@@ -1,0 +1,14 @@
+{
+  "projects": {
+    "default": "hocapp-44760"
+  },
+  "targets": {
+    "hocapp-44760": {
+      "hosting": {
+        "superbolao": [
+          "superbolao"
+        ]
+      }
+    }
+  }
+}

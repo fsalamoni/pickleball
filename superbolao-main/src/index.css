@@ -1,0 +1,109 @@
+@tailwind base;
+@tailwind components;
+@tailwind utilities;
+
+@layer base {
+  :root {
+    --background: 145 32% 96%;
+    --foreground: 215 42% 12%;
+    --card: 44 45% 97%;
+    --card-foreground: 215 42% 12%;
+    --popover: 0 0% 100%;
+    --popover-foreground: 0 0% 3.9%;
+    --primary: 142 71% 35%;
+    --primary-foreground: 0 0% 98%;
+    --secondary: 166 31% 92%;
+    --secondary-foreground: 190 56% 17%;
+    --muted: 154 24% 92%;
+    --muted-foreground: 214 18% 39%;
+    --accent: 142 71% 95%;
+    --accent-foreground: 142 71% 25%;
+    --destructive: 0 84.2% 60.2%;
+    --destructive-foreground: 0 0% 98%;
+    --border: 156 18% 82%;
+    --input: 156 18% 82%;
+    --ring: 142 71% 35%;
+    --radius: 0.5rem;
+    --sidebar-background: 199 62% 12%;
+    --sidebar-foreground: 150 24% 92%;
+    --sidebar-primary: 142 71% 35%;
+    --sidebar-primary-foreground: 0 0% 98%;
+    --sidebar-accent: 176 50% 18%;
+    --sidebar-accent-foreground: 144 44% 94%;
+    --sidebar-border: 186 32% 22%;
+    --sidebar-ring: 142 71% 35%;
+  }
+
+  .dark {
+    --background: 0 0% 3.9%;
+    --foreground: 0 0% 98%;
+    --card: 0 0% 3.9%;
+    --card-foreground: 0 0% 98%;
+    --popover: 0 0% 3.9%;
+    --popover-foreground: 0 0% 98%;
+    --primary: 142 71% 45%;
+    --primary-foreground: 0 0% 9%;
+    --secondary: 0 0% 14.9%;
+    --secondary-foreground: 0 0% 98%;
+    --muted: 0 0% 14.9%;
+    --muted-foreground: 0 0% 63.9%;
+    --accent: 142 71% 15%;
+    --accent-foreground: 142 71% 90%;
+    --destructive: 0 62.8% 30.6%;
+    --destructive-foreground: 0 0% 98%;
+    --border: 0 0% 14.9%;
+    --input: 0 0% 14.9%;
+    --ring: 142 71% 45%;
+    --sidebar-background: 240 5.9% 10%;
+    --sidebar-foreground: 240 4.8% 95.9%;
+    --sidebar-primary: 142 71% 45%;
+    --sidebar-primary-foreground: 0 0% 98%;
+    --sidebar-accent: 240 3.7% 15.9%;
+    --sidebar-accent-foreground: 240 4.8% 95.9%;
+    --sidebar-border: 240 3.7% 15.9%;
+    --sidebar-ring: 142 71% 45%;
+  }
+}
+
+@layer base {
+  * {
+    @apply border-border;
+  }
+
+  body {
+    @apply bg-background text-foreground;
+    font-family: ui-sans-serif, system-ui, -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, 'Helvetica Neue', Arial, sans-serif;
+  }
+}
+
+@layer components {
+  .arena-page {
+    background:
+      linear-gradient(135deg, hsl(150 38% 95% / 0.94), hsl(205 35% 96% / 0.92)),
+      repeating-linear-gradient(90deg, hsl(151 46% 88% / 0.34) 0 72px, hsl(158 38% 84% / 0.28) 72px 144px);
+  }
+
+  .arena-panel {
+    @apply border border-emerald-950/10 bg-card/95 shadow-sm shadow-emerald-950/5 backdrop-blur-sm;
+  }
+
+  .arena-panel-strong {
+    @apply border border-emerald-900/15 bg-gradient-to-br from-emerald-950 to-teal-900 text-white shadow-lg shadow-emerald-950/15;
+  }
+
+  .arena-heading {
+    @apply bg-gradient-to-r from-emerald-800 via-teal-700 to-slate-900 bg-clip-text text-transparent;
+  }
+
+  .arena-chip {
+    @apply inline-flex h-7 items-center gap-1 rounded-md border border-emerald-900/10 bg-emerald-50 px-2 text-xs font-medium text-emerald-900;
+  }
+
+  .arena-table-wrap {
+    @apply overflow-x-auto rounded-md border border-emerald-950/10 bg-white/70 shadow-sm shadow-emerald-950/5;
+  }
+
+  .match-surface {
+    @apply rounded-md border border-emerald-950/10 bg-gradient-to-br from-white/90 via-emerald-50/70 to-teal-50/60 shadow-sm shadow-emerald-950/5 transition-colors hover:border-emerald-700/25;
+  }
+}

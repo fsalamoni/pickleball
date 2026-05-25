@@ -1,0 +1,1 @@
+export const FUNCTION_SERVICE_ACCOUNT = 'firebase-adminsdk-fbsvc@hocapp-44760.iam.gserviceaccount.com';

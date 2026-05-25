@@ -1,0 +1,130 @@
+name: Deploy Firebase
+
+on:
+  push:
+    branches: [main, copilot/implementacao-da-plataforma-firebase]
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+concurrency:
+  group: firebase-deploy-${{ github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  deploy:
+    runs-on: ubuntu-latest
+    env:
+      FIREBASE_PROJECT_ID: hocapp-44760
+      FIREBASE_HOSTING_TARGET: superbolao
+      VITE_FIREBASE_API_KEY: AIzaSyDFV2iOMhhg3EAwQ6J72Zpx2kfe4WyDLLw
+      VITE_FIREBASE_AUTH_DOMAIN: hocapp-44760.firebaseapp.com
+      VITE_FIREBASE_PROJECT_ID: hocapp-44760
+      VITE_FIREBASE_STORAGE_BUCKET: hocapp-44760.firebasestorage.app
+      VITE_FIREBASE_MESSAGING_SENDER_ID: "143237037612"
+      VITE_FIREBASE_APP_ID: "1:143237037612:web:5601b8d3647525e5031b89"
+      VITE_FIREBASE_USE_EMULATORS: "false"
+
+    steps:
+      - uses: actions/checkout@v6
+
+      - uses: actions/setup-node@v6
+        with:
+          node-version: "22"
+          cache: npm
+
+      - name: Install dependencies
+        run: npm ci
+
+      - name: Install dependencies (functions)
+        working-directory: functions
+        run: npm ci
+
+      - name: Validate Firebase web config
+        run: |
+          test -n "$VITE_FIREBASE_API_KEY"
+          test -n "$VITE_FIREBASE_AUTH_DOMAIN"
+          test -n "$VITE_FIREBASE_PROJECT_ID"
+          test -n "$VITE_FIREBASE_STORAGE_BUCKET"
+          test -n "$VITE_FIREBASE_MESSAGING_SENDER_ID"
+          test -n "$VITE_FIREBASE_APP_ID"
+
+      - name: Test
+        run: npm test
+
+      - name: Test (functions)
+        working-directory: functions
+        run: npm test
+
+      - name: Build
+        run: npm run build
+
+      - name: Build (functions)
+        working-directory: functions
+        run: |
+          npm run build
+          echo "=== Verificando build ==="
+          ls -la lib/
+          test -f lib/index.js || (echo "ERROR: lib/index.js not found after tsc build" && exit 1)
+          echo "Build OK: lib/index.js exists"
+
+      - name: Authenticate Firebase
+        run: |
+          test -n "$FIREBASE_SERVICE_ACCOUNT"
+          printf '%s' "$FIREBASE_SERVICE_ACCOUNT" > "$RUNNER_TEMP/firebase-service-account.json"
+          chmod 600 "$RUNNER_TEMP/firebase-service-account.json"
+        env:
+          FIREBASE_SERVICE_ACCOUNT: ${{ secrets.FIREBASE_SERVICE_ACCOUNT }}
+
+      - name: Deploy Hosting and Firestore
+        run: npx --yes firebase-tools@14.17.0 deploy --only "hosting:${FIREBASE_HOSTING_TARGET},firestore:bolao2026" --project "$FIREBASE_PROJECT_ID" --non-interactive
+        env:
+          GOOGLE_APPLICATION_CREDENTIALS: ${{ runner.temp }}/firebase-service-account.json
+
+      - name: Authenticate gcloud
+        uses: google-github-actions/auth@v3
+        with:
+          credentials_json: ${{ secrets.FIREBASE_SERVICE_ACCOUNT }}
+
+      - name: Set up gcloud
+        uses: google-github-actions/setup-gcloud@v3
+
+      - name: Deploy Functions via gcloud (lib already built locally)
+        working-directory: functions
+        run: |
+          set -e
+          REGION="southamerica-east1"
+          RUN_SA="hocapp-44760@appspot.gserviceaccount.com"
+          BUILD_SA="projects/hocapp-44760/serviceAccounts/firebase-adminsdk-fbsvc@hocapp-44760.iam.gserviceaccount.com"
+
+          # Verify lib/ exists before deploying
+          test -f lib/index.js || (echo "FATAL: lib/index.js missing before deploy" && exit 1)
+
+          echo "::group::seedTournament"
+           gcloud functions deploy seedTournament --gen2 --region="$REGION" --runtime=nodejs22 --entry-point=seedTournament --source=. --trigger-http --no-allow-unauthenticated --service-account="$RUN_SA" --build-service-account="$BUILD_SA" --project="$FIREBASE_PROJECT_ID" --quiet
+          echo "::endgroup::"
+
+          echo "::group::setSpecialBetResults"
+           gcloud functions deploy setSpecialBetResults --gen2 --region="$REGION" --runtime=nodejs22 --entry-point=setSpecialBetResults --source=. --trigger-http --no-allow-unauthenticated --service-account="$RUN_SA" --build-service-account="$BUILD_SA" --project="$FIREBASE_PROJECT_ID" --quiet
+          echo "::endgroup::"
+
+          echo "::group::processMatchScoring"
+          gcloud functions deploy processMatchScoring --gen2 --region="$REGION" --runtime=nodejs22 --entry-point=processMatchScoring --source=. --trigger-event-filters="type=google.cloud.firestore.document.v1.updated,database=bolao2026,document=matches/{matchId}" --retry --service-account="$RUN_SA" --build-service-account="$BUILD_SA" --project="$FIREBASE_PROJECT_ID" --quiet
+          echo "::endgroup::"
+
+          echo "::group::revealBetsForStage"
+          gcloud functions deploy revealBetsForStage --gen2 --region="$REGION" --runtime=nodejs22 --entry-point=revealBetsForStage --source=. --trigger-topic=revealBetsForStage --retry --service-account="$RUN_SA" --build-service-account="$BUILD_SA" --project="$FIREBASE_PROJECT_ID" --quiet
+          echo "::endgroup::"
+
+          echo "::group::notifyPendingBets"
+          gcloud functions deploy notifyPendingBets --gen2 --region="$REGION" --runtime=nodejs22 --entry-point=notifyPendingBets --source=. --trigger-topic=notifyPendingBets --service-account="$RUN_SA" --build-service-account="$BUILD_SA" --project="$FIREBASE_PROJECT_ID" --quiet
+          echo "::endgroup::"
+
+          echo "::group::Cloud Scheduler jobs (upsert)"
+          gcloud scheduler jobs create pubsub reveal-every-15min --project="$FIREBASE_PROJECT_ID" --location="$REGION" --schedule="*/15 * * * *" --time-zone="America/Sao_Paulo" --topic=revealBetsForStage --message-body="{}" --quiet 2>/dev/null || \
+            gcloud scheduler jobs update pubsub reveal-every-15min --project="$FIREBASE_PROJECT_ID" --location="$REGION" --schedule="*/15 * * * *" --time-zone="America/Sao_Paulo" --topic=revealBetsForStage --message-body="{}" --quiet
+
+          gcloud scheduler jobs create pubsub notify-pending-daily --project="$FIREBASE_PROJECT_ID" --location="$REGION" --schedule="0 9 * * *" --time-zone="America/Sao_Paulo" --topic=notifyPendingBets --message-body="{}" --quiet 2>/dev/null || \
+            gcloud scheduler jobs update pubsub notify-pending-daily --project="$FIREBASE_PROJECT_ID" --location="$REGION" --schedule="0 9 * * *" --time-zone="America/Sao_Paulo" --topic=notifyPendingBets --message-body="{}" --quiet
+          echo "::endgroup::"

@@ -1,0 +1,515 @@
+rules_version = '2';
+service cloud.firestore {
+  match /databases/{database}/documents {
+
+    // ========== HELPER FUNCTIONS ==========
+
+    function isAuthed() {
+      return request.auth != null;
+    }
+
+    function isOwner(userId) {
+      return request.auth.uid == userId;
+    }
+
+    function isPlatformAdmin() {
+      return isAuthed()
+        && exists(/databases/$(database)/documents/users/$(request.auth.uid))
+        && get(/databases/$(database)/documents/users/$(request.auth.uid)).data.role == 'platform_admin';
+    }
+
+    function isPlatformOwnerEmail() {
+      return isAuthed() && request.auth.token.email == 'fsalamoni@gmail.com';
+    }
+
+    function canCreatePools() {
+      return isPlatformOwnerEmail()
+        || (isAuthed()
+          && exists(/databases/$(database)/documents/users/$(request.auth.uid))
+          && (
+            get(/databases/$(database)/documents/users/$(request.auth.uid)).data.role == 'platform_admin'
+            || get(/databases/$(database)/documents/users/$(request.auth.uid)).data.can_create_pools == true
+          ));
+    }
+
+    function userProfile(userId) {
+      return get(/databases/$(database)/documents/users/$(userId)).data;
+    }
+
+    function hasCompleteAdultProfile(userId) {
+      return exists(/databases/$(database)/documents/users/$(userId))
+        && userProfile(userId).platform_name is string
+        && userProfile(userId).platform_name.size() > 0
+        && userProfile(userId).phone is string
+        && userProfile(userId).phone.size() >= 10
+        && userProfile(userId).birth_date is string
+        && userProfile(userId).birth_date.size() == 10
+        && userProfile(userId).birth_date_at is timestamp
+        && userProfile(userId).birth_date_at <= request.time - duration.value(6575, 'd');
+    }
+
+    function canParticipate(userId) {
+      return isPlatformAdmin() || hasCompleteAdultProfile(userId);
+    }
+
+    function poolRequiresPayment(poolId) {
+      let pool = getPool(poolId);
+      return 'entry_fee' in pool && pool.entry_fee > 0;
+    }
+
+    function hasConfirmedPoolPayment(poolId) {
+      return isPoolMember(poolId)
+        && (
+          poolHasRole(poolId, ['owner', 'admin'])
+          || !poolRequiresPayment(poolId)
+          || poolMembership(poolId).payment_status == 'confirmed'
+        );
+    }
+
+    function membershipId(uid, poolId) {
+      return uid + '_' + poolId;
+    }
+
+    function isPoolMember(poolId) {
+      return exists(/databases/$(database)/documents/pool_memberships/$(membershipId(request.auth.uid, poolId)));
+    }
+
+    function poolMembership(poolId) {
+      return get(/databases/$(database)/documents/pool_memberships/$(membershipId(request.auth.uid, poolId))).data;
+    }
+
+    function poolHasRole(poolId, allowedRoles) {
+      return poolMembership(poolId).role in allowedRoles;
+    }
+
+    function getMatch(matchId) {
+      return get(/databases/$(database)/documents/matches/$(matchId)).data;
+    }
+
+    function globalMatchExists(matchId) {
+      return exists(/databases/$(database)/documents/matches/$(matchId));
+    }
+
+    function poolMatchExists(poolId, matchId) {
+      return exists(/databases/$(database)/documents/pool_matches/$(matchId))
+        && get(/databases/$(database)/documents/pool_matches/$(matchId)).data.pool_id == poolId;
+    }
+
+    function getPoolMatch(matchId) {
+      return get(/databases/$(database)/documents/pool_matches/$(matchId)).data;
+    }
+
+    function getPool(poolId) {
+      return get(/databases/$(database)/documents/pools/$(poolId)).data;
+    }
+
+    function getPoolAfter(poolId) {
+      return getAfter(/databases/$(database)/documents/pools/$(poolId)).data;
+    }
+
+    function getMembershipAfter(poolId) {
+      return getAfter(/databases/$(database)/documents/pool_memberships/$(membershipId(request.auth.uid, poolId))).data;
+    }
+
+    function hasSelfMembershipAfter(poolId, role) {
+      return getMembershipAfter(poolId).user_id == request.auth.uid
+        && getMembershipAfter(poolId).pool_id == poolId
+        && getMembershipAfter(poolId).role == role;
+    }
+
+    function hasNoCurrentSelfMembership(poolId) {
+      return !exists(/databases/$(database)/documents/pool_memberships/$(membershipId(request.auth.uid, poolId)));
+    }
+
+    function changedOnlyMemberCountAndTimestamp() {
+      return request.resource.data.diff(resource.data).affectedKeys().hasOnly(['stats', 'updated_at'])
+        && request.resource.data.stats.diff(resource.data.stats).affectedKeys().hasOnly(['members_count']);
+    }
+
+    function isPoolJoinCounterUpdate(poolId) {
+      return hasNoCurrentSelfMembership(poolId)
+        && hasSelfMembershipAfter(poolId, 'participant')
+        && changedOnlyMemberCountAndTimestamp()
+        && request.resource.data.stats.members_count == resource.data.stats.members_count + 1;
+    }
+
+    function isOwnerMembershipForPool(poolId) {
+      return hasSelfMembershipAfter(poolId, 'owner')
+        && getPoolAfter(poolId).owner_user_id == request.auth.uid;
+    }
+
+    function isSelfParticipantMembershipCreate() {
+      return request.resource.data.user_id == request.auth.uid
+        && canParticipate(request.auth.uid)
+        && request.resource.data.pool_id is string
+        && request.resource.data.role == 'participant'
+        && (
+          (poolRequiresPayment(request.resource.data.pool_id) && request.resource.data.payment_status == 'unpaid')
+          || (!poolRequiresPayment(request.resource.data.pool_id) && request.resource.data.payment_status == 'confirmed')
+        )
+        && request.resource.data.payment_reported_at == null
+        && request.resource.data.payment_confirmed_by == null
+        && request.resource.data.invite_code_used == getPool(request.resource.data.pool_id).invite_code
+        && exists(/databases/$(database)/documents/pools/$(request.resource.data.pool_id))
+        && hasNoCurrentSelfMembership(request.resource.data.pool_id)
+        && getPoolAfter(request.resource.data.pool_id).stats.members_count == getPool(request.resource.data.pool_id).stats.members_count + 1;
+    }
+
+    function isSelfOwnerMembershipCreate() {
+      return request.resource.data.user_id == request.auth.uid
+        && canParticipate(request.auth.uid)
+        && request.resource.data.pool_id is string
+        && request.resource.data.role == 'owner'
+        && request.resource.data.payment_status == 'confirmed'
+        && getPoolAfter(request.resource.data.pool_id).owner_user_id == request.auth.uid;
+    }
+
+    function isSelfMembershipSnapshotUpdate() {
+      return isOwner(resource.data.user_id)
+        && request.resource.data.user_id == resource.data.user_id
+        && request.resource.data.pool_id == resource.data.pool_id
+        && request.resource.data.role == resource.data.role
+        && request.resource.data.diff(resource.data).affectedKeys()
+            .hasOnly(['user_email_snapshot', 'user_name_snapshot', 'user_photo_snapshot', 'updated_at']);
+    }
+
+    function isSelfPaymentReportUpdate() {
+      return isOwner(resource.data.user_id)
+        && request.resource.data.user_id == resource.data.user_id
+        && request.resource.data.pool_id == resource.data.pool_id
+        && request.resource.data.role == resource.data.role
+        && request.resource.data.payment_status == 'reported'
+        && (
+          !('payment_status' in resource.data)
+          || resource.data.payment_status == null
+          || resource.data.payment_status in ['unpaid', 'reported']
+        )
+        && request.resource.data.diff(resource.data).affectedKeys()
+            .hasOnly(['payment_status', 'payment_reported_at', 'updated_at']);
+    }
+
+    function betDeadline(poolId, matchId) {
+      let pool = getPool(poolId);
+      let fixture = globalMatchExists(matchId)
+        ? getMatch(matchId)
+        : poolMatchExists(poolId, matchId)
+          ? getPoolMatch(matchId)
+          // Missing match sentinel: empty stage + expired deadline denies bet writes safely.
+          : { stage_code: '', bet_lock_at: request.time - duration.value(1, 's') };
+      return hasDeadline(pool, fixture.stage_code)
+        ? pool.settings.deadline_overrides[fixture.stage_code]
+        : fixture.bet_lock_at;
+    }
+
+    function hasDeadline(pool, stageCode) {
+      return 'settings' in pool
+        && 'deadline_overrides' in pool.settings
+        && stageCode in pool.settings.deadline_overrides
+        && pool.settings.deadline_overrides[stageCode] is timestamp;
+    }
+
+    function specialBetIsOpen(poolId) {
+      let pool = getPool(poolId);
+      return !hasDeadline(pool, 'group') || request.time < pool.settings.deadline_overrides.group;
+    }
+
+    // ========== USERS ==========
+
+    match /users/{userId} {
+      // Authed users can read profiles (for leaderboards, member lists)
+      allow read: if isAuthed();
+
+      // A user can create/update their own profile, but cannot self-promote to platform_admin.
+      // The platform owner email is bootstrapped as admin automatically.
+      allow create: if isAuthed() && isOwner(userId)
+        && (
+          (isPlatformOwnerEmail()
+            && request.resource.data.role == 'platform_admin'
+            && request.resource.data.can_create_pools == true)
+          || (
+            (!('role' in request.resource.data) || request.resource.data.role == 'user')
+            && (!('can_create_pools' in request.resource.data) || request.resource.data.can_create_pools == false)
+          )
+        );
+      allow update: if isAuthed() && isOwner(userId)
+        && (
+          (isPlatformOwnerEmail()
+            && request.resource.data.role == 'platform_admin'
+            && request.resource.data.can_create_pools == true)
+          || (
+            request.resource.data.role == resource.data.role
+            && request.resource.data.can_create_pools == resource.data.can_create_pools
+          )
+        );
+      // Platform admin can edit roles (server-side scripted action recommended)
+      allow update: if isPlatformAdmin();
+      allow delete: if false;
+    }
+
+    // ========== POOL CREATOR AUTHORIZATION REQUESTS ==========
+
+    match /pool_creator_requests/{userId} {
+      allow read: if isAuthed() && (isOwner(userId) || isPlatformAdmin());
+
+      allow create: if isAuthed()
+        && isOwner(userId)
+        && request.resource.data.user_id == request.auth.uid
+        && request.resource.data.status == 'pending'
+        && request.resource.data.reviewed_by == null
+        && request.resource.data.reviewed_at == null;
+
+      allow update: if isAuthed()
+        && isOwner(userId)
+        && resource.data.status == 'pending'
+        && request.resource.data.user_id == request.auth.uid
+        && request.resource.data.status == 'pending'
+        && request.resource.data.reviewed_by == null
+        && request.resource.data.reviewed_at == null;
+
+      allow update: if isPlatformAdmin();
+      allow delete: if false;
+    }
+
+    // ========== POOLS ==========
+
+    match /pools/{poolId} {
+      // Owners and members read their pool. Platform admin reads all.
+      allow get: if isAuthed() && (
+        resource.data.owner_user_id == request.auth.uid
+        || isPoolMember(poolId)
+        || isPlatformAdmin()
+      );
+
+      // Limited list access supports owner dashboards and invite-code lookup.
+      allow list: if isAuthed() && (
+        resource.data.owner_user_id == request.auth.uid
+        || isPlatformAdmin()
+        || request.query.limit == 1
+      );
+
+      // Authorized users can create a pool only together with their owner membership.
+      allow create: if isAuthed() && canCreatePools() && canParticipate(request.auth.uid)
+        && request.resource.data.owner_user_id == request.auth.uid
+        && isOwnerMembershipForPool(poolId);
+
+      // Pool owner / admin can update; platform admin can update flags too
+      allow update: if isAuthed() && (
+        resource.data.owner_user_id == request.auth.uid
+        || (isPoolMember(poolId) && poolHasRole(poolId, ['owner', 'admin']))
+        || isPoolJoinCounterUpdate(poolId)
+        || isPlatformAdmin()
+      );
+
+      // Pool owner only (or platform admin) can delete
+      allow delete: if isAuthed() && (
+        resource.data.owner_user_id == request.auth.uid
+        || isPlatformAdmin()
+      );
+    }
+
+    // ========== POOL MEMBERSHIPS ==========
+
+    match /pool_memberships/{membershipId} {
+      // Authed users can read memberships of pools they belong to.
+      // (Permissive read allows leaderboards / member lists.)
+      allow read: if isAuthed();
+
+      // A user creates only their own membership; pool admins can also add.
+      allow create: if isAuthed() && (
+        isSelfOwnerMembershipCreate()
+        || isSelfParticipantMembershipCreate()
+        || (isPoolMember(request.resource.data.pool_id)
+            && poolHasRole(request.resource.data.pool_id, ['owner', 'admin'])
+            && canParticipate(request.resource.data.user_id))
+        || isPlatformAdmin()
+      );
+
+      // Owner/admin of the pool can update memberships (e.g. promote);
+      // user can update own snapshot fields (name/photo)
+      allow update: if isAuthed() && (
+        (isPoolMember(resource.data.pool_id) && poolHasRole(resource.data.pool_id, ['owner', 'admin']))
+        || isSelfMembershipSnapshotUpdate()
+        || isSelfPaymentReportUpdate()
+        || isPlatformAdmin()
+      );
+
+      allow delete: if isAuthed() && (
+        (isPoolMember(resource.data.pool_id) && poolHasRole(resource.data.pool_id, ['owner', 'admin']))
+        || isOwner(resource.data.user_id)
+        || isPlatformAdmin()
+      );
+    }
+
+    // ========== TOURNAMENT STRUCTURE (read for all, write platform admin only) ==========
+
+    match /tournaments/{tournamentId} {
+      allow read: if isAuthed();
+      allow write: if isPlatformAdmin();
+    }
+
+    match /stages/{stageId} {
+      allow read: if isAuthed();
+      allow write: if isPlatformAdmin();
+    }
+
+    match /groups/{groupId} {
+      allow read: if isAuthed();
+      allow write: if isPlatformAdmin();
+    }
+
+    match /teams/{teamId} {
+      allow read: if isAuthed();
+      allow write: if isPlatformAdmin();
+    }
+
+    match /team_in_group/{relId} {
+      allow read: if isAuthed();
+      allow write: if isPlatformAdmin();
+    }
+
+    match /scoring_tiers/{tierId} {
+      allow read: if isAuthed();
+      allow write: if isPlatformAdmin();
+    }
+
+    match /matches/{matchId} {
+      allow read: if isAuthed();
+      // Only platform admin can update result fields (kickoff, score, status).
+      // Cloud Function may also update via privileged path.
+      allow write: if isPlatformAdmin();
+    }
+
+    match /pool_competitors/{competitorId} {
+      allow read: if isAuthed() && (
+        isPoolMember(resource.data.pool_id) || getPool(resource.data.pool_id).owner_user_id == request.auth.uid || isPlatformAdmin()
+      );
+      allow create: if isAuthed()
+        && request.resource.data.pool_id is string
+        && (isPlatformAdmin() || (isPoolMember(request.resource.data.pool_id) && poolHasRole(request.resource.data.pool_id, ['owner', 'admin'])));
+      allow update, delete: if isAuthed() && (
+        isPlatformAdmin() || (isPoolMember(resource.data.pool_id) && poolHasRole(resource.data.pool_id, ['owner', 'admin']))
+      );
+    }
+
+    match /pool_matches/{matchId} {
+      allow read: if isAuthed() && (
+        isPoolMember(resource.data.pool_id) || getPool(resource.data.pool_id).owner_user_id == request.auth.uid || isPlatformAdmin()
+      );
+      allow create: if isAuthed()
+        && request.resource.data.pool_id is string
+        && (isPlatformAdmin() || (isPoolMember(request.resource.data.pool_id) && poolHasRole(request.resource.data.pool_id, ['owner', 'admin'])));
+      allow update, delete: if isAuthed() && (
+        isPlatformAdmin() || (isPoolMember(resource.data.pool_id) && poolHasRole(resource.data.pool_id, ['owner', 'admin']))
+      );
+    }
+
+    // ========== BETS ==========
+
+    match /bets/{betId} {
+      // Owner reads their own bet always.
+      // Anyone in the same pool reads only revealed bets.
+      // Platform admin reads all.
+      allow read: if isAuthed() && (
+        isPlatformAdmin()
+        || resource.data.user_id == request.auth.uid
+        || (resource.data.revealed == true && isPoolMember(resource.data.pool_id))
+      );
+
+      // Create: must be owner, pool member, match exists, and deadline has not passed.
+      allow create: if isAuthed()
+        && request.resource.data.user_id == request.auth.uid
+        && canParticipate(request.auth.uid)
+        && isPoolMember(request.resource.data.pool_id)
+        && (globalMatchExists(request.resource.data.match_id) || poolMatchExists(request.resource.data.pool_id, request.resource.data.match_id))
+        && hasConfirmedPoolPayment(request.resource.data.pool_id)
+        && request.resource.data.revealed == false
+        && request.time < betDeadline(request.resource.data.pool_id, request.resource.data.match_id);
+
+      // Update: same constraints; cannot flip revealed via client (Cloud Function only).
+      allow update: if isAuthed()
+        && resource.data.user_id == request.auth.uid
+        && canParticipate(request.auth.uid)
+        && hasConfirmedPoolPayment(resource.data.pool_id)
+        && request.resource.data.user_id == resource.data.user_id
+        && request.resource.data.pool_id == resource.data.pool_id
+        && request.resource.data.match_id == resource.data.match_id
+        && request.resource.data.revealed == resource.data.revealed
+        && (globalMatchExists(resource.data.match_id) || poolMatchExists(resource.data.pool_id, resource.data.match_id))
+        && request.time < betDeadline(resource.data.pool_id, resource.data.match_id);
+
+      // Only platform admin can hard-delete bets (cascade on pool deletion).
+      allow delete: if isPlatformAdmin();
+    }
+
+    match /special_bets/{specialId} {
+      allow read: if isAuthed() && (
+        isPlatformAdmin()
+        || resource.data.user_id == request.auth.uid
+        || (resource.data.revealed == true && isPoolMember(resource.data.pool_id))
+      );
+
+      allow create, update: if isAuthed()
+        && request.resource.data.user_id == request.auth.uid
+        && canParticipate(request.auth.uid)
+        && isPoolMember(request.resource.data.pool_id)
+        && hasConfirmedPoolPayment(request.resource.data.pool_id)
+        && specialBetIsOpen(request.resource.data.pool_id);
+
+      // Only platform admin can hard-delete special bets (cascade on pool deletion).
+      allow delete: if isPlatformAdmin();
+    }
+
+    // ========== PROCESSED SCORES (cache) ==========
+
+    match /processed_scores/{scoreId} {
+      // Users read scores in pools they belong to.
+      allow read: if isAuthed() && (
+        isPoolMember(resource.data.pool_id) || isPlatformAdmin()
+      );
+      // Cloud Functions and platform admin can write (admin for hard-delete cascade).
+      allow write: if isPlatformAdmin();
+    }
+
+    // ========== AGGREGATES ==========
+
+    match /pool_stage_aggregates/{aggId} {
+      allow read: if isAuthed() && (
+        isPoolMember(resource.data.pool_id) || isPlatformAdmin()
+      );
+      // Cloud Functions and platform admin can write (admin for hard-delete cascade).
+      allow write: if isPlatformAdmin();
+    }
+
+    // ========== NOTIFICATIONS ==========
+
+    match /notifications/{notifId} {
+      allow read: if isAuthed() && isOwner(resource.data.user_id);
+
+      // Only marking as read is allowed by the client.
+      allow update: if isAuthed()
+        && isOwner(resource.data.user_id)
+        && request.resource.data.diff(resource.data).affectedKeys()
+            .hasOnly(['read', 'read_at']);
+
+      allow create: if isPlatformAdmin();
+      allow delete: if false;
+    }
+
+    // ========== AUDIT LOG ==========
+
+    match /audit_logs/{logId} {
+      allow read: if isPlatformAdmin()
+        || (resource.data.pool_id is string
+          && isPoolMember(resource.data.pool_id)
+          && poolHasRole(resource.data.pool_id, ['owner', 'admin']));
+
+      allow create: if isAuthed()
+        && request.resource.data.actor_id == request.auth.uid
+        && request.resource.data.log_number is number
+        && request.resource.data.action is string
+        && request.resource.data.created_at == request.time;
+
+      allow update, delete: if false;
+    }
+  }
+}
