@@ -43,6 +43,40 @@ npm run dev                  # http://localhost:5173
 | `npm run test` | Vitest (unit) |
 | `npm run e2e` | Playwright (E2E) |
 
+## Publicação no GitHub Pages
+
+O repositório já está preparado para publicar a aplicação em **GitHub Pages** via workflow do GitHub Actions (`.github/workflows/deploy-pages.yml`).
+
+### 1. Habilite o GitHub Pages
+
+No GitHub, abra **Settings → Pages** e selecione **Build and deployment → Source: GitHub Actions**.
+
+### 2. Configure as variáveis do build
+
+Em **Settings → Secrets and variables → Actions**, crie as variáveis (ou secrets) abaixo com os valores reais do seu projeto Firebase:
+
+- `VITE_FIREBASE_API_KEY`
+- `VITE_FIREBASE_AUTH_DOMAIN`
+- `VITE_FIREBASE_PROJECT_ID`
+- `VITE_FIREBASE_STORAGE_BUCKET`
+- `VITE_FIREBASE_MESSAGING_SENDER_ID`
+- `VITE_FIREBASE_APP_ID`
+
+Opcionais:
+
+- `VITE_FIREBASE_MEASUREMENT_ID`
+- `VITE_FIRESTORE_DATABASE_ID` (padrão recomendado: `pickleball`)
+- `VITE_ENABLE_FIREBASE_ANALYTICS`
+- `VITE_ENABLE_FIREBASE_PERFORMANCE`
+
+### 3. Deploy
+
+Ao fazer push para `main`, o workflow publica automaticamente em:
+
+`https://fsalamoni.github.io/pickleball/`
+
+O workflow também gera `404.html` a partir do `index.html` para manter o roteamento SPA funcionando em refresh e links diretos.
+
 ## Estrutura
 
 ```
