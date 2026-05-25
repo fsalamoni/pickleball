@@ -58,7 +58,7 @@ export default function Profile() {
           <div className="max-w-2xl space-y-2">
             <p className="text-xs font-semibold uppercase tracking-wider text-emerald-200">Conta e elegibilidade</p>
             <h1 className="text-2xl font-bold text-white sm:text-3xl">Meu Perfil</h1>
-            <p className="text-sm leading-6 text-emerald-50/85">Como você aparece para os outros membros dos bolões.</p>
+            <p className="text-sm leading-6 text-emerald-50/85">Como você aparece para os outros participantes dos torneios.</p>
           </div>
         </div>
       </section>
@@ -127,7 +127,7 @@ export default function Profile() {
             </div>
             <div className="flex items-start gap-2 rounded-md border border-amber-300/60 bg-amber-100/80 p-3 text-sm text-amber-950">
               <ShieldCheck className="mt-0.5 h-4 w-4 shrink-0" />
-              <span>Nao e permitida a participacao de menores em boloes.</span>
+              <span>Não é permitida a participação de menores em torneios.</span>
             </div>
             <Button type="submit" disabled={busy} className="bg-emerald-700 hover:bg-emerald-800">
               {busy ? 'Salvando...' : 'Salvar alterações'}

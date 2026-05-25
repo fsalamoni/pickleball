@@ -26,13 +26,13 @@ export function validateRequiredProfile({ platformName, birthDate, phone }) {
   const trimmedName = String(platformName || '').trim();
   const trimmedPhone = String(phone || '').trim();
 
-  if (!trimmedName) errors.platformName = 'Informe seu nome de exibicao.';
+  if (!trimmedName) errors.platformName = 'Informe seu nome de exibição.';
   if (!birthDate) errors.birthDate = 'Informe sua data de nascimento.';
   if (!trimmedPhone) errors.phone = 'Informe seu telefone.';
 
   const age = calculateAge(birthDate);
-  if (birthDate && age === null) errors.birthDate = 'Informe uma data de nascimento valida.';
-  if (age !== null && age < 18) errors.birthDate = 'Nao e permitida a participacao de menores em boloes.';
+  if (birthDate && age === null) errors.birthDate = 'Informe uma data de nascimento válida.';
+  if (age !== null && age < 18) errors.birthDate = 'Não é permitida a participação de menores em torneios.';
 
   const phoneDigits = trimmedPhone.replace(/\D/g, '');
   if (trimmedPhone && phoneDigits.length < 10) errors.phone = 'Informe um telefone com DDD.';

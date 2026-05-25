@@ -50,7 +50,7 @@ export default function ProfileCompletionModal() {
         birth_date_at: Timestamp.fromDate(birthDateToBrtDate(birthDate)),
         phone: phone.trim(),
       });
-      toast.success('Perfil completo. Agora voce pode participar dos boloes.');
+      toast.success('Perfil completo. Agora você pode participar dos torneios.');
     } catch (error) {
       toast.error(error.message || 'Erro ao salvar o perfil.');
     } finally {
@@ -64,14 +64,14 @@ export default function ProfileCompletionModal() {
         <AlertDialogHeader>
           <AlertDialogTitle>Complete seu perfil</AlertDialogTitle>
           <AlertDialogDescription>
-            Data de nascimento e telefone sao obrigatorios para participar dos boloes. Nao e permitida a participacao de menores.
+            Data de nascimento e telefone são obrigatórios para participar dos torneios. Não é permitida a participação de menores.
           </AlertDialogDescription>
         </AlertDialogHeader>
 
         <form onSubmit={handleSubmit} className="space-y-4">
           <div className="rounded-md border border-amber-200 bg-amber-50 p-3 text-sm text-amber-900 flex items-start gap-2">
             <AlertTriangle className="mt-0.5 h-4 w-4 shrink-0 text-amber-600" />
-            <span>Ao continuar, confirme dados verdadeiros. Participantes menores de 18 anos nao podem entrar nos boloes.</span>
+            <span>Ao continuar, confirme dados verdadeiros. Participantes menores de 18 anos não podem entrar nos torneios.</span>
           </div>
 
           <div className="space-y-2">
