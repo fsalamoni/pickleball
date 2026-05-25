@@ -19,6 +19,8 @@ const Leveling = lazy(() => import('@/pages/Leveling'));
 const ConductFairPlay = lazy(() => import('@/pages/ConductFairPlay'));
 const AdminMetrics = lazy(() => import('@/modules/admin/pages/AdminMetrics'));
 const AdminTournaments = lazy(() => import('@/modules/admin/pages/AdminTournaments'));
+const PublicTournament = lazy(() => import('@/pages/PublicTournament'));
+const PrintTournament = lazy(() => import('@/pages/PrintTournament'));
 const PageNotFound = lazy(() => import('@/pages/PageNotFound'));
 
 const queryClient = new QueryClient({
@@ -81,6 +83,10 @@ export default function App() {
               <Route path="/nivelamento" element={withLayout('Leveling', Leveling)} />
               <Route path="/conduta" element={withLayout('ConductFairPlay', ConductFairPlay)} />
               <Route path="/politica-uso" element={withLayout('PrivacyPolicy', PrivacyPolicy)} />
+
+              {/* Public spectator view (sem auth) */}
+              <Route path="/p/:tournamentId" element={<PublicTournament />} />
+              <Route path="/torneios/:tournamentId/imprimir" element={<PrintTournament />} />
 
               {/* Legacy redirects (Bolão → Pickleball) */}
               <Route path="/aviso-jogos" element={<Navigate to="/conduta" replace />} />

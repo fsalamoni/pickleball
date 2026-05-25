@@ -26,8 +26,8 @@ service cloud.firestore {
 
     // ---- Tournaments -----------------------------------------------------
     match /tournaments/{tid} {
-      // Qualquer um autenticado pode descobrir torneios por código de convite.
-      allow read: if isAuthed();
+      // Leitura pública para visão de espectador (/p/:id).
+      allow read: if true;
       allow create: if isAuthed() && request.resource.data.creator_uid == request.auth.uid;
       allow update: if isPlatformAdmin() || isTournamentAdmin(tid)
         || (isAuthed() && resource.data.creator_uid == request.auth.uid);
@@ -47,14 +47,15 @@ service cloud.firestore {
     }
 
     match /tournament_modalities/{mid} {
-      allow read: if isAuthed();
+      allow read: if true;
       allow create, update, delete: if isPlatformAdmin()
         || isTournamentAdmin(request.resource.data.tournament_id)
         || isTournamentAdmin(resource.data.tournament_id);
     }
 
     match /tournament_registrations/{rid} {
-      allow read: if isAuthed();
+      // Inscritos são públicos para o quadro do torneio.
+      allow read: if true;
       // Próprio jogador inscreve-se, OU admin do torneio inscreve.
       allow create: if isAuthed()
         && (request.resource.data.created_by == request.auth.uid
@@ -67,22 +68,29 @@ service cloud.firestore {
     }
 
     match /tournament_matches/{mid} {
-      allow read: if isAuthed();
+      allow read: if true;
       allow create, update, delete: if isPlatformAdmin()
         || isTournamentAdmin(request.resource.data.tournament_id)
         || isTournamentAdmin(resource.data.tournament_id);
     }
 
     match /tournament_groups/{gid} {
-      allow read: if isAuthed();
+      allow read: if true;
       allow create, update, delete: if isPlatformAdmin()
         || isTournamentAdmin(request.resource.data.tournament_id)
         || isTournamentAdmin(resource.data.tournament_id);
     }
 
     match /tournament_rankings/{rid} {
-      allow read: if isAuthed();
+      allow read: if true;
       allow write: if isPlatformAdmin()
+        || isTournamentAdmin(request.resource.data.tournament_id)
+        || isTournamentAdmin(resource.data.tournament_id);
+    }
+
+    match /tournament_courts/{cid} {
+      allow read: if true;
+      allow create, update, delete: if isPlatformAdmin()
         || isTournamentAdmin(request.resource.data.tournament_id)
         || isTournamentAdmin(resource.data.tournament_id);
     }

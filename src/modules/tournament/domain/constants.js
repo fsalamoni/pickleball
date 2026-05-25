@@ -20,16 +20,20 @@ export const MODALITY_FORMAT_LABELS = Object.freeze({
 
 /** Estrutura de fase do torneio. */
 export const TOURNAMENT_STAGE_TYPE = Object.freeze({
-  ROUND_ROBIN: 'round_robin', // pontos corridos (todos contra todos)
-  GROUPS: 'groups',           // grupos seguidos de classificação
-  KNOCKOUT: 'knockout',       // chaves (mata-mata)
-  AMERICANO: 'americano',     // formato americano (rotação)
+  ROUND_ROBIN: 'round_robin',         // pontos corridos (todos contra todos)
+  GROUPS: 'groups',                   // grupos seguidos de classificação
+  KNOCKOUT: 'knockout',               // chaves (mata-mata)
+  DOUBLE_KNOCKOUT: 'double_knockout', // dupla eliminação (winners + losers brackets)
+  SWISS: 'swiss',                     // sistema suíço (pareamento por pontuação)
+  AMERICANO: 'americano',             // formato americano (rotação)
 });
 
 export const TOURNAMENT_STAGE_TYPE_LABELS = Object.freeze({
   [TOURNAMENT_STAGE_TYPE.ROUND_ROBIN]: 'Pontos corridos',
   [TOURNAMENT_STAGE_TYPE.GROUPS]: 'Fase de grupos',
   [TOURNAMENT_STAGE_TYPE.KNOCKOUT]: 'Chaves (mata-mata)',
+  [TOURNAMENT_STAGE_TYPE.DOUBLE_KNOCKOUT]: 'Dupla eliminação',
+  [TOURNAMENT_STAGE_TYPE.SWISS]: 'Sistema suíço',
   [TOURNAMENT_STAGE_TYPE.AMERICANO]: 'Americana (rotação)',
 });
 
@@ -129,15 +133,19 @@ export const TOURNAMENT_STATUS_LABELS = Object.freeze({
 export const REGISTRATION_STATUS = Object.freeze({
   PENDING_PAYMENT: 'pending_payment',
   CONFIRMED: 'confirmed',
+  CHECKED_IN: 'checked_in',
   WAITLIST: 'waitlist',
   CANCELLED: 'cancelled',
+  WITHDRAWN: 'withdrawn',
 });
 
 export const REGISTRATION_STATUS_LABELS = Object.freeze({
   [REGISTRATION_STATUS.PENDING_PAYMENT]: 'Pagamento pendente',
   [REGISTRATION_STATUS.CONFIRMED]: 'Confirmada',
+  [REGISTRATION_STATUS.CHECKED_IN]: 'Check-in feito',
   [REGISTRATION_STATUS.WAITLIST]: 'Lista de espera',
   [REGISTRATION_STATUS.CANCELLED]: 'Cancelada',
+  [REGISTRATION_STATUS.WITHDRAWN]: 'Desistência (WO)',
 });
 
 /** Status de um jogo. */
@@ -165,6 +173,40 @@ export const TOURNAMENT_ADMIN_ROLE = Object.freeze({
 
 /** Capacidade máxima por modalidade. Requisito do produto: até 500 inscritos. */
 export const MAX_REGISTRATIONS_PER_MODALITY = 500;
+
+/** Status de uma quadra. */
+export const COURT_STATUS = Object.freeze({
+  AVAILABLE: 'available',
+  IN_USE: 'in_use',
+  MAINTENANCE: 'maintenance',
+  CLOSED: 'closed',
+});
+
+export const COURT_STATUS_LABELS = Object.freeze({
+  [COURT_STATUS.AVAILABLE]: 'Disponível',
+  [COURT_STATUS.IN_USE]: 'Em uso',
+  [COURT_STATUS.MAINTENANCE]: 'Manutenção',
+  [COURT_STATUS.CLOSED]: 'Fechada',
+});
+
+/** Templates de torneio pré-configurados. */
+export const TOURNAMENT_TEMPLATE = Object.freeze({
+  ROUND_ROBIN_SIMPLE: 'round_robin_simple',
+  GROUPS_THEN_KO: 'groups_then_ko',
+  SINGLE_KO: 'single_ko',
+  DOUBLE_KO: 'double_ko',
+  SWISS_THEN_KO: 'swiss_then_ko',
+  AMERICANO_OPEN: 'americano_open',
+});
+
+export const TOURNAMENT_TEMPLATE_LABELS = Object.freeze({
+  [TOURNAMENT_TEMPLATE.ROUND_ROBIN_SIMPLE]: 'Pontos corridos (simples)',
+  [TOURNAMENT_TEMPLATE.GROUPS_THEN_KO]: 'Grupos + mata-mata',
+  [TOURNAMENT_TEMPLATE.SINGLE_KO]: 'Eliminação simples',
+  [TOURNAMENT_TEMPLATE.DOUBLE_KO]: 'Dupla eliminação',
+  [TOURNAMENT_TEMPLATE.SWISS_THEN_KO]: 'Suíço + mata-mata',
+  [TOURNAMENT_TEMPLATE.AMERICANO_OPEN]: 'Americana aberta',
+});
 
 /** Códigos USAP por nível, úteis para comunicação cruzada. */
 export const SKILL_LEVEL_USAP_RANGE = Object.freeze({

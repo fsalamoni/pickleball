@@ -8,10 +8,14 @@ Plataforma web para criação e administração de torneios amadores de **pickle
 - 📋 **Modalidades múltiplas** por torneio com níveis (iniciante → elite), categorias por gênero e idade
 - 📏 **Regras configuráveis**: CBP ou USAP, jogos de 11/15/21 pontos, 1+ sets
 - 🎲 **Sorteio automático** de grupos e chaves (com seed reproduzível)
+- 🪜 **Formatos avançados de fase**: pontos corridos, grupos, mata-mata (single), **dupla eliminação** com bracket reset e **sistema suíço** com pareamento por pontuação
+- 📅 **Agendamento por quadras** com slots de tempo e descanso mínimo entre jogos
 - 📊 **Ranking ao vivo** adaptado ao formato (pontos corridos, grupos, mata-mata, americana)
 - 👥 **Admins compartilhados** por torneio sem afetar o admin geral da plataforma
 - 📖 **Páginas educativas**: regras (CBP/USAP) e nivelamento (CBPE/USAP) com formulário auto-avaliativo
-- 🎫 Até **500 inscritos por modalidade**, taxa de inscrição opcional
+- 🎫 Até **500 inscritos por modalidade**, taxa de inscrição opcional, check-in de jogadores
+- 👀 **Visão pública** (`/p/:id`) para espectadores, sem login, com atualização automática
+- 🖨️ **Versão para impressão** (`/torneios/:id/imprimir`) das chaves e classificação
 - 🔐 Login com **Google** (Firebase Auth) e auditoria de ações administrativas
 
 ## Stack
