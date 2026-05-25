@@ -1,0 +1,12 @@
+{
+  "projects": {
+    "default": "hocapp-44760"
+  },
+  "targets": {
+    "hocapp-44760": {
+      "hosting": {
+        "pickleball": ["pickleball"]
+      }
+    }
+  }
+}

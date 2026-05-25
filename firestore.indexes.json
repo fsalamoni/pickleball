@@ -1,0 +1,62 @@
+{
+  "indexes": [
+    {
+      "collectionGroup": "tournaments",
+      "queryScope": "COLLECTION",
+      "fields": [
+        { "fieldPath": "creator_uid", "order": "ASCENDING" },
+        { "fieldPath": "created_at", "order": "DESCENDING" }
+      ]
+    },
+    {
+      "collectionGroup": "tournament_admins",
+      "queryScope": "COLLECTION",
+      "fields": [
+        { "fieldPath": "user_id", "order": "ASCENDING" },
+        { "fieldPath": "created_at", "order": "DESCENDING" }
+      ]
+    },
+    {
+      "collectionGroup": "tournament_registrations",
+      "queryScope": "COLLECTION",
+      "fields": [
+        { "fieldPath": "tournament_id", "order": "ASCENDING" },
+        { "fieldPath": "created_at", "order": "ASCENDING" }
+      ]
+    },
+    {
+      "collectionGroup": "tournament_registrations",
+      "queryScope": "COLLECTION",
+      "fields": [
+        { "fieldPath": "modality_id", "order": "ASCENDING" },
+        { "fieldPath": "created_at", "order": "ASCENDING" }
+      ]
+    },
+    {
+      "collectionGroup": "tournament_matches",
+      "queryScope": "COLLECTION",
+      "fields": [
+        { "fieldPath": "modality_id", "order": "ASCENDING" },
+        { "fieldPath": "stage_index", "order": "ASCENDING" },
+        { "fieldPath": "round", "order": "ASCENDING" }
+      ]
+    },
+    {
+      "collectionGroup": "tournament_modalities",
+      "queryScope": "COLLECTION",
+      "fields": [
+        { "fieldPath": "tournament_id", "order": "ASCENDING" },
+        { "fieldPath": "created_at", "order": "ASCENDING" }
+      ]
+    },
+    {
+      "collectionGroup": "tournament_courts",
+      "queryScope": "COLLECTION",
+      "fields": [
+        { "fieldPath": "tournament_id", "order": "ASCENDING" },
+        { "fieldPath": "order", "order": "ASCENDING" }
+      ]
+    }
+  ],
+  "fieldOverrides": []
+}

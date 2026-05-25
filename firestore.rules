@@ -1,0 +1,112 @@
+rules_version = '2';
+service cloud.firestore {
+  match /databases/{database}/documents {
+
+    function isAuthed() { return request.auth != null; }
+    function isOwner(uid) { return isAuthed() && request.auth.uid == uid; }
+    function isPlatformAdmin() {
+      return isAuthed()
+        && exists(/databases/$(database)/documents/users/$(request.auth.uid))
+        && get(/databases/$(database)/documents/users/$(request.auth.uid)).data.role == 'platform_admin';
+    }
+    function isPlatformOwnerEmail() {
+      return isAuthed() && request.auth.token.email == 'fsalamoni@gmail.com';
+    }
+    function isTournamentAdmin(tid) {
+      return isAuthed()
+        && exists(/databases/$(database)/documents/tournament_admins/$(tid + '_' + request.auth.uid));
+    }
+
+    // ---- Users -----------------------------------------------------------
+    match /users/{userId} {
+      allow read: if isOwner(userId) || isPlatformAdmin();
+      allow create, update: if isOwner(userId);
+      allow delete: if isPlatformAdmin();
+    }
+
+    // ---- Tournaments -----------------------------------------------------
+    match /tournaments/{tid} {
+      // Leitura pública para visão de espectador (/p/:id).
+      allow read: if true;
+      allow create: if isAuthed() && request.resource.data.creator_uid == request.auth.uid;
+      allow update: if isPlatformAdmin() || isTournamentAdmin(tid)
+        || (isAuthed() && resource.data.creator_uid == request.auth.uid);
+      allow delete: if isPlatformAdmin()
+        || (isAuthed() && resource.data.creator_uid == request.auth.uid);
+    }
+
+    match /tournament_admins/{docId} {
+      allow read: if isAuthed();
+      // Owner cria o registro inicial dele próprio durante createTournament.
+      allow create: if isAuthed()
+        && (request.resource.data.user_id == request.auth.uid
+            || isTournamentAdmin(request.resource.data.tournament_id)
+            || isPlatformAdmin());
+      allow update, delete: if isPlatformAdmin()
+        || isTournamentAdmin(resource.data.tournament_id);
+    }
+
+    match /tournament_modalities/{mid} {
+      allow read: if true;
+      allow create, update, delete: if isPlatformAdmin()
+        || isTournamentAdmin(request.resource.data.tournament_id)
+        || isTournamentAdmin(resource.data.tournament_id);
+    }
+
+    match /tournament_registrations/{rid} {
+      // Inscritos são públicos para o quadro do torneio.
+      allow read: if true;
+      // Próprio jogador inscreve-se, OU admin do torneio inscreve.
+      allow create: if isAuthed()
+        && (request.resource.data.created_by == request.auth.uid
+            || isTournamentAdmin(request.resource.data.tournament_id)
+            || isPlatformAdmin());
+      allow update: if isPlatformAdmin()
+        || isTournamentAdmin(resource.data.tournament_id)
+        || (isAuthed() && resource.data.created_by == request.auth.uid);
+      allow delete: if isPlatformAdmin() || isTournamentAdmin(resource.data.tournament_id);
+    }
+
+    match /tournament_matches/{mid} {
+      allow read: if true;
+      allow create, update, delete: if isPlatformAdmin()
+        || isTournamentAdmin(request.resource.data.tournament_id)
+        || isTournamentAdmin(resource.data.tournament_id);
+    }
+
+    match /tournament_groups/{gid} {
+      allow read: if true;
+      allow create, update, delete: if isPlatformAdmin()
+        || isTournamentAdmin(request.resource.data.tournament_id)
+        || isTournamentAdmin(resource.data.tournament_id);
+    }
+
+    match /tournament_rankings/{rid} {
+      allow read: if true;
+      allow write: if isPlatformAdmin()
+        || isTournamentAdmin(request.resource.data.tournament_id)
+        || isTournamentAdmin(resource.data.tournament_id);
+    }
+
+    match /tournament_courts/{cid} {
+      allow read: if true;
+      allow create, update, delete: if isPlatformAdmin()
+        || isTournamentAdmin(request.resource.data.tournament_id)
+        || isTournamentAdmin(resource.data.tournament_id);
+    }
+
+    // ---- Notifications ---------------------------------------------------
+    match /notifications/{nid} {
+      allow read, update: if isAuthed() && resource.data.user_id == request.auth.uid;
+      allow create: if isAuthed();
+      allow delete: if isPlatformAdmin();
+    }
+
+    // ---- Audit logs (read by platform admin only) ------------------------
+    match /audit_logs/{lid} {
+      allow read: if isPlatformAdmin();
+      allow create: if isAuthed();
+      allow update, delete: if false;
+    }
+  }
+}
