@@ -1,6 +1,6 @@
 import React from 'react';
 import { Card, CardContent } from '@/components/ui/card';
-import { Trophy, Info } from 'lucide-react';
+import { Trophy, Info, Medal } from 'lucide-react';
 import { useModalities, useModalityRanking } from '@/modules/tournament/hooks/useTournament';
 
 export default function TournamentRankingTab({ tournament }) {
@@ -34,6 +34,28 @@ export default function TournamentRankingTab({ tournament }) {
   );
 }
 
+const MEDAL_BY_POSITION = {
+  1: { color: 'text-amber-500', label: 'Ouro' },
+  2: { color: 'text-slate-400', label: 'Prata' },
+  3: { color: 'text-amber-700', label: 'Bronze' },
+};
+
+const ROW_TONE_BY_POSITION = {
+  1: 'bg-amber-50/70 hover:bg-amber-100/70',
+  2: 'bg-slate-50/70 hover:bg-slate-100/70',
+  3: 'bg-orange-50/60 hover:bg-orange-100/60',
+};
+
+function PositionCell({ position }) {
+  const medal = MEDAL_BY_POSITION[position];
+  return (
+    <span className="inline-flex items-center gap-1 font-bold tabular-nums">
+      {medal && <Medal className={`w-4 h-4 ${medal.color}`} aria-label={medal.label} />}
+      {position}
+    </span>
+  );
+}
+
 function ModalityRankingBlock({ modality }) {
   const { data: ranking = [], isLoading } = useModalityRanking(modality.id);
 
@@ -50,7 +72,7 @@ function ModalityRankingBlock({ modality }) {
         ) : (
           <div className="mt-3 arena-table-wrap">
             <table className="w-full text-sm">
-              <thead className="bg-slate-50">
+              <thead className="bg-slate-50 sticky top-0 z-10">
                 <tr className="text-left">
                   <th className="px-3 py-2">Pos.</th>
                   <th className="px-3 py-2">Participante</th>
@@ -66,9 +88,10 @@ function ModalityRankingBlock({ modality }) {
               <tbody>
                 {ranking.map((r) => {
                   const balance = (r.points_for || 0) - (r.points_against || 0);
+                  const tone = ROW_TONE_BY_POSITION[r.position] || '';
                   return (
-                    <tr key={r.participant_id} className="border-t">
-                      <td className="px-3 py-2 font-bold">{r.position}</td>
+                    <tr key={r.participant_id} className={`border-t ${tone}`}>
+                      <td className="px-3 py-2"><PositionCell position={r.position} /></td>
                       <td className="px-3 py-2">{r.label}</td>
                       <td className="px-3 py-2 text-center">{r.played}</td>
                       <td className="px-3 py-2 text-center font-semibold">{r.wins}</td>

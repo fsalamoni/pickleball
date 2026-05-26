@@ -13,6 +13,7 @@ import {
 } from '@/components/ui/dialog';
 import { Plus, Trash2 } from 'lucide-react';
 import { toast } from 'sonner';
+import { ConfirmDialog } from '@/components/ui/confirm-dialog';
 import {
   useModalities,
   useCreateModality,
@@ -52,6 +53,7 @@ export default function TournamentModalitiesTab({ tournament, isAdmin }) {
   const deleteMutation = useDeleteModality(tournament.id);
   const [open, setOpen] = useState(false);
   const [form, setForm] = useState(emptyForm);
+  const [deleteTarget, setDeleteTarget] = useState(null);
 
   function set(field, value) {
     setForm((f) => ({ ...f, [field]: value }));
@@ -87,10 +89,10 @@ export default function TournamentModalitiesTab({ tournament, isAdmin }) {
   }
 
   async function handleDelete(id) {
-    if (!confirm('Excluir esta modalidade? Os inscritos e jogos associados ficarão órfãos.')) return;
     try {
       await deleteMutation.mutateAsync(id);
       toast.success('Modalidade excluída.');
+      setDeleteTarget(null);
     } catch (err) {
       toast.error(err.message);
     }
@@ -135,7 +137,7 @@ export default function TournamentModalitiesTab({ tournament, isAdmin }) {
                     </div>
                   </div>
                   {isAdmin && (
-                    <Button variant="ghost" size="icon" onClick={() => handleDelete(m.id)}>
+                    <Button variant="ghost" size="icon" title="Excluir modalidade" onClick={() => setDeleteTarget(m)}>
                       <Trash2 className="w-4 h-4 text-red-600" />
                     </Button>
                   )}
@@ -145,6 +147,17 @@ export default function TournamentModalitiesTab({ tournament, isAdmin }) {
           ))}
         </div>
       )}
+
+      <ConfirmDialog
+        open={Boolean(deleteTarget)}
+        onOpenChange={(v) => !v && setDeleteTarget(null)}
+        title={`Excluir modalidade "${deleteTarget?.name}"?`}
+        description="Os inscritos e os jogos associados continuarão registrados, mas ficarão órfãos — sem modalidade pai. Esta ação não pode ser desfeita."
+        confirmLabel="Excluir modalidade"
+        destructive
+        loading={deleteMutation.isPending}
+        onConfirm={() => deleteTarget && handleDelete(deleteTarget.id)}
+      />
 
       <Dialog open={open} onOpenChange={setOpen}>
         <DialogContent className="max-w-2xl">

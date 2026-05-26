@@ -3,8 +3,9 @@ import { useParams, Link } from 'react-router-dom';
 import { useQuery } from '@tanstack/react-query';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Badge } from '@/components/ui/badge';
+import { Button } from '@/components/ui/button';
 import { Skeleton } from '@/components/ui/skeleton';
-import { Trophy, MapPin, Calendar, Hash, Eye, Printer } from 'lucide-react';
+import { Trophy, MapPin, Calendar, Hash, Eye, Printer, Share2, Copy, Check } from 'lucide-react';
 import { getTournament } from '@/modules/tournament/services/tournamentService';
 import { listModalities } from '@/modules/tournament/services/modalityService';
 import { listMatches } from '@/modules/tournament/services/matchService';
@@ -15,6 +16,7 @@ import {
   MATCH_STATUS_LABELS,
   MODALITY_FORMAT_LABELS,
 } from '@/modules/tournament/domain/constants';
+import { useClipboard } from '@/core/lib/useClipboard';
 
 /**
  * Página pública (sem autenticação) de visualização ao vivo de um torneio.
@@ -23,6 +25,21 @@ import {
  */
 export default function PublicTournament() {
   const { tournamentId } = useParams();
+  const { copy, copied } = useClipboard();
+  const publicUrl =
+    typeof window !== 'undefined' ? `${window.location.origin}/p/${tournamentId}` : '';
+
+  async function handleShare() {
+    if (typeof navigator !== 'undefined' && navigator.share) {
+      try {
+        await navigator.share({ title: 'Torneio Pickleball', url: publicUrl });
+        return;
+      } catch {
+        // usuário cancelou ou share não disponível → cai no copy
+      }
+    }
+    copy(publicUrl, 'Link público copiado!');
+  }
 
   const { data: tournament, isLoading: loadingT } = useQuery({
     queryKey: ['public', 'tournament', tournamentId],
@@ -60,13 +77,23 @@ export default function PublicTournament() {
   return (
     <div className="min-h-screen bg-gradient-to-b from-emerald-50/50 to-white">
       <header className="border-b bg-white/80 backdrop-blur sticky top-0 z-10">
-        <div className="max-w-5xl mx-auto px-4 py-3 flex items-center justify-between">
+        <div className="max-w-5xl mx-auto px-4 py-3 flex items-center justify-between gap-2">
           <Link to="/" className="flex items-center gap-2 font-bold text-emerald-700">
             <Trophy className="w-5 h-5" /> Pickleball
           </Link>
-          <Badge variant="success" className="text-xs">
-            <Eye className="w-3 h-3 mr-1" /> Visão pública
-          </Badge>
+          <div className="flex items-center gap-2 flex-wrap">
+            <Button size="sm" variant="outline" onClick={handleShare}>
+              {copied ? <Check className="w-4 h-4 text-emerald-600" /> : <Share2 className="w-4 h-4" />}
+              <span className="ml-1 hidden sm:inline">Compartilhar</span>
+            </Button>
+            <Button size="sm" variant="outline" onClick={() => copy(publicUrl, 'Link copiado!')}>
+              <Copy className="w-4 h-4" />
+              <span className="ml-1 hidden sm:inline">Copiar link</span>
+            </Button>
+            <Badge variant="success" className="text-xs">
+              <Eye className="w-3 h-3 mr-1" /> Visão pública
+            </Badge>
+          </div>
         </div>
       </header>
 

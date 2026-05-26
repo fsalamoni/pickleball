@@ -12,13 +12,14 @@ import {
   DialogFooter,
 } from '@/components/ui/dialog';
 import { toast } from 'sonner';
+import { Trophy } from 'lucide-react';
 import {
   useModalities,
   useMatches,
   useRecordMatchResult,
   useRegistrations,
 } from '@/modules/tournament/hooks/useTournament';
-import { MATCH_STATUS_LABELS } from '@/modules/tournament/domain/constants';
+import { MATCH_STATUS, MATCH_STATUS_LABELS } from '@/modules/tournament/domain/constants';
 import { normalizeScoringConfig } from '@/modules/tournament/domain/scoring';
 
 export default function TournamentMatchesTab({ tournament, isAdmin }) {
@@ -82,28 +83,39 @@ function ModalityMatchesBlock({ tournament, modality, isAdmin }) {
                 {matches.map((m) => {
                   const sideA = m.side_a_ids?.map((id) => labelById.get(id) || id).join(' + ') || m.side_a;
                   const sideB = m.side_b_ids?.map((id) => labelById.get(id) || id).join(' + ') || m.side_b;
+                  const finished = m.status === MATCH_STATUS.FINISHED || m.status === MATCH_STATUS.WALKOVER;
+                  const winA = finished && m.winner_side === 'a';
+                  const winB = finished && m.winner_side === 'b';
                   return (
                     <tr key={m.id} className="border-t">
                       {matches.some((mm) => mm.group) && <td className="px-3 py-2">{m.group || '—'}</td>}
                       <td className="px-3 py-2">{m.round}</td>
                       <td className="px-3 py-2">
-                        <div className="font-medium">{sideA}</div>
-                        <div className="text-xs text-slate-500">vs</div>
-                        <div className="font-medium">{sideB}</div>
+                        <div className={`flex items-center gap-1 ${winA ? 'font-bold text-emerald-700' : 'font-medium'}`}>
+                          {winA && <Trophy className="w-3.5 h-3.5 text-emerald-600" aria-label="Vencedor" />}
+                          <span>{sideA}</span>
+                        </div>
+                        <div className="text-xs text-slate-400">vs</div>
+                        <div className={`flex items-center gap-1 ${winB ? 'font-bold text-emerald-700' : 'font-medium'}`}>
+                          {winB && <Trophy className="w-3.5 h-3.5 text-emerald-600" aria-label="Vencedor" />}
+                          <span>{sideB}</span>
+                        </div>
                       </td>
-                      <td className="px-3 py-2">
+                      <td className="px-3 py-2 tabular-nums">
                         {(m.games || []).length === 0 ? '—' : m.games.map((g, i) => (
                           <span key={i} className="mr-2">{g.a}-{g.b}</span>
                         ))}
                       </td>
                       <td className="px-3 py-2">
-                        <Badge variant={m.status === 'finished' ? 'success' : 'secondary'}>
+                        <Badge variant={finished ? 'success' : 'secondary'}>
                           {MATCH_STATUS_LABELS[m.status] || m.status}
                         </Badge>
                       </td>
                       {isAdmin && (
                         <td className="px-3 py-2 text-right">
-                          <Button size="sm" variant="outline" onClick={() => setOpenMatchId(m.id)}>Lançar</Button>
+                          <Button size="sm" variant="outline" onClick={() => setOpenMatchId(m.id)}>
+                            {finished ? 'Editar' : 'Lançar'}
+                          </Button>
                         </td>
                       )}
                     </tr>

@@ -1,6 +1,6 @@
 import React, { useMemo, useState } from 'react';
 import { Link } from 'react-router-dom';
-import { Globe, Trophy, MapPin, Hash, Calendar, Search, Users } from 'lucide-react';
+import { Globe, Trophy, MapPin, Hash, Calendar, Search, Users, X } from 'lucide-react';
 import { Input } from '@/components/ui/input';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent } from '@/components/ui/card';
@@ -11,6 +11,35 @@ import {
   TOURNAMENT_STATUS,
   TOURNAMENT_STATUS_LABELS,
 } from '@/modules/tournament/domain/constants';
+
+const STATUS_TONE = {
+  [TOURNAMENT_STATUS.IN_PROGRESS]: 'bg-blue-100 text-blue-900 border-blue-200',
+  [TOURNAMENT_STATUS.REGISTRATIONS_OPEN]: 'bg-emerald-100 text-emerald-800 border-emerald-200',
+  [TOURNAMENT_STATUS.REGISTRATIONS_CLOSED]: 'bg-amber-100 text-amber-900 border-amber-200',
+  [TOURNAMENT_STATUS.DRAFT]: 'bg-slate-100 text-slate-700 border-slate-200',
+  [TOURNAMENT_STATUS.FINISHED]: 'bg-slate-200 text-slate-700 border-slate-300',
+  [TOURNAMENT_STATUS.CANCELLED]: 'bg-red-100 text-red-800 border-red-200',
+};
+
+function formatStartEnd(starts_at, ends_at) {
+  function parse(value) {
+    if (!value) return null;
+    try {
+      const d = typeof value === 'string'
+        ? new Date(`${value}T00:00:00`)
+        : value?.toDate ? value.toDate() : new Date(value);
+      return Number.isNaN(d.getTime()) ? null : d;
+    } catch {
+      return null;
+    }
+  }
+  const a = parse(starts_at);
+  const b = parse(ends_at);
+  if (!a && !b) return null;
+  const fmt = (d) => d.toLocaleDateString('pt-BR', { day: '2-digit', month: 'short' });
+  if (a && b) return a.toDateString() === b.toDateString() ? fmt(a) : `${fmt(a)} – ${fmt(b)}`;
+  return fmt(a || b);
+}
 
 const OPEN_STATUSES = new Set([
   TOURNAMENT_STATUS.REGISTRATIONS_OPEN,
@@ -87,8 +116,18 @@ export default function PublicTournamentsList() {
               value={search}
               onChange={(e) => setSearch(e.target.value)}
               placeholder="Buscar por nome, cidade, local ou descrição"
-              className="pl-9"
+              className="pl-9 pr-9"
             />
+            {search && (
+              <button
+                type="button"
+                onClick={() => setSearch('')}
+                aria-label="Limpar busca"
+                className="absolute right-3 top-1/2 -translate-y-1/2 text-slate-400 hover:text-slate-700"
+              >
+                <X className="w-4 h-4" />
+              </button>
+            )}
           </div>
           <select
             value={statusFilter}
@@ -130,42 +169,48 @@ export default function PublicTournamentsList() {
         </Card>
       ) : (
         <div className="grid md:grid-cols-2 gap-4">
-          {filtered.map((t) => (
-            <Link key={t.id} to={`/torneios/${t.id}`}>
-              <Card className="hover:border-emerald-400 transition-colors h-full">
-                <CardContent className="p-5">
-                  <div className="flex items-start justify-between gap-3">
-                    <div className="min-w-0">
-                      <h3 className="font-semibold text-slate-900 flex items-center gap-2">
-                        <Trophy className="w-4 h-4 text-emerald-600 shrink-0" />
-                        <span className="truncate">{t.name}</span>
-                      </h3>
-                      <p className="text-xs text-slate-500 mt-1 flex items-center gap-1">
-                        <MapPin className="w-3 h-3" />
-                        {t.city ? `${t.city}${t.state ? ' / ' + t.state : ''}` : 'Local não informado'}
-                      </p>
-                    </div>
-                    <Badge variant="secondary" className="shrink-0">Público</Badge>
-                  </div>
-                  {t.description && (
-                    <p className="text-xs text-slate-600 mt-2 line-clamp-2">{t.description}</p>
-                  )}
-                  <div className="mt-3 flex items-center gap-3 text-xs text-slate-600 flex-wrap">
-                    <span className="inline-flex items-center gap-1">
-                      <Calendar className="w-3 h-3" />
-                      {TOURNAMENT_STATUS_LABELS[t.status] || t.status}
-                    </span>
-                    {t.invite_code && (
-                      <span className="inline-flex items-center gap-1">
-                        <Hash className="w-3 h-3" />
-                        {t.invite_code}
+          {filtered.map((t) => {
+            const dateRange = formatStartEnd(t.starts_at, t.ends_at);
+            const tone = STATUS_TONE[t.status] || 'bg-slate-100 text-slate-700 border-slate-200';
+            return (
+              <Link key={t.id} to={`/torneios/${t.id}`}>
+                <Card className="hover:border-emerald-400 transition-colors h-full">
+                  <CardContent className="p-5">
+                    <div className="flex items-start justify-between gap-3">
+                      <div className="min-w-0">
+                        <h3 className="font-semibold text-slate-900 flex items-center gap-2">
+                          <Trophy className="w-4 h-4 text-emerald-600 shrink-0" />
+                          <span className="truncate">{t.name}</span>
+                        </h3>
+                        <p className="text-xs text-slate-500 mt-1 flex items-center gap-1">
+                          <MapPin className="w-3 h-3" />
+                          {t.city ? `${t.city}${t.state ? ' / ' + t.state : ''}` : 'Local não informado'}
+                        </p>
+                      </div>
+                      <span className={`inline-flex shrink-0 items-center gap-1 px-2 py-0.5 rounded-full border text-[11px] font-medium ${tone}`}>
+                        {TOURNAMENT_STATUS_LABELS[t.status] || t.status}
                       </span>
+                    </div>
+                    {t.description && (
+                      <p className="text-xs text-slate-600 mt-2 line-clamp-2">{t.description}</p>
                     )}
-                  </div>
-                </CardContent>
-              </Card>
-            </Link>
-          ))}
+                    <div className="mt-3 flex items-center gap-3 text-xs text-slate-600 flex-wrap">
+                      {dateRange && (
+                        <span className="inline-flex items-center gap-1">
+                          <Calendar className="w-3 h-3" /> {dateRange}
+                        </span>
+                      )}
+                      {t.invite_code && (
+                        <span className="inline-flex items-center gap-1">
+                          <Hash className="w-3 h-3" /> {t.invite_code}
+                        </span>
+                      )}
+                    </div>
+                  </CardContent>
+                </Card>
+              </Link>
+            );
+          })}
         </div>
       )}
     </div>

@@ -220,13 +220,24 @@ function ModalityCard({
   );
   const canRegister = isAdmin || isPublic || hasPrivateAccess;
   const slotsFull = confirmed >= modality.max_entries;
+  const pct = Math.max(0, Math.min(100, Math.round((confirmed / Math.max(1, modality.max_entries)) * 100)));
+  const barTone = slotsFull
+    ? 'bg-amber-500'
+    : pct >= 80
+      ? 'bg-amber-400'
+      : 'bg-emerald-500';
 
   return (
-    <Card>
+    <Card className={alreadyRegistered ? 'border-emerald-300 bg-emerald-50/30' : ''}>
       <CardContent className="p-4">
         <div className="flex items-start justify-between gap-3 flex-wrap">
           <div className="min-w-0 flex-1">
-            <h4 className="font-semibold text-slate-900">{modality.name}</h4>
+            <div className="flex items-center gap-2 flex-wrap">
+              <h4 className="font-semibold text-slate-900">{modality.name}</h4>
+              {alreadyRegistered && (
+                <Badge variant="success" className="text-[10px]">Você está inscrito</Badge>
+              )}
+            </div>
             <div className="text-xs text-slate-500 mt-1 flex flex-wrap gap-1">
               <Badge variant="secondary">{MODALITY_FORMAT_LABELS[modality.format]}</Badge>
               <Badge variant="secondary">{SKILL_LEVEL_LABELS[modality.skill_level]}</Badge>
@@ -236,14 +247,26 @@ function ModalityCard({
                 <Badge variant="secondary">{TOURNAMENT_STAGE_TYPE_LABELS[stageType]}</Badge>
               )}
             </div>
-            <div className="text-xs text-slate-600 mt-2 flex flex-wrap items-center gap-x-3 gap-y-1">
-              <span>
-                <strong>Vagas:</strong> {confirmed}/{modality.max_entries}
-              </span>
-              <span className="inline-flex items-center gap-1">
-                <Wallet className="w-3 h-3" />
-                <strong>Taxa:</strong> {fee > 0 ? formatBRL(fee) : 'Gratuita'}
-              </span>
+            <div className="mt-3 max-w-md">
+              <div className="flex items-center justify-between text-xs text-slate-600 mb-1">
+                <span>
+                  <strong>{confirmed}</strong> / {modality.max_entries} inscritos
+                </span>
+                <span className="inline-flex items-center gap-1">
+                  <Wallet className="w-3 h-3" />
+                  {fee > 0 ? formatBRL(fee) : 'Gratuita'}
+                </span>
+              </div>
+              <div className="h-1.5 w-full rounded-full bg-slate-200 overflow-hidden">
+                <div
+                  className={`h-full ${barTone} transition-all duration-300`}
+                  style={{ width: `${pct}%` }}
+                  role="progressbar"
+                  aria-valuenow={confirmed}
+                  aria-valuemin={0}
+                  aria-valuemax={modality.max_entries}
+                />
+              </div>
             </div>
           </div>
           <div className="flex items-center gap-2 flex-wrap">

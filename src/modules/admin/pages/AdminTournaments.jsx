@@ -3,6 +3,7 @@ import { Trophy, Archive, Trash2, ArchiveRestore } from 'lucide-react';
 import { Card, CardContent } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
+import { ConfirmDialog } from '@/components/ui/confirm-dialog';
 import { toast } from 'sonner';
 import {
   listAllTournaments,
@@ -15,6 +16,8 @@ import { TOURNAMENT_STATUS_LABELS } from '@/modules/tournament/domain/constants'
 export default function AdminTournaments() {
   const { user } = useAuth();
   const [tournaments, setTournaments] = useState(null);
+  const [deleteTarget, setDeleteTarget] = useState(null);
+  const [deleting, setDeleting] = useState(false);
 
   async function load() {
     try {
@@ -39,13 +42,16 @@ export default function AdminTournaments() {
   }
 
   async function handleDelete(t) {
-    if (!confirm(`Excluir DEFINITIVAMENTE o torneio "${t.name}" e todos os dados associados?`)) return;
+    setDeleting(true);
     try {
       await deleteTournamentCascading(t.id, user);
       toast.success('Torneio removido.');
+      setDeleteTarget(null);
       load();
     } catch (err) {
       toast.error(err.message);
+    } finally {
+      setDeleting(false);
     }
   }
 
@@ -86,7 +92,7 @@ export default function AdminTournaments() {
                       <Button size="icon" variant="ghost" title={t.archived ? 'Desarquivar' : 'Arquivar'} onClick={() => handleArchive(t)}>
                         {t.archived ? <ArchiveRestore className="w-4 h-4" /> : <Archive className="w-4 h-4" />}
                       </Button>
-                      <Button size="icon" variant="ghost" title="Excluir" onClick={() => handleDelete(t)}>
+                      <Button size="icon" variant="ghost" title="Excluir" onClick={() => setDeleteTarget(t)}>
                         <Trash2 className="w-4 h-4 text-red-600" />
                       </Button>
                     </td>
@@ -97,6 +103,17 @@ export default function AdminTournaments() {
           </CardContent>
         </Card>
       )}
+
+      <ConfirmDialog
+        open={Boolean(deleteTarget)}
+        onOpenChange={(v) => !v && !deleting && setDeleteTarget(null)}
+        title={`Excluir torneio "${deleteTarget?.name}"?`}
+        description="Esta ação remove DEFINITIVAMENTE o torneio e todos os dados associados (modalidades, inscrições, jogos e ranking). Não há como desfazer."
+        confirmLabel="Excluir definitivamente"
+        destructive
+        loading={deleting}
+        onConfirm={() => deleteTarget && handleDelete(deleteTarget)}
+      />
     </div>
   );
 }

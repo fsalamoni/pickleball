@@ -22,6 +22,7 @@ import {
 import { useAuth } from '@/core/lib/FirebaseAuthContext';
 import { useMyTournaments } from '@/modules/tournament/hooks/useTournament';
 import { useNotifications } from '@/modules/notifications/hooks/useNotifications';
+import { TOURNAMENT_STATUS } from '@/modules/tournament/domain/constants';
 import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
 import ProfileCompletionModal from '@/components/ProfileCompletionModal';
@@ -116,6 +117,7 @@ export default function Layout({ children, currentPageName }) {
                       active={activeTournamentId === t.id}
                       onClick={() => setSidebarOpen(false)}
                       badge={t.my_role === 'owner' ? 'Owner' : t.my_role === 'admin' ? 'Admin' : null}
+                      dot={statusDot(t.status)}
                     />
                   ))}
                 </div>
@@ -290,7 +292,25 @@ function pageTitle(name) {
   return map[name] || name || APP_NAME;
 }
 
-function NavItem({ to, icon: Icon, label, active, onClick, badge }) {
+function statusDot(status) {
+  switch (status) {
+    case TOURNAMENT_STATUS.IN_PROGRESS:
+      return { color: 'bg-blue-400', title: 'Em andamento' };
+    case TOURNAMENT_STATUS.REGISTRATIONS_OPEN:
+      return { color: 'bg-emerald-400', title: 'Inscrições abertas' };
+    case TOURNAMENT_STATUS.REGISTRATIONS_CLOSED:
+      return { color: 'bg-amber-400', title: 'Inscrições encerradas' };
+    case TOURNAMENT_STATUS.FINISHED:
+      return { color: 'bg-slate-400', title: 'Encerrado' };
+    case TOURNAMENT_STATUS.CANCELLED:
+      return { color: 'bg-red-400', title: 'Cancelado' };
+    case TOURNAMENT_STATUS.DRAFT:
+    default:
+      return null;
+  }
+}
+
+function NavItem({ to, icon: Icon, label, active, onClick, badge, dot }) {
   return (
     <Link
       to={to}
@@ -304,6 +324,13 @@ function NavItem({ to, icon: Icon, label, active, onClick, badge }) {
     >
       <Icon className="w-4 h-4 shrink-0" />
       <span className="flex-1 truncate">{label}</span>
+      {dot && (
+        <span
+          className={cn('w-2 h-2 rounded-full shrink-0', dot.color)}
+          title={dot.title}
+          aria-label={dot.title}
+        />
+      )}
       {badge && (
         <Badge variant="success" className="text-[10px]">
           {badge}
