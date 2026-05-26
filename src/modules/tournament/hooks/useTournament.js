@@ -264,6 +264,9 @@ export function useMatches(modalityId, stageIndex = 0) {
     queryKey: ['matches', modalityId, stageIndex],
     queryFn: () => listMatches(modalityId, stageIndex),
     enabled: !!modalityId,
+    // Atualização automática: jogadores/admins veem novos resultados sem refresh.
+    refetchInterval: 20000,
+    refetchOnWindowFocus: true,
   });
 }
 
@@ -272,6 +275,8 @@ export function useMatchesByTournament(tournamentId) {
     queryKey: ['matches-tournament', tournamentId],
     queryFn: () => listMatchesByTournament(tournamentId),
     enabled: !!tournamentId,
+    refetchInterval: 20000,
+    refetchOnWindowFocus: true,
   });
 }
 
@@ -316,5 +321,7 @@ export function useModalityRanking(modalityId, stageIndex) {
     queryKey: ['ranking', modalityId, stageIndex ?? 'all'],
     queryFn: () => computeModalityRanking(modalityId, stageIndex),
     enabled: !!modalityId,
+    refetchInterval: 20000,
+    refetchOnWindowFocus: true,
   });
 }

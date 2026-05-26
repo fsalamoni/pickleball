@@ -2,7 +2,15 @@ import React, { useState } from 'react';
 import { Card, CardContent } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
-import { Shuffle } from 'lucide-react';
+import {
+  Dialog,
+  DialogContent,
+  DialogHeader,
+  DialogTitle,
+  DialogFooter,
+  DialogDescription,
+} from '@/components/ui/dialog';
+import { Shuffle, AlertTriangle } from 'lucide-react';
 import { toast } from 'sonner';
 import {
   useModalities,
@@ -37,9 +45,11 @@ function ModalityDrawBlock({ tournament, modality, isAdmin }) {
   const drawMutation = useRunDraw();
   const { data: matches = [] } = useMatches(modality.id, 0);
   const [running, setRunning] = useState(false);
+  const [confirmOpen, setConfirmOpen] = useState(false);
+  const [error, setError] = useState(null);
 
-  async function handleDraw() {
-    if (!confirm(`Sortear a fase "${modality.stages?.[0]?.name}"? Isso irá apagar jogos existentes desta fase.`)) return;
+  async function performDraw() {
+    setError(null);
     setRunning(true);
     try {
       await drawMutation.mutateAsync({
@@ -48,12 +58,18 @@ function ModalityDrawBlock({ tournament, modality, isAdmin }) {
         stageIndex: 0,
       });
       toast.success('Sorteio realizado!');
+      setConfirmOpen(false);
     } catch (err) {
-      toast.error(err.message || 'Falha ao sortear.');
+      // Expor erro também no card para o admin entender o motivo do "não funcionou".
+      const message = err?.message || 'Falha ao sortear.';
+      setError(message);
+      toast.error(message);
     } finally {
       setRunning(false);
     }
   }
+
+  const stageName = modality.stages?.[0]?.name || 'fase 1';
 
   return (
     <Card>
@@ -67,11 +83,20 @@ function ModalityDrawBlock({ tournament, modality, isAdmin }) {
             </p>
           </div>
           {isAdmin && (
-            <Button size="sm" onClick={handleDraw} disabled={running}>
+            <Button size="sm" onClick={() => setConfirmOpen(true)} disabled={running}>
               <Shuffle className="w-4 h-4 mr-1" /> {matches.length > 0 ? 'Re-sortear' : 'Sortear'}
             </Button>
           )}
         </div>
+        {error && (
+          <div className="mt-3 flex items-start gap-2 rounded border border-red-200 bg-red-50 p-2 text-xs text-red-700">
+            <AlertTriangle className="w-4 h-4 mt-0.5 shrink-0" />
+            <div>
+              <div className="font-medium">Não foi possível sortear.</div>
+              <div>{error}</div>
+            </div>
+          </div>
+        )}
         {matches.length > 0 && (
           <div className="mt-3 arena-table-wrap">
             <table className="w-full text-sm">
@@ -101,6 +126,27 @@ function ModalityDrawBlock({ tournament, modality, isAdmin }) {
           </div>
         )}
       </CardContent>
+
+      <Dialog open={confirmOpen} onOpenChange={(o) => !running && setConfirmOpen(o)}>
+        <DialogContent>
+          <DialogHeader>
+            <DialogTitle>Sortear &quot;{stageName}&quot;</DialogTitle>
+            <DialogDescription>
+              {matches.length > 0
+                ? 'Os jogos atuais desta fase serão apagados e novos jogos serão gerados.'
+                : 'Serão gerados os jogos desta fase a partir das inscrições confirmadas.'}
+            </DialogDescription>
+          </DialogHeader>
+          <DialogFooter>
+            <Button variant="outline" onClick={() => setConfirmOpen(false)} disabled={running}>
+              Cancelar
+            </Button>
+            <Button onClick={performDraw} disabled={running}>
+              {running ? 'Sorteando…' : 'Confirmar sorteio'}
+            </Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
     </Card>
   );
 }

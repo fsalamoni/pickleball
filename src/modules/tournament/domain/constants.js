@@ -102,6 +102,22 @@ export const GENDER_CATEGORY_LABELS = Object.freeze({
   [GENDER_CATEGORY.OPEN]: 'Aberto',
 });
 
+/**
+ * Preferência do jogador sobre em qual categoria deseja competir quando o
+ * torneio tem chaves separadas por categoria (ex.: duplas masculinas,
+ * duplas femininas, mistas). Trata-se exclusivamente de uma preferência
+ * competitiva — não está relacionada à identidade de gênero da pessoa.
+ */
+export const COMPETITION_GENDER = Object.freeze({
+  MALE: 'male',
+  FEMALE: 'female',
+});
+
+export const COMPETITION_GENDER_LABELS = Object.freeze({
+  [COMPETITION_GENDER.MALE]: 'Competir na categoria masculina',
+  [COMPETITION_GENDER.FEMALE]: 'Competir na categoria feminina',
+});
+
 /** Faixa etária (CBP). */
 export const AGE_CATEGORY = Object.freeze({
   OPEN: 'open',

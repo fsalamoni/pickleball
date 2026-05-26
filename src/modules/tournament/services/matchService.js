@@ -101,15 +101,21 @@ function normalizeIds(side) {
 }
 
 export async function listMatches(modalityId, stageIndex) {
+  // Apenas `round` é ordenado no servidor para não exigir um índice composto
+  // adicional com `position`. A ordenação fina por `position` é feita no
+  // cliente — quantidades de jogos por fase são pequenas (centenas) e isso
+  // evita falhas silenciosas do botão "Sortear" quando o índice composto
+  // (modality_id, stage_index, round, position) não está provisionado.
   const q = query(
     collection(db, COL),
     where('modality_id', '==', modalityId),
     where('stage_index', '==', Number(stageIndex)),
     orderBy('round', 'asc'),
-    orderBy('position', 'asc'),
   );
   const snap = await getDocs(q);
-  return snap.docs.map((d) => d.data());
+  return snap.docs
+    .map((d) => d.data())
+    .sort((a, b) => (a.round - b.round) || ((a.position || 0) - (b.position || 0)));
 }
 
 export async function listMatchesByTournament(tournamentId) {

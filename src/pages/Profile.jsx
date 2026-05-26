@@ -12,7 +12,7 @@ import { LEVEL_OPTIONS, getLevelByCode } from '@/modules/leveling/data/levels';
 import { calculateAssessment } from '@/modules/leveling/domain/questionnaire';
 import LevelingQuestionnaire from '@/modules/leveling/components/LevelingQuestionnaire';
 import LevelingResultCard from '@/modules/leveling/components/LevelingResultCard';
-import { PICKLEBALL_EXPERIENCE_LABELS } from '@/modules/tournament/domain/constants';
+import { PICKLEBALL_EXPERIENCE_LABELS, COMPETITION_GENDER_LABELS } from '@/modules/tournament/domain/constants';
 
 export default function Profile() {
   const { user, userProfile, updateUserProfile } = useAuth();
@@ -20,6 +20,7 @@ export default function Profile() {
   const [birthDate, setBirthDate] = useState(userProfile?.birth_date || '');
   const [phone, setPhone] = useState(userProfile?.phone || '');
   const [pickleballExperience, setPickleballExperience] = useState(userProfile?.pickleball_experience || '');
+  const [competitionGender, setCompetitionGender] = useState(userProfile?.competition_gender || '');
   const [manualLevel, setManualLevel] = useState(userProfile?.leveling_level || '');
   const [errors, setErrors] = useState({});
   const [busy, setBusy] = useState(false);
@@ -37,6 +38,7 @@ export default function Profile() {
     setBirthDate(userProfile?.birth_date || '');
     setPhone(userProfile?.phone || '');
     setPickleballExperience(userProfile?.pickleball_experience || '');
+    setCompetitionGender(userProfile?.competition_gender || '');
     setManualLevel(userProfile?.leveling_level || '');
     setVisibleResult(userProfile?.leveling_assessment?.result || null);
     setErrors({});
@@ -47,6 +49,7 @@ export default function Profile() {
     userProfile?.birth_date,
     userProfile?.phone,
     userProfile?.pickleball_experience,
+    userProfile?.competition_gender,
     userProfile?.leveling_level,
     userProfile?.leveling_assessment,
   ]);
@@ -67,6 +70,7 @@ export default function Profile() {
         birth_date_at: Timestamp.fromDate(birthDateToBrtDate(birthDate)),
         phone: phone.trim(),
         pickleball_experience: pickleballExperience,
+        competition_gender: competitionGender || null,
       });
       toast.success('Perfil atualizado.');
     } catch (err) {
@@ -235,6 +239,26 @@ export default function Profile() {
               </select>
               {errors.pickleballExperience && <p className="text-xs text-red-600">{errors.pickleballExperience}</p>}
               <p className="text-xs text-slate-500">Usado como informação complementar para organização das categorias.</p>
+            </div>
+            <div className="space-y-2">
+              <Label htmlFor="competition_gender">Categoria em que deseja competir</Label>
+              <select
+                id="competition_gender"
+                value={competitionGender}
+                onChange={(e) => setCompetitionGender(e.target.value)}
+                className="h-10 w-full rounded-md border border-input bg-background px-3 py-2 text-sm ring-offset-background focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2"
+              >
+                <option value="">Não informar (decido na inscrição)</option>
+                {Object.entries(COMPETITION_GENDER_LABELS).map(([value, label]) => (
+                  <option key={value} value={value}>{label}</option>
+                ))}
+              </select>
+              <p className="text-xs text-slate-500">
+                Trata-se exclusivamente de uma preferência competitiva (em qual chave você quer
+                jogar) — não é uma pergunta sobre identidade de gênero. Usada para sugerir
+                automaticamente as modalidades elegíveis (masculino, feminino, dupla mista, etc.)
+                em torneios que tenham categorias separadas.
+              </p>
             </div>
             <div className="flex items-start gap-2 rounded-md border border-amber-300/60 bg-amber-100/80 p-3 text-sm text-amber-950">
               <ShieldCheck className="mt-0.5 h-4 w-4 shrink-0" />

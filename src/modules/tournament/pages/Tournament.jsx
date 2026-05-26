@@ -4,7 +4,7 @@ import { Tabs, TabsList, TabsTrigger, TabsContent } from '@/components/ui/tabs';
 import { Card, CardContent } from '@/components/ui/card';
 import { Badge } from '@/components/ui/badge';
 import { Skeleton } from '@/components/ui/skeleton';
-import { Trophy, MapPin, Calendar, Hash } from 'lucide-react';
+import { Trophy, MapPin, Calendar, Hash, ShieldAlert } from 'lucide-react';
 import { useTournament, useIsTournamentAdmin } from '@/modules/tournament/hooks/useTournament';
 import {
   TOURNAMENT_STATUS_LABELS,
@@ -14,19 +14,18 @@ import {
 import TournamentOverviewTab from '../components/TournamentOverviewTab';
 import TournamentModalitiesTab from '../components/TournamentModalitiesTab';
 import TournamentRegistrationsTab from '../components/TournamentRegistrationsTab';
-import TournamentDrawTab from '../components/TournamentDrawTab';
 import TournamentMatchesTab from '../components/TournamentMatchesTab';
 import TournamentRankingTab from '../components/TournamentRankingTab';
-import TournamentAdminTab from '../components/TournamentAdminTab';
+import TournamentAdminPanel from '../components/TournamentAdminPanel';
 
-const TABS = [
+// Abas visíveis a qualquer participante (admins veem o MESMO conteúdo de
+// jogador nestas abas — ações de gestão ficam exclusivamente na aba "Admin").
+const PLAYER_TABS = [
   { value: 'visao-geral', label: 'Visão geral' },
   { value: 'modalidades', label: 'Modalidades' },
   { value: 'inscritos', label: 'Inscritos' },
-  { value: 'sorteio', label: 'Sorteio' },
   { value: 'jogos', label: 'Jogos' },
   { value: 'ranking', label: 'Ranking' },
-  { value: 'admin', label: 'Admin', adminOnly: true },
 ];
 
 export default function Tournament() {
@@ -60,7 +59,15 @@ export default function Tournament() {
     );
   }
 
-  const availableTabs = TABS.filter((t) => !t.adminOnly || isAdmin);
+  // Redireciona automaticamente abas obsoletas (ex.: /sorteio) para a área correta.
+  if (tab === 'sorteio') {
+    navigate(`/torneios/${tournamentId}/${isAdmin ? 'admin' : 'jogos'}`, { replace: true });
+    return null;
+  }
+  if (tab === 'admin' && !isAdmin) {
+    navigate(`/torneios/${tournamentId}/visao-geral`, { replace: true });
+    return null;
+  }
 
   return (
     <div className="max-w-6xl mx-auto space-y-5">
@@ -105,31 +112,41 @@ export default function Tournament() {
         className="w-full"
       >
         <TabsList className="flex flex-wrap h-auto">
-          {availableTabs.map((t) => (
+          {PLAYER_TABS.map((t) => (
             <TabsTrigger key={t.value} value={t.value}>{t.label}</TabsTrigger>
           ))}
+          {isAdmin && (
+            <TabsTrigger
+              value="admin"
+              // Destaque visual claro de que é área administrativa.
+              className="bg-amber-200/70 text-amber-950 hover:bg-amber-200 data-[state=active]:bg-amber-500 data-[state=active]:text-white data-[state=active]:shadow-sm ml-1"
+            >
+              <ShieldAlert className="w-4 h-4 mr-1" /> Admin
+            </TabsTrigger>
+          )}
         </TabsList>
+
+        {/* Visualização do jogador — admins veem exatamente o mesmo conteúdo aqui.
+            Todas as ações de gestão ficam isoladas na aba "Admin". */}
         <TabsContent value="visao-geral" className="mt-4">
           <TournamentOverviewTab tournament={tournament} isAdmin={isAdmin} />
         </TabsContent>
         <TabsContent value="modalidades" className="mt-4">
-          <TournamentModalitiesTab tournament={tournament} isAdmin={isAdmin} />
+          <TournamentModalitiesTab tournament={tournament} isAdmin={false} />
         </TabsContent>
         <TabsContent value="inscritos" className="mt-4">
-          <TournamentRegistrationsTab tournament={tournament} isAdmin={isAdmin} />
-        </TabsContent>
-        <TabsContent value="sorteio" className="mt-4">
-          <TournamentDrawTab tournament={tournament} isAdmin={isAdmin} />
+          <TournamentRegistrationsTab tournament={tournament} isAdmin={false} />
         </TabsContent>
         <TabsContent value="jogos" className="mt-4">
-          <TournamentMatchesTab tournament={tournament} isAdmin={isAdmin} />
+          <TournamentMatchesTab tournament={tournament} isAdmin={false} />
         </TabsContent>
         <TabsContent value="ranking" className="mt-4">
           <TournamentRankingTab tournament={tournament} />
         </TabsContent>
+
         {isAdmin && (
           <TabsContent value="admin" className="mt-4">
-            <TournamentAdminTab tournament={tournament} />
+            <TournamentAdminPanel tournament={tournament} />
           </TabsContent>
         )}
       </Tabs>

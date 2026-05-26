@@ -48,23 +48,32 @@ function ModalityRankingBlock({ modality }) {
                   <th className="px-3 py-2 text-center">V</th>
                   <th className="px-3 py-2 text-center">D</th>
                   <th className="px-3 py-2 text-center">Sets (G–P)</th>
-                  <th className="px-3 py-2 text-center">Pts (PF–PC)</th>
+                  <th className="px-3 py-2 text-center">PF</th>
+                  <th className="px-3 py-2 text-center">PC</th>
+                  <th className="px-3 py-2 text-center" title="Saldo de pontos (PF − PC) — usado como desempate">Saldo</th>
                   <th className="px-3 py-2 text-right">Pontos</th>
                 </tr>
               </thead>
               <tbody>
-                {ranking.map((r) => (
-                  <tr key={r.participant_id} className="border-t">
-                    <td className="px-3 py-2 font-bold">{r.position}</td>
-                    <td className="px-3 py-2">{r.label}</td>
-                    <td className="px-3 py-2 text-center">{r.played}</td>
-                    <td className="px-3 py-2 text-center">{r.wins}</td>
-                    <td className="px-3 py-2 text-center">{r.losses}</td>
-                    <td className="px-3 py-2 text-center">{r.sets_won}–{r.sets_lost}</td>
-                    <td className="px-3 py-2 text-center">{r.points_for}–{r.points_against}</td>
-                    <td className="px-3 py-2 text-right font-semibold">{r.ranking_points}</td>
-                  </tr>
-                ))}
+                {ranking.map((r) => {
+                  const balance = (r.points_for || 0) - (r.points_against || 0);
+                  return (
+                    <tr key={r.participant_id} className="border-t">
+                      <td className="px-3 py-2 font-bold">{r.position}</td>
+                      <td className="px-3 py-2">{r.label}</td>
+                      <td className="px-3 py-2 text-center">{r.played}</td>
+                      <td className="px-3 py-2 text-center">{r.wins}</td>
+                      <td className="px-3 py-2 text-center">{r.losses}</td>
+                      <td className="px-3 py-2 text-center">{r.sets_won}–{r.sets_lost}</td>
+                      <td className="px-3 py-2 text-center">{r.points_for}</td>
+                      <td className="px-3 py-2 text-center">{r.points_against}</td>
+                      <td className={`px-3 py-2 text-center font-medium ${balance > 0 ? 'text-emerald-700' : balance < 0 ? 'text-red-600' : 'text-slate-600'}`}>
+                        {balance > 0 ? `+${balance}` : balance}
+                      </td>
+                      <td className="px-3 py-2 text-right font-semibold">{r.ranking_points}</td>
+                    </tr>
+                  );
+                })}
               </tbody>
             </table>
           </div>
