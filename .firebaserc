@@ -1,12 +1,5 @@
 {
   "projects": {
     "default": "pickletour"
-  },
-  "targets": {
-    "pickletour": {
-      "hosting": {
-        "pickletour": ["pickletour"]
-      }
-    }
   }
 }

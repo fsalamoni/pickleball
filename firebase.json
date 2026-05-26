@@ -7,7 +7,7 @@
     }
   ],
   "hosting": {
-    "target": "pickletour",
+    "site": "pickletour",
     "public": "dist",
     "ignore": ["firebase.json", "**/.*", "**/node_modules/**"],
     "rewrites": [

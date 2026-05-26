@@ -19,6 +19,7 @@ jobs:
       FIREBASE_PROJECT_ID: ${{ secrets.VITE_FIREBASE_PROJECT_ID }}
       FIRESTORE_DATABASE_ID: pickleball
       FIRESTORE_LOCATION: southamerica-east1
+      HOSTING_SITE_ID: pickletour
       VITE_FIREBASE_API_KEY: ${{ secrets.VITE_FIREBASE_API_KEY }}
       VITE_FIREBASE_AUTH_DOMAIN: ${{ secrets.VITE_FIREBASE_AUTH_DOMAIN }}
       VITE_FIREBASE_PROJECT_ID: ${{ secrets.VITE_FIREBASE_PROJECT_ID }}
@@ -48,16 +49,18 @@ jobs:
             VITE_FIREBASE_MESSAGING_SENDER_ID
             VITE_FIREBASE_APP_ID
           )
+          missing=0
           for var_name in "${required_vars[@]}"; do
             if [ -z "${!var_name}" ]; then
-              echo "::error title=Missing secret::Configure ${var_name} in repository Settings > Secrets and variables > Actions."
-              exit 1
+              echo "::error title=Missing secret::Configure ${var_name} in Settings > Secrets and variables > Actions."
+              missing=1
             fi
           done
           if [ -z "${{ secrets.FIREBASE_SERVICE_ACCOUNT }}" ]; then
-            echo "::error title=Missing secret::Configure FIREBASE_SERVICE_ACCOUNT (JSON of a service account with deploy permissions)."
-            exit 1
+            echo "::error title=Missing secret::Configure FIREBASE_SERVICE_ACCOUNT (full JSON of a service account with deploy permissions)."
+            missing=1
           fi
+          [ "$missing" -eq 0 ] || exit 1
 
       - name: Install dependencies
         run: npm ci
@@ -67,46 +70,186 @@ jobs:
 
       - name: Write service account credentials
         run: |
-          printf '%s' '${{ secrets.FIREBASE_SERVICE_ACCOUNT }}' > "$RUNNER_TEMP/firebase-sa.json"
-          echo "GOOGLE_APPLICATION_CREDENTIALS=$RUNNER_TEMP/firebase-sa.json" >> "$GITHUB_ENV"
+          SA_FILE="$RUNNER_TEMP/firebase-sa.json"
+          printf '%s' '${{ secrets.FIREBASE_SERVICE_ACCOUNT }}' > "$SA_FILE"
+          if ! jq -e . "$SA_FILE" >/dev/null 2>&1; then
+            echo "::error title=Bad service account::FIREBASE_SERVICE_ACCOUNT is not valid JSON. Paste the entire downloaded service-account .json file as the secret value."
+            exit 1
+          fi
+          SA_EMAIL=$(jq -r '.client_email // empty' "$SA_FILE")
+          SA_PROJECT=$(jq -r '.project_id // empty' "$SA_FILE")
+          if [ -z "$SA_EMAIL" ]; then
+            echo "::error title=Bad service account::client_email missing from FIREBASE_SERVICE_ACCOUNT JSON."
+            exit 1
+          fi
+          echo "Service account: $SA_EMAIL"
+          echo "Service account project: $SA_PROJECT"
+          echo "Target Firebase project: $FIREBASE_PROJECT_ID"
+          if [ -n "$SA_PROJECT" ] && [ "$SA_PROJECT" != "$FIREBASE_PROJECT_ID" ]; then
+            echo "::warning title=Project mismatch::Service account belongs to '$SA_PROJECT' but VITE_FIREBASE_PROJECT_ID is '$FIREBASE_PROJECT_ID'. Cross-project deploys only work if the SA has roles on the target project."
+          fi
+          echo "GOOGLE_APPLICATION_CREDENTIALS=$SA_FILE" >> "$GITHUB_ENV"
+          echo "SA_EMAIL=$SA_EMAIL" >> "$GITHUB_ENV"
 
       - name: Ensure Firestore database "pickleball" exists
         run: |
-          set -e
-          if firebase firestore:databases:get "$FIRESTORE_DATABASE_ID" --project "$FIREBASE_PROJECT_ID" >/dev/null 2>&1; then
-            echo "Firestore database '$FIRESTORE_DATABASE_ID' already exists."
-          else
-            echo "Creating Firestore database '$FIRESTORE_DATABASE_ID' in $FIRESTORE_LOCATION..."
-            firebase firestore:databases:create "$FIRESTORE_DATABASE_ID" \
-              --location "$FIRESTORE_LOCATION" \
-              --project "$FIREBASE_PROJECT_ID"
+          set +e
+          GET_OUT=$(firebase firestore:databases:get "$FIRESTORE_DATABASE_ID" \
+            --project "$FIREBASE_PROJECT_ID" 2>&1)
+          GET_RC=$?
+          if [ $GET_RC -eq 0 ]; then
+            echo "Firestore database '$FIRESTORE_DATABASE_ID' already exists. OK."
+            exit 0
           fi
+          echo "Firestore database '$FIRESTORE_DATABASE_ID' not visible (rc=$GET_RC):"
+          echo "$GET_OUT"
+          echo
+          echo "Attempting to create Firestore database '$FIRESTORE_DATABASE_ID' in $FIRESTORE_LOCATION..."
+          CREATE_OUT=$(firebase firestore:databases:create "$FIRESTORE_DATABASE_ID" \
+            --location "$FIRESTORE_LOCATION" \
+            --project "$FIREBASE_PROJECT_ID" 2>&1)
+          CREATE_RC=$?
+          echo "$CREATE_OUT"
+          if [ $CREATE_RC -eq 0 ]; then
+            echo "Created Firestore database '$FIRESTORE_DATABASE_ID'."
+            exit 0
+          fi
+          if echo "$CREATE_OUT" | grep -qiE "already exists|ALREADY_EXISTS"; then
+            echo "Database already exists (concurrent create). OK."
+            exit 0
+          fi
+          if echo "$CREATE_OUT" | grep -qiE "HTTP Error: 403|PERMISSION_DENIED|caller does not have permission"; then
+            cat <<MSG
+::error title=Missing IAM permission for Firestore database create::
+The service account '$SA_EMAIL' lacks permission to create the
+Firestore database '$FIRESTORE_DATABASE_ID' in project '$FIREBASE_PROJECT_ID'.
+
+Fix (choose one):
+
+  A) Grant the role in Google Cloud Console (recommended):
+     https://console.cloud.google.com/iam-admin/iam?project=$FIREBASE_PROJECT_ID
+     Add principal: $SA_EMAIL
+     Role: 'Cloud Datastore Owner' (roles/datastore.owner)
+            -- OR -- 'Firebase Admin' (roles/firebase.admin)
+
+  B) Create the database manually one time:
+     https://console.firebase.google.com/project/$FIREBASE_PROJECT_ID/firestore
+     - Click 'Add database'
+     - Database ID: pickleball
+     - Location: $FIRESTORE_LOCATION
+     - Mode: Native (Standard)
+     Then re-run this workflow.
+MSG
+            exit 1
+          fi
+          echo "::error title=Firestore database create failed::Unhandled error (rc=$CREATE_RC). See log above."
+          exit 1
 
       - name: Ensure Hosting site "pickletour" exists
         run: |
-          set -e
-          if firebase hosting:sites:get pickletour --project "$FIREBASE_PROJECT_ID" >/dev/null 2>&1; then
-            echo "Hosting site 'pickletour' already exists."
-          else
-            echo "Creating hosting site 'pickletour'..."
-            firebase hosting:sites:create pickletour --project "$FIREBASE_PROJECT_ID"
+          set +e
+          GET_OUT=$(firebase hosting:sites:get "$HOSTING_SITE_ID" \
+            --project "$FIREBASE_PROJECT_ID" 2>&1)
+          GET_RC=$?
+          if [ $GET_RC -eq 0 ]; then
+            echo "Hosting site '$HOSTING_SITE_ID' already exists. OK."
+            exit 0
           fi
-          firebase target:apply hosting pickletour pickletour --project "$FIREBASE_PROJECT_ID"
+          echo "Hosting site '$HOSTING_SITE_ID' not visible (rc=$GET_RC):"
+          echo "$GET_OUT"
+          echo
+          echo "Attempting to create hosting site '$HOSTING_SITE_ID'..."
+          CREATE_OUT=$(firebase hosting:sites:create "$HOSTING_SITE_ID" \
+            --project "$FIREBASE_PROJECT_ID" 2>&1)
+          CREATE_RC=$?
+          echo "$CREATE_OUT"
+          if [ $CREATE_RC -eq 0 ]; then
+            echo "Created hosting site '$HOSTING_SITE_ID'."
+            exit 0
+          fi
+          if echo "$CREATE_OUT" | grep -qiE "already exists|ALREADY_EXISTS"; then
+            echo "Site already exists (concurrent create). OK."
+            exit 0
+          fi
+          if echo "$CREATE_OUT" | grep -qiE "HTTP Error: 403|PERMISSION_DENIED|caller does not have permission"; then
+            cat <<MSG
+::error title=Missing IAM permission for Hosting site create::
+The service account '$SA_EMAIL' lacks permission to create hosting sites
+in project '$FIREBASE_PROJECT_ID'.
+
+Fix: add role 'Firebase Hosting Admin' (roles/firebasehosting.admin)
+to $SA_EMAIL at:
+  https://console.cloud.google.com/iam-admin/iam?project=$FIREBASE_PROJECT_ID
+
+Or create the site manually one time:
+  https://console.firebase.google.com/project/$FIREBASE_PROJECT_ID/hosting/sites
+  -> Add another site -> 'pickletour'
+MSG
+            exit 1
+          fi
+          if echo "$CREATE_OUT" | grep -qiE "HTTP Error: 409|already in use|is taken"; then
+            cat <<MSG
+::error title=Hosting site name unavailable::
+The site id 'pickletour' is already registered to another Firebase project
+globally. Site ids on *.web.app are globally unique.
+
+Fix: pick a different site id (e.g. 'pickletour-app') by editing:
+  - .github/workflows/deploy-firebase.yml (HOSTING_SITE_ID env var)
+  - firebase.json ("hosting.site")
+MSG
+            exit 1
+          fi
+          echo "::error title=Hosting site create failed::Unhandled error (rc=$CREATE_RC). See log above."
+          exit 1
 
       - name: Build production bundle
         run: npm run build
 
       - name: Deploy Firestore rules and indexes
         run: |
-          firebase deploy \
-            --only "firestore:pickleball" \
+          set +e
+          OUT=$(firebase deploy \
+            --only "firestore:$FIRESTORE_DATABASE_ID" \
             --project "$FIREBASE_PROJECT_ID" \
-            --non-interactive
+            --non-interactive 2>&1)
+          RC=$?
+          echo "$OUT"
+          if [ $RC -eq 0 ]; then exit 0; fi
+          if echo "$OUT" | grep -qiE "HTTP Error: 403|PERMISSION_DENIED|caller does not have permission"; then
+            cat <<MSG
+::error title=Missing IAM permission for Firestore deploy::
+The service account '$SA_EMAIL' cannot deploy Firestore rules/indexes
+to '$FIRESTORE_DATABASE_ID' in '$FIREBASE_PROJECT_ID'.
+
+Fix: add role 'Cloud Datastore Owner' or 'Firebase Admin' to $SA_EMAIL at:
+  https://console.cloud.google.com/iam-admin/iam?project=$FIREBASE_PROJECT_ID
+MSG
+          fi
+          exit $RC
 
       - name: Deploy Firebase Hosting
         run: |
-          firebase deploy \
-            --only "hosting:pickletour" \
+          set +e
+          OUT=$(firebase deploy \
+            --only "hosting:$HOSTING_SITE_ID" \
             --project "$FIREBASE_PROJECT_ID" \
             --non-interactive \
-            --message "Deploy from GitHub Actions @ ${{ github.sha }}"
+            --message "Deploy from GitHub Actions @ ${{ github.sha }}" 2>&1)
+          RC=$?
+          echo "$OUT"
+          if [ $RC -eq 0 ]; then
+            echo
+            echo "Live URL: https://$HOSTING_SITE_ID.web.app"
+            exit 0
+          fi
+          if echo "$OUT" | grep -qiE "HTTP Error: 403|PERMISSION_DENIED|caller does not have permission"; then
+            cat <<MSG
+::error title=Missing IAM permission for Hosting deploy::
+The service account '$SA_EMAIL' cannot deploy to hosting site
+'$HOSTING_SITE_ID' in '$FIREBASE_PROJECT_ID'.
+
+Fix: add role 'Firebase Hosting Admin' to $SA_EMAIL at:
+  https://console.cloud.google.com/iam-admin/iam?project=$FIREBASE_PROJECT_ID
+MSG
+          fi
+          exit $RC
