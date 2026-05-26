@@ -24,7 +24,7 @@ export default function CreateTournament() {
     city: '',
     state: '',
     venue: '',
-    visibility: TOURNAMENT_VISIBILITY.PRIVATE,
+    visibility: TOURNAMENT_VISIBILITY.PUBLIC,
     ruleset: RULESET.CBP,
     target_score: TARGET_SCORE.ELEVEN,
     sets_per_match: 1,
@@ -110,7 +110,8 @@ export default function CreateTournament() {
                   ))}
                 </select>
                 <p className="mt-1 text-xs text-slate-500">
-                  Público permite inscrição de usuários habilitados sem código; privado exige código de ingresso.
+                  Torneios públicos aparecem na lista de torneios públicos da plataforma e aceitam inscrições
+                  diretas. Os privados só são acessíveis com o código de ingresso compartilhado pelo admin.
                 </p>
               </div>
             </section>

@@ -18,6 +18,31 @@ const OPEN_STATUSES = new Set([
   TOURNAMENT_STATUS.IN_PROGRESS,
 ]);
 
+// Ordem de prioridade exibida para o usuário: o que está acontecendo agora
+// primeiro, depois inscrições abertas, depois futuros, depois encerrados.
+const STATUS_ORDER = {
+  [TOURNAMENT_STATUS.IN_PROGRESS]: 0,
+  [TOURNAMENT_STATUS.REGISTRATIONS_OPEN]: 1,
+  [TOURNAMENT_STATUS.REGISTRATIONS_CLOSED]: 2,
+  [TOURNAMENT_STATUS.DRAFT]: 3,
+  [TOURNAMENT_STATUS.FINISHED]: 4,
+  [TOURNAMENT_STATUS.CANCELLED]: 5,
+};
+
+function compareTournaments(a, b) {
+  const sa = STATUS_ORDER[a.status] ?? 99;
+  const sb = STATUS_ORDER[b.status] ?? 99;
+  if (sa !== sb) return sa - sb;
+  // Mesma faixa de status → mais próximos primeiro (data crescente para
+  // futuros; data decrescente para encerrados).
+  const da = a.starts_at || '';
+  const db = b.starts_at || '';
+  if (a.status === TOURNAMENT_STATUS.FINISHED || a.status === TOURNAMENT_STATUS.CANCELLED) {
+    return db.localeCompare(da);
+  }
+  return da.localeCompare(db);
+}
+
 export default function PublicTournamentsList() {
   const { data: tournaments = [], isLoading } = usePublicTournaments();
   const [search, setSearch] = useState('');
@@ -25,7 +50,7 @@ export default function PublicTournamentsList() {
 
   const filtered = useMemo(() => {
     const q = search.trim().toLowerCase();
-    return tournaments.filter((t) => {
+    const list = tournaments.filter((t) => {
       if (statusFilter === 'open' && !OPEN_STATUSES.has(t.status)) return false;
       if (statusFilter === 'finished' && t.status !== TOURNAMENT_STATUS.FINISHED) return false;
       if (statusFilter === 'draft' && t.status !== TOURNAMENT_STATUS.DRAFT) return false;
@@ -36,6 +61,7 @@ export default function PublicTournamentsList() {
         .toLowerCase();
       return haystack.includes(q);
     });
+    return list.slice().sort(compareTournaments);
   }, [tournaments, search, statusFilter]);
 
   return (
