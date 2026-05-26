@@ -7,6 +7,7 @@ import { birthDateToBrtDate, isRequiredProfileComplete, validateRequiredProfile 
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
+import { PICKLEBALL_EXPERIENCE_LABELS } from '@/modules/tournament/domain/constants';
 import {
   AlertDialog,
   AlertDialogContent,
@@ -21,6 +22,7 @@ export default function ProfileCompletionModal() {
   const [platformName, setPlatformName] = useState('');
   const [birthDate, setBirthDate] = useState('');
   const [phone, setPhone] = useState('');
+  const [pickleballExperience, setPickleballExperience] = useState('');
   const [errors, setErrors] = useState({});
   const [busy, setBusy] = useState(false);
 
@@ -31,12 +33,13 @@ export default function ProfileCompletionModal() {
     setPlatformName(userProfile?.platform_name || userProfile?.full_name || '');
     setBirthDate(userProfile?.birth_date || '');
     setPhone(userProfile?.phone || '');
+    setPickleballExperience(userProfile?.pickleball_experience || '');
     setErrors({});
   }, [userProfile?.uid]);
 
   const handleSubmit = async (event) => {
     event.preventDefault();
-    const validation = validateRequiredProfile({ platformName, birthDate, phone });
+    const validation = validateRequiredProfile({ platformName, birthDate, phone, pickleballExperience });
     if (!validation.isValid) {
       setErrors(validation.errors);
       return;
@@ -49,6 +52,7 @@ export default function ProfileCompletionModal() {
         birth_date: birthDate,
         birth_date_at: Timestamp.fromDate(birthDateToBrtDate(birthDate)),
         phone: phone.trim(),
+        pickleball_experience: pickleballExperience,
       });
       toast.success('Perfil completo. Agora você pode participar dos torneios.');
     } catch (error) {
@@ -64,7 +68,7 @@ export default function ProfileCompletionModal() {
         <AlertDialogHeader>
           <AlertDialogTitle>Complete seu perfil</AlertDialogTitle>
           <AlertDialogDescription>
-            Data de nascimento e telefone são obrigatórios para participar dos torneios. Não é permitida a participação de menores.
+            Data de nascimento, telefone e tempo de experiência são obrigatórios para participar dos torneios. Não é permitida a participação de menores.
           </AlertDialogDescription>
         </AlertDialogHeader>
 
@@ -112,6 +116,23 @@ export default function ProfileCompletionModal() {
               />
               {errors.phone && <p className="text-xs text-red-600">{errors.phone}</p>}
             </div>
+          </div>
+
+          <div className="space-y-2">
+            <Label htmlFor="modal_pickleball_experience">Tempo de experiência em pickleball</Label>
+            <select
+              id="modal_pickleball_experience"
+              value={pickleballExperience}
+              onChange={(event) => setPickleballExperience(event.target.value)}
+              required
+              className="h-10 w-full rounded-md border border-input bg-background px-3 py-2 text-sm ring-offset-background focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2"
+            >
+              <option value="">Selecione uma opção</option>
+              {Object.entries(PICKLEBALL_EXPERIENCE_LABELS).map(([value, label]) => (
+                <option key={value} value={value}>{label}</option>
+              ))}
+            </select>
+            {errors.pickleballExperience && <p className="text-xs text-red-600">{errors.pickleballExperience}</p>}
           </div>
 
           <AlertDialogFooter>

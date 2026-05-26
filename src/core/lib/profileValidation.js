@@ -21,7 +21,7 @@ export function birthDateToBrtDate(birthDateValue) {
   return Number.isNaN(birthDate.getTime()) ? null : birthDate;
 }
 
-export function validateRequiredProfile({ platformName, birthDate, phone }) {
+export function validateRequiredProfile({ platformName, birthDate, phone, pickleballExperience }) {
   const errors = {};
   const trimmedName = String(platformName || '').trim();
   const trimmedPhone = String(phone || '').trim();
@@ -29,6 +29,7 @@ export function validateRequiredProfile({ platformName, birthDate, phone }) {
   if (!trimmedName) errors.platformName = 'Informe seu nome de exibição.';
   if (!birthDate) errors.birthDate = 'Informe sua data de nascimento.';
   if (!trimmedPhone) errors.phone = 'Informe seu telefone.';
+  if (!pickleballExperience) errors.pickleballExperience = 'Informe seu tempo de experiência no pickleball.';
 
   const age = calculateAge(birthDate);
   if (birthDate && age === null) errors.birthDate = 'Informe uma data de nascimento válida.';
@@ -46,5 +47,6 @@ export function isRequiredProfileComplete(profile) {
     platformName: profile.platform_name || profile.full_name,
     birthDate: profile.birth_date,
     phone: profile.phone,
+    pickleballExperience: profile.pickleball_experience,
   }).isValid;
 }

@@ -6,7 +6,11 @@ import { Badge } from '@/components/ui/badge';
 import { Skeleton } from '@/components/ui/skeleton';
 import { Trophy, MapPin, Calendar, Hash } from 'lucide-react';
 import { useTournament, useIsTournamentAdmin } from '@/modules/tournament/hooks/useTournament';
-import { TOURNAMENT_STATUS_LABELS } from '@/modules/tournament/domain/constants';
+import {
+  TOURNAMENT_STATUS_LABELS,
+  TOURNAMENT_VISIBILITY,
+  TOURNAMENT_VISIBILITY_LABELS,
+} from '@/modules/tournament/domain/constants';
 import TournamentOverviewTab from '../components/TournamentOverviewTab';
 import TournamentModalitiesTab from '../components/TournamentModalitiesTab';
 import TournamentRegistrationsTab from '../components/TournamentRegistrationsTab';
@@ -84,6 +88,9 @@ export default function Tournament() {
                 )}
                 <span className="inline-flex items-center gap-1">
                   <Calendar className="w-3 h-3" /> {TOURNAMENT_STATUS_LABELS[tournament.status] || tournament.status}
+                </span>
+                <span>
+                  {TOURNAMENT_VISIBILITY_LABELS[tournament.visibility || TOURNAMENT_VISIBILITY.PRIVATE]}
                 </span>
               </div>
             </div>

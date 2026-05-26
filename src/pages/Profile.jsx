@@ -12,12 +12,14 @@ import { LEVEL_OPTIONS, getLevelByCode } from '@/modules/leveling/data/levels';
 import { calculateAssessment } from '@/modules/leveling/domain/questionnaire';
 import LevelingQuestionnaire from '@/modules/leveling/components/LevelingQuestionnaire';
 import LevelingResultCard from '@/modules/leveling/components/LevelingResultCard';
+import { PICKLEBALL_EXPERIENCE_LABELS } from '@/modules/tournament/domain/constants';
 
 export default function Profile() {
   const { user, userProfile, updateUserProfile } = useAuth();
   const [platformName, setPlatformName] = useState(userProfile?.platform_name || userProfile?.full_name || '');
   const [birthDate, setBirthDate] = useState(userProfile?.birth_date || '');
   const [phone, setPhone] = useState(userProfile?.phone || '');
+  const [pickleballExperience, setPickleballExperience] = useState(userProfile?.pickleball_experience || '');
   const [manualLevel, setManualLevel] = useState(userProfile?.leveling_level || '');
   const [errors, setErrors] = useState({});
   const [busy, setBusy] = useState(false);
@@ -34,6 +36,7 @@ export default function Profile() {
     setPlatformName(userProfile?.platform_name || userProfile?.full_name || '');
     setBirthDate(userProfile?.birth_date || '');
     setPhone(userProfile?.phone || '');
+    setPickleballExperience(userProfile?.pickleball_experience || '');
     setManualLevel(userProfile?.leveling_level || '');
     setVisibleResult(userProfile?.leveling_assessment?.result || null);
     setErrors({});
@@ -43,13 +46,14 @@ export default function Profile() {
     userProfile?.full_name,
     userProfile?.birth_date,
     userProfile?.phone,
+    userProfile?.pickleball_experience,
     userProfile?.leveling_level,
     userProfile?.leveling_assessment,
   ]);
 
   const onSave = async (e) => {
     e.preventDefault();
-    const validation = validateRequiredProfile({ platformName, birthDate, phone });
+    const validation = validateRequiredProfile({ platformName, birthDate, phone, pickleballExperience });
     if (!validation.isValid) {
       setErrors(validation.errors);
       return;
@@ -62,6 +66,7 @@ export default function Profile() {
         birth_date: birthDate,
         birth_date_at: Timestamp.fromDate(birthDateToBrtDate(birthDate)),
         phone: phone.trim(),
+        pickleball_experience: pickleballExperience,
       });
       toast.success('Perfil atualizado.');
     } catch (err) {
@@ -155,7 +160,7 @@ export default function Profile() {
       <Card className="overflow-hidden">
         <CardHeader className="border-b border-emerald-950/10 bg-white/45 p-4 sm:p-5">
           <CardTitle className="text-base text-slate-950">Dados do participante</CardTitle>
-          <CardDescription>Atualize nome público, data de nascimento e telefone de contato.</CardDescription>
+          <CardDescription>Atualize nome público, data de nascimento, telefone e experiência no pickleball.</CardDescription>
         </CardHeader>
         <CardContent className="p-4 sm:p-5">
           <div className="mb-6 flex items-center gap-4 rounded-md border border-emerald-950/10 bg-gradient-to-br from-white/85 to-emerald-50/70 p-3">
@@ -213,6 +218,23 @@ export default function Profile() {
                 {errors.phone && <p className="text-xs text-red-600">{errors.phone}</p>}
                 <p className="text-xs text-slate-500">Use DDD e numero para contato.</p>
               </div>
+            </div>
+            <div className="space-y-2">
+              <Label htmlFor="pickleball_experience">Tempo de experiência em pickleball</Label>
+              <select
+                id="pickleball_experience"
+                value={pickleballExperience}
+                onChange={(e) => setPickleballExperience(e.target.value)}
+                required
+                className="h-10 w-full rounded-md border border-input bg-background px-3 py-2 text-sm ring-offset-background focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2"
+              >
+                <option value="">Selecione uma opção</option>
+                {Object.entries(PICKLEBALL_EXPERIENCE_LABELS).map(([value, label]) => (
+                  <option key={value} value={value}>{label}</option>
+                ))}
+              </select>
+              {errors.pickleballExperience && <p className="text-xs text-red-600">{errors.pickleballExperience}</p>}
+              <p className="text-xs text-slate-500">Usado como informação complementar para organização das categorias.</p>
             </div>
             <div className="flex items-start gap-2 rounded-md border border-amber-300/60 bg-amber-100/80 p-3 text-sm text-amber-950">
               <ShieldCheck className="mt-0.5 h-4 w-4 shrink-0" />

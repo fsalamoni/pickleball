@@ -22,6 +22,7 @@ export default function JoinTournament() {
         toast.error('Código não encontrado.');
         return;
       }
+      sessionStorage.setItem(`tournament_access_${t.id}`, code.trim().toUpperCase());
       navigate(`/torneios/${t.id}/inscritos?join=1`);
     } catch (err) {
       toast.error(err.message || 'Falha ao buscar torneio.');

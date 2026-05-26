@@ -16,6 +16,49 @@ service cloud.firestore {
       return isAuthed()
         && exists(/databases/$(database)/documents/tournament_admins/$(tid + '_' + request.auth.uid));
     }
+    function isPlayerARegistrationEmailOwner() {
+      return isAuthed()
+        && request.auth.token.email is string
+        && resource.data.player_a_email_lc == request.auth.token.email.lower()
+        && request.resource.data.player_a_email_lc == request.auth.token.email.lower()
+        && request.resource.data.player_a_user_id == request.auth.uid;
+    }
+    function isPlayerBRegistrationEmailOwner() {
+      return isAuthed()
+        && request.auth.token.email is string
+        && resource.data.player_b_email_lc == request.auth.token.email.lower()
+        && request.resource.data.player_b_email_lc == request.auth.token.email.lower()
+        && request.resource.data.player_b_user_id == request.auth.uid;
+    }
+    function isRegistrationEmailOwnerUpdate() {
+      return (isPlayerARegistrationEmailOwner()
+          && request.resource.data.diff(resource.data).affectedKeys().hasOnly([
+            'user_id',
+            'player_a_user_id',
+            'player_a_name',
+            'player_a_email',
+            'player_a_email_lc',
+            'player_a_level',
+            'player_a_provisional',
+            'is_provisional',
+            'label',
+            'claimed_at',
+            'updated_at',
+          ]))
+        || (isPlayerBRegistrationEmailOwner()
+          && request.resource.data.diff(resource.data).affectedKeys().hasOnly([
+            'player_b_user_id',
+            'player_b_name',
+            'player_b_email',
+            'player_b_email_lc',
+            'player_b_level',
+            'player_b_provisional',
+            'is_provisional',
+            'label',
+            'claimed_at',
+            'updated_at',
+          ]));
+    }
 
     // ---- Users -----------------------------------------------------------
     match /users/{userId} {
@@ -63,7 +106,8 @@ service cloud.firestore {
             || isPlatformAdmin());
       allow update: if isPlatformAdmin()
         || isTournamentAdmin(resource.data.tournament_id)
-        || (isAuthed() && resource.data.created_by == request.auth.uid);
+        || (isAuthed() && resource.data.created_by == request.auth.uid)
+        || isRegistrationEmailOwnerUpdate();
       allow delete: if isPlatformAdmin() || isTournamentAdmin(resource.data.tournament_id);
     }
 

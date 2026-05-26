@@ -55,6 +55,17 @@ export const TARGET_SCORE = Object.freeze({
   TWENTY_ONE: 21,
 });
 
+/** Visibilidade/acesso do torneio. */
+export const TOURNAMENT_VISIBILITY = Object.freeze({
+  PUBLIC: 'public',
+  PRIVATE: 'private',
+});
+
+export const TOURNAMENT_VISIBILITY_LABELS = Object.freeze({
+  [TOURNAMENT_VISIBILITY.PUBLIC]: 'Público',
+  [TOURNAMENT_VISIBILITY.PRIVATE]: 'Privado',
+});
+
 /** Categoria de nível. */
 export const SKILL_LEVEL = Object.freeze({
   BEGINNER: 'beginner',
@@ -171,8 +182,32 @@ export const TOURNAMENT_ADMIN_ROLE = Object.freeze({
   ADMIN: 'admin',
 });
 
+export const TOURNAMENT_USER_ROLE = Object.freeze({
+  OWNER: 'owner',
+  ADMIN: 'admin',
+  PLAYER: 'player',
+  PUBLIC: 'public',
+});
+
 /** Capacidade máxima por modalidade. Requisito do produto: até 500 inscritos. */
 export const MAX_REGISTRATIONS_PER_MODALITY = 500;
+
+export const REGISTRATION_PROVISIONAL_LABEL = 'Provisório';
+
+/** Tempo de experiência do usuário em pickleball. */
+export const PICKLEBALL_EXPERIENCE = Object.freeze({
+  UP_TO_6_MONTHS: 'up_to_6_months',
+  SIX_TO_TWELVE_MONTHS: 'six_to_twelve_months',
+  ONE_TO_TWO_YEARS: 'one_to_two_years',
+  MORE_THAN_TWO_YEARS: 'more_than_two_years',
+});
+
+export const PICKLEBALL_EXPERIENCE_LABELS = Object.freeze({
+  [PICKLEBALL_EXPERIENCE.UP_TO_6_MONTHS]: '6 meses ou menos',
+  [PICKLEBALL_EXPERIENCE.SIX_TO_TWELVE_MONTHS]: 'Entre 6 meses e 1 ano',
+  [PICKLEBALL_EXPERIENCE.ONE_TO_TWO_YEARS]: 'Entre 1 e 2 anos',
+  [PICKLEBALL_EXPERIENCE.MORE_THAN_TWO_YEARS]: 'Mais de 2 anos',
+});
 
 /** Status de uma quadra. */
 export const COURT_STATUS = Object.freeze({

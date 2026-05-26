@@ -3,6 +3,7 @@ import {
   getTournament,
   listMyTournaments,
   listAllTournaments,
+  listPublicTournaments,
   listTournamentAdmins,
   isTournamentAdmin,
   createTournament,
@@ -68,12 +69,19 @@ export function useAllTournaments() {
   return useQuery({ queryKey: ['tournaments-all'], queryFn: listAllTournaments });
 }
 
+export function usePublicTournaments() {
+  return useQuery({ queryKey: ['tournaments-public'], queryFn: listPublicTournaments });
+}
+
 export function useCreateTournament() {
   const { user } = useAuth();
   const qc = useQueryClient();
   return useMutation({
     mutationFn: (data) => createTournament(user, data),
-    onSuccess: () => qc.invalidateQueries({ queryKey: ['my-tournaments'] }),
+    onSuccess: () => {
+      qc.invalidateQueries({ queryKey: ['my-tournaments'] });
+      qc.invalidateQueries({ queryKey: ['tournaments-public'] });
+    },
   });
 }
 
@@ -85,6 +93,7 @@ export function useUpdateTournament(id) {
     onSuccess: () => {
       qc.invalidateQueries({ queryKey: ['tournament', id] });
       qc.invalidateQueries({ queryKey: ['my-tournaments'] });
+      qc.invalidateQueries({ queryKey: ['tournaments-public'] });
     },
   });
 }
@@ -217,7 +226,10 @@ export function useConfirmRegistrationPayment(modalityId) {
   const qc = useQueryClient();
   return useMutation({
     mutationFn: (id) => confirmRegistrationPayment(id, user),
-    onSuccess: () => qc.invalidateQueries({ queryKey: ['registrations', modalityId] }),
+    onSuccess: () => {
+      qc.invalidateQueries({ queryKey: ['registrations', modalityId] });
+      qc.invalidateQueries({ queryKey: ['registrations-tournament'] });
+    },
   });
 }
 
@@ -226,7 +238,10 @@ export function useCancelRegistration(modalityId) {
   const qc = useQueryClient();
   return useMutation({
     mutationFn: (id) => cancelRegistration(id, user),
-    onSuccess: () => qc.invalidateQueries({ queryKey: ['registrations', modalityId] }),
+    onSuccess: () => {
+      qc.invalidateQueries({ queryKey: ['registrations', modalityId] });
+      qc.invalidateQueries({ queryKey: ['registrations-tournament'] });
+    },
   });
 }
 
@@ -235,7 +250,10 @@ export function useDeleteRegistration(modalityId) {
   const qc = useQueryClient();
   return useMutation({
     mutationFn: (id) => deleteRegistration(id, user),
-    onSuccess: () => qc.invalidateQueries({ queryKey: ['registrations', modalityId] }),
+    onSuccess: () => {
+      qc.invalidateQueries({ queryKey: ['registrations', modalityId] });
+      qc.invalidateQueries({ queryKey: ['registrations-tournament'] });
+    },
   });
 }
 

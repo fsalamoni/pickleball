@@ -7,7 +7,13 @@ import { Button } from '@/components/ui/button';
 import { Separator } from '@/components/ui/separator';
 import { toast } from 'sonner';
 import { useCreateTournament } from '@/modules/tournament/hooks/useTournament';
-import { RULESET, RULESET_LABELS, TARGET_SCORE } from '@/modules/tournament/domain/constants';
+import {
+  RULESET,
+  RULESET_LABELS,
+  TARGET_SCORE,
+  TOURNAMENT_VISIBILITY,
+  TOURNAMENT_VISIBILITY_LABELS,
+} from '@/modules/tournament/domain/constants';
 
 export default function CreateTournament() {
   const navigate = useNavigate();
@@ -18,6 +24,7 @@ export default function CreateTournament() {
     city: '',
     state: '',
     venue: '',
+    visibility: TOURNAMENT_VISIBILITY.PRIVATE,
     ruleset: RULESET.CBP,
     target_score: TARGET_SCORE.ELEVEN,
     sets_per_match: 1,
@@ -42,6 +49,7 @@ export default function CreateTournament() {
         city: form.city,
         state: form.state,
         venue: form.venue,
+        visibility: form.visibility,
         ruleset: form.ruleset,
         starts_at: form.starts_at || null,
         ends_at: form.ends_at || null,
@@ -99,6 +107,21 @@ export default function CreateTournament() {
                   <Label>Local (quadra/clube)</Label>
                   <Input value={form.venue} onChange={(e) => set('venue', e.target.value)} />
                 </div>
+              </div>
+              <div>
+                <Label>Tipo de acesso</Label>
+                <select
+                  className="w-full h-10 rounded-md border border-input bg-background px-3 text-sm"
+                  value={form.visibility}
+                  onChange={(e) => set('visibility', e.target.value)}
+                >
+                  {Object.entries(TOURNAMENT_VISIBILITY_LABELS).map(([value, label]) => (
+                    <option key={value} value={value}>{label}</option>
+                  ))}
+                </select>
+                <p className="mt-1 text-xs text-slate-500">
+                  Público permite inscrição de usuários habilitados sem código; privado exige código de ingresso.
+                </p>
               </div>
             </section>
 
