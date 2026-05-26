@@ -116,7 +116,7 @@ export default function Profile() {
     }
   };
 
-  const generateSavedResult = async () => {
+  const regenerateResultFromSavedAnswers = async () => {
     if (!savedAnswers) {
       toast.error('Não há respostas salvas para gerar o resultado.');
       return;
@@ -254,7 +254,7 @@ export default function Profile() {
           <div className="flex flex-wrap gap-2">
             <Button type="button" variant="outline" onClick={startFromScratch}>Preencher formulário do zero</Button>
             <Button type="button" variant="outline" onClick={startFromSaved} disabled={!savedAnswers}>Refazer com respostas anteriores</Button>
-            <Button type="button" variant="outline" onClick={generateSavedResult} disabled={!savedAnswers || levelBusy}>Gerar resultado salvo</Button>
+            <Button type="button" variant="outline" onClick={regenerateResultFromSavedAnswers} disabled={!savedAnswers || levelBusy}>Gerar resultado salvo</Button>
             <Button type="button" variant="outline" onClick={() => window.print()} disabled={!visibleResult}>
               <Printer className="mr-2 h-4 w-4" /> Imprimir nivelamento
             </Button>

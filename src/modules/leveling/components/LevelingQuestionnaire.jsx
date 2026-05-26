@@ -13,6 +13,8 @@ import {
   countAnswered,
 } from '@/modules/leveling/domain/questionnaire';
 
+const TOTAL_QUESTIONS = QUESTIONNAIRE_SECTIONS.reduce((sum, section) => sum + section.questions.length, 0);
+
 export default function LevelingQuestionnaire({
   initialAnswers,
   initialResult = null,
@@ -32,7 +34,7 @@ export default function LevelingQuestionnaire({
 
   const currentIndex = CATEGORY_ORDER.indexOf(activeCategory);
   const answered = countAnswered(answers);
-  const progress = Math.round((answered / QUESTIONNAIRE_SECTIONS.reduce((sum, section) => sum + section.questions.length, 0)) * 100);
+  const progress = Math.round((answered / TOTAL_QUESTIONS) * 100);
 
   function updateAnswer(questionId, value) {
     setAnswers((current) => ({ ...current, [questionId]: value }));
@@ -77,7 +79,7 @@ export default function LevelingQuestionnaire({
     <div ref={topRef} className="space-y-5">
       <Card className="p-4">
         <div className="flex items-center justify-between text-sm">
-          <span>Progresso geral: {answered} respostas fora do neutro</span>
+          <span>Progresso geral: {answered} respostas diferentes do padrão neutro (3)</span>
           <span className="font-semibold">{progress}%</span>
         </div>
         <div className="mt-2 h-2 overflow-hidden rounded bg-slate-100">

@@ -649,6 +649,7 @@ export const QUESTIONNAIRE_SECTIONS = CATEGORY_ORDER.map((category) => ({
 }));
 
 function average(ids, answers) {
+  // Missing answers use the neutral baseline (3), matching the imported form's default state.
   const values = ids.map((id) => Number(answers?.[id] ?? 3)).filter((v) => Number.isFinite(v) && v >= 1 && v <= 5);
   if (!values.length) return 3;
   return Math.round((values.reduce((sum, value) => sum + value, 0) / values.length) * 10) / 10;
@@ -667,6 +668,7 @@ export function calculateWeightedScore(answers) {
     (sum, [key, weight]) => sum + (breakdown[key] ?? 3) * weight,
     0,
   );
+  // Convert weighted average from the 1–5 Likert scale to a normalized 0–100 score.
   return Math.round(((weighted - 1) / 4) * 100);
 }
 

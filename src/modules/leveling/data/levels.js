@@ -261,6 +261,7 @@ export const LEVEL_OPTIONS = LEVEL_TABLE.map((level) => ({
   label: `${level.name} — USAP ${level.usap}`,
 }));
 
+// Primary lookup is by id; badge/name fallbacks preserve compatibility with stored or displayed values.
 export function getLevelByCode(code) {
   return LEVEL_TABLE.find((level) => level.id === code || level.badge === code || level.name === code) || null;
 }
