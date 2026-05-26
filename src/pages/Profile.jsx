@@ -1,28 +1,51 @@
-import { useEffect, useState } from 'react';
+import { useEffect, useMemo, useState } from 'react';
 import { Timestamp } from 'firebase/firestore';
 import { toast } from 'sonner';
-import { ShieldCheck, UserCheck } from 'lucide-react';
+import { Award, Printer, ShieldCheck, UserCheck } from 'lucide-react';
 import { useAuth } from '@/core/lib/FirebaseAuthContext';
 import { birthDateToBrtDate, validateRequiredProfile } from '@/core/lib/profileValidation';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from '@/components/ui/card';
+import { LEVEL_OPTIONS, getLevelByCode } from '@/modules/leveling/data/levels';
+import { calculateAssessment } from '@/modules/leveling/domain/questionnaire';
+import LevelingQuestionnaire from '@/modules/leveling/components/LevelingQuestionnaire';
+import LevelingResultCard from '@/modules/leveling/components/LevelingResultCard';
 
 export default function Profile() {
   const { user, userProfile, updateUserProfile } = useAuth();
   const [platformName, setPlatformName] = useState(userProfile?.platform_name || userProfile?.full_name || '');
   const [birthDate, setBirthDate] = useState(userProfile?.birth_date || '');
   const [phone, setPhone] = useState(userProfile?.phone || '');
+  const [manualLevel, setManualLevel] = useState(userProfile?.leveling_level || '');
   const [errors, setErrors] = useState({});
   const [busy, setBusy] = useState(false);
+  const [levelBusy, setLevelBusy] = useState(false);
+  const [formMode, setFormMode] = useState(null);
+  const [formVersion, setFormVersion] = useState(0);
+  const [visibleResult, setVisibleResult] = useState(userProfile?.leveling_assessment?.result || null);
+
+  const savedAssessment = userProfile?.leveling_assessment;
+  const savedAnswers = savedAssessment?.answers;
+  const selectedLevel = useMemo(() => getLevelByCode(manualLevel), [manualLevel]);
 
   useEffect(() => {
     setPlatformName(userProfile?.platform_name || userProfile?.full_name || '');
     setBirthDate(userProfile?.birth_date || '');
     setPhone(userProfile?.phone || '');
+    setManualLevel(userProfile?.leveling_level || '');
+    setVisibleResult(userProfile?.leveling_assessment?.result || null);
     setErrors({});
-  }, [userProfile?.uid]);
+  }, [
+    userProfile?.uid,
+    userProfile?.platform_name,
+    userProfile?.full_name,
+    userProfile?.birth_date,
+    userProfile?.phone,
+    userProfile?.leveling_level,
+    userProfile?.leveling_assessment,
+  ]);
 
   const onSave = async (e) => {
     e.preventDefault();
@@ -48,8 +71,74 @@ export default function Profile() {
     }
   };
 
+  const saveManualLevel = async () => {
+    if (!manualLevel) {
+      toast.error('Selecione um nível.');
+      return;
+    }
+    const level = getLevelByCode(manualLevel);
+    setLevelBusy(true);
+    try {
+      await updateUserProfile({
+        level: level ? `${level.name} (USAP ${level.usap})` : manualLevel,
+        leveling_level: manualLevel,
+        leveling_method: 'manual',
+        leveling_manual_level: manualLevel,
+      });
+      toast.success('Nível salvo no perfil.');
+    } catch (err) {
+      toast.error(err.message || 'Erro ao salvar nível.');
+    } finally {
+      setLevelBusy(false);
+    }
+  };
+
+  const saveAssessment = async ({ answers, result }) => {
+    setLevelBusy(true);
+    try {
+      await updateUserProfile({
+        level: result.levelName,
+        leveling_level: result.level,
+        leveling_method: 'form',
+        leveling_assessment: {
+          version: 'pickleball-nivelamento-104',
+          answers,
+          result,
+          updated_at: new Date().toISOString(),
+        },
+      });
+      setManualLevel(result.level);
+      setVisibleResult(result);
+      toast.success('Formulário e resultado salvos permanentemente no seu perfil.');
+    } catch (err) {
+      toast.error(err.message || 'Erro ao salvar formulário.');
+    } finally {
+      setLevelBusy(false);
+    }
+  };
+
+  const regenerateResultFromSavedAnswers = async () => {
+    if (!savedAnswers) {
+      toast.error('Não há respostas salvas para gerar o resultado.');
+      return;
+    }
+    await saveAssessment({ answers: savedAnswers, result: calculateAssessment(savedAnswers) });
+  };
+
+  const startFromScratch = () => {
+    setVisibleResult(null);
+    setFormMode('scratch');
+    setFormVersion((version) => version + 1);
+  };
+
+  const startFromSaved = () => {
+    setVisibleResult(null);
+    setFormMode('saved');
+    setFormVersion((version) => version + 1);
+  };
+
   return (
-    <div className="mx-auto max-w-3xl space-y-4">
+    <div className="mx-auto max-w-4xl space-y-4">
       <section className="arena-panel-strong rounded-lg p-5 sm:p-6">
         <div className="flex items-start gap-3">
           <div className="flex h-10 w-10 shrink-0 items-center justify-center rounded-md bg-amber-300 text-slate-950">
@@ -133,6 +222,60 @@ export default function Profile() {
               {busy ? 'Salvando...' : 'Salvar alterações'}
             </Button>
           </form>
+        </CardContent>
+      </Card>
+
+      <Card className="overflow-hidden">
+        <CardHeader className="border-b border-emerald-950/10 bg-white/45 p-4 sm:p-5">
+          <CardTitle className="flex items-center gap-2 text-base text-slate-950">
+            <Award className="h-5 w-5 text-emerald-700" /> Nivelamento
+          </CardTitle>
+          <CardDescription>Informe seu nível pela tabela detalhada ou preencha o formulário para obter a recomendação.</CardDescription>
+        </CardHeader>
+        <CardContent className="space-y-5 p-4 sm:p-5">
+          <div className="grid gap-3 sm:grid-cols-[1fr_auto] sm:items-end">
+            <div className="space-y-2">
+              <Label htmlFor="leveling_level">Meu nível informado</Label>
+              <select
+                id="leveling_level"
+                value={manualLevel}
+                onChange={(e) => setManualLevel(e.target.value)}
+                className="h-10 w-full rounded-md border border-input bg-background px-3 py-2 text-sm ring-offset-background focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2"
+              >
+                <option value="">Selecione um nível</option>
+                {LEVEL_OPTIONS.map((option) => (
+                  <option key={option.code} value={option.code}>{option.label}</option>
+                ))}
+              </select>
+              {selectedLevel && <p className="text-xs text-slate-600">{selectedLevel.tagline}</p>}
+            </div>
+            <Button type="button" onClick={saveManualLevel} disabled={levelBusy} className="bg-emerald-700 hover:bg-emerald-800">
+              Salvar nível
+            </Button>
+          </div>
+
+          <div className="flex flex-wrap gap-2">
+            <Button type="button" variant="outline" onClick={startFromScratch}>Preencher formulário do zero</Button>
+            <Button type="button" variant="outline" onClick={startFromSaved} disabled={!savedAnswers}>Refazer com respostas anteriores</Button>
+            <Button type="button" variant="outline" onClick={regenerateResultFromSavedAnswers} disabled={!savedAnswers || levelBusy}>Gerar resultado salvo</Button>
+            <Button type="button" variant="outline" onClick={() => window.print()} disabled={!visibleResult}>
+              <Printer className="mr-2 h-4 w-4" /> Imprimir nivelamento
+            </Button>
+          </div>
+
+          {visibleResult && <LevelingResultCard result={visibleResult} compact />}
+
+          {formMode && (
+            <div className="border-t pt-5">
+              <LevelingQuestionnaire
+                key={`${formMode}-${formVersion}`}
+                initialAnswers={formMode === 'saved' ? savedAnswers : null}
+                onComplete={saveAssessment}
+                onSaveDraft={saveAssessment}
+                saveLabel="Salvar respostas no perfil"
+              />
+            </div>
+          )}
         </CardContent>
       </Card>
     </div>
