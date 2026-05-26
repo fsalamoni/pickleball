@@ -8,9 +8,10 @@ import {
   CATEGORY_ORDER,
   INITIAL_LEVELING_ANSWERS,
   LIKERT_OPTIONS,
+  NEUTRAL_BASELINE_VALUE,
   QUESTIONNAIRE_SECTIONS,
   calculateAssessment,
-  countAnswered,
+  countNonNeutralAnswers,
 } from '@/modules/leveling/domain/questionnaire';
 
 const TOTAL_QUESTIONS = QUESTIONNAIRE_SECTIONS.reduce((sum, section) => sum + section.questions.length, 0);
@@ -33,7 +34,7 @@ export default function LevelingQuestionnaire({
   const topRef = useRef(null);
 
   const currentIndex = CATEGORY_ORDER.indexOf(activeCategory);
-  const answered = countAnswered(answers);
+  const answered = countNonNeutralAnswers(answers);
   const progress = Math.round((answered / TOTAL_QUESTIONS) * 100);
 
   function updateAnswer(questionId, value) {
@@ -79,7 +80,7 @@ export default function LevelingQuestionnaire({
     <div ref={topRef} className="space-y-5">
       <Card className="p-4">
         <div className="flex items-center justify-between text-sm">
-          <span>Progresso geral: {answered} respostas diferentes do padrão neutro (3)</span>
+          <span>Progresso geral: {answered} respostas diferentes do padrão neutro ({NEUTRAL_BASELINE_VALUE})</span>
           <span className="font-semibold">{progress}%</span>
         </div>
         <div className="mt-2 h-2 overflow-hidden rounded bg-slate-100">
@@ -109,7 +110,7 @@ export default function LevelingQuestionnaire({
                 key={question.id}
                 questionNumber={index + 1}
                 question={question}
-                value={answers[question.id] ?? 3}
+                value={answers[question.id] ?? NEUTRAL_BASELINE_VALUE}
                 showContext={expandedContext[question.id]}
                 onToggleContext={() => setExpandedContext((current) => ({ ...current, [question.id]: !current[question.id] }))}
                 onChange={(value) => updateAnswer(question.id, value)}

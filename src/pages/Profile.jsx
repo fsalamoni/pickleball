@@ -23,6 +23,7 @@ export default function Profile() {
   const [busy, setBusy] = useState(false);
   const [levelBusy, setLevelBusy] = useState(false);
   const [formMode, setFormMode] = useState(null);
+  const [formVersion, setFormVersion] = useState(0);
   const [visibleResult, setVisibleResult] = useState(userProfile?.leveling_assessment?.result || null);
 
   const savedAssessment = userProfile?.leveling_assessment;
@@ -126,12 +127,14 @@ export default function Profile() {
 
   const startFromScratch = () => {
     setVisibleResult(null);
-    setFormMode(`scratch-${Date.now()}`);
+    setFormMode('scratch');
+    setFormVersion((version) => version + 1);
   };
 
   const startFromSaved = () => {
     setVisibleResult(null);
-    setFormMode(`saved-${Date.now()}`);
+    setFormMode('saved');
+    setFormVersion((version) => version + 1);
   };
 
   return (
@@ -265,8 +268,8 @@ export default function Profile() {
           {formMode && (
             <div className="border-t pt-5">
               <LevelingQuestionnaire
-                key={formMode}
-                initialAnswers={formMode.startsWith('saved') ? savedAnswers : null}
+                key={`${formMode}-${formVersion}`}
+                initialAnswers={formMode === 'saved' ? savedAnswers : null}
                 onComplete={saveAssessment}
                 onSaveDraft={saveAssessment}
                 saveLabel="Salvar respostas no perfil"

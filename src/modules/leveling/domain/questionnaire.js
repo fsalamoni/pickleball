@@ -612,6 +612,8 @@ export const CATEGORY_LABELS = {
   experience: 'Experiência',
 };
 
+export const NEUTRAL_BASELINE_VALUE = 3;
+
 const CATEGORY_WEIGHTS = {
   serve: 0.11,
   groundstrokes: 0.12,
@@ -638,7 +640,7 @@ export const SKILL_LEVELS = {
 };
 
 export const INITIAL_LEVELING_ANSWERS = LIKERT_STATEMENTS.reduce((acc, question) => {
-  acc[question.id] = 3;
+  acc[question.id] = NEUTRAL_BASELINE_VALUE;
   return acc;
 }, {});
 
@@ -649,9 +651,9 @@ export const QUESTIONNAIRE_SECTIONS = CATEGORY_ORDER.map((category) => ({
 }));
 
 function average(ids, answers) {
-  // Missing answers use the neutral baseline (3), matching the imported form's default state.
-  const values = ids.map((id) => Number(answers?.[id] ?? 3)).filter((v) => Number.isFinite(v) && v >= 1 && v <= 5);
-  if (!values.length) return 3;
+  // Missing answers use the same neutral baseline as the form's default response state.
+  const values = ids.map((id) => Number(answers?.[id] ?? NEUTRAL_BASELINE_VALUE)).filter((v) => Number.isFinite(v) && v >= 1 && v <= 5);
+  if (!values.length) return NEUTRAL_BASELINE_VALUE;
   return Math.round((values.reduce((sum, value) => sum + value, 0) / values.length) * 10) / 10;
 }
 
@@ -665,7 +667,7 @@ export function getCategoryBreakdown(answers) {
 export function calculateWeightedScore(answers) {
   const breakdown = getCategoryBreakdown(answers);
   const weighted = Object.entries(CATEGORY_WEIGHTS).reduce(
-    (sum, [key, weight]) => sum + (breakdown[key] ?? 3) * weight,
+    (sum, [key, weight]) => sum + (breakdown[key] ?? NEUTRAL_BASELINE_VALUE) * weight,
     0,
   );
   // Convert weighted average from the 1–5 Likert scale to a normalized 0–100 score.
@@ -766,7 +768,7 @@ export function calculateAssessment(answers) {
   const normalizedScore = calculateWeightedScore(answers);
   const level = determineLevel(normalizedScore);
   const usapEquivalent = getUSAPEquivalent(normalizedScore);
-  const score = LIKERT_STATEMENTS.reduce((sum, question) => sum + Number(answers?.[question.id] ?? 3), 0);
+  const score = LIKERT_STATEMENTS.reduce((sum, question) => sum + Number(answers?.[question.id] ?? NEUTRAL_BASELINE_VALUE), 0);
   return {
     level,
     levelName: getLevelName(level),
@@ -779,6 +781,6 @@ export function calculateAssessment(answers) {
   };
 }
 
-export function countAnswered(answers) {
-  return LIKERT_STATEMENTS.filter((question) => Number(answers?.[question.id]) !== 3).length;
+export function countNonNeutralAnswers(answers) {
+  return LIKERT_STATEMENTS.filter((question) => Number(answers?.[question.id]) !== NEUTRAL_BASELINE_VALUE).length;
 }
