@@ -17,7 +17,11 @@ import {
   TOURNAMENT_VISIBILITY,
   REGISTRATION_PROVISIONAL_LABEL,
 } from '@/modules/tournament/domain/constants';
-import { hasUnlimitedEntries, isRegistrationCapacityReached } from '@/modules/tournament/domain/capacity';
+import {
+  countOccupiedRegistrations,
+  hasUnlimitedEntries,
+  isRegistrationCapacityReached,
+} from '@/modules/tournament/domain/capacity';
 import { useAuth } from '@/core/lib/FirebaseAuthContext';
 import ModalityRegistrationDialog from './ModalityRegistrationDialog';
 
@@ -66,9 +70,7 @@ function ModalityRegistrationsBlock({ tournament, modality, registrations, isAdm
   const cancelMutation = useCancelRegistration(modality.id);
   const deleteMutation = useDeleteRegistration(modality.id);
   const confirmed = registrations.filter((r) => r.status === REGISTRATION_STATUS.CONFIRMED).length;
-  const occupied = registrations.filter((r) => (
-    ![REGISTRATION_STATUS.CANCELLED, REGISTRATION_STATUS.WAITLIST, REGISTRATION_STATUS.WITHDRAWN].includes(r.status)
-  )).length;
+  const occupied = countOccupiedRegistrations(registrations);
   const hasPrivateAccess = typeof window !== 'undefined' && Boolean(sessionStorage.getItem(`tournament_access_${tournament.id}`));
   const isPublic = (tournament.visibility || TOURNAMENT_VISIBILITY.PRIVATE) === TOURNAMENT_VISIBILITY.PUBLIC;
   const alreadyRegistered = registrations.some((r) => (

@@ -33,7 +33,7 @@ import {
   TOURNAMENT_STAGE_TYPE_LABELS,
   MAX_REGISTRATIONS_PER_MODALITY,
 } from '@/modules/tournament/domain/constants';
-import { hasUnlimitedEntries } from '@/modules/tournament/domain/capacity';
+import { DEFAULT_MAX_ENTRIES, hasUnlimitedEntries } from '@/modules/tournament/domain/capacity';
 
 const emptyForm = {
   name: '',
@@ -41,7 +41,7 @@ const emptyForm = {
   skill_level: SKILL_LEVEL.INTERMEDIATE,
   gender_category: GENDER_CATEGORY.OPEN,
   age_category: AGE_CATEGORY.OPEN,
-  max_entries: 32,
+  max_entries: DEFAULT_MAX_ENTRIES,
   has_unlimited_entries: false,
   entry_fee_brl: 0,
   stage_type: TOURNAMENT_STAGE_TYPE.ROUND_ROBIN,
@@ -59,7 +59,7 @@ function buildFormState(modality) {
     skill_level: modality.skill_level || SKILL_LEVEL.INTERMEDIATE,
     gender_category: modality.gender_category || GENDER_CATEGORY.OPEN,
     age_category: modality.age_category || AGE_CATEGORY.OPEN,
-    max_entries: hasUnlimitedEntries(modality.max_entries) ? 32 : modality.max_entries,
+    max_entries: hasUnlimitedEntries(modality.max_entries) ? DEFAULT_MAX_ENTRIES : modality.max_entries,
     has_unlimited_entries: hasUnlimitedEntries(modality.max_entries),
     entry_fee_brl: ((Number(modality.entry_fee_cents || 0)) / 100).toFixed(2),
     stage_type: stage.type || TOURNAMENT_STAGE_TYPE.ROUND_ROBIN,

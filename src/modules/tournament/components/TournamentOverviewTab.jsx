@@ -24,7 +24,12 @@ import {
   REGISTRATION_STATUS,
   TOURNAMENT_VISIBILITY,
 } from '@/modules/tournament/domain/constants';
-import { getCapacityProgress, hasUnlimitedEntries, isRegistrationCapacityReached } from '@/modules/tournament/domain/capacity';
+import {
+  countOccupiedRegistrations,
+  getCapacityProgress,
+  hasUnlimitedEntries,
+  isRegistrationCapacityReached,
+} from '@/modules/tournament/domain/capacity';
 import ModalityInfoModal from './ModalityInfoModal';
 import ModalityRegistrationDialog from './ModalityRegistrationDialog';
 
@@ -220,10 +225,7 @@ function ModalityCard({
         r.player_b_user_id === currentUserId),
   );
   const canRegister = isAdmin || isPublic || hasPrivateAccess;
-  const occupied = allRegistrations.filter((r) => (
-    r.modality_id === modality.id &&
-    ![REGISTRATION_STATUS.CANCELLED, REGISTRATION_STATUS.WAITLIST, REGISTRATION_STATUS.WITHDRAWN].includes(r.status)
-  )).length;
+  const occupied = countOccupiedRegistrations(allRegistrations.filter((r) => r.modality_id === modality.id));
   const slotsFull = isRegistrationCapacityReached(occupied, modality.max_entries);
   const pct = getCapacityProgress(confirmed, modality.max_entries);
   const barTone = slotsFull

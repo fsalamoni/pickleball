@@ -1,5 +1,7 @@
 import { describe, expect, it } from 'vitest';
 import {
+  countOccupiedRegistrations,
+  DEFAULT_MAX_ENTRIES,
   getCapacityProgress,
   hasUnlimitedEntries,
   isRegistrationCapacityReached,
@@ -16,6 +18,8 @@ describe('capacity helpers', () => {
     expect(normalizeMaxEntries('9')).toBe(9);
     expect(normalizeMaxEntries(1)).toBe(2);
     expect(normalizeMaxEntries(999)).toBe(500);
+    expect(normalizeMaxEntries('')).toBeNull();
+    expect(normalizeMaxEntries(undefined, { allowUnlimited: false })).toBe(DEFAULT_MAX_ENTRIES);
   });
 
   it('detecta lotação apenas quando há limite fechado', () => {
@@ -26,5 +30,14 @@ describe('capacity helpers', () => {
   it('retorna progresso somente para limites fechados', () => {
     expect(getCapacityProgress(10, null)).toBeNull();
     expect(getCapacityProgress(5, 10)).toBe(50);
+  });
+
+  it('conta apenas inscrições que ocupam vagas', () => {
+    expect(countOccupiedRegistrations([
+      { status: 'confirmed' },
+      { status: 'pending_payment' },
+      { status: 'cancelled' },
+      { status: 'waitlist' },
+    ])).toBe(2);
   });
 });

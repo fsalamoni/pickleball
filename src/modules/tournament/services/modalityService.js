@@ -24,7 +24,7 @@ import {
   GENDER_CATEGORY,
   AGE_CATEGORY,
 } from '../domain/constants.js';
-import { normalizeMaxEntries } from '../domain/capacity.js';
+import { DEFAULT_MAX_ENTRIES, normalizeMaxEntries } from '../domain/capacity.js';
 import { normalizeScoringConfig } from '../domain/scoring.js';
 
 const COL = 'tournament_modalities';
@@ -39,7 +39,7 @@ export async function createModality(tournamentId, data, actor) {
     skill_level: data.skill_level || SKILL_LEVEL.INTERMEDIATE,
     gender_category: data.gender_category || GENDER_CATEGORY.OPEN,
     age_category: data.age_category || AGE_CATEGORY.OPEN,
-    max_entries: normalizeMaxEntries(data.max_entries, { defaultValue: 32, allowUnlimited: true }),
+    max_entries: normalizeMaxEntries(data.max_entries, { defaultValue: DEFAULT_MAX_ENTRIES, allowUnlimited: true }),
     entry_fee_cents: Math.max(0, Number(data.entry_fee_cents) || 0),
     /** Override de regras de pontuação (opcional, herda do torneio se vazio). */
     scoring_override: data.scoring_override ? normalizeScoringConfig(data.scoring_override) : null,
@@ -64,7 +64,7 @@ export async function updateModality(id, updates, actor) {
   const normalizedUpdates = { ...updates };
   if (Object.hasOwn(normalizedUpdates, 'max_entries')) {
     normalizedUpdates.max_entries = normalizeMaxEntries(normalizedUpdates.max_entries, {
-      defaultValue: 32,
+      defaultValue: DEFAULT_MAX_ENTRIES,
       allowUnlimited: true,
     });
   }

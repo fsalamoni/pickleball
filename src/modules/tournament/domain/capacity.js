@@ -1,15 +1,25 @@
-import { MAX_REGISTRATIONS_PER_MODALITY } from './constants.js';
+import { MAX_REGISTRATIONS_PER_MODALITY, REGISTRATION_STATUS } from './constants.js';
+
+export const DEFAULT_MAX_ENTRIES = 32;
 
 export function hasUnlimitedEntries(maxEntries) {
   return maxEntries === null || maxEntries === undefined || maxEntries === '';
 }
 
-export function normalizeMaxEntries(maxEntries, { defaultValue = 32, allowUnlimited = true } = {}) {
+export function normalizeMaxEntries(maxEntries, { defaultValue = DEFAULT_MAX_ENTRIES, allowUnlimited = true } = {}) {
   if (allowUnlimited && hasUnlimitedEntries(maxEntries)) return null;
-  const fallback = Math.min(Math.max(Math.trunc(Number(defaultValue) || 32), 2), MAX_REGISTRATIONS_PER_MODALITY);
+  const fallback = Math.min(Math.max(Math.trunc(Number(defaultValue) || DEFAULT_MAX_ENTRIES), 2), MAX_REGISTRATIONS_PER_MODALITY);
   const parsed = Math.trunc(Number(maxEntries));
   if (!Number.isFinite(parsed)) return fallback;
   return Math.min(Math.max(parsed, 2), MAX_REGISTRATIONS_PER_MODALITY);
+}
+
+export function countOccupiedRegistrations(registrations = []) {
+  return registrations.filter((registration) => ![
+    REGISTRATION_STATUS.CANCELLED,
+    REGISTRATION_STATUS.WAITLIST,
+    REGISTRATION_STATUS.WITHDRAWN,
+  ].includes(registration.status)).length;
 }
 
 export function isRegistrationCapacityReached(occupiedCount, maxEntries) {
