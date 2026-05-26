@@ -8,6 +8,7 @@ import { doc, getDoc, setDoc, serverTimestamp } from 'firebase/firestore';
 import { auth, googleProvider, db } from '@/core/config/firebase';
 import { logger } from '@/core/lib/logger';
 import { createAuditLog } from '@/core/services/auditService';
+import { claimProvisionalRegistrationsForUser } from '@/modules/tournament/services/registrationService';
 
 const AuthContext = createContext(null);
 const PLATFORM_OWNER_EMAIL = 'fsalamoni@gmail.com';
@@ -43,7 +44,9 @@ export const AuthProvider = ({ children }) => {
               { ...autoAdminUpdates, last_login: serverTimestamp(), updated_at: serverTimestamp() },
               { merge: true },
             );
-            setUserProfile({ uid: firebaseUser.uid, ...existingProfile, ...autoAdminUpdates });
+            const mergedProfile = { uid: firebaseUser.uid, ...existingProfile, ...autoAdminUpdates };
+            await claimProvisionalRegistrationsForUser(firebaseUser, mergedProfile);
+            setUserProfile(mergedProfile);
           } else {
             const isOwner = isPlatformOwnerEmail(firebaseUser.email);
             const newProfile = {
@@ -54,6 +57,7 @@ export const AuthProvider = ({ children }) => {
               birth_date: '',
               birth_date_at: null,
               phone: '',
+              pickleball_experience: '',
               photo_url: firebaseUser.photoURL || '',
               role: isOwner ? 'platform_admin' : 'user',
               can_create_pools: isOwner,
@@ -62,6 +66,7 @@ export const AuthProvider = ({ children }) => {
               last_login: serverTimestamp(),
             };
             await setDoc(userDocRef, newProfile);
+            await claimProvisionalRegistrationsForUser(firebaseUser, newProfile);
             setUserProfile(newProfile);
             logger.info('New user profile created:', firebaseUser.uid);
           }
@@ -121,6 +126,7 @@ export const AuthProvider = ({ children }) => {
       userEmail: user.email,
       details: { changed_fields: Object.keys(updates) },
     });
+    await claimProvisionalRegistrationsForUser(user, { ...userProfile, ...updates });
     setUserProfile((prev) => ({ ...prev, ...updates }));
   };
 

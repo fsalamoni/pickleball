@@ -31,6 +31,7 @@ import { createAuditLog } from '@/core/services/auditService';
 import {
   TOURNAMENT_STATUS,
   TOURNAMENT_ADMIN_ROLE,
+  TOURNAMENT_VISIBILITY,
 } from '../domain/constants.js';
 import { DEFAULT_SCORING_CONFIG, normalizeScoringConfig } from '../domain/scoring.js';
 
@@ -66,6 +67,7 @@ export async function createTournament(creator, data) {
     venue: data.venue?.trim() || '',
     ruleset: data.ruleset || 'cbp',
     scoring: normalizeScoringConfig(data.scoring || DEFAULT_SCORING_CONFIG),
+    visibility: data.visibility || TOURNAMENT_VISIBILITY.PRIVATE,
     invite_code: data.invite_code || inviteCode(),
     cover_image_url: data.cover_image_url || '',
     starts_at: data.starts_at || null,
@@ -176,9 +178,15 @@ export async function listMyTournaments(userId) {
   const adminSnap = await getDocs(q);
   const tournamentIds = adminSnap.docs.map((d) => d.data().tournament_id);
   // torneios onde sou inscrito
-  const regQ = query(collection(db, COL.registrations), where('user_id', '==', userId));
-  const regSnap = await getDocs(regQ);
-  regSnap.docs.forEach((d) => tournamentIds.push(d.data().tournament_id));
+  const registrationQueries = [
+    query(collection(db, COL.registrations), where('user_id', '==', userId)),
+    query(collection(db, COL.registrations), where('player_a_user_id', '==', userId)),
+    query(collection(db, COL.registrations), where('player_b_user_id', '==', userId)),
+  ];
+  const registrationSnaps = await Promise.all(registrationQueries.map((regQ) => getDocs(regQ)));
+  registrationSnaps.forEach((regSnap) => {
+    regSnap.docs.forEach((d) => tournamentIds.push(d.data().tournament_id));
+  });
 
   const unique = Array.from(new Set(tournamentIds));
   const results = [];
@@ -197,5 +205,11 @@ export async function listMyTournaments(userId) {
 
 export async function listAllTournaments() {
   const snap = await getDocs(query(collection(db, COL.tournaments), orderBy('created_at', 'desc')));
+  return snap.docs.map((d) => d.data());
+}
+
+export async function listPublicTournaments() {
+  const q = query(collection(db, COL.tournaments), where('visibility', '==', TOURNAMENT_VISIBILITY.PUBLIC));
+  const snap = await getDocs(q);
   return snap.docs.map((d) => d.data());
 }

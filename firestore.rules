@@ -16,6 +16,12 @@ service cloud.firestore {
       return isAuthed()
         && exists(/databases/$(database)/documents/tournament_admins/$(tid + '_' + request.auth.uid));
     }
+    function isRegistrationEmailOwner() {
+      return isAuthed()
+        && request.auth.token.email is string
+        && (resource.data.player_a_email_lc == request.auth.token.email.lower()
+            || resource.data.player_b_email_lc == request.auth.token.email.lower());
+    }
 
     // ---- Users -----------------------------------------------------------
     match /users/{userId} {
@@ -63,7 +69,8 @@ service cloud.firestore {
             || isPlatformAdmin());
       allow update: if isPlatformAdmin()
         || isTournamentAdmin(resource.data.tournament_id)
-        || (isAuthed() && resource.data.created_by == request.auth.uid);
+        || (isAuthed() && resource.data.created_by == request.auth.uid)
+        || isRegistrationEmailOwner();
       allow delete: if isPlatformAdmin() || isTournamentAdmin(resource.data.tournament_id);
     }
 

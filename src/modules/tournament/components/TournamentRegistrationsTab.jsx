@@ -26,8 +26,10 @@ import {
   REGISTRATION_STATUS,
   REGISTRATION_STATUS_LABELS,
   MODALITY_FORMAT_LABELS,
+  TOURNAMENT_VISIBILITY,
 } from '@/modules/tournament/domain/constants';
 import { useAuth } from '@/core/lib/FirebaseAuthContext';
+import { LEVEL_OPTIONS } from '@/modules/leveling/data/levels';
 
 export default function TournamentRegistrationsTab({ tournament, isAdmin }) {
   const { user, userProfile } = useAuth();
@@ -35,7 +37,14 @@ export default function TournamentRegistrationsTab({ tournament, isAdmin }) {
   const { data: registrations = [] } = useRegistrationsByTournament(tournament.id);
   const [open, setOpen] = useState(false);
   const [selectedModalityId, setSelectedModalityId] = useState('');
-  const [form, setForm] = useState({ player_a_name: '', player_b_name: '' });
+  const [form, setForm] = useState({
+    player_a_name: '',
+    player_a_email: '',
+    player_a_level: '',
+    player_b_name: '',
+    player_b_email: '',
+    player_b_level: '',
+  });
   const createMutation = useCreateRegistration();
 
   const selectedModality = modalities.find((m) => m.id === selectedModalityId);
@@ -44,7 +53,11 @@ export default function TournamentRegistrationsTab({ tournament, isAdmin }) {
     setSelectedModalityId(modality.id);
     setForm({
       player_a_name: userProfile?.platform_name || user?.displayName || user?.email || '',
+      player_a_email: user?.email || '',
+      player_a_level: userProfile?.leveling_level || '',
       player_b_name: '',
+      player_b_email: '',
+      player_b_level: '',
     });
     setOpen(true);
   }
@@ -55,14 +68,26 @@ export default function TournamentRegistrationsTab({ tournament, isAdmin }) {
     if (selectedModality.format === MODALITY_FORMAT.DOUBLES && !form.player_b_name.trim()) {
       return toast.error('Informe o nome da dupla (jogador B).');
     }
+    if (isAdmin) {
+      if (!form.player_a_email.trim() || !form.player_a_level) return toast.error('Informe e-mail e nível do jogador A.');
+      if (selectedModality.format === MODALITY_FORMAT.DOUBLES && (!form.player_b_email.trim() || !form.player_b_level)) {
+        return toast.error('Informe e-mail e nível do jogador B.');
+      }
+    }
     try {
       await createMutation.mutateAsync({
         tournament_id: tournament.id,
         modality_id: selectedModality.id,
-        player_a: { name: form.player_a_name, user_id: user?.uid },
+        invite_code: sessionStorage.getItem(`tournament_access_${tournament.id}`) || '',
+        player_a: {
+          name: form.player_a_name,
+          email: form.player_a_email,
+          level: form.player_a_level,
+          user_id: isAdmin ? null : user?.uid,
+        },
         player_b:
           selectedModality.format === MODALITY_FORMAT.DOUBLES
-            ? { name: form.player_b_name }
+            ? { name: form.player_b_name, email: form.player_b_email, level: form.player_b_level }
             : null,
       });
       toast.success('Inscrição enviada!');
@@ -86,7 +111,9 @@ export default function TournamentRegistrationsTab({ tournament, isAdmin }) {
             key={modality.id}
             modality={modality}
             registrations={registrations.filter((r) => r.modality_id === modality.id)}
+            tournament={tournament}
             isAdmin={isAdmin}
+            currentUserId={user?.uid}
             onJoin={openDialog}
           />
         ))
@@ -95,18 +122,51 @@ export default function TournamentRegistrationsTab({ tournament, isAdmin }) {
       <Dialog open={open} onOpenChange={setOpen}>
         <DialogContent>
           <DialogHeader>
-            <DialogTitle>Inscrever-se em {selectedModality?.name}</DialogTitle>
+            <DialogTitle>{isAdmin ? 'Inscrever participante' : 'Inscrever-se'} em {selectedModality?.name}</DialogTitle>
           </DialogHeader>
           <div className="space-y-3">
             <div>
               <Label>Seu nome (Jogador A)</Label>
               <Input value={form.player_a_name} onChange={(e) => setForm((f) => ({ ...f, player_a_name: e.target.value }))} />
             </div>
-            {selectedModality?.format === MODALITY_FORMAT.DOUBLES && (
+            <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
               <div>
-                <Label>Parceiro(a) (Jogador B)</Label>
-                <Input value={form.player_b_name} onChange={(e) => setForm((f) => ({ ...f, player_b_name: e.target.value }))} />
+                <Label>E-mail do jogador A</Label>
+                <Input
+                  type="email"
+                  value={form.player_a_email}
+                  onChange={(e) => setForm((f) => ({ ...f, player_a_email: e.target.value }))}
+                  disabled={!isAdmin}
+                />
               </div>
+              <LevelSelect
+                label="Nível do jogador A"
+                value={form.player_a_level}
+                onChange={(value) => setForm((f) => ({ ...f, player_a_level: value }))}
+              />
+            </div>
+            {selectedModality?.format === MODALITY_FORMAT.DOUBLES && (
+              <>
+                <div>
+                  <Label>Parceiro(a) (Jogador B)</Label>
+                  <Input value={form.player_b_name} onChange={(e) => setForm((f) => ({ ...f, player_b_name: e.target.value }))} />
+                </div>
+                <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
+                  <div>
+                    <Label>E-mail do jogador B</Label>
+                    <Input
+                      type="email"
+                      value={form.player_b_email}
+                      onChange={(e) => setForm((f) => ({ ...f, player_b_email: e.target.value }))}
+                    />
+                  </div>
+                  <LevelSelect
+                    label="Nível do jogador B"
+                    value={form.player_b_level}
+                    onChange={(value) => setForm((f) => ({ ...f, player_b_level: value }))}
+                  />
+                </div>
+              </>
             )}
             {selectedModality?.entry_fee_cents > 0 && (
               <p className="text-xs text-amber-700 bg-amber-50 border border-amber-200 rounded p-2">
@@ -126,11 +186,19 @@ export default function TournamentRegistrationsTab({ tournament, isAdmin }) {
   );
 }
 
-function ModalityRegistrationsBlock({ modality, registrations, isAdmin, onJoin }) {
+function ModalityRegistrationsBlock({ tournament, modality, registrations, isAdmin, currentUserId, onJoin }) {
   const confirmMutation = useConfirmRegistrationPayment(modality.id);
   const cancelMutation = useCancelRegistration(modality.id);
   const deleteMutation = useDeleteRegistration(modality.id);
   const confirmed = registrations.filter((r) => r.status === REGISTRATION_STATUS.CONFIRMED).length;
+  const hasPrivateAccess = typeof window !== 'undefined' && Boolean(sessionStorage.getItem(`tournament_access_${tournament.id}`));
+  const isPublic = (tournament.visibility || TOURNAMENT_VISIBILITY.PRIVATE) === TOURNAMENT_VISIBILITY.PUBLIC;
+  const alreadyRegistered = registrations.some((r) => (
+    r.user_id === currentUserId ||
+    r.player_a_user_id === currentUserId ||
+    r.player_b_user_id === currentUserId
+  ));
+  const canJoin = isAdmin || isPublic || hasPrivateAccess || alreadyRegistered;
 
   return (
     <Card>
@@ -142,9 +210,13 @@ function ModalityRegistrationsBlock({ modality, registrations, isAdmin, onJoin }
               {MODALITY_FORMAT_LABELS[modality.format]} · {confirmed}/{modality.max_entries} confirmados
             </p>
           </div>
-          <Button size="sm" onClick={() => onJoin(modality)}>
-            <Plus className="w-4 h-4 mr-1" /> Inscrever-se
-          </Button>
+          {canJoin ? (
+            <Button size="sm" onClick={() => onJoin(modality)}>
+              <Plus className="w-4 h-4 mr-1" /> {isAdmin ? 'Inscrever jogador' : 'Inscrever-se'}
+            </Button>
+          ) : (
+            <Badge variant="secondary">Privado: exige código</Badge>
+          )}
         </div>
         {registrations.length > 0 && (
           <div className="mt-3 arena-table-wrap">
@@ -159,7 +231,13 @@ function ModalityRegistrationsBlock({ modality, registrations, isAdmin, onJoin }
               <tbody>
                 {registrations.map((r) => (
                   <tr key={r.id} className="border-t">
-                    <td className="px-3 py-2">{r.label || `${r.player_a_name}${r.player_b_name ? ' / ' + r.player_b_name : ''}`}</td>
+                    <td className="px-3 py-2">
+                      <div>{r.label || `${r.player_a_name}${r.player_b_name ? ' / ' + r.player_b_name : ''}`}</div>
+                      <div className="text-xs text-slate-500">
+                        {[r.player_a_email, r.player_b_email].filter(Boolean).join(' / ')}
+                        {r.is_provisional ? ' · provisório' : ''}
+                      </div>
+                    </td>
                     <td className="px-3 py-2">
                       <Badge variant={r.status === REGISTRATION_STATUS.CONFIRMED ? 'success' : 'secondary'}>
                         {REGISTRATION_STATUS_LABELS[r.status]}
@@ -190,5 +268,23 @@ function ModalityRegistrationsBlock({ modality, registrations, isAdmin, onJoin }
         )}
       </CardContent>
     </Card>
+  );
+}
+
+function LevelSelect({ label, value, onChange }) {
+  return (
+    <div>
+      <Label>{label}</Label>
+      <select
+        className="w-full h-10 rounded-md border border-input bg-background px-3 text-sm"
+        value={value}
+        onChange={(e) => onChange(e.target.value)}
+      >
+        <option value="">Selecione</option>
+        {LEVEL_OPTIONS.map((option) => (
+          <option key={option.code} value={option.code}>{option.label}</option>
+        ))}
+      </select>
+    </div>
   );
 }
