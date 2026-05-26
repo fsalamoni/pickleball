@@ -1,10 +1,11 @@
-import React, { useEffect } from 'react';
+import React, { useEffect, useMemo } from 'react';
 import { useParams, Link } from 'react-router-dom';
 import { useQuery } from '@tanstack/react-query';
 import { Printer, Trophy } from 'lucide-react';
 import { getTournament } from '@/modules/tournament/services/tournamentService';
 import { listModalities } from '@/modules/tournament/services/modalityService';
 import { listMatches } from '@/modules/tournament/services/matchService';
+import { listRegistrations } from '@/modules/tournament/services/registrationService';
 import { computeModalityRanking } from '@/modules/tournament/services/rankingService';
 import { MODALITY_FORMAT_LABELS } from '@/modules/tournament/domain/constants';
 
@@ -76,6 +77,30 @@ function PrintModality({ modality }) {
     queryKey: ['print', 'ranking', modality.id],
     queryFn: () => computeModalityRanking(modality.id),
   });
+  const { data: registrations = [] } = useQuery({
+    queryKey: ['print', 'registrations', modality.id],
+    queryFn: () => listRegistrations(modality.id),
+  });
+  const labelById = useMemo(() => {
+    const map = new Map();
+    registrations.forEach((r) =>
+      map.set(r.id, r.label || `${r.player_a_name || ''}${r.player_b_name ? ' / ' + r.player_b_name : ''}`),
+    );
+    return map;
+  }, [registrations]);
+
+  function renderSide(match, key) {
+    const ids = match[`${key}_ids`];
+    if (Array.isArray(ids) && ids.length > 0) {
+      return ids.map((id) => labelById.get(id) || id).join(' + ');
+    }
+    const raw = match[key];
+    if (!raw) return '—';
+    return String(raw)
+      .split('+')
+      .map((id) => labelById.get(id.trim()) || id.trim())
+      .join(' + ');
+  }
 
   return (
     <section className="mb-6 break-inside-avoid print:break-after-page">
@@ -97,20 +122,23 @@ function PrintModality({ modality }) {
                 <th className="py-1 text-center">PJ</th>
                 <th className="py-1 text-center">V</th>
                 <th className="py-1 text-center">Sets</th>
-                <th className="py-1 text-right">Pts</th>
+                <th className="py-1 text-right">Saldo</th>
               </tr>
             </thead>
             <tbody>
-              {ranking.map((r) => (
-                <tr key={r.participant_id} className="border-b">
-                  <td className="py-1">{r.position}</td>
-                  <td className="py-1">{r.label || r.participant_id}</td>
-                  <td className="py-1 text-center">{r.played}</td>
-                  <td className="py-1 text-center">{r.wins}</td>
-                  <td className="py-1 text-center">{r.sets_won}–{r.sets_lost}</td>
-                  <td className="py-1 text-right font-semibold">{r.ranking_points}</td>
-                </tr>
-              ))}
+              {ranking.map((r) => {
+                const balance = (r.points_for || 0) - (r.points_against || 0);
+                return (
+                  <tr key={r.participant_id} className="border-b">
+                    <td className="py-1">{r.position}</td>
+                    <td className="py-1">{r.label || r.participant_id}</td>
+                    <td className="py-1 text-center">{r.played}</td>
+                    <td className="py-1 text-center font-semibold">{r.wins}</td>
+                    <td className="py-1 text-center">{r.sets_won}–{r.sets_lost}</td>
+                    <td className="py-1 text-right font-medium">{balance > 0 ? `+${balance}` : balance}</td>
+                  </tr>
+                );
+              })}
             </tbody>
           </table>
         </div>
@@ -134,8 +162,8 @@ function PrintModality({ modality }) {
                 <tr key={m.id} className="border-b">
                   <td className="py-1">{m.round}</td>
                   {matches.some((mm) => mm.group) && <td className="py-1">{m.group || '—'}</td>}
-                  <td className="py-1">{m.side_a || '—'}</td>
-                  <td className="py-1">{m.side_b || '—'}</td>
+                  <td className="py-1">{renderSide(m, 'side_a')}</td>
+                  <td className="py-1">{renderSide(m, 'side_b')}</td>
                   <td className="py-1 text-right tabular-nums">
                     {(m.games || []).map((g, i) => (
                       <span key={i} className="ml-1">

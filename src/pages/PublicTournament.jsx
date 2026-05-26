@@ -1,4 +1,4 @@
-import React from 'react';
+import React, { useMemo } from 'react';
 import { useParams, Link } from 'react-router-dom';
 import { useQuery } from '@tanstack/react-query';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
@@ -8,6 +8,7 @@ import { Trophy, MapPin, Calendar, Hash, Eye, Printer } from 'lucide-react';
 import { getTournament } from '@/modules/tournament/services/tournamentService';
 import { listModalities } from '@/modules/tournament/services/modalityService';
 import { listMatches } from '@/modules/tournament/services/matchService';
+import { listRegistrations } from '@/modules/tournament/services/registrationService';
 import { computeModalityRanking } from '@/modules/tournament/services/rankingService';
 import {
   TOURNAMENT_STATUS_LABELS,
@@ -135,6 +136,31 @@ function PublicModalityBlock({ modality }) {
     queryFn: () => computeModalityRanking(modality.id),
     refetchInterval: 30_000,
   });
+  const { data: registrations = [] } = useQuery({
+    queryKey: ['public', 'registrations', modality.id],
+    queryFn: () => listRegistrations(modality.id),
+    refetchInterval: 60_000,
+  });
+  const labelById = useMemo(() => {
+    const map = new Map();
+    registrations.forEach((r) =>
+      map.set(r.id, r.label || `${r.player_a_name || ''}${r.player_b_name ? ' / ' + r.player_b_name : ''}`),
+    );
+    return map;
+  }, [registrations]);
+
+  function renderSide(match, key) {
+    const ids = match[`${key}_ids`];
+    if (Array.isArray(ids) && ids.length > 0) {
+      return ids.map((id) => labelById.get(id) || id).join(' + ');
+    }
+    const raw = match[key];
+    if (!raw) return '—';
+    return String(raw)
+      .split('+')
+      .map((id) => labelById.get(id.trim()) || id.trim())
+      .join(' + ');
+  }
 
   return (
     <Card>
@@ -159,20 +185,25 @@ function PublicModalityBlock({ modality }) {
                     <th className="px-3 py-2 text-center">PJ</th>
                     <th className="px-3 py-2 text-center">V</th>
                     <th className="px-3 py-2 text-center">Sets</th>
-                    <th className="px-3 py-2 text-right">Pts</th>
+                    <th className="px-3 py-2 text-right" title="Saldo de pontos (PF − PC)">Saldo</th>
                   </tr>
                 </thead>
                 <tbody>
-                  {ranking.slice(0, 16).map((r) => (
-                    <tr key={r.participant_id} className="border-t">
-                      <td className="px-3 py-2 font-semibold">{r.position}</td>
-                      <td className="px-3 py-2">{r.label || r.participant_id}</td>
-                      <td className="px-3 py-2 text-center">{r.played}</td>
-                      <td className="px-3 py-2 text-center">{r.wins}</td>
-                      <td className="px-3 py-2 text-center">{r.sets_won}–{r.sets_lost}</td>
-                      <td className="px-3 py-2 text-right font-semibold">{r.ranking_points}</td>
-                    </tr>
-                  ))}
+                  {ranking.slice(0, 16).map((r) => {
+                    const balance = (r.points_for || 0) - (r.points_against || 0);
+                    return (
+                      <tr key={r.participant_id} className="border-t">
+                        <td className="px-3 py-2 font-semibold">{r.position}</td>
+                        <td className="px-3 py-2">{r.label || r.participant_id}</td>
+                        <td className="px-3 py-2 text-center">{r.played}</td>
+                        <td className="px-3 py-2 text-center font-semibold">{r.wins}</td>
+                        <td className="px-3 py-2 text-center">{r.sets_won}–{r.sets_lost}</td>
+                        <td className={`px-3 py-2 text-right font-medium ${balance > 0 ? 'text-emerald-700' : balance < 0 ? 'text-red-600' : 'text-slate-600'}`}>
+                          {balance > 0 ? `+${balance}` : balance}
+                        </td>
+                      </tr>
+                    );
+                  })}
                 </tbody>
               </table>
             </div>
@@ -201,8 +232,8 @@ function PublicModalityBlock({ modality }) {
                       {matches.some((mm) => mm.group) && (
                         <td className="px-3 py-2">{m.group || '—'}</td>
                       )}
-                      <td className="px-3 py-2">{m.side_a || '—'}</td>
-                      <td className="px-3 py-2">{m.side_b || '—'}</td>
+                      <td className="px-3 py-2">{renderSide(m, 'side_a')}</td>
+                      <td className="px-3 py-2">{renderSide(m, 'side_b')}</td>
                       <td className="px-3 py-2 text-right tabular-nums">
                         {(m.games || []).map((g, i) => (
                           <span key={i} className="ml-1">

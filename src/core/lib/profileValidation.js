@@ -33,7 +33,6 @@ export function validateRequiredProfile({ platformName, birthDate, phone, pickle
 
   const age = calculateAge(birthDate);
   if (birthDate && age === null) errors.birthDate = 'Informe uma data de nascimento válida.';
-  if (age !== null && age < 18) errors.birthDate = 'Não é permitida a participação de menores em torneios.';
 
   const phoneDigits = trimmedPhone.replace(/\D/g, '');
   if (trimmedPhone && phoneDigits.length < 10) errors.phone = 'Informe um telefone com DDD.';

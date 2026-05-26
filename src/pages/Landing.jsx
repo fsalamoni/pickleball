@@ -73,8 +73,8 @@ export default function Landing() {
         />
         <FeatureCard
           icon={Target}
-          title="Pontuação configurável"
-          desc="Jogos de 11, 15 ou 21 pontos, 1+ sets, regras CBP ou USAP. Defina quanto vale vitória, set vencido e até saldo de games."
+          title="Pontuação oficial"
+          desc="Jogos de 11, 15 ou 21 pontos, 1+ sets, regras CBP ou USAP. Classificação por vitórias com desempate por saldo de pontos."
         />
         <FeatureCard
           icon={Trophy}
@@ -84,7 +84,7 @@ export default function Landing() {
         <FeatureCard
           icon={Award}
           title="Ranking ao vivo"
-          desc="Lance os resultados, a plataforma atualiza ranking e fases seguintes automaticamente. Desempate por confronto direto e saldos."
+          desc="Lance os resultados e a plataforma atualiza o ranking automaticamente. Classificação por vitórias, com desempate por saldo de pontos."
         />
         <FeatureCard
           icon={BookOpen}

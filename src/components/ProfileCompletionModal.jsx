@@ -68,14 +68,14 @@ export default function ProfileCompletionModal() {
         <AlertDialogHeader>
           <AlertDialogTitle>Complete seu perfil</AlertDialogTitle>
           <AlertDialogDescription>
-            Data de nascimento, telefone e tempo de experiência são obrigatórios para participar dos torneios. Não é permitida a participação de menores.
+            Data de nascimento, telefone e tempo de experiência são obrigatórios para participar dos torneios. Todas as idades são bem-vindas.
           </AlertDialogDescription>
         </AlertDialogHeader>
 
         <form onSubmit={handleSubmit} className="space-y-4">
-          <div className="rounded-md border border-amber-200 bg-amber-50 p-3 text-sm text-amber-900 flex items-start gap-2">
-            <AlertTriangle className="mt-0.5 h-4 w-4 shrink-0 text-amber-600" />
-            <span>Ao continuar, confirme dados verdadeiros. Participantes menores de 18 anos não podem entrar nos torneios.</span>
+          <div className="rounded-md border border-emerald-200 bg-emerald-50 p-3 text-sm text-emerald-900 flex items-start gap-2">
+            <AlertTriangle className="mt-0.5 h-4 w-4 shrink-0 text-emerald-700" />
+            <span>Ao continuar, confirme dados verdadeiros. A plataforma é aberta a participantes de todas as idades.</span>
           </div>
 
           <div className="space-y-2">

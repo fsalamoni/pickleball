@@ -1,6 +1,6 @@
 import React, { useMemo } from 'react';
 import { Link } from 'react-router-dom';
-import { Trophy, Plus, Hash, Users, Calendar } from 'lucide-react';
+import { Trophy, Plus, Hash, Users, Calendar, Globe } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent } from '@/components/ui/card';
 import { Badge } from '@/components/ui/badge';
@@ -32,7 +32,7 @@ export default function Dashboard() {
           <h1 className="text-2xl font-bold arena-heading">Meus torneios</h1>
           <p className="text-sm text-slate-600">Torneios que você administra, está inscrito ou estão públicos.</p>
         </div>
-        <div className="flex gap-2">
+        <div className="flex gap-2 flex-wrap">
           <Button asChild>
             <Link to="/torneios/criar">
               <Plus className="w-4 h-4 mr-1" /> Criar torneio
@@ -41,6 +41,11 @@ export default function Dashboard() {
           <Button asChild variant="outline">
             <Link to="/torneios/ingressar">
               <Hash className="w-4 h-4 mr-1" /> Ingressar com código
+            </Link>
+          </Button>
+          <Button asChild variant="outline">
+            <Link to="/torneios/publicos">
+              <Globe className="w-4 h-4 mr-1" /> Torneios públicos
             </Link>
           </Button>
         </div>
@@ -99,12 +104,15 @@ export default function Dashboard() {
             <Users className="w-10 h-10 mx-auto text-slate-300" />
             <h3 className="mt-3 font-medium text-slate-900">Você ainda não participa de nenhum torneio</h3>
             <p className="mt-1 text-sm text-slate-600">Crie o seu, ingresse com um código ou aguarde torneios públicos.</p>
-            <div className="mt-4 flex items-center justify-center gap-2">
+            <div className="mt-4 flex items-center justify-center gap-2 flex-wrap">
               <Button asChild>
                 <Link to="/torneios/criar">Criar torneio</Link>
               </Button>
               <Button asChild variant="outline">
                 <Link to="/torneios/ingressar">Ingressar com código</Link>
+              </Button>
+              <Button asChild variant="outline">
+                <Link to="/torneios/publicos">Torneios públicos</Link>
               </Button>
             </div>
           </CardContent>

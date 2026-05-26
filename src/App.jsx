@@ -12,6 +12,7 @@ const Inicio = lazy(() => import('@/modules/tournament/pages/Dashboard'));
 const Profile = lazy(() => import('@/pages/Profile'));
 const CreateTournament = lazy(() => import('@/modules/tournament/pages/CreateTournament'));
 const JoinTournament = lazy(() => import('@/modules/tournament/pages/JoinTournament'));
+const PublicTournamentsList = lazy(() => import('@/modules/tournament/pages/PublicTournamentsList'));
 const Tournament = lazy(() => import('@/modules/tournament/pages/Tournament'));
 const PrivacyPolicy = lazy(() => import('@/pages/PrivacyPolicy'));
 const PickleballRules = lazy(() => import('@/pages/PickleballRules'));
@@ -102,6 +103,7 @@ export default function App() {
               <Route path="/torneios" element={<Navigate to="/inicio" replace />} />
               <Route path="/torneios/criar" element={<ProtectedRoute>{withLayout('CreateTournament', CreateTournament)}</ProtectedRoute>} />
               <Route path="/torneios/ingressar" element={<ProtectedRoute>{withLayout('JoinTournament', JoinTournament)}</ProtectedRoute>} />
+              <Route path="/torneios/publicos" element={<ProtectedRoute>{withLayout('PublicTournamentsList', PublicTournamentsList)}</ProtectedRoute>} />
               <Route path="/torneios/:tournamentId" element={<ProtectedRoute>{withLayout('Tournament', Tournament)}</ProtectedRoute>} />
               <Route path="/torneios/:tournamentId/:tab" element={<ProtectedRoute>{withLayout('Tournament', Tournament)}</ProtectedRoute>} />
 
