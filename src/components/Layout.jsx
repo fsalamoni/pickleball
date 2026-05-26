@@ -11,6 +11,7 @@ import {
   X,
   Plus,
   Hash,
+  Globe,
   ShieldAlert,
   BarChart3,
   BookOpen,
@@ -124,6 +125,7 @@ export default function Layout({ children, currentPageName }) {
             <div className="mt-6 space-y-1">
               <NavItem to="/torneios/criar" icon={Plus} label="Criar torneio" active={currentPageName === 'CreateTournament'} onClick={() => setSidebarOpen(false)} />
               <NavItem to="/torneios/ingressar" icon={Hash} label="Ingressar com código" active={currentPageName === 'JoinTournament'} onClick={() => setSidebarOpen(false)} />
+              <NavItem to="/torneios/publicos" icon={Globe} label="Torneios públicos" active={currentPageName === 'PublicTournamentsList'} onClick={() => setSidebarOpen(false)} />
             </div>
 
             <div className="mt-6 mb-2 px-3">
@@ -276,6 +278,7 @@ function pageTitle(name) {
     Profile: 'Meu Perfil',
     CreateTournament: 'Criar torneio',
     JoinTournament: 'Ingressar com código',
+    PublicTournamentsList: 'Torneios públicos',
     Tournament: 'Torneio',
     PickleballRules: 'Regras do Pickleball',
     Leveling: 'Nivelamento',

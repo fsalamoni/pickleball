@@ -23,7 +23,7 @@ export default function JoinTournament() {
         return;
       }
       sessionStorage.setItem(`tournament_access_${t.id}`, code.trim().toUpperCase());
-      navigate(`/torneios/${t.id}/inscritos?join=1`);
+      navigate(`/torneios/${t.id}/visao-geral?join=1`);
     } catch (err) {
       toast.error(err.message || 'Falha ao buscar torneio.');
     } finally {

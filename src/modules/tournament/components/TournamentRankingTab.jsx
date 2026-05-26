@@ -1,6 +1,6 @@
 import React from 'react';
 import { Card, CardContent } from '@/components/ui/card';
-import { Trophy } from 'lucide-react';
+import { Trophy, Info } from 'lucide-react';
 import { useModalities, useModalityRanking } from '@/modules/tournament/hooks/useTournament';
 
 export default function TournamentRankingTab({ tournament }) {
@@ -17,6 +17,16 @@ export default function TournamentRankingTab({ tournament }) {
   }
   return (
     <div className="space-y-4">
+      <Card className="border-emerald-200 bg-emerald-50/40">
+        <CardContent className="p-4 flex items-start gap-2 text-sm text-emerald-950">
+          <Info className="w-4 h-4 mt-0.5 text-emerald-700 shrink-0" />
+          <div>
+            <strong>Como funciona a classificação:</strong> a posição é definida pelo número de vitórias.
+            Em caso de empate, valem na ordem: <strong>saldo de pontos</strong> (a favor − contra),
+            <strong> pontos marcados</strong> e, por fim, <strong>menor número de pontos sofridos</strong>.
+          </div>
+        </CardContent>
+      </Card>
       {modalities.map((m) => (
         <ModalityRankingBlock key={m.id} modality={m} />
       ))}
@@ -45,13 +55,12 @@ function ModalityRankingBlock({ modality }) {
                   <th className="px-3 py-2">Pos.</th>
                   <th className="px-3 py-2">Participante</th>
                   <th className="px-3 py-2 text-center">PJ</th>
-                  <th className="px-3 py-2 text-center">V</th>
+                  <th className="px-3 py-2 text-center" title="Vitórias — critério principal de classificação">V</th>
                   <th className="px-3 py-2 text-center">D</th>
                   <th className="px-3 py-2 text-center">Sets (G–P)</th>
-                  <th className="px-3 py-2 text-center">PF</th>
-                  <th className="px-3 py-2 text-center">PC</th>
-                  <th className="px-3 py-2 text-center" title="Saldo de pontos (PF − PC) — usado como desempate">Saldo</th>
-                  <th className="px-3 py-2 text-right">Pontos</th>
+                  <th className="px-3 py-2 text-center" title="Pontos a favor (somados em todos os jogos)">PF</th>
+                  <th className="px-3 py-2 text-center" title="Pontos sofridos">PC</th>
+                  <th className="px-3 py-2 text-center" title="Saldo de pontos (PF − PC) — 1º critério de desempate">Saldo</th>
                 </tr>
               </thead>
               <tbody>
@@ -62,7 +71,7 @@ function ModalityRankingBlock({ modality }) {
                       <td className="px-3 py-2 font-bold">{r.position}</td>
                       <td className="px-3 py-2">{r.label}</td>
                       <td className="px-3 py-2 text-center">{r.played}</td>
-                      <td className="px-3 py-2 text-center">{r.wins}</td>
+                      <td className="px-3 py-2 text-center font-semibold">{r.wins}</td>
                       <td className="px-3 py-2 text-center">{r.losses}</td>
                       <td className="px-3 py-2 text-center">{r.sets_won}–{r.sets_lost}</td>
                       <td className="px-3 py-2 text-center">{r.points_for}</td>
@@ -70,7 +79,6 @@ function ModalityRankingBlock({ modality }) {
                       <td className={`px-3 py-2 text-center font-medium ${balance > 0 ? 'text-emerald-700' : balance < 0 ? 'text-red-600' : 'text-slate-600'}`}>
                         {balance > 0 ? `+${balance}` : balance}
                       </td>
-                      <td className="px-3 py-2 text-right font-semibold">{r.ranking_points}</td>
                     </tr>
                   );
                 })}

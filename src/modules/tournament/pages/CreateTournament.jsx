@@ -28,8 +28,6 @@ export default function CreateTournament() {
     ruleset: RULESET.CBP,
     target_score: TARGET_SCORE.ELEVEN,
     sets_per_match: 1,
-    match_win_points: 3,
-    per_set_won_points: 0,
     starts_at: '',
     ends_at: '',
     registration_deadline: '',
@@ -59,14 +57,6 @@ export default function CreateTournament() {
           target_score: Number(form.target_score),
           sets_per_match: Number(form.sets_per_match),
           win_by_two: true,
-          points: {
-            match_win: Number(form.match_win_points),
-            match_loss: 0,
-            match_draw: 0,
-            walkover_win: Number(form.match_win_points),
-            walkover_loss: 0,
-            per_set_won: Number(form.per_set_won_points),
-          },
         },
       });
       toast.success('Torneio criado!');
@@ -166,18 +156,13 @@ export default function CreateTournament() {
                     <option value={5}>Melhor de 5</option>
                   </select>
                 </div>
-                <div>
-                  <Label>Pontos por vitória</Label>
-                  <Input type="number" min={0} value={form.match_win_points} onChange={(e) => set('match_win_points', e.target.value)} />
-                </div>
-                <div>
-                  <Label>Pontos por set vencido</Label>
-                  <Input type="number" min={0} value={form.per_set_won_points} onChange={(e) => set('per_set_won_points', e.target.value)} />
-                </div>
               </div>
-              <p className="text-xs text-slate-500">
-                Esses valores podem ser sobrescritos em cada modalidade depois de criar o torneio.
-              </p>
+              <div className="rounded-md border border-emerald-200 bg-emerald-50/60 p-3 text-xs text-emerald-950">
+                <strong>Classificação do ranking (padrão da plataforma):</strong> a posição é definida
+                pelo número de vitórias. Em caso de empate valem, nesta ordem, o saldo de pontos
+                (a favor − contra), o maior número de pontos marcados e, por último, o menor número
+                de pontos sofridos. Não é necessário definir pontuação por vitória.
+              </div>
             </section>
 
             <Separator />

@@ -159,20 +159,25 @@ function PublicModalityBlock({ modality }) {
                     <th className="px-3 py-2 text-center">PJ</th>
                     <th className="px-3 py-2 text-center">V</th>
                     <th className="px-3 py-2 text-center">Sets</th>
-                    <th className="px-3 py-2 text-right">Pts</th>
+                    <th className="px-3 py-2 text-right" title="Saldo de pontos (PF − PC)">Saldo</th>
                   </tr>
                 </thead>
                 <tbody>
-                  {ranking.slice(0, 16).map((r) => (
-                    <tr key={r.participant_id} className="border-t">
-                      <td className="px-3 py-2 font-semibold">{r.position}</td>
-                      <td className="px-3 py-2">{r.label || r.participant_id}</td>
-                      <td className="px-3 py-2 text-center">{r.played}</td>
-                      <td className="px-3 py-2 text-center">{r.wins}</td>
-                      <td className="px-3 py-2 text-center">{r.sets_won}–{r.sets_lost}</td>
-                      <td className="px-3 py-2 text-right font-semibold">{r.ranking_points}</td>
-                    </tr>
-                  ))}
+                  {ranking.slice(0, 16).map((r) => {
+                    const balance = (r.points_for || 0) - (r.points_against || 0);
+                    return (
+                      <tr key={r.participant_id} className="border-t">
+                        <td className="px-3 py-2 font-semibold">{r.position}</td>
+                        <td className="px-3 py-2">{r.label || r.participant_id}</td>
+                        <td className="px-3 py-2 text-center">{r.played}</td>
+                        <td className="px-3 py-2 text-center font-semibold">{r.wins}</td>
+                        <td className="px-3 py-2 text-center">{r.sets_won}–{r.sets_lost}</td>
+                        <td className={`px-3 py-2 text-right font-medium ${balance > 0 ? 'text-emerald-700' : balance < 0 ? 'text-red-600' : 'text-slate-600'}`}>
+                          {balance > 0 ? `+${balance}` : balance}
+                        </td>
+                      </tr>
+                    );
+                  })}
                 </tbody>
               </table>
             </div>

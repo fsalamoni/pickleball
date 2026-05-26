@@ -1,7 +1,7 @@
 import { useEffect, useMemo, useState } from 'react';
 import { Timestamp } from 'firebase/firestore';
 import { toast } from 'sonner';
-import { Award, Printer, ShieldCheck, UserCheck } from 'lucide-react';
+import { Award, Printer, UserCheck } from 'lucide-react';
 import { useAuth } from '@/core/lib/FirebaseAuthContext';
 import { birthDateToBrtDate, validateRequiredProfile } from '@/core/lib/profileValidation';
 import { Button } from '@/components/ui/button';
@@ -259,10 +259,6 @@ export default function Profile() {
                 automaticamente as modalidades elegíveis (masculino, feminino, dupla mista, etc.)
                 em torneios que tenham categorias separadas.
               </p>
-            </div>
-            <div className="flex items-start gap-2 rounded-md border border-amber-300/60 bg-amber-100/80 p-3 text-sm text-amber-950">
-              <ShieldCheck className="mt-0.5 h-4 w-4 shrink-0" />
-              <span>Não é permitida a participação de menores em torneios.</span>
             </div>
             <Button type="submit" disabled={busy} className="bg-emerald-700 hover:bg-emerald-800">
               {busy ? 'Salvando...' : 'Salvar alterações'}

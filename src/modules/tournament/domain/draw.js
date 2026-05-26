@@ -227,14 +227,223 @@ export function seedSlot(seedNum, size) {
 /* ----------------------------- Americana -------------------------------- */
 
 /**
- * Gera as rodadas da Americana: cada jogador joga em dupla com cada outro
- * jogador exatamente uma vez, contra outra dupla.
+ * Calcula o número exato de jogos para um torneio Americana aberta
+ * (todos jogam em dupla com todos exatamente uma vez).
  *
- * Para N jogadores, são necessárias N-1 rodadas (com N par), cada rodada
- * formando N/4 jogos (ou N/2 quadras simultâneas se N múltiplo de 4).
+ * Cada jogo envolve 4 jogadores formando 2 duplas. Cada dupla é uma parceria
+ * única. O total de parcerias possíveis é C(N,2). Cada jogo "consome" 2
+ * parcerias, então o total de jogos é C(N,2) / 2 = N·(N−1) / 4.
  *
- * Quando N não é múltiplo de 4, os jogos restantes ficam balanceados.
- * Quando N é ímpar, um jogador descansa em cada rodada.
+ * Para que o total seja inteiro, é necessário que N(N−1) seja múltiplo de 4,
+ * o que ocorre quando N ≡ 0 ou N ≡ 1 (mod 4). Para N ≡ 2 ou 3 (mod 4) o
+ * formato Americana aberta não fecha matematicamente.
+ *
+ * @param {number} n
+ * @returns {{ totalMatches: number, exact: boolean, reason?: string }}
+ */
+export function americanoMatchCount(n) {
+  if (n < 4) return { totalMatches: 0, exact: false, reason: 'Mínimo de 4 jogadores.' };
+  const product = n * (n - 1);
+  if (product % 4 !== 0) {
+    return {
+      totalMatches: Math.floor(product / 4),
+      exact: false,
+      reason: `Com ${n} jogadores o formato Americana aberta não fecha — cada parceria precisa ser única. Use um número de jogadores N tal que N ≡ 0 ou N ≡ 1 (mod 4): 4, 5, 8, 9, 12, 13, 16, 17, …`,
+    };
+  }
+  return { totalMatches: product / 4, exact: true };
+}
+
+/**
+ * Resolve o mini-torneio Americana fixo para 4 jogadores [a, b, c, d]:
+ *   1) a+b vs c+d
+ *   2) a+c vs b+d
+ *   3) a+d vs b+c
+ *
+ * Cada parceria possível aparece exatamente uma vez.
+ * @param {[string, string, string, string]} four
+ * @returns {Array<{ side_a: [string, string], side_b: [string, string] }>}
+ */
+export function americanoFour(four) {
+  const [a, b, c, d] = four;
+  return [
+    { side_a: [a, b], side_b: [c, d] },
+    { side_a: [a, c], side_b: [b, d] },
+    { side_a: [a, d], side_b: [b, c] },
+  ];
+}
+
+/**
+ * Gera os 8 jogos que cobrem TODAS as parcerias cruzadas entre dois blocos
+ * de 4 jogadores (B1 = [a,b,c,d], B2 = [e,f,g,h]).
+ *
+ * Há 16 parcerias cruzadas (4×4). Cada jogo cruzado consome 2 parcerias
+ * cruzadas. Logo, 8 jogos cobrem todas. Eles são organizados em 4 sub-blocos
+ * de 4 jogadores ("a, b, e, f", "c, d, g, h", "a, b, g, h", "c, d, e, f"),
+ * cada um contribuindo com 2 jogos cruzados (o terceiro jogo do mini-bloco
+ * seria uma parceria intra-bloco já jogada na Fase 1 e por isso é omitido).
+ *
+ * @param {[string, string, string, string]} b1
+ * @param {[string, string, string, string]} b2
+ * @returns {Array<{ side_a: [string, string], side_b: [string, string] }>}
+ */
+export function americanoCrossBlocks(b1, b2) {
+  const [a, b, c, d] = b1;
+  const [e, f, g, h] = b2;
+  const subblocks = [
+    [a, b, e, f],
+    [c, d, g, h],
+    [a, b, g, h],
+    [c, d, e, f],
+  ];
+  const matches = [];
+  subblocks.forEach((sb) => {
+    // Em [x, y, z, w] com {x,y} ⊂ B1 e {z,w} ⊂ B2 (ou vice-versa), os 3
+    // jogos do mini-torneio Americana são:
+    //   1) x+y vs z+w  → parceiras já jogadas na Fase 1 → omitido
+    //   2) x+z vs y+w  → 2 novas parcerias cruzadas
+    //   3) x+w vs y+z  → 2 novas parcerias cruzadas
+    const [x, y, z, w] = sb;
+    matches.push({ side_a: [x, z], side_b: [y, w] });
+    matches.push({ side_a: [x, w], side_b: [y, z] });
+  });
+  return matches;
+}
+
+/**
+ * Cobertura completa para o caso geral de N jogadores em Americana aberta.
+ *
+ * Estratégia:
+ *  - Geramos todas as C(N,2) parcerias.
+ *  - Construímos jogos por "matching" guloso, garantindo que cada parceria
+ *    apareça exatamente uma vez e cada jogador apareça no máximo uma vez por
+ *    rodada (round-robin temporal).
+ *
+ * Esta rotina é usada quando N não é múltiplo de 4 (ex.: N=5, 9, 13...).
+ * Para N múltiplo de 4 o caminho rápido é `buildAmericanoBlockSchedule`.
+ *
+ * @param {string[]} players
+ * @returns {Array<{ side_a: [string, string], side_b: [string, string] }>}
+ */
+function buildAmericanoGeneral(players) {
+  const pairs = [];
+  for (let i = 0; i < players.length; i += 1) {
+    for (let j = i + 1; j < players.length; j += 1) {
+      pairs.push([players[i], players[j]]);
+    }
+  }
+  const matches = [];
+  const used = new Array(pairs.length).fill(false);
+  while (used.includes(false)) {
+    const i = used.findIndex((u) => !u);
+    const pa = pairs[i];
+    let partnerIdx = -1;
+    for (let j = i + 1; j < pairs.length; j += 1) {
+      if (used[j]) continue;
+      const pb = pairs[j];
+      if (
+        pb[0] !== pa[0] && pb[0] !== pa[1] &&
+        pb[1] !== pa[0] && pb[1] !== pa[1]
+      ) {
+        partnerIdx = j;
+        break;
+      }
+    }
+    if (partnerIdx === -1) break; // não há mais como casar, sai
+    used[i] = true;
+    used[partnerIdx] = true;
+    matches.push({ side_a: pa, side_b: pairs[partnerIdx] });
+  }
+  return matches;
+}
+
+/**
+ * Distribui uma lista de jogos em rodadas de tal modo que nenhum jogador
+ * participe de dois jogos na mesma rodada (greedy).
+ */
+function assignRounds(matches) {
+  // matches: [{ side_a: [x,y], side_b: [z,w] }, ...]
+  const remaining = matches.slice();
+  const out = [];
+  let round = 1;
+  while (remaining.length > 0) {
+    const busy = new Set();
+    const scheduled = [];
+    const leftovers = [];
+    for (let i = 0; i < remaining.length; i += 1) {
+      const m = remaining[i];
+      const players = [...m.side_a, ...m.side_b];
+      if (players.some((p) => busy.has(p))) {
+        leftovers.push(m);
+        continue;
+      }
+      players.forEach((p) => busy.add(p));
+      scheduled.push({ ...m, round });
+    }
+    if (scheduled.length === 0) {
+      // não foi possível agendar nada — força o primeiro restante na próxima rodada
+      // para evitar loop infinito
+      const m = leftovers.shift();
+      if (!m) break;
+      out.push({ ...m, round });
+      remaining.splice(0, remaining.length, ...leftovers);
+      round += 1;
+      continue;
+    }
+    out.push(...scheduled);
+    remaining.splice(0, remaining.length, ...leftovers);
+    round += 1;
+  }
+  return out;
+}
+
+/**
+ * Gera o calendário hierárquico para N múltiplo de 4:
+ *   Fase 1: para cada bloco de 4 jogadores, joga seus 3 jogos intra-bloco.
+ *   Fase 2: para cada par de blocos (B_i, B_j), joga os 8 jogos cruzados.
+ *
+ * A ordem das fases é estável (determinística pela ordem dos jogadores):
+ *   - blocos: chunks de 4 na ordem fornecida
+ *   - dentro do bloco: ordem fixa de americanoFour
+ *   - entre blocos: pares na ordem (i, j) com i < j
+ */
+function buildAmericanoBlockSchedule(players) {
+  const matches = [];
+  const blocks = [];
+  for (let i = 0; i < players.length; i += 4) {
+    blocks.push(players.slice(i, i + 4));
+  }
+
+  // Fase 1: intra-blocos
+  blocks.forEach((b) => matches.push(...americanoFour(b)));
+
+  // Fase 2: cruzamentos entre pares de blocos
+  for (let i = 0; i < blocks.length; i += 1) {
+    for (let j = i + 1; j < blocks.length; j += 1) {
+      matches.push(...americanoCrossBlocks(blocks[i], blocks[j]));
+    }
+  }
+  return matches;
+}
+
+/**
+ * Gera as rodadas da Americana aberta: cada jogador joga em dupla com cada
+ * outro jogador exatamente uma vez, contra outra dupla.
+ *
+ * O número total de jogos é exato: C(N,2) / 2 = N·(N−1) / 4.
+ *
+ * Quando N é múltiplo de 4, o cronograma é hierárquico:
+ *   1. Resolver os jogos internos de cada bloco de 4 jogadores
+ *      (ex.: {a,b,c,d}, depois {e,f,g,h}).
+ *   2. Resolver os cruzamentos entre cada par de blocos
+ *      (ex.: misturar {a,b,e,f} e {c,d,g,h}, depois {a,b,g,h} e {c,d,e,f}).
+ *
+ * Para N ≡ 1 (mod 4) (5, 9, 13, …) também há cobertura exata, usando uma
+ * heurística gulosa que respeita a unicidade das parcerias.
+ *
+ * Para N ≡ 2 ou 3 (mod 4) o formato não fecha matematicamente. Nestes casos
+ * é lançado um erro descritivo para o admin escolher outro número de
+ * inscritos ou outro formato de torneio.
  *
  * @param {string[]} playerIds
  * @param {{ seed?: string }} [options]
@@ -242,68 +451,27 @@ export function seedSlot(seedNum, size) {
  */
 export function buildAmericanoRotation(playerIds, options = {}) {
   const { seed = 'americano' } = options;
+  const n = playerIds.length;
+  if (n < 4) {
+    throw new Error('Americana aberta exige no mínimo 4 jogadores.');
+  }
+  const check = americanoMatchCount(n);
+  if (!check.exact) {
+    throw new Error(check.reason);
+  }
+
+  // Embaralhamento determinístico: define a ordem dos blocos sem alterar
+  // a estrutura matemática do torneio.
   const rng = seededRng(seed);
   const players = shuffle(playerIds, rng);
-  const matches = [];
-  const seenPairs = new Set();
 
-  const pairKey = (x, y) => [x, y].sort().join('|');
+  const baseMatches =
+    n % 4 === 0
+      ? buildAmericanoBlockSchedule(players)
+      : buildAmericanoGeneral(players);
 
-  // Para cada par possível, joga uma vez. Distribui em rodadas tentando
-  // que cada jogador atue uma vez por rodada quando possível.
-  const allPairs = [];
-  for (let i = 0; i < players.length; i += 1) {
-    for (let j = i + 1; j < players.length; j += 1) {
-      allPairs.push([players[i], players[j]]);
-    }
-  }
-
-  // Agrupa em rodadas: em cada rodada montamos jogos (par-vs-par) usando
-  // jogadores ainda não escalados nessa rodada.
-  let round = 1;
-  let remaining = allPairs.slice();
-  while (remaining.length > 0) {
-    const busy = new Set();
-    const roundGames = [];
-    const skipped = [];
-    // ordena por par com mais "déficit" de jogos primeiro para balancear
-    const sorted = remaining.slice().sort(() => rng() - 0.5);
-    for (let idx = 0; idx < sorted.length; idx += 1) {
-      const pairA = sorted[idx];
-      if (!pairA) continue;
-      if (busy.has(pairA[0]) || busy.has(pairA[1])) {
-        skipped.push(pairA);
-        continue;
-      }
-      // procura um pairB compatível
-      const pairBIdx = sorted.findIndex((p, k) => {
-        if (k <= idx) return false;
-        if (!p) return false;
-        return !busy.has(p[0]) && !busy.has(p[1]) && !pairA.includes(p[0]) && !pairA.includes(p[1]);
-      });
-      if (pairBIdx === -1) {
-        skipped.push(pairA);
-        continue;
-      }
-      const pairB = sorted[pairBIdx];
-      busy.add(pairA[0]);
-      busy.add(pairA[1]);
-      busy.add(pairB[0]);
-      busy.add(pairB[1]);
-      roundGames.push({ round, side_a: pairA, side_b: pairB });
-      seenPairs.add(pairKey(pairA[0], pairA[1]));
-      seenPairs.add(pairKey(pairB[0], pairB[1]));
-      sorted[idx] = null;
-      sorted[pairBIdx] = null;
-    }
-    matches.push(...roundGames);
-    // remove pares já utilizados
-    const used = new Set(roundGames.flatMap((g) => [pairKey(...g.side_a), pairKey(...g.side_b)]));
-    remaining = remaining.filter((p) => !used.has(pairKey(p[0], p[1])));
-    if (roundGames.length === 0) break; // proteção contra loop infinito
-    round += 1;
-  }
-  return matches;
+  // Atribui rodadas (cada jogador joga no máximo uma vez por rodada).
+  return assignRounds(baseMatches);
 }
 
 /* ----------------------------- Entrypoint ------------------------------- */

@@ -97,20 +97,23 @@ function PrintModality({ modality }) {
                 <th className="py-1 text-center">PJ</th>
                 <th className="py-1 text-center">V</th>
                 <th className="py-1 text-center">Sets</th>
-                <th className="py-1 text-right">Pts</th>
+                <th className="py-1 text-right">Saldo</th>
               </tr>
             </thead>
             <tbody>
-              {ranking.map((r) => (
-                <tr key={r.participant_id} className="border-b">
-                  <td className="py-1">{r.position}</td>
-                  <td className="py-1">{r.label || r.participant_id}</td>
-                  <td className="py-1 text-center">{r.played}</td>
-                  <td className="py-1 text-center">{r.wins}</td>
-                  <td className="py-1 text-center">{r.sets_won}–{r.sets_lost}</td>
-                  <td className="py-1 text-right font-semibold">{r.ranking_points}</td>
-                </tr>
-              ))}
+              {ranking.map((r) => {
+                const balance = (r.points_for || 0) - (r.points_against || 0);
+                return (
+                  <tr key={r.participant_id} className="border-b">
+                    <td className="py-1">{r.position}</td>
+                    <td className="py-1">{r.label || r.participant_id}</td>
+                    <td className="py-1 text-center">{r.played}</td>
+                    <td className="py-1 text-center font-semibold">{r.wins}</td>
+                    <td className="py-1 text-center">{r.sets_won}–{r.sets_lost}</td>
+                    <td className="py-1 text-right font-medium">{balance > 0 ? `+${balance}` : balance}</td>
+                  </tr>
+                );
+              })}
             </tbody>
           </table>
         </div>

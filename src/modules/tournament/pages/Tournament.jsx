@@ -12,21 +12,23 @@ import {
   TOURNAMENT_VISIBILITY_LABELS,
 } from '@/modules/tournament/domain/constants';
 import TournamentOverviewTab from '../components/TournamentOverviewTab';
-import TournamentModalitiesTab from '../components/TournamentModalitiesTab';
-import TournamentRegistrationsTab from '../components/TournamentRegistrationsTab';
 import TournamentMatchesTab from '../components/TournamentMatchesTab';
 import TournamentRankingTab from '../components/TournamentRankingTab';
 import TournamentAdminPanel from '../components/TournamentAdminPanel';
 
-// Abas visíveis a qualquer participante (admins veem o MESMO conteúdo de
-// jogador nestas abas — ações de gestão ficam exclusivamente na aba "Admin").
+// Abas visíveis a qualquer participante. As inscrições e a lista de
+// modalidades passaram a viver dentro da própria "Visão geral", com o botão
+// de inscrição e o modal de informações em cada cartão de modalidade.
+// Ações de gestão ficam exclusivamente na aba "Admin".
 const PLAYER_TABS = [
   { value: 'visao-geral', label: 'Visão geral' },
-  { value: 'modalidades', label: 'Modalidades' },
-  { value: 'inscritos', label: 'Inscritos' },
   { value: 'jogos', label: 'Jogos' },
   { value: 'ranking', label: 'Ranking' },
 ];
+
+// Abas obsoletas que ainda podem aparecer em links salvos. Redirecionamos
+// para a nova home da modalidade (visão geral).
+const LEGACY_PLAYER_TABS = new Set(['modalidades', 'inscritos']);
 
 export default function Tournament() {
   const { tournamentId, tab = 'visao-geral' } = useParams();
@@ -62,6 +64,10 @@ export default function Tournament() {
   // Redireciona automaticamente abas obsoletas (ex.: /sorteio) para a área correta.
   if (tab === 'sorteio') {
     navigate(`/torneios/${tournamentId}/${isAdmin ? 'admin' : 'jogos'}`, { replace: true });
+    return null;
+  }
+  if (LEGACY_PLAYER_TABS.has(tab)) {
+    navigate(`/torneios/${tournamentId}/visao-geral`, { replace: true });
     return null;
   }
   if (tab === 'admin' && !isAdmin) {
@@ -127,15 +133,11 @@ export default function Tournament() {
         </TabsList>
 
         {/* Visualização do jogador — admins veem exatamente o mesmo conteúdo aqui.
-            Todas as ações de gestão ficam isoladas na aba "Admin". */}
+            Todas as ações de gestão ficam isoladas na aba "Admin". As
+            modalidades (com inscrição e informações) ficam dentro da visão
+            geral. */}
         <TabsContent value="visao-geral" className="mt-4">
           <TournamentOverviewTab tournament={tournament} isAdmin={isAdmin} />
-        </TabsContent>
-        <TabsContent value="modalidades" className="mt-4">
-          <TournamentModalitiesTab tournament={tournament} isAdmin={false} />
-        </TabsContent>
-        <TabsContent value="inscritos" className="mt-4">
-          <TournamentRegistrationsTab tournament={tournament} isAdmin={false} />
         </TabsContent>
         <TabsContent value="jogos" className="mt-4">
           <TournamentMatchesTab tournament={tournament} isAdmin={false} />
