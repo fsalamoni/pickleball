@@ -86,8 +86,9 @@ function ModalityRegistrationsBlock({ tournament, modality, registrations, isAdm
           <div>
             <h4 className="font-semibold">{modality.name}</h4>
             <p className="text-xs text-slate-500">
-              {MODALITY_FORMAT_LABELS[modality.format]} · {confirmed}
-              {hasUnlimitedEntries(modality.max_entries) ? ' confirmados · vagas abertas' : `/${modality.max_entries} confirmados`}
+              {MODALITY_FORMAT_LABELS[modality.format]} · {hasUnlimitedEntries(modality.max_entries)
+                ? `${confirmed} confirmados · vagas abertas`
+                : `${confirmed}/${modality.max_entries} confirmados`}
             </p>
           </div>
           {canJoin ? (

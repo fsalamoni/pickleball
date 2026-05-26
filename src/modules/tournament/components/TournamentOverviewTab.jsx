@@ -228,7 +228,7 @@ function ModalityCard({
   const pct = getCapacityProgress(confirmed, modality.max_entries);
   const barTone = slotsFull
     ? 'bg-amber-500'
-    : (pct || 0) >= 80
+    : (pct ?? 0) >= 80
       ? 'bg-amber-400'
       : 'bg-emerald-500';
 

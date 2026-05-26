@@ -49,6 +49,10 @@ function formatBRL(cents) {
   return `R$ ${value.toFixed(2).replace('.', ',')}`;
 }
 
+function formatConfirmedCount(count) {
+  return `${count} ${count === 1 ? 'inscrição confirmada' : 'inscrições confirmadas'}`;
+}
+
 function AmericanoMatchPreview({ confirmed }) {
   if (!confirmed || confirmed < 4) {
     return (
@@ -114,8 +118,8 @@ export default function ModalityInfoModal({ modality, tournament, registrationsC
               <li>
                 <strong>Vagas:</strong>{' '}
                 {hasUnlimitedEntries(modality.max_entries)
-                  ? `abertas. O sistema organizará a modalidade com base nas ${registrationsCount} inscrição(ões) confirmada(s) ao encerrar as inscrições.`
-                  : `até ${modality.max_entries} inscrições. Atualmente ${registrationsCount} confirmada(s).`}
+                  ? `abertas. O sistema organizará a modalidade com base nas ${formatConfirmedCount(registrationsCount)} ao encerrar as inscrições.`
+                  : `até ${modality.max_entries} inscrições. Atualmente ${formatConfirmedCount(registrationsCount)}.`}
               </li>
               <li><strong>Categoria de gênero:</strong> {GENDER_CATEGORY_LABELS[modality.gender_category]}</li>
               <li><strong>Faixa etária:</strong> {AGE_CATEGORY_LABELS[modality.age_category]} <span className="text-xs text-slate-500">(a plataforma é aberta a todas as idades; esta categoria define apenas a faixa elegível para esta modalidade)</span></li>
