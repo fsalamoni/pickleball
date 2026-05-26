@@ -79,8 +79,7 @@ jobs:
             echo "Creating Firestore database '$FIRESTORE_DATABASE_ID' in $FIRESTORE_LOCATION..."
             firebase firestore:databases:create "$FIRESTORE_DATABASE_ID" \
               --location "$FIRESTORE_LOCATION" \
-              --project "$FIREBASE_PROJECT_ID" \
-              --type firestore-native
+              --project "$FIREBASE_PROJECT_ID"
           fi
 
       - name: Ensure Hosting site "pickletour" exists
