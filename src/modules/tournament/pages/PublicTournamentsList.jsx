@@ -8,7 +8,6 @@ import {
   Hash,
   MapPin,
   Search,
-  Sparkles,
   Trophy,
   Users,
   X,
@@ -118,83 +117,39 @@ export default function PublicTournamentsList() {
     const cities = new Set(tournaments.map((t) => [t.city, t.state].filter(Boolean).join(' / ')).filter(Boolean));
     return [
       {
-        label: 'torneios publicados',
+        label: 'publicados',
         value: tournaments.length,
-        hint: 'catalogo publico da plataforma',
         icon: Globe,
       },
       {
-        label: 'com atividade agora',
+        label: 'ativos',
         value: tournaments.filter((t) => OPEN_STATUSES.has(t.status)).length,
-        hint: 'inscricoes abertas ou evento em andamento',
         icon: Activity,
       },
       {
-        label: 'cidades visiveis',
+        label: 'cidades',
         value: cities.size,
-        hint: 'alcance atual dos eventos divulgados',
         icon: MapPin,
       },
     ];
   }, [tournaments]);
 
-  const featuredTournaments = filtered.slice(0, 3);
-
   return (
-    <div className="space-y-8">
-      <section className="grid gap-6 xl:grid-cols-[1.08fr,0.92fr]">
-        <Card className="arena-panel-strong overflow-hidden rounded-[2rem] border-0">
-          <CardContent className="relative p-7 sm:p-8 lg:p-10">
-            <div className="relative max-w-2xl">
-              <span className="inline-flex items-center gap-2 rounded-full border border-white/15 bg-white/10 px-3 py-1 text-xs font-semibold uppercase tracking-[0.18em] text-emerald-50/80">
-                <Sparkles className="h-3.5 w-3.5" /> Descoberta publica de torneios
-              </span>
-              <h2 className="mt-5 text-3xl font-semibold leading-tight text-white lg:text-4xl">
-                Explore eventos abertos com uma leitura mais clara do que esta acontecendo agora.
-              </h2>
-              <p className="mt-4 max-w-xl text-sm leading-7 text-emerald-50/75 sm:text-base">
-                A inscricao em torneios publicos nao exige codigo. Basta abrir o evento, entender o contexto e seguir para a modalidade desejada com menos friccao.
-              </p>
-
-              <div className="mt-6 flex flex-wrap gap-3">
-                <Button asChild className="bg-white text-slate-950 hover:bg-emerald-50">
-                  <Link to="/torneios/criar">Criar torneio publico</Link>
-                </Button>
-                {search && (
-                  <Button variant="outline" className="border-white/20 bg-white/10 text-white hover:bg-white/15 hover:text-white" onClick={() => setSearch('')}>
-                    Limpar busca
-                  </Button>
-                )}
+    <div className="space-y-6">
+      <section className="grid gap-3 sm:grid-cols-3">
+        {stats.map(({ label, value, icon: Icon }) => (
+          <div key={label} className="rounded-[1.35rem] border border-emerald-950/10 bg-white/82 p-4">
+            <div className="flex items-center justify-between gap-3">
+              <div>
+                <div className="text-2xl font-semibold text-slate-950">{value}</div>
+                <div className="mt-1 text-[11px] font-semibold uppercase tracking-[0.16em] text-emerald-700/75">{label}</div>
+              </div>
+              <div className="flex h-10 w-10 items-center justify-center rounded-2xl bg-emerald-100 text-emerald-700">
+                <Icon className="h-4.5 w-4.5" />
               </div>
             </div>
-          </CardContent>
-        </Card>
-
-        <Card className="rounded-[2rem] border-white/80 bg-white/82">
-          <CardContent className="p-6 sm:p-7">
-            <span className="arena-chip">Pulso do catalogo</span>
-            <h3 className="mt-4 text-2xl font-semibold text-slate-950">Panorama rapido para descobrir onde entrar</h3>
-            <p className="mt-2 text-sm leading-6 text-slate-600">
-              Um resumo para enxergar alcance, atividade e densidade dos eventos publicos antes mesmo da busca detalhada.
-            </p>
-            <div className="mt-6 grid gap-3 sm:grid-cols-3 xl:grid-cols-1">
-              {stats.map(({ label, value, hint, icon: Icon }) => (
-                <div key={label} className="rounded-[1.35rem] border border-emerald-950/8 bg-secondary/35 p-4">
-                  <div className="flex items-center justify-between gap-3">
-                    <div>
-                      <div className="text-2xl font-semibold text-slate-950">{value}</div>
-                      <div className="mt-1 text-[11px] font-semibold uppercase tracking-[0.16em] text-emerald-700/75">{label}</div>
-                    </div>
-                    <div className="flex h-10 w-10 items-center justify-center rounded-2xl bg-emerald-100 text-emerald-700">
-                      <Icon className="h-4.5 w-4.5" />
-                    </div>
-                  </div>
-                  <p className="mt-3 text-xs leading-5 text-slate-600">{hint}</p>
-                </div>
-              ))}
-            </div>
-          </CardContent>
-        </Card>
+          </div>
+        ))}
       </section>
 
       <Card className="rounded-[2rem] border-white/80 bg-white/82">
@@ -205,7 +160,7 @@ export default function PublicTournamentsList() {
               <Input
                 value={search}
                 onChange={(e) => setSearch(e.target.value)}
-                placeholder="Buscar por nome, cidade, local ou descricao"
+                placeholder="Buscar por nome, cidade, local ou descrição"
                 className="h-12 rounded-full border-white/80 bg-white/80 pl-11 pr-11"
               />
               {search && (
@@ -239,13 +194,8 @@ export default function PublicTournamentsList() {
             </div>
           </div>
 
-          <div className="mt-4 flex flex-wrap items-center justify-between gap-3 border-t border-emerald-950/8 pt-4 text-sm text-slate-600">
-            <div>
-              <span className="font-semibold text-slate-950">{filtered.length}</span> resultados para o filtro atual.
-            </div>
-            <div className="text-xs uppercase tracking-[0.18em] text-emerald-700/70">
-              Eventos publicos em leitura priorizada por atividade
-            </div>
+          <div className="mt-4 border-t border-emerald-950/8 pt-4 text-sm text-slate-600">
+            <span className="font-semibold text-slate-950">{filtered.length}</span> resultados.
           </div>
         </CardContent>
       </Card>
@@ -253,24 +203,10 @@ export default function PublicTournamentsList() {
       {isPreviewMode && (
         <Card className="rounded-[2rem] border-amber-300/70 bg-amber-50/85">
           <CardContent className="p-5 text-sm leading-6 text-amber-950">
-            Prévia local sem Firebase: esta lista fica disponível para validar o layout, mas os torneios públicos não são carregados neste ambiente.
+            Prévia local sem Firebase: os torneios públicos não são carregados neste ambiente.
             {authUnavailableReason ? ` ${authUnavailableReason}` : ''}
           </CardContent>
         </Card>
-      )}
-
-      {!isLoading && featuredTournaments.length > 0 && (
-        <section className="space-y-4">
-          <div>
-            <div className="text-xs font-semibold uppercase tracking-[0.2em] text-emerald-700/75">Em destaque</div>
-            <h3 className="mt-2 text-2xl font-semibold text-slate-950">Eventos que aparecem primeiro na descoberta</h3>
-          </div>
-          <div className="grid gap-4 lg:grid-cols-3">
-            {featuredTournaments.map((tournament) => (
-              <FeaturedTournamentCard key={tournament.id} tournament={tournament} />
-            ))}
-          </div>
-        </section>
       )}
 
       {isLoading ? (
@@ -286,15 +222,8 @@ export default function PublicTournamentsList() {
               <Users className="h-8 w-8" />
             </div>
             <h3 className="mt-5 text-2xl font-semibold text-slate-950">
-              {isPreviewMode ? 'Nenhum torneio publico carregado neste preview' : 'Nenhum torneio publico encontrado'}
+              {isPreviewMode ? 'Nenhum torneio público carregado neste preview' : 'Nenhum torneio público encontrado'}
             </h3>
-            <p className="mt-3 max-w-2xl text-sm leading-7 text-slate-600 sm:text-base">
-              {isPreviewMode
-                ? 'Sem Firebase local, a vitrine fica vazia de proposito. O objetivo aqui e validar composicao, filtros e hierarquia visual.'
-                : tournaments.length === 0
-                ? 'Ainda nao ha torneios publicos na plataforma. Crie o primeiro e transforme esta vitrine em ponto de entrada para novos atletas.'
-                : 'Ajuste a busca ou altere o filtro para abrir mais possibilidades de descoberta.'}
-            </p>
             <div className="mt-6 flex flex-wrap justify-center gap-3">
               <Button asChild>
                 <Link to="/torneios/criar">Criar torneio</Link>
@@ -308,69 +237,13 @@ export default function PublicTournamentsList() {
           </CardContent>
         </Card>
       ) : (
-        <section className="space-y-4">
-          <div>
-            <div className="text-xs font-semibold uppercase tracking-[0.2em] text-emerald-700/75">Catalogo completo</div>
-            <h3 className="mt-2 text-2xl font-semibold text-slate-950">Todos os torneios publicos encontrados</h3>
-          </div>
-          <div className="grid gap-4 lg:grid-cols-2 xl:grid-cols-3">
-            {filtered.map((tournament) => (
-              <PublicTournamentCard key={tournament.id} tournament={tournament} />
-            ))}
-          </div>
-        </section>
+        <div className="grid gap-4 lg:grid-cols-2 xl:grid-cols-3">
+          {filtered.map((tournament) => (
+            <PublicTournamentCard key={tournament.id} tournament={tournament} />
+          ))}
+        </div>
       )}
     </div>
-  );
-}
-
-function FeaturedTournamentCard({ tournament }) {
-  const dateRange = formatStartEnd(tournament.starts_at, tournament.ends_at);
-  const tone = STATUS_TONE[tournament.status] || 'bg-slate-100 text-slate-700 border-slate-200';
-
-  return (
-    <Link to={`/torneios/${tournament.id}`} className="block h-full">
-      <Card className="match-surface h-full rounded-[1.75rem] border-white/80 bg-white/85">
-        <CardContent className="flex h-full flex-col p-5 sm:p-6">
-          <div className="flex items-start justify-between gap-3">
-            <div className="min-w-0">
-              <div className="text-xs font-semibold uppercase tracking-[0.16em] text-emerald-700/75">Descoberta priorizada</div>
-              <h4 className="mt-2 text-xl font-semibold text-slate-950">{tournament.name}</h4>
-            </div>
-            <div className={`inline-flex shrink-0 items-center gap-1 rounded-full border px-2.5 py-1 text-[11px] font-medium ${tone}`}>
-              {TOURNAMENT_STATUS_LABELS[tournament.status] || tournament.status}
-            </div>
-          </div>
-
-          <div className="mt-4 flex items-center gap-2 text-sm text-slate-600">
-            <MapPin className="h-4 w-4 shrink-0 text-emerald-700" />
-            <span className="truncate">{tournament.city ? `${tournament.city}${tournament.state ? ` / ${tournament.state}` : ''}` : 'Local nao informado'}</span>
-          </div>
-
-          {tournament.description && (
-            <p className="mt-4 line-clamp-3 text-sm leading-6 text-slate-600">{tournament.description}</p>
-          )}
-
-          <div className="mt-4 flex flex-wrap gap-2 text-xs text-slate-600">
-            {dateRange && (
-              <span className="inline-flex items-center gap-1 rounded-full border border-emerald-950/10 bg-white/75 px-2.5 py-1">
-                <Calendar className="h-3 w-3" /> {dateRange}
-              </span>
-            )}
-            {tournament.venue && (
-              <span className="inline-flex items-center gap-1 rounded-full border border-emerald-950/10 bg-white/75 px-2.5 py-1">
-                <Trophy className="h-3 w-3" /> {tournament.venue}
-              </span>
-            )}
-          </div>
-
-          <div className="mt-auto flex items-center justify-between pt-6 text-sm font-medium text-emerald-800">
-            <span>Ver modalidades e detalhes</span>
-            <ArrowRight className="h-4 w-4" />
-          </div>
-        </CardContent>
-      </Card>
-    </Link>
   );
 }
 

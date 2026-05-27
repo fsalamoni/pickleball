@@ -9,9 +9,6 @@ export default function LevelTable() {
     <div className="space-y-5">
       <div className="text-center">
         <h2 className="text-2xl font-bold text-slate-900">Tabela de Níveis de Pickleball</h2>
-        <p className="mx-auto mt-2 max-w-2xl text-sm text-slate-600">
-          Sistema USAP adaptado para a realidade brasileira, definido por comportamentos observáveis em partidas reais.
-        </p>
       </div>
 
       <div

@@ -1,4 +1,4 @@
-import { Printer, RotateCcw, Trophy, TrendingUp, AlertCircle } from 'lucide-react';
+import { Printer, RotateCcw, Trophy, TrendingUp } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { CATEGORY_LABELS, SKILL_LEVELS } from '@/modules/leveling/domain/questionnaire';
 
@@ -44,7 +44,7 @@ export default function LevelingResultCard({ result, onRestart, onPrint = () => 
         {!compact && (
           <div className="mt-6">
             <h3 className="flex items-center gap-2 font-semibold text-slate-900">
-              <TrendingUp className="h-5 w-5 text-blue-500" /> Recomendações para melhoria
+              <TrendingUp className="h-5 w-5 text-blue-500" /> Recomendações
             </h3>
             <ul className="mt-3 space-y-2">
               {(result.recommendations || []).map((recommendation, index) => (
@@ -56,13 +56,6 @@ export default function LevelingResultCard({ result, onRestart, onPrint = () => 
             </ul>
           </div>
         )}
-
-        <div className="mt-6 rounded border-l-4 border-blue-500 bg-blue-50 p-4 text-sm text-blue-900">
-          <div className="flex gap-2">
-            <AlertCircle className="mt-0.5 h-5 w-5 shrink-0 text-blue-500" />
-            <p>Este formulário é uma autoavaliação psicométrica baseada em comportamentos observáveis. Confirme seu nível em jogos, aulas ou torneios oficiais.</p>
-          </div>
-        </div>
       </div>
 
       <div className="flex flex-col gap-3 print:hidden sm:flex-row">
