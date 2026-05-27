@@ -43,12 +43,12 @@ const PAGE_META = {
   Dashboard: {
     eyebrow: 'Painel',
     title: 'Sua central de torneios',
-    description: 'Acompanhe inscrições, eventos e próximas decisões com leitura rápida.',
+    description: 'Acompanhe inscrições, eventos e próximas decisões.',
   },
   Inicio: {
     eyebrow: 'Painel',
     title: 'Sua central de torneios',
-    description: 'Acompanhe inscrições, eventos e próximas decisões com leitura rápida.',
+    description: 'Acompanhe inscrições, eventos e próximas decisões.',
   },
   Profile: {
     eyebrow: 'Conta',
@@ -58,7 +58,7 @@ const PAGE_META = {
   CreateTournament: {
     eyebrow: 'Organização',
     title: 'Criar novo torneio',
-    description: 'Configure o evento com mais clareza e uma experiência de preenchimento mais confortável.',
+    description: 'Configure identidade, acesso, regras e calendário do evento.',
   },
   JoinTournament: {
     eyebrow: 'Convites',
@@ -73,37 +73,37 @@ const PAGE_META = {
   Tournament: {
     eyebrow: 'Evento',
     title: 'Operação do torneio',
-    description: 'Modos, inscrições, jogos e ranking organizados em um shell mais claro para o staff.',
+    description: 'Modalidades, inscrições, jogos e ranking do evento.',
   },
   PickleballRules: {
     eyebrow: 'Esporte',
     title: 'Regras do pickleball',
-    description: 'Consulte fundamentos do jogo sem sair da identidade visual principal da plataforma.',
+    description: 'Consulte os fundamentos do jogo.',
   },
   Leveling: {
     eyebrow: 'Esporte',
     title: 'Nivelamento',
-    description: 'Descubra níveis de jogo com uma leitura mais confortável e orientada ao atleta.',
+    description: 'Descubra os níveis de jogo e onde você se encaixa.',
   },
   ConductFairPlay: {
     eyebrow: 'Esporte',
     title: 'Conduta e fair play',
-    description: 'Reforce o espírito esportivo com uma navegação mais calma e objetiva.',
+    description: 'Reforce o espírito esportivo do evento.',
   },
   PrivacyPolicy: {
     eyebrow: 'Informações',
     title: 'Política de uso',
-    description: 'Leitura institucional integrada ao restante da experiência.',
+    description: 'Termos e condições de uso da plataforma.',
   },
   AdminTournaments: {
     eyebrow: 'Admin geral',
     title: 'Gestão de torneios',
-    description: 'Supervisione eventos com uma área mais clara para monitoramento e ações rápidas.',
+    description: 'Supervisione eventos da plataforma e realize ações administrativas.',
   },
   AdminMetrics: {
     eyebrow: 'Admin geral',
     title: 'Métricas da plataforma',
-    description: 'Visualize indicadores com melhor contraste e menos ruído visual.',
+    description: 'Visualize indicadores de uso e desempenho.',
   },
 };
 
@@ -171,10 +171,7 @@ export default function Layout({ children, currentPageName }) {
       >
         <div className="flex h-full flex-col border-r border-white/10 bg-[linear-gradient(180deg,rgba(2,18,28,0.98),rgba(8,47,73,0.95))] text-sidebar-foreground shadow-[0_30px_80px_-35px_rgba(2,12,27,0.8)] backdrop-blur-xl">
           <div className="border-b border-white/10 px-6 py-6">
-            <BrandLockup to="/inicio" subtitle="Plataforma para operação, ranking e experiência de evento" />
-            <p className="mt-4 text-sm leading-6 text-emerald-50/70">
-              Um shell mais claro para organizar quadras, inscrições e público com menos atrito ao longo do dia.
-            </p>
+            <BrandLockup to="/inicio" subtitle="Gestão de torneios de pickleball" />
             <div className="mt-5 grid gap-2">
               <Button asChild className="w-full justify-between bg-white text-slate-950 hover:bg-emerald-50">
                 <Link to="/torneios/criar" onClick={() => setSidebarOpen(false)}>
@@ -394,9 +391,6 @@ function PublicUtilityLayout({ children, currentPageName }) {
         <div className="flex h-full flex-col border-r border-white/10 bg-[linear-gradient(180deg,rgba(2,18,28,0.98),rgba(8,47,73,0.95))] text-sidebar-foreground shadow-[0_30px_80px_-35px_rgba(2,12,27,0.8)] backdrop-blur-xl">
           <div className="border-b border-white/10 px-6 py-6">
             <BrandLockup to="/" subtitle="Regras, nivelamento e cultura do esporte" />
-            <p className="mt-4 text-sm leading-6 text-emerald-50/70">
-              Conteúdo institucional e educativo com o mesmo cuidado visual do restante da plataforma.
-            </p>
           </div>
 
           <nav className="flex-1 overflow-y-auto px-4 py-6">
@@ -412,7 +406,7 @@ function PublicUtilityLayout({ children, currentPageName }) {
             <div className="rounded-[1.5rem] border border-white/10 bg-white/10 p-4">
               <div className="text-sm font-semibold text-white">Quer acessar a plataforma completa?</div>
               <p className="mt-2 text-xs leading-6 text-emerald-50/70">
-                Entre para criar torneios, acompanhar inscrições e operar modalidades com a experiência redesenhada.
+                Entre para criar torneios, acompanhar inscrições e operar modalidades.
               </p>
               <div className="mt-4 grid gap-2">
                 <Button asChild className="w-full bg-white text-slate-950 hover:bg-emerald-50">
@@ -461,7 +455,7 @@ function pageMeta(name) {
   return PAGE_META[name] || {
     eyebrow: 'Plataforma',
     title: name || APP_NAME,
-    description: 'Uma navegação mais clara para organizar o torneio com calma e rapidez.',
+    description: '',
   };
 }
 

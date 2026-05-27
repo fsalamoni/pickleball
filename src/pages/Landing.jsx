@@ -73,12 +73,6 @@ const JOURNEY_STEPS = [
   },
 ];
 
-const BENEFIT_LINES = [
-  'A comunicação do torneio passa a parecer mais profissional desde a primeira visita.',
-  'A navegação fica mais clara no celular, que é onde boa parte do uso acontece durante partidas.',
-  'As áreas principais ganham identidade visual própria sem sacrificar legibilidade ou velocidade.',
-];
-
 export default function Landing() {
   const { isAuthenticated } = useAuth();
   const primaryHref = isAuthenticated ? '/torneios/criar' : '/login';
@@ -142,7 +136,7 @@ export default function Landing() {
               O torneio ganha cara de evento sério antes mesmo do primeiro saque.
             </h1>
             <p className="mt-6 max-w-2xl text-lg leading-8 text-slate-600 md:text-xl">
-              Crie modalidades, publique regras, organize equipes, acompanhe ranking e conduza o staff com uma experiência visual mais forte, clara e agradável para atletas, espectadores e organizadores.
+              Crie modalidades, publique regras, organize equipes e acompanhe o ranking do seu torneio em um único lugar, do convite à premiação.
             </p>
 
             <div className="mt-8 flex flex-wrap gap-3">
@@ -181,9 +175,6 @@ export default function Landing() {
                 <h2 className="mt-5 text-3xl font-semibold leading-tight text-white lg:text-4xl">
                   Do cadastro ao pódio, com ritmo de evento real.
                 </h2>
-                <p className="mt-4 max-w-xl text-sm leading-7 text-emerald-50/80">
-                  O novo visual aproxima a plataforma da atmosfera das quadras: energia, organização e leitura rápida para quem está correndo entre jogos, chamadas e resultados.
-                </p>
 
                 <div className="mt-8 grid gap-3 sm:grid-cols-2">
                   <HighlightBox title="Sorteio inteligente" desc="Estruturas de chave e grupos com mais contexto visual para o staff." />
@@ -192,17 +183,6 @@ export default function Landing() {
                   <HighlightBox title="Equipe sincronizada" desc="Admins, convites e ações essenciais mais próximos de quem organiza." />
                 </div>
               </div>
-            </div>
-
-            <div className="arena-panel absolute -bottom-8 left-0 hidden w-64 rounded-[1.5rem] p-4 lg:block">
-              <div className="text-xs font-semibold uppercase tracking-[0.2em] text-emerald-700/80">Pulso do evento</div>
-              <div className="mt-3 text-2xl font-semibold text-slate-950">Rodadas, ranking e chamadas em uma leitura só.</div>
-              <p className="mt-2 text-sm leading-6 text-slate-600">Menos planilha paralela, menos atrito e melhor percepção para quem está acompanhando a competição.</p>
-            </div>
-
-            <div className="arena-panel absolute -right-6 -top-6 hidden w-52 rounded-[1.5rem] p-4 lg:block">
-              <div className="text-xs font-semibold uppercase tracking-[0.18em] text-amber-700">Experiência móvel</div>
-              <div className="mt-2 text-sm font-medium text-slate-900">Navegação pensada para uso em quadra e no balcão do evento.</div>
             </div>
           </div>
         </section>
@@ -220,11 +200,8 @@ export default function Landing() {
             <div className="arena-panel rounded-[2rem] p-8 lg:p-10">
               <span className="arena-chip">Jornada do evento</span>
               <h2 className="mt-5 text-3xl font-semibold leading-tight text-slate-950 lg:text-4xl">
-                Uma experiência que funciona melhor para o público e para quem está operando o torneio.
+                Como a plataforma acompanha cada etapa do torneio.
               </h2>
-              <p className="mt-4 max-w-2xl text-base leading-7 text-slate-600">
-                O redesign prioriza hierarquia clara, chamadas à ação objetivas e superfícies mais agradáveis para reduzir fricção em momentos rápidos de uso.
-              </p>
 
               <div className="mt-8 grid gap-4 md:grid-cols-3">
                 {JOURNEY_STEPS.map((item) => (
@@ -238,19 +215,7 @@ export default function Landing() {
             </div>
 
             <div className="arena-panel rounded-[2rem] p-8 lg:p-10">
-              <div className="text-xs font-semibold uppercase tracking-[0.24em] text-emerald-700/80">O que melhora na prática</div>
-              <div className="mt-6 space-y-4">
-                {BENEFIT_LINES.map((line) => (
-                  <div key={line} className="flex gap-3 rounded-[1.35rem] border border-emerald-950/10 bg-white/70 p-4">
-                    <div className="mt-1 flex h-8 w-8 items-center justify-center rounded-full bg-emerald-100 text-emerald-700">
-                      <ShieldCheck className="h-4 w-4" />
-                    </div>
-                    <p className="text-sm leading-6 text-slate-600">{line}</p>
-                  </div>
-                ))}
-              </div>
-
-              <div className="mt-8 rounded-[1.75rem] border border-emerald-300/30 bg-gradient-to-br from-emerald-50 to-lime-50 p-6">
+              <div className="rounded-[1.75rem] border border-emerald-300/30 bg-gradient-to-br from-emerald-50 to-lime-50 p-6">
                 <BookOpen className="h-10 w-10 text-emerald-700" />
                 <h3 className="mt-4 text-2xl font-semibold text-slate-950">Comece pelas regras e pelo nivelamento</h3>
                 <p className="mt-2 text-sm leading-6 text-slate-600">
@@ -266,11 +231,8 @@ export default function Landing() {
             <div className="max-w-3xl">
               <div className="text-sm font-semibold uppercase tracking-[0.24em] text-emerald-50/80">Público, organizadores e atletas</div>
               <h2 className="mt-3 text-3xl font-semibold leading-tight text-white lg:text-4xl">
-                Uma plataforma mais agradável de usar e mais alinhada com o crescimento do pickleball.
+                Acompanhe o crescimento do pickleball no Brasil.
               </h2>
-              <p className="mt-3 text-sm leading-7 text-emerald-50/75">
-                Mais atmosfera, melhor contraste, navegação mais lógica e uma primeira impressão mais forte para valorizar o torneio desde a divulgação até a entrega dos resultados.
-              </p>
             </div>
             <div className="flex flex-wrap gap-3">
               <Button asChild size="lg" className="bg-white text-slate-950 hover:bg-emerald-50">

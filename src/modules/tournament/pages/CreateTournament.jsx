@@ -148,7 +148,7 @@ export default function CreateTournament() {
                 Monte um torneio com cara de evento real antes mesmo da primeira inscrição.
               </h1>
               <p className="mt-4 max-w-2xl text-sm leading-7 text-emerald-50/75 sm:text-base">
-                A ideia aqui é organizar o fluxo de criação em blocos claros: identidade, acesso, regras e calendário, com um resumo vivo do que está sendo configurado.
+                Configure identidade, acesso, regras e calendário do evento. O resumo ao lado atualiza enquanto você preenche.
               </p>
             </div>
           </CardContent>
@@ -156,8 +156,8 @@ export default function CreateTournament() {
 
         <Card className="rounded-[2rem] border-white/80 bg-white/82">
           <CardContent className="p-6 sm:p-7">
-            <div className="text-xs font-semibold uppercase tracking-[0.18em] text-emerald-700/75">Resumo instantâneo</div>
-            <h2 className="mt-3 text-2xl font-semibold text-slate-950">O torneio vai aparecendo enquanto você decide.</h2>
+            <div className="text-xs font-semibold uppercase tracking-[0.18em] text-emerald-700/75">Resumo</div>
+            <h2 className="mt-3 text-2xl font-semibold text-slate-950">Prévia do torneio em tempo real.</h2>
             <div className="mt-5 rounded-[1.5rem] border border-emerald-950/10 bg-secondary/35 p-5">
               <div className="text-sm font-semibold uppercase tracking-[0.18em] text-emerald-700/75">Prévia do evento</div>
               <div className="mt-3 text-2xl font-semibold text-slate-950">

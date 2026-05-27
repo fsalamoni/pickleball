@@ -171,10 +171,10 @@ export default function Dashboard() {
                 <Sparkles className="h-3.5 w-3.5" /> Centro de operacao do torneio
               </span>
               <h2 className="mt-5 text-3xl font-semibold leading-tight text-white lg:text-4xl">
-                Organize o seu dia de evento com menos atrito e mais leitura de contexto.
+                Organize o seu dia de evento.
               </h2>
               <p className="mt-4 max-w-xl text-sm leading-7 text-emerald-50/75 sm:text-base">
-                Aqui ficam os torneios que voce administra, participa ou pode acompanhar. A ideia e deixar o proximo passo sempre visivel: criar, entrar, retomar ou explorar.
+                Aqui ficam os torneios que voce administra, participa ou pode acompanhar.
               </p>
 
               <div className="mt-6 flex flex-wrap gap-3">
@@ -304,7 +304,7 @@ export default function Dashboard() {
               <SectionHeader
                 eyebrow="Participacao"
                 title="Torneios em que voce joga"
-                description="Retome eventos em que voce esta inscrito sem navegar por menus ou buscas paralelas."
+                description="Retome eventos em que voce esta inscrito como jogador."
               />
               <div className="grid gap-4 lg:grid-cols-2 xl:grid-cols-3">
                 {playerTournaments.map((tournament) => (

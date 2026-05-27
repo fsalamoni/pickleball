@@ -1,7 +1,7 @@
 import { useEffect, useState } from 'react';
 import { Link, useNavigate } from 'react-router-dom';
 import { toast } from 'sonner';
-import { ArrowRight, ShieldCheck, Sparkles, Trophy } from 'lucide-react';
+import { ArrowRight, Sparkles, Trophy } from 'lucide-react';
 import { useAuth } from '@/core/lib/FirebaseAuthContext';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from '@/components/ui/card';
@@ -60,11 +60,8 @@ export default function Login() {
               <Sparkles className="h-3.5 w-3.5" /> Entrada principal da plataforma
             </span>
             <h1 className="mt-6 text-5xl font-semibold leading-[0.95] text-white">
-              Entre para organizar melhor, publicar mais bonito e operar com menos esforço.
+              Entre para criar, administrar e acompanhar cada modalidade do seu torneio.
             </h1>
-            <p className="mt-5 max-w-xl text-base leading-7 text-emerald-50/80">
-              A nova experiência reforça a percepção de valor do torneio e deixa mais claro o caminho para criar, administrar e acompanhar cada modalidade.
-            </p>
 
             <div className="mt-8 grid gap-3">
               {LOGIN_HIGHLIGHTS.map((item) => (
@@ -103,20 +100,6 @@ export default function Login() {
             </CardHeader>
 
             <CardContent className="space-y-5 px-5 pb-6 sm:px-8">
-              <div className="rounded-[1.5rem] border border-emerald-950/5 bg-secondary/40 p-4">
-                <div className="flex items-start gap-3">
-                  <div className="mt-1 flex h-9 w-9 items-center justify-center rounded-full bg-emerald-100 text-emerald-700">
-                    <ShieldCheck className="h-4 w-4" />
-                  </div>
-                  <div>
-                    <div className="font-semibold text-slate-950">Acesso pensado para o ritmo do evento</div>
-                    <p className="mt-1 text-sm leading-6 text-slate-600">
-                      O objetivo aqui é reduzir atrito logo no primeiro clique e manter a jornada coerente com o resto da plataforma.
-                    </p>
-                  </div>
-                </div>
-              </div>
-
               <Button onClick={onClick} disabled={busy || !isAuthAvailable} className="h-12 w-full text-[15px]" size="lg">
                 <GoogleIcon className="h-4 w-4" />
                 {busy ? (

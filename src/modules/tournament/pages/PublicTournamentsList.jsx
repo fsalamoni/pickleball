@@ -150,10 +150,10 @@ export default function PublicTournamentsList() {
                 <Sparkles className="h-3.5 w-3.5" /> Descoberta publica de torneios
               </span>
               <h2 className="mt-5 text-3xl font-semibold leading-tight text-white lg:text-4xl">
-                Explore eventos abertos com uma leitura mais clara do que esta acontecendo agora.
+                Explore os torneios públicos da plataforma.
               </h2>
               <p className="mt-4 max-w-xl text-sm leading-7 text-emerald-50/75 sm:text-base">
-                A inscricao em torneios publicos nao exige codigo. Basta abrir o evento, entender o contexto e seguir para a modalidade desejada com menos friccao.
+                A inscrição em torneios públicos não exige código. Basta abrir o evento e escolher a modalidade desejada.
               </p>
 
               <div className="mt-6 flex flex-wrap gap-3">
@@ -172,11 +172,8 @@ export default function PublicTournamentsList() {
 
         <Card className="rounded-[2rem] border-white/80 bg-white/82">
           <CardContent className="p-6 sm:p-7">
-            <span className="arena-chip">Pulso do catalogo</span>
-            <h3 className="mt-4 text-2xl font-semibold text-slate-950">Panorama rapido para descobrir onde entrar</h3>
-            <p className="mt-2 text-sm leading-6 text-slate-600">
-              Um resumo para enxergar alcance, atividade e densidade dos eventos publicos antes mesmo da busca detalhada.
-            </p>
+            <span className="arena-chip">Panorama</span>
+            <h3 className="mt-4 text-2xl font-semibold text-slate-950">Resumo dos eventos públicos</h3>
             <div className="mt-6 grid gap-3 sm:grid-cols-3 xl:grid-cols-1">
               {stats.map(({ label, value, hint, icon: Icon }) => (
                 <div key={label} className="rounded-[1.35rem] border border-emerald-950/8 bg-secondary/35 p-4">
@@ -239,13 +236,8 @@ export default function PublicTournamentsList() {
             </div>
           </div>
 
-          <div className="mt-4 flex flex-wrap items-center justify-between gap-3 border-t border-emerald-950/8 pt-4 text-sm text-slate-600">
-            <div>
-              <span className="font-semibold text-slate-950">{filtered.length}</span> resultados para o filtro atual.
-            </div>
-            <div className="text-xs uppercase tracking-[0.18em] text-emerald-700/70">
-              Eventos publicos em leitura priorizada por atividade
-            </div>
+          <div className="mt-4 border-t border-emerald-950/8 pt-4 text-sm text-slate-600">
+            <span className="font-semibold text-slate-950">{filtered.length}</span> resultados para o filtro atual.
           </div>
         </CardContent>
       </Card>
@@ -253,7 +245,7 @@ export default function PublicTournamentsList() {
       {isPreviewMode && (
         <Card className="rounded-[2rem] border-amber-300/70 bg-amber-50/85">
           <CardContent className="p-5 text-sm leading-6 text-amber-950">
-            Prévia local sem Firebase: esta lista fica disponível para validar o layout, mas os torneios públicos não são carregados neste ambiente.
+            Prévia local sem Firebase: os torneios públicos não são carregados neste ambiente.
             {authUnavailableReason ? ` ${authUnavailableReason}` : ''}
           </CardContent>
         </Card>
@@ -290,10 +282,10 @@ export default function PublicTournamentsList() {
             </h3>
             <p className="mt-3 max-w-2xl text-sm leading-7 text-slate-600 sm:text-base">
               {isPreviewMode
-                ? 'Sem Firebase local, a vitrine fica vazia de proposito. O objetivo aqui e validar composicao, filtros e hierarquia visual.'
+                ? 'Sem Firebase local, nenhum torneio é carregado neste ambiente.'
                 : tournaments.length === 0
-                ? 'Ainda nao ha torneios publicos na plataforma. Crie o primeiro e transforme esta vitrine em ponto de entrada para novos atletas.'
-                : 'Ajuste a busca ou altere o filtro para abrir mais possibilidades de descoberta.'}
+                ? 'Ainda nao ha torneios publicos na plataforma. Crie o primeiro para abrir inscrições ao público.'
+                : 'Ajuste a busca ou altere o filtro para ver mais resultados.'}
             </p>
             <div className="mt-6 flex flex-wrap justify-center gap-3">
               <Button asChild>
@@ -334,7 +326,7 @@ function FeaturedTournamentCard({ tournament }) {
         <CardContent className="flex h-full flex-col p-5 sm:p-6">
           <div className="flex items-start justify-between gap-3">
             <div className="min-w-0">
-              <div className="text-xs font-semibold uppercase tracking-[0.16em] text-emerald-700/75">Descoberta priorizada</div>
+              <div className="text-xs font-semibold uppercase tracking-[0.16em] text-emerald-700/75">Em destaque</div>
               <h4 className="mt-2 text-xl font-semibold text-slate-950">{tournament.name}</h4>
             </div>
             <div className={`inline-flex shrink-0 items-center gap-1 rounded-full border px-2.5 py-1 text-[11px] font-medium ${tone}`}>

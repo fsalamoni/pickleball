@@ -15,7 +15,6 @@ import {
   Share2,
   ShieldAlert,
   ShieldCheck,
-  Sparkles,
   Trophy,
 } from 'lucide-react';
 import { useTournament, useIsTournamentAdmin } from '@/modules/tournament/hooks/useTournament';
@@ -186,17 +185,14 @@ export default function Tournament() {
           <CardContent className="relative p-6 sm:p-8 lg:p-9">
             <div className="absolute inset-y-0 right-0 hidden w-1/2 bg-[radial-gradient(circle_at_top_right,rgba(255,255,255,0.16),transparent_50%)] lg:block" />
             <div className="relative max-w-3xl">
-              <span className="inline-flex items-center gap-2 rounded-full border border-white/15 bg-white/10 px-3 py-1 text-xs font-semibold uppercase tracking-[0.18em] text-emerald-50/80">
-                <Sparkles className="h-3.5 w-3.5" /> Espaço central do torneio
-              </span>
-              <div className="mt-5 flex flex-wrap items-start gap-3">
+              <div className="flex flex-wrap items-start gap-3">
                 <div className="flex h-14 w-14 items-center justify-center rounded-[1.5rem] bg-white/10 text-white backdrop-blur-sm">
                   <Trophy className="h-6 w-6" />
                 </div>
                 <div className="min-w-0 flex-1">
                   <h1 className="text-3xl font-semibold leading-tight text-white lg:text-4xl">{tournament.name}</h1>
                   <p className="mt-2 max-w-2xl text-sm leading-7 text-emerald-50/75 sm:text-base">
-                    {tournament.description || 'Acompanhe modalidades, jogos, ranking e operação do evento em um fluxo mais claro para atletas e organização.'}
+                    {tournament.description || 'Acompanhe modalidades, jogos, ranking e operação do evento.'}
                   </p>
                 </div>
               </div>
@@ -228,61 +224,44 @@ export default function Tournament() {
           </CardContent>
         </Card>
 
-        <div className="grid gap-4">
-          <Card className="rounded-[1.75rem] border-white/80 bg-white/82">
-            <CardContent className="p-6 sm:p-7">
-              <div className="text-xs font-semibold uppercase tracking-[0.18em] text-emerald-700/75">Ações rápidas</div>
-              <h2 className="mt-3 text-2xl font-semibold text-slate-950">Compartilhe e retome o evento sem perder contexto</h2>
-              <p className="mt-2 text-sm leading-6 text-slate-600">
-                Código de acesso, link público e visualização de espectador ficam próximos do topo para reduzir atrito durante a operação.
-              </p>
+        <Card className="rounded-[1.75rem] border-white/80 bg-white/82">
+          <CardContent className="p-6 sm:p-7">
+            <h2 className="text-xl font-semibold text-slate-950">Ações rápidas</h2>
 
-              <div className="mt-5 grid gap-3">
-                {tournament.invite_code && (
-                  <Button
-                    variant="outline"
-                    className="justify-between"
-                    onClick={() => copy(tournament.invite_code, 'Código copiado para a área de transferência.')}
-                  >
-                    <span className="flex items-center gap-2 truncate">
-                      {copied ? <Check className="h-4 w-4 text-emerald-600" /> : <Copy className="h-4 w-4" />}
-                      Código: <strong className="tabular-nums">{tournament.invite_code}</strong>
-                    </span>
-                  </Button>
-                )}
-                {isPublic && (
-                  <Button
-                    variant="outline"
-                    className="justify-between"
-                    onClick={() => copy(publicUrl, 'Link público copiado!')}
-                  >
-                    <span className="flex items-center gap-2 truncate">
-                      <Share2 className="h-4 w-4" /> Compartilhar link público
-                    </span>
-                  </Button>
-                )}
-                <Button asChild variant="outline" className="justify-between">
-                  <Link to={`/p/${tournament.id}`} target="_blank" rel="noreferrer">
-                    <span className="flex items-center gap-2 truncate">
-                      <Eye className="h-4 w-4" /> Abrir visão pública
-                    </span>
-                  </Link>
+            <div className="mt-5 grid gap-3">
+              {tournament.invite_code && (
+                <Button
+                  variant="outline"
+                  className="justify-between"
+                  onClick={() => copy(tournament.invite_code, 'Código copiado para a área de transferência.')}
+                >
+                  <span className="flex items-center gap-2 truncate">
+                    {copied ? <Check className="h-4 w-4 text-emerald-600" /> : <Copy className="h-4 w-4" />}
+                    Código: <strong className="tabular-nums">{tournament.invite_code}</strong>
+                  </span>
                 </Button>
-              </div>
-            </CardContent>
-          </Card>
-
-          <Card className="rounded-[1.75rem] border-white/80 bg-white/82">
-            <CardContent className="p-6">
-              <div className="text-xs font-semibold uppercase tracking-[0.18em] text-emerald-700/75">Fluxo desta tela</div>
-              <div className="mt-3 space-y-3 text-sm leading-6 text-slate-600">
-                <p>Visão geral para contexto, modalidades e inscrições.</p>
-                <p>Jogos e ranking para acompanhamento esportivo em tempo real.</p>
-                {isAdmin ? <p>Aba admin isolada para mudanças operacionais sem misturar a visão do atleta.</p> : <p>Se você receber permissões de admin, a área de gestão aparece automaticamente aqui.</p>}
-              </div>
-            </CardContent>
-          </Card>
-        </div>
+              )}
+              {isPublic && (
+                <Button
+                  variant="outline"
+                  className="justify-between"
+                  onClick={() => copy(publicUrl, 'Link público copiado!')}
+                >
+                  <span className="flex items-center gap-2 truncate">
+                    <Share2 className="h-4 w-4" /> Compartilhar link público
+                  </span>
+                </Button>
+              )}
+              <Button asChild variant="outline" className="justify-between">
+                <Link to={`/p/${tournament.id}`} target="_blank" rel="noreferrer">
+                  <span className="flex items-center gap-2 truncate">
+                    <Eye className="h-4 w-4" /> Abrir visão pública
+                  </span>
+                </Link>
+              </Button>
+            </div>
+          </CardContent>
+        </Card>
       </section>
 
       <Tabs

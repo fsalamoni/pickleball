@@ -109,7 +109,7 @@ export default function TournamentOverviewTab({ tournament, isAdmin }) {
             </span>
             <h3 className="mt-4 text-3xl font-semibold text-slate-950">Tudo o que atletas e organização precisam ler primeiro</h3>
             <p className="mt-3 max-w-2xl text-sm leading-7 text-slate-600 sm:text-base">
-              Datas, local, regra esportiva e contexto das modalidades aparecem juntos para reduzir dúvida antes da inscrição ou da operação do torneio.
+              Datas, local, regra esportiva e contexto das modalidades do torneio.
             </p>
 
             <div className="mt-6 grid gap-3 sm:grid-cols-3">
@@ -161,9 +161,9 @@ export default function TournamentOverviewTab({ tournament, isAdmin }) {
         <Card className="arena-panel-strong rounded-[2rem] border-0">
           <CardContent className="p-6 sm:p-7">
             <div className="text-xs font-semibold uppercase tracking-[0.18em] text-emerald-50/75">Critério de classificação</div>
-            <h3 className="mt-4 text-3xl font-semibold leading-tight text-white">Ranking com uma leitura simples para quem está jogando e para quem está operando.</h3>
+            <h3 className="mt-4 text-3xl font-semibold leading-tight text-white">Como o ranking é calculado.</h3>
             <p className="mt-3 text-sm leading-7 text-emerald-50/75 sm:text-base">
-              A plataforma mantém o mesmo critério em todas as modalidades para evitar interpretação ambígua de tabela durante o evento.
+              A plataforma usa o mesmo critério em todas as modalidades do torneio.
             </p>
 
             <div className="mt-6 space-y-3">
@@ -181,7 +181,7 @@ export default function TournamentOverviewTab({ tournament, isAdmin }) {
             <div className="text-xs font-semibold uppercase tracking-[0.2em] text-emerald-700/75">Modalidades</div>
             <h3 className="mt-2 text-2xl font-semibold text-slate-950">Escolha onde jogar ou o que acompanhar</h3>
             <p className="mt-1 max-w-3xl text-sm leading-6 text-slate-600">
-              Cada card concentra formato, nível, capacidade e ação disponível. O objetivo é deixar a decisão mais clara antes do clique de inscrição.
+              Cada card mostra formato, nível, capacidade e ação disponível para cada modalidade.
             </p>
           </div>
           {!isPublic && !hasPrivateAccess && !isAdmin && (

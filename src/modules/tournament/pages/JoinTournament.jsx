@@ -63,10 +63,10 @@ export default function JoinTournament() {
               <Sparkles className="h-3.5 w-3.5" /> Acesso privado
             </span>
             <h1 className="mt-5 text-4xl font-semibold leading-tight text-white lg:text-5xl">
-              Entre em um torneio privado com um fluxo mais claro desde o primeiro passo.
+              Entre em um torneio privado com o código recebido.
             </h1>
             <p className="mt-4 max-w-2xl text-sm leading-7 text-emerald-50/75 sm:text-base">
-              O código de convite desbloqueia a visão geral do evento e libera a escolha da modalidade. Sem senha longa, sem cadastro extra e sem ruído desnecessário.
+              O código de convite desbloqueia a visão geral do evento e libera a escolha da modalidade.
             </p>
 
             <div className="mt-8 space-y-3">
