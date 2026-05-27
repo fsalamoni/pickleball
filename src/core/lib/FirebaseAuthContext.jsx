@@ -5,7 +5,7 @@ import {
   signOut as firebaseSignOut,
 } from 'firebase/auth';
 import { doc, getDoc, setDoc, serverTimestamp } from 'firebase/firestore';
-import { auth, googleProvider, db } from '@/core/config/firebase';
+import { auth, googleProvider, db, firebaseDisabledReason } from '@/core/config/firebase';
 import { logger } from '@/core/lib/logger';
 import { createAuditLog } from '@/core/services/auditService';
 import { claimProvisionalRegistrationsForUser } from '@/modules/tournament/services/registrationService';
@@ -25,6 +25,14 @@ export const AuthProvider = ({ children }) => {
   const [authError, setAuthError] = useState(null);
 
   useEffect(() => {
+    if (!auth || !db) {
+      setUser(null);
+      setUserProfile(null);
+      setIsAuthenticated(false);
+      setIsLoadingAuth(false);
+      return undefined;
+    }
+
     const unsubscribe = onAuthStateChanged(auth, async (firebaseUser) => {
       try {
         if (firebaseUser) {
@@ -86,6 +94,16 @@ export const AuthProvider = ({ children }) => {
   }, []);
 
   const signInWithGoogle = async () => {
+    if (!auth || !googleProvider) {
+      const error = {
+        type: 'signin_error',
+        message: firebaseDisabledReason || 'Login indisponível neste ambiente.',
+        code: 'auth/configuration-missing',
+      };
+      setAuthError(error);
+      throw new Error(error.message);
+    }
+
     try {
       setAuthError(null);
       const result = await signInWithPopup(auth, googleProvider);
@@ -136,6 +154,8 @@ export const AuthProvider = ({ children }) => {
     isAuthenticated,
     isLoadingAuth,
     authError,
+    isAuthAvailable: Boolean(auth && googleProvider && db),
+    authUnavailableReason: firebaseDisabledReason,
     signInWithGoogle,
     signOut,
     updateUserProfile,

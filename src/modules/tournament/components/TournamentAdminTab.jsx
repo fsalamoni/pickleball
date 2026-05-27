@@ -5,7 +5,18 @@ import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { Badge } from '@/components/ui/badge';
 import { toast } from 'sonner';
-import { UserPlus, Trash2, Play, Lock, CheckCircle2, Save } from 'lucide-react';
+import {
+  CalendarDays,
+  CheckCircle2,
+  Lock,
+  Play,
+  Save,
+  Settings2,
+  ShieldAlert,
+  Trash2,
+  UserPlus,
+  Users,
+} from 'lucide-react';
 import {
   useTournamentAdmins,
   useAddTournamentAdmin,
@@ -41,6 +52,33 @@ function buildFormState(tournament) {
     registration_deadline: tournament?.registration_deadline || '',
   };
 }
+
+const STATUS_ACTIONS = [
+  {
+    value: TOURNAMENT_STATUS.REGISTRATIONS_OPEN,
+    label: 'Abrir inscrições',
+    description: 'Permite novas entradas nas modalidades.',
+    icon: Play,
+  },
+  {
+    value: TOURNAMENT_STATUS.REGISTRATIONS_CLOSED,
+    label: 'Encerrar inscrições',
+    description: 'Fecha novas entradas e estabiliza a lista.',
+    icon: Lock,
+  },
+  {
+    value: TOURNAMENT_STATUS.IN_PROGRESS,
+    label: 'Iniciar torneio',
+    description: 'Marca o evento como em andamento.',
+    icon: Settings2,
+  },
+  {
+    value: TOURNAMENT_STATUS.FINISHED,
+    label: 'Encerrar torneio',
+    description: 'Fecha a operação e mantém o histórico publicado.',
+    icon: CheckCircle2,
+  },
+];
 
 export default function TournamentAdminTab({ tournament }) {
   const { data: admins = [] } = useTournamentAdmins(tournament.id);
@@ -114,15 +152,34 @@ export default function TournamentAdminTab({ tournament }) {
     }
   }
 
+  const infoCards = [
+    {
+      label: 'Status atual',
+      value: TOURNAMENT_STATUS_LABELS[tournament.status],
+      icon: ShieldAlert,
+    },
+    {
+      label: 'Acesso',
+      value: TOURNAMENT_VISIBILITY_LABELS[form.visibility],
+      icon: Lock,
+    },
+    {
+      label: 'Admins ativos',
+      value: admins.length,
+      icon: Users,
+    },
+  ];
+
   return (
-    <div className="space-y-4">
-      <Card>
-        <CardContent className="p-4 space-y-4">
-          <div className="flex items-start justify-between gap-2 flex-wrap">
+    <div className="space-y-5">
+      <Card className="rounded-[2rem] border-white/80 bg-white/82">
+        <CardContent className="p-6 sm:p-7">
+          <div className="flex items-start justify-between gap-3 flex-wrap">
             <div>
-              <h4 className="font-semibold">Parâmetros do torneio</h4>
-              <p className="text-xs text-slate-500">
-                Os admins podem ajustar informações gerais, visibilidade e pontuação mesmo após a criação.
+              <div className="text-xs font-semibold uppercase tracking-[0.18em] text-emerald-700/75">Parâmetros centrais</div>
+              <h3 className="mt-2 text-2xl font-semibold text-slate-950">Edite o torneio sem perder contexto operacional</h3>
+              <p className="mt-2 max-w-3xl text-sm leading-6 text-slate-600">
+                Nome, local, regras, datas e acesso ficam concentrados aqui para facilitar revisão antes de abrir inscrições ou iniciar partidas.
               </p>
             </div>
             <Button onClick={handleSave} disabled={updateMutation.isPending}>
@@ -131,158 +188,228 @@ export default function TournamentAdminTab({ tournament }) {
             </Button>
           </div>
 
-          <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
-            <div>
-              <Label>Nome do torneio</Label>
-              <Input value={form.name} onChange={(e) => set('name', e.target.value)} />
-            </div>
-            <div>
-              <Label>Tipo de acesso</Label>
-              <select
-                className="w-full h-10 rounded-md border border-input bg-background px-3 text-sm"
-                value={form.visibility}
-                onChange={(e) => set('visibility', e.target.value)}
-              >
-                {Object.entries(TOURNAMENT_VISIBILITY_LABELS).map(([value, label]) => (
-                  <option key={value} value={value}>{label}</option>
-                ))}
-              </select>
-            </div>
-            <div className="md:col-span-2">
-              <Label>Descrição</Label>
-              <textarea
-                className="flex min-h-24 w-full rounded-md border border-input bg-background px-3 py-2 text-sm"
-                value={form.description}
-                onChange={(e) => set('description', e.target.value)}
-              />
-            </div>
-            <div>
-              <Label>Cidade</Label>
-              <Input value={form.city} onChange={(e) => set('city', e.target.value)} />
-            </div>
-            <div>
-              <Label>Local (quadra/clube)</Label>
-              <Input value={form.venue} onChange={(e) => set('venue', e.target.value)} />
-            </div>
-            <div>
-              <Label>UF</Label>
-              <Input value={form.state} onChange={(e) => set('state', e.target.value)} maxLength={2} />
-            </div>
-            <div>
-              <Label>Conjunto de regras</Label>
-              <select
-                className="w-full h-10 rounded-md border border-input bg-background px-3 text-sm"
-                value={form.ruleset}
-                onChange={(e) => set('ruleset', e.target.value)}
-              >
-                {Object.values(RULESET).map((ruleset) => (
-                  <option key={ruleset} value={ruleset}>{RULESET_LABELS[ruleset]}</option>
-                ))}
-              </select>
-            </div>
-            <div>
-              <Label>Pontos por game</Label>
-              <select
-                className="w-full h-10 rounded-md border border-input bg-background px-3 text-sm"
-                value={form.target_score}
-                onChange={(e) => set('target_score', e.target.value)}
-              >
-                {Object.values(TARGET_SCORE).map((score) => (
-                  <option key={score} value={score}>{score} pontos</option>
-                ))}
-              </select>
-            </div>
-            <div>
-              <Label>Sets por partida</Label>
-              <select
-                className="w-full h-10 rounded-md border border-input bg-background px-3 text-sm"
-                value={form.sets_per_match}
-                onChange={(e) => set('sets_per_match', e.target.value)}
-              >
-                <option value="1">1 set</option>
-                <option value="3">Melhor de 3</option>
-                <option value="5">Melhor de 5</option>
-              </select>
-            </div>
-            <div>
-              <Label>Início</Label>
-              <Input type="date" value={form.starts_at} onChange={(e) => set('starts_at', e.target.value)} />
-            </div>
-            <div>
-              <Label>Fim</Label>
-              <Input type="date" value={form.ends_at} onChange={(e) => set('ends_at', e.target.value)} />
-            </div>
-            <div>
-              <Label>Fim das inscrições</Label>
-              <Input
-                type="date"
-                value={form.registration_deadline}
-                onChange={(e) => set('registration_deadline', e.target.value)}
-              />
-            </div>
+          <div className="mt-6 grid gap-3 sm:grid-cols-3">
+            {infoCards.map(({ label, value, icon: Icon }) => (
+              <div key={label} className="rounded-[1.35rem] border border-emerald-950/10 bg-secondary/35 p-4">
+                <div className="flex items-center justify-between gap-3">
+                  <div className="text-[11px] font-semibold uppercase tracking-[0.16em] text-emerald-700/75">{label}</div>
+                  <div className="flex h-10 w-10 items-center justify-center rounded-2xl bg-emerald-100 text-emerald-700">
+                    <Icon className="h-4.5 w-4.5" />
+                  </div>
+                </div>
+                <div className="mt-3 text-xl font-semibold text-slate-950">{value}</div>
+              </div>
+            ))}
           </div>
         </CardContent>
       </Card>
 
-      <div className="grid md:grid-cols-2 gap-4">
-        <Card>
-          <CardContent className="p-4 space-y-3">
-            <h4 className="font-semibold">Status do torneio</h4>
-            <p className="text-sm text-slate-600">
-              Atual: <Badge variant="secondary">{TOURNAMENT_STATUS_LABELS[tournament.status]}</Badge>
-            </p>
-            <div className="flex flex-wrap gap-2">
-              <Button size="sm" variant="outline" onClick={() => setStatus(TOURNAMENT_STATUS.REGISTRATIONS_OPEN)}>
-                <Play className="w-4 h-4 mr-1" /> Abrir inscrições
-              </Button>
-              <Button size="sm" variant="outline" onClick={() => setStatus(TOURNAMENT_STATUS.REGISTRATIONS_CLOSED)}>
-                <Lock className="w-4 h-4 mr-1" /> Encerrar inscrições
-              </Button>
-              <Button size="sm" variant="outline" onClick={() => setStatus(TOURNAMENT_STATUS.IN_PROGRESS)}>
-                Iniciar
-              </Button>
-              <Button size="sm" variant="outline" onClick={() => setStatus(TOURNAMENT_STATUS.FINISHED)}>
-                <CheckCircle2 className="w-4 h-4 mr-1" /> Encerrar
-              </Button>
-            </div>
+      <div className="grid gap-5 xl:grid-cols-[1.15fr,0.85fr]">
+        <Card className="rounded-[2rem] border-white/80 bg-white/82">
+          <CardContent className="space-y-6 p-6 sm:p-7">
+            <section className="space-y-4">
+              <div>
+                <div className="text-xs font-semibold uppercase tracking-[0.16em] text-emerald-700/75">Identidade e contexto</div>
+                <h4 className="mt-2 text-xl font-semibold text-slate-950">Como o torneio aparece para o público</h4>
+              </div>
+
+              <div className="grid grid-cols-1 gap-4 md:grid-cols-2">
+                <div className="md:col-span-2">
+                  <Label>Nome do torneio</Label>
+                  <Input value={form.name} onChange={(e) => set('name', e.target.value)} className="mt-2" />
+                </div>
+                <div className="md:col-span-2">
+                  <Label>Descrição</Label>
+                  <textarea
+                    className="mt-2 flex min-h-28 w-full rounded-[1rem] border border-input bg-background px-3 py-3 text-sm"
+                    value={form.description}
+                    onChange={(e) => set('description', e.target.value)}
+                  />
+                </div>
+                <div>
+                  <Label>Cidade</Label>
+                  <Input value={form.city} onChange={(e) => set('city', e.target.value)} className="mt-2" />
+                </div>
+                <div>
+                  <Label>UF</Label>
+                  <Input value={form.state} onChange={(e) => set('state', e.target.value)} maxLength={2} className="mt-2" />
+                </div>
+                <div className="md:col-span-2">
+                  <Label>Local (quadra/clube)</Label>
+                  <Input value={form.venue} onChange={(e) => set('venue', e.target.value)} className="mt-2" />
+                </div>
+              </div>
+            </section>
+
+            <section className="space-y-4 rounded-[1.5rem] border border-emerald-950/10 bg-white/75 p-5">
+              <div className="flex items-start gap-3">
+                <div className="flex h-10 w-10 items-center justify-center rounded-2xl bg-emerald-100 text-emerald-700">
+                  <Settings2 className="h-4.5 w-4.5" />
+                </div>
+                <div>
+                  <div className="text-base font-semibold text-slate-950">Acesso e regras-base</div>
+                  <p className="mt-1 text-sm leading-6 text-slate-600">Defina quem encontra o torneio e qual conjunto de pontuação vira padrão para todas as modalidades.</p>
+                </div>
+              </div>
+
+              <div className="grid grid-cols-1 gap-4 md:grid-cols-2">
+                <div>
+                  <Label>Tipo de acesso</Label>
+                  <select
+                    className="mt-2 h-11 w-full rounded-[1rem] border border-input bg-background px-3 text-sm"
+                    value={form.visibility}
+                    onChange={(e) => set('visibility', e.target.value)}
+                  >
+                    {Object.entries(TOURNAMENT_VISIBILITY_LABELS).map(([value, label]) => (
+                      <option key={value} value={value}>{label}</option>
+                    ))}
+                  </select>
+                </div>
+                <div>
+                  <Label>Conjunto de regras</Label>
+                  <select
+                    className="mt-2 h-11 w-full rounded-[1rem] border border-input bg-background px-3 text-sm"
+                    value={form.ruleset}
+                    onChange={(e) => set('ruleset', e.target.value)}
+                  >
+                    {Object.values(RULESET).map((ruleset) => (
+                      <option key={ruleset} value={ruleset}>{RULESET_LABELS[ruleset]}</option>
+                    ))}
+                  </select>
+                </div>
+                <div>
+                  <Label>Pontos por game</Label>
+                  <select
+                    className="mt-2 h-11 w-full rounded-[1rem] border border-input bg-background px-3 text-sm"
+                    value={form.target_score}
+                    onChange={(e) => set('target_score', e.target.value)}
+                  >
+                    {Object.values(TARGET_SCORE).map((score) => (
+                      <option key={score} value={score}>{score} pontos</option>
+                    ))}
+                  </select>
+                </div>
+                <div>
+                  <Label>Sets por partida</Label>
+                  <select
+                    className="mt-2 h-11 w-full rounded-[1rem] border border-input bg-background px-3 text-sm"
+                    value={form.sets_per_match}
+                    onChange={(e) => set('sets_per_match', e.target.value)}
+                  >
+                    <option value="1">1 set</option>
+                    <option value="3">Melhor de 3</option>
+                    <option value="5">Melhor de 5</option>
+                  </select>
+                </div>
+              </div>
+            </section>
+
+            <section className="space-y-4 rounded-[1.5rem] border border-emerald-950/10 bg-white/75 p-5">
+              <div className="flex items-start gap-3">
+                <div className="flex h-10 w-10 items-center justify-center rounded-2xl bg-emerald-100 text-emerald-700">
+                  <CalendarDays className="h-4.5 w-4.5" />
+                </div>
+                <div>
+                  <div className="text-base font-semibold text-slate-950">Datas operacionais</div>
+                  <p className="mt-1 text-sm leading-6 text-slate-600">Controle o período do evento e o fechamento das inscrições sem sair da área administrativa.</p>
+                </div>
+              </div>
+
+              <div className="grid grid-cols-1 gap-4 md:grid-cols-3">
+                <div>
+                  <Label>Início</Label>
+                  <Input type="date" value={form.starts_at} onChange={(e) => set('starts_at', e.target.value)} className="mt-2" />
+                </div>
+                <div>
+                  <Label>Fim</Label>
+                  <Input type="date" value={form.ends_at} onChange={(e) => set('ends_at', e.target.value)} className="mt-2" />
+                </div>
+                <div>
+                  <Label>Fim das inscrições</Label>
+                  <Input type="date" value={form.registration_deadline} onChange={(e) => set('registration_deadline', e.target.value)} className="mt-2" />
+                </div>
+              </div>
+            </section>
           </CardContent>
         </Card>
 
-        <Card>
-          <CardContent className="p-4 space-y-3">
-            <h4 className="font-semibold">Admins do torneio</h4>
-            <p className="text-xs text-slate-500">
-              O criador é admin permanente. Outros admins compartilham todas as funções de gestão deste torneio
-              (não afeta o admin geral da plataforma).
-            </p>
-            <ul className="text-sm space-y-1">
-              {admins.map((a) => (
-                <li key={a.user_id} className="flex items-center justify-between">
-                  <span>
-                    {a.user_name || a.user_email}{' '}
-                    <Badge variant="secondary" className="ml-1">
-                      {a.role === TOURNAMENT_ADMIN_ROLE.OWNER ? 'Owner' : 'Admin'}
-                    </Badge>
-                  </span>
-                  {a.role !== TOURNAMENT_ADMIN_ROLE.OWNER && (
-                    <Button size="icon" variant="ghost" onClick={() => removeMutation.mutate(a.user_id)}>
-                      <Trash2 className="w-4 h-4 text-red-600" />
-                    </Button>
-                  )}
-                </li>
-              ))}
-            </ul>
-            <div className="space-y-2">
-              <Label>Adicionar admin (e-mail do usuário já cadastrado)</Label>
-              <div className="flex gap-2">
-                <Input value={email} onChange={(e) => setEmail(e.target.value)} placeholder="email@dominio.com" type="email" />
-                <Button onClick={handleAddAdmin} disabled={addMutation.isPending}>
-                  <UserPlus className="w-4 h-4" />
-                </Button>
+        <div className="space-y-5">
+          <Card className="rounded-[2rem] border-white/80 bg-white/82">
+            <CardContent className="p-6 sm:p-7">
+              <div className="text-xs font-semibold uppercase tracking-[0.16em] text-emerald-700/75">Status da operação</div>
+              <h4 className="mt-2 text-xl font-semibold text-slate-950">Atualize o estado do evento com clareza</h4>
+              <p className="mt-2 text-sm leading-6 text-slate-600">
+                Escolha uma ação abaixo para refletir o momento atual do torneio em toda a plataforma.
+              </p>
+
+              <div className="mt-5 space-y-3">
+                {STATUS_ACTIONS.map(({ value, label, description, icon: Icon }) => (
+                  <button
+                    key={value}
+                    type="button"
+                    onClick={() => setStatus(value)}
+                    className="flex w-full items-start gap-3 rounded-[1.35rem] border border-emerald-950/10 bg-white/75 p-4 text-left transition-transform duration-200 hover:-translate-y-0.5"
+                  >
+                    <div className="flex h-10 w-10 shrink-0 items-center justify-center rounded-2xl bg-emerald-100 text-emerald-700">
+                      <Icon className="h-4.5 w-4.5" />
+                    </div>
+                    <div>
+                      <div className="font-semibold text-slate-950">{label}</div>
+                      <p className="mt-1 text-sm leading-6 text-slate-600">{description}</p>
+                    </div>
+                  </button>
+                ))}
               </div>
-            </div>
-          </CardContent>
-        </Card>
+            </CardContent>
+          </Card>
+
+          <Card className="rounded-[2rem] border-white/80 bg-white/82">
+            <CardContent className="p-6 sm:p-7">
+              <div className="flex items-start gap-3">
+                <div className="flex h-10 w-10 items-center justify-center rounded-2xl bg-emerald-100 text-emerald-700">
+                  <Users className="h-4.5 w-4.5" />
+                </div>
+                <div>
+                  <div className="text-base font-semibold text-slate-950">Admins do torneio</div>
+                  <p className="mt-1 text-sm leading-6 text-slate-600">
+                    O owner permanece fixo. Os demais admins compartilham gestão deste torneio sem impactar o admin geral da plataforma.
+                  </p>
+                </div>
+              </div>
+
+              <ul className="mt-5 space-y-3">
+                {admins.map((a) => (
+                  <li key={a.user_id} className="flex items-center justify-between gap-3 rounded-[1.25rem] border border-emerald-950/10 bg-white/75 px-4 py-3">
+                    <div className="min-w-0">
+                      <div className="truncate font-medium text-slate-950">{a.user_name || a.user_email}</div>
+                      <div className="mt-1 text-xs text-slate-500">{a.user_email}</div>
+                    </div>
+                    <div className="flex items-center gap-2">
+                      <Badge variant="secondary" className="shadow-none">
+                        {a.role === TOURNAMENT_ADMIN_ROLE.OWNER ? 'Owner' : 'Admin'}
+                      </Badge>
+                      {a.role !== TOURNAMENT_ADMIN_ROLE.OWNER && (
+                        <Button size="icon" variant="ghost" onClick={() => removeMutation.mutate(a.user_id)}>
+                          <Trash2 className="w-4 h-4 text-red-600" />
+                        </Button>
+                      )}
+                    </div>
+                  </li>
+                ))}
+              </ul>
+
+              <div className="mt-5 rounded-[1.5rem] border border-emerald-950/10 bg-secondary/35 p-4">
+                <Label>Adicionar admin (e-mail do usuário já cadastrado)</Label>
+                <div className="mt-3 flex gap-2">
+                  <Input value={email} onChange={(e) => setEmail(e.target.value)} placeholder="email@dominio.com" type="email" />
+                  <Button onClick={handleAddAdmin} disabled={addMutation.isPending}>
+                    <UserPlus className="w-4 h-4" />
+                  </Button>
+                </div>
+              </div>
+            </CardContent>
+          </Card>
+        </div>
       </div>
     </div>
   );

@@ -1,11 +1,23 @@
 import React, { useMemo, useState } from 'react';
 import { Link } from 'react-router-dom';
-import { Globe, Trophy, MapPin, Hash, Calendar, Search, Users, X } from 'lucide-react';
+import {
+  Activity,
+  ArrowRight,
+  Calendar,
+  Globe,
+  Hash,
+  MapPin,
+  Search,
+  Sparkles,
+  Trophy,
+  Users,
+  X,
+} from 'lucide-react';
 import { Input } from '@/components/ui/input';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent } from '@/components/ui/card';
-import { Badge } from '@/components/ui/badge';
 import { Skeleton } from '@/components/ui/skeleton';
+import { useAuth } from '@/core/lib/FirebaseAuthContext';
 import { usePublicTournaments } from '@/modules/tournament/hooks/useTournament';
 import {
   TOURNAMENT_STATUS,
@@ -47,6 +59,13 @@ const OPEN_STATUSES = new Set([
   TOURNAMENT_STATUS.IN_PROGRESS,
 ]);
 
+const FILTER_OPTIONS = [
+  { value: 'all', label: 'Todos' },
+  { value: 'open', label: 'Inscricoes e ao vivo' },
+  { value: 'finished', label: 'Encerrados' },
+  { value: 'draft', label: 'Rascunhos' },
+];
+
 // Ordem de prioridade exibida para o usuário: o que está acontecendo agora
 // primeiro, depois inscrições abertas, depois futuros, depois encerrados.
 const STATUS_ORDER = {
@@ -73,9 +92,11 @@ function compareTournaments(a, b) {
 }
 
 export default function PublicTournamentsList() {
+  const { isAuthAvailable, authUnavailableReason } = useAuth();
   const { data: tournaments = [], isLoading } = usePublicTournaments();
   const [search, setSearch] = useState('');
   const [statusFilter, setStatusFilter] = useState('all');
+  const isPreviewMode = import.meta.env.DEV && !isAuthAvailable;
 
   const filtered = useMemo(() => {
     const q = search.trim().toLowerCase();
@@ -93,126 +114,324 @@ export default function PublicTournamentsList() {
     return list.slice().sort(compareTournaments);
   }, [tournaments, search, statusFilter]);
 
-  return (
-    <div className="max-w-5xl mx-auto space-y-6">
-      <div className="flex items-start justify-between gap-3 flex-wrap">
-        <div>
-          <h1 className="text-2xl font-bold arena-heading flex items-center gap-2">
-            <Globe className="w-6 h-6 text-emerald-600" />
-            Torneios públicos
-          </h1>
-          <p className="text-sm text-slate-600 mt-1 max-w-2xl">
-            Veja e ingresse em qualquer torneio público criado na plataforma. A inscrição em torneios
-            públicos não exige código — basta abrir o torneio e escolher uma modalidade.
-          </p>
-        </div>
-      </div>
+  const stats = useMemo(() => {
+    const cities = new Set(tournaments.map((t) => [t.city, t.state].filter(Boolean).join(' / ')).filter(Boolean));
+    return [
+      {
+        label: 'torneios publicados',
+        value: tournaments.length,
+        hint: 'catalogo publico da plataforma',
+        icon: Globe,
+      },
+      {
+        label: 'com atividade agora',
+        value: tournaments.filter((t) => OPEN_STATUSES.has(t.status)).length,
+        hint: 'inscricoes abertas ou evento em andamento',
+        icon: Activity,
+      },
+      {
+        label: 'cidades visiveis',
+        value: cities.size,
+        hint: 'alcance atual dos eventos divulgados',
+        icon: MapPin,
+      },
+    ];
+  }, [tournaments]);
 
-      <Card>
-        <CardContent className="p-4 grid gap-3 sm:grid-cols-[1fr_auto]">
-          <div className="relative">
-            <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-slate-400" />
-            <Input
-              value={search}
-              onChange={(e) => setSearch(e.target.value)}
-              placeholder="Buscar por nome, cidade, local ou descrição"
-              className="pl-9 pr-9"
-            />
-            {search && (
-              <button
-                type="button"
-                onClick={() => setSearch('')}
-                aria-label="Limpar busca"
-                className="absolute right-3 top-1/2 -translate-y-1/2 text-slate-400 hover:text-slate-700"
-              >
-                <X className="w-4 h-4" />
-              </button>
-            )}
+  const featuredTournaments = filtered.slice(0, 3);
+
+  return (
+    <div className="space-y-8">
+      <section className="grid gap-6 xl:grid-cols-[1.08fr,0.92fr]">
+        <Card className="arena-panel-strong overflow-hidden rounded-[2rem] border-0">
+          <CardContent className="relative p-7 sm:p-8 lg:p-10">
+            <div className="relative max-w-2xl">
+              <span className="inline-flex items-center gap-2 rounded-full border border-white/15 bg-white/10 px-3 py-1 text-xs font-semibold uppercase tracking-[0.18em] text-emerald-50/80">
+                <Sparkles className="h-3.5 w-3.5" /> Descoberta publica de torneios
+              </span>
+              <h2 className="mt-5 text-3xl font-semibold leading-tight text-white lg:text-4xl">
+                Explore eventos abertos com uma leitura mais clara do que esta acontecendo agora.
+              </h2>
+              <p className="mt-4 max-w-xl text-sm leading-7 text-emerald-50/75 sm:text-base">
+                A inscricao em torneios publicos nao exige codigo. Basta abrir o evento, entender o contexto e seguir para a modalidade desejada com menos friccao.
+              </p>
+
+              <div className="mt-6 flex flex-wrap gap-3">
+                <Button asChild className="bg-white text-slate-950 hover:bg-emerald-50">
+                  <Link to="/torneios/criar">Criar torneio publico</Link>
+                </Button>
+                {search && (
+                  <Button variant="outline" className="border-white/20 bg-white/10 text-white hover:bg-white/15 hover:text-white" onClick={() => setSearch('')}>
+                    Limpar busca
+                  </Button>
+                )}
+              </div>
+            </div>
+          </CardContent>
+        </Card>
+
+        <Card className="rounded-[2rem] border-white/80 bg-white/82">
+          <CardContent className="p-6 sm:p-7">
+            <span className="arena-chip">Pulso do catalogo</span>
+            <h3 className="mt-4 text-2xl font-semibold text-slate-950">Panorama rapido para descobrir onde entrar</h3>
+            <p className="mt-2 text-sm leading-6 text-slate-600">
+              Um resumo para enxergar alcance, atividade e densidade dos eventos publicos antes mesmo da busca detalhada.
+            </p>
+            <div className="mt-6 grid gap-3 sm:grid-cols-3 xl:grid-cols-1">
+              {stats.map(({ label, value, hint, icon: Icon }) => (
+                <div key={label} className="rounded-[1.35rem] border border-emerald-950/8 bg-secondary/35 p-4">
+                  <div className="flex items-center justify-between gap-3">
+                    <div>
+                      <div className="text-2xl font-semibold text-slate-950">{value}</div>
+                      <div className="mt-1 text-[11px] font-semibold uppercase tracking-[0.16em] text-emerald-700/75">{label}</div>
+                    </div>
+                    <div className="flex h-10 w-10 items-center justify-center rounded-2xl bg-emerald-100 text-emerald-700">
+                      <Icon className="h-4.5 w-4.5" />
+                    </div>
+                  </div>
+                  <p className="mt-3 text-xs leading-5 text-slate-600">{hint}</p>
+                </div>
+              ))}
+            </div>
+          </CardContent>
+        </Card>
+      </section>
+
+      <Card className="rounded-[2rem] border-white/80 bg-white/82">
+        <CardContent className="p-4 sm:p-5">
+          <div className="grid gap-4 xl:grid-cols-[1fr,auto] xl:items-center">
+            <div className="relative">
+              <Search className="absolute left-4 top-1/2 h-4 w-4 -translate-y-1/2 text-slate-400" />
+              <Input
+                value={search}
+                onChange={(e) => setSearch(e.target.value)}
+                placeholder="Buscar por nome, cidade, local ou descricao"
+                className="h-12 rounded-full border-white/80 bg-white/80 pl-11 pr-11"
+              />
+              {search && (
+                <button
+                  type="button"
+                  onClick={() => setSearch('')}
+                  aria-label="Limpar busca"
+                  className="absolute right-4 top-1/2 -translate-y-1/2 text-slate-400 transition-colors hover:text-slate-700"
+                >
+                  <X className="h-4 w-4" />
+                </button>
+              )}
+            </div>
+
+            <div className="flex flex-wrap gap-2">
+              {FILTER_OPTIONS.map((option) => (
+                <button
+                  key={option.value}
+                  type="button"
+                  onClick={() => setStatusFilter(option.value)}
+                  className={[
+                    'rounded-full border px-4 py-2 text-sm font-medium transition-all duration-200',
+                    statusFilter === option.value
+                      ? 'border-emerald-500/35 bg-emerald-600 text-white shadow-[0_16px_34px_-24px_rgba(5,150,105,0.75)]'
+                      : 'border-emerald-950/10 bg-white/75 text-slate-700 hover:border-emerald-400/40 hover:text-slate-950',
+                  ].join(' ')}
+                >
+                  {option.label}
+                </button>
+              ))}
+            </div>
           </div>
-          <select
-            value={statusFilter}
-            onChange={(e) => setStatusFilter(e.target.value)}
-            className="h-10 rounded-md border border-input bg-background px-3 text-sm"
-          >
-            <option value="all">Todos os status</option>
-            <option value="open">Inscrições/Em andamento</option>
-            <option value="finished">Encerrados</option>
-            <option value="draft">Rascunhos</option>
-          </select>
+
+          <div className="mt-4 flex flex-wrap items-center justify-between gap-3 border-t border-emerald-950/8 pt-4 text-sm text-slate-600">
+            <div>
+              <span className="font-semibold text-slate-950">{filtered.length}</span> resultados para o filtro atual.
+            </div>
+            <div className="text-xs uppercase tracking-[0.18em] text-emerald-700/70">
+              Eventos publicos em leitura priorizada por atividade
+            </div>
+          </div>
         </CardContent>
       </Card>
 
+      {isPreviewMode && (
+        <Card className="rounded-[2rem] border-amber-300/70 bg-amber-50/85">
+          <CardContent className="p-5 text-sm leading-6 text-amber-950">
+            Prévia local sem Firebase: esta lista fica disponível para validar o layout, mas os torneios públicos não são carregados neste ambiente.
+            {authUnavailableReason ? ` ${authUnavailableReason}` : ''}
+          </CardContent>
+        </Card>
+      )}
+
+      {!isLoading && featuredTournaments.length > 0 && (
+        <section className="space-y-4">
+          <div>
+            <div className="text-xs font-semibold uppercase tracking-[0.2em] text-emerald-700/75">Em destaque</div>
+            <h3 className="mt-2 text-2xl font-semibold text-slate-950">Eventos que aparecem primeiro na descoberta</h3>
+          </div>
+          <div className="grid gap-4 lg:grid-cols-3">
+            {featuredTournaments.map((tournament) => (
+              <FeaturedTournamentCard key={tournament.id} tournament={tournament} />
+            ))}
+          </div>
+        </section>
+      )}
+
       {isLoading ? (
-        <div className="grid md:grid-cols-2 gap-4">
-          {[1, 2, 3, 4].map((i) => (
-            <Skeleton key={i} className="h-32" />
+        <div className="grid gap-4 lg:grid-cols-2 xl:grid-cols-3">
+          {[1, 2, 3, 4, 5, 6].map((item) => (
+            <Skeleton key={item} className="h-64 rounded-[1.75rem]" />
           ))}
         </div>
       ) : filtered.length === 0 ? (
-        <Card>
-          <CardContent className="p-8 text-center">
-            <Users className="w-10 h-10 mx-auto text-slate-300" />
-            <h3 className="mt-3 font-medium text-slate-900">
-              Nenhum torneio público encontrado
+        <Card className="rounded-[2rem] border-white/80 bg-white/82">
+          <CardContent className="flex flex-col items-center px-6 py-12 text-center sm:px-10">
+            <div className="flex h-16 w-16 items-center justify-center rounded-[1.5rem] bg-emerald-100 text-emerald-700">
+              <Users className="h-8 w-8" />
+            </div>
+            <h3 className="mt-5 text-2xl font-semibold text-slate-950">
+              {isPreviewMode ? 'Nenhum torneio publico carregado neste preview' : 'Nenhum torneio publico encontrado'}
             </h3>
-            <p className="mt-1 text-sm text-slate-600">
-              {tournaments.length === 0
-                ? 'Ainda não há torneios públicos na plataforma. Que tal criar o primeiro?'
-                : 'Ajuste os filtros ou tente outra busca.'}
+            <p className="mt-3 max-w-2xl text-sm leading-7 text-slate-600 sm:text-base">
+              {isPreviewMode
+                ? 'Sem Firebase local, a vitrine fica vazia de proposito. O objetivo aqui e validar composicao, filtros e hierarquia visual.'
+                : tournaments.length === 0
+                ? 'Ainda nao ha torneios publicos na plataforma. Crie o primeiro e transforme esta vitrine em ponto de entrada para novos atletas.'
+                : 'Ajuste a busca ou altere o filtro para abrir mais possibilidades de descoberta.'}
             </p>
-            <div className="mt-4 flex justify-center">
+            <div className="mt-6 flex flex-wrap justify-center gap-3">
               <Button asChild>
                 <Link to="/torneios/criar">Criar torneio</Link>
               </Button>
+              {search && (
+                <Button variant="outline" onClick={() => setSearch('')}>
+                  Limpar busca
+                </Button>
+              )}
             </div>
           </CardContent>
         </Card>
       ) : (
-        <div className="grid md:grid-cols-2 gap-4">
-          {filtered.map((t) => {
-            const dateRange = formatStartEnd(t.starts_at, t.ends_at);
-            const tone = STATUS_TONE[t.status] || 'bg-slate-100 text-slate-700 border-slate-200';
-            return (
-              <Link key={t.id} to={`/torneios/${t.id}`}>
-                <Card className="hover:border-emerald-400 transition-colors h-full">
-                  <CardContent className="p-5">
-                    <div className="flex items-start justify-between gap-3">
-                      <div className="min-w-0">
-                        <h3 className="font-semibold text-slate-900 flex items-center gap-2">
-                          <Trophy className="w-4 h-4 text-emerald-600 shrink-0" />
-                          <span className="truncate">{t.name}</span>
-                        </h3>
-                        <p className="text-xs text-slate-500 mt-1 flex items-center gap-1">
-                          <MapPin className="w-3 h-3" />
-                          {t.city ? `${t.city}${t.state ? ' / ' + t.state : ''}` : 'Local não informado'}
-                        </p>
-                      </div>
-                      <span className={`inline-flex shrink-0 items-center gap-1 px-2 py-0.5 rounded-full border text-[11px] font-medium ${tone}`}>
-                        {TOURNAMENT_STATUS_LABELS[t.status] || t.status}
-                      </span>
-                    </div>
-                    {t.description && (
-                      <p className="text-xs text-slate-600 mt-2 line-clamp-2">{t.description}</p>
-                    )}
-                    <div className="mt-3 flex items-center gap-3 text-xs text-slate-600 flex-wrap">
-                      {dateRange && (
-                        <span className="inline-flex items-center gap-1">
-                          <Calendar className="w-3 h-3" /> {dateRange}
-                        </span>
-                      )}
-                      {t.invite_code && (
-                        <span className="inline-flex items-center gap-1">
-                          <Hash className="w-3 h-3" /> {t.invite_code}
-                        </span>
-                      )}
-                    </div>
-                  </CardContent>
-                </Card>
-              </Link>
-            );
-          })}
-        </div>
+        <section className="space-y-4">
+          <div>
+            <div className="text-xs font-semibold uppercase tracking-[0.2em] text-emerald-700/75">Catalogo completo</div>
+            <h3 className="mt-2 text-2xl font-semibold text-slate-950">Todos os torneios publicos encontrados</h3>
+          </div>
+          <div className="grid gap-4 lg:grid-cols-2 xl:grid-cols-3">
+            {filtered.map((tournament) => (
+              <PublicTournamentCard key={tournament.id} tournament={tournament} />
+            ))}
+          </div>
+        </section>
       )}
     </div>
+  );
+}
+
+function FeaturedTournamentCard({ tournament }) {
+  const dateRange = formatStartEnd(tournament.starts_at, tournament.ends_at);
+  const tone = STATUS_TONE[tournament.status] || 'bg-slate-100 text-slate-700 border-slate-200';
+
+  return (
+    <Link to={`/torneios/${tournament.id}`} className="block h-full">
+      <Card className="match-surface h-full rounded-[1.75rem] border-white/80 bg-white/85">
+        <CardContent className="flex h-full flex-col p-5 sm:p-6">
+          <div className="flex items-start justify-between gap-3">
+            <div className="min-w-0">
+              <div className="text-xs font-semibold uppercase tracking-[0.16em] text-emerald-700/75">Descoberta priorizada</div>
+              <h4 className="mt-2 text-xl font-semibold text-slate-950">{tournament.name}</h4>
+            </div>
+            <div className={`inline-flex shrink-0 items-center gap-1 rounded-full border px-2.5 py-1 text-[11px] font-medium ${tone}`}>
+              {TOURNAMENT_STATUS_LABELS[tournament.status] || tournament.status}
+            </div>
+          </div>
+
+          <div className="mt-4 flex items-center gap-2 text-sm text-slate-600">
+            <MapPin className="h-4 w-4 shrink-0 text-emerald-700" />
+            <span className="truncate">{tournament.city ? `${tournament.city}${tournament.state ? ` / ${tournament.state}` : ''}` : 'Local nao informado'}</span>
+          </div>
+
+          {tournament.description && (
+            <p className="mt-4 line-clamp-3 text-sm leading-6 text-slate-600">{tournament.description}</p>
+          )}
+
+          <div className="mt-4 flex flex-wrap gap-2 text-xs text-slate-600">
+            {dateRange && (
+              <span className="inline-flex items-center gap-1 rounded-full border border-emerald-950/10 bg-white/75 px-2.5 py-1">
+                <Calendar className="h-3 w-3" /> {dateRange}
+              </span>
+            )}
+            {tournament.venue && (
+              <span className="inline-flex items-center gap-1 rounded-full border border-emerald-950/10 bg-white/75 px-2.5 py-1">
+                <Trophy className="h-3 w-3" /> {tournament.venue}
+              </span>
+            )}
+          </div>
+
+          <div className="mt-auto flex items-center justify-between pt-6 text-sm font-medium text-emerald-800">
+            <span>Ver modalidades e detalhes</span>
+            <ArrowRight className="h-4 w-4" />
+          </div>
+        </CardContent>
+      </Card>
+    </Link>
+  );
+}
+
+function PublicTournamentCard({ tournament }) {
+  const dateRange = formatStartEnd(tournament.starts_at, tournament.ends_at);
+  const tone = STATUS_TONE[tournament.status] || 'bg-slate-100 text-slate-700 border-slate-200';
+
+  return (
+    <Link to={`/torneios/${tournament.id}`} className="block h-full">
+      <Card className="match-surface h-full rounded-[1.75rem] border-white/80 bg-white/85">
+        <CardContent className="flex h-full flex-col p-5 sm:p-6">
+          <div className="flex items-start justify-between gap-3">
+            <div className="min-w-0">
+              <h4 className="flex items-center gap-3 text-lg font-semibold text-slate-950">
+                <span className="flex h-11 w-11 shrink-0 items-center justify-center rounded-2xl bg-emerald-100 text-emerald-700">
+                  <Trophy className="h-4.5 w-4.5" />
+                </span>
+                <span className="truncate">{tournament.name}</span>
+              </h4>
+            </div>
+            <div className={`inline-flex shrink-0 items-center gap-1 rounded-full border px-2.5 py-1 text-[11px] font-medium ${tone}`}>
+              {TOURNAMENT_STATUS_LABELS[tournament.status] || tournament.status}
+            </div>
+          </div>
+
+          <div className="mt-4 space-y-2 text-sm text-slate-600">
+            <div className="flex items-center gap-2">
+              <MapPin className="h-4 w-4 shrink-0 text-emerald-700" />
+              <span className="truncate">{tournament.city ? `${tournament.city}${tournament.state ? ` / ${tournament.state}` : ''}` : 'Local nao informado'}</span>
+            </div>
+            {dateRange && (
+              <div className="flex items-center gap-2">
+                <Calendar className="h-4 w-4 shrink-0 text-emerald-700" />
+                <span>{dateRange}</span>
+              </div>
+            )}
+          </div>
+
+          {tournament.description && (
+            <p className="mt-4 line-clamp-3 text-sm leading-6 text-slate-600">{tournament.description}</p>
+          )}
+
+          <div className="mt-4 flex flex-wrap gap-2 text-xs text-slate-600">
+            {tournament.invite_code && (
+              <span className="inline-flex items-center gap-1 rounded-full border border-emerald-950/10 bg-white/75 px-2.5 py-1">
+                <Hash className="h-3 w-3" /> {tournament.invite_code}
+              </span>
+            )}
+            {tournament.venue && (
+              <span className="inline-flex items-center gap-1 rounded-full border border-emerald-950/10 bg-white/75 px-2.5 py-1">
+                <Users className="h-3 w-3" /> {tournament.venue}
+              </span>
+            )}
+          </div>
+
+          <div className="mt-auto flex items-center justify-between pt-6 text-sm font-medium text-emerald-800">
+            <span>Abrir torneio</span>
+            <ArrowRight className="h-4 w-4" />
+          </div>
+        </CardContent>
+      </Card>
+    </Link>
   );
 }

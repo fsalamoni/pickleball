@@ -24,6 +24,8 @@ const PublicTournament = lazy(() => import('@/pages/PublicTournament'));
 const PrintTournament = lazy(() => import('@/pages/PrintTournament'));
 const PageNotFound = lazy(() => import('@/pages/PageNotFound'));
 
+const LOCAL_PREVIEW_PROTECTED_PATHS = new Set(['/torneios/criar', '/torneios/ingressar', '/torneios/publicos']);
+
 const queryClient = new QueryClient({
   defaultOptions: {
     queries: { staleTime: 30_000, refetchOnWindowFocus: false },
@@ -31,9 +33,14 @@ const queryClient = new QueryClient({
 });
 
 function ProtectedRoute({ children }) {
-  const { isAuthenticated, isLoadingAuth } = useAuth();
+  const location = useLocation();
+  const { isAuthenticated, isLoadingAuth, isAuthAvailable } = useAuth();
+  const isLocalPreviewRoute = import.meta.env.DEV
+    && !isAuthAvailable
+    && LOCAL_PREVIEW_PROTECTED_PATHS.has(location.pathname);
+
   if (isLoadingAuth) return <FullScreenSpinner />;
-  if (!isAuthenticated) return <Navigate to="/login" replace />;
+  if (!isAuthenticated && !isLocalPreviewRoute) return <Navigate to="/login" replace />;
   return children;
 }
 

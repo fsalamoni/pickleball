@@ -13,39 +13,51 @@ const firebaseConfig = {
   measurementId: import.meta.env.VITE_FIREBASE_MEASUREMENT_ID || undefined,
 };
 
-export const app = initializeApp(firebaseConfig);
+const requiredFirebaseConfig = [
+  firebaseConfig.apiKey,
+  firebaseConfig.authDomain,
+  firebaseConfig.projectId,
+  firebaseConfig.appId,
+];
 
-export const auth = getAuth(app);
+export const firebaseServicesEnabled = requiredFirebaseConfig.every(Boolean);
+export const firebaseDisabledReason = firebaseServicesEnabled
+  ? null
+  : 'Firebase não está configurado neste ambiente local.';
+
+export const app = firebaseServicesEnabled ? initializeApp(firebaseConfig) : null;
+
 const firestoreDatabaseId = import.meta.env.VITE_FIRESTORE_DATABASE_ID || 'pickleball';
-export const db = getFirestore(app, firestoreDatabaseId);
-export const functions = getFunctions(app, 'southamerica-east1');
+export const auth = app ? getAuth(app) : null;
+export const db = app ? getFirestore(app, firestoreDatabaseId) : null;
+export const functions = app ? getFunctions(app, 'southamerica-east1') : null;
 
-export const googleProvider = new GoogleAuthProvider();
-googleProvider.setCustomParameters({ prompt: 'select_account' });
+export const googleProvider = auth ? new GoogleAuthProvider() : null;
+googleProvider?.setCustomParameters({ prompt: 'select_account' });
 
 const isBrowser = typeof window !== 'undefined';
 const hasMeasurementId = Boolean(import.meta.env.VITE_FIREBASE_MEASUREMENT_ID);
 const analyticsEnabled = isBrowser && hasMeasurementId && import.meta.env.VITE_ENABLE_FIREBASE_ANALYTICS === 'true';
 const performanceEnabled = isBrowser && import.meta.env.VITE_ENABLE_FIREBASE_PERFORMANCE === 'true';
 
-export const analyticsPromise = analyticsEnabled
+export const analyticsPromise = app && analyticsEnabled
   ? import('firebase/analytics')
     .then(async ({ getAnalytics, isSupported }) => (await isSupported() ? getAnalytics(app) : null))
     .catch(() => null)
   : Promise.resolve(null);
 
-export const performancePromise = performanceEnabled
+export const performancePromise = app && performanceEnabled
   ? import('firebase/performance')
     .then(async ({ getPerformance, isSupported }) => (await isSupported() ? getPerformance(app) : null))
     .catch(() => null)
   : Promise.resolve(null);
 
-if (import.meta.env.VITE_FIREBASE_USE_EMULATORS === 'true') {
+if (app && auth && db && functions && import.meta.env.VITE_FIREBASE_USE_EMULATORS === 'true') {
   try {
     connectAuthEmulator(auth, 'http://localhost:9099', { disableWarnings: true });
     connectFirestoreEmulator(db, 'localhost', 8080);
     connectFunctionsEmulator(functions, 'localhost', 5001);
-  } catch (e) {
+  } catch {
     // already connected
   }
 }

@@ -209,6 +209,7 @@ export async function listAllTournaments() {
 }
 
 export async function listPublicTournaments() {
+  if (!db) return [];
   const q = query(collection(db, COL.tournaments), where('visibility', '==', TOURNAMENT_VISIBILITY.PUBLIC));
   const snap = await getDocs(q);
   return snap.docs.map((d) => d.data());
