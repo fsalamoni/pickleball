@@ -1,7 +1,7 @@
 import { useEffect, useMemo, useState } from 'react';
 import { Timestamp } from 'firebase/firestore';
 import { toast } from 'sonner';
-import { Award, Printer, UserCheck } from 'lucide-react';
+import { Award, Printer } from 'lucide-react';
 import { useAuth } from '@/core/lib/FirebaseAuthContext';
 import { birthDateToBrtDate, validateRequiredProfile } from '@/core/lib/profileValidation';
 import { Button } from '@/components/ui/button';
@@ -148,19 +148,6 @@ export default function Profile() {
 
   return (
     <div className="mx-auto max-w-4xl space-y-4">
-      <section className="arena-panel-strong rounded-lg p-5 sm:p-6">
-        <div className="flex items-start gap-3">
-          <div className="flex h-10 w-10 shrink-0 items-center justify-center rounded-md bg-amber-300 text-slate-950">
-            <UserCheck className="h-5 w-5" />
-          </div>
-          <div className="max-w-2xl space-y-2">
-            <p className="text-xs font-semibold uppercase tracking-wider text-emerald-200">Conta e elegibilidade</p>
-            <h1 className="text-2xl font-bold text-white sm:text-3xl">Meu Perfil</h1>
-            <p className="text-sm leading-6 text-emerald-50/85">Como você aparece para os outros participantes dos torneios.</p>
-          </div>
-        </div>
-      </section>
-
       <Card className="overflow-hidden">
         <CardHeader className="border-b border-emerald-950/10 bg-white/45 p-4 sm:p-5">
           <CardTitle className="text-base text-slate-950">Dados do participante</CardTitle>
@@ -254,10 +241,7 @@ export default function Profile() {
                 ))}
               </select>
               <p className="text-xs text-slate-500">
-                Trata-se exclusivamente de uma preferência competitiva (em qual chave você quer
-                jogar) — não é uma pergunta sobre identidade de gênero. Usada para sugerir
-                automaticamente as modalidades elegíveis (masculino, feminino, dupla mista, etc.)
-                em torneios que tenham categorias separadas.
+                Preferência competitiva, não pergunta de identidade. Usada para sugerir modalidades elegíveis.
               </p>
             </div>
             <Button type="submit" disabled={busy} className="bg-emerald-700 hover:bg-emerald-800">

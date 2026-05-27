@@ -80,15 +80,12 @@ export default function LevelingQuestionnaire({
     <div ref={topRef} className="space-y-5">
       <Card className="p-4">
         <div className="flex items-center justify-between text-sm">
-          <span>Progresso geral: {answered} respostas diferentes do padrão neutro ({NEUTRAL_BASELINE_VALUE})</span>
+          <span>Progresso: {answered} respostas</span>
           <span className="font-semibold">{progress}%</span>
         </div>
         <div className="mt-2 h-2 overflow-hidden rounded bg-slate-100">
           <div className="h-full bg-emerald-500" style={{ width: `${progress}%` }} />
         </div>
-        <p className="mt-2 text-xs text-slate-500">
-          A opção 3 é neutra. Altere apenas quando a afirmação representar melhor ou pior seu comportamento real em partidas competitivas.
-        </p>
       </Card>
 
       <Tabs value={activeCategory} onValueChange={switchCategory}>
@@ -102,9 +99,7 @@ export default function LevelingQuestionnaire({
 
         {QUESTIONNAIRE_SECTIONS.map((section) => (
           <TabsContent key={section.category} value={section.category} className="mt-5 space-y-4">
-            <div className="rounded border-l-4 border-blue-500 bg-blue-50 p-4 text-sm text-blue-900">
-              <strong>{section.category}:</strong> avalie seu comportamento real em partidas competitivas e sob pressão.
-            </div>
+            <h3 className="text-lg font-semibold text-slate-900">{section.category}</h3>
             {section.questions.map((question, index) => (
               <QuestionCard
                 key={question.id}

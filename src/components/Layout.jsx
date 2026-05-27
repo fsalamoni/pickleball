@@ -40,71 +40,19 @@ const UTILITY_PUBLIC_PAGES = ['PrivacyPolicy', 'ConductFairPlay', 'PickleballRul
 const APP_NAME = 'Pickleball';
 
 const PAGE_META = {
-  Dashboard: {
-    eyebrow: 'Painel',
-    title: 'Sua central de torneios',
-    description: 'Acompanhe inscrições, eventos e próximas decisões com leitura rápida.',
-  },
-  Inicio: {
-    eyebrow: 'Painel',
-    title: 'Sua central de torneios',
-    description: 'Acompanhe inscrições, eventos e próximas decisões com leitura rápida.',
-  },
-  Profile: {
-    eyebrow: 'Conta',
-    title: 'Perfil do atleta',
-    description: 'Organize sua identidade na plataforma e melhore a confiança nas inscrições.',
-  },
-  CreateTournament: {
-    eyebrow: 'Organização',
-    title: 'Criar novo torneio',
-    description: 'Configure o evento com mais clareza e uma experiência de preenchimento mais confortável.',
-  },
-  JoinTournament: {
-    eyebrow: 'Convites',
-    title: 'Ingressar com código',
-    description: 'Entre rápido em eventos compartilhados sem perder contexto do torneio.',
-  },
-  PublicTournamentsList: {
-    eyebrow: 'Explorar',
-    title: 'Torneios públicos',
-    description: 'Descubra eventos abertos e acompanhe oportunidades de participação.',
-  },
-  Tournament: {
-    eyebrow: 'Evento',
-    title: 'Operação do torneio',
-    description: 'Modos, inscrições, jogos e ranking organizados em um shell mais claro para o staff.',
-  },
-  PickleballRules: {
-    eyebrow: 'Esporte',
-    title: 'Regras do pickleball',
-    description: 'Consulte fundamentos do jogo sem sair da identidade visual principal da plataforma.',
-  },
-  Leveling: {
-    eyebrow: 'Esporte',
-    title: 'Nivelamento',
-    description: 'Descubra níveis de jogo com uma leitura mais confortável e orientada ao atleta.',
-  },
-  ConductFairPlay: {
-    eyebrow: 'Esporte',
-    title: 'Conduta e fair play',
-    description: 'Reforce o espírito esportivo com uma navegação mais calma e objetiva.',
-  },
-  PrivacyPolicy: {
-    eyebrow: 'Informações',
-    title: 'Política de uso',
-    description: 'Leitura institucional integrada ao restante da experiência.',
-  },
-  AdminTournaments: {
-    eyebrow: 'Admin geral',
-    title: 'Gestão de torneios',
-    description: 'Supervisione eventos com uma área mais clara para monitoramento e ações rápidas.',
-  },
-  AdminMetrics: {
-    eyebrow: 'Admin geral',
-    title: 'Métricas da plataforma',
-    description: 'Visualize indicadores com melhor contraste e menos ruído visual.',
-  },
+  Dashboard: { title: 'Início' },
+  Inicio: { title: 'Início' },
+  Profile: { title: 'Meu perfil' },
+  CreateTournament: { title: 'Criar novo torneio' },
+  JoinTournament: { title: 'Ingressar com código' },
+  PublicTournamentsList: { title: 'Torneios públicos' },
+  Tournament: { title: 'Torneio' },
+  PickleballRules: { title: 'Regras do pickleball' },
+  Leveling: { title: 'Nivelamento' },
+  ConductFairPlay: { title: 'Conduta e fair play' },
+  PrivacyPolicy: { title: 'Política de uso' },
+  AdminTournaments: { title: 'Gestão de torneios' },
+  AdminMetrics: { title: 'Métricas da plataforma' },
 };
 
 export default function Layout({ children, currentPageName }) {
@@ -152,7 +100,7 @@ export default function Layout({ children, currentPageName }) {
       />
 
       <div className="fixed inset-x-0 top-0 z-50 flex h-[4.75rem] items-center justify-between border-b border-white/10 bg-slate-950/95 px-4 text-white backdrop-blur-xl lg:hidden">
-        <BrandLockup to="/inicio" subtitle="Gestão de torneios" />
+        <BrandLockup to="/inicio" />
         <Button
           variant="ghost"
           size="icon"
@@ -171,10 +119,7 @@ export default function Layout({ children, currentPageName }) {
       >
         <div className="flex h-full flex-col border-r border-white/10 bg-[linear-gradient(180deg,rgba(2,18,28,0.98),rgba(8,47,73,0.95))] text-sidebar-foreground shadow-[0_30px_80px_-35px_rgba(2,12,27,0.8)] backdrop-blur-xl">
           <div className="border-b border-white/10 px-6 py-6">
-            <BrandLockup to="/inicio" subtitle="Plataforma para operação, ranking e experiência de evento" />
-            <p className="mt-4 text-sm leading-6 text-emerald-50/70">
-              Um shell mais claro para organizar quadras, inscrições e público com menos atrito ao longo do dia.
-            </p>
+            <BrandLockup to="/inicio" />
             <div className="mt-5 grid gap-2">
               <Button asChild className="w-full justify-between bg-white text-slate-950 hover:bg-emerald-50">
                 <Link to="/torneios/criar" onClick={() => setSidebarOpen(false)}>
@@ -194,7 +139,7 @@ export default function Layout({ children, currentPageName }) {
           </div>
 
           <nav className="flex-1 overflow-y-auto px-4 py-6">
-            <SidebarSection title="Seu espaço" hint="Operação diária">
+            <SidebarSection title="Seu espaço">
               <NavItem
                 to="/inicio"
                 icon={LayoutDashboard}
@@ -235,7 +180,7 @@ export default function Layout({ children, currentPageName }) {
               </SidebarSection>
             )}
 
-            <SidebarSection title="Explore o jogo" hint="Conteúdo e referências">
+            <SidebarSection title="Explore o jogo">
               <NavItem
                 to="/torneios/publicos"
                 icon={Globe}
@@ -267,7 +212,7 @@ export default function Layout({ children, currentPageName }) {
             </SidebarSection>
 
             {isPlatformAdmin && (
-              <SidebarSection title="Admin geral" hint="Supervisão da plataforma">
+              <SidebarSection title="Admin geral">
                 <NavItem
                   to="/admin/torneios"
                   icon={FolderCog}
@@ -285,7 +230,7 @@ export default function Layout({ children, currentPageName }) {
               </SidebarSection>
             )}
 
-            <SidebarSection title="Informações" hint="Documentos da plataforma">
+            <SidebarSection title="Informações">
               <NavItem
                 to="/politica-uso"
                 icon={FileText}
@@ -326,9 +271,7 @@ export default function Layout({ children, currentPageName }) {
         <header className="sticky top-[4.75rem] z-30 border-b border-white/70 bg-white/75 backdrop-blur-xl lg:top-0">
           <div className="mx-auto flex max-w-7xl flex-col gap-4 px-4 py-4 lg:flex-row lg:items-center lg:justify-between lg:px-8 lg:py-5">
             <div className="min-w-0">
-              <p className="text-xs font-semibold uppercase tracking-[0.24em] text-emerald-700/80">{currentMeta.eyebrow}</p>
-              <h1 className="mt-2 text-2xl font-semibold text-slate-950 lg:text-3xl">{currentMeta.title}</h1>
-              <p className="mt-1 max-w-2xl text-sm leading-6 text-slate-600">{currentMeta.description}</p>
+              <h1 className="text-2xl font-semibold text-slate-950 lg:text-3xl">{currentMeta.title}</h1>
             </div>
 
             <div className="flex flex-wrap items-center gap-2">
@@ -374,7 +317,7 @@ function PublicUtilityLayout({ children, currentPageName }) {
       />
 
       <div className="fixed inset-x-0 top-0 z-50 flex h-[4.75rem] items-center justify-between border-b border-white/10 bg-slate-950/95 px-4 text-white backdrop-blur-xl lg:hidden">
-        <BrandLockup to="/" subtitle="Guia do esporte" />
+        <BrandLockup to="/" />
         <Button
           variant="ghost"
           size="icon"
@@ -393,14 +336,11 @@ function PublicUtilityLayout({ children, currentPageName }) {
       >
         <div className="flex h-full flex-col border-r border-white/10 bg-[linear-gradient(180deg,rgba(2,18,28,0.98),rgba(8,47,73,0.95))] text-sidebar-foreground shadow-[0_30px_80px_-35px_rgba(2,12,27,0.8)] backdrop-blur-xl">
           <div className="border-b border-white/10 px-6 py-6">
-            <BrandLockup to="/" subtitle="Regras, nivelamento e cultura do esporte" />
-            <p className="mt-4 text-sm leading-6 text-emerald-50/70">
-              Conteúdo institucional e educativo com o mesmo cuidado visual do restante da plataforma.
-            </p>
+            <BrandLockup to="/" />
           </div>
 
           <nav className="flex-1 overflow-y-auto px-4 py-6">
-            <SidebarSection title="Sobre o esporte" hint="Leitura pública">
+            <SidebarSection title="Sobre o esporte">
               <NavItem to="/regras" icon={BookOpen} label="Regras" active={currentPageName === 'PickleballRules'} onClick={() => setSidebarOpen(false)} />
               <NavItem to="/nivelamento" icon={Award} label="Nivelamento" active={currentPageName === 'Leveling'} onClick={() => setSidebarOpen(false)} />
               <NavItem to="/conduta" icon={HeartHandshake} label="Conduta" active={currentPageName === 'ConductFairPlay'} onClick={() => setSidebarOpen(false)} />
@@ -410,11 +350,7 @@ function PublicUtilityLayout({ children, currentPageName }) {
 
           <div className="border-t border-white/10 p-4">
             <div className="rounded-[1.5rem] border border-white/10 bg-white/10 p-4">
-              <div className="text-sm font-semibold text-white">Quer acessar a plataforma completa?</div>
-              <p className="mt-2 text-xs leading-6 text-emerald-50/70">
-                Entre para criar torneios, acompanhar inscrições e operar modalidades com a experiência redesenhada.
-              </p>
-              <div className="mt-4 grid gap-2">
+              <div className="grid gap-2">
                 <Button asChild className="w-full bg-white text-slate-950 hover:bg-emerald-50">
                   <Link to="/login" onClick={() => setSidebarOpen(false)}>Entrar</Link>
                 </Button>
@@ -435,9 +371,7 @@ function PublicUtilityLayout({ children, currentPageName }) {
         <header className="sticky top-[4.75rem] z-30 border-b border-white/70 bg-white/75 backdrop-blur-xl lg:top-0">
           <div className="mx-auto flex max-w-7xl flex-col gap-4 px-4 py-4 lg:flex-row lg:items-center lg:justify-between lg:px-8 lg:py-5">
             <div className="min-w-0">
-              <p className="text-xs font-semibold uppercase tracking-[0.24em] text-emerald-700/80">{currentMeta.eyebrow}</p>
-              <h1 className="mt-2 text-2xl font-semibold text-slate-950 lg:text-3xl">{currentMeta.title}</h1>
-              <p className="mt-1 max-w-2xl text-sm leading-6 text-slate-600">{currentMeta.description}</p>
+              <h1 className="text-2xl font-semibold text-slate-950 lg:text-3xl">{currentMeta.title}</h1>
             </div>
 
             <div className="flex flex-wrap gap-2">
@@ -458,14 +392,10 @@ function PublicUtilityLayout({ children, currentPageName }) {
 }
 
 function pageMeta(name) {
-  return PAGE_META[name] || {
-    eyebrow: 'Plataforma',
-    title: name || APP_NAME,
-    description: 'Uma navegação mais clara para organizar o torneio com calma e rapidez.',
-  };
+  return PAGE_META[name] || { title: name || APP_NAME };
 }
 
-function BrandLockup({ to, subtitle }) {
+function BrandLockup({ to }) {
   return (
     <Link to={to} className="flex items-center gap-3 text-white">
       <div className="flex h-11 w-11 items-center justify-center rounded-2xl border border-white/10 bg-white/10 text-emerald-50">
@@ -473,7 +403,6 @@ function BrandLockup({ to, subtitle }) {
       </div>
       <div className="min-w-0">
         <div className="truncate text-sm font-semibold uppercase tracking-[0.24em] text-emerald-50/80">{APP_NAME}</div>
-        <div className="truncate text-sm text-emerald-50/60">{subtitle}</div>
       </div>
     </Link>
   );
@@ -508,10 +437,7 @@ function NotificationsMenu({ notifications, unreadCount, markAsRead }) {
       </DropdownMenuTrigger>
       <DropdownMenuContent align="end" className="w-[22rem] rounded-[1.25rem] border-white/80 bg-white/95 p-2 backdrop-blur-xl">
         <div className="flex items-center justify-between px-3 py-2">
-          <div>
-            <div className="text-sm font-semibold text-slate-950">Notificações</div>
-            <div className="text-xs text-slate-500">Atualizações recentes da sua operação</div>
-          </div>
+          <div className="text-sm font-semibold text-slate-950">Notificações</div>
           <div className="flex h-8 w-8 items-center justify-center rounded-full bg-emerald-100 text-emerald-700">
             <Sparkles className="h-4 w-4" />
           </div>
