@@ -1,6 +1,6 @@
 import React from 'react';
 import { Card, CardContent } from '@/components/ui/card';
-import { Trophy, Medal } from 'lucide-react';
+import { Trophy, Info, Medal } from 'lucide-react';
 import { useModalities, useModalityRanking } from '@/modules/tournament/hooks/useTournament';
 
 export default function TournamentRankingTab({ tournament }) {
@@ -17,6 +17,16 @@ export default function TournamentRankingTab({ tournament }) {
   }
   return (
     <div className="space-y-4">
+      <Card className="border-emerald-200 bg-emerald-50/40">
+        <CardContent className="p-4 flex items-start gap-2 text-sm text-emerald-950">
+          <Info className="w-4 h-4 mt-0.5 text-emerald-700 shrink-0" />
+          <div>
+            <strong>Como funciona a classificação:</strong> a posição é definida pelo número de vitórias.
+            Em caso de empate, valem na ordem: <strong>saldo de pontos</strong> (a favor − contra),
+            <strong> pontos marcados</strong> e, por fim, <strong>menor número de pontos sofridos</strong>.
+          </div>
+        </CardContent>
+      </Card>
       {modalities.map((m) => (
         <ModalityRankingBlock key={m.id} modality={m} />
       ))}

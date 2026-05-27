@@ -9,6 +9,7 @@ import {
   Info,
   MapPin,
   ShieldCheck,
+  Sparkles,
   Trophy,
   Plus,
   Users,
@@ -81,72 +82,108 @@ export default function TournamentOverviewTab({ tournament, isAdmin }) {
     {
       label: 'Modalidades',
       value: modalities.length,
+      description: 'frentes esportivas ativas neste torneio',
       icon: Trophy,
     },
     {
       label: 'Inscrições confirmadas',
       value: confirmedRegistrations,
+      description: 'confirmadas no panorama atual do evento',
       icon: Users,
     },
     {
       label: 'Acesso',
       value: isPublic ? 'Público' : 'Privado',
+      description: isPublic ? 'qualquer atleta pode explorar e seguir para inscrição' : 'exige código para liberar as modalidades',
       icon: isPublic ? Globe : ShieldCheck,
     },
   ];
 
   return (
     <div className="space-y-6">
-      <Card className="rounded-[2rem] border-white/80 bg-white/82">
-        <CardContent className="p-6 sm:p-7">
-          <div className="grid gap-3 sm:grid-cols-3">
-            {summaryCards.map(({ label, value, icon: Icon }) => (
-              <div key={label} className="rounded-[1.35rem] border border-emerald-950/10 bg-secondary/35 p-4">
-                <div className="flex items-center justify-between gap-3">
-                  <div className="text-[11px] font-semibold uppercase tracking-[0.16em] text-emerald-700/75">{label}</div>
-                  <div className="flex h-10 w-10 items-center justify-center rounded-2xl bg-emerald-100 text-emerald-700">
-                    <Icon className="h-4.5 w-4.5" />
+      <section className="grid gap-4 xl:grid-cols-[1.1fr,0.9fr]">
+        <Card className="rounded-[2rem] border-white/80 bg-white/82">
+          <CardContent className="p-6 sm:p-7">
+            <span className="arena-chip">
+              <Sparkles className="h-3.5 w-3.5 text-emerald-700" /> Visão geral do evento
+            </span>
+            <h3 className="mt-4 text-3xl font-semibold text-slate-950">Tudo o que atletas e organização precisam ler primeiro</h3>
+            <p className="mt-3 max-w-2xl text-sm leading-7 text-slate-600 sm:text-base">
+              Datas, local, regra esportiva e contexto das modalidades aparecem juntos para reduzir dúvida antes da inscrição ou da operação do torneio.
+            </p>
+
+            <div className="mt-6 grid gap-3 sm:grid-cols-3">
+              {summaryCards.map(({ label, value, description, icon: Icon }) => (
+                <div key={label} className="rounded-[1.35rem] border border-emerald-950/10 bg-secondary/35 p-4">
+                  <div className="flex items-center justify-between gap-3">
+                    <div className="text-[11px] font-semibold uppercase tracking-[0.16em] text-emerald-700/75">{label}</div>
+                    <div className="flex h-10 w-10 items-center justify-center rounded-2xl bg-emerald-100 text-emerald-700">
+                      <Icon className="h-4.5 w-4.5" />
+                    </div>
                   </div>
+                  <div className="mt-3 text-xl font-semibold text-slate-950">{value}</div>
+                  <p className="mt-1 text-xs leading-5 text-slate-600">{description}</p>
                 </div>
-                <div className="mt-3 text-xl font-semibold text-slate-950">{value}</div>
-              </div>
-            ))}
-          </div>
-
-          <div className="mt-6 grid gap-3 sm:grid-cols-2">
-            <InfoSurface
-              icon={Calendar}
-              title="Datas do torneio"
-              description={startsAt || endsAt ? (startsAt && endsAt ? (startsAt === endsAt ? startsAt : `${startsAt} a ${endsAt}`) : startsAt || endsAt) : 'Período ainda não definido.'}
-            />
-            <InfoSurface
-              icon={Clock}
-              title="Inscrições até"
-              description={deadline || 'Prazo ainda não definido pelo admin.'}
-            />
-            <InfoSurface
-              icon={MapPin}
-              title="Local da competição"
-              description={tournament.venue || 'Quadra ou clube ainda não informado.'}
-            />
-            <InfoSurface
-              icon={Trophy}
-              title="Regras e pontuação"
-              description={`${RULESET_LABELS[tournament.scoring?.ruleset || tournament.ruleset] || '—'} · ${tournament.scoring?.target_score} pontos · ${tournament.scoring?.sets_per_match} set(s)`}
-            />
-          </div>
-
-          {tournament.description && (
-            <div className="mt-6 rounded-[1.5rem] border border-emerald-950/10 bg-white/75 p-5 text-sm leading-7 text-slate-600">
-              {tournament.description}
+              ))}
             </div>
-          )}
-        </CardContent>
-      </Card>
+
+            <div className="mt-6 grid gap-3 sm:grid-cols-2">
+              <InfoSurface
+                icon={Calendar}
+                title="Datas do torneio"
+                description={startsAt || endsAt ? (startsAt && endsAt ? (startsAt === endsAt ? startsAt : `${startsAt} a ${endsAt}`) : startsAt || endsAt) : 'Período ainda não definido.'}
+              />
+              <InfoSurface
+                icon={Clock}
+                title="Inscrições até"
+                description={deadline || 'Prazo ainda não definido pelo admin.'}
+              />
+              <InfoSurface
+                icon={MapPin}
+                title="Local da competição"
+                description={tournament.venue || 'Quadra ou clube ainda não informado.'}
+              />
+              <InfoSurface
+                icon={Trophy}
+                title="Regras e pontuação"
+                description={`${RULESET_LABELS[tournament.scoring?.ruleset || tournament.ruleset] || '—'} · ${tournament.scoring?.target_score} pontos · ${tournament.scoring?.sets_per_match} set(s)`}
+              />
+            </div>
+
+            {tournament.description && (
+              <div className="mt-6 rounded-[1.5rem] border border-emerald-950/10 bg-white/75 p-5 text-sm leading-7 text-slate-600">
+                {tournament.description}
+              </div>
+            )}
+          </CardContent>
+        </Card>
+
+        <Card className="arena-panel-strong rounded-[2rem] border-0">
+          <CardContent className="p-6 sm:p-7">
+            <div className="text-xs font-semibold uppercase tracking-[0.18em] text-emerald-50/75">Critério de classificação</div>
+            <h3 className="mt-4 text-3xl font-semibold leading-tight text-white">Ranking com uma leitura simples para quem está jogando e para quem está operando.</h3>
+            <p className="mt-3 text-sm leading-7 text-emerald-50/75 sm:text-base">
+              A plataforma mantém o mesmo critério em todas as modalidades para evitar interpretação ambígua de tabela durante o evento.
+            </p>
+
+            <div className="mt-6 space-y-3">
+              <RankingRule order="01" title="Vitórias" description="A posição inicial no ranking sempre parte do número de vitórias." />
+              <RankingRule order="02" title="Saldo de pontos" description="Empates são resolvidos primeiro pelo saldo entre pontos marcados e sofridos." />
+              <RankingRule order="03" title="Pontos marcados e sofridos" description="Se o empate persistir, valem maior pontuação a favor e, por fim, menor pontuação contra." />
+            </div>
+          </CardContent>
+        </Card>
+      </section>
 
       <section className="space-y-4">
         <div className="flex items-end justify-between gap-3 flex-wrap">
-          <h3 className="text-2xl font-semibold text-slate-950">Modalidades</h3>
+          <div>
+            <div className="text-xs font-semibold uppercase tracking-[0.2em] text-emerald-700/75">Modalidades</div>
+            <h3 className="mt-2 text-2xl font-semibold text-slate-950">Escolha onde jogar ou o que acompanhar</h3>
+            <p className="mt-1 max-w-3xl text-sm leading-6 text-slate-600">
+              Cada card concentra formato, nível, capacidade e ação disponível. O objetivo é deixar a decisão mais clara antes do clique de inscrição.
+            </p>
+          </div>
           {!isPublic && !hasPrivateAccess && !isAdmin && (
             <div className="rounded-full border border-amber-200 bg-amber-50 px-4 py-2 text-xs text-amber-900">
               Torneio privado: use o código recebido em <strong>Ingressar com código</strong> para liberar inscrições.
@@ -274,7 +311,7 @@ function ModalityCard({
               {pct !== null ? (
                 <>
                   <div className="mb-1 flex items-center justify-between text-[11px] text-slate-600">
-                    <span>{slotsFull ? 'Esgotada' : 'Ocupação'}</span>
+                    <span>{slotsFull ? 'Capacidade esgotada' : 'Leitura atual da ocupação'}</span>
                     <span>{pct}%</span>
                   </div>
                   <div className="h-2 w-full overflow-hidden rounded-full bg-slate-200">
@@ -302,15 +339,27 @@ function ModalityCard({
               <Wallet className="h-4 w-4 text-emerald-700" />
               {fee > 0 ? formatBRL(fee) : 'Gratuita'}
             </div>
-            {pendingRegistrations > 0 && (
-              <p className="mt-3 text-xs leading-5 text-slate-600">
-                {pendingRegistrations} aguardando confirmação.
-              </p>
-            )}
+            <p className="mt-3 text-xs leading-5 text-slate-600">
+              {pendingRegistrations > 0
+                ? `Há ${pendingRegistrations} inscrição(ões) adicional(is) aguardando confirmação ou processamento.`
+                : 'Sem pendências extras registradas no momento.'}
+            </p>
           </div>
         </div>
 
         <div className="mt-auto pt-5">
+          <div className="mb-4 text-xs leading-5 text-slate-600">
+            {alreadyRegistered
+              ? 'Sua participação nesta modalidade já está registrada.'
+              : canRegister
+                ? slotsFull
+                  ? 'A modalidade atingiu a capacidade configurada para novas confirmações.'
+                  : isAdmin
+                    ? 'Como admin, você pode adicionar jogadores diretamente por aqui.'
+                    : 'Abra o diálogo para concluir sua inscrição nesta modalidade.'
+                : 'Modalidade bloqueada até que o código de acesso do torneio privado seja validado.'}
+          </div>
+
           <div className="flex flex-wrap items-center justify-between gap-3">
             <Button variant="outline" size="sm" onClick={onInfo}>
               <Info className="w-4 h-4 mr-1" /> Informações
@@ -342,6 +391,16 @@ function InfoSurface({ icon: Icon, title, description }) {
         <Icon className="h-4 w-4 text-emerald-700" /> {title}
       </div>
       <p className="mt-2 text-sm leading-6 text-slate-600">{description}</p>
+    </div>
+  );
+}
+
+function RankingRule({ order, title, description }) {
+  return (
+    <div className="rounded-[1.35rem] border border-white/12 bg-white/10 p-4 backdrop-blur-sm">
+      <div className="text-[11px] font-semibold uppercase tracking-[0.16em] text-emerald-50/75">{order}</div>
+      <div className="mt-2 text-lg font-semibold text-white">{title}</div>
+      <p className="mt-1 text-sm leading-6 text-emerald-50/75">{description}</p>
     </div>
   );
 }

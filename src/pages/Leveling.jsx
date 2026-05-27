@@ -53,9 +53,12 @@ export default function Leveling() {
               <Button size="sm" variant={tab === 'tabela' ? 'default' : 'outline'} onClick={() => setTab('tabela')}>Tabela</Button>
             </div>
           </div>
+          <p className="mt-2 text-sm text-slate-600">
+            Formulário comportamental importado da plataforma de nivelamento, direto na avaliação e com tabela detalhada de níveis USAP adaptados ao Brasil.
+          </p>
           {!isAuthenticated && (
             <p className="mt-2 text-xs text-amber-700">
-              Entre na sua conta para salvar permanentemente respostas e resultado no seu perfil.
+              Você pode preencher sem login, mas entre na sua conta para salvar permanentemente respostas e resultado no seu perfil.
             </p>
           )}
         </CardContent>

@@ -1,10 +1,16 @@
 import { useEffect, useState } from 'react';
 import { Link, useNavigate } from 'react-router-dom';
 import { toast } from 'sonner';
-import { ArrowRight, Trophy } from 'lucide-react';
+import { ArrowRight, ShieldCheck, Sparkles, Trophy } from 'lucide-react';
 import { useAuth } from '@/core/lib/FirebaseAuthContext';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from '@/components/ui/card';
+
+const LOGIN_HIGHLIGHTS = [
+  'Acesse torneios, ranking e ferramentas com menos atrito.',
+  'Mantenha a identidade do evento consistente do convite ao resultado final.',
+  'Use uma interface mais clara para operar no balcão, no desktop e na quadra.',
+];
 
 export default function Login() {
   const { signInWithGoogle, isAuthenticated, isLoadingAuth, authError, isAuthAvailable, authUnavailableReason } = useAuth();
@@ -35,25 +41,82 @@ export default function Login() {
   return (
     <div className="relative min-h-screen overflow-hidden arena-page">
       <div className="absolute inset-x-0 top-0 h-[28rem] bg-[radial-gradient(circle_at_top,rgba(16,185,129,0.2),transparent_58%)]" />
-      <div className="relative mx-auto flex min-h-screen max-w-md items-center justify-center px-6 py-8">
-        <div className="flex w-full items-center justify-center">
+      <div className="relative mx-auto grid min-h-screen max-w-6xl gap-8 px-6 py-8 lg:grid-cols-[1.05fr,0.95fr] lg:items-center">
+        <div className="hidden h-full min-h-[42rem] flex-col justify-between rounded-[2.25rem] arena-panel-strong p-8 lg:flex">
+          <div>
+            <Link to="/" className="inline-flex items-center gap-3 text-white">
+              <div className="flex h-11 w-11 items-center justify-center rounded-2xl border border-white/15 bg-white/10">
+                <Trophy className="h-5 w-5" />
+              </div>
+              <div>
+                <span className="block text-sm font-semibold uppercase tracking-[0.24em] text-emerald-50/80">Pickleball</span>
+                <span className="block text-xl font-semibold">Organização com cara de evento</span>
+              </div>
+            </Link>
+          </div>
+
+          <div>
+            <span className="inline-flex items-center gap-2 rounded-full border border-white/15 bg-white/10 px-3 py-1 text-xs font-semibold uppercase tracking-[0.2em] text-emerald-50/80">
+              <Sparkles className="h-3.5 w-3.5" /> Entrada principal da plataforma
+            </span>
+            <h1 className="mt-6 text-5xl font-semibold leading-[0.95] text-white">
+              Entre para organizar melhor, publicar mais bonito e operar com menos esforço.
+            </h1>
+            <p className="mt-5 max-w-xl text-base leading-7 text-emerald-50/80">
+              A nova experiência reforça a percepção de valor do torneio e deixa mais claro o caminho para criar, administrar e acompanhar cada modalidade.
+            </p>
+
+            <div className="mt-8 grid gap-3">
+              {LOGIN_HIGHLIGHTS.map((item) => (
+                <div key={item} className="rounded-[1.35rem] border border-white/10 bg-white/10 p-4 text-sm leading-6 text-emerald-50/80 backdrop-blur-sm">
+                  {item}
+                </div>
+              ))}
+            </div>
+          </div>
+
+          <div className="flex flex-wrap gap-3 text-sm text-emerald-50/75">
+            <Link to="/regras" className="transition-colors hover:text-white">Regras oficiais</Link>
+            <Link to="/nivelamento" className="transition-colors hover:text-white">Nivelamento</Link>
+            <Link to="/conduta" className="transition-colors hover:text-white">Fair Play</Link>
+          </div>
+        </div>
+
+        <div className="flex items-center justify-center">
           <Card className="w-full max-w-lg rounded-[2.25rem] border-white/80 bg-white/90 p-1.5 shadow-[0_35px_80px_-40px_rgba(15,23,42,0.45)] sm:p-2">
             <CardHeader className="px-5 pb-4 pt-6 text-center sm:px-8">
-              <Link to="/" className="mx-auto mb-4 inline-flex items-center gap-3 text-slate-950">
+              <Link to="/" className="mx-auto mb-4 inline-flex items-center gap-3 text-slate-950 lg:hidden">
                 <div className="flex h-11 w-11 items-center justify-center rounded-2xl border border-emerald-200/70 bg-emerald-50">
                   <Trophy className="h-5 w-5 text-emerald-700" />
                 </div>
                 <span className="text-lg font-semibold">Pickleball</span>
               </Link>
-              <CardTitle className="text-[1.6rem] font-semibold text-slate-950 sm:text-2xl">
-                Entrar
+              <div className="mx-auto flex h-14 w-14 items-center justify-center rounded-2xl bg-emerald-100 text-emerald-700 shadow-[0_18px_35px_-26px_rgba(16,185,129,0.7)]">
+                <Trophy className="h-6 w-6" />
+              </div>
+              <CardTitle className="mt-5 text-[2.2rem] font-semibold leading-[1.02] text-slate-950 sm:text-3xl">
+                Entrar para publicar e operar torneios com mais confiança.
               </CardTitle>
-              <CardDescription className="mx-auto mt-2 max-w-md text-sm text-slate-600">
-                Use sua conta Google para acessar a plataforma.
+              <CardDescription className="mx-auto mt-3 max-w-md text-sm leading-7 text-slate-600">
+                Use sua conta Google para acessar a plataforma e manter inscrições, modalidades e resultados sob controle.
               </CardDescription>
             </CardHeader>
 
             <CardContent className="space-y-5 px-5 pb-6 sm:px-8">
+              <div className="rounded-[1.5rem] border border-emerald-950/5 bg-secondary/40 p-4">
+                <div className="flex items-start gap-3">
+                  <div className="mt-1 flex h-9 w-9 items-center justify-center rounded-full bg-emerald-100 text-emerald-700">
+                    <ShieldCheck className="h-4 w-4" />
+                  </div>
+                  <div>
+                    <div className="font-semibold text-slate-950">Acesso pensado para o ritmo do evento</div>
+                    <p className="mt-1 text-sm leading-6 text-slate-600">
+                      O objetivo aqui é reduzir atrito logo no primeiro clique e manter a jornada coerente com o resto da plataforma.
+                    </p>
+                  </div>
+                </div>
+              </div>
+
               <Button onClick={onClick} disabled={busy || !isAuthAvailable} className="h-12 w-full text-[15px]" size="lg">
                 <GoogleIcon className="h-4 w-4" />
                 {busy ? (
