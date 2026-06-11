@@ -357,21 +357,25 @@ function buildAmericanoGeneral(players) {
     }
 
     // Grau = número de parcerias disjuntas ainda disponíveis para casar.
-    const degree = (i) => {
+    // Calculado uma única vez por iteração (o conjunto `available` é fixo aqui)
+    // e reutilizado nas duas seleções abaixo.
+    const degreeByIndex = new Map();
+    for (let k = 0; k < available.length; k += 1) {
+      const i = available[k];
       let deg = 0;
-      for (let k = 0; k < available.length; k += 1) {
-        const j = available[k];
+      for (let m = 0; m < available.length; m += 1) {
+        const j = available[m];
         if (j !== i && disjoint(pairs[i], pairs[j])) deg += 1;
       }
-      return deg;
-    };
+      degreeByIndex.set(i, deg);
+    }
 
     // Escolhe a parceria mais restrita (menor grau) para casar primeiro.
     let best = -1;
     let bestDeg = Infinity;
     for (let k = 0; k < available.length; k += 1) {
       const i = available[k];
-      const deg = degree(i);
+      const deg = degreeByIndex.get(i);
       if (deg < bestDeg) {
         bestDeg = deg;
         best = i;
@@ -385,7 +389,7 @@ function buildAmericanoGeneral(players) {
     for (let k = 0; k < available.length; k += 1) {
       const j = available[k];
       if (j === best || !disjoint(pairs[best], pairs[j])) continue;
-      const deg = degree(j);
+      const deg = degreeByIndex.get(j);
       if (deg < partnerDeg) {
         partnerDeg = deg;
         partner = j;
@@ -393,7 +397,8 @@ function buildAmericanoGeneral(players) {
     }
 
     if (partner === -1) {
-      // Parceria sem nenhum casamento possível — fica de fora (no máximo uma).
+      // Parceria sem nenhum casamento possível — fica de fora. Na prática isso
+      // ocorre no máximo uma vez (quando C(N,2) é ímpar, N ≡ 2 ou 3 mod 4).
       used[best] = true;
       remaining -= 1;
       continue;
