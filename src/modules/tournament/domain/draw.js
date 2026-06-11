@@ -227,19 +227,25 @@ export function seedSlot(seedNum, size) {
 /* ----------------------------- Americana -------------------------------- */
 
 /**
- * Calcula o número exato de jogos para um torneio Americana aberta
- * (todos jogam em dupla com todos exatamente uma vez).
+ * Calcula o número de jogos de um torneio Americana aberta, no qual todos
+ * jogam em dupla com todos (rotação de parceiros).
  *
  * Cada jogo envolve 4 jogadores formando 2 duplas. Cada dupla é uma parceria
  * única. O total de parcerias possíveis é C(N,2). Cada jogo "consome" 2
- * parcerias, então o total de jogos é C(N,2) / 2 = N·(N−1) / 4.
+ * parcerias, então o número de jogos é ⌊C(N,2) / 2⌋ = ⌊N·(N−1) / 4⌋.
  *
- * Para que o total seja inteiro, é necessário que N(N−1) seja múltiplo de 4,
- * o que ocorre quando N ≡ 0 ou N ≡ 1 (mod 4). Para N ≡ 2 ou 3 (mod 4) o
- * formato Americana aberta não fecha matematicamente.
+ * A Americana sempre pode ser realizada com qualquer número de inscritos
+ * (N ≥ 4): a rotação faz com que todos joguem com todos. A cobertura é
+ * perfeita (cada parceria acontece exatamente uma vez) quando N(N−1) é
+ * múltiplo de 4, ou seja, N ≡ 0 ou N ≡ 1 (mod 4).
+ *
+ * Para N ≡ 2 ou 3 (mod 4), C(N,2) é ímpar e, portanto, exatamente uma
+ * parceria não pode ser fechada em um jogo de 4 jogadores. O torneio ainda
+ * roda normalmente: todos jogam com todos, exceto por essa única dupla que
+ * fica de fora — que é o máximo matematicamente possível.
  *
  * @param {number} n
- * @returns {{ totalMatches: number, exact: boolean, reason?: string }}
+ * @returns {{ totalMatches: number, exact: boolean, reason?: string, note?: string }}
  */
 export function americanoMatchCount(n) {
   if (n < 4) return { totalMatches: 0, exact: false, reason: 'Mínimo de 4 jogadores.' };
@@ -248,7 +254,7 @@ export function americanoMatchCount(n) {
     return {
       totalMatches: Math.floor(product / 4),
       exact: false,
-      reason: `Com ${n} jogadores o formato Americana aberta não fecha — cada parceria precisa ser única. Use um número de jogadores N tal que N ≡ 0 ou N ≡ 1 (mod 4): 4, 5, 8, 9, 12, 13, 16, 17, …`,
+      note: `Com ${n} jogadores a Americana roda normalmente e quase todas as parcerias acontecem: apenas uma dupla não pode ser fechada (limitação matemática para N ≡ 2 ou 3 mod 4). Para que cada parceria ocorra exatamente uma vez, use N ≡ 0 ou N ≡ 1 (mod 4): 4, 5, 8, 9, 12, 13, 16, 17, …`,
     };
   }
   return { totalMatches: product / 4, exact: true };
@@ -311,15 +317,20 @@ export function americanoCrossBlocks(b1, b2) {
 }
 
 /**
- * Cobertura completa para o caso geral de N jogadores em Americana aberta.
+ * Cobertura para o caso geral de N jogadores em Americana aberta.
  *
- * Estratégia:
+ * Estratégia (greedy "mais restrito primeiro"):
  *  - Geramos todas as C(N,2) parcerias.
- *  - Construímos jogos por "matching" guloso, garantindo que cada parceria
- *    apareça exatamente uma vez e cada jogador apareça no máximo uma vez por
- *    rodada (round-robin temporal).
+ *  - Montamos jogos casando duas parcerias disjuntas (4 jogadores distintos),
+ *    cada parceria usada no máximo uma vez. A cada passo escolhemos a parceria
+ *    com menos opções de casamento disponíveis (e o parceiro também mais
+ *    restrito), o que maximiza o número de parcerias cobertas.
  *
- * Esta rotina é usada quando N não é múltiplo de 4 (ex.: N=5, 9, 13...).
+ * Resultado: cobertura ótima — 0 parcerias de fora quando N ≡ 0 ou 1 (mod 4)
+ * e exatamente 1 parceria de fora quando N ≡ 2 ou 3 (mod 4), que é o máximo
+ * matematicamente possível (pois C(N,2) é ímpar nesses casos).
+ *
+ * Esta rotina é usada quando N não é múltiplo de 4 (ex.: N=5, 6, 7, 9, 10…).
  * Para N múltiplo de 4 o caminho rápido é `buildAmericanoBlockSchedule`.
  *
  * @param {string[]} players
@@ -332,28 +343,73 @@ function buildAmericanoGeneral(players) {
       pairs.push([players[i], players[j]]);
     }
   }
+  const disjoint = (a, b) =>
+    a[0] !== b[0] && a[0] !== b[1] && a[1] !== b[0] && a[1] !== b[1];
+
   const matches = [];
   const used = new Array(pairs.length).fill(false);
-  while (used.includes(false)) {
-    const i = used.findIndex((u) => !u);
-    const pa = pairs[i];
-    let partnerIdx = -1;
-    for (let j = i + 1; j < pairs.length; j += 1) {
-      if (used[j]) continue;
-      const pb = pairs[j];
-      if (
-        pb[0] !== pa[0] && pb[0] !== pa[1] &&
-        pb[1] !== pa[0] && pb[1] !== pa[1]
-      ) {
-        partnerIdx = j;
-        break;
+  let remaining = pairs.length;
+
+  while (remaining >= 2) {
+    const available = [];
+    for (let i = 0; i < pairs.length; i += 1) {
+      if (!used[i]) available.push(i);
+    }
+
+    // Grau = número de parcerias disjuntas ainda disponíveis para casar.
+    // Calculado uma única vez por iteração (o conjunto `available` é fixo aqui)
+    // e reutilizado nas duas seleções abaixo.
+    const degreeByIndex = new Map();
+    for (let k = 0; k < available.length; k += 1) {
+      const i = available[k];
+      let deg = 0;
+      for (let m = 0; m < available.length; m += 1) {
+        const j = available[m];
+        if (j !== i && disjoint(pairs[i], pairs[j])) deg += 1;
+      }
+      degreeByIndex.set(i, deg);
+    }
+
+    // Escolhe a parceria mais restrita (menor grau) para casar primeiro.
+    let best = -1;
+    let bestDeg = Infinity;
+    for (let k = 0; k < available.length; k += 1) {
+      const i = available[k];
+      const deg = degreeByIndex.get(i);
+      if (deg < bestDeg) {
+        bestDeg = deg;
+        best = i;
       }
     }
-    if (partnerIdx === -1) break; // não há mais como casar, sai
-    used[i] = true;
-    used[partnerIdx] = true;
-    matches.push({ side_a: pa, side_b: pairs[partnerIdx] });
+    if (best === -1) break;
+
+    // Escolhe o parceiro disjunto também mais restrito.
+    let partner = -1;
+    let partnerDeg = Infinity;
+    for (let k = 0; k < available.length; k += 1) {
+      const j = available[k];
+      if (j === best || !disjoint(pairs[best], pairs[j])) continue;
+      const deg = degreeByIndex.get(j);
+      if (deg < partnerDeg) {
+        partnerDeg = deg;
+        partner = j;
+      }
+    }
+
+    if (partner === -1) {
+      // Parceria sem nenhum casamento possível — fica de fora. Na prática isso
+      // ocorre no máximo uma vez (quando C(N,2) é ímpar, N ≡ 2 ou 3 mod 4).
+      used[best] = true;
+      remaining -= 1;
+      continue;
+    }
+
+    used[best] = true;
+    used[partner] = true;
+    remaining -= 2;
+    matches.push({ side_a: pairs[best], side_b: pairs[partner] });
   }
+
   return matches;
 }
 
@@ -427,10 +483,11 @@ function buildAmericanoBlockSchedule(players) {
 }
 
 /**
- * Gera as rodadas da Americana aberta: cada jogador joga em dupla com cada
- * outro jogador exatamente uma vez, contra outra dupla.
+ * Gera as rodadas da Americana aberta: cada jogador joga em dupla com os
+ * demais jogadores (rotação de parceiros), contra outra dupla.
  *
- * O número total de jogos é exato: C(N,2) / 2 = N·(N−1) / 4.
+ * A Americana roda com qualquer número de inscritos (N ≥ 4). O número de
+ * jogos é ⌊N·(N−1) / 4⌋.
  *
  * Quando N é múltiplo de 4, o cronograma é hierárquico:
  *   1. Resolver os jogos internos de cada bloco de 4 jogadores
@@ -438,12 +495,11 @@ function buildAmericanoBlockSchedule(players) {
  *   2. Resolver os cruzamentos entre cada par de blocos
  *      (ex.: misturar {a,b,e,f} e {c,d,g,h}, depois {a,b,g,h} e {c,d,e,f}).
  *
- * Para N ≡ 1 (mod 4) (5, 9, 13, …) também há cobertura exata, usando uma
- * heurística gulosa que respeita a unicidade das parcerias.
- *
- * Para N ≡ 2 ou 3 (mod 4) o formato não fecha matematicamente. Nestes casos
- * é lançado um erro descritivo para o admin escolher outro número de
- * inscritos ou outro formato de torneio.
+ * Para os demais N, usa-se uma heurística gulosa ("mais restrito primeiro")
+ * que maximiza a cobertura de parcerias:
+ *   - N ≡ 1 (mod 4) (5, 9, 13, …): cobertura perfeita (cada parceria uma vez).
+ *   - N ≡ 2 ou 3 (mod 4) (6, 7, 10, 11, …): todos jogam com todos exceto por
+ *     uma única parceria que não fecha — o máximo matematicamente possível.
  *
  * @param {string[]} playerIds
  * @param {{ seed?: string }} [options]
@@ -454,10 +510,6 @@ export function buildAmericanoRotation(playerIds, options = {}) {
   const n = playerIds.length;
   if (n < 4) {
     throw new Error('Americana aberta exige no mínimo 4 jogadores.');
-  }
-  const check = americanoMatchCount(n);
-  if (!check.exact) {
-    throw new Error(check.reason);
   }
 
   // Embaralhamento determinístico: define a ordem dos blocos sem alterar

@@ -69,7 +69,7 @@ describe('draw engine', () => {
   });
 
   describe('americano (rotação aberta)', () => {
-    it('contagem exata: N(N−1)/4 jogos para N ≡ 0 ou 1 (mod 4)', () => {
+    it('contagem: ⌊N(N−1)/4⌋ jogos; exato para N ≡ 0 ou 1 (mod 4)', () => {
       expect(americanoMatchCount(4)).toEqual({ totalMatches: 3, exact: true });
       expect(americanoMatchCount(5)).toEqual({ totalMatches: 5, exact: true });
       expect(americanoMatchCount(8)).toEqual({ totalMatches: 14, exact: true });
@@ -78,11 +78,14 @@ describe('draw engine', () => {
       expect(americanoMatchCount(16)).toEqual({ totalMatches: 60, exact: true });
     });
 
-    it('rejeita N que não fecham matematicamente (N ≡ 2 ou 3 mod 4)', () => {
-      expect(americanoMatchCount(6).exact).toBe(false);
-      expect(americanoMatchCount(7).exact).toBe(false);
-      expect(americanoMatchCount(10).exact).toBe(false);
-      expect(americanoMatchCount(11).exact).toBe(false);
+    it('N ≡ 2 ou 3 (mod 4): roda mesmo sem fechar (exact=false, sem reason bloqueante)', () => {
+      [6, 7, 10, 11].forEach((n) => {
+        const check = americanoMatchCount(n);
+        expect(check.exact).toBe(false);
+        expect(check.reason).toBeUndefined();
+        expect(check.totalMatches).toBe(Math.floor((n * (n - 1)) / 4));
+        expect(check.note).toMatch(/Americana roda normalmente/);
+      });
     });
 
     it('N=4: exatamente 3 jogos com cada parceria possível uma vez', () => {
@@ -180,8 +183,42 @@ describe('draw engine', () => {
       expect(pairs.size).toBe(66); // C(12,2)
     });
 
-    it('lança erro para N que não fecha (ex.: 6)', () => {
-      expect(() => buildAmericanoRotation(['a', 'b', 'c', 'd', 'e', 'f'])).toThrow(/Americana aberta/);
+    it('N ≡ 2 ou 3 (mod 4) roda e cobre o máximo de parcerias possível (todas menos uma)', () => {
+      [6, 7, 10, 11, 14, 15].forEach((n) => {
+        const players = Array.from({ length: n }, (_, i) => `p${i}`);
+        const matches = buildAmericanoRotation(players, { seed: 'fixed' });
+        const total = (n * (n - 1)) / 2;
+        expect(matches).toHaveLength(Math.floor((n * (n - 1)) / 4));
+        const pairs = new Set();
+        matches.forEach((m) => {
+          pairs.add([...m.side_a].sort().join('|'));
+          pairs.add([...m.side_b].sort().join('|'));
+        });
+        // C(N,2) é ímpar nesses casos → exatamente uma parceria fica de fora.
+        expect(pairs.size).toBe(total - 1);
+        // Nenhuma parceria se repete.
+        expect(pairs.size).toBe(matches.length * 2);
+      });
+    });
+
+    it('N=6: nenhum jogador joga duas vezes na mesma rodada', () => {
+      const players = ['a', 'b', 'c', 'd', 'e', 'f'];
+      const matches = buildAmericanoRotation(players, { seed: 'fixed' });
+      const byRound = new Map();
+      matches.forEach((m) => {
+        const list = byRound.get(m.round) || [];
+        list.push(m);
+        byRound.set(m.round, list);
+      });
+      byRound.forEach((list) => {
+        const seen = new Set();
+        list.forEach((m) => {
+          [...m.side_a, ...m.side_b].forEach((p) => {
+            expect(seen.has(p)).toBe(false);
+            seen.add(p);
+          });
+        });
+      });
     });
   });
 

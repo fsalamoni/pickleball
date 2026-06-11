@@ -2,11 +2,11 @@
  * Serviço de sorteio: orquestra a geração e persistência das chaves/grupos.
  */
 
-import { generateDraw, americanoMatchCount } from '../domain/draw.js';
+import { generateDraw } from '../domain/draw.js';
 import { listRegistrations } from './registrationService.js';
 import { persistMatches } from './matchService.js';
 import { getModality } from './modalityService.js';
-import { REGISTRATION_STATUS, MODALITY_FORMAT } from '../domain/constants.js';
+import { REGISTRATION_STATUS } from '../domain/constants.js';
 
 /**
  * Executa o sorteio de uma determinada fase de uma modalidade.
@@ -36,16 +36,6 @@ export async function runDraw(params, actor) {
     participantOrder && participantOrder.length > 0
       ? participantOrder
       : confirmed.sort((a, b) => (a.seed ?? Infinity) - (b.seed ?? Infinity)).map((r) => r.id);
-
-  // Pré-validação para Americana aberta: o número de inscritos precisa
-  // permitir cobertura exata de todas as parcerias (cada par joga junto
-  // exatamente uma vez).
-  if (modality.format === MODALITY_FORMAT.AMERICANO || stage.type === 'americano') {
-    const check = americanoMatchCount(participants.length);
-    if (!check.exact) {
-      throw new Error(check.reason);
-    }
-  }
 
   const seed = providedSeed || `${tournamentId}_${modalityId}_${stageIndex}_${Date.now()}`;
 
