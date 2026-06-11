@@ -35,13 +35,13 @@ const STAGE_DESCRIPTION = {
   [TOURNAMENT_STAGE_TYPE.SWISS]:
     'Sistema suíço: a cada rodada, participantes com pontuação semelhante são pareados. Sem eliminação direta.',
   [TOURNAMENT_STAGE_TYPE.AMERICANO]:
-    'Americana (rotação): formato em duplas onde cada jogador joga com cada outro jogador exatamente uma vez. O total de jogos é exato: N·(N−1)/4. Para N múltiplo de 4 os jogos são organizados primeiro dentro de cada bloco de 4 e depois nos cruzamentos entre blocos.',
+    'Americana (rotação): formato em duplas onde todos jogam com todos (rotação de parceiros). Roda com qualquer número de inscritos (a partir de 4). O total de jogos é ⌊N·(N−1)/4⌋. Quando N ≡ 0 ou 1 (mod 4) cada parceria acontece exatamente uma vez; nos demais casos, apenas uma dupla fica de fora (limitação matemática).',
 };
 
 const FORMAT_DESCRIPTION = {
   [MODALITY_FORMAT.SINGLES]: 'Simples (1 contra 1): cada inscrição é individual.',
   [MODALITY_FORMAT.DOUBLES]: 'Duplas (2 contra 2): cada inscrição precisa de jogador A e jogador B definidos no momento da inscrição.',
-  [MODALITY_FORMAT.AMERICANO]: 'Americana: inscrição individual; as duplas são montadas por rotação para que cada jogador jogue ao menos uma vez com cada outro jogador.',
+  [MODALITY_FORMAT.AMERICANO]: 'Americana: inscrição individual; as duplas são montadas por rotação para que todos joguem com todos. Roda com qualquer número de inscritos (mínimo de 4).',
 };
 
 function formatBRL(cents) {
@@ -74,9 +74,10 @@ function AmericanoMatchPreview({ confirmed }) {
     <div className="rounded-md border border-amber-300 bg-amber-50 p-3 text-xs text-amber-900 flex items-start gap-2">
       <AlertTriangle className="w-3 h-3 mt-0.5 shrink-0" />
       <span>
-        Com {confirmed} inscritos o formato Americana aberta não fecha matematicamente. Para que
-        cada parceria aconteça exatamente uma vez, o número de jogadores precisa ser
-        N ≡ 0 ou N ≡ 1 (mod 4) — ex.: 4, 5, 8, 9, 12, 13, 16, 17…
+        Com {confirmed} inscritos a Americana roda normalmente em {check.totalMatches} jogos e
+        todos jogam com todos — apenas uma dupla não pode ser fechada (limitação matemática para
+        N ≡ 2 ou 3 mod 4). Para que cada parceria aconteça exatamente uma vez, use um número de
+        jogadores N ≡ 0 ou N ≡ 1 (mod 4) — ex.: 4, 5, 8, 9, 12, 13, 16, 17…
       </span>
     </div>
   );
