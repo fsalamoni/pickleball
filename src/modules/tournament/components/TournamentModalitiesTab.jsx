@@ -34,10 +34,12 @@ import {
   MAX_REGISTRATIONS_PER_MODALITY,
 } from '@/modules/tournament/domain/constants';
 import { DEFAULT_MAX_ENTRIES, hasUnlimitedEntries } from '@/modules/tournament/domain/capacity';
+import StageExplanation from './StageExplanation';
+
+const PREVIEW_PLAYER_COUNT = 8;
 
 const emptyForm = {
-  name: '',
-  format: MODALITY_FORMAT.DOUBLES,
+  name: '',  format: MODALITY_FORMAT.DOUBLES,
   skill_level: SKILL_LEVEL.INTERMEDIATE,
   gender_category: GENDER_CATEGORY.OPEN,
   age_category: AGE_CATEGORY.OPEN,
@@ -282,6 +284,28 @@ export default function TournamentModalitiesTab({ tournament, isAdmin }) {
                   <Input type="number" min={0} value={form.seed_count} onChange={(e) => set('seed_count', e.target.value)} />
                 </div>
               )}
+              <div className="md:col-span-2 space-y-1">
+                <Label className="text-sm">
+                  Como o campeonato vai rodar
+                  {!form.has_unlimited_entries && ` (com ${Number(form.max_entries) || 0} jogadores)`}
+                </Label>
+                {form.has_unlimited_entries && (
+                  <p className="text-xs text-slate-500">
+                    Prévia para {PREVIEW_PLAYER_COUNT} jogadores (vagas abertas). Os números exatos
+                    serão recalculados com o total efetivo de inscritos ao encerrar as inscrições.
+                  </p>
+                )}
+                <StageExplanation
+                  stageType={form.stage_type}
+                  playerCount={
+                    form.has_unlimited_entries
+                      ? PREVIEW_PLAYER_COUNT
+                      : Number(form.max_entries) || 0
+                  }
+                  groupCount={Number(form.group_count) || 1}
+                  seedCount={Number(form.seed_count) || 0}
+                />
+              </div>
             </div>
             <div>
               <Label>Observações (opcional)</Label>
