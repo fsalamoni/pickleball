@@ -99,8 +99,11 @@ export default function TournamentModalitiesTab({ tournament, isAdmin }) {
     });
   }
 
+  // Estruturas válidas para o formato atual. O fallback usa os valores do enum
+  // (mesma forma das entradas de STAGE_TYPES_BY_FORMAT) para casos de dados
+  // legados com formato desconhecido.
   const stageOptions = Object.fromEntries(
-    (STAGE_TYPES_BY_FORMAT[form.format] || Object.keys(TOURNAMENT_STAGE_TYPE_LABELS)).map(
+    (STAGE_TYPES_BY_FORMAT[form.format] || Object.values(TOURNAMENT_STAGE_TYPE)).map(
       (key) => [key, TOURNAMENT_STAGE_TYPE_LABELS[key]],
     ),
   );
