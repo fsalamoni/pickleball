@@ -3,6 +3,7 @@
  */
 
 import { generateDraw } from '../domain/draw.js';
+import { stageFormatCompatibility } from '../domain/formatExplain.js';
 import { listRegistrations } from './registrationService.js';
 import { persistMatches } from './matchService.js';
 import { getModality } from './modalityService.js';
@@ -27,6 +28,11 @@ export async function runDraw(params, actor) {
   if (modality.tournament_id !== tournamentId) throw new Error('Modalidade não pertence ao torneio.');
   const stage = modality.stages?.[stageIndex];
   if (!stage) throw new Error('Fase não encontrada na modalidade.');
+
+  // A estrutura escolhida precisa ser compatível com o formato de inscrição
+  // (ex.: Americano exige inscrição Simples). Falha cedo com mensagem clara.
+  const compat = stageFormatCompatibility(modality.format, stage.type);
+  if (!compat.compatible) throw new Error(compat.reason);
 
   const registrations = await listRegistrations(modalityId);
   const confirmed = registrations.filter((r) => r.status === REGISTRATION_STATUS.CONFIRMED);
