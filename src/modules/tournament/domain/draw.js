@@ -227,25 +227,26 @@ export function seedSlot(seedNum, size) {
 /* ----------------------------- Americana -------------------------------- */
 
 /**
- * Calcula o número de jogos de um torneio Americana aberta, no qual todos
- * jogam em dupla com todos (rotação de parceiros).
+ * Calcula o número de jogos de um torneio Americana, no qual todos jogam em
+ * dupla com todos (rotação de parceiros), e indica se o número de inscritos
+ * permite uma cobertura EXATA.
  *
  * Cada jogo envolve 4 jogadores formando 2 duplas. Cada dupla é uma parceria
  * única. O total de parcerias possíveis é C(N,2). Cada jogo "consome" 2
- * parcerias, então o número de jogos é ⌊C(N,2) / 2⌋ = ⌊N·(N−1) / 4⌋.
+ * parcerias, então o número de jogos é N·(N−1) / 4.
  *
- * A Americana sempre pode ser realizada com qualquer número de inscritos
- * (N ≥ 4): a rotação faz com que todos joguem com todos. A cobertura é
- * perfeita (cada parceria acontece exatamente uma vez) quando N(N−1) é
- * múltiplo de 4, ou seja, N ≡ 0 ou N ≡ 1 (mod 4).
+ * A cobertura é EXATA (cada parceria acontece exatamente uma vez, e cada
+ * jogador forma dupla com todos os demais) somente quando N·(N−1) é múltiplo
+ * de 4, ou seja, N ≡ 0 ou N ≡ 1 (mod 4): 4, 5, 8, 9, 12, 13, 16, 17, …
  *
- * Para N ≡ 2 ou 3 (mod 4), C(N,2) é ímpar e, portanto, exatamente uma
- * parceria não pode ser fechada em um jogo de 4 jogadores. O torneio ainda
- * roda normalmente: todos jogam com todos, exceto por essa única dupla que
- * fica de fora — que é o máximo matematicamente possível.
+ * Para N ≡ 2 ou 3 (mod 4), C(N,2) é ímpar e é matematicamente impossível
+ * fechar todas as duplas exatamente uma vez. Nesses casos o formato Americana
+ * é considerado INVÁLIDO (exact=false com um `reason` bloqueante): o sistema
+ * não deve gerar uma chave parcial — o número de inscritos não é condizente
+ * com o formato escolhido.
  *
  * @param {number} n
- * @returns {{ totalMatches: number, exact: boolean, reason?: string, note?: string }}
+ * @returns {{ totalMatches: number, exact: boolean, reason?: string }}
  */
 export function americanoMatchCount(n) {
   if (n < 4) return { totalMatches: 0, exact: false, reason: 'Mínimo de 4 jogadores.' };
@@ -254,7 +255,7 @@ export function americanoMatchCount(n) {
     return {
       totalMatches: Math.floor(product / 4),
       exact: false,
-      note: `Com ${n} jogadores a Americana roda normalmente e quase todas as parcerias acontecem: apenas uma dupla não pode ser fechada (limitação matemática para N ≡ 2 ou 3 mod 4). Para que cada parceria ocorra exatamente uma vez, use N ≡ 0 ou N ≡ 1 (mod 4): 4, 5, 8, 9, 12, 13, 16, 17, …`,
+      reason: `O número de inscritos (${n}) não é condizente com o formato Americano: não é possível formar todas as duplas exatamente uma vez. Use um número com N ≡ 0 ou 1 (mod 4): 4, 5, 8, 9, 12, 13, 16, 17…`,
     };
   }
   return { totalMatches: product / 4, exact: true };
@@ -483,11 +484,15 @@ function buildAmericanoBlockSchedule(players) {
 }
 
 /**
- * Gera as rodadas da Americana aberta: cada jogador joga em dupla com os
- * demais jogadores (rotação de parceiros), contra outra dupla.
+ * Gera as rodadas da Americana: cada jogador joga em dupla com TODOS os demais
+ * jogadores (rotação de parceiros), contra outra dupla, e nenhuma dupla se
+ * repete. A inscrição é individual (Simples) e as duplas são montadas aqui.
  *
- * A Americana roda com qualquer número de inscritos (N ≥ 4). O número de
- * jogos é ⌊N·(N−1) / 4⌋.
+ * Para garantir precisão perfeita, a Americana só é gerada quando o número de
+ * inscritos permite cobrir TODAS as duplas exatamente uma vez — N ≡ 0 ou 1
+ * (mod 4): 4, 5, 8, 9, 12, 13, 16, 17, … O número de jogos é exatamente
+ * N·(N−1) / 4. Para qualquer outro N (≡ 2 ou 3 mod 4) o método lança erro, pois
+ * seria impossível gerar todos os jogos sem deixar duplas de fora.
  *
  * Quando N é múltiplo de 4, o cronograma é hierárquico:
  *   1. Resolver os jogos internos de cada bloco de 4 jogadores
@@ -495,11 +500,8 @@ function buildAmericanoBlockSchedule(players) {
  *   2. Resolver os cruzamentos entre cada par de blocos
  *      (ex.: misturar {a,b,e,f} e {c,d,g,h}, depois {a,b,g,h} e {c,d,e,f}).
  *
- * Para os demais N, usa-se uma heurística gulosa ("mais restrito primeiro")
- * que maximiza a cobertura de parcerias:
- *   - N ≡ 1 (mod 4) (5, 9, 13, …): cobertura perfeita (cada parceria uma vez).
- *   - N ≡ 2 ou 3 (mod 4) (6, 7, 10, 11, …): todos jogam com todos exceto por
- *     uma única parceria que não fecha — o máximo matematicamente possível.
+ * Para N ≡ 1 (mod 4) (5, 9, 13, …) usa-se uma heurística gulosa
+ * ("mais restrito primeiro") que cobre todas as parcerias exatamente uma vez.
  *
  * @param {string[]} playerIds
  * @param {{ seed?: string }} [options]
@@ -509,7 +511,14 @@ export function buildAmericanoRotation(playerIds, options = {}) {
   const { seed = 'americano' } = options;
   const n = playerIds.length;
   if (n < 4) {
-    throw new Error('Americana aberta exige no mínimo 4 jogadores.');
+    throw new Error('Americano exige no mínimo 4 jogadores.');
+  }
+  const { exact, reason } = americanoMatchCount(n);
+  if (!exact) {
+    throw new Error(
+      reason ||
+        `O formato Americano exige um número de inscritos que permita formar todas as duplas exatamente uma vez (N ≡ 0 ou 1 mod 4: 4, 5, 8, 9, 12, 13, 16, 17…). Com ${n} inscritos não é possível gerar todos os jogos sem deixar duplas de fora.`,
+    );
   }
 
   // Embaralhamento determinístico: define a ordem dos blocos sem alterar
@@ -555,7 +564,12 @@ export function generateDraw(input) {
     seed = 'draw',
   } = input;
 
-  if (format === MODALITY_FORMAT.AMERICANO || stageType === 'americano') {
+  if (stageType === 'americano') {
+    if (format === MODALITY_FORMAT.DOUBLES) {
+      throw new Error(
+        'O formato Americano (rotação de duplas) só é compatível com inscrição individual (Simples). Para inscrição em Duplas, escolha Pontos corridos, Fase de grupos, Chaves, Dupla eliminação ou Sistema suíço.',
+      );
+    }
     return { stageType: 'americano', matches: buildAmericanoRotation(participants, { seed }) };
   }
   if (stageType === 'round_robin') {

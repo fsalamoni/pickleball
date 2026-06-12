@@ -17,6 +17,7 @@
 import {
   MODALITY_FORMAT,
   MODALITY_FORMAT_LABELS,
+  STAGE_TYPES_BY_FORMAT,
   TOURNAMENT_STAGE_TYPE,
   TOURNAMENT_STAGE_TYPE_LABELS,
 } from './constants.js';
@@ -52,12 +53,10 @@ export const STAGE_MIN_PLAYERS = Object.freeze({
 /** Descrição curta (independente de N) de cada formato de inscrição. */
 export const FORMAT_DESCRIPTION = Object.freeze({
   [MODALITY_FORMAT.SINGLES]:
-    'Simples (1 contra 1): cada inscrição é individual.',
+    'Simples: a inscrição é individual — o jogador se inscreve sozinho. Conforme a estrutura escolhida, os jogos podem ser 1×1 (pontos corridos, grupos, chaves, dupla eliminação ou suíço) ou em duplas montadas por rotação (Americano).',
   [MODALITY_FORMAT.DOUBLES]:
     'Duplas (2 contra 2): cada inscrição precisa de jogador A e jogador B definidos no momento da inscrição. A dupla é fixa durante todo o torneio.',
-  [MODALITY_FORMAT.AMERICANO]:
-    'Americana: inscrição individual; as duplas são montadas por rotação para que todos joguem com todos. Roda com qualquer número de inscritos (mínimo de 4).',
-});
+});;
 
 /** Descrição curta (independente de N) de cada sistema/fase de competição. */
 export const STAGE_DESCRIPTION = Object.freeze({
@@ -72,7 +71,7 @@ export const STAGE_DESCRIPTION = Object.freeze({
   [TOURNAMENT_STAGE_TYPE.SWISS]:
     'Sistema suíço: a cada rodada, participantes com pontuação semelhante são pareados, sem eliminação direta e sem repetir confrontos.',
   [TOURNAMENT_STAGE_TYPE.AMERICANO]:
-    'Americana (rotação): formato em duplas onde todos jogam com todos (rotação de parceiros). Roda com qualquer número de inscritos (a partir de 4). O total de jogos é ⌊N·(N−1)/4⌋.',
+    'Americana (rotação): só para inscrição individual (Simples). Os jogos são em duplas (2×2) montadas por rotação, de modo que cada jogador forma dupla com todos os demais e nenhuma dupla se repete. Exige um número de inscritos que permita exatidão (N ≡ 0 ou 1 mod 4): 4, 5, 8, 9, 12, 13, 16, 17… O total de jogos é N·(N−1)/4.',
 });
 
 /**
@@ -239,43 +238,37 @@ function explainSwiss(n) {
 
 function explainAmericano(n) {
   const check = americanoMatchCount(n);
-  const totalMatches = check.totalMatches;
   const totalPairs = comb2(n); // parcerias possíveis C(N,2)
-  const coveredPairs = totalMatches * 2; // cada jogo fecha 2 duplas
-  const leftOut = totalPairs - coveredPairs; // 0 quando exato, 1 caso contrário
-  const totalSlots = totalMatches * 4;
-  const minPerPlayer = Math.floor(totalSlots / n);
-  const maxPerPlayer = Math.ceil(totalSlots / n);
 
-  const lines = [
-    `${n} jogadores → ${totalMatches} jogos no total (cada jogo é 2 contra 2 e fecha 2 duplas).`,
-  ];
-
-  if (check.exact) {
-    lines.push(
-      `Cobertura perfeita: cada uma das ${totalPairs} duplas possíveis acontece exatamente uma vez.`,
-      `Cada jogador faz ${n - 1} jogos, formando dupla com cada outro jogador uma única vez.`,
-    );
-  } else {
-    const perPlayerLabel =
-      minPerPlayer === maxPerPlayer
-        ? `${minPerPlayer} jogos`
-        : `${minPerPlayer} ou ${maxPerPlayer} jogos`;
-    lines.push(
-      `Das ${totalPairs} duplas possíveis, ${coveredPairs} acontecem e ${leftOut} fica de fora — nenhuma dupla se repete.`,
-      `Cada jogador faz ${perPlayerLabel} (rodízio justo de descanso).`,
-      `Limitação matemática: como N ≡ 2 ou 3 (mod 4), C(N,2) é ímpar e exatamente 1 dupla não pode ser fechada sem repetir outra.`,
-    );
+  if (!check.exact) {
+    // Número de inscritos não permite cobertura exata → configuração inválida.
+    // O sistema não gera uma chave parcial: aponta o erro claramente.
+    return {
+      status: 'error',
+      totalMatches: check.totalMatches,
+      rounds: 0,
+      lines: [
+        `${n} jogadores não permitem um Americano exato.`,
+        'No Americano cada jogador forma dupla com todos os demais e nenhuma dupla se repete — isso só é possível quando o número de inscritos é N ≡ 0 ou 1 (mod 4).',
+        `Com ${n} inscritos sobraria(m) dupla(s) sem confronto possível, então o sistema não gera os jogos desta estrutura.`,
+      ],
+      recommendation:
+        'Ajuste o número de inscritos para 4, 5, 8, 9, 12, 13, 16, 17… (N ≡ 0 ou 1 mod 4).',
+    };
   }
 
+  const totalMatches = check.totalMatches;
+  const lines = [
+    `${n} jogadores → ${totalMatches} jogos no total (cada jogo é 2 contra 2 e fecha 2 duplas).`,
+    `Cobertura perfeita: cada uma das ${totalPairs} duplas possíveis acontece exatamente uma vez.`,
+    `Cada jogador faz ${n - 1} jogos, formando dupla com cada outro jogador uma única vez.`,
+  ];
+
   return {
-    status: check.exact ? 'ok' : 'warn',
+    status: 'ok',
     totalMatches,
     rounds: 0, // a Americana distribui em rodadas dinamicamente (1 jogo por jogador/rodada)
     lines,
-    recommendation: check.exact
-      ? undefined
-      : 'Para que cada dupla aconteça exatamente uma vez, use N ≡ 0 ou 1 (mod 4): 4, 5, 8, 9, 12, 13, 16, 17…',
   };
 }
 
@@ -370,4 +363,37 @@ export function describeFormat(format) {
  */
 export function describeStage(stageType) {
   return STAGE_DESCRIPTION[stageType] || 'Formato definido pelo organizador.';
+}
+
+/**
+ * Lista as estruturas de competição compatíveis com um formato de inscrição.
+ * @param {string} format
+ * @returns {string[]} chaves de TOURNAMENT_STAGE_TYPE
+ */
+export function compatibleStageTypes(format) {
+  return STAGE_TYPES_BY_FORMAT[format] || Object.values(TOURNAMENT_STAGE_TYPE);
+}
+
+/**
+ * Verifica se uma estrutura de competição é compatível com o formato de
+ * inscrição e, quando não é, devolve uma mensagem explicando o motivo.
+ *
+ * Regra: a Americana (rotação) só é compatível com inscrição individual
+ * (Simples). Os demais sistemas funcionam tanto para Simples (1×1) quanto
+ * para Duplas (2×2 com dupla fixa).
+ *
+ * @param {string} format
+ * @param {string} stageType
+ * @returns {{ compatible: boolean, reason: string | null }}
+ */
+export function stageFormatCompatibility(format, stageType) {
+  const allowed = STAGE_TYPES_BY_FORMAT[format];
+  if (!allowed || allowed.includes(stageType)) {
+    return { compatible: true, reason: null };
+  }
+  const reason =
+    stageType === TOURNAMENT_STAGE_TYPE.AMERICANO
+      ? 'O formato Americano (rotação de duplas) só funciona com inscrição individual (Simples), pois monta as duplas sorteando parceiros. Para inscrição em Duplas, escolha Pontos corridos, Fase de grupos, Chaves, Dupla eliminação ou Sistema suíço.'
+      : `O sistema "${TOURNAMENT_STAGE_TYPE_LABELS[stageType] || stageType}" não é compatível com inscrição em ${MODALITY_FORMAT_LABELS[format] || format}.`;
+  return { compatible: false, reason };
 }

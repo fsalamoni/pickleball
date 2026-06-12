@@ -31,6 +31,7 @@ import {
   AGE_CATEGORY_LABELS,
   TOURNAMENT_STAGE_TYPE,
   TOURNAMENT_STAGE_TYPE_LABELS,
+  STAGE_TYPES_BY_FORMAT,
   MAX_REGISTRATIONS_PER_MODALITY,
 } from '@/modules/tournament/domain/constants';
 import { DEFAULT_MAX_ENTRIES, hasUnlimitedEntries } from '@/modules/tournament/domain/capacity';
@@ -86,6 +87,23 @@ export default function TournamentModalitiesTab({ tournament, isAdmin }) {
   function set(field, value) {
     setForm((f) => ({ ...f, [field]: value }));
   }
+
+  // O formato de inscrição (Simples/Duplas) define quais estruturas são
+  // possíveis. Ao trocar o formato, se a estrutura atual deixar de ser
+  // compatível (ex.: Duplas + Americano), reverte para a primeira válida.
+  function setFormat(value) {
+    setForm((f) => {
+      const allowed = STAGE_TYPES_BY_FORMAT[value] || [];
+      const stage_type = allowed.includes(f.stage_type) ? f.stage_type : allowed[0];
+      return { ...f, format: value, stage_type };
+    });
+  }
+
+  const stageOptions = Object.fromEntries(
+    (STAGE_TYPES_BY_FORMAT[form.format] || Object.keys(TOURNAMENT_STAGE_TYPE_LABELS)).map(
+      (key) => [key, TOURNAMENT_STAGE_TYPE_LABELS[key]],
+    ),
+  );
 
   function openCreate() {
     setEditingModality(null);
@@ -228,7 +246,7 @@ export default function TournamentModalitiesTab({ tournament, isAdmin }) {
               <Input value={form.name} onChange={(e) => set('name', e.target.value)} placeholder="Ex.: Duplas Mistas Intermediário" />
             </div>
             <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
-              <SelectRow label="Formato" value={form.format} options={MODALITY_FORMAT_LABELS} onChange={(v) => set('format', v)} />
+              <SelectRow label="Formato" value={form.format} options={MODALITY_FORMAT_LABELS} onChange={setFormat} />
               <SelectRow label="Nível" value={form.skill_level} options={SKILL_LEVEL_LABELS} onChange={(v) => set('skill_level', v)} />
               <SelectRow label="Gênero" value={form.gender_category} options={GENDER_CATEGORY_LABELS} onChange={(v) => set('gender_category', v)} />
               <SelectRow label="Idade" value={form.age_category} options={AGE_CATEGORY_LABELS} onChange={(v) => set('age_category', v)} />
@@ -269,7 +287,7 @@ export default function TournamentModalitiesTab({ tournament, isAdmin }) {
               <SelectRow
                 label="Formato da fase"
                 value={form.stage_type}
-                options={TOURNAMENT_STAGE_TYPE_LABELS}
+                options={stageOptions}
                 onChange={(v) => set('stage_type', v)}
               />
               {form.stage_type === TOURNAMENT_STAGE_TYPE.GROUPS && (

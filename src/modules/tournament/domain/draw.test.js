@@ -78,13 +78,12 @@ describe('draw engine', () => {
       expect(americanoMatchCount(16)).toEqual({ totalMatches: 60, exact: true });
     });
 
-    it('N ≡ 2 ou 3 (mod 4): roda mesmo sem fechar (exact=false, sem reason bloqueante)', () => {
+    it('N ≡ 2 ou 3 (mod 4): inválido (exact=false com reason bloqueante)', () => {
       [6, 7, 10, 11].forEach((n) => {
         const check = americanoMatchCount(n);
         expect(check.exact).toBe(false);
-        expect(check.reason).toBeUndefined();
+        expect(check.reason).toMatch(/não é condizente/i);
         expect(check.totalMatches).toBe(Math.floor((n * (n - 1)) / 4));
-        expect(check.note).toMatch(/Americana roda normalmente/);
       });
     });
 
@@ -183,42 +182,40 @@ describe('draw engine', () => {
       expect(pairs.size).toBe(66); // C(12,2)
     });
 
-    it('N ≡ 2 ou 3 (mod 4) roda e cobre o máximo de parcerias possível (todas menos uma)', () => {
+    it('N=5 (≡1 mod 4): exatamente 5 jogos cobrindo todas as 10 parcerias', () => {
+      const players = ['a', 'b', 'c', 'd', 'e'];
+      const matches = buildAmericanoRotation(players, { seed: 'fixed' });
+      expect(matches).toHaveLength(5);
+      const pairs = new Set();
+      matches.forEach((m) => {
+        pairs.add([...m.side_a].sort().join('|'));
+        pairs.add([...m.side_b].sort().join('|'));
+      });
+      expect(pairs.size).toBe(10); // C(5,2)
+      expect(pairs.size).toBe(matches.length * 2); // nenhuma dupla repetida
+    });
+
+    it('N=9 (≡1 mod 4): exatamente 18 jogos cobrindo todas as 36 parcerias', () => {
+      const players = Array.from({ length: 9 }, (_, i) => `p${i}`);
+      const matches = buildAmericanoRotation(players, { seed: 'fixed' });
+      expect(matches).toHaveLength(18);
+      const pairs = new Set();
+      matches.forEach((m) => {
+        pairs.add([...m.side_a].sort().join('|'));
+        pairs.add([...m.side_b].sort().join('|'));
+      });
+      expect(pairs.size).toBe(36); // C(9,2)
+    });
+
+    it('N ≡ 2 ou 3 (mod 4): recusa gerar a chave (precisão perfeita ou erro)', () => {
       [6, 7, 10, 11, 14, 15].forEach((n) => {
         const players = Array.from({ length: n }, (_, i) => `p${i}`);
-        const matches = buildAmericanoRotation(players, { seed: 'fixed' });
-        const total = (n * (n - 1)) / 2;
-        expect(matches).toHaveLength(Math.floor((n * (n - 1)) / 4));
-        const pairs = new Set();
-        matches.forEach((m) => {
-          pairs.add([...m.side_a].sort().join('|'));
-          pairs.add([...m.side_b].sort().join('|'));
-        });
-        // C(N,2) é ímpar nesses casos → exatamente uma parceria fica de fora.
-        expect(pairs.size).toBe(total - 1);
-        // Nenhuma parceria se repete.
-        expect(pairs.size).toBe(matches.length * 2);
+        expect(() => buildAmericanoRotation(players, { seed: 'fixed' })).toThrow(/não é condizente/i);
       });
     });
 
-    it('N=6: nenhum jogador joga duas vezes na mesma rodada', () => {
-      const players = ['a', 'b', 'c', 'd', 'e', 'f'];
-      const matches = buildAmericanoRotation(players, { seed: 'fixed' });
-      const byRound = new Map();
-      matches.forEach((m) => {
-        const list = byRound.get(m.round) || [];
-        list.push(m);
-        byRound.set(m.round, list);
-      });
-      byRound.forEach((list) => {
-        const seen = new Set();
-        list.forEach((m) => {
-          [...m.side_a, ...m.side_b].forEach((p) => {
-            expect(seen.has(p)).toBe(false);
-            seen.add(p);
-          });
-        });
-      });
+    it('N < 4: recusa gerar a chave', () => {
+      expect(() => buildAmericanoRotation(['a', 'b', 'c'])).toThrow(/no mínimo 4/i);
     });
   });
 
@@ -230,5 +227,15 @@ describe('draw engine', () => {
     const koDraw = generateDraw({ format: 'singles', stageType: 'knockout', participants: ['a', 'b', 'c', 'd'] });
     expect(koDraw.bracket).toBeDefined();
     expect(koDraw.matches).toHaveLength(2);
+
+    // Americano só com inscrição Simples; com Duplas deve recusar.
+    expect(() =>
+      generateDraw({ format: 'doubles', stageType: 'americano', participants: ['a', 'b', 'c', 'd'] }),
+    ).toThrow(/Americano/i);
+
+    // Americano com Simples e N exato gera todos os jogos.
+    const amDraw = generateDraw({ format: 'singles', stageType: 'americano', participants: ['a', 'b', 'c', 'd'] });
+    expect(amDraw.stageType).toBe('americano');
+    expect(amDraw.matches).toHaveLength(3);
   });
 });

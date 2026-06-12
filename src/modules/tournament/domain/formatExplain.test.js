@@ -3,6 +3,8 @@ import {
   explainStage,
   describeFormat,
   describeStage,
+  stageFormatCompatibility,
+  compatibleStageTypes,
   STAGE_MIN_PLAYERS,
 } from './formatExplain.js';
 import { TOURNAMENT_STAGE_TYPE, MODALITY_FORMAT } from './constants.js';
@@ -78,12 +80,10 @@ describe('formatExplain', () => {
     expect(a.lines.some((l) => /exatamente uma vez/i.test(l))).toBe(true);
   });
 
-  it('americano: N=7 deixa exatamente 1 dupla de fora, sem repetir duplas', () => {
+  it('americano: N=7 é inválido (erro) por não permitir cobertura exata', () => {
     const a = explainStage({ stageType: TOURNAMENT_STAGE_TYPE.AMERICANO, playerCount: 7 });
-    expect(a.stats.totalMatches).toBe(10); // floor(7*6/4)
-    expect(a.status).toBe('warn');
-    // C(7,2)=21 duplas; 10 jogos cobrem 20; 1 fica de fora
-    expect(a.lines.some((l) => /1 fica de fora/i.test(l))).toBe(true);
+    expect(a.status).toBe('error');
+    expect(a.lines.some((l) => /não permitem um Americano exato/i.test(l))).toBe(true);
     expect(a.recommendation).toMatch(/mod 4/i);
   });
 
@@ -101,8 +101,28 @@ describe('formatExplain', () => {
   });
 
   it('describeFormat / describeStage retornam textos', () => {
-    expect(describeFormat(MODALITY_FORMAT.AMERICANO)).toMatch(/Americana/);
+    expect(describeFormat(MODALITY_FORMAT.SINGLES)).toMatch(/Simples/);
+    expect(describeFormat(MODALITY_FORMAT.DOUBLES)).toMatch(/Duplas/);
     expect(describeStage(TOURNAMENT_STAGE_TYPE.SWISS)).toMatch(/suíço/i);
     expect(describeStage('desconhecido')).toMatch(/organizador/i);
+  });
+
+  it('compatibilidade formato × estrutura: Duplas não aceita Americano', () => {
+    const ok = stageFormatCompatibility(MODALITY_FORMAT.SINGLES, TOURNAMENT_STAGE_TYPE.AMERICANO);
+    expect(ok.compatible).toBe(true);
+    expect(ok.reason).toBeNull();
+
+    const blocked = stageFormatCompatibility(MODALITY_FORMAT.DOUBLES, TOURNAMENT_STAGE_TYPE.AMERICANO);
+    expect(blocked.compatible).toBe(false);
+    expect(blocked.reason).toMatch(/Simples/i);
+
+    // Demais estruturas servem aos dois formatos.
+    expect(stageFormatCompatibility(MODALITY_FORMAT.DOUBLES, TOURNAMENT_STAGE_TYPE.ROUND_ROBIN).compatible).toBe(true);
+    expect(stageFormatCompatibility(MODALITY_FORMAT.SINGLES, TOURNAMENT_STAGE_TYPE.ROUND_ROBIN).compatible).toBe(true);
+  });
+
+  it('compatibleStageTypes: Simples inclui Americano, Duplas não', () => {
+    expect(compatibleStageTypes(MODALITY_FORMAT.SINGLES)).toContain(TOURNAMENT_STAGE_TYPE.AMERICANO);
+    expect(compatibleStageTypes(MODALITY_FORMAT.DOUBLES)).not.toContain(TOURNAMENT_STAGE_TYPE.AMERICANO);
   });
 });

@@ -5,17 +5,23 @@
  * os rótulos para exibição são em pt-BR e ficam nos mapas *_LABELS.
  */
 
-/** Formato de inscrição da modalidade. */
+/**
+ * Formato de inscrição da modalidade.
+ *
+ * A inscrição é sempre individual (Simples) ou em dupla fixa (Duplas):
+ * ou o jogador se inscreve sozinho, ou inscreve a sua dupla. O "Americano"
+ * NÃO é um formato de inscrição — é uma estrutura de competição
+ * (TOURNAMENT_STAGE_TYPE.AMERICANO) que monta as duplas por rotação a partir
+ * de inscrições individuais (Simples).
+ */
 export const MODALITY_FORMAT = Object.freeze({
   SINGLES: 'singles',
   DOUBLES: 'doubles',
-  AMERICANO: 'americano',
 });
 
 export const MODALITY_FORMAT_LABELS = Object.freeze({
   [MODALITY_FORMAT.SINGLES]: 'Simples',
   [MODALITY_FORMAT.DOUBLES]: 'Duplas',
-  [MODALITY_FORMAT.AMERICANO]: 'Americana',
 });
 
 /** Estrutura de fase do torneio. */
@@ -35,6 +41,34 @@ export const TOURNAMENT_STAGE_TYPE_LABELS = Object.freeze({
   [TOURNAMENT_STAGE_TYPE.DOUBLE_KNOCKOUT]: 'Dupla eliminação',
   [TOURNAMENT_STAGE_TYPE.SWISS]: 'Sistema suíço',
   [TOURNAMENT_STAGE_TYPE.AMERICANO]: 'Americana (rotação)',
+});
+
+/**
+ * Estruturas de competição compatíveis com cada formato de inscrição.
+ *
+ * - Simples (inscrição individual): aceita todas as estruturas. As estruturas
+ *   1×1 (pontos corridos, grupos, chaves, dupla eliminação, suíço) geram jogos
+ *   de um jogador contra outro; a Americana (rotação) gera jogos 2×2 montando
+ *   duplas a partir dos inscritos individuais.
+ * - Duplas (dupla fixa): aceita todas as estruturas EXCETO a Americana, pois a
+ *   Americana monta duplas por rotação e isso é incompatível com duplas fixas.
+ */
+export const STAGE_TYPES_BY_FORMAT = Object.freeze({
+  [MODALITY_FORMAT.SINGLES]: Object.freeze([
+    TOURNAMENT_STAGE_TYPE.ROUND_ROBIN,
+    TOURNAMENT_STAGE_TYPE.GROUPS,
+    TOURNAMENT_STAGE_TYPE.KNOCKOUT,
+    TOURNAMENT_STAGE_TYPE.DOUBLE_KNOCKOUT,
+    TOURNAMENT_STAGE_TYPE.SWISS,
+    TOURNAMENT_STAGE_TYPE.AMERICANO,
+  ]),
+  [MODALITY_FORMAT.DOUBLES]: Object.freeze([
+    TOURNAMENT_STAGE_TYPE.ROUND_ROBIN,
+    TOURNAMENT_STAGE_TYPE.GROUPS,
+    TOURNAMENT_STAGE_TYPE.KNOCKOUT,
+    TOURNAMENT_STAGE_TYPE.DOUBLE_KNOCKOUT,
+    TOURNAMENT_STAGE_TYPE.SWISS,
+  ]),
 });
 
 /** Conjunto de regras oficiais aplicáveis. */
