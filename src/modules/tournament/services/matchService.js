@@ -168,3 +168,38 @@ export async function scheduleMatch(id, schedule, actor) {
   });
   await createAuditLog({ action: 'match_scheduled', actor, details: { match_id: id } });
 }
+
+export async function substitutePlayer(matchId, { oldRegistrationId, newRegistrationId }, actor) {
+  const match = await getMatch(matchId);
+  if (!match) throw new Error('Jogo não encontrado.');
+
+  const sideAIds = match.side_a_ids || [];
+  const sideBIds = match.side_b_ids || [];
+
+  const newSideAIds = sideAIds.map((id) => (id === oldRegistrationId ? newRegistrationId : id));
+  const newSideBIds = sideBIds.map((id) => (id === oldRegistrationId ? newRegistrationId : id));
+
+  const unchanged =
+    newSideAIds.every((id, i) => id === sideAIds[i]) &&
+    newSideBIds.every((id, i) => id === sideBIds[i]);
+  if (unchanged) throw new Error('Jogador não encontrado no jogo.');
+
+  const serializeIds = (ids) => {
+    if (!ids || ids.length === 0) return null;
+    if (ids.length === 1) return ids[0];
+    return ids.join('+');
+  };
+
+  await updateDoc(doc(db, COL, matchId), {
+    side_a_ids: newSideAIds,
+    side_b_ids: newSideBIds,
+    side_a: serializeIds(newSideAIds),
+    side_b: serializeIds(newSideBIds),
+    updated_at: serverTimestamp(),
+  });
+  await createAuditLog({
+    action: 'match_player_substituted',
+    actor,
+    details: { match_id: matchId, old_registration_id: oldRegistrationId, new_registration_id: newRegistrationId },
+  });
+}
