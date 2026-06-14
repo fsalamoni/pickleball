@@ -33,6 +33,7 @@ import {
   listMatchesByTournament,
   recordMatchResult,
   scheduleMatch,
+  substitutePlayer,
 } from '../services/matchService';
 import { runDraw } from '../services/drawService';
 import { computeModalityRanking } from '../services/rankingService';
@@ -316,6 +317,16 @@ export function useScheduleMatch(modalityId) {
   const qc = useQueryClient();
   return useMutation({
     mutationFn: ({ matchId, schedule }) => scheduleMatch(matchId, schedule, user),
+    onSuccess: () => qc.invalidateQueries({ queryKey: ['matches', modalityId] }),
+  });
+}
+
+export function useSubstitutePlayer(modalityId) {
+  const { user } = useAuth();
+  const qc = useQueryClient();
+  return useMutation({
+    mutationFn: ({ matchId, oldRegistrationId, newRegistrationId }) =>
+      substitutePlayer(matchId, { oldRegistrationId, newRegistrationId }, user),
     onSuccess: () => qc.invalidateQueries({ queryKey: ['matches', modalityId] }),
   });
 }

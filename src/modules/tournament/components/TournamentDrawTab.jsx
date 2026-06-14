@@ -1,7 +1,8 @@
-import React, { useState } from 'react';
+import React, { useState, useMemo } from 'react';
 import { Card, CardContent } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
+import { Label } from '@/components/ui/label';
 import {
   Dialog,
   DialogContent,
@@ -10,14 +11,19 @@ import {
   DialogFooter,
   DialogDescription,
 } from '@/components/ui/dialog';
-import { Shuffle, AlertTriangle } from 'lucide-react';
+import { Shuffle, AlertTriangle, Pencil } from 'lucide-react';
 import { toast } from 'sonner';
 import {
   useModalities,
   useRunDraw,
   useMatches,
+  useRegistrations,
+  useSubstitutePlayer,
 } from '@/modules/tournament/hooks/useTournament';
-import { TOURNAMENT_STAGE_TYPE_LABELS } from '@/modules/tournament/domain/constants';
+import {
+  TOURNAMENT_STAGE_TYPE_LABELS,
+  REGISTRATION_STATUS,
+} from '@/modules/tournament/domain/constants';
 
 export default function TournamentDrawTab({ tournament, isAdmin }) {
   const { data: modalities = [] } = useModalities(tournament.id);
@@ -44,9 +50,27 @@ export default function TournamentDrawTab({ tournament, isAdmin }) {
 function ModalityDrawBlock({ tournament, modality, isAdmin }) {
   const drawMutation = useRunDraw();
   const { data: matches = [] } = useMatches(modality.id, 0);
+  const { data: registrations = [] } = useRegistrations(modality.id);
   const [running, setRunning] = useState(false);
   const [confirmOpen, setConfirmOpen] = useState(false);
   const [error, setError] = useState(null);
+  const [substitution, setSubstitution] = useState(null);
+
+  const labelById = useMemo(() => {
+    const map = new Map();
+    registrations.forEach((r) => map.set(r.id, r.label || r.player_a_name));
+    return map;
+  }, [registrations]);
+
+  const activeRegistrations = useMemo(
+    () =>
+      registrations.filter(
+        (r) =>
+          r.status === REGISTRATION_STATUS.CONFIRMED ||
+          r.status === REGISTRATION_STATUS.CHECKED_IN,
+      ),
+    [registrations],
+  );
 
   async function performDraw() {
     setError(null);
@@ -60,7 +84,6 @@ function ModalityDrawBlock({ tournament, modality, isAdmin }) {
       toast.success('Sorteio realizado!');
       setConfirmOpen(false);
     } catch (err) {
-      // Expor erro também no card para o admin entender o motivo do "não funcionou".
       const message = err?.message || 'Falha ao sortear.';
       setError(message);
       toast.error(message);
@@ -70,6 +93,7 @@ function ModalityDrawBlock({ tournament, modality, isAdmin }) {
   }
 
   const stageName = modality.stages?.[0]?.name || 'fase 1';
+  const hasGroups = matches.some((m) => m.group);
 
   return (
     <Card>
@@ -88,6 +112,7 @@ function ModalityDrawBlock({ tournament, modality, isAdmin }) {
             </Button>
           )}
         </div>
+
         {error && (
           <div className="mt-3 flex items-start gap-2 rounded border border-red-200 bg-red-50 p-2 text-xs text-red-700">
             <AlertTriangle className="w-4 h-4 mt-0.5 shrink-0" />
@@ -97,13 +122,14 @@ function ModalityDrawBlock({ tournament, modality, isAdmin }) {
             </div>
           </div>
         )}
+
         {matches.length > 0 && (
           <div className="mt-3 arena-table-wrap">
             <table className="w-full text-sm">
               <thead className="bg-slate-50">
                 <tr className="text-left">
                   <th className="px-3 py-2">#</th>
-                  {matches.some((m) => m.group) && <th className="px-3 py-2">Grupo</th>}
+                  {hasGroups && <th className="px-3 py-2">Grupo</th>}
                   <th className="px-3 py-2">Rod.</th>
                   <th className="px-3 py-2">Lado A</th>
                   <th className="px-3 py-2">Lado B</th>
@@ -114,11 +140,29 @@ function ModalityDrawBlock({ tournament, modality, isAdmin }) {
                 {matches.map((m, i) => (
                   <tr key={m.id} className="border-t">
                     <td className="px-3 py-2">{i + 1}</td>
-                    {matches.some((mm) => mm.group) && <td className="px-3 py-2">{m.group || '—'}</td>}
+                    {hasGroups && <td className="px-3 py-2">{m.group || '—'}</td>}
                     <td className="px-3 py-2">{m.round}</td>
-                    <td className="px-3 py-2">{m.side_a || '—'}</td>
-                    <td className="px-3 py-2">{m.side_b || '—'}</td>
-                    <td className="px-3 py-2"><Badge variant="secondary">{m.status}</Badge></td>
+                    <td className="px-3 py-2">
+                      <SideCell
+                        ids={m.side_a_ids}
+                        rawSide={m.side_a}
+                        labelById={labelById}
+                        isAdmin={isAdmin}
+                        onSubstitute={(regId) => setSubstitution({ match: m, registrationId: regId })}
+                      />
+                    </td>
+                    <td className="px-3 py-2">
+                      <SideCell
+                        ids={m.side_b_ids}
+                        rawSide={m.side_b}
+                        labelById={labelById}
+                        isAdmin={isAdmin}
+                        onSubstitute={(regId) => setSubstitution({ match: m, registrationId: regId })}
+                      />
+                    </td>
+                    <td className="px-3 py-2">
+                      <Badge variant="secondary">{m.status}</Badge>
+                    </td>
                   </tr>
                 ))}
               </tbody>
@@ -147,6 +191,127 @@ function ModalityDrawBlock({ tournament, modality, isAdmin }) {
           </DialogFooter>
         </DialogContent>
       </Dialog>
+
+      {substitution && (
+        <SubstitutePlayerDialog
+          match={substitution.match}
+          registrationId={substitution.registrationId}
+          modalityId={modality.id}
+          labelById={labelById}
+          activeRegistrations={activeRegistrations}
+          onClose={() => setSubstitution(null)}
+        />
+      )}
     </Card>
+  );
+}
+
+function SideCell({ ids, rawSide, labelById, isAdmin, onSubstitute }) {
+  if (!ids || ids.length === 0) {
+    return <span className="text-slate-400">{rawSide || '—'}</span>;
+  }
+  return (
+    <div className="space-y-0.5">
+      {ids.map((regId) => {
+        const name = labelById.get(regId) || regId;
+        return (
+          <div key={regId} className="flex items-center gap-1">
+            <span>{name}</span>
+            {isAdmin && (
+              <button
+                onClick={() => onSubstitute(regId)}
+                title="Substituir jogador"
+                className="text-slate-400 hover:text-slate-700 transition-colors ml-1"
+              >
+                <Pencil className="w-3 h-3" />
+              </button>
+            )}
+          </div>
+        );
+      })}
+    </div>
+  );
+}
+
+function SubstitutePlayerDialog({
+  match,
+  registrationId,
+  modalityId,
+  labelById,
+  activeRegistrations,
+  onClose,
+}) {
+  const substituteMutation = useSubstitutePlayer(modalityId);
+  const [selectedId, setSelectedId] = useState('');
+
+  const currentName = labelById.get(registrationId) || registrationId;
+
+  const takenIds = new Set([...(match.side_a_ids || []), ...(match.side_b_ids || [])]);
+  const available = activeRegistrations
+    .filter((r) => !takenIds.has(r.id))
+    .sort((a, b) =>
+      (a.label || a.player_a_name || '').localeCompare(b.label || b.player_a_name || ''),
+    );
+
+  async function handleConfirm() {
+    if (!selectedId) return;
+    try {
+      await substituteMutation.mutateAsync({
+        matchId: match.id,
+        oldRegistrationId: registrationId,
+        newRegistrationId: selectedId,
+      });
+      toast.success('Jogador substituído com sucesso.');
+      onClose();
+    } catch (err) {
+      toast.error(err.message || 'Falha ao substituir jogador.');
+    }
+  }
+
+  return (
+    <Dialog open onOpenChange={(o) => !o && onClose()}>
+      <DialogContent>
+        <DialogHeader>
+          <DialogTitle>Substituir jogador</DialogTitle>
+          <DialogDescription>
+            Substituindo: <strong>{currentName}</strong>
+          </DialogDescription>
+        </DialogHeader>
+        <div className="space-y-3">
+          <div>
+            <Label>Substituto</Label>
+            {available.length === 0 ? (
+              <p className="text-sm text-slate-500 mt-1">
+                Nenhum jogador disponível para substituição.
+              </p>
+            ) : (
+              <select
+                className="w-full h-10 rounded-md border border-input bg-background px-3 text-sm mt-1"
+                value={selectedId}
+                onChange={(e) => setSelectedId(e.target.value)}
+              >
+                <option value="">— selecione um jogador —</option>
+                {available.map((r) => (
+                  <option key={r.id} value={r.id}>
+                    {r.label || r.player_a_name}
+                  </option>
+                ))}
+              </select>
+            )}
+          </div>
+        </div>
+        <DialogFooter>
+          <Button variant="outline" onClick={onClose}>
+            Cancelar
+          </Button>
+          <Button
+            onClick={handleConfirm}
+            disabled={!selectedId || substituteMutation.isPending}
+          >
+            {substituteMutation.isPending ? 'Substituindo…' : 'Confirmar substituição'}
+          </Button>
+        </DialogFooter>
+      </DialogContent>
+    </Dialog>
   );
 }
