@@ -41,6 +41,7 @@ import {
 } from '../services/matchService';
 import { runDraw } from '../services/drawService';
 import { computeModalityRanking } from '../services/rankingService';
+import { getMyTournamentHistory } from '../services/participationService';
 import { useAuth } from '@/core/lib/FirebaseAuthContext';
 
 /* ------------------------------ Tournaments ----------------------------- */
@@ -215,6 +216,15 @@ export function useMyRegistrations() {
   return useQuery({
     queryKey: ['my-registrations', user?.uid],
     queryFn: () => (user?.uid ? listMyRegistrations(user.uid) : Promise.resolve([])),
+    enabled: !!user?.uid,
+  });
+}
+
+export function useMyTournamentHistory() {
+  const { user } = useAuth();
+  return useQuery({
+    queryKey: ['my-tournament-history', user?.uid],
+    queryFn: () => (user?.uid ? getMyTournamentHistory(user.uid) : Promise.resolve([])),
     enabled: !!user?.uid,
   });
 }
