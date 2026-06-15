@@ -16,6 +16,20 @@ service cloud.firestore {
       return isAuthed()
         && exists(/databases/$(database)/documents/tournament_admins/$(tid + '_' + request.auth.uid));
     }
+    function isClubMember(clubId) {
+      return isAuthed()
+        && exists(/databases/$(database)/documents/club_members/$(clubId + '_' + request.auth.uid));
+    }
+    function isClubAdmin(clubId) {
+      return isAuthed()
+        && exists(/databases/$(database)/documents/club_members/$(clubId + '_' + request.auth.uid))
+        && get(/databases/$(database)/documents/club_members/$(clubId + '_' + request.auth.uid)).data.role == 'admin';
+    }
+    function isClubCreator(clubId) {
+      return isAuthed()
+        && exists(/databases/$(database)/documents/clubs/$(clubId))
+        && get(/databases/$(database)/documents/clubs/$(clubId)).data.created_by == request.auth.uid;
+    }
     function isPlayerARegistrationEmailOwner() {
       return isAuthed()
         && request.auth.token.email is string
@@ -153,6 +167,71 @@ service cloud.firestore {
       allow read: if isPlatformAdmin();
       allow create: if isAuthed();
       allow update, delete: if false;
+    }
+
+    // ---- Athlete directory (public projection of users) ------------------
+    // Documento público controlado: o cliente só grava aqui os campos que o
+    // próprio atleta autorizou. Dados privados nunca chegam a esta coleção.
+    match /athlete_profiles/{uid} {
+      allow read: if isAuthed();
+      allow create, update: if isOwner(uid);
+      allow delete: if isOwner(uid) || isPlatformAdmin();
+    }
+
+    // ---- Clubs -----------------------------------------------------------
+    match /clubs/{clubId} {
+      allow read: if isAuthed();
+      allow create: if isAuthed() && request.resource.data.created_by == request.auth.uid;
+      // Admins editam tudo; qualquer membro pode atualizar apenas o contador
+      // cosmético de membros (entrar/sair do clube).
+      allow update: if isClubAdmin(clubId) || isPlatformAdmin()
+        || (isAuthed()
+            && request.resource.data.diff(resource.data).affectedKeys().hasOnly(['member_count', 'updated_at']));
+      allow delete: if isPlatformAdmin()
+        || (isAuthed() && resource.data.created_by == request.auth.uid);
+    }
+
+    match /club_members/{docId} {
+      allow read: if isAuthed();
+      // Auto-ingresso como membro, criador registrando-se como admin, ou um
+      // admin adicionando alguém.
+      allow create: if isAuthed() && (
+        (request.resource.data.user_id == request.auth.uid
+          && (request.resource.data.role == 'member' || isClubCreator(request.resource.data.club_id)))
+        || isClubAdmin(request.resource.data.club_id)
+        || isPlatformAdmin()
+      );
+      allow update: if isClubAdmin(resource.data.club_id) || isPlatformAdmin();
+      // Admin remove membros; qualquer um remove a própria associação (sair).
+      allow delete: if isClubAdmin(resource.data.club_id) || isPlatformAdmin()
+        || (isAuthed() && resource.data.user_id == request.auth.uid);
+    }
+
+    match /club_events/{eventId} {
+      allow read: if isClubMember(resource.data.club_id) || isPlatformAdmin();
+      allow create: if isClubMember(request.resource.data.club_id)
+        && request.resource.data.created_by == request.auth.uid;
+      allow update, delete: if isClubAdmin(resource.data.club_id) || isPlatformAdmin()
+        || (isAuthed() && resource.data.created_by == request.auth.uid);
+    }
+
+    match /club_event_rsvps/{docId} {
+      allow read: if isClubMember(resource.data.club_id) || isPlatformAdmin();
+      allow create: if isAuthed()
+        && request.resource.data.user_id == request.auth.uid
+        && isClubMember(request.resource.data.club_id);
+      allow update: if isAuthed() && resource.data.user_id == request.auth.uid;
+      allow delete: if (isAuthed() && resource.data.user_id == request.auth.uid)
+        || isClubAdmin(resource.data.club_id) || isPlatformAdmin();
+    }
+
+    match /club_posts/{postId} {
+      allow read: if isClubMember(resource.data.club_id) || isPlatformAdmin();
+      allow create: if isClubMember(request.resource.data.club_id)
+        && request.resource.data.author_id == request.auth.uid;
+      allow update: if isAuthed() && resource.data.author_id == request.auth.uid;
+      allow delete: if (isAuthed() && resource.data.author_id == request.auth.uid)
+        || isClubAdmin(resource.data.club_id) || isPlatformAdmin();
     }
   }
 }
