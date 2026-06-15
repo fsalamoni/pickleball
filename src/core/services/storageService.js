@@ -1,0 +1,127 @@
+/**
+ * Serviço de upload de imagens para o Firebase Storage.
+ *
+ * Convenções:
+ *  - Todo upload fica em `uploads/{uid}/{folder}/...`, de modo que as regras de
+ *    segurança possam restringir a escrita ao próprio usuário autenticado.
+ *  - As imagens são enviadas sem reprocessamento (preservando a qualidade
+ *    original); apenas validamos tipo e tamanho.
+ *  - Retorna a URL pública de download (com token) usada nas <img> e nos docs.
+ */
+
+import { ref, uploadBytesResumable, getDownloadURL, deleteObject } from 'firebase/storage';
+import { storage } from '@/core/config/firebase';
+import { logger } from '@/core/lib/logger';
+
+export const MAX_IMAGE_BYTES = 15 * 1024 * 1024; // 15 MB
+export const ACCEPTED_IMAGE_ATTR = 'image/*';
+
+export function maxImageMb() {
+  return Math.round(MAX_IMAGE_BYTES / (1024 * 1024));
+}
+
+function sanitizeName(name) {
+  const base = String(name || 'imagem')
+    .toLowerCase()
+    .normalize('NFD')
+    // Remove acentos (marcas combinantes) e qualquer caractere fora do ASCII
+    // imprimível, mantendo o nome do arquivo seguro para o caminho do Storage.
+    .replace(/[^ -~]/g, '')
+    .replace(/[^a-z0-9.\-_]+/g, '-')
+    .replace(/-+/g, '-')
+    .replace(/^-|-$/g, '');
+  return (base || 'imagem').slice(-80);
+}
+
+/** Valida um arquivo de imagem. Retorna mensagem de erro ou null. */
+export function validateImageFile(file) {
+  if (!file) return 'Selecione um arquivo.';
+  if (!String(file.type || '').startsWith('image/')) return 'O arquivo precisa ser uma imagem.';
+  if (file.size > MAX_IMAGE_BYTES) return `Imagem muito grande (máximo ${maxImageMb()} MB).`;
+  return null;
+}
+
+/**
+ * Faz upload de uma imagem e resolve com metadados + URL de download.
+ * @returns {Promise<{url:string, path:string, name:string, size:number, contentType:string}>}
+ */
+export function uploadImage(file, { uid, folder = 'misc', onProgress } = {}) {
+  return new Promise((resolve, reject) => {
+    if (!storage) {
+      reject(new Error('Armazenamento de imagens indisponível neste ambiente.'));
+      return;
+    }
+    if (!uid) {
+      reject(new Error('Usuário não autenticado.'));
+      return;
+    }
+    const validationError = validateImageFile(file);
+    if (validationError) {
+      reject(new Error(validationError));
+      return;
+    }
+
+    const path = `uploads/${uid}/${folder}/${Date.now()}-${sanitizeName(file.name)}`;
+    const task = uploadBytesResumable(ref(storage, path), file, {
+      contentType: file.type,
+      cacheControl: 'public, max-age=31536000, immutable',
+    });
+
+    task.on(
+      'state_changed',
+      (snap) => {
+        if (onProgress && snap.totalBytes) {
+          onProgress(Math.round((snap.bytesTransferred / snap.totalBytes) * 100));
+        }
+      },
+      (error) => {
+        logger.error('Falha no upload de imagem:', error);
+        reject(new Error('Não foi possível enviar a imagem. Tente novamente.'));
+      },
+      async () => {
+        try {
+          const url = await getDownloadURL(task.snapshot.ref);
+          resolve({ url, path, name: file.name, size: file.size, contentType: file.type });
+        } catch (error) {
+          logger.error('Falha ao obter URL da imagem:', error);
+          reject(new Error('Imagem enviada, mas não foi possível obter o link.'));
+        }
+      },
+    );
+  });
+}
+
+/** Remove uma imagem do Storage (best-effort). */
+export async function deleteImage(path) {
+  if (!storage || !path) return;
+  try {
+    await deleteObject(ref(storage, path));
+  } catch (err) {
+    logger.error('Falha ao remover imagem do Storage:', err);
+  }
+}
+
+/**
+ * Baixa uma imagem para o dispositivo do usuário, preservando a qualidade
+ * original. Tenta via blob (download real) e, em caso de bloqueio de CORS,
+ * abre a imagem em nova aba como alternativa.
+ */
+export async function downloadImage(url, fileName = 'imagem') {
+  if (!url) return;
+  try {
+    const response = await fetch(url);
+    if (!response.ok) throw new Error('fetch failed');
+    const blob = await response.blob();
+    const objectUrl = URL.createObjectURL(blob);
+    const link = document.createElement('a');
+    link.href = objectUrl;
+    link.download = fileName || 'imagem';
+    document.body.appendChild(link);
+    link.click();
+    document.body.removeChild(link);
+    setTimeout(() => URL.revokeObjectURL(objectUrl), 4000);
+  } catch (err) {
+    logger.error('Download direto falhou, abrindo em nova aba:', err);
+    window.open(url, '_blank', 'noopener,noreferrer');
+  }
+}

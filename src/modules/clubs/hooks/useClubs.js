@@ -224,7 +224,7 @@ export function useCreateClubPost(clubId) {
   const { user, userProfile } = useAuth();
   const qc = useQueryClient();
   return useMutation({
-    mutationFn: (content) => createClubPost(clubId, content, user, userProfile),
+    mutationFn: (input) => createClubPost(clubId, input, user, userProfile),
     onSuccess: () => qc.invalidateQueries({ queryKey: ['club-posts', clubId] }),
   });
 }

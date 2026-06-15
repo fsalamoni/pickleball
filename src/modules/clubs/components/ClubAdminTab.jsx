@@ -7,6 +7,7 @@ import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { ConfirmDialog } from '@/components/ui/confirm-dialog';
+import { ImageUpload } from '@/components/ui/image-upload';
 import { useClipboard } from '@/core/lib/useClipboard';
 import { useUpdateClub, useRegenerateInviteCode, useDeleteClub } from '@/modules/clubs/hooks/useClubs';
 
@@ -100,6 +101,17 @@ export default function ClubAdminTab({ club }) {
         <CardContent className="p-4 pt-0 sm:p-5 sm:pt-0">
           <form onSubmit={handleSave} className="space-y-4">
             <div className="space-y-2">
+              <Label>Logo / imagem do clube</Label>
+              <ImageUpload
+                value={form.logo_url}
+                onChange={(url) => setForm((prev) => ({ ...prev, logo_url: url }))}
+                folder="clubs"
+                shape="square"
+                label="Enviar logo"
+                hint="Logo ou foto do clube exibida no diretório e na página do clube."
+              />
+            </div>
+            <div className="space-y-2">
               <Label htmlFor="admin_name">Nome *</Label>
               <Input id="admin_name" value={form.name} onChange={setField('name')} maxLength={80} required />
             </div>
@@ -138,15 +150,9 @@ export default function ClubAdminTab({ club }) {
                 <Input id="admin_phone" type="tel" value={form.contact_phone} onChange={setField('contact_phone')} maxLength={30} />
               </div>
             </div>
-            <div className="grid gap-4 sm:grid-cols-2">
-              <div className="space-y-2">
-                <Label htmlFor="admin_instagram">Instagram</Label>
-                <Input id="admin_instagram" value={form.instagram} onChange={setField('instagram')} maxLength={60} />
-              </div>
-              <div className="space-y-2">
-                <Label htmlFor="admin_logo">URL do logo</Label>
-                <Input id="admin_logo" type="url" value={form.logo_url} onChange={setField('logo_url')} maxLength={400} />
-              </div>
+            <div className="space-y-2">
+              <Label htmlFor="admin_instagram">Instagram</Label>
+              <Input id="admin_instagram" value={form.instagram} onChange={setField('instagram')} maxLength={60} />
             </div>
             <Button type="submit" disabled={updateClub.isPending} className="bg-emerald-700 hover:bg-emerald-800">
               <Save className="mr-1.5 h-4 w-4" /> {updateClub.isPending ? 'Salvando…' : 'Salvar alterações'}

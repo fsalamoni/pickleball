@@ -6,6 +6,7 @@ import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from '@/components/ui/card';
+import { ImageUpload } from '@/components/ui/image-upload';
 import { useAuth } from '@/core/lib/FirebaseAuthContext';
 import { useCreateClub } from '@/modules/clubs/hooks/useClubs';
 
@@ -83,6 +84,17 @@ export default function CreateClub() {
           )}
           <form onSubmit={onSubmit} className="space-y-4">
             <div className="space-y-2">
+              <Label>Logo / imagem do clube</Label>
+              <ImageUpload
+                value={form.logo_url}
+                onChange={(url) => setForm((prev) => ({ ...prev, logo_url: url }))}
+                folder="clubs"
+                shape="square"
+                label="Enviar logo"
+                hint="Logo ou foto do clube. Aparece no diretório e na página do clube."
+              />
+            </div>
+            <div className="space-y-2">
               <Label htmlFor="name">Nome do clube *</Label>
               <Input id="name" value={form.name} onChange={setField('name')} maxLength={80} required />
               {errors.name && <p className="text-xs text-red-600">{errors.name}</p>}
@@ -129,15 +141,9 @@ export default function CreateClub() {
               </div>
             </div>
 
-            <div className="grid gap-4 sm:grid-cols-2">
-              <div className="space-y-2">
-                <Label htmlFor="instagram">Instagram</Label>
-                <Input id="instagram" value={form.instagram} onChange={setField('instagram')} maxLength={60} placeholder="@seuclube" />
-              </div>
-              <div className="space-y-2">
-                <Label htmlFor="logo_url">URL do logo</Label>
-                <Input id="logo_url" type="url" value={form.logo_url} onChange={setField('logo_url')} maxLength={400} placeholder="https://…" />
-              </div>
+            <div className="space-y-2">
+              <Label htmlFor="instagram">Instagram</Label>
+              <Input id="instagram" value={form.instagram} onChange={setField('instagram')} maxLength={60} placeholder="@seuclube" />
             </div>
 
             <Button type="submit" disabled={createClub.isPending || !isAuthenticated} className="bg-emerald-700 hover:bg-emerald-800">

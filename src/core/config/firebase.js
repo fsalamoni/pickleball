@@ -2,6 +2,7 @@ import { initializeApp } from 'firebase/app';
 import { getAuth, GoogleAuthProvider, connectAuthEmulator } from 'firebase/auth';
 import { getFirestore, connectFirestoreEmulator } from 'firebase/firestore';
 import { getFunctions, connectFunctionsEmulator } from 'firebase/functions';
+import { getStorage, connectStorageEmulator } from 'firebase/storage';
 
 const firebaseConfig = {
   apiKey: import.meta.env.VITE_FIREBASE_API_KEY,
@@ -31,6 +32,7 @@ const firestoreDatabaseId = import.meta.env.VITE_FIRESTORE_DATABASE_ID || 'pickl
 export const auth = app ? getAuth(app) : null;
 export const db = app ? getFirestore(app, firestoreDatabaseId) : null;
 export const functions = app ? getFunctions(app, 'southamerica-east1') : null;
+export const storage = app ? getStorage(app) : null;
 
 export const googleProvider = auth ? new GoogleAuthProvider() : null;
 googleProvider?.setCustomParameters({ prompt: 'select_account' });
@@ -57,6 +59,7 @@ if (app && auth && db && functions && import.meta.env.VITE_FIREBASE_USE_EMULATOR
     connectAuthEmulator(auth, 'http://localhost:9099', { disableWarnings: true });
     connectFirestoreEmulator(db, 'localhost', 8080);
     connectFunctionsEmulator(functions, 'localhost', 5001);
+    if (storage) connectStorageEmulator(storage, 'localhost', 9199);
   } catch {
     // already connected
   }

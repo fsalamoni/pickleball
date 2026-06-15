@@ -55,7 +55,7 @@ function memberPayload(clubId, user, profile, role) {
     user_id: user.uid,
     user_name: profile?.platform_name || profile?.full_name || user.displayName || user.email || 'Atleta',
     user_email: user.email || '',
-    photo_url: user.photoURL || profile?.photo_url || '',
+    photo_url: profile?.photo_url || user.photoURL || '',
     role,
     joined_at: serverTimestamp(),
   };
@@ -332,18 +332,35 @@ export async function listClubPosts(clubId) {
     .sort((a, b) => (b.created_at_ms || 0) - (a.created_at_ms || 0));
 }
 
-export async function createClubPost(clubId, content, user, profile) {
+export async function createClubPost(clubId, input, user, profile) {
   if (!user?.uid) throw new Error('Usuário não autenticado.');
-  const text = trimmed(content);
-  if (!text) throw new Error('Escreva uma mensagem.');
+  // Aceita string (mensagem) ou objeto { content, images }.
+  const payload = typeof input === 'string' ? { content: input } : (input || {});
+  const text = trimmed(payload.content);
+  const images = Array.isArray(payload.images)
+    ? payload.images
+        .filter((img) => img && img.url)
+        .slice(0, 10)
+        .map((img) => ({
+          url: img.url,
+          path: img.path || '',
+          name: img.name || 'imagem',
+          content_type: img.contentType || img.content_type || '',
+          size: img.size || 0,
+        }))
+    : [];
+
+  if (!text && images.length === 0) throw new Error('Escreva uma mensagem ou anexe uma imagem.');
+
   const id = doc(collection(db, COL.posts)).id;
   await setDoc(doc(db, COL.posts, id), {
     id,
     club_id: clubId,
     author_id: user.uid,
     author_name: profile?.platform_name || user.displayName || user.email || 'Atleta',
-    author_photo: user.photoURL || profile?.photo_url || '',
+    author_photo: profile?.photo_url || user.photoURL || '',
     content: text.slice(0, 2000),
+    images,
     created_at_ms: Date.now(),
     created_at: serverTimestamp(),
   });
