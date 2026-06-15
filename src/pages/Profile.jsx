@@ -8,6 +8,7 @@ import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { Switch } from '@/components/ui/switch';
+import { ImageUpload } from '@/components/ui/image-upload';
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from '@/components/ui/card';
 import { ATHLETE_GENDER_LABELS } from '@/modules/athletes/domain/constants';
 import { LEVEL_OPTIONS, getLevelByCode } from '@/modules/leveling/data/levels';
@@ -34,6 +35,7 @@ export default function Profile() {
   const [emailPublic, setEmailPublic] = useState(userProfile?.email_public === true);
   const [addressPublic, setAddressPublic] = useState(userProfile?.address_public === true);
   const [directoryListed, setDirectoryListed] = useState(userProfile?.directory_listed !== false);
+  const [photoUrl, setPhotoUrl] = useState(userProfile?.photo_url || user?.photoURL || '');
   const [communityBusy, setCommunityBusy] = useState(false);
   const [errors, setErrors] = useState({});
   const [busy, setBusy] = useState(false);
@@ -61,6 +63,7 @@ export default function Profile() {
     setEmailPublic(userProfile?.email_public === true);
     setAddressPublic(userProfile?.address_public === true);
     setDirectoryListed(userProfile?.directory_listed !== false);
+    setPhotoUrl(userProfile?.photo_url || user?.photoURL || '');
     setVisibleResult(userProfile?.leveling_assessment?.result || null);
     setErrors({});
   }, [
@@ -81,6 +84,7 @@ export default function Profile() {
     userProfile?.email_public,
     userProfile?.address_public,
     userProfile?.directory_listed,
+    userProfile?.photo_url,
   ]);
 
   const onSave = async (e) => {
@@ -106,6 +110,18 @@ export default function Profile() {
       toast.error(err.message || 'Erro ao salvar.');
     } finally {
       setBusy(false);
+    }
+  };
+
+  const savePhoto = async (url) => {
+    const previous = photoUrl;
+    setPhotoUrl(url);
+    try {
+      await updateUserProfile({ photo_url: url });
+      toast.success(url ? 'Foto atualizada.' : 'Foto removida.');
+    } catch (err) {
+      setPhotoUrl(previous);
+      toast.error(err.message || 'Erro ao salvar a foto.');
     }
   };
 
@@ -217,17 +233,22 @@ export default function Profile() {
           <CardDescription>Atualize nome público, data de nascimento, telefone e experiência no pickleball.</CardDescription>
         </CardHeader>
         <CardContent className="p-4 sm:p-5">
-          <div className="mb-6 flex items-center gap-4 rounded-md border border-emerald-950/10 bg-gradient-to-br from-white/85 to-emerald-50/70 p-3">
-            {user?.photoURL ? (
-              <img src={user.photoURL} alt="" className="h-16 w-16 rounded-full border border-emerald-900/10" />
-            ) : (
-              <div className="flex h-16 w-16 items-center justify-center rounded-full bg-emerald-900 text-2xl font-semibold text-emerald-50">
-                {(platformName || user?.email)?.[0]?.toUpperCase()}
-              </div>
-            )}
-            <div>
-              <div className="font-medium">{user?.email}</div>
-              <div className="text-xs text-slate-500">Login via Google</div>
+          <div className="mb-6 rounded-md border border-emerald-950/10 bg-gradient-to-br from-white/85 to-emerald-50/70 p-3">
+            <ImageUpload
+              value={photoUrl}
+              onChange={savePhoto}
+              folder="profile"
+              shape="circle"
+              label="Enviar foto"
+              hint="Sua foto aparece no perfil, no diretório de atletas e nos clubes."
+              fallback={(
+                <span className="flex h-full w-full items-center justify-center bg-emerald-900 text-2xl font-semibold text-emerald-50">
+                  {(platformName || user?.email)?.[0]?.toUpperCase()}
+                </span>
+              )}
+            />
+            <div className="mt-3 text-xs text-slate-500">
+              {user?.email} · Login via Google
             </div>
           </div>
 

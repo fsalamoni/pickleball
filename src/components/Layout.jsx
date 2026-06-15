@@ -160,6 +160,7 @@ export default function Layout({ children, currentPageName }) {
   const displayName = userProfile?.platform_name || user?.displayName || user?.email?.split('@')[0] || 'Usuário';
   const displayEmail = userProfile?.email || user?.email;
   const displayRole = isPlatformAdmin ? 'Admin geral da plataforma' : 'Atleta e organizador';
+  const displayPhoto = userProfile?.photo_url || user?.photoURL || '';
   const initial = displayName?.[0]?.toUpperCase() || 'U';
   const activeTournamentId = location.pathname.match(/\/torneios\/([^/]+)/)?.[1];
 
@@ -332,9 +333,17 @@ export default function Layout({ children, currentPageName }) {
           <div className="border-t border-white/10 p-4">
             <div className="rounded-[1.5rem] border border-white/10 bg-white/10 p-4">
               <div className="flex items-center gap-3">
-                <div className="flex h-11 w-11 items-center justify-center rounded-2xl bg-[linear-gradient(135deg,#facc15,#34d399)] text-slate-950 shadow-[0_18px_36px_-24px_rgba(250,204,21,0.7)]">
-                  <span className="text-sm font-semibold">{initial}</span>
-                </div>
+                {displayPhoto ? (
+                  <img
+                    src={displayPhoto}
+                    alt=""
+                    className="h-11 w-11 rounded-2xl object-cover shadow-[0_18px_36px_-24px_rgba(250,204,21,0.7)]"
+                  />
+                ) : (
+                  <div className="flex h-11 w-11 items-center justify-center rounded-2xl bg-[linear-gradient(135deg,#facc15,#34d399)] text-slate-950 shadow-[0_18px_36px_-24px_rgba(250,204,21,0.7)]">
+                    <span className="text-sm font-semibold">{initial}</span>
+                  </div>
+                )}
                 <div className="min-w-0 flex-1">
                   <p className="truncate text-sm font-semibold text-white">{displayName}</p>
                   <p className="truncate text-xs text-emerald-50/60" title={displayEmail}>{displayEmail}</p>
