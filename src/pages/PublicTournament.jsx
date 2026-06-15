@@ -25,6 +25,13 @@ function formatPublicMatchTime(iso) {
   return d.toLocaleTimeString('pt-BR', { hour: '2-digit', minute: '2-digit' });
 }
 
+function roundLabel(m) {
+  if (m.bracket === 'gf') return m.round === 2 ? 'Final (reset)' : 'Grande final';
+  if (m.bracket === 'wb') return `Venc. R${m.round}`;
+  if (m.bracket === 'lb') return `Repesc. R${m.round}`;
+  return m.round;
+}
+
 /**
  * Página pública (sem autenticação) de visualização ao vivo de um torneio.
  * Inspirado em evroon/bracket e CourtHive/TMX — permite que espectadores,
@@ -268,7 +275,7 @@ function PublicModalityBlock({ modality }) {
                 <tbody>
                   {matches.map((m) => (
                     <tr key={m.id} className="border-t">
-                      <td className="px-3 py-2">{m.round}</td>
+                      <td className="px-3 py-2">{roundLabel(m)}</td>
                       {matches.some((mm) => mm.group) && (
                         <td className="px-3 py-2">{m.group || '—'}</td>
                       )}

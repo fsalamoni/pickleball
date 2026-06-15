@@ -50,6 +50,13 @@ function formatMatchTime(iso) {
   return d.toLocaleTimeString('pt-BR', { hour: '2-digit', minute: '2-digit' });
 }
 
+function roundLabel(m) {
+  if (m.bracket === 'gf') return m.round === 2 ? 'Final (reset)' : 'Grande final';
+  if (m.bracket === 'wb') return `Venc. R${m.round}`;
+  if (m.bracket === 'lb') return `Repesc. R${m.round}`;
+  return m.round;
+}
+
 function statusBadgeVariant(status) {
   if (status === MATCH_STATUS.FINISHED || status === MATCH_STATUS.WALKOVER) return 'success';
   if (status === MATCH_STATUS.IN_PROGRESS) return 'warning';
@@ -122,7 +129,7 @@ function ModalityMatchesBlock({ tournament, modality, isAdmin }) {
                       className={`border-t ${inProgress ? 'bg-amber-50' : ''}`}
                     >
                       {hasGroups && <td className="px-3 py-2">{m.group || '—'}</td>}
-                      <td className="px-3 py-2">{m.round}</td>
+                      <td className="px-3 py-2">{roundLabel(m)}</td>
                       {hasSchedule && <td className="px-3 py-2">{m.court || '—'}</td>}
                       {hasSchedule && <td className="px-3 py-2 tabular-nums">{formatMatchTime(m.scheduled_at)}</td>}
                       <td className="px-3 py-2">

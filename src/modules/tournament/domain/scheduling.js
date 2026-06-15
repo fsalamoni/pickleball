@@ -155,15 +155,23 @@ export function buildCourts(courtCount) {
  *
  * @param {Array<{ id: string, round?: number, position?: number, side_a_ids?: string[], side_b_ids?: string[], player_ids?: string[] }>} matches
  * @param {object} schedulingConfig saída de normalizeSchedulingConfig
- * @param {{ fallbackDate?: string|Date|null, restSlots?: number }} [options]
+ * @param {{ fallbackDate?: string|Date|null, restSlots?: number, slotOffset?: number }} [options]
  * @returns {{ byMatchId: Map<string, object>, warnings: string[], totalSlots: number, slotMinutes: number, startAt: string|null }}
  */
 export function assignSchedule(matches, schedulingConfig, options = {}) {
   const cfg = normalizeSchedulingConfig(schedulingConfig);
   const { fallbackDate = null, restSlots = DEFAULT_REST_SLOTS } = options;
+  // Deslocamento de slots: usado ao agendar jogos de uma nova rodada após os
+  // jogos já existentes (ex.: avanço de chave), para que comecem depois.
+  const slotOffset = Math.max(0, Math.trunc(Number(options.slotOffset) || 0));
 
   const courts = buildCourts(cfg.court_count);
-  const startAt = buildStartAtISO(cfg.play_date, cfg.play_start_time, fallbackDate);
+  const baseStartAt = buildStartAtISO(cfg.play_date, cfg.play_start_time, fallbackDate);
+  // Empurra o horário-base pelo deslocamento de slots, mantendo a grade alinhada.
+  const startAt =
+    baseStartAt && slotOffset > 0
+      ? new Date(new Date(baseStartAt).getTime() + slotOffset * cfg.match_duration_minutes * 60_000).toISOString()
+      : baseStartAt;
   const maxSlots = computeWindowSlots(
     cfg.play_start_time,
     cfg.play_end_time,
@@ -198,7 +206,7 @@ export function assignSchedule(matches, schedulingConfig, options = {}) {
     byMatchId.set(a.match_id, {
       court: court ? court.name : null,
       court_index: court ? court.index : null,
-      slot: a.slot,
+      slot: a.slot + slotOffset,
       scheduled_at: a.start_at,
     });
   });

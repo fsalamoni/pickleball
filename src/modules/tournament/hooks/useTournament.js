@@ -37,6 +37,7 @@ import {
   markMatchInProgress,
   reShuffleRemainingMatches,
   rescheduleMatches,
+  advanceStage,
 } from '../services/matchService';
 import { runDraw } from '../services/drawService';
 import { computeModalityRanking } from '../services/rankingService';
@@ -352,6 +353,20 @@ export function useRescheduleMatches(modalityId) {
     onSuccess: () => {
       qc.invalidateQueries({ queryKey: ['matches', modalityId] });
       qc.invalidateQueries({ queryKey: ['matches-tournament'] });
+    },
+  });
+}
+
+export function useAdvanceStage(modalityId) {
+  const { user } = useAuth();
+  const qc = useQueryClient();
+  return useMutation({
+    mutationFn: ({ tournamentId, stageIndex = 0, modality, tournament }) =>
+      advanceStage(tournamentId, modalityId, stageIndex, modality, tournament, user),
+    onSuccess: () => {
+      qc.invalidateQueries({ queryKey: ['matches', modalityId] });
+      qc.invalidateQueries({ queryKey: ['matches-tournament'] });
+      qc.invalidateQueries({ queryKey: ['ranking', modalityId] });
     },
   });
 }
