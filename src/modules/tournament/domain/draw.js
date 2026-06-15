@@ -615,6 +615,7 @@ export function generateDraw(input) {
     const matches = bracket.wb
       .filter((m) => m.round === 1)
       .map((m) => ({
+        bracket: 'wb',
         round: 1,
         position: m.position,
         side_a: m.side_a,

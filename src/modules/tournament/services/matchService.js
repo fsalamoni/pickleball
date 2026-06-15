@@ -19,9 +19,12 @@ import {
 } from 'firebase/firestore';
 import { db } from '@/core/config/firebase';
 import { createAuditLog } from '@/core/services/auditService';
-import { MATCH_STATUS } from '../domain/constants.js';
+import { MATCH_STATUS, REGISTRATION_STATUS } from '../domain/constants.js';
 import { getMatchResult } from '../domain/scoring.js';
 import { assignSchedule } from '../domain/scheduling.js';
+import { computeStageAdvance, stageSupportsAdvance } from '../domain/progression.js';
+import { recommendedSwissRounds } from '../domain/swiss.js';
+import { listRegistrations } from './registrationService.js';
 
 const COL = 'tournament_matches';
 
@@ -55,6 +58,7 @@ export async function persistMatches(tournamentId, modalityId, stageIndex, draw,
       stage_index: stageIndex,
       stage_type: draw.stageType,
       group: m.group || null,
+      bracket: m.bracket || null,
       round: m.round || 1,
       position: m.position || idx + 1,
       side_a: serializeSide(m.side_a),
@@ -133,6 +137,124 @@ export async function persistMatches(tournamentId, modalityId, stageIndex, draw,
     },
   });
   return { scheduleWarnings };
+}
+
+/**
+ * Avança uma fase eliminatória/suíça: cria os jogos da próxima rodada
+ * (vencedores das chaves, próxima rodada do suíço, trânsito de
+ * vencedores/perdedores na dupla eliminação) e os agenda após os já existentes.
+ *
+ * Não remove nem altera jogos já criados — apenas acrescenta os novos.
+ *
+ * @param {string} tournamentId
+ * @param {string} modalityId
+ * @param {number} stageIndex
+ * @param {object} modality
+ * @param {object|null} tournament
+ * @param {object} actor
+ * @returns {Promise<{ created: number, complete?: boolean, championIds?: string[], scheduleWarnings: string[] }>}
+ */
+export async function advanceStage(tournamentId, modalityId, stageIndex, modality, tournament, actor) {
+  const stage = modality?.stages?.[stageIndex];
+  const stageType = stage?.type;
+  if (!stageSupportsAdvance(stageType)) {
+    throw new Error('Este formato gera todos os jogos no sorteio — não há rodadas a avançar.');
+  }
+
+  const matches = await listMatches(modalityId, stageIndex);
+  if (matches.length === 0) throw new Error('Faça o sorteio antes de avançar a fase.');
+
+  const ctx = {};
+  if (stageType === 'swiss') {
+    const regs = await listRegistrations(modalityId);
+    const active = regs.filter(
+      (r) => r.status === REGISTRATION_STATUS.CONFIRMED || r.status === REGISTRATION_STATUS.CHECKED_IN,
+    );
+    ctx.participantIds = active.map((r) => r.id);
+    ctx.totalRounds = recommendedSwissRounds(ctx.participantIds.length);
+    ctx.seed = `${modalityId}_${stageIndex}_swiss`;
+  } else if (stageType === 'double_knockout') {
+    // Tamanho da chave derivado dos jogos da 1ª rodada (consistente com o sorteio).
+    const wbR1 = matches.filter((m) => (m.bracket || 'wb') === 'wb' && (m.round || 1) === 1);
+    ctx.participantCount = wbR1.length * 2;
+  }
+
+  const result = computeStageAdvance(stageType, matches, ctx);
+  if (result.complete) {
+    return { created: 0, complete: true, championIds: result.championIds || [], scheduleWarnings: [] };
+  }
+  if (result.pending || !result.matches || result.matches.length === 0) {
+    throw new Error('Conclua todos os jogos da rodada atual antes de avançar.');
+  }
+
+  // Monta os payloads dos novos jogos (ids estáveis).
+  const payloads = result.matches.map((m, idx) => ({
+    id: doc(collection(db, COL)).id,
+    tournament_id: tournamentId,
+    modality_id: modalityId,
+    stage_index: stageIndex,
+    stage_type: stageType,
+    group: null,
+    bracket: m.bracket || null,
+    round: m.round || 1,
+    position: m.position || idx + 1,
+    side_a: serializeSide(m.side_a),
+    side_b: serializeSide(m.side_b),
+    side_a_ids: normalizeIds(m.side_a),
+    side_b_ids: normalizeIds(m.side_b),
+    games: [],
+    walkover: null,
+    status: m.bye ? MATCH_STATUS.WALKOVER : MATCH_STATUS.SCHEDULED,
+    scheduled_at: null,
+    court: null,
+    court_index: null,
+    slot: null,
+    result_recorded_at: null,
+    created_at: serverTimestamp(),
+    updated_at: serverTimestamp(),
+  }));
+
+  // Agenda os novos jogos (somente disputáveis) após o último horário usado.
+  const existingSlots = matches
+    .map((m) => (typeof m.slot === 'number' ? m.slot : -1))
+    .filter((s) => s >= 0);
+  const slotOffset = existingSlots.length ? Math.max(...existingSlots) + 1 : 0;
+  const schedulable = payloads.filter(
+    (p) => p.status !== MATCH_STATUS.WALKOVER && p.side_a_ids.length && p.side_b_ids.length,
+  );
+  let scheduleWarnings = [];
+  if (schedulable.length > 0) {
+    const { byMatchId, warnings } = assignSchedule(schedulable, modality || {}, {
+      fallbackDate: tournament?.starts_at || null,
+      slotOffset,
+    });
+    payloads.forEach((p) => {
+      const slot = byMatchId.get(p.id);
+      if (slot) {
+        p.court = slot.court;
+        p.court_index = slot.court_index;
+        p.slot = slot.slot;
+        p.scheduled_at = slot.scheduled_at;
+      }
+    });
+    scheduleWarnings = warnings;
+  }
+
+  const batch = writeBatch(db);
+  payloads.forEach((p) => batch.set(doc(db, COL, p.id), p));
+  await batch.commit();
+  await createAuditLog({
+    action: 'stage_advanced',
+    actor,
+    details: {
+      tournament_id: tournamentId,
+      modality_id: modalityId,
+      stage_index: stageIndex,
+      stage_type: stageType,
+      created: payloads.length,
+    },
+  });
+  return { created: payloads.length, scheduleWarnings };
 }
 
 function serializeSide(side) {

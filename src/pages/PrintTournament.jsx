@@ -75,6 +75,13 @@ function formatPrintTime(iso) {
   return d.toLocaleTimeString('pt-BR', { hour: '2-digit', minute: '2-digit' });
 }
 
+function roundLabel(m) {
+  if (m.bracket === 'gf') return m.round === 2 ? 'Final (reset)' : 'Grande final';
+  if (m.bracket === 'wb') return `Venc. R${m.round}`;
+  if (m.bracket === 'lb') return `Repesc. R${m.round}`;
+  return m.round;
+}
+
 function PrintModality({ modality }) {
   const { data: matches = [] } = useQuery({
     queryKey: ['print', 'matches', modality.id, 0],
@@ -172,7 +179,7 @@ function PrintModality({ modality }) {
             <tbody>
               {matches.map((m) => (
                 <tr key={m.id} className="border-b">
-                  <td className="py-1">{m.round}</td>
+                  <td className="py-1">{roundLabel(m)}</td>
                   {hasGroups && <td className="py-1">{m.group || '—'}</td>}
                   {hasSchedule && <td className="py-1">{m.court || '—'}</td>}
                   {hasSchedule && <td className="py-1 tabular-nums">{formatPrintTime(m.scheduled_at)}</td>}

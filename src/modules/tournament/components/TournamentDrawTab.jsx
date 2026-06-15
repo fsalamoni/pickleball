@@ -11,7 +11,7 @@ import {
   DialogFooter,
   DialogDescription,
 } from '@/components/ui/dialog';
-import { Shuffle, AlertTriangle, Pencil, ListRestart, CalendarClock } from 'lucide-react';
+import { Shuffle, AlertTriangle, Pencil, ListRestart, CalendarClock, ChevronsRight } from 'lucide-react';
 import { toast } from 'sonner';
 import {
   useModalities,
@@ -21,18 +21,27 @@ import {
   useSubstitutePlayer,
   useReShuffleRemainingMatches,
   useRescheduleMatches,
+  useAdvanceStage,
 } from '@/modules/tournament/hooks/useTournament';
 import {
   TOURNAMENT_STAGE_TYPE_LABELS,
   REGISTRATION_STATUS,
   MATCH_STATUS,
 } from '@/modules/tournament/domain/constants';
+import { stageSupportsAdvance } from '@/modules/tournament/domain/progression';
 
 function formatMatchTime(iso) {
   if (!iso) return '—';
   const d = new Date(iso);
   if (Number.isNaN(d.getTime())) return '—';
   return d.toLocaleTimeString('pt-BR', { hour: '2-digit', minute: '2-digit' });
+}
+
+function roundLabel(m) {
+  if (m.bracket === 'gf') return m.round === 2 ? 'Final (reset)' : 'Grande final';
+  if (m.bracket === 'wb') return `Vencedores R${m.round}`;
+  if (m.bracket === 'lb') return `Repescagem R${m.round}`;
+  return m.round;
 }
 
 export default function TournamentDrawTab({ tournament, isAdmin }) {
@@ -61,6 +70,7 @@ function ModalityDrawBlock({ tournament, modality, isAdmin }) {
   const drawMutation = useRunDraw();
   const reShuffleMutation = useReShuffleRemainingMatches(modality.id);
   const rescheduleMutation = useRescheduleMatches(modality.id);
+  const advanceMutation = useAdvanceStage(modality.id);
   const { data: matches = [] } = useMatches(modality.id, 0);
   const { data: registrations = [] } = useRegistrations(modality.id);
   const [running, setRunning] = useState(false);
@@ -98,6 +108,35 @@ function ModalityDrawBlock({ tournament, modality, isAdmin }) {
   const scheduledCount = playableMatches.filter((m) => m.scheduled_at || m.court).length;
   const unscheduledCount = playableMatches.length - scheduledCount;
   const canReschedule = isAdmin && matches.length > 0 && startedCount === 0;
+
+  // Avanço de fase (mata-mata, dupla eliminação, suíço).
+  const stageType = modality.stages?.[0]?.type;
+  const canAdvance = isAdmin && matches.length > 0 && stageSupportsAdvance(stageType);
+
+  async function performAdvance() {
+    setRunning(true);
+    try {
+      const res = await advanceMutation.mutateAsync({
+        tournamentId: tournament.id,
+        stageIndex: 0,
+        modality,
+        tournament,
+      });
+      if (res.complete) {
+        toast.success('Fase concluída — campeão definido! 🏆');
+      } else {
+        const warns = res.scheduleWarnings || [];
+        toast.success(`Próxima rodada gerada (${res.created} jogo(s)).`);
+        if (warns.length > 0) {
+          toast.warning(`${warns.length} jogo(s) sem horário — ajuste quadras/horário de término.`);
+        }
+      }
+    } catch (err) {
+      toast.error(err?.message || 'Não foi possível avançar a fase.');
+    } finally {
+      setRunning(false);
+    }
+  }
 
   async function performReschedule() {
     setRunning(true);
@@ -178,6 +217,17 @@ function ModalityDrawBlock({ tournament, modality, isAdmin }) {
           </div>
           {isAdmin && (
             <div className="flex gap-2 flex-wrap">
+              {canAdvance && (
+                <Button
+                  size="sm"
+                  variant="outline"
+                  onClick={performAdvance}
+                  disabled={running}
+                  title="Gerar a próxima rodada com base nos resultados"
+                >
+                  <ChevronsRight className="w-4 h-4 mr-1" /> Avançar fase
+                </Button>
+              )}
               {canReschedule && (
                 <Button
                   size="sm"
@@ -254,7 +304,7 @@ function ModalityDrawBlock({ tournament, modality, isAdmin }) {
                   <tr key={m.id} className="border-t">
                     <td className="px-3 py-2">{i + 1}</td>
                     {hasGroups && <td className="px-3 py-2">{m.group || '—'}</td>}
-                    <td className="px-3 py-2">{m.round}</td>
+                    <td className="px-3 py-2">{roundLabel(m)}</td>
                     {hasSchedule && <td className="px-3 py-2">{m.court || '—'}</td>}
                     {hasSchedule && <td className="px-3 py-2 tabular-nums">{formatMatchTime(m.scheduled_at)}</td>}
                     <td className="px-3 py-2">
