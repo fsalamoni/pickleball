@@ -334,7 +334,9 @@ export default function TournamentModalitiesTab({ tournament, isAdmin }) {
                   <Input type="number" min={1} value={form.group_count} onChange={(e) => set('group_count', e.target.value)} />
                 </div>
               )}
-              {(form.stage_type === TOURNAMENT_STAGE_TYPE.GROUPS || form.stage_type === TOURNAMENT_STAGE_TYPE.KNOCKOUT) && (
+              {(form.stage_type === TOURNAMENT_STAGE_TYPE.GROUPS ||
+                form.stage_type === TOURNAMENT_STAGE_TYPE.KNOCKOUT ||
+                form.stage_type === TOURNAMENT_STAGE_TYPE.DOUBLE_KNOCKOUT) && (
                 <div>
                   <Label>Cabeças-de-chave</Label>
                   <Input type="number" min={0} value={form.seed_count} onChange={(e) => set('seed_count', e.target.value)} />

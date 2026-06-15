@@ -36,6 +36,7 @@ import {
   substitutePlayer,
   markMatchInProgress,
   reShuffleRemainingMatches,
+  rescheduleMatches,
 } from '../services/matchService';
 import { runDraw } from '../services/drawService';
 import { computeModalityRanking } from '../services/rankingService';
@@ -339,6 +340,19 @@ export function useMarkMatchInProgress(modalityId) {
   return useMutation({
     mutationFn: (matchId) => markMatchInProgress(matchId, user),
     onSuccess: () => qc.invalidateQueries({ queryKey: ['matches', modalityId] }),
+  });
+}
+
+export function useRescheduleMatches(modalityId) {
+  const { user } = useAuth();
+  const qc = useQueryClient();
+  return useMutation({
+    mutationFn: ({ stageIndex = 0, modality, tournament }) =>
+      rescheduleMatches(modalityId, stageIndex, modality, tournament, user),
+    onSuccess: () => {
+      qc.invalidateQueries({ queryKey: ['matches', modalityId] });
+      qc.invalidateQueries({ queryKey: ['matches-tournament'] });
+    },
   });
 }
 

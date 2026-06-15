@@ -115,7 +115,13 @@ export async function runDraw(params, actor) {
   //    encontrando-se nas fases finais).
   const groupStrategy = balanced ? 'tiered' : 'shuffle';
   let seedCount = stage.seed_count || 0;
-  if (balanced && stage.type === TOURNAMENT_STAGE_TYPE.KNOCKOUT) {
+  const bracketTypes = [
+    TOURNAMENT_STAGE_TYPE.KNOCKOUT,
+    TOURNAMENT_STAGE_TYPE.DOUBLE_KNOCKOUT,
+  ];
+  if (balanced && bracketTypes.includes(stage.type)) {
+    // Em chaves, o nível vira cabeça-de-chave: os mais fortes ficam em lados
+    // opostos e só se encontram nas fases finais.
     seedCount = participants.length;
   }
 

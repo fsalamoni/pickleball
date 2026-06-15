@@ -224,6 +224,63 @@ export async function markMatchInProgress(matchId, actor) {
   await createAuditLog({ action: 'match_started', actor, details: { match_id: matchId } });
 }
 
+/**
+ * Reagenda (recalcula quadras e horários) os jogos de uma fase SEM alterar os
+ * confrontos. Útil após substituições, troca de configuração de quadras/horário
+ * ou simplesmente para reorganizar a grade. Bloqueia se algum jogo já começou
+ * ou terminou, para não bagunçar o andamento.
+ *
+ * @param {string} modalityId
+ * @param {number} stageIndex
+ * @param {object} modality modalidade (com a config de agendamento)
+ * @param {object|null} tournament torneio (para data base, opcional)
+ * @param {object} actor
+ * @returns {Promise<{ scheduleWarnings: string[], count: number }>}
+ */
+export async function rescheduleMatches(modalityId, stageIndex, modality, tournament, actor) {
+  const all = await listMatches(modalityId, stageIndex);
+  if (all.length === 0) {
+    throw new Error('Não há jogos para reagendar. Faça o sorteio primeiro.');
+  }
+  const started = all.filter(
+    (m) => m.status === MATCH_STATUS.IN_PROGRESS || m.status === MATCH_STATUS.FINISHED,
+  );
+  if (started.length > 0) {
+    throw new Error(
+      'Já existem jogos em andamento ou encerrados. Não é possível reagendar sem afetar o andamento.',
+    );
+  }
+
+  const schedulable = all.filter((m) => m.status !== MATCH_STATUS.WALKOVER);
+  const { byMatchId, warnings } = assignSchedule(schedulable, modality || {}, {
+    fallbackDate: tournament?.starts_at || null,
+  });
+
+  const batch = writeBatch(db);
+  all.forEach((m) => {
+    const slot = byMatchId.get(m.id);
+    batch.update(doc(db, COL, m.id), {
+      court: slot?.court ?? null,
+      court_index: slot?.court_index ?? null,
+      slot: slot?.slot ?? null,
+      scheduled_at: slot?.scheduled_at ?? null,
+      updated_at: serverTimestamp(),
+    });
+  });
+  await batch.commit();
+  await createAuditLog({
+    action: 'matches_rescheduled',
+    actor,
+    details: {
+      modality_id: modalityId,
+      stage_index: stageIndex,
+      count: schedulable.length,
+      schedule_warnings: warnings.length,
+    },
+  });
+  return { scheduleWarnings: warnings, count: schedulable.length };
+}
+
 export async function reShuffleRemainingMatches(modalityId, stageIndex, actor) {
   const allMatches = await listMatches(modalityId, stageIndex);
   const doneStatuses = new Set([MATCH_STATUS.FINISHED, MATCH_STATUS.WALKOVER]);

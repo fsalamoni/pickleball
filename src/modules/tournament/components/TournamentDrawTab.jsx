@@ -11,7 +11,7 @@ import {
   DialogFooter,
   DialogDescription,
 } from '@/components/ui/dialog';
-import { Shuffle, AlertTriangle, Pencil, ListRestart } from 'lucide-react';
+import { Shuffle, AlertTriangle, Pencil, ListRestart, CalendarClock } from 'lucide-react';
 import { toast } from 'sonner';
 import {
   useModalities,
@@ -20,6 +20,7 @@ import {
   useRegistrations,
   useSubstitutePlayer,
   useReShuffleRemainingMatches,
+  useRescheduleMatches,
 } from '@/modules/tournament/hooks/useTournament';
 import {
   TOURNAMENT_STAGE_TYPE_LABELS,
@@ -59,6 +60,7 @@ export default function TournamentDrawTab({ tournament, isAdmin }) {
 function ModalityDrawBlock({ tournament, modality, isAdmin }) {
   const drawMutation = useRunDraw();
   const reShuffleMutation = useReShuffleRemainingMatches(modality.id);
+  const rescheduleMutation = useRescheduleMatches(modality.id);
   const { data: matches = [] } = useMatches(modality.id, 0);
   const { data: registrations = [] } = useRegistrations(modality.id);
   const [running, setRunning] = useState(false);
@@ -87,6 +89,38 @@ function ModalityDrawBlock({ tournament, modality, isAdmin }) {
   const playedCount = matches.filter((m) => doneStatuses.has(m.status)).length;
   const pendingCount = matches.length - playedCount;
   const canReshuffleRemaining = isAdmin && playedCount > 0 && pendingCount > 0;
+
+  // Resumo do agendamento (quadras/horários).
+  const startedCount = matches.filter(
+    (m) => m.status === MATCH_STATUS.FINISHED || m.status === MATCH_STATUS.IN_PROGRESS,
+  ).length;
+  const playableMatches = matches.filter((m) => m.status !== MATCH_STATUS.WALKOVER);
+  const scheduledCount = playableMatches.filter((m) => m.scheduled_at || m.court).length;
+  const unscheduledCount = playableMatches.length - scheduledCount;
+  const canReschedule = isAdmin && matches.length > 0 && startedCount === 0;
+
+  async function performReschedule() {
+    setRunning(true);
+    try {
+      const { scheduleWarnings } = await rescheduleMutation.mutateAsync({
+        stageIndex: 0,
+        modality,
+        tournament,
+      });
+      const warns = scheduleWarnings || [];
+      if (warns.length > 0) {
+        toast.warning(
+          `Jogos reagendados, mas ${warns.length} não couberam na janela de horário. Ajuste quadras ou horário de término.`,
+        );
+      } else {
+        toast.success('Jogos reagendados nas quadras e horários.');
+      }
+    } catch (err) {
+      toast.error(err?.message || 'Falha ao reagendar.');
+    } finally {
+      setRunning(false);
+    }
+  }
 
   async function performDraw() {
     setError(null);
@@ -144,6 +178,17 @@ function ModalityDrawBlock({ tournament, modality, isAdmin }) {
           </div>
           {isAdmin && (
             <div className="flex gap-2 flex-wrap">
+              {canReschedule && (
+                <Button
+                  size="sm"
+                  variant="outline"
+                  onClick={performReschedule}
+                  disabled={running}
+                  title="Recalcular quadras e horários sem alterar os confrontos"
+                >
+                  <CalendarClock className="w-4 h-4 mr-1" /> Reagendar
+                </Button>
+              )}
               {canReshuffleRemaining && (
                 <Button
                   size="sm"
@@ -160,6 +205,24 @@ function ModalityDrawBlock({ tournament, modality, isAdmin }) {
             </div>
           )}
         </div>
+
+        {matches.length > 0 && (scheduledCount > 0 || unscheduledCount > 0) && (
+          <div className="mt-2 flex flex-wrap items-center gap-2 text-xs">
+            <span className="inline-flex items-center gap-1 text-slate-600">
+              <CalendarClock className="w-3.5 h-3.5" />
+              {modality.court_count || 1} quadra(s) · {modality.match_duration_minutes || 30} min/jogo
+              {modality.play_start_time ? ` · início ${modality.play_start_time}` : ''}
+            </span>
+            {scheduledCount > 0 && (
+              <Badge variant="secondary">{scheduledCount} jogo(s) com horário</Badge>
+            )}
+            {unscheduledCount > 0 && (
+              <Badge variant="secondary" className="bg-amber-100 text-amber-800">
+                {unscheduledCount} sem horário
+              </Badge>
+            )}
+          </div>
+        )}
 
         {error && (
           <div className="mt-3 flex items-start gap-2 rounded border border-red-200 bg-red-50 p-2 text-xs text-red-700">

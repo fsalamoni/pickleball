@@ -7,6 +7,8 @@
  */
 
 import { MODALITY_FORMAT } from './constants.js';
+import { buildDoubleEliminationBracket } from './doubleElimination.js';
+import { pairSwissRound } from './swiss.js';
 
 /* ----------------------------- RNG semeado ------------------------------- */
 
@@ -604,6 +606,40 @@ export function generateDraw(input) {
   if (stageType === 'knockout') {
     const { slots, matches, totalRounds } = buildKnockoutBracket(participants, { seedCount, seed });
     return { stageType, bracket: { slots, totalRounds }, matches };
+  }
+  if (stageType === 'double_knockout') {
+    // Gera a chave completa; persistimos os jogos jogáveis da 1ª rodada da
+    // chave de vencedores (os demais dependem dos resultados, como no mata-mata
+    // simples). A estrutura da chave fica disponível como metadado.
+    const bracket = buildDoubleEliminationBracket(participants, { seedCount, seed });
+    const matches = bracket.wb
+      .filter((m) => m.round === 1)
+      .map((m) => ({
+        round: 1,
+        position: m.position,
+        side_a: m.side_a,
+        side_b: m.side_b,
+        bye: Boolean(m.bye),
+      }));
+    return {
+      stageType,
+      bracket: { size: bracket.size, wbRounds: bracket.wbRounds, lbRounds: bracket.lbRounds },
+      matches,
+    };
+  }
+  if (stageType === 'swiss') {
+    // Pareamento da 1ª rodada (sem pontuação ainda). As rodadas seguintes são
+    // pareadas conforme a classificação, após os resultados.
+    const standings = participants.map((id) => ({ id, points: 0, byesReceived: 0 }));
+    const { pairings } = pairSwissRound(standings, [], { round: 1, seed });
+    const matches = pairings.map((p, i) => ({
+      round: 1,
+      position: i + 1,
+      side_a: p.side_a,
+      side_b: p.side_b ?? null,
+      bye: Boolean(p.bye),
+    }));
+    return { stageType, matches };
   }
   throw new Error(`Tipo de fase desconhecido: ${stageType}`);
 }

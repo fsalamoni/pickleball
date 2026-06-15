@@ -274,4 +274,42 @@ describe('draw engine', () => {
     expect(amDraw.stageType).toBe('americano');
     expect(amDraw.matches).toHaveLength(3);
   });
+
+  it('generateDraw: sistema suíço gera a 1ª rodada (N/2 jogos, sem repetir jogador)', () => {
+    const players = ['a', 'b', 'c', 'd', 'e', 'f'];
+    const draw = generateDraw({ format: 'singles', stageType: 'swiss', participants: players, seed: 'fixed' });
+    expect(draw.stageType).toBe('swiss');
+    expect(draw.matches).toHaveLength(3); // 6 jogadores → 3 jogos
+    const seen = new Set();
+    draw.matches.forEach((m) => {
+      [m.side_a, m.side_b].filter(Boolean).forEach((p) => {
+        expect(seen.has(p)).toBe(false);
+        seen.add(p);
+      });
+    });
+    expect(seen.size).toBe(6);
+  });
+
+  it('generateDraw: suíço com N ímpar gera um BYE', () => {
+    const draw = generateDraw({ format: 'singles', stageType: 'swiss', participants: ['a', 'b', 'c'], seed: 'fixed' });
+    const byes = draw.matches.filter((m) => m.bye);
+    expect(byes).toHaveLength(1);
+    expect(byes[0].side_b).toBeNull();
+  });
+
+  it('generateDraw: dupla eliminação gera a 1ª rodada da chave de vencedores', () => {
+    const players = ['a', 'b', 'c', 'd', 'e', 'f', 'g', 'h'];
+    const draw = generateDraw({ format: 'singles', stageType: 'double_knockout', participants: players, seed: 'fixed' });
+    expect(draw.stageType).toBe('double_knockout');
+    expect(draw.matches).toHaveLength(4); // 8 jogadores → 4 jogos na 1ª rodada
+    expect(draw.bracket.size).toBe(8);
+    const flat = draw.matches.flatMap((m) => [m.side_a, m.side_b]).filter(Boolean).sort();
+    expect(flat).toEqual(players.slice().sort());
+  });
+
+  it('generateDraw: dupla eliminação com N não-potência-de-2 marca byes', () => {
+    const draw = generateDraw({ format: 'doubles', stageType: 'double_knockout', participants: ['a', 'b', 'c', 'd', 'e'], seed: 'fixed' });
+    expect(draw.bracket.size).toBe(8);
+    expect(draw.matches.some((m) => m.bye)).toBe(true);
+  });
 });
