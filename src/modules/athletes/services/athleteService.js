@@ -21,14 +21,12 @@ import {
 } from 'firebase/firestore';
 import { db } from '@/core/config/firebase';
 import { logger } from '@/core/lib/logger';
-import { calculateAge } from '@/core/lib/profileValidation';
-import { ATHLETE_DIRECTORY_COLLECTION, ATHLETE_PRIVACY_FIELDS } from '../domain/constants.js';
+import { ATHLETE_DIRECTORY_COLLECTION } from '../domain/constants.js';
+import { buildAthletePublicProfile } from '../domain/publicProfile.js';
 
 const CLUB_MEMBERS_COLLECTION = 'club_members';
 
-function trimmed(value) {
-  return String(value ?? '').trim();
-}
+export { buildAthletePublicProfile };
 
 /**
  * Busca os clubes de um usuário (best-effort) para enriquecer o diretório.
@@ -49,45 +47,6 @@ async function listUserClubsSummary(uid) {
 }
 
 /**
- * Constrói a projeção pública do perfil respeitando as preferências de
- * privacidade. Campos privados são omitidos (string vazia), nunca expostos.
- */
-export function buildAthletePublicProfile(uid, profile = {}, clubs = []) {
-  const name = trimmed(profile.platform_name) || trimmed(profile.full_name) || trimmed(profile.email).split('@')[0] || 'Atleta';
-  const age = profile.birth_date ? calculateAge(profile.birth_date) : null;
-
-  const phonePublic = profile[ATHLETE_PRIVACY_FIELDS.PHONE] === true;
-  const emailPublic = profile[ATHLETE_PRIVACY_FIELDS.EMAIL] === true;
-  const addressPublic = profile[ATHLETE_PRIVACY_FIELDS.ADDRESS] === true;
-
-  return {
-    uid,
-    platform_name: name,
-    age: Number.isFinite(age) ? age : null,
-    gender: profile.gender || null,
-    city: trimmed(profile.city) || null,
-    state: trimmed(profile.state) || null,
-    level: profile.level || null,
-    leveling_level: profile.leveling_level || null,
-    pickleball_experience: profile.pickleball_experience || null,
-    photo_url: profile.photo_url || '',
-    // Clubes (best-effort, atualizado a cada sincronização).
-    clubs: clubs.map((c) => ({ id: c.id, name: c.name })),
-    club_ids: clubs.map((c) => c.id),
-    // Contatos: publicados apenas se autorizado.
-    phone_public: phonePublic,
-    phone: phonePublic ? trimmed(profile.phone) : '',
-    email_public: emailPublic,
-    email: emailPublic ? trimmed(profile.email) : '',
-    address_public: addressPublic,
-    address: addressPublic ? trimmed(profile.address) : '',
-    // Controle de listagem no diretório (padrão: listado).
-    directory_listed: profile.directory_listed !== false,
-    updated_at: serverTimestamp(),
-  };
-}
-
-/**
  * Sincroniza o documento público do atleta. Defensivo: nunca lança erro para
  * não interromper fluxos críticos (login, salvar perfil).
  */
@@ -97,7 +56,11 @@ export async function syncAthleteProfile(user, profile = {}) {
     const merged = { email: user.email, photo_url: user.photoURL || '', ...profile };
     const clubs = await listUserClubsSummary(user.uid);
     const publicProfile = buildAthletePublicProfile(user.uid, merged, clubs);
-    await setDoc(doc(db, ATHLETE_DIRECTORY_COLLECTION, user.uid), publicProfile, { merge: true });
+    await setDoc(
+      doc(db, ATHLETE_DIRECTORY_COLLECTION, user.uid),
+      { ...publicProfile, updated_at: serverTimestamp() },
+      { merge: true },
+    );
   } catch (err) {
     logger.error('Falha ao sincronizar perfil de atleta no diretório:', err);
   }
