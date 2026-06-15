@@ -13,6 +13,7 @@ import { calculateAssessment } from '@/modules/leveling/domain/questionnaire';
 import LevelingQuestionnaire from '@/modules/leveling/components/LevelingQuestionnaire';
 import LevelingResultCard from '@/modules/leveling/components/LevelingResultCard';
 import { PICKLEBALL_EXPERIENCE_LABELS, COMPETITION_GENDER_LABELS } from '@/modules/tournament/domain/constants';
+import ParticipationHistoryCard from '@/modules/tournament/components/ParticipationHistoryCard';
 
 export default function Profile() {
   const { user, userProfile, updateUserProfile } = useAuth();
@@ -266,6 +267,8 @@ export default function Profile() {
           </form>
         </CardContent>
       </Card>
+
+      <ParticipationHistoryCard />
 
       <Card className="overflow-hidden">
         <CardHeader className="border-b border-emerald-950/10 bg-white/45 p-4 sm:p-5">
