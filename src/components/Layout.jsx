@@ -18,6 +18,8 @@ import {
   HeartHandshake,
   FolderCog,
   Sparkles,
+  Users,
+  Building2,
 } from 'lucide-react';
 import { useAuth } from '@/core/lib/FirebaseAuthContext';
 import { useMyTournaments } from '@/modules/tournament/hooks/useTournament';
@@ -69,6 +71,26 @@ const PAGE_META = {
     eyebrow: 'Explorar',
     title: 'Torneios públicos',
     description: 'Descubra eventos abertos e acompanhe oportunidades de participação.',
+  },
+  AthletesDirectory: {
+    eyebrow: 'Explorar',
+    title: 'Atletas',
+    description: 'Conheça os atletas da comunidade e encontre parceiros de jogo.',
+  },
+  ClubsDirectory: {
+    eyebrow: 'Explorar',
+    title: 'Clubes',
+    description: 'Descubra clubes, crie o seu e organize sua turma.',
+  },
+  CreateClub: {
+    eyebrow: 'Comunidade',
+    title: 'Criar clube',
+    description: 'Cadastre seu clube e convide atletas para participar.',
+  },
+  ClubDetail: {
+    eyebrow: 'Comunidade',
+    title: 'Clube',
+    description: 'Membros, eventos, mural e administração do clube.',
   },
   Tournament: {
     eyebrow: 'Evento',
@@ -238,6 +260,20 @@ export default function Layout({ children, currentPageName }) {
                 icon={Globe}
                 label="Torneios públicos"
                 active={currentPageName === 'PublicTournamentsList'}
+                onClick={() => setSidebarOpen(false)}
+              />
+              <NavItem
+                to="/atletas"
+                icon={Users}
+                label="Atletas"
+                active={currentPageName === 'AthletesDirectory'}
+                onClick={() => setSidebarOpen(false)}
+              />
+              <NavItem
+                to="/clubes"
+                icon={Building2}
+                label="Clubes"
+                active={currentPageName === 'ClubsDirectory' || currentPageName === 'CreateClub' || currentPageName === 'ClubDetail'}
                 onClick={() => setSidebarOpen(false)}
               />
               <NavItem
