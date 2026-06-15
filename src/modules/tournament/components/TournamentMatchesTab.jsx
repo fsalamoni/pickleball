@@ -43,6 +43,13 @@ export default function TournamentMatchesTab({ tournament, isAdmin }) {
   );
 }
 
+function formatMatchTime(iso) {
+  if (!iso) return '—';
+  const d = new Date(iso);
+  if (Number.isNaN(d.getTime())) return '—';
+  return d.toLocaleTimeString('pt-BR', { hour: '2-digit', minute: '2-digit' });
+}
+
 function statusBadgeVariant(status) {
   if (status === MATCH_STATUS.FINISHED || status === MATCH_STATUS.WALKOVER) return 'success';
   if (status === MATCH_STATUS.IN_PROGRESS) return 'warning';
@@ -73,6 +80,7 @@ function ModalityMatchesBlock({ tournament, modality, isAdmin }) {
   }
 
   const hasGroups = matches.some((m) => m.group);
+  const hasSchedule = matches.some((m) => m.court || m.scheduled_at);
 
   return (
     <Card>
@@ -92,6 +100,8 @@ function ModalityMatchesBlock({ tournament, modality, isAdmin }) {
                 <tr className="text-left">
                   {hasGroups && <th className="px-3 py-2">Grupo</th>}
                   <th className="px-3 py-2">Rod.</th>
+                  {hasSchedule && <th className="px-3 py-2">Quadra</th>}
+                  {hasSchedule && <th className="px-3 py-2">Horário</th>}
                   <th className="px-3 py-2">Partida</th>
                   <th className="px-3 py-2">Placar (sets)</th>
                   <th className="px-3 py-2">Status</th>
@@ -113,6 +123,8 @@ function ModalityMatchesBlock({ tournament, modality, isAdmin }) {
                     >
                       {hasGroups && <td className="px-3 py-2">{m.group || '—'}</td>}
                       <td className="px-3 py-2">{m.round}</td>
+                      {hasSchedule && <td className="px-3 py-2">{m.court || '—'}</td>}
+                      {hasSchedule && <td className="px-3 py-2 tabular-nums">{formatMatchTime(m.scheduled_at)}</td>}
                       <td className="px-3 py-2">
                         <div className={`flex items-center gap-1 ${winA ? 'font-bold text-emerald-700' : 'font-medium'}`}>
                           {winA && <Trophy className="w-3.5 h-3.5 text-emerald-600" aria-label="Vencedor" />}

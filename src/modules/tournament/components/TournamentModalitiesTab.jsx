@@ -35,6 +35,12 @@ import {
   MAX_REGISTRATIONS_PER_MODALITY,
 } from '@/modules/tournament/domain/constants';
 import { DEFAULT_MAX_ENTRIES, hasUnlimitedEntries } from '@/modules/tournament/domain/capacity';
+import {
+  DEFAULT_COURT_COUNT,
+  DEFAULT_MATCH_DURATION_MINUTES,
+  MAX_COURT_COUNT,
+  computeWindowSlots,
+} from '@/modules/tournament/domain/scheduling';
 import StageExplanation from './StageExplanation';
 
 const PREVIEW_PLAYER_COUNT = 8;
@@ -50,6 +56,11 @@ const emptyForm = {
   stage_type: TOURNAMENT_STAGE_TYPE.ROUND_ROBIN,
   group_count: 1,
   seed_count: 0,
+  court_count: DEFAULT_COURT_COUNT,
+  match_duration_minutes: DEFAULT_MATCH_DURATION_MINUTES,
+  play_date: '',
+  play_start_time: '',
+  play_end_time: '',
   notes: '',
 };
 
@@ -68,6 +79,11 @@ function buildFormState(modality) {
     stage_type: stage.type || TOURNAMENT_STAGE_TYPE.ROUND_ROBIN,
     group_count: stage.group_count || 1,
     seed_count: stage.seed_count || 0,
+    court_count: modality.court_count || DEFAULT_COURT_COUNT,
+    match_duration_minutes: modality.match_duration_minutes || DEFAULT_MATCH_DURATION_MINUTES,
+    play_date: modality.play_date || '',
+    play_start_time: modality.play_start_time || '',
+    play_end_time: modality.play_end_time || '',
     notes: modality.notes || '',
   };
 }
@@ -130,6 +146,13 @@ export default function TournamentModalitiesTab({ tournament, isAdmin }) {
 
   async function handleSave() {
     if (!form.name.trim()) return toast.error('Informe um nome.');
+    if (
+      form.play_start_time &&
+      form.play_end_time &&
+      form.play_end_time <= form.play_start_time
+    ) {
+      return toast.error('O horário de término deve ser depois do horário de início.');
+    }
     const payload = {
       name: form.name,
       format: form.format,
@@ -138,6 +161,11 @@ export default function TournamentModalitiesTab({ tournament, isAdmin }) {
       age_category: form.age_category,
       max_entries: form.has_unlimited_entries ? null : form.max_entries,
       entry_fee_cents: Math.round(Number(form.entry_fee_brl || 0) * 100),
+      court_count: form.court_count,
+      match_duration_minutes: form.match_duration_minutes,
+      play_date: form.play_date,
+      play_start_time: form.play_start_time,
+      play_end_time: form.play_end_time,
       stages: [
         {
           type: form.stage_type,
@@ -208,6 +236,13 @@ export default function TournamentModalitiesTab({ tournament, isAdmin }) {
                       Vagas: {hasUnlimitedEntries(m.max_entries) ? 'abertas' : m.max_entries} · Taxa: R${' '}
                       {((m.entry_fee_cents || 0) / 100).toFixed(2).replace('.', ',')} · Fase:{' '}
                       {TOURNAMENT_STAGE_TYPE_LABELS[m.stages?.[0]?.type] || '—'}
+                    </div>
+                    <div className="text-xs text-slate-500 mt-1">
+                      {m.court_count || DEFAULT_COURT_COUNT} quadra(s) ·{' '}
+                      {m.match_duration_minutes || DEFAULT_MATCH_DURATION_MINUTES} min/jogo
+                      {m.play_start_time ? ` · ${m.play_start_time}` : ''}
+                      {m.play_start_time && m.play_end_time ? `–${m.play_end_time}` : ''}
+                      {m.play_date ? ` · ${m.play_date}` : ''}
                     </div>
                   </div>
                   {isAdmin && (
@@ -328,6 +363,65 @@ export default function TournamentModalitiesTab({ tournament, isAdmin }) {
                 />
               </div>
             </div>
+
+            <div className="rounded-md border border-slate-200 p-3 space-y-3">
+              <div>
+                <Label className="text-sm font-semibold">Quadras e horários</Label>
+                <p className="text-xs text-slate-500">
+                  O sorteio usa estes dados para marcar cada jogo em uma quadra e horário, sem
+                  conflito de jogadores e equilibrando a participação ao longo do dia.
+                </p>
+              </div>
+              <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
+                <div>
+                  <Label>Quadras disponíveis</Label>
+                  <Input
+                    type="number"
+                    min={1}
+                    max={MAX_COURT_COUNT}
+                    value={form.court_count}
+                    onChange={(e) => set('court_count', e.target.value)}
+                  />
+                </div>
+                <div>
+                  <Label>Duração média do jogo (min)</Label>
+                  <Input
+                    type="number"
+                    min={5}
+                    max={600}
+                    value={form.match_duration_minutes}
+                    onChange={(e) => set('match_duration_minutes', e.target.value)}
+                  />
+                </div>
+                <div>
+                  <Label>Data dos jogos (opcional)</Label>
+                  <Input
+                    type="date"
+                    value={form.play_date}
+                    onChange={(e) => set('play_date', e.target.value)}
+                  />
+                </div>
+                <div className="grid grid-cols-2 gap-2">
+                  <div>
+                    <Label>Início</Label>
+                    <Input
+                      type="time"
+                      value={form.play_start_time}
+                      onChange={(e) => set('play_start_time', e.target.value)}
+                    />
+                  </div>
+                  <div>
+                    <Label>Término (opcional)</Label>
+                    <Input
+                      type="time"
+                      value={form.play_end_time}
+                      onChange={(e) => set('play_end_time', e.target.value)}
+                    />
+                  </div>
+                </div>
+              </div>
+              <ScheduleHint form={form} />
+            </div>
             <div>
               <Label>Observações (opcional)</Label>
               <Input value={form.notes} onChange={(e) => set('notes', e.target.value)} />
@@ -342,6 +436,27 @@ export default function TournamentModalitiesTab({ tournament, isAdmin }) {
         </DialogContent>
       </Dialog>
     </div>
+  );
+}
+
+function ScheduleHint({ form }) {
+  const courts = Number(form.court_count) || 1;
+  const duration = Number(form.match_duration_minutes) || 0;
+  const slots = computeWindowSlots(form.play_start_time, form.play_end_time, duration);
+  if (slots == null) {
+    return (
+      <p className="text-xs text-slate-500">
+        {courts} quadra(s) · {duration || '—'} min por jogo
+        {form.play_start_time ? ` · a partir das ${form.play_start_time}` : ''}.
+      </p>
+    );
+  }
+  const capacity = slots * courts;
+  return (
+    <p className="text-xs text-slate-600">
+      Janela de {form.play_start_time}–{form.play_end_time}: cabem cerca de{' '}
+      <strong>{capacity}</strong> jogo(s) ({slots} horário(s) × {courts} quadra(s), {duration} min cada).
+    </p>
   );
 }
 

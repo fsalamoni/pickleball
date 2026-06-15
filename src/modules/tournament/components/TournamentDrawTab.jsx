@@ -27,6 +27,13 @@ import {
   MATCH_STATUS,
 } from '@/modules/tournament/domain/constants';
 
+function formatMatchTime(iso) {
+  if (!iso) return '—';
+  const d = new Date(iso);
+  if (Number.isNaN(d.getTime())) return '—';
+  return d.toLocaleTimeString('pt-BR', { hour: '2-digit', minute: '2-digit' });
+}
+
 export default function TournamentDrawTab({ tournament, isAdmin }) {
   const { data: modalities = [] } = useModalities(tournament.id);
 
@@ -85,12 +92,18 @@ function ModalityDrawBlock({ tournament, modality, isAdmin }) {
     setError(null);
     setRunning(true);
     try {
-      await drawMutation.mutateAsync({
+      const result = await drawMutation.mutateAsync({
         tournamentId: tournament.id,
         modalityId: modality.id,
         stageIndex: 0,
       });
       toast.success('Sorteio realizado!');
+      const warns = result?.scheduleWarnings || [];
+      if (warns.length > 0) {
+        toast.warning(
+          `${warns.length} jogo(s) não couberam na janela de horário definida. Revise as quadras ou o horário de término da modalidade.`,
+        );
+      }
       setConfirmOpen(false);
     } catch (err) {
       const message = err?.message || 'Falha ao sortear.';
@@ -116,6 +129,7 @@ function ModalityDrawBlock({ tournament, modality, isAdmin }) {
 
   const stageName = modality.stages?.[0]?.name || 'fase 1';
   const hasGroups = matches.some((m) => m.group);
+  const hasSchedule = matches.some((m) => m.court || m.scheduled_at);
 
   return (
     <Card>
@@ -165,6 +179,8 @@ function ModalityDrawBlock({ tournament, modality, isAdmin }) {
                   <th className="px-3 py-2">#</th>
                   {hasGroups && <th className="px-3 py-2">Grupo</th>}
                   <th className="px-3 py-2">Rod.</th>
+                  {hasSchedule && <th className="px-3 py-2">Quadra</th>}
+                  {hasSchedule && <th className="px-3 py-2">Horário</th>}
                   <th className="px-3 py-2">Lado A</th>
                   <th className="px-3 py-2">Lado B</th>
                   <th className="px-3 py-2">Status</th>
@@ -176,6 +192,8 @@ function ModalityDrawBlock({ tournament, modality, isAdmin }) {
                     <td className="px-3 py-2">{i + 1}</td>
                     {hasGroups && <td className="px-3 py-2">{m.group || '—'}</td>}
                     <td className="px-3 py-2">{m.round}</td>
+                    {hasSchedule && <td className="px-3 py-2">{m.court || '—'}</td>}
+                    {hasSchedule && <td className="px-3 py-2 tabular-nums">{formatMatchTime(m.scheduled_at)}</td>}
                     <td className="px-3 py-2">
                       <SideCell
                         ids={m.side_a_ids}

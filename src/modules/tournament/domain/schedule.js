@@ -32,6 +32,7 @@
  *   slotMinutes?: number,
  *   restSlots?: number,
  *   startAt?: string|Date|null,
+ *   maxSlots?: number,
  * }} options
  * @returns {{
  *   assignments: Array<{ match_id: string, court_id: string, slot: number, start_at: string|null }>,
@@ -40,7 +41,12 @@
  * }}
  */
 export function scheduleMatches(matches, options) {
-  const { courts, slotMinutes = 45, restSlots = 1, startAt = null } = options;
+  const { courts, slotMinutes = 45, restSlots = 1, startAt = null, maxSlots = null } = options;
+  // Limite rígido de slots (janela de término). Quando definido, um jogo que
+  // não couber dentro de [0, maxSlots) não é agendado (court/slot nulos) e um
+  // aviso é emitido — preferimos não agendar a criar conflitos.
+  const hasCap = Number.isFinite(maxSlots) && maxSlots >= 0;
+  const slotCap = hasCap ? Math.floor(maxSlots) : 10000;
   if (!Array.isArray(courts) || courts.length === 0) {
     return { assignments: [], totalSlots: 0, warnings: ['Nenhuma quadra disponível.'] };
   }
@@ -68,7 +74,7 @@ export function scheduleMatches(matches, options) {
     let chosenCourt = null;
     let chosenSlot = null;
 
-    for (let slot = 0; slot < 10000 && chosenSlot === null; slot += 1) {
+    for (let slot = 0; slot + duration <= slotCap && chosenSlot === null; slot += 1) {
       for (const court of courts) {
         const busy = courtBusy.get(court.id);
         let ok = true;
@@ -91,7 +97,11 @@ export function scheduleMatches(matches, options) {
     }
 
     if (chosenSlot === null) {
-      warnings.push(`Sem horário disponível para o jogo ${m.id}.`);
+      warnings.push(
+        hasCap
+          ? `O jogo ${m.id} não coube na janela de horário definida (término muito cedo para a quantidade de quadras).`
+          : `Sem horário disponível para o jogo ${m.id}.`,
+      );
       continue;
     }
 

@@ -55,21 +55,42 @@ export function shuffle(list, rng) {
  * Suporta "seeds" (cabeças-de-chave) — os primeiros `seedCount` itens da lista
  * de entrada são distribuídos um por grupo antes do sorteio dos demais.
  *
+ * Estratégias:
+ *  - 'shuffle' (padrão): sorteia os não-cabeças e distribui em round-robin.
+ *  - 'tiered': preserva a ordem recebida (já ordenada por nível/gênero) e
+ *    preenche os grupos com blocos contíguos, formando grupos homogêneos —
+ *    níveis próximos no mesmo grupo (assim os fortes se enfrentam entre si) e
+ *    duplas do mesmo gênero juntas, dentro do possível.
+ *
  * @param {string[]} participantIds
- * @param {{ groupCount: number, seedCount?: number, seed?: string }} options
+ * @param {{ groupCount: number, seedCount?: number, seed?: string, strategy?: 'shuffle'|'tiered' }} options
  * @returns {Array<{ name: string, participants: string[] }>}
  */
 export function distributeGroups(participantIds, options) {
-  const { groupCount, seedCount = 0, seed = 'groups' } = options;
+  const { groupCount, seedCount = 0, seed = 'groups', strategy = 'shuffle' } = options;
   if (groupCount <= 0) return [];
   if (!participantIds || participantIds.length === 0) return [];
 
-  const rng = seededRng(seed);
   const groups = Array.from({ length: groupCount }, (_, i) => ({
     name: `Grupo ${String.fromCharCode(65 + i)}`,
     participants: [],
   }));
 
+  if (strategy === 'tiered') {
+    // Tamanhos equilibrados: os primeiros (resto) grupos recebem um a mais.
+    const total = participantIds.length;
+    const base = Math.floor(total / groupCount);
+    const extra = total % groupCount;
+    let cursor = 0;
+    for (let g = 0; g < groupCount; g += 1) {
+      const size = base + (g < extra ? 1 : 0);
+      groups[g].participants = participantIds.slice(cursor, cursor + size);
+      cursor += size;
+    }
+    return groups;
+  }
+
+  const rng = seededRng(seed);
   const seeds = participantIds.slice(0, seedCount);
   const rest = shuffle(participantIds.slice(seedCount), rng);
 
@@ -562,6 +583,7 @@ export function generateDraw(input) {
     groupCount = 4,
     seedCount = 0,
     seed = 'draw',
+    groupStrategy = 'shuffle',
   } = input;
 
   if (stageType === 'americano') {
@@ -576,7 +598,7 @@ export function generateDraw(input) {
     return { stageType, matches: buildRoundRobinMatches(participants) };
   }
   if (stageType === 'groups') {
-    const groups = distributeGroups(participants, { groupCount, seedCount, seed });
+    const groups = distributeGroups(participants, { groupCount, seedCount, seed, strategy: groupStrategy });
     return { stageType, groups, matches: buildGroupMatches(groups) };
   }
   if (stageType === 'knockout') {

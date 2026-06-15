@@ -21,18 +21,34 @@ import { db } from '@/core/config/firebase';
 import { createAuditLog } from '@/core/services/auditService';
 import { MATCH_STATUS } from '../domain/constants.js';
 import { getMatchResult } from '../domain/scoring.js';
+import { assignSchedule } from '../domain/scheduling.js';
 
 const COL = 'tournament_matches';
 
-export async function persistMatches(tournamentId, modalityId, stageIndex, draw, actor) {
+/**
+ * Persiste os jogos gerados por um sorteio. Quando uma configuração de
+ * agendamento é fornecida (`scheduleOptions.schedulingConfig`), cada jogo é
+ * automaticamente alocado em uma quadra e horário, sem conflito de jogadores,
+ * respeitando a duração média e a janela de horários da modalidade.
+ *
+ * @param {string} tournamentId
+ * @param {string} modalityId
+ * @param {number} stageIndex
+ * @param {object} draw saída de generateDraw
+ * @param {object} actor
+ * @param {{ schedulingConfig?: object, fallbackDate?: string|Date|null }} [scheduleOptions]
+ * @returns {Promise<{ scheduleWarnings: string[] }>}
+ */
+export async function persistMatches(tournamentId, modalityId, stageIndex, draw, actor, scheduleOptions = {}) {
   const batch = writeBatch(db);
   // remove jogos anteriores da fase (se houver) → este re-sorteio sobrescreve
   const existing = await listMatches(modalityId, stageIndex);
   existing.forEach((m) => batch.delete(doc(db, COL, m.id)));
 
-  draw.matches.forEach((m, idx) => {
+  // 1) Monta os payloads (com ids estáveis) antes de agendar.
+  const payloads = draw.matches.map((m, idx) => {
     const id = doc(collection(db, COL)).id;
-    const payload = {
+    return {
       id,
       tournament_id: tournamentId,
       modality_id: modalityId,
@@ -50,12 +66,36 @@ export async function persistMatches(tournamentId, modalityId, stageIndex, draw,
       status: m.bye ? MATCH_STATUS.WALKOVER : MATCH_STATUS.SCHEDULED,
       scheduled_at: null,
       court: null,
+      court_index: null,
+      slot: null,
       result_recorded_at: null,
       created_at: serverTimestamp(),
       updated_at: serverTimestamp(),
     };
-    batch.set(doc(db, COL, id), payload);
   });
+
+  // 2) Agendamento automático em quadras/horários (somente jogos disputáveis;
+  // byes não ocupam quadra).
+  let scheduleWarnings = [];
+  if (scheduleOptions.schedulingConfig) {
+    const schedulable = payloads.filter((p) => p.status !== MATCH_STATUS.WALKOVER);
+    const { byMatchId, warnings } = assignSchedule(schedulable, scheduleOptions.schedulingConfig, {
+      fallbackDate: scheduleOptions.fallbackDate || null,
+    });
+    payloads.forEach((p) => {
+      const slot = byMatchId.get(p.id);
+      if (slot) {
+        p.court = slot.court;
+        p.court_index = slot.court_index;
+        p.slot = slot.slot;
+        p.scheduled_at = slot.scheduled_at;
+      }
+    });
+    scheduleWarnings = warnings;
+  }
+
+  // 3) Grava todos os jogos.
+  payloads.forEach((p) => batch.set(doc(db, COL, p.id), p));
 
   if (draw.groups) {
     // persiste a definição de grupos como metadados em tournament_groups
@@ -84,8 +124,15 @@ export async function persistMatches(tournamentId, modalityId, stageIndex, draw,
   await createAuditLog({
     action: 'matches_generated',
     actor,
-    details: { tournament_id: tournamentId, modality_id: modalityId, stage_index: stageIndex, count: draw.matches.length },
+    details: {
+      tournament_id: tournamentId,
+      modality_id: modalityId,
+      stage_index: stageIndex,
+      count: draw.matches.length,
+      schedule_warnings: scheduleWarnings.length,
+    },
   });
+  return { scheduleWarnings };
 }
 
 function serializeSide(side) {

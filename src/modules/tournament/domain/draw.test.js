@@ -235,6 +235,26 @@ describe('draw engine', () => {
     });
   });
 
+  it('distributeGroups tiered cria grupos homogêneos por ordem (sem sortear)', () => {
+    const ordered = ['s1', 's2', 's3', 's4', 's5'];
+    const groups = distributeGroups(ordered, { groupCount: 2, strategy: 'tiered' });
+    // 5 em 2 grupos → 3 + 2, em blocos contíguos
+    expect(groups[0].participants).toEqual(['s1', 's2', 's3']);
+    expect(groups[1].participants).toEqual(['s4', 's5']);
+  });
+
+  it('generateDraw aceita groupStrategy tiered', () => {
+    const draw = generateDraw({
+      format: 'singles',
+      stageType: 'groups',
+      participants: ['a', 'b', 'c', 'd'],
+      groupCount: 2,
+      groupStrategy: 'tiered',
+    });
+    expect(draw.groups[0].participants).toEqual(['a', 'b']);
+    expect(draw.groups[1].participants).toEqual(['c', 'd']);
+  });
+
   it('generateDraw entrega estrutura conforme stageType', () => {
     const groupsDraw = generateDraw({ format: 'singles', stageType: 'groups', participants: ['a', 'b', 'c', 'd'], groupCount: 2 });
     expect(groupsDraw.groups).toHaveLength(2);

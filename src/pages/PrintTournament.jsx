@@ -68,6 +68,13 @@ export default function PrintTournament() {
   );
 }
 
+function formatPrintTime(iso) {
+  if (!iso) return '—';
+  const d = new Date(iso);
+  if (Number.isNaN(d.getTime())) return '—';
+  return d.toLocaleTimeString('pt-BR', { hour: '2-digit', minute: '2-digit' });
+}
+
 function PrintModality({ modality }) {
   const { data: matches = [] } = useQuery({
     queryKey: ['print', 'matches', modality.id, 0],
@@ -101,6 +108,9 @@ function PrintModality({ modality }) {
       .map((id) => labelById.get(id.trim()) || id.trim())
       .join(' + ');
   }
+
+  const hasSchedule = matches.some((m) => m.court || m.scheduled_at);
+  const hasGroups = matches.some((m) => m.group);
 
   return (
     <section className="mb-6 break-inside-avoid print:break-after-page">
@@ -151,7 +161,9 @@ function PrintModality({ modality }) {
             <thead>
               <tr className="border-b">
                 <th className="py-1 text-left">Rod.</th>
-                {matches.some((m) => m.group) && <th className="py-1 text-left">Grupo</th>}
+                {hasGroups && <th className="py-1 text-left">Grupo</th>}
+                {hasSchedule && <th className="py-1 text-left">Quadra</th>}
+                {hasSchedule && <th className="py-1 text-left">Horário</th>}
                 <th className="py-1 text-left">Lado A</th>
                 <th className="py-1 text-left">Lado B</th>
                 <th className="py-1 text-right">Placar</th>
@@ -161,7 +173,9 @@ function PrintModality({ modality }) {
               {matches.map((m) => (
                 <tr key={m.id} className="border-b">
                   <td className="py-1">{m.round}</td>
-                  {matches.some((mm) => mm.group) && <td className="py-1">{m.group || '—'}</td>}
+                  {hasGroups && <td className="py-1">{m.group || '—'}</td>}
+                  {hasSchedule && <td className="py-1">{m.court || '—'}</td>}
+                  {hasSchedule && <td className="py-1 tabular-nums">{formatPrintTime(m.scheduled_at)}</td>}
                   <td className="py-1">{renderSide(m, 'side_a')}</td>
                   <td className="py-1">{renderSide(m, 'side_b')}</td>
                   <td className="py-1 text-right tabular-nums">

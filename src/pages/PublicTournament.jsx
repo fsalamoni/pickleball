@@ -18,6 +18,13 @@ import {
 } from '@/modules/tournament/domain/constants';
 import { useClipboard } from '@/core/lib/useClipboard';
 
+function formatPublicMatchTime(iso) {
+  if (!iso) return '—';
+  const d = new Date(iso);
+  if (Number.isNaN(d.getTime())) return '—';
+  return d.toLocaleTimeString('pt-BR', { hour: '2-digit', minute: '2-digit' });
+}
+
 /**
  * Página pública (sem autenticação) de visualização ao vivo de um torneio.
  * Inspirado em evroon/bracket e CourtHive/TMX — permite que espectadores,
@@ -246,6 +253,12 @@ function PublicModalityBlock({ modality }) {
                   <tr className="text-left">
                     <th className="px-3 py-2">Rod.</th>
                     {matches.some((m) => m.group) && <th className="px-3 py-2">Grupo</th>}
+                    {matches.some((m) => m.court || m.scheduled_at) && (
+                      <>
+                        <th className="px-3 py-2">Quadra</th>
+                        <th className="px-3 py-2">Horário</th>
+                      </>
+                    )}
                     <th className="px-3 py-2">Lado A</th>
                     <th className="px-3 py-2">Lado B</th>
                     <th className="px-3 py-2 text-right">Placar</th>
@@ -258,6 +271,12 @@ function PublicModalityBlock({ modality }) {
                       <td className="px-3 py-2">{m.round}</td>
                       {matches.some((mm) => mm.group) && (
                         <td className="px-3 py-2">{m.group || '—'}</td>
+                      )}
+                      {matches.some((mm) => mm.court || mm.scheduled_at) && (
+                        <>
+                          <td className="px-3 py-2">{m.court || '—'}</td>
+                          <td className="px-3 py-2 tabular-nums">{formatPublicMatchTime(m.scheduled_at)}</td>
+                        </>
                       )}
                       <td className="px-3 py-2">{renderSide(m, 'side_a')}</td>
                       <td className="px-3 py-2">{renderSide(m, 'side_b')}</td>

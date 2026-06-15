@@ -1,13 +1,55 @@
 /**
- * Serviço de sorteio: orquestra a geração e persistência das chaves/grupos.
+ * Serviço de sorteio: orquestra a geração e persistência das chaves/grupos,
+ * o equilíbrio das duplas/adversários (nível e gênero, dentro do possível) e o
+ * agendamento automático dos jogos em quadras e horários.
  */
 
 import { generateDraw } from '../domain/draw.js';
 import { stageFormatCompatibility } from '../domain/formatExplain.js';
+import { balancedParticipantOrder } from '../domain/seeding.js';
 import { listRegistrations } from './registrationService.js';
 import { persistMatches } from './matchService.js';
 import { getModality } from './modalityService.js';
-import { REGISTRATION_STATUS } from '../domain/constants.js';
+import { getTournament } from './tournamentService.js';
+import {
+  REGISTRATION_STATUS,
+  MODALITY_FORMAT,
+  GENDER_CATEGORY,
+  COMPETITION_GENDER,
+  TOURNAMENT_STAGE_TYPE,
+} from '../domain/constants.js';
+
+/**
+ * Deriva o gênero competitivo de uma inscrição, dentro do que é conhecido:
+ *  - Se a modalidade já é exclusivamente masculina/feminina, todas as duplas
+ *    são desse gênero.
+ *  - Caso contrário (aberta/mista), usa o gênero competitivo informado por
+ *    jogador; em duplas só conclui quando ambos são do mesmo gênero conhecido.
+ */
+function deriveGender(reg, modality) {
+  if (modality.gender_category === GENDER_CATEGORY.MALE) return COMPETITION_GENDER.MALE;
+  if (modality.gender_category === GENDER_CATEGORY.FEMALE) return COMPETITION_GENDER.FEMALE;
+
+  const a = reg.player_a_competition_gender || null;
+  if (modality.format !== MODALITY_FORMAT.DOUBLES) return a;
+
+  const b = reg.player_b_competition_gender || null;
+  if (a && b && a === b) return a;
+  return null; // misto ou desconhecido → preferência de gênero não se aplica
+}
+
+/**
+ * Monta os metadados (nível e gênero) de cada inscrição confirmada, para o
+ * equilíbrio do sorteio.
+ */
+function buildMeta(registrations, modality) {
+  return registrations.map((reg) => ({
+    id: reg.id,
+    level: reg.player_a_level || null,
+    partner_level: modality.format === MODALITY_FORMAT.DOUBLES ? reg.player_b_level || null : null,
+    gender: deriveGender(reg, modality),
+  }));
+}
 
 /**
  * Executa o sorteio de uma determinada fase de uma modalidade.
@@ -38,22 +80,67 @@ export async function runDraw(params, actor) {
   const confirmed = registrations.filter((r) => r.status === REGISTRATION_STATUS.CONFIRMED);
   if (confirmed.length < 2) throw new Error('São necessários ao menos 2 inscritos confirmados.');
 
-  const participants =
-    participantOrder && participantOrder.length > 0
-      ? participantOrder
-      : confirmed.sort((a, b) => (a.seed ?? Infinity) - (b.seed ?? Infinity)).map((r) => r.id);
+  // Define a ordem dos participantes:
+  //  1) ordem manual explícita, se fornecida;
+  //  2) ordem por cabeças-de-chave (seed) quando o admin definiu seeds;
+  //  3) equilíbrio automático por nível/gênero (dentro do possível);
+  //  4) ordem de inscrição (fallback estável).
+  const hasManualSeeds = confirmed.some((r) => Number.isFinite(Number(r.seed)));
+  const byCreation = confirmed
+    .slice()
+    .sort((a, b) => (a.seed ?? Infinity) - (b.seed ?? Infinity));
+
+  let participants;
+  let balanced = false;
+  if (participantOrder && participantOrder.length > 0) {
+    participants = participantOrder;
+  } else if (hasManualSeeds) {
+    participants = byCreation.map((r) => r.id);
+  } else {
+    const meta = buildMeta(byCreation, modality);
+    const ordered = balancedParticipantOrder(meta);
+    if (ordered) {
+      participants = ordered;
+      balanced = true;
+    } else {
+      participants = byCreation.map((r) => r.id);
+    }
+  }
 
   const seed = providedSeed || `${tournamentId}_${modalityId}_${stageIndex}_${Date.now()}`;
+
+  // Quando o equilíbrio por nível foi aplicado:
+  //  - grupos usam distribuição "tiered" (grupos homogêneos por nível/gênero);
+  //  - chaves usam o nível como cabeça-de-chave (fortes em lados opostos,
+  //    encontrando-se nas fases finais).
+  const groupStrategy = balanced ? 'tiered' : 'shuffle';
+  let seedCount = stage.seed_count || 0;
+  if (balanced && stage.type === TOURNAMENT_STAGE_TYPE.KNOCKOUT) {
+    seedCount = participants.length;
+  }
 
   const draw = generateDraw({
     format: modality.format,
     stageType: stage.type,
     participants,
     groupCount: stage.group_count || 1,
-    seedCount: stage.seed_count || 0,
+    seedCount,
     seed,
+    groupStrategy,
   });
 
-  await persistMatches(tournamentId, modalityId, stageIndex, draw, actor);
-  return { ...draw, seed_used: seed };
+  const tournament = await getTournament(tournamentId);
+  const { scheduleWarnings } = await persistMatches(
+    tournamentId,
+    modalityId,
+    stageIndex,
+    draw,
+    actor,
+    {
+      schedulingConfig: modality,
+      fallbackDate: tournament?.starts_at || null,
+    },
+  );
+
+  return { ...draw, seed_used: seed, balanced, scheduleWarnings: scheduleWarnings || [] };
 }

@@ -99,6 +99,7 @@ export default function ModalityRegistrationDialog({
           name: form.player_a_name,
           email: form.player_a_email,
           level: form.player_a_level,
+          competition_gender: isAdmin ? null : userProfile?.competition_gender || null,
           user_id: isAdmin ? null : user?.uid,
         },
         player_b:

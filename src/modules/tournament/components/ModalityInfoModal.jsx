@@ -8,7 +8,7 @@ import {
 } from '@/components/ui/dialog';
 import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
-import { Info, Trophy, Users, Wallet, BookOpen, Layers } from 'lucide-react';
+import { Info, Trophy, Users, Wallet, BookOpen, Layers, CalendarClock } from 'lucide-react';
 import {
   MODALITY_FORMAT_LABELS,
   SKILL_LEVEL_LABELS,
@@ -91,6 +91,35 @@ export default function ModalityInfoModal({ modality, tournament, registrationsC
                 groupCount={groupCount}
                 seedCount={seedCount}
               />
+            </section>
+          )}
+
+          {(modality.court_count || modality.play_start_time || modality.play_date) && (
+            <section className="space-y-2">
+              <h4 className="font-semibold text-slate-900 flex items-center gap-2">
+                <CalendarClock className="w-4 h-4 text-emerald-600" /> Quadras e horários
+              </h4>
+              <ul className="list-disc pl-5 space-y-1">
+                {modality.play_date && (
+                  <li><strong>Data:</strong> {modality.play_date}</li>
+                )}
+                {modality.play_start_time && (
+                  <li>
+                    <strong>Horário:</strong> a partir das {modality.play_start_time}
+                    {modality.play_end_time ? ` até ${modality.play_end_time}` : ''}
+                  </li>
+                )}
+                {modality.court_count && (
+                  <li><strong>Quadras disponíveis:</strong> {modality.court_count}</li>
+                )}
+                {modality.match_duration_minutes && (
+                  <li><strong>Duração média do jogo:</strong> {modality.match_duration_minutes} minutos</li>
+                )}
+              </ul>
+              <p className="text-xs text-slate-500">
+                Após o sorteio, cada jogo é marcado automaticamente em uma quadra e horário, sem
+                conflito de jogadores.
+              </p>
             </section>
           )}
 

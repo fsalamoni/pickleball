@@ -57,4 +57,17 @@ describe('scheduleMatches', () => {
   it('estima duração em minutos', () => {
     expect(estimateScheduleDurationMinutes({ totalSlots: 4 }, 30)).toBe(120);
   });
+
+  it('maxSlots limita a janela e avisa sobre jogos que não cabem', () => {
+    const matches = [
+      { id: 'm1', round: 1, position: 1, player_ids: ['a', 'b'] },
+      { id: 'm2', round: 2, position: 1, player_ids: ['a', 'c'] },
+      { id: 'm3', round: 3, position: 1, player_ids: ['a', 'd'] },
+    ];
+    // 1 quadra, descanso 0, janela de apenas 2 slots → cabem 2 jogos do jogador "a"
+    const res = scheduleMatches(matches, { courts: courts(1), restSlots: 0, maxSlots: 2 });
+    expect(res.assignments).toHaveLength(2);
+    expect(res.warnings.length).toBe(1);
+    expect(res.assignments.every((a) => a.slot < 2)).toBe(true);
+  });
 });
