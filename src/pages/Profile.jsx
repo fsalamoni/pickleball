@@ -1,18 +1,22 @@
 import { useEffect, useMemo, useState } from 'react';
 import { Timestamp } from 'firebase/firestore';
 import { toast } from 'sonner';
-import { Award, Printer, UserCheck } from 'lucide-react';
+import { Award, Printer, UserCheck, Users, Shield } from 'lucide-react';
 import { useAuth } from '@/core/lib/FirebaseAuthContext';
 import { birthDateToBrtDate, validateRequiredProfile } from '@/core/lib/profileValidation';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
+import { Switch } from '@/components/ui/switch';
+import { ImageUpload } from '@/components/ui/image-upload';
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from '@/components/ui/card';
+import { ATHLETE_GENDER_LABELS } from '@/modules/athletes/domain/constants';
 import { LEVEL_OPTIONS, getLevelByCode } from '@/modules/leveling/data/levels';
 import { calculateAssessment } from '@/modules/leveling/domain/questionnaire';
 import LevelingQuestionnaire from '@/modules/leveling/components/LevelingQuestionnaire';
 import LevelingResultCard from '@/modules/leveling/components/LevelingResultCard';
 import { PICKLEBALL_EXPERIENCE_LABELS, COMPETITION_GENDER_LABELS } from '@/modules/tournament/domain/constants';
+import ParticipationHistoryCard from '@/modules/tournament/components/ParticipationHistoryCard';
 
 export default function Profile() {
   const { user, userProfile, updateUserProfile } = useAuth();
@@ -22,6 +26,17 @@ export default function Profile() {
   const [pickleballExperience, setPickleballExperience] = useState(userProfile?.pickleball_experience || '');
   const [competitionGender, setCompetitionGender] = useState(userProfile?.competition_gender || '');
   const [manualLevel, setManualLevel] = useState(userProfile?.leveling_level || '');
+  // Comunidade e privacidade
+  const [gender, setGender] = useState(userProfile?.gender || '');
+  const [city, setCity] = useState(userProfile?.city || '');
+  const [stateUf, setStateUf] = useState(userProfile?.state || '');
+  const [address, setAddress] = useState(userProfile?.address || '');
+  const [phonePublic, setPhonePublic] = useState(userProfile?.phone_public === true);
+  const [emailPublic, setEmailPublic] = useState(userProfile?.email_public === true);
+  const [addressPublic, setAddressPublic] = useState(userProfile?.address_public === true);
+  const [directoryListed, setDirectoryListed] = useState(userProfile?.directory_listed !== false);
+  const [photoUrl, setPhotoUrl] = useState(userProfile?.photo_url || user?.photoURL || '');
+  const [communityBusy, setCommunityBusy] = useState(false);
   const [errors, setErrors] = useState({});
   const [busy, setBusy] = useState(false);
   const [levelBusy, setLevelBusy] = useState(false);
@@ -40,6 +55,15 @@ export default function Profile() {
     setPickleballExperience(userProfile?.pickleball_experience || '');
     setCompetitionGender(userProfile?.competition_gender || '');
     setManualLevel(userProfile?.leveling_level || '');
+    setGender(userProfile?.gender || '');
+    setCity(userProfile?.city || '');
+    setStateUf(userProfile?.state || '');
+    setAddress(userProfile?.address || '');
+    setPhonePublic(userProfile?.phone_public === true);
+    setEmailPublic(userProfile?.email_public === true);
+    setAddressPublic(userProfile?.address_public === true);
+    setDirectoryListed(userProfile?.directory_listed !== false);
+    setPhotoUrl(userProfile?.photo_url || user?.photoURL || '');
     setVisibleResult(userProfile?.leveling_assessment?.result || null);
     setErrors({});
   }, [
@@ -52,6 +76,15 @@ export default function Profile() {
     userProfile?.competition_gender,
     userProfile?.leveling_level,
     userProfile?.leveling_assessment,
+    userProfile?.gender,
+    userProfile?.city,
+    userProfile?.state,
+    userProfile?.address,
+    userProfile?.phone_public,
+    userProfile?.email_public,
+    userProfile?.address_public,
+    userProfile?.directory_listed,
+    userProfile?.photo_url,
   ]);
 
   const onSave = async (e) => {
@@ -77,6 +110,39 @@ export default function Profile() {
       toast.error(err.message || 'Erro ao salvar.');
     } finally {
       setBusy(false);
+    }
+  };
+
+  const savePhoto = async (url) => {
+    const previous = photoUrl;
+    setPhotoUrl(url);
+    try {
+      await updateUserProfile({ photo_url: url });
+      toast.success(url ? 'Foto atualizada.' : 'Foto removida.');
+    } catch (err) {
+      setPhotoUrl(previous);
+      toast.error(err.message || 'Erro ao salvar a foto.');
+    }
+  };
+
+  const saveCommunity = async () => {
+    setCommunityBusy(true);
+    try {
+      await updateUserProfile({
+        gender: gender || '',
+        city: city.trim(),
+        state: stateUf.trim().toUpperCase(),
+        address: address.trim(),
+        phone_public: phonePublic,
+        email_public: emailPublic,
+        address_public: addressPublic,
+        directory_listed: directoryListed,
+      });
+      toast.success('Preferências de comunidade e privacidade salvas.');
+    } catch (err) {
+      toast.error(err.message || 'Erro ao salvar preferências.');
+    } finally {
+      setCommunityBusy(false);
     }
   };
 
@@ -167,17 +233,22 @@ export default function Profile() {
           <CardDescription>Atualize nome público, data de nascimento, telefone e experiência no pickleball.</CardDescription>
         </CardHeader>
         <CardContent className="p-4 sm:p-5">
-          <div className="mb-6 flex items-center gap-4 rounded-md border border-emerald-950/10 bg-gradient-to-br from-white/85 to-emerald-50/70 p-3">
-            {user?.photoURL ? (
-              <img src={user.photoURL} alt="" className="h-16 w-16 rounded-full border border-emerald-900/10" />
-            ) : (
-              <div className="flex h-16 w-16 items-center justify-center rounded-full bg-emerald-900 text-2xl font-semibold text-emerald-50">
-                {(platformName || user?.email)?.[0]?.toUpperCase()}
-              </div>
-            )}
-            <div>
-              <div className="font-medium">{user?.email}</div>
-              <div className="text-xs text-slate-500">Login via Google</div>
+          <div className="mb-6 rounded-md border border-emerald-950/10 bg-gradient-to-br from-white/85 to-emerald-50/70 p-3">
+            <ImageUpload
+              value={photoUrl}
+              onChange={savePhoto}
+              folder="profile"
+              shape="circle"
+              label="Enviar foto"
+              hint="Sua foto aparece no perfil, no diretório de atletas e nos clubes."
+              fallback={(
+                <span className="flex h-full w-full items-center justify-center bg-emerald-900 text-2xl font-semibold text-emerald-50">
+                  {(platformName || user?.email)?.[0]?.toUpperCase()}
+                </span>
+              )}
+            />
+            <div className="mt-3 text-xs text-slate-500">
+              {user?.email} · Login via Google
             </div>
           </div>
 
@@ -270,6 +341,99 @@ export default function Profile() {
       <Card className="overflow-hidden">
         <CardHeader className="border-b border-emerald-950/10 bg-white/45 p-4 sm:p-5">
           <CardTitle className="flex items-center gap-2 text-base text-slate-950">
+            <Users className="h-5 w-5 text-emerald-700" /> Comunidade e privacidade
+          </CardTitle>
+          <CardDescription>
+            Defina como você aparece no diretório de atletas e quais contatos deseja tornar públicos.
+          </CardDescription>
+        </CardHeader>
+        <CardContent className="space-y-5 p-4 sm:p-5">
+          <div className="grid gap-4 sm:grid-cols-2">
+            <div className="space-y-2">
+              <Label htmlFor="gender">Gênero</Label>
+              <select
+                id="gender"
+                value={gender}
+                onChange={(e) => setGender(e.target.value)}
+                className="h-10 w-full rounded-md border border-input bg-background px-3 py-2 text-sm ring-offset-background focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2"
+              >
+                <option value="">Não informar</option>
+                {Object.entries(ATHLETE_GENDER_LABELS).map(([value, label]) => (
+                  <option key={value} value={value}>{label}</option>
+                ))}
+              </select>
+            </div>
+            <div className="grid grid-cols-[1fr_auto] gap-3">
+              <div className="space-y-2">
+                <Label htmlFor="city">Cidade</Label>
+                <Input id="city" value={city} onChange={(e) => setCity(e.target.value)} maxLength={60} placeholder="Sua cidade" />
+              </div>
+              <div className="space-y-2">
+                <Label htmlFor="state">UF</Label>
+                <Input id="state" value={stateUf} onChange={(e) => setStateUf(e.target.value)} maxLength={2} placeholder="SP" className="w-16" />
+              </div>
+            </div>
+          </div>
+
+          <div className="space-y-2">
+            <Label htmlFor="address">Endereço</Label>
+            <Input id="address" value={address} onChange={(e) => setAddress(e.target.value)} maxLength={160} placeholder="Rua, número, bairro" />
+            <p className="text-xs text-slate-500">Só é exibido se você marcar como público abaixo.</p>
+          </div>
+
+          <div className="rounded-md border border-emerald-950/10 bg-secondary/30 p-4">
+            <div className="flex items-center gap-2 text-sm font-semibold text-slate-900">
+              <Shield className="h-4 w-4 text-emerald-700" /> Visibilidade dos contatos
+            </div>
+            <p className="mt-1 text-xs text-slate-500">
+              Quando privado, o dado nunca aparece no diretório de atletas para outros usuários.
+            </p>
+            <div className="mt-4 space-y-3">
+              <PrivacyToggle
+                id="phone_public"
+                label="Telefone público"
+                hint="Permitir que outros atletas vejam seu telefone"
+                checked={phonePublic}
+                onCheckedChange={setPhonePublic}
+              />
+              <PrivacyToggle
+                id="email_public"
+                label="E-mail público"
+                hint="Permitir que outros atletas vejam seu e-mail"
+                checked={emailPublic}
+                onCheckedChange={setEmailPublic}
+              />
+              <PrivacyToggle
+                id="address_public"
+                label="Endereço público"
+                hint="Permitir que outros atletas vejam seu endereço"
+                checked={addressPublic}
+                onCheckedChange={setAddressPublic}
+              />
+            </div>
+          </div>
+
+          <div className="rounded-md border border-emerald-950/10 bg-secondary/30 p-4">
+            <PrivacyToggle
+              id="directory_listed"
+              label="Aparecer no diretório de atletas"
+              hint="Se desativado, seu perfil não será listado para outros atletas"
+              checked={directoryListed}
+              onCheckedChange={setDirectoryListed}
+            />
+          </div>
+
+          <Button type="button" onClick={saveCommunity} disabled={communityBusy} className="bg-emerald-700 hover:bg-emerald-800">
+            {communityBusy ? 'Salvando...' : 'Salvar comunidade e privacidade'}
+          </Button>
+        </CardContent>
+      </Card>
+
+      <ParticipationHistoryCard />
+
+      <Card className="overflow-hidden">
+        <CardHeader className="border-b border-emerald-950/10 bg-white/45 p-4 sm:p-5">
+          <CardTitle className="flex items-center gap-2 text-base text-slate-950">
             <Award className="h-5 w-5 text-emerald-700" /> Nivelamento
           </CardTitle>
           <CardDescription>Informe seu nível pela tabela detalhada ou preencha o formulário para obter a recomendação.</CardDescription>
@@ -320,6 +484,18 @@ export default function Profile() {
           )}
         </CardContent>
       </Card>
+    </div>
+  );
+}
+
+function PrivacyToggle({ id, label, hint, checked, onCheckedChange }) {
+  return (
+    <div className="flex items-center justify-between gap-4">
+      <div className="min-w-0">
+        <Label htmlFor={id} className="cursor-pointer text-sm text-slate-900">{label}</Label>
+        <p className="text-xs text-slate-500">{hint}</p>
+      </div>
+      <Switch id={id} checked={checked} onCheckedChange={onCheckedChange} />
     </div>
   );
 }

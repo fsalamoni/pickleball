@@ -33,9 +33,15 @@ import {
   listMatchesByTournament,
   recordMatchResult,
   scheduleMatch,
+  substitutePlayer,
+  markMatchInProgress,
+  reShuffleRemainingMatches,
+  rescheduleMatches,
+  advanceStage,
 } from '../services/matchService';
 import { runDraw } from '../services/drawService';
 import { computeModalityRanking } from '../services/rankingService';
+import { getMyTournamentHistory } from '../services/participationService';
 import { useAuth } from '@/core/lib/FirebaseAuthContext';
 
 /* ------------------------------ Tournaments ----------------------------- */
@@ -214,6 +220,15 @@ export function useMyRegistrations() {
   });
 }
 
+export function useMyTournamentHistory() {
+  const { user } = useAuth();
+  return useQuery({
+    queryKey: ['my-tournament-history', user?.uid],
+    queryFn: () => (user?.uid ? getMyTournamentHistory(user.uid) : Promise.resolve([])),
+    enabled: !!user?.uid,
+  });
+}
+
 export function useCreateRegistration() {
   const { user } = useAuth();
   const qc = useQueryClient();
@@ -316,6 +331,61 @@ export function useScheduleMatch(modalityId) {
   const qc = useQueryClient();
   return useMutation({
     mutationFn: ({ matchId, schedule }) => scheduleMatch(matchId, schedule, user),
+    onSuccess: () => qc.invalidateQueries({ queryKey: ['matches', modalityId] }),
+  });
+}
+
+export function useSubstitutePlayer(modalityId) {
+  const { user } = useAuth();
+  const qc = useQueryClient();
+  return useMutation({
+    mutationFn: ({ matchId, oldRegistrationId, newRegistrationId }) =>
+      substitutePlayer(matchId, { oldRegistrationId, newRegistrationId }, user),
+    onSuccess: () => qc.invalidateQueries({ queryKey: ['matches', modalityId] }),
+  });
+}
+
+export function useMarkMatchInProgress(modalityId) {
+  const { user } = useAuth();
+  const qc = useQueryClient();
+  return useMutation({
+    mutationFn: (matchId) => markMatchInProgress(matchId, user),
+    onSuccess: () => qc.invalidateQueries({ queryKey: ['matches', modalityId] }),
+  });
+}
+
+export function useRescheduleMatches(modalityId) {
+  const { user } = useAuth();
+  const qc = useQueryClient();
+  return useMutation({
+    mutationFn: ({ stageIndex = 0, modality, tournament }) =>
+      rescheduleMatches(modalityId, stageIndex, modality, tournament, user),
+    onSuccess: () => {
+      qc.invalidateQueries({ queryKey: ['matches', modalityId] });
+      qc.invalidateQueries({ queryKey: ['matches-tournament'] });
+    },
+  });
+}
+
+export function useAdvanceStage(modalityId) {
+  const { user } = useAuth();
+  const qc = useQueryClient();
+  return useMutation({
+    mutationFn: ({ tournamentId, stageIndex = 0, modality, tournament }) =>
+      advanceStage(tournamentId, modalityId, stageIndex, modality, tournament, user),
+    onSuccess: () => {
+      qc.invalidateQueries({ queryKey: ['matches', modalityId] });
+      qc.invalidateQueries({ queryKey: ['matches-tournament'] });
+      qc.invalidateQueries({ queryKey: ['ranking', modalityId] });
+    },
+  });
+}
+
+export function useReShuffleRemainingMatches(modalityId) {
+  const { user } = useAuth();
+  const qc = useQueryClient();
+  return useMutation({
+    mutationFn: (stageIndex) => reShuffleRemainingMatches(modalityId, stageIndex, user),
     onSuccess: () => qc.invalidateQueries({ queryKey: ['matches', modalityId] }),
   });
 }

@@ -2,6 +2,7 @@ import React, { useState } from 'react';
 import { Card, CardContent } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
+import { AvatarGroup } from '@/components/ui/user-avatar';
 import { Plus, Check, X, Trash2 } from 'lucide-react';
 import {
   useModalities,
@@ -115,10 +116,21 @@ function ModalityRegistrationsBlock({ tournament, modality, registrations, isAdm
                 {registrations.map((r) => (
                   <tr key={r.id} className="border-t">
                     <td className="px-3 py-2">
-                      <div>{r.label || `${r.player_a_name}${r.player_b_name ? ' / ' + r.player_b_name : ''}`}</div>
-                      <div className="text-xs text-slate-500">
-                        {[r.player_a_email, r.player_b_email].filter(Boolean).join(' / ')}
-                        {r.is_provisional ? ` · ${REGISTRATION_PROVISIONAL_LABEL.toLowerCase()}` : ''}
+                      <div className="flex items-center gap-2">
+                        <AvatarGroup
+                          size="sm"
+                          people={[
+                            { name: r.player_a_name, photoUrl: r.player_a_photo },
+                            ...(r.player_b_name ? [{ name: r.player_b_name, photoUrl: r.player_b_photo }] : []),
+                          ]}
+                        />
+                        <div className="min-w-0">
+                          <div>{r.label || `${r.player_a_name}${r.player_b_name ? ' / ' + r.player_b_name : ''}`}</div>
+                          <div className="text-xs text-slate-500">
+                            {[r.player_a_email, r.player_b_email].filter(Boolean).join(' / ')}
+                            {r.is_provisional ? ` · ${REGISTRATION_PROVISIONAL_LABEL.toLowerCase()}` : ''}
+                          </div>
+                        </div>
                       </div>
                     </td>
                     <td className="px-3 py-2">

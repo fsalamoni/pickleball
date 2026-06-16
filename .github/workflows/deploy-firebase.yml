@@ -172,6 +172,26 @@ jobs:
           fi
           exit $RC
 
+      - name: Deploy Storage rules (non-fatal)
+        run: |
+          set +e
+          OUT=$(firebase deploy --only storage --project "$FIREBASE_PROJECT_ID" --non-interactive 2>&1)
+          RC=$?
+          echo "$OUT"
+          if [ $RC -eq 0 ]; then
+            echo "Storage rules deployed."
+            exit 0
+          fi
+          if echo "$OUT" | grep -qiE "not been set up|has not been set up|No default bucket|bucket does not exist|default bucket"; then
+            echo "::warning title=Firebase Storage nao habilitado::Ative o Firebase Storage no console (https://console.firebase.google.com/project/$FIREBASE_PROJECT_ID/storage) para o upload de imagens. As storage.rules serao aplicadas no proximo deploy apos a ativacao."
+          elif echo "$OUT" | grep -qiE "HTTP Error: 403|PERMISSION_DENIED|caller does not have permission"; then
+            echo "::warning title=Sem permissao para deploy de Storage::Conceda 'Firebase Admin' a service account '$SA_EMAIL' para aplicar storage.rules em '$FIREBASE_PROJECT_ID'."
+          else
+            echo "::warning title=Deploy de Storage falhou::Veja o log acima. Hosting/Firestore nao foram afetados."
+          fi
+          # Nao falha o job: Hosting/Firestore ja foram aplicados.
+          exit 0
+
       - name: Deploy Firebase Hosting
         run: |
           set +e

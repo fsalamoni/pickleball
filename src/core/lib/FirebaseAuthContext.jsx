@@ -9,6 +9,7 @@ import { auth, googleProvider, db, firebaseDisabledReason } from '@/core/config/
 import { logger } from '@/core/lib/logger';
 import { createAuditLog } from '@/core/services/auditService';
 import { claimProvisionalRegistrationsForUser } from '@/modules/tournament/services/registrationService';
+import { syncAthleteProfile } from '@/modules/athletes/services/athleteService';
 
 const AuthContext = createContext(null);
 const PLATFORM_OWNER_EMAIL = 'fsalamoni@gmail.com';
@@ -55,6 +56,9 @@ export const AuthProvider = ({ children }) => {
             const mergedProfile = { uid: firebaseUser.uid, ...existingProfile, ...autoAdminUpdates };
             await claimProvisionalRegistrationsForUser(firebaseUser, mergedProfile);
             setUserProfile(mergedProfile);
+            // Mantém o diretório público de atletas atualizado (best-effort,
+            // não bloqueia o login; respeita as preferências de privacidade).
+            syncAthleteProfile(firebaseUser, mergedProfile);
           } else {
             const isOwner = isPlatformOwnerEmail(firebaseUser.email);
             const newProfile = {
@@ -67,6 +71,17 @@ export const AuthProvider = ({ children }) => {
               phone: '',
               pickleball_experience: '',
               photo_url: firebaseUser.photoURL || '',
+              // Campos da comunidade (diretório de atletas / clubes).
+              gender: '',
+              city: '',
+              state: '',
+              address: '',
+              // Preferências de privacidade (padrão: contatos privados).
+              phone_public: false,
+              email_public: false,
+              address_public: false,
+              // Aparece no diretório de atletas por padrão.
+              directory_listed: true,
               role: isOwner ? 'platform_admin' : 'user',
               can_create_pools: isOwner,
               created_at: serverTimestamp(),
@@ -76,6 +91,7 @@ export const AuthProvider = ({ children }) => {
             await setDoc(userDocRef, newProfile);
             await claimProvisionalRegistrationsForUser(firebaseUser, newProfile);
             setUserProfile(newProfile);
+            syncAthleteProfile(firebaseUser, newProfile);
             logger.info('New user profile created:', firebaseUser.uid);
           }
         } else {
@@ -145,7 +161,10 @@ export const AuthProvider = ({ children }) => {
       details: { changed_fields: Object.keys(updates) },
     });
     await claimProvisionalRegistrationsForUser(user, { ...userProfile, ...updates });
-    setUserProfile((prev) => ({ ...prev, ...updates }));
+    const nextProfile = { ...userProfile, ...updates };
+    setUserProfile(nextProfile);
+    // Reflete imediatamente as mudanças (inclusive privacidade) no diretório.
+    await syncAthleteProfile(user, nextProfile);
   };
 
   const value = {

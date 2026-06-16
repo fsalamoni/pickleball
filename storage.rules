@@ -1,0 +1,26 @@
+rules_version = '2';
+
+// Regras do Firebase Storage.
+//
+// Estrutura: todos os uploads ficam em `uploads/{uid}/...`, garantindo que
+// cada usuário só possa gravar/excluir os próprios arquivos. A leitura é
+// liberada para usuários autenticados (e as URLs de download com token
+// permanecem acessíveis para exibição de imagens e anexos). Aceitamos imagens
+// e documentos (chat e fóruns), sempre com limite de tamanho para evitar abuso.
+service firebase.storage {
+  match /b/{bucket}/o {
+    function isAuthed() { return request.auth != null; }
+    function sizeOk() { return request.resource.size < 25 * 1024 * 1024; }
+
+    match /uploads/{uid}/{allPaths=**} {
+      allow read: if isAuthed();
+      allow write: if isAuthed() && request.auth.uid == uid && sizeOk();
+      allow delete: if isAuthed() && request.auth.uid == uid;
+    }
+
+    // Bloqueia qualquer outro caminho por padrão.
+    match /{allPaths=**} {
+      allow read, write: if false;
+    }
+  }
+}

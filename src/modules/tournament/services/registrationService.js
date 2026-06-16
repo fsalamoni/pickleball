@@ -52,6 +52,8 @@ function officialPlayerData(user, profile = {}) {
     name,
     email: user?.email || profile.email || '',
     level: profile.level || profile.leveling_level || null,
+    competition_gender: profile.competition_gender || null,
+    photo_url: profile.photo_url || user?.photoURL || null,
   };
 }
 
@@ -99,12 +101,16 @@ export async function createRegistration(input, actor) {
     player_a_email: playerAEmail,
     player_a_email_lc: playerAEmail,
     player_a_level: player_a?.level || null,
+    player_a_competition_gender: player_a?.competition_gender || null,
+    player_a_photo: player_a?.photo_url || null,
     player_a_provisional: Boolean(playerAEmail && !playerAUserId),
     player_b_user_id: playerBUserId,
     player_b_name: player_b?.name?.trim() || '',
     player_b_email: playerBEmail,
     player_b_email_lc: playerBEmail,
     player_b_level: player_b?.level || null,
+    player_b_competition_gender: player_b?.competition_gender || null,
+    player_b_photo: player_b?.photo_url || null,
     player_b_provisional: Boolean(playerBEmail && !playerBUserId),
     status: (modality.entry_fee_cents || 0) > 0 ? REGISTRATION_STATUS.PENDING_PAYMENT : REGISTRATION_STATUS.CONFIRMED,
     seed: null,
@@ -147,6 +153,8 @@ export async function claimProvisionalRegistrationsForUser(user, profile = {}) {
     updates.data.player_a_email = player.email;
     updates.data.player_a_email_lc = email;
     updates.data.player_a_level = player.level;
+    updates.data.player_a_competition_gender = player.competition_gender;
+    updates.data.player_a_photo = player.photo_url;
     updates.data.player_a_provisional = false;
     updatesById.set(docSnap.id, updates);
   });
@@ -159,6 +167,8 @@ export async function claimProvisionalRegistrationsForUser(user, profile = {}) {
     updates.data.player_b_email = player.email;
     updates.data.player_b_email_lc = email;
     updates.data.player_b_level = player.level;
+    updates.data.player_b_competition_gender = player.competition_gender;
+    updates.data.player_b_photo = player.photo_url;
     updates.data.player_b_provisional = false;
     updatesById.set(docSnap.id, updates);
   });

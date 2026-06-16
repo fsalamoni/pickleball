@@ -26,6 +26,16 @@ import {
 } from '../domain/constants.js';
 import { DEFAULT_MAX_ENTRIES, normalizeMaxEntries } from '../domain/capacity.js';
 import { normalizeScoringConfig } from '../domain/scoring.js';
+import { normalizeSchedulingConfig } from '../domain/scheduling.js';
+
+/** Campos de agendamento mantidos na modalidade. */
+const SCHEDULING_FIELDS = [
+  'court_count',
+  'match_duration_minutes',
+  'play_date',
+  'play_start_time',
+  'play_end_time',
+];
 
 const COL = 'tournament_modalities';
 
@@ -47,6 +57,12 @@ export async function createModality(tournamentId, data, actor) {
     stages: data.stages || [
       { type: 'round_robin', name: 'Fase única', group_count: 1, seed_count: 0 },
     ],
+    /**
+     * Configuração de agendamento: quadras disponíveis, janela de horários e
+     * duração média dos jogos. Usada pelo sorteio para marcar cada jogo em uma
+     * quadra e horário, sem conflito de jogadores.
+     */
+    ...normalizeSchedulingConfig(data),
     notes: data.notes || '',
     created_at: serverTimestamp(),
     updated_at: serverTimestamp(),
@@ -67,6 +83,10 @@ export async function updateModality(id, updates, actor) {
       defaultValue: DEFAULT_MAX_ENTRIES,
       allowUnlimited: true,
     });
+  }
+  // Normaliza os campos de agendamento que estiverem sendo atualizados.
+  if (SCHEDULING_FIELDS.some((f) => Object.hasOwn(normalizedUpdates, f))) {
+    Object.assign(normalizedUpdates, normalizeSchedulingConfig(normalizedUpdates));
   }
   await updateDoc(doc(db, COL, id), { ...normalizedUpdates, updated_at: serverTimestamp() });
   await createAuditLog({

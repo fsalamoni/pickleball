@@ -99,7 +99,9 @@ export default function ModalityRegistrationDialog({
           name: form.player_a_name,
           email: form.player_a_email,
           level: form.player_a_level,
+          competition_gender: isAdmin ? null : userProfile?.competition_gender || null,
           user_id: isAdmin ? null : user?.uid,
+          photo_url: isAdmin ? null : (userProfile?.photo_url || user?.photoURL || null),
         },
         player_b:
           modality.format === MODALITY_FORMAT.DOUBLES

@@ -35,7 +35,17 @@ export async function computeModalityRanking(modalityId, stageIndex) {
 
   const ranking = buildRanking(matches, participantIds, cfg);
 
-  // enriquece com label do participante para o front
-  const labelByReg = new Map(registrations.map((r) => [r.id, r.label || `${r.player_a_name}${r.player_b_name ? ' / ' + r.player_b_name : ''}`]));
-  return ranking.map((r) => ({ ...r, label: labelByReg.get(r.participant_id) || r.participant_id }));
+  // enriquece com label e fotos dos participantes para o front
+  const regById = new Map(registrations.map((r) => [r.id, r]));
+  return ranking.map((r) => {
+    const reg = regById.get(r.participant_id);
+    const label = reg?.label || (reg ? `${reg.player_a_name}${reg.player_b_name ? ' / ' + reg.player_b_name : ''}` : r.participant_id);
+    const players = reg
+      ? [
+          { name: reg.player_a_name, photoUrl: reg.player_a_photo || null },
+          ...(reg.player_b_name ? [{ name: reg.player_b_name, photoUrl: reg.player_b_photo || null }] : []),
+        ]
+      : [];
+    return { ...r, label, players };
+  });
 }

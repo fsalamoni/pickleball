@@ -22,9 +22,21 @@ const AdminMetrics = lazy(() => import('@/modules/admin/pages/AdminMetrics'));
 const AdminTournaments = lazy(() => import('@/modules/admin/pages/AdminTournaments'));
 const PublicTournament = lazy(() => import('@/pages/PublicTournament'));
 const PrintTournament = lazy(() => import('@/pages/PrintTournament'));
+const AthletesDirectory = lazy(() => import('@/modules/athletes/pages/AthletesDirectory'));
+const ClubsDirectory = lazy(() => import('@/modules/clubs/pages/ClubsDirectory'));
+const CreateClub = lazy(() => import('@/modules/clubs/pages/CreateClub'));
+const ClubDetail = lazy(() => import('@/modules/clubs/pages/ClubDetail'));
+const ChatPage = lazy(() => import('@/modules/chat/pages/ChatPage'));
 const PageNotFound = lazy(() => import('@/pages/PageNotFound'));
 
-const LOCAL_PREVIEW_PROTECTED_PATHS = new Set(['/torneios/criar', '/torneios/ingressar', '/torneios/publicos']);
+const LOCAL_PREVIEW_PROTECTED_PATHS = new Set([
+  '/torneios/criar',
+  '/torneios/ingressar',
+  '/torneios/publicos',
+  '/atletas',
+  '/clubes',
+  '/clubes/criar',
+]);
 
 const queryClient = new QueryClient({
   defaultOptions: {
@@ -107,12 +119,19 @@ export default function App() {
               {/* Authenticated */}
               <Route path="/inicio" element={<ProtectedRoute>{withLayout('Inicio', Inicio)}</ProtectedRoute>} />
               <Route path="/perfil" element={<ProtectedRoute>{withLayout('Profile', Profile)}</ProtectedRoute>} />
+              <Route path="/chat" element={<ProtectedRoute>{withLayout('Chat', ChatPage)}</ProtectedRoute>} />
               <Route path="/torneios" element={<Navigate to="/inicio" replace />} />
               <Route path="/torneios/criar" element={<ProtectedRoute>{withLayout('CreateTournament', CreateTournament)}</ProtectedRoute>} />
               <Route path="/torneios/ingressar" element={<ProtectedRoute>{withLayout('JoinTournament', JoinTournament)}</ProtectedRoute>} />
               <Route path="/torneios/publicos" element={<ProtectedRoute>{withLayout('PublicTournamentsList', PublicTournamentsList)}</ProtectedRoute>} />
               <Route path="/torneios/:tournamentId" element={<ProtectedRoute>{withLayout('Tournament', Tournament)}</ProtectedRoute>} />
               <Route path="/torneios/:tournamentId/:tab" element={<ProtectedRoute>{withLayout('Tournament', Tournament)}</ProtectedRoute>} />
+
+              {/* Comunidade: atletas e clubes */}
+              <Route path="/atletas" element={<ProtectedRoute>{withLayout('AthletesDirectory', AthletesDirectory)}</ProtectedRoute>} />
+              <Route path="/clubes" element={<ProtectedRoute>{withLayout('ClubsDirectory', ClubsDirectory)}</ProtectedRoute>} />
+              <Route path="/clubes/criar" element={<ProtectedRoute>{withLayout('CreateClub', CreateClub)}</ProtectedRoute>} />
+              <Route path="/clubes/:clubId" element={<ProtectedRoute>{withLayout('ClubDetail', ClubDetail)}</ProtectedRoute>} />
 
               {/* Platform admin */}
               <Route path="/admin" element={<AdminRoute>{withLayout('AdminTournaments', AdminTournaments)}</AdminRoute>} />

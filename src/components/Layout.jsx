@@ -18,6 +18,9 @@ import {
   HeartHandshake,
   FolderCog,
   Sparkles,
+  Users,
+  Building2,
+  MessageCircle,
 } from 'lucide-react';
 import { useAuth } from '@/core/lib/FirebaseAuthContext';
 import { useMyTournaments } from '@/modules/tournament/hooks/useTournament';
@@ -55,6 +58,11 @@ const PAGE_META = {
     title: 'Perfil do atleta',
     description: 'Organize sua identidade na plataforma e melhore a confiança nas inscrições.',
   },
+  Chat: {
+    eyebrow: 'Conversas',
+    title: 'Mensagens',
+    description: 'Converse com atletas e grupos da comunidade em tempo real.',
+  },
   CreateTournament: {
     eyebrow: 'Organização',
     title: 'Criar novo torneio',
@@ -69,6 +77,26 @@ const PAGE_META = {
     eyebrow: 'Explorar',
     title: 'Torneios públicos',
     description: 'Descubra eventos abertos e acompanhe oportunidades de participação.',
+  },
+  AthletesDirectory: {
+    eyebrow: 'Explorar',
+    title: 'Atletas',
+    description: 'Conheça os atletas da comunidade e encontre parceiros de jogo.',
+  },
+  ClubsDirectory: {
+    eyebrow: 'Explorar',
+    title: 'Clubes',
+    description: 'Descubra clubes, crie o seu e organize sua turma.',
+  },
+  CreateClub: {
+    eyebrow: 'Comunidade',
+    title: 'Criar clube',
+    description: 'Cadastre seu clube e convide atletas para participar.',
+  },
+  ClubDetail: {
+    eyebrow: 'Comunidade',
+    title: 'Clube',
+    description: 'Membros, eventos, mural e administração do clube.',
   },
   Tournament: {
     eyebrow: 'Evento',
@@ -138,6 +166,7 @@ export default function Layout({ children, currentPageName }) {
   const displayName = userProfile?.platform_name || user?.displayName || user?.email?.split('@')[0] || 'Usuário';
   const displayEmail = userProfile?.email || user?.email;
   const displayRole = isPlatformAdmin ? 'Admin geral da plataforma' : 'Atleta e organizador';
+  const displayPhoto = userProfile?.photo_url || user?.photoURL || '';
   const initial = displayName?.[0]?.toUpperCase() || 'U';
   const activeTournamentId = location.pathname.match(/\/torneios\/([^/]+)/)?.[1];
 
@@ -207,6 +236,13 @@ export default function Layout({ children, currentPageName }) {
                 onClick={() => setSidebarOpen(false)}
               />
               <NavItem
+                to="/chat"
+                icon={MessageCircle}
+                label="Chat"
+                active={currentPageName === 'Chat'}
+                onClick={() => setSidebarOpen(false)}
+              />
+              <NavItem
                 to="/torneios/ingressar"
                 icon={Hash}
                 label="Ingressar com código"
@@ -238,6 +274,20 @@ export default function Layout({ children, currentPageName }) {
                 icon={Globe}
                 label="Torneios públicos"
                 active={currentPageName === 'PublicTournamentsList'}
+                onClick={() => setSidebarOpen(false)}
+              />
+              <NavItem
+                to="/atletas"
+                icon={Users}
+                label="Atletas"
+                active={currentPageName === 'AthletesDirectory'}
+                onClick={() => setSidebarOpen(false)}
+              />
+              <NavItem
+                to="/clubes"
+                icon={Building2}
+                label="Clubes"
+                active={currentPageName === 'ClubsDirectory' || currentPageName === 'CreateClub' || currentPageName === 'ClubDetail'}
                 onClick={() => setSidebarOpen(false)}
               />
               <NavItem
@@ -296,9 +346,17 @@ export default function Layout({ children, currentPageName }) {
           <div className="border-t border-white/10 p-4">
             <div className="rounded-[1.5rem] border border-white/10 bg-white/10 p-4">
               <div className="flex items-center gap-3">
-                <div className="flex h-11 w-11 items-center justify-center rounded-2xl bg-[linear-gradient(135deg,#facc15,#34d399)] text-slate-950 shadow-[0_18px_36px_-24px_rgba(250,204,21,0.7)]">
-                  <span className="text-sm font-semibold">{initial}</span>
-                </div>
+                {displayPhoto ? (
+                  <img
+                    src={displayPhoto}
+                    alt=""
+                    className="h-11 w-11 rounded-2xl object-cover shadow-[0_18px_36px_-24px_rgba(250,204,21,0.7)]"
+                  />
+                ) : (
+                  <div className="flex h-11 w-11 items-center justify-center rounded-2xl bg-[linear-gradient(135deg,#facc15,#34d399)] text-slate-950 shadow-[0_18px_36px_-24px_rgba(250,204,21,0.7)]">
+                    <span className="text-sm font-semibold">{initial}</span>
+                  </div>
+                )}
                 <div className="min-w-0 flex-1">
                   <p className="truncate text-sm font-semibold text-white">{displayName}</p>
                   <p className="truncate text-xs text-emerald-50/60" title={displayEmail}>{displayEmail}</p>
@@ -488,6 +546,13 @@ function SidebarSection({ title, hint, children }) {
 }
 
 function NotificationsMenu({ notifications, unreadCount, markAsRead }) {
+  const navigate = useNavigate();
+
+  const handleSelect = (n) => {
+    if (!n.read) markAsRead(n.id);
+    if (n.link) navigate(n.link);
+  };
+
   return (
     <DropdownMenu>
       <DropdownMenuTrigger asChild>
@@ -518,7 +583,7 @@ function NotificationsMenu({ notifications, unreadCount, markAsRead }) {
             <DropdownMenuItem
               key={n.id}
               className="mt-1 flex cursor-pointer flex-col items-start rounded-[1rem] px-3 py-3 focus:bg-emerald-50"
-              onClick={() => !n.read && markAsRead(n.id)}
+              onClick={() => handleSelect(n)}
             >
               <div className={cn('text-sm font-medium', n.read ? 'text-slate-600' : 'text-slate-950')}>{n.title}</div>
               <div className="mt-1 text-xs leading-5 text-slate-500">{n.message}</div>

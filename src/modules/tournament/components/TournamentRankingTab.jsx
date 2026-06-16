@@ -1,6 +1,7 @@
 import React from 'react';
 import { Card, CardContent } from '@/components/ui/card';
 import { Trophy, Info, Medal } from 'lucide-react';
+import { AvatarGroup } from '@/components/ui/user-avatar';
 import { useModalities, useModalityRanking } from '@/modules/tournament/hooks/useTournament';
 
 export default function TournamentRankingTab({ tournament }) {
@@ -92,7 +93,12 @@ function ModalityRankingBlock({ modality }) {
                   return (
                     <tr key={r.participant_id} className={`border-t ${tone}`}>
                       <td className="px-3 py-2"><PositionCell position={r.position} /></td>
-                      <td className="px-3 py-2">{r.label}</td>
+                      <td className="px-3 py-2">
+                        <div className="flex items-center gap-2">
+                          <AvatarGroup size="sm" people={r.players || []} />
+                          <span>{r.label}</span>
+                        </div>
+                      </td>
                       <td className="px-3 py-2 text-center">{r.played}</td>
                       <td className="px-3 py-2 text-center font-semibold">{r.wins}</td>
                       <td className="px-3 py-2 text-center">{r.losses}</td>

@@ -69,7 +69,7 @@ describe('draw engine', () => {
   });
 
   describe('americano (rotação aberta)', () => {
-    it('contagem exata: N(N−1)/4 jogos para N ≡ 0 ou 1 (mod 4)', () => {
+    it('contagem: ⌊N(N−1)/4⌋ jogos; exato para N ≡ 0 ou 1 (mod 4)', () => {
       expect(americanoMatchCount(4)).toEqual({ totalMatches: 3, exact: true });
       expect(americanoMatchCount(5)).toEqual({ totalMatches: 5, exact: true });
       expect(americanoMatchCount(8)).toEqual({ totalMatches: 14, exact: true });
@@ -78,11 +78,13 @@ describe('draw engine', () => {
       expect(americanoMatchCount(16)).toEqual({ totalMatches: 60, exact: true });
     });
 
-    it('rejeita N que não fecham matematicamente (N ≡ 2 ou 3 mod 4)', () => {
-      expect(americanoMatchCount(6).exact).toBe(false);
-      expect(americanoMatchCount(7).exact).toBe(false);
-      expect(americanoMatchCount(10).exact).toBe(false);
-      expect(americanoMatchCount(11).exact).toBe(false);
+    it('N ≡ 2 ou 3 (mod 4): inválido (exact=false com reason bloqueante)', () => {
+      [6, 7, 10, 11].forEach((n) => {
+        const check = americanoMatchCount(n);
+        expect(check.exact).toBe(false);
+        expect(check.reason).toMatch(/não é condizente/i);
+        expect(check.totalMatches).toBe(Math.floor((n * (n - 1)) / 4));
+      });
     });
 
     it('N=4: exatamente 3 jogos com cada parceria possível uma vez', () => {
@@ -180,9 +182,168 @@ describe('draw engine', () => {
       expect(pairs.size).toBe(66); // C(12,2)
     });
 
-    it('lança erro para N que não fecha (ex.: 6)', () => {
-      expect(() => buildAmericanoRotation(['a', 'b', 'c', 'd', 'e', 'f'])).toThrow(/Americana aberta/);
+    it('N=5 (≡1 mod 4): exatamente 5 jogos cobrindo todas as 10 parcerias', () => {
+      const players = ['a', 'b', 'c', 'd', 'e'];
+      const matches = buildAmericanoRotation(players, { seed: 'fixed' });
+      expect(matches).toHaveLength(5);
+      const pairs = new Set();
+      matches.forEach((m) => {
+        pairs.add([...m.side_a].sort().join('|'));
+        pairs.add([...m.side_b].sort().join('|'));
+      });
+      expect(pairs.size).toBe(10); // C(5,2)
+      expect(pairs.size).toBe(matches.length * 2); // nenhuma dupla repetida
     });
+
+    it('N=9 (≡1 mod 4): exatamente 18 jogos cobrindo todas as 36 parcerias', () => {
+      const players = Array.from({ length: 9 }, (_, i) => `p${i}`);
+      const matches = buildAmericanoRotation(players, { seed: 'fixed' });
+      expect(matches).toHaveLength(18);
+      const pairs = new Set();
+      matches.forEach((m) => {
+        pairs.add([...m.side_a].sort().join('|'));
+        pairs.add([...m.side_b].sort().join('|'));
+      });
+      expect(pairs.size).toBe(36); // C(9,2)
+    });
+
+    it('N=13 (≡1 mod 4): exatamente 39 jogos cobrindo todas as 78 parcerias sem repetição', () => {
+      const players = Array.from({ length: 13 }, (_, i) => `p${i}`);
+      const matches = buildAmericanoRotation(players, { seed: 'fixed' });
+      expect(matches).toHaveLength(39);
+      const pairs = new Set();
+      matches.forEach((m) => {
+        const keyA = [...m.side_a].sort().join('|');
+        const keyB = [...m.side_b].sort().join('|');
+        expect(pairs.has(keyA)).toBe(false);
+        expect(pairs.has(keyB)).toBe(false);
+        pairs.add(keyA);
+        pairs.add(keyB);
+      });
+      expect(pairs.size).toBe(78); // C(13,2) = 78 parcerias únicas
+    });
+
+    // Helper: estatísticas de adversários e parcerias de uma escala.
+    const americanoStats = (matches, n) => {
+      const key = (a, b) => (a < b ? `${a}|${b}` : `${b}|${a}`);
+      const partner = new Map();
+      const opp = new Map();
+      const plays = new Map();
+      matches.forEach((m) => {
+        partner.set(key(...m.side_a), (partner.get(key(...m.side_a)) || 0) + 1);
+        partner.set(key(...m.side_b), (partner.get(key(...m.side_b)) || 0) + 1);
+        [...m.side_a, ...m.side_b].forEach((p) => plays.set(p, (plays.get(p) || 0) + 1));
+        for (const a of m.side_a) for (const b of m.side_b) {
+          opp.set(key(a, b), (opp.get(key(a, b)) || 0) + 1);
+        }
+      });
+      const oppCounts = [];
+      for (let i = 0; i < n; i += 1) for (let j = i + 1; j < n; j += 1) {
+        oppCounts.push(opp.get(key(`p${i}`, `p${j}`)) || 0);
+      }
+      return {
+        partnerMax: Math.max(...partner.values()),
+        partnerCount: partner.size,
+        oppMin: Math.min(...oppCounts),
+        oppMax: Math.max(...oppCounts),
+        playsValues: [...new Set(plays.values())],
+      };
+    };
+
+    it('equilíbrio PERFEITO de adversários: cada um enfrenta cada outro exatamente 2× (N ≤ 13)', { timeout: 30000 }, () => {
+      [4, 5, 8, 9, 12, 13].forEach((n) => {
+        const players = Array.from({ length: n }, (_, i) => `p${i}`);
+        const matches = buildAmericanoRotation(players, { seed: 'fixed' });
+        const s = americanoStats(matches, n);
+        // regra absoluta 1: parceria única (cada dupla possível uma vez)
+        expect(s.partnerMax).toBe(1);
+        expect(s.partnerCount).toBe((n * (n - 1)) / 2);
+        // regra absoluta 2: equilíbrio perfeito de adversários (todos = 2)
+        expect(s.oppMin).toBe(2);
+        expect(s.oppMax).toBe(2);
+        // cada jogador disputa N−1 jogos
+        expect(s.playsValues).toEqual([n - 1]);
+      });
+    });
+
+    it('equilíbrio de adversários quase-perfeito para N maiores (faixa estreita [1,3])', { timeout: 30000 }, () => {
+      [16, 17, 20].forEach((n) => {
+        const players = Array.from({ length: n }, (_, i) => `p${i}`);
+        const matches = buildAmericanoRotation(players, { seed: 'fixed' });
+        const s = americanoStats(matches, n);
+        expect(s.partnerMax).toBe(1); // parceria única continua absoluta
+        // a média é sempre 2; nunca permitimos distorções (≤1 ou ≥4)
+        expect(s.oppMin).toBeGreaterThanOrEqual(1);
+        expect(s.oppMax).toBeLessThanOrEqual(3);
+        expect(s.playsValues).toEqual([n - 1]);
+      });
+    });
+
+    it('é determinística: a mesma seed gera exatamente a mesma escala', () => {
+      const players = Array.from({ length: 8 }, (_, i) => `p${i}`);
+      const a = buildAmericanoRotation(players, { seed: 'repro' });
+      const b = buildAmericanoRotation(players, { seed: 'repro' });
+      expect(a).toEqual(b);
+    });
+
+    it('metadados de gênero/nível não violam as regras absolutas de equilíbrio', { timeout: 30000 }, () => {
+      const n = 12;
+      const players = Array.from({ length: n }, (_, i) => `p${i}`);
+      const playerMeta = {};
+      players.forEach((id, i) => {
+        playerMeta[id] = { gender: i < n / 2 ? 1 : 0, level: (i % 4) + 1 };
+      });
+      const matches = buildAmericanoRotation(players, { seed: 'fixed', playerMeta });
+      const s = americanoStats(matches, n);
+      // mesmo com a preferência de gênero/nível, parceria única e equilíbrio
+      // perfeito de adversários permanecem garantidos.
+      expect(s.partnerMax).toBe(1);
+      expect(s.partnerCount).toBe((n * (n - 1)) / 2);
+      expect(s.oppMin).toBe(2);
+      expect(s.oppMax).toBe(2);
+    });
+
+    it('preferência de gênero: campo homogêneo não cria desequilíbrio', () => {
+      const n = 8;
+      const players = Array.from({ length: n }, (_, i) => `p${i}`);
+      const playerMeta = {};
+      players.forEach((id) => { playerMeta[id] = { gender: 1, level: 3 }; }); // todos iguais
+      const matches = buildAmericanoRotation(players, { seed: 'fixed', playerMeta });
+      const s = americanoStats(matches, n);
+      expect(s.oppMin).toBe(2);
+      expect(s.oppMax).toBe(2);
+    });
+
+    it('N ≡ 2 ou 3 (mod 4): recusa gerar a chave (precisão perfeita ou erro)', () => {
+      [6, 7, 10, 11, 14, 15].forEach((n) => {
+        const players = Array.from({ length: n }, (_, i) => `p${i}`);
+        expect(() => buildAmericanoRotation(players, { seed: 'fixed' })).toThrow(/não é condizente/i);
+      });
+    });
+
+    it('N < 4: recusa gerar a chave', () => {
+      expect(() => buildAmericanoRotation(['a', 'b', 'c'])).toThrow(/no mínimo 4/i);
+    });
+  });
+
+  it('distributeGroups tiered cria grupos homogêneos por ordem (sem sortear)', () => {
+    const ordered = ['s1', 's2', 's3', 's4', 's5'];
+    const groups = distributeGroups(ordered, { groupCount: 2, strategy: 'tiered' });
+    // 5 em 2 grupos → 3 + 2, em blocos contíguos
+    expect(groups[0].participants).toEqual(['s1', 's2', 's3']);
+    expect(groups[1].participants).toEqual(['s4', 's5']);
+  });
+
+  it('generateDraw aceita groupStrategy tiered', () => {
+    const draw = generateDraw({
+      format: 'singles',
+      stageType: 'groups',
+      participants: ['a', 'b', 'c', 'd'],
+      groupCount: 2,
+      groupStrategy: 'tiered',
+    });
+    expect(draw.groups[0].participants).toEqual(['a', 'b']);
+    expect(draw.groups[1].participants).toEqual(['c', 'd']);
   });
 
   it('generateDraw entrega estrutura conforme stageType', () => {
@@ -193,5 +354,53 @@ describe('draw engine', () => {
     const koDraw = generateDraw({ format: 'singles', stageType: 'knockout', participants: ['a', 'b', 'c', 'd'] });
     expect(koDraw.bracket).toBeDefined();
     expect(koDraw.matches).toHaveLength(2);
+
+    // Americano só com inscrição Simples; com Duplas deve recusar.
+    expect(() =>
+      generateDraw({ format: 'doubles', stageType: 'americano', participants: ['a', 'b', 'c', 'd'] }),
+    ).toThrow(/Americano/i);
+
+    // Americano com Simples e N exato gera todos os jogos.
+    const amDraw = generateDraw({ format: 'singles', stageType: 'americano', participants: ['a', 'b', 'c', 'd'] });
+    expect(amDraw.stageType).toBe('americano');
+    expect(amDraw.matches).toHaveLength(3);
+  });
+
+  it('generateDraw: sistema suíço gera a 1ª rodada (N/2 jogos, sem repetir jogador)', () => {
+    const players = ['a', 'b', 'c', 'd', 'e', 'f'];
+    const draw = generateDraw({ format: 'singles', stageType: 'swiss', participants: players, seed: 'fixed' });
+    expect(draw.stageType).toBe('swiss');
+    expect(draw.matches).toHaveLength(3); // 6 jogadores → 3 jogos
+    const seen = new Set();
+    draw.matches.forEach((m) => {
+      [m.side_a, m.side_b].filter(Boolean).forEach((p) => {
+        expect(seen.has(p)).toBe(false);
+        seen.add(p);
+      });
+    });
+    expect(seen.size).toBe(6);
+  });
+
+  it('generateDraw: suíço com N ímpar gera um BYE', () => {
+    const draw = generateDraw({ format: 'singles', stageType: 'swiss', participants: ['a', 'b', 'c'], seed: 'fixed' });
+    const byes = draw.matches.filter((m) => m.bye);
+    expect(byes).toHaveLength(1);
+    expect(byes[0].side_b).toBeNull();
+  });
+
+  it('generateDraw: dupla eliminação gera a 1ª rodada da chave de vencedores', () => {
+    const players = ['a', 'b', 'c', 'd', 'e', 'f', 'g', 'h'];
+    const draw = generateDraw({ format: 'singles', stageType: 'double_knockout', participants: players, seed: 'fixed' });
+    expect(draw.stageType).toBe('double_knockout');
+    expect(draw.matches).toHaveLength(4); // 8 jogadores → 4 jogos na 1ª rodada
+    expect(draw.bracket.size).toBe(8);
+    const flat = draw.matches.flatMap((m) => [m.side_a, m.side_b]).filter(Boolean).sort();
+    expect(flat).toEqual(players.slice().sort());
+  });
+
+  it('generateDraw: dupla eliminação com N não-potência-de-2 marca byes', () => {
+    const draw = generateDraw({ format: 'doubles', stageType: 'double_knockout', participants: ['a', 'b', 'c', 'd', 'e'], seed: 'fixed' });
+    expect(draw.bracket.size).toBe(8);
+    expect(draw.matches.some((m) => m.bye)).toBe(true);
   });
 });
