@@ -28,10 +28,23 @@ import {
 import { db } from '@/core/config/firebase';
 import { logger } from '@/core/lib/logger';
 import { createAuditLog } from '@/core/services/auditService';
+import { notifyUsers, NOTIFICATION_TYPE } from '@/core/services/notificationService';
 import { syncAthleteProfile } from '@/modules/athletes/services/athleteService';
-import { CLUB_COLLECTIONS, CLUB_ROLE, CLUB_EVENT_TYPE, GAME_DAY_LIMITS } from '../domain/constants.js';
+import {
+  CLUB_COLLECTIONS,
+  CLUB_ROLE,
+  CLUB_EVENT_TYPE,
+  GAME_DAY_LIMITS,
+  EVENT_VISIBILITY,
+  INVITE_STATUS,
+  INVITE_SOURCE,
+} from '../domain/constants.js';
 
 const COL = CLUB_COLLECTIONS;
+
+function eventInviteId(eventId, userId) {
+  return `${eventId}_${userId}`;
+}
 
 function inviteCode() {
   return Math.random().toString(36).slice(2, 8).toUpperCase();
@@ -269,12 +282,44 @@ export async function removeMember(clubId, member, actor) {
 
 /* -------------------------------- Events -------------------------------- */
 
-export async function listClubEvents(clubId) {
+function sortEvents(list) {
+  return list.sort((a, b) => String(a.starts_at || '').localeCompare(String(b.starts_at || '')));
+}
+
+/**
+ * Lista os eventos visíveis para o usuário em um clube:
+ *  - tenta a consulta ampla (funciona para admins/criadores ou quando não há
+ *    evento privado bloqueando a leitura);
+ *  - se as regras bloquearem (há eventos privados que o usuário não pode ler),
+ *    cai para: eventos públicos + eventos privados em que o usuário foi
+ *    convidado (via event_invites).
+ */
+export async function listClubEvents(clubId, userId) {
   if (!db || !clubId) return [];
-  const snap = await getDocs(query(collection(db, COL.events), where('club_id', '==', clubId)));
-  return snap.docs
-    .map((d) => ({ id: d.id, ...d.data() }))
-    .sort((a, b) => String(a.starts_at || '').localeCompare(String(b.starts_at || '')));
+  try {
+    const snap = await getDocs(query(collection(db, COL.events), where('club_id', '==', clubId)));
+    return sortEvents(snap.docs.map((d) => ({ id: d.id, ...d.data() })));
+  } catch (err) {
+    logger.info('listClubEvents: fallback para eventos públicos + convites', { clubId, err: err?.code });
+    const byId = new Map();
+    try {
+      const pub = await getDocs(
+        query(collection(db, COL.events), where('club_id', '==', clubId), where('visibility', '==', EVENT_VISIBILITY.PUBLIC)),
+      );
+      pub.docs.forEach((d) => byId.set(d.id, { id: d.id, ...d.data() }));
+    } catch (e) {
+      logger.error('Falha ao listar eventos públicos do clube:', e);
+    }
+    if (userId) {
+      const invites = await listMyEventInvites(userId).catch(() => []);
+      for (const inv of invites.filter((i) => i.club_id === clubId)) {
+        if (byId.has(inv.event_id)) continue;
+        const ev = await getClubEvent(inv.event_id).catch(() => null);
+        if (ev) byId.set(ev.id, ev);
+      }
+    }
+    return sortEvents(Array.from(byId.values()));
+  }
 }
 
 export async function getClubEvent(eventId) {
@@ -288,6 +333,7 @@ export async function createClubEvent(clubId, data, user) {
   if (!user?.uid) throw new Error('Usuário não autenticado.');
   if (!trimmed(data.title)) throw new Error('Informe o título do evento.');
   const id = doc(collection(db, COL.events)).id;
+  const visibility = data.visibility === EVENT_VISIBILITY.PRIVATE ? EVENT_VISIBILITY.PRIVATE : EVENT_VISIBILITY.PUBLIC;
   await setDoc(doc(db, COL.events, id), {
     id,
     club_id: clubId,
@@ -297,11 +343,31 @@ export async function createClubEvent(clubId, data, user) {
     location: trimmed(data.location),
     starts_at: data.starts_at || null,
     recurring: !!data.recurring,
+    visibility,
     created_by: user.uid,
     created_by_name: data.created_by_name || user.displayName || user.email || '',
     created_at: serverTimestamp(),
     updated_at: serverTimestamp(),
   });
+  // O criador já entra como participante confirmado do evento.
+  try {
+    await setDoc(doc(db, COL.eventInvites, eventInviteId(id, user.uid)), {
+      id: eventInviteId(id, user.uid),
+      event_id: id,
+      club_id: clubId,
+      user_id: user.uid,
+      user_name: data.created_by_name || user.displayName || user.email || 'Atleta',
+      user_photo: data.created_by_photo || user.photoURL || '',
+      status: INVITE_STATUS.GOING,
+      source: INVITE_SOURCE.CLUB,
+      invited_by: user.uid,
+      created_at: serverTimestamp(),
+      created_at_ms: Date.now(),
+      updated_at: serverTimestamp(),
+    });
+  } catch (err) {
+    logger.error('Falha ao registrar o criador como participante do evento:', err);
+  }
   // Semeia a primeira data do evento (quando informada) para que a página do
   // evento já mostre a data com local/horário e permita respostas por data.
   if (data.starts_at) {
@@ -316,17 +382,139 @@ export async function createClubEvent(clubId, data, user) {
 }
 
 export async function updateClubEvent(eventId, updates, actor) {
-  const allowed = ['title', 'description', 'type', 'location', 'starts_at', 'recurring'];
+  const allowed = ['title', 'description', 'type', 'location', 'starts_at', 'recurring', 'visibility'];
   const sanitized = {};
   allowed.forEach((key) => {
     if (updates[key] === undefined) return;
     if (key === 'starts_at') sanitized[key] = updates[key] || null;
     else if (key === 'type') sanitized[key] = updates[key];
     else if (key === 'recurring') sanitized[key] = !!updates[key];
+    else if (key === 'visibility') sanitized[key] = updates[key] === EVENT_VISIBILITY.PRIVATE ? EVENT_VISIBILITY.PRIVATE : EVENT_VISIBILITY.PUBLIC;
     else sanitized[key] = trimmed(updates[key]);
   });
   await updateDoc(doc(db, COL.events, eventId), { ...sanitized, updated_at: serverTimestamp() });
   await createAuditLog({ action: 'club_event_updated', actor, details: { event_id: eventId } });
+}
+
+/* ----------------------- Event invites / participants ------------------- */
+
+export async function listEventInvites(eventId) {
+  if (!db || !eventId) return [];
+  const snap = await getDocs(query(collection(db, COL.eventInvites), where('event_id', '==', eventId)));
+  return snap.docs
+    .map((d) => ({ id: d.id, ...d.data() }))
+    .sort((a, b) => (a.created_at_ms || 0) - (b.created_at_ms || 0));
+}
+
+export async function listMyEventInvites(userId) {
+  if (!db || !userId) return [];
+  const snap = await getDocs(query(collection(db, COL.eventInvites), where('user_id', '==', userId)));
+  return snap.docs.map((d) => ({ id: d.id, ...d.data() }));
+}
+
+/**
+ * Eventos disponíveis para o usuário na página inicial:
+ *  - eventos públicos dos clubes em que o usuário é membro;
+ *  - eventos (públicos ou privados) para os quais o usuário foi convidado, de
+ *    qualquer clube.
+ */
+export async function listAvailableEvents(userId, clubIds = []) {
+  if (!db || !userId) return [];
+  const byId = new Map();
+  for (const cid of clubIds) {
+    try {
+      const snap = await getDocs(
+        query(collection(db, COL.events), where('club_id', '==', cid), where('visibility', '==', EVENT_VISIBILITY.PUBLIC)),
+      );
+      snap.docs.forEach((d) => byId.set(d.id, { id: d.id, ...d.data(), my_invite_status: null }));
+    } catch (err) {
+      logger.error('Falha ao listar eventos públicos para o início:', err);
+    }
+  }
+  const invites = await listMyEventInvites(userId).catch(() => []);
+  const statusByEvent = new Map(invites.map((i) => [i.event_id, i.status]));
+  for (const inv of invites) {
+    if (!byId.has(inv.event_id)) {
+      const ev = await getClubEvent(inv.event_id).catch(() => null);
+      if (ev) byId.set(ev.id, { ...ev, my_invite_status: inv.status });
+    }
+  }
+  // Anota a resposta do usuário (quando houver) também nos públicos.
+  const result = Array.from(byId.values()).map((ev) => ({
+    ...ev,
+    my_invite_status: ev.my_invite_status ?? statusByEvent.get(ev.id) ?? null,
+  }));
+  return result.sort((a, b) => String(a.starts_at || '').localeCompare(String(b.starts_at || '')));
+}
+
+export async function getMyEventInvite(eventId, userId) {
+  if (!db || !eventId || !userId) return null;
+  const snap = await getDoc(doc(db, COL.eventInvites, eventInviteId(eventId, userId)));
+  return snap.exists() ? { id: snap.id, ...snap.data() } : null;
+}
+
+/**
+ * Convida um atleta (do clube ou da plataforma) para o evento e notifica-o.
+ * `target` = { user_id, user_name, user_photo, source }.
+ */
+export async function inviteToEvent(event, target, inviter, profile) {
+  if (!inviter?.uid) throw new Error('Usuário não autenticado.');
+  if (!target?.user_id) throw new Error('Selecione um atleta para convidar.');
+  const id = eventInviteId(event.id, target.user_id);
+  const existing = await getDoc(doc(db, COL.eventInvites, id));
+  if (existing.exists()) return existing.data(); // já é participante/convidado
+
+  const payload = {
+    id,
+    event_id: event.id,
+    club_id: event.club_id,
+    user_id: target.user_id,
+    user_name: target.user_name || 'Atleta',
+    user_photo: target.user_photo || '',
+    status: INVITE_STATUS.INVITED,
+    source: target.source === INVITE_SOURCE.PLATFORM ? INVITE_SOURCE.PLATFORM : INVITE_SOURCE.CLUB,
+    invited_by: inviter.uid,
+    created_at: serverTimestamp(),
+    created_at_ms: Date.now(),
+    updated_at: serverTimestamp(),
+  };
+  await setDoc(doc(db, COL.eventInvites, id), payload);
+
+  const inviterName = profile?.platform_name || inviter.displayName || inviter.email || 'Um atleta';
+  notifyUsers([target.user_id], {
+    title: `${inviterName} convidou você para "${trimmed(event.title).slice(0, 60)}"`,
+    message: 'Toque para ver o evento e responder: Vou, Talvez ou Não vou.',
+    type: NOTIFICATION_TYPE.EVENT_INVITE,
+    link: `/clubes/${event.club_id}/eventos/${event.id}`,
+    actor: { uid: inviter.uid, displayName: inviterName },
+  });
+  return payload;
+}
+
+/** Resposta do próprio usuário (Vou/Talvez/Não vou) — cria ou atualiza o convite. */
+export async function setMyEventResponse(event, status, user, profile) {
+  if (!user?.uid) throw new Error('Usuário não autenticado.');
+  const id = eventInviteId(event.id, user.uid);
+  await setDoc(
+    doc(db, COL.eventInvites, id),
+    {
+      id,
+      event_id: event.id,
+      club_id: event.club_id,
+      user_id: user.uid,
+      user_name: profile?.platform_name || user.displayName || user.email || 'Atleta',
+      user_photo: profile?.photo_url || user.photoURL || '',
+      status,
+      source: INVITE_SOURCE.CLUB,
+      updated_at: serverTimestamp(),
+      created_at_ms: Date.now(),
+    },
+    { merge: true },
+  );
+}
+
+export async function removeEventInvite(eventId, userId) {
+  await deleteDoc(doc(db, COL.eventInvites, eventInviteId(eventId, userId)));
 }
 
 async function deleteSubcollection(eventId, sub) {
@@ -340,13 +528,14 @@ async function deleteSubcollection(eventId, sub) {
 }
 
 export async function deleteClubEvent(eventId, actor) {
-  try {
-    const snap = await getDocs(query(collection(db, COL.rsvps), where('event_id', '==', eventId)));
-    const batch = writeBatch(db);
-    snap.docs.forEach((d) => batch.delete(d.ref));
-    if (!snap.empty) await batch.commit();
-  } catch (err) {
-    logger.error('Falha ao limpar RSVPs do evento:', err);
+  // RSVPs legados e convites/participações (coleções de nível superior).
+  for (const colName of [COL.rsvps, COL.eventInvites]) {
+    try {
+      const snap = await getDocs(query(collection(db, colName), where('event_id', '==', eventId)));
+      if (!snap.empty) await commitInChunks(snap.docs.map((d) => ({ type: 'delete', ref: d.ref })));
+    } catch (err) {
+      logger.error(`Falha ao limpar ${colName} do evento:`, err);
+    }
   }
   // Limpa as subcoleções do evento (best-effort) antes de remover o documento.
   for (const sub of [COL.eventDates, COL.eventDateRsvps, COL.eventMessages, COL.eventParticipants, COL.eventGames]) {

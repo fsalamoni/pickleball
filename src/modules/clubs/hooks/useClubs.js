@@ -21,6 +21,12 @@ import {
   deleteClubEvent,
   listEventRsvps,
   setEventRsvp,
+  listEventInvites,
+  listMyEventInvites,
+  listAvailableEvents,
+  inviteToEvent,
+  setMyEventResponse,
+  removeEventInvite,
   listEventDates,
   addEventDate,
   updateEventDate,
@@ -179,10 +185,71 @@ export function useRemoveMember(clubId) {
 /* -------------------------------- Events -------------------------------- */
 
 export function useClubEvents(clubId) {
+  const { user } = useAuth();
   return useQuery({
-    queryKey: ['club-events', clubId],
-    queryFn: () => listClubEvents(clubId),
+    queryKey: ['club-events', clubId, user?.uid],
+    queryFn: () => listClubEvents(clubId, user?.uid),
     enabled: !!clubId,
+  });
+}
+
+/* -------------------- Event invites / participants ---------------------- */
+
+export function useEventInvites(eventId) {
+  return useQuery({
+    queryKey: ['event-invites', eventId],
+    queryFn: () => listEventInvites(eventId),
+    enabled: !!eventId,
+  });
+}
+
+export function useMyEventInvites() {
+  const { user } = useAuth();
+  return useQuery({
+    queryKey: ['my-event-invites', user?.uid],
+    queryFn: () => (user?.uid ? listMyEventInvites(user.uid) : Promise.resolve([])),
+    enabled: !!user?.uid,
+  });
+}
+
+/** Eventos disponíveis para o início (públicos dos meus clubes + convites). */
+export function useAvailableEvents() {
+  const { user } = useAuth();
+  const { data: myClubs = [] } = useMyClubs();
+  const clubIds = myClubs.map((c) => c.id).filter(Boolean);
+  return useQuery({
+    queryKey: ['available-events', user?.uid, clubIds.slice().sort().join(',')],
+    queryFn: () => listAvailableEvents(user?.uid, clubIds),
+    enabled: !!user?.uid,
+  });
+}
+
+export function useInviteToEvent(event) {
+  const { user, userProfile } = useAuth();
+  const qc = useQueryClient();
+  return useMutation({
+    mutationFn: (target) => inviteToEvent(event, target, user, userProfile),
+    onSuccess: () => qc.invalidateQueries({ queryKey: ['event-invites', event.id] }),
+  });
+}
+
+export function useSetEventResponse(event) {
+  const { user, userProfile } = useAuth();
+  const qc = useQueryClient();
+  return useMutation({
+    mutationFn: (status) => setMyEventResponse(event, status, user, userProfile),
+    onSuccess: () => {
+      qc.invalidateQueries({ queryKey: ['event-invites', event.id] });
+      qc.invalidateQueries({ queryKey: ['my-event-invites'] });
+    },
+  });
+}
+
+export function useRemoveEventInvite(eventId) {
+  const qc = useQueryClient();
+  return useMutation({
+    mutationFn: (userId) => removeEventInvite(eventId, userId),
+    onSuccess: () => qc.invalidateQueries({ queryKey: ['event-invites', eventId] }),
   });
 }
 

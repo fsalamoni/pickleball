@@ -30,19 +30,41 @@ service cloud.firestore {
         && exists(/databases/$(database)/documents/clubs/$(clubId))
         && get(/databases/$(database)/documents/clubs/$(clubId)).data.created_by == request.auth.uid;
     }
-    // Clube de um evento (para validar subcoleções pelo documento-pai).
-    function eventClubId(eventId) {
-      return get(/databases/$(database)/documents/club_events/$(eventId)).data.club_id;
+    // Dados/relações de um evento (para validar subcoleções pelo documento-pai).
+    function eventData(eventId) {
+      return get(/databases/$(database)/documents/club_events/$(eventId)).data;
     }
-    function isEventClubMember(eventId) {
+    function eventClubId(eventId) {
+      return eventData(eventId).club_id;
+    }
+    // Eventos antigos sem o campo `visibility` são tratados como públicos.
+    function eventIsPublic(eventId) {
+      return eventData(eventId).get('visibility', 'public') != 'private';
+    }
+    // Convidado/participante do evento (doc em event_invites com id determinístico).
+    function isEventInvitee(eventId) {
+      return isAuthed()
+        && exists(/databases/$(database)/documents/event_invites/$(eventId + '_' + request.auth.uid));
+    }
+    // Quem pode ver/usar o evento: admin da plataforma, criador, admin do clube,
+    // convidado/participante, ou — se público — qualquer membro do clube.
+    function isEventParticipant(eventId) {
       return isAuthed()
         && exists(/databases/$(database)/documents/club_events/$(eventId))
-        && isClubMember(eventClubId(eventId));
+        && (isPlatformAdmin()
+            || eventData(eventId).created_by == request.auth.uid
+            || isClubAdmin(eventClubId(eventId))
+            || isEventInvitee(eventId)
+            || (eventIsPublic(eventId) && isClubMember(eventClubId(eventId))));
+    }
+    function isEventClubMember(eventId) {
+      return isEventParticipant(eventId);
     }
     function isEventClubModerator(eventId) {
       return isAuthed()
         && exists(/databases/$(database)/documents/club_events/$(eventId))
-        && (isClubAdmin(eventClubId(eventId)) || isPlatformAdmin());
+        && (isClubAdmin(eventClubId(eventId)) || isPlatformAdmin()
+            || eventData(eventId).created_by == request.auth.uid);
     }
     // Membro de uma conversa (validação pelo documento-pai para as mensagens).
     function isConversationMember(cid) {
@@ -244,12 +266,21 @@ service cloud.firestore {
     }
 
     match /club_events/{eventId} {
-      allow read: if isClubMember(resource.data.club_id) || isPlatformAdmin();
+      // Público (ou legado sem o campo): qualquer membro do clube lê.
+      // Privado: apenas criador, admin do clube, plataforma ou convidado.
+      allow read: if isPlatformAdmin()
+        || (isAuthed() && resource.data.created_by == request.auth.uid)
+        || isClubAdmin(resource.data.club_id)
+        || isEventInvitee(eventId)
+        || (resource.data.get('visibility', 'public') != 'private' && isClubMember(resource.data.club_id));
       allow create: if isClubMember(request.resource.data.club_id)
         && request.resource.data.created_by == request.auth.uid;
-      // Membros participantes podem editar os detalhes do evento (edição livre,
-      // conforme a regra de negócio); admins e o criador também.
-      allow update: if isClubMember(resource.data.club_id) || isPlatformAdmin();
+      // Criador, admin e participantes (incluindo convidados) editam livremente.
+      allow update: if isPlatformAdmin()
+        || (isAuthed() && resource.data.created_by == request.auth.uid)
+        || isClubAdmin(resource.data.club_id)
+        || isEventInvitee(eventId)
+        || (resource.data.get('visibility', 'public') != 'private' && isClubMember(resource.data.club_id));
       allow delete: if isClubAdmin(resource.data.club_id) || isPlatformAdmin()
         || (isAuthed() && resource.data.created_by == request.auth.uid);
 
@@ -289,6 +320,27 @@ service cloud.firestore {
         allow read: if isEventClubMember(eventId) || isPlatformAdmin();
         allow create, update, delete: if isEventClubMember(eventId) || isPlatformAdmin();
       }
+    }
+
+    // ---- Convites/participações em eventos (coleção de nível superior) -----
+    // Id determinístico `${eventId}_${uid}`. Permite ao usuário listar seus
+    // próprios convites (início) e aos participantes verem a lista do evento.
+    match /event_invites/{docId} {
+      allow read: if isAuthed()
+        && (resource.data.user_id == request.auth.uid || isEventParticipant(resource.data.event_id));
+      // Auto-resposta a evento público, aceite de convite, ou um participante
+      // convidando outro atleta.
+      allow create: if isAuthed() && (
+        (request.resource.data.user_id == request.auth.uid
+          && (eventIsPublic(request.resource.data.event_id) || isEventInvitee(request.resource.data.event_id)))
+        || isEventParticipant(request.resource.data.event_id)
+      );
+      allow update: if isAuthed()
+        && (resource.data.user_id == request.auth.uid || isEventParticipant(resource.data.event_id));
+      allow delete: if isAuthed()
+        && (resource.data.user_id == request.auth.uid
+            || isEventClubModerator(resource.data.event_id)
+            || isEventParticipant(resource.data.event_id));
     }
 
     match /club_event_rsvps/{docId} {

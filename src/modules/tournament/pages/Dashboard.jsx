@@ -18,6 +18,8 @@ import { Card, CardContent } from '@/components/ui/card';
 import { Badge } from '@/components/ui/badge';
 import { Skeleton } from '@/components/ui/skeleton';
 import { useMyTournaments, usePublicTournaments } from '@/modules/tournament/hooks/useTournament';
+import { useAvailableEvents } from '@/modules/clubs/hooks/useClubs';
+import { eventTypeLabel, isPrivateEvent, INVITE_STATUS, INVITE_STATUS_LABELS } from '@/modules/clubs/domain/constants';
 import {
   TOURNAMENT_STATUS,
   TOURNAMENT_STATUS_LABELS,
@@ -257,6 +259,8 @@ export default function Dashboard() {
         </Card>
       </section>
 
+      <AvailableEventsSection />
+
       {visibleTournaments.length === 0 ? (
         <Card className="rounded-[2rem] border-white/80 bg-white/82">
           <CardContent className="flex flex-col items-center px-6 py-12 text-center sm:px-10">
@@ -352,6 +356,68 @@ function DashboardLoadingState() {
         ))}
       </div>
     </div>
+  );
+}
+
+function eventDateLabel(value) {
+  const d = parseDate(value);
+  if (!d) return null;
+  return d.toLocaleString('pt-BR', { day: '2-digit', month: 'short', hour: '2-digit', minute: '2-digit' });
+}
+
+function AvailableEventsSection() {
+  const { data: events = [], isLoading } = useAvailableEvents();
+
+  if (isLoading || events.length === 0) return null;
+
+  return (
+    <section className="space-y-4">
+      <SectionHeader
+        eyebrow="Clubes"
+        title="Eventos disponíveis para você"
+        description="Dias de jogo e eventos públicos dos seus clubes e os eventos privados para os quais você foi convidado."
+      />
+      <div className="grid gap-4 lg:grid-cols-2 xl:grid-cols-3">
+        {events.slice(0, 6).map((event) => {
+          const when = eventDateLabel(event.starts_at);
+          const priv = isPrivateEvent(event);
+          const status = event.my_invite_status;
+          return (
+            <Link
+              key={event.id}
+              to={`/clubes/${event.club_id}/eventos/${event.id}`}
+              className="block h-full"
+            >
+              <Card className="match-surface h-full overflow-hidden rounded-[1.5rem] border-white/80 bg-white/85">
+                <CardContent className="flex h-full flex-col p-5">
+                  <div className="flex items-center justify-between gap-2">
+                    <Badge variant="success" className="rounded-full">{eventTypeLabel(event.type)}</Badge>
+                    <Badge variant="outline" className="rounded-full text-[10px] uppercase tracking-[0.12em]">
+                      {priv ? 'Privado' : 'Público'}
+                    </Badge>
+                  </div>
+                  <h4 className="mt-3 line-clamp-2 text-lg font-semibold text-slate-950">{event.title}</h4>
+                  <div className="mt-3 flex flex-wrap gap-x-3 gap-y-1 text-xs text-slate-600">
+                    {when && <span className="inline-flex items-center gap-1"><Calendar className="h-3 w-3" /> {when}</span>}
+                    {event.location && <span className="inline-flex items-center gap-1"><MapPin className="h-3 w-3" /> {event.location}</span>}
+                  </div>
+                  <div className="mt-auto flex items-center justify-between pt-5 text-sm font-medium text-emerald-800">
+                    <span>
+                      {status === INVITE_STATUS.INVITED
+                        ? 'Convite pendente — responda'
+                        : status && INVITE_STATUS_LABELS[status]
+                          ? `Sua resposta: ${INVITE_STATUS_LABELS[status]}`
+                          : 'Ver evento'}
+                    </span>
+                    <ArrowRight className="h-4 w-4" />
+                  </div>
+                </CardContent>
+              </Card>
+            </Link>
+          );
+        })}
+      </div>
+    </section>
   );
 }
 

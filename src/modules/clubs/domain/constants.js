@@ -22,6 +22,7 @@ export const CLUB_COLLECTIONS = Object.freeze({
   members: 'club_members',
   events: 'club_events',
   rsvps: 'club_event_rsvps',
+  eventInvites: 'event_invites',
   posts: 'club_posts',
   forumThreads: 'club_forum_threads',
   forumComments: 'comments',
@@ -103,6 +104,46 @@ export const RSVP_STATUS_LABELS = Object.freeze({
   [RSVP_STATUS.GOING]: 'Vou',
   [RSVP_STATUS.MAYBE]: 'Talvez',
   [RSVP_STATUS.NOT_GOING]: 'Não vou',
+});
+
+/** Visibilidade do evento. */
+export const EVENT_VISIBILITY = Object.freeze({
+  PUBLIC: 'public',
+  PRIVATE: 'private',
+});
+
+export const EVENT_VISIBILITY_LABELS = Object.freeze({
+  [EVENT_VISIBILITY.PUBLIC]: 'Público (todo o clube)',
+  [EVENT_VISIBILITY.PRIVATE]: 'Privado (somente convidados)',
+});
+
+/** Trata a ausência do campo como público (compatibilidade com eventos antigos). */
+export function isPrivateEvent(event) {
+  return (event?.visibility || EVENT_VISIBILITY.PUBLIC) === EVENT_VISIBILITY.PRIVATE;
+}
+
+/**
+ * Estado do convite/participação de um atleta em um evento.
+ * `invited` = convidado e ainda sem resposta; demais reaproveitam o RSVP.
+ */
+export const INVITE_STATUS = Object.freeze({
+  INVITED: 'invited',
+  GOING: RSVP_STATUS.GOING,
+  MAYBE: RSVP_STATUS.MAYBE,
+  NOT_GOING: RSVP_STATUS.NOT_GOING,
+});
+
+export const INVITE_STATUS_LABELS = Object.freeze({
+  [INVITE_STATUS.INVITED]: 'Convidado',
+  [INVITE_STATUS.GOING]: 'Vou',
+  [INVITE_STATUS.MAYBE]: 'Talvez',
+  [INVITE_STATUS.NOT_GOING]: 'Não vou',
+});
+
+/** Origem do participante do evento. */
+export const INVITE_SOURCE = Object.freeze({
+  CLUB: 'club', // atleta do clube
+  PLATFORM: 'platform', // outro atleta da plataforma (convidado em evento privado)
 });
 
 /** Origem de um participante do dia de jogo. */

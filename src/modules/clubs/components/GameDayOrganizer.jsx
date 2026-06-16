@@ -23,8 +23,7 @@ import {
   useEventParticipants,
   useAddEventParticipant,
   useRemoveEventParticipant,
-  useEventRsvps,
-  useEventDateRsvps,
+  useEventInvites,
   useEventGames,
   useAddEventGame,
   useUpdateEventGame,
@@ -34,7 +33,7 @@ import {
   useClubMembers,
 } from '@/modules/clubs/hooks/useClubs';
 import { useAthletes } from '@/modules/athletes/hooks/useAthletes';
-import { PARTICIPANT_SOURCE, RSVP_STATUS, GAME_DAY_LIMITS } from '@/modules/clubs/domain/constants';
+import { PARTICIPANT_SOURCE, INVITE_STATUS, GAME_DAY_LIMITS } from '@/modules/clubs/domain/constants';
 import { generateGameDayGames, suggestRounds } from '@/modules/clubs/domain/gameDayDraw';
 
 const SOURCE_LABEL = {
@@ -60,8 +59,7 @@ export default function GameDayOrganizer({ event, clubId }) {
 function ParticipantsSection({ eventId, clubId, participants, isLoading }) {
   const addParticipant = useAddEventParticipant(eventId);
   const removeParticipant = useRemoveEventParticipant(eventId);
-  const { data: eventRsvps = [] } = useEventRsvps(eventId);
-  const { data: dateRsvps = [] } = useEventDateRsvps(eventId);
+  const { data: invites = [] } = useEventInvites(eventId);
   const { data: members = [] } = useClubMembers(clubId);
   const { data: athletes = [] } = useAthletes();
   const [guestName, setGuestName] = useState('');
@@ -76,17 +74,17 @@ function ParticipantsSection({ eventId, clubId, participants, isLoading }) {
     [participants],
   );
 
-  // Atletas que confirmaram presença no evento (vou) — nível evento ou alguma data.
+  // Participantes do evento que confirmaram presença (Vou).
   const confirmedPool = useMemo(() => {
     const map = new Map();
-    const consider = (uid, name, photo) => {
-      if (!uid || addedUserIds.has(uid) || map.has(uid)) return;
-      map.set(uid, { user_id: uid, name: name || 'Atleta', photo_url: photo || '', source: PARTICIPANT_SOURCE.CONFIRMED });
-    };
-    eventRsvps.filter((r) => r.status === RSVP_STATUS.GOING).forEach((r) => consider(r.user_id, r.user_name, r.user_photo));
-    dateRsvps.filter((r) => r.status === RSVP_STATUS.GOING).forEach((r) => consider(r.user_id, r.user_name, r.user_photo));
+    invites
+      .filter((i) => i.status === INVITE_STATUS.GOING)
+      .forEach((i) => {
+        if (!i.user_id || addedUserIds.has(i.user_id) || map.has(i.user_id)) return;
+        map.set(i.user_id, { user_id: i.user_id, name: i.user_name || 'Atleta', photo_url: i.user_photo || '', source: PARTICIPANT_SOURCE.CONFIRMED });
+      });
     return Array.from(map.values());
-  }, [eventRsvps, dateRsvps, addedUserIds]);
+  }, [invites, addedUserIds]);
 
   // Demais atletas da plataforma (membros do clube + diretório), excluindo os já confirmados/adicionados.
   const platformPool = useMemo(() => {

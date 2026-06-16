@@ -24,6 +24,7 @@ export const NOTIFICATION_TYPE = Object.freeze({
   CHAT_INVITE: 'chat_invite',
   FORUM_REPLY: 'forum_reply',
   FORUM_MENTION: 'forum_mention',
+  EVENT_INVITE: 'event_invite',
   GENERIC: 'generic',
 });
 

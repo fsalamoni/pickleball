@@ -1,7 +1,7 @@
 import React, { useState } from 'react';
 import { Link } from 'react-router-dom';
 import { toast } from 'sonner';
-import { CalendarDays, MapPin, Pencil, Plus, Repeat, Trash2, Users, ArrowRight } from 'lucide-react';
+import { CalendarDays, MapPin, Pencil, Plus, Repeat, Trash2, Users, ArrowRight, Globe, Lock } from 'lucide-react';
 import { Card, CardContent } from '@/components/ui/card';
 import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
@@ -25,16 +25,20 @@ import {
   useCreateClubEvent,
   useUpdateClubEvent,
   useDeleteClubEvent,
-  useEventRsvps,
-  useSetEventRsvp,
+  useEventInvites,
+  useSetEventResponse,
 } from '@/modules/clubs/hooks/useClubs';
 import {
   CLUB_EVENT_TYPE,
   CLUB_EVENT_TYPE_LABELS,
   RSVP_STATUS,
   RSVP_STATUS_LABELS,
+  INVITE_STATUS,
+  EVENT_VISIBILITY,
+  EVENT_VISIBILITY_LABELS,
   eventTypeLabel,
   isGameDayEvent,
+  isPrivateEvent,
 } from '@/modules/clubs/domain/constants';
 
 function formatDateTime(value) {
@@ -90,21 +94,22 @@ export default function ClubEventsTab({ clubId, isAdmin }) {
 
 function EventCard({ event, clubId, isAdmin }) {
   const { user } = useAuth();
-  const { data: rsvps = [] } = useEventRsvps(event.id);
-  const setRsvp = useSetEventRsvp(event.id);
+  const { data: invites = [] } = useEventInvites(event.id);
+  const setResponse = useSetEventResponse(event);
   const deleteEvent = useDeleteClubEvent(clubId);
   const [confirmDelete, setConfirmDelete] = useState(false);
   const [editOpen, setEditOpen] = useState(false);
 
   const canManage = isAdmin || event.created_by === user?.uid;
-  const myRsvp = rsvps.find((r) => r.user_id === user?.uid)?.status;
-  const goingCount = rsvps.filter((r) => r.status === RSVP_STATUS.GOING).length;
+  const myRsvp = invites.find((r) => r.user_id === user?.uid)?.status;
+  const goingCount = invites.filter((r) => r.status === INVITE_STATUS.GOING).length;
   const when = formatDateTime(event.starts_at);
   const gameDay = isGameDayEvent(event.type);
+  const isPrivate = isPrivateEvent(event);
 
   const handleRsvp = async (status) => {
     try {
-      await setRsvp.mutateAsync({ event, status });
+      await setResponse.mutateAsync(status);
     } catch (err) {
       toast.error(err.message || 'Não foi possível registrar presença.');
     }
@@ -128,6 +133,10 @@ function EventCard({ event, clubId, isAdmin }) {
             <div className="flex flex-wrap items-center gap-2">
               <Badge variant={TYPE_TONE[event.type] || 'outline'} className="rounded-full">
                 {eventTypeLabel(event.type)}
+              </Badge>
+              <Badge variant="outline" className="rounded-full">
+                {isPrivate ? <Lock className="mr-1 h-3 w-3" /> : <Globe className="mr-1 h-3 w-3" />}
+                {isPrivate ? 'Privado' : 'Público'}
               </Badge>
               {event.recurring && (
                 <Badge variant="secondary" className="rounded-full">
@@ -157,7 +166,7 @@ function EventCard({ event, clubId, isAdmin }) {
               key={status}
               size="sm"
               variant={myRsvp === status ? 'default' : 'outline'}
-              disabled={setRsvp.isPending}
+              disabled={setResponse.isPending}
               onClick={() => handleRsvp(status)}
             >
               {RSVP_STATUS_LABELS[status]}
@@ -209,27 +218,21 @@ export function EventFormDialog({ clubId, event, open, onClose }) {
   const isEdit = !!event;
   const createEvent = useCreateClubEvent(clubId);
   const updateEvent = useUpdateClubEvent(clubId);
-  const [form, setForm] = useState(() => ({
+  const buildInitial = () => ({
     title: event?.title || '',
     description: event?.description || '',
     type: event?.type || CLUB_EVENT_TYPE.GAME_DAY,
     location: event?.location || '',
     starts_at: toLocalInput(event?.starts_at),
     recurring: !!event?.recurring,
-  }));
+    visibility: event?.visibility || EVENT_VISIBILITY.PUBLIC,
+  });
+  const [form, setForm] = useState(buildInitial);
 
   // Reinicializa o formulário ao abrir (importante no modo edição).
   React.useEffect(() => {
-    if (open) {
-      setForm({
-        title: event?.title || '',
-        description: event?.description || '',
-        type: event?.type || CLUB_EVENT_TYPE.GAME_DAY,
-        location: event?.location || '',
-        starts_at: toLocalInput(event?.starts_at),
-        recurring: !!event?.recurring,
-      });
-    }
+    if (open) setForm(buildInitial());
+    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [open, event]);
 
   const setField = (key) => (e) => setForm((prev) => ({ ...prev, [key]: e.target.value }));
@@ -306,6 +309,24 @@ export function EventFormDialog({ clubId, event, open, onClose }) {
               checked={form.recurring}
               onCheckedChange={(v) => setForm((prev) => ({ ...prev, recurring: v }))}
             />
+          </div>
+          <div className="space-y-2">
+            <Label htmlFor="event_visibility">Visibilidade</Label>
+            <select
+              id="event_visibility"
+              value={form.visibility}
+              onChange={setField('visibility')}
+              className="h-10 w-full rounded-md border border-input bg-background px-3 py-2 text-sm ring-offset-background focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2"
+            >
+              {Object.entries(EVENT_VISIBILITY_LABELS).map(([value, label]) => (
+                <option key={value} value={value}>{label}</option>
+              ))}
+            </select>
+            <p className="text-xs text-slate-500">
+              {form.visibility === EVENT_VISIBILITY.PRIVATE
+                ? 'Apenas atletas convidados verão e participarão do evento.'
+                : 'Todos os atletas do clube poderão ver e participar.'}
+            </p>
           </div>
           <div className="space-y-2">
             <Label htmlFor="event_description">Descrição</Label>
