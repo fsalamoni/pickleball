@@ -130,7 +130,10 @@ describe('assignSchedule', () => {
     // m1 e m3 compartilham o jogador "a" → horários diferentes
     expect(m1.scheduled_at).not.toBe(m3.scheduled_at);
     expect(m1.court).toMatch(/Quadra/);
-    expect(new Date(m1.scheduled_at).getHours()).toBe(14);
+    // a grade começa no horário configurado (14:00); o agendador de equilíbrio
+    // pode escolher qualquer jogo para o 1º horário, mas algum começa às 14h.
+    const startHours = ['m1', 'm2', 'm3'].map((id) => new Date(byMatchId.get(id).scheduled_at).getHours());
+    expect(Math.min(...startHours)).toBe(14);
   });
 
   it('respeita a janela de término emitindo avisos', () => {
