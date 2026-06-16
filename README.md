@@ -43,6 +43,23 @@ npm run dev                  # http://localhost:5173
 | `npm run test` | Vitest (unit) |
 | `npm run e2e` | Playwright (E2E) |
 
+## App mobile (PWA)
+
+A plataforma pode ser instalada como app no celular **sem passar pelas lojas**,
+direto do site (Android via prompt nativo; iOS/Safari via "Adicionar à Tela de
+Início"). É um PWA — totalmente aditivo, não altera banco de dados nem
+funcionalidades.
+
+Fica **desligado por padrão** atrás da flag `VITE_PWA_ENABLED`:
+
+- `VITE_PWA_ENABLED=false` (padrão): nenhum service worker é registrado e o
+  botão "Baixar o app" não aparece. Zero impacto.
+- `VITE_PWA_ENABLED=true`: ativa o registro do service worker (apenas em build de
+  produção) e exibe o botão de instalação na landing.
+
+Os ícones do app são gerados por `node scripts/generate-pwa-icons.mjs`
+(saída em `public/`). Após validar tudo, basta ligar a flag no ambiente de build.
+
 ## Publicação no GitHub Pages
 
 O repositório já está preparado para publicar a aplicação em **GitHub Pages** via workflow do GitHub Actions (`.github/workflows/deploy-pages.yml`).

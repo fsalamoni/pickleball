@@ -14,6 +14,7 @@ import {
 } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent } from '@/components/ui/card';
+import InstallAppButton from '@/components/InstallAppButton';
 import { useAuth } from '@/core/lib/FirebaseAuthContext';
 
 const HERO_STATS = [
@@ -152,6 +153,7 @@ export default function Landing() {
                   <ChevronRight className="h-4 w-4" />
                 </Link>
               </Button>
+              <InstallAppButton size="lg" variant="outline" label="Baixar o app" />
             </div>
 
             <div className="mt-10 grid gap-3 sm:grid-cols-3">
