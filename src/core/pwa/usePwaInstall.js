@@ -61,8 +61,9 @@ export function usePwaInstall() {
     installed,
     isIOS,
     canPrompt: Boolean(deferredPrompt),
-    // Mostra o CTA se há prompt nativo OU se é iOS (instruções manuais).
-    available: enabled && (Boolean(deferredPrompt) || isIOS),
+    // Mostra o CTA sempre que o PWA está ligado e ainda não foi instalado.
+    // O clique decide o caminho: prompt nativo, instruções iOS ou genéricas.
+    available: enabled,
     promptInstall,
   };
 }
