@@ -262,6 +262,8 @@ function explainAmericano(n) {
     `${n} jogadores → ${totalMatches} jogos no total (cada jogo é 2 contra 2 e fecha 2 duplas).`,
     `Cobertura perfeita: cada uma das ${totalPairs} duplas possíveis acontece exatamente uma vez.`,
     `Cada jogador faz ${n - 1} jogos, formando dupla com cada outro jogador uma única vez.`,
+    'Adversários equilibrados: você enfrenta cada outro jogador a mesma quantidade de vezes (em média 2), sem repetições desproporcionais.',
+    'Quando há níveis e gêneros informados, o sorteio ainda tenta — dentro do equilíbrio — que duplas do mesmo gênero e de níveis próximos se enfrentem.',
   ];
 
   return {

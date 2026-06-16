@@ -6,7 +6,7 @@
 
 import { generateDraw } from '../domain/draw.js';
 import { stageFormatCompatibility } from '../domain/formatExplain.js';
-import { balancedParticipantOrder } from '../domain/seeding.js';
+import { balancedParticipantOrder, levelRank } from '../domain/seeding.js';
 import { listRegistrations } from './registrationService.js';
 import { persistMatches } from './matchService.js';
 import { getModality } from './modalityService.js';
@@ -49,6 +49,29 @@ function buildMeta(registrations, modality) {
     partner_level: modality.format === MODALITY_FORMAT.DOUBLES ? reg.player_b_level || null : null,
     gender: deriveGender(reg, modality),
   }));
+}
+
+/**
+ * Metadados por jogador para o equilíbrio secundário da Americana (gênero e
+ * nível). A inscrição é individual (Simples), então cada inscrição é um jogador.
+ *  - gender: 1 (masculino), 0 (feminino) ou null (desconhecido/misto);
+ *  - level: força numérica do nível (maior = mais forte) ou null.
+ *
+ * @param {Array<object>} registrations
+ * @param {object} modality
+ * @returns {Record<string, { gender: 0|1|null, level: number|null }>}
+ */
+function buildAmericanoPlayerMeta(registrations, modality) {
+  const meta = {};
+  registrations.forEach((reg) => {
+    const g = deriveGender(reg, modality);
+    let gender = null;
+    if (g === COMPETITION_GENDER.MALE) gender = 1;
+    else if (g === COMPETITION_GENDER.FEMALE) gender = 0;
+    const rank = levelRank(reg.player_a_level);
+    meta[reg.id] = { gender, level: rank >= 0 ? rank : null };
+  });
+  return meta;
 }
 
 /**
@@ -125,6 +148,14 @@ export async function runDraw(params, actor) {
     seedCount = participants.length;
   }
 
+  // Para a Americana, o equilíbrio de adversários (regra absoluta) é resolvido
+  // pelo motor de sorteio; aqui apenas fornecemos os metadados de gênero/nível
+  // por jogador para a preferência secundária (mesmo gênero/nível se enfrentam).
+  const playerMeta =
+    stage.type === TOURNAMENT_STAGE_TYPE.AMERICANO
+      ? buildAmericanoPlayerMeta(byCreation, modality)
+      : null;
+
   const draw = generateDraw({
     format: modality.format,
     stageType: stage.type,
@@ -133,6 +164,7 @@ export async function runDraw(params, actor) {
     seedCount,
     seed,
     groupStrategy,
+    playerMeta,
   });
 
   const tournament = await getTournament(tournamentId);

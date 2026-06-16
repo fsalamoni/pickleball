@@ -340,101 +340,307 @@ export function americanoCrossBlocks(b1, b2) {
   return matches;
 }
 
+/* --------------------- Motor de equilíbrio da Americana ------------------ */
+//
+// O coração da Americana individual é um problema combinatório clássico
+// (conhecido como Whist Tournament / Social Golfer): com N ≡ 0 ou 1 (mod 4)
+// jogadores precisamos montar jogos 2×2 tais que
+//
+//   (1) cada jogador forme dupla com cada outro EXATAMENTE uma vez
+//       (parceria única — regra absoluta), e
+//   (2) cada jogador enfrente cada outro como adversário o MESMO número de
+//       vezes (equilíbrio de adversários — regra absoluta).
+//
+// A média de confrontos é sempre exatamente 2 (cada jogador disputa N−1 jogos,
+// com 2 adversários por jogo → 2·(N−1) "vagas" de adversário divididas pelos
+// N−1 demais jogadores = 2). O objetivo é fazer essa média valer para TODOS os
+// pares, minimizando a variância. Quando isso é alcançado, cada jogador
+// enfrenta cada outro exatamente 2 vezes — o equilíbrio perfeito (teoricamente
+// possível para todo N ≡ 0 ou 1 mod 4).
+//
+// Como o número de duplas C(N,2) é par exatamente quando N ≡ 0 ou 1 (mod 4),
+// elas sempre podem ser distribuídas em jogos (pares de duplas disjuntas). A
+// liberdade está em ESCOLHER quais duas duplas se enfrentam em cada jogo — é
+// isso que determina o equilíbrio de adversários. Otimizamos essa escolha por
+// recozimento simulado (simulated annealing) determinístico:
+//
+//   - Partimos de uma 1-fatoração pelo "método do círculo" (cada jogador
+//     forma dupla com todos uma vez), que já garante a regra (1).
+//   - Movimento 2-opt: tomamos dois jogos (A vs B) e (C vs D) e recombinamos as
+//     duplas — (A vs C) e (B vs D), por exemplo. Isso preserva a regra (1)
+//     (cada dupla continua aparecendo uma única vez) e só altera quem enfrenta
+//     quem, permitindo equilibrar os adversários.
+//   - Custo primário = Σ (confrontos(i,j) − 2)² → zero no equilíbrio perfeito.
+//
+// Tudo é determinístico dada a seed (reprodutível), usando arrays tipados para
+// custo incremental O(1) por movimento.
+
+const americanoDisjoint = (a, b) =>
+  a[0] !== b[0] && a[0] !== b[1] && a[1] !== b[0] && a[1] !== b[1];
+
 /**
- * Cobertura para o caso geral de N jogadores em Americana aberta.
+ * 1-fatoração inicial pelo método do círculo: distribui os N jogadores
+ * (índices 0..N−1) em duplas tais que cada par apareça uma única vez, e
+ * pré-agrupa as duplas em jogos. Serve de ponto de partida para o otimizador.
  *
- * Estratégia (greedy "mais restrito primeiro"):
- *  - Geramos todas as C(N,2) parcerias.
- *  - Montamos jogos casando duas parcerias disjuntas (4 jogadores distintos),
- *    cada parceria usada no máximo uma vez. A cada passo escolhemos a parceria
- *    com menos opções de casamento disponíveis (e o parceiro também mais
- *    restrito), o que maximiza o número de parcerias cobertas.
- *
- * Resultado: cobertura ótima — 0 parcerias de fora quando N ≡ 0 ou 1 (mod 4)
- * e exatamente 1 parceria de fora quando N ≡ 2 ou 3 (mod 4), que é o máximo
- * matematicamente possível (pois C(N,2) é ímpar nesses casos).
- *
- * Esta rotina é usada quando N não é múltiplo de 4 (ex.: N=5, 6, 7, 9, 10…).
- * Para N múltiplo de 4 o caminho rápido é `buildAmericanoBlockSchedule`.
- *
- * @param {string[]} players
- * @returns {Array<{ side_a: [string, string], side_b: [string, string] }>}
+ * @param {number} n
+ * @returns {{ pairs: Array<[number, number]>, games: Array<[number, number]> }}
+ *   `pairs` é a lista de duplas (por índice); `games` casa duas duplas (por
+ *   índice em `pairs`) por jogo.
  */
-function buildAmericanoGeneral(players) {
+function americanoCircleInit(n) {
+  const m = n % 2 === 0 ? n : n + 1; // jogador fantasma (folga) quando ímpar
+  const bye = n;
+  const ring = Array.from({ length: m }, (_, i) => i);
   const pairs = [];
-  for (let i = 0; i < players.length; i += 1) {
-    for (let j = i + 1; j < players.length; j += 1) {
-      pairs.push([players[i], players[j]]);
+  const games = [];
+  const pairIndex = new Map();
+  const addPair = (x, y) => {
+    const key = x < y ? x * 1000 + y : y * 1000 + x;
+    if (pairIndex.has(key)) return pairIndex.get(key);
+    const id = pairs.length;
+    pairs.push([x, y]);
+    pairIndex.set(key, id);
+    return id;
+  };
+  for (let r = 0; r < m - 1; r += 1) {
+    const roundPairs = [];
+    for (let i = 0; i < m / 2; i += 1) {
+      const a = ring[i];
+      const b = ring[m - 1 - i];
+      if (a !== bye && b !== bye) roundPairs.push(addPair(a, b));
     }
+    for (let i = 0; i + 1 < roundPairs.length; i += 2) {
+      games.push([roundPairs[i], roundPairs[i + 1]]);
+    }
+    ring.splice(1, 0, ring.pop()); // rotaciona mantendo o primeiro fixo
   }
-  const disjoint = (a, b) =>
-    a[0] !== b[0] && a[0] !== b[1] && a[1] !== b[0] && a[1] !== b[1];
+  return { pairs, games };
+}
 
-  const matches = [];
-  const used = new Array(pairs.length).fill(false);
-  let remaining = pairs.length;
+/**
+ * Uma execução do recozimento simulado que minimiza o desequilíbrio de
+ * adversários, preservando a regra de parceria única. Determinística pela seed.
+ *
+ * @param {number} n
+ * @param {string} seed
+ * @returns {{ oppCost: number, gameList: Array<[[number,number],[number,number]]> }}
+ *   `oppCost` = Σ (confrontos(i,j) − 2)² (0 = equilíbrio perfeito);
+ *   `gameList` = jogos como par de duplas (cada dupla é [iJogador, jJogador]).
+ */
+function optimizeAmericanoOpponents(n, seed) {
+  const { pairs, games } = americanoCircleInit(n);
+  const nPairs = (n * (n - 1)) / 2;
+  const totalGames = nPairs / 2;
+  const idx = (a, b) => (a < b ? a * n + b : b * n + a);
+  const sq = (x) => x * x;
 
-  while (remaining >= 2) {
-    const available = [];
-    for (let i = 0; i < pairs.length; i += 1) {
-      if (!used[i]) available.push(i);
-    }
-
-    // Grau = número de parcerias disjuntas ainda disponíveis para casar.
-    // Calculado uma única vez por iteração (o conjunto `available` é fixo aqui)
-    // e reutilizado nas duas seleções abaixo.
-    const degreeByIndex = new Map();
-    for (let k = 0; k < available.length; k += 1) {
-      const i = available[k];
-      let deg = 0;
-      for (let m = 0; m < available.length; m += 1) {
-        const j = available[m];
-        if (j !== i && disjoint(pairs[i], pairs[j])) deg += 1;
-      }
-      degreeByIndex.set(i, deg);
-    }
-
-    // Escolhe a parceria mais restrita (menor grau) para casar primeiro.
-    let best = -1;
-    let bestDeg = Infinity;
-    for (let k = 0; k < available.length; k += 1) {
-      const i = available[k];
-      const deg = degreeByIndex.get(i);
-      if (deg < bestDeg) {
-        bestDeg = deg;
-        best = i;
+  const opp = new Int32Array(n * n);
+  let cost = nPairs * 4; // base: todos os pares em 0 confrontos → (0−2)² = 4
+  const applyGame = (p, q, d) => {
+    const A = pairs[p];
+    const B = pairs[q];
+    for (let x = 0; x < 2; x += 1) {
+      for (let y = 0; y < 2; y += 1) {
+        const k = idx(A[x], B[y]);
+        const c = opp[k];
+        cost -= sq(c - 2);
+        const nc = c + d;
+        opp[k] = nc;
+        cost += sq(nc - 2);
       }
     }
-    if (best === -1) break;
+  };
+  games.forEach(([gi, gj]) => applyGame(gi, gj, 1));
 
-    // Escolhe o parceiro disjunto também mais restrito.
-    let partner = -1;
-    let partnerDeg = Infinity;
-    for (let k = 0; k < available.length; k += 1) {
-      const j = available[k];
-      if (j === best || !disjoint(pairs[best], pairs[j])) continue;
-      const deg = degreeByIndex.get(j);
-      if (deg < partnerDeg) {
-        partnerDeg = deg;
-        partner = j;
+  let bestCost = cost;
+  const bestFlat = new Int32Array(totalGames * 2);
+  const snapshot = () => {
+    for (let i = 0; i < totalGames; i += 1) {
+      bestFlat[i * 2] = games[i][0];
+      bestFlat[i * 2 + 1] = games[i][1];
+    }
+  };
+  snapshot();
+  const restore = () => {
+    opp.fill(0);
+    cost = nPairs * 4;
+    for (let i = 0; i < totalGames; i += 1) {
+      games[i][0] = bestFlat[i * 2];
+      games[i][1] = bestFlat[i * 2 + 1];
+    }
+    games.forEach(([gi, gj]) => applyGame(gi, gj, 1));
+  };
+
+  const rng = seededRng(seed);
+  const cycles = 5;
+  const itersPer = Math.min(150000, Math.max(20000, nPairs * 800));
+  for (let cy = 0; cy < cycles && bestCost > 0; cy += 1) {
+    const t0 = cy === 0 ? 1.0 : 0.5; // reaquecimento a cada ciclo
+    for (let it = 0; it < itersPer && cost > 0; it += 1) {
+      const temp = t0 * (1 - it / itersPer) + 0.01;
+      const a = (rng() * totalGames) | 0;
+      const b = (rng() * totalGames) | 0;
+      if (a === b) continue;
+      const a1 = games[a][0];
+      const a2 = games[a][1];
+      const b1 = games[b][0];
+      const b2 = games[b][1];
+      // Duas recombinações possíveis; cada uma exige duplas disjuntas (jogo
+      // válido com 4 jogadores distintos).
+      const opt1 = americanoDisjoint(pairs[a1], pairs[b1]) && americanoDisjoint(pairs[a2], pairs[b2]);
+      const opt2 = americanoDisjoint(pairs[a1], pairs[b2]) && americanoDisjoint(pairs[a2], pairs[b1]);
+      let n0;
+      let n1;
+      if (opt1 && opt2) {
+        if (rng() < 0.5) { n0 = [a1, b1]; n1 = [a2, b2]; } else { n0 = [a1, b2]; n1 = [a2, b1]; }
+      } else if (opt1) {
+        n0 = [a1, b1]; n1 = [a2, b2];
+      } else if (opt2) {
+        n0 = [a1, b2]; n1 = [a2, b1];
+      } else {
+        continue;
+      }
+      const before = cost;
+      applyGame(a1, a2, -1);
+      applyGame(b1, b2, -1);
+      applyGame(n0[0], n0[1], 1);
+      applyGame(n1[0], n1[1], 1);
+      if (cost <= before || rng() < Math.exp((before - cost) / temp)) {
+        games[a][0] = n0[0];
+        games[a][1] = n0[1];
+        games[b][0] = n1[0];
+        games[b][1] = n1[1];
+        if (cost < bestCost) { bestCost = cost; snapshot(); }
+      } else {
+        // reverte
+        applyGame(n0[0], n0[1], -1);
+        applyGame(n1[0], n1[1], -1);
+        applyGame(a1, a2, 1);
+        applyGame(b1, b2, 1);
       }
     }
-
-    if (partner === -1) {
-      // Parceria sem nenhum casamento possível — fica de fora. Na prática isso
-      // ocorre no máximo uma vez (quando C(N,2) é ímpar, N ≡ 2 ou 3 mod 4).
-      used[best] = true;
-      remaining -= 1;
-      continue;
-    }
-
-    used[best] = true;
-    used[partner] = true;
-    remaining -= 2;
-    matches.push({ side_a: pairs[best], side_b: pairs[partner] });
+    if (cost !== bestCost) restore();
   }
 
-  return matches;
+  const gameList = [];
+  for (let i = 0; i < totalGames; i += 1) {
+    gameList.push([pairs[bestFlat[i * 2]].slice(), pairs[bestFlat[i * 2 + 1]].slice()]);
+  }
+  return { oppCost: bestCost, gameList };
+}
+
+/**
+ * Custo do objetivo SECUNDÁRIO (gênero e nível) de uma escala de jogos.
+ *
+ * Dentro do equilíbrio de adversários (regra absoluta), preferimos — "dentro do
+ * possível" — que duplas do mesmo gênero se enfrentem (masculina×masculina,
+ * feminina×feminina) e que duplas de nível semelhante se enfrentem. Este custo
+ * é usado apenas como CRITÉRIO DE DESEMPATE entre escalas igualmente
+ * equilibradas: nunca sacrifica o equilíbrio de adversários.
+ *
+ * @param {Array<[[number,number],[number,number]]>} gameList
+ * @param {{ gender: Array<0|1|null>, level: Array<number|null> }} meta
+ *   gênero por índice de jogador (1 = masculino, 0 = feminino, null = desconhecido)
+ *   e força/nível por índice (null = desconhecido).
+ * @returns {number}
+ */
+function americanoSecondaryCost(gameList, meta) {
+  if (!meta) return 0;
+  const { gender, level } = meta;
+  const profile = (pair) => {
+    const a = gender[pair[0]];
+    const b = gender[pair[1]];
+    if (a == null || b == null) return 'UN';
+    if (a === 1 && b === 1) return 'MM';
+    if (a === 0 && b === 0) return 'FF';
+    return 'MX';
+  };
+  const strength = (pair) => {
+    const a = level[pair[0]];
+    const b = level[pair[1]];
+    if (a == null || b == null) return null;
+    return a + b;
+  };
+  let cost = 0;
+  for (const [P, Q] of gameList) {
+    const gp = profile(P);
+    const gq = profile(Q);
+    if (gp !== 'UN' && gq !== 'UN' && gp !== gq) {
+      // gênero diferente entre as duplas adversárias: penaliza, com peso maior
+      // para o caso mais "fora do espírito" (masculina × feminina).
+      cost += (gp === 'MM' && gq === 'FF') || (gp === 'FF' && gq === 'MM') ? 4 : 2;
+    }
+    const sp = strength(P);
+    const sq = strength(Q);
+    if (sp != null && sq != null) cost += Math.abs(sp - sq);
+  }
+  return cost;
+}
+
+/**
+ * Conta em quantas rodadas a escala de jogos cabe quando nenhum jogador pode
+ * jogar duas vezes na mesma rodada (empacotamento guloso). Usado apenas como
+ * critério de desempate final — quanto menos rodadas, mais "enxuta" a grade.
+ *
+ * @param {Array<[[number,number],[number,number]]>} gameList
+ * @param {number} n
+ * @returns {number}
+ */
+function americanoRoundCount(gameList, n) {
+  const cap = n % 2 === 0 ? n / 4 : (n - 1) / 4;
+  let remaining = gameList.slice();
+  let rounds = 0;
+  while (remaining.length > 0) {
+    const busy = new Set();
+    const keep = [];
+    let placed = 0;
+    for (const g of remaining) {
+      const players = [g[0][0], g[0][1], g[1][0], g[1][1]];
+      if (placed < cap && !players.some((p) => busy.has(p))) {
+        players.forEach((p) => busy.add(p));
+        placed += 1;
+      } else {
+        keep.push(g);
+      }
+    }
+    remaining = keep;
+    rounds += 1;
+  }
+  return rounds;
+}
+
+/**
+ * Monta a melhor escala da Americana para N jogadores (índices 0..N−1):
+ * roda o otimizador várias vezes (restarts determinísticos) e escolhe a escala
+ * que melhor atende, NESTA ORDEM de prioridade:
+ *   1) menor desequilíbrio de adversários (regra absoluta);
+ *   2) menor custo de gênero/nível ("dentro do possível");
+ *   3) menos rodadas (grade mais enxuta).
+ *
+ * @param {number} n
+ * @param {string} seed
+ * @param {{ gender: Array<0|1|null>, level: Array<number|null> }|null} meta
+ * @returns {{ oppCost: number, gameList: Array<[[number,number],[number,number]]> }}
+ */
+function buildAmericanoSchedule(n, seed, meta) {
+  const restarts = n <= 13 ? 8 : n <= 20 ? 5 : 3;
+  const idealRounds = n % 2 === 0 ? n - 1 : n;
+  let champion = null;
+  for (let k = 0; k < restarts; k += 1) {
+    const { oppCost, gameList } = optimizeAmericanoOpponents(n, `${seed}:${k}`);
+    const secCost = americanoSecondaryCost(gameList, meta);
+    const rounds = americanoRoundCount(gameList, n);
+    // ordenação lexicográfica (oppCost, secCost, rounds) num único número
+    const score = oppCost * 1e9 + secCost * 1000 + rounds;
+    if (!champion || score < champion.score) {
+      champion = { score, oppCost, secCost, rounds, gameList };
+    }
+    // Parada antecipada no ótimo absoluto: equilíbrio perfeito, sem penalidade
+    // secundária e grade já mínima.
+    if (oppCost === 0 && secCost === 0 && rounds === idealRounds) break;
+  }
+  return { oppCost: champion.oppCost, gameList: champion.gameList };
 }
 
 /**
@@ -478,60 +684,35 @@ function assignRounds(matches) {
 }
 
 /**
- * Gera o calendário hierárquico para N múltiplo de 4:
- *   Fase 1: para cada bloco de 4 jogadores, joga seus 3 jogos intra-bloco.
- *   Fase 2: para cada par de blocos (B_i, B_j), joga os 8 jogos cruzados.
- *
- * A ordem das fases é estável (determinística pela ordem dos jogadores):
- *   - blocos: chunks de 4 na ordem fornecida
- *   - dentro do bloco: ordem fixa de americanoFour
- *   - entre blocos: pares na ordem (i, j) com i < j
- */
-function buildAmericanoBlockSchedule(players) {
-  const matches = [];
-  const blocks = [];
-  for (let i = 0; i < players.length; i += 4) {
-    blocks.push(players.slice(i, i + 4));
-  }
-
-  // Fase 1: intra-blocos
-  blocks.forEach((b) => matches.push(...americanoFour(b)));
-
-  // Fase 2: cruzamentos entre pares de blocos
-  for (let i = 0; i < blocks.length; i += 1) {
-    for (let j = i + 1; j < blocks.length; j += 1) {
-      matches.push(...americanoCrossBlocks(blocks[i], blocks[j]));
-    }
-  }
-  return matches;
-}
-
-/**
  * Gera as rodadas da Americana: cada jogador joga em dupla com TODOS os demais
  * jogadores (rotação de parceiros), contra outra dupla, e nenhuma dupla se
  * repete. A inscrição é individual (Simples) e as duplas são montadas aqui.
  *
- * Para garantir precisão perfeita, a Americana só é gerada quando o número de
- * inscritos permite cobrir TODAS as duplas exatamente uma vez — N ≡ 0 ou 1
- * (mod 4): 4, 5, 8, 9, 12, 13, 16, 17, … O número de jogos é exatamente
- * N·(N−1) / 4. Para qualquer outro N (≡ 2 ou 3 mod 4) o método lança erro, pois
- * seria impossível gerar todos os jogos sem deixar duplas de fora.
+ * Garantias (regras absolutas, para todo N ≡ 0 ou 1 mod 4):
+ *  - PARCERIA ÚNICA: cada jogador forma dupla com cada outro exatamente uma vez
+ *    (são N·(N−1)/4 jogos, cobrindo as C(N,2) duplas possíveis sem repetição).
+ *  - EQUILÍBRIO DE ADVERSÁRIOS: cada jogador enfrenta cada outro o mesmo número
+ *    de vezes (a média é sempre 2; o motor minimiza a variância, atingindo o
+ *    equilíbrio perfeito — exatamente 2 confrontos por par — sempre que possível
+ *    para o N em questão).
  *
- * Quando N é múltiplo de 4, o cronograma é hierárquico:
- *   1. Resolver os jogos internos de cada bloco de 4 jogadores
- *      (ex.: {a,b,c,d}, depois {e,f,g,h}).
- *   2. Resolver os cruzamentos entre cada par de blocos
- *      (ex.: misturar {a,b,e,f} e {c,d,g,h}, depois {a,b,g,h} e {c,d,e,f}).
+ * Preferência secundária ("dentro do possível", sem violar as regras acima):
+ * duplas do mesmo gênero se enfrentam entre si e duplas de nível semelhante se
+ * enfrentam entre si. Para isso, informe `playerMeta` (gênero/nível por id).
  *
- * Para N ≡ 1 (mod 4) (5, 9, 13, …) usa-se uma heurística gulosa
- * ("mais restrito primeiro") que cobre todas as parcerias exatamente uma vez.
+ * Para N ≡ 2 ou 3 (mod 4) o método lança erro: seria impossível formar todas as
+ * duplas exatamente uma vez (C(N,2) é ímpar) — o número de inscritos não é
+ * condizente com o formato.
  *
  * @param {string[]} playerIds
- * @param {{ seed?: string }} [options]
+ * @param {{
+ *   seed?: string,
+ *   playerMeta?: Record<string, { gender?: 0|1|null, level?: number|null }>,
+ * }} [options]
  * @returns {Array<{ round: number, side_a: [string, string], side_b: [string, string] }>}
  */
 export function buildAmericanoRotation(playerIds, options = {}) {
-  const { seed = 'americano' } = options;
+  const { seed = 'americano', playerMeta = null } = options;
   const n = playerIds.length;
   if (n < 4) {
     throw new Error('Americano exige no mínimo 4 jogadores.');
@@ -544,15 +725,34 @@ export function buildAmericanoRotation(playerIds, options = {}) {
     );
   }
 
-  // Embaralhamento determinístico: define a ordem dos blocos sem alterar
-  // a estrutura matemática do torneio.
+  // Embaralhamento determinístico: dá variedade ao resultado conforme a seed,
+  // sem alterar a estrutura matemática do torneio (índice → id de jogador).
   const rng = seededRng(seed);
   const players = shuffle(playerIds, rng);
 
-  const baseMatches =
-    n % 4 === 0
-      ? buildAmericanoBlockSchedule(players)
-      : buildAmericanoGeneral(players);
+  // Metadados por índice de jogador (gênero/nível), quando disponíveis, para o
+  // objetivo secundário de equilíbrio por gênero e nível.
+  let meta = null;
+  if (playerMeta) {
+    const gender = players.map((id) => {
+      const g = playerMeta[id]?.gender;
+      return g === 0 || g === 1 ? g : null;
+    });
+    const level = players.map((id) => {
+      const l = playerMeta[id]?.level;
+      return Number.isFinite(l) ? l : null;
+    });
+    const hasAny = gender.some((g) => g != null) || level.some((l) => l != null);
+    if (hasAny) meta = { gender, level };
+  }
+
+  const { gameList } = buildAmericanoSchedule(n, seed, meta);
+
+  // Converte os índices de jogador de volta para ids de inscrição.
+  const baseMatches = gameList.map(([sideA, sideB]) => ({
+    side_a: [players[sideA[0]], players[sideA[1]]],
+    side_b: [players[sideB[0]], players[sideB[1]]],
+  }));
 
   // Atribui rodadas (cada jogador joga no máximo uma vez por rodada).
   return assignRounds(baseMatches);
@@ -569,7 +769,12 @@ export function buildAmericanoRotation(playerIds, options = {}) {
  *   groupCount?: number,
  *   seedCount?: number,
  *   seed?: string,
+ *   groupStrategy?: 'shuffle'|'tiered',
+ *   playerMeta?: Record<string, { gender?: 0|1|null, level?: number|null }>,
  * }} input
+ *   `playerMeta` (opcional) é usado apenas pelo formato Americano para o
+ *   equilíbrio secundário por gênero/nível, sem afetar o equilíbrio de
+ *   adversários (regra absoluta).
  * @returns {{
  *   stageType: string,
  *   groups?: Array<{ name: string, participants: string[] }>,
@@ -586,6 +791,7 @@ export function generateDraw(input) {
     seedCount = 0,
     seed = 'draw',
     groupStrategy = 'shuffle',
+    playerMeta = null,
   } = input;
 
   if (stageType === 'americano') {
@@ -594,7 +800,10 @@ export function generateDraw(input) {
         'O formato Americano (rotação de duplas) só é compatível com inscrição individual (Simples). Para inscrição em Duplas, escolha Pontos corridos, Fase de grupos, Chaves, Dupla eliminação ou Sistema suíço.',
       );
     }
-    return { stageType: 'americano', matches: buildAmericanoRotation(participants, { seed }) };
+    return {
+      stageType: 'americano',
+      matches: buildAmericanoRotation(participants, { seed, playerMeta }),
+    };
   }
   if (stageType === 'round_robin') {
     return { stageType, matches: buildRoundRobinMatches(participants) };

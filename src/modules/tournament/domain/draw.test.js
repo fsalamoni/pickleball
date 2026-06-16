@@ -223,6 +223,97 @@ describe('draw engine', () => {
       expect(pairs.size).toBe(78); // C(13,2) = 78 parcerias únicas
     });
 
+    // Helper: estatísticas de adversários e parcerias de uma escala.
+    const americanoStats = (matches, n) => {
+      const key = (a, b) => (a < b ? `${a}|${b}` : `${b}|${a}`);
+      const partner = new Map();
+      const opp = new Map();
+      const plays = new Map();
+      matches.forEach((m) => {
+        partner.set(key(...m.side_a), (partner.get(key(...m.side_a)) || 0) + 1);
+        partner.set(key(...m.side_b), (partner.get(key(...m.side_b)) || 0) + 1);
+        [...m.side_a, ...m.side_b].forEach((p) => plays.set(p, (plays.get(p) || 0) + 1));
+        for (const a of m.side_a) for (const b of m.side_b) {
+          opp.set(key(a, b), (opp.get(key(a, b)) || 0) + 1);
+        }
+      });
+      const oppCounts = [];
+      for (let i = 0; i < n; i += 1) for (let j = i + 1; j < n; j += 1) {
+        oppCounts.push(opp.get(key(`p${i}`, `p${j}`)) || 0);
+      }
+      return {
+        partnerMax: Math.max(...partner.values()),
+        partnerCount: partner.size,
+        oppMin: Math.min(...oppCounts),
+        oppMax: Math.max(...oppCounts),
+        playsValues: [...new Set(plays.values())],
+      };
+    };
+
+    it('equilíbrio PERFEITO de adversários: cada um enfrenta cada outro exatamente 2× (N ≤ 13)', { timeout: 30000 }, () => {
+      [4, 5, 8, 9, 12, 13].forEach((n) => {
+        const players = Array.from({ length: n }, (_, i) => `p${i}`);
+        const matches = buildAmericanoRotation(players, { seed: 'fixed' });
+        const s = americanoStats(matches, n);
+        // regra absoluta 1: parceria única (cada dupla possível uma vez)
+        expect(s.partnerMax).toBe(1);
+        expect(s.partnerCount).toBe((n * (n - 1)) / 2);
+        // regra absoluta 2: equilíbrio perfeito de adversários (todos = 2)
+        expect(s.oppMin).toBe(2);
+        expect(s.oppMax).toBe(2);
+        // cada jogador disputa N−1 jogos
+        expect(s.playsValues).toEqual([n - 1]);
+      });
+    });
+
+    it('equilíbrio de adversários quase-perfeito para N maiores (faixa estreita [1,3])', { timeout: 30000 }, () => {
+      [16, 17, 20].forEach((n) => {
+        const players = Array.from({ length: n }, (_, i) => `p${i}`);
+        const matches = buildAmericanoRotation(players, { seed: 'fixed' });
+        const s = americanoStats(matches, n);
+        expect(s.partnerMax).toBe(1); // parceria única continua absoluta
+        // a média é sempre 2; nunca permitimos distorções (≤1 ou ≥4)
+        expect(s.oppMin).toBeGreaterThanOrEqual(1);
+        expect(s.oppMax).toBeLessThanOrEqual(3);
+        expect(s.playsValues).toEqual([n - 1]);
+      });
+    });
+
+    it('é determinística: a mesma seed gera exatamente a mesma escala', () => {
+      const players = Array.from({ length: 8 }, (_, i) => `p${i}`);
+      const a = buildAmericanoRotation(players, { seed: 'repro' });
+      const b = buildAmericanoRotation(players, { seed: 'repro' });
+      expect(a).toEqual(b);
+    });
+
+    it('metadados de gênero/nível não violam as regras absolutas de equilíbrio', { timeout: 30000 }, () => {
+      const n = 12;
+      const players = Array.from({ length: n }, (_, i) => `p${i}`);
+      const playerMeta = {};
+      players.forEach((id, i) => {
+        playerMeta[id] = { gender: i < n / 2 ? 1 : 0, level: (i % 4) + 1 };
+      });
+      const matches = buildAmericanoRotation(players, { seed: 'fixed', playerMeta });
+      const s = americanoStats(matches, n);
+      // mesmo com a preferência de gênero/nível, parceria única e equilíbrio
+      // perfeito de adversários permanecem garantidos.
+      expect(s.partnerMax).toBe(1);
+      expect(s.partnerCount).toBe((n * (n - 1)) / 2);
+      expect(s.oppMin).toBe(2);
+      expect(s.oppMax).toBe(2);
+    });
+
+    it('preferência de gênero: campo homogêneo não cria desequilíbrio', () => {
+      const n = 8;
+      const players = Array.from({ length: n }, (_, i) => `p${i}`);
+      const playerMeta = {};
+      players.forEach((id) => { playerMeta[id] = { gender: 1, level: 3 }; }); // todos iguais
+      const matches = buildAmericanoRotation(players, { seed: 'fixed', playerMeta });
+      const s = americanoStats(matches, n);
+      expect(s.oppMin).toBe(2);
+      expect(s.oppMax).toBe(2);
+    });
+
     it('N ≡ 2 ou 3 (mod 4): recusa gerar a chave (precisão perfeita ou erro)', () => {
       [6, 7, 10, 11, 14, 15].forEach((n) => {
         const players = Array.from({ length: n }, (_, i) => `p${i}`);
