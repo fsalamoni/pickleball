@@ -39,6 +39,32 @@ describe('draw engine', () => {
     expect(m).toHaveLength(3);
   });
 
+  it('buildGroupMatches organiza cada grupo em rodadas equilibradas (método do círculo)', () => {
+    const groups = [
+      { name: 'A', participants: ['a1', 'a2', 'a3', 'a4'] },
+      { name: 'B', participants: ['b1', 'b2', 'b3', 'b4'] },
+    ];
+    const m = buildGroupMatches(groups);
+    expect(m).toHaveLength(12); // 2 grupos × C(4,2)=6 jogos
+    // cada grupo de 4 se organiza em 3 rodadas (não tudo na rodada 1)
+    const roundsA = new Set(m.filter((x) => x.group === 'A').map((x) => x.round));
+    expect(roundsA).toEqual(new Set([1, 2, 3]));
+    // dentro de uma rodada, nenhum jogador joga duas vezes (rotação justa)
+    const r1 = m.filter((x) => x.round === 1 && x.group === 'A');
+    const seen = new Set();
+    r1.forEach((x) => [x.side_a, x.side_b].forEach((p) => { expect(seen.has(p)).toBe(false); seen.add(p); }));
+  });
+
+  it('buildGroupMatches distribui o bye de forma justa em grupo ímpar (cada um joga todos)', () => {
+    const groups = [{ name: 'A', participants: ['a', 'b', 'c', 'd', 'e'] }];
+    const m = buildGroupMatches(groups);
+    expect(m).toHaveLength(10); // C(5,2)
+    const plays = new Map();
+    m.forEach((x) => [x.side_a, x.side_b].forEach((p) => plays.set(p, (plays.get(p) || 0) + 1)));
+    // todos jogam contra todos do grupo exatamente uma vez → 4 jogos cada
+    expect([...new Set(plays.values())]).toEqual([4]);
+  });
+
   it('round-robin com 4 jogadores → 3 rodadas, 6 jogos', () => {
     const m = buildRoundRobinMatches(['a', 'b', 'c', 'd']);
     expect(m).toHaveLength(6);
@@ -266,8 +292,8 @@ describe('draw engine', () => {
       });
     });
 
-    it('equilíbrio de adversários quase-perfeito para N maiores (faixa estreita [1,3])', { timeout: 30000 }, () => {
-      [16, 17, 20].forEach((n) => {
+    it('funciona para qualquer N válido (sem limite de 16): faixa estreita [1,3]', { timeout: 60000 }, () => {
+      [16, 17, 20, 24].forEach((n) => {
         const players = Array.from({ length: n }, (_, i) => `p${i}`);
         const matches = buildAmericanoRotation(players, { seed: 'fixed' });
         const s = americanoStats(matches, n);
