@@ -47,7 +47,7 @@ export default function MessageBubble({ message, isOwn, showAuthor, onEdit, onDe
     }
     setBusy(true);
     try {
-      await onEdit?.(message.id, next);
+      await onEdit?.(message, next);
       setEditing(false);
     } catch (err) {
       toast.error(err.message || 'Não foi possível editar a mensagem.');

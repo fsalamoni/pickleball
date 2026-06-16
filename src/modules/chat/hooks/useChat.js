@@ -75,7 +75,7 @@ export function useChatActions() {
       leave: (conversation) => leaveConversation(conversation, user),
       hide: (conversation) => hideConversation(conversation, user),
       send: (conversation, payload) => sendMessage(conversation, payload, user, userProfile),
-      edit: (messageId, text) => editMessage(messageId, text, user),
+      edit: (message, text) => editMessage(message.conversation_id, message.id, text, user),
       remove: (message) => deleteMessage(message, user),
     }),
     [user, userProfile],

@@ -42,10 +42,6 @@ function trimmed(value, max) {
   return max ? text.slice(0, max) : text;
 }
 
-function voteDocId(threadId, userId) {
-  return `${threadId}_${userId}`;
-}
-
 function sanitizeAttachments(attachments) {
   return (Array.isArray(attachments) ? attachments : [])
     .filter((a) => a && a.url)
@@ -140,16 +136,16 @@ export async function deleteThread(thread, actor) {
   if (!thread?.id) return;
   // Remove comentários e votos (best-effort; pode falhar para comentários de
   // terceiros quando o ator não é admin — nesse caso ficam órfãos inofensivos).
-  for (const col of [COL.forumComments, COL.forumPollVotes]) {
+  for (const sub of [COL.forumComments, COL.forumPollVotes]) {
     try {
-      const snap = await getDocs(query(collection(db, col), where('thread_id', '==', thread.id)));
+      const snap = await getDocs(collection(db, COL.forumThreads, thread.id, sub));
       if (!snap.empty) {
         const batch = writeBatch(db);
         snap.docs.forEach((d) => batch.delete(d.ref));
         await batch.commit();
       }
     } catch (err) {
-      logger.error(`Falha ao limpar ${col} do tópico ${thread.id}:`, err);
+      logger.error(`Falha ao limpar ${sub} do tópico ${thread.id}:`, err);
     }
   }
   await deleteDoc(doc(db, COL.forumThreads, thread.id));
@@ -162,7 +158,7 @@ export async function deleteThread(thread, actor) {
 
 export async function listComments(threadId) {
   if (!db || !threadId) return [];
-  const snap = await getDocs(query(collection(db, COL.forumComments), where('thread_id', '==', threadId)));
+  const snap = await getDocs(collection(db, COL.forumThreads, threadId, COL.forumComments));
   return snap.docs
     .map((d) => ({ id: d.id, ...d.data() }))
     .sort((a, b) => (a.created_at_ms || 0) - (b.created_at_ms || 0));
@@ -176,11 +172,11 @@ export async function addComment(thread, input, user, profile) {
   if (!body && attachments.length === 0) throw new Error('Escreva um comentário ou anexe um arquivo.');
 
   const nowMs = Date.now();
-  const id = doc(collection(db, COL.forumComments)).id;
+  const ref = doc(collection(db, COL.forumThreads, thread.id, COL.forumComments));
   const authorName = profile?.platform_name || user.displayName || user.email || 'Atleta';
 
-  await setDoc(doc(db, COL.forumComments, id), {
-    id,
+  await setDoc(ref, {
+    id: ref.id,
     thread_id: thread.id,
     club_id: thread.club_id,
     body,
@@ -211,12 +207,12 @@ export async function addComment(thread, input, user, profile) {
     actor: { uid: user.uid, displayName: authorName },
   });
 
-  return id;
+  return ref.id;
 }
 
-export async function updateComment(commentId, body, actor) {
-  if (!commentId) return;
-  await updateDoc(doc(db, COL.forumComments, commentId), {
+export async function updateComment(threadId, commentId, body, actor) {
+  if (!threadId || !commentId) return;
+  await updateDoc(doc(db, COL.forumThreads, threadId, COL.forumComments, commentId), {
     body: trimmed(body, FORUM_LIMITS.COMMENT_MAX),
     edited: true,
     edited_at: serverTimestamp(),
@@ -224,29 +220,27 @@ export async function updateComment(commentId, body, actor) {
 }
 
 export async function deleteComment(comment, actor) {
-  if (!comment?.id) return;
-  await deleteDoc(doc(db, COL.forumComments, comment.id));
+  if (!comment?.id || !comment?.thread_id) return;
+  await deleteDoc(doc(db, COL.forumThreads, comment.thread_id, COL.forumComments, comment.id));
   (comment.attachments || []).forEach((a) => a.path && deleteAttachment(a.path));
   // Decrementa o contador cosmético (best-effort).
-  if (comment.thread_id) {
-    updateDoc(doc(db, COL.forumThreads, comment.thread_id), {
-      comment_count: increment(-1),
-      updated_at: serverTimestamp(),
-    }).catch(() => {});
-  }
+  updateDoc(doc(db, COL.forumThreads, comment.thread_id), {
+    comment_count: increment(-1),
+    updated_at: serverTimestamp(),
+  }).catch(() => {});
 }
 
 /* -------------------------------- Polls --------------------------------- */
 
 export async function listPollVotes(threadId) {
   if (!db || !threadId) return [];
-  const snap = await getDocs(query(collection(db, COL.forumPollVotes), where('thread_id', '==', threadId)));
+  const snap = await getDocs(collection(db, COL.forumThreads, threadId, COL.forumPollVotes));
   return snap.docs.map((d) => ({ id: d.id, ...d.data() }));
 }
 
 export async function getMyPollVote(threadId, userId) {
   if (!db || !threadId || !userId) return null;
-  const snap = await getDoc(doc(db, COL.forumPollVotes, voteDocId(threadId, userId)));
+  const snap = await getDoc(doc(db, COL.forumThreads, threadId, COL.forumPollVotes, userId));
   return snap.exists() ? { id: snap.id, ...snap.data() } : null;
 }
 
@@ -260,7 +254,7 @@ export async function setPollVote(thread, optionIds, user) {
   // Voto único: garante no máximo uma opção.
   const finalIds = thread.poll.multiple ? ids : ids.slice(0, 1);
 
-  const ref = doc(db, COL.forumPollVotes, voteDocId(thread.id, user.uid));
+  const ref = doc(db, COL.forumThreads, thread.id, COL.forumPollVotes, user.uid);
   if (finalIds.length === 0) {
     // Sem opção selecionada: remove o voto.
     await deleteDoc(ref).catch(() => {});

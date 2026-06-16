@@ -240,13 +240,18 @@ export function subscribeToConversations(userId, callback) {
 
 /* ------------------------------- Messages ------------------------------- */
 
+/** Coleção de mensagens (subcoleção da conversa). */
+function messagesCol(conversationId) {
+  return collection(db, COL.conversations, conversationId, COL.messages);
+}
+
 /** Assina as mensagens de uma conversa em tempo real (ordem crescente). */
 export function subscribeToMessages(conversationId, callback) {
   if (!db || !conversationId) {
     callback?.([]);
     return noop;
   }
-  const q = query(collection(db, COL.messages), where('conversation_id', '==', conversationId));
+  const q = query(messagesCol(conversationId));
   return onSnapshot(
     q,
     (snap) => {
@@ -278,11 +283,10 @@ export async function sendMessage(conversation, { text, attachments } = {}, user
   const senderPhoto = profile?.photo_url || user.photoURL || '';
   const nowMs = Date.now();
 
-  const id = doc(collection(db, COL.messages)).id;
-  await setDoc(doc(db, COL.messages, id), {
-    id,
+  const ref = doc(messagesCol(conversation.id));
+  await setDoc(ref, {
+    id: ref.id,
     conversation_id: conversation.id,
-    member_ids: memberIds,
     sender_id: user.uid,
     sender_name: senderName,
     sender_photo: senderPhoto,
@@ -320,13 +324,13 @@ export async function sendMessage(conversation, { text, attachments } = {}, user
     actor: { uid: user.uid, displayName: senderName },
   });
 
-  return id;
+  return ref.id;
 }
 
 /** Edita o texto de uma mensagem própria. */
-export async function editMessage(messageId, newText, user) {
-  if (!user?.uid || !messageId) return;
-  await updateDoc(doc(db, COL.messages, messageId), {
+export async function editMessage(conversationId, messageId, newText, user) {
+  if (!user?.uid || !conversationId || !messageId) return;
+  await updateDoc(doc(db, COL.conversations, conversationId, COL.messages, messageId), {
     text: trimmed(newText, CHAT_LIMITS.MESSAGE_MAX_CHARS),
     edited: true,
     edited_at: serverTimestamp(),
@@ -335,8 +339,8 @@ export async function editMessage(messageId, newText, user) {
 
 /** Exclui uma mensagem própria e seus anexos (best-effort no Storage). */
 export async function deleteMessage(message, user) {
-  if (!user?.uid || !message?.id) return;
-  await deleteDoc(doc(db, COL.messages, message.id));
+  if (!user?.uid || !message?.id || !message?.conversation_id) return;
+  await deleteDoc(doc(db, COL.conversations, message.conversation_id, COL.messages, message.id));
   (message.attachments || []).forEach((a) => a.path && deleteAttachment(a.path));
 }
 

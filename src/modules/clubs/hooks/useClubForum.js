@@ -103,7 +103,7 @@ export function useUpdateComment(threadId) {
   const { user } = useAuth();
   const qc = useQueryClient();
   return useMutation({
-    mutationFn: ({ commentId, body }) => updateComment(commentId, body, user),
+    mutationFn: ({ commentId, body }) => updateComment(threadId, commentId, body, user),
     onSuccess: () => qc.invalidateQueries({ queryKey: ['forum-comments', threadId] }),
   });
 }

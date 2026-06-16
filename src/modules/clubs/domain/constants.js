@@ -8,8 +8,8 @@
  *  - club_event_rsvps        (presença em evento, id = `${eventId}_${uid}`)
  *  - club_posts              (mural de avisos/interação)
  *  - club_forum_threads      (tópicos de fórum do clube)
- *  - club_forum_comments     (comentários dos tópicos)
- *  - club_forum_poll_votes   (votos de enquete, id = `${threadId}_${uid}`)
+ *  - club_forum_threads/{id}/comments    (subcoleção de comentários do tópico)
+ *  - club_forum_threads/{id}/poll_votes  (subcoleção de votos; id do doc = uid)
  */
 
 export const CLUB_COLLECTIONS = Object.freeze({
@@ -19,8 +19,8 @@ export const CLUB_COLLECTIONS = Object.freeze({
   rsvps: 'club_event_rsvps',
   posts: 'club_posts',
   forumThreads: 'club_forum_threads',
-  forumComments: 'club_forum_comments',
-  forumPollVotes: 'club_forum_poll_votes',
+  forumComments: 'comments',
+  forumPollVotes: 'poll_votes',
 });
 
 /** Limites e regras das enquetes do fórum. */

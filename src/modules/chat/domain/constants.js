@@ -2,19 +2,19 @@
  * Constantes do domínio de Chat (mensagens diretas e em grupo).
  *
  * Coleções Firestore:
- *  - conversations   (uma conversa direta ou em grupo)
- *  - chat_messages   (mensagens; cada doc replica `member_ids` da conversa
- *                     para que as regras de segurança validem o acesso sem
- *                     leituras cruzadas caras)
+ *  - conversations              (uma conversa direta ou em grupo)
+ *  - conversations/{id}/messages (subcoleção de mensagens; o acesso é validado
+ *                     pelo documento-pai — membros da conversa — sem denormalizar
+ *                     membros em cada mensagem nem exigir índices compostos)
  *
- * Decisão de modelagem: as consultas usam apenas `where` (array-contains /
- * igualdade) e ordenam no cliente, evitando índices compostos e erros de
- * runtime por "índice ausente".
+ * Decisão de modelagem: as consultas de conversas usam apenas `where`
+ * (array-contains) e as de mensagens leem a subcoleção inteira, ordenando no
+ * cliente — evitando índices compostos e erros de runtime por "índice ausente".
  */
 
 export const CHAT_COLLECTIONS = Object.freeze({
   conversations: 'conversations',
-  messages: 'chat_messages',
+  messages: 'messages',
 });
 
 export const CONVERSATION_TYPE = Object.freeze({
