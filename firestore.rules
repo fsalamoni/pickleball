@@ -326,8 +326,13 @@ service cloud.firestore {
     // Id determinístico `${eventId}_${uid}`. Permite ao usuário listar seus
     // próprios convites (início) e aos participantes verem a lista do evento.
     match /event_invites/{docId} {
-      allow read: if isAuthed()
-        && (resource.data.user_id == request.auth.uid || isEventParticipant(resource.data.event_id));
+      // `resource == null` cobre o `get` de um convite ainda inexistente (ex.:
+      // verificação antes de criar) — sem isso o acesso a resource.data falha.
+      allow read: if isAuthed() && (
+        resource == null
+        || resource.data.user_id == request.auth.uid
+        || isEventParticipant(resource.data.event_id)
+      );
       // Auto-resposta a evento público, aceite de convite, ou um participante
       // convidando outro atleta.
       allow create: if isAuthed() && (

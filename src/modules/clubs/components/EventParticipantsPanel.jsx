@@ -27,21 +27,11 @@ import {
 } from '@/modules/clubs/hooks/useClubs';
 import { useAthletes } from '@/modules/athletes/hooks/useAthletes';
 import {
-  RSVP_STATUS,
-  RSVP_STATUS_LABELS,
   INVITE_STATUS,
-  INVITE_STATUS_LABELS,
   INVITE_SOURCE,
   EVENT_VISIBILITY,
   isPrivateEvent,
 } from '@/modules/clubs/domain/constants';
-
-const STATUS_TONE = {
-  [INVITE_STATUS.GOING]: 'success',
-  [INVITE_STATUS.MAYBE]: 'warning',
-  [INVITE_STATUS.NOT_GOING]: 'outline',
-  [INVITE_STATUS.INVITED]: 'secondary',
-};
 
 export default function EventParticipantsPanel({ event, clubId }) {
   const { user } = useAuth();
@@ -56,11 +46,24 @@ export default function EventParticipantsPanel({ event, clubId }) {
   const myInvite = invites.find((i) => i.user_id === user?.uid);
   const myStatus = myInvite?.status;
 
-  const handleResponse = async (status) => {
+  const amParticipant = !!myInvite && myStatus !== INVITE_STATUS.INVITED;
+  const amInvited = myStatus === INVITE_STATUS.INVITED;
+
+  const handleJoin = async () => {
     try {
-      await setResponse.mutateAsync(status);
+      await setResponse.mutateAsync(INVITE_STATUS.GOING);
+      toast.success('Você agora participa deste evento.');
     } catch (err) {
-      toast.error(err.message || 'Não foi possível responder.');
+      toast.error(err.message || 'Não foi possível participar.');
+    }
+  };
+
+  const handleLeave = async () => {
+    try {
+      await removeInvite.mutateAsync(user.uid);
+      toast.success('Você saiu do evento.');
+    } catch (err) {
+      toast.error(err.message || 'Não foi possível sair.');
     }
   };
 
@@ -82,8 +85,7 @@ export default function EventParticipantsPanel({ event, clubId }) {
   };
 
   const counts = {
-    going: invites.filter((i) => i.status === INVITE_STATUS.GOING).length,
-    maybe: invites.filter((i) => i.status === INVITE_STATUS.MAYBE).length,
+    participants: invites.filter((i) => i.status !== INVITE_STATUS.INVITED).length,
     invited: invites.filter((i) => i.status === INVITE_STATUS.INVITED).length,
   };
 
@@ -124,24 +126,26 @@ export default function EventParticipantsPanel({ event, clubId }) {
         </CardContent>
       </Card>
 
-      {/* Minha resposta */}
+      {/* Minha participação no evento (a confirmação por dia fica em cada dia de jogo) */}
       <Card className="rounded-xl">
-        <CardContent className="p-4">
-          <h3 className="text-sm font-semibold text-slate-900">Sua participação</h3>
-          <p className="mb-3 text-xs text-slate-500">Você pode mudar sua resposta a qualquer momento.</p>
-          <div className="flex flex-wrap gap-2">
-            {Object.values(RSVP_STATUS).map((status) => (
-              <Button
-                key={status}
-                size="sm"
-                variant={myStatus === status ? 'default' : 'outline'}
-                disabled={setResponse.isPending}
-                onClick={() => handleResponse(status)}
-              >
-                {RSVP_STATUS_LABELS[status]}
-              </Button>
-            ))}
+        <CardContent className="flex flex-wrap items-center justify-between gap-3 p-4">
+          <div>
+            <h3 className="text-sm font-semibold text-slate-900">
+              {amParticipant ? 'Você participa deste evento' : amInvited ? 'Você foi convidado' : 'Participe deste evento'}
+            </h3>
+            <p className="text-xs text-slate-500">
+              Confirme sua presença em cada dia de jogo na aba “Detalhes e dias de jogo”.
+            </p>
           </div>
+          {amParticipant ? (
+            <Button size="sm" variant="outline" onClick={handleLeave} disabled={removeInvite.isPending || isManager}>
+              Sair do evento
+            </Button>
+          ) : (
+            <Button size="sm" onClick={handleJoin} disabled={setResponse.isPending}>
+              {amInvited ? 'Aceitar convite' : 'Participar'}
+            </Button>
+          )}
         </CardContent>
       </Card>
 
@@ -159,9 +163,8 @@ export default function EventParticipantsPanel({ event, clubId }) {
           </div>
 
           <div className="flex flex-wrap gap-2 text-xs">
-            <Badge variant="success" className="rounded-full">{counts.going} confirmado(s)</Badge>
-            <Badge variant="warning" className="rounded-full">{counts.maybe} talvez</Badge>
-            <Badge variant="secondary" className="rounded-full">{counts.invited} aguardando</Badge>
+            <Badge variant="success" className="rounded-full">{counts.participants} participante(s)</Badge>
+            <Badge variant="secondary" className="rounded-full">{counts.invited} convite(s) pendente(s)</Badge>
           </div>
 
           {isLoading ? (
@@ -187,8 +190,8 @@ export default function EventParticipantsPanel({ event, clubId }) {
                       </div>
                     </div>
                     <div className="flex items-center gap-2">
-                      <Badge variant={STATUS_TONE[inv.status] || 'secondary'} className="rounded-full">
-                        {INVITE_STATUS_LABELS[inv.status] || inv.status}
+                      <Badge variant={inv.status === INVITE_STATUS.INVITED ? 'secondary' : 'success'} className="rounded-full">
+                        {inv.status === INVITE_STATUS.INVITED ? 'Convidado' : 'Participante'}
                       </Badge>
                       {canRemove && inv.user_id !== event.created_by && (
                         <button onClick={() => handleRemove(inv.user_id)} className="text-slate-400 transition-colors hover:text-red-600" title="Remover">

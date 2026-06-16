@@ -474,7 +474,7 @@ export function useReplaceEventGames(eventId) {
   const { user } = useAuth();
   const qc = useQueryClient();
   return useMutation({
-    mutationFn: (games) => replaceEventGames(eventId, games, user),
+    mutationFn: ({ games, dateId = null }) => replaceEventGames(eventId, games, user, dateId),
     onSuccess: () => qc.invalidateQueries({ queryKey: ['event-games', eventId] }),
   });
 }
@@ -482,7 +482,7 @@ export function useReplaceEventGames(eventId) {
 export function useClearEventGames(eventId) {
   const qc = useQueryClient();
   return useMutation({
-    mutationFn: () => clearEventGames(eventId),
+    mutationFn: (dateId = null) => clearEventGames(eventId, dateId),
     onSuccess: () => qc.invalidateQueries({ queryKey: ['event-games', eventId] }),
   });
 }

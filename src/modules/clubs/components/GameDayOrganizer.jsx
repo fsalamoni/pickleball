@@ -18,12 +18,12 @@ import {
   DialogDescription,
   DialogFooter,
 } from '@/components/ui/dialog';
-import { useAuth } from '@/core/lib/FirebaseAuthContext';
 import {
   useEventParticipants,
   useAddEventParticipant,
   useRemoveEventParticipant,
   useEventInvites,
+  useEventDateRsvps,
   useEventGames,
   useAddEventGame,
   useUpdateEventGame,
@@ -37,29 +37,38 @@ import { PARTICIPANT_SOURCE, INVITE_STATUS, GAME_DAY_LIMITS } from '@/modules/cl
 import { generateGameDayGames, suggestRounds } from '@/modules/clubs/domain/gameDayDraw';
 
 const SOURCE_LABEL = {
-  [PARTICIPANT_SOURCE.CONFIRMED]: 'Confirmado',
+  [PARTICIPANT_SOURCE.CONFIRMED]: 'Confirmou no dia',
   [PARTICIPANT_SOURCE.PLATFORM]: 'Plataforma',
   [PARTICIPANT_SOURCE.GUEST]: 'Convidado',
 };
 
-export default function GameDayOrganizer({ event, clubId }) {
+/**
+ * Organização de jogos de UM dia de jogo (date_id). Tem participantes e jogos
+ * próprios, escopados àquela data.
+ */
+export default function GameDayOrganizer({ event, clubId, dateId }) {
   const eventId = event.id;
-  const { data: participants = [], isLoading } = useEventParticipants(eventId);
+  const { data: allParticipants = [], isLoading } = useEventParticipants(eventId);
+  const participants = useMemo(
+    () => allParticipants.filter((p) => (p.date_id || null) === (dateId || null)),
+    [allParticipants, dateId],
+  );
 
   return (
     <div className="space-y-5">
-      <ParticipantsSection eventId={eventId} clubId={clubId} participants={participants} isLoading={isLoading} />
-      <GamesSection eventId={eventId} participants={participants} />
+      <ParticipantsSection eventId={eventId} clubId={clubId} dateId={dateId} participants={participants} isLoading={isLoading} />
+      <GamesSection eventId={eventId} dateId={dateId} participants={participants} />
     </div>
   );
 }
 
 /* ------------------------------ Participants ----------------------------- */
 
-function ParticipantsSection({ eventId, clubId, participants, isLoading }) {
+function ParticipantsSection({ eventId, clubId, dateId, participants, isLoading }) {
   const addParticipant = useAddEventParticipant(eventId);
   const removeParticipant = useRemoveEventParticipant(eventId);
   const { data: invites = [] } = useEventInvites(eventId);
+  const { data: dateRsvps = [] } = useEventDateRsvps(eventId);
   const { data: members = [] } = useClubMembers(clubId);
   const { data: athletes = [] } = useAthletes();
   const [guestName, setGuestName] = useState('');
@@ -74,19 +83,19 @@ function ParticipantsSection({ eventId, clubId, participants, isLoading }) {
     [participants],
   );
 
-  // Participantes do evento que confirmaram presença (Vou).
+  // 1) Quem confirmou presença NESTE dia de jogo (RSVP "Vou" da data).
   const confirmedPool = useMemo(() => {
     const map = new Map();
-    invites
-      .filter((i) => i.status === INVITE_STATUS.GOING)
-      .forEach((i) => {
-        if (!i.user_id || addedUserIds.has(i.user_id) || map.has(i.user_id)) return;
-        map.set(i.user_id, { user_id: i.user_id, name: i.user_name || 'Atleta', photo_url: i.user_photo || '', source: PARTICIPANT_SOURCE.CONFIRMED });
+    dateRsvps
+      .filter((r) => r.date_id === dateId && r.status === INVITE_STATUS.GOING)
+      .forEach((r) => {
+        if (!r.user_id || addedUserIds.has(r.user_id) || map.has(r.user_id)) return;
+        map.set(r.user_id, { user_id: r.user_id, name: r.user_name || 'Atleta', photo_url: r.user_photo || '', source: PARTICIPANT_SOURCE.CONFIRMED });
       });
     return Array.from(map.values());
-  }, [invites, addedUserIds]);
+  }, [dateRsvps, dateId, addedUserIds]);
 
-  // Demais atletas da plataforma (membros do clube + diretório), excluindo os já confirmados/adicionados.
+  // 2) Demais participantes do evento + atletas da plataforma (membros/diretório).
   const platformPool = useMemo(() => {
     const confirmedIds = new Set(confirmedPool.map((c) => c.user_id));
     const map = new Map();
@@ -94,14 +103,15 @@ function ParticipantsSection({ eventId, clubId, participants, isLoading }) {
       if (!uid || addedUserIds.has(uid) || confirmedIds.has(uid) || map.has(uid)) return;
       map.set(uid, { user_id: uid, name: name || 'Atleta', photo_url: photo || '', source: PARTICIPANT_SOURCE.PLATFORM });
     };
+    invites.forEach((i) => consider(i.user_id, i.user_name, i.user_photo));
     members.forEach((m) => consider(m.user_id, m.user_name, m.photo_url));
     athletes.forEach((a) => consider(a.id, a.platform_name, a.photo_url));
     return Array.from(map.values()).sort((a, b) => a.name.localeCompare(b.name));
-  }, [members, athletes, confirmedPool, addedUserIds]);
+  }, [invites, members, athletes, confirmedPool, addedUserIds]);
 
   const handleAdd = async (entry) => {
     try {
-      await addParticipant.mutateAsync(entry);
+      await addParticipant.mutateAsync({ ...entry, date_id: dateId });
     } catch (err) {
       toast.error(err.message || 'Não foi possível adicionar.');
     }
@@ -201,13 +211,14 @@ function AddAthletesDialog({ open, onClose, confirmedPool, platformPool, onAdd }
         <DialogHeader>
           <DialogTitle>Inserir atletas</DialogTitle>
           <DialogDescription>
-            Primeiro os atletas que confirmaram presença; depois os demais atletas da plataforma.
+            Primeiro os atletas que confirmaram presença neste dia de jogo; depois os participantes do evento e
+            demais atletas da plataforma.
           </DialogDescription>
         </DialogHeader>
         <Input value={search} onChange={(e) => setSearch(e.target.value)} placeholder="Buscar por nome…" />
         <div className="max-h-[50vh] space-y-4 overflow-y-auto">
-          <PoolList title="Confirmaram presença" people={confirmed} onAdd={onAdd} emptyText="Ninguém confirmou presença ainda." />
-          <PoolList title="Demais atletas da plataforma" people={platform} onAdd={onAdd} emptyText="Nenhum atleta disponível." />
+          <PoolList title="Confirmaram presença neste dia" people={confirmed} onAdd={onAdd} emptyText="Ninguém confirmou presença ainda." />
+          <PoolList title="Participantes do evento e plataforma" people={platform} onAdd={onAdd} emptyText="Nenhum atleta disponível." />
         </div>
         <DialogFooter>
           <Button variant="outline" onClick={onClose}>Fechar</Button>
@@ -244,9 +255,12 @@ function PoolList({ title, people, onAdd, emptyText }) {
 
 /* --------------------------------- Games --------------------------------- */
 
-function GamesSection({ eventId, participants }) {
-  const { user } = useAuth();
-  const { data: games = [], isLoading } = useEventGames(eventId);
+function GamesSection({ eventId, dateId, participants }) {
+  const { data: allGames = [], isLoading } = useEventGames(eventId);
+  const games = useMemo(
+    () => allGames.filter((g) => (g.date_id || null) === (dateId || null)),
+    [allGames, dateId],
+  );
   const replaceGames = useReplaceEventGames(eventId);
   const clearGames = useClearEventGames(eventId);
   const [rounds, setRounds] = useState(0);
@@ -276,7 +290,7 @@ function GamesSection({ eventId, participants }) {
         side_a: g.side_a.map((id) => ({ id, name: participantById.get(id)?.name || 'Jogador' })),
         side_b: g.side_b.map((id) => ({ id, name: participantById.get(id)?.name || 'Jogador' })),
       }));
-      await replaceGames.mutateAsync(payload);
+      await replaceGames.mutateAsync({ games: payload, dateId });
       toast.success(`Sorteio concluído: ${payload.length} jogo(s) em ${effectiveRounds} rodada(s).`);
       setDrawOpen(false);
     } catch (err) {
@@ -288,7 +302,7 @@ function GamesSection({ eventId, participants }) {
 
   const handleClear = async () => {
     try {
-      await clearGames.mutateAsync();
+      await clearGames.mutateAsync(dateId);
       toast.success('Jogos removidos.');
       setConfirmClear(false);
     } catch (err) {
@@ -400,6 +414,7 @@ function GamesSection({ eventId, participants }) {
           open={manualOpen}
           onClose={() => setManualOpen(false)}
           eventId={eventId}
+          dateId={dateId}
           participants={participants}
         />
 
@@ -471,7 +486,7 @@ function GameRow({ eventId, game }) {
   );
 }
 
-function ManualGameDialog({ open, onClose, eventId, participants }) {
+function ManualGameDialog({ open, onClose, eventId, dateId, participants }) {
   const addGame = useAddEventGame(eventId);
   const [kind, setKind] = useState('doubles');
   const [sideA, setSideA] = useState(['', '']);
@@ -511,7 +526,7 @@ function ManualGameDialog({ open, onClose, eventId, participants }) {
       return;
     }
     try {
-      await addGame.mutateAsync({ kind, side_a: a, side_b: b, round: null });
+      await addGame.mutateAsync({ kind, side_a: a, side_b: b, round: null, date_id: dateId });
       toast.success('Partida adicionada.');
       onClose();
     } catch (err) {

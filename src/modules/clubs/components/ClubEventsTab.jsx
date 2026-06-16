@@ -26,13 +26,10 @@ import {
   useUpdateClubEvent,
   useDeleteClubEvent,
   useEventInvites,
-  useSetEventResponse,
 } from '@/modules/clubs/hooks/useClubs';
 import {
   CLUB_EVENT_TYPE,
   CLUB_EVENT_TYPE_LABELS,
-  RSVP_STATUS,
-  RSVP_STATUS_LABELS,
   INVITE_STATUS,
   EVENT_VISIBILITY,
   EVENT_VISIBILITY_LABELS,
@@ -95,25 +92,15 @@ export default function ClubEventsTab({ clubId, isAdmin }) {
 function EventCard({ event, clubId, isAdmin }) {
   const { user } = useAuth();
   const { data: invites = [] } = useEventInvites(event.id);
-  const setResponse = useSetEventResponse(event);
   const deleteEvent = useDeleteClubEvent(clubId);
   const [confirmDelete, setConfirmDelete] = useState(false);
   const [editOpen, setEditOpen] = useState(false);
 
   const canManage = isAdmin || event.created_by === user?.uid;
-  const myRsvp = invites.find((r) => r.user_id === user?.uid)?.status;
-  const goingCount = invites.filter((r) => r.status === INVITE_STATUS.GOING).length;
+  const participantCount = invites.filter((r) => r.status !== INVITE_STATUS.INVITED).length;
   const when = formatDateTime(event.starts_at);
   const gameDay = isGameDayEvent(event.type);
   const isPrivate = isPrivateEvent(event);
-
-  const handleRsvp = async (status) => {
-    try {
-      await setResponse.mutateAsync(status);
-    } catch (err) {
-      toast.error(err.message || 'Não foi possível registrar presença.');
-    }
-  };
 
   const handleDelete = async () => {
     try {
@@ -148,7 +135,7 @@ function EventCard({ event, clubId, isAdmin }) {
             <div className="mt-2 flex flex-wrap gap-x-4 gap-y-1 text-xs text-slate-500">
               {when && <span className="inline-flex items-center gap-1"><CalendarDays className="h-3.5 w-3.5" /> {when}</span>}
               {event.location && <span className="inline-flex items-center gap-1"><MapPin className="h-3.5 w-3.5" /> {event.location}</span>}
-              <span className="inline-flex items-center gap-1"><Users className="h-3.5 w-3.5" /> {goingCount} confirmado(s)</span>
+              <span className="inline-flex items-center gap-1"><Users className="h-3.5 w-3.5" /> {participantCount} participante(s)</span>
             </div>
           </div>
           {canManage && (
@@ -160,21 +147,7 @@ function EventCard({ event, clubId, isAdmin }) {
 
         {event.description && <p className="mt-3 whitespace-pre-wrap text-sm leading-6 text-slate-600">{event.description}</p>}
 
-        <div className="mt-4 flex flex-wrap gap-2">
-          {Object.values(RSVP_STATUS).map((status) => (
-            <Button
-              key={status}
-              size="sm"
-              variant={myRsvp === status ? 'default' : 'outline'}
-              disabled={setResponse.isPending}
-              onClick={() => handleRsvp(status)}
-            >
-              {RSVP_STATUS_LABELS[status]}
-            </Button>
-          ))}
-        </div>
-
-        <div className="mt-3 flex flex-wrap items-center gap-2 border-t border-slate-100 pt-3">
+        <div className="mt-4 flex flex-wrap items-center gap-2 border-t border-slate-100 pt-3">
           <Button size="sm" variant="ghost" onClick={() => setEditOpen(true)}>
             <Pencil className="mr-1.5 h-3.5 w-3.5" /> Editar
           </Button>

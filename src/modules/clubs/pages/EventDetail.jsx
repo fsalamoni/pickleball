@@ -7,7 +7,6 @@ import {
   Pencil,
   Repeat,
   MessageSquare,
-  Swords,
   Info,
   Building2,
   Users,
@@ -26,7 +25,6 @@ import { EventFormDialog } from '@/modules/clubs/components/ClubEventsTab';
 import EventDatesPanel from '@/modules/clubs/components/EventDatesPanel';
 import EventParticipantsPanel from '@/modules/clubs/components/EventParticipantsPanel';
 import EventChat from '@/modules/clubs/components/EventChat';
-import GameDayOrganizer from '@/modules/clubs/components/GameDayOrganizer';
 
 function formatDateTime(value) {
   if (!value) return null;
@@ -127,9 +125,10 @@ export default function EventDetail() {
 
       <Tabs value={tab} onValueChange={setTab} className="w-full">
         <TabsList className="flex h-auto w-full flex-wrap justify-start gap-1 bg-muted/60 p-1">
-          <TabsTrigger value="detalhes"><Info className="mr-1.5 h-4 w-4" /> Detalhes e datas</TabsTrigger>
+          <TabsTrigger value="detalhes">
+            <Info className="mr-1.5 h-4 w-4" /> {showGames ? 'Detalhes e dias de jogo' : 'Detalhes e datas'}
+          </TabsTrigger>
           <TabsTrigger value="participantes"><Users className="mr-1.5 h-4 w-4" /> Participantes</TabsTrigger>
-          {showGames && <TabsTrigger value="jogos"><Swords className="mr-1.5 h-4 w-4" /> Organização de jogos</TabsTrigger>}
           <TabsTrigger value="conversa"><MessageSquare className="mr-1.5 h-4 w-4" /> Conversa</TabsTrigger>
         </TabsList>
 
@@ -142,18 +141,12 @@ export default function EventDetail() {
               </CardContent>
             </Card>
           )}
-          <EventDatesPanel event={event} />
+          <EventDatesPanel event={event} clubId={clubId} showGames={showGames} />
         </TabsContent>
 
         <TabsContent value="participantes" className="mt-4">
           <EventParticipantsPanel event={event} clubId={clubId} />
         </TabsContent>
-
-        {showGames && (
-          <TabsContent value="jogos" className="mt-4">
-            <GameDayOrganizer event={event} clubId={clubId} />
-          </TabsContent>
-        )}
 
         <TabsContent value="conversa" className="mt-4">
           <EventChat eventId={eventId} />

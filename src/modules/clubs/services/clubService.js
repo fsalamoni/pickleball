@@ -461,8 +461,13 @@ export async function inviteToEvent(event, target, inviter, profile) {
   if (!inviter?.uid) throw new Error('Usuário não autenticado.');
   if (!target?.user_id) throw new Error('Selecione um atleta para convidar.');
   const id = eventInviteId(event.id, target.user_id);
-  const existing = await getDoc(doc(db, COL.eventInvites, id));
-  if (existing.exists()) return existing.data(); // já é participante/convidado
+  // Verificação best-effort: se já existe, não sobrescreve a resposta atual.
+  try {
+    const existing = await getDoc(doc(db, COL.eventInvites, id));
+    if (existing.exists()) return existing.data();
+  } catch (err) {
+    logger.info('inviteToEvent: verificação de convite existente ignorada', { err: err?.code });
+  }
 
   const payload = {
     id,
@@ -583,6 +588,7 @@ export async function updateEventDate(eventId, dateId, updates) {
 }
 
 export async function deleteEventDate(eventId, dateId) {
+  await clearGameDayData(eventId, dateId);
   await deleteDoc(doc(db, COL.events, eventId, COL.eventDates, dateId));
 }
 
@@ -666,6 +672,7 @@ export async function addEventParticipant(eventId, data, user) {
   await setDoc(ref, {
     id: ref.id,
     event_id: eventId,
+    date_id: data.date_id || null,
     name,
     user_id: data.user_id || null,
     photo_url: trimmed(data.photo_url),
@@ -711,6 +718,7 @@ function buildGamePayload(id, eventId, data, user) {
   return {
     id,
     event_id: eventId,
+    date_id: data.date_id || null,
     round: data.round ?? null,
     kind: data.kind === 'singles' ? 'singles' : 'doubles',
     side_a,
@@ -741,22 +749,48 @@ export async function deleteEventGame(eventId, gameId) {
 }
 
 /**
- * Substitui TODOS os jogos do evento por uma nova lista (usado pelo sorteio).
- * Apaga os jogos atuais e grava os novos em lote.
+ * Substitui os jogos de um dia de jogo (date_id) por uma nova lista (sorteio).
+ * Apaga apenas os jogos daquele dia e grava os novos em lote.
  */
-export async function replaceEventGames(eventId, games, user) {
+export async function replaceEventGames(eventId, games, user, dateId = null) {
   if (!user?.uid) throw new Error('Usuário não autenticado.');
   const existing = await getDocs(collection(db, COL.events, eventId, COL.eventGames));
-  const ops = existing.docs.map((d) => ({ type: 'delete', ref: d.ref }));
+  const ops = existing.docs
+    .filter((d) => (d.data().date_id || null) === (dateId || null))
+    .map((d) => ({ type: 'delete', ref: d.ref }));
   games.forEach((g, i) => {
     const ref = doc(collection(db, COL.events, eventId, COL.eventGames));
-    ops.push({ type: 'set', ref, data: buildGamePayload(ref.id, eventId, { ...g, order: i }, user) });
+    ops.push({ type: 'set', ref, data: buildGamePayload(ref.id, eventId, { ...g, date_id: dateId, order: i }, user) });
   });
   await commitInChunks(ops);
 }
 
-export async function clearEventGames(eventId) {
-  await deleteSubcollection(eventId, COL.eventGames);
+export async function clearEventGames(eventId, dateId = null) {
+  const snap = await getDocs(collection(db, COL.events, eventId, COL.eventGames));
+  const ops = snap.docs
+    .filter((d) => (d.data().date_id || null) === (dateId || null))
+    .map((d) => ({ type: 'delete', ref: d.ref }));
+  if (ops.length > 0) await commitInChunks(ops);
+}
+
+/**
+ * Remove participantes e jogos associados a um dia de jogo (ao excluí-lo).
+ */
+export async function clearGameDayData(eventId, dateId) {
+  if (!dateId) return;
+  try {
+    const [parts, games] = await Promise.all([
+      getDocs(collection(db, COL.events, eventId, COL.eventParticipants)),
+      getDocs(collection(db, COL.events, eventId, COL.eventGames)),
+    ]);
+    const ops = [
+      ...parts.docs.filter((d) => d.data().date_id === dateId),
+      ...games.docs.filter((d) => d.data().date_id === dateId),
+    ].map((d) => ({ type: 'delete', ref: d.ref }));
+    if (ops.length > 0) await commitInChunks(ops);
+  } catch (err) {
+    logger.error('Falha ao limpar dados do dia de jogo:', err);
+  }
 }
 
 export async function listEventRsvps(eventId) {
