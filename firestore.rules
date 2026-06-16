@@ -30,6 +30,20 @@ service cloud.firestore {
         && exists(/databases/$(database)/documents/clubs/$(clubId))
         && get(/databases/$(database)/documents/clubs/$(clubId)).data.created_by == request.auth.uid;
     }
+    // Clube de um evento (para validar subcoleções pelo documento-pai).
+    function eventClubId(eventId) {
+      return get(/databases/$(database)/documents/club_events/$(eventId)).data.club_id;
+    }
+    function isEventClubMember(eventId) {
+      return isAuthed()
+        && exists(/databases/$(database)/documents/club_events/$(eventId))
+        && isClubMember(eventClubId(eventId));
+    }
+    function isEventClubModerator(eventId) {
+      return isAuthed()
+        && exists(/databases/$(database)/documents/club_events/$(eventId))
+        && (isClubAdmin(eventClubId(eventId)) || isPlatformAdmin());
+    }
     // Membro de uma conversa (validação pelo documento-pai para as mensagens).
     function isConversationMember(cid) {
       return isAuthed()
@@ -233,8 +247,48 @@ service cloud.firestore {
       allow read: if isClubMember(resource.data.club_id) || isPlatformAdmin();
       allow create: if isClubMember(request.resource.data.club_id)
         && request.resource.data.created_by == request.auth.uid;
-      allow update, delete: if isClubAdmin(resource.data.club_id) || isPlatformAdmin()
+      // Membros participantes podem editar os detalhes do evento (edição livre,
+      // conforme a regra de negócio); admins e o criador também.
+      allow update: if isClubMember(resource.data.club_id) || isPlatformAdmin();
+      allow delete: if isClubAdmin(resource.data.club_id) || isPlatformAdmin()
         || (isAuthed() && resource.data.created_by == request.auth.uid);
+
+      // Datas do evento (data, local, horário) — editáveis pelos participantes.
+      match /dates/{dateId} {
+        allow read: if isEventClubMember(eventId) || isPlatformAdmin();
+        allow create, update, delete: if isEventClubMember(eventId) || isPlatformAdmin();
+      }
+
+      // Resposta por data (vou/talvez/não vou). Cada um grava a própria resposta.
+      match /date_rsvps/{docId} {
+        allow read: if isEventClubMember(eventId) || isPlatformAdmin();
+        allow create, update: if isAuthed()
+          && request.resource.data.user_id == request.auth.uid
+          && isEventClubMember(eventId);
+        allow delete: if (isAuthed() && resource.data.user_id == request.auth.uid)
+          || isEventClubModerator(eventId);
+      }
+
+      // Chat cronológico do evento.
+      match /messages/{messageId} {
+        allow read: if isEventClubMember(eventId) || isPlatformAdmin();
+        allow create: if isEventClubMember(eventId)
+          && request.resource.data.sender_id == request.auth.uid;
+        allow update, delete: if (isAuthed() && resource.data.sender_id == request.auth.uid)
+          || isEventClubModerator(eventId);
+      }
+
+      // Participantes do dia de jogo (edição livre pelos participantes).
+      match /participants/{participantId} {
+        allow read: if isEventClubMember(eventId) || isPlatformAdmin();
+        allow create, update, delete: if isEventClubMember(eventId) || isPlatformAdmin();
+      }
+
+      // Jogos organizados/sorteados (edição livre pelos participantes).
+      match /games/{gameId} {
+        allow read: if isEventClubMember(eventId) || isPlatformAdmin();
+        allow create, update, delete: if isEventClubMember(eventId) || isPlatformAdmin();
+      }
     }
 
     match /club_event_rsvps/{docId} {

@@ -4,7 +4,7 @@ import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { Badge } from '@/components/ui/badge';
-import { AvatarGroup } from '@/components/ui/user-avatar';
+import { UserAvatar } from '@/components/ui/user-avatar';
 import {
   Dialog,
   DialogContent,
@@ -64,6 +64,30 @@ function statusBadgeVariant(status) {
   return 'secondary';
 }
 
+/**
+ * Lado de uma partida: cada jogador (um ou dois, conforme o sorteio) aparece
+ * empilhado, com avatar e nome, espelhando o visual da aba de sorteio.
+ */
+function MatchSideCell({ people = [], fallback, win }) {
+  const list = (people || []).filter(Boolean);
+  if (list.length === 0) {
+    return <span className="text-slate-400">{fallback || '—'}</span>;
+  }
+  return (
+    <div className={`space-y-1 ${win ? 'font-bold text-emerald-700' : 'font-medium'}`}>
+      {list.map((person, index) => (
+        <div key={`${person.name || 'p'}-${index}`} className="flex items-center gap-1.5">
+          {win && index === 0 && (
+            <Trophy className="w-3.5 h-3.5 shrink-0 text-emerald-600" aria-label="Vencedor" />
+          )}
+          <UserAvatar name={person.name} photoUrl={person.photoUrl} size="xs" />
+          <span className="leading-tight">{person.name}</span>
+        </div>
+      ))}
+    </div>
+  );
+}
+
 function ModalityMatchesBlock({ tournament, modality, isAdmin }) {
   const { data: matches = [] } = useMatches(modality.id, 0);
   const { data: registrations = [] } = useRegistrations(modality.id);
@@ -118,7 +142,9 @@ function ModalityMatchesBlock({ tournament, modality, isAdmin }) {
                   <th className="px-3 py-2">Rod.</th>
                   {hasSchedule && <th className="px-3 py-2">Quadra</th>}
                   {hasSchedule && <th className="px-3 py-2">Horário</th>}
-                  <th className="px-3 py-2">Partida</th>
+                  <th className="px-3 py-2">Lado A</th>
+                  <th className="px-3 py-2 text-center">vs</th>
+                  <th className="px-3 py-2">Lado B</th>
                   <th className="px-3 py-2">Placar (sets)</th>
                   <th className="px-3 py-2">Status</th>
                   {isAdmin && <th className="px-3 py-2 text-right">Ações</th>}
@@ -143,18 +169,14 @@ function ModalityMatchesBlock({ tournament, modality, isAdmin }) {
                       <td className="px-3 py-2">{roundLabel(m)}</td>
                       {hasSchedule && <td className="px-3 py-2">{m.court || '—'}</td>}
                       {hasSchedule && <td className="px-3 py-2 tabular-nums">{formatMatchTime(m.scheduled_at)}</td>}
-                      <td className="px-3 py-2">
-                        <div className={`flex items-center gap-1.5 ${winA ? 'font-bold text-emerald-700' : 'font-medium'}`}>
-                          {winA && <Trophy className="w-3.5 h-3.5 text-emerald-600" aria-label="Vencedor" />}
-                          <AvatarGroup size="xs" people={sideAPeople} />
-                          <span>{sideA}</span>
-                        </div>
-                        <div className="text-xs text-slate-400">vs</div>
-                        <div className={`flex items-center gap-1.5 ${winB ? 'font-bold text-emerald-700' : 'font-medium'}`}>
-                          {winB && <Trophy className="w-3.5 h-3.5 text-emerald-600" aria-label="Vencedor" />}
-                          <AvatarGroup size="xs" people={sideBPeople} />
-                          <span>{sideB}</span>
-                        </div>
+                      <td className="px-3 py-2 align-middle">
+                        <MatchSideCell people={sideAPeople} fallback={sideA} win={winA} />
+                      </td>
+                      <td className="px-3 py-2 text-center align-middle text-xs font-medium text-slate-400">
+                        vs
+                      </td>
+                      <td className="px-3 py-2 align-middle">
+                        <MatchSideCell people={sideBPeople} fallback={sideB} win={winB} />
                       </td>
                       <td className="px-3 py-2 tabular-nums">
                         {(m.games || []).length === 0 ? '—' : m.games.map((g, i) => (
