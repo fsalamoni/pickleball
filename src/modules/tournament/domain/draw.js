@@ -473,8 +473,8 @@ function optimizeAmericanoOpponents(n, seed) {
   };
 
   const rng = seededRng(seed);
-  const cycles = 5;
-  const itersPer = Math.min(150000, Math.max(20000, nPairs * 800));
+  const cycles = 6;
+  const itersPer = Math.min(250000, Math.max(30000, nPairs * 1200));
   for (let cy = 0; cy < cycles && bestCost > 0; cy += 1) {
     const t0 = cy === 0 ? 1.0 : 0.5; // reaquecimento a cada ciclo
     for (let it = 0; it < itersPer && cost > 0; it += 1) {
@@ -615,8 +615,16 @@ function americanoRoundCount(gameList, n) {
  * roda o otimizador várias vezes (restarts determinísticos) e escolhe a escala
  * que melhor atende, NESTA ORDEM de prioridade:
  *   1) menor desequilíbrio de adversários (regra absoluta);
- *   2) menor custo de gênero/nível ("dentro do possível");
- *   3) menos rodadas (grade mais enxuta).
+ *   2) MENOS rodadas — uma escala "resolúvel" em poucas rodadas permite que os
+ *      jogos rodem em paralelo nas várias quadras e que o tempo de espera de
+ *      cada jogador seja equilibrado (logística da segunda etapa);
+ *   3) menor custo de gênero/nível ("dentro do possível").
+ *
+ * O número mínimo de rodadas é N−1 (N par) ou N (N ímpar): nesse caso cada
+ * jogador joga exatamente uma vez por rodada, todas as quadras ficam ocupadas e
+ * ninguém acumula jogos no início ou no fim. Para N pequenos (ex.: 8) o motor
+ * costuma achar essa escala perfeita; para N maiores chega o mais perto
+ * possível, sem nunca abrir mão do equilíbrio de adversários.
  *
  * @param {number} n
  * @param {string} seed
@@ -624,21 +632,23 @@ function americanoRoundCount(gameList, n) {
  * @returns {{ oppCost: number, gameList: Array<[[number,number],[number,number]]> }}
  */
 function buildAmericanoSchedule(n, seed, meta) {
-  const restarts = n <= 13 ? 8 : n <= 20 ? 5 : 3;
+  const restarts = n <= 13 ? 12 : n <= 20 ? 6 : 3;
   const idealRounds = n % 2 === 0 ? n - 1 : n;
   let champion = null;
   for (let k = 0; k < restarts; k += 1) {
     const { oppCost, gameList } = optimizeAmericanoOpponents(n, `${seed}:${k}`);
-    const secCost = americanoSecondaryCost(gameList, meta);
     const rounds = americanoRoundCount(gameList, n);
-    // ordenação lexicográfica (oppCost, secCost, rounds) num único número
-    const score = oppCost * 1e9 + secCost * 1000 + rounds;
+    const secCost = americanoSecondaryCost(gameList, meta);
+    // ordenação lexicográfica (oppCost, rounds, secCost) num único número:
+    // o equilíbrio de adversários domina; depois a "resolubilidade" (poucas
+    // rodadas, boa para a logística de quadras); por fim, gênero/nível.
+    const score = oppCost * 1e12 + rounds * 1e6 + secCost;
     if (!champion || score < champion.score) {
       champion = { score, oppCost, secCost, rounds, gameList };
     }
-    // Parada antecipada no ótimo absoluto: equilíbrio perfeito, sem penalidade
-    // secundária e grade já mínima.
-    if (oppCost === 0 && secCost === 0 && rounds === idealRounds) break;
+    // Parada antecipada no ótimo absoluto: equilíbrio perfeito, grade mínima
+    // (totalmente paralelizável) e sem penalidade secundária.
+    if (oppCost === 0 && rounds === idealRounds && secCost === 0) break;
   }
   return { oppCost: champion.oppCost, gameList: champion.gameList };
 }
