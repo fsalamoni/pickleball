@@ -24,9 +24,27 @@ export function registerPwa() {
 
   const swUrl = `${import.meta.env.BASE_URL || '/'}sw.js`.replace(/\/{2,}/g, '/');
 
-  window.addEventListener('load', () => {
-    navigator.serviceWorker.register(swUrl).catch(() => {
-      // Falha no registro não pode afetar o app — silenciosa por design.
+  // Se já existe um SW controlando a página, qualquer troca de controlador
+  // significa uma ATUALIZAÇÃO. Recarrega uma única vez para o usuário receber
+  // a versão nova automaticamente, sem precisar limpar cache.
+  if (navigator.serviceWorker.controller) {
+    let refreshing = false;
+    navigator.serviceWorker.addEventListener('controllerchange', () => {
+      if (refreshing) return;
+      refreshing = true;
+      window.location.reload();
     });
+  }
+
+  window.addEventListener('load', () => {
+    navigator.serviceWorker
+      .register(swUrl)
+      .then((reg) => {
+        // Procura ativamente por uma versão nova do SW a cada carregamento.
+        reg.update?.().catch(() => {});
+      })
+      .catch(() => {
+        // Falha no registro não pode afetar o app — silenciosa por design.
+      });
   });
 }

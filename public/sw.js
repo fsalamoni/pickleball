@@ -9,7 +9,7 @@
  *    só entra como fallback offline. Assets com hash são imutáveis (cache-first).
  *  - skipWaiting + clients.claim garantem que atualizações entram sem ficar presas.
  */
-const VERSION = 'v1';
+const VERSION = 'v2';
 const CACHE = `pickleball-${VERSION}`;
 const SHELL_URL = '/index.html';
 
