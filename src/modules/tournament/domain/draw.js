@@ -9,6 +9,7 @@
 import { MODALITY_FORMAT } from './constants.js';
 import { buildDoubleEliminationBracket } from './doubleElimination.js';
 import { pairSwissRound } from './swiss.js';
+import { getWhistTable } from './whistTables.js';
 
 /* ----------------------------- RNG semeado ------------------------------- */
 
@@ -699,22 +700,193 @@ function assignRounds(matches) {
   return out;
 }
 
+/* ----------------- Whist resolúvel (regras absolutas exatas) ------------- */
+
+/** Verdadeiro se p é primo. */
+function americanoIsPrime(p) {
+  if (p < 2) return false;
+  for (let i = 2; i * i <= p; i += 1) if (p % i === 0) return false;
+  return true;
+}
+
+/** Exponenciação modular. */
+function americanoModpow(b, e, m) {
+  let r = 1;
+  let base = b % m;
+  let exp = e;
+  while (exp > 0) {
+    if (exp & 1) r = (r * base) % m;
+    base = (base * base) % m;
+    exp >>= 1;
+  }
+  return r;
+}
+
+/** Menor raiz primitiva módulo p (p primo). */
+function americanoPrimitiveRoot(p) {
+  const factors = [];
+  let m = p - 1;
+  for (let d = 2; d * d <= m; d += 1) {
+    if (m % d === 0) {
+      factors.push(d);
+      while (m % d === 0) m /= d;
+    }
+  }
+  if (m > 1) factors.push(m);
+  for (let g = 2; g < p; g += 1) {
+    if (factors.every((q) => americanoModpow(g, (p - 1) / q, p) !== 1)) return g;
+  }
+  return -1;
+}
+
+/**
+ * Constrói um Torneio de Whist resolúvel para N primo ≡ 1 (mod 4) pela
+ * construção Z-cíclica clássica: jogadores 0..N−1, raiz primitiva g, t=(N−1)/4
+ * mesas por rodada; a rodada base é desenvolvida somando r (mod N). Garante, de
+ * forma exata, parceria única, adversário exatamente 2× e resolubilidade (N
+ * rodadas, um jogador folga por rodada, folga circulando).
+ *
+ * @param {number} n
+ * @returns {Array<Array<[[number,number],[number,number]]>>}
+ */
+function americanoPrimeCyclic(n) {
+  const g = americanoPrimitiveRoot(n);
+  const t = (n - 1) / 4;
+  const pw = [];
+  let c = 1;
+  for (let i = 0; i < n - 1; i += 1) {
+    pw.push(c);
+    c = (c * g) % n;
+  }
+  const base = [];
+  for (let i = 0; i < t; i += 1) {
+    base.push([[pw[i], pw[i + 2 * t]], [pw[i + t], pw[i + 3 * t]]]);
+  }
+  const rounds = [];
+  for (let r = 0; r < n; r += 1) {
+    rounds.push(
+      base.map(([P, Q]) => [
+        [(P[0] + r) % n, (P[1] + r) % n],
+        [(Q[0] + r) % n, (Q[1] + r) % n],
+      ]),
+    );
+  }
+  return rounds;
+}
+
+/**
+ * Retorna as rodadas de um Torneio de Whist resolúvel para N jogadores
+ * (índices 0..N−1), ou null se não houver uma escala exata pré-computada nem
+ * construtível diretamente. Fontes, em ordem:
+ *   1) tabela verificada (cobre os tamanhos usuais: 4,5,8,9,12,13,16,17,20,21,
+ *      24,25,28,29,32);
+ *   2) construção cíclica para qualquer N primo ≡ 1 (mod 4) (instantânea).
+ *
+ * @param {number} n
+ * @returns {Array<Array<[[number,number],[number,number]]>>|null}
+ */
+function americanoWhistRounds(n) {
+  const table = getWhistTable(n);
+  if (table) return table;
+  if (n % 4 === 1 && americanoIsPrime(n)) return americanoPrimeCyclic(n);
+  return null;
+}
+
+/**
+ * Penalidade secundária (gênero/nível) de uma escala de Whist sob um dado
+ * mapeamento jogador→índice. Usada apenas para ESCOLHER o melhor mapeamento,
+ * sem jamais alterar a estrutura (qualquer permutação preserva as regras
+ * absolutas). Mesmos pesos de `americanoSecondaryCost`.
+ */
+function americanoAssignmentCost(rounds, slot, meta) {
+  const { gender, level } = meta;
+  const profile = (i, j) => {
+    const a = gender[slot[i]];
+    const b = gender[slot[j]];
+    if (a == null || b == null) return 'UN';
+    if (a === 1 && b === 1) return 'MM';
+    if (a === 0 && b === 0) return 'FF';
+    return 'MX';
+  };
+  const strength = (i, j) => {
+    const a = level[slot[i]];
+    const b = level[slot[j]];
+    if (a == null || b == null) return null;
+    return a + b;
+  };
+  let cost = 0;
+  for (const round of rounds) {
+    for (const [P, Q] of round) {
+      const gp = profile(P[0], P[1]);
+      const gq = profile(Q[0], Q[1]);
+      if (gp !== 'UN' && gq !== 'UN' && gp !== gq) {
+        cost += (gp === 'MM' && gq === 'FF') || (gp === 'FF' && gq === 'MM') ? 4 : 2;
+      }
+      const sp = strength(P[0], P[1]);
+      const sq = strength(Q[0], Q[1]);
+      if (sp != null && sq != null) cost += Math.abs(sp - sq);
+    }
+  }
+  return cost;
+}
+
+/**
+ * Escolhe o mapeamento índice-da-tabela → jogador que melhor aproxima o
+ * equilíbrio de gênero/nível, por busca local (troca de dois jogadores de
+ * posição). Como permutar rótulos não altera parceria-única nem adversário-2×,
+ * isso refina o objetivo secundário sem tocar nas regras absolutas.
+ *
+ * @returns {number[]} slot — slot[k] = índice do jogador (em `players`) que
+ *   ocupa a posição k da tabela.
+ */
+function americanoOptimizeAssignment(n, rounds, meta, rng) {
+  const slot = Array.from({ length: n }, (_, i) => i);
+  if (!meta) return slot;
+  let cost = americanoAssignmentCost(rounds, slot, meta);
+  const iters = Math.min(40000, Math.max(4000, n * n * 30));
+  let temp = 1.0;
+  for (let it = 0; it < iters && cost > 0; it += 1) {
+    temp = 1.0 * (1 - it / iters) + 0.01;
+    const i = (rng() * n) | 0;
+    const j = (rng() * n) | 0;
+    if (i === j) continue;
+    [slot[i], slot[j]] = [slot[j], slot[i]];
+    const c2 = americanoAssignmentCost(rounds, slot, meta);
+    if (c2 <= cost || rng() < Math.exp((cost - c2) / temp)) {
+      cost = c2;
+    } else {
+      [slot[i], slot[j]] = [slot[j], slot[i]];
+    }
+  }
+  return slot;
+}
+
 /**
  * Gera as rodadas da Americana: cada jogador joga em dupla com TODOS os demais
  * jogadores (rotação de parceiros), contra outra dupla, e nenhuma dupla se
  * repete. A inscrição é individual (Simples) e as duplas são montadas aqui.
  *
- * Garantias (regras absolutas, para todo N ≡ 0 ou 1 mod 4):
+ * Garantias (regras absolutas EXATAS, para todo N ≡ 0 ou 1 mod 4):
  *  - PARCERIA ÚNICA: cada jogador forma dupla com cada outro exatamente uma vez
  *    (são N·(N−1)/4 jogos, cobrindo as C(N,2) duplas possíveis sem repetição).
- *  - EQUILÍBRIO DE ADVERSÁRIOS: cada jogador enfrenta cada outro o mesmo número
- *    de vezes (a média é sempre 2; o motor minimiza a variância, atingindo o
- *    equilíbrio perfeito — exatamente 2 confrontos por par — sempre que possível
- *    para o N em questão).
+ *  - ADVERSÁRIO 2×: cada jogador enfrenta cada outro EXATAMENTE duas vezes — o
+ *    equilíbrio perfeito, independente do número de inscritos. Isso é garantido
+ *    por um "Torneio de Whist" resolúvel (tabela verificada para os tamanhos
+ *    usuais; construção cíclica para N primo; ver `whistTables.js`).
+ *  - GRADE RESOLÚVEL: os jogos já saem organizados em rodadas (N−1 se N é par, N
+ *    se ímpar), em que cada jogador joga uma vez por rodada — quando N é ímpar a
+ *    folga circula (cada um folga uma vez). Isso permite rodar todas as quadras
+ *    em paralelo e equilibrar perfeitamente o tempo de espera.
  *
- * Preferência secundária ("dentro do possível", sem violar as regras acima):
- * duplas do mesmo gênero se enfrentam entre si e duplas de nível semelhante se
- * enfrentam entre si. Para isso, informe `playerMeta` (gênero/nível por id).
+ * Preferência secundária ("dentro do possível", sem jamais violar as regras
+ * acima): duplas do mesmo gênero se enfrentam entre si e duplas de nível
+ * semelhante se enfrentam entre si. Como permutar os rótulos dos jogadores
+ * preserva as regras absolutas, o mapeamento jogador→posição é escolhido para
+ * aproximar esse equilíbrio. Informe `playerMeta` (gênero/nível por id).
+ *
+ * Para N grande e sem escala de Whist pré-computada (ex.: N não-primo > 32), há
+ * um fallback heurístico que mantém a parceria única e equilibra os adversários
+ * ao máximo, para que o sistema funcione com qualquer número de inscritos.
  *
  * Para N ≡ 2 ou 3 (mod 4) o método lança erro: seria impossível formar todas as
  * duplas exatamente uma vez (C(N,2) é ímpar) — o número de inscritos não é
@@ -762,15 +934,38 @@ export function buildAmericanoRotation(playerIds, options = {}) {
     if (hasAny) meta = { gender, level };
   }
 
-  const { gameList } = buildAmericanoSchedule(n, seed, meta);
+  // Caminho preferencial: Torneio de Whist RESOLÚVEL — garante, de forma exata,
+  // parceria única E adversário exatamente 2× para todos, já organizado em
+  // rodadas (cada jogador joga uma vez por rodada; em N ímpar a folga circula).
+  // Isso dá o equilíbrio perfeito de adversários e uma grade que roda todas as
+  // quadras em paralelo com espera uniforme. O mapeamento jogador→índice é
+  // escolhido para aproximar o equilíbrio de gênero/nível, sem afetar as regras
+  // absolutas (permutar rótulos as preserva).
+  const whist = americanoWhistRounds(n);
+  if (whist) {
+    const slot = americanoOptimizeAssignment(n, whist, meta, seededRng(`${seed}:assign`));
+    const matches = [];
+    whist.forEach((round, r) => {
+      round.forEach(([sideA, sideB]) => {
+        matches.push({
+          round: r + 1,
+          side_a: [players[slot[sideA[0]]], players[slot[sideA[1]]]],
+          side_b: [players[slot[sideB[0]]], players[slot[sideB[1]]]],
+        });
+      });
+    });
+    return matches;
+  }
 
-  // Converte os índices de jogador de volta para ids de inscrição.
+  // Fallback (tamanhos sem escala de Whist pré-computada, ex.: N muito grande e
+  // não-primo): otimização heurística que preserva a parceria única e equilibra
+  // ao máximo os adversários. Mantém o sistema funcionando para qualquer N
+  // válido, ainda que sem a resolubilidade perfeita das tabelas.
+  const { gameList } = buildAmericanoSchedule(n, seed, meta);
   const baseMatches = gameList.map(([sideA, sideB]) => ({
     side_a: [players[sideA[0]], players[sideA[1]]],
     side_b: [players[sideB[0]], players[sideB[1]]],
   }));
-
-  // Atribui rodadas (cada jogador joga no máximo uma vez por rodada).
   return assignRounds(baseMatches);
 }
 

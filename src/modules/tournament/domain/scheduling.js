@@ -15,11 +15,13 @@ export const DEFAULT_MATCH_DURATION_MINUTES = 30;
 export const MIN_MATCH_DURATION_MINUTES = 5;
 export const MAX_MATCH_DURATION_MINUTES = 600;
 /**
- * Descanso mínimo (em "slots", ou seja, múltiplos da duração do jogo) que um
- * jogador deve ter entre dois jogos. 1 = ao menos um intervalo de uma partida
- * antes de voltar à quadra, o que equilibra a participação e dá folga.
+ * Descanso opcional (em "slots") ENTRE RODADAS. O padrão é 0: como a grade é
+ * montada rodada a rodada e cada jogador joga uma vez por rodada, a própria
+ * estrutura já dá o ritmo (na Americana joga-se de forma contínua, rodada após
+ * rodada). Um valor > 0 insere um intervalo extra entre rodadas, caso o
+ * organizador queira mais folga.
  */
-export const DEFAULT_REST_SLOTS = 1;
+export const DEFAULT_REST_SLOTS = 0;
 
 const TIME_RE = /^([01]\d|2[0-3]):([0-5]\d)$/;
 const DATE_RE = /^\d{4}-\d{2}-\d{2}$/;

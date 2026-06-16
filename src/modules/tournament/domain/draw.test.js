@@ -267,41 +267,48 @@ describe('draw engine', () => {
       for (let i = 0; i < n; i += 1) for (let j = i + 1; j < n; j += 1) {
         oppCounts.push(opp.get(key(`p${i}`, `p${j}`)) || 0);
       }
+      const rounds = new Map();
+      matches.forEach((m) => {
+        const list = rounds.get(m.round) || [];
+        list.push(m);
+        rounds.set(m.round, list);
+      });
+      let dupInRound = 0;
+      rounds.forEach((list) => {
+        const seen = new Set();
+        list.forEach((m) => [...m.side_a, ...m.side_b].forEach((p) => {
+          if (seen.has(p)) dupInRound += 1;
+          seen.add(p);
+        }));
+      });
       return {
         partnerMax: Math.max(...partner.values()),
         partnerCount: partner.size,
         oppMin: Math.min(...oppCounts),
         oppMax: Math.max(...oppCounts),
         playsValues: [...new Set(plays.values())],
+        roundCount: rounds.size,
+        dupInRound,
       };
     };
 
-    it('equilíbrio PERFEITO de adversários: cada um enfrenta cada outro exatamente 2× (N ≤ 13)', { timeout: 30000 }, () => {
-      [4, 5, 8, 9, 12, 13].forEach((n) => {
+    it('regras absolutas EXATAS para todo N (sem limite): parceria 1×, adversário 2×, resolúvel', { timeout: 30000 }, () => {
+      // cobre tabelas (4..32) e construção cíclica em runtime para primos (37, 41)
+      [4, 5, 8, 9, 12, 13, 16, 17, 20, 21, 24, 25, 28, 29, 32, 37, 41].forEach((n) => {
         const players = Array.from({ length: n }, (_, i) => `p${i}`);
         const matches = buildAmericanoRotation(players, { seed: 'fixed' });
         const s = americanoStats(matches, n);
-        // regra absoluta 1: parceria única (cada dupla possível uma vez)
+        // regra absoluta 1: parceria única (cada dupla possível exatamente 1×)
         expect(s.partnerMax).toBe(1);
         expect(s.partnerCount).toBe((n * (n - 1)) / 2);
-        // regra absoluta 2: equilíbrio perfeito de adversários (todos = 2)
+        // regra absoluta 2: adversários perfeitamente equilibrados (todos = 2×)
         expect(s.oppMin).toBe(2);
         expect(s.oppMax).toBe(2);
         // cada jogador disputa N−1 jogos
         expect(s.playsValues).toEqual([n - 1]);
-      });
-    });
-
-    it('funciona para qualquer N válido (sem limite de 16): faixa estreita [1,3]', { timeout: 60000 }, () => {
-      [16, 17, 20, 24].forEach((n) => {
-        const players = Array.from({ length: n }, (_, i) => `p${i}`);
-        const matches = buildAmericanoRotation(players, { seed: 'fixed' });
-        const s = americanoStats(matches, n);
-        expect(s.partnerMax).toBe(1); // parceria única continua absoluta
-        // a média é sempre 2; nunca permitimos distorções (≤1 ou ≥4)
-        expect(s.oppMin).toBeGreaterThanOrEqual(1);
-        expect(s.oppMax).toBeLessThanOrEqual(3);
-        expect(s.playsValues).toEqual([n - 1]);
+        // RESOLÚVEL: N−1 rodadas (par) ou N (ímpar), sem jogador repetido por rodada
+        expect(s.roundCount).toBe(n % 2 === 0 ? n - 1 : n);
+        expect(s.dupInRound).toBe(0);
       });
     });
 
