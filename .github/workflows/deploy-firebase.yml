@@ -31,6 +31,8 @@ jobs:
       VITE_ENABLE_FIREBASE_ANALYTICS: 'false'
       VITE_ENABLE_FIREBASE_PERFORMANCE: 'false'
       VITE_BASE_PATH: /
+      # PWA habilitado: app instalável (Android/iOS) direto do site, sem lojas.
+      VITE_PWA_ENABLED: 'true'
     steps:
       - uses: actions/checkout@v5
 
