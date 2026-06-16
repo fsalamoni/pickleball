@@ -112,18 +112,24 @@ export function distributeGroups(participantIds, options) {
 
 /**
  * Gera os jogos de uma fase de grupos (todos contra todos dentro de cada grupo).
+ *
+ * Dentro de cada grupo usamos o "método do círculo" (mesmo do pontos corridos),
+ * que organiza os confrontos em rodadas equilibradas: em cada rodada todos os
+ * jogadores do grupo entram em quadra no máximo uma vez e, quando o grupo tem
+ * número ímpar de participantes, o descanso (bye) circula de forma justa — cada
+ * um folga no máximo uma vez. Isso dá ao grupo a mesma distribuição equilibrada
+ * de rotação/espera das demais modalidades (o agendador depois aproveita essas
+ * rodadas para paralelizar as quadras entre os grupos).
+ *
  * @param {Array<{ name: string, participants: string[] }>} groups
  * @returns {Array<{ group: string, side_a: string, side_b: string, round: number }>}
  */
 export function buildGroupMatches(groups) {
   const matches = [];
   groups.forEach((g) => {
-    const ps = g.participants;
-    for (let i = 0; i < ps.length; i += 1) {
-      for (let j = i + 1; j < ps.length; j += 1) {
-        matches.push({ group: g.name, side_a: ps[i], side_b: ps[j], round: 1 });
-      }
-    }
+    buildRoundRobinMatches(g.participants).forEach((m) => {
+      matches.push({ group: g.name, side_a: m.side_a, side_b: m.side_b, round: m.round });
+    });
   });
   return matches;
 }
