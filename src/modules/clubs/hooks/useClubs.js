@@ -15,11 +15,31 @@ import {
   setMemberRole,
   removeMember,
   listClubEvents,
+  getClubEvent,
   createClubEvent,
   updateClubEvent,
   deleteClubEvent,
   listEventRsvps,
   setEventRsvp,
+  listEventDates,
+  addEventDate,
+  updateEventDate,
+  deleteEventDate,
+  listEventDateRsvps,
+  setEventDateRsvp,
+  listEventMessages,
+  sendEventMessage,
+  updateEventMessage,
+  deleteEventMessage,
+  listEventParticipants,
+  addEventParticipant,
+  removeEventParticipant,
+  listEventGames,
+  addEventGame,
+  updateEventGame,
+  deleteEventGame,
+  replaceEventGames,
+  clearEventGames,
   listClubPosts,
   createClubPost,
   deleteClubPost,
@@ -207,6 +227,196 @@ export function useSetEventRsvp(eventId) {
   return useMutation({
     mutationFn: ({ event, status }) => setEventRsvp(event, status, user, userProfile),
     onSuccess: () => qc.invalidateQueries({ queryKey: ['club-event-rsvps', eventId] }),
+  });
+}
+
+export function useClubEvent(eventId) {
+  return useQuery({
+    queryKey: ['club-event', eventId],
+    queryFn: () => getClubEvent(eventId),
+    enabled: !!eventId,
+  });
+}
+
+export function useUpdateEvent(eventId) {
+  const { user } = useAuth();
+  const qc = useQueryClient();
+  return useMutation({
+    mutationFn: (updates) => updateClubEvent(eventId, updates, user),
+    onSuccess: () => {
+      qc.invalidateQueries({ queryKey: ['club-event', eventId] });
+      qc.invalidateQueries({ queryKey: ['club-events'] });
+    },
+  });
+}
+
+/* ----------------------------- Event dates ------------------------------ */
+
+export function useEventDates(eventId) {
+  return useQuery({
+    queryKey: ['event-dates', eventId],
+    queryFn: () => listEventDates(eventId),
+    enabled: !!eventId,
+  });
+}
+
+export function useAddEventDate(eventId) {
+  const { user } = useAuth();
+  const qc = useQueryClient();
+  return useMutation({
+    mutationFn: (data) => addEventDate(eventId, data, user),
+    onSuccess: () => qc.invalidateQueries({ queryKey: ['event-dates', eventId] }),
+  });
+}
+
+export function useUpdateEventDate(eventId) {
+  const qc = useQueryClient();
+  return useMutation({
+    mutationFn: ({ dateId, updates }) => updateEventDate(eventId, dateId, updates),
+    onSuccess: () => qc.invalidateQueries({ queryKey: ['event-dates', eventId] }),
+  });
+}
+
+export function useDeleteEventDate(eventId) {
+  const qc = useQueryClient();
+  return useMutation({
+    mutationFn: (dateId) => deleteEventDate(eventId, dateId),
+    onSuccess: () => {
+      qc.invalidateQueries({ queryKey: ['event-dates', eventId] });
+      qc.invalidateQueries({ queryKey: ['event-date-rsvps', eventId] });
+    },
+  });
+}
+
+export function useEventDateRsvps(eventId) {
+  return useQuery({
+    queryKey: ['event-date-rsvps', eventId],
+    queryFn: () => listEventDateRsvps(eventId),
+    enabled: !!eventId,
+  });
+}
+
+export function useSetEventDateRsvp(eventId) {
+  const { user, userProfile } = useAuth();
+  const qc = useQueryClient();
+  return useMutation({
+    mutationFn: ({ dateId, status }) => setEventDateRsvp(eventId, dateId, status, user, userProfile),
+    onSuccess: () => qc.invalidateQueries({ queryKey: ['event-date-rsvps', eventId] }),
+  });
+}
+
+/* ------------------------------ Event chat ------------------------------ */
+
+export function useEventMessages(eventId) {
+  return useQuery({
+    queryKey: ['event-messages', eventId],
+    queryFn: () => listEventMessages(eventId),
+    enabled: !!eventId,
+    refetchInterval: 15000,
+  });
+}
+
+export function useSendEventMessage(eventId) {
+  const { user, userProfile } = useAuth();
+  const qc = useQueryClient();
+  return useMutation({
+    mutationFn: (text) => sendEventMessage(eventId, text, user, userProfile),
+    onSuccess: () => qc.invalidateQueries({ queryKey: ['event-messages', eventId] }),
+  });
+}
+
+export function useUpdateEventMessage(eventId) {
+  const qc = useQueryClient();
+  return useMutation({
+    mutationFn: ({ messageId, text }) => updateEventMessage(eventId, messageId, text),
+    onSuccess: () => qc.invalidateQueries({ queryKey: ['event-messages', eventId] }),
+  });
+}
+
+export function useDeleteEventMessage(eventId) {
+  const qc = useQueryClient();
+  return useMutation({
+    mutationFn: (messageId) => deleteEventMessage(eventId, messageId),
+    onSuccess: () => qc.invalidateQueries({ queryKey: ['event-messages', eventId] }),
+  });
+}
+
+/* -------------------------- Game day participants ----------------------- */
+
+export function useEventParticipants(eventId) {
+  return useQuery({
+    queryKey: ['event-participants', eventId],
+    queryFn: () => listEventParticipants(eventId),
+    enabled: !!eventId,
+  });
+}
+
+export function useAddEventParticipant(eventId) {
+  const { user } = useAuth();
+  const qc = useQueryClient();
+  return useMutation({
+    mutationFn: (data) => addEventParticipant(eventId, data, user),
+    onSuccess: () => qc.invalidateQueries({ queryKey: ['event-participants', eventId] }),
+  });
+}
+
+export function useRemoveEventParticipant(eventId) {
+  const qc = useQueryClient();
+  return useMutation({
+    mutationFn: (participantId) => removeEventParticipant(eventId, participantId),
+    onSuccess: () => qc.invalidateQueries({ queryKey: ['event-participants', eventId] }),
+  });
+}
+
+/* ----------------------------- Game day games --------------------------- */
+
+export function useEventGames(eventId) {
+  return useQuery({
+    queryKey: ['event-games', eventId],
+    queryFn: () => listEventGames(eventId),
+    enabled: !!eventId,
+  });
+}
+
+export function useAddEventGame(eventId) {
+  const { user } = useAuth();
+  const qc = useQueryClient();
+  return useMutation({
+    mutationFn: (data) => addEventGame(eventId, data, user),
+    onSuccess: () => qc.invalidateQueries({ queryKey: ['event-games', eventId] }),
+  });
+}
+
+export function useUpdateEventGame(eventId) {
+  const qc = useQueryClient();
+  return useMutation({
+    mutationFn: ({ gameId, updates }) => updateEventGame(eventId, gameId, updates),
+    onSuccess: () => qc.invalidateQueries({ queryKey: ['event-games', eventId] }),
+  });
+}
+
+export function useDeleteEventGame(eventId) {
+  const qc = useQueryClient();
+  return useMutation({
+    mutationFn: (gameId) => deleteEventGame(eventId, gameId),
+    onSuccess: () => qc.invalidateQueries({ queryKey: ['event-games', eventId] }),
+  });
+}
+
+export function useReplaceEventGames(eventId) {
+  const { user } = useAuth();
+  const qc = useQueryClient();
+  return useMutation({
+    mutationFn: (games) => replaceEventGames(eventId, games, user),
+    onSuccess: () => qc.invalidateQueries({ queryKey: ['event-games', eventId] }),
+  });
+}
+
+export function useClearEventGames(eventId) {
+  const qc = useQueryClient();
+  return useMutation({
+    mutationFn: () => clearEventGames(eventId),
+    onSuccess: () => qc.invalidateQueries({ queryKey: ['event-games', eventId] }),
   });
 }
 

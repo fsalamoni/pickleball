@@ -29,7 +29,7 @@ import { db } from '@/core/config/firebase';
 import { logger } from '@/core/lib/logger';
 import { createAuditLog } from '@/core/services/auditService';
 import { syncAthleteProfile } from '@/modules/athletes/services/athleteService';
-import { CLUB_COLLECTIONS, CLUB_ROLE, CLUB_EVENT_TYPE } from '../domain/constants.js';
+import { CLUB_COLLECTIONS, CLUB_ROLE, CLUB_EVENT_TYPE, GAME_DAY_LIMITS } from '../domain/constants.js';
 
 const COL = CLUB_COLLECTIONS;
 
@@ -47,6 +47,23 @@ function rsvpDocId(eventId, userId) {
 
 function trimmed(value) {
   return String(value ?? '').trim();
+}
+
+/**
+ * Executa um conjunto de operações de escrita em lotes de no máximo 450
+ * (limite do Firestore é 500 por batch), de forma segura para grandes volumes.
+ * @param {Array<{ type: 'set'|'delete', ref: any, data?: object }>} ops
+ */
+async function commitInChunks(ops) {
+  const CHUNK = 450;
+  for (let i = 0; i < ops.length; i += CHUNK) {
+    const batch = writeBatch(db);
+    ops.slice(i, i + CHUNK).forEach((op) => {
+      if (op.type === 'delete') batch.delete(op.ref);
+      else batch.set(op.ref, op.data);
+    });
+    await batch.commit();
+  }
 }
 
 function memberPayload(clubId, user, profile, role) {
@@ -260,6 +277,13 @@ export async function listClubEvents(clubId) {
     .sort((a, b) => String(a.starts_at || '').localeCompare(String(b.starts_at || '')));
 }
 
+export async function getClubEvent(eventId) {
+  if (!db || !eventId) return null;
+  const snap = await getDoc(doc(db, COL.events, eventId));
+  if (!snap.exists()) return null;
+  return { id: snap.id, ...snap.data() };
+}
+
 export async function createClubEvent(clubId, data, user) {
   if (!user?.uid) throw new Error('Usuário não autenticado.');
   if (!trimmed(data.title)) throw new Error('Informe o título do evento.');
@@ -272,23 +296,47 @@ export async function createClubEvent(clubId, data, user) {
     type: data.type || CLUB_EVENT_TYPE.SOCIAL,
     location: trimmed(data.location),
     starts_at: data.starts_at || null,
+    recurring: !!data.recurring,
     created_by: user.uid,
     created_by_name: data.created_by_name || user.displayName || user.email || '',
     created_at: serverTimestamp(),
     updated_at: serverTimestamp(),
   });
+  // Semeia a primeira data do evento (quando informada) para que a página do
+  // evento já mostre a data com local/horário e permita respostas por data.
+  if (data.starts_at) {
+    try {
+      await addEventDate(id, { club_id: clubId, date_time: data.starts_at, location: trimmed(data.location) }, user);
+    } catch (err) {
+      logger.error('Falha ao criar a data inicial do evento:', err);
+    }
+  }
   await createAuditLog({ action: 'club_event_created', actor: user, details: { club_id: clubId, event_id: id } });
   return id;
 }
 
 export async function updateClubEvent(eventId, updates, actor) {
-  const allowed = ['title', 'description', 'type', 'location', 'starts_at'];
+  const allowed = ['title', 'description', 'type', 'location', 'starts_at', 'recurring'];
   const sanitized = {};
   allowed.forEach((key) => {
-    if (updates[key] !== undefined) sanitized[key] = key === 'starts_at' ? (updates[key] || null) : (key === 'type' ? updates[key] : trimmed(updates[key]));
+    if (updates[key] === undefined) return;
+    if (key === 'starts_at') sanitized[key] = updates[key] || null;
+    else if (key === 'type') sanitized[key] = updates[key];
+    else if (key === 'recurring') sanitized[key] = !!updates[key];
+    else sanitized[key] = trimmed(updates[key]);
   });
   await updateDoc(doc(db, COL.events, eventId), { ...sanitized, updated_at: serverTimestamp() });
   await createAuditLog({ action: 'club_event_updated', actor, details: { event_id: eventId } });
+}
+
+async function deleteSubcollection(eventId, sub) {
+  try {
+    const snap = await getDocs(collection(db, COL.events, eventId, sub));
+    if (snap.empty) return;
+    await commitInChunks(snap.docs.map((d) => ({ type: 'delete', ref: d.ref })));
+  } catch (err) {
+    logger.error(`Falha ao limpar subcoleção ${sub} do evento ${eventId}:`, err);
+  }
 }
 
 export async function deleteClubEvent(eventId, actor) {
@@ -300,8 +348,226 @@ export async function deleteClubEvent(eventId, actor) {
   } catch (err) {
     logger.error('Falha ao limpar RSVPs do evento:', err);
   }
+  // Limpa as subcoleções do evento (best-effort) antes de remover o documento.
+  for (const sub of [COL.eventDates, COL.eventDateRsvps, COL.eventMessages, COL.eventParticipants, COL.eventGames]) {
+    await deleteSubcollection(eventId, sub);
+  }
   await deleteDoc(doc(db, COL.events, eventId));
   await createAuditLog({ action: 'club_event_deleted', actor, details: { event_id: eventId } });
+}
+
+/* --------------------------- Event dates -------------------------------- */
+
+export async function listEventDates(eventId) {
+  if (!db || !eventId) return [];
+  const snap = await getDocs(collection(db, COL.events, eventId, COL.eventDates));
+  return snap.docs
+    .map((d) => ({ id: d.id, ...d.data() }))
+    .sort((a, b) => String(a.date_time || '').localeCompare(String(b.date_time || '')));
+}
+
+export async function addEventDate(eventId, data, user) {
+  if (!user?.uid) throw new Error('Usuário não autenticado.');
+  const ref = doc(collection(db, COL.events, eventId, COL.eventDates));
+  await setDoc(ref, {
+    id: ref.id,
+    event_id: eventId,
+    club_id: data.club_id || '',
+    date_time: data.date_time || null,
+    location: trimmed(data.location),
+    note: trimmed(data.note),
+    created_by: user.uid,
+    created_at_ms: Date.now(),
+    created_at: serverTimestamp(),
+  });
+  return ref.id;
+}
+
+export async function updateEventDate(eventId, dateId, updates) {
+  const allowed = ['date_time', 'location', 'note'];
+  const sanitized = {};
+  allowed.forEach((key) => {
+    if (updates[key] === undefined) return;
+    sanitized[key] = key === 'date_time' ? (updates[key] || null) : trimmed(updates[key]);
+  });
+  await updateDoc(doc(db, COL.events, eventId, COL.eventDates, dateId), { ...sanitized, updated_at: serverTimestamp() });
+}
+
+export async function deleteEventDate(eventId, dateId) {
+  await deleteDoc(doc(db, COL.events, eventId, COL.eventDates, dateId));
+}
+
+/* ------------------------- Per-date RSVP -------------------------------- */
+
+export async function listEventDateRsvps(eventId) {
+  if (!db || !eventId) return [];
+  const snap = await getDocs(collection(db, COL.events, eventId, COL.eventDateRsvps));
+  return snap.docs.map((d) => ({ id: d.id, ...d.data() }));
+}
+
+export async function setEventDateRsvp(eventId, dateId, status, user, profile) {
+  if (!user?.uid) throw new Error('Usuário não autenticado.');
+  await setDoc(doc(db, COL.events, eventId, COL.eventDateRsvps, `${dateId}_${user.uid}`), {
+    event_id: eventId,
+    date_id: dateId,
+    user_id: user.uid,
+    user_name: profile?.platform_name || user.displayName || user.email || 'Atleta',
+    user_photo: profile?.photo_url || user.photoURL || '',
+    status,
+    updated_at: serverTimestamp(),
+  });
+}
+
+/* --------------------------- Event chat --------------------------------- */
+
+export async function listEventMessages(eventId) {
+  if (!db || !eventId) return [];
+  const snap = await getDocs(collection(db, COL.events, eventId, COL.eventMessages));
+  return snap.docs
+    .map((d) => ({ id: d.id, ...d.data() }))
+    .sort((a, b) => (a.created_at_ms || 0) - (b.created_at_ms || 0));
+}
+
+export async function sendEventMessage(eventId, text, user, profile) {
+  if (!user?.uid) throw new Error('Usuário não autenticado.');
+  const body = trimmed(text, GAME_DAY_LIMITS.MESSAGE_MAX);
+  if (!body) throw new Error('Escreva uma mensagem.');
+  const ref = doc(collection(db, COL.events, eventId, COL.eventMessages));
+  await setDoc(ref, {
+    id: ref.id,
+    event_id: eventId,
+    text: body,
+    sender_id: user.uid,
+    sender_name: profile?.platform_name || user.displayName || user.email || 'Atleta',
+    sender_photo: profile?.photo_url || user.photoURL || '',
+    edited: false,
+    created_at_ms: Date.now(),
+    created_at: serverTimestamp(),
+  });
+  return ref.id;
+}
+
+export async function updateEventMessage(eventId, messageId, text) {
+  await updateDoc(doc(db, COL.events, eventId, COL.eventMessages, messageId), {
+    text: trimmed(text, GAME_DAY_LIMITS.MESSAGE_MAX),
+    edited: true,
+    edited_at: serverTimestamp(),
+  });
+}
+
+export async function deleteEventMessage(eventId, messageId) {
+  await deleteDoc(doc(db, COL.events, eventId, COL.eventMessages, messageId));
+}
+
+/* ----------------------- Game day participants -------------------------- */
+
+export async function listEventParticipants(eventId) {
+  if (!db || !eventId) return [];
+  const snap = await getDocs(collection(db, COL.events, eventId, COL.eventParticipants));
+  return snap.docs
+    .map((d) => ({ id: d.id, ...d.data() }))
+    .sort((a, b) => (a.created_at_ms || 0) - (b.created_at_ms || 0));
+}
+
+export async function addEventParticipant(eventId, data, user) {
+  if (!user?.uid) throw new Error('Usuário não autenticado.');
+  const name = trimmed(data.name);
+  if (!name) throw new Error('Informe o nome do participante.');
+  const ref = doc(collection(db, COL.events, eventId, COL.eventParticipants));
+  await setDoc(ref, {
+    id: ref.id,
+    event_id: eventId,
+    name,
+    user_id: data.user_id || null,
+    photo_url: trimmed(data.photo_url),
+    source: data.source || 'guest',
+    added_by: user.uid,
+    created_at_ms: Date.now(),
+    created_at: serverTimestamp(),
+  });
+  return ref.id;
+}
+
+export async function removeEventParticipant(eventId, participantId) {
+  await deleteDoc(doc(db, COL.events, eventId, COL.eventParticipants, participantId));
+}
+
+/* -------------------------- Game day games ------------------------------ */
+
+export async function listEventGames(eventId) {
+  if (!db || !eventId) return [];
+  const snap = await getDocs(collection(db, COL.events, eventId, COL.eventGames));
+  return snap.docs
+    .map((d) => ({ id: d.id, ...d.data() }))
+    .sort((a, b) => (a.order ?? 0) - (b.order ?? 0) || (a.created_at_ms || 0) - (b.created_at_ms || 0));
+}
+
+function sanitizeGameSide(side) {
+  return (Array.isArray(side) ? side : [])
+    .filter((p) => p && (p.name || p.id))
+    .slice(0, 2)
+    .map((p) => ({ id: p.id || null, name: trimmed(p.name) || 'Jogador' }));
+}
+
+export async function addEventGame(eventId, data, user) {
+  if (!user?.uid) throw new Error('Usuário não autenticado.');
+  const ref = doc(collection(db, COL.events, eventId, COL.eventGames));
+  await setDoc(ref, buildGamePayload(ref.id, eventId, data, user));
+  return ref.id;
+}
+
+function buildGamePayload(id, eventId, data, user) {
+  const side_a = sanitizeGameSide(data.side_a);
+  const side_b = sanitizeGameSide(data.side_b);
+  return {
+    id,
+    event_id: eventId,
+    round: data.round ?? null,
+    kind: data.kind === 'singles' ? 'singles' : 'doubles',
+    side_a,
+    side_b,
+    score_a: Number.isFinite(data.score_a) ? data.score_a : null,
+    score_b: Number.isFinite(data.score_b) ? data.score_b : null,
+    order: Number.isFinite(data.order) ? data.order : Date.now(),
+    created_by: user.uid,
+    created_at_ms: Date.now(),
+    created_at: serverTimestamp(),
+  };
+}
+
+export async function updateEventGame(eventId, gameId, updates) {
+  const sanitized = {};
+  if (updates.side_a !== undefined) sanitized.side_a = sanitizeGameSide(updates.side_a);
+  if (updates.side_b !== undefined) sanitized.side_b = sanitizeGameSide(updates.side_b);
+  if (updates.round !== undefined) sanitized.round = updates.round;
+  if (updates.kind !== undefined) sanitized.kind = updates.kind === 'singles' ? 'singles' : 'doubles';
+  if (updates.score_a !== undefined) sanitized.score_a = Number.isFinite(updates.score_a) ? updates.score_a : null;
+  if (updates.score_b !== undefined) sanitized.score_b = Number.isFinite(updates.score_b) ? updates.score_b : null;
+  if (updates.order !== undefined) sanitized.order = updates.order;
+  await updateDoc(doc(db, COL.events, eventId, COL.eventGames, gameId), { ...sanitized, updated_at: serverTimestamp() });
+}
+
+export async function deleteEventGame(eventId, gameId) {
+  await deleteDoc(doc(db, COL.events, eventId, COL.eventGames, gameId));
+}
+
+/**
+ * Substitui TODOS os jogos do evento por uma nova lista (usado pelo sorteio).
+ * Apaga os jogos atuais e grava os novos em lote.
+ */
+export async function replaceEventGames(eventId, games, user) {
+  if (!user?.uid) throw new Error('Usuário não autenticado.');
+  const existing = await getDocs(collection(db, COL.events, eventId, COL.eventGames));
+  const ops = existing.docs.map((d) => ({ type: 'delete', ref: d.ref }));
+  games.forEach((g, i) => {
+    const ref = doc(collection(db, COL.events, eventId, COL.eventGames));
+    ops.push({ type: 'set', ref, data: buildGamePayload(ref.id, eventId, { ...g, order: i }, user) });
+  });
+  await commitInChunks(ops);
+}
+
+export async function clearEventGames(eventId) {
+  await deleteSubcollection(eventId, COL.eventGames);
 }
 
 export async function listEventRsvps(eventId) {

@@ -26,6 +26,7 @@ const AthletesDirectory = lazy(() => import('@/modules/athletes/pages/AthletesDi
 const ClubsDirectory = lazy(() => import('@/modules/clubs/pages/ClubsDirectory'));
 const CreateClub = lazy(() => import('@/modules/clubs/pages/CreateClub'));
 const ClubDetail = lazy(() => import('@/modules/clubs/pages/ClubDetail'));
+const EventDetail = lazy(() => import('@/modules/clubs/pages/EventDetail'));
 const ChatPage = lazy(() => import('@/modules/chat/pages/ChatPage'));
 const PageNotFound = lazy(() => import('@/pages/PageNotFound'));
 
@@ -132,6 +133,7 @@ export default function App() {
               <Route path="/clubes" element={<ProtectedRoute>{withLayout('ClubsDirectory', ClubsDirectory)}</ProtectedRoute>} />
               <Route path="/clubes/criar" element={<ProtectedRoute>{withLayout('CreateClub', CreateClub)}</ProtectedRoute>} />
               <Route path="/clubes/:clubId" element={<ProtectedRoute>{withLayout('ClubDetail', ClubDetail)}</ProtectedRoute>} />
+              <Route path="/clubes/:clubId/eventos/:eventId" element={<ProtectedRoute>{withLayout('EventDetail', EventDetail)}</ProtectedRoute>} />
 
               {/* Platform admin */}
               <Route path="/admin" element={<AdminRoute>{withLayout('AdminTournaments', AdminTournaments)}</AdminRoute>} />
