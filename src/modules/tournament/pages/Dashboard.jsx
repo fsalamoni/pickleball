@@ -165,14 +165,14 @@ export default function Dashboard() {
   return (
     <div className="space-y-8">
       <section className="grid gap-6 xl:grid-cols-[1.12fr,0.88fr]">
-        <Card className="arena-panel-strong overflow-hidden rounded-[2rem] border-0">
-          <CardContent className="relative p-7 sm:p-8 lg:p-10">
+        <Card className="arena-panel-strong overflow-hidden rounded-[1.25rem] border-0 sm:rounded-[2rem]">
+          <CardContent className="relative p-5 sm:p-8 lg:p-10">
             <div className="absolute inset-y-0 right-0 hidden w-1/2 bg-[radial-gradient(circle_at_top_right,rgba(255,255,255,0.16),transparent_45%)] lg:block" />
             <div className="relative max-w-2xl">
               <span className="inline-flex items-center gap-2 rounded-full border border-white/15 bg-white/10 px-3 py-1 text-xs font-semibold uppercase tracking-[0.18em] text-emerald-50/80">
                 <Sparkles className="h-3.5 w-3.5" /> Centro de operacao do torneio
               </span>
-              <h2 className="mt-5 text-3xl font-semibold leading-tight text-white lg:text-4xl">
+              <h2 className="mt-5 text-2xl font-semibold leading-tight text-white sm:text-3xl lg:text-4xl">
                 Organize o seu dia de evento.
               </h2>
               <p className="mt-4 max-w-xl text-sm leading-7 text-emerald-50/75 sm:text-base">

@@ -181,16 +181,16 @@ export default function Tournament() {
   return (
     <div className="space-y-6">
       <section className="grid gap-5 xl:grid-cols-[1.15fr,0.85fr]">
-        <Card className="arena-panel-strong overflow-hidden rounded-[2rem] border-0">
-          <CardContent className="relative p-6 sm:p-8 lg:p-9">
+        <Card className="arena-panel-strong overflow-hidden rounded-[1.25rem] border-0 sm:rounded-[2rem]">
+          <CardContent className="relative p-5 sm:p-8 lg:p-9">
             <div className="absolute inset-y-0 right-0 hidden w-1/2 bg-[radial-gradient(circle_at_top_right,rgba(255,255,255,0.16),transparent_50%)] lg:block" />
             <div className="relative max-w-3xl">
               <div className="flex flex-wrap items-start gap-3">
-                <div className="flex h-14 w-14 items-center justify-center rounded-[1.5rem] bg-white/10 text-white backdrop-blur-sm">
+                <div className="flex h-12 w-12 items-center justify-center rounded-[1.25rem] bg-white/10 text-white backdrop-blur-sm sm:h-14 sm:w-14 sm:rounded-[1.5rem]">
                   <Trophy className="h-6 w-6" />
                 </div>
                 <div className="min-w-0 flex-1">
-                  <h1 className="text-3xl font-semibold leading-tight text-white lg:text-4xl">{tournament.name}</h1>
+                  <h1 className="text-2xl font-semibold leading-tight text-white sm:text-3xl lg:text-4xl">{tournament.name}</h1>
                   <p className="mt-2 max-w-2xl text-sm leading-7 text-emerald-50/75 sm:text-base">
                     {tournament.description || 'Acompanhe modalidades, jogos, ranking e operação do evento.'}
                   </p>

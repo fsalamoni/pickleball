@@ -59,7 +59,7 @@ export default function Login() {
             <span className="inline-flex items-center gap-2 rounded-full border border-white/15 bg-white/10 px-3 py-1 text-xs font-semibold uppercase tracking-[0.2em] text-emerald-50/80">
               <Sparkles className="h-3.5 w-3.5" /> Entrada principal da plataforma
             </span>
-            <h1 className="mt-6 text-5xl font-semibold leading-[0.95] text-white">
+            <h1 className="mt-6 text-3xl font-semibold leading-tight text-white sm:text-4xl sm:leading-[0.95] lg:text-5xl">
               Entre para criar, administrar e acompanhar cada modalidade do seu torneio.
             </h1>
 

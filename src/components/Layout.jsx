@@ -180,7 +180,7 @@ export default function Layout({ children, currentPageName }) {
         onClick={() => setSidebarOpen(false)}
       />
 
-      <div className="fixed inset-x-0 top-0 z-50 flex h-[4.75rem] items-center justify-between border-b border-white/10 bg-slate-950/95 px-4 text-white backdrop-blur-xl lg:hidden">
+      <div className="fixed inset-x-0 top-0 z-50 flex h-[calc(4.75rem+env(safe-area-inset-top))] items-center justify-between border-b border-white/10 bg-slate-950/95 px-4 pt-[env(safe-area-inset-top)] text-white backdrop-blur-xl lg:hidden">
         <BrandLockup to="/inicio" subtitle="Gestão de torneios" />
         <Button
           variant="ghost"
@@ -377,8 +377,8 @@ export default function Layout({ children, currentPageName }) {
         </div>
       </aside>
 
-      <div className="min-h-screen pt-[4.75rem] lg:ml-72 lg:pt-0">
-        <header className="sticky top-[4.75rem] z-30 border-b border-white/70 bg-white/75 backdrop-blur-xl lg:top-0">
+      <div className="min-h-screen pt-[calc(4.75rem+env(safe-area-inset-top))] lg:ml-72 lg:pt-0">
+        <header className="sticky top-[calc(4.75rem+env(safe-area-inset-top))] z-30 border-b border-white/70 bg-white/75 backdrop-blur-xl lg:top-0">
           <div className="mx-auto flex max-w-7xl flex-col gap-4 px-4 py-4 lg:flex-row lg:items-center lg:justify-between lg:px-8 lg:py-5">
             <div className="min-w-0">
               <p className="text-xs font-semibold uppercase tracking-[0.24em] text-emerald-700/80">{currentMeta.eyebrow}</p>
@@ -406,7 +406,7 @@ export default function Layout({ children, currentPageName }) {
           </div>
         </header>
 
-        <main className="mx-auto max-w-7xl px-4 pb-10 pt-6 lg:px-8 lg:pb-12">{children}</main>
+        <main className="safe-px mx-auto max-w-7xl pb-10 pt-6 lg:px-8 lg:pb-12">{children}</main>
       </div>
 
       <ProfileCompletionModal />
@@ -428,7 +428,7 @@ function PublicUtilityLayout({ children, currentPageName }) {
         onClick={() => setSidebarOpen(false)}
       />
 
-      <div className="fixed inset-x-0 top-0 z-50 flex h-[4.75rem] items-center justify-between border-b border-white/10 bg-slate-950/95 px-4 text-white backdrop-blur-xl lg:hidden">
+      <div className="fixed inset-x-0 top-0 z-50 flex h-[calc(4.75rem+env(safe-area-inset-top))] items-center justify-between border-b border-white/10 bg-slate-950/95 px-4 pt-[env(safe-area-inset-top)] text-white backdrop-blur-xl lg:hidden">
         <BrandLockup to="/" subtitle="Guia do esporte" />
         <Button
           variant="ghost"
@@ -483,8 +483,8 @@ function PublicUtilityLayout({ children, currentPageName }) {
         </div>
       </aside>
 
-      <div className="min-h-screen pt-[4.75rem] lg:ml-72 lg:pt-0">
-        <header className="sticky top-[4.75rem] z-30 border-b border-white/70 bg-white/75 backdrop-blur-xl lg:top-0">
+      <div className="min-h-screen pt-[calc(4.75rem+env(safe-area-inset-top))] lg:ml-72 lg:pt-0">
+        <header className="sticky top-[calc(4.75rem+env(safe-area-inset-top))] z-30 border-b border-white/70 bg-white/75 backdrop-blur-xl lg:top-0">
           <div className="mx-auto flex max-w-7xl flex-col gap-4 px-4 py-4 lg:flex-row lg:items-center lg:justify-between lg:px-8 lg:py-5">
             <div className="min-w-0">
               <p className="text-xs font-semibold uppercase tracking-[0.24em] text-emerald-700/80">{currentMeta.eyebrow}</p>
@@ -503,7 +503,7 @@ function PublicUtilityLayout({ children, currentPageName }) {
           </div>
         </header>
 
-        <main className="mx-auto max-w-7xl px-4 pb-10 pt-6 lg:px-8 lg:pb-12">{children}</main>
+        <main className="safe-px mx-auto max-w-7xl pb-10 pt-6 lg:px-8 lg:pb-12">{children}</main>
       </div>
     </div>
   );

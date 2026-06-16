@@ -57,12 +57,12 @@ export default function JoinTournament() {
   return (
     <div className="space-y-6">
       <section className="grid gap-6 xl:grid-cols-[0.95fr,1.05fr]">
-        <Card className="arena-panel-strong overflow-hidden rounded-[2rem] border-0">
-          <CardContent className="p-7 sm:p-8 lg:p-10">
+        <Card className="arena-panel-strong overflow-hidden rounded-[1.25rem] border-0 sm:rounded-[2rem]">
+          <CardContent className="p-5 sm:p-8 lg:p-10">
             <span className="inline-flex items-center gap-2 rounded-full border border-white/15 bg-white/10 px-3 py-1 text-xs font-semibold uppercase tracking-[0.18em] text-emerald-50/80">
               <Sparkles className="h-3.5 w-3.5" /> Acesso privado
             </span>
-            <h1 className="mt-5 text-4xl font-semibold leading-tight text-white lg:text-5xl">
+            <h1 className="mt-5 text-2xl font-semibold leading-tight text-white sm:text-3xl lg:text-5xl">
               Entre em um torneio privado com o código recebido.
             </h1>
             <p className="mt-4 max-w-2xl text-sm leading-7 text-emerald-50/75 sm:text-base">

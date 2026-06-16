@@ -133,7 +133,7 @@ export default function Landing() {
             <span className="arena-chip">
               <Sparkles className="h-3.5 w-3.5 text-emerald-700" /> Plataforma completa para torneios de pickleball no Brasil
             </span>
-            <h1 className="mt-6 text-5xl font-semibold leading-[0.92] text-slate-950 md:text-6xl xl:text-[5.2rem]">
+            <h1 className="mt-6 text-[2rem] font-semibold leading-[1.05] text-slate-950 sm:text-4xl sm:leading-[0.95] md:text-6xl md:leading-[0.92] xl:text-[5.2rem]">
               O torneio ganha cara de evento sério antes mesmo do primeiro saque.
             </h1>
             <p className="mt-6 max-w-2xl text-lg leading-8 text-slate-600 md:text-xl">
