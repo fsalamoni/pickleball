@@ -38,6 +38,8 @@ import {
   EVENT_VISIBILITY,
   INVITE_STATUS,
   INVITE_SOURCE,
+  JOIN_REQUEST_STATUS,
+  MEMBER_INVITE_STATUS,
 } from '../domain/constants.js';
 
 const COL = CLUB_COLLECTIONS;
@@ -280,7 +282,218 @@ export async function removeMember(clubId, member, actor) {
   await createAuditLog({ action: 'club_member_removed', actor, details: { club_id: clubId, user_id: member.user_id } });
 }
 
+/* ------------------ Join requests & membership invites ------------------ */
+
+/** Uids dos administradores de um clube (para notificações). */
+async function listClubAdminIds(clubId) {
+  const members = await listClubMembers(clubId).catch(() => []);
+  return members.filter((m) => m.role === CLUB_ROLE.ADMIN).map((m) => m.user_id).filter(Boolean);
+}
+
+/**
+ * Não-membro pede para ingressar no clube. Cria (ou reaproveita) o pedido
+ * pendente e notifica os administradores. Id determinístico evita duplicidade.
+ */
+export async function requestToJoinClub(club, user, profile) {
+  if (!user?.uid) throw new Error('Usuário não autenticado.');
+  if (!club?.id) throw new Error('Clube inválido.');
+  const existingMember = await getMembership(club.id, user.uid).catch(() => null);
+  if (existingMember) return { alreadyMember: true };
+
+  const id = memberDocId(club.id, user.uid);
+  const requesterName = profile?.platform_name || profile?.full_name || user.displayName || user.email || 'Atleta';
+  await setDoc(doc(db, COL.joinRequests, id), {
+    id,
+    club_id: club.id,
+    club_name: trimmed(club.name),
+    user_id: user.uid,
+    user_name: requesterName,
+    user_email: user.email || '',
+    photo_url: profile?.photo_url || user.photoURL || '',
+    status: JOIN_REQUEST_STATUS.PENDING,
+    created_at: serverTimestamp(),
+    created_at_ms: Date.now(),
+    updated_at: serverTimestamp(),
+  });
+
+  const adminIds = await listClubAdminIds(club.id);
+  notifyUsers(adminIds, {
+    title: `${requesterName} pediu para entrar em "${trimmed(club.name).slice(0, 50)}"`,
+    message: 'Toque para aprovar ou recusar o pedido na administração do clube.',
+    type: NOTIFICATION_TYPE.CLUB_JOIN_REQUEST,
+    link: `/clubes/${club.id}?tab=admin`,
+    actor: { uid: user.uid, displayName: requesterName },
+  });
+  await createAuditLog({ action: 'club_join_requested', actor: user, details: { club_id: club.id } });
+  return { ok: true };
+}
+
+export async function getMyJoinRequest(clubId, userId) {
+  if (!db || !clubId || !userId) return null;
+  const snap = await getDoc(doc(db, COL.joinRequests, memberDocId(clubId, userId)));
+  return snap.exists() ? { id: snap.id, ...snap.data() } : null;
+}
+
+export async function listMyJoinRequests(userId) {
+  if (!db || !userId) return [];
+  const snap = await getDocs(query(collection(db, COL.joinRequests), where('user_id', '==', userId)));
+  return snap.docs.map((d) => ({ id: d.id, ...d.data() }));
+}
+
+export async function listJoinRequests(clubId) {
+  if (!db || !clubId) return [];
+  const snap = await getDocs(
+    query(collection(db, COL.joinRequests), where('club_id', '==', clubId), where('status', '==', JOIN_REQUEST_STATUS.PENDING)),
+  );
+  return snap.docs
+    .map((d) => ({ id: d.id, ...d.data() }))
+    .sort((a, b) => (a.created_at_ms || 0) - (b.created_at_ms || 0));
+}
+
+export async function approveJoinRequest(request, actor) {
+  if (!request?.club_id || !request?.user_id) throw new Error('Pedido inválido.');
+  // Admin cria a associação do solicitante (regra permite admin criar membro).
+  await setDoc(doc(db, COL.members, memberDocId(request.club_id, request.user_id)), {
+    club_id: request.club_id,
+    user_id: request.user_id,
+    user_name: request.user_name || 'Atleta',
+    user_email: request.user_email || '',
+    photo_url: request.photo_url || '',
+    role: CLUB_ROLE.MEMBER,
+    joined_at: serverTimestamp(),
+  });
+  await updateDoc(doc(db, COL.joinRequests, memberDocId(request.club_id, request.user_id)), {
+    status: JOIN_REQUEST_STATUS.APPROVED,
+    responded_by: actor?.uid || null,
+    updated_at: serverTimestamp(),
+  }).catch(() => {});
+  await updateDoc(doc(db, COL.clubs, request.club_id), { member_count: increment(1), updated_at: serverTimestamp() }).catch(() => {});
+  notifyUsers([request.user_id], {
+    title: `Pedido aprovado: você agora é membro de "${trimmed(request.club_name).slice(0, 50)}"`,
+    message: 'Toque para abrir o clube e ver eventos, mural e fórum.',
+    type: NOTIFICATION_TYPE.CLUB_JOIN_APPROVED,
+    link: `/clubes/${request.club_id}`,
+    actor,
+  });
+  await createAuditLog({ action: 'club_join_approved', actor, details: { club_id: request.club_id, user_id: request.user_id } });
+}
+
+export async function rejectJoinRequest(request, actor) {
+  if (!request?.club_id || !request?.user_id) throw new Error('Pedido inválido.');
+  await updateDoc(doc(db, COL.joinRequests, memberDocId(request.club_id, request.user_id)), {
+    status: JOIN_REQUEST_STATUS.REJECTED,
+    responded_by: actor?.uid || null,
+    updated_at: serverTimestamp(),
+  });
+  notifyUsers([request.user_id], {
+    title: `Seu pedido para "${trimmed(request.club_name).slice(0, 50)}" não foi aprovado`,
+    message: 'Você pode falar com um administrador do clube para mais informações.',
+    type: NOTIFICATION_TYPE.CLUB_JOIN_REJECTED,
+    link: `/clubes/${request.club_id}`,
+    actor,
+  });
+  await createAuditLog({ action: 'club_join_rejected', actor, details: { club_id: request.club_id, user_id: request.user_id } });
+}
+
+/**
+ * Admin convida um atleta para o clube. `target` = { user_id, user_name,
+ * user_email, photo_url }. O convidado recebe notificação e decide aceitar.
+ */
+export async function inviteMemberToClub(club, target, inviter, profile) {
+  if (!inviter?.uid) throw new Error('Usuário não autenticado.');
+  if (!target?.user_id) throw new Error('Selecione um atleta para convidar.');
+  const existingMember = await getMembership(club.id, target.user_id).catch(() => null);
+  if (existingMember) throw new Error('Este atleta já é membro do clube.');
+
+  const id = memberDocId(club.id, target.user_id);
+  const inviterName = profile?.platform_name || inviter.displayName || inviter.email || 'Um administrador';
+  await setDoc(doc(db, COL.memberInvites, id), {
+    id,
+    club_id: club.id,
+    club_name: trimmed(club.name),
+    user_id: target.user_id,
+    user_name: target.user_name || 'Atleta',
+    user_email: target.user_email || '',
+    photo_url: target.photo_url || '',
+    status: MEMBER_INVITE_STATUS.PENDING,
+    invited_by: inviter.uid,
+    inviter_name: inviterName,
+    created_at: serverTimestamp(),
+    created_at_ms: Date.now(),
+    updated_at: serverTimestamp(),
+  });
+  notifyUsers([target.user_id], {
+    title: `${inviterName} convidou você para o clube "${trimmed(club.name).slice(0, 50)}"`,
+    message: 'Toque para aceitar ou recusar o convite.',
+    type: NOTIFICATION_TYPE.CLUB_INVITE,
+    link: `/clubes/${club.id}`,
+    actor: { uid: inviter.uid, displayName: inviterName },
+  });
+  await createAuditLog({ action: 'club_member_invited', actor: inviter, details: { club_id: club.id, user_id: target.user_id } });
+}
+
+export async function listClubInvites(clubId) {
+  if (!db || !clubId) return [];
+  const snap = await getDocs(
+    query(collection(db, COL.memberInvites), where('club_id', '==', clubId), where('status', '==', MEMBER_INVITE_STATUS.PENDING)),
+  );
+  return snap.docs
+    .map((d) => ({ id: d.id, ...d.data() }))
+    .sort((a, b) => (a.created_at_ms || 0) - (b.created_at_ms || 0));
+}
+
+export async function listMyClubInvites(userId) {
+  if (!db || !userId) return [];
+  const snap = await getDocs(
+    query(collection(db, COL.memberInvites), where('user_id', '==', userId), where('status', '==', MEMBER_INVITE_STATUS.PENDING)),
+  );
+  return snap.docs.map((d) => ({ id: d.id, ...d.data() }));
+}
+
+export async function getMyClubInvite(clubId, userId) {
+  if (!db || !clubId || !userId) return null;
+  const snap = await getDoc(doc(db, COL.memberInvites, memberDocId(clubId, userId)));
+  if (!snap.exists()) return null;
+  const data = snap.data();
+  return data.status === MEMBER_INVITE_STATUS.PENDING ? { id: snap.id, ...data } : null;
+}
+
+export async function acceptClubInvite(invite, user, profile) {
+  if (!user?.uid) throw new Error('Usuário não autenticado.');
+  if (!invite?.club_id) throw new Error('Convite inválido.');
+  // O próprio convidado cria sua associação (regra permite user_id==uid && member).
+  await setDoc(doc(db, COL.members, memberDocId(invite.club_id, user.uid)), memberPayload(invite.club_id, user, profile, CLUB_ROLE.MEMBER));
+  await updateDoc(doc(db, COL.memberInvites, memberDocId(invite.club_id, user.uid)), {
+    status: MEMBER_INVITE_STATUS.ACCEPTED,
+    updated_at: serverTimestamp(),
+  }).catch(() => {});
+  await updateDoc(doc(db, COL.clubs, invite.club_id), { member_count: increment(1), updated_at: serverTimestamp() }).catch(() => {});
+  await syncAthleteProfile(user, profile);
+  const me = profile?.platform_name || user.displayName || user.email || 'Um atleta';
+  if (invite.invited_by) {
+    notifyUsers([invite.invited_by], {
+      title: `${me} aceitou o convite e entrou em "${trimmed(invite.club_name).slice(0, 50)}"`,
+      message: 'O atleta agora faz parte do clube.',
+      type: NOTIFICATION_TYPE.CLUB_INVITE_ACCEPTED,
+      link: `/clubes/${invite.club_id}?tab=members`,
+      actor: { uid: user.uid, displayName: me },
+    });
+  }
+  await createAuditLog({ action: 'club_invite_accepted', actor: user, details: { club_id: invite.club_id } });
+}
+
+export async function declineClubInvite(invite, user) {
+  if (!user?.uid) throw new Error('Usuário não autenticado.');
+  await updateDoc(doc(db, COL.memberInvites, memberDocId(invite.club_id, user.uid)), {
+    status: MEMBER_INVITE_STATUS.DECLINED,
+    updated_at: serverTimestamp(),
+  });
+  await createAuditLog({ action: 'club_invite_declined', actor: user, details: { club_id: invite.club_id } });
+}
+
 /* -------------------------------- Events -------------------------------- */
+
+/* -------------------------------- Events (e novos avisos) ---------------- */
 
 function sortEvents(list) {
   return list.sort((a, b) => String(a.starts_at || '').localeCompare(String(b.starts_at || '')));
@@ -375,6 +588,22 @@ export async function createClubEvent(clubId, data, user) {
       await addEventDate(id, { club_id: clubId, date_time: data.starts_at, location: trimmed(data.location) }, user);
     } catch (err) {
       logger.error('Falha ao criar a data inicial do evento:', err);
+    }
+  }
+  // Avisa os membros do clube quando um evento PÚBLICO é criado.
+  if (visibility === EVENT_VISIBILITY.PUBLIC) {
+    try {
+      const memberIds = (await listClubMembers(clubId)).map((m) => m.user_id).filter(Boolean);
+      const creatorName = data.created_by_name || user.displayName || user.email || 'Um membro';
+      notifyUsers(memberIds, {
+        title: `Novo evento no clube: "${trimmed(data.title).slice(0, 60)}"`,
+        message: `${creatorName} criou um evento. Toque para ver e responder.`,
+        type: NOTIFICATION_TYPE.CLUB_EVENT_PUBLISHED,
+        link: `/clubes/${clubId}/eventos/${id}`,
+        actor: { uid: user.uid, displayName: creatorName },
+      });
+    } catch (err) {
+      logger.error('Falha ao notificar membros sobre novo evento:', err);
     }
   }
   await createAuditLog({ action: 'club_event_created', actor: user, details: { club_id: clubId, event_id: id } });

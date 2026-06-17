@@ -265,6 +265,48 @@ service cloud.firestore {
         || (isAuthed() && resource.data.user_id == request.auth.uid);
     }
 
+    // Pedidos de ingresso: não-membro pede para entrar; admin aprova/recusa.
+    match /club_join_requests/{docId} {
+      allow read: if isAuthed() && (
+        resource == null
+        || resource.data.user_id == request.auth.uid
+        || isClubAdmin(resource.data.club_id)
+        || isPlatformAdmin()
+      );
+      allow create: if isAuthed()
+        && request.resource.data.user_id == request.auth.uid
+        && request.resource.data.status == 'pending'
+        && !isClubMember(request.resource.data.club_id);
+      allow update: if isAuthed() && (
+        isClubAdmin(resource.data.club_id) || isPlatformAdmin()
+        || resource.data.user_id == request.auth.uid
+      );
+      allow delete: if isAuthed() && (
+        isClubAdmin(resource.data.club_id) || isPlatformAdmin()
+        || resource.data.user_id == request.auth.uid
+      );
+    }
+
+    // Convites de associação: admin convida atleta; o convidado aceita/recusa.
+    match /club_member_invites/{docId} {
+      allow read: if isAuthed() && (
+        resource == null
+        || resource.data.user_id == request.auth.uid
+        || isClubAdmin(resource.data.club_id)
+        || isPlatformAdmin()
+      );
+      allow create: if isAuthed()
+        && (isClubAdmin(request.resource.data.club_id) || isPlatformAdmin());
+      allow update: if isAuthed() && (
+        resource.data.user_id == request.auth.uid
+        || isClubAdmin(resource.data.club_id) || isPlatformAdmin()
+      );
+      allow delete: if isAuthed() && (
+        resource.data.user_id == request.auth.uid
+        || isClubAdmin(resource.data.club_id) || isPlatformAdmin()
+      );
+    }
+
     match /club_events/{eventId} {
       // Público (ou legado sem o campo): qualquer membro do clube lê.
       // Privado: apenas criador, admin do clube, plataforma ou convidado.

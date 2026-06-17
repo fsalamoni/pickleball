@@ -18,7 +18,15 @@ import { Card, CardContent } from '@/components/ui/card';
 import { Badge } from '@/components/ui/badge';
 import { Skeleton } from '@/components/ui/skeleton';
 import { useAuth } from '@/core/lib/FirebaseAuthContext';
-import { useClubs, useMyClubs, useJoinClub } from '@/modules/clubs/hooks/useClubs';
+import {
+  useClubs,
+  useMyClubs,
+  useJoinClub,
+  useMyJoinRequests,
+  useMyClubInvites,
+  useRequestToJoinClub,
+} from '@/modules/clubs/hooks/useClubs';
+import { JOIN_REQUEST_STATUS } from '@/modules/clubs/domain/constants';
 
 function locationText(club) {
   return [club.city, club.state].filter(Boolean).join(' / ') || null;
@@ -28,12 +36,37 @@ export default function ClubsDirectory() {
   const { isAuthAvailable, authUnavailableReason } = useAuth();
   const { data: clubs = [], isLoading } = useClubs();
   const { data: myClubs = [] } = useMyClubs();
+  const { data: myRequests = [] } = useMyJoinRequests();
+  const { data: myInvites = [] } = useMyClubInvites();
   const joinClub = useJoinClub();
+  const requestToJoin = useRequestToJoinClub();
   const [search, setSearch] = useState('');
   const [code, setCode] = useState('');
   const isPreviewMode = import.meta.env.DEV && !isAuthAvailable;
 
   const myClubIds = useMemo(() => new Set(myClubs.map((c) => c.id)), [myClubs]);
+  const pendingRequestIds = useMemo(
+    () => new Set(myRequests.filter((r) => r.status === JOIN_REQUEST_STATUS.PENDING).map((r) => r.club_id)),
+    [myRequests],
+  );
+  const invitedClubIds = useMemo(() => new Set(myInvites.map((i) => i.club_id)), [myInvites]);
+
+  const joinStateFor = (clubId) => {
+    if (myClubIds.has(clubId)) return null;
+    if (invitedClubIds.has(clubId)) return 'invited';
+    if (pendingRequestIds.has(clubId)) return 'pending';
+    return 'none';
+  };
+
+  const handleRequest = async (club) => {
+    try {
+      const res = await requestToJoin.mutateAsync(club);
+      if (res?.alreadyMember) toast.success('Você já é membro deste clube.');
+      else toast.success(`Pedido enviado para ${club.name}.`);
+    } catch (err) {
+      toast.error(err.message || 'Não foi possível enviar o pedido.');
+    }
+  };
 
   const filtered = useMemo(() => {
     const q = search.trim().toLowerCase();
@@ -193,7 +226,14 @@ export default function ClubsDirectory() {
           </div>
           <div className="grid gap-4 sm:grid-cols-2 xl:grid-cols-3">
             {filtered.map((club) => (
-              <ClubCard key={club.id} club={club} myRole={myClubIds.has(club.id) ? (club.my_role || 'member') : null} />
+              <ClubCard
+                key={club.id}
+                club={club}
+                myRole={myClubIds.has(club.id) ? (club.my_role || 'member') : null}
+                joinState={joinStateFor(club.id)}
+                onRequest={handleRequest}
+                requesting={requestToJoin.isPending}
+              />
             ))}
           </div>
         </section>
@@ -202,8 +242,13 @@ export default function ClubsDirectory() {
   );
 }
 
-function ClubCard({ club, myRole }) {
+function ClubCard({ club, myRole, joinState = null, onRequest, requesting = false }) {
   const location = locationText(club);
+  const handleRequestClick = (e) => {
+    e.preventDefault();
+    e.stopPropagation();
+    onRequest?.(club);
+  };
   return (
     <Link to={`/clubes/${club.id}`} className="block h-full">
       <Card className="match-surface h-full rounded-[1.75rem] border-white/80 bg-white/85">
@@ -241,9 +286,24 @@ function ClubCard({ club, myRole }) {
             <p className="mt-4 line-clamp-3 text-sm leading-6 text-slate-600">{club.description}</p>
           )}
 
-          <div className="mt-auto flex items-center justify-between pt-6 text-sm font-medium text-emerald-800">
-            <span>Abrir clube</span>
-            <ArrowRight className="h-4 w-4" />
+          <div className="mt-auto pt-6">
+            {myRole || !joinState || joinState === 'none' ? (
+              <div className="flex items-center justify-between text-sm font-medium text-emerald-800">
+                <span>Abrir clube</span>
+                <ArrowRight className="h-4 w-4" />
+              </div>
+            ) : null}
+            {!myRole && joinState === 'none' && (
+              <Button size="sm" variant="outline" className="mt-3 w-full" onClick={handleRequestClick} disabled={requesting}>
+                Pedir para ingressar
+              </Button>
+            )}
+            {!myRole && joinState === 'pending' && (
+              <Badge variant="secondary" className="mt-3 w-full justify-center rounded-full py-1.5">Pedido enviado</Badge>
+            )}
+            {!myRole && joinState === 'invited' && (
+              <Badge variant="warning" className="mt-3 w-full justify-center rounded-full py-1.5">Você foi convidado — abrir</Badge>
+            )}
           </div>
         </CardContent>
       </Card>

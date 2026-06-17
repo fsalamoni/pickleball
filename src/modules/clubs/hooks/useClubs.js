@@ -14,6 +14,18 @@ import {
   leaveClub,
   setMemberRole,
   removeMember,
+  requestToJoinClub,
+  getMyJoinRequest,
+  listMyJoinRequests,
+  listJoinRequests,
+  approveJoinRequest,
+  rejectJoinRequest,
+  inviteMemberToClub,
+  listClubInvites,
+  listMyClubInvites,
+  getMyClubInvite,
+  acceptClubInvite,
+  declineClubInvite,
   listClubEvents,
   getClubEvent,
   createClubEvent,
@@ -179,6 +191,132 @@ export function useRemoveMember(clubId) {
   return useMutation({
     mutationFn: (member) => removeMember(clubId, member, user),
     onSuccess: () => qc.invalidateQueries({ queryKey: ['club-members', clubId] }),
+  });
+}
+
+/* ------------------ Join requests & membership invites ------------------ */
+
+export function useMyJoinRequest(clubId) {
+  const { user } = useAuth();
+  return useQuery({
+    queryKey: ['club-join-request', clubId, user?.uid],
+    queryFn: () => getMyJoinRequest(clubId, user?.uid),
+    enabled: !!clubId && !!user?.uid,
+  });
+}
+
+export function useMyJoinRequests() {
+  const { user } = useAuth();
+  return useQuery({
+    queryKey: ['my-club-join-requests', user?.uid],
+    queryFn: () => (user?.uid ? listMyJoinRequests(user.uid) : Promise.resolve([])),
+    enabled: !!user?.uid,
+  });
+}
+
+export function useRequestToJoinClub() {
+  const { user, userProfile } = useAuth();
+  const qc = useQueryClient();
+  return useMutation({
+    mutationFn: (club) => requestToJoinClub(club, user, userProfile),
+    onSuccess: (_res, club) => {
+      qc.invalidateQueries({ queryKey: ['club-join-request', club?.id] });
+      qc.invalidateQueries({ queryKey: ['my-club-join-requests'] });
+      if (club?.id) qc.invalidateQueries({ queryKey: ['club-membership', club.id] });
+      qc.invalidateQueries({ queryKey: ['my-clubs'] });
+    },
+  });
+}
+
+export function useJoinRequests(clubId) {
+  return useQuery({
+    queryKey: ['club-join-requests', clubId],
+    queryFn: () => listJoinRequests(clubId),
+    enabled: !!clubId,
+  });
+}
+
+export function useApproveJoinRequest(clubId) {
+  const { user } = useAuth();
+  const qc = useQueryClient();
+  return useMutation({
+    mutationFn: (request) => approveJoinRequest(request, user),
+    onSuccess: () => {
+      qc.invalidateQueries({ queryKey: ['club-join-requests', clubId] });
+      qc.invalidateQueries({ queryKey: ['club-members', clubId] });
+      qc.invalidateQueries({ queryKey: ['club', clubId] });
+    },
+  });
+}
+
+export function useRejectJoinRequest(clubId) {
+  const { user } = useAuth();
+  const qc = useQueryClient();
+  return useMutation({
+    mutationFn: (request) => rejectJoinRequest(request, user),
+    onSuccess: () => qc.invalidateQueries({ queryKey: ['club-join-requests', clubId] }),
+  });
+}
+
+export function useInviteMemberToClub(club) {
+  const { user, userProfile } = useAuth();
+  const qc = useQueryClient();
+  return useMutation({
+    mutationFn: (target) => inviteMemberToClub(club, target, user, userProfile),
+    onSuccess: () => qc.invalidateQueries({ queryKey: ['club-invites', club?.id] }),
+  });
+}
+
+export function useClubInvites(clubId) {
+  return useQuery({
+    queryKey: ['club-invites', clubId],
+    queryFn: () => listClubInvites(clubId),
+    enabled: !!clubId,
+  });
+}
+
+export function useMyClubInvites() {
+  const { user } = useAuth();
+  return useQuery({
+    queryKey: ['my-club-invites', user?.uid],
+    queryFn: () => (user?.uid ? listMyClubInvites(user.uid) : Promise.resolve([])),
+    enabled: !!user?.uid,
+  });
+}
+
+export function useMyClubInvite(clubId) {
+  const { user } = useAuth();
+  return useQuery({
+    queryKey: ['club-invite', clubId, user?.uid],
+    queryFn: () => getMyClubInvite(clubId, user?.uid),
+    enabled: !!clubId && !!user?.uid,
+  });
+}
+
+export function useAcceptClubInvite(clubId) {
+  const { user, userProfile } = useAuth();
+  const qc = useQueryClient();
+  return useMutation({
+    mutationFn: (invite) => acceptClubInvite(invite, user, userProfile),
+    onSuccess: () => {
+      qc.invalidateQueries({ queryKey: ['club-invite', clubId] });
+      qc.invalidateQueries({ queryKey: ['my-club-invites'] });
+      qc.invalidateQueries({ queryKey: ['club-membership', clubId] });
+      qc.invalidateQueries({ queryKey: ['my-clubs'] });
+      qc.invalidateQueries({ queryKey: ['club-members', clubId] });
+    },
+  });
+}
+
+export function useDeclineClubInvite(clubId) {
+  const { user } = useAuth();
+  const qc = useQueryClient();
+  return useMutation({
+    mutationFn: (invite) => declineClubInvite(invite, user),
+    onSuccess: () => {
+      qc.invalidateQueries({ queryKey: ['club-invite', clubId] });
+      qc.invalidateQueries({ queryKey: ['my-club-invites'] });
+    },
   });
 }
 

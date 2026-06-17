@@ -25,6 +25,12 @@ export const NOTIFICATION_TYPE = Object.freeze({
   FORUM_REPLY: 'forum_reply',
   FORUM_MENTION: 'forum_mention',
   EVENT_INVITE: 'event_invite',
+  CLUB_JOIN_REQUEST: 'club_join_request',
+  CLUB_JOIN_APPROVED: 'club_join_approved',
+  CLUB_JOIN_REJECTED: 'club_join_rejected',
+  CLUB_INVITE: 'club_invite',
+  CLUB_INVITE_ACCEPTED: 'club_invite_accepted',
+  CLUB_EVENT_PUBLISHED: 'club_event_published',
   GENERIC: 'generic',
 });
 

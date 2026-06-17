@@ -20,6 +20,8 @@
 export const CLUB_COLLECTIONS = Object.freeze({
   clubs: 'clubs',
   members: 'club_members',
+  joinRequests: 'club_join_requests',
+  memberInvites: 'club_member_invites',
   events: 'club_events',
   rsvps: 'club_event_rsvps',
   eventInvites: 'event_invites',
@@ -60,6 +62,20 @@ export const CLUB_ROLE = Object.freeze({
 export const CLUB_ROLE_LABELS = Object.freeze({
   [CLUB_ROLE.ADMIN]: 'Administrador',
   [CLUB_ROLE.MEMBER]: 'Membro',
+});
+
+/** Estado de um pedido de ingresso (não-membro pede para entrar no clube). */
+export const JOIN_REQUEST_STATUS = Object.freeze({
+  PENDING: 'pending',
+  APPROVED: 'approved',
+  REJECTED: 'rejected',
+});
+
+/** Estado de um convite de associação (admin convida atleta para o clube). */
+export const MEMBER_INVITE_STATUS = Object.freeze({
+  PENDING: 'pending',
+  ACCEPTED: 'accepted',
+  DECLINED: 'declined',
 });
 
 /** Tipos de evento do clube. */
