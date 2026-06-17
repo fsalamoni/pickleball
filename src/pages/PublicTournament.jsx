@@ -231,7 +231,7 @@ function PublicModalityBlock({ modality }) {
         {ranking.length > 0 && (
           <div>
             <h4 className="text-sm font-semibold mb-2">Ranking</h4>
-            <div className="arena-table-wrap">
+            <div className="hidden sm:block arena-table-wrap">
               <table className="w-full text-sm">
                 <thead className="bg-slate-50">
                   <tr className="text-left">
@@ -267,13 +267,35 @@ function PublicModalityBlock({ modality }) {
                 </tbody>
               </table>
             </div>
+            <div className="mt-3 space-y-2 sm:hidden">
+              {ranking.slice(0, 16).map((r) => {
+                const balance = (r.points_for || 0) - (r.points_against || 0);
+                return (
+                  <div key={r.participant_id} className="rounded-2xl border border-slate-200 bg-white p-3">
+                    <div className="flex items-center gap-2">
+                      <span className="font-bold tabular-nums">{r.position}</span>
+                      <AvatarGroup size="sm" people={r.players || []} />
+                      <span className="min-w-0 flex-1 truncate font-medium">{r.label || r.participant_id}</span>
+                    </div>
+                    <div className="mt-2 flex items-center gap-3 text-xs text-slate-600">
+                      <span>PJ <strong className="tabular-nums text-slate-900">{r.played}</strong></span>
+                      <span>V <strong className="tabular-nums text-slate-900">{r.wins}</strong></span>
+                      <span>Sets <strong className="tabular-nums text-slate-900">{r.sets_won}–{r.sets_lost}</strong></span>
+                      <span className={`ml-auto font-semibold tabular-nums ${balance > 0 ? 'text-emerald-700' : balance < 0 ? 'text-red-600' : 'text-slate-600'}`}>
+                        Saldo {balance > 0 ? `+${balance}` : balance}
+                      </span>
+                    </div>
+                  </div>
+                );
+              })}
+            </div>
           </div>
         )}
 
         {matches.length > 0 ? (
           <div>
             <h4 className="text-sm font-semibold mb-2">Jogos</h4>
-            <div className="arena-table-wrap">
+            <div className="hidden sm:block arena-table-wrap">
               <table className="w-full text-sm">
                 <thead className="bg-slate-50">
                   <tr className="text-left">
@@ -332,6 +354,55 @@ function PublicModalityBlock({ modality }) {
                   ))}
                 </tbody>
               </table>
+            </div>
+            <div className="mt-3 space-y-2.5 sm:hidden">
+              {matches.map((m) => {
+                const hasGroup = Boolean(m.group);
+                const hasSched = Boolean(m.court || m.scheduled_at);
+                const hasScore = (m.games || []).length > 0;
+                return (
+                  <div key={m.id} className="rounded-2xl border border-slate-200 bg-white p-3">
+                    <div className="mb-2 flex flex-wrap items-center gap-1.5">
+                      <span className="rounded-full bg-slate-100 px-2 py-0.5 text-[11px] font-medium text-slate-600">Rod. {roundLabel(m)}</span>
+                      {hasGroup && (
+                        <span className="rounded-full bg-slate-100 px-2 py-0.5 text-[11px] font-medium text-slate-600">{m.group}</span>
+                      )}
+                      {hasSched && m.court && (
+                        <span className="rounded-full bg-slate-100 px-2 py-0.5 text-[11px] font-medium text-slate-600">{m.court}</span>
+                      )}
+                      {hasSched && m.scheduled_at && (
+                        <span className="rounded-full bg-slate-100 px-2 py-0.5 text-[11px] font-medium tabular-nums text-slate-600">{formatPublicMatchTime(m.scheduled_at)}</span>
+                      )}
+                      <Badge variant="secondary" className="ml-auto text-xs">
+                        {MATCH_STATUS_LABELS[m.status] || m.status}
+                      </Badge>
+                    </div>
+                    <div className="space-y-1.5 text-sm">
+                      <div className="flex items-center justify-between gap-3">
+                        <div className="flex min-w-0 items-center gap-1.5">
+                          <AvatarGroup size="xs" people={sidePeople(m, 'side_a')} />
+                          <span className="truncate">{renderSide(m, 'side_a')}</span>
+                        </div>
+                        {hasScore && (
+                          <span className="shrink-0 tabular-nums font-semibold text-slate-700">{m.games.map((g) => g.a).join('  ')}</span>
+                        )}
+                      </div>
+                      <div className="flex items-center gap-2 text-[10px] font-semibold uppercase tracking-wider text-slate-300">
+                        <span className="h-px flex-1 bg-slate-100" />vs<span className="h-px flex-1 bg-slate-100" />
+                      </div>
+                      <div className="flex items-center justify-between gap-3">
+                        <div className="flex min-w-0 items-center gap-1.5">
+                          <AvatarGroup size="xs" people={sidePeople(m, 'side_b')} />
+                          <span className="truncate">{renderSide(m, 'side_b')}</span>
+                        </div>
+                        {hasScore && (
+                          <span className="shrink-0 tabular-nums font-semibold text-slate-700">{m.games.map((g) => g.b).join('  ')}</span>
+                        )}
+                      </div>
+                    </div>
+                  </div>
+                );
+              })}
             </div>
           </div>
         ) : (
