@@ -137,7 +137,7 @@ export default function CreateTournament() {
 
   return (
     <div className="space-y-6">
-      <section className="grid gap-6 xl:grid-cols-[1.08fr,0.92fr]">
+      <section className="grid grid-cols-1 gap-6 xl:grid-cols-[1.08fr,0.92fr]">
         <Card className="arena-panel-strong overflow-hidden rounded-[1.25rem] border-0 sm:rounded-[2rem]">
           <CardContent className="relative p-5 sm:p-8 lg:p-10">
             <div className="relative max-w-3xl">

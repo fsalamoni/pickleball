@@ -174,7 +174,7 @@ export default function Landing() {
                 <span className="inline-flex items-center gap-2 rounded-full border border-white/15 bg-white/10 px-3 py-1 text-xs font-semibold uppercase tracking-[0.2em] text-emerald-50/80">
                   <CalendarDays className="h-3.5 w-3.5" /> Pronto para abrir inscrições
                 </span>
-                <h2 className="mt-5 text-3xl font-semibold leading-tight text-white lg:text-4xl">
+                <h2 className="mt-5 text-2xl font-semibold leading-tight text-white sm:text-3xl lg:text-4xl">
                   Do cadastro ao pódio, com ritmo de evento real.
                 </h2>
 
@@ -201,7 +201,7 @@ export default function Landing() {
           <div className="grid gap-6 lg:grid-cols-[1fr,0.92fr]">
             <div className="arena-panel rounded-[2rem] p-8 lg:p-10">
               <span className="arena-chip">Jornada do evento</span>
-              <h2 className="mt-5 text-3xl font-semibold leading-tight text-slate-950 lg:text-4xl">
+              <h2 className="mt-5 text-2xl font-semibold leading-tight text-slate-950 sm:text-3xl lg:text-4xl">
                 Como a plataforma acompanha cada etapa do torneio.
               </h2>
 
@@ -232,7 +232,7 @@ export default function Landing() {
           <div className="arena-panel-strong flex flex-col gap-8 rounded-[2rem] px-8 py-10 lg:flex-row lg:items-center lg:justify-between lg:px-10">
             <div className="max-w-3xl">
               <div className="text-sm font-semibold uppercase tracking-[0.24em] text-emerald-50/80">Público, organizadores e atletas</div>
-              <h2 className="mt-3 text-3xl font-semibold leading-tight text-white lg:text-4xl">
+              <h2 className="mt-3 text-2xl font-semibold leading-tight text-white sm:text-3xl lg:text-4xl">
                 Acompanhe o crescimento do pickleball no Brasil.
               </h2>
             </div>

@@ -101,7 +101,7 @@ export default function TournamentOverviewTab({ tournament, isAdmin }) {
 
   return (
     <div className="space-y-6">
-      <section className="grid gap-4 xl:grid-cols-[1.1fr,0.9fr]">
+      <section className="grid grid-cols-1 gap-4 xl:grid-cols-[1.1fr,0.9fr]">
         <Card className="rounded-[2rem] border-white/80 bg-white/82">
           <CardContent className="p-6 sm:p-7">
             <span className="arena-chip">

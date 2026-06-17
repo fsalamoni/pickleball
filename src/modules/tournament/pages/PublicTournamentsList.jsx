@@ -149,7 +149,7 @@ export default function PublicTournamentsList() {
               <span className="inline-flex items-center gap-2 rounded-full border border-white/15 bg-white/10 px-3 py-1 text-xs font-semibold uppercase tracking-[0.18em] text-emerald-50/80">
                 <Sparkles className="h-3.5 w-3.5" /> Descoberta publica de torneios
               </span>
-              <h2 className="mt-5 text-3xl font-semibold leading-tight text-white lg:text-4xl">
+              <h2 className="mt-5 text-2xl font-semibold leading-tight text-white sm:text-3xl lg:text-4xl">
                 Explore os torneios públicos da plataforma.
               </h2>
               <p className="mt-4 max-w-xl text-sm leading-7 text-emerald-50/75 sm:text-base">

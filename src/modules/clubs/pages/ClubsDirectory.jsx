@@ -61,14 +61,14 @@ export default function ClubsDirectory() {
 
   return (
     <div className="space-y-8">
-      <section className="grid gap-6 xl:grid-cols-[1.08fr,0.92fr]">
+      <section className="grid grid-cols-1 gap-6 xl:grid-cols-[1.08fr,0.92fr]">
         <Card className="arena-panel-strong overflow-hidden rounded-[1.25rem] border-0 sm:rounded-[2rem]">
           <CardContent className="relative p-5 sm:p-8 lg:p-10">
             <div className="relative max-w-2xl">
               <span className="inline-flex items-center gap-2 rounded-full border border-white/15 bg-white/10 px-3 py-1 text-xs font-semibold uppercase tracking-[0.18em] text-emerald-50/80">
                 <Sparkles className="h-3.5 w-3.5" /> Clubes da comunidade
               </span>
-              <h2 className="mt-5 text-3xl font-semibold leading-tight text-white lg:text-4xl">
+              <h2 className="mt-5 text-2xl font-semibold leading-tight text-white sm:text-3xl lg:text-4xl">
                 Encontre seu clube ou crie o seu.
               </h2>
               <p className="mt-4 max-w-xl text-sm leading-7 text-emerald-50/75 sm:text-base">
