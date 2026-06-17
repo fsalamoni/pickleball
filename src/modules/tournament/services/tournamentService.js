@@ -28,6 +28,8 @@ import {
 import { db } from '@/core/config/firebase';
 import { logger } from '@/core/lib/logger';
 import { createAuditLog } from '@/core/services/auditService';
+import { notifyUsers, NOTIFICATION_TYPE } from '@/core/services/notificationService';
+import { listAthletes } from '@/modules/athletes/services/athleteService';
 import {
   TOURNAMENT_STATUS,
   TOURNAMENT_ADMIN_ROLE,
@@ -122,7 +124,40 @@ export async function updateTournament(id, updates, actor) {
 }
 
 export async function setTournamentStatus(id, status, actor) {
+  let previousStatus = null;
+  let tournament = null;
+  try {
+    const snap = await getDoc(doc(db, COL.tournaments, id));
+    if (snap.exists()) {
+      tournament = snap.data();
+      previousStatus = tournament.status;
+    }
+  } catch (err) {
+    logger.error('Falha ao ler torneio antes de mudar status:', err);
+  }
+
   await updateTournament(id, { status }, actor);
+
+  // Aviso à comunidade quando um torneio PÚBLICO passa a aceitar inscrições.
+  if (
+    status === TOURNAMENT_STATUS.REGISTRATIONS_OPEN
+    && previousStatus !== TOURNAMENT_STATUS.REGISTRATIONS_OPEN
+    && tournament?.visibility === TOURNAMENT_VISIBILITY.PUBLIC
+  ) {
+    try {
+      const athletes = await listAthletes();
+      const ids = athletes.map((a) => a.id).filter(Boolean);
+      notifyUsers(ids, {
+        title: `Inscrições abertas: "${String(tournament.name || 'Novo torneio').slice(0, 60)}"`,
+        message: 'Um torneio público está com inscrições abertas. Toque para ver e participar.',
+        type: NOTIFICATION_TYPE.TOURNAMENT_OPEN,
+        link: '/torneios/publicos',
+        actor,
+      });
+    } catch (err) {
+      logger.error('Falha ao avisar a comunidade sobre torneio aberto:', err);
+    }
+  }
 }
 
 export async function deleteTournament(id, actor) {

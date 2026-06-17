@@ -37,6 +37,7 @@ import {
   DropdownMenuSeparator,
 } from '@/components/ui/dropdown-menu';
 import { cn } from '@/core/lib/utils';
+import { isRequiredProfileComplete } from '@/core/lib/profileValidation';
 
 const STANDALONE_PUBLIC_PAGES = ['Landing', 'Login'];
 const UTILITY_PUBLIC_PAGES = ['PrivacyPolicy', 'ConductFairPlay', 'PickleballRules', 'Leveling'];
@@ -146,6 +147,25 @@ export default function Layout({ children, currentPageName }) {
 
   const { data: tournaments = [] } = useMyTournaments();
   const { notifications, unreadCount, markAsRead } = useNotifications();
+
+  // Lembretes derivados (sem gravar no banco): aparecem no sino enquanto a
+  // pendência existir e somem sozinhos quando o atleta resolve.
+  const reminders = [];
+  if (userProfile && !isRequiredProfileComplete(userProfile)) {
+    reminders.push({
+      id: 'reminder-profile',
+      title: 'Complete seu perfil',
+      message: 'Finalize seus dados para se inscrever em torneios e clubes.',
+      link: '/perfil',
+    });
+  } else if (userProfile && !userProfile.leveling_level) {
+    reminders.push({
+      id: 'reminder-leveling',
+      title: 'Faça seu nivelamento',
+      message: 'Descubra seu nível para encontrar jogos e torneios ideais.',
+      link: '/nivelamento',
+    });
+  }
 
   const handleLogout = async () => {
     setSidebarOpen(false);
@@ -403,6 +423,7 @@ export default function Layout({ children, currentPageName }) {
                 notifications={notifications}
                 unreadCount={unreadCount}
                 markAsRead={markAsRead}
+                reminders={reminders}
               />
             </div>
           </div>
@@ -600,7 +621,7 @@ function SidebarSection({ title, hint, children }) {
   );
 }
 
-function NotificationsMenu({ notifications, unreadCount, markAsRead }) {
+function NotificationsMenu({ notifications, unreadCount, markAsRead, reminders = [] }) {
   const navigate = useNavigate();
 
   const handleSelect = (n) => {
@@ -608,19 +629,22 @@ function NotificationsMenu({ notifications, unreadCount, markAsRead }) {
     if (n.link) navigate(n.link);
   };
 
+  const totalBadge = (unreadCount || 0) + reminders.length;
+  const isEmpty = notifications.length === 0 && reminders.length === 0;
+
   return (
     <DropdownMenu>
       <DropdownMenuTrigger asChild>
         <Button variant="outline" size="icon" className="relative h-11 w-11">
           <Bell className="h-4.5 w-4.5" />
-          {unreadCount > 0 && (
+          {totalBadge > 0 && (
             <Badge className="absolute -right-1 -top-1 flex h-5 min-w-5 items-center justify-center rounded-full border-0 bg-red-500 px-1 text-[10px] text-white shadow-none">
-              {unreadCount}
+              {totalBadge}
             </Badge>
           )}
         </Button>
       </DropdownMenuTrigger>
-      <DropdownMenuContent align="end" className="w-[22rem] rounded-[1.25rem] border-white/80 bg-white/95 p-2 backdrop-blur-xl">
+      <DropdownMenuContent align="end" className="max-h-[70vh] w-[20rem] overflow-y-auto rounded-[1.25rem] border-white/80 bg-white/95 p-2 backdrop-blur-xl sm:w-[22rem]">
         <div className="flex items-center justify-between px-3 py-2">
           <div>
             <div className="text-sm font-semibold text-slate-950">Notificações</div>
@@ -631,10 +655,20 @@ function NotificationsMenu({ notifications, unreadCount, markAsRead }) {
           </div>
         </div>
         <DropdownMenuSeparator className="bg-slate-200" />
-        {notifications.length === 0 ? (
+        {reminders.map((r) => (
+          <DropdownMenuItem
+            key={r.id}
+            className="mt-1 flex cursor-pointer flex-col items-start rounded-[1rem] border border-amber-200 bg-amber-50/70 px-3 py-3 focus:bg-amber-100"
+            onClick={() => navigate(r.link)}
+          >
+            <div className="text-sm font-semibold text-amber-900">{r.title}</div>
+            <div className="mt-1 text-xs leading-5 text-amber-800/80">{r.message}</div>
+          </DropdownMenuItem>
+        ))}
+        {isEmpty ? (
           <div className="px-3 py-6 text-center text-sm text-slate-500">Nenhuma notificação no momento.</div>
         ) : (
-          notifications.slice(0, 8).map((n) => (
+          notifications.slice(0, 10).map((n) => (
             <DropdownMenuItem
               key={n.id}
               className="mt-1 flex cursor-pointer flex-col items-start rounded-[1rem] px-3 py-3 focus:bg-emerald-50"
