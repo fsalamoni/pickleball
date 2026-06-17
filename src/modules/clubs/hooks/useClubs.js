@@ -21,6 +21,8 @@ import {
   approveJoinRequest,
   rejectJoinRequest,
   inviteMemberToClub,
+  inviteMembersToClub,
+  cancelClubInvite,
   listClubInvites,
   listMyClubInvites,
   getMyClubInvite,
@@ -264,6 +266,25 @@ export function useInviteMemberToClub(club) {
   return useMutation({
     mutationFn: (target) => inviteMemberToClub(club, target, user, userProfile),
     onSuccess: () => qc.invalidateQueries({ queryKey: ['club-invites', club?.id] }),
+  });
+}
+
+/** Convite em lote (vários atletas selecionados de uma vez). */
+export function useInviteMembersToClub(club) {
+  const { user, userProfile } = useAuth();
+  const qc = useQueryClient();
+  return useMutation({
+    mutationFn: (targets) => inviteMembersToClub(club, targets, user, userProfile),
+    onSuccess: () => qc.invalidateQueries({ queryKey: ['club-invites', club?.id] }),
+  });
+}
+
+export function useCancelClubInvite(clubId) {
+  const { user } = useAuth();
+  const qc = useQueryClient();
+  return useMutation({
+    mutationFn: (invite) => cancelClubInvite(invite, user),
+    onSuccess: () => qc.invalidateQueries({ queryKey: ['club-invites', clubId] }),
   });
 }
 

@@ -491,6 +491,27 @@ export async function declineClubInvite(invite, user) {
   await createAuditLog({ action: 'club_invite_declined', actor: user, details: { club_id: invite.club_id } });
 }
 
+/**
+ * Convida vários atletas de uma vez. Cada convite é independente: falhas
+ * individuais (ex.: já é membro) não abortam os demais. Retorna um resumo.
+ */
+export async function inviteMembersToClub(club, targets, inviter, profile) {
+  const list = (Array.isArray(targets) ? targets : [targets]).filter((t) => t?.user_id);
+  if (list.length === 0) throw new Error('Selecione ao menos um atleta.');
+  const results = await Promise.allSettled(
+    list.map((t) => inviteMemberToClub(club, t, inviter, profile)),
+  );
+  const invited = results.filter((r) => r.status === 'fulfilled').length;
+  return { invited, failed: results.length - invited };
+}
+
+/** Admin cancela um convite pendente. */
+export async function cancelClubInvite(invite, actor) {
+  if (!invite?.club_id || !invite?.user_id) throw new Error('Convite inválido.');
+  await deleteDoc(doc(db, COL.memberInvites, memberDocId(invite.club_id, invite.user_id)));
+  await createAuditLog({ action: 'club_invite_cancelled', actor, details: { club_id: invite.club_id, user_id: invite.user_id } });
+}
+
 /* -------------------------------- Events -------------------------------- */
 
 /* -------------------------------- Events (e novos avisos) ---------------- */

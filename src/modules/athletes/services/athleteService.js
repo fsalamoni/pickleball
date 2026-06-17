@@ -75,6 +75,18 @@ export async function listAthletes() {
   return snap.docs.map((d) => ({ id: d.id, ...d.data() }));
 }
 
+/**
+ * Lista TODOS os perfis de atleta da plataforma (sem o filtro de diretório).
+ * Como `syncAthleteProfile` roda no login de todo usuário, isto equivale ao
+ * conjunto de usuários da plataforma — usado para o admin escolher quem
+ * convidar para um clube (inclusive quem optou por não aparecer no diretório).
+ */
+export async function listAllAthleteProfiles() {
+  if (!db) return [];
+  const snap = await getDocs(collection(db, ATHLETE_DIRECTORY_COLLECTION));
+  return snap.docs.map((d) => ({ id: d.id, ...d.data() }));
+}
+
 /** Obtém um atleta do diretório pelo uid. */
 export async function getAthlete(uid) {
   if (!db || !uid) return null;

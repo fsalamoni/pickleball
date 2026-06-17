@@ -1,8 +1,7 @@
 import React, { useMemo, useState } from 'react';
 import { useNavigate } from 'react-router-dom';
-import { useQuery } from '@tanstack/react-query';
 import { toast } from 'sonner';
-import { Check, Copy, RefreshCw, Save, Search, Trash2, UserPlus, X } from 'lucide-react';
+import { Check, Copy, RefreshCw, Save, Search, Trash2, UserPlus, Users, X } from 'lucide-react';
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
@@ -20,10 +19,11 @@ import {
   useApproveJoinRequest,
   useRejectJoinRequest,
   useClubInvites,
-  useInviteMemberToClub,
+  useInviteMembersToClub,
+  useCancelClubInvite,
   useClubMembers,
 } from '@/modules/clubs/hooks/useClubs';
-import { listAthletes } from '@/modules/athletes/services/athleteService';
+import { useAllAthletes } from '@/modules/athletes/hooks/useAthletes';
 
 export default function ClubAdminTab({ club }) {
   const navigate = useNavigate();
@@ -266,42 +266,70 @@ function ClubJoinRequests({ club }) {
   );
 }
 
-/** Adicionar membros: busca atletas no diretório e envia convites. */
+/**
+ * Adicionar membros: lista navegável de TODOS os atletas/usuários da
+ * plataforma, com busca, seleção múltipla e convite em lote. Os convidados
+ * recebem um aviso no sino e decidem aceitar ou recusar.
+ */
 function ClubAddMembers({ club }) {
   const [search, setSearch] = useState('');
-  const { data: athletes = [] } = useQuery({ queryKey: ['athletes-directory'], queryFn: listAthletes });
+  const [selected, setSelected] = useState({}); // { uid: athlete }
+  const { data: athletes = [], isLoading } = useAllAthletes();
   const { data: members = [] } = useClubMembers(club.id);
   const { data: invites = [] } = useClubInvites(club.id);
-  const invite = useInviteMemberToClub(club);
+  const inviteMany = useInviteMembersToClub(club);
+  const cancelInvite = useCancelClubInvite(club.id);
 
   const memberIds = useMemo(() => new Set(members.map((m) => m.user_id)), [members]);
   const invitedIds = useMemo(() => new Set(invites.map((i) => i.user_id)), [invites]);
 
-  const results = useMemo(() => {
+  const athleteName = (a) => a.platform_name || a.full_name || a.name || 'Atleta';
+
+  // Disponíveis = todos os perfis menos quem já é membro ou já tem convite.
+  const available = useMemo(() => {
     const q = search.trim().toLowerCase();
-    if (!q) return [];
     return athletes
-      .filter((a) => !memberIds.has(a.id) && !invitedIds.has(a.id))
+      .filter((a) => a.id && !memberIds.has(a.id) && !invitedIds.has(a.id))
       .filter((a) => {
-        const name = (a.platform_name || a.full_name || a.name || '').toLowerCase();
-        const city = (a.city || '').toLowerCase();
-        return name.includes(q) || city.includes(q);
+        if (!q) return true;
+        const hay = `${athleteName(a)} ${a.city || ''} ${a.email || ''}`.toLowerCase();
+        return hay.includes(q);
       })
-      .slice(0, 8);
+      .sort((a, b) => athleteName(a).localeCompare(athleteName(b), 'pt-BR'));
   }, [athletes, memberIds, invitedIds, search]);
 
-  const handleInvite = async (a) => {
+  const selectedCount = Object.keys(selected).length;
+
+  const toggle = (a) => setSelected((prev) => {
+    const next = { ...prev };
+    if (next[a.id]) delete next[a.id];
+    else next[a.id] = a;
+    return next;
+  });
+
+  const handleInviteSelected = async () => {
+    const targets = Object.values(selected).map((a) => ({
+      user_id: a.id,
+      user_name: athleteName(a),
+      user_email: a.email || '',
+      photo_url: a.photo_url || '',
+    }));
     try {
-      await invite.mutateAsync({
-        user_id: a.id,
-        user_name: a.platform_name || a.full_name || a.name || 'Atleta',
-        user_email: a.email || '',
-        photo_url: a.photo_url || '',
-      });
-      toast.success('Convite enviado.');
-      setSearch('');
+      const { invited, failed } = await inviteMany.mutateAsync(targets);
+      setSelected({});
+      if (invited > 0) toast.success(`${invited} convite(s) enviado(s).${failed ? ` ${failed} falhou(aram).` : ''}`);
+      else toast.error('Não foi possível enviar os convites.');
     } catch (err) {
       toast.error(err.message || 'Não foi possível convidar.');
+    }
+  };
+
+  const handleCancel = async (inv) => {
+    try {
+      await cancelInvite.mutateAsync(inv);
+      toast.success('Convite cancelado.');
+    } catch (err) {
+      toast.error(err.message || 'Não foi possível cancelar o convite.');
     }
   };
 
@@ -309,7 +337,7 @@ function ClubAddMembers({ club }) {
     <Card className="rounded-xl">
       <CardHeader className="p-4 sm:p-5">
         <CardTitle className="flex items-center gap-2 text-base"><UserPlus className="h-4 w-4" /> Adicionar membros</CardTitle>
-        <CardDescription>Convide atletas da plataforma. Eles recebem um aviso e decidem aceitar.</CardDescription>
+        <CardDescription>Selecione atletas da plataforma e envie convites. Eles recebem um aviso e decidem aceitar.</CardDescription>
       </CardHeader>
       <CardContent className="space-y-3 p-4 pt-0 sm:p-5 sm:pt-0">
         <div className="relative">
@@ -317,38 +345,80 @@ function ClubAddMembers({ club }) {
           <Input
             value={search}
             onChange={(e) => setSearch(e.target.value)}
-            placeholder="Buscar atleta por nome ou cidade"
+            placeholder="Filtrar por nome, cidade ou e-mail"
             className="pl-9"
           />
         </div>
-        {search.trim() && (
-          <div className="space-y-2">
-            {results.length === 0 ? (
-              <p className="text-sm text-slate-500">Nenhum atleta disponível para convidar.</p>
-            ) : (
-              results.map((a) => (
-                <div key={a.id} className="flex items-center gap-3 rounded-xl border border-slate-200 bg-white p-2.5">
-                  <UserAvatar name={a.platform_name || a.name} photoUrl={a.photo_url} size="sm" />
+
+        {isLoading ? (
+          <p className="text-sm text-slate-500">Carregando atletas…</p>
+        ) : available.length === 0 ? (
+          <div className="flex items-center gap-2 rounded-lg bg-slate-50 px-3 py-4 text-sm text-slate-500">
+            <Users className="h-4 w-4 shrink-0" />
+            {search.trim() ? 'Nenhum atleta encontrado para esse filtro.' : 'Todos os atletas já são membros ou já foram convidados.'}
+          </div>
+        ) : (
+          <div className="max-h-80 space-y-1.5 overflow-y-auto rounded-lg border border-slate-100 p-1.5">
+            {available.map((a) => {
+              const isSel = !!selected[a.id];
+              return (
+                <button
+                  type="button"
+                  key={a.id}
+                  onClick={() => toggle(a)}
+                  className={`flex w-full items-center gap-3 rounded-lg border p-2.5 text-left transition-colors ${
+                    isSel ? 'border-emerald-300 bg-emerald-50' : 'border-transparent bg-white hover:bg-slate-50'
+                  }`}
+                >
+                  <span className={`flex h-5 w-5 shrink-0 items-center justify-center rounded-md border ${
+                    isSel ? 'border-emerald-600 bg-emerald-600 text-white' : 'border-slate-300 bg-white'
+                  }`}>
+                    {isSel && <Check className="h-3.5 w-3.5" />}
+                  </span>
+                  <UserAvatar name={athleteName(a)} photoUrl={a.photo_url} size="sm" />
                   <div className="min-w-0 flex-1">
-                    <div className="truncate text-sm font-medium text-slate-900">{a.platform_name || a.full_name || a.name || 'Atleta'}</div>
-                    {a.city && <div className="truncate text-xs text-slate-500">{a.city}{a.state ? ` / ${a.state}` : ''}</div>}
+                    <div className="truncate text-sm font-medium text-slate-900">{athleteName(a)}</div>
+                    {(a.city || a.email) && (
+                      <div className="truncate text-xs text-slate-500">
+                        {a.city ? `${a.city}${a.state ? ` / ${a.state}` : ''}` : a.email}
+                      </div>
+                    )}
                   </div>
-                  <Button size="sm" variant="outline" onClick={() => handleInvite(a)} disabled={invite.isPending}>
-                    Convidar
-                  </Button>
-                </div>
-              ))
-            )}
+                </button>
+              );
+            })}
           </div>
         )}
+
+        <Button
+          onClick={handleInviteSelected}
+          disabled={selectedCount === 0 || inviteMany.isPending}
+          className="w-full bg-emerald-700 hover:bg-emerald-800"
+        >
+          <UserPlus className="mr-1.5 h-4 w-4" />
+          {inviteMany.isPending
+            ? 'Enviando…'
+            : selectedCount > 0 ? `Convidar selecionados (${selectedCount})` : 'Selecione atletas para convidar'}
+        </Button>
+
         {invites.length > 0 && (
           <div className="border-t border-slate-100 pt-3">
-            <div className="mb-2 text-xs font-semibold uppercase tracking-wide text-slate-400">Convites pendentes</div>
-            <div className="flex flex-wrap gap-1.5">
+            <div className="mb-2 text-xs font-semibold uppercase tracking-wide text-slate-400">Convites pendentes ({invites.length})</div>
+            <div className="space-y-1.5">
               {invites.map((i) => (
-                <span key={i.id} className="inline-flex items-center gap-1.5 rounded-full bg-slate-100 px-2.5 py-1 text-xs text-slate-600">
-                  {i.user_name}
-                </span>
+                <div key={i.id} className="flex items-center gap-2 rounded-lg bg-slate-50 px-2.5 py-1.5">
+                  <UserAvatar name={i.user_name} photoUrl={i.photo_url} size="sm" />
+                  <span className="min-w-0 flex-1 truncate text-sm text-slate-700">{i.user_name}</span>
+                  <button
+                    type="button"
+                    onClick={() => handleCancel(i)}
+                    disabled={cancelInvite.isPending}
+                    className="text-slate-400 transition-colors hover:text-red-600"
+                    title="Cancelar convite"
+                  >
+                    <X className="h-4 w-4" />
+                  </button>
+                </div>
               ))}
             </div>
           </div>
