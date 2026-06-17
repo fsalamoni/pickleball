@@ -166,20 +166,20 @@ export default function Dashboard() {
     <div className="space-y-8">
       <section className="grid grid-cols-1 gap-6 xl:grid-cols-[1.12fr,0.88fr]">
         <Card className="arena-panel-strong overflow-hidden rounded-[1.25rem] border-0 sm:rounded-[2rem]">
-          <CardContent className="relative p-5 sm:p-8 lg:p-10">
+          <CardContent className="relative p-4 sm:p-8 lg:p-10">
             <div className="absolute inset-y-0 right-0 hidden w-1/2 bg-[radial-gradient(circle_at_top_right,rgba(255,255,255,0.16),transparent_45%)] lg:block" />
             <div className="relative max-w-2xl">
-              <span className="inline-flex items-center gap-2 rounded-full border border-white/15 bg-white/10 px-3 py-1 text-xs font-semibold uppercase tracking-[0.18em] text-emerald-50/80">
+              <span className="inline-flex items-center gap-2 rounded-full border border-white/15 bg-white/10 px-3 py-1 text-[10px] font-semibold uppercase tracking-[0.14em] text-emerald-50/80 sm:text-xs sm:tracking-[0.18em]">
                 <Sparkles className="h-3.5 w-3.5" /> Centro de operacao do torneio
               </span>
-              <h2 className="mt-5 text-2xl font-semibold leading-tight text-white sm:text-3xl lg:text-4xl">
+              <h2 className="mt-3 text-2xl font-semibold leading-tight text-white sm:mt-5 sm:text-3xl lg:text-4xl">
                 Organize o seu dia de evento.
               </h2>
-              <p className="mt-4 max-w-xl text-sm leading-7 text-emerald-50/75 sm:text-base">
+              <p className="mt-2 max-w-xl text-sm leading-6 text-emerald-50/75 sm:mt-4 sm:text-base sm:leading-7">
                 Aqui ficam os torneios que voce administra, participa ou pode acompanhar.
               </p>
 
-              <div className="mt-6 flex flex-wrap gap-3">
+              <div className="mt-4 flex flex-wrap gap-2 sm:mt-6 sm:gap-3">
                 <Button asChild className="bg-white text-slate-950 hover:bg-emerald-50">
                   <Link to="/torneios/criar">
                     Criar torneio <Plus className="h-4 w-4" />
@@ -192,19 +192,19 @@ export default function Dashboard() {
                 </Button>
               </div>
 
-              <div className="mt-8 grid gap-3 sm:grid-cols-3">
+              <div className="mt-5 grid grid-cols-3 gap-2 sm:mt-8 sm:gap-3">
                 {stats.map(({ label, value, hint, icon: Icon }) => (
-                  <div key={label} className="rounded-[1.35rem] border border-white/12 bg-white/10 p-4 backdrop-blur-sm">
+                  <div key={label} className="rounded-2xl border border-white/12 bg-white/10 p-3 backdrop-blur-sm sm:rounded-[1.35rem] sm:p-4">
                     <div className="flex items-center justify-between gap-3">
-                      <div>
-                        <div className="text-2xl font-semibold text-white">{value}</div>
-                        <div className="mt-1 text-[11px] font-semibold uppercase tracking-[0.16em] text-emerald-50/75">{label}</div>
+                      <div className="min-w-0">
+                        <div className="text-xl font-semibold text-white sm:text-2xl">{value}</div>
+                        <div className="mt-1 text-[10px] font-semibold uppercase tracking-[0.12em] text-emerald-50/75 sm:text-[11px] sm:tracking-[0.16em]">{label}</div>
                       </div>
-                      <div className="flex h-10 w-10 items-center justify-center rounded-2xl bg-white/10 text-emerald-50">
+                      <div className="hidden h-10 w-10 items-center justify-center rounded-2xl bg-white/10 text-emerald-50 sm:flex">
                         <Icon className="h-4.5 w-4.5" />
                       </div>
                     </div>
-                    <p className="mt-3 text-xs leading-5 text-emerald-50/70">{hint}</p>
+                    <p className="mt-3 hidden text-xs leading-5 text-emerald-50/70 sm:block">{hint}</p>
                   </div>
                 ))}
               </div>

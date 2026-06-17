@@ -343,7 +343,7 @@ export default function Layout({ children, currentPageName }) {
             </SidebarSection>
           </nav>
 
-          <div className="border-t border-white/10 p-4">
+          <div className="border-t border-white/10 p-4 pb-[max(1rem,env(safe-area-inset-bottom))]">
             <div className="rounded-[1.5rem] border border-white/10 bg-white/10 p-4">
               <div className="flex items-center gap-3">
                 {displayPhoto ? (
@@ -381,19 +381,21 @@ export default function Layout({ children, currentPageName }) {
         <header className="sticky top-[calc(4.75rem+env(safe-area-inset-top))] z-30 border-b border-white/70 bg-white/75 backdrop-blur-xl lg:top-0">
           <div className="mx-auto flex max-w-7xl flex-col gap-4 px-4 py-4 lg:flex-row lg:items-center lg:justify-between lg:px-8 lg:py-5">
             <div className="min-w-0">
-              <p className="text-xs font-semibold uppercase tracking-[0.24em] text-emerald-700/80">{currentMeta.eyebrow}</p>
-              <h1 className="mt-2 text-2xl font-semibold text-slate-950 lg:text-3xl">{currentMeta.title}</h1>
-              <p className="mt-1 max-w-2xl text-sm leading-6 text-slate-600">{currentMeta.description}</p>
+              <p className="text-[11px] font-semibold uppercase tracking-[0.24em] text-emerald-700/80 sm:text-xs">{currentMeta.eyebrow}</p>
+              <h1 className="mt-1.5 text-xl font-semibold text-slate-950 sm:mt-2 sm:text-2xl lg:text-3xl">{currentMeta.title}</h1>
+              {currentMeta.description && (
+                <p className="mt-1 hidden max-w-2xl text-sm leading-6 text-slate-600 sm:block">{currentMeta.description}</p>
+              )}
             </div>
 
             <div className="flex flex-wrap items-center gap-2">
               {currentPageName !== 'PublicTournamentsList' && (
-                <Button asChild variant="outline" size="sm">
+                <Button asChild variant="outline" size="sm" className="hidden sm:inline-flex">
                   <Link to="/torneios/publicos">Explorar públicos</Link>
                 </Button>
               )}
               {currentPageName !== 'CreateTournament' && (
-                <Button asChild size="sm">
+                <Button asChild size="sm" className="hidden sm:inline-flex">
                   <Link to="/torneios/criar">Criar torneio</Link>
                 </Button>
               )}
@@ -409,7 +411,7 @@ export default function Layout({ children, currentPageName }) {
         <main className="safe-px mx-auto max-w-7xl pb-[calc(5.25rem+env(safe-area-inset-bottom))] pt-6 lg:px-8 lg:pb-12">{children}</main>
       </div>
 
-      <MobileBottomNav currentPageName={currentPageName} />
+      {!sidebarOpen && <MobileBottomNav currentPageName={currentPageName} />}
 
       <ProfileCompletionModal />
     </div>
