@@ -306,7 +306,13 @@ export async function advanceToNextPhase(params, actor) {
   // Reconstrói os grupos da fase atual (ou um grupo único, se não houver subdivisão).
   let storedGroups = await listPhaseGroups(modalityId, stageIndex);
   if (storedGroups.length === 0) {
-    // Fase de grupo único: monta um grupo a partir dos ids dos jogos.
+    // Fase de grupo único: monta um grupo a partir dos ids dos jogos, enriquecendo
+    // cada entrant com gênero/nível/rótulo das inscrições (essencial para a
+    // classificação "melhor de cada gênero").
+    const regs = await listRegistrations(modalityId);
+    const entrantByReg = new Map(
+      regs.map((r) => [r.id, registrationToEntrant(r, modality)]),
+    );
     const ids = new Set();
     matches.forEach((m) => {
       (m.side_a_ids || []).forEach((id) => ids.add(id));
@@ -316,7 +322,7 @@ export async function advanceToNextPhase(params, actor) {
       {
         name: 'Grupo único',
         group_index: 0,
-        entrants: [...ids].map((id) => ({ id, members: [id] })),
+        entrants: [...ids].map((id) => entrantByReg.get(id) || { id, members: [id] }),
       },
     ];
   }

@@ -153,7 +153,8 @@ export async function claimProvisionalRegistrationsForUser(user, profile = {}) {
     updates.data.player_a_email = player.email;
     updates.data.player_a_email_lc = email;
     updates.data.player_a_level = player.level;
-    updates.data.player_a_competition_gender = player.competition_gender;
+    // Não apaga o gênero já informado (ex.: admin inseriu) se o perfil não tiver.
+    updates.data.player_a_competition_gender = player.competition_gender || reg.player_a_competition_gender || null;
     updates.data.player_a_photo = player.photo_url;
     updates.data.player_a_provisional = false;
     updatesById.set(docSnap.id, updates);
@@ -167,7 +168,7 @@ export async function claimProvisionalRegistrationsForUser(user, profile = {}) {
     updates.data.player_b_email = player.email;
     updates.data.player_b_email_lc = email;
     updates.data.player_b_level = player.level;
-    updates.data.player_b_competition_gender = player.competition_gender;
+    updates.data.player_b_competition_gender = player.competition_gender || reg.player_b_competition_gender || null;
     updates.data.player_b_photo = player.photo_url;
     updates.data.player_b_provisional = false;
     updatesById.set(docSnap.id, updates);

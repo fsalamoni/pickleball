@@ -41,7 +41,7 @@ import {
 } from '../services/matchService';
 import { runDraw } from '../services/drawService';
 import { runPhaseDraw, advanceToNextPhase, listPhaseGroups } from '../services/phaseService';
-import { computeModalityRanking } from '../services/rankingService';
+import { computeModalityRanking, computeModalityRankingStructured } from '../services/rankingService';
 import { getMyTournamentHistory } from '../services/participationService';
 import { useAuth } from '@/core/lib/FirebaseAuthContext';
 
@@ -436,6 +436,16 @@ export function useModalityRanking(modalityId, stageIndex) {
   return useQuery({
     queryKey: ['ranking', modalityId, stageIndex ?? 'all'],
     queryFn: () => computeModalityRanking(modalityId, stageIndex),
+    enabled: !!modalityId,
+    refetchInterval: 20000,
+    refetchOnWindowFocus: true,
+  });
+}
+
+export function useModalityRankingStructured(modalityId) {
+  return useQuery({
+    queryKey: ['ranking-structured', modalityId],
+    queryFn: () => computeModalityRankingStructured(modalityId),
     enabled: !!modalityId,
     refetchInterval: 20000,
     refetchOnWindowFocus: true,

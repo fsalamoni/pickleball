@@ -49,6 +49,26 @@ describe('rankEntrantsInGroup', () => {
   });
 });
 
+describe('rankEntrantsInGroup — duplas formadas contam como uma unidade', () => {
+  it('agrega as estatísticas dos 2 membros e classifica o par como um só', () => {
+    // 2 duplas formadas: AB (a,b) vence CD (c,d) por 11x5.
+    const entrants = [
+      { id: 'AB', members: ['a', 'b'], label: 'AB' },
+      { id: 'CD', members: ['c', 'd'], label: 'CD' },
+    ];
+    const matches = [
+      { group: 'G', side_a_ids: ['a', 'b'], side_b_ids: ['c', 'd'], games: [{ a: 11, b: 5 }], status: 'finished' },
+    ];
+    const ranked = rankEntrantsInGroup(entrants, matches, CFG);
+    expect(ranked.map((e) => e.id)).toEqual(['AB', 'CD']);
+    // vitórias contam 1 para o par (não 2, apesar de 2 membros)
+    expect(ranked[0].stats.wins).toBe(1);
+    expect(ranked[0].stats.played).toBe(1);
+    expect(ranked[0].stats.points_for).toBe(11);
+    expect(ranked[1].stats.wins).toBe(0);
+  });
+});
+
 describe('selectQualifiers', () => {
   const ranked = [
     entrant('m1', { gender: 'male', rank: 1 }),

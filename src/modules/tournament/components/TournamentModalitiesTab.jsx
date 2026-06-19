@@ -11,7 +11,7 @@ import {
   DialogTitle,
   DialogFooter,
 } from '@/components/ui/dialog';
-import { Pencil, Plus, Trash2 } from 'lucide-react';
+import { Pencil, Plus, Trash2, BookOpen } from 'lucide-react';
 import { toast } from 'sonner';
 import { ConfirmDialog } from '@/components/ui/confirm-dialog';
 import {
@@ -229,13 +229,21 @@ export default function TournamentModalitiesTab({ tournament, isAdmin }) {
 
   return (
     <div className="space-y-4">
-      {isAdmin && (
-        <div className="flex justify-end">
+      <div className="flex justify-between items-center gap-2 flex-wrap">
+        <a
+          href={`${import.meta.env.BASE_URL}torneios/guia`}
+          target="_blank"
+          rel="noreferrer"
+          className="text-sm text-emerald-700 inline-flex items-center gap-1 hover:underline"
+        >
+          <BookOpen className="w-4 h-4" /> Guia de formatos e modelos
+        </a>
+        {isAdmin && (
           <Button onClick={openCreate}>
             <Plus className="w-4 h-4 mr-1" /> Nova modalidade
           </Button>
-        </div>
-      )}
+        )}
+      </div>
 
       {isLoading ? (
         <p className="text-sm text-slate-500">Carregando…</p>

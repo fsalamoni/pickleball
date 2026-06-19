@@ -13,8 +13,13 @@ import { toast } from 'sonner';
 import { AlertTriangle, Info } from 'lucide-react';
 import { useAuth } from '@/core/lib/FirebaseAuthContext';
 import { useCreateRegistration } from '@/modules/tournament/hooks/useTournament';
-import { MODALITY_FORMAT } from '@/modules/tournament/domain/constants';
+import { MODALITY_FORMAT, COMPETITION_GENDER } from '@/modules/tournament/domain/constants';
 import { LEVEL_OPTIONS } from '@/modules/leveling/data/levels';
+
+const GENDER_OPTIONS = [
+  { value: COMPETITION_GENDER.MALE, label: 'Masculino' },
+  { value: COMPETITION_GENDER.FEMALE, label: 'Feminino' },
+];
 import { evaluateRegistrationEligibility } from '@/modules/tournament/domain/eligibility';
 
 /**
@@ -37,9 +42,11 @@ export default function ModalityRegistrationDialog({
     player_a_name: '',
     player_a_email: '',
     player_a_level: '',
+    player_a_gender: '',
     player_b_name: '',
     player_b_email: '',
     player_b_level: '',
+    player_b_gender: '',
   });
 
   useEffect(() => {
@@ -48,11 +55,13 @@ export default function ModalityRegistrationDialog({
       player_a_name: userProfile?.platform_name || user?.displayName || user?.email || '',
       player_a_email: user?.email || '',
       player_a_level: userProfile?.leveling_level || '',
+      player_a_gender: userProfile?.competition_gender || '',
       player_b_name: '',
       player_b_email: '',
       player_b_level: '',
+      player_b_gender: '',
     });
-  }, [open, user?.email, user?.displayName, userProfile?.platform_name, userProfile?.leveling_level]);
+  }, [open, user?.email, user?.displayName, userProfile?.platform_name, userProfile?.leveling_level, userProfile?.competition_gender]);
 
   const eligibility = useMemo(() => {
     if (!modality) return { errors: [], warnings: [] };
@@ -80,8 +89,14 @@ export default function ModalityRegistrationDialog({
       if (!form.player_a_email.trim() || !form.player_a_level) {
         return toast.error('Informe e-mail e nível do jogador A.');
       }
+      if (!form.player_a_gender) {
+        return toast.error('Informe o gênero do jogador A.');
+      }
       if (modality.format === MODALITY_FORMAT.DOUBLES && (!form.player_b_email.trim() || !form.player_b_level)) {
         return toast.error('Informe e-mail e nível do jogador B.');
+      }
+      if (modality.format === MODALITY_FORMAT.DOUBLES && !form.player_b_gender) {
+        return toast.error('Informe o gênero do jogador B.');
       }
     }
     if (blocked) {
@@ -99,13 +114,18 @@ export default function ModalityRegistrationDialog({
           name: form.player_a_name,
           email: form.player_a_email,
           level: form.player_a_level,
-          competition_gender: isAdmin ? null : userProfile?.competition_gender || null,
+          competition_gender: form.player_a_gender || (isAdmin ? null : userProfile?.competition_gender || null),
           user_id: isAdmin ? null : user?.uid,
           photo_url: isAdmin ? null : (userProfile?.photo_url || user?.photoURL || null),
         },
         player_b:
           modality.format === MODALITY_FORMAT.DOUBLES
-            ? { name: form.player_b_name, email: form.player_b_email, level: form.player_b_level }
+            ? {
+                name: form.player_b_name,
+                email: form.player_b_email,
+                level: form.player_b_level,
+                competition_gender: form.player_b_gender || null,
+              }
             : null,
       });
       toast.success('Inscrição enviada!');
@@ -161,7 +181,7 @@ export default function ModalityRegistrationDialog({
               onChange={(e) => setForm((f) => ({ ...f, player_a_name: e.target.value }))}
             />
           </div>
-          <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
+          <div className="grid grid-cols-1 sm:grid-cols-3 gap-3">
             <div>
               <Label>E-mail do jogador A</Label>
               <Input
@@ -176,6 +196,11 @@ export default function ModalityRegistrationDialog({
               value={form.player_a_level}
               onChange={(value) => setForm((f) => ({ ...f, player_a_level: value }))}
             />
+            <GenderSelect
+              label="Gênero do jogador A"
+              value={form.player_a_gender}
+              onChange={(value) => setForm((f) => ({ ...f, player_a_gender: value }))}
+            />
           </div>
           {modality.format === MODALITY_FORMAT.DOUBLES && (
             <>
@@ -186,7 +211,7 @@ export default function ModalityRegistrationDialog({
                   onChange={(e) => setForm((f) => ({ ...f, player_b_name: e.target.value }))}
                 />
               </div>
-              <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
+              <div className="grid grid-cols-1 sm:grid-cols-3 gap-3">
                 <div>
                   <Label>E-mail do jogador B</Label>
                   <Input
@@ -199,6 +224,11 @@ export default function ModalityRegistrationDialog({
                   label="Nível do jogador B"
                   value={form.player_b_level}
                   onChange={(value) => setForm((f) => ({ ...f, player_b_level: value }))}
+                />
+                <GenderSelect
+                  label="Gênero do jogador B"
+                  value={form.player_b_gender}
+                  onChange={(value) => setForm((f) => ({ ...f, player_b_gender: value }))}
                 />
               </div>
             </>
@@ -232,6 +262,24 @@ function LevelSelect({ label, value, onChange }) {
         <option value="">Selecione</option>
         {LEVEL_OPTIONS.map((option) => (
           <option key={option.code} value={option.code}>{option.label}</option>
+        ))}
+      </select>
+    </div>
+  );
+}
+
+function GenderSelect({ label, value, onChange }) {
+  return (
+    <div>
+      <Label>{label}</Label>
+      <select
+        className="w-full h-10 rounded-md border border-input bg-background px-3 text-sm"
+        value={value}
+        onChange={(e) => onChange(e.target.value)}
+      >
+        <option value="">Selecione</option>
+        {GENDER_OPTIONS.map((option) => (
+          <option key={option.value} value={option.value}>{option.label}</option>
         ))}
       </select>
     </div>

@@ -21,6 +21,7 @@ const Leveling = lazy(() => import('@/pages/Leveling'));
 const ConductFairPlay = lazy(() => import('@/pages/ConductFairPlay'));
 const AdminMetrics = lazy(() => import('@/modules/admin/pages/AdminMetrics'));
 const AdminTournaments = lazy(() => import('@/modules/admin/pages/AdminTournaments'));
+const TournamentFormatsGuide = lazy(() => import('@/modules/tournament/pages/TournamentFormatsGuide'));
 const PublicTournament = lazy(() => import('@/pages/PublicTournament'));
 const PrintTournament = lazy(() => import('@/pages/PrintTournament'));
 const AthletesDirectory = lazy(() => import('@/modules/athletes/pages/AthletesDirectory'));
@@ -103,6 +104,7 @@ export default function App() {
               <Route path="/" element={withLayout('Landing', Landing)} />
               <Route path="/login" element={withLayout('Login', Login)} />
               <Route path="/regras" element={withLayout('PickleballRules', PickleballRules)} />
+              <Route path="/torneios/guia" element={withLayout('TournamentFormatsGuide', TournamentFormatsGuide)} />
               <Route path="/nivelamento" element={withLayout('Leveling', Leveling)} />
               <Route path="/conduta" element={withLayout('ConductFairPlay', ConductFairPlay)} />
               <Route path="/politica-uso" element={withLayout('PrivacyPolicy', PrivacyPolicy)} />

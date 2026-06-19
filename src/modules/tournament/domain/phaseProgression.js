@@ -54,13 +54,15 @@ export function rankEntrantsInGroup(entrants, matches, scoringConfig) {
 
   const withStats = entrants.map((e, index) => {
     // Agrega as estatísticas dos membros do entrant (some quando há mais de um).
-    const agg = { wins: 0, losses: 0, played: 0, points_for: 0, points_against: 0 };
+    const agg = { wins: 0, losses: 0, played: 0, sets_won: 0, sets_lost: 0, points_for: 0, points_against: 0 };
     (e.members || []).forEach((m) => {
       const s = byId.get(String(m));
       if (!s) return;
       agg.wins += s.wins;
       agg.losses += s.losses;
       agg.played += s.played;
+      agg.sets_won += s.sets_won;
+      agg.sets_lost += s.sets_lost;
       agg.points_for += s.points_for;
       agg.points_against += s.points_against;
     });
@@ -71,6 +73,8 @@ export function rankEntrantsInGroup(entrants, matches, scoringConfig) {
       wins: agg.wins / divisor,
       losses: agg.losses / divisor,
       played: agg.played / divisor,
+      sets_won: agg.sets_won / divisor,
+      sets_lost: agg.sets_lost / divisor,
       points_for: agg.points_for / divisor,
       points_against: agg.points_against / divisor,
     };
