@@ -36,6 +36,9 @@ export const AUDIT_ACTION_LABELS = {
   platform_archive_tournament: 'Torneio arquivado (admin)',
   platform_unarchive_tournament: 'Torneio desarquivado (admin)',
   platform_delete_tournament: 'Torneio excluído (admin)',
+  platform_feature_flag_changed: 'Feature flag alterada (admin)',
+  tournament_groups_set: 'Grupos da fase definidos',
+  tournament_phase_advanced: 'Fase avançada (classificados)',
 };
 
 export async function createAuditLog({

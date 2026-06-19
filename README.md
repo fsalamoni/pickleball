@@ -60,6 +60,26 @@ Fica **desligado por padrão** atrás da flag `VITE_PWA_ENABLED`:
 Os ícones do app são gerados por `node scripts/generate-pwa-icons.mjs`
 (saída em `public/`). Após validar tudo, basta ligar a flag no ambiente de build.
 
+## Feature flags (admin master)
+
+Algumas funcionalidades nascem **desligadas** e são ativadas em tempo real pelo
+admin master na página **Métricas da Plataforma** (`/admin/metricas`), no card
+**Funcionalidades (flags)**. As flags ficam em `platform_settings/global`
+(Firestore) e são puramente aditivas — desligar não afeta nada do que já existe.
+
+- **Torneios em múltiplas fases** (`multi_phase_tournaments`): permite configurar
+  uma modalidade com várias fases encadeadas (grupos, americano, mata-mata, dupla
+  eliminação, suíço), com **divisão em grupos equilibrados** por gênero e nível
+  (diferença máxima de 1 atleta por grupo), sorteio ou seleção manual,
+  **qualificação de classificados** (geral ou por gênero) e **progressão
+  automática entre fases** (fusão de grupos A+B → AB, formação de duplas mistas,
+  chaveamento A×B / C×D). A inscrição continua em **lista única** por modalidade.
+  Com a flag desligada, o fluxo de fase única permanece idêntico ao atual.
+
+> Após o primeiro uso, lembre-se de publicar as regras do Firestore
+> (`firestore.rules`) — há uma regra nova para `platform_settings` (leitura
+> pública, escrita só do admin master).
+
 ## Publicação no GitHub Pages
 
 O repositório já está preparado para publicar a aplicação em **GitHub Pages** via workflow do GitHub Actions (`.github/workflows/deploy-pages.yml`).

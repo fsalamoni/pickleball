@@ -27,6 +27,7 @@ import {
 import { DEFAULT_MAX_ENTRIES, normalizeMaxEntries } from '../domain/capacity.js';
 import { normalizeScoringConfig } from '../domain/scoring.js';
 import { normalizeSchedulingConfig } from '../domain/scheduling.js';
+import { normalizePhases } from '../domain/phases.js';
 
 /** Campos de agendamento mantidos na modalidade. */
 const SCHEDULING_FIELDS = [
@@ -53,10 +54,11 @@ export async function createModality(tournamentId, data, actor) {
     entry_fee_cents: Math.max(0, Number(data.entry_fee_cents) || 0),
     /** Override de regras de pontuação (opcional, herda do torneio se vazio). */
     scoring_override: data.scoring_override ? normalizeScoringConfig(data.scoring_override) : null,
-    /** Estrutura de fases. Array em ordem de execução. */
-    stages: data.stages || [
-      { type: 'round_robin', name: 'Fase única', group_count: 1, seed_count: 0 },
-    ],
+    /**
+     * Estrutura de fases. Array em ordem de execução. Normalizado para garantir
+     * compatibilidade com fases simples (legado) e com fases multi-fase novas.
+     */
+    stages: normalizePhases(data.stages),
     /**
      * Configuração de agendamento: quadras disponíveis, janela de horários e
      * duração média dos jogos. Usada pelo sorteio para marcar cada jogo em uma
@@ -87,6 +89,10 @@ export async function updateModality(id, updates, actor) {
   // Normaliza os campos de agendamento que estiverem sendo atualizados.
   if (SCHEDULING_FIELDS.some((f) => Object.hasOwn(normalizedUpdates, f))) {
     Object.assign(normalizedUpdates, normalizeSchedulingConfig(normalizedUpdates));
+  }
+  // Normaliza as fases quando estiverem sendo atualizadas.
+  if (Object.hasOwn(normalizedUpdates, 'stages')) {
+    normalizedUpdates.stages = normalizePhases(normalizedUpdates.stages);
   }
   await updateDoc(doc(db, COL, id), { ...normalizedUpdates, updated_at: serverTimestamp() });
   await createAuditLog({

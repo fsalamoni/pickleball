@@ -40,6 +40,7 @@ import {
   advanceStage,
 } from '../services/matchService';
 import { runDraw } from '../services/drawService';
+import { runPhaseDraw, advanceToNextPhase, listPhaseGroups } from '../services/phaseService';
 import { computeModalityRanking } from '../services/rankingService';
 import { getMyTournamentHistory } from '../services/participationService';
 import { useAuth } from '@/core/lib/FirebaseAuthContext';
@@ -309,6 +310,45 @@ export function useRunDraw() {
     onSuccess: (_data, params) => {
       qc.invalidateQueries({ queryKey: ['matches', params.modalityId] });
       qc.invalidateQueries({ queryKey: ['matches-tournament', params.tournamentId] });
+      qc.invalidateQueries({ queryKey: ['ranking', params.modalityId] });
+    },
+  });
+}
+
+/* ----------------------- Multi-fase (feature flag) ---------------------- */
+
+export function usePhaseGroups(modalityId, stageIndex) {
+  return useQuery({
+    queryKey: ['phase-groups', modalityId, stageIndex],
+    queryFn: () => listPhaseGroups(modalityId, stageIndex),
+    enabled: !!modalityId && Number.isFinite(stageIndex),
+    refetchInterval: 20000,
+  });
+}
+
+export function useRunPhaseDraw() {
+  const { user } = useAuth();
+  const qc = useQueryClient();
+  return useMutation({
+    mutationFn: (params) => runPhaseDraw(params, user),
+    onSuccess: (_data, params) => {
+      qc.invalidateQueries({ queryKey: ['matches', params.modalityId] });
+      qc.invalidateQueries({ queryKey: ['matches-tournament', params.tournamentId] });
+      qc.invalidateQueries({ queryKey: ['phase-groups', params.modalityId] });
+      qc.invalidateQueries({ queryKey: ['ranking', params.modalityId] });
+    },
+  });
+}
+
+export function useAdvanceToNextPhase() {
+  const { user } = useAuth();
+  const qc = useQueryClient();
+  return useMutation({
+    mutationFn: (params) => advanceToNextPhase(params, user),
+    onSuccess: (_data, params) => {
+      qc.invalidateQueries({ queryKey: ['matches', params.modalityId] });
+      qc.invalidateQueries({ queryKey: ['matches-tournament', params.tournamentId] });
+      qc.invalidateQueries({ queryKey: ['phase-groups', params.modalityId] });
       qc.invalidateQueries({ queryKey: ['ranking', params.modalityId] });
     },
   });

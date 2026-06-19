@@ -41,7 +41,11 @@ import {
   MAX_COURT_COUNT,
   computeWindowSlots,
 } from '@/modules/tournament/domain/scheduling';
+import { normalizePhases, validatePhases, defaultPhase } from '@/modules/tournament/domain/phases';
+import { useFeatureFlag } from '@/core/lib/FeatureFlagsContext';
+import { FEATURE_FLAG } from '@/core/featureFlags';
 import StageExplanation from './StageExplanation';
+import PhasesEditor from './PhasesEditor';
 
 const PREVIEW_PLAYER_COUNT = 8;
 
@@ -56,6 +60,8 @@ const emptyForm = {
   stage_type: TOURNAMENT_STAGE_TYPE.ROUND_ROBIN,
   group_count: 1,
   seed_count: 0,
+  // Multi-fase (apenas quando a feature flag está ligada).
+  phases: [defaultPhase(MODALITY_FORMAT.DOUBLES, true)],
   court_count: DEFAULT_COURT_COUNT,
   match_duration_minutes: DEFAULT_MATCH_DURATION_MINUTES,
   play_date: '',
@@ -79,6 +85,7 @@ function buildFormState(modality) {
     stage_type: stage.type || TOURNAMENT_STAGE_TYPE.ROUND_ROBIN,
     group_count: stage.group_count || 1,
     seed_count: stage.seed_count || 0,
+    phases: normalizePhases(modality.stages),
     court_count: modality.court_count || DEFAULT_COURT_COUNT,
     match_duration_minutes: modality.match_duration_minutes || DEFAULT_MATCH_DURATION_MINUTES,
     play_date: modality.play_date || '',
@@ -89,6 +96,7 @@ function buildFormState(modality) {
 }
 
 export default function TournamentModalitiesTab({ tournament, isAdmin }) {
+  const multiPhaseEnabled = useFeatureFlag(FEATURE_FLAG.MULTI_PHASE_TOURNAMENTS);
   const { data: modalities = [], isLoading } = useModalities(tournament.id);
   const createMutation = useCreateModality(tournament.id);
   const updateMutation = useUpdateModality(tournament.id);
@@ -111,7 +119,14 @@ export default function TournamentModalitiesTab({ tournament, isAdmin }) {
     setForm((f) => {
       const allowed = STAGE_TYPES_BY_FORMAT[value] || [];
       const stage_type = allowed.includes(f.stage_type) ? f.stage_type : allowed[0];
-      return { ...f, format: value, stage_type };
+      // Mantém as fases compatíveis com o novo formato de inscrição.
+      const phases = normalizePhases(
+        (f.phases || []).map((p) => ({
+          ...p,
+          type: allowed.includes(p.type) ? p.type : allowed[0],
+        })),
+      );
+      return { ...f, format: value, stage_type, phases };
     });
   }
 
@@ -153,6 +168,24 @@ export default function TournamentModalitiesTab({ tournament, isAdmin }) {
     ) {
       return toast.error('O horário de término deve ser depois do horário de início.');
     }
+
+    // Estrutura de fases: multi-fase (flag ligada) ou fase única (padrão).
+    let stages;
+    if (multiPhaseEnabled) {
+      const { valid, errors } = validatePhases(form.phases, form.format);
+      if (!valid) return toast.error(errors[0]);
+      stages = normalizePhases(form.phases);
+    } else {
+      stages = [
+        {
+          type: form.stage_type,
+          name: TOURNAMENT_STAGE_TYPE_LABELS[form.stage_type],
+          group_count: Number(form.group_count) || 1,
+          seed_count: Number(form.seed_count) || 0,
+        },
+      ];
+    }
+
     const payload = {
       name: form.name,
       format: form.format,
@@ -166,14 +199,7 @@ export default function TournamentModalitiesTab({ tournament, isAdmin }) {
       play_date: form.play_date,
       play_start_time: form.play_start_time,
       play_end_time: form.play_end_time,
-      stages: [
-        {
-          type: form.stage_type,
-          name: TOURNAMENT_STAGE_TYPE_LABELS[form.stage_type],
-          group_count: Number(form.group_count) || 1,
-          seed_count: Number(form.seed_count) || 0,
-        },
-      ],
+      stages,
       notes: form.notes,
     };
     try {
@@ -234,8 +260,12 @@ export default function TournamentModalitiesTab({ tournament, isAdmin }) {
                     </div>
                     <div className="text-xs text-slate-600 mt-2">
                       Vagas: {hasUnlimitedEntries(m.max_entries) ? 'abertas' : m.max_entries} · Taxa: R${' '}
-                      {((m.entry_fee_cents || 0) / 100).toFixed(2).replace('.', ',')} · Fase:{' '}
-                      {TOURNAMENT_STAGE_TYPE_LABELS[m.stages?.[0]?.type] || '—'}
+                      {((m.entry_fee_cents || 0) / 100).toFixed(2).replace('.', ',')} ·{' '}
+                      {(m.stages?.length || 0) > 1
+                        ? `${m.stages.length} fases: ${m.stages
+                            .map((s) => TOURNAMENT_STAGE_TYPE_LABELS[s.type] || '—')
+                            .join(' → ')}`
+                        : `Fase: ${TOURNAMENT_STAGE_TYPE_LABELS[m.stages?.[0]?.type] || '—'}`}
                     </div>
                     <div className="text-xs text-slate-500 mt-1">
                       {m.court_count || DEFAULT_COURT_COUNT} quadra(s) ·{' '}
@@ -322,48 +352,60 @@ export default function TournamentModalitiesTab({ tournament, isAdmin }) {
                 <Label>Taxa de inscrição (R$)</Label>
                 <Input type="number" min={0} step="0.01" value={form.entry_fee_brl} onChange={(e) => set('entry_fee_brl', e.target.value)} />
               </div>
-              <SelectRow
-                label="Formato da fase"
-                value={form.stage_type}
-                options={stageOptions}
-                onChange={(v) => set('stage_type', v)}
-              />
-              {form.stage_type === TOURNAMENT_STAGE_TYPE.GROUPS && (
-                <div>
-                  <Label>Quantidade de grupos</Label>
-                  <Input type="number" min={1} value={form.group_count} onChange={(e) => set('group_count', e.target.value)} />
+              {multiPhaseEnabled ? (
+                <div className="md:col-span-2">
+                  <PhasesEditor
+                    phases={form.phases}
+                    format={form.format}
+                    onChange={(phases) => set('phases', phases)}
+                  />
                 </div>
+              ) : (
+                <>
+                  <SelectRow
+                    label="Formato da fase"
+                    value={form.stage_type}
+                    options={stageOptions}
+                    onChange={(v) => set('stage_type', v)}
+                  />
+                  {form.stage_type === TOURNAMENT_STAGE_TYPE.GROUPS && (
+                    <div>
+                      <Label>Quantidade de grupos</Label>
+                      <Input type="number" min={1} value={form.group_count} onChange={(e) => set('group_count', e.target.value)} />
+                    </div>
+                  )}
+                  {(form.stage_type === TOURNAMENT_STAGE_TYPE.GROUPS ||
+                    form.stage_type === TOURNAMENT_STAGE_TYPE.KNOCKOUT ||
+                    form.stage_type === TOURNAMENT_STAGE_TYPE.DOUBLE_KNOCKOUT) && (
+                    <div>
+                      <Label>Cabeças-de-chave</Label>
+                      <Input type="number" min={0} value={form.seed_count} onChange={(e) => set('seed_count', e.target.value)} />
+                    </div>
+                  )}
+                  <div className="md:col-span-2 space-y-1">
+                    <Label className="text-sm">
+                      Como o campeonato vai rodar
+                      {!form.has_unlimited_entries && ` (com ${Number(form.max_entries) || 0} jogadores)`}
+                    </Label>
+                    {form.has_unlimited_entries && (
+                      <p className="text-xs text-slate-500">
+                        Prévia para {PREVIEW_PLAYER_COUNT} jogadores (vagas abertas). Os números exatos
+                        serão recalculados com o total efetivo de inscritos ao encerrar as inscrições.
+                      </p>
+                    )}
+                    <StageExplanation
+                      stageType={form.stage_type}
+                      playerCount={
+                        form.has_unlimited_entries
+                          ? PREVIEW_PLAYER_COUNT
+                          : Number(form.max_entries) || 0
+                      }
+                      groupCount={Number(form.group_count) || 1}
+                      seedCount={Number(form.seed_count) || 0}
+                    />
+                  </div>
+                </>
               )}
-              {(form.stage_type === TOURNAMENT_STAGE_TYPE.GROUPS ||
-                form.stage_type === TOURNAMENT_STAGE_TYPE.KNOCKOUT ||
-                form.stage_type === TOURNAMENT_STAGE_TYPE.DOUBLE_KNOCKOUT) && (
-                <div>
-                  <Label>Cabeças-de-chave</Label>
-                  <Input type="number" min={0} value={form.seed_count} onChange={(e) => set('seed_count', e.target.value)} />
-                </div>
-              )}
-              <div className="md:col-span-2 space-y-1">
-                <Label className="text-sm">
-                  Como o campeonato vai rodar
-                  {!form.has_unlimited_entries && ` (com ${Number(form.max_entries) || 0} jogadores)`}
-                </Label>
-                {form.has_unlimited_entries && (
-                  <p className="text-xs text-slate-500">
-                    Prévia para {PREVIEW_PLAYER_COUNT} jogadores (vagas abertas). Os números exatos
-                    serão recalculados com o total efetivo de inscritos ao encerrar as inscrições.
-                  </p>
-                )}
-                <StageExplanation
-                  stageType={form.stage_type}
-                  playerCount={
-                    form.has_unlimited_entries
-                      ? PREVIEW_PLAYER_COUNT
-                      : Number(form.max_entries) || 0
-                  }
-                  groupCount={Number(form.group_count) || 1}
-                  seedCount={Number(form.seed_count) || 0}
-                />
-              </div>
             </div>
 
             <div className="rounded-md border border-slate-200 p-3 space-y-3">

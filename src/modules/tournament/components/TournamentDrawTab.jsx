@@ -29,6 +29,9 @@ import {
   MATCH_STATUS,
 } from '@/modules/tournament/domain/constants';
 import { stageSupportsAdvance } from '@/modules/tournament/domain/progression';
+import { useFeatureFlag } from '@/core/lib/FeatureFlagsContext';
+import { FEATURE_FLAG } from '@/core/featureFlags';
+import MultiPhaseDrawBlock from './MultiPhaseDrawBlock';
 
 function formatMatchTime(iso) {
   if (!iso) return '—';
@@ -46,6 +49,7 @@ function roundLabel(m) {
 
 export default function TournamentDrawTab({ tournament, isAdmin }) {
   const { data: modalities = [] } = useModalities(tournament.id);
+  const multiPhaseEnabled = useFeatureFlag(FEATURE_FLAG.MULTI_PHASE_TOURNAMENTS);
 
   if (modalities.length === 0) {
     return (
@@ -59,9 +63,13 @@ export default function TournamentDrawTab({ tournament, isAdmin }) {
 
   return (
     <div className="space-y-4">
-      {modalities.map((m) => (
-        <ModalityDrawBlock key={m.id} tournament={tournament} modality={m} isAdmin={isAdmin} />
-      ))}
+      {modalities.map((m) =>
+        multiPhaseEnabled && (m.stages?.length || 0) > 1 ? (
+          <MultiPhaseDrawBlock key={m.id} tournament={tournament} modality={m} isAdmin={isAdmin} />
+        ) : (
+          <ModalityDrawBlock key={m.id} tournament={tournament} modality={m} isAdmin={isAdmin} />
+        ),
+      )}
     </div>
   );
 }

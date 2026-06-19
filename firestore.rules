@@ -134,6 +134,15 @@ service cloud.firestore {
           ]));
     }
 
+    // ---- Platform settings (feature flags) -------------------------------
+    // Documento único `platform_settings/global`. Leitura pública (as flags
+    // governam a UI inclusive na visão de espectador). Escrita só do admin
+    // master da plataforma.
+    match /platform_settings/{docId} {
+      allow read: if true;
+      allow write: if isPlatformAdmin();
+    }
+
     // ---- Users -----------------------------------------------------------
     match /users/{userId} {
       allow read: if isOwner(userId) || isPlatformAdmin();

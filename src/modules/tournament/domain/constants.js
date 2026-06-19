@@ -71,6 +71,86 @@ export const STAGE_TYPES_BY_FORMAT = Object.freeze({
   ]),
 });
 
+/**
+ * Modo de divisão dos participantes de uma fase em grupos/chaves.
+ *  - SINGLE: a fase é jogada por todos juntos, sem subdivisão (1 grupo único).
+ *  - GROUP_COUNT: o admin indica QUANTOS grupos quer; o sistema reparte os
+ *    atletas de forma equilibrada (diferença máxima de 1 atleta entre grupos).
+ *  - MAX_PER_GROUP: o admin indica o número MÁXIMO de atletas por grupo; o
+ *    sistema calcula a menor quantidade de grupos que respeita esse teto e os
+ *    mantém equilibrados (diferença máxima de 1 atleta).
+ */
+export const PHASE_DIVISION_MODE = Object.freeze({
+  SINGLE: 'single',
+  GROUP_COUNT: 'group_count',
+  MAX_PER_GROUP: 'max_per_group',
+});
+
+export const PHASE_DIVISION_MODE_LABELS = Object.freeze({
+  [PHASE_DIVISION_MODE.SINGLE]: 'Grupo único (todos juntos)',
+  [PHASE_DIVISION_MODE.GROUP_COUNT]: 'Número de grupos',
+  [PHASE_DIVISION_MODE.MAX_PER_GROUP]: 'Máximo de atletas por grupo',
+});
+
+/**
+ * Critério de quem se classifica de cada grupo para a fase seguinte.
+ *  - OVERALL: passam os N melhores classificados do grupo, independente de
+ *    gênero (ex.: "os dois melhores").
+ *  - BY_GENDER: passa o melhor masculino e a melhor feminina (N de cada
+ *    gênero), úteis para depois formar duplas mistas (ex.: melhor M + melhor F).
+ */
+export const PHASE_QUALIFIER_MODE = Object.freeze({
+  OVERALL: 'overall',
+  BY_GENDER: 'by_gender',
+});
+
+export const PHASE_QUALIFIER_MODE_LABELS = Object.freeze({
+  [PHASE_QUALIFIER_MODE.OVERALL]: 'Melhores classificados (geral)',
+  [PHASE_QUALIFIER_MODE.BY_GENDER]: 'Melhor(es) de cada gênero (M e F)',
+});
+
+/**
+ * Como os classificados da fase anterior alimentam ESTA fase.
+ *  - INHERIT_GROUPS: cada grupo anterior vira uma "fonte"; útil para chaves em
+ *    que o vencedor/classificado do grupo A enfrenta o do grupo B.
+ *  - MERGE_GROUPS: agrupa K grupos anteriores em um novo grupo (A+B → "AB").
+ *  - POOL_ALL: junta todos os classificados num único pote e redistribui
+ *    conforme o modo de divisão desta fase.
+ */
+export const PHASE_FEED_MODE = Object.freeze({
+  INHERIT_GROUPS: 'inherit_groups',
+  MERGE_GROUPS: 'merge_groups',
+  POOL_ALL: 'pool_all',
+});
+
+export const PHASE_FEED_MODE_LABELS = Object.freeze({
+  [PHASE_FEED_MODE.INHERIT_GROUPS]: 'Por grupo da fase anterior',
+  [PHASE_FEED_MODE.MERGE_GROUPS]: 'Fundir grupos (A+B → AB)',
+  [PHASE_FEED_MODE.POOL_ALL]: 'Juntar todos e redividir',
+});
+
+/**
+ * Quando os classificados de cada grupo são um homem + uma mulher
+ * (BY_GENDER, 1 de cada), o sistema pode formar uma dupla mista por grupo.
+ *  - NONE: cada classificado avança individualmente.
+ *  - MIXED_BY_GROUP: forma uma dupla mista (melhor M + melhor F) por grupo.
+ *  - PAIR_TOP_TWO: forma uma dupla com os dois melhores classificados do grupo.
+ */
+export const PHASE_PAIRING_MODE = Object.freeze({
+  NONE: 'none',
+  MIXED_BY_GROUP: 'mixed_by_group',
+  PAIR_TOP_TWO: 'pair_top_two',
+});
+
+export const PHASE_PAIRING_MODE_LABELS = Object.freeze({
+  [PHASE_PAIRING_MODE.NONE]: 'Avançam individualmente',
+  [PHASE_PAIRING_MODE.MIXED_BY_GROUP]: 'Formar dupla mista por grupo (M + F)',
+  [PHASE_PAIRING_MODE.PAIR_TOP_TWO]: 'Formar dupla com os 2 melhores do grupo',
+});
+
+/** Limite de segurança para o número de fases de uma modalidade. */
+export const MAX_PHASES_PER_MODALITY = 6;
+
 /** Conjunto de regras oficiais aplicáveis. */
 export const RULESET = Object.freeze({
   CBP: 'cbp', // Confederação Brasileira de Pickleball

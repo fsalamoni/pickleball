@@ -2,6 +2,7 @@ import React, { Suspense, lazy, useEffect } from 'react';
 import { BrowserRouter, Routes, Route, Navigate, useLocation } from 'react-router-dom';
 import { QueryClient, QueryClientProvider } from '@tanstack/react-query';
 import { AuthProvider, useAuth } from '@/core/lib/FirebaseAuthContext';
+import { FeatureFlagsProvider } from '@/core/lib/FeatureFlagsContext';
 import Layout from '@/components/Layout';
 import { Toaster } from '@/components/ui/sonner';
 import { recordPageView } from '@/core/services/observabilityService';
@@ -93,6 +94,7 @@ export default function App() {
   return (
     <QueryClientProvider client={queryClient}>
       <AuthProvider>
+        <FeatureFlagsProvider>
         <BrowserRouter basename={import.meta.env.BASE_URL}>
           <RouteTelemetry />
           <Suspense fallback={<FullScreenSpinner />}>
@@ -145,6 +147,7 @@ export default function App() {
           </Suspense>
         </BrowserRouter>
         <Toaster />
+        </FeatureFlagsProvider>
       </AuthProvider>
     </QueryClientProvider>
   );
