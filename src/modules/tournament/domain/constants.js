@@ -32,6 +32,7 @@ export const TOURNAMENT_STAGE_TYPE = Object.freeze({
   DOUBLE_KNOCKOUT: 'double_knockout', // dupla eliminação (winners + losers brackets)
   SWISS: 'swiss',                     // sistema suíço (pareamento por pontuação)
   AMERICANO: 'americano',             // formato americano (rotação)
+  MEXICANO: 'mexicano',               // mexicano (rotação dinâmica por classificação)
 });
 
 export const TOURNAMENT_STAGE_TYPE_LABELS = Object.freeze({
@@ -41,6 +42,7 @@ export const TOURNAMENT_STAGE_TYPE_LABELS = Object.freeze({
   [TOURNAMENT_STAGE_TYPE.DOUBLE_KNOCKOUT]: 'Dupla eliminação',
   [TOURNAMENT_STAGE_TYPE.SWISS]: 'Sistema suíço',
   [TOURNAMENT_STAGE_TYPE.AMERICANO]: 'Americana (rotação)',
+  [TOURNAMENT_STAGE_TYPE.MEXICANO]: 'Mexicano (rotação dinâmica)',
 });
 
 /**
@@ -61,6 +63,7 @@ export const STAGE_TYPES_BY_FORMAT = Object.freeze({
     TOURNAMENT_STAGE_TYPE.DOUBLE_KNOCKOUT,
     TOURNAMENT_STAGE_TYPE.SWISS,
     TOURNAMENT_STAGE_TYPE.AMERICANO,
+    TOURNAMENT_STAGE_TYPE.MEXICANO,
   ]),
   [MODALITY_FORMAT.DOUBLES]: Object.freeze([
     TOURNAMENT_STAGE_TYPE.ROUND_ROBIN,
@@ -70,6 +73,27 @@ export const STAGE_TYPES_BY_FORMAT = Object.freeze({
     TOURNAMENT_STAGE_TYPE.SWISS,
   ]),
 });
+
+/**
+ * Formatos "avançados": só aparecem nos seletores quando a feature flag de
+ * funcionalidades avançadas está ligada. (O Mexicano é totalmente suportado
+ * pelo motor; fica oculto por padrão para não alterar a experiência atual.)
+ */
+export const ADVANCED_STAGE_TYPES = Object.freeze([TOURNAMENT_STAGE_TYPE.MEXICANO]);
+
+/**
+ * Estruturas disponíveis para um formato de inscrição, filtrando as avançadas
+ * conforme a flag. Use nos seletores de UI; a validação/compatibilidade segue
+ * usando o conjunto completo `STAGE_TYPES_BY_FORMAT`.
+ * @param {string} format
+ * @param {boolean} [advancedEnabled]
+ * @returns {string[]}
+ */
+export function availableStageTypes(format, advancedEnabled = false) {
+  const all = STAGE_TYPES_BY_FORMAT[format] || [];
+  if (advancedEnabled) return [...all];
+  return all.filter((t) => !ADVANCED_STAGE_TYPES.includes(t));
+}
 
 /**
  * Modo de divisão dos participantes de uma fase em grupos/chaves.
@@ -146,6 +170,24 @@ export const PHASE_PAIRING_MODE_LABELS = Object.freeze({
   [PHASE_PAIRING_MODE.NONE]: 'Avançam individualmente',
   [PHASE_PAIRING_MODE.MIXED_BY_GROUP]: 'Formar dupla mista por grupo (M + F)',
   [PHASE_PAIRING_MODE.PAIR_TOP_TWO]: 'Formar dupla com os 2 melhores do grupo',
+});
+
+/**
+ * Como uma fase de CHAVE alimentada pela fase anterior monta os confrontos:
+ *  - STANDARD: cabeças-de-chave espalhadas (1ºs colocados em lados opostos,
+ *    encontrando-se só nas fases finais) — o chaveamento clássico de
+ *    "grupos + mata-mata".
+ *  - ADJACENT: pareia os grupos na ordem (vencedor do A × vencedor do B,
+ *    C × D…) — o chaveamento "cruzado" por grupos.
+ */
+export const PHASE_BRACKET_SEEDING = Object.freeze({
+  STANDARD: 'standard',
+  ADJACENT: 'adjacent',
+});
+
+export const PHASE_BRACKET_SEEDING_LABELS = Object.freeze({
+  [PHASE_BRACKET_SEEDING.STANDARD]: 'Cabeças-de-chave espalhadas (clássico)',
+  [PHASE_BRACKET_SEEDING.ADJACENT]: 'Cruzado por grupos (A×B, C×D)',
 });
 
 /** Limite de segurança para o número de fases de uma modalidade. */

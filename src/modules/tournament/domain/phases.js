@@ -24,6 +24,7 @@ import {
   PHASE_QUALIFIER_MODE,
   PHASE_FEED_MODE,
   PHASE_PAIRING_MODE,
+  PHASE_BRACKET_SEEDING,
   MAX_PHASES_PER_MODALITY,
 } from './constants.js';
 
@@ -83,6 +84,10 @@ export function normalizePhase(raw = {}, ctx = {}) {
     ? raw.pairing_mode
     : PHASE_PAIRING_MODE.NONE;
 
+  const bracketSeeding = Object.values(PHASE_BRACKET_SEEDING).includes(raw.bracket_seeding)
+    ? raw.bracket_seeding
+    : PHASE_BRACKET_SEEDING.STANDARD;
+
   return {
     type,
     name: raw.name || '',
@@ -97,6 +102,10 @@ export function normalizePhase(raw = {}, ctx = {}) {
     feed_mode: ctx.isFirst ? PHASE_FEED_MODE.POOL_ALL : feedMode,
     merge_size: mergeSize,
     pairing_mode: pairingMode,
+    // Como uma fase de chave monta os confrontos a partir dos classificados.
+    bracket_seeding: bracketSeeding,
+    // Disputa de 3º lugar (só faz sentido em mata-mata simples).
+    third_place: Boolean(raw.third_place),
   };
 }
 

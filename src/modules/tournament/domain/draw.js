@@ -9,6 +9,7 @@
 import { MODALITY_FORMAT } from './constants.js';
 import { buildDoubleEliminationBracket } from './doubleElimination.js';
 import { pairSwissRound } from './swiss.js';
+import { buildMexicanoFirstRound } from './mexicano.js';
 import { getWhistTable } from './whistTables.js';
 
 /* ----------------------------- RNG semeado ------------------------------- */
@@ -1015,6 +1016,15 @@ export function generateDraw(input) {
       stageType: 'americano',
       matches: buildAmericanoRotation(participants, { seed, playerMeta }),
     };
+  }
+  if (stageType === 'mexicano') {
+    if (format === MODALITY_FORMAT.DOUBLES) {
+      throw new Error(
+        'O Mexicano (rotação dinâmica de duplas) só é compatível com inscrição individual (Simples).',
+      );
+    }
+    const { matches } = buildMexicanoFirstRound(participants, { seed, seedCount });
+    return { stageType: 'mexicano', matches };
   }
   if (stageType === 'round_robin') {
     return { stageType, matches: buildRoundRobinMatches(participants) };

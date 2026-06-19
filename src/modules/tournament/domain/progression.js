@@ -13,6 +13,7 @@
 import { MATCH_STATUS } from './constants.js';
 import { nextPowerOfTwo } from './draw.js';
 import { pairSwissRound, recommendedSwissRounds } from './swiss.js';
+import { mexicanoNextRound } from './mexicano.js';
 
 /* ------------------------------ helpers --------------------------------- */
 
@@ -69,11 +70,17 @@ function groupByRound(matches) {
  * @param {Array<object>} matches jogos da fase (com resultados)
  * @returns {{ pending: true } | { complete: true, championIds: string[] } | { matches: Array<object>, nextRound: number }}
  */
-export function knockoutNextRound(matches) {
+export function knockoutNextRound(matches, options = {}) {
   if (!matches || matches.length === 0) return { pending: true };
   const rounds = groupByRound(matches);
   const maxRound = Math.max(...rounds.keys());
-  const current = rounds.get(maxRound).slice().sort((a, b) => (a.position || 0) - (b.position || 0));
+  // A disputa de 3º lugar fica na mesma rodada da final; ignoramos esse jogo ao
+  // calcular vencedores/avanço (ele não gera próxima rodada).
+  const current = rounds
+    .get(maxRound)
+    .filter((m) => !m.third_place)
+    .slice()
+    .sort((a, b) => (a.position || 0) - (b.position || 0));
 
   if (current.length === 1 && isMatchDecided(current[0])) {
     return { complete: true, championIds: matchWinnerIds(current[0]) };
@@ -93,6 +100,23 @@ export function knockoutNextRound(matches) {
       bye: !b || b.length === 0,
     });
   }
+
+  // Disputa de 3º lugar: quando esta rodada são as semifinais (2 jogos → 1
+  // final) e a opção está ligada, cria também o jogo entre os 2 perdedores.
+  if (options.thirdPlace && current.length === 2 && next.length === 1) {
+    const losers = current.map(matchLoserIds);
+    if (losers.every((l) => l && l.length > 0)) {
+      next.push({
+        round: maxRound + 1,
+        position: 2,
+        side_a: sideFromIds(losers[0]),
+        side_b: sideFromIds(losers[1]),
+        bye: false,
+        third_place: true,
+      });
+    }
+  }
+
   return { matches: next, nextRound: maxRound + 1 };
 }
 
@@ -406,9 +430,15 @@ export function doubleEliminationNextMatches(matches, participantCount) {
  * @param {{ participantIds?: string[], participantCount?: number, seed?: string, totalRounds?: number }} ctx
  */
 export function computeStageAdvance(stageType, matches, ctx = {}) {
-  if (stageType === 'knockout') return knockoutNextRound(matches);
+  if (stageType === 'knockout') return knockoutNextRound(matches, { thirdPlace: ctx.thirdPlace });
   if (stageType === 'swiss') {
     return swissNextRound(matches, ctx.participantIds || [], {
+      seed: ctx.seed,
+      totalRounds: ctx.totalRounds,
+    });
+  }
+  if (stageType === 'mexicano') {
+    return mexicanoNextRound(matches, ctx.participantIds || [], {
       seed: ctx.seed,
       totalRounds: ctx.totalRounds,
     });
@@ -425,5 +455,10 @@ export function computeStageAdvance(stageType, matches, ctx = {}) {
 
 /** Tipos de estrutura que suportam avanço de fase. */
 export function stageSupportsAdvance(stageType) {
-  return stageType === 'knockout' || stageType === 'swiss' || stageType === 'double_knockout';
+  return (
+    stageType === 'knockout'
+    || stageType === 'swiss'
+    || stageType === 'double_knockout'
+    || stageType === 'mexicano'
+  );
 }

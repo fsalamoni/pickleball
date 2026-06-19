@@ -68,13 +68,27 @@ admin master na página **Métricas da Plataforma** (`/admin/metricas`), no card
 (Firestore) e são puramente aditivas — desligar não afeta nada do que já existe.
 
 - **Torneios em múltiplas fases** (`multi_phase_tournaments`): permite configurar
-  uma modalidade com várias fases encadeadas (grupos, americano, mata-mata, dupla
-  eliminação, suíço), com **divisão em grupos equilibrados** por gênero e nível
-  (diferença máxima de 1 atleta por grupo), sorteio ou seleção manual,
-  **qualificação de classificados** (geral ou por gênero) e **progressão
+  uma modalidade com várias fases encadeadas (grupos, americano, **mexicano**,
+  mata-mata, dupla eliminação, suíço), com **divisão em grupos equilibrados** por
+  gênero e nível (diferença máxima de 1 atleta por grupo), sorteio ou seleção
+  manual, **qualificação de classificados** (geral ou por gênero) e **progressão
   automática entre fases** (fusão de grupos A+B → AB, formação de duplas mistas,
-  chaveamento A×B / C×D). A inscrição continua em **lista única** por modalidade.
-  Com a flag desligada, o fluxo de fase única permanece idêntico ao atual.
+  chaveamento clássico ou cruzado A×B / C×D, disputa de 3º lugar). A inscrição
+  continua em **lista única** por modalidade. Com a flag desligada, o fluxo de
+  fase única permanece idêntico ao atual.
+
+  **Modelos prontos** (catálogo organizado, escolhido no editor de fases):
+  pontos corridos (com/sem final), grupos + mata-mata (clássico e cruzado),
+  mata-mata simples (com/sem disputa de 3º lugar), dupla eliminação, suíço
+  (com/sem playoffs), cascata de grupos, **americano** e **mexicano**, e os
+  encadeamentos sociais (americano em grupos → final de duplas mistas; americano
+  em 3 fases com fusão de grupos).
+
+  **Formatos de jogo cobertos** (espectro completo): pontos corridos, fase de
+  grupos, mata-mata (eliminação simples), dupla eliminação (com repescagem),
+  sistema suíço, americano (rotação por tabela de Whist) e mexicano (rotação
+  dinâmica por classificação). O mexicano fica oculto nos seletores até a flag
+  ser ligada.
 
 > Após o primeiro uso, lembre-se de publicar as regras do Firestore
 > (`firestore.rules`) — há uma regra nova para `platform_settings` (leitura

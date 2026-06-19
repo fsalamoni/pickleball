@@ -19,12 +19,12 @@ import {
 } from 'firebase/firestore';
 import { db } from '@/core/config/firebase';
 import { createAuditLog } from '@/core/services/auditService';
-import { MATCH_STATUS, REGISTRATION_STATUS } from '../domain/constants.js';
+import { MATCH_STATUS } from '../domain/constants.js';
 import { getMatchResult } from '../domain/scoring.js';
 import { assignSchedule } from '../domain/scheduling.js';
 import { computeStageAdvance, stageSupportsAdvance } from '../domain/progression.js';
 import { recommendedSwissRounds } from '../domain/swiss.js';
-import { listRegistrations } from './registrationService.js';
+import { recommendedMexicanoRounds } from '../domain/mexicano.js';
 
 const COL = 'tournament_matches';
 
@@ -165,14 +165,22 @@ export async function advanceStage(tournamentId, modalityId, stageIndex, modalit
   if (matches.length === 0) throw new Error('Faça o sorteio antes de avançar a fase.');
 
   const ctx = {};
-  if (stageType === 'swiss') {
-    const regs = await listRegistrations(modalityId);
-    const active = regs.filter(
-      (r) => r.status === REGISTRATION_STATUS.CONFIRMED || r.status === REGISTRATION_STATUS.CHECKED_IN,
-    );
-    ctx.participantIds = active.map((r) => r.id);
-    ctx.totalRounds = recommendedSwissRounds(ctx.participantIds.length);
-    ctx.seed = `${modalityId}_${stageIndex}_swiss`;
+  // Disputa de 3º lugar (opcional) em fases de mata-mata.
+  if (stageType === 'knockout' && stage?.third_place) ctx.thirdPlace = true;
+  if (stageType === 'swiss' || stageType === 'mexicano') {
+    // Participantes ativos = ids presentes nos jogos da fase (cobre inscrições
+    // diretas e entrants formados em fases posteriores).
+    const ids = new Set();
+    matches.forEach((m) => {
+      (m.side_a_ids || []).forEach((id) => ids.add(id));
+      (m.side_b_ids || []).forEach((id) => ids.add(id));
+    });
+    ctx.participantIds = [...ids];
+    ctx.totalRounds =
+      stageType === 'mexicano'
+        ? recommendedMexicanoRounds(ctx.participantIds.length)
+        : recommendedSwissRounds(ctx.participantIds.length);
+    ctx.seed = `${modalityId}_${stageIndex}_${stageType}`;
   } else if (stageType === 'double_knockout') {
     // Tamanho da chave derivado dos jogos da 1ª rodada (consistente com o sorteio).
     const wbR1 = matches.filter((m) => (m.bracket || 'wb') === 'wb' && (m.round || 1) === 1);
@@ -198,6 +206,7 @@ export async function advanceStage(tournamentId, modalityId, stageIndex, modalit
     bracket: m.bracket || null,
     round: m.round || 1,
     position: m.position || idx + 1,
+    third_place: Boolean(m.third_place),
     side_a: serializeSide(m.side_a),
     side_b: serializeSide(m.side_b),
     side_a_ids: normalizeIds(m.side_a),

@@ -21,6 +21,7 @@ import {
   PHASE_FEED_MODE,
   PHASE_PAIRING_MODE,
   PHASE_DIVISION_MODE,
+  PHASE_BRACKET_SEEDING,
 } from './constants.js';
 import { supportsGroups, BRACKET_FORMATS } from './phases.js';
 
@@ -180,23 +181,33 @@ export function buildNextPhaseEntrants(sourceGroups, prevPhase, nextPhase, optio
   const advancersByGroup = sourceGroups.map((g) => {
     const quals = selectQualifiers(g.ranked, prevPhase);
     const letter = (g.name || '').replace(/^Grupo\s+/i, '') || groupLetter(g.index || 0);
-    return {
-      index: g.index || 0,
-      letter,
-      entrants: applyPairing(quals, prevPhase.pairing_mode, letter),
-    };
+    const entrants = applyPairing(quals, prevPhase.pairing_mode, letter).map((e, j) => ({
+      ...e,
+      _groupIndex: g.index || 0,
+      _seedRank: j + 1, // 1º, 2º… classificado do grupo
+    }));
+    return { index: g.index || 0, letter, entrants };
   });
 
   const allAdvancers = advancersByGroup.flatMap((g) => g.entrants);
   const nextIsBracket = BRACKET_FORMATS.has(nextPhase.type);
   const nextIsGrouped = supportsGroups(nextPhase.type);
 
+  // Ordem da chave: "adjacente" (A×B, C×D) usa a ordem dos grupos; "clássica"
+  // espalha por colocação (todos os 1ºs, depois os 2ºs…) para cabeças-de-chave.
+  const bracketOrder =
+    nextIsBracket && nextPhase.bracket_seeding === PHASE_BRACKET_SEEDING.STANDARD
+      ? allAdvancers
+          .slice()
+          .sort((a, b) => (a._seedRank - b._seedRank) || (a._groupIndex - b._groupIndex))
+      : allAdvancers;
+
   // 2) Monta os grupos da próxima fase conforme o modo de alimentação.
   let groups;
   if (nextIsBracket || nextPhase.feed_mode === PHASE_FEED_MODE.INHERIT_GROUPS) {
-    // Em chaves, a ordem dos grupos vira a ordem da chave: A×B, C×D, …
+    // Em chaves, a ordem dos entrants define os confrontos (ver bracketOrder).
     if (nextIsBracket) {
-      groups = [{ name: 'Chave', index: 0, entrants: allAdvancers }];
+      groups = [{ name: 'Chave', index: 0, entrants: bracketOrder }];
     } else {
       // Cada grupo de origem segue como um grupo próprio na próxima fase.
       groups = advancersByGroup.map((g, i) => ({
@@ -233,5 +244,10 @@ export function buildNextPhaseEntrants(sourceGroups, prevPhase, nextPhase, optio
     }
   }
 
-  return { entrants: allAdvancers, groups, bracketOrder: allAdvancers };
+  return {
+    entrants: allAdvancers,
+    groups,
+    bracketOrder,
+    bracketSeeding: nextPhase.bracket_seeding,
+  };
 }

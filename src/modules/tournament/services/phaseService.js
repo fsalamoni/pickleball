@@ -34,9 +34,10 @@ import {
   MODALITY_FORMAT,
   GENDER_CATEGORY,
   COMPETITION_GENDER,
+  PHASE_BRACKET_SEEDING,
 } from '../domain/constants.js';
 import { combinedStrength } from '../domain/seeding.js';
-import { normalizePhases } from '../domain/phases.js';
+import { normalizePhases, BRACKET_FORMATS } from '../domain/phases.js';
 import { drawGroups } from '../domain/grouping.js';
 import { buildPhaseDraw } from '../domain/phaseDraw.js';
 import { rankEntrantsInGroup, buildNextPhaseEntrants } from '../domain/phaseProgression.js';
@@ -230,6 +231,7 @@ export async function runPhaseDraw(params, actor) {
     seed,
     playerMetaByMember,
     ordered: Boolean(params.ordered),
+    seedCount: params.seedCount,
   });
 
   const tournament = await getTournament(tournamentId);
@@ -336,7 +338,7 @@ export async function advanceToNextPhase(params, actor) {
   });
 
   const seed = providedSeed || `${tournamentId}_${modalityId}_${stageIndex + 1}_${Date.now()}`;
-  const { groups: nextGroups, entrants: nextEntrants } = buildNextPhaseEntrants(
+  const { groups: nextGroups, entrants: nextEntrants, bracketSeeding } = buildNextPhaseEntrants(
     groupsRanked,
     prevPhase,
     nextPhase,
@@ -347,7 +349,12 @@ export async function advanceToNextPhase(params, actor) {
     throw new Error('Classificados insuficientes para formar a próxima fase. Revise a classificação.');
   }
 
-  // Gera e persiste a próxima fase (chaves respeitam a ordem dos grupos).
+  // Em chaves: "cruzado" (adjacente, A×B/C×D) ou "clássico" (cabeças-de-chave
+  // espalhadas, com a ordem já preparada por colocação em buildNextPhaseEntrants).
+  const nextIsBracket = BRACKET_FORMATS.has(nextPhase.type);
+  const adjacent = nextIsBracket && bracketSeeding === PHASE_BRACKET_SEEDING.ADJACENT;
+  const standardSeedCount = nextIsBracket && !adjacent ? nextEntrants.length : undefined;
+
   const result = await runPhaseDraw(
     {
       tournamentId,
@@ -356,7 +363,8 @@ export async function advanceToNextPhase(params, actor) {
       seed,
       entrants: nextEntrants,
       manualGroups: nextGroups,
-      ordered: true,
+      ordered: adjacent,
+      seedCount: standardSeedCount,
     },
     actor,
   );

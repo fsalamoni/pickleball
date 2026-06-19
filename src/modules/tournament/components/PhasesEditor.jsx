@@ -3,10 +3,11 @@ import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { Badge } from '@/components/ui/badge';
-import { Plus, Trash2, ArrowDown } from 'lucide-react';
+import { Plus, Trash2, ArrowDown, Sparkles } from 'lucide-react';
 import {
+  TOURNAMENT_STAGE_TYPE,
   TOURNAMENT_STAGE_TYPE_LABELS,
-  STAGE_TYPES_BY_FORMAT,
+  availableStageTypes,
   PHASE_DIVISION_MODE,
   PHASE_DIVISION_MODE_LABELS,
   PHASE_QUALIFIER_MODE,
@@ -14,9 +15,11 @@ import {
   PHASE_FEED_MODE,
   PHASE_FEED_MODE_LABELS,
   PHASE_PAIRING_MODE_LABELS,
+  PHASE_BRACKET_SEEDING_LABELS,
   MAX_PHASES_PER_MODALITY,
 } from '@/modules/tournament/domain/constants';
-import { normalizePhase, supportsGroups } from '@/modules/tournament/domain/phases';
+import { normalizePhase, normalizePhases, supportsGroups, BRACKET_FORMATS } from '@/modules/tournament/domain/phases';
+import { presetsForFormat, buildPreset } from '@/modules/tournament/domain/tournamentPresets';
 
 function MiniSelect({ label, value, options, onChange, disabled }) {
   return (
@@ -43,8 +46,15 @@ function MiniSelect({ label, value, options, onChange, disabled }) {
  */
 export default function PhasesEditor({ phases, format, onChange }) {
   const stageOptions = Object.fromEntries(
-    (STAGE_TYPES_BY_FORMAT[format] || []).map((k) => [k, TOURNAMENT_STAGE_TYPE_LABELS[k]]),
+    availableStageTypes(format, true).map((k) => [k, TOURNAMENT_STAGE_TYPE_LABELS[k]]),
   );
+  const presets = presetsForFormat(format);
+
+  function applyPreset(presetId) {
+    if (!presetId) return;
+    const built = buildPreset(presetId, format);
+    if (built) onChange(normalizePhases(built));
+  }
 
   function update(index, patch) {
     const next = phases.map((p, i) => (i === index ? normalizePhase({ ...p, ...patch }, { isFirst: index === 0 }) : p));
@@ -53,7 +63,7 @@ export default function PhasesEditor({ phases, format, onChange }) {
 
   function addPhase() {
     if (phases.length >= MAX_PHASES_PER_MODALITY) return;
-    const allowed = STAGE_TYPES_BY_FORMAT[format] || [];
+    const allowed = availableStageTypes(format, true);
     const next = [
       ...phases,
       normalizePhase(
@@ -71,7 +81,7 @@ export default function PhasesEditor({ phases, format, onChange }) {
 
   return (
     <div className="space-y-2">
-      <div className="flex items-center justify-between">
+      <div className="flex items-center justify-between gap-2 flex-wrap">
         <div>
           <Label className="text-sm font-semibold">Fases do torneio</Label>
           <p className="text-xs text-slate-500">
@@ -84,11 +94,32 @@ export default function PhasesEditor({ phases, format, onChange }) {
         </Button>
       </div>
 
+      <div className="rounded-md border border-emerald-200 bg-emerald-50/50 p-2">
+        <Label className="text-xs flex items-center gap-1 text-emerald-800">
+          <Sparkles className="w-3.5 h-3.5" /> Começar a partir de um modelo
+        </Label>
+        <select
+          className="w-full h-9 rounded-md border border-input bg-background px-2 text-sm mt-1"
+          value=""
+          onChange={(e) => applyPreset(e.target.value)}
+        >
+          <option value="">— escolha um modelo pronto (opcional) —</option>
+          {presets.map((p) => (
+            <option key={p.id} value={p.id}>{p.label}</option>
+          ))}
+        </select>
+        <p className="text-[11px] text-slate-500 mt-1">
+          Preenche as fases automaticamente; você pode ajustar tudo depois.
+        </p>
+      </div>
+
       {phases.map((rawPhase, index) => {
         const phase = normalizePhase(rawPhase, { isFirst: index === 0 });
         const isFirst = index === 0;
         const isLast = index === phases.length - 1;
         const grouped = supportsGroups(phase.type);
+        const isBracket = BRACKET_FORMATS.has(phase.type);
+        const isKnockout = phase.type === TOURNAMENT_STAGE_TYPE.KNOCKOUT;
         return (
           <div key={index} className="rounded-md border border-slate-200 p-3 space-y-3 bg-slate-50/50">
             <div className="flex items-center justify-between">
@@ -148,7 +179,7 @@ export default function PhasesEditor({ phases, format, onChange }) {
                 </div>
               )}
 
-              {!grouped && (
+              {!grouped && isFirst && (
                 <div>
                   <Label className="text-xs">Cabeças-de-chave</Label>
                   <Input
@@ -159,6 +190,26 @@ export default function PhasesEditor({ phases, format, onChange }) {
                     className="h-9"
                   />
                 </div>
+              )}
+
+              {isBracket && !isFirst && (
+                <MiniSelect
+                  label="Chaveamento (a partir dos classificados)"
+                  value={phase.bracket_seeding}
+                  options={PHASE_BRACKET_SEEDING_LABELS}
+                  onChange={(v) => update(index, { bracket_seeding: v })}
+                />
+              )}
+
+              {isKnockout && (
+                <label className="flex items-center gap-2 text-xs text-slate-700 md:col-span-2">
+                  <input
+                    type="checkbox"
+                    checked={Boolean(phase.third_place)}
+                    onChange={(e) => update(index, { third_place: e.target.checked })}
+                  />
+                  Disputa de 3º lugar (medalha de bronze entre os perdedores das semifinais)
+                </label>
               )}
             </div>
 

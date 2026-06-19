@@ -144,14 +144,14 @@ export function buildPhaseDraw(phase, groups, options = {}) {
   // Formatos de chave/suíço: um único pote.
   const pool = (groups[0] && groups[0].entrants) || [];
 
-  // Progressão entre fases em chave: respeita a ordem (A×B, C×D, …).
+  // Progressão entre fases em chave "cruzada": respeita a ordem (A×B, C×D, …).
   if (options.ordered && BRACKET_FORMATS.has(phase.type)) {
     return { stageType: phase.type, matches: buildOrderedBracketRound1(pool, phase.type) };
   }
 
   const d = buildPoolDraw(pool, phase.type, {
     seed,
-    seedCount: phase.seed_count || 0,
+    seedCount: options.seedCount != null ? options.seedCount : phase.seed_count || 0,
     playerMetaByMember,
   });
   return { stageType: phase.type, matches: d.matches };

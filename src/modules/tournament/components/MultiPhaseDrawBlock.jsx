@@ -26,6 +26,7 @@ function formatMatchTime(iso) {
 }
 
 function roundLabel(m) {
+  if (m.third_place) return 'Disputa de 3º lugar';
   if (m.bracket === 'gf') return m.round === 2 ? 'Final (reset)' : 'Grande final';
   if (m.bracket === 'wb') return `Vencedores R${m.round}`;
   if (m.bracket === 'lb') return `Repescagem R${m.round}`;

@@ -23,6 +23,7 @@ import {
 } from './constants.js';
 import { nextPowerOfTwo, americanoMatchCount } from './draw.js';
 import { recommendedSwissRounds } from './swiss.js';
+import { recommendedMexicanoRounds } from './mexicano.js';
 
 /* ----------------------------- Utilitários ------------------------------ */
 
@@ -48,6 +49,7 @@ export const STAGE_MIN_PLAYERS = Object.freeze({
   [TOURNAMENT_STAGE_TYPE.DOUBLE_KNOCKOUT]: 2,
   [TOURNAMENT_STAGE_TYPE.SWISS]: 2,
   [TOURNAMENT_STAGE_TYPE.AMERICANO]: 4,
+  [TOURNAMENT_STAGE_TYPE.MEXICANO]: 4,
 });
 
 /** Descrição curta (independente de N) de cada formato de inscrição. */
@@ -72,6 +74,8 @@ export const STAGE_DESCRIPTION = Object.freeze({
     'Sistema suíço: a cada rodada, participantes com pontuação semelhante são pareados, sem eliminação direta e sem repetir confrontos.',
   [TOURNAMENT_STAGE_TYPE.AMERICANO]:
     'Americana (rotação): só para inscrição individual (Simples). Os jogos são em duplas (2×2) montadas por rotação, de modo que cada jogador forma dupla com todos os demais e nenhuma dupla se repete. Exige um número de inscritos que permita exatidão (N ≡ 0 ou 1 mod 4): 4, 5, 8, 9, 12, 13, 16, 17… O total de jogos é N·(N−1)/4.',
+  [TOURNAMENT_STAGE_TYPE.MEXICANO]:
+    'Mexicano (rotação dinâmica): só para inscrição individual (Simples). Como na Americana joga-se 2×2 em quadras de 4, mas os pares de cada rodada são definidos pela classificação: a cada rodada todos são reordenados por pontos e reagrupados (1º+4º × 2º+3º). Quem vence sobe de quadra e enfrenta os melhores — os jogos ficam sempre equilibrados.',
 });
 
 /**
@@ -275,6 +279,20 @@ function explainAmericano(n) {
   };
 }
 
+function explainMexicano(n) {
+  const sitting = n % 4;
+  const perRound = Math.floor(n / 4);
+  const rounds = recommendedMexicanoRounds(n);
+  const lines = [
+    `${n} jogadores → quadras de 4 (${perRound} quadra(s) por rodada)${
+      sitting > 0 ? `, com ${sitting} folga(s) por rodada circulando de forma justa` : ''
+    }.`,
+    `${rounds} rodadas recomendadas (o organizador pode ajustar).`,
+    'A cada rodada, todos são reordenados pela pontuação e reagrupados de 4 em 4 (1º+4º × 2º+3º): quem vai bem sobe de quadra, quem vai mal desce — os jogos ficam sempre equilibrados.',
+  ];
+  return { status: 'ok', totalMatches: perRound * rounds, rounds, lines };
+}
+
 const STAGE_EXPLAINERS = {
   [TOURNAMENT_STAGE_TYPE.ROUND_ROBIN]: (n) => explainRoundRobin(n),
   [TOURNAMENT_STAGE_TYPE.GROUPS]: (n, opts) => explainGroups(n, opts.groupCount),
@@ -282,6 +300,7 @@ const STAGE_EXPLAINERS = {
   [TOURNAMENT_STAGE_TYPE.DOUBLE_KNOCKOUT]: (n) => explainDoubleKnockout(n),
   [TOURNAMENT_STAGE_TYPE.SWISS]: (n) => explainSwiss(n),
   [TOURNAMENT_STAGE_TYPE.AMERICANO]: (n) => explainAmericano(n),
+  [TOURNAMENT_STAGE_TYPE.MEXICANO]: (n) => explainMexicano(n),
 };
 
 /* ----------------------------- API pública ------------------------------ */

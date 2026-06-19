@@ -32,6 +32,7 @@ import {
   TOURNAMENT_STAGE_TYPE,
   TOURNAMENT_STAGE_TYPE_LABELS,
   STAGE_TYPES_BY_FORMAT,
+  availableStageTypes,
   MAX_REGISTRATIONS_PER_MODALITY,
 } from '@/modules/tournament/domain/constants';
 import { DEFAULT_MAX_ENTRIES, hasUnlimitedEntries } from '@/modules/tournament/domain/capacity';
@@ -134,7 +135,7 @@ export default function TournamentModalitiesTab({ tournament, isAdmin }) {
   // (mesma forma das entradas de STAGE_TYPES_BY_FORMAT) para casos de dados
   // legados com formato desconhecido.
   const stageOptions = Object.fromEntries(
-    (STAGE_TYPES_BY_FORMAT[form.format] || Object.values(TOURNAMENT_STAGE_TYPE)).map(
+    availableStageTypes(form.format, multiPhaseEnabled).map(
       (key) => [key, TOURNAMENT_STAGE_TYPE_LABELS[key]],
     ),
   );
