@@ -34,9 +34,11 @@ function formatConfirmedCount(count) {
 export default function ModalityInfoModal({ modality, tournament, registrationsCount, open, onClose }) {
   if (!modality) return null;
   const scoring = normalizeScoringConfig(modality.scoring_override || tournament?.scoring);
-  const stageType = modality.stages?.[0]?.type;
-  const groupCount = modality.stages?.[0]?.group_count || 1;
-  const seedCount = modality.stages?.[0]?.seed_count || 0;
+  const stages = Array.isArray(modality.stages) && modality.stages.length > 0 ? modality.stages : [];
+  const isMultiPhase = stages.length > 1;
+  const stageType = stages[0]?.type;
+  const groupCount = stages[0]?.group_count || 1;
+  const seedCount = stages[0]?.seed_count || 0;
   const fee = Number(modality.entry_fee_cents || 0);
 
   return (
@@ -54,8 +56,10 @@ export default function ModalityInfoModal({ modality, tournament, registrationsC
               <Badge variant="secondary">{SKILL_LEVEL_LABELS[modality.skill_level]}</Badge>
               <Badge variant="secondary">{GENDER_CATEGORY_LABELS[modality.gender_category]}</Badge>
               <Badge variant="secondary">{AGE_CATEGORY_LABELS[modality.age_category]}</Badge>
-              {stageType && (
-                <Badge variant="secondary">{TOURNAMENT_STAGE_TYPE_LABELS[stageType]}</Badge>
+              {isMultiPhase ? (
+                <Badge variant="secondary">{stages.length} fases</Badge>
+              ) : (
+                stageType && <Badge variant="secondary">{TOURNAMENT_STAGE_TYPE_LABELS[stageType]}</Badge>
               )}
             </div>
           </section>
@@ -79,19 +83,48 @@ export default function ModalityInfoModal({ modality, tournament, registrationsC
             </ul>
           </section>
 
-          {stageType && (
+          {isMultiPhase ? (
             <section className="space-y-2">
               <h4 className="font-semibold text-slate-900 flex items-center gap-2">
-                <Layers className="w-4 h-4 text-emerald-600" /> Como funciona a competição
+                <Layers className="w-4 h-4 text-emerald-600" /> Como funciona a competição ({stages.length} fases)
               </h4>
-              <p>{describeStage(stageType)}</p>
-              <StageExplanation
-                stageType={stageType}
-                playerCount={registrationsCount}
-                groupCount={groupCount}
-                seedCount={seedCount}
-              />
+              <p className="text-xs text-slate-500">
+                A inscrição é única; a cada fase os classificados avançam para a fase seguinte.
+              </p>
+              <ol className="space-y-2">
+                {stages.map((s, i) => (
+                  <li key={i} className="rounded-md border border-slate-200 p-2">
+                    <div className="font-medium text-slate-800">
+                      Fase {i + 1}: {TOURNAMENT_STAGE_TYPE_LABELS[s.type] || s.type}
+                    </div>
+                    <p className="text-xs text-slate-600 mt-0.5">{describeStage(s.type)}</p>
+                  </li>
+                ))}
+              </ol>
+              <a
+                href={`${import.meta.env.BASE_URL}torneios/guia`}
+                target="_blank"
+                rel="noreferrer"
+                className="text-xs text-emerald-700 inline-flex items-center gap-1 hover:underline"
+              >
+                <BookOpen className="w-3.5 h-3.5" /> Guia completo de formatos e modelos
+              </a>
             </section>
+          ) : (
+            stageType && (
+              <section className="space-y-2">
+                <h4 className="font-semibold text-slate-900 flex items-center gap-2">
+                  <Layers className="w-4 h-4 text-emerald-600" /> Como funciona a competição
+                </h4>
+                <p>{describeStage(stageType)}</p>
+                <StageExplanation
+                  stageType={stageType}
+                  playerCount={registrationsCount}
+                  groupCount={groupCount}
+                  seedCount={seedCount}
+                />
+              </section>
+            )
           )}
 
           {(modality.court_count || modality.play_start_time || modality.play_date) && (

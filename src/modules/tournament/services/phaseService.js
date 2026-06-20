@@ -49,7 +49,7 @@ import { stageFormatCompatibility } from '../domain/formatExplain.js';
 import { listRegistrations } from './registrationService.js';
 import { getModality } from './modalityService.js';
 import { getTournament } from './tournamentService.js';
-import { persistMatches, listMatches } from './matchService.js';
+import { persistMatches, listMatches, listAllMatchesForModality } from './matchService.js';
 
 const GROUPS_COL = 'tournament_groups';
 
@@ -278,6 +278,17 @@ export async function runPhaseDraw(params, actor) {
   });
 
   const tournament = await getTournament(tournamentId);
+
+  // Agenda esta fase APÓS as fases anteriores (não sobrepõe os horários/quadras
+  // já usados pelas fases precedentes da mesma modalidade).
+  let slotOffset = 0;
+  if (stageIndex > 0) {
+    const earlier = (await listAllMatchesForModality(modalityId)).filter(
+      (m) => (m.stage_index ?? 0) < stageIndex && typeof m.slot === 'number',
+    );
+    if (earlier.length > 0) slotOffset = Math.max(...earlier.map((m) => m.slot)) + 1;
+  }
+
   // Persiste os jogos (sem deixar persistMatches mexer nos grupos — gravamos a
   // estrutura rica de grupos nós mesmos logo abaixo).
   const { scheduleWarnings } = await persistMatches(
@@ -286,7 +297,7 @@ export async function runPhaseDraw(params, actor) {
     stageIndex,
     { ...draw, groups: undefined },
     actor,
-    { schedulingConfig: modality, fallbackDate: tournament?.starts_at || null },
+    { schedulingConfig: modality, fallbackDate: tournament?.starts_at || null, slotOffset },
   );
 
   // Persiste os grupos só quando há subdivisão real (mais de 1 grupo).

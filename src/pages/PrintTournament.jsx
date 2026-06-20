@@ -4,7 +4,7 @@ import { useQuery } from '@tanstack/react-query';
 import { Printer, Trophy } from 'lucide-react';
 import { getTournament } from '@/modules/tournament/services/tournamentService';
 import { listModalities } from '@/modules/tournament/services/modalityService';
-import { listMatches } from '@/modules/tournament/services/matchService';
+import { listAllMatchesForModality } from '@/modules/tournament/services/matchService';
 import { listRegistrations } from '@/modules/tournament/services/registrationService';
 import { computeModalityRanking } from '@/modules/tournament/services/rankingService';
 import { MODALITY_FORMAT_LABELS } from '@/modules/tournament/domain/constants';
@@ -76,6 +76,7 @@ function formatPrintTime(iso) {
 }
 
 function roundLabel(m) {
+  if (m.third_place) return '3º lugar';
   if (m.bracket === 'gf') return m.round === 2 ? 'Final (reset)' : 'Grande final';
   if (m.bracket === 'wb') return `Venc. R${m.round}`;
   if (m.bracket === 'lb') return `Repesc. R${m.round}`;
@@ -84,9 +85,10 @@ function roundLabel(m) {
 
 function PrintModality({ modality }) {
   const { data: matches = [] } = useQuery({
-    queryKey: ['print', 'matches', modality.id, 0],
-    queryFn: () => listMatches(modality.id, 0),
+    queryKey: ['print', 'matches', modality.id, 'all'],
+    queryFn: () => listAllMatchesForModality(modality.id),
   });
+  const multiPhase = matches.some((m) => (m.stage_index ?? 0) > 0);
   const { data: ranking = [] } = useQuery({
     queryKey: ['print', 'ranking', modality.id],
     queryFn: () => computeModalityRanking(modality.id),
@@ -167,6 +169,7 @@ function PrintModality({ modality }) {
           <table className="w-full text-xs border-collapse">
             <thead>
               <tr className="border-b">
+                {multiPhase && <th className="py-1 text-left">Fase</th>}
                 <th className="py-1 text-left">Rod.</th>
                 {hasGroups && <th className="py-1 text-left">Grupo</th>}
                 {hasSchedule && <th className="py-1 text-left">Quadra</th>}
@@ -179,6 +182,7 @@ function PrintModality({ modality }) {
             <tbody>
               {matches.map((m) => (
                 <tr key={m.id} className="border-b">
+                  {multiPhase && <td className="py-1">{(m.stage_index ?? 0) + 1}</td>}
                   <td className="py-1">{roundLabel(m)}</td>
                   {hasGroups && <td className="py-1">{m.group || '—'}</td>}
                   {hasSchedule && <td className="py-1">{m.court || '—'}</td>}

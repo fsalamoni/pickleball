@@ -247,7 +247,11 @@ function ModalityCard({
   onRegister,
 }) {
   const fee = Number(modality.entry_fee_cents || 0);
+  const stageCount = modality.stages?.length || 0;
   const stageType = modality.stages?.[0]?.type;
+  const stageBadgeLabel = stageCount > 1
+    ? `${stageCount} fases`
+    : (stageType ? TOURNAMENT_STAGE_TYPE_LABELS[stageType] : null);
   const hasPrivateAccess =
     typeof window !== 'undefined' && Boolean(sessionStorage.getItem(`tournament_access_${tournament.id}`));
   const isPublic = (tournament.visibility || TOURNAMENT_VISIBILITY.PRIVATE) === TOURNAMENT_VISIBILITY.PUBLIC;
@@ -290,7 +294,7 @@ function ModalityCard({
               <Badge variant="secondary">{SKILL_LEVEL_LABELS[modality.skill_level]}</Badge>
               <Badge variant="secondary">{GENDER_CATEGORY_LABELS[modality.gender_category]}</Badge>
               <Badge variant="secondary">{AGE_CATEGORY_LABELS[modality.age_category]}</Badge>
-              {stageType && <Badge variant="secondary">{TOURNAMENT_STAGE_TYPE_LABELS[stageType]}</Badge>}
+              {stageBadgeLabel && <Badge variant="secondary">{stageBadgeLabel}</Badge>}
             </div>
           </div>
 

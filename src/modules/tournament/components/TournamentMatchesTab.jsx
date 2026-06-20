@@ -13,16 +13,21 @@ import {
   DialogFooter,
 } from '@/components/ui/dialog';
 import { toast } from 'sonner';
-import { Trophy, Play } from 'lucide-react';
+import { Trophy, Play, Layers } from 'lucide-react';
 import {
   useModalities,
-  useMatches,
+  useAllModalityMatches,
   useRecordMatchResult,
   useRegistrations,
   useMarkMatchInProgress,
 } from '@/modules/tournament/hooks/useTournament';
-import { MATCH_STATUS, MATCH_STATUS_LABELS } from '@/modules/tournament/domain/constants';
+import {
+  MATCH_STATUS,
+  MATCH_STATUS_LABELS,
+  TOURNAMENT_STAGE_TYPE_LABELS,
+} from '@/modules/tournament/domain/constants';
 import { normalizeScoringConfig } from '@/modules/tournament/domain/scoring';
+import { normalizePhases } from '@/modules/tournament/domain/phases';
 
 export default function TournamentMatchesTab({ tournament, isAdmin }) {
   const { data: modalities = [] } = useModalities(tournament.id);
@@ -52,6 +57,7 @@ function formatMatchTime(iso) {
 }
 
 function roundLabel(m) {
+  if (m.third_place) return '3º lugar';
   if (m.bracket === 'gf') return m.round === 2 ? 'Final (reset)' : 'Grande final';
   if (m.bracket === 'wb') return `Venc. R${m.round}`;
   if (m.bracket === 'lb') return `Repesc. R${m.round}`;
@@ -89,9 +95,8 @@ function MatchSideCell({ people = [], fallback, win }) {
 }
 
 function ModalityMatchesBlock({ tournament, modality, isAdmin }) {
-  const { data: matches = [] } = useMatches(modality.id, 0);
+  const { data: matches = [] } = useAllModalityMatches(modality.id);
   const { data: registrations = [] } = useRegistrations(modality.id);
-  const markInProgressMutation = useMarkMatchInProgress(modality.id);
   const labelById = useMemo(() => {
     const map = new Map();
     registrations.forEach((r) => map.set(r.id, r.label || r.player_a_name));
@@ -110,17 +115,18 @@ function ModalityMatchesBlock({ tournament, modality, isAdmin }) {
   const [openMatchId, setOpenMatchId] = useState(null);
   const openMatch = matches.find((m) => m.id === openMatchId);
 
-  async function handleMarkInProgress(matchId) {
-    try {
-      await markInProgressMutation.mutateAsync(matchId);
-      toast.success('Partida marcada como em andamento.');
-    } catch (err) {
-      toast.error(err.message || 'Falha ao atualizar status.');
-    }
-  }
-
-  const hasGroups = matches.some((m) => m.group);
-  const hasSchedule = matches.some((m) => m.court || m.scheduled_at);
+  const phases = useMemo(() => normalizePhases(modality.stages), [modality.stages]);
+  // Agrupa os jogos por fase (stage_index), na ordem das fases.
+  const byStage = useMemo(() => {
+    const map = new Map();
+    matches.forEach((m) => {
+      const s = m.stage_index ?? 0;
+      if (!map.has(s)) map.set(s, []);
+      map.get(s).push(m);
+    });
+    return [...map.entries()].sort((a, b) => a[0] - b[0]);
+  }, [matches]);
+  const showPhaseHeaders = phases.length > 1;
 
   return (
     <Card>
@@ -134,6 +140,59 @@ function ModalityMatchesBlock({ tournament, modality, isAdmin }) {
         {matches.length === 0 ? (
           <p className="text-sm text-slate-500">Nenhum jogo gerado ainda.</p>
         ) : (
+          <div className="space-y-4">
+            {byStage.map(([stageIndex, stageMatches]) => (
+              <PhaseMatches
+                key={stageIndex}
+                header={showPhaseHeaders
+                  ? `Fase ${stageIndex + 1} · ${TOURNAMENT_STAGE_TYPE_LABELS[phases[stageIndex]?.type] || ''}`
+                  : null}
+                matches={stageMatches}
+                modalityId={modality.id}
+                labelById={labelById}
+                peopleById={peopleById}
+                isAdmin={isAdmin}
+                onOpenScore={setOpenMatchId}
+              />
+            ))}
+          </div>
+        )}
+      </CardContent>
+      {openMatch && (
+        <ScoreEntryDialog
+          match={openMatch}
+          modalityId={modality.id}
+          scoringConfig={cfg}
+          labelById={labelById}
+          onClose={() => setOpenMatchId(null)}
+        />
+      )}
+    </Card>
+  );
+}
+
+function PhaseMatches({ header, matches, modalityId, labelById, peopleById, isAdmin, onOpenScore }) {
+  const markInProgressMutation = useMarkMatchInProgress(modalityId);
+
+  async function handleMarkInProgress(matchId) {
+    try {
+      await markInProgressMutation.mutateAsync(matchId);
+      toast.success('Partida marcada como em andamento.');
+    } catch (err) {
+      toast.error(err.message || 'Falha ao atualizar status.');
+    }
+  }
+
+  const hasGroups = matches.some((m) => m.group);
+  const hasSchedule = matches.some((m) => m.court || m.scheduled_at);
+
+  return (
+    <div>
+      {header && (
+        <div className="flex items-center gap-2 mb-2">
+          <Badge className="gap-1"><Layers className="w-3 h-3" /> {header}</Badge>
+        </div>
+      )}
           <div className="hidden sm:block arena-table-wrap">
             <table className="w-full text-sm">
               <thead className="bg-slate-50">
@@ -205,7 +264,7 @@ function ModalityMatchesBlock({ tournament, modality, isAdmin }) {
                             <Button
                               size="sm"
                               variant="outline"
-                              onClick={() => setOpenMatchId(m.id)}
+                              onClick={() => onOpenScore(m.id)}
                             >
                               {finished ? 'Editar' : 'Lançar'}
                             </Button>
@@ -218,7 +277,6 @@ function ModalityMatchesBlock({ tournament, modality, isAdmin }) {
               </tbody>
             </table>
           </div>
-        )}
         {matches.length > 0 && (
           <div className="mt-1 space-y-2.5 sm:hidden">
             {matches.map((m) => {
@@ -285,7 +343,7 @@ function ModalityMatchesBlock({ tournament, modality, isAdmin }) {
                           <Play className="mr-1 h-3.5 w-3.5" /> Iniciar
                         </Button>
                       )}
-                      <Button size="sm" variant="outline" className="flex-1" onClick={() => setOpenMatchId(m.id)}>
+                      <Button size="sm" variant="outline" className="flex-1" onClick={() => onOpenScore(m.id)}>
                         {finished ? 'Editar placar' : 'Lançar placar'}
                       </Button>
                     </div>
@@ -295,17 +353,7 @@ function ModalityMatchesBlock({ tournament, modality, isAdmin }) {
             })}
           </div>
         )}
-      </CardContent>
-      {openMatch && (
-        <ScoreEntryDialog
-          match={openMatch}
-          modalityId={modality.id}
-          scoringConfig={cfg}
-          labelById={labelById}
-          onClose={() => setOpenMatchId(null)}
-        />
-      )}
-    </Card>
+    </div>
   );
 }
 

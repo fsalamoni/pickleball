@@ -9,7 +9,7 @@ import { AvatarGroup } from '@/components/ui/user-avatar';
 import { Trophy, MapPin, Calendar, Hash, Eye, Printer, Share2, Copy, Check } from 'lucide-react';
 import { getTournament } from '@/modules/tournament/services/tournamentService';
 import { listModalities } from '@/modules/tournament/services/modalityService';
-import { listMatches } from '@/modules/tournament/services/matchService';
+import { listAllMatchesForModality } from '@/modules/tournament/services/matchService';
 import { listRegistrations } from '@/modules/tournament/services/registrationService';
 import { computeModalityRanking } from '@/modules/tournament/services/rankingService';
 import {
@@ -27,6 +27,7 @@ function formatPublicMatchTime(iso) {
 }
 
 function roundLabel(m) {
+  if (m.third_place) return '3º lugar';
   if (m.bracket === 'gf') return m.round === 2 ? 'Final (reset)' : 'Grande final';
   if (m.bracket === 'wb') return `Venc. R${m.round}`;
   if (m.bracket === 'lb') return `Repesc. R${m.round}`;
@@ -169,10 +170,11 @@ export default function PublicTournament() {
 
 function PublicModalityBlock({ modality }) {
   const { data: matches = [] } = useQuery({
-    queryKey: ['public', 'matches', modality.id, 0],
-    queryFn: () => listMatches(modality.id, 0),
+    queryKey: ['public', 'matches', modality.id, 'all'],
+    queryFn: () => listAllMatchesForModality(modality.id),
     refetchInterval: 20_000,
   });
+  const multiPhase = matches.some((m) => (m.stage_index ?? 0) > 0);
   const { data: ranking = [] } = useQuery({
     queryKey: ['public', 'ranking', modality.id],
     queryFn: () => computeModalityRanking(modality.id),
@@ -299,6 +301,7 @@ function PublicModalityBlock({ modality }) {
               <table className="w-full text-sm">
                 <thead className="bg-slate-50">
                   <tr className="text-left">
+                    {multiPhase && <th className="px-3 py-2">Fase</th>}
                     <th className="px-3 py-2">Rod.</th>
                     {matches.some((m) => m.group) && <th className="px-3 py-2">Grupo</th>}
                     {matches.some((m) => m.court || m.scheduled_at) && (
@@ -316,6 +319,7 @@ function PublicModalityBlock({ modality }) {
                 <tbody>
                   {matches.map((m) => (
                     <tr key={m.id} className="border-t">
+                      {multiPhase && <td className="px-3 py-2 tabular-nums">{(m.stage_index ?? 0) + 1}</td>}
                       <td className="px-3 py-2">{roundLabel(m)}</td>
                       {matches.some((mm) => mm.group) && (
                         <td className="px-3 py-2">{m.group || '—'}</td>
@@ -363,6 +367,9 @@ function PublicModalityBlock({ modality }) {
                 return (
                   <div key={m.id} className="rounded-2xl border border-slate-200 bg-white p-3">
                     <div className="mb-2 flex flex-wrap items-center gap-1.5">
+                      {multiPhase && (
+                        <span className="rounded-full bg-emerald-100 px-2 py-0.5 text-[11px] font-medium text-emerald-700">Fase {(m.stage_index ?? 0) + 1}</span>
+                      )}
                       <span className="rounded-full bg-slate-100 px-2 py-0.5 text-[11px] font-medium text-slate-600">Rod. {roundLabel(m)}</span>
                       {hasGroup && (
                         <span className="rounded-full bg-slate-100 px-2 py-0.5 text-[11px] font-medium text-slate-600">{m.group}</span>

@@ -85,6 +85,7 @@ export async function persistMatches(tournamentId, modalityId, stageIndex, draw,
     const schedulable = payloads.filter((p) => p.status !== MATCH_STATUS.WALKOVER);
     const { byMatchId, warnings } = assignSchedule(schedulable, scheduleOptions.schedulingConfig, {
       fallbackDate: scheduleOptions.fallbackDate || null,
+      slotOffset: scheduleOptions.slotOffset || 0,
     });
     payloads.forEach((p) => {
       const slot = byMatchId.get(p.id);
@@ -300,6 +301,24 @@ export async function listMatchesByTournament(tournamentId) {
   const q = query(collection(db, COL), where('tournament_id', '==', tournamentId));
   const snap = await getDocs(q);
   return snap.docs.map((d) => d.data());
+}
+
+/**
+ * Lista TODOS os jogos de uma modalidade, de todas as fases (stage_index),
+ * ordenados por fase, rodada e posição. Usado pelas telas que precisam exibir o
+ * torneio multi-fase inteiro (resultados, visão pública, impressão).
+ */
+export async function listAllMatchesForModality(modalityId) {
+  const q = query(collection(db, COL), where('modality_id', '==', modalityId));
+  const snap = await getDocs(q);
+  return snap.docs
+    .map((d) => d.data())
+    .sort(
+      (a, b) =>
+        (a.stage_index ?? 0) - (b.stage_index ?? 0)
+        || (a.round || 0) - (b.round || 0)
+        || (a.position || 0) - (b.position || 0),
+    );
 }
 
 export async function getMatch(id) {

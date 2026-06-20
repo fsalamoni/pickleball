@@ -31,6 +31,7 @@ import {
 import {
   listMatches,
   listMatchesByTournament,
+  listAllMatchesForModality,
   recordMatchResult,
   scheduleMatch,
   substitutePlayer,
@@ -292,6 +293,17 @@ export function useMatches(modalityId, stageIndex = 0) {
   });
 }
 
+/** Todos os jogos de uma modalidade, de TODAS as fases (multi-fase). */
+export function useAllModalityMatches(modalityId) {
+  return useQuery({
+    queryKey: ['all-matches', modalityId],
+    queryFn: () => listAllMatchesForModality(modalityId),
+    enabled: !!modalityId,
+    refetchInterval: 20000,
+    refetchOnWindowFocus: true,
+  });
+}
+
 export function useMatchesByTournament(tournamentId) {
   return useQuery({
     queryKey: ['matches-tournament', tournamentId],
@@ -309,8 +321,10 @@ export function useRunDraw() {
     mutationFn: (params) => runDraw(params, user),
     onSuccess: (_data, params) => {
       qc.invalidateQueries({ queryKey: ['matches', params.modalityId] });
+      qc.invalidateQueries({ queryKey: ['all-matches', params.modalityId] });
       qc.invalidateQueries({ queryKey: ['matches-tournament', params.tournamentId] });
       qc.invalidateQueries({ queryKey: ['ranking', params.modalityId] });
+      qc.invalidateQueries({ queryKey: ['ranking-structured', params.modalityId] });
     },
   });
 }
@@ -333,9 +347,11 @@ export function useRunPhaseDraw() {
     mutationFn: (params) => runPhaseDraw(params, user),
     onSuccess: (_data, params) => {
       qc.invalidateQueries({ queryKey: ['matches', params.modalityId] });
+      qc.invalidateQueries({ queryKey: ['all-matches', params.modalityId] });
       qc.invalidateQueries({ queryKey: ['matches-tournament', params.tournamentId] });
       qc.invalidateQueries({ queryKey: ['phase-groups', params.modalityId] });
       qc.invalidateQueries({ queryKey: ['ranking', params.modalityId] });
+      qc.invalidateQueries({ queryKey: ['ranking-structured', params.modalityId] });
     },
   });
 }
@@ -347,9 +363,11 @@ export function useAdvanceToNextPhase() {
     mutationFn: (params) => advanceToNextPhase(params, user),
     onSuccess: (_data, params) => {
       qc.invalidateQueries({ queryKey: ['matches', params.modalityId] });
+      qc.invalidateQueries({ queryKey: ['all-matches', params.modalityId] });
       qc.invalidateQueries({ queryKey: ['matches-tournament', params.tournamentId] });
       qc.invalidateQueries({ queryKey: ['phase-groups', params.modalityId] });
       qc.invalidateQueries({ queryKey: ['ranking', params.modalityId] });
+      qc.invalidateQueries({ queryKey: ['ranking-structured', params.modalityId] });
     },
   });
 }
@@ -361,7 +379,10 @@ export function useRecordMatchResult(modalityId, scoringConfig) {
     mutationFn: ({ matchId, payload }) => recordMatchResult(matchId, payload, scoringConfig, user),
     onSuccess: () => {
       qc.invalidateQueries({ queryKey: ['matches', modalityId] });
+      qc.invalidateQueries({ queryKey: ['all-matches', modalityId] });
+      qc.invalidateQueries({ queryKey: ['matches-tournament'] });
       qc.invalidateQueries({ queryKey: ['ranking', modalityId] });
+      qc.invalidateQueries({ queryKey: ['ranking-structured', modalityId] });
     },
   });
 }
@@ -371,7 +392,10 @@ export function useScheduleMatch(modalityId) {
   const qc = useQueryClient();
   return useMutation({
     mutationFn: ({ matchId, schedule }) => scheduleMatch(matchId, schedule, user),
-    onSuccess: () => qc.invalidateQueries({ queryKey: ['matches', modalityId] }),
+    onSuccess: () => {
+      qc.invalidateQueries({ queryKey: ['matches', modalityId] });
+      qc.invalidateQueries({ queryKey: ['all-matches', modalityId] });
+    },
   });
 }
 
@@ -381,7 +405,12 @@ export function useSubstitutePlayer(modalityId) {
   return useMutation({
     mutationFn: ({ matchId, oldRegistrationId, newRegistrationId }) =>
       substitutePlayer(matchId, { oldRegistrationId, newRegistrationId }, user),
-    onSuccess: () => qc.invalidateQueries({ queryKey: ['matches', modalityId] }),
+    onSuccess: () => {
+      qc.invalidateQueries({ queryKey: ['matches', modalityId] });
+      qc.invalidateQueries({ queryKey: ['all-matches', modalityId] });
+      qc.invalidateQueries({ queryKey: ['ranking', modalityId] });
+      qc.invalidateQueries({ queryKey: ['ranking-structured', modalityId] });
+    },
   });
 }
 
@@ -390,7 +419,10 @@ export function useMarkMatchInProgress(modalityId) {
   const qc = useQueryClient();
   return useMutation({
     mutationFn: (matchId) => markMatchInProgress(matchId, user),
-    onSuccess: () => qc.invalidateQueries({ queryKey: ['matches', modalityId] }),
+    onSuccess: () => {
+      qc.invalidateQueries({ queryKey: ['matches', modalityId] });
+      qc.invalidateQueries({ queryKey: ['all-matches', modalityId] });
+    },
   });
 }
 
@@ -402,6 +434,7 @@ export function useRescheduleMatches(modalityId) {
       rescheduleMatches(modalityId, stageIndex, modality, tournament, user),
     onSuccess: () => {
       qc.invalidateQueries({ queryKey: ['matches', modalityId] });
+      qc.invalidateQueries({ queryKey: ['all-matches', modalityId] });
       qc.invalidateQueries({ queryKey: ['matches-tournament'] });
     },
   });
@@ -415,8 +448,10 @@ export function useAdvanceStage(modalityId) {
       advanceStage(tournamentId, modalityId, stageIndex, modality, tournament, user),
     onSuccess: () => {
       qc.invalidateQueries({ queryKey: ['matches', modalityId] });
+      qc.invalidateQueries({ queryKey: ['all-matches', modalityId] });
       qc.invalidateQueries({ queryKey: ['matches-tournament'] });
       qc.invalidateQueries({ queryKey: ['ranking', modalityId] });
+      qc.invalidateQueries({ queryKey: ['ranking-structured', modalityId] });
     },
   });
 }
@@ -426,7 +461,10 @@ export function useReShuffleRemainingMatches(modalityId) {
   const qc = useQueryClient();
   return useMutation({
     mutationFn: (stageIndex) => reShuffleRemainingMatches(modalityId, stageIndex, user),
-    onSuccess: () => qc.invalidateQueries({ queryKey: ['matches', modalityId] }),
+    onSuccess: () => {
+      qc.invalidateQueries({ queryKey: ['matches', modalityId] });
+      qc.invalidateQueries({ queryKey: ['all-matches', modalityId] });
+    },
   });
 }
 
