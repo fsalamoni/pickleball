@@ -35,6 +35,17 @@ describe('normalizePhases', () => {
   });
 });
 
+describe('normalizePhase — classificados padrão', () => {
+  it('usa 2 classificados por grupo quando não informado', () => {
+    const p = normalizePhase({ type: TOURNAMENT_STAGE_TYPE.GROUPS, group_count: 2 });
+    expect(p.qualifiers_per_group).toBe(2);
+  });
+  it('preserva um valor explícito (inclusive 0)', () => {
+    expect(normalizePhase({ type: TOURNAMENT_STAGE_TYPE.GROUPS, qualifiers_per_group: 0 }).qualifiers_per_group).toBe(0);
+    expect(normalizePhase({ type: TOURNAMENT_STAGE_TYPE.GROUPS, qualifiers_per_group: 3 }).qualifiers_per_group).toBe(3);
+  });
+});
+
 describe('validatePhases', () => {
   it('exige classificados nas fases não-finais', () => {
     const stages = [

@@ -244,6 +244,17 @@ export default function PhasesEditor({ phases, format, onChange }) {
                 {phase.qualifier_mode === PHASE_QUALIFIER_MODE.BY_GENDER && (
                   <p className="md:col-span-2 text-[11px] text-slate-500">
                     Passa o(s) melhor(es) de cada gênero (M e F) — útil para formar duplas mistas.
+                    Exige o gênero informado em cada inscrição.
+                  </p>
+                )}
+                {!isLast
+                  && [TOURNAMENT_STAGE_TYPE.AMERICANO, TOURNAMENT_STAGE_TYPE.MEXICANO].includes(
+                    phases[index + 1]?.type,
+                  ) && (
+                  <p className="md:col-span-2 text-[11px] text-amber-700">
+                    A próxima fase é {TOURNAMENT_STAGE_TYPE_LABELS[phases[index + 1].type]} e precisa
+                    de ao menos <strong>4 atletas por grupo</strong>. Garanta classificados
+                    suficientes (ex.: 2 por grupo em 2 grupos = 4).
                   </p>
                 )}
               </div>

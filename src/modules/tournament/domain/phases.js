@@ -73,7 +73,12 @@ export function normalizePhase(raw = {}, ctx = {}) {
   const qualifierMode = Object.values(PHASE_QUALIFIER_MODE).includes(raw.qualifier_mode)
     ? raw.qualifier_mode
     : PHASE_QUALIFIER_MODE.OVERALL;
-  const qualifiersPerGroup = Math.max(0, Math.floor(Number(raw.qualifiers_per_group)) || 0);
+  // Padrão 2 classificados por grupo quando não informado (cobre o caso comum
+  // de alimentar uma próxima fase — inclusive Americano, que exige ≥ 4). Um 0
+  // explícito é preservado (validado adiante para fases não-finais).
+  const qualifiersPerGroup = raw.qualifiers_per_group == null
+    ? 2
+    : Math.max(0, Math.floor(Number(raw.qualifiers_per_group)) || 0);
 
   const feedMode = Object.values(PHASE_FEED_MODE).includes(raw.feed_mode)
     ? raw.feed_mode
