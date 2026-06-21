@@ -13,7 +13,7 @@ import {
   DialogFooter,
 } from '@/components/ui/dialog';
 import { toast } from 'sonner';
-import { Trophy, Play, Layers } from 'lucide-react';
+import { Trophy, Play } from 'lucide-react';
 import {
   useModalities,
   useAllModalityMatches,
@@ -28,6 +28,7 @@ import {
 } from '@/modules/tournament/domain/constants';
 import { normalizeScoringConfig } from '@/modules/tournament/domain/scoring';
 import { normalizePhases } from '@/modules/tournament/domain/phases';
+import { CollapsibleSection } from '@/components/ui/collapsible-section';
 
 export default function TournamentMatchesTab({ tournament, isAdmin }) {
   const { data: modalities = [] } = useModalities(tournament.id);
@@ -128,23 +129,24 @@ function ModalityMatchesBlock({ tournament, modality, isAdmin }) {
   }, [matches]);
   const showPhaseHeaders = phases.length > 1;
 
+  const doneCount = matches.filter(
+    (m) => m.status === MATCH_STATUS.FINISHED || m.status === MATCH_STATUS.WALKOVER,
+  ).length;
+  const subtitle = matches.length === 0
+    ? 'Nenhum jogo gerado ainda'
+    : `${doneCount}/${matches.length} jogos concluídos · ${cfg.target_score} pontos · best-of-${cfg.sets_per_match}`;
+
   return (
-    <Card>
-      <CardContent className="p-4">
-        <div className="flex items-start justify-between gap-2 flex-wrap mb-3">
-          <div>
-            <h4 className="font-semibold">{modality.name}</h4>
-            <p className="text-xs text-slate-500">{matches.length} jogos · {cfg.target_score} pontos por game · best-of-{cfg.sets_per_match}</p>
-          </div>
-        </div>
+    <>
+      <CollapsibleSection title={modality.name} subtitle={subtitle} defaultOpen>
         {matches.length === 0 ? (
           <p className="text-sm text-slate-500">Nenhum jogo gerado ainda.</p>
         ) : (
-          <div className="space-y-4">
+          <div className="space-y-3">
             {byStage.map(([stageIndex, stageMatches]) => (
               <PhaseMatches
                 key={stageIndex}
-                header={showPhaseHeaders
+                phaseLabel={showPhaseHeaders
                   ? `Fase ${stageIndex + 1} · ${TOURNAMENT_STAGE_TYPE_LABELS[phases[stageIndex]?.type] || ''}`
                   : null}
                 matches={stageMatches}
@@ -157,7 +159,7 @@ function ModalityMatchesBlock({ tournament, modality, isAdmin }) {
             ))}
           </div>
         )}
-      </CardContent>
+      </CollapsibleSection>
       {openMatch && (
         <ScoreEntryDialog
           match={openMatch}
@@ -167,11 +169,11 @@ function ModalityMatchesBlock({ tournament, modality, isAdmin }) {
           onClose={() => setOpenMatchId(null)}
         />
       )}
-    </Card>
+    </>
   );
 }
 
-function PhaseMatches({ header, matches, modalityId, labelById, peopleById, isAdmin, onOpenScore }) {
+function PhaseMatches({ phaseLabel, matches, modalityId, labelById, peopleById, isAdmin, onOpenScore }) {
   const markInProgressMutation = useMarkMatchInProgress(modalityId);
 
   async function handleMarkInProgress(matchId) {
@@ -185,14 +187,12 @@ function PhaseMatches({ header, matches, modalityId, labelById, peopleById, isAd
 
   const hasGroups = matches.some((m) => m.group);
   const hasSchedule = matches.some((m) => m.court || m.scheduled_at);
+  const doneCount = matches.filter(
+    (m) => m.status === MATCH_STATUS.FINISHED || m.status === MATCH_STATUS.WALKOVER,
+  ).length;
 
-  return (
-    <div>
-      {header && (
-        <div className="flex items-center gap-2 mb-2">
-          <Badge className="gap-1"><Layers className="w-3 h-3" /> {header}</Badge>
-        </div>
-      )}
+  const inner = (
+    <>
           <div className="hidden sm:block arena-table-wrap">
             <table className="w-full text-sm">
               <thead className="bg-slate-50">
@@ -353,7 +353,20 @@ function PhaseMatches({ header, matches, modalityId, labelById, peopleById, isAd
             })}
           </div>
         )}
-    </div>
+    </>
+  );
+
+  if (!phaseLabel) return inner;
+  return (
+    <CollapsibleSection
+      className="border-slate-200 bg-slate-50/40"
+      headerClassName="py-1.5"
+      title={phaseLabel}
+      badges={<Badge variant="secondary">{doneCount}/{matches.length} concluídos</Badge>}
+      defaultOpen
+    >
+      {inner}
+    </CollapsibleSection>
   );
 }
 

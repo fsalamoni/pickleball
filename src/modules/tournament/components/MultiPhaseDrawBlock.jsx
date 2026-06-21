@@ -1,5 +1,4 @@
 import React, { useMemo, useState } from 'react';
-import { Card, CardContent } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
 import { Shuffle, ChevronsRight, AlertTriangle, Users, ArrowDownToLine } from 'lucide-react';
@@ -18,6 +17,7 @@ import {
 } from '@/modules/tournament/domain/constants';
 import { normalizePhases } from '@/modules/tournament/domain/phases';
 import { stageSupportsAdvance } from '@/modules/tournament/domain/progression';
+import { CollapsibleSection } from '@/components/ui/collapsible-section';
 
 function formatMatchTime(iso) {
   if (!iso) return '—';
@@ -44,16 +44,12 @@ export default function MultiPhaseDrawBlock({ tournament, modality, isAdmin }) {
   }, [registrations]);
 
   return (
-    <Card>
-      <CardContent className="p-4 space-y-4">
-        <div>
-          <h4 className="font-semibold">{modality.name}</h4>
-          <p className="text-xs text-slate-500">
-            {phases.length} fases · inscrição em lista única ·{' '}
-            {registrations.length} inscrito(s)
-          </p>
-        </div>
-
+    <CollapsibleSection
+      title={modality.name}
+      subtitle={`${phases.length} fases · inscrição em lista única · ${registrations.length} inscrito(s)`}
+      defaultOpen
+    >
+      <div className="space-y-3">
         {phases.map((phase, index) => (
           <PhaseSection
             key={index}
@@ -67,8 +63,8 @@ export default function MultiPhaseDrawBlock({ tournament, modality, isAdmin }) {
             labelById={labelById}
           />
         ))}
-      </CardContent>
-    </Card>
+      </div>
+    </CollapsibleSection>
   );
 }
 
@@ -145,45 +141,50 @@ function PhaseSection({ tournament, modality, phase, stageIndex, isFirst, isLast
     }
   }
 
+  const actions = isAdmin ? (
+    <>
+      {isFirst && (
+        <Button size="sm" onClick={doDraw} disabled={running}>
+          <Shuffle className="w-4 h-4 mr-1" />
+          {matches.length > 0 ? 'Re-sortear' : 'Sortear grupos e jogos'}
+        </Button>
+      )}
+      {withinAdvance && matches.length > 0 && (
+        <Button size="sm" variant="outline" onClick={doWithinAdvance} disabled={running}>
+          <ChevronsRight className="w-4 h-4 mr-1" /> Avançar rodada
+        </Button>
+      )}
+      {!isLast && (
+        <Button
+          size="sm"
+          variant="outline"
+          onClick={doAdvanceToNext}
+          disabled={running || !allDone}
+          title={allDone ? 'Classificar e gerar a próxima fase' : 'Conclua todos os jogos desta fase'}
+        >
+          <ArrowDownToLine className="w-4 h-4 mr-1" /> Gerar próxima fase
+        </Button>
+      )}
+    </>
+  ) : null;
+
   return (
-    <div className="rounded-md border border-slate-200">
-      <div className="flex items-center justify-between gap-2 flex-wrap bg-slate-50 px-3 py-2 rounded-t-md">
-        <div className="flex items-center gap-2">
-          <Badge>Fase {stageIndex + 1}</Badge>
-          <span className="text-sm font-medium">{TOURNAMENT_STAGE_TYPE_LABELS[phase.type]}</span>
+    <CollapsibleSection
+      className="border-slate-200 bg-slate-50/40"
+      headerClassName="py-1.5"
+      title={`Fase ${stageIndex + 1}`}
+      badges={(
+        <>
+          <Badge variant="secondary">{TOURNAMENT_STAGE_TYPE_LABELS[phase.type]}</Badge>
           <span className="text-xs text-slate-500">
             {matches.length > 0 ? `${playedCount}/${matches.length} jogos` : 'não sorteada'}
           </span>
-        </div>
-        {isAdmin && (
-          <div className="flex gap-1 flex-wrap">
-            {isFirst && (
-              <Button size="sm" onClick={doDraw} disabled={running}>
-                <Shuffle className="w-4 h-4 mr-1" />
-                {matches.length > 0 ? 'Re-sortear' : 'Sortear grupos e jogos'}
-              </Button>
-            )}
-            {withinAdvance && matches.length > 0 && (
-              <Button size="sm" variant="outline" onClick={doWithinAdvance} disabled={running}>
-                <ChevronsRight className="w-4 h-4 mr-1" /> Avançar rodada
-              </Button>
-            )}
-            {!isLast && (
-              <Button
-                size="sm"
-                variant="outline"
-                onClick={doAdvanceToNext}
-                disabled={running || !allDone}
-                title={allDone ? 'Classificar e gerar a próxima fase' : 'Conclua todos os jogos desta fase'}
-              >
-                <ArrowDownToLine className="w-4 h-4 mr-1" /> Gerar próxima fase
-              </Button>
-            )}
-          </div>
-        )}
-      </div>
-
-      <div className="p-3 space-y-3">
+        </>
+      )}
+      actions={actions}
+      defaultOpen
+    >
+      <div className="space-y-3">
         {error && (
           <div className="flex items-start gap-2 rounded border border-red-200 bg-red-50 p-2 text-xs text-red-700">
             <AlertTriangle className="w-4 h-4 mt-0.5 shrink-0" />
@@ -255,6 +256,6 @@ function PhaseSection({ tournament, modality, phase, stageIndex, isFirst, isLast
           </p>
         )}
       </div>
-    </div>
+    </CollapsibleSection>
   );
 }

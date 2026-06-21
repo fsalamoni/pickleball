@@ -1,8 +1,9 @@
 import React from 'react';
 import { Card, CardContent } from '@/components/ui/card';
-import { Trophy, Info, Medal, Layers } from 'lucide-react';
+import { Trophy, Info, Medal } from 'lucide-react';
 import { Badge } from '@/components/ui/badge';
 import { AvatarGroup } from '@/components/ui/user-avatar';
+import { CollapsibleSection } from '@/components/ui/collapsible-section';
 import { useModalities, useModalityRankingStructured } from '@/modules/tournament/hooks/useTournament';
 
 export default function TournamentRankingTab({ tournament }) {
@@ -64,35 +65,59 @@ function ModalityRankingBlock({ modality }) {
   const phases = (data?.phases || []).filter((p) => p.played && p.groups.length > 0);
   const showPhaseHeaders = phases.length > 1;
 
+  const subtitle = isLoading
+    ? 'Carregando…'
+    : phases.length === 0
+      ? 'Aguardando resultados'
+      : showPhaseHeaders
+        ? `${phases.length} fases com resultados`
+        : 'Classificação';
+
   return (
-    <Card>
-      <CardContent className="p-4">
-        <h4 className="font-semibold flex items-center gap-2">
+    <CollapsibleSection
+      title={(
+        <span className="inline-flex items-center gap-2">
           <Trophy className="w-4 h-4 text-emerald-600" /> {modality.name}
-        </h4>
-        {isLoading ? (
-          <p className="text-sm text-slate-500 mt-2">Carregando…</p>
-        ) : phases.length === 0 ? (
-          <p className="text-sm text-slate-500 mt-2">Aguardando resultados.</p>
-        ) : (
-          <div className="mt-3 space-y-4">
-            {phases.map((phase) => (
-              <div key={phase.stageIndex} className="space-y-2">
-                {showPhaseHeaders && (
-                  <div className="flex items-center gap-2">
-                    <Badge className="gap-1"><Layers className="w-3 h-3" /> Fase {phase.stageIndex + 1}</Badge>
-                    <span className="text-sm font-medium text-slate-700">{phase.typeLabel}</span>
-                  </div>
-                )}
+        </span>
+      )}
+      subtitle={subtitle}
+      defaultOpen
+    >
+      {isLoading ? (
+        <p className="text-sm text-slate-500">Carregando…</p>
+      ) : phases.length === 0 ? (
+        <p className="text-sm text-slate-500">Aguardando resultados.</p>
+      ) : (
+        <div className="space-y-3">
+          {phases.map((phase) => {
+            const body = (
+              <div className="space-y-2">
                 {phase.groups.map((group, gi) => (
-                  <GroupRanking key={group.name || gi} group={group} showName={phase.groups.length > 1 || Boolean(group.name)} />
+                  <GroupRanking
+                    key={group.name || gi}
+                    group={group}
+                    showName={phase.groups.length > 1 || Boolean(group.name)}
+                  />
                 ))}
               </div>
-            ))}
-          </div>
-        )}
-      </CardContent>
-    </Card>
+            );
+            if (!showPhaseHeaders) return <div key={phase.stageIndex}>{body}</div>;
+            return (
+              <CollapsibleSection
+                key={phase.stageIndex}
+                className="border-slate-200 bg-slate-50/40"
+                headerClassName="py-1.5"
+                title={`Fase ${phase.stageIndex + 1}`}
+                badges={<Badge variant="secondary">{phase.typeLabel}</Badge>}
+                defaultOpen
+              >
+                {body}
+              </CollapsibleSection>
+            );
+          })}
+        </div>
+      )}
+    </CollapsibleSection>
   );
 }
 
