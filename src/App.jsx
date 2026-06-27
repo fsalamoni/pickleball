@@ -26,6 +26,7 @@ const TournamentFormatsGuide = lazy(() => import('@/modules/tournament/pages/Tou
 const PublicTournament = lazy(() => import('@/pages/PublicTournament'));
 const PrintTournament = lazy(() => import('@/pages/PrintTournament'));
 const AthletesDirectory = lazy(() => import('@/modules/athletes/pages/AthletesDirectory'));
+const AthleteProfile = lazy(() => import('@/modules/athletes/pages/AthleteProfile'));
 const ClubsDirectory = lazy(() => import('@/modules/clubs/pages/ClubsDirectory'));
 const CreateClub = lazy(() => import('@/modules/clubs/pages/CreateClub'));
 const ClubDetail = lazy(() => import('@/modules/clubs/pages/ClubDetail'));
@@ -147,6 +148,7 @@ export default function App() {
 
               {/* Comunidade: atletas e clubes */}
               <Route path="/atletas" element={<ProtectedRoute>{withLayout('AthletesDirectory', AthletesDirectory)}</ProtectedRoute>} />
+              <Route path="/atleta/:uid" element={<ProtectedRoute>{withLayout('AthleteProfile', AthleteProfile)}</ProtectedRoute>} />
               <Route path="/clubes" element={<ProtectedRoute>{withLayout('ClubsDirectory', ClubsDirectory)}</ProtectedRoute>} />
               <Route path="/clubes/criar" element={<ProtectedRoute>{withLayout('CreateClub', CreateClub)}</ProtectedRoute>} />
               <Route path="/clubes/:clubId" element={<ProtectedRoute>{withLayout('ClubDetail', ClubDetail)}</ProtectedRoute>} />

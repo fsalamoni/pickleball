@@ -20,6 +20,7 @@ function medalEmoji(position) {
 
 export default function NationalRanking() {
   const enabled = useFeatureFlag(FEATURE_FLAG.PLAYER_RATING);
+  const profilePageOn = useFeatureFlag(FEATURE_FLAG.ATHLETE_PROFILE_PAGE);
   const { data: players = [], isLoading } = useNationalRanking();
   const [search, setSearch] = useState('');
   const [stateFilter, setStateFilter] = useState(ALL);
@@ -158,7 +159,13 @@ export default function NationalRanking() {
                                   {String(p.platform_name || 'A')[0]?.toUpperCase()}
                                 </span>
                               )}
-                              <span className="font-medium">{p.platform_name}</span>
+                              {profilePageOn ? (
+                                <Link to={`/atleta/${p.id}`} className="font-medium text-emerald-800 hover:underline">
+                                  {p.platform_name}
+                                </Link>
+                              ) : (
+                                <span className="font-medium">{p.platform_name}</span>
+                              )}
                             </div>
                           </td>
                           <td className="px-3 py-2 text-slate-600">

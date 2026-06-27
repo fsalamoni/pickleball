@@ -81,6 +81,13 @@ export const FEATURE_FLAG = Object.freeze({
    * invisível ao usuário — desligado, nenhum evento de funil é enviado.
    */
   FUNNEL_ANALYTICS: 'funnel_analytics',
+
+  /**
+   * Página rica do atleta (`/atleta/:uid`): reúne dados públicos, rating e
+   * posição, desempenho, conquistas e clubes num só lugar. Aditivo — desligado,
+   * a rota some e os links para ela não aparecem (o diretório segue igual).
+   */
+  ATHLETE_PROFILE_PAGE: 'athlete_profile_page',
 });
 
 /** Metadados de exibição para o painel de flags (admin master). */
@@ -156,6 +163,13 @@ export const FEATURE_FLAG_META = Object.freeze({
       'Envia eventos de produto (login, perfil completo, torneio criado, '
       + 'inscrição, convite aberto) ao Firebase Analytics para medir conversão e '
       + 'retenção. Invisível ao usuário. Desligado, nenhum evento de funil é enviado.',
+  },
+  [FEATURE_FLAG.ATHLETE_PROFILE_PAGE]: {
+    label: 'Página rica do atleta',
+    description:
+      'Habilita a página de perfil do atleta (/atleta/:uid) com desempenho, '
+      + 'rating, conquistas e clubes, e torna o diretório e o ranking clicáveis '
+      + 'para ela. Desligado, a rota e os links ficam ocultos.',
   },
 });
 

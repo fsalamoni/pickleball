@@ -55,6 +55,7 @@ function locationText(athlete) {
 export default function AthletesDirectory() {
   const { isAuthAvailable, authUnavailableReason } = useAuth();
   const coachDirectoryOn = useFeatureFlag(FEATURE_FLAG.COACH_DIRECTORY);
+  const profilePageOn = useFeatureFlag(FEATURE_FLAG.ATHLETE_PROFILE_PAGE);
   const { data: athletes = [], isLoading } = useAthletes();
   const [search, setSearch] = useState('');
   const [genderFilter, setGenderFilter] = useState(ALL);
@@ -287,7 +288,13 @@ export default function AthletesDirectory() {
         </div>
       )}
 
-      <AthleteDialog athlete={selected} open={!!selected} onClose={() => setSelected(null)} showCoach={coachDirectoryOn} />
+      <AthleteDialog
+        athlete={selected}
+        open={!!selected}
+        onClose={() => setSelected(null)}
+        showCoach={coachDirectoryOn}
+        showProfileLink={profilePageOn}
+      />
     </div>
   );
 }
@@ -380,7 +387,7 @@ function AthleteCard({ athlete, onOpen, showCoach }) {
   );
 }
 
-function AthleteDialog({ athlete, open, onClose, showCoach }) {
+function AthleteDialog({ athlete, open, onClose, showCoach, showProfileLink }) {
   if (!athlete) return null;
   const location = locationText(athlete);
   const clubs = athlete.clubs || [];
@@ -409,6 +416,12 @@ function AthleteDialog({ athlete, open, onClose, showCoach }) {
 
         <div className="space-y-4">
           <ChatLauncherButton athlete={athlete} className="w-full" label="Conversar com este atleta" />
+
+          {showProfileLink && (
+            <Button asChild variant="outline" className="w-full">
+              <Link to={`/atleta/${athlete.id}`} onClick={onClose}>Ver perfil completo</Link>
+            </Button>
+          )}
 
           {isCoach && (
             <div className="rounded-[1rem] border border-emerald-200 bg-emerald-50/60 p-3">

@@ -115,6 +115,11 @@ const PAGE_META = {
     title: 'Atletas',
     description: 'Conheça os atletas da comunidade e encontre parceiros de jogo.',
   },
+  AthleteProfile: {
+    eyebrow: 'Comunidade',
+    title: 'Perfil do atleta',
+    description: 'Desempenho, rating, conquistas e histórico do atleta.',
+  },
   ClubsDirectory: {
     eyebrow: 'Explorar',
     title: 'Clubes',
