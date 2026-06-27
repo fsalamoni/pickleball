@@ -42,6 +42,14 @@ export const FEATURE_FLAG = Object.freeze({
    * perfil e o filtro/badge do diretório ficam ocultos.
    */
   COACH_DIRECTORY: 'coach_directory',
+
+  /**
+   * Rating ELO próprio + Ranking nacional: calcula um rating por jogador a
+   * partir dos jogos finalizados e exibe um ranking público (filtrável por
+   * cidade/estado/nível). O recálculo é acionado pelo admin master. Aditivo —
+   * desligado, a rota /ranking, o menu e o botão de recálculo ficam ocultos.
+   */
+  PLAYER_RATING: 'player_rating',
 });
 
 /** Metadados de exibição para o painel de flags (admin master). */
@@ -78,6 +86,15 @@ export const FEATURE_FLAG_META = Object.freeze({
       + 'atuação) no perfil e sejam encontrados por um filtro dedicado no '
       + 'diretório de atletas, com contato pelo chat. Abre espaço para um novo '
       + 'público e parcerias. Desligado, a seção e o filtro ficam ocultos.',
+  },
+  [FEATURE_FLAG.PLAYER_RATING]: {
+    label: 'Rating ELO + Ranking nacional',
+    description:
+      'Calcula um rating ELO por jogador a partir dos jogos finalizados e '
+      + 'publica um ranking nacional (filtrável por cidade/estado/nível). O '
+      + 'recálculo é feito sob demanda pelo admin na própria página de Métricas. '
+      + 'Cria autoridade de marca e engajamento. Desligado, a rota /ranking, o '
+      + 'item de menu e o botão de recálculo ficam ocultos.',
   },
 });
 

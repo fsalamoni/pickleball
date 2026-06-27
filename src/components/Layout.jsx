@@ -22,6 +22,7 @@ import {
   Building2,
   MessageCircle,
   Activity,
+  Medal,
 } from 'lucide-react';
 import { useAuth } from '@/core/lib/FirebaseAuthContext';
 import { useFeatureFlag } from '@/core/lib/FeatureFlagsContext';
@@ -149,6 +150,7 @@ export default function Layout({ children, currentPageName }) {
   const navigate = useNavigate();
   const { user, userProfile, signOut, isAuthenticated, isPlatformAdmin } = useAuth();
   const performanceOn = useFeatureFlag(FEATURE_FLAG.PLAYER_PERFORMANCE);
+  const ratingOn = useFeatureFlag(FEATURE_FLAG.PLAYER_RATING);
   const [sidebarOpen, setSidebarOpen] = useState(false);
   const isStandalonePublicPage = STANDALONE_PUBLIC_PAGES.includes(currentPageName);
   const isUtilityPublicPage = UTILITY_PUBLIC_PAGES.includes(currentPageName);
@@ -321,6 +323,15 @@ export default function Layout({ children, currentPageName }) {
                 active={currentPageName === 'AthletesDirectory'}
                 onClick={() => setSidebarOpen(false)}
               />
+              {ratingOn && (
+                <NavItem
+                  to="/ranking"
+                  icon={Medal}
+                  label="Ranking nacional"
+                  active={currentPageName === 'NationalRanking'}
+                  onClick={() => setSidebarOpen(false)}
+                />
+              )}
               <NavItem
                 to="/clubes"
                 icon={Building2}

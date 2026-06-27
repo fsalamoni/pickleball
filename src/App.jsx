@@ -31,6 +31,7 @@ const ClubDetail = lazy(() => import('@/modules/clubs/pages/ClubDetail'));
 const EventDetail = lazy(() => import('@/modules/clubs/pages/EventDetail'));
 const ChatPage = lazy(() => import('@/modules/chat/pages/ChatPage'));
 const MyPerformance = lazy(() => import('@/modules/performance/pages/MyPerformance'));
+const NationalRanking = lazy(() => import('@/modules/rating/pages/NationalRanking'));
 const PageNotFound = lazy(() => import('@/pages/PageNotFound'));
 
 const LOCAL_PREVIEW_PROTECTED_PATHS = new Set([
@@ -112,6 +113,7 @@ export default function App() {
 
               {/* Public spectator view (sem auth) */}
               <Route path="/p/:tournamentId" element={<PublicTournament />} />
+              <Route path="/ranking" element={<NationalRanking />} />
               <Route path="/torneios/:tournamentId/imprimir" element={<PrintTournament />} />
 
               {/* Legacy redirects (Bolão → Pickleball) */}

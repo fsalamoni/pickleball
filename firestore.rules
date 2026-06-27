@@ -143,6 +143,14 @@ service cloud.firestore {
       allow write: if isPlatformAdmin();
     }
 
+    // ---- Player ratings (ELO + ranking nacional) -------------------------
+    // Ranking materializado por replay dos jogos finalizados. Leitura pública
+    // (a página /ranking é aberta). Escrita só do admin master, via recálculo.
+    match /player_ratings/{uid} {
+      allow read: if true;
+      allow write: if isPlatformAdmin();
+    }
+
     // ---- Users -----------------------------------------------------------
     match /users/{userId} {
       allow read: if isOwner(userId) || isPlatformAdmin();
