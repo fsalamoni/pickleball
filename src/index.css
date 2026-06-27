@@ -125,6 +125,22 @@
     background: hsl(161 78% 28% / 0.18);
     color: hsl(214 39% 16%);
   }
+
+  /* Acessibilidade: respeita usuários que pedem menos movimento — desliga
+     animações, transições e a rolagem suave automática. */
+  @media (prefers-reduced-motion: reduce) {
+    html {
+      scroll-behavior: auto;
+    }
+    *,
+    *::before,
+    *::after {
+      animation-duration: 0.001ms !important;
+      animation-iteration-count: 1 !important;
+      transition-duration: 0.001ms !important;
+      scroll-behavior: auto !important;
+    }
+  }
 }
 
 @layer components {

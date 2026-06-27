@@ -75,7 +75,10 @@ export async function createRegistration(input, actor) {
 
   const existing = await listRegistrations(modality_id);
   const occupiedCount = countOccupiedRegistrations(existing);
-  if (isRegistrationCapacityReached(occupiedCount, modality.max_entries)) {
+  const capacityReached = isRegistrationCapacityReached(occupiedCount, modality.max_entries);
+  // Lotada: bloqueia, salvo quando o fluxo de lista de espera é permitido
+  // explicitamente (flag tournament_waitlist), caso em que entra como WAITLIST.
+  if (capacityReached && !input.allow_waitlist) {
     throw new Error('Modalidade lotada.');
   }
 
@@ -112,7 +115,9 @@ export async function createRegistration(input, actor) {
     player_b_competition_gender: player_b?.competition_gender || null,
     player_b_photo: player_b?.photo_url || null,
     player_b_provisional: Boolean(playerBEmail && !playerBUserId),
-    status: (modality.entry_fee_cents || 0) > 0 ? REGISTRATION_STATUS.PENDING_PAYMENT : REGISTRATION_STATUS.CONFIRMED,
+    status: capacityReached
+      ? REGISTRATION_STATUS.WAITLIST
+      : ((modality.entry_fee_cents || 0) > 0 ? REGISTRATION_STATUS.PENDING_PAYMENT : REGISTRATION_STATUS.CONFIRMED),
     seed: null,
     created_at: serverTimestamp(),
     updated_at: serverTimestamp(),
@@ -212,6 +217,11 @@ export async function updateRegistration(id, updates, actor) {
 
 export async function confirmRegistrationPayment(id, actor) {
   await updateRegistration(id, { status: REGISTRATION_STATUS.CONFIRMED, payment_confirmed_at: serverTimestamp() }, actor);
+}
+
+/** Promove uma inscrição da lista de espera para confirmada (admin do torneio). */
+export async function promoteFromWaitlist(id, actor) {
+  await updateRegistration(id, { status: REGISTRATION_STATUS.CONFIRMED, promoted_at: serverTimestamp() }, actor);
 }
 
 export async function cancelRegistration(id, actor) {

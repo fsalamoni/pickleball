@@ -29,6 +29,7 @@ import TournamentOverviewTab from '../components/TournamentOverviewTab';
 import TournamentMatchesTab from '../components/TournamentMatchesTab';
 import TournamentRankingTab from '../components/TournamentRankingTab';
 import TournamentAdminPanel from '../components/TournamentAdminPanel';
+import TournamentGallery from '../components/TournamentGallery';
 
 // Abas visíveis a qualquer participante. As inscrições e a lista de
 // modalidades passaram a viver dentro da própria "Visão geral", com o botão
@@ -309,6 +310,8 @@ export default function Tournament() {
           </TabsContent>
         )}
       </Tabs>
+
+      <TournamentGallery tournamentId={tournament.id} canManage={!!isAdmin} />
     </div>
   );
 }

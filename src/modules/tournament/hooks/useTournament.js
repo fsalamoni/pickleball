@@ -25,6 +25,7 @@ import {
   listMyRegistrations,
   createRegistration,
   confirmRegistrationPayment,
+  promoteFromWaitlist,
   cancelRegistration,
   deleteRegistration,
 } from '../services/registrationService';
@@ -45,6 +46,8 @@ import { runPhaseDraw, advanceToNextPhase, listPhaseGroups } from '../services/p
 import { computeModalityRanking, computeModalityRankingStructured } from '../services/rankingService';
 import { getMyTournamentHistory } from '../services/participationService';
 import { useAuth } from '@/core/lib/FirebaseAuthContext';
+import { useFunnel } from '@/modules/analytics/hooks/useFunnel';
+import { FUNNEL_EVENT } from '@/modules/analytics/domain/funnelEvents';
 
 /* ------------------------------ Tournaments ----------------------------- */
 
@@ -84,11 +87,13 @@ export function usePublicTournaments() {
 export function useCreateTournament() {
   const { user } = useAuth();
   const qc = useQueryClient();
+  const { track } = useFunnel();
   return useMutation({
     mutationFn: (data) => createTournament(user, data),
     onSuccess: () => {
       qc.invalidateQueries({ queryKey: ['my-tournaments'] });
       qc.invalidateQueries({ queryKey: ['tournaments-public'] });
+      track(FUNNEL_EVENT.TOURNAMENT_CREATED);
     },
   });
 }
@@ -234,12 +239,14 @@ export function useMyTournamentHistory() {
 export function useCreateRegistration() {
   const { user } = useAuth();
   const qc = useQueryClient();
+  const { track } = useFunnel();
   return useMutation({
     mutationFn: (input) => createRegistration(input, user),
     onSuccess: (_id, input) => {
       qc.invalidateQueries({ queryKey: ['registrations', input.modality_id] });
       qc.invalidateQueries({ queryKey: ['registrations-tournament', input.tournament_id] });
       qc.invalidateQueries({ queryKey: ['my-registrations'] });
+      track(FUNNEL_EVENT.REGISTRATION_CREATED);
     },
   });
 }
@@ -249,6 +256,18 @@ export function useConfirmRegistrationPayment(modalityId) {
   const qc = useQueryClient();
   return useMutation({
     mutationFn: (id) => confirmRegistrationPayment(id, user),
+    onSuccess: () => {
+      qc.invalidateQueries({ queryKey: ['registrations', modalityId] });
+      qc.invalidateQueries({ queryKey: ['registrations-tournament'] });
+    },
+  });
+}
+
+export function usePromoteFromWaitlist(modalityId) {
+  const { user } = useAuth();
+  const qc = useQueryClient();
+  return useMutation({
+    mutationFn: (id) => promoteFromWaitlist(id, user),
     onSuccess: () => {
       qc.invalidateQueries({ queryKey: ['registrations', modalityId] });
       qc.invalidateQueries({ queryKey: ['registrations-tournament'] });

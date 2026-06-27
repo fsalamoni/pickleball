@@ -12,8 +12,11 @@ import { Label } from '@/components/ui/label';
 import { toast } from 'sonner';
 import { AlertTriangle, Info } from 'lucide-react';
 import { useAuth } from '@/core/lib/FirebaseAuthContext';
-import { useCreateRegistration } from '@/modules/tournament/hooks/useTournament';
+import { useFeatureFlag } from '@/core/lib/FeatureFlagsContext';
+import { FEATURE_FLAG } from '@/core/featureFlags';
+import { useCreateRegistration, useRegistrations } from '@/modules/tournament/hooks/useTournament';
 import { MODALITY_FORMAT, COMPETITION_GENDER } from '@/modules/tournament/domain/constants';
+import { countOccupiedRegistrations, isRegistrationCapacityReached } from '@/modules/tournament/domain/capacity';
 import { LEVEL_OPTIONS } from '@/modules/leveling/data/levels';
 
 const GENDER_OPTIONS = [
@@ -37,7 +40,13 @@ export default function ModalityRegistrationDialog({
   isAdmin = false,
 }) {
   const { user, userProfile } = useAuth();
+  const waitlistOn = useFeatureFlag(FEATURE_FLAG.TOURNAMENT_WAITLIST);
   const createMutation = useCreateRegistration();
+  const { data: existingRegs = [] } = useRegistrations(modality?.id);
+  const isFull = modality
+    ? isRegistrationCapacityReached(countOccupiedRegistrations(existingRegs), modality.max_entries)
+    : false;
+  const asWaitlist = isFull && waitlistOn;
   const [form, setForm] = useState({
     player_a_name: '',
     player_a_email: '',
@@ -106,6 +115,7 @@ export default function ModalityRegistrationDialog({
       await createMutation.mutateAsync({
         tournament_id: tournament.id,
         modality_id: modality.id,
+        allow_waitlist: asWaitlist,
         invite_code:
           typeof window !== 'undefined'
             ? sessionStorage.getItem(`tournament_access_${tournament.id}`) || ''
@@ -128,7 +138,7 @@ export default function ModalityRegistrationDialog({
               }
             : null,
       });
-      toast.success('Inscrição enviada!');
+      toast.success(asWaitlist ? 'Você entrou na lista de espera!' : 'Inscrição enviada!');
       onClose();
     } catch (err) {
       toast.error(err.message || 'Falha na inscrição.');
@@ -144,6 +154,14 @@ export default function ModalityRegistrationDialog({
           </DialogTitle>
         </DialogHeader>
         <div className="space-y-3">
+          {asWaitlist && (
+            <div className="rounded-md border border-amber-300 bg-amber-50 p-3 text-sm text-amber-900">
+              <div className="flex items-center gap-2 font-medium">
+                <Info className="w-4 h-4" /> Modalidade lotada
+              </div>
+              <p className="mt-1">Você pode entrar na lista de espera e será promovido se abrir uma vaga.</p>
+            </div>
+          )}
           {eligibility.errors.length > 0 && (
             <div className="rounded-md border border-red-300 bg-red-50 p-3 text-sm text-red-800">
               <div className="flex items-center gap-2 font-medium">
@@ -242,7 +260,9 @@ export default function ModalityRegistrationDialog({
         <DialogFooter>
           <Button variant="outline" onClick={onClose}>Cancelar</Button>
           <Button onClick={handleSubmit} disabled={createMutation.isPending || blocked}>
-            {createMutation.isPending ? 'Enviando…' : 'Confirmar inscrição'}
+            {createMutation.isPending
+              ? 'Enviando…'
+              : asWaitlist ? 'Entrar na lista de espera' : 'Confirmar inscrição'}
           </Button>
         </DialogFooter>
       </DialogContent>

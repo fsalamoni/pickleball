@@ -98,4 +98,30 @@ describe('buildAthletePublicProfile', () => {
     const result = buildAthletePublicProfile('uid-1', { ...baseProfile, birth_date: '' }, []);
     expect(result.age).toBeNull();
   });
+
+  it('não projeta dados de treinador quando o atleta não se declara treinador', () => {
+    const result = buildAthletePublicProfile('uid-1', {
+      ...baseProfile,
+      coach_bio: 'Aulas de saque',
+      coach_price: 'R$ 100',
+    });
+    expect(result.is_coach).toBe(false);
+    expect(result.coach_bio).toBe('');
+    expect(result.coach_price).toBe('');
+    expect(result.coach_regions).toBe('');
+  });
+
+  it('projeta dados de treinador quando is_coach é verdadeiro', () => {
+    const result = buildAthletePublicProfile('uid-1', {
+      ...baseProfile,
+      is_coach: true,
+      coach_bio: '  Aulas para iniciantes  ',
+      coach_price: 'R$ 80/aula',
+      coach_regions: 'Zona Sul, online',
+    });
+    expect(result.is_coach).toBe(true);
+    expect(result.coach_bio).toBe('Aulas para iniciantes');
+    expect(result.coach_price).toBe('R$ 80/aula');
+    expect(result.coach_regions).toBe('Zona Sul, online');
+  });
 });

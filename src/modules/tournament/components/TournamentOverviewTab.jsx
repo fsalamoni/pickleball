@@ -35,6 +35,8 @@ import {
 } from '@/modules/tournament/domain/capacity';
 import ModalityInfoModal from './ModalityInfoModal';
 import ModalityRegistrationDialog from './ModalityRegistrationDialog';
+import { useFeatureFlag } from '@/core/lib/FeatureFlagsContext';
+import { FEATURE_FLAG } from '@/core/featureFlags';
 import { cn } from '@/core/lib/utils';
 
 function formatDate(value) {
@@ -265,6 +267,8 @@ function ModalityCard({
   const canRegister = isAdmin || isPublic || hasPrivateAccess;
   const occupied = countOccupiedRegistrations(allRegistrations.filter((r) => r.modality_id === modality.id));
   const slotsFull = isRegistrationCapacityReached(occupied, modality.max_entries);
+  const waitlistOn = useFeatureFlag(FEATURE_FLAG.TOURNAMENT_WAITLIST);
+  const canWaitlist = slotsFull && waitlistOn && !alreadyRegistered && !isAdmin;
   const pct = getCapacityProgress(confirmed, modality.max_entries);
   const pendingRegistrations = Math.max(occupied - confirmed, 0);
   const barTone = slotsFull
@@ -373,9 +377,11 @@ function ModalityCard({
               {alreadyRegistered ? (
                 <Badge variant="success" className="rounded-full px-3 py-1 shadow-none">Inscrito</Badge>
               ) : canRegister ? (
-                <Button size="sm" onClick={onRegister} disabled={slotsFull}>
+                <Button size="sm" onClick={onRegister} disabled={slotsFull && !canWaitlist}>
                   <Plus className="w-4 h-4 mr-1" />
-                  {slotsFull ? 'Modalidade lotada' : isAdmin ? 'Inscrever jogador' : 'Inscrever-se'}
+                  {canWaitlist
+                    ? 'Entrar na lista de espera'
+                    : slotsFull ? 'Modalidade lotada' : isAdmin ? 'Inscrever jogador' : 'Inscrever-se'}
                 </Button>
               ) : (
                 <Badge variant="secondary" className="rounded-full px-3 py-1 shadow-none">Privado: exige código</Badge>

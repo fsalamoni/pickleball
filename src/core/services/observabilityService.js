@@ -18,6 +18,23 @@ export function recordPageView(pathname) {
     .catch((error) => logger.debug('page_view telemetry skipped:', error));
 }
 
+/**
+ * Registra um evento de produto genérico no Firebase Analytics (best-effort).
+ * Usado, por exemplo, para medir cliques em links de afiliado. Nunca lança.
+ * @param {string} name nome do evento (ex.: 'affiliate_click')
+ * @param {Record<string, string|number|boolean>} [params]
+ */
+export function recordEvent(name, params = {}) {
+  if (!name) return;
+  void analyticsPromise
+    .then(async (analytics) => {
+      if (!analytics) return;
+      const { logEvent } = await import('firebase/analytics');
+      logEvent(analytics, sanitizeTraceName(name), params);
+    })
+    .catch((error) => logger.debug('event telemetry skipped:', error));
+}
+
 export function recordClientError(error, context = {}) {
   logger.error(context.source || 'Client error', error, context.info || '');
 

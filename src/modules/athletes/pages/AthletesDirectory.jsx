@@ -3,6 +3,7 @@ import { Link } from 'react-router-dom';
 import {
   Award,
   Building2,
+  GraduationCap,
   Mail,
   MapPin,
   Phone,
@@ -26,8 +27,11 @@ import {
   DialogDescription,
 } from '@/components/ui/dialog';
 import { useAuth } from '@/core/lib/FirebaseAuthContext';
+import { useFeatureFlag } from '@/core/lib/FeatureFlagsContext';
+import { FEATURE_FLAG } from '@/core/featureFlags';
 import { useAthletes } from '@/modules/athletes/hooks/useAthletes';
 import ChatLauncherButton from '@/modules/chat/components/ChatLauncherButton';
+import FollowButton from '@/modules/social/components/FollowButton';
 import {
   ATHLETE_GENDER_LABELS,
   genderLabel,
@@ -51,11 +55,15 @@ function locationText(athlete) {
 
 export default function AthletesDirectory() {
   const { isAuthAvailable, authUnavailableReason } = useAuth();
+  const coachDirectoryOn = useFeatureFlag(FEATURE_FLAG.COACH_DIRECTORY);
+  const profilePageOn = useFeatureFlag(FEATURE_FLAG.ATHLETE_PROFILE_PAGE);
+  const followOn = useFeatureFlag(FEATURE_FLAG.FOLLOW_ATHLETES);
   const { data: athletes = [], isLoading } = useAthletes();
   const [search, setSearch] = useState('');
   const [genderFilter, setGenderFilter] = useState(ALL);
   const [levelFilter, setLevelFilter] = useState(ALL);
   const [clubFilter, setClubFilter] = useState(ALL);
+  const [coachOnly, setCoachOnly] = useState(false);
   const [selected, setSelected] = useState(null);
   const isPreviewMode = import.meta.env.DEV && !isAuthAvailable;
 
@@ -78,6 +86,7 @@ export default function AthletesDirectory() {
         if (genderFilter !== ALL && a.gender !== genderFilter) return false;
         if (levelFilter !== ALL && a.level !== levelFilter) return false;
         if (clubFilter !== ALL && !(a.clubs || []).some((c) => c.id === clubFilter)) return false;
+        if (coachDirectoryOn && coachOnly && a.is_coach !== true) return false;
         if (!q) return true;
         const haystack = [a.platform_name, a.city, a.state, a.level, ...(a.clubs || []).map((c) => c.name)]
           .filter(Boolean)
@@ -86,7 +95,7 @@ export default function AthletesDirectory() {
         return haystack.includes(q);
       })
       .sort((a, b) => String(a.platform_name || '').localeCompare(String(b.platform_name || ''), 'pt-BR'));
-  }, [athletes, search, genderFilter, levelFilter, clubFilter]);
+  }, [athletes, search, genderFilter, levelFilter, clubFilter, coachOnly, coachDirectoryOn]);
 
   const stats = useMemo(() => {
     const cities = new Set(athletes.map(locationText).filter(Boolean));
@@ -98,13 +107,15 @@ export default function AthletesDirectory() {
     ];
   }, [athletes]);
 
-  const hasActiveFilters = search || genderFilter !== ALL || levelFilter !== ALL || clubFilter !== ALL;
+  const hasActiveFilters =
+    search || genderFilter !== ALL || levelFilter !== ALL || clubFilter !== ALL || coachOnly;
 
   const clearFilters = () => {
     setSearch('');
     setGenderFilter(ALL);
     setLevelFilter(ALL);
     setClubFilter(ALL);
+    setCoachOnly(false);
   };
 
   return (
@@ -208,6 +219,21 @@ export default function AthletesDirectory() {
             />
           </div>
 
+          {coachDirectoryOn && (
+            <button
+              type="button"
+              onClick={() => setCoachOnly((v) => !v)}
+              aria-pressed={coachOnly}
+              className={`inline-flex items-center gap-2 rounded-full border px-4 py-2 text-sm font-medium transition-colors ${
+                coachOnly
+                  ? 'border-emerald-600 bg-emerald-600 text-white'
+                  : 'border-emerald-950/15 bg-white/80 text-slate-700 hover:bg-emerald-50'
+              }`}
+            >
+              <GraduationCap className="h-4 w-4" /> Somente treinadores
+            </button>
+          )}
+
           <div className="border-t border-emerald-950/8 pt-4 text-sm text-slate-600">
             <span className="font-semibold text-slate-950">{filtered.length}</span> atleta(s) para o filtro atual.
           </div>
@@ -254,12 +280,24 @@ export default function AthletesDirectory() {
       ) : (
         <div className="grid gap-4 sm:grid-cols-2 xl:grid-cols-3">
           {filtered.map((athlete) => (
-            <AthleteCard key={athlete.id} athlete={athlete} onOpen={() => setSelected(athlete)} />
+            <AthleteCard
+              key={athlete.id}
+              athlete={athlete}
+              showCoach={coachDirectoryOn}
+              onOpen={() => setSelected(athlete)}
+            />
           ))}
         </div>
       )}
 
-      <AthleteDialog athlete={selected} open={!!selected} onClose={() => setSelected(null)} />
+      <AthleteDialog
+        athlete={selected}
+        open={!!selected}
+        onClose={() => setSelected(null)}
+        showCoach={coachDirectoryOn}
+        showProfileLink={profilePageOn}
+        showFollow={followOn}
+      />
     </div>
   );
 }
@@ -293,9 +331,10 @@ function AthleteAvatar({ athlete, size = 'md' }) {
   );
 }
 
-function AthleteCard({ athlete, onOpen }) {
+function AthleteCard({ athlete, onOpen, showCoach }) {
   const location = locationText(athlete);
   const clubs = athlete.clubs || [];
+  const isCoach = showCoach && athlete.is_coach === true;
   return (
     <Card className="match-surface h-full rounded-[1.75rem] border-white/80 bg-white/85">
       <CardContent className="flex h-full flex-col p-5">
@@ -307,6 +346,11 @@ function AthleteCard({ athlete, onOpen }) {
               {Number.isFinite(athlete.age) && <span>{athlete.age} anos</span>}
               {genderLabel(athlete.gender) && <span>· {genderLabel(athlete.gender)}</span>}
             </div>
+            {isCoach && (
+              <Badge variant="success" className="mt-1.5 rounded-full">
+                <GraduationCap className="mr-1 h-3 w-3" /> Treinador
+              </Badge>
+            )}
           </div>
         </div>
 
@@ -346,10 +390,11 @@ function AthleteCard({ athlete, onOpen }) {
   );
 }
 
-function AthleteDialog({ athlete, open, onClose }) {
+function AthleteDialog({ athlete, open, onClose, showCoach, showProfileLink, showFollow }) {
   if (!athlete) return null;
   const location = locationText(athlete);
   const clubs = athlete.clubs || [];
+  const isCoach = showCoach && athlete.is_coach === true;
   const contacts = [
     athlete.phone_public && athlete.phone ? { icon: Phone, label: 'Telefone', value: athlete.phone } : null,
     athlete.email_public && athlete.email ? { icon: Mail, label: 'E-mail', value: athlete.email } : null,
@@ -374,6 +419,27 @@ function AthleteDialog({ athlete, open, onClose }) {
 
         <div className="space-y-4">
           <ChatLauncherButton athlete={athlete} className="w-full" label="Conversar com este atleta" />
+
+          {showFollow && <FollowButton targetUid={athlete.id} className="w-full" />}
+
+          {showProfileLink && (
+            <Button asChild variant="outline" className="w-full">
+              <Link to={`/atleta/${athlete.id}`} onClick={onClose}>Ver perfil completo</Link>
+            </Button>
+          )}
+
+          {isCoach && (
+            <div className="rounded-[1rem] border border-emerald-200 bg-emerald-50/60 p-3">
+              <div className="mb-1 flex items-center gap-2 text-xs font-semibold uppercase tracking-[0.16em] text-emerald-700/80">
+                <GraduationCap className="h-3.5 w-3.5" /> Treinador
+              </div>
+              {athlete.coach_bio && <p className="text-sm text-slate-700">{athlete.coach_bio}</p>}
+              <div className="mt-2 flex flex-wrap gap-x-4 gap-y-1 text-xs text-slate-600">
+                {athlete.coach_price && <span><strong className="text-slate-800">Valor:</strong> {athlete.coach_price}</span>}
+                {athlete.coach_regions && <span><strong className="text-slate-800">Atua em:</strong> {athlete.coach_regions}</span>}
+              </div>
+            </div>
+          )}
 
           <div className="grid gap-3 sm:grid-cols-2">
             <InfoRow icon={MapPin} label="Cidade" value={location} />

@@ -1,16 +1,18 @@
 import { useEffect, useState } from 'react';
 import { collection, getCountFromServer } from 'firebase/firestore';
-import { BarChart3, Trophy, Users, ListChecks, Flag } from 'lucide-react';
+import { BarChart3, Trophy, Users, ListChecks, Flag, Medal } from 'lucide-react';
 import { toast } from 'sonner';
 import { db } from '@/core/config/firebase';
 import { AuditLogTable } from '@/components/AuditLogTable';
+import { Button } from '@/components/ui/button';
 import { Card, CardContent } from '@/components/ui/card';
 import { Skeleton } from '@/components/ui/skeleton';
 import { Switch } from '@/components/ui/switch';
 import { useAuth } from '@/core/lib/FirebaseAuthContext';
-import { useFeatureFlags } from '@/core/lib/FeatureFlagsContext';
-import { FEATURE_FLAG_META } from '@/core/featureFlags';
+import { useFeatureFlags, useFeatureFlag } from '@/core/lib/FeatureFlagsContext';
+import { FEATURE_FLAG, FEATURE_FLAG_META } from '@/core/featureFlags';
 import { setFeatureFlag } from '@/core/services/platformSettingsService';
+import { useRecomputeRatings } from '@/modules/rating/hooks/useRating';
 
 export default function AdminMetrics() {
   const [stats, setStats] = useState(null);
@@ -55,8 +57,54 @@ export default function AdminMetrics() {
         </div>
       )}
       <FeatureFlagsPanel />
+      <RatingsPanel />
       <AuditLogTable />
     </div>
+  );
+}
+
+function RatingsPanel() {
+  const ratingOn = useFeatureFlag(FEATURE_FLAG.PLAYER_RATING);
+  const { mutateAsync, isPending } = useRecomputeRatings();
+  const [lastResult, setLastResult] = useState(null);
+
+  if (!ratingOn) return null;
+
+  async function handleRecompute() {
+    try {
+      const result = await mutateAsync();
+      setLastResult(result);
+      toast.success(
+        `Ratings recalculados: ${result.players} atleta(s) a partir de ${result.matchesUsed} jogo(s).`,
+      );
+    } catch (err) {
+      toast.error(err?.message || 'Não foi possível recalcular os ratings.');
+    }
+  }
+
+  return (
+    <Card>
+      <CardContent className="p-4 space-y-3">
+        <div className="flex items-center gap-2">
+          <Medal className="w-5 h-5 text-emerald-600" />
+          <h2 className="text-lg font-semibold arena-heading">Rating ELO + Ranking nacional</h2>
+        </div>
+        <p className="text-xs text-slate-500">
+          Recalcula o rating de todos os atletas a partir dos jogos finalizados e atualiza o
+          ranking nacional público (/ranking). Faça isso após registrar novos resultados.
+        </p>
+        <Button onClick={handleRecompute} disabled={isPending}>
+          <Medal className="w-4 h-4" />
+          <span className="ml-1">{isPending ? 'Recalculando…' : 'Recalcular ratings'}</span>
+        </Button>
+        {lastResult && (
+          <p className="text-xs text-slate-500">
+            Último recálculo: {lastResult.players} atleta(s), {lastResult.matchesUsed} de{' '}
+            {lastResult.matchesTotal} jogo(s) finalizados utilizados.
+          </p>
+        )}
+      </CardContent>
+    </Card>
   );
 }
 
