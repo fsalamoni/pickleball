@@ -18,6 +18,9 @@ import {
   MODALITY_FORMAT_LABELS,
 } from '@/modules/tournament/domain/constants';
 import { useClipboard } from '@/core/lib/useClipboard';
+import { useFeatureFlag } from '@/core/lib/FeatureFlagsContext';
+import { FEATURE_FLAG } from '@/core/featureFlags';
+import ShareCardButton from '@/modules/sharing/components/ShareCardButton';
 
 function formatPublicMatchTime(iso) {
   if (!iso) return '—';
@@ -42,6 +45,7 @@ function roundLabel(m) {
 export default function PublicTournament() {
   const { tournamentId } = useParams();
   const { copy, copied } = useClipboard();
+  const shareCardsOn = useFeatureFlag(FEATURE_FLAG.SHARE_CARDS);
   const publicUrl =
     typeof window !== 'undefined' ? `${window.location.origin}/p/${tournamentId}` : '';
 
@@ -98,10 +102,14 @@ export default function PublicTournament() {
             <Trophy className="w-5 h-5" /> Pickleball
           </Link>
           <div className="flex items-center gap-2 flex-wrap">
-            <Button size="sm" variant="outline" onClick={handleShare}>
-              {copied ? <Check className="w-4 h-4 text-emerald-600" /> : <Share2 className="w-4 h-4" />}
-              <span className="ml-1 hidden sm:inline">Compartilhar</span>
-            </Button>
+            {shareCardsOn ? (
+              <ShareCardButton tournament={tournament} />
+            ) : (
+              <Button size="sm" variant="outline" onClick={handleShare}>
+                {copied ? <Check className="w-4 h-4 text-emerald-600" /> : <Share2 className="w-4 h-4" />}
+                <span className="ml-1 hidden sm:inline">Compartilhar</span>
+              </Button>
+            )}
             <Button size="sm" variant="outline" onClick={() => copy(publicUrl, 'Link copiado!')}>
               <Copy className="w-4 h-4" />
               <span className="ml-1 hidden sm:inline">Copiar link</span>

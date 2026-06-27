@@ -19,6 +19,14 @@ export const FEATURE_FLAG = Object.freeze({
    * progressão automática entre as fases. Inscrição segue em lista única.
    */
   MULTI_PHASE_TOURNAMENTS: 'multi_phase_tournaments',
+
+  /**
+   * Cards de compartilhamento (UGC): habilita o botão "Compartilhar" que gera
+   * um card visual do torneio (com QR Code e link público) pronto para
+   * WhatsApp/Stories, além do compartilhamento por link pré-preenchido. É
+   * puramente aditivo — desligado, o botão some e nada muda no fluxo atual.
+   */
+  SHARE_CARDS: 'share_cards',
 });
 
 /** Metadados de exibição para o painel de flags (admin master). */
@@ -31,6 +39,14 @@ export const FEATURE_FLAG_META = Object.freeze({
       + 'em grupos equilibrados por gênero e nível, sorteio ou seleção manual, '
       + 'qualificação de classificados e progressão automática entre fases. '
       + 'A inscrição continua em lista única por modalidade.',
+  },
+  [FEATURE_FLAG.SHARE_CARDS]: {
+    label: 'Cards de compartilhamento (UGC)',
+    description:
+      'Habilita o botão "Compartilhar" na página pública do torneio, que gera '
+      + 'um card visual com QR Code e link, otimizado para WhatsApp e Stories, '
+      + 'e o compartilhamento por link/texto pré-preenchido. Ajuda na divulgação '
+      + 'e aquisição orgânica. Desligado, o botão fica oculto e nada muda.',
   },
 });
 
