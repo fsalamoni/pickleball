@@ -8,6 +8,7 @@ import { useAuth } from '@/core/lib/FirebaseAuthContext';
 import { useFeatureFlag } from '@/core/lib/FeatureFlagsContext';
 import { FEATURE_FLAG } from '@/core/featureFlags';
 import ChatLauncherButton from '@/modules/chat/components/ChatLauncherButton';
+import ErrorState from '@/components/ErrorState';
 import { useNationalRanking } from '../hooks/useRating.js';
 import { rankMatchmakingCandidates, DEFAULT_MAX_RATING_DIFF } from '../domain/matchmaking.js';
 
@@ -16,7 +17,7 @@ export default function FindPlayers() {
   const matchmakingOn = useFeatureFlag(FEATURE_FLAG.MATCHMAKING);
   const enabled = ratingOn && matchmakingOn;
   const { user, userProfile } = useAuth();
-  const { data: players = [], isLoading } = useNationalRanking();
+  const { data: players = [], isLoading, isError, refetch } = useNationalRanking();
   const [sameCityOnly, setSameCityOnly] = useState(false);
   const [closeLevelOnly, setCloseLevelOnly] = useState(true);
 
@@ -33,6 +34,14 @@ export default function FindPlayers() {
   }, [me, players, user?.uid, sameCityOnly, closeLevelOnly, myCity]);
 
   if (!enabled) return <Navigate to="/inicio" replace />;
+
+  if (isError) {
+    return (
+      <div className="mx-auto max-w-4xl">
+        <ErrorState message="Não foi possível carregar os jogadores." onRetry={refetch} />
+      </div>
+    );
+  }
 
   if (isLoading) {
     return (

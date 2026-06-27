@@ -4,6 +4,7 @@ import { Trophy, MapPin, Award, Medal, Swords, Percent, Building2, ChevronRight 
 import { Card, CardContent } from '@/components/ui/card';
 import { Badge } from '@/components/ui/badge';
 import { Skeleton } from '@/components/ui/skeleton';
+import ErrorState from '@/components/ErrorState';
 import { useFeatureFlag } from '@/core/lib/FeatureFlagsContext';
 import { FEATURE_FLAG } from '@/core/featureFlags';
 import ChatLauncherButton from '@/modules/chat/components/ChatLauncherButton';
@@ -46,12 +47,20 @@ export default function AthleteProfile() {
   const headToHeadOn = useFeatureFlag(FEATURE_FLAG.HEAD_TO_HEAD);
   const followOn = useFeatureFlag(FEATURE_FLAG.FOLLOW_ATHLETES);
   const { uid } = useParams();
-  const { data, isLoading } = useAthleteProfile(uid);
+  const { data, isLoading, isError, refetch } = useAthleteProfile(uid);
   const { data: ratingHistory = [] } = useRatingHistory(uid, ratingHistoryOn);
   const { data: h2hData } = useHeadToHead(uid, headToHeadOn);
   const { data: followers = [] } = useFollowers(uid, followOn);
 
   if (!enabled) return <Navigate to="/atletas" replace />;
+
+  if (isError) {
+    return (
+      <div className="mx-auto max-w-4xl">
+        <ErrorState message="Não foi possível carregar o perfil do atleta." onRetry={refetch} />
+      </div>
+    );
+  }
 
   if (isLoading) {
     return (

@@ -138,8 +138,12 @@ export async function recomputeAllRatings(actor) {
     };
   });
 
-  // Histórico de rating: lê o existente uma vez e acrescenta um ponto por jogador.
-  const historySnap = await getDocs(collection(db, HISTORY_COLLECTION));
+  // Lê (uma vez) o histórico e os ratings já existentes — para acrescentar
+  // pontos ao histórico e detectar ratings órfãos a remover.
+  const [historySnap, existingRatingsSnap] = await Promise.all([
+    getDocs(collection(db, HISTORY_COLLECTION)),
+    getDocs(collection(db, RATINGS_COLLECTION)),
+  ]);
   const historyByUid = new Map(historySnap.docs.map((d) => [d.id, d.data()]));
   const snapshotAt = Date.now();
 
@@ -160,13 +164,34 @@ export async function recomputeAllRatings(actor) {
     await batch.commit();
   }
 
+  // Limpeza: remove ratings de jogadores que não estão mais no ranking (ex.:
+  // jogos excluídos/anulados), evitando posições e ratings obsoletos no ranking
+  // público. O histórico é preservado (caso o jogador volte a pontuar).
+  const newUids = new Set(rows.map((r) => r.uid));
+  const staleIds = existingRatingsSnap.docs.map((d) => d.id).filter((id) => !newUids.has(id));
+  for (let i = 0; i < staleIds.length; i += SAFE_BATCH_WRITE_SIZE) {
+    const batch = writeBatch(db);
+    staleIds.slice(i, i + SAFE_BATCH_WRITE_SIZE).forEach((id) => batch.delete(doc(db, RATINGS_COLLECTION, id)));
+    await batch.commit();
+  }
+
   await createAuditLog({
     action: 'ratings_recomputed',
     actor,
-    details: { players: rows.length, matches_used: engineMatches.length, matches_total: finishedMatches.length },
+    details: {
+      players: rows.length,
+      matches_used: engineMatches.length,
+      matches_total: finishedMatches.length,
+      stale_removed: staleIds.length,
+    },
   });
 
-  return { players: rows.length, matchesUsed: engineMatches.length, matchesTotal: finishedMatches.length };
+  return {
+    players: rows.length,
+    matchesUsed: engineMatches.length,
+    matchesTotal: finishedMatches.length,
+    staleRemoved: staleIds.length,
+  };
 }
 
 /** Ranking nacional materializado (ordenado por rating desc). */

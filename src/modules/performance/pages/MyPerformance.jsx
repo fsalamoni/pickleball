@@ -3,6 +3,7 @@ import { Navigate } from 'react-router-dom';
 import { Trophy, Swords, Percent, Medal, Award, ListChecks } from 'lucide-react';
 import { Card, CardContent } from '@/components/ui/card';
 import { Skeleton } from '@/components/ui/skeleton';
+import ErrorState from '@/components/ErrorState';
 import { useAuth } from '@/core/lib/FirebaseAuthContext';
 import { useFeatureFlag } from '@/core/lib/FeatureFlagsContext';
 import { FEATURE_FLAG } from '@/core/featureFlags';
@@ -44,12 +45,20 @@ export default function MyPerformance() {
   const ratingHistoryOn = useFeatureFlag(FEATURE_FLAG.RATING_HISTORY);
   const progressionOn = useFeatureFlag(FEATURE_FLAG.PLAYER_PROGRESSION);
   const { user } = useAuth();
-  const { stats, isLoading } = usePlayerStats();
+  const { stats, isLoading, isError, refetch } = usePlayerStats();
   const { data: ratingHistory = [] } = useRatingHistory(user?.uid, ratingHistoryOn);
   const { data: matchDates = [] } = usePlayerMatchDates(user?.uid, progressionOn);
   const currentRating = ratingHistory.length ? ratingHistory[ratingHistory.length - 1].rating : 0;
 
   if (!enabled) return <Navigate to="/inicio" replace />;
+
+  if (isError) {
+    return (
+      <div className="mx-auto max-w-5xl">
+        <ErrorState message="Não foi possível carregar seu desempenho." onRetry={refetch} />
+      </div>
+    );
+  }
 
   if (isLoading) {
     return (
