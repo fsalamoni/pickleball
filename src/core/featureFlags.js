@@ -109,6 +109,13 @@ export const FEATURE_FLAG = Object.freeze({
    * desligado, o gráfico não aparece (os pontos seguem sendo registrados).
    */
   RATING_HISTORY: 'rating_history',
+
+  /**
+   * Confrontos diretos (head-to-head) e rivais: agrega os jogos do atleta por
+   * adversário (vitórias/derrotas) e destaca os rivais mais frequentes, exibido
+   * no perfil. Aditivo — desligado, a seção não aparece.
+   */
+  HEAD_TO_HEAD: 'head_to_head',
 });
 
 /** Metadados de exibição para o painel de flags (admin master). */
@@ -210,6 +217,12 @@ export const FEATURE_FLAG_META = Object.freeze({
     description:
       'Mostra um gráfico de evolução do rating (snapshots a cada recálculo) no '
       + 'perfil do atleta e em "Meu Desempenho". Desligado, o gráfico não aparece.',
+  },
+  [FEATURE_FLAG.HEAD_TO_HEAD]: {
+    label: 'Confrontos diretos e rivais',
+    description:
+      'Agrega os jogos do atleta por adversário (vitórias/derrotas) e destaca os '
+      + 'rivais mais frequentes, no perfil. Desligado, a seção não aparece.',
   },
 });
 

@@ -9,7 +9,9 @@ import { FEATURE_FLAG } from '@/core/featureFlags';
 import ChatLauncherButton from '@/modules/chat/components/ChatLauncherButton';
 import AchievementsCard from '@/modules/achievements/components/AchievementsCard';
 import RatingSparkline from '@/modules/rating/components/RatingSparkline';
+import HeadToHeadCard from '@/modules/rating/components/HeadToHeadCard';
 import { useRatingHistory } from '@/modules/rating/hooks/useRating';
+import { useHeadToHead } from '@/modules/rating/hooks/useHeadToHead';
 import { genderLabel } from '@/modules/athletes/domain/constants';
 import { MODALITY_FORMAT_LABELS } from '@/modules/tournament/domain/constants';
 import { useAthleteProfile } from '../hooks/useAthleteProfile.js';
@@ -39,9 +41,11 @@ export default function AthleteProfile() {
   const enabled = useFeatureFlag(FEATURE_FLAG.ATHLETE_PROFILE_PAGE);
   const achievementsOn = useFeatureFlag(FEATURE_FLAG.ACHIEVEMENTS);
   const ratingHistoryOn = useFeatureFlag(FEATURE_FLAG.RATING_HISTORY);
+  const headToHeadOn = useFeatureFlag(FEATURE_FLAG.HEAD_TO_HEAD);
   const { uid } = useParams();
   const { data, isLoading } = useAthleteProfile(uid);
   const { data: ratingHistory = [] } = useRatingHistory(uid, ratingHistoryOn);
+  const { data: h2hData } = useHeadToHead(uid, headToHeadOn);
 
   if (!enabled) return <Navigate to="/atletas" replace />;
 
@@ -156,6 +160,8 @@ export default function AthleteProfile() {
       {ratingHistoryOn && <RatingSparkline points={ratingHistory} />}
 
       {achievementsOn && <AchievementsCard summary={{ ...stats, rating: rating?.rating }} />}
+
+      {headToHeadOn && h2hData?.h2h?.length > 0 && <HeadToHeadCard records={h2hData.h2h} />}
 
       {/* Torneios recentes */}
       {history.length > 0 && (
