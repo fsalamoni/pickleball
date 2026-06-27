@@ -50,6 +50,14 @@ export const FEATURE_FLAG = Object.freeze({
    * desligado, a rota /ranking, o menu e o botão de recálculo ficam ocultos.
    */
   PLAYER_RATING: 'player_rating',
+
+  /**
+   * Matchmaking por nível: página "Encontrar jogadores" que sugere parceiros e
+   * adversários com rating próximo (e, opcionalmente, da mesma cidade), com
+   * atalho para conversar. Depende de `player_rating` (usa o rating calculado).
+   * Aditivo — desligado, a rota e o item de menu ficam ocultos.
+   */
+  MATCHMAKING: 'matchmaking',
 });
 
 /** Metadados de exibição para o painel de flags (admin master). */
@@ -95,6 +103,13 @@ export const FEATURE_FLAG_META = Object.freeze({
       + 'recálculo é feito sob demanda pelo admin na própria página de Métricas. '
       + 'Cria autoridade de marca e engajamento. Desligado, a rota /ranking, o '
       + 'item de menu e o botão de recálculo ficam ocultos.',
+  },
+  [FEATURE_FLAG.MATCHMAKING]: {
+    label: 'Matchmaking por nível',
+    description:
+      'Página "Encontrar jogadores" que sugere parceiros e adversários com '
+      + 'rating próximo (opcionalmente da mesma cidade), com atalho para o chat. '
+      + 'Requer o "Rating ELO" ativado. Desligado, a rota e o menu ficam ocultos.',
   },
 });
 

@@ -23,6 +23,7 @@ import {
   MessageCircle,
   Activity,
   Medal,
+  Swords,
 } from 'lucide-react';
 import { useAuth } from '@/core/lib/FirebaseAuthContext';
 import { useFeatureFlag } from '@/core/lib/FeatureFlagsContext';
@@ -72,6 +73,11 @@ const PAGE_META = {
     eyebrow: 'Conta',
     title: 'Meu desempenho',
     description: 'Acompanhe seus jogos, aproveitamento, pódios e evolução nos torneios.',
+  },
+  FindPlayers: {
+    eyebrow: 'Explorar',
+    title: 'Encontrar jogadores',
+    description: 'Parceiros e adversários do seu nível, prontos para um jogo.',
   },
   CreateTournament: {
     eyebrow: 'Organização',
@@ -151,6 +157,7 @@ export default function Layout({ children, currentPageName }) {
   const { user, userProfile, signOut, isAuthenticated, isPlatformAdmin } = useAuth();
   const performanceOn = useFeatureFlag(FEATURE_FLAG.PLAYER_PERFORMANCE);
   const ratingOn = useFeatureFlag(FEATURE_FLAG.PLAYER_RATING);
+  const matchmakingOn = useFeatureFlag(FEATURE_FLAG.MATCHMAKING);
   const [sidebarOpen, setSidebarOpen] = useState(false);
   const isStandalonePublicPage = STANDALONE_PUBLIC_PAGES.includes(currentPageName);
   const isUtilityPublicPage = UTILITY_PUBLIC_PAGES.includes(currentPageName);
@@ -329,6 +336,15 @@ export default function Layout({ children, currentPageName }) {
                   icon={Medal}
                   label="Ranking nacional"
                   active={currentPageName === 'NationalRanking'}
+                  onClick={() => setSidebarOpen(false)}
+                />
+              )}
+              {ratingOn && matchmakingOn && (
+                <NavItem
+                  to="/encontrar-jogadores"
+                  icon={Swords}
+                  label="Encontrar jogadores"
+                  active={currentPageName === 'FindPlayers'}
                   onClick={() => setSidebarOpen(false)}
                 />
               )}
