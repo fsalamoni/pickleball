@@ -137,6 +137,32 @@ export const FEATURE_FLAG = Object.freeze({
    * `player_goals` (do próprio dono). Aditivo — desligado, a seção não aparece.
    */
   PLAYER_PROGRESSION: 'player_progression',
+
+  /**
+   * Certificados/diplomas de torneio: gera uma imagem de campeão/participação
+   * (reusa a infra dos share cards) na página pública de torneios encerrados.
+   * Aditivo — desligado, o botão não aparece.
+   */
+  TOURNAMENT_CERTIFICATES: 'tournament_certificates',
+
+  /**
+   * Galeria de fotos do torneio: upload pelos admins do torneio e exibição na
+   * página do torneio e na pública. Aditivo — desligado, a galeria não aparece.
+   */
+  TOURNAMENT_GALLERY: 'tournament_gallery',
+
+  /**
+   * Lista de espera: quando a modalidade lota, o atleta pode entrar na fila e o
+   * admin promove ao abrir vaga. Aditivo — desligado, o fluxo atual (bloqueio
+   * "modalidade lotada") permanece.
+   */
+  TOURNAMENT_WAITLIST: 'tournament_waitlist',
+
+  /**
+   * UX do torneio: "Meus próximos jogos" no painel inicial. Aditivo —
+   * desligado, a seção não aparece.
+   */
+  TOURNAMENT_UX: 'tournament_ux',
 });
 
 /** Metadados de exibição para o painel de flags (admin master). */
@@ -265,6 +291,31 @@ export const FEATURE_FLAG_META = Object.freeze({
       'Mostra XP e nível de perfil, sequência de semanas ativas e metas pessoais '
       + 'em "Meu Desempenho". XP e streak são calculados dos dados; as metas são '
       + 'do próprio atleta. Desligado, a seção não aparece.',
+  },
+  [FEATURE_FLAG.TOURNAMENT_CERTIFICATES]: {
+    label: 'Certificados de torneio',
+    description:
+      'Gera um certificado/diploma (imagem para download) de campeão ou '
+      + 'participação na página pública de torneios encerrados. Desligado, o '
+      + 'botão não aparece.',
+  },
+  [FEATURE_FLAG.TOURNAMENT_GALLERY]: {
+    label: 'Galeria de fotos do torneio',
+    description:
+      'Permite aos admins do torneio enviar fotos, exibidas na página do torneio '
+      + 'e na visão pública. Desligado, a galeria não aparece.',
+  },
+  [FEATURE_FLAG.TOURNAMENT_WAITLIST]: {
+    label: 'Lista de espera',
+    description:
+      'Quando a modalidade lota, o atleta pode entrar na lista de espera e o '
+      + 'admin promove ao abrir vaga. Desligado, permanece o bloqueio atual.',
+  },
+  [FEATURE_FLAG.TOURNAMENT_UX]: {
+    label: 'Meus próximos jogos',
+    description:
+      'Mostra os próximos jogos agendados do atleta no painel inicial. '
+      + 'Desligado, a seção não aparece.',
   },
 });
 

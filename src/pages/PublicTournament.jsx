@@ -13,6 +13,7 @@ import { listAllMatchesForModality } from '@/modules/tournament/services/matchSe
 import { listRegistrations } from '@/modules/tournament/services/registrationService';
 import { computeModalityRanking } from '@/modules/tournament/services/rankingService';
 import {
+  TOURNAMENT_STATUS,
   TOURNAMENT_STATUS_LABELS,
   MATCH_STATUS_LABELS,
   MODALITY_FORMAT_LABELS,
@@ -21,6 +22,8 @@ import { useClipboard } from '@/core/lib/useClipboard';
 import { useFeatureFlag } from '@/core/lib/FeatureFlagsContext';
 import { FEATURE_FLAG } from '@/core/featureFlags';
 import ShareCardButton from '@/modules/sharing/components/ShareCardButton';
+import CertificateButton from '@/modules/tournament/components/CertificateButton';
+import TournamentGallery from '@/modules/tournament/components/TournamentGallery';
 
 function formatPublicMatchTime(iso) {
   if (!iso) return '—';
@@ -114,6 +117,9 @@ export default function PublicTournament() {
               <Copy className="w-4 h-4" />
               <span className="ml-1 hidden sm:inline">Copiar link</span>
             </Button>
+            {tournament.status === TOURNAMENT_STATUS.FINISHED && (
+              <CertificateButton tournament={tournament} />
+            )}
             <Badge variant="success" className="text-xs">
               <Eye className="w-3 h-3 mr-1" /> Visão pública
             </Badge>
@@ -167,6 +173,8 @@ export default function PublicTournament() {
         {modalities.map((m) => (
           <PublicModalityBlock key={m.id} modality={m} />
         ))}
+
+        <TournamentGallery tournamentId={tournament.id} canManage={false} />
       </main>
 
       <footer className="text-center text-xs text-slate-400 py-6">

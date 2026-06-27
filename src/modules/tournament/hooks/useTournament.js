@@ -25,6 +25,7 @@ import {
   listMyRegistrations,
   createRegistration,
   confirmRegistrationPayment,
+  promoteFromWaitlist,
   cancelRegistration,
   deleteRegistration,
 } from '../services/registrationService';
@@ -255,6 +256,18 @@ export function useConfirmRegistrationPayment(modalityId) {
   const qc = useQueryClient();
   return useMutation({
     mutationFn: (id) => confirmRegistrationPayment(id, user),
+    onSuccess: () => {
+      qc.invalidateQueries({ queryKey: ['registrations', modalityId] });
+      qc.invalidateQueries({ queryKey: ['registrations-tournament'] });
+    },
+  });
+}
+
+export function usePromoteFromWaitlist(modalityId) {
+  const { user } = useAuth();
+  const qc = useQueryClient();
+  return useMutation({
+    mutationFn: (id) => promoteFromWaitlist(id, user),
     onSuccess: () => {
       qc.invalidateQueries({ queryKey: ['registrations', modalityId] });
       qc.invalidateQueries({ queryKey: ['registrations-tournament'] });

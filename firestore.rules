@@ -164,6 +164,16 @@ service cloud.firestore {
       allow update, delete: if isAuthed() && resource.data.uid == request.auth.uid;
     }
 
+    // ---- Galeria de fotos do torneio -------------------------------------
+    // Leitura pública (aparece na visão de espectador). Envio/remoção só por
+    // admin do torneio (ou admin master).
+    match /tournament_photos/{id} {
+      allow read: if true;
+      allow create: if isTournamentAdmin(request.resource.data.tournament_id) || isPlatformAdmin();
+      allow delete: if (resource.data.tournament_id != null
+        && isTournamentAdmin(resource.data.tournament_id)) || isPlatformAdmin();
+    }
+
     // ---- Seguir atletas --------------------------------------------------
     // Id determinista followerUid_targetUid. Leitura por autenticados; criar/
     // remover apenas o próprio seguidor.

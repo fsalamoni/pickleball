@@ -18,6 +18,7 @@ import { Card, CardContent } from '@/components/ui/card';
 import { Badge } from '@/components/ui/badge';
 import { Skeleton } from '@/components/ui/skeleton';
 import { useMyTournaments, usePublicTournaments } from '@/modules/tournament/hooks/useTournament';
+import MyUpcomingMatches from '@/modules/tournament/components/MyUpcomingMatches';
 import { useAvailableEvents } from '@/modules/clubs/hooks/useClubs';
 import { eventTypeLabel, isPrivateEvent, INVITE_STATUS, INVITE_STATUS_LABELS } from '@/modules/clubs/domain/constants';
 import {
@@ -258,6 +259,8 @@ export default function Dashboard() {
           </CardContent>
         </Card>
       </section>
+
+      <MyUpcomingMatches />
 
       <AvailableEventsSection />
 

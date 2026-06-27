@@ -3,14 +3,17 @@ import { Card, CardContent } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
 import { AvatarGroup } from '@/components/ui/user-avatar';
-import { Plus, Check, X, Trash2 } from 'lucide-react';
+import { Plus, Check, X, Trash2, ArrowUp } from 'lucide-react';
 import {
   useModalities,
   useRegistrationsByTournament,
   useConfirmRegistrationPayment,
+  usePromoteFromWaitlist,
   useCancelRegistration,
   useDeleteRegistration,
 } from '@/modules/tournament/hooks/useTournament';
+import { useFeatureFlag } from '@/core/lib/FeatureFlagsContext';
+import { FEATURE_FLAG } from '@/core/featureFlags';
 import {
   REGISTRATION_STATUS,
   REGISTRATION_STATUS_LABELS,
@@ -68,8 +71,10 @@ export default function TournamentRegistrationsTab({ tournament, isAdmin }) {
 
 function ModalityRegistrationsBlock({ tournament, modality, registrations, isAdmin, currentUserId, onJoin }) {
   const confirmMutation = useConfirmRegistrationPayment(modality.id);
+  const promoteMutation = usePromoteFromWaitlist(modality.id);
   const cancelMutation = useCancelRegistration(modality.id);
   const deleteMutation = useDeleteRegistration(modality.id);
+  const waitlistOn = useFeatureFlag(FEATURE_FLAG.TOURNAMENT_WAITLIST);
   const confirmed = registrations.filter((r) => r.status === REGISTRATION_STATUS.CONFIRMED).length;
   const occupied = countOccupiedRegistrations(registrations);
   const hasPrivateAccess = typeof window !== 'undefined' && Boolean(sessionStorage.getItem(`tournament_access_${tournament.id}`));
@@ -143,6 +148,11 @@ function ModalityRegistrationsBlock({ tournament, modality, registrations, isAdm
                         {r.status === REGISTRATION_STATUS.PENDING_PAYMENT && (
                           <Button size="icon" variant="ghost" title="Confirmar pagamento" onClick={() => confirmMutation.mutate(r.id)}>
                             <Check className="w-4 h-4 text-emerald-600" />
+                          </Button>
+                        )}
+                        {waitlistOn && r.status === REGISTRATION_STATUS.WAITLIST && (
+                          <Button size="icon" variant="ghost" title="Promover da lista de espera" onClick={() => promoteMutation.mutate(r.id)}>
+                            <ArrowUp className="w-4 h-4 text-emerald-600" />
                           </Button>
                         )}
                         {r.status !== REGISTRATION_STATUS.CANCELLED && (
