@@ -6,6 +6,7 @@ import { FeatureFlagsProvider } from '@/core/lib/FeatureFlagsContext';
 import Layout from '@/components/Layout';
 import { Toaster } from '@/components/ui/sonner';
 import { recordPageView } from '@/core/services/observabilityService';
+import AuthFunnelTracker from '@/modules/analytics/components/AuthFunnelTracker';
 
 const Landing = lazy(() => import('@/pages/Landing'));
 const Login = lazy(() => import('@/pages/Login'));
@@ -104,6 +105,7 @@ export default function App() {
         <FeatureFlagsProvider>
         <BrowserRouter basename={import.meta.env.BASE_URL}>
           <RouteTelemetry />
+          <AuthFunnelTracker />
           <Suspense fallback={<FullScreenSpinner />}>
             <Routes>
               {/* Public */}

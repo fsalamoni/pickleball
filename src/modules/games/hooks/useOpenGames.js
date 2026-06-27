@@ -1,5 +1,7 @@
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
 import { useAuth } from '@/core/lib/FirebaseAuthContext';
+import { useFunnel } from '@/modules/analytics/hooks/useFunnel';
+import { FUNNEL_EVENT } from '@/modules/analytics/domain/funnelEvents';
 import {
   createOpenGame,
   listOpenGames,
@@ -31,7 +33,14 @@ function useInvalidate() {
 export function useCreateOpenGame() {
   const { user } = useAuth();
   const invalidate = useInvalidate();
-  return useMutation({ mutationFn: (input) => createOpenGame(input, user), onSuccess: invalidate });
+  const { track } = useFunnel();
+  return useMutation({
+    mutationFn: (input) => createOpenGame(input, user),
+    onSuccess: () => {
+      invalidate();
+      track(FUNNEL_EVENT.OPEN_GAME_CREATED);
+    },
+  });
 }
 
 export function useCloseOpenGame() {

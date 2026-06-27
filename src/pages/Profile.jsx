@@ -5,7 +5,9 @@ import { Award, Printer, UserCheck, Users, Shield, GraduationCap } from 'lucide-
 import { useAuth } from '@/core/lib/FirebaseAuthContext';
 import { useFeatureFlag } from '@/core/lib/FeatureFlagsContext';
 import { FEATURE_FLAG } from '@/core/featureFlags';
-import { birthDateToBrtDate, validateRequiredProfile } from '@/core/lib/profileValidation';
+import { birthDateToBrtDate, validateRequiredProfile, isRequiredProfileComplete } from '@/core/lib/profileValidation';
+import { useFunnel } from '@/modules/analytics/hooks/useFunnel';
+import { FUNNEL_EVENT } from '@/modules/analytics/domain/funnelEvents';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
@@ -23,6 +25,7 @@ import ParticipationHistoryCard from '@/modules/tournament/components/Participat
 export default function Profile() {
   const { user, userProfile, updateUserProfile } = useAuth();
   const coachDirectoryOn = useFeatureFlag(FEATURE_FLAG.COACH_DIRECTORY);
+  const { track } = useFunnel();
   const [platformName, setPlatformName] = useState(userProfile?.platform_name || userProfile?.full_name || '');
   const [birthDate, setBirthDate] = useState(userProfile?.birth_date || '');
   const [phone, setPhone] = useState(userProfile?.phone || '');
@@ -112,6 +115,7 @@ export default function Profile() {
       return;
     }
 
+    const wasComplete = isRequiredProfileComplete(userProfile);
     setBusy(true);
     try {
       await updateUserProfile({
@@ -123,6 +127,8 @@ export default function Profile() {
         competition_gender: competitionGender || null,
       });
       toast.success('Perfil atualizado.');
+      // Marco de funil: só na transição incompleto → completo (a validação acima garante completo).
+      if (!wasComplete) track(FUNNEL_EVENT.PROFILE_COMPLETED);
     } catch (err) {
       toast.error(err.message || 'Erro ao salvar.');
     } finally {

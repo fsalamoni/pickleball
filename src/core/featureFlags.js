@@ -73,6 +73,14 @@ export const FEATURE_FLAG = Object.freeze({
    * analytics. Aditivo — desligado, as rotas e os menus ficam ocultos.
    */
   AFFILIATE_LINKS: 'affiliate_links',
+
+  /**
+   * Instrumentação de funil: envia eventos de produto (login, perfil completo,
+   * torneio criado, inscrição criada, convite aberto) ao Firebase Analytics
+   * para medir conversão e o efeito das demais funcionalidades. Aditivo e
+   * invisível ao usuário — desligado, nenhum evento de funil é enviado.
+   */
+  FUNNEL_ANALYTICS: 'funnel_analytics',
 });
 
 /** Metadados de exibição para o painel de flags (admin master). */
@@ -141,6 +149,13 @@ export const FEATURE_FLAG_META = Object.freeze({
       + 'em uma página de parceiros para os atletas; os cliques são medidos via '
       + 'analytics. Primeira fonte de receita sem barreira. Desligado, as rotas '
       + 'e os itens de menu ficam ocultos.',
+  },
+  [FEATURE_FLAG.FUNNEL_ANALYTICS]: {
+    label: 'Instrumentação de funil (analytics)',
+    description:
+      'Envia eventos de produto (login, perfil completo, torneio criado, '
+      + 'inscrição, convite aberto) ao Firebase Analytics para medir conversão e '
+      + 'retenção. Invisível ao usuário. Desligado, nenhum evento de funil é enviado.',
   },
 });
 
