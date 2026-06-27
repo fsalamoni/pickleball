@@ -116,6 +116,20 @@ export const FEATURE_FLAG = Object.freeze({
    * no perfil. Aditivo — desligado, a seção não aparece.
    */
   HEAD_TO_HEAD: 'head_to_head',
+
+  /**
+   * Seguir atletas: permite acompanhar outros atletas (botão Seguir no perfil e
+   * no diretório), com notificação ao seguido. Base para o feed da comunidade.
+   * Aditivo — desligado, os botões e contagens não aparecem.
+   */
+  FOLLOW_ATHLETES: 'follow_athletes',
+
+  /**
+   * Feed da comunidade: página "Novidades" agregando atividade recente
+   * (torneios públicos, convites de jogo) e, se "seguir atletas" estiver on,
+   * dos atletas que você segue. Aditivo — desligado, a rota e o menu somem.
+   */
+  COMMUNITY_FEED: 'community_feed',
 });
 
 /** Metadados de exibição para o painel de flags (admin master). */
@@ -223,6 +237,20 @@ export const FEATURE_FLAG_META = Object.freeze({
     description:
       'Agrega os jogos do atleta por adversário (vitórias/derrotas) e destaca os '
       + 'rivais mais frequentes, no perfil. Desligado, a seção não aparece.',
+  },
+  [FEATURE_FLAG.FOLLOW_ATHLETES]: {
+    label: 'Seguir atletas',
+    description:
+      'Permite seguir outros atletas (botão no perfil e no diretório), com '
+      + 'notificação ao seguido e contagem de seguidores. Desligado, os botões '
+      + 'e contagens ficam ocultos.',
+  },
+  [FEATURE_FLAG.COMMUNITY_FEED]: {
+    label: 'Feed da comunidade',
+    description:
+      'Página "Novidades" com a atividade recente da comunidade (torneios '
+      + 'públicos, convites de jogo) e dos atletas que você segue. Desligado, a '
+      + 'rota e o item de menu ficam ocultos.',
   },
 });
 

@@ -31,6 +31,7 @@ import { useFeatureFlag } from '@/core/lib/FeatureFlagsContext';
 import { FEATURE_FLAG } from '@/core/featureFlags';
 import { useAthletes } from '@/modules/athletes/hooks/useAthletes';
 import ChatLauncherButton from '@/modules/chat/components/ChatLauncherButton';
+import FollowButton from '@/modules/social/components/FollowButton';
 import {
   ATHLETE_GENDER_LABELS,
   genderLabel,
@@ -56,6 +57,7 @@ export default function AthletesDirectory() {
   const { isAuthAvailable, authUnavailableReason } = useAuth();
   const coachDirectoryOn = useFeatureFlag(FEATURE_FLAG.COACH_DIRECTORY);
   const profilePageOn = useFeatureFlag(FEATURE_FLAG.ATHLETE_PROFILE_PAGE);
+  const followOn = useFeatureFlag(FEATURE_FLAG.FOLLOW_ATHLETES);
   const { data: athletes = [], isLoading } = useAthletes();
   const [search, setSearch] = useState('');
   const [genderFilter, setGenderFilter] = useState(ALL);
@@ -294,6 +296,7 @@ export default function AthletesDirectory() {
         onClose={() => setSelected(null)}
         showCoach={coachDirectoryOn}
         showProfileLink={profilePageOn}
+        showFollow={followOn}
       />
     </div>
   );
@@ -387,7 +390,7 @@ function AthleteCard({ athlete, onOpen, showCoach }) {
   );
 }
 
-function AthleteDialog({ athlete, open, onClose, showCoach, showProfileLink }) {
+function AthleteDialog({ athlete, open, onClose, showCoach, showProfileLink, showFollow }) {
   if (!athlete) return null;
   const location = locationText(athlete);
   const clubs = athlete.clubs || [];
@@ -416,6 +419,8 @@ function AthleteDialog({ athlete, open, onClose, showCoach, showProfileLink }) {
 
         <div className="space-y-4">
           <ChatLauncherButton athlete={athlete} className="w-full" label="Conversar com este atleta" />
+
+          {showFollow && <FollowButton targetUid={athlete.id} className="w-full" />}
 
           {showProfileLink && (
             <Button asChild variant="outline" className="w-full">

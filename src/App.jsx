@@ -37,6 +37,7 @@ const NationalRanking = lazy(() => import('@/modules/rating/pages/NationalRankin
 const FindPlayers = lazy(() => import('@/modules/rating/pages/FindPlayers'));
 const OpenGames = lazy(() => import('@/modules/games/pages/OpenGames'));
 const Partners = lazy(() => import('@/modules/partners/pages/Partners'));
+const CommunityFeed = lazy(() => import('@/modules/social/pages/CommunityFeed'));
 const AdminPartners = lazy(() => import('@/modules/partners/pages/AdminPartners'));
 const PageNotFound = lazy(() => import('@/pages/PageNotFound'));
 
@@ -139,6 +140,7 @@ export default function App() {
               <Route path="/meu-desempenho" element={<ProtectedRoute>{withLayout('MyPerformance', MyPerformance)}</ProtectedRoute>} />
               <Route path="/encontrar-jogadores" element={<ProtectedRoute>{withLayout('FindPlayers', FindPlayers)}</ProtectedRoute>} />
               <Route path="/procura-jogo" element={<ProtectedRoute>{withLayout('OpenGames', OpenGames)}</ProtectedRoute>} />
+              <Route path="/novidades" element={<ProtectedRoute>{withLayout('CommunityFeed', CommunityFeed)}</ProtectedRoute>} />
               <Route path="/torneios" element={<Navigate to="/inicio" replace />} />
               <Route path="/torneios/criar" element={<ProtectedRoute>{withLayout('CreateTournament', CreateTournament)}</ProtectedRoute>} />
               <Route path="/torneios/ingressar" element={<ProtectedRoute>{withLayout('JoinTournament', JoinTournament)}</ProtectedRoute>} />

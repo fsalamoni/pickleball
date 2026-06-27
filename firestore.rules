@@ -157,6 +157,15 @@ service cloud.firestore {
       allow write: if isPlatformAdmin();
     }
 
+    // ---- Seguir atletas --------------------------------------------------
+    // Id determinista followerUid_targetUid. Leitura por autenticados; criar/
+    // remover apenas o próprio seguidor.
+    match /follows/{id} {
+      allow read: if isAuthed();
+      allow create: if isAuthed() && request.resource.data.follower_uid == request.auth.uid;
+      allow delete: if isAuthed() && resource.data.follower_uid == request.auth.uid;
+    }
+
     // ---- Procura-se jogo (partidas sociais abertas) ----------------------
     // Mural de convites. Leitura por autenticados; criação pelo próprio autor;
     // edição/remoção só do autor (ou admin master).

@@ -12,6 +12,8 @@ import RatingSparkline from '@/modules/rating/components/RatingSparkline';
 import HeadToHeadCard from '@/modules/rating/components/HeadToHeadCard';
 import { useRatingHistory } from '@/modules/rating/hooks/useRating';
 import { useHeadToHead } from '@/modules/rating/hooks/useHeadToHead';
+import FollowButton from '@/modules/social/components/FollowButton';
+import { useFollowers } from '@/modules/social/hooks/useFollow';
 import { genderLabel } from '@/modules/athletes/domain/constants';
 import { MODALITY_FORMAT_LABELS } from '@/modules/tournament/domain/constants';
 import { useAthleteProfile } from '../hooks/useAthleteProfile.js';
@@ -42,10 +44,12 @@ export default function AthleteProfile() {
   const achievementsOn = useFeatureFlag(FEATURE_FLAG.ACHIEVEMENTS);
   const ratingHistoryOn = useFeatureFlag(FEATURE_FLAG.RATING_HISTORY);
   const headToHeadOn = useFeatureFlag(FEATURE_FLAG.HEAD_TO_HEAD);
+  const followOn = useFeatureFlag(FEATURE_FLAG.FOLLOW_ATHLETES);
   const { uid } = useParams();
   const { data, isLoading } = useAthleteProfile(uid);
   const { data: ratingHistory = [] } = useRatingHistory(uid, ratingHistoryOn);
   const { data: h2hData } = useHeadToHead(uid, headToHeadOn);
+  const { data: followers = [] } = useFollowers(uid, followOn);
 
   if (!enabled) return <Navigate to="/atletas" replace />;
 
@@ -94,6 +98,7 @@ export default function AthleteProfile() {
               {genderLabel(athlete.gender) && <span>· {genderLabel(athlete.gender)}</span>}
               {location && <span className="inline-flex items-center gap-1"><MapPin className="h-3.5 w-3.5" /> {location}</span>}
               {athlete.level && <span className="inline-flex items-center gap-1"><Award className="h-3.5 w-3.5" /> {athlete.level}</span>}
+              {followOn && <span>· {followers.length} seguidor(es)</span>}
             </div>
             {(athlete.clubs || []).length > 0 && (
               <div className="mt-2 flex flex-wrap gap-1.5">
@@ -107,7 +112,10 @@ export default function AthleteProfile() {
               </div>
             )}
           </div>
-          <ChatLauncherButton athlete={athlete} label="Conversar" />
+          <div className="flex shrink-0 gap-2">
+            {followOn && <FollowButton targetUid={uid} />}
+            <ChatLauncherButton athlete={athlete} label="Conversar" />
+          </div>
         </CardContent>
       </Card>
 

@@ -25,6 +25,7 @@ import {
   Medal,
   Swords,
   Megaphone,
+  Newspaper,
 } from 'lucide-react';
 import { useAuth } from '@/core/lib/FirebaseAuthContext';
 import { useFeatureFlag } from '@/core/lib/FeatureFlagsContext';
@@ -84,6 +85,11 @@ const PAGE_META = {
     eyebrow: 'Explorar',
     title: 'Procura-se jogo',
     description: 'Convites de partidas sociais abertas na comunidade.',
+  },
+  CommunityFeed: {
+    eyebrow: 'Comunidade',
+    title: 'Novidades',
+    description: 'Atividade recente da comunidade e de quem você segue.',
   },
   Partners: {
     eyebrow: 'Explorar',
@@ -181,6 +187,7 @@ export default function Layout({ children, currentPageName }) {
   const matchmakingOn = useFeatureFlag(FEATURE_FLAG.MATCHMAKING);
   const openGamesOn = useFeatureFlag(FEATURE_FLAG.OPEN_GAMES);
   const affiliatesOn = useFeatureFlag(FEATURE_FLAG.AFFILIATE_LINKS);
+  const communityFeedOn = useFeatureFlag(FEATURE_FLAG.COMMUNITY_FEED);
   const [sidebarOpen, setSidebarOpen] = useState(false);
   const isStandalonePublicPage = STANDALONE_PUBLIC_PAGES.includes(currentPageName);
   const isUtilityPublicPage = UTILITY_PUBLIC_PAGES.includes(currentPageName);
@@ -309,6 +316,15 @@ export default function Layout({ children, currentPageName }) {
                   icon={Activity}
                   label="Meu desempenho"
                   active={currentPageName === 'MyPerformance'}
+                  onClick={() => setSidebarOpen(false)}
+                />
+              )}
+              {communityFeedOn && (
+                <NavItem
+                  to="/novidades"
+                  icon={Newspaper}
+                  label="Novidades"
+                  active={currentPageName === 'CommunityFeed'}
                   onClick={() => setSidebarOpen(false)}
                 />
               )}
