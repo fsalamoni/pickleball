@@ -21,8 +21,11 @@ import {
   Users,
   Building2,
   MessageCircle,
+  Activity,
 } from 'lucide-react';
 import { useAuth } from '@/core/lib/FirebaseAuthContext';
+import { useFeatureFlag } from '@/core/lib/FeatureFlagsContext';
+import { FEATURE_FLAG } from '@/core/featureFlags';
 import { useMyTournaments } from '@/modules/tournament/hooks/useTournament';
 import { useNotifications } from '@/modules/notifications/hooks/useNotifications';
 import { TOURNAMENT_STATUS } from '@/modules/tournament/domain/constants';
@@ -63,6 +66,11 @@ const PAGE_META = {
     eyebrow: 'Conversas',
     title: 'Mensagens',
     description: 'Converse com atletas e grupos da comunidade em tempo real.',
+  },
+  MyPerformance: {
+    eyebrow: 'Conta',
+    title: 'Meu desempenho',
+    description: 'Acompanhe seus jogos, aproveitamento, pódios e evolução nos torneios.',
   },
   CreateTournament: {
     eyebrow: 'Organização',
@@ -140,6 +148,7 @@ export default function Layout({ children, currentPageName }) {
   const location = useLocation();
   const navigate = useNavigate();
   const { user, userProfile, signOut, isAuthenticated, isPlatformAdmin } = useAuth();
+  const performanceOn = useFeatureFlag(FEATURE_FLAG.PLAYER_PERFORMANCE);
   const [sidebarOpen, setSidebarOpen] = useState(false);
   const isStandalonePublicPage = STANDALONE_PUBLIC_PAGES.includes(currentPageName);
   const isUtilityPublicPage = UTILITY_PUBLIC_PAGES.includes(currentPageName);
@@ -262,6 +271,15 @@ export default function Layout({ children, currentPageName }) {
                 active={currentPageName === 'Chat'}
                 onClick={() => setSidebarOpen(false)}
               />
+              {performanceOn && (
+                <NavItem
+                  to="/meu-desempenho"
+                  icon={Activity}
+                  label="Meu desempenho"
+                  active={currentPageName === 'MyPerformance'}
+                  onClick={() => setSidebarOpen(false)}
+                />
+              )}
               <NavItem
                 to="/torneios/ingressar"
                 icon={Hash}

@@ -27,6 +27,13 @@ export const FEATURE_FLAG = Object.freeze({
    * puramente aditivo — desligado, o botão some e nada muda no fluxo atual.
    */
   SHARE_CARDS: 'share_cards',
+
+  /**
+   * Página "Meu Desempenho": painel pessoal do atleta com torneios disputados,
+   * vitórias/derrotas, aproveitamento, pódios e títulos, consolidados a partir
+   * dos jogos já registrados. Aditivo — desligado, a rota e o menu somem.
+   */
+  PLAYER_PERFORMANCE: 'player_performance',
 });
 
 /** Metadados de exibição para o painel de flags (admin master). */
@@ -47,6 +54,14 @@ export const FEATURE_FLAG_META = Object.freeze({
       + 'um card visual com QR Code e link, otimizado para WhatsApp e Stories, '
       + 'e o compartilhamento por link/texto pré-preenchido. Ajuda na divulgação '
       + 'e aquisição orgânica. Desligado, o botão fica oculto e nada muda.',
+  },
+  [FEATURE_FLAG.PLAYER_PERFORMANCE]: {
+    label: 'Meu Desempenho (estatísticas do atleta)',
+    description:
+      'Habilita a página pessoal "Meu Desempenho" com torneios disputados, '
+      + 'vitórias/derrotas, aproveitamento, pódios e títulos por formato, '
+      + 'consolidados dos jogos já registrados. Estimula a retenção e prepara '
+      + 'recursos premium. Desligado, a rota e o item de menu ficam ocultos.',
   },
 });
 
