@@ -1,8 +1,10 @@
 import { useEffect, useMemo, useState } from 'react';
 import { Timestamp } from 'firebase/firestore';
 import { toast } from 'sonner';
-import { Award, Printer, UserCheck, Users, Shield } from 'lucide-react';
+import { Award, Printer, UserCheck, Users, Shield, GraduationCap } from 'lucide-react';
 import { useAuth } from '@/core/lib/FirebaseAuthContext';
+import { useFeatureFlag } from '@/core/lib/FeatureFlagsContext';
+import { FEATURE_FLAG } from '@/core/featureFlags';
 import { birthDateToBrtDate, validateRequiredProfile } from '@/core/lib/profileValidation';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
@@ -20,6 +22,7 @@ import ParticipationHistoryCard from '@/modules/tournament/components/Participat
 
 export default function Profile() {
   const { user, userProfile, updateUserProfile } = useAuth();
+  const coachDirectoryOn = useFeatureFlag(FEATURE_FLAG.COACH_DIRECTORY);
   const [platformName, setPlatformName] = useState(userProfile?.platform_name || userProfile?.full_name || '');
   const [birthDate, setBirthDate] = useState(userProfile?.birth_date || '');
   const [phone, setPhone] = useState(userProfile?.phone || '');
@@ -37,6 +40,12 @@ export default function Profile() {
   const [directoryListed, setDirectoryListed] = useState(userProfile?.directory_listed !== false);
   const [photoUrl, setPhotoUrl] = useState(userProfile?.photo_url || user?.photoURL || '');
   const [communityBusy, setCommunityBusy] = useState(false);
+  // Treinador (opt-in, atrás da flag coach_directory)
+  const [isCoach, setIsCoach] = useState(userProfile?.is_coach === true);
+  const [coachBio, setCoachBio] = useState(userProfile?.coach_bio || '');
+  const [coachPrice, setCoachPrice] = useState(userProfile?.coach_price || '');
+  const [coachRegions, setCoachRegions] = useState(userProfile?.coach_regions || '');
+  const [coachBusy, setCoachBusy] = useState(false);
   const [errors, setErrors] = useState({});
   const [busy, setBusy] = useState(false);
   const [levelBusy, setLevelBusy] = useState(false);
@@ -64,6 +73,10 @@ export default function Profile() {
     setAddressPublic(userProfile?.address_public === true);
     setDirectoryListed(userProfile?.directory_listed !== false);
     setPhotoUrl(userProfile?.photo_url || user?.photoURL || '');
+    setIsCoach(userProfile?.is_coach === true);
+    setCoachBio(userProfile?.coach_bio || '');
+    setCoachPrice(userProfile?.coach_price || '');
+    setCoachRegions(userProfile?.coach_regions || '');
     setVisibleResult(userProfile?.leveling_assessment?.result || null);
     setErrors({});
   }, [
@@ -85,6 +98,10 @@ export default function Profile() {
     userProfile?.address_public,
     userProfile?.directory_listed,
     userProfile?.photo_url,
+    userProfile?.is_coach,
+    userProfile?.coach_bio,
+    userProfile?.coach_price,
+    userProfile?.coach_regions,
   ]);
 
   const onSave = async (e) => {
@@ -143,6 +160,23 @@ export default function Profile() {
       toast.error(err.message || 'Erro ao salvar preferências.');
     } finally {
       setCommunityBusy(false);
+    }
+  };
+
+  const saveCoach = async () => {
+    setCoachBusy(true);
+    try {
+      await updateUserProfile({
+        is_coach: isCoach,
+        coach_bio: isCoach ? coachBio.trim() : '',
+        coach_price: isCoach ? coachPrice.trim() : '',
+        coach_regions: isCoach ? coachRegions.trim() : '',
+      });
+      toast.success('Informações de treinador salvas.');
+    } catch (err) {
+      toast.error(err.message || 'Erro ao salvar informações de treinador.');
+    } finally {
+      setCoachBusy(false);
     }
   };
 
@@ -428,6 +462,73 @@ export default function Profile() {
           </Button>
         </CardContent>
       </Card>
+
+      {coachDirectoryOn && (
+        <Card className="overflow-hidden">
+          <CardHeader className="border-b border-emerald-950/10 bg-white/45 p-4 sm:p-5">
+            <CardTitle className="flex items-center gap-2 text-base text-slate-950">
+              <GraduationCap className="h-5 w-5 text-emerald-700" /> Treinador
+            </CardTitle>
+            <CardDescription>
+              Ofereça aulas e clínicas: ative para aparecer no filtro de treinadores do diretório de atletas.
+            </CardDescription>
+          </CardHeader>
+          <CardContent className="space-y-5 p-4 sm:p-5">
+            <div className="rounded-md border border-emerald-950/10 bg-secondary/30 p-4">
+              <PrivacyToggle
+                id="is_coach"
+                label="Sou treinador(a)"
+                hint="Aparecer no filtro de treinadores e exibir suas informações de aula"
+                checked={isCoach}
+                onCheckedChange={setIsCoach}
+              />
+            </div>
+
+            {isCoach && (
+              <div className="space-y-4">
+                <div className="space-y-2">
+                  <Label htmlFor="coach_bio">Sobre suas aulas</Label>
+                  <textarea
+                    id="coach_bio"
+                    value={coachBio}
+                    onChange={(e) => setCoachBio(e.target.value)}
+                    maxLength={400}
+                    rows={3}
+                    placeholder="Ex.: Aulas para iniciantes e intermediários, foco em fundamentos e tática."
+                    className="w-full rounded-md border border-input bg-background px-3 py-2 text-sm ring-offset-background focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2"
+                  />
+                </div>
+                <div className="grid gap-4 sm:grid-cols-2">
+                  <div className="space-y-2">
+                    <Label htmlFor="coach_price">Valor (opcional)</Label>
+                    <Input
+                      id="coach_price"
+                      value={coachPrice}
+                      onChange={(e) => setCoachPrice(e.target.value)}
+                      maxLength={60}
+                      placeholder="Ex.: R$ 80/aula"
+                    />
+                  </div>
+                  <div className="space-y-2">
+                    <Label htmlFor="coach_regions">Regiões de atuação (opcional)</Label>
+                    <Input
+                      id="coach_regions"
+                      value={coachRegions}
+                      onChange={(e) => setCoachRegions(e.target.value)}
+                      maxLength={120}
+                      placeholder="Ex.: Zona Sul, online"
+                    />
+                  </div>
+                </div>
+              </div>
+            )}
+
+            <Button type="button" onClick={saveCoach} disabled={coachBusy} className="bg-emerald-700 hover:bg-emerald-800">
+              {coachBusy ? 'Salvando...' : 'Salvar informações de treinador'}
+            </Button>
+          </CardContent>
+        </Card>
+      )}
 
       <ParticipationHistoryCard />
 

@@ -34,6 +34,14 @@ export const FEATURE_FLAG = Object.freeze({
    * dos jogos já registrados. Aditivo — desligado, a rota e o menu somem.
    */
   PLAYER_PERFORMANCE: 'player_performance',
+
+  /**
+   * Diretório de treinadores: permite ao atleta se declarar treinador (bio,
+   * valor e regiões de atuação) e ser encontrado no diretório por um filtro
+   * dedicado, com contato pelo chat existente. Aditivo — desligado, a seção do
+   * perfil e o filtro/badge do diretório ficam ocultos.
+   */
+  COACH_DIRECTORY: 'coach_directory',
 });
 
 /** Metadados de exibição para o painel de flags (admin master). */
@@ -62,6 +70,14 @@ export const FEATURE_FLAG_META = Object.freeze({
       + 'vitórias/derrotas, aproveitamento, pódios e títulos por formato, '
       + 'consolidados dos jogos já registrados. Estimula a retenção e prepara '
       + 'recursos premium. Desligado, a rota e o item de menu ficam ocultos.',
+  },
+  [FEATURE_FLAG.COACH_DIRECTORY]: {
+    label: 'Diretório de treinadores',
+    description:
+      'Permite que atletas se declarem treinadores (bio, valor e regiões de '
+      + 'atuação) no perfil e sejam encontrados por um filtro dedicado no '
+      + 'diretório de atletas, com contato pelo chat. Abre espaço para um novo '
+      + 'público e parcerias. Desligado, a seção e o filtro ficam ocultos.',
   },
 });
 
