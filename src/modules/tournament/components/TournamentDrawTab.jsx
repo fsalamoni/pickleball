@@ -11,6 +11,7 @@ import {
   DialogFooter,
   DialogDescription,
 } from '@/components/ui/dialog';
+import { ConfirmDialog } from '@/components/ui/confirm-dialog';
 import { Shuffle, AlertTriangle, Pencil, ListRestart, CalendarClock, ChevronsRight, Users } from 'lucide-react';
 import { toast } from 'sonner';
 import {
@@ -463,6 +464,7 @@ function ModalityDrawBlock({ tournament, modality, isAdmin }) {
           tournament={tournament}
           modality={modality}
           labelById={labelById}
+          hasPlayedScores={playedCount > 0}
           onClose={() => setGroupsEditorOpen(false)}
         />
       )}
@@ -494,9 +496,11 @@ function SideCell({ ids, rawSide, labelById, isAdmin, onSubstitute }) {
             <span>{name}</span>
             {isAdmin && (
               <button
+                type="button"
                 onClick={() => onSubstitute(regId)}
-                title="Substituir jogador"
-                className="text-slate-400 hover:text-slate-700 transition-colors ml-1"
+                title={`Substituir ${name}`}
+                aria-label={`Substituir ${name}`}
+                className="text-slate-400 hover:text-emerald-600 focus-visible:text-emerald-600 transition-colors ml-1"
               >
                 <Pencil className="w-3 h-3" />
               </button>
@@ -508,13 +512,13 @@ function SideCell({ ids, rawSide, labelById, isAdmin, onSubstitute }) {
   );
 }
 
-function GroupsEditorDialog({ tournament, modality, labelById, onClose }) {
+function GroupsEditorDialog({ tournament, modality, labelById, hasPlayedScores, onClose }) {
   const { data: groups = [], isLoading } = useStageGroups(modality.id, 0);
   const moveMutation = useMoveParticipantBetweenGroups();
+  const [pendingMove, setPendingMove] = useState(null);
   const groupNames = groups.map((g) => g.name);
 
-  async function handleMove(registrationId, toGroupName, fromGroupName) {
-    if (toGroupName === fromGroupName) return;
+  async function doMove(registrationId, toGroupName) {
     try {
       await moveMutation.mutateAsync({
         tournamentId: tournament.id,
@@ -529,6 +533,20 @@ function GroupsEditorDialog({ tournament, modality, labelById, onClose }) {
     }
   }
 
+  function requestMove(registrationId, toGroupName, fromGroupName) {
+    if (toGroupName === fromGroupName) return;
+    if (hasPlayedScores) {
+      setPendingMove({
+        registrationId,
+        toGroupName,
+        fromGroupName,
+        name: labelById.get(registrationId) || registrationId,
+      });
+    } else {
+      doMove(registrationId, toGroupName);
+    }
+  }
+
   return (
     <Dialog open onOpenChange={(o) => !moveMutation.isPending && !o && onClose()}>
       <DialogContent className="max-w-lg">
@@ -536,7 +554,7 @@ function GroupsEditorDialog({ tournament, modality, labelById, onClose }) {
           <DialogTitle>Editar grupos · {modality.name}</DialogTitle>
           <DialogDescription>
             Mova jogadores entre os grupos. Ao mover, os jogos da fase são regerados com a nova
-            composição — os placares já lançados nesta fase serão perdidos.
+            composição{hasPlayedScores ? ' — os placares já lançados nesta fase serão perdidos' : ''}.
           </DialogDescription>
         </DialogHeader>
 
@@ -562,11 +580,14 @@ function GroupsEditorDialog({ tournament, modality, labelById, onClose }) {
                           className="h-8 shrink-0 rounded-md border border-input bg-background px-2 text-xs"
                           value={g.name}
                           disabled={moveMutation.isPending}
-                          onChange={(e) => handleMove(pid, e.target.value, g.name)}
+                          onChange={(e) => requestMove(pid, e.target.value, g.name)}
+                          aria-label={`Mover ${labelById.get(pid) || pid} para outro grupo`}
                           title="Mover para outro grupo"
                         >
                           {groupNames.map((name) => (
-                            <option key={name} value={name}>{name}</option>
+                            <option key={name} value={name}>
+                              {name === g.name ? `${name} (atual)` : `Mover para ${name}`}
+                            </option>
                           ))}
                         </select>
                       </div>
@@ -584,6 +605,26 @@ function GroupsEditorDialog({ tournament, modality, labelById, onClose }) {
           </Button>
         </DialogFooter>
       </DialogContent>
+
+      <ConfirmDialog
+        open={Boolean(pendingMove)}
+        onOpenChange={(o) => !o && !moveMutation.isPending && setPendingMove(null)}
+        destructive
+        title="Mover jogador e refazer os jogos?"
+        description={
+          pendingMove
+            ? `${pendingMove.name} vai do ${pendingMove.fromGroupName} para o ${pendingMove.toGroupName}. `
+              + 'Os jogos desta fase serão regerados e os placares já lançados nela serão perdidos.'
+            : ''
+        }
+        confirmLabel="Mover e refazer jogos"
+        loading={moveMutation.isPending}
+        onConfirm={async () => {
+          if (!pendingMove) return;
+          await doMove(pendingMove.registrationId, pendingMove.toGroupName);
+          setPendingMove(null);
+        }}
+      />
     </Dialog>
   );
 }
