@@ -22,6 +22,7 @@ import {
   useReShuffleRemainingMatches,
   useRescheduleMatches,
   useAdvanceStage,
+  useRedrawGroupMatchesKeepingGroups,
 } from '@/modules/tournament/hooks/useTournament';
 import {
   TOURNAMENT_STAGE_TYPE_LABELS,
@@ -80,11 +81,13 @@ function ModalityDrawBlock({ tournament, modality, isAdmin }) {
   const reShuffleMutation = useReShuffleRemainingMatches(modality.id);
   const rescheduleMutation = useRescheduleMatches(modality.id);
   const advanceMutation = useAdvanceStage(modality.id);
+  const redrawKeepGroupsMutation = useRedrawGroupMatchesKeepingGroups();
   const { data: matches = [] } = useMatches(modality.id, 0);
   const { data: registrations = [] } = useRegistrations(modality.id);
   const [running, setRunning] = useState(false);
   const [confirmOpen, setConfirmOpen] = useState(false);
   const [reshuffleConfirmOpen, setReshuffleConfirmOpen] = useState(false);
+  const [keepGroupsConfirmOpen, setKeepGroupsConfirmOpen] = useState(false);
   const [error, setError] = useState(null);
   const [substitution, setSubstitution] = useState(null);
 
@@ -196,6 +199,29 @@ function ModalityDrawBlock({ tournament, modality, isAdmin }) {
     }
   }
 
+  async function performRedrawKeepingGroups() {
+    setRunning(true);
+    try {
+      const result = await redrawKeepGroupsMutation.mutateAsync({
+        tournamentId: tournament.id,
+        modalityId: modality.id,
+        stageIndex: 0,
+      });
+      toast.success(`Jogos re-sorteados (${result.matches}) mantendo os ${result.groups} grupo(s).`);
+      const warns = result?.scheduleWarnings || [];
+      if (warns.length > 0) {
+        toast.warning(
+          `${warns.length} jogo(s) ficaram além do horário de término planejado — adicione quadras ou estenda o horário.`,
+        );
+      }
+      setKeepGroupsConfirmOpen(false);
+    } catch (err) {
+      toast.error(err?.message || 'Falha ao re-sortear os jogos.');
+    } finally {
+      setRunning(false);
+    }
+  }
+
   async function performReshuffleRemaining() {
     setRunning(true);
     try {
@@ -256,6 +282,17 @@ function ModalityDrawBlock({ tournament, modality, isAdmin }) {
                   disabled={running}
                 >
                   <ListRestart className="w-4 h-4 mr-1" /> Resortear restantes ({pendingCount})
+                </Button>
+              )}
+              {hasGroups && (
+                <Button
+                  size="sm"
+                  variant="outline"
+                  onClick={() => setKeepGroupsConfirmOpen(true)}
+                  disabled={running}
+                  title="Gera novamente todos os jogos dos grupos atuais, sem alterar a composição dos grupos"
+                >
+                  <ListRestart className="w-4 h-4 mr-1" /> Re-sortear jogos (manter grupos)
                 </Button>
               )}
               <Button size="sm" onClick={() => setConfirmOpen(true)} disabled={running}>
@@ -381,6 +418,27 @@ function ModalityDrawBlock({ tournament, modality, isAdmin }) {
             </Button>
             <Button onClick={performReshuffleRemaining} disabled={running}>
               {running ? 'Resorteando…' : 'Confirmar'}
+            </Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
+
+      <Dialog open={keepGroupsConfirmOpen} onOpenChange={(o) => !running && setKeepGroupsConfirmOpen(o)}>
+        <DialogContent>
+          <DialogHeader>
+            <DialogTitle>Re-sortear jogos (manter grupos)</DialogTitle>
+            <DialogDescription>
+              Os grupos atuais e seus integrantes serão mantidos. Todos os jogos desta fase
+              serão gerados novamente (todos contra todos em cada grupo) e reagendados —
+              os placares já lançados nesta fase serão perdidos.
+            </DialogDescription>
+          </DialogHeader>
+          <DialogFooter>
+            <Button variant="outline" onClick={() => setKeepGroupsConfirmOpen(false)} disabled={running}>
+              Cancelar
+            </Button>
+            <Button onClick={performRedrawKeepingGroups} disabled={running}>
+              {running ? 'Re-sorteando…' : 'Confirmar'}
             </Button>
           </DialogFooter>
         </DialogContent>

@@ -4,7 +4,9 @@
  * agendamento automático dos jogos em quadras e horários.
  */
 
-import { generateDraw } from '../domain/draw.js';
+import { collection, getDocs, query, where } from 'firebase/firestore';
+import { db } from '@/core/config/firebase';
+import { generateDraw, buildGroupMatches, shuffle, seededRng } from '../domain/draw.js';
 import { stageFormatCompatibility } from '../domain/formatExplain.js';
 import { balancedParticipantOrder, levelRank } from '../domain/seeding.js';
 import { listRegistrations } from './registrationService.js';
@@ -181,4 +183,73 @@ export async function runDraw(params, actor) {
   );
 
   return { ...draw, seed_used: seed, balanced, scheduleWarnings: scheduleWarnings || [] };
+}
+
+/**
+ * Lê os grupos já sorteados de uma fase (composição preservada).
+ * @returns {Array<{ name: string, participants: string[] }>}
+ */
+async function readStageGroups(modalityId, stageIndex) {
+  const snap = await getDocs(
+    query(
+      collection(db, 'tournament_groups'),
+      where('modality_id', '==', modalityId),
+      where('stage_index', '==', Number(stageIndex)),
+    ),
+  );
+  return snap.docs
+    .map((d) => d.data())
+    .sort((a, b) => String(a.name || '').localeCompare(String(b.name || ''), 'pt-BR'))
+    .map((g) => ({
+      name: g.name,
+      participants: Array.isArray(g.participants) && g.participants.length
+        ? g.participants
+        : (g.entrants || []).flatMap((e) => e.members || [e.id]),
+    }))
+    .filter((g) => g.participants.length > 0);
+}
+
+/**
+ * Re-sorteia os JOGOS de uma fase de grupos MANTENDO os grupos (composição
+ * inalterada). Regenera o round-robin completo de cada grupo já existente — útil
+ * quando faltam jogos ou para reorganizar a ordem das rodadas — sem redistribuir
+ * os jogadores. Substitui os jogos atuais da fase (placares são perdidos).
+ *
+ * @param {{ tournamentId: string, modalityId: string, stageIndex?: number }} params
+ * @param {object} actor
+ * @returns {Promise<{ matches: number, groups: number, scheduleWarnings: string[] }>}
+ */
+export async function redrawGroupMatchesKeepingGroups(params, actor) {
+  const { tournamentId, modalityId, stageIndex = 0 } = params;
+  const modality = await getModality(modalityId);
+  if (!modality) throw new Error('Modalidade não encontrada.');
+  if (modality.tournament_id !== tournamentId) throw new Error('Modalidade não pertence ao torneio.');
+  const stage = modality.stages?.[stageIndex];
+  if (!stage) throw new Error('Fase não encontrada na modalidade.');
+  if (stage.type !== TOURNAMENT_STAGE_TYPE.GROUPS) {
+    throw new Error('Esta opção é apenas para fases de grupos. Para os demais formatos, use "Sortear".');
+  }
+
+  const groups = await readStageGroups(modalityId, stageIndex);
+  if (groups.length === 0) {
+    throw new Error('Nenhum grupo sorteado encontrado nesta fase. Use "Sortear" para criar os grupos primeiro.');
+  }
+
+  // Reembaralha a ordem interna de cada grupo (varia a arrumação das rodadas),
+  // preservando a composição. O conjunto de confrontos round-robin é o mesmo.
+  const seed = `${tournamentId}_${modalityId}_${stageIndex}_regroupgames_${Date.now()}`;
+  const rng = seededRng(seed);
+  const reshuffled = groups.map((g) => ({ name: g.name, participants: shuffle(g.participants, rng) }));
+
+  // draw SEM `groups` → persistMatches não recria/altera tournament_groups,
+  // apenas substitui os jogos da fase pelos novos.
+  const draw = { stageType: stage.type, matches: buildGroupMatches(reshuffled) };
+
+  const tournament = await getTournament(tournamentId);
+  const { scheduleWarnings } = await persistMatches(tournamentId, modalityId, stageIndex, draw, actor, {
+    schedulingConfig: modality,
+    fallbackDate: tournament?.starts_at || null,
+  });
+
+  return { matches: draw.matches.length, groups: groups.length, scheduleWarnings: scheduleWarnings || [] };
 }

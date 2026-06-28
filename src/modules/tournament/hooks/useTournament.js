@@ -41,7 +41,7 @@ import {
   rescheduleMatches,
   advanceStage,
 } from '../services/matchService';
-import { runDraw } from '../services/drawService';
+import { runDraw, redrawGroupMatchesKeepingGroups } from '../services/drawService';
 import { runPhaseDraw, advanceToNextPhase, listPhaseGroups } from '../services/phaseService';
 import { computeModalityRanking, computeModalityRankingStructured } from '../services/rankingService';
 import { getMyTournamentHistory } from '../services/participationService';
@@ -338,6 +338,21 @@ export function useRunDraw() {
   const qc = useQueryClient();
   return useMutation({
     mutationFn: (params) => runDraw(params, user),
+    onSuccess: (_data, params) => {
+      qc.invalidateQueries({ queryKey: ['matches', params.modalityId] });
+      qc.invalidateQueries({ queryKey: ['all-matches', params.modalityId] });
+      qc.invalidateQueries({ queryKey: ['matches-tournament', params.tournamentId] });
+      qc.invalidateQueries({ queryKey: ['ranking', params.modalityId] });
+      qc.invalidateQueries({ queryKey: ['ranking-structured', params.modalityId] });
+    },
+  });
+}
+
+export function useRedrawGroupMatchesKeepingGroups() {
+  const { user } = useAuth();
+  const qc = useQueryClient();
+  return useMutation({
+    mutationFn: (params) => redrawGroupMatchesKeepingGroups(params, user),
     onSuccess: (_data, params) => {
       qc.invalidateQueries({ queryKey: ['matches', params.modalityId] });
       qc.invalidateQueries({ queryKey: ['all-matches', params.modalityId] });
