@@ -1,7 +1,16 @@
 import React, { useMemo, useState } from 'react';
 import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
-import { Shuffle, ChevronsRight, AlertTriangle, Users, ArrowDownToLine } from 'lucide-react';
+import { Label } from '@/components/ui/label';
+import {
+  Dialog,
+  DialogContent,
+  DialogHeader,
+  DialogTitle,
+  DialogFooter,
+  DialogDescription,
+} from '@/components/ui/dialog';
+import { Shuffle, ChevronsRight, AlertTriangle, Users, ArrowDownToLine, Pencil } from 'lucide-react';
 import { toast } from 'sonner';
 import {
   useMatches,
@@ -10,10 +19,13 @@ import {
   useRunPhaseDraw,
   useAdvanceToNextPhase,
   useAdvanceStage,
+  useSubstitutePlayer,
+  useMovePhaseEntrant,
 } from '@/modules/tournament/hooks/useTournament';
 import {
   TOURNAMENT_STAGE_TYPE_LABELS,
   MATCH_STATUS,
+  REGISTRATION_STATUS,
 } from '@/modules/tournament/domain/constants';
 import { normalizePhases } from '@/modules/tournament/domain/phases';
 import { stageSupportsAdvance } from '@/modules/tournament/domain/progression';
@@ -43,6 +55,16 @@ export default function MultiPhaseDrawBlock({ tournament, modality, isAdmin }) {
     return map;
   }, [registrations]);
 
+  const activeRegistrations = useMemo(
+    () =>
+      registrations.filter(
+        (r) =>
+          r.status === REGISTRATION_STATUS.CONFIRMED ||
+          r.status === REGISTRATION_STATUS.CHECKED_IN,
+      ),
+    [registrations],
+  );
+
   return (
     <CollapsibleSection
       title={modality.name}
@@ -61,6 +83,7 @@ export default function MultiPhaseDrawBlock({ tournament, modality, isAdmin }) {
             isLast={index === phases.length - 1}
             isAdmin={isAdmin}
             labelById={labelById}
+            activeRegistrations={activeRegistrations}
           />
         ))}
       </div>
@@ -68,7 +91,7 @@ export default function MultiPhaseDrawBlock({ tournament, modality, isAdmin }) {
   );
 }
 
-function PhaseSection({ tournament, modality, phase, stageIndex, isFirst, isLast, isAdmin, labelById }) {
+function PhaseSection({ tournament, modality, phase, stageIndex, isFirst, isLast, isAdmin, labelById, activeRegistrations }) {
   const { data: matches = [] } = useMatches(modality.id, stageIndex);
   const { data: groups = [] } = usePhaseGroups(modality.id, stageIndex);
   const runPhaseDraw = useRunPhaseDraw();
@@ -76,16 +99,14 @@ function PhaseSection({ tournament, modality, phase, stageIndex, isFirst, isLast
   const advanceStage = useAdvanceStage(modality.id);
   const [running, setRunning] = useState(false);
   const [error, setError] = useState(null);
+  const [substitution, setSubstitution] = useState(null);
+  const [groupsEditorOpen, setGroupsEditorOpen] = useState(false);
 
   const doneStatuses = new Set([MATCH_STATUS.FINISHED, MATCH_STATUS.WALKOVER]);
   const playedCount = matches.filter((m) => doneStatuses.has(m.status)).length;
   const allDone = matches.length > 0 && playedCount === matches.length;
   const withinAdvance = stageSupportsAdvance(phase.type);
-
-  function renderSide(ids, raw) {
-    if (!ids || ids.length === 0) return <span className="text-slate-400">{raw || '—'}</span>;
-    return ids.map((id) => labelById.get(id) || id).join(' + ');
-  }
+  const hasGroups = groups.length > 0;
 
   async function doDraw() {
     setError(null);
@@ -147,6 +168,17 @@ function PhaseSection({ tournament, modality, phase, stageIndex, isFirst, isLast
         <Button size="sm" onClick={doDraw} disabled={running}>
           <Shuffle className="w-4 h-4 mr-1" />
           {matches.length > 0 ? 'Re-sortear' : 'Sortear grupos e jogos'}
+        </Button>
+      )}
+      {hasGroups && (
+        <Button
+          size="sm"
+          variant="outline"
+          onClick={() => setGroupsEditorOpen(true)}
+          disabled={running}
+          title="Mover jogadores entre os grupos sorteados desta fase"
+        >
+          <Users className="w-4 h-4 mr-1" /> Editar grupos
         </Button>
       )}
       {withinAdvance && matches.length > 0 && (
@@ -239,8 +271,24 @@ function PhaseSection({ tournament, modality, phase, stageIndex, isFirst, isLast
                     {matches.some((mm) => mm.scheduled_at) && (
                       <td className="px-2 py-1 tabular-nums">{formatMatchTime(m.scheduled_at)}</td>
                     )}
-                    <td className="px-2 py-1">{renderSide(m.side_a_ids, m.side_a)}</td>
-                    <td className="px-2 py-1">{renderSide(m.side_b_ids, m.side_b)}</td>
+                    <td className="px-2 py-1">
+                      <SideCell
+                        ids={m.side_a_ids}
+                        rawSide={m.side_a}
+                        labelById={labelById}
+                        isAdmin={isAdmin}
+                        onSubstitute={(regId) => setSubstitution({ match: m, registrationId: regId })}
+                      />
+                    </td>
+                    <td className="px-2 py-1">
+                      <SideCell
+                        ids={m.side_b_ids}
+                        rawSide={m.side_b}
+                        labelById={labelById}
+                        isAdmin={isAdmin}
+                        onSubstitute={(regId) => setSubstitution({ match: m, registrationId: regId })}
+                      />
+                    </td>
                     <td className="px-2 py-1"><Badge variant="secondary">{m.status}</Badge></td>
                   </tr>
                 ))}
@@ -256,6 +304,229 @@ function PhaseSection({ tournament, modality, phase, stageIndex, isFirst, isLast
           </p>
         )}
       </div>
+
+      {groupsEditorOpen && (
+        <PhaseGroupsEditorDialog
+          tournament={tournament}
+          modality={modality}
+          stageIndex={stageIndex}
+          groups={groups}
+          labelById={labelById}
+          onClose={() => setGroupsEditorOpen(false)}
+        />
+      )}
+
+      {substitution && (
+        <SubstitutePlayerDialog
+          match={substitution.match}
+          registrationId={substitution.registrationId}
+          modalityId={modality.id}
+          labelById={labelById}
+          activeRegistrations={activeRegistrations}
+          onClose={() => setSubstitution(null)}
+        />
+      )}
     </CollapsibleSection>
+  );
+}
+
+function SideCell({ ids, rawSide, labelById, isAdmin, onSubstitute }) {
+  if (!ids || ids.length === 0) {
+    return <span className="text-slate-400">{rawSide || '—'}</span>;
+  }
+  return (
+    <div className="space-y-0.5">
+      {ids.map((regId) => {
+        const name = labelById.get(regId) || regId;
+        return (
+          <div key={regId} className="flex items-center gap-1">
+            <span>{name}</span>
+            {isAdmin && (
+              <button
+                onClick={() => onSubstitute(regId)}
+                title="Substituir jogador"
+                className="text-slate-400 hover:text-slate-700 transition-colors ml-1"
+              >
+                <Pencil className="w-3 h-3" />
+              </button>
+            )}
+          </div>
+        );
+      })}
+    </div>
+  );
+}
+
+function PhaseGroupsEditorDialog({ tournament, modality, stageIndex, groups, labelById, onClose }) {
+  const moveMutation = useMovePhaseEntrant();
+  const groupNames = groups.map((g) => g.name);
+
+  function entrantsOf(g) {
+    if (Array.isArray(g.entrants) && g.entrants.length > 0) return g.entrants;
+    return (g.participants || []).map((id) => ({ id, members: [id] }));
+  }
+
+  function entrantLabel(e) {
+    const members = e.members || [e.id];
+    return members.map((m) => labelById.get(m) || m).join(' + ');
+  }
+
+  async function handleMove(entrantId, toGroupName, fromGroupName) {
+    if (toGroupName === fromGroupName) return;
+    try {
+      await moveMutation.mutateAsync({
+        tournamentId: tournament.id,
+        modalityId: modality.id,
+        stageIndex,
+        entrantId,
+        toGroupName,
+      });
+      toast.success('Participante movido e jogos da fase regerados.');
+    } catch (err) {
+      toast.error(err?.message || 'Não foi possível mover o participante.');
+    }
+  }
+
+  return (
+    <Dialog open onOpenChange={(o) => !moveMutation.isPending && !o && onClose()}>
+      <DialogContent className="max-w-lg">
+        <DialogHeader>
+          <DialogTitle>Editar grupos · {modality.name}</DialogTitle>
+          <DialogDescription>
+            Mova participantes entre os grupos desta fase. Ao mover, os jogos da fase são
+            regerados com a nova composição — os placares já lançados nesta fase serão perdidos.
+          </DialogDescription>
+        </DialogHeader>
+
+        {groups.length === 0 ? (
+          <p className="text-sm text-slate-500">Nenhum grupo sorteado nesta fase.</p>
+        ) : (
+          <div className="space-y-3 max-h-[60vh] overflow-y-auto">
+            {groups.map((g) => {
+              const entrants = entrantsOf(g);
+              return (
+                <div key={g.name} className="rounded-md border border-slate-200 p-3">
+                  <div className="mb-2 text-sm font-semibold text-slate-800">
+                    {g.name}{' '}
+                    <span className="text-xs font-normal text-slate-500">({entrants.length})</span>
+                  </div>
+                  <div className="space-y-1.5">
+                    {entrants.length === 0 ? (
+                      <p className="text-xs text-slate-400">Grupo vazio</p>
+                    ) : (
+                      entrants.map((e) => (
+                        <div key={e.id} className="flex items-center justify-between gap-2">
+                          <span className="min-w-0 truncate text-sm">{entrantLabel(e)}</span>
+                          <select
+                            className="h-8 shrink-0 rounded-md border border-input bg-background px-2 text-xs"
+                            value={g.name}
+                            disabled={moveMutation.isPending}
+                            onChange={(ev) => handleMove(e.id, ev.target.value, g.name)}
+                            title="Mover para outro grupo"
+                          >
+                            {groupNames.map((name) => (
+                              <option key={name} value={name}>{name}</option>
+                            ))}
+                          </select>
+                        </div>
+                      ))
+                    )}
+                  </div>
+                </div>
+              );
+            })}
+          </div>
+        )}
+
+        <DialogFooter>
+          <Button variant="outline" onClick={onClose} disabled={moveMutation.isPending}>
+            {moveMutation.isPending ? 'Movendo…' : 'Fechar'}
+          </Button>
+        </DialogFooter>
+      </DialogContent>
+    </Dialog>
+  );
+}
+
+function SubstitutePlayerDialog({
+  match,
+  registrationId,
+  modalityId,
+  labelById,
+  activeRegistrations,
+  onClose,
+}) {
+  const substituteMutation = useSubstitutePlayer(modalityId);
+  const [selectedId, setSelectedId] = useState('');
+
+  const currentName = labelById.get(registrationId) || registrationId;
+
+  const takenIds = new Set([...(match.side_a_ids || []), ...(match.side_b_ids || [])]);
+  const available = activeRegistrations
+    .filter((r) => !takenIds.has(r.id))
+    .sort((a, b) =>
+      (a.label || a.player_a_name || '').localeCompare(b.label || b.player_a_name || ''),
+    );
+
+  async function handleConfirm() {
+    if (!selectedId) return;
+    try {
+      await substituteMutation.mutateAsync({
+        matchId: match.id,
+        oldRegistrationId: registrationId,
+        newRegistrationId: selectedId,
+      });
+      toast.success('Jogador substituído com sucesso.');
+      onClose();
+    } catch (err) {
+      toast.error(err.message || 'Falha ao substituir jogador.');
+    }
+  }
+
+  return (
+    <Dialog open onOpenChange={(o) => !o && onClose()}>
+      <DialogContent>
+        <DialogHeader>
+          <DialogTitle>Substituir jogador</DialogTitle>
+          <DialogDescription>
+            Substituindo: <strong>{currentName}</strong>
+          </DialogDescription>
+        </DialogHeader>
+        <div className="space-y-3">
+          <div>
+            <Label>Substituto</Label>
+            {available.length === 0 ? (
+              <p className="text-sm text-slate-500 mt-1">
+                Nenhum jogador disponível para substituição.
+              </p>
+            ) : (
+              <select
+                className="w-full h-10 rounded-md border border-input bg-background px-3 text-sm mt-1"
+                value={selectedId}
+                onChange={(e) => setSelectedId(e.target.value)}
+              >
+                <option value="">— selecione um jogador —</option>
+                {available.map((r) => (
+                  <option key={r.id} value={r.id}>
+                    {r.label || r.player_a_name}
+                  </option>
+                ))}
+              </select>
+            )}
+          </div>
+        </div>
+        <DialogFooter>
+          <Button variant="outline" onClick={onClose}>
+            Cancelar
+          </Button>
+          <Button
+            onClick={handleConfirm}
+            disabled={!selectedId || substituteMutation.isPending}
+          >
+            {substituteMutation.isPending ? 'Substituindo…' : 'Confirmar substituição'}
+          </Button>
+        </DialogFooter>
+      </DialogContent>
+    </Dialog>
   );
 }

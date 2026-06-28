@@ -48,7 +48,12 @@ import {
   getStageGroups,
   moveParticipantBetweenGroups,
 } from '../services/drawService';
-import { runPhaseDraw, advanceToNextPhase, listPhaseGroups } from '../services/phaseService';
+import {
+  runPhaseDraw,
+  advanceToNextPhase,
+  listPhaseGroups,
+  movePhaseEntrantBetweenGroups,
+} from '../services/phaseService';
 import { computeModalityRanking, computeModalityRankingStructured } from '../services/rankingService';
 import { getMyTournamentHistory } from '../services/participationService';
 import { useAuth } from '@/core/lib/FirebaseAuthContext';
@@ -425,6 +430,22 @@ export function useRunPhaseDraw() {
   const qc = useQueryClient();
   return useMutation({
     mutationFn: (params) => runPhaseDraw(params, user),
+    onSuccess: (_data, params) => {
+      qc.invalidateQueries({ queryKey: ['matches', params.modalityId] });
+      qc.invalidateQueries({ queryKey: ['all-matches', params.modalityId] });
+      qc.invalidateQueries({ queryKey: ['matches-tournament', params.tournamentId] });
+      qc.invalidateQueries({ queryKey: ['phase-groups', params.modalityId] });
+      qc.invalidateQueries({ queryKey: ['ranking', params.modalityId] });
+      qc.invalidateQueries({ queryKey: ['ranking-structured', params.modalityId] });
+    },
+  });
+}
+
+export function useMovePhaseEntrant() {
+  const { user } = useAuth();
+  const qc = useQueryClient();
+  return useMutation({
+    mutationFn: (params) => movePhaseEntrantBetweenGroups(params, user),
     onSuccess: (_data, params) => {
       qc.invalidateQueries({ queryKey: ['matches', params.modalityId] });
       qc.invalidateQueries({ queryKey: ['all-matches', params.modalityId] });

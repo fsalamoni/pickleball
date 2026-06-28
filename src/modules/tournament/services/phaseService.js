@@ -122,6 +122,67 @@ function groupEntrants(group) {
 }
 
 /**
+ * Move um participante (entrant) de um grupo para outro NESTA fase, mantendo a
+ * composição dos demais grupos, e regenera os jogos da fase com a nova divisão.
+ * Os placares já lançados nesta fase são perdidos (os jogos são refeitos).
+ *
+ * @param {object} params
+ * @param {string} params.tournamentId
+ * @param {string} params.modalityId
+ * @param {number} params.stageIndex
+ * @param {string} params.entrantId   id do entrant a mover (membro individual ou dupla)
+ * @param {string} params.toGroupName grupo de destino
+ * @param {object} actor
+ */
+export async function movePhaseEntrantBetweenGroups(params, actor) {
+  const { tournamentId, modalityId, stageIndex, entrantId, toGroupName } = params;
+  const persisted = await listPhaseGroups(modalityId, stageIndex);
+  if (persisted.length === 0) throw new Error('Nenhum grupo sorteado nesta fase.');
+
+  const rebuilt = persisted.map((g) => ({ name: g.name, entrants: [...groupEntrants(g)] }));
+  const target = rebuilt.find((g) => g.name === toGroupName);
+  if (!target) throw new Error('Grupo de destino não encontrado.');
+
+  const source = rebuilt.find((g) => g.entrants.some((e) => e.id === entrantId));
+  if (!source) throw new Error('Participante não encontrado nos grupos desta fase.');
+  if (source.name === toGroupName) return { moved: false };
+
+  const moving = source.entrants.find((e) => e.id === entrantId);
+  source.entrants = source.entrants.filter((e) => e.id !== entrantId);
+  target.entrants.push(moving);
+
+  const allEntrants = rebuilt.flatMap((g) => g.entrants);
+
+  // Regenera os jogos desta fase mantendo a nova composição (manualGroups).
+  const result = await runPhaseDraw(
+    {
+      tournamentId,
+      modalityId,
+      stageIndex,
+      manualGroups: rebuilt,
+      entrants: allEntrants,
+    },
+    actor,
+  );
+
+  await createAuditLog({
+    action: 'group_participant_moved',
+    actor,
+    details: {
+      tournament_id: tournamentId,
+      modality_id: modalityId,
+      stage_index: stageIndex,
+      entrant_id: entrantId,
+      from_group: source.name,
+      to_group: toGroupName,
+      multi_phase: true,
+    },
+  });
+
+  return { moved: true, groups: result.groups.length, matches: result.matches };
+}
+
+/**
  * Verifica se os grupos formados para uma fase podem realmente ser sorteados no
  * formato escolhido, devolvendo mensagens claras e acionáveis quando não.
  * @param {object} phase fase normalizada
