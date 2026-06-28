@@ -11,7 +11,7 @@ import {
   DialogFooter,
   DialogDescription,
 } from '@/components/ui/dialog';
-import { Shuffle, AlertTriangle, Pencil, ListRestart, CalendarClock, ChevronsRight } from 'lucide-react';
+import { Shuffle, AlertTriangle, Pencil, ListRestart, CalendarClock, ChevronsRight, Users } from 'lucide-react';
 import { toast } from 'sonner';
 import {
   useModalities,
@@ -23,6 +23,8 @@ import {
   useRescheduleMatches,
   useAdvanceStage,
   useRedrawGroupMatchesKeepingGroups,
+  useStageGroups,
+  useMoveParticipantBetweenGroups,
 } from '@/modules/tournament/hooks/useTournament';
 import {
   TOURNAMENT_STAGE_TYPE_LABELS,
@@ -88,6 +90,7 @@ function ModalityDrawBlock({ tournament, modality, isAdmin }) {
   const [confirmOpen, setConfirmOpen] = useState(false);
   const [reshuffleConfirmOpen, setReshuffleConfirmOpen] = useState(false);
   const [keepGroupsConfirmOpen, setKeepGroupsConfirmOpen] = useState(false);
+  const [groupsEditorOpen, setGroupsEditorOpen] = useState(false);
   const [error, setError] = useState(null);
   const [substitution, setSubstitution] = useState(null);
 
@@ -288,6 +291,17 @@ function ModalityDrawBlock({ tournament, modality, isAdmin }) {
                 <Button
                   size="sm"
                   variant="outline"
+                  onClick={() => setGroupsEditorOpen(true)}
+                  disabled={running}
+                  title="Mover jogadores entre os grupos sorteados"
+                >
+                  <Users className="w-4 h-4 mr-1" /> Editar grupos
+                </Button>
+              )}
+              {hasGroups && (
+                <Button
+                  size="sm"
+                  variant="outline"
                   onClick={() => setKeepGroupsConfirmOpen(true)}
                   disabled={running}
                   title="Gera novamente todos os jogos dos grupos atuais, sem alterar a composição dos grupos"
@@ -444,6 +458,15 @@ function ModalityDrawBlock({ tournament, modality, isAdmin }) {
         </DialogContent>
       </Dialog>
 
+      {groupsEditorOpen && (
+        <GroupsEditorDialog
+          tournament={tournament}
+          modality={modality}
+          labelById={labelById}
+          onClose={() => setGroupsEditorOpen(false)}
+        />
+      )}
+
       {substitution && (
         <SubstitutePlayerDialog
           match={substitution.match}
@@ -482,6 +505,86 @@ function SideCell({ ids, rawSide, labelById, isAdmin, onSubstitute }) {
         );
       })}
     </div>
+  );
+}
+
+function GroupsEditorDialog({ tournament, modality, labelById, onClose }) {
+  const { data: groups = [], isLoading } = useStageGroups(modality.id, 0);
+  const moveMutation = useMoveParticipantBetweenGroups();
+  const groupNames = groups.map((g) => g.name);
+
+  async function handleMove(registrationId, toGroupName, fromGroupName) {
+    if (toGroupName === fromGroupName) return;
+    try {
+      await moveMutation.mutateAsync({
+        tournamentId: tournament.id,
+        modalityId: modality.id,
+        stageIndex: 0,
+        registrationId,
+        toGroupName,
+      });
+      toast.success('Jogador movido e jogos da fase regerados.');
+    } catch (err) {
+      toast.error(err?.message || 'Não foi possível mover o jogador.');
+    }
+  }
+
+  return (
+    <Dialog open onOpenChange={(o) => !moveMutation.isPending && !o && onClose()}>
+      <DialogContent className="max-w-lg">
+        <DialogHeader>
+          <DialogTitle>Editar grupos · {modality.name}</DialogTitle>
+          <DialogDescription>
+            Mova jogadores entre os grupos. Ao mover, os jogos da fase são regerados com a nova
+            composição — os placares já lançados nesta fase serão perdidos.
+          </DialogDescription>
+        </DialogHeader>
+
+        {isLoading ? (
+          <p className="text-sm text-slate-500">Carregando grupos…</p>
+        ) : groups.length === 0 ? (
+          <p className="text-sm text-slate-500">Nenhum grupo sorteado nesta fase.</p>
+        ) : (
+          <div className="space-y-3 max-h-[60vh] overflow-y-auto">
+            {groups.map((g) => (
+              <div key={g.name} className="rounded-md border border-slate-200 p-3">
+                <div className="mb-2 text-sm font-semibold text-slate-800">
+                  {g.name} <span className="text-xs font-normal text-slate-500">({g.participants.length})</span>
+                </div>
+                <div className="space-y-1.5">
+                  {g.participants.length === 0 ? (
+                    <p className="text-xs text-slate-400">Grupo vazio</p>
+                  ) : (
+                    g.participants.map((pid) => (
+                      <div key={pid} className="flex items-center justify-between gap-2">
+                        <span className="min-w-0 truncate text-sm">{labelById.get(pid) || pid}</span>
+                        <select
+                          className="h-8 shrink-0 rounded-md border border-input bg-background px-2 text-xs"
+                          value={g.name}
+                          disabled={moveMutation.isPending}
+                          onChange={(e) => handleMove(pid, e.target.value, g.name)}
+                          title="Mover para outro grupo"
+                        >
+                          {groupNames.map((name) => (
+                            <option key={name} value={name}>{name}</option>
+                          ))}
+                        </select>
+                      </div>
+                    ))
+                  )}
+                </div>
+              </div>
+            ))}
+          </div>
+        )}
+
+        <DialogFooter>
+          <Button variant="outline" onClick={onClose} disabled={moveMutation.isPending}>
+            {moveMutation.isPending ? 'Movendo…' : 'Fechar'}
+          </Button>
+        </DialogFooter>
+      </DialogContent>
+    </Dialog>
   );
 }
 

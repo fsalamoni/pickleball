@@ -215,6 +215,38 @@ export async function updateRegistration(id, updates, actor) {
   await createAuditLog({ action: 'registration_updated', actor, details: { registration_id: id, fields: Object.keys(updates) } });
 }
 
+/**
+ * Edita os DADOS dos jogadores de uma inscrição (nome, e-mail, nível, gênero),
+ * recompondo o rótulo. Os nomes aparecem por referência (id da inscrição) nos
+ * grupos, jogos e ranking, então a edição reflete automaticamente em todos.
+ *
+ * @param {string} id
+ * @param {{ format: string, player_a: object, player_b?: object|null }} input
+ * @param {object} actor
+ */
+export async function updateRegistrationDetails(id, input, actor) {
+  const { format, player_a = {}, player_b = null } = input;
+  const aEmail = normalizeEmail(player_a.email);
+  const updates = {
+    player_a_name: String(player_a.name || '').trim(),
+    player_a_email: aEmail,
+    player_a_email_lc: aEmail,
+    player_a_level: player_a.level || null,
+    player_a_competition_gender: player_a.competition_gender || null,
+  };
+  if (format === MODALITY_FORMAT.DOUBLES) {
+    const bEmail = normalizeEmail(player_b?.email);
+    updates.player_b_name = String(player_b?.name || '').trim();
+    updates.player_b_email = bEmail;
+    updates.player_b_email_lc = bEmail;
+    updates.player_b_level = player_b?.level || null;
+    updates.player_b_competition_gender = player_b?.competition_gender || null;
+  }
+  updates.label = buildRegistrationLabel(updates, format);
+  await updateDoc(doc(db, COL, id), { ...updates, updated_at: serverTimestamp() });
+  await createAuditLog({ action: 'registration_edited', actor, details: { registration_id: id } });
+}
+
 export async function confirmRegistrationPayment(id, actor) {
   await updateRegistration(id, { status: REGISTRATION_STATUS.CONFIRMED, payment_confirmed_at: serverTimestamp() }, actor);
 }

@@ -24,6 +24,7 @@ import {
   listRegistrationsByTournament,
   listMyRegistrations,
   createRegistration,
+  updateRegistrationDetails,
   confirmRegistrationPayment,
   promoteFromWaitlist,
   cancelRegistration,
@@ -41,7 +42,12 @@ import {
   rescheduleMatches,
   advanceStage,
 } from '../services/matchService';
-import { runDraw, redrawGroupMatchesKeepingGroups } from '../services/drawService';
+import {
+  runDraw,
+  redrawGroupMatchesKeepingGroups,
+  getStageGroups,
+  moveParticipantBetweenGroups,
+} from '../services/drawService';
 import { runPhaseDraw, advanceToNextPhase, listPhaseGroups } from '../services/phaseService';
 import { computeModalityRanking, computeModalityRankingStructured } from '../services/rankingService';
 import { getMyTournamentHistory } from '../services/participationService';
@@ -263,6 +269,22 @@ export function useConfirmRegistrationPayment(modalityId) {
   });
 }
 
+export function useEditRegistration(modalityId) {
+  const { user } = useAuth();
+  const qc = useQueryClient();
+  return useMutation({
+    mutationFn: ({ id, input }) => updateRegistrationDetails(id, input, user),
+    onSuccess: () => {
+      qc.invalidateQueries({ queryKey: ['registrations', modalityId] });
+      qc.invalidateQueries({ queryKey: ['registrations-tournament'] });
+      qc.invalidateQueries({ queryKey: ['all-matches', modalityId] });
+      qc.invalidateQueries({ queryKey: ['matches', modalityId] });
+      qc.invalidateQueries({ queryKey: ['ranking', modalityId] });
+      qc.invalidateQueries({ queryKey: ['ranking-structured', modalityId] });
+    },
+  });
+}
+
 export function usePromoteFromWaitlist(modalityId) {
   const { user } = useAuth();
   const qc = useQueryClient();
@@ -339,6 +361,30 @@ export function useRunDraw() {
   return useMutation({
     mutationFn: (params) => runDraw(params, user),
     onSuccess: (_data, params) => {
+      qc.invalidateQueries({ queryKey: ['matches', params.modalityId] });
+      qc.invalidateQueries({ queryKey: ['all-matches', params.modalityId] });
+      qc.invalidateQueries({ queryKey: ['matches-tournament', params.tournamentId] });
+      qc.invalidateQueries({ queryKey: ['ranking', params.modalityId] });
+      qc.invalidateQueries({ queryKey: ['ranking-structured', params.modalityId] });
+    },
+  });
+}
+
+export function useStageGroups(modalityId, stageIndex = 0) {
+  return useQuery({
+    queryKey: ['stage-groups', modalityId, stageIndex],
+    queryFn: () => getStageGroups(modalityId, stageIndex),
+    enabled: !!modalityId,
+  });
+}
+
+export function useMoveParticipantBetweenGroups() {
+  const { user } = useAuth();
+  const qc = useQueryClient();
+  return useMutation({
+    mutationFn: (params) => moveParticipantBetweenGroups(params, user),
+    onSuccess: (_data, params) => {
+      qc.invalidateQueries({ queryKey: ['stage-groups', params.modalityId] });
       qc.invalidateQueries({ queryKey: ['matches', params.modalityId] });
       qc.invalidateQueries({ queryKey: ['all-matches', params.modalityId] });
       qc.invalidateQueries({ queryKey: ['matches-tournament', params.tournamentId] });

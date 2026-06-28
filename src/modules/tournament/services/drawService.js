@@ -6,6 +6,7 @@
 
 import { collection, getDocs, query, where } from 'firebase/firestore';
 import { db } from '@/core/config/firebase';
+import { createAuditLog } from '@/core/services/auditService';
 import { generateDraw, buildGroupMatches, shuffle, seededRng } from '../domain/draw.js';
 import { stageFormatCompatibility } from '../domain/formatExplain.js';
 import { balancedParticipantOrder, levelRank } from '../domain/seeding.js';
@@ -189,7 +190,7 @@ export async function runDraw(params, actor) {
  * Lê os grupos já sorteados de uma fase (composição preservada).
  * @returns {Array<{ name: string, participants: string[] }>}
  */
-async function readStageGroups(modalityId, stageIndex) {
+export async function getStageGroups(modalityId, stageIndex = 0) {
   const snap = await getDocs(
     query(
       collection(db, 'tournament_groups'),
@@ -230,7 +231,7 @@ export async function redrawGroupMatchesKeepingGroups(params, actor) {
     throw new Error('Esta opção é apenas para fases de grupos. Para os demais formatos, use "Sortear".');
   }
 
-  const groups = await readStageGroups(modalityId, stageIndex);
+  const groups = await getStageGroups(modalityId, stageIndex);
   if (groups.length === 0) {
     throw new Error('Nenhum grupo sorteado encontrado nesta fase. Use "Sortear" para criar os grupos primeiro.');
   }
@@ -252,4 +253,59 @@ export async function redrawGroupMatchesKeepingGroups(params, actor) {
   });
 
   return { matches: draw.matches.length, groups: groups.length, scheduleWarnings: scheduleWarnings || [] };
+}
+
+/**
+ * Move um participante (inscrição) de um grupo para outro em uma fase de grupos,
+ * mantendo os demais grupos, e regenera os jogos da fase com a nova composição.
+ * Substitui os jogos da fase (placares da fase são perdidos).
+ *
+ * @param {{ tournamentId, modalityId, stageIndex?, registrationId, toGroupName }} params
+ * @param {object} actor
+ * @returns {Promise<{ matches: number, scheduleWarnings: string[] }>}
+ */
+export async function moveParticipantBetweenGroups(params, actor) {
+  const { tournamentId, modalityId, stageIndex = 0, registrationId, toGroupName } = params;
+  const modality = await getModality(modalityId);
+  if (!modality) throw new Error('Modalidade não encontrada.');
+  if (modality.tournament_id !== tournamentId) throw new Error('Modalidade não pertence ao torneio.');
+  const stage = modality.stages?.[stageIndex];
+  if (!stage || stage.type !== TOURNAMENT_STAGE_TYPE.GROUPS) {
+    throw new Error('Mover entre grupos só se aplica a fases de grupos.');
+  }
+
+  const groups = await getStageGroups(modalityId, stageIndex);
+  const target = groups.find((g) => g.name === toGroupName);
+  if (!target) throw new Error('Grupo de destino não encontrado.');
+  const source = groups.find((g) => g.participants.includes(registrationId));
+  if (!source) throw new Error('Participante não encontrado em nenhum grupo.');
+  if (source.name === target.name) return { matches: 0, scheduleWarnings: [] };
+
+  // Aplica o movimento (composição nova).
+  const newGroups = groups.map((g) => {
+    if (g.name === source.name) {
+      return { name: g.name, participants: g.participants.filter((id) => id !== registrationId) };
+    }
+    if (g.name === target.name) {
+      return { name: g.name, participants: [...g.participants, registrationId] };
+    }
+    return { name: g.name, participants: g.participants };
+  });
+
+  // draw COM groups → persistMatches reescreve os grupos (nova composição) e
+  // regenera os jogos da fase, em lote.
+  const draw = { stageType: stage.type, groups: newGroups, matches: buildGroupMatches(newGroups) };
+  const tournament = await getTournament(tournamentId);
+  const { scheduleWarnings } = await persistMatches(tournamentId, modalityId, stageIndex, draw, actor, {
+    schedulingConfig: modality,
+    fallbackDate: tournament?.starts_at || null,
+  });
+
+  await createAuditLog({
+    action: 'group_participant_moved',
+    actor,
+    details: { modality_id: modalityId, registration_id: registrationId, from: source.name, to: target.name },
+  });
+
+  return { matches: draw.matches.length, scheduleWarnings: scheduleWarnings || [] };
 }
