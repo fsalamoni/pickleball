@@ -181,6 +181,15 @@ export const FEATURE_FLAG = Object.freeze({
    * Aditivo — desligado, a rota e o item de menu ficam ocultos.
    */
   SPORT_HISTORY: 'sport_history',
+
+  /**
+   * Página própria de cada modalidade: em vez do modal de informações, cada
+   * modalidade ganha uma página com abas (informações gerais, inscrição, jogos,
+   * ranking e fotos da modalidade). A visão geral do torneio e a administração/
+   * sorteio continuam iguais; a inscrição rápida no card permanece. Aditivo —
+   * desligado, o botão "Informações" volta a abrir o modal atual.
+   */
+  MODALITY_PAGES: 'modality_pages',
 });
 
 /** Metadados de exibição para o painel de flags (admin master). */
@@ -352,6 +361,15 @@ export const FEATURE_FLAG_META = Object.freeze({
       'Publica uma página, na seção "sobre o esporte", com a origem do '
       + 'pickleball, marcos históricos, curiosidades e cultura do jogo. '
       + 'Desligado, a rota e o item de menu ficam ocultos.',
+  },
+  [FEATURE_FLAG.MODALITY_PAGES]: {
+    label: 'Página própria de cada modalidade',
+    description:
+      'Cada modalidade ganha uma página dedicada com abas de informações gerais, '
+      + 'inscrição (mantendo a inscrição rápida no card), jogos, ranking e fotos '
+      + 'da modalidade, no lugar do modal de informações. A visão geral do '
+      + 'torneio e a administração/sorteio permanecem iguais. Desligado, o botão '
+      + '"Informações" volta a abrir o modal atual.',
   },
 });
 

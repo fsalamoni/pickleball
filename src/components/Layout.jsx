@@ -191,6 +191,11 @@ const PAGE_META = {
     title: 'Operação do torneio',
     description: 'Modalidades, inscrições, jogos e ranking do evento.',
   },
+  ModalityPage: {
+    eyebrow: 'Modalidade',
+    title: 'Modalidade do torneio',
+    description: 'Informações, inscrição, jogos, ranking e fotos da modalidade.',
+  },
   PickleballRules: {
     eyebrow: 'Esporte',
     title: 'Regras do pickleball',

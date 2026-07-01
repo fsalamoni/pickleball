@@ -95,7 +95,7 @@ function MatchSideCell({ people = [], fallback, win }) {
   );
 }
 
-function ModalityMatchesBlock({ tournament, modality, isAdmin }) {
+export function ModalityMatchesBlock({ tournament, modality, isAdmin }) {
   const { data: matches = [] } = useAllModalityMatches(modality.id);
   const { data: registrations = [] } = useRegistrations(modality.id);
   const labelById = useMemo(() => {

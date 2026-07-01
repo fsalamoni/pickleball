@@ -1,4 +1,5 @@
 import React, { useState } from 'react';
+import { Link } from 'react-router-dom';
 import { Card, CardContent } from '@/components/ui/card';
 import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
@@ -269,6 +270,8 @@ function ModalityCard({
   const slotsFull = isRegistrationCapacityReached(occupied, modality.max_entries);
   const waitlistOn = useFeatureFlag(FEATURE_FLAG.TOURNAMENT_WAITLIST);
   const canWaitlist = slotsFull && waitlistOn && !alreadyRegistered && !isAdmin;
+  const modalityPagesOn = useFeatureFlag(FEATURE_FLAG.MODALITY_PAGES);
+  const modalityHref = `/torneios/${tournament.id}/modalidades/${modality.id}`;
   const pct = getCapacityProgress(confirmed, modality.max_entries);
   const pendingRegistrations = Math.max(occupied - confirmed, 0);
   const barTone = slotsFull
@@ -288,7 +291,13 @@ function ModalityCard({
         <div className="flex items-start justify-between gap-3">
           <div className="min-w-0 flex-1">
             <div className="flex items-center gap-2 flex-wrap">
-              <h4 className="text-xl font-semibold text-slate-950">{modality.name}</h4>
+              {modalityPagesOn ? (
+                <Link to={modalityHref} className="text-xl font-semibold text-slate-950 hover:text-emerald-700 hover:underline">
+                  {modality.name}
+                </Link>
+              ) : (
+                <h4 className="text-xl font-semibold text-slate-950">{modality.name}</h4>
+              )}
               {alreadyRegistered && (
                 <Badge variant="success" className="rounded-full px-3 py-1 text-[10px] uppercase tracking-[0.14em] shadow-none">Você está inscrito</Badge>
               )}
@@ -369,9 +378,17 @@ function ModalityCard({
           </div>
 
           <div className="flex flex-wrap items-center justify-between gap-3">
-            <Button variant="outline" size="sm" onClick={onInfo}>
-              <Info className="w-4 h-4 mr-1" /> Informações
-            </Button>
+            {modalityPagesOn ? (
+              <Button asChild variant="outline" size="sm">
+                <Link to={modalityHref}>
+                  <Info className="w-4 h-4 mr-1" /> Ver modalidade
+                </Link>
+              </Button>
+            ) : (
+              <Button variant="outline" size="sm" onClick={onInfo}>
+                <Info className="w-4 h-4 mr-1" /> Informações
+              </Button>
+            )}
 
             <div className="flex items-center gap-2 flex-wrap">
               {alreadyRegistered ? (

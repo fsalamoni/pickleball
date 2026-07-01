@@ -60,7 +60,7 @@ function PositionCell({ position }) {
   );
 }
 
-function ModalityRankingBlock({ modality }) {
+export function ModalityRankingBlock({ modality }) {
   const { data, isLoading } = useModalityRankingStructured(modality.id);
   const phases = (data?.phases || []).filter((p) => p.played && p.groups.length > 0);
   const showPhaseHeaders = phases.length > 1;

@@ -18,25 +18,37 @@ import { createAuditLog } from '@/core/services/auditService';
 
 const COL = 'tournament_photos';
 
-/** Adiciona uma foto à galeria do torneio. */
-export async function addTournamentPhoto(tournamentId, url, actor) {
+/**
+ * Adiciona uma foto à galeria do torneio. Se `modalityId` for informado, a foto
+ * também é vinculada a uma modalidade (campo aditivo `modality_id`), permitindo
+ * uma galeria por modalidade sem afetar a galeria geral.
+ */
+export async function addTournamentPhoto(tournamentId, url, actor, modalityId = null) {
   if (!db || !tournamentId || !url) return null;
   const id = doc(collection(db, COL)).id;
   await setDoc(doc(db, COL, id), {
     id,
     tournament_id: tournamentId,
+    modality_id: modalityId || null,
     url,
     uploaded_by: actor?.uid || null,
     created_at: serverTimestamp(),
   });
-  await createAuditLog({ action: 'tournament_photo_added', actor, details: { tournament_id: tournamentId, photo_id: id } });
+  await createAuditLog({ action: 'tournament_photo_added', actor, details: { tournament_id: tournamentId, modality_id: modalityId || null, photo_id: id } });
   return id;
 }
 
-/** Lista as fotos de um torneio. */
+/** Lista as fotos de um torneio (galeria geral). */
 export async function listTournamentPhotos(tournamentId) {
   if (!db || !tournamentId) return [];
   const snap = await getDocs(query(collection(db, COL), where('tournament_id', '==', tournamentId)));
+  return snap.docs.map((d) => d.data());
+}
+
+/** Lista as fotos de uma modalidade específica. */
+export async function listModalityPhotos(modalityId) {
+  if (!db || !modalityId) return [];
+  const snap = await getDocs(query(collection(db, COL), where('modality_id', '==', modalityId)));
   return snap.docs.map((d) => d.data());
 }
 

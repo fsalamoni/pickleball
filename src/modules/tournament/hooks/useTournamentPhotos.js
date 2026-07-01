@@ -3,6 +3,7 @@ import { useAuth } from '@/core/lib/FirebaseAuthContext';
 import {
   addTournamentPhoto,
   listTournamentPhotos,
+  listModalityPhotos,
   deleteTournamentPhoto,
 } from '../services/photoService.js';
 
@@ -13,6 +14,29 @@ export function useTournamentPhotos(tournamentId, enabled = true) {
     queryFn: () => listTournamentPhotos(tournamentId),
     enabled: !!tournamentId && enabled,
     staleTime: 60_000,
+  });
+}
+
+/** Fotos de uma modalidade específica. */
+export function useModalityPhotos(modalityId, enabled = true) {
+  return useQuery({
+    queryKey: ['modality-photos', modalityId],
+    queryFn: () => listModalityPhotos(modalityId),
+    enabled: !!modalityId && enabled,
+    staleTime: 60_000,
+  });
+}
+
+/** Envia uma foto vinculada a uma modalidade. */
+export function useAddModalityPhoto(tournamentId, modalityId) {
+  const { user } = useAuth();
+  const qc = useQueryClient();
+  return useMutation({
+    mutationFn: (url) => addTournamentPhoto(tournamentId, url, user, modalityId),
+    onSuccess: () => {
+      qc.invalidateQueries({ queryKey: ['modality-photos', modalityId] });
+      qc.invalidateQueries({ queryKey: ['tournament-photos', tournamentId] });
+    },
   });
 }
 
