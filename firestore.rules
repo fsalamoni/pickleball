@@ -30,6 +30,11 @@ service cloud.firestore {
         && exists(/databases/$(database)/documents/clubs/$(clubId))
         && get(/databases/$(database)/documents/clubs/$(clubId)).data.created_by == request.auth.uid;
     }
+    // Gestor (dono ou administrador) de uma arena — doc determinístico arenaId_uid.
+    function isArenaManager(arenaId) {
+      return isAuthed()
+        && exists(/databases/$(database)/documents/arena_managers/$(arenaId + '_' + request.auth.uid));
+    }
     // Dados/relações de um evento (para validar subcoleções pelo documento-pai).
     function eventData(eventId) {
       return get(/databases/$(database)/documents/club_events/$(eventId)).data;
@@ -199,6 +204,60 @@ service cloud.firestore {
     match /affiliate_links/{linkId} {
       allow read: if true;
       allow write: if isPlatformAdmin();
+    }
+
+    // ---- Arenas -----------------------------------------------------------
+    // Diretório de arenas/quadras. Leitura pública (a página da arena é
+    // compartilhável por QR). Criação pelo próprio dono; edição/exclusão pelos
+    // gestores (ou admin master).
+    match /arenas/{arenaId} {
+      allow read: if true;
+      allow create: if isAuthed() && request.resource.data.owner_id == request.auth.uid;
+      allow update: if isArenaManager(arenaId) || isPlatformAdmin();
+      allow delete: if (isAuthed() && resource.data.owner_id == request.auth.uid) || isPlatformAdmin();
+    }
+    // Gestores da arena (id determinístico arenaId_uid). O criador registra a si
+    // mesmo como dono; gestores existentes adicionam outros; cada um pode sair.
+    match /arena_managers/{docId} {
+      allow read: if true;
+      allow create: if isAuthed() && (
+        request.resource.data.user_id == request.auth.uid
+        || isArenaManager(request.resource.data.arena_id)
+        || isPlatformAdmin());
+      allow update: if isArenaManager(resource.data.arena_id) || isPlatformAdmin();
+      allow delete: if isAuthed() && (
+        resource.data.user_id == request.auth.uid
+        || isArenaManager(resource.data.arena_id)
+        || isPlatformAdmin());
+    }
+    // Reservas: legíveis/gerenciáveis pelo atleta solicitante e pelos gestores
+    // da arena. Criação só pelo próprio atleta.
+    match /arena_bookings/{bookingId} {
+      allow read: if isAuthed() && (
+        resource.data.athlete_id == request.auth.uid
+        || isArenaManager(resource.data.arena_id)
+        || isPlatformAdmin());
+      allow create: if isAuthed() && request.resource.data.athlete_id == request.auth.uid;
+      allow update, delete: if isAuthed() && (
+        resource.data.athlete_id == request.auth.uid
+        || isArenaManager(resource.data.arena_id)
+        || isPlatformAdmin());
+    }
+    // Avaliações/reclamações/sugestões — leitura pública; cada um cria/edita as
+    // suas; a própria arena e o admin podem remover.
+    match /arena_reviews/{reviewId} {
+      allow read: if true;
+      allow create, update: if isAuthed() && request.resource.data.user_id == request.auth.uid;
+      allow delete: if isAuthed() && (
+        resource.data.user_id == request.auth.uid
+        || isArenaManager(resource.data.arena_id)
+        || isPlatformAdmin());
+    }
+    // Favoritos do atleta (id determinístico uid_arenaId) — só o próprio dono.
+    match /arena_favorites/{docId} {
+      allow read: if isAuthed() && resource.data.user_id == request.auth.uid;
+      allow create: if isAuthed() && request.resource.data.user_id == request.auth.uid;
+      allow delete: if isAuthed() && resource.data.user_id == request.auth.uid;
     }
 
     // ---- Users -----------------------------------------------------------

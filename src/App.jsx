@@ -39,6 +39,12 @@ const OpenGames = lazy(() => import('@/modules/games/pages/OpenGames'));
 const Partners = lazy(() => import('@/modules/partners/pages/Partners'));
 const CommunityFeed = lazy(() => import('@/modules/social/pages/CommunityFeed'));
 const AdminPartners = lazy(() => import('@/modules/partners/pages/AdminPartners'));
+const ArenasDirectory = lazy(() => import('@/modules/arenas/pages/ArenasDirectory'));
+const CreateArena = lazy(() => import('@/modules/arenas/pages/CreateArena'));
+const ArenaDetail = lazy(() => import('@/modules/arenas/pages/ArenaDetail'));
+const ArenaManage = lazy(() => import('@/modules/arenas/pages/ArenaManage'));
+const MyBookings = lazy(() => import('@/modules/arenas/pages/MyBookings'));
+const SportHistory = lazy(() => import('@/pages/SportHistory'));
 const PageNotFound = lazy(() => import('@/pages/PageNotFound'));
 
 const LOCAL_PREVIEW_PROTECTED_PATHS = new Set([
@@ -120,6 +126,7 @@ export default function App() {
               <Route path="/regras" element={withLayout('PickleballRules', PickleballRules)} />
               <Route path="/torneios/guia" element={withLayout('TournamentFormatsGuide', TournamentFormatsGuide)} />
               <Route path="/nivelamento" element={withLayout('Leveling', Leveling)} />
+              <Route path="/historia" element={withLayout('SportHistory', SportHistory)} />
               <Route path="/conduta" element={withLayout('ConductFairPlay', ConductFairPlay)} />
               <Route path="/politica-uso" element={withLayout('PrivacyPolicy', PrivacyPolicy)} />
 
@@ -145,6 +152,11 @@ export default function App() {
               <Route path="/encontrar-jogadores" element={<ProtectedRoute>{withLayout('FindPlayers', FindPlayers)}</ProtectedRoute>} />
               <Route path="/procura-jogo" element={<ProtectedRoute>{withLayout('OpenGames', OpenGames)}</ProtectedRoute>} />
               <Route path="/novidades" element={<ProtectedRoute>{withLayout('CommunityFeed', CommunityFeed)}</ProtectedRoute>} />
+              <Route path="/arenas" element={<ProtectedRoute>{withLayout('ArenasDirectory', ArenasDirectory)}</ProtectedRoute>} />
+              <Route path="/arenas/criar" element={<ProtectedRoute>{withLayout('CreateArena', CreateArena)}</ProtectedRoute>} />
+              <Route path="/arenas/:arenaId" element={<ProtectedRoute>{withLayout('ArenaDetail', ArenaDetail)}</ProtectedRoute>} />
+              <Route path="/arenas/:arenaId/gerir" element={<ProtectedRoute>{withLayout('ArenaManage', ArenaManage)}</ProtectedRoute>} />
+              <Route path="/minhas-reservas" element={<ProtectedRoute>{withLayout('MyBookings', MyBookings)}</ProtectedRoute>} />
               <Route path="/torneios" element={<Navigate to="/inicio" replace />} />
               <Route path="/torneios/criar" element={<ProtectedRoute>{withLayout('CreateTournament', CreateTournament)}</ProtectedRoute>} />
               <Route path="/torneios/ingressar" element={<ProtectedRoute>{withLayout('JoinTournament', JoinTournament)}</ProtectedRoute>} />

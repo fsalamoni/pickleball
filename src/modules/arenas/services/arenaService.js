@@ -1,0 +1,301 @@
+/**
+ * Serviço de Arenas — CRUD, gestores, fotos, preços, favoritos e avaliações.
+ *
+ * Padrões (iguais aos demais módulos):
+ *  - IDs determinísticos onde faz sentido (gestor: arenaId_uid; favorito:
+ *    uid_arenaId) para evitar duplicidade.
+ *  - Contadores (rating_count) são cosméticos; a verdade é a coleção.
+ *  - Auditoria e notificações são best-effort e nunca interrompem o fluxo.
+ */
+
+import {
+  collection,
+  doc,
+  getDoc,
+  getDocs,
+  setDoc,
+  updateDoc,
+  deleteDoc,
+  query,
+  where,
+  serverTimestamp,
+  writeBatch,
+} from 'firebase/firestore';
+import { db } from '@/core/config/firebase';
+import { logger } from '@/core/lib/logger';
+import { createAuditLog } from '@/core/services/auditService';
+import { notifyUsers, NOTIFICATION_TYPE } from '@/core/services/notificationService';
+import { ARENA_COLLECTIONS, ARENA_MANAGER_ROLE, REVIEW_TYPE, REVIEW_TYPE_LABELS } from '../domain/constants.js';
+import { normalizeArenaInput } from '../domain/arena.js';
+import { normalizePriceRule, normalizePriceOverride } from '../domain/pricing.js';
+
+const COL = ARENA_COLLECTIONS;
+
+function managerId(arenaId, userId) {
+  return `${arenaId}_${userId}`;
+}
+function favoriteId(userId, arenaId) {
+  return `${userId}_${arenaId}`;
+}
+function str(v) {
+  return String(v ?? '').trim();
+}
+
+function displayName(user, profile) {
+  return profile?.platform_name || profile?.full_name || user?.displayName || user?.email || 'Atleta';
+}
+
+/* -------------------------------- Arenas -------------------------------- */
+
+export async function createArena(user, profile, input) {
+  if (!user?.uid) throw new Error('Usuário não autenticado.');
+  const { valid, errors, value } = normalizeArenaInput(input);
+  if (!valid) throw new Error(errors.name || 'Dados inválidos.');
+
+  const id = doc(collection(db, COL.arenas)).id;
+  const payload = {
+    id,
+    ...value,
+    photos: [],
+    cover_url: '',
+    price_rules: [],
+    price_overrides: [],
+    rating_avg: null,
+    rating_count: 0,
+    owner_id: user.uid,
+    owner_name: displayName(user, profile),
+    created_at: serverTimestamp(),
+    updated_at: serverTimestamp(),
+  };
+  await setDoc(doc(db, COL.arenas, id), payload);
+  try {
+    await setDoc(doc(db, COL.managers, managerId(id, user.uid)), {
+      id: managerId(id, user.uid),
+      arena_id: id,
+      user_id: user.uid,
+      user_name: displayName(user, profile),
+      user_photo: profile?.photo_url || user.photoURL || '',
+      role: ARENA_MANAGER_ROLE.OWNER,
+      created_at: serverTimestamp(),
+    });
+  } catch (err) {
+    await deleteDoc(doc(db, COL.arenas, id)).catch(() => {});
+    throw err;
+  }
+  await createAuditLog({ action: 'arena_created', actor: user, details: { arena_id: id, name: value.name } });
+  logger.info('arena_created', { id });
+  return id;
+}
+
+export async function getArena(id) {
+  if (!db || !id) return null;
+  const snap = await getDoc(doc(db, COL.arenas, id));
+  return snap.exists() ? { id: snap.id, ...snap.data() } : null;
+}
+
+export async function listArenas() {
+  if (!db) return [];
+  const snap = await getDocs(collection(db, COL.arenas));
+  return snap.docs.map((d) => ({ id: d.id, ...d.data() }));
+}
+
+export async function listMyManagedArenas(userId) {
+  if (!db || !userId) return [];
+  const snap = await getDocs(query(collection(db, COL.managers), where('user_id', '==', userId)));
+  const arenas = [];
+  for (const m of snap.docs.map((d) => d.data())) {
+    const arena = await getArena(m.arena_id);
+    if (arena) arenas.push({ ...arena, my_role: m.role });
+  }
+  return arenas;
+}
+
+export async function updateArena(id, updates, actor) {
+  const { value } = normalizeArenaInput({ ...updates });
+  const allowed = [
+    'name', 'description', 'city', 'state', 'address', 'neighborhood',
+    'contact_phone', 'contact_whatsapp', 'contact_email', 'instagram',
+    'website', 'hours', 'court_count', 'base_price', 'active',
+  ];
+  const sanitized = {};
+  allowed.forEach((key) => {
+    if (updates[key] !== undefined) sanitized[key] = value[key];
+  });
+  await updateDoc(doc(db, COL.arenas, id), { ...sanitized, updated_at: serverTimestamp() });
+  await createAuditLog({ action: 'arena_updated', actor, details: { arena_id: id, fields: Object.keys(sanitized) } });
+}
+
+export async function setArenaPhotos(id, photos, actor) {
+  const clean = (Array.isArray(photos) ? photos : [])
+    .filter((p) => p && p.url)
+    .slice(0, 20)
+    .map((p) => ({ url: p.url, path: p.path || '', name: p.name || 'foto' }));
+  await updateDoc(doc(db, COL.arenas, id), {
+    photos: clean,
+    cover_url: clean[0]?.url || '',
+    updated_at: serverTimestamp(),
+  });
+  await createAuditLog({ action: 'arena_photos_updated', actor, details: { arena_id: id, count: clean.length } });
+}
+
+export async function saveArenaPricing(id, { base_price, price_rules, price_overrides }, actor) {
+  const rules = (Array.isArray(price_rules) ? price_rules : [])
+    .map((r) => normalizePriceRule(r))
+    .filter((r) => r.valid)
+    .map((r) => r.value)
+    .slice(0, 40);
+  const overrides = (Array.isArray(price_overrides) ? price_overrides : [])
+    .map((o) => normalizePriceOverride(o))
+    .filter((o) => o.valid)
+    .map((o) => o.value)
+    .slice(0, 60);
+  const base = base_price === '' || base_price == null ? null : Math.max(0, Number(base_price) || 0);
+  await updateDoc(doc(db, COL.arenas, id), {
+    base_price: base,
+    price_rules: rules,
+    price_overrides: overrides,
+    updated_at: serverTimestamp(),
+  });
+  await createAuditLog({ action: 'arena_pricing_updated', actor, details: { arena_id: id, rules: rules.length, overrides: overrides.length } });
+}
+
+export async function deleteArena(id, actor) {
+  for (const col of [COL.bookings, COL.reviews, COL.managers]) {
+    try {
+      const snap = await getDocs(query(collection(db, col), where('arena_id', '==', id)));
+      if (!snap.empty) {
+        const batch = writeBatch(db);
+        snap.docs.forEach((d) => batch.delete(d.ref));
+        await batch.commit();
+      }
+    } catch (err) {
+      logger.error(`Falha ao limpar ${col} da arena ${id}:`, err);
+    }
+  }
+  await deleteDoc(doc(db, COL.arenas, id));
+  await createAuditLog({ action: 'arena_deleted', actor, details: { arena_id: id } });
+}
+
+/* -------------------------------- Managers ------------------------------ */
+
+export async function listArenaManagers(arenaId) {
+  if (!db || !arenaId) return [];
+  const snap = await getDocs(query(collection(db, COL.managers), where('arena_id', '==', arenaId)));
+  return snap.docs.map((d) => ({ id: d.id, ...d.data() }));
+}
+
+export async function listArenaManagerIds(arenaId) {
+  return (await listArenaManagers(arenaId)).map((m) => m.user_id).filter(Boolean);
+}
+
+export async function addArenaManager(arena, target, actor) {
+  if (!target?.user_id) throw new Error('Selecione um atleta para adicionar.');
+  await setDoc(doc(db, COL.managers, managerId(arena.id, target.user_id)), {
+    id: managerId(arena.id, target.user_id),
+    arena_id: arena.id,
+    user_id: target.user_id,
+    user_name: target.user_name || 'Atleta',
+    user_photo: target.user_photo || '',
+    role: ARENA_MANAGER_ROLE.MANAGER,
+    created_at: serverTimestamp(),
+  });
+  notifyUsers([target.user_id], {
+    title: `Você agora administra a arena "${str(arena.name).slice(0, 50)}"`,
+    message: 'Toque para gerenciar reservas, preços e informações da arena.',
+    type: NOTIFICATION_TYPE.GENERIC,
+    link: `/arenas/${arena.id}/gerir`,
+    actor,
+  });
+  await createAuditLog({ action: 'arena_manager_added', actor, details: { arena_id: arena.id, user_id: target.user_id } });
+}
+
+export async function removeArenaManager(arenaId, userId, actor) {
+  await deleteDoc(doc(db, COL.managers, managerId(arenaId, userId)));
+  await createAuditLog({ action: 'arena_manager_removed', actor, details: { arena_id: arenaId, user_id: userId } });
+}
+
+/* ------------------------------- Favorites ------------------------------ */
+
+export async function listMyFavoriteArenas(userId) {
+  if (!db || !userId) return [];
+  const snap = await getDocs(query(collection(db, COL.favorites), where('user_id', '==', userId)));
+  return snap.docs.map((d) => d.data().arena_id).filter(Boolean);
+}
+
+export async function favoriteArena(user, arena) {
+  if (!user?.uid) throw new Error('Usuário não autenticado.');
+  await setDoc(doc(db, COL.favorites, favoriteId(user.uid, arena.id)), {
+    id: favoriteId(user.uid, arena.id),
+    user_id: user.uid,
+    arena_id: arena.id,
+    arena_name: str(arena.name),
+    created_at: serverTimestamp(),
+  });
+}
+
+export async function unfavoriteArena(userId, arenaId) {
+  await deleteDoc(doc(db, COL.favorites, favoriteId(userId, arenaId)));
+}
+
+/* -------------------------------- Reviews ------------------------------- */
+
+export async function listArenaReviews(arenaId) {
+  if (!db || !arenaId) return [];
+  const snap = await getDocs(query(collection(db, COL.reviews), where('arena_id', '==', arenaId)));
+  return snap.docs
+    .map((d) => ({ id: d.id, ...d.data() }))
+    .sort((a, b) => (b.created_at_ms || 0) - (a.created_at_ms || 0));
+}
+
+export async function addArenaReview(arena, user, profile, input) {
+  if (!user?.uid) throw new Error('Usuário não autenticado.');
+  const type = Object.values(REVIEW_TYPE).includes(input.type) ? input.type : REVIEW_TYPE.REVIEW;
+  const comment = str(input.comment).slice(0, 1000);
+  const rating = type === REVIEW_TYPE.REVIEW ? Math.max(1, Math.min(5, Math.round(Number(input.rating) || 0))) : null;
+  if (type === REVIEW_TYPE.REVIEW && !rating) throw new Error('Escolha uma nota de 1 a 5.');
+  if (type !== REVIEW_TYPE.REVIEW && !comment) throw new Error('Escreva sua mensagem.');
+
+  const id = doc(collection(db, COL.reviews)).id;
+  await setDoc(doc(db, COL.reviews, id), {
+    id,
+    arena_id: arena.id,
+    user_id: user.uid,
+    user_name: displayName(user, profile),
+    user_photo: profile?.photo_url || user.photoURL || '',
+    type,
+    rating,
+    comment,
+    created_at: serverTimestamp(),
+    created_at_ms: Date.now(),
+  });
+
+  // Recalcula a média (cosmética) só das avaliações.
+  try {
+    const reviews = await listArenaReviews(arena.id);
+    const ratings = reviews.filter((r) => (r.type ?? 'review') === 'review' && Number.isFinite(r.rating));
+    const avg = ratings.length ? Math.round((ratings.reduce((s, r) => s + r.rating, 0) / ratings.length) * 10) / 10 : null;
+    await updateDoc(doc(db, COL.arenas, arena.id), { rating_avg: avg, rating_count: ratings.length }).catch(() => {});
+  } catch (err) {
+    logger.info('Falha ao recalcular média da arena (cosmético)', { err: err?.code });
+  }
+
+  // Notifica os gestores da arena sobre a nova manifestação.
+  try {
+    const managerIds = await listArenaManagerIds(arena.id);
+    notifyUsers(managerIds, {
+      title: `Nova ${REVIEW_TYPE_LABELS[type].toLowerCase()} em "${str(arena.name).slice(0, 50)}"`,
+      message: type === REVIEW_TYPE.REVIEW ? `Nota ${rating}★${comment ? `: ${comment.slice(0, 80)}` : ''}` : comment.slice(0, 100),
+      type: NOTIFICATION_TYPE.GENERIC,
+      link: `/arenas/${arena.id}/gerir`,
+      actor: { uid: user.uid, displayName: displayName(user, profile) },
+    });
+  } catch (err) {
+    logger.info('Falha ao notificar gestores da arena', { err: err?.code });
+  }
+  return id;
+}
+
+export async function deleteArenaReview(review, actor) {
+  await deleteDoc(doc(db, COL.reviews, review.id));
+  await createAuditLog({ action: 'arena_review_deleted', actor, details: { arena_id: review.arena_id, review_id: review.id } });
+}

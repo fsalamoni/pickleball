@@ -163,6 +163,24 @@ export const FEATURE_FLAG = Object.freeze({
    * desligado, a seção não aparece.
    */
   TOURNAMENT_UX: 'tournament_ux',
+
+  /**
+   * Arenas: diretório de arenas/quadras com perfil completo (descrição,
+   * endereço, contatos, redes, site, fotos), avaliações e reclamações dos
+   * atletas, favoritos, card com QR para compartilhar, tabela de preços
+   * (padrão por dia/horário + exceções) e solicitação de reservas (avulsas ou
+   * recorrentes) com negociação de valor e status de pagamento. Administração
+   * pela própria arena (dono/gestores) e contato pelo chat. Aditivo —
+   * desligado, as rotas, o menu e os pontos de entrada ficam ocultos.
+   */
+  ARENAS: 'arenas',
+
+  /**
+   * História e curiosidades do esporte: página de conteúdo (na seção "sobre o
+   * esporte") com a origem do pickleball, marcos, curiosidades e cultura.
+   * Aditivo — desligado, a rota e o item de menu ficam ocultos.
+   */
+  SPORT_HISTORY: 'sport_history',
 });
 
 /** Metadados de exibição para o painel de flags (admin master). */
@@ -316,6 +334,24 @@ export const FEATURE_FLAG_META = Object.freeze({
     description:
       'Mostra os próximos jogos agendados do atleta no painel inicial. '
       + 'Desligado, a seção não aparece.',
+  },
+  [FEATURE_FLAG.ARENAS]: {
+    label: 'Arenas (quadras e reservas)',
+    description:
+      'Habilita o diretório de arenas com perfil completo (descrição, endereço, '
+      + 'contatos, redes sociais, site e fotos), avaliações e reclamações dos '
+      + 'atletas, favoritos e card com QR para compartilhar. As arenas definem '
+      + 'preços padrão por dia/horário e exceções por ocasião/cliente, e recebem '
+      + 'solicitações de reserva avulsas ou recorrentes, com negociação de valor '
+      + 'e acompanhamento de pagamento; contato pelo chat e notificações a cada '
+      + 'movimento. Desligado, as rotas e os menus ficam ocultos.',
+  },
+  [FEATURE_FLAG.SPORT_HISTORY]: {
+    label: 'História e curiosidades do esporte',
+    description:
+      'Publica uma página, na seção "sobre o esporte", com a origem do '
+      + 'pickleball, marcos históricos, curiosidades e cultura do jogo. '
+      + 'Desligado, a rota e o item de menu ficam ocultos.',
   },
 });
 

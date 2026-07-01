@@ -26,6 +26,8 @@ import {
   Swords,
   Megaphone,
   Newspaper,
+  CalendarClock,
+  History,
 } from 'lucide-react';
 import { useAuth } from '@/core/lib/FirebaseAuthContext';
 import { useFeatureFlag } from '@/core/lib/FeatureFlagsContext';
@@ -54,6 +56,7 @@ const UTILITY_PUBLIC_PAGES = [
   'Leveling',
   'NationalRanking',
   'Partners',
+  'SportHistory',
 ];
 const APP_NAME = 'Pickleball';
 
@@ -107,6 +110,36 @@ const PAGE_META = {
     eyebrow: 'Explorar',
     title: 'Ranking nacional',
     description: 'Rating calculado a partir dos jogos disputados nos torneios da plataforma.',
+  },
+  ArenasDirectory: {
+    eyebrow: 'Explorar',
+    title: 'Arenas',
+    description: 'Encontre arenas e quadras, veja preços e horários e solicite sua reserva.',
+  },
+  CreateArena: {
+    eyebrow: 'Arenas',
+    title: 'Cadastrar arena',
+    description: 'Publique sua arena com perfil, fotos, contatos e preços.',
+  },
+  ArenaDetail: {
+    eyebrow: 'Arenas',
+    title: 'Arena',
+    description: 'Perfil, preços, fotos, avaliações e reserva.',
+  },
+  ArenaManage: {
+    eyebrow: 'Arenas',
+    title: 'Administrar arena',
+    description: 'Reservas, preços, fotos, informações e retornos dos atletas.',
+  },
+  MyBookings: {
+    eyebrow: 'Arenas',
+    title: 'Minhas reservas',
+    description: 'Acompanhe suas solicitações, valores e pagamentos nas arenas.',
+  },
+  SportHistory: {
+    eyebrow: 'Esporte',
+    title: 'História e curiosidades',
+    description: 'A origem do pickleball, marcos e curiosidades do jogo.',
   },
   AdminPartners: {
     eyebrow: 'Admin geral',
@@ -200,6 +233,8 @@ export default function Layout({ children, currentPageName }) {
   const openGamesOn = useFeatureFlag(FEATURE_FLAG.OPEN_GAMES);
   const affiliatesOn = useFeatureFlag(FEATURE_FLAG.AFFILIATE_LINKS);
   const communityFeedOn = useFeatureFlag(FEATURE_FLAG.COMMUNITY_FEED);
+  const arenasOn = useFeatureFlag(FEATURE_FLAG.ARENAS);
+  const sportHistoryOn = useFeatureFlag(FEATURE_FLAG.SPORT_HISTORY);
   const [sidebarOpen, setSidebarOpen] = useState(false);
   const isStandalonePublicPage = STANDALONE_PUBLIC_PAGES.includes(currentPageName);
   const isUtilityPublicPage = UTILITY_PUBLIC_PAGES.includes(currentPageName);
@@ -340,6 +375,15 @@ export default function Layout({ children, currentPageName }) {
                   onClick={() => setSidebarOpen(false)}
                 />
               )}
+              {arenasOn && (
+                <NavItem
+                  to="/minhas-reservas"
+                  icon={CalendarClock}
+                  label="Minhas reservas"
+                  active={currentPageName === 'MyBookings'}
+                  onClick={() => setSidebarOpen(false)}
+                />
+              )}
               <NavItem
                 to="/torneios/ingressar"
                 icon={Hash}
@@ -417,6 +461,15 @@ export default function Layout({ children, currentPageName }) {
                   onClick={() => setSidebarOpen(false)}
                 />
               )}
+              {arenasOn && (
+                <NavItem
+                  to="/arenas"
+                  icon={Building2}
+                  label="Arenas"
+                  active={['ArenasDirectory', 'ArenaDetail', 'ArenaManage', 'CreateArena'].includes(currentPageName)}
+                  onClick={() => setSidebarOpen(false)}
+                />
+              )}
               <NavItem
                 to="/clubes"
                 icon={Building2}
@@ -438,6 +491,15 @@ export default function Layout({ children, currentPageName }) {
                 active={currentPageName === 'Leveling'}
                 onClick={() => setSidebarOpen(false)}
               />
+              {sportHistoryOn && (
+                <NavItem
+                  to="/historia"
+                  icon={History}
+                  label="História do esporte"
+                  active={currentPageName === 'SportHistory'}
+                  onClick={() => setSidebarOpen(false)}
+                />
+              )}
               <NavItem
                 to="/conduta"
                 icon={HeartHandshake}
@@ -567,6 +629,7 @@ function PublicUtilityLayout({ children, currentPageName }) {
   const currentMeta = pageMeta(currentPageName);
   const ratingOn = useFeatureFlag(FEATURE_FLAG.PLAYER_RATING);
   const affiliatesOn = useFeatureFlag(FEATURE_FLAG.AFFILIATE_LINKS);
+  const sportHistoryOn = useFeatureFlag(FEATURE_FLAG.SPORT_HISTORY);
   const hasExplore = ratingOn || affiliatesOn;
 
   return (
@@ -616,6 +679,9 @@ function PublicUtilityLayout({ children, currentPageName }) {
             <SidebarSection title="Sobre o esporte" hint="Leitura pública">
               <NavItem to="/regras" icon={BookOpen} label="Regras" active={currentPageName === 'PickleballRules'} onClick={() => setSidebarOpen(false)} />
               <NavItem to="/nivelamento" icon={Award} label="Nivelamento" active={currentPageName === 'Leveling'} onClick={() => setSidebarOpen(false)} />
+              {sportHistoryOn && (
+                <NavItem to="/historia" icon={History} label="História do esporte" active={currentPageName === 'SportHistory'} onClick={() => setSidebarOpen(false)} />
+              )}
               <NavItem to="/conduta" icon={HeartHandshake} label="Conduta" active={currentPageName === 'ConductFairPlay'} onClick={() => setSidebarOpen(false)} />
               <NavItem to="/politica-uso" icon={FileText} label="Política de uso" active={currentPageName === 'PrivacyPolicy'} onClick={() => setSidebarOpen(false)} />
             </SidebarSection>

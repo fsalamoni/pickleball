@@ -1,6 +1,6 @@
 import React, { useMemo } from 'react';
-import { Navigate } from 'react-router-dom';
-import { ExternalLink, Handshake } from 'lucide-react';
+import { Navigate, Link } from 'react-router-dom';
+import { ExternalLink, Handshake, Building2, ChevronRight } from 'lucide-react';
 import { Card, CardContent } from '@/components/ui/card';
 import { Badge } from '@/components/ui/badge';
 import { Skeleton } from '@/components/ui/skeleton';
@@ -13,6 +13,7 @@ import { useAffiliateLinks } from '../hooks/useAffiliates.js';
 
 export default function Partners() {
   const enabled = useFeatureFlag(FEATURE_FLAG.AFFILIATE_LINKS);
+  const arenasOn = useFeatureFlag(FEATURE_FLAG.ARENAS);
   const { data: links = [], isLoading, isError, refetch } = useAffiliateLinks();
   const active = useMemo(() => sortActiveLinks(links), [links]);
 
@@ -25,6 +26,22 @@ export default function Partners() {
 
   return (
     <div className="mx-auto max-w-5xl space-y-4">
+        {arenasOn && (
+          <Link to="/arenas" className="block">
+            <Card className="border-emerald-200 bg-gradient-to-br from-emerald-50 to-white transition-shadow hover:shadow-md">
+              <CardContent className="flex items-center gap-3 p-4">
+                <div className="flex h-11 w-11 shrink-0 items-center justify-center rounded-xl bg-emerald-600 text-white">
+                  <Building2 className="h-5 w-5" />
+                </div>
+                <div className="min-w-0 flex-1">
+                  <div className="font-semibold text-slate-900">Arenas parceiras</div>
+                  <div className="text-sm text-slate-600">Encontre quadras, veja preços e horários e reserve sua partida.</div>
+                </div>
+                <ChevronRight className="h-5 w-5 shrink-0 text-emerald-600" />
+              </CardContent>
+            </Card>
+          </Link>
+        )}
         {isError ? (
           <ErrorState message="Não foi possível carregar os parceiros." onRetry={refetch} />
         ) : isLoading ? (
