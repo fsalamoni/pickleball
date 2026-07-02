@@ -48,6 +48,11 @@
       "public": "redirect-only",
       "redirects": [
         {
+          "source": "/",
+          "destination": "https://picklerush.web.app/",
+          "type": 301
+        },
+        {
           "source": "/:path*",
           "destination": "https://picklerush.web.app/:path",
           "type": 301
