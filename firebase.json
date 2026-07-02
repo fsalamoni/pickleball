@@ -48,7 +48,7 @@
       "public": "redirect-only",
       "redirects": [
         {
-          "source": "**",
+          "source": "/:path*",
           "destination": "https://picklerush.web.app/:path",
           "type": 301
         }
