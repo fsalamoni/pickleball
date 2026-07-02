@@ -13,7 +13,7 @@ import { CLUB_ROLE, JOIN_REQUEST_STATUS } from '@/modules/clubs/domain/constants
 import V2ClubMembers from '@/v2/components/clubs/V2ClubMembers';
 import V2ClubEvents from '@/v2/components/clubs/V2ClubEvents';
 import V2ClubFeed from '@/v2/components/clubs/V2ClubFeed';
-import ClubForumsTab from '@/modules/clubs/components/ClubForumsTab';
+import V2ClubForums from '@/v2/components/clubs/V2ClubForums';
 import ClubAdminTab from '@/modules/clubs/components/ClubAdminTab';
 import { useAuth } from '@/core/lib/FirebaseAuthContext';
 import { V2Avatar, V2Badge, V2Button, V2EmptyState, V2Skeleton, V2Surface } from '@/v2/ui/primitives';
@@ -218,7 +218,7 @@ export default function V2ClubDetail() {
             {safeTab === 'members' && <V2ClubMembers clubId={clubId} isAdmin={isAdmin} />}
             {safeTab === 'events' && <V2ClubEvents clubId={clubId} isAdmin={isAdmin} />}
             {safeTab === 'feed' && <V2ClubFeed clubId={clubId} isAdmin={isAdmin} />}
-            {safeTab === 'forums' && <ClubForumsTab clubId={clubId} isAdmin={isAdmin} initialThreadId={threadParam} onThreadChange={setThreadParam} />}
+            {safeTab === 'forums' && <V2ClubForums clubId={clubId} isAdmin={isAdmin} initialThreadId={threadParam} onThreadChange={setThreadParam} />}
             {safeTab === 'admin' && isAdmin && <ClubAdminTab club={club} />}
           </div>
         </>
