@@ -4,6 +4,12 @@ import { Card, CardContent } from '@/components/ui/card';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { Button } from '@/components/ui/button';
+import {
+  PlatformFormSection,
+  PlatformMetricCard,
+  PlatformSectionHeader,
+  PlatformSurfaceCard,
+} from '@/components/ui/platform-page';
 import { useAuth } from '@/core/lib/FirebaseAuthContext';
 import { toast } from 'sonner';
 import { useCreateTournament } from '@/modules/tournament/hooks/useTournament';
@@ -147,10 +153,11 @@ export default function CreateTournament() {
           </CardContent>
         </Card>
 
-        <Card className="rounded-[2rem] border-white/80 bg-white/82">
-          <CardContent className="p-6 sm:p-7">
-            <div className="text-xs font-semibold uppercase tracking-[0.18em] text-emerald-700/75">Resumo</div>
-            <h2 className="mt-3 text-2xl font-semibold text-slate-950">Prévia do torneio em tempo real.</h2>
+        <PlatformSurfaceCard>
+            <PlatformSectionHeader
+              eyebrow="Resumo"
+              title="Prévia do torneio em tempo real."
+            />
             <div className="mt-5 rounded-[1.5rem] border border-emerald-950/10 bg-secondary/35 p-5">
               <div className="text-sm font-semibold uppercase tracking-[0.18em] text-emerald-700/75">Prévia do evento</div>
               <div className="mt-3 text-2xl font-semibold text-slate-950">
@@ -166,29 +173,24 @@ export default function CreateTournament() {
 
             <div className="mt-5 space-y-3">
               {summaryItems.map(({ label, value, icon: Icon }) => (
-                <div key={label} className="flex items-center justify-between gap-3 rounded-[1.25rem] border border-emerald-950/10 bg-white/75 px-4 py-3">
-                  <div className="flex items-center gap-3 min-w-0">
-                    <div className="flex h-10 w-10 items-center justify-center rounded-2xl bg-emerald-100 text-emerald-700">
-                      <Icon className="h-4.5 w-4.5" />
-                    </div>
-                    <div className="min-w-0">
-                      <div className="text-[11px] font-semibold uppercase tracking-[0.16em] text-emerald-700/75">{label}</div>
-                      <div className="truncate text-sm font-medium text-slate-950">{value}</div>
-                    </div>
-                  </div>
-                </div>
+                <PlatformMetricCard
+                  key={label}
+                  label={label}
+                  value={value}
+                  icon={Icon}
+                  className="bg-white/75"
+                  valueClassName="truncate text-sm font-medium"
+                />
               ))}
             </div>
 
             <div className="mt-5 rounded-[1.5rem] border border-emerald-950/10 bg-white/75 p-5 text-sm leading-6 text-slate-600">
               O código de convite para torneios privados é gerado automaticamente após a criação. Depois disso, a operação continua na tela do próprio torneio.
             </div>
-          </CardContent>
-        </Card>
+        </PlatformSurfaceCard>
       </section>
 
-      <Card className="rounded-[2rem] border-white/80 bg-white/82">
-        <CardContent className="p-6 sm:p-7">
+      <PlatformSurfaceCard>
           <form onSubmit={handleSubmit} className="space-y-6">
             {isPreviewMode && (
               <div className="rounded-[1.5rem] border border-amber-300/70 bg-amber-50/85 p-4 text-sm leading-6 text-amber-950">
@@ -198,10 +200,10 @@ export default function CreateTournament() {
             )}
 
             <section className="space-y-4">
-              <div>
-                <div className="text-xs font-semibold uppercase tracking-[0.16em] text-emerald-700/75">Identidade do evento</div>
-                <h3 className="mt-2 text-2xl font-semibold text-slate-950">Como o torneio será percebido logo no primeiro contato</h3>
-              </div>
+              <PlatformSectionHeader
+                eyebrow="Identidade do evento"
+                title="Como o torneio será percebido logo no primeiro contato"
+              />
 
               <div className="grid grid-cols-1 gap-4 md:grid-cols-2">
                 <div className="md:col-span-2">
@@ -232,12 +234,11 @@ export default function CreateTournament() {
               </div>
             </section>
 
-            <section className="space-y-4 rounded-[1.5rem] border border-emerald-950/10 bg-secondary/35 p-5">
-              <div>
-                <div className="text-xs font-semibold uppercase tracking-[0.16em] text-emerald-700/75">Acesso</div>
-                <h3 className="mt-2 text-xl font-semibold text-slate-950">Defina quem encontra e como entra no torneio</h3>
-              </div>
-
+            <PlatformFormSection
+              eyebrow="Acesso"
+              title="Defina quem encontra e como entra no torneio"
+              className="bg-secondary/35"
+            >
               <div className="grid gap-3 md:grid-cols-2">
                 {VISIBILITY_OPTIONS.map(({ value, title, description, icon: Icon }) => {
                   const active = form.visibility === value;
@@ -264,14 +265,12 @@ export default function CreateTournament() {
                   );
                 })}
               </div>
-            </section>
+            </PlatformFormSection>
 
-            <section className="space-y-4 rounded-[1.5rem] border border-emerald-950/10 bg-white/75 p-5">
-              <div>
-                <div className="text-xs font-semibold uppercase tracking-[0.16em] text-emerald-700/75">Regras-base</div>
-                <h3 className="mt-2 text-xl font-semibold text-slate-950">Defina a base regulamentar do torneio</h3>
-              </div>
-
+            <PlatformFormSection
+              eyebrow="Regras-base"
+              title="Defina a base regulamentar do torneio"
+            >
               <div className="grid grid-cols-1 gap-4 md:grid-cols-2">
                 <div>
                   <Label>Conjunto de regras</Label>
@@ -290,14 +289,12 @@ export default function CreateTournament() {
               <div className="rounded-[1.25rem] border border-emerald-200 bg-emerald-50/70 p-4 text-sm leading-6 text-emerald-950">
                 Pontos por game e sets por partida serão definidos depois, dentro de cada modalidade e, quando houver, em cada fase da modalidade.
               </div>
-            </section>
+            </PlatformFormSection>
 
-            <section className="space-y-4 rounded-[1.5rem] border border-emerald-950/10 bg-white/75 p-5">
-              <div>
-                <div className="text-xs font-semibold uppercase tracking-[0.16em] text-emerald-700/75">Calendário</div>
-                <h3 className="mt-2 text-xl font-semibold text-slate-950">Marque a janela do evento e o fechamento das inscrições</h3>
-              </div>
-
+            <PlatformFormSection
+              eyebrow="Calendário"
+              title="Marque a janela do evento e o fechamento das inscrições"
+            >
               <div className="grid grid-cols-1 gap-4 md:grid-cols-3">
                 <div>
                   <Label>Início</Label>
@@ -312,7 +309,7 @@ export default function CreateTournament() {
                   <Input type="date" value={form.registration_deadline} onChange={(e) => set('registration_deadline', e.target.value)} className="mt-2" />
                 </div>
               </div>
-            </section>
+            </PlatformFormSection>
 
             <div className="flex justify-end gap-2">
               <Button type="button" variant="outline" onClick={() => navigate(cancelDestination)}>
@@ -324,8 +321,7 @@ export default function CreateTournament() {
               </Button>
             </div>
           </form>
-        </CardContent>
-      </Card>
+      </PlatformSurfaceCard>
     </div>
   );
 }

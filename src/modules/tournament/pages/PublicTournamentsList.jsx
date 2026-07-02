@@ -17,6 +17,11 @@ import { Input } from '@/components/ui/input';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent } from '@/components/ui/card';
 import { Skeleton } from '@/components/ui/skeleton';
+import {
+  PlatformMetricCard,
+  PlatformSectionHeader,
+  PlatformSurfaceCard,
+} from '@/components/ui/platform-page';
 import { useAuth } from '@/core/lib/FirebaseAuthContext';
 import { usePublicTournaments } from '@/modules/tournament/hooks/useTournament';
 import {
@@ -170,32 +175,18 @@ export default function PublicTournamentsList() {
           </CardContent>
         </Card>
 
-        <Card className="rounded-[2rem] border-white/80 bg-white/82">
-          <CardContent className="p-6 sm:p-7">
+        <PlatformSurfaceCard>
             <span className="arena-chip">Panorama</span>
             <h3 className="mt-4 text-2xl font-semibold text-slate-950">Resumo dos eventos públicos</h3>
             <div className="mt-6 grid gap-3 sm:grid-cols-3 xl:grid-cols-1">
               {stats.map(({ label, value, hint, icon: Icon }) => (
-                <div key={label} className="rounded-[1.35rem] border border-emerald-950/8 bg-secondary/35 p-4">
-                  <div className="flex items-center justify-between gap-3">
-                    <div>
-                      <div className="text-2xl font-semibold text-slate-950">{value}</div>
-                      <div className="mt-1 text-[11px] font-semibold uppercase tracking-[0.16em] text-emerald-700/75">{label}</div>
-                    </div>
-                    <div className="flex h-10 w-10 items-center justify-center rounded-2xl bg-emerald-100 text-emerald-700">
-                      <Icon className="h-4.5 w-4.5" />
-                    </div>
-                  </div>
-                  <p className="mt-3 text-xs leading-5 text-slate-600">{hint}</p>
-                </div>
+                <PlatformMetricCard key={label} label={label} value={value} description={hint} icon={Icon} />
               ))}
             </div>
-          </CardContent>
-        </Card>
+        </PlatformSurfaceCard>
       </section>
 
-      <Card className="rounded-[2rem] border-white/80 bg-white/82">
-        <CardContent className="p-4 sm:p-5">
+      <PlatformSurfaceCard contentClassName="p-4 sm:p-5">
           <div className="grid gap-4 xl:grid-cols-[1fr,auto] xl:items-center">
             <div className="relative">
               <Search className="absolute left-4 top-1/2 h-4 w-4 -translate-y-1/2 text-slate-400" />
@@ -239,8 +230,7 @@ export default function PublicTournamentsList() {
           <div className="mt-4 border-t border-emerald-950/8 pt-4 text-sm text-slate-600">
             <span className="font-semibold text-slate-950">{filtered.length}</span> resultados para o filtro atual.
           </div>
-        </CardContent>
-      </Card>
+      </PlatformSurfaceCard>
 
       {isPreviewMode && (
         <Card className="rounded-[2rem] border-amber-300/70 bg-amber-50/85">
@@ -253,10 +243,10 @@ export default function PublicTournamentsList() {
 
       {!isLoading && featuredTournaments.length > 0 && (
         <section className="space-y-4">
-          <div>
-            <div className="text-xs font-semibold uppercase tracking-[0.2em] text-emerald-700/75">Em destaque</div>
-            <h3 className="mt-2 text-2xl font-semibold text-slate-950">Eventos que aparecem primeiro na descoberta</h3>
-          </div>
+          <PlatformSectionHeader
+            eyebrow="Em destaque"
+            title="Eventos que aparecem primeiro na descoberta"
+          />
           <div className="grid gap-4 lg:grid-cols-3">
             {featuredTournaments.map((tournament) => (
               <FeaturedTournamentCard key={tournament.id} tournament={tournament} />
@@ -301,10 +291,10 @@ export default function PublicTournamentsList() {
         </Card>
       ) : (
         <section className="space-y-4">
-          <div>
-            <div className="text-xs font-semibold uppercase tracking-[0.2em] text-emerald-700/75">Catalogo completo</div>
-            <h3 className="mt-2 text-2xl font-semibold text-slate-950">Todos os torneios publicos encontrados</h3>
-          </div>
+          <PlatformSectionHeader
+            eyebrow="Catálogo completo"
+            title="Todos os torneios públicos encontrados"
+          />
           <div className="grid gap-4 lg:grid-cols-2 xl:grid-cols-3">
             {filtered.map((tournament) => (
               <PublicTournamentCard key={tournament.id} tournament={tournament} />

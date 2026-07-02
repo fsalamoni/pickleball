@@ -12,15 +12,21 @@ import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { cn } from '@/core/lib/utils';
+import { PlatformNotice } from '@/components/ui/platform-page';
 import { useAuth } from '@/core/lib/FirebaseAuthContext';
-import { BOOKING_KIND, WEEKDAY_LABELS } from '../domain/constants.js';
+import { BOOKING_KIND, BOOKING_STATUS, WEEKDAY_LABELS } from '../domain/constants.js';
 import { resolveArenaPrice, formatPrice } from '../domain/pricing.js';
-import { weekdayOf } from '../domain/booking.js';
-import { useCreateBooking } from '../hooks/useBookings.js';
+import { bookingSlots, expandRecurring, hasConflictWithConfirmed, isValidSlot, sortSlots, weekdayOf } from '../domain/booking.js';
+import { useArenaBookings, useCreateBooking } from '../hooks/useBookings.js';
+
+function slotLabel(slot) {
+  return `${slot.date} · ${slot.start}–${slot.end}`;
+}
 
 export default function BookingRequestDialog({ arena, open, onOpenChange }) {
   const { user } = useAuth();
   const createBooking = useCreateBooking();
+  const { data: existingBookings = [] } = useArenaBookings(arena.id);
   const [kind, setKind] = useState(BOOKING_KIND.SINGLE);
   const [single, setSingle] = useState({ date: '', start: '18:00', end: '19:00' });
   const [recurring, setRecurring] = useState({ weekday: 1, start: '18:00', end: '19:00', weeks: 8, fromDate: '' });
@@ -34,8 +40,41 @@ export default function BookingRequestDialog({ arena, open, onOpenChange }) {
     return resolveArenaPrice(arena, { weekday: Number(recurring.weekday), time: recurring.start, clientId: user?.uid });
   }, [kind, single, recurring, arena, user?.uid]);
 
+  const candidateSlots = useMemo(() => {
+    if (kind === BOOKING_KIND.SINGLE) {
+      const slot = { date: single.date, start: single.start, end: single.end };
+      return isValidSlot(slot) ? [slot] : [];
+    }
+    return sortSlots(expandRecurring({
+      weekday: Number(recurring.weekday),
+      start: recurring.start,
+      end: recurring.end,
+      weeks: recurring.weeks,
+      fromDate: recurring.fromDate,
+    }));
+  }, [kind, single, recurring]);
+
+  const confirmedBookings = useMemo(
+    () => existingBookings.filter((booking) => booking.status === BOOKING_STATUS.CONFIRMED),
+    [existingBookings],
+  );
+
+  const upcomingConfirmedSlots = useMemo(
+    () => sortSlots(confirmedBookings.flatMap((booking) => bookingSlots(booking))).slice(0, 8),
+    [confirmedBookings],
+  );
+
+  const hasConflict = useMemo(
+    () => candidateSlots.length > 0 && hasConflictWithConfirmed(candidateSlots, confirmedBookings),
+    [candidateSlots, confirmedBookings],
+  );
+
   async function handleSubmit() {
     try {
+      if (hasConflict) {
+        toast.error('Há conflito com uma reserva já confirmada. Escolha outro horário.');
+        return;
+      }
       const input = kind === BOOKING_KIND.SINGLE
         ? { kind, ...single, notes, proposed_price: estimate?.price ?? null }
         : { kind, recurring, notes, proposed_price: estimate?.price ?? null };
@@ -133,6 +172,43 @@ export default function BookingRequestDialog({ arena, open, onOpenChange }) {
             />
           </div>
 
+          {candidateSlots.length > 0 && (
+            <div className="rounded-[1rem] border border-emerald-950/10 bg-white/75 p-3">
+              <div className="text-xs font-semibold uppercase tracking-[0.16em] text-emerald-700/75">Prévia da agenda solicitada</div>
+              <div className="mt-2 flex flex-wrap gap-2">
+                {candidateSlots.slice(0, 8).map((slot) => (
+                  <span key={`${slot.date}_${slot.start}`} className="rounded-full border border-emerald-950/10 bg-secondary/35 px-3 py-1 text-xs text-slate-700">
+                    {slotLabel(slot)}
+                  </span>
+                ))}
+                {candidateSlots.length > 8 && (
+                  <span className="rounded-full border border-emerald-950/10 bg-secondary/35 px-3 py-1 text-xs text-slate-700">
+                    +{candidateSlots.length - 8} horário(s)
+                  </span>
+                )}
+              </div>
+            </div>
+          )}
+
+          {hasConflict && (
+            <PlatformNotice className="border-amber-300 bg-amber-50/85 text-amber-950">
+              Já existe reserva confirmada em conflito com parte dessa solicitação. Ajuste data ou horário antes de continuar.
+            </PlatformNotice>
+          )}
+
+          {upcomingConfirmedSlots.length > 0 && (
+            <div className="rounded-[1rem] border border-emerald-950/10 bg-secondary/35 p-3">
+              <div className="text-xs font-semibold uppercase tracking-[0.16em] text-emerald-700/75">Próximos horários já confirmados</div>
+              <div className="mt-2 flex flex-wrap gap-2">
+                {upcomingConfirmedSlots.map((slot) => (
+                  <span key={`confirmed_${slot.date}_${slot.start}`} className="rounded-full border border-emerald-950/10 bg-white/75 px-3 py-1 text-xs text-slate-700">
+                    {slotLabel(slot)}
+                  </span>
+                ))}
+              </div>
+            </div>
+          )}
+
           {estimate && (
             <div className="rounded-lg bg-emerald-50 p-3 text-sm text-emerald-800">
               Estimativa: <strong>{formatPrice(estimate.price)}</strong>
@@ -143,7 +219,7 @@ export default function BookingRequestDialog({ arena, open, onOpenChange }) {
 
         <DialogFooter>
           <Button variant="outline" onClick={() => onOpenChange(false)}>Cancelar</Button>
-          <Button onClick={handleSubmit} disabled={createBooking.isPending}>
+          <Button onClick={handleSubmit} disabled={createBooking.isPending || hasConflict || candidateSlots.length === 0}>
             {createBooking.isPending ? 'Enviando…' : 'Solicitar reserva'}
           </Button>
         </DialogFooter>

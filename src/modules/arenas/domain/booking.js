@@ -116,4 +116,8 @@ export function sortBookings(bookings = []) {
   return [...bookings].sort((a, b) => firstDate(a).localeCompare(firstDate(b)));
 }
 
+export function sortSlots(slots = []) {
+  return [...slots].sort((a, b) => `${a.date}_${a.start}`.localeCompare(`${b.date}_${b.start}`));
+}
+
 export { BOOKING_KIND };

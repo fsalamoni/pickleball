@@ -15,6 +15,8 @@ de tokens/leitura**, sem precisar varrer o código.
    relacionamentos e princípios das regras de segurança.
 4. **[`MODULES.md`](./MODULES.md)** — o que cada módulo faz, arquivos-chave,
    fluxos e o mapa rota → módulo.
+5. **[`DESIGN_STANDARD.md`](./DESIGN_STANDARD.md)** — padrão visual obrigatório
+   para páginas, tabs e modais, com componentes-base e regras de composição.
 
 > O `README.md` da raiz cobre funcionalidades para o usuário final, como rodar
 > e publicar. Estes docs cobrem **estrutura e funcionamento interno**.

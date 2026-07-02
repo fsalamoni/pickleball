@@ -18,6 +18,10 @@ import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
 import { Skeleton } from '@/components/ui/skeleton';
 import { AvatarGroup } from '@/components/ui/user-avatar';
+import {
+  PlatformMetricCard,
+  PlatformSectionHeader,
+} from '@/components/ui/platform-page';
 import { useAuth } from '@/core/lib/FirebaseAuthContext';
 import { useFeatureFlag } from '@/core/lib/FeatureFlagsContext';
 import { FEATURE_FLAG } from '@/core/featureFlags';
@@ -302,7 +306,7 @@ function ModalityInfoTab({
 
       <div className="grid gap-4 md:grid-cols-2 xl:grid-cols-4">
         {details.map(({ label, value, description, icon: Icon }) => (
-          <DetailMetric
+          <PlatformMetricCard
             key={label}
             label={label}
             value={value}
@@ -338,13 +342,12 @@ function ModalityInfoTab({
             </div>
 
             <div className="rounded-[1.75rem] border border-emerald-950/10 bg-white/85 p-5 sm:p-6">
-              <div className="text-xs font-semibold uppercase tracking-[0.18em] text-emerald-700/80">Detalhamento técnico</div>
-              <h3 className="mt-3 text-2xl font-semibold text-slate-950">
-                Estrutura, regras e critérios oficiais da modalidade
-              </h3>
-              <p className="mt-2 text-sm leading-6 text-slate-600">
-                Aqui ficam os detalhes práticos para quem quer entrar já sabendo como a disputa será conduzida.
-              </p>
+              <PlatformSectionHeader
+                eyebrow="Detalhamento técnico"
+                title="Estrutura, regras e critérios oficiais da modalidade"
+                description="Aqui ficam os detalhes práticos para quem quer entrar já sabendo como a disputa será conduzida."
+                titleClassName="mt-3 text-2xl font-semibold text-slate-950"
+              />
               <div className="mt-5">
                 <ModalityInfoContent
                   modality={modality}
@@ -599,23 +602,6 @@ export default function ModalityPage() {
         </p>
       )}
     </div>
-  );
-}
-
-function DetailMetric({ label, value, description, icon: Icon }) {
-  return (
-    <Card className="rounded-[1.75rem] border-white/80 bg-white/82">
-      <CardContent className="p-5">
-        <div className="flex items-center justify-between gap-3">
-          <div className="text-[11px] font-semibold uppercase tracking-[0.16em] text-emerald-700/75">{label}</div>
-          <div className="flex h-10 w-10 items-center justify-center rounded-2xl bg-emerald-100 text-emerald-700">
-            <Icon className="h-4.5 w-4.5" />
-          </div>
-        </div>
-        <div className="mt-3 text-lg font-semibold text-slate-950">{value}</div>
-        <p className="mt-1 text-xs leading-5 text-slate-600">{description}</p>
-      </CardContent>
-    </Card>
   );
 }
 

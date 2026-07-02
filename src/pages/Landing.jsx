@@ -54,6 +54,11 @@ const FEATURE_CARDS = [
     title: 'Administração compartilhada',
     desc: 'Organização distribuída entre admins do torneio, sem abrir mão do controle geral da plataforma e do histórico de ações.',
   },
+  {
+    icon: CalendarDays,
+    title: 'Arenas e reservas no mesmo ecossistema',
+    desc: 'A plataforma também conecta arenas, agenda, preços, fotos e pedidos de reserva para manter o atleta ativo entre um torneio e outro.',
+  },
 ];
 
 const JOURNEY_STEPS = [
@@ -71,6 +76,11 @@ const JOURNEY_STEPS = [
     step: '03',
     title: 'Entregue uma experiência mais premium',
     desc: 'Resultados, ranking e páginas auxiliares ficam mais leves, legíveis e agradáveis para atletas, espectadores e organizadores.',
+  },
+  {
+    step: '04',
+    title: 'Continue o relacionamento fora do evento',
+    desc: 'Clubes, arenas, fóruns, reservas e chat mantêm a comunidade viva entre um campeonato e outro.',
   },
 ];
 
@@ -134,10 +144,10 @@ export default function Landing() {
               <Sparkles className="h-3.5 w-3.5 text-emerald-700" /> Plataforma completa para torneios de pickleball no Brasil
             </span>
             <h1 className="mt-6 text-[2rem] font-semibold leading-[1.05] text-slate-950 sm:text-4xl sm:leading-[0.95] md:text-6xl md:leading-[0.92] xl:text-[5.2rem]">
-              O torneio ganha cara de evento sério antes mesmo do primeiro saque.
+              O pickleball ganha uma plataforma para evento, comunidade e continuidade.
             </h1>
             <p className="mt-6 max-w-2xl text-lg leading-8 text-slate-600 md:text-xl">
-              Crie modalidades, publique regras, organize equipes e acompanhe o ranking do seu torneio em um único lugar, do convite à premiação.
+              Crie torneios com estrutura profissional, publique modalidades e regras, acompanhe jogos e ranking, conecte atletas, clubes e arenas e mantenha o esporte ativo para além do fim de semana do evento.
             </p>
 
             <div className="mt-8 flex flex-wrap gap-3">
@@ -149,7 +159,13 @@ export default function Landing() {
               </Button>
               <Button asChild variant="outline" size="lg">
                 <Link to={secondaryHref}>
-                  {isAuthenticated ? 'Ingressar com código' : 'Ver fluxo de inscrição'}
+                  {isAuthenticated ? 'Ingressar com código' : 'Explorar como funciona'}
+                  <ChevronRight className="h-4 w-4" />
+                </Link>
+              </Button>
+              <Button asChild variant="outline" size="lg">
+                <Link to="/torneios/publicos">
+                  Ver torneios públicos
                   <ChevronRight className="h-4 w-4" />
                 </Link>
               </Button>
@@ -175,7 +191,7 @@ export default function Landing() {
                   <CalendarDays className="h-3.5 w-3.5" /> Pronto para abrir inscrições
                 </span>
                 <h2 className="mt-5 text-2xl font-semibold leading-tight text-white sm:text-3xl lg:text-4xl">
-                  Do cadastro ao pódio, com ritmo de evento real.
+                  Do cadastro ao pódio, com presença contínua dentro do esporte.
                 </h2>
 
                 <div className="mt-8 grid gap-3 sm:grid-cols-2">
@@ -183,6 +199,8 @@ export default function Landing() {
                   <HighlightBox title="Ranking ao vivo" desc="Atualizações mais fáceis de interpretar entre partidas e rodadas." />
                   <HighlightBox title="Regras prontas" desc="CBP e USAP acessíveis sem quebrar o fluxo principal do usuário." />
                   <HighlightBox title="Equipe sincronizada" desc="Admins, convites e ações essenciais mais próximos de quem organiza." />
+                  <HighlightBox title="Arenas conectadas" desc="Preços, agenda e reservas prolongam a utilidade da plataforma fora do torneio." />
+                  <HighlightBox title="Comunidade ativa" desc="Clubes, chat e fóruns mantêm o relacionamento vivo entre um evento e outro." />
                 </div>
               </div>
             </div>
@@ -205,7 +223,7 @@ export default function Landing() {
                 Como a plataforma acompanha cada etapa do torneio.
               </h2>
 
-              <div className="mt-8 grid gap-4 md:grid-cols-3">
+              <div className="mt-8 grid gap-4 md:grid-cols-2 xl:grid-cols-4">
                 {JOURNEY_STEPS.map((item) => (
                   <div key={item.step} className="rounded-[1.5rem] border border-emerald-950/10 bg-secondary/40 p-5">
                     <div className="text-sm font-semibold uppercase tracking-[0.24em] text-emerald-700/75">{item.step}</div>
@@ -219,9 +237,9 @@ export default function Landing() {
             <div className="arena-panel rounded-[2rem] p-8 lg:p-10">
               <div className="rounded-[1.75rem] border border-emerald-300/30 bg-gradient-to-br from-emerald-50 to-lime-50 p-6">
                 <BookOpen className="h-10 w-10 text-emerald-700" />
-                <h3 className="mt-4 text-2xl font-semibold text-slate-950">Comece pelas regras e pelo nivelamento</h3>
+                <h3 className="mt-4 text-2xl font-semibold text-slate-950">Entre pelo conteúdo, continue pela participação</h3>
                 <p className="mt-2 text-sm leading-6 text-slate-600">
-                  Conheça as <Link to="/regras" className="font-semibold text-emerald-800 underline-offset-4 hover:underline">regras oficiais</Link> e descubra seu nível com o <Link to="/nivelamento" className="font-semibold text-emerald-800 underline-offset-4 hover:underline">formulário de nivelamento</Link> antes de abrir a próxima inscrição.
+                  Conheça as <Link to="/regras" className="font-semibold text-emerald-800 underline-offset-4 hover:underline">regras oficiais</Link>, descubra seu nível com o <Link to="/nivelamento" className="font-semibold text-emerald-800 underline-offset-4 hover:underline">formulário de nivelamento</Link> e depois encontre torneios, clubes e arenas para transformar interesse em presença real na comunidade.
                 </p>
               </div>
             </div>
@@ -233,15 +251,15 @@ export default function Landing() {
             <div className="max-w-3xl">
               <div className="text-sm font-semibold uppercase tracking-[0.24em] text-emerald-50/80">Público, organizadores e atletas</div>
               <h2 className="mt-3 text-2xl font-semibold leading-tight text-white sm:text-3xl lg:text-4xl">
-                Acompanhe o crescimento do pickleball no Brasil.
+                Traga sua operação, sua comunidade e sua presença digital para o mesmo lugar.
               </h2>
             </div>
             <div className="flex flex-wrap gap-3">
               <Button asChild size="lg" className="bg-white text-slate-950 hover:bg-emerald-50">
-                <Link to={primaryHref}>Abrir meu torneio</Link>
+                <Link to={primaryHref}>{isAuthenticated ? 'Abrir meu torneio' : 'Entrar na plataforma'}</Link>
               </Button>
               <Button asChild size="lg" variant="outline" className="border-white/20 bg-white/10 text-white hover:bg-white/15 hover:text-white">
-                <Link to="/regras">Explorar o esporte</Link>
+                <Link to="/torneios/publicos">Explorar torneios públicos</Link>
               </Button>
             </div>
           </div>

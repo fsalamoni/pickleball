@@ -7,6 +7,7 @@ import {
   hasConflictWithConfirmed,
   canTransition,
   sortBookings,
+  sortSlots,
 } from './booking.js';
 import { BOOKING_STATUS } from './constants.js';
 
@@ -98,5 +99,20 @@ describe('sortBookings', () => {
       { id: 'a', date: '2026-06-01', start: '1', end: '2' },
     ];
     expect(sortBookings(list).map((b) => b.id)).toEqual(['a', 'b']);
+  });
+});
+
+describe('sortSlots', () => {
+  it('ordena slots por data e horário', () => {
+    const sorted = sortSlots([
+      { date: '2026-07-10', start: '20:00', end: '21:00' },
+      { date: '2026-07-09', start: '19:00', end: '20:00' },
+      { date: '2026-07-10', start: '18:00', end: '19:00' },
+    ]);
+    expect(sorted.map((slot) => `${slot.date} ${slot.start}`)).toEqual([
+      '2026-07-09 19:00',
+      '2026-07-10 18:00',
+      '2026-07-10 20:00',
+    ]);
   });
 });

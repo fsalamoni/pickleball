@@ -1,9 +1,10 @@
 import React, { useState } from 'react';
 import { Link, useNavigate } from 'react-router-dom';
-import { Card, CardContent, CardHeader, CardTitle, CardDescription } from '@/components/ui/card';
+import { Card, CardContent } from '@/components/ui/card';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { Button } from '@/components/ui/button';
+import { PlatformSurfaceCard } from '@/components/ui/platform-page';
 import { useAuth } from '@/core/lib/FirebaseAuthContext';
 import { ArrowRight, Globe, Hash, ShieldCheck, Sparkles, Trophy } from 'lucide-react';
 import { toast } from 'sonner';
@@ -82,22 +83,22 @@ export default function JoinTournament() {
         </Card>
 
         <div className="space-y-5">
-          <Card className="rounded-[2rem] border-white/80 bg-white/82">
-            <CardHeader className="px-6 pb-2 pt-6 sm:px-7">
+          <PlatformSurfaceCard>
+            <div className="px-0 pb-2 pt-0">
               <div className="flex items-start gap-3">
                 <div className="flex h-11 w-11 items-center justify-center rounded-2xl bg-emerald-100 text-emerald-700 shrink-0">
                   <Hash className="h-5 w-5" />
                 </div>
                 <div>
-                  <CardTitle className="text-2xl text-slate-950">Ingressar com código</CardTitle>
-                  <CardDescription className="mt-1 text-sm leading-6 text-slate-600">
+                  <h2 className="text-2xl font-semibold text-slate-950">Ingressar com código</h2>
+                  <p className="mt-1 text-sm leading-6 text-slate-600">
                     Informe o código que você recebeu do organizador para liberar o acesso ao torneio privado.
-                  </CardDescription>
+                  </p>
                 </div>
               </div>
-            </CardHeader>
+            </div>
 
-            <CardContent className="px-6 pb-6 pt-4 sm:px-7">
+            <div className="pt-4">
               <form onSubmit={handleSubmit} className="space-y-5">
                 {isPreviewMode && (
                   <div className="rounded-[1.35rem] border border-amber-300/70 bg-amber-50/85 p-4 text-sm leading-6 text-amber-950">
@@ -143,11 +144,10 @@ export default function JoinTournament() {
                   <ArrowRight className="ml-1 h-4 w-4" />
                 </Button>
               </form>
-            </CardContent>
-          </Card>
+            </div>
+          </PlatformSurfaceCard>
 
-          <Card className="rounded-[2rem] border-white/80 bg-white/82">
-            <CardContent className="p-6 sm:p-7">
+          <PlatformSurfaceCard>
               <div className="flex items-start gap-3 text-sm text-slate-700">
                 <div className="flex h-11 w-11 items-center justify-center rounded-2xl bg-emerald-100 text-emerald-700 shrink-0">
                   <Globe className="h-5 w-5" />
@@ -167,8 +167,7 @@ export default function JoinTournament() {
                   </p>
                 </div>
               </div>
-            </CardContent>
-          </Card>
+          </PlatformSurfaceCard>
         </div>
       </section>
 

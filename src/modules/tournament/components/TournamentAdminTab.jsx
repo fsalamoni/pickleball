@@ -1,9 +1,13 @@
 import React, { useEffect, useState } from 'react';
-import { Card, CardContent } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { Badge } from '@/components/ui/badge';
+import {
+  PlatformFormSection,
+  PlatformMetricCard,
+  PlatformSurfaceCard,
+} from '@/components/ui/platform-page';
 import { toast } from 'sonner';
 import {
   CalendarDays,
@@ -168,8 +172,7 @@ export default function TournamentAdminTab({ tournament }) {
 
   return (
     <div className="space-y-5">
-      <Card className="rounded-[2rem] border-white/80 bg-white/82">
-        <CardContent className="p-6 sm:p-7">
+      <PlatformSurfaceCard>
           <div className="flex items-start justify-between gap-3 flex-wrap">
             <div>
               <div className="text-xs font-semibold uppercase tracking-[0.18em] text-emerald-700/75">Parâmetros centrais</div>
@@ -186,23 +189,13 @@ export default function TournamentAdminTab({ tournament }) {
 
           <div className="mt-6 grid gap-3 sm:grid-cols-3">
             {infoCards.map(({ label, value, icon: Icon }) => (
-              <div key={label} className="rounded-[1.35rem] border border-emerald-950/10 bg-secondary/35 p-4">
-                <div className="flex items-center justify-between gap-3">
-                  <div className="text-[11px] font-semibold uppercase tracking-[0.16em] text-emerald-700/75">{label}</div>
-                  <div className="flex h-10 w-10 items-center justify-center rounded-2xl bg-emerald-100 text-emerald-700">
-                    <Icon className="h-4.5 w-4.5" />
-                  </div>
-                </div>
-                <div className="mt-3 text-xl font-semibold text-slate-950">{value}</div>
-              </div>
+              <PlatformMetricCard key={label} label={label} value={value} icon={Icon} />
             ))}
           </div>
-        </CardContent>
-      </Card>
+      </PlatformSurfaceCard>
 
       <div className="grid gap-5 xl:grid-cols-[1.15fr,0.85fr]">
-        <Card className="rounded-[2rem] border-white/80 bg-white/82">
-          <CardContent className="space-y-6 p-6 sm:p-7">
+        <PlatformSurfaceCard contentClassName="space-y-6 p-6 sm:p-7">
             <section className="space-y-4">
               <div>
                 <div className="text-xs font-semibold uppercase tracking-[0.16em] text-emerald-700/75">Identidade e contexto</div>
@@ -237,17 +230,11 @@ export default function TournamentAdminTab({ tournament }) {
               </div>
             </section>
 
-            <section className="space-y-4 rounded-[1.5rem] border border-emerald-950/10 bg-white/75 p-5">
-              <div className="flex items-start gap-3">
-                <div className="flex h-10 w-10 items-center justify-center rounded-2xl bg-emerald-100 text-emerald-700">
-                  <Settings2 className="h-4.5 w-4.5" />
-                </div>
-                <div>
-                  <div className="text-base font-semibold text-slate-950">Acesso e regras-base</div>
-                  <p className="mt-1 text-sm leading-6 text-slate-600">Defina quem encontra o torneio e qual conjunto de regras-base será herdado pelas modalidades.</p>
-                </div>
-              </div>
-
+            <PlatformFormSection
+              icon={Settings2}
+              title="Acesso e regras-base"
+              description="Defina quem encontra o torneio e qual conjunto de regras-base será herdado pelas modalidades."
+            >
               <div className="grid grid-cols-1 gap-4 md:grid-cols-2">
                 <div>
                   <Label>Tipo de acesso</Label>
@@ -277,19 +264,13 @@ export default function TournamentAdminTab({ tournament }) {
                   Pontos por game e sets por partida agora são definidos dentro de cada modalidade, fase por fase. Aqui ficam apenas as regras-base do torneio.
                 </div>
               </div>
-            </section>
+            </PlatformFormSection>
 
-            <section className="space-y-4 rounded-[1.5rem] border border-emerald-950/10 bg-white/75 p-5">
-              <div className="flex items-start gap-3">
-                <div className="flex h-10 w-10 items-center justify-center rounded-2xl bg-emerald-100 text-emerald-700">
-                  <CalendarDays className="h-4.5 w-4.5" />
-                </div>
-                <div>
-                  <div className="text-base font-semibold text-slate-950">Datas operacionais</div>
-                  <p className="mt-1 text-sm leading-6 text-slate-600">Controle o período do evento e o fechamento das inscrições sem sair da área administrativa.</p>
-                </div>
-              </div>
-
+            <PlatformFormSection
+              icon={CalendarDays}
+              title="Datas operacionais"
+              description="Controle o período do evento e o fechamento das inscrições sem sair da área administrativa."
+            >
               <div className="grid grid-cols-1 gap-4 md:grid-cols-3">
                 <div>
                   <Label>Início</Label>
@@ -304,86 +285,81 @@ export default function TournamentAdminTab({ tournament }) {
                   <Input type="date" value={form.registration_deadline} onChange={(e) => set('registration_deadline', e.target.value)} className="mt-2" />
                 </div>
               </div>
-            </section>
-          </CardContent>
-        </Card>
+            </PlatformFormSection>
+        </PlatformSurfaceCard>
 
         <div className="space-y-5">
-          <Card className="rounded-[2rem] border-white/80 bg-white/82">
-            <CardContent className="p-6 sm:p-7">
-              <div className="text-xs font-semibold uppercase tracking-[0.16em] text-emerald-700/75">Status da operação</div>
-              <h4 className="mt-2 text-xl font-semibold text-slate-950">Atualize o estado do evento com clareza</h4>
-              <p className="mt-2 text-sm leading-6 text-slate-600">
-                Escolha uma ação abaixo para refletir o momento atual do torneio em toda a plataforma.
-              </p>
+          <PlatformSurfaceCard>
+            <div className="text-xs font-semibold uppercase tracking-[0.16em] text-emerald-700/75">Status da operação</div>
+            <h4 className="mt-2 text-xl font-semibold text-slate-950">Atualize o estado do evento com clareza</h4>
+            <p className="mt-2 text-sm leading-6 text-slate-600">
+              Escolha uma ação abaixo para refletir o momento atual do torneio em toda a plataforma.
+            </p>
 
-              <div className="mt-5 space-y-3">
-                {STATUS_ACTIONS.map(({ value, label, description, icon: Icon }) => (
-                  <button
-                    key={value}
-                    type="button"
-                    onClick={() => setStatus(value)}
-                    className="flex w-full items-start gap-3 rounded-[1.35rem] border border-emerald-950/10 bg-white/75 p-4 text-left transition-transform duration-200 hover:-translate-y-0.5"
-                  >
-                    <div className="flex h-10 w-10 shrink-0 items-center justify-center rounded-2xl bg-emerald-100 text-emerald-700">
-                      <Icon className="h-4.5 w-4.5" />
-                    </div>
-                    <div>
-                      <div className="font-semibold text-slate-950">{label}</div>
-                      <p className="mt-1 text-sm leading-6 text-slate-600">{description}</p>
-                    </div>
-                  </button>
-                ))}
+            <div className="mt-5 space-y-3">
+              {STATUS_ACTIONS.map(({ value, label, description, icon: Icon }) => (
+                <button
+                  key={value}
+                  type="button"
+                  onClick={() => setStatus(value)}
+                  className="flex w-full items-start gap-3 rounded-[1.35rem] border border-emerald-950/10 bg-white/75 p-4 text-left transition-transform duration-200 hover:-translate-y-0.5"
+                >
+                  <div className="flex h-10 w-10 shrink-0 items-center justify-center rounded-2xl bg-emerald-100 text-emerald-700">
+                    <Icon className="h-4.5 w-4.5" />
+                  </div>
+                  <div>
+                    <div className="font-semibold text-slate-950">{label}</div>
+                    <p className="mt-1 text-sm leading-6 text-slate-600">{description}</p>
+                  </div>
+                </button>
+              ))}
+            </div>
+          </PlatformSurfaceCard>
+
+          <PlatformSurfaceCard>
+            <div className="flex items-start gap-3">
+              <div className="flex h-10 w-10 items-center justify-center rounded-2xl bg-emerald-100 text-emerald-700">
+                <Users className="h-4.5 w-4.5" />
               </div>
-            </CardContent>
-          </Card>
-
-          <Card className="rounded-[2rem] border-white/80 bg-white/82">
-            <CardContent className="p-6 sm:p-7">
-              <div className="flex items-start gap-3">
-                <div className="flex h-10 w-10 items-center justify-center rounded-2xl bg-emerald-100 text-emerald-700">
-                  <Users className="h-4.5 w-4.5" />
-                </div>
-                <div>
-                  <div className="text-base font-semibold text-slate-950">Admins do torneio</div>
-                  <p className="mt-1 text-sm leading-6 text-slate-600">
-                    O owner permanece fixo. Os demais admins compartilham gestão deste torneio sem impactar o admin geral da plataforma.
-                  </p>
-                </div>
+              <div>
+                <div className="text-base font-semibold text-slate-950">Admins do torneio</div>
+                <p className="mt-1 text-sm leading-6 text-slate-600">
+                  O owner permanece fixo. Os demais admins compartilham gestão deste torneio sem impactar o admin geral da plataforma.
+                </p>
               </div>
+            </div>
 
-              <ul className="mt-5 space-y-3">
-                {admins.map((a) => (
-                  <li key={a.user_id} className="flex items-center justify-between gap-3 rounded-[1.25rem] border border-emerald-950/10 bg-white/75 px-4 py-3">
-                    <div className="min-w-0">
-                      <div className="truncate font-medium text-slate-950">{a.user_name || a.user_email}</div>
-                      <div className="mt-1 text-xs text-slate-500">{a.user_email}</div>
-                    </div>
-                    <div className="flex items-center gap-2">
-                      <Badge variant="secondary" className="shadow-none">
-                        {a.role === TOURNAMENT_ADMIN_ROLE.OWNER ? 'Owner' : 'Admin'}
-                      </Badge>
-                      {a.role !== TOURNAMENT_ADMIN_ROLE.OWNER && (
-                        <Button size="icon" variant="ghost" onClick={() => removeMutation.mutate(a.user_id)}>
-                          <Trash2 className="w-4 h-4 text-red-600" />
-                        </Button>
-                      )}
-                    </div>
-                  </li>
-                ))}
-              </ul>
+            <ul className="mt-5 space-y-3">
+              {admins.map((a) => (
+                <li key={a.user_id} className="flex items-center justify-between gap-3 rounded-[1.25rem] border border-emerald-950/10 bg-white/75 px-4 py-3">
+                  <div className="min-w-0">
+                    <div className="truncate font-medium text-slate-950">{a.user_name || a.user_email}</div>
+                    <div className="mt-1 text-xs text-slate-500">{a.user_email}</div>
+                  </div>
+                  <div className="flex items-center gap-2">
+                    <Badge variant="secondary" className="shadow-none">
+                      {a.role === TOURNAMENT_ADMIN_ROLE.OWNER ? 'Owner' : 'Admin'}
+                    </Badge>
+                    {a.role !== TOURNAMENT_ADMIN_ROLE.OWNER && (
+                      <Button size="icon" variant="ghost" onClick={() => removeMutation.mutate(a.user_id)}>
+                        <Trash2 className="w-4 h-4 text-red-600" />
+                      </Button>
+                    )}
+                  </div>
+                </li>
+              ))}
+            </ul>
 
-              <div className="mt-5 rounded-[1.5rem] border border-emerald-950/10 bg-secondary/35 p-4">
-                <Label>Adicionar admin (e-mail do usuário já cadastrado)</Label>
-                <div className="mt-3 flex gap-2">
-                  <Input value={email} onChange={(e) => setEmail(e.target.value)} placeholder="email@dominio.com" type="email" />
-                  <Button onClick={handleAddAdmin} disabled={addMutation.isPending}>
-                    <UserPlus className="w-4 h-4" />
-                  </Button>
-                </div>
+            <div className="mt-5 rounded-[1.5rem] border border-emerald-950/10 bg-secondary/35 p-4">
+              <Label>Adicionar admin (e-mail do usuário já cadastrado)</Label>
+              <div className="mt-3 flex gap-2">
+                <Input value={email} onChange={(e) => setEmail(e.target.value)} placeholder="email@dominio.com" type="email" />
+                <Button onClick={handleAddAdmin} disabled={addMutation.isPending}>
+                  <UserPlus className="w-4 h-4" />
+                </Button>
               </div>
-            </CardContent>
-          </Card>
+            </div>
+          </PlatformSurfaceCard>
         </div>
       </div>
     </div>

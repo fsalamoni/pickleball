@@ -4,10 +4,12 @@ import {
   MapPin, Phone, Mail, Instagram, Globe, MessageCircle, Building2,
   Star, CalendarPlus, Settings, Clock, Trophy,
 } from 'lucide-react';
-import { Card, CardContent } from '@/components/ui/card';
+import { CardContent } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
 import { Skeleton } from '@/components/ui/skeleton';
+import { PlatformSectionHeader, PlatformSurfaceCard } from '@/components/ui/platform-page';
+import { PhotoLightbox } from '@/components/ui/photo-lightbox';
 import ErrorState from '@/components/ErrorState';
 import { useFeatureFlag } from '@/core/lib/FeatureFlagsContext';
 import { FEATURE_FLAG } from '@/core/featureFlags';
@@ -15,12 +17,14 @@ import { useAuth } from '@/core/lib/FirebaseAuthContext';
 import ChatLauncherButton from '@/modules/chat/components/ChatLauncherButton';
 import { formatArenaAddress, arenaContactLinks } from '../domain/arena.js';
 import { formatPrice } from '../domain/pricing.js';
-import { WEEKDAY_SHORT } from '../domain/constants.js';
+import { BOOKING_STATUS, WEEKDAY_SHORT } from '../domain/constants.js';
 import { useArena, useMyManagedArenas } from '../hooks/useArenas.js';
+import { useArenaBookings } from '../hooks/useBookings.js';
 import FavoriteArenaButton from '../components/FavoriteArenaButton.jsx';
 import ArenaShareButton from '../components/ArenaShareButton.jsx';
 import ArenaReviews from '../components/ArenaReviews.jsx';
 import BookingRequestDialog from '../components/BookingRequestDialog.jsx';
+import { bookingSlots, sortSlots } from '../domain/booking.js';
 
 function ContactRow({ icon: Icon, href, label }) {
   if (!href) return null;
@@ -37,6 +41,7 @@ export default function ArenaDetail() {
   const { user } = useAuth();
   const { data: arena, isLoading, isError, refetch } = useArena(arenaId);
   const { data: managed = [] } = useMyManagedArenas();
+  const { data: bookings = [] } = useArenaBookings(arenaId);
   const [bookingOpen, setBookingOpen] = useState(false);
 
   if (!enabled) return <Navigate to="/inicio" replace />;
@@ -55,19 +60,29 @@ export default function ArenaDetail() {
   const links = arenaContactLinks(arena);
   const canManage = arena.owner_id === user?.uid || managed.some((m) => m.id === arena.id);
   const address = formatArenaAddress(arena);
+  const upcomingConfirmedSlots = sortSlots(
+    bookings
+      .filter((booking) => booking.status === BOOKING_STATUS.CONFIRMED)
+      .flatMap((booking) => bookingSlots(booking)),
+  ).slice(0, 8);
 
   return (
     <div className="mx-auto max-w-3xl space-y-4">
       {/* Capa + cabeçalho */}
-      <Card className="overflow-hidden">
+      <PlatformSurfaceCard className="overflow-hidden p-0" contentClassName="p-0">
         <div className="h-40 w-full bg-emerald-50 sm:h-52">
           {arena.cover_url ? (
-            <img src={arena.cover_url} alt="" className="h-full w-full object-cover" />
+            <PhotoLightbox
+              src={arena.cover_url}
+              alt={arena.name}
+              title={arena.name}
+              trigger={<img src={arena.cover_url} alt="" className="h-full w-full cursor-zoom-in object-cover" />}
+            />
           ) : (
             <div className="flex h-full w-full items-center justify-center text-emerald-600"><Building2 className="h-12 w-12" /></div>
           )}
         </div>
-        <CardContent className="p-5">
+        <CardContent className="p-5 sm:p-6">
           <div className="flex flex-wrap items-start justify-between gap-3">
             <div className="min-w-0">
               <h1 className="text-2xl font-bold text-slate-900">{arena.name}</h1>
@@ -101,16 +116,17 @@ export default function ArenaDetail() {
             )}
           </div>
         </CardContent>
-      </Card>
+      </PlatformSurfaceCard>
 
       {arena.description && (
-        <Card><CardContent className="p-5"><p className="whitespace-pre-line text-sm text-slate-700">{arena.description}</p></CardContent></Card>
+        <PlatformSurfaceCard contentClassName="p-5">
+          <p className="whitespace-pre-line text-sm text-slate-700">{arena.description}</p>
+        </PlatformSurfaceCard>
       )}
 
       {/* Contatos, horários, redes */}
       <div className="grid gap-4 sm:grid-cols-2">
-        <Card>
-          <CardContent className="space-y-2 p-5">
+        <PlatformSurfaceCard contentClassName="space-y-2 p-5">
             <h3 className="text-sm font-semibold text-slate-800">Contato e redes</h3>
             <div className="flex flex-col gap-1.5">
               <ContactRow icon={MessageCircle} href={links.whatsapp} label="WhatsApp" />
@@ -122,20 +138,33 @@ export default function ArenaDetail() {
                 <p className="text-sm text-slate-400">Sem contatos informados.</p>
               )}
             </div>
-          </CardContent>
-        </Card>
-        <Card>
-          <CardContent className="space-y-2 p-5">
+        </PlatformSurfaceCard>
+        <PlatformSurfaceCard contentClassName="space-y-2 p-5">
             <h3 className="flex items-center gap-1 text-sm font-semibold text-slate-800"><Clock className="h-4 w-4" /> Funcionamento</h3>
             <p className="text-sm text-slate-600">{arena.hours || 'Horário não informado.'}</p>
-          </CardContent>
-        </Card>
+        </PlatformSurfaceCard>
       </div>
+
+      {upcomingConfirmedSlots.length > 0 && (
+        <PlatformSurfaceCard>
+          <PlatformSectionHeader
+            eyebrow="Agenda"
+            title="Próximos horários confirmados"
+            description="Use esta leitura rápida para entender a ocupação recente da arena antes de pedir uma nova reserva."
+          />
+          <div className="mt-5 flex flex-wrap gap-2">
+            {upcomingConfirmedSlots.map((slot) => (
+              <span key={`${slot.date}_${slot.start}`} className="rounded-full border border-emerald-950/10 bg-secondary/35 px-3 py-1.5 text-xs text-slate-700">
+                {slot.date} · {slot.start}–{slot.end}
+              </span>
+            ))}
+          </div>
+        </PlatformSurfaceCard>
+      )}
 
       {/* Tabela de preços */}
       {(arena.base_price != null || (arena.price_rules || []).length > 0) && (
-        <Card>
-          <CardContent className="p-5">
+        <PlatformSurfaceCard contentClassName="p-5">
             <h3 className="mb-2 text-sm font-semibold text-slate-800">Preços</h3>
             {arena.base_price != null && <p className="text-sm text-slate-600">Preço base: <strong>{formatPrice(arena.base_price)}</strong></p>}
             <div className="mt-2 space-y-1.5">
@@ -150,22 +179,24 @@ export default function ArenaDetail() {
               ))}
             </div>
             <p className="mt-2 text-xs text-slate-400">Valores de referência; o valor final é confirmado pela arena na reserva.</p>
-          </CardContent>
-        </Card>
+        </PlatformSurfaceCard>
       )}
 
       {/* Fotos */}
       {(arena.photos || []).length > 0 && (
-        <Card>
-          <CardContent className="p-5">
+        <PlatformSurfaceCard contentClassName="p-5">
             <h3 className="mb-2 text-sm font-semibold text-slate-800">Fotos</h3>
             <div className="grid grid-cols-2 gap-2 sm:grid-cols-3">
               {arena.photos.map((p, i) => (
-                <img key={p.path || i} src={p.url} alt="" className="h-28 w-full rounded-lg object-cover" />
+                <PhotoLightbox
+                  key={p.path || i}
+                  src={p.url}
+                  alt={`Foto ${i + 1} da arena`}
+                  trigger={<img src={p.url} alt="" className="h-28 w-full cursor-zoom-in rounded-lg object-cover" />}
+                />
               ))}
             </div>
-          </CardContent>
-        </Card>
+        </PlatformSurfaceCard>
       )}
 
       <ArenaReviews arena={arena} />

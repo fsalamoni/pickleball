@@ -1,149 +1,147 @@
-# Pickleball
+# PickleTour
 
-Plataforma web para criação e administração de torneios amadores de **pickleball** no Brasil.
+Plataforma web para **operar o ecossistema do pickleball amador no Brasil**.
 
-## Funcionalidades
+Ela une torneios, modalidades, comunidade, clubes, arenas, reservas e comunicação em um único produto.
 
-- 🏆 **Torneios** com formatos single, duplas e americana
-- 📋 **Modalidades múltiplas** por torneio com níveis (iniciante → elite), categorias por gênero e idade
-- 📏 **Regras configuráveis**: CBP ou USAP, jogos de 11/15/21 pontos, 1+ sets
-- 🎲 **Sorteio automático** de grupos e chaves (com seed reproduzível)
-- 🪜 **Formatos avançados de fase**: pontos corridos, grupos, mata-mata (single), **dupla eliminação** com bracket reset e **sistema suíço** com pareamento por pontuação
-- 📅 **Agendamento por quadras** com slots de tempo e descanso mínimo entre jogos
-- 📊 **Ranking ao vivo** adaptado ao formato (pontos corridos, grupos, mata-mata, americana)
-- 👥 **Admins compartilhados** por torneio sem afetar o admin geral da plataforma
-- 📖 **Páginas educativas**: regras (CBP/USAP) e nivelamento (CBPE/USAP) com formulário auto-avaliativo
-- 🎫 Até **500 inscritos por modalidade**, taxa de inscrição opcional, check-in de jogadores
-- 👀 **Visão pública** (`/p/:id`) para espectadores, sem login, com atualização automática
-- 🖨️ **Versão para impressão** (`/torneios/:id/imprimir`) das chaves e classificação
-- 🔐 Login com **Google** (Firebase Auth) e auditoria de ações administrativas
+## Propósito
+
+A PickleTour existe para:
+
+1. reduzir improviso na organização de torneios;
+2. melhorar a percepção de qualidade para atletas e público;
+3. conectar a rotina do esporte fora do torneio, com clubes, arenas e relacionamento contínuo;
+4. transformar o produto em uma presença digital completa do pickleball, e não só em um painel de resultados.
+
+## Funcionalidades principais
+
+### Torneios e modalidades
+
+- 🏆 torneios com identidade, operação e visão pública
+- 📋 modalidades múltiplas por torneio com nível, gênero, idade e taxa de inscrição
+- 🧭 página própria de modalidade com visão geral, inscrição, jogos, ranking e fotos
+- 🪜 múltiplas fases por modalidade
+- 📏 pontuação por fase: pontos por game e sets por partida definidos dentro de cada fase
+- 🎲 sorteio automático de grupos e chaves com seed reproduzível
+- 🧩 formatos competitivos: pontos corridos, grupos, mata-mata, dupla eliminação, suíço, americano e mexicano
+- 📅 agendamento por quadras com janela de horários e duração média de jogo
+- 📊 ranking ao vivo e classificação por modalidade
+- 🖼️ galerias de fotos gerais e por modalidade
+- 👀 visão pública sem login (`/p/:id`)
+- 🖨️ versão para impressão do torneio
+
+### Comunidade e atletas
+
+- 👤 perfil do atleta com foto, elegibilidade competitiva e dados públicos controlados
+- 📖 nivelamento com base CBPE e USAP
+- 🔎 diretório de atletas
+- 💬 chat direto e em grupo
+- 📰 feed e fóruns da comunidade
+
+### Clubes
+
+- 🏠 criação e gestão de clubes
+- 🎟️ convites e ingresso por código
+- 📅 eventos e game-days
+- 🗳️ fórum com comentários e enquetes
+
+### Arenas e reservas
+
+- 🏟️ diretório de arenas com perfil, fotos, contatos e preços
+- 📆 solicitação de reservas avulsas e recorrentes
+- 💸 negociação manual de valor
+- 🧾 acompanhamento de pagamento e histórico
+- 🔍 ampliação de fotos para melhor visualização da estrutura
+- ⛔ bloqueio de conflito com horários já confirmados
+
+### Base operacional da plataforma
+
+- 🔔 notificações in-app
+- 🧾 auditoria de ações administrativas
+- 🔐 login com Google (Firebase Auth)
+- 🚩 feature flags para rollout controlado
+- 📱 PWA opcional
+
+## Padrão visual
+
+O padrão obrigatório de design da plataforma está documentado em [docs/DESIGN_STANDARD.md](docs/DESIGN_STANDARD.md).
+
+As primitivas de composição para páginas, seções e formulários ficam em [src/components/ui/platform-page.jsx](src/components/ui/platform-page.jsx).
 
 ## Stack
 
-- **React 18** + Vite + Tailwind + shadcn/ui
-- **Firebase**: Auth, Firestore (database `pickleball`), Hosting
-- **React Query** para data fetching
-- **Vitest** para testes unitários · **Playwright** para E2E
+- React 18 + Vite + Tailwind + shadcn/ui
+- Firebase: Auth, Firestore (database `pickleball`), Hosting
+- React Query para data fetching
+- Vitest para testes unitários
+- Playwright para E2E
 
 ## Como rodar
 
 ```bash
 npm install
-cp .env.example .env.local   # preencha as variáveis do Firebase
-npm run dev                  # http://localhost:5173
+cp .env.example .env.local
+npm run dev
 ```
 
 ## Scripts úteis
 
 | Script | Descrição |
 | --- | --- |
-| `npm run dev` | Vite em modo desenvolvimento |
-| `npm run build` | Build de produção (`dist/`) |
-| `npm run lint` | ESLint |
-| `npm run test` | Vitest (unit) |
-| `npm run e2e` | Playwright (E2E) |
+| `npm run dev` | desenvolvimento local com Vite |
+| `npm run build` | build de produção (`dist/`) |
+| `npm run lint` | validação estática com ESLint |
+| `npm run test` | testes unitários com Vitest |
+| `npm run e2e` | testes end-to-end com Playwright |
 
-## App mobile (PWA)
+## PWA
 
-A plataforma pode ser instalada como app no celular **sem passar pelas lojas**,
-direto do site (Android via prompt nativo; iOS/Safari via "Adicionar à Tela de
-Início"). É um PWA — totalmente aditivo, não altera banco de dados nem
-funcionalidades.
+A aplicação pode ser instalada no celular sem loja, via navegador.
 
-Fica **desligado por padrão** atrás da flag `VITE_PWA_ENABLED`:
+Controle:
 
-- `VITE_PWA_ENABLED=false` (padrão): nenhum service worker é registrado e o
-  botão "Baixar o app" não aparece. Zero impacto.
-- `VITE_PWA_ENABLED=true`: ativa o registro do service worker (apenas em build de
-  produção) e exibe o botão de instalação na landing.
+- `VITE_PWA_ENABLED=false`: sem service worker, sem botão de instalação
+- `VITE_PWA_ENABLED=true`: instala o PWA e habilita o CTA na landing
 
-Os ícones do app são gerados por `node scripts/generate-pwa-icons.mjs`
-(saída em `public/`). Após validar tudo, basta ligar a flag no ambiente de build.
+## Feature flags
 
-## Feature flags (admin master)
+Algumas capacidades nascem desligadas e são habilitadas pelo admin master.
 
-Algumas funcionalidades nascem **desligadas** e são ativadas em tempo real pelo
-admin master na página **Métricas da Plataforma** (`/admin/metricas`), no card
-**Funcionalidades (flags)**. As flags ficam em `platform_settings/global`
-(Firestore) e são puramente aditivas — desligar não afeta nada do que já existe.
+Exemplos importantes:
 
-- **Torneios em múltiplas fases** (`multi_phase_tournaments`): permite configurar
-  uma modalidade com várias fases encadeadas (grupos, americano, **mexicano**,
-  mata-mata, dupla eliminação, suíço), com **divisão em grupos equilibrados** por
-  gênero e nível (diferença máxima de 1 atleta por grupo), sorteio ou seleção
-  manual, **qualificação de classificados** (geral ou por gênero) e **progressão
-  automática entre fases** (fusão de grupos A+B → AB, formação de duplas mistas,
-  chaveamento clássico ou cruzado A×B / C×D, disputa de 3º lugar). A inscrição
-  continua em **lista única** por modalidade. Com a flag desligada, o fluxo de
-  fase única permanece idêntico ao atual.
+- `multi_phase_tournaments`: múltiplas fases por modalidade
+- `modality_pages`: páginas próprias das modalidades
+- `tournament_gallery`: galeria de fotos de torneio
+- `arenas`: diretório e operação de arenas
 
-  **Modelos prontos** (catálogo organizado, escolhido no editor de fases):
-  pontos corridos (com/sem final), grupos + mata-mata (clássico e cruzado),
-  mata-mata simples (com/sem disputa de 3º lugar), dupla eliminação, suíço
-  (com/sem playoffs), cascata de grupos, **americano** e **mexicano**, e os
-  encadeamentos sociais (americano em grupos → final de duplas mistas; americano
-  em 3 fases com fusão de grupos).
+As flags vivem em `platform_settings/global` e são aditivas.
 
-  **Formatos de jogo cobertos** (espectro completo): pontos corridos, fase de
-  grupos, mata-mata (eliminação simples), dupla eliminação (com repescagem),
-  sistema suíço, americano (rotação por tabela de Whist) e mexicano (rotação
-  dinâmica por classificação). O mexicano fica oculto nos seletores até a flag
-  ser ligada.
+## Deploy
 
-> Após o primeiro uso, lembre-se de publicar as regras do Firestore
-> (`firestore.rules`) — há uma regra nova para `platform_settings` (leitura
-> pública, escrita só do admin master).
+Push em `main` dispara os workflows do GitHub Actions para CI e publicação.
 
-## Publicação no GitHub Pages
+O repositório está preparado para:
 
-O repositório já está preparado para publicar a aplicação em **GitHub Pages** via workflow do GitHub Actions (`.github/workflows/deploy-pages.yml`).
-
-### 1. Habilite o GitHub Pages
-
-No GitHub, abra **Settings → Pages** e selecione **Build and deployment → Source: GitHub Actions**.
-
-### 2. Configure as variáveis do build
-
-Em **Settings → Secrets and variables → Actions**, crie as variáveis (ou secrets) abaixo com os valores reais do seu projeto Firebase:
-
-- `VITE_FIREBASE_API_KEY`
-- `VITE_FIREBASE_AUTH_DOMAIN`
-- `VITE_FIREBASE_PROJECT_ID`
-- `VITE_FIREBASE_STORAGE_BUCKET`
-- `VITE_FIREBASE_MESSAGING_SENDER_ID`
-- `VITE_FIREBASE_APP_ID`
-
-Opcionais:
-
-- `VITE_FIREBASE_MEASUREMENT_ID`
-- `VITE_FIRESTORE_DATABASE_ID` (padrão recomendado: `pickleball`)
-- `VITE_ENABLE_FIREBASE_ANALYTICS`
-- `VITE_ENABLE_FIREBASE_PERFORMANCE`
-
-### 3. Deploy
-
-Ao fazer push para `main`, o workflow publica automaticamente em:
-
-`https://fsalamoni.github.io/pickleball/`
-
-O workflow também gera `404.html` a partir do `index.html` para manter o roteamento SPA funcionando em refresh e links diretos.
+1. deploy em Firebase Hosting;
+2. deploy em GitHub Pages;
+3. publicação de regras e índices do Firestore;
+4. validação automática de build.
 
 ## Estrutura
 
-```
+```text
 src/
-├── App.jsx                # Roteamento
-├── core/                  # Auth, Firebase, serviços compartilhados, design system
-├── components/            # Layout, AuditLogTable, UI primitives (shadcn)
-├── pages/                 # Landing, Login, Regras, Nivelamento, Conduta, Política
+├── App.jsx
+├── core/                  # auth, firebase, serviços e base compartilhada
+├── components/            # layout, componentes globais e ui/
+├── pages/                 # landing, login, regras, perfil e páginas institucionais
 └── modules/
-    ├── tournament/        # Domínio principal (torneios, modalidades, jogos, ranking)
-    │   ├── domain/        # constants, scoring, draw, ranking (puros, testados)
-    │   ├── services/      # Firestore CRUD
-    │   ├── hooks/         # React Query
-    │   ├── pages/         # Dashboard, CreateTournament, JoinTournament, Tournament
-    │   └── components/    # Tabs do torneio + dialogs
-    ├── leveling/          # Tabela e formulário de nivelamento (CBPE/USAP)
-    ├── notifications/     # Notificações in-app
-    └── admin/             # Painel administrativo da plataforma
+    ├── tournament/        # torneios, modalidades, fases, jogos, ranking, visão pública
+    ├── arenas/            # arenas, reservas, fotos, preços e avaliações
+    ├── clubs/             # clubes, mural, eventos e fóruns
+    ├── chat/              # conversas diretas e em grupo
+    ├── athletes/          # diretório e perfis públicos
+    ├── leveling/          # nivelamento do atleta
+    ├── notifications/     # notificações in-app
+    └── admin/             # painel administrativo da plataforma
 ```

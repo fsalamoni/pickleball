@@ -3,6 +3,7 @@ import { Link } from 'react-router-dom';
 import { MapPin, Star, Building2, Trophy } from 'lucide-react';
 import { Card, CardContent } from '@/components/ui/card';
 import { Badge } from '@/components/ui/badge';
+import { PhotoLightbox } from '@/components/ui/photo-lightbox';
 import { formatArenaAddress } from '../domain/arena.js';
 import { formatPrice } from '../domain/pricing.js';
 import FavoriteArenaButton from './FavoriteArenaButton.jsx';
@@ -12,10 +13,15 @@ export default function ArenaCard({ arena }) {
   const address = formatArenaAddress(arena);
   return (
     <Link to={`/arenas/${arena.id}`} className="group block">
-      <Card className="h-full overflow-hidden transition-shadow group-hover:shadow-md">
+      <Card className="match-surface h-full overflow-hidden rounded-[1.75rem] border-white/80 bg-white/85">
         <div className="relative h-32 w-full bg-emerald-50">
           {arena.cover_url ? (
-            <img src={arena.cover_url} alt="" className="h-full w-full object-cover" />
+            <PhotoLightbox
+              src={arena.cover_url}
+              alt={arena.name}
+              title={arena.name}
+              trigger={<img src={arena.cover_url} alt="" className="h-full w-full cursor-zoom-in object-cover" />}
+            />
           ) : (
             <div className="flex h-full w-full items-center justify-center text-emerald-600">
               <Building2 className="h-10 w-10" />
@@ -25,7 +31,7 @@ export default function ArenaCard({ arena }) {
             <FavoriteArenaButton arena={arena} className="h-9 w-9 bg-white/90 hover:bg-white" />
           </div>
         </div>
-        <CardContent className="p-4">
+        <CardContent className="p-5 sm:p-6">
           <div className="flex items-start justify-between gap-2">
             <h3 className="min-w-0 truncate font-semibold text-slate-900">{arena.name}</h3>
             {Number.isFinite(arena.rating_avg) && arena.rating_avg != null && (

@@ -3,6 +3,7 @@ import { toast } from 'sonner';
 import { Images, Trash2 } from 'lucide-react';
 import { Card, CardContent } from '@/components/ui/card';
 import { ImageUpload } from '@/components/ui/image-upload';
+import { PhotoLightbox } from '@/components/ui/photo-lightbox';
 import ConfirmDialog from '@/components/ConfirmDialog';
 import { useFeatureFlag } from '@/core/lib/FeatureFlagsContext';
 import { FEATURE_FLAG } from '@/core/featureFlags';
@@ -67,7 +68,11 @@ export default function TournamentGallery({ tournamentId, canManage = false }) {
           <div className="grid grid-cols-2 gap-2 sm:grid-cols-3 md:grid-cols-4">
             {photos.map((p) => (
               <div key={p.id} className="group relative overflow-hidden rounded-lg">
-                <img src={p.url} alt="" className="h-28 w-full object-cover" />
+                <PhotoLightbox
+                  src={p.url}
+                  alt="Foto do torneio"
+                  trigger={<img src={p.url} alt="" className="h-28 w-full cursor-zoom-in object-cover" />}
+                />
                 {canManage && (
                   <ConfirmDialog
                     title="Remover foto?"

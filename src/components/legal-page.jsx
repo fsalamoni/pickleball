@@ -1,10 +1,11 @@
-import { Card, CardContent, CardHeader, CardTitle, CardDescription } from '@/components/ui/card';
+import { CardHeader, CardTitle, CardDescription, CardContent } from '@/components/ui/card';
+import { PlatformSurfaceCard } from '@/components/ui/platform-page';
 import { cn } from '@/core/lib/utils';
 
 export function LegalPage({ eyebrow, title, description, meta, children }) {
   return (
     <div className="mx-auto max-w-6xl space-y-5">
-      <section className="arena-panel-strong rounded-lg p-5 sm:p-6">
+      <section className="arena-panel-strong rounded-[1.25rem] p-5 sm:rounded-[2rem] sm:p-8">
         <div className="max-w-3xl space-y-3">
           {eyebrow && <p className="text-xs font-semibold uppercase tracking-wider text-emerald-200">{eyebrow}</p>}
           <h1 className="text-2xl font-bold text-white sm:text-3xl">{title}</h1>
@@ -19,11 +20,11 @@ export function LegalPage({ eyebrow, title, description, meta, children }) {
 
 export function LegalSection({ icon: Icon, title, description, children, className }) {
   return (
-    <Card className={cn('overflow-hidden', className)}>
+    <PlatformSurfaceCard className={cn('overflow-hidden', className)} contentClassName="p-0">
       <CardHeader className="border-b border-emerald-950/10 bg-white/45 p-4 sm:p-5">
         <div className="flex items-start gap-3">
           {Icon && (
-            <div className="flex h-9 w-9 shrink-0 items-center justify-center rounded-md bg-emerald-900 text-emerald-50 shadow-sm">
+            <div className="flex h-9 w-9 shrink-0 items-center justify-center rounded-2xl bg-emerald-900 text-emerald-50 shadow-sm">
               <Icon className="h-4 w-4" />
             </div>
           )}
@@ -36,7 +37,7 @@ export function LegalSection({ icon: Icon, title, description, children, classNa
       <CardContent className="space-y-3 p-4 text-sm leading-6 text-slate-700 sm:p-5">
         {children}
       </CardContent>
-    </Card>
+    </PlatformSurfaceCard>
   );
 }
 

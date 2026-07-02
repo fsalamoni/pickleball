@@ -23,7 +23,7 @@ import { db } from '@/core/config/firebase';
 import { createAuditLog } from '@/core/services/auditService';
 import { notifyUsers, NOTIFICATION_TYPE } from '@/core/services/notificationService';
 import { ARENA_COLLECTIONS, BOOKING_STATUS, BOOKING_KIND, PAYMENT_STATUS, BOOKING_STATUS_LABELS } from '../domain/constants.js';
-import { expandRecurring, isValidSlot, canTransition, weekdayOf } from '../domain/booking.js';
+import { expandRecurring, isValidSlot, canTransition, weekdayOf, hasConflictWithConfirmed } from '../domain/booking.js';
 import { listArenaManagerIds } from './arenaService.js';
 
 const COL = ARENA_COLLECTIONS;
@@ -64,6 +64,11 @@ export async function createBooking(arena, user, profile, input) {
     const slot = { date: str(input.date), start: str(input.start), end: str(input.end) };
     if (!isValidSlot(slot)) throw new Error('Preencha a data e um horário válido (fim depois do início).');
     slots = [slot];
+  }
+
+  const existingBookings = await listArenaBookings(arena.id);
+  if (hasConflictWithConfirmed(slots, existingBookings)) {
+    throw new Error('Já existe uma reserva confirmada nesse horário. Escolha outro período.');
   }
 
   const id = doc(collection(db, COL.bookings)).id;
@@ -126,6 +131,13 @@ export async function listArenaBookings(arenaId) {
 export async function updateBookingStatus(booking, nextStatus, actor, { agreedPrice, byManager = true } = {}) {
   if (!canTransition(booking.status, nextStatus)) {
     throw new Error(`Transição inválida (${BOOKING_STATUS_LABELS[booking.status]} → ${BOOKING_STATUS_LABELS[nextStatus] || nextStatus}).`);
+  }
+  if (nextStatus === BOOKING_STATUS.CONFIRMED) {
+    const existingBookings = await listArenaBookings(booking.arena_id);
+    const others = existingBookings.filter((item) => item.id !== booking.id);
+    if (hasConflictWithConfirmed(booking.slots || [], others)) {
+      throw new Error('Não é possível confirmar: já existe outra reserva confirmada em conflito com este horário.');
+    }
   }
   const patch = { status: nextStatus, updated_at: serverTimestamp() };
   if (agreedPrice !== undefined) patch.agreed_price = num(agreedPrice);

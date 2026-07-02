@@ -3,6 +3,7 @@ import { toast } from 'sonner';
 import { Camera, ImagePlus, Loader2, Trash2 } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { cn } from '@/core/lib/utils';
+import { PhotoLightbox } from '@/components/ui/photo-lightbox';
 import { useAuth } from '@/core/lib/FirebaseAuthContext';
 import { uploadImage, maxImageMb, ACCEPTED_IMAGE_ATTR } from '@/core/services/storageService';
 
@@ -60,28 +61,52 @@ export function ImageUpload({
 
   return (
     <div className={cn('flex items-center gap-4', className)}>
-      <button
-        type="button"
-        onClick={openPicker}
-        disabled={busy || disabled}
-        aria-label={label}
-        className={cn(
-          'group relative flex shrink-0 items-center justify-center overflow-hidden border border-emerald-950/10 bg-secondary/40 text-slate-400 transition-colors hover:border-emerald-400/50',
-          isCircle ? 'h-20 w-20 rounded-full' : 'h-24 w-24 rounded-xl',
-          (busy || disabled) && 'cursor-not-allowed opacity-80',
-        )}
-      >
-        {value ? (
-          <img src={value} alt="" className="h-full w-full object-cover" />
-        ) : (
-          fallback || <ImagePlus className="h-7 w-7" />
-        )}
-        {!disabled && (
-          <span className="absolute inset-0 flex items-center justify-center bg-slate-950/0 text-white opacity-0 transition-opacity group-hover:bg-slate-950/40 group-hover:opacity-100">
-            {busy ? <Loader2 className="h-5 w-5 animate-spin" /> : <Camera className="h-5 w-5" />}
-          </span>
-        )}
-      </button>
+      {value ? (
+        <PhotoLightbox
+          src={value}
+          alt={label}
+          title={label}
+          description="Use o botão Alterar para enviar outra imagem."
+          trigger={(
+            <button
+              type="button"
+              disabled={busy || disabled}
+              aria-label={`${label} ampliada`}
+              className={cn(
+                'group relative flex shrink-0 items-center justify-center overflow-hidden border border-emerald-950/10 bg-secondary/40 text-slate-400 transition-colors hover:border-emerald-400/50',
+                isCircle ? 'h-20 w-20 rounded-full' : 'h-24 w-24 rounded-xl',
+                (busy || disabled) && 'cursor-not-allowed opacity-80',
+              )}
+            >
+              <img src={value} alt="" className="h-full w-full object-cover" />
+              {!disabled && (
+                <span className="absolute inset-0 flex items-center justify-center bg-slate-950/0 text-white opacity-0 transition-opacity group-hover:bg-slate-950/40 group-hover:opacity-100">
+                  {busy ? <Loader2 className="h-5 w-5 animate-spin" /> : <Camera className="h-5 w-5" />}
+                </span>
+              )}
+            </button>
+          )}
+        />
+      ) : (
+        <button
+          type="button"
+          onClick={openPicker}
+          disabled={busy || disabled}
+          aria-label={label}
+          className={cn(
+            'group relative flex shrink-0 items-center justify-center overflow-hidden border border-emerald-950/10 bg-secondary/40 text-slate-400 transition-colors hover:border-emerald-400/50',
+            isCircle ? 'h-20 w-20 rounded-full' : 'h-24 w-24 rounded-xl',
+            (busy || disabled) && 'cursor-not-allowed opacity-80',
+          )}
+        >
+          {fallback || <ImagePlus className="h-7 w-7" />}
+          {!disabled && (
+            <span className="absolute inset-0 flex items-center justify-center bg-slate-950/0 text-white opacity-0 transition-opacity group-hover:bg-slate-950/40 group-hover:opacity-100">
+              {busy ? <Loader2 className="h-5 w-5 animate-spin" /> : <Camera className="h-5 w-5" />}
+            </span>
+          )}
+        </button>
+      )}
 
       <div className="min-w-0 space-y-1.5">
         <input

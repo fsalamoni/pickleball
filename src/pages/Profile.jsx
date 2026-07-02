@@ -101,6 +101,7 @@ export default function Profile() {
     userProfile?.address_public,
     userProfile?.directory_listed,
     userProfile?.photo_url,
+    user?.photoURL,
     userProfile?.is_coach,
     userProfile?.coach_bio,
     userProfile?.coach_price,
@@ -253,10 +254,10 @@ export default function Profile() {
   };
 
   return (
-    <div className="mx-auto max-w-4xl space-y-4">
-      <section className="arena-panel-strong rounded-lg p-5 sm:p-6">
+    <div className="mx-auto max-w-4xl space-y-5">
+      <section className="arena-panel-strong rounded-[1.25rem] p-5 sm:rounded-[2rem] sm:p-8">
         <div className="flex items-start gap-3">
-          <div className="flex h-10 w-10 shrink-0 items-center justify-center rounded-md bg-amber-300 text-slate-950">
+          <div className="flex h-10 w-10 shrink-0 items-center justify-center rounded-2xl bg-amber-300 text-slate-950">
             <UserCheck className="h-5 w-5" />
           </div>
           <div className="max-w-2xl space-y-2">
@@ -267,7 +268,7 @@ export default function Profile() {
         </div>
       </section>
 
-      <Card className="overflow-hidden">
+      <Card className="rounded-[2rem] border-white/80 bg-white/82 overflow-hidden">
         <CardHeader className="border-b border-emerald-950/10 bg-white/45 p-4 sm:p-5">
           <CardTitle className="text-base text-slate-950">Dados do participante</CardTitle>
           <CardDescription>Atualize nome público, data de nascimento, telefone e experiência no pickleball.</CardDescription>
@@ -378,7 +379,7 @@ export default function Profile() {
         </CardContent>
       </Card>
 
-      <Card className="overflow-hidden">
+      <Card className="rounded-[2rem] border-white/80 bg-white/82 overflow-hidden">
         <CardHeader className="border-b border-emerald-950/10 bg-white/45 p-4 sm:p-5">
           <CardTitle className="flex items-center gap-2 text-base text-slate-950">
             <Users className="h-5 w-5 text-emerald-700" /> Comunidade e privacidade

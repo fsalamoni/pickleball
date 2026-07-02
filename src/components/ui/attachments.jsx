@@ -1,15 +1,16 @@
+/* eslint-disable react-refresh/only-export-components */
 import React, { useRef, useState, useCallback, useEffect } from 'react';
 import { toast } from 'sonner';
 import { Download, FileText, ImagePlus, Loader2, Paperclip, X } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { cn } from '@/core/lib/utils';
+import { PhotoLightbox } from '@/components/ui/photo-lightbox';
 import { useAuth } from '@/core/lib/FirebaseAuthContext';
 import {
   uploadAttachment,
   deleteAttachment,
   downloadAttachment,
   formatBytes,
-  maxFileMb,
   ACCEPTED_FILE_ATTR,
 } from '@/core/services/storageService';
 
@@ -126,7 +127,11 @@ export function PendingAttachmentList({ items = [], onRemove, className }) {
           className="group relative flex items-center gap-2 overflow-hidden rounded-lg border border-emerald-950/10 bg-secondary/40"
         >
           {item.kind === 'image' ? (
-            <img src={item.url} alt="" className="h-16 w-16 object-cover" />
+            <PhotoLightbox
+              src={item.url}
+              alt={item.name || 'Imagem'}
+              trigger={<img src={item.url} alt="" className="h-16 w-16 cursor-zoom-in object-cover" />}
+            />
           ) : (
             <div className="flex h-16 w-44 items-center gap-2 px-3">
               <FileText className="h-6 w-6 shrink-0 text-emerald-700" />
@@ -162,9 +167,12 @@ export function AttachmentGallery({ attachments = [], className }) {
         <div className="grid grid-cols-2 gap-2 sm:grid-cols-3">
           {images.map((image) => (
             <div key={image.path || image.url} className="group relative overflow-hidden rounded-lg border border-emerald-950/10">
-              <a href={image.url} target="_blank" rel="noopener noreferrer">
-                <img src={image.url} alt={image.name || ''} loading="lazy" className="h-32 w-full object-cover transition-transform group-hover:scale-[1.02]" />
-              </a>
+              <PhotoLightbox
+                src={image.url}
+                alt={image.name || ''}
+                title={image.name || 'Imagem'}
+                trigger={<img src={image.url} alt={image.name || ''} loading="lazy" className="h-32 w-full cursor-zoom-in object-cover transition-transform group-hover:scale-[1.02]" />}
+              />
               <button
                 type="button"
                 onClick={() => downloadAttachment(image.url, image.name)}

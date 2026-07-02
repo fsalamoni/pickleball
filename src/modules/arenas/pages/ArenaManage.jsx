@@ -7,6 +7,8 @@ import { Card, CardContent } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { Skeleton } from '@/components/ui/skeleton';
 import { ImageUpload } from '@/components/ui/image-upload';
+import { PlatformSurfaceCard } from '@/components/ui/platform-page';
+import { PhotoLightbox } from '@/components/ui/photo-lightbox';
 import ConfirmDialog from '@/components/ConfirmDialog';
 import { useFeatureFlag } from '@/core/lib/FeatureFlagsContext';
 import { FEATURE_FLAG } from '@/core/featureFlags';
@@ -76,8 +78,7 @@ function PhotosTab({ arena }) {
   }
 
   return (
-    <Card>
-      <CardContent className="space-y-4 p-5">
+    <PlatformSurfaceCard contentClassName="space-y-4 p-5">
         <div>
           <p className="mb-2 text-sm font-semibold text-slate-800">Fotos da arena</p>
           <p className="mb-3 text-xs text-slate-500">A primeira foto é usada como capa. Até 20 fotos.</p>
@@ -85,7 +86,11 @@ function PhotosTab({ arena }) {
             <div className="mb-3 grid grid-cols-2 gap-2 sm:grid-cols-3">
               {photos.map((p, i) => (
                 <div key={p.path || i} className="group relative">
-                  <img src={p.url} alt="" className="h-28 w-full rounded-lg object-cover" />
+                  <PhotoLightbox
+                    src={p.url}
+                    alt={`Foto ${i + 1} da arena`}
+                    trigger={<img src={p.url} alt="" className="h-28 w-full cursor-zoom-in rounded-lg object-cover" />}
+                  />
                   {i === 0 && <span className="absolute left-1 top-1 rounded bg-emerald-600 px-1.5 py-0.5 text-[10px] text-white">Capa</span>}
                   <button
                     type="button"
@@ -103,8 +108,7 @@ function PhotosTab({ arena }) {
             <ImageUpload value="" onChange={addPhoto} folder="arenas" label="Adicionar foto" hint="JPG/PNG da arena, quadras, estrutura." />
           )}
         </div>
-      </CardContent>
-    </Card>
+    </PlatformSurfaceCard>
   );
 }
 

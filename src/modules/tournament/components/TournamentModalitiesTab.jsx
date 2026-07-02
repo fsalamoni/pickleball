@@ -6,6 +6,10 @@ import { Label } from '@/components/ui/label';
 import { Badge } from '@/components/ui/badge';
 import { EmptyState } from '@/components/ui/empty-state';
 import {
+  PlatformFormSection,
+  PlatformSurfaceCard,
+} from '@/components/ui/platform-page';
+import {
   Dialog,
   DialogContent,
   DialogHeader,
@@ -269,15 +273,13 @@ export default function TournamentModalitiesTab({ tournament, isAdmin }) {
       {isLoading ? (
         <p className="text-sm text-slate-500">Carregando…</p>
       ) : modalities.length === 0 ? (
-        <Card className="rounded-[1.75rem] border-white/80 bg-white/82">
-          <CardContent className="p-2">
+        <PlatformSurfaceCard contentClassName="p-2">
             <EmptyState
               icon={Layers}
               title="Nenhuma modalidade cadastrada"
               description="Crie a primeira modalidade para começar a estruturar as inscrições, fases, horários e a pontuação de cada disputa."
             />
-          </CardContent>
-        </Card>
+        </PlatformSurfaceCard>
       ) : (
         <div className="grid md:grid-cols-2 gap-3">
           {modalities.map((m) => (
@@ -355,19 +357,11 @@ export default function TournamentModalitiesTab({ tournament, isAdmin }) {
             </DialogDescription>
           </DialogHeader>
           <div className="space-y-5 max-h-[76vh] overflow-y-auto pr-1">
-            <section className="space-y-4 rounded-[1.5rem] border border-emerald-950/10 bg-white/75 p-5">
-              <div className="flex items-start gap-3">
-                <div className="flex h-10 w-10 items-center justify-center rounded-2xl bg-emerald-100 text-emerald-700">
-                  <Layers className="h-4.5 w-4.5" />
-                </div>
-                <div>
-                  <div className="text-base font-semibold text-slate-950">Identidade da modalidade</div>
-                  <p className="mt-1 text-sm leading-6 text-slate-600">
-                    Comece pelo recorte competitivo. Esse bloco define como a modalidade será apresentada e filtrada pelos atletas.
-                  </p>
-                </div>
-              </div>
-
+            <PlatformFormSection
+              icon={Layers}
+              title="Identidade da modalidade"
+              description="Comece pelo recorte competitivo. Esse bloco define como a modalidade será apresentada e filtrada pelos atletas."
+            >
               <div>
                 <Label>Nome</Label>
                 <Input value={form.name} onChange={(e) => set('name', e.target.value)} placeholder="Ex.: Duplas Mistas Intermediário" className="mt-2" />
@@ -378,21 +372,13 @@ export default function TournamentModalitiesTab({ tournament, isAdmin }) {
                 <SelectRow label="Gênero" value={form.gender_category} options={GENDER_CATEGORY_LABELS} onChange={(v) => set('gender_category', v)} />
                 <SelectRow label="Idade" value={form.age_category} options={AGE_CATEGORY_LABELS} onChange={(v) => set('age_category', v)} />
               </div>
-            </section>
+            </PlatformFormSection>
 
-            <section className="space-y-4 rounded-[1.5rem] border border-emerald-950/10 bg-white/75 p-5">
-              <div className="flex items-start gap-3">
-                <div className="flex h-10 w-10 items-center justify-center rounded-2xl bg-emerald-100 text-emerald-700">
-                  <Ticket className="h-4.5 w-4.5" />
-                </div>
-                <div>
-                  <div className="text-base font-semibold text-slate-950">Vagas e inscrição</div>
-                  <p className="mt-1 text-sm leading-6 text-slate-600">
-                    Defina capacidade e taxa da modalidade sem misturar isso com a montagem técnica das fases.
-                  </p>
-                </div>
-              </div>
-
+            <PlatformFormSection
+              icon={Ticket}
+              title="Vagas e inscrição"
+              description="Defina capacidade e taxa da modalidade sem misturar isso com a montagem técnica das fases."
+            >
               <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
                 <div className="space-y-2 md:col-span-2">
                   <div className="flex items-center justify-between gap-3 rounded-[1.25rem] border border-slate-200 p-4">
@@ -430,21 +416,13 @@ export default function TournamentModalitiesTab({ tournament, isAdmin }) {
                   <Input type="number" min={0} step="0.01" value={form.entry_fee_brl} onChange={(e) => set('entry_fee_brl', e.target.value)} className="mt-2" />
                 </div>
               </div>
-            </section>
+            </PlatformFormSection>
 
-            <section className="space-y-4 rounded-[1.5rem] border border-emerald-950/10 bg-white/75 p-5">
-              <div className="flex items-start gap-3">
-                <div className="flex h-10 w-10 items-center justify-center rounded-2xl bg-emerald-100 text-emerald-700">
-                  <Settings2 className="h-4.5 w-4.5" />
-                </div>
-                <div>
-                  <div className="text-base font-semibold text-slate-950">Estrutura competitiva</div>
-                  <p className="mt-1 text-sm leading-6 text-slate-600">
-                    Monte as fases na ordem em que o atleta vai vivê-las. A pontuação agora é definida dentro de cada fase.
-                  </p>
-                </div>
-              </div>
-
+            <PlatformFormSection
+              icon={Settings2}
+              title="Estrutura competitiva"
+              description="Monte as fases na ordem em que o atleta vai vivê-las. A pontuação agora é definida dentro de cada fase."
+            >
               {multiPhaseEnabled ? (
                 <PhasesEditor
                   phases={form.phases}
@@ -547,20 +525,13 @@ export default function TournamentModalitiesTab({ tournament, isAdmin }) {
                   </div>
                 </div>
               )}
-            </section>
+            </PlatformFormSection>
 
-            <section className="space-y-4 rounded-[1.5rem] border border-emerald-950/10 bg-white/75 p-5">
-              <div className="flex items-start gap-3">
-                <div className="flex h-10 w-10 items-center justify-center rounded-2xl bg-emerald-100 text-emerald-700">
-                  <CalendarClock className="h-4.5 w-4.5" />
-                </div>
-                <div>
-                  <div className="text-base font-semibold text-slate-950">Quadras e horários</div>
-                  <p className="mt-1 text-sm leading-6 text-slate-600">
-                    Esses dados ajudam o sorteio a distribuir jogos sem conflito e com cadência operacional melhor.
-                  </p>
-                </div>
-              </div>
+            <PlatformFormSection
+              icon={CalendarClock}
+              title="Quadras e horários"
+              description="Esses dados ajudam o sorteio a distribuir jogos sem conflito e com cadência operacional melhor."
+            >
               <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
                 <div>
                   <Label>Quadras disponíveis</Label>
@@ -610,7 +581,7 @@ export default function TournamentModalitiesTab({ tournament, isAdmin }) {
                 </div>
               </div>
               <ScheduleHint form={form} />
-            </section>
+            </PlatformFormSection>
 
             <section className="space-y-3 rounded-[1.5rem] border border-emerald-950/10 bg-white/75 p-5">
               <Label>Observações (opcional)</Label>
