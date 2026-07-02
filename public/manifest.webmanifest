@@ -1,7 +1,7 @@
 {
-  "name": "Pickleball — Torneios",
-  "short_name": "Pickleball",
-  "description": "Plataforma de criação e gestão de torneios de pickleball: single, duplas e americana, com sorteio automatizado e ranking ao vivo.",
+  "name": "PickleRush",
+  "short_name": "PickleRush",
+  "description": "Conectando e organizando o pickleball globalmente.",
   "id": "/",
   "start_url": "/?source=pwa",
   "scope": "/",

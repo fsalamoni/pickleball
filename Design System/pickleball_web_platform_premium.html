@@ -1,0 +1,751 @@
+<!DOCTYPE html>
+<html lang="pt-BR" class="antialiased">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>PickleHub - Premium Platform</title>
+    
+    <!-- Tailwind CSS -->
+    <script src="https://cdn.tailwindcss.com"></script>
+    
+    <!-- Premium Google Fonts: Outfit (Display) & Inter (Body) -->
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600&family=Outfit:wght@400;500;600;700;800&display=swap" rel="stylesheet">
+    
+    <!-- FontAwesome -->
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+    
+    <script>
+        tailwind.config = {
+            theme: {
+                extend: {
+                    fontFamily: {
+                        sans: ['Inter', 'sans-serif'],
+                        display: ['Outfit', 'sans-serif'],
+                    },
+                    colors: {
+                        // Paleta Premium "Athleisure"
+                        acid: {
+                            DEFAULT: '#D4F82E', // Verde Limão Neon Esportivo
+                            light: '#E5FA7A',
+                            dark: '#A6C61A',
+                        },
+                        ink: {
+                            DEFAULT: '#0B0F19', // Quase preto, tom frio
+                            light: '#1A2235',
+                            lighter: '#2D3A54'
+                        },
+                        paper: {
+                            DEFAULT: '#F7F9FC', // Fundo off-white azulado/orgânico
+                            pure: '#FFFFFF',
+                            dark: '#E2E8F0'
+                        }
+                    },
+                    boxShadow: {
+                        'organic': '0 24px 48px -12px rgba(11, 15, 25, 0.06)',
+                        'organic-sm': '0 12px 24px -8px rgba(11, 15, 25, 0.04)',
+                        'glow': '0 0 24px -4px rgba(212, 248, 46, 0.4)'
+                    },
+                    borderRadius: {
+                        '2.5xl': '1.25rem',
+                        '3xl': '1.75rem',
+                        '4xl': '2.25rem',
+                    }
+                }
+            }
+        }
+    </script>
+    
+    <style>
+        /* Tipografia Base e Scrollbar Clean */
+        body {
+            background-color: #F7F9FC;
+            color: #1A2235;
+        }
+        
+        ::-webkit-scrollbar { width: 6px; height: 6px; }
+        ::-webkit-scrollbar-track { background: transparent; }
+        ::-webkit-scrollbar-thumb { background: #CBD5E1; border-radius: 10px; }
+        ::-webkit-scrollbar-thumb:hover { background: #94A3B8; }
+
+        /* Animações Orgânicas de Entrada */
+        .page-section {
+            display: none;
+            opacity: 0;
+            transform: translateY(15px) scale(0.99);
+            transition: all 0.4s cubic-bezier(0.16, 1, 0.3, 1);
+        }
+        .page-section.active {
+            display: block;
+            opacity: 1;
+            transform: translateY(0) scale(1);
+        }
+
+        /* Utilidade para Glassmorphism */
+        .glass {
+            background: rgba(255, 255, 255, 0.7);
+            backdrop-filter: blur(16px);
+            -webkit-backdrop-filter: blur(16px);
+            border-bottom: 1px solid rgba(255, 255, 255, 0.4);
+        }
+
+        /* Texturas SVG sutis para fundos */
+        .bg-mesh {
+            background-color: #0B0F19;
+            background-image: radial-gradient(at 89% 0%, hsla(68,93%,57%,0.15) 0px, transparent 50%),
+                              radial-gradient(at 0% 100%, hsla(210,100%,40%,0.1) 0px, transparent 50%);
+        }
+        
+        /* Efeito de hover suave em botões */
+        .btn-press { transition: transform 0.15s cubic-bezier(0.4, 0, 0.2, 1); }
+        .btn-press:active { transform: scale(0.96); }
+    </style>
+</head>
+
+<body class="h-screen overflow-hidden flex font-sans selection:bg-acid selection:text-ink">
+
+    <!-- Sidebar Premium (Flutuante / Clean) -->
+    <aside id="sidebar" class="bg-paper-pure w-[280px] flex-shrink-0 hidden lg:flex flex-col border-r border-gray-100 z-30 transition-all duration-300">
+        
+        <!-- Logo -->
+        <div class="h-24 flex items-center px-8">
+            <div class="w-10 h-10 bg-acid rounded-2xl flex items-center justify-center mr-3 text-ink shadow-glow transform -rotate-6">
+                <i class="fa-solid fa-table-tennis-paddle-ball text-xl"></i>
+            </div>
+            <span class="text-2xl font-display font-bold tracking-tight text-ink">Pickle<span class="text-gray-400 font-medium">Hub</span></span>
+        </div>
+
+        <!-- Navigation -->
+        <nav class="flex-1 overflow-y-auto px-4 py-6 space-y-2 hide-scrollbar">
+            
+            <p class="px-4 text-[11px] font-bold text-gray-400 uppercase tracking-widest mb-4">Plataforma</p>
+            
+            <a href="#" onclick="navigateTo('dashboard', this)" class="nav-item active flex items-center px-4 py-3.5 bg-ink text-white rounded-2xl transition-all btn-press group">
+                <i class="fa-solid fa-border-all w-6 text-xl opacity-90 group-hover:text-acid transition-colors"></i>
+                <span class="ml-3 font-medium">Visão Geral</span>
+            </a>
+            
+            <a href="#" onclick="navigateTo('play', this)" class="nav-item flex items-center px-4 py-3.5 text-gray-500 hover:bg-gray-50 hover:text-ink rounded-2xl transition-all btn-press group">
+                <i class="fa-solid fa-location-dot w-6 text-xl opacity-70 group-hover:text-acid transition-colors"></i>
+                <span class="ml-3 font-medium">Explorar Quadras</span>
+            </a>
+            
+            <a href="#" onclick="navigateTo('tournaments', this)" class="nav-item flex items-center px-4 py-3.5 text-gray-500 hover:bg-gray-50 hover:text-ink rounded-2xl transition-all btn-press group">
+                <i class="fa-solid fa-trophy w-6 text-xl opacity-70 group-hover:text-acid transition-colors"></i>
+                <span class="ml-3 font-medium">Torneios <span class="ml-2 bg-acid/20 text-ink-lighter text-[10px] px-2 py-0.5 rounded-full font-bold">Novo</span></span>
+            </a>
+            
+            <a href="#" onclick="navigateTo('community', this)" class="nav-item flex items-center px-4 py-3.5 text-gray-500 hover:bg-gray-50 hover:text-ink rounded-2xl transition-all btn-press group">
+                <i class="fa-solid fa-bolt w-6 text-xl opacity-70 group-hover:text-acid transition-colors"></i>
+                <span class="ml-3 font-medium">Comunidade</span>
+            </a>
+
+            <p class="px-4 text-[11px] font-bold text-gray-400 uppercase tracking-widest mb-4 mt-8">Você</p>
+            
+            <a href="#" onclick="navigateTo('profile', this)" class="nav-item flex items-center px-4 py-3.5 text-gray-500 hover:bg-gray-50 hover:text-ink rounded-2xl transition-all btn-press group">
+                <i class="fa-regular fa-user w-6 text-xl opacity-70 group-hover:text-acid transition-colors"></i>
+                <span class="ml-3 font-medium">Seu Perfil</span>
+            </a>
+        </nav>
+
+        <!-- User Profile Card (Bottom) -->
+        <div class="p-4 mb-4 mx-4 bg-paper rounded-2.5xl border border-gray-100 flex items-center gap-3 hover:border-gray-200 cursor-pointer transition-colors">
+            <div class="relative">
+                <img src="https://images.unsplash.com/photo-1500648767791-00dcc994a43e?q=80&w=150&auto=format&fit=crop" alt="Rafael T." class="w-10 h-10 rounded-full object-cover">
+                <div class="absolute -bottom-1 -right-1 w-4 h-4 bg-acid rounded-full border-2 border-paper flex items-center justify-center">
+                    <i class="fa-solid fa-check text-[8px] text-ink"></i>
+                </div>
+            </div>
+            <div class="flex-1 min-w-0">
+                <p class="text-sm font-bold text-ink truncate">Rafael Tavares</p>
+                <p class="text-xs text-gray-500 font-medium">Nível 3.54</p>
+            </div>
+            <i class="fa-solid fa-chevron-right text-gray-400 text-xs"></i>
+        </div>
+    </aside>
+
+    <!-- Main Area -->
+    <div class="flex-1 flex flex-col relative w-full">
+        
+        <!-- Top Navbar (Glassmorphism) -->
+        <header class="h-20 glass absolute top-0 w-full z-20 px-6 lg:px-10 flex items-center justify-between transition-all">
+            
+            <!-- Mobile Menu Toggle -->
+            <button onclick="toggleMobileMenu()" class="lg:hidden w-10 h-10 bg-white rounded-full shadow-sm flex items-center justify-center text-ink mr-4">
+                <i class="fa-solid fa-bars"></i>
+            </button>
+
+            <!-- Search (Organic, rounded) -->
+            <div class="flex-1 max-w-md hidden md:block">
+                <div class="relative group">
+                    <div class="absolute inset-y-0 left-0 pl-4 flex items-center pointer-events-none text-gray-400 group-focus-within:text-ink transition-colors">
+                        <i class="fa-solid fa-magnifying-glass"></i>
+                    </div>
+                    <input type="text" class="w-full bg-white/80 border border-gray-200 text-ink text-sm rounded-full focus:ring-4 focus:ring-gray-100 focus:border-gray-300 focus:bg-white block pl-11 p-3 transition-all placeholder-gray-400" placeholder="Buscar jogadores, quadras em Porto Alegre...">
+                </div>
+            </div>
+
+            <!-- Actions -->
+            <div class="flex items-center gap-4 ml-auto">
+                <button class="relative text-gray-500 hover:text-ink transition-colors w-10 h-10 flex items-center justify-center btn-press">
+                    <i class="fa-regular fa-bell text-xl"></i>
+                    <span class="absolute top-2 right-2 w-2 h-2 bg-red-500 rounded-full border-2 border-white"></span>
+                </button>
+                <button class="bg-acid text-ink font-bold px-6 py-3 rounded-full text-sm shadow-glow hover:bg-acid-light btn-press transition-all flex items-center gap-2">
+                    <i class="fa-solid fa-plus"></i> <span class="hidden sm:inline">Criar Partida</span>
+                </button>
+            </div>
+        </header>
+
+        <!-- Content Scroll Area -->
+        <main class="flex-1 overflow-x-hidden overflow-y-auto pt-28 pb-12 px-4 sm:px-6 lg:px-10">
+            
+            <!-- ====== PAGE: DASHBOARD (Bento Grid Style) ====== -->
+            <div id="dashboard" class="page-section active max-w-[1400px] mx-auto">
+                
+                <div class="mb-8">
+                    <h1 class="font-display text-3xl sm:text-4xl font-bold text-ink">Bom dia, Rafael 👋</h1>
+                    <p class="text-gray-500 mt-2 font-medium">Seu DUPR subiu <span class="text-green-500 font-bold">+0.04</span> após a última partida. Continue assim!</p>
+                </div>
+
+                <!-- BENTO GRID -->
+                <div class="grid grid-cols-1 md:grid-cols-2 xl:grid-cols-4 gap-6">
+                    
+                    <!-- Hero Card (Span 2) -->
+                    <div class="col-span-1 md:col-span-2 xl:col-span-2 bg-mesh rounded-4xl p-8 relative overflow-hidden shadow-organic group">
+                        <div class="absolute -right-10 -top-10 w-64 h-64 bg-acid opacity-20 blur-[80px] rounded-full group-hover:opacity-30 transition-opacity duration-700"></div>
+                        
+                        <div class="relative z-10 h-full flex flex-col justify-between">
+                            <div>
+                                <span class="bg-white/10 text-acid backdrop-blur-md px-3 py-1 rounded-full text-xs font-bold uppercase tracking-wider border border-white/10">Próximo Jogo</span>
+                                <h2 class="font-display text-3xl text-white font-bold mt-4 mb-2">Desafio Open Play</h2>
+                                <p class="text-gray-300 flex items-center gap-2"><i class="fa-solid fa-location-dot"></i> Arena Praia de Belas • Hoje, 19:30</p>
+                            </div>
+                            
+                            <div class="mt-8 flex items-center justify-between bg-white/5 backdrop-blur-lg border border-white/10 rounded-2.5xl p-4">
+                                <div class="flex -space-x-3">
+                                    <img src="https://images.unsplash.com/photo-1500648767791-00dcc994a43e?w=100&auto=format&fit=crop" class="w-12 h-12 rounded-full border-2 border-ink object-cover" title="Você">
+                                    <img src="https://images.unsplash.com/photo-1534528741775-53994a69daeb?w=100&auto=format&fit=crop" class="w-12 h-12 rounded-full border-2 border-ink object-cover">
+                                    <img src="https://images.unsplash.com/photo-1507003211169-0a1dd7228f2d?w=100&auto=format&fit=crop" class="w-12 h-12 rounded-full border-2 border-ink object-cover">
+                                    <div class="w-12 h-12 rounded-full border-2 border-dashed border-gray-500 flex items-center justify-center text-gray-400 bg-ink/50 backdrop-blur-sm">
+                                        <i class="fa-solid fa-plus text-sm"></i>
+                                    </div>
+                                </div>
+                                <button class="bg-white text-ink px-5 py-2.5 rounded-full text-sm font-bold hover:scale-105 transition-transform">Convidar</button>
+                            </div>
+                        </div>
+                    </div>
+
+                    <!-- Stat Card 1 -->
+                    <div class="bg-white rounded-4xl p-8 shadow-organic-sm border border-gray-100 flex flex-col justify-center relative overflow-hidden group">
+                        <div class="absolute top-0 right-0 w-24 h-24 bg-blue-50 rounded-bl-full -mr-8 -mt-8 transition-transform group-hover:scale-110"></div>
+                        <div class="relative z-10">
+                            <div class="w-12 h-12 bg-ink text-white rounded-2xl flex items-center justify-center text-xl mb-6 shadow-md">
+                                <i class="fa-solid fa-arrow-trend-up"></i>
+                            </div>
+                            <p class="text-gray-500 font-medium mb-1">Nível DUPR</p>
+                            <div class="flex items-baseline gap-3">
+                                <h3 class="font-display text-5xl font-bold text-ink tracking-tight">3.54</h3>
+                                <span class="text-green-500 font-bold text-sm bg-green-50 px-2 py-1 rounded-lg">+1.2%</span>
+                            </div>
+                        </div>
+                    </div>
+
+                    <!-- Stat Card 2 -->
+                    <div class="bg-white rounded-4xl p-8 shadow-organic-sm border border-gray-100 flex flex-col justify-center relative overflow-hidden group">
+                        <div class="absolute top-0 right-0 w-24 h-24 bg-orange-50 rounded-bl-full -mr-8 -mt-8 transition-transform group-hover:scale-110"></div>
+                        <div class="relative z-10">
+                            <div class="w-12 h-12 bg-acid text-ink rounded-2xl flex items-center justify-center text-xl mb-6 shadow-md">
+                                <i class="fa-solid fa-fire"></i>
+                            </div>
+                            <p class="text-gray-500 font-medium mb-1">Sequência de Vitórias</p>
+                            <div class="flex items-baseline gap-3">
+                                <h3 class="font-display text-5xl font-bold text-ink tracking-tight">4</h3>
+                                <span class="text-gray-400 font-medium text-sm">Partidas</span>
+                            </div>
+                        </div>
+                    </div>
+
+                    <!-- Action Banner (Span Full on mobile, Span 2 on Desktop) -->
+                    <div class="col-span-1 md:col-span-2 xl:col-span-2 bg-gradient-to-r from-blue-600 to-indigo-700 rounded-4xl p-8 text-white shadow-organic flex flex-col sm:flex-row justify-between items-center overflow-hidden relative group">
+                        <!-- Abstract shapes -->
+                        <div class="absolute -right-20 -bottom-20 w-64 h-64 border-[40px] border-white/10 rounded-full group-hover:scale-110 transition-transform duration-700"></div>
+                        
+                        <div class="relative z-10 mb-6 sm:mb-0 text-center sm:text-left">
+                            <h3 class="font-display text-2xl font-bold mb-2">Torneio de Inverno RS</h3>
+                            <p class="text-blue-100 opacity-90 max-w-sm">Inscrições encerram em 48h. Vagas abertas para dupla mista (Categoria C).</p>
+                        </div>
+                        <button class="relative z-10 bg-white text-indigo-700 px-8 py-3.5 rounded-full font-bold shadow-lg hover:shadow-xl hover:-translate-y-1 transition-all whitespace-nowrap">
+                            Garantir Vaga
+                        </button>
+                    </div>
+
+                    <!-- Quick Actions Mini Grid -->
+                    <div class="col-span-1 md:col-span-2 xl:col-span-2 grid grid-cols-2 gap-4">
+                        <button onclick="navigateTo('play')" class="bg-white rounded-3xl p-6 shadow-organic-sm border border-gray-100 flex flex-col items-center justify-center gap-4 hover:border-gray-300 hover:shadow-organic transition-all group btn-press">
+                            <div class="w-16 h-16 rounded-full bg-paper flex items-center justify-center text-ink text-2xl group-hover:bg-acid transition-colors">
+                                <i class="fa-regular fa-calendar-check"></i>
+                            </div>
+                            <span class="font-display font-semibold text-ink">Agendar Quadra</span>
+                        </button>
+                        <button class="bg-white rounded-3xl p-6 shadow-organic-sm border border-gray-100 flex flex-col items-center justify-center gap-4 hover:border-gray-300 hover:shadow-organic transition-all group btn-press">
+                            <div class="w-16 h-16 rounded-full bg-paper flex items-center justify-center text-ink text-2xl group-hover:bg-acid transition-colors">
+                                <i class="fa-solid fa-pen-nib"></i>
+                            </div>
+                            <span class="font-display font-semibold text-ink">Lançar Placar</span>
+                        </button>
+                    </div>
+                </div>
+            </div>
+
+            <!-- ====== PAGE: EXPLORAR QUADRAS & JOGAR ====== -->
+            <div id="play" class="page-section max-w-[1400px] mx-auto">
+                <div class="flex flex-col md:flex-row justify-between items-start md:items-center mb-10 gap-6">
+                    <div>
+                        <h1 class="font-display text-3xl sm:text-4xl font-bold text-ink">Explorar Partidas</h1>
+                        <p class="text-gray-500 mt-2 font-medium">Encontre jogadores do seu nível ou reserve um espaço.</p>
+                    </div>
+                    
+                    <!-- Premium Toggle -->
+                    <div class="bg-white p-1.5 rounded-full shadow-sm border border-gray-100 inline-flex">
+                        <button class="px-6 py-2.5 bg-ink text-white rounded-full text-sm font-semibold shadow-md">Partidas (Matchmaking)</button>
+                        <button class="px-6 py-2.5 text-gray-500 hover:text-ink rounded-full text-sm font-medium transition-colors">Alugar Quadra</button>
+                    </div>
+                </div>
+
+                <!-- Organic Filter Bar -->
+                <div class="flex flex-wrap gap-3 mb-8">
+                    <button class="bg-white border border-gray-200 px-5 py-2 rounded-full text-sm font-medium text-ink hover:border-ink transition-colors flex items-center gap-2 shadow-sm">
+                        <i class="fa-solid fa-sliders text-gray-400"></i> Filtros
+                    </button>
+                    <button class="bg-acid text-ink border border-transparent px-5 py-2 rounded-full text-sm font-bold flex items-center gap-2 shadow-sm">
+                        Hoje
+                    </button>
+                    <button class="bg-white border border-gray-200 px-5 py-2 rounded-full text-sm font-medium text-gray-600 hover:border-ink transition-colors shadow-sm">
+                        Nível 3.0 - 4.0
+                    </button>
+                    <button class="bg-white border border-gray-200 px-5 py-2 rounded-full text-sm font-medium text-gray-600 hover:border-ink transition-colors shadow-sm">
+                        Duplas
+                    </button>
+                </div>
+
+                <!-- Match Cards Grid -->
+                <div class="grid grid-cols-1 md:grid-cols-2 xl:grid-cols-3 gap-8">
+                    
+                    <!-- Match Card 1 -->
+                    <div class="bg-white rounded-3xl overflow-hidden border border-gray-100 shadow-organic-sm hover:shadow-organic transition-all duration-300 group cursor-pointer flex flex-col">
+                        <div class="h-48 relative overflow-hidden">
+                            <img src="https://images.unsplash.com/photo-1622227922682-58c07886477e?auto=format&fit=crop&q=80&w=800" class="w-full h-full object-cover group-hover:scale-105 transition-transform duration-500">
+                            <div class="absolute inset-0 bg-gradient-to-t from-black/60 to-transparent"></div>
+                            
+                            <!-- Badges -->
+                            <div class="absolute top-4 left-4">
+                                <span class="bg-white/90 backdrop-blur-sm text-ink text-xs font-bold px-3 py-1.5 rounded-full shadow-sm">Nível 3.0+</span>
+                            </div>
+                            <div class="absolute top-4 right-4">
+                                <span class="bg-green-500 text-white text-xs font-bold px-3 py-1.5 rounded-full shadow-sm shadow-green-500/30">2 Vagas</span>
+                            </div>
+                            
+                            <!-- Price & Time -->
+                            <div class="absolute bottom-4 left-4 right-4 flex justify-between items-end">
+                                <div class="text-white">
+                                    <p class="font-display font-bold text-xl leading-tight">Clínica & Open Play</p>
+                                    <p class="text-white/80 text-sm mt-1"><i class="fa-regular fa-clock mr-1"></i> Hoje, 19:00 - 21:00</p>
+                                </div>
+                                <div class="bg-ink/80 backdrop-blur-md text-white font-bold px-3 py-1 rounded-xl border border-white/20">
+                                    R$ 35
+                                </div>
+                            </div>
+                        </div>
+                        
+                        <div class="p-6 flex-1 flex flex-col justify-between">
+                            <div class="mb-6">
+                                <div class="flex items-center gap-3 mb-4">
+                                    <div class="w-10 h-10 bg-gray-50 rounded-xl flex items-center justify-center text-gray-400 border border-gray-100">
+                                        <i class="fa-solid fa-map-pin"></i>
+                                    </div>
+                                    <div>
+                                        <p class="font-semibold text-ink text-sm">Complexo Esportivo Sul</p>
+                                        <p class="text-xs text-gray-500">A 3.2 km de você</p>
+                                    </div>
+                                </div>
+                                <div class="flex items-center justify-between bg-paper p-3 rounded-2xl">
+                                    <span class="text-xs font-medium text-gray-500 uppercase tracking-wide">Organizador</span>
+                                    <div class="flex items-center gap-2">
+                                        <img src="https://images.unsplash.com/photo-1599566150163-29194dcaad36?w=50&auto=format&fit=crop" class="w-6 h-6 rounded-full">
+                                        <span class="text-sm font-semibold text-ink">Marcos F.</span>
+                                    </div>
+                                </div>
+                            </div>
+                            <button class="w-full bg-ink text-white py-3.5 rounded-full font-bold text-sm group-hover:bg-acid group-hover:text-ink transition-colors">Entrar na Partida</button>
+                        </div>
+                    </div>
+
+                    <!-- Match Card 2 -->
+                    <div class="bg-white rounded-3xl overflow-hidden border border-gray-100 shadow-organic-sm hover:shadow-organic transition-all duration-300 group cursor-pointer flex flex-col">
+                        <div class="h-48 relative overflow-hidden">
+                            <img src="https://images.unsplash.com/photo-1554068865-24cecd4e34b8?auto=format&fit=crop&q=80&w=800" class="w-full h-full object-cover group-hover:scale-105 transition-transform duration-500">
+                            <div class="absolute inset-0 bg-gradient-to-t from-black/60 to-transparent"></div>
+                            
+                            <div class="absolute top-4 left-4">
+                                <span class="bg-ink text-acid text-xs font-bold px-3 py-1.5 rounded-full shadow-sm">Avançado 4.0+</span>
+                            </div>
+                            <div class="absolute top-4 right-4">
+                                <span class="bg-red-50 text-red-500 text-xs font-bold px-3 py-1.5 rounded-full shadow-sm border border-red-100">Lotado</span>
+                            </div>
+                            
+                            <div class="absolute bottom-4 left-4 right-4 flex justify-between items-end">
+                                <div class="text-white">
+                                    <p class="font-display font-bold text-xl leading-tight">Rei da Quadra - Duplas</p>
+                                    <p class="text-white/80 text-sm mt-1"><i class="fa-regular fa-clock mr-1"></i> Amanhã, 10:00 - 12:00</p>
+                                </div>
+                                <div class="bg-ink/80 backdrop-blur-md text-white font-bold px-3 py-1 rounded-xl border border-white/20">
+                                    R$ 40
+                                </div>
+                            </div>
+                        </div>
+                        
+                        <div class="p-6 flex-1 flex flex-col justify-between">
+                            <div class="mb-6">
+                                <div class="flex items-center gap-3 mb-4">
+                                    <div class="w-10 h-10 bg-gray-50 rounded-xl flex items-center justify-center text-gray-400 border border-gray-100">
+                                        <i class="fa-solid fa-map-pin"></i>
+                                    </div>
+                                    <div>
+                                        <p class="font-semibold text-ink text-sm">Clube de Campo Central</p>
+                                        <p class="text-xs text-gray-500">A 5.0 km de você</p>
+                                    </div>
+                                </div>
+                                <div class="flex items-center justify-between bg-paper p-3 rounded-2xl">
+                                    <span class="text-xs font-medium text-gray-500 uppercase tracking-wide">Lista de Espera</span>
+                                    <div class="flex -space-x-2">
+                                        <div class="w-6 h-6 rounded-full bg-gray-300 border-2 border-paper flex items-center justify-center text-[10px] text-white">+3</div>
+                                    </div>
+                                </div>
+                            </div>
+                            <button class="w-full bg-gray-100 text-gray-400 py-3.5 rounded-full font-bold text-sm cursor-not-allowed">Juntar-se à Espera</button>
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+            <!-- ====== PAGE: COMUNIDADE ====== -->
+            <div id="community" class="page-section max-w-[1000px] mx-auto">
+                <h1 class="font-display text-3xl sm:text-4xl font-bold text-ink mb-8">Comunidade</h1>
+
+                <div class="grid grid-cols-1 lg:grid-cols-3 gap-8">
+                    <!-- Feed Principal -->
+                    <div class="lg:col-span-2 space-y-6">
+                        
+                        <!-- Post Creator -->
+                        <div class="bg-white p-6 rounded-4xl border border-gray-100 shadow-organic-sm">
+                            <div class="flex gap-4 mb-4">
+                                <img src="https://images.unsplash.com/photo-1500648767791-00dcc994a43e?w=100&auto=format&fit=crop" class="w-12 h-12 rounded-full object-cover">
+                                <textarea class="w-full bg-transparent resize-none outline-none text-ink text-lg placeholder-gray-400 pt-2" rows="2" placeholder="Compartilhe uma vitória ou faça uma pergunta..."></textarea>
+                            </div>
+                            <div class="flex justify-between items-center pt-4 border-t border-gray-100">
+                                <div class="flex gap-2 text-gray-400">
+                                    <button class="w-10 h-10 rounded-full hover:bg-gray-50 flex items-center justify-center transition-colors"><i class="fa-regular fa-image"></i></button>
+                                    <button class="w-10 h-10 rounded-full hover:bg-gray-50 flex items-center justify-center transition-colors"><i class="fa-solid fa-location-dot"></i></button>
+                                </div>
+                                <button class="bg-ink text-white px-6 py-2 rounded-full font-bold text-sm btn-press">Publicar</button>
+                            </div>
+                        </div>
+
+                        <!-- Post Item -->
+                        <div class="bg-white p-6 rounded-4xl border border-gray-100 shadow-organic-sm">
+                            <div class="flex justify-between items-start mb-4">
+                                <div class="flex items-center gap-3">
+                                    <img src="https://images.unsplash.com/photo-1534528741775-53994a69daeb?w=100&auto=format&fit=crop" class="w-12 h-12 rounded-full object-cover">
+                                    <div>
+                                        <p class="font-bold text-ink">Ana Souza</p>
+                                        <p class="text-xs text-gray-500">Há 2 horas • Compartilhou um placar</p>
+                                    </div>
+                                </div>
+                                <button class="text-gray-400 hover:text-ink"><i class="fa-solid fa-ellipsis"></i></button>
+                            </div>
+                            
+                            <p class="text-ink mb-6 text-lg">Manhã incrível nas quadras! Consegui defender o primeiro lugar no ranking do clube contra uma dupla duríssima. 🏓🔥</p>
+                            
+                            <!-- Placar Aesthetic -->
+                            <div class="bg-paper p-6 rounded-3xl mb-6 relative overflow-hidden">
+                                <!-- Decoração -->
+                                <div class="absolute -right-4 -bottom-4 text-gray-200 text-6xl opacity-50">
+                                    <i class="fa-solid fa-trophy"></i>
+                                </div>
+                                
+                                <div class="relative z-10 flex justify-between items-center max-w-sm mx-auto">
+                                    <div class="text-center">
+                                        <img src="https://images.unsplash.com/photo-1534528741775-53994a69daeb?w=100&auto=format&fit=crop" class="w-10 h-10 rounded-full mx-auto mb-2 border-2 border-acid">
+                                        <span class="font-bold text-ink block text-sm">Ana / Bia</span>
+                                        <span class="text-xs text-acid bg-ink px-2 py-0.5 rounded-full font-bold mt-1 inline-block">Vencedoras</span>
+                                    </div>
+                                    <div class="flex flex-col items-center justify-center">
+                                        <div class="flex gap-2 text-3xl font-display font-black text-ink">
+                                            <span>11</span> <span class="text-gray-300">-</span> <span>9</span>
+                                        </div>
+                                        <span class="text-[10px] uppercase text-gray-400 font-bold mt-1 tracking-widest">Partida Unica</span>
+                                    </div>
+                                    <div class="text-center opacity-60">
+                                        <div class="flex -space-x-2 justify-center mb-2">
+                                            <img src="https://images.unsplash.com/photo-1599566150163-29194dcaad36?w=100&auto=format&fit=crop" class="w-10 h-10 rounded-full border-2 border-paper">
+                                        </div>
+                                        <span class="font-bold text-ink block text-sm">João / Pedro</span>
+                                    </div>
+                                </div>
+                            </div>
+
+                            <div class="flex items-center gap-2 pt-4 border-t border-gray-100">
+                                <button class="flex items-center gap-2 px-4 py-2 rounded-full hover:bg-gray-50 text-gray-500 font-medium text-sm transition-colors group">
+                                    <i class="fa-regular fa-heart group-hover:text-red-500 transition-colors text-lg"></i> 24
+                                </button>
+                                <button class="flex items-center gap-2 px-4 py-2 rounded-full hover:bg-gray-50 text-gray-500 font-medium text-sm transition-colors">
+                                    <i class="fa-regular fa-comment text-lg"></i> 5
+                                </button>
+                            </div>
+                        </div>
+                    </div>
+
+                    <!-- Sidebar da Comunidade (Ranking) -->
+                    <div class="lg:col-span-1">
+                        <div class="bg-white rounded-4xl border border-gray-100 shadow-organic-sm p-6 sticky top-28">
+                            <div class="flex justify-between items-center mb-6">
+                                <h3 class="font-display font-bold text-xl text-ink">Ranking do Clube</h3>
+                                <button class="text-sm font-bold text-blue-600 hover:text-blue-800">Ver Todos</button>
+                            </div>
+                            
+                            <div class="space-y-4">
+                                <!-- Rank Item 1 -->
+                                <div class="flex items-center gap-4 bg-paper p-3 rounded-2xl">
+                                    <div class="w-6 text-center font-display font-black text-ink text-xl">1</div>
+                                    <div class="relative">
+                                        <img src="https://images.unsplash.com/photo-1507003211169-0a1dd7228f2d?w=100&auto=format&fit=crop" class="w-10 h-10 rounded-full object-cover">
+                                        <div class="absolute -top-1 -right-1 text-yellow-500 text-xs bg-white rounded-full"><i class="fa-solid fa-crown"></i></div>
+                                    </div>
+                                    <div class="flex-1 min-w-0">
+                                        <p class="text-sm font-bold text-ink truncate">Marcos Silva</p>
+                                        <p class="text-[10px] text-gray-500 uppercase tracking-wide">Rating: 4.25</p>
+                                    </div>
+                                </div>
+                                
+                                <!-- Rank Item 2 -->
+                                <div class="flex items-center gap-4 p-3 rounded-2xl hover:bg-gray-50 transition-colors">
+                                    <div class="w-6 text-center font-display font-bold text-gray-400 text-lg">2</div>
+                                    <img src="https://images.unsplash.com/photo-1534528741775-53994a69daeb?w=100&auto=format&fit=crop" class="w-10 h-10 rounded-full object-cover">
+                                    <div class="flex-1 min-w-0">
+                                        <p class="text-sm font-bold text-ink truncate">Ana Souza</p>
+                                        <p class="text-[10px] text-gray-500 uppercase tracking-wide">Rating: 4.02</p>
+                                    </div>
+                                </div>
+
+                                <!-- Separator -->
+                                <div class="flex justify-center"><i class="fa-solid fa-ellipsis-vertical text-gray-300"></i></div>
+
+                                <!-- Rank Item (Current User) -->
+                                <div class="flex items-center gap-4 bg-acid/10 border border-acid/30 p-3 rounded-2xl">
+                                    <div class="w-6 text-center font-display font-bold text-ink text-lg">15</div>
+                                    <img src="https://images.unsplash.com/photo-1500648767791-00dcc994a43e?w=100&auto=format&fit=crop" class="w-10 h-10 rounded-full object-cover border border-acid">
+                                    <div class="flex-1 min-w-0">
+                                        <p class="text-sm font-bold text-ink truncate">Você</p>
+                                        <p class="text-[10px] text-gray-600 uppercase tracking-wide">Rating: 3.54</p>
+                                    </div>
+                                    <div class="text-green-500 text-xs font-bold"><i class="fa-solid fa-arrow-up"></i> 2</div>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+            <!-- ====== PAGE: PERFIL ====== -->
+            <div id="profile" class="page-section max-w-[1000px] mx-auto">
+                
+                <!-- Profile Header Card -->
+                <div class="bg-white rounded-4xl shadow-organic-sm overflow-hidden mb-8 border border-gray-100">
+                    <!-- Cover -->
+                    <div class="h-64 bg-ink relative overflow-hidden">
+                        <img src="https://images.unsplash.com/photo-1599474751421-2c1110b991b1?q=80&w=1200&auto=format&fit=crop" class="absolute inset-0 w-full h-full object-cover opacity-40 mix-blend-overlay">
+                        <!-- Fade para integrar com o fundo branco -->
+                        <div class="absolute bottom-0 left-0 right-0 h-24 bg-gradient-to-t from-white to-transparent"></div>
+                    </div>
+                    
+                    <div class="px-8 pb-8 relative">
+                        <div class="flex flex-col md:flex-row justify-between items-center md:items-end -mt-20 mb-6 gap-6">
+                            <!-- Avatar -->
+                            <div class="relative group">
+                                <img src="https://images.unsplash.com/photo-1500648767791-00dcc994a43e?w=300&auto=format&fit=crop" class="w-36 h-36 rounded-full border-8 border-white shadow-md object-cover bg-white">
+                                <button class="absolute bottom-2 right-2 w-10 h-10 bg-ink text-white rounded-full shadow-lg flex items-center justify-center hover:scale-110 transition-transform">
+                                    <i class="fa-solid fa-camera text-sm"></i>
+                                </button>
+                            </div>
+                            
+                            <!-- Actions -->
+                            <div class="flex gap-3 w-full md:w-auto">
+                                <button class="flex-1 md:flex-none bg-paper text-ink px-6 py-3 rounded-full font-bold hover:bg-gray-200 transition-colors shadow-sm">Editar Perfil</button>
+                                <button class="flex-1 md:flex-none bg-acid text-ink px-6 py-3 rounded-full font-bold shadow-glow hover:bg-acid-light transition-colors flex items-center justify-center gap-2">
+                                    <i class="fa-solid fa-share-nodes"></i> Compartilhar
+                                </button>
+                            </div>
+                        </div>
+                        
+                        <!-- Info -->
+                        <div class="text-center md:text-left">
+                            <h1 class="font-display text-4xl font-bold text-ink">Rafael Tavares</h1>
+                            <p class="text-gray-500 font-medium text-lg mt-1">Porto Alegre, RS • Membro desde 2025</p>
+                            
+                            <div class="flex flex-wrap justify-center md:justify-start gap-3 mt-6">
+                                <div class="bg-paper border border-gray-100 px-4 py-2 rounded-2xl flex items-center gap-2">
+                                    <div class="w-2 h-2 bg-green-500 rounded-full"></div>
+                                    <span class="text-sm font-semibold text-ink">DUPR 3.54</span>
+                                </div>
+                                <div class="bg-paper border border-gray-100 px-4 py-2 rounded-2xl flex items-center gap-2 text-gray-600">
+                                    <i class="fa-solid fa-hand-back-fist text-sm"></i>
+                                    <span class="text-sm font-medium">Destro</span>
+                                </div>
+                                <div class="bg-paper border border-gray-100 px-4 py-2 rounded-2xl flex items-center gap-2 text-gray-600">
+                                    <i class="fa-solid fa-table-tennis-paddle-ball text-sm"></i>
+                                    <span class="text-sm font-medium">Selkirk Vanguard</span>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Stats Grid inside Profile -->
+                <h3 class="font-display font-bold text-2xl text-ink mb-6">Histórico Recente</h3>
+                <div class="bg-white rounded-3xl border border-gray-100 shadow-organic-sm p-2">
+                    <!-- Match Item -->
+                    <div class="p-4 flex items-center justify-between hover:bg-gray-50 rounded-2xl transition-colors cursor-pointer group">
+                        <div class="flex items-center gap-4">
+                            <div class="w-12 h-12 bg-green-50 rounded-xl flex items-center justify-center text-green-500 font-bold text-xl border border-green-100">W</div>
+                            <div>
+                                <p class="font-bold text-ink text-lg">Duplas Mistas</p>
+                                <p class="text-sm text-gray-500">Ontem • Arena Sul</p>
+                            </div>
+                        </div>
+                        <div class="text-right">
+                            <p class="font-display font-black text-xl text-ink">11-8, 11-5</p>
+                            <p class="text-sm text-green-500 font-bold">+0.02 DUPR</p>
+                        </div>
+                    </div>
+                    
+                    <hr class="border-gray-100 mx-4">
+                    
+                    <!-- Match Item -->
+                    <div class="p-4 flex items-center justify-between hover:bg-gray-50 rounded-2xl transition-colors cursor-pointer group">
+                        <div class="flex items-center gap-4">
+                            <div class="w-12 h-12 bg-red-50 rounded-xl flex items-center justify-center text-red-500 font-bold text-xl border border-red-100">L</div>
+                            <div>
+                                <p class="font-bold text-ink text-lg">Simples</p>
+                                <p class="text-sm text-gray-500">Há 3 dias • Central</p>
+                            </div>
+                        </div>
+                        <div class="text-right">
+                            <p class="font-display font-black text-xl text-ink">9-11, 10-12</p>
+                            <p class="text-sm text-red-400 font-bold">-0.01 DUPR</p>
+                        </div>
+                    </div>
+                </div>
+            </div>
+            
+            <!-- Placeholder for Tournaments Route to prevent errors if clicked -->
+            <div id="tournaments" class="page-section max-w-[1400px] mx-auto text-center py-20">
+                <div class="inline-flex w-24 h-24 bg-acid/20 text-acid-dark rounded-full items-center justify-center text-4xl mb-6 shadow-glow"><i class="fa-solid fa-trophy"></i></div>
+                <h2 class="font-display text-4xl font-bold text-ink mb-4">Central de Torneios</h2>
+                <p class="text-gray-500 text-lg max-w-lg mx-auto">Em breve você poderá gerenciar chaves, inscrever-se em etapas oficiais e acompanhar resultados ao vivo por aqui.</p>
+            </div>
+
+        </main>
+    </div>
+
+    <!-- Mobile Navigation Overlay (Glassmorphism) -->
+    <div id="mobile-menu" class="fixed inset-0 bg-ink/80 backdrop-blur-md z-40 hidden flex-col transition-all duration-300">
+        <div class="flex justify-end p-6">
+            <button onclick="toggleMobileMenu()" class="w-12 h-12 bg-white/10 text-white rounded-full flex items-center justify-center text-xl hover:bg-white/20">
+                <i class="fa-solid fa-xmark"></i>
+            </button>
+        </div>
+        <div class="flex flex-col items-center gap-6 mt-10">
+            <a href="#" onclick="navigateTo('dashboard', this); toggleMobileMenu();" class="text-2xl font-display font-bold text-white hover:text-acid transition-colors">Visão Geral</a>
+            <a href="#" onclick="navigateTo('play', this); toggleMobileMenu();" class="text-2xl font-display font-bold text-white hover:text-acid transition-colors">Explorar Quadras</a>
+            <a href="#" onclick="navigateTo('community', this); toggleMobileMenu();" class="text-2xl font-display font-bold text-white hover:text-acid transition-colors">Comunidade</a>
+            <a href="#" onclick="navigateTo('profile', this); toggleMobileMenu();" class="text-2xl font-display font-bold text-white hover:text-acid transition-colors">Seu Perfil</a>
+        </div>
+    </div>
+
+    <script>
+        // SPA Routing Logic with animations
+        function navigateTo(pageId, element = null) {
+            // Smooth fade out
+            const activeSection = document.querySelector('.page-section.active');
+            if(activeSection && activeSection.id !== pageId) {
+                activeSection.style.opacity = '0';
+                activeSection.style.transform = 'translateY(10px)';
+                
+                setTimeout(() => {
+                    activeSection.classList.remove('active');
+                    showNewSection(pageId);
+                }, 200); // Wait for fade out
+            } else if (!activeSection) {
+                 showNewSection(pageId);
+            }
+
+            // Update Sidebar UI
+            if (element && element.classList.contains('nav-item')) {
+                document.querySelectorAll('.nav-item').forEach(nav => {
+                    nav.classList.remove('bg-ink', 'text-white');
+                    nav.classList.add('text-gray-500', 'hover:bg-gray-50');
+                    // Reset icon opacity
+                    const icon = nav.querySelector('i');
+                    if(icon) {
+                        icon.classList.remove('opacity-90');
+                        icon.classList.add('opacity-70');
+                    }
+                });
+                
+                element.classList.remove('text-gray-500', 'hover:bg-gray-50');
+                element.classList.add('bg-ink', 'text-white');
+                const activeIcon = element.querySelector('i');
+                if(activeIcon) {
+                    activeIcon.classList.remove('opacity-70');
+                    activeIcon.classList.add('opacity-90');
+                }
+            }
+        }
+
+        function showNewSection(pageId) {
+            const newSection = document.getElementById(pageId);
+            newSection.classList.add('active');
+            // Force reflow
+            void newSection.offsetWidth;
+            newSection.style.opacity = '1';
+            newSection.style.transform = 'translateY(0)';
+            
+            // Scroll to top
+            document.querySelector('main').scrollTo({ top: 0, behavior: 'smooth' });
+        }
+
+        // Mobile Menu Logic
+        function toggleMobileMenu() {
+            const menu = document.getElementById('mobile-menu');
+            if (menu.classList.contains('hidden')) {
+                menu.classList.remove('hidden');
+                menu.classList.add('flex');
+            } else {
+                menu.classList.add('hidden');
+                menu.classList.remove('flex');
+            }
+        }
+        
+        // Initial setup
+        document.addEventListener('DOMContentLoaded', () => {
+            const activeSection = document.querySelector('.page-section.active');
+            if(activeSection) {
+                activeSection.style.opacity = '1';
+                activeSection.style.transform = 'translateY(0)';
+            }
+        });
+    </script>
+</body>
+</html>

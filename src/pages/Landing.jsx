@@ -101,7 +101,7 @@ export default function Landing() {
               <Trophy className="h-5 w-5 text-emerald-700" />
             </div>
             <div className="min-w-0">
-              <span className="block text-sm font-semibold uppercase tracking-[0.24em] text-emerald-700/80">Pickleball</span>
+              <span className="block text-sm font-semibold uppercase tracking-[0.24em] text-emerald-700/80">PickleRush</span>
               <span className="hidden text-sm font-medium text-slate-700 sm:block">Torneios com presença de evento</span>
             </div>
           </Link>
@@ -268,7 +268,7 @@ export default function Landing() {
 
       <footer className="border-t border-white/60 bg-white/50 py-6 backdrop-blur-xl">
         <div className="mx-auto flex max-w-7xl flex-wrap items-center justify-between gap-4 px-6 text-sm text-slate-600">
-          <span>© {new Date().getFullYear()} Pickleball</span>
+          <span>© {new Date().getFullYear()} PickleRush</span>
           <div className="flex flex-wrap gap-4">
             <Link to="/regras" className="transition-colors hover:text-slate-950">Regras</Link>
             <Link to="/nivelamento" className="transition-colors hover:text-slate-950">Nivelamento</Link>

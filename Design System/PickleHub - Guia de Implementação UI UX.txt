@@ -1,0 +1,180 @@
+PickleHub - Guia de Implementação do Design System
+
+Este documento detalha todos os elementos necessários para replicar o design premium "Athleisure" no seu repositório oficial do Pickleball. O foco é utilizar Tailwind CSS como motor principal de estilização.
+
+1. Referências e Assets (O que você precisa importar)
+
+Para que o site tenha exatamente a mesma "cara", você precisa importar as fontes e os ícones corretos no seu arquivo principal (ex: index.html, _document.js ou layout.tsx).
+
+Tipografia Primária (Títulos/Display): Outfit (Pesos: 400, 500, 600, 700, 800)
+
+Por que? Traz um visual tech, geométrico, mas com curvas amigáveis que lembram o formato das raquetes e bolas.
+
+Tipografia Secundária (Corpo/Dados): Inter (Pesos: 300, 400, 500, 600)
+
+Por que? É a fonte de interface mais legível do mundo atual, perfeita para tabelas, placares e textos longos.
+
+Ícones: FontAwesome 6 (Sólido e Regular).
+
+Alternativa moderna: Se preferir não usar FontAwesome, recomendo usar a biblioteca Phosphor Icons ou Lucide, que têm um traço mais limpo (SVG).
+
+Código de Importação (HTML <head>):
+
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600&family=Outfit:wght@400;500;600;700;800&display=swap" rel="stylesheet">
+<link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+
+
+2. Configuração do Tailwind CSS (O "DNA" do Design)
+
+Você deve copiar o objeto abaixo e colá-lo no seu arquivo tailwind.config.js (ou equivalente no seu framework). Isso garantirá que você possa usar as classes customizadas (ex: text-acid, shadow-organic, rounded-4xl).
+
+/** @type {import('tailwindcss').Config} */
+module.exports = {
+  content: [
+    "./src/**/*.{js,jsx,ts,tsx,html}", // Ajuste para os caminhos do seu projeto
+  ],
+  theme: {
+    extend: {
+      // 1. FONTES
+      fontFamily: {
+        sans: ['Inter', 'sans-serif'],
+        display: ['Outfit', 'sans-serif'],
+      },
+      // 2. PALETA DE CORES "ATHLEISURE"
+      colors: {
+        acid: {
+          DEFAULT: '#D4F82E', // Verde Limão Neon (Ação Primária)
+          light: '#E5FA7A',
+          dark: '#A6C61A',
+        },
+        ink: {
+          DEFAULT: '#0B0F19', // Quase preto/azul profundo (Textos e Fundos Escuros)
+          light: '#1A2235',
+          lighter: '#2D3A54'
+        },
+        paper: {
+          DEFAULT: '#F7F9FC', // Fundo off-white (Usado no body do site)
+          pure: '#FFFFFF',
+          dark: '#E2E8F0'
+        }
+      },
+      // 3. SOMBRAS ORGÂNICAS (Fugindo do padrão de bordas duras)
+      boxShadow: {
+        'organic': '0 24px 48px -12px rgba(11, 15, 25, 0.06)',
+        'organic-sm': '0 12px 24px -8px rgba(11, 15, 25, 0.04)',
+        'glow': '0 0 24px -4px rgba(212, 248, 46, 0.4)' // Brilho verde em botões
+      },
+      // 4. BORDAS ULTRA-ARREDONDADAS (Squircles)
+      borderRadius: {
+        '2.5xl': '1.25rem', // 20px
+        '3xl': '1.75rem',   // 28px
+        '4xl': '2.25rem',   // 36px
+      }
+    }
+  },
+  plugins: [],
+}
+
+
+3. CSS Global (Física e Animações)
+
+No seu arquivo de CSS global (ex: index.css, globals.css ou App.css), adicione as seguintes regras. Elas controlam a cor de fundo geral, a barra de rolagem (para não ficar feia no Windows) e as classes utilitárias de animação e textura.
+
+@tailwind base;
+@tailwind components;
+@tailwind utilities;
+
+/* Base do Body */
+@layer base {
+  body {
+    @apply bg-paper text-ink font-sans antialiased;
+  }
+  
+  /* Cor de seleção de texto (quando o usuário arrasta o mouse) */
+  ::selection {
+    @apply bg-acid text-ink;
+  }
+}
+
+@layer utilities {
+  /* Scrollbar customizada e limpa */
+  .hide-scrollbar::-webkit-scrollbar {
+    display: none;
+  }
+  .hide-scrollbar {
+    -ms-overflow-style: none;
+    scrollbar-width: none;
+  }
+
+  ::-webkit-scrollbar { width: 6px; height: 6px; }
+  ::-webkit-scrollbar-track { background: transparent; }
+  ::-webkit-scrollbar-thumb { background: #CBD5E1; border-radius: 10px; }
+  ::-webkit-scrollbar-thumb:hover { background: #94A3B8; }
+
+  /* Efeito de Vidro (Glassmorphism) para Navbars */
+  .glass {
+    @apply bg-white/70 backdrop-blur-md border-b border-white/40;
+  }
+
+  /* Gradiente complexo para fundos (usado no Card de Próximo Jogo) */
+  .bg-mesh {
+    background-color: #0B0F19;
+    background-image: radial-gradient(at 89% 0%, hsla(68,93%,57%,0.15) 0px, transparent 50%),
+                      radial-gradient(at 0% 100%, hsla(210,100%,40%,0.1) 0px, transparent 50%);
+  }
+
+  /* Animação tátil de botões (Micro-interação) */
+  .btn-press { 
+    transition: transform 0.15s cubic-bezier(0.4, 0, 0.2, 1); 
+  }
+  .btn-press:active { 
+    transform: scale(0.96); 
+  }
+}
+
+
+4. Arquitetura de Componentes (Como dividir seu código)
+
+No seu repositório, você não deve ter um HTML gigante. Você deve criar componentes (seja React, Vue, ou Blade templates). Siga esta estrutura lógica:
+
+A. Layout Principal (Layout.js / Layout.vue)
+
+<Sidebar />: Fica fixo à esquerda (width fixa, ex: w-[280px]). Oculto em mobile.
+
+<Topbar />: Fica no topo da área de conteúdo (usa a classe .glass). Tem a busca e o botão do usuário/notificações.
+
+<MainContent />: A área onde as páginas (rotas) são renderizadas. Deve ter flex-1, overflow-y-auto e um padding top suficiente para não ficar debaixo da Topbar (ex: pt-28).
+
+B. O Padrão "Bento Grid" (Para Dashboards)
+
+Para a tela inicial, use o CSS Grid do Tailwind. A regra é ter grids de tamanhos diferentes se encaixando perfeitamente.
+
+Container Principal: grid grid-cols-1 md:grid-cols-2 xl:grid-cols-4 gap-6
+
+Card Grande (Destaque): col-span-1 md:col-span-2 xl:col-span-2 rounded-4xl bg-mesh p-8
+
+Card Pequeno (Estatística): col-span-1 bg-white rounded-4xl p-8 shadow-organic-sm
+
+C. O Padrão de "Cards" (Para Quadras/Torneios)
+
+Container: bg-white rounded-3xl overflow-hidden border border-gray-100 shadow-organic-sm transition-all hover:shadow-organic
+
+Imagem no Topo: Uma div com altura fixa (ex: h-48) contendo a foto da quadra. Sempre adicione gradiente sobre a imagem (bg-gradient-to-t from-black/60 to-transparent) para que o texto em cima fique legível.
+
+Conteúdo Embaixo: Padding generoso (p-6), título em font-display, tags (bg-green-100 text-green-700) e botão de ação primária com w-full na base.
+
+5. Princípios Rígidos de UX/UI (A Regra de Ouro)
+
+Para manter o aspecto "Premium e Sênior", você e sua equipe devem seguir estas regras ao codificar novas telas no futuro:
+
+Espaçamento (Whitespace): O erro número 1 em interfaces amadoras é amontoar as coisas. Use sempre p-6 ou p-8 em formulários, cards e modais. Respire.
+
+Nunca use bordas pretas: Para separar elementos em fundo branco, use border-gray-100 ou border-gray-200. Fica suave e limpo.
+
+Títulos em Outfit, Dados em Inter: Use font-display apenas para cabeçalhos (H1, H2, H3) e grandes números (ex: Placar, Nível 3.5). Para nomes de jogadores, datas, horários e textos, deixe a fonte padrão (Inter).
+
+Cuidado com as Cores de Texto: Nunca use preto puro (#000000). O texto principal deve ser da cor text-ink (Azul/Preto profundo). Textos secundários (datas, descrições) devem ser sempre text-gray-500 para criar hierarquia visual sem precisar mudar o tamanho da fonte.
+
+Cores Neon apenas para Ação: O bg-acid (Verde Limão) é forte e chama muita atenção. Use apenas para chamar a atenção principal (Botão "Criar Partida", "Salvar", Status de Destaque). Se tudo for verde, nada será destaque.

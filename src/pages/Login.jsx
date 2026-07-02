@@ -44,12 +44,9 @@ export default function Login() {
       <div className="relative mx-auto grid min-h-screen max-w-6xl gap-8 px-6 py-8 lg:grid-cols-[1.05fr,0.95fr] lg:items-center">
         <div className="hidden h-full min-h-[42rem] flex-col justify-between rounded-[2.25rem] arena-panel-strong p-8 lg:flex">
           <div>
-            <Link to="/" className="inline-flex items-center gap-3 text-white">
-              <div className="flex h-11 w-11 items-center justify-center rounded-2xl border border-white/15 bg-white/10">
-                <Trophy className="h-5 w-5" />
-              </div>
+            <Link to="/" className="inline-flex flex-col gap-2 text-white">
+              <img src="/logo-escuro.png" alt="PickleRush" className="h-10 w-auto object-contain object-left" />
               <div>
-                <span className="block text-sm font-semibold uppercase tracking-[0.24em] text-emerald-50/80">Pickleball</span>
                 <span className="block text-xl font-semibold">Organização com cara de evento</span>
               </div>
             </Link>
@@ -83,14 +80,8 @@ export default function Login() {
           <Card className="w-full max-w-lg rounded-[2.25rem] border-white/80 bg-white/90 p-1.5 shadow-[0_35px_80px_-40px_rgba(15,23,42,0.45)] sm:p-2">
             <CardHeader className="px-5 pb-4 pt-6 text-center sm:px-8">
               <Link to="/" className="mx-auto mb-4 inline-flex items-center gap-3 text-slate-950 lg:hidden">
-                <div className="flex h-11 w-11 items-center justify-center rounded-2xl border border-emerald-200/70 bg-emerald-50">
-                  <Trophy className="h-5 w-5 text-emerald-700" />
-                </div>
-                <span className="text-lg font-semibold">Pickleball</span>
+                <img src="/logo-claro.png" alt="PickleRush" className="h-10 w-auto object-contain" />
               </Link>
-              <div className="mx-auto flex h-14 w-14 items-center justify-center rounded-2xl bg-emerald-100 text-emerald-700 shadow-[0_18px_35px_-26px_rgba(16,185,129,0.7)]">
-                <Trophy className="h-6 w-6" />
-              </div>
               <CardTitle className="mt-5 text-[2.2rem] font-semibold leading-[1.02] text-slate-950 sm:text-3xl">
                 Entrar para publicar e operar torneios com mais confiança.
               </CardTitle>

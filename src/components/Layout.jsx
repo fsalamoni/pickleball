@@ -58,7 +58,7 @@ const UTILITY_PUBLIC_PAGES = [
   'Partners',
   'SportHistory',
 ];
-const APP_NAME = 'Pickleball';
+const APP_NAME = 'PickleRush';
 const PRESERVE_WINDOW_SCROLL_STATE = { preserveWindowScroll: true };
 const APP_SIDEBAR_SCROLL_KEY = 'layout:app-sidebar-scroll';
 const PUBLIC_SIDEBAR_SCROLL_KEY = 'layout:public-sidebar-scroll';
@@ -829,12 +829,9 @@ function MobileBottomNav({ currentPageName }) {
 
 function BrandLockup({ to, subtitle, preserveScroll = false, onClick }) {
   return (
-    <Link to={to} state={preserveScroll ? PRESERVE_WINDOW_SCROLL_STATE : undefined} onClick={onClick} className="flex items-center gap-3 text-white">
-      <div className="flex h-11 w-11 items-center justify-center rounded-2xl border border-white/10 bg-white/10 text-emerald-50">
-        <Trophy className="h-5 w-5" />
-      </div>
+    <Link to={to} state={preserveScroll ? PRESERVE_WINDOW_SCROLL_STATE : undefined} onClick={onClick} className="flex flex-col gap-2 text-white">
+      <img src="/logo-escuro.png" alt={APP_NAME} className="h-10 w-auto object-contain object-left" />
       <div className="min-w-0">
-        <div className="truncate text-sm font-semibold uppercase tracking-[0.24em] text-emerald-50/80">{APP_NAME}</div>
         <div className="truncate text-sm text-emerald-50/60">{subtitle}</div>
       </div>
     </Link>

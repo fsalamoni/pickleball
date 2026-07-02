@@ -1,0 +1,175 @@
+PickleHub - Guia de Implementação do Design System (UI/UX)
+
+Este guia contém todas as referências, cores, configurações e padrões arquitetônicos utilizados para criar a interface premium "Athleisure" para a plataforma PickleHub. Utilize estas configurações como base para o seu repositório no GitHub.
+
+1. Referências Externas (Fundações)
+
+Para que a tipografia e os ícones funcionem corretamente, adicione estas chamadas no <head> do seu arquivo principal (ex: index.html, layout.tsx no Next.js, ou index.html no Vite).
+
+Tipografia (Google Fonts):
+
+Outfit (Display): Usada para títulos, números de destaque (placares, rating) e elementos gráficos. Traz um visual tech/esportivo.
+
+Inter (Sans): Usada para leitura, formulários, botões secundários e interface geral.
+
+Ícones:
+
+FontAwesome 6 (Free): Usado para a iconografia geral.
+
+<!-- Cole isto no <head> -->
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600&family=Outfit:wght@400;500;600;700;800&display=swap" rel="stylesheet">
+<link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+
+
+2. Configuração do Tailwind CSS (O DNA do Projeto)
+
+O segredo do design está nas configurações customizadas do Tailwind. Copie o objeto theme abaixo e cole no seu arquivo tailwind.config.js. É aqui que definimos o Verde Neon, o Azul Profundo, as Sombras Orgânicas e as bordas super arredondadas.
+
+// tailwind.config.js
+/** @type {import('tailwindcss').Config} */
+module.exports = {
+  content: [
+    "./src/**/*.{html,js,jsx,ts,tsx}", // Ajuste conforme a estrutura do seu projeto
+  ],
+  theme: {
+    extend: {
+      // 1. Tipografia
+      fontFamily: {
+        sans: ['Inter', 'sans-serif'],
+        display: ['Outfit', 'sans-serif'],
+      },
+      // 2. Paleta de Cores "Athleisure Premium"
+      colors: {
+        acid: {
+          DEFAULT: '#D4F82E', // Verde Limão Neon (Destaque Principal)
+          light: '#E5FA7A',
+          dark: '#A6C61A',
+        },
+        ink: {
+          DEFAULT: '#0B0F19', // Quase preto frio (Textos primários, fundo da sidebar ativa)
+          light: '#1A2235',
+          lighter: '#2D3A54'
+        },
+        paper: {
+          DEFAULT: '#F7F9FC', // Off-white (Fundo principal do site)
+          pure: '#FFFFFF',    // Fundo dos Cards
+          dark: '#E2E8F0'
+        }
+      },
+      // 3. Sombras Suaves (Evitar sombras duras nativas)
+      boxShadow: {
+        'organic': '0 24px 48px -12px rgba(11, 15, 25, 0.06)',
+        'organic-sm': '0 12px 24px -8px rgba(11, 15, 25, 0.04)',
+        'glow': '0 0 24px -4px rgba(212, 248, 46, 0.4)' // Sombra colorida para botões primários
+      },
+      // 4. Bordas Arredondadas Modernas (Squircles)
+      borderRadius: {
+        '2.5xl': '1.25rem', // 20px
+        '3xl': '1.75rem',   // 28px
+        '4xl': '2.25rem',   // 36px
+      }
+    }
+  },
+  plugins: [],
+}
+
+
+3. CSS Global (Estilos Base e Utilitários)
+
+No seu arquivo CSS principal (ex: index.css ou globals.css), adicione as regras abaixo para resetar as cores base do sistema e criar utilitários específicos (como ocultar scrollbar feia e criar os efeitos de vidro).
+
+@tailwind base;
+@tailwind components;
+@tailwind utilities;
+
+@layer base {
+  /* Define as cores e fontes padrão para a tela inteira */
+  body {
+    @apply bg-paper text-ink font-sans antialiased;
+  }
+  
+  /* Cor quando o usuário seleciona um texto com o mouse */
+  ::selection {
+    @apply bg-acid text-ink;
+  }
+}
+
+@layer utilities {
+  /* Customização de Scrollbar para ficar fina e moderna */
+  .hide-scrollbar::-webkit-scrollbar {
+    display: none;
+  }
+  .hide-scrollbar {
+    -ms-overflow-style: none;
+    scrollbar-width: none;
+  }
+  ::-webkit-scrollbar { width: 6px; height: 6px; }
+  ::-webkit-scrollbar-track { background: transparent; }
+  ::-webkit-scrollbar-thumb { background: #CBD5E1; border-radius: 10px; }
+  ::-webkit-scrollbar-thumb:hover { background: #94A3B8; }
+
+  /* Utilitário de Glassmorphism (Usado na barra superior) */
+  .glass {
+    @apply bg-white/70 backdrop-blur-md border-b border-white/30;
+  }
+
+  /* Gradiente complexo para fundos com "textura" (Usado no card principal) */
+  .bg-mesh {
+    background-color: #0B0F19;
+    background-image: radial-gradient(at 89% 0%, hsla(68,93%,57%,0.15) 0px, transparent 50%),
+                      radial-gradient(at 0% 100%, hsla(210,100%,40%,0.1) 0px, transparent 50%);
+  }
+
+  /* Efeito de clique físico em botões */
+  .btn-press { transition: transform 0.15s cubic-bezier(0.4, 0, 0.2, 1); }
+  .btn-press:active { transform: scale(0.96); }
+}
+
+
+4. Padrões de Layout e Componentes (Regras de UX/UI)
+
+Ao construir o site em React, Vue ou HTML puro, mantenha a consistência seguiringo estas regras:
+
+A. Layout Base (Dashboard)
+
+A estrutura principal do app deve ser construída com flexbox para ocupar a tela toda sem rolar o corpo (apenas o miolo).
+
+Corpo: h-screen w-full flex overflow-hidden bg-paper
+
+Sidebar (Esquerda): Fixa, w-[280px] bg-white border-r border-gray-100.
+
+Main (Direita): flex-1 flex flex-col relative
+
+Topbar: Posicionamento absoluto (absolute top-0 w-full z-20) com a classe utilitária .glass.
+
+Conteúdo Interno (Scrollável): overflow-y-auto pt-28 px-10 pb-12 (O pt-28 empurra o conteúdo para baixo da Topbar de vidro).
+
+B. Cards e Bento Grid (Módulos de Informação)
+
+Ao construir "Widgets" ou Cards de estatísticas, utilize o padrão Bento Grid (grid desigual e modular):
+
+Grid Principal: grid grid-cols-1 md:grid-cols-2 xl:grid-cols-4 gap-6
+
+O Cartão Padrão: Sempre utilize bg-white rounded-3xl p-6 shadow-organic-sm border border-gray-100.
+
+Respiro (Whitespace): Nunca use menos que p-6 para um cartão principal. O design precisa respirar. O erro comum é amontoar elementos.
+
+C. Hierarquia Tipográfica e Cores de Texto
+
+Títulos de Páginas: text-3xl font-display font-bold text-ink
+
+Subtítulos / Apoio: text-gray-500 font-medium mt-2
+
+Destaque em Preto: NUNCA utilize preto puro (#000000 ou text-black). Use a cor primária de texto definida: text-ink. Isso torna o contraste muito mais agradável aos olhos (menos fadiga ocular).
+
+D. Botões
+
+Botão Primário (Ação Principal): bg-acid text-ink font-bold px-6 py-3 rounded-full shadow-glow hover:bg-acid-light btn-press transition-all (Ex: Criar Partida, Salvar).
+
+Botão Secundário: bg-ink text-white font-bold px-6 py-3 rounded-full btn-press transition-all (Ex: Filtros, Cancelar).
+
+Botão Fantasma/Contorno: bg-white border border-gray-200 text-ink hover:border-ink...
+
+Atenção: Mantenha a consistência do arredondamento nos botões. Use rounded-full (pílula) para os botões principais, e não botões quadrados.

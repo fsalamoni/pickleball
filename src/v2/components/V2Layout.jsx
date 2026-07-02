@@ -44,7 +44,7 @@ import { useNotifications } from '@/modules/notifications/hooks/useNotifications
 import { cn } from '@/core/lib/utils';
 import { V2Avatar } from '@/v2/ui/primitives';
 
-const BRAND = 'PickleHub';
+const BRAND = 'PickleRush';
 
 /** Constrói a árvore de navegação da v2 respeitando as feature flags ativas. */
 function useV2Nav() {
@@ -117,12 +117,7 @@ function isActive(pathname, item) {
 function BrandLockup() {
   return (
     <Link to="/v2" className="flex items-center gap-3">
-      <div className="flex h-10 w-10 -rotate-6 items-center justify-center rounded-2xl bg-acid text-ink shadow-glow">
-        <Trophy className="h-5 w-5" />
-      </div>
-      <span className="font-display text-2xl font-bold tracking-tight text-ink">
-        Pickle<span className="font-medium text-gray-400">Hub</span>
-      </span>
+      <img src="/logo-claro.png" alt="PickleRush" className="h-10 object-contain" />
     </Link>
   );
 }
@@ -334,7 +329,7 @@ export default function V2Layout({ children }) {
         )}
       >
         <div className="flex items-center justify-between p-6">
-          <span className="font-display text-xl font-bold text-white">{BRAND}</span>
+          <img src="/logo-escuro.png" alt={BRAND} className="h-8 object-contain" />
           <button
             onClick={closeMobile}
             className="flex h-12 w-12 items-center justify-center rounded-full bg-white/10 text-xl text-white hover:bg-white/20"

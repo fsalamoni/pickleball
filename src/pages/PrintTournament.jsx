@@ -61,7 +61,7 @@ export default function PrintTournament() {
 
       <footer className="text-[10px] text-slate-400 mt-6">
         <Link to={`/p/${tournamentId}`} className="hover:underline">
-          plataforma Pickleball — visão pública
+          plataforma PickleRush — visão pública
         </Link>
       </footer>
     </div>

@@ -12,7 +12,7 @@ import { ATHLETE_GENDER_LABELS } from '@/modules/athletes/domain/constants';
 import { LEVEL_OPTIONS, getLevelByCode } from '@/modules/leveling/data/levels';
 import { calculateAssessment } from '@/modules/leveling/domain/questionnaire';
 import { V2LevelingQuestionnaire } from '@/v2/components/leveling/V2LevelingQuestionnaire';
-import LevelingResultCard from '@/modules/leveling/components/LevelingResultCard';
+import { V2LevelingResultCard } from '@/v2/components/leveling/V2LevelingQuestionnaire';
 import { PICKLEBALL_EXPERIENCE_LABELS, COMPETITION_GENDER_LABELS } from '@/modules/tournament/domain/constants';
 import V2ParticipationHistoryCard from '@/v2/components/tournament/V2ParticipationHistoryCard';
 import {
@@ -335,7 +335,7 @@ export default function V2ProfileEdit() {
             <V2Button variant="ghost" size="sm" onClick={() => window.print()} disabled={!visibleResult}><Printer className="h-4 w-4" /> Imprimir</V2Button>
           </div>
 
-          {visibleResult && <div className="mt-5"><LevelingResultCard result={visibleResult} compact /></div>}
+          {visibleResult && <div className="mt-5"><V2LevelingResultCard result={visibleResult} compact /></div>}
 
           {formMode && (
             <div className="mt-5 border-t border-gray-100 pt-5">

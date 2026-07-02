@@ -55,7 +55,7 @@ export default function PublicTournament() {
   async function handleShare() {
     if (typeof navigator !== 'undefined' && navigator.share) {
       try {
-        await navigator.share({ title: 'Torneio Pickleball', url: publicUrl });
+        await navigator.share({ title: 'Torneio PickleRush', url: publicUrl });
         return;
       } catch {
         // usuário cancelou ou share não disponível → cai no copy
@@ -102,7 +102,7 @@ export default function PublicTournament() {
       <header className="border-b bg-white/80 backdrop-blur sticky top-0 z-10">
         <div className="max-w-5xl mx-auto px-4 py-3 flex items-center justify-between gap-2">
           <Link to="/" className="flex items-center gap-2 font-bold text-emerald-700">
-            <Trophy className="w-5 h-5" /> Pickleball
+            <img src="/logo-claro.png" alt="PickleRush" className="h-6 w-auto object-contain" />
           </Link>
           <div className="flex items-center gap-2 flex-wrap">
             {shareCardsOn ? (
@@ -178,7 +178,7 @@ export default function PublicTournament() {
       </main>
 
       <footer className="text-center text-xs text-slate-400 py-6">
-        Plataforma Pickleball · Atualização automática a cada 30s
+        Plataforma PickleRush · Atualização automática a cada 30s
       </footer>
     </div>
   );
