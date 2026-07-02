@@ -123,14 +123,16 @@ export function V2TournamentOverview({ tournament, isAdmin }) {
   return (
     <div className="space-y-6">
       <section className="grid grid-cols-1 gap-4 xl:grid-cols-[1.1fr,0.9fr]">
-        <V2Surface className="bg-mesh">
-          <V2Badge tone="acid"><Sparkles className="h-3.5 w-3.5" /> Visão geral do evento</V2Badge>
-          <h3 className="mt-4 font-display text-3xl font-bold text-ink">Tudo o que atletas e organização precisam ler primeiro</h3>
-          <p className="mt-3 max-w-2xl text-sm leading-7 text-gray-500 sm:text-base">
+        <V2Surface className="bg-mesh shadow-glow">
+          <div className="inline-flex items-center gap-1.5 rounded-full border border-white/10 bg-white/10 px-3 py-1 text-xs font-bold text-acid">
+            <Sparkles className="h-3.5 w-3.5" /> Visão geral do evento
+          </div>
+          <h3 className="mt-5 font-display text-3xl font-bold text-white">Tudo o que atletas e organização precisam ler primeiro</h3>
+          <p className="mt-3 max-w-2xl text-sm leading-7 text-white/70 sm:text-base">
             Datas, local, regra esportiva e contexto das modalidades do torneio.
           </p>
 
-          <div className="mt-6 grid gap-3 sm:grid-cols-3">
+          <div className="mt-8 grid gap-3 sm:grid-cols-3">
             <SummaryTile icon={Trophy} label="Modalidades" value={modalities.length} description="frentes esportivas ativas neste torneio" />
             <SummaryTile icon={Users} label="Inscrições confirmadas" value={confirmedRegistrations} description="confirmadas no panorama atual do evento" />
             <SummaryTile
@@ -141,7 +143,7 @@ export function V2TournamentOverview({ tournament, isAdmin }) {
             />
           </div>
 
-          <div className="mt-6 grid gap-3 sm:grid-cols-2">
+          <div className="mt-4 grid gap-3 sm:grid-cols-2">
             <InfoSurface icon={Calendar} title="Datas do torneio" description={datesText} />
             <InfoSurface icon={Clock} title="Inscrições até" description={deadline || 'Prazo ainda não definido pelo admin.'} />
             <InfoSurface icon={MapPin} title="Local da competição" description={tournament.venue || 'Quadra ou clube ainda não informado.'} />
@@ -153,7 +155,7 @@ export function V2TournamentOverview({ tournament, isAdmin }) {
           </div>
 
           {tournament.description && (
-            <div className="mt-6 rounded-3xl border border-gray-100 bg-paper p-5 text-sm leading-7 text-gray-600">
+            <div className="mt-4 rounded-3xl border border-white/10 bg-white/5 p-5 text-sm leading-7 text-white/80 backdrop-blur-sm">
               {tournament.description}
             </div>
           )}
