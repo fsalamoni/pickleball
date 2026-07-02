@@ -101,11 +101,9 @@ export default function PublicTournament() {
     <div className="min-h-screen bg-gradient-to-b from-emerald-50/50 to-white">
       <header className="sticky top-0 z-10 border-b bg-white/80 backdrop-blur">
         <div className="mx-auto flex max-w-5xl items-center justify-between gap-2 px-4 py-3">
-          <Link to="/" className="flex items-center gap-2 font-bold text-emerald-700">
+          <Link to="/" className="flex items-center gap-3 font-bold text-emerald-700">
             <img src="/logo-claro.png" alt="PickleRush" className="h-7 w-auto object-contain" />
-            <div className="flex flex-col justify-center pt-0.5 text-left">
-              <span className="font-display text-lg font-black uppercase leading-none tracking-tighter text-slate-900">PickleRush</span>
-            </div>
+            <span className="text-xl font-bold tracking-tight text-slate-900">PickleRush</span>
           </Link>
           <div className="flex items-center gap-2 flex-wrap">
             {shareCardsOn ? (

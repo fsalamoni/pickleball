@@ -832,10 +832,9 @@ function BrandLockup({ to, subtitle, preserveScroll = false, onClick }) {
     <Link to={to} state={preserveScroll ? PRESERVE_WINDOW_SCROLL_STATE : undefined} onClick={onClick} className="flex items-center gap-3 text-white">
       <img src="/logo-escuro.png" alt={APP_NAME} className="h-10 w-auto object-contain object-left" />
       <div className="flex min-w-0 flex-col justify-center pt-1">
-        <div className="truncate font-display text-xl font-black uppercase leading-none tracking-tighter text-white">{APP_NAME}</div>
-        <div className="mt-1 truncate text-[7.5px] font-bold uppercase leading-tight tracking-widest text-emerald-50/70">Conectando e organizando<br/>o pickleball globalmente</div>
+        <div className="truncate text-xl font-bold tracking-tight text-white">{APP_NAME}</div>
         {subtitle && subtitle !== 'Gestão de torneios de pickleball' && subtitle !== 'Gestão de torneios' && (
-          <div className="mt-1 truncate text-xs text-emerald-50/50">{subtitle}</div>
+          <div className="mt-0.5 truncate text-sm text-emerald-50/60">{subtitle}</div>
         )}
       </div>
     </Link>

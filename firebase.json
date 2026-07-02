@@ -9,39 +9,52 @@
   "storage": {
     "rules": "storage.rules"
   },
-  "hosting": {
-    "site": "pickletour",
-    "public": "dist",
-    "ignore": ["firebase.json", "**/.*", "**/node_modules/**"],
-    "rewrites": [
-      {
-        "source": "**",
-        "destination": "/index.html"
-      }
-    ],
-    "headers": [
-      {
-        "source": "**/*.@(jpg|jpeg|gif|png|svg|webp|ico)",
-        "headers": [{ "key": "Cache-Control", "value": "max-age=31536000" }]
-      },
-      {
-        "source": "**/assets/**/*.@(js|css)",
-        "headers": [{ "key": "Cache-Control", "value": "max-age=31536000, immutable" }]
-      },
-      {
-        "source": "/index.html",
-        "headers": [{ "key": "Cache-Control", "value": "no-cache, no-store, must-revalidate" }]
-      },
-      {
-        "source": "/sw.js",
-        "headers": [{ "key": "Cache-Control", "value": "no-cache, no-store, must-revalidate" }]
-      },
-      {
-        "source": "/manifest.webmanifest",
-        "headers": [{ "key": "Cache-Control", "value": "max-age=3600" }]
-      }
-    ]
-  },
+  "hosting": [
+    {
+      "site": "picklerush",
+      "public": "dist",
+      "ignore": ["firebase.json", "**/.*", "**/node_modules/**"],
+      "rewrites": [
+        {
+          "source": "**",
+          "destination": "/index.html"
+        }
+      ],
+      "headers": [
+        {
+          "source": "**/*.@(jpg|jpeg|gif|png|svg|webp|ico)",
+          "headers": [{ "key": "Cache-Control", "value": "max-age=31536000" }]
+        },
+        {
+          "source": "**/assets/**/*.@(js|css)",
+          "headers": [{ "key": "Cache-Control", "value": "max-age=31536000, immutable" }]
+        },
+        {
+          "source": "/index.html",
+          "headers": [{ "key": "Cache-Control", "value": "no-cache, no-store, must-revalidate" }]
+        },
+        {
+          "source": "/sw.js",
+          "headers": [{ "key": "Cache-Control", "value": "no-cache, no-store, must-revalidate" }]
+        },
+        {
+          "source": "/manifest.webmanifest",
+          "headers": [{ "key": "Cache-Control", "value": "max-age=3600" }]
+        }
+      ]
+    },
+    {
+      "site": "pickletour",
+      "public": "dist",
+      "redirects": [
+        {
+          "source": "**",
+          "destination": "https://picklerush.web.app/:path",
+          "type": 301
+        }
+      ]
+    }
+  ],
   "emulators": {
     "auth": { "port": 9099 },
     "firestore": { "port": 8080 },

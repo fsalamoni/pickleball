@@ -60,11 +60,11 @@ function formatBRL(cents) {
 
 function InfoSurface({ icon: Icon, title, description }) {
   return (
-    <div className="rounded-3xl border border-gray-100 bg-paper p-4">
-      <div className="flex items-center gap-2 text-sm font-bold text-ink">
-        <Icon className="h-4 w-4 text-ink" /> {title}
+    <div className="rounded-3xl border border-white/10 bg-white/5 p-4 backdrop-blur-sm">
+      <div className="flex items-center gap-2 text-sm font-bold text-white">
+        <Icon className="h-4 w-4 text-acid" /> {title}
       </div>
-      <p className="mt-2 text-sm leading-6 text-gray-500">{description}</p>
+      <p className="mt-2 text-sm leading-6 text-white/70">{description}</p>
     </div>
   );
 }
@@ -81,15 +81,15 @@ function RankingRule({ order, title, description }) {
 
 function SummaryTile({ icon: Icon, label, value, description }) {
   return (
-    <div className="rounded-3xl border border-gray-100 bg-paper p-4">
+    <div className="rounded-3xl border border-white/10 bg-white/5 p-4 backdrop-blur-sm">
       <div className="flex items-center justify-between gap-3">
-        <div className="text-[11px] font-bold uppercase tracking-widest text-gray-400">{label}</div>
-        <div className="flex h-10 w-10 items-center justify-center rounded-2xl bg-ink text-acid">
+        <div className="text-[11px] font-bold uppercase tracking-widest text-white/50">{label}</div>
+        <div className="flex h-10 w-10 items-center justify-center rounded-2xl bg-acid text-ink">
           <Icon className="h-4.5 w-4.5" />
         </div>
       </div>
-      <div className="mt-3 font-display text-xl font-bold text-ink">{value}</div>
-      <p className="mt-1 text-xs leading-5 text-gray-500">{description}</p>
+      <div className="mt-3 font-display text-xl font-bold text-white">{value}</div>
+      <p className="mt-1 text-xs leading-5 text-white/60">{description}</p>
     </div>
   );
 }
@@ -254,7 +254,7 @@ function ModalityCard({ modality, confirmed, tournament, currentUserId, allRegis
   const waitlistOn = useFeatureFlag(FEATURE_FLAG.TOURNAMENT_WAITLIST);
   const canWaitlist = slotsFull && waitlistOn && !alreadyRegistered && !isAdmin;
   const modalityPagesOn = useFeatureFlag(FEATURE_FLAG.MODALITY_PAGES);
-  const modalityHref = `/v2/torneios/${tournament.id}/modalidades/${modality.id}`;
+  const modalityHref = `/torneios/${tournament.id}/modalidades/${modality.id}`;
   const pct = getCapacityProgress(confirmed, modality.max_entries);
   const pendingRegistrations = Math.max(occupied - confirmed, 0);
   const barTone = slotsFull ? 'bg-amber-500' : (pct ?? 0) >= 80 ? 'bg-amber-400' : 'bg-acid';

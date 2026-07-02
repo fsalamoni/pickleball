@@ -4,7 +4,7 @@ import { ArrowLeft, CalendarDays, Globe, Info, Lock, MapPin, MessageSquare, Penc
 import { useMyMembership, useClubEvent } from '@/modules/clubs/hooks/useClubs';
 import { CLUB_EVENT_TYPE, eventTypeLabel, isGameDayEvent, isPrivateEvent } from '@/modules/clubs/domain/constants';
 import { EventFormDialog } from '@/modules/clubs/components/ClubEventsTab';
-import EventDatesPanel from '@/modules/clubs/components/EventDatesPanel';
+import V2EventDatesPanel from '@/v2/components/clubs/V2EventDatesPanel';
 import V2EventParticipantsPanel from '@/v2/components/clubs/V2EventParticipantsPanel';
 import V2EventChat from '@/v2/components/clubs/V2EventChat';
 import { V2Badge, V2Button, V2EmptyState, V2Skeleton, V2Surface } from '@/v2/ui/primitives';
@@ -113,7 +113,7 @@ export default function V2EventDetail() {
                 <p className="mt-1 whitespace-pre-wrap text-sm leading-7 text-gray-600">{event.description}</p>
               </V2Surface>
             )}
-            <EventDatesPanel event={event} clubId={clubId} showGames={showGames} />
+            <V2EventDatesPanel event={event} clubId={clubId} showGames={showGames} />
           </>
         )}
         {tab === 'participantes' && <V2EventParticipantsPanel event={event} clubId={clubId} />}
