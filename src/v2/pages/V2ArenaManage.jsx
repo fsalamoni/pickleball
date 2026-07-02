@@ -10,8 +10,7 @@ import { useAuth } from '@/core/lib/FirebaseAuthContext';
 import { ImageUpload } from '@/components/ui/image-upload';
 import { PhotoLightbox } from '@/components/ui/photo-lightbox';
 import ConfirmDialog from '@/components/ConfirmDialog';
-import ProfileFields from '@/modules/arenas/components/ProfileFields';
-import PricingEditor from '@/modules/arenas/components/PricingEditor';
+import { V2ProfileFields, V2PricingEditor } from '@/v2/components/arenas/V2ArenaEditors';
 import V2ArenaReviews from '@/v2/components/arenas/V2ArenaReviews';
 import V2BookingRow from '@/v2/components/arenas/V2BookingRow';
 import { sortBookings } from '@/modules/arenas/domain/booking';
@@ -99,7 +98,7 @@ export default function V2ArenaManage() {
 
       <div className="mt-6">
         {tab === 'reservas' && <BookingsTab arena={arena} />}
-        {tab === 'precos' && <V2Surface><PricingEditor arena={arena} /></V2Surface>}
+        {tab === 'precos' && <V2Surface><V2PricingEditor arena={arena} /></V2Surface>}
         {tab === 'fotos' && <PhotosTab arena={arena} />}
         {tab === 'info' && <InfoTab arena={arena} />}
         {tab === 'admins' && <ManagersTab arena={arena} />}
@@ -126,9 +125,9 @@ function InfoTab({ arena }) {
   }
 
   return (
-    <V2Surface contentClassName="space-y-4 p-5 sm:p-6">
-      <ProfileFields form={form} setField={setField} />
-      <div className="flex justify-end">
+    <V2Surface className="space-y-4 p-5 sm:p-6">
+      <V2ProfileFields form={form} setField={setField} />
+      <div className="flex justify-end pt-2">
         <V2Button onClick={save} disabled={update.isPending}>{update.isPending ? 'Salvando…' : 'Salvar informações'}</V2Button>
       </div>
     </V2Surface>
@@ -152,7 +151,7 @@ function PhotosTab({ arena }) {
   }
 
   return (
-    <V2Surface contentClassName="space-y-4 p-5 sm:p-6">
+    <V2Surface className="space-y-4 p-5 sm:p-6">
       <div>
         <p className="text-sm font-bold text-ink">Fotos da arena</p>
         <p className="mt-1 text-xs text-gray-500">A primeira foto é usada como capa. Até 20 fotos.</p>
