@@ -5,8 +5,8 @@ import { useMyMembership, useClubEvent } from '@/modules/clubs/hooks/useClubs';
 import { CLUB_EVENT_TYPE, eventTypeLabel, isGameDayEvent, isPrivateEvent } from '@/modules/clubs/domain/constants';
 import { EventFormDialog } from '@/modules/clubs/components/ClubEventsTab';
 import EventDatesPanel from '@/modules/clubs/components/EventDatesPanel';
-import EventParticipantsPanel from '@/modules/clubs/components/EventParticipantsPanel';
-import EventChat from '@/modules/clubs/components/EventChat';
+import V2EventParticipantsPanel from '@/v2/components/clubs/V2EventParticipantsPanel';
+import V2EventChat from '@/v2/components/clubs/V2EventChat';
 import { V2Badge, V2Button, V2EmptyState, V2Skeleton, V2Surface } from '@/v2/ui/primitives';
 import { cn } from '@/core/lib/utils';
 
@@ -116,8 +116,8 @@ export default function V2EventDetail() {
             <EventDatesPanel event={event} clubId={clubId} showGames={showGames} />
           </>
         )}
-        {tab === 'participantes' && <EventParticipantsPanel event={event} clubId={clubId} />}
-        {tab === 'conversa' && <EventChat eventId={eventId} />}
+        {tab === 'participantes' && <V2EventParticipantsPanel event={event} clubId={clubId} />}
+        {tab === 'conversa' && <V2EventChat eventId={eventId} />}
       </div>
 
       <EventFormDialog clubId={clubId} event={event} open={editOpen} onClose={() => setEditOpen(false)} />
