@@ -3,7 +3,7 @@ import { BarChart3, MessageSquare, MessagesSquare, Paperclip, Pin, Plus } from '
 import { UserAvatar } from '@/components/ui/user-avatar';
 import { useForumThreads } from '@/modules/clubs/hooks/useClubForum';
 import CreateThreadDialog from '@/modules/clubs/components/CreateThreadDialog';
-import ForumThreadView from '@/modules/clubs/components/ForumThreadView';
+import V2ForumThreadView from '@/v2/components/clubs/V2ForumThreadView';
 import { V2Badge, V2Button, V2EmptyState, V2Skeleton } from '@/v2/ui/primitives';
 
 function timeAgo(ms) {
@@ -43,7 +43,7 @@ export default function V2ClubForums({ clubId, isAdmin, initialThreadId, onThrea
 
   if (selectedId) {
     return (
-      <ForumThreadView
+      <V2ForumThreadView
         clubId={clubId}
         threadId={selectedId}
         isAdmin={isAdmin}
