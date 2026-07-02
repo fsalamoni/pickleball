@@ -57,6 +57,66 @@ export function normalizeScoringConfig(config) {
   return cfg;
 }
 
+function mergeScoringLayers(configs = []) {
+  return configs.reduce(
+    (acc, config) => {
+      if (!config || typeof config !== 'object') return acc;
+      return {
+        ...acc,
+        ...config,
+        points: config.points ? { ...acc.points, ...config.points } : acc.points,
+      };
+    },
+    {
+      ...DEFAULT_SCORING_CONFIG,
+      points: { ...DEFAULT_SCORING_CONFIG.points },
+    },
+  );
+}
+
+/**
+ * Normaliza apenas os campos editáveis no contexto de uma fase.
+ * Mantém o shape pequeno para armazenar no array `stages`.
+ * @param {object} [config]
+ */
+export function normalizeStageScoringOverride(config) {
+  const cfg = normalizeScoringConfig(config);
+  return {
+    target_score: cfg.target_score,
+    sets_per_match: cfg.sets_per_match,
+  };
+}
+
+/**
+ * Resolve a pontuação efetiva de uma fase, mesclando o torneio, a modalidade e
+ * o override específico da fase (quando houver).
+ * @param {object|null|undefined} modality
+ * @param {object|null|undefined} tournament
+ * @param {number} [stageIndex]
+ */
+export function resolveStageScoringConfig(modality, tournament, stageIndex = 0) {
+  const stages = Array.isArray(modality?.stages) ? modality.stages : [];
+  const normalizedStageIndex = Math.max(0, Number(stageIndex) || 0);
+  const stage = stages[normalizedStageIndex] || null;
+  return normalizeScoringConfig(
+    mergeScoringLayers([
+      tournament?.scoring,
+      modality?.scoring_override,
+      stage?.scoring_override,
+    ]),
+  );
+}
+
+export function formatSetsPerMatchLabel(setsPerMatch) {
+  const cfg = normalizeScoringConfig({ sets_per_match: setsPerMatch });
+  return cfg.sets_per_match === 1 ? '1 set' : `Melhor de ${cfg.sets_per_match}`;
+}
+
+export function formatScoringSummary(config) {
+  const cfg = normalizeScoringConfig(config);
+  return `${cfg.target_score} pontos · ${formatSetsPerMatchLabel(cfg.sets_per_match)}`;
+}
+
 /**
  * Valida e classifica o vencedor de um único game.
  * @param {{a: number, b: number}} game

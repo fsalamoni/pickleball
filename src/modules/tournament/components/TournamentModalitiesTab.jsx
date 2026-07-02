@@ -4,14 +4,16 @@ import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { Badge } from '@/components/ui/badge';
+import { EmptyState } from '@/components/ui/empty-state';
 import {
   Dialog,
   DialogContent,
   DialogHeader,
   DialogTitle,
+  DialogDescription,
   DialogFooter,
 } from '@/components/ui/dialog';
-import { Pencil, Plus, Trash2, BookOpen } from 'lucide-react';
+import { Pencil, Plus, Trash2, BookOpen, CalendarClock, Layers, Settings2, Ticket } from 'lucide-react';
 import { toast } from 'sonner';
 import { ConfirmDialog } from '@/components/ui/confirm-dialog';
 import {
@@ -34,6 +36,7 @@ import {
   STAGE_TYPES_BY_FORMAT,
   availableStageTypes,
   MAX_REGISTRATIONS_PER_MODALITY,
+  TARGET_SCORE,
 } from '@/modules/tournament/domain/constants';
 import { DEFAULT_MAX_ENTRIES, hasUnlimitedEntries } from '@/modules/tournament/domain/capacity';
 import {
@@ -43,6 +46,7 @@ import {
   computeWindowSlots,
 } from '@/modules/tournament/domain/scheduling';
 import { normalizePhases, validatePhases, defaultPhase } from '@/modules/tournament/domain/phases';
+import { formatScoringSummary } from '@/modules/tournament/domain/scoring';
 import { useFeatureFlag } from '@/core/lib/FeatureFlagsContext';
 import { FEATURE_FLAG } from '@/core/featureFlags';
 import StageExplanation from './StageExplanation';
@@ -113,6 +117,22 @@ export default function TournamentModalitiesTab({ tournament, isAdmin }) {
     setForm((f) => ({ ...f, [field]: value }));
   }
 
+  function setSinglePhaseScoring(patch) {
+    setForm((current) => {
+      const firstPhase = current.phases?.[0] || defaultPhase(current.format, true);
+      const phases = [
+        {
+          ...firstPhase,
+          scoring_override: {
+            ...(firstPhase.scoring_override || {}),
+            ...patch,
+          },
+        },
+      ];
+      return { ...current, phases };
+    });
+  }
+
   // O formato de inscrição (Simples/Duplas) define quais estruturas são
   // possíveis. Ao trocar o formato, se a estrutura atual deixar de ser
   // compatível (ex.: Duplas + Americano), reverte para a primeira válida.
@@ -181,6 +201,7 @@ export default function TournamentModalitiesTab({ tournament, isAdmin }) {
         {
           type: form.stage_type,
           name: TOURNAMENT_STAGE_TYPE_LABELS[form.stage_type],
+          scoring_override: form.phases?.[0]?.scoring_override || defaultPhase(form.format, true).scoring_override,
           group_count: Number(form.group_count) || 1,
           seed_count: Number(form.seed_count) || 0,
         },
@@ -248,26 +269,30 @@ export default function TournamentModalitiesTab({ tournament, isAdmin }) {
       {isLoading ? (
         <p className="text-sm text-slate-500">Carregando…</p>
       ) : modalities.length === 0 ? (
-        <Card>
-          <CardContent className="p-6 text-center text-sm text-slate-500">
-            Nenhuma modalidade cadastrada ainda.
+        <Card className="rounded-[1.75rem] border-white/80 bg-white/82">
+          <CardContent className="p-2">
+            <EmptyState
+              icon={Layers}
+              title="Nenhuma modalidade cadastrada"
+              description="Crie a primeira modalidade para começar a estruturar as inscrições, fases, horários e a pontuação de cada disputa."
+            />
           </CardContent>
         </Card>
       ) : (
         <div className="grid md:grid-cols-2 gap-3">
           {modalities.map((m) => (
-            <Card key={m.id}>
-              <CardContent className="p-4">
+            <Card key={m.id} className="rounded-[1.75rem] border-white/80 bg-white/82">
+              <CardContent className="p-5">
                 <div className="flex items-start justify-between gap-2">
                   <div>
-                    <h4 className="font-semibold">{m.name}</h4>
+                    <h4 className="text-lg font-semibold text-slate-950">{m.name}</h4>
                     <div className="text-xs text-slate-500 mt-1 flex flex-wrap gap-1">
                       <Badge variant="secondary">{MODALITY_FORMAT_LABELS[m.format]}</Badge>
                       <Badge variant="secondary">{SKILL_LEVEL_LABELS[m.skill_level]}</Badge>
                       <Badge variant="secondary">{GENDER_CATEGORY_LABELS[m.gender_category]}</Badge>
                       <Badge variant="secondary">{AGE_CATEGORY_LABELS[m.age_category]}</Badge>
                     </div>
-                    <div className="text-xs text-slate-600 mt-2">
+                    <div className="text-xs text-slate-600 mt-3 leading-5">
                       Vagas: {hasUnlimitedEntries(m.max_entries) ? 'abertas' : m.max_entries} · Taxa: R${' '}
                       {((m.entry_fee_cents || 0) / 100).toFixed(2).replace('.', ',')} ·{' '}
                       {(m.stages?.length || 0) > 1
@@ -276,13 +301,22 @@ export default function TournamentModalitiesTab({ tournament, isAdmin }) {
                             .join(' → ')}`
                         : `Fase: ${TOURNAMENT_STAGE_TYPE_LABELS[m.stages?.[0]?.type] || '—'}`}
                     </div>
-                    <div className="text-xs text-slate-500 mt-1">
+                    <div className="text-xs text-slate-500 mt-1 leading-5">
                       {m.court_count || DEFAULT_COURT_COUNT} quadra(s) ·{' '}
                       {m.match_duration_minutes || DEFAULT_MATCH_DURATION_MINUTES} min/jogo
                       {m.play_start_time ? ` · ${m.play_start_time}` : ''}
                       {m.play_start_time && m.play_end_time ? `–${m.play_end_time}` : ''}
                       {m.play_date ? ` · ${m.play_date}` : ''}
                     </div>
+                    {Array.isArray(m.stages) && m.stages.length > 0 && (
+                      <div className="mt-3 flex flex-wrap gap-1.5">
+                        {m.stages.map((stage, index) => (
+                          <Badge key={`${m.id}-${index}`} variant="outline" className="rounded-full px-3 py-1 text-[11px]">
+                            Fase {index + 1}: {formatScoringSummary(stage.scoring_override || {})}
+                          </Badge>
+                        ))}
+                      </div>
+                    )}
                   </div>
                   {isAdmin && (
                     <div className="flex gap-1">
@@ -313,64 +347,112 @@ export default function TournamentModalitiesTab({ tournament, isAdmin }) {
       />
 
       <Dialog open={open} onOpenChange={closeDialog}>
-        <DialogContent className="max-w-2xl">
+        <DialogContent className="max-w-4xl">
           <DialogHeader>
             <DialogTitle>{isEditing ? 'Editar modalidade' : 'Nova modalidade'}</DialogTitle>
+            <DialogDescription>
+              Organize a modalidade em blocos lógicos: identidade, vagas, fases com pontuação própria e operação em quadra.
+            </DialogDescription>
           </DialogHeader>
-          <div className="space-y-3 max-h-[70vh] overflow-y-auto">
-            <div>
-              <Label>Nome</Label>
-              <Input value={form.name} onChange={(e) => set('name', e.target.value)} placeholder="Ex.: Duplas Mistas Intermediário" />
-            </div>
-            <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
-              <SelectRow label="Formato" value={form.format} options={MODALITY_FORMAT_LABELS} onChange={setFormat} />
-              <SelectRow label="Nível" value={form.skill_level} options={SKILL_LEVEL_LABELS} onChange={(v) => set('skill_level', v)} />
-              <SelectRow label="Gênero" value={form.gender_category} options={GENDER_CATEGORY_LABELS} onChange={(v) => set('gender_category', v)} />
-              <SelectRow label="Idade" value={form.age_category} options={AGE_CATEGORY_LABELS} onChange={(v) => set('age_category', v)} />
-              <div className="space-y-2 md:col-span-2">
-                <div className="flex items-center justify-between gap-3 rounded-md border border-slate-200 p-3">
-                  <div>
-                    <Label className="text-sm">Quantidade de participantes</Label>
-                    <p className="text-xs text-slate-500">
-                      Use vagas abertas para fechar as inscrições primeiro e organizar a chave com o total efetivo de inscritos.
-                    </p>
-                  </div>
-                  <label className="flex items-center gap-2 text-sm font-medium text-slate-700">
-                    <input
-                      type="checkbox"
-                      checked={form.has_unlimited_entries}
-                      onChange={(e) => set('has_unlimited_entries', e.target.checked)}
-                    />
-                    Vagas abertas
-                  </label>
+          <div className="space-y-5 max-h-[76vh] overflow-y-auto pr-1">
+            <section className="space-y-4 rounded-[1.5rem] border border-emerald-950/10 bg-white/75 p-5">
+              <div className="flex items-start gap-3">
+                <div className="flex h-10 w-10 items-center justify-center rounded-2xl bg-emerald-100 text-emerald-700">
+                  <Layers className="h-4.5 w-4.5" />
                 </div>
-                {!form.has_unlimited_entries && (
-                  <div>
-                    <Label>Vagas (até {MAX_REGISTRATIONS_PER_MODALITY})</Label>
-                    <Input
-                      type="number"
-                      min={2}
-                      max={MAX_REGISTRATIONS_PER_MODALITY}
-                      value={form.max_entries}
-                      onChange={(e) => set('max_entries', e.target.value)}
-                    />
-                  </div>
-                )}
+                <div>
+                  <div className="text-base font-semibold text-slate-950">Identidade da modalidade</div>
+                  <p className="mt-1 text-sm leading-6 text-slate-600">
+                    Comece pelo recorte competitivo. Esse bloco define como a modalidade será apresentada e filtrada pelos atletas.
+                  </p>
+                </div>
               </div>
+
               <div>
-                <Label>Taxa de inscrição (R$)</Label>
-                <Input type="number" min={0} step="0.01" value={form.entry_fee_brl} onChange={(e) => set('entry_fee_brl', e.target.value)} />
+                <Label>Nome</Label>
+                <Input value={form.name} onChange={(e) => set('name', e.target.value)} placeholder="Ex.: Duplas Mistas Intermediário" className="mt-2" />
               </div>
-              {multiPhaseEnabled ? (
-                <div className="md:col-span-2">
-                  <PhasesEditor
-                    phases={form.phases}
-                    format={form.format}
-                    onChange={(phases) => set('phases', phases)}
-                  />
+              <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
+                <SelectRow label="Formato" value={form.format} options={MODALITY_FORMAT_LABELS} onChange={setFormat} />
+                <SelectRow label="Nível" value={form.skill_level} options={SKILL_LEVEL_LABELS} onChange={(v) => set('skill_level', v)} />
+                <SelectRow label="Gênero" value={form.gender_category} options={GENDER_CATEGORY_LABELS} onChange={(v) => set('gender_category', v)} />
+                <SelectRow label="Idade" value={form.age_category} options={AGE_CATEGORY_LABELS} onChange={(v) => set('age_category', v)} />
+              </div>
+            </section>
+
+            <section className="space-y-4 rounded-[1.5rem] border border-emerald-950/10 bg-white/75 p-5">
+              <div className="flex items-start gap-3">
+                <div className="flex h-10 w-10 items-center justify-center rounded-2xl bg-emerald-100 text-emerald-700">
+                  <Ticket className="h-4.5 w-4.5" />
                 </div>
+                <div>
+                  <div className="text-base font-semibold text-slate-950">Vagas e inscrição</div>
+                  <p className="mt-1 text-sm leading-6 text-slate-600">
+                    Defina capacidade e taxa da modalidade sem misturar isso com a montagem técnica das fases.
+                  </p>
+                </div>
+              </div>
+
+              <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                <div className="space-y-2 md:col-span-2">
+                  <div className="flex items-center justify-between gap-3 rounded-[1.25rem] border border-slate-200 p-4">
+                    <div>
+                      <Label className="text-sm">Quantidade de participantes</Label>
+                      <p className="text-xs text-slate-500 mt-1">
+                        Use vagas abertas quando quiser primeiro captar inscritos e depois ajustar a operação com o total final.
+                      </p>
+                    </div>
+                    <label className="flex items-center gap-2 text-sm font-medium text-slate-700">
+                      <input
+                        type="checkbox"
+                        checked={form.has_unlimited_entries}
+                        onChange={(e) => set('has_unlimited_entries', e.target.checked)}
+                      />
+                      Vagas abertas
+                    </label>
+                  </div>
+                  {!form.has_unlimited_entries && (
+                    <div>
+                      <Label>Vagas (até {MAX_REGISTRATIONS_PER_MODALITY})</Label>
+                      <Input
+                        type="number"
+                        min={2}
+                        max={MAX_REGISTRATIONS_PER_MODALITY}
+                        value={form.max_entries}
+                        onChange={(e) => set('max_entries', e.target.value)}
+                        className="mt-2"
+                      />
+                    </div>
+                  )}
+                </div>
+                <div>
+                  <Label>Taxa de inscrição (R$)</Label>
+                  <Input type="number" min={0} step="0.01" value={form.entry_fee_brl} onChange={(e) => set('entry_fee_brl', e.target.value)} className="mt-2" />
+                </div>
+              </div>
+            </section>
+
+            <section className="space-y-4 rounded-[1.5rem] border border-emerald-950/10 bg-white/75 p-5">
+              <div className="flex items-start gap-3">
+                <div className="flex h-10 w-10 items-center justify-center rounded-2xl bg-emerald-100 text-emerald-700">
+                  <Settings2 className="h-4.5 w-4.5" />
+                </div>
+                <div>
+                  <div className="text-base font-semibold text-slate-950">Estrutura competitiva</div>
+                  <p className="mt-1 text-sm leading-6 text-slate-600">
+                    Monte as fases na ordem em que o atleta vai vivê-las. A pontuação agora é definida dentro de cada fase.
+                  </p>
+                </div>
+              </div>
+
+              {multiPhaseEnabled ? (
+                <PhasesEditor
+                  phases={form.phases}
+                  format={form.format}
+                  onChange={(phases) => set('phases', phases)}
+                />
               ) : (
-                <>
+                <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
                   <SelectRow
                     label="Formato da fase"
                     value={form.stage_type}
@@ -413,17 +495,71 @@ export default function TournamentModalitiesTab({ tournament, isAdmin }) {
                       seedCount={Number(form.seed_count) || 0}
                     />
                   </div>
-                </>
+                  <div className="md:col-span-2 rounded-[1.25rem] border border-slate-200 bg-white p-4 space-y-3">
+                    <div>
+                      <Label className="text-sm font-semibold">Pontuação da fase</Label>
+                      <p className="text-xs text-slate-500 mt-1">
+                        Mesmo em modalidade de fase única, a pontuação fica definida dentro da fase e não no torneio geral.
+                      </p>
+                    </div>
+                    <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
+                      <div>
+                        <Label>Pontos por game</Label>
+                        <div className="mt-2 flex flex-wrap gap-2">
+                          {Object.values(TARGET_SCORE).map((score) => (
+                            <button
+                              key={score}
+                              type="button"
+                              onClick={() => setSinglePhaseScoring({ target_score: score })}
+                              className={[
+                                'rounded-full border px-4 py-2 text-sm font-medium transition-all duration-200',
+                                Number(form.phases?.[0]?.scoring_override?.target_score) === score
+                                  ? 'border-emerald-500/35 bg-emerald-600 text-white'
+                                  : 'border-emerald-950/10 bg-background text-slate-700 hover:border-emerald-400/35',
+                              ].join(' ')}
+                            >
+                              {score} pontos
+                            </button>
+                          ))}
+                        </div>
+                      </div>
+                      <div>
+                        <Label>Sets por partida</Label>
+                        <div className="mt-2 flex flex-wrap gap-2">
+                          {[1, 3, 5].map((sets) => (
+                            <button
+                              key={sets}
+                              type="button"
+                              onClick={() => setSinglePhaseScoring({ sets_per_match: sets })}
+                              className={[
+                                'rounded-full border px-4 py-2 text-sm font-medium transition-all duration-200',
+                                Number(form.phases?.[0]?.scoring_override?.sets_per_match) === sets
+                                  ? 'border-emerald-500/35 bg-emerald-600 text-white'
+                                  : 'border-emerald-950/10 bg-background text-slate-700 hover:border-emerald-400/35',
+                              ].join(' ')}
+                            >
+                              {sets === 1 ? '1 set' : `Melhor de ${sets}`}
+                            </button>
+                          ))}
+                        </div>
+                      </div>
+                    </div>
+                  </div>
+                </div>
               )}
-            </div>
+            </section>
 
-            <div className="rounded-md border border-slate-200 p-3 space-y-3">
-              <div>
-                <Label className="text-sm font-semibold">Quadras e horários</Label>
-                <p className="text-xs text-slate-500">
-                  O sorteio usa estes dados para marcar cada jogo em uma quadra e horário, sem
-                  conflito de jogadores e equilibrando a participação ao longo do dia.
-                </p>
+            <section className="space-y-4 rounded-[1.5rem] border border-emerald-950/10 bg-white/75 p-5">
+              <div className="flex items-start gap-3">
+                <div className="flex h-10 w-10 items-center justify-center rounded-2xl bg-emerald-100 text-emerald-700">
+                  <CalendarClock className="h-4.5 w-4.5" />
+                </div>
+                <div>
+                  <div className="text-base font-semibold text-slate-950">Quadras e horários</div>
+                  <p className="mt-1 text-sm leading-6 text-slate-600">
+                    Esses dados ajudam o sorteio a distribuir jogos sem conflito e com cadência operacional melhor.
+                  </p>
+                </div>
               </div>
               <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
                 <div>
@@ -474,11 +610,12 @@ export default function TournamentModalitiesTab({ tournament, isAdmin }) {
                 </div>
               </div>
               <ScheduleHint form={form} />
-            </div>
-            <div>
+            </section>
+
+            <section className="space-y-3 rounded-[1.5rem] border border-emerald-950/10 bg-white/75 p-5">
               <Label>Observações (opcional)</Label>
-              <Input value={form.notes} onChange={(e) => set('notes', e.target.value)} />
-            </div>
+              <Input value={form.notes} onChange={(e) => set('notes', e.target.value)} className="mt-2" />
+            </section>
           </div>
           <DialogFooter>
             <Button variant="outline" onClick={() => closeDialog(false)}>Cancelar</Button>

@@ -148,8 +148,8 @@ export default function TournamentOverviewTab({ tournament, isAdmin }) {
               />
               <InfoSurface
                 icon={Trophy}
-                title="Regras e pontuação"
-                description={`${RULESET_LABELS[tournament.scoring?.ruleset || tournament.ruleset] || '—'} · ${tournament.scoring?.target_score} pontos · ${tournament.scoring?.sets_per_match} set(s)`}
+                title="Regras-base do torneio"
+                description={`${RULESET_LABELS[tournament.scoring?.ruleset || tournament.ruleset] || '—'} · a pontuação é definida dentro de cada modalidade e fase`}
               />
             </div>
 

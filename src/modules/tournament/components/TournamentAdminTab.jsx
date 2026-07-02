@@ -30,7 +30,6 @@ import {
   TOURNAMENT_ADMIN_ROLE,
   RULESET,
   RULESET_LABELS,
-  TARGET_SCORE,
   TOURNAMENT_VISIBILITY_LABELS,
 } from '@/modules/tournament/domain/constants';
 import { collection, query, where, getDocs } from 'firebase/firestore';
@@ -45,8 +44,6 @@ function buildFormState(tournament) {
     venue: tournament?.venue || '',
     visibility: tournament?.visibility || 'private',
     ruleset: tournament?.scoring?.ruleset || tournament?.ruleset || RULESET.CBP,
-    target_score: String(tournament?.scoring?.target_score || TARGET_SCORE.ELEVEN),
-    sets_per_match: String(tournament?.scoring?.sets_per_match || 1),
     starts_at: tournament?.starts_at || '',
     ends_at: tournament?.ends_at || '',
     registration_deadline: tournament?.registration_deadline || '',
@@ -131,9 +128,8 @@ export default function TournamentAdminTab({ tournament }) {
         ends_at: form.ends_at || null,
         registration_deadline: form.registration_deadline || null,
         scoring: {
+          ...(tournament?.scoring || {}),
           ruleset: form.ruleset,
-          target_score: Number(form.target_score),
-          sets_per_match: Number(form.sets_per_match),
           win_by_two: tournament?.scoring?.win_by_two ?? true,
         },
       });
@@ -248,7 +244,7 @@ export default function TournamentAdminTab({ tournament }) {
                 </div>
                 <div>
                   <div className="text-base font-semibold text-slate-950">Acesso e regras-base</div>
-                  <p className="mt-1 text-sm leading-6 text-slate-600">Defina quem encontra o torneio e qual conjunto de pontuação vira padrão para todas as modalidades.</p>
+                  <p className="mt-1 text-sm leading-6 text-slate-600">Defina quem encontra o torneio e qual conjunto de regras-base será herdado pelas modalidades.</p>
                 </div>
               </div>
 
@@ -265,7 +261,7 @@ export default function TournamentAdminTab({ tournament }) {
                     ))}
                   </select>
                 </div>
-                <div>
+                <div className="md:col-span-1">
                   <Label>Conjunto de regras</Label>
                   <select
                     className="mt-2 h-11 w-full rounded-[1rem] border border-input bg-background px-3 text-sm"
@@ -277,29 +273,8 @@ export default function TournamentAdminTab({ tournament }) {
                     ))}
                   </select>
                 </div>
-                <div>
-                  <Label>Pontos por game</Label>
-                  <select
-                    className="mt-2 h-11 w-full rounded-[1rem] border border-input bg-background px-3 text-sm"
-                    value={form.target_score}
-                    onChange={(e) => set('target_score', e.target.value)}
-                  >
-                    {Object.values(TARGET_SCORE).map((score) => (
-                      <option key={score} value={score}>{score} pontos</option>
-                    ))}
-                  </select>
-                </div>
-                <div>
-                  <Label>Sets por partida</Label>
-                  <select
-                    className="mt-2 h-11 w-full rounded-[1rem] border border-input bg-background px-3 text-sm"
-                    value={form.sets_per_match}
-                    onChange={(e) => set('sets_per_match', e.target.value)}
-                  >
-                    <option value="1">1 set</option>
-                    <option value="3">Melhor de 3</option>
-                    <option value="5">Melhor de 5</option>
-                  </select>
+                <div className="md:col-span-2 rounded-[1.25rem] border border-emerald-200 bg-emerald-50/70 p-4 text-sm leading-6 text-emerald-950">
+                  Pontos por game e sets por partida agora são definidos dentro de cada modalidade, fase por fase. Aqui ficam apenas as regras-base do torneio.
                 </div>
               </div>
             </section>

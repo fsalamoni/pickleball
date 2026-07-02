@@ -27,6 +27,7 @@ import {
   PHASE_BRACKET_SEEDING,
   MAX_PHASES_PER_MODALITY,
 } from './constants.js';
+import { normalizeStageScoringOverride } from './scoring.js';
 
 /** Formatos que se dividem naturalmente em grupos paralelos. */
 const GROUPED_FORMATS = new Set([
@@ -96,6 +97,7 @@ export function normalizePhase(raw = {}, ctx = {}) {
   return {
     type,
     name: raw.name || '',
+    scoring_override: normalizeStageScoringOverride(raw.scoring_override || {}),
     division_mode: divisionMode,
     group_count: groupCount,
     max_per_group: maxPerGroup,
@@ -137,7 +139,7 @@ export function normalizePhases(stages) {
  */
 export function defaultPhase(format = MODALITY_FORMAT.DOUBLES, isFirst = true) {
   const allowed = STAGE_TYPES_BY_FORMAT[format] || [TOURNAMENT_STAGE_TYPE.ROUND_ROBIN];
-  return normalizePhase({ type: allowed[0] }, { isFirst });
+  return normalizePhase({ type: allowed[0], scoring_override: {} }, { isFirst });
 }
 
 /**

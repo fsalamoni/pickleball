@@ -103,7 +103,7 @@ function buildEligibilityLine(modality) {
 function buildHeroCopy(modality, tournament) {
   const formatLabel = (MODALITY_FORMAT_LABELS[modality.format] || 'modalidade').toLowerCase();
   const competitionLabel = buildCompetitionLabel(modality).toLowerCase();
-  return `${tournament.name} abre uma disputa de ${formatLabel} com ${competitionLabel}, pensada para atletas que valorizam jogos organizados, leitura transparente do ranking e progressão competitiva do início ao fim.`;
+  return `${tournament.name} abre uma disputa de ${formatLabel} com ${competitionLabel}, desenhada para atletas que querem entender rapidamente o nível, a estrutura e o caminho competitivo desta modalidade.`;
 }
 
 function buildExpectationCopy(modality, tournament) {
@@ -112,6 +112,19 @@ function buildExpectationCopy(modality, tournament) {
     ? `${modality.court_count} quadra(s) reservada(s) para sustentar o ritmo da disputa.`
     : 'A distribuição de quadras e horários segue a programação do torneio.';
   return `${scheduleLabel}. ${courtCopy} O atleta acompanha tudo dentro de ${tournament.name}, com pontuação e critérios unificados na plataforma.`;
+}
+
+function buildWhyParticipate(modality, confirmedCount, occupiedCount) {
+  const reasons = [
+    `A proposta competitiva está clara desde o início: ${buildEligibilityLine(modality)}.`,
+    `A estrutura da modalidade já indica como a disputa progride: ${buildCompetitionLabel(modality).toLowerCase()}.`,
+  ];
+  if (hasUnlimitedEntries(modality.max_entries)) {
+    reasons.push(`${confirmedCount} inscrição(ões) confirmada(s) até agora, com vagas ainda abertas para ajustar a disputa ao volume real de atletas.`);
+  } else {
+    reasons.push(`${occupiedCount} vaga(s) ocupada(s) no momento, dentro de uma capacidade de ${modality.max_entries}, o que dá leitura imediata da concorrência e da disponibilidade.`);
+  }
+  return reasons;
 }
 
 function resolveRegisterButtonLabel({ alreadyRegistered, canRegister, slotsFull, isAdmin }) {
@@ -198,6 +211,7 @@ function ModalityInfoTab({
   const scheduleLabel = buildScheduleLabel(modality);
   const stages = Array.isArray(modality.stages) ? modality.stages : [];
   const stageType = stages[0]?.type;
+  const whyParticipate = buildWhyParticipate(modality, confirmedCount, occupiedCount);
   const details = [
     {
       label: 'Perfil competitivo',
@@ -228,17 +242,6 @@ function ModalityInfoTab({
       icon: Wallet,
     },
   ];
-  const joinReasons = [
-    `A modalidade já nasce com um perfil competitivo definido: ${buildEligibilityLine(modality)}.`,
-    stages.length > 1
-      ? `A disputa foi estruturada em ${stages.length} fases, o que cria narrativa esportiva e mantém o torneio interessante até os momentos decisivos.`
-      : describeStage(stageType),
-    hasUnlimitedEntries(modality.max_entries)
-      ? 'As vagas seguem abertas sem limite formal, o que amplia a porta de entrada sem perder a organização da modalidade.'
-      : slotsFull
-        ? 'A capacidade configurada está no limite agora, sinal de procura real e de uma modalidade já aquecida dentro do torneio.'
-        : `A leitura de ocupação está clara: ${Math.max(Number(modality.max_entries || 0) - occupiedCount, 0)} vaga(s) ainda disponíveis no cenário atual.`,
-  ];
   const registerLabel = resolveRegisterButtonLabel({ alreadyRegistered, canRegister, slotsFull, isAdmin });
 
   return (
@@ -261,22 +264,25 @@ function ModalityInfoTab({
           </CardContent>
         </Card>
 
-        <Card className="arena-panel-strong rounded-[2rem] border-0">
+        <Card className="rounded-[2rem] border-white/80 bg-white/82">
           <CardContent className="p-6 sm:p-7">
-            <div className="text-xs font-semibold uppercase tracking-[0.18em] text-emerald-50/75">Por que entrar</div>
-            <h3 className="mt-4 text-3xl font-semibold leading-tight text-white">
-              O atleta entende rápido o nível, a dinâmica e o caminho até o pódio.
+            <div className="text-xs font-semibold uppercase tracking-[0.18em] text-emerald-700/80">Por que participar</div>
+            <h3 className="mt-4 text-2xl font-semibold leading-tight text-slate-950">
+              Razões concretas para avaliar esta modalidade com mais seriedade.
             </h3>
+            <p className="mt-3 text-sm leading-7 text-slate-600 sm:text-base">
+              Sem exagero visual: o foco aqui é mostrar os elementos que realmente ajudam alguém a decidir se esta disputa faz sentido para o seu perfil.
+            </p>
 
             <div className="mt-6 space-y-3">
-              {joinReasons.map((reason, index) => (
-                <HighlightLine key={index} index={index} description={reason} />
+              {whyParticipate.map((reason, index) => (
+                <InfoPanel key={index} icon={Target} title={`Leitura ${index + 1}`} description={reason} />
               ))}
             </div>
 
-            <div className="mt-6 rounded-[1.35rem] border border-white/12 bg-white/10 p-4 backdrop-blur-sm">
-              <div className="text-[11px] font-semibold uppercase tracking-[0.16em] text-emerald-50/75">Expectativa esportiva</div>
-              <p className="mt-2 text-sm leading-6 text-emerald-50/80">
+            <div className="mt-6 rounded-[1.35rem] border border-emerald-950/10 bg-secondary/35 p-4">
+              <div className="text-[11px] font-semibold uppercase tracking-[0.16em] text-emerald-700/75">Leitura operacional</div>
+              <p className="mt-2 text-sm leading-6 text-slate-600">
                 {buildExpectationCopy(modality, tournament)}
               </p>
             </div>
@@ -285,7 +291,6 @@ function ModalityInfoTab({
               <Button
                 onClick={onRegister}
                 disabled={alreadyRegistered || !canRegister || (slotsFull && !isAdmin)}
-                className="bg-white text-slate-950 hover:bg-slate-100"
               >
                 <Plus className="h-4 w-4" />
                 <span className="ml-1">{registerLabel}</span>
@@ -611,15 +616,6 @@ function DetailMetric({ label, value, description, icon: Icon }) {
         <p className="mt-1 text-xs leading-5 text-slate-600">{description}</p>
       </CardContent>
     </Card>
-  );
-}
-
-function HighlightLine({ index, description }) {
-  return (
-    <div className="rounded-[1.35rem] border border-white/12 bg-white/10 p-4 backdrop-blur-sm">
-      <div className="text-[11px] font-semibold uppercase tracking-[0.16em] text-emerald-50/75">0{index + 1}</div>
-      <p className="mt-2 text-sm leading-6 text-emerald-50/80">{description}</p>
-    </div>
   );
 }
 

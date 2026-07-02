@@ -2,10 +2,13 @@ import { describe, it, expect } from 'vitest';
 import { RULESET, TARGET_SCORE } from './constants.js';
 import {
   DEFAULT_SCORING_CONFIG,
+  formatScoringSummary,
   normalizeScoringConfig,
+  normalizeStageScoringOverride,
   getGameWinner,
   getMatchResult,
   getMatchPoints,
+  resolveStageScoringConfig,
 } from './scoring.js';
 
 describe('pickleball scoring engine', () => {
@@ -21,6 +24,26 @@ describe('pickleball scoring engine', () => {
       expect(cfg.target_score).toBe(11);
       expect(cfg.sets_per_match).toBe(1);
       expect(cfg.ruleset).toBe(RULESET.CBP);
+    });
+    it('resolve override por fase sobre torneio e modalidade', () => {
+      const tournament = { scoring: { ruleset: RULESET.USAP, target_score: 15, sets_per_match: 1 } };
+      const modality = {
+        scoring_override: { target_score: 21 },
+        stages: [{ scoring_override: { sets_per_match: 3 } }],
+      };
+      const cfg = resolveStageScoringConfig(modality, tournament, 0);
+      expect(cfg.ruleset).toBe(RULESET.USAP);
+      expect(cfg.target_score).toBe(21);
+      expect(cfg.sets_per_match).toBe(3);
+    });
+    it('normaliza o override resumido de uma fase', () => {
+      expect(normalizeStageScoringOverride({ target_score: 99, sets_per_match: 2 })).toEqual({
+        target_score: 11,
+        sets_per_match: 1,
+      });
+    });
+    it('formata um resumo legível de pontuação', () => {
+      expect(formatScoringSummary({ target_score: 15, sets_per_match: 3 })).toBe('15 pontos · Melhor de 3');
     });
   });
 

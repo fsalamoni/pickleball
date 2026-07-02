@@ -3,6 +3,7 @@ import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { Badge } from '@/components/ui/badge';
+import { formatSetsPerMatchLabel, formatScoringSummary, normalizeStageScoringOverride } from '@/modules/tournament/domain/scoring';
 import { Plus, Trash2, ArrowDown, Sparkles, Info, AlertTriangle, Users2, User } from 'lucide-react';
 import { CollapsibleSection } from '@/components/ui/collapsible-section';
 import {
@@ -19,6 +20,7 @@ import {
   PHASE_PAIRING_MODE_LABELS,
   PHASE_BRACKET_SEEDING_LABELS,
   MAX_PHASES_PER_MODALITY,
+  TARGET_SCORE,
 } from '@/modules/tournament/domain/constants';
 import { normalizePhase, normalizePhases, supportsGroups, BRACKET_FORMATS } from '@/modules/tournament/domain/phases';
 import { describeStage } from '@/modules/tournament/domain/formatExplain';
@@ -95,6 +97,7 @@ function computePlayUnits(phases, format) {
 /** Resumo de uma fase em linguagem simples (para o cabeçalho colapsado). */
 function phaseSummary(phase, index, phases) {
   const parts = [TOURNAMENT_STAGE_TYPE_LABELS[phase.type]];
+  if (phase.scoring_override) parts.push(formatScoringSummary(phase.scoring_override));
   if (supportsGroups(phase.type)) {
     if (phase.division_mode === PHASE_DIVISION_MODE.GROUP_COUNT) parts.push(`${phase.group_count} grupos`);
     else if (phase.division_mode === PHASE_DIVISION_MODE.MAX_PER_GROUP) parts.push(`até ${phase.max_per_group}/grupo`);
@@ -158,6 +161,11 @@ export default function PhasesEditor({ phases, format, onChange }) {
   function update(index, patch) {
     const next = phases.map((p, i) => (i === index ? normalizePhase({ ...p, ...patch }, { isFirst: index === 0 }) : p));
     onChange(next);
+  }
+
+  function updateScoring(index, patch) {
+    const current = normalized[index]?.scoring_override || {};
+    update(index, { scoring_override: normalizeStageScoringOverride({ ...current, ...patch }) });
   }
 
   function addPhase() {
@@ -332,6 +340,57 @@ export default function PhasesEditor({ phases, format, onChange }) {
                     <span>Disputa de 3º lugar (medalha de bronze entre os perdedores das semifinais)</span>
                   </label>
                 )}
+              </div>
+
+              <div className="rounded-md border border-slate-200 bg-white p-3 space-y-3">
+                <div>
+                  <div className="text-xs font-medium text-slate-700">Pontuação da fase</div>
+                  <p className="text-[11px] leading-snug text-slate-500 mt-1">
+                    Cada fase pode ter sua própria configuração de pontos por game e sets por partida.
+                  </p>
+                </div>
+                <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
+                  <div>
+                    <Label className="text-xs">Pontos por game</Label>
+                    <div className="mt-2 flex flex-wrap gap-2">
+                      {Object.values(TARGET_SCORE).map((score) => (
+                        <button
+                          key={score}
+                          type="button"
+                          onClick={() => updateScoring(index, { target_score: score })}
+                          className={[
+                            'rounded-full border px-3 py-1.5 text-xs font-medium transition-all duration-200',
+                            Number(phase.scoring_override?.target_score) === score
+                              ? 'border-emerald-500/35 bg-emerald-600 text-white'
+                              : 'border-emerald-950/10 bg-background text-slate-700 hover:border-emerald-400/35',
+                          ].join(' ')}
+                        >
+                          {score} pontos
+                        </button>
+                      ))}
+                    </div>
+                  </div>
+                  <div>
+                    <Label className="text-xs">Sets por partida</Label>
+                    <div className="mt-2 flex flex-wrap gap-2">
+                      {[1, 3, 5].map((sets) => (
+                        <button
+                          key={sets}
+                          type="button"
+                          onClick={() => updateScoring(index, { sets_per_match: sets })}
+                          className={[
+                            'rounded-full border px-3 py-1.5 text-xs font-medium transition-all duration-200',
+                            Number(phase.scoring_override?.sets_per_match) === sets
+                              ? 'border-emerald-500/35 bg-emerald-600 text-white'
+                              : 'border-emerald-950/10 bg-background text-slate-700 hover:border-emerald-400/35',
+                          ].join(' ')}
+                        >
+                          {formatSetsPerMatchLabel(sets)}
+                        </button>
+                      ))}
+                    </div>
+                  </div>
+                </div>
               </div>
 
               {/* Classificação para a próxima fase (não aparece na última). */}

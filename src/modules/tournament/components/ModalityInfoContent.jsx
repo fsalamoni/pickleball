@@ -10,7 +10,7 @@ import {
   RULESET_LABELS,
 } from '@/modules/tournament/domain/constants';
 import { hasUnlimitedEntries } from '@/modules/tournament/domain/capacity';
-import { normalizeScoringConfig } from '@/modules/tournament/domain/scoring';
+import { formatScoringSummary, resolveStageScoringConfig } from '@/modules/tournament/domain/scoring';
 import { describeFormat, describeStage } from '@/modules/tournament/domain/formatExplain';
 import StageExplanation from './StageExplanation';
 
@@ -29,7 +29,6 @@ function formatConfirmedCount(count) {
  */
 export default function ModalityInfoContent({ modality, tournament, registrationsCount = 0 }) {
   if (!modality) return null;
-  const scoring = normalizeScoringConfig(modality.scoring_override || tournament?.scoring);
   const stages = Array.isArray(modality.stages) && modality.stages.length > 0 ? modality.stages : [];
   const isMultiPhase = stages.length > 1;
   const stageType = stages[0]?.type;
@@ -87,6 +86,11 @@ export default function ModalityInfoContent({ modality, tournament, registration
                   Fase {i + 1}: {TOURNAMENT_STAGE_TYPE_LABELS[s.type] || s.type}
                 </div>
                 <p className="text-xs text-slate-600 mt-0.5">{describeStage(s.type)}</p>
+                <p className="mt-1 text-xs font-medium text-emerald-700">
+                  {RULESET_LABELS[resolveStageScoringConfig(modality, tournament, i).ruleset] || resolveStageScoringConfig(modality, tournament, i).ruleset}
+                  {' · '}
+                  {formatScoringSummary(resolveStageScoringConfig(modality, tournament, i))}
+                </p>
               </li>
             ))}
           </ol>
@@ -149,11 +153,20 @@ export default function ModalityInfoContent({ modality, tournament, registration
         <h4 className="font-semibold text-slate-900 flex items-center gap-2">
           <BookOpen className="w-4 h-4 text-emerald-600" /> Regras de pontuação
         </h4>
-        <ul className="list-disc pl-5 space-y-1">
-          <li><strong>Conjunto de regras:</strong> {RULESET_LABELS[scoring.ruleset] || scoring.ruleset}</li>
-          <li><strong>Pontos por game:</strong> {scoring.target_score} (vantagem mínima de 2)</li>
-          <li><strong>Sets por partida:</strong> {scoring.sets_per_match === 1 ? '1 set' : `Melhor de ${scoring.sets_per_match}`}</li>
-        </ul>
+        {stages.length > 0 ? (
+          <ul className="list-disc pl-5 space-y-1">
+            {stages.map((stage, index) => {
+              const scoring = resolveStageScoringConfig(modality, tournament, index);
+              return (
+                <li key={`${stage.type}-${index}`}>
+                  <strong>Fase {index + 1}:</strong> {RULESET_LABELS[scoring.ruleset] || scoring.ruleset} · {formatScoringSummary(scoring)}
+                </li>
+              );
+            })}
+          </ul>
+        ) : (
+          <p className="text-sm text-slate-500">A pontuação desta modalidade ainda não foi configurada.</p>
+        )}
       </section>
 
       <section className="space-y-2">

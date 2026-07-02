@@ -20,7 +20,6 @@ import {
 import {
   RULESET,
   RULESET_LABELS,
-  TARGET_SCORE,
   TOURNAMENT_VISIBILITY,
   TOURNAMENT_VISIBILITY_LABELS,
 } from '@/modules/tournament/domain/constants';
@@ -39,8 +38,6 @@ const VISIBILITY_OPTIONS = [
     icon: Lock,
   },
 ];
-
-const SETS_OPTIONS = [1, 3, 5];
 
 function formatDatePreview(value) {
   if (!value) return 'A definir';
@@ -66,8 +63,6 @@ export default function CreateTournament() {
     venue: '',
     visibility: TOURNAMENT_VISIBILITY.PUBLIC,
     ruleset: RULESET.CBP,
-    target_score: TARGET_SCORE.ELEVEN,
-    sets_per_match: 1,
     starts_at: '',
     ends_at: '',
     registration_deadline: '',
@@ -94,8 +89,6 @@ export default function CreateTournament() {
         registration_deadline: form.registration_deadline || null,
         scoring: {
           ruleset: form.ruleset,
-          target_score: Number(form.target_score),
-          sets_per_match: Number(form.sets_per_match),
           win_by_two: true,
         },
       });
@@ -124,8 +117,8 @@ export default function CreateTournament() {
       icon: ShieldCheck,
     },
     {
-      label: 'Pontuação',
-      value: `${form.target_score} pontos · ${form.sets_per_match} set(s)`,
+      label: 'Inscrições',
+      value: formatDatePreview(form.registration_deadline),
       icon: Trophy,
     },
     {
@@ -275,8 +268,8 @@ export default function CreateTournament() {
 
             <section className="space-y-4 rounded-[1.5rem] border border-emerald-950/10 bg-white/75 p-5">
               <div>
-                <div className="text-xs font-semibold uppercase tracking-[0.16em] text-emerald-700/75">Regras e pontuação</div>
-                <h3 className="mt-2 text-xl font-semibold text-slate-950">Configure o padrão esportivo do evento</h3>
+                <div className="text-xs font-semibold uppercase tracking-[0.16em] text-emerald-700/75">Regras-base</div>
+                <h3 className="mt-2 text-xl font-semibold text-slate-950">Defina a base regulamentar do torneio</h3>
               </div>
 
               <div className="grid grid-cols-1 gap-4 md:grid-cols-2">
@@ -292,50 +285,10 @@ export default function CreateTournament() {
                     ))}
                   </select>
                 </div>
-                <div>
-                  <Label>Pontos por game</Label>
-                  <div className="mt-2 flex flex-wrap gap-2">
-                    {Object.values(TARGET_SCORE).map((score) => (
-                      <button
-                        key={score}
-                        type="button"
-                        onClick={() => set('target_score', score)}
-                        className={[
-                          'rounded-full border px-4 py-2 text-sm font-medium transition-all duration-200',
-                          Number(form.target_score) === score
-                            ? 'border-emerald-500/35 bg-emerald-600 text-white'
-                            : 'border-emerald-950/10 bg-background text-slate-700 hover:border-emerald-400/35',
-                        ].join(' ')}
-                      >
-                        {score} pontos
-                      </button>
-                    ))}
-                  </div>
-                </div>
-                <div className="md:col-span-2">
-                  <Label>Sets por partida</Label>
-                  <div className="mt-2 flex flex-wrap gap-2">
-                    {SETS_OPTIONS.map((sets) => (
-                      <button
-                        key={sets}
-                        type="button"
-                        onClick={() => set('sets_per_match', sets)}
-                        className={[
-                          'rounded-full border px-4 py-2 text-sm font-medium transition-all duration-200',
-                          Number(form.sets_per_match) === sets
-                            ? 'border-emerald-500/35 bg-emerald-600 text-white'
-                            : 'border-emerald-950/10 bg-background text-slate-700 hover:border-emerald-400/35',
-                        ].join(' ')}
-                      >
-                        {sets === 1 ? '1 set' : `Melhor de ${sets}`}
-                      </button>
-                    ))}
-                  </div>
-                </div>
               </div>
 
               <div className="rounded-[1.25rem] border border-emerald-200 bg-emerald-50/70 p-4 text-sm leading-6 text-emerald-950">
-                A classificação padrão da plataforma usa número de vitórias, saldo de pontos, maior número de pontos marcados e, por fim, menor número de pontos sofridos. Você não precisa configurar isso manualmente.
+                Pontos por game e sets por partida serão definidos depois, dentro de cada modalidade e, quando houver, em cada fase da modalidade.
               </div>
             </section>
 

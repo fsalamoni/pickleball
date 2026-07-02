@@ -9,7 +9,7 @@ import { listMatches } from './matchService.js';
 import { listRegistrations } from './registrationService.js';
 import { getModality } from './modalityService.js';
 import { getTournament } from './tournamentService.js';
-import { normalizeScoringConfig } from '../domain/scoring.js';
+import { resolveStageScoringConfig } from '../domain/scoring.js';
 import { buildRanking } from '../domain/ranking.js';
 import { normalizePhases, supportsGroups } from '../domain/phases.js';
 import { rankEntrantsInGroup } from '../domain/phaseProgression.js';
@@ -23,7 +23,6 @@ export async function computeModalityRanking(modalityId, stageIndex) {
   const modality = await getModality(modalityId);
   if (!modality) return [];
   const tournament = await getTournament(modality.tournament_id);
-  const cfg = normalizeScoringConfig(modality.scoring_override || tournament?.scoring);
 
   const stages = modality.stages || [];
   const matches = [];
@@ -38,7 +37,13 @@ export async function computeModalityRanking(modalityId, stageIndex) {
   const registrations = await listRegistrations(modalityId);
   const participantIds = registrations.map((r) => r.id);
 
-  const ranking = buildRanking(matches, participantIds, cfg);
+  const ranking = buildRanking(
+    matches,
+    participantIds,
+    typeof stageIndex === 'number'
+      ? resolveStageScoringConfig(modality, tournament, stageIndex)
+      : (match) => resolveStageScoringConfig(modality, tournament, match.stage_index ?? 0),
+  );
 
   // enriquece com label e fotos dos participantes para o front
   const regById = new Map(registrations.map((r) => [r.id, r]));
@@ -118,7 +123,6 @@ export async function computeModalityRankingStructured(modalityId) {
   const modality = await getModality(modalityId);
   if (!modality) return { structured: false, phases: [] };
   const tournament = await getTournament(modality.tournament_id);
-  const cfg = normalizeScoringConfig(modality.scoring_override || tournament?.scoring);
 
   const phases = normalizePhases(modality.stages);
   const registrations = await listRegistrations(modalityId);
@@ -127,6 +131,7 @@ export async function computeModalityRankingStructured(modalityId) {
   const result = [];
   for (let i = 0; i < phases.length; i += 1) {
     const phase = phases[i];
+    const phaseScoring = resolveStageScoringConfig(modality, tournament, i);
     const matches = await listMatches(modalityId, i);
     if (matches.length === 0) {
       result.push({
@@ -149,7 +154,7 @@ export async function computeModalityRankingStructured(modalityId) {
         const memberSet = new Set(entrants.flatMap((e) => e.members || [e.id]));
         const groupMatches = matches.filter((m) =>
           (m.group ? m.group === g.name : (m.side_a_ids || []).some((id) => memberSet.has(id))));
-        const ranked = rankEntrantsInGroup(entrants, groupMatches, cfg);
+        const ranked = rankEntrantsInGroup(entrants, groupMatches, phaseScoring);
         return { name: g.name, rows: ranked.map((r) => rowFromRanked(r, regById)) };
       });
     } else {
@@ -160,7 +165,7 @@ export async function computeModalityRankingStructured(modalityId) {
         (m.side_b_ids || []).forEach((id) => ids.add(id));
       });
       const entrants = [...ids].map((id) => ({ id, members: [id] }));
-      const ranked = rankEntrantsInGroup(entrants, matches, cfg);
+      const ranked = rankEntrantsInGroup(entrants, matches, phaseScoring);
       groups = [{ name: null, rows: ranked.map((r) => rowFromRanked(r, regById)) }];
     }
 

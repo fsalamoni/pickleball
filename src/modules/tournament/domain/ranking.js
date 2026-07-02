@@ -57,7 +57,8 @@ export function buildStandings(matches, participantIds, scoringConfig) {
   participantIds.forEach((id) => stats.set(String(id), emptyStats(String(id))));
 
   matches.forEach((m) => {
-    const result = getMatchResult(m, scoringConfig);
+    const configForMatch = typeof scoringConfig === 'function' ? scoringConfig(m) : scoringConfig;
+    const result = getMatchResult(m, configForMatch);
     if (!result.finished) return;
 
     const idsA = getSideIds(m, 'a');

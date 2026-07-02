@@ -26,7 +26,7 @@ import {
   MATCH_STATUS_LABELS,
   TOURNAMENT_STAGE_TYPE_LABELS,
 } from '@/modules/tournament/domain/constants';
-import { normalizeScoringConfig } from '@/modules/tournament/domain/scoring';
+import { formatScoringSummary, resolveStageScoringConfig } from '@/modules/tournament/domain/scoring';
 import { normalizePhases } from '@/modules/tournament/domain/phases';
 import { CollapsibleSection } from '@/components/ui/collapsible-section';
 
@@ -112,7 +112,6 @@ export function ModalityMatchesBlock({ tournament, modality, isAdmin }) {
     return map;
   }, [registrations]);
 
-  const cfg = normalizeScoringConfig(modality.scoring_override || tournament.scoring);
   const [openMatchId, setOpenMatchId] = useState(null);
   const openMatch = matches.find((m) => m.id === openMatchId);
 
@@ -134,7 +133,7 @@ export function ModalityMatchesBlock({ tournament, modality, isAdmin }) {
   ).length;
   const subtitle = matches.length === 0
     ? 'Nenhum jogo gerado ainda'
-    : `${doneCount}/${matches.length} jogos concluídos · ${cfg.target_score} pontos · best-of-${cfg.sets_per_match}`;
+    : `${doneCount}/${matches.length} jogos concluídos`;
 
   return (
     <>
@@ -144,18 +143,25 @@ export function ModalityMatchesBlock({ tournament, modality, isAdmin }) {
         ) : (
           <div className="space-y-3">
             {byStage.map(([stageIndex, stageMatches]) => (
+              (() => {
+                const phaseScoring = resolveStageScoringConfig(modality, tournament, stageIndex);
+                return (
               <PhaseMatches
                 key={stageIndex}
                 phaseLabel={showPhaseHeaders
                   ? `Fase ${stageIndex + 1} · ${TOURNAMENT_STAGE_TYPE_LABELS[phases[stageIndex]?.type] || ''}`
                   : null}
+                phaseScoringLabel={formatScoringSummary(phaseScoring)}
                 matches={stageMatches}
                 modalityId={modality.id}
                 labelById={labelById}
                 peopleById={peopleById}
                 isAdmin={isAdmin}
                 onOpenScore={setOpenMatchId}
+                scoringConfig={phaseScoring}
               />
+                );
+              })()
             ))}
           </div>
         )}
@@ -164,7 +170,7 @@ export function ModalityMatchesBlock({ tournament, modality, isAdmin }) {
         <ScoreEntryDialog
           match={openMatch}
           modalityId={modality.id}
-          scoringConfig={cfg}
+          scoringConfig={resolveStageScoringConfig(modality, tournament, openMatch.stage_index ?? 0)}
           labelById={labelById}
           onClose={() => setOpenMatchId(null)}
         />
@@ -173,7 +179,7 @@ export function ModalityMatchesBlock({ tournament, modality, isAdmin }) {
   );
 }
 
-function PhaseMatches({ phaseLabel, matches, modalityId, labelById, peopleById, isAdmin, onOpenScore }) {
+function PhaseMatches({ phaseLabel, phaseScoringLabel, matches, modalityId, labelById, peopleById, isAdmin, onOpenScore }) {
   const markInProgressMutation = useMarkMatchInProgress(modalityId);
 
   async function handleMarkInProgress(matchId) {
@@ -362,7 +368,12 @@ function PhaseMatches({ phaseLabel, matches, modalityId, labelById, peopleById, 
       className="border-slate-200 bg-slate-50/40"
       headerClassName="py-1.5"
       title={phaseLabel}
-      badges={<Badge variant="secondary">{doneCount}/{matches.length} concluídos</Badge>}
+      badges={(
+        <>
+          <Badge variant="secondary">{phaseScoringLabel}</Badge>
+          <Badge variant="secondary">{doneCount}/{matches.length} concluídos</Badge>
+        </>
+      )}
       defaultOpen
     >
       {inner}

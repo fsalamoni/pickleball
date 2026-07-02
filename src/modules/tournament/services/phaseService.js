@@ -44,7 +44,7 @@ import { drawGroups } from '../domain/grouping.js';
 import { americanoMatchCount } from '../domain/draw.js';
 import { buildPhaseDraw } from '../domain/phaseDraw.js';
 import { rankEntrantsInGroup, buildNextPhaseEntrants } from '../domain/phaseProgression.js';
-import { normalizeScoringConfig } from '../domain/scoring.js';
+import { resolveStageScoringConfig } from '../domain/scoring.js';
 import { stageFormatCompatibility } from '../domain/formatExplain.js';
 import { listRegistrations } from './registrationService.js';
 import { getModality } from './modalityService.js';
@@ -400,6 +400,7 @@ export async function advanceToNextPhase(params, actor) {
   const { tournamentId, modalityId, stageIndex, seed: providedSeed } = params;
   const modality = await getModality(modalityId);
   if (!modality) throw new Error('Modalidade não encontrada.');
+  const tournament = await getTournament(tournamentId);
 
   const phases = normalizePhases(modality.stages);
   const prevPhase = phases[stageIndex];
@@ -407,7 +408,7 @@ export async function advanceToNextPhase(params, actor) {
   if (!prevPhase) throw new Error('Fase atual não encontrada.');
   if (!nextPhase) throw new Error('Esta já é a última fase — não há próxima fase para gerar.');
 
-  const scoringConfig = normalizeScoringConfig(modality.scoring_override || {});
+  const scoringConfig = resolveStageScoringConfig(modality, tournament, stageIndex);
   const matches = await listMatches(modalityId, stageIndex);
   if (matches.length === 0) throw new Error('Sorteie e dispute a fase atual antes de avançar.');
 
