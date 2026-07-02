@@ -48,6 +48,10 @@ const MyBookings = lazy(() => import('@/modules/arenas/pages/MyBookings'));
 const SportHistory = lazy(() => import('@/pages/SportHistory'));
 const PageNotFound = lazy(() => import('@/pages/PageNotFound'));
 
+// Experiência de design paralela (Athleisure Premium) sob /v2. Chunk isolado:
+// só carrega quando a rota /v2 é acessada e não interfere no app atual.
+const V2App = lazy(() => import('@/v2/V2App'));
+
 const LOCAL_PREVIEW_PROTECTED_PATHS = new Set([
   '/torneios/criar',
   '/torneios/ingressar',
@@ -180,6 +184,9 @@ export default function App() {
               <Route path="/admin/torneios" element={<AdminRoute>{withLayout('AdminTournaments', AdminTournaments)}</AdminRoute>} />
               <Route path="/admin/metricas" element={<AdminRoute>{withLayout('AdminMetrics', AdminMetrics)}</AdminRoute>} />
               <Route path="/admin/parceiros" element={<AdminRoute>{withLayout('AdminPartners', AdminPartners)}</AdminRoute>} />
+
+              {/* Experiência de design paralela (v2) — layout e rotas próprios. */}
+              <Route path="/v2/*" element={<V2App />} />
 
               <Route path="*" element={<PageNotFound />} />
             </Routes>
