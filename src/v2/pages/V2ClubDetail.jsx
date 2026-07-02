@@ -10,9 +10,9 @@ import {
   useRequestToJoinClub, useMyClubInvite, useAcceptClubInvite, useDeclineClubInvite,
 } from '@/modules/clubs/hooks/useClubs';
 import { CLUB_ROLE, JOIN_REQUEST_STATUS } from '@/modules/clubs/domain/constants';
-import ClubMembersTab from '@/modules/clubs/components/ClubMembersTab';
-import ClubEventsTab from '@/modules/clubs/components/ClubEventsTab';
-import ClubFeedTab from '@/modules/clubs/components/ClubFeedTab';
+import V2ClubMembers from '@/v2/components/clubs/V2ClubMembers';
+import V2ClubEvents from '@/v2/components/clubs/V2ClubEvents';
+import V2ClubFeed from '@/v2/components/clubs/V2ClubFeed';
 import ClubForumsTab from '@/modules/clubs/components/ClubForumsTab';
 import ClubAdminTab from '@/modules/clubs/components/ClubAdminTab';
 import { useAuth } from '@/core/lib/FirebaseAuthContext';
@@ -215,9 +215,9 @@ export default function V2ClubDetail() {
           </div>
 
           <div className="mt-6">
-            {safeTab === 'members' && <ClubMembersTab clubId={clubId} isAdmin={isAdmin} />}
-            {safeTab === 'events' && <ClubEventsTab clubId={clubId} isAdmin={isAdmin} />}
-            {safeTab === 'feed' && <ClubFeedTab clubId={clubId} isAdmin={isAdmin} />}
+            {safeTab === 'members' && <V2ClubMembers clubId={clubId} isAdmin={isAdmin} />}
+            {safeTab === 'events' && <V2ClubEvents clubId={clubId} isAdmin={isAdmin} />}
+            {safeTab === 'feed' && <V2ClubFeed clubId={clubId} isAdmin={isAdmin} />}
             {safeTab === 'forums' && <ClubForumsTab clubId={clubId} isAdmin={isAdmin} initialThreadId={threadParam} onThreadChange={setThreadParam} />}
             {safeTab === 'admin' && isAdmin && <ClubAdminTab club={club} />}
           </div>

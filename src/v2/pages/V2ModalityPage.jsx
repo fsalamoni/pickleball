@@ -146,7 +146,7 @@ export default function V2ModalityPage() {
       </div>
 
       <div className="mt-6">
-        {tab === 'info' && <V2Surface contentClassName="p-5 sm:p-6"><ModalityInfoContent modality={modality} tournament={tournament} registrationsCount={confirmed.length} /></V2Surface>}
+        {tab === 'info' && <V2Surface><ModalityInfoContent modality={modality} tournament={tournament} registrationsCount={confirmed.length} /></V2Surface>}
         {tab === 'inscricao' && (
           <V2Surface>
             <div className="flex flex-wrap items-center justify-between gap-3">
