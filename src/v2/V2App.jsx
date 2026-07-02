@@ -23,25 +23,27 @@ const V2Bookings = lazy(() => import('@/v2/pages/V2Bookings'));
 const V2Profile = lazy(() => import('@/v2/pages/V2Profile'));
 const V2Chat = lazy(() => import('@/v2/pages/V2Chat'));
 
-// Fluxos de autoria/admin/conteúdo: reutilizam as páginas provadas do app atual
-// renderizadas dentro do shell v2, garantindo navegação completa sob /v2.
-const CreateTournament = lazy(() => import('@/modules/tournament/pages/CreateTournament'));
-const JoinTournament = lazy(() => import('@/modules/tournament/pages/JoinTournament'));
+// Páginas nativas v2 de autoria e admin.
+const V2CreateTournament = lazy(() => import('@/v2/pages/V2CreateTournament'));
+const V2JoinTournament = lazy(() => import('@/v2/pages/V2JoinTournament'));
+const V2CreateArena = lazy(() => import('@/v2/pages/V2CreateArena'));
+const V2CreateClub = lazy(() => import('@/v2/pages/V2CreateClub'));
+const V2ProfileEdit = lazy(() => import('@/v2/pages/V2ProfileEdit'));
+const V2AdminMetrics = lazy(() => import('@/v2/pages/V2AdminMetrics'));
+const V2AdminTournaments = lazy(() => import('@/v2/pages/V2AdminTournaments'));
+const V2AdminPartners = lazy(() => import('@/v2/pages/V2AdminPartners'));
+
+// Ainda reutilizando as páginas provadas do app atual dentro do shell v2
+// (conteúdo estático, gestão de arena, modalidade e evento).
 const TournamentFormatsGuide = lazy(() => import('@/modules/tournament/pages/TournamentFormatsGuide'));
 const ModalityPage = lazy(() => import('@/modules/tournament/pages/ModalityPage'));
-const CreateArena = lazy(() => import('@/modules/arenas/pages/CreateArena'));
 const ArenaManage = lazy(() => import('@/modules/arenas/pages/ArenaManage'));
-const CreateClub = lazy(() => import('@/modules/clubs/pages/CreateClub'));
 const EventDetail = lazy(() => import('@/modules/clubs/pages/EventDetail'));
-const Profile = lazy(() => import('@/pages/Profile'));
 const PickleballRules = lazy(() => import('@/pages/PickleballRules'));
 const Leveling = lazy(() => import('@/pages/Leveling'));
 const SportHistory = lazy(() => import('@/pages/SportHistory'));
 const ConductFairPlay = lazy(() => import('@/pages/ConductFairPlay'));
 const PrivacyPolicy = lazy(() => import('@/pages/PrivacyPolicy'));
-const AdminTournaments = lazy(() => import('@/modules/admin/pages/AdminTournaments'));
-const AdminMetrics = lazy(() => import('@/modules/admin/pages/AdminMetrics'));
-const AdminPartners = lazy(() => import('@/modules/partners/pages/AdminPartners'));
 
 function V2Spinner({ full = true }) {
   return (
@@ -72,7 +74,7 @@ export default function V2App() {
 
           {/* Arenas */}
           <Route path="arenas" element={<V2Arenas />} />
-          <Route path="arenas/criar" element={<CreateArena />} />
+          <Route path="arenas/criar" element={<V2CreateArena />} />
           <Route path="arenas/:arenaId" element={<V2ArenaDetail />} />
           <Route path="arenas/:arenaId/gerir" element={<ArenaManage />} />
           <Route path="minhas-reservas" element={<V2Bookings />} />
@@ -80,8 +82,8 @@ export default function V2App() {
           {/* Torneios */}
           <Route path="torneios" element={<V2Tournaments />} />
           <Route path="torneios/publicos" element={<Navigate to="/v2/torneios" replace />} />
-          <Route path="torneios/criar" element={<CreateTournament />} />
-          <Route path="torneios/ingressar" element={<JoinTournament />} />
+          <Route path="torneios/criar" element={<V2CreateTournament />} />
+          <Route path="torneios/ingressar" element={<V2JoinTournament />} />
           <Route path="torneios/guia" element={<TournamentFormatsGuide />} />
           <Route path="torneios/:tournamentId" element={<V2Tournament />} />
           <Route path="torneios/:tournamentId/modalidades/:modalityId" element={<ModalityPage />} />
@@ -91,7 +93,7 @@ export default function V2App() {
           <Route path="atletas" element={<V2Athletes />} />
           <Route path="atleta/:uid" element={<V2AthleteProfile />} />
           <Route path="clubes" element={<V2Clubs />} />
-          <Route path="clubes/criar" element={<CreateClub />} />
+          <Route path="clubes/criar" element={<V2CreateClub />} />
           <Route path="clubes/:clubId" element={<V2ClubDetail />} />
           <Route path="clubes/:clubId/eventos/:eventId" element={<EventDetail />} />
           <Route path="novidades" element={<V2Community />} />
@@ -106,7 +108,7 @@ export default function V2App() {
           {/* Você */}
           <Route path="meu-desempenho" element={<V2Performance />} />
           <Route path="perfil" element={<V2Profile />} />
-          <Route path="perfil/editar" element={<Profile />} />
+          <Route path="perfil/editar" element={<V2ProfileEdit />} />
 
           {/* Conteúdo do esporte */}
           <Route path="regras" element={<PickleballRules />} />
@@ -116,9 +118,9 @@ export default function V2App() {
           <Route path="politica-uso" element={<PrivacyPolicy />} />
 
           {/* Admin geral */}
-          <Route path="admin/torneios" element={<AdminTournaments />} />
-          <Route path="admin/metricas" element={<AdminMetrics />} />
-          <Route path="admin/parceiros" element={<AdminPartners />} />
+          <Route path="admin/torneios" element={<V2AdminTournaments />} />
+          <Route path="admin/metricas" element={<V2AdminMetrics />} />
+          <Route path="admin/parceiros" element={<V2AdminPartners />} />
 
           <Route path="*" element={<Navigate to="/v2" replace />} />
         </Routes>

@@ -2,10 +2,12 @@ import React, { useEffect, useMemo, useRef, useState } from 'react';
 import { Link, useLocation, useNavigate } from 'react-router-dom';
 import {
   Activity,
+  BarChart3,
   Bell,
   Building2,
   CalendarClock,
   ChevronRight,
+  FolderCog,
   HeartHandshake,
   LayoutGrid,
   LogOut,
@@ -42,6 +44,7 @@ const BRAND = 'PickleHub';
 
 /** Constrói a árvore de navegação da v2 respeitando as feature flags ativas. */
 function useV2Nav() {
+  const { isPlatformAdmin } = useAuth();
   const performanceOn = useFeatureFlag(FEATURE_FLAG.PLAYER_PERFORMANCE);
   const ratingOn = useFeatureFlag(FEATURE_FLAG.PLAYER_RATING);
   const matchmakingOn = useFeatureFlag(FEATURE_FLAG.MATCHMAKING);
@@ -80,7 +83,15 @@ function useV2Nav() {
         { to: '/v2/perfil', label: 'Seu Perfil', icon: User },
       ].filter(Boolean),
     },
-  ], [performanceOn, ratingOn, matchmakingOn, openGamesOn, affiliatesOn, communityFeedOn, arenasOn]);
+    isPlatformAdmin && {
+      title: 'Admin geral',
+      items: [
+        { to: '/v2/admin/torneios', label: 'Torneios', icon: FolderCog },
+        { to: '/v2/admin/metricas', label: 'Métricas', icon: BarChart3 },
+        affiliatesOn && { to: '/v2/admin/parceiros', label: 'Parceiros', icon: HeartHandshake },
+      ].filter(Boolean),
+    },
+  ].filter(Boolean), [performanceOn, ratingOn, matchmakingOn, openGamesOn, affiliatesOn, communityFeedOn, arenasOn, isPlatformAdmin]);
 }
 
 function isActive(pathname, item) {

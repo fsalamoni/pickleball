@@ -255,3 +255,60 @@ export function V2SearchInput({ icon: Icon, className, wrapperClassName, ...prop
     </div>
   );
 }
+
+const FIELD_CONTROL = 'w-full rounded-2xl border border-gray-200 bg-paper-pure px-4 py-3 text-sm text-ink transition-all placeholder-gray-400 focus:border-gray-300 focus:bg-white focus:outline-none focus:ring-4 focus:ring-gray-100 disabled:cursor-not-allowed disabled:opacity-60';
+
+export function V2Field({ label, htmlFor, hint, error, required, className, children }) {
+  return (
+    <div className={cn('space-y-2', className)}>
+      {label && (
+        <label htmlFor={htmlFor} className="block text-sm font-semibold text-ink">
+          {label} {required && <span className="text-acid-dark">*</span>}
+        </label>
+      )}
+      {children}
+      {hint && !error && <p className="text-xs leading-5 text-gray-400">{hint}</p>}
+      {error && <p className="text-xs font-medium text-red-500">{error}</p>}
+    </div>
+  );
+}
+
+export function V2Input({ className, ...props }) {
+  return <input className={cn(FIELD_CONTROL, className)} {...props} />;
+}
+
+export function V2Textarea({ className, rows = 4, ...props }) {
+  return <textarea rows={rows} className={cn(FIELD_CONTROL, 'min-h-[7rem] resize-y', className)} {...props} />;
+}
+
+export function V2Select({ className, children, ...props }) {
+  return (
+    <select className={cn(FIELD_CONTROL, 'h-12 appearance-none bg-[length:1rem] pr-10', className)} {...props}>
+      {children}
+    </select>
+  );
+}
+
+export function V2Toggle({ checked, onChange, label, hint, id }) {
+  return (
+    <div className="flex items-center justify-between gap-4">
+      <div className="min-w-0">
+        {label && <label htmlFor={id} className="cursor-pointer text-sm font-semibold text-ink">{label}</label>}
+        {hint && <p className="text-xs leading-5 text-gray-400">{hint}</p>}
+      </div>
+      <button
+        id={id}
+        type="button"
+        role="switch"
+        aria-checked={checked}
+        onClick={() => onChange(!checked)}
+        className={cn(
+          'relative inline-flex h-7 w-12 shrink-0 items-center rounded-full transition-colors',
+          checked ? 'bg-acid' : 'bg-gray-200',
+        )}
+      >
+        <span className={cn('inline-block h-5 w-5 transform rounded-full bg-white shadow transition-transform', checked ? 'translate-x-6' : 'translate-x-1')} />
+      </button>
+    </div>
+  );
+}
