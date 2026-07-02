@@ -11,7 +11,7 @@ import { ImageUpload } from '@/components/ui/image-upload';
 import { ATHLETE_GENDER_LABELS } from '@/modules/athletes/domain/constants';
 import { LEVEL_OPTIONS, getLevelByCode } from '@/modules/leveling/data/levels';
 import { calculateAssessment } from '@/modules/leveling/domain/questionnaire';
-import LevelingQuestionnaire from '@/modules/leveling/components/LevelingQuestionnaire';
+import { V2LevelingQuestionnaire } from '@/v2/components/leveling/V2LevelingQuestionnaire';
 import LevelingResultCard from '@/modules/leveling/components/LevelingResultCard';
 import { PICKLEBALL_EXPERIENCE_LABELS, COMPETITION_GENDER_LABELS } from '@/modules/tournament/domain/constants';
 import V2ParticipationHistoryCard from '@/v2/components/tournament/V2ParticipationHistoryCard';
@@ -339,7 +339,7 @@ export default function V2ProfileEdit() {
 
           {formMode && (
             <div className="mt-5 border-t border-gray-100 pt-5">
-              <LevelingQuestionnaire
+              <V2LevelingQuestionnaire
                 key={`${formMode}-${formVersion}`}
                 initialAnswers={formMode === 'saved' ? savedAnswers : null}
                 onComplete={saveAssessment}

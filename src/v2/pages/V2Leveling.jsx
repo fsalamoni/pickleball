@@ -1,8 +1,8 @@
 import React, { useState } from 'react';
 import { toast } from 'sonner';
 import { useAuth } from '@/core/lib/FirebaseAuthContext';
-import LevelTable from '@/modules/leveling/components/LevelTable';
-import LevelingQuestionnaire from '@/modules/leveling/components/LevelingQuestionnaire';
+import V2LevelTable from '@/v2/components/leveling/V2LevelTable';
+import { V2LevelingQuestionnaire } from '@/v2/components/leveling/V2LevelingQuestionnaire';
 import { V2ContentHero, V2Surface } from '@/v2/ui/primitives';
 import { cn } from '@/core/lib/utils';
 
@@ -57,8 +57,8 @@ export default function V2Leveling() {
       )}
 
       {tab === 'formulario' ? (
-        <V2Surface contentClassName="p-4 sm:p-6">
-          <LevelingQuestionnaire
+        <V2Surface className="p-4 sm:p-6">
+          <V2LevelingQuestionnaire
             initialAnswers={savedAnswers}
             onComplete={saveAssessment}
             onSaveDraft={saveDraft}
@@ -66,8 +66,8 @@ export default function V2Leveling() {
           />
         </V2Surface>
       ) : (
-        <V2Surface contentClassName="p-4 sm:p-6">
-          <LevelTable />
+        <V2Surface className="p-4 sm:p-6">
+          <V2LevelTable />
         </V2Surface>
       )}
     </div>
