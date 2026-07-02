@@ -14,7 +14,7 @@ import V2ClubMembers from '@/v2/components/clubs/V2ClubMembers';
 import V2ClubEvents from '@/v2/components/clubs/V2ClubEvents';
 import V2ClubFeed from '@/v2/components/clubs/V2ClubFeed';
 import V2ClubForums from '@/v2/components/clubs/V2ClubForums';
-import ClubAdminTab from '@/modules/clubs/components/ClubAdminTab';
+import V2ClubAdmin from '@/v2/components/clubs/V2ClubAdmin';
 import { useAuth } from '@/core/lib/FirebaseAuthContext';
 import { V2Avatar, V2Badge, V2Button, V2EmptyState, V2Skeleton, V2Surface } from '@/v2/ui/primitives';
 import { cn } from '@/core/lib/utils';
@@ -219,7 +219,7 @@ export default function V2ClubDetail() {
             {safeTab === 'events' && <V2ClubEvents clubId={clubId} isAdmin={isAdmin} />}
             {safeTab === 'feed' && <V2ClubFeed clubId={clubId} isAdmin={isAdmin} />}
             {safeTab === 'forums' && <V2ClubForums clubId={clubId} isAdmin={isAdmin} initialThreadId={threadParam} onThreadChange={setThreadParam} />}
-            {safeTab === 'admin' && isAdmin && <ClubAdminTab club={club} />}
+            {safeTab === 'admin' && isAdmin && <V2ClubAdmin club={club} />}
           </div>
         </>
       )}
