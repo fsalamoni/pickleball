@@ -312,3 +312,52 @@ export function V2Toggle({ checked, onChange, label, hint, id }) {
     </div>
   );
 }
+
+export function V2ContentHero({ eyebrow, title, description, meta, action }) {
+  return (
+    <div className="relative mb-6 overflow-hidden rounded-4xl bg-mesh p-8 shadow-organic">
+      <div className="absolute -right-10 -top-10 h-56 w-56 rounded-full bg-acid opacity-20 blur-[80px]" />
+      <div className="relative z-10 flex flex-wrap items-end justify-between gap-4">
+        <div className="max-w-3xl">
+          {eyebrow && <span className="rounded-full border border-white/10 bg-white/10 px-3 py-1 text-xs font-bold uppercase tracking-wider text-acid">{eyebrow}</span>}
+          <h1 className="mt-4 font-display text-3xl font-bold text-white sm:text-4xl">{title}</h1>
+          {description && <p className="mt-3 text-sm leading-7 text-gray-300">{description}</p>}
+          {meta && <p className="mt-3 text-xs text-gray-400">{meta}</p>}
+        </div>
+        {action}
+      </div>
+    </div>
+  );
+}
+
+export function V2ContentSection({ icon: Icon, title, description, children, className }) {
+  return (
+    <V2Surface className={className}>
+      <div className="flex items-start gap-3">
+        {Icon && (
+          <div className="flex h-10 w-10 shrink-0 items-center justify-center rounded-2xl bg-ink text-acid">
+            <Icon className="h-5 w-5" />
+          </div>
+        )}
+        <div className="min-w-0">
+          <h2 className="font-display text-lg font-bold text-ink">{title}</h2>
+          {description && <p className="mt-1 text-sm text-gray-500">{description}</p>}
+        </div>
+      </div>
+      <div className="mt-4 space-y-3 text-sm leading-7 text-gray-600">{children}</div>
+    </V2Surface>
+  );
+}
+
+export function V2BulletList({ items = [], className }) {
+  return (
+    <ul className={cn('space-y-2', className)}>
+      {items.map((item, i) => (
+        <li key={i} className="flex gap-2.5">
+          <span className="mt-2.5 h-1.5 w-1.5 shrink-0 rounded-full bg-acid-dark" />
+          <span>{item}</span>
+        </li>
+      ))}
+    </ul>
+  );
+}

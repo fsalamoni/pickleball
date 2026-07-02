@@ -2,13 +2,17 @@ import React, { useEffect, useMemo, useRef, useState } from 'react';
 import { Link, useLocation, useNavigate } from 'react-router-dom';
 import {
   Activity,
+  Award,
   BarChart3,
   Bell,
+  BookOpen,
   Building2,
   CalendarClock,
   ChevronRight,
+  FileText,
   FolderCog,
   HeartHandshake,
+  History,
   LayoutGrid,
   LogOut,
   MapPin,
@@ -52,6 +56,7 @@ function useV2Nav() {
   const affiliatesOn = useFeatureFlag(FEATURE_FLAG.AFFILIATE_LINKS);
   const communityFeedOn = useFeatureFlag(FEATURE_FLAG.COMMUNITY_FEED);
   const arenasOn = useFeatureFlag(FEATURE_FLAG.ARENAS);
+  const sportHistoryOn = useFeatureFlag(FEATURE_FLAG.SPORT_HISTORY);
 
   return useMemo(() => [
     {
@@ -91,7 +96,17 @@ function useV2Nav() {
         affiliatesOn && { to: '/v2/admin/parceiros', label: 'Parceiros', icon: HeartHandshake },
       ].filter(Boolean),
     },
-  ].filter(Boolean), [performanceOn, ratingOn, matchmakingOn, openGamesOn, affiliatesOn, communityFeedOn, arenasOn, isPlatformAdmin]);
+    {
+      title: 'Aprender',
+      items: [
+        { to: '/v2/regras', label: 'Regras', icon: BookOpen },
+        { to: '/v2/nivelamento', label: 'Nivelamento', icon: Award },
+        sportHistoryOn && { to: '/v2/historia', label: 'História do esporte', icon: History },
+        { to: '/v2/conduta', label: 'Conduta e fair play', icon: HeartHandshake },
+        { to: '/v2/politica-uso', label: 'Política de uso', icon: FileText },
+      ].filter(Boolean),
+    },
+  ].filter(Boolean), [performanceOn, ratingOn, matchmakingOn, openGamesOn, affiliatesOn, communityFeedOn, arenasOn, sportHistoryOn, isPlatformAdmin]);
 }
 
 function isActive(pathname, item) {

@@ -39,11 +39,13 @@ const TournamentFormatsGuide = lazy(() => import('@/modules/tournament/pages/Tou
 const ModalityPage = lazy(() => import('@/modules/tournament/pages/ModalityPage'));
 const ArenaManage = lazy(() => import('@/modules/arenas/pages/ArenaManage'));
 const EventDetail = lazy(() => import('@/modules/clubs/pages/EventDetail'));
-const PickleballRules = lazy(() => import('@/pages/PickleballRules'));
-const Leveling = lazy(() => import('@/pages/Leveling'));
-const SportHistory = lazy(() => import('@/pages/SportHistory'));
-const ConductFairPlay = lazy(() => import('@/pages/ConductFairPlay'));
-const PrivacyPolicy = lazy(() => import('@/pages/PrivacyPolicy'));
+
+// Conteúdo de referência — nativo v2.
+const V2Rules = lazy(() => import('@/v2/pages/V2Rules'));
+const V2Leveling = lazy(() => import('@/v2/pages/V2Leveling'));
+const V2History = lazy(() => import('@/v2/pages/V2History'));
+const V2Conduct = lazy(() => import('@/v2/pages/V2Conduct'));
+const V2Privacy = lazy(() => import('@/v2/pages/V2Privacy'));
 
 function V2Spinner({ full = true }) {
   return (
@@ -111,11 +113,11 @@ export default function V2App() {
           <Route path="perfil/editar" element={<V2ProfileEdit />} />
 
           {/* Conteúdo do esporte */}
-          <Route path="regras" element={<PickleballRules />} />
-          <Route path="nivelamento" element={<Leveling />} />
-          <Route path="historia" element={<SportHistory />} />
-          <Route path="conduta" element={<ConductFairPlay />} />
-          <Route path="politica-uso" element={<PrivacyPolicy />} />
+          <Route path="regras" element={<V2Rules />} />
+          <Route path="nivelamento" element={<V2Leveling />} />
+          <Route path="historia" element={<V2History />} />
+          <Route path="conduta" element={<V2Conduct />} />
+          <Route path="politica-uso" element={<V2Privacy />} />
 
           {/* Admin geral */}
           <Route path="admin/torneios" element={<V2AdminTournaments />} />
