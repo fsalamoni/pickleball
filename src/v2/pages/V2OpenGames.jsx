@@ -5,7 +5,7 @@ import { useOpenGames, useMyOpenGames, useCloseOpenGame } from '@/modules/games/
 import { OPEN_GAME_FORMAT_LABELS, OPEN_GAME_STATUS } from '@/modules/games/domain/openGames';
 import { getLevelByCode } from '@/modules/leveling/data/levels';
 import CreateOpenGameDialog from '@/modules/games/components/CreateOpenGameDialog';
-import ChatLauncherButton from '@/modules/chat/components/ChatLauncherButton';
+import V2ChatLauncherButton from '@/v2/components/chat/V2ChatLauncherButton';
 import {
   V2Avatar,
   V2Badge,
@@ -102,7 +102,7 @@ export default function V2OpenGames() {
               </div>
               {g.notes && <p className="mt-3 text-sm text-gray-500">{g.notes}</p>}
               <div className="mt-auto pt-5">
-                <ChatLauncherButton
+                <V2ChatLauncherButton
                   athlete={{ id: g.created_by, platform_name: g.creator_name, photo_url: g.creator_photo }}
                   className="w-full"
                   label="Chamar para jogar"

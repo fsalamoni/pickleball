@@ -3,7 +3,7 @@ import { MapPin, Medal, Swords } from 'lucide-react';
 import { useAuth } from '@/core/lib/FirebaseAuthContext';
 import { useNationalRanking } from '@/modules/rating/hooks/useRating';
 import { rankMatchmakingCandidates, DEFAULT_MAX_RATING_DIFF } from '@/modules/rating/domain/matchmaking';
-import ChatLauncherButton from '@/modules/chat/components/ChatLauncherButton';
+import V2ChatLauncherButton from '@/v2/components/chat/V2ChatLauncherButton';
 import {
   V2Avatar,
   V2Badge,
@@ -95,7 +95,7 @@ export default function V2FindPlayers() {
                   <span className="text-gray-400">· Δ {p.ratingDiff}</span>
                 </div>
               </div>
-              <ChatLauncherButton athlete={p} size="sm" iconOnly />
+              <V2ChatLauncherButton athlete={p} size="sm" iconOnly />
             </div>
           ))}
         </div>

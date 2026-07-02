@@ -6,7 +6,7 @@ import { FEATURE_FLAG } from '@/core/featureFlags';
 import { useAthleteProfile } from '@/modules/athletes/hooks/useAthleteProfile';
 import { genderLabel } from '@/modules/athletes/domain/constants';
 import { MODALITY_FORMAT_LABELS } from '@/modules/tournament/domain/constants';
-import ChatLauncherButton from '@/modules/chat/components/ChatLauncherButton';
+import V2ChatLauncherButton from '@/v2/components/chat/V2ChatLauncherButton';
 import { V2Avatar, V2Badge, V2EmptyState, V2Skeleton, V2Surface } from '@/v2/ui/primitives';
 
 function formatPercent(rate) {
@@ -71,7 +71,7 @@ export default function V2AthleteProfile() {
               <V2Avatar name={athlete.platform_name} photoUrl={athlete.photo_url} size="xl" className="h-32 w-32 text-4xl" />
             </div>
             <div className="w-full sm:w-auto">
-              <ChatLauncherButton athlete={athlete} label="Conversar" className="w-full sm:w-auto" />
+              <V2ChatLauncherButton athlete={athlete} label="Conversar" className="w-full sm:w-auto" />
             </div>
           </div>
 

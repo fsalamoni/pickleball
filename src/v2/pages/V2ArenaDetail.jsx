@@ -8,7 +8,7 @@ import { PhotoLightbox } from '@/components/ui/photo-lightbox';
 import { useFeatureFlag } from '@/core/lib/FeatureFlagsContext';
 import { FEATURE_FLAG } from '@/core/featureFlags';
 import { useAuth } from '@/core/lib/FirebaseAuthContext';
-import ChatLauncherButton from '@/modules/chat/components/ChatLauncherButton';
+import V2ChatLauncherButton from '@/v2/components/chat/V2ChatLauncherButton';
 import { V2FavoriteArenaButton, V2ArenaShareButton } from '@/v2/components/arenas/V2ArenaActions';
 import V2ArenaReviews from '@/v2/components/arenas/V2ArenaReviews';
 import BookingRequestDialog from '@/modules/arenas/components/BookingRequestDialog';
@@ -111,7 +111,7 @@ export default function V2ArenaDetail() {
           <div className="mt-5 flex flex-wrap items-center gap-2">
             <V2Button onClick={() => setBookingOpen(true)}><CalendarPlus className="h-4 w-4" /> Solicitar reserva</V2Button>
             {arena.owner_id && arena.owner_id !== user?.uid && (
-              <ChatLauncherButton
+              <V2ChatLauncherButton
                 athlete={{ id: arena.owner_id, platform_name: arena.name, photo_url: cover }}
                 variant="outline"
                 label="Falar com a arena"
