@@ -9,9 +9,8 @@ import { useFeatureFlag } from '@/core/lib/FeatureFlagsContext';
 import { FEATURE_FLAG } from '@/core/featureFlags';
 import { useAuth } from '@/core/lib/FirebaseAuthContext';
 import ChatLauncherButton from '@/modules/chat/components/ChatLauncherButton';
-import FavoriteArenaButton from '@/modules/arenas/components/FavoriteArenaButton';
-import ArenaShareButton from '@/modules/arenas/components/ArenaShareButton';
-import ArenaReviews from '@/modules/arenas/components/ArenaReviews';
+import { V2FavoriteArenaButton, V2ArenaShareButton } from '@/v2/components/arenas/V2ArenaActions';
+import V2ArenaReviews from '@/v2/components/arenas/V2ArenaReviews';
 import BookingRequestDialog from '@/modules/arenas/components/BookingRequestDialog';
 import { formatArenaAddress, arenaContactLinks } from '@/modules/arenas/domain/arena';
 import { formatPrice } from '@/modules/arenas/domain/pricing';
@@ -118,8 +117,8 @@ export default function V2ArenaDetail() {
                 label="Falar com a arena"
               />
             )}
-            <FavoriteArenaButton arena={arena} />
-            <ArenaShareButton arena={arena} />
+            <V2FavoriteArenaButton arena={arena} />
+            <V2ArenaShareButton arena={arena} />
             {canManage && (
               <V2Button asChild variant="ghost" size="sm"><Link to={`/v2/arenas/${arena.id}/gerir`}><Settings className="h-4 w-4" /> Gerir</Link></V2Button>
             )}
@@ -196,7 +195,7 @@ export default function V2ArenaDetail() {
       )}
 
       <div className="mt-6">
-        <ArenaReviews arena={arena} />
+        <V2ArenaReviews arena={arena} />
       </div>
 
       {bookingOpen && <BookingRequestDialog arena={arena} open={bookingOpen} onOpenChange={setBookingOpen} />}

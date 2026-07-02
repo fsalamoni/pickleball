@@ -12,7 +12,7 @@ import { PhotoLightbox } from '@/components/ui/photo-lightbox';
 import ConfirmDialog from '@/components/ConfirmDialog';
 import ProfileFields from '@/modules/arenas/components/ProfileFields';
 import PricingEditor from '@/modules/arenas/components/PricingEditor';
-import ArenaReviews from '@/modules/arenas/components/ArenaReviews';
+import V2ArenaReviews from '@/v2/components/arenas/V2ArenaReviews';
 import BookingRow from '@/modules/arenas/components/BookingRow';
 import { sortBookings } from '@/modules/arenas/domain/booking';
 import { ARENA_MANAGER_ROLE, BOOKING_STATUS } from '@/modules/arenas/domain/constants';
@@ -103,7 +103,7 @@ export default function V2ArenaManage() {
         {tab === 'fotos' && <PhotosTab arena={arena} />}
         {tab === 'info' && <InfoTab arena={arena} />}
         {tab === 'admins' && <ManagersTab arena={arena} />}
-        {tab === 'retornos' && <ArenaReviews arena={arena} canModerate />}
+        {tab === 'retornos' && <V2ArenaReviews arena={arena} canModerate />}
       </div>
     </div>
   );
