@@ -18,7 +18,7 @@ import TournamentAdminPanel from '@/modules/tournament/components/TournamentAdmi
 import { V2TournamentOverview } from '@/v2/components/tournament/V2OverviewBlock';
 import { V2TournamentMatches } from '@/v2/components/tournament/V2MatchesBlock';
 import { V2TournamentRanking } from '@/v2/components/tournament/V2RankingBlock';
-import TournamentGallery from '@/modules/tournament/components/TournamentGallery';
+import { V2TournamentGallery } from '@/v2/components/tournament/V2Gallery';
 import { V2Badge, V2Button, V2EmptyState, V2Skeleton, V2Surface } from '@/v2/ui/primitives';
 import { cn } from '@/core/lib/utils';
 
@@ -174,11 +174,11 @@ export default function V2Tournament() {
         {activeTab === 'visao-geral' && <V2TournamentOverview tournament={tournament} isAdmin={isAdmin} />}
         {activeTab === 'jogos' && <V2TournamentMatches tournament={tournament} />}
         {activeTab === 'ranking' && <V2TournamentRanking tournament={tournament} />}
-        {activeTab === 'fotos' && showGallery && <TournamentGallery tournamentId={tournament.id} canManage={!!isAdmin} />}
+        {activeTab === 'fotos' && showGallery && <V2TournamentGallery tournamentId={tournament.id} canManage={!!isAdmin} />}
         {activeTab === 'admin' && isAdmin && <TournamentAdminPanel tournament={tournament} />}
       </div>
 
-      {!showGallery && <div className="mt-6"><TournamentGallery tournamentId={tournament.id} canManage={!!isAdmin} /></div>}
+      {!showGallery && <div className="mt-6"><V2TournamentGallery tournamentId={tournament.id} canManage={!!isAdmin} /></div>}
     </div>
   );
 }

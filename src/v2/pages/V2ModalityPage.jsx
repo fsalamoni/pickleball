@@ -8,9 +8,9 @@ import {
   REGISTRATION_STATUS, TOURNAMENT_VISIBILITY, TOURNAMENT_STAGE_TYPE_LABELS,
 } from '@/modules/tournament/domain/constants';
 import { countOccupiedRegistrations, isRegistrationCapacityReached, hasUnlimitedEntries } from '@/modules/tournament/domain/capacity';
-import ModalityInfoContent from '@/modules/tournament/components/ModalityInfoContent';
+import V2ModalityInfoContent from '@/v2/components/tournament/V2ModalityInfoContent';
 import ModalityRegistrationDialog from '@/modules/tournament/components/ModalityRegistrationDialog';
-import ModalityGallery from '@/modules/tournament/components/ModalityGallery';
+import { V2ModalityGallery } from '@/v2/components/tournament/V2Gallery';
 import { V2ModalityMatches } from '@/v2/components/tournament/V2MatchesBlock';
 import { V2ModalityRanking } from '@/v2/components/tournament/V2RankingBlock';
 import { AvatarGroup } from '@/components/ui/user-avatar';
@@ -146,7 +146,7 @@ export default function V2ModalityPage() {
       </div>
 
       <div className="mt-6">
-        {tab === 'info' && <V2Surface><ModalityInfoContent modality={modality} tournament={tournament} registrationsCount={confirmed.length} /></V2Surface>}
+        {tab === 'info' && <V2Surface><V2ModalityInfoContent modality={modality} tournament={tournament} registrationsCount={confirmed.length} /></V2Surface>}
         {tab === 'inscricao' && (
           <V2Surface>
             <div className="flex flex-wrap items-center justify-between gap-3">
@@ -177,7 +177,7 @@ export default function V2ModalityPage() {
         )}
         {tab === 'jogos' && <V2ModalityMatches tournament={tournament} modality={modality} />}
         {tab === 'ranking' && <V2ModalityRanking modality={modality} />}
-        {tab === 'fotos' && <ModalityGallery tournamentId={tournament.id} modalityId={modality.id} canManage={!!isAdmin} />}
+        {tab === 'fotos' && <V2ModalityGallery tournamentId={tournament.id} modalityId={modality.id} canManage={!!isAdmin} />}
       </div>
 
       <ModalityRegistrationDialog modality={modality} tournament={tournament} isAdmin={!!isAdmin} open={registerOpen} onClose={() => setRegisterOpen(false)} />
