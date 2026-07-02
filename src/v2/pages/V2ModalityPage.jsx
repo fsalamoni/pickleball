@@ -11,8 +11,8 @@ import { countOccupiedRegistrations, isRegistrationCapacityReached, hasUnlimited
 import ModalityInfoContent from '@/modules/tournament/components/ModalityInfoContent';
 import ModalityRegistrationDialog from '@/modules/tournament/components/ModalityRegistrationDialog';
 import ModalityGallery from '@/modules/tournament/components/ModalityGallery';
-import { ModalityMatchesBlock } from '@/modules/tournament/components/TournamentMatchesTab';
-import { ModalityRankingBlock } from '@/modules/tournament/components/TournamentRankingTab';
+import { V2ModalityMatches } from '@/v2/components/tournament/V2MatchesBlock';
+import { V2ModalityRanking } from '@/v2/components/tournament/V2RankingBlock';
 import { AvatarGroup } from '@/components/ui/user-avatar';
 import { V2Badge, V2Button, V2Skeleton, V2Surface } from '@/v2/ui/primitives';
 import { cn } from '@/core/lib/utils';
@@ -175,8 +175,8 @@ export default function V2ModalityPage() {
             </div>
           </V2Surface>
         )}
-        {tab === 'jogos' && <ModalityMatchesBlock tournament={tournament} modality={modality} isAdmin={false} />}
-        {tab === 'ranking' && <ModalityRankingBlock modality={modality} />}
+        {tab === 'jogos' && <V2ModalityMatches tournament={tournament} modality={modality} />}
+        {tab === 'ranking' && <V2ModalityRanking modality={modality} />}
         {tab === 'fotos' && <ModalityGallery tournamentId={tournament.id} modalityId={modality.id} canManage={!!isAdmin} />}
       </div>
 
