@@ -96,7 +96,7 @@ export default function V2Ranking() {
               </div>
             );
             return profilePageOn ? (
-              <Link key={p.id} to={`/atleta/${p.id}`} className="block">{row}</Link>
+              <Link key={p.id} to={`/v2/atleta/${p.id}`} className="block">{row}</Link>
             ) : (
               <div key={p.id}>{row}</div>
             );

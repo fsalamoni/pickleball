@@ -91,7 +91,7 @@ function AthleteCard({ athlete, profilePageOn, coachOn }) {
   const clubs = clubNames(athlete);
   const isCoach = coachOn && athlete.is_coach === true;
   const Wrapper = profilePageOn ? Link : 'div';
-  const wrapperProps = profilePageOn ? { to: `/atleta/${athlete.id}` } : {};
+  const wrapperProps = profilePageOn ? { to: `/v2/atleta/${athlete.id}` } : {};
 
   return (
     <Wrapper

@@ -13,6 +13,7 @@ import {
   Medal,
   Megaphone,
   Menu,
+  MessageCircle,
   Plus,
   Search,
   Sparkles,
@@ -73,6 +74,7 @@ function useV2Nav() {
     {
       title: 'Você',
       items: [
+        { to: '/v2/chat', label: 'Mensagens', icon: MessageCircle },
         performanceOn && { to: '/v2/meu-desempenho', label: 'Meu desempenho', icon: Activity },
         arenasOn && { to: '/v2/minhas-reservas', label: 'Minhas reservas', icon: CalendarClock },
         { to: '/v2/perfil', label: 'Seu Perfil', icon: User },

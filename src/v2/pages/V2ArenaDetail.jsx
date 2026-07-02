@@ -1,0 +1,205 @@
+import React, { useState } from 'react';
+import { Link, Navigate, useParams } from 'react-router-dom';
+import {
+  ArrowLeft, Building2, CalendarPlus, Clock, Globe, Instagram, Mail, MapPin,
+  MessageCircle, Phone, Settings, Star, Trophy,
+} from 'lucide-react';
+import { PhotoLightbox } from '@/components/ui/photo-lightbox';
+import { useFeatureFlag } from '@/core/lib/FeatureFlagsContext';
+import { FEATURE_FLAG } from '@/core/featureFlags';
+import { useAuth } from '@/core/lib/FirebaseAuthContext';
+import ChatLauncherButton from '@/modules/chat/components/ChatLauncherButton';
+import FavoriteArenaButton from '@/modules/arenas/components/FavoriteArenaButton';
+import ArenaShareButton from '@/modules/arenas/components/ArenaShareButton';
+import ArenaReviews from '@/modules/arenas/components/ArenaReviews';
+import BookingRequestDialog from '@/modules/arenas/components/BookingRequestDialog';
+import { formatArenaAddress, arenaContactLinks } from '@/modules/arenas/domain/arena';
+import { formatPrice } from '@/modules/arenas/domain/pricing';
+import { BOOKING_STATUS, WEEKDAY_SHORT } from '@/modules/arenas/domain/constants';
+import { bookingSlots, sortSlots } from '@/modules/arenas/domain/booking';
+import { useArena, useMyManagedArenas } from '@/modules/arenas/hooks/useArenas';
+import { useArenaBookings } from '@/modules/arenas/hooks/useBookings';
+import { V2Badge, V2Button, V2EmptyState, V2Skeleton, V2Surface } from '@/v2/ui/primitives';
+
+function arenaPhotoUrl(photo) {
+  return typeof photo === 'string' ? photo : photo?.url;
+}
+
+function ContactRow({ icon: Icon, href, label }) {
+  if (!href) return null;
+  return (
+    <a href={href} target="_blank" rel="noopener noreferrer" className="inline-flex items-center gap-2 text-sm font-medium text-ink hover:text-ink-lighter">
+      <Icon className="h-4 w-4 text-gray-400" /> {label}
+    </a>
+  );
+}
+
+export default function V2ArenaDetail() {
+  const enabled = useFeatureFlag(FEATURE_FLAG.ARENAS);
+  const { arenaId } = useParams();
+  const { user } = useAuth();
+  const { data: arena, isLoading } = useArena(arenaId);
+  const { data: managed = [] } = useMyManagedArenas();
+  const { data: bookings = [] } = useArenaBookings(arenaId);
+  const [bookingOpen, setBookingOpen] = useState(false);
+
+  if (!enabled) return <Navigate to="/v2" replace />;
+
+  if (isLoading) {
+    return (
+      <div className="mx-auto max-w-[900px] space-y-4">
+        <V2Skeleton className="h-56 rounded-4xl" />
+        <V2Skeleton className="h-48 rounded-4xl" />
+      </div>
+    );
+  }
+
+  if (!arena) {
+    return (
+      <div className="mx-auto max-w-[700px]">
+        <V2Surface>
+          <V2EmptyState
+            icon={Building2}
+            title="Arena não encontrada"
+            description="A arena que você procura não existe ou foi removida."
+            action={<Link to="/v2/arenas" className="rounded-full bg-ink px-6 py-3 text-sm font-bold text-white">Voltar às arenas</Link>}
+          />
+        </V2Surface>
+      </div>
+    );
+  }
+
+  const cover = arena.cover_url || arenaPhotoUrl((arena.photos || [])[0]);
+  const links = arenaContactLinks(arena);
+  const canManage = arena.owner_id === user?.uid || managed.some((m) => m.id === arena.id);
+  const address = formatArenaAddress(arena);
+  const upcomingSlots = sortSlots(
+    bookings.filter((b) => b.status === BOOKING_STATUS.CONFIRMED).flatMap((b) => bookingSlots(b)),
+  ).slice(0, 8);
+  const hasContacts = links.whatsapp || links.phone || links.email || links.instagram || links.website;
+
+  return (
+    <div className="mx-auto max-w-[900px]">
+      <Link to="/v2/arenas" className="mb-5 inline-flex items-center gap-1.5 text-sm font-semibold text-gray-500 hover:text-ink">
+        <ArrowLeft className="h-4 w-4" /> Voltar às arenas
+      </Link>
+
+      {/* Hero */}
+      <div className="overflow-hidden rounded-4xl border border-gray-100 bg-paper-pure shadow-organic-sm">
+        <div className="relative h-52 bg-ink">
+          {cover ? (
+            <PhotoLightbox src={cover} alt={arena.name} title={arena.name}
+              trigger={<img src={cover} alt="" className="h-full w-full cursor-zoom-in object-cover" />} />
+          ) : (
+            <div className="flex h-full w-full items-center justify-center text-white/25"><Building2 className="h-14 w-14" /></div>
+          )}
+          <div className="absolute inset-0 bg-gradient-to-t from-ink/70 to-transparent" />
+          <div className="absolute bottom-5 left-6 right-6 text-white">
+            <h1 className="font-display text-3xl font-bold">{arena.name}</h1>
+            {address && <p className="mt-1 flex items-center gap-1.5 text-sm text-white/85"><MapPin className="h-4 w-4" /> {address}</p>}
+          </div>
+        </div>
+
+        <div className="p-6 sm:p-8">
+          <div className="flex flex-wrap items-center gap-2">
+            {arena.rating_avg != null && (
+              <V2Badge tone="amber"><Star className="h-3 w-3 fill-amber-500" /> {arena.rating_avg} ({arena.rating_count})</V2Badge>
+            )}
+            {arena.court_count > 0 && <V2Badge tone="neutral"><Trophy className="h-3 w-3" /> {arena.court_count} quadra(s)</V2Badge>}
+            {arena.hours && <V2Badge tone="neutral"><Clock className="h-3 w-3" /> {arena.hours}</V2Badge>}
+          </div>
+
+          <div className="mt-5 flex flex-wrap items-center gap-2">
+            <V2Button onClick={() => setBookingOpen(true)}><CalendarPlus className="h-4 w-4" /> Solicitar reserva</V2Button>
+            {arena.owner_id && arena.owner_id !== user?.uid && (
+              <ChatLauncherButton
+                athlete={{ id: arena.owner_id, platform_name: arena.name, photo_url: cover }}
+                variant="outline"
+                label="Falar com a arena"
+              />
+            )}
+            <FavoriteArenaButton arena={arena} />
+            <ArenaShareButton arena={arena} />
+            {canManage && (
+              <V2Button asChild variant="ghost" size="sm"><Link to={`/v2/arenas/${arena.id}/gerir`}><Settings className="h-4 w-4" /> Gerir</Link></V2Button>
+            )}
+          </div>
+
+          {arena.description && <p className="mt-6 whitespace-pre-line text-sm leading-7 text-gray-500">{arena.description}</p>}
+        </div>
+      </div>
+
+      {/* Contact + hours */}
+      <div className="mt-6 grid gap-6 sm:grid-cols-2">
+        <V2Surface>
+          <h3 className="font-display text-base font-bold text-ink">Contato e redes</h3>
+          <div className="mt-3 flex flex-col gap-2">
+            <ContactRow icon={MessageCircle} href={links.whatsapp} label="WhatsApp" />
+            <ContactRow icon={Phone} href={links.phone} label={arena.contact_phone || 'Telefone'} />
+            <ContactRow icon={Mail} href={links.email} label={arena.contact_email || 'E-mail'} />
+            <ContactRow icon={Instagram} href={links.instagram} label={arena.instagram ? `@${arena.instagram}` : 'Instagram'} />
+            <ContactRow icon={Globe} href={links.website} label="Site" />
+            {!hasContacts && <p className="text-sm text-gray-400">Sem contatos informados.</p>}
+          </div>
+        </V2Surface>
+        <V2Surface>
+          <h3 className="flex items-center gap-1.5 font-display text-base font-bold text-ink"><Clock className="h-4 w-4" /> Funcionamento</h3>
+          <p className="mt-3 text-sm text-gray-500">{arena.hours || 'Horário não informado.'}</p>
+        </V2Surface>
+      </div>
+
+      {upcomingSlots.length > 0 && (
+        <V2Surface className="mt-6">
+          <p className="text-[11px] font-bold uppercase tracking-widest text-gray-400">Agenda</p>
+          <h3 className="mt-1 font-display text-lg font-bold text-ink">Próximos horários confirmados</h3>
+          <div className="mt-4 flex flex-wrap gap-2">
+            {upcomingSlots.map((slot) => (
+              <span key={`${slot.date}_${slot.start}`} className="rounded-full border border-gray-100 bg-paper px-3 py-1.5 text-xs text-gray-600">
+                {slot.date} · {slot.start}–{slot.end}
+              </span>
+            ))}
+          </div>
+        </V2Surface>
+      )}
+
+      {(arena.base_price != null || (arena.price_rules || []).length > 0) && (
+        <V2Surface className="mt-6">
+          <h3 className="font-display text-base font-bold text-ink">Preços</h3>
+          {arena.base_price != null && <p className="mt-2 text-sm text-gray-500">Preço base: <strong className="text-ink">{formatPrice(arena.base_price)}</strong></p>}
+          <div className="mt-3 space-y-2">
+            {(arena.price_rules || []).map((r) => (
+              <div key={r.id} className="flex items-center justify-between rounded-2xl border border-gray-100 bg-paper px-4 py-2.5 text-sm">
+                <span className="text-gray-500">
+                  {(r.weekdays || []).map((d) => WEEKDAY_SHORT[d]).join(', ')} · {r.start}–{r.end}{r.label ? ` · ${r.label}` : ''}
+                </span>
+                <strong className="text-ink">{formatPrice(r.price)}</strong>
+              </div>
+            ))}
+          </div>
+          <p className="mt-3 text-xs text-gray-400">Valores de referência; o valor final é confirmado pela arena na reserva.</p>
+        </V2Surface>
+      )}
+
+      {(arena.photos || []).length > 0 && (
+        <V2Surface className="mt-6">
+          <h3 className="font-display text-base font-bold text-ink">Fotos</h3>
+          <div className="mt-3 grid grid-cols-2 gap-2 sm:grid-cols-3">
+            {arena.photos.map((p, i) => {
+              const url = arenaPhotoUrl(p);
+              return (
+                <PhotoLightbox key={p.path || i} src={url} alt={`Foto ${i + 1} da arena`}
+                  trigger={<img src={url} alt="" className="h-28 w-full cursor-zoom-in rounded-2xl object-cover" />} />
+              );
+            })}
+          </div>
+        </V2Surface>
+      )}
+
+      <div className="mt-6">
+        <ArenaReviews arena={arena} />
+      </div>
+
+      {bookingOpen && <BookingRequestDialog arena={arena} open={bookingOpen} onOpenChange={setBookingOpen} />}
+    </div>
+  );
+}

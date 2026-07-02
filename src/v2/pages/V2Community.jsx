@@ -20,6 +20,12 @@ function itemTone(type) {
   return 'blue';
 }
 
+function feedTarget(item) {
+  if (item.type === 'open_game') return '/v2/procura-jogo';
+  const id = String(item.id || '').replace(/^t_/, '');
+  return id ? `/v2/torneios/${id}` : (item.link || '/v2');
+}
+
 export default function V2Community() {
   const { data: items = [], isLoading } = useFeed();
 
@@ -46,7 +52,7 @@ export default function V2Community() {
             return (
               <Link
                 key={item.id}
-                to={item.link || '/v2'}
+                to={feedTarget(item)}
                 className="group flex items-center gap-4 rounded-3xl border border-gray-100 bg-paper-pure p-5 shadow-organic-sm transition-all hover:shadow-organic"
               >
                 <div className="flex h-12 w-12 shrink-0 items-center justify-center rounded-2xl bg-paper text-ink transition-colors group-hover:bg-acid">

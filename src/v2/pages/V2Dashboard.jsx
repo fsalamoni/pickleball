@@ -132,7 +132,7 @@ export default function V2Dashboard() {
                       {TOURNAMENT_STATUS_LABELS[spotlight.status] || spotlight.status}
                     </span>
                     <Link
-                      to={`/torneios/${spotlight.id}`}
+                      to={`/v2/torneios/${spotlight.id}`}
                       className="btn-press rounded-full bg-white px-5 py-2.5 text-sm font-bold text-ink transition-transform hover:scale-105"
                     >
                       Abrir torneio
@@ -141,7 +141,7 @@ export default function V2Dashboard() {
                 ) : (
                   <>
                     <span className="text-sm text-gray-300">Nenhum torneio em contexto ainda.</span>
-                    <Link to="/torneios/criar" className="btn-press rounded-full bg-white px-5 py-2.5 text-sm font-bold text-ink hover:scale-105">
+                    <Link to="/v2/torneios/criar" className="btn-press rounded-full bg-white px-5 py-2.5 text-sm font-bold text-ink hover:scale-105">
                       Criar torneio
                     </Link>
                   </>
@@ -184,7 +184,7 @@ export default function V2Dashboard() {
               </p>
             </div>
             <Link
-              to={featured ? `/torneios/${featured.id}` : '/v2/torneios'}
+              to={featured ? `/v2/torneios/${featured.id}` : '/v2/torneios'}
               className="relative z-10 whitespace-nowrap rounded-full bg-white px-8 py-3.5 font-bold text-indigo-700 shadow-lg transition-all hover:-translate-y-1 hover:shadow-xl"
             >
               {featured ? 'Garantir vaga' : 'Ver torneios'}
