@@ -4,6 +4,8 @@ import { MapPin, Medal } from 'lucide-react';
 import { Card, CardContent } from '@/components/ui/card';
 import { Skeleton } from '@/components/ui/skeleton';
 import { Badge } from '@/components/ui/badge';
+import { EmptyState } from '@/components/ui/empty-state';
+import { PlatformSectionHeader, PlatformSurfaceCard } from '@/components/ui/platform-page';
 import { useAuth } from '@/core/lib/FirebaseAuthContext';
 import { useFeatureFlag } from '@/core/lib/FeatureFlagsContext';
 import { FEATURE_FLAG } from '@/core/featureFlags';
@@ -55,8 +57,7 @@ export default function FindPlayers() {
   if (!me) {
     return (
       <div className="mx-auto max-w-2xl">
-        <Card>
-          <CardContent className="p-8 text-center">
+        <PlatformSurfaceCard contentClassName="p-8 text-center">
             <Medal className="mx-auto mb-3 h-8 w-8 text-emerald-600" />
             <h2 className="text-lg font-semibold text-slate-900">Você ainda não tem rating</h2>
             <p className="mt-2 text-sm text-slate-600">
@@ -64,16 +65,22 @@ export default function FindPlayers() {
               adversários do seu nível. Veja o{' '}
               <Link to="/ranking" className="text-emerald-700 underline">ranking nacional</Link>.
             </p>
-          </CardContent>
-        </Card>
+        </PlatformSurfaceCard>
       </div>
     );
   }
 
   return (
-    <div className="mx-auto max-w-4xl space-y-4">
-      <Card>
-        <CardContent className="p-5">
+    <div className="mx-auto max-w-4xl space-y-6">
+      <PlatformSurfaceCard>
+        <PlatformSectionHeader
+          eyebrow="Matchmaking"
+          title="Encontre atletas com proximidade real de nível"
+          description="A leitura parte do seu rating atual e ajuda a descobrir parceiros ou adversários mais coerentes com a sua faixa competitiva."
+        />
+      </PlatformSurfaceCard>
+
+      <PlatformSurfaceCard contentClassName="p-5">
           <p className="text-sm text-slate-600">
             Seu rating: <strong className="text-emerald-700">{me.rating}</strong>
             {myCity ? <> · {myCity}</> : null}. Sugestões de parceiros e adversários do seu nível.
@@ -86,19 +93,20 @@ export default function FindPlayers() {
               <MapPin className="mr-1 inline h-3.5 w-3.5" /> Minha cidade
             </FilterChip>
           </div>
-        </CardContent>
-      </Card>
+      </PlatformSurfaceCard>
 
       {suggestions.length === 0 ? (
-        <Card>
-          <CardContent className="p-8 text-center text-sm text-slate-500">
-            Nenhum jogador encontrado para os filtros atuais. Tente ampliar a faixa de nível ou a cidade.
-          </CardContent>
-        </Card>
+        <PlatformSurfaceCard contentClassName="p-2">
+          <EmptyState
+            icon={MapPin}
+            title="Nenhum jogador encontrado para os filtros atuais"
+            description="Tente ampliar a faixa de nível ou remover a restrição de cidade para encontrar mais combinações possíveis."
+          />
+        </PlatformSurfaceCard>
       ) : (
         <div className="grid gap-3 sm:grid-cols-2">
           {suggestions.map((p) => (
-            <Card key={p.id}>
+            <Card key={p.id} className="match-surface rounded-[1.75rem] border-white/80 bg-white/85">
               <CardContent className="flex items-center gap-3 p-4">
                 {p.photo_url ? (
                   <img src={p.photo_url} alt="" className="h-12 w-12 rounded-full object-cover" />

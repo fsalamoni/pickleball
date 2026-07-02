@@ -4,6 +4,9 @@ import { ExternalLink, Handshake, Building2, ChevronRight } from 'lucide-react';
 import { Card, CardContent } from '@/components/ui/card';
 import { Badge } from '@/components/ui/badge';
 import { Skeleton } from '@/components/ui/skeleton';
+import { EmptyState } from '@/components/ui/empty-state';
+import { PhotoLightbox } from '@/components/ui/photo-lightbox';
+import { PlatformSectionHeader, PlatformSurfaceCard } from '@/components/ui/platform-page';
 import { useFeatureFlag } from '@/core/lib/FeatureFlagsContext';
 import { FEATURE_FLAG } from '@/core/featureFlags';
 import { recordEvent } from '@/core/services/observabilityService';
@@ -25,10 +28,17 @@ export default function Partners() {
   }
 
   return (
-    <div className="mx-auto max-w-5xl space-y-4">
+    <div className="mx-auto max-w-5xl space-y-6">
+        <PlatformSurfaceCard>
+          <PlatformSectionHeader
+            eyebrow="Parcerias"
+            title="Marcas, arenas e serviços conectados ao crescimento do jogo."
+            description="Use esta área para encontrar parceiros comerciais e atalhos para outras frentes do ecossistema esportivo."
+          />
+        </PlatformSurfaceCard>
         {arenasOn && (
           <Link to="/arenas" className="block">
-            <Card className="border-emerald-200 bg-gradient-to-br from-emerald-50 to-white transition-shadow hover:shadow-md">
+            <Card className="match-surface rounded-[1.75rem] border-emerald-200 bg-gradient-to-br from-emerald-50 to-white">
               <CardContent className="flex items-center gap-3 p-4">
                 <div className="flex h-11 w-11 shrink-0 items-center justify-center rounded-xl bg-emerald-600 text-white">
                   <Building2 className="h-5 w-5" />
@@ -49,11 +59,9 @@ export default function Partners() {
             {[1, 2, 3].map((i) => <Skeleton key={i} className="h-44 rounded-xl" />)}
           </div>
         ) : active.length === 0 ? (
-          <Card>
-            <CardContent className="p-8 text-center text-sm text-slate-500">
-              Ainda não há parceiros cadastrados.
-            </CardContent>
-          </Card>
+          <PlatformSurfaceCard contentClassName="p-2">
+            <EmptyState icon={Handshake} title="Ainda não há parceiros cadastrados" description="Assim que novas marcas, arenas ou links parceiros forem publicados, eles aparecerão aqui." />
+          </PlatformSurfaceCard>
         ) : (
           <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-3">
             {active.map((link) => (
@@ -63,10 +71,15 @@ export default function Partners() {
                 onClick={() => handleOpen(link)}
                 className="group text-left"
               >
-                <Card className="h-full transition-shadow group-hover:shadow-md">
-                  <CardContent className="flex h-full flex-col p-4">
+                <Card className="match-surface h-full rounded-[1.75rem] border-white/80 bg-white/85">
+                  <CardContent className="flex h-full flex-col p-5 sm:p-6">
                     {link.image_url ? (
-                      <img src={link.image_url} alt="" className="mb-3 h-28 w-full rounded-lg object-cover" />
+                      <PhotoLightbox
+                        src={link.image_url}
+                        alt={link.title}
+                        title={link.title}
+                        trigger={<img src={link.image_url} alt="" className="mb-3 h-28 w-full cursor-zoom-in rounded-lg object-cover" />}
+                      />
                     ) : (
                       <div className="mb-3 flex h-28 w-full items-center justify-center rounded-lg bg-emerald-50 text-emerald-700">
                         <Handshake className="h-8 w-8" />

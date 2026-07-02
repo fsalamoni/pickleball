@@ -340,7 +340,7 @@ export default function Layout({ children, currentPageName }) {
           </div>
 
           <nav className="flex-1 overflow-y-auto px-4 py-6">
-            <SidebarSection title="Seu espaço" hint="Operação diária">
+            <SidebarSection title="Operação" hint="Sua rotina">
               <NavItem
                 to="/inicio"
                 icon={LayoutDashboard}
@@ -380,6 +380,13 @@ export default function Layout({ children, currentPageName }) {
                   onClick={() => setSidebarOpen(false)}
                 />
               )}
+              <NavItem
+                to="/torneios/ingressar"
+                icon={Hash}
+                label="Ingressar com código"
+                active={currentPageName === 'JoinTournament'}
+                onClick={() => setSidebarOpen(false)}
+              />
               {arenasOn && (
                 <NavItem
                   to="/minhas-reservas"
@@ -389,33 +396,9 @@ export default function Layout({ children, currentPageName }) {
                   onClick={() => setSidebarOpen(false)}
                 />
               )}
-              <NavItem
-                to="/torneios/ingressar"
-                icon={Hash}
-                label="Ingressar com código"
-                active={currentPageName === 'JoinTournament'}
-                onClick={() => setSidebarOpen(false)}
-              />
             </SidebarSection>
 
-            {tournaments.length > 0 && (
-              <SidebarSection title="Seus torneios" hint={`${tournaments.length} ativos`}>
-                {tournaments.map((t) => (
-                  <NavItem
-                    key={t.id}
-                    to={`/torneios/${t.id}`}
-                    icon={Trophy}
-                    label={t.name}
-                    active={activeTournamentId === t.id}
-                    onClick={() => setSidebarOpen(false)}
-                    badge={t.my_role === 'owner' ? 'Owner' : t.my_role === 'admin' ? 'Admin' : null}
-                    dot={statusDot(t.status)}
-                  />
-                ))}
-              </SidebarSection>
-            )}
-
-            <SidebarSection title="Explore o jogo" hint="Conteúdo e referências">
+            <SidebarSection title="Torneios" hint={tournaments.length > 0 ? `${tournaments.length} em contexto` : 'Entrada e acompanhamento'}>
               <NavItem
                 to="/torneios/publicos"
                 icon={Globe}
@@ -423,6 +406,21 @@ export default function Layout({ children, currentPageName }) {
                 active={currentPageName === 'PublicTournamentsList'}
                 onClick={() => setSidebarOpen(false)}
               />
+              {tournaments.length > 0 && tournaments.map((t) => (
+                <NavItem
+                  key={t.id}
+                  to={`/torneios/${t.id}`}
+                  icon={Trophy}
+                  label={t.name}
+                  active={activeTournamentId === t.id}
+                  onClick={() => setSidebarOpen(false)}
+                  badge={t.my_role === 'owner' ? 'Owner' : t.my_role === 'admin' ? 'Admin' : null}
+                  dot={statusDot(t.status)}
+                />
+              ))}
+            </SidebarSection>
+
+            <SidebarSection title="Comunidade" hint="Pessoas e conexões">
               <NavItem
                 to="/atletas"
                 icon={Users}
@@ -430,6 +428,46 @@ export default function Layout({ children, currentPageName }) {
                 active={currentPageName === 'AthletesDirectory'}
                 onClick={() => setSidebarOpen(false)}
               />
+              {ratingOn && (
+                <NavItem
+                  to="/ranking"
+                  icon={Medal}
+                  label="Ranking nacional"
+                  active={currentPageName === 'NationalRanking'}
+                  onClick={() => setSidebarOpen(false)}
+                />
+              )}
+              <NavItem
+                to="/clubes"
+                icon={Building2}
+                label="Clubes"
+                active={currentPageName === 'ClubsDirectory' || currentPageName === 'CreateClub' || currentPageName === 'ClubDetail'}
+                onClick={() => setSidebarOpen(false)}
+              />
+            </SidebarSection>
+
+            <SidebarSection title="Ecossistema" hint="Estrutura do jogo">
+              {arenasOn && (
+                <NavItem
+                  to="/arenas"
+                  icon={Building2}
+                  label="Arenas"
+                  active={['ArenasDirectory', 'ArenaDetail', 'ArenaManage', 'CreateArena', 'MyBookings'].includes(currentPageName)}
+                  onClick={() => setSidebarOpen(false)}
+                />
+              )}
+              {affiliatesOn && (
+                <NavItem
+                  to="/parceiros"
+                  icon={HeartHandshake}
+                  label="Parceiros"
+                  active={currentPageName === 'Partners'}
+                  onClick={() => setSidebarOpen(false)}
+                />
+              )}
+            </SidebarSection>
+
+            <SidebarSection title="Esporte e referência" hint="Aprender e acompanhar">
               {ratingOn && (
                 <NavItem
                   to="/ranking"
@@ -457,31 +495,6 @@ export default function Layout({ children, currentPageName }) {
                   onClick={() => setSidebarOpen(false)}
                 />
               )}
-              {affiliatesOn && (
-                <NavItem
-                  to="/parceiros"
-                  icon={HeartHandshake}
-                  label="Parceiros"
-                  active={currentPageName === 'Partners'}
-                  onClick={() => setSidebarOpen(false)}
-                />
-              )}
-              {arenasOn && (
-                <NavItem
-                  to="/arenas"
-                  icon={Building2}
-                  label="Arenas"
-                  active={['ArenasDirectory', 'ArenaDetail', 'ArenaManage', 'CreateArena'].includes(currentPageName)}
-                  onClick={() => setSidebarOpen(false)}
-                />
-              )}
-              <NavItem
-                to="/clubes"
-                icon={Building2}
-                label="Clubes"
-                active={currentPageName === 'ClubsDirectory' || currentPageName === 'CreateClub' || currentPageName === 'ClubDetail'}
-                onClick={() => setSidebarOpen(false)}
-              />
               <NavItem
                 to="/regras"
                 icon={BookOpen}

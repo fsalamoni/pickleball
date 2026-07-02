@@ -5,6 +5,7 @@ import { MessageCircle, Plus, Search } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Card } from '@/components/ui/card';
+import { PlatformSurfaceCard } from '@/components/ui/platform-page';
 import { useAuth } from '@/core/lib/FirebaseAuthContext';
 import { useConversations, useChatActions } from '@/modules/chat/hooks/useChat';
 import { conversationTitle } from '@/modules/chat/domain/conversations';
@@ -69,14 +70,14 @@ export default function ChatPage() {
   };
 
   return (
-    <div className="space-y-4">
+    <div className="space-y-5">
       {isPreviewMode && (
-        <Card className="rounded-2xl border-amber-300/70 bg-amber-50/85 p-4 text-sm leading-6 text-amber-950">
+        <PlatformSurfaceCard className="border-amber-300/70 bg-amber-50/85" contentClassName="p-4 text-sm leading-6 text-amber-950">
           Prévia local sem Firebase: o chat não carrega conversas neste ambiente.
-        </Card>
+        </PlatformSurfaceCard>
       )}
 
-      <Card className="grid h-[calc(100dvh-11rem)] min-h-[30rem] grid-cols-1 overflow-hidden rounded-2xl border-white/80 bg-white/85 lg:grid-cols-[20rem,1fr] xl:grid-cols-[22rem,1fr]">
+      <Card className="grid h-[calc(100dvh-11rem)] min-h-[30rem] grid-cols-1 overflow-hidden rounded-[2rem] border-white/80 bg-white/85 lg:grid-cols-[20rem,1fr] xl:grid-cols-[22rem,1fr]">
         {/* Lista de conversas */}
         <aside className={cn('flex min-h-0 flex-col border-r border-emerald-950/10', selectedConversation && 'hidden lg:flex')}>
           <div className="space-y-3 border-b border-emerald-950/10 p-3">

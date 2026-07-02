@@ -1,20 +1,18 @@
 import React from 'react';
 import { Navigate } from 'react-router-dom';
 import { History, Lightbulb, Flag, Globe2, Sparkles } from 'lucide-react';
-import { Card, CardContent } from '@/components/ui/card';
+import { PlatformSectionHeader, PlatformSurfaceCard } from '@/components/ui/platform-page';
 import { useFeatureFlag } from '@/core/lib/FeatureFlagsContext';
 import { FEATURE_FLAG } from '@/core/featureFlags';
 
 function Section({ icon: Icon, title, children }) {
   return (
-    <Card>
-      <CardContent className="p-5">
+    <PlatformSurfaceCard contentClassName="p-5">
         <h2 className="flex items-center gap-2 text-lg font-semibold arena-heading">
           <Icon className="h-5 w-5 text-emerald-600" /> {title}
         </h2>
         <div className="mt-2 space-y-2 text-sm leading-6 text-slate-700">{children}</div>
-      </CardContent>
-    </Card>
+    </PlatformSurfaceCard>
   );
 }
 
@@ -40,7 +38,15 @@ export default function SportHistory() {
   if (!enabled) return <Navigate to="/" replace />;
 
   return (
-    <div className="mx-auto max-w-3xl space-y-4">
+    <div className="mx-auto max-w-4xl space-y-6">
+      <PlatformSurfaceCard>
+        <PlatformSectionHeader
+          eyebrow="História do esporte"
+          title="Como o pickleball saiu de uma brincadeira e virou uma comunidade global"
+          description="Uma leitura pública para contextualizar a cultura do jogo e aproximar novos usuários do universo da plataforma."
+        />
+      </PlatformSurfaceCard>
+
       <Section icon={Sparkles} title="O que é o pickleball">
         <p>
           O pickleball é um esporte de raquete que combina elementos do tênis, do badminton e do

@@ -2,8 +2,9 @@ import React, { useMemo, useState } from 'react';
 import { Link, Navigate } from 'react-router-dom';
 import { Search, X } from 'lucide-react';
 import { Input } from '@/components/ui/input';
-import { Card, CardContent } from '@/components/ui/card';
 import { Skeleton } from '@/components/ui/skeleton';
+import { EmptyState } from '@/components/ui/empty-state';
+import { PlatformSectionHeader, PlatformSurfaceCard } from '@/components/ui/platform-page';
 import { useFeatureFlag } from '@/core/lib/FeatureFlagsContext';
 import { FEATURE_FLAG } from '@/core/featureFlags';
 import { genderLabel } from '@/modules/athletes/domain/constants';
@@ -90,9 +91,15 @@ export default function NationalRanking() {
   if (!enabled) return <Navigate to="/" replace />;
 
   return (
-    <div className="mx-auto max-w-5xl space-y-4">
-      <Card>
-        <CardContent className="space-y-3 p-4">
+    <div className="mx-auto max-w-5xl space-y-6">
+      <PlatformSurfaceCard>
+        <PlatformSectionHeader
+          eyebrow="Ranking"
+          title="Leitura nacional de desempenho competitivo"
+          description="Filtre por estado, nível e perfil para entender quem está se destacando dentro da base de atletas da plataforma."
+        />
+      </PlatformSurfaceCard>
+      <PlatformSurfaceCard contentClassName="space-y-3 p-4">
             <div className="relative">
               <Search className="absolute left-4 top-1/2 h-4 w-4 -translate-y-1/2 text-slate-400" />
               <Input
@@ -148,24 +155,24 @@ export default function NationalRanking() {
                 />
               </div>
             )}
-          </CardContent>
-        </Card>
+      </PlatformSurfaceCard>
 
         {isError ? (
           <ErrorState message="Não foi possível carregar o ranking." onRetry={refetch} />
         ) : isLoading ? (
           <Skeleton className="h-72" />
         ) : filtered.length === 0 ? (
-          <Card>
-            <CardContent className="p-8 text-center text-sm text-slate-500">
-              {players.length === 0
-                ? 'O ranking ainda não foi calculado. Assim que houver jogos finalizados e o recálculo for feito, os atletas aparecerão aqui.'
-                : 'Nenhum atleta para o filtro atual.'}
-            </CardContent>
-          </Card>
+          <PlatformSurfaceCard contentClassName="p-2">
+            <EmptyState
+              icon={Search}
+              title={players.length === 0 ? 'O ranking ainda não foi calculado' : 'Nenhum atleta para o filtro atual'}
+              description={players.length === 0
+                ? 'Assim que houver jogos finalizados e o recálculo for feito, os atletas aparecerão aqui.'
+                : 'Ajuste os filtros para ampliar ou refinar a leitura do ranking.'}
+            />
+          </PlatformSurfaceCard>
         ) : (
-          <Card>
-            <CardContent className="p-0">
+          <PlatformSurfaceCard contentClassName="p-0">
               <div className="arena-table-wrap">
                 <table className="w-full text-sm">
                   <thead className="bg-slate-50">
@@ -216,8 +223,7 @@ export default function NationalRanking() {
                   </tbody>
                 </table>
               </div>
-            </CardContent>
-          </Card>
+          </PlatformSurfaceCard>
         )}
     </div>
   );

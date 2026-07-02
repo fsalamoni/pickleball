@@ -1,25 +1,39 @@
 import React, { useMemo, useState } from 'react';
 import { Navigate, useParams, Link } from 'react-router-dom';
 import { toast } from 'sonner';
-import { ArrowLeft, Trash2, Building2 } from 'lucide-react';
+import { ArrowLeft, Trash2, Building2, UserPlus, Users } from 'lucide-react';
 import { Tabs, TabsList, TabsTrigger, TabsContent } from '@/components/ui/tabs';
 import { Card, CardContent } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { Skeleton } from '@/components/ui/skeleton';
 import { ImageUpload } from '@/components/ui/image-upload';
+import { Badge } from '@/components/ui/badge';
+import { Input } from '@/components/ui/input';
+import { Label } from '@/components/ui/label';
 import { PlatformSurfaceCard } from '@/components/ui/platform-page';
 import { PhotoLightbox } from '@/components/ui/photo-lightbox';
 import ConfirmDialog from '@/components/ConfirmDialog';
 import { useFeatureFlag } from '@/core/lib/FeatureFlagsContext';
 import { FEATURE_FLAG } from '@/core/featureFlags';
 import { useAuth } from '@/core/lib/FirebaseAuthContext';
+import { collection, getDocs, query, where } from 'firebase/firestore';
+import { db } from '@/core/config/firebase';
 import ProfileFields from '../components/ProfileFields.jsx';
 import PricingEditor from '../components/PricingEditor.jsx';
 import ArenaReviews from '../components/ArenaReviews.jsx';
 import BookingRow from '../components/BookingRow.jsx';
 import { sortBookings } from '../domain/booking.js';
-import { BOOKING_STATUS } from '../domain/constants.js';
-import { useArena, useMyManagedArenas, useUpdateArena, useSetArenaPhotos, useDeleteArena } from '../hooks/useArenas.js';
+import { ARENA_MANAGER_ROLE, BOOKING_STATUS } from '../domain/constants.js';
+import {
+  useArena,
+  useMyManagedArenas,
+  useUpdateArena,
+  useSetArenaPhotos,
+  useDeleteArena,
+  useArenaManagers,
+  useAddManager,
+  useRemoveManager,
+} from '../hooks/useArenas.js';
 import { useArenaBookings } from '../hooks/useBookings.js';
 
 function InfoTab({ arena }) {
@@ -141,6 +155,97 @@ function BookingsTab({ arena }) {
   );
 }
 
+function ManagersTab({ arena }) {
+  const { data: managers = [] } = useArenaManagers(arena.id);
+  const addManager = useAddManager();
+  const removeManager = useRemoveManager();
+  const [email, setEmail] = useState('');
+
+  async function handleAddManager() {
+    const trimmed = email.trim().toLowerCase();
+    if (!trimmed) return;
+
+    try {
+      const snap = await getDocs(query(collection(db, 'users'), where('email', '==', trimmed)));
+      if (snap.empty) {
+        toast.error('Usuário não encontrado. Peça para a pessoa entrar na plataforma ao menos uma vez.');
+        return;
+      }
+
+      const target = snap.docs[0].data();
+      if (managers.some((manager) => manager.user_id === target.uid)) {
+        toast.error('Esse usuário já administra esta arena.');
+        return;
+      }
+
+      await addManager.mutateAsync({
+        arena,
+        target: {
+          user_id: target.uid,
+          user_name: target.platform_name || target.full_name || target.email,
+          user_photo: target.photo_url || '',
+        },
+      });
+      toast.success('Admin da arena adicionado.');
+      setEmail('');
+    } catch (err) {
+      toast.error(err?.message || 'Não foi possível adicionar o admin da arena.');
+    }
+  }
+
+  return (
+    <PlatformSurfaceCard>
+      <div className="flex items-start gap-3">
+        <div className="flex h-10 w-10 items-center justify-center rounded-2xl bg-emerald-100 text-emerald-700">
+          <Users className="h-4.5 w-4.5" />
+        </div>
+        <div>
+          <div className="text-base font-semibold text-slate-950">Admins da arena</div>
+          <p className="mt-1 text-sm leading-6 text-slate-600">
+            O criador da arena já nasce como owner. Qualquer admin da arena pode compartilhar a administração com outros usuários da plataforma.
+          </p>
+        </div>
+      </div>
+
+      <ul className="mt-5 space-y-3">
+        {managers.map((manager) => (
+          <li key={manager.user_id} className="flex items-center justify-between gap-3 rounded-[1.25rem] border border-emerald-950/10 bg-white/75 px-4 py-3">
+            <div className="min-w-0">
+              <div className="truncate font-medium text-slate-950">{manager.user_name || 'Usuário'}</div>
+              <div className="mt-1 text-xs text-slate-500">{manager.user_id}</div>
+            </div>
+            <div className="flex items-center gap-2">
+              <Badge variant="secondary" className="shadow-none">
+                {manager.role === ARENA_MANAGER_ROLE.OWNER ? 'Owner' : 'Admin'}
+              </Badge>
+              {manager.role !== ARENA_MANAGER_ROLE.OWNER && (
+                <Button
+                  size="icon"
+                  variant="ghost"
+                  onClick={() => removeManager.mutate({ arenaId: arena.id, userId: manager.user_id })}
+                  disabled={removeManager.isPending}
+                >
+                  <Trash2 className="w-4 h-4 text-red-600" />
+                </Button>
+              )}
+            </div>
+          </li>
+        ))}
+      </ul>
+
+      <div className="mt-5 rounded-[1.5rem] border border-emerald-950/10 bg-secondary/35 p-4">
+        <Label>Adicionar admin da arena (e-mail do usuário já cadastrado)</Label>
+        <div className="mt-3 flex gap-2">
+          <Input value={email} onChange={(e) => setEmail(e.target.value)} placeholder="email@dominio.com" type="email" />
+          <Button onClick={handleAddManager} disabled={addManager.isPending}>
+            <UserPlus className="w-4 h-4" />
+          </Button>
+        </div>
+      </div>
+    </PlatformSurfaceCard>
+  );
+}
+
 export default function ArenaManage() {
   const enabled = useFeatureFlag(FEATURE_FLAG.ARENAS);
   const { arenaId } = useParams();
@@ -166,7 +271,7 @@ export default function ArenaManage() {
   const isOwner = arena.owner_id === user?.uid || isPlatformAdmin;
 
   return (
-    <div className="mx-auto max-w-4xl space-y-4">
+    <div className="mx-auto max-w-4xl space-y-6">
       <div className="flex items-center justify-between gap-2">
         <Link to={`/arenas/${arena.id}`} className="inline-flex items-center gap-1 text-sm text-slate-500 hover:text-slate-800">
           <ArrowLeft className="h-4 w-4" /> {arena.name}
@@ -190,6 +295,20 @@ export default function ArenaManage() {
         )}
       </div>
 
+      <PlatformSurfaceCard>
+        <div className="flex items-start gap-3">
+          <div className="flex h-10 w-10 items-center justify-center rounded-2xl bg-emerald-100 text-emerald-700">
+            <Building2 className="h-4.5 w-4.5" />
+          </div>
+          <div>
+            <div className="text-base font-semibold text-slate-950">Central da arena</div>
+            <p className="mt-1 text-sm leading-6 text-slate-600">
+              Aqui você gerencia reservas, preços, fotos, admins e informações públicas da arena no mesmo fluxo operacional.
+            </p>
+          </div>
+        </div>
+      </PlatformSurfaceCard>
+
       <Tabs defaultValue="reservas">
         <div className="overflow-x-auto -mx-1 px-1">
           <TabsList className="inline-flex h-auto min-w-full justify-start gap-2 rounded-[1.25rem] bg-amber-50 p-2">
@@ -197,6 +316,7 @@ export default function ArenaManage() {
             <TabsTrigger value="precos">Preços</TabsTrigger>
             <TabsTrigger value="fotos">Fotos</TabsTrigger>
             <TabsTrigger value="info">Informações</TabsTrigger>
+            <TabsTrigger value="admins">Admins</TabsTrigger>
             <TabsTrigger value="retornos">Retornos</TabsTrigger>
           </TabsList>
         </div>
@@ -204,6 +324,7 @@ export default function ArenaManage() {
         <TabsContent value="precos" className="mt-4"><Card><CardContent className="p-5"><PricingEditor arena={arena} /></CardContent></Card></TabsContent>
         <TabsContent value="fotos" className="mt-4"><PhotosTab arena={arena} /></TabsContent>
         <TabsContent value="info" className="mt-4"><InfoTab arena={arena} /></TabsContent>
+        <TabsContent value="admins" className="mt-4"><ManagersTab arena={arena} /></TabsContent>
         <TabsContent value="retornos" className="mt-4"><ArenaReviews arena={arena} canModerate /></TabsContent>
       </Tabs>
     </div>

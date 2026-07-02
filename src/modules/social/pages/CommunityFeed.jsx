@@ -3,6 +3,8 @@ import { Link, Navigate } from 'react-router-dom';
 import { Trophy, Megaphone, Newspaper } from 'lucide-react';
 import { Card, CardContent } from '@/components/ui/card';
 import { Skeleton } from '@/components/ui/skeleton';
+import { EmptyState } from '@/components/ui/empty-state';
+import { PlatformSectionHeader, PlatformSurfaceCard } from '@/components/ui/platform-page';
 import { useAuth } from '@/core/lib/FirebaseAuthContext';
 import { useFeatureFlag } from '@/core/lib/FeatureFlagsContext';
 import { FEATURE_FLAG } from '@/core/featureFlags';
@@ -37,11 +39,14 @@ export default function CommunityFeed() {
   if (!enabled) return <Navigate to="/inicio" replace />;
 
   return (
-    <div className="mx-auto max-w-3xl space-y-4">
-      <div className="flex items-center justify-between gap-3">
-        <p className="flex items-center gap-2 text-sm text-slate-600">
-          <Newspaper className="h-4 w-4 text-emerald-600" /> Atividade recente da comunidade.
-        </p>
+    <div className="mx-auto max-w-4xl space-y-6">
+      <PlatformSurfaceCard>
+        <div className="flex items-center justify-between gap-3">
+          <PlatformSectionHeader
+            eyebrow="Comunidade"
+            title="Atividade recente da plataforma"
+            description="Acompanhe movimentos recentes de torneios, clubes e da comunidade em uma leitura mais direta."
+          />
         {followOn && (
           <button
             type="button"
@@ -56,25 +61,26 @@ export default function CommunityFeed() {
             Só de quem sigo
           </button>
         )}
-      </div>
+        </div>
+      </PlatformSurfaceCard>
 
       {isError ? (
         <ErrorState message="Não foi possível carregar as novidades." onRetry={refetch} />
       ) : isLoading ? (
         <Skeleton className="h-64" />
       ) : visible.length === 0 ? (
-        <Card>
-          <CardContent className="p-8 text-center text-sm text-slate-500">
-            {onlyFollowing
-              ? 'Nenhuma atividade recente de quem você segue.'
-              : 'Nenhuma atividade recente por aqui ainda.'}
-          </CardContent>
-        </Card>
+        <PlatformSurfaceCard contentClassName="p-2">
+          <EmptyState
+            icon={Newspaper}
+            title={onlyFollowing ? 'Nenhuma atividade recente de quem você segue' : 'Nenhuma atividade recente por aqui ainda'}
+            description="Assim que novos movimentos acontecerem na comunidade, eles aparecerão aqui em ordem de relevância."
+          />
+        </PlatformSurfaceCard>
       ) : (
         <div className="space-y-2">
           {visible.map((item) => (
             <Link key={item.id} to={item.link} className="block">
-              <Card className="transition-shadow hover:shadow-md">
+              <Card className="match-surface rounded-[1.5rem] border-white/80 bg-white/85">
                 <CardContent className="flex items-center gap-3 p-4">
                   <ItemIcon type={item.type} />
                   <div className="min-w-0 flex-1">
