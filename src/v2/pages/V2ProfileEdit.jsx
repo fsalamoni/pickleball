@@ -14,7 +14,7 @@ import { calculateAssessment } from '@/modules/leveling/domain/questionnaire';
 import LevelingQuestionnaire from '@/modules/leveling/components/LevelingQuestionnaire';
 import LevelingResultCard from '@/modules/leveling/components/LevelingResultCard';
 import { PICKLEBALL_EXPERIENCE_LABELS, COMPETITION_GENDER_LABELS } from '@/modules/tournament/domain/constants';
-import ParticipationHistoryCard from '@/modules/tournament/components/ParticipationHistoryCard';
+import V2ParticipationHistoryCard from '@/v2/components/tournament/V2ParticipationHistoryCard';
 import {
   V2Button, V2Field, V2Input, V2SectionHeader, V2Select, V2Surface, V2Textarea, V2Toggle,
 } from '@/v2/ui/primitives';
@@ -312,7 +312,7 @@ export default function V2ProfileEdit() {
           </V2Surface>
         )}
 
-        <ParticipationHistoryCard />
+        <V2ParticipationHistoryCard />
 
         {/* Leveling */}
         <V2Surface>
