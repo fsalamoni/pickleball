@@ -5,8 +5,8 @@ import { MessageCircle, Plus, Search } from 'lucide-react';
 import { useAuth } from '@/core/lib/FirebaseAuthContext';
 import { useConversations, useChatActions } from '@/modules/chat/hooks/useChat';
 import { conversationTitle } from '@/modules/chat/domain/conversations';
-import ConversationList from '@/modules/chat/components/ConversationList';
-import ChatWindow from '@/modules/chat/components/ChatWindow';
+import V2ConversationList from '@/v2/components/chat/V2ConversationList';
+import V2ChatWindow from '@/v2/components/chat/V2ChatWindow';
 import NewChatDialog from '@/modules/chat/components/NewChatDialog';
 import { V2Button } from '@/v2/ui/primitives';
 import { cn } from '@/core/lib/utils';
@@ -82,7 +82,7 @@ export default function V2Chat() {
             </div>
           </div>
           <div className="min-h-0 flex-1 overflow-y-auto">
-            <ConversationList
+            <V2ConversationList
               conversations={filtered}
               isLoading={isLoading}
               selectedId={selectedId}
@@ -94,7 +94,7 @@ export default function V2Chat() {
 
         <section className={cn('min-h-0 flex-col', selectedConversation ? 'flex' : 'hidden lg:flex')}>
           {selectedConversation ? (
-            <ChatWindow
+            <V2ChatWindow
               conversation={selectedConversation}
               currentUserId={user?.uid}
               onBack={() => selectConversation(null)}
