@@ -103,11 +103,12 @@ function RouteTelemetry() {
   const location = useLocation();
   useEffect(() => {
     recordPageView(location.pathname);
-    // Reinicia o scroll no topo a cada navegação (evita abrir páginas "no meio").
-    if (typeof window !== 'undefined') {
+    // Algumas navegações internas preservam a posição atual por intenção
+    // explícita (ex.: navegação lateral).
+    if (typeof window !== 'undefined' && !location.state?.preserveWindowScroll) {
       window.scrollTo({ top: 0, left: 0, behavior: 'auto' });
     }
-  }, [location.pathname]);
+  }, [location.pathname, location.state]);
   return null;
 }
 

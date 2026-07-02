@@ -15,10 +15,17 @@ import {
 } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
-import { Card, CardContent } from '@/components/ui/card';
 import { Skeleton } from '@/components/ui/skeleton';
-import { Tabs, TabsList, TabsTrigger, TabsContent } from '@/components/ui/tabs';
+import {
+  Tabs,
+  TabsList,
+  TabsTrigger,
+  TabsContent,
+  PLATFORM_TABS_LIST_CLASS,
+  PLATFORM_TABS_TRIGGER_CLASS,
+} from '@/components/ui/tabs';
 import { EmptyState } from '@/components/ui/empty-state';
+import { PlatformSurfaceCard } from '@/components/ui/platform-page';
 import { useMyMembership, useClubEvent } from '@/modules/clubs/hooks/useClubs';
 import { CLUB_EVENT_TYPE, eventTypeLabel, isGameDayEvent, isPrivateEvent } from '@/modules/clubs/domain/constants';
 import { EventFormDialog } from '@/modules/clubs/components/ClubEventsTab';
@@ -123,35 +130,37 @@ export default function EventDetail() {
         )}
       </section>
 
-      <Tabs value={tab} onValueChange={setTab} className="w-full">
-        <TabsList className="flex h-auto w-full flex-wrap justify-start gap-1 bg-muted/60 p-1">
-          <TabsTrigger value="detalhes">
-            <Info className="mr-1.5 h-4 w-4" /> {showGames ? 'Detalhes e dias de jogo' : 'Detalhes e datas'}
-          </TabsTrigger>
-          <TabsTrigger value="participantes"><Users className="mr-1.5 h-4 w-4" /> Participantes</TabsTrigger>
-          <TabsTrigger value="conversa"><MessageSquare className="mr-1.5 h-4 w-4" /> Conversa</TabsTrigger>
-        </TabsList>
+      <PlatformSurfaceCard contentClassName="p-3 sm:p-4">
+        <Tabs value={tab} onValueChange={setTab} className="w-full">
+          <TabsList className={PLATFORM_TABS_LIST_CLASS}>
+            <TabsTrigger value="detalhes" className={PLATFORM_TABS_TRIGGER_CLASS}>
+              <Info className="mr-1.5 h-4 w-4" /> {showGames ? 'Detalhes e dias de jogo' : 'Detalhes e datas'}
+            </TabsTrigger>
+            <TabsTrigger value="participantes" className={PLATFORM_TABS_TRIGGER_CLASS}><Users className="mr-1.5 h-4 w-4" /> Participantes</TabsTrigger>
+            <TabsTrigger value="conversa" className={PLATFORM_TABS_TRIGGER_CLASS}><MessageSquare className="mr-1.5 h-4 w-4" /> Conversa</TabsTrigger>
+          </TabsList>
 
-        <TabsContent value="detalhes" className="mt-4">
-          {event.description && (
-            <Card className="mb-4 rounded-xl">
-              <CardContent className="p-4">
+          <TabsContent value="detalhes" className="mt-4">
+            {event.description && (
+              <PlatformSurfaceCard contentClassName="p-4">
                 <h3 className="mb-1 text-sm font-semibold text-slate-900">Sobre o evento</h3>
                 <p className="whitespace-pre-wrap text-sm leading-6 text-slate-600">{event.description}</p>
-              </CardContent>
-            </Card>
-          )}
-          <EventDatesPanel event={event} clubId={clubId} showGames={showGames} />
-        </TabsContent>
+              </PlatformSurfaceCard>
+            )}
+            <div className={event.description ? 'mt-4' : ''}>
+              <EventDatesPanel event={event} clubId={clubId} showGames={showGames} />
+            </div>
+          </TabsContent>
 
-        <TabsContent value="participantes" className="mt-4">
-          <EventParticipantsPanel event={event} clubId={clubId} />
-        </TabsContent>
+          <TabsContent value="participantes" className="mt-4">
+            <EventParticipantsPanel event={event} clubId={clubId} />
+          </TabsContent>
 
-        <TabsContent value="conversa" className="mt-4">
-          <EventChat eventId={eventId} />
-        </TabsContent>
-      </Tabs>
+          <TabsContent value="conversa" className="mt-4">
+            <EventChat eventId={eventId} />
+          </TabsContent>
+        </Tabs>
+      </PlatformSurfaceCard>
 
       <EventFormDialog clubId={clubId} event={event} open={editOpen} onClose={() => setEditOpen(false)} />
     </div>

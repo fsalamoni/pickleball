@@ -1,6 +1,13 @@
 import React from 'react';
 import { useParams, useNavigate, Link } from 'react-router-dom';
-import { Tabs, TabsList, TabsTrigger, TabsContent } from '@/components/ui/tabs';
+import {
+  Tabs,
+  TabsList,
+  TabsTrigger,
+  TabsContent,
+  PLATFORM_TABS_LIST_CLASS,
+  PLATFORM_TABS_TRIGGER_CLASS,
+} from '@/components/ui/tabs';
 import { Card, CardContent } from '@/components/ui/card';
 import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
@@ -54,8 +61,6 @@ const PLAYER_TABS = [
   { value: 'jogos', label: 'Jogos' },
   { value: 'ranking', label: 'Ranking' },
 ];
-
-const TAB_TRIGGER_CLASSNAME = 'rounded-full px-4 py-2 text-sm font-semibold data-[state=active]:bg-white data-[state=active]:text-slate-950 data-[state=active]:shadow-[0_14px_30px_-22px_rgba(15,23,42,0.45)]';
 
 // Abas obsoletas que ainda podem aparecer em links salvos. Redirecionamos
 // para a nova home da modalidade (visão geral).
@@ -297,10 +302,10 @@ export default function Tournament() {
       >
         <div className="rounded-[1.75rem] border border-white/80 bg-white/82 p-3 shadow-[0_18px_40px_-28px_rgba(15,23,42,0.28)]">
           <div className="overflow-x-auto -mx-1 px-1 sm:mx-0 sm:px-0">
-            <TabsList className="inline-flex h-auto min-w-full justify-start gap-2 rounded-[1.5rem] bg-secondary/45 p-2 sm:min-w-0">
+            <TabsList className={`${PLATFORM_TABS_LIST_CLASS} min-w-full rounded-[1.5rem] bg-secondary/45 p-2 sm:min-w-0`}>
               <TabsTrigger
                 value={PLAYER_TABS[0].value}
-                className={TAB_TRIGGER_CLASSNAME}
+                className={PLATFORM_TABS_TRIGGER_CLASS}
               >
                 {PLAYER_TABS[0].label}
               </TabsTrigger>
@@ -309,18 +314,18 @@ export default function Tournament() {
               )}
               <TabsTrigger
                 value={PLAYER_TABS[1].value}
-                className={TAB_TRIGGER_CLASSNAME}
+                className={PLATFORM_TABS_TRIGGER_CLASS}
               >
                 {PLAYER_TABS[1].label}
               </TabsTrigger>
               <TabsTrigger
                 value={PLAYER_TABS[2].value}
-                className={TAB_TRIGGER_CLASSNAME}
+                className={PLATFORM_TABS_TRIGGER_CLASS}
               >
                 {PLAYER_TABS[2].label}
               </TabsTrigger>
               {showGalleryTab && (
-                <TabsTrigger value="fotos" className={TAB_TRIGGER_CLASSNAME}>
+                <TabsTrigger value="fotos" className={PLATFORM_TABS_TRIGGER_CLASS}>
                   <Images className="mr-1 h-4 w-4" /> Fotos
                 </TabsTrigger>
               )}

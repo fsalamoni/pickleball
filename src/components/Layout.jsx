@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import React, { useEffect, useRef, useState } from 'react';
 import { Link, useLocation, useNavigate } from 'react-router-dom';
 import {
   LayoutDashboard,
@@ -59,6 +59,9 @@ const UTILITY_PUBLIC_PAGES = [
   'SportHistory',
 ];
 const APP_NAME = 'Pickleball';
+const PRESERVE_WINDOW_SCROLL_STATE = { preserveWindowScroll: true };
+const APP_SIDEBAR_SCROLL_KEY = 'layout:app-sidebar-scroll';
+const PUBLIC_SIDEBAR_SCROLL_KEY = 'layout:public-sidebar-scroll';
 
 const PAGE_META = {
   Dashboard: {
@@ -241,6 +244,7 @@ export default function Layout({ children, currentPageName }) {
   const arenasOn = useFeatureFlag(FEATURE_FLAG.ARENAS);
   const sportHistoryOn = useFeatureFlag(FEATURE_FLAG.SPORT_HISTORY);
   const [sidebarOpen, setSidebarOpen] = useState(false);
+  const appSidebarNavRef = usePersistentSidebarScroll(APP_SIDEBAR_SCROLL_KEY);
   const isStandalonePublicPage = STANDALONE_PUBLIC_PAGES.includes(currentPageName);
   const isUtilityPublicPage = UTILITY_PUBLIC_PAGES.includes(currentPageName);
   const currentMeta = pageMeta(currentPageName);
@@ -289,6 +293,10 @@ export default function Layout({ children, currentPageName }) {
   const displayPhoto = userProfile?.photo_url || user?.photoURL || '';
   const initial = displayName?.[0]?.toUpperCase() || 'U';
   const activeTournamentId = location.pathname.match(/\/torneios\/([^/]+)/)?.[1];
+  const handleSidebarNavClick = () => {
+    persistSidebarScroll(appSidebarNavRef.current, APP_SIDEBAR_SCROLL_KEY);
+    setSidebarOpen(false);
+  };
 
   return (
     <div className="min-h-screen arena-page">
@@ -320,10 +328,10 @@ export default function Layout({ children, currentPageName }) {
       >
         <div className="flex h-full flex-col border-r border-white/10 bg-[linear-gradient(180deg,rgba(2,18,28,0.98),rgba(8,47,73,0.95))] text-sidebar-foreground shadow-[0_30px_80px_-35px_rgba(2,12,27,0.8)] backdrop-blur-xl">
           <div className="border-b border-white/10 px-6 py-6">
-            <BrandLockup to="/inicio" subtitle="Gestão de torneios de pickleball" />
+            <BrandLockup to="/inicio" subtitle="Gestão de torneios de pickleball" preserveScroll onClick={handleSidebarNavClick} />
             <div className="mt-5 grid gap-2">
               <Button asChild className="w-full justify-between bg-white text-slate-950 hover:bg-emerald-50">
-                <Link to="/torneios/criar" onClick={() => setSidebarOpen(false)}>
+                <Link to="/torneios/criar" state={PRESERVE_WINDOW_SCROLL_STATE} onClick={handleSidebarNavClick}>
                   Criar torneio <Plus className="h-4 w-4" />
                 </Link>
               </Button>
@@ -332,14 +340,14 @@ export default function Layout({ children, currentPageName }) {
                 variant="outline"
                 className="w-full justify-between border-white/10 bg-white/10 text-white hover:bg-white/15 hover:text-white"
               >
-                <Link to="/torneios/publicos" onClick={() => setSidebarOpen(false)}>
+                <Link to="/torneios/publicos" state={PRESERVE_WINDOW_SCROLL_STATE} onClick={handleSidebarNavClick}>
                   Ver públicos <Globe className="h-4 w-4" />
                 </Link>
               </Button>
             </div>
           </div>
 
-          <nav className="flex-1 overflow-y-auto px-4 py-6">
+          <nav ref={appSidebarNavRef} onClickCapture={() => persistSidebarScroll(appSidebarNavRef.current, APP_SIDEBAR_SCROLL_KEY)} className="flex-1 overflow-y-auto px-4 py-6">
             <SidebarSection title="Operação" hint="Sua rotina">
               <NavItem
                 to="/inicio"
@@ -644,11 +652,16 @@ export default function Layout({ children, currentPageName }) {
 
 function PublicUtilityLayout({ children, currentPageName }) {
   const [sidebarOpen, setSidebarOpen] = useState(false);
+  const publicSidebarNavRef = usePersistentSidebarScroll(PUBLIC_SIDEBAR_SCROLL_KEY);
   const currentMeta = pageMeta(currentPageName);
   const ratingOn = useFeatureFlag(FEATURE_FLAG.PLAYER_RATING);
   const affiliatesOn = useFeatureFlag(FEATURE_FLAG.AFFILIATE_LINKS);
   const sportHistoryOn = useFeatureFlag(FEATURE_FLAG.SPORT_HISTORY);
   const hasExplore = ratingOn || affiliatesOn;
+  const handleSidebarNavClick = () => {
+    persistSidebarScroll(publicSidebarNavRef.current, PUBLIC_SIDEBAR_SCROLL_KEY);
+    setSidebarOpen(false);
+  };
 
   return (
     <div className="min-h-screen arena-page">
@@ -680,10 +693,10 @@ function PublicUtilityLayout({ children, currentPageName }) {
       >
         <div className="flex h-full flex-col border-r border-white/10 bg-[linear-gradient(180deg,rgba(2,18,28,0.98),rgba(8,47,73,0.95))] text-sidebar-foreground shadow-[0_30px_80px_-35px_rgba(2,12,27,0.8)] backdrop-blur-xl">
           <div className="border-b border-white/10 px-6 py-6">
-            <BrandLockup to="/" subtitle="Regras, nivelamento e cultura do esporte" />
+            <BrandLockup to="/" subtitle="Regras, nivelamento e cultura do esporte" preserveScroll onClick={handleSidebarNavClick} />
           </div>
 
-          <nav className="flex-1 overflow-y-auto px-4 py-6">
+          <nav ref={publicSidebarNavRef} onClickCapture={() => persistSidebarScroll(publicSidebarNavRef.current, PUBLIC_SIDEBAR_SCROLL_KEY)} className="flex-1 overflow-y-auto px-4 py-6">
             {hasExplore && (
               <SidebarSection title="Explorar" hint="Aberto à comunidade">
                 {ratingOn && (
@@ -713,14 +726,14 @@ function PublicUtilityLayout({ children, currentPageName }) {
               </p>
               <div className="mt-4 grid gap-2">
                 <Button asChild className="w-full bg-white text-slate-950 hover:bg-emerald-50">
-                  <Link to="/login" onClick={() => setSidebarOpen(false)}>Entrar</Link>
+                  <Link to="/login" state={PRESERVE_WINDOW_SCROLL_STATE} onClick={handleSidebarNavClick}>Entrar</Link>
                 </Button>
                 <Button
                   asChild
                   variant="outline"
                   className="w-full border-white/10 bg-white/10 text-white hover:bg-white/15 hover:text-white"
                 >
-                  <Link to="/" onClick={() => setSidebarOpen(false)}>Página inicial</Link>
+                  <Link to="/" state={PRESERVE_WINDOW_SCROLL_STATE} onClick={handleSidebarNavClick}>Página inicial</Link>
                 </Button>
               </div>
             </div>
@@ -786,6 +799,7 @@ function MobileBottomNav({ currentPageName }) {
             <Link
               key={item.to}
               to={item.to}
+              state={PRESERVE_WINDOW_SCROLL_STATE}
               aria-current={active ? 'page' : undefined}
               className={cn(
                 'flex min-w-0 flex-1 flex-col items-center justify-center gap-1 py-2 text-[0.65rem] font-medium transition-colors',
@@ -813,9 +827,9 @@ function MobileBottomNav({ currentPageName }) {
   );
 }
 
-function BrandLockup({ to, subtitle }) {
+function BrandLockup({ to, subtitle, preserveScroll = false, onClick }) {
   return (
-    <Link to={to} className="flex items-center gap-3 text-white">
+    <Link to={to} state={preserveScroll ? PRESERVE_WINDOW_SCROLL_STATE : undefined} onClick={onClick} className="flex items-center gap-3 text-white">
       <div className="flex h-11 w-11 items-center justify-center rounded-2xl border border-white/10 bg-white/10 text-emerald-50">
         <Trophy className="h-5 w-5" />
       </div>
@@ -926,6 +940,7 @@ function NavItem({ to, icon: Icon, label, active, onClick, badge, dot }) {
   return (
     <Link
       to={to}
+      state={PRESERVE_WINDOW_SCROLL_STATE}
       onClick={onClick}
       className={cn(
         'group flex items-center gap-3 rounded-[1.15rem] px-3 py-3 text-sm font-medium transition-all duration-200',
@@ -956,4 +971,33 @@ function NavItem({ to, icon: Icon, label, active, onClick, badge, dot }) {
       )}
     </Link>
   );
+}
+
+function persistSidebarScroll(element, storageKey) {
+  if (typeof window === 'undefined' || !element) return;
+  window.sessionStorage.setItem(storageKey, String(element.scrollTop || 0));
+}
+
+function usePersistentSidebarScroll(storageKey) {
+  const navRef = useRef(null);
+
+  useEffect(() => {
+    const element = navRef.current;
+    if (typeof window === 'undefined' || !element) return undefined;
+
+    const savedPosition = Number(window.sessionStorage.getItem(storageKey));
+    if (Number.isFinite(savedPosition)) {
+      element.scrollTop = savedPosition;
+    }
+
+    const handleScroll = () => persistSidebarScroll(element, storageKey);
+    element.addEventListener('scroll', handleScroll, { passive: true });
+
+    return () => {
+      persistSidebarScroll(element, storageKey);
+      element.removeEventListener('scroll', handleScroll);
+    };
+  }, [storageKey]);
+
+  return navRef;
 }

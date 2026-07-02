@@ -17,6 +17,8 @@ import { Button } from '@/components/ui/button';
 import { Card, CardContent } from '@/components/ui/card';
 import { Badge } from '@/components/ui/badge';
 import { Skeleton } from '@/components/ui/skeleton';
+import { EmptyState } from '@/components/ui/empty-state';
+import { PlatformSectionHeader, PlatformSurfaceCard } from '@/components/ui/platform-page';
 import { useAuth } from '@/core/lib/FirebaseAuthContext';
 import {
   useClubs,
@@ -117,13 +119,12 @@ export default function ClubsDirectory() {
           </CardContent>
         </Card>
 
-        <Card className="rounded-[2rem] border-white/80 bg-white/82">
-          <CardContent className="p-6 sm:p-7">
-            <span className="arena-chip">Ingressar com código</span>
-            <h3 className="mt-4 text-2xl font-semibold text-slate-950">Tem um convite?</h3>
-            <p className="mt-2 text-sm leading-6 text-slate-600">
-              Digite o código compartilhado por um administrador para entrar no clube.
-            </p>
+        <PlatformSurfaceCard>
+            <PlatformSectionHeader
+              eyebrow="Ingressar com código"
+              title="Tem um convite?"
+              description="Digite o código compartilhado por um administrador para entrar no clube."
+            />
             <form onSubmit={handleJoin} className="mt-5 flex flex-col gap-3 sm:flex-row">
               <div className="relative flex-1">
                 <Hash className="absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-slate-400" />
@@ -139,16 +140,16 @@ export default function ClubsDirectory() {
                 {joinClub.isPending ? 'Entrando…' : 'Ingressar'}
               </Button>
             </form>
-          </CardContent>
-        </Card>
+        </PlatformSurfaceCard>
       </section>
 
       {myClubs.length > 0 && (
         <section className="space-y-4">
-          <div>
-            <div className="text-xs font-semibold uppercase tracking-[0.2em] text-emerald-700/75">Meus clubes</div>
-            <h3 className="mt-2 text-2xl font-semibold text-slate-950">Clubes em que você participa</h3>
-          </div>
+          <PlatformSectionHeader
+            eyebrow="Meus clubes"
+            title="Clubes em que você participa"
+            description="Acesse rapidamente os espaços em que você já está dentro da operação da comunidade."
+          />
           <div className="grid gap-4 sm:grid-cols-2 xl:grid-cols-3">
             {myClubs.map((club) => (
               <ClubCard key={club.id} club={club} myRole={club.my_role} />
@@ -157,8 +158,7 @@ export default function ClubsDirectory() {
         </section>
       )}
 
-      <Card className="rounded-[2rem] border-white/80 bg-white/82">
-        <CardContent className="p-4 sm:p-5">
+      <PlatformSurfaceCard contentClassName="p-4 sm:p-5">
           <div className="relative">
             <Search className="absolute left-4 top-1/2 h-4 w-4 -translate-y-1/2 text-slate-400" />
             <Input
@@ -181,16 +181,13 @@ export default function ClubsDirectory() {
           <div className="mt-4 border-t border-emerald-950/8 pt-4 text-sm text-slate-600">
             <span className="font-semibold text-slate-950">{filtered.length}</span> clube(s) na plataforma.
           </div>
-        </CardContent>
-      </Card>
+      </PlatformSurfaceCard>
 
       {isPreviewMode && (
-        <Card className="rounded-[2rem] border-amber-300/70 bg-amber-50/85">
-          <CardContent className="p-5 text-sm leading-6 text-amber-950">
+        <PlatformSurfaceCard className="border-amber-300/70 bg-amber-50/85" contentClassName="p-5 text-sm leading-6 text-amber-950">
             Prévia local sem Firebase: os clubes não são carregados neste ambiente.
             {authUnavailableReason ? ` ${authUnavailableReason}` : ''}
-          </CardContent>
-        </Card>
+        </PlatformSurfaceCard>
       )}
 
       {isLoading ? (
@@ -200,30 +197,27 @@ export default function ClubsDirectory() {
           ))}
         </div>
       ) : filtered.length === 0 ? (
-        <Card className="rounded-[2rem] border-white/80 bg-white/82">
-          <CardContent className="flex flex-col items-center px-4 py-10 text-center sm:px-10 sm:py-12">
-            <div className="flex h-16 w-16 items-center justify-center rounded-[1.5rem] bg-emerald-100 text-emerald-700">
-              <Building2 className="h-8 w-8" />
-            </div>
-            <h3 className="mt-5 text-2xl font-semibold text-slate-950">Nenhum clube encontrado</h3>
-            <p className="mt-3 max-w-2xl text-sm leading-7 text-slate-600 sm:text-base">
-              {clubs.length === 0
-                ? 'Ainda não há clubes na plataforma. Crie o primeiro e convide sua turma!'
-                : 'Ajuste a busca para ver mais clubes.'}
-            </p>
-            <div className="mt-6">
+        <PlatformSurfaceCard contentClassName="p-2">
+          <EmptyState
+            icon={Building2}
+            title="Nenhum clube encontrado"
+            description={clubs.length === 0
+              ? 'Ainda não há clubes na plataforma. Crie o primeiro e convide sua turma.'
+              : 'Ajuste a busca para ver mais clubes.'}
+            action={(
               <Button asChild>
                 <Link to="/clubes/criar"><Plus className="mr-1.5 h-4 w-4" /> Criar clube</Link>
               </Button>
-            </div>
-          </CardContent>
-        </Card>
+            )}
+          />
+        </PlatformSurfaceCard>
       ) : (
         <section className="space-y-4">
-          <div>
-            <div className="text-xs font-semibold uppercase tracking-[0.2em] text-emerald-700/75">Catálogo</div>
-            <h3 className="mt-2 text-2xl font-semibold text-slate-950">Todos os clubes</h3>
-          </div>
+          <PlatformSectionHeader
+            eyebrow="Catálogo"
+            title="Todos os clubes"
+            description="Descubra grupos já organizados, veja onde você já tem convite e peça entrada quando fizer sentido."
+          />
           <div className="grid gap-4 sm:grid-cols-2 xl:grid-cols-3">
             {filtered.map((club) => (
               <ClubCard

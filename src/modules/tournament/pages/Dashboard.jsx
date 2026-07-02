@@ -17,6 +17,8 @@ import { Button } from '@/components/ui/button';
 import { Card, CardContent } from '@/components/ui/card';
 import { Badge } from '@/components/ui/badge';
 import { Skeleton } from '@/components/ui/skeleton';
+import { EmptyState } from '@/components/ui/empty-state';
+import { PlatformSectionHeader, PlatformSurfaceCard } from '@/components/ui/platform-page';
 import { useMyTournaments, usePublicTournaments } from '@/modules/tournament/hooks/useTournament';
 import MyUpcomingMatches from '@/modules/tournament/components/MyUpcomingMatches';
 import { useAvailableEvents } from '@/modules/clubs/hooks/useClubs';
@@ -213,13 +215,12 @@ export default function Dashboard() {
           </CardContent>
         </Card>
 
-        <Card className="rounded-[2rem] border-white/80 bg-white/82">
-          <CardContent className="p-6 sm:p-7">
-            <span className="arena-chip">Em foco agora</span>
-            <h3 className="mt-4 text-2xl font-semibold text-slate-950">O que merece sua atencao primeiro</h3>
-            <p className="mt-2 text-sm leading-6 text-slate-600">
-              Priorizamos eventos em andamento, inscricoes abertas e os torneios mais proximos da operacao.
-            </p>
+        <PlatformSurfaceCard>
+            <PlatformSectionHeader
+              eyebrow="Em foco agora"
+              title="O que merece sua atenção primeiro"
+              description="Priorizamos eventos em andamento, inscrições abertas e os torneios mais próximos da operação."
+            />
 
             {spotlightTournaments.length > 0 ? (
               <div className="mt-6 space-y-3">
@@ -253,11 +254,10 @@ export default function Dashboard() {
               </div>
             ) : (
               <div className="mt-6 rounded-[1.5rem] border border-dashed border-emerald-300/40 bg-emerald-50/65 p-5 text-sm leading-6 text-slate-600">
-                Assim que voce criar ou ingressar em um torneio, este painel passa a destacar automaticamente o que esta mais urgente.
+                Assim que você criar ou ingressar em um torneio, este painel passa a destacar automaticamente o que está mais urgente.
               </div>
             )}
-          </CardContent>
-        </Card>
+        </PlatformSurfaceCard>
       </section>
 
       <MyUpcomingMatches />
@@ -265,25 +265,23 @@ export default function Dashboard() {
       <AvailableEventsSection />
 
       {visibleTournaments.length === 0 ? (
-        <Card className="rounded-[2rem] border-white/80 bg-white/82">
-          <CardContent className="flex flex-col items-center px-4 py-10 text-center sm:px-10 sm:py-12">
-            <div className="flex h-16 w-16 items-center justify-center rounded-[1.5rem] bg-emerald-100 text-emerald-700">
-              <Users className="h-8 w-8" />
-            </div>
-            <h3 className="mt-5 text-2xl font-semibold text-slate-950">Sua area de torneios ainda esta vazia</h3>
-            <p className="mt-3 max-w-2xl text-sm leading-7 text-slate-600 sm:text-base">
-              Crie o seu primeiro evento, entre com um codigo ou acompanhe os torneios publicos que ja estao em circulacao na plataforma.
-            </p>
-            <div className="mt-6 flex flex-wrap justify-center gap-3">
-              <Button asChild>
-                <Link to="/torneios/criar">Criar primeiro torneio</Link>
-              </Button>
-              <Button asChild variant="outline">
-                <Link to="/torneios/publicos">Explorar torneios publicos</Link>
-              </Button>
-            </div>
-          </CardContent>
-        </Card>
+        <PlatformSurfaceCard contentClassName="p-2">
+          <EmptyState
+            icon={Users}
+            title="Sua área de torneios ainda está vazia"
+            description="Crie o seu primeiro evento, entre com um código ou acompanhe os torneios públicos que já estão em circulação na plataforma."
+            action={(
+              <div className="flex flex-wrap justify-center gap-3">
+                <Button asChild>
+                  <Link to="/torneios/criar">Criar primeiro torneio</Link>
+                </Button>
+                <Button asChild variant="outline">
+                  <Link to="/torneios/publicos">Explorar torneios públicos</Link>
+                </Button>
+              </div>
+            )}
+          />
+        </PlatformSurfaceCard>
       ) : (
         <>
           {managedTournaments.length > 0 && (
@@ -425,16 +423,7 @@ function AvailableEventsSection() {
 }
 
 function SectionHeader({ eyebrow, title, description, action }) {
-  return (
-    <div className="flex flex-wrap items-end justify-between gap-3">
-      <div>
-        <div className="text-xs font-semibold uppercase tracking-[0.2em] text-emerald-700/75">{eyebrow}</div>
-        <h3 className="mt-2 text-2xl font-semibold text-slate-950">{title}</h3>
-        <p className="mt-1 max-w-2xl text-sm leading-6 text-slate-600">{description}</p>
-      </div>
-      {action}
-    </div>
-  );
+  return <PlatformSectionHeader eyebrow={eyebrow} title={title} description={description} action={action} />;
 }
 
 function TournamentCard({ tournament, ctaLabel }) {

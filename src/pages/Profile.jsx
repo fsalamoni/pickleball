@@ -13,7 +13,7 @@ import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { Switch } from '@/components/ui/switch';
 import { ImageUpload } from '@/components/ui/image-upload';
-import { Card, CardContent, CardHeader, CardTitle, CardDescription } from '@/components/ui/card';
+import { PlatformSectionHeader, PlatformSurfaceCard } from '@/components/ui/platform-page';
 import { ATHLETE_GENDER_LABELS } from '@/modules/athletes/domain/constants';
 import { LEVEL_OPTIONS, getLevelByCode } from '@/modules/leveling/data/levels';
 import { calculateAssessment } from '@/modules/leveling/domain/questionnaire';
@@ -268,12 +268,13 @@ export default function Profile() {
         </div>
       </section>
 
-      <Card className="rounded-[2rem] border-white/80 bg-white/82 overflow-hidden">
-        <CardHeader className="border-b border-emerald-950/10 bg-white/45 p-4 sm:p-5">
-          <CardTitle className="text-base text-slate-950">Dados do participante</CardTitle>
-          <CardDescription>Atualize nome público, data de nascimento, telefone e experiência no pickleball.</CardDescription>
-        </CardHeader>
-        <CardContent className="p-4 sm:p-5">
+      <PlatformSurfaceCard contentClassName="space-y-5 p-4 sm:p-5">
+          <PlatformSectionHeader
+            eyebrow="Identidade"
+            title="Dados do participante"
+            description="Atualize nome público, data de nascimento, telefone e experiência no pickleball."
+            titleClassName="text-lg"
+          />
           <div className="mb-6 rounded-md border border-emerald-950/10 bg-gradient-to-br from-white/85 to-emerald-50/70 p-3">
             <ImageUpload
               value={photoUrl}
@@ -376,19 +377,15 @@ export default function Profile() {
               {busy ? 'Salvando...' : 'Salvar alterações'}
             </Button>
           </form>
-        </CardContent>
-      </Card>
+      </PlatformSurfaceCard>
 
-      <Card className="rounded-[2rem] border-white/80 bg-white/82 overflow-hidden">
-        <CardHeader className="border-b border-emerald-950/10 bg-white/45 p-4 sm:p-5">
-          <CardTitle className="flex items-center gap-2 text-base text-slate-950">
-            <Users className="h-5 w-5 text-emerald-700" /> Comunidade e privacidade
-          </CardTitle>
-          <CardDescription>
-            Defina como você aparece no diretório de atletas e quais contatos deseja tornar públicos.
-          </CardDescription>
-        </CardHeader>
-        <CardContent className="space-y-5 p-4 sm:p-5">
+      <PlatformSurfaceCard contentClassName="space-y-5 p-4 sm:p-5">
+          <PlatformSectionHeader
+            eyebrow="Comunidade"
+            title="Comunidade e privacidade"
+            description="Defina como você aparece no diretório de atletas e quais contatos deseja tornar públicos."
+            titleClassName="text-lg"
+          />
           <div className="grid gap-4 sm:grid-cols-2">
             <div className="space-y-2">
               <Label htmlFor="gender">Gênero</Label>
@@ -467,20 +464,16 @@ export default function Profile() {
           <Button type="button" onClick={saveCommunity} disabled={communityBusy} className="bg-emerald-700 hover:bg-emerald-800">
             {communityBusy ? 'Salvando...' : 'Salvar comunidade e privacidade'}
           </Button>
-        </CardContent>
-      </Card>
+      </PlatformSurfaceCard>
 
       {coachDirectoryOn && (
-        <Card className="overflow-hidden">
-          <CardHeader className="border-b border-emerald-950/10 bg-white/45 p-4 sm:p-5">
-            <CardTitle className="flex items-center gap-2 text-base text-slate-950">
-              <GraduationCap className="h-5 w-5 text-emerald-700" /> Treinador
-            </CardTitle>
-            <CardDescription>
-              Ofereça aulas e clínicas: ative para aparecer no filtro de treinadores do diretório de atletas.
-            </CardDescription>
-          </CardHeader>
-          <CardContent className="space-y-5 p-4 sm:p-5">
+        <PlatformSurfaceCard contentClassName="space-y-5 p-4 sm:p-5">
+            <PlatformSectionHeader
+              eyebrow="Treinador"
+              title="Perfil de aulas e clínicas"
+              description="Ative esta área para aparecer no filtro de treinadores do diretório de atletas."
+              titleClassName="text-lg"
+            />
             <div className="rounded-md border border-emerald-950/10 bg-secondary/30 p-4">
               <PrivacyToggle
                 id="is_coach"
@@ -533,20 +526,18 @@ export default function Profile() {
             <Button type="button" onClick={saveCoach} disabled={coachBusy} className="bg-emerald-700 hover:bg-emerald-800">
               {coachBusy ? 'Salvando...' : 'Salvar informações de treinador'}
             </Button>
-          </CardContent>
-        </Card>
+        </PlatformSurfaceCard>
       )}
 
       <ParticipationHistoryCard />
 
-      <Card className="overflow-hidden">
-        <CardHeader className="border-b border-emerald-950/10 bg-white/45 p-4 sm:p-5">
-          <CardTitle className="flex items-center gap-2 text-base text-slate-950">
-            <Award className="h-5 w-5 text-emerald-700" /> Nivelamento
-          </CardTitle>
-          <CardDescription>Informe seu nível pela tabela detalhada ou preencha o formulário para obter a recomendação.</CardDescription>
-        </CardHeader>
-        <CardContent className="space-y-5 p-4 sm:p-5">
+      <PlatformSurfaceCard contentClassName="space-y-5 p-4 sm:p-5">
+          <PlatformSectionHeader
+            eyebrow="Nivelamento"
+            title="Seu nível competitivo"
+            description="Informe seu nível pela tabela detalhada ou preencha o formulário para obter a recomendação."
+            titleClassName="text-lg"
+          />
           <div className="grid gap-3 sm:grid-cols-[1fr_auto] sm:items-end">
             <div className="space-y-2">
               <Label htmlFor="leveling_level">Meu nível informado</Label>
@@ -590,8 +581,7 @@ export default function Profile() {
               />
             </div>
           )}
-        </CardContent>
-      </Card>
+      </PlatformSurfaceCard>
     </div>
   );
 }

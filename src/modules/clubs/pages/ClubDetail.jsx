@@ -21,10 +21,18 @@ import { Input } from '@/components/ui/input';
 import { Card, CardContent } from '@/components/ui/card';
 import { Badge } from '@/components/ui/badge';
 import { Skeleton } from '@/components/ui/skeleton';
-import { Tabs, TabsList, TabsTrigger, TabsContent } from '@/components/ui/tabs';
+import {
+  Tabs,
+  TabsList,
+  TabsTrigger,
+  TabsContent,
+  PLATFORM_TABS_LIST_CLASS,
+  PLATFORM_TABS_TRIGGER_CLASS,
+} from '@/components/ui/tabs';
 import { ConfirmDialog } from '@/components/ui/confirm-dialog';
 import { EmptyState } from '@/components/ui/empty-state';
 import { PhotoLightbox } from '@/components/ui/photo-lightbox';
+import { PlatformSurfaceCard } from '@/components/ui/platform-page';
 import { useAuth } from '@/core/lib/FirebaseAuthContext';
 import {
   useClub,
@@ -280,42 +288,44 @@ export default function ClubDetail() {
       )}
 
       {isMember && (
-        <Tabs value={activeTab === 'admin' && !isAdmin ? 'members' : activeTab} onValueChange={setActiveTab} className="w-full">
-          <TabsList className="flex h-auto w-full flex-wrap justify-start gap-1 bg-muted/60 p-1">
-            <TabsTrigger value="members"><Users className="mr-1.5 h-4 w-4" /> Membros</TabsTrigger>
-            <TabsTrigger value="events"><CalendarDays className="mr-1.5 h-4 w-4" /> Eventos</TabsTrigger>
-            <TabsTrigger value="feed"><MessageSquare className="mr-1.5 h-4 w-4" /> Mural</TabsTrigger>
-            <TabsTrigger value="forums"><MessagesSquare className="mr-1.5 h-4 w-4" /> Fóruns</TabsTrigger>
-            {isAdmin && <TabsTrigger value="admin"><Settings className="mr-1.5 h-4 w-4" /> Administração</TabsTrigger>}
-          </TabsList>
+        <PlatformSurfaceCard contentClassName="p-3 sm:p-4">
+          <Tabs value={activeTab === 'admin' && !isAdmin ? 'members' : activeTab} onValueChange={setActiveTab} className="w-full">
+            <TabsList className={PLATFORM_TABS_LIST_CLASS}>
+              <TabsTrigger value="members" className={PLATFORM_TABS_TRIGGER_CLASS}><Users className="mr-1.5 h-4 w-4" /> Membros</TabsTrigger>
+              <TabsTrigger value="events" className={PLATFORM_TABS_TRIGGER_CLASS}><CalendarDays className="mr-1.5 h-4 w-4" /> Eventos</TabsTrigger>
+              <TabsTrigger value="feed" className={PLATFORM_TABS_TRIGGER_CLASS}><MessageSquare className="mr-1.5 h-4 w-4" /> Mural</TabsTrigger>
+              <TabsTrigger value="forums" className={PLATFORM_TABS_TRIGGER_CLASS}><MessagesSquare className="mr-1.5 h-4 w-4" /> Fóruns</TabsTrigger>
+              {isAdmin && <TabsTrigger value="admin" className={PLATFORM_TABS_TRIGGER_CLASS}><Settings className="mr-1.5 h-4 w-4" /> Administração</TabsTrigger>}
+            </TabsList>
 
-          <TabsContent value="members" className="mt-4">
-            <ClubMembersTab clubId={clubId} isAdmin={isAdmin} />
-          </TabsContent>
-
-          <TabsContent value="events" className="mt-4">
-            <ClubEventsTab clubId={clubId} isAdmin={isAdmin} />
-          </TabsContent>
-
-          <TabsContent value="feed" className="mt-4">
-            <ClubFeedTab clubId={clubId} isAdmin={isAdmin} />
-          </TabsContent>
-
-          <TabsContent value="forums" className="mt-4">
-            <ClubForumsTab
-              clubId={clubId}
-              isAdmin={isAdmin}
-              initialThreadId={threadParam}
-              onThreadChange={setThreadParam}
-            />
-          </TabsContent>
-
-          {isAdmin && (
-            <TabsContent value="admin" className="mt-4">
-              <ClubAdminTab club={club} />
+            <TabsContent value="members" className="mt-4">
+              <ClubMembersTab clubId={clubId} isAdmin={isAdmin} />
             </TabsContent>
-          )}
-        </Tabs>
+
+            <TabsContent value="events" className="mt-4">
+              <ClubEventsTab clubId={clubId} isAdmin={isAdmin} />
+            </TabsContent>
+
+            <TabsContent value="feed" className="mt-4">
+              <ClubFeedTab clubId={clubId} isAdmin={isAdmin} />
+            </TabsContent>
+
+            <TabsContent value="forums" className="mt-4">
+              <ClubForumsTab
+                clubId={clubId}
+                isAdmin={isAdmin}
+                initialThreadId={threadParam}
+                onThreadChange={setThreadParam}
+              />
+            </TabsContent>
+
+            {isAdmin && (
+              <TabsContent value="admin" className="mt-4">
+                <ClubAdminTab club={club} />
+              </TabsContent>
+            )}
+          </Tabs>
+        </PlatformSurfaceCard>
       )}
 
       <ConfirmDialog
