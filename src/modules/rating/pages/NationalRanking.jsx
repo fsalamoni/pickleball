@@ -5,6 +5,7 @@ import { Input } from '@/components/ui/input';
 import { Skeleton } from '@/components/ui/skeleton';
 import { EmptyState } from '@/components/ui/empty-state';
 import { PlatformSectionHeader, PlatformSurfaceCard } from '@/components/ui/platform-page';
+import { UserAvatar } from '@/components/ui/user-avatar';
 import { useFeatureFlag } from '@/core/lib/FeatureFlagsContext';
 import { FEATURE_FLAG } from '@/core/featureFlags';
 import { genderLabel } from '@/modules/athletes/domain/constants';
@@ -195,13 +196,14 @@ export default function NationalRanking() {
                           </td>
                           <td className="px-3 py-2">
                             <div className="flex items-center gap-2">
-                              {p.photo_url ? (
-                                <img src={p.photo_url} alt="" className="h-7 w-7 rounded-full object-cover" />
-                              ) : (
-                                <span className="flex h-7 w-7 items-center justify-center rounded-full bg-emerald-900 text-xs font-semibold text-emerald-50">
-                                  {String(p.platform_name || 'A')[0]?.toUpperCase()}
-                                </span>
-                              )}
+                              <UserAvatar
+                                name={p.platform_name}
+                                photoUrl={p.photo_url}
+                                size="xs"
+                                className="h-7 w-7 text-[10px]"
+                                zoomable={Boolean(p.photo_url)}
+                                lightboxTitle={p.platform_name || 'Atleta'}
+                              />
                               {profilePageOn ? (
                                 <Link to={`/atleta/${p.id}`} className="font-medium text-emerald-800 hover:underline">
                                   {p.platform_name}

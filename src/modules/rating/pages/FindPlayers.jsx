@@ -6,6 +6,7 @@ import { Skeleton } from '@/components/ui/skeleton';
 import { Badge } from '@/components/ui/badge';
 import { EmptyState } from '@/components/ui/empty-state';
 import { PlatformSectionHeader, PlatformSurfaceCard } from '@/components/ui/platform-page';
+import { UserAvatar } from '@/components/ui/user-avatar';
 import { useAuth } from '@/core/lib/FirebaseAuthContext';
 import { useFeatureFlag } from '@/core/lib/FeatureFlagsContext';
 import { FEATURE_FLAG } from '@/core/featureFlags';
@@ -108,13 +109,14 @@ export default function FindPlayers() {
           {suggestions.map((p) => (
             <Card key={p.id} className="match-surface rounded-[1.75rem] border-white/80 bg-white/85">
               <CardContent className="flex items-center gap-3 p-4">
-                {p.photo_url ? (
-                  <img src={p.photo_url} alt="" className="h-12 w-12 rounded-full object-cover" />
-                ) : (
-                  <span className="flex h-12 w-12 items-center justify-center rounded-full bg-emerald-900 text-base font-semibold text-emerald-50">
-                    {String(p.platform_name || 'A')[0]?.toUpperCase()}
-                  </span>
-                )}
+                <UserAvatar
+                  name={p.platform_name}
+                  photoUrl={p.photo_url}
+                  size="md"
+                  className="h-12 w-12 text-base"
+                  zoomable={Boolean(p.photo_url)}
+                  lightboxTitle={p.platform_name || 'Atleta'}
+                />
                 <div className="min-w-0 flex-1">
                   <div className="truncate font-semibold text-slate-900">{p.platform_name}</div>
                   <div className="mt-0.5 flex flex-wrap items-center gap-1.5 text-xs text-slate-600">

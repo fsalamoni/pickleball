@@ -5,7 +5,11 @@ import { Input } from '@/components/ui/input';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent } from '@/components/ui/card';
 import { Badge } from '@/components/ui/badge';
+import { EmptyState } from '@/components/ui/empty-state';
+import { PlatformSectionHeader, PlatformSurfaceCard } from '@/components/ui/platform-page';
+import { PhotoLightbox } from '@/components/ui/photo-lightbox';
 import { Skeleton } from '@/components/ui/skeleton';
+import { UserAvatar } from '@/components/ui/user-avatar';
 import { useAuth } from '@/core/lib/FirebaseAuthContext';
 import { useFeatureFlag } from '@/core/lib/FeatureFlagsContext';
 import { FEATURE_FLAG } from '@/core/featureFlags';
@@ -30,7 +34,7 @@ function levelLabel(code) {
 
 export default function OpenGames() {
   const enabled = useFeatureFlag(FEATURE_FLAG.OPEN_GAMES);
-  const { user } = useAuth();
+  const { user, isAuthAvailable, authUnavailableReason } = useAuth();
   const { data: games = [], isLoading, isError, refetch } = useOpenGames();
   const { data: myGames = [] } = useMyOpenGames();
   const closeGame = useCloseOpenGame();
@@ -39,6 +43,7 @@ export default function OpenGames() {
   const [city, setCity] = useState('');
   const [level, setLevel] = useState(ALL);
   const [format, setFormat] = useState(ALL);
+  const isPreviewMode = import.meta.env.DEV && !isAuthAvailable;
 
   const filtered = useMemo(
     () => filterAndSortOpenGames(games, { city, level, format }).filter((g) => g.created_by !== user?.uid),
@@ -52,26 +57,41 @@ export default function OpenGames() {
   if (!enabled) return <Navigate to="/inicio" replace />;
 
   return (
-    <div className="mx-auto max-w-4xl space-y-4">
-      <div className="flex items-center justify-between gap-3">
-        <p className="text-sm text-slate-600">
-          Publique um convite e encontre parceiros para jogar fora dos torneios.
-        </p>
-        <Button onClick={() => setCreateOpen(true)}>
-          <Plus className="h-4 w-4" /> <span className="ml-1">Procuro jogo</span>
-        </Button>
-      </div>
+    <div className="mx-auto max-w-5xl space-y-6">
+      <PlatformSurfaceCard>
+        <PlatformSectionHeader
+          eyebrow="Procura-se jogo"
+          title="Encontre parceiros para jogar fora dos torneios"
+          description="Publique um convite, filtre por cidade, nível e formato, e transforme uma intenção solta em partida combinada."
+          action={(
+            <Button onClick={() => setCreateOpen(true)}>
+              <Plus className="h-4 w-4" /> <span className="ml-1">Publicar convite</span>
+            </Button>
+          )}
+        />
+      </PlatformSurfaceCard>
+
+      {isPreviewMode && (
+        <PlatformSurfaceCard className="border-amber-300/70 bg-amber-50/85" contentClassName="p-4 text-sm leading-6 text-amber-950">
+          Prévia local sem Firebase: o mural não carrega convites reais neste ambiente.
+          {authUnavailableReason ? ` ${authUnavailableReason}` : ''}
+        </PlatformSurfaceCard>
+      )}
 
       {myOpen.length > 0 && (
-        <Card>
-          <CardContent className="p-4">
-            <h2 className="mb-2 text-sm font-semibold text-slate-800">Meus convites abertos</h2>
+        <PlatformSurfaceCard contentClassName="space-y-4 p-5 sm:p-6">
+          <PlatformSectionHeader
+            eyebrow="Minha operação"
+            title="Convites que ainda estão no ar"
+            description="Feche rapidamente o que já virou jogo ou remova o que não faz mais sentido manter no mural."
+            titleClassName="text-lg"
+          />
             <div className="space-y-2">
               {myOpen.map((g) => (
-                <div key={g.id} className="flex items-center justify-between gap-3 rounded-md border border-slate-200 p-3">
+                <div key={g.id} className="flex items-center justify-between gap-3 rounded-[1.25rem] border border-emerald-950/10 bg-white/75 p-3">
                   <div className="min-w-0 text-sm">
                     <span className="font-medium text-slate-900">{g.when_text}</span>
-                    <span className="text-slate-500"> · {[g.city, g.state].filter(Boolean).join('/')}</span>
+                    <span className="text-slate-500"> · {[g.city, g.state].filter(Boolean).join(' / ')}</span>
                   </div>
                   <div className="flex shrink-0 gap-2">
                     <Button size="sm" variant="outline" onClick={() => closeGame.mutate(g.id)} disabled={closeGame.isPending}>
@@ -92,12 +112,16 @@ export default function OpenGames() {
                 </div>
               ))}
             </div>
-          </CardContent>
-        </Card>
+        </PlatformSurfaceCard>
       )}
 
-      <Card>
-        <CardContent className="space-y-3 p-4">
+      <PlatformSurfaceCard contentClassName="space-y-4 p-5 sm:p-6">
+        <PlatformSectionHeader
+          eyebrow="Leitura do mural"
+          title="Filtre os convites disponíveis"
+          description="Refine a busca para enxergar apenas combinações compatíveis com sua região e faixa competitiva."
+          titleClassName="text-lg"
+        />
           <div className="relative">
             <Search className="absolute left-4 top-1/2 h-4 w-4 -translate-y-1/2 text-slate-400" />
             <Input
@@ -121,32 +145,32 @@ export default function OpenGames() {
               options={[{ value: ALL, label: 'Todos os formatos' }, ...Object.entries(OPEN_GAME_FORMAT_LABELS).map(([value, l]) => ({ value, label: l }))]}
             />
           </div>
-        </CardContent>
-      </Card>
+      </PlatformSurfaceCard>
 
       {isError ? (
         <ErrorState message="Não foi possível carregar os convites." onRetry={refetch} />
       ) : isLoading ? (
-        <Skeleton className="h-48" />
+        <div className="grid gap-4 sm:grid-cols-2 xl:grid-cols-3">
+          {[1, 2, 3].map((item) => (
+            <Skeleton key={item} className="h-64 rounded-[1.75rem]" />
+          ))}
+        </div>
       ) : filtered.length === 0 ? (
-        <Card>
-          <CardContent className="p-8 text-center text-sm text-slate-500">
-            Nenhum convite aberto para o filtro atual. Que tal publicar o seu?
-          </CardContent>
-        </Card>
+        <PlatformSurfaceCard contentClassName="p-2">
+          <EmptyState
+            icon={Trophy}
+            title="Nenhum convite aberto para o filtro atual"
+            description="Amplie a cidade, remova filtros mais estreitos ou publique o seu próprio convite para abrir a rodada."
+            action={<Button onClick={() => setCreateOpen(true)}>Publicar convite</Button>}
+          />
+        </PlatformSurfaceCard>
       ) : (
-        <div className="grid gap-3 sm:grid-cols-2">
+        <div className="grid gap-4 sm:grid-cols-2 xl:grid-cols-3">
           {filtered.map((g) => (
-            <Card key={g.id}>
-              <CardContent className="flex h-full flex-col p-4">
+            <Card key={g.id} className="match-surface h-full rounded-[1.75rem] border-white/80 bg-white/85">
+              <CardContent className="flex h-full flex-col p-5">
                 <div className="flex items-center gap-2">
-                  {g.creator_photo ? (
-                    <img src={g.creator_photo} alt="" className="h-9 w-9 rounded-full object-cover" />
-                  ) : (
-                    <span className="flex h-9 w-9 items-center justify-center rounded-full bg-emerald-900 text-xs font-semibold text-emerald-50">
-                      {String(g.creator_name || 'A')[0]?.toUpperCase()}
-                    </span>
-                  )}
+                  <GameCreatorAvatar name={g.creator_name} photoUrl={g.creator_photo} />
                   <span className="truncate font-semibold text-slate-900">{g.creator_name}</span>
                 </div>
 
@@ -181,6 +205,23 @@ export default function OpenGames() {
 
       {createOpen && <CreateOpenGameDialog open={createOpen} onOpenChange={setCreateOpen} />}
     </div>
+  );
+}
+
+function GameCreatorAvatar({ name, photoUrl }) {
+  if (!photoUrl) return <UserAvatar name={name} photoUrl={photoUrl} size="sm" className="h-9 w-9" />;
+
+  return (
+    <PhotoLightbox
+      src={photoUrl}
+      alt={name || 'Atleta'}
+      title={name || 'Atleta'}
+      trigger={(
+        <button type="button" className="cursor-zoom-in" aria-label={`Ampliar foto de ${name || 'atleta'}`}>
+          <UserAvatar name={name} photoUrl={photoUrl} size="sm" className="h-9 w-9" />
+        </button>
+      )}
+    />
   );
 }
 

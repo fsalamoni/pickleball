@@ -2,13 +2,19 @@ import React, { useState } from 'react';
 import { Navigate } from 'react-router-dom';
 import { toast } from 'sonner';
 import { Handshake, Pencil, Trash2, Plus, ExternalLink } from 'lucide-react';
-import { Card, CardContent } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { Switch } from '@/components/ui/switch';
 import { Badge } from '@/components/ui/badge';
+import { EmptyState } from '@/components/ui/empty-state';
 import { ImageUpload } from '@/components/ui/image-upload';
+import { PhotoLightbox } from '@/components/ui/photo-lightbox';
+import {
+  PlatformMetricCard,
+  PlatformSectionHeader,
+  PlatformSurfaceCard,
+} from '@/components/ui/platform-page';
 import ConfirmDialog from '@/components/ConfirmDialog';
 import { useFeatureFlag } from '@/core/lib/FeatureFlagsContext';
 import { FEATURE_FLAG } from '@/core/featureFlags';
@@ -36,6 +42,9 @@ export default function AdminPartners() {
   const [errors, setErrors] = useState({});
 
   if (!enabled) return <Navigate to="/admin/metricas" replace />;
+
+  const activeCount = links.filter((link) => link.active !== false).length;
+  const inactiveCount = links.length - activeCount;
 
   const set = (patch) => setForm((f) => ({ ...f, ...patch }));
 
@@ -90,9 +99,23 @@ export default function AdminPartners() {
   }
 
   return (
-    <div className="mx-auto max-w-4xl space-y-4">
-      <Card>
-        <CardContent className="p-4 space-y-4">
+    <div className="mx-auto max-w-4xl space-y-6">
+      <PlatformSurfaceCard>
+        <PlatformSectionHeader
+          eyebrow="Admin parceiros"
+          title="Curadoria do ecossistema comercial"
+          description="Cadastre, revise e publique parceiros com uma visão mais clara do que já está ativo na vitrine pública."
+          action={<Handshake className="h-5 w-5 text-emerald-600" />}
+        />
+      </PlatformSurfaceCard>
+
+      <div className="grid grid-cols-2 gap-3 md:grid-cols-3">
+        <PlatformMetricCard label="Total" value={links.length} description="itens cadastrados" icon={Handshake} />
+        <PlatformMetricCard label="Ativos" value={activeCount} description="visíveis na página pública" icon={ExternalLink} />
+        <PlatformMetricCard label="Inativos" value={inactiveCount} description="guardados para revisão" icon={Trash2} />
+      </div>
+
+      <PlatformSurfaceCard contentClassName="space-y-4 p-5 sm:p-6">
           <div className="flex items-center gap-2">
             <Handshake className="h-5 w-5 text-emerald-600" />
             <h2 className="text-lg font-semibold arena-heading">
@@ -161,9 +184,17 @@ export default function AdminPartners() {
                 label="Enviar imagem"
                 hint="Logo ou banner do parceiro."
               />
+              {form.image_url && (
+                <PhotoLightbox
+                  src={form.image_url}
+                  alt={form.title || 'Parceiro'}
+                  title={form.title || 'Parceiro'}
+                  trigger={<img src={form.image_url} alt="" className="h-28 w-full max-w-xs cursor-zoom-in rounded-xl object-cover" />}
+                />
+              )}
             </div>
 
-            <div className="flex items-center justify-between gap-4 rounded-md border border-slate-200 p-3">
+            <div className="flex items-center justify-between gap-4 rounded-[1.25rem] border border-emerald-950/10 bg-white/75 p-3">
               <div>
                 <Label htmlFor="active" className="cursor-pointer text-sm">Ativo (visível na página de parceiros)</Label>
               </div>
@@ -180,22 +211,41 @@ export default function AdminPartners() {
               )}
             </div>
           </form>
-        </CardContent>
-      </Card>
+      </PlatformSurfaceCard>
 
-      <Card>
-        <CardContent className="p-4">
-          <h2 className="mb-3 text-sm font-semibold text-slate-800">Parceiros cadastrados</h2>
+      <PlatformSurfaceCard contentClassName="space-y-4 p-5 sm:p-6">
+          <PlatformSectionHeader
+            eyebrow="Inventário"
+            title="Parceiros cadastrados"
+            description="Revise rapidamente visibilidade, link e imagem de cada item antes de editar ou remover."
+            titleClassName="text-lg"
+          />
           {isLoading ? (
-            <p className="text-sm text-slate-500">Carregando…</p>
+            <div className="space-y-2">
+              {[1, 2, 3].map((item) => (
+                <div key={item} className="h-20 animate-pulse rounded-[1.25rem] bg-slate-200/70" />
+              ))}
+            </div>
           ) : links.length === 0 ? (
-            <p className="text-sm text-slate-500">Nenhum parceiro cadastrado ainda.</p>
+            <EmptyState
+              icon={Handshake}
+              title="Nenhum parceiro cadastrado ainda"
+              description="Cadastre o primeiro parceiro para começar a compor a vitrine pública do ecossistema."
+            />
           ) : (
             <div className="space-y-2">
               {links.map((link) => (
-                <div key={link.id} className="flex items-center justify-between gap-3 rounded-md border border-slate-200 p-3">
+                <div key={link.id} className="flex items-center justify-between gap-3 rounded-[1.25rem] border border-emerald-950/10 bg-white/75 p-3">
                   <div className="min-w-0">
                     <div className="flex items-center gap-2">
+                      {link.image_url ? (
+                        <PhotoLightbox
+                          src={link.image_url}
+                          alt={link.title || 'Parceiro'}
+                          title={link.title || 'Parceiro'}
+                          trigger={<img src={link.image_url} alt="" className="h-10 w-10 cursor-zoom-in rounded-xl object-cover" />}
+                        />
+                      ) : null}
                       <span className="truncate font-medium text-slate-900">{link.title}</span>
                       {!link.active && <Badge variant="secondary" className="text-[11px]">inativo</Badge>}
                     </div>
@@ -229,8 +279,7 @@ export default function AdminPartners() {
               ))}
             </div>
           )}
-        </CardContent>
-      </Card>
+      </PlatformSurfaceCard>
     </div>
   );
 }

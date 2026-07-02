@@ -1,7 +1,7 @@
 import React, { useMemo, useState } from 'react';
 import { Navigate, useParams, Link } from 'react-router-dom';
 import { toast } from 'sonner';
-import { ArrowLeft, Trash2, Building2, UserPlus, Users } from 'lucide-react';
+import { ArrowLeft, Trash2, Building2, UserPlus, Users, CalendarDays } from 'lucide-react';
 import { Tabs, TabsList, TabsTrigger, TabsContent } from '@/components/ui/tabs';
 import { Card, CardContent } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
@@ -22,8 +22,9 @@ import ProfileFields from '../components/ProfileFields.jsx';
 import PricingEditor from '../components/PricingEditor.jsx';
 import ArenaReviews from '../components/ArenaReviews.jsx';
 import BookingRow from '../components/BookingRow.jsx';
-import { sortBookings } from '../domain/booking.js';
-import { ARENA_MANAGER_ROLE, BOOKING_STATUS } from '../domain/constants.js';
+import { bookingSlots, sortBookings } from '../domain/booking.js';
+import { ARENA_MANAGER_ROLE, BOOKING_STATUS, BOOKING_STATUS_LABELS, WEEKDAY_SHORT } from '../domain/constants.js';
+import { formatPrice } from '../domain/pricing.js';
 import {
   useArena,
   useMyManagedArenas,
@@ -35,6 +36,49 @@ import {
   useRemoveManager,
 } from '../hooks/useArenas.js';
 import { useArenaBookings } from '../hooks/useBookings.js';
+
+const CALENDAR_STATUS_STYLE = {
+  [BOOKING_STATUS.REQUESTED]: 'bg-amber-100 text-amber-800',
+  [BOOKING_STATUS.NEGOTIATING]: 'bg-blue-100 text-blue-800',
+  [BOOKING_STATUS.CONFIRMED]: 'bg-emerald-100 text-emerald-800',
+};
+
+function toLocalIso(date) {
+  return [date.getFullYear(), String(date.getMonth() + 1).padStart(2, '0'), String(date.getDate()).padStart(2, '0')].join('-');
+}
+
+function parseIsoDate(value) {
+  const [year, month, day] = String(value || '').split('-').map(Number);
+  if (!year || !month || !day) return null;
+  const parsed = new Date(year, month - 1, day);
+  return Number.isNaN(parsed.getTime()) ? null : parsed;
+}
+
+function shiftIsoDate(value, amount) {
+  const base = parseIsoDate(value);
+  if (!base) return value;
+  const next = new Date(base);
+  next.setDate(base.getDate() + amount);
+  return toLocalIso(next);
+}
+
+function formatCalendarHeading(value) {
+  const date = parseIsoDate(value);
+  if (!date) return value;
+  return new Intl.DateTimeFormat('pt-BR', { day: '2-digit', month: '2-digit' }).format(date);
+}
+
+function formatCalendarSubheading(value) {
+  const date = parseIsoDate(value);
+  if (!date) return value;
+  return WEEKDAY_SHORT[date.getDay()] || value;
+}
+
+function buildCalendarSlots(bookings = []) {
+  return bookings
+    .flatMap((booking) => bookingSlots(booking).map((slot) => ({ ...slot, booking })))
+    .sort((a, b) => `${a.date}_${a.start}`.localeCompare(`${b.date}_${b.start}`));
+}
 
 function InfoTab({ arena }) {
   const update = useUpdateArena();
@@ -128,11 +172,27 @@ function PhotosTab({ arena }) {
 
 function BookingsTab({ arena }) {
   const { data: bookings = [], isLoading } = useArenaBookings(arena.id);
+  const [calendarMode, setCalendarMode] = useState('week');
+  const [selectedDate, setSelectedDate] = useState('');
   const grouped = useMemo(() => {
     const active = sortBookings(bookings.filter((b) => [BOOKING_STATUS.REQUESTED, BOOKING_STATUS.NEGOTIATING, BOOKING_STATUS.CONFIRMED].includes(b.status)));
     const past = sortBookings(bookings.filter((b) => [BOOKING_STATUS.DECLINED, BOOKING_STATUS.CANCELLED, BOOKING_STATUS.COMPLETED].includes(b.status)));
     return { active, past };
   }, [bookings]);
+  const activeSlots = useMemo(() => buildCalendarSlots(grouped.active), [grouped.active]);
+  const calendarDates = useMemo(() => [...new Set(activeSlots.map((slot) => slot.date))], [activeSlots]);
+  const today = useMemo(() => toLocalIso(new Date()), []);
+  const anchorDate = useMemo(
+    () => calendarDates.find((date) => date >= today) || calendarDates[0] || today,
+    [calendarDates, today],
+  );
+  const weekDates = useMemo(
+    () => Array.from({ length: 7 }, (_, index) => shiftIsoDate(anchorDate, index)),
+    [anchorDate],
+  );
+  const effectiveSelectedDate = calendarDates.includes(selectedDate)
+    ? selectedDate
+    : calendarDates.find((date) => weekDates.includes(date)) || anchorDate;
 
   if (isLoading) return <Skeleton className="h-40" />;
   if (bookings.length === 0) {
@@ -140,6 +200,109 @@ function BookingsTab({ arena }) {
   }
   return (
     <div className="space-y-4">
+      {grouped.active.length > 0 && (
+        <PlatformSurfaceCard contentClassName="space-y-4 p-5 sm:p-6">
+          <div className="flex flex-wrap items-start justify-between gap-3">
+            <div>
+              <div className="text-xs font-semibold uppercase tracking-[0.16em] text-emerald-700/75">Agenda visual</div>
+              <div className="mt-1 flex items-center gap-2 text-base font-semibold text-slate-950">
+                <CalendarDays className="h-4.5 w-4.5 text-emerald-700" /> Próximos horários da arena
+              </div>
+              <p className="mt-1 text-sm leading-6 text-slate-600">
+                As reservas recorrentes já aparecem expandidas em slots concretos para leitura rápida por semana ou por dia.
+              </p>
+            </div>
+            <div className="flex items-center gap-2 rounded-full border border-emerald-950/10 bg-white/75 p-1">
+              <CalendarModeButton active={calendarMode === 'week'} onClick={() => setCalendarMode('week')}>
+                Semana
+              </CalendarModeButton>
+              <CalendarModeButton active={calendarMode === 'day'} onClick={() => setCalendarMode('day')}>
+                Dia
+              </CalendarModeButton>
+            </div>
+          </div>
+
+          <div className="flex flex-wrap gap-2">
+            {calendarDates.slice(0, 14).map((date) => (
+              <button
+                key={date}
+                type="button"
+                onClick={() => setSelectedDate(date)}
+                className={`rounded-full border px-3 py-1.5 text-xs font-medium transition-colors ${
+                  effectiveSelectedDate === date
+                    ? 'border-emerald-600 bg-emerald-600 text-white'
+                    : 'border-emerald-950/10 bg-white/80 text-slate-700 hover:bg-emerald-50'
+                }`}
+              >
+                {formatCalendarSubheading(date)} · {formatCalendarHeading(date)}
+              </button>
+            ))}
+          </div>
+
+          {calendarMode === 'week' ? (
+            <div className="grid gap-3 lg:grid-cols-7">
+              {weekDates.map((date) => {
+                const daySlots = activeSlots.filter((slot) => slot.date === date);
+                return (
+                  <div
+                    key={date}
+                    className={`rounded-[1.25rem] border p-3 ${
+                      effectiveSelectedDate === date
+                        ? 'border-emerald-500 bg-emerald-50/80'
+                        : 'border-emerald-950/10 bg-white/70'
+                    }`}
+                  >
+                    <button
+                      type="button"
+                      onClick={() => {
+                        setSelectedDate(date);
+                        setCalendarMode('day');
+                      }}
+                      className="text-left"
+                    >
+                      <div className="text-[11px] font-semibold uppercase tracking-[0.16em] text-emerald-700/75">
+                        {formatCalendarSubheading(date)}
+                      </div>
+                      <div className="mt-1 text-sm font-semibold text-slate-950">{formatCalendarHeading(date)}</div>
+                    </button>
+                    <div className="mt-3 space-y-2">
+                      {daySlots.length === 0 ? (
+                        <p className="text-xs text-slate-400">Sem slots ativos.</p>
+                      ) : (
+                        daySlots.map((slot) => <BookingCalendarEntry key={`${slot.booking.id}_${slot.date}_${slot.start}`} slot={slot} compact />)
+                      )}
+                    </div>
+                  </div>
+                );
+              })}
+            </div>
+          ) : (
+            <div className="rounded-[1.5rem] border border-emerald-950/10 bg-white/75 p-4">
+              <div className="flex flex-wrap items-center justify-between gap-3">
+                <div>
+                  <div className="text-xs font-semibold uppercase tracking-[0.16em] text-emerald-700/75">Dia selecionado</div>
+                  <div className="mt-1 text-lg font-semibold text-slate-950">
+                    {formatCalendarSubheading(effectiveSelectedDate)} · {formatCalendarHeading(effectiveSelectedDate)}
+                  </div>
+                </div>
+                <Badge variant="secondary" className="shadow-none">
+                  {activeSlots.filter((slot) => slot.date === effectiveSelectedDate).length} slot(s)
+                </Badge>
+              </div>
+              <div className="mt-4 space-y-3">
+                {activeSlots.filter((slot) => slot.date === effectiveSelectedDate).length === 0 ? (
+                  <p className="text-sm text-slate-500">Nenhuma reserva ativa neste dia.</p>
+                ) : (
+                  activeSlots
+                    .filter((slot) => slot.date === effectiveSelectedDate)
+                    .map((slot) => <BookingCalendarEntry key={`${slot.booking.id}_${slot.date}_${slot.start}`} slot={slot} />)
+                )}
+              </div>
+            </div>
+          )}
+        </PlatformSurfaceCard>
+      )}
+
       <Card><CardContent className="space-y-2 p-4">
         <h3 className="text-sm font-semibold text-slate-800">Ativas</h3>
         {grouped.active.length === 0 ? <p className="text-sm text-slate-500">Nenhuma reserva ativa.</p>
@@ -150,6 +313,45 @@ function BookingsTab({ arena }) {
           <h3 className="text-sm font-semibold text-slate-800">Histórico</h3>
           {grouped.past.map((b) => <BookingRow key={b.id} booking={b} perspective="arena" />)}
         </CardContent></Card>
+      )}
+    </div>
+  );
+}
+
+function CalendarModeButton({ active, onClick, children }) {
+  return (
+    <button
+      type="button"
+      onClick={onClick}
+      className={`rounded-full px-3 py-1.5 text-sm font-medium transition-colors ${
+        active ? 'bg-emerald-600 text-white' : 'text-slate-700 hover:bg-emerald-50'
+      }`}
+    >
+      {children}
+    </button>
+  );
+}
+
+function BookingCalendarEntry({ slot, compact = false }) {
+  const booking = slot.booking;
+  const statusClassName = CALENDAR_STATUS_STYLE[booking.status] || 'bg-slate-100 text-slate-700';
+  const amount = booking.agreed_price ?? booking.proposed_price;
+
+  return (
+    <div className="rounded-[1rem] border border-emerald-950/10 bg-white/85 p-3">
+      <div className="flex items-start justify-between gap-2">
+        <div>
+          <div className="text-sm font-semibold text-slate-950">{slot.start}–{slot.end}</div>
+          <div className="mt-0.5 text-xs text-slate-600">{booking.athlete_name || 'Atleta'}</div>
+        </div>
+        <Badge className={statusClassName}>{BOOKING_STATUS_LABELS[booking.status] || booking.status}</Badge>
+      </div>
+
+      {!compact && (
+        <div className="mt-2 space-y-1 text-xs text-slate-500">
+          {amount != null && <div>Valor em jogo: <strong className="text-slate-700">{formatPrice(amount)}</strong></div>}
+          {booking.notes && <div>Observação: {booking.notes}</div>}
+        </div>
       )}
     </div>
   );

@@ -19,6 +19,7 @@ import { Button } from '@/components/ui/button';
 import { Card, CardContent } from '@/components/ui/card';
 import { Badge } from '@/components/ui/badge';
 import { Skeleton } from '@/components/ui/skeleton';
+import { UserAvatar } from '@/components/ui/user-avatar';
 import {
   Dialog,
   DialogContent,
@@ -39,15 +40,6 @@ import {
 import { PICKLEBALL_EXPERIENCE_LABELS } from '@/modules/tournament/domain/constants';
 
 const ALL = 'all';
-
-function initialsFor(name) {
-  return String(name || 'A')
-    .split(' ')
-    .filter(Boolean)
-    .slice(0, 2)
-    .map((part) => part[0]?.toUpperCase())
-    .join('') || 'A';
-}
 
 function locationText(athlete) {
   return [athlete.city, athlete.state].filter(Boolean).join(' / ') || null;
@@ -321,13 +313,16 @@ function FilterSelect({ label, value, onChange, options }) {
 
 function AthleteAvatar({ athlete, size = 'md' }) {
   const dimension = size === 'lg' ? 'h-16 w-16 text-xl' : 'h-12 w-12 text-base';
-  if (athlete.photo_url) {
-    return <img src={athlete.photo_url} alt="" className={`${dimension} shrink-0 rounded-full border border-emerald-900/10 object-cover`} />;
-  }
   return (
-    <div className={`${dimension} flex shrink-0 items-center justify-center rounded-full bg-emerald-900 font-semibold text-emerald-50`}>
-      {initialsFor(athlete.platform_name)}
-    </div>
+    <UserAvatar
+      name={athlete.platform_name}
+      photoUrl={athlete.photo_url}
+      size={size === 'lg' ? 'lg' : 'md'}
+      className={dimension}
+      zoomable={Boolean(athlete.photo_url)}
+      lightboxTitle={athlete.platform_name || 'Atleta'}
+      lightboxDescription="Foto pública do perfil do atleta."
+    />
   );
 }
 

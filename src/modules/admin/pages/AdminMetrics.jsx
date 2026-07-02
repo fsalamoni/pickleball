@@ -2,11 +2,16 @@ import { useEffect, useState } from 'react';
 import { collection, getCountFromServer } from 'firebase/firestore';
 import { BarChart3, Trophy, Users, ListChecks, Flag, Medal } from 'lucide-react';
 import { toast } from 'sonner';
-import { db } from '@/core/config/firebase';
+import { db, firebaseDisabledReason, firebaseServicesEnabled } from '@/core/config/firebase';
 import { AuditLogTable } from '@/components/AuditLogTable';
 import { Button } from '@/components/ui/button';
-import { Card, CardContent } from '@/components/ui/card';
 import { Skeleton } from '@/components/ui/skeleton';
+import {
+  PlatformMetricCard,
+  PlatformNotice,
+  PlatformSectionHeader,
+  PlatformSurfaceCard,
+} from '@/components/ui/platform-page';
 import { Switch } from '@/components/ui/switch';
 import { useAuth } from '@/core/lib/FirebaseAuthContext';
 import { useFeatureFlags, useFeatureFlag } from '@/core/lib/FeatureFlagsContext';
@@ -19,6 +24,10 @@ export default function AdminMetrics() {
   const [error, setError] = useState(null);
 
   useEffect(() => {
+    if (!firebaseServicesEnabled || !db) return undefined;
+
+    let active = true;
+
     (async () => {
       try {
         const [usersC, tournamentsC, matchesC, regsC] = await Promise.all([
@@ -27,6 +36,7 @@ export default function AdminMetrics() {
           getCountFromServer(collection(db, 'tournament_matches')),
           getCountFromServer(collection(db, 'tournament_registrations')),
         ]);
+        if (!active) return;
         setStats({
           users: usersC.data().count,
           tournaments: tournamentsC.data().count,
@@ -34,26 +44,59 @@ export default function AdminMetrics() {
           registrations: regsC.data().count,
         });
       } catch (e) {
+        if (!active) return;
         setError(e.message);
       }
     })();
+
+    return () => {
+      active = false;
+    };
   }, []);
 
-  if (error) return <p className="text-red-600 text-sm">{error}</p>;
+  if (!firebaseServicesEnabled) {
+    return (
+      <div className="mx-auto max-w-5xl space-y-6">
+        <PlatformSurfaceCard>
+          <PlatformSectionHeader
+            eyebrow="Admin geral"
+            title="Métricas e controles da plataforma"
+            description="Acompanhe volumes, revise auditoria e controle funcionalidades globais quando os serviços do Firebase estiverem disponíveis."
+          />
+        </PlatformSurfaceCard>
+        <PlatformNotice>
+          Este ambiente está sem Firebase configurado. Métricas, flags e auditoria não podem ser carregadas aqui.
+          {firebaseDisabledReason ? ` ${firebaseDisabledReason}` : ''}
+        </PlatformNotice>
+      </div>
+    );
+  }
 
   return (
-    <div className="mx-auto max-w-5xl space-y-4">
-      <h1 className="text-2xl font-bold arena-heading flex items-center gap-2">
-        <BarChart3 className="w-6 h-6 text-emerald-600" /> Métricas da Plataforma
-      </h1>
+    <div className="mx-auto max-w-5xl space-y-6">
+      <PlatformSurfaceCard>
+        <PlatformSectionHeader
+          eyebrow="Admin geral"
+          title="Métricas e controles da plataforma"
+          description="Acompanhe escala de uso, acione recálculos críticos e governe funcionalidades globais em um único painel operacional."
+          action={<BarChart3 className="h-6 w-6 text-emerald-600" />}
+        />
+      </PlatformSurfaceCard>
+
+      {error && <PlatformNotice className="border-red-200 bg-red-50/80 text-red-900">{error}</PlatformNotice>}
+
       {!stats ? (
-        <Skeleton className="h-32" />
+        <div className="grid grid-cols-2 gap-3 md:grid-cols-4">
+          {[1, 2, 3, 4].map((item) => (
+            <Skeleton key={item} className="h-32 rounded-[1.5rem]" />
+          ))}
+        </div>
       ) : (
-        <div className="grid grid-cols-2 md:grid-cols-4 gap-3">
-          <StatCard icon={Users} label="Usuários" value={stats.users} />
-          <StatCard icon={Trophy} label="Torneios" value={stats.tournaments} />
-          <StatCard icon={ListChecks} label="Inscrições" value={stats.registrations} />
-          <StatCard icon={Trophy} label="Jogos" value={stats.matches} />
+        <div className="grid grid-cols-2 gap-3 md:grid-cols-4">
+          <PlatformMetricCard icon={Users} label="Usuários" value={stats.users} description="base total cadastrada" />
+          <PlatformMetricCard icon={Trophy} label="Torneios" value={stats.tournaments} description="eventos registrados" />
+          <PlatformMetricCard icon={ListChecks} label="Inscrições" value={stats.registrations} description="participações criadas" />
+          <PlatformMetricCard icon={Trophy} label="Jogos" value={stats.matches} description="partidas computadas" />
         </div>
       )}
       <FeatureFlagsPanel />
@@ -83,8 +126,7 @@ function RatingsPanel() {
   }
 
   return (
-    <Card>
-      <CardContent className="p-4 space-y-3">
+    <PlatformSurfaceCard contentClassName="space-y-4 p-5 sm:p-6">
         <div className="flex items-center gap-2">
           <Medal className="w-5 h-5 text-emerald-600" />
           <h2 className="text-lg font-semibold arena-heading">Rating ELO + Ranking nacional</h2>
@@ -103,8 +145,7 @@ function RatingsPanel() {
             {lastResult.matchesTotal} jogo(s) finalizados utilizados.
           </p>
         )}
-      </CardContent>
-    </Card>
+    </PlatformSurfaceCard>
   );
 }
 
@@ -126,8 +167,7 @@ function FeatureFlagsPanel() {
   }
 
   return (
-    <Card>
-      <CardContent className="p-4 space-y-3">
+    <PlatformSurfaceCard contentClassName="space-y-4 p-5 sm:p-6">
         <div className="flex items-center gap-2">
           <Flag className="w-5 h-5 text-emerald-600" />
           <h2 className="text-lg font-semibold arena-heading">Funcionalidades (flags)</h2>
@@ -140,7 +180,7 @@ function FeatureFlagsPanel() {
           {Object.entries(FEATURE_FLAG_META).map(([key, meta]) => (
             <div
               key={key}
-              className="flex items-start justify-between gap-4 rounded-md border border-slate-200 p-3"
+              className="flex items-start justify-between gap-4 rounded-[1.25rem] border border-emerald-950/10 bg-white/75 p-3"
             >
               <div>
                 <div className="text-sm font-medium text-slate-800">{meta.label}</div>
@@ -155,21 +195,6 @@ function FeatureFlagsPanel() {
             </div>
           ))}
         </div>
-      </CardContent>
-    </Card>
-  );
-}
-
-function StatCard({ icon: Icon, label, value }) {
-  return (
-    <Card>
-      <CardContent className="p-4 flex items-center gap-3">
-        <Icon className="w-7 h-7 text-emerald-600" />
-        <div>
-          <div className="text-2xl font-bold">{value}</div>
-          <div className="text-xs text-slate-500">{label}</div>
-        </div>
-      </CardContent>
-    </Card>
+    </PlatformSurfaceCard>
   );
 }

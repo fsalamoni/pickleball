@@ -1,5 +1,6 @@
 import React from 'react';
 import { cn } from '@/core/lib/utils';
+import { PhotoLightbox } from '@/components/ui/photo-lightbox';
 
 const SIZES = {
   xs: 'h-6 w-6 text-[10px]',
@@ -23,15 +24,42 @@ export function initialsFor(name) {
  * Avatar do usuário: mostra a foto quando disponível ou as iniciais como
  * fallback. Reutilizável em todos os locais onde um atleta aparece.
  */
-export function UserAvatar({ name, photoUrl, size = 'sm', className, title }) {
+export function UserAvatar({
+  name,
+  photoUrl,
+  size = 'sm',
+  className,
+  title,
+  zoomable = false,
+  lightboxTitle,
+  lightboxDescription,
+}) {
   const dim = SIZES[size] || SIZES.sm;
   const base = 'shrink-0 rounded-full border border-emerald-900/10 object-cover';
+  const label = title || name || '';
+
   if (photoUrl) {
-    return <img src={photoUrl} alt="" title={title || name || ''} className={cn(dim, base, className)} />;
+    const avatar = <img src={photoUrl} alt="" title={label} className={cn(dim, base, className)} />;
+    if (!zoomable) return avatar;
+
+    return (
+      <PhotoLightbox
+        src={photoUrl}
+        alt={label}
+        title={lightboxTitle || label}
+        description={lightboxDescription}
+        trigger={(
+          <button type="button" className="cursor-zoom-in" aria-label={`Ampliar foto de ${label || 'usuário'}`}>
+            {avatar}
+          </button>
+        )}
+      />
+    );
   }
+
   return (
     <div
-      title={title || name || ''}
+      title={label}
       className={cn(dim, 'flex shrink-0 items-center justify-center rounded-full bg-emerald-900 font-semibold text-emerald-50', className)}
     >
       {initialsFor(name)}

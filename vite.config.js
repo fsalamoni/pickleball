@@ -14,6 +14,24 @@ export default defineConfig(({ mode }) => {
           manualChunks(id) {
             if (!id.includes('node_modules')) return undefined;
             const normalizedId = id.replace(/\\/g, '/');
+            if (
+              normalizedId.includes('/react-router/')
+              || normalizedId.includes('/react-router-dom/')
+              || normalizedId.includes('/@tanstack/react-query/')
+            ) return 'vendor-routing-data';
+            if (
+              normalizedId.includes('/@radix-ui/')
+              || normalizedId.includes('/lucide-react/')
+              || normalizedId.includes('/sonner/')
+              || normalizedId.includes('/class-variance-authority/')
+              || normalizedId.includes('/clsx/')
+              || normalizedId.includes('/tailwind-merge/')
+              || normalizedId.includes('/tailwindcss-animate/')
+            ) return 'vendor-ui';
+            if (
+              normalizedId.includes('/react-markdown/')
+              || normalizedId.includes('/remark-gfm/')
+            ) return 'vendor-markdown';
             // Libs do card de compartilhamento (flag share_cards): isoladas em um
             // chunk próprio para só carregarem sob demanda ao abrir o card.
             if (

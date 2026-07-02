@@ -1,9 +1,15 @@
 import { useEffect, useState } from 'react';
 import { Trophy, Archive, Trash2, ArchiveRestore } from 'lucide-react';
-import { Card, CardContent } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
 import { ConfirmDialog } from '@/components/ui/confirm-dialog';
+import { EmptyState } from '@/components/ui/empty-state';
+import {
+  PlatformMetricCard,
+  PlatformNotice,
+  PlatformSectionHeader,
+  PlatformSurfaceCard,
+} from '@/components/ui/platform-page';
 import { toast } from 'sonner';
 import {
   listAllTournaments,
@@ -16,26 +22,33 @@ import { TOURNAMENT_STATUS_LABELS } from '@/modules/tournament/domain/constants'
 export default function AdminTournaments() {
   const { user } = useAuth();
   const [tournaments, setTournaments] = useState(null);
+  const [error, setError] = useState(null);
   const [deleteTarget, setDeleteTarget] = useState(null);
   const [deleting, setDeleting] = useState(false);
 
   async function load() {
     try {
+      setError(null);
       setTournaments(await listAllTournaments());
     } catch (err) {
+      setError(err.message || 'Não foi possível carregar os torneios.');
       toast.error(err.message);
     }
   }
 
   useEffect(() => {
-    load();
+    void load();
   }, []);
+
+  const items = tournaments || [];
+  const archivedCount = items.filter((t) => t.archived).length;
+  const activeCount = items.length - archivedCount;
 
   async function handleArchive(t) {
     try {
       await setTournamentArchived(t.id, !t.archived, user);
       toast.success('Atualizado.');
-      load();
+      void load();
     } catch (err) {
       toast.error(err.message);
     }
@@ -47,7 +60,7 @@ export default function AdminTournaments() {
       await deleteTournamentCascading(t.id, user);
       toast.success('Torneio removido.');
       setDeleteTarget(null);
-      load();
+      void load();
     } catch (err) {
       toast.error(err.message);
     } finally {
@@ -56,19 +69,43 @@ export default function AdminTournaments() {
   }
 
   return (
-    <div className="max-w-5xl mx-auto space-y-4">
-      <h1 className="text-2xl font-bold arena-heading flex items-center gap-2">
-        <Trophy className="w-6 h-6 text-emerald-600" /> Torneios da plataforma
-      </h1>
+    <div className="mx-auto max-w-5xl space-y-6">
+      <PlatformSurfaceCard>
+        <PlatformSectionHeader
+          eyebrow="Admin torneios"
+          title="Governança do catálogo competitivo"
+          description="Arquive, reabra ou remova torneios com leitura mais clara do inventário atual da plataforma."
+          action={<Trophy className="h-6 w-6 text-emerald-600" />}
+        />
+      </PlatformSurfaceCard>
+
+      {tournaments && (
+        <div className="grid grid-cols-2 gap-3 md:grid-cols-3">
+          <PlatformMetricCard label="Total" value={items.length} description="torneios cadastrados" icon={Trophy} />
+          <PlatformMetricCard label="Ativos" value={activeCount} description="visíveis no fluxo operacional" icon={ArchiveRestore} />
+          <PlatformMetricCard label="Arquivados" value={archivedCount} description="fora do fluxo principal" icon={Archive} />
+        </div>
+      )}
+
+      {error && <PlatformNotice className="border-red-200 bg-red-50/80 text-red-900">{error}</PlatformNotice>}
+
       {!tournaments ? (
-        <p className="text-sm text-slate-500">Carregando…</p>
-      ) : tournaments.length === 0 ? (
-        <Card>
-          <CardContent className="p-6 text-sm text-slate-500 text-center">Nenhum torneio cadastrado.</CardContent>
-        </Card>
+        <div className="grid grid-cols-2 gap-3 md:grid-cols-3">
+          {[1, 2, 3].map((item) => (
+            <div key={item} className="h-32 animate-pulse rounded-[1.5rem] bg-slate-200/70" />
+          ))}
+        </div>
+      ) : items.length === 0 ? (
+        <PlatformSurfaceCard contentClassName="p-2">
+          <EmptyState
+            icon={Trophy}
+            title="Nenhum torneio cadastrado"
+            description="Assim que o primeiro torneio for criado, ele aparecerá aqui para governança administrativa."
+          />
+        </PlatformSurfaceCard>
       ) : (
-        <Card>
-          <CardContent className="p-0 arena-table-wrap">
+        <PlatformSurfaceCard contentClassName="p-0">
+          <div className="arena-table-wrap">
             <table className="w-full text-sm">
               <thead className="bg-slate-50">
                 <tr className="text-left">
@@ -80,7 +117,7 @@ export default function AdminTournaments() {
                 </tr>
               </thead>
               <tbody>
-                {tournaments.map((t) => (
+                {items.map((t) => (
                   <tr key={t.id} className="border-t">
                     <td className="px-3 py-2 font-medium">
                       {t.name} {t.archived && <Badge variant="secondary">Arquivado</Badge>}
@@ -100,8 +137,8 @@ export default function AdminTournaments() {
                 ))}
               </tbody>
             </table>
-          </CardContent>
-        </Card>
+          </div>
+        </PlatformSurfaceCard>
       )}
 
       <ConfirmDialog

@@ -24,6 +24,7 @@ import { Skeleton } from '@/components/ui/skeleton';
 import { Tabs, TabsList, TabsTrigger, TabsContent } from '@/components/ui/tabs';
 import { ConfirmDialog } from '@/components/ui/confirm-dialog';
 import { EmptyState } from '@/components/ui/empty-state';
+import { PhotoLightbox } from '@/components/ui/photo-lightbox';
 import { useAuth } from '@/core/lib/FirebaseAuthContext';
 import {
   useClub,
@@ -165,7 +166,17 @@ export default function ClubDetail() {
         <div className="flex flex-col gap-5 sm:flex-row sm:items-start sm:justify-between">
           <div className="flex items-start gap-4">
             {club.logo_url ? (
-              <img src={club.logo_url} alt="" className="h-16 w-16 shrink-0 rounded-2xl border border-white/15 object-cover" />
+              <PhotoLightbox
+                src={club.logo_url}
+                alt={club.name || 'Clube'}
+                title={club.name || 'Clube'}
+                description="Logo ou imagem principal usada na apresentação pública do clube."
+                trigger={(
+                  <button type="button" className="cursor-zoom-in" aria-label={`Ampliar logo de ${club.name || 'clube'}`}>
+                    <img src={club.logo_url} alt="" className="h-16 w-16 shrink-0 rounded-2xl border border-white/15 object-cover" />
+                  </button>
+                )}
+              />
             ) : (
               <div className="flex h-16 w-16 shrink-0 items-center justify-center rounded-2xl bg-white/10 text-emerald-50">
                 <Building2 className="h-7 w-7" />

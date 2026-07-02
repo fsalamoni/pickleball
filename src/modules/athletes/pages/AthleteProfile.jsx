@@ -1,9 +1,10 @@
 import React from 'react';
 import { Navigate, useParams, Link } from 'react-router-dom';
 import { Trophy, MapPin, Award, Medal, Swords, Percent, Building2, ChevronRight } from 'lucide-react';
-import { Card, CardContent } from '@/components/ui/card';
 import { Badge } from '@/components/ui/badge';
 import { Skeleton } from '@/components/ui/skeleton';
+import { PlatformMetricCard, PlatformSurfaceCard } from '@/components/ui/platform-page';
+import { UserAvatar } from '@/components/ui/user-avatar';
 import ErrorState from '@/components/ErrorState';
 import { useFeatureFlag } from '@/core/lib/FeatureFlagsContext';
 import { FEATURE_FLAG } from '@/core/featureFlags';
@@ -21,23 +22,6 @@ import { useAthleteProfile } from '../hooks/useAthleteProfile.js';
 
 function formatPercent(rate) {
   return rate == null ? '—' : `${Math.round(rate * 100)}%`;
-}
-
-function StatTile({ icon: Icon, label, value, hint }) {
-  return (
-    <Card>
-      <CardContent className="p-4 flex items-center gap-3">
-        <div className="flex h-10 w-10 shrink-0 items-center justify-center rounded-xl bg-emerald-50 text-emerald-700">
-          <Icon className="h-5 w-5" />
-        </div>
-        <div className="min-w-0">
-          <div className="text-2xl font-bold tabular-nums text-slate-900">{value}</div>
-          <div className="text-xs text-slate-500">{label}</div>
-          {hint && <div className="text-[11px] text-slate-400">{hint}</div>}
-        </div>
-      </CardContent>
-    </Card>
-  );
 }
 
 export default function AthleteProfile() {
@@ -89,17 +73,18 @@ export default function AthleteProfile() {
   const formats = Object.entries(stats.byFormat);
 
   return (
-    <div className="mx-auto max-w-4xl space-y-4">
-      {/* Cabeçalho */}
-      <Card>
-        <CardContent className="flex flex-col gap-4 p-5 sm:flex-row sm:items-center">
-          {athlete.photo_url ? (
-            <img src={athlete.photo_url} alt="" className="h-20 w-20 rounded-full object-cover" />
-          ) : (
-            <span className="flex h-20 w-20 items-center justify-center rounded-full bg-emerald-900 text-2xl font-semibold text-emerald-50">
-              {String(athlete.platform_name || 'A')[0]?.toUpperCase()}
-            </span>
-          )}
+    <div className="mx-auto max-w-4xl space-y-6">
+      <PlatformSurfaceCard contentClassName="p-5 sm:p-6">
+        <div className="flex flex-col gap-4 sm:flex-row sm:items-center">
+          <UserAvatar
+            name={athlete.platform_name}
+            photoUrl={athlete.photo_url}
+            size="lg"
+            className="h-20 w-20 text-2xl"
+            zoomable={Boolean(athlete.photo_url)}
+            lightboxTitle={athlete.platform_name || 'Atleta'}
+            lightboxDescription="Foto pública usada no perfil do atleta."
+          />
           <div className="min-w-0 flex-1">
             <h1 className="text-2xl font-bold text-slate-900">{athlete.platform_name}</h1>
             <div className="mt-1 flex flex-wrap items-center gap-x-3 gap-y-1 text-sm text-slate-600">
@@ -125,13 +110,11 @@ export default function AthleteProfile() {
             {followOn && <FollowButton targetUid={uid} />}
             <ChatLauncherButton athlete={athlete} label="Conversar" />
           </div>
-        </CardContent>
-      </Card>
+        </div>
+      </PlatformSurfaceCard>
 
-      {/* Rating */}
       {rating && (
-        <Card>
-          <CardContent className="flex items-center justify-between p-5">
+        <PlatformSurfaceCard contentClassName="flex items-center justify-between gap-4 p-5">
             <div className="flex items-center gap-3">
               <Medal className="h-7 w-7 text-emerald-600" />
               <div>
@@ -142,23 +125,20 @@ export default function AthleteProfile() {
             <div className="text-right text-sm text-slate-600 tabular-nums">
               {rating.wins}V – {rating.losses}D <span className="text-slate-400">· {rating.games} jogo(s)</span>
             </div>
-          </CardContent>
-        </Card>
+        </PlatformSurfaceCard>
       )}
 
-      {/* Desempenho */}
       <div className="grid grid-cols-2 gap-3 md:grid-cols-3 lg:grid-cols-6">
-        <StatTile icon={Trophy} label="Torneios" value={stats.tournaments} />
-        <StatTile icon={Swords} label="Jogos" value={stats.played} />
-        <StatTile icon={Percent} label="Aproveitamento" value={formatPercent(stats.winRate)} hint={`${stats.wins}V – ${stats.losses}D`} />
-        <StatTile icon={Award} label="Títulos" value={stats.titles} />
-        <StatTile icon={Medal} label="Pódios" value={stats.podiums} />
-        <StatTile icon={Trophy} label="Inscrições" value={stats.registrations} />
+        <PlatformMetricCard icon={Trophy} label="Torneios" value={stats.tournaments} />
+        <PlatformMetricCard icon={Swords} label="Jogos" value={stats.played} />
+        <PlatformMetricCard icon={Percent} label="Aproveitamento" value={formatPercent(stats.winRate)} description={`${stats.wins}V – ${stats.losses}D`} />
+        <PlatformMetricCard icon={Award} label="Títulos" value={stats.titles} />
+        <PlatformMetricCard icon={Medal} label="Pódios" value={stats.podiums} />
+        <PlatformMetricCard icon={Trophy} label="Inscrições" value={stats.registrations} />
       </div>
 
       {formats.length > 0 && (
-        <Card>
-          <CardContent className="p-4">
+        <PlatformSurfaceCard contentClassName="p-4">
             <h2 className="mb-3 text-sm font-semibold text-slate-800">Desempenho por formato</h2>
             <div className="space-y-2">
               {formats.map(([format, b]) => (
@@ -170,8 +150,7 @@ export default function AthleteProfile() {
                 </div>
               ))}
             </div>
-          </CardContent>
-        </Card>
+        </PlatformSurfaceCard>
       )}
 
       {ratingHistoryOn && <RatingSparkline points={ratingHistory} />}
@@ -180,10 +159,8 @@ export default function AthleteProfile() {
 
       {headToHeadOn && h2hData?.h2h?.length > 0 && <HeadToHeadCard records={h2hData.h2h} />}
 
-      {/* Torneios recentes */}
       {history.length > 0 && (
-        <Card>
-          <CardContent className="p-4">
+        <PlatformSurfaceCard contentClassName="p-4">
             <h2 className="mb-3 text-sm font-semibold text-slate-800">Torneios recentes</h2>
             <div className="space-y-2">
               {history.slice(0, 8).map((g) => (
@@ -199,8 +176,7 @@ export default function AthleteProfile() {
                 </Link>
               ))}
             </div>
-          </CardContent>
-        </Card>
+        </PlatformSurfaceCard>
       )}
     </div>
   );
