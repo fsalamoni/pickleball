@@ -35,10 +35,11 @@ const V2AdminPartners = lazy(() => import('@/v2/pages/V2AdminPartners'));
 
 // Ainda reutilizando as páginas provadas do app atual dentro do shell v2
 // (conteúdo estático, gestão de arena, modalidade e evento).
-const TournamentFormatsGuide = lazy(() => import('@/modules/tournament/pages/TournamentFormatsGuide'));
-const ModalityPage = lazy(() => import('@/modules/tournament/pages/ModalityPage'));
-const ArenaManage = lazy(() => import('@/modules/arenas/pages/ArenaManage'));
-const EventDetail = lazy(() => import('@/modules/clubs/pages/EventDetail'));
+// Autoria/gestão/conteúdo — nativo v2.
+const V2FormatsGuide = lazy(() => import('@/v2/pages/V2FormatsGuide'));
+const V2ModalityPage = lazy(() => import('@/v2/pages/V2ModalityPage'));
+const V2ArenaManage = lazy(() => import('@/v2/pages/V2ArenaManage'));
+const V2EventDetail = lazy(() => import('@/v2/pages/V2EventDetail'));
 
 // Conteúdo de referência — nativo v2.
 const V2Rules = lazy(() => import('@/v2/pages/V2Rules'));
@@ -78,7 +79,7 @@ export default function V2App() {
           <Route path="arenas" element={<V2Arenas />} />
           <Route path="arenas/criar" element={<V2CreateArena />} />
           <Route path="arenas/:arenaId" element={<V2ArenaDetail />} />
-          <Route path="arenas/:arenaId/gerir" element={<ArenaManage />} />
+          <Route path="arenas/:arenaId/gerir" element={<V2ArenaManage />} />
           <Route path="minhas-reservas" element={<V2Bookings />} />
 
           {/* Torneios */}
@@ -86,9 +87,9 @@ export default function V2App() {
           <Route path="torneios/publicos" element={<Navigate to="/v2/torneios" replace />} />
           <Route path="torneios/criar" element={<V2CreateTournament />} />
           <Route path="torneios/ingressar" element={<V2JoinTournament />} />
-          <Route path="torneios/guia" element={<TournamentFormatsGuide />} />
+          <Route path="torneios/guia" element={<V2FormatsGuide />} />
           <Route path="torneios/:tournamentId" element={<V2Tournament />} />
-          <Route path="torneios/:tournamentId/modalidades/:modalityId" element={<ModalityPage />} />
+          <Route path="torneios/:tournamentId/modalidades/:modalityId" element={<V2ModalityPage />} />
           <Route path="torneios/:tournamentId/:tab" element={<V2Tournament />} />
 
           {/* Comunidade */}
@@ -97,7 +98,7 @@ export default function V2App() {
           <Route path="clubes" element={<V2Clubs />} />
           <Route path="clubes/criar" element={<V2CreateClub />} />
           <Route path="clubes/:clubId" element={<V2ClubDetail />} />
-          <Route path="clubes/:clubId/eventos/:eventId" element={<EventDetail />} />
+          <Route path="clubes/:clubId/eventos/:eventId" element={<V2EventDetail />} />
           <Route path="novidades" element={<V2Community />} />
           <Route path="chat" element={<V2Chat />} />
 
