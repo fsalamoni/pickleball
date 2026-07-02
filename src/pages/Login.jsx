@@ -44,10 +44,11 @@ export default function Login() {
       <div className="relative mx-auto grid min-h-screen max-w-6xl gap-8 px-6 py-8 lg:grid-cols-[1.05fr,0.95fr] lg:items-center">
         <div className="hidden h-full min-h-[42rem] flex-col justify-between rounded-[2.25rem] arena-panel-strong p-8 lg:flex">
           <div>
-            <Link to="/" className="inline-flex flex-col gap-2 text-white">
-              <img src="/logo-escuro.png" alt="PickleRush" className="h-10 w-auto object-contain object-left" />
-              <div>
-                <span className="block text-xl font-semibold">Organização com cara de evento</span>
+            <Link to="/" className="inline-flex items-center gap-3 text-white">
+              <img src="/logo-escuro.png" alt="PickleRush" className="h-12 w-auto object-contain object-left" />
+              <div className="flex flex-col justify-center pt-1">
+                <span className="block font-display text-2xl font-black uppercase leading-none tracking-tighter text-white">PickleRush</span>
+                <span className="mt-1.5 block text-[8px] font-bold uppercase leading-tight tracking-widest text-emerald-50/70">Conectando e organizando<br/>o pickleball globalmente</span>
               </div>
             </Link>
           </div>
@@ -79,8 +80,12 @@ export default function Login() {
         <div className="flex items-center justify-center">
           <Card className="w-full max-w-lg rounded-[2.25rem] border-white/80 bg-white/90 p-1.5 shadow-[0_35px_80px_-40px_rgba(15,23,42,0.45)] sm:p-2">
             <CardHeader className="px-5 pb-4 pt-6 text-center sm:px-8">
-              <Link to="/" className="mx-auto mb-4 inline-flex items-center gap-3 text-slate-950 lg:hidden">
-                <img src="/logo-claro.png" alt="PickleRush" className="h-10 w-auto object-contain" />
+              <Link to="/" className="mx-auto mb-4 inline-flex items-center gap-2 text-slate-950 lg:hidden">
+                <img src="/logo-claro.png" alt="PickleRush" className="h-8 w-auto object-contain" />
+                <div className="flex flex-col justify-center pt-0.5 text-left">
+                  <span className="font-display text-xl font-black uppercase leading-none tracking-tighter text-slate-900">PickleRush</span>
+                  <span className="mt-1 text-[6px] font-bold uppercase leading-tight tracking-widest text-slate-500">Conectando e organizando<br/>o pickleball globalmente</span>
+                </div>
               </Link>
               <CardTitle className="mt-5 text-[2.2rem] font-semibold leading-[1.02] text-slate-950 sm:text-3xl">
                 Entrar para publicar e operar torneios com mais confiança.

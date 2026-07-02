@@ -118,6 +118,10 @@ function BrandLockup() {
   return (
     <Link to="/v2" className="flex items-center gap-3">
       <img src="/logo-claro.png" alt="PickleRush" className="h-10 object-contain" />
+      <div className="flex flex-col justify-center pt-1">
+        <span className="font-display text-2xl font-black uppercase tracking-tighter text-ink leading-none">PickleRush</span>
+        <span className="mt-1 text-[7.5px] font-bold uppercase leading-tight tracking-widest text-gray-500">Conectando e organizando<br/>o pickleball globalmente</span>
+      </div>
     </Link>
   );
 }
@@ -329,7 +333,13 @@ export default function V2Layout({ children }) {
         )}
       >
         <div className="flex items-center justify-between p-6">
-          <img src="/logo-escuro.png" alt={BRAND} className="h-8 object-contain" />
+          <Link to="/v2" className="flex items-center gap-2">
+            <img src="/logo-escuro.png" alt={BRAND} className="h-8 object-contain" />
+            <div className="flex flex-col justify-center pt-0.5">
+              <span className="font-display text-xl font-black uppercase tracking-tighter text-white leading-none">{BRAND}</span>
+              <span className="mt-1 text-[6px] font-bold uppercase leading-tight tracking-widest text-white/60">Conectando e organizando<br/>o pickleball globalmente</span>
+            </div>
+          </Link>
           <button
             onClick={closeMobile}
             className="flex h-12 w-12 items-center justify-center rounded-full bg-white/10 text-xl text-white hover:bg-white/20"
