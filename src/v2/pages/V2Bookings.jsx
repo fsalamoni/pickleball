@@ -20,6 +20,8 @@ import {
   V2Surface,
 } from '@/v2/ui/primitives';
 
+import V2BookingRow from '@/v2/components/arenas/V2BookingRow';
+
 const ACTIVE = new Set([BOOKING_STATUS.REQUESTED, BOOKING_STATUS.NEGOTIATING, BOOKING_STATUS.CONFIRMED]);
 
 const STATUS_TONE = {
@@ -74,12 +76,6 @@ export default function V2Bookings() {
         <div className="space-y-8">
           <BookingsGroup title="Ativas" bookings={active} emptyText="Nenhuma reserva ativa." />
           {past.length > 0 && <BookingsGroup title="Histórico" bookings={past} />}
-          <V2Surface className="border-dashed bg-paper">
-            <p className="text-sm text-gray-500">
-              Para negociar valores, confirmar ou marcar pagamentos, abra a gestão completa no app atual.{' '}
-              <Link to="/minhas-reservas" className="font-bold text-ink underline">Gerenciar reservas</Link>
-            </p>
-          </V2Surface>
         </div>
       )}
     </div>
@@ -94,27 +90,9 @@ function BookingsGroup({ title, bookings, emptyText }) {
         <p className="text-sm text-gray-500">{emptyText}</p>
       ) : (
         <div className="space-y-3">
-          {bookings.map((b) => {
-            const amount = b.agreed_price ?? b.proposed_price;
-            return (
-              <div key={b.id} className="flex items-center justify-between gap-3 rounded-3xl border border-gray-100 bg-paper-pure p-5 shadow-organic-sm">
-                <div className="min-w-0">
-                  <p className="truncate font-bold text-ink">{b.arena_name || 'Arena'}</p>
-                  <p className="mt-1 flex items-center gap-1.5 text-xs text-gray-500">
-                    {b.kind === BOOKING_KIND.RECURRING ? <Repeat className="h-3.5 w-3.5" /> : <CalendarClock className="h-3.5 w-3.5" />}
-                    {whenLabel(b)}
-                  </p>
-                  {amount != null && <p className="mt-1 text-xs text-gray-500">Valor: <strong className="text-ink">{formatPrice(amount)}</strong></p>}
-                </div>
-                <div className="flex shrink-0 flex-col items-end gap-1">
-                  <V2Badge tone={STATUS_TONE[b.status] || 'neutral'}>{BOOKING_STATUS_LABELS[b.status] || b.status}</V2Badge>
-                  {b.payment_status && b.payment_status !== PAYMENT_STATUS.NONE && (
-                    <span className="text-[11px] text-gray-400">{PAYMENT_STATUS_LABELS[b.payment_status]}</span>
-                  )}
-                </div>
-              </div>
-            );
-          })}
+          {bookings.map((b) => (
+            <V2BookingRow key={b.id} booking={b} perspective="athlete" />
+          ))}
         </div>
       )}
     </div>

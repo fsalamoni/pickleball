@@ -13,7 +13,7 @@ import ConfirmDialog from '@/components/ConfirmDialog';
 import ProfileFields from '@/modules/arenas/components/ProfileFields';
 import PricingEditor from '@/modules/arenas/components/PricingEditor';
 import V2ArenaReviews from '@/v2/components/arenas/V2ArenaReviews';
-import BookingRow from '@/modules/arenas/components/BookingRow';
+import V2BookingRow from '@/v2/components/arenas/V2BookingRow';
 import { sortBookings } from '@/modules/arenas/domain/booking';
 import { ARENA_MANAGER_ROLE, BOOKING_STATUS } from '@/modules/arenas/domain/constants';
 import {
@@ -189,15 +189,15 @@ function BookingsTab({ arena }) {
 
   return (
     <div className="space-y-4">
-      <V2Surface contentClassName="space-y-2 p-4 sm:p-5">
+      <V2Surface className="space-y-2 p-4 sm:p-5">
         <h3 className="text-sm font-bold text-ink">Ativas</h3>
         {grouped.active.length === 0 ? <p className="text-sm text-gray-500">Nenhuma reserva ativa.</p>
-          : grouped.active.map((b) => <BookingRow key={b.id} booking={b} perspective="arena" />)}
+          : grouped.active.map((b) => <V2BookingRow key={b.id} booking={b} perspective="arena" />)}
       </V2Surface>
       {grouped.past.length > 0 && (
-        <V2Surface contentClassName="space-y-2 p-4 sm:p-5">
+        <V2Surface className="space-y-2 p-4 sm:p-5">
           <h3 className="text-sm font-bold text-ink">Histórico</h3>
-          {grouped.past.map((b) => <BookingRow key={b.id} booking={b} perspective="arena" />)}
+          {grouped.past.map((b) => <V2BookingRow key={b.id} booking={b} perspective="arena" />)}
         </V2Surface>
       )}
     </div>
