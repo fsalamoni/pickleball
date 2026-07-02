@@ -38,7 +38,7 @@ export function ConfirmDialog({
 }) {
   return (
     <AlertDialog open={open} onOpenChange={onOpenChange}>
-      <AlertDialogContent>
+      <AlertDialogContent className="rounded-4xl border-gray-100 bg-paper-pure p-6 sm:p-8 shadow-organic">
         <AlertDialogHeader>
           <AlertDialogTitle className="flex items-center gap-2">
             {destructive && <AlertTriangle className="w-5 h-5 text-red-600" />}

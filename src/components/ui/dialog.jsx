@@ -50,11 +50,11 @@ export const DialogFooter = ({ className, ...props }) => (
 );
 
 export const DialogTitle = React.forwardRef(({ className, ...props }, ref) => (
-  <DialogPrimitive.Title ref={ref} className={cn('text-lg font-semibold leading-none tracking-tight', className)} {...props} />
+  <DialogPrimitive.Title ref={ref} className={cn('text-lg font-display text-xl font-bold text-ink', className)} {...props} />
 ));
 DialogTitle.displayName = 'DialogTitle';
 
 export const DialogDescription = React.forwardRef(({ className, ...props }, ref) => (
-  <DialogPrimitive.Description ref={ref} className={cn('text-sm text-muted-foreground', className)} {...props} />
+  <DialogPrimitive.Description ref={ref} className={cn('text-sm leading-6 text-gray-500', className)} {...props} />
 ));
 DialogDescription.displayName = 'DialogDescription';
