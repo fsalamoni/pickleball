@@ -40,11 +40,14 @@ export default function TournamentGallery({ tournamentId, canManage = false }) {
   }
 
   return (
-    <Card>
-      <CardContent className="p-4">
+    <Card className="rounded-[1.75rem] border-white/80 bg-white/82">
+      <CardContent className="p-5 sm:p-6">
         <h2 className="mb-3 flex items-center gap-2 text-sm font-semibold text-slate-800">
           <Images className="h-4 w-4 text-emerald-600" /> Galeria de fotos
         </h2>
+        <p className="mb-4 text-sm leading-6 text-slate-500">
+          Esta visão reúne as fotos enviadas na galeria geral do torneio e nas galerias das modalidades.
+        </p>
 
         {canManage && (
           <div className="mb-4">
@@ -59,7 +62,7 @@ export default function TournamentGallery({ tournamentId, canManage = false }) {
         )}
 
         {photos.length === 0 ? (
-          <p className="text-sm text-slate-500">Nenhuma foto ainda.</p>
+          <p className="text-sm text-slate-500">Nenhuma foto do torneio ou das modalidades ainda.</p>
         ) : (
           <div className="grid grid-cols-2 gap-2 sm:grid-cols-3 md:grid-cols-4">
             {photos.map((p) => (

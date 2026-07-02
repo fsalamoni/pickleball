@@ -17,7 +17,7 @@ import {
 export default function ModalityGallery({ tournamentId, modalityId, canManage = false }) {
   const { data: photos = [] } = useModalityPhotos(modalityId);
   const add = useAddModalityPhoto(tournamentId, modalityId);
-  const remove = useDeleteTournamentPhoto(tournamentId);
+  const remove = useDeleteTournamentPhoto(tournamentId, modalityId);
   const [pending, setPending] = useState('');
 
   function handleUpload(url) {
@@ -31,8 +31,8 @@ export default function ModalityGallery({ tournamentId, modalityId, canManage = 
   }
 
   return (
-    <Card>
-      <CardContent className="p-4">
+    <Card className="rounded-[1.75rem] border-white/80 bg-white/82">
+      <CardContent className="p-5 sm:p-6">
         <h2 className="mb-3 flex items-center gap-2 text-sm font-semibold text-slate-800">
           <Images className="h-4 w-4 text-emerald-600" /> Fotos da modalidade
         </h2>

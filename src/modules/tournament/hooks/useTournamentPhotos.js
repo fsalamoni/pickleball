@@ -49,11 +49,16 @@ export function useAddTournamentPhoto(tournamentId) {
   });
 }
 
-export function useDeleteTournamentPhoto(tournamentId) {
+export function useDeleteTournamentPhoto(tournamentId, modalityId = null) {
   const { user } = useAuth();
   const qc = useQueryClient();
   return useMutation({
     mutationFn: (id) => deleteTournamentPhoto(id, user),
-    onSuccess: () => qc.invalidateQueries({ queryKey: ['tournament-photos', tournamentId] }),
+    onSuccess: () => {
+      qc.invalidateQueries({ queryKey: ['tournament-photos', tournamentId] });
+      if (modalityId) {
+        qc.invalidateQueries({ queryKey: ['modality-photos', modalityId] });
+      }
+    },
   });
 }

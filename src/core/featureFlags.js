@@ -367,9 +367,11 @@ export const FEATURE_FLAG_META = Object.freeze({
     description:
       'Cada modalidade ganha uma página dedicada com abas de informações gerais, '
       + 'inscrição (mantendo a inscrição rápida no card), jogos, ranking e fotos '
-      + 'da modalidade, no lugar do modal de informações. A visão geral do '
-      + 'torneio e a administração/sorteio permanecem iguais. Desligado, o botão '
-      + '"Informações" volta a abrir o modal atual.',
+      + 'da modalidade, no lugar do modal de informações. Também adiciona o '
+      + 'seletor de modalidades na navegação do torneio e move a galeria geral '
+      + 'para uma aba própria quando a flag de fotos estiver ligada. Desligado, '
+      + 'o botão "Informações" volta a abrir o modal atual e a visão do torneio '
+      + 'permanece no formato anterior.',
   },
 });
 

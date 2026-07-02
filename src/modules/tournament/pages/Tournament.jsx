@@ -6,25 +6,39 @@ import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
 import { Skeleton } from '@/components/ui/skeleton';
 import {
+  DropdownMenu,
+  DropdownMenuContent,
+  DropdownMenuItem,
+  DropdownMenuLabel,
+  DropdownMenuSeparator,
+  DropdownMenuTrigger,
+} from '@/components/ui/dropdown-menu';
+import {
   Calendar,
   Check,
+  ChevronDown,
   Copy,
   Eye,
   Hash,
+  Images,
   MapPin,
   Share2,
   ShieldAlert,
   ShieldCheck,
   Trophy,
 } from 'lucide-react';
-import { useTournament, useIsTournamentAdmin } from '@/modules/tournament/hooks/useTournament';
+import { useTournament, useIsTournamentAdmin, useModalities } from '@/modules/tournament/hooks/useTournament';
 import {
+  MODALITY_FORMAT_LABELS,
+  SKILL_LEVEL_LABELS,
   TOURNAMENT_STATUS,
   TOURNAMENT_STATUS_LABELS,
   TOURNAMENT_VISIBILITY,
   TOURNAMENT_VISIBILITY_LABELS,
 } from '@/modules/tournament/domain/constants';
 import { useClipboard } from '@/core/lib/useClipboard';
+import { useFeatureFlag } from '@/core/lib/FeatureFlagsContext';
+import { FEATURE_FLAG } from '@/core/featureFlags';
 import TournamentOverviewTab from '../components/TournamentOverviewTab';
 import TournamentMatchesTab from '../components/TournamentMatchesTab';
 import TournamentRankingTab from '../components/TournamentRankingTab';
@@ -40,6 +54,8 @@ const PLAYER_TABS = [
   { value: 'jogos', label: 'Jogos' },
   { value: 'ranking', label: 'Ranking' },
 ];
+
+const TAB_TRIGGER_CLASSNAME = 'rounded-full px-4 py-2 text-sm font-semibold data-[state=active]:bg-white data-[state=active]:text-slate-950 data-[state=active]:shadow-[0_14px_30px_-22px_rgba(15,23,42,0.45)]';
 
 // Abas obsoletas que ainda podem aparecer em links salvos. Redirecionamos
 // para a nova home da modalidade (visão geral).
@@ -103,6 +119,9 @@ export default function Tournament() {
   const navigate = useNavigate();
   const { data: tournament, isLoading } = useTournament(tournamentId);
   const { data: isAdmin } = useIsTournamentAdmin(tournamentId);
+  const { data: modalities = [] } = useModalities(tournamentId);
+  const modalityPagesOn = useFeatureFlag(FEATURE_FLAG.MODALITY_PAGES);
+  const galleryOn = useFeatureFlag(FEATURE_FLAG.TOURNAMENT_GALLERY);
   const { copy, copied } = useClipboard();
 
   if (isLoading) {
@@ -149,6 +168,12 @@ export default function Tournament() {
     return null;
   }
   if (tab === 'admin' && !isAdmin) {
+    navigate(`/torneios/${tournamentId}/visao-geral`, { replace: true });
+    return null;
+  }
+
+  const showGalleryTab = modalityPagesOn && galleryOn;
+  if (tab === 'fotos' && !showGalleryTab) {
     navigate(`/torneios/${tournamentId}/visao-geral`, { replace: true });
     return null;
   }
@@ -273,15 +298,32 @@ export default function Tournament() {
         <div className="rounded-[1.75rem] border border-white/80 bg-white/82 p-3 shadow-[0_18px_40px_-28px_rgba(15,23,42,0.28)]">
           <div className="overflow-x-auto -mx-1 px-1 sm:mx-0 sm:px-0">
             <TabsList className="inline-flex h-auto min-w-full justify-start gap-2 rounded-[1.5rem] bg-secondary/45 p-2 sm:min-w-0">
-            {PLAYER_TABS.map((t) => (
               <TabsTrigger
-                key={t.value}
-                value={t.value}
-                className="rounded-full px-4 py-2 text-sm font-semibold data-[state=active]:bg-white data-[state=active]:text-slate-950 data-[state=active]:shadow-[0_14px_30px_-22px_rgba(15,23,42,0.45)]"
+                value={PLAYER_TABS[0].value}
+                className={TAB_TRIGGER_CLASSNAME}
               >
-                {t.label}
+                {PLAYER_TABS[0].label}
               </TabsTrigger>
-            ))}
+              {modalityPagesOn && (
+                <ModalityTabsMenu tournamentId={tournamentId} modalities={modalities} />
+              )}
+              <TabsTrigger
+                value={PLAYER_TABS[1].value}
+                className={TAB_TRIGGER_CLASSNAME}
+              >
+                {PLAYER_TABS[1].label}
+              </TabsTrigger>
+              <TabsTrigger
+                value={PLAYER_TABS[2].value}
+                className={TAB_TRIGGER_CLASSNAME}
+              >
+                {PLAYER_TABS[2].label}
+              </TabsTrigger>
+              {showGalleryTab && (
+                <TabsTrigger value="fotos" className={TAB_TRIGGER_CLASSNAME}>
+                  <Images className="mr-1 h-4 w-4" /> Fotos
+                </TabsTrigger>
+              )}
             {isAdmin && (
               <TabsTrigger
                 value="admin"
@@ -303,6 +345,11 @@ export default function Tournament() {
         <TabsContent value="ranking" className="mt-4">
           <TournamentRankingTab tournament={tournament} />
         </TabsContent>
+        {showGalleryTab && (
+          <TabsContent value="fotos" className="mt-4">
+            <TournamentGallery tournamentId={tournament.id} canManage={!!isAdmin} />
+          </TabsContent>
+        )}
 
         {isAdmin && (
           <TabsContent value="admin" className="mt-4">
@@ -311,7 +358,54 @@ export default function Tournament() {
         )}
       </Tabs>
 
-      <TournamentGallery tournamentId={tournament.id} canManage={!!isAdmin} />
+      {!showGalleryTab && <TournamentGallery tournamentId={tournament.id} canManage={!!isAdmin} />}
     </div>
+  );
+}
+
+function ModalityTabsMenu({ tournamentId, modalities }) {
+  return (
+    <DropdownMenu>
+      <DropdownMenuTrigger asChild>
+        <button
+          type="button"
+          className="inline-flex items-center rounded-full px-4 py-2 text-sm font-semibold text-slate-600 transition hover:bg-white hover:text-slate-950 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-emerald-500"
+        >
+          Modalidades
+          <ChevronDown className="ml-1 h-4 w-4" />
+        </button>
+      </DropdownMenuTrigger>
+      <DropdownMenuContent
+        align="start"
+        className="w-[22rem] rounded-[1.5rem] border-white/80 bg-white/95 p-2 shadow-[0_20px_48px_-32px_rgba(15,23,42,0.45)] backdrop-blur-xl"
+      >
+        <DropdownMenuLabel className="px-3 py-2 text-xs font-semibold uppercase tracking-[0.18em] text-emerald-700/80">
+          Modalidades do torneio
+        </DropdownMenuLabel>
+        <DropdownMenuSeparator className="bg-slate-200" />
+        {modalities.length === 0 ? (
+          <DropdownMenuItem disabled className="rounded-[1.25rem] px-3 py-3 text-sm leading-6 text-slate-500">
+            Ainda não há modalidades criadas para este torneio.
+          </DropdownMenuItem>
+        ) : (
+          modalities.map((modality) => (
+            <DropdownMenuItem
+              key={modality.id}
+              asChild
+              className="rounded-[1.25rem] px-3 py-3 focus:bg-emerald-50"
+            >
+              <Link to={`/torneios/${tournamentId}/modalidades/${modality.id}`}>
+                <div className="text-sm font-semibold text-slate-950">{modality.name}</div>
+                <div className="mt-1 text-xs leading-5 text-slate-500">
+                  {MODALITY_FORMAT_LABELS[modality.format] || modality.format}
+                  {' · '}
+                  {SKILL_LEVEL_LABELS[modality.skill_level] || modality.skill_level}
+                </div>
+              </Link>
+            </DropdownMenuItem>
+          ))
+        )}
+      </DropdownMenuContent>
+    </DropdownMenu>
   );
 }
