@@ -1,0 +1,6 @@
+Diretorio publico do site "pickletour" no Firebase Hosting.
+
+Propositalmente vazio: o site pickletour so existe para o redirect 301
+configurado em firebase.json (hosting[].redirects). Se este diretorio
+tivesse os arquivos do app (ex.: dist/), qualquer caminho que bata com
+um arquivo real seria servido diretamente, e o redirect nunca dispararia.
