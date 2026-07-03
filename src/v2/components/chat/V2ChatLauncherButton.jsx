@@ -47,7 +47,7 @@ export default function V2ChatLauncherButton({
         photo_url: athlete.photo_url || athlete.photoURL,
       });
       onStarted?.(id);
-      navigate(`/v2/chat?c=${id}`);
+      navigate(`/chat?c=${id}`);
     } catch (err) {
       toast.error(err.message || 'Não foi possível iniciar a conversa.');
     } finally {

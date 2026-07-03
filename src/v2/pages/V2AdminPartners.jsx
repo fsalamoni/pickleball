@@ -29,7 +29,7 @@ export default function V2AdminPartners() {
   const [editingId, setEditingId] = useState(null);
   const [errors, setErrors] = useState({});
 
-  if (!isPlatformAdmin || !enabled) return <Navigate to="/v2" replace />;
+  if (!isPlatformAdmin || !enabled) return <Navigate to="/" replace />;
 
   const set = (patch) => setForm((f) => ({ ...f, ...patch }));
   const startEdit = (link) => { setEditingId(link.id); setForm({ ...EMPTY, ...link }); setErrors({}); };

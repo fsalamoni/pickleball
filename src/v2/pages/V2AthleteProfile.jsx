@@ -22,7 +22,7 @@ export default function V2AthleteProfile() {
   const { uid } = useParams();
   const { data, isLoading, isError } = useAthleteProfile(uid);
 
-  if (!enabled) return <Navigate to="/v2/atletas" replace />;
+  if (!enabled) return <Navigate to="/atletas" replace />;
 
   if (isLoading) {
     return (
@@ -42,7 +42,7 @@ export default function V2AthleteProfile() {
             icon={Trophy}
             title="Atleta não encontrado"
             description="O perfil que você procura não existe ou não está mais disponível."
-            action={<Link to="/v2/atletas" className="rounded-full bg-ink px-6 py-3 text-sm font-bold text-white">Voltar aos atletas</Link>}
+            action={<Link to="/atletas" className="rounded-full bg-ink px-6 py-3 text-sm font-bold text-white">Voltar aos atletas</Link>}
           />
         </V2Surface>
       </div>
@@ -56,7 +56,7 @@ export default function V2AthleteProfile() {
 
   return (
     <div className="mx-auto max-w-[1000px]">
-      <Link to="/v2/atletas" className="mb-5 inline-flex items-center gap-1.5 text-sm font-semibold text-gray-500 hover:text-ink">
+      <Link to="/atletas" className="mb-5 inline-flex items-center gap-1.5 text-sm font-semibold text-gray-500 hover:text-ink">
         <ArrowLeft className="h-4 w-4" /> Voltar aos atletas
       </Link>
 
@@ -101,7 +101,7 @@ export default function V2AthleteProfile() {
             {clubs.length > 0 && (
               <div className="mt-4 flex flex-wrap justify-center gap-1.5 sm:justify-start">
                 {clubs.map((c) => (
-                  <Link key={c.id} to={`/v2/clubes/${c.id}`}>
+                  <Link key={c.id} to={`/clubes/${c.id}`}>
                     <V2Badge tone="neutral"><Building2 className="h-3 w-3" /> {c.name}</V2Badge>
                   </Link>
                 ))}
@@ -144,7 +144,7 @@ export default function V2AthleteProfile() {
             {history.slice(0, 8).map((g) => (
               <Link
                 key={g.tournamentId}
-                to={`/v2/torneios/${g.tournamentId}`}
+                to={`/torneios/${g.tournamentId}`}
                 className="flex items-center justify-between gap-3 rounded-2xl border border-gray-100 bg-paper p-4 transition-colors hover:border-gray-200"
               >
                 <span className="min-w-0 truncate text-sm font-semibold text-ink">{g.tournament?.name || 'Torneio'}</span>

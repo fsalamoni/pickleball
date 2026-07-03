@@ -73,7 +73,7 @@ export default function V2ClubAdmin({ club }) {
     try {
       await deleteClub.mutateAsync();
       toast.success('Clube excluído.');
-      navigate('/v2/clubes');
+      navigate('/clubes');
     } catch (err) {
       toast.error(err.message || 'Não foi possível excluir o clube.');
     }

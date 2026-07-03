@@ -22,7 +22,7 @@ export default function V2CreateArena() {
   const [form, setForm] = useState(INITIAL);
   const [errors, setErrors] = useState({});
 
-  if (!enabled) return <Navigate to="/v2" replace />;
+  if (!enabled) return <Navigate to="/" replace />;
 
   const set = (key) => (e) => setForm((prev) => ({ ...prev, [key]: e.target.value }));
 
@@ -37,7 +37,7 @@ export default function V2CreateArena() {
     try {
       const id = await createArena.mutateAsync(form);
       toast.success('Arena cadastrada! Agora adicione fotos e preços.');
-      navigate(`/v2/arenas/${id}/gerir`);
+      navigate(`/arenas/${id}/gerir`);
     } catch (err) {
       toast.error(err?.message || 'Não foi possível cadastrar a arena.');
     }
@@ -45,7 +45,7 @@ export default function V2CreateArena() {
 
   return (
     <div className="mx-auto max-w-[1000px]">
-      <Link to="/v2/arenas" className="mb-5 inline-flex items-center gap-1.5 text-sm font-semibold text-gray-500 hover:text-ink">
+      <Link to="/arenas" className="mb-5 inline-flex items-center gap-1.5 text-sm font-semibold text-gray-500 hover:text-ink">
         <ArrowLeft className="h-4 w-4" /> Voltar às arenas
       </Link>
 
@@ -89,7 +89,7 @@ export default function V2CreateArena() {
           </div>
 
           <div className="flex justify-end gap-2 pt-2">
-            <V2Button type="button" variant="ghost" onClick={() => navigate('/v2/arenas')}>Cancelar</V2Button>
+            <V2Button type="button" variant="ghost" onClick={() => navigate('/arenas')}>Cancelar</V2Button>
             <V2Button type="submit" disabled={createArena.isPending}>
               {createArena.isPending ? 'Cadastrando…' : 'Cadastrar arena'}
             </V2Button>

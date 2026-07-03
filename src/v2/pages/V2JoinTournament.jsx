@@ -28,7 +28,7 @@ export default function V2JoinTournament() {
       if (!t) { toast.error('Código não encontrado.'); return; }
       sessionStorage.setItem(`tournament_access_${t.id}`, code.trim().toUpperCase());
       toast.success(`Acesso concedido a "${t.name}".`);
-      navigate(`/v2/torneios/${t.id}/visao-geral?join=1`);
+      navigate(`/torneios/${t.id}/visao-geral?join=1`);
     } catch (err) {
       toast.error(err.message || 'Falha ao buscar torneio.');
     } finally {
@@ -38,7 +38,7 @@ export default function V2JoinTournament() {
 
   return (
     <div className="mx-auto max-w-[1100px]">
-      <Link to="/v2/torneios" className="mb-5 inline-flex items-center gap-1.5 text-sm font-semibold text-gray-500 hover:text-ink">
+      <Link to="/torneios" className="mb-5 inline-flex items-center gap-1.5 text-sm font-semibold text-gray-500 hover:text-ink">
         <ArrowLeft className="h-4 w-4" /> Voltar aos torneios
       </Link>
 
@@ -98,8 +98,8 @@ export default function V2JoinTournament() {
                 <p className="font-display text-base font-bold text-ink">Procurando torneios abertos?</p>
                 <p className="mt-2 leading-6">
                   Torneios públicos não exigem código.{' '}
-                  <Link to="/v2/torneios" className="font-bold text-ink underline">Veja a lista</Link> ou{' '}
-                  <Link to="/v2/torneios/criar" className="font-bold text-ink underline">crie o seu</Link>.
+                  <Link to="/torneios" className="font-bold text-ink underline">Veja a lista</Link> ou{' '}
+                  <Link to="/torneios/criar" className="font-bold text-ink underline">crie o seu</Link>.
                 </p>
               </div>
             </div>

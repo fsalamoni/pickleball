@@ -196,7 +196,7 @@ export default function V2ProfileEdit() {
 
   return (
     <div className="mx-auto max-w-[900px]">
-      <Link to="/v2/perfil" className="mb-5 inline-flex items-center gap-1.5 text-sm font-semibold text-gray-500 hover:text-ink">
+      <Link to="/perfil" className="mb-5 inline-flex items-center gap-1.5 text-sm font-semibold text-gray-500 hover:text-ink">
         <ArrowLeft className="h-4 w-4" /> Voltar ao perfil
       </Link>
 

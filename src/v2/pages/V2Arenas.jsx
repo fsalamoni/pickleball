@@ -44,7 +44,7 @@ export default function V2Arenas() {
       <V2PageIntro
         title="Explorar Quadras"
         subtitle="Encontre arenas, veja preços e horários e solicite sua reserva."
-        action={<V2Button asChild variant="secondary" size="sm"><Link to="/v2/arenas/criar">Cadastrar arena</Link></V2Button>}
+        action={<V2Button asChild variant="secondary" size="sm"><Link to="/arenas/criar">Cadastrar arena</Link></V2Button>}
       />
 
       <V2Surface className="mb-8">
@@ -69,7 +69,7 @@ export default function V2Arenas() {
             icon={LayoutGrid}
             title="Nenhuma arena encontrada"
             description="Ajuste a busca ou cadastre uma arena para começar a receber reservas."
-            action={<V2Button asChild><Link to="/v2/arenas/criar">Cadastrar arena</Link></V2Button>}
+            action={<V2Button asChild><Link to="/arenas/criar">Cadastrar arena</Link></V2Button>}
           />
         </V2Surface>
       ) : (
@@ -89,7 +89,7 @@ function ArenaCard({ arena }) {
 
   return (
     <Link
-      to={`/v2/arenas/${arena.id}`}
+      to={`/arenas/${arena.id}`}
       className="group flex flex-col overflow-hidden rounded-3xl border border-gray-100 bg-paper-pure shadow-organic-sm transition-all hover:shadow-organic"
     >
       <div className="relative h-48 overflow-hidden bg-ink">

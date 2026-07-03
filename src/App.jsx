@@ -3,13 +3,17 @@ import { BrowserRouter, Routes, Route, Navigate, useLocation } from 'react-route
 import { QueryClient, QueryClientProvider } from '@tanstack/react-query';
 import { AuthProvider, useAuth } from '@/core/lib/FirebaseAuthContext';
 import { FeatureFlagsProvider } from '@/core/lib/FeatureFlagsContext';
-import Layout from '@/components/Layout';
 import { Toaster } from '@/components/ui/sonner';
 import { recordPageView } from '@/core/services/observabilityService';
 import V1Routes from '@/V1Routes';
 
-// Experiência de design paralela (Athleisure Premium) sob /v2. Chunk isolado:
-// só carrega quando a rota /v2 é acessada e não interfere no app atual.
+// Páginas públicas (sem autenticação) — precisam funcionar fora do app v2.
+const Landing = lazy(() => import('@/pages/Landing'));
+const Login = lazy(() => import('@/pages/Login'));
+const PublicTournament = lazy(() => import('@/pages/PublicTournament'));
+const PrintTournament = lazy(() => import('@/pages/PrintTournament'));
+
+// App principal (Athleisure Premium). Chunk isolado.
 const V2App = lazy(() => import('@/v2/V2App'));
 
 const LOCAL_PREVIEW_PROTECTED_PATHS = new Set([
@@ -55,6 +59,23 @@ function FullScreenSpinner() {
   );
 }
 
+/**
+ * Entrada principal da plataforma. Usuários autenticados entram no app v2;
+ * visitantes veem a landing na raiz e são levados ao login nas demais rotas.
+ */
+function MainEntry() {
+  const location = useLocation();
+  const { isAuthenticated, isLoadingAuth, isAuthAvailable } = useAuth();
+  const allowLocalPreview = import.meta.env.DEV && !isAuthAvailable;
+
+  if (isLoadingAuth) return <FullScreenSpinner />;
+  if (!isAuthenticated && !allowLocalPreview) {
+    if (location.pathname === '/') return <Landing />;
+    return <Navigate to="/login" replace state={{ from: location.pathname }} />;
+  }
+  return <V2App />;
+}
+
 function RouteTelemetry() {
   const location = useLocation();
   useEffect(() => {
@@ -77,9 +98,16 @@ export default function App() {
           <RouteTelemetry />
           <Suspense fallback={<FullScreenSpinner />}>
             <Routes>
+              {/* Público (sem autenticação) */}
+              <Route path="/login" element={<Login />} />
+              <Route path="/p/:tournamentId" element={<PublicTournament />} />
+              <Route path="/torneios/:tournamentId/imprimir" element={<PrintTournament />} />
+
+              {/* Versão anterior (v1) arquivada */}
               <Route path="/v1/*" element={<V1Routes ProtectedRoute={ProtectedRoute} AdminRoute={AdminRoute} />} />
-              <Route path="/*" element={<V2App />} />
-              <Route path="*" element={<PageNotFound />} />
+
+              {/* Plataforma principal (PickleRush) */}
+              <Route path="/*" element={<MainEntry />} />
             </Routes>
           </Suspense>
         </BrowserRouter>

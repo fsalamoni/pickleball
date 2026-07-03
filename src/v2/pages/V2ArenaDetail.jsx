@@ -42,7 +42,7 @@ export default function V2ArenaDetail() {
   const { data: bookings = [] } = useArenaBookings(arenaId);
   const [bookingOpen, setBookingOpen] = useState(false);
 
-  if (!enabled) return <Navigate to="/v2" replace />;
+  if (!enabled) return <Navigate to="/" replace />;
 
   if (isLoading) {
     return (
@@ -61,7 +61,7 @@ export default function V2ArenaDetail() {
             icon={Building2}
             title="Arena não encontrada"
             description="A arena que você procura não existe ou foi removida."
-            action={<Link to="/v2/arenas" className="rounded-full bg-ink px-6 py-3 text-sm font-bold text-white">Voltar às arenas</Link>}
+            action={<Link to="/arenas" className="rounded-full bg-ink px-6 py-3 text-sm font-bold text-white">Voltar às arenas</Link>}
           />
         </V2Surface>
       </div>
@@ -79,7 +79,7 @@ export default function V2ArenaDetail() {
 
   return (
     <div className="mx-auto max-w-[900px]">
-      <Link to="/v2/arenas" className="mb-5 inline-flex items-center gap-1.5 text-sm font-semibold text-gray-500 hover:text-ink">
+      <Link to="/arenas" className="mb-5 inline-flex items-center gap-1.5 text-sm font-semibold text-gray-500 hover:text-ink">
         <ArrowLeft className="h-4 w-4" /> Voltar às arenas
       </Link>
 
@@ -120,7 +120,7 @@ export default function V2ArenaDetail() {
             <V2FavoriteArenaButton arena={arena} />
             <V2ArenaShareButton arena={arena} />
             {canManage && (
-              <V2Button asChild variant="ghost" size="sm"><Link to={`/v2/arenas/${arena.id}/gerir`}><Settings className="h-4 w-4" /> Gerir</Link></V2Button>
+              <V2Button asChild variant="ghost" size="sm"><Link to={`/arenas/${arena.id}/gerir`}><Settings className="h-4 w-4" /> Gerir</Link></V2Button>
             )}
           </div>
 

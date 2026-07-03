@@ -119,7 +119,7 @@ export default function V2Rules() {
       </div>
 
       <div className="mt-6 text-center text-sm text-gray-500">
-        <Link to="/v2/nivelamento" className="font-bold text-ink underline">Descubra seu nível com nosso formulário de nivelamento →</Link>
+        <Link to="/nivelamento" className="font-bold text-ink underline">Descubra seu nível com nosso formulário de nivelamento →</Link>
       </div>
     </div>
   );

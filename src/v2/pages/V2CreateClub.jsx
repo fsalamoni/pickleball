@@ -31,7 +31,7 @@ export default function V2CreateClub() {
     try {
       const id = await createClub.mutateAsync(form);
       toast.success('Clube criado com sucesso!');
-      navigate(`/v2/clubes/${id}`);
+      navigate(`/clubes/${id}`);
     } catch (err) {
       toast.error(err.message || 'Não foi possível criar o clube.');
     }
@@ -39,7 +39,7 @@ export default function V2CreateClub() {
 
   return (
     <div className="mx-auto max-w-[1000px]">
-      <Link to="/v2/clubes" className="mb-5 inline-flex items-center gap-1.5 text-sm font-semibold text-gray-500 hover:text-ink">
+      <Link to="/clubes" className="mb-5 inline-flex items-center gap-1.5 text-sm font-semibold text-gray-500 hover:text-ink">
         <ArrowLeft className="h-4 w-4" /> Voltar para clubes
       </Link>
 
@@ -91,7 +91,7 @@ export default function V2CreateClub() {
           </div>
 
           <div className="flex justify-end gap-2 pt-2">
-            <V2Button type="button" variant="ghost" onClick={() => navigate('/v2/clubes')}>Cancelar</V2Button>
+            <V2Button type="button" variant="ghost" onClick={() => navigate('/clubes')}>Cancelar</V2Button>
             <V2Button type="submit" disabled={createClub.isPending || !isAuthenticated}>
               {createClub.isPending ? 'Criando…' : 'Criar clube'}
             </V2Button>

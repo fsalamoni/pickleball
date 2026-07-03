@@ -87,7 +87,7 @@ export default function V2ModalityInfoContent({ modality, tournament, registrati
               </li>
             ))}
           </ol>
-          <Link to="/v2/torneios/guia" className="inline-flex items-center gap-1 text-xs font-bold text-ink hover:underline">
+          <Link to="/torneios/guia" className="inline-flex items-center gap-1 text-xs font-bold text-ink hover:underline">
             <BookOpen className="h-3.5 w-3.5" /> Guia completo de formatos e modelos
           </Link>
         </section>

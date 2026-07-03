@@ -78,10 +78,10 @@ function useV2Nav() {
     {
       title: 'Você',
       items: [
-        { to: '/mensagens', label: 'Mensagens', icon: MessageSquare },
+        { to: '/chat', label: 'Mensagens', icon: MessageSquare },
         performanceOn && { to: '/meu-desempenho', label: 'Meu desempenho', icon: BarChart3 },
         { to: '/minhas-reservas', label: 'Minhas reservas', icon: Building2 },
-        { to: '/meu-perfil', label: 'Meu Perfil', icon: User },
+        { to: '/perfil', label: 'Meu Perfil', icon: User },
       ].filter(Boolean),
     },
     isPlatformAdmin && {
@@ -235,7 +235,7 @@ export default function V2Layout({ children }) {
           ))}
         </nav>
         <Link
-          to="/meu-perfil"
+          to="/perfil"
           className="mx-4 mb-4 flex items-center gap-3 rounded-2.5xl border border-gray-100 bg-paper p-4 transition-colors hover:border-gray-200"
         >
           <div className="relative">

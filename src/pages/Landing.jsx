@@ -119,7 +119,7 @@ export default function Landing() {
               </Button>
             </nav>
             <Button asChild size="sm">
-              <Link to={isAuthenticated ? '/inicio' : '/login'}>
+              <Link to={isAuthenticated ? '/' : '/login'}>
                 {isAuthenticated ? (
                   <>
                     <span className="sm:hidden">Painel</span>

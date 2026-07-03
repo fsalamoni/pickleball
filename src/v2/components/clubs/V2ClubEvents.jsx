@@ -116,7 +116,7 @@ function EventCard({ event, clubId, isAdmin }) {
       <div className="mt-4 flex flex-wrap items-center gap-2 border-t border-gray-100 pt-3">
         <V2Button size="sm" variant="ghost" onClick={() => setEditOpen(true)}><Pencil className="h-3.5 w-3.5" /> Editar</V2Button>
         <V2Button asChild size="sm" variant="secondary" className="ml-auto">
-          <Link to={`/v2/clubes/${clubId}/eventos/${event.id}`}>
+          <Link to={`/clubes/${clubId}/eventos/${event.id}`}>
             {gameDay ? 'Organizar / ingressar' : 'Ingressar no evento'} <ArrowRight className="h-3.5 w-3.5" />
           </Link>
         </V2Button>

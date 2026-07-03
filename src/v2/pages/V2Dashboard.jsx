@@ -132,7 +132,7 @@ export default function V2Dashboard() {
                       {TOURNAMENT_STATUS_LABELS[spotlight.status] || spotlight.status}
                     </span>
                     <Link
-                      to={`/v2/torneios/${spotlight.id}`}
+                      to={`/torneios/${spotlight.id}`}
                       className="btn-press rounded-full bg-white px-5 py-2.5 text-sm font-bold text-ink transition-transform hover:scale-105"
                     >
                       Abrir torneio
@@ -141,7 +141,7 @@ export default function V2Dashboard() {
                 ) : (
                   <>
                     <span className="text-sm text-gray-300">Nenhum torneio em contexto ainda.</span>
-                    <Link to="/v2/torneios/criar" className="btn-press rounded-full bg-white px-5 py-2.5 text-sm font-bold text-ink hover:scale-105">
+                    <Link to="/torneios/criar" className="btn-press rounded-full bg-white px-5 py-2.5 text-sm font-bold text-ink hover:scale-105">
                       Criar torneio
                     </Link>
                   </>
@@ -184,7 +184,7 @@ export default function V2Dashboard() {
               </p>
             </div>
             <Link
-              to={featured ? `/v2/torneios/${featured.id}` : '/v2/torneios'}
+              to={featured ? `/torneios/${featured.id}` : '/torneios'}
               className="relative z-10 whitespace-nowrap rounded-full bg-white px-8 py-3.5 font-bold text-indigo-700 shadow-lg transition-all hover:-translate-y-1 hover:shadow-xl"
             >
               {featured ? 'Garantir vaga' : 'Ver torneios'}
@@ -193,17 +193,17 @@ export default function V2Dashboard() {
 
           {/* Quick actions */}
           <div className="col-span-1 grid grid-cols-2 gap-4 md:col-span-2 xl:col-span-2">
-            <QuickAction to="/v2/arenas" icon={CalendarCheck} label="Agendar Quadra" />
-            <QuickAction to="/v2/procura-jogo" icon={PenTool} label="Procuro jogo" />
+            <QuickAction to="/arenas" icon={CalendarCheck} label="Agendar Quadra" />
+            <QuickAction to="/procura-jogo" icon={PenTool} label="Procuro jogo" />
           </div>
         </div>
       )}
 
       {/* Discovery strip */}
       <div className="mt-10 grid grid-cols-1 gap-6 lg:grid-cols-3">
-        <DiscoveryCard to="/v2/atletas" icon={Trophy} title="Atletas" description="Encontre parceiros do seu nível na comunidade." />
-        <DiscoveryCard to="/v2/ranking" icon={Globe} title="Ranking nacional" description="Veja quem está no topo e onde você está." />
-        <DiscoveryCard to="/v2/novidades" icon={Hash} title="Comunidade" description="Movimentos recentes de torneios e jogos." />
+        <DiscoveryCard to="/atletas" icon={Trophy} title="Atletas" description="Encontre parceiros do seu nível na comunidade." />
+        <DiscoveryCard to="/ranking" icon={Globe} title="Ranking nacional" description="Veja quem está no topo e onde você está." />
+        <DiscoveryCard to="/novidades" icon={Hash} title="Comunidade" description="Movimentos recentes de torneios e jogos." />
       </div>
     </div>
   );

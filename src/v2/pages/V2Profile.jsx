@@ -47,11 +47,11 @@ export default function V2Profile() {
             </div>
             <div className="flex w-full gap-3 sm:w-auto">
               <V2Button asChild variant="subtle" className="flex-1 sm:flex-none">
-                <Link to="/v2/perfil/editar"><Pencil className="h-4 w-4" /> Editar perfil</Link>
+                <Link to="/perfil/editar"><Pencil className="h-4 w-4" /> Editar perfil</Link>
               </V2Button>
               {me && (
                 <V2Button asChild className="flex-1 sm:flex-none">
-                  <Link to="/v2/ranking">Ver no ranking</Link>
+                  <Link to="/ranking">Ver no ranking</Link>
                 </V2Button>
               )}
             </div>
@@ -95,7 +95,7 @@ export default function V2Profile() {
 
       <div className="mt-8 rounded-4xl border border-dashed border-gray-200 bg-paper p-6 text-sm text-gray-500">
         A edição completa do perfil, nivelamento e privacidade continua no app atual.{' '}
-        <Link to="/v2/perfil/editar" className="font-bold text-ink underline">Abrir editor completo</Link>
+        <Link to="/perfil/editar" className="font-bold text-ink underline">Abrir editor completo</Link>
       </div>
     </div>
   );

@@ -58,7 +58,7 @@ export default function V2Bookings() {
       <V2PageIntro
         title="Minhas reservas"
         subtitle="Acompanhe suas solicitações, valores e pagamentos nas arenas."
-        action={<V2Button asChild variant="ghost" size="sm"><Link to="/v2/arenas"><Building2 className="h-4 w-4" /> Ver arenas</Link></V2Button>}
+        action={<V2Button asChild variant="ghost" size="sm"><Link to="/arenas"><Building2 className="h-4 w-4" /> Ver arenas</Link></V2Button>}
       />
 
       {isLoading ? (
@@ -69,7 +69,7 @@ export default function V2Bookings() {
             icon={CalendarClock}
             title="Você ainda não solicitou reservas"
             description="Explore as arenas, compare horários e faça seu primeiro pedido de reserva."
-            action={<V2Button asChild><Link to="/v2/arenas">Explorar arenas</Link></V2Button>}
+            action={<V2Button asChild><Link to="/arenas">Explorar arenas</Link></V2Button>}
           />
         </V2Surface>
       ) : (

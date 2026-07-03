@@ -51,7 +51,7 @@ export default function V2ModalityPage() {
         <V2Surface className="text-center">
           <Trophy className="mx-auto h-10 w-10 text-gray-300" />
           <h2 className="mt-3 font-display text-lg font-bold text-ink">Modalidade não encontrada</h2>
-          <Link to={`/v2/torneios/${tournamentId}`} className="mt-2 inline-block text-sm font-bold text-ink underline">Voltar ao torneio</Link>
+          <Link to={`/torneios/${tournamentId}`} className="mt-2 inline-block text-sm font-bold text-ink underline">Voltar ao torneio</Link>
         </V2Surface>
       </div>
     );
@@ -90,7 +90,7 @@ export default function V2ModalityPage() {
 
   return (
     <div className="mx-auto max-w-[1200px]">
-      <Link to={`/v2/torneios/${tournamentId}`} className="mb-5 inline-flex items-center gap-1.5 text-sm font-semibold text-gray-500 hover:text-ink">
+      <Link to={`/torneios/${tournamentId}`} className="mb-5 inline-flex items-center gap-1.5 text-sm font-semibold text-gray-500 hover:text-ink">
         <ArrowLeft className="h-4 w-4" /> {tournament.name}
       </Link>
 
@@ -127,7 +127,7 @@ export default function V2ModalityPage() {
               <Plus className="h-4 w-4" /> {registerLabel}
             </V2Button>
             <V2Button asChild variant="ghost" className="border-white/20 bg-white/10 text-white hover:border-white/40">
-              <Link to={`/v2/torneios/${tournamentId}/jogos`}>Ver jogos do torneio</Link>
+              <Link to={`/torneios/${tournamentId}/jogos`}>Ver jogos do torneio</Link>
             </V2Button>
           </div>
         </div>

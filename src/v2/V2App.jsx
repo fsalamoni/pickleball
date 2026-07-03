@@ -84,7 +84,7 @@ export default function V2App() {
 
           {/* Torneios */}
           <Route path="torneios" element={<V2Tournaments />} />
-          <Route path="torneios/publicos" element={<Navigate to="/v2/torneios" replace />} />
+          <Route path="torneios/publicos" element={<Navigate to="/torneios" replace />} />
           <Route path="torneios/criar" element={<V2CreateTournament />} />
           <Route path="torneios/ingressar" element={<V2JoinTournament />} />
           <Route path="torneios/guia" element={<V2FormatsGuide />} />
@@ -125,7 +125,7 @@ export default function V2App() {
           <Route path="admin/metricas" element={<V2AdminMetrics />} />
           <Route path="admin/parceiros" element={<V2AdminPartners />} />
 
-          <Route path="*" element={<Navigate to="/v2" replace />} />
+          <Route path="*" element={<Navigate to="/" replace />} />
         </Routes>
       </Suspense>
     </V2Layout>

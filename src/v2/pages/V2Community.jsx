@@ -21,9 +21,9 @@ function itemTone(type) {
 }
 
 function feedTarget(item) {
-  if (item.type === 'open_game') return '/v2/procura-jogo';
+  if (item.type === 'open_game') return '/procura-jogo';
   const id = String(item.id || '').replace(/^t_/, '');
-  return id ? `/v2/torneios/${id}` : (item.link || '/v2');
+  return id ? `/torneios/${id}` : (item.link || '/');
 }
 
 export default function V2Community() {

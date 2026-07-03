@@ -68,7 +68,7 @@ export default function V2ClubDetail() {
     try {
       await leaveClub.mutateAsync();
       toast.success('Você saiu do clube.');
-      navigate('/v2/clubes');
+      navigate('/clubes');
     } catch (err) {
       toast.error(err.message || 'Não foi possível sair do clube.');
     }
@@ -98,7 +98,7 @@ export default function V2ClubDetail() {
         <V2Surface>
           <V2EmptyState icon={Building2} title="Clube não encontrado"
             description="O clube que você procura não existe ou foi removido."
-            action={<Link to="/v2/clubes" className="rounded-full bg-ink px-6 py-3 text-sm font-bold text-white">Voltar para clubes</Link>} />
+            action={<Link to="/clubes" className="rounded-full bg-ink px-6 py-3 text-sm font-bold text-white">Voltar para clubes</Link>} />
         </V2Surface>
       </div>
     );
@@ -116,7 +116,7 @@ export default function V2ClubDetail() {
 
   return (
     <div className="mx-auto max-w-[1100px]">
-      <Link to="/v2/clubes" className="mb-5 inline-flex items-center gap-1.5 text-sm font-semibold text-gray-500 hover:text-ink">
+      <Link to="/clubes" className="mb-5 inline-flex items-center gap-1.5 text-sm font-semibold text-gray-500 hover:text-ink">
         <ArrowLeft className="h-4 w-4" /> Voltar para clubes
       </Link>
 

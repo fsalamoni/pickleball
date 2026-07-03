@@ -49,7 +49,7 @@ export default function V2AdminTournaments() {
     } catch (err) { toast.error(err.message); } finally { setDeleting(false); }
   }
 
-  if (!isPlatformAdmin) return <Navigate to="/v2" replace />;
+  if (!isPlatformAdmin) return <Navigate to="/" replace />;
 
   return (
     <div className="mx-auto max-w-[1100px]">

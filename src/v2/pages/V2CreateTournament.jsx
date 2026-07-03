@@ -49,7 +49,7 @@ export default function V2CreateTournament() {
         scoring: { ruleset: form.ruleset, win_by_two: true },
       });
       toast.success('Torneio criado!');
-      navigate(`/v2/torneios/${id}`);
+      navigate(`/torneios/${id}`);
     } catch (err) {
       toast.error(err.message || 'Falha ao criar torneio.');
     }
@@ -61,7 +61,7 @@ export default function V2CreateTournament() {
 
   return (
     <div className="mx-auto max-w-[1200px]">
-      <Link to="/v2/torneios" className="mb-5 inline-flex items-center gap-1.5 text-sm font-semibold text-gray-500 hover:text-ink">
+      <Link to="/torneios" className="mb-5 inline-flex items-center gap-1.5 text-sm font-semibold text-gray-500 hover:text-ink">
         <ArrowLeft className="h-4 w-4" /> Voltar aos torneios
       </Link>
 
@@ -143,7 +143,7 @@ export default function V2CreateTournament() {
             </div>
 
             <div className="flex justify-end gap-2 pt-2">
-              <V2Button type="button" variant="ghost" onClick={() => navigate('/v2/torneios')}>Cancelar</V2Button>
+              <V2Button type="button" variant="ghost" onClick={() => navigate('/torneios')}>Cancelar</V2Button>
               <V2Button type="submit" disabled={createMutation.isPending || isPreview}>
                 {createMutation.isPending ? 'Criando…' : 'Criar torneio'} <ArrowRight className="h-4 w-4" />
               </V2Button>

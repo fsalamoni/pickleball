@@ -71,7 +71,7 @@ export default function V2Tournament() {
         <V2Surface>
           <V2EmptyState icon={Trophy} title="Torneio não encontrado"
             description="Verifique o link ou volte para a lista de torneios."
-            action={<Link to="/v2/torneios" className="rounded-full bg-ink px-6 py-3 text-sm font-bold text-white">Voltar aos torneios</Link>} />
+            action={<Link to="/torneios" className="rounded-full bg-ink px-6 py-3 text-sm font-bold text-white">Voltar aos torneios</Link>} />
         </V2Surface>
       </div>
     );
@@ -85,7 +85,7 @@ export default function V2Tournament() {
   const location = tournament.city ? `${tournament.city}${tournament.state ? ` / ${tournament.state}` : ''}` : 'Local a definir';
 
   const activeTab = ['visao-geral', 'jogos', 'ranking', 'fotos', 'admin'].includes(tab) ? tab : 'visao-geral';
-  const goTab = (v) => navigate(`/v2/torneios/${tournamentId}/${v}`);
+  const goTab = (v) => navigate(`/torneios/${tournamentId}/${v}`);
 
   const tabs = [
     { value: 'visao-geral', label: 'Visão geral' },
@@ -97,7 +97,7 @@ export default function V2Tournament() {
 
   return (
     <div className="mx-auto max-w-[1200px]">
-      <Link to="/v2/torneios" className="mb-5 inline-flex items-center gap-1.5 text-sm font-semibold text-gray-500 hover:text-ink">
+      <Link to="/torneios" className="mb-5 inline-flex items-center gap-1.5 text-sm font-semibold text-gray-500 hover:text-ink">
         <ArrowLeft className="h-4 w-4" /> Voltar aos torneios
       </Link>
 
@@ -147,7 +147,7 @@ export default function V2Tournament() {
       {modalities.length > 0 && (
         <div className="mt-6 flex flex-wrap gap-2">
           {modalities.map((m) => (
-            <Link key={m.id} to={`/v2/torneios/${tournamentId}/modalidades/${m.id}`}>
+            <Link key={m.id} to={`/torneios/${tournamentId}/modalidades/${m.id}`}>
               <V2Badge tone="neutral">
                 {m.name} · {MODALITY_FORMAT_LABELS[m.format] || m.format}{m.skill_level ? ` · ${SKILL_LEVEL_LABELS[m.skill_level] || m.skill_level}` : ''}
               </V2Badge>

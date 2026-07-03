@@ -101,7 +101,7 @@ function TournamentGroup({ group }) {
           <div className="flex items-center gap-2">
             <Trophy className="h-4 w-4 shrink-0 text-ink" />
             {tournament ? (
-              <Link to={`/v2/torneios/${tournamentId}`} className="inline-flex items-center gap-0.5 font-bold text-ink hover:underline">
+              <Link to={`/torneios/${tournamentId}`} className="inline-flex items-center gap-0.5 font-bold text-ink hover:underline">
                 {name}
                 <ChevronRight className="h-4 w-4" />
               </Link>
@@ -144,7 +144,7 @@ export default function V2ParticipationHistoryCard() {
           <div className="rounded-3xl border border-dashed border-gray-200 bg-paper p-6 text-center">
             <Trophy className="mx-auto mb-2 h-6 w-6 text-gray-400" />
             <p className="text-sm text-gray-600">Você ainda não participou de nenhum torneio.</p>
-            <Link to="/v2/torneios/publicos" className="mt-2 inline-block text-sm font-bold text-ink hover:underline">Ver torneios disponíveis</Link>
+            <Link to="/torneios/publicos" className="mt-2 inline-block text-sm font-bold text-ink hover:underline">Ver torneios disponíveis</Link>
           </div>
         ) : (
           <>

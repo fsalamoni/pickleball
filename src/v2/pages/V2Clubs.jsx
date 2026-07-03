@@ -37,7 +37,7 @@ export default function V2Clubs() {
       <V2PageIntro
         title="Clubes"
         subtitle="Descubra clubes, crie o seu e organize sua turma."
-        action={<V2Button asChild><Link to="/v2/clubes/criar"><Plus className="h-4 w-4" /> Criar clube</Link></V2Button>}
+        action={<V2Button asChild><Link to="/clubes/criar"><Plus className="h-4 w-4" /> Criar clube</Link></V2Button>}
       />
 
       {myClubs.length > 0 && (
@@ -71,7 +71,7 @@ export default function V2Clubs() {
             icon={Building2}
             title="Nenhum clube encontrado"
             description="Ajuste a busca ou crie o primeiro clube e convide sua turma."
-            action={<V2Button asChild><Link to="/v2/clubes/criar">Criar clube</Link></V2Button>}
+            action={<V2Button asChild><Link to="/clubes/criar">Criar clube</Link></V2Button>}
           />
         </V2Surface>
       ) : (
@@ -87,7 +87,7 @@ function ClubCard({ club, mine }) {
   const location = locationText(club);
   return (
     <Link
-      to={`/v2/clubes/${club.id}`}
+      to={`/clubes/${club.id}`}
       className="group flex h-full flex-col rounded-4xl border border-gray-100 bg-paper-pure p-6 shadow-organic-sm transition-all hover:shadow-organic"
     >
       <div className="flex items-start justify-between gap-3">

@@ -43,7 +43,7 @@ export default function V2EventDetail() {
             description={membership
               ? 'O evento que você procura não existe ou foi removido.'
               : 'Este evento é privado ou foi removido. Você precisa de convite ou de ser membro do clube para acessá-lo.'}
-            action={<Link to={membership ? `/v2/clubes/${clubId}?tab=events` : `/v2/clubes/${clubId}`} className="rounded-full bg-ink px-6 py-3 text-sm font-bold text-white">{membership ? 'Voltar para eventos' : 'Ir para o clube'}</Link>}
+            action={<Link to={membership ? `/clubes/${clubId}?tab=events` : `/clubes/${clubId}`} className="rounded-full bg-ink px-6 py-3 text-sm font-bold text-white">{membership ? 'Voltar para eventos' : 'Ir para o clube'}</Link>}
           />
         </V2Surface>
       </div>
@@ -63,7 +63,7 @@ export default function V2EventDetail() {
 
   return (
     <div className="mx-auto max-w-[1000px]">
-      <Link to={`/v2/clubes/${clubId}?tab=events`} className="mb-5 inline-flex items-center gap-1.5 text-sm font-semibold text-gray-500 hover:text-ink">
+      <Link to={`/clubes/${clubId}?tab=events`} className="mb-5 inline-flex items-center gap-1.5 text-sm font-semibold text-gray-500 hover:text-ink">
         <ArrowLeft className="h-4 w-4" /> Voltar para eventos
       </Link>
 

@@ -66,7 +66,7 @@ export default function V2Tournaments() {
       <V2PageIntro
         title="Torneios"
         subtitle="Descubra eventos abertos e acompanhe os seus."
-        action={<V2Button asChild><Link to="/v2/torneios/criar"><Plus className="h-4 w-4" /> Criar torneio</Link></V2Button>}
+        action={<V2Button asChild><Link to="/torneios/criar"><Plus className="h-4 w-4" /> Criar torneio</Link></V2Button>}
       />
 
       <div className="mb-8 inline-flex rounded-full border border-gray-100 bg-paper-pure p-1.5 shadow-sm">
@@ -86,7 +86,7 @@ export default function V2Tournaments() {
             description={tab === 'mine'
               ? 'Crie o seu primeiro evento ou ingresse com um código de convite.'
               : 'Assim que houver eventos abertos, eles aparecerão aqui.'}
-            action={<V2Button asChild><Link to="/v2/torneios/criar">Criar torneio</Link></V2Button>}
+            action={<V2Button asChild><Link to="/torneios/criar">Criar torneio</Link></V2Button>}
           />
         </V2Surface>
       ) : (
@@ -119,7 +119,7 @@ function TournamentCard({ tournament }) {
 
   return (
     <Link
-      to={`/v2/torneios/${tournament.id}`}
+      to={`/torneios/${tournament.id}`}
       className="group flex h-full flex-col rounded-4xl border border-gray-100 bg-paper-pure p-6 shadow-organic-sm transition-all hover:shadow-organic sm:p-7"
     >
       <div className="flex items-start justify-between gap-3">

@@ -24,7 +24,7 @@ const CURIOSITIES = [
 
 export default function V2History() {
   const enabled = useFeatureFlag(FEATURE_FLAG.SPORT_HISTORY);
-  if (!enabled) return <Navigate to="/v2" replace />;
+  if (!enabled) return <Navigate to="/" replace />;
 
   return (
     <div className="mx-auto max-w-[900px]">

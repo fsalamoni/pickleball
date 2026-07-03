@@ -37,7 +37,7 @@ export default function V2AdminMetrics() {
     return () => { active = false; };
   }, []);
 
-  if (!isPlatformAdmin) return <Navigate to="/v2" replace />;
+  if (!isPlatformAdmin) return <Navigate to="/" replace />;
 
   return (
     <div className="mx-auto max-w-[1100px]">

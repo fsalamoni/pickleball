@@ -32,7 +32,7 @@ export default function V2ArenaManage() {
   const deleteArena = useDeleteArena();
   const [tab, setTab] = useState('reservas');
 
-  if (!enabled) return <Navigate to="/v2" replace />;
+  if (!enabled) return <Navigate to="/" replace />;
   if (isLoading) return <div className="mx-auto max-w-[1000px] space-y-4"><V2Skeleton className="h-40 rounded-4xl" /><V2Skeleton className="h-64 rounded-4xl" /></div>;
   if (!arena) {
     return (
@@ -40,14 +40,14 @@ export default function V2ArenaManage() {
         <V2Surface className="text-center">
           <Building2 className="mx-auto h-10 w-10 text-gray-300" />
           <h2 className="mt-3 font-display text-lg font-bold text-ink">Arena não encontrada</h2>
-          <Link to="/v2/arenas" className="mt-2 inline-block text-sm font-bold text-ink underline">Voltar ao diretório</Link>
+          <Link to="/arenas" className="mt-2 inline-block text-sm font-bold text-ink underline">Voltar ao diretório</Link>
         </V2Surface>
       </div>
     );
   }
 
   const canManage = arena.owner_id === user?.uid || managed.some((m) => m.id === arena.id) || isPlatformAdmin;
-  if (!canManage) return <Navigate to={`/v2/arenas/${arena.id}`} replace />;
+  if (!canManage) return <Navigate to={`/arenas/${arena.id}`} replace />;
   const isOwner = arena.owner_id === user?.uid || isPlatformAdmin;
 
   const tabs = [
@@ -62,7 +62,7 @@ export default function V2ArenaManage() {
   return (
     <div className="mx-auto max-w-[1000px]">
       <div className="mb-5 flex items-center justify-between gap-2">
-        <Link to={`/v2/arenas/${arena.id}`} className="inline-flex items-center gap-1.5 text-sm font-semibold text-gray-500 hover:text-ink">
+        <Link to={`/arenas/${arena.id}`} className="inline-flex items-center gap-1.5 text-sm font-semibold text-gray-500 hover:text-ink">
           <ArrowLeft className="h-4 w-4" /> {arena.name}
         </Link>
         {isOwner && (
@@ -71,7 +71,7 @@ export default function V2ArenaManage() {
             description="A arena, suas reservas e avaliações serão removidas permanentemente."
             confirmLabel="Excluir"
             onConfirm={async () => {
-              try { await deleteArena.mutateAsync(arena.id); toast.success('Arena excluída.'); window.location.assign('/v2/arenas'); }
+              try { await deleteArena.mutateAsync(arena.id); toast.success('Arena excluída.'); window.location.assign('/arenas'); }
               catch (err) { toast.error(err?.message || 'Não foi possível excluir.'); }
             }}
             trigger={<V2Button variant="danger" size="sm"><Trash2 className="h-4 w-4" /> Excluir</V2Button>}
