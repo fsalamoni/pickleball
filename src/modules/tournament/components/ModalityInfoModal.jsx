@@ -18,7 +18,7 @@ export default function ModalityInfoModal({ modality, tournament, registrationsC
       <DialogContent className="max-w-2xl">
         <DialogHeader>
           <DialogTitle className="flex items-center gap-2">
-            <Info className="w-5 h-5 text-emerald-600" /> {modality.name}
+            <Info className="w-5 h-5 text-ink" /> {modality.name}
           </DialogTitle>
         </DialogHeader>
         <div className="max-h-[70vh] overflow-y-auto">

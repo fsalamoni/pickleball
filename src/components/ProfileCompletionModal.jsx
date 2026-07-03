@@ -73,8 +73,8 @@ export default function ProfileCompletionModal() {
         </AlertDialogHeader>
 
         <form onSubmit={handleSubmit} className="space-y-4">
-          <div className="rounded-md border border-emerald-200 bg-emerald-50 p-3 text-sm text-emerald-900 flex items-start gap-2">
-            <AlertTriangle className="mt-0.5 h-4 w-4 shrink-0 text-emerald-700" />
+          <div className="rounded-md border border-gray-200 bg-acid/10 p-3 text-sm text-ink flex items-start gap-2">
+            <AlertTriangle className="mt-0.5 h-4 w-4 shrink-0 text-ink" />
             <span>Ao continuar, confirme dados verdadeiros. A plataforma é aberta a participantes de todas as idades.</span>
           </div>
 

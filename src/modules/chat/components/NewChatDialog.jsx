@@ -91,7 +91,7 @@ export default function NewChatDialog({ open, onOpenChange, onConfirm, excludeId
       <DialogContent className="max-w-lg">
         <DialogHeader>
           <DialogTitle className="flex items-center gap-2">
-            <Users className="h-5 w-5 text-emerald-700" />
+            <Users className="h-5 w-5 text-ink" />
             {mode === 'add' ? 'Chamar atletas para um novo grupo' : 'Nova conversa'}
           </DialogTitle>
           <DialogDescription>
@@ -103,7 +103,7 @@ export default function NewChatDialog({ open, onOpenChange, onConfirm, excludeId
 
         <div className="space-y-3">
           <div className="relative">
-            <Search className="absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-slate-400" />
+            <Search className="absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-gray-400" />
             <Input
               value={search}
               onChange={(e) => setSearch(e.target.value)}
@@ -123,7 +123,7 @@ export default function NewChatDialog({ open, onOpenChange, onConfirm, excludeId
                     delete next[m.uid];
                     return next;
                   })}
-                  className="inline-flex items-center gap-1.5 rounded-full bg-emerald-100 py-1 pl-1 pr-2 text-xs font-medium text-emerald-900 hover:bg-emerald-200"
+                  className="inline-flex items-center gap-1.5 rounded-full bg-acid/15 py-1 pl-1 pr-2 text-xs font-medium text-ink hover:bg-acid/25"
                 >
                   <UserAvatar name={m.name} photoUrl={m.photo_url} size="xs" />
                   {m.name}
@@ -133,13 +133,13 @@ export default function NewChatDialog({ open, onOpenChange, onConfirm, excludeId
             </div>
           )}
 
-          <div className="max-h-64 space-y-1 overflow-y-auto rounded-lg border border-emerald-950/10 p-1">
+          <div className="max-h-64 space-y-1 overflow-y-auto rounded-lg border border-gray-100 p-1">
             {isLoading ? (
               <div className="space-y-2 p-2">
                 {[1, 2, 3].map((i) => <Skeleton key={i} className="h-12 rounded-lg" />)}
               </div>
             ) : candidates.length === 0 ? (
-              <p className="px-3 py-8 text-center text-sm text-slate-500">
+              <p className="px-3 py-8 text-center text-sm text-gray-500">
                 {athletes.length <= 1 ? 'Ainda não há outros atletas no diretório.' : 'Nenhum atleta encontrado para a busca.'}
               </p>
             ) : (
@@ -150,16 +150,16 @@ export default function NewChatDialog({ open, onOpenChange, onConfirm, excludeId
                     key={athlete.id}
                     type="button"
                     onClick={() => toggle(athlete)}
-                    className={`flex w-full items-center gap-3 rounded-lg px-2 py-2 text-left transition-colors ${isChecked ? 'bg-emerald-50' : 'hover:bg-secondary/60'}`}
+                    className={`flex w-full items-center gap-3 rounded-lg px-2 py-2 text-left transition-colors ${isChecked ? 'bg-acid/10' : 'hover:bg-paper'}`}
                   >
                     <UserAvatar name={athlete.platform_name} photoUrl={athlete.photo_url} size="sm" />
                     <span className="min-w-0 flex-1">
-                      <span className="block truncate text-sm font-medium text-slate-900">{athlete.platform_name}</span>
-                      <span className="block truncate text-xs text-slate-500">
+                      <span className="block truncate text-sm font-medium text-ink">{athlete.platform_name}</span>
+                      <span className="block truncate text-xs text-gray-500">
                         {[athlete.city, athlete.level].filter(Boolean).join(' · ') || 'Atleta'}
                       </span>
                     </span>
-                    <span className={`flex h-5 w-5 items-center justify-center rounded-full border ${isChecked ? 'border-emerald-600 bg-emerald-600 text-white' : 'border-slate-300'}`}>
+                    <span className={`flex h-5 w-5 items-center justify-center rounded-full border ${isChecked ? 'border-ink bg-ink text-white' : 'border-gray-200'}`}>
                       {isChecked && <Check className="h-3.5 w-3.5" />}
                     </span>
                   </button>

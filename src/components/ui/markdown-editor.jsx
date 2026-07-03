@@ -33,7 +33,7 @@ function ToolbarButton({ title, onClick, children, disabled }) {
       onMouseDown={(e) => e.preventDefault()}
       onClick={onClick}
       disabled={disabled}
-      className="flex h-8 w-8 items-center justify-center rounded-md text-slate-600 transition-colors hover:bg-emerald-100 hover:text-emerald-800 disabled:opacity-40"
+      className="flex h-8 w-8 items-center justify-center rounded-md text-gray-500 transition-colors hover:bg-acid/15 hover:text-ink disabled:opacity-40"
     >
       {children}
     </button>
@@ -113,7 +113,7 @@ export function MarkdownEditor({
 
   return (
     <div className={cn('rounded-lg border border-input bg-background', disabled && 'opacity-70', className)}>
-      <div className="flex flex-wrap items-center gap-1 border-b border-emerald-950/10 px-1.5 py-1">
+      <div className="flex flex-wrap items-center gap-1 border-b border-gray-100 px-1.5 py-1">
         <ToolbarButton title="Negrito" onClick={() => applyWrap('**', '**', 'negrito')} disabled={disabled || mode === 'preview'}>
           <Bold className="h-4 w-4" />
         </ToolbarButton>
@@ -147,7 +147,7 @@ export function MarkdownEditor({
           <button
             type="button"
             onClick={() => setMode((m) => (m === 'write' ? 'preview' : 'write'))}
-            className="flex items-center gap-1.5 rounded-md px-2 py-1 text-xs font-medium text-slate-600 transition-colors hover:bg-emerald-100 hover:text-emerald-800"
+            className="flex items-center gap-1.5 rounded-md px-2 py-1 text-xs font-medium text-gray-500 transition-colors hover:bg-acid/15 hover:text-ink"
           >
             {mode === 'write' ? <><Eye className="h-3.5 w-3.5" /> Prévia</> : <><Pencil className="h-3.5 w-3.5" /> Editar</>}
           </button>
@@ -163,14 +163,14 @@ export function MarkdownEditor({
           placeholder={placeholder}
           rows={rows}
           disabled={disabled}
-          className="block w-full resize-y border-0 bg-transparent px-3 py-2.5 text-sm text-slate-800 outline-none placeholder:text-slate-400 focus-visible:ring-0"
+          className="block w-full resize-y border-0 bg-transparent px-3 py-2.5 text-sm text-ink outline-none placeholder:text-gray-400 focus-visible:ring-0"
         />
       ) : (
         <div className="min-h-[6rem] px-3 py-2.5">
           {value.trim() ? (
             <MarkdownContent>{value}</MarkdownContent>
           ) : (
-            <p className="text-sm text-slate-400">Nada para pré-visualizar ainda.</p>
+            <p className="text-sm text-gray-400">Nada para pré-visualizar ainda.</p>
           )}
         </div>
       )}

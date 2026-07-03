@@ -56,7 +56,7 @@ export default function TournamentRegistrationsTab({ tournament, isAdmin }) {
     <div className="space-y-4">
       {modalities.length === 0 ? (
         <V2Surface>
-          <div className="p-6 text-sm text-slate-500 text-center">
+          <div className="p-6 text-sm text-gray-500 text-center">
             Aguardando o admin cadastrar modalidades.
           </div>
         </V2Surface>
@@ -110,7 +110,7 @@ function ModalityRegistrationsBlock({ tournament, modality, registrations, isAdm
         <div className="flex items-start justify-between gap-2 flex-wrap">
           <div>
             <h4 className="font-semibold">{modality.name}</h4>
-            <p className="text-xs text-slate-500">
+            <p className="text-xs text-gray-500">
               {MODALITY_FORMAT_LABELS[modality.format]} · {hasUnlimitedEntries(modality.max_entries)
                 ? `${confirmed} confirmados · vagas abertas`
                 : `${confirmed}/${modality.max_entries} confirmados`}
@@ -125,9 +125,9 @@ function ModalityRegistrationsBlock({ tournament, modality, registrations, isAdm
           )}
         </div>
         {registrations.length > 0 && (
-          <div className="mt-3 arena-table-wrap">
+          <div className="mt-3 overflow-x-auto rounded-3xl border border-gray-100">
             <table className="w-full text-sm">
-              <thead className="bg-slate-50">
+              <thead className="bg-paper">
                 <tr className="text-left">
                   <th className="px-3 py-2">Inscrição</th>
                   <th className="px-3 py-2">Status</th>
@@ -148,7 +148,7 @@ function ModalityRegistrationsBlock({ tournament, modality, registrations, isAdm
                         />
                         <div className="min-w-0">
                           <div>{r.label || `${r.player_a_name}${r.player_b_name ? ' / ' + r.player_b_name : ''}`}</div>
-                          <div className="text-xs text-slate-500">
+                          <div className="text-xs text-gray-500">
                             {[r.player_a_email, r.player_b_email].filter(Boolean).join(' / ')}
                             {r.is_provisional ? ` · ${REGISTRATION_PROVISIONAL_LABEL.toLowerCase()}` : ''}
                           </div>
@@ -163,16 +163,16 @@ function ModalityRegistrationsBlock({ tournament, modality, registrations, isAdm
                     {isAdmin && (
                       <td className="px-3 py-2 text-right space-x-1">
                         <V2Button size="icon" variant="ghost" title="Editar dados do(s) jogador(es)" aria-label="Editar inscrição" onClick={() => setEditTarget(r)}>
-                          <Pencil className="w-4 h-4 text-slate-600" />
+                          <Pencil className="w-4 h-4 text-gray-500" />
                         </V2Button>
                         {r.status === REGISTRATION_STATUS.PENDING_PAYMENT && (
                           <V2Button size="icon" variant="ghost" title="Confirmar pagamento" onClick={() => confirmMutation.mutate(r.id)}>
-                            <Check className="w-4 h-4 text-emerald-600" />
+                            <Check className="w-4 h-4 text-green-600" />
                           </V2Button>
                         )}
                         {waitlistOn && r.status === REGISTRATION_STATUS.WAITLIST && (
                           <V2Button size="icon" variant="ghost" title="Promover da lista de espera" onClick={() => promoteMutation.mutate(r.id)}>
-                            <ArrowUp className="w-4 h-4 text-emerald-600" />
+                            <ArrowUp className="w-4 h-4 text-green-600" />
                           </V2Button>
                         )}
                         {r.status !== REGISTRATION_STATUS.CANCELLED && (

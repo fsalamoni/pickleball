@@ -124,7 +124,7 @@ export function PendingAttachmentList({ items = [], onRemove, className }) {
       {items.map((item) => (
         <div
           key={item.path}
-          className="group relative flex items-center gap-2 overflow-hidden rounded-lg border border-emerald-950/10 bg-secondary/40"
+          className="group relative flex items-center gap-2 overflow-hidden rounded-lg border border-gray-100 bg-secondary/40"
         >
           {item.kind === 'image' ? (
             <PhotoLightbox
@@ -134,10 +134,10 @@ export function PendingAttachmentList({ items = [], onRemove, className }) {
             />
           ) : (
             <div className="flex h-16 w-44 items-center gap-2 px-3">
-              <FileText className="h-6 w-6 shrink-0 text-emerald-700" />
+              <FileText className="h-6 w-6 shrink-0 text-ink" />
               <div className="min-w-0">
-                <div className="truncate text-xs font-medium text-slate-800">{item.name}</div>
-                <div className="text-[11px] text-slate-500">{formatBytes(item.size)}</div>
+                <div className="truncate text-xs font-medium text-ink">{item.name}</div>
+                <div className="text-[11px] text-gray-500">{formatBytes(item.size)}</div>
               </div>
             </div>
           )}
@@ -166,7 +166,7 @@ export function AttachmentGallery({ attachments = [], className }) {
       {images.length > 0 && (
         <div className="grid grid-cols-2 gap-2 sm:grid-cols-3">
           {images.map((image) => (
-            <div key={image.path || image.url} className="group relative overflow-hidden rounded-lg border border-emerald-950/10">
+            <div key={image.path || image.url} className="group relative overflow-hidden rounded-lg border border-gray-100">
               <PhotoLightbox
                 src={image.url}
                 alt={image.name || ''}
@@ -192,14 +192,14 @@ export function AttachmentGallery({ attachments = [], className }) {
               key={file.path || file.url}
               type="button"
               onClick={() => downloadAttachment(file.url, file.name)}
-              className="flex max-w-full items-center gap-2 rounded-lg border border-emerald-950/10 bg-secondary/40 px-3 py-2 text-left transition-colors hover:border-emerald-400/50 hover:bg-emerald-50"
+              className="flex max-w-full items-center gap-2 rounded-lg border border-gray-100 bg-secondary/40 px-3 py-2 text-left transition-colors hover:border-emerald-400/50 hover:bg-acid/10"
             >
-              <FileText className="h-5 w-5 shrink-0 text-emerald-700" />
+              <FileText className="h-5 w-5 shrink-0 text-ink" />
               <span className="min-w-0">
-                <span className="block truncate text-sm font-medium text-slate-800">{file.name || 'Arquivo'}</span>
-                {file.size ? <span className="block text-[11px] text-slate-500">{formatBytes(file.size)}</span> : null}
+                <span className="block truncate text-sm font-medium text-ink">{file.name || 'Arquivo'}</span>
+                {file.size ? <span className="block text-[11px] text-gray-500">{formatBytes(file.size)}</span> : null}
               </span>
-              <Download className="ml-1 h-4 w-4 shrink-0 text-slate-400" />
+              <Download className="ml-1 h-4 w-4 shrink-0 text-gray-400" />
             </button>
           ))}
         </div>

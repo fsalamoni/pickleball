@@ -106,7 +106,7 @@ export default function BookingRequestDialog({ arena, open, onOpenChange }) {
                 onClick={() => setKind(k)}
                 className={cn(
                   'flex-1 rounded-md border px-3 py-2 text-sm font-medium transition-colors',
-                  kind === k ? 'border-emerald-600 bg-emerald-600 text-white' : 'border-slate-200 text-slate-600 hover:bg-slate-50',
+                  kind === k ? 'border-ink bg-ink text-white' : 'border-gray-200 text-gray-500 hover:bg-paper',
                 )}
               >
                 {label}
@@ -173,16 +173,16 @@ export default function BookingRequestDialog({ arena, open, onOpenChange }) {
           </div>
 
           {candidateSlots.length > 0 && (
-            <div className="rounded-[1rem] border border-emerald-950/10 bg-white/75 p-3">
-              <div className="text-xs font-semibold uppercase tracking-[0.16em] text-emerald-700/75">Prévia da agenda solicitada</div>
+            <div className="rounded-[1rem] border border-gray-100 bg-white/75 p-3">
+              <div className="text-xs font-semibold uppercase tracking-[0.16em] text-gray-400">Prévia da agenda solicitada</div>
               <div className="mt-2 flex flex-wrap gap-2">
                 {candidateSlots.slice(0, 8).map((slot) => (
-                  <span key={`${slot.date}_${slot.start}`} className="rounded-full border border-emerald-950/10 bg-secondary/35 px-3 py-1 text-xs text-slate-700">
+                  <span key={`${slot.date}_${slot.start}`} className="rounded-full border border-gray-100 bg-secondary/35 px-3 py-1 text-xs text-slate-700">
                     {slotLabel(slot)}
                   </span>
                 ))}
                 {candidateSlots.length > 8 && (
-                  <span className="rounded-full border border-emerald-950/10 bg-secondary/35 px-3 py-1 text-xs text-slate-700">
+                  <span className="rounded-full border border-gray-100 bg-secondary/35 px-3 py-1 text-xs text-slate-700">
                     +{candidateSlots.length - 8} horário(s)
                   </span>
                 )}
@@ -197,11 +197,11 @@ export default function BookingRequestDialog({ arena, open, onOpenChange }) {
           )}
 
           {upcomingConfirmedSlots.length > 0 && (
-            <div className="rounded-[1rem] border border-emerald-950/10 bg-secondary/35 p-3">
-              <div className="text-xs font-semibold uppercase tracking-[0.16em] text-emerald-700/75">Próximos horários já confirmados</div>
+            <div className="rounded-[1rem] border border-gray-100 bg-secondary/35 p-3">
+              <div className="text-xs font-semibold uppercase tracking-[0.16em] text-gray-400">Próximos horários já confirmados</div>
               <div className="mt-2 flex flex-wrap gap-2">
                 {upcomingConfirmedSlots.map((slot) => (
-                  <span key={`confirmed_${slot.date}_${slot.start}`} className="rounded-full border border-emerald-950/10 bg-white/75 px-3 py-1 text-xs text-slate-700">
+                  <span key={`confirmed_${slot.date}_${slot.start}`} className="rounded-full border border-gray-100 bg-white/75 px-3 py-1 text-xs text-slate-700">
                     {slotLabel(slot)}
                   </span>
                 ))}
@@ -210,9 +210,9 @@ export default function BookingRequestDialog({ arena, open, onOpenChange }) {
           )}
 
           {estimate && (
-            <div className="rounded-lg bg-emerald-50 p-3 text-sm text-emerald-800">
+            <div className="rounded-lg bg-acid/10 p-3 text-sm text-ink">
               Estimativa: <strong>{formatPrice(estimate.price)}</strong>
-              <span className="text-emerald-700/70"> · {estimate.label} (por horário; a arena confirma o valor final)</span>
+              <span className="text-ink/70"> · {estimate.label} (por horário; a arena confirma o valor final)</span>
             </div>
           )}
         </div>

@@ -28,7 +28,7 @@ export function CollapsibleSection({
 }) {
   const [open, setOpen] = useState(defaultOpen);
   return (
-    <div className={cn('rounded-md border border-slate-200 bg-white', className)}>
+    <div className={cn('rounded-md border border-gray-200 bg-white', className)}>
       <div className={cn('flex items-center justify-between gap-2 px-3 py-2', headerClassName)}>
         <button
           type="button"
@@ -37,14 +37,14 @@ export function CollapsibleSection({
           className="flex min-w-0 flex-1 items-center gap-2 text-left"
         >
           <ChevronDown
-            className={cn('h-4 w-4 shrink-0 text-slate-500 transition-transform', !open && '-rotate-90')}
+            className={cn('h-4 w-4 shrink-0 text-gray-500 transition-transform', !open && '-rotate-90')}
           />
           <span className="min-w-0">
             <span className="flex items-center gap-2 flex-wrap">
-              <span className="font-semibold text-slate-800 truncate">{title}</span>
+              <span className="font-semibold text-ink truncate">{title}</span>
               {badges}
             </span>
-            {subtitle && <span className="block text-xs text-slate-500 mt-0.5">{subtitle}</span>}
+            {subtitle && <span className="block text-xs text-gray-500 mt-0.5">{subtitle}</span>}
           </span>
         </button>
         {actions && <div className="flex shrink-0 items-center gap-1 flex-wrap justify-end">{actions}</div>}

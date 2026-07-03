@@ -120,7 +120,7 @@ export default function V2BookingRow({ booking, perspective }) {
           <span>Proposto: <strong className="text-ink">{formatPrice(booking.proposed_price)}</strong></span>
         )}
         {booking.agreed_price != null && (
-          <span className="text-emerald-700">Acordado: <strong>{formatPrice(booking.agreed_price)}</strong></span>
+          <span className="text-green-700">Acordado: <strong>{formatPrice(booking.agreed_price)}</strong></span>
         )}
       </div>
 

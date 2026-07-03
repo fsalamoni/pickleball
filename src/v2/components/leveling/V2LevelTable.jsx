@@ -81,7 +81,7 @@ export default function V2LevelTable() {
                   <div className="mt-6 grid gap-8 md:grid-cols-3">
                     <InfoList title="Características" dotTone="bg-ink" items={level.characteristics} />
                     <div className="space-y-6">
-                      <InfoList title="Pontos Fortes" dotTone="bg-emerald-500" items={level.strengths} marker="✓" />
+                      <InfoList title="Pontos Fortes" dotTone="bg-green-500" items={level.strengths} marker="✓" />
                       <InfoList title="Pontos a Melhorar" dotTone="bg-red-400" items={level.weaknesses} marker="✗" />
                     </div>
                     <div>

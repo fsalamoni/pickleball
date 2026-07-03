@@ -59,7 +59,7 @@ export default function ArenaShareDialog({ arena, open, onOpenChange }) {
           <DialogDescription>Baixe o card, copie o link ou envie pelo WhatsApp.</DialogDescription>
         </DialogHeader>
 
-        <div ref={cardRef} className="overflow-hidden rounded-2xl border border-emerald-100 bg-gradient-to-br from-emerald-600 to-emerald-800 p-5 text-white">
+        <div ref={cardRef} className="overflow-hidden rounded-2xl border border-acid/20 bg-gradient-to-br from-emerald-600 to-emerald-800 p-5 text-white">
           <div className="flex items-center gap-2 text-xs font-semibold uppercase tracking-[0.2em] text-emerald-50/80">
             <Building className="h-4 w-4" /> Arena · Pickleholics
           </div>

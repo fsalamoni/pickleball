@@ -12,10 +12,9 @@ import {
   CalendarDays,
   ShieldCheck,
 } from 'lucide-react';
-import { Button } from '@/components/ui/button';
-import { Card, CardContent } from '@/components/ui/card';
 import InstallAppButton from '@/components/InstallAppButton';
 import { useAuth } from '@/core/lib/FirebaseAuthContext';
+import { V2Button } from '@/v2/ui/primitives';
 
 const HERO_STATS = [
   { value: '500+', label: 'inscritos por modalidade com lista de espera e fluxo claro' },
@@ -90,107 +89,85 @@ export default function Landing() {
   const secondaryHref = isAuthenticated ? '/torneios/ingressar' : '/login';
 
   return (
-    <div className="relative overflow-hidden arena-page">
-      <div className="absolute inset-x-0 top-0 h-[34rem] bg-[radial-gradient(circle_at_top,rgba(16,185,129,0.16),transparent_55%)]" />
-      <div className="absolute left-1/2 top-28 hidden h-[32rem] w-[32rem] -translate-x-1/2 rounded-full bg-lime-300/15 blur-3xl lg:block" />
-
-      <header className="sticky top-0 z-40 border-b border-white/60 bg-white/70 backdrop-blur-xl">
-        <div className="mx-auto flex max-w-7xl items-center justify-between gap-3 px-4 py-3 sm:px-6 sm:py-4">
-          <Link to="/" className="flex items-center gap-3 text-slate-950">
-            <div className="flex h-11 w-11 items-center justify-center rounded-2xl border border-emerald-200/80 bg-white/80 shadow-[0_12px_30px_-20px_rgba(15,23,42,0.45)]">
-              <Trophy className="h-5 w-5 text-emerald-700" />
-            </div>
-            <div className="min-w-0">
-              <span className="block text-sm font-semibold uppercase tracking-[0.24em] text-emerald-700/80">PickleRush</span>
-              <span className="hidden text-sm font-medium text-slate-700 sm:block">Torneios com presença de evento</span>
-            </div>
+    <div className="v2-root min-h-screen bg-paper font-inter text-ink">
+      {/* Header */}
+      <header className="sticky top-0 z-40 border-b border-gray-100 bg-paper/80 backdrop-blur-xl">
+        <div className="mx-auto flex max-w-7xl items-center justify-between gap-3 px-4 py-4 sm:px-6">
+          <Link to="/" className="flex items-center gap-3">
+            <img src="/logo-claro.png" alt="PickleRush" className="h-9 w-9 object-contain" />
+            <span className="font-display text-2xl font-bold tracking-tight text-ink">PickleRush</span>
           </Link>
 
-          <div className="flex items-center gap-2">
+          <div className="flex items-center gap-1.5 sm:gap-2">
             <nav className="hidden items-center gap-1 md:flex">
-              <Button asChild variant="ghost" size="sm">
-                <Link to="/regras">Regras</Link>
-              </Button>
-              <Button asChild variant="ghost" size="sm">
-                <Link to="/nivelamento">Nivelamento</Link>
-              </Button>
-              <Button asChild variant="ghost" size="sm">
-                <Link to="/conduta">Fair Play</Link>
-              </Button>
+              <V2Button asChild variant="ghost" size="sm"><Link to="/regras">Regras</Link></V2Button>
+              <V2Button asChild variant="ghost" size="sm"><Link to="/nivelamento">Nivelamento</Link></V2Button>
+              <V2Button asChild variant="ghost" size="sm"><Link to="/conduta">Fair Play</Link></V2Button>
             </nav>
-            <Button asChild size="sm">
+            <V2Button asChild size="sm">
               <Link to={isAuthenticated ? '/' : '/login'}>
-                {isAuthenticated ? (
-                  <>
-                    <span className="sm:hidden">Painel</span>
-                    <span className="hidden sm:inline">Abrir painel</span>
-                  </>
-                ) : (
-                  <>
-                    <span className="sm:hidden">Entrar</span>
-                    <span className="hidden sm:inline">Entrar com Google</span>
-                  </>
-                )}
+                {isAuthenticated ? 'Abrir painel' : 'Entrar com Google'}
               </Link>
-            </Button>
+            </V2Button>
           </div>
         </div>
       </header>
 
-      <main className="relative">
-        <section className="mx-auto grid max-w-7xl gap-14 px-6 pb-16 pt-16 lg:grid-cols-[1.15fr,0.85fr] lg:items-center lg:pt-24">
+      <main>
+        {/* Hero */}
+        <section className="mx-auto grid max-w-7xl gap-12 px-6 pb-16 pt-14 lg:grid-cols-[1.1fr,0.9fr] lg:items-center lg:pt-20">
           <div className="max-w-3xl">
-            <span className="arena-chip">
-              <Sparkles className="h-3.5 w-3.5 text-emerald-700" /> Plataforma completa para torneios de pickleball no Brasil
+            <span className="inline-flex items-center gap-1.5 rounded-full border border-gray-200 bg-paper-pure px-3 py-1 text-xs font-bold text-ink shadow-sm">
+              <Sparkles className="h-3.5 w-3.5 text-acid-dark" /> Plataforma completa para torneios de pickleball no Brasil
             </span>
-            <h1 className="mt-6 text-[2rem] font-semibold leading-[1.05] text-slate-950 sm:text-4xl sm:leading-[0.95] md:text-6xl md:leading-[0.92] xl:text-[5.2rem]">
+            <h1 className="mt-6 font-display text-4xl font-bold leading-[1.02] tracking-tight text-ink sm:text-5xl md:text-6xl xl:text-7xl">
               O pickleball ganha uma plataforma para evento, comunidade e continuidade.
             </h1>
-            <p className="mt-6 max-w-2xl text-lg leading-8 text-slate-600 md:text-xl">
+            <p className="mt-6 max-w-2xl text-lg leading-8 text-gray-500 md:text-xl">
               Crie torneios com estrutura profissional, publique modalidades e regras, acompanhe jogos e ranking, conecte atletas, clubes e arenas e mantenha o esporte ativo para além do fim de semana do evento.
             </p>
 
             <div className="mt-8 flex flex-wrap gap-3">
-              <Button asChild size="lg">
+              <V2Button asChild size="lg">
                 <Link to={primaryHref}>
                   {isAuthenticated ? 'Criar novo torneio' : 'Começar com Google'}
                   <ArrowRight className="h-4 w-4" />
                 </Link>
-              </Button>
-              <Button asChild variant="outline" size="lg">
+              </V2Button>
+              <V2Button asChild variant="ghost" size="lg">
                 <Link to={secondaryHref}>
                   {isAuthenticated ? 'Ingressar com código' : 'Explorar como funciona'}
                   <ChevronRight className="h-4 w-4" />
                 </Link>
-              </Button>
-              <Button asChild variant="outline" size="lg">
+              </V2Button>
+              <V2Button asChild variant="ghost" size="lg">
                 <Link to="/torneios/publicos">
                   Ver torneios públicos
                   <ChevronRight className="h-4 w-4" />
                 </Link>
-              </Button>
+              </V2Button>
               <InstallAppButton size="lg" variant="outline" label="Baixar o app" />
             </div>
 
             <div className="mt-10 grid gap-3 sm:grid-cols-3">
               {HERO_STATS.map((item) => (
-                <div key={item.value} className="arena-panel rounded-[1.5rem] p-4">
-                  <div className="text-2xl font-semibold text-slate-950">{item.value}</div>
-                  <p className="mt-1 text-sm leading-6 text-slate-600">{item.label}</p>
+                <div key={item.value} className="rounded-3xl border border-gray-100 bg-paper-pure p-4 shadow-organic-sm">
+                  <div className="font-display text-2xl font-bold text-ink">{item.value}</div>
+                  <p className="mt-1 text-sm leading-6 text-gray-500">{item.label}</p>
                 </div>
               ))}
             </div>
           </div>
 
-          <div className="relative lg:pt-10">
-            <div className="absolute inset-0 rounded-[2.25rem] bg-gradient-to-br from-emerald-300/25 via-lime-200/10 to-transparent blur-3xl" />
-            <div className="relative overflow-hidden rounded-[2.25rem] arena-panel-strong p-8 lg:p-10">
-              <div className="absolute inset-0 bg-[radial-gradient(circle_at_top_right,rgba(253,224,71,0.18),transparent_30%),linear-gradient(180deg,transparent,rgba(15,23,42,0.12))]" />
-              <div className="relative">
-                <span className="inline-flex items-center gap-2 rounded-full border border-white/15 bg-white/10 px-3 py-1 text-xs font-semibold uppercase tracking-[0.2em] text-emerald-50/80">
+          {/* Hero dark panel */}
+          <div className="relative lg:pt-6">
+            <div className="relative overflow-hidden rounded-4xl bg-mesh p-8 shadow-organic lg:p-10">
+              <div className="absolute -right-10 -top-10 h-56 w-56 rounded-full bg-acid opacity-20 blur-[80px]" />
+              <div className="relative z-10">
+                <span className="inline-flex items-center gap-2 rounded-full border border-white/10 bg-white/10 px-3 py-1 text-xs font-bold uppercase tracking-widest text-acid">
                   <CalendarDays className="h-3.5 w-3.5" /> Pronto para abrir inscrições
                 </span>
-                <h2 className="mt-5 text-2xl font-semibold leading-tight text-white sm:text-3xl lg:text-4xl">
+                <h2 className="mt-5 font-display text-2xl font-bold leading-tight text-white sm:text-3xl lg:text-4xl">
                   Do cadastro ao pódio, com presença contínua dentro do esporte.
                 </h2>
 
@@ -207,6 +184,7 @@ export default function Landing() {
           </div>
         </section>
 
+        {/* Feature cards */}
         <section className="mx-auto max-w-7xl px-6 pb-16">
           <div className="grid gap-5 md:grid-cols-2 xl:grid-cols-3">
             {FEATURE_CARDS.map((feature) => (
@@ -215,65 +193,74 @@ export default function Landing() {
           </div>
         </section>
 
+        {/* Journey */}
         <section className="mx-auto max-w-7xl px-6 pb-20">
           <div className="grid gap-6 lg:grid-cols-[1fr,0.92fr]">
-            <div className="arena-panel rounded-[2rem] p-8 lg:p-10">
-              <span className="arena-chip">Jornada do evento</span>
-              <h2 className="mt-5 text-2xl font-semibold leading-tight text-slate-950 sm:text-3xl lg:text-4xl">
+            <div className="rounded-4xl border border-gray-100 bg-paper-pure p-8 shadow-organic-sm lg:p-10">
+              <span className="inline-flex items-center rounded-full border border-gray-200 bg-paper px-3 py-1 text-xs font-bold uppercase tracking-widest text-gray-500">Jornada do evento</span>
+              <h2 className="mt-5 font-display text-2xl font-bold leading-tight text-ink sm:text-3xl lg:text-4xl">
                 Como a plataforma acompanha cada etapa do torneio.
               </h2>
 
               <div className="mt-8 grid gap-4 md:grid-cols-2 xl:grid-cols-4">
                 {JOURNEY_STEPS.map((item) => (
-                  <div key={item.step} className="rounded-[1.5rem] border border-emerald-950/10 bg-secondary/40 p-5">
-                    <div className="text-sm font-semibold uppercase tracking-[0.24em] text-emerald-700/75">{item.step}</div>
-                    <h3 className="mt-3 text-xl font-semibold text-slate-950">{item.title}</h3>
-                    <p className="mt-2 text-sm leading-6 text-slate-600">{item.desc}</p>
+                  <div key={item.step} className="rounded-3xl border border-gray-100 bg-paper p-5">
+                    <div className="font-display text-sm font-bold uppercase tracking-widest text-acid-dark">{item.step}</div>
+                    <h3 className="mt-3 font-display text-lg font-bold text-ink">{item.title}</h3>
+                    <p className="mt-2 text-sm leading-6 text-gray-500">{item.desc}</p>
                   </div>
                 ))}
               </div>
             </div>
 
-            <div className="arena-panel rounded-[2rem] p-8 lg:p-10">
-              <div className="rounded-[1.75rem] border border-emerald-300/30 bg-gradient-to-br from-emerald-50 to-lime-50 p-6">
-                <BookOpen className="h-10 w-10 text-emerald-700" />
-                <h3 className="mt-4 text-2xl font-semibold text-slate-950">Entre pelo conteúdo, continue pela participação</h3>
-                <p className="mt-2 text-sm leading-6 text-slate-600">
-                  Conheça as <Link to="/regras" className="font-semibold text-emerald-800 underline-offset-4 hover:underline">regras oficiais</Link>, descubra seu nível com o <Link to="/nivelamento" className="font-semibold text-emerald-800 underline-offset-4 hover:underline">formulário de nivelamento</Link> e depois encontre torneios, clubes e arenas para transformar interesse em presença real na comunidade.
+            <div className="rounded-4xl border border-gray-100 bg-paper-pure p-8 shadow-organic-sm lg:p-10">
+              <div className="flex h-full flex-col justify-center rounded-3xl border border-acid/30 bg-acid/10 p-6">
+                <div className="flex h-14 w-14 items-center justify-center rounded-2xl bg-ink text-acid">
+                  <BookOpen className="h-7 w-7" />
+                </div>
+                <h3 className="mt-5 font-display text-2xl font-bold text-ink">Entre pelo conteúdo, continue pela participação</h3>
+                <p className="mt-3 text-sm leading-7 text-gray-600">
+                  Conheça as <Link to="/regras" className="font-bold text-ink underline-offset-4 hover:underline">regras oficiais</Link>, descubra seu nível com o <Link to="/nivelamento" className="font-bold text-ink underline-offset-4 hover:underline">formulário de nivelamento</Link> e depois encontre torneios, clubes e arenas para transformar interesse em presença real na comunidade.
                 </p>
               </div>
             </div>
           </div>
         </section>
 
+        {/* CTA */}
         <section className="mx-auto max-w-7xl px-6 pb-24">
-          <div className="arena-panel-strong flex flex-col gap-8 rounded-[2rem] px-8 py-10 lg:flex-row lg:items-center lg:justify-between lg:px-10">
-            <div className="max-w-3xl">
-              <div className="text-sm font-semibold uppercase tracking-[0.24em] text-emerald-50/80">Público, organizadores e atletas</div>
-              <h2 className="mt-3 text-2xl font-semibold leading-tight text-white sm:text-3xl lg:text-4xl">
+          <div className="relative flex flex-col gap-8 overflow-hidden rounded-4xl bg-mesh px-8 py-10 shadow-organic lg:flex-row lg:items-center lg:justify-between lg:px-12">
+            <div className="absolute -right-10 -top-10 h-56 w-56 rounded-full bg-acid opacity-20 blur-[80px]" />
+            <div className="relative z-10 max-w-3xl">
+              <div className="font-display text-xs font-bold uppercase tracking-widest text-acid">Público, organizadores e atletas</div>
+              <h2 className="mt-3 font-display text-2xl font-bold leading-tight text-white sm:text-3xl lg:text-4xl">
                 Traga sua operação, sua comunidade e sua presença digital para o mesmo lugar.
               </h2>
             </div>
-            <div className="flex flex-wrap gap-3">
-              <Button asChild size="lg" className="bg-white text-slate-950 hover:bg-emerald-50">
+            <div className="relative z-10 flex flex-wrap gap-3">
+              <V2Button asChild size="lg">
                 <Link to={primaryHref}>{isAuthenticated ? 'Abrir meu torneio' : 'Entrar na plataforma'}</Link>
-              </Button>
-              <Button asChild size="lg" variant="outline" className="border-white/20 bg-white/10 text-white hover:bg-white/15 hover:text-white">
+              </V2Button>
+              <V2Button asChild variant="ghost" size="lg" className="border-white/20 bg-white/10 text-white hover:border-white/40 hover:bg-white/15">
                 <Link to="/torneios/publicos">Explorar torneios públicos</Link>
-              </Button>
+              </V2Button>
             </div>
           </div>
         </section>
       </main>
 
-      <footer className="border-t border-white/60 bg-white/50 py-6 backdrop-blur-xl">
-        <div className="mx-auto flex max-w-7xl flex-wrap items-center justify-between gap-4 px-6 text-sm text-slate-600">
-          <span>© {new Date().getFullYear()} PickleRush</span>
+      {/* Footer */}
+      <footer className="border-t border-gray-100 bg-paper-pure py-6">
+        <div className="mx-auto flex max-w-7xl flex-wrap items-center justify-between gap-4 px-6 text-sm text-gray-500">
+          <div className="flex items-center gap-2">
+            <img src="/logo-claro.png" alt="PickleRush" className="h-6 w-6 object-contain" />
+            <span>© {new Date().getFullYear()} PickleRush</span>
+          </div>
           <div className="flex flex-wrap gap-4">
-            <Link to="/regras" className="transition-colors hover:text-slate-950">Regras</Link>
-            <Link to="/nivelamento" className="transition-colors hover:text-slate-950">Nivelamento</Link>
-            <Link to="/politica-uso" className="transition-colors hover:text-slate-950">Política de Uso</Link>
-            <Link to="/conduta" className="transition-colors hover:text-slate-950">Conduta &amp; Fair Play</Link>
+            <Link to="/regras" className="transition-colors hover:text-ink">Regras</Link>
+            <Link to="/nivelamento" className="transition-colors hover:text-ink">Nivelamento</Link>
+            <Link to="/politica-uso" className="transition-colors hover:text-ink">Política de Uso</Link>
+            <Link to="/conduta" className="transition-colors hover:text-ink">Conduta &amp; Fair Play</Link>
           </div>
         </div>
       </footer>
@@ -283,23 +270,21 @@ export default function Landing() {
 
 function FeatureCard({ icon: Icon, title, desc }) {
   return (
-    <Card className="h-full rounded-[1.75rem] border-white/80 bg-white/80 transition-all duration-300 hover:-translate-y-1 hover:shadow-[0_24px_50px_-30px_rgba(15,23,42,0.38)]">
-      <CardContent className="p-7">
-        <div className="mb-4 flex h-12 w-12 items-center justify-center rounded-2xl bg-emerald-100 text-emerald-800">
-          <Icon className="h-5 w-5" />
-        </div>
-        <h3 className="text-xl font-semibold text-slate-950">{title}</h3>
-        <p className="mt-2 text-sm leading-7 text-slate-600">{desc}</p>
-      </CardContent>
-    </Card>
+    <div className="h-full rounded-4xl border border-gray-100 bg-paper-pure p-7 shadow-organic-sm transition-all duration-300 hover:-translate-y-1 hover:shadow-organic">
+      <div className="mb-4 flex h-12 w-12 items-center justify-center rounded-2xl bg-ink text-acid">
+        <Icon className="h-5 w-5" />
+      </div>
+      <h3 className="font-display text-xl font-bold text-ink">{title}</h3>
+      <p className="mt-2 text-sm leading-7 text-gray-500">{desc}</p>
+    </div>
   );
 }
 
 function HighlightBox({ title, desc }) {
   return (
-    <div className="rounded-[1.35rem] border border-white/10 bg-white/10 p-4 backdrop-blur-sm">
-      <div className="text-sm font-semibold text-white">{title}</div>
-      <p className="mt-1 text-xs leading-6 text-emerald-50/75">{desc}</p>
+    <div className="rounded-2xl border border-white/10 bg-white/5 p-4 backdrop-blur-sm">
+      <div className="text-sm font-bold text-white">{title}</div>
+      <p className="mt-1 text-xs leading-6 text-white/60">{desc}</p>
     </div>
   );
 }

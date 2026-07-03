@@ -3,8 +3,7 @@ import { Link, useNavigate } from 'react-router-dom';
 import { toast } from 'sonner';
 import { ArrowRight, Sparkles, Trophy } from 'lucide-react';
 import { useAuth } from '@/core/lib/FirebaseAuthContext';
-import { Button } from '@/components/ui/button';
-import { Card, CardContent, CardHeader, CardTitle, CardDescription } from '@/components/ui/card';
+import { V2Button } from '@/v2/ui/primitives';
 
 const LOGIN_HIGHLIGHTS = [
   'Acesse torneios, ranking e ferramentas com menos atrito.',
@@ -39,60 +38,63 @@ export default function Login() {
   if (isLoadingAuth) return null;
 
   return (
-    <div className="relative min-h-screen overflow-hidden arena-page">
-      <div className="absolute inset-x-0 top-0 h-[28rem] bg-[radial-gradient(circle_at_top,rgba(16,185,129,0.2),transparent_58%)]" />
+    <div className="v2-root relative min-h-screen overflow-hidden bg-paper font-inter text-ink">
       <div className="relative mx-auto grid min-h-screen max-w-6xl gap-8 px-6 py-8 lg:grid-cols-[1.05fr,0.95fr] lg:items-center">
-        <div className="hidden h-full min-h-[42rem] flex-col justify-between rounded-[2.25rem] arena-panel-strong p-8 lg:flex">
-          <div>
-            <Link to="/" className="inline-flex items-center gap-3 text-white">
-              <img src="/logo-escuro.png" alt="PickleRush" className="h-12 w-auto object-contain object-left" />
-              <div className="flex flex-col justify-center pt-1">
-                <span className="block text-2xl font-bold tracking-tight text-white">PickleRush</span>
-              </div>
+        {/* Painel escuro (branding) */}
+        <div className="relative hidden h-full min-h-[42rem] flex-col justify-between overflow-hidden rounded-4xl bg-mesh p-10 shadow-organic lg:flex">
+          <div className="absolute -right-10 -top-10 h-56 w-56 rounded-full bg-acid opacity-20 blur-[80px]" />
+          <div className="relative z-10">
+            <Link to="/" className="inline-flex items-center gap-3">
+              <img src="/logo-escuro.png" alt="PickleRush" className="h-11 w-auto object-contain object-left" />
+              <span className="font-display text-2xl font-bold tracking-tight text-white">PickleRush</span>
             </Link>
           </div>
 
-          <div>
-            <span className="inline-flex items-center gap-2 rounded-full border border-white/15 bg-white/10 px-3 py-1 text-xs font-semibold uppercase tracking-[0.2em] text-emerald-50/80">
+          <div className="relative z-10">
+            <span className="inline-flex items-center gap-2 rounded-full border border-white/10 bg-white/10 px-3 py-1 text-xs font-bold uppercase tracking-widest text-acid">
               <Sparkles className="h-3.5 w-3.5" /> Entrada principal da plataforma
             </span>
-            <h1 className="mt-6 text-3xl font-semibold leading-tight text-white sm:text-4xl sm:leading-[0.95] lg:text-5xl">
+            <h1 className="mt-6 font-display text-3xl font-bold leading-tight text-white sm:text-4xl lg:text-5xl">
               Entre para criar, administrar e acompanhar cada modalidade do seu torneio.
             </h1>
 
             <div className="mt-8 grid gap-3">
               {LOGIN_HIGHLIGHTS.map((item) => (
-                <div key={item} className="rounded-[1.35rem] border border-white/10 bg-white/10 p-4 text-sm leading-6 text-emerald-50/80 backdrop-blur-sm">
+                <div key={item} className="rounded-2xl border border-white/10 bg-white/5 p-4 text-sm leading-6 text-white/70 backdrop-blur-sm">
                   {item}
                 </div>
               ))}
             </div>
           </div>
 
-          <div className="flex flex-wrap gap-3 text-sm text-emerald-50/75">
-            <Link to="/regras" className="transition-colors hover:text-white">Regras oficiais</Link>
-            <Link to="/nivelamento" className="transition-colors hover:text-white">Nivelamento</Link>
-            <Link to="/conduta" className="transition-colors hover:text-white">Fair Play</Link>
+          <div className="relative z-10 flex flex-wrap gap-4 text-sm text-white/60">
+            <Link to="/regras" className="transition-colors hover:text-acid">Regras oficiais</Link>
+            <Link to="/nivelamento" className="transition-colors hover:text-acid">Nivelamento</Link>
+            <Link to="/conduta" className="transition-colors hover:text-acid">Fair Play</Link>
           </div>
         </div>
 
+        {/* Cartão de login */}
         <div className="flex items-center justify-center">
-          <Card className="w-full max-w-lg rounded-[2.25rem] border-white/80 bg-white/90 p-1.5 shadow-[0_35px_80px_-40px_rgba(15,23,42,0.45)] sm:p-2">
-            <CardHeader className="px-5 pb-4 pt-6 text-center sm:px-8">
-              <Link to="/" className="mx-auto mb-4 inline-flex items-center gap-3 text-slate-950 lg:hidden">
+          <div className="w-full max-w-lg rounded-4xl border border-gray-100 bg-paper-pure p-6 shadow-organic sm:p-8">
+            <div className="text-center">
+              <Link to="/" className="mx-auto mb-6 inline-flex items-center gap-3 lg:hidden">
                 <img src="/logo-claro.png" alt="PickleRush" className="h-8 w-auto object-contain" />
-                <span className="text-xl font-bold tracking-tight text-slate-900">PickleRush</span>
+                <span className="font-display text-xl font-bold tracking-tight text-ink">PickleRush</span>
               </Link>
-              <CardTitle className="mt-5 text-[2.2rem] font-semibold leading-[1.02] text-slate-950 sm:text-3xl">
+              <div className="mx-auto flex h-14 w-14 items-center justify-center rounded-2xl bg-ink text-acid shadow-glow">
+                <Trophy className="h-6 w-6" />
+              </div>
+              <h2 className="mt-6 font-display text-3xl font-bold leading-tight text-ink">
                 Entrar para publicar e operar torneios com mais confiança.
-              </CardTitle>
-              <CardDescription className="mx-auto mt-3 max-w-md text-sm leading-7 text-slate-600">
+              </h2>
+              <p className="mx-auto mt-3 max-w-md text-sm leading-7 text-gray-500">
                 Use sua conta Google para acessar a plataforma e manter inscrições, modalidades e resultados sob controle.
-              </CardDescription>
-            </CardHeader>
+              </p>
+            </div>
 
-            <CardContent className="space-y-5 px-5 pb-6 sm:px-8">
-              <Button onClick={onClick} disabled={busy || !isAuthAvailable} className="h-12 w-full text-[15px]" size="lg">
+            <div className="mt-8 space-y-5">
+              <V2Button onClick={onClick} disabled={busy || !isAuthAvailable} size="lg" className="w-full">
                 <GoogleIcon className="h-4 w-4" />
                 {busy ? (
                   'Conectando…'
@@ -108,27 +110,27 @@ export default function Login() {
                   </>
                 )}
                 <ArrowRight className="h-4 w-4" />
-              </Button>
+              </V2Button>
 
               {!isAuthAvailable && (
-                <p className="rounded-[1.15rem] border border-amber-200 bg-amber-50 px-4 py-3 text-sm leading-6 text-amber-900">
+                <p className="rounded-2xl border border-amber-200 bg-amber-50 px-4 py-3 text-sm leading-6 text-amber-900">
                   {authUnavailableReason || 'Configure o Firebase para habilitar autenticação e dados em tempo real.'}
                 </p>
               )}
 
-              <div className="flex flex-wrap items-center justify-between gap-3 text-sm text-slate-600">
-                <Link to="/regras" className="font-medium text-emerald-800 transition-colors hover:text-emerald-950">Conhecer as regras</Link>
-                <Link to="/nivelamento" className="font-medium text-emerald-800 transition-colors hover:text-emerald-950">Ver nivelamento</Link>
+              <div className="flex flex-wrap items-center justify-between gap-3 text-sm">
+                <Link to="/regras" className="font-bold text-ink transition-colors hover:text-acid-dark">Conhecer as regras</Link>
+                <Link to="/nivelamento" className="font-bold text-ink transition-colors hover:text-acid-dark">Ver nivelamento</Link>
               </div>
 
-              <p className="text-center text-xs leading-6 text-slate-500">
+              <p className="text-center text-xs leading-6 text-gray-400">
                 Ao continuar você aceita nossa{' '}
-                <Link to="/politica-uso" className="font-medium text-slate-700 underline underline-offset-4">Política de Uso</Link>
+                <Link to="/politica-uso" className="font-bold text-gray-600 underline underline-offset-4">Política de Uso</Link>
                 {' '}e o{' '}
-                <Link to="/conduta" className="font-medium text-slate-700 underline underline-offset-4">Conduta &amp; Fair Play</Link>.
+                <Link to="/conduta" className="font-bold text-gray-600 underline underline-offset-4">Conduta &amp; Fair Play</Link>.
               </p>
-            </CardContent>
-          </Card>
+            </div>
+          </div>
         </div>
       </div>
     </div>

@@ -175,9 +175,9 @@ export default function TournamentAdminTab({ tournament }) {
       <PlatformSurfaceCard>
           <div className="flex items-start justify-between gap-3 flex-wrap">
             <div>
-              <div className="text-xs font-semibold uppercase tracking-[0.18em] text-emerald-700/75">Parâmetros centrais</div>
-              <h3 className="mt-2 text-2xl font-semibold text-slate-950">Edite o torneio sem perder contexto operacional</h3>
-              <p className="mt-2 max-w-3xl text-sm leading-6 text-slate-600">
+              <div className="text-xs font-semibold uppercase tracking-[0.18em] text-gray-400">Parâmetros centrais</div>
+              <h3 className="mt-2 text-2xl font-semibold text-ink">Edite o torneio sem perder contexto operacional</h3>
+              <p className="mt-2 max-w-3xl text-sm leading-6 text-gray-500">
                 Nome, local, regras, datas e acesso ficam concentrados aqui para facilitar revisão antes de abrir inscrições ou iniciar partidas.
               </p>
             </div>
@@ -198,8 +198,8 @@ export default function TournamentAdminTab({ tournament }) {
         <PlatformSurfaceCard contentClassName="space-y-6 p-6 sm:p-7">
             <section className="space-y-4">
               <div>
-                <div className="text-xs font-semibold uppercase tracking-[0.16em] text-emerald-700/75">Identidade e contexto</div>
-                <h4 className="mt-2 text-xl font-semibold text-slate-950">Como o torneio aparece para o público</h4>
+                <div className="text-xs font-semibold uppercase tracking-[0.16em] text-gray-400">Identidade e contexto</div>
+                <h4 className="mt-2 text-xl font-semibold text-ink">Como o torneio aparece para o público</h4>
               </div>
 
               <div className="grid grid-cols-1 gap-4 md:grid-cols-2">
@@ -260,7 +260,7 @@ export default function TournamentAdminTab({ tournament }) {
                     ))}
                   </select>
                 </div>
-                <div className="md:col-span-2 rounded-[1.25rem] border border-emerald-200 bg-emerald-50/70 p-4 text-sm leading-6 text-emerald-950">
+                <div className="md:col-span-2 rounded-[1.25rem] border border-gray-200 bg-acid/10/70 p-4 text-sm leading-6 text-emerald-950">
                   Pontos por game e sets por partida agora são definidos dentro de cada modalidade, fase por fase. Aqui ficam apenas as regras-base do torneio.
                 </div>
               </div>
@@ -290,9 +290,9 @@ export default function TournamentAdminTab({ tournament }) {
 
         <div className="space-y-5">
           <PlatformSurfaceCard>
-            <div className="text-xs font-semibold uppercase tracking-[0.16em] text-emerald-700/75">Status da operação</div>
-            <h4 className="mt-2 text-xl font-semibold text-slate-950">Atualize o estado do evento com clareza</h4>
-            <p className="mt-2 text-sm leading-6 text-slate-600">
+            <div className="text-xs font-semibold uppercase tracking-[0.16em] text-gray-400">Status da operação</div>
+            <h4 className="mt-2 text-xl font-semibold text-ink">Atualize o estado do evento com clareza</h4>
+            <p className="mt-2 text-sm leading-6 text-gray-500">
               Escolha uma ação abaixo para refletir o momento atual do torneio em toda a plataforma.
             </p>
 
@@ -302,14 +302,14 @@ export default function TournamentAdminTab({ tournament }) {
                   key={value}
                   type="button"
                   onClick={() => setStatus(value)}
-                  className="flex w-full items-start gap-3 rounded-[1.35rem] border border-emerald-950/10 bg-white/75 p-4 text-left transition-transform duration-200 hover:-translate-y-0.5"
+                  className="flex w-full items-start gap-3 rounded-[1.35rem] border border-gray-100 bg-white/75 p-4 text-left transition-transform duration-200 hover:-translate-y-0.5"
                 >
-                  <div className="flex h-10 w-10 shrink-0 items-center justify-center rounded-2xl bg-emerald-100 text-emerald-700">
+                  <div className="flex h-10 w-10 shrink-0 items-center justify-center rounded-2xl bg-acid/15 text-ink">
                     <Icon className="h-4.5 w-4.5" />
                   </div>
                   <div>
-                    <div className="font-semibold text-slate-950">{label}</div>
-                    <p className="mt-1 text-sm leading-6 text-slate-600">{description}</p>
+                    <div className="font-semibold text-ink">{label}</div>
+                    <p className="mt-1 text-sm leading-6 text-gray-500">{description}</p>
                   </div>
                 </button>
               ))}
@@ -318,12 +318,12 @@ export default function TournamentAdminTab({ tournament }) {
 
           <PlatformSurfaceCard>
             <div className="flex items-start gap-3">
-              <div className="flex h-10 w-10 items-center justify-center rounded-2xl bg-emerald-100 text-emerald-700">
+              <div className="flex h-10 w-10 items-center justify-center rounded-2xl bg-acid/15 text-ink">
                 <Users className="h-4.5 w-4.5" />
               </div>
               <div>
-                <div className="text-base font-semibold text-slate-950">Admins do torneio</div>
-                <p className="mt-1 text-sm leading-6 text-slate-600">
+                <div className="text-base font-semibold text-ink">Admins do torneio</div>
+                <p className="mt-1 text-sm leading-6 text-gray-500">
                   O owner permanece fixo. Os demais admins compartilham gestão deste torneio sem impactar o admin geral da plataforma.
                 </p>
               </div>
@@ -331,10 +331,10 @@ export default function TournamentAdminTab({ tournament }) {
 
             <ul className="mt-5 space-y-3">
               {admins.map((a) => (
-                <li key={a.user_id} className="flex items-center justify-between gap-3 rounded-[1.25rem] border border-emerald-950/10 bg-white/75 px-4 py-3">
+                <li key={a.user_id} className="flex items-center justify-between gap-3 rounded-[1.25rem] border border-gray-100 bg-white/75 px-4 py-3">
                   <div className="min-w-0">
-                    <div className="truncate font-medium text-slate-950">{a.user_name || a.user_email}</div>
-                    <div className="mt-1 text-xs text-slate-500">{a.user_email}</div>
+                    <div className="truncate font-medium text-ink">{a.user_name || a.user_email}</div>
+                    <div className="mt-1 text-xs text-gray-500">{a.user_email}</div>
                   </div>
                   <div className="flex items-center gap-2">
                     <Badge variant="secondary" className="shadow-none">
@@ -350,7 +350,7 @@ export default function TournamentAdminTab({ tournament }) {
               ))}
             </ul>
 
-            <div className="mt-5 rounded-[1.5rem] border border-emerald-950/10 bg-secondary/35 p-4">
+            <div className="mt-5 rounded-[1.5rem] border border-gray-100 bg-secondary/35 p-4">
               <Label>Adicionar admin (e-mail do usuário já cadastrado)</Label>
               <div className="mt-3 flex gap-2">
                 <Input value={email} onChange={(e) => setEmail(e.target.value)} placeholder="email@dominio.com" type="email" />

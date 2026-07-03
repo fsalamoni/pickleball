@@ -73,7 +73,7 @@ export function ImageUpload({
               disabled={busy || disabled}
               aria-label={`${label} ampliada`}
               className={cn(
-                'group relative flex shrink-0 items-center justify-center overflow-hidden border border-emerald-950/10 bg-secondary/40 text-slate-400 transition-colors hover:border-emerald-400/50',
+                'group relative flex shrink-0 items-center justify-center overflow-hidden border border-gray-100 bg-secondary/40 text-gray-400 transition-colors hover:border-emerald-400/50',
                 isCircle ? 'h-20 w-20 rounded-full' : 'h-24 w-24 rounded-xl',
                 (busy || disabled) && 'cursor-not-allowed opacity-80',
               )}
@@ -94,7 +94,7 @@ export function ImageUpload({
           disabled={busy || disabled}
           aria-label={label}
           className={cn(
-            'group relative flex shrink-0 items-center justify-center overflow-hidden border border-emerald-950/10 bg-secondary/40 text-slate-400 transition-colors hover:border-emerald-400/50',
+            'group relative flex shrink-0 items-center justify-center overflow-hidden border border-gray-100 bg-secondary/40 text-gray-400 transition-colors hover:border-emerald-400/50',
             isCircle ? 'h-20 w-20 rounded-full' : 'h-24 w-24 rounded-xl',
             (busy || disabled) && 'cursor-not-allowed opacity-80',
           )}
@@ -136,7 +136,7 @@ export function ImageUpload({
             </Button>
           )}
         </div>
-        <p className="text-xs text-slate-500">{hint || `JPG, PNG ou WEBP até ${maxImageMb()} MB.`}</p>
+        <p className="text-xs text-gray-500">{hint || `JPG, PNG ou WEBP até ${maxImageMb()} MB.`}</p>
       </div>
     </div>
   );

@@ -29,7 +29,7 @@ export function V2LevelingResultCard({ result, onRestart, onPrint = () => window
             {result.usapEquivalent.toFixed(1)}
           </div>
           <h2 className="mt-6 font-display text-3xl font-bold text-ink">{display.name}</h2>
-          <p className="text-sm font-bold text-emerald-600">USAP {display.usap}</p>
+          <p className="text-sm font-bold text-green-600">USAP {display.usap}</p>
           <p className="mt-3 text-sm text-gray-500">
             Pontuação Likert: <strong className="text-ink">{result.score}/520</strong> · Normalizado: <strong className="text-ink">{result.normalizedScore}/100</strong>
           </p>
@@ -96,7 +96,7 @@ function getColorClass(value) {
   if (value === 2) return 'border-orange-200 bg-orange-50 text-orange-900';
   if (value === 3) return 'border-amber-200 bg-amber-50 text-amber-900';
   if (value === 4) return 'border-lime-200 bg-lime-50 text-lime-900';
-  if (value === 5) return 'border-emerald-200 bg-emerald-50 text-emerald-900';
+  if (value === 5) return 'border-green-200 bg-green-50 text-green-900';
   return 'border-gray-200 bg-paper text-gray-400';
 }
 

@@ -59,7 +59,7 @@ export default function TournamentDrawTab({ tournament, isAdmin }) {
   if (modalities.length === 0) {
     return (
       <V2Surface>
-        <div className="p-6 text-sm text-slate-500 text-center">
+        <div className="p-6 text-sm text-gray-500 text-center">
           Crie modalidades antes de sortear.
         </div>
       </V2Surface>
@@ -249,7 +249,7 @@ function ModalityDrawBlock({ tournament, modality, isAdmin }) {
         <div className="flex items-start justify-between gap-2 flex-wrap">
           <div>
             <h4 className="font-semibold">{modality.name}</h4>
-            <p className="text-xs text-slate-500">
+            <p className="text-xs text-gray-500">
               Fase: {TOURNAMENT_STAGE_TYPE_LABELS[modality.stages?.[0]?.type]} ·{' '}
               {matches.length > 0 ? `${matches.length} jogos gerados` : 'Ainda não sorteado'}
             </p>
@@ -319,7 +319,7 @@ function ModalityDrawBlock({ tournament, modality, isAdmin }) {
 
         {matches.length > 0 && (scheduledCount > 0 || unscheduledCount > 0) && (
           <div className="mt-2 flex flex-wrap items-center gap-2 text-xs">
-            <span className="inline-flex items-center gap-1 text-slate-600">
+            <span className="inline-flex items-center gap-1 text-gray-500">
               <CalendarClock className="w-3.5 h-3.5" />
               {modality.court_count || 1} quadra(s) · {modality.match_duration_minutes || 30} min/jogo
               {modality.play_start_time ? ` · início ${modality.play_start_time}` : ''}
@@ -346,9 +346,9 @@ function ModalityDrawBlock({ tournament, modality, isAdmin }) {
         )}
 
         {matches.length > 0 && (
-          <div className="mt-3 arena-table-wrap">
+          <div className="mt-3 overflow-x-auto rounded-3xl border border-gray-100">
             <table className="w-full text-sm">
-              <thead className="bg-slate-50">
+              <thead className="bg-paper">
                 <tr className="text-left">
                   <th className="px-3 py-2">#</th>
                   {hasGroups && <th className="px-3 py-2">Grupo</th>}
@@ -485,7 +485,7 @@ function ModalityDrawBlock({ tournament, modality, isAdmin }) {
 
 function SideCell({ ids, rawSide, labelById, isAdmin, onSubstitute }) {
   if (!ids || ids.length === 0) {
-    return <span className="text-slate-400">{rawSide || '—'}</span>;
+    return <span className="text-gray-400">{rawSide || '—'}</span>;
   }
   return (
     <div className="space-y-0.5">
@@ -500,7 +500,7 @@ function SideCell({ ids, rawSide, labelById, isAdmin, onSubstitute }) {
                 onClick={() => onSubstitute(regId)}
                 title={`Substituir ${name}`}
                 aria-label={`Substituir ${name}`}
-                className="text-slate-400 hover:text-emerald-600 focus-visible:text-emerald-600 transition-colors ml-1"
+                className="text-gray-400 hover:text-green-600 focus-visible:text-green-600 transition-colors ml-1"
               >
                 <Pencil className="w-3 h-3" />
               </V2Button>
@@ -559,19 +559,19 @@ function GroupsEditorDialog({ tournament, modality, labelById, hasPlayedScores, 
         </DialogHeader>
 
         {isLoading ? (
-          <p className="text-sm text-slate-500">Carregando grupos…</p>
+          <p className="text-sm text-gray-500">Carregando grupos…</p>
         ) : groups.length === 0 ? (
-          <p className="text-sm text-slate-500">Nenhum grupo sorteado nesta fase.</p>
+          <p className="text-sm text-gray-500">Nenhum grupo sorteado nesta fase.</p>
         ) : (
           <div className="space-y-3 max-h-[60vh] overflow-y-auto">
             {groups.map((g) => (
-              <div key={g.name} className="rounded-md border border-slate-200 p-3">
-                <div className="mb-2 text-sm font-semibold text-slate-800">
-                  {g.name} <span className="text-xs font-normal text-slate-500">({g.participants.length})</span>
+              <div key={g.name} className="rounded-md border border-gray-200 p-3">
+                <div className="mb-2 text-sm font-semibold text-ink">
+                  {g.name} <span className="text-xs font-normal text-gray-500">({g.participants.length})</span>
                 </div>
                 <div className="space-y-1.5">
                   {g.participants.length === 0 ? (
-                    <p className="text-xs text-slate-400">Grupo vazio</p>
+                    <p className="text-xs text-gray-400">Grupo vazio</p>
                   ) : (
                     g.participants.map((pid) => (
                       <div key={pid} className="flex items-center justify-between gap-2">
@@ -677,7 +677,7 @@ function SubstitutePlayerDialog({
           <div>
             <Label>Substituto</Label>
             {available.length === 0 ? (
-              <p className="text-sm text-slate-500 mt-1">
+              <p className="text-sm text-gray-500 mt-1">
                 Nenhum jogador disponível para substituição.
               </p>
             ) : (

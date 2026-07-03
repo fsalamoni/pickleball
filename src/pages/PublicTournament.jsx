@@ -98,19 +98,19 @@ export default function PublicTournament() {
   }
 
   return (
-    <div className="min-h-screen bg-gradient-to-b from-emerald-50/50 to-white">
-      <header className="sticky top-0 z-10 border-b bg-white/80 backdrop-blur">
+    <div className="v2-root min-h-screen bg-paper font-inter text-ink">
+      <header className="sticky top-0 z-10 border-b border-gray-100 bg-paper/80 backdrop-blur">
         <div className="mx-auto flex max-w-5xl items-center justify-between gap-2 px-4 py-3">
-          <Link to="/" className="flex items-center gap-3 font-bold text-emerald-700">
+          <Link to="/" className="flex items-center gap-3">
             <img src="/logo-claro.png" alt="PickleRush" className="h-7 w-auto object-contain" />
-            <span className="text-xl font-bold tracking-tight text-slate-900">PickleRush</span>
+            <span className="font-display text-xl font-bold tracking-tight text-ink">PickleRush</span>
           </Link>
           <div className="flex items-center gap-2 flex-wrap">
             {shareCardsOn ? (
               <ShareCardButton tournament={tournament} />
             ) : (
               <Button size="sm" variant="outline" onClick={handleShare}>
-                {copied ? <Check className="w-4 h-4 text-emerald-600" /> : <Share2 className="w-4 h-4" />}
+                {copied ? <Check className="w-4 h-4 text-green-600" /> : <Share2 className="w-4 h-4" />}
                 <span className="ml-1 hidden sm:inline">Compartilhar</span>
               </Button>
             )}
@@ -131,13 +131,13 @@ export default function PublicTournament() {
       <main className="max-w-5xl mx-auto p-4 space-y-4">
         <Card>
           <CardContent className="p-5">
-            <h1 className="text-2xl font-bold arena-heading flex items-center gap-2">
-              <Trophy className="w-6 h-6 text-emerald-600" /> {tournament.name}
+            <h1 className="font-display text-2xl font-bold text-ink flex items-center gap-2">
+              <Trophy className="w-6 h-6 text-acid-dark" /> {tournament.name}
             </h1>
             {tournament.description && (
-              <p className="text-sm text-slate-600 mt-1">{tournament.description}</p>
+              <p className="text-sm text-gray-500 mt-1">{tournament.description}</p>
             )}
-            <div className="mt-3 flex items-center gap-3 text-xs text-slate-600 flex-wrap">
+            <div className="mt-3 flex items-center gap-3 text-xs text-gray-500 flex-wrap">
               {tournament.city && (
                 <span className="inline-flex items-center gap-1">
                   <MapPin className="w-3 h-3" /> {tournament.city}
@@ -146,7 +146,7 @@ export default function PublicTournament() {
               )}
               {tournament.invite_code && (
                 <span className="inline-flex items-center gap-1">
-                  <Hash className="w-3 h-3" /> Código: <strong>{tournament.invite_code}</strong>
+                  <Hash className="w-3 h-3" /> Código: <strong className="text-ink">{tournament.invite_code}</strong>
                 </span>
               )}
               <span className="inline-flex items-center gap-1">
@@ -155,7 +155,7 @@ export default function PublicTournament() {
               </span>
               <Link
                 to={`/torneios/${tournament.id}/imprimir`}
-                className="inline-flex items-center gap-1 text-emerald-700 hover:underline"
+                className="inline-flex items-center gap-1 font-bold text-ink hover:underline"
               >
                 <Printer className="w-3 h-3" /> Versão para impressão
               </Link>
@@ -165,7 +165,7 @@ export default function PublicTournament() {
 
         {modalities.length === 0 && (
           <Card>
-            <CardContent className="p-6 text-sm text-slate-500 text-center">
+            <CardContent className="p-6 text-sm text-gray-500 text-center">
               Nenhuma modalidade publicada ainda.
             </CardContent>
           </Card>
@@ -178,7 +178,7 @@ export default function PublicTournament() {
         <TournamentGallery tournamentId={tournament.id} canManage={false} />
       </main>
 
-      <footer className="text-center text-xs text-slate-400 py-6">
+      <footer className="text-center text-xs text-gray-400 py-6">
         Plataforma PickleRush · Atualização automática a cada 30s
       </footer>
     </div>
