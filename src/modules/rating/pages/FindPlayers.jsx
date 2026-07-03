@@ -59,12 +59,12 @@ export default function FindPlayers() {
     return (
       <div className="mx-auto max-w-2xl">
         <PlatformSurfaceCard contentClassName="p-8 text-center">
-            <Medal className="mx-auto mb-3 h-8 w-8 text-emerald-600" />
-            <h2 className="text-lg font-semibold text-slate-900">Você ainda não tem rating</h2>
-            <p className="mt-2 text-sm text-slate-600">
+            <Medal className="mx-auto mb-3 h-8 w-8 text-green-600" />
+            <h2 className="text-lg font-semibold text-ink">Você ainda não tem rating</h2>
+            <p className="mt-2 text-sm text-gray-500">
               Dispute jogos em torneios da plataforma para receber seu rating e encontrar
               adversários do seu nível. Veja o{' '}
-              <Link to="/ranking" className="text-emerald-700 underline">ranking nacional</Link>.
+              <Link to="/ranking" className="text-green-700 underline">ranking nacional</Link>.
             </p>
         </PlatformSurfaceCard>
       </div>
@@ -82,8 +82,8 @@ export default function FindPlayers() {
       </PlatformSurfaceCard>
 
       <PlatformSurfaceCard contentClassName="p-5">
-          <p className="text-sm text-slate-600">
-            Seu rating: <strong className="text-emerald-700">{me.rating}</strong>
+          <p className="text-sm text-gray-500">
+            Seu rating: <strong className="text-green-700">{me.rating}</strong>
             {myCity ? <> · {myCity}</> : null}. Sugestões de parceiros e adversários do seu nível.
           </p>
           <div className="mt-4 flex flex-wrap gap-2">
@@ -107,7 +107,7 @@ export default function FindPlayers() {
       ) : (
         <div className="grid gap-3 sm:grid-cols-2">
           {suggestions.map((p) => (
-            <Card key={p.id} className="match-surface rounded-[1.75rem] border-white/80 bg-white/85">
+            <Card key={p.id} className="rounded-[1.75rem] border-white/80 bg-white/85">
               <CardContent className="flex items-center gap-3 p-4">
                 <UserAvatar
                   name={p.platform_name}
@@ -118,13 +118,13 @@ export default function FindPlayers() {
                   lightboxTitle={p.platform_name || 'Atleta'}
                 />
                 <div className="min-w-0 flex-1">
-                  <div className="truncate font-semibold text-slate-900">{p.platform_name}</div>
-                  <div className="mt-0.5 flex flex-wrap items-center gap-1.5 text-xs text-slate-600">
+                  <div className="truncate font-semibold text-ink">{p.platform_name}</div>
+                  <div className="mt-0.5 flex flex-wrap items-center gap-1.5 text-xs text-gray-500">
                     <Badge variant="secondary" className="rounded-full">Rating {p.rating}</Badge>
                     {[p.city, p.state].filter(Boolean).length > 0 && (
                       <span>{[p.city, p.state].filter(Boolean).join(' / ')}</span>
                     )}
-                    <span className="text-slate-400">· Δ {p.ratingDiff}</span>
+                    <span className="text-gray-400">· Δ {p.ratingDiff}</span>
                   </div>
                 </div>
                 <ChatLauncherButton athlete={p} size="sm" iconOnly />
@@ -146,8 +146,8 @@ function FilterChip({ active, onClick, disabled, children }) {
       aria-pressed={active}
       className={`inline-flex items-center rounded-full border px-4 py-2 text-sm font-medium transition-colors disabled:cursor-not-allowed disabled:opacity-50 ${
         active
-          ? 'border-emerald-600 bg-emerald-600 text-white'
-          : 'border-emerald-950/15 bg-white/80 text-slate-700 hover:bg-emerald-50'
+          ? 'border-ink bg-ink text-white'
+          : 'border-gray-100 bg-white/80 text-gray-600 hover:bg-acid/10'
       }`}
     >
       {children}

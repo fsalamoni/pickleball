@@ -119,13 +119,13 @@ export default function ClubFeedTab({ clubId, isAdmin }) {
             {pendingImages.length > 0 && (
               <div className="grid grid-cols-3 gap-2 sm:grid-cols-4">
                 {pendingImages.map((image) => (
-                  <div key={image.path} className="group relative aspect-square overflow-hidden rounded-lg border border-emerald-950/10">
+                  <div key={image.path} className="group relative aspect-square overflow-hidden rounded-lg border border-gray-100">
                     <img src={image.url} alt="" className="h-full w-full object-cover" />
                     <button
                       type="button"
                       onClick={() => removePending(image)}
                       aria-label="Remover imagem"
-                      className="absolute right-1 top-1 flex h-6 w-6 items-center justify-center rounded-full bg-slate-950/60 text-white opacity-0 transition-opacity group-hover:opacity-100"
+                      className="absolute right-1 top-1 flex h-6 w-6 items-center justify-center rounded-full bg-ink/60 text-white opacity-0 transition-opacity group-hover:opacity-100"
                     >
                       <X className="h-3.5 w-3.5" />
                     </button>
@@ -157,7 +157,7 @@ export default function ClubFeedTab({ clubId, isAdmin }) {
                 <Send className="mr-1.5 h-4 w-4" /> {createPost.isPending ? 'Publicando…' : 'Publicar'}
               </Button>
             </div>
-            <p className="text-xs text-slate-500">
+            <p className="text-xs text-gray-500">
               Até {MAX_IMAGES_PER_POST} imagens por publicação, {maxImageMb()} MB cada. As imagens podem ser baixadas em alta qualidade pelos membros.
             </p>
           </form>
@@ -177,17 +177,17 @@ export default function ClubFeedTab({ clubId, isAdmin }) {
                 <CardContent className="p-4">
                   <div className="flex items-start gap-3">
                     {post.author_photo ? (
-                      <img src={post.author_photo} alt="" className="h-9 w-9 shrink-0 rounded-full border border-emerald-900/10 object-cover" />
+                      <img src={post.author_photo} alt="" className="h-9 w-9 shrink-0 rounded-full border border-gray-100 object-cover" />
                     ) : (
-                      <div className="flex h-9 w-9 shrink-0 items-center justify-center rounded-full bg-emerald-900 text-sm font-semibold text-emerald-50">
+                      <div className="flex h-9 w-9 shrink-0 items-center justify-center rounded-full bg-ink text-sm font-semibold text-white/70">
                         {initials(post.author_name)}
                       </div>
                     )}
                     <div className="min-w-0 flex-1">
                       <div className="flex items-center justify-between gap-2">
                         <div className="min-w-0">
-                          <span className="font-medium text-slate-900">{post.author_name}</span>
-                          <span className="ml-2 text-xs text-slate-400">{timeAgo(post.created_at_ms)}</span>
+                          <span className="font-medium text-ink">{post.author_name}</span>
+                          <span className="ml-2 text-xs text-gray-400">{timeAgo(post.created_at_ms)}</span>
                         </div>
                         {canDelete && (
                           <Button variant="ghost" size="icon" className="h-7 w-7 shrink-0 text-red-500 hover:text-red-600" onClick={() => setConfirmDelete(post)}>
@@ -196,7 +196,7 @@ export default function ClubFeedTab({ clubId, isAdmin }) {
                         )}
                       </div>
                       {post.content && (
-                        <p className="mt-1 whitespace-pre-wrap break-words text-sm leading-6 text-slate-700">{post.content}</p>
+                        <p className="mt-1 whitespace-pre-wrap break-words text-sm leading-6 text-gray-600">{post.content}</p>
                       )}
                       <PostImages images={post.images} />
                     </div>
@@ -237,7 +237,7 @@ function PostImages({ images }) {
   return (
     <div className={`mt-3 grid gap-2 ${list.length === 1 ? 'grid-cols-1 sm:max-w-md' : 'grid-cols-2 sm:grid-cols-3'}`}>
       {list.map((image) => (
-        <div key={image.path || image.url} className="group relative overflow-hidden rounded-lg border border-emerald-950/10 bg-slate-50">
+        <div key={image.path || image.url} className="group relative overflow-hidden rounded-lg border border-gray-100 bg-paper">
           <a href={image.url} target="_blank" rel="noopener noreferrer" className="block">
             <img
               src={image.url}
@@ -251,7 +251,7 @@ function PostImages({ images }) {
             onClick={() => handleDownload(image)}
             aria-label="Baixar imagem"
             title="Baixar em alta qualidade"
-            className="absolute bottom-2 right-2 flex h-9 w-9 items-center justify-center rounded-full bg-slate-950/60 text-white opacity-0 transition-opacity hover:bg-slate-950/80 group-hover:opacity-100"
+            className="absolute bottom-2 right-2 flex h-9 w-9 items-center justify-center rounded-full bg-ink/60 text-white opacity-0 transition-opacity hover:bg-ink/80 group-hover:opacity-100"
           >
             <Download className="h-4 w-4" />
           </button>

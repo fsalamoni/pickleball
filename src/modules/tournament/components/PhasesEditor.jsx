@@ -56,7 +56,7 @@ const SEEDING_HELP = {
 };
 
 function HelpText({ children }) {
-  return <p className="text-[11px] leading-snug text-slate-500 mt-1">{children}</p>;
+  return <p className="text-[11px] leading-snug text-gray-500 mt-1">{children}</p>;
 }
 
 function MiniSelect({ label, value, options, onChange, help }) {
@@ -190,7 +190,7 @@ export default function PhasesEditor({ phases, format, onChange }) {
       <div className="flex items-center justify-between gap-2 flex-wrap">
         <div>
           <Label className="text-sm font-semibold">Fases do torneio</Label>
-          <p className="text-xs text-slate-500">
+          <p className="text-xs text-gray-500">
             Encadeie fases (ex.: grupos → mata-mata). A inscrição é única; cada fase pode ter um
             formato diferente — inclusive virar de <strong>duplas</strong> a partir dos classificados.
           </p>
@@ -200,8 +200,8 @@ export default function PhasesEditor({ phases, format, onChange }) {
         </Button>
       </div>
 
-      <div className="rounded-md border border-emerald-200 bg-emerald-50/50 p-2">
-        <Label className="text-xs flex items-center gap-1 text-emerald-800">
+      <div className="rounded-md border border-green-200 bg-green-50 p-2">
+        <Label className="text-xs flex items-center gap-1 text-green-700">
           <Sparkles className="w-3.5 h-3.5" /> Começar a partir de um modelo
         </Label>
         <select
@@ -214,14 +214,14 @@ export default function PhasesEditor({ phases, format, onChange }) {
             <option key={p.id} value={p.id}>{p.label}</option>
           ))}
         </select>
-        <p className="text-[11px] text-slate-500 mt-1">
+        <p className="text-[11px] text-gray-500 mt-1">
           Preenche as fases automaticamente; você pode ajustar tudo depois. Veja o que cada modelo
           faz no{' '}
           <a
             href={`${import.meta.env.BASE_URL}torneios/guia`}
             target="_blank"
             rel="noreferrer"
-            className="text-emerald-700 underline"
+            className="text-green-700 underline"
           >
             guia de formatos
           </a>.
@@ -242,7 +242,7 @@ export default function PhasesEditor({ phases, format, onChange }) {
         return (
           <CollapsibleSection
             key={index}
-            className="border-slate-200 bg-slate-50/40"
+            className="border-gray-200 bg-paper/40"
             headerClassName="py-1.5"
             title={`Fase ${index + 1}`}
             subtitle={phaseSummary(phase, index, normalized)}
@@ -273,9 +273,9 @@ export default function PhasesEditor({ phases, format, onChange }) {
             defaultOpen
           >
             <div className="space-y-3">
-              <div className="rounded-md bg-emerald-50/60 border border-emerald-100 p-2 flex items-start gap-2">
-                <Info className="w-3.5 h-3.5 text-emerald-600 mt-0.5 shrink-0" />
-                <p className="text-[11px] leading-snug text-slate-600">
+              <div className="rounded-md bg-green-50 border border-green-100 p-2 flex items-start gap-2">
+                <Info className="w-3.5 h-3.5 text-green-600 mt-0.5 shrink-0" />
+                <p className="text-[11px] leading-snug text-gray-500">
                   <strong>{TOURNAMENT_STAGE_TYPE_LABELS[phase.type]}:</strong> {describeStage(phase.type)}
                 </p>
               </div>
@@ -330,7 +330,7 @@ export default function PhasesEditor({ phases, format, onChange }) {
                 )}
 
                 {isKnockout && (
-                  <label className="flex items-start gap-2 text-xs text-slate-700 md:col-span-2">
+                  <label className="flex items-start gap-2 text-xs text-gray-600 md:col-span-2">
                     <input
                       type="checkbox"
                       className="mt-0.5"
@@ -342,10 +342,10 @@ export default function PhasesEditor({ phases, format, onChange }) {
                 )}
               </div>
 
-              <div className="rounded-md border border-slate-200 bg-white p-3 space-y-3">
+              <div className="rounded-md border border-gray-200 bg-white p-3 space-y-3">
                 <div>
-                  <div className="text-xs font-medium text-slate-700">Pontuação da fase</div>
-                  <p className="text-[11px] leading-snug text-slate-500 mt-1">
+                  <div className="text-xs font-medium text-gray-600">Pontuação da fase</div>
+                  <p className="text-[11px] leading-snug text-gray-500 mt-1">
                     Cada fase pode ter sua própria configuração de pontos por game e sets por partida.
                   </p>
                 </div>
@@ -361,8 +361,8 @@ export default function PhasesEditor({ phases, format, onChange }) {
                           className={[
                             'rounded-full border px-3 py-1.5 text-xs font-medium transition-all duration-200',
                             Number(phase.scoring_override?.target_score) === score
-                              ? 'border-emerald-500/35 bg-emerald-600 text-white'
-                              : 'border-emerald-950/10 bg-background text-slate-700 hover:border-emerald-400/35',
+                              ? 'border-green-500 bg-ink text-white'
+                              : 'border-gray-100 bg-background text-gray-600 hover:border-green-400',
                           ].join(' ')}
                         >
                           {score} pontos
@@ -381,8 +381,8 @@ export default function PhasesEditor({ phases, format, onChange }) {
                           className={[
                             'rounded-full border px-3 py-1.5 text-xs font-medium transition-all duration-200',
                             Number(phase.scoring_override?.sets_per_match) === sets
-                              ? 'border-emerald-500/35 bg-emerald-600 text-white'
-                              : 'border-emerald-950/10 bg-background text-slate-700 hover:border-emerald-400/35',
+                              ? 'border-green-500 bg-ink text-white'
+                              : 'border-gray-100 bg-background text-gray-600 hover:border-green-400',
                           ].join(' ')}
                         >
                           {formatSetsPerMatchLabel(sets)}
@@ -395,8 +395,8 @@ export default function PhasesEditor({ phases, format, onChange }) {
 
               {/* Classificação para a próxima fase (não aparece na última). */}
               {!isLast && (
-                <div className="grid grid-cols-1 md:grid-cols-2 gap-2 rounded-md bg-white border border-slate-200 p-2">
-                  <div className="md:col-span-2 text-xs font-medium text-slate-700">
+                <div className="grid grid-cols-1 md:grid-cols-2 gap-2 rounded-md bg-white border border-gray-200 p-2">
+                  <div className="md:col-span-2 text-xs font-medium text-gray-600">
                     Quem se classifica para a próxima fase
                   </div>
                   <div>
@@ -428,7 +428,7 @@ export default function PhasesEditor({ phases, format, onChange }) {
                     </div>
                   )}
                   {phase.pairing_mode !== PHASE_PAIRING_MODE.NONE && !nextIsRotation && (
-                    <p className="md:col-span-2 text-[11px] text-emerald-700 inline-flex items-center gap-1">
+                    <p className="md:col-span-2 text-[11px] text-green-700 inline-flex items-center gap-1">
                       <Users2 className="w-3.5 h-3.5" /> A partir da próxima fase joga-se em
                       <strong> duplas</strong> formadas pelos classificados.
                     </p>
@@ -438,8 +438,8 @@ export default function PhasesEditor({ phases, format, onChange }) {
 
               {/* Alimentação a partir da fase anterior (não aparece na primeira). */}
               {!isFirst && (
-                <div className="rounded-md bg-white border border-slate-200 p-2 space-y-2">
-                  <div className="flex items-center gap-1 text-xs font-medium text-slate-700">
+                <div className="rounded-md bg-white border border-gray-200 p-2 space-y-2">
+                  <div className="flex items-center gap-1 text-xs font-medium text-gray-600">
                     <ArrowDown className="w-3.5 h-3.5" /> Como recebe os classificados
                   </div>
                   <div className="grid grid-cols-1 md:grid-cols-2 gap-2">

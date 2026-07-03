@@ -81,7 +81,7 @@ export default function ForumThreadView({ clubId, threadId, isAdmin, onBack, onD
     return (
       <div className="space-y-3">
         <Button variant="ghost" size="sm" onClick={onBack}><ArrowLeft className="mr-1.5 h-4 w-4" /> Voltar</Button>
-        <Card className="rounded-xl"><CardContent className="p-6 text-center text-sm text-slate-500">Tópico não encontrado ou removido.</CardContent></Card>
+        <Card className="rounded-xl"><CardContent className="p-6 text-center text-sm text-gray-500">Tópico não encontrado ou removido.</CardContent></Card>
       </div>
     );
   }
@@ -179,9 +179,9 @@ export default function ForumThreadView({ clubId, threadId, isAdmin, onBack, onD
                 <>
                   <div className="flex flex-wrap items-center gap-2">
                     {thread.pinned && <Badge variant="warning" className="rounded-full"><Pin className="mr-1 h-3 w-3" /> Fixado</Badge>}
-                    <h2 className="text-xl font-bold text-slate-900">{thread.title}</h2>
+                    <h2 className="text-xl font-bold text-ink">{thread.title}</h2>
                   </div>
-                  <div className="mt-0.5 text-xs text-slate-500">
+                  <div className="mt-0.5 text-xs text-gray-500">
                     {thread.author_name} · {timeAgo(thread.created_at_ms)}{thread.edited ? ' · editado' : ''}
                   </div>
                   {thread.body && <div className="mt-3"><MarkdownContent>{thread.body}</MarkdownContent></div>}
@@ -195,8 +195,8 @@ export default function ForumThreadView({ clubId, threadId, isAdmin, onBack, onD
       </Card>
 
       {/* Comentários */}
-      <div className="flex items-center gap-2 px-1 text-sm font-semibold text-slate-700">
-        <MessageSquare className="h-4 w-4 text-emerald-700" />
+      <div className="flex items-center gap-2 px-1 text-sm font-semibold text-gray-600">
+        <MessageSquare className="h-4 w-4 text-green-700" />
         {comments.length} comentário(s)
       </div>
 
@@ -280,13 +280,13 @@ function ForumComment({ comment, clubId, threadId, canModerate }) {
           <div className="min-w-0 flex-1">
             <div className="flex items-center justify-between gap-2">
               <div className="min-w-0 text-sm">
-                <span className="font-medium text-slate-900">{comment.author_name}</span>
-                <span className="ml-2 text-xs text-slate-400">{timeAgo(comment.created_at_ms)}{comment.edited ? ' · editado' : ''}</span>
+                <span className="font-medium text-ink">{comment.author_name}</span>
+                <span className="ml-2 text-xs text-gray-400">{timeAgo(comment.created_at_ms)}{comment.edited ? ' · editado' : ''}</span>
               </div>
               {(isAuthor || canDelete) && !editing && (
                 <DropdownMenu>
                   <DropdownMenuTrigger asChild>
-                    <Button variant="ghost" size="icon" className="h-7 w-7 shrink-0 text-slate-400"><MoreVertical className="h-4 w-4" /></Button>
+                    <Button variant="ghost" size="icon" className="h-7 w-7 shrink-0 text-gray-400"><MoreVertical className="h-4 w-4" /></Button>
                   </DropdownMenuTrigger>
                   <DropdownMenuContent align="end">
                     {isAuthor && comment.body && (
@@ -361,7 +361,7 @@ function CommentComposer({ thread, clubId, threadId }) {
   return (
     <Card className="rounded-xl">
       <CardContent className="space-y-3 p-4">
-        <div className="text-sm font-semibold text-slate-700">Adicionar comentário</div>
+        <div className="text-sm font-semibold text-gray-600">Adicionar comentário</div>
         <MarkdownEditor value={body} onChange={setBody} rows={3} maxLength={FORUM_LIMITS.COMMENT_MAX} placeholder="Participe da discussão…" />
         <PendingAttachmentList items={attachments.items} onRemove={attachments.remove} />
         <div className="flex flex-wrap items-center justify-between gap-2">

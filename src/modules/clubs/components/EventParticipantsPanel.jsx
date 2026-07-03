@@ -95,10 +95,10 @@ export default function EventParticipantsPanel({ event, clubId }) {
       <Card className="rounded-xl">
         <CardContent className="flex flex-wrap items-center justify-between gap-3 p-4">
           <div className="flex items-center gap-2">
-            {isPrivate ? <Lock className="h-5 w-5 text-amber-600" /> : <Globe className="h-5 w-5 text-emerald-600" />}
+            {isPrivate ? <Lock className="h-5 w-5 text-amber-600" /> : <Globe className="h-5 w-5 text-green-600" />}
             <div>
-              <h3 className="text-sm font-semibold text-slate-900">{isPrivate ? 'Evento privado' : 'Evento público'}</h3>
-              <p className="text-xs text-slate-500">
+              <h3 className="text-sm font-semibold text-ink">{isPrivate ? 'Evento privado' : 'Evento público'}</h3>
+              <p className="text-xs text-gray-500">
                 {isPrivate
                   ? 'Visível apenas para participantes e convidados.'
                   : 'Visível para todos os atletas do clube.'}
@@ -130,10 +130,10 @@ export default function EventParticipantsPanel({ event, clubId }) {
       <Card className="rounded-xl">
         <CardContent className="flex flex-wrap items-center justify-between gap-3 p-4">
           <div>
-            <h3 className="text-sm font-semibold text-slate-900">
+            <h3 className="text-sm font-semibold text-ink">
               {amParticipant ? 'Você participa deste evento' : amInvited ? 'Você foi convidado' : 'Participe deste evento'}
             </h3>
-            <p className="text-xs text-slate-500">
+            <p className="text-xs text-gray-500">
               Confirme sua presença em cada dia de jogo na aba “Detalhes e dias de jogo”.
             </p>
           </div>
@@ -154,8 +154,8 @@ export default function EventParticipantsPanel({ event, clubId }) {
         <CardContent className="space-y-4 p-4">
           <div className="flex items-center justify-between gap-3">
             <div className="flex items-center gap-2">
-              <Users className="h-5 w-5 text-emerald-600" />
-              <h3 className="text-base font-semibold text-slate-900">Participantes do evento</h3>
+              <Users className="h-5 w-5 text-green-600" />
+              <h3 className="text-base font-semibold text-ink">Participantes do evento</h3>
             </div>
             <Button size="sm" variant="outline" onClick={() => setInviteOpen(true)}>
               <UserPlus className="mr-1.5 h-4 w-4" /> Convidar atletas
@@ -172,7 +172,7 @@ export default function EventParticipantsPanel({ event, clubId }) {
           ) : invites.length === 0 ? (
             <EmptyState icon={Users} title="Sem participantes ainda" description="Convide os atletas do clube para integrarem o evento." />
           ) : (
-            <div className="divide-y divide-slate-100">
+            <div className="divide-y divide-gray-100">
               {invites.map((inv) => {
                 const canRemove = isManager || inv.user_id === user?.uid;
                 return (
@@ -180,12 +180,12 @@ export default function EventParticipantsPanel({ event, clubId }) {
                     <div className="flex min-w-0 items-center gap-2">
                       <UserAvatar name={inv.user_name} photoUrl={inv.user_photo} size="sm" />
                       <div className="min-w-0">
-                        <div className="truncate text-sm font-medium text-slate-800">
+                        <div className="truncate text-sm font-medium text-ink">
                           {inv.user_name}
-                          {inv.user_id === event.created_by && <span className="ml-1 text-xs text-emerald-700">(organizador)</span>}
+                          {inv.user_id === event.created_by && <span className="ml-1 text-xs text-green-700">(organizador)</span>}
                         </div>
                         {inv.source === INVITE_SOURCE.PLATFORM && (
-                          <div className="text-[11px] text-slate-400">Convidado da plataforma</div>
+                          <div className="text-[11px] text-gray-400">Convidado da plataforma</div>
                         )}
                       </div>
                     </div>
@@ -194,7 +194,7 @@ export default function EventParticipantsPanel({ event, clubId }) {
                         {inv.status === INVITE_STATUS.INVITED ? 'Convidado' : 'Participante'}
                       </Badge>
                       {canRemove && inv.user_id !== event.created_by && (
-                        <button onClick={() => handleRemove(inv.user_id)} className="text-slate-400 transition-colors hover:text-red-600" title="Remover">
+                        <button onClick={() => handleRemove(inv.user_id)} className="text-gray-400 transition-colors hover:text-red-600" title="Remover">
                           <Trash2 className="h-3.5 w-3.5" />
                         </button>
                       )}
@@ -283,16 +283,16 @@ function InviteDialog({ open, onClose, event, clubId, invites }) {
 function Pool({ title, people, onInvite, emptyText }) {
   return (
     <div>
-      <h4 className="mb-2 text-xs font-semibold uppercase tracking-wide text-slate-500">{title} ({people.length})</h4>
+      <h4 className="mb-2 text-xs font-semibold uppercase tracking-wide text-gray-500">{title} ({people.length})</h4>
       {people.length === 0 ? (
-        <p className="text-sm text-slate-400">{emptyText}</p>
+        <p className="text-sm text-gray-400">{emptyText}</p>
       ) : (
         <div className="space-y-1.5">
           {people.map((p) => (
-            <div key={p.user_id} className="flex items-center justify-between gap-2 rounded-lg border border-slate-100 p-2">
+            <div key={p.user_id} className="flex items-center justify-between gap-2 rounded-lg border border-gray-100 p-2">
               <div className="flex min-w-0 items-center gap-2">
                 <UserAvatar name={p.user_name} photoUrl={p.user_photo} size="sm" />
-                <span className="truncate text-sm font-medium text-slate-800">{p.user_name}</span>
+                <span className="truncate text-sm font-medium text-ink">{p.user_name}</span>
               </div>
               <Button size="sm" variant="outline" onClick={() => onInvite(p)}>
                 <Send className="mr-1 h-3.5 w-3.5" /> Convidar

@@ -35,10 +35,10 @@ export default function RatingSparkline({ points = [], title = 'Evolução do ra
     <Card>
       <CardContent className="p-4">
         <div className="mb-2 flex items-center justify-between">
-          <h2 className="flex items-center gap-2 text-sm font-semibold text-slate-800">
-            <TrendingUp className="h-4 w-4 text-emerald-600" /> {title}
+          <h2 className="flex items-center gap-2 text-sm font-semibold text-ink">
+            <TrendingUp className="h-4 w-4 text-green-600" /> {title}
           </h2>
-          <span className={`text-xs font-medium tabular-nums ${delta > 0 ? 'text-emerald-700' : delta < 0 ? 'text-red-600' : 'text-slate-500'}`}>
+          <span className={`text-xs font-medium tabular-nums ${delta > 0 ? 'text-green-700' : delta < 0 ? 'text-red-600' : 'text-gray-500'}`}>
             {delta > 0 ? `+${delta}` : delta} desde o início
           </span>
         </div>
@@ -55,7 +55,7 @@ export default function RatingSparkline({ points = [], title = 'Evolução do ra
             <circle cx={coords[coords.length - 1][0]} cy={coords[coords.length - 1][1]} r="3.5" fill="rgb(5 150 105)" />
           )}
         </svg>
-        <div className="mt-1 flex justify-between text-[11px] text-slate-400 tabular-nums">
+        <div className="mt-1 flex justify-between text-[11px] text-gray-400 tabular-nums">
           <span>{min}</span>
           <span>{max}</span>
         </div>

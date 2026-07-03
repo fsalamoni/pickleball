@@ -40,7 +40,7 @@ import { useArenaBookings } from '../hooks/useBookings.js';
 const CALENDAR_STATUS_STYLE = {
   [BOOKING_STATUS.REQUESTED]: 'bg-amber-100 text-amber-800',
   [BOOKING_STATUS.NEGOTIATING]: 'bg-blue-100 text-blue-800',
-  [BOOKING_STATUS.CONFIRMED]: 'bg-emerald-100 text-emerald-800',
+  [BOOKING_STATUS.CONFIRMED]: 'bg-green-100 text-green-700',
 };
 
 function toLocalIso(date) {
@@ -138,8 +138,8 @@ function PhotosTab({ arena }) {
   return (
     <PlatformSurfaceCard contentClassName="space-y-4 p-5">
         <div>
-          <p className="mb-2 text-sm font-semibold text-slate-800">Fotos da arena</p>
-          <p className="mb-3 text-xs text-slate-500">A primeira foto é usada como capa. Até 20 fotos.</p>
+          <p className="mb-2 text-sm font-semibold text-ink">Fotos da arena</p>
+          <p className="mb-3 text-xs text-gray-500">A primeira foto é usada como capa. Até 20 fotos.</p>
           {photos.length > 0 && (
             <div className="mb-3 grid grid-cols-2 gap-2 sm:grid-cols-3">
               {photos.map((p, i) => (
@@ -149,7 +149,7 @@ function PhotosTab({ arena }) {
                     alt={`Foto ${i + 1} da arena`}
                     trigger={<img src={p.url} alt="" className="h-28 w-full cursor-zoom-in rounded-lg object-cover" />}
                   />
-                  {i === 0 && <span className="absolute left-1 top-1 rounded bg-emerald-600 px-1.5 py-0.5 text-[10px] text-white">Capa</span>}
+                  {i === 0 && <span className="absolute left-1 top-1 rounded bg-green-600 px-1.5 py-0.5 text-[10px] text-white">Capa</span>}
                   <button
                     type="button"
                     onClick={() => removePhoto(i)}
@@ -196,7 +196,7 @@ function BookingsTab({ arena }) {
 
   if (isLoading) return <Skeleton className="h-40" />;
   if (bookings.length === 0) {
-    return <Card><CardContent className="p-8 text-center text-sm text-slate-500">Nenhuma solicitação de reserva ainda.</CardContent></Card>;
+    return <Card><CardContent className="p-8 text-center text-sm text-gray-500">Nenhuma solicitação de reserva ainda.</CardContent></Card>;
   }
   return (
     <div className="space-y-4">
@@ -204,15 +204,15 @@ function BookingsTab({ arena }) {
         <PlatformSurfaceCard contentClassName="space-y-4 p-5 sm:p-6">
           <div className="flex flex-wrap items-start justify-between gap-3">
             <div>
-              <div className="text-xs font-semibold uppercase tracking-[0.16em] text-emerald-700/75">Agenda visual</div>
-              <div className="mt-1 flex items-center gap-2 text-base font-semibold text-slate-950">
-                <CalendarDays className="h-4.5 w-4.5 text-emerald-700" /> Próximos horários da arena
+              <div className="text-xs font-semibold uppercase tracking-[0.16em] text-gray-400">Agenda visual</div>
+              <div className="mt-1 flex items-center gap-2 text-base font-semibold text-ink">
+                <CalendarDays className="h-4.5 w-4.5 text-green-700" /> Próximos horários da arena
               </div>
-              <p className="mt-1 text-sm leading-6 text-slate-600">
+              <p className="mt-1 text-sm leading-6 text-gray-500">
                 As reservas recorrentes já aparecem expandidas em slots concretos para leitura rápida por semana ou por dia.
               </p>
             </div>
-            <div className="flex items-center gap-2 rounded-full border border-emerald-950/10 bg-white/75 p-1">
+            <div className="flex items-center gap-2 rounded-full border border-gray-100 bg-white/75 p-1">
               <CalendarModeButton active={calendarMode === 'week'} onClick={() => setCalendarMode('week')}>
                 Semana
               </CalendarModeButton>
@@ -230,8 +230,8 @@ function BookingsTab({ arena }) {
                 onClick={() => setSelectedDate(date)}
                 className={`rounded-full border px-3 py-1.5 text-xs font-medium transition-colors ${
                   effectiveSelectedDate === date
-                    ? 'border-emerald-600 bg-emerald-600 text-white'
-                    : 'border-emerald-950/10 bg-white/80 text-slate-700 hover:bg-emerald-50'
+                    ? 'border-ink bg-ink text-white'
+                    : 'border-gray-100 bg-white/80 text-gray-600 hover:bg-acid/10'
                 }`}
               >
                 {formatCalendarSubheading(date)} · {formatCalendarHeading(date)}
@@ -248,8 +248,8 @@ function BookingsTab({ arena }) {
                     key={date}
                     className={`rounded-[1.25rem] border p-3 ${
                       effectiveSelectedDate === date
-                        ? 'border-emerald-500 bg-emerald-50/80'
-                        : 'border-emerald-950/10 bg-white/70'
+                        ? 'border-green-500 bg-green-50'
+                        : 'border-gray-100 bg-white/70'
                     }`}
                   >
                     <button
@@ -260,14 +260,14 @@ function BookingsTab({ arena }) {
                       }}
                       className="text-left"
                     >
-                      <div className="text-[11px] font-semibold uppercase tracking-[0.16em] text-emerald-700/75">
+                      <div className="text-[11px] font-semibold uppercase tracking-[0.16em] text-gray-400">
                         {formatCalendarSubheading(date)}
                       </div>
-                      <div className="mt-1 text-sm font-semibold text-slate-950">{formatCalendarHeading(date)}</div>
+                      <div className="mt-1 text-sm font-semibold text-ink">{formatCalendarHeading(date)}</div>
                     </button>
                     <div className="mt-3 space-y-2">
                       {daySlots.length === 0 ? (
-                        <p className="text-xs text-slate-400">Sem slots ativos.</p>
+                        <p className="text-xs text-gray-400">Sem slots ativos.</p>
                       ) : (
                         daySlots.map((slot) => <BookingCalendarEntry key={`${slot.booking.id}_${slot.date}_${slot.start}`} slot={slot} compact />)
                       )}
@@ -277,11 +277,11 @@ function BookingsTab({ arena }) {
               })}
             </div>
           ) : (
-            <div className="rounded-[1.5rem] border border-emerald-950/10 bg-white/75 p-4">
+            <div className="rounded-[1.5rem] border border-gray-100 bg-white/75 p-4">
               <div className="flex flex-wrap items-center justify-between gap-3">
                 <div>
-                  <div className="text-xs font-semibold uppercase tracking-[0.16em] text-emerald-700/75">Dia selecionado</div>
-                  <div className="mt-1 text-lg font-semibold text-slate-950">
+                  <div className="text-xs font-semibold uppercase tracking-[0.16em] text-gray-400">Dia selecionado</div>
+                  <div className="mt-1 text-lg font-semibold text-ink">
                     {formatCalendarSubheading(effectiveSelectedDate)} · {formatCalendarHeading(effectiveSelectedDate)}
                   </div>
                 </div>
@@ -291,7 +291,7 @@ function BookingsTab({ arena }) {
               </div>
               <div className="mt-4 space-y-3">
                 {activeSlots.filter((slot) => slot.date === effectiveSelectedDate).length === 0 ? (
-                  <p className="text-sm text-slate-500">Nenhuma reserva ativa neste dia.</p>
+                  <p className="text-sm text-gray-500">Nenhuma reserva ativa neste dia.</p>
                 ) : (
                   activeSlots
                     .filter((slot) => slot.date === effectiveSelectedDate)
@@ -304,13 +304,13 @@ function BookingsTab({ arena }) {
       )}
 
       <Card><CardContent className="space-y-2 p-4">
-        <h3 className="text-sm font-semibold text-slate-800">Ativas</h3>
-        {grouped.active.length === 0 ? <p className="text-sm text-slate-500">Nenhuma reserva ativa.</p>
+        <h3 className="text-sm font-semibold text-ink">Ativas</h3>
+        {grouped.active.length === 0 ? <p className="text-sm text-gray-500">Nenhuma reserva ativa.</p>
           : grouped.active.map((b) => <BookingRow key={b.id} booking={b} perspective="arena" />)}
       </CardContent></Card>
       {grouped.past.length > 0 && (
         <Card><CardContent className="space-y-2 p-4">
-          <h3 className="text-sm font-semibold text-slate-800">Histórico</h3>
+          <h3 className="text-sm font-semibold text-ink">Histórico</h3>
           {grouped.past.map((b) => <BookingRow key={b.id} booking={b} perspective="arena" />)}
         </CardContent></Card>
       )}
@@ -324,7 +324,7 @@ function CalendarModeButton({ active, onClick, children }) {
       type="button"
       onClick={onClick}
       className={`rounded-full px-3 py-1.5 text-sm font-medium transition-colors ${
-        active ? 'bg-emerald-600 text-white' : 'text-slate-700 hover:bg-emerald-50'
+        active ? 'bg-ink text-white' : 'text-gray-600 hover:bg-acid/10'
       }`}
     >
       {children}
@@ -334,22 +334,22 @@ function CalendarModeButton({ active, onClick, children }) {
 
 function BookingCalendarEntry({ slot, compact = false }) {
   const booking = slot.booking;
-  const statusClassName = CALENDAR_STATUS_STYLE[booking.status] || 'bg-slate-100 text-slate-700';
+  const statusClassName = CALENDAR_STATUS_STYLE[booking.status] || 'bg-paper text-gray-600';
   const amount = booking.agreed_price ?? booking.proposed_price;
 
   return (
-    <div className="rounded-[1rem] border border-emerald-950/10 bg-white/85 p-3">
+    <div className="rounded-[1rem] border border-gray-100 bg-white/85 p-3">
       <div className="flex items-start justify-between gap-2">
         <div>
-          <div className="text-sm font-semibold text-slate-950">{slot.start}–{slot.end}</div>
-          <div className="mt-0.5 text-xs text-slate-600">{booking.athlete_name || 'Atleta'}</div>
+          <div className="text-sm font-semibold text-ink">{slot.start}–{slot.end}</div>
+          <div className="mt-0.5 text-xs text-gray-500">{booking.athlete_name || 'Atleta'}</div>
         </div>
         <Badge className={statusClassName}>{BOOKING_STATUS_LABELS[booking.status] || booking.status}</Badge>
       </div>
 
       {!compact && (
-        <div className="mt-2 space-y-1 text-xs text-slate-500">
-          {amount != null && <div>Valor em jogo: <strong className="text-slate-700">{formatPrice(amount)}</strong></div>}
+        <div className="mt-2 space-y-1 text-xs text-gray-500">
+          {amount != null && <div>Valor em jogo: <strong className="text-gray-600">{formatPrice(amount)}</strong></div>}
           {booking.notes && <div>Observação: {booking.notes}</div>}
         </div>
       )}
@@ -398,12 +398,12 @@ function ManagersTab({ arena }) {
   return (
     <PlatformSurfaceCard>
       <div className="flex items-start gap-3">
-        <div className="flex h-10 w-10 items-center justify-center rounded-2xl bg-emerald-100 text-emerald-700">
+        <div className="flex h-10 w-10 items-center justify-center rounded-2xl bg-green-100 text-green-700">
           <Users className="h-4.5 w-4.5" />
         </div>
         <div>
-          <div className="text-base font-semibold text-slate-950">Admins da arena</div>
-          <p className="mt-1 text-sm leading-6 text-slate-600">
+          <div className="text-base font-semibold text-ink">Admins da arena</div>
+          <p className="mt-1 text-sm leading-6 text-gray-500">
             O criador da arena já nasce como owner. Qualquer admin da arena pode compartilhar a administração com outros usuários da plataforma.
           </p>
         </div>
@@ -411,10 +411,10 @@ function ManagersTab({ arena }) {
 
       <ul className="mt-5 space-y-3">
         {managers.map((manager) => (
-          <li key={manager.user_id} className="flex items-center justify-between gap-3 rounded-[1.25rem] border border-emerald-950/10 bg-white/75 px-4 py-3">
+          <li key={manager.user_id} className="flex items-center justify-between gap-3 rounded-[1.25rem] border border-gray-100 bg-white/75 px-4 py-3">
             <div className="min-w-0">
-              <div className="truncate font-medium text-slate-950">{manager.user_name || 'Usuário'}</div>
-              <div className="mt-1 text-xs text-slate-500">{manager.user_id}</div>
+              <div className="truncate font-medium text-ink">{manager.user_name || 'Usuário'}</div>
+              <div className="mt-1 text-xs text-gray-500">{manager.user_id}</div>
             </div>
             <div className="flex items-center gap-2">
               <Badge variant="secondary" className="shadow-none">
@@ -435,7 +435,7 @@ function ManagersTab({ arena }) {
         ))}
       </ul>
 
-      <div className="mt-5 rounded-[1.5rem] border border-emerald-950/10 bg-secondary/35 p-4">
+      <div className="mt-5 rounded-[1.5rem] border border-gray-100 bg-paper p-4">
         <Label>Adicionar admin da arena (e-mail do usuário já cadastrado)</Label>
         <div className="mt-3 flex gap-2">
           <Input value={email} onChange={(e) => setEmail(e.target.value)} placeholder="email@dominio.com" type="email" />
@@ -461,9 +461,9 @@ export default function ArenaManage() {
   if (!arena) {
     return (
       <div className="mx-auto max-w-md p-6 text-center">
-        <Building2 className="mx-auto h-10 w-10 text-slate-300" />
+        <Building2 className="mx-auto h-10 w-10 text-gray-300" />
         <h2 className="mt-3 font-semibold">Arena não encontrada</h2>
-        <Link to="/arenas" className="mt-1 inline-block text-sm text-emerald-700 underline">Voltar ao diretório</Link>
+        <Link to="/arenas" className="mt-1 inline-block text-sm text-green-700 underline">Voltar ao diretório</Link>
       </div>
     );
   }
@@ -475,7 +475,7 @@ export default function ArenaManage() {
   return (
     <div className="mx-auto max-w-4xl space-y-6">
       <div className="flex items-center justify-between gap-2">
-        <Link to={`/arenas/${arena.id}`} className="inline-flex items-center gap-1 text-sm text-slate-500 hover:text-slate-800">
+        <Link to={`/arenas/${arena.id}`} className="inline-flex items-center gap-1 text-sm text-gray-500 hover:text-ink">
           <ArrowLeft className="h-4 w-4" /> {arena.name}
         </Link>
         {isOwner && (
@@ -499,12 +499,12 @@ export default function ArenaManage() {
 
       <PlatformSurfaceCard>
         <div className="flex items-start gap-3">
-          <div className="flex h-10 w-10 items-center justify-center rounded-2xl bg-emerald-100 text-emerald-700">
+          <div className="flex h-10 w-10 items-center justify-center rounded-2xl bg-green-100 text-green-700">
             <Building2 className="h-4.5 w-4.5" />
           </div>
           <div>
-            <div className="text-base font-semibold text-slate-950">Central da arena</div>
-            <p className="mt-1 text-sm leading-6 text-slate-600">
+            <div className="text-base font-semibold text-ink">Central da arena</div>
+            <p className="mt-1 text-sm leading-6 text-gray-500">
               Aqui você gerencia reservas, preços, fotos, admins e informações públicas da arena no mesmo fluxo operacional.
             </p>
           </div>

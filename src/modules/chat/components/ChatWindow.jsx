@@ -139,22 +139,22 @@ export default function ChatWindow({ conversation, currentUserId, onBack, onClos
   return (
     <div className="flex h-full min-h-0 flex-col">
       {/* Header */}
-      <div className="flex items-center gap-3 border-b border-emerald-950/10 bg-white/85 px-3 py-2.5">
+      <div className="flex items-center gap-3 border-b border-gray-100 bg-white/85 px-3 py-2.5">
         {onBack && (
           <Button variant="ghost" size="icon" className="h-9 w-9 shrink-0 lg:hidden" onClick={onBack} aria-label="Voltar">
             <ArrowLeft className="h-5 w-5" />
           </Button>
         )}
         {isGroup ? (
-          <span className="flex h-10 w-10 shrink-0 items-center justify-center rounded-full bg-emerald-700 text-emerald-50">
+          <span className="flex h-10 w-10 shrink-0 items-center justify-center rounded-full bg-ink text-white/70">
             <Users className="h-5 w-5" />
           </span>
         ) : (
           <UserAvatar name={counterpart?.name || title} photoUrl={counterpart?.photo_url} size="md" />
         )}
         <div className="min-w-0 flex-1">
-          <div className="truncate text-sm font-semibold text-slate-900">{title}</div>
-          <div className="truncate text-xs text-slate-500">
+          <div className="truncate text-sm font-semibold text-ink">{title}</div>
+          <div className="truncate text-xs text-gray-500">
             {isGroup ? `${memberCount} participantes` : 'Conversa direta'}
           </div>
         </div>
@@ -193,15 +193,15 @@ export default function ChatWindow({ conversation, currentUserId, onBack, onClos
             {[1, 2, 3].map((i) => <Skeleton key={i} className={`h-12 max-w-[60%] rounded-2xl ${i % 2 ? '' : 'ml-auto'}`} />)}
           </div>
         ) : rendered.length === 0 ? (
-          <div className="flex h-full flex-col items-center justify-center text-center text-slate-500">
-            <MessagesSquare className="mb-3 h-10 w-10 text-emerald-300" />
+          <div className="flex h-full flex-col items-center justify-center text-center text-gray-500">
+            <MessagesSquare className="mb-3 h-10 w-10 text-green-300" />
             <p className="text-sm">Nenhuma mensagem ainda. Diga olá! 👋</p>
           </div>
         ) : (
           rendered.map((item) =>
             item.type === 'day' ? (
               <div key={item.id} className="my-3 flex justify-center">
-                <span className="rounded-full bg-white/80 px-3 py-1 text-[11px] font-medium text-slate-500 shadow-sm">{item.label}</span>
+                <span className="rounded-full bg-white/80 px-3 py-1 text-[11px] font-medium text-gray-500 shadow-sm">{item.label}</span>
               </div>
             ) : (
               <MessageBubble
@@ -233,7 +233,7 @@ export default function ChatWindow({ conversation, currentUserId, onBack, onClos
       <Dialog open={renameOpen} onOpenChange={setRenameOpen}>
         <DialogContent className="max-w-sm">
           <DialogHeader>
-            <DialogTitle className="flex items-center gap-2"><Info className="h-5 w-5 text-emerald-700" /> Renomear grupo</DialogTitle>
+            <DialogTitle className="flex items-center gap-2"><Info className="h-5 w-5 text-green-700" /> Renomear grupo</DialogTitle>
             <DialogDescription>Escolha um nome para identificar o grupo.</DialogDescription>
           </DialogHeader>
           <Input value={renameValue} onChange={(e) => setRenameValue(e.target.value)} maxLength={80} placeholder="Nome do grupo" />

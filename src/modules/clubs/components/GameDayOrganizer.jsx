@@ -144,8 +144,8 @@ function ParticipantsSection({ eventId, clubId, dateId, participants, isLoading 
       <CardContent className="space-y-4 p-4">
         <div className="flex items-center justify-between gap-3">
           <div className="flex items-center gap-2">
-            <Users className="h-5 w-5 text-emerald-600" />
-            <h3 className="text-base font-semibold text-slate-900">Participantes ({participants.length})</h3>
+            <Users className="h-5 w-5 text-green-600" />
+            <h3 className="text-base font-semibold text-ink">Participantes ({participants.length})</h3>
           </div>
           <Button size="sm" variant="outline" onClick={() => setPickerOpen(true)} disabled={atLimit}>
             <UserPlus className="mr-1.5 h-4 w-4" /> Inserir atletas
@@ -159,11 +159,11 @@ function ParticipantsSection({ eventId, clubId, dateId, participants, isLoading 
         ) : (
           <div className="flex flex-wrap gap-2">
             {participants.map((p) => (
-              <div key={p.id} className="flex items-center gap-2 rounded-full border border-slate-200 bg-white py-1 pl-1 pr-2 text-sm">
+              <div key={p.id} className="flex items-center gap-2 rounded-full border border-gray-200 bg-white py-1 pl-1 pr-2 text-sm">
                 <UserAvatar name={p.name} photoUrl={p.photo_url} size="xs" />
-                <span className="font-medium text-slate-800">{p.name}</span>
+                <span className="font-medium text-ink">{p.name}</span>
                 <Badge variant="secondary" className="rounded-full px-1.5 py-0 text-[10px] font-normal">{SOURCE_LABEL[p.source] || 'Atleta'}</Badge>
-                <button onClick={() => handleRemove(p.id)} className="text-slate-400 transition-colors hover:text-red-600" title="Remover">
+                <button onClick={() => handleRemove(p.id)} className="text-gray-400 transition-colors hover:text-red-600" title="Remover">
                   <Trash2 className="h-3.5 w-3.5" />
                 </button>
               </div>
@@ -231,16 +231,16 @@ function AddAthletesDialog({ open, onClose, confirmedPool, platformPool, onAdd }
 function PoolList({ title, people, onAdd, emptyText }) {
   return (
     <div>
-      <h4 className="mb-2 text-xs font-semibold uppercase tracking-wide text-slate-500">{title} ({people.length})</h4>
+      <h4 className="mb-2 text-xs font-semibold uppercase tracking-wide text-gray-500">{title} ({people.length})</h4>
       {people.length === 0 ? (
-        <p className="text-sm text-slate-400">{emptyText}</p>
+        <p className="text-sm text-gray-400">{emptyText}</p>
       ) : (
         <div className="space-y-1.5">
           {people.map((p) => (
-            <div key={p.user_id} className="flex items-center justify-between gap-2 rounded-lg border border-slate-100 p-2">
+            <div key={p.user_id} className="flex items-center justify-between gap-2 rounded-lg border border-gray-100 p-2">
               <div className="flex min-w-0 items-center gap-2">
                 <UserAvatar name={p.name} photoUrl={p.photo_url} size="sm" />
-                <span className="truncate text-sm font-medium text-slate-800">{p.name}</span>
+                <span className="truncate text-sm font-medium text-ink">{p.name}</span>
               </div>
               <Button size="sm" variant="outline" onClick={() => onAdd(p)}>
                 <Plus className="mr-1 h-3.5 w-3.5" /> Inserir
@@ -329,8 +329,8 @@ function GamesSection({ eventId, dateId, participants }) {
       <CardContent className="space-y-4 p-4">
         <div className="flex flex-wrap items-center justify-between gap-3">
           <div className="flex items-center gap-2">
-            <Swords className="h-5 w-5 text-emerald-600" />
-            <h3 className="text-base font-semibold text-slate-900">Jogos ({games.length})</h3>
+            <Swords className="h-5 w-5 text-green-600" />
+            <h3 className="text-base font-semibold text-ink">Jogos ({games.length})</h3>
           </div>
           <div className="flex flex-wrap gap-2">
             <Button size="sm" variant="outline" onClick={() => setManualOpen(true)} disabled={participants.length < 2}>
@@ -348,7 +348,7 @@ function GamesSection({ eventId, dateId, participants }) {
         </div>
 
         {!canDraw && (
-          <p className="text-xs text-slate-500">
+          <p className="text-xs text-gray-500">
             Insira ao menos 4 participantes para sortear jogos de duplas. Para partidas individuais avulsas, bastam 2.
           </p>
         )}
@@ -365,7 +365,7 @@ function GamesSection({ eventId, dateId, participants }) {
           <div className="space-y-4">
             {byRound.map(([key, list]) => (
               <div key={key}>
-                <div className="mb-2 text-xs font-semibold uppercase tracking-wide text-slate-500">
+                <div className="mb-2 text-xs font-semibold uppercase tracking-wide text-gray-500">
                   {key === 'manual' ? 'Partidas avulsas' : `Rodada ${key}`}
                 </div>
                 <div className="space-y-2">
@@ -399,7 +399,7 @@ function GamesSection({ eventId, dateId, participants }) {
                 value={rounds || effectiveRounds}
                 onChange={(e) => setRounds(Math.max(1, Math.min(GAME_DAY_LIMITS.MAX_ROUNDS, Number(e.target.value) || 0)))}
               />
-              <p className="text-xs text-slate-500">
+              <p className="text-xs text-gray-500">
                 Com {participants.length} participantes e {Math.floor(participants.length / 4)} jogo(s) por rodada.
               </p>
             </div>
@@ -452,8 +452,8 @@ function GameRow({ eventId, game }) {
   const winB = game.score_a != null && game.score_b != null && game.score_b > game.score_a;
 
   return (
-    <div className="flex items-center gap-2 rounded-lg border border-slate-200 bg-white p-2.5 text-sm">
-      <div className={`flex-1 text-right ${winA ? 'font-bold text-emerald-700' : 'font-medium text-slate-700'}`}>
+    <div className="flex items-center gap-2 rounded-lg border border-gray-200 bg-white p-2.5 text-sm">
+      <div className={`flex-1 text-right ${winA ? 'font-bold text-green-700' : 'font-medium text-gray-600'}`}>
         {sideNames(game.side_a)}
       </div>
       <div className="flex items-center gap-1">
@@ -466,7 +466,7 @@ function GameRow({ eventId, game }) {
           className="h-8 w-12 px-1 text-center tabular-nums"
           aria-label="Placar lado A"
         />
-        <span className="text-xs text-slate-400">×</span>
+        <span className="text-xs text-gray-400">×</span>
         <Input
           type="number"
           min={0}
@@ -477,13 +477,13 @@ function GameRow({ eventId, game }) {
           aria-label="Placar lado B"
         />
       </div>
-      <div className={`flex-1 ${winB ? 'font-bold text-emerald-700' : 'font-medium text-slate-700'}`}>
+      <div className={`flex-1 ${winB ? 'font-bold text-green-700' : 'font-medium text-gray-600'}`}>
         {sideNames(game.side_b)}
       </div>
       <button
         type="button"
         onClick={() => setConfirmDelete(true)}
-        className="text-slate-400 transition-colors hover:text-red-600"
+        className="text-gray-400 transition-colors hover:text-red-600"
         title="Excluir jogo"
         aria-label="Excluir jogo"
       >
@@ -584,7 +584,7 @@ function ManualGameDialog({ open, onClose, eventId, dateId, participants }) {
           </div>
           <div className="grid grid-cols-[1fr_auto_1fr] items-start gap-3">
             <div className="space-y-2">
-              <Label className="text-xs uppercase text-slate-500">Lado A</Label>
+              <Label className="text-xs uppercase text-gray-500">Lado A</Label>
               {Array.from({ length: slots }).map((_, i) => (
                 <PlayerSelect
                   key={i}
@@ -594,9 +594,9 @@ function ManualGameDialog({ open, onClose, eventId, dateId, participants }) {
                 />
               ))}
             </div>
-            <div className="pt-7 text-xs font-medium text-slate-400">vs</div>
+            <div className="pt-7 text-xs font-medium text-gray-400">vs</div>
             <div className="space-y-2">
-              <Label className="text-xs uppercase text-slate-500">Lado B</Label>
+              <Label className="text-xs uppercase text-gray-500">Lado B</Label>
               {Array.from({ length: slots }).map((_, i) => (
                 <PlayerSelect
                   key={i}

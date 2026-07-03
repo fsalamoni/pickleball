@@ -68,14 +68,14 @@ export default function ForumPoll({ thread }) {
   };
 
   return (
-    <div className="rounded-xl border border-emerald-950/10 bg-secondary/30 p-4">
+    <div className="rounded-xl border border-gray-100 bg-paper p-4">
       <div className="mb-3 flex items-start justify-between gap-3">
         <div className="flex items-center gap-2">
-          <BarChart3 className="h-4 w-4 text-emerald-700" />
-          <h4 className="font-semibold text-slate-900">{poll.question}</h4>
+          <BarChart3 className="h-4 w-4 text-green-700" />
+          <h4 className="font-semibold text-ink">{poll.question}</h4>
         </div>
         {closed ? (
-          <span className="inline-flex shrink-0 items-center gap-1 rounded-full bg-slate-200 px-2 py-0.5 text-[11px] font-medium text-slate-600">
+          <span className="inline-flex shrink-0 items-center gap-1 rounded-full bg-gray-200 px-2 py-0.5 text-[11px] font-medium text-gray-500">
             <Lock className="h-3 w-3" /> Encerrada
           </span>
         ) : poll.closes_at_ms ? (
@@ -85,7 +85,7 @@ export default function ForumPoll({ thread }) {
         ) : null}
       </div>
 
-      <p className="mb-3 text-xs text-slate-500">
+      <p className="mb-3 text-xs text-gray-500">
         {poll.multiple ? 'Você pode escolher várias opções.' : 'Escolha uma opção.'}
       </p>
 
@@ -101,31 +101,31 @@ export default function ForumPoll({ thread }) {
               disabled={closed}
               className={cn(
                 'relative w-full overflow-hidden rounded-lg border px-3 py-2 text-left transition-colors',
-                isSelected ? 'border-emerald-500 bg-white' : 'border-emerald-950/10 bg-white/70 hover:border-emerald-300',
+                isSelected ? 'border-green-500 bg-white' : 'border-gray-100 bg-white/70 hover:border-green-400',
                 closed && 'cursor-default',
               )}
             >
               {revealResults && (
                 <span
-                  className="absolute inset-y-0 left-0 bg-emerald-100/80"
+                  className="absolute inset-y-0 left-0 bg-green-100/80"
                   style={{ width: `${option.percentage}%` }}
                   aria-hidden
                 />
               )}
               <span className="relative flex items-center justify-between gap-2">
-                <span className="flex items-center gap-2 text-sm text-slate-800">
+                <span className="flex items-center gap-2 text-sm text-ink">
                   <span className={cn(
                     'flex h-4 w-4 shrink-0 items-center justify-center border',
                     poll.multiple ? 'rounded' : 'rounded-full',
-                    isSelected ? 'border-emerald-600 bg-emerald-600 text-white' : 'border-slate-300',
+                    isSelected ? 'border-ink bg-ink text-white' : 'border-gray-200',
                   )}>
                     {isSelected && <Check className="h-3 w-3" />}
                   </span>
                   {option.text}
-                  {isMine && <span className="text-[11px] font-medium text-emerald-700">· seu voto</span>}
+                  {isMine && <span className="text-[11px] font-medium text-green-700">· seu voto</span>}
                 </span>
                 {revealResults && (
-                  <span className="relative shrink-0 text-xs font-semibold text-slate-600">
+                  <span className="relative shrink-0 text-xs font-semibold text-gray-500">
                     {option.percentage}% ({option.count})
                   </span>
                 )}
@@ -136,7 +136,7 @@ export default function ForumPoll({ thread }) {
       </div>
 
       <div className="mt-3 flex flex-wrap items-center justify-between gap-2">
-        <span className="text-xs text-slate-500">
+        <span className="text-xs text-gray-500">
           {totalVoters} participante(s) · {totalVotes} voto(s)
         </span>
         <div className="flex gap-2">
@@ -146,7 +146,7 @@ export default function ForumPoll({ thread }) {
             </Button>
           )}
           {!closed && hasVoted && (
-            <Button variant="ghost" size="sm" className="h-8 text-slate-500" onClick={handleClear} disabled={setVote.isPending}>
+            <Button variant="ghost" size="sm" className="h-8 text-gray-500" onClick={handleClear} disabled={setVote.isPending}>
               Remover voto
             </Button>
           )}

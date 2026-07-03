@@ -96,9 +96,9 @@ export default function ShareCardDialog({ tournament, open, onOpenChange }) {
         {/* Card visual capturável */}
         <div
           ref={cardRef}
-          className="relative overflow-hidden rounded-2xl bg-gradient-to-br from-emerald-600 to-emerald-800 p-5 text-white"
+          className="relative overflow-hidden rounded-2xl bg-gradient-to-br from-ink to-ink-light p-5 text-white"
         >
-          <div className="flex items-center gap-2 text-emerald-100">
+          <div className="flex items-center gap-2 text-acid">
             <Trophy className="h-5 w-5" />
             <span className="text-sm font-semibold tracking-wide">Pickleholics</span>
           </div>
@@ -107,7 +107,7 @@ export default function ShareCardDialog({ tournament, open, onOpenChange }) {
             {tournament?.name || 'Torneio de Pickleball'}
           </h3>
 
-          <div className="mt-2 space-y-1 text-sm text-emerald-50">
+          <div className="mt-2 space-y-1 text-sm text-white/70">
             {(tournament?.city || tournament?.state) && (
               <div className="flex items-center gap-1.5">
                 <MapPin className="h-4 w-4" />
@@ -123,7 +123,7 @@ export default function ShareCardDialog({ tournament, open, onOpenChange }) {
           </div>
 
           <div className="mt-4 flex items-end justify-between gap-3">
-            <p className="text-xs text-emerald-100/90">
+            <p className="text-xs text-acid/90">
               Aponte a câmera para acompanhar o torneio ao vivo
             </p>
             {qrDataUrl && (
@@ -147,7 +147,7 @@ export default function ShareCardDialog({ tournament, open, onOpenChange }) {
               <span className="ml-1">{downloading ? 'Gerando…' : 'Baixar card'}</span>
             </Button>
             <Button variant="outline" onClick={() => copy(url, 'Link copiado!')}>
-              {copied ? <Check className="h-4 w-4 text-emerald-600" /> : <Copy className="h-4 w-4" />}
+              {copied ? <Check className="h-4 w-4 text-green-600" /> : <Copy className="h-4 w-4" />}
               <span className="ml-1">Copiar link</span>
             </Button>
           </div>

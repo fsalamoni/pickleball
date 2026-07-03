@@ -260,7 +260,7 @@ export default function TournamentAdminTab({ tournament }) {
                     ))}
                   </select>
                 </div>
-                <div className="md:col-span-2 rounded-[1.25rem] border border-gray-200 bg-acid/10/70 p-4 text-sm leading-6 text-emerald-950">
+                <div className="md:col-span-2 rounded-[1.25rem] border border-gray-200 bg-acid/10 p-4 text-sm leading-6 text-green-800">
                   Pontos por game e sets por partida agora são definidos dentro de cada modalidade, fase por fase. Aqui ficam apenas as regras-base do torneio.
                 </div>
               </div>
@@ -350,7 +350,7 @@ export default function TournamentAdminTab({ tournament }) {
               ))}
             </ul>
 
-            <div className="mt-5 rounded-[1.5rem] border border-gray-100 bg-secondary/35 p-4">
+            <div className="mt-5 rounded-[1.5rem] border border-gray-100 bg-paper p-4">
               <Label>Adicionar admin (e-mail do usuário já cadastrado)</Label>
               <div className="mt-3 flex gap-2">
                 <Input value={email} onChange={(e) => setEmail(e.target.value)} placeholder="email@dominio.com" type="email" />

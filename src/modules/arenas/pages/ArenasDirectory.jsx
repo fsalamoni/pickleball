@@ -33,14 +33,14 @@ export default function ArenasDirectory() {
   return (
     <div className="mx-auto max-w-6xl space-y-6">
       <section className="grid gap-6 xl:grid-cols-[1.05fr,0.95fr]">
-        <Card className="arena-panel-strong overflow-hidden rounded-[1.25rem] border-0 sm:rounded-[2rem]">
+        <Card className="bg-ink text-white overflow-hidden rounded-[1.25rem] border-0 sm:rounded-[2rem]">
           <CardContent className="p-5 sm:p-8 lg:p-10">
             <PlatformSectionHeader
               eyebrow="Arenas"
               title="Encontre onde jogar, reservar e organizar sua rotina fora do torneio."
               description="A plataforma também funciona como vitrine e canal operacional para arenas, quadras e pedidos de reserva."
               titleClassName="mt-4 text-3xl leading-tight text-white sm:text-4xl"
-              descriptionClassName="mt-3 max-w-2xl text-sm leading-7 text-emerald-50/75 sm:text-base"
+              descriptionClassName="mt-3 max-w-2xl text-sm leading-7 text-white/70 sm:text-base"
             />
             <div className="mt-6 flex flex-wrap gap-3">
               {managed.length > 0 && (
@@ -48,7 +48,7 @@ export default function ArenasDirectory() {
                   <Link to={`/arenas/${managed[0].id}/gerir`}><Settings className="h-4 w-4" /> <span className="ml-1">Minha arena</span></Link>
                 </Button>
               )}
-              <Button asChild size="sm" className="bg-white text-slate-950 hover:bg-emerald-50">
+              <Button asChild size="sm" className="bg-white text-ink hover:bg-acid/10">
                 <Link to="/arenas/criar"><Plus className="h-4 w-4" /> <span className="ml-1">Cadastrar arena</span></Link>
               </Button>
             </div>
@@ -62,16 +62,16 @@ export default function ArenasDirectory() {
             description="Filtre por nome, cidade, bairro ou favoritos sem sair do mesmo fluxo."
           />
           <div className="mt-5 flex flex-wrap items-center gap-3">
-            <span className="rounded-full border border-emerald-950/10 bg-secondary/35 px-3 py-1.5 text-sm text-slate-700">{arenas.length} arena(s) publicadas</span>
-            <span className="rounded-full border border-emerald-950/10 bg-secondary/35 px-3 py-1.5 text-sm text-slate-700">{favorites.length} favorita(s)</span>
-            <span className="rounded-full border border-emerald-950/10 bg-secondary/35 px-3 py-1.5 text-sm text-slate-700">{managed.length} sob sua gestão</span>
+            <span className="rounded-full border border-gray-100 bg-paper px-3 py-1.5 text-sm text-gray-600">{arenas.length} arena(s) publicadas</span>
+            <span className="rounded-full border border-gray-100 bg-paper px-3 py-1.5 text-sm text-gray-600">{favorites.length} favorita(s)</span>
+            <span className="rounded-full border border-gray-100 bg-paper px-3 py-1.5 text-sm text-gray-600">{managed.length} sob sua gestão</span>
           </div>
         </PlatformSurfaceCard>
       </section>
 
       <PlatformSurfaceCard contentClassName="flex flex-wrap items-center gap-3 p-4">
           <div className="relative min-w-[220px] flex-1">
-            <Search className="absolute left-4 top-1/2 h-4 w-4 -translate-y-1/2 text-slate-400" />
+            <Search className="absolute left-4 top-1/2 h-4 w-4 -translate-y-1/2 text-gray-400" />
             <Input
               value={search}
               onChange={(e) => setSearch(e.target.value)}
@@ -84,7 +84,7 @@ export default function ArenasDirectory() {
             onClick={() => setOnlyFavorites((v) => !v)}
             aria-pressed={onlyFavorites}
             className={`inline-flex items-center gap-1.5 rounded-full border px-4 py-2 text-sm font-medium transition-colors ${
-              onlyFavorites ? 'border-red-500 bg-red-50 text-red-600' : 'border-slate-200 text-slate-600 hover:bg-slate-50'
+              onlyFavorites ? 'border-red-500 bg-red-50 text-red-600' : 'border-gray-200 text-gray-500 hover:bg-paper'
             }`}
           >
             <Heart className={onlyFavorites ? 'h-4 w-4 fill-red-500' : 'h-4 w-4'} /> Favoritas

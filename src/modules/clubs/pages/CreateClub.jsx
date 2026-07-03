@@ -52,19 +52,19 @@ export default function CreateClub() {
 
   return (
     <div className="mx-auto max-w-4xl space-y-6">
-      <Button asChild variant="ghost" size="sm" className="text-emerald-50 hover:bg-white/10 hover:text-white">
+      <Button asChild variant="ghost" size="sm" className="text-white/70 hover:bg-white/10 hover:text-white">
         <Link to="/clubes"><ArrowLeft className="mr-1.5 h-4 w-4" /> Voltar para clubes</Link>
       </Button>
 
-      <section className="arena-panel-strong rounded-[1.25rem] p-5 sm:rounded-[2rem] sm:p-8">
+      <section className="bg-ink text-white rounded-[1.25rem] p-5 sm:rounded-[2rem] sm:p-8">
         <div className="flex items-start gap-3">
-          <div className="flex h-10 w-10 shrink-0 items-center justify-center rounded-2xl bg-amber-300 text-slate-950">
+          <div className="flex h-10 w-10 shrink-0 items-center justify-center rounded-2xl bg-amber-300 text-ink">
             <Building2 className="h-5 w-5" />
           </div>
           <div className="max-w-2xl space-y-2">
-            <p className="text-xs font-semibold uppercase tracking-wider text-emerald-200">Novo clube</p>
+            <p className="text-xs font-semibold uppercase tracking-wider text-green-600">Novo clube</p>
             <h1 className="text-2xl font-bold text-white sm:text-3xl">Criar clube</h1>
-            <p className="text-sm leading-6 text-emerald-50/85">
+            <p className="text-sm leading-6 text-white/70">
               Você será o administrador do clube e poderá convidar atletas por meio de um código exclusivo.
             </p>
           </div>
@@ -74,24 +74,24 @@ export default function CreateClub() {
       <section className="grid gap-6 xl:grid-cols-[1.04fr,0.96fr]">
         <PlatformSurfaceCard>
           <div className="flex items-start gap-3">
-            <div className="flex h-10 w-10 items-center justify-center rounded-2xl bg-emerald-100 text-emerald-700">
+            <div className="flex h-10 w-10 items-center justify-center rounded-2xl bg-green-100 text-green-700">
               <Sparkles className="h-4.5 w-4.5" />
             </div>
             <div>
-              <div className="text-base font-semibold text-slate-950">Posicione seu clube na comunidade</div>
-              <p className="mt-1 text-sm leading-6 text-slate-600">Um bom perfil ajuda atletas a entender o ambiente, o local de jogo e como entrar em contato.</p>
+              <div className="text-base font-semibold text-ink">Posicione seu clube na comunidade</div>
+              <p className="mt-1 text-sm leading-6 text-gray-500">Um bom perfil ajuda atletas a entender o ambiente, o local de jogo e como entrar em contato.</p>
             </div>
           </div>
         </PlatformSurfaceCard>
 
         <PlatformSurfaceCard>
           <div className="flex items-start gap-3">
-            <div className="flex h-10 w-10 items-center justify-center rounded-2xl bg-emerald-100 text-emerald-700">
+            <div className="flex h-10 w-10 items-center justify-center rounded-2xl bg-green-100 text-green-700">
               <Users className="h-4.5 w-4.5" />
             </div>
             <div>
-              <div className="text-base font-semibold text-slate-950">O que você libera ao criar</div>
-              <p className="mt-1 text-sm leading-6 text-slate-600">Convites por código, mural, eventos, fórum e gestão compartilhada do clube dentro da plataforma.</p>
+              <div className="text-base font-semibold text-ink">O que você libera ao criar</div>
+              <p className="mt-1 text-sm leading-6 text-gray-500">Convites por código, mural, eventos, fórum e gestão compartilhada do clube dentro da plataforma.</p>
             </div>
           </div>
         </PlatformSurfaceCard>
@@ -173,7 +173,7 @@ export default function CreateClub() {
               </div>
             </PlatformFormSection>
 
-            <Button type="submit" disabled={createClub.isPending || !isAuthenticated} className="bg-emerald-700 hover:bg-emerald-800">
+            <Button type="submit" disabled={createClub.isPending || !isAuthenticated} className="bg-ink hover:bg-ink-light">
               {createClub.isPending ? 'Criando…' : 'Criar clube'}
             </Button>
           </form>

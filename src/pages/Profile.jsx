@@ -255,15 +255,15 @@ export default function Profile() {
 
   return (
     <div className="mx-auto max-w-4xl space-y-5">
-      <section className="arena-panel-strong rounded-[1.25rem] p-5 sm:rounded-[2rem] sm:p-8">
+      <section className="bg-ink text-white rounded-[1.25rem] p-5 sm:rounded-[2rem] sm:p-8">
         <div className="flex items-start gap-3">
-          <div className="flex h-10 w-10 shrink-0 items-center justify-center rounded-2xl bg-amber-300 text-slate-950">
+          <div className="flex h-10 w-10 shrink-0 items-center justify-center rounded-2xl bg-amber-300 text-ink">
             <UserCheck className="h-5 w-5" />
           </div>
           <div className="max-w-2xl space-y-2">
-            <p className="text-xs font-semibold uppercase tracking-wider text-emerald-200">Conta e elegibilidade</p>
+            <p className="text-xs font-semibold uppercase tracking-wider text-green-600">Conta e elegibilidade</p>
             <h1 className="text-2xl font-bold text-white sm:text-3xl">Meu Perfil</h1>
-            <p className="text-sm leading-6 text-emerald-50/85">Como você aparece para os outros participantes dos torneios.</p>
+            <p className="text-sm leading-6 text-white/70">Como você aparece para os outros participantes dos torneios.</p>
           </div>
         </div>
       </section>
@@ -275,7 +275,7 @@ export default function Profile() {
             description="Atualize nome público, data de nascimento, telefone e experiência no pickleball."
             titleClassName="text-lg"
           />
-          <div className="mb-6 rounded-md border border-emerald-950/10 bg-gradient-to-br from-white/85 to-emerald-50/70 p-3">
+          <div className="mb-6 rounded-md border border-gray-100 bg-gradient-to-br from-white/85 to-green-50 p-3">
             <ImageUpload
               value={photoUrl}
               onChange={savePhoto}
@@ -284,12 +284,12 @@ export default function Profile() {
               label="Enviar foto"
               hint="Sua foto aparece no perfil, no diretório de atletas e nos clubes."
               fallback={(
-                <span className="flex h-full w-full items-center justify-center bg-emerald-900 text-2xl font-semibold text-emerald-50">
+                <span className="flex h-full w-full items-center justify-center bg-ink text-2xl font-semibold text-white/70">
                   {(platformName || user?.email)?.[0]?.toUpperCase()}
                 </span>
               )}
             />
-            <div className="mt-3 text-xs text-slate-500">
+            <div className="mt-3 text-xs text-gray-500">
               {user?.email} · Login via Google
             </div>
           </div>
@@ -305,7 +305,7 @@ export default function Profile() {
                 required
               />
               {errors.platformName && <p className="text-xs text-red-600">{errors.platformName}</p>}
-              <p className="text-xs text-slate-500">Esse é o nome que aparece nos rankings.</p>
+              <p className="text-xs text-gray-500">Esse é o nome que aparece nos rankings.</p>
             </div>
             <div className="grid gap-4 sm:grid-cols-2">
               <div className="space-y-2">
@@ -318,7 +318,7 @@ export default function Profile() {
                   required
                 />
                 {errors.birthDate && <p className="text-xs text-red-600">{errors.birthDate}</p>}
-                <p className="text-xs text-slate-500">Obrigatória para validar participação.</p>
+                <p className="text-xs text-gray-500">Obrigatória para validar participação.</p>
               </div>
 
               <div className="space-y-2">
@@ -333,7 +333,7 @@ export default function Profile() {
                   required
                 />
                 {errors.phone && <p className="text-xs text-red-600">{errors.phone}</p>}
-                <p className="text-xs text-slate-500">Use DDD e numero para contato.</p>
+                <p className="text-xs text-gray-500">Use DDD e numero para contato.</p>
               </div>
             </div>
             <div className="space-y-2">
@@ -351,7 +351,7 @@ export default function Profile() {
                 ))}
               </select>
               {errors.pickleballExperience && <p className="text-xs text-red-600">{errors.pickleballExperience}</p>}
-              <p className="text-xs text-slate-500">Usado como informação complementar para organização das categorias.</p>
+              <p className="text-xs text-gray-500">Usado como informação complementar para organização das categorias.</p>
             </div>
             <div className="space-y-2">
               <Label htmlFor="competition_gender">Categoria em que deseja competir</Label>
@@ -366,14 +366,14 @@ export default function Profile() {
                   <option key={value} value={value}>{label}</option>
                 ))}
               </select>
-              <p className="text-xs text-slate-500">
+              <p className="text-xs text-gray-500">
                 Trata-se exclusivamente de uma preferência competitiva (em qual chave você quer
                 jogar) — não é uma pergunta sobre identidade de gênero. Usada para sugerir
                 automaticamente as modalidades elegíveis (masculino, feminino, dupla mista, etc.)
                 em torneios que tenham categorias separadas.
               </p>
             </div>
-            <Button type="submit" disabled={busy} className="bg-emerald-700 hover:bg-emerald-800">
+            <Button type="submit" disabled={busy} className="bg-ink hover:bg-ink-light">
               {busy ? 'Salvando...' : 'Salvar alterações'}
             </Button>
           </form>
@@ -416,14 +416,14 @@ export default function Profile() {
           <div className="space-y-2">
             <Label htmlFor="address">Endereço</Label>
             <Input id="address" value={address} onChange={(e) => setAddress(e.target.value)} maxLength={160} placeholder="Rua, número, bairro" />
-            <p className="text-xs text-slate-500">Só é exibido se você marcar como público abaixo.</p>
+            <p className="text-xs text-gray-500">Só é exibido se você marcar como público abaixo.</p>
           </div>
 
-          <div className="rounded-md border border-emerald-950/10 bg-secondary/30 p-4">
-            <div className="flex items-center gap-2 text-sm font-semibold text-slate-900">
-              <Shield className="h-4 w-4 text-emerald-700" /> Visibilidade dos contatos
+          <div className="rounded-md border border-gray-100 bg-paper p-4">
+            <div className="flex items-center gap-2 text-sm font-semibold text-ink">
+              <Shield className="h-4 w-4 text-green-700" /> Visibilidade dos contatos
             </div>
-            <p className="mt-1 text-xs text-slate-500">
+            <p className="mt-1 text-xs text-gray-500">
               Quando privado, o dado nunca aparece no diretório de atletas para outros usuários.
             </p>
             <div className="mt-4 space-y-3">
@@ -451,7 +451,7 @@ export default function Profile() {
             </div>
           </div>
 
-          <div className="rounded-md border border-emerald-950/10 bg-secondary/30 p-4">
+          <div className="rounded-md border border-gray-100 bg-paper p-4">
             <PrivacyToggle
               id="directory_listed"
               label="Aparecer no diretório de atletas"
@@ -461,7 +461,7 @@ export default function Profile() {
             />
           </div>
 
-          <Button type="button" onClick={saveCommunity} disabled={communityBusy} className="bg-emerald-700 hover:bg-emerald-800">
+          <Button type="button" onClick={saveCommunity} disabled={communityBusy} className="bg-ink hover:bg-ink-light">
             {communityBusy ? 'Salvando...' : 'Salvar comunidade e privacidade'}
           </Button>
       </PlatformSurfaceCard>
@@ -474,7 +474,7 @@ export default function Profile() {
               description="Ative esta área para aparecer no filtro de treinadores do diretório de atletas."
               titleClassName="text-lg"
             />
-            <div className="rounded-md border border-emerald-950/10 bg-secondary/30 p-4">
+            <div className="rounded-md border border-gray-100 bg-paper p-4">
               <PrivacyToggle
                 id="is_coach"
                 label="Sou treinador(a)"
@@ -523,7 +523,7 @@ export default function Profile() {
               </div>
             )}
 
-            <Button type="button" onClick={saveCoach} disabled={coachBusy} className="bg-emerald-700 hover:bg-emerald-800">
+            <Button type="button" onClick={saveCoach} disabled={coachBusy} className="bg-ink hover:bg-ink-light">
               {coachBusy ? 'Salvando...' : 'Salvar informações de treinador'}
             </Button>
         </PlatformSurfaceCard>
@@ -552,9 +552,9 @@ export default function Profile() {
                   <option key={option.code} value={option.code}>{option.label}</option>
                 ))}
               </select>
-              {selectedLevel && <p className="text-xs text-slate-600">{selectedLevel.tagline}</p>}
+              {selectedLevel && <p className="text-xs text-gray-500">{selectedLevel.tagline}</p>}
             </div>
-            <Button type="button" onClick={saveManualLevel} disabled={levelBusy} className="bg-emerald-700 hover:bg-emerald-800">
+            <Button type="button" onClick={saveManualLevel} disabled={levelBusy} className="bg-ink hover:bg-ink-light">
               Salvar nível
             </Button>
           </div>
@@ -590,8 +590,8 @@ function PrivacyToggle({ id, label, hint, checked, onCheckedChange }) {
   return (
     <div className="flex items-center justify-between gap-4">
       <div className="min-w-0">
-        <Label htmlFor={id} className="cursor-pointer text-sm text-slate-900">{label}</Label>
-        <p className="text-xs text-slate-500">{hint}</p>
+        <Label htmlFor={id} className="cursor-pointer text-sm text-ink">{label}</Label>
+        <p className="text-xs text-gray-500">{hint}</p>
       </div>
       <Switch id={id} checked={checked} onCheckedChange={onCheckedChange} />
     </div>

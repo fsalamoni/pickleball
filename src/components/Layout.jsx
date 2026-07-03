@@ -284,7 +284,7 @@ export default function Layout({ children, currentPageName }) {
   }
 
   if (!isAuthenticated || !user) {
-    return <div className="min-h-screen arena-page">{children}</div>;
+    return <div className="min-h-screen bg-paper">{children}</div>;
   }
 
   const displayName = userProfile?.platform_name || user?.displayName || user?.email?.split('@')[0] || 'Usuário';
@@ -299,16 +299,16 @@ export default function Layout({ children, currentPageName }) {
   };
 
   return (
-    <div className="min-h-screen arena-page">
+    <div className="min-h-screen bg-paper">
       <div
         className={cn(
-          'fixed inset-0 z-30 bg-slate-950/50 backdrop-blur-sm transition-opacity lg:hidden',
+          'fixed inset-0 z-30 bg-ink/50 backdrop-blur-sm transition-opacity lg:hidden',
           sidebarOpen ? 'opacity-100' : 'pointer-events-none opacity-0',
         )}
         onClick={() => setSidebarOpen(false)}
       />
 
-      <div className="fixed inset-x-0 top-0 z-50 flex h-[calc(4.75rem+env(safe-area-inset-top))] items-center justify-between border-b border-white/10 bg-slate-950/95 px-4 pt-[env(safe-area-inset-top)] text-white backdrop-blur-xl lg:hidden">
+      <div className="fixed inset-x-0 top-0 z-50 flex h-[calc(4.75rem+env(safe-area-inset-top))] items-center justify-between border-b border-white/10 bg-ink/95 px-4 pt-[env(safe-area-inset-top)] text-white backdrop-blur-xl lg:hidden">
         <BrandLockup to="/inicio" subtitle="Gestão de torneios" />
         <Button
           variant="ghost"
@@ -330,7 +330,7 @@ export default function Layout({ children, currentPageName }) {
           <div className="border-b border-white/10 px-6 py-6">
             <BrandLockup to="/inicio" subtitle="Gestão de torneios de pickleball" preserveScroll onClick={handleSidebarNavClick} />
             <div className="mt-5 grid gap-2">
-              <Button asChild className="w-full justify-between bg-white text-slate-950 hover:bg-emerald-50">
+              <Button asChild className="w-full justify-between bg-white text-ink hover:bg-acid/10">
                 <Link to="/torneios/criar" state={PRESERVE_WINDOW_SCROLL_STATE} onClick={handleSidebarNavClick}>
                   Criar torneio <Plus className="h-4 w-4" />
                 </Link>
@@ -584,16 +584,16 @@ export default function Layout({ children, currentPageName }) {
                     className="h-11 w-11 rounded-2xl object-cover shadow-[0_18px_36px_-24px_rgba(250,204,21,0.7)]"
                   />
                 ) : (
-                  <div className="flex h-11 w-11 items-center justify-center rounded-2xl bg-[linear-gradient(135deg,#facc15,#34d399)] text-slate-950 shadow-[0_18px_36px_-24px_rgba(250,204,21,0.7)]">
+                  <div className="flex h-11 w-11 items-center justify-center rounded-2xl bg-[linear-gradient(135deg,#facc15,#34d399)] text-ink shadow-[0_18px_36px_-24px_rgba(250,204,21,0.7)]">
                     <span className="text-sm font-semibold">{initial}</span>
                   </div>
                 )}
                 <div className="min-w-0 flex-1">
                   <p className="truncate text-sm font-semibold text-white">{displayName}</p>
-                  <p className="truncate text-xs text-emerald-50/60" title={displayEmail}>{displayEmail}</p>
+                  <p className="truncate text-xs text-white/70" title={displayEmail}>{displayEmail}</p>
                 </div>
               </div>
-              <div className="mt-4 rounded-[1.15rem] border border-white/10 bg-white/5 px-3 py-2 text-xs text-emerald-50/75">
+              <div className="mt-4 rounded-[1.15rem] border border-white/10 bg-white/5 px-3 py-2 text-xs text-white/70">
                 {displayRole}
               </div>
               <Button
@@ -612,10 +612,10 @@ export default function Layout({ children, currentPageName }) {
         <header className="sticky top-[calc(4.75rem+env(safe-area-inset-top))] z-30 border-b border-white/70 bg-white/75 backdrop-blur-xl lg:top-0">
           <div className="mx-auto flex max-w-7xl flex-col gap-4 px-4 py-4 lg:flex-row lg:items-center lg:justify-between lg:px-8 lg:py-5">
             <div className="min-w-0">
-              <p className="text-[11px] font-semibold uppercase tracking-[0.24em] text-emerald-700/80 sm:text-xs">{currentMeta.eyebrow}</p>
-              <h1 className="mt-1.5 text-xl font-semibold text-slate-950 sm:mt-2 sm:text-2xl lg:text-3xl">{currentMeta.title}</h1>
+              <p className="text-[11px] font-semibold uppercase tracking-[0.24em] text-green-700/80 sm:text-xs">{currentMeta.eyebrow}</p>
+              <h1 className="mt-1.5 text-xl font-semibold text-ink sm:mt-2 sm:text-2xl lg:text-3xl">{currentMeta.title}</h1>
               {currentMeta.description && (
-                <p className="mt-1 hidden max-w-2xl text-sm leading-6 text-slate-600 sm:block">{currentMeta.description}</p>
+                <p className="mt-1 hidden max-w-2xl text-sm leading-6 text-gray-500 sm:block">{currentMeta.description}</p>
               )}
             </div>
 
@@ -664,16 +664,16 @@ function PublicUtilityLayout({ children, currentPageName }) {
   };
 
   return (
-    <div className="min-h-screen arena-page">
+    <div className="min-h-screen bg-paper">
       <div
         className={cn(
-          'fixed inset-0 z-30 bg-slate-950/50 backdrop-blur-sm transition-opacity lg:hidden',
+          'fixed inset-0 z-30 bg-ink/50 backdrop-blur-sm transition-opacity lg:hidden',
           sidebarOpen ? 'opacity-100' : 'pointer-events-none opacity-0',
         )}
         onClick={() => setSidebarOpen(false)}
       />
 
-      <div className="fixed inset-x-0 top-0 z-50 flex h-[calc(4.75rem+env(safe-area-inset-top))] items-center justify-between border-b border-white/10 bg-slate-950/95 px-4 pt-[env(safe-area-inset-top)] text-white backdrop-blur-xl lg:hidden">
+      <div className="fixed inset-x-0 top-0 z-50 flex h-[calc(4.75rem+env(safe-area-inset-top))] items-center justify-between border-b border-white/10 bg-ink/95 px-4 pt-[env(safe-area-inset-top)] text-white backdrop-blur-xl lg:hidden">
         <BrandLockup to="/" subtitle="Guia do esporte" />
         <Button
           variant="ghost"
@@ -721,11 +721,11 @@ function PublicUtilityLayout({ children, currentPageName }) {
           <div className="border-t border-white/10 p-4">
             <div className="rounded-[1.5rem] border border-white/10 bg-white/10 p-4">
               <div className="text-sm font-semibold text-white">Quer acessar a plataforma completa?</div>
-              <p className="mt-2 text-xs leading-6 text-emerald-50/70">
+              <p className="mt-2 text-xs leading-6 text-white/70">
                 Entre para criar torneios, acompanhar inscrições e operar modalidades.
               </p>
               <div className="mt-4 grid gap-2">
-                <Button asChild className="w-full bg-white text-slate-950 hover:bg-emerald-50">
+                <Button asChild className="w-full bg-white text-ink hover:bg-acid/10">
                   <Link to="/login" state={PRESERVE_WINDOW_SCROLL_STATE} onClick={handleSidebarNavClick}>Entrar</Link>
                 </Button>
                 <Button
@@ -745,9 +745,9 @@ function PublicUtilityLayout({ children, currentPageName }) {
         <header className="sticky top-[calc(4.75rem+env(safe-area-inset-top))] z-30 border-b border-white/70 bg-white/75 backdrop-blur-xl lg:top-0">
           <div className="mx-auto flex max-w-7xl flex-col gap-4 px-4 py-4 lg:flex-row lg:items-center lg:justify-between lg:px-8 lg:py-5">
             <div className="min-w-0">
-              <p className="text-xs font-semibold uppercase tracking-[0.24em] text-emerald-700/80">{currentMeta.eyebrow}</p>
-              <h1 className="mt-2 text-2xl font-semibold text-slate-950 lg:text-3xl">{currentMeta.title}</h1>
-              <p className="mt-1 max-w-2xl text-sm leading-6 text-slate-600">{currentMeta.description}</p>
+              <p className="text-xs font-semibold uppercase tracking-[0.24em] text-green-700/80">{currentMeta.eyebrow}</p>
+              <h1 className="mt-2 text-2xl font-semibold text-ink lg:text-3xl">{currentMeta.title}</h1>
+              <p className="mt-1 max-w-2xl text-sm leading-6 text-gray-500">{currentMeta.description}</p>
             </div>
 
             <div className="flex flex-wrap gap-2">
@@ -790,7 +790,7 @@ const BOTTOM_NAV = [
  */
 function MobileBottomNav({ currentPageName }) {
   return (
-    <nav className="fixed inset-x-0 bottom-0 z-40 border-t border-white/10 bg-slate-950/95 pb-[env(safe-area-inset-bottom)] backdrop-blur-xl lg:hidden">
+    <nav className="fixed inset-x-0 bottom-0 z-40 border-t border-white/10 bg-ink/95 pb-[env(safe-area-inset-bottom)] backdrop-blur-xl lg:hidden">
       <div className="mx-auto flex max-w-lg items-stretch justify-around px-1">
         {BOTTOM_NAV.map((item) => {
           const active = item.match(currentPageName);
@@ -803,14 +803,14 @@ function MobileBottomNav({ currentPageName }) {
               aria-current={active ? 'page' : undefined}
               className={cn(
                 'flex min-w-0 flex-1 flex-col items-center justify-center gap-1 py-2 text-[0.65rem] font-medium transition-colors',
-                active ? 'text-emerald-300' : 'text-emerald-50/65 hover:text-white',
+                active ? 'text-green-300' : 'text-white/70 hover:text-white',
               )}
             >
               <span
                 className={cn(
                   'flex h-9 w-9 items-center justify-center rounded-2xl transition-colors',
                   item.primary
-                    ? 'bg-[linear-gradient(135deg,#facc15,#34d399)] text-slate-950 shadow-[0_12px_24px_-12px_rgba(250,204,21,0.8)]'
+                    ? 'bg-[linear-gradient(135deg,#facc15,#34d399)] text-ink shadow-[0_12px_24px_-12px_rgba(250,204,21,0.8)]'
                     : active
                       ? 'bg-white/10'
                       : '',
@@ -834,7 +834,7 @@ function BrandLockup({ to, subtitle, preserveScroll = false, onClick }) {
       <div className="flex min-w-0 flex-col justify-center pt-1">
         <div className="truncate text-xl font-bold tracking-tight text-white">{APP_NAME}</div>
         {subtitle && subtitle !== 'Gestão de torneios de pickleball' && subtitle !== 'Gestão de torneios' && (
-          <div className="mt-0.5 truncate text-sm text-emerald-50/60">{subtitle}</div>
+          <div className="mt-0.5 truncate text-sm text-white/70">{subtitle}</div>
         )}
       </div>
     </Link>
@@ -846,8 +846,8 @@ function SidebarSection({ title, hint, children }) {
     <section className="mb-6 last:mb-0">
       <div className="mb-3 px-3">
         <div className="flex items-center justify-between gap-2">
-          <h3 className="text-xs font-semibold uppercase tracking-[0.22em] text-emerald-100/60">{title}</h3>
-          {hint ? <span className="text-[10px] uppercase tracking-[0.18em] text-emerald-100/40">{hint}</span> : null}
+          <h3 className="text-xs font-semibold uppercase tracking-[0.22em] text-acid/60">{title}</h3>
+          {hint ? <span className="text-[10px] uppercase tracking-[0.18em] text-acid/40">{hint}</span> : null}
         </div>
       </div>
       <div className="space-y-1.5">{children}</div>
@@ -881,14 +881,14 @@ function NotificationsMenu({ notifications, unreadCount, markAsRead, reminders =
       <DropdownMenuContent align="end" className="max-h-[70vh] w-[20rem] overflow-y-auto rounded-[1.25rem] border-white/80 bg-white/95 p-2 backdrop-blur-xl sm:w-[22rem]">
         <div className="flex items-center justify-between px-3 py-2">
           <div>
-            <div className="text-sm font-semibold text-slate-950">Notificações</div>
-            <div className="text-xs text-slate-500">Atualizações recentes da sua operação</div>
+            <div className="text-sm font-semibold text-ink">Notificações</div>
+            <div className="text-xs text-gray-500">Atualizações recentes da sua operação</div>
           </div>
-          <div className="flex h-8 w-8 items-center justify-center rounded-full bg-emerald-100 text-emerald-700">
+          <div className="flex h-8 w-8 items-center justify-center rounded-full bg-green-100 text-green-700">
             <Sparkles className="h-4 w-4" />
           </div>
         </div>
-        <DropdownMenuSeparator className="bg-slate-200" />
+        <DropdownMenuSeparator className="bg-gray-200" />
         {reminders.map((r) => (
           <DropdownMenuItem
             key={r.id}
@@ -900,16 +900,16 @@ function NotificationsMenu({ notifications, unreadCount, markAsRead, reminders =
           </DropdownMenuItem>
         ))}
         {isEmpty ? (
-          <div className="px-3 py-6 text-center text-sm text-slate-500">Nenhuma notificação no momento.</div>
+          <div className="px-3 py-6 text-center text-sm text-gray-500">Nenhuma notificação no momento.</div>
         ) : (
           notifications.slice(0, 10).map((n) => (
             <DropdownMenuItem
               key={n.id}
-              className="mt-1 flex cursor-pointer flex-col items-start rounded-[1rem] px-3 py-3 focus:bg-emerald-50"
+              className="mt-1 flex cursor-pointer flex-col items-start rounded-[1rem] px-3 py-3 focus:bg-green-50"
               onClick={() => handleSelect(n)}
             >
-              <div className={cn('text-sm font-medium', n.read ? 'text-slate-600' : 'text-slate-950')}>{n.title}</div>
-              <div className="mt-1 text-xs leading-5 text-slate-500">{n.message}</div>
+              <div className={cn('text-sm font-medium', n.read ? 'text-gray-500' : 'text-ink')}>{n.title}</div>
+              <div className="mt-1 text-xs leading-5 text-gray-500">{n.message}</div>
             </DropdownMenuItem>
           ))
         )}
@@ -923,11 +923,11 @@ function statusDot(status) {
     case TOURNAMENT_STATUS.IN_PROGRESS:
       return { color: 'bg-blue-400', title: 'Em andamento' };
     case TOURNAMENT_STATUS.REGISTRATIONS_OPEN:
-      return { color: 'bg-emerald-400', title: 'Inscrições abertas' };
+      return { color: 'bg-green-400', title: 'Inscrições abertas' };
     case TOURNAMENT_STATUS.REGISTRATIONS_CLOSED:
       return { color: 'bg-amber-400', title: 'Inscrições encerradas' };
     case TOURNAMENT_STATUS.FINISHED:
-      return { color: 'bg-slate-400', title: 'Encerrado' };
+      return { color: 'bg-gray-400', title: 'Encerrado' };
     case TOURNAMENT_STATUS.CANCELLED:
       return { color: 'bg-red-400', title: 'Cancelado' };
     case TOURNAMENT_STATUS.DRAFT:
@@ -945,16 +945,16 @@ function NavItem({ to, icon: Icon, label, active, onClick, badge, dot }) {
       className={cn(
         'group flex items-center gap-3 rounded-[1.15rem] px-3 py-3 text-sm font-medium transition-all duration-200',
         active
-          ? 'bg-white text-slate-950 shadow-[0_18px_42px_-26px_rgba(15,23,42,0.55)]'
-          : 'text-emerald-50/75 hover:bg-white/10 hover:text-white',
+          ? 'bg-white text-ink shadow-[0_18px_42px_-26px_rgba(15,23,42,0.55)]'
+          : 'text-white/70 hover:bg-white/10 hover:text-white',
       )}
     >
       <span
         className={cn(
           'flex h-10 w-10 shrink-0 items-center justify-center rounded-xl border transition-colors',
           active
-            ? 'border-emerald-200 bg-emerald-50 text-emerald-700'
-            : 'border-white/10 bg-white/5 text-emerald-100/80 group-hover:border-white/20 group-hover:bg-white/10 group-hover:text-white',
+            ? 'border-green-200 bg-green-50 text-green-700'
+            : 'border-white/10 bg-white/5 text-acid/80 group-hover:border-white/20 group-hover:bg-white/10 group-hover:text-white',
         )}
       >
         <Icon className="h-4.5 w-4.5" />

@@ -88,10 +88,10 @@ export default function OpenGames() {
           />
             <div className="space-y-2">
               {myOpen.map((g) => (
-                <div key={g.id} className="flex items-center justify-between gap-3 rounded-[1.25rem] border border-emerald-950/10 bg-white/75 p-3">
+                <div key={g.id} className="flex items-center justify-between gap-3 rounded-[1.25rem] border border-gray-100 bg-white/75 p-3">
                   <div className="min-w-0 text-sm">
-                    <span className="font-medium text-slate-900">{g.when_text}</span>
-                    <span className="text-slate-500"> · {[g.city, g.state].filter(Boolean).join(' / ')}</span>
+                    <span className="font-medium text-ink">{g.when_text}</span>
+                    <span className="text-gray-500"> · {[g.city, g.state].filter(Boolean).join(' / ')}</span>
                   </div>
                   <div className="flex shrink-0 gap-2">
                     <Button size="sm" variant="outline" onClick={() => closeGame.mutate(g.id)} disabled={closeGame.isPending}>
@@ -123,7 +123,7 @@ export default function OpenGames() {
           titleClassName="text-lg"
         />
           <div className="relative">
-            <Search className="absolute left-4 top-1/2 h-4 w-4 -translate-y-1/2 text-slate-400" />
+            <Search className="absolute left-4 top-1/2 h-4 w-4 -translate-y-1/2 text-gray-400" />
             <Input
               value={city}
               onChange={(e) => setCity(e.target.value)}
@@ -167,17 +167,17 @@ export default function OpenGames() {
       ) : (
         <div className="grid gap-4 sm:grid-cols-2 xl:grid-cols-3">
           {filtered.map((g) => (
-            <Card key={g.id} className="match-surface h-full rounded-[1.75rem] border-white/80 bg-white/85">
+            <Card key={g.id} className="h-full rounded-[1.75rem] border-white/80 bg-white/85">
               <CardContent className="flex h-full flex-col p-5">
                 <div className="flex items-center gap-2">
                   <GameCreatorAvatar name={g.creator_name} photoUrl={g.creator_photo} />
-                  <span className="truncate font-semibold text-slate-900">{g.creator_name}</span>
+                  <span className="truncate font-semibold text-ink">{g.creator_name}</span>
                 </div>
 
-                <div className="mt-3 space-y-1.5 text-sm text-slate-600">
-                  <div className="flex items-center gap-2"><Clock className="h-4 w-4 text-emerald-700" /> {g.when_text}</div>
+                <div className="mt-3 space-y-1.5 text-sm text-gray-500">
+                  <div className="flex items-center gap-2"><Clock className="h-4 w-4 text-green-700" /> {g.when_text}</div>
                   {(g.city || g.state) && (
-                    <div className="flex items-center gap-2"><MapPin className="h-4 w-4 text-emerald-700" /> {[g.city, g.state].filter(Boolean).join(' / ')}</div>
+                    <div className="flex items-center gap-2"><MapPin className="h-4 w-4 text-green-700" /> {[g.city, g.state].filter(Boolean).join(' / ')}</div>
                   )}
                 </div>
 
@@ -188,7 +188,7 @@ export default function OpenGames() {
                   )}
                 </div>
 
-                {g.notes && <p className="mt-3 text-sm text-slate-600">{g.notes}</p>}
+                {g.notes && <p className="mt-3 text-sm text-gray-500">{g.notes}</p>}
 
                 <div className="mt-auto pt-4">
                   <ChatLauncherButton
@@ -228,7 +228,7 @@ function GameCreatorAvatar({ name, photoUrl }) {
 function FilterSelect({ label, value, onChange, options }) {
   return (
     <label className="block">
-      <span className="mb-1 block text-xs font-semibold uppercase tracking-[0.16em] text-emerald-700/75">{label}</span>
+      <span className="mb-1 block text-xs font-semibold uppercase tracking-[0.16em] text-gray-400">{label}</span>
       <select
         value={value}
         onChange={(e) => onChange(e.target.value)}

@@ -107,25 +107,25 @@ export default function TournamentOverviewTab({ tournament, isAdmin }) {
       <section className="grid grid-cols-1 gap-4 xl:grid-cols-[1.1fr,0.9fr]">
         <Card className="rounded-[2rem] border-white/80 bg-white/82">
           <CardContent className="p-6 sm:p-7">
-            <span className="arena-chip">
-              <Sparkles className="h-3.5 w-3.5 text-emerald-700" /> Visão geral do evento
+            <span className="inline-flex items-center gap-1.5 rounded-full border border-gray-200 bg-paper-pure px-3 py-1 text-xs font-bold text-ink">
+              <Sparkles className="h-3.5 w-3.5 text-green-700" /> Visão geral do evento
             </span>
-            <h3 className="mt-4 text-3xl font-semibold text-slate-950">Tudo o que atletas e organização precisam ler primeiro</h3>
-            <p className="mt-3 max-w-2xl text-sm leading-7 text-slate-600 sm:text-base">
+            <h3 className="mt-4 text-3xl font-semibold text-ink">Tudo o que atletas e organização precisam ler primeiro</h3>
+            <p className="mt-3 max-w-2xl text-sm leading-7 text-gray-500 sm:text-base">
               Datas, local, regra esportiva e contexto das modalidades do torneio.
             </p>
 
             <div className="mt-6 grid gap-3 sm:grid-cols-3">
               {summaryCards.map(({ label, value, description, icon: Icon }) => (
-                <div key={label} className="rounded-[1.35rem] border border-emerald-950/10 bg-secondary/35 p-4">
+                <div key={label} className="rounded-[1.35rem] border border-gray-100 bg-paper p-4">
                   <div className="flex items-center justify-between gap-3">
-                    <div className="text-[11px] font-semibold uppercase tracking-[0.16em] text-emerald-700/75">{label}</div>
-                    <div className="flex h-10 w-10 items-center justify-center rounded-2xl bg-emerald-100 text-emerald-700">
+                    <div className="text-[11px] font-semibold uppercase tracking-[0.16em] text-gray-400">{label}</div>
+                    <div className="flex h-10 w-10 items-center justify-center rounded-2xl bg-green-100 text-green-700">
                       <Icon className="h-4.5 w-4.5" />
                     </div>
                   </div>
-                  <div className="mt-3 text-xl font-semibold text-slate-950">{value}</div>
-                  <p className="mt-1 text-xs leading-5 text-slate-600">{description}</p>
+                  <div className="mt-3 text-xl font-semibold text-ink">{value}</div>
+                  <p className="mt-1 text-xs leading-5 text-gray-500">{description}</p>
                 </div>
               ))}
             </div>
@@ -154,18 +154,18 @@ export default function TournamentOverviewTab({ tournament, isAdmin }) {
             </div>
 
             {tournament.description && (
-              <div className="mt-6 rounded-[1.5rem] border border-emerald-950/10 bg-white/75 p-5 text-sm leading-7 text-slate-600">
+              <div className="mt-6 rounded-[1.5rem] border border-gray-100 bg-white/75 p-5 text-sm leading-7 text-gray-500">
                 {tournament.description}
               </div>
             )}
           </CardContent>
         </Card>
 
-        <Card className="arena-panel-strong rounded-[2rem] border-0">
+        <Card className="bg-ink text-white rounded-[2rem] border-0">
           <CardContent className="p-6 sm:p-7">
-            <div className="text-xs font-semibold uppercase tracking-[0.18em] text-emerald-50/75">Critério de classificação</div>
+            <div className="text-xs font-semibold uppercase tracking-[0.18em] text-white/70">Critério de classificação</div>
             <h3 className="mt-4 text-3xl font-semibold leading-tight text-white">Como o ranking é calculado.</h3>
-            <p className="mt-3 text-sm leading-7 text-emerald-50/75 sm:text-base">
+            <p className="mt-3 text-sm leading-7 text-white/70 sm:text-base">
               A plataforma usa o mesmo critério em todas as modalidades do torneio.
             </p>
 
@@ -181,9 +181,9 @@ export default function TournamentOverviewTab({ tournament, isAdmin }) {
       <section className="space-y-4">
         <div className="flex items-end justify-between gap-3 flex-wrap">
           <div>
-            <div className="text-xs font-semibold uppercase tracking-[0.2em] text-emerald-700/75">Modalidades</div>
-            <h3 className="mt-2 text-2xl font-semibold text-slate-950">Escolha onde jogar ou o que acompanhar</h3>
-            <p className="mt-1 max-w-3xl text-sm leading-6 text-slate-600">
+            <div className="text-xs font-semibold uppercase tracking-[0.2em] text-gray-400">Modalidades</div>
+            <h3 className="mt-2 text-2xl font-semibold text-ink">Escolha onde jogar ou o que acompanhar</h3>
+            <p className="mt-1 max-w-3xl text-sm leading-6 text-gray-500">
               Cada card mostra formato, nível, capacidade e ação disponível para cada modalidade.
             </p>
           </div>
@@ -196,7 +196,7 @@ export default function TournamentOverviewTab({ tournament, isAdmin }) {
 
         {modalities.length === 0 ? (
           <Card className="rounded-[1.75rem] border-white/80 bg-white/82">
-            <CardContent className="px-6 py-10 text-center text-sm text-slate-500">
+            <CardContent className="px-6 py-10 text-center text-sm text-gray-500">
               {isAdmin
                 ? 'Vá em "Admin" para criar a primeira modalidade e abrir a experiência competitiva do torneio.'
                 : 'O admin ainda não cadastrou modalidades para este torneio.'}
@@ -278,13 +278,13 @@ function ModalityCard({
     ? 'bg-amber-500'
     : (pct ?? 0) >= 80
       ? 'bg-amber-400'
-      : 'bg-emerald-500';
+      : 'bg-green-500';
 
   return (
     <Card
       className={cn(
-        'match-surface h-full rounded-[1.75rem] border-white/80 bg-white/85',
-        alreadyRegistered && 'border-emerald-300 bg-emerald-50/50 shadow-[0_20px_44px_-30px_rgba(5,150,105,0.45)]',
+        'h-full rounded-[1.75rem] border-white/80 bg-white/85',
+        alreadyRegistered && 'border-green-300 bg-green-50 shadow-[0_20px_44px_-30px_rgba(5,150,105,0.45)]',
       )}
     >
       <CardContent className="flex h-full flex-col p-5 sm:p-6">
@@ -292,17 +292,17 @@ function ModalityCard({
           <div className="min-w-0 flex-1">
             <div className="flex items-center gap-2 flex-wrap">
               {modalityPagesOn ? (
-                <Link to={modalityHref} className="text-xl font-semibold text-slate-950 hover:text-emerald-700 hover:underline">
+                <Link to={modalityHref} className="text-xl font-semibold text-ink hover:text-green-700 hover:underline">
                   {modality.name}
                 </Link>
               ) : (
-                <h4 className="text-xl font-semibold text-slate-950">{modality.name}</h4>
+                <h4 className="text-xl font-semibold text-ink">{modality.name}</h4>
               )}
               {alreadyRegistered && (
                 <Badge variant="success" className="rounded-full px-3 py-1 text-[10px] uppercase tracking-[0.14em] shadow-none">Você está inscrito</Badge>
               )}
             </div>
-            <div className="mt-3 flex flex-wrap gap-1.5 text-xs text-slate-500">
+            <div className="mt-3 flex flex-wrap gap-1.5 text-xs text-gray-500">
               <Badge variant="secondary">{MODALITY_FORMAT_LABELS[modality.format]}</Badge>
               <Badge variant="secondary">{SKILL_LEVEL_LABELS[modality.skill_level]}</Badge>
               <Badge variant="secondary">{GENDER_CATEGORY_LABELS[modality.gender_category]}</Badge>
@@ -311,15 +311,15 @@ function ModalityCard({
             </div>
           </div>
 
-          <div className="flex h-11 w-11 shrink-0 items-center justify-center rounded-2xl bg-emerald-100 text-emerald-700">
+          <div className="flex h-11 w-11 shrink-0 items-center justify-center rounded-2xl bg-green-100 text-green-700">
             <Trophy className="h-4.5 w-4.5" />
           </div>
         </div>
 
         <div className="mt-5 grid gap-3 sm:grid-cols-2">
-          <div className="rounded-[1.25rem] border border-emerald-950/10 bg-white/80 p-4">
-            <div className="text-[11px] font-semibold uppercase tracking-[0.16em] text-emerald-700/75">Capacidade</div>
-            <div className="mt-2 text-sm font-medium text-slate-950">
+          <div className="rounded-[1.25rem] border border-gray-100 bg-white/80 p-4">
+            <div className="text-[11px] font-semibold uppercase tracking-[0.16em] text-gray-400">Capacidade</div>
+            <div className="mt-2 text-sm font-medium text-ink">
               {hasUnlimitedEntries(modality.max_entries)
                 ? `${confirmed} inscritos confirmados`
                 : `${confirmed} / ${modality.max_entries} inscritos confirmados`}
@@ -327,11 +327,11 @@ function ModalityCard({
             <div className="mt-3">
               {pct !== null ? (
                 <>
-                  <div className="mb-1 flex items-center justify-between text-[11px] text-slate-600">
+                  <div className="mb-1 flex items-center justify-between text-[11px] text-gray-500">
                     <span>{slotsFull ? 'Capacidade esgotada' : 'Leitura atual da ocupação'}</span>
                     <span>{pct}%</span>
                   </div>
-                  <div className="h-2 w-full overflow-hidden rounded-full bg-slate-200">
+                  <div className="h-2 w-full overflow-hidden rounded-full bg-gray-200">
                     <div
                       className={`h-full ${barTone} transition-all duration-300`}
                       style={{ width: `${pct}%` }}
@@ -343,20 +343,20 @@ function ModalityCard({
                   </div>
                 </>
               ) : (
-                <div className="rounded-[1rem] border border-dashed border-emerald-300 bg-emerald-50 px-3 py-2 text-[11px] text-emerald-900">
+                <div className="rounded-[1rem] border border-dashed border-green-300 bg-green-50 px-3 py-2 text-[11px] text-green-800">
                   Vagas abertas sem limite definido para esta modalidade.
                 </div>
               )}
             </div>
           </div>
 
-          <div className="rounded-[1.25rem] border border-emerald-950/10 bg-white/80 p-4">
-            <div className="text-[11px] font-semibold uppercase tracking-[0.16em] text-emerald-700/75">Inscrição</div>
-            <div className="mt-2 flex items-center gap-2 text-sm font-medium text-slate-950">
-              <Wallet className="h-4 w-4 text-emerald-700" />
+          <div className="rounded-[1.25rem] border border-gray-100 bg-white/80 p-4">
+            <div className="text-[11px] font-semibold uppercase tracking-[0.16em] text-gray-400">Inscrição</div>
+            <div className="mt-2 flex items-center gap-2 text-sm font-medium text-ink">
+              <Wallet className="h-4 w-4 text-green-700" />
               {fee > 0 ? formatBRL(fee) : 'Gratuita'}
             </div>
-            <p className="mt-3 text-xs leading-5 text-slate-600">
+            <p className="mt-3 text-xs leading-5 text-gray-500">
               {pendingRegistrations > 0
                 ? `Há ${pendingRegistrations} inscrição(ões) adicional(is) aguardando confirmação ou processamento.`
                 : 'Sem pendências extras registradas no momento.'}
@@ -365,7 +365,7 @@ function ModalityCard({
         </div>
 
         <div className="mt-auto pt-5">
-          <div className="mb-4 text-xs leading-5 text-slate-600">
+          <div className="mb-4 text-xs leading-5 text-gray-500">
             {alreadyRegistered
               ? 'Sua participação nesta modalidade já está registrada.'
               : canRegister
@@ -413,11 +413,11 @@ function ModalityCard({
 
 function InfoSurface({ icon: Icon, title, description }) {
   return (
-    <div className="rounded-[1.35rem] border border-emerald-950/10 bg-white/75 p-4">
-      <div className="flex items-center gap-2 text-sm font-semibold text-slate-950">
-        <Icon className="h-4 w-4 text-emerald-700" /> {title}
+    <div className="rounded-[1.35rem] border border-gray-100 bg-white/75 p-4">
+      <div className="flex items-center gap-2 text-sm font-semibold text-ink">
+        <Icon className="h-4 w-4 text-green-700" /> {title}
       </div>
-      <p className="mt-2 text-sm leading-6 text-slate-600">{description}</p>
+      <p className="mt-2 text-sm leading-6 text-gray-500">{description}</p>
     </div>
   );
 }
@@ -425,9 +425,9 @@ function InfoSurface({ icon: Icon, title, description }) {
 function RankingRule({ order, title, description }) {
   return (
     <div className="rounded-[1.35rem] border border-white/12 bg-white/10 p-4 backdrop-blur-sm">
-      <div className="text-[11px] font-semibold uppercase tracking-[0.16em] text-emerald-50/75">{order}</div>
+      <div className="text-[11px] font-semibold uppercase tracking-[0.16em] text-white/70">{order}</div>
       <div className="mt-2 text-lg font-semibold text-white">{title}</div>
-      <p className="mt-1 text-sm leading-6 text-emerald-50/75">{description}</p>
+      <p className="mt-1 text-sm leading-6 text-white/70">{description}</p>
     </div>
   );
 }

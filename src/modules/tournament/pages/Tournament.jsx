@@ -67,11 +67,11 @@ const PLAYER_TABS = [
 const LEGACY_PLAYER_TABS = new Set(['modalidades', 'inscritos']);
 
 const STATUS_TONE = {
-  [TOURNAMENT_STATUS.DRAFT]: 'bg-slate-100 text-slate-700 border-slate-200',
-  [TOURNAMENT_STATUS.REGISTRATIONS_OPEN]: 'bg-emerald-100 text-emerald-800 border-emerald-200',
+  [TOURNAMENT_STATUS.DRAFT]: 'bg-paper text-gray-600 border-gray-200',
+  [TOURNAMENT_STATUS.REGISTRATIONS_OPEN]: 'bg-green-100 text-green-700 border-green-200',
   [TOURNAMENT_STATUS.REGISTRATIONS_CLOSED]: 'bg-amber-100 text-amber-900 border-amber-200',
   [TOURNAMENT_STATUS.IN_PROGRESS]: 'bg-blue-100 text-blue-900 border-blue-200',
-  [TOURNAMENT_STATUS.FINISHED]: 'bg-slate-200 text-slate-700 border-slate-300',
+  [TOURNAMENT_STATUS.FINISHED]: 'bg-gray-200 text-gray-600 border-gray-200',
   [TOURNAMENT_STATUS.CANCELLED]: 'bg-red-100 text-red-800 border-red-200',
 };
 
@@ -111,7 +111,7 @@ function formatDateRange(start, end) {
 }
 
 function StatusPill({ status }) {
-  const tone = STATUS_TONE[status] || 'bg-slate-100 text-slate-700 border-slate-200';
+  const tone = STATUS_TONE[status] || 'bg-paper text-gray-600 border-gray-200';
   return (
     <span className={`inline-flex items-center gap-1 px-2 py-0.5 rounded-full border text-xs font-medium ${tone}`}>
       <Calendar className="w-3 h-3" /> {TOURNAMENT_STATUS_LABELS[status] || status}
@@ -150,12 +150,12 @@ export default function Tournament() {
       <div className="mx-auto max-w-xl">
         <Card className="rounded-[2rem] border-white/80 bg-white/85">
           <CardContent className="p-6 text-center sm:p-10">
-            <div className="mx-auto flex h-16 w-16 items-center justify-center rounded-[1.5rem] bg-emerald-100 text-emerald-700">
+            <div className="mx-auto flex h-16 w-16 items-center justify-center rounded-[1.5rem] bg-green-100 text-green-700">
               <Trophy className="h-8 w-8" />
             </div>
-            <h2 className="mt-5 text-2xl font-semibold text-slate-950">Torneio não encontrado</h2>
-            <p className="text-sm text-slate-600 mt-1">
-              Verifique o link ou volte para <Link to="/inicio" className="text-emerald-700 underline">seus torneios</Link>.
+            <h2 className="mt-5 text-2xl font-semibold text-ink">Torneio não encontrado</h2>
+            <p className="text-sm text-gray-500 mt-1">
+              Verifique o link ou volte para <Link to="/inicio" className="text-green-700 underline">seus torneios</Link>.
             </p>
           </CardContent>
         </Card>
@@ -212,7 +212,7 @@ export default function Tournament() {
   return (
     <div className="space-y-6">
       <section className="grid grid-cols-1 gap-5 xl:grid-cols-[1.15fr,0.85fr]">
-        <Card className="arena-panel-strong overflow-hidden rounded-[1.25rem] border-0 sm:rounded-[2rem]">
+        <Card className="bg-ink text-white overflow-hidden rounded-[1.25rem] border-0 sm:rounded-[2rem]">
           <CardContent className="relative p-5 sm:p-8 lg:p-9">
             <div className="absolute inset-y-0 right-0 hidden w-1/2 bg-[radial-gradient(circle_at_top_right,rgba(255,255,255,0.16),transparent_50%)] lg:block" />
             <div className="relative max-w-3xl">
@@ -222,7 +222,7 @@ export default function Tournament() {
                 </div>
                 <div className="min-w-0 flex-1">
                   <h1 className="text-2xl font-semibold leading-tight text-white sm:text-3xl lg:text-4xl">{tournament.name}</h1>
-                  <p className="mt-2 max-w-2xl text-sm leading-7 text-emerald-50/75 sm:text-base">
+                  <p className="mt-2 max-w-2xl text-sm leading-7 text-white/70 sm:text-base">
                     {tournament.description || 'Acompanhe modalidades, jogos, ranking e operação do evento.'}
                   </p>
                 </div>
@@ -244,8 +244,8 @@ export default function Tournament() {
                 {surfaceCards.map(({ label, value, icon: Icon }) => (
                   <div key={label} className="rounded-[1.35rem] border border-white/12 bg-white/10 p-4 backdrop-blur-sm">
                     <div className="flex items-center justify-between gap-3">
-                      <div className="text-[11px] font-semibold uppercase tracking-[0.16em] text-emerald-50/70">{label}</div>
-                      <Icon className="h-4 w-4 text-emerald-50/80" />
+                      <div className="text-[11px] font-semibold uppercase tracking-[0.16em] text-white/70">{label}</div>
+                      <Icon className="h-4 w-4 text-white/70" />
                     </div>
                     <div className="mt-3 text-sm font-medium leading-6 text-white">{value}</div>
                   </div>
@@ -257,7 +257,7 @@ export default function Tournament() {
 
         <Card className="rounded-[1.75rem] border-white/80 bg-white/82">
           <CardContent className="p-6 sm:p-7">
-            <h2 className="text-xl font-semibold text-slate-950">Ações rápidas</h2>
+            <h2 className="text-xl font-semibold text-ink">Ações rápidas</h2>
 
             <div className="mt-5 grid gap-3">
               {tournament.invite_code && (
@@ -267,7 +267,7 @@ export default function Tournament() {
                   onClick={() => copy(tournament.invite_code, 'Código copiado para a área de transferência.')}
                 >
                   <span className="flex items-center gap-2 truncate">
-                    {copied ? <Check className="h-4 w-4 text-emerald-600" /> : <Copy className="h-4 w-4" />}
+                    {copied ? <Check className="h-4 w-4 text-green-600" /> : <Copy className="h-4 w-4" />}
                     Código: <strong className="tabular-nums">{tournament.invite_code}</strong>
                   </span>
                 </Button>
@@ -302,7 +302,7 @@ export default function Tournament() {
       >
         <div className="rounded-[1.75rem] border border-white/80 bg-white/82 p-3 shadow-[0_18px_40px_-28px_rgba(15,23,42,0.28)]">
           <div className="overflow-x-auto -mx-1 px-1 sm:mx-0 sm:px-0">
-            <TabsList className={`${PLATFORM_TABS_LIST_CLASS} min-w-full rounded-[1.5rem] bg-secondary/45 p-2 sm:min-w-0`}>
+            <TabsList className={`${PLATFORM_TABS_LIST_CLASS} min-w-full rounded-[1.5rem] bg-paper p-2 sm:min-w-0`}>
               <TabsTrigger
                 value={PLAYER_TABS[0].value}
                 className={PLATFORM_TABS_TRIGGER_CLASS}
@@ -374,7 +374,7 @@ function ModalityTabsMenu({ tournamentId, modalities }) {
       <DropdownMenuTrigger asChild>
         <button
           type="button"
-          className="inline-flex items-center rounded-full px-4 py-2 text-sm font-semibold text-slate-600 transition hover:bg-white hover:text-slate-950 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-emerald-500"
+          className="inline-flex items-center rounded-full px-4 py-2 text-sm font-semibold text-gray-500 transition hover:bg-white hover:text-ink focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-acid"
         >
           Modalidades
           <ChevronDown className="ml-1 h-4 w-4" />
@@ -384,12 +384,12 @@ function ModalityTabsMenu({ tournamentId, modalities }) {
         align="start"
         className="w-[22rem] rounded-[1.5rem] border-white/80 bg-white/95 p-2 shadow-[0_20px_48px_-32px_rgba(15,23,42,0.45)] backdrop-blur-xl"
       >
-        <DropdownMenuLabel className="px-3 py-2 text-xs font-semibold uppercase tracking-[0.18em] text-emerald-700/80">
+        <DropdownMenuLabel className="px-3 py-2 text-xs font-semibold uppercase tracking-[0.18em] text-green-700/80">
           Modalidades do torneio
         </DropdownMenuLabel>
-        <DropdownMenuSeparator className="bg-slate-200" />
+        <DropdownMenuSeparator className="bg-gray-200" />
         {modalities.length === 0 ? (
-          <DropdownMenuItem disabled className="rounded-[1.25rem] px-3 py-3 text-sm leading-6 text-slate-500">
+          <DropdownMenuItem disabled className="rounded-[1.25rem] px-3 py-3 text-sm leading-6 text-gray-500">
             Ainda não há modalidades criadas para este torneio.
           </DropdownMenuItem>
         ) : (
@@ -397,11 +397,11 @@ function ModalityTabsMenu({ tournamentId, modalities }) {
             <DropdownMenuItem
               key={modality.id}
               asChild
-              className="rounded-[1.25rem] px-3 py-3 focus:bg-emerald-50"
+              className="rounded-[1.25rem] px-3 py-3 focus:bg-green-50"
             >
               <Link to={`/torneios/${tournamentId}/modalidades/${modality.id}`}>
-                <div className="text-sm font-semibold text-slate-950">{modality.name}</div>
-                <div className="mt-1 text-xs leading-5 text-slate-500">
+                <div className="text-sm font-semibold text-ink">{modality.name}</div>
+                <div className="mt-1 text-xs leading-5 text-gray-500">
                   {MODALITY_FORMAT_LABELS[modality.format] || modality.format}
                   {' · '}
                   {SKILL_LEVEL_LABELS[modality.skill_level] || modality.skill_level}

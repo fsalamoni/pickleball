@@ -79,7 +79,7 @@ export default function AdminMetrics() {
           eyebrow="Admin geral"
           title="Métricas e controles da plataforma"
           description="Acompanhe escala de uso, acione recálculos críticos e governe funcionalidades globais em um único painel operacional."
-          action={<BarChart3 className="h-6 w-6 text-emerald-600" />}
+          action={<BarChart3 className="h-6 w-6 text-green-600" />}
         />
       </PlatformSurfaceCard>
 
@@ -128,10 +128,10 @@ function RatingsPanel() {
   return (
     <PlatformSurfaceCard contentClassName="space-y-4 p-5 sm:p-6">
         <div className="flex items-center gap-2">
-          <Medal className="w-5 h-5 text-emerald-600" />
-          <h2 className="text-lg font-semibold arena-heading">Rating ELO + Ranking nacional</h2>
+          <Medal className="w-5 h-5 text-green-600" />
+          <h2 className="text-lg font-semibold font-display text-ink">Rating ELO + Ranking nacional</h2>
         </div>
-        <p className="text-xs text-slate-500">
+        <p className="text-xs text-gray-500">
           Recalcula o rating de todos os atletas a partir dos jogos finalizados e atualiza o
           ranking nacional público (/ranking). Faça isso após registrar novos resultados.
         </p>
@@ -140,7 +140,7 @@ function RatingsPanel() {
           <span className="ml-1">{isPending ? 'Recalculando…' : 'Recalcular ratings'}</span>
         </Button>
         {lastResult && (
-          <p className="text-xs text-slate-500">
+          <p className="text-xs text-gray-500">
             Último recálculo: {lastResult.players} atleta(s), {lastResult.matchesUsed} de{' '}
             {lastResult.matchesTotal} jogo(s) finalizados utilizados.
           </p>
@@ -169,10 +169,10 @@ function FeatureFlagsPanel() {
   return (
     <PlatformSurfaceCard contentClassName="space-y-4 p-5 sm:p-6">
         <div className="flex items-center gap-2">
-          <Flag className="w-5 h-5 text-emerald-600" />
-          <h2 className="text-lg font-semibold arena-heading">Funcionalidades (flags)</h2>
+          <Flag className="w-5 h-5 text-green-600" />
+          <h2 className="text-lg font-semibold font-display text-ink">Funcionalidades (flags)</h2>
         </div>
-        <p className="text-xs text-slate-500">
+        <p className="text-xs text-gray-500">
           Ative ou desative funcionalidades em tempo real para toda a plataforma. Cada flag nasce
           desligada e é puramente aditiva — desligá-la não afeta o que já existe.
         </p>
@@ -180,11 +180,11 @@ function FeatureFlagsPanel() {
           {Object.entries(FEATURE_FLAG_META).map(([key, meta]) => (
             <div
               key={key}
-              className="flex items-start justify-between gap-4 rounded-[1.25rem] border border-emerald-950/10 bg-white/75 p-3"
+              className="flex items-start justify-between gap-4 rounded-[1.25rem] border border-gray-100 bg-white/75 p-3"
             >
               <div>
-                <div className="text-sm font-medium text-slate-800">{meta.label}</div>
-                <p className="text-xs text-slate-500 mt-0.5">{meta.description}</p>
+                <div className="text-sm font-medium text-ink">{meta.label}</div>
+                <p className="text-xs text-gray-500 mt-0.5">{meta.description}</p>
               </div>
               <Switch
                 checked={Boolean(flags?.[key])}

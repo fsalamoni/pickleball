@@ -259,7 +259,7 @@ export default function TournamentModalitiesTab({ tournament, isAdmin }) {
           href={`${import.meta.env.BASE_URL}torneios/guia`}
           target="_blank"
           rel="noreferrer"
-          className="text-sm text-emerald-700 inline-flex items-center gap-1 hover:underline"
+          className="text-sm text-green-700 inline-flex items-center gap-1 hover:underline"
         >
           <BookOpen className="w-4 h-4" /> Guia de formatos e modelos
         </a>
@@ -271,7 +271,7 @@ export default function TournamentModalitiesTab({ tournament, isAdmin }) {
       </div>
 
       {isLoading ? (
-        <p className="text-sm text-slate-500">Carregando…</p>
+        <p className="text-sm text-gray-500">Carregando…</p>
       ) : modalities.length === 0 ? (
         <PlatformSurfaceCard contentClassName="p-2">
             <EmptyState
@@ -287,14 +287,14 @@ export default function TournamentModalitiesTab({ tournament, isAdmin }) {
               <CardContent className="p-5">
                 <div className="flex items-start justify-between gap-2">
                   <div>
-                    <h4 className="text-lg font-semibold text-slate-950">{m.name}</h4>
-                    <div className="text-xs text-slate-500 mt-1 flex flex-wrap gap-1">
+                    <h4 className="text-lg font-semibold text-ink">{m.name}</h4>
+                    <div className="text-xs text-gray-500 mt-1 flex flex-wrap gap-1">
                       <Badge variant="secondary">{MODALITY_FORMAT_LABELS[m.format]}</Badge>
                       <Badge variant="secondary">{SKILL_LEVEL_LABELS[m.skill_level]}</Badge>
                       <Badge variant="secondary">{GENDER_CATEGORY_LABELS[m.gender_category]}</Badge>
                       <Badge variant="secondary">{AGE_CATEGORY_LABELS[m.age_category]}</Badge>
                     </div>
-                    <div className="text-xs text-slate-600 mt-3 leading-5">
+                    <div className="text-xs text-gray-500 mt-3 leading-5">
                       Vagas: {hasUnlimitedEntries(m.max_entries) ? 'abertas' : m.max_entries} · Taxa: R${' '}
                       {((m.entry_fee_cents || 0) / 100).toFixed(2).replace('.', ',')} ·{' '}
                       {(m.stages?.length || 0) > 1
@@ -303,7 +303,7 @@ export default function TournamentModalitiesTab({ tournament, isAdmin }) {
                             .join(' → ')}`
                         : `Fase: ${TOURNAMENT_STAGE_TYPE_LABELS[m.stages?.[0]?.type] || '—'}`}
                     </div>
-                    <div className="text-xs text-slate-500 mt-1 leading-5">
+                    <div className="text-xs text-gray-500 mt-1 leading-5">
                       {m.court_count || DEFAULT_COURT_COUNT} quadra(s) ·{' '}
                       {m.match_duration_minutes || DEFAULT_MATCH_DURATION_MINUTES} min/jogo
                       {m.play_start_time ? ` · ${m.play_start_time}` : ''}
@@ -381,14 +381,14 @@ export default function TournamentModalitiesTab({ tournament, isAdmin }) {
             >
               <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
                 <div className="space-y-2 md:col-span-2">
-                  <div className="flex items-center justify-between gap-3 rounded-[1.25rem] border border-slate-200 p-4">
+                  <div className="flex items-center justify-between gap-3 rounded-[1.25rem] border border-gray-200 p-4">
                     <div>
                       <Label className="text-sm">Quantidade de participantes</Label>
-                      <p className="text-xs text-slate-500 mt-1">
+                      <p className="text-xs text-gray-500 mt-1">
                         Use vagas abertas quando quiser primeiro captar inscritos e depois ajustar a operação com o total final.
                       </p>
                     </div>
-                    <label className="flex items-center gap-2 text-sm font-medium text-slate-700">
+                    <label className="flex items-center gap-2 text-sm font-medium text-gray-600">
                       <input
                         type="checkbox"
                         checked={form.has_unlimited_entries}
@@ -457,7 +457,7 @@ export default function TournamentModalitiesTab({ tournament, isAdmin }) {
                       {!form.has_unlimited_entries && ` (com ${Number(form.max_entries) || 0} jogadores)`}
                     </Label>
                     {form.has_unlimited_entries && (
-                      <p className="text-xs text-slate-500">
+                      <p className="text-xs text-gray-500">
                         Prévia para {PREVIEW_PLAYER_COUNT} jogadores (vagas abertas). Os números exatos
                         serão recalculados com o total efetivo de inscritos ao encerrar as inscrições.
                       </p>
@@ -473,10 +473,10 @@ export default function TournamentModalitiesTab({ tournament, isAdmin }) {
                       seedCount={Number(form.seed_count) || 0}
                     />
                   </div>
-                  <div className="md:col-span-2 rounded-[1.25rem] border border-slate-200 bg-white p-4 space-y-3">
+                  <div className="md:col-span-2 rounded-[1.25rem] border border-gray-200 bg-white p-4 space-y-3">
                     <div>
                       <Label className="text-sm font-semibold">Pontuação da fase</Label>
-                      <p className="text-xs text-slate-500 mt-1">
+                      <p className="text-xs text-gray-500 mt-1">
                         Mesmo em modalidade de fase única, a pontuação fica definida dentro da fase e não no torneio geral.
                       </p>
                     </div>
@@ -492,8 +492,8 @@ export default function TournamentModalitiesTab({ tournament, isAdmin }) {
                               className={[
                                 'rounded-full border px-4 py-2 text-sm font-medium transition-all duration-200',
                                 Number(form.phases?.[0]?.scoring_override?.target_score) === score
-                                  ? 'border-emerald-500/35 bg-emerald-600 text-white'
-                                  : 'border-emerald-950/10 bg-background text-slate-700 hover:border-emerald-400/35',
+                                  ? 'border-green-500 bg-ink text-white'
+                                  : 'border-gray-100 bg-background text-gray-600 hover:border-green-400',
                               ].join(' ')}
                             >
                               {score} pontos
@@ -512,8 +512,8 @@ export default function TournamentModalitiesTab({ tournament, isAdmin }) {
                               className={[
                                 'rounded-full border px-4 py-2 text-sm font-medium transition-all duration-200',
                                 Number(form.phases?.[0]?.scoring_override?.sets_per_match) === sets
-                                  ? 'border-emerald-500/35 bg-emerald-600 text-white'
-                                  : 'border-emerald-950/10 bg-background text-slate-700 hover:border-emerald-400/35',
+                                  ? 'border-green-500 bg-ink text-white'
+                                  : 'border-gray-100 bg-background text-gray-600 hover:border-green-400',
                               ].join(' ')}
                             >
                               {sets === 1 ? '1 set' : `Melhor de ${sets}`}
@@ -583,7 +583,7 @@ export default function TournamentModalitiesTab({ tournament, isAdmin }) {
               <ScheduleHint form={form} />
             </PlatformFormSection>
 
-            <section className="space-y-3 rounded-[1.5rem] border border-emerald-950/10 bg-white/75 p-5">
+            <section className="space-y-3 rounded-[1.5rem] border border-gray-100 bg-white/75 p-5">
               <Label>Observações (opcional)</Label>
               <Input value={form.notes} onChange={(e) => set('notes', e.target.value)} className="mt-2" />
             </section>
@@ -606,7 +606,7 @@ function ScheduleHint({ form }) {
   const slots = computeWindowSlots(form.play_start_time, form.play_end_time, duration);
   if (slots == null) {
     return (
-      <p className="text-xs text-slate-500">
+      <p className="text-xs text-gray-500">
         {courts} quadra(s) · {duration || '—'} min por jogo
         {form.play_start_time ? ` · a partir das ${form.play_start_time}` : ''}.
       </p>
@@ -614,7 +614,7 @@ function ScheduleHint({ form }) {
   }
   const capacity = slots * courts;
   return (
-    <p className="text-xs text-slate-600">
+    <p className="text-xs text-gray-500">
       Janela de {form.play_start_time}–{form.play_end_time}: cabem cerca de{' '}
       <strong>{capacity}</strong> jogo(s) ({slots} horário(s) × {courts} quadra(s), {duration} min cada).
     </p>

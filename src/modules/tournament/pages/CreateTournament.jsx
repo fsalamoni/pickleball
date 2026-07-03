@@ -137,16 +137,16 @@ export default function CreateTournament() {
   return (
     <div className="space-y-6">
       <section className="grid grid-cols-1 gap-6 xl:grid-cols-[1.08fr,0.92fr]">
-        <Card className="arena-panel-strong overflow-hidden rounded-[1.25rem] border-0 sm:rounded-[2rem]">
+        <Card className="bg-ink text-white overflow-hidden rounded-[1.25rem] border-0 sm:rounded-[2rem]">
           <CardContent className="relative p-5 sm:p-8 lg:p-10">
             <div className="relative max-w-3xl">
-              <span className="inline-flex items-center gap-2 rounded-full border border-white/15 bg-white/10 px-3 py-1 text-xs font-semibold uppercase tracking-[0.18em] text-emerald-50/80">
+              <span className="inline-flex items-center gap-2 rounded-full border border-white/15 bg-white/10 px-3 py-1 text-xs font-semibold uppercase tracking-[0.18em] text-white/70">
                 <Sparkles className="h-3.5 w-3.5" /> Novo torneio
               </span>
               <h1 className="mt-5 text-2xl font-semibold leading-tight text-white sm:text-3xl lg:text-5xl">
                 Monte um torneio com cara de evento real antes mesmo da primeira inscrição.
               </h1>
-              <p className="mt-4 max-w-2xl text-sm leading-7 text-emerald-50/75 sm:text-base">
+              <p className="mt-4 max-w-2xl text-sm leading-7 text-white/70 sm:text-base">
                 Configure identidade, acesso, regras e calendário do evento. O resumo ao lado atualiza enquanto você preenche.
               </p>
             </div>
@@ -158,16 +158,16 @@ export default function CreateTournament() {
               eyebrow="Resumo"
               title="Prévia do torneio em tempo real."
             />
-            <div className="mt-5 rounded-[1.5rem] border border-emerald-950/10 bg-secondary/35 p-5">
-              <div className="text-sm font-semibold uppercase tracking-[0.18em] text-emerald-700/75">Prévia do evento</div>
-              <div className="mt-3 text-2xl font-semibold text-slate-950">
+            <div className="mt-5 rounded-[1.5rem] border border-gray-100 bg-paper p-5">
+              <div className="text-sm font-semibold uppercase tracking-[0.18em] text-gray-400">Prévia do evento</div>
+              <div className="mt-3 text-2xl font-semibold text-ink">
                 {form.name.trim() || 'Seu torneio ainda sem nome'}
               </div>
-              <p className="mt-2 text-sm leading-6 text-slate-600">
+              <p className="mt-2 text-sm leading-6 text-gray-500">
                 {form.description.trim() || 'Adicione uma descrição para dar contexto a atletas, admins e público.'}
               </p>
-              <div className="mt-4 flex items-center gap-2 text-sm text-slate-600">
-                <MapPin className="h-4 w-4 text-emerald-700" /> {locationPreview}
+              <div className="mt-4 flex items-center gap-2 text-sm text-gray-500">
+                <MapPin className="h-4 w-4 text-green-700" /> {locationPreview}
               </div>
             </div>
 
@@ -184,7 +184,7 @@ export default function CreateTournament() {
               ))}
             </div>
 
-            <div className="mt-5 rounded-[1.5rem] border border-emerald-950/10 bg-white/75 p-5 text-sm leading-6 text-slate-600">
+            <div className="mt-5 rounded-[1.5rem] border border-gray-100 bg-white/75 p-5 text-sm leading-6 text-gray-500">
               O código de convite para torneios privados é gerado automaticamente após a criação. Depois disso, a operação continua na tela do próprio torneio.
             </div>
         </PlatformSurfaceCard>
@@ -237,7 +237,7 @@ export default function CreateTournament() {
             <PlatformFormSection
               eyebrow="Acesso"
               title="Defina quem encontra e como entra no torneio"
-              className="bg-secondary/35"
+              className="bg-paper"
             >
               <div className="grid gap-3 md:grid-cols-2">
                 {VISIBILITY_OPTIONS.map(({ value, title, description, icon: Icon }) => {
@@ -250,17 +250,17 @@ export default function CreateTournament() {
                       className={[
                         'rounded-[1.35rem] border p-5 text-left transition-all duration-200',
                         active
-                          ? 'border-emerald-500/35 bg-white text-slate-950 shadow-[0_18px_36px_-24px_rgba(5,150,105,0.35)]'
-                          : 'border-emerald-950/10 bg-white/75 text-slate-700 hover:border-emerald-400/35',
+                          ? 'border-green-500 bg-white text-ink shadow-[0_18px_36px_-24px_rgba(5,150,105,0.35)]'
+                          : 'border-gray-100 bg-white/75 text-gray-600 hover:border-green-400',
                       ].join(' ')}
                     >
                       <div className="flex items-center justify-between gap-3">
                         <div className="text-lg font-semibold">{title}</div>
-                        <div className="flex h-10 w-10 items-center justify-center rounded-2xl bg-emerald-100 text-emerald-700">
+                        <div className="flex h-10 w-10 items-center justify-center rounded-2xl bg-green-100 text-green-700">
                           <Icon className="h-4.5 w-4.5" />
                         </div>
                       </div>
-                      <p className="mt-2 text-sm leading-6 text-slate-600">{description}</p>
+                      <p className="mt-2 text-sm leading-6 text-gray-500">{description}</p>
                     </button>
                   );
                 })}
@@ -286,7 +286,7 @@ export default function CreateTournament() {
                 </div>
               </div>
 
-              <div className="rounded-[1.25rem] border border-emerald-200 bg-emerald-50/70 p-4 text-sm leading-6 text-emerald-950">
+              <div className="rounded-[1.25rem] border border-green-200 bg-green-50 p-4 text-sm leading-6 text-green-800">
                 Pontos por game e sets por partida serão definidos depois, dentro de cada modalidade e, quando houver, em cada fase da modalidade.
               </div>
             </PlatformFormSection>

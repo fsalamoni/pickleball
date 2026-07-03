@@ -44,7 +44,7 @@ export default function ChatComposer({ onSend, disabled = false }) {
   };
 
   return (
-    <div className="border-t border-emerald-950/10 bg-white/80 p-3">
+    <div className="border-t border-gray-100 bg-white/80 p-3">
       <PendingAttachmentList items={items} onRemove={remove} className="mb-2" />
       <div className="flex items-end gap-2">
         <AttachmentAddButton onFiles={pick} uploading={uploading} disabled={disabled} iconOnly label="Anexar arquivo ou imagem" />

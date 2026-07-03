@@ -123,7 +123,7 @@ export function MarkdownEditor({
         <ToolbarButton title="Título" onClick={() => applyLinePrefix('## ')} disabled={disabled || mode === 'preview'}>
           <Heading2 className="h-4 w-4" />
         </ToolbarButton>
-        <span className="mx-0.5 h-5 w-px bg-emerald-950/10" />
+        <span className="mx-0.5 h-5 w-px bg-ink/10" />
         <ToolbarButton title="Lista" onClick={() => applyLinePrefix('- ')} disabled={disabled || mode === 'preview'}>
           <List className="h-4 w-4" />
         </ToolbarButton>
@@ -133,7 +133,7 @@ export function MarkdownEditor({
         <ToolbarButton title="Citação" onClick={() => applyLinePrefix('> ')} disabled={disabled || mode === 'preview'}>
           <Quote className="h-4 w-4" />
         </ToolbarButton>
-        <span className="mx-0.5 h-5 w-px bg-emerald-950/10" />
+        <span className="mx-0.5 h-5 w-px bg-ink/10" />
         <ToolbarButton title="Link" onClick={insertLink} disabled={disabled || mode === 'preview'}>
           <Link2 className="h-4 w-4" />
         </ToolbarButton>

@@ -73,18 +73,18 @@ export default function ClubMembersTab({ clubId, isAdmin }) {
           <Card key={member.id} className="rounded-xl">
             <CardContent className="flex items-center gap-3 p-3 sm:p-4">
               {member.photo_url ? (
-                <img src={member.photo_url} alt="" className="h-11 w-11 shrink-0 rounded-full border border-emerald-900/10 object-cover" />
+                <img src={member.photo_url} alt="" className="h-11 w-11 shrink-0 rounded-full border border-gray-100 object-cover" />
               ) : (
-                <div className="flex h-11 w-11 shrink-0 items-center justify-center rounded-full bg-emerald-900 font-semibold text-emerald-50">
+                <div className="flex h-11 w-11 shrink-0 items-center justify-center rounded-full bg-ink font-semibold text-white/70">
                   {initials(member.user_name)}
                 </div>
               )}
               <div className="min-w-0 flex-1">
                 <div className="flex items-center gap-2">
-                  <span className="truncate font-medium text-slate-900">{member.user_name}</span>
-                  {isSelf && <span className="text-xs text-slate-400">(você)</span>}
+                  <span className="truncate font-medium text-ink">{member.user_name}</span>
+                  {isSelf && <span className="text-xs text-gray-400">(você)</span>}
                 </div>
-                <div className="mt-0.5 flex flex-wrap items-center gap-x-3 gap-y-0.5 text-xs text-slate-500">
+                <div className="mt-0.5 flex flex-wrap items-center gap-x-3 gap-y-0.5 text-xs text-gray-500">
                   {member.user_email && (
                     <span className="inline-flex items-center gap-1"><Mail className="h-3 w-3" /> {member.user_email}</span>
                   )}

@@ -45,15 +45,15 @@ export default function Leveling() {
       <Card>
         <CardContent className="p-5">
           <div className="flex flex-wrap items-center justify-between gap-3">
-            <h1 className="arena-heading flex items-center gap-2 text-2xl font-bold">
-              <Award className="h-6 w-6 text-emerald-600" /> Nivelamento de Pickleball
+            <h1 className="font-display text-ink flex items-center gap-2 text-2xl font-bold">
+              <Award className="h-6 w-6 text-green-600" /> Nivelamento de Pickleball
             </h1>
             <div className="flex gap-2">
               <Button size="sm" variant={tab === 'formulario' ? 'default' : 'outline'} onClick={() => setTab('formulario')}>Formulário</Button>
               <Button size="sm" variant={tab === 'tabela' ? 'default' : 'outline'} onClick={() => setTab('tabela')}>Tabela</Button>
             </div>
           </div>
-          <p className="mt-2 text-sm text-slate-600">
+          <p className="mt-2 text-sm text-gray-500">
             Formulário comportamental importado da plataforma de nivelamento, direto na avaliação e com tabela detalhada de níveis USAP adaptados ao Brasil.
           </p>
           {!isAuthenticated && (

@@ -28,14 +28,14 @@ export default function MyBookings() {
   return (
     <div className="mx-auto max-w-4xl space-y-6">
       <section className="grid gap-6 xl:grid-cols-[1.05fr,0.95fr]">
-        <Card className="arena-panel-strong overflow-hidden rounded-[1.25rem] border-0 sm:rounded-[2rem]">
+        <Card className="bg-ink text-white overflow-hidden rounded-[1.25rem] border-0 sm:rounded-[2rem]">
           <CardContent className="p-5 sm:p-8 lg:p-10">
             <PlatformSectionHeader
               eyebrow="Reservas"
               title="Acompanhe suas negociações e confirmações com as arenas."
               description="Tudo o que você pediu para reservar fica visível aqui, com status, histórico e andamento do pagamento."
               titleClassName="mt-4 text-3xl leading-tight text-white sm:text-4xl"
-              descriptionClassName="mt-3 text-sm leading-7 text-emerald-50/75 sm:text-base"
+              descriptionClassName="mt-3 text-sm leading-7 text-white/70 sm:text-base"
             />
           </CardContent>
         </Card>
@@ -43,8 +43,8 @@ export default function MyBookings() {
         <PlatformSurfaceCard>
           <div className="flex items-center justify-between gap-3">
             <div>
-              <div className="text-xs font-semibold uppercase tracking-[0.16em] text-emerald-700/75">Ação rápida</div>
-              <div className="mt-2 text-lg font-semibold text-slate-950">Voltar ao catálogo de arenas</div>
+              <div className="text-xs font-semibold uppercase tracking-[0.16em] text-gray-400">Ação rápida</div>
+              <div className="mt-2 text-lg font-semibold text-ink">Voltar ao catálogo de arenas</div>
             </div>
             <Button asChild size="sm" variant="outline"><Link to="/arenas"><Building2 className="h-4 w-4" /> <span className="ml-1">Ver arenas</span></Link></Button>
           </div>
@@ -65,13 +65,13 @@ export default function MyBookings() {
       ) : (
         <>
           <PlatformSurfaceCard contentClassName="space-y-2 p-4">
-            <h3 className="text-sm font-semibold text-slate-800">Ativas</h3>
-            {grouped.active.length === 0 ? <p className="text-sm text-slate-500">Nenhuma reserva ativa.</p>
+            <h3 className="text-sm font-semibold text-ink">Ativas</h3>
+            {grouped.active.length === 0 ? <p className="text-sm text-gray-500">Nenhuma reserva ativa.</p>
               : grouped.active.map((b) => <BookingRow key={b.id} booking={b} perspective="athlete" />)}
           </PlatformSurfaceCard>
           {grouped.past.length > 0 && (
             <PlatformSurfaceCard contentClassName="space-y-2 p-4">
-              <h3 className="text-sm font-semibold text-slate-800">Histórico</h3>
+              <h3 className="text-sm font-semibold text-ink">Histórico</h3>
               {grouped.past.map((b) => <BookingRow key={b.id} booking={b} perspective="athlete" />)}
             </PlatformSurfaceCard>
           )}

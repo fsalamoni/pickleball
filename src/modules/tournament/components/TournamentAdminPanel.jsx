@@ -28,12 +28,12 @@ const ADMIN_TABS = [
 export default function TournamentAdminPanel({ tournament }) {
   return (
     <div className="space-y-5">
-      <Card className="arena-panel-strong overflow-hidden rounded-[2rem] border-0">
+      <Card className="bg-ink text-white overflow-hidden rounded-[2rem] border-0">
         <CardContent className="relative p-6 sm:p-7 lg:p-8">
           <div className="absolute inset-y-0 right-0 hidden w-1/2 bg-[radial-gradient(circle_at_top_right,rgba(255,255,255,0.16),transparent_46%)] lg:block" />
           <div className="relative max-w-3xl">
             <div className="flex items-center gap-2 flex-wrap">
-              <span className="inline-flex items-center gap-2 rounded-full border border-white/15 bg-white/10 px-3 py-1 text-xs font-semibold uppercase tracking-[0.18em] text-emerald-50/80">
+              <span className="inline-flex items-center gap-2 rounded-full border border-white/15 bg-white/10 px-3 py-1 text-xs font-semibold uppercase tracking-[0.18em] text-white/70">
                 <Sparkles className="h-3.5 w-3.5" /> Hub administrativo
               </span>
               <Badge variant="secondary" className="rounded-full border-0 bg-amber-300 px-3 py-1 text-xs font-semibold text-amber-950 shadow-none">
@@ -47,7 +47,7 @@ export default function TournamentAdminPanel({ tournament }) {
               </div>
               <div>
                 <h3 className="text-3xl font-semibold leading-tight text-white">Controle tudo o que muda a experiência do torneio sem misturar a visão do atleta.</h3>
-                <p className="mt-3 text-sm leading-7 text-emerald-50/75 sm:text-base">
+                <p className="mt-3 text-sm leading-7 text-white/70 sm:text-base">
                   Status, modalidades, inscrições, sorteio e resultados continuam aqui, mas agora em uma estrutura mais clara para operação ao vivo.
                 </p>
               </div>
@@ -64,7 +64,7 @@ export default function TournamentAdminPanel({ tournament }) {
                 <TabsTrigger
                   key={value}
                   value={value}
-                  className="rounded-full px-4 py-2 text-sm font-semibold data-[state=active]:bg-white data-[state=active]:text-slate-950 data-[state=active]:shadow-[0_14px_30px_-22px_rgba(15,23,42,0.35)]"
+                  className="rounded-full px-4 py-2 text-sm font-semibold data-[state=active]:bg-white data-[state=active]:text-ink data-[state=active]:shadow-[0_14px_30px_-22px_rgba(15,23,42,0.35)]"
                 >
                   <Icon className="mr-2 h-4 w-4" /> {label}
                 </TabsTrigger>

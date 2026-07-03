@@ -22,20 +22,20 @@ export default function ProgressionCard({ summary, matchDates = [] }) {
               <Zap className="h-5 w-5" />
             </div>
             <div>
-              <div className="text-lg font-bold text-slate-900">Nível {level.level}</div>
-              <div className="text-xs text-slate-500 tabular-nums">{level.xp} XP</div>
+              <div className="text-lg font-bold text-ink">Nível {level.level}</div>
+              <div className="text-xs text-gray-500 tabular-nums">{level.xp} XP</div>
             </div>
           </div>
-          <div className="flex items-center gap-2 text-sm text-slate-700">
-            <Flame className={`h-5 w-5 ${streak > 0 ? 'text-orange-500' : 'text-slate-300'}`} />
+          <div className="flex items-center gap-2 text-sm text-gray-600">
+            <Flame className={`h-5 w-5 ${streak > 0 ? 'text-orange-500' : 'text-gray-300'}`} />
             <span className="tabular-nums">{streak} semana(s) seguidas</span>
           </div>
         </div>
         <div className="mt-3">
-          <div className="h-2 w-full overflow-hidden rounded-full bg-slate-100">
+          <div className="h-2 w-full overflow-hidden rounded-full bg-paper">
             <div className="h-full rounded-full bg-amber-400" style={{ width: `${Math.round(level.progress * 100)}%` }} />
           </div>
-          <div className="mt-1 text-right text-[11px] text-slate-400 tabular-nums">
+          <div className="mt-1 text-right text-[11px] text-gray-400 tabular-nums">
             {level.xpIntoLevel}/{level.xpForNext} XP para o nível {level.level + 1}
           </div>
         </div>

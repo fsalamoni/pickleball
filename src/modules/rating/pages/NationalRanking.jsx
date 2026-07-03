@@ -102,7 +102,7 @@ export default function NationalRanking() {
       </PlatformSurfaceCard>
       <PlatformSurfaceCard contentClassName="space-y-3 p-4">
             <div className="relative">
-              <Search className="absolute left-4 top-1/2 h-4 w-4 -translate-y-1/2 text-slate-400" />
+              <Search className="absolute left-4 top-1/2 h-4 w-4 -translate-y-1/2 text-gray-400" />
               <Input
                 value={search}
                 onChange={(e) => setSearch(e.target.value)}
@@ -114,7 +114,7 @@ export default function NationalRanking() {
                   type="button"
                   onClick={() => setSearch('')}
                   aria-label="Limpar busca"
-                  className="absolute right-4 top-1/2 -translate-y-1/2 text-slate-400 hover:text-slate-700"
+                  className="absolute right-4 top-1/2 -translate-y-1/2 text-gray-400 hover:text-gray-600"
                 >
                   <X className="h-4 w-4" />
                 </button>
@@ -174,9 +174,9 @@ export default function NationalRanking() {
           </PlatformSurfaceCard>
         ) : (
           <PlatformSurfaceCard contentClassName="p-0">
-              <div className="arena-table-wrap">
+              <div className="overflow-x-auto rounded-3xl border border-gray-100">
                 <table className="w-full text-sm">
-                  <thead className="bg-slate-50">
+                  <thead className="bg-paper">
                     <tr className="text-left">
                       <th className="px-3 py-2">#</th>
                       <th className="px-3 py-2">Atleta</th>
@@ -205,7 +205,7 @@ export default function NationalRanking() {
                                 lightboxTitle={p.platform_name || 'Atleta'}
                               />
                               {profilePageOn ? (
-                                <Link to={`/atleta/${p.id}`} className="font-medium text-emerald-800 hover:underline">
+                                <Link to={`/atleta/${p.id}`} className="font-medium text-green-700 hover:underline">
                                   {p.platform_name}
                                 </Link>
                               ) : (
@@ -213,12 +213,12 @@ export default function NationalRanking() {
                               )}
                             </div>
                           </td>
-                          <td className="px-3 py-2 text-slate-600">
+                          <td className="px-3 py-2 text-gray-500">
                             {[p.city, p.state].filter(Boolean).join(' / ') || '—'}
                           </td>
                           <td className="px-3 py-2 text-center tabular-nums">{p.games}</td>
                           <td className="px-3 py-2 text-center tabular-nums">{p.wins}–{p.losses}</td>
-                          <td className="px-3 py-2 text-right font-bold tabular-nums text-emerald-700">{p.rating}</td>
+                          <td className="px-3 py-2 text-right font-bold tabular-nums text-green-700">{p.rating}</td>
                         </tr>
                       );
                     })}
@@ -234,7 +234,7 @@ export default function NationalRanking() {
 function FilterSelect({ label, value, onChange, options }) {
   return (
     <label className="block">
-      <span className="mb-1 block text-xs font-semibold uppercase tracking-[0.16em] text-emerald-700/75">{label}</span>
+      <span className="mb-1 block text-xs font-semibold uppercase tracking-[0.16em] text-gray-400">{label}</span>
       <select
         value={value}
         onChange={(e) => onChange(e.target.value)}

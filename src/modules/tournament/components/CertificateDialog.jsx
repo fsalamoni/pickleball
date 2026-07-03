@@ -77,20 +77,20 @@ export default function CertificateDialog({ tournament, open, onOpenChange }) {
         {/* Certificado capturável */}
         <div
           ref={ref}
-          className="relative overflow-hidden rounded-lg border-4 border-emerald-700 bg-gradient-to-br from-white to-emerald-50 p-6 text-center"
+          className="relative overflow-hidden rounded-lg border-4 border-ink bg-gradient-to-br from-white to-green-50 p-6 text-center"
         >
-          <div className="flex items-center justify-center gap-2 text-emerald-700">
+          <div className="flex items-center justify-center gap-2 text-green-700">
             {type === 'champion' ? <Medal className="h-6 w-6" /> : <Trophy className="h-6 w-6" />}
             <span className="text-sm font-semibold uppercase tracking-[0.2em]">Pickleholics</span>
           </div>
-          <h3 className="mt-3 text-lg font-bold text-emerald-800">{heading}</h3>
-          <p className="mt-3 text-sm text-slate-600">Certificamos que</p>
-          <p className="mt-1 text-2xl font-bold text-slate-900">{name || 'Seu nome'}</p>
-          <p className="mt-2 text-sm text-slate-600">
+          <h3 className="mt-3 text-lg font-bold text-green-700">{heading}</h3>
+          <p className="mt-3 text-sm text-gray-500">Certificamos que</p>
+          <p className="mt-1 text-2xl font-bold text-ink">{name || 'Seu nome'}</p>
+          <p className="mt-2 text-sm text-gray-500">
             {type === 'champion' ? 'foi campeão(ã) do torneio' : 'participou do torneio'}
           </p>
-          <p className="mt-1 text-lg font-semibold text-emerald-800">{tournament?.name || 'Torneio de Pickleball'}</p>
-          {place && <p className="mt-1 text-xs text-slate-500">{place}</p>}
+          <p className="mt-1 text-lg font-semibold text-green-700">{tournament?.name || 'Torneio de Pickleball'}</p>
+          {place && <p className="mt-1 text-xs text-gray-500">{place}</p>}
         </div>
 
         <Button onClick={handleDownload} disabled={busy} className="w-full">

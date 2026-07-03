@@ -81,13 +81,13 @@ export default function MessageBubble({ message, isOwn, showAuthor, onEdit, onDe
 
       <div className={cn('group relative max-w-[78%] sm:max-w-[70%]', isOwn ? 'items-end' : 'items-start')}>
         {showAuthor && !isOwn && (
-          <div className="mb-0.5 pl-1 text-xs font-medium text-emerald-800">{message.sender_name}</div>
+          <div className="mb-0.5 pl-1 text-xs font-medium text-green-700">{message.sender_name}</div>
         )}
 
         <div
           className={cn(
             'rounded-2xl px-3 py-2 text-sm shadow-sm',
-            isOwn ? 'rounded-br-sm bg-emerald-600 text-white' : 'rounded-bl-sm bg-white text-slate-800 border border-emerald-950/8',
+            isOwn ? 'rounded-br-sm bg-ink text-white' : 'rounded-bl-sm bg-white text-ink border border-gray-100',
           )}
         >
           {editing ? (
@@ -97,13 +97,13 @@ export default function MessageBubble({ message, isOwn, showAuthor, onEdit, onDe
                 onChange={(e) => setDraft(e.target.value)}
                 rows={2}
                 autoFocus
-                className="w-full resize-y rounded-md border border-white/40 bg-white/95 px-2 py-1.5 text-sm text-slate-800 outline-none"
+                className="w-full resize-y rounded-md border border-white/40 bg-white/95 px-2 py-1.5 text-sm text-ink outline-none"
               />
               <div className="flex justify-end gap-1.5">
                 <Button size="sm" variant="ghost" className={cn('h-7', isOwn && 'text-white hover:bg-white/15 hover:text-white')} onClick={() => setEditing(false)} disabled={busy}>
                   <X className="mr-1 h-3.5 w-3.5" /> Cancelar
                 </Button>
-                <Button size="sm" className="h-7 bg-white text-emerald-700 hover:bg-emerald-50" onClick={saveEdit} disabled={busy}>
+                <Button size="sm" className="h-7 bg-white text-green-700 hover:bg-acid/10" onClick={saveEdit} disabled={busy}>
                   <Check className="mr-1 h-3.5 w-3.5" /> Salvar
                 </Button>
               </div>
@@ -117,7 +117,7 @@ export default function MessageBubble({ message, isOwn, showAuthor, onEdit, onDe
                   className={cn(hasText && 'mt-2', isOwn && '[&_a]:text-white')}
                 />
               )}
-              <div className={cn('mt-1 flex items-center justify-end gap-1 text-[10px]', isOwn ? 'text-emerald-50/80' : 'text-slate-400')}>
+              <div className={cn('mt-1 flex items-center justify-end gap-1 text-[10px]', isOwn ? 'text-white/70' : 'text-gray-400')}>
                 {message.edited && <span>editada</span>}
                 <span>{formatTime(message.created_at_ms)}</span>
               </div>
@@ -130,7 +130,7 @@ export default function MessageBubble({ message, isOwn, showAuthor, onEdit, onDe
         <div className="self-center opacity-0 transition-opacity group-hover:opacity-100 focus-within:opacity-100">
           <DropdownMenu>
             <DropdownMenuTrigger asChild>
-              <Button variant="ghost" size="icon" className="h-7 w-7 text-slate-400">
+              <Button variant="ghost" size="icon" className="h-7 w-7 text-gray-400">
                 <MoreVertical className="h-4 w-4" />
               </Button>
             </DropdownMenuTrigger>

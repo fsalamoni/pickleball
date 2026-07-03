@@ -35,7 +35,7 @@ export function UserAvatar({
   lightboxDescription,
 }) {
   const dim = SIZES[size] || SIZES.sm;
-  const base = 'shrink-0 rounded-full border border-emerald-900/10 object-cover';
+  const base = 'shrink-0 rounded-full border border-gray-100 object-cover';
   const label = title || name || '';
 
   if (photoUrl) {
@@ -60,7 +60,7 @@ export function UserAvatar({
   return (
     <div
       title={label}
-      className={cn(dim, 'flex shrink-0 items-center justify-center rounded-full bg-emerald-900 font-semibold text-emerald-50', className)}
+      className={cn(dim, 'flex shrink-0 items-center justify-center rounded-full bg-ink font-semibold text-white/70', className)}
     >
       {initialsFor(name)}
     </div>

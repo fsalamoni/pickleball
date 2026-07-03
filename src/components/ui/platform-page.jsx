@@ -45,7 +45,7 @@ export function PlatformSectionHeader({
 
 export function PlatformMetricCard({ label, value, description, icon: Icon, className, valueClassName }) {
   return (
-    <div className={cn('rounded-[1.35rem] border border-gray-100 bg-secondary/35 p-4', className)}>
+    <div className={cn('rounded-[1.35rem] border border-gray-100 bg-paper p-4', className)}>
       <div className="flex items-center justify-between gap-3">
         <div className="text-[11px] font-semibold uppercase tracking-[0.16em] text-gray-400">
           {label}
@@ -97,7 +97,7 @@ export function PlatformFormSection({
 
 export function PlatformNotice({ children, className }) {
   return (
-    <div className={cn('rounded-[1.25rem] border border-gray-200 bg-acid/10/70 p-4 text-sm leading-6 text-emerald-950', className)}>
+    <div className={cn('rounded-[1.25rem] border border-gray-200 bg-acid/10 p-4 text-sm leading-6 text-green-800', className)}>
       {children}
     </div>
   );

@@ -31,10 +31,10 @@ import {
 
 const STATUS_TONE = {
   [TOURNAMENT_STATUS.IN_PROGRESS]: 'bg-blue-100 text-blue-900 border-blue-200',
-  [TOURNAMENT_STATUS.REGISTRATIONS_OPEN]: 'bg-emerald-100 text-emerald-800 border-emerald-200',
+  [TOURNAMENT_STATUS.REGISTRATIONS_OPEN]: 'bg-green-100 text-green-700 border-green-200',
   [TOURNAMENT_STATUS.REGISTRATIONS_CLOSED]: 'bg-amber-100 text-amber-900 border-amber-200',
-  [TOURNAMENT_STATUS.DRAFT]: 'bg-slate-100 text-slate-700 border-slate-200',
-  [TOURNAMENT_STATUS.FINISHED]: 'bg-slate-200 text-slate-700 border-slate-300',
+  [TOURNAMENT_STATUS.DRAFT]: 'bg-paper text-gray-600 border-gray-200',
+  [TOURNAMENT_STATUS.FINISHED]: 'bg-gray-200 text-gray-600 border-gray-200',
   [TOURNAMENT_STATUS.CANCELLED]: 'bg-red-100 text-red-800 border-red-200',
 };
 
@@ -148,21 +148,21 @@ export default function PublicTournamentsList() {
   return (
     <div className="space-y-8">
       <section className="grid gap-6 xl:grid-cols-[1.08fr,0.92fr]">
-        <Card className="arena-panel-strong overflow-hidden rounded-[2rem] border-0">
+        <Card className="bg-ink text-white overflow-hidden rounded-[2rem] border-0">
           <CardContent className="relative p-7 sm:p-8 lg:p-10">
             <div className="relative max-w-2xl">
-              <span className="inline-flex items-center gap-2 rounded-full border border-white/15 bg-white/10 px-3 py-1 text-xs font-semibold uppercase tracking-[0.18em] text-emerald-50/80">
+              <span className="inline-flex items-center gap-2 rounded-full border border-white/15 bg-white/10 px-3 py-1 text-xs font-semibold uppercase tracking-[0.18em] text-white/70">
                 <Sparkles className="h-3.5 w-3.5" /> Descoberta publica de torneios
               </span>
               <h2 className="mt-5 text-2xl font-semibold leading-tight text-white sm:text-3xl lg:text-4xl">
                 Explore os torneios públicos da plataforma.
               </h2>
-              <p className="mt-4 max-w-xl text-sm leading-7 text-emerald-50/75 sm:text-base">
+              <p className="mt-4 max-w-xl text-sm leading-7 text-white/70 sm:text-base">
                 A inscrição em torneios públicos não exige código. Basta abrir o evento e escolher a modalidade desejada.
               </p>
 
               <div className="mt-6 flex flex-wrap gap-3">
-                <Button asChild className="bg-white text-slate-950 hover:bg-emerald-50">
+                <Button asChild className="bg-white text-ink hover:bg-acid/10">
                   <Link to="/torneios/criar">Criar torneio publico</Link>
                 </Button>
                 {search && (
@@ -176,8 +176,8 @@ export default function PublicTournamentsList() {
         </Card>
 
         <PlatformSurfaceCard>
-            <span className="arena-chip">Panorama</span>
-            <h3 className="mt-4 text-2xl font-semibold text-slate-950">Resumo dos eventos públicos</h3>
+            <span className="inline-flex items-center gap-1.5 rounded-full border border-gray-200 bg-paper-pure px-3 py-1 text-xs font-bold text-ink">Panorama</span>
+            <h3 className="mt-4 text-2xl font-semibold text-ink">Resumo dos eventos públicos</h3>
             <div className="mt-6 grid gap-3 sm:grid-cols-3 xl:grid-cols-1">
               {stats.map(({ label, value, hint, icon: Icon }) => (
                 <PlatformMetricCard key={label} label={label} value={value} description={hint} icon={Icon} />
@@ -189,7 +189,7 @@ export default function PublicTournamentsList() {
       <PlatformSurfaceCard contentClassName="p-4 sm:p-5">
           <div className="grid gap-4 xl:grid-cols-[1fr,auto] xl:items-center">
             <div className="relative">
-              <Search className="absolute left-4 top-1/2 h-4 w-4 -translate-y-1/2 text-slate-400" />
+              <Search className="absolute left-4 top-1/2 h-4 w-4 -translate-y-1/2 text-gray-400" />
               <Input
                 value={search}
                 onChange={(e) => setSearch(e.target.value)}
@@ -201,7 +201,7 @@ export default function PublicTournamentsList() {
                   type="button"
                   onClick={() => setSearch('')}
                   aria-label="Limpar busca"
-                  className="absolute right-1.5 top-1/2 flex h-9 w-9 -translate-y-1/2 items-center justify-center rounded-full text-slate-400 transition-colors hover:bg-slate-100 hover:text-slate-700"
+                  className="absolute right-1.5 top-1/2 flex h-9 w-9 -translate-y-1/2 items-center justify-center rounded-full text-gray-400 transition-colors hover:bg-paper hover:text-gray-600"
                 >
                   <X className="h-4 w-4" />
                 </button>
@@ -217,8 +217,8 @@ export default function PublicTournamentsList() {
                   className={[
                     'rounded-full border px-4 py-2 text-sm font-medium transition-all duration-200',
                     statusFilter === option.value
-                      ? 'border-emerald-500/35 bg-emerald-600 text-white shadow-[0_16px_34px_-24px_rgba(5,150,105,0.75)]'
-                      : 'border-emerald-950/10 bg-white/75 text-slate-700 hover:border-emerald-400/40 hover:text-slate-950',
+                      ? 'border-green-500 bg-ink text-white shadow-[0_16px_34px_-24px_rgba(5,150,105,0.75)]'
+                      : 'border-gray-100 bg-white/75 text-gray-600 hover:border-green-400 hover:text-ink',
                   ].join(' ')}
                 >
                   {option.label}
@@ -227,8 +227,8 @@ export default function PublicTournamentsList() {
             </div>
           </div>
 
-          <div className="mt-4 border-t border-emerald-950/8 pt-4 text-sm text-slate-600">
-            <span className="font-semibold text-slate-950">{filtered.length}</span> resultados para o filtro atual.
+          <div className="mt-4 border-t border-gray-100 pt-4 text-sm text-gray-500">
+            <span className="font-semibold text-ink">{filtered.length}</span> resultados para o filtro atual.
           </div>
       </PlatformSurfaceCard>
 
@@ -264,13 +264,13 @@ export default function PublicTournamentsList() {
       ) : filtered.length === 0 ? (
         <Card className="rounded-[2rem] border-white/80 bg-white/82">
           <CardContent className="flex flex-col items-center px-6 py-12 text-center sm:px-10">
-            <div className="flex h-16 w-16 items-center justify-center rounded-[1.5rem] bg-emerald-100 text-emerald-700">
+            <div className="flex h-16 w-16 items-center justify-center rounded-[1.5rem] bg-green-100 text-green-700">
               <Users className="h-8 w-8" />
             </div>
-            <h3 className="mt-5 text-2xl font-semibold text-slate-950">
+            <h3 className="mt-5 text-2xl font-semibold text-ink">
               {isPreviewMode ? 'Nenhum torneio publico carregado neste preview' : 'Nenhum torneio publico encontrado'}
             </h3>
-            <p className="mt-3 max-w-2xl text-sm leading-7 text-slate-600 sm:text-base">
+            <p className="mt-3 max-w-2xl text-sm leading-7 text-gray-500 sm:text-base">
               {isPreviewMode
                 ? 'Sem Firebase local, nenhum torneio é carregado neste ambiente.'
                 : tournaments.length === 0
@@ -308,45 +308,45 @@ export default function PublicTournamentsList() {
 
 function FeaturedTournamentCard({ tournament }) {
   const dateRange = formatStartEnd(tournament.starts_at, tournament.ends_at);
-  const tone = STATUS_TONE[tournament.status] || 'bg-slate-100 text-slate-700 border-slate-200';
+  const tone = STATUS_TONE[tournament.status] || 'bg-paper text-gray-600 border-gray-200';
 
   return (
     <Link to={`/torneios/${tournament.id}`} className="block h-full">
-      <Card className="match-surface h-full rounded-[1.75rem] border-white/80 bg-white/85">
+      <Card className="h-full rounded-[1.75rem] border-white/80 bg-white/85">
         <CardContent className="flex h-full flex-col p-5 sm:p-6">
           <div className="flex items-start justify-between gap-3">
             <div className="min-w-0">
-              <div className="text-xs font-semibold uppercase tracking-[0.16em] text-emerald-700/75">Em destaque</div>
-              <h4 className="mt-2 text-xl font-semibold text-slate-950">{tournament.name}</h4>
+              <div className="text-xs font-semibold uppercase tracking-[0.16em] text-gray-400">Em destaque</div>
+              <h4 className="mt-2 text-xl font-semibold text-ink">{tournament.name}</h4>
             </div>
             <div className={`inline-flex shrink-0 items-center gap-1 rounded-full border px-2.5 py-1 text-[11px] font-medium ${tone}`}>
               {TOURNAMENT_STATUS_LABELS[tournament.status] || tournament.status}
             </div>
           </div>
 
-          <div className="mt-4 flex items-center gap-2 text-sm text-slate-600">
-            <MapPin className="h-4 w-4 shrink-0 text-emerald-700" />
+          <div className="mt-4 flex items-center gap-2 text-sm text-gray-500">
+            <MapPin className="h-4 w-4 shrink-0 text-green-700" />
             <span className="truncate">{tournament.city ? `${tournament.city}${tournament.state ? ` / ${tournament.state}` : ''}` : 'Local nao informado'}</span>
           </div>
 
           {tournament.description && (
-            <p className="mt-4 line-clamp-3 text-sm leading-6 text-slate-600">{tournament.description}</p>
+            <p className="mt-4 line-clamp-3 text-sm leading-6 text-gray-500">{tournament.description}</p>
           )}
 
-          <div className="mt-4 flex flex-wrap gap-2 text-xs text-slate-600">
+          <div className="mt-4 flex flex-wrap gap-2 text-xs text-gray-500">
             {dateRange && (
-              <span className="inline-flex items-center gap-1 rounded-full border border-emerald-950/10 bg-white/75 px-2.5 py-1">
+              <span className="inline-flex items-center gap-1 rounded-full border border-gray-100 bg-white/75 px-2.5 py-1">
                 <Calendar className="h-3 w-3" /> {dateRange}
               </span>
             )}
             {tournament.venue && (
-              <span className="inline-flex items-center gap-1 rounded-full border border-emerald-950/10 bg-white/75 px-2.5 py-1">
+              <span className="inline-flex items-center gap-1 rounded-full border border-gray-100 bg-white/75 px-2.5 py-1">
                 <Trophy className="h-3 w-3" /> {tournament.venue}
               </span>
             )}
           </div>
 
-          <div className="mt-auto flex items-center justify-between pt-6 text-sm font-medium text-emerald-800">
+          <div className="mt-auto flex items-center justify-between pt-6 text-sm font-medium text-green-700">
             <span>Ver modalidades e detalhes</span>
             <ArrowRight className="h-4 w-4" />
           </div>
@@ -358,16 +358,16 @@ function FeaturedTournamentCard({ tournament }) {
 
 function PublicTournamentCard({ tournament }) {
   const dateRange = formatStartEnd(tournament.starts_at, tournament.ends_at);
-  const tone = STATUS_TONE[tournament.status] || 'bg-slate-100 text-slate-700 border-slate-200';
+  const tone = STATUS_TONE[tournament.status] || 'bg-paper text-gray-600 border-gray-200';
 
   return (
     <Link to={`/torneios/${tournament.id}`} className="block h-full">
-      <Card className="match-surface h-full rounded-[1.75rem] border-white/80 bg-white/85">
+      <Card className="h-full rounded-[1.75rem] border-white/80 bg-white/85">
         <CardContent className="flex h-full flex-col p-5 sm:p-6">
           <div className="flex items-start justify-between gap-3">
             <div className="min-w-0">
-              <h4 className="flex items-center gap-3 text-lg font-semibold text-slate-950">
-                <span className="flex h-11 w-11 shrink-0 items-center justify-center rounded-2xl bg-emerald-100 text-emerald-700">
+              <h4 className="flex items-center gap-3 text-lg font-semibold text-ink">
+                <span className="flex h-11 w-11 shrink-0 items-center justify-center rounded-2xl bg-green-100 text-green-700">
                   <Trophy className="h-4.5 w-4.5" />
                 </span>
                 <span className="truncate">{tournament.name}</span>
@@ -378,37 +378,37 @@ function PublicTournamentCard({ tournament }) {
             </div>
           </div>
 
-          <div className="mt-4 space-y-2 text-sm text-slate-600">
+          <div className="mt-4 space-y-2 text-sm text-gray-500">
             <div className="flex items-center gap-2">
-              <MapPin className="h-4 w-4 shrink-0 text-emerald-700" />
+              <MapPin className="h-4 w-4 shrink-0 text-green-700" />
               <span className="truncate">{tournament.city ? `${tournament.city}${tournament.state ? ` / ${tournament.state}` : ''}` : 'Local nao informado'}</span>
             </div>
             {dateRange && (
               <div className="flex items-center gap-2">
-                <Calendar className="h-4 w-4 shrink-0 text-emerald-700" />
+                <Calendar className="h-4 w-4 shrink-0 text-green-700" />
                 <span>{dateRange}</span>
               </div>
             )}
           </div>
 
           {tournament.description && (
-            <p className="mt-4 line-clamp-3 text-sm leading-6 text-slate-600">{tournament.description}</p>
+            <p className="mt-4 line-clamp-3 text-sm leading-6 text-gray-500">{tournament.description}</p>
           )}
 
-          <div className="mt-4 flex flex-wrap gap-2 text-xs text-slate-600">
+          <div className="mt-4 flex flex-wrap gap-2 text-xs text-gray-500">
             {tournament.invite_code && (
-              <span className="inline-flex items-center gap-1 rounded-full border border-emerald-950/10 bg-white/75 px-2.5 py-1">
+              <span className="inline-flex items-center gap-1 rounded-full border border-gray-100 bg-white/75 px-2.5 py-1">
                 <Hash className="h-3 w-3" /> {tournament.invite_code}
               </span>
             )}
             {tournament.venue && (
-              <span className="inline-flex items-center gap-1 rounded-full border border-emerald-950/10 bg-white/75 px-2.5 py-1">
+              <span className="inline-flex items-center gap-1 rounded-full border border-gray-100 bg-white/75 px-2.5 py-1">
                 <Users className="h-3 w-3" /> {tournament.venue}
               </span>
             )}
           </div>
 
-          <div className="mt-auto flex items-center justify-between pt-6 text-sm font-medium text-emerald-800">
+          <div className="mt-auto flex items-center justify-between pt-6 text-sm font-medium text-green-700">
             <span>Abrir torneio</span>
             <ArrowRight className="h-4 w-4" />
           </div>

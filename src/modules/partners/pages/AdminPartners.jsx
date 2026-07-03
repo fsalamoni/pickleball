@@ -105,7 +105,7 @@ export default function AdminPartners() {
           eyebrow="Admin parceiros"
           title="Curadoria do ecossistema comercial"
           description="Cadastre, revise e publique parceiros com uma visão mais clara do que já está ativo na vitrine pública."
-          action={<Handshake className="h-5 w-5 text-emerald-600" />}
+          action={<Handshake className="h-5 w-5 text-green-600" />}
         />
       </PlatformSurfaceCard>
 
@@ -117,8 +117,8 @@ export default function AdminPartners() {
 
       <PlatformSurfaceCard contentClassName="space-y-4 p-5 sm:p-6">
           <div className="flex items-center gap-2">
-            <Handshake className="h-5 w-5 text-emerald-600" />
-            <h2 className="text-lg font-semibold arena-heading">
+            <Handshake className="h-5 w-5 text-green-600" />
+            <h2 className="text-lg font-semibold font-display text-ink">
               {editingId ? 'Editar parceiro' : 'Novo parceiro / afiliado'}
             </h2>
           </div>
@@ -194,7 +194,7 @@ export default function AdminPartners() {
               )}
             </div>
 
-            <div className="flex items-center justify-between gap-4 rounded-[1.25rem] border border-emerald-950/10 bg-white/75 p-3">
+            <div className="flex items-center justify-between gap-4 rounded-[1.25rem] border border-gray-100 bg-white/75 p-3">
               <div>
                 <Label htmlFor="active" className="cursor-pointer text-sm">Ativo (visível na página de parceiros)</Label>
               </div>
@@ -223,7 +223,7 @@ export default function AdminPartners() {
           {isLoading ? (
             <div className="space-y-2">
               {[1, 2, 3].map((item) => (
-                <div key={item} className="h-20 animate-pulse rounded-[1.25rem] bg-slate-200/70" />
+                <div key={item} className="h-20 animate-pulse rounded-[1.25rem] bg-gray-200/70" />
               ))}
             </div>
           ) : links.length === 0 ? (
@@ -235,7 +235,7 @@ export default function AdminPartners() {
           ) : (
             <div className="space-y-2">
               {links.map((link) => (
-                <div key={link.id} className="flex items-center justify-between gap-3 rounded-[1.25rem] border border-emerald-950/10 bg-white/75 p-3">
+                <div key={link.id} className="flex items-center justify-between gap-3 rounded-[1.25rem] border border-gray-100 bg-white/75 p-3">
                   <div className="min-w-0">
                     <div className="flex items-center gap-2">
                       {link.image_url ? (
@@ -246,14 +246,14 @@ export default function AdminPartners() {
                           trigger={<img src={link.image_url} alt="" className="h-10 w-10 cursor-zoom-in rounded-xl object-cover" />}
                         />
                       ) : null}
-                      <span className="truncate font-medium text-slate-900">{link.title}</span>
+                      <span className="truncate font-medium text-ink">{link.title}</span>
                       {!link.active && <Badge variant="secondary" className="text-[11px]">inativo</Badge>}
                     </div>
                     <a
                       href={link.url}
                       target="_blank"
                       rel="noopener noreferrer"
-                      className="inline-flex items-center gap-1 text-xs text-emerald-700 hover:underline"
+                      className="inline-flex items-center gap-1 text-xs text-green-700 hover:underline"
                     >
                       {link.url} <ExternalLink className="h-3 w-3" />
                     </a>

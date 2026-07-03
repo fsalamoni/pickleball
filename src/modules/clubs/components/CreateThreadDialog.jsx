@@ -113,7 +113,7 @@ export default function CreateThreadDialog({ clubId, open, onOpenChange, onCreat
             <AttachmentAddButton onFiles={attachments.pick} uploading={attachments.uploading} label="Anexar imagens ou arquivos" />
           </div>
 
-          <div className="flex items-center justify-between gap-3 rounded-lg border border-gray-100 bg-secondary/20 px-3 py-2">
+          <div className="flex items-center justify-between gap-3 rounded-lg border border-gray-100 bg-paper px-3 py-2">
             <div>
               <div className="text-sm font-medium text-ink">Adicionar enquete</div>
               <div className="text-xs text-gray-500">Colete a opinião do clube com uma votação.</div>

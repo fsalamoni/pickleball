@@ -59,9 +59,9 @@ export default function AthleteProfile() {
   if (!athlete) {
     return (
       <div className="mx-auto max-w-md p-6 text-center">
-        <Trophy className="mx-auto h-10 w-10 text-slate-300" />
+        <Trophy className="mx-auto h-10 w-10 text-gray-300" />
         <h2 className="mt-3 font-semibold">Atleta não encontrado</h2>
-        <Link to="/atletas" className="mt-1 inline-block text-sm text-emerald-700 underline">
+        <Link to="/atletas" className="mt-1 inline-block text-sm text-green-700 underline">
           Voltar ao diretório
         </Link>
       </div>
@@ -86,8 +86,8 @@ export default function AthleteProfile() {
             lightboxDescription="Foto pública usada no perfil do atleta."
           />
           <div className="min-w-0 flex-1">
-            <h1 className="text-2xl font-bold text-slate-900">{athlete.platform_name}</h1>
-            <div className="mt-1 flex flex-wrap items-center gap-x-3 gap-y-1 text-sm text-slate-600">
+            <h1 className="text-2xl font-bold text-ink">{athlete.platform_name}</h1>
+            <div className="mt-1 flex flex-wrap items-center gap-x-3 gap-y-1 text-sm text-gray-500">
               {Number.isFinite(athlete.age) && <span>{athlete.age} anos</span>}
               {genderLabel(athlete.gender) && <span>· {genderLabel(athlete.gender)}</span>}
               {location && <span className="inline-flex items-center gap-1"><MapPin className="h-3.5 w-3.5" /> {location}</span>}
@@ -116,14 +116,14 @@ export default function AthleteProfile() {
       {rating && (
         <PlatformSurfaceCard contentClassName="flex items-center justify-between gap-4 p-5">
             <div className="flex items-center gap-3">
-              <Medal className="h-7 w-7 text-emerald-600" />
+              <Medal className="h-7 w-7 text-green-600" />
               <div>
-                <div className="text-2xl font-bold text-emerald-700 tabular-nums">{rating.rating}</div>
-                <div className="text-xs text-slate-500">Rating · {rating.position ? `${rating.position}º no ranking` : 'sem posição'}</div>
+                <div className="text-2xl font-bold text-green-700 tabular-nums">{rating.rating}</div>
+                <div className="text-xs text-gray-500">Rating · {rating.position ? `${rating.position}º no ranking` : 'sem posição'}</div>
               </div>
             </div>
-            <div className="text-right text-sm text-slate-600 tabular-nums">
-              {rating.wins}V – {rating.losses}D <span className="text-slate-400">· {rating.games} jogo(s)</span>
+            <div className="text-right text-sm text-gray-500 tabular-nums">
+              {rating.wins}V – {rating.losses}D <span className="text-gray-400">· {rating.games} jogo(s)</span>
             </div>
         </PlatformSurfaceCard>
       )}
@@ -139,13 +139,13 @@ export default function AthleteProfile() {
 
       {formats.length > 0 && (
         <PlatformSurfaceCard contentClassName="p-4">
-            <h2 className="mb-3 text-sm font-semibold text-slate-800">Desempenho por formato</h2>
+            <h2 className="mb-3 text-sm font-semibold text-ink">Desempenho por formato</h2>
             <div className="space-y-2">
               {formats.map(([format, b]) => (
-                <div key={format} className="flex items-center justify-between gap-4 rounded-md border border-slate-200 p-3">
-                  <span className="text-sm font-medium text-slate-700">{MODALITY_FORMAT_LABELS[format] || format}</span>
-                  <span className="text-xs text-slate-600 tabular-nums">
-                    {b.played} jogo(s) · {b.wins}V – {b.losses}D · <strong className="text-slate-900">{formatPercent(b.winRate)}</strong>
+                <div key={format} className="flex items-center justify-between gap-4 rounded-md border border-gray-200 p-3">
+                  <span className="text-sm font-medium text-gray-600">{MODALITY_FORMAT_LABELS[format] || format}</span>
+                  <span className="text-xs text-gray-500 tabular-nums">
+                    {b.played} jogo(s) · {b.wins}V – {b.losses}D · <strong className="text-ink">{formatPercent(b.winRate)}</strong>
                   </span>
                 </div>
               ))}
@@ -161,18 +161,18 @@ export default function AthleteProfile() {
 
       {history.length > 0 && (
         <PlatformSurfaceCard contentClassName="p-4">
-            <h2 className="mb-3 text-sm font-semibold text-slate-800">Torneios recentes</h2>
+            <h2 className="mb-3 text-sm font-semibold text-ink">Torneios recentes</h2>
             <div className="space-y-2">
               {history.slice(0, 8).map((g) => (
                 <Link
                   key={g.tournamentId}
                   to={`/torneios/${g.tournamentId}`}
-                  className="flex items-center justify-between gap-3 rounded-md border border-slate-200 p-3 hover:bg-emerald-50/50"
+                  className="flex items-center justify-between gap-3 rounded-md border border-gray-200 p-3 hover:bg-acid/10"
                 >
-                  <span className="min-w-0 truncate text-sm font-medium text-slate-800">
+                  <span className="min-w-0 truncate text-sm font-medium text-ink">
                     {g.tournament?.name || 'Torneio'}
                   </span>
-                  <ChevronRight className="h-4 w-4 shrink-0 text-slate-400" />
+                  <ChevronRight className="h-4 w-4 shrink-0 text-gray-400" />
                 </Link>
               ))}
             </div>

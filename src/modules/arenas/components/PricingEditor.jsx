@@ -75,18 +75,18 @@ export default function PricingEditor({ arena }) {
           className="w-40"
           placeholder="Ex.: 80"
         />
-        <p className="mt-1 text-xs text-slate-500">Usado quando nenhuma regra por dia/horário se aplica.</p>
+        <p className="mt-1 text-xs text-gray-500">Usado quando nenhuma regra por dia/horário se aplica.</p>
       </div>
 
       <div>
         <div className="mb-2 flex items-center justify-between">
-          <h4 className="text-sm font-semibold text-slate-800">Preços padrão (por dia e horário)</h4>
+          <h4 className="text-sm font-semibold text-ink">Preços padrão (por dia e horário)</h4>
           <Button size="sm" variant="outline" onClick={addRule}><Plus className="h-4 w-4" /> <span className="ml-1">Regra</span></Button>
         </div>
         <div className="space-y-3">
-          {rules.length === 0 && <p className="text-xs text-slate-500">Nenhuma regra. Ex.: seg–sex 18h–22h = R$150.</p>}
+          {rules.length === 0 && <p className="text-xs text-gray-500">Nenhuma regra. Ex.: seg–sex 18h–22h = R$150.</p>}
           {rules.map((r) => (
-            <div key={r.id} className="rounded-lg border border-slate-200 p-3">
+            <div key={r.id} className="rounded-lg border border-gray-200 p-3">
               <div className="flex flex-wrap gap-1.5">
                 {WEEKDAY_SHORT.map((label, day) => (
                   <button
@@ -95,7 +95,7 @@ export default function PricingEditor({ arena }) {
                     onClick={() => toggleWeekday(r.id, day)}
                     className={cn(
                       'rounded-md border px-2 py-1 text-xs font-medium',
-                      (r.weekdays || []).includes(day) ? 'border-emerald-600 bg-emerald-600 text-white' : 'border-slate-200 text-slate-600',
+                      (r.weekdays || []).includes(day) ? 'border-ink bg-ink text-white' : 'border-gray-200 text-gray-500',
                     )}
                   >
                     {label}
@@ -132,13 +132,13 @@ export default function PricingEditor({ arena }) {
 
       <div>
         <div className="mb-2 flex items-center justify-between">
-          <h4 className="text-sm font-semibold text-slate-800">Exceções (ocasião ou cliente)</h4>
+          <h4 className="text-sm font-semibold text-ink">Exceções (ocasião ou cliente)</h4>
           <Button size="sm" variant="outline" onClick={addOverride}><Plus className="h-4 w-4" /> <span className="ml-1">Exceção</span></Button>
         </div>
         <div className="space-y-3">
-          {overrides.length === 0 && <p className="text-xs text-slate-500">Ex.: feriado, promoção, ou preço fixo para um cliente.</p>}
+          {overrides.length === 0 && <p className="text-xs text-gray-500">Ex.: feriado, promoção, ou preço fixo para um cliente.</p>}
           {overrides.map((o) => (
-            <div key={o.id} className="rounded-lg border border-slate-200 p-3">
+            <div key={o.id} className="rounded-lg border border-gray-200 p-3">
               <div className="grid grid-cols-2 gap-2 sm:grid-cols-4">
                 <div>
                   <Label className="text-xs">Data (opcional)</Label>

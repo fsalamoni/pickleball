@@ -88,10 +88,10 @@ export default function PublicTournament() {
   if (!tournament) {
     return (
       <div className="max-w-md mx-auto p-6 text-center">
-        <Trophy className="w-10 h-10 mx-auto text-slate-300" />
+        <Trophy className="w-10 h-10 mx-auto text-gray-300" />
         <h2 className="mt-3 font-semibold">Torneio não encontrado</h2>
-        <p className="text-sm text-slate-600 mt-1">
-          Verifique o link recebido. <Link to="/" className="text-emerald-700 underline">Voltar</Link>.
+        <p className="text-sm text-gray-500 mt-1">
+          Verifique o link recebido. <Link to="/" className="text-green-700 underline">Voltar</Link>.
         </p>
       </div>
     );
@@ -250,9 +250,9 @@ function PublicModalityBlock({ modality }) {
         {ranking.length > 0 && (
           <div>
             <h4 className="text-sm font-semibold mb-2">Ranking</h4>
-            <div className="hidden sm:block arena-table-wrap">
+            <div className="hidden sm:block overflow-x-auto rounded-3xl border border-gray-100">
               <table className="w-full text-sm">
-                <thead className="bg-slate-50">
+                <thead className="bg-paper">
                   <tr className="text-left">
                     <th className="px-3 py-2">#</th>
                     <th className="px-3 py-2">Participante</th>
@@ -277,7 +277,7 @@ function PublicModalityBlock({ modality }) {
                         <td className="px-3 py-2 text-center">{r.played}</td>
                         <td className="px-3 py-2 text-center font-semibold">{r.wins}</td>
                         <td className="px-3 py-2 text-center">{r.sets_won}–{r.sets_lost}</td>
-                        <td className={`px-3 py-2 text-right font-medium ${balance > 0 ? 'text-emerald-700' : balance < 0 ? 'text-red-600' : 'text-slate-600'}`}>
+                        <td className={`px-3 py-2 text-right font-medium ${balance > 0 ? 'text-green-700' : balance < 0 ? 'text-red-600' : 'text-gray-500'}`}>
                           {balance > 0 ? `+${balance}` : balance}
                         </td>
                       </tr>
@@ -290,17 +290,17 @@ function PublicModalityBlock({ modality }) {
               {ranking.slice(0, 16).map((r) => {
                 const balance = (r.points_for || 0) - (r.points_against || 0);
                 return (
-                  <div key={r.participant_id} className="rounded-2xl border border-slate-200 bg-white p-3">
+                  <div key={r.participant_id} className="rounded-2xl border border-gray-200 bg-white p-3">
                     <div className="flex items-center gap-2">
                       <span className="font-bold tabular-nums">{r.position}</span>
                       <AvatarGroup size="sm" people={r.players || []} />
                       <span className="min-w-0 flex-1 truncate font-medium">{r.label || r.participant_id}</span>
                     </div>
-                    <div className="mt-2 flex items-center gap-3 text-xs text-slate-600">
-                      <span>PJ <strong className="tabular-nums text-slate-900">{r.played}</strong></span>
-                      <span>V <strong className="tabular-nums text-slate-900">{r.wins}</strong></span>
-                      <span>Sets <strong className="tabular-nums text-slate-900">{r.sets_won}–{r.sets_lost}</strong></span>
-                      <span className={`ml-auto font-semibold tabular-nums ${balance > 0 ? 'text-emerald-700' : balance < 0 ? 'text-red-600' : 'text-slate-600'}`}>
+                    <div className="mt-2 flex items-center gap-3 text-xs text-gray-500">
+                      <span>PJ <strong className="tabular-nums text-ink">{r.played}</strong></span>
+                      <span>V <strong className="tabular-nums text-ink">{r.wins}</strong></span>
+                      <span>Sets <strong className="tabular-nums text-ink">{r.sets_won}–{r.sets_lost}</strong></span>
+                      <span className={`ml-auto font-semibold tabular-nums ${balance > 0 ? 'text-green-700' : balance < 0 ? 'text-red-600' : 'text-gray-500'}`}>
                         Saldo {balance > 0 ? `+${balance}` : balance}
                       </span>
                     </div>
@@ -314,9 +314,9 @@ function PublicModalityBlock({ modality }) {
         {matches.length > 0 ? (
           <div>
             <h4 className="text-sm font-semibold mb-2">Jogos</h4>
-            <div className="hidden sm:block arena-table-wrap">
+            <div className="hidden sm:block overflow-x-auto rounded-3xl border border-gray-100">
               <table className="w-full text-sm">
-                <thead className="bg-slate-50">
+                <thead className="bg-paper">
                   <tr className="text-left">
                     {multiPhase && <th className="px-3 py-2">Fase</th>}
                     <th className="px-3 py-2">Rod.</th>
@@ -382,20 +382,20 @@ function PublicModalityBlock({ modality }) {
                 const hasSched = Boolean(m.court || m.scheduled_at);
                 const hasScore = (m.games || []).length > 0;
                 return (
-                  <div key={m.id} className="rounded-2xl border border-slate-200 bg-white p-3">
+                  <div key={m.id} className="rounded-2xl border border-gray-200 bg-white p-3">
                     <div className="mb-2 flex flex-wrap items-center gap-1.5">
                       {multiPhase && (
-                        <span className="rounded-full bg-emerald-100 px-2 py-0.5 text-[11px] font-medium text-emerald-700">Fase {(m.stage_index ?? 0) + 1}</span>
+                        <span className="rounded-full bg-green-100 px-2 py-0.5 text-[11px] font-medium text-green-700">Fase {(m.stage_index ?? 0) + 1}</span>
                       )}
-                      <span className="rounded-full bg-slate-100 px-2 py-0.5 text-[11px] font-medium text-slate-600">Rod. {roundLabel(m)}</span>
+                      <span className="rounded-full bg-paper px-2 py-0.5 text-[11px] font-medium text-gray-500">Rod. {roundLabel(m)}</span>
                       {hasGroup && (
-                        <span className="rounded-full bg-slate-100 px-2 py-0.5 text-[11px] font-medium text-slate-600">{m.group}</span>
+                        <span className="rounded-full bg-paper px-2 py-0.5 text-[11px] font-medium text-gray-500">{m.group}</span>
                       )}
                       {hasSched && m.court && (
-                        <span className="rounded-full bg-slate-100 px-2 py-0.5 text-[11px] font-medium text-slate-600">{m.court}</span>
+                        <span className="rounded-full bg-paper px-2 py-0.5 text-[11px] font-medium text-gray-500">{m.court}</span>
                       )}
                       {hasSched && m.scheduled_at && (
-                        <span className="rounded-full bg-slate-100 px-2 py-0.5 text-[11px] font-medium tabular-nums text-slate-600">{formatPublicMatchTime(m.scheduled_at)}</span>
+                        <span className="rounded-full bg-paper px-2 py-0.5 text-[11px] font-medium tabular-nums text-gray-500">{formatPublicMatchTime(m.scheduled_at)}</span>
                       )}
                       <Badge variant="secondary" className="ml-auto text-xs">
                         {MATCH_STATUS_LABELS[m.status] || m.status}
@@ -408,11 +408,11 @@ function PublicModalityBlock({ modality }) {
                           <span className="truncate">{renderSide(m, 'side_a')}</span>
                         </div>
                         {hasScore && (
-                          <span className="shrink-0 tabular-nums font-semibold text-slate-700">{m.games.map((g) => g.a).join('  ')}</span>
+                          <span className="shrink-0 tabular-nums font-semibold text-gray-600">{m.games.map((g) => g.a).join('  ')}</span>
                         )}
                       </div>
-                      <div className="flex items-center gap-2 text-[10px] font-semibold uppercase tracking-wider text-slate-300">
-                        <span className="h-px flex-1 bg-slate-100" />vs<span className="h-px flex-1 bg-slate-100" />
+                      <div className="flex items-center gap-2 text-[10px] font-semibold uppercase tracking-wider text-gray-300">
+                        <span className="h-px flex-1 bg-paper" />vs<span className="h-px flex-1 bg-paper" />
                       </div>
                       <div className="flex items-center justify-between gap-3">
                         <div className="flex min-w-0 items-center gap-1.5">
@@ -420,7 +420,7 @@ function PublicModalityBlock({ modality }) {
                           <span className="truncate">{renderSide(m, 'side_b')}</span>
                         </div>
                         {hasScore && (
-                          <span className="shrink-0 tabular-nums font-semibold text-slate-700">{m.games.map((g) => g.b).join('  ')}</span>
+                          <span className="shrink-0 tabular-nums font-semibold text-gray-600">{m.games.map((g) => g.b).join('  ')}</span>
                         )}
                       </div>
                     </div>
@@ -430,7 +430,7 @@ function PublicModalityBlock({ modality }) {
             </div>
           </div>
         ) : (
-          <p className="text-sm text-slate-500">Jogos ainda não publicados.</p>
+          <p className="text-sm text-gray-500">Jogos ainda não publicados.</p>
         )}
       </CardContent>
     </Card>

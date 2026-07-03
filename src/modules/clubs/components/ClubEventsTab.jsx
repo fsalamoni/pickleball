@@ -61,7 +61,7 @@ export default function ClubEventsTab({ clubId, isAdmin }) {
   return (
     <div className="space-y-4">
       <div className="flex items-center justify-between gap-3">
-        <p className="text-sm text-slate-600">Dias de jogo, confraternizações, torneios internos e reuniões do clube.</p>
+        <p className="text-sm text-gray-500">Dias de jogo, confraternizações, torneios internos e reuniões do clube.</p>
         <Button size="sm" onClick={() => setCreateOpen(true)}>
           <Plus className="mr-1.5 h-4 w-4" /> Novo evento
         </Button>
@@ -130,9 +130,9 @@ function EventCard({ event, clubId, isAdmin }) {
                   <Repeat className="mr-1 h-3 w-3" /> Recorrente
                 </Badge>
               )}
-              <h4 className="text-base font-semibold text-slate-900">{event.title}</h4>
+              <h4 className="text-base font-semibold text-ink">{event.title}</h4>
             </div>
-            <div className="mt-2 flex flex-wrap gap-x-4 gap-y-1 text-xs text-slate-500">
+            <div className="mt-2 flex flex-wrap gap-x-4 gap-y-1 text-xs text-gray-500">
               {when && <span className="inline-flex items-center gap-1"><CalendarDays className="h-3.5 w-3.5" /> {when}</span>}
               {event.location && <span className="inline-flex items-center gap-1"><MapPin className="h-3.5 w-3.5" /> {event.location}</span>}
               <span className="inline-flex items-center gap-1"><Users className="h-3.5 w-3.5" /> {participantCount} participante(s)</span>
@@ -145,9 +145,9 @@ function EventCard({ event, clubId, isAdmin }) {
           )}
         </div>
 
-        {event.description && <p className="mt-3 whitespace-pre-wrap text-sm leading-6 text-slate-600">{event.description}</p>}
+        {event.description && <p className="mt-3 whitespace-pre-wrap text-sm leading-6 text-gray-500">{event.description}</p>}
 
-        <div className="mt-4 flex flex-wrap items-center gap-2 border-t border-slate-100 pt-3">
+        <div className="mt-4 flex flex-wrap items-center gap-2 border-t border-gray-100 pt-3">
           <Button size="sm" variant="ghost" onClick={() => setEditOpen(true)}>
             <Pencil className="mr-1.5 h-3.5 w-3.5" /> Editar
           </Button>
@@ -270,10 +270,10 @@ export function EventFormDialog({ clubId, event, open, onClose }) {
             <Label htmlFor="event_location">Local</Label>
             <Input id="event_location" value={form.location} onChange={setField('location')} maxLength={160} />
           </div>
-          <div className="flex items-center justify-between rounded-lg border border-slate-200 p-3">
+          <div className="flex items-center justify-between rounded-lg border border-gray-200 p-3">
             <div>
               <Label htmlFor="event_recurring" className="font-medium">Evento recorrente</Label>
-              <p className="text-xs text-slate-500">
+              <p className="text-xs text-gray-500">
                 {gameDay ? 'Permite adicionar várias datas na página do dia de jogo.' : 'Permite cadastrar mais de uma data na página do evento.'}
               </p>
             </div>
@@ -295,7 +295,7 @@ export function EventFormDialog({ clubId, event, open, onClose }) {
                 <option key={value} value={value}>{label}</option>
               ))}
             </select>
-            <p className="text-xs text-slate-500">
+            <p className="text-xs text-gray-500">
               {form.visibility === EVENT_VISIBILITY.PRIVATE
                 ? 'Apenas atletas convidados verão e participarão do evento.'
                 : 'Todos os atletas do clube poderão ver e participar.'}

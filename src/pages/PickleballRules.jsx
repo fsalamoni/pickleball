@@ -98,16 +98,16 @@ export default function PickleballRules() {
         <CardContent className="p-5">
           <div className="flex items-start justify-between gap-3 flex-wrap">
             <div>
-              <h1 className="text-2xl font-bold arena-heading flex items-center gap-2">
-                <BookOpen className="w-6 h-6 text-emerald-600" /> Regras do Pickleball
+              <h1 className="text-2xl font-bold font-display text-ink flex items-center gap-2">
+                <BookOpen className="w-6 h-6 text-green-600" /> Regras do Pickleball
               </h1>
-              <p className="text-sm text-slate-600 mt-1">
+              <p className="text-sm text-gray-500 mt-1">
                 Resumo das regras oficiais nas duas variações mais comuns. Para o regulamento completo, consulte a{' '}
-                <a className="text-emerald-700 underline" target="_blank" rel="noreferrer" href="https://cbpickleball.com.br/">
+                <a className="text-green-700 underline" target="_blank" rel="noreferrer" href="https://cbpickleball.com.br/">
                   CBP
                 </a>{' '}
                 ou a{' '}
-                <a className="text-emerald-700 underline" target="_blank" rel="noreferrer" href="https://usapickleball.org/">
+                <a className="text-green-700 underline" target="_blank" rel="noreferrer" href="https://usapickleball.org/">
                   USA Pickleball
                 </a>
                 .
@@ -131,10 +131,10 @@ export default function PickleballRules() {
       {data.map((section) => (
         <Card key={section.title}>
           <CardContent className="p-5">
-            <h2 className="font-semibold text-slate-900 flex items-center gap-2">
-              <Trophy className="w-4 h-4 text-emerald-600" /> {section.title}
+            <h2 className="font-semibold text-ink flex items-center gap-2">
+              <Trophy className="w-4 h-4 text-green-600" /> {section.title}
             </h2>
-            <ul className="mt-2 space-y-2 text-sm text-slate-700 list-disc pl-5">
+            <ul className="mt-2 space-y-2 text-sm text-gray-600 list-disc pl-5">
               {section.body.map((p, i) => (
                 <li key={i}>{p}</li>
               ))}
@@ -143,8 +143,8 @@ export default function PickleballRules() {
         </Card>
       ))}
 
-      <div className="text-center text-sm text-slate-500">
-        <Link to="/nivelamento" className="text-emerald-700 underline">
+      <div className="text-center text-sm text-gray-500">
+        <Link to="/nivelamento" className="text-green-700 underline">
           Descubra seu nível com nosso formulário de nivelamento →
         </Link>
       </div>

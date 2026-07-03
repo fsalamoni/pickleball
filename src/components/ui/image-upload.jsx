@@ -73,14 +73,14 @@ export function ImageUpload({
               disabled={busy || disabled}
               aria-label={`${label} ampliada`}
               className={cn(
-                'group relative flex shrink-0 items-center justify-center overflow-hidden border border-gray-100 bg-secondary/40 text-gray-400 transition-colors hover:border-emerald-400/50',
+                'group relative flex shrink-0 items-center justify-center overflow-hidden border border-gray-100 bg-paper text-gray-400 transition-colors hover:border-green-400',
                 isCircle ? 'h-20 w-20 rounded-full' : 'h-24 w-24 rounded-xl',
                 (busy || disabled) && 'cursor-not-allowed opacity-80',
               )}
             >
               <img src={value} alt="" className="h-full w-full object-cover" />
               {!disabled && (
-                <span className="absolute inset-0 flex items-center justify-center bg-slate-950/0 text-white opacity-0 transition-opacity group-hover:bg-slate-950/40 group-hover:opacity-100">
+                <span className="absolute inset-0 flex items-center justify-center bg-ink/0 text-white opacity-0 transition-opacity group-hover:bg-ink/40 group-hover:opacity-100">
                   {busy ? <Loader2 className="h-5 w-5 animate-spin" /> : <Camera className="h-5 w-5" />}
                 </span>
               )}
@@ -94,14 +94,14 @@ export function ImageUpload({
           disabled={busy || disabled}
           aria-label={label}
           className={cn(
-            'group relative flex shrink-0 items-center justify-center overflow-hidden border border-gray-100 bg-secondary/40 text-gray-400 transition-colors hover:border-emerald-400/50',
+            'group relative flex shrink-0 items-center justify-center overflow-hidden border border-gray-100 bg-paper text-gray-400 transition-colors hover:border-green-400',
             isCircle ? 'h-20 w-20 rounded-full' : 'h-24 w-24 rounded-xl',
             (busy || disabled) && 'cursor-not-allowed opacity-80',
           )}
         >
           {fallback || <ImagePlus className="h-7 w-7" />}
           {!disabled && (
-            <span className="absolute inset-0 flex items-center justify-center bg-slate-950/0 text-white opacity-0 transition-opacity group-hover:bg-slate-950/40 group-hover:opacity-100">
+            <span className="absolute inset-0 flex items-center justify-center bg-ink/0 text-white opacity-0 transition-opacity group-hover:bg-ink/40 group-hover:opacity-100">
               {busy ? <Loader2 className="h-5 w-5 animate-spin" /> : <Camera className="h-5 w-5" />}
             </span>
           )}

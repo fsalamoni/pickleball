@@ -16,7 +16,7 @@ import { filterFeedByFollowing, FEED_ITEM_TYPE } from '../domain/feed.js';
 function ItemIcon({ type }) {
   const Icon = type === FEED_ITEM_TYPE.TOURNAMENT ? Trophy : Megaphone;
   return (
-    <div className="flex h-10 w-10 shrink-0 items-center justify-center rounded-xl bg-emerald-50 text-emerald-700">
+    <div className="flex h-10 w-10 shrink-0 items-center justify-center rounded-xl bg-green-50 text-green-700">
       <Icon className="h-5 w-5" />
     </div>
   );
@@ -54,8 +54,8 @@ export default function CommunityFeed() {
             aria-pressed={onlyFollowing}
             className={`rounded-full border px-4 py-2 text-sm font-medium transition-colors ${
               onlyFollowing
-                ? 'border-emerald-600 bg-emerald-600 text-white'
-                : 'border-emerald-950/15 bg-white/80 text-slate-700 hover:bg-emerald-50'
+                ? 'border-ink bg-ink text-white'
+                : 'border-gray-100 bg-white/80 text-gray-600 hover:bg-acid/10'
             }`}
           >
             Só de quem sigo
@@ -80,12 +80,12 @@ export default function CommunityFeed() {
         <div className="space-y-2">
           {visible.map((item) => (
             <Link key={item.id} to={item.link} className="block">
-              <Card className="match-surface rounded-[1.5rem] border-white/80 bg-white/85">
+              <Card className="rounded-[1.5rem] border-white/80 bg-white/85">
                 <CardContent className="flex items-center gap-3 p-4">
                   <ItemIcon type={item.type} />
                   <div className="min-w-0 flex-1">
-                    <div className="truncate font-medium text-slate-900">{item.title}</div>
-                    <div className="truncate text-xs text-slate-500">{item.subtitle}</div>
+                    <div className="truncate font-medium text-ink">{item.title}</div>
+                    <div className="truncate text-xs text-gray-500">{item.subtitle}</div>
                   </div>
                 </CardContent>
               </Card>

@@ -35,7 +35,7 @@ export default function TournamentMatchesTab({ tournament, isAdmin }) {
   if (modalities.length === 0) {
     return (
       <Card>
-        <CardContent className="p-6 text-sm text-slate-500 text-center">
+        <CardContent className="p-6 text-sm text-gray-500 text-center">
           Sem modalidades.
         </CardContent>
       </Card>
@@ -78,14 +78,14 @@ function statusBadgeVariant(status) {
 function MatchSideCell({ people = [], fallback, win }) {
   const list = (people || []).filter(Boolean);
   if (list.length === 0) {
-    return <span className="text-slate-400">{fallback || '—'}</span>;
+    return <span className="text-gray-400">{fallback || '—'}</span>;
   }
   return (
-    <div className={`space-y-1 ${win ? 'font-bold text-emerald-700' : 'font-medium'}`}>
+    <div className={`space-y-1 ${win ? 'font-bold text-green-700' : 'font-medium'}`}>
       {list.map((person, index) => (
         <div key={`${person.name || 'p'}-${index}`} className="flex items-center gap-1.5">
           {win && index === 0 && (
-            <Trophy className="w-3.5 h-3.5 shrink-0 text-emerald-600" aria-label="Vencedor" />
+            <Trophy className="w-3.5 h-3.5 shrink-0 text-green-600" aria-label="Vencedor" />
           )}
           <UserAvatar name={person.name} photoUrl={person.photoUrl} size="xs" />
           <span className="leading-tight">{person.name}</span>
@@ -139,7 +139,7 @@ export function ModalityMatchesBlock({ tournament, modality, isAdmin }) {
     <>
       <CollapsibleSection title={modality.name} subtitle={subtitle} defaultOpen>
         {matches.length === 0 ? (
-          <p className="text-sm text-slate-500">Nenhum jogo gerado ainda.</p>
+          <p className="text-sm text-gray-500">Nenhum jogo gerado ainda.</p>
         ) : (
           <div className="space-y-3">
             {byStage.map(([stageIndex, stageMatches]) => (
@@ -199,9 +199,9 @@ function PhaseMatches({ phaseLabel, phaseScoringLabel, matches, modalityId, labe
 
   const inner = (
     <>
-          <div className="hidden sm:block arena-table-wrap">
+          <div className="hidden sm:block overflow-x-auto rounded-3xl border border-gray-100">
             <table className="w-full text-sm">
-              <thead className="bg-slate-50">
+              <thead className="bg-paper">
                 <tr className="text-left">
                   {hasGroups && <th className="px-3 py-2">Grupo</th>}
                   <th className="px-3 py-2">Rod.</th>
@@ -237,7 +237,7 @@ function PhaseMatches({ phaseLabel, phaseScoringLabel, matches, modalityId, labe
                       <td className="px-3 py-2 align-middle">
                         <MatchSideCell people={sideAPeople} fallback={sideA} win={winA} />
                       </td>
-                      <td className="px-3 py-2 text-center align-middle text-xs font-medium text-slate-400">
+                      <td className="px-3 py-2 text-center align-middle text-xs font-medium text-gray-400">
                         vs
                       </td>
                       <td className="px-3 py-2 align-middle">
@@ -298,18 +298,18 @@ function PhaseMatches({ phaseLabel, phaseScoringLabel, matches, modalityId, labe
               return (
                 <div
                   key={m.id}
-                  className={`rounded-2xl border p-3 ${inProgress ? 'border-amber-200 bg-amber-50' : 'border-slate-200 bg-white'}`}
+                  className={`rounded-2xl border p-3 ${inProgress ? 'border-amber-200 bg-amber-50' : 'border-gray-200 bg-white'}`}
                 >
                   <div className="mb-2 flex flex-wrap items-center gap-1.5">
                     {hasGroups && m.group && (
-                      <span className="rounded-full bg-slate-100 px-2 py-0.5 text-[11px] font-medium text-slate-600">{m.group}</span>
+                      <span className="rounded-full bg-paper px-2 py-0.5 text-[11px] font-medium text-gray-500">{m.group}</span>
                     )}
-                    <span className="rounded-full bg-slate-100 px-2 py-0.5 text-[11px] font-medium text-slate-600">Rod. {roundLabel(m)}</span>
+                    <span className="rounded-full bg-paper px-2 py-0.5 text-[11px] font-medium text-gray-500">Rod. {roundLabel(m)}</span>
                     {hasSchedule && m.court && (
-                      <span className="rounded-full bg-slate-100 px-2 py-0.5 text-[11px] font-medium text-slate-600">{m.court}</span>
+                      <span className="rounded-full bg-paper px-2 py-0.5 text-[11px] font-medium text-gray-500">{m.court}</span>
                     )}
                     {hasSchedule && m.scheduled_at && (
-                      <span className="rounded-full bg-slate-100 px-2 py-0.5 text-[11px] font-medium tabular-nums text-slate-600">{formatMatchTime(m.scheduled_at)}</span>
+                      <span className="rounded-full bg-paper px-2 py-0.5 text-[11px] font-medium tabular-nums text-gray-500">{formatMatchTime(m.scheduled_at)}</span>
                     )}
                     <Badge variant={statusBadgeVariant(m.status)} className="ml-auto">
                       {MATCH_STATUS_LABELS[m.status] || m.status}
@@ -319,18 +319,18 @@ function PhaseMatches({ phaseLabel, phaseScoringLabel, matches, modalityId, labe
                     <div className="flex items-center justify-between gap-3">
                       <MatchSideCell people={sideAPeople} fallback={sideA} win={winA} />
                       {hasScore && (
-                        <span className="shrink-0 tabular-nums text-sm font-semibold text-slate-700">
+                        <span className="shrink-0 tabular-nums text-sm font-semibold text-gray-600">
                           {m.games.map((g) => g.a).join('  ')}
                         </span>
                       )}
                     </div>
-                    <div className="flex items-center gap-2 text-[10px] font-semibold uppercase tracking-wider text-slate-300">
-                      <span className="h-px flex-1 bg-slate-100" />vs<span className="h-px flex-1 bg-slate-100" />
+                    <div className="flex items-center gap-2 text-[10px] font-semibold uppercase tracking-wider text-gray-300">
+                      <span className="h-px flex-1 bg-paper" />vs<span className="h-px flex-1 bg-paper" />
                     </div>
                     <div className="flex items-center justify-between gap-3">
                       <MatchSideCell people={sideBPeople} fallback={sideB} win={winB} />
                       {hasScore && (
-                        <span className="shrink-0 tabular-nums text-sm font-semibold text-slate-700">
+                        <span className="shrink-0 tabular-nums text-sm font-semibold text-gray-600">
                           {m.games.map((g) => g.b).join('  ')}
                         </span>
                       )}
@@ -365,7 +365,7 @@ function PhaseMatches({ phaseLabel, phaseScoringLabel, matches, modalityId, labe
   if (!phaseLabel) return inner;
   return (
     <CollapsibleSection
-      className="border-slate-200 bg-slate-50/40"
+      className="border-gray-200 bg-paper/40"
       headerClassName="py-1.5"
       title={phaseLabel}
       badges={(
@@ -434,7 +434,7 @@ function ScoreEntryDialog({ match, modalityId, scoringConfig, labelById, onClose
                       onChange={(e) => setGames((arr) => arr.map((x, j) => (j === i ? { ...x, a: e.target.value } : x)))}
                     />
                   </div>
-                  <span className="pb-2 text-slate-400">×</span>
+                  <span className="pb-2 text-gray-400">×</span>
                   <div>
                     <Label>Lado B</Label>
                     <Input

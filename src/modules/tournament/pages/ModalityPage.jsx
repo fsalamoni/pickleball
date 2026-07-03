@@ -158,8 +158,8 @@ function RegistrationTab({ tournament, modality, isAdmin, onRegister }) {
       <Card className="rounded-[1.75rem] border-white/80 bg-white/82">
         <CardContent className="flex flex-wrap items-center justify-between gap-3 p-5 sm:p-6">
           <div>
-            <div className="text-sm font-semibold text-slate-800">Inscrição na modalidade</div>
-            <p className="mt-1 text-sm leading-6 text-slate-500">
+            <div className="text-sm font-semibold text-ink">Inscrição na modalidade</div>
+            <p className="mt-1 text-sm leading-6 text-gray-500">
               {confirmed.length} inscrição(ões) confirmada(s)
               {!isPublic && !hasPrivateAccess && !isAdmin ? ' · torneio privado (use o código para liberar)' : ''}
             </p>
@@ -177,15 +177,15 @@ function RegistrationTab({ tournament, modality, isAdmin, onRegister }) {
 
       <Card className="rounded-[1.75rem] border-white/80 bg-white/82">
         <CardContent className="p-5 sm:p-6">
-          <h3 className="mb-3 flex items-center gap-2 text-sm font-semibold text-slate-800">
-            <Users className="h-4 w-4 text-emerald-600" /> Inscritos confirmados
+          <h3 className="mb-3 flex items-center gap-2 text-sm font-semibold text-ink">
+            <Users className="h-4 w-4 text-green-600" /> Inscritos confirmados
           </h3>
           {confirmed.length === 0 ? (
-            <p className="text-sm text-slate-500">Ainda não há inscritos confirmados nesta modalidade.</p>
+            <p className="text-sm text-gray-500">Ainda não há inscritos confirmados nesta modalidade.</p>
           ) : (
             <div className="space-y-2">
               {confirmed.map((r) => (
-                <div key={r.id} className="flex items-center gap-2 rounded-[1.1rem] border border-emerald-950/10 bg-white/80 p-3">
+                <div key={r.id} className="flex items-center gap-2 rounded-[1.1rem] border border-gray-100 bg-white/80 p-3">
                   <AvatarGroup
                     size="sm"
                     people={[
@@ -193,7 +193,7 @@ function RegistrationTab({ tournament, modality, isAdmin, onRegister }) {
                       ...(r.player_b_name ? [{ name: r.player_b_name, photoUrl: r.player_b_photo }] : []),
                     ]}
                   />
-                  <span className="text-sm text-slate-700">{r.label || r.player_a_name}</span>
+                  <span className="text-sm text-gray-600">{r.label || r.player_a_name}</span>
                 </div>
               ))}
             </div>
@@ -258,16 +258,16 @@ function ModalityInfoTab({
       <section className="grid gap-5 xl:grid-cols-[1.08fr,0.92fr]">
         <Card className="rounded-[2rem] border-white/80 bg-white/82">
           <CardContent className="p-6 sm:p-7">
-            <span className="arena-chip">
-              <Sparkles className="h-3.5 w-3.5 text-emerald-700" /> Apresentação da modalidade
+            <span className="inline-flex items-center gap-1.5 rounded-full border border-gray-200 bg-paper-pure px-3 py-1 text-xs font-bold text-ink">
+              <Sparkles className="h-3.5 w-3.5 text-green-700" /> Apresentação da modalidade
             </span>
-            <h2 className="mt-4 text-3xl font-semibold leading-tight text-slate-950">
+            <h2 className="mt-4 text-3xl font-semibold leading-tight text-ink">
               Uma modalidade para quem quer competir com contexto claro e boa cadência de jogos
             </h2>
-            <p className="mt-3 text-sm leading-7 text-slate-600 sm:text-base">
+            <p className="mt-3 text-sm leading-7 text-gray-500 sm:text-base">
               {buildHeroCopy(modality, tournament)}
             </p>
-            <p className="mt-3 text-sm leading-7 text-slate-600 sm:text-base">
+            <p className="mt-3 text-sm leading-7 text-gray-500 sm:text-base">
               {describeFormat(modality.format)}
             </p>
           </CardContent>
@@ -275,11 +275,11 @@ function ModalityInfoTab({
 
         <Card className="rounded-[2rem] border-white/80 bg-white/82">
           <CardContent className="p-6 sm:p-7">
-            <div className="text-xs font-semibold uppercase tracking-[0.18em] text-emerald-700/80">Por que participar</div>
-            <h3 className="mt-4 text-2xl font-semibold leading-tight text-slate-950">
+            <div className="text-xs font-semibold uppercase tracking-[0.18em] text-green-700/80">Por que participar</div>
+            <h3 className="mt-4 text-2xl font-semibold leading-tight text-ink">
               Razões concretas para avaliar esta modalidade com mais seriedade.
             </h3>
-            <p className="mt-3 text-sm leading-7 text-slate-600 sm:text-base">
+            <p className="mt-3 text-sm leading-7 text-gray-500 sm:text-base">
               Sem exagero visual: o foco aqui é mostrar os elementos que realmente ajudam alguém a decidir se esta disputa faz sentido para o seu perfil.
             </p>
 
@@ -289,9 +289,9 @@ function ModalityInfoTab({
               ))}
             </div>
 
-            <div className="mt-6 rounded-[1.35rem] border border-emerald-950/10 bg-secondary/35 p-4">
-              <div className="text-[11px] font-semibold uppercase tracking-[0.16em] text-emerald-700/75">Leitura operacional</div>
-              <p className="mt-2 text-sm leading-6 text-slate-600">
+            <div className="mt-6 rounded-[1.35rem] border border-gray-100 bg-paper p-4">
+              <div className="text-[11px] font-semibold uppercase tracking-[0.16em] text-gray-400">Leitura operacional</div>
+              <p className="mt-2 text-sm leading-6 text-gray-500">
                 {buildExpectationCopy(modality, tournament)}
               </p>
             </div>
@@ -346,12 +346,12 @@ function ModalityInfoTab({
               />
             </div>
 
-            <div className="rounded-[1.75rem] border border-emerald-950/10 bg-white/85 p-5 sm:p-6">
+            <div className="rounded-[1.75rem] border border-gray-100 bg-white/85 p-5 sm:p-6">
               <PlatformSectionHeader
                 eyebrow="Detalhamento técnico"
                 title="Estrutura, regras e critérios oficiais da modalidade"
                 description="Aqui ficam os detalhes práticos para quem quer entrar já sabendo como a disputa será conduzida."
-                titleClassName="mt-3 text-2xl font-semibold text-slate-950"
+                titleClassName="mt-3 text-2xl font-semibold text-ink"
               />
               <div className="mt-5">
                 <ModalityInfoContent
@@ -389,9 +389,9 @@ export default function ModalityPage() {
   if (!tournament || !modality) {
     return (
       <div className="mx-auto max-w-md p-6 text-center">
-        <Trophy className="mx-auto h-10 w-10 text-slate-300" />
+        <Trophy className="mx-auto h-10 w-10 text-gray-300" />
         <h2 className="mt-3 font-semibold">Modalidade não encontrada</h2>
-        <Link to={`/torneios/${tournamentId}/visao-geral`} className="mt-1 inline-block text-sm text-emerald-700 underline">
+        <Link to={`/torneios/${tournamentId}/visao-geral`} className="mt-1 inline-block text-sm text-green-700 underline">
           Voltar ao torneio
         </Link>
       </div>
@@ -446,17 +446,17 @@ export default function ModalityPage() {
 
   return (
     <div className="mx-auto max-w-6xl space-y-6">
-      <Link to={`/torneios/${tournamentId}/visao-geral`} className="inline-flex items-center gap-1 text-sm text-slate-500 hover:text-slate-800">
+      <Link to={`/torneios/${tournamentId}/visao-geral`} className="inline-flex items-center gap-1 text-sm text-gray-500 hover:text-ink">
         <ArrowLeft className="h-4 w-4" /> {tournament.name}
       </Link>
 
       <section className="grid grid-cols-1 gap-5 xl:grid-cols-[1.15fr,0.85fr]">
-        <Card className="arena-panel-strong overflow-hidden rounded-[2rem] border-0">
+        <Card className="bg-ink text-white overflow-hidden rounded-[2rem] border-0">
           <CardContent className="relative p-6 sm:p-8 lg:p-9">
             <div className="absolute inset-y-0 right-0 hidden w-1/2 bg-[radial-gradient(circle_at_top_right,rgba(255,255,255,0.16),transparent_50%)] lg:block" />
             <div className="relative max-w-4xl">
-              <span className="arena-chip border-white/15 bg-white/10 text-emerald-50/90">
-                <Sparkles className="h-3.5 w-3.5 text-emerald-50" /> Modalidade do torneio
+              <span className="inline-flex items-center gap-1.5 rounded-full border border-gray-200 bg-paper-pure px-3 py-1 text-xs font-bold text-ink border-white/15 bg-white/10 text-white/70">
+                <Sparkles className="h-3.5 w-3.5 text-white/70" /> Modalidade do torneio
               </span>
 
               <div className="mt-5 flex flex-wrap items-start gap-3">
@@ -465,7 +465,7 @@ export default function ModalityPage() {
                 </div>
                 <div className="min-w-0 flex-1">
                   <h1 className="text-2xl font-semibold leading-tight text-white sm:text-3xl lg:text-4xl">{modality.name}</h1>
-                  <p className="mt-2 max-w-3xl text-sm leading-7 text-emerald-50/80 sm:text-base">
+                  <p className="mt-2 max-w-3xl text-sm leading-7 text-white/70 sm:text-base">
                     {buildHeroCopy(modality, tournament)}
                   </p>
                 </div>
@@ -485,7 +485,7 @@ export default function ModalityPage() {
                   {AGE_CATEGORY_LABELS[modality.age_category]}
                 </Badge>
                 {alreadyRegistered && (
-                  <Badge variant="secondary" className="rounded-full border-0 bg-emerald-300 px-3 py-1 text-xs font-semibold text-emerald-950 shadow-none">
+                  <Badge variant="secondary" className="rounded-full border-0 bg-green-300 px-3 py-1 text-xs font-semibold text-green-800 shadow-none">
                     <ShieldCheck className="mr-1 h-3 w-3" /> Você já está inscrito
                   </Badge>
                 )}
@@ -495,11 +495,11 @@ export default function ModalityPage() {
                 {summaryCards.map(({ label, value, description, icon: Icon }) => (
                   <div key={label} className="rounded-[1.35rem] border border-white/12 bg-white/10 p-4 backdrop-blur-sm">
                     <div className="flex items-center justify-between gap-3">
-                      <div className="text-[11px] font-semibold uppercase tracking-[0.16em] text-emerald-50/70">{label}</div>
-                      <Icon className="h-4 w-4 text-emerald-50/80" />
+                      <div className="text-[11px] font-semibold uppercase tracking-[0.16em] text-white/70">{label}</div>
+                      <Icon className="h-4 w-4 text-white/70" />
                     </div>
                     <div className="mt-3 text-sm font-medium leading-6 text-white">{value}</div>
-                    <div className="mt-1 text-xs leading-5 text-emerald-50/70">{description}</div>
+                    <div className="mt-1 text-xs leading-5 text-white/70">{description}</div>
                   </div>
                 ))}
               </div>
@@ -509,11 +509,11 @@ export default function ModalityPage() {
 
         <Card className="rounded-[1.75rem] border-white/80 bg-white/82">
           <CardContent className="p-6 sm:p-7">
-            <div className="text-xs font-semibold uppercase tracking-[0.18em] text-emerald-700/80">Decisão de inscrição</div>
-            <h2 className="mt-4 text-3xl font-semibold leading-tight text-slate-950">
+            <div className="text-xs font-semibold uppercase tracking-[0.18em] text-green-700/80">Decisão de inscrição</div>
+            <h2 className="mt-4 text-3xl font-semibold leading-tight text-ink">
               A modalidade já mostra, logo na entrada, o que o atleta precisa para decidir com confiança.
             </h2>
-            <p className="mt-3 text-sm leading-7 text-slate-600 sm:text-base">
+            <p className="mt-3 text-sm leading-7 text-gray-500 sm:text-base">
               {buildExpectationCopy(modality, tournament)}
             </p>
 
@@ -551,7 +551,7 @@ export default function ModalityPage() {
       <Tabs defaultValue="info" className="w-full">
         <div className="rounded-[1.75rem] border border-white/80 bg-white/82 p-3 shadow-[0_18px_40px_-28px_rgba(15,23,42,0.28)]">
           <div className="overflow-x-auto -mx-1 px-1 sm:mx-0 sm:px-0">
-            <TabsList className={`${PLATFORM_TABS_LIST_CLASS} min-w-full rounded-[1.5rem] bg-secondary/45 p-2 sm:min-w-0`}>
+            <TabsList className={`${PLATFORM_TABS_LIST_CLASS} min-w-full rounded-[1.5rem] bg-paper p-2 sm:min-w-0`}>
               <TabsTrigger value="info" className={PLATFORM_TABS_TRIGGER_CLASS}>Visão geral</TabsTrigger>
               <TabsTrigger value="inscricao" className={PLATFORM_TABS_TRIGGER_CLASS}>Inscrição</TabsTrigger>
               <TabsTrigger value="jogos" className={PLATFORM_TABS_TRIGGER_CLASS}>Jogos</TabsTrigger>
@@ -601,7 +601,7 @@ export default function ModalityPage() {
       />
 
       {isAdmin && (
-        <p className="text-center text-xs text-slate-400">
+        <p className="text-center text-xs text-gray-400">
           A administração (sorteio de grupos, jogos e resultados) continua na aba{' '}
           <button type="button" className="underline" onClick={() => navigate(`/torneios/${tournamentId}/admin`)}>Admin</button> do torneio.
         </p>
@@ -612,11 +612,11 @@ export default function ModalityPage() {
 
 function InfoPanel({ icon: Icon, title, description }) {
   return (
-    <div className="rounded-[1.35rem] border border-emerald-950/10 bg-white/75 p-4">
-      <div className="flex items-center gap-2 text-sm font-semibold text-slate-950">
-        <Icon className="h-4 w-4 text-emerald-700" /> {title}
+    <div className="rounded-[1.35rem] border border-gray-100 bg-white/75 p-4">
+      <div className="flex items-center gap-2 text-sm font-semibold text-ink">
+        <Icon className="h-4 w-4 text-green-700" /> {title}
       </div>
-      <p className="mt-2 text-sm leading-6 text-slate-600">{description}</p>
+      <p className="mt-2 text-sm leading-6 text-gray-500">{description}</p>
     </div>
   );
 }

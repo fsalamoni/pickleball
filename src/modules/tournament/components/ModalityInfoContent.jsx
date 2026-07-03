@@ -37,7 +37,7 @@ export default function ModalityInfoContent({ modality, tournament, registration
   const fee = Number(modality.entry_fee_cents || 0);
 
   return (
-    <div className="space-y-4 text-sm text-slate-700">
+    <div className="space-y-4 text-sm text-gray-600">
       <section>
         <div className="flex flex-wrap gap-1">
           <Badge variant="secondary">{MODALITY_FORMAT_LABELS[modality.format]}</Badge>
@@ -53,11 +53,11 @@ export default function ModalityInfoContent({ modality, tournament, registration
       </section>
 
       <section className="space-y-2">
-        <h4 className="font-semibold text-slate-900 flex items-center gap-2">
-          <Users className="w-4 h-4 text-emerald-600" /> Inscrições e formato
+        <h4 className="font-semibold text-ink flex items-center gap-2">
+          <Users className="w-4 h-4 text-green-600" /> Inscrições e formato
         </h4>
         <p>{describeFormat(modality.format)}</p>
-        <ul className="list-disc pl-5 space-y-1 text-slate-700">
+        <ul className="list-disc pl-5 space-y-1 text-gray-600">
           <li>
             <strong>Vagas:</strong>{' '}
             {hasUnlimitedEntries(modality.max_entries)
@@ -65,7 +65,7 @@ export default function ModalityInfoContent({ modality, tournament, registration
               : `até ${modality.max_entries} inscrições. Atualmente ${formatConfirmedCount(registrationsCount)}.`}
           </li>
           <li><strong>Categoria de gênero:</strong> {GENDER_CATEGORY_LABELS[modality.gender_category]}</li>
-          <li><strong>Faixa etária:</strong> {AGE_CATEGORY_LABELS[modality.age_category]} <span className="text-xs text-slate-500">(a plataforma é aberta a todas as idades; esta categoria define apenas a faixa elegível para esta modalidade)</span></li>
+          <li><strong>Faixa etária:</strong> {AGE_CATEGORY_LABELS[modality.age_category]} <span className="text-xs text-gray-500">(a plataforma é aberta a todas as idades; esta categoria define apenas a faixa elegível para esta modalidade)</span></li>
           <li><strong>Nível recomendado:</strong> {SKILL_LEVEL_LABELS[modality.skill_level]}</li>
           <li className="flex items-center gap-1"><Wallet className="w-3 h-3" /> <strong>Taxa de inscrição:</strong> {fee > 0 ? formatBRL(fee) : 'Gratuita'}</li>
         </ul>
@@ -73,20 +73,20 @@ export default function ModalityInfoContent({ modality, tournament, registration
 
       {isMultiPhase ? (
         <section className="space-y-2">
-          <h4 className="font-semibold text-slate-900 flex items-center gap-2">
-            <Layers className="w-4 h-4 text-emerald-600" /> Como funciona a competição ({stages.length} fases)
+          <h4 className="font-semibold text-ink flex items-center gap-2">
+            <Layers className="w-4 h-4 text-green-600" /> Como funciona a competição ({stages.length} fases)
           </h4>
-          <p className="text-xs text-slate-500">
+          <p className="text-xs text-gray-500">
             A inscrição é única; a cada fase os classificados avançam para a fase seguinte.
           </p>
           <ol className="space-y-2">
             {stages.map((s, i) => (
-              <li key={i} className="rounded-md border border-slate-200 p-2">
-                <div className="font-medium text-slate-800">
+              <li key={i} className="rounded-md border border-gray-200 p-2">
+                <div className="font-medium text-ink">
                   Fase {i + 1}: {TOURNAMENT_STAGE_TYPE_LABELS[s.type] || s.type}
                 </div>
-                <p className="text-xs text-slate-600 mt-0.5">{describeStage(s.type)}</p>
-                <p className="mt-1 text-xs font-medium text-emerald-700">
+                <p className="text-xs text-gray-500 mt-0.5">{describeStage(s.type)}</p>
+                <p className="mt-1 text-xs font-medium text-green-700">
                   {RULESET_LABELS[resolveStageScoringConfig(modality, tournament, i).ruleset] || resolveStageScoringConfig(modality, tournament, i).ruleset}
                   {' · '}
                   {formatScoringSummary(resolveStageScoringConfig(modality, tournament, i))}
@@ -98,7 +98,7 @@ export default function ModalityInfoContent({ modality, tournament, registration
             href={`${import.meta.env.BASE_URL}torneios/guia`}
             target="_blank"
             rel="noreferrer"
-            className="text-xs text-emerald-700 inline-flex items-center gap-1 hover:underline"
+            className="text-xs text-green-700 inline-flex items-center gap-1 hover:underline"
           >
             <BookOpen className="w-3.5 h-3.5" /> Guia completo de formatos e modelos
           </a>
@@ -106,8 +106,8 @@ export default function ModalityInfoContent({ modality, tournament, registration
       ) : (
         stageType && (
           <section className="space-y-2">
-            <h4 className="font-semibold text-slate-900 flex items-center gap-2">
-              <Layers className="w-4 h-4 text-emerald-600" /> Como funciona a competição
+            <h4 className="font-semibold text-ink flex items-center gap-2">
+              <Layers className="w-4 h-4 text-green-600" /> Como funciona a competição
             </h4>
             <p>{describeStage(stageType)}</p>
             <StageExplanation
@@ -122,8 +122,8 @@ export default function ModalityInfoContent({ modality, tournament, registration
 
       {(modality.court_count || modality.play_start_time || modality.play_date) && (
         <section className="space-y-2">
-          <h4 className="font-semibold text-slate-900 flex items-center gap-2">
-            <CalendarClock className="w-4 h-4 text-emerald-600" /> Quadras e horários
+          <h4 className="font-semibold text-ink flex items-center gap-2">
+            <CalendarClock className="w-4 h-4 text-green-600" /> Quadras e horários
           </h4>
           <ul className="list-disc pl-5 space-y-1">
             {modality.play_date && (
@@ -142,7 +142,7 @@ export default function ModalityInfoContent({ modality, tournament, registration
               <li><strong>Duração média do jogo:</strong> {modality.match_duration_minutes} minutos</li>
             )}
           </ul>
-          <p className="text-xs text-slate-500">
+          <p className="text-xs text-gray-500">
             Após o sorteio, cada jogo é marcado automaticamente em uma quadra e horário, sem
             conflito de jogadores.
           </p>
@@ -150,8 +150,8 @@ export default function ModalityInfoContent({ modality, tournament, registration
       )}
 
       <section className="space-y-2">
-        <h4 className="font-semibold text-slate-900 flex items-center gap-2">
-          <BookOpen className="w-4 h-4 text-emerald-600" /> Regras de pontuação
+        <h4 className="font-semibold text-ink flex items-center gap-2">
+          <BookOpen className="w-4 h-4 text-green-600" /> Regras de pontuação
         </h4>
         {stages.length > 0 ? (
           <ul className="list-disc pl-5 space-y-1">
@@ -165,13 +165,13 @@ export default function ModalityInfoContent({ modality, tournament, registration
             })}
           </ul>
         ) : (
-          <p className="text-sm text-slate-500">A pontuação desta modalidade ainda não foi configurada.</p>
+          <p className="text-sm text-gray-500">A pontuação desta modalidade ainda não foi configurada.</p>
         )}
       </section>
 
       <section className="space-y-2">
-        <h4 className="font-semibold text-slate-900 flex items-center gap-2">
-          <Trophy className="w-4 h-4 text-emerald-600" /> Critério de classificação
+        <h4 className="font-semibold text-ink flex items-center gap-2">
+          <Trophy className="w-4 h-4 text-green-600" /> Critério de classificação
         </h4>
         <p>A classificação é feita pelo número de vitórias. Em caso de empate valem, nesta ordem:</p>
         <ol className="list-decimal pl-5 space-y-1">
@@ -183,7 +183,7 @@ export default function ModalityInfoContent({ modality, tournament, registration
 
       {modality.notes && (
         <section className="space-y-1">
-          <h4 className="font-semibold text-slate-900">Observações do organizador</h4>
+          <h4 className="font-semibold text-ink">Observações do organizador</h4>
           <p className="whitespace-pre-line">{modality.notes}</p>
         </section>
       )}

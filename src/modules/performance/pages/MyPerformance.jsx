@@ -80,19 +80,19 @@ export default function MyPerformance() {
 
       {formats.length > 0 && (
         <PlatformSurfaceCard contentClassName="p-4">
-            <h2 className="mb-3 text-sm font-semibold text-slate-800">Desempenho por formato</h2>
+            <h2 className="mb-3 text-sm font-semibold text-ink">Desempenho por formato</h2>
             <div className="space-y-2">
               {formats.map(([format, b]) => (
                 <div
                   key={format}
-                  className="flex items-center justify-between gap-4 rounded-md border border-slate-200 p-3"
+                  className="flex items-center justify-between gap-4 rounded-md border border-gray-200 p-3"
                 >
-                  <span className="text-sm font-medium text-slate-700">
+                  <span className="text-sm font-medium text-gray-600">
                     {MODALITY_FORMAT_LABELS[format] || format}
                   </span>
-                  <span className="text-xs text-slate-600 tabular-nums">
+                  <span className="text-xs text-gray-500 tabular-nums">
                     {b.played} jogo(s) · {b.wins}V – {b.losses}D ·{' '}
-                    <strong className="text-slate-900">{formatPercent(b.winRate)}</strong>
+                    <strong className="text-ink">{formatPercent(b.winRate)}</strong>
                   </span>
                 </div>
               ))}

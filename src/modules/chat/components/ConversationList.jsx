@@ -55,11 +55,11 @@ export default function ConversationList({ conversations, isLoading, selectedId,
             onClick={() => onSelect?.(conversation.id)}
             className={cn(
               'flex w-full items-center gap-3 rounded-xl px-2.5 py-2.5 text-left transition-colors',
-              isSelected ? 'bg-emerald-100/80' : 'hover:bg-secondary/60',
+              isSelected ? 'bg-green-100/80' : 'hover:bg-paper',
             )}
           >
             {isGroup ? (
-              <span className="flex h-11 w-11 shrink-0 items-center justify-center rounded-full bg-emerald-700 text-emerald-50">
+              <span className="flex h-11 w-11 shrink-0 items-center justify-center rounded-full bg-ink text-white/70">
                 <Users className="h-5 w-5" />
               </span>
             ) : (
@@ -67,11 +67,11 @@ export default function ConversationList({ conversations, isLoading, selectedId,
             )}
             <span className="min-w-0 flex-1">
               <span className="flex items-center justify-between gap-2">
-                <span className="truncate text-sm font-semibold text-slate-900">{title}</span>
-                <span className="shrink-0 text-[11px] text-slate-400">{timeLabel(conversation.last_message_at_ms)}</span>
+                <span className="truncate text-sm font-semibold text-ink">{title}</span>
+                <span className="shrink-0 text-[11px] text-gray-400">{timeLabel(conversation.last_message_at_ms)}</span>
               </span>
-              <span className="mt-0.5 flex items-center gap-1 text-xs text-slate-500">
-                {last?.sender_id === currentUserId && <span className="text-slate-400">Você:</span>}
+              <span className="mt-0.5 flex items-center gap-1 text-xs text-gray-500">
+                {last?.sender_id === currentUserId && <span className="text-gray-400">Você:</span>}
                 <span className="truncate">{lastMessagePreview(conversation)}</span>
               </span>
             </span>

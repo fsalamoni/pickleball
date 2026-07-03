@@ -8,8 +8,8 @@ export default function LevelTable() {
   return (
     <div className="space-y-5">
       <div className="text-center">
-        <h2 className="text-2xl font-bold text-slate-900">Tabela de Níveis de Pickleball</h2>
-        <p className="mx-auto mt-2 max-w-2xl text-sm text-slate-600">
+        <h2 className="text-2xl font-bold text-ink">Tabela de Níveis de Pickleball</h2>
+        <p className="mx-auto mt-2 max-w-2xl text-sm text-gray-500">
           Sistema USAP adaptado para a realidade brasileira, definido por comportamentos observáveis em partidas reais.
         </p>
       </div>
@@ -42,26 +42,26 @@ export default function LevelTable() {
                     <span className={`text-lg font-bold sm:text-xl ${level.textColor}`}>{level.name}</span>
                     <span className={`${level.badgeBg} rounded-full px-2 py-0.5 text-xs font-semibold text-white`}>USAP {level.usap}</span>
                   </div>
-                  <p className="text-sm text-slate-600">{level.tagline}</p>
+                  <p className="text-sm text-gray-500">{level.tagline}</p>
                 </div>
                 <div className="hidden text-right md:block">
-                  <p className="text-xs font-medium text-slate-500">Score normalizado</p>
+                  <p className="text-xs font-medium text-gray-500">Score normalizado</p>
                   <p className={`text-lg font-bold ${level.textColor}`}>{level.normalizedRange}</p>
                 </div>
                 {isOpen ? <ChevronUp className={level.textColor} /> : <ChevronDown className={level.textColor} />}
               </button>
 
               {isOpen && (
-                <div className="border-t border-slate-100 p-5 sm:p-6">
-                  <p className="leading-relaxed text-slate-700">{level.description}</p>
+                <div className="border-t border-gray-100 p-5 sm:p-6">
+                  <p className="leading-relaxed text-gray-600">{level.description}</p>
                   <div className="mt-6 grid gap-6 md:grid-cols-3">
                     <InfoList title="Características" color="bg-blue-500" items={level.characteristics} />
                     <div className="space-y-4">
-                      <InfoList title="Pontos Fortes" color="bg-emerald-500" items={level.strengths} marker="✓" />
+                      <InfoList title="Pontos Fortes" color="bg-green-500" items={level.strengths} marker="✓" />
                       <InfoList title="Pontos a Melhorar" color="bg-red-400" items={level.weaknesses} marker="✗" />
                     </div>
                     <div>
-                      <h4 className="mb-3 flex items-center gap-2 font-bold text-slate-800">
+                      <h4 className="mb-3 flex items-center gap-2 font-bold text-ink">
                         <span className="h-2 w-2 rounded-full bg-orange-500" /> Próximo Passo
                       </h4>
                       <div className="rounded-r-lg border-l-4 border-orange-400 bg-orange-50 p-4 text-sm leading-relaxed text-orange-950">
@@ -82,13 +82,13 @@ export default function LevelTable() {
 function InfoList({ title, color, items, marker = '•' }) {
   return (
     <div>
-      <h4 className="mb-3 flex items-center gap-2 font-bold text-slate-800">
+      <h4 className="mb-3 flex items-center gap-2 font-bold text-ink">
         <span className={`h-2 w-2 rounded-full ${color}`} /> {title}
       </h4>
       <ul className="space-y-2">
         {items.map((item) => (
-          <li key={item} className="flex gap-2 text-sm text-slate-700">
-            <span className="shrink-0 text-slate-400">{marker}</span>
+          <li key={item} className="flex gap-2 text-sm text-gray-600">
+            <span className="shrink-0 text-gray-400">{marker}</span>
             <span>{item}</span>
           </li>
         ))}

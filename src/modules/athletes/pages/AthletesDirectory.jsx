@@ -113,21 +113,21 @@ export default function AthletesDirectory() {
   return (
     <div className="space-y-8">
       <section className="grid grid-cols-1 gap-6 xl:grid-cols-[1.08fr,0.92fr]">
-        <Card className="arena-panel-strong overflow-hidden rounded-[1.25rem] border-0 sm:rounded-[2rem]">
+        <Card className="bg-ink text-white overflow-hidden rounded-[1.25rem] border-0 sm:rounded-[2rem]">
           <CardContent className="relative p-5 sm:p-8 lg:p-10">
             <div className="relative max-w-2xl">
-              <span className="inline-flex items-center gap-2 rounded-full border border-white/15 bg-white/10 px-3 py-1 text-xs font-semibold uppercase tracking-[0.18em] text-emerald-50/80">
+              <span className="inline-flex items-center gap-2 rounded-full border border-white/15 bg-white/10 px-3 py-1 text-xs font-semibold uppercase tracking-[0.18em] text-white/70">
                 <Sparkles className="h-3.5 w-3.5" /> Comunidade de atletas
               </span>
               <h2 className="mt-5 text-2xl font-semibold leading-tight text-white sm:text-3xl lg:text-4xl">
                 Conheça os atletas inscritos na plataforma.
               </h2>
-              <p className="mt-4 max-w-xl text-sm leading-7 text-emerald-50/75 sm:text-base">
+              <p className="mt-4 max-w-xl text-sm leading-7 text-white/70 sm:text-base">
                 Encontre parceiros de jogo por nível, cidade e clube. Cada atleta controla
                 quais informações de contato deseja tornar públicas.
               </p>
               <div className="mt-6 flex flex-wrap gap-3">
-                <Button asChild className="bg-white text-slate-950 hover:bg-emerald-50">
+                <Button asChild className="bg-white text-ink hover:bg-acid/10">
                   <Link to="/perfil">Editar meu perfil e privacidade</Link>
                 </Button>
                 {hasActiveFilters && (
@@ -146,21 +146,21 @@ export default function AthletesDirectory() {
 
         <Card className="rounded-[2rem] border-white/80 bg-white/82">
           <CardContent className="p-6 sm:p-7">
-            <span className="arena-chip">Panorama</span>
-            <h3 className="mt-4 text-2xl font-semibold text-slate-950">Resumo da comunidade</h3>
+            <span className="inline-flex items-center gap-1.5 rounded-full border border-gray-200 bg-paper-pure px-3 py-1 text-xs font-bold text-ink">Panorama</span>
+            <h3 className="mt-4 text-2xl font-semibold text-ink">Resumo da comunidade</h3>
             <div className="mt-6 grid gap-3 sm:grid-cols-3 xl:grid-cols-1">
               {stats.map(({ label, value, hint, icon: Icon }) => (
-                <div key={label} className="rounded-[1.35rem] border border-emerald-950/8 bg-secondary/35 p-4">
+                <div key={label} className="rounded-[1.35rem] border border-gray-100 bg-paper p-4">
                   <div className="flex items-center justify-between gap-3">
                     <div>
-                      <div className="text-2xl font-semibold text-slate-950">{value}</div>
-                      <div className="mt-1 text-[11px] font-semibold uppercase tracking-[0.16em] text-emerald-700/75">{label}</div>
+                      <div className="text-2xl font-semibold text-ink">{value}</div>
+                      <div className="mt-1 text-[11px] font-semibold uppercase tracking-[0.16em] text-gray-400">{label}</div>
                     </div>
-                    <div className="flex h-10 w-10 items-center justify-center rounded-2xl bg-emerald-100 text-emerald-700">
+                    <div className="flex h-10 w-10 items-center justify-center rounded-2xl bg-green-100 text-green-700">
                       <Icon className="h-4.5 w-4.5" />
                     </div>
                   </div>
-                  <p className="mt-3 text-xs leading-5 text-slate-600">{hint}</p>
+                  <p className="mt-3 text-xs leading-5 text-gray-500">{hint}</p>
                 </div>
               ))}
             </div>
@@ -171,7 +171,7 @@ export default function AthletesDirectory() {
       <Card className="rounded-[2rem] border-white/80 bg-white/82">
         <CardContent className="space-y-4 p-4 sm:p-5">
           <div className="relative">
-            <Search className="absolute left-4 top-1/2 h-4 w-4 -translate-y-1/2 text-slate-400" />
+            <Search className="absolute left-4 top-1/2 h-4 w-4 -translate-y-1/2 text-gray-400" />
             <Input
               value={search}
               onChange={(e) => setSearch(e.target.value)}
@@ -183,7 +183,7 @@ export default function AthletesDirectory() {
                 type="button"
                 onClick={() => setSearch('')}
                 aria-label="Limpar busca"
-                className="absolute right-4 top-1/2 -translate-y-1/2 text-slate-400 transition-colors hover:text-slate-700"
+                className="absolute right-4 top-1/2 -translate-y-1/2 text-gray-400 transition-colors hover:text-gray-600"
               >
                 <X className="h-4 w-4" />
               </button>
@@ -218,16 +218,16 @@ export default function AthletesDirectory() {
               aria-pressed={coachOnly}
               className={`inline-flex items-center gap-2 rounded-full border px-4 py-2 text-sm font-medium transition-colors ${
                 coachOnly
-                  ? 'border-emerald-600 bg-emerald-600 text-white'
-                  : 'border-emerald-950/15 bg-white/80 text-slate-700 hover:bg-emerald-50'
+                  ? 'border-ink bg-ink text-white'
+                  : 'border-gray-100 bg-white/80 text-gray-600 hover:bg-acid/10'
               }`}
             >
               <GraduationCap className="h-4 w-4" /> Somente treinadores
             </button>
           )}
 
-          <div className="border-t border-emerald-950/8 pt-4 text-sm text-slate-600">
-            <span className="font-semibold text-slate-950">{filtered.length}</span> atleta(s) para o filtro atual.
+          <div className="border-t border-gray-100 pt-4 text-sm text-gray-500">
+            <span className="font-semibold text-ink">{filtered.length}</span> atleta(s) para o filtro atual.
           </div>
         </CardContent>
       </Card>
@@ -250,11 +250,11 @@ export default function AthletesDirectory() {
       ) : filtered.length === 0 ? (
         <Card className="rounded-[2rem] border-white/80 bg-white/82">
           <CardContent className="flex flex-col items-center px-4 py-10 text-center sm:px-10 sm:py-12">
-            <div className="flex h-16 w-16 items-center justify-center rounded-[1.5rem] bg-emerald-100 text-emerald-700">
+            <div className="flex h-16 w-16 items-center justify-center rounded-[1.5rem] bg-green-100 text-green-700">
               <Users className="h-8 w-8" />
             </div>
-            <h3 className="mt-5 text-2xl font-semibold text-slate-950">Nenhum atleta encontrado</h3>
-            <p className="mt-3 max-w-2xl text-sm leading-7 text-slate-600 sm:text-base">
+            <h3 className="mt-5 text-2xl font-semibold text-ink">Nenhum atleta encontrado</h3>
+            <p className="mt-3 max-w-2xl text-sm leading-7 text-gray-500 sm:text-base">
               {athletes.length === 0
                 ? 'Ainda não há atletas listados. Complete seu perfil para aparecer aqui e ajude a comunidade a crescer.'
                 : 'Ajuste a busca ou os filtros para ver mais atletas.'}
@@ -297,7 +297,7 @@ export default function AthletesDirectory() {
 function FilterSelect({ label, value, onChange, options }) {
   return (
     <label className="block">
-      <span className="mb-1 block text-xs font-semibold uppercase tracking-[0.16em] text-emerald-700/75">{label}</span>
+      <span className="mb-1 block text-xs font-semibold uppercase tracking-[0.16em] text-gray-400">{label}</span>
       <select
         value={value}
         onChange={(e) => onChange(e.target.value)}
@@ -331,13 +331,13 @@ function AthleteCard({ athlete, onOpen, showCoach }) {
   const clubs = athlete.clubs || [];
   const isCoach = showCoach && athlete.is_coach === true;
   return (
-    <Card className="match-surface h-full rounded-[1.75rem] border-white/80 bg-white/85">
+    <Card className="h-full rounded-[1.75rem] border-white/80 bg-white/85">
       <CardContent className="flex h-full flex-col p-5">
         <div className="flex items-start gap-3">
           <AthleteAvatar athlete={athlete} />
           <div className="min-w-0 flex-1">
-            <h4 className="truncate text-lg font-semibold text-slate-950">{athlete.platform_name}</h4>
-            <div className="mt-1 flex flex-wrap items-center gap-1.5 text-xs text-slate-600">
+            <h4 className="truncate text-lg font-semibold text-ink">{athlete.platform_name}</h4>
+            <div className="mt-1 flex flex-wrap items-center gap-1.5 text-xs text-gray-500">
               {Number.isFinite(athlete.age) && <span>{athlete.age} anos</span>}
               {genderLabel(athlete.gender) && <span>· {genderLabel(athlete.gender)}</span>}
             </div>
@@ -349,16 +349,16 @@ function AthleteCard({ athlete, onOpen, showCoach }) {
           </div>
         </div>
 
-        <div className="mt-4 space-y-2 text-sm text-slate-600">
+        <div className="mt-4 space-y-2 text-sm text-gray-500">
           {location && (
             <div className="flex items-center gap-2">
-              <MapPin className="h-4 w-4 shrink-0 text-emerald-700" />
+              <MapPin className="h-4 w-4 shrink-0 text-green-700" />
               <span className="truncate">{location}</span>
             </div>
           )}
           {athlete.level && (
             <div className="flex items-center gap-2">
-              <Award className="h-4 w-4 shrink-0 text-emerald-700" />
+              <Award className="h-4 w-4 shrink-0 text-green-700" />
               <span className="truncate">{athlete.level}</span>
             </div>
           )}
@@ -404,7 +404,7 @@ function AthleteDialog({ athlete, open, onClose, showCoach, showProfileLink, sho
             <AthleteAvatar athlete={athlete} size="lg" />
             <span className="min-w-0">
               <span className="block truncate text-xl">{athlete.platform_name}</span>
-              <span className="mt-0.5 block text-sm font-normal text-slate-500">
+              <span className="mt-0.5 block text-sm font-normal text-gray-500">
                 {[Number.isFinite(athlete.age) ? `${athlete.age} anos` : null, genderLabel(athlete.gender)].filter(Boolean).join(' · ') || 'Atleta'}
               </span>
             </span>
@@ -424,14 +424,14 @@ function AthleteDialog({ athlete, open, onClose, showCoach, showProfileLink, sho
           )}
 
           {isCoach && (
-            <div className="rounded-[1rem] border border-emerald-200 bg-emerald-50/60 p-3">
-              <div className="mb-1 flex items-center gap-2 text-xs font-semibold uppercase tracking-[0.16em] text-emerald-700/80">
+            <div className="rounded-[1rem] border border-green-200 bg-green-50 p-3">
+              <div className="mb-1 flex items-center gap-2 text-xs font-semibold uppercase tracking-[0.16em] text-green-700/80">
                 <GraduationCap className="h-3.5 w-3.5" /> Treinador
               </div>
-              {athlete.coach_bio && <p className="text-sm text-slate-700">{athlete.coach_bio}</p>}
-              <div className="mt-2 flex flex-wrap gap-x-4 gap-y-1 text-xs text-slate-600">
-                {athlete.coach_price && <span><strong className="text-slate-800">Valor:</strong> {athlete.coach_price}</span>}
-                {athlete.coach_regions && <span><strong className="text-slate-800">Atua em:</strong> {athlete.coach_regions}</span>}
+              {athlete.coach_bio && <p className="text-sm text-gray-600">{athlete.coach_bio}</p>}
+              <div className="mt-2 flex flex-wrap gap-x-4 gap-y-1 text-xs text-gray-500">
+                {athlete.coach_price && <span><strong className="text-ink">Valor:</strong> {athlete.coach_price}</span>}
+                {athlete.coach_regions && <span><strong className="text-ink">Atua em:</strong> {athlete.coach_regions}</span>}
               </div>
             </div>
           )}
@@ -448,7 +448,7 @@ function AthleteDialog({ athlete, open, onClose, showCoach, showProfileLink, sho
 
           {clubs.length > 0 && (
             <div>
-              <div className="mb-2 flex items-center gap-2 text-xs font-semibold uppercase tracking-[0.16em] text-emerald-700/75">
+              <div className="mb-2 flex items-center gap-2 text-xs font-semibold uppercase tracking-[0.16em] text-gray-400">
                 <Building2 className="h-3.5 w-3.5" /> Clubes
               </div>
               <div className="flex flex-wrap gap-1.5">
@@ -462,16 +462,16 @@ function AthleteDialog({ athlete, open, onClose, showCoach, showProfileLink, sho
           )}
 
           <div>
-            <div className="mb-2 flex items-center gap-2 text-xs font-semibold uppercase tracking-[0.16em] text-emerald-700/75">
+            <div className="mb-2 flex items-center gap-2 text-xs font-semibold uppercase tracking-[0.16em] text-gray-400">
               <Shield className="h-3.5 w-3.5" /> Contato
             </div>
             {contacts.length === 0 ? (
-              <p className="text-sm text-slate-500">Este atleta optou por manter os contatos privados.</p>
+              <p className="text-sm text-gray-500">Este atleta optou por manter os contatos privados.</p>
             ) : (
               <div className="space-y-2">
                 {contacts.map(({ icon: Icon, label, value }) => (
-                  <div key={label} className="flex items-center gap-2 text-sm text-slate-700">
-                    <Icon className="h-4 w-4 shrink-0 text-emerald-700" />
+                  <div key={label} className="flex items-center gap-2 text-sm text-gray-600">
+                    <Icon className="h-4 w-4 shrink-0 text-green-700" />
                     <span className="font-medium">{label}:</span>
                     <span className="truncate">{value}</span>
                   </div>
@@ -488,11 +488,11 @@ function AthleteDialog({ athlete, open, onClose, showCoach, showProfileLink, sho
 function InfoRow({ icon: Icon, label, value }) {
   if (!value) return null;
   return (
-    <div className="rounded-[1rem] border border-emerald-950/8 bg-secondary/30 p-3">
-      <div className="flex items-center gap-1.5 text-[11px] font-semibold uppercase tracking-[0.14em] text-emerald-700/75">
+    <div className="rounded-[1rem] border border-gray-100 bg-paper p-3">
+      <div className="flex items-center gap-1.5 text-[11px] font-semibold uppercase tracking-[0.14em] text-gray-400">
         <Icon className="h-3.5 w-3.5" /> {label}
       </div>
-      <div className="mt-1 text-sm text-slate-800">{value}</div>
+      <div className="mt-1 text-sm text-ink">{value}</div>
     </div>
   );
 }

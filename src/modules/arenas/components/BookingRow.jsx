@@ -23,10 +23,10 @@ import {
 const STATUS_STYLE = {
   [BOOKING_STATUS.REQUESTED]: 'bg-amber-100 text-amber-800',
   [BOOKING_STATUS.NEGOTIATING]: 'bg-blue-100 text-blue-800',
-  [BOOKING_STATUS.CONFIRMED]: 'bg-emerald-100 text-emerald-800',
+  [BOOKING_STATUS.CONFIRMED]: 'bg-green-100 text-green-700',
   [BOOKING_STATUS.DECLINED]: 'bg-red-100 text-red-700',
-  [BOOKING_STATUS.CANCELLED]: 'bg-slate-100 text-slate-600',
-  [BOOKING_STATUS.COMPLETED]: 'bg-slate-100 text-slate-700',
+  [BOOKING_STATUS.CANCELLED]: 'bg-paper text-gray-500',
+  [BOOKING_STATUS.COMPLETED]: 'bg-paper text-gray-600',
 };
 
 function SlotSummary({ booking }) {
@@ -71,14 +71,14 @@ export default function BookingRow({ booking, perspective }) {
   }
 
   return (
-    <div className="rounded-lg border border-slate-200 p-3">
+    <div className="rounded-lg border border-gray-200 p-3">
       <div className="flex items-start justify-between gap-2">
         <div className="min-w-0">
-          <div className="text-sm font-medium text-slate-800">
+          <div className="text-sm font-medium text-ink">
             {isArena ? booking.athlete_name : booking.arena_name}
           </div>
-          <div className="mt-0.5 text-xs text-slate-500"><SlotSummary booking={booking} /></div>
-          {booking.notes && <div className="mt-1 text-xs text-slate-500">“{booking.notes}”</div>}
+          <div className="mt-0.5 text-xs text-gray-500"><SlotSummary booking={booking} /></div>
+          {booking.notes && <div className="mt-1 text-xs text-gray-500">“{booking.notes}”</div>}
         </div>
         <div className="flex shrink-0 flex-col items-end gap-1">
           <Badge className={STATUS_STYLE[booking.status]}>{BOOKING_STATUS_LABELS[booking.status]}</Badge>
@@ -88,16 +88,16 @@ export default function BookingRow({ booking, perspective }) {
         </div>
       </div>
 
-      <div className="mt-2 flex flex-wrap items-center gap-2 text-xs text-slate-600">
+      <div className="mt-2 flex flex-wrap items-center gap-2 text-xs text-gray-500">
         {booking.proposed_price != null && <span>Proposto: <strong>{formatPrice(booking.proposed_price)}</strong></span>}
-        {booking.agreed_price != null && <span className="text-emerald-700">Acordado: <strong>{formatPrice(booking.agreed_price)}</strong></span>}
+        {booking.agreed_price != null && <span className="text-green-700">Acordado: <strong>{formatPrice(booking.agreed_price)}</strong></span>}
       </div>
 
       {/* Negociação de valor (ambos podem propor enquanto ativa) */}
       {active && (
         <div className="mt-2 flex flex-wrap items-end gap-2">
           <div>
-            <label className="text-[11px] text-slate-500">Valor (R$)</label>
+            <label className="text-[11px] text-gray-500">Valor (R$)</label>
             <Input type="number" min="0" step="0.01" value={price} onChange={(e) => setPrice(e.target.value)} className="h-9 w-28" />
           </div>
           <Button size="sm" variant="outline" onClick={() => act(() => proposePrice.mutateAsync({ booking, price, options }), 'Proposta enviada.')}>

@@ -12,7 +12,7 @@ export default function TournamentRankingTab({ tournament }) {
   if (modalities.length === 0) {
     return (
       <Card>
-        <CardContent className="p-6 text-sm text-slate-500 text-center">
+        <CardContent className="p-6 text-sm text-gray-500 text-center">
           Sem modalidades.
         </CardContent>
       </Card>
@@ -20,9 +20,9 @@ export default function TournamentRankingTab({ tournament }) {
   }
   return (
     <div className="space-y-4">
-      <Card className="border-emerald-200 bg-emerald-50/40">
-        <CardContent className="p-4 flex items-start gap-2 text-sm text-emerald-950">
-          <Info className="w-4 h-4 mt-0.5 text-emerald-700 shrink-0" />
+      <Card className="border-green-200 bg-green-50">
+        <CardContent className="p-4 flex items-start gap-2 text-sm text-green-800">
+          <Info className="w-4 h-4 mt-0.5 text-green-700 shrink-0" />
           <div>
             <strong>Como funciona a classificação:</strong> a posição é definida pelo número de vitórias.
             Em caso de empate, valem na ordem: <strong>saldo de pontos</strong> (a favor − contra),
@@ -40,13 +40,13 @@ export default function TournamentRankingTab({ tournament }) {
 
 const MEDAL_BY_POSITION = {
   1: { color: 'text-amber-500', label: 'Ouro' },
-  2: { color: 'text-slate-400', label: 'Prata' },
+  2: { color: 'text-gray-400', label: 'Prata' },
   3: { color: 'text-amber-700', label: 'Bronze' },
 };
 
 const ROW_TONE_BY_POSITION = {
   1: 'bg-amber-50/70 hover:bg-amber-100/70',
-  2: 'bg-slate-50/70 hover:bg-slate-100/70',
+  2: 'bg-paper/70 hover:bg-paper/70',
   3: 'bg-orange-50/60 hover:bg-orange-100/60',
 };
 
@@ -77,16 +77,16 @@ export function ModalityRankingBlock({ modality }) {
     <CollapsibleSection
       title={(
         <span className="inline-flex items-center gap-2">
-          <Trophy className="w-4 h-4 text-emerald-600" /> {modality.name}
+          <Trophy className="w-4 h-4 text-green-600" /> {modality.name}
         </span>
       )}
       subtitle={subtitle}
       defaultOpen
     >
       {isLoading ? (
-        <p className="text-sm text-slate-500">Carregando…</p>
+        <p className="text-sm text-gray-500">Carregando…</p>
       ) : phases.length === 0 ? (
-        <p className="text-sm text-slate-500">Aguardando resultados.</p>
+        <p className="text-sm text-gray-500">Aguardando resultados.</p>
       ) : (
         <div className="space-y-3">
           {phases.map((phase) => {
@@ -105,7 +105,7 @@ export function ModalityRankingBlock({ modality }) {
             return (
               <CollapsibleSection
                 key={phase.stageIndex}
-                className="border-slate-200 bg-slate-50/40"
+                className="border-gray-200 bg-paper/40"
                 headerClassName="py-1.5"
                 title={`Fase ${phase.stageIndex + 1}`}
                 badges={<Badge variant="secondary">{phase.typeLabel}</Badge>}
@@ -125,11 +125,11 @@ function GroupRanking({ group, showName }) {
   return (
     <div>
       {showName && group.name && (
-        <div className="text-xs font-semibold text-emerald-800 mb-1">{group.name}</div>
+        <div className="text-xs font-semibold text-green-700 mb-1">{group.name}</div>
       )}
-      <div className="hidden sm:block arena-table-wrap">
+      <div className="hidden sm:block overflow-x-auto rounded-3xl border border-gray-100">
         <table className="w-full text-sm">
-          <thead className="bg-slate-50">
+          <thead className="bg-paper">
             <tr className="text-left">
               <th className="px-3 py-2">Pos.</th>
               <th className="px-3 py-2">Participante</th>
@@ -161,7 +161,7 @@ function GroupRanking({ group, showName }) {
                   <td className="px-3 py-2 text-center">{r.sets_won}–{r.sets_lost}</td>
                   <td className="px-3 py-2 text-center">{r.points_for}</td>
                   <td className="px-3 py-2 text-center">{r.points_against}</td>
-                  <td className={`px-3 py-2 text-center font-medium ${balance > 0 ? 'text-emerald-700' : balance < 0 ? 'text-red-600' : 'text-slate-600'}`}>
+                  <td className={`px-3 py-2 text-center font-medium ${balance > 0 ? 'text-green-700' : balance < 0 ? 'text-red-600' : 'text-gray-500'}`}>
                     {balance > 0 ? `+${balance}` : balance}
                   </td>
                 </tr>
@@ -176,7 +176,7 @@ function GroupRanking({ group, showName }) {
           const balance = (r.points_for || 0) - (r.points_against || 0);
           const tone = ROW_TONE_BY_POSITION[r.position] || 'bg-white';
           return (
-            <div key={r.key} className={`rounded-2xl border border-slate-200 p-3 ${tone}`}>
+            <div key={r.key} className={`rounded-2xl border border-gray-200 p-3 ${tone}`}>
               <div className="flex items-center gap-2">
                 <PositionCell position={r.position} />
                 <AvatarGroup size="sm" people={r.players || []} />
@@ -192,7 +192,7 @@ function GroupRanking({ group, showName }) {
                 <RankStat
                   label="Saldo"
                   value={balance > 0 ? `+${balance}` : balance}
-                  tone={balance > 0 ? 'text-emerald-700' : balance < 0 ? 'text-red-600' : 'text-slate-700'}
+                  tone={balance > 0 ? 'text-green-700' : balance < 0 ? 'text-red-600' : 'text-gray-600'}
                 />
               </div>
             </div>
@@ -206,8 +206,8 @@ function GroupRanking({ group, showName }) {
 function RankStat({ label, value, strong, tone }) {
   return (
     <div className="rounded-lg bg-white/70 px-1 py-1.5">
-      <div className="text-[10px] font-medium uppercase tracking-wide text-slate-400">{label}</div>
-      <div className={`text-sm tabular-nums ${strong ? 'font-bold text-slate-900' : `font-medium ${tone || 'text-slate-700'}`}`}>{value}</div>
+      <div className="text-[10px] font-medium uppercase tracking-wide text-gray-400">{label}</div>
+      <div className={`text-sm tabular-nums ${strong ? 'font-bold text-ink' : `font-medium ${tone || 'text-gray-600'}`}`}>{value}</div>
     </div>
   );
 }

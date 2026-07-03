@@ -49,7 +49,7 @@ function medalEmoji(position) {
 
 function RankingBadge({ ranking }) {
   if (!ranking) {
-    return <span className="text-xs text-slate-500">Aguardando início dos jogos</span>;
+    return <span className="text-xs text-gray-500">Aguardando início dos jogos</span>;
   }
   const medal = medalEmoji(ranking.position);
   return (
@@ -61,9 +61,9 @@ function RankingBadge({ ranking }) {
         {medal ? `${medal} ` : ''}
         {ranking.position}º de {ranking.total}
       </Badge>
-      <span className="text-slate-600 tabular-nums">
+      <span className="text-gray-500 tabular-nums">
         {ranking.wins}V – {ranking.losses}D
-        <span className="text-slate-400"> · {ranking.played} jogo(s)</span>
+        <span className="text-gray-400"> · {ranking.played} jogo(s)</span>
       </span>
     </div>
   );
@@ -73,10 +73,10 @@ function EntryRow({ entry }) {
   const { registration: reg, modality, partnerName, partnerPhoto, ranking } = entry;
   const name = modality?.name || 'Modalidade';
   return (
-    <div className="rounded-md border border-emerald-950/10 bg-white/60 p-3">
+    <div className="rounded-md border border-gray-100 bg-white/60 p-3">
       <div className="flex items-start justify-between gap-2 flex-wrap">
         <div className="min-w-0">
-          <div className="font-medium text-slate-900">{name}</div>
+          <div className="font-medium text-ink">{name}</div>
           <div className="mt-1 flex flex-wrap gap-1">
             {modality?.format && (
               <Badge variant="secondary">{MODALITY_FORMAT_LABELS[modality.format] || modality.format}</Badge>
@@ -94,7 +94,7 @@ function EntryRow({ entry }) {
             )}
           </div>
           {partnerName && (
-            <div className="mt-1.5 flex items-center gap-1.5 text-xs text-slate-600">
+            <div className="mt-1.5 flex items-center gap-1.5 text-xs text-gray-500">
               <Users className="h-3.5 w-3.5" /> Dupla com
               <UserAvatar size="xs" name={partnerName} photoUrl={partnerPhoto} />
               {partnerName}
@@ -119,24 +119,24 @@ function TournamentGroup({ group }) {
   const place = [tournament?.city, tournament?.state].filter(Boolean).join(' / ');
 
   return (
-    <div className="rounded-lg border border-emerald-950/10 bg-gradient-to-br from-white/80 to-emerald-50/50 p-3 sm:p-4">
+    <div className="rounded-lg border border-gray-100 bg-gradient-to-br from-paper-pure to-green-50 p-3 sm:p-4">
       <div className="flex items-start justify-between gap-2 flex-wrap">
         <div className="min-w-0">
           <div className="flex items-center gap-2">
-            <Trophy className="h-4 w-4 shrink-0 text-emerald-700" />
+            <Trophy className="h-4 w-4 shrink-0 text-green-700" />
             {tournament ? (
               <Link
                 to={`/torneios/${tournamentId}`}
-                className="font-semibold text-slate-900 hover:text-emerald-800 hover:underline inline-flex items-center gap-0.5"
+                className="font-semibold text-ink hover:text-green-700 hover:underline inline-flex items-center gap-0.5"
               >
                 {name}
                 <ChevronRight className="h-4 w-4" />
               </Link>
             ) : (
-              <span className="font-semibold text-slate-500">{name} (indisponível)</span>
+              <span className="font-semibold text-gray-500">{name} (indisponível)</span>
             )}
           </div>
-          <div className="mt-1 flex flex-wrap items-center gap-x-3 gap-y-1 text-xs text-slate-600">
+          <div className="mt-1 flex flex-wrap items-center gap-x-3 gap-y-1 text-xs text-gray-500">
             {date && (
               <span className="inline-flex items-center gap-1">
                 <CalendarDays className="h-3.5 w-3.5" /> {date}
@@ -171,9 +171,9 @@ export default function ParticipationHistoryCard() {
 
   return (
     <Card className="overflow-hidden">
-      <CardHeader className="border-b border-emerald-950/10 bg-white/45 p-4 sm:p-5">
-        <CardTitle className="flex items-center gap-2 text-base text-slate-950">
-          <History className="h-5 w-5 text-emerald-700" /> Histórico de participações
+      <CardHeader className="border-b border-gray-100 bg-white/45 p-4 sm:p-5">
+        <CardTitle className="flex items-center gap-2 text-base text-ink">
+          <History className="h-5 w-5 text-green-700" /> Histórico de participações
         </CardTitle>
         <CardDescription>
           Torneios em que você se inscreveu, com as modalidades, sua dupla e a posição no ranking de cada competição.
@@ -181,18 +181,18 @@ export default function ParticipationHistoryCard() {
       </CardHeader>
       <CardContent className="p-4 sm:p-5">
         {isLoading ? (
-          <p className="text-sm text-slate-500">Carregando…</p>
+          <p className="text-sm text-gray-500">Carregando…</p>
         ) : history.length === 0 ? (
-          <div className="rounded-md border border-dashed border-emerald-950/15 bg-white/50 p-6 text-center">
-            <Trophy className="mx-auto mb-2 h-6 w-6 text-emerald-700/70" />
-            <p className="text-sm text-slate-600">Você ainda não participou de nenhum torneio.</p>
-            <Link to="/torneios/publicos" className="mt-2 inline-block text-sm font-medium text-emerald-800 hover:underline">
+          <div className="rounded-md border border-dashed border-gray-100 bg-white/50 p-6 text-center">
+            <Trophy className="mx-auto mb-2 h-6 w-6 text-green-700/70" />
+            <p className="text-sm text-gray-500">Você ainda não participou de nenhum torneio.</p>
+            <Link to="/torneios/publicos" className="mt-2 inline-block text-sm font-medium text-green-700 hover:underline">
               Ver torneios disponíveis
             </Link>
           </div>
         ) : (
           <>
-            <p className="mb-3 text-xs text-slate-500">
+            <p className="mb-3 text-xs text-gray-500">
               {history.length} torneio(s) · {totalRegistrations} inscrição(ões)
             </p>
             <div className="space-y-3">

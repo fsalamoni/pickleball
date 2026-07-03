@@ -31,17 +31,17 @@ export default function PrintTournament() {
   }, []);
 
   if (!tournament) {
-    return <p className="p-8 text-sm text-slate-500">Carregando…</p>;
+    return <p className="p-8 text-sm text-gray-500">Carregando…</p>;
   }
 
   return (
-    <div className="bg-white text-slate-900 max-w-4xl mx-auto p-8 print:p-0 print:max-w-none">
+    <div className="bg-white text-ink max-w-4xl mx-auto p-8 print:p-0 print:max-w-none">
       <header className="flex items-center justify-between border-b pb-3 mb-4">
         <div>
           <h1 className="text-xl font-bold flex items-center gap-2">
-            <Trophy className="w-5 h-5 text-emerald-600" /> {tournament.name}
+            <Trophy className="w-5 h-5 text-green-600" /> {tournament.name}
           </h1>
-          <p className="text-xs text-slate-500">
+          <p className="text-xs text-gray-500">
             {tournament.city ? `${tournament.city} · ` : ''}
             Código: {tournament.invite_code}
           </p>
@@ -49,7 +49,7 @@ export default function PrintTournament() {
         <button
           type="button"
           onClick={() => window.print()}
-          className="print:hidden text-sm inline-flex items-center gap-1 px-3 py-1.5 border rounded hover:bg-slate-50"
+          className="print:hidden text-sm inline-flex items-center gap-1 px-3 py-1.5 border rounded hover:bg-paper"
         >
           <Printer className="w-4 h-4" /> Imprimir
         </button>
@@ -59,7 +59,7 @@ export default function PrintTournament() {
         <PrintModality key={m.id} modality={m} />
       ))}
 
-      <footer className="text-[10px] text-slate-400 mt-6">
+      <footer className="text-[10px] text-gray-400 mt-6">
         <Link to={`/p/${tournamentId}`} className="hover:underline">
           plataforma PickleRush — visão pública
         </Link>
@@ -123,9 +123,9 @@ function PrintModality({ modality }) {
 
   return (
     <section className="mb-6 break-inside-avoid print:break-after-page">
-      <h2 className="font-semibold text-sm border-b border-emerald-600 pb-1 mb-2">
+      <h2 className="font-semibold text-sm border-b border-ink pb-1 mb-2">
         {modality.name} —{' '}
-        <span className="font-normal text-slate-500">
+        <span className="font-normal text-gray-500">
           {MODALITY_FORMAT_LABELS[modality.format] || modality.format}
         </span>
       </h2>

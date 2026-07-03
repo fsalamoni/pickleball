@@ -34,8 +34,8 @@ export default function ModalityGallery({ tournamentId, modalityId, canManage = 
   return (
     <Card className="rounded-[1.75rem] border-white/80 bg-white/82">
       <CardContent className="p-5 sm:p-6">
-        <h2 className="mb-3 flex items-center gap-2 text-sm font-semibold text-slate-800">
-          <Images className="h-4 w-4 text-emerald-600" /> Fotos da modalidade
+        <h2 className="mb-3 flex items-center gap-2 text-sm font-semibold text-ink">
+          <Images className="h-4 w-4 text-green-600" /> Fotos da modalidade
         </h2>
 
         {canManage && (
@@ -51,7 +51,7 @@ export default function ModalityGallery({ tournamentId, modalityId, canManage = 
         )}
 
         {photos.length === 0 ? (
-          <p className="text-sm text-slate-500">Nenhuma foto desta modalidade ainda.</p>
+          <p className="text-sm text-gray-500">Nenhuma foto desta modalidade ainda.</p>
         ) : (
           <div className="grid grid-cols-2 gap-2 sm:grid-cols-3 md:grid-cols-4">
             {photos.map((p) => (

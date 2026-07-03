@@ -35,7 +35,7 @@ const COMPONENTS = {
   ol: ({ _node, ...props }) => <ol className="my-2 ml-5 list-decimal space-y-1 marker:text-ink" {...props} />,
   li: ({ _node, ...props }) => <li className="leading-7" {...props} />,
   blockquote: ({ _node, ...props }) => (
-    <blockquote className="my-3 border-l-4 border-emerald-300 bg-acid/10/60 py-1 pl-4 pr-2 italic text-slate-700" {...props} />
+    <blockquote className="my-3 border-l-4 border-green-300 bg-acid/10 py-1 pl-4 pr-2 italic text-gray-600" {...props} />
   ),
   hr: () => <hr className="my-4 border-gray-100" />,
   strong: ({ _node, ...props }) => <strong className="font-semibold text-ink" {...props} />,
@@ -53,22 +53,22 @@ const COMPONENTS = {
       );
     }
     return (
-      <code className="rounded bg-emerald-950/8 px-1.5 py-0.5 font-mono text-[0.85em] text-ink" {...props}>
+      <code className="rounded bg-ink/8 px-1.5 py-0.5 font-mono text-[0.85em] text-ink" {...props}>
         {children}
       </code>
     );
   },
   pre: ({ _node, ...props }) => (
-    <pre className="my-3 overflow-x-auto rounded-lg bg-slate-900 p-3 text-slate-100" {...props} />
+    <pre className="my-3 overflow-x-auto rounded-lg bg-ink p-3 text-gray-500" {...props} />
   ),
   table: ({ _node, ...props }) => (
     <div className="my-3 w-full overflow-x-auto rounded-lg border border-gray-100">
       <table className="w-full border-collapse text-sm" {...props} />
     </div>
   ),
-  thead: ({ _node, ...props }) => <thead className="bg-secondary/50" {...props} />,
+  thead: ({ _node, ...props }) => <thead className="bg-paper" {...props} />,
   th: ({ _node, ...props }) => <th className="border border-gray-100 px-3 py-2 text-left font-semibold text-ink" {...props} />,
-  td: ({ _node, ...props }) => <td className="border border-gray-100 px-3 py-2 align-top text-slate-700" {...props} />,
+  td: ({ _node, ...props }) => <td className="border border-gray-100 px-3 py-2 align-top text-gray-600" {...props} />,
   img: ({ _node, src, alt, ...props }) => (
     <ZoomableImage
       src={src}
@@ -85,7 +85,7 @@ export function MarkdownContent({ children, className }) {
   const content = String(children ?? '');
   if (!content.trim()) return null;
   return (
-    <div className={cn('text-sm text-slate-700 break-words', className)}>
+    <div className={cn('text-sm text-gray-600 break-words', className)}>
       <ReactMarkdown remarkPlugins={[remarkGfm]} components={COMPONENTS} skipHtml>
         {content}
       </ReactMarkdown>

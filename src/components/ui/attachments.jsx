@@ -124,7 +124,7 @@ export function PendingAttachmentList({ items = [], onRemove, className }) {
       {items.map((item) => (
         <div
           key={item.path}
-          className="group relative flex items-center gap-2 overflow-hidden rounded-lg border border-gray-100 bg-secondary/40"
+          className="group relative flex items-center gap-2 overflow-hidden rounded-lg border border-gray-100 bg-paper"
         >
           {item.kind === 'image' ? (
             <PhotoLightbox
@@ -145,7 +145,7 @@ export function PendingAttachmentList({ items = [], onRemove, className }) {
             type="button"
             onClick={() => onRemove?.(item.path)}
             aria-label="Remover anexo"
-            className="absolute right-1 top-1 flex h-5 w-5 items-center justify-center rounded-full bg-slate-950/60 text-white opacity-0 transition-opacity group-hover:opacity-100"
+            className="absolute right-1 top-1 flex h-5 w-5 items-center justify-center rounded-full bg-ink/60 text-white opacity-0 transition-opacity group-hover:opacity-100"
           >
             <X className="h-3 w-3" />
           </button>
@@ -177,7 +177,7 @@ export function AttachmentGallery({ attachments = [], className }) {
                 type="button"
                 onClick={() => downloadAttachment(image.url, image.name)}
                 aria-label="Baixar imagem"
-                className="absolute right-1.5 top-1.5 flex h-7 w-7 items-center justify-center rounded-full bg-slate-950/60 text-white opacity-0 transition-opacity group-hover:opacity-100"
+                className="absolute right-1.5 top-1.5 flex h-7 w-7 items-center justify-center rounded-full bg-ink/60 text-white opacity-0 transition-opacity group-hover:opacity-100"
               >
                 <Download className="h-3.5 w-3.5" />
               </button>
@@ -192,7 +192,7 @@ export function AttachmentGallery({ attachments = [], className }) {
               key={file.path || file.url}
               type="button"
               onClick={() => downloadAttachment(file.url, file.name)}
-              className="flex max-w-full items-center gap-2 rounded-lg border border-gray-100 bg-secondary/40 px-3 py-2 text-left transition-colors hover:border-emerald-400/50 hover:bg-acid/10"
+              className="flex max-w-full items-center gap-2 rounded-lg border border-gray-100 bg-paper px-3 py-2 text-left transition-colors hover:border-green-400 hover:bg-acid/10"
             >
               <FileText className="h-5 w-5 shrink-0 text-ink" />
               <span className="min-w-0">

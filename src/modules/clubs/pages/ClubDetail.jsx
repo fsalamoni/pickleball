@@ -166,11 +166,11 @@ export default function ClubDetail() {
 
   return (
     <div className="mx-auto max-w-4xl space-y-4">
-      <Button asChild variant="ghost" size="sm" className="text-emerald-50 hover:bg-white/10 hover:text-white">
+      <Button asChild variant="ghost" size="sm" className="text-white/70 hover:bg-white/10 hover:text-white">
         <Link to="/clubes"><ArrowLeft className="mr-1.5 h-4 w-4" /> Voltar para clubes</Link>
       </Button>
 
-      <section className="arena-panel-strong overflow-hidden rounded-[1.25rem] p-5 sm:rounded-[2rem] sm:p-8">
+      <section className="bg-ink text-white overflow-hidden rounded-[1.25rem] p-5 sm:rounded-[2rem] sm:p-8">
         <div className="flex flex-col gap-5 sm:flex-row sm:items-start sm:justify-between">
           <div className="flex items-start gap-4">
             {club.logo_url ? (
@@ -186,13 +186,13 @@ export default function ClubDetail() {
                 )}
               />
             ) : (
-              <div className="flex h-16 w-16 shrink-0 items-center justify-center rounded-2xl bg-white/10 text-emerald-50">
+              <div className="flex h-16 w-16 shrink-0 items-center justify-center rounded-2xl bg-white/10 text-white/70">
                 <Building2 className="h-7 w-7" />
               </div>
             )}
             <div className="min-w-0">
               <h1 className="text-2xl font-bold text-white sm:text-3xl">{club.name}</h1>
-              <div className="mt-2 flex flex-wrap items-center gap-x-4 gap-y-1 text-sm text-emerald-50/80">
+              <div className="mt-2 flex flex-wrap items-center gap-x-4 gap-y-1 text-sm text-white/70">
                 {location && <span className="inline-flex items-center gap-1"><MapPin className="h-4 w-4" /> {location}</span>}
                 <span className="inline-flex items-center gap-1"><Users className="h-4 w-4" /> {club.member_count || 0} membro(s)</span>
               </div>
@@ -217,10 +217,10 @@ export default function ClubDetail() {
         </div>
 
         {club.description && (
-          <p className="mt-5 max-w-2xl whitespace-pre-wrap text-sm leading-7 text-emerald-50/85">{club.description}</p>
+          <p className="mt-5 max-w-2xl whitespace-pre-wrap text-sm leading-7 text-white/70">{club.description}</p>
         )}
 
-        <div className="mt-5 flex flex-wrap gap-2 text-xs text-emerald-50/80">
+        <div className="mt-5 flex flex-wrap gap-2 text-xs text-white/70">
           {club.home_venue && <InfoChip icon={Building2}>{club.home_venue}</InfoChip>}
           {club.contact_email && <InfoChip icon={Mail}>{club.contact_email}</InfoChip>}
           {club.contact_phone && <InfoChip icon={Phone}>{club.contact_phone}</InfoChip>}
@@ -231,8 +231,8 @@ export default function ClubDetail() {
       {!isMember && myInvite && (
         <Card className="rounded-[1.5rem] border-amber-300 bg-amber-50/80">
           <CardContent className="p-5">
-            <h3 className="text-base font-semibold text-slate-900">Você foi convidado para este clube</h3>
-            <p className="mt-1 text-sm text-slate-600">
+            <h3 className="text-base font-semibold text-ink">Você foi convidado para este clube</h3>
+            <p className="mt-1 text-sm text-gray-500">
               {myInvite.inviter_name || 'Um administrador'} convidou você a participar. Aceite para entrar e acessar eventos, mural e fórum.
             </p>
             <div className="mt-4 flex flex-wrap gap-2">
@@ -248,16 +248,16 @@ export default function ClubDetail() {
       )}
 
       {!isMember && !myInvite && (
-        <Card className="rounded-[1.5rem] border-emerald-200 bg-emerald-50/70">
+        <Card className="rounded-[1.5rem] border-green-200 bg-green-50">
           <CardContent className="p-5">
-            <h3 className="text-base font-semibold text-slate-900">Participe deste clube</h3>
+            <h3 className="text-base font-semibold text-ink">Participe deste clube</h3>
             {myRequest?.status === JOIN_REQUEST_STATUS.PENDING ? (
               <p className="mt-2 inline-flex items-center gap-2 rounded-full bg-amber-100 px-3 py-1.5 text-sm font-medium text-amber-800">
                 Pedido enviado — aguardando aprovação de um administrador.
               </p>
             ) : (
               <>
-                <p className="mt-1 text-sm text-slate-600">
+                <p className="mt-1 text-sm text-gray-500">
                   {myRequest?.status === JOIN_REQUEST_STATUS.REJECTED
                     ? 'Seu pedido anterior não foi aprovado. Você pode pedir novamente.'
                     : 'Peça para ingressar e um administrador irá aprovar, ou entre direto com o código de convite.'}
@@ -267,9 +267,9 @@ export default function ClubDetail() {
                 </Button>
               </>
             )}
-            <form onSubmit={handleJoin} className="mt-4 flex flex-col gap-3 border-t border-emerald-900/10 pt-4 sm:flex-row">
+            <form onSubmit={handleJoin} className="mt-4 flex flex-col gap-3 border-t border-gray-100 pt-4 sm:flex-row">
               <div className="relative flex-1">
-                <Hash className="absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-slate-400" />
+                <Hash className="absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-gray-400" />
                 <Input
                   value={code}
                   onChange={(e) => setCode(e.target.value.toUpperCase())}

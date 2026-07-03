@@ -8,10 +8,10 @@ import { FEATURE_FLAG } from '@/core/featureFlags';
 function Section({ icon: Icon, title, children }) {
   return (
     <PlatformSurfaceCard contentClassName="p-5">
-        <h2 className="flex items-center gap-2 text-lg font-semibold arena-heading">
-          <Icon className="h-5 w-5 text-emerald-600" /> {title}
+        <h2 className="flex items-center gap-2 text-lg font-semibold font-display text-ink">
+          <Icon className="h-5 w-5 text-green-600" /> {title}
         </h2>
-        <div className="mt-2 space-y-2 text-sm leading-6 text-slate-700">{children}</div>
+        <div className="mt-2 space-y-2 text-sm leading-6 text-gray-600">{children}</div>
     </PlatformSurfaceCard>
   );
 }
@@ -69,7 +69,7 @@ export default function SportHistory() {
         <ul className="space-y-2">
           {MILESTONES.map(([year, text]) => (
             <li key={year} className="flex gap-3">
-              <span className="shrink-0 rounded-md bg-emerald-50 px-2 py-0.5 text-xs font-semibold text-emerald-700">{year}</span>
+              <span className="shrink-0 rounded-md bg-green-50 px-2 py-0.5 text-xs font-semibold text-green-700">{year}</span>
               <span>{text}</span>
             </li>
           ))}

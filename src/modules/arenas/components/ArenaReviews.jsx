@@ -22,7 +22,7 @@ function StarPicker({ value, onChange }) {
     <div className="flex items-center gap-1">
       {[1, 2, 3, 4, 5].map((n) => (
         <button key={n} type="button" onClick={() => onChange(n)} aria-label={`${n} estrela(s)`} className="p-0.5">
-          <Star className={cn('h-6 w-6', n <= value ? 'fill-amber-400 text-amber-400' : 'text-slate-300')} />
+          <Star className={cn('h-6 w-6', n <= value ? 'fill-amber-400 text-amber-400' : 'text-gray-300')} />
         </button>
       ))}
     </div>
@@ -58,17 +58,17 @@ export default function ArenaReviews({ arena, canModerate = false }) {
       <Card>
         <CardContent className="p-4">
           <div className="flex items-center justify-between">
-            <h3 className="text-sm font-semibold text-slate-800">Avaliações e retornos</h3>
+            <h3 className="text-sm font-semibold text-ink">Avaliações e retornos</h3>
             {summary.average != null && (
               <span className="flex items-center gap-1 text-sm font-medium text-amber-600">
                 <Star className="h-4 w-4 fill-amber-400 text-amber-400" /> {summary.average}
-                <span className="text-xs text-slate-400">({summary.count})</span>
+                <span className="text-xs text-gray-400">({summary.count})</span>
               </span>
             )}
           </div>
 
           {isAuthenticated && (
-            <form onSubmit={handleSubmit} className="mt-3 space-y-3 rounded-lg border border-slate-200 p-3">
+            <form onSubmit={handleSubmit} className="mt-3 space-y-3 rounded-lg border border-gray-200 p-3">
               <div className="flex flex-wrap gap-2">
                 {Object.values(REVIEW_TYPE).map((t) => (
                   <button
@@ -77,7 +77,7 @@ export default function ArenaReviews({ arena, canModerate = false }) {
                     onClick={() => setType(t)}
                     className={cn(
                       'rounded-full border px-3 py-1 text-xs font-medium transition-colors',
-                      type === t ? 'border-emerald-600 bg-emerald-600 text-white' : 'border-slate-200 text-slate-600 hover:bg-slate-50',
+                      type === t ? 'border-ink bg-ink text-white' : 'border-gray-200 text-gray-500 hover:bg-paper',
                     )}
                   >
                     {REVIEW_TYPE_LABELS[t]}
@@ -103,27 +103,27 @@ export default function ArenaReviews({ arena, canModerate = false }) {
 
           <div className="mt-4 space-y-2">
             {isLoading ? (
-              <p className="text-sm text-slate-500">Carregando…</p>
+              <p className="text-sm text-gray-500">Carregando…</p>
             ) : reviews.length === 0 ? (
-              <p className="text-sm text-slate-500">Ainda não há avaliações. Seja o primeiro a comentar.</p>
+              <p className="text-sm text-gray-500">Ainda não há avaliações. Seja o primeiro a comentar.</p>
             ) : (
               reviews.map((r) => {
                 const Icon = TYPE_ICON[r.type] || Star;
                 const mine = r.user_id === user?.uid;
                 return (
-                  <div key={r.id} className="rounded-lg border border-slate-100 p-3">
+                  <div key={r.id} className="rounded-lg border border-gray-100 p-3">
                     <div className="flex items-start justify-between gap-2">
                       <div className="flex items-center gap-2">
                         {r.user_photo ? (
                           <img src={r.user_photo} alt="" className="h-7 w-7 rounded-full object-cover" />
                         ) : (
-                          <span className="flex h-7 w-7 items-center justify-center rounded-full bg-emerald-900 text-xs font-semibold text-emerald-50">
+                          <span className="flex h-7 w-7 items-center justify-center rounded-full bg-ink text-xs font-semibold text-white/70">
                             {String(r.user_name || 'A')[0]?.toUpperCase()}
                           </span>
                         )}
                         <div>
-                          <div className="text-sm font-medium text-slate-800">{r.user_name}</div>
-                          <div className="flex items-center gap-1 text-xs text-slate-400">
+                          <div className="text-sm font-medium text-ink">{r.user_name}</div>
+                          <div className="flex items-center gap-1 text-xs text-gray-400">
                             <Icon className="h-3 w-3" />
                             {(r.type ?? 'review') !== 'review'
                               ? REVIEW_TYPE_LABELS[r.type]
@@ -139,13 +139,13 @@ export default function ArenaReviews({ arena, canModerate = false }) {
                           onConfirm={() => deleteReview.mutate(r)}
                           trigger={(
                             <Button size="icon" variant="ghost" aria-label="Remover" className="h-7 w-7">
-                              <Trash2 className="h-3.5 w-3.5 text-slate-400" />
+                              <Trash2 className="h-3.5 w-3.5 text-gray-400" />
                             </Button>
                           )}
                         />
                       )}
                     </div>
-                    {r.comment && <p className="mt-2 text-sm text-slate-600">{r.comment}</p>}
+                    {r.comment && <p className="mt-2 text-sm text-gray-500">{r.comment}</p>}
                     {canModerate && (r.type ?? 'review') !== 'review' && (
                       <Badge variant="secondary" className="mt-2 text-[11px]">Requer atenção da arena</Badge>
                     )}

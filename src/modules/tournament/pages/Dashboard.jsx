@@ -33,10 +33,10 @@ import {
 
 const STATUS_TONE = {
   [TOURNAMENT_STATUS.IN_PROGRESS]: 'bg-blue-100 text-blue-900 border-blue-200',
-  [TOURNAMENT_STATUS.REGISTRATIONS_OPEN]: 'bg-emerald-100 text-emerald-800 border-emerald-200',
+  [TOURNAMENT_STATUS.REGISTRATIONS_OPEN]: 'bg-green-100 text-green-700 border-green-200',
   [TOURNAMENT_STATUS.REGISTRATIONS_CLOSED]: 'bg-amber-100 text-amber-900 border-amber-200',
-  [TOURNAMENT_STATUS.DRAFT]: 'bg-slate-100 text-slate-700 border-slate-200',
-  [TOURNAMENT_STATUS.FINISHED]: 'bg-slate-200 text-slate-700 border-slate-300',
+  [TOURNAMENT_STATUS.DRAFT]: 'bg-paper text-gray-600 border-gray-200',
+  [TOURNAMENT_STATUS.FINISHED]: 'bg-gray-200 text-gray-600 border-gray-200',
   [TOURNAMENT_STATUS.CANCELLED]: 'bg-red-100 text-red-800 border-red-200',
 };
 
@@ -168,22 +168,22 @@ export default function Dashboard() {
   return (
     <div className="space-y-8">
       <section className="grid grid-cols-1 gap-6 xl:grid-cols-[1.12fr,0.88fr]">
-        <Card className="arena-panel-strong overflow-hidden rounded-[1.25rem] border-0 sm:rounded-[2rem]">
+        <Card className="bg-ink text-white overflow-hidden rounded-[1.25rem] border-0 sm:rounded-[2rem]">
           <CardContent className="relative p-4 sm:p-8 lg:p-10">
             <div className="absolute inset-y-0 right-0 hidden w-1/2 bg-[radial-gradient(circle_at_top_right,rgba(255,255,255,0.16),transparent_45%)] lg:block" />
             <div className="relative max-w-2xl">
-              <span className="inline-flex items-center gap-2 rounded-full border border-white/15 bg-white/10 px-3 py-1 text-[10px] font-semibold uppercase tracking-[0.14em] text-emerald-50/80 sm:text-xs sm:tracking-[0.18em]">
+              <span className="inline-flex items-center gap-2 rounded-full border border-white/15 bg-white/10 px-3 py-1 text-[10px] font-semibold uppercase tracking-[0.14em] text-white/70 sm:text-xs sm:tracking-[0.18em]">
                 <Sparkles className="h-3.5 w-3.5" /> Centro de operacao do torneio
               </span>
               <h2 className="mt-3 text-2xl font-semibold leading-tight text-white sm:mt-5 sm:text-3xl lg:text-4xl">
                 Organize o seu dia de evento.
               </h2>
-              <p className="mt-2 max-w-xl text-sm leading-6 text-emerald-50/75 sm:mt-4 sm:text-base sm:leading-7">
+              <p className="mt-2 max-w-xl text-sm leading-6 text-white/70 sm:mt-4 sm:text-base sm:leading-7">
                 Aqui ficam os torneios que voce administra, participa ou pode acompanhar.
               </p>
 
               <div className="mt-4 flex flex-wrap gap-2 sm:mt-6 sm:gap-3">
-                <Button asChild className="bg-white text-slate-950 hover:bg-emerald-50">
+                <Button asChild className="bg-white text-ink hover:bg-acid/10">
                   <Link to="/torneios/criar">
                     Criar torneio <Plus className="h-4 w-4" />
                   </Link>
@@ -201,13 +201,13 @@ export default function Dashboard() {
                     <div className="flex items-center justify-between gap-3">
                       <div className="min-w-0">
                         <div className="text-xl font-semibold text-white sm:text-2xl">{value}</div>
-                        <div className="mt-1 text-[10px] font-semibold uppercase tracking-[0.12em] text-emerald-50/75 sm:text-[11px] sm:tracking-[0.16em]">{label}</div>
+                        <div className="mt-1 text-[10px] font-semibold uppercase tracking-[0.12em] text-white/70 sm:text-[11px] sm:tracking-[0.16em]">{label}</div>
                       </div>
-                      <div className="hidden h-10 w-10 items-center justify-center rounded-2xl bg-white/10 text-emerald-50 sm:flex">
+                      <div className="hidden h-10 w-10 items-center justify-center rounded-2xl bg-white/10 text-white/70 sm:flex">
                         <Icon className="h-4.5 w-4.5" />
                       </div>
                     </div>
-                    <p className="mt-3 hidden text-xs leading-5 text-emerald-50/70 sm:block">{hint}</p>
+                    <p className="mt-3 hidden text-xs leading-5 text-white/70 sm:block">{hint}</p>
                   </div>
                 ))}
               </div>
@@ -228,16 +228,16 @@ export default function Dashboard() {
                   <Link
                     key={tournament.id}
                     to={`/torneios/${tournament.id}`}
-                    className="block rounded-[1.35rem] border border-emerald-950/8 bg-secondary/35 p-4 transition-transform duration-200 hover:-translate-y-0.5"
+                    className="block rounded-[1.35rem] border border-gray-100 bg-paper p-4 transition-transform duration-200 hover:-translate-y-0.5"
                   >
                     <div className="flex items-start justify-between gap-3">
                       <div className="min-w-0">
-                        <div className="text-xs font-semibold uppercase tracking-[0.16em] text-emerald-700/75">
+                        <div className="text-xs font-semibold uppercase tracking-[0.16em] text-gray-400">
                           {roleLabel(tournament.my_role)}
                         </div>
-                        <div className="mt-1 truncate text-lg font-semibold text-slate-950">{tournament.name}</div>
-                        <div className="mt-2 flex flex-wrap items-center gap-2 text-xs text-slate-600">
-                          <span className={`inline-flex items-center gap-1 rounded-full border px-2 py-1 font-medium ${STATUS_TONE[tournament.status] || 'bg-slate-100 text-slate-700 border-slate-200'}`}>
+                        <div className="mt-1 truncate text-lg font-semibold text-ink">{tournament.name}</div>
+                        <div className="mt-2 flex flex-wrap items-center gap-2 text-xs text-gray-500">
+                          <span className={`inline-flex items-center gap-1 rounded-full border px-2 py-1 font-medium ${STATUS_TONE[tournament.status] || 'bg-paper text-gray-600 border-gray-200'}`}>
                             <Calendar className="h-3 w-3" />
                             {TOURNAMENT_STATUS_LABELS[tournament.status] || tournament.status}
                           </span>
@@ -247,13 +247,13 @@ export default function Dashboard() {
                           </span>
                         </div>
                       </div>
-                      <ArrowRight className="mt-1 h-4 w-4 shrink-0 text-emerald-700" />
+                      <ArrowRight className="mt-1 h-4 w-4 shrink-0 text-green-700" />
                     </div>
                   </Link>
                 ))}
               </div>
             ) : (
-              <div className="mt-6 rounded-[1.5rem] border border-dashed border-emerald-300/40 bg-emerald-50/65 p-5 text-sm leading-6 text-slate-600">
+              <div className="mt-6 rounded-[1.5rem] border border-dashed border-green-300/40 bg-green-50 p-5 text-sm leading-6 text-gray-500">
                 Assim que você criar ou ingressar em um torneio, este painel passa a destacar automaticamente o que está mais urgente.
               </div>
             )}
@@ -389,7 +389,7 @@ function AvailableEventsSection() {
               to={`/clubes/${event.club_id}/eventos/${event.id}`}
               className="block h-full"
             >
-              <Card className="match-surface h-full overflow-hidden rounded-[1.5rem] border-white/80 bg-white/85">
+              <Card className="h-full overflow-hidden rounded-[1.5rem] border-white/80 bg-white/85">
                 <CardContent className="flex h-full flex-col p-5">
                   <div className="flex items-center justify-between gap-2">
                     <Badge variant="success" className="rounded-full">{eventTypeLabel(event.type)}</Badge>
@@ -397,12 +397,12 @@ function AvailableEventsSection() {
                       {priv ? 'Privado' : 'Público'}
                     </Badge>
                   </div>
-                  <h4 className="mt-3 line-clamp-2 text-lg font-semibold text-slate-950">{event.title}</h4>
-                  <div className="mt-3 flex flex-wrap gap-x-3 gap-y-1 text-xs text-slate-600">
+                  <h4 className="mt-3 line-clamp-2 text-lg font-semibold text-ink">{event.title}</h4>
+                  <div className="mt-3 flex flex-wrap gap-x-3 gap-y-1 text-xs text-gray-500">
                     {when && <span className="inline-flex items-center gap-1"><Calendar className="h-3 w-3" /> {when}</span>}
                     {event.location && <span className="inline-flex items-center gap-1"><MapPin className="h-3 w-3" /> {event.location}</span>}
                   </div>
-                  <div className="mt-auto flex items-center justify-between pt-5 text-sm font-medium text-emerald-800">
+                  <div className="mt-auto flex items-center justify-between pt-5 text-sm font-medium text-green-700">
                     <span>
                       {status === INVITE_STATUS.INVITED
                         ? 'Convite pendente — responda'
@@ -428,19 +428,19 @@ function SectionHeader({ eyebrow, title, description, action }) {
 
 function TournamentCard({ tournament, ctaLabel }) {
   const dateRange = formatDateRange(tournament.starts_at, tournament.ends_at);
-  const statusTone = STATUS_TONE[tournament.status] || 'bg-slate-100 text-slate-700 border-slate-200';
+  const statusTone = STATUS_TONE[tournament.status] || 'bg-paper text-gray-600 border-gray-200';
 
   return (
     <Link to={`/torneios/${tournament.id}`} className="block h-full">
-      <Card className="match-surface h-full overflow-hidden rounded-[1.75rem] border-white/80 bg-white/85">
+      <Card className="h-full overflow-hidden rounded-[1.75rem] border-white/80 bg-white/85">
         <CardContent className="flex h-full flex-col p-5 sm:p-6">
           <div className="flex items-start justify-between gap-3">
             <div className="min-w-0">
-              <div className="text-xs font-semibold uppercase tracking-[0.16em] text-emerald-700/75">
+              <div className="text-xs font-semibold uppercase tracking-[0.16em] text-gray-400">
                 {roleLabel(tournament.my_role)}
               </div>
-              <h4 className="mt-2 flex items-center gap-3 text-lg font-semibold text-slate-950">
-                <span className="flex h-11 w-11 shrink-0 items-center justify-center rounded-2xl bg-emerald-100 text-emerald-700">
+              <h4 className="mt-2 flex items-center gap-3 text-lg font-semibold text-ink">
+                <span className="flex h-11 w-11 shrink-0 items-center justify-center rounded-2xl bg-green-100 text-green-700">
                   <Trophy className="h-4.5 w-4.5" />
                 </span>
                 <span className="truncate">{tournament.name}</span>
@@ -452,36 +452,36 @@ function TournamentCard({ tournament, ctaLabel }) {
             </Badge>
           </div>
 
-          <div className="mt-4 flex items-center gap-2 text-sm text-slate-600">
-            <MapPin className="h-4 w-4 shrink-0 text-emerald-700" />
+          <div className="mt-4 flex items-center gap-2 text-sm text-gray-500">
+            <MapPin className="h-4 w-4 shrink-0 text-green-700" />
             <span className="truncate">{locationLabel(tournament)}</span>
           </div>
 
           {tournament.description && (
-            <p className="mt-4 line-clamp-3 text-sm leading-6 text-slate-600">{tournament.description}</p>
+            <p className="mt-4 line-clamp-3 text-sm leading-6 text-gray-500">{tournament.description}</p>
           )}
 
-          <div className="mt-4 flex flex-wrap gap-2 text-xs text-slate-600">
+          <div className="mt-4 flex flex-wrap gap-2 text-xs text-gray-500">
             <span className={`inline-flex items-center gap-1 rounded-full border px-2.5 py-1 font-medium ${statusTone}`}>
               <Calendar className="h-3 w-3" />
               {TOURNAMENT_STATUS_LABELS[tournament.status] || tournament.status}
             </span>
             {dateRange && (
-              <span className="inline-flex items-center gap-1 rounded-full border border-emerald-950/10 bg-white/75 px-2.5 py-1">
+              <span className="inline-flex items-center gap-1 rounded-full border border-gray-100 bg-white/75 px-2.5 py-1">
                 <Calendar className="h-3 w-3" /> {dateRange}
               </span>
             )}
-            <span className="inline-flex items-center gap-1 rounded-full border border-emerald-950/10 bg-white/75 px-2.5 py-1">
+            <span className="inline-flex items-center gap-1 rounded-full border border-gray-100 bg-white/75 px-2.5 py-1">
               <Globe className="h-3 w-3" /> {TOURNAMENT_VISIBILITY_LABELS[tournament.visibility || TOURNAMENT_VISIBILITY.PRIVATE]}
             </span>
             {tournament.invite_code && (
-              <span className="inline-flex items-center gap-1 rounded-full border border-emerald-950/10 bg-white/75 px-2.5 py-1">
+              <span className="inline-flex items-center gap-1 rounded-full border border-gray-100 bg-white/75 px-2.5 py-1">
                 <Hash className="h-3 w-3" /> {tournament.invite_code}
               </span>
             )}
           </div>
 
-          <div className="mt-auto flex items-center justify-between pt-6 text-sm font-medium text-emerald-800">
+          <div className="mt-auto flex items-center justify-between pt-6 text-sm font-medium text-green-700">
             <span>{ctaLabel}</span>
             <ArrowRight className="h-4 w-4" />
           </div>

@@ -53,12 +53,12 @@ export default function EventChat({ eventId }) {
   const handleDelete = (message) => remove.mutateAsync(message.id);
 
   return (
-    <div className="flex h-[60vh] flex-col rounded-xl border border-slate-200 bg-slate-50/60">
+    <div className="flex h-[60vh] flex-col rounded-xl border border-gray-200 bg-paper/60">
       <div className="flex-1 space-y-2 overflow-y-auto p-4">
         {isLoading ? (
           <div className="space-y-3">{[1, 2, 3].map((i) => <Skeleton key={i} className="h-12 w-2/3 rounded-2xl" />)}</div>
         ) : messages.length === 0 ? (
-          <p className="py-10 text-center text-sm text-slate-500">
+          <p className="py-10 text-center text-sm text-gray-500">
             Nenhuma mensagem ainda. Comece a conversa com os participantes.
           </p>
         ) : (
@@ -71,7 +71,7 @@ export default function EventChat({ eventId }) {
               <React.Fragment key={m.id}>
                 {showDay && (
                   <div className="my-2 text-center">
-                    <span className="rounded-full bg-white px-3 py-1 text-[11px] font-medium text-slate-500 shadow-sm">
+                    <span className="rounded-full bg-white px-3 py-1 text-[11px] font-medium text-gray-500 shadow-sm">
                       {dayLabel(m.created_at_ms)}
                     </span>
                   </div>
@@ -89,7 +89,7 @@ export default function EventChat({ eventId }) {
         )}
         <div ref={bottomRef} />
       </div>
-      <form onSubmit={handleSend} className="flex items-end gap-2 border-t border-slate-200 p-3">
+      <form onSubmit={handleSend} className="flex items-end gap-2 border-t border-gray-200 p-3">
         <textarea
           value={draft}
           onChange={(e) => setDraft(e.target.value)}

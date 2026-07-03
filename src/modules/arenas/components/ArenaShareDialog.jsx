@@ -59,8 +59,8 @@ export default function ArenaShareDialog({ arena, open, onOpenChange }) {
           <DialogDescription>Baixe o card, copie o link ou envie pelo WhatsApp.</DialogDescription>
         </DialogHeader>
 
-        <div ref={cardRef} className="overflow-hidden rounded-2xl border border-acid/20 bg-gradient-to-br from-emerald-600 to-emerald-800 p-5 text-white">
-          <div className="flex items-center gap-2 text-xs font-semibold uppercase tracking-[0.2em] text-emerald-50/80">
+        <div ref={cardRef} className="overflow-hidden rounded-2xl border border-acid/20 bg-gradient-to-br from-ink to-ink-light p-5 text-white">
+          <div className="flex items-center gap-2 text-xs font-semibold uppercase tracking-[0.2em] text-white/70">
             <Building className="h-4 w-4" /> Arena · Pickleholics
           </div>
           {arena.cover_url ? (
@@ -68,12 +68,12 @@ export default function ArenaShareDialog({ arena, open, onOpenChange }) {
           ) : null}
           <h3 className="mt-3 text-2xl font-bold leading-tight">{arena.name}</h3>
           {formatArenaAddress(arena) && (
-            <p className="mt-1 flex items-center gap-1 text-sm text-emerald-50/85">
+            <p className="mt-1 flex items-center gap-1 text-sm text-white/70">
               <MapPin className="h-3.5 w-3.5" /> {formatArenaAddress(arena)}
             </p>
           )}
           <div className="mt-4 flex items-center justify-between gap-3">
-            <p className="text-xs text-emerald-50/80">Aponte a câmera para reservar e ver os horários.</p>
+            <p className="text-xs text-white/70">Aponte a câmera para reservar e ver os horários.</p>
             {qr && <img src={qr} alt="QR" className="h-20 w-20 rounded-lg bg-white p-1" />}
           </div>
         </div>

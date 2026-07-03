@@ -75,7 +75,7 @@ export default function AdminTournaments() {
           eyebrow="Admin torneios"
           title="Governança do catálogo competitivo"
           description="Arquive, reabra ou remova torneios com leitura mais clara do inventário atual da plataforma."
-          action={<Trophy className="h-6 w-6 text-emerald-600" />}
+          action={<Trophy className="h-6 w-6 text-green-600" />}
         />
       </PlatformSurfaceCard>
 
@@ -92,7 +92,7 @@ export default function AdminTournaments() {
       {!tournaments ? (
         <div className="grid grid-cols-2 gap-3 md:grid-cols-3">
           {[1, 2, 3].map((item) => (
-            <div key={item} className="h-32 animate-pulse rounded-[1.5rem] bg-slate-200/70" />
+            <div key={item} className="h-32 animate-pulse rounded-[1.5rem] bg-gray-200/70" />
           ))}
         </div>
       ) : items.length === 0 ? (
@@ -105,9 +105,9 @@ export default function AdminTournaments() {
         </PlatformSurfaceCard>
       ) : (
         <PlatformSurfaceCard contentClassName="p-0">
-          <div className="arena-table-wrap">
+          <div className="overflow-x-auto rounded-3xl border border-gray-100">
             <table className="w-full text-sm">
-              <thead className="bg-slate-50">
+              <thead className="bg-paper">
                 <tr className="text-left">
                   <th className="px-3 py-2">Nome</th>
                   <th className="px-3 py-2">Cidade</th>

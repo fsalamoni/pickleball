@@ -94,7 +94,7 @@ export default function ClubAdminTab({ club }) {
         </CardHeader>
         <CardContent className="space-y-3 p-4 pt-0 sm:p-5 sm:pt-0">
           <div className="flex flex-wrap items-center gap-2">
-            <code className="rounded-md border border-emerald-950/10 bg-secondary/40 px-4 py-2 text-lg font-bold tracking-[0.25em] text-slate-900">
+            <code className="rounded-md border border-gray-100 bg-paper px-4 py-2 text-lg font-bold tracking-[0.25em] text-ink">
               {club.invite_code}
             </code>
             <Button variant="outline" size="sm" onClick={() => copy(club.invite_code, 'Código copiado!')}>
@@ -104,7 +104,7 @@ export default function ClubAdminTab({ club }) {
               <RefreshCw className="mr-1.5 h-4 w-4" /> Gerar novo
             </Button>
           </div>
-          <p className="text-xs text-slate-500">
+          <p className="text-xs text-gray-500">
             Ao gerar um novo código, o anterior deixa de funcionar imediatamente.
           </p>
         </CardContent>
@@ -171,7 +171,7 @@ export default function ClubAdminTab({ club }) {
               <Label htmlFor="admin_instagram">Instagram</Label>
               <Input id="admin_instagram" value={form.instagram} onChange={setField('instagram')} maxLength={60} />
             </div>
-            <Button type="submit" disabled={updateClub.isPending} className="bg-emerald-700 hover:bg-emerald-800">
+            <Button type="submit" disabled={updateClub.isPending} className="bg-ink hover:bg-ink-light">
               <Save className="mr-1.5 h-4 w-4" /> {updateClub.isPending ? 'Salvando…' : 'Salvar alterações'}
             </Button>
           </form>
@@ -239,16 +239,16 @@ function ClubJoinRequests({ club }) {
       </CardHeader>
       <CardContent className="space-y-2 p-4 pt-0 sm:p-5 sm:pt-0">
         {isLoading ? (
-          <p className="text-sm text-slate-500">Carregando…</p>
+          <p className="text-sm text-gray-500">Carregando…</p>
         ) : requests.length === 0 ? (
-          <p className="text-sm text-slate-500">Nenhum pedido pendente.</p>
+          <p className="text-sm text-gray-500">Nenhum pedido pendente.</p>
         ) : (
           requests.map((r) => (
-            <div key={r.id} className="flex items-center gap-3 rounded-xl border border-slate-200 bg-white p-3">
+            <div key={r.id} className="flex items-center gap-3 rounded-xl border border-gray-200 bg-white p-3">
               <UserAvatar name={r.user_name} photoUrl={r.photo_url} size="sm" />
               <div className="min-w-0 flex-1">
-                <div className="truncate text-sm font-medium text-slate-900">{r.user_name}</div>
-                {r.user_email && <div className="truncate text-xs text-slate-500">{r.user_email}</div>}
+                <div className="truncate text-sm font-medium text-ink">{r.user_name}</div>
+                {r.user_email && <div className="truncate text-xs text-gray-500">{r.user_email}</div>}
               </div>
               <div className="flex shrink-0 gap-1.5">
                 <Button size="sm" onClick={() => handle(approve, r, 'Pedido aprovado.')} disabled={approve.isPending}>
@@ -341,7 +341,7 @@ function ClubAddMembers({ club }) {
       </CardHeader>
       <CardContent className="space-y-3 p-4 pt-0 sm:p-5 sm:pt-0">
         <div className="relative">
-          <Search className="absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-slate-400" />
+          <Search className="absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-gray-400" />
           <Input
             value={search}
             onChange={(e) => setSearch(e.target.value)}
@@ -351,14 +351,14 @@ function ClubAddMembers({ club }) {
         </div>
 
         {isLoading ? (
-          <p className="text-sm text-slate-500">Carregando atletas…</p>
+          <p className="text-sm text-gray-500">Carregando atletas…</p>
         ) : available.length === 0 ? (
-          <div className="flex items-center gap-2 rounded-lg bg-slate-50 px-3 py-4 text-sm text-slate-500">
+          <div className="flex items-center gap-2 rounded-lg bg-paper px-3 py-4 text-sm text-gray-500">
             <Users className="h-4 w-4 shrink-0" />
             {search.trim() ? 'Nenhum atleta encontrado para esse filtro.' : 'Todos os atletas já são membros ou já foram convidados.'}
           </div>
         ) : (
-          <div className="max-h-80 space-y-1.5 overflow-y-auto rounded-lg border border-slate-100 p-1.5">
+          <div className="max-h-80 space-y-1.5 overflow-y-auto rounded-lg border border-gray-100 p-1.5">
             {available.map((a) => {
               const isSel = !!selected[a.id];
               return (
@@ -367,19 +367,19 @@ function ClubAddMembers({ club }) {
                   key={a.id}
                   onClick={() => toggle(a)}
                   className={`flex w-full items-center gap-3 rounded-lg border p-2.5 text-left transition-colors ${
-                    isSel ? 'border-emerald-300 bg-emerald-50' : 'border-transparent bg-white hover:bg-slate-50'
+                    isSel ? 'border-green-300 bg-green-50' : 'border-transparent bg-white hover:bg-paper'
                   }`}
                 >
                   <span className={`flex h-5 w-5 shrink-0 items-center justify-center rounded-md border ${
-                    isSel ? 'border-emerald-600 bg-emerald-600 text-white' : 'border-slate-300 bg-white'
+                    isSel ? 'border-ink bg-ink text-white' : 'border-gray-200 bg-white'
                   }`}>
                     {isSel && <Check className="h-3.5 w-3.5" />}
                   </span>
                   <UserAvatar name={athleteName(a)} photoUrl={a.photo_url} size="sm" />
                   <div className="min-w-0 flex-1">
-                    <div className="truncate text-sm font-medium text-slate-900">{athleteName(a)}</div>
+                    <div className="truncate text-sm font-medium text-ink">{athleteName(a)}</div>
                     {(a.city || a.email) && (
-                      <div className="truncate text-xs text-slate-500">
+                      <div className="truncate text-xs text-gray-500">
                         {a.city ? `${a.city}${a.state ? ` / ${a.state}` : ''}` : a.email}
                       </div>
                     )}
@@ -393,7 +393,7 @@ function ClubAddMembers({ club }) {
         <Button
           onClick={handleInviteSelected}
           disabled={selectedCount === 0 || inviteMany.isPending}
-          className="w-full bg-emerald-700 hover:bg-emerald-800"
+          className="w-full bg-ink hover:bg-ink-light"
         >
           <UserPlus className="mr-1.5 h-4 w-4" />
           {inviteMany.isPending
@@ -402,18 +402,18 @@ function ClubAddMembers({ club }) {
         </Button>
 
         {invites.length > 0 && (
-          <div className="border-t border-slate-100 pt-3">
-            <div className="mb-2 text-xs font-semibold uppercase tracking-wide text-slate-400">Convites pendentes ({invites.length})</div>
+          <div className="border-t border-gray-100 pt-3">
+            <div className="mb-2 text-xs font-semibold uppercase tracking-wide text-gray-400">Convites pendentes ({invites.length})</div>
             <div className="space-y-1.5">
               {invites.map((i) => (
-                <div key={i.id} className="flex items-center gap-2 rounded-lg bg-slate-50 px-2.5 py-1.5">
+                <div key={i.id} className="flex items-center gap-2 rounded-lg bg-paper px-2.5 py-1.5">
                   <UserAvatar name={i.user_name} photoUrl={i.photo_url} size="sm" />
-                  <span className="min-w-0 flex-1 truncate text-sm text-slate-700">{i.user_name}</span>
+                  <span className="min-w-0 flex-1 truncate text-sm text-gray-600">{i.user_name}</span>
                   <button
                     type="button"
                     onClick={() => handleCancel(i)}
                     disabled={cancelInvite.isPending}
-                    className="text-slate-400 transition-colors hover:text-red-600"
+                    className="text-gray-400 transition-colors hover:text-red-600"
                     title="Cancelar convite"
                   >
                     <X className="h-4 w-4" />

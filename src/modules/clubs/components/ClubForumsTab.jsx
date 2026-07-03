@@ -70,7 +70,7 @@ export default function ClubForumsTab({ clubId, isAdmin, initialThreadId, onThre
   return (
     <div className="space-y-4">
       <div className="flex items-center justify-between gap-3">
-        <p className="text-sm text-slate-600">
+        <p className="text-sm text-gray-500">
           Discussões do clube: combine jogos, faça enquetes e compartilhe avisos com formatação rica.
         </p>
         <Button size="sm" onClick={() => setCreateOpen(true)}>
@@ -94,7 +94,7 @@ export default function ClubForumsTab({ clubId, isAdmin, initialThreadId, onThre
             return (
               <Card
                 key={thread.id}
-                className="cursor-pointer rounded-xl transition-colors hover:border-emerald-300"
+                className="cursor-pointer rounded-xl transition-colors hover:border-green-400"
                 onClick={() => select(thread.id)}
               >
                 <CardContent className="p-4">
@@ -103,15 +103,15 @@ export default function ClubForumsTab({ clubId, isAdmin, initialThreadId, onThre
                     <div className="min-w-0 flex-1">
                       <div className="flex flex-wrap items-center gap-2">
                         {thread.pinned && <Badge variant="warning" className="rounded-full"><Pin className="mr-1 h-3 w-3" /> Fixado</Badge>}
-                        <h4 className="text-base font-semibold text-slate-900">{thread.title}</h4>
+                        <h4 className="text-base font-semibold text-ink">{thread.title}</h4>
                       </div>
-                      <div className="mt-0.5 text-xs text-slate-500">
+                      <div className="mt-0.5 text-xs text-gray-500">
                         {thread.author_name} · {timeAgo(thread.last_activity_ms || thread.created_at_ms)}
                       </div>
-                      {thread.body && <p className="mt-2 line-clamp-2 text-sm text-slate-600">{snippet(thread.body)}</p>}
-                      <div className="mt-3 flex flex-wrap items-center gap-3 text-xs text-slate-500">
+                      {thread.body && <p className="mt-2 line-clamp-2 text-sm text-gray-500">{snippet(thread.body)}</p>}
+                      <div className="mt-3 flex flex-wrap items-center gap-3 text-xs text-gray-500">
                         <span className="inline-flex items-center gap-1"><MessageSquare className="h-3.5 w-3.5" /> {thread.comment_count || 0}</span>
-                        {thread.poll && <span className="inline-flex items-center gap-1 text-emerald-700"><BarChart3 className="h-3.5 w-3.5" /> Enquete</span>}
+                        {thread.poll && <span className="inline-flex items-center gap-1 text-green-700"><BarChart3 className="h-3.5 w-3.5" /> Enquete</span>}
                         {attachmentsCount > 0 && <span className="inline-flex items-center gap-1"><Paperclip className="h-3.5 w-3.5" /> {attachmentsCount}</span>}
                       </div>
                     </div>

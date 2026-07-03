@@ -177,12 +177,12 @@ export default function BookingRequestDialog({ arena, open, onOpenChange }) {
               <div className="text-xs font-semibold uppercase tracking-[0.16em] text-gray-400">Prévia da agenda solicitada</div>
               <div className="mt-2 flex flex-wrap gap-2">
                 {candidateSlots.slice(0, 8).map((slot) => (
-                  <span key={`${slot.date}_${slot.start}`} className="rounded-full border border-gray-100 bg-secondary/35 px-3 py-1 text-xs text-slate-700">
+                  <span key={`${slot.date}_${slot.start}`} className="rounded-full border border-gray-100 bg-paper px-3 py-1 text-xs text-gray-600">
                     {slotLabel(slot)}
                   </span>
                 ))}
                 {candidateSlots.length > 8 && (
-                  <span className="rounded-full border border-gray-100 bg-secondary/35 px-3 py-1 text-xs text-slate-700">
+                  <span className="rounded-full border border-gray-100 bg-paper px-3 py-1 text-xs text-gray-600">
                     +{candidateSlots.length - 8} horário(s)
                   </span>
                 )}
@@ -197,11 +197,11 @@ export default function BookingRequestDialog({ arena, open, onOpenChange }) {
           )}
 
           {upcomingConfirmedSlots.length > 0 && (
-            <div className="rounded-[1rem] border border-gray-100 bg-secondary/35 p-3">
+            <div className="rounded-[1rem] border border-gray-100 bg-paper p-3">
               <div className="text-xs font-semibold uppercase tracking-[0.16em] text-gray-400">Próximos horários já confirmados</div>
               <div className="mt-2 flex flex-wrap gap-2">
                 {upcomingConfirmedSlots.map((slot) => (
-                  <span key={`confirmed_${slot.date}_${slot.start}`} className="rounded-full border border-gray-100 bg-white/75 px-3 py-1 text-xs text-slate-700">
+                  <span key={`confirmed_${slot.date}_${slot.start}`} className="rounded-full border border-gray-100 bg-white/75 px-3 py-1 text-xs text-gray-600">
                     {slotLabel(slot)}
                   </span>
                 ))}

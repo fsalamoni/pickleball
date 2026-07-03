@@ -17,7 +17,7 @@ export default function ErrorState({ message = 'Não foi possível carregar os d
         <div className="flex h-10 w-10 items-center justify-center rounded-full bg-red-50 text-red-600">
           <AlertTriangle className="h-5 w-5" />
         </div>
-        <p className="text-sm text-slate-600">{message}</p>
+        <p className="text-sm text-gray-500">{message}</p>
         {onRetry && (
           <Button variant="outline" size="sm" onClick={onRetry}>Tentar novamente</Button>
         )}

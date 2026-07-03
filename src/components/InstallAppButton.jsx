@@ -55,28 +55,28 @@ export default function InstallAppButton({
         <DialogContent className="sm:max-w-md">
           <DialogHeader>
             <DialogTitle className="flex items-center gap-2">
-              <Smartphone className="h-5 w-5 text-emerald-600" />
+              <Smartphone className="h-5 w-5 text-green-600" />
               Instalar no iPhone / iPad
             </DialogTitle>
             <DialogDescription>
               No iOS, o app é instalado direto pelo Safari, sem App Store. Siga os passos:
             </DialogDescription>
           </DialogHeader>
-          <ol className="mt-2 space-y-3 text-sm text-slate-700">
+          <ol className="mt-2 space-y-3 text-sm text-gray-600">
             <li className="flex items-start gap-3">
-              <span className="mt-0.5 flex h-6 w-6 shrink-0 items-center justify-center rounded-full bg-emerald-100 text-xs font-semibold text-emerald-700">1</span>
+              <span className="mt-0.5 flex h-6 w-6 shrink-0 items-center justify-center rounded-full bg-green-100 text-xs font-semibold text-green-700">1</span>
               <span className="flex items-center gap-1">
                 Toque no botão <Share className="inline h-4 w-4" /> <strong>Compartilhar</strong> na barra do Safari.
               </span>
             </li>
             <li className="flex items-start gap-3">
-              <span className="mt-0.5 flex h-6 w-6 shrink-0 items-center justify-center rounded-full bg-emerald-100 text-xs font-semibold text-emerald-700">2</span>
+              <span className="mt-0.5 flex h-6 w-6 shrink-0 items-center justify-center rounded-full bg-green-100 text-xs font-semibold text-green-700">2</span>
               <span className="flex items-center gap-1">
                 Escolha <Plus className="inline h-4 w-4" /> <strong>Adicionar à Tela de Início</strong>.
               </span>
             </li>
             <li className="flex items-start gap-3">
-              <span className="mt-0.5 flex h-6 w-6 shrink-0 items-center justify-center rounded-full bg-emerald-100 text-xs font-semibold text-emerald-700">3</span>
+              <span className="mt-0.5 flex h-6 w-6 shrink-0 items-center justify-center rounded-full bg-green-100 text-xs font-semibold text-green-700">3</span>
               <span>Confirme em <strong>Adicionar</strong>. O ícone do Pickleball aparece na tela inicial.</span>
             </li>
           </ol>
@@ -87,16 +87,16 @@ export default function InstallAppButton({
         <DialogContent className="sm:max-w-md">
           <DialogHeader>
             <DialogTitle className="flex items-center gap-2">
-              <MonitorDown className="h-5 w-5 text-emerald-600" />
+              <MonitorDown className="h-5 w-5 text-green-600" />
               Instalar o app
             </DialogTitle>
             <DialogDescription>
               Você pode instalar o Pickleball direto do navegador, sem loja de apps:
             </DialogDescription>
           </DialogHeader>
-          <ul className="mt-2 space-y-3 text-sm text-slate-700">
+          <ul className="mt-2 space-y-3 text-sm text-gray-600">
             <li className="flex items-start gap-3">
-              <span className="mt-0.5 flex h-6 w-6 shrink-0 items-center justify-center rounded-full bg-emerald-100 text-emerald-700">
+              <span className="mt-0.5 flex h-6 w-6 shrink-0 items-center justify-center rounded-full bg-green-100 text-green-700">
                 <MonitorDown className="h-3.5 w-3.5" />
               </span>
               <span>
@@ -105,7 +105,7 @@ export default function InstallAppButton({
               </span>
             </li>
             <li className="flex items-start gap-3">
-              <span className="mt-0.5 flex h-6 w-6 shrink-0 items-center justify-center rounded-full bg-emerald-100 text-emerald-700">
+              <span className="mt-0.5 flex h-6 w-6 shrink-0 items-center justify-center rounded-full bg-green-100 text-green-700">
                 <Smartphone className="h-3.5 w-3.5" />
               </span>
               <span>
@@ -115,7 +115,7 @@ export default function InstallAppButton({
               </span>
             </li>
             <li className="flex items-start gap-3">
-              <span className="mt-0.5 flex h-6 w-6 shrink-0 items-center justify-center rounded-full bg-emerald-100 text-emerald-700">
+              <span className="mt-0.5 flex h-6 w-6 shrink-0 items-center justify-center rounded-full bg-green-100 text-green-700">
                 <Share className="h-3.5 w-3.5" />
               </span>
               <span>

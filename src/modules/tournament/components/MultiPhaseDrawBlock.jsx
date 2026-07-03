@@ -203,13 +203,13 @@ function PhaseSection({ tournament, modality, phase, stageIndex, isFirst, isLast
 
   return (
     <CollapsibleSection
-      className="border-slate-200 bg-slate-50/40"
+      className="border-gray-200 bg-paper/40"
       headerClassName="py-1.5"
       title={`Fase ${stageIndex + 1}`}
       badges={(
         <>
           <Badge variant="secondary">{TOURNAMENT_STAGE_TYPE_LABELS[phase.type]}</Badge>
-          <span className="text-xs text-slate-500">
+          <span className="text-xs text-gray-500">
             {matches.length > 0 ? `${playedCount}/${matches.length} jogos` : 'não sorteada'}
           </span>
         </>
@@ -228,12 +228,12 @@ function PhaseSection({ tournament, modality, phase, stageIndex, isFirst, isLast
         {groups.length > 0 && (
           <div className="grid sm:grid-cols-2 gap-2">
             {groups.map((g) => (
-              <div key={g.id || g.name} className="rounded border border-slate-200 p-2">
+              <div key={g.id || g.name} className="rounded border border-gray-200 p-2">
                 <div className="text-xs font-semibold flex items-center gap-1">
-                  <Users className="w-3.5 h-3.5 text-emerald-600" /> {g.name}
-                  <span className="text-slate-400 font-normal">({(g.entrants || []).length})</span>
+                  <Users className="w-3.5 h-3.5 text-green-600" /> {g.name}
+                  <span className="text-gray-400 font-normal">({(g.entrants || []).length})</span>
                 </div>
-                <ul className="mt-1 text-xs text-slate-600 space-y-0.5">
+                <ul className="mt-1 text-xs text-gray-500 space-y-0.5">
                   {(g.entrants || []).map((e) => (
                     <li key={e.id}>
                       {(e.members || [e.id]).map((m) => labelById.get(m) || m).join(' + ')}
@@ -246,9 +246,9 @@ function PhaseSection({ tournament, modality, phase, stageIndex, isFirst, isLast
         )}
 
         {matches.length > 0 && (
-          <div className="arena-table-wrap">
+          <div className="overflow-x-auto rounded-3xl border border-gray-100">
             <table className="w-full text-sm">
-              <thead className="bg-slate-50">
+              <thead className="bg-paper">
                 <tr className="text-left">
                   <th className="px-2 py-1">#</th>
                   {matches.some((m) => m.group) && <th className="px-2 py-1">Grupo</th>}
@@ -299,7 +299,7 @@ function PhaseSection({ tournament, modality, phase, stageIndex, isFirst, isLast
         )}
 
         {matches.length === 0 && !isFirst && (
-          <p className="text-xs text-slate-500">
+          <p className="text-xs text-gray-500">
             Esta fase será gerada automaticamente ao concluir a fase anterior e clicar em
             “Gerar próxima fase”.
           </p>
@@ -334,7 +334,7 @@ function PhaseSection({ tournament, modality, phase, stageIndex, isFirst, isLast
 
 function SideCell({ ids, rawSide, labelById, isAdmin, onSubstitute }) {
   if (!ids || ids.length === 0) {
-    return <span className="text-slate-400">{rawSide || '—'}</span>;
+    return <span className="text-gray-400">{rawSide || '—'}</span>;
   }
   return (
     <div className="space-y-0.5">
@@ -349,7 +349,7 @@ function SideCell({ ids, rawSide, labelById, isAdmin, onSubstitute }) {
                 onClick={() => onSubstitute(regId)}
                 title={`Substituir ${name}`}
                 aria-label={`Substituir ${name}`}
-                className="text-slate-400 hover:text-emerald-600 focus-visible:text-emerald-600 transition-colors ml-1"
+                className="text-gray-400 hover:text-green-600 focus-visible:text-green-600 transition-colors ml-1"
               >
                 <Pencil className="w-3 h-3" />
               </button>
@@ -412,20 +412,20 @@ function PhaseGroupsEditorDialog({ tournament, modality, stageIndex, groups, lab
         </DialogHeader>
 
         {groups.length === 0 ? (
-          <p className="text-sm text-slate-500">Nenhum grupo sorteado nesta fase.</p>
+          <p className="text-sm text-gray-500">Nenhum grupo sorteado nesta fase.</p>
         ) : (
           <div className="space-y-3 max-h-[60vh] overflow-y-auto">
             {groups.map((g) => {
               const entrants = entrantsOf(g);
               return (
-                <div key={g.name} className="rounded-md border border-slate-200 p-3">
-                  <div className="mb-2 text-sm font-semibold text-slate-800">
+                <div key={g.name} className="rounded-md border border-gray-200 p-3">
+                  <div className="mb-2 text-sm font-semibold text-ink">
                     {g.name}{' '}
-                    <span className="text-xs font-normal text-slate-500">({entrants.length})</span>
+                    <span className="text-xs font-normal text-gray-500">({entrants.length})</span>
                   </div>
                   <div className="space-y-1.5">
                     {entrants.length === 0 ? (
-                      <p className="text-xs text-slate-400">Grupo vazio</p>
+                      <p className="text-xs text-gray-400">Grupo vazio</p>
                     ) : (
                       entrants.map((e) => (
                         <div key={e.id} className="flex items-center justify-between gap-2">
@@ -532,7 +532,7 @@ function SubstitutePlayerDialog({
           <div>
             <Label>Substituto</Label>
             {available.length === 0 ? (
-              <p className="text-sm text-slate-500 mt-1">
+              <p className="text-sm text-gray-500 mt-1">
                 Nenhum jogador disponível para substituição.
               </p>
             ) : (

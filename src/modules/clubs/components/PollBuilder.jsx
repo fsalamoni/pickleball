@@ -33,9 +33,9 @@ export default function PollBuilder({ value, onChange }) {
   };
 
   return (
-    <div className="space-y-3 rounded-xl border border-emerald-950/10 bg-secondary/30 p-4">
-      <div className="flex items-center gap-2 text-sm font-semibold text-slate-900">
-        <BarChart3 className="h-4 w-4 text-emerald-700" /> Enquete
+    <div className="space-y-3 rounded-xl border border-gray-100 bg-paper p-4">
+      <div className="flex items-center gap-2 text-sm font-semibold text-ink">
+        <BarChart3 className="h-4 w-4 text-green-700" /> Enquete
       </div>
 
       <div className="space-y-1.5">
@@ -63,7 +63,7 @@ export default function PollBuilder({ value, onChange }) {
               type="button"
               variant="ghost"
               size="icon"
-              className="h-9 w-9 shrink-0 text-slate-400 hover:text-red-600"
+              className="h-9 w-9 shrink-0 text-gray-400 hover:text-red-600"
               onClick={() => removeOption(index)}
               disabled={options.length <= FORUM_POLL.MIN_OPTIONS}
               aria-label="Remover opção"
@@ -79,10 +79,10 @@ export default function PollBuilder({ value, onChange }) {
         )}
       </div>
 
-      <div className="flex items-center justify-between gap-3 rounded-lg border border-emerald-950/10 bg-white/60 px-3 py-2">
+      <div className="flex items-center justify-between gap-3 rounded-lg border border-gray-100 bg-white/60 px-3 py-2">
         <div>
-          <div className="text-sm font-medium text-slate-800">Permitir múltiplas escolhas</div>
-          <div className="text-xs text-slate-500">Cada participante pode marcar mais de uma opção.</div>
+          <div className="text-sm font-medium text-ink">Permitir múltiplas escolhas</div>
+          <div className="text-xs text-gray-500">Cada participante pode marcar mais de uma opção.</div>
         </div>
         <Switch checked={!!value.multiple} onCheckedChange={(checked) => setField('multiple', checked)} />
       </div>
@@ -95,7 +95,7 @@ export default function PollBuilder({ value, onChange }) {
           value={value.closesAt || ''}
           onChange={(e) => setField('closesAt', e.target.value)}
         />
-        <p className="text-xs text-slate-500">Após esta data a votação é encerrada automaticamente.</p>
+        <p className="text-xs text-gray-500">Após esta data a votação é encerrada automaticamente.</p>
       </div>
     </div>
   );

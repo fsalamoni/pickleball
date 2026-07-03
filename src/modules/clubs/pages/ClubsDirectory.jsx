@@ -97,21 +97,21 @@ export default function ClubsDirectory() {
   return (
     <div className="space-y-8">
       <section className="grid grid-cols-1 gap-6 xl:grid-cols-[1.08fr,0.92fr]">
-        <Card className="arena-panel-strong overflow-hidden rounded-[1.25rem] border-0 sm:rounded-[2rem]">
+        <Card className="bg-ink text-white overflow-hidden rounded-[1.25rem] border-0 sm:rounded-[2rem]">
           <CardContent className="relative p-5 sm:p-8 lg:p-10">
             <div className="relative max-w-2xl">
-              <span className="inline-flex items-center gap-2 rounded-full border border-white/15 bg-white/10 px-3 py-1 text-xs font-semibold uppercase tracking-[0.18em] text-emerald-50/80">
+              <span className="inline-flex items-center gap-2 rounded-full border border-white/15 bg-white/10 px-3 py-1 text-xs font-semibold uppercase tracking-[0.18em] text-white/70">
                 <Sparkles className="h-3.5 w-3.5" /> Clubes da comunidade
               </span>
               <h2 className="mt-5 text-2xl font-semibold leading-tight text-white sm:text-3xl lg:text-4xl">
                 Encontre seu clube ou crie o seu.
               </h2>
-              <p className="mt-4 max-w-xl text-sm leading-7 text-emerald-50/75 sm:text-base">
+              <p className="mt-4 max-w-xl text-sm leading-7 text-white/70 sm:text-base">
                 Reúna sua turma, organize confraternizações e torneios internos e mantenha todos
                 conectados em um só lugar.
               </p>
               <div className="mt-6 flex flex-wrap gap-3">
-                <Button asChild className="bg-white text-slate-950 hover:bg-emerald-50">
+                <Button asChild className="bg-white text-ink hover:bg-acid/10">
                   <Link to="/clubes/criar"><Plus className="mr-1.5 h-4 w-4" /> Criar clube</Link>
                 </Button>
               </div>
@@ -127,7 +127,7 @@ export default function ClubsDirectory() {
             />
             <form onSubmit={handleJoin} className="mt-5 flex flex-col gap-3 sm:flex-row">
               <div className="relative flex-1">
-                <Hash className="absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-slate-400" />
+                <Hash className="absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-gray-400" />
                 <Input
                   value={code}
                   onChange={(e) => setCode(e.target.value.toUpperCase())}
@@ -160,7 +160,7 @@ export default function ClubsDirectory() {
 
       <PlatformSurfaceCard contentClassName="p-4 sm:p-5">
           <div className="relative">
-            <Search className="absolute left-4 top-1/2 h-4 w-4 -translate-y-1/2 text-slate-400" />
+            <Search className="absolute left-4 top-1/2 h-4 w-4 -translate-y-1/2 text-gray-400" />
             <Input
               value={search}
               onChange={(e) => setSearch(e.target.value)}
@@ -172,14 +172,14 @@ export default function ClubsDirectory() {
                 type="button"
                 onClick={() => setSearch('')}
                 aria-label="Limpar busca"
-                className="absolute right-4 top-1/2 -translate-y-1/2 text-slate-400 transition-colors hover:text-slate-700"
+                className="absolute right-4 top-1/2 -translate-y-1/2 text-gray-400 transition-colors hover:text-gray-600"
               >
                 <X className="h-4 w-4" />
               </button>
             )}
           </div>
-          <div className="mt-4 border-t border-emerald-950/8 pt-4 text-sm text-slate-600">
-            <span className="font-semibold text-slate-950">{filtered.length}</span> clube(s) na plataforma.
+          <div className="mt-4 border-t border-gray-100 pt-4 text-sm text-gray-500">
+            <span className="font-semibold text-ink">{filtered.length}</span> clube(s) na plataforma.
           </div>
       </PlatformSurfaceCard>
 
@@ -245,14 +245,14 @@ function ClubCard({ club, myRole, joinState = null, onRequest, requesting = fals
   };
   return (
     <Link to={`/clubes/${club.id}`} className="block h-full">
-      <Card className="match-surface h-full rounded-[1.75rem] border-white/80 bg-white/85">
+      <Card className="h-full rounded-[1.75rem] border-white/80 bg-white/85">
         <CardContent className="flex h-full flex-col p-5 sm:p-6">
           <div className="flex items-start justify-between gap-3">
-            <h4 className="flex min-w-0 items-center gap-3 text-lg font-semibold text-slate-950">
+            <h4 className="flex min-w-0 items-center gap-3 text-lg font-semibold text-ink">
               {club.logo_url ? (
-                <img src={club.logo_url} alt="" className="h-11 w-11 shrink-0 rounded-2xl border border-emerald-900/10 object-cover" />
+                <img src={club.logo_url} alt="" className="h-11 w-11 shrink-0 rounded-2xl border border-gray-100 object-cover" />
               ) : (
-                <span className="flex h-11 w-11 shrink-0 items-center justify-center rounded-2xl bg-emerald-100 text-emerald-700">
+                <span className="flex h-11 w-11 shrink-0 items-center justify-center rounded-2xl bg-green-100 text-green-700">
                   <Building2 className="h-4.5 w-4.5" />
                 </span>
               )}
@@ -265,24 +265,24 @@ function ClubCard({ club, myRole, joinState = null, onRequest, requesting = fals
             )}
           </div>
 
-          <div className="mt-4 space-y-2 text-sm text-slate-600">
+          <div className="mt-4 space-y-2 text-sm text-gray-500">
             <div className="flex items-center gap-2">
-              <MapPin className="h-4 w-4 shrink-0 text-emerald-700" />
+              <MapPin className="h-4 w-4 shrink-0 text-green-700" />
               <span className="truncate">{location || 'Cidade não informada'}</span>
             </div>
             <div className="flex items-center gap-2">
-              <Users className="h-4 w-4 shrink-0 text-emerald-700" />
+              <Users className="h-4 w-4 shrink-0 text-green-700" />
               <span>{club.member_count || 0} membro(s)</span>
             </div>
           </div>
 
           {club.description && (
-            <p className="mt-4 line-clamp-3 text-sm leading-6 text-slate-600">{club.description}</p>
+            <p className="mt-4 line-clamp-3 text-sm leading-6 text-gray-500">{club.description}</p>
           )}
 
           <div className="mt-auto pt-6">
             {myRole || !joinState || joinState === 'none' ? (
-              <div className="flex items-center justify-between text-sm font-medium text-emerald-800">
+              <div className="flex items-center justify-between text-sm font-medium text-green-700">
                 <span>Abrir clube</span>
                 <ArrowRight className="h-4 w-4" />
               </div>

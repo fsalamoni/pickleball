@@ -4,9 +4,9 @@ import { explainStage } from '@/modules/tournament/domain/formatExplain';
 
 const STATUS_STYLES = {
   ok: {
-    container: 'border-emerald-200 bg-emerald-50 text-emerald-950',
+    container: 'border-green-200 bg-green-50 text-green-800',
     Icon: CheckCircle2,
-    iconClass: 'text-emerald-600',
+    iconClass: 'text-green-600',
   },
   info: {
     container: 'border-sky-200 bg-sky-50 text-sky-950',

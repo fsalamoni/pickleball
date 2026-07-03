@@ -25,14 +25,14 @@ export function PhotoLightbox({
       <DialogTrigger asChild>{trigger}</DialogTrigger>
       <DialogContent
         className={cn(
-          'max-w-5xl border-white/10 bg-slate-950/95 p-3 text-white shadow-[0_28px_80px_-28px_rgba(15,23,42,0.75)]',
+          'max-w-5xl border-white/10 bg-ink/95 p-3 text-white shadow-[0_28px_80px_-28px_rgba(15,23,42,0.75)]',
           contentClassName,
         )}
       >
         {(title || description) && (
           <DialogHeader className="pr-8 text-left">
             {title ? <DialogTitle className="text-white">{title}</DialogTitle> : null}
-            {description ? <DialogDescription className="text-slate-300">{description}</DialogDescription> : null}
+            {description ? <DialogDescription className="text-gray-300">{description}</DialogDescription> : null}
           </DialogHeader>
         )}
         <div className="flex max-h-[82vh] items-center justify-center overflow-hidden rounded-[1.5rem] bg-black/30 p-2">

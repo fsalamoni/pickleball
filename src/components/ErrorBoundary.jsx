@@ -18,10 +18,10 @@ export default class ErrorBoundary extends React.Component {
   render() {
     if (this.state.hasError) {
       return (
-        <div className="min-h-screen flex items-center justify-center bg-slate-50 p-6">
+        <div className="min-h-screen flex items-center justify-center bg-paper p-6">
           <div className="max-w-md w-full bg-white rounded-lg shadow p-6 border">
-            <h1 className="text-xl font-semibold text-slate-900 mb-2">Algo deu errado</h1>
-            <p className="text-sm text-slate-600 mb-4">
+            <h1 className="text-xl font-semibold text-ink mb-2">Algo deu errado</h1>
+            <p className="text-sm text-gray-500 mb-4">
               Ocorreu um erro inesperado. Recarregue a página para tentar novamente.
             </p>
             <button
@@ -31,7 +31,7 @@ export default class ErrorBoundary extends React.Component {
               Recarregar
             </button>
             {import.meta.env.DEV && this.state.error && (
-              <pre className="mt-4 p-3 bg-slate-100 rounded text-xs overflow-auto max-h-64">
+              <pre className="mt-4 p-3 bg-paper rounded text-xs overflow-auto max-h-64">
                 {String(this.state.error?.stack || this.state.error)}
               </pre>
             )}
