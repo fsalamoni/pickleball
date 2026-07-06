@@ -238,7 +238,7 @@ export default function V2TournamentModalitiesTab({ tournament, isAdmin }) {
           <div className="grid gap-4 sm:grid-cols-2">
             <div className="space-y-2">
               <label className="text-[11px] font-bold uppercase tracking-widest text-gray-400">Nome (ex.: Duplas Mistas Inic.) *</label>
-              <input value={form.name} onChange={(e) => set(e.target.value)} maxLength={80} className="w-full rounded-2xl border border-gray-200 bg-paper px-4 py-3 text-sm text-ink outline-none focus-visible:ring-4 focus-visible:ring-acid/30" />
+              <input value={form.name} onChange={(e) => set('name', e.target.value)} maxLength={80} className="w-full rounded-2xl border border-gray-200 bg-paper px-4 py-3 text-sm text-ink outline-none focus-visible:ring-4 focus-visible:ring-acid/30" />
             </div>
             <div className="space-y-2">
               <label className="text-[11px] font-bold uppercase tracking-widest text-gray-400">Formato</label>
