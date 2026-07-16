@@ -175,7 +175,7 @@ export default function V2ModalityPage() {
             </div>
           </V2Surface>
         )}
-        {tab === 'jogos' && <V2ModalityMatches tournament={tournament} modality={modality} />}
+        {tab === 'jogos' && <V2ModalityMatches tournament={tournament} modality={modality} isAdmin={!!isAdmin} />}
         {tab === 'ranking' && <V2ModalityRanking modality={modality} />}
         {tab === 'fotos' && <V2ModalityGallery tournamentId={tournament.id} modalityId={modality.id} canManage={!!isAdmin} />}
       </div>
