@@ -98,6 +98,32 @@ export default function ModalityRegistrationDialog({
 
   const eligibility = useMemo(() => {
     if (!modality) return { errors: [], warnings: [] };
+    if (canPickAthletes) {
+      // Com o seletor de atletas, os avisos refletem o ATLETA selecionado (e não
+      // o perfil do admin): usa gênero/nível do formulário — que partem do
+      // atleta e podem ser ajustados — e a data de nascimento real da conta
+      // escolhida para a checagem de idade. Sem atleta escolhido para o jogador
+      // A, não há o que avaliar. Admin nunca é bloqueado (tudo vira aviso).
+      const selA = form.player_a_user_id ? platformUsers.find((u) => u.uid === form.player_a_user_id) : null;
+      if (!selA) return { errors: [], warnings: [] };
+      const isDoubles = modality.format === MODALITY_FORMAT.DOUBLES;
+      const selB = form.player_b_user_id ? platformUsers.find((u) => u.uid === form.player_b_user_id) : null;
+      const profileA = {
+        competition_gender: form.player_a_gender || null,
+        leveling_level: form.player_a_level || null,
+        birth_date: selA.birth_date || null,
+      };
+      // Jogador B só entra na avaliação quando um atleta foi escolhido para ele.
+      const profileB = isDoubles && selB
+        ? {
+            competition_gender: form.player_b_gender || null,
+            leveling_level: form.player_b_level || null,
+            birth_date: selB.birth_date || null,
+          }
+        : undefined;
+      const r = evaluateRegistrationEligibility(modality, profileA, profileB);
+      return { errors: [], warnings: [...r.errors, ...r.warnings] };
+    }
     if (isAdmin) {
       // Admin pode sobrescrever — apresentamos os apontamentos como aviso.
       const r = evaluateRegistrationEligibility(modality, userProfile, undefined);
@@ -108,7 +134,19 @@ export default function ModalityRegistrationDialog({
     // Passamos `undefined` para sinalizar "desconhecido" e a engine emite
     // aviso quando precisar.
     return evaluateRegistrationEligibility(modality, userProfile, undefined);
-  }, [modality, userProfile, isAdmin]);
+  }, [
+    modality,
+    userProfile,
+    isAdmin,
+    canPickAthletes,
+    platformUsers,
+    form.player_a_user_id,
+    form.player_b_user_id,
+    form.player_a_gender,
+    form.player_a_level,
+    form.player_b_gender,
+    form.player_b_level,
+  ]);
 
   if (!modality) return null;
   const blocked = !isAdmin && eligibility.errors.length > 0;
