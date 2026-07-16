@@ -12,6 +12,7 @@ import { toast } from 'sonner';
 import {
   CalendarDays,
   CheckCircle2,
+  Copy,
   Lock,
   Play,
   Save,
@@ -38,6 +39,9 @@ import {
 } from '@/modules/tournament/domain/constants';
 import { collection, query, where, getDocs } from 'firebase/firestore';
 import { db } from '@/core/config/firebase';
+import { useFeatureFlag } from '@/core/lib/FeatureFlagsContext';
+import { FEATURE_FLAG } from '@/core/featureFlags';
+import DuplicateTournamentDialog from '@/modules/tournament/components/DuplicateTournamentDialog';
 
 function buildFormState(tournament) {
   return {
@@ -89,6 +93,8 @@ export default function TournamentAdminTab({ tournament }) {
   const updateMutation = useUpdateTournament(tournament.id);
   const [email, setEmail] = useState('');
   const [form, setForm] = useState(() => buildFormState(tournament));
+  const duplicationOn = useFeatureFlag(FEATURE_FLAG.TOURNAMENT_DUPLICATION);
+  const [duplicateOpen, setDuplicateOpen] = useState(false);
 
   useEffect(() => {
     setForm(buildFormState(tournament));
@@ -181,10 +187,18 @@ export default function TournamentAdminTab({ tournament }) {
                 Nome, local, regras, datas e acesso ficam concentrados aqui para facilitar revisão antes de abrir inscrições ou iniciar partidas.
               </p>
             </div>
-            <Button onClick={handleSave} disabled={updateMutation.isPending}>
-              <Save className="w-4 h-4 mr-1" />
-              {updateMutation.isPending ? 'Salvando…' : 'Salvar alterações'}
-            </Button>
+            <div className="flex flex-wrap items-center gap-2">
+              {duplicationOn && (
+                <Button variant="outline" onClick={() => setDuplicateOpen(true)}>
+                  <Copy className="w-4 h-4 mr-1" />
+                  Duplicar torneio
+                </Button>
+              )}
+              <Button onClick={handleSave} disabled={updateMutation.isPending}>
+                <Save className="w-4 h-4 mr-1" />
+                {updateMutation.isPending ? 'Salvando…' : 'Salvar alterações'}
+              </Button>
+            </div>
           </div>
 
           <div className="mt-6 grid gap-3 sm:grid-cols-3">
@@ -362,6 +376,14 @@ export default function TournamentAdminTab({ tournament }) {
           </PlatformSurfaceCard>
         </div>
       </div>
+
+      {duplicationOn && duplicateOpen && (
+        <DuplicateTournamentDialog
+          tournament={tournament}
+          open={duplicateOpen}
+          onClose={() => setDuplicateOpen(false)}
+        />
+      )}
     </div>
   );
 }
