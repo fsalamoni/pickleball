@@ -201,6 +201,17 @@ export const FEATURE_FLAG = Object.freeze({
    * está hoje.
    */
   ADMIN_ATHLETE_REGISTRATION: 'admin_athlete_registration',
+
+  /**
+   * Duplicar torneio: no hub administrativo, o criador/admin de um torneio pode
+   * gerar uma cópia dele. Permite duplicar integralmente (definições,
+   * modalidades e inscritos) ou escolher item a item — o conjunto de definições,
+   * cada modalidade e, por modalidade, o conjunto de inscritos (podendo copiar a
+   * modalidade sem os inscritos). O novo torneio nasce como rascunho, com novo
+   * código de convite e o ator como owner; sorteio (grupos/jogos/ranking) nunca
+   * é copiado. Aditivo — desligado, o botão não aparece e nada muda.
+   */
+  TOURNAMENT_DUPLICATION: 'tournament_duplication',
 });
 
 /** Metadados de exibição para o painel de flags (admin master). */
@@ -393,6 +404,16 @@ export const FEATURE_FLAG_META = Object.freeze({
       + 'preenchidos automaticamente e a inscrição fica vinculada à conta real '
       + 'do atleta. Restrito ao admin da plataforma. Desligado, o modal '
       + 'permanece exatamente como está.',
+  },
+  [FEATURE_FLAG.TOURNAMENT_DUPLICATION]: {
+    label: 'Duplicar torneio',
+    description:
+      'Adiciona, no hub administrativo do torneio, um botão para duplicá-lo. O '
+      + 'criador/admin escolhe duplicar integralmente (definições, modalidades e '
+      + 'inscritos) ou item a item: o conjunto de definições, cada modalidade e, '
+      + 'por modalidade, o conjunto de inscritos (é possível copiar a modalidade '
+      + 'sem os inscritos). O novo torneio nasce como rascunho, com novo código '
+      + 'de convite; o sorteio não é copiado. Desligado, o botão não aparece.',
   },
 });
 

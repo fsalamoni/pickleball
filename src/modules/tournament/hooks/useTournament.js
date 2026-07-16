@@ -19,6 +19,7 @@ import {
   updateModality,
   deleteModality,
 } from '../services/modalityService';
+import { duplicateTournament } from '../services/tournamentDuplicationService';
 import {
   listRegistrations,
   listRegistrationsByTournament,
@@ -105,6 +106,19 @@ export function useCreateTournament() {
       qc.invalidateQueries({ queryKey: ['my-tournaments'] });
       qc.invalidateQueries({ queryKey: ['tournaments-public'] });
       track(FUNNEL_EVENT.TOURNAMENT_CREATED);
+    },
+  });
+}
+
+export function useDuplicateTournament() {
+  const { user } = useAuth();
+  const qc = useQueryClient();
+  return useMutation({
+    mutationFn: (params) => duplicateTournament(user, params),
+    onSuccess: () => {
+      qc.invalidateQueries({ queryKey: ['my-tournaments'] });
+      qc.invalidateQueries({ queryKey: ['tournaments-public'] });
+      qc.invalidateQueries({ queryKey: ['tournaments-all'] });
     },
   });
 }
