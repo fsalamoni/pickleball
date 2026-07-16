@@ -190,6 +190,17 @@ export const FEATURE_FLAG = Object.freeze({
    * desligado, o botão "Informações" volta a abrir o modal atual.
    */
   MODALITY_PAGES: 'modality_pages',
+
+  /**
+   * Inscrição de atletas pelo admin da plataforma: no modal "Inscrever
+   * participante" dos torneios que o admin master criou ou administra, exibe
+   * uma lista de todos os atletas cadastrados na plataforma (com filtro por
+   * nome) para escolher quem inscrever, preenchendo os dados e vinculando a
+   * inscrição à conta real do atleta. Restrito ao admin da plataforma. Aditivo
+   * — desligado (ou para qualquer outro usuário), o modal segue exatamente como
+   * está hoje.
+   */
+  ADMIN_ATHLETE_REGISTRATION: 'admin_athlete_registration',
 });
 
 /** Metadados de exibição para o painel de flags (admin master). */
@@ -372,6 +383,16 @@ export const FEATURE_FLAG_META = Object.freeze({
       + 'para uma aba própria quando a flag de fotos estiver ligada. Desligado, '
       + 'o botão "Informações" volta a abrir o modal atual e a visão do torneio '
       + 'permanece no formato anterior.',
+  },
+  [FEATURE_FLAG.ADMIN_ATHLETE_REGISTRATION]: {
+    label: 'Inscrição de atletas pelo admin',
+    description:
+      'No modal "Inscrever participante" dos torneios que o admin da plataforma '
+      + 'criou ou administra, exibe uma lista de todos os atletas cadastrados '
+      + '(com filtro por nome) para escolher quem inscrever: os dados são '
+      + 'preenchidos automaticamente e a inscrição fica vinculada à conta real '
+      + 'do atleta. Restrito ao admin da plataforma. Desligado, o modal '
+      + 'permanece exatamente como está.',
   },
 });
 

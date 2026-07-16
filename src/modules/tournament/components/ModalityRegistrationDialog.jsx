@@ -10,13 +10,21 @@ import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { toast } from 'sonner';
-import { AlertTriangle, Info } from 'lucide-react';
+import { AlertTriangle, Info, Search, X } from 'lucide-react';
 import { useAuth } from '@/core/lib/FirebaseAuthContext';
 import { useFeatureFlag } from '@/core/lib/FeatureFlagsContext';
 import { FEATURE_FLAG } from '@/core/featureFlags';
 import { useCreateRegistration, useRegistrations } from '@/modules/tournament/hooks/useTournament';
+import { useAllPlatformUsers } from '@/modules/admin/hooks/usePlatformUsers';
 import { MODALITY_FORMAT, COMPETITION_GENDER } from '@/modules/tournament/domain/constants';
 import { countOccupiedRegistrations, isRegistrationCapacityReached } from '@/modules/tournament/domain/capacity';
+import {
+  filterPlatformAthletes,
+  platformUserDisplayName,
+  platformUserToPlayerFields,
+} from '@/modules/tournament/domain/adminAthleteRegistration';
+import { UserAvatar } from '@/components/ui/user-avatar';
+import { cn } from '@/core/lib/utils';
 import { LEVEL_OPTIONS } from '@/modules/leveling/data/levels';
 
 const GENDER_OPTIONS = [
@@ -39,10 +47,15 @@ export default function ModalityRegistrationDialog({
   onClose,
   isAdmin = false,
 }) {
-  const { user, userProfile } = useAuth();
+  const { user, userProfile, isPlatformAdmin } = useAuth();
   const waitlistOn = useFeatureFlag(FEATURE_FLAG.TOURNAMENT_WAITLIST);
+  const adminAthleteRegOn = useFeatureFlag(FEATURE_FLAG.ADMIN_ATHLETE_REGISTRATION);
   const createMutation = useCreateRegistration();
   const { data: existingRegs = [] } = useRegistrations(modality?.id);
+  // Seletor de atletas da plataforma: exclusivo do admin da plataforma, atrás
+  // da flag, e apenas quando o modal está aberto em modo admin do torneio.
+  const canPickAthletes = Boolean(isAdmin && isPlatformAdmin && adminAthleteRegOn);
+  const { data: platformUsers = [] } = useAllPlatformUsers({ enabled: canPickAthletes && open });
   const isFull = modality
     ? isRegistrationCapacityReached(countOccupiedRegistrations(existingRegs), modality.max_entries)
     : false;
@@ -52,25 +65,36 @@ export default function ModalityRegistrationDialog({
     player_a_email: '',
     player_a_level: '',
     player_a_gender: '',
+    player_a_user_id: null,
+    player_a_photo: null,
     player_b_name: '',
     player_b_email: '',
     player_b_level: '',
     player_b_gender: '',
+    player_b_user_id: null,
+    player_b_photo: null,
   });
 
   useEffect(() => {
     if (!open) return;
     setForm({
-      player_a_name: userProfile?.platform_name || user?.displayName || user?.email || '',
-      player_a_email: user?.email || '',
-      player_a_level: userProfile?.leveling_level || '',
-      player_a_gender: userProfile?.competition_gender || '',
+      // Com o seletor de atletas ativo, o formulário começa vazio para o admin
+      // escolher o atleta na lista. Caso contrário, mantém o autopreenchimento
+      // atual (perfil do usuário logado) — comportamento inalterado.
+      player_a_name: canPickAthletes ? '' : (userProfile?.platform_name || user?.displayName || user?.email || ''),
+      player_a_email: canPickAthletes ? '' : (user?.email || ''),
+      player_a_level: canPickAthletes ? '' : (userProfile?.leveling_level || ''),
+      player_a_gender: canPickAthletes ? '' : (userProfile?.competition_gender || ''),
+      player_a_user_id: null,
+      player_a_photo: null,
       player_b_name: '',
       player_b_email: '',
       player_b_level: '',
       player_b_gender: '',
+      player_b_user_id: null,
+      player_b_photo: null,
     });
-  }, [open, user?.email, user?.displayName, userProfile?.platform_name, userProfile?.leveling_level, userProfile?.competition_gender]);
+  }, [open, canPickAthletes, user?.email, user?.displayName, userProfile?.platform_name, userProfile?.leveling_level, userProfile?.competition_gender]);
 
   const eligibility = useMemo(() => {
     if (!modality) return { errors: [], warnings: [] };
@@ -125,8 +149,10 @@ export default function ModalityRegistrationDialog({
           email: form.player_a_email,
           level: form.player_a_level,
           competition_gender: form.player_a_gender || (isAdmin ? null : userProfile?.competition_gender || null),
-          user_id: isAdmin ? null : user?.uid,
-          photo_url: isAdmin ? null : (userProfile?.photo_url || user?.photoURL || null),
+          // Admin: vincula à conta real do atleta escolhido na lista (quando houver);
+          // fora do modo admin, é sempre o próprio usuário logado.
+          user_id: isAdmin ? (form.player_a_user_id || null) : user?.uid,
+          photo_url: isAdmin ? (form.player_a_photo || null) : (userProfile?.photo_url || user?.photoURL || null),
         },
         player_b:
           modality.format === MODALITY_FORMAT.DOUBLES
@@ -135,6 +161,8 @@ export default function ModalityRegistrationDialog({
                 email: form.player_b_email,
                 level: form.player_b_level,
                 competition_gender: form.player_b_gender || null,
+                user_id: form.player_b_user_id || null,
+                photo_url: form.player_b_photo || null,
               }
             : null,
       });
@@ -143,6 +171,31 @@ export default function ModalityRegistrationDialog({
     } catch (err) {
       toast.error(err.message || 'Falha na inscrição.');
     }
+  }
+
+  function selectAthlete(slot, platformUser) {
+    const p = platformUserToPlayerFields(platformUser);
+    setForm((f) => ({
+      ...f,
+      [`player_${slot}_name`]: p.name,
+      [`player_${slot}_email`]: p.email,
+      [`player_${slot}_level`]: p.level,
+      [`player_${slot}_gender`]: p.gender,
+      [`player_${slot}_user_id`]: p.user_id,
+      [`player_${slot}_photo`]: p.photo_url,
+    }));
+  }
+
+  function clearAthlete(slot) {
+    setForm((f) => ({
+      ...f,
+      [`player_${slot}_name`]: '',
+      [`player_${slot}_email`]: '',
+      [`player_${slot}_level`]: '',
+      [`player_${slot}_gender`]: '',
+      [`player_${slot}_user_id`]: null,
+      [`player_${slot}_photo`]: null,
+    }));
   }
 
   return (
@@ -192,11 +245,20 @@ export default function ModalityRegistrationDialog({
             </div>
           )}
 
+          {canPickAthletes && (
+            <AthletePicker
+              label="Escolher atleta cadastrado (Jogador A)"
+              users={platformUsers}
+              selectedUserId={form.player_a_user_id}
+              onSelect={(u) => selectAthlete('a', u)}
+              onClear={() => clearAthlete('a')}
+            />
+          )}
           <div>
             <Label>{isAdmin ? 'Nome (Jogador A)' : 'Seu nome (Jogador A)'}</Label>
             <Input
               value={form.player_a_name}
-              onChange={(e) => setForm((f) => ({ ...f, player_a_name: e.target.value }))}
+              onChange={(e) => setForm((f) => ({ ...f, player_a_name: e.target.value, player_a_user_id: null, player_a_photo: null }))}
             />
           </div>
           <div className="grid grid-cols-1 sm:grid-cols-3 gap-3">
@@ -222,11 +284,20 @@ export default function ModalityRegistrationDialog({
           </div>
           {modality.format === MODALITY_FORMAT.DOUBLES && (
             <>
+              {canPickAthletes && (
+                <AthletePicker
+                  label="Escolher atleta cadastrado (Jogador B)"
+                  users={platformUsers}
+                  selectedUserId={form.player_b_user_id}
+                  onSelect={(u) => selectAthlete('b', u)}
+                  onClear={() => clearAthlete('b')}
+                />
+              )}
               <div>
                 <Label>Parceiro(a) (Jogador B)</Label>
                 <Input
                   value={form.player_b_name}
-                  onChange={(e) => setForm((f) => ({ ...f, player_b_name: e.target.value }))}
+                  onChange={(e) => setForm((f) => ({ ...f, player_b_name: e.target.value, player_b_user_id: null, player_b_photo: null }))}
                 />
               </div>
               <div className="grid grid-cols-1 sm:grid-cols-3 gap-3">
@@ -267,6 +338,82 @@ export default function ModalityRegistrationDialog({
         </DialogFooter>
       </DialogContent>
     </Dialog>
+  );
+}
+
+/**
+ * Seletor de atletas cadastrados na plataforma (exclusivo do admin da
+ * plataforma). Lista todos os atletas com filtro por nome; ao escolher, os
+ * dados do jogador são preenchidos e a inscrição é vinculada à conta real.
+ */
+function AthletePicker({ label, users, selectedUserId, onSelect, onClear }) {
+  const [term, setTerm] = useState('');
+  const results = useMemo(() => filterPlatformAthletes(users, term), [users, term]);
+  const selected = selectedUserId ? users.find((u) => u.uid === selectedUserId) : null;
+
+  return (
+    <div className="rounded-md border border-input bg-paper/40 p-3 space-y-2">
+      <div className="flex items-center justify-between gap-2">
+        <Label className="text-xs uppercase tracking-wide text-gray-500">{label}</Label>
+        {selected && (
+          <button
+            type="button"
+            onClick={onClear}
+            className="flex items-center gap-1 text-xs text-gray-500 hover:text-ink"
+          >
+            <X className="w-3 h-3" /> limpar seleção
+          </button>
+        )}
+      </div>
+      {selected ? (
+        <div className="flex items-center gap-2 rounded-md border border-acid/40 bg-acid/10 p-2">
+          <UserAvatar name={platformUserDisplayName(selected)} photoUrl={selected.photo_url} size="sm" />
+          <div className="min-w-0">
+            <div className="text-sm font-medium truncate">{platformUserDisplayName(selected)}</div>
+            <div className="text-xs text-gray-500 truncate">{selected.email || '—'}</div>
+          </div>
+        </div>
+      ) : (
+        <>
+          <div className="relative">
+            <Search className="absolute left-2 top-1/2 -translate-y-1/2 w-4 h-4 text-gray-400" />
+            <Input
+              className="pl-8"
+              placeholder="Filtrar atletas por nome…"
+              value={term}
+              onChange={(e) => setTerm(e.target.value)}
+            />
+          </div>
+          <div className="max-h-48 overflow-y-auto rounded-md border border-gray-100 divide-y">
+            {users.length === 0 ? (
+              <div className="p-3 text-xs text-gray-500 text-center">Carregando atletas…</div>
+            ) : results.length === 0 ? (
+              <div className="p-3 text-xs text-gray-500 text-center">Nenhum atleta encontrado.</div>
+            ) : (
+              results.map((u) => {
+                const name = platformUserDisplayName(u);
+                return (
+                  <button
+                    key={u.uid}
+                    type="button"
+                    onClick={() => onSelect(u)}
+                    className={cn('flex w-full items-center gap-2 p-2 text-left hover:bg-paper')}
+                  >
+                    <UserAvatar name={name} photoUrl={u.photo_url} size="sm" />
+                    <div className="min-w-0">
+                      <div className="text-sm truncate">{name}</div>
+                      <div className="text-xs text-gray-500 truncate">
+                        {[u.city, u.state].filter(Boolean).join(' · ') || u.email || '—'}
+                      </div>
+                    </div>
+                  </button>
+                );
+              })
+            )}
+          </div>
+        </>
+      )}
+    </div>
   );
 }
 
