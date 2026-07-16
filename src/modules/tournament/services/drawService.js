@@ -97,6 +97,11 @@ export async function runDraw(params, actor) {
   const stage = modality.stages?.[stageIndex];
   if (!stage) throw new Error('Fase não encontrada na modalidade.');
 
+  const lockCheck = await getTournament(tournamentId);
+  if (lockCheck?.results_locked) {
+    throw new Error('Torneio bloqueado: desbloqueie as alterações para sortear.');
+  }
+
   // A estrutura escolhida precisa ser compatível com o formato de inscrição
   // (ex.: Americano exige inscrição Simples). Falha cedo com mensagem clara.
   const compat = stageFormatCompatibility(modality.format, stage.type);

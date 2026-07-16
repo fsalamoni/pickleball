@@ -14,6 +14,7 @@ import {
   CheckCircle2,
   Copy,
   Lock,
+  LockOpen,
   Play,
   Save,
   Settings2,
@@ -28,7 +29,9 @@ import {
   useRemoveTournamentAdmin,
   useSetTournamentStatus,
   useUpdateTournament,
+  useSetResultsLocked,
 } from '@/modules/tournament/hooks/useTournament';
+import ConfirmDialog from '@/components/ConfirmDialog';
 import {
   TOURNAMENT_STATUS,
   TOURNAMENT_STATUS_LABELS,
@@ -95,6 +98,19 @@ export default function TournamentAdminTab({ tournament }) {
   const [form, setForm] = useState(() => buildFormState(tournament));
   const duplicationOn = useFeatureFlag(FEATURE_FLAG.TOURNAMENT_DUPLICATION);
   const [duplicateOpen, setDuplicateOpen] = useState(false);
+  const lifecycleOn = useFeatureFlag(FEATURE_FLAG.TOURNAMENT_LIFECYCLE);
+  const lockMutation = useSetResultsLocked(tournament.id);
+  const isFinished = tournament.status === TOURNAMENT_STATUS.FINISHED;
+  const isLocked = Boolean(tournament.results_locked);
+
+  async function handleSetLocked(locked) {
+    try {
+      await lockMutation.mutateAsync(locked);
+      toast.success(locked ? 'Alterações bloqueadas.' : 'Alterações desbloqueadas.');
+    } catch (err) {
+      toast.error(err?.message || 'Falha ao atualizar o bloqueio.');
+    }
+  }
 
   useEffect(() => {
     setForm(buildFormState(tournament));
@@ -194,12 +210,49 @@ export default function TournamentAdminTab({ tournament }) {
                   Duplicar torneio
                 </Button>
               )}
-              <Button onClick={handleSave} disabled={updateMutation.isPending}>
+              {lifecycleOn && isFinished && (
+                isLocked ? (
+                  <ConfirmDialog
+                    title="Desbloquear alterações?"
+                    description="O torneio voltará a permitir sorteios e ajustes. Os dados seguem valendo para o ranking enquanto o torneio estiver encerrado."
+                    confirmLabel="Desbloquear"
+                    destructive={false}
+                    onConfirm={() => handleSetLocked(false)}
+                    trigger={(
+                      <Button variant="outline" disabled={lockMutation.isPending}>
+                        <LockOpen className="w-4 h-4 mr-1" /> Desbloquear alterações
+                      </Button>
+                    )}
+                  />
+                ) : (
+                  <ConfirmDialog
+                    title="Bloquear alterações?"
+                    description="Congela o resultado oficial do torneio: sorteios e ajustes ficam bloqueados até você desbloquear. Você pode reverter a qualquer momento."
+                    confirmLabel="Bloquear"
+                    destructive={false}
+                    onConfirm={() => handleSetLocked(true)}
+                    trigger={(
+                      <Button variant="outline" disabled={lockMutation.isPending}>
+                        <Lock className="w-4 h-4 mr-1" /> Bloquear alterações
+                      </Button>
+                    )}
+                  />
+                )
+              )}
+              <Button onClick={handleSave} disabled={updateMutation.isPending || (lifecycleOn && isLocked)}>
                 <Save className="w-4 h-4 mr-1" />
                 {updateMutation.isPending ? 'Salvando…' : 'Salvar alterações'}
               </Button>
             </div>
           </div>
+
+          {lifecycleOn && isFinished && (
+            <div className={`mt-4 rounded-[1.25rem] border p-4 text-sm ${isLocked ? 'border-amber-200 bg-amber-50 text-amber-900' : 'border-green-200 bg-green-50 text-green-900'}`}>
+              {isLocked
+                ? 'Torneio encerrado e bloqueado: os resultados estão congelados e valendo para o ranking da plataforma. Desbloqueie para permitir ajustes.'
+                : 'Torneio encerrado: os resultados já valem para o ranking da plataforma. Você pode bloquear as alterações para congelar o resultado oficial.'}
+            </div>
+          )}
 
           <div className="mt-6 grid gap-3 sm:grid-cols-3">
             {infoCards.map(({ label, value, icon: Icon }) => (

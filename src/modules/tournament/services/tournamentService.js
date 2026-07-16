@@ -36,6 +36,7 @@ import {
   TOURNAMENT_VISIBILITY,
 } from '../domain/constants.js';
 import { DEFAULT_SCORING_CONFIG, normalizeScoringConfig } from '../domain/scoring.js';
+import { isTournamentComplete } from '../domain/tournamentCompletion.js';
 
 const COL = {
   tournaments: 'tournaments',
@@ -163,6 +164,66 @@ export async function setTournamentStatus(id, status, actor) {
 export async function deleteTournament(id, actor) {
   await deleteDoc(doc(db, COL.tournaments, id));
   await createAuditLog({ action: 'tournament_deleted', actor, details: { tournament_id: id } });
+}
+
+/* --------------------- Ciclo de vida (encerramento) --------------------- */
+
+/**
+ * Encerra o torneio automaticamente quando ele está concluído (todos os jogos
+ * de todas as modalidades/fases decididos). Não faz nada se já encerrado, se as
+ * alterações estiverem bloqueadas, ou se ainda houver jogos pendentes. Idempotente
+ * e seguro para chamar após cada resultado.
+ *
+ * @param {string} tournamentId
+ * @param {object} actor
+ * @returns {Promise<{ closed: boolean, alreadyFinished?: boolean }>}
+ */
+export async function maybeAutoCloseTournament(tournamentId, actor) {
+  if (!db || !tournamentId) return { closed: false };
+  const tournament = await getTournament(tournamentId);
+  if (!tournament) return { closed: false };
+  if (tournament.status === TOURNAMENT_STATUS.FINISHED) return { closed: false, alreadyFinished: true };
+  if (tournament.results_locked) return { closed: false };
+
+  const [modsSnap, matchesSnap] = await Promise.all([
+    getDocs(query(collection(db, COL.modalities), where('tournament_id', '==', tournamentId))),
+    getDocs(query(collection(db, COL.matches), where('tournament_id', '==', tournamentId))),
+  ]);
+  const modalities = modsSnap.docs.map((d) => d.data());
+  const matches = matchesSnap.docs.map((d) => d.data());
+  if (!isTournamentComplete(modalities, matches)) return { closed: false };
+
+  await updateTournament(tournamentId, {
+    status: TOURNAMENT_STATUS.FINISHED,
+    auto_closed_at: serverTimestamp(),
+  }, actor);
+  await createAuditLog({
+    action: 'tournament_auto_closed',
+    actor,
+    details: { tournament_id: tournamentId },
+  });
+  return { closed: true };
+}
+
+/**
+ * Bloqueia (ou desbloqueia) alterações no torneio encerrado. Enquanto bloqueado,
+ * o admin não pode sortear/re-sortear; o objetivo é congelar o resultado oficial.
+ *
+ * @param {string} id
+ * @param {boolean} locked
+ * @param {object} actor
+ */
+export async function setResultsLocked(id, locked, actor) {
+  await updateDoc(doc(db, COL.tournaments, id), {
+    results_locked: Boolean(locked),
+    results_locked_at: locked ? serverTimestamp() : null,
+    updated_at: serverTimestamp(),
+  });
+  await createAuditLog({
+    action: locked ? 'tournament_results_locked' : 'tournament_results_unlocked',
+    actor,
+    details: { tournament_id: id },
+  });
 }
 
 /* --------------------------- Admin (compartilhado) ---------------------- */

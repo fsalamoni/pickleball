@@ -12,7 +12,7 @@ import {
   DialogDescription,
 } from '@/components/ui/dialog';
 import { ConfirmDialog } from '@/components/ui/confirm-dialog';
-import { Shuffle, AlertTriangle, Pencil, ListRestart, CalendarClock, ChevronsRight, Users } from 'lucide-react';
+import { Shuffle, AlertTriangle, Pencil, ListRestart, CalendarClock, ChevronsRight, Users, Lock } from 'lucide-react';
 import { toast } from 'sonner';
 import {
   useModalities,
@@ -26,7 +26,10 @@ import {
   useRedrawGroupMatchesKeepingGroups,
   useStageGroups,
   useMoveParticipantBetweenGroups,
+  useEnsurePlaceholders,
+  useClearPlaceholders,
 } from '@/modules/tournament/hooks/useTournament';
+import { neededPlaceholderCount } from '@/modules/tournament/domain/placeholders';
 import {
   TOURNAMENT_STAGE_TYPE_LABELS,
   REGISTRATION_STATUS,
@@ -85,6 +88,11 @@ function ModalityDrawBlock({ tournament, modality, isAdmin }) {
   const rescheduleMutation = useRescheduleMatches(modality.id);
   const advanceMutation = useAdvanceStage(modality.id);
   const redrawKeepGroupsMutation = useRedrawGroupMatchesKeepingGroups();
+  const ensurePlaceholdersMutation = useEnsurePlaceholders(modality.id);
+  const clearPlaceholdersMutation = useClearPlaceholders(modality.id);
+  const placeholderOn = useFeatureFlag(FEATURE_FLAG.TOURNAMENT_PLACEHOLDER_DRAW);
+  const lifecycleOn = useFeatureFlag(FEATURE_FLAG.TOURNAMENT_LIFECYCLE);
+  const locked = lifecycleOn && Boolean(tournament.results_locked);
   const { data: matches = [] } = useMatches(modality.id, 0);
   const { data: registrations = [] } = useRegistrations(modality.id);
   const [running, setRunning] = useState(false);
@@ -110,6 +118,35 @@ function ModalityDrawBlock({ tournament, modality, isAdmin }) {
       ),
     [registrations],
   );
+
+  // Vagas fictícias (Atleta N): completar até o número exato de participantes.
+  const maxEntries = Number(modality.max_entries);
+  const hasFiniteMax = Number.isFinite(maxEntries) && maxEntries > 0;
+  const placeholderCount = registrations.filter((r) => r.is_placeholder).length;
+  const realConfirmedCount = activeRegistrations.filter((r) => !r.is_placeholder).length;
+  const missingSlots = neededPlaceholderCount(realConfirmedCount, maxEntries);
+  const showPlaceholderPanel = placeholderOn && isAdmin && hasFiniteMax && !locked
+    && (missingSlots > 0 || placeholderCount > 0);
+
+  async function fillPlaceholders() {
+    try {
+      const res = await ensurePlaceholdersMutation.mutateAsync(modality);
+      toast.success(res.created > 0
+        ? `Vagas preenchidas com ${res.created} atleta(s) fictício(s).`
+        : 'Nenhuma vaga faltante para preencher.');
+    } catch (err) {
+      toast.error(err?.message || 'Não foi possível preencher as vagas.');
+    }
+  }
+
+  async function removePlaceholders() {
+    try {
+      const res = await clearPlaceholdersMutation.mutateAsync();
+      toast.success(res.cleared > 0 ? 'Atletas fictícios removidos.' : 'Não havia atletas fictícios.');
+    } catch (err) {
+      toast.error(err?.message || 'Não foi possível remover os atletas fictícios.');
+    }
+  }
 
   const doneStatuses = new Set([MATCH_STATUS.FINISHED, MATCH_STATUS.WALKOVER]);
   const playedCount = matches.filter((m) => doneStatuses.has(m.status)).length;
@@ -310,12 +347,46 @@ function ModalityDrawBlock({ tournament, modality, isAdmin }) {
                   <ListRestart className="w-4 h-4 mr-1" /> Re-sortear jogos (manter grupos)
                 </V2Button>
               )}
-              <V2Button size="sm" onClick={() => setConfirmOpen(true)} disabled={running}>
+              <V2Button size="sm" onClick={() => setConfirmOpen(true)} disabled={running || locked}>
                 <Shuffle className="w-4 h-4 mr-1" /> {matches.length > 0 ? 'Re-sortear tudo' : 'Sortear'}
               </V2Button>
             </div>
           )}
         </div>
+
+        {locked && isAdmin && (
+          <div className="mt-3 flex items-start gap-2 rounded-2xl border border-amber-200 bg-amber-50 p-3 text-xs text-amber-900">
+            <Lock className="w-4 h-4 mt-0.5 shrink-0" />
+            <span>Torneio bloqueado. Desbloqueie as alterações (na aba Geral) para sortear ou ajustar.</span>
+          </div>
+        )}
+
+        {showPlaceholderPanel && (
+          <div className="mt-3 rounded-2xl border border-gray-100 bg-paper p-3">
+            <div className="flex flex-wrap items-center justify-between gap-2">
+              <div className="min-w-0 text-xs text-gray-600">
+                <div className="font-medium text-ink">Vagas fictícias (“Atleta N”)</div>
+                <div>
+                  {realConfirmedCount} inscrito(s) real(is) · {maxEntries} vaga(s) exata(s)
+                  {placeholderCount > 0 ? ` · ${placeholderCount} fictício(s) no momento` : ''}
+                  {missingSlots > 0 ? ` · faltam ${missingSlots}` : ''}
+                </div>
+              </div>
+              <div className="flex flex-wrap gap-2">
+                {missingSlots > 0 && (
+                  <V2Button size="sm" variant="ghost" onClick={fillPlaceholders} disabled={ensurePlaceholdersMutation.isPending}>
+                    <Users className="w-4 h-4 mr-1" /> Preencher {missingSlots} vaga(s)
+                  </V2Button>
+                )}
+                {placeholderCount > 0 && (
+                  <V2Button size="sm" variant="ghost" onClick={removePlaceholders} disabled={clearPlaceholdersMutation.isPending}>
+                    Remover fictícios
+                  </V2Button>
+                )}
+              </div>
+            </div>
+          </div>
+        )}
 
         {matches.length > 0 && (scheduledCount > 0 || unscheduledCount > 0) && (
           <div className="mt-2 flex flex-wrap items-center gap-2 text-xs">

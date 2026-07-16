@@ -12,6 +12,8 @@ import {
   removeTournamentAdmin,
   setTournamentStatus,
   getTournamentByInviteCode,
+  maybeAutoCloseTournament,
+  setResultsLocked,
 } from '../services/tournamentService';
 import {
   listModalities,
@@ -30,6 +32,8 @@ import {
   promoteFromWaitlist,
   cancelRegistration,
   deleteRegistration,
+  ensurePlaceholderRegistrations,
+  clearPlaceholderRegistrations,
 } from '../services/registrationService';
 import {
   listMatches,
@@ -147,6 +151,35 @@ export function useSetTournamentStatus(id) {
       qc.invalidateQueries({ queryKey: ['my-tournaments'] });
       qc.invalidateQueries({ queryKey: ['tournaments-public'] });
       qc.invalidateQueries({ queryKey: ['tournaments-all'] });
+    },
+  });
+}
+
+/** Encerra o torneio automaticamente se estiver concluído (idempotente). */
+export function useMaybeAutoCloseTournament() {
+  const { user } = useAuth();
+  const qc = useQueryClient();
+  return useMutation({
+    mutationFn: (tournamentId) => maybeAutoCloseTournament(tournamentId, user),
+    onSuccess: (result, tournamentId) => {
+      if (result?.closed) {
+        qc.invalidateQueries({ queryKey: ['tournament', tournamentId] });
+        qc.invalidateQueries({ queryKey: ['my-tournaments'] });
+        qc.invalidateQueries({ queryKey: ['tournaments-public'] });
+        qc.invalidateQueries({ queryKey: ['tournaments-all'] });
+      }
+    },
+  });
+}
+
+/** Bloqueia/desbloqueia alterações no torneio encerrado. */
+export function useSetResultsLocked(id) {
+  const { user } = useAuth();
+  const qc = useQueryClient();
+  return useMutation({
+    mutationFn: (locked) => setResultsLocked(id, locked, user),
+    onSuccess: () => {
+      qc.invalidateQueries({ queryKey: ['tournament', id] });
     },
   });
 }
@@ -371,6 +404,32 @@ export function useMatchesByTournament(tournamentId) {
     enabled: !!tournamentId,
     refetchInterval: 20000,
     refetchOnWindowFocus: true,
+  });
+}
+
+/** Preenche as vagas faltantes de uma modalidade com atletas fictícios. */
+export function useEnsurePlaceholders(modalityId) {
+  const { user } = useAuth();
+  const qc = useQueryClient();
+  return useMutation({
+    mutationFn: (modality) => ensurePlaceholderRegistrations(modality, user),
+    onSuccess: () => {
+      qc.invalidateQueries({ queryKey: ['registrations', modalityId] });
+      qc.invalidateQueries({ queryKey: ['registrations-tournament'] });
+    },
+  });
+}
+
+/** Remove os atletas fictícios de uma modalidade. */
+export function useClearPlaceholders(modalityId) {
+  const { user } = useAuth();
+  const qc = useQueryClient();
+  return useMutation({
+    mutationFn: () => clearPlaceholderRegistrations(modalityId, user),
+    onSuccess: () => {
+      qc.invalidateQueries({ queryKey: ['registrations', modalityId] });
+      qc.invalidateQueries({ queryKey: ['registrations-tournament'] });
+    },
   });
 }
 

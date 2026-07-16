@@ -287,6 +287,11 @@ export async function runPhaseDraw(params, actor) {
   if (!modality) throw new Error('Modalidade não encontrada.');
   if (modality.tournament_id !== tournamentId) throw new Error('Modalidade não pertence ao torneio.');
 
+  const lockCheck = await getTournament(tournamentId);
+  if (lockCheck?.results_locked) {
+    throw new Error('Torneio bloqueado: desbloqueie as alterações para sortear.');
+  }
+
   const phases = normalizePhases(modality.stages);
   const phase = phases[stageIndex];
   if (!phase) throw new Error('Fase não encontrada na modalidade.');
