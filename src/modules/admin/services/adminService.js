@@ -7,6 +7,21 @@ export async function listAllTournaments() {
   return snap.docs.map((d) => d.data());
 }
 
+/**
+ * Lista todos os usuários (atletas) cadastrados na plataforma a partir da
+ * coleção `users`, que só o admin da plataforma pode ler (reforçado pelas
+ * regras do Firestore). Diferente do diretório público de atletas, aqui temos
+ * acesso a e-mail e categoria de competição — o necessário para o admin
+ * inscrever um atleta vinculando a inscrição à conta real dele.
+ *
+ * @returns {Promise<Array<{ uid: string } & Record<string, unknown>>>}
+ */
+export async function listAllPlatformUsers() {
+  if (!db) return [];
+  const snap = await getDocs(collection(db, 'users'));
+  return snap.docs.map((d) => ({ uid: d.id, ...d.data() }));
+}
+
 export async function setTournamentArchived(tournamentId, archived, actor) {
   await updateDoc(doc(db, 'tournaments', tournamentId), {
     archived: !!archived,
