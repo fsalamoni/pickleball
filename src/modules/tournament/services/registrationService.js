@@ -28,6 +28,7 @@ import {
   TOURNAMENT_VISIBILITY,
 } from '../domain/constants.js';
 import { countOccupiedRegistrations, isRegistrationCapacityReached } from '../domain/capacity.js';
+import { buildPlaceholderRegistrationFields, neededPlaceholderCount } from '../domain/placeholders.js';
 import { getModality } from './modalityService.js';
 import { getTournament, isTournamentAdmin } from './tournamentService.js';
 
@@ -208,6 +209,92 @@ export async function claimProvisionalRegistrationsForUser(user, profile = {}) {
     details: { user_id: user.uid, email, count: updatesById.size },
   });
   return updatesById.size;
+}
+
+/**
+ * Preenche as vagas faltantes de uma modalidade com atletas fictícios
+ * ("Atleta N"), até o número exato de participantes (`max_entries`). Idempotente:
+ * remove os fictícios existentes e recria a quantidade certa a partir da
+ * contagem atual de inscritos reais confirmados. Só faz sentido quando a
+ * modalidade tem um número exato de participantes definido.
+ *
+ * @param {object} modality modalidade (precisa ter max_entries finito)
+ * @param {object} actor
+ * @returns {Promise<{ created: number, cleared: number, total: number }>}
+ */
+export async function ensurePlaceholderRegistrations(modality, actor) {
+  if (!db || !modality?.id) return { created: 0, cleared: 0, total: 0 };
+  const max = Number(modality.max_entries);
+  if (!Number.isFinite(max) || max <= 0) {
+    throw new Error('Defina um número exato de participantes na modalidade para preencher as vagas.');
+  }
+  const all = await listRegistrations(modality.id);
+  const existingPlaceholders = all.filter((r) => r.is_placeholder);
+  const realConfirmed = all.filter(
+    (r) => !r.is_placeholder && r.status === REGISTRATION_STATUS.CONFIRMED,
+  );
+  const need = neededPlaceholderCount(realConfirmed.length, max);
+
+  const ops = [];
+  existingPlaceholders.forEach((p) => ops.push({ type: 'delete', ref: doc(db, COL, p.id) }));
+  for (let i = 0; i < need; i += 1) {
+    const id = doc(collection(db, COL)).id;
+    ops.push({
+      type: 'set',
+      ref: doc(db, COL, id),
+      payload: {
+        id,
+        tournament_id: modality.tournament_id,
+        modality_id: modality.id,
+        created_by: actor?.uid || null,
+        created_by_role: 'admin',
+        ...buildPlaceholderRegistrationFields(modality, realConfirmed.length + i + 1),
+        created_at: serverTimestamp(),
+        updated_at: serverTimestamp(),
+      },
+    });
+  }
+
+  for (let i = 0; i < ops.length; i += SAFE_BATCH_WRITE_SIZE) {
+    const batch = writeBatch(db);
+    ops.slice(i, i + SAFE_BATCH_WRITE_SIZE).forEach((op) => {
+      if (op.type === 'delete') batch.delete(op.ref);
+      else batch.set(op.ref, op.payload);
+    });
+    await batch.commit();
+  }
+
+  await createAuditLog({
+    action: 'placeholder_registrations_filled',
+    actor,
+    details: { modality_id: modality.id, created: need, cleared: existingPlaceholders.length },
+  });
+  return { created: need, cleared: existingPlaceholders.length, total: need };
+}
+
+/**
+ * Remove todos os atletas fictícios de uma modalidade.
+ * @param {string} modalityId
+ * @param {object} actor
+ * @returns {Promise<{ cleared: number }>}
+ */
+export async function clearPlaceholderRegistrations(modalityId, actor) {
+  if (!db || !modalityId) return { cleared: 0 };
+  const all = await listRegistrations(modalityId);
+  const placeholders = all.filter((r) => r.is_placeholder);
+  for (let i = 0; i < placeholders.length; i += SAFE_BATCH_WRITE_SIZE) {
+    const batch = writeBatch(db);
+    placeholders.slice(i, i + SAFE_BATCH_WRITE_SIZE).forEach((p) => batch.delete(doc(db, COL, p.id)));
+    await batch.commit();
+  }
+  if (placeholders.length > 0) {
+    await createAuditLog({
+      action: 'placeholder_registrations_cleared',
+      actor,
+      details: { modality_id: modalityId, cleared: placeholders.length },
+    });
+  }
+  return { cleared: placeholders.length };
 }
 
 export async function updateRegistration(id, updates, actor) {

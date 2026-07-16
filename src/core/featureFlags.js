@@ -212,6 +212,29 @@ export const FEATURE_FLAG = Object.freeze({
    * é copiado. Aditivo — desligado, o botão não aparece e nada muda.
    */
   TOURNAMENT_DUPLICATION: 'tournament_duplication',
+
+  /**
+   * Sorteio com vagas fictícias: quando a modalidade define um número exato de
+   * participantes e ainda faltam inscrições, o admin pode preencher as vagas
+   * faltantes com atletas fictícios ("Atleta N", na ordem de inscrição) para já
+   * sortear os jogos. O atleta fictício entra no equilíbrio do sorteio com o
+   * gênero da modalidade (se houver) e o nível padrão da modalidade. Fictícios
+   * não têm conta, não contam para o ranking e não ocupam vaga de inscrições
+   * reais. Aditivo — desligado, os controles não aparecem e nada muda.
+   */
+  TOURNAMENT_PLACEHOLDER_DRAW: 'tournament_placeholder_draw',
+
+  /**
+   * Ciclo de vida e ranking oficial do torneio (conjunto integrado):
+   *  - encerra o torneio automaticamente quando o último resultado de jogos é
+   *    lançado, considerando todas as modalidades e fases;
+   *  - dá ao admin um botão de "bloquear alterações" (com confirmação) que
+   *    aparece após o encerramento, reversível por "desbloquear";
+   *  - o ranking nacional passa a considerar SOMENTE torneios públicos e já
+   *    encerrados (e exclui automaticamente torneios apagados). Aditivo —
+   *    desligado, o encerramento é manual e o ranking mantém o cálculo anterior.
+   */
+  TOURNAMENT_LIFECYCLE: 'tournament_lifecycle',
 });
 
 /** Metadados de exibição para o painel de flags (admin master). */
@@ -414,6 +437,25 @@ export const FEATURE_FLAG_META = Object.freeze({
       + 'por modalidade, o conjunto de inscritos (é possível copiar a modalidade '
       + 'sem os inscritos). O novo torneio nasce como rascunho, com novo código '
       + 'de convite; o sorteio não é copiado. Desligado, o botão não aparece.',
+  },
+  [FEATURE_FLAG.TOURNAMENT_PLACEHOLDER_DRAW]: {
+    label: 'Sorteio com vagas fictícias',
+    description:
+      'Quando a modalidade tem um número exato de participantes e faltam '
+      + 'inscrições, permite preencher as vagas com atletas fictícios ("Atleta N") '
+      + 'para já sortear os jogos. O fictício entra no equilíbrio com o gênero da '
+      + 'modalidade e o nível padrão dela. Não conta para o ranking nem ocupa vaga '
+      + 'de inscrições reais. Desligado, os controles não aparecem.',
+  },
+  [FEATURE_FLAG.TOURNAMENT_LIFECYCLE]: {
+    label: 'Encerramento automático, bloqueio e ranking oficial',
+    description:
+      'Encerra o torneio automaticamente ao lançar o último resultado (todas as '
+      + 'modalidades e fases); adiciona ao admin um botão de bloquear/desbloquear '
+      + 'alterações após o encerramento; e faz o ranking nacional considerar '
+      + 'somente torneios públicos e encerrados, excluindo automaticamente os '
+      + 'apagados. Desligado, o encerramento é manual e o ranking mantém o '
+      + 'cálculo anterior.',
   },
 });
 

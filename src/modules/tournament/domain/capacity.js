@@ -15,7 +15,7 @@ export function normalizeMaxEntries(maxEntries, { defaultValue = DEFAULT_MAX_ENT
 }
 
 export function countOccupiedRegistrations(registrations = []) {
-  return registrations.filter((registration) => ![
+  return registrations.filter((registration) => !registration.is_placeholder && ![
     REGISTRATION_STATUS.CANCELLED,
     REGISTRATION_STATUS.WAITLIST,
     REGISTRATION_STATUS.WITHDRAWN,

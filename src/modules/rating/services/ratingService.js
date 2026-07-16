@@ -26,6 +26,7 @@ import { db } from '@/core/config/firebase';
 import { createAuditLog } from '@/core/services/auditService';
 import { MATCH_STATUS, MODALITY_FORMAT } from '@/modules/tournament/domain/constants';
 import { toMillis } from '@/modules/tournament/domain/participation';
+import { eligibleTournamentIdsForRanking } from '@/modules/tournament/domain/rankingEligibility';
 import { LEVEL_TABLE } from '@/modules/leveling/data/levels';
 import { computeRatings, seedFromLevelOrdinal } from '../domain/elo.js';
 
@@ -70,17 +71,30 @@ function seedForProfile(profile) {
 /**
  * Recalcula todos os ratings a partir dos jogos finalizados e materializa em
  * `player_ratings`. Retorna um resumo do processamento.
+ *
  * @param {object} actor usuário admin (para auditoria)
+ * @param {{ onlyPublicClosed?: boolean }} [options]
+ *   Quando `onlyPublicClosed` é verdadeiro, considera apenas jogos de torneios
+ *   PÚBLICOS e já ENCERRADOS que ainda existem — excluindo automaticamente os
+ *   apagados, privados ou em andamento (ranking oficial).
  * @returns {Promise<{ players: number, matchesUsed: number, matchesTotal: number }>}
  */
-export async function recomputeAllRatings(actor) {
+export async function recomputeAllRatings(actor, options = {}) {
   if (!db) return { players: 0, matchesUsed: 0, matchesTotal: 0 };
+  const { onlyPublicClosed = false } = options;
 
   // 1) Jogos finalizados (status in finished/walkover); ordenação cronológica no cliente.
   const matchesSnap = await getDocs(
     query(collection(db, 'tournament_matches'), where('status', 'in', FINISHED_STATUSES)),
   );
-  const finishedMatches = matchesSnap.docs.map((d) => d.data());
+  let finishedMatches = matchesSnap.docs.map((d) => d.data());
+
+  // Ranking oficial: restringe aos torneios públicos e encerrados existentes.
+  if (onlyPublicClosed) {
+    const tournamentsSnap = await getDocs(collection(db, 'tournaments'));
+    const eligibleIds = eligibleTournamentIdsForRanking(tournamentsSnap.docs.map((d) => d.data()));
+    finishedMatches = finishedMatches.filter((m) => eligibleIds.has(m.tournament_id));
+  }
 
   // 2) Inscrições (regId → uids) e 3) perfis (uid → dados/semente).
   const [regsSnap, profilesSnap] = await Promise.all([

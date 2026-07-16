@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import React, { useEffect, useRef, useState } from 'react';
 import { ClipboardCheck, FolderCog, Settings2, ShieldAlert, Sparkles, Swords, Users } from 'lucide-react';
 import V2TournamentModalitiesTab from '@/v2/components/tournament/V2TournamentModalitiesTab';
 import V2TournamentRegistrationsTab from '@/v2/components/tournament/V2TournamentRegistrationsTab';
@@ -7,6 +7,37 @@ import { V2TournamentMatches } from '@/v2/components/tournament/V2MatchesBlock';
 import TournamentAdminTab from '@/modules/tournament/components/TournamentAdminTab';
 import { V2Badge } from '@/v2/ui/primitives';
 import { cn } from '@/core/lib/utils';
+import { useFeatureFlag } from '@/core/lib/FeatureFlagsContext';
+import { FEATURE_FLAG } from '@/core/featureFlags';
+import { useModalities, useMatchesByTournament, useMaybeAutoCloseTournament } from '@/modules/tournament/hooks/useTournament';
+import { isTournamentComplete } from '@/modules/tournament/domain/tournamentCompletion';
+import { TOURNAMENT_STATUS } from '@/modules/tournament/domain/constants';
+
+/**
+ * Encerra o torneio automaticamente quando o último resultado é lançado
+ * (todas as modalidades e fases decididas). Roda apenas para o admin, atrás da
+ * flag do ciclo de vida. É idempotente: dispara uma única vez ao concluir.
+ */
+function useAutoCloseTournament(tournament) {
+  const lifecycleOn = useFeatureFlag(FEATURE_FLAG.TOURNAMENT_LIFECYCLE);
+  const { data: modalities = [] } = useModalities(tournament.id);
+  const { data: matches = [] } = useMatchesByTournament(tournament.id);
+  const autoClose = useMaybeAutoCloseTournament();
+  const triggeredRef = useRef(false);
+
+  useEffect(() => {
+    if (!lifecycleOn) return;
+    if (tournament.status === TOURNAMENT_STATUS.FINISHED || tournament.results_locked) return;
+    if (!isTournamentComplete(modalities, matches)) {
+      triggeredRef.current = false;
+      return;
+    }
+    if (triggeredRef.current) return;
+    triggeredRef.current = true;
+    autoClose.mutate(tournament.id);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [lifecycleOn, tournament.status, tournament.results_locked, tournament.id, modalities, matches]);
+}
 
 const ADMIN_TABS = [
   { value: 'geral', label: 'Geral', icon: Settings2 },
@@ -18,6 +49,7 @@ const ADMIN_TABS = [
 
 export default function V2TournamentAdminPanel({ tournament }) {
   const [activeTab, setActiveTab] = useState('geral');
+  useAutoCloseTournament(tournament);
 
   return (
     <div className="space-y-6">
