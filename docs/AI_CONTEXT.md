@@ -144,7 +144,10 @@ campos em `docs/DATA_MODEL.md`.
 - **Torneios**: `tournaments` · `tournament_modalities` · `tournament_admins`
   (id `tournamentId_uid`) · `tournament_registrations` · `tournament_matches` ·
   `tournament_groups` · `tournament_rankings` (materializado no client) ·
-  `tournament_courts`.
+  `tournament_courts`. O doc `tournaments/{id}` tem um campo booleano
+  `archived` (mais `archived_at`/`archived_by`); arquivar exige
+  `status === 'cancelled'` (validação cliente+server) e esconde o torneio
+  do público (apenas criador + `platform_admin` continuam vendo).
 - **Clubes**: `clubs` · `club_members` (id `clubId_uid`, tem `role`) ·
   `club_join_requests` (id `clubId_uid`) · `club_member_invites`
   (id `clubId_uid`) · `club_posts` (mural) · `club_forum_threads` ·

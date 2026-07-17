@@ -37,6 +37,10 @@ import {
 } from '../domain/constants.js';
 import { DEFAULT_SCORING_CONFIG, normalizeScoringConfig } from '../domain/scoring.js';
 import { isTournamentComplete } from '../domain/tournamentCompletion.js';
+import {
+  validateArchiveRequest,
+  validateUnarchiveRequest,
+} from '../domain/archiveValidation.js';
 
 const COL = {
   tournaments: 'tournaments',
@@ -166,6 +170,102 @@ export async function deleteTournament(id, actor) {
   await createAuditLog({ action: 'tournament_deleted', actor, details: { tournament_id: id } });
 }
 
+/* --------------------- Arquivamento (criador + admin) ------------------- */
+
+/**
+ * Arquiva um torneio. Pré-condição: o torneio precisa estar com
+ * `status: 'cancelled'` (é o caminho "limpar a casa" depois de explicar pra
+ * galera por que o evento não rolou). O arquivamento esconde o torneio da
+ * listagem pública (`/p/:id`, listas) e do `useMyTournaments` por padrão,
+ * mas preserva todo o histórico (modalidades, jogos, ranking) para o criador
+ * e o admin da plataforma, que continuam podendo consultar.
+ *
+ * Permissão: apenas o criador do torneio (`creator_uid`) e o admin master
+ * da plataforma (`platform_admin`). A Firestore rule de `tournaments/{tid}`
+ * reforça isso no servidor; este service valida a pré-condição de status
+ * cliente-side (via `validateArchiveRequest`) e lança erro descritivo se
+ * não for atendida.
+ *
+ * @param {string} tournamentId
+ * @param {object} actor — precisa ter `.uid` (audit log)
+ * @returns {Promise<{ tournamentId: string, archived: true, alreadyArchived?: boolean }>}
+ * @throws {Error} se torneio não existir, se o status não for 'cancelled',
+ *                 ou se a Firestore rule recusar.
+ */
+export async function archiveTournament(tournamentId, actor) {
+  if (!tournamentId) throw new Error('ID do torneio é obrigatório.');
+  if (!actor?.uid) throw new Error('Usuário não autenticado.');
+
+  const snap = await getDoc(doc(db, COL.tournaments, tournamentId));
+  if (!snap.exists()) throw new Error('Torneio não encontrado.');
+  const tournament = snap.data();
+  if (tournament.archived) {
+    // idempotente: já está arquivado, nada a fazer
+    return { tournamentId, archived: true, alreadyArchived: true };
+  }
+  const validation = validateArchiveRequest(tournament);
+  if (!validation.ok) throw new Error(validation.reason);
+
+  await updateDoc(doc(db, COL.tournaments, tournamentId), {
+    archived: true,
+    archived_at: serverTimestamp(),
+    archived_by: actor.uid,
+    updated_at: serverTimestamp(),
+  });
+  await createAuditLog({
+    action: 'tournament_archived',
+    actor,
+    tournamentId,
+    userId: tournament.creator_uid,
+    userName: tournament.creator_name,
+    details: { tournament_id: tournamentId, previous_status: tournament.status },
+  });
+  logger.info('tournament_archived', { id: tournamentId, by: actor.uid });
+  return { tournamentId, archived: true };
+}
+
+/**
+ * Desarquiva um torneio. Volta a aparecer nas listagens (respeitando a
+ * visibilidade) e na `Dashboard` do criador. Não exige pré-condição de
+ * status (o criador pode desarquivar pra reabrir, ou pra mudar o status
+ * depois). Idempotente: se já não está arquivado, não faz nada.
+ *
+ * @param {string} tournamentId
+ * @param {object} actor — precisa ter `.uid` (audit log)
+ * @returns {Promise<{ tournamentId: string, archived: false, alreadyUnarchived?: boolean }>}
+ * @throws {Error} se torneio não existir, ou se a Firestore rule recusar.
+ */
+export async function unarchiveTournament(tournamentId, actor) {
+  if (!tournamentId) throw new Error('ID do torneio é obrigatório.');
+  if (!actor?.uid) throw new Error('Usuário não autenticado.');
+
+  const snap = await getDoc(doc(db, COL.tournaments, tournamentId));
+  if (!snap.exists()) throw new Error('Torneio não encontrado.');
+  const tournament = snap.data();
+  if (!tournament.archived) {
+    return { tournamentId, archived: false, alreadyUnarchived: true };
+  }
+  const validation = validateUnarchiveRequest(tournament);
+  if (!validation.ok) throw new Error(validation.reason);
+
+  await updateDoc(doc(db, COL.tournaments, tournamentId), {
+    archived: false,
+    archived_at: null,
+    archived_by: null,
+    updated_at: serverTimestamp(),
+  });
+  await createAuditLog({
+    action: 'tournament_unarchived',
+    actor,
+    tournamentId,
+    userId: tournament.creator_uid,
+    userName: tournament.creator_name,
+    details: { tournament_id: tournamentId },
+  });
+  logger.info('tournament_unarchived', { id: tournamentId, by: actor.uid });
+  return { tournamentId, archived: false };
+}
+
 /* --------------------- Ciclo de vida (encerramento) --------------------- */
 
 /**
@@ -268,7 +368,7 @@ export async function isTournamentAdmin(tournamentId, userId) {
 
 /* --------------------------- Listagens ---------------------------------- */
 
-export async function listMyTournaments(userId) {
+export async function listMyTournaments(userId, { includeArchived = false } = {}) {
   // torneios onde sou admin
   const q = query(collection(db, COL.admins), where('user_id', '==', userId));
   const adminSnap = await getDocs(q);
@@ -289,6 +389,8 @@ export async function listMyTournaments(userId) {
   for (const id of unique) {
     const t = await getTournament(id);
     if (t) {
+      // Filtra arquivados por padrão (a Dashboard do atleta mostra só ativos).
+      if (!includeArchived && t.archived) continue;
       const adminDoc = adminSnap.docs.find((d) => d.data().tournament_id === id);
       results.push({
         ...t,
@@ -299,9 +401,14 @@ export async function listMyTournaments(userId) {
   return results;
 }
 
-export async function listAllTournaments() {
+export async function listAllTournaments({ includeArchived = false } = {}) {
   const snap = await getDocs(query(collection(db, COL.tournaments), orderBy('created_at', 'desc')));
-  return snap.docs.map((d) => d.data());
+  const docs = snap.docs.map((d) => d.data());
+  if (includeArchived) return docs;
+  // Filtro client-side: o Firestore já recusa leitura de arquivados para
+  // não-criador/não-admin, mas se o caller for admin e passar
+  // includeArchived=false, queremos garantir o contrato.
+  return docs.filter((t) => !t.archived);
 }
 
 export async function listPublicTournaments() {

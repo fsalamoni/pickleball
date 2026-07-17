@@ -35,6 +35,8 @@ export const AUDIT_ACTION_LABELS = {
   club_post_deleted: 'Publicação do mural removida',
   platform_archive_tournament: 'Torneio arquivado (admin)',
   platform_unarchive_tournament: 'Torneio desarquivado (admin)',
+  tournament_archived: 'Torneio arquivado',
+  tournament_unarchived: 'Torneio desarquivado',
   platform_delete_tournament: 'Torneio excluído (admin)',
   platform_feature_flag_changed: 'Feature flag alterada (admin)',
   tournament_groups_set: 'Grupos da fase definidos',

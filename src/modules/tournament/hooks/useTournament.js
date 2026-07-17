@@ -14,6 +14,8 @@ import {
   getTournamentByInviteCode,
   maybeAutoCloseTournament,
   setResultsLocked,
+  archiveTournament,
+  unarchiveTournament,
 } from '../services/tournamentService';
 import {
   listModalities,
@@ -67,11 +69,11 @@ import { FUNNEL_EVENT } from '@/modules/analytics/domain/funnelEvents';
 
 /* ------------------------------ Tournaments ----------------------------- */
 
-export function useMyTournaments() {
+export function useMyTournaments({ includeArchived = false } = {}) {
   const { user } = useAuth();
   return useQuery({
-    queryKey: ['my-tournaments', user?.uid],
-    queryFn: () => (user?.uid ? listMyTournaments(user.uid) : Promise.resolve([])),
+    queryKey: ['my-tournaments', user?.uid, { includeArchived }],
+    queryFn: () => (user?.uid ? listMyTournaments(user.uid, { includeArchived }) : Promise.resolve([])),
     enabled: !!user?.uid,
   });
 }
@@ -92,8 +94,11 @@ export function useTournamentByInvite(code) {
   });
 }
 
-export function useAllTournaments() {
-  return useQuery({ queryKey: ['tournaments-all'], queryFn: listAllTournaments });
+export function useAllTournaments({ includeArchived = false } = {}) {
+  return useQuery({
+    queryKey: ['tournaments-all', { includeArchived }],
+    queryFn: () => listAllTournaments({ includeArchived }),
+  });
 }
 
 export function usePublicTournaments() {
@@ -180,6 +185,38 @@ export function useSetResultsLocked(id) {
     mutationFn: (locked) => setResultsLocked(id, locked, user),
     onSuccess: () => {
       qc.invalidateQueries({ queryKey: ['tournament', id] });
+    },
+  });
+}
+
+/* --------------------- Arquivamento (criador + admin) ------------------- */
+
+/** Arquiva o torneio. Pré-condição cliente-side: status === 'cancelled'. */
+export function useArchiveTournament(id) {
+  const { user } = useAuth();
+  const qc = useQueryClient();
+  return useMutation({
+    mutationFn: () => archiveTournament(id, user),
+    onSuccess: () => {
+      qc.invalidateQueries({ queryKey: ['tournament', id] });
+      qc.invalidateQueries({ queryKey: ['my-tournaments'] });
+      qc.invalidateQueries({ queryKey: ['tournaments-public'] });
+      qc.invalidateQueries({ queryKey: ['tournaments-all'] });
+    },
+  });
+}
+
+/** Desarquiva o torneio. Não exige pré-condição de status. */
+export function useUnarchiveTournament(id) {
+  const { user } = useAuth();
+  const qc = useQueryClient();
+  return useMutation({
+    mutationFn: () => unarchiveTournament(id, user),
+    onSuccess: () => {
+      qc.invalidateQueries({ queryKey: ['tournament', id] });
+      qc.invalidateQueries({ queryKey: ['my-tournaments'] });
+      qc.invalidateQueries({ queryKey: ['tournaments-public'] });
+      qc.invalidateQueries({ queryKey: ['tournaments-all'] });
     },
   });
 }
