@@ -16,6 +16,23 @@ service cloud.firestore {
       return isAuthed()
         && exists(/databases/$(database)/documents/tournament_admins/$(tid + '_' + request.auth.uid));
     }
+    // Criador do torneio (dono do recurso).
+    function isTournamentCreator(tid) {
+      return isAuthed()
+        && exists(/databases/$(database)/documents/tournaments/$(tid))
+        && get(/databases/$(database)/documents/tournaments/$(tid)).data.creator_uid == request.auth.uid;
+    }
+    // Quem pode ver/usar um torneio, respeitando o flag 'archived' (criador +
+    // admin continuam vendo; público some). Para coleções filhas, chame
+    // isTournamentVisibleByTid(request.resource.data.tournament_id).
+    function isTournamentVisibleByTid(tid) {
+      return exists(/databases/$(database)/documents/tournaments/$(tid))
+        && (
+          get(/databases/$(database)/documents/tournaments/$(tid)).data.get('archived', false) != true
+          || isPlatformAdmin()
+          || isTournamentCreator(tid)
+        );
+    }
     function isClubMember(clubId) {
       return isAuthed()
         && exists(/databases/$(database)/documents/club_members/$(clubId + '_' + request.auth.uid));
@@ -269,11 +286,28 @@ service cloud.firestore {
 
     // ---- Tournaments -----------------------------------------------------
     match /tournaments/{tid} {
-      // Leitura pública para visão de espectador (/p/:id).
-      allow read: if true;
+      // Leitura: pública se NÃO arquivado; se arquivado, só platform_admin
+      // e criador continuam vendo (preserva histórico pra eles, esconde
+      // da UI pública, das listas de torneio e da visão de espectador).
+      allow read: if resource.data.get('archived', false) != true
+        || isPlatformAdmin()
+        || isTournamentCreator(tid);
       allow create: if isAuthed() && request.resource.data.creator_uid == request.auth.uid;
-      allow update: if isPlatformAdmin() || isTournamentAdmin(tid)
-        || (isAuthed() && resource.data.creator_uid == request.auth.uid);
+      // Update: a regra antiga (platform_admin / tournament_admin / criador)
+      // continua valendo para todos os campos. Para o campo 'archived'
+      // especificamente:
+      //  - só platform_admin ou criador podem alterá-lo (NÃO tournament_admin);
+      //  - arquivar (archived: true) só é permitido se o status atual for
+      //    'cancelled' (validação servidor — o service valida cliente-side).
+      allow update: if (isPlatformAdmin() || isTournamentAdmin(tid)
+        || (isAuthed() && resource.data.creator_uid == request.auth.uid))
+        && (
+          !request.resource.data.diff(resource.data).affectedKeys().hasAny(['archived'])
+          || (
+            (isPlatformAdmin() || (isAuthed() && resource.data.creator_uid == request.auth.uid))
+            && (!request.resource.data.archived || resource.data.status == 'cancelled')
+          )
+        );
       allow delete: if isPlatformAdmin()
         || (isAuthed() && resource.data.creator_uid == request.auth.uid);
     }
@@ -290,15 +324,16 @@ service cloud.firestore {
     }
 
     match /tournament_modalities/{mid} {
-      allow read: if true;
+      // Leitura respeita o flag 'archived' do torneio-pai.
+      allow read: if isTournamentVisibleByTid(resource.data.tournament_id);
       allow create, update, delete: if isPlatformAdmin()
         || isTournamentAdmin(request.resource.data.tournament_id)
         || isTournamentAdmin(resource.data.tournament_id);
     }
 
     match /tournament_registrations/{rid} {
-      // Inscritos são públicos para o quadro do torneio.
-      allow read: if true;
+      // Inscritos: leitura respeita o flag 'archived' do torneio-pai.
+      allow read: if isTournamentVisibleByTid(resource.data.tournament_id);
       // Próprio jogador inscreve-se, OU admin do torneio inscreve.
       allow create: if isAuthed()
         && (request.resource.data.created_by == request.auth.uid
@@ -312,28 +347,32 @@ service cloud.firestore {
     }
 
     match /tournament_matches/{mid} {
-      allow read: if true;
+      // Jogos: leitura respeita o flag 'archived' do torneio-pai.
+      allow read: if isTournamentVisibleByTid(resource.data.tournament_id);
       allow create, update, delete: if isPlatformAdmin()
         || isTournamentAdmin(request.resource.data.tournament_id)
         || isTournamentAdmin(resource.data.tournament_id);
     }
 
     match /tournament_groups/{gid} {
-      allow read: if true;
+      // Grupos: leitura respeita o flag 'archived' do torneio-pai.
+      allow read: if isTournamentVisibleByTid(resource.data.tournament_id);
       allow create, update, delete: if isPlatformAdmin()
         || isTournamentAdmin(request.resource.data.tournament_id)
         || isTournamentAdmin(resource.data.tournament_id);
     }
 
     match /tournament_rankings/{rid} {
-      allow read: if true;
+      // Ranking materializado: leitura respeita o flag 'archived' do torneio-pai.
+      allow read: if isTournamentVisibleByTid(resource.data.tournament_id);
       allow write: if isPlatformAdmin()
         || isTournamentAdmin(request.resource.data.tournament_id)
         || isTournamentAdmin(resource.data.tournament_id);
     }
 
     match /tournament_courts/{cid} {
-      allow read: if true;
+      // Quadras: leitura respeita o flag 'archived' do torneio-pai.
+      allow read: if isTournamentVisibleByTid(resource.data.tournament_id);
       allow create, update, delete: if isPlatformAdmin()
         || isTournamentAdmin(request.resource.data.tournament_id)
         || isTournamentAdmin(resource.data.tournament_id);
