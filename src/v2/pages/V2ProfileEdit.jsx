@@ -6,7 +6,9 @@ import { ArrowLeft, Printer, Shield } from 'lucide-react';
 import { useAuth } from '@/core/lib/FirebaseAuthContext';
 import { useFeatureFlag } from '@/core/lib/FeatureFlagsContext';
 import { FEATURE_FLAG } from '@/core/featureFlags';
-import { birthDateToBrtDate, validateRequiredProfile } from '@/core/lib/profileValidation';
+import { birthDateToBrtDate, validateRequiredProfile, isRequiredProfileComplete } from '@/core/lib/profileValidation';
+import { useFunnel } from '@/modules/analytics/hooks/useFunnel';
+import { FUNNEL_EVENT } from '@/modules/analytics/domain/funnelEvents';
 import { ImageUpload } from '@/components/ui/image-upload';
 import { ATHLETE_GENDER_LABELS } from '@/modules/athletes/domain/constants';
 import { LEVEL_OPTIONS, getLevelByCode } from '@/modules/leveling/data/levels';
@@ -21,6 +23,7 @@ import {
 
 export default function V2ProfileEdit() {
   const { user, userProfile, updateUserProfile } = useAuth();
+  const { track } = useFunnel();
   const coachDirectoryOn = useFeatureFlag(FEATURE_FLAG.COACH_DIRECTORY);
 
   const [platformName, setPlatformName] = useState(userProfile?.platform_name || userProfile?.full_name || '');
@@ -81,6 +84,7 @@ export default function V2ProfileEdit() {
     e.preventDefault();
     const validation = validateRequiredProfile({ platformName, birthDate, phone, pickleballExperience });
     if (!validation.isValid) { setErrors(validation.errors); return; }
+    const wasComplete = isRequiredProfileComplete(userProfile);
     setBusy(true);
     try {
       await updateUserProfile({
@@ -92,6 +96,8 @@ export default function V2ProfileEdit() {
         competition_gender: competitionGender || null,
       });
       toast.success('Perfil atualizado.');
+      // Marco de funil: só na transição incompleto → completo.
+      if (!wasComplete) track(FUNNEL_EVENT.PROFILE_COMPLETED);
     } catch (err) {
       toast.error(err.message || 'Erro ao salvar.');
     } finally {

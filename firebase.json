@@ -9,6 +9,13 @@
   "storage": {
     "rules": "storage.rules"
   },
+  "functions": [
+    {
+      "source": "functions",
+      "codebase": "default",
+      "ignore": ["node_modules", ".git", "*.local"]
+    }
+  ],
   "hosting": [
     {
       "site": "picklerush",

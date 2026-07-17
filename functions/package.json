@@ -1,0 +1,13 @@
+{
+  "name": "pickleball-functions",
+  "description": "Cloud Functions da plataforma (recálculo automático do ranking).",
+  "engines": {
+    "node": "20"
+  },
+  "main": "index.js",
+  "dependencies": {
+    "firebase-admin": "^12.7.0",
+    "firebase-functions": "^6.1.0"
+  },
+  "private": true
+}
