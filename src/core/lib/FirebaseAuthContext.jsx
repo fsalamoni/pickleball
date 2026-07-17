@@ -10,13 +10,12 @@ import { logger } from '@/core/lib/logger';
 import { createAuditLog } from '@/core/services/auditService';
 import { claimProvisionalRegistrationsForUser } from '@/modules/tournament/services/registrationService';
 import { syncAthleteProfile } from '@/modules/athletes/services/athleteService';
+import { isOwnerEmail } from '@/core/config/owners';
 
 const AuthContext = createContext(null);
-const PLATFORM_OWNER_EMAIL = 'fsalamoni@gmail.com';
 
-function isPlatformOwnerEmail(email) {
-  return String(email || '').toLowerCase() === PLATFORM_OWNER_EMAIL;
-}
+// Mantido como alias para compat com código legado.
+const isPlatformOwnerEmail = isOwnerEmail;
 
 export const AuthProvider = ({ children }) => {
   const [user, setUser] = useState(null);

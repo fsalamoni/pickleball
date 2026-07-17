@@ -39,6 +39,7 @@ export const AUDIT_ACTION_LABELS = {
   tournament_unarchived: 'Torneio desarquivado',
   athlete_profile_restored: 'Perfil de atleta restaurado pelo admin',
   registrations_bulk_removed: 'Inscrições provisórias removidas em massa',
+  platform_owner_self_restored: 'Owner restaurou o próprio admin via rota de emergência',
   platform_delete_tournament: 'Torneio excluído (admin)',
   platform_feature_flag_changed: 'Feature flag alterada (admin)',
   tournament_groups_set: 'Grupos da fase definidos',
