@@ -8,8 +8,8 @@ import {
 
 describe('buildPublicTournamentUrl', () => {
   it('monta a URL pública no formato /p/<id>', () => {
-    expect(buildPublicTournamentUrl('https://pickletour.web.app', 'abc')).toBe(
-      'https://pickletour.web.app/p/abc',
+    expect(buildPublicTournamentUrl('https://picklerush.web.app', 'abc')).toBe(
+      'https://picklerush.web.app/p/abc',
     );
   });
 

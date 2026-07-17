@@ -57,10 +57,17 @@ function V2Spinner({ full = true }) {
 }
 
 /**
- * App v2 "Athleisure Premium" — experiência de design paralela sob /v2.
+ * V2App — "Athleisure Premium", a camada de apresentação OFICIAL e INTEGRAL
+ * da plataforma PickleRush.
  *
- * Reutiliza integralmente a camada de dados (hooks/serviços/Firebase) do app
- * atual; apenas a apresentação é nova. Não altera nada do v1.
+ * É montada em `/*` pelo `App.jsx` raiz (não em `/v2/*`) para todo usuário
+ * autenticado, e o V2 também atende as rotas públicas (landing, login,
+ * espectador, impressão) reusando os mesmos hooks e services do app legado.
+ *
+ * Reutiliza integralmente a camada de dados (`src/modules/*` — hooks,
+ * services, Firestore) que existia no V1; apenas a apresentação é nova. O
+ * V1 sobrevive apenas como arquivo de rotas em `src/V1Routes.jsx` montado em
+ * `/v1/*`, sem uso real na navegação.
  */
 export default function V2App() {
   const { isAuthenticated, isLoadingAuth, isAuthAvailable } = useAuth();

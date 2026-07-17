@@ -6,10 +6,11 @@
 
 ## 1. O que é
 
-**PickleTour** — plataforma web (PWA) para criar e administrar **torneios
+**PickleRush** — plataforma web (PWA) para criar e administrar **torneios
 amadores de pickleball no Brasil**, com camada de **comunidade** (atletas,
-clubes, eventos, fórum, chat). Domínio em produção: `pickletour.web.app`.
-UI e textos em **português (pt-BR)**.
+clubes, eventos, fórum, chat). Domínio em produção: `picklerush.web.app`
+(site Firebase `picklerush`). O site legado `pickletour.web.app` redireciona
+301 para o oficial. UI e textos em **português (pt-BR)**.
 
 Pilares:
 1. **Torneios** — formatos (single, duplas, americana), modalidades por
@@ -24,24 +25,32 @@ Pilares:
 - **React 18 + Vite**, JSX (sem TypeScript; há `typecheck` via JSDoc/`types.js`).
 - **Tailwind + shadcn/ui** (Radix) — primitivos em `src/components/ui/`.
 - **Firebase**: Auth (Google), **Firestore** (database nomeada `pickleball`),
-  Hosting (site `pickletour`). Sem Cloud Functions — **toda a lógica roda no
-  client**; a segurança é garantida por `firestore.rules`.
+  Hosting (sites `picklerush` ativo + `pickletour` redirect-only),
+  Storage e **Cloud Functions** (region `southamerica-east1`, usada apenas
+  para recálculo do ranking nacional via gatilho `onDocumentWritten` em
+  `tournaments/{id}`). Toda a lógica de UI/Hooks roda no client; a
+  segurança é garantida por `firestore.rules`.
 - **React Query** (`@tanstack/react-query`) para data fetching/cache.
-- **Vitest** (unit, ~213 testes) + **Playwright** (E2E).
+- **Vitest** (unit, ~408 testes) + **Playwright** (E2E).
 - **react-router-dom** (BrowserRouter), **react-hook-form + zod**, `sonner`
   (toasts), `date-fns`, `lucide-react`.
 
 ## 3. Arquitetura em uma frase
 
-App **client-only por módulos de domínio**, cada módulo em camadas
+App **client-only por módulos de domínio** (V1 + V2 coexistem; **V2 é a
+experiência oficial e integral**), cada módulo em camadas
 `domain → services → hooks → components/pages`. Domínio é **puro e testado**;
 services falam com Firestore; hooks expõem React Query; UI consome hooks.
+V2 (`src/v2/`) é a camada de apresentação ativa; **reusa integralmente** os
+hooks e services dos módulos em `src/modules/`.
 
 ```
 src/
 ├── App.jsx              # Roteamento + providers (QueryClient, Auth, Router)
 ├── main.jsx             # Bootstrap + registro PWA (atrás de flag)
-├── components/          # Layout (shell, sino, navegação) + ui/ (shadcn)
+├── V1Routes.jsx         # Tabela de rotas legada (V1) — somente /v1/*, sem uso real
+├── pages/               # Páginas V1-style que V2 ainda não substituiu (espectador, impressão)
+├── components/          # shadcn/ui primitives + Layout V1 (em desuso)
 ├── core/
 │   ├── config/firebase.js        # init app/auth/db (database 'pickleball')
 │   ├── lib/FirebaseAuthContext.jsx  # AuthProvider + useAuth (user, perfil, papéis)
@@ -50,14 +59,29 @@ src/
 │   ├── domain/types.js           # typedefs JSDoc compartilhados
 │   └── services/                 # auditService, notificationService,
 │                                 # baseService, storageService, observabilityService
-└── modules/
-    ├── tournament/   # núcleo: torneios, modalidades, jogos, ranking, sorteio
-    ├── athletes/     # diretório de atletas (perfis públicos)
-    ├── clubs/        # clubes, membros, eventos, fórum, game-day
-    ├── chat/         # conversas 1:1 e grupo
-    ├── leveling/     # tabela + questionário de nível (CBPE/USAP)
-    ├── notifications/# hook do sino
-    └── admin/        # painel da plataforma (métricas, torneios)
+├── modules/             # ⭐ BASE DE DOMÍNIO (17 módulos — reusado por V1 e V2)
+│   ├── tournament/      # núcleo: torneios, modalidades, jogos, ranking, sorteio
+│   ├── athletes/        # diretório de atletas (perfis públicos)
+│   ├── clubs/           # clubes, membros, eventos, fórum, game-day
+│   ├── chat/            # conversas 1:1 e grupo
+│   ├── leveling/        # tabela + questionário de nível (CBPE/USAP)
+│   ├── notifications/   # hook do sino
+│   ├── admin/           # painel da plataforma (métricas, torneios, parceiros)
+│   ├── arenas/          # arenas, reservas, fotos, preços e avaliações
+│   ├── games/           # jogos abertos e procura-jogo
+│   ├── partners/        # espaço de parceiros (admin)
+│   ├── performance/     # meu desempenho
+│   ├── progression/     # progressão do atleta
+│   ├── rating/          # ranking nacional, head-to-head
+│   ├── sharing/         # compartilhamento e certificados
+│   ├── social/          # feed, follows, players, metas
+│   ├── achievements/    # conquistas
+│   └── analytics/       # funil e observabilidade
+└── v2/                  # ⭐ APP ATIVO — "Athleisure Premium"
+    ├── V2App.jsx        # Tabela de rotas (ativo em /*, autenticado)
+    ├── components/      # V2Layout + componentes por módulo
+    ├── pages/           # V2Dashboard, V2Arenas, V2Tournament, V2Profile, ...
+    └── ui/primitives.jsx # V2Button, V2Card, ...
 ```
 
 Convenção de camadas por módulo (nem todo módulo tem todas):
@@ -79,25 +103,36 @@ Convenção de camadas por módulo (nem todo módulo tem todas):
   nascimento, telefone, tempo de experiência. Nivelamento (`leveling_level`) é
   recomendado, não obrigatório.
 
-## 5. Rotas (App.jsx)
+## 5. Rotas
+
+A navegação autenticada roda 100% na **V2App** (`src/v2/V2App.jsx`),
+montada em `/*` quando o usuário está autenticado. Visitantes em `/` veem a
+landing (V2) e nas demais rotas são levados a `/login`. A `V1Routes` (V1
+legado) está presente em `App.jsx` mas só atende `/v1/*` — não recebe
+navegação nova.
 
 | Rota | Acesso | Tela |
 | --- | --- | --- |
-| `/` `/login` `/regras` `/nivelamento` `/conduta` `/politica-uso` | público | landing, login, conteúdo |
+| `/` `/login` | público | landing, login (V2) |
+| `/regras` `/nivelamento` `/historia` `/conduta` `/politica-uso` | público | conteúdo institucional (V2) |
 | `/p/:tournamentId` | público (sem layout) | visão de espectador, auto-refresh |
 | `/torneios/:id/imprimir` | público | versão impressão |
-| `/inicio` | autenticado | Dashboard (meus torneios) |
-| `/perfil` | autenticado | Profile (dados + nivelamento) |
-| `/torneios/criar` `/torneios/ingressar` `/torneios/publicos` | autenticado | criar/ingressar/listar públicos |
-| `/torneios/:id` `/torneios/:id/:tab` | autenticado | Tournament (abas) |
-| `/atletas` | autenticado | diretório de atletas |
-| `/clubes` `/clubes/criar` `/clubes/:id` `/clubes/:id/eventos/:eventId` | autenticado | comunidade de clubes |
-| `/chat` | autenticado | mensagens |
-| `/admin` `/admin/torneios` `/admin/metricas` | platform_admin | painel |
+| `/inicio` | autenticado (V2) | Dashboard |
+| `/perfil` `/perfil/editar` | autenticado (V2) | Profile (dados + nivelamento) |
+| `/torneios` `/torneios/criar` `/torneios/ingressar` `/torneios/guia` | autenticado (V2) | lista/criar/ingressar/guia |
+| `/torneios/:id` `/torneios/:id/:tab` `/torneios/:id/modalidades/:modId` | autenticado (V2) | Tournament (abas) + página de modalidade |
+| `/arenas` `/arenas/criar` `/arenas/:id` `/arenas/:id/gerir` `/minhas-reservas` | autenticado (V2) | arenas + reservas |
+| `/atletas` `/atleta/:uid` | autenticado (V2) | diretório + perfil público |
+| `/clubes` `/clubes/criar` `/clubes/:id` `/clubes/:id/eventos/:eventId` | autenticado (V2) | clubes + eventos |
+| `/chat` `/novidades` | autenticado (V2) | mensagens + feed |
+| `/ranking` `/encontrar-jogadores` `/procura-jogo` `/parceiros` | autenticado (V2) | rating + jogos + parceiros |
+| `/meu-desempenho` | autenticado (V2) | performance |
+| `/admin/torneios` `/admin/metricas` `/admin/parceiros` | platform_admin (V2) | painel |
 
 Guards: `ProtectedRoute` (auth) e `AdminRoute` (platform_admin). Redirects
 legados `/dashboard`,`/boloes*` → rotas novas. Páginas via `React.lazy`.
-`basename = import.meta.env.BASE_URL`. Em DEV sem Firebase há "local preview".
+`basename = import.meta.env.BASE_URL`. Em DEV sem Firebase há "local preview"
+em `LOCAL_PREVIEW_PROTECTED_PATHS`.
 
 ## 6. Modelo de dados (Firestore, database `pickleball`)
 
@@ -152,14 +187,18 @@ componentes ou services.
 ```bash
 npm run dev       # Vite dev (http://localhost:5173)
 npm run lint      # ESLint (--quiet no CI)
-npm run test      # Vitest unit
+npm run test      # Vitest unit (~408 testes)
 npm run e2e       # Playwright
 npm run build     # produção → dist/  (VITE_PWA_ENABLED=true ativa PWA)
 ```
 
 - **Deploy**: push em `main` dispara `.github/workflows/deploy-firebase.yml`
-  (workflow "Deploy Firebase Hosting") → Firebase Hosting site `pickletour`.
-  Regras do Firestore (`firestore.rules`) são publicadas pelo mesmo fluxo/CLI.
+  (workflow "Deploy Firebase Hosting") → Firebase Hosting nos sites
+  `picklerush` (ativo) + `pickletour` (redirect-only 301). Regras do
+  Firestore (`firestore.rules`) e índices (`firestore.indexes.json`) são
+  publicados pelo mesmo fluxo/CLI. Cloud Function
+  `recomputeRankingOnTournamentChange` (region `southamerica-east1`) é
+  implantada junto.
 - **Env**: variáveis `VITE_FIREBASE_*` (ver `.env.example`),
   `VITE_FIRESTORE_DATABASE_ID` (padrão `pickleball`), `VITE_PWA_ENABLED`.
 - **PWA**: aditivo, atrás de `VITE_PWA_ENABLED`; ícones via

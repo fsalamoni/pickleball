@@ -13,7 +13,7 @@ function trimTrailingSlash(value) {
 
 /**
  * URL pública (visão de espectador) de um torneio: `<origin>/p/<id>`.
- * @param {string} origin — ex.: `https://pickletour.web.app`
+ * @param {string} origin — ex.: `https://picklerush.web.app`
  * @param {string} tournamentId
  * @returns {string} URL absoluta, ou '' se faltar dado.
  */

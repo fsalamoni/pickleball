@@ -6,7 +6,7 @@ export default function PrivacyPolicy() {
     <LegalPage
       eyebrow="Termos de uso e privacidade"
       title="Política de Uso e Privacidade"
-      description="Condições de uso da plataforma Pickleball, natureza esportiva da ferramenta e diretrizes de tratamento de dados pessoais."
+      description="Condições de uso da plataforma PickleRush, natureza esportiva da ferramenta e diretrizes de tratamento de dados pessoais."
       meta={`Versão 1.0 — ${new Date().toLocaleDateString('pt-BR', { month: 'long', year: 'numeric' })}. Ao usar a plataforma, você declara ciência e aceitação destas condições.`}
     >
       <LegalSection icon={FileText} title="Natureza da Plataforma" description="Ferramenta esportiva para criação e gestão de torneios amadores.">

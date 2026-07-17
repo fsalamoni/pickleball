@@ -8,7 +8,7 @@ export default function V2Conduct() {
       <V2ContentHero
         eyebrow="Espírito esportivo"
         title="Conduta & Fair Play"
-        description="Princípios de respeito, integridade e fair play que orientam o uso da plataforma Pickleball."
+        description="Princípios de respeito, integridade e fair play que orientam o uso da plataforma PickleRush."
       />
 
       <div className="space-y-4">

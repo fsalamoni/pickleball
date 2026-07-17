@@ -1,4 +1,4 @@
-# PickleTour
+# PickleRush
 
 Plataforma web para **operar o ecossistema do pickleball amador no Brasil**.
 
@@ -6,7 +6,7 @@ Ela une torneios, modalidades, comunidade, clubes, arenas, reservas e comunicaç
 
 ## Propósito
 
-A PickleTour existe para:
+A PickleRush existe para:
 
 1. reduzir improviso na organização de torneios;
 2. melhorar a percepção de qualidade para atletas e público;
@@ -66,14 +66,23 @@ A PickleTour existe para:
 
 O padrão obrigatório de design da plataforma está documentado em [docs/DESIGN_STANDARD.md](docs/DESIGN_STANDARD.md).
 
-As primitivas de composição para páginas, seções e formulários ficam em [src/components/ui/platform-page.jsx](src/components/ui/platform-page.jsx).
+A camada de apresentação ativa é o **V2 ("Athleisure Premium")** em `src/v2/` (rotas, layout e primitivos próprios). As primitivas compartilhadas de baixo nível (shadcn/ui) ficam em [src/components/ui/](src/components/ui/).
+
+## App ativo (V2) vs. legado (V1)
+
+A plataforma opera em **dois apps paralelos no mesmo código-fonte**, e a V2 é a experiência oficial e integral:
+
+- **V2 (ativo, `src/v2/`)** — design "Athleisure Premium". Atende **toda a navegação** do app autenticado em `/*` e as páginas públicas (landing, login, espectador, impressão). É o que o usuário final vê.
+- **V1 (legado, `src/pages/` + `src/V1Routes.jsx`)** — design antigo, mantido apenas como arquivo de rotas. **Não recebe mais navegação nova**; páginas que tinham par em V2 foram removidas. Sobrevive apenas como código morto em `src/V1Routes.jsx` (ver plano de remoção).
+
+A camada de **domínio** (`src/modules/`) é **compartilhada por V1 e V2** — V2 renderiza usando os hooks e services que V1 já consolidou. Toda a lógica de negócio, dados, regras e integrações mora em `src/modules/` e é reusada.
 
 ## Stack
 
-- React 18 + Vite + Tailwind + shadcn/ui
-- Firebase: Auth, Firestore (database `pickleball`), Hosting
+- React 18 + Vite + Tailwind + shadcn/ui (Radix)
+- Firebase: Auth (Google), **Firestore (database nomeada `pickleball`)**, Hosting, Storage, **Cloud Functions** (region `southamerica-east1`, apenas para recálculo do ranking nacional)
 - React Query para data fetching
-- Vitest para testes unitários
+- Vitest para testes unitários (~408 testes)
 - Playwright para E2E
 
 ## Como rodar
@@ -131,17 +140,32 @@ O repositório está preparado para:
 
 ```text
 src/
-├── App.jsx
-├── core/                  # auth, firebase, serviços e base compartilhada
-├── components/            # layout, componentes globais e ui/
-├── pages/                 # landing, login, regras, perfil e páginas institucionais
-└── modules/
-    ├── tournament/        # torneios, modalidades, fases, jogos, ranking, visão pública
-    ├── arenas/            # arenas, reservas, fotos, preços e avaliações
-    ├── clubs/             # clubes, mural, eventos e fóruns
-    ├── chat/              # conversas diretas e em grupo
-    ├── athletes/          # diretório e perfis públicos
-    ├── leveling/          # nivelamento do atleta
-    ├── notifications/     # notificações in-app
-    └── admin/             # painel administrativo da plataforma
+├── App.jsx                # Roteamento raiz + providers
+├── main.jsx               # Bootstrap + PWA (atrás de flag)
+├── core/                  # auth, firebase, services e base compartilhada
+├── components/            # layout, componentes globais e ui/ (shadcn)
+├── pages/                 # páginas públicas com auto-refresh (espectador, impressão)
+├── modules/               # ⭐ BASE DE DOMÍNIO — 17 módulos (hooks/services/domain)
+│   ├── tournament/        # torneios, modalidades, fases, jogos, ranking, sorteio
+│   ├── athletes/          # diretório e perfis públicos
+│   ├── clubs/             # clubes, mural, eventos, fóruns, game-day
+│   ├── chat/              # conversas diretas e em grupo
+│   ├── leveling/          # nivelamento do atleta (CBPE/USAP)
+│   ├── notifications/     # notificações in-app (sino)
+│   ├── admin/             # painel administrativo
+│   ├── arenas/            # arenas, reservas, fotos, preços
+│   ├── games/             # jogos abertos e procura-jogo
+│   ├── partners/          # espaço de parceiros
+│   ├── performance/       # meu desempenho
+│   ├── progression/       # progressão do atleta
+│   ├── rating/            # ranking nacional
+│   ├── sharing/           # compartilhamento e certificados
+│   ├── social/            # feed, follows, players, metas
+│   ├── achievements/      # conquistas
+│   └── analytics/         # funil e observabilidade
+└── v2/                    # ⭐ APP ATIVO — "Athleisure Premium"
+    ├── V2App.jsx          # Tabela de rotas do V2 (ativo em /*)
+    ├── components/        # V2Layout + componentes por módulo
+    ├── pages/             # V2Dashboard, V2Arenas, V2Tournament, ...
+    └── ui/primitives.jsx  # V2Button, V2Card, ...
 ```

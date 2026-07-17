@@ -6,7 +6,7 @@ export default function ConductFairPlay() {
     <LegalPage
       eyebrow="Espírito esportivo"
       title="Conduta &amp; Fair Play"
-      description="Princípios de respeito, integridade e fair play que orientam o uso da plataforma Pickleball."
+      description="Princípios de respeito, integridade e fair play que orientam o uso da plataforma PickleRush."
     >
       <LegalSection icon={HeartHandshake} title="Respeito ao adversário e ao parceiro">
         <p>

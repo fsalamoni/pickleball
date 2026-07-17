@@ -1,6 +1,6 @@
 # docs/ — Base de conhecimento (para IA e humanos)
 
-Documentação de referência da plataforma **PickleTour**, escrita para que
+Documentação de referência da plataforma **PickleRush**, escrita para que
 qualquer pessoa — ou IA — entenda a estrutura e o funcionamento com o **mínimo
 de tokens/leitura**, sem precisar varrer o código.
 
