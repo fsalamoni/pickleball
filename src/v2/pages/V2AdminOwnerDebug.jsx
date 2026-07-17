@@ -254,7 +254,7 @@ export default function V2AdminOwnerDebug() {
               summary="counts"
             />
             <Section
-              title="7. tournament_registrations (player_email == email)"
+              title="7. tournament_registrations por email (player_a/b_email_lc == email)"
               data={report.sections.tournament_registrations_by_email}
               summary="counts"
             />
