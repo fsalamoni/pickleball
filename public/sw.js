@@ -1,5 +1,5 @@
 /*
- * Service worker do PWA Pickleball.
+ * Service worker do PWA PickleRush.
  *
  * Princípios de segurança (não pode afetar nada do app/Firebase):
  *  - Só intercepta requisições GET de MESMA ORIGEM.
@@ -8,9 +8,13 @@
  *  - Navegação usa network-first (sempre conteúdo novo quando online); o cache
  *    só entra como fallback offline. Assets com hash são imutáveis (cache-first).
  *  - skipWaiting + clients.claim garantem que atualizações entram sem ficar presas.
+ *
+ * IMPORTANTE: bumpar `VERSION` sempre que o conjunto de assets mudar (ex.:
+ * migração de V1 → V2). O cache key inclui o nome do produto e a versão; a
+ * próxima ativação apaga caches antigos em `activate`.
  */
-const VERSION = 'v3';
-const CACHE = `pickleball-${VERSION}`;
+const VERSION = 'v4';
+const CACHE = `picklerush-${VERSION}`;
 const SHELL_URL = '/index.html';
 
 self.addEventListener('install', (event) => {
