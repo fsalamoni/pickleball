@@ -91,4 +91,30 @@ describe('computeRatings', () => {
     ]);
     expect(result).toEqual([]);
   });
+
+  it('acumula saldo de pontos e conta torneios distintos', () => {
+    const result = computeRatings([
+      { side_a: ['p1'], side_b: ['p2'], winner: 'a', points_a: 22, points_b: 15, tournament_id: 't1' },
+      { side_a: ['p2'], side_b: ['p1'], winner: 'a', points_a: 21, points_b: 10, tournament_id: 't1' },
+      { side_a: ['p1'], side_b: ['p2'], winner: 'a', points_a: 21, points_b: 19, tournament_id: 't2' },
+    ]);
+    const p1 = result.find((p) => p.player_id === 'p1');
+    const p2 = result.find((p) => p.player_id === 'p2');
+    // p1: marcou 22+10+21=53, sofreu 15+21+19=55 → saldo -2
+    expect(p1.points_for).toBe(53);
+    expect(p1.points_against).toBe(55);
+    expect(p1.points_balance).toBe(-2);
+    // p2 é o espelho de p1
+    expect(p2.points_balance).toBe(2);
+    // dois torneios distintos (t1, t2)
+    expect(p1.tournaments).toBe(2);
+    expect(p2.tournaments).toBe(2);
+  });
+
+  it('saldo/torneios assumem zero quando não informados', () => {
+    const [p] = computeRatings([{ side_a: ['p1'], side_b: ['p2'], winner: 'a' }]);
+    expect(p.points_for).toBe(0);
+    expect(p.points_balance).toBe(0);
+    expect(p.tournaments).toBe(0);
+  });
 });

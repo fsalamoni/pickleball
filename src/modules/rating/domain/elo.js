@@ -55,7 +55,18 @@ function ensurePlayer(state, id, seeds, defaultSeed) {
   let player = state.get(id);
   if (!player) {
     const seed = Number.isFinite(seeds?.[id]) ? seeds[id] : defaultSeed;
-    player = { player_id: id, rating: seed, games: 0, wins: 0, losses: 0, peak_rating: seed };
+    player = {
+      player_id: id,
+      rating: seed,
+      games: 0,
+      wins: 0,
+      losses: 0,
+      peak_rating: seed,
+      // Saldo de pontos (pontos marcados − sofridos) e torneios distintos.
+      points_for: 0,
+      points_against: 0,
+      tournaments: new Set(),
+    };
     state.set(id, player);
   }
   return player;
@@ -64,7 +75,7 @@ function ensurePlayer(state, id, seeds, defaultSeed) {
 /**
  * Aplica um único jogo ao estado mutável `state` (Map id → estatísticas).
  * @param {Map<string, object>} state
- * @param {{ side_a: string[], side_b: string[], winner: 'a'|'b' }} match
+ * @param {{ side_a: string[], side_b: string[], winner: 'a'|'b', points_a?: number, points_b?: number, tournament_id?: string }} match
  * @param {{ seeds?: Record<string, number>, defaultSeed?: number }} [options]
  */
 export function applyMatch(state, match, options = {}) {
@@ -83,17 +94,27 @@ export function applyMatch(state, match, options = {}) {
   const expA = expectedScore(teamA, teamB);
   const scoreA = match.winner === 'a' ? 1 : 0;
 
+  const pointsA = Number(match.points_a) || 0;
+  const pointsB = Number(match.points_b) || 0;
+  const tournamentId = match.tournament_id || null;
+
   playersA.forEach((p) => {
     p.rating += kFactor(p.games) * (scoreA - expA);
     p.games += 1;
     if (scoreA === 1) p.wins += 1; else p.losses += 1;
     if (p.rating > p.peak_rating) p.peak_rating = p.rating;
+    p.points_for += pointsA;
+    p.points_against += pointsB;
+    if (tournamentId) p.tournaments.add(tournamentId);
   });
   playersB.forEach((p) => {
     p.rating += kFactor(p.games) * ((1 - scoreA) - (1 - expA));
     p.games += 1;
     if (scoreA === 0) p.wins += 1; else p.losses += 1;
     if (p.rating > p.peak_rating) p.peak_rating = p.rating;
+    p.points_for += pointsB;
+    p.points_against += pointsA;
+    if (tournamentId) p.tournaments.add(tournamentId);
   });
 }
 
@@ -115,9 +136,16 @@ export function computeRatings(matches, options = {}) {
 
   return Array.from(state.values())
     .map((p) => ({
-      ...p,
+      player_id: p.player_id,
       rating: Math.round(p.rating),
       peak_rating: Math.round(p.peak_rating),
+      games: p.games,
+      wins: p.wins,
+      losses: p.losses,
+      points_for: p.points_for,
+      points_against: p.points_against,
+      points_balance: p.points_for - p.points_against,
+      tournaments: p.tournaments.size,
     }))
     .sort((a, b) => b.rating - a.rating || b.games - a.games);
 }

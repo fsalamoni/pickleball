@@ -34,6 +34,74 @@ function medalEmoji(position) {
   return null;
 }
 
+/** Formata o saldo de pontos com sinal (ex.: +12, -5, 0) ou "—" quando ausente. */
+function formatBalance(balance) {
+  if (balance == null || Number.isNaN(Number(balance))) return '—';
+  const n = Number(balance);
+  return n > 0 ? `+${n}` : String(n);
+}
+
+/** Explicação em linguagem natural de como o ranking é formado. */
+function RankingExplainer() {
+  return (
+    <PlatformSurfaceCard contentClassName="p-4 sm:p-5">
+      <details className="group">
+        <summary className="flex cursor-pointer list-none items-center justify-between gap-2">
+          <span className="text-sm font-semibold text-ink">Como funciona o ranking?</span>
+          <span className="text-xs text-gray-400 group-open:hidden">ver explicação</span>
+          <span className="hidden text-xs text-gray-400 group-open:inline">ocultar</span>
+        </summary>
+        <div className="mt-3 space-y-3 text-sm leading-6 text-gray-600">
+          <p>
+            O ranking é um <strong>rating de habilidade calculado pela própria plataforma</strong> (no
+            estilo Elo), a partir dos <strong>jogos já finalizados</strong>. A cada recálculo, todos os
+            jogos são reprocessados do zero, em ordem cronológica — então o resultado é sempre consistente.
+          </p>
+          <ul className="list-disc space-y-1.5 pl-5">
+            <li>
+              Cada atleta começa com uma pontuação inicial derivada do seu <strong>nível declarado</strong>
+              {' '}(nível mais alto começa mais alto; sem nível, começa no meio da tabela).
+            </li>
+            <li>
+              A cada jogo, quem <strong>vence ganha pontos</strong> e quem perde cede pontos. O tamanho do
+              ajuste depende da <strong>força do adversário</strong>: vencer alguém mais forte vale mais;
+              perder para alguém mais fraco custa mais.
+            </li>
+            <li>
+              Nos <strong>primeiros jogos</strong> a pontuação se move mais rápido (fase provisória) e
+              depois estabiliza.
+            </li>
+            <li>
+              Em <strong>duplas</strong>, a dupla é avaliada pela média das pontuações e cada jogador recebe
+              o próprio ajuste.
+            </li>
+            <li>
+              Só entram jogos entre atletas <strong>com conta na plataforma</strong> — não é possível
+              ranquear quem não tem cadastro.
+            </li>
+            <li>
+              O ranking oficial considera apenas <strong>torneios públicos e já encerrados</strong>; torneios
+              apagados saem do ranking automaticamente no recálculo seguinte.
+            </li>
+            <li>
+              O recálculo é feito pela administração da plataforma — após novos resultados, pode levar um
+              tempo até o ranking refletir.
+            </li>
+          </ul>
+          <p className="text-xs text-gray-500">
+            <strong>Colunas:</strong> Torneios (torneios disputados), Jogos, V–D (vitórias–derrotas), Saldo
+            (pontos marcados − sofridos) e Rating (a pontuação que ordena o ranking).
+          </p>
+          <p className="text-xs text-gray-500">
+            Este é um rating <strong>próprio da plataforma</strong>, para leitura interna — não é um rating
+            oficial de federação (como DUPR ou UTPR).
+          </p>
+        </div>
+      </details>
+    </PlatformSurfaceCard>
+  );
+}
+
 export default function NationalRanking() {
   const enabled = useFeatureFlag(FEATURE_FLAG.PLAYER_RATING);
   const profilePageOn = useFeatureFlag(FEATURE_FLAG.ATHLETE_PROFILE_PAGE);
@@ -100,6 +168,8 @@ export default function NationalRanking() {
           description="Filtre por estado, nível e perfil para entender quem está se destacando dentro da base de atletas da plataforma."
         />
       </PlatformSurfaceCard>
+
+      <RankingExplainer />
       <PlatformSurfaceCard contentClassName="space-y-3 p-4">
             <div className="relative">
               <Search className="absolute left-4 top-1/2 h-4 w-4 -translate-y-1/2 text-gray-400" />
@@ -181,8 +251,10 @@ export default function NationalRanking() {
                       <th className="px-3 py-2">#</th>
                       <th className="px-3 py-2">Atleta</th>
                       <th className="px-3 py-2">Cidade/UF</th>
+                      <th className="px-3 py-2 text-center">Torneios</th>
                       <th className="px-3 py-2 text-center">Jogos</th>
                       <th className="px-3 py-2 text-center">V–D</th>
+                      <th className="px-3 py-2 text-center">Saldo</th>
                       <th className="px-3 py-2 text-right">Rating</th>
                     </tr>
                   </thead>
@@ -216,8 +288,10 @@ export default function NationalRanking() {
                           <td className="px-3 py-2 text-gray-500">
                             {[p.city, p.state].filter(Boolean).join(' / ') || '—'}
                           </td>
+                          <td className="px-3 py-2 text-center tabular-nums">{p.tournaments ?? '—'}</td>
                           <td className="px-3 py-2 text-center tabular-nums">{p.games}</td>
                           <td className="px-3 py-2 text-center tabular-nums">{p.wins}–{p.losses}</td>
+                          <td className="px-3 py-2 text-center tabular-nums">{formatBalance(p.points_balance)}</td>
                           <td className="px-3 py-2 text-right font-bold tabular-nums text-green-700">{p.rating}</td>
                         </tr>
                       );

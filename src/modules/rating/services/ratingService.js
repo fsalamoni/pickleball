@@ -117,10 +117,16 @@ export async function recomputeAllRatings(actor, options = {}) {
     const a = resolveSideUids(m.side_a_ids, regById);
     const b = resolveSideUids(m.side_b_ids, regById);
     if (!a.complete || !b.complete) return;
+    const games = Array.isArray(m.games) ? m.games : [];
+    const pointsA = games.reduce((sum, g) => sum + (Number(g.a) || 0), 0);
+    const pointsB = games.reduce((sum, g) => sum + (Number(g.b) || 0), 0);
     engineMatches.push({
       side_a: a.uids,
       side_b: b.uids,
       winner: m.winner_side,
+      points_a: pointsA,
+      points_b: pointsB,
+      tournament_id: m.tournament_id || null,
       at: toMillis(m.result_recorded_at) || toMillis(m.updated_at) || toMillis(m.created_at),
     });
   });
@@ -137,6 +143,10 @@ export async function recomputeAllRatings(actor, options = {}) {
       games: p.games,
       wins: p.wins,
       losses: p.losses,
+      points_for: p.points_for,
+      points_against: p.points_against,
+      points_balance: p.points_balance,
+      tournaments: p.tournaments,
       position: index + 1,
       platform_name: profile.platform_name || 'Atleta',
       photo_url: profile.photo_url || '',
