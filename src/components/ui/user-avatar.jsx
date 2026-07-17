@@ -35,7 +35,7 @@ export function UserAvatar({
   lightboxDescription,
 }) {
   const dim = SIZES[size] || SIZES.sm;
-  const base = 'shrink-0 rounded-full border border-gray-100 object-cover';
+  const base = 'shrink-0 rounded-full border border-gray-100 object-cover object-top';
   const label = title || name || '';
 
   if (photoUrl) {

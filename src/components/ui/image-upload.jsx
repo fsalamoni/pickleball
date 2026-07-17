@@ -78,7 +78,7 @@ export function ImageUpload({
                 (busy || disabled) && 'cursor-not-allowed opacity-80',
               )}
             >
-              <img src={value} alt="" className="h-full w-full object-cover" />
+              <img src={value} alt="" className={cn('h-full w-full object-cover', isCircle && 'object-top')} />
               {!disabled && (
                 <span className="absolute inset-0 flex items-center justify-center bg-ink/0 text-white opacity-0 transition-opacity group-hover:bg-ink/40 group-hover:opacity-100">
                   {busy ? <Loader2 className="h-5 w-5 animate-spin" /> : <Camera className="h-5 w-5" />}
