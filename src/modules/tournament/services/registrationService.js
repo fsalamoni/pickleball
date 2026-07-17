@@ -21,6 +21,7 @@ import {
   writeBatch,
 } from 'firebase/firestore';
 import { db } from '@/core/config/firebase';
+import { logger } from '@/core/lib/logger';
 import { createAuditLog } from '@/core/services/auditService';
 import {
   REGISTRATION_STATUS,
@@ -350,6 +351,125 @@ export async function cancelRegistration(id, actor) {
 export async function deleteRegistration(id, actor) {
   await deleteDoc(doc(db, COL, id));
   await createAuditLog({ action: 'registration_deleted', actor, details: { registration_id: id } });
+}
+
+/**
+ * Remove em lote inscrições provisórias e/ou placeholder, com filtros finos.
+ * Use com cuidado: o audit log é gerado UMA VEZ (com a contagem), não por
+ * registration deletada, para não inundar `audit_logs` em operações grandes.
+ *
+ * Permissão: `platform_admin` (Firestore rule atual de `tournament_registrations`
+ * já permite `delete` por admin OU tournament_admin; aqui restringimos no
+ * service para evitar que admins de torneio limpem atletas de outros).
+ *
+ * @param {object} options
+ * @param {string} [options.tournamentId] — escopo (null = todos os torneios)
+ * @param {string} [options.modalityId] — escopo adicional
+ * @param {boolean} [options.onlyProvisional=true] — `is_provisional: true`
+ * @param {boolean} [options.onlyPlaceholder=false] — `is_placeholder: true`
+ * @param {RegExp|string} [options.namePattern] — regex ou string; bate em
+ *   `player_a_name` e `player_b_name` (case-insensitive). Útil pra remover
+ *   "A", "B", "C" etc.
+ * @param {string} [options.email] — remove só registrations com esse email
+ *   (em player_a_email_lc ou player_b_email_lc). Use pra desvincular o seu
+ *   próprio email de registrations provisórias que você cadastrou.
+ * @param {boolean} [options.dryRun=false] — se true, não deleta; só conta
+ * @param {object} actor
+ * @returns {Promise<{ scanned: number, deleted: number, dryRun: boolean,
+ *                     ids: string[] }>}
+ */
+export async function bulkRemoveProvisionalRegistrations(options = {}, actor) {
+  const {
+    tournamentId = null,
+    modalityId = null,
+    onlyProvisional = true,
+    onlyPlaceholder = false,
+    namePattern = null,
+    email = null,
+    dryRun = false,
+  } = options;
+
+  if (!actor?.uid) throw new Error('Usuário não autenticado.');
+  const callerIsAdmin = await checkIsPlatformAdmin(actor.uid);
+  if (!callerIsAdmin) {
+    throw new Error('Apenas o admin da plataforma pode executar limpeza em massa.');
+  }
+
+  const filters = [];
+  if (tournamentId) filters.push(where('tournament_id', '==', tournamentId));
+  if (modalityId) filters.push(where('modality_id', '==', modalityId));
+  // Firestore não aceita `OR` em campos diferentes; tratamos `is_provisional`
+  // OU `is_placeholder` no client (filtro adicional). Para `namePattern` e
+  // `email` também é client-side.
+  if (onlyProvisional && !onlyPlaceholder) {
+    filters.push(where('is_provisional', '==', true));
+  } else if (onlyPlaceholder && !onlyProvisional) {
+    filters.push(where('is_placeholder', '==', true));
+  } else if (onlyProvisional && onlyPlaceholder) {
+    // AND entre campos; se quiser OU, faz 2 queries. Por enquanto, ambos
+    // verdadeiros = placeholder (geralmente são exclusivos; é o suficiente).
+    filters.push(where('is_placeholder', '==', true));
+  }
+
+  const snap = await getDocs(query(collection(db, COL), ...filters));
+  let docsToDelete = snap.docs;
+
+  if (namePattern) {
+    const re = namePattern instanceof RegExp ? namePattern : new RegExp(namePattern, 'i');
+    docsToDelete = docsToDelete.filter((d) => {
+      const data = d.data();
+      return re.test(data.player_a_name || '') || re.test(data.player_b_name || '');
+    });
+  }
+  if (email) {
+    const target = String(email).trim().toLowerCase();
+    docsToDelete = docsToDelete.filter((d) => {
+      const data = d.data();
+      return data.player_a_email_lc === target || data.player_b_email_lc === target;
+    });
+  }
+
+  const ids = docsToDelete.map((d) => d.id);
+  if (dryRun) {
+    return { scanned: snap.size, deleted: 0, dryRun: true, ids };
+  }
+
+  // Batches respeitando o limite do Firestore (500 operações por batch).
+  let deleted = 0;
+  for (let i = 0; i < docsToDelete.length; i += SAFE_BATCH_WRITE_SIZE) {
+    const slice = docsToDelete.slice(i, i + SAFE_BATCH_WRITE_SIZE);
+    const batch = writeBatch(db);
+    slice.forEach((d) => batch.delete(d.ref));
+    await batch.commit();
+    deleted += slice.length;
+  }
+
+  await createAuditLog({
+    action: 'registrations_bulk_removed',
+    actor,
+    details: {
+      scanned: snap.size,
+      deleted,
+      filters: {
+        tournamentId, modalityId, onlyProvisional, onlyPlaceholder,
+        namePattern: namePattern ? String(namePattern) : null,
+        email: email ? String(email).trim().toLowerCase() : null,
+      },
+    },
+  });
+
+  return { scanned: snap.size, deleted, dryRun: false, ids };
+}
+
+async function checkIsPlatformAdmin(uid) {
+  if (!uid || !db) return false;
+  try {
+    const snap = await getDoc(doc(db, 'users', uid));
+    return snap.exists() && snap.data()?.role === 'platform_admin';
+  } catch (err) {
+    logger.error('Falha ao verificar role do caller em bulkRemoveProvisionalRegistrations:', err);
+    return false;
+  }
 }
 
 export async function listRegistrations(modalityId) {

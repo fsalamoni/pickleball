@@ -397,7 +397,10 @@ service cloud.firestore {
     // próprio atleta autorizou. Dados privados nunca chegam a esta coleção.
     match /athlete_profiles/{uid} {
       allow read: if isAuthed();
-      allow create, update: if isOwner(uid);
+      // platform_admin também pode escrever — usado por
+      // `restoreAthleteProfileFromUserDoc` pra recuperar perfis corrompidos
+      // pelo bug antigo do `syncAthleteProfile`.
+      allow create, update: if isOwner(uid) || isPlatformAdmin();
       allow delete: if isOwner(uid) || isPlatformAdmin();
     }
 

@@ -1,11 +1,12 @@
 import React, { useEffect, useMemo, useState } from 'react';
 import { Navigate } from 'react-router-dom';
-import { Archive, ArchiveRestore, Trash2, Trophy } from 'lucide-react';
+import { Archive, ArchiveRestore, Brush, Trash2, Trophy } from 'lucide-react';
 import { toast } from 'sonner';
 import { ConfirmDialog } from '@/components/ui/confirm-dialog';
 import { useAuth } from '@/core/lib/FirebaseAuthContext';
 import { listAllTournaments, deleteTournamentCascading } from '@/modules/admin/services/adminService';
 import { archiveTournament, unarchiveTournament } from '@/modules/tournament/services/tournamentService';
+import { bulkRemoveProvisionalRegistrations } from '@/modules/tournament/services/registrationService';
 import { TOURNAMENT_STATUS_LABELS } from '@/modules/tournament/domain/constants';
 import { V2Badge, V2Button, V2EmptyState, V2PageIntro, V2Skeleton, V2StatCard, V2Surface } from '@/v2/ui/primitives';
 
@@ -53,6 +54,33 @@ export default function V2AdminTournaments() {
       setDeleteTarget(null);
       void load();
     } catch (err) { toast.error(err.message); } finally { setDeleting(false); }
+  }
+
+  async function handleCleanProvisionals(t) {
+    // Dry-run primeiro pra mostrar o que será removido.
+    try {
+      const dry = await bulkRemoveProvisionalRegistrations({
+        tournamentId: t.id,
+        onlyProvisional: true,
+        onlyPlaceholder: true,
+        dryRun: true,
+      }, user);
+      if (dry.deleted === 0 && dry.scanned === 0) {
+        toast.info('Nada pra limpar neste torneio.');
+        return;
+      }
+      const ok = window.confirm(
+        `Remover ${dry.scanned} inscrição(ões) provisória(s)/placeholder do torneio "${t.name}"?\n`
+        + 'A operação é registrada no audit_logs e não pode ser desfeita.',
+      );
+      if (!ok) return;
+      const result = await bulkRemoveProvisionalRegistrations({
+        tournamentId: t.id,
+        onlyProvisional: true,
+        onlyPlaceholder: true,
+      }, user);
+      toast.success(`${result.deleted} inscrição(ões) removida(s).`);
+    } catch (err) { toast.error(err.message); }
   }
 
   if (!isPlatformAdmin) return <Navigate to="/" replace />;
@@ -104,6 +132,13 @@ export default function V2AdminTournaments() {
                         </button>
                         <button title="Excluir" onClick={() => setDeleteTarget(t)} className="flex h-9 w-9 items-center justify-center rounded-full text-red-500 hover:bg-red-50">
                           <Trash2 className="h-4 w-4" />
+                        </button>
+                        <button
+                          title="Limpar atletas provisórios/placeholder"
+                          onClick={() => handleCleanProvisionals(t)}
+                          className="flex h-9 w-9 items-center justify-center rounded-full text-amber-600 hover:bg-amber-50"
+                        >
+                          <Brush className="h-4 w-4" />
                         </button>
                       </div>
                     </td>

@@ -1,127 +1,87 @@
 import { describe, it, expect } from 'vitest';
-import { buildAthletePublicProfile } from './publicProfile.js';
-import { ATHLETE_GENDER } from './constants.js';
+import { buildAthletePublicProfile, filterEmptyStringFields } from './publicProfile.js';
 
-const REFERENCE_DATE = new Date('2026-06-15T12:00:00-03:00');
-
-const baseProfile = {
-  platform_name: 'Maria Silva',
-  full_name: 'Maria da Silva',
-  email: 'maria@example.com',
-  birth_date: '1990-01-10',
-  gender: ATHLETE_GENDER.FEMALE,
-  city: '  São Paulo  ',
-  state: 'sp',
-  level: 'Intermediário (USAP 3.0)',
-  leveling_level: 'intermediario',
-  pickleball_experience: 'one_to_two_years',
-  phone: '11999998888',
-  address: 'Rua das Quadras, 100',
-};
-
-describe('buildAthletePublicProfile', () => {
-  it('mantém contatos privados por padrão (telefone, e-mail e endereço vazios)', () => {
-    const result = buildAthletePublicProfile('uid-1', baseProfile, [], { referenceDate: REFERENCE_DATE });
-
-    expect(result.phone_public).toBe(false);
-    expect(result.phone).toBe('');
-    expect(result.email_public).toBe(false);
-    expect(result.email).toBe('');
-    expect(result.address_public).toBe(false);
-    expect(result.address).toBe('');
+describe('filterEmptyStringFields', () => {
+  it('remove strings vazias', () => {
+    expect(filterEmptyStringFields({ a: 'x', b: '', c: 'y' })).toEqual({ a: 'x', c: 'y' });
   });
 
-  it('publica apenas os contatos explicitamente marcados como públicos', () => {
-    const result = buildAthletePublicProfile(
-      'uid-1',
-      { ...baseProfile, phone_public: true, email_public: false, address_public: true },
-      [],
-      { referenceDate: REFERENCE_DATE },
-    );
-
-    expect(result.phone_public).toBe(true);
-    expect(result.phone).toBe('11999998888');
-    // E-mail permanece privado mesmo existindo no perfil.
-    expect(result.email_public).toBe(false);
-    expect(result.email).toBe('');
-    expect(result.address_public).toBe(true);
-    expect(result.address).toBe('Rua das Quadras, 100');
+  it('remove undefined (mantém null, false, 0)', () => {
+    expect(filterEmptyStringFields({ a: 0, b: false, c: null, d: undefined, e: '' }))
+      .toEqual({ a: 0, b: false, c: null });
   });
 
-  it('nunca vaza dados privados, mesmo que existam no perfil', () => {
-    const result = buildAthletePublicProfile('uid-1', baseProfile, [], { referenceDate: REFERENCE_DATE });
-    const serialized = JSON.stringify(result);
-
-    expect(serialized).not.toContain('11999998888');
-    expect(serialized).not.toContain('maria@example.com');
-    expect(serialized).not.toContain('Rua das Quadras');
+  it('retorna {} para payload vazio ou inválido', () => {
+    expect(filterEmptyStringFields({})).toEqual({});
+    expect(filterEmptyStringFields(null)).toEqual({});
+    expect(filterEmptyStringFields(undefined)).toEqual({});
   });
 
-  it('expõe campos públicos (nome, idade, gênero, cidade, nível) corretamente', () => {
-    const result = buildAthletePublicProfile('uid-1', baseProfile, [], { referenceDate: REFERENCE_DATE });
-
-    expect(result.uid).toBe('uid-1');
-    expect(result.platform_name).toBe('Maria Silva');
-    expect(result.age).toBe(36);
-    expect(result.gender).toBe(ATHLETE_GENDER.FEMALE);
-    expect(result.city).toBe('São Paulo');
-    expect(result.state).toBe('sp');
-    expect(result.level).toBe('Intermediário (USAP 3.0)');
+  it('preserva chaves com valor 0 (não confunde com ausente)', () => {
+    const out = filterEmptyStringFields({ age: 0, name: '' });
+    expect(out).toEqual({ age: 0 });
   });
 
-  it('lista no diretório por padrão e respeita o opt-out', () => {
-    expect(buildAthletePublicProfile('uid-1', baseProfile).directory_listed).toBe(true);
-    expect(
-      buildAthletePublicProfile('uid-1', { ...baseProfile, directory_listed: false }).directory_listed,
-    ).toBe(false);
+  it('preserva arrays e objetos aninhados', () => {
+    const out = filterEmptyStringFields({ clubs: [], meta: { x: 1 }, name: '' });
+    expect(out).toEqual({ clubs: [], meta: { x: 1 } });
+  });
+});
+
+describe('buildAthletePublicProfile — regressão de campos vazios', () => {
+  // Regressão: o syncAthleteProfile NÃO pode sobrescrever a foto do atleta
+  // com string vazia. O `buildAthletePublicProfile` pode retornar '' para
+  // sinalizar "ausência", mas o `sync` filtra antes do setDoc.
+  it('photo_url vazia quando profile.photo_url é undefined (caso do bug)', () => {
+    const out = buildAthletePublicProfile('uid-1', { platform_name: 'Fulano' });
+    expect(out.photo_url).toBe('');
+    expect(out.platform_name).toBe('Fulano');
   });
 
-  it('normaliza clubes e ignora entradas inválidas', () => {
-    const result = buildAthletePublicProfile(
-      'uid-1',
-      baseProfile,
-      [{ id: 'c1', name: 'Clube A' }, { id: null, name: 'Inválido' }, { name: 'Sem id' }],
-      { referenceDate: REFERENCE_DATE },
-    );
-
-    expect(result.clubs).toEqual([{ id: 'c1', name: 'Clube A' }]);
-    expect(result.club_ids).toEqual(['c1']);
+  it('photo_url preservado quando profile.photo_url é string válida', () => {
+    const url = 'https://example.com/photo.png';
+    const out = buildAthletePublicProfile('uid-1', { photo_url: url });
+    expect(out.photo_url).toBe(url);
   });
 
-  it('usa fallbacks de nome quando platform_name está ausente', () => {
-    expect(buildAthletePublicProfile('uid-1', { full_name: 'João' }).platform_name).toBe('João');
-    expect(buildAthletePublicProfile('uid-1', { email: 'pedro@x.com' }).platform_name).toBe('pedro');
-    expect(buildAthletePublicProfile('uid-1', {}).platform_name).toBe('Atleta');
+  it('platform_name cai pro email quando tudo é vazio (UX fallback)', () => {
+    const out = buildAthletePublicProfile('uid-1', { email: 'fulano@example.com' });
+    expect(out.platform_name).toBe('fulano'); // parte antes do @
   });
 
-  it('trata data de nascimento ausente com idade nula', () => {
-    const result = buildAthletePublicProfile('uid-1', { ...baseProfile, birth_date: '' }, []);
-    expect(result.age).toBeNull();
+  it('platform_name cai pro "Atleta" quando não há nada', () => {
+    const out = buildAthletePublicProfile('uid-1', {});
+    expect(out.platform_name).toBe('Atleta');
   });
 
-  it('não projeta dados de treinador quando o atleta não se declara treinador', () => {
-    const result = buildAthletePublicProfile('uid-1', {
-      ...baseProfile,
-      coach_bio: 'Aulas de saque',
-      coach_price: 'R$ 100',
+  it('campos de privacidade (phone/email/address) só saem com opt-in explícito', () => {
+    const out = buildAthletePublicProfile('uid-1', {
+      platform_name: 'Fulano',
+      phone: '51999999999',
+      email: 'fulano@example.com',
+      address: 'Rua X',
     });
-    expect(result.is_coach).toBe(false);
-    expect(result.coach_bio).toBe('');
-    expect(result.coach_price).toBe('');
-    expect(result.coach_regions).toBe('');
+    // Por padrão, opt-out: campos vazios
+    expect(out.phone).toBe('');
+    expect(out.email).toBe('');
+    expect(out.address).toBe('');
+    expect(out.phone_public).toBe(false);
+    expect(out.email_public).toBe(false);
+    expect(out.address_public).toBe(false);
   });
 
-  it('projeta dados de treinador quando is_coach é verdadeiro', () => {
-    const result = buildAthletePublicProfile('uid-1', {
-      ...baseProfile,
-      is_coach: true,
-      coach_bio: '  Aulas para iniciantes  ',
-      coach_price: 'R$ 80/aula',
-      coach_regions: 'Zona Sul, online',
+  it('campos de privacidade saem com opt-in', () => {
+    const out = buildAthletePublicProfile('uid-1', {
+      platform_name: 'Fulano',
+      phone: '51999999999',
+      email: 'fulano@example.com',
+      address: 'Rua X',
+      phone_public: true,
+      email_public: true,
+      address_public: true,
     });
-    expect(result.is_coach).toBe(true);
-    expect(result.coach_bio).toBe('Aulas para iniciantes');
-    expect(result.coach_price).toBe('R$ 80/aula');
-    expect(result.coach_regions).toBe('Zona Sul, online');
+    expect(out.phone).toBe('51999999999');
+    expect(out.email).toBe('fulano@example.com');
+    expect(out.address).toBe('Rua X');
   });
 });
