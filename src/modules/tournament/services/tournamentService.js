@@ -37,6 +37,10 @@ import {
 } from '../domain/constants.js';
 import { DEFAULT_SCORING_CONFIG, normalizeScoringConfig } from '../domain/scoring.js';
 import { isTournamentComplete } from '../domain/tournamentCompletion.js';
+import {
+  validateArchiveRequest,
+  validateUnarchiveRequest,
+} from '../domain/archiveValidation.js';
 
 const COL = {
   tournaments: 'tournaments',
@@ -179,7 +183,8 @@ export async function deleteTournament(id, actor) {
  * Permissão: apenas o criador do torneio (`creator_uid`) e o admin master
  * da plataforma (`platform_admin`). A Firestore rule de `tournaments/{tid}`
  * reforça isso no servidor; este service valida a pré-condição de status
- * cliente-side e lança erro descritivo se não for atendida.
+ * cliente-side (via `validateArchiveRequest`) e lança erro descritivo se
+ * não for atendida.
  *
  * @param {string} tournamentId
  * @param {object} actor — precisa ter `.uid` (audit log)
@@ -198,12 +203,8 @@ export async function archiveTournament(tournamentId, actor) {
     // idempotente: já está arquivado, nada a fazer
     return { tournamentId, archived: true, alreadyArchived: true };
   }
-  if (tournament.status !== TOURNAMENT_STATUS.CANCELLED) {
-    throw new Error(
-      'Para arquivar, o torneio precisa estar cancelado. '
-      + 'Cancele o torneio primeiro (status → "Cancelado") e só depois arquive.',
-    );
-  }
+  const validation = validateArchiveRequest(tournament);
+  if (!validation.ok) throw new Error(validation.reason);
 
   await updateDoc(doc(db, COL.tournaments, tournamentId), {
     archived: true,
@@ -244,6 +245,8 @@ export async function unarchiveTournament(tournamentId, actor) {
   if (!tournament.archived) {
     return { tournamentId, archived: false, alreadyUnarchived: true };
   }
+  const validation = validateUnarchiveRequest(tournament);
+  if (!validation.ok) throw new Error(validation.reason);
 
   await updateDoc(doc(db, COL.tournaments, tournamentId), {
     archived: false,
