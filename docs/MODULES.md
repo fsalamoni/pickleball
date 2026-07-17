@@ -33,12 +33,15 @@ pública e impressão.
   `V2Dashboard`, `V2Tournaments`, `V2CreateTournament`, `V2JoinTournament`,
   `V2ModalityPage`, `V2FormatsGuide`.
 - **services**: `tournamentService` (CRUD + `setTournamentStatus` → notifica
-  comunidade quando torneio **público** abre inscrições), `modalityService`,
+  comunidade quando torneio **público** abre inscrições +
+  `archiveTournament`/`unarchiveTournament` para o criador/admin, exigindo
+  `status === 'cancelled'` para arquivar), `modalityService`,
   `registrationService`, `participationService`, `matchService`, `drawService`,
   `rankingService`, `courtService`.
 - **domain (puro, testado)**: `scoring`, `draw`/`seeding`, `progression`,
   `doubleElimination`, `swiss`, `schedule`/`scheduling`, `ranking`, `capacity`,
-  `eligibility`, `participation`, `formatExplain`, `whistTables`, `constants`.
+  `eligibility`, `participation`, `formatExplain`, `whistTables`, `constants`,
+  `archiveValidation` (valida pré-condição de `status === 'cancelled'`).
 - **hooks**: `useTournament` (queries/mutations + invalidações
   `['tournaments-public']` etc.).
 

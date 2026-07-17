@@ -39,6 +39,12 @@ Perfil **público** do diretório de atletas (espelho controlado de `users`).
   (`draft | registrations_open | registrations_closed | in_progress | finished | cancelled`),
 - `visibility`: `'public' | 'private'`, `invite_code` (ingresso por código),
 - config de regras/scoring (CBP/USAP, pontos, sets), datas, sede.
+- **Arquivamento**: `archived: bool` (default `false`), `archived_at: Timestamp`,
+  `archived_by: uid`. O flag `archived` é separado do enum `status` —
+  arquivar exige `status === 'cancelled'` (validação dupla, cliente em
+  `validateArchiveRequest` + server na Firestore rule). Visibilidade: se
+  `archived == true`, o doc (e as 6 coleções filhas) só são lidos pelo
+  criador e pelo `platform_admin`; público some do `/p/:id` e das listas.
 
 ### `tournament_modalities/{id}`
 Modalidade dentro de um torneio: `tournament_id`, formato
