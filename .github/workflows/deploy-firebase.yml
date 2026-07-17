@@ -180,17 +180,19 @@ jobs:
           fi
           exit $RC
 
+      - name: Install functions dependencies
+        run: npm --prefix functions ci
+
       - name: Deploy Cloud Functions (non-fatal)
         run: |
           set +e
-          OUT=$(firebase deploy --only functions --project "$FIREBASE_PROJECT_ID" --non-interactive --force --debug 2>&1)
+          OUT=$(firebase deploy --only functions --project "$FIREBASE_PROJECT_ID" --non-interactive --force 2>&1)
           RC=$?
+          echo "$OUT"
           if [ $RC -eq 0 ]; then
             echo "Cloud Functions deployed (recálculo automático do ranking no servidor)."
             exit 0
           fi
-          # Em falha, mostra o final do log de debug (a causa real costuma estar aqui).
-          echo "$OUT" | tail -n 120
           if echo "$OUT" | grep -qiE "Your project .* must be on the Blaze"; then
             echo "::warning title=Blaze necessário::As Cloud Functions exigem o plano Blaze. O ranking segue automático pelo cliente (admin) enquanto isso."
           elif echo "$OUT" | grep -qiE "HTTP Error: 403|PERMISSION_DENIED|caller does not have permission|iam.serviceAccounts"; then
