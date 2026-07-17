@@ -10,7 +10,7 @@ export default function V2Privacy() {
       <V2ContentHero
         eyebrow="Termos de uso e privacidade"
         title="Política de Uso e Privacidade"
-        description="Condições de uso da plataforma Pickleball, natureza esportiva da ferramenta e diretrizes de tratamento de dados pessoais."
+        description="Condições de uso da plataforma PickleRush, natureza esportiva da ferramenta e diretrizes de tratamento de dados pessoais."
         meta={meta}
       />
 

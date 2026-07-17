@@ -73,7 +73,7 @@ coberta por testes — é o que dá confiança sem ambiente de execução.
 ## Testes
 
 - **Vitest** (unit) — foco no `domain/` de cada módulo (pontuação, sorteio,
-  ranking, agendamento, elegibilidade, enquetes, game-day…). ~213 testes.
+  ranking, agendamento, elegibilidade, enquetes, game-day…). ~408 testes.
 - **Playwright** (E2E) — `npm run e2e` (instalar com `npm run e2e:install`).
 - Convenção: cada arquivo puro de domínio tem `*.test.js` ao lado.
 - Antes de qualquer push: `npm run lint && npm run build && npm test`.
@@ -81,7 +81,9 @@ coberta por testes — é o que dá confiança sem ambiente de execução.
 ## CI/CD
 
 - `.github/workflows/deploy-firebase.yml` — em push para `main`: build e deploy
-  no Firebase Hosting (site `pickletour`) + publicação das regras do Firestore.
+  no Firebase Hosting (sites `picklerush` ativo + `pickletour` redirect-only)
+  + publicação das regras e índices do Firestore + deploy da Cloud Function
+  `recomputeRankingOnTournamentChange`.
 - (Legado) `deploy-pages.yml` para GitHub Pages, descrito no `README.md`.
 - Variáveis de build: `VITE_FIREBASE_*`, `VITE_FIRESTORE_DATABASE_ID`,
   flags de analytics/performance/PWA. Ver `.env.example`.

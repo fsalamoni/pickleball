@@ -1,6 +1,6 @@
 # DESIGN_STANDARD — padrão visual obrigatório da plataforma
 
-Documento normativo para páginas, tabs e modais da PickleTour. Ele existe para
+Documento normativo para páginas, tabs e modais da PickleRush. Ele existe para
 eliminar deriva visual: qualquer nova tela deve parecer parte do mesmo produto,
 não uma implementação isolada.
 

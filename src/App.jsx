@@ -5,15 +5,16 @@ import { AuthProvider, useAuth } from '@/core/lib/FirebaseAuthContext';
 import { FeatureFlagsProvider } from '@/core/lib/FeatureFlagsContext';
 import { Toaster } from '@/components/ui/sonner';
 import { recordPageView } from '@/core/services/observabilityService';
-import V1Routes from '@/V1Routes';
 
-// Páginas públicas (sem autenticação) — precisam funcionar fora do app v2.
-const Landing = lazy(() => import('@/pages/Landing'));
-const Login = lazy(() => import('@/pages/Login'));
+// Páginas públicas (sem autenticação) — precisam funcionar fora do app autenticado.
+// V2 é a camada de apresentação oficial e integral; a landing e o login moram
+// nela desde a consolidação da V2 como base única.
+const Landing = lazy(() => import('@/v2/pages/V2Landing'));
+const Login = lazy(() => import('@/v2/pages/V2Login'));
 const PublicTournament = lazy(() => import('@/pages/PublicTournament'));
 const PrintTournament = lazy(() => import('@/pages/PrintTournament'));
 
-// App principal (Athleisure Premium). Chunk isolado.
+// App principal (V2 / "Athleisure Premium"). Chunk isolado.
 const V2App = lazy(() => import('@/v2/V2App'));
 
 const LOCAL_PREVIEW_PROTECTED_PATHS = new Set([
@@ -47,7 +48,7 @@ function AdminRoute({ children }) {
   const { isAuthenticated, isLoadingAuth, isPlatformAdmin } = useAuth();
   if (isLoadingAuth) return <FullScreenSpinner />;
   if (!isAuthenticated) return <Navigate to="/login" replace />;
-  if (!isPlatformAdmin) return <Navigate to="/inicio" replace />;
+  if (!isPlatformAdmin) return <Navigate to="/" replace />;
   return children;
 }
 
@@ -60,7 +61,7 @@ function FullScreenSpinner() {
 }
 
 /**
- * Entrada principal da plataforma. Usuários autenticados entram no app v2;
+ * Entrada principal da plataforma. Usuários autenticados entram no V2App;
  * visitantes veem a landing na raiz e são levados ao login nas demais rotas.
  */
 function MainEntry() {
@@ -98,15 +99,21 @@ export default function App() {
           <RouteTelemetry />
           <Suspense fallback={<FullScreenSpinner />}>
             <Routes>
-              {/* Público (sem autenticação) */}
+              {/* Páginas públicas (sem autenticação) */}
               <Route path="/login" element={<Login />} />
               <Route path="/p/:tournamentId" element={<PublicTournament />} />
               <Route path="/torneios/:tournamentId/imprimir" element={<PrintTournament />} />
 
-              {/* Versão anterior (v1) arquivada */}
-              <Route path="/v1/*" element={<V1Routes ProtectedRoute={ProtectedRoute} AdminRoute={AdminRoute} />} />
+              {/* Redirects de compatibilidade com URLs legadas (V1) */}
+              <Route path="/inicio" element={<Navigate to="/" replace />} />
+              <Route path="/dashboard" element={<Navigate to="/" replace />} />
+              <Route path="/aviso-jogos" element={<Navigate to="/conduta" replace />} />
+              <Route path="/boloes" element={<Navigate to="/torneios" replace />} />
+              <Route path="/boloes/criar" element={<Navigate to="/torneios/criar" replace />} />
+              <Route path="/boloes/ingressar" element={<Navigate to="/torneios/ingressar" replace />} />
+              <Route path="/boloes/:tournamentId" element={<Navigate to="/torneios/:tournamentId" replace />} />
 
-              {/* Plataforma principal (PickleRush) */}
+              {/* Plataforma principal (PickleRush / V2) */}
               <Route path="/*" element={<MainEntry />} />
             </Routes>
           </Suspense>
