@@ -180,6 +180,26 @@ jobs:
           fi
           exit $RC
 
+      - name: Deploy Cloud Functions (non-fatal)
+        run: |
+          set +e
+          OUT=$(firebase deploy --only functions --project "$FIREBASE_PROJECT_ID" --non-interactive --force 2>&1)
+          RC=$?
+          echo "$OUT"
+          if [ $RC -eq 0 ]; then
+            echo "Cloud Functions deployed (recálculo automático do ranking no servidor)."
+            exit 0
+          fi
+          if echo "$OUT" | grep -qiE "Your project .* must be on the Blaze"; then
+            echo "::warning title=Blaze necessário::As Cloud Functions exigem o plano Blaze. O ranking segue automático pelo cliente (admin) enquanto isso."
+          elif echo "$OUT" | grep -qiE "HTTP Error: 403|PERMISSION_DENIED|caller does not have permission|iam.serviceAccounts"; then
+            echo "::warning title=IAM para Functions::A service account '$SA_EMAIL' precisa de 'Cloud Functions Admin' e 'Service Account User' (e as APIs Cloud Functions/Cloud Build/Artifact Registry habilitadas) em '$FIREBASE_PROJECT_ID'. O ranking segue automático pelo cliente (admin) enquanto isso."
+          else
+            echo "::warning title=Deploy de Functions falhou::Veja o log acima. Hosting/Firestore não foram afetados; o ranking segue automático pelo cliente."
+          fi
+          # Não falha o job: Hosting/Firestore já foram aplicados e o cliente cobre o recálculo.
+          exit 0
+
       - name: Deploy Storage rules (non-fatal)
         run: |
           set +e
