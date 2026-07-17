@@ -1,5 +1,5 @@
 import React, { useMemo, useState } from 'react';
-import { Trophy, Swords, Pencil } from 'lucide-react';
+import { Trophy, Swords, Pencil, Play } from 'lucide-react';
 import { toast } from 'sonner';
 import { UserAvatar } from '@/components/ui/user-avatar';
 import {
@@ -17,6 +17,7 @@ import {
   useAllModalityMatches,
   useRegistrations,
   useRecordMatchResult,
+  useMarkMatchInProgress,
 } from '@/modules/tournament/hooks/useTournament';
 import {
   MATCH_STATUS,
@@ -72,6 +73,7 @@ function MatchesTable({ matches, labelById, peopleById, canEdit = false, modalit
   const hasGroups = matches.some((m) => m.group);
   const hasSchedule = matches.some((m) => m.court || m.scheduled_at);
   const [editMatch, setEditMatch] = useState(null);
+  const markInProgress = useMarkMatchInProgress(modalityId);
 
   return (
     <>
@@ -121,9 +123,16 @@ function MatchesTable({ matches, labelById, peopleById, canEdit = false, modalit
                       {isBye ? (
                         <span className="text-xs text-gray-400">—</span>
                       ) : (
-                        <V2Button size="sm" variant="ghost" onClick={() => setEditMatch(m)}>
-                          <Pencil className="h-3.5 w-3.5 mr-1" /> {finished ? 'Editar' : 'Lançar'}
-                        </V2Button>
+                        <div className="inline-flex items-center gap-1">
+                          {m.status === MATCH_STATUS.SCHEDULED && (
+                            <V2Button size="sm" variant="ghost" onClick={() => markInProgress.mutate(m.id)} disabled={markInProgress.isPending}>
+                              <Play className="h-3.5 w-3.5 mr-1" /> Iniciar
+                            </V2Button>
+                          )}
+                          <V2Button size="sm" variant="ghost" onClick={() => setEditMatch(m)}>
+                            <Pencil className="h-3.5 w-3.5 mr-1" /> {finished ? 'Editar' : 'Lançar'}
+                          </V2Button>
+                        </div>
                       )}
                     </td>
                   )}

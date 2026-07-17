@@ -28,6 +28,7 @@ import {
 } from 'lucide-react';
 import { useAuth } from '@/core/lib/FirebaseAuthContext';
 import { useAutoRecomputeRatings } from '@/modules/rating/hooks/useRating';
+import AuthFunnelTracker from '@/modules/analytics/components/AuthFunnelTracker';
 import { useFeatureFlag } from '@/core/lib/FeatureFlagsContext';
 import { FEATURE_FLAG } from '@/core/featureFlags';
 import { useNotifications } from '@/modules/notifications/hooks/useNotifications';
@@ -221,6 +222,8 @@ export default function V2Layout({ children }) {
 
   return (
     <div className="v2-root flex h-[100dvh] w-full overflow-hidden bg-paper font-inter text-ink">
+      {/* Instrumentação de funil (flag funnel_analytics; não renderiza nada) */}
+      <AuthFunnelTracker />
       <aside className="z-30 hidden w-[280px] flex-shrink-0 flex-col border-r border-gray-100 bg-paper-pure lg:flex">
         <div className="flex h-24 items-center px-8">
           <BrandLockup />

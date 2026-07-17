@@ -5,6 +5,7 @@ import { useNationalRanking } from '@/modules/rating/hooks/useRating';
 import { useAuth } from '@/core/lib/FirebaseAuthContext';
 import { useFeatureFlag } from '@/core/lib/FeatureFlagsContext';
 import { FEATURE_FLAG } from '@/core/featureFlags';
+import { genderLabel } from '@/modules/athletes/domain/constants';
 import {
   V2Avatar,
   V2EmptyState,
@@ -20,6 +21,35 @@ function medalEmoji(position) {
   if (position === 2) return '🥈';
   if (position === 3) return '🥉';
   return null;
+}
+
+const ALL = 'all';
+const AGE_BUCKETS = [
+  { value: '18-29', label: '18–29', min: 18, max: 29 },
+  { value: '30-39', label: '30–39', min: 30, max: 39 },
+  { value: '40-49', label: '40–49', min: 40, max: 49 },
+  { value: '50+', label: '50+', min: 50, max: 200 },
+];
+
+function inAgeBucket(age, bucketValue) {
+  const b = AGE_BUCKETS.find((x) => x.value === bucketValue);
+  if (!b || !Number.isFinite(age)) return false;
+  return age >= b.min && age <= b.max;
+}
+
+function FilterSelect({ label, value, onChange, options }) {
+  return (
+    <label className="block">
+      <span className="mb-1 block text-[11px] font-semibold uppercase tracking-wide text-gray-400">{label}</span>
+      <select
+        value={value}
+        onChange={(e) => onChange(e.target.value)}
+        className="h-10 w-full rounded-xl border border-gray-200 bg-paper-pure px-3 text-sm"
+      >
+        {options.map((o) => <option key={o.value} value={o.value}>{o.label}</option>)}
+      </select>
+    </label>
+  );
 }
 
 /** Saldo de pontos com sinal (+12 / -5 / 0), ou "—" quando ausente. */
@@ -80,15 +110,51 @@ function RankingExplainer() {
 export default function V2Ranking() {
   const { data: players = [], isLoading } = useNationalRanking();
   const profilePageOn = useFeatureFlag(FEATURE_FLAG.ATHLETE_PROFILE_PAGE);
+  const rankingFiltersOn = useFeatureFlag(FEATURE_FLAG.RANKING_FILTERS);
   const { user } = useAuth();
   const [search, setSearch] = useState('');
+  const [stateFilter, setStateFilter] = useState(ALL);
+  const [levelFilter, setLevelFilter] = useState(ALL);
+  const [genderFilter, setGenderFilter] = useState(ALL);
+  const [clubFilter, setClubFilter] = useState(ALL);
+  const [ageFilter, setAgeFilter] = useState(ALL);
+
+  const stateOptions = useMemo(() => {
+    const set = new Set();
+    players.forEach((p) => p.state && set.add(p.state));
+    return Array.from(set).sort();
+  }, [players]);
+  const levelOptions = useMemo(() => {
+    const set = new Set();
+    players.forEach((p) => p.level && set.add(p.level));
+    return Array.from(set).sort();
+  }, [players]);
+  const genderOptions = useMemo(() => {
+    const set = new Set();
+    players.forEach((p) => p.gender && set.add(p.gender));
+    return Array.from(set);
+  }, [players]);
+  const clubOptions = useMemo(() => {
+    const map = new Map();
+    players.forEach((p) => (p.clubs || []).forEach((c) => c?.id && map.set(c.id, c.name)));
+    return Array.from(map.entries()).map(([id, name]) => ({ id, name }));
+  }, [players]);
 
   const filtered = useMemo(() => {
     const term = search.trim().toLowerCase();
-    if (!term) return players;
-    return players.filter((p) => [p.platform_name, p.city, p.state, p.level]
-      .filter(Boolean).join(' ').toLowerCase().includes(term));
-  }, [players, search]);
+    return players.filter((p) => {
+      if (rankingFiltersOn) {
+        if (stateFilter !== ALL && p.state !== stateFilter) return false;
+        if (levelFilter !== ALL && p.level !== levelFilter) return false;
+        if (genderFilter !== ALL && p.gender !== genderFilter) return false;
+        if (clubFilter !== ALL && !(p.club_ids || []).includes(clubFilter)) return false;
+        if (ageFilter !== ALL && !inAgeBucket(p.age, ageFilter)) return false;
+      }
+      if (!term) return true;
+      return [p.platform_name, p.city, p.state, p.level]
+        .filter(Boolean).join(' ').toLowerCase().includes(term);
+    });
+  }, [players, search, rankingFiltersOn, stateFilter, levelFilter, genderFilter, clubFilter, ageFilter]);
 
   return (
     <div className="mx-auto max-w-[1100px]">
@@ -96,13 +162,47 @@ export default function V2Ranking() {
 
       <RankingExplainer />
 
-      <V2Surface className="mb-8">
+      <V2Surface className="mb-8 space-y-4">
         <V2SearchInput
           icon={Search}
           value={search}
           onChange={(e) => setSearch(e.target.value)}
           placeholder="Buscar por nome, cidade, estado ou nível"
         />
+        {rankingFiltersOn && (
+          <div className="grid grid-cols-2 gap-3 sm:grid-cols-3 lg:grid-cols-5">
+            <FilterSelect
+              label="Estado"
+              value={stateFilter}
+              onChange={setStateFilter}
+              options={[{ value: ALL, label: 'Todos os estados' }, ...stateOptions.map((s) => ({ value: s, label: s }))]}
+            />
+            <FilterSelect
+              label="Nível"
+              value={levelFilter}
+              onChange={setLevelFilter}
+              options={[{ value: ALL, label: 'Todos os níveis' }, ...levelOptions.map((l) => ({ value: l, label: l }))]}
+            />
+            <FilterSelect
+              label="Gênero"
+              value={genderFilter}
+              onChange={setGenderFilter}
+              options={[{ value: ALL, label: 'Todos os gêneros' }, ...genderOptions.map((g) => ({ value: g, label: genderLabel(g) || g }))]}
+            />
+            <FilterSelect
+              label="Clube"
+              value={clubFilter}
+              onChange={setClubFilter}
+              options={[{ value: ALL, label: 'Todos os clubes' }, ...clubOptions.map((c) => ({ value: c.id, label: c.name }))]}
+            />
+            <FilterSelect
+              label="Faixa etária"
+              value={ageFilter}
+              onChange={setAgeFilter}
+              options={[{ value: ALL, label: 'Todas as idades' }, ...AGE_BUCKETS.map((b) => ({ value: b.value, label: b.label }))]}
+            />
+          </div>
+        )}
       </V2Surface>
 
       {isLoading ? (
