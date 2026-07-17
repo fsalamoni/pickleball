@@ -1,7 +1,7 @@
 import React from 'react';
 import { Link, Navigate, useNavigate, useParams } from 'react-router-dom';
 import {
-  ArrowLeft, Calendar, Check, Copy, Eye, Hash, Images, MapPin, Share2, ShieldCheck, Trophy,
+  Archive, ArrowLeft, Calendar, Check, Copy, Eye, Hash, Images, MapPin, Share2, ShieldCheck, Trophy,
 } from 'lucide-react';
 import { useClipboard } from '@/core/lib/useClipboard';
 import { useFeatureFlag } from '@/core/lib/FeatureFlagsContext';
@@ -100,6 +100,19 @@ export default function V2Tournament() {
       <Link to="/torneios" className="mb-5 inline-flex items-center gap-1.5 text-sm font-semibold text-gray-500 hover:text-ink">
         <ArrowLeft className="h-4 w-4" /> Voltar aos torneios
       </Link>
+
+      {tournament.archived && (
+        <div className="mb-5 flex items-start gap-3 rounded-2xl border border-amber-200 bg-amber-50 p-4 text-sm text-amber-900">
+          <Archive className="mt-0.5 h-4 w-4 shrink-0" />
+          <div className="flex-1">
+            <p className="font-semibold">Este torneio está arquivado.</p>
+            <p className="mt-1 text-amber-800/80">
+              Saiu das listagens públicas. Você ainda consegue abrir essa página porque é o criador ou admin da plataforma.
+              {isAdmin && ' Use o painel Admin para desarquivar quando quiser reativar.'}
+            </p>
+          </div>
+        </div>
+      )}
 
       {/* Hero */}
       <div className="relative overflow-hidden rounded-4xl bg-mesh p-8 shadow-organic">

@@ -1,6 +1,6 @@
 import React, { useMemo, useState } from 'react';
 import { Link } from 'react-router-dom';
-import { Calendar, Globe, Hash, MapPin, Plus, Trophy } from 'lucide-react';
+import { Archive, Calendar, Globe, Hash, MapPin, Plus, Trophy } from 'lucide-react';
 import { useMyTournaments, usePublicTournaments } from '@/modules/tournament/hooks/useTournament';
 import {
   TOURNAMENT_STATUS,
@@ -129,9 +129,16 @@ function TournamentCard({ tournament }) {
           </span>
           <h3 className="truncate font-display text-lg font-bold text-ink">{tournament.name}</h3>
         </div>
-        <V2Badge tone={STATUS_TONE[tournament.status] || 'neutral'}>
-          {TOURNAMENT_STATUS_LABELS[tournament.status] || tournament.status}
-        </V2Badge>
+        <div className="flex shrink-0 flex-col items-end gap-1.5">
+          <V2Badge tone={STATUS_TONE[tournament.status] || 'neutral'}>
+            {TOURNAMENT_STATUS_LABELS[tournament.status] || tournament.status}
+          </V2Badge>
+          {tournament.archived && (
+            <V2Badge tone="neutral">
+              <Archive className="h-3 w-3" /> Arquivado
+            </V2Badge>
+          )}
+        </div>
       </div>
 
       <div className="mt-4 flex items-center gap-2 text-sm text-gray-500">

@@ -71,7 +71,8 @@ export default function V2Dashboard() {
 
   const spotlight = useMemo(() => {
     const live = myTournaments.filter((t) => LIVE_STATUSES.has(t.status));
-    return live[0] || myTournaments[0] || publicTournaments[0] || null;
+    const mineNotArchived = myTournaments.find((t) => !t.archived);
+    return live[0] || mineNotArchived || publicTournaments[0] || null;
   }, [myTournaments, publicTournaments]);
 
   const featured = useMemo(
