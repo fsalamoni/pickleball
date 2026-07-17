@@ -6,6 +6,13 @@ import { FEATURE_FLAG } from '@/core/featureFlags';
 import { useAthleteProfile } from '@/modules/athletes/hooks/useAthleteProfile';
 import { genderLabel } from '@/modules/athletes/domain/constants';
 import { MODALITY_FORMAT_LABELS } from '@/modules/tournament/domain/constants';
+import { useRatingHistory } from '@/modules/rating/hooks/useRating';
+import { useHeadToHead } from '@/modules/rating/hooks/useHeadToHead';
+import { useFollowers } from '@/modules/social/hooks/useFollow';
+import FollowButton from '@/modules/social/components/FollowButton';
+import RatingSparkline from '@/modules/rating/components/RatingSparkline';
+import HeadToHeadCard from '@/modules/rating/components/HeadToHeadCard';
+import AchievementsCard from '@/modules/achievements/components/AchievementsCard';
 import V2ChatLauncherButton from '@/v2/components/chat/V2ChatLauncherButton';
 import { V2Avatar, V2Badge, V2EmptyState, V2Skeleton, V2Surface } from '@/v2/ui/primitives';
 
@@ -19,8 +26,15 @@ function clubNames(athlete) {
 
 export default function V2AthleteProfile() {
   const enabled = useFeatureFlag(FEATURE_FLAG.ATHLETE_PROFILE_PAGE);
+  const followOn = useFeatureFlag(FEATURE_FLAG.FOLLOW_ATHLETES);
+  const ratingHistoryOn = useFeatureFlag(FEATURE_FLAG.RATING_HISTORY);
+  const headToHeadOn = useFeatureFlag(FEATURE_FLAG.HEAD_TO_HEAD);
+  const achievementsOn = useFeatureFlag(FEATURE_FLAG.ACHIEVEMENTS);
   const { uid } = useParams();
   const { data, isLoading, isError } = useAthleteProfile(uid);
+  const { data: ratingHistory = [] } = useRatingHistory(uid, ratingHistoryOn);
+  const { data: h2hData } = useHeadToHead(uid, headToHeadOn);
+  const { data: followers = [] } = useFollowers(uid, followOn);
 
   if (!enabled) return <Navigate to="/atletas" replace />;
 
@@ -70,7 +84,8 @@ export default function V2AthleteProfile() {
             <div className="rounded-full border-8 border-paper-pure bg-paper-pure shadow-md">
               <V2Avatar name={athlete.platform_name} photoUrl={athlete.photo_url} size="xl" className="h-32 w-32 text-4xl" />
             </div>
-            <div className="w-full sm:w-auto">
+            <div className="flex w-full items-center gap-2 sm:w-auto">
+              {followOn && <FollowButton targetUid={uid} />}
               <V2ChatLauncherButton athlete={athlete} label="Conversar" className="w-full sm:w-auto" />
             </div>
           </div>
@@ -82,6 +97,7 @@ export default function V2AthleteProfile() {
                 Number.isFinite(athlete.age) ? `${athlete.age} anos` : null,
                 genderLabel(athlete.gender),
                 location,
+                followOn ? `${followers.length} seguidor(es)` : null,
               ].filter(Boolean).join(' • ') || 'Atleta da comunidade'}
             </p>
 
@@ -135,6 +151,18 @@ export default function V2AthleteProfile() {
             ))}
           </div>
         </V2Surface>
+      )}
+
+      {ratingHistoryOn && ratingHistory.length >= 2 && (
+        <div className="mt-8"><RatingSparkline points={ratingHistory} /></div>
+      )}
+
+      {achievementsOn && (
+        <div className="mt-8"><AchievementsCard summary={{ ...stats, rating: rating?.rating }} /></div>
+      )}
+
+      {headToHeadOn && h2hData?.h2h?.length > 0 && (
+        <div className="mt-8"><HeadToHeadCard records={h2hData.h2h} /></div>
       )}
 
       {history.length > 0 && (
