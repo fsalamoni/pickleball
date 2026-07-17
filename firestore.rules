@@ -324,16 +324,30 @@ service cloud.firestore {
     }
 
     match /tournament_modalities/{mid} {
-      // Leitura respeita o flag 'archived' do torneio-pai.
-      allow read: if isTournamentVisibleByTid(resource.data.tournament_id);
+      // Leitura pública (modalidades integram o quadro do torneio).
+      // O flag 'archived' do torneio-pai já é filtrado pela rule de
+      // /tournaments/{tid} — público que não tem acesso ao torneio
+      // não chega aqui. Usar isTournamentVisibleByTid aqui estoura
+      // o limite de lookups do Firestore (4 lookups × N docs/query)
+      // e causa permission-denied pra todo mundo.
+      allow read: if true;
       allow create, update, delete: if isPlatformAdmin()
         || isTournamentAdmin(request.resource.data.tournament_id)
         || isTournamentAdmin(resource.data.tournament_id);
     }
 
     match /tournament_registrations/{rid} {
-      // Inscritos: leitura respeita o flag 'archived' do torneio-pai.
-      allow read: if isTournamentVisibleByTid(resource.data.tournament_id);
+      // Inscritos: leitura pública (quadro do torneio inclui nomes).
+      // O flag 'archived' do torneio-pai já é filtrado pela rule de
+      // /tournaments/{tid} — público que não tem acesso ao torneio
+      // arquivado não chega aqui. Manter como pública evita o estouro
+      // de lookups do Firestore (CRÍTICO: listMyRegistrations faz 3
+      // queries paralelas com where(user_id|player_a_user_id|player_b_user_id)
+      // — cada doc disparava isTournamentVisibleByTid e batia o limite
+      // de 20 lookups/query → permission-denied → useMyTournaments
+      // quebrava silenciosamente e o admin via "como se nunca tivesse
+      // criado torneios"). Bug introduzido em #33, corrigido em #37.
+      allow read: if true;
       // Próprio jogador inscreve-se, OU admin do torneio inscreve.
       allow create: if isAuthed()
         && (request.resource.data.created_by == request.auth.uid
@@ -347,8 +361,12 @@ service cloud.firestore {
     }
 
     match /tournament_matches/{mid} {
-      // Jogos: leitura respeita o flag 'archived' do torneio-pai.
-      allow read: if isTournamentVisibleByTid(resource.data.tournament_id);
+      // Jogos: leitura pública (quadro do torneio é público).
+      // O flag 'archived' do torneio-pai já é filtrado pela rule de
+      // /tournaments/{tid} — público não chega num torneio arquivado.
+      // Usar isTournamentVisibleByTid aqui causa o mesmo estouro de
+      // lookups documentado em /tournament_registrations.
+      allow read: if true;
       allow create, update, delete: if isPlatformAdmin()
         || isTournamentAdmin(request.resource.data.tournament_id)
         || isTournamentAdmin(resource.data.tournament_id);
@@ -371,8 +389,10 @@ service cloud.firestore {
     }
 
     match /tournament_courts/{cid} {
-      // Quadras: leitura respeita o flag 'archived' do torneio-pai.
-      allow read: if isTournamentVisibleByTid(resource.data.tournament_id);
+      // Quadras: leitura pública (info do torneio).
+      // O flag 'archived' do torneio-pai já é filtrado pela rule de
+      // /tournaments/{tid} — público não chega num torneio arquivado.
+      allow read: if true;
       allow create, update, delete: if isPlatformAdmin()
         || isTournamentAdmin(request.resource.data.tournament_id)
         || isTournamentAdmin(resource.data.tournament_id);
