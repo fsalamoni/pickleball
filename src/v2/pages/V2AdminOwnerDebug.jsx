@@ -114,6 +114,36 @@ export default function V2AdminOwnerDebug() {
       errors.push(`tournaments_creator: ${err.message}`);
     }
 
+    // 5b) TODOS os tournaments (sem filtro de creator_uid) — para responder
+    // 'onde estão os 2 que somem?' quando o owner reporta 6 mas vê 4.
+    try {
+      const allSnap = await getDocs(collection(db, 'tournaments'));
+      const allDocs = allSnap.docs.map((d) => ({ id: d.id, ...d.data() }));
+      const archived = allDocs.filter((t) => t.archived === true);
+      const byCreator = allDocs.reduce((acc, t) => {
+        const k = t.creator_uid || '(sem creator_uid)';
+        acc[k] = (acc[k] || 0) + 1;
+        return acc;
+      }, {});
+      out.sections.tournaments_all = {
+        count: allSnap.size,
+        count_archived: archived.length,
+        archived_ids: archived.map((t) => ({ id: t.id, name: t.name, status: t.status, archived_at: t.archived_at })),
+        by_creator: byCreator,
+        docs: allDocs.map((d) => ({
+          id: d.id,
+          name: d.name,
+          creator_uid: d.creator_uid,
+          status: d.status,
+          archived: d.archived,
+          created_at: d.created_at,
+        })),
+      };
+    } catch (err) {
+      out.sections.tournaments_all = { error: err.message, code: err.code };
+      errors.push(`tournaments_all: ${err.message}`);
+    }
+
     // 6) tournament_registrations onde player_a_user_id == uid
     try {
       const [aSnap, bSnap] = await Promise.all([
@@ -246,6 +276,11 @@ export default function V2AdminOwnerDebug() {
             <Section
               title="5. tournaments (creator_uid == uid)"
               data={report.sections.tournaments_creator}
+              summary="count"
+            />
+            <Section
+              title="5b. TODOS os tournaments (sem filtro) — diz onde estão os 2 que somem"
+              data={report.sections.tournaments_all}
               summary="count"
             />
             <Section
