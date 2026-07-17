@@ -22,6 +22,8 @@ import {
   Trash2,
   UserPlus,
   Users,
+  Archive,
+  ArchiveRestore,
 } from 'lucide-react';
 import {
   useTournamentAdmins,
@@ -30,6 +32,8 @@ import {
   useSetTournamentStatus,
   useUpdateTournament,
   useSetResultsLocked,
+  useArchiveTournament,
+  useUnarchiveTournament,
 } from '@/modules/tournament/hooks/useTournament';
 import ConfirmDialog from '@/components/ConfirmDialog';
 import {
@@ -42,6 +46,7 @@ import {
 } from '@/modules/tournament/domain/constants';
 import { collection, query, where, getDocs } from 'firebase/firestore';
 import { db } from '@/core/config/firebase';
+import { useAuth } from '@/core/lib/FirebaseAuthContext';
 import { useFeatureFlag } from '@/core/lib/FeatureFlagsContext';
 import { FEATURE_FLAG } from '@/core/featureFlags';
 import DuplicateTournamentDialog from '@/modules/tournament/components/DuplicateTournamentDialog';
@@ -89,11 +94,14 @@ const STATUS_ACTIONS = [
 ];
 
 export default function TournamentAdminTab({ tournament }) {
+  const { user, isPlatformAdmin } = useAuth();
   const { data: admins = [] } = useTournamentAdmins(tournament.id);
   const addMutation = useAddTournamentAdmin(tournament.id);
   const removeMutation = useRemoveTournamentAdmin(tournament.id);
   const statusMutation = useSetTournamentStatus(tournament.id);
   const updateMutation = useUpdateTournament(tournament.id);
+  const archiveMutation = useArchiveTournament(tournament.id);
+  const unarchiveMutation = useUnarchiveTournament(tournament.id);
   const [email, setEmail] = useState('');
   const [form, setForm] = useState(() => buildFormState(tournament));
   const duplicationOn = useFeatureFlag(FEATURE_FLAG.TOURNAMENT_DUPLICATION);
@@ -102,6 +110,24 @@ export default function TournamentAdminTab({ tournament }) {
   const lockMutation = useSetResultsLocked(tournament.id);
   const isFinished = tournament.status === TOURNAMENT_STATUS.FINISHED;
   const isLocked = Boolean(tournament.results_locked);
+  const isCreator = user?.uid && tournament.creator_uid === user.uid;
+  const canArchive = isCreator || isPlatformAdmin;
+  const isCancelled = tournament.status === TOURNAMENT_STATUS.CANCELLED;
+  const isArchived = Boolean(tournament.archived);
+
+  async function handleArchiveToggle() {
+    try {
+      if (isArchived) {
+        await unarchiveMutation.mutateAsync();
+        toast.success('Torneio desarquivado. Ele voltou a aparecer publicamente.');
+      } else {
+        await archiveMutation.mutateAsync();
+        toast.success('Torneio arquivado. Saiu das listas públicas e do /p/:id.');
+      }
+    } catch (err) {
+      toast.error(err?.message || 'Falha ao atualizar o arquivo.');
+    }
+  }
 
   async function handleSetLocked(locked) {
     try {
@@ -427,6 +453,66 @@ export default function TournamentAdminTab({ tournament }) {
               </div>
             </div>
           </PlatformSurfaceCard>
+
+          {canArchive && (
+            <PlatformSurfaceCard>
+              <div className="flex items-start gap-3">
+                <div className="flex h-10 w-10 items-center justify-center rounded-2xl bg-amber-100 text-amber-700">
+                  {isArchived ? <ArchiveRestore className="h-4.5 w-4.5" /> : <Archive className="h-4.5 w-4.5" />}
+                </div>
+                <div>
+                  <div className="text-base font-semibold text-ink">
+                    {isArchived ? 'Torneio arquivado' : 'Arquivamento'}
+                  </div>
+                  <p className="mt-1 text-sm leading-6 text-gray-500">
+                    {isArchived
+                      ? 'O torneio está fora das listas públicas e da visão de espectador. Você ainda consegue consultá-lo por aqui para reabri-lo quando quiser.'
+                      : 'Arquivar esconde o torneio da UI pública, do /p/:id e da Dashboard dos atletas. O histórico (modalidades, jogos, ranking) fica preservado para você e para o admin da plataforma.'}
+                  </p>
+                </div>
+              </div>
+
+              {!isArchived && !isCancelled && (
+                <div className="mt-4 rounded-[1.25rem] border border-amber-200 bg-amber-50 p-4 text-sm leading-6 text-amber-900">
+                  Para arquivar, o torneio precisa estar com o status
+                  <strong> &quot;Cancelado&quot;</strong>. Cancele o torneio primeiro
+                  (use o card &quot;Status da operação&quot; à esquerda) e só depois
+                  arquive — assim a galera é avisada do cancelamento antes do
+                  torneio sumir.
+                </div>
+              )}
+
+              {isArchived && (
+                <div className="mt-4 rounded-[1.25rem] border border-blue-200 bg-blue-50 p-4 text-sm leading-6 text-blue-900">
+                  Desarquivar faz o torneio voltar a aparecer nas listas
+                  (respeitando a visibilidade configurada) e na Dashboard.
+                </div>
+              )}
+
+              <div className="mt-5 flex flex-wrap gap-2">
+                {isArchived ? (
+                  <Button
+                    variant="outline"
+                    onClick={handleArchiveToggle}
+                    disabled={unarchiveMutation.isPending}
+                  >
+                    <ArchiveRestore className="w-4 h-4 mr-1" />
+                    {unarchiveMutation.isPending ? 'Desarquivando…' : 'Desarquivar torneio'}
+                  </Button>
+                ) : (
+                  <Button
+                    variant="outline"
+                    onClick={handleArchiveToggle}
+                    disabled={!isCancelled || archiveMutation.isPending}
+                    title={!isCancelled ? 'Cancele o torneio antes de arquivar' : undefined}
+                  >
+                    <Archive className="w-4 h-4 mr-1" />
+                    {archiveMutation.isPending ? 'Arquivando…' : 'Arquivar torneio'}
+                  </Button>
+                )}
+              </div>
+            </PlatformSurfaceCard>
+          )}
         </div>
       </div>
 
