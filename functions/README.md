@@ -41,3 +41,6 @@ gcloud iam service-accounts add-iam-policy-binding \
 
 Enquanto o deploy da função não estiver concluído, o ranking continua sendo
 recalculado automaticamente pelo cliente do admin da plataforma (fallback).
+
+> IAM/APIs do projeto configurados: o deploy da função é executado no próximo
+> push para `main`.
