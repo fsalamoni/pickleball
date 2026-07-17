@@ -73,6 +73,7 @@ export default function V2AdminMetrics() {
 
 function RatingsPanel() {
   const ratingOn = useFeatureFlag(FEATURE_FLAG.PLAYER_RATING);
+  const lifecycleOn = useFeatureFlag(FEATURE_FLAG.TOURNAMENT_LIFECYCLE);
   const { mutateAsync, isPending } = useRecomputeRatings();
   const [last, setLast] = useState(null);
   if (!ratingOn) return null;
@@ -90,8 +91,12 @@ function RatingsPanel() {
   return (
     <V2Surface>
       <div className="flex items-center gap-2"><Medal className="h-5 w-5 text-ink" /><h2 className="font-display text-lg font-bold text-ink">Rating ELO + Ranking nacional</h2></div>
-      <p className="mt-2 text-xs text-gray-500">Recalcula o rating de todos os atletas a partir dos jogos finalizados e atualiza o ranking nacional público. Faça isso após registrar novos resultados.</p>
-      <V2Button className="mt-4" onClick={handleRecompute} disabled={isPending}><Medal className="h-4 w-4" /> {isPending ? 'Recalculando…' : 'Recalcular ratings'}</V2Button>
+      <p className="mt-2 text-xs text-gray-500">
+        {lifecycleOn
+          ? 'O ranking é recalculado automaticamente conforme os torneios (públicos) são encerrados — não é preciso acionar manualmente. Use o botão abaixo apenas se quiser forçar um recálculo imediato.'
+          : 'Recalcula o rating de todos os atletas a partir dos jogos finalizados e atualiza o ranking nacional público. Faça isso após registrar novos resultados.'}
+      </p>
+      <V2Button className="mt-4" onClick={handleRecompute} disabled={isPending}><Medal className="h-4 w-4" /> {isPending ? 'Recalculando…' : (lifecycleOn ? 'Recalcular agora' : 'Recalcular ratings')}</V2Button>
       {last && <p className="mt-3 text-xs text-gray-500">Último recálculo: {last.players} atleta(s), {last.matchesUsed} de {last.matchesTotal} jogo(s) finalizados utilizados.</p>}
     </V2Surface>
   );

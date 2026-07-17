@@ -27,6 +27,7 @@ import {
   Search as SearchIcon,
 } from 'lucide-react';
 import { useAuth } from '@/core/lib/FirebaseAuthContext';
+import { useAutoRecomputeRatings } from '@/modules/rating/hooks/useRating';
 import { useFeatureFlag } from '@/core/lib/FeatureFlagsContext';
 import { FEATURE_FLAG } from '@/core/featureFlags';
 import { useNotifications } from '@/modules/notifications/hooks/useNotifications';
@@ -186,6 +187,8 @@ function NotificationsMenu() {
 
 export default function V2Layout({ children }) {
   const { userProfile, signOut } = useAuth();
+  // Mantém o ranking atualizado automaticamente para o admin da plataforma.
+  useAutoRecomputeRatings();
   const location = useLocation();
   const navigate = useNavigate();
   const nav = useV2Nav();

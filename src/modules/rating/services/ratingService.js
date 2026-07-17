@@ -23,12 +23,17 @@ import {
   writeBatch,
 } from 'firebase/firestore';
 import { db } from '@/core/config/firebase';
+import { logger } from '@/core/lib/logger';
 import { createAuditLog } from '@/core/services/auditService';
 import { MATCH_STATUS, MODALITY_FORMAT } from '@/modules/tournament/domain/constants';
 import { toMillis } from '@/modules/tournament/domain/participation';
 import { eligibleTournamentIdsForRanking } from '@/modules/tournament/domain/rankingEligibility';
 import { LEVEL_TABLE } from '@/modules/leveling/data/levels';
 import { computeRatings, seedFromLevelOrdinal } from '../domain/elo.js';
+import { computeRatingSignature } from '../domain/ratingSignature.js';
+
+const SETTINGS_COLLECTION = 'platform_settings';
+const SETTINGS_DOC = 'global';
 
 const RATINGS_COLLECTION = 'player_ratings';
 const HISTORY_COLLECTION = 'rating_history';
@@ -90,10 +95,13 @@ export async function recomputeAllRatings(actor, options = {}) {
   let finishedMatches = matchesSnap.docs.map((d) => d.data());
 
   // Ranking oficial: restringe aos torneios públicos e encerrados existentes.
+  let ratingSignature = null;
   if (onlyPublicClosed) {
     const tournamentsSnap = await getDocs(collection(db, 'tournaments'));
-    const eligibleIds = eligibleTournamentIdsForRanking(tournamentsSnap.docs.map((d) => d.data()));
+    const tournaments = tournamentsSnap.docs.map((d) => d.data());
+    const eligibleIds = eligibleTournamentIdsForRanking(tournaments);
     finishedMatches = finishedMatches.filter((m) => eligibleIds.has(m.tournament_id));
+    ratingSignature = computeRatingSignature(tournaments);
   }
 
   // 2) Inscrições (regId → uids) e 3) perfis (uid → dados/semente).
@@ -199,6 +207,20 @@ export async function recomputeAllRatings(actor, options = {}) {
     await batch.commit();
   }
 
+  // Marca o estado do recálculo (assinatura das entradas + timestamp) para o
+  // recálculo automático detectar staleness sem reprocessar tudo.
+  if (onlyPublicClosed) {
+    try {
+      await setDoc(
+        doc(db, SETTINGS_COLLECTION, SETTINGS_DOC),
+        { ratings_signature: ratingSignature, ratings_recomputed_at: serverTimestamp() },
+        { merge: true },
+      );
+    } catch (err) {
+      logger.error('Falha ao gravar o estado do recálculo de ratings:', err);
+    }
+  }
+
   await createAuditLog({
     action: 'ratings_recomputed',
     actor,
@@ -207,6 +229,7 @@ export async function recomputeAllRatings(actor, options = {}) {
       matches_used: engineMatches.length,
       matches_total: finishedMatches.length,
       stale_removed: staleIds.length,
+      auto: Boolean(onlyPublicClosed && options.auto),
     },
   });
 
@@ -216,6 +239,54 @@ export async function recomputeAllRatings(actor, options = {}) {
     matchesTotal: finishedMatches.length,
     staleRemoved: staleIds.length,
   };
+}
+
+/** Lê o estado do último recálculo (assinatura + momento). */
+async function readRatingMeta() {
+  try {
+    const snap = await getDoc(doc(db, SETTINGS_COLLECTION, SETTINGS_DOC));
+    const data = snap.exists() ? snap.data() : {};
+    return {
+      signature: data.ratings_signature ?? null,
+      recomputedAtMs: toMillis(data.ratings_recomputed_at) || 0,
+    };
+  } catch {
+    return { signature: null, recomputedAtMs: 0 };
+  }
+}
+
+/**
+ * Recálculo AUTOMÁTICO do ranking: recalcula apenas quando as entradas mudaram
+ * desde a última vez (nova assinatura), respeitando um intervalo mínimo para não
+ * reprocessar em excesso. Considera sempre o ranking oficial (público +
+ * encerrado). Só o admin da plataforma consegue gravar (regras do Firestore).
+ *
+ * @param {object} actor
+ * @param {{ minIntervalMs?: number, force?: boolean }} [options]
+ * @returns {Promise<{ ran: boolean, reason?: string } & Record<string, unknown>>}
+ */
+export async function maybeAutoRecomputeRatings(actor, options = {}) {
+  if (!db) return { ran: false, reason: 'no-db' };
+  const { minIntervalMs = 60_000, force = false } = options;
+  let currentSignature = '';
+  try {
+    const tournamentsSnap = await getDocs(collection(db, 'tournaments'));
+    currentSignature = computeRatingSignature(tournamentsSnap.docs.map((d) => d.data()));
+  } catch (err) {
+    logger.error('Falha ao ler torneios para o recálculo automático:', err);
+    return { ran: false, reason: 'read-failed' };
+  }
+
+  if (!force) {
+    const meta = await readRatingMeta();
+    if (currentSignature === meta.signature) return { ran: false, reason: 'up-to-date' };
+    if (meta.recomputedAtMs && Date.now() - meta.recomputedAtMs < minIntervalMs) {
+      return { ran: false, reason: 'throttled' };
+    }
+  }
+
+  const result = await recomputeAllRatings(actor, { onlyPublicClosed: true, auto: true });
+  return { ran: true, ...result };
 }
 
 /** Ranking nacional materializado (ordenado por rating desc). */
