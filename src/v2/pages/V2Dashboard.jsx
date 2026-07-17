@@ -14,6 +14,7 @@ import {
 import { useAuth } from '@/core/lib/FirebaseAuthContext';
 import { useMyTournaments, usePublicTournaments } from '@/modules/tournament/hooks/useTournament';
 import { useNationalRanking } from '@/modules/rating/hooks/useRating';
+import MyUpcomingMatches from '@/modules/tournament/components/MyUpcomingMatches';
 import {
   TOURNAMENT_STATUS,
   TOURNAMENT_STATUS_LABELS,
@@ -198,6 +199,9 @@ export default function V2Dashboard() {
           </div>
         </div>
       )}
+
+      {/* Meus próximos jogos (flag tournament_ux; some quando não há) */}
+      <div className="mt-10"><MyUpcomingMatches /></div>
 
       {/* Discovery strip */}
       <div className="mt-10 grid grid-cols-1 gap-6 lg:grid-cols-3">

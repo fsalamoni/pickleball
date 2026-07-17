@@ -2,6 +2,15 @@ import React from 'react';
 import { Award, ListChecks, Medal, Percent, Swords, Trophy } from 'lucide-react';
 import { usePlayerStats } from '@/modules/performance/hooks/usePlayerStats';
 import { MODALITY_FORMAT_LABELS } from '@/modules/tournament/domain/constants';
+import { useAuth } from '@/core/lib/FirebaseAuthContext';
+import { useFeatureFlag } from '@/core/lib/FeatureFlagsContext';
+import { FEATURE_FLAG } from '@/core/featureFlags';
+import { useRatingHistory } from '@/modules/rating/hooks/useRating';
+import { usePlayerMatchDates } from '@/modules/progression/hooks/useProgression';
+import ProgressionCard from '@/modules/progression/components/ProgressionCard';
+import GoalsCard from '@/modules/progression/components/GoalsCard';
+import RatingSparkline from '@/modules/rating/components/RatingSparkline';
+import AchievementsCard from '@/modules/achievements/components/AchievementsCard';
 import {
   V2PageIntro,
   V2Skeleton,
@@ -14,7 +23,14 @@ function formatPercent(rate) {
 }
 
 export default function V2Performance() {
+  const { user } = useAuth();
+  const achievementsOn = useFeatureFlag(FEATURE_FLAG.ACHIEVEMENTS);
+  const ratingHistoryOn = useFeatureFlag(FEATURE_FLAG.RATING_HISTORY);
+  const progressionOn = useFeatureFlag(FEATURE_FLAG.PLAYER_PROGRESSION);
   const { stats, isLoading } = usePlayerStats();
+  const { data: ratingHistory = [] } = useRatingHistory(user?.uid, ratingHistoryOn);
+  const { data: matchDates = [] } = usePlayerMatchDates(user?.uid, progressionOn);
+  const currentRating = ratingHistory.length ? ratingHistory[ratingHistory.length - 1].rating : 0;
   const formats = Object.entries(stats?.byFormat || {});
 
   return (
@@ -50,6 +66,27 @@ export default function V2Performance() {
                 ))}
               </div>
             </V2Surface>
+          )}
+
+          {progressionOn && (
+            <div className="mt-8"><ProgressionCard summary={stats} matchDates={matchDates} /></div>
+          )}
+
+          {ratingHistoryOn && ratingHistory.length >= 2 && (
+            <div className="mt-8"><RatingSparkline points={ratingHistory} /></div>
+          )}
+
+          {achievementsOn && (
+            <div className="mt-8"><AchievementsCard summary={stats} /></div>
+          )}
+
+          {progressionOn && (
+            <div className="mt-8">
+              <GoalsCard
+                uid={user?.uid}
+                values={{ games: stats.played, wins: stats.wins, tournaments: stats.tournaments, rating: currentRating }}
+              />
+            </div>
           )}
         </>
       )}
