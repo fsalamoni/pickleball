@@ -19,7 +19,7 @@ export default function V2AdminTournaments() {
   async function load() {
     try {
       setError(null);
-      setTournaments(await listAllTournaments());
+      setTournaments(await listAllTournaments({ includeArchived: true }));
     } catch (err) {
       setError(err.message || 'Não foi possível carregar os torneios.');
       toast.error(err.message);

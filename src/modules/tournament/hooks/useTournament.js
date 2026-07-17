@@ -67,11 +67,11 @@ import { FUNNEL_EVENT } from '@/modules/analytics/domain/funnelEvents';
 
 /* ------------------------------ Tournaments ----------------------------- */
 
-export function useMyTournaments() {
+export function useMyTournaments({ includeArchived = false } = {}) {
   const { user } = useAuth();
   return useQuery({
-    queryKey: ['my-tournaments', user?.uid],
-    queryFn: () => (user?.uid ? listMyTournaments(user.uid) : Promise.resolve([])),
+    queryKey: ['my-tournaments', user?.uid, { includeArchived }],
+    queryFn: () => (user?.uid ? listMyTournaments(user.uid, { includeArchived }) : Promise.resolve([])),
     enabled: !!user?.uid,
   });
 }
@@ -92,8 +92,11 @@ export function useTournamentByInvite(code) {
   });
 }
 
-export function useAllTournaments() {
-  return useQuery({ queryKey: ['tournaments-all'], queryFn: listAllTournaments });
+export function useAllTournaments({ includeArchived = false } = {}) {
+  return useQuery({
+    queryKey: ['tournaments-all', { includeArchived }],
+    queryFn: () => listAllTournaments({ includeArchived }),
+  });
 }
 
 export function usePublicTournaments() {

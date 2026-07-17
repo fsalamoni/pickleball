@@ -365,7 +365,7 @@ export async function isTournamentAdmin(tournamentId, userId) {
 
 /* --------------------------- Listagens ---------------------------------- */
 
-export async function listMyTournaments(userId) {
+export async function listMyTournaments(userId, { includeArchived = false } = {}) {
   // torneios onde sou admin
   const q = query(collection(db, COL.admins), where('user_id', '==', userId));
   const adminSnap = await getDocs(q);
@@ -386,6 +386,8 @@ export async function listMyTournaments(userId) {
   for (const id of unique) {
     const t = await getTournament(id);
     if (t) {
+      // Filtra arquivados por padrão (a Dashboard do atleta mostra só ativos).
+      if (!includeArchived && t.archived) continue;
       const adminDoc = adminSnap.docs.find((d) => d.data().tournament_id === id);
       results.push({
         ...t,
@@ -396,9 +398,14 @@ export async function listMyTournaments(userId) {
   return results;
 }
 
-export async function listAllTournaments() {
+export async function listAllTournaments({ includeArchived = false } = {}) {
   const snap = await getDocs(query(collection(db, COL.tournaments), orderBy('created_at', 'desc')));
-  return snap.docs.map((d) => d.data());
+  const docs = snap.docs.map((d) => d.data());
+  if (includeArchived) return docs;
+  // Filtro client-side: o Firestore já recusa leitura de arquivados para
+  // não-criador/não-admin, mas se o caller for admin e passar
+  // includeArchived=false, queremos garantir o contrato.
+  return docs.filter((t) => !t.archived);
 }
 
 export async function listPublicTournaments() {
