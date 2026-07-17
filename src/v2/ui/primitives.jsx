@@ -175,7 +175,7 @@ export function V2Avatar({ name, photoUrl, size = 'md', className, ring = false 
   const dim = AVATAR_SIZES[size] || AVATAR_SIZES.md;
   const ringClass = ring ? 'ring-2 ring-white' : '';
   if (photoUrl) {
-    return <img src={photoUrl} alt="" title={name || ''} className={cn(dim, ringClass, 'shrink-0 rounded-full border border-gray-100 object-cover', className)} />;
+    return <img src={photoUrl} alt="" title={name || ''} className={cn(dim, ringClass, 'shrink-0 rounded-full border border-gray-100 object-cover object-top', className)} />;
   }
   return (
     <div
