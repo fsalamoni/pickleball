@@ -15,6 +15,28 @@ function trimmed(value) {
 }
 
 /**
+ * Filtra campos com string vazia de um objeto. Usado pelo `syncAthleteProfile`
+ * antes do `setDoc({ merge: true })` para evitar que valores vazios sobrescrevam
+ * dados válidos já gravados no Firestore.
+ *
+ * Regra: apenas `''` (string vazia) é filtrado. `null` e `false` passam, porque
+ * podem ser valores legítimos ("campo não preenchido" e flag desligada).
+ * `undefined` também é filtrado — não é um valor útil para persistir.
+ *
+ * @param {object} payload
+ * @returns {object} cópia do payload sem campos `''` ou `undefined`
+ */
+export function filterEmptyStringFields(payload) {
+  if (!payload || typeof payload !== 'object') return {};
+  const out = {};
+  for (const [key, value] of Object.entries(payload)) {
+    if (value === '' || value === undefined) continue;
+    out[key] = value;
+  }
+  return out;
+}
+
+/**
  * @param {string} uid
  * @param {object} profile - perfil mesclado do usuário
  * @param {Array<{id:string,name:string}>} clubs - clubes do atleta
