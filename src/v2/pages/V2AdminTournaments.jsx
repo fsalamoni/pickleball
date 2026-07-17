@@ -4,7 +4,8 @@ import { Archive, ArchiveRestore, Trash2, Trophy } from 'lucide-react';
 import { toast } from 'sonner';
 import { ConfirmDialog } from '@/components/ui/confirm-dialog';
 import { useAuth } from '@/core/lib/FirebaseAuthContext';
-import { listAllTournaments, setTournamentArchived, deleteTournamentCascading } from '@/modules/admin/services/adminService';
+import { listAllTournaments, deleteTournamentCascading } from '@/modules/admin/services/adminService';
+import { archiveTournament, unarchiveTournament } from '@/modules/tournament/services/tournamentService';
 import { TOURNAMENT_STATUS_LABELS } from '@/modules/tournament/domain/constants';
 import { V2Badge, V2Button, V2EmptyState, V2PageIntro, V2Skeleton, V2StatCard, V2Surface } from '@/v2/ui/primitives';
 
@@ -33,8 +34,13 @@ export default function V2AdminTournaments() {
 
   async function handleArchive(t) {
     try {
-      await setTournamentArchived(t.id, !t.archived, user);
-      toast.success('Atualizado.');
+      if (t.archived) {
+        await unarchiveTournament(t.id, user);
+        toast.success('Torneio desarquivado.');
+      } else {
+        await archiveTournament(t.id, user);
+        toast.success('Torneio arquivado.');
+      }
       void load();
     } catch (err) { toast.error(err.message); }
   }

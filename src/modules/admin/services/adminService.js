@@ -1,6 +1,7 @@
 import { collection, getDocs, deleteDoc, doc, orderBy, query, where, serverTimestamp, updateDoc } from 'firebase/firestore';
 import { db } from '@/core/config/firebase';
 import { createAuditLog } from '@/core/services/auditService';
+import { archiveTournament as serviceArchive, unarchiveTournament as serviceUnarchive } from '@/modules/tournament/services/tournamentService';
 
 export async function listAllTournaments() {
   const snap = await getDocs(query(collection(db, 'tournaments'), orderBy('created_at', 'desc')));
@@ -22,16 +23,15 @@ export async function listAllPlatformUsers() {
   return snap.docs.map((d) => ({ uid: d.id, ...d.data() }));
 }
 
+/**
+ * @deprecated Prefira `archiveTournament` / `unarchiveTournament` de
+ * `@/modules/tournament/services/tournamentService`. Esta função existe só
+ * para retrocompatibilidade de imports legados (AdminTournaments V1).
+ * Reexporta os novos helpers para que o caller continue funcionando.
+ */
 export async function setTournamentArchived(tournamentId, archived, actor) {
-  await updateDoc(doc(db, 'tournaments', tournamentId), {
-    archived: !!archived,
-    updated_at: serverTimestamp(),
-  });
-  await createAuditLog({
-    action: archived ? 'platform_archive_tournament' : 'platform_unarchive_tournament',
-    actor,
-    details: { tournament_id: tournamentId },
-  });
+  if (archived) return serviceArchive(tournamentId, actor);
+  return serviceUnarchive(tournamentId, actor);
 }
 
 export async function deleteTournamentCascading(tournamentId, actor) {

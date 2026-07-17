@@ -166,6 +166,103 @@ export async function deleteTournament(id, actor) {
   await createAuditLog({ action: 'tournament_deleted', actor, details: { tournament_id: id } });
 }
 
+/* --------------------- Arquivamento (criador + admin) ------------------- */
+
+/**
+ * Arquiva um torneio. Pré-condição: o torneio precisa estar com
+ * `status: 'cancelled'` (é o caminho "limpar a casa" depois de explicar pra
+ * galera por que o evento não rolou). O arquivamento esconde o torneio da
+ * listagem pública (`/p/:id`, listas) e do `useMyTournaments` por padrão,
+ * mas preserva todo o histórico (modalidades, jogos, ranking) para o criador
+ * e o admin da plataforma, que continuam podendo consultar.
+ *
+ * Permissão: apenas o criador do torneio (`creator_uid`) e o admin master
+ * da plataforma (`platform_admin`). A Firestore rule de `tournaments/{tid}`
+ * reforça isso no servidor; este service valida a pré-condição de status
+ * cliente-side e lança erro descritivo se não for atendida.
+ *
+ * @param {string} tournamentId
+ * @param {object} actor — precisa ter `.uid` (audit log)
+ * @returns {Promise<{ tournamentId: string, archived: true, alreadyArchived?: boolean }>}
+ * @throws {Error} se torneio não existir, se o status não for 'cancelled',
+ *                 ou se a Firestore rule recusar.
+ */
+export async function archiveTournament(tournamentId, actor) {
+  if (!tournamentId) throw new Error('ID do torneio é obrigatório.');
+  if (!actor?.uid) throw new Error('Usuário não autenticado.');
+
+  const snap = await getDoc(doc(db, COL.tournaments, tournamentId));
+  if (!snap.exists()) throw new Error('Torneio não encontrado.');
+  const tournament = snap.data();
+  if (tournament.archived) {
+    // idempotente: já está arquivado, nada a fazer
+    return { tournamentId, archived: true, alreadyArchived: true };
+  }
+  if (tournament.status !== TOURNAMENT_STATUS.CANCELLED) {
+    throw new Error(
+      'Para arquivar, o torneio precisa estar cancelado. '
+      + 'Cancele o torneio primeiro (status → "Cancelado") e só depois arquive.',
+    );
+  }
+
+  await updateDoc(doc(db, COL.tournaments, tournamentId), {
+    archived: true,
+    archived_at: serverTimestamp(),
+    archived_by: actor.uid,
+    updated_at: serverTimestamp(),
+  });
+  await createAuditLog({
+    action: 'tournament_archived',
+    actor,
+    tournamentId,
+    userId: tournament.creator_uid,
+    userName: tournament.creator_name,
+    details: { tournament_id: tournamentId, previous_status: tournament.status },
+  });
+  logger.info('tournament_archived', { id: tournamentId, by: actor.uid });
+  return { tournamentId, archived: true };
+}
+
+/**
+ * Desarquiva um torneio. Volta a aparecer nas listagens (respeitando a
+ * visibilidade) e na `Dashboard` do criador. Não exige pré-condição de
+ * status (o criador pode desarquivar pra reabrir, ou pra mudar o status
+ * depois). Idempotente: se já não está arquivado, não faz nada.
+ *
+ * @param {string} tournamentId
+ * @param {object} actor — precisa ter `.uid` (audit log)
+ * @returns {Promise<{ tournamentId: string, archived: false, alreadyUnarchived?: boolean }>}
+ * @throws {Error} se torneio não existir, ou se a Firestore rule recusar.
+ */
+export async function unarchiveTournament(tournamentId, actor) {
+  if (!tournamentId) throw new Error('ID do torneio é obrigatório.');
+  if (!actor?.uid) throw new Error('Usuário não autenticado.');
+
+  const snap = await getDoc(doc(db, COL.tournaments, tournamentId));
+  if (!snap.exists()) throw new Error('Torneio não encontrado.');
+  const tournament = snap.data();
+  if (!tournament.archived) {
+    return { tournamentId, archived: false, alreadyUnarchived: true };
+  }
+
+  await updateDoc(doc(db, COL.tournaments, tournamentId), {
+    archived: false,
+    archived_at: null,
+    archived_by: null,
+    updated_at: serverTimestamp(),
+  });
+  await createAuditLog({
+    action: 'tournament_unarchived',
+    actor,
+    tournamentId,
+    userId: tournament.creator_uid,
+    userName: tournament.creator_name,
+    details: { tournament_id: tournamentId },
+  });
+  logger.info('tournament_unarchived', { id: tournamentId, by: actor.uid });
+  return { tournamentId, archived: false };
+}
+
 /* --------------------- Ciclo de vida (encerramento) --------------------- */
 
 /**
