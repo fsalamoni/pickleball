@@ -235,6 +235,16 @@ export const FEATURE_FLAG = Object.freeze({
    *    desligado, o encerramento é manual e o ranking mantém o cálculo anterior.
    */
   TOURNAMENT_LIFECYCLE: 'tournament_lifecycle',
+
+  /**
+   * Painel Admin centralizado (hub): adiciona em "Admin geral" um item
+   * "Painel" que abre uma página única (/admin/painel) reunindo métricas,
+   * gestão de torneios, parceiros, funcionalidades (flags), branding,
+   * conteúdo da plataforma, auditoria e diagnóstico. Aditivo — desligado,
+   * só existem as 3 rotas independentes (Métricas / Torneios / Parceiros).
+   * O item de menu e a rota /admin/painel somem completamente.
+   */
+  ADMIN_CONSOLE: 'admin_console',
 });
 
 /** Metadados de exibição para o painel de flags (admin master). */
@@ -456,6 +466,15 @@ export const FEATURE_FLAG_META = Object.freeze({
       + 'somente torneios públicos e encerrados, excluindo automaticamente os '
       + 'apagados. Desligado, o encerramento é manual e o ranking mantém o '
       + 'cálculo anterior.',
+  },
+  [FEATURE_FLAG.ADMIN_CONSOLE]: {
+    label: 'Painel Admin centralizado (hub)',
+    description:
+      'Adiciona em "Admin geral" um item "Painel" que abre uma página única '
+      + '(/admin/painel) reunindo métricas, gestão de torneios, parceiros, '
+      + 'funcionalidades (flags), branding, conteúdo da plataforma, auditoria '
+      + 'e diagnóstico. Desligado, só existem as 3 rotas independentes '
+      + '(Métricas / Torneios / Parceiros) e o item do menu some.',
   },
 });
 

@@ -2,6 +2,7 @@ import React, { Suspense, lazy, useState, useMemo, useRef, useEffect } from 'rea
 import { Link, Routes, Route, useLocation, useNavigate } from 'react-router-dom';
 import {
   LayoutGrid,
+  LayoutDashboard,
   MapPin,
   Trophy,
   Zap,
@@ -51,6 +52,7 @@ function useV2Nav() {
   const ratingOn = useFeatureFlag(FEATURE_FLAG.PLAYER_RATING);
   const matchmakingOn = useFeatureFlag(FEATURE_FLAG.MATCHMAKING);
   const openGamesOn = useFeatureFlag(FEATURE_FLAG.OPEN_GAMES);
+  const adminConsoleOn = useFeatureFlag(FEATURE_FLAG.ADMIN_CONSOLE);
   const affiliatesOn = useFeatureFlag(FEATURE_FLAG.AFFILIATE_LINKS);
   const communityFeedOn = useFeatureFlag(FEATURE_FLAG.COMMUNITY_FEED);
   const arenasOn = useFeatureFlag(FEATURE_FLAG.ARENAS);
@@ -89,10 +91,11 @@ function useV2Nav() {
     isPlatformAdmin && {
       title: 'Admin geral',
       items: [
+        adminConsoleOn && { to: '/admin/painel', label: 'Painel', icon: LayoutDashboard, tag: 'Novo' },
         { to: '/admin/metricas', label: 'Métricas', icon: Settings },
         { to: '/admin/torneios', label: 'Torneios', icon: Settings },
         { to: '/admin/parceiros', label: 'Parceiros', icon: Settings },
-      ],
+      ].filter(Boolean),
     },
     {
       title: 'Aprender',
@@ -104,7 +107,7 @@ function useV2Nav() {
         { to: '/politica-uso', label: 'Política de uso', icon: FileText },
       ].filter(Boolean),
     },
-  ].filter(Boolean), [performanceOn, ratingOn, matchmakingOn, openGamesOn, affiliatesOn, communityFeedOn, arenasOn, sportHistoryOn, isPlatformAdmin]);
+  ].filter(Boolean), [performanceOn, ratingOn, matchmakingOn, openGamesOn, affiliatesOn, communityFeedOn, arenasOn, sportHistoryOn, isPlatformAdmin, adminConsoleOn]);
 }
 
 function isActive(pathname, item) {
