@@ -11,7 +11,7 @@ import { getModality } from './modalityService.js';
 import { getTournament } from './tournamentService.js';
 import { resolveStageScoringConfig } from '../domain/scoring.js';
 import { buildRanking } from '../domain/ranking.js';
-import { normalizePhases, supportsGroups } from '../domain/phases.js';
+import { normalizePhase, normalizePhases, supportsGroups } from '../domain/phases.js';
 import { rankEntrantsInGroup } from '../domain/phaseProgression.js';
 import { TOURNAMENT_STAGE_TYPE_LABELS } from '../domain/constants.js';
 
@@ -61,15 +61,21 @@ export async function computeModalityRanking(modalityId, stageIndex) {
 
 /* --------------------- Ranking estruturado (por fase/grupo) -------------- */
 
-/** Lê os grupos persistidos de uma fase (com a estrutura de entrants). */
+/** Lê os grupos persistidos de uma fase (com a estrutura de entrants).
+ * Tolerante a falhas: se a leitura falhar (regras/índice), devolve [] para que
+ * o ranking caia no modo "grupo único" em vez de quebrar por completo. */
 async function readPhaseGroups(modalityId, stageIndex) {
-  const q = query(
-    collection(db, 'tournament_groups'),
-    where('modality_id', '==', modalityId),
-    where('stage_index', '==', Number(stageIndex)),
-  );
-  const snap = await getDocs(q);
-  return snap.docs.map((d) => d.data()).sort((a, b) => (a.group_index ?? 0) - (b.group_index ?? 0));
+  try {
+    const q = query(
+      collection(db, 'tournament_groups'),
+      where('modality_id', '==', modalityId),
+      where('stage_index', '==', Number(stageIndex)),
+    );
+    const snap = await getDocs(q);
+    return snap.docs.map((d) => d.data()).sort((a, b) => (a.group_index ?? 0) - (b.group_index ?? 0));
+  } catch {
+    return [];
+  }
 }
 
 /** Monta rótulo e fotos de um entrant a partir das inscrições dos seus membros. */
@@ -121,7 +127,7 @@ function rowFromRanked(ranked, regById) {
 export async function computeModalityRankingStructured(modalityId) {
   const modality = await getModality(modalityId);
   if (!modality) return { structured: false, phases: [] };
-  const tournament = await getTournament(modality.tournament_id);
+  const tournament = modality.tournament_id ? await getTournament(modality.tournament_id) : null;
 
   const phases = normalizePhases(modality.stages);
   const registrations = await listRegistrations(modalityId);
@@ -133,11 +139,23 @@ export async function computeModalityRankingStructured(modalityId) {
   // lançados mesmo enquanto a fase está em andamento.
   const allMatches = await listAllMatchesForModality(modalityId);
 
+  // Fases a exibir: as configuradas em `stages` MAIS qualquer stage_index que
+  // realmente apareça nos jogos. Assim, se houver jogos lançados, o ranking
+  // sempre carrega — mesmo que `stages` esteja vazio/desalinhado ou o
+  // stage_index tenha sido gravado fora do padrão.
+  const stageIndices = new Set(phases.map((_, i) => i));
+  allMatches.forEach((m) => {
+    const si = Number(m.stage_index ?? 0);
+    if (Number.isFinite(si)) stageIndices.add(si);
+  });
+  const orderedStages = [...stageIndices].sort((a, b) => a - b);
+
   const result = [];
-  for (let i = 0; i < phases.length; i += 1) {
-    const phase = phases[i];
-    const phaseScoring = resolveStageScoringConfig(modality, tournament, i);
+  for (const i of orderedStages) {
     const matches = allMatches.filter((m) => Number(m.stage_index ?? 0) === i);
+    // Fase configurada quando existir; senão, deriva o tipo a partir dos jogos.
+    const phase = phases[i] || normalizePhase({ type: matches[0]?.stage_type });
+    const phaseScoring = resolveStageScoringConfig(modality, tournament, i);
     if (matches.length === 0) {
       result.push({
         stageIndex: i,
