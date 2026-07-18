@@ -34,6 +34,33 @@ export async function setTournamentArchived(tournamentId, archived, actor) {
   return serviceUnarchive(tournamentId, actor);
 }
 
+/**
+ * Atalho: cancela (status: cancelled) E arquiva (archived: true) em uma
+ * única escrita. A invariante do PR #33 é que só dá pra arquivar se o
+ * status for 'cancelled' (validação cliente + server), o que força um
+ * fluxo de 2 cliques quando o admin quer esconder um torneio. Aqui a
+ * gente combina os dois num write só — usado pelo Painel Admin
+ * (/admin/painel) quando o user clica em 'Arquivar' num torneio com
+ * status != 'cancelled'.
+ */
+export async function cancelAndArchiveTournament(tournamentId, actor) {
+  if (!tournamentId) throw new Error('ID do torneio é obrigatório.');
+  if (!actor?.uid) throw new Error('Usuário não autenticado.');
+  if (!db) throw new Error('Firestore indisponível.');
+  await updateDoc(doc(db, 'tournaments', tournamentId), {
+    status: 'cancelled',
+    archived: true,
+    archived_at: serverTimestamp(),
+    archived_by: actor.uid,
+    updated_at: serverTimestamp(),
+  });
+  await createAuditLog({
+    action: 'platform_cancel_and_archive_tournament',
+    actor,
+    details: { tournament_id: tournamentId },
+  });
+}
+
 export async function deleteTournamentCascading(tournamentId, actor) {
   // Apaga o documento principal — subcoleções/jogos são limpos preguiçosamente
   // pelas regras Firestore (que negam leitura órfã) e por job de manutenção.
