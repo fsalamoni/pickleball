@@ -89,4 +89,18 @@ describe('ranking engine', () => {
     );
     expect(r.every((s) => s.played === 0)).toBe(true);
   });
+
+  it('mantém quem ainda não jogou (sem resultado lançado) abaixo de quem já jogou, mesmo perdendo', () => {
+    // Grupo com 3: só o jogo a×b foi lançado (a venceu). c ainda não jogou nada.
+    // c (saldo 0, sem jogos) NÃO pode ficar à frente de b, que jogou e perdeu.
+    const matches = [
+      { side_a: 'a', side_b: 'b', side_a_ids: ['a'], side_b_ids: ['b'], games: [{ a: 11, b: 4 }] },
+      { side_a: 'a', side_b: 'c', side_a_ids: ['a'], side_b_ids: ['c'], games: [] },
+      { side_a: 'b', side_b: 'c', side_a_ids: ['b'], side_b_ids: ['c'], games: [] },
+    ];
+    const r = buildRanking(matches, ['a', 'b', 'c'], cfg);
+    expect(r.map((s) => s.participant_id)).toEqual(['a', 'b', 'c']);
+    expect(r[2].participant_id).toBe('c'); // sem jogo lançado → por último
+    expect(r[2].played).toBe(0);
+  });
 });

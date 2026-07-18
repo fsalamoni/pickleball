@@ -104,6 +104,10 @@ export function buildStandings(matches, participantIds, scoringConfig) {
 
 /**
  * Ordena standings aplicando os critérios oficiais da plataforma:
+ *   0. quem já tem resultado lançado (jogos disputados) vem antes de quem ainda
+ *      não jogou nenhum jogo lançado — o ranking reflete apenas os resultados já
+ *      lançados; enquanto um participante não tem jogo lançado, ele fica ao final
+ *      e sobe/desce conforme seus resultados vão sendo lançados.
  *   1. mais vitórias
  *   2. melhor saldo de pontos (PF − PC)
  *   3. mais pontos a favor (PF)
@@ -111,6 +115,12 @@ export function buildStandings(matches, participantIds, scoringConfig) {
  */
 export function rankStandings(standings) {
   const cmp = (x, y) => {
+    // Participantes sem nenhum jogo lançado não podem ficar à frente de quem já
+    // tem resultado (o saldo neutro 0 não pode "passar" na frente de um saldo
+    // negativo de quem de fato jogou e perdeu).
+    const xPlayed = (x.played || 0) > 0;
+    const yPlayed = (y.played || 0) > 0;
+    if (xPlayed !== yPlayed) return xPlayed ? -1 : 1;
     if (y.wins !== x.wins) return y.wins - x.wins;
     const xBalance = (x.points_for || 0) - (x.points_against || 0);
     const yBalance = (y.points_for || 0) - (y.points_against || 0);
