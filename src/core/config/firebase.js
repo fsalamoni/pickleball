@@ -1,5 +1,5 @@
 import { initializeApp } from 'firebase/app';
-import { getAuth, GoogleAuthProvider, connectAuthEmulator } from 'firebase/auth';
+import { getAuth, GoogleAuthProvider, OAuthProvider, connectAuthEmulator } from 'firebase/auth';
 import { getFirestore, connectFirestoreEmulator } from 'firebase/firestore';
 import { getFunctions, connectFunctionsEmulator } from 'firebase/functions';
 import { getStorage, connectStorageEmulator } from 'firebase/storage';
@@ -36,6 +36,14 @@ export const storage = app ? getStorage(app) : null;
 
 export const googleProvider = auth ? new GoogleAuthProvider() : null;
 googleProvider?.setCustomParameters({ prompt: 'select_account' });
+
+// Login com Apple (Sign in with Apple). Requer o provedor Apple habilitado no
+// Firebase Auth (Service ID / chave configurados no console). Pedimos os
+// escopos de e-mail e nome para popular o perfil e permitir a vinculação por
+// e-mail das inscrições provisórias do atleta.
+export const appleProvider = auth ? new OAuthProvider('apple.com') : null;
+appleProvider?.addScope('email');
+appleProvider?.addScope('name');
 
 const isBrowser = typeof window !== 'undefined';
 const hasMeasurementId = Boolean(import.meta.env.VITE_FIREBASE_MEASUREMENT_ID);
