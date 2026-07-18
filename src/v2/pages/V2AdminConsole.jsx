@@ -60,7 +60,7 @@ import {
   serverTimestamp,
   setDoc,
 } from 'firebase/firestore';
-import ConfirmDialog from '@/components/ConfirmDialog';
+import { ConfirmDialog } from '@/components/ui/confirm-dialog';
 import { ImageUpload } from '@/components/ui/image-upload';
 import { AuditLogTable } from '@/components/AuditLogTable';
 import { useAuth } from '@/core/lib/FirebaseAuthContext';
