@@ -37,11 +37,14 @@ export const storage = app ? getStorage(app) : null;
 export const googleProvider = auth ? new GoogleAuthProvider() : null;
 googleProvider?.setCustomParameters({ prompt: 'select_account' });
 
-// Login com Apple (Sign in with Apple). Requer o provedor Apple habilitado no
-// Firebase Auth (Service ID / chave configurados no console). Pedimos os
-// escopos de e-mail e nome para popular o perfil e permitir a vinculação por
-// e-mail das inscrições provisórias do atleta.
-export const appleProvider = auth ? new OAuthProvider('apple.com') : null;
+// Login com Apple (Sign in with Apple). Desligado por ora: exige configuração
+// extra no console da Apple (Service ID, chave .p8, Return URLs). Para reativar,
+// basta ligar o flag abaixo depois de concluir essa configuração — o restante do
+// código (botão na tela de login e método signInWithApple) já está pronto.
+// Requer os escopos de e-mail e nome para popular o perfil e permitir a
+// vinculação por e-mail das inscrições provisórias do atleta.
+const APPLE_SIGN_IN_ENABLED = false;
+export const appleProvider = (auth && APPLE_SIGN_IN_ENABLED) ? new OAuthProvider('apple.com') : null;
 appleProvider?.addScope('email');
 appleProvider?.addScope('name');
 
