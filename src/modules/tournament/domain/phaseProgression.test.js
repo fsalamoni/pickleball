@@ -47,18 +47,6 @@ describe('rankEntrantsInGroup', () => {
     expect(ranked.map((e) => e.id)).toEqual(['a', 'b', 'c']);
     expect(ranked[0].rank).toBe(1);
   });
-
-  it('coloca quem ainda não jogou (sem resultado lançado) ao final, abaixo de quem já perdeu', () => {
-    // Só o jogo a×b foi lançado (a venceu). c ainda não tem jogo lançado.
-    // O ranking parcial deve refletir os resultados: a (1º), b (2º, jogou e
-    // perdeu), c (3º, sem jogo lançado) — c não pode passar b só por ter saldo 0.
-    const entrants = [entrant('a'), entrant('b'), entrant('c')];
-    const matches = [match('A', 'a', 'b', 'a')];
-    const ranked = rankEntrantsInGroup(entrants, matches, CFG);
-    expect(ranked.map((e) => e.id)).toEqual(['a', 'b', 'c']);
-    expect(ranked[2].id).toBe('c');
-    expect(ranked[2].stats.played).toBe(0);
-  });
 });
 
 describe('rankEntrantsInGroup — duplas formadas contam como uma unidade', () => {

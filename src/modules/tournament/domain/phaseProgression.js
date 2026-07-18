@@ -34,12 +34,6 @@ const ROTATION_FORMATS = new Set([
 
 /** Comparador oficial de classificação (mesmos critérios de ranking.js). */
 function compareStats(x, y) {
-  // Quem ainda não tem nenhum jogo lançado fica ao final: o ranking reflete só
-  // os resultados já lançados, então um saldo neutro (0) de quem não jogou não
-  // pode passar à frente de quem já jogou (ainda que com saldo negativo).
-  const xPlayed = (x.played || 0) > 0;
-  const yPlayed = (y.played || 0) > 0;
-  if (xPlayed !== yPlayed) return xPlayed ? -1 : 1;
   if (y.wins !== x.wins) return y.wins - x.wins;
   const xb = (x.points_for || 0) - (x.points_against || 0);
   const yb = (y.points_for || 0) - (y.points_against || 0);
