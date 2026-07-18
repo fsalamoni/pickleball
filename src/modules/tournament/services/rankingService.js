@@ -5,7 +5,7 @@
 
 import { collection, getDocs, query, where } from 'firebase/firestore';
 import { db } from '@/core/config/firebase';
-import { listMatches } from './matchService.js';
+import { listAllMatchesForModality } from './matchService.js';
 import { listRegistrations } from './registrationService.js';
 import { getModality } from './modalityService.js';
 import { getTournament } from './tournamentService.js';
@@ -24,15 +24,14 @@ export async function computeModalityRanking(modalityId, stageIndex) {
   if (!modality) return [];
   const tournament = await getTournament(modality.tournament_id);
 
-  const stages = modality.stages || [];
-  const matches = [];
-  if (typeof stageIndex === 'number') {
-    matches.push(...(await listMatches(modalityId, stageIndex)));
-  } else {
-    for (let i = 0; i < stages.length; i += 1) {
-      matches.push(...(await listMatches(modalityId, i)));
-    }
-  }
+  // Lê TODOS os jogos da modalidade de uma vez (mesma fonte da aba "Jogos"),
+  // sem filtrar por stage_index no servidor — assim o ranking enxerga
+  // exatamente os jogos já lançados, independentemente de como o stage_index
+  // foi gravado. Se uma fase específica for pedida, filtra no cliente.
+  const allMatches = await listAllMatchesForModality(modalityId);
+  const matches = typeof stageIndex === 'number'
+    ? allMatches.filter((m) => Number(m.stage_index ?? 0) === stageIndex)
+    : allMatches;
 
   const registrations = await listRegistrations(modalityId);
   const participantIds = registrations.map((r) => r.id);
@@ -128,11 +127,17 @@ export async function computeModalityRankingStructured(modalityId) {
   const registrations = await listRegistrations(modalityId);
   const regById = new Map(registrations.map((r) => [r.id, r]));
 
+  // Fonte única de jogos (igual à aba "Jogos"): lê tudo por modality_id e
+  // separa por fase no cliente. Evita depender de igualdade estrita de
+  // stage_index no servidor, garantindo que o ranking reflita os resultados já
+  // lançados mesmo enquanto a fase está em andamento.
+  const allMatches = await listAllMatchesForModality(modalityId);
+
   const result = [];
   for (let i = 0; i < phases.length; i += 1) {
     const phase = phases[i];
     const phaseScoring = resolveStageScoringConfig(modality, tournament, i);
-    const matches = await listMatches(modalityId, i);
+    const matches = allMatches.filter((m) => Number(m.stage_index ?? 0) === i);
     if (matches.length === 0) {
       result.push({
         stageIndex: i,
