@@ -94,8 +94,8 @@ export default function V2Profile() {
       )}
 
       <div className="mt-8 rounded-4xl border border-dashed border-gray-200 bg-paper p-6 text-sm text-gray-500">
-        A edição completa do perfil, nivelamento e privacidade continua no app atual.{' '}
-        <Link to="/perfil/editar" className="font-bold text-ink underline">Abrir editor completo</Link>
+        Edite seus dados, nivelamento e privacidade no editor de perfil.{' '}
+        <Link to="/perfil/editar" className="font-bold text-ink underline">Abrir editor de perfil</Link>
       </div>
     </div>
   );

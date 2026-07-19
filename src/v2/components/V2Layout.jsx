@@ -277,19 +277,12 @@ export default function V2Layout({ children }) {
                 value={searchQuery}
                 onChange={(e) => setSearchQuery(e.target.value)}
                 className="block w-full rounded-full border border-transparent bg-white py-3 pl-11 pr-4 text-sm text-ink shadow-sm transition-colors placeholder:text-gray-400 focus:border-gray-300 focus:outline-none focus:ring-4 focus:ring-gray-100"
-                placeholder="Buscar atletas, cidades, clubes..."
+                placeholder="Buscar atletas..."
               />
             </div>
           </form>
 
           <div className="ml-auto flex items-center gap-2 sm:gap-4">
-            <Link
-              to="/v1/inicio"
-              className="hidden rounded-full border border-gray-200 bg-white px-4 py-2 text-xs font-semibold text-gray-500 transition-colors hover:border-ink hover:text-ink sm:inline-flex"
-              title="Voltar para a versão anterior da plataforma"
-            >
-              App anterior
-            </Link>
             <NotificationsMenu />
             <Link
               to="/procura-jogo"

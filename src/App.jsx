@@ -55,7 +55,7 @@ function AdminRoute({ children }) {
 function FullScreenSpinner() {
   return (
     <div className="fixed inset-0 flex items-center justify-center bg-background">
-      <div className="h-10 w-10 animate-spin rounded-full border-2 border-primary border-t-transparent" />
+      <div className="h-10 w-10 animate-spin rounded-full border-2 border-ink border-t-transparent" />
     </div>
   );
 }
