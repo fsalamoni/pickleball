@@ -14,7 +14,7 @@ import {
   DialogDescription,
 } from '@/components/ui/dialog';
 import { AvatarGroup } from '@/components/ui/user-avatar';
-import { Plus, Check, X, Trash2, ArrowUp, Pencil } from 'lucide-react';
+import { Plus, Check, X, Trash2, ArrowUp, Pencil, UserCheck, Undo2 } from 'lucide-react';
 import {
   useModalities,
   useRegistrationsByTournament,
@@ -23,6 +23,7 @@ import {
   useCancelRegistration,
   useDeleteRegistration,
   useEditRegistration,
+  useSetRegistrationCheckIn,
 } from '@/modules/tournament/hooks/useTournament';
 import { useFeatureFlag } from '@/core/lib/FeatureFlagsContext';
 import { FEATURE_FLAG } from '@/core/featureFlags';
@@ -90,9 +91,13 @@ function ModalityRegistrationsBlock({ tournament, modality, registrations, isAdm
   const promoteMutation = usePromoteFromWaitlist(modality.id);
   const cancelMutation = useCancelRegistration(modality.id);
   const deleteMutation = useDeleteRegistration(modality.id);
+  const checkInMutation = useSetRegistrationCheckIn(modality.id);
   const waitlistOn = useFeatureFlag(FEATURE_FLAG.TOURNAMENT_WAITLIST);
+  const checkinOn = useFeatureFlag(FEATURE_FLAG.TOURNAMENT_CHECKIN);
   const [editTarget, setEditTarget] = useState(null);
-  const confirmed = registrations.filter((r) => r.status === REGISTRATION_STATUS.CONFIRMED).length;
+  const checkedInCount = registrations.filter((r) => r.status === REGISTRATION_STATUS.CHECKED_IN).length;
+  const confirmed = registrations.filter((r) => r.status === REGISTRATION_STATUS.CONFIRMED).length
+    + (checkinOn ? checkedInCount : 0);
   const occupied = countOccupiedRegistrations(registrations);
   const hasPrivateAccess = typeof window !== 'undefined' && Boolean(sessionStorage.getItem(`tournament_access_${tournament.id}`));
   const isPublic = (tournament.visibility || TOURNAMENT_VISIBILITY.PRIVATE) === TOURNAMENT_VISIBILITY.PUBLIC;
@@ -114,6 +119,7 @@ function ModalityRegistrationsBlock({ tournament, modality, registrations, isAdm
               {MODALITY_FORMAT_LABELS[modality.format]} · {hasUnlimitedEntries(modality.max_entries)
                 ? `${confirmed} confirmados · vagas abertas`
                 : `${confirmed}/${modality.max_entries} confirmados`}
+              {checkinOn && checkedInCount > 0 ? ` · ${checkedInCount} com check-in` : ''}
             </p>
           </div>
           {canJoin ? (
@@ -168,6 +174,16 @@ function ModalityRegistrationsBlock({ tournament, modality, registrations, isAdm
                         {r.status === REGISTRATION_STATUS.PENDING_PAYMENT && (
                           <V2Button size="icon" variant="ghost" title="Confirmar pagamento" onClick={() => confirmMutation.mutate(r.id)}>
                             <Check className="w-4 h-4 text-green-600" />
+                          </V2Button>
+                        )}
+                        {checkinOn && r.status === REGISTRATION_STATUS.CONFIRMED && (
+                          <V2Button size="icon" variant="ghost" title="Fazer check-in" aria-label="Fazer check-in" onClick={() => checkInMutation.mutate({ id: r.id, checkedIn: true })}>
+                            <UserCheck className="w-4 h-4 text-green-600" />
+                          </V2Button>
+                        )}
+                        {checkinOn && r.status === REGISTRATION_STATUS.CHECKED_IN && (
+                          <V2Button size="icon" variant="ghost" title="Desfazer check-in" aria-label="Desfazer check-in" onClick={() => checkInMutation.mutate({ id: r.id, checkedIn: false })}>
+                            <Undo2 className="w-4 h-4 text-amber-600" />
                           </V2Button>
                         )}
                         {waitlistOn && r.status === REGISTRATION_STATUS.WAITLIST && (

@@ -24,6 +24,7 @@ import {
   Users,
   Archive,
   ArchiveRestore,
+  Ban,
 } from 'lucide-react';
 import {
   useTournamentAdmins,
@@ -107,6 +108,7 @@ export default function TournamentAdminTab({ tournament }) {
   const duplicationOn = useFeatureFlag(FEATURE_FLAG.TOURNAMENT_DUPLICATION);
   const [duplicateOpen, setDuplicateOpen] = useState(false);
   const lifecycleOn = useFeatureFlag(FEATURE_FLAG.TOURNAMENT_LIFECYCLE);
+  const cancelActionOn = useFeatureFlag(FEATURE_FLAG.TOURNAMENT_CANCEL_ACTION);
   const lockMutation = useSetResultsLocked(tournament.id);
   const isFinished = tournament.status === TOURNAMENT_STATUS.FINISHED;
   const isLocked = Boolean(tournament.results_locked);
@@ -406,6 +408,31 @@ export default function TournamentAdminTab({ tournament }) {
                   </div>
                 </button>
               ))}
+
+              {cancelActionOn && !isCancelled && (
+                <ConfirmDialog
+                  title="Cancelar o torneio?"
+                  description="O torneio passa ao status &quot;Cancelado&quot;: sai das listas ativas e fica liberado para arquivamento. Os dados (modalidades, inscrições e jogos) são preservados e você pode reverter escolhendo outro status depois."
+                  confirmLabel="Cancelar torneio"
+                  onConfirm={() => setStatus(TOURNAMENT_STATUS.CANCELLED)}
+                  trigger={(
+                    <button
+                      type="button"
+                      className="flex w-full items-start gap-3 rounded-[1.35rem] border border-red-100 bg-red-50/60 p-4 text-left transition-transform duration-200 hover:-translate-y-0.5"
+                    >
+                      <div className="flex h-10 w-10 shrink-0 items-center justify-center rounded-2xl bg-red-100 text-red-600">
+                        <Ban className="h-4.5 w-4.5" />
+                      </div>
+                      <div>
+                        <div className="font-semibold text-red-700">Cancelar torneio</div>
+                        <p className="mt-1 text-sm leading-6 text-red-600/80">
+                          Marca o evento como cancelado e libera o arquivamento. Reversível.
+                        </p>
+                      </div>
+                    </button>
+                  )}
+                />
+              )}
             </div>
           </PlatformSurfaceCard>
 

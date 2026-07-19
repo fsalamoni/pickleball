@@ -17,6 +17,16 @@ import {
   AlertDialogTitle,
 } from '@/components/ui/alert-dialog';
 
+const DEFER_KEY = 'profile_completion_deferred';
+
+function readDeferred() {
+  try {
+    return sessionStorage.getItem(DEFER_KEY) === '1';
+  } catch {
+    return false;
+  }
+}
+
 export default function ProfileCompletionModal() {
   const { userProfile, updateUserProfile } = useAuth();
   const [platformName, setPlatformName] = useState('');
@@ -25,9 +35,19 @@ export default function ProfileCompletionModal() {
   const [pickleballExperience, setPickleballExperience] = useState('');
   const [errors, setErrors] = useState({});
   const [busy, setBusy] = useState(false);
+  const [deferred, setDeferred] = useState(readDeferred);
 
   const isComplete = useMemo(() => isRequiredProfileComplete(userProfile), [userProfile]);
-  const shouldOpen = Boolean(userProfile && !isComplete);
+  const shouldOpen = Boolean(userProfile && !isComplete && !deferred);
+
+  const handleDefer = () => {
+    try {
+      sessionStorage.setItem(DEFER_KEY, '1');
+    } catch {
+      // sessionStorage indisponível: adia apenas em memória.
+    }
+    setDeferred(true);
+  };
 
   useEffect(() => {
     setPlatformName(userProfile?.platform_name || userProfile?.full_name || '');
@@ -135,7 +155,10 @@ export default function ProfileCompletionModal() {
             {errors.pickleballExperience && <p className="text-xs text-red-600">{errors.pickleballExperience}</p>}
           </div>
 
-          <AlertDialogFooter>
+          <AlertDialogFooter className="gap-2 sm:gap-0">
+            <Button type="button" variant="outline" onClick={handleDefer} disabled={busy} className="w-full sm:w-auto">
+              Deixar para depois
+            </Button>
             <Button type="submit" disabled={busy} className="w-full sm:w-auto">
               <Save className="h-4 w-4" />
               {busy ? 'Salvando...' : 'Salvar e continuar'}

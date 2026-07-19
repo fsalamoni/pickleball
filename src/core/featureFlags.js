@@ -245,6 +245,54 @@ export const FEATURE_FLAG = Object.freeze({
    * O item de menu e a rota /admin/painel somem completamente.
    */
   ADMIN_CONSOLE: 'admin_console',
+
+  /**
+   * Completude de perfil (onboarding): monta o modal "Complete seu perfil"
+   * no layout autenticado quando faltam os dados obrigatórios para torneios
+   * (nome, nascimento, telefone, experiência). O atleta pode adiar ("Deixar
+   * para depois", válido pela sessão) — o bloqueio duro continua existindo
+   * apenas na inscrição. Aditivo — desligado, nada aparece.
+   */
+  PROFILE_ONBOARDING: 'profile_onboarding',
+
+  /**
+   * Menu do usuário no topo (desktop): avatar no cabeçalho que abre um menu
+   * com Meu perfil, Editar perfil e Sair. Hoje não existe nenhuma forma de
+   * sair da conta no desktop (o botão "Sair" só existe no menu mobile).
+   * Aditivo — desligado, o cabeçalho permanece como está.
+   */
+  NAV_USER_MENU: 'nav_user_menu',
+
+  /**
+   * Navegação inferior no mobile: barra fixa com os 5 destinos principais
+   * (Início, Torneios, Atletas, Chat, Perfil) para navegar com 1 toque sem
+   * abrir o menu lateral. Aditivo — desligado, a barra não é renderizada.
+   */
+  MOBILE_BOTTOM_NAV: 'mobile_bottom_nav',
+
+  /**
+   * Cancelar torneio: adiciona ao hub administrativo a ação "Cancelar
+   * torneio" (com confirmação). O status CANCELLED já existe e é
+   * pré-requisito para arquivar, mas não havia botão para alcançá-lo.
+   * Aditivo — desligado, as ações de status permanecem as atuais.
+   */
+  TOURNAMENT_CANCEL_ACTION: 'tournament_cancel_action',
+
+  /**
+   * Marcar todas como lidas: botão no menu de notificações que marca todas
+   * as notificações não lidas de uma vez. Aditivo — desligado, o menu
+   * permanece como está.
+   */
+  NOTIFICATIONS_MARK_ALL: 'notifications_mark_all',
+
+  /**
+   * Check-in de atletas: na aba de inscrições do torneio, o admin pode
+   * marcar/desfazer o check-in de inscrições confirmadas. O status
+   * "Check-in feito" já existia e já era considerado pelo sorteio; esta
+   * flag adiciona a UI que faltava para registrá-lo. Aditivo — desligado,
+   * a aba permanece como está.
+   */
+  TOURNAMENT_CHECKIN: 'tournament_checkin',
 });
 
 /** Metadados de exibição para o painel de flags (admin master). */
@@ -475,6 +523,52 @@ export const FEATURE_FLAG_META = Object.freeze({
       + 'funcionalidades (flags), branding, conteúdo da plataforma, auditoria '
       + 'e diagnóstico. Desligado, só existem as 3 rotas independentes '
       + '(Métricas / Torneios / Parceiros) e o item do menu some.',
+  },
+  [FEATURE_FLAG.PROFILE_ONBOARDING]: {
+    label: 'Completar perfil (onboarding)',
+    description:
+      'Mostra o modal "Complete seu perfil" no app autenticado quando faltam '
+      + 'os dados obrigatórios para torneios (nome, nascimento, telefone e '
+      + 'experiência). O atleta pode adiar pela sessão; o bloqueio duro segue '
+      + 'existindo apenas na inscrição. Desligado, nada aparece.',
+  },
+  [FEATURE_FLAG.NAV_USER_MENU]: {
+    label: 'Menu do usuário no topo (desktop)',
+    description:
+      'Adiciona o avatar do usuário no cabeçalho, abrindo um menu com Meu '
+      + 'perfil, Editar perfil e Sair — inclui a saída da conta no desktop, '
+      + 'que hoje só existe no menu mobile. Desligado, o cabeçalho fica igual.',
+  },
+  [FEATURE_FLAG.MOBILE_BOTTOM_NAV]: {
+    label: 'Navegação inferior (mobile)',
+    description:
+      'Exibe uma barra fixa na base da tela em celulares com os 5 destinos '
+      + 'principais (Início, Torneios, Atletas, Chat, Perfil), permitindo '
+      + 'navegar com 1 toque sem abrir o menu lateral. Desligado, a barra '
+      + 'não é renderizada.',
+  },
+  [FEATURE_FLAG.TOURNAMENT_CANCEL_ACTION]: {
+    label: 'Cancelar torneio',
+    description:
+      'Adiciona ao hub administrativo do torneio a ação "Cancelar torneio" '
+      + 'com confirmação. O status Cancelado já existia e é pré-requisito '
+      + 'para arquivar, mas não havia botão para alcançá-lo. Desligado, as '
+      + 'ações de status permanecem as atuais.',
+  },
+  [FEATURE_FLAG.NOTIFICATIONS_MARK_ALL]: {
+    label: 'Marcar notificações como lidas (todas)',
+    description:
+      'Adiciona ao menu de notificações um botão para marcar todas as não '
+      + 'lidas de uma vez. Desligado, o menu permanece como está.',
+  },
+  [FEATURE_FLAG.TOURNAMENT_CHECKIN]: {
+    label: 'Check-in de atletas no torneio',
+    description:
+      'Permite ao admin do torneio marcar e desfazer o check-in de '
+      + 'inscrições confirmadas na aba de inscrições, com contador por '
+      + 'modalidade. O sorteio já considerava o status "Check-in feito"; '
+      + 'esta flag adiciona a interface para registrá-lo. Desligado, a aba '
+      + 'permanece como está.',
   },
 });
 

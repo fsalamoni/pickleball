@@ -33,6 +33,8 @@ import {
   confirmRegistrationPayment,
   promoteFromWaitlist,
   cancelRegistration,
+  checkInRegistration,
+  undoRegistrationCheckIn,
   deleteRegistration,
   ensurePlaceholderRegistrations,
   clearPlaceholderRegistrations,
@@ -391,6 +393,24 @@ export function useCancelRegistration(modalityId) {
   const qc = useQueryClient();
   return useMutation({
     mutationFn: (id) => cancelRegistration(id, user),
+    onSuccess: () => {
+      qc.invalidateQueries({ queryKey: ['registrations', modalityId] });
+      qc.invalidateQueries({ queryKey: ['registrations-tournament'] });
+    },
+  });
+}
+
+/**
+ * Marca ou desfaz o check-in de uma inscrição (flag tournament_checkin).
+ * `checkedIn: true` → status "Check-in feito"; `false` → volta a confirmada.
+ */
+export function useSetRegistrationCheckIn(modalityId) {
+  const { user } = useAuth();
+  const qc = useQueryClient();
+  return useMutation({
+    mutationFn: ({ id, checkedIn }) => (
+      checkedIn ? checkInRegistration(id, user) : undoRegistrationCheckIn(id, user)
+    ),
     onSuccess: () => {
       qc.invalidateQueries({ queryKey: ['registrations', modalityId] });
       qc.invalidateQueries({ queryKey: ['registrations-tournament'] });

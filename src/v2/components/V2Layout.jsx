@@ -25,6 +25,8 @@ import {
   Plus,
   ChevronRight,
   Bell,
+  LogOut,
+  Pencil,
   Search as SearchIcon,
 } from 'lucide-react';
 import { useAuth } from '@/core/lib/FirebaseAuthContext';
@@ -43,6 +45,7 @@ import {
 } from '@/components/ui/dropdown-menu';
 import { cn } from '@/core/lib/utils';
 import { V2Avatar } from '@/v2/ui/primitives';
+import ProfileCompletionModal from '@/components/ProfileCompletionModal';
 
 const BRAND = 'PickleRush';
 
@@ -148,7 +151,18 @@ function NavItem({ item, active, onClick }) {
 
 function NotificationsMenu() {
   const navigate = useNavigate();
-  const { notifications, unreadCount, markAsRead } = useNotifications();
+  const { notifications, unreadCount, markAsRead, markAllAsRead } = useNotifications();
+  const markAllOn = useFeatureFlag(FEATURE_FLAG.NOTIFICATIONS_MARK_ALL);
+
+  const handleMarkAll = async (event) => {
+    // Mantém o dropdown aberto enquanto marca.
+    event.preventDefault();
+    try {
+      await markAllAsRead();
+    } catch {
+      // Falha silenciosa: as notificações continuam não lidas.
+    }
+  };
 
   return (
     <DropdownMenu>
@@ -163,7 +177,18 @@ function NotificationsMenu() {
         </button>
       </DropdownMenuTrigger>
       <DropdownMenuContent align="end" className="w-80">
-        <div className="p-2 font-bold">Notificações</div>
+        <div className="flex items-center justify-between gap-2 p-2">
+          <span className="font-bold">Notificações</span>
+          {markAllOn && unreadCount > 0 && (
+            <button
+              type="button"
+              onClick={handleMarkAll}
+              className="text-xs font-semibold text-gray-500 transition-colors hover:text-ink"
+            >
+              Marcar todas como lidas
+            </button>
+          )}
+        </div>
         {notifications.length === 0 ? (
           <div className="p-4 text-center text-sm text-gray-500">Nenhuma notificação.</div>
         ) : (
@@ -189,6 +214,80 @@ function NotificationsMenu() {
   );
 }
 
+const BOTTOM_NAV_ITEMS = [
+  { to: '/', label: 'Início', icon: LayoutGrid, exact: true },
+  { to: '/torneios', label: 'Torneios', icon: Trophy },
+  { to: '/atletas', label: 'Atletas', icon: Users },
+  { to: '/chat', label: 'Chat', icon: MessageSquare },
+  { to: '/perfil', label: 'Perfil', icon: User },
+];
+
+function MobileBottomNav({ pathname }) {
+  return (
+    <nav
+      aria-label="Navegação principal"
+      className="fixed inset-x-0 bottom-0 z-30 border-t border-gray-100 bg-paper-pure/95 backdrop-blur-md lg:hidden"
+      style={{ paddingBottom: 'env(safe-area-inset-bottom)' }}
+    >
+      <div className="mx-auto flex h-16 max-w-lg items-stretch justify-around">
+        {BOTTOM_NAV_ITEMS.map((item) => {
+          const Icon = item.icon;
+          const active = isActive(pathname, item);
+          return (
+            <Link
+              key={item.to}
+              to={item.to}
+              aria-current={active ? 'page' : undefined}
+              className={cn(
+                'flex flex-1 flex-col items-center justify-center gap-0.5 text-[11px] font-semibold transition-colors',
+                active ? 'text-ink' : 'text-gray-400',
+              )}
+            >
+              <span className={cn('flex h-8 w-14 items-center justify-center rounded-full transition-colors', active && 'bg-ink')}>
+                <Icon className={cn('h-5 w-5', active && 'text-acid')} />
+              </span>
+              {item.label}
+            </Link>
+          );
+        })}
+      </div>
+    </nav>
+  );
+}
+
+function UserMenu({ displayName, displayPhoto, levelLabel, onLogout }) {
+  const navigate = useNavigate();
+  return (
+    <DropdownMenu>
+      <DropdownMenuTrigger asChild>
+        <button
+          className="btn-press hidden items-center justify-center rounded-full transition-opacity hover:opacity-80 sm:flex"
+          aria-label="Menu do usuário"
+        >
+          <V2Avatar name={displayName} photoUrl={displayPhoto} size="md" />
+        </button>
+      </DropdownMenuTrigger>
+      <DropdownMenuContent align="end" className="w-60">
+        <div className="px-2 py-2">
+          <p className="truncate text-sm font-bold text-ink">{displayName}</p>
+          {levelLabel && <p className="truncate text-xs text-gray-500">{levelLabel}</p>}
+        </div>
+        <DropdownMenuSeparator />
+        <DropdownMenuItem className="cursor-pointer" onClick={() => navigate('/perfil')}>
+          <User className="mr-2 h-4 w-4" /> Meu perfil
+        </DropdownMenuItem>
+        <DropdownMenuItem className="cursor-pointer" onClick={() => navigate('/perfil/editar')}>
+          <Pencil className="mr-2 h-4 w-4" /> Editar perfil
+        </DropdownMenuItem>
+        <DropdownMenuSeparator />
+        <DropdownMenuItem className="cursor-pointer text-red-600 focus:text-red-600" onClick={onLogout}>
+          <LogOut className="mr-2 h-4 w-4" /> Sair
+        </DropdownMenuItem>
+      </DropdownMenuContent>
+    </DropdownMenu>
+  );
+}
+
 export default function V2Layout({ children }) {
   const { userProfile, signOut } = useAuth();
   // Mantém o ranking atualizado automaticamente para o admin da plataforma.
@@ -199,6 +298,9 @@ export default function V2Layout({ children }) {
   const mainRef = useRef(null);
   const [mobileOpen, setMobileOpen] = useState(false);
   const [searchQuery, setSearchQuery] = useState('');
+  const profileOnboardingOn = useFeatureFlag(FEATURE_FLAG.PROFILE_ONBOARDING);
+  const userMenuOn = useFeatureFlag(FEATURE_FLAG.NAV_USER_MENU);
+  const bottomNavOn = useFeatureFlag(FEATURE_FLAG.MOBILE_BOTTOM_NAV);
 
   const displayName = userProfile?.platform_name || userProfile?.full_name || 'Atleta';
   const displayPhoto = userProfile?.photo_url || null;
@@ -227,6 +329,9 @@ export default function V2Layout({ children }) {
     <div className="v2-root flex h-[100dvh] w-full overflow-hidden bg-paper font-inter text-ink">
       {/* Instrumentação de funil (flag funnel_analytics; não renderiza nada) */}
       <AuthFunnelTracker />
+      {/* Onboarding de perfil (flag profile_onboarding): pede os dados
+          obrigatórios para torneios; o atleta pode adiar pela sessão. */}
+      {profileOnboardingOn && <ProfileCompletionModal />}
       <aside className="z-30 hidden w-[280px] flex-shrink-0 flex-col border-r border-gray-100 bg-paper-pure lg:flex">
         <div className="flex h-24 items-center px-8">
           <BrandLockup />
@@ -284,6 +389,14 @@ export default function V2Layout({ children }) {
 
           <div className="ml-auto flex items-center gap-2 sm:gap-4">
             <NotificationsMenu />
+            {userMenuOn && (
+              <UserMenu
+                displayName={displayName}
+                displayPhoto={displayPhoto}
+                levelLabel={levelLabel}
+                onLogout={handleLogout}
+              />
+            )}
             <Link
               to="/procura-jogo"
               className="btn-press flex items-center gap-2 rounded-full bg-acid px-5 py-3 text-sm font-bold text-ink shadow-glow transition-all hover:bg-acid-light sm:px-6"
@@ -296,6 +409,7 @@ export default function V2Layout({ children }) {
         <main ref={mainRef} className="flex-1 overflow-y-auto overflow-x-hidden px-4 pb-24 pt-28 sm:px-6 lg:px-10 lg:pb-12">
           {children}
         </main>
+        {bottomNavOn && <MobileBottomNav pathname={location.pathname} />}
       </div>
 
       <div

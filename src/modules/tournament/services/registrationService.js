@@ -348,6 +348,20 @@ export async function cancelRegistration(id, actor) {
   await updateRegistration(id, { status: REGISTRATION_STATUS.CANCELLED }, actor);
 }
 
+/**
+ * Marca o check-in de uma inscrição confirmada (admin do torneio). O status
+ * "Check-in feito" já era aceito pelo sorteio como equivalente a confirmado;
+ * aqui apenas o registramos com carimbo de horário.
+ */
+export async function checkInRegistration(id, actor) {
+  await updateRegistration(id, { status: REGISTRATION_STATUS.CHECKED_IN, checked_in_at: serverTimestamp() }, actor);
+}
+
+/** Desfaz o check-in, devolvendo a inscrição ao status confirmado. */
+export async function undoRegistrationCheckIn(id, actor) {
+  await updateRegistration(id, { status: REGISTRATION_STATUS.CONFIRMED, checked_in_at: null }, actor);
+}
+
 export async function deleteRegistration(id, actor) {
   await deleteDoc(doc(db, COL, id));
   await createAuditLog({ action: 'registration_deleted', actor, details: { registration_id: id } });
