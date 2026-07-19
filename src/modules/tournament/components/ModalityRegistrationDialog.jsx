@@ -26,6 +26,8 @@ import {
 import { UserAvatar } from '@/components/ui/user-avatar';
 import { cn } from '@/core/lib/utils';
 import { LEVEL_OPTIONS } from '@/modules/leveling/data/levels';
+import { formatBrlCents, tournamentHasPixConfig } from '@/modules/tournament/domain/payment';
+import { PixPaymentContent } from '@/modules/tournament/components/PixPaymentDialog';
 
 const GENDER_OPTIONS = [
   { value: COMPETITION_GENDER.MALE, label: 'Masculino' },
@@ -50,7 +52,11 @@ export default function ModalityRegistrationDialog({
   const { user, userProfile, isPlatformAdmin } = useAuth();
   const waitlistOn = useFeatureFlag(FEATURE_FLAG.TOURNAMENT_WAITLIST);
   const adminAthleteRegOn = useFeatureFlag(FEATURE_FLAG.ADMIN_ATHLETE_REGISTRATION);
+  const paymentOn = useFeatureFlag(FEATURE_FLAG.PAYMENT_INSTRUCTIONS);
   const createMutation = useCreateRegistration();
+  // Etapa de pagamento (flag payment_instructions): guarda o id da inscrição
+  // recém-criada para exibir as instruções PIX sem fechar o dialog.
+  const [paymentRegId, setPaymentRegId] = useState(null);
   const { data: existingRegs = [] } = useRegistrations(modality?.id);
   // Seletor de atletas da plataforma: exclusivo do admin da plataforma, atrás
   // da flag, e apenas quando o modal está aberto em modo admin do torneio.
@@ -77,6 +83,7 @@ export default function ModalityRegistrationDialog({
 
   useEffect(() => {
     if (!open) return;
+    setPaymentRegId(null);
     setForm({
       // Com o seletor de atletas ativo, o formulário começa vazio para o admin
       // escolher o atleta na lista. Caso contrário, mantém o autopreenchimento
@@ -150,6 +157,15 @@ export default function ModalityRegistrationDialog({
 
   if (!modality) return null;
   const blocked = !isAdmin && eligibility.errors.length > 0;
+  const pixReady = paymentOn
+    && !isAdmin
+    && (modality.entry_fee_cents || 0) > 0
+    && tournamentHasPixConfig(tournament);
+
+  function closeAll() {
+    setPaymentRegId(null);
+    onClose();
+  }
 
   async function handleSubmit() {
     if (!form.player_a_name.trim()) return toast.error('Informe o nome do jogador A.');
@@ -174,7 +190,7 @@ export default function ModalityRegistrationDialog({
       return toast.error('Não é possível enviar a inscrição: você não atende aos critérios desta modalidade.');
     }
     try {
-      await createMutation.mutateAsync({
+      const registrationId = await createMutation.mutateAsync({
         tournament_id: tournament.id,
         modality_id: modality.id,
         allow_waitlist: asWaitlist,
@@ -205,7 +221,12 @@ export default function ModalityRegistrationDialog({
             : null,
       });
       toast.success(asWaitlist ? 'Você entrou na lista de espera!' : 'Inscrição enviada!');
-      onClose();
+      if (!asWaitlist && pixReady && registrationId) {
+        // Mantém o dialog aberto na etapa de pagamento (flag payment_instructions).
+        setPaymentRegId(registrationId);
+      } else {
+        onClose();
+      }
     } catch (err) {
       toast.error(err.message || 'Falha na inscrição.');
     }
@@ -234,6 +255,24 @@ export default function ModalityRegistrationDialog({
       [`player_${slot}_user_id`]: null,
       [`player_${slot}_photo`]: null,
     }));
+  }
+
+  if (paymentRegId) {
+    return (
+      <Dialog open={open} onOpenChange={(o) => !o && closeAll()}>
+        <DialogContent className="max-w-md">
+          <DialogHeader>
+            <DialogTitle>Pagamento da inscrição</DialogTitle>
+          </DialogHeader>
+          <PixPaymentContent
+            tournament={tournament}
+            modality={modality}
+            registrationId={paymentRegId}
+            onDone={closeAll}
+          />
+        </DialogContent>
+      </Dialog>
+    );
   }
 
   return (
@@ -362,7 +401,9 @@ export default function ModalityRegistrationDialog({
           )}
           {modality.entry_fee_cents > 0 && (
             <p className="text-xs text-amber-700 bg-amber-50 border border-amber-200 rounded p-2">
-              Taxa: R$ {(modality.entry_fee_cents / 100).toFixed(2).replace('.', ',')} — pagamento será solicitado em seguida.
+              {pixReady
+                ? `Taxa: ${formatBrlCents(modality.entry_fee_cents)} — as instruções de pagamento (PIX) aparecem após confirmar a inscrição.`
+                : `Taxa: ${formatBrlCents(modality.entry_fee_cents)} — pagamento será solicitado em seguida.`}
             </p>
           )}
         </div>

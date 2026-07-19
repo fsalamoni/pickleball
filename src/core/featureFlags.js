@@ -293,6 +293,25 @@ export const FEATURE_FLAG = Object.freeze({
    * a aba permanece como está.
    */
   TOURNAMENT_CHECKIN: 'tournament_checkin',
+
+  /**
+   * Instruções de pagamento (PIX) na inscrição: o admin configura a chave
+   * PIX do torneio (aba Geral) e, ao se inscrever numa modalidade paga, o
+   * atleta vê o valor, o QR Code e o "copia e cola" com botão de copiar,
+   * podendo declarar "já paguei" (avisa os admins para confirmar). A
+   * confirmação continua manual, pelo admin, como hoje. Aditivo —
+   * desligado, o fluxo de inscrição permanece exatamente como está.
+   */
+  PAYMENT_INSTRUCTIONS: 'payment_instructions',
+
+  /**
+   * Resumo operacional do torneio: adiciona ao hub administrativo uma aba
+   * "Resumo" com os contadores que hoje ficam espalhados (inscrições por
+   * status, pagamentos pendentes, % de jogos concluídos, jogos sem horário)
+   * e alertas de pendências. Somente leitura — nenhum dado novo é gravado.
+   * Aditivo — desligado, a aba não aparece.
+   */
+  TOURNAMENT_OPS_DASHBOARD: 'tournament_ops_dashboard',
 });
 
 /** Metadados de exibição para o painel de flags (admin master). */
@@ -569,6 +588,23 @@ export const FEATURE_FLAG_META = Object.freeze({
       + 'modalidade. O sorteio já considerava o status "Check-in feito"; '
       + 'esta flag adiciona a interface para registrá-lo. Desligado, a aba '
       + 'permanece como está.',
+  },
+  [FEATURE_FLAG.PAYMENT_INSTRUCTIONS]: {
+    label: 'Instruções de pagamento (PIX)',
+    description:
+      'O admin configura a chave PIX do torneio na aba Geral e o atleta, ao '
+      + 'se inscrever numa modalidade paga, vê o valor, o QR Code e o código '
+      + '"copia e cola", podendo declarar que pagou (os admins são avisados '
+      + 'para conferir e confirmar). A confirmação do pagamento continua '
+      + 'manual, como hoje. Desligado, o fluxo de inscrição fica igual.',
+  },
+  [FEATURE_FLAG.TOURNAMENT_OPS_DASHBOARD]: {
+    label: 'Resumo operacional do torneio',
+    description:
+      'Adiciona ao hub administrativo do torneio uma aba "Resumo" com '
+      + 'inscrições por status, pagamentos pendentes, progresso dos jogos, '
+      + 'jogos sem horário e alertas de pendências — a visão única de "como '
+      + 'está meu torneio". Somente leitura. Desligado, a aba não aparece.',
   },
 });
 

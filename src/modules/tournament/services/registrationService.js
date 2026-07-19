@@ -31,7 +31,8 @@ import {
 import { countOccupiedRegistrations, isRegistrationCapacityReached } from '../domain/capacity.js';
 import { buildPlaceholderRegistrationFields, neededPlaceholderCount } from '../domain/placeholders.js';
 import { getModality } from './modalityService.js';
-import { getTournament, isTournamentAdmin } from './tournamentService.js';
+import { getTournament, isTournamentAdmin, listTournamentAdmins } from './tournamentService.js';
+import { notifyUsers, NOTIFICATION_TYPE } from '@/core/services/notificationService';
 
 const COL = 'tournament_registrations';
 const SAFE_BATCH_WRITE_SIZE = 450; // abaixo do limite de 500 operações por batch do Firestore
@@ -346,6 +347,31 @@ export async function promoteFromWaitlist(id, actor) {
 
 export async function cancelRegistration(id, actor) {
   await updateRegistration(id, { status: REGISTRATION_STATUS.CANCELLED }, actor);
+}
+
+/**
+ * O inscrito declara que efetuou o pagamento da inscrição (flag
+ * payment_instructions). Não muda o status — apenas registra o carimbo e
+ * avisa os admins do torneio para conciliarem e confirmarem.
+ */
+export async function declareRegistrationPayment(id, actor) {
+  const registration = await getRegistration(id);
+  if (!registration) throw new Error('Inscrição não encontrada.');
+  await updateRegistration(id, { payment_declared_at: serverTimestamp() }, actor);
+  try {
+    const admins = await listTournamentAdmins(registration.tournament_id);
+    const adminIds = admins.map((a) => a.user_id).filter(Boolean);
+    await notifyUsers(adminIds, {
+      title: 'Pagamento informado',
+      message: `${registration.label || registration.player_a_name || 'Um inscrito'} informou o pagamento da inscrição. Confira e confirme.`,
+      type: NOTIFICATION_TYPE.GENERIC,
+      link: `/torneios/${registration.tournament_id}/admin`,
+      actor,
+    });
+  } catch (err) {
+    // Best-effort: a declaração vale mesmo se a notificação falhar.
+    logger.error('Falha ao notificar admins sobre pagamento informado:', err);
+  }
 }
 
 /**

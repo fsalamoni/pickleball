@@ -25,6 +25,7 @@ import {
   Archive,
   ArchiveRestore,
   Ban,
+  Wallet,
 } from 'lucide-react';
 import {
   useTournamentAdmins,
@@ -64,6 +65,10 @@ function buildFormState(tournament) {
     starts_at: tournament?.starts_at || '',
     ends_at: tournament?.ends_at || '',
     registration_deadline: tournament?.registration_deadline || '',
+    payment_pix_key: tournament?.payment_pix_key || '',
+    payment_pix_name: tournament?.payment_pix_name || '',
+    payment_pix_city: tournament?.payment_pix_city || '',
+    payment_instructions: tournament?.payment_instructions || '',
   };
 }
 
@@ -109,6 +114,7 @@ export default function TournamentAdminTab({ tournament }) {
   const [duplicateOpen, setDuplicateOpen] = useState(false);
   const lifecycleOn = useFeatureFlag(FEATURE_FLAG.TOURNAMENT_LIFECYCLE);
   const cancelActionOn = useFeatureFlag(FEATURE_FLAG.TOURNAMENT_CANCEL_ACTION);
+  const paymentOn = useFeatureFlag(FEATURE_FLAG.PAYMENT_INSTRUCTIONS);
   const lockMutation = useSetResultsLocked(tournament.id);
   const isFinished = tournament.status === TOURNAMENT_STATUS.FINISHED;
   const isLocked = Boolean(tournament.results_locked);
@@ -181,6 +187,12 @@ export default function TournamentAdminTab({ tournament }) {
         starts_at: form.starts_at || null,
         ends_at: form.ends_at || null,
         registration_deadline: form.registration_deadline || null,
+        ...(paymentOn ? {
+          payment_pix_key: form.payment_pix_key.trim(),
+          payment_pix_name: form.payment_pix_name.trim(),
+          payment_pix_city: form.payment_pix_city.trim(),
+          payment_instructions: form.payment_instructions.trim(),
+        } : {}),
         scoring: {
           ...(tournament?.scoring || {}),
           ruleset: form.ruleset,
@@ -381,6 +393,58 @@ export default function TournamentAdminTab({ tournament }) {
                 </div>
               </div>
             </PlatformFormSection>
+
+            {paymentOn && (
+              <PlatformFormSection
+                icon={Wallet}
+                title="Pagamento das inscrições (PIX)"
+                description="Com a chave configurada, o atleta vê o QR Code e o código copia e cola ao se inscrever em modalidades pagas, e pode avisar quando pagar. A confirmação continua manual, feita por você."
+              >
+                <div className="grid grid-cols-1 gap-4 md:grid-cols-2">
+                  <div className="md:col-span-2">
+                    <Label>Chave PIX (CPF/CNPJ, e-mail, telefone ou chave aleatória)</Label>
+                    <Input
+                      value={form.payment_pix_key}
+                      onChange={(e) => set('payment_pix_key', e.target.value)}
+                      placeholder="ex.: organizador@email.com"
+                      className="mt-2"
+                    />
+                  </div>
+                  <div>
+                    <Label>Nome do recebedor</Label>
+                    <Input
+                      value={form.payment_pix_name}
+                      onChange={(e) => set('payment_pix_name', e.target.value)}
+                      maxLength={25}
+                      placeholder="como aparece no banco"
+                      className="mt-2"
+                    />
+                  </div>
+                  <div>
+                    <Label>Cidade do recebedor</Label>
+                    <Input
+                      value={form.payment_pix_city}
+                      onChange={(e) => set('payment_pix_city', e.target.value)}
+                      maxLength={15}
+                      placeholder="ex.: Sao Paulo"
+                      className="mt-2"
+                    />
+                  </div>
+                  <div className="md:col-span-2">
+                    <Label>Instruções adicionais (opcional)</Label>
+                    <textarea
+                      className="mt-2 flex min-h-20 w-full rounded-[1rem] border border-input bg-background px-3 py-3 text-sm"
+                      value={form.payment_instructions}
+                      onChange={(e) => set('payment_instructions', e.target.value)}
+                      placeholder="ex.: envie o comprovante no WhatsApp (11) 99999-9999"
+                    />
+                  </div>
+                  <div className="md:col-span-2 rounded-[1.25rem] border border-gray-200 bg-acid/10 p-4 text-sm leading-6 text-green-800">
+                    Deixe a chave em branco para não exibir instruções de pagamento. O valor cobrado é a taxa definida em cada modalidade.
+                  </div>
+                </div>
+              </PlatformFormSection>
+            )}
         </PlatformSurfaceCard>
 
         <div className="space-y-5">

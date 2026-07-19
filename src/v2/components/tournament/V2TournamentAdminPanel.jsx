@@ -1,5 +1,6 @@
 import React, { useEffect, useRef, useState } from 'react';
-import { ClipboardCheck, FolderCog, Settings2, ShieldAlert, Sparkles, Swords, Users } from 'lucide-react';
+import { ClipboardCheck, FolderCog, LayoutDashboard, Settings2, ShieldAlert, Sparkles, Swords, Users } from 'lucide-react';
+import V2TournamentOpsTab from '@/v2/components/tournament/V2TournamentOpsTab';
 import V2TournamentModalitiesTab from '@/v2/components/tournament/V2TournamentModalitiesTab';
 import V2TournamentRegistrationsTab from '@/v2/components/tournament/V2TournamentRegistrationsTab';
 import V2TournamentDrawTab from '@/v2/components/tournament/V2TournamentDrawTab';
@@ -61,7 +62,12 @@ const ADMIN_TABS = [
 
 export default function V2TournamentAdminPanel({ tournament }) {
   const [activeTab, setActiveTab] = useState('geral');
+  const opsOn = useFeatureFlag(FEATURE_FLAG.TOURNAMENT_OPS_DASHBOARD);
   useAutoCloseTournament(tournament);
+
+  const tabs = opsOn
+    ? [{ value: 'resumo', label: 'Resumo', icon: LayoutDashboard }, ...ADMIN_TABS]
+    : ADMIN_TABS;
 
   return (
     <div className="space-y-6">
@@ -91,7 +97,7 @@ export default function V2TournamentAdminPanel({ tournament }) {
 
       <div className="overflow-x-auto">
         <div className="inline-flex gap-1.5 rounded-full border border-gray-100 bg-paper-pure p-1.5 shadow-sm">
-          {ADMIN_TABS.map(({ value, label, icon: Icon }) => (
+          {tabs.map(({ value, label, icon: Icon }) => (
             <button
               key={value}
               onClick={() => setActiveTab(value)}
@@ -107,6 +113,7 @@ export default function V2TournamentAdminPanel({ tournament }) {
       </div>
 
       <div className="mt-6">
+        {activeTab === 'resumo' && opsOn && <V2TournamentOpsTab tournament={tournament} />}
         {activeTab === 'geral' && <TournamentAdminTab tournament={tournament} />}
         {activeTab === 'modalidades' && <V2TournamentModalitiesTab tournament={tournament} isAdmin />}
         {activeTab === 'inscricoes' && <V2TournamentRegistrationsTab tournament={tournament} isAdmin />}

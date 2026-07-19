@@ -45,6 +45,8 @@ import {
 } from '@/modules/tournament/domain/capacity';
 import { useAuth } from '@/core/lib/FirebaseAuthContext';
 import ModalityRegistrationDialog from '@/modules/tournament/components/ModalityRegistrationDialog';
+import PixPaymentDialog from '@/modules/tournament/components/PixPaymentDialog';
+import { tournamentHasPixConfig } from '@/modules/tournament/domain/payment';
 
 export default function TournamentRegistrationsTab({ tournament, isAdmin }) {
   const { user } = useAuth();
@@ -94,7 +96,17 @@ function ModalityRegistrationsBlock({ tournament, modality, registrations, isAdm
   const checkInMutation = useSetRegistrationCheckIn(modality.id);
   const waitlistOn = useFeatureFlag(FEATURE_FLAG.TOURNAMENT_WAITLIST);
   const checkinOn = useFeatureFlag(FEATURE_FLAG.TOURNAMENT_CHECKIN);
+  const paymentOn = useFeatureFlag(FEATURE_FLAG.PAYMENT_INSTRUCTIONS);
   const [editTarget, setEditTarget] = useState(null);
+  const [payOpen, setPayOpen] = useState(false);
+  // Inscrição pendente de pagamento do próprio usuário (flag payment_instructions).
+  const ownPendingPayment = paymentOn && tournamentHasPixConfig(tournament)
+    ? registrations.find((r) => (
+        r.status === REGISTRATION_STATUS.PENDING_PAYMENT
+        && currentUserId
+        && (r.created_by === currentUserId || r.player_a_user_id === currentUserId)
+      )) || null
+    : null;
   const checkedInCount = registrations.filter((r) => r.status === REGISTRATION_STATUS.CHECKED_IN).length;
   const confirmed = registrations.filter((r) => r.status === REGISTRATION_STATUS.CONFIRMED).length
     + (checkinOn ? checkedInCount : 0);
@@ -130,6 +142,18 @@ function ModalityRegistrationsBlock({ tournament, modality, registrations, isAdm
             <V2Badge tone="neutral">Privado: exige código</V2Badge>
           )}
         </div>
+        {ownPendingPayment && (
+          <div className="mt-3 flex flex-wrap items-center justify-between gap-2 rounded-2xl border border-amber-200 bg-amber-50 p-3 text-sm text-amber-900">
+            <span>
+              {ownPendingPayment.payment_declared_at
+                ? 'Pagamento informado — aguardando confirmação do organizador.'
+                : 'Sua inscrição aguarda pagamento.'}
+            </span>
+            <V2Button size="sm" variant="secondary" onClick={() => setPayOpen(true)}>
+              Ver dados de pagamento
+            </V2Button>
+          </div>
+        )}
         {registrations.length > 0 && (
           <div className="mt-3 overflow-x-auto rounded-3xl border border-gray-100">
             <table className="w-full text-sm">
@@ -165,6 +189,9 @@ function ModalityRegistrationsBlock({ tournament, modality, registrations, isAdm
                       <V2Badge variant={r.status === REGISTRATION_STATUS.CONFIRMED ? 'success' : 'secondary'}>
                         {REGISTRATION_STATUS_LABELS[r.status]}
                       </V2Badge>
+                      {paymentOn && isAdmin && r.status === REGISTRATION_STATUS.PENDING_PAYMENT && r.payment_declared_at && (
+                        <div className="mt-1 text-[11px] font-medium text-amber-700">pagamento informado</div>
+                      )}
                     </td>
                     {isAdmin && (
                       <td className="px-3 py-2 text-right space-x-1">
@@ -222,6 +249,17 @@ function ModalityRegistrationsBlock({ tournament, modality, registrations, isAdm
           registration={editTarget}
           modality={modality}
           onClose={() => setEditTarget(null)}
+        />
+      )}
+
+      {ownPendingPayment && payOpen && (
+        <PixPaymentDialog
+          open
+          onClose={() => setPayOpen(false)}
+          tournament={tournament}
+          modality={modality}
+          registrationId={ownPendingPayment.id}
+          paymentDeclared={Boolean(ownPendingPayment.payment_declared_at)}
         />
       )}
     </V2Surface>

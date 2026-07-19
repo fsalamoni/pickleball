@@ -33,6 +33,7 @@ import {
   confirmRegistrationPayment,
   promoteFromWaitlist,
   cancelRegistration,
+  declareRegistrationPayment,
   checkInRegistration,
   undoRegistrationCheckIn,
   deleteRegistration,
@@ -393,6 +394,22 @@ export function useCancelRegistration(modalityId) {
   const qc = useQueryClient();
   return useMutation({
     mutationFn: (id) => cancelRegistration(id, user),
+    onSuccess: () => {
+      qc.invalidateQueries({ queryKey: ['registrations', modalityId] });
+      qc.invalidateQueries({ queryKey: ['registrations-tournament'] });
+    },
+  });
+}
+
+/**
+ * O inscrito declara o pagamento da própria inscrição (flag
+ * payment_instructions): grava o carimbo e notifica os admins do torneio.
+ */
+export function useDeclareRegistrationPayment(modalityId) {
+  const { user } = useAuth();
+  const qc = useQueryClient();
+  return useMutation({
+    mutationFn: (id) => declareRegistrationPayment(id, user),
     onSuccess: () => {
       qc.invalidateQueries({ queryKey: ['registrations', modalityId] });
       qc.invalidateQueries({ queryKey: ['registrations-tournament'] });
