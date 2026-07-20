@@ -46,6 +46,7 @@ import {
 import { cn } from '@/core/lib/utils';
 import { V2Avatar } from '@/v2/ui/primitives';
 import ProfileCompletionModal from '@/components/ProfileCompletionModal';
+import V2OnboardingWizard from '@/v2/components/onboarding/V2OnboardingWizard';
 
 const BRAND = 'PickleRush';
 
@@ -332,6 +333,7 @@ export default function V2Layout({ children }) {
   const [mobileOpen, setMobileOpen] = useState(false);
   const [searchQuery, setSearchQuery] = useState('');
   const profileOnboardingOn = useFeatureFlag(FEATURE_FLAG.PROFILE_ONBOARDING);
+  const onboardingWizardOn = useFeatureFlag(FEATURE_FLAG.ONBOARDING_WIZARD);
   const userMenuOn = useFeatureFlag(FEATURE_FLAG.NAV_USER_MENU);
   const bottomNavOn = useFeatureFlag(FEATURE_FLAG.MOBILE_BOTTOM_NAV);
 
@@ -369,9 +371,12 @@ export default function V2Layout({ children }) {
     <div className="v2-root flex h-[100dvh] w-full overflow-hidden bg-paper font-inter text-ink">
       {/* Instrumentação de funil (flag funnel_analytics; não renderiza nada) */}
       <AuthFunnelTracker />
-      {/* Onboarding de perfil (flag profile_onboarding): pede os dados
-          obrigatórios para torneios; o atleta pode adiar pela sessão. */}
-      {profileOnboardingOn && <ProfileCompletionModal />}
+      {/* Onboarding: o assistente em passos (flag onboarding_wizard) tem
+          precedência sobre o modal simples de completude (profile_onboarding);
+          ambos podem ser adiados pela sessão. */}
+      {onboardingWizardOn
+        ? <V2OnboardingWizard />
+        : profileOnboardingOn && <ProfileCompletionModal />}
       <aside className="z-30 hidden w-[280px] flex-shrink-0 flex-col border-r border-gray-100 bg-paper-pure lg:flex">
         <div className="flex h-24 items-center px-8">
           <BrandLockup />

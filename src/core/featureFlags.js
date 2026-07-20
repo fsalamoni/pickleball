@@ -346,6 +346,17 @@ export const FEATURE_FLAG = Object.freeze({
    * a flag de Arenas ligada. Aditivo — desligado, a aba não aparece.
    */
   ARENA_CALENDAR: 'arena_calendar',
+
+  /**
+   * Onboarding em passos: no primeiro acesso, um assistente em 3 passos pede
+   * os dados essenciais (os mesmos exigidos em torneios), os interesses do
+   * usuário (jogar, organizar, arena, ensinar, acompanhar — gravados em
+   * `interests`) e convida ao nivelamento. Fechar adia pela sessão; concluir
+   * grava `onboarding_completed_at`. Quando ligada, substitui o modal simples
+   * de completude de perfil (profile_onboarding). Aditivo — desligado, nada
+   * aparece.
+   */
+  ONBOARDING_WIZARD: 'onboarding_wizard',
 });
 
 /** Metadados de exibição para o painel de flags (admin master). */
@@ -672,6 +683,15 @@ export const FEATURE_FLAG_META = Object.freeze({
       + 'reservas confirmadas e pendentes por dia e horário, com navegação '
       + 'entre semanas. Somente leitura nesta fase. Requer "Arenas" ligada. '
       + 'Desligado, a aba não aparece.',
+  },
+  [FEATURE_FLAG.ONBOARDING_WIZARD]: {
+    label: 'Onboarding em passos (com persona)',
+    description:
+      'No primeiro acesso, assistente em 3 passos: dados essenciais, '
+      + 'interesses (jogar, organizar torneios, arena, aulas, acompanhar) e '
+      + 'convite ao nivelamento. Fechar adia pela sessão; concluir grava a '
+      + 'conclusão no perfil. Quando ligada, substitui o modal simples de '
+      + '"Completar perfil". Desligado, nada aparece.',
   },
 });
 
