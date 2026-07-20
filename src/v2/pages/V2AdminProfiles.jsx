@@ -1,9 +1,11 @@
 import React, { useMemo, useState } from 'react';
 import { Navigate } from 'react-router-dom';
-import { ArrowRight, RotateCcw, ShieldCheck, UserCog } from 'lucide-react';
+import { ArrowRight, RotateCcw, ShieldCheck, UserCog, Wand2, AlertTriangle, CheckCircle2 } from 'lucide-react';
 import { toast } from 'sonner';
 import { useAuth } from '@/core/lib/FirebaseAuthContext';
 import { restoreAthleteProfileFromUserDoc, listAllAthleteProfiles } from '@/modules/athletes/services/athleteService';
+import { migrateProvisionalData } from '@/modules/tournament/services/registrationService';
+import { useRecomputeRatings } from '@/modules/rating/hooks/useRating';
 import {
   V2Button,
   V2EmptyState,
@@ -18,6 +20,14 @@ export default function V2AdminProfiles() {
   const [error, setError] = useState(null);
   const [uid, setUid] = useState('');
   const [busy, setBusy] = useState(false);
+
+  // Migração de dados provisórios (migrateProvisionalData)
+  const [migUid, setMigUid] = useState('');
+  const [migAliases, setMigAliases] = useState('');
+  const [migNote, setMigNote] = useState('');
+  const [migBusy, setMigBusy] = useState(false);
+  const [migLastResult, setMigLastResult] = useState(null);
+  const recomputeRatings = useRecomputeRatings();
 
   async function load() {
     try {
@@ -52,6 +62,61 @@ export default function V2AdminProfiles() {
       toast.error(err.message);
     } finally {
       setBusy(false);
+    }
+  }
+
+  function parseAliasEmails() {
+    return migAliases
+      .split(/[,\n;]+/)
+      .map((s) => s.trim())
+      .filter(Boolean);
+  }
+
+  async function runMigration(dryRun) {
+    if (!migUid.trim()) {
+      toast.error('Informe o UID do atleta definitivo.');
+      return;
+    }
+    const aliases = parseAliasEmails();
+    if (aliases.length === 0) {
+      toast.error('Informe ao menos um email de origem.');
+      return;
+    }
+    setMigBusy(true);
+    try {
+      const res = await migrateProvisionalData(
+        {
+          targetUid: migUid.trim(),
+          fromEmails: aliases,
+          dryRun,
+          resyncProfile: !dryRun,
+          note: migNote.trim() || null,
+        },
+        user,
+      );
+      setMigLastResult({ ...res, mode: dryRun ? 'dry-run' : 'apply' });
+      if (dryRun) {
+        toast.success(
+          `Dry-run: ${res.scanned} encontrados, ${res.claimed} seriam migrados.`,
+        );
+      } else {
+        toast.success(
+          `${res.claimed} inscrição(ões) migrada(s) em ${res.tournamentsAffected.length} torneio(s).`,
+        );
+      }
+    } catch (err) {
+      toast.error(err.message || 'Falha na migração.');
+    } finally {
+      setMigBusy(false);
+    }
+  }
+
+  async function handleRecomputeAfterMig() {
+    try {
+      await recomputeRatings.mutateAsync();
+      toast.success('Ranking recalculado.');
+    } catch (err) {
+      toast.error(err.message || 'Falha ao recalcular ranking.');
     }
   }
 
@@ -132,6 +197,126 @@ export default function V2AdminProfiles() {
         {error && (
           <div className="mt-4 rounded-[1.25rem] border border-red-200 bg-red-50 p-3 text-sm text-red-800">
             {error}
+          </div>
+        )}
+      </V2Surface>
+
+      <V2Surface className="mb-6 p-6 sm:p-7">
+        <div className="flex items-start gap-3">
+          <div className="flex h-10 w-10 items-center justify-center rounded-2xl bg-amber-100 text-amber-900">
+            <Wand2 className="h-4.5 w-4.5" />
+          </div>
+          <div className="flex-1">
+            <h2 className="font-display text-xl font-bold text-ink">Migração de dados provisórios</h2>
+            <p className="mt-1 text-sm leading-6 text-gray-500">
+              Use quando um atleta foi inscrito provisoriamente pelo admin com um
+              email diferente do email que ele usa para entrar na plataforma
+              (ex.: <code className="mx-1 rounded bg-paper px-1.5 py-0.5 text-xs">vicente@google.com</code>
+              em vez de <code className="mx-1 rounded bg-paper px-1.5 py-0.5 text-xs">vicente.bcosta@icloud.com</code>).
+              A migração re-escreve os campos <code className="mx-1 rounded bg-paper px-1.5 py-0.5 text-xs">player_a_*</code> /
+              <code className="mx-1 rounded bg-paper px-1.5 py-0.5 text-xs">player_b_*</code> das
+              <code className="mx-1 rounded bg-paper px-1.5 py-0.5 text-xs">tournament_registrations</code>
+              com o UID, nome, nível e foto da conta definitiva. Os jogos e o
+              ranking passam a contar para o atleta real na próxima recomputação.
+            </p>
+          </div>
+        </div>
+
+        <div className="mt-5 grid gap-4 sm:grid-cols-2">
+          <div>
+            <label className="text-xs font-semibold uppercase tracking-[0.16em] text-gray-500">UID do atleta definitivo</label>
+            <input
+              value={migUid}
+              onChange={(e) => setMigUid(e.target.value.trim())}
+              placeholder="q4tFakmMjzMS3CWgqqC43TZ0Cbz1"
+              className="mt-2 h-11 w-full rounded-[1rem] border border-input bg-background px-3 text-sm font-mono"
+              autoComplete="off"
+              spellCheck={false}
+            />
+          </div>
+          <div>
+            <label className="text-xs font-semibold uppercase tracking-[0.16em] text-gray-500">
+              Emails de origem <span className="font-normal normal-case text-gray-400">(separar por vírgula)</span>
+            </label>
+            <input
+              value={migAliases}
+              onChange={(e) => setMigAliases(e.target.value)}
+              placeholder="vicente.b.costa@icloud.com, vicente@google.com"
+              className="mt-2 h-11 w-full rounded-[1rem] border border-input bg-background px-3 text-sm font-mono"
+              autoComplete="off"
+              spellCheck={false}
+            />
+          </div>
+        </div>
+
+        <div className="mt-4">
+          <label className="text-xs font-semibold uppercase tracking-[0.16em] text-gray-500">
+            Nota (opcional) <span className="font-normal normal-case text-gray-400">— vai para o audit log</span>
+          </label>
+          <input
+            value={migNote}
+            onChange={(e) => setMigNote(e.target.value)}
+            placeholder="Ex.: migração do Vicente, 3 torneios com email provisório errado"
+            className="mt-2 h-11 w-full rounded-[1rem] border border-input bg-background px-3 text-sm"
+            autoComplete="off"
+          />
+        </div>
+
+        <div className="mt-5 flex flex-wrap items-center gap-3">
+          <V2Button
+            variant="secondary"
+            onClick={() => runMigration(true)}
+            disabled={migBusy}
+          >
+            <AlertTriangle className="h-4 w-4" />
+            {migBusy ? 'Simulando…' : 'Simular (dry-run)'}
+          </V2Button>
+          <V2Button onClick={() => runMigration(false)} disabled={migBusy}>
+            <Wand2 className="h-4 w-4" />
+            {migBusy ? 'Migrando…' : 'Executar migração'}
+          </V2Button>
+          {migLastResult && migLastResult.mode === 'apply' && migLastResult.claimed > 0 && (
+            <V2Button
+              variant="secondary"
+              onClick={handleRecomputeAfterMig}
+              disabled={recomputeRatings.isPending}
+            >
+              <CheckCircle2 className="h-4 w-4" />
+              {recomputeRatings.isPending ? 'Recalculando…' : 'Recalcular ranking agora'}
+            </V2Button>
+          )}
+        </div>
+
+        {migLastResult && (
+          <div className="mt-5 rounded-[1.25rem] border border-gray-200 bg-gray-50 p-4 text-sm">
+            <div className="font-bold text-ink">
+              {migLastResult.mode === 'dry-run' ? 'Simulação' : 'Resultado'} — UID {migLastResult.targetUid}
+            </div>
+            <div className="mt-2 grid gap-2 sm:grid-cols-4">
+              <div><span className="text-gray-500">Encontrados:</span> {migLastResult.scanned}</div>
+              <div><span className="text-gray-500">Migrados:</span> {migLastResult.claimed}</div>
+              <div><span className="text-gray-500">Já OK:</span> {migLastResult.skipped}</div>
+              <div><span className="text-gray-500">Torneios:</span> {migLastResult.tournamentsAffected.length}</div>
+            </div>
+            <div className="mt-2 text-xs text-gray-500">
+              Emails: {migLastResult.aliasEmails.join(', ')}
+            </div>
+            {migLastResult.details.length > 0 && (
+              <details className="mt-3">
+                <summary className="cursor-pointer text-xs font-semibold text-gray-500 hover:text-ink">
+                  Ver {migLastResult.details.length} inscrição(ões) afetada(s)
+                </summary>
+                <ul className="mt-2 space-y-1 font-mono text-xs text-gray-600">
+                  {migLastResult.details.map((d) => (
+                    <li key={d.registrationId}>
+                      <span className="text-gray-400">{d.registrationId.slice(0, 8)}…</span>{' '}
+                      <span className="text-ink">{d.slot}</span>{' '}
+                      <span className="text-gray-400">torneio {d.tournamentId} / modalidade {d.modalityId}</span>
+                    </li>
+                  ))}
+                </ul>
+              </details>
+            )}
           </div>
         )}
       </V2Surface>

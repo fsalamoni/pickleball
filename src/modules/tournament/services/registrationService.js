@@ -30,6 +30,13 @@ import {
 } from '../domain/constants.js';
 import { countOccupiedRegistrations, isRegistrationCapacityReached } from '../domain/capacity.js';
 import { buildPlaceholderRegistrationFields, neededPlaceholderCount } from '../domain/placeholders.js';
+import {
+  buildOfficialPlayer,
+  buildRegistrationMigrationDiff,
+  filterRegistrationsByEmails,
+  normalizeEmail,
+  recomputeRegistrationFlags,
+} from '../domain/claimMigration.js';
 import { getModality } from './modalityService.js';
 import { getTournament, isTournamentAdmin } from './tournamentService.js';
 
@@ -41,10 +48,6 @@ function buildRegistrationLabel(reg, format) {
     return `${reg.player_a_name || '—'} / ${reg.player_b_name || '—'}`;
   }
   return reg.player_a_name || '—';
-}
-
-function normalizeEmail(email) {
-  return String(email || '').trim().toLowerCase();
 }
 
 function officialPlayerData(user, profile = {}) {
@@ -139,49 +142,100 @@ function selectedModalityIsDoubles(format) {
   return format === MODALITY_FORMAT.DOUBLES;
 }
 
-export async function claimProvisionalRegistrationsForUser(user, profile = {}) {
-  const email = normalizeEmail(user?.email || profile.email);
-  if (!user?.uid || !email) return 0;
+/**
+ * Aplica os dados oficiais de um usuário nas inscrições provisórias que
+ * combinam com algum dos emails fornecidos.
+ *
+ * Email principal: o do usuário (auth + profile). Emails extras: passados em
+ * `options.aliasEmails` — útil quando o usuário foi cadastrado pelo admin
+ * sob outros emails (erros de digitação, vários inscrições provisórias ao
+ * longo do tempo, etc.) e o claim automático pelo email atual não os alcança.
+ *
+ * Cada email vira uma query paralela; o resultado é deduplicado por
+ * `registrationId` para não aplicar o mesmo registro duas vezes. Retorna
+ * `{ claimed, byEmail }` onde `byEmail[email] = count` para diagnóstico.
+ *
+ * @param {object} user auth user (precisa ter `uid` e `email`)
+ * @param {object} [profile] perfil do Firestore (opcional)
+ * @param {{ aliasEmails?: string[] }} [options]
+ * @returns {Promise<{ claimed: number, byEmail: Record<string, number> }>}
+ */
+export async function claimProvisionalRegistrationsForUser(user, profile = {}, options = {}) {
+  const primaryEmail = normalizeEmail(user?.email || profile.email);
+  const aliasEmails = (options.aliasEmails || [])
+    .map((e) => normalizeEmail(e))
+    .filter(Boolean);
+  const allEmails = Array.from(new Set([primaryEmail, ...aliasEmails])).filter(Boolean);
+  if (!user?.uid || allEmails.length === 0) {
+    return { claimed: 0, byEmail: {} };
+  }
 
-  const [playerASnap, playerBSnap] = await Promise.all([
-    // Keep matching by email even after claiming so later profile edits refresh tournament data.
-    getDocs(query(collection(db, COL), where('player_a_email_lc', '==', email))),
-    getDocs(query(collection(db, COL), where('player_b_email_lc', '==', email))),
-  ]);
+  // Query paralela por email (player_a e player_b). Cada email tem 2 queries.
+  const queries = [];
+  allEmails.forEach((em) => {
+    queries.push(getDocs(query(collection(db, COL), where('player_a_email_lc', '==', em))));
+    queries.push(getDocs(query(collection(db, COL), where('player_b_email_lc', '==', em))));
+  });
+  const snaps = await Promise.all(queries);
+  // Cada email contribui com 2 snapshots; mapeia email → {aDocs, bDocs}.
+  const byEmail = {};
+  allEmails.forEach((em, idx) => {
+    byEmail[em] = {
+      a: snaps[idx * 2]?.docs || [],
+      b: snaps[idx * 2 + 1]?.docs || [],
+    };
+  });
+
   const player = officialPlayerData(user, profile);
   const updatesById = new Map();
 
-  playerASnap.docs.forEach((docSnap) => {
-    const reg = docSnap.data();
-    const updates = updatesById.get(docSnap.id) || { ref: docSnap.ref, data: { ...reg } };
-    updates.data.player_a_user_id = user.uid;
-    updates.data.user_id = user.uid;
-    updates.data.player_a_name = player.name;
-    updates.data.player_a_email = player.email;
-    updates.data.player_a_email_lc = email;
-    updates.data.player_a_level = player.level;
-    // Não apaga o gênero já informado (ex.: admin inseriu) se o perfil não tiver.
-    updates.data.player_a_competition_gender = player.competition_gender || reg.player_a_competition_gender || null;
-    updates.data.player_a_photo = player.photo_url;
-    updates.data.player_a_provisional = false;
-    updatesById.set(docSnap.id, updates);
+  // Para cada email, atualiza player_a e player_b dos docs encontrados.
+  allEmails.forEach((em) => {
+    byEmail[em].a.forEach((docSnap) => {
+      const reg = docSnap.data();
+      const updates = updatesById.get(docSnap.id) || { ref: docSnap.ref, data: { ...reg } };
+      updates.data.player_a_user_id = user.uid;
+      updates.data.user_id = user.uid;
+      updates.data.player_a_name = player.name;
+      updates.data.player_a_email = player.email;
+      updates.data.player_a_email_lc = em;
+      updates.data.player_a_level = player.level;
+      // Não apaga o gênero já informado (ex.: admin inseriu) se o perfil não tiver.
+      updates.data.player_a_competition_gender = player.competition_gender || reg.player_a_competition_gender || null;
+      updates.data.player_a_photo = player.photo_url;
+      updates.data.player_a_provisional = false;
+      updatesById.set(docSnap.id, updates);
+    });
+    byEmail[em].b.forEach((docSnap) => {
+      const reg = docSnap.data();
+      const updates = updatesById.get(docSnap.id) || { ref: docSnap.ref, data: { ...reg } };
+      updates.data.player_b_user_id = user.uid;
+      updates.data.player_b_name = player.name;
+      updates.data.player_b_email = player.email;
+      updates.data.player_b_email_lc = em;
+      updates.data.player_b_level = player.level;
+      updates.data.player_b_competition_gender = player.competition_gender || reg.player_b_competition_gender || null;
+      updates.data.player_b_photo = player.photo_url;
+      updates.data.player_b_provisional = false;
+      updatesById.set(docSnap.id, updates);
+    });
   });
 
-  playerBSnap.docs.forEach((docSnap) => {
-    const reg = docSnap.data();
-    const updates = updatesById.get(docSnap.id) || { ref: docSnap.ref, data: { ...reg } };
-    updates.data.player_b_user_id = user.uid;
-    updates.data.player_b_name = player.name;
-    updates.data.player_b_email = player.email;
-    updates.data.player_b_email_lc = email;
-    updates.data.player_b_level = player.level;
-    updates.data.player_b_competition_gender = player.competition_gender || reg.player_b_competition_gender || null;
-    updates.data.player_b_photo = player.photo_url;
-    updates.data.player_b_provisional = false;
-    updatesById.set(docSnap.id, updates);
+  // Contagem por email de origem (para diagnóstico e audit).
+  const byEmailCounts = Object.fromEntries(allEmails.map((em) => [em, 0]));
+  updatesById.forEach((entry, id) => {
+    // Conta 1 por registro (não por campo) — diz quantos registrations foram
+    // reivindicados com origem em cada email.
+    allEmails.forEach((em) => {
+      const aIds = new Set(byEmail[em].a.map((d) => d.id));
+      const bIds = new Set(byEmail[em].b.map((d) => d.id));
+      if (aIds.has(id) || bIds.has(id)) byEmailCounts[em] += 1;
+    });
   });
 
-  if (updatesById.size === 0) return 0;
+  if (updatesById.size === 0) {
+    return { claimed: 0, byEmail: byEmailCounts };
+  }
 
   const batchUpdates = [];
   updatesById.forEach(({ ref, data }) => {
@@ -207,9 +261,15 @@ export async function claimProvisionalRegistrationsForUser(user, profile = {}) {
   await createAuditLog({
     action: 'provisional_registrations_claimed',
     actor: user,
-    details: { user_id: user.uid, email, count: updatesById.size },
+    details: {
+      user_id: user.uid,
+      email: primaryEmail,
+      alias_emails: aliasEmails,
+      count: updatesById.size,
+      by_email: byEmailCounts,
+    },
   });
-  return updatesById.size;
+  return { claimed: updatesById.size, byEmail: byEmailCounts };
 }
 
 /**
@@ -223,6 +283,161 @@ export async function claimProvisionalRegistrationsForUser(user, profile = {}) {
  * @param {object} actor
  * @returns {Promise<{ created: number, cleared: number, total: number }>}
  */
+export async function migrateProvisionalData(options = {}, actor) {
+  if (!actor?.uid) throw new Error('Usuário não autenticado.');
+  const callerIsAdmin = await checkIsPlatformAdmin(actor.uid);
+  if (!callerIsAdmin) {
+    throw new Error('Apenas o admin da plataforma pode executar migração de dados provisórios.');
+  }
+
+  const {
+    targetUid,
+    fromEmails = [],
+    dryRun = false,
+    resyncProfile = true,
+    note = null,
+  } = options;
+
+  if (!targetUid) throw new Error('Informe o UID do atleta definitivo.');
+  if (!Array.isArray(fromEmails) || fromEmails.length === 0) {
+    throw new Error('Informe ao menos um email de origem para migrar.');
+  }
+  const aliasEmails = Array.from(new Set(fromEmails.map(normalizeEmail).filter(Boolean)));
+  if (aliasEmails.length === 0) {
+    throw new Error('Nenhum email válido para migrar.');
+  }
+
+  // 1) Lê o usuário-alvo.
+  const targetUserSnap = await getDoc(doc(db, 'users', targetUid));
+  if (!targetUserSnap.exists()) {
+    throw new Error(`Usuário alvo (users/${targetUid}) não encontrado.`);
+  }
+  const targetProfile = { uid: targetUid, ...targetUserSnap.data() };
+  const player = buildOfficialPlayer(
+    {
+      uid: targetUid,
+      email: targetProfile.email,
+      displayName: targetProfile.full_name || targetProfile.platform_name,
+    },
+    targetProfile,
+  );
+
+  // 2) Varrre registrations por cada email. Firestore não tem OR nativo,
+  //    então fazemos N queries paralelas (2 por email: player_a + player_b)
+  //    e deduplicamos por registrationId.
+  const queries = [];
+  aliasEmails.forEach((em) => {
+    queries.push(getDocs(query(collection(db, COL), where('player_a_email_lc', '==', em))));
+    queries.push(getDocs(query(collection(db, COL), where('player_b_email_lc', '==', em))));
+  });
+  const snaps = await Promise.all(queries);
+  const seen = new Set();
+  const matched = [];
+  snaps.forEach((snap) => {
+    snap.docs.forEach((d) => {
+      if (seen.has(d.id)) return;
+      seen.add(d.id);
+      matched.push({ id: d.id, ref: d.ref, data: d.data() });
+    });
+  });
+
+  // 3) Calcula o diff puro para cada registration.
+  const diffs = [];
+  matched.forEach(({ id, ref, data }) => {
+    const diff = buildRegistrationMigrationDiff(data, aliasEmails, player);
+    if (!diff) return;
+    const next = { ...data, ...diff };
+    const flags = recomputeRegistrationFlags(next);
+    diffs.push({
+      id,
+      ref,
+      diff,
+      next,
+      flags,
+      tournamentId: data.tournament_id,
+      modalityId: data.modality_id,
+    });
+  });
+
+  const tournamentsAffected = Array.from(
+    new Set(diffs.map((d) => d.tournamentId).filter(Boolean)),
+  );
+
+  // 4) Aplica (se não for dry-run).
+  if (!dryRun && diffs.length > 0) {
+    for (let i = 0; i < diffs.length; i += SAFE_BATCH_WRITE_SIZE) {
+      const batch = writeBatch(db);
+      diffs.slice(i, i + SAFE_BATCH_WRITE_SIZE).forEach(({ ref, diff, flags }) => {
+        batch.update(ref, {
+          ...diff,
+          is_provisional: flags.is_provisional,
+          label: flags.label,
+          migrated_at: serverTimestamp(),
+          migrated_from_emails: aliasEmails,
+          migrated_by: actor.uid,
+          updated_at: serverTimestamp(),
+        });
+      });
+      await batch.commit();
+    }
+  }
+
+  // 5) Re-sync do athlete_profiles (best-effort).
+  if (!dryRun && resyncProfile) {
+    try {
+      const { syncAthleteProfile } = await import('@/modules/athletes/services/athleteService');
+      await syncAthleteProfile(
+        { uid: targetUid, email: targetProfile.email, photoURL: targetProfile.photo_url },
+        targetProfile,
+      );
+    } catch (err) {
+      logger.warn('migrateProvisionalData: falha ao re-sync athlete_profiles:', err);
+    }
+  }
+
+  // 6) Audit log (sempre, inclusive em dry-run, pra rastreabilidade).
+  await createAuditLog({
+    action: 'provisional_registrations_migrated',
+    actor,
+    userId: targetUid,
+    userName: targetProfile.platform_name || targetProfile.full_name,
+    userEmail: targetProfile.email,
+    details: {
+      target_uid: targetUid,
+      alias_emails: aliasEmails,
+      scanned: matched.length,
+      claimed: diffs.length,
+      skipped: matched.length - diffs.length,
+      tournaments_affected: tournamentsAffected,
+      dry_run: dryRun,
+      note: note || null,
+    },
+  });
+
+  return {
+    scanned: matched.length,
+    claimed: diffs.length,
+    skipped: matched.length - diffs.length,
+    tournamentsAffected,
+    dryRun,
+    aliasEmails,
+    targetUid,
+    details: diffs.map(({ id, diff, next, tournamentId, modalityId }) => ({
+      registrationId: id,
+      slot: diff.player_a_user_id ? 'player_a' : 'player_b',
+      tournamentId,
+      modalityId,
+      after: {
+        player_a_user_id: diff.player_a_user_id || next.player_a_user_id,
+        player_b_user_id: diff.player_b_user_id || next.player_b_user_id,
+        player_a_email_lc: diff.player_a_email_lc || next.player_a_email_lc,
+        player_b_email_lc: diff.player_b_email_lc || next.player_b_email_lc,
+        is_provisional: Boolean(next.player_a_provisional || next.player_b_provisional),
+      },
+    })),
+  };
+}
+
 export async function ensurePlaceholderRegistrations(modality, actor) {
   if (!db || !modality?.id) return { created: 0, cleared: 0, total: 0 };
   const max = Number(modality.max_entries);
