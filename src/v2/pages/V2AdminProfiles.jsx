@@ -14,7 +14,7 @@ import {
   V2Surface,
 } from '@/v2/ui/primitives';
 
-export default function V2AdminProfiles() {
+export default function V2AdminProfiles({ embedded = false }) {
   const { user, isPlatformAdmin } = useAuth();
   const [profiles, setProfiles] = useState(null);
   const [error, setError] = useState(null);
@@ -123,11 +123,29 @@ export default function V2AdminProfiles() {
   if (!isPlatformAdmin) return <Navigate to="/" replace />;
 
   return (
-    <div className="mx-auto max-w-[1100px]">
-      <V2PageIntro
-        title="Perfis de atletas"
-        subtitle="Restaure o athlete_profiles/{uid} a partir do users/{uid} (fonte de verdade operacional)."
-      />
+    <div className={embedded ? 'space-y-6' : 'mx-auto max-w-[1100px]'}>
+      {!embedded && (
+        <V2PageIntro
+          title="Perfis de atletas"
+          subtitle="Restaure o athlete_profiles/{uid} a partir do users/{uid} (fonte de verdade operacional)."
+        />
+      )}
+      {embedded && (
+        <V2Surface>
+          <div className="flex items-start gap-3">
+            <div className="flex h-10 w-10 items-center justify-center rounded-2xl bg-ink text-acid">
+              <UserCog className="h-4.5 w-4.5" />
+            </div>
+            <div className="flex-1">
+              <h2 className="font-display text-xl font-bold text-ink">Perfis de atletas</h2>
+              <p className="mt-1 text-sm leading-6 text-gray-500">
+                Ferramentas de manutenção do diretório público (<code className="rounded bg-paper px-1.5 py-0.5 text-xs">athlete_profiles/{'{uid}'}</code>)
+                e de migração de dados provisórios com emails divergentes.
+              </p>
+            </div>
+          </div>
+        </V2Surface>
+      )}
 
       <V2Surface className="mb-6 p-6 sm:p-7">
         <div className="flex items-start gap-3">

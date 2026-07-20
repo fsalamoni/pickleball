@@ -62,6 +62,9 @@ import {
 } from 'firebase/firestore';
 import { ConfirmDialog } from '@/components/ui/confirm-dialog';
 import { ImageUpload } from '@/components/ui/image-upload';
+import { useNavigate, useSearchParams } from 'react-router-dom';
+import { UserCog, Wrench, Settings } from 'lucide-react';
+import ProfilesTab from './V2AdminProfiles.jsx';
 import { AuditLogTable } from '@/components/AuditLogTable';
 import { useAuth } from '@/core/lib/FirebaseAuthContext';
 import { useFeatureFlags, useFeatureFlag } from '@/core/lib/FeatureFlagsContext';
@@ -109,10 +112,12 @@ const TABS = Object.freeze([
   { id: 'overview',  label: 'Visão geral',      icon: LayoutDashboard },
   { id: 'tournaments', label: 'Torneios',         icon: Trophy },
   { id: 'partners',  label: 'Parceiros',        icon: Handshake },
+  { id: 'profiles',  label: 'Perfis',           icon: UserCog },
   { id: 'flags',     label: 'Funcionalidades',  icon: Flag },
   { id: 'branding',  label: 'Branding',         icon: Palette },
   { id: 'content',   label: 'Conteúdo',         icon: TextIcon },
   { id: 'audit',     label: 'Auditoria',        icon: ListChecks },
+  { id: 'tools',     label: 'Avançado',         icon: Wrench },
 ]);
 
 const DEFAULT_BRANDING = Object.freeze({
@@ -136,7 +141,17 @@ const DEFAULT_CONTENT = Object.freeze({
 export default function V2AdminConsole() {
   const { isPlatformAdmin } = useAuth();
   const enabled = useFeatureFlag(FEATURE_FLAG.ADMIN_CONSOLE);
-  const [tab, setTab] = useState('overview');
+  const [searchParams, setSearchParams] = useSearchParams();
+  const navigate = useNavigate();
+
+  // Tab ativa vem de ?tab= (deep link). Default: overview. Validada contra TABS.
+  const tabFromUrl = searchParams.get('tab');
+  const tab = TABS.some((t) => t.id === tabFromUrl) ? tabFromUrl : 'overview';
+  const setTab = (id) => {
+    const next = new URLSearchParams(searchParams);
+    next.set('tab', id);
+    setSearchParams(next, { replace: false });
+  };
 
   if (!isPlatformAdmin) return <Navigate to="/" replace />;
   if (!enabled) return <Navigate to="/admin/metricas" replace />;
@@ -163,10 +178,12 @@ export default function V2AdminConsole() {
         {tab === 'overview'   && <OverviewTab />}
         {tab === 'tournaments' && <TournamentsTab />}
         {tab === 'partners'   && <PartnersTab />}
+        {tab === 'profiles'   && <ProfilesTab embedded />}
         {tab === 'flags'      && <FlagsTab />}
         {tab === 'branding'   && <BrandingTab />}
         {tab === 'content'    && <ContentTab />}
         {tab === 'audit'      && <AuditTab />}
+        {tab === 'tools'      && <ToolsTab navigate={navigate} />}
       </div>
     </div>
   );
@@ -1030,6 +1047,93 @@ function AuditTab() {
           <Link to="/admin/owner-restore" className="inline-flex items-center gap-1.5 rounded-full border border-gray-200 bg-paper-pure px-4 py-2 text-xs font-bold text-ink">
             <AlertTriangle className="h-3.5 w-3.5" /> Abrir /admin/owner-restore
           </Link>
+        </div>
+      </V2Surface>
+    </div>
+  );
+}
+
+/* ----------------------------- Tools tab -------------------------------- */
+
+function ToolsTab({ navigate }) {
+  return (
+    <div className="space-y-4">
+      <V2Surface>
+        <div className="flex items-start gap-3">
+          <div className="flex h-10 w-10 items-center justify-center rounded-2xl bg-ink text-acid">
+            <Wrench className="h-4.5 w-4.5" />
+          </div>
+          <div className="flex-1">
+            <h2 className="font-display text-xl font-bold text-ink">Ferramentas avançadas</h2>
+            <p className="mt-1 text-sm leading-6 text-gray-500">
+              Páginas de admin legadas (Métricas / Torneios / Parceiros) e ferramentas de diagnóstico
+              do owner. Mantidas por compatibilidade — a partir de agora, a entrada principal é
+              este Painel.
+            </p>
+          </div>
+        </div>
+
+        <div className="mt-5 grid gap-3 sm:grid-cols-2 lg:grid-cols-3">
+          <button
+            type="button"
+            onClick={() => navigate('/admin/metricas')}
+            className="btn-press flex items-center gap-3 rounded-[1.25rem] border border-gray-100 bg-paper-pure p-4 text-left transition-colors hover:border-ink"
+          >
+            <Settings className="h-4 w-4 text-gray-400" />
+            <div className="flex-1">
+              <div className="font-semibold text-ink">Métricas (legado)</div>
+              <div className="text-xs text-gray-500">Dashboard de métricas em página cheia</div>
+            </div>
+            <ExternalLink className="h-3.5 w-3.5 opacity-40" />
+          </button>
+          <button
+            type="button"
+            onClick={() => navigate('/admin/torneios')}
+            className="btn-press flex items-center gap-3 rounded-[1.25rem] border border-gray-100 bg-paper-pure p-4 text-left transition-colors hover:border-ink"
+          >
+            <Trophy className="h-4 w-4 text-gray-400" />
+            <div className="flex-1">
+              <div className="font-semibold text-ink">Torneios (legado)</div>
+              <div className="text-xs text-gray-500">Lista cheia de todos os torneios</div>
+            </div>
+            <ExternalLink className="h-3.5 w-3.5 opacity-40" />
+          </button>
+          <button
+            type="button"
+            onClick={() => navigate('/admin/parceiros')}
+            className="btn-press flex items-center gap-3 rounded-[1.25rem] border border-gray-100 bg-paper-pure p-4 text-left transition-colors hover:border-ink"
+          >
+            <Handshake className="h-4 w-4 text-gray-400" />
+            <div className="flex-1">
+              <div className="font-semibold text-ink">Parceiros (legado)</div>
+              <div className="text-xs text-gray-500">Lista cheia de todos os parceiros</div>
+            </div>
+            <ExternalLink className="h-3.5 w-3.5 opacity-40" />
+          </button>
+          <button
+            type="button"
+            onClick={() => navigate('/admin/owner-debug')}
+            className="btn-press flex items-center gap-3 rounded-[1.25rem] border border-gray-100 bg-paper-pure p-4 text-left transition-colors hover:border-ink"
+          >
+            <Stethoscope className="h-4 w-4 text-gray-400" />
+            <div className="flex-1">
+              <div className="font-semibold text-ink">Diagnóstico profundo</div>
+              <div className="text-xs text-gray-500">Lê Firestore bruto (sem cache)</div>
+            </div>
+            <ExternalLink className="h-3.5 w-3.5 opacity-40" />
+          </button>
+          <button
+            type="button"
+            onClick={() => navigate('/admin/owner-restore')}
+            className="btn-press flex items-center gap-3 rounded-[1.25rem] border border-gray-100 bg-paper-pure p-4 text-left transition-colors hover:border-ink"
+          >
+            <AlertTriangle className="h-4 w-4 text-amber-500" />
+            <div className="flex-1">
+              <div className="font-semibold text-ink">Restaurar meu admin</div>
+              <div className="text-xs text-gray-500">Force role platform_admin (emergência)</div>
+            </div>
+            <ExternalLink className="h-3.5 w-3.5 opacity-40" />
+          </button>
         </div>
       </V2Surface>
     </div>
