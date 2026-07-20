@@ -52,6 +52,7 @@ import { useAuth } from '@/core/lib/FirebaseAuthContext';
 import { useFeatureFlag } from '@/core/lib/FeatureFlagsContext';
 import { FEATURE_FLAG } from '@/core/featureFlags';
 import DuplicateTournamentDialog from '@/modules/tournament/components/DuplicateTournamentDialog';
+import TournamentAnnouncementsCard from '@/modules/tournament/components/TournamentAnnouncementsCard';
 
 function buildFormState(tournament) {
   return {
@@ -115,6 +116,7 @@ export default function TournamentAdminTab({ tournament }) {
   const lifecycleOn = useFeatureFlag(FEATURE_FLAG.TOURNAMENT_LIFECYCLE);
   const cancelActionOn = useFeatureFlag(FEATURE_FLAG.TOURNAMENT_CANCEL_ACTION);
   const paymentOn = useFeatureFlag(FEATURE_FLAG.PAYMENT_INSTRUCTIONS);
+  const announcementsOn = useFeatureFlag(FEATURE_FLAG.TOURNAMENT_ANNOUNCEMENTS);
   const lockMutation = useSetResultsLocked(tournament.id);
   const isFinished = tournament.status === TOURNAMENT_STATUS.FINISHED;
   const isLocked = Boolean(tournament.results_locked);
@@ -606,6 +608,8 @@ export default function TournamentAdminTab({ tournament }) {
           )}
         </div>
       </div>
+
+      {announcementsOn && <TournamentAnnouncementsCard tournament={tournament} />}
 
       {duplicationOn && duplicateOpen && (
         <DuplicateTournamentDialog

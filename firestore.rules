@@ -369,6 +369,16 @@ service cloud.firestore {
       allow delete: if isPlatformAdmin() || isTournamentAdmin(resource.data.tournament_id);
     }
 
+    match /tournament_announcements/{aid} {
+      // Avisos do organizador (flag tournament_announcements): histórico
+      // legível por autenticados; escrita apenas por admins do torneio.
+      allow read: if isAuthed();
+      allow create: if isPlatformAdmin()
+        || isTournamentAdmin(request.resource.data.tournament_id);
+      allow update, delete: if isPlatformAdmin()
+        || isTournamentAdmin(resource.data.tournament_id);
+    }
+
     match /tournament_matches/{mid} {
       // Jogos: leitura pública (quadro do torneio é público).
       // O flag 'archived' do torneio-pai já é filtrado pela rule de

@@ -357,6 +357,15 @@ export const FEATURE_FLAG = Object.freeze({
    * aparece.
    */
   ONBOARDING_WIZARD: 'onboarding_wizard',
+
+  /**
+   * Avisos aos inscritos: o admin do torneio envia um aviso (título +
+   * mensagem) para todos os inscritos com conta vinculada — do torneio todo
+   * ou de uma modalidade — como notificação in-app, com histórico dos avisos
+   * enviados e texto pronto para colar em grupo de WhatsApp. Aditivo —
+   * desligado, o card de comunicação não aparece.
+   */
+  TOURNAMENT_ANNOUNCEMENTS: 'tournament_announcements',
 });
 
 /** Metadados de exibição para o painel de flags (admin master). */
@@ -692,6 +701,15 @@ export const FEATURE_FLAG_META = Object.freeze({
       + 'convite ao nivelamento. Fechar adia pela sessão; concluir grava a '
       + 'conclusão no perfil. Quando ligada, substitui o modal simples de '
       + '"Completar perfil". Desligado, nada aparece.',
+  },
+  [FEATURE_FLAG.TOURNAMENT_ANNOUNCEMENTS]: {
+    label: 'Avisos aos inscritos',
+    description:
+      'O admin do torneio envia um aviso (título e mensagem) para todos os '
+      + 'inscritos com conta vinculada — do torneio inteiro ou de uma '
+      + 'modalidade — como notificação in-app, com histórico dos envios e '
+      + 'texto pronto para colar no grupo de WhatsApp. Desligado, o card de '
+      + 'comunicação não aparece.',
   },
 });
 

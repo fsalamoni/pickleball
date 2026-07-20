@@ -25,6 +25,10 @@ import {
 } from '../services/modalityService';
 import { duplicateTournament } from '../services/tournamentDuplicationService';
 import {
+  listTournamentAnnouncements,
+  sendTournamentAnnouncement,
+} from '../services/announcementService';
+import {
   listRegistrations,
   listRegistrationsByTournament,
   listMyRegistrations,
@@ -415,6 +419,27 @@ export function useDeclareRegistrationPayment(modalityId) {
     onSuccess: () => {
       qc.invalidateQueries({ queryKey: ['registrations', modalityId] });
       qc.invalidateQueries({ queryKey: ['registrations-tournament'] });
+    },
+  });
+}
+
+/** Histórico de avisos do torneio (flag tournament_announcements). */
+export function useTournamentAnnouncements(tournamentId, { enabled = true } = {}) {
+  return useQuery({
+    queryKey: ['tournament-announcements', tournamentId],
+    queryFn: () => listTournamentAnnouncements(tournamentId),
+    enabled: Boolean(tournamentId) && enabled,
+  });
+}
+
+/** Envia um aviso aos inscritos (flag tournament_announcements). */
+export function useSendTournamentAnnouncement(tournamentId) {
+  const { user } = useAuth();
+  const qc = useQueryClient();
+  return useMutation({
+    mutationFn: (input) => sendTournamentAnnouncement(input, user),
+    onSuccess: () => {
+      qc.invalidateQueries({ queryKey: ['tournament-announcements', tournamentId] });
     },
   });
 }
