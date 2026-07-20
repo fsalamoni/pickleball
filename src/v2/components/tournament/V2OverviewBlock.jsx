@@ -33,6 +33,14 @@ import {
 } from '@/modules/tournament/domain/capacity';
 import ModalityInfoModal from '@/modules/tournament/components/ModalityInfoModal';
 import ModalityRegistrationDialog from '@/modules/tournament/components/ModalityRegistrationDialog';
+import PixPaymentDialog from '@/modules/tournament/components/PixPaymentDialog';
+import { tournamentHasPixConfig } from '@/modules/tournament/domain/payment';
+import {
+  canRespondToPartnerInvite,
+  partnerInviteBadge,
+} from '@/modules/tournament/domain/partnerInvite';
+import { useRespondPartnerInvite } from '@/modules/tournament/hooks/useTournament';
+import { toast } from 'sonner';
 import { useFeatureFlag } from '@/core/lib/FeatureFlagsContext';
 import { FEATURE_FLAG } from '@/core/featureFlags';
 import { V2Badge, V2Button, V2Surface } from '@/v2/ui/primitives';
@@ -249,7 +257,38 @@ function ModalityCard({ modality, confirmed, tournament, currentUserId, allRegis
       && (r.user_id === currentUserId || r.player_a_user_id === currentUserId || r.player_b_user_id === currentUserId),
   );
   const canRegister = isAdmin || isPublic || hasPrivateAccess;
-  const occupied = countOccupiedRegistrations(allRegistrations.filter((r) => r.modality_id === modality.id));
+  const modalityRegs = allRegistrations.filter((r) => r.modality_id === modality.id);
+  const partnerInvitesOn = useFeatureFlag(FEATURE_FLAG.PARTNER_INVITES);
+  const paymentOn = useFeatureFlag(FEATURE_FLAG.PAYMENT_INSTRUCTIONS);
+  const respondMutation = useRespondPartnerInvite();
+  const [payOpen, setPayOpen] = useState(false);
+  // Convite de dupla endereçado a mim, ainda pendente (flag partner_invites).
+  const inviteForMe = partnerInvitesOn
+    ? modalityRegs.find((r) => canRespondToPartnerInvite(r, currentUserId)) || null
+    : null;
+  const myRegistration = modalityRegs.find(
+    (r) => r.user_id === currentUserId || r.player_a_user_id === currentUserId || r.player_b_user_id === currentUserId,
+  ) || null;
+  const myInviteBadge = partnerInvitesOn && myRegistration ? partnerInviteBadge(myRegistration) : null;
+  // Pagamento PIX da própria inscrição pendente (flag payment_instructions).
+  const canPayOwn = Boolean(
+    paymentOn
+    && tournamentHasPixConfig(tournament)
+    && myRegistration
+    && myRegistration.status === REGISTRATION_STATUS.PENDING_PAYMENT
+    && (myRegistration.created_by === currentUserId || myRegistration.player_a_user_id === currentUserId),
+  );
+
+  async function handleRespondInvite(accept) {
+    if (!inviteForMe) return;
+    try {
+      await respondMutation.mutateAsync({ id: inviteForMe.id, accept });
+      toast.success(accept ? 'Dupla confirmada! Boa sorte no torneio.' : 'Convite recusado.');
+    } catch (err) {
+      toast.error(err?.message || 'Não foi possível responder ao convite.');
+    }
+  }
+  const occupied = countOccupiedRegistrations(modalityRegs);
   const slotsFull = isRegistrationCapacityReached(occupied, modality.max_entries);
   const waitlistOn = useFeatureFlag(FEATURE_FLAG.TOURNAMENT_WAITLIST);
   const canWaitlist = slotsFull && waitlistOn && !alreadyRegistered && !isAdmin;
@@ -275,6 +314,7 @@ function ModalityCard({ modality, confirmed, tournament, currentUserId, allRegis
               <h4 className="font-display text-xl font-bold text-ink">{modality.name}</h4>
             )}
             {alreadyRegistered && <V2Badge tone="green">Você está inscrito</V2Badge>}
+            {myInviteBadge && <V2Badge tone={myInviteBadge.tone}>{myInviteBadge.text}</V2Badge>}
           </div>
           <div className="mt-3 flex flex-wrap gap-1.5">
             <V2Badge tone="neutral">{MODALITY_FORMAT_LABELS[modality.format]}</V2Badge>
@@ -288,6 +328,22 @@ function ModalityCard({ modality, confirmed, tournament, currentUserId, allRegis
           <Trophy className="h-4.5 w-4.5" />
         </div>
       </div>
+
+      {inviteForMe && (
+        <div className="mt-4 rounded-3xl border border-acid/40 bg-acid/10 p-4">
+          <p className="text-sm font-semibold text-ink">
+            {inviteForMe.player_a_name || 'Um atleta'} te convidou para jogar como dupla nesta modalidade.
+          </p>
+          <div className="mt-3 flex flex-wrap gap-2">
+            <V2Button size="sm" disabled={respondMutation.isPending} onClick={() => handleRespondInvite(true)}>
+              Aceitar convite
+            </V2Button>
+            <V2Button size="sm" variant="ghost" disabled={respondMutation.isPending} onClick={() => handleRespondInvite(false)}>
+              Recusar
+            </V2Button>
+          </div>
+        </div>
+      )}
 
       <div className="mt-5 grid gap-3 sm:grid-cols-2">
         <div className="rounded-3xl border border-gray-100 bg-paper p-4">
@@ -360,6 +416,12 @@ function ModalityCard({ modality, confirmed, tournament, currentUserId, allRegis
           )}
 
           <div className="flex flex-wrap items-center gap-2">
+            {alreadyRegistered && canPayOwn && (
+              <V2Button size="sm" variant="secondary" onClick={() => setPayOpen(true)}>
+                <Wallet className="h-4 w-4" />
+                {myRegistration?.payment_declared_at ? 'Pagamento informado' : 'Pagar inscrição'}
+              </V2Button>
+            )}
             {alreadyRegistered ? (
               <V2Badge tone="green">Inscrito</V2Badge>
             ) : canRegister ? (
@@ -373,6 +435,17 @@ function ModalityCard({ modality, confirmed, tournament, currentUserId, allRegis
           </div>
         </div>
       </div>
+
+      {canPayOwn && payOpen && (
+        <PixPaymentDialog
+          open
+          onClose={() => setPayOpen(false)}
+          tournament={tournament}
+          modality={modality}
+          registrationId={myRegistration.id}
+          paymentDeclared={Boolean(myRegistration.payment_declared_at)}
+        />
+      )}
     </div>
   );
 }

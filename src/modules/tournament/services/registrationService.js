@@ -33,6 +33,11 @@ import { buildPlaceholderRegistrationFields, neededPlaceholderCount } from '../d
 import { getModality } from './modalityService.js';
 import { getTournament, isTournamentAdmin, listTournamentAdmins } from './tournamentService.js';
 import { notifyUsers, NOTIFICATION_TYPE } from '@/core/services/notificationService';
+import {
+  PARTNER_INVITE_STATUS,
+  buildPartnerInviteFields,
+  canRespondToPartnerInvite,
+} from '../domain/partnerInvite.js';
 
 const COL = 'tournament_registrations';
 const SAFE_BATCH_WRITE_SIZE = 450; // abaixo do limite de 500 operações por batch do Firestore
@@ -127,13 +132,73 @@ export async function createRegistration(input, actor) {
   };
   payload.label = buildRegistrationLabel(payload, modality.format);
 
+  // Convite de dupla (flag partner_invites): quando o inscrito escolheu um
+  // parceiro cadastrado, a inscrição nasce com o convite pendente.
+  const withPartnerInvite = Boolean(input.partner_invite && playerBUserId && playerBUserId !== actor?.uid);
+  if (withPartnerInvite) {
+    Object.assign(payload, buildPartnerInviteFields(playerBUserId));
+  }
+
   await setDoc(doc(db, COL, id), payload);
   await createAuditLog({
     action: 'registration_created',
     actor,
     details: { tournament_id, modality_id, registration_id: id },
   });
+
+  if (withPartnerInvite) {
+    try {
+      await notifyUsers([playerBUserId], {
+        title: 'Convite de dupla',
+        message: `${payload.player_a_name || 'Um atleta'} te inscreveu como dupla em "${tournament.name}". Abra o torneio para confirmar ou recusar.`,
+        type: NOTIFICATION_TYPE.PARTNER_INVITE,
+        link: `/torneios/${tournament_id}`,
+        actor,
+      });
+    } catch (err) {
+      // Best-effort: a inscrição vale mesmo se a notificação falhar.
+      logger.error('Falha ao notificar o parceiro convidado:', err);
+    }
+  }
   return id;
+}
+
+/**
+ * O parceiro convidado responde ao convite de dupla (flag partner_invites).
+ * Só o próprio convidado, e só enquanto o convite está pendente. Não altera
+ * o status da inscrição — apenas o status do convite.
+ */
+export async function respondPartnerInvite(id, accept, actor) {
+  const registration = await getRegistration(id);
+  if (!registration) throw new Error('Inscrição não encontrada.');
+  if (!canRespondToPartnerInvite(registration, actor?.uid)) {
+    throw new Error('Este convite não está mais disponível para resposta.');
+  }
+  const status = accept ? PARTNER_INVITE_STATUS.ACCEPTED : PARTNER_INVITE_STATUS.DECLINED;
+  await updateDoc(doc(db, COL, id), {
+    partner_invite_status: status,
+    partner_invite_responded_at: serverTimestamp(),
+    updated_at: serverTimestamp(),
+  });
+  await createAuditLog({
+    action: accept ? 'partner_invite_accepted' : 'partner_invite_declined',
+    actor,
+    details: { registration_id: id, tournament_id: registration.tournament_id },
+  });
+  try {
+    const recipients = [registration.created_by, registration.player_a_user_id].filter(Boolean);
+    await notifyUsers(recipients, {
+      title: accept ? 'Dupla confirmada' : 'Convite de dupla recusado',
+      message: accept
+        ? `${registration.player_b_name || 'Seu parceiro'} confirmou a dupla em "${registration.label || 'sua inscrição'}".`
+        : `${registration.player_b_name || 'Seu parceiro'} recusou o convite de dupla. Ajuste ou cancele a inscrição.`,
+      type: NOTIFICATION_TYPE.PARTNER_RESPONSE,
+      link: `/torneios/${registration.tournament_id}`,
+      actor,
+    });
+  } catch (err) {
+    logger.error('Falha ao notificar a resposta do convite de dupla:', err);
+  }
 }
 
 function selectedModalityIsDoubles(format) {

@@ -34,6 +34,7 @@ import {
   promoteFromWaitlist,
   cancelRegistration,
   declareRegistrationPayment,
+  respondPartnerInvite,
   checkInRegistration,
   undoRegistrationCheckIn,
   deleteRegistration,
@@ -413,6 +414,22 @@ export function useDeclareRegistrationPayment(modalityId) {
     onSuccess: () => {
       qc.invalidateQueries({ queryKey: ['registrations', modalityId] });
       qc.invalidateQueries({ queryKey: ['registrations-tournament'] });
+    },
+  });
+}
+
+/**
+ * O parceiro convidado aceita/recusa o convite de dupla (flag partner_invites).
+ */
+export function useRespondPartnerInvite() {
+  const { user } = useAuth();
+  const qc = useQueryClient();
+  return useMutation({
+    mutationFn: ({ id, accept }) => respondPartnerInvite(id, accept, user),
+    onSuccess: () => {
+      qc.invalidateQueries({ queryKey: ['registrations'] });
+      qc.invalidateQueries({ queryKey: ['registrations-tournament'] });
+      qc.invalidateQueries({ queryKey: ['my-registrations'] });
     },
   });
 }

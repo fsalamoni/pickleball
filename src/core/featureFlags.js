@@ -312,6 +312,16 @@ export const FEATURE_FLAG = Object.freeze({
    * Aditivo — desligado, a aba não aparece.
    */
   TOURNAMENT_OPS_DASHBOARD: 'tournament_ops_dashboard',
+
+  /**
+   * Convite e aceite de dupla: na inscrição de duplas, o atleta pode escolher
+   * o parceiro entre os atletas do diretório (vinculando a conta real) — o
+   * parceiro recebe uma notificação e confirma ou recusa na página do
+   * torneio. O preenchimento manual continua disponível para convidados sem
+   * conta. O status do convite não altera a máquina de status da inscrição.
+   * Aditivo — desligado, a inscrição de duplas permanece exatamente como está.
+   */
+  PARTNER_INVITES: 'partner_invites',
 });
 
 /** Metadados de exibição para o painel de flags (admin master). */
@@ -605,6 +615,16 @@ export const FEATURE_FLAG_META = Object.freeze({
       + 'inscrições por status, pagamentos pendentes, progresso dos jogos, '
       + 'jogos sem horário e alertas de pendências — a visão única de "como '
       + 'está meu torneio". Somente leitura. Desligado, a aba não aparece.',
+  },
+  [FEATURE_FLAG.PARTNER_INVITES]: {
+    label: 'Convite e aceite de dupla',
+    description:
+      'Na inscrição de duplas, o atleta escolhe o parceiro entre os atletas '
+      + 'do diretório (a inscrição fica vinculada à conta real dele). O '
+      + 'parceiro é notificado e confirma ou recusa na página do torneio; o '
+      + 'organizador vê o status do convite nas inscrições. O preenchimento '
+      + 'manual continua disponível para convidados sem conta. Desligado, a '
+      + 'inscrição de duplas fica exatamente como está.',
   },
 });
 

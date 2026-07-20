@@ -32,6 +32,8 @@ export const NOTIFICATION_TYPE = Object.freeze({
   CLUB_INVITE_ACCEPTED: 'club_invite_accepted',
   CLUB_EVENT_PUBLISHED: 'club_event_published',
   TOURNAMENT_OPEN: 'tournament_open',
+  PARTNER_INVITE: 'partner_invite',
+  PARTNER_RESPONSE: 'partner_response',
   PROFILE_REMINDER: 'profile_reminder',
   LEVELING_REMINDER: 'leveling_reminder',
   GENERIC: 'generic',

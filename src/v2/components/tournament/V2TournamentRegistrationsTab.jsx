@@ -47,6 +47,7 @@ import { useAuth } from '@/core/lib/FirebaseAuthContext';
 import ModalityRegistrationDialog from '@/modules/tournament/components/ModalityRegistrationDialog';
 import PixPaymentDialog from '@/modules/tournament/components/PixPaymentDialog';
 import { tournamentHasPixConfig } from '@/modules/tournament/domain/payment';
+import { partnerInviteBadge } from '@/modules/tournament/domain/partnerInvite';
 
 export default function TournamentRegistrationsTab({ tournament, isAdmin }) {
   const { user } = useAuth();
@@ -97,6 +98,7 @@ function ModalityRegistrationsBlock({ tournament, modality, registrations, isAdm
   const waitlistOn = useFeatureFlag(FEATURE_FLAG.TOURNAMENT_WAITLIST);
   const checkinOn = useFeatureFlag(FEATURE_FLAG.TOURNAMENT_CHECKIN);
   const paymentOn = useFeatureFlag(FEATURE_FLAG.PAYMENT_INSTRUCTIONS);
+  const partnerInvitesOn = useFeatureFlag(FEATURE_FLAG.PARTNER_INVITES);
   const [editTarget, setEditTarget] = useState(null);
   const [payOpen, setPayOpen] = useState(false);
   // Inscrição pendente de pagamento do próprio usuário (flag payment_instructions).
@@ -192,6 +194,16 @@ function ModalityRegistrationsBlock({ tournament, modality, registrations, isAdm
                       {paymentOn && isAdmin && r.status === REGISTRATION_STATUS.PENDING_PAYMENT && r.payment_declared_at && (
                         <div className="mt-1 text-[11px] font-medium text-amber-700">pagamento informado</div>
                       )}
+                      {partnerInvitesOn && (() => {
+                        const invite = partnerInviteBadge(r);
+                        if (!invite) return null;
+                        const toneClass = invite.tone === 'green'
+                          ? 'text-green-700'
+                          : invite.tone === 'red'
+                            ? 'text-red-600'
+                            : 'text-amber-700';
+                        return <div className={`mt-1 text-[11px] font-medium ${toneClass}`}>{invite.text.toLowerCase()}</div>;
+                      })()}
                     </td>
                     {isAdmin && (
                       <td className="px-3 py-2 text-right space-x-1">

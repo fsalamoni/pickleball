@@ -356,7 +356,16 @@ service cloud.firestore {
       allow update: if isPlatformAdmin()
         || isTournamentAdmin(resource.data.tournament_id)
         || (isAuthed() && resource.data.created_by == request.auth.uid)
-        || isRegistrationEmailOwnerUpdate();
+        || isRegistrationEmailOwnerUpdate()
+        // Convite de dupla (flag partner_invites): o convidado responde ao
+        // convite alterando SOMENTE os campos do convite.
+        || (isAuthed()
+          && resource.data.partner_invite_uid == request.auth.uid
+          && request.resource.data.diff(resource.data).affectedKeys().hasOnly([
+            'partner_invite_status',
+            'partner_invite_responded_at',
+            'updated_at',
+          ]));
       allow delete: if isPlatformAdmin() || isTournamentAdmin(resource.data.tournament_id);
     }
 
