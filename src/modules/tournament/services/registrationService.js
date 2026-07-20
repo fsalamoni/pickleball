@@ -38,6 +38,7 @@ import {
   buildPartnerInviteFields,
   canRespondToPartnerInvite,
 } from '../domain/partnerInvite.js';
+import { canSelfCheckIn } from '../domain/checkin.js';
 
 const COL = 'tournament_registrations';
 const SAFE_BATCH_WRITE_SIZE = 450; // abaixo do limite de 500 operações por batch do Firestore
@@ -451,6 +452,25 @@ export async function checkInRegistration(id, actor) {
 /** Desfaz o check-in, devolvendo a inscrição ao status confirmado. */
 export async function undoRegistrationCheckIn(id, actor) {
   await updateRegistration(id, { status: REGISTRATION_STATUS.CONFIRMED, checked_in_at: null }, actor);
+}
+
+/**
+ * Check-in feito pelo próprio atleta (flag athlete_self_checkin): válido
+ * apenas com o torneio em andamento e a inscrição confirmada, pelo criador
+ * da inscrição ou jogador A vinculado.
+ */
+export async function selfCheckInRegistration(id, actor) {
+  const registration = await getRegistration(id);
+  if (!registration) throw new Error('Inscrição não encontrada.');
+  const tournament = await getTournament(registration.tournament_id);
+  if (!canSelfCheckIn({ tournament, registration, uid: actor?.uid })) {
+    throw new Error('O check-in não está disponível para esta inscrição.');
+  }
+  await updateRegistration(id, {
+    status: REGISTRATION_STATUS.CHECKED_IN,
+    checked_in_at: serverTimestamp(),
+    checked_in_by: 'athlete',
+  }, actor);
 }
 
 export async function deleteRegistration(id, actor) {

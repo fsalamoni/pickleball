@@ -37,6 +37,7 @@ import {
   respondPartnerInvite,
   checkInRegistration,
   undoRegistrationCheckIn,
+  selfCheckInRegistration,
   deleteRegistration,
   ensurePlaceholderRegistrations,
   clearPlaceholderRegistrations,
@@ -447,6 +448,19 @@ export function useSetRegistrationCheckIn(modalityId) {
     ),
     onSuccess: () => {
       qc.invalidateQueries({ queryKey: ['registrations', modalityId] });
+      qc.invalidateQueries({ queryKey: ['registrations-tournament'] });
+    },
+  });
+}
+
+/** Check-in feito pelo próprio atleta (flag athlete_self_checkin). */
+export function useSelfCheckIn() {
+  const { user } = useAuth();
+  const qc = useQueryClient();
+  return useMutation({
+    mutationFn: (id) => selfCheckInRegistration(id, user),
+    onSuccess: () => {
+      qc.invalidateQueries({ queryKey: ['registrations'] });
       qc.invalidateQueries({ queryKey: ['registrations-tournament'] });
     },
   });

@@ -322,6 +322,15 @@ export const FEATURE_FLAG = Object.freeze({
    * Aditivo — desligado, a inscrição de duplas permanece exatamente como está.
    */
   PARTNER_INVITES: 'partner_invites',
+
+  /**
+   * Check-in pelo próprio atleta: com o torneio em andamento, o inscrito com
+   * inscrição confirmada vê o botão "Fazer check-in" no card da modalidade e
+   * confirma presença com um toque (mesmo status usado pelo check-in do
+   * organizador e considerado pelo sorteio). Aditivo — desligado, o botão
+   * não aparece e o check-in segue exclusivo do organizador.
+   */
+  ATHLETE_SELF_CHECKIN: 'athlete_self_checkin',
 });
 
 /** Metadados de exibição para o painel de flags (admin master). */
@@ -625,6 +634,14 @@ export const FEATURE_FLAG_META = Object.freeze({
       + 'organizador vê o status do convite nas inscrições. O preenchimento '
       + 'manual continua disponível para convidados sem conta. Desligado, a '
       + 'inscrição de duplas fica exatamente como está.',
+  },
+  [FEATURE_FLAG.ATHLETE_SELF_CHECKIN]: {
+    label: 'Check-in pelo próprio atleta',
+    description:
+      'Com o torneio em andamento, o inscrito confirma presença com um toque '
+      + 'no card da modalidade ("Fazer check-in"). Usa o mesmo status do '
+      + 'check-in do organizador e já é considerado pelo sorteio. Desligado, '
+      + 'o check-in segue exclusivo do organizador.',
   },
 });
 

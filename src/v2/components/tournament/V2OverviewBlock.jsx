@@ -39,7 +39,8 @@ import {
   canRespondToPartnerInvite,
   partnerInviteBadge,
 } from '@/modules/tournament/domain/partnerInvite';
-import { useRespondPartnerInvite } from '@/modules/tournament/hooks/useTournament';
+import { canSelfCheckIn, hasCheckedIn } from '@/modules/tournament/domain/checkin';
+import { useRespondPartnerInvite, useSelfCheckIn } from '@/modules/tournament/hooks/useTournament';
 import { toast } from 'sonner';
 import { useFeatureFlag } from '@/core/lib/FeatureFlagsContext';
 import { FEATURE_FLAG } from '@/core/featureFlags';
@@ -279,6 +280,24 @@ function ModalityCard({ modality, confirmed, tournament, currentUserId, allRegis
     && (myRegistration.created_by === currentUserId || myRegistration.player_a_user_id === currentUserId),
   );
 
+  // Self check-in (flag athlete_self_checkin).
+  const selfCheckinOn = useFeatureFlag(FEATURE_FLAG.ATHLETE_SELF_CHECKIN);
+  const selfCheckInMutation = useSelfCheckIn();
+  const canCheckInOwn = Boolean(
+    selfCheckinOn && myRegistration
+    && canSelfCheckIn({ tournament, registration: myRegistration, uid: currentUserId }),
+  );
+
+  async function handleSelfCheckIn() {
+    if (!myRegistration) return;
+    try {
+      await selfCheckInMutation.mutateAsync(myRegistration.id);
+      toast.success('Check-in feito. Bom jogo!');
+    } catch (err) {
+      toast.error(err?.message || 'Não foi possível fazer o check-in.');
+    }
+  }
+
   async function handleRespondInvite(accept) {
     if (!inviteForMe) return;
     try {
@@ -421,6 +440,14 @@ function ModalityCard({ modality, confirmed, tournament, currentUserId, allRegis
                 <Wallet className="h-4 w-4" />
                 {myRegistration?.payment_declared_at ? 'Pagamento informado' : 'Pagar inscrição'}
               </V2Button>
+            )}
+            {canCheckInOwn && (
+              <V2Button size="sm" onClick={handleSelfCheckIn} disabled={selfCheckInMutation.isPending}>
+                {selfCheckInMutation.isPending ? 'Confirmando…' : 'Fazer check-in'}
+              </V2Button>
+            )}
+            {selfCheckinOn && hasCheckedIn(myRegistration) && (
+              <V2Badge tone="green">Check-in feito</V2Badge>
             )}
             {alreadyRegistered ? (
               <V2Badge tone="green">Inscrito</V2Badge>
