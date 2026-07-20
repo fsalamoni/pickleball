@@ -101,7 +101,7 @@ export const AuthProvider = ({ children }) => {
               { merge: true },
             );
             const mergedProfile = { uid: firebaseUser.uid, ...existingProfile, ...autoAdminUpdates };
-            await claimProvisionalRegistrationsForUser(firebaseUser, mergedProfile);
+            await claimProvisionalRegistrationsForUser(firebaseUser, mergedProfile, { aliasEmails: mergedProfile.claim_alias_emails });
             setUserProfile(mergedProfile);
             // Mantém o diretório público de atletas atualizado (best-effort,
             // não bloqueia o login; respeita as preferências de privacidade).
@@ -136,7 +136,7 @@ export const AuthProvider = ({ children }) => {
               last_login: serverTimestamp(),
             };
             await setDoc(userDocRef, newProfile);
-            await claimProvisionalRegistrationsForUser(firebaseUser, newProfile);
+            await claimProvisionalRegistrationsForUser(firebaseUser, newProfile, { aliasEmails: newProfile.claim_alias_emails });
             setUserProfile(newProfile);
             syncAthleteProfile(firebaseUser, newProfile);
             logger.info('New user profile created:', firebaseUser.uid);
@@ -246,7 +246,7 @@ export const AuthProvider = ({ children }) => {
       userEmail: user.email,
       details: { changed_fields: Object.keys(updates) },
     });
-    await claimProvisionalRegistrationsForUser(user, { ...userProfile, ...updates });
+    await claimProvisionalRegistrationsForUser(user, { ...userProfile, ...updates }, { aliasEmails: updates.claim_alias_emails || userProfile?.claim_alias_emails });
     const nextProfile = { ...userProfile, ...updates };
     setUserProfile(nextProfile);
     // Reflete imediatamente as mudanças (inclusive privacidade) no diretório.
