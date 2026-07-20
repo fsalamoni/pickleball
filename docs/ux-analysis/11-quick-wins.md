@@ -15,7 +15,7 @@ Itens de esforço baixo (horas, não dias) com retorno imediato. ✅ = implement
 | QW-09 | Logout no desktop | Único "Sair" está no drawer mobile (`V2Layout.jsx:353`) | Menu do usuário no topbar (flag `NAV_USER_MENU`) | ✅ |
 | QW-10 | Check-in mínimo | `CHECKED_IN` sem UI (`constants.js:319`) | Ação na aba de inscrições (flag `TOURNAMENT_CHECKIN`) | ✅ |
 | QW-11 | Bottom nav mobile | `pb-24` reservado sem uso (`V2Layout.jsx:303`) | 5 itens fixos (flag `MOBILE_BOTTOM_NAV`) | ✅ |
-| QW-12 | Título do documento por rota | `document.title` fixo em todas as páginas | Hook de título no layout (NAV-08) | — |
+| QW-12 | Título do documento por rota | `document.title` fixo em todas as páginas | Mapa rota→título no layout (flag `page_titles`) | ✅ |
 | QW-13 | Migrar imports legados em componentes V2 | `V2GameDayOrganizer.jsx:9-10`, `V2EventDatesPanel.jsx:9-10` (Skeleton/EmptyState), `V2MatchesBlock.jsx:12` (Button) | Trocar por primitivos V2 (DS-04/05) | — |
 | QW-14 | "Minhas reservas" visível com ARENAS off | `V2Layout.jsx:87` item incondicional | Condicionar à flag `ARENAS` | — |
 | QW-15 | Atualizar docs desatualizados | `AI_CONTEXT.md`/`README.md` citam `V1Routes.jsx` inexistente; rotas admin não documentadas | Revisar docs | — |

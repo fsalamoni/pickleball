@@ -56,6 +56,10 @@ Catálogo acionável de melhorias de usabilidade e experiência (UX/UI) para as 
 9. Design system fragmentado eleva custo de toda tela nova (DS-01…)
 10. Professor sem produto (PRO-*) — persona anunciada sem experiência própria
 
+## Status de implementação (neste branch)
+
+Já implementados atrás de flags (todas nascem desligadas): QW-01…QW-12 (quick wins), ONB-01 (`profile_onboarding`), NAV-01 (`mobile_bottom_nav`), NAV-02 (`nav_user_menu`), NAV-08 (`page_titles`), ORG-04 parcial (`tournament_cancel_action`), ORG-05 (`tournament_ops_dashboard`), ORG-08 (`tournament_checkin`), ATL-03 (`athlete_self_checkin`), ATL-04 (`partner_invites`), ATL-08/TRV-05 fase 1 (`payment_instructions`), ATL-23 parcial (`notifications_mark_all`), ARE-02 fase 1 (`arena_calendar`).
+
 ## Convenção de implementação
 
 Toda mudança que altera comportamento visível deve nascer atrás de **feature flag** no catálogo `src/core/featureFlags.js` (padrão já estabelecido: nasce desligada, é ativada em runtime pelo admin em `platform_settings/global.feature_flags`). Correções de defeitos evidentes (links quebrados, copy obsoleta) podem ser diretas.
