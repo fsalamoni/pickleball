@@ -49,6 +49,39 @@ import ProfileCompletionModal from '@/components/ProfileCompletionModal';
 
 const BRAND = 'PickleRush';
 
+/**
+ * Títulos por rota (flag page_titles). Prefixos ordenados do mais específico
+ * para o mais genérico; '/' é o fallback exato.
+ */
+const PAGE_TITLES = [
+  ['/torneios', 'Torneios'],
+  ['/arenas', 'Arenas'],
+  ['/minhas-reservas', 'Minhas reservas'],
+  ['/atletas', 'Atletas'],
+  ['/atleta/', 'Atleta'],
+  ['/ranking', 'Ranking'],
+  ['/encontrar-jogadores', 'Encontrar jogadores'],
+  ['/procura-jogo', 'Procura-se jogo'],
+  ['/clubes', 'Clubes'],
+  ['/novidades', 'Comunidade'],
+  ['/parceiros', 'Parceiros'],
+  ['/chat', 'Mensagens'],
+  ['/meu-desempenho', 'Meu desempenho'],
+  ['/perfil', 'Meu perfil'],
+  ['/regras', 'Regras'],
+  ['/nivelamento', 'Nivelamento'],
+  ['/historia', 'História do esporte'],
+  ['/conduta', 'Conduta e fair play'],
+  ['/politica-uso', 'Política de uso'],
+  ['/admin', 'Admin'],
+];
+
+function resolvePageTitle(pathname) {
+  if (pathname === '/') return 'Visão Geral';
+  const match = PAGE_TITLES.find(([prefix]) => pathname.startsWith(prefix));
+  return match ? match[1] : null;
+}
+
 function useV2Nav() {
   const { isPlatformAdmin } = useAuth();
   const performanceOn = useFeatureFlag(FEATURE_FLAG.PLAYER_PERFORMANCE);
@@ -310,6 +343,13 @@ export default function V2Layout({ children }) {
   useEffect(() => {
     mainRef.current?.scrollTo({ top: 0, left: 0, behavior: 'auto' });
   }, [location.pathname]);
+
+  const pageTitlesOn = useFeatureFlag(FEATURE_FLAG.PAGE_TITLES);
+  useEffect(() => {
+    if (!pageTitlesOn) return;
+    const title = resolvePageTitle(location.pathname);
+    document.title = title ? `${title} · ${BRAND}` : BRAND;
+  }, [pageTitlesOn, location.pathname]);
 
   const closeMobile = () => setMobileOpen(false);
 

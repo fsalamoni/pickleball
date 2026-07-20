@@ -331,6 +331,13 @@ export const FEATURE_FLAG = Object.freeze({
    * não aparece e o check-in segue exclusivo do organizador.
    */
   ATHLETE_SELF_CHECKIN: 'athlete_self_checkin',
+
+  /**
+   * Título da aba do navegador por página: define document.title conforme a
+   * rota ("Torneios · PickleRush"), melhorando histórico, favoritos e a
+   * navegação entre abas. Aditivo — desligado, o título permanece fixo.
+   */
+  PAGE_TITLES: 'page_titles',
 });
 
 /** Metadados de exibição para o painel de flags (admin master). */
@@ -642,6 +649,13 @@ export const FEATURE_FLAG_META = Object.freeze({
       + 'no card da modalidade ("Fazer check-in"). Usa o mesmo status do '
       + 'check-in do organizador e já é considerado pelo sorteio. Desligado, '
       + 'o check-in segue exclusivo do organizador.',
+  },
+  [FEATURE_FLAG.PAGE_TITLES]: {
+    label: 'Título da aba por página',
+    description:
+      'Define o título da aba do navegador conforme a página ("Torneios · '
+      + 'PickleRush"), melhorando histórico, favoritos e a troca entre abas. '
+      + 'Desligado, o título permanece fixo.',
   },
 });
 
