@@ -12,6 +12,7 @@ import { PhotoLightbox } from '@/components/ui/photo-lightbox';
 import ConfirmDialog from '@/components/ConfirmDialog';
 import { V2ProfileFields, V2PricingEditor } from '@/v2/components/arenas/V2ArenaEditors';
 import V2ArenaReviews from '@/v2/components/arenas/V2ArenaReviews';
+import V2ArenaWeekAgenda from '@/v2/components/arenas/V2ArenaWeekAgenda';
 import V2BookingRow from '@/v2/components/arenas/V2BookingRow';
 import { sortBookings } from '@/modules/arenas/domain/booking';
 import { ARENA_MANAGER_ROLE, BOOKING_STATUS } from '@/modules/arenas/domain/constants';
@@ -25,6 +26,7 @@ import { cn } from '@/core/lib/utils';
 
 export default function V2ArenaManage() {
   const enabled = useFeatureFlag(FEATURE_FLAG.ARENAS);
+  const calendarOn = useFeatureFlag(FEATURE_FLAG.ARENA_CALENDAR);
   const { arenaId } = useParams();
   const { user, isPlatformAdmin } = useAuth();
   const { data: arena, isLoading } = useArena(arenaId);
@@ -52,6 +54,7 @@ export default function V2ArenaManage() {
 
   const tabs = [
     { value: 'reservas', label: 'Reservas' },
+    ...(calendarOn ? [{ value: 'agenda', label: 'Agenda' }] : []),
     { value: 'precos', label: 'Preços' },
     { value: 'fotos', label: 'Fotos' },
     { value: 'info', label: 'Informações' },
@@ -98,6 +101,7 @@ export default function V2ArenaManage() {
 
       <div className="mt-6">
         {tab === 'reservas' && <BookingsTab arena={arena} />}
+        {tab === 'agenda' && calendarOn && <AgendaTab arena={arena} />}
         {tab === 'precos' && <V2Surface><V2PricingEditor arena={arena} /></V2Surface>}
         {tab === 'fotos' && <PhotosTab arena={arena} />}
         {tab === 'info' && <InfoTab arena={arena} />}
@@ -173,6 +177,12 @@ function PhotosTab({ arena }) {
       {photos.length < 20 && <ImageUpload value="" onChange={addPhoto} folder="arenas" label="Adicionar foto" hint="JPG/PNG da arena, quadras, estrutura." />}
     </V2Surface>
   );
+}
+
+function AgendaTab({ arena }) {
+  const { data: bookings = [], isLoading } = useArenaBookings(arena.id);
+  if (isLoading) return <V2Skeleton className="h-64" />;
+  return <V2ArenaWeekAgenda bookings={bookings} />;
 }
 
 function BookingsTab({ arena }) {

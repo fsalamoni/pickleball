@@ -338,6 +338,14 @@ export const FEATURE_FLAG = Object.freeze({
    * navegação entre abas. Aditivo — desligado, o título permanece fixo.
    */
   PAGE_TITLES: 'page_titles',
+
+  /**
+   * Agenda visual da arena: adiciona à central de gestão da arena uma aba
+   * "Agenda" com a grade da semana (reservas confirmadas e pendentes por dia
+   * e horário), navegável entre semanas. Somente leitura nesta fase. Requer
+   * a flag de Arenas ligada. Aditivo — desligado, a aba não aparece.
+   */
+  ARENA_CALENDAR: 'arena_calendar',
 });
 
 /** Metadados de exibição para o painel de flags (admin master). */
@@ -656,6 +664,14 @@ export const FEATURE_FLAG_META = Object.freeze({
       'Define o título da aba do navegador conforme a página ("Torneios · '
       + 'PickleRush"), melhorando histórico, favoritos e a troca entre abas. '
       + 'Desligado, o título permanece fixo.',
+  },
+  [FEATURE_FLAG.ARENA_CALENDAR]: {
+    label: 'Agenda visual da arena',
+    description:
+      'Aba "Agenda" na central de gestão da arena com a grade da semana: '
+      + 'reservas confirmadas e pendentes por dia e horário, com navegação '
+      + 'entre semanas. Somente leitura nesta fase. Requer "Arenas" ligada. '
+      + 'Desligado, a aba não aparece.',
   },
 });
 
