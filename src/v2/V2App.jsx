@@ -32,7 +32,7 @@ const V2ProfileEdit = lazy(() => import('@/v2/pages/V2ProfileEdit'));
 const V2AdminMetrics = lazy(() => import('@/v2/pages/V2AdminMetrics'));
 const V2AdminTournaments = lazy(() => import('@/v2/pages/V2AdminTournaments'));
 const V2AdminPartners = lazy(() => import('@/v2/pages/V2AdminPartners'));
-const V2AdminProfiles = lazy(() => import('@/v2/pages/V2AdminProfiles'));
+
 const V2AdminConsole = lazy(() => import('@/v2/pages/V2AdminConsole'));
 const V2AdminOwnerRestore = lazy(() => import('@/v2/pages/V2AdminOwnerRestore'));
 const V2AdminOwnerDebug = lazy(() => import('@/v2/pages/V2AdminOwnerDebug'));
@@ -133,7 +133,7 @@ export default function V2App() {
           <Route path="admin/torneios" element={<V2AdminTournaments />} />
           <Route path="admin/metricas" element={<V2AdminMetrics />} />
           <Route path="admin/parceiros" element={<V2AdminPartners />} />
-          <Route path="admin/perfis" element={<V2AdminProfiles />} />
+          <Route path="admin/perfis" element={<Navigate to="/admin/painel?tab=profiles" replace />} />
           <Route path="admin/painel" element={<V2AdminConsole />} />
           <Route path="admin/owner-restore" element={<V2AdminOwnerRestore />} />
           <Route path="admin/owner-debug" element={<V2AdminOwnerDebug />} />

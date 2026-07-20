@@ -92,9 +92,6 @@ function useV2Nav() {
       title: 'Admin geral',
       items: [
         adminConsoleOn && { to: '/admin/painel', label: 'Painel', icon: LayoutDashboard, tag: 'Novo' },
-        { to: '/admin/metricas', label: 'Métricas', icon: Settings },
-        { to: '/admin/torneios', label: 'Torneios', icon: Settings },
-        { to: '/admin/parceiros', label: 'Parceiros', icon: Settings },
       ].filter(Boolean),
     },
     {
