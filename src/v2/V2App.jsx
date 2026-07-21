@@ -56,6 +56,7 @@ const V2ArenaMarketing = lazy(() => import('@/v2/pages/V2ArenaMarketing'));
 const V2ArenaOperations = lazy(() => import('@/v2/pages/V2ArenaOperations'));
 const V2ArenaAdvanced = lazy(() => import('@/v2/pages/V2ArenaAdvanced'));
 const V2EventDetail = lazy(() => import('@/v2/pages/V2EventDetail'));
+const V2AdminBootstrap = lazy(() => import('@/v2/pages/V2AdminBootstrap'));
 
 // Conteúdo de referência — nativo v2.
 const V2Rules = lazy(() => import('@/v2/pages/V2Rules'));
@@ -166,6 +167,9 @@ export default function V2App() {
           <Route path="admin/painel" element={<V2AdminConsole />} />
           <Route path="admin/owner-restore" element={<V2AdminOwnerRestore />} />
           <Route path="admin/owner-debug" element={<V2AdminOwnerDebug />} />
+
+          {/* V3 Bootstrap: liga flags da Arena V3 sem gate de feature flag */}
+          <Route path="admin/v3-bootstrap" element={<V2AdminBootstrap />} />
 
           <Route path="*" element={<Navigate to="/" replace />} />
         </Routes>
