@@ -121,13 +121,19 @@ navegação nova.
 | `/perfil` `/perfil/editar` | autenticado (V2) | Profile (dados + nivelamento) |
 | `/torneios` `/torneios/criar` `/torneios/ingressar` `/torneios/guia` | autenticado (V2) | lista/criar/ingressar/guia |
 | `/torneios/:id` `/torneios/:id/:tab` `/torneios/:id/modalidades/:modId` | autenticado (V2) | Tournament (abas) + página de modalidade |
-| `/arenas` `/arenas/criar` `/arenas/:id` `/arenas/:id/gerir` `/minhas-reservas` | autenticado (V2) | arenas + reservas |
+| `/arenas` `/arenas/criar` `/arenas/:id` `/arenas/:id/gerir` `/arenas/:id/onboarding` `/minhas-reservas` | autenticado (V2) | arenas + reservas (onboarding é o stepper de 4 passos pós-criação) |
 | `/atletas` `/atleta/:uid` | autenticado (V2) | diretório + perfil público |
 | `/clubes` `/clubes/criar` `/clubes/:id` `/clubes/:id/eventos/:eventId` | autenticado (V2) | clubes + eventos |
 | `/chat` `/novidades` | autenticado (V2) | mensagens + feed |
 | `/ranking` `/encontrar-jogadores` `/procura-jogo` `/parceiros` | autenticado (V2) | rating + jogos + parceiros |
 | `/meu-desempenho` | autenticado (V2) | performance |
 | `/admin/torneios` `/admin/metricas` `/admin/parceiros` | platform_admin (V2) | painel |
+
+> Itens do sidebar são **condicionais**: a flag `ARENAS` liga `/arenas` na
+> seção Plataforma; com o user sendo `manager`/`owner` de alguma arena,
+> surge "Minhas arenas" (com badge de reservas pendentes) na seção Você;
+> `Minhas reservas` só aparece se `ARENAS` estiver ligada (Sprint 0
+> ARE-11 + QW-14).
 
 Guards: `ProtectedRoute` (auth) e `AdminRoute` (platform_admin). Redirects
 legados `/dashboard`,`/boloes*` → rotas novas. Páginas via `React.lazy`.
@@ -148,6 +154,14 @@ campos em `docs/DATA_MODEL.md`.
   `archived` (mais `archived_at`/`archived_by`); arquivar exige
   `status === 'cancelled'` (validação cliente+server) e esconde o torneio
   do público (apenas criador + `platform_admin` continuam vendo).
+- **Arenas**: `arenas` · `arena_managers` (id `arenaId_uid`, tem `role`
+  `owner|manager`) · `arena_bookings` · `arena_reviews` · `arena_favorites`.
+  O doc `arenas/{id}` tem um objeto `onboarding_complete` com 4 booleans
+  (`fotos`, `precos`, `horarios`, `compartilhar`) mais
+  `onboarding_completed_at`; populado pelo stepper
+  `/arenas/:id/onboarding` (Sprint 0 ARE-20) e usado para nutrir campanhas
+  de "complete seu perfil". A página `/arenas/:id/gerir` é o painel
+  operacional (fotos, preços, regras, membros, módulos).
 - **Clubes**: `clubs` · `club_members` (id `clubId_uid`, tem `role`) ·
   `club_join_requests` (id `clubId_uid`) · `club_member_invites`
   (id `clubId_uid`) · `club_posts` (mural) · `club_forum_threads` ·

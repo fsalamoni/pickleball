@@ -50,6 +50,9 @@ import {
   Trash2,
   Trophy,
   Users,
+  Building2,
+  Check,
+  X,
 } from 'lucide-react';
 import { toast } from 'sonner';
 import {
@@ -82,6 +85,7 @@ import {
   listAllTournaments,
   setTournamentArchived,
 } from '@/modules/admin/services/adminService';
+import { listArenas } from '@/modules/arenas/services/arenaService';
 import {
   useAffiliateLinks,
   useCreateAffiliateLink,
@@ -112,6 +116,7 @@ const TABS = Object.freeze([
   { id: 'overview',  label: 'Visão geral',      icon: LayoutDashboard },
   { id: 'tournaments', label: 'Torneios',         icon: Trophy },
   { id: 'partners',  label: 'Parceiros',        icon: Handshake },
+  { id: 'arenas',    label: 'Arenas',           icon: Building2 },
   { id: 'profiles',  label: 'Perfis',           icon: UserCog },
   { id: 'flags',     label: 'Funcionalidades',  icon: Flag },
   { id: 'branding',  label: 'Branding',         icon: Palette },
@@ -178,6 +183,7 @@ export default function V2AdminConsole() {
         {tab === 'overview'   && <OverviewTab />}
         {tab === 'tournaments' && <TournamentsTab />}
         {tab === 'partners'   && <PartnersTab />}
+        {tab === 'arenas'     && <ArenasTab />}
         {tab === 'profiles'   && <ProfilesTab embedded />}
         {tab === 'flags'      && <FlagsTab />}
         {tab === 'branding'   && <BrandingTab />}
@@ -1138,4 +1144,170 @@ function ToolsTab({ navigate }) {
       </V2Surface>
     </div>
   );
+}
+
+/* ---------------------- 5. Arenas (bônus Sprint 0) ------------------ */
+
+/**
+ * ArenasTab — lista todas as arenas com status de onboarding.
+ *
+ * Sprint 0 (bônus) do roadmap arena: dá ao admin uma visão de "quem criou
+ * arena e nunca terminou o setup" (90% das arenas ficam órfãs na origem
+ * do problema). Métricas expostas:
+ * - total de arenas
+ * - quantas completaram onboarding (4/4)
+ * - quantas estão sem fotos / sem preço
+ * - quantas inativas
+ *
+ * Sem ações destrutivas (não deleta arena daqui — isso fica no V2ArenaManage
+ * do próprio dono). Apenas leitura + atalho para a página da arena.
+ */
+function ArenasTab() {
+  const [arenas, setArenas] = useState(null);
+  const [error, setError] = useState(null);
+
+  async function load() {
+    try {
+      setError(null);
+      setArenas(await listArenas());
+    } catch (err) {
+      setError(err.message || 'Não foi possível carregar as arenas.');
+    }
+  }
+
+  useEffect(() => { void load(); }, []);
+
+  const items = arenas || [];
+  const stats = useMemo(() => {
+    const out = { total: items.length, withPhotos: 0, withPrice: 0, onboardingDone: 0, inactive: 0 };
+    for (const a of items) {
+      if (a.active === false) out.inactive += 1;
+      if (Array.isArray(a.photos) && a.photos.length > 0) out.withPhotos += 1;
+      const hasBase = Number.isFinite(a.base_price) && a.base_price > 0;
+      const hasRules = Array.isArray(a.price_rules) && a.price_rules.length > 0;
+      if (hasBase || hasRules) out.withPrice += 1;
+      const ob = a.onboarding_complete || {};
+      if (ob.fotos && ob.precos && ob.horarios && ob.compartilhar) out.onboardingDone += 1;
+    }
+    return out;
+  }, [items]);
+
+  if (error) {
+    return (
+      <V2Surface className="p-6">
+        <p className="text-sm text-red-600">{error}</p>
+      </V2Surface>
+    );
+  }
+
+  if (!arenas) {
+    return (
+      <V2Surface className="flex items-center gap-2 p-6 text-sm text-gray-500">
+        <Loader2 className="h-4 w-4 animate-spin" /> Carregando arenas…
+      </V2Surface>
+    );
+  }
+
+  return (
+    <div className="space-y-4">
+      <div className="grid grid-cols-2 gap-3 md:grid-cols-5">
+        <Stat label="Total" value={stats.total} />
+        <Stat label="Inativas" value={stats.inactive} variant={stats.inactive > 0 ? 'amber' : 'default'} />
+        <Stat label="Com fotos" value={stats.withPhotos} variant="success" />
+        <Stat label="Com preço" value={stats.withPrice} variant="success" />
+        <Stat label="Onboarding 4/4" value={stats.onboardingDone} variant="info" />
+      </div>
+
+      <V2Surface className="p-0">
+        <div className="overflow-x-auto">
+          <table className="min-w-full text-sm">
+            <thead className="border-b border-gray-100 bg-gray-50/50 text-left text-xs uppercase text-gray-500">
+              <tr>
+                <th className="px-4 py-3">Nome</th>
+                <th className="px-4 py-3">Cidade</th>
+                <th className="px-4 py-3 text-center">Onboarding</th>
+                <th className="px-4 py-3 text-center">Status</th>
+                <th className="px-4 py-3 text-right">Ações</th>
+              </tr>
+            </thead>
+            <tbody className="divide-y divide-gray-100">
+              {items.length === 0 && (
+                <tr>
+                  <td colSpan={5} className="px-4 py-8 text-center text-sm text-gray-500">
+                    Nenhuma arena cadastrada ainda.
+                  </td>
+                </tr>
+              )}
+              {items.map((a) => {
+                const ob = a.onboarding_complete || {};
+                const steps = ['fotos', 'precos', 'horarios', 'compartilhar'];
+                const doneCount = steps.filter((k) => ob[k]).length;
+                return (
+                  <tr key={a.id} className="hover:bg-gray-50/50">
+                    <td className="px-4 py-3">
+                      <div className="font-semibold text-ink">{a.name}</div>
+                      <div className="text-xs text-gray-500">
+                        {Array.isArray(a.photos) ? `${a.photos.length} foto(s)` : 'sem fotos'}
+                      </div>
+                    </td>
+                    <td className="px-4 py-3 text-gray-600">
+                      {[a.city, a.state].filter(Boolean).join(' / ') || '—'}
+                    </td>
+                    <td className="px-4 py-3 text-center">
+                      <OnboardingBadge doneCount={doneCount} />
+                    </td>
+                    <td className="px-4 py-3 text-center">
+                      {a.active === false ? (
+                        <span className="inline-flex items-center gap-1 rounded-full bg-gray-100 px-2 py-0.5 text-xs text-gray-600">
+                          <X className="h-3 w-3" /> Inativa
+                        </span>
+                      ) : (
+                        <span className="inline-flex items-center gap-1 rounded-full bg-emerald-50 px-2 py-0.5 text-xs text-emerald-700">
+                          <Check className="h-3 w-3" /> Ativa
+                        </span>
+                      )}
+                    </td>
+                    <td className="px-4 py-3 text-right">
+                      <Link
+                        to={`/arenas/${a.id}`}
+                        className="inline-flex items-center gap-1 text-xs font-semibold text-ink hover:underline"
+                      >
+                        Ver <ExternalLink className="h-3 w-3" />
+                      </Link>
+                    </td>
+                  </tr>
+                );
+              })}
+            </tbody>
+          </table>
+        </div>
+      </V2Surface>
+    </div>
+  );
+}
+
+function Stat({ label, value, variant = 'default' }) {
+  const colorMap = {
+    default: 'text-ink',
+    success: 'text-emerald-700',
+    amber: 'text-amber-700',
+    info: 'text-sky-700',
+  };
+  return (
+    <V2Surface className="p-4">
+      <div className="text-xs text-gray-500">{label}</div>
+      <div className={cn('mt-1 font-display text-2xl font-bold', colorMap[variant])}>{value}</div>
+    </V2Surface>
+  );
+}
+
+function OnboardingBadge({ doneCount }) {
+  const label = `${doneCount}/4`;
+  if (doneCount === 4) {
+    return <span className="inline-flex items-center gap-1 rounded-full bg-emerald-50 px-2 py-0.5 text-xs font-bold text-emerald-700"><Check className="h-3 w-3" /> {label}</span>;
+  }
+  if (doneCount === 0) {
+    return <span className="inline-flex items-center gap-1 rounded-full bg-rose-50 px-2 py-0.5 text-xs font-bold text-rose-700"><X className="h-3 w-3" /> {label}</span>;
+  }
+  return <span className="inline-flex items-center gap-1 rounded-full bg-amber-50 px-2 py-0.5 text-xs font-bold text-amber-700"> {label}</span>;
 }
