@@ -1,13 +1,38 @@
 /**
- * Firebase config — com fallback automático para hosting init.
+ * Firebase config — com fallback automático para hosting init.json em RUNTIME.
  *
- * 1. Tenta usar as env vars (VITE_FIREBASE_*) injetadas no build.
- * 2. Se alguma var crítica estiver faltando, faz fetch em runtime de
- *    `__/firebase/init.json` (exposto automaticamente pelo Firebase Hosting)
- *    e usa os valores públicos de lá.
+ * PROBLEMA RESOLVIDO NESTE COMMIT:
+ * O bundle anterior exportava `app`/`auth`/`db` como `const` com valor `null`
+ * (porque as env vars `VITE_FIREBASE_*` não estavam baked no build — elas
+ * só existem nos secrets do GitHub Actions, não no bundle). Aí o tree-shaking
+ * do Vite ELIMINAVA `ensureFirebaseInitialized` e `fetchHostingConfig` do
+ * bundle (porque nenhum outro módulo os importava estaticamente) e o app
+ * ficava com `app = null` exportado pra sempre. Resultado: usuário via
+ * "Firebase não está configurado neste ambiente local." em /login.
  *
- * O init.json é público e seguro de usar (mesmo nível de exposição que
- * embed direto no bundle). Funciona mesmo se o .env estiver vazio.
+ * FIX (3 partes):
+ *
+ * 1. Exports viram `let` em vez de `const` (live bindings do ES modules).
+ *    Quando o init completa (via env ou init.json), o módulo firebase.js
+ *    REATRIBUI as variáveis `app`, `auth`, `db`, etc. Os importadores
+ *    recebem o valor atualizado automaticamente, porque ES modules
+ *    exportam bindings, não valores.
+ *
+ * 2. `_initializeFirebase()` é chamado como SIDE EFFECT no top-level do
+ *    módulo (NÃO como função exportada). Isso impede o tree-shaking de
+ *    eliminar o init — a chamada já está no módulo e não depende de
+ *    ninguém importar a função.
+ *
+ * 3. `firebaseReady` (Promise exportada) é o que `App.jsx`/`main.jsx`
+ *    esperam ANTES de renderizar. Garante que o Firebase tá inicializado
+ *    (via env ou via fetch do init.json do Firebase Hosting) antes do
+ *    React tentar usar.
+ *
+ * FALLBACK CHAIN:
+ *   1. Tenta env vars (VITE_FIREBASE_*) — funciona em build local com .env
+ *   2. Se faltarem, faz fetch em runtime de /__/firebase/init.json
+ *      (exposto automaticamente pelo Firebase Hosting — config pública)
+ *   3. Se nenhum funcionar, deixa app=null e firebaseServicesEnabled=false
  */
 
 import { initializeApp } from 'firebase/app';
@@ -16,19 +41,19 @@ import { getFirestore, connectFirestoreEmulator } from 'firebase/firestore';
 import { getFunctions, connectFunctionsEmulator } from 'firebase/functions';
 import { getStorage, connectStorageEmulator } from 'firebase/storage';
 
-const envConfig = {
-  apiKey: import.meta.env.VITE_FIREBASE_API_KEY,
-  authDomain: import.meta.env.VITE_FIREBASE_AUTH_DOMAIN,
-  projectId: import.meta.env.VITE_FIREBASE_PROJECT_ID,
-  storageBucket: import.meta.env.VITE_FIREBASE_STORAGE_BUCKET,
-  messagingSenderId: import.meta.env.VITE_FIREBASE_MESSAGING_SENDER_ID,
-  appId: import.meta.env.VITE_FIREBASE_APP_ID,
-  measurementId: import.meta.env.VITE_FIREBASE_MEASUREMENT_ID || undefined,
-};
-
 const REQUIRED_KEYS = ['apiKey', 'authDomain', 'projectId', 'appId'];
 
-/** Faz fetch do init.json do Firebase Hosting em runtime. */
+// Login com Apple (Sign in with Apple). Desligado por ora: exige configuração
+// extra no console da Apple (Service ID, chave .8, Return URLs). Para reativar,
+// basta ligar a constante abaixo depois de concluir essa configuração — o
+// restante do código (botão na tela de login e método signInWithApple) já
+// está pronto. Requer os escopos de e-mail e nome para popular o perfil e
+// permitir a vinculação por e-mail das inscrições provisórias do atleta.
+const APPLE_SIGN_IN_ENABLED = false;
+
+const firestoreDatabaseId = import.meta.env.VITE_FIRESTORE_DATABASE_ID || 'pickleball';
+
+/** Faz fetch do init.json do Firebase Hosting em runtime (config pública). */
 async function fetchHostingConfig() {
   try {
     const res = await fetch('/__/firebase/init.json', { cache: 'no-store' });
@@ -39,126 +64,158 @@ async function fetchHostingConfig() {
   }
 }
 
-/** Mescla envConfig com hostingConfig. envConfig tem prioridade. */
-function mergeConfig(hosting = {}) {
+/** Lê as env vars VITE_FIREBASE_*. */
+function readEnvConfig() {
   return {
-    apiKey: envConfig.apiKey || hosting.apiKey,
-    authDomain: envConfig.authDomain || hosting.authDomain,
-    projectId: envConfig.projectId || hosting.projectId,
-    storageBucket: envConfig.storageBucket || hosting.storageBucket,
-    messagingSenderId: envConfig.messagingSenderId || hosting.messagingSenderId,
-    appId: envConfig.appId || hosting.appId,
-    databaseURL: hosting.databaseURL || undefined,
-    measurementId: envConfig.measurementId || hosting.measurementId,
+    apiKey: import.meta.env.VITE_FIREBASE_API_KEY,
+    authDomain: import.meta.env.VITE_FIREBASE_AUTH_DOMAIN,
+    projectId: import.meta.env.VITE_FIREBASE_PROJECT_ID,
+    storageBucket: import.meta.env.VITE_FIREBASE_STORAGE_BUCKET,
+    messagingSenderId: import.meta.env.VITE_FIREBASE_MESSAGING_SENDER_ID,
+    appId: import.meta.env.VITE_FIREBASE_APP_ID,
+    measurementId: import.meta.env.VITE_FIREBASE_MEASUREMENT_ID || undefined,
   };
 }
 
-/** Tenta montar config válida: env vars → hosting init.json. */
-async function resolveFirebaseConfig() {
-  // Cenário 1: env vars completas
-  const envComplete = REQUIRED_KEYS.every((k) => envConfig[k]);
-  if (envComplete) return { source: 'env', config: envConfig };
-
-  // Cenário 2: tentar hosting init.json
-  const hosting = await fetchHostingConfig();
-  if (hosting) {
-    const merged = mergeConfig(hosting);
-    const complete = REQUIRED_KEYS.every((k) => merged[k]);
-    if (complete) return { source: 'hosting', config: merged };
-  }
-
-  return { source: null, config: envConfig };
+/** Mescla envConfig com hostingConfig. envConfig tem prioridade. */
+function mergeConfig(env, hosting = {}) {
+  return {
+    apiKey: env.apiKey || hosting.apiKey,
+    authDomain: env.authDomain || hosting.authDomain,
+    projectId: env.projectId || hosting.projectId,
+    storageBucket: env.storageBucket || hosting.storageBucket,
+    messagingSenderId: env.messagingSenderId || hosting.messagingSenderId,
+    appId: env.appId || hosting.appId,
+    databaseURL: hosting.databaseURL || undefined,
+    measurementId: env.measurementId || hosting.measurementId,
+  };
 }
 
-// Estado inicial baseado em env (síncrono) para evitar flickering no carregamento
-let firebaseConfig = envConfig;
-let configSource = REQUIRED_KEYS.every((k) => envConfig[k]) ? 'env' : 'pending';
+// =====================================================================
+// Exports com LIVE BINDINGS (ES modules exportam bindings, não valores).
+// Quando `_initializeFirebase` completa, estas variáveis são REATRIBUÍDAS
+// e todos os importadores passam a ver o valor atualizado.
+// =====================================================================
 
-export const firebaseServicesEnabled = REQUIRED_KEYS.every((k) => firebaseConfig[k]);
-export const firebaseDisabledReason = firebaseServicesEnabled
-  ? null
-  : 'Firebase não está configurado neste ambiente local.';
+/** @type {import('firebase/app').FirebaseApp | null} */
+export let app = null;
+/** @type {import('firebase/auth').Auth | null} */
+export let auth = null;
+/** @type {import('firebase/firestore').Firestore | null} */
+export let db = null;
+/** @type {import('firebase/functions').Functions | null} */
+export let functions = null;
+/** @type {import('firebase/storage').FirebaseStorage | null} */
+export let storage = null;
+/** @type {GoogleAuthProvider | null} */
+export let googleProvider = null;
+/** @type {OAuthProvider | null} */
+export let appleProvider = null;
 
-export const app = firebaseServicesEnabled ? initializeApp(firebaseConfig) : null;
+export let firebaseServicesEnabled = false;
+export let firebaseDisabledReason = 'Firebase não está configurado neste ambiente local.';
+export let analyticsPromise = Promise.resolve(null);
+export let performancePromise = Promise.resolve(null);
 
-const firestoreDatabaseId = import.meta.env.VITE_FIRESTORE_DATABASE_ID || 'pickleball';
-export const auth = app ? getAuth(app) : null;
-export const db = app ? getFirestore(app, firestoreDatabaseId) : null;
-export const functions = app ? getFunctions(app, 'southamerica-east1') : null;
-export const storage = app ? getStorage(app) : null;
+let _initSource = 'pending'; // 'env' | 'hosting' | 'none' | 'pending'
+let _initPromise = null;
 
-export const googleProvider = auth ? new GoogleAuthProvider() : null;
-googleProvider?.setCustomParameters({ prompt: 'select_account' });
+/** Inicializa Firebase a partir de uma config válida. Reatribui as exports. */
+function _initializeFromConfig(config) {
+  app = initializeApp(config);
+  auth = getAuth(app);
+  db = getFirestore(app, firestoreDatabaseId);
+  functions = getFunctions(app, 'southamerica-east1');
+  storage = getStorage(app);
+  googleProvider = new GoogleAuthProvider();
+  googleProvider.setCustomParameters({ prompt: 'select_account' });
+  if (APPLE_SIGN_IN_ENABLED) {
+    appleProvider = new OAuthProvider('apple.com');
+    appleProvider.addScope('email');
+    appleProvider.addScope('name');
+  }
+  firebaseServicesEnabled = true;
+  firebaseDisabledReason = null;
 
-// Login com Apple (Sign in with Apple). Desligado por ora: exige configuração
-// extra no console da Apple (Service ID, chave .p8, Return URLs). Para reativar,
-// basta ligar o flag abaixo depois de concluir essa configuração — o restante do
-// código (botão na tela de login e método signInWithApple) já está pronto.
-// Requer os escopos de e-mail e nome para popular o perfil e permitir a
-// vinculação por e-mail das inscrições provisórias do atleta.
-const APPLE_SIGN_IN_ENABLED = false;
-export const appleProvider = (auth && APPLE_SIGN_IN_ENABLED) ? new OAuthProvider('apple.com') : null;
-appleProvider?.addScope('email');
-appleProvider?.addScope('name');
+  // Emuladores (opcional, dev local)
+  if (import.meta.env.VITE_FIREBASE_USE_EMULATORS === 'true' && auth && db && functions) {
+    try {
+      connectAuthEmulator(auth, 'http://localhost:9099', { disableWarnings: true });
+      connectFirestoreEmulator(db, 'localhost', 8080);
+      connectFunctionsEmulator(functions, 'localhost', 5001);
+      if (storage) connectStorageEmulator(storage, 'localhost', 9199);
+    } catch {
+      // already connected
+    }
+  }
 
-const isBrowser = typeof window !== 'undefined';
-const hasMeasurementId = Boolean(firebaseConfig.measurementId);
-const analyticsEnabled = isBrowser && hasMeasurementId && import.meta.env.VITE_ENABLE_FIREBASE_ANALYTICS === 'true';
-const performanceEnabled = isBrowser && import.meta.env.VITE_ENABLE_FIREBASE_PERFORMANCE === 'true';
+  // Analytics e Performance (lazy, só liga se measurementId existir)
+  const isBrowser = typeof window !== 'undefined';
+  const hasMeasurementId = Boolean(config.measurementId);
+  const analyticsEnabled =
+    isBrowser && hasMeasurementId && import.meta.env.VITE_ENABLE_FIREBASE_ANALYTICS === 'true';
+  const performanceEnabled =
+    isBrowser && import.meta.env.VITE_ENABLE_FIREBASE_PERFORMANCE === 'true';
 
-export const analyticsPromise = app && analyticsEnabled
-  ? import('firebase/analytics')
-    .then(async ({ getAnalytics, isSupported }) => (await isSupported() ? getAnalytics(app) : null))
-    .catch(() => null)
-  : Promise.resolve(null);
+  if (app && analyticsEnabled) {
+    analyticsPromise = import('firebase/analytics')
+      .then(async ({ getAnalytics, isSupported }) => (await isSupported() ? getAnalytics(app) : null))
+      .catch(() => null);
+  } else {
+    analyticsPromise = Promise.resolve(null);
+  }
 
-export const performancePromise = app && performanceEnabled
-  ? import('firebase/performance')
-    .then(async ({ getPerformance, isSupported }) => (await isSupported() ? getPerformance(app) : null))
-    .catch(() => null)
-  : Promise.resolve(null);
-
-if (app && auth && db && functions && import.meta.env.VITE_FIREBASE_USE_EMULATORS === 'true') {
-  try {
-    connectAuthEmulator(auth, 'http://localhost:9099', { disableWarnings: true });
-    connectFirestoreEmulator(db, 'localhost', 8080);
-    connectFunctionsEmulator(functions, 'localhost', 5001);
-    if (storage) connectStorageEmulator(storage, 'localhost', 9199);
-  } catch {
-    // already connected
+  if (app && performanceEnabled) {
+    performancePromise = import('firebase/performance')
+      .then(async ({ getPerformance, isSupported }) => (await isSupported() ? getPerformance(app) : null))
+      .catch(() => null);
+  } else {
+    performancePromise = Promise.resolve(null);
   }
 }
 
 /**
- * Inicialização assíncrona: se a config do env não está completa,
- * tenta resolver via Firebase Hosting init.json. Re-inicializa Firebase
- * se necessário.
+ * Tenta resolver a config (env → hosting init.json) e inicializar.
+ * Idempotente: múltiplas chamadas retornam a mesma Promise.
  */
-let initPromise = null;
 export function ensureFirebaseInitialized() {
-  if (initPromise) return initPromise;
-  initPromise = (async () => {
-    if (firebaseServicesEnabled) return { source: configSource, config: firebaseConfig };
-    const resolved = await resolveFirebaseConfig();
-    if (resolved.source && !firebaseServicesEnabled) {
-      console.info('[firebase] config resolvida via', resolved.source);
-      firebaseConfig = resolved.config;
-      configSource = resolved.source;
-      // Re-inicializa app se necessário
-      try {
-        const { initializeApp: init } = await import('firebase/app');
-        const newApp = init(firebaseConfig);
-        if (newApp) {
-          // Exporta nova app
-          // (a reatribuição de `app` abaixo é intencional para hot-reload em dev)
-          // eslint-disable-next-line no-unused-vars
-          const _ = newApp;
-        }
-      } catch (err) {
-        console.warn('[firebase] failed to re-initialize', err);
+  if (_initPromise) return _initPromise;
+  _initPromise = (async () => {
+    const env = readEnvConfig();
+    const envComplete = REQUIRED_KEYS.every((k) => env[k]);
+    if (envComplete) {
+      _initializeFromConfig(env);
+      _initSource = 'env';
+      // eslint-disable-next-line no-console
+      console.info('[firebase] config resolvida via env vars');
+      return;
+    }
+    const hosting = await fetchHostingConfig();
+    if (hosting) {
+      const merged = mergeConfig(env, hosting);
+      const complete = REQUIRED_KEYS.every((k) => merged[k]);
+      if (complete) {
+        _initializeFromConfig(merged);
+        _initSource = 'hosting';
+        // eslint-disable-next-line no-console
+        console.info('[firebase] config resolvida via /__/firebase/init.json');
+        return;
       }
     }
-    return resolved;
+    _initSource = 'none';
+    // eslint-disable-next-line no-console
+    console.warn('[firebase] config não resolvida (env nem init.json disponíveis)');
   })();
-  return initPromise;
+  return _initPromise;
+}
+
+/**
+ * Promise que resolve quando Firebase está inicializado.
+ * O `App.jsx`/`main.jsx` esperam essa Promise antes de renderizar.
+ */
+export const firebaseReady = ensureFirebaseInitialized();
+
+/** De onde veio a config (env / hosting / none / pending). Útil pra debug. */
+export function getFirebaseConfigSource() {
+  return _initSource;
 }
