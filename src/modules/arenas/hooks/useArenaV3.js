@@ -695,3 +695,55 @@ export function useUpdateMaintenanceStatus() {
     onSuccess: () => qc.invalidateQueries({ queryKey: ['arena-maintenance'] }),
   });
 }
+
+/* -------------------- Advanced (sprints 8-11) -------------------- */
+
+import {
+  listArenaDevices, createDevice, updateDeviceStatus,
+  listNetworks, createNetwork, addArenaToNetwork,
+  updateBranding, getHistoricalBookings,
+} from '../services/advancedService.js';
+
+export function useArenaDevices(arenaId) {
+  return useQuery({
+    queryKey: ['arena-devices', arenaId],
+    queryFn: () => listArenaDevices(arenaId),
+    enabled: !!arenaId,
+    staleTime: 60_000,
+  });
+}
+
+export function useCreateDevice() {
+  const { user } = useAuth();
+  const qc = useQueryClient();
+  return useMutation({
+    mutationFn: ({ arenaId, input }) => createDevice(arenaId, input, user),
+    onSuccess: (_d, { arenaId }) => qc.invalidateQueries({ queryKey: ['arena-devices', arenaId] }),
+  });
+}
+
+export function useNetworks() {
+  return useQuery({
+    queryKey: ['arena-networks'],
+    queryFn: () => listNetworks(),
+    staleTime: 60_000,
+  });
+}
+
+export function useCreateNetwork() {
+  const { user } = useAuth();
+  const qc = useQueryClient();
+  return useMutation({
+    mutationFn: (name) => createNetwork(name, user),
+    onSuccess: () => qc.invalidateQueries({ queryKey: ['arena-networks'] }),
+  });
+}
+
+export function useUpdateBranding() {
+  const { user } = useAuth();
+  const qc = useQueryClient();
+  return useMutation({
+    mutationFn: ({ arenaId, branding }) => updateBranding(arenaId, branding, user),
+    onSuccess: (_d, { arenaId }) => qc.invalidateQueries({ queryKey: ['arena-settings', arenaId] }),
+  });
+}
