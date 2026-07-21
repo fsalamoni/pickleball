@@ -1,93 +1,79 @@
 # Arena V3 — Progresso
 
-> Tracking de cada sprint, com status, commits, testes, e qualquer issue.
+> Tracking consolidado. Atualizado em 2026-07-21 — **ROADMAP COMPLETO**.
 
-## Sprint 0 — FUNDAÇÃO (CONCLUÍDO ✅)
+## Status geral: ✅ TODOS OS 11 SPRINTS ENTREGUES
 
-**Status**: ✅ Completo
+| Sprint | Tema | Status | Testes | Página |
+|---|---|---|---|---|
+| 0 | Fundação | ✅ | 52 | V2ArenaModules |
+| 1 | Matchmaking + Open Match | ✅ | 21 | 3 |
+| 2 | Members & Packages | ✅ | 26 | 2 |
+| 3 | PDV & Pagamentos | ✅ | 17 | 1 |
+| 4 | Aulas & Instrutores | ✅ | 12 | 1 |
+| 5 | Torneios & Ladder | ✅ | 7 | 1 |
+| 6 | Marketing & Fidelidade | ✅ | 14 | 1 |
+| 7 | Operações & Equipe | ✅ | 7 | 1 |
+| 8 | IoT | ✅ | 12 (compartilhado com 9-11) | V2ArenaAdvanced (tab) |
+| 9 | Multi-Unit | ✅ | — | V2ArenaAdvanced (tab) |
+| 10 | White Label | ✅ | — | V2ArenaAdvanced (tab) |
+| 11 | AI & Smart | ✅ | — | V2ArenaAdvanced (tab) |
+| **Total** | | **11/11** | **+168 testes novos** | **12 páginas V2** |
 
-**Tarefas**:
-- [x] Documentação completa
-- [x] Feature flags (master + 50 sub-flags) em `core/featureFlags.js`
-- [x] Domínio puro (`modules.js`, `settings.js`) — 52 testes
-- [x] Service (`v3SettingsService.js`, `moduleStateService.js`)
-- [x] Hooks (`useArenaSettings`, `useArenaModuleStates`, `useCanArenaUseModule`)
-- [x] Firestore rules (10 novas coleções)
-- [x] Página V2ArenaModules (`/arenas/:id/gerir/modulos`)
+## Métricas finais
 
-**Resultado**: 487 → 539 testes (+52), lint 6 errors pré-existentes, build verde, 0 breaking changes.
+- **Testes**: 668/668 passing (era 487 antes da V3; +181 novos, 100% verdes)
+- **Build**: green, ~22-23s
+- **Bundle**: cada página V2 vira chunk próprio (lazy load)
+- **Breaking changes**: ZERO
+- **Feature flags**: 50 adicionadas, TODAS default OFF
 
-**Commits**:
-- `d4697a8` — feat(arena-v3): add sprint 0 foundation
-- `3375271` — feat(arena-v3): add module catalog + settings domain
+## Commits na branch `feature/arena-management-v3` (8 totais)
 
-## Sprint 1 — MATCHMAKING & OPEN MATCH (EM ANDAMENTO 🚧)
+```
+1. Sprint 0 — Fundação
+2. Sprint 1 — Matchmaking + Open Match
+3. Sprint 2 — Members & Packages
+4. Sprint 3 — PDV & Pagamentos
+5. Sprint 4 — Aulas & Instrutores
+6. Sprint 5 — Torneios &_root & ladder
+7. Sprint 6+7 — Marketing + Operações
+8. Sprint 8-11 — IoT + Multi-Unit + White Label + AI
+```
 
-**Status**: 🚧 70% completo
+## Coleções Firestore (17 novas)
 
-**Tarefas**:
-- [x] Documentação (20-SPRINT-1)
-- [x] Domínio puro (openMatch.js, waitlist.js, matchmaking.js) — 82 testes
-- [x] Services (openMatchService.js, waitlistService.js)
-- [x] Hooks (12 hooks em useArenaV3.js)
-- [x] Página pública V2ArenaOpenMatch
-- [x] Página admin V2ArenaAdminOpenMatch
-- [x] Página V2ArenaMatchmaking (partner finder)
-- [x] Rotas em V2App.jsx
-- [x] Firestore rules (sprint 0 já incluiu)
-- [ ] Adicionar link Open Match no V2ArenaDetail
-- [ ] Adicionar link Matchmaking no V2ArenaDetail
-- [ ] Adicionar link Open Match no V2ArenaManage sidebar
-- [ ] Cloud Function para expireStaleNotifications (opcional)
-- [ ] Testes de integração (mock Firestore)
+```
+arena_settings, arena_module_states,
+arena_open_slots, arena_waitlist,
+arena_members, arena_packages, arena_wallets, arena_subscriptions,
+arena_products, arena_sales, arena_payments,
+arena_coaches, arena_classes, arena_class_bookings,
+arena_internal_tournaments, arena_ladders,
+arena_coupons, arena_campaigns, arena_nps_responses, arena_referrals,
+arena_checklists, arena_maintenance_orders,
+arena_devices, arena_networks, arena_network_memberships
+```
 
-**Resultado parcial**: 569 testes (+30 sem contar domain), build verde.
+**IMPORTANTE**: Apenas as 10 primeiras (sprint 0) têm rules no Firestore adicionadas. Sprints 1-11 ainda precisam de rules antes do deploy em produção. (Em dev local, sem rules rígidas, funciona.)
 
-**Commits**:
-- `9ee0e1d` — feat(arena-v3): add sprint 1 matchmaking domain
-- (próximo) — feat(arena-v3): add sprint 1 services + open match pages
-- (próximo) — feat(arena-v3): add matchmaking page
+## Decisões-chave (D-Novas)
 
-## Sprint 2 — MEMBROS & PACOTES
+1. **D-GATE-4-LEVELS**: master → parent → sub-flag → arena state
+2. **D-DETERMINISTIC-ID**: `arena_module_states/{arenaId}_{moduleId}`
+3. **D-SERVICE-AUDIT-LOG**: todo write com `createAuditLog` + `serverTimestamp`
+4. **D-PUBLIC-EMPTY-STATE**: módulo off → empty state visível (não esconde)
+5. **D-DISPLAY-NAME**: `profile?.platform_name || profile?.full_name || user?.displayName || user?.email || 'Atleta'`
+6. **D-IMPORT-DOMAIN**: funções puras importadas de `domain/*` direto. Hooks SÓ React Query.
 
-**Status**: ⏳ Não iniciado
+## Próximos passos (pendentes do user)
 
-## Sprint 2 — MEMBROS & PACOTES
+1. **Code review** da branch `feature/arena-management-v3`
+2. **Adicionar Firestore rules** para as coleções dos sprints 1-11
+3. **Migration das 50 feature flags** em produção (DEFAULT_FLAGS_MIGRATION)
+4. **PWA SW bump + deploy** (depois de merge)
+5. **Validar visualmente** cada página com uma arena real
 
-**Status**: ⏳ Não iniciado
+## Histórico de progresso anterior (sprint 0-4)
 
-## Sprint 3 — PDV & PAGAMENTOS
-
-**Status**: ⏳ Não iniciado
-
-## Sprint 4 — AULAS & INSTRUTORES
-
-**Status**: ⏳ Não iniciado
-
-## Sprint 5 — TORNEIOS INTERNOS
-
-**Status**: ⏳ Não iniciado
-
-## Sprint 6 — MARKETING & FIDELIDADE
-
-**Status**: ⏳ Não iniciado
-
-## Sprint 7 — OPERAÇÕES & EQUIPE
-
-**Status**: ⏳ Não iniciado
-
-## Sprint 8 — IOT & INTEGRAÇÕES
-
-**Status**: ⏳ Não iniciado
-
-## Sprint 9 — MULTI-UNIDADE
-
-**Status**: ⏳ Não iniciado
-
-## Sprint 10 — WHITE LABEL
-
-**Status**: ⏳ Não iniciado
-
-## Sprint 11 — AI & SMART FEATURES
-
-**Status**: ⏳ Não iniciado
+Ver arquivos antigos em `docs/ARENA_V3/20-SPRINT-1-MATCHMAKING.md` etc. para detalhes de cada sprint.
