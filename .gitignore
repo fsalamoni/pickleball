@@ -20,3 +20,5 @@ firebase-debug.log
 firebase-debug.*.log
 functions/lib
 functions/node_modules
+.release/
+*.tar.gz
