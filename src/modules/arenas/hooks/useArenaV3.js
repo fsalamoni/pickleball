@@ -25,6 +25,27 @@ import {
   listArenaModuleStates,
   getArenaModuleState,
 } from '../services/moduleStateService.js';
+import {
+  listArenaOpenSlots,
+  listOpenSlotsGlobal,
+  getOpenSlot,
+  createOpenSlot,
+  updateOpenSlot,
+  cancelOpenSlot,
+  joinOpenSlot,
+  leaveOpenSlot,
+  deleteOpenSlot,
+} from '../services/openMatchService.js';
+import {
+  joinWaitlist,
+  leaveWaitlist,
+  listSlotWaitlist,
+  listUserWaitlist,
+  getUserWaitlistEntry,
+  notifyNextInLine,
+  acceptWaitlistPromotion,
+  declineWaitlistPromotion,
+} from '../services/waitlistService.js';
 
 /* ----------------------------- Settings ----------------------------- */
 
@@ -106,6 +127,184 @@ export function useToggleArenaModule() {
     onSuccess: (_d, { arenaId, moduleId }) => {
       qc.invalidateQueries({ queryKey: ['arena-module-states', arenaId] });
       qc.invalidateQueries({ queryKey: ['arena-module-state', arenaId, moduleId] });
+    },
+  });
+}
+
+/* ----------------------------- Open Match ----------------------------- */
+
+export function useArenaOpenSlots(arenaId, filters = {}) {
+  return useQuery({
+    queryKey: ['arena-open-slots', arenaId, filters],
+    queryFn: () => listArenaOpenSlots(arenaId, filters),
+    enabled: !!arenaId,
+    staleTime: 30_000,
+  });
+}
+
+export function useGlobalOpenSlots(filters = {}) {
+  return useQuery({
+    queryKey: ['open-slots-global', filters],
+    queryFn: () => listOpenSlotsGlobal(filters),
+    staleTime: 30_000,
+  });
+}
+
+export function useOpenSlot(slotId) {
+  return useQuery({
+    queryKey: ['open-slot', slotId],
+    queryFn: () => getOpenSlot(slotId),
+    enabled: !!slotId,
+    staleTime: 15_000,
+  });
+}
+
+export function useCreateOpenSlot() {
+  const { user } = useAuth();
+  const qc = useQueryClient();
+  return useMutation({
+    mutationFn: ({ arenaId, input }) => createOpenSlot(arenaId, input, user),
+    onSuccess: (_d, { arenaId }) => {
+      qc.invalidateQueries({ queryKey: ['arena-open-slots', arenaId] });
+      qc.invalidateQueries({ queryKey: ['open-slots-global'] });
+    },
+  });
+}
+
+export function useUpdateOpenSlot() {
+  const { user } = useAuth();
+  const qc = useQueryClient();
+  return useMutation({
+    mutationFn: ({ slotId, updates }) => updateOpenSlot(slotId, updates, user),
+    onSuccess: (_d, { arenaId }) => {
+      qc.invalidateQueries({ queryKey: ['arena-open-slots', arenaId] });
+    },
+  });
+}
+
+export function useCancelOpenSlot() {
+  const { user } = useAuth();
+  const qc = useQueryClient();
+  return useMutation({
+    mutationFn: ({ slotId, reason }) => cancelOpenSlot(slotId, reason, user),
+    onSuccess: (_d, { arenaId }) => {
+      qc.invalidateQueries({ queryKey: ['arena-open-slots', arenaId] });
+    },
+  });
+}
+
+export function useJoinOpenSlot() {
+  const { user, userProfile } = useAuth();
+  const qc = useQueryClient();
+  return useMutation({
+    mutationFn: (slotId) => joinOpenSlot(slotId, user, userProfile),
+    onSuccess: (_d, slotId) => {
+      qc.invalidateQueries({ queryKey: ['open-slot', slotId] });
+      qc.invalidateQueries({ queryKey: ['open-slots-global'] });
+      qc.invalidateQueries({ queryKey: ['arena-open-slots'] });
+    },
+  });
+}
+
+export function useLeaveOpenSlot() {
+  const { user } = useAuth();
+  const qc = useQueryClient();
+  return useMutation({
+    mutationFn: (slotId) => leaveOpenSlot(slotId, user?.uid),
+    onSuccess: (_d, slotId) => {
+      qc.invalidateQueries({ queryKey: ['open-slot', slotId] });
+      qc.invalidateQueries({ queryKey: ['open-slots-global'] });
+    },
+  });
+}
+
+export function useDeleteOpenSlot() {
+  const { user } = useAuth();
+  const qc = useQueryClient();
+  return useMutation({
+    mutationFn: (slotId) => deleteOpenSlot(slotId, user),
+    onSuccess: () => {
+      qc.invalidateQueries({ queryKey: ['open-slots-global'] });
+      qc.invalidateQueries({ queryKey: ['arena-open-slots'] });
+    },
+  });
+}
+
+/* ------------------------------- Waitlist ----------------------------- */
+
+export function useSlotWaitlist(slotId) {
+  return useQuery({
+    queryKey: ['slot-waitlist', slotId],
+    queryFn: () => listSlotWaitlist(slotId),
+    enabled: !!slotId,
+    staleTime: 15_000,
+  });
+}
+
+export function useUserWaitlistEntry(slotId) {
+  const { user } = useAuth();
+  return useQuery({
+    queryKey: ['user-waitlist-entry', slotId, user?.uid],
+    queryFn: () => getUserWaitlistEntry(user?.uid, slotId),
+    enabled: !!user?.uid && !!slotId,
+    staleTime: 15_000,
+  });
+}
+
+export function useUserWaitlist() {
+  const { user } = useAuth();
+  return useQuery({
+    queryKey: ['user-waitlist', user?.uid],
+    queryFn: () => listUserWaitlist(user?.uid),
+    enabled: !!user?.uid,
+    staleTime: 30_000,
+  });
+}
+
+export function useJoinWaitlist() {
+  const { user, userProfile } = useAuth();
+  const qc = useQueryClient();
+  return useMutation({
+    mutationFn: (slotId) => joinWaitlist(slotId, user, userProfile),
+    onSuccess: (_d, slotId) => {
+      qc.invalidateQueries({ queryKey: ['slot-waitlist', slotId] });
+      qc.invalidateQueries({ queryKey: ['user-waitlist-entry', slotId] });
+      qc.invalidateQueries({ queryKey: ['user-waitlist'] });
+    },
+  });
+}
+
+export function useLeaveWaitlist() {
+  const { user } = useAuth();
+  const qc = useQueryClient();
+  return useMutation({
+    mutationFn: (slotId) => leaveWaitlist(slotId, user?.uid, user),
+    onSuccess: (_d, slotId) => {
+      qc.invalidateQueries({ queryKey: ['slot-waitlist', slotId] });
+      qc.invalidateQueries({ queryKey: ['user-waitlist-entry', slotId] });
+    },
+  });
+}
+
+export function useAcceptWaitlist() {
+  const { user, userProfile } = useAuth();
+  const qc = useQueryClient();
+  return useMutation({
+    mutationFn: (slotId) => acceptWaitlistPromotion(slotId, user, userProfile),
+    onSuccess: (_d, slotId) => {
+      qc.invalidateQueries({ queryKey: ['slot-waitlist', slotId] });
+      qc.invalidateQueries({ queryKey: ['open-slot', slotId] });
+    },
+  });
+}
+
+export function useDeclineWaitlist() {
+  const { user } = useAuth();
+  const qc = useQueryClient();
+  return useMutation({
+    mutationFn: (slotId) => declineWaitlistPromotion(slotId, user, user),
+    onSuccess: (_d, slotId) => {
+      qc.invalidateQueries({ queryKey: ['slot-waitlist', slotId] });
     },
   });
 }
