@@ -105,6 +105,94 @@
         { "fieldPath": "club_id", "order": "ASCENDING" },
         { "fieldPath": "visibility", "order": "ASCENDING" }
       ]
+    },
+    {
+      "collectionGroup": "arena_open_slots",
+      "queryScope": "COLLECTION",
+      "fields": [
+        { "fieldPath": "arena_id", "order": "ASCENDING" },
+        { "fieldPath": "starts_at", "order": "ASCENDING" }
+      ]
+    },
+    {
+      "collectionGroup": "arena_waitlist",
+      "queryScope": "COLLECTION",
+      "fields": [
+        { "fieldPath": "arena_id", "order": "ASCENDING" },
+        { "fieldPath": "created_at", "order": "DESCENDING" }
+      ]
+    },
+    {
+      "collectionGroup": "arena_members",
+      "queryScope": "COLLECTION",
+      "fields": [
+        { "fieldPath": "arena_id", "order": "ASCENDING" },
+        { "fieldPath": "tier", "order": "ASCENDING" }
+      ]
+    },
+    {
+      "collectionGroup": "arena_packages",
+      "queryScope": "COLLECTION",
+      "fields": [
+        { "fieldPath": "arena_id", "order": "ASCENDING" },
+        { "fieldPath": "active", "order": "ASCENDING" }
+      ]
+    },
+    {
+      "collectionGroup": "arena_sales",
+      "queryScope": "COLLECTION",
+      "fields": [
+        { "fieldPath": "arena_id", "order": "ASCENDING" },
+        { "fieldPath": "created_at", "order": "DESCENDING" }
+      ]
+    },
+    {
+      "collectionGroup": "arena_classes",
+      "queryScope": "COLLECTION",
+      "fields": [
+        { "fieldPath": "arena_id", "order": "ASCENDING" },
+        { "fieldPath": "starts_at", "order": "ASCENDING" }
+      ]
+    },
+    {
+      "collectionGroup": "arena_internal_tournaments",
+      "queryScope": "COLLECTION",
+      "fields": [
+        { "fieldPath": "arena_id", "order": "ASCENDING" },
+        { "fieldPath": "date", "order": "ASCENDING" }
+      ]
+    },
+    {
+      "collectionGroup": "arena_coupons",
+      "queryScope": "COLLECTION",
+      "fields": [
+        { "fieldPath": "arena_id", "order": "ASCENDING" },
+        { "fieldPath": "active", "order": "ASCENDING" }
+      ]
+    },
+    {
+      "collectionGroup": "arena_campaigns",
+      "queryScope": "COLLECTION",
+      "fields": [
+        { "fieldPath": "arena_id", "order": "ASCENDING" },
+        { "fieldPath": "created_at", "order": "DESCENDING" }
+      ]
+    },
+    {
+      "collectionGroup": "arena_maintenance_orders",
+      "queryScope": "COLLECTION",
+      "fields": [
+        { "fieldPath": "arena_id", "order": "ASCENDING" },
+        { "fieldPath": "created_at", "order": "DESCENDING" }
+      ]
+    },
+    {
+      "collectionGroup": "arena_devices",
+      "queryScope": "COLLECTION",
+      "fields": [
+        { "fieldPath": "arena_id", "order": "ASCENDING" },
+        { "fieldPath": "name", "order": "ASCENDING" }
+      ]
     }
   ],
   "fieldOverrides": []

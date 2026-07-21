@@ -793,5 +793,115 @@ service cloud.firestore {
         allow update, delete: if isAuthed() && resource.data.sender_id == request.auth.uid;
       }
     }
+
+    // ============================================================
+    // ARENA V3 — Sprints 1-11 (regras adicionadas em 2026-07-21)
+    // ============================================================
+
+    // Sprint 1: Matches entre atletas (parceria encontrada via matchmaking)
+    match /arena_matches/{matchId} {
+      allow read: if isAuthed();
+      allow create: if isAuthed() && (
+        request.resource.data.user_a == request.auth.uid ||
+        request.resource.data.user_b == request.auth.uid
+      );
+      allow update, delete: if isAuthed() && (
+        isArenaManager(request.resource.data.arena_id) ||
+        resource.data.user_a == request.auth.uid ||
+        resource.data.user_b == request.auth.uid
+      );
+    }
+
+    // Sprint 4: Aulas, instrutores e reservas de aulas
+    match /arena_coaches/{coachId} {
+      allow read: if isAuthed();
+      allow create, update, delete: if isArenaManager(request.resource.data.arena_id) || isPlatformAdmin();
+    }
+
+    match /arena_classes/{classId} {
+      allow read: if isAuthed();
+      allow create, update, delete: if isArenaManager(request.resource.data.arena_id) || isPlatformAdmin();
+    }
+
+    match /arena_class_bookings/{bookingId} {
+      allow read: if isAuthed() && (
+        resource.data.user_id == request.auth.uid ||
+        isArenaManager(resource.data.arena_id) ||
+        isPlatformAdmin()
+      );
+      allow create: if isAuthed() && request.resource.data.user_id == request.auth.uid;
+      allow update, delete: if isAuthed() && resource.data.user_id == request.auth.uid;
+    }
+
+    // Sprint 5: Torneios internos e ladder
+    match /arena_internal_tournaments/{tournamentId} {
+      allow read: if isAuthed();
+      allow create, update: if isArenaManager(request.resource.data.arena_id) || isPlatformAdmin();
+      allow delete: if isArenaManager(resource.data.arena_id) || isPlatformAdmin();
+    }
+
+    match /arena_ladders/{ladderId} {
+      allow read: if isAuthed();
+      allow write: if isArenaManager(request.resource.data.arena_id) || isPlatformAdmin();
+    }
+
+    // Sprint 6: Marketing (cupons, campanhas, NPS, referral)
+    match /arena_coupons/{couponId} {
+      allow read: if isAuthed();
+      allow create, update, delete: if isArenaManager(request.resource.data.arena_id) || isPlatformAdmin();
+    }
+
+    match /arena_campaigns/{campaignId} {
+      allow read: if isAuthed();
+      allow create, update, delete: if isArenaManager(request.resource.data.arena_id) || isPlatformAdmin();
+    }
+
+    match /arena_nps_responses/{responseId} {
+      allow read: if isArenaManager(request.resource.data.arena_id) || isPlatformAdmin();
+      allow create: if isAuthed() && request.resource.data.user_id == request.auth.uid;
+    }
+
+    match /arena_referrals/{referralId} {
+      allow read: if isAuthed() && (
+        resource.data.referrer_id == request.auth.uid ||
+        resource.data.referred_id == request.auth.uid ||
+        isPlatformAdmin()
+      );
+      allow create: if isAuthed();
+      allow update, delete: if isAuthed() && resource.data.referrer_id == request.auth.uid;
+    }
+
+    // Sprint 7: Operações (checklists, manutenção)
+    match /arena_checklists/{checklistId} {
+      allow read: if isAuthed();
+      allow create, update, delete: if isArenaManager(request.resource.data.arena_id) || isPlatformAdmin();
+    }
+
+    match /arena_maintenance_orders/{orderId} {
+      allow read: if isArenaManager(request.resource.data.arena_id) || isPlatformAdmin();
+      allow create, update, delete: if isArenaManager(request.resource.data.arena_id) || isPlatformAdmin();
+    }
+
+    // Sprints 8-11: IoT, Multi-unit (network)
+    match /arena_devices/{deviceId} {
+      allow read: if isAuthed();
+      allow create, update, delete: if isArenaManager(request.resource.data.arena_id) || isPlatformAdmin();
+    }
+
+    match /arena_networks/{networkId} {
+      allow read: if isAuthed();
+      allow create, update, delete: if isPlatformAdmin();
+    }
+
+    match /arena_network_memberships/{membershipId} {
+      allow read: if isAuthed();
+      allow create, update, delete: if isPlatformAdmin();
+    }
+
+    // Sprint 2: Configuração de tiers (apenas platform admin)
+    match /arena_tier_configs/{configId} {
+      allow read: if isAuthed();
+      allow write: if isPlatformAdmin();
+    }
   }
 }
