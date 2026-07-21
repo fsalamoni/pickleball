@@ -568,3 +568,130 @@ export function useArenaLadder(arenaId) {
     staleTime: 60_000,
   });
 }
+
+/* -------------------- Marketing (sprint 6) -------------------- */
+
+import {
+  listArenaCoupons, createArenaCoupon, useCoupon,
+  listArenaCampaigns, createCampaign,
+  submitNps, getArenaNpsResponses, getArenaNpsSummary,
+  createReferral,
+} from '../services/marketingService.js';
+
+export function useArenaCoupons(arenaId) {
+  return useQuery({
+    queryKey: ['arena-coupons', arenaId],
+    queryFn: () => listArenaCoupons(arenaId),
+    enabled: !!arenaId,
+    staleTime: 60_000,
+  });
+}
+
+export function useCreateCoupon() {
+  const { user } = useAuth();
+  const qc = useQueryClient();
+  return useMutation({
+    mutationFn: ({ arenaId, input }) => createArenaCoupon(arenaId, input, user),
+    onSuccess: (_d, { arenaId }) => qc.invalidateQueries({ queryKey: ['arena-coupons', arenaId] }),
+  });
+}
+
+export function useArenaCampaigns(arenaId) {
+  return useQuery({
+    queryKey: ['arena-campaigns', arenaId],
+    queryFn: () => listArenaCampaigns(arenaId),
+    enabled: !!arenaId,
+    staleTime: 30_000,
+  });
+}
+
+export function useCreateCampaign() {
+  const { user } = useAuth();
+  const qc = useQueryClient();
+  return useMutation({
+    mutationFn: ({ arenaId, input }) => createCampaign(arenaId, input, user),
+    onSuccess: (_d, { arenaId }) => qc.invalidateQueries({ queryKey: ['arena-campaigns', arenaId] }),
+  });
+}
+
+export function useArenaNps(arenaId) {
+  return useQuery({
+    queryKey: ['arena-nps', arenaId],
+    queryFn: async () => {
+      const responses = await getArenaNpsResponses(arenaId);
+      return getArenaNpsSummary(responses);
+    },
+    enabled: !!arenaId,
+    staleTime: 60_000,
+  });
+}
+
+export function useSubmitNps() {
+  const { user } = useAuth();
+  const qc = useQueryClient();
+  return useMutation({
+    mutationFn: ({ arenaId, score, comment }) => submitNps(arenaId, user?.uid, score, comment),
+    onSuccess: (_d, { arenaId }) => qc.invalidateQueries({ queryKey: ['arena-nps', arenaId] }),
+  });
+}
+
+/* -------------------- Operations (sprint 7) -------------------- */
+
+import {
+  listArenaChecklists, createChecklist, toggleChecklistItem,
+  listArenaMaintenance, createMaintenance, updateMaintenanceStatus,
+} from '../services/operationsService.js';
+
+export function useArenaChecklists(arenaId, filters = {}) {
+  return useQuery({
+    queryKey: ['arena-checklists', arenaId, filters],
+    queryFn: () => listArenaChecklists(arenaId, filters),
+    enabled: !!arenaId,
+    staleTime: 30_000,
+  });
+}
+
+export function useCreateChecklist() {
+  const { user } = useAuth();
+  const qc = useQueryClient();
+  return useMutation({
+    mutationFn: ({ arenaId, input }) => createChecklist(arenaId, input, user),
+    onSuccess: (_d, { arenaId }) => qc.invalidateQueries({ queryKey: ['arena-checklists', arenaId] }),
+  });
+}
+
+export function useToggleChecklistItem() {
+  const { user } = useAuth();
+  const qc = useQueryClient();
+  return useMutation({
+    mutationFn: ({ checklistId, itemIdx }) => toggleChecklistItem(checklistId, itemIdx, user?.uid),
+    onSuccess: () => qc.invalidateQueries({ queryKey: ['arena-checklists'] }),
+  });
+}
+
+export function useArenaMaintenance(arenaId) {
+  return useQuery({
+    queryKey: ['arena-maintenance', arenaId],
+    queryFn: () => listArenaMaintenance(arenaId),
+    enabled: !!arenaId,
+    staleTime: 30_000,
+  });
+}
+
+export function useCreateMaintenance() {
+  const { user } = useAuth();
+  const qc = useQueryClient();
+  return useMutation({
+    mutationFn: ({ arenaId, input }) => createMaintenance(arenaId, input, user),
+    onSuccess: (_d, { arenaId }) => qc.invalidateQueries({ queryKey: ['arena-maintenance', arenaId] }),
+  });
+}
+
+export function useUpdateMaintenanceStatus() {
+  const { user } = useAuth();
+  const qc = useQueryClient();
+  return useMutation({
+    mutationFn: ({ orderId, status }) => updateMaintenanceStatus(orderId, status, user),
+    onSuccess: () => qc.invalidateQueries({ queryKey: ['arena-maintenance'] }),
+  });
+}
