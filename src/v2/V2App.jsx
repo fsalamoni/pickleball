@@ -43,6 +43,7 @@ const V2AdminOwnerDebug = lazy(() => import('@/v2/pages/V2AdminOwnerDebug'));
 const V2FormatsGuide = lazy(() => import('@/v2/pages/V2FormatsGuide'));
 const V2ModalityPage = lazy(() => import('@/v2/pages/V2ModalityPage'));
 const V2ArenaManage = lazy(() => import('@/v2/pages/V2ArenaManage'));
+const V2ArenaModules = lazy(() => import('@/v2/pages/V2ArenaModules'));
 const V2EventDetail = lazy(() => import('@/v2/pages/V2EventDetail'));
 
 // Conteúdo de referência — nativo v2.
@@ -89,6 +90,7 @@ export default function V2App() {
           <Route path="arenas/criar" element={<V2CreateArena />} />
           <Route path="arenas/:arenaId" element={<V2ArenaDetail />} />
           <Route path="arenas/:arenaId/gerir" element={<V2ArenaManage />} />
+          <Route path="arenas/:arenaId/gerir/modulos" element={<V2ArenaModules />} />
           <Route path="minhas-reservas" element={<V2Bookings />} />
 
           {/* Torneios */}
