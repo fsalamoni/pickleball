@@ -83,6 +83,14 @@ export default function V2ArenaManage() {
         <span className="rounded-full border border-white/10 bg-white/10 px-3 py-1 text-xs font-bold uppercase tracking-wider text-acid">Central da arena</span>
         <h1 className="mt-4 font-display text-3xl font-bold text-white sm:text-4xl">{arena.name}</h1>
         <p className="mt-3 max-w-2xl text-sm leading-7 text-gray-300">Gerencie reservas, preços, fotos, admins e informações públicas no mesmo fluxo operacional.</p>
+        <div className="mt-5 flex flex-wrap gap-2">
+          <V2Button asChild variant="secondary" size="sm">
+            <Link to={`/arenas/${arena.id}/gerir/modulos`}><Settings className="h-4 w-4" /> Módulos V3</Link>
+          </V2Button>
+          <V2Button asChild variant="secondary" size="sm">
+            <Link to={`/arenas/${arena.id}/gerir/open-match`}>Open Match</Link>
+          </V2Button>
+        </div>
       </div>
 
       <div className="mt-6 overflow-x-auto">

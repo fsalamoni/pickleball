@@ -2,7 +2,7 @@ import React, { useState } from 'react';
 import { Link, Navigate, useParams } from 'react-router-dom';
 import {
   ArrowLeft, Building2, CalendarPlus, Clock, Globe, Instagram, Mail, MapPin,
-  MessageCircle, Phone, Settings, Star, Trophy,
+  MessageCircle, Phone, Settings, Star, Trophy, Users,
 } from 'lucide-react';
 import { PhotoLightbox } from '@/components/ui/photo-lightbox';
 import { useFeatureFlag } from '@/core/lib/FeatureFlagsContext';
@@ -18,10 +18,35 @@ import { BOOKING_STATUS, WEEKDAY_SHORT } from '@/modules/arenas/domain/constants
 import { bookingSlots, sortSlots } from '@/modules/arenas/domain/booking';
 import { useArena, useMyManagedArenas } from '@/modules/arenas/hooks/useArenas';
 import { useArenaBookings } from '@/modules/arenas/hooks/useBookings';
+import { useCanArenaUseModule } from '@/modules/arenas/hooks/useArenaV3';
 import { V2Badge, V2Button, V2EmptyState, V2Skeleton, V2Surface } from '@/v2/ui/primitives';
 
 function arenaPhotoUrl(photo) {
   return typeof photo === 'string' ? photo : photo?.url;
+}
+
+function ArenaModuleLinks({ arenaId }) {
+  const canOpenMatch = useCanArenaUseModule(arenaId, 'matchmaking_open_match');
+  const canMatchmaking = useCanArenaUseModule(arenaId, 'matchmaking_partner_finder');
+  if (!canOpenMatch && !canMatchmaking) return null;
+  return (
+    <>
+      {canOpenMatch && (
+        <V2Button asChild variant="secondary" size="sm">
+          <Link to={`/arenas/${arenaId}/open-match`}>
+            <Trophy className="h-4 w-4" /> Open Match
+          </Link>
+        </V2Button>
+      )}
+      {canMatchmaking && (
+        <V2Button asChild variant="secondary" size="sm">
+          <Link to={`/arenas/${arenaId}/matchmaking`}>
+            <Users className="h-4 w-4" /> Matchmaking
+          </Link>
+        </V2Button>
+      )}
+    </>
+  );
 }
 
 function ContactRow({ icon: Icon, href, label }) {
@@ -122,6 +147,7 @@ export default function V2ArenaDetail() {
             {canManage && (
               <V2Button asChild variant="ghost" size="sm"><Link to={`/arenas/${arena.id}/gerir`}><Settings className="h-4 w-4" /> Gerir</Link></V2Button>
             )}
+            <ArenaModuleLinks arenaId={arena.id} />
           </div>
 
           {arena.description && <p className="mt-6 whitespace-pre-line text-sm leading-7 text-gray-500">{arena.description}</p>}
