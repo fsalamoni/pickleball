@@ -47,6 +47,8 @@ const V2ArenaModules = lazy(() => import('@/v2/pages/V2ArenaModules'));
 const V2ArenaOpenMatch = lazy(() => import('@/v2/pages/V2ArenaOpenMatch'));
 const V2ArenaAdminOpenMatch = lazy(() => import('@/v2/pages/V2ArenaAdminOpenMatch'));
 const V2ArenaMatchmaking = lazy(() => import('@/v2/pages/V2ArenaMatchmaking'));
+const V2ArenaMembers = lazy(() => import('@/v2/pages/V2ArenaMembers'));
+const V2ArenaAdminMembers = lazy(() => import('@/v2/pages/V2ArenaAdminMembers'));
 const V2EventDetail = lazy(() => import('@/v2/pages/V2EventDetail'));
 
 // Conteúdo de referência — nativo v2.
@@ -97,6 +99,8 @@ export default function V2App() {
           <Route path="arenas/:arenaId/gerir/open-match" element={<V2ArenaAdminOpenMatch />} />
           <Route path="arenas/:arenaId/open-match" element={<V2ArenaOpenMatch />} />
           <Route path="arenas/:arenaId/matchmaking" element={<V2ArenaMatchmaking />} />
+          <Route path="arenas/:arenaId/membros" element={<V2ArenaMembers />} />
+          <Route path="arenas/:arenaId/gerir/membros" element={<V2ArenaAdminMembers />} />
           <Route path="minhas-reservas" element={<V2Bookings />} />
 
           {/* Torneios */}

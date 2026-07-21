@@ -28,7 +28,8 @@ function arenaPhotoUrl(photo) {
 function ArenaModuleLinks({ arenaId }) {
   const canOpenMatch = useCanArenaUseModule(arenaId, 'matchmaking_open_match');
   const canMatchmaking = useCanArenaUseModule(arenaId, 'matchmaking_partner_finder');
-  if (!canOpenMatch && !canMatchmaking) return null;
+  const canMembers = useCanArenaUseModule(arenaId, 'members');
+  if (!canOpenMatch && !canMatchmaking && !canMembers) return null;
   return (
     <>
       {canOpenMatch && (
@@ -42,6 +43,13 @@ function ArenaModuleLinks({ arenaId }) {
         <V2Button asChild variant="secondary" size="sm">
           <Link to={`/arenas/${arenaId}/matchmaking`}>
             <Users className="h-4 w-4" /> Matchmaking
+          </Link>
+        </V2Button>
+      )}
+      {canMembers && (
+        <V2Button asChild variant="secondary" size="sm">
+          <Link to={`/arenas/${arenaId}/membros`}>
+            <Trophy className="h-4 w-4" /> Membros
           </Link>
         </V2Button>
       )}

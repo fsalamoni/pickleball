@@ -308,3 +308,100 @@ export function useDeclineWaitlist() {
     },
   });
 }
+
+/* ------------------------ Members (sprint 2) ------------------------ */
+
+import {
+  listArenaMembers, getArenaMember, addArenaMember, removeArenaMember,
+  addPointsToMember, listArenaPackages, createArenaPackage, updateArenaPackage,
+  deleteArenaPackage, purchasePackage, getArenaWallet, creditWallet, applyCashback,
+} from '../services/membersService.js';
+
+export function useArenaMembers(arenaId) {
+  return useQuery({
+    queryKey: ['arena-members', arenaId],
+    queryFn: () => listArenaMembers(arenaId),
+    enabled: !!arenaId,
+    staleTime: 30_000,
+  });
+}
+
+export function useArenaMember(arenaId, userId) {
+  return useQuery({
+    queryKey: ['arena-member', arenaId, userId],
+    queryFn: () => getArenaMember(arenaId, userId),
+    enabled: !!arenaId && !!userId,
+    staleTime: 30_000,
+  });
+}
+
+export function useAddArenaMember() {
+  const { user } = useAuth();
+  const qc = useQueryClient();
+  return useMutation({
+    mutationFn: ({ arenaId, target }) => addArenaMember(arenaId, target, user),
+    onSuccess: (_d, { arenaId }) => {
+      qc.invalidateQueries({ queryKey: ['arena-members', arenaId] });
+    },
+  });
+}
+
+export function useRemoveArenaMember() {
+  const { user } = useAuth();
+  const qc = useQueryClient();
+  return useMutation({
+    mutationFn: ({ arenaId, userId }) => removeArenaMember(arenaId, userId, user),
+    onSuccess: (_d, { arenaId }) => {
+      qc.invalidateQueries({ queryKey: ['arena-members', arenaId] });
+    },
+  });
+}
+
+export function useArenaPackages(arenaId) {
+  return useQuery({
+    queryKey: ['arena-packages', arenaId],
+    queryFn: () => listArenaPackages(arenaId),
+    enabled: !!arenaId,
+    staleTime: 60_000,
+  });
+}
+
+export function useCreatePackage() {
+  const { user } = useAuth();
+  const qc = useQueryClient();
+  return useMutation({
+    mutationFn: ({ arenaId, input }) => createArenaPackage(arenaId, input, user),
+    onSuccess: (_d, { arenaId }) => qc.invalidateQueries({ queryKey: ['arena-packages', arenaId] }),
+  });
+}
+
+export function useDeletePackage() {
+  const { user } = useAuth();
+  const qc = useQueryClient();
+  return useMutation({
+    mutationFn: ({ pkgId }) => deleteArenaPackage(pkgId, user),
+    onSuccess: () => qc.invalidateQueries({ queryKey: ['arena-packages'] }),
+  });
+}
+
+export function usePurchasePackage() {
+  const { user, userProfile } = useAuth();
+  const qc = useQueryClient();
+  return useMutation({
+    mutationFn: ({ arenaId, pkgId }) => purchasePackage(arenaId, pkgId, user, userProfile),
+    onSuccess: (_d, { arenaId }) => {
+      qc.invalidateQueries({ queryKey: ['arena-packages', arenaId] });
+      qc.invalidateQueries({ queryKey: ['arena-wallet', arenaId, user?.uid] });
+      qc.invalidateQueries({ queryKey: ['arena-member', arenaId, user?.uid] });
+    },
+  });
+}
+
+export function useArenaWallet(arenaId, userId) {
+  return useQuery({
+    queryKey: ['arena-wallet', arenaId, userId],
+    queryFn: () => getArenaWallet(arenaId, userId),
+    enabled: !!arenaId && !!userId,
+    staleTime: 30_000,
+  });
+}

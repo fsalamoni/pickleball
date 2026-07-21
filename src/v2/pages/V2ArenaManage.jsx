@@ -90,6 +90,9 @@ export default function V2ArenaManage() {
           <V2Button asChild variant="secondary" size="sm">
             <Link to={`/arenas/${arena.id}/gerir/open-match`}>Open Match</Link>
           </V2Button>
+          <V2Button asChild variant="secondary" size="sm">
+            <Link to={`/arenas/${arena.id}/gerir/membros`}>Membros</Link>
+          </V2Button>
         </div>
       </div>
 
