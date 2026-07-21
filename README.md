@@ -48,6 +48,8 @@ A PickleRush existe para:
 ### Arenas e reservas
 
 - 🏟️ diretório de arenas com perfil, fotos, contatos e preços
+- 🪜 onboarding guiado pós-criação (4 passos: fotos → preços → horários → compartilhar)
+- 🧭 "Minhas arenas" no sidebar com badge de reservas pendentes (só aparece para quem gerencia)
 - 📆 solicitação de reservas avulsas e recorrentes
 - 💸 negociação manual de valor
 - 🧾 acompanhamento de pagamento e histórico

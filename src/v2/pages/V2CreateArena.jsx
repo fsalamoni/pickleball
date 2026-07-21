@@ -36,8 +36,8 @@ export default function V2CreateArena() {
     if (!isAuthenticated) { toast.error('Entre na plataforma para cadastrar uma arena.'); return; }
     try {
       const id = await createArena.mutateAsync(form);
-      toast.success('Arena cadastrada! Agora adicione fotos e preços.');
-      navigate(`/arenas/${id}/gerir`);
+      toast.success('Arena cadastrada! Vamos configurar o básico?');
+      navigate(`/arenas/${id}/onboarding`);
     } catch (err) {
       toast.error(err?.message || 'Não foi possível cadastrar a arena.');
     }
