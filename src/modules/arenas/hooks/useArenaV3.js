@@ -405,3 +405,124 @@ export function useArenaWallet(arenaId, userId) {
     staleTime: 30_000,
   });
 }
+
+/* ---------------------- PDV (sprint 3) ---------------------- */
+
+import {
+  listArenaProducts, createArenaProduct, updateArenaProduct, deleteArenaProduct,
+  createSale, listArenaSales, listUserSales,
+  listArenaPayments, confirmPayment,
+} from '../services/pdvService.js';
+
+export function useArenaProducts(arenaId) {
+  return useQuery({
+    queryKey: ['arena-products', arenaId],
+    queryFn: () => listArenaProducts(arenaId),
+    enabled: !!arenaId,
+    staleTime: 60_000,
+  });
+}
+
+export function useCreateProduct() {
+  const { user } = useAuth();
+  const qc = useQueryClient();
+  return useMutation({
+    mutationFn: ({ arenaId, input }) => createArenaProduct(arenaId, input, user),
+    onSuccess: (_d, { arenaId }) => qc.invalidateQueries({ queryKey: ['arena-products', arenaId] }),
+  });
+}
+
+export function useDeleteProduct() {
+  const { user } = useAuth();
+  const qc = useQueryClient();
+  return useMutation({
+    mutationFn: ({ prodId }) => deleteArenaProduct(prodId, user),
+    onSuccess: () => qc.invalidateQueries({ queryKey: ['arena-products'] }),
+  });
+}
+
+export function useCreateSale() {
+  const { user, userProfile } = useAuth();
+  const qc = useQueryClient();
+  return useMutation({
+    mutationFn: ({ arenaId, items, paymentMethod, splitWith }) =>
+      createSale(arenaId, items, paymentMethod, splitWith, user, userProfile),
+    onSuccess: (_d, { arenaId }) => {
+      qc.invalidateQueries({ queryKey: ['arena-products', arenaId] });
+      qc.invalidateQueries({ queryKey: ['arena-sales', arenaId] });
+    },
+  });
+}
+
+export function useArenaSales(arenaId) {
+  return useQuery({
+    queryKey: ['arena-sales', arenaId],
+    queryFn: () => listArenaSales(arenaId),
+    enabled: !!arenaId,
+    staleTime: 30_000,
+  });
+}
+
+export function useConfirmPayment() {
+  const { user } = useAuth();
+  const qc = useQueryClient();
+  return useMutation({
+    mutationFn: ({ paymentId }) => confirmPayment(paymentId, user),
+    onSuccess: () => qc.invalidateQueries({ queryKey: ['arena-payments'] }),
+  });
+}
+
+/* -------------------- Classes (sprint 4) -------------------- */
+
+import {
+  listArenaCoaches, createArenaCoach, deleteArenaCoach,
+  listArenaClasses, createArenaClass, bookClass,
+} from '../services/classesService.js';
+
+export function useArenaCoaches(arenaId) {
+  return useQuery({
+    queryKey: ['arena-coaches', arenaId],
+    queryFn: () => listArenaCoaches(arenaId),
+    enabled: !!arenaId,
+    staleTime: 60_000,
+  });
+}
+
+export function useCreateCoach() {
+  const { user } = useAuth();
+  const qc = useQueryClient();
+  return useMutation({
+    mutationFn: ({ arenaId, input }) => createArenaCoach(arenaId, input, user),
+    onSuccess: (_d, { arenaId }) => qc.invalidateQueries({ queryKey: ['arena-coaches', arenaId] }),
+  });
+}
+
+export function useArenaClasses(arenaId, filters = {}) {
+  return useQuery({
+    queryKey: ['arena-classes', arenaId, filters],
+    queryFn: () => listArenaClasses(arenaId, filters),
+    enabled: !!arenaId,
+    staleTime: 30_000,
+  });
+}
+
+export function useCreateClass() {
+  const { user } = useAuth();
+  const qc = useQueryClient();
+  return useMutation({
+    mutationFn: ({ arenaId, input }) => createArenaClass(arenaId, input, user),
+    onSuccess: (_d, { arenaId }) => qc.invalidateQueries({ queryKey: ['arena-classes', arenaId] }),
+  });
+}
+
+export function useBookClass() {
+  const { user, userProfile } = useAuth();
+  const qc = useQueryClient();
+  return useMutation({
+    mutationFn: (classId) => bookClass(classId, user, userProfile),
+    onSuccess: (_d, classId) => {
+      qc.invalidateQueries({ queryKey: ['arena-classes'] });
+      qc.invalidateQueries({ queryKey: ['class', classId] });
+    },
+  });
+}
