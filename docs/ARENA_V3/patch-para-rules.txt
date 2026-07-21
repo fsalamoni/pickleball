@@ -1,0 +1,143 @@
+// ============================================================
+// PATCH — ARENA V3 Sprints 1-11
+// ============================================================
+// Como aplicar no Cloud Shell da Google:
+//
+//   1. Abra https://shell.cloud.google.com (projeto antonov-82411)
+//
+//   2. Clone o repo + checkout na main:
+//      cd ~
+//      rm -rf pickleball
+//      git clone https://github.com/fsalamoni/pickleball.git
+//      cd pickleball
+//
+//   3. Copie TODO o conteúdo deste arquivo (a partir da próxima
+//      linha) e cole num novo arquivo patch.txt:
+//      cat > /tmp/patch.txt   (cole o conteúdo, Ctrl+D no fim)
+//
+//   4. Aplique o patch no firestore.rules (insere antes do
+//      último `  }` que fecha o match /databases/...):
+//
+//      head -n -2 firestore.rules > /tmp/firestore.new
+//      cat /tmp/patch.txt >> /tmp/firestore.new
+//      echo "  }" >> /tmp/firestore.new
+//      echo "}" >> /tmp/firestore.new
+//
+//   5. Valide as chaves (deve ser igual):
+//      echo "Abertas: $(grep -c '{' /tmp/firestore.new)"
+//      echo "Fechadas: $(grep -c '}' /tmp/firestore.new)"
+//
+//   6. Substitua o firestore.rules original:
+//      cp /tmp/firestore.new firestore.rules
+//
+//   7. Deploy:
+//      firebase deploy --only firestore:rules
+//
+// ============================================================
+// CONTEÚDO DO PATCH (a partir desta linha):
+// ============================================================
+
+// Sprint 1: Matches entre atletas
+match /arena_matches/{matchId} {
+  allow read: if isAuthed();
+  allow create: if isAuthed() && (
+    request.resource.data.user_a == request.auth.uid ||
+    request.resource.data.user_b == request.auth.uid
+  );
+  allow update, delete: if isAuthed() && (
+    isArenaManager(request.resource.data.arena_id) ||
+    resource.data.user_a == request.auth.uid ||
+    resource.data.user_b == request.auth.uid
+  );
+}
+
+match /arena_coaches/{coachId} {
+  allow read: if isAuthed();
+  allow create, update, delete: if isArenaManager(request.resource.data.arena_id) || isPlatformAdmin();
+}
+
+match /arena_classes/{classId} {
+  allow read: if isAuthed();
+  allow create, update, delete: if isArenaManager(request.resource.data.arena_id) || isPlatformAdmin();
+}
+
+match /arena_class_bookings/{bookingId} {
+  allow read: if isAuthed() && (
+    resource.data.user_id == request.auth.uid ||
+    isArenaManager(resource.data.arena_id) ||
+    isPlatformAdmin()
+  );
+  allow create: if isAuthed() && request.resource.data.user_id == request.auth.uid;
+  allow update, delete: if isAuthed() && resource.data.user_id == request.auth.uid;
+}
+
+match /arena_internal_tournaments/{tournamentId} {
+  allow read: if isAuthed();
+  allow create, update: if isArenaManager(request.resource.data.arena_id) || isPlatformAdmin();
+  allow delete: if isArenaManager(resource.data.arena_id) || isPlatformAdmin();
+}
+
+match /arena_ladders/{ladderId} {
+  allow read: if isAuthed();
+  allow write: if isArenaManager(request.resource.data.arena_id) || isPlatformAdmin();
+}
+
+match /arena_coupons/{couponId} {
+  allow read: if isAuthed();
+  allow create, update, delete: if isArenaManager(request.resource.data.arena_id) || isPlatformAdmin();
+}
+
+match /arena_campaigns/{campaignId} {
+  allow read: if isAuthed();
+  allow create, update, delete: if isArenaManager(request.resource.data.arena_id) || isPlatformAdmin();
+}
+
+match /arena_nps_responses/{responseId} {
+  allow read: if isArenaManager(resource.data.arena_id) || isPlatformAdmin();
+  allow create: if isAuthed() && request.resource.data.user_id == request.auth.uid;
+}
+
+match /arena_referrals/{referralId} {
+  allow read: if isAuthed() && (
+    resource.data.referrer_id == request.auth.uid ||
+    resource.data.referred_id == request.auth.uid ||
+    isPlatformAdmin()
+  );
+  allow create: if isAuthed();
+  allow update, delete: if isAuthed() && resource.data.referrer_id == request.auth.uid;
+}
+
+match /arena_checklists/{checklistId} {
+  allow read: if isAuthed();
+  allow create, update, delete: if isArenaManager(request.resource.data.arena_id) || isPlatformAdmin();
+}
+
+match /arena_maintenance_orders/{orderId} {
+  allow read: if isArenaManager(resource.data.arena_id) || isPlatformAdmin();
+  allow create, update, delete: if isArenaManager(request.resource.data.arena_id) || isPlatformAdmin();
+}
+
+match /arena_devices/{deviceId} {
+  allow read: if isAuthed();
+  allow create, update, delete: if isArenaManager(request.resource.data.arena_id) || isPlatformAdmin();
+}
+
+match /arena_networks/{networkId} {
+  allow read: if isAuthed();
+  allow create, update, delete: if isPlatformAdmin();
+}
+
+match /arena_network_memberships/{membershipId} {
+  allow read: if isAuthed();
+  allow create, update, delete: if isPlatformAdmin();
+}
+
+match /arena_tier_configs/{configId} {
+  allow read: if isAuthed();
+  allow write: if isPlatformAdmin();
+}
+
+match /arena_nps_daily/{docId} {
+  allow read: if isAuthed();
+  allow write: if false;
+}
