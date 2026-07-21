@@ -526,3 +526,45 @@ export function useBookClass() {
     },
   });
 }
+
+/* -------------------- Leagues (sprint 5) -------------------- */
+
+import {
+  listArenaTournaments, createInternalTournament, joinTournament, getLadder,
+} from '../services/leaguesService.js';
+
+export function useArenaTournaments(arenaId, filters = {}) {
+  return useQuery({
+    queryKey: ['arena-tournaments', arenaId, filters],
+    queryFn: () => listArenaTournaments(arenaId, filters),
+    enabled: !!arenaId,
+    staleTime: 30_000,
+  });
+}
+
+export function useCreateTournament() {
+  const { user } = useAuth();
+  const qc = useQueryClient();
+  return useMutation({
+    mutationFn: ({ arenaId, input }) => createInternalTournament(arenaId, input, user),
+    onSuccess: (_d, { arenaId }) => qc.invalidateQueries({ queryKey: ['arena-tournaments', arenaId] }),
+  });
+}
+
+export function useJoinTournament() {
+  const { user, userProfile } = useAuth();
+  const qc = useQueryClient();
+  return useMutation({
+    mutationFn: (tid) => joinTournament(tid, user, userProfile),
+    onSuccess: () => qc.invalidateQueries({ queryKey: ['arena-tournaments'] }),
+  });
+}
+
+export function useArenaLadder(arenaId) {
+  return useQuery({
+    queryKey: ['arena-ladder', arenaId],
+    queryFn: () => getLadder(arenaId),
+    enabled: !!arenaId,
+    staleTime: 60_000,
+  });
+}
