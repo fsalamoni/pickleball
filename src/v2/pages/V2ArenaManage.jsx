@@ -2,7 +2,7 @@ import React, { useEffect, useMemo, useState } from 'react';
 import { Link, Navigate, useLocation, useParams } from 'react-router-dom';
 import { toast } from 'sonner';
 import { collection, getDocs, query, where } from 'firebase/firestore';
-import { ArrowLeft, Building2, Trash2, UserPlus, Users } from 'lucide-react';
+import { ArrowLeft, Building2, Settings, Trash2, UserPlus, Users } from 'lucide-react';
 import V2CourtsTab from '@/v2/components/arenas/V2CourtsTab';
 import V2ArenaCalendar from '@/v2/components/arenas/V2ArenaCalendar';
 import { db } from '@/core/config/firebase';
