@@ -6,6 +6,10 @@ import { ArrowLeft, Building2, Settings, Trash2, UserPlus, Users } from 'lucide-
 import V2CourtsTab from '@/v2/components/arenas/V2CourtsTab';
 import V2ArenaCalendar from '@/v2/components/arenas/V2ArenaCalendar';
 import V2ArenaMetrics from '@/v2/components/arenas/V2ArenaMetrics';
+import V2AdminBookingCalendar from '@/v2/components/arenas/V2AdminBookingCalendar';
+import V2ArenaPaymentTab from '@/v2/components/arenas/V2ArenaPaymentTab';
+import V2ArenaRulesTab from '@/v2/components/arenas/V2ArenaRulesTab';
+import V2ArenaMercadoTab from '@/v2/components/arenas/V2ArenaMercadoTab';
 import { db } from '@/core/config/firebase';
 import { useFeatureFlag } from '@/core/lib/FeatureFlagsContext';
 import { FEATURE_FLAG } from '@/core/featureFlags';
@@ -72,20 +76,27 @@ export default function V2ArenaManage() {
   if (!canManage) return <Navigate to={`/arenas/${arena.id}`} replace />;
   const isOwner = arena.owner_id === user?.uid || isPlatformAdmin;
 
-  const tabs = [
-    { value: 'metricas', label: 'Métricas' },
-    { value: 'reservas', label: 'Reservas' },
-    { value: 'calendario', label: 'Calendário' },
-    { value: 'calendario-admin', label: '📅 Reservas (Admin)' },
-    { value: 'pagamento', label: '💳 Pagamento' },
-    { value: 'regras', label: '📋 Regras' },
-    { value: 'mercado', label: '🛒 Mercado' },
-    { value: 'quadras', label: 'Quadras' },
-    { value: 'precos', label: 'Preços' },
-    { value: 'fotos', label: 'Fotos' },
-    { value: 'info', label: 'Informações' },
-    { value: 'admins', label: 'Admins' },
-    { value: 'retornos', label: 'Retornos' },
+  // Tabs organizadas em 2 linhas (mesmo padrão visual: pill rounded-full)
+  // Linha 1 = Operação do dia-a-dia
+  // Linha 2 = Configuração da arena
+  const tabRows = [
+    [
+      { value: 'metricas', label: 'Métricas' },
+      { value: 'reservas', label: 'Reservas' },
+      { value: 'calendario', label: 'Calendário' },
+      { value: 'calendario-admin', label: 'Reservas (Admin)' },
+      { value: 'pagamento', label: 'Pagamento' },
+      { value: 'regras', label: 'Regras' },
+      { value: 'mercado', label: 'Mercado' },
+    ],
+    [
+      { value: 'quadras', label: 'Quadras' },
+      { value: 'precos', label: 'Preços' },
+      { value: 'fotos', label: 'Fotos' },
+      { value: 'info', label: 'Informações' },
+      { value: 'admins', label: 'Admins' },
+      { value: 'retornos', label: 'Retornos' },
+    ],
   ];
 
   return (
@@ -125,15 +136,19 @@ export default function V2ArenaManage() {
         </div>
       </div>
 
-      <div className="mt-6 overflow-x-auto">
-        <div className="inline-flex gap-1.5 rounded-full border border-gray-100 bg-paper-pure p-1.5 shadow-sm">
-          {tabs.map((t) => (
-            <button key={t.value} onClick={() => setTab(t.value)}
-              className={cn('whitespace-nowrap rounded-full px-5 py-2.5 text-sm font-semibold transition-colors', tab === t.value ? 'bg-ink text-white shadow-md' : 'text-gray-500 hover:text-ink')}>
-              {t.label}
-            </button>
-          ))}
-        </div>
+      <div className="mt-6 space-y-2">
+        {tabRows.map((row, rowIdx) => (
+          <div key={rowIdx} className="overflow-x-auto">
+            <div className="inline-flex gap-1.5 rounded-full border border-gray-100 bg-paper-pure p-1.5 shadow-sm">
+              {row.map((t) => (
+                <button key={t.value} onClick={() => setTab(t.value)}
+                  className={cn('whitespace-nowrap rounded-full px-4 py-2 text-sm font-semibold transition-colors', tab === t.value ? 'bg-ink text-white shadow-md' : 'text-gray-500 hover:text-ink')}>
+                  {t.label}
+                </button>
+              ))}
+            </div>
+          </div>
+        ))}
       </div>
 
       <div className="mt-6">
