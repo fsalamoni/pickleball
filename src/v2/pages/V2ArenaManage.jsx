@@ -1,5 +1,5 @@
-import React, { useMemo, useState } from 'react';
-import { Link, Navigate, useParams } from 'react-router-dom';
+import React, { useEffect, useMemo, useState } from 'react';
+import { Link, Navigate, useLocation, useParams } from 'react-router-dom';
 import { toast } from 'sonner';
 import { collection, getDocs, query, where } from 'firebase/firestore';
 import { ArrowLeft, Building2, Trash2, UserPlus, Users } from 'lucide-react';
@@ -30,7 +30,26 @@ export default function V2ArenaManage() {
   const { data: arena, isLoading } = useArena(arenaId);
   const { data: managed = [] } = useMyManagedArenas();
   const deleteArena = useDeleteArena();
+  const location = useLocation();
   const [tab, setTab] = useState('reservas');
+
+  // Sprint 0.1 (â€ncora pro stepper de onboarding): ao montar, lê o hash
+  // (#fotos / #precos / #horarios) e troca a tab + scroll até a seÃ§Ã£o.
+  // Cada panel abaixo tem um `id` correspondente, e #horarios aponta para
+  // a tab 'info' (que é onde fica o campo hours) e rola até o campo.
+  useEffect(() => {
+    const hash = location.hash?.replace('#', '').toLowerCase();
+    if (!hash) return;
+    const target = hash === 'horarios' ? 'info' : hash;
+    const valid = ['reservas', 'precos', 'fotos', 'info', 'admins', 'retornos'].includes(target);
+    if (!valid) return;
+    setTab(target);
+    // Espera o próximo frame pra garantir que o panel está montado
+    requestAnimationFrame(() => {
+      const el = document.getElementById(`arena-manage-${hash}`);
+      el?.scrollIntoView({ behavior: 'smooth', block: 'start' });
+    });
+  }, [location.hash]);
 
   if (!enabled) return <Navigate to="/" replace />;
   if (isLoading) return <div className="mx-auto max-w-[1000px] space-y-4"><V2Skeleton className="h-40 rounded-4xl" /><V2Skeleton className="h-64 rounded-4xl" /></div>;
@@ -109,8 +128,8 @@ export default function V2ArenaManage() {
 
       <div className="mt-6">
         {tab === 'reservas' && <BookingsTab arena={arena} />}
-        {tab === 'precos' && <V2Surface><V2PricingEditor arena={arena} /></V2Surface>}
-        {tab === 'fotos' && <PhotosTab arena={arena} />}
+        {tab === 'precos' && <V2Surface id="arena-manage-precos"><V2PricingEditor arena={arena} /></V2Surface>}
+        {tab === 'fotos' && <div id="arena-manage-fotos"><PhotosTab arena={arena} /></div>}
         {tab === 'info' && <InfoTab arena={arena} />}
         {tab === 'admins' && <ManagersTab arena={arena} />}
         {tab === 'retornos' && <V2ArenaReviews arena={arena} canModerate />}
@@ -136,7 +155,7 @@ function InfoTab({ arena }) {
   }
 
   return (
-    <V2Surface className="space-y-4 p-5 sm:p-6">
+    <V2Surface id="arena-manage-horarios" className="space-y-4 p-5 sm:p-6">
       <V2ProfileFields form={form} setField={setField} />
       <div className="flex justify-end pt-2">
         <V2Button onClick={save} disabled={update.isPending}>{update.isPending ? 'Salvando…' : 'Salvar informações'}</V2Button>
