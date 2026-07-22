@@ -2,6 +2,8 @@ import React, { useMemo, useState } from 'react';
 import { Link } from 'react-router-dom';
 import { Building2, Clock, LayoutGrid, MapPin, Search } from 'lucide-react';
 import { useArenas } from '@/modules/arenas/hooks/useArenas';
+import { FEATURE_FLAG } from '@/core/featureFlags';
+import FeatureFlagGuard from '@/v2/components/FeatureFlagGuard';
 import { formatPrice } from '@/modules/arenas/domain/pricing';
 import {
   V2Badge,
@@ -29,6 +31,18 @@ function arenaHours(arena) {
 }
 
 export default function V2Arenas() {
+  return (
+    <FeatureFlagGuard
+      flag={FEATURE_FLAG.ARENAS}
+      label="Arenas"
+      description="O diretório de arenas fica disponível quando a flag Arenas está ligada."
+    >
+      <V2ArenasContent />
+    </FeatureFlagGuard>
+  );
+}
+
+function V2ArenasContent() {
   const { data: arenas = [], isLoading } = useArenas();
   const [search, setSearch] = useState('');
 

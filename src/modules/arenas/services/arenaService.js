@@ -96,7 +96,17 @@ export async function createArena(user, profile, input) {
 export async function getArena(id) {
   if (!db || !id) return null;
   const snap = await getDoc(doc(db, COL.arenas, id));
-  return snap.exists() ? { id: snap.id, ...snap.data() } : null;
+  if (snap.exists()) return { id: snap.id, ...snap.data() };
+  // Fallback case-insensitive: link compartilhado pode ter case diferente
+  try {
+    const all = await getDocs(collection(db, COL.arenas));
+    const lower = String(id).toLowerCase();
+    const match = all.docs.find((d) => d.id.toLowerCase() === lower);
+    if (match) return { id: match.id, ...match.data() };
+  } catch (e) {
+    logger.warn('getArena fallback failed', e);
+  }
+  return null;
 }
 
 export async function listArenas() {

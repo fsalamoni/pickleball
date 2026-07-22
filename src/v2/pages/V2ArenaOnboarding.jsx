@@ -18,15 +18,15 @@
  */
 
 import React, { useEffect, useMemo, useState } from 'react';
-import { Link, Navigate, useNavigate, useParams } from 'react-router-dom';
+import { Link, useNavigate, useParams } from 'react-router-dom';
 import { doc, getDoc, serverTimestamp, setDoc } from 'firebase/firestore';
 import {
   ArrowLeft, ArrowRight, Camera, Check, CircleDot, Clock, Copy, Share2,
 } from 'lucide-react';
 import { toast } from 'sonner';
 import { db } from '@/core/config/firebase';
-import { useFeatureFlag } from '@/core/lib/FeatureFlagsContext';
 import { FEATURE_FLAG } from '@/core/featureFlags';
+import FeatureFlagGuard from '@/v2/components/FeatureFlagGuard';
 import { useAuth } from '@/core/lib/FirebaseAuthContext';
 import { useArena } from '@/modules/arenas/hooks/useArenas';
 import {
@@ -61,10 +61,21 @@ function computeProgressFromArena(arena) {
 }
 
 export default function V2ArenaOnboarding() {
-  const enabled = useFeatureFlag(FEATURE_FLAG.ARENAS);
   const { arenaId } = useParams();
-  const navigate = useNavigate();
   const { user } = useAuth();
+  return (
+    <FeatureFlagGuard
+      flag={FEATURE_FLAG.ARENAS}
+      label="Arenas"
+      description="O assistente de cadastro de arenas fica disponível quando a flag Arenas está ligada."
+    >
+      <V2ArenaOnboardingContent arenaId={arenaId} user={user} />
+    </FeatureFlagGuard>
+  );
+}
+
+function V2ArenaOnboardingContent({ arenaId, user }) {
+  const navigate = useNavigate();
   const { data: arena, isLoading } = useArena(arenaId);
   const [progress, setProgress] = useState(DEFAULT_PROGRESS);
   const [hydrated, setHydrated] = useState(false);
@@ -100,7 +111,6 @@ export default function V2ArenaOnboarding() {
     return () => { cancelled = true; };
   }, [arenaId, arena, hydrated]);
 
-  if (!enabled) return <Navigate to="/" replace />;
   if (isLoading) {
     return <div className="mx-auto max-w-3xl p-6 text-sm text-gray-500">Carregando…</div>;
   }
