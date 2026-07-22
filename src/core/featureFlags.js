@@ -302,6 +302,11 @@ export const FEATURE_FLAG = Object.freeze({
   ARENA_MODULE_AI_PRICING: 'arena_module_ai_pricing',
   ARENA_MODULE_AI_MATCHMAKING: 'arena_module_ai_matchmaking',
   ARENA_MODULE_AI_FORECAST: 'arena_module_ai_forecast',
+
+  /**
+   * Circuitos (Sprint 4 ORG-20): série de torneios com ranking acumulado.
+   */
+  CIRCUITS: 'circuits',
 });
 
 /** Metadados de exibição para o painel de flags (admin master). */
@@ -546,6 +551,16 @@ export const FEATURE_FLAG_META = Object.freeze({
       + 'arenas ainda podem ligar/desligar individualmente via "Módulos da '
       + 'arena" no painel admin. Desligado, as rotas /arenas/:id/gerir/modulos '
       + 'somem e nada muda no comportamento atual.',
+  },
+
+  // ---- Sprint 4 ORG-20 Circuitos ----
+  [FEATURE_FLAG.CIRCUITS]: {
+    label: 'Circuitos de torneios (Sprint 4 ORG-20)',
+    description:
+      'Permite ao organizador criar séries de torneios (circuitos) com '
+      + 'ranking acumulado. Cada torneio atribui pontos por posição final '
+      + 'e o sistema computa o ranking agregado. Desligado, a rota '
+      + '/circuits e o menu somem.',
   },
 });
 

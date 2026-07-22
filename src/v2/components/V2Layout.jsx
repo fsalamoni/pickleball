@@ -58,6 +58,7 @@ function useV2Nav() {
   const affiliatesOn = useFeatureFlag(FEATURE_FLAG.AFFILIATE_LINKS);
   const communityFeedOn = useFeatureFlag(FEATURE_FLAG.COMMUNITY_FEED);
   const arenasOn = useFeatureFlag(FEATURE_FLAG.ARENAS);
+  const circuitsOn = useFeatureFlag(FEATURE_FLAG.CIRCUITS);
   const { totalArenas: myArenasCount, totalPendingBookings: myPendingBookings } = useMyArenaSummary();
   const showMyArenas = arenasOn && myArenasCount > 0;
   const sportHistoryOn = useFeatureFlag(FEATURE_FLAG.SPORT_HISTORY);
@@ -69,6 +70,7 @@ function useV2Nav() {
         { to: '/', label: 'Visão Geral', icon: LayoutGrid, exact: true },
         arenasOn && { to: '/arenas', label: 'Explorar Quadras', icon: MapPin },
         { to: '/torneios', label: 'Torneios', icon: Trophy, tag: 'Novo' },
+        circuitsOn && { to: '/circuits', label: 'Circuitos', icon: Award },
         communityFeedOn && { to: '/novidades', label: 'Comunidade', icon: Zap },
       ].filter(Boolean),
     },

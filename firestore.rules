@@ -926,5 +926,34 @@ service cloud.firestore {
       allow read: if isAuthed();
       allow write: if isPlatformAdmin();
     }
+
+    // ---- Sprint 4 ORG-20: Circuitos (séries de torneios) ----
+    // Sprint 4 ORG-20: admin de circuito
+    function isCircuitAdmin(circuitId) {
+      return isAuthed() && (
+        isPlatformAdmin() ||
+        (circuitId != null && exists(/databases/$(database)/documents/circuit_admins/$(circuitId + '_' + request.auth.uid)))
+      );
+    }
+    match /circuits/{circuitId} {
+      allow read: if true;
+      allow create: if isAuthed();
+      allow update, delete: if isCircuitAdmin(circuitId) || isPlatformAdmin();
+    }
+    match /circuit_admins/{adminId} {
+      allow read: if isAuthed() && (isPlatformAdmin() || resource.data.user_id == request.auth.uid);
+      allow create, update, delete: if isPlatformAdmin() || (
+        isAuthed() && get(/databases/$(database)/documents/circuits/$(adminId.split('_')[0])).data.created_by == request.auth.uid
+      );
+    }
+    match /circuit_tournaments/{linkId} {
+      allow read: if true;
+      allow create, delete: if isCircuitAdmin(linkId.split('_')[0]) || isPlatformAdmin();
+    }
+    match /circuit_results/{resultId} {
+      allow read: if true;
+      allow create, update, delete: if isCircuitAdmin(resultId.split('_')[0]) || isPlatformAdmin();
+    }
+
   }
 }
