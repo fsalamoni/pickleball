@@ -182,6 +182,18 @@ campos em `docs/DATA_MODEL.md`.
     por manager — UI em V2ArenaReviews)
   - `arenas/{id}.house_rules_md` (markdown regras da casa, exibido
     público em /arenas/:id → bloco "Regras da casa")
+  **Sprint 4 ORG-20** (Circuitos):
+  - `circuits/{id}` (metadados: name, season, categories[], points_table)
+  - `circuit_admins/{circuitId_uid}` (admin doc, role owner|manager)
+  - `circuit_tournaments/{circuitId_tournamentId}` (link)
+  - `circuit_results/{circuitId_tournamentId_userId}` (resultado por atleta)
+  - Computa ranking agregado (computeCircuitRanking)
+  **Sprint 4 PRO-15** (Professores):
+  - `coaches/{uid}` (perfil: bio, hourly_rate, regions, modalities, certifications)
+  - `coach_arenas/{coachId_arenaId}` (residência)
+  **Sprint 4 ARE-14/15** (Integrações):
+  - `tournaments/{id}.arena_id` (opcional, vincula torneio a arena)
+  - Página da arena mostra tournaments vinculados e coaches residentes
 - **Clubes**: `clubs` · `club_members` (id `clubId_uid`, tem `role`) ·
   `club_join_requests` (id `clubId_uid`) · `club_member_invites`
   (id `clubId_uid`) · `club_posts` (mural) · `club_forum_threads` ·

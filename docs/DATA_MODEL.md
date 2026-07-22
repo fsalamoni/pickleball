@@ -164,6 +164,50 @@ Gestores da arena. Id determinista evita duplicidade.
   max 2000. Exibido em /arenas/:id → bloco "Regras da casa" (collapsible).
   Manager edita em /arenas/:id/gerir → tab "Informações".
 
+
+### `circuits/{id}` (Sprint 4 ORG-20)
+Séries de torneios com ranking acumulado.
+- `name` (max 80), `description` (max 500), `season` (max 40,
+  obrigatório — ex: "2026 Verão"), `categories[]` (max 10,
+  cada uma max 30, obrigatório pelo menos 1).
+- `start_date`, `end_date` (ISO date strings, end >= start).
+- `active: bool` (soft archive).
+- `points_table: object` (custom; default = 1º=100, 2º=75, 3/4º=50,
+  5-8º=30, 9-16º=20, 17-32º=10, 33-56º=5).
+- `created_by`, `created_at`, `updated_at`.
+
+### `circuit_admins/{circuitId_uid}` (Sprint 4 ORG-20)
+Id determinístico. `circuit_id`, `user_id`, `role`
+(`'owner'|'manager'`), `added_at`, `added_by`.
+
+### `circuit_tournaments/{circuitId_tournamentId}` (Sprint 4 ORG-20)
+Link entre circuito e torneio. `added_at`, `added_by`.
+
+### `circuit_results/{circuitId_tournamentId_userId}` (Sprint 4 ORG-20)
+Resultado de 1 atleta em 1 torneio do circuito. `user_id`,
+`user_name`, `user_photo`, `tournament_id`, `position`
+(1-9999), `total_participants`, `points` (calculado da tabela),
+`updated_at`, `updated_by`.
+
+### `coaches/{uid}` (Sprint 4 PRO-15)
+Perfil público do professor. `uid` = user id.
+- `display_name` (max 80, obrigatório), `bio` (max 1000),
+  `hourly_rate: number|null`, `regions[]` (max 10),
+  `modalities[]` (max 5, obrigatório pelo menos 1),
+  `certifications[]` (max 10).
+- `accepting_students: bool`, `active: bool`.
+- `user_id`, `created_at`, `updated_at`.
+
+### `coach_arenas/{coachId_arenaId}` (Sprint 4 PRO-15)
+Residência (vínculo coach ↔ arena).
+- `coach_id`, `arena_id`, `status` (`'active'|'paused'`),
+  `weekly_schedule` (objeto opcional), `notes` (max 500).
+- `added_at`, `added_by`.
+
+### `tournaments/{id}` (Sprint 4 ARE-14)
+Campo extra: `arena_id: string|null` (opcional, vincula torneio
+a uma arena específica). Default null (torneio independente).
+
 ### `arena_courts/{id}` (Sprint 1 ARE-01)
 Quadras nomeadas da arena (substitui o `court_count: int` legado).
 - `arena_id`, `name` (max 60, obrigatório), `court_type` (`'indoor'|'outdoor'|'covered'`),

@@ -60,6 +60,10 @@ A PickleRush existe para:
 - 🏪 PDV (loja) com produtos, vendas, pagamentos (PIX por QR/código ou dinheiro na arena)
 - 💬 resposta pública de reviews pela arena (gerente ou dono)
 - 📋 regras da casa (markdown) exibidas na página pública da arena
+- 🏆 circuitos de torneios com ranking acumulado (séries de torneios + pontuação)
+- 👨‍🏫 diretório de professores com perfil, valor/hora e vínculo de residência em arenas
+- 🏟️ integração arena × torneio (torneios aparecem na página da arena)
+- 🤝 integração arena × professor (coaches residentes aparecem na arena)
 - 📆 solicitação de reservas avulsas e recorrentes
 - 💸 negociação manual de valor
 - 🧾 acompanhamento de pagamento e histórico
