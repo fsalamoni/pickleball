@@ -83,6 +83,8 @@ export async function createTournament(creator, data) {
     status: TOURNAMENT_STATUS.DRAFT,
     creator_uid: creator.uid,
     creator_name: creator.displayName || creator.email || '',
+    // Sprint 4 ARE-14: arena vinculada (opcional)
+    arena_id: data.arena_id || null,
     created_at: serverTimestamp(),
     updated_at: serverTimestamp(),
   };
@@ -416,4 +418,16 @@ export async function listPublicTournaments() {
   const q = query(collection(db, COL.tournaments), where('visibility', '==', TOURNAMENT_VISIBILITY.PUBLIC));
   const snap = await getDocs(q);
   return snap.docs.map((d) => d.data());
+}
+
+// Sprint 4 ARE-14: lista tournaments vinculados a uma arena
+export async function listArenaTournaments(arenaId) {
+  if (!arenaId || !db) return [];
+  const q = query(
+    collection(db, COL.tournaments),
+    where('arena_id', '==', arenaId),
+    orderBy('starts_at', 'desc'),
+  );
+  const snap = await getDocs(q);
+  return snap.docs.map((d) => ({ id: d.id, ...d.data() }));
 }

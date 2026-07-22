@@ -4,6 +4,7 @@ import { toast } from 'sonner';
 import { ArrowLeft, ArrowRight, CalendarDays, Globe, Lock, MapPin, ShieldCheck, Trophy } from 'lucide-react';
 import { useAuth } from '@/core/lib/FirebaseAuthContext';
 import { useCreateTournament } from '@/modules/tournament/hooks/useTournament';
+import { useMyManagedArenas } from '@/modules/arenas/hooks/useArenas';
 import {
   RULESET,
   RULESET_LABELS,
@@ -35,6 +36,7 @@ export default function V2CreateTournament() {
     name: '', description: '', city: '', state: '', venue: '',
     visibility: TOURNAMENT_VISIBILITY.PUBLIC, ruleset: RULESET.CBP,
     starts_at: '', ends_at: '', registration_deadline: '',
+    arena_id: '', // Sprint 4 ARE-14: arena vinculada (opcional)
   });
   const set = (field, value) => setForm((f) => ({ ...f, [field]: value }));
 
@@ -47,6 +49,7 @@ export default function V2CreateTournament() {
         visibility: form.visibility, ruleset: form.ruleset,
         starts_at: form.starts_at || null, ends_at: form.ends_at || null, registration_deadline: form.registration_deadline || null,
         scoring: { ruleset: form.ruleset, win_by_two: true },
+        arena_id: form.arena_id || null,
       });
       toast.success('Torneio criado!');
       navigate(`/torneios/${id}`);
@@ -110,6 +113,7 @@ export default function V2CreateTournament() {
               <V2Field label="UF"><V2Input value={form.state} onChange={(e) => set('state', e.target.value)} maxLength={2} /></V2Field>
             </div>
             <V2Field label="Local (quadra/clube)"><V2Input value={form.venue} onChange={(e) => set('venue', e.target.value)} /></V2Field>
+            <ArenaSelectField value={form.arena_id} onChange={(v) => set('arena_id', v)} />
 
             <V2SectionHeader eyebrow="Acesso" title="Quem encontra e como entra" titleClassName="text-xl" />
             <div className="grid gap-3 sm:grid-cols-2">
@@ -164,5 +168,24 @@ function PreviewFact({ icon: Icon, label, value }) {
       </div>
       <p className="mt-1.5 truncate text-xs font-semibold text-white">{value}</p>
     </div>
+  );
+}
+
+function ArenaSelectField({ value, onChange }) {
+  const { data: myArenas = [] } = useMyManagedArenas();
+  if (myArenas.length === 0) return null;
+  return (
+    <V2Field label="Vincular a uma arena (opcional)">
+      <select
+        value={value}
+        onChange={(e) => onChange(e.target.value)}
+        className="w-full rounded-2xl border border-gray-200 bg-paper px-4 py-3 text-sm outline-none focus-visible:ring-4 focus-visible:ring-acid/30"
+      >
+        <option value="">— Nenhuma —</option>
+        {myArenas.map((a) => (
+          <option key={a.id} value={a.id}>{a.name}{a.city ? ` (${a.city})` : ''}</option>
+        ))}
+      </select>
+    </V2Field>
   );
 }
