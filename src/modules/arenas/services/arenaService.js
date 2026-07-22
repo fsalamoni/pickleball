@@ -30,6 +30,7 @@ import { normalizeArenaInput } from '../domain/arena.js';
 import { normalizeCourtInput, nextSortOrder, renumberSortOrder } from '../domain/court.js';
 import { normalizeScheduleInput } from '../domain/court_schedule.js';
 import { normalizePriceRule, normalizePriceOverride } from '../domain/pricing.js';
+import { normalizeReviewResponse } from '../domain/review_response.js';
 
 const COL = ARENA_COLLECTIONS;
 
@@ -118,6 +119,7 @@ export async function updateArena(id, updates, actor) {
     'name', 'description', 'city', 'state', 'address', 'neighborhood',
     'contact_phone', 'contact_whatsapp', 'contact_email', 'instagram',
     'website', 'hours', 'court_count', 'base_price', 'active',
+    'house_rules_md', 'allow_instant_booking', // Sprint 3 ARE-18 + ARE-03
   ];
   const sanitized = {};
   allowed.forEach((key) => {
@@ -300,6 +302,45 @@ export async function addArenaReview(arena, user, profile, input) {
 export async function deleteArenaReview(review, actor) {
   await deleteDoc(doc(db, COL.reviews, review.id));
   await createAuditLog({ action: 'arena_review_deleted', actor, details: { arena_id: review.arena_id, review_id: review.id } });
+}
+
+/* ---------------------- Review responses (Sprint 3 ARE-09) ---------- */
+
+/**
+ * Manager responde (ou atualiza) a uma review. Valida tamanho, atualiza
+ * `response` + `responded_at` + `responded_by`. Audit log best-effort.
+ */
+export async function respondToArenaReview(reviewId, responseText, actor) {
+  if (!db || !reviewId) throw new Error('Review inválida.');
+  const { valid, error, value } = normalizeReviewResponse({ response: responseText });
+  if (!valid) throw new Error(error);
+  await updateDoc(doc(db, COL.reviews, reviewId), {
+    response: value,
+    responded_at: serverTimestamp(),
+    responded_by: actor?.uid || null,
+    updated_at: serverTimestamp(),
+  });
+  await createAuditLog({
+    action: 'arena_review_responded',
+    actor,
+    details: { review_id: reviewId, response_length: value.length },
+  });
+}
+
+/** Manager remove sua resposta (volta o review ao estado sem response). */
+export async function deleteArenaReviewResponse(reviewId, actor) {
+  if (!db || !reviewId) throw new Error('Review inválida.');
+  await updateDoc(doc(db, COL.reviews, reviewId), {
+    response: null,
+    responded_at: null,
+    responded_by: null,
+    updated_at: serverTimestamp(),
+  });
+  await createAuditLog({
+    action: 'arena_review_response_deleted',
+    actor,
+    details: { review_id: reviewId },
+  });
 }
 
 /* ---------------------- Courts (ARE-01, Sprint 1) -------------------- */

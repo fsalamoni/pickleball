@@ -81,6 +81,25 @@ export function V2ProfileFields({ form, setField, errors = {} }) {
         <label htmlFor="arena-hours" className="text-[11px] font-bold uppercase tracking-widest text-gray-400">Horário de funcionamento</label>
         <input id="arena-hours" value={form.hours} onChange={setField('hours')} maxLength={400} placeholder="Seg–Sex 6h–23h · Sáb–Dom 7h–20h" className="w-full rounded-2xl border border-gray-200 bg-paper px-4 py-3 text-sm text-ink outline-none focus-visible:ring-4 focus-visible:ring-acid/30" />
       </div>
+
+      {/* Sprint 3 ARE-18: Termos de uso / regras da casa */}
+      <div className="space-y-2">
+        <label htmlFor="arena-house-rules" className="text-[11px] font-bold uppercase tracking-widest text-gray-400">
+          Regras da casa (público)
+        </label>
+        <textarea
+          id="arena-house-rules"
+          value={form.house_rules_md || ''}
+          onChange={setField('house_rules_md')}
+          rows={4}
+          maxLength={2000}
+          placeholder="Regras, política de cancelamento, exigência de uso de equipamento, código de conduta, etc. Aparece na página pública da arena."
+          className="w-full rounded-2xl border border-gray-200 bg-paper px-4 py-3 text-sm text-ink outline-none focus-visible:ring-4 focus-visible:ring-acid/30"
+        />
+        <p className="text-[10px] text-gray-400">
+          {(form.house_rules_md || '').length}/2000. Exibido em /arenas/:id → seção "Regras".
+        </p>
+      </div>
     </div>
   );
 }

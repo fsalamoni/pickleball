@@ -24,6 +24,8 @@ import {
   deleteArenaCourt,
   reorderArenaCourts,
   normalizeArenaCourtsOrder,
+  respondToArenaReview,
+  deleteArenaReviewResponse,
   listArenaCourtSchedules,
   listCourtSchedules,
   createCourtSchedule,
@@ -230,6 +232,30 @@ export function useNormalizeCourtOrder(arenaId) {
   return useMutation({
     mutationFn: () => normalizeArenaCourtsOrder(arenaId, user),
     onSuccess: invalidate,
+  });
+}
+
+/* ---------------- Review responses (Sprint 3 ARE-09) --------------- */
+
+export function useRespondToReview() {
+  const { user } = useAuth();
+  const qc = useQueryClient();
+  return useMutation({
+    mutationFn: ({ reviewId, response }) => respondToArenaReview(reviewId, response, user),
+    onSuccess: () => {
+      qc.invalidateQueries({ queryKey: ['arena-reviews'] });
+    },
+  });
+}
+
+export function useDeleteReviewResponse() {
+  const { user } = useAuth();
+  const qc = useQueryClient();
+  return useMutation({
+    mutationFn: (reviewId) => deleteArenaReviewResponse(reviewId, user),
+    onSuccess: () => {
+      qc.invalidateQueries({ queryKey: ['arena-reviews'] });
+    },
   });
 }
 

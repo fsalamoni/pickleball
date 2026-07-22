@@ -155,6 +155,7 @@ function InfoTab({ arena }) {
     contact_phone: arena.contact_phone || '', contact_whatsapp: arena.contact_whatsapp || '',
     contact_email: arena.contact_email || '', instagram: arena.instagram || '', website: arena.website || '',
     court_count: arena.court_count ?? '', hours: arena.hours || '',
+    house_rules_md: arena.house_rules_md || '',
   });
   const setField = (key) => (e) => setForm((p) => ({ ...p, [key]: e.target.value }));
 
