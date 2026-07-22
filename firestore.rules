@@ -276,6 +276,18 @@ service cloud.firestore {
       allow create: if isAuthed() && request.resource.data.user_id == request.auth.uid;
       allow delete: if isAuthed() && resource.data.user_id == request.auth.uid;
     }
+    // Quadras da arena (Sprint 1, ARE-01). Leitura pública (atletas
+    // precisam ver as quadras ativas pra reservar); escrita só por
+    // gestores da arena + platform admin.
+    match /arena_courts/{courtId} {
+      allow read: if true;
+      allow create, update: if isAuthed() && (
+        isArenaManager(request.resource.data.arena_id) || isPlatformAdmin()
+      );
+      allow delete: if isAuthed() && (
+        isArenaManager(resource.data.arena_id) || isPlatformAdmin()
+      );
+    }
 
     // ---- Arena V3 (sprint 0+) -------------------------------------------
     // Settings da arena (1:1 com arenas/{id}). Leitura/escrita só por
