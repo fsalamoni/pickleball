@@ -9,6 +9,7 @@ export const ARENA_COLLECTIONS = Object.freeze({
   reviews: 'arena_reviews',
   favorites: 'arena_favorites',
   courts: 'arena_courts',
+  court_schedules: 'arena_court_schedules',
 });
 
 export const ARENA_MANAGER_ROLE = Object.freeze({

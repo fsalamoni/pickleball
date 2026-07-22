@@ -288,6 +288,17 @@ service cloud.firestore {
         isArenaManager(resource.data.arena_id) || isPlatformAdmin()
       );
     }
+    // Janelas de horário recorrentes (Sprint 1, ARE-04). Mesma regra
+    // de leitura pública que quadras; escrita só por manager+admin.
+    match /arena_court_schedules/{scheduleId} {
+      allow read: if true;
+      allow create, update: if isAuthed() && (
+        isArenaManager(request.resource.data.arena_id) || isPlatformAdmin()
+      );
+      allow delete: if isAuthed() && (
+        isArenaManager(resource.data.arena_id) || isPlatformAdmin()
+      );
+    }
 
     // ---- Arena V3 (sprint 0+) -------------------------------------------
     // Settings da arena (1:1 com arenas/{id}). Leitura/escrita só por

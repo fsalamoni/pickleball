@@ -28,6 +28,7 @@ import { notifyUsers, NOTIFICATION_TYPE } from '@/core/services/notificationServ
 import { ARENA_COLLECTIONS, ARENA_MANAGER_ROLE, REVIEW_TYPE, REVIEW_TYPE_LABELS } from '../domain/constants.js';
 import { normalizeArenaInput } from '../domain/arena.js';
 import { normalizeCourtInput, nextSortOrder, renumberSortOrder } from '../domain/court.js';
+import { normalizeScheduleInput } from '../domain/court_schedule.js';
 import { normalizePriceRule, normalizePriceOverride } from '../domain/pricing.js';
 
 const COL = ARENA_COLLECTIONS;
@@ -420,5 +421,96 @@ export async function normalizeArenaCourtsOrder(arenaId, actor) {
   const renumbered = renumberSortOrder(courts);
   const orderedIds = renumbered.map((c) => c.id);
   await reorderArenaCourts(arenaId, orderedIds, actor);
+}
+
+/* ---------------------- Court Schedules (ARE-04, Sprint 1) ---------- */
+
+/**
+ * Lista schedules (janelas de horário recorrentes) de uma arena.
+ * Retorna array vazio se não houver schedules.
+ */
+export async function listArenaCourtSchedules(arenaId) {
+  if (!db || !arenaId) return [];
+  const snap = await getDocs(
+    query(collection(db, COL.court_schedules), where('arena_id', '==', arenaId)),
+  );
+  return snap.docs.map((d) => ({ id: d.id, ...d.data() }));
+}
+
+/**
+ * Lista schedules de UMA quadra específica. Útil pra UI que expande
+ * a quadra e mostra os horários dela.
+ */
+export async function listCourtSchedules(courtId) {
+  if (!db || !courtId) return [];
+  const snap = await getDocs(
+    query(collection(db, COL.court_schedules), where('court_id', '==', courtId)),
+  );
+  return snap.docs.map((d) => ({ id: d.id, ...d.data() }));
+}
+
+/**
+ * Cria uma janela de horário recorrente. Audit log best-effort.
+ */
+export async function createCourtSchedule(arenaId, courtId, input, actor) {
+  if (!db || !arenaId || !courtId) throw new Error('Arena ou quadra inválida.');
+  const { valid, errors, value } = normalizeScheduleInput(input);
+  if (!valid) {
+    const first = Object.values(errors)[0];
+    throw new Error(first || 'Dados do horário inválidos.');
+  }
+  const ref = doc(collection(db, COL.court_schedules));
+  await setDoc(ref, {
+    arena_id: arenaId,
+    court_id: courtId,
+    ...value,
+    created_at: serverTimestamp(),
+    updated_at: serverTimestamp(),
+  });
+  await createAuditLog({
+    action: 'arena_court_schedule_created',
+    actor,
+    details: { arena_id: arenaId, court_id: courtId, schedule_id: ref.id, weekdays: value.weekdays },
+  });
+  return ref.id;
+}
+
+/**
+ * Atualiza uma janela de horário. Audit log best-effort.
+ */
+export async function updateCourtSchedule(scheduleId, input, actor) {
+  if (!db || !scheduleId) throw new Error('Horário inválido.');
+  const { valid, errors, value } = normalizeScheduleInput(input);
+  if (!valid) {
+    const first = Object.values(errors)[0];
+    throw new Error(first || 'Dados do horário inválidos.');
+  }
+  await updateDoc(doc(db, COL.court_schedules, scheduleId), {
+    ...value,
+    updated_at: serverTimestamp(),
+  });
+  await createAuditLog({
+    action: 'arena_court_schedule_updated',
+    actor,
+    details: { schedule_id: scheduleId, arena_id: input.arena_id, court_id: input.court_id, weekdays: value.weekdays },
+  });
+}
+
+/**
+ * Remove uma janela de horário. Bookings existentes que referenciam
+ * implicitamente esse slot continuam no histórico (a referência é por
+ * arena_id+court_id+date, não por schedule_id).
+ */
+export async function deleteCourtSchedule(scheduleId, actor) {
+  if (!db || !scheduleId) throw new Error('Horário inválido.');
+  const ref = doc(db, COL.court_schedules, scheduleId);
+  const snap = await getDoc(ref);
+  const meta = snap.exists() ? snap.data() : null;
+  await deleteDoc(ref);
+  await createAuditLog({
+    action: 'arena_court_schedule_deleted',
+    actor,
+    details: { schedule_id: scheduleId, arena_id: meta?.arena_id, court_id: meta?.court_id },
+  });
 }
 

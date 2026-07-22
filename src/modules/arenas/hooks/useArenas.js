@@ -24,8 +24,14 @@ import {
   deleteArenaCourt,
   reorderArenaCourts,
   normalizeArenaCourtsOrder,
+  listArenaCourtSchedules,
+  listCourtSchedules,
+  createCourtSchedule,
+  updateCourtSchedule,
+  deleteCourtSchedule,
 } from '../services/arenaService.js';
 import { sortCourts } from '../domain/court.js';
+import { sortSchedules, groupSchedulesByWeekday } from '../domain/court_schedule.js';
 
 export function useArenas() {
   return useQuery({ queryKey: ['arenas'], queryFn: listArenas, staleTime: 30_000 });
@@ -223,6 +229,73 @@ export function useNormalizeCourtOrder(arenaId) {
   const { user, invalidate } = useCourtMutation(arenaId);
   return useMutation({
     mutationFn: () => normalizeArenaCourtsOrder(arenaId, user),
+    onSuccess: invalidate,
+  });
+}
+
+/* ---------------- Court Schedules (ARE-04, Sprint 1) ----------------- */
+
+/**
+ * Lista todos os schedules de uma arena (todas as quadras), ordenados.
+ * Útil pra render agregado (calendário semanal).
+ */
+export function useArenaCourtSchedules(arenaId) {
+  return useQuery({
+    queryKey: ['arena-court-schedules', arenaId],
+    queryFn: async () => sortSchedules(await listArenaCourtSchedules(arenaId)),
+    enabled: !!arenaId,
+    staleTime: 60_000,
+  });
+}
+
+/**
+ * Lista schedules de uma quadra específica, ordenados.
+ * Retorna também o agrupamento por weekday (helper pronto pra UI).
+ */
+export function useCourtSchedules(courtId) {
+  return useQuery({
+    queryKey: ['court-schedules', courtId],
+    queryFn: async () => {
+      const list = sortSchedules(await listCourtSchedules(courtId));
+      return { list, byWeekday: groupSchedulesByWeekday(list) };
+    },
+    enabled: !!courtId,
+    staleTime: 60_000,
+  });
+}
+
+function useScheduleMutation(courtId) {
+  const { user } = useAuth();
+  const qc = useQueryClient();
+  return {
+    user,
+    invalidate: () => {
+      qc.invalidateQueries({ queryKey: ['court-schedules', courtId] });
+      qc.invalidateQueries({ queryKey: ['arena-court-schedules'] });
+    },
+  };
+}
+
+export function useCreateSchedule(arenaId, courtId) {
+  const { user, invalidate } = useScheduleMutation(courtId);
+  return useMutation({
+    mutationFn: (input) => createCourtSchedule(arenaId, courtId, input, user),
+    onSuccess: invalidate,
+  });
+}
+
+export function useUpdateSchedule(courtId) {
+  const { user, invalidate } = useScheduleMutation(courtId);
+  return useMutation({
+    mutationFn: ({ scheduleId, input }) => updateCourtSchedule(scheduleId, input, user),
+    onSuccess: invalidate,
+  });
+}
+
+export function useDeleteSchedule(courtId) {
+  const { user, invalidate } = useScheduleMutation(courtId);
+  return useMutation({
+    mutationFn: (scheduleId) => deleteCourtSchedule(scheduleId, user),
     onSuccess: invalidate,
   });
 }
