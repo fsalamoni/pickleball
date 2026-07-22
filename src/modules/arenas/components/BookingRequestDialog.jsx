@@ -21,6 +21,8 @@ import { useArenaBookings, useCreateBooking } from '../hooks/useBookings.js';
 import { useArenaCourts, useCourtSchedules } from '../hooks/useArenas.js';
 import { validateBookingRequest, getCourtAvailabilityForDate, BLOCKING_STATUSES } from '../domain/booking_conflict.js';
 import { normalizeTime } from '../domain/court_schedule.js';
+import { canBeInstantBooking, arenaSupportsInstant, INSTANT_BOOKING_LABELS } from '../domain/instant_booking.js';
+import { PAYMENT_METHOD } from '../domain/pdv.js';
 
 function slotLabel(slot) {
   return `${slot.date} · ${slot.start}–${slot.end}`;
@@ -37,6 +39,11 @@ export default function BookingRequestDialog({ arena, open, onOpenChange }) {
   const [single, setSingle] = useState({ date: '', start: '18:00', end: '19:00' });
   const [recurring, setRecurring] = useState({ weekday: 1, start: '18:00', end: '19:00', weeks: 8, fromDate: '' });
   const [notes, setNotes] = useState('');
+  const [isInstant, setIsInstant] = useState(false);
+  const [paymentMethod, setPaymentMethod] = useState(PAYMENT_METHOD.PIX);
+
+  // Arena permite instant?
+  const supportsInstant = arenaSupportsInstant(arena);
 
   // Reset courtId quando dialog abre/fecha
   React.useEffect(() => {
@@ -120,15 +127,43 @@ export default function BookingRequestDialog({ arena, open, onOpenChange }) {
         toast.error(singleValidation.message);
         return;
       }
+      if (isInstant && kind === BOOKING_KIND.SINGLE) {
+        const instant = canBeInstantBooking(
+          {
+            date: single.date,
+            start_time: single.start,
+            end_time: single.end,
+            court_id: courtId || null,
+            proposed_price: estimate?.price ?? null,
+            payment_method: paymentMethod,
+          },
+          arena,
+          existingBookings,
+          courtSchedules,
+        );
+        if (!instant.ok) {
+          toast.error(instant.message);
+          return;
+        }
+      }
       if (hasConflict) {
         toast.error('Há conflito com uma reserva já confirmada. Escolha outro horário.');
         return;
       }
       const input = kind === BOOKING_KIND.SINGLE
-        ? { kind, ...single, court_id: courtId || null, notes, proposed_price: estimate?.price ?? null }
+        ? {
+            kind, ...single, court_id: courtId || null, notes,
+            is_instant: isInstant,
+            payment_method: isInstant ? paymentMethod : null,
+            proposed_price: estimate?.price ?? null,
+          }
         : { kind, recurring, court_id: courtId || null, notes, proposed_price: estimate?.price ?? null };
       await createBooking.mutateAsync({ arena, input });
-      toast.success('Solicitação enviada! A arena vai responder em breve.');
+      toast.success(
+        isInstant
+          ? 'Reserva instantânea confirmada! Compareça no horário marcado.'
+          : 'Solicitação enviada! A arena vai responder em breve.',
+      );
       onOpenChange(false);
     } catch (err) {
       toast.error(err?.message || 'Não foi possível solicitar a reserva.');
@@ -162,6 +197,62 @@ export default function BookingRequestDialog({ arena, open, onOpenChange }) {
               </button>
             ))}
           </div>
+
+          {kind === BOOKING_KIND.SINGLE && supportsInstant && (
+            <div className="space-y-2">
+              <Label className="text-xs">{INSTANT_BOOKING_LABELS.TITLE}</Label>
+              <div className="grid grid-cols-1 gap-2 sm:grid-cols-2">
+                <button
+                  type="button"
+                  onClick={() => setIsInstant(false)}
+                  className={cn(
+                    'rounded-2xl border p-3 text-left transition-colors',
+                    !isInstant ? 'border-ink bg-ink text-white' : 'border-gray-200 bg-paper hover:border-gray-300',
+                  )}
+                >
+                  <div className="text-sm font-bold">{INSTANT_BOOKING_LABELS.REQUEST.title}</div>
+                  <div className={cn('mt-1 text-xs', !isInstant ? 'text-white/80' : 'text-gray-500')}>
+                    {INSTANT_BOOKING_LABELS.REQUEST.description}
+                  </div>
+                </button>
+                <button
+                  type="button"
+                  onClick={() => setIsInstant(true)}
+                  className={cn(
+                    'rounded-2xl border p-3 text-left transition-colors',
+                    isInstant ? 'border-emerald-500 bg-emerald-500 text-white' : 'border-gray-200 bg-paper hover:border-emerald-300',
+                  )}
+                >
+                  <div className="text-sm font-bold">⚡ {INSTANT_BOOKING_LABELS.INSTANT.title}</div>
+                  <div className={cn('mt-1 text-xs', isInstant ? 'text-white/90' : 'text-gray-500')}>
+                    {INSTANT_BOOKING_LABELS.INSTANT.description}
+                  </div>
+                </button>
+              </div>
+              {isInstant && (
+                <div className="space-y-1">
+                  <Label className="text-xs">Forma de pagamento</Label>
+                  <select
+                    value={paymentMethod}
+                    onChange={(e) => setPaymentMethod(e.target.value)}
+                    className="h-10 w-full rounded-md border border-input bg-background px-3 text-sm"
+                  >
+                    {Object.entries({
+                      pix: 'PIX (QR/código)',
+                      credit_card: 'Cartão de crédito',
+                      debit_card: 'Cartão de débito',
+                      cash: 'Dinheiro (na arena)',
+                    }).map(([v, l]) => (
+                      <option key={v} value={v}>{l}</option>
+                    ))}
+                  </select>
+                  <p className="text-[10px] text-gray-400">
+                    Pagamento é registrado mas a confirmação na arena é manual (PIX por QR/código ou dinheiro na hora).
+                  </p>
+                </div>
+              )}
+            </div>
+          )}
 
           {kind === BOOKING_KIND.SINGLE ? (
             <div className="space-y-2">

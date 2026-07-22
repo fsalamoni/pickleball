@@ -1,27 +1,33 @@
 # Roadmap de Arena — implementação completa
 
 > **Status**: **Sprint 0 ✅ DONE** (PRs #46, #47), **Sprint 1 ✅ DONE**
-> (PRs #48–#51). Plano de Sprints 2-4 mantido como referência.
+> (PRs #48–#51), **Sprint 2 em andamento** (PR novo: ARE-08 métricas +
+> ARE-03 reserva instantânea; ARE-06 PDV já existia do Arena V3).
 >
 > **Escopo**: persona **proprietário de arena** (ARE-01 a ARE-20 do doc de UX)
 > + cross-cutting necessário para ela fechar. **Não** cobre gestão de
 > torneio (05-organizador), dia de jogo (06), professor (08), clubes (09) —
 > esses têm seu próprio roadmap.
 >
-> **Estado atual no repositório (origin/main @ 708a15f)**:
+> **Estado atual no repositório (origin/main @ d03a61e + hotfix #52)**:
 > - Sprint 0 (Descoberta) ✅: `Minhas arenas` no sidebar (ARE-11), onboarding
 >   4-passos (ARE-20), aba "Arenas" no admin/painel, QW-14/15
 > - Sprint 1 (Fundação) ✅: ARE-01 quadras, ARE-02 calendário, ARE-04
 >   janelas de horário, ARE-05 preço por quadra, ARE-07 detecção de conflito
-> - 17 páginas V2Arena* (V2ArenaOnboarding e V2ArenaCalendar adicionados) no ar
+> - Sprint 2 (Operação) em andamento:
+>   - ARE-06 PDV: ✅ já existia (Arena V3) — 4 flags, 3 coleções, 2 rotas
+>   - ARE-08 Painel de métricas: ✅ PR atual
+>   - ARE-03 Reserva instantânea: ✅ PR atual
+> - 18 páginas V2Arena* (V2ArenaMetrics adicionado) no ar
 > - 13 services + 1 hook monolítico `useArenaV3.js` (749 linhas)
 > - 30 feature flags `ARENA_MODULE_*` (4-level gate)
-> - 33 firestore collections (Sprint 1: `arena_courts`, `arena_court_schedules`)
+> - 36 firestore collections (Sprint 1+2: +arena_courts, +arena_court_schedules,
+>   +arena_products, +arena_sales, +arena_payments)
 >   + 5 Cloud Functions
 > - `/admin/v3-bootstrap` (liga tudo de uma vez)
 > - Domínio de booking/pricing/calendar/court/court_schedule/booking_conflict
->   **bem testado** (6 arquivos de teste, 816 tests passing)
-> - 5/5 features de Fundação (Sprint 1) implementadas
+>   /instant_booking/arena_metrics **bem testado** (8 arquivos de teste,
+>   857 tests passing)
 
 ---
 
@@ -495,3 +501,57 @@ primeira vez no menu, com checklist de configuração. Já é vitória.
 - ARE-03 reserva instantânea (workflow refinado + pagamento)
 - ARE-06 PDV de arena
 - ARE-08 painel de proprietário (métricas)
+
+---
+
+## 12. Sprint 2 (Operação) — em andamento (2026-07-22)
+
+### Status
+- ✅ **ARE-08** Painel do proprietário (métricas) — PR (este PR)
+- ✅ **ARE-03** Reserva instantânea (PIX/dinheiro) — PR (este PR)
+- 🔲 **ARE-06** PDV — **JÁ IMPLEMENTADO** pelo Arena V3 (outro agente).
+  Coleções `arena_products` / `arena_sales` / `arena_payments` +
+  rotas `/arenas/:id/loja` e `/arenas/:id/gerir/pdv` + 4 feature flags
+  (ARENA_MODULE_PDV, _CATALOG, _PIX_NATIVE, _SPLIT). Tudo default OFF.
+  Para ativar: `/admin/v3-bootstrap` ou via platform_settings.
+
+### ARE-08 (este PR)
+Painel read-only com métricas agregadas:
+- Receita confirmada (bookings CONFIRMED + sales PAID)
+- Receita pendente (REQUESTED + NEGOTIATING)
+- Taxa de conversão (% de finalizadas com sucesso)
+- Ocupação (% de horas reservadas vs disponíveis)
+- Rating médio
+- Próximas reservas confirmadas
+- Navegação por mês (cursor prev/next)
+
+Domain puro `arena_metrics.js` + 22 tests. Reusa hooks já cacheados
+(useArenaBookings, useArenaSales, useArenaReviews,
+useArenaCourtSchedules, useArenaCourts) e filtra no client.
+
+UI: nova tab "Métricas" no /arenas/:id/gerir (primeira tab).
+
+### ARE-03 (este PR)
+Toggle no BookingRequestDialog: "Solicitar reserva" vs "Reserva
+instantânea" (auto-confirmada).
+- Arena opt-in: `arena.allow_instant_booking: true`
+- Requer `payment_method` (PIX por QR/código, cartão, dinheiro)
+- Requer `proposed_price > 0` (instant não pode ser grátis)
+- Status inicial muda pra CONFIRMED (em vez de REQUESTED)
+- Flag `is_instant: true` gravada no booking
+
+Domain puro `instant_booking.js` + 19 tests. Integração no
+`bookingService.createBooking` com `canBeInstantBooking` +
+`getInitialBookingStatus`.
+
+### Métricas Sprint 2
+- 857/857 tests passing (era 816, +41)
+- Build verde (23.1s)
+- +41 tests (22 metrics + 19 instant)
+- Bundle: `index-DjnLS97o.js` (124,709 B) — hotfix #52 do Settings
+  import também deployado
+- 4 PRs mergeados (PRs #52 hotfix + PR novo)
+
+### Próximos sprints
+- Sprint 3 (Engajamento): ARE-09 reviews, ARE-18 termos
+- Sprint 4 (Integrações): ARE-14/15 (depende ORG-20, PRO-15)
