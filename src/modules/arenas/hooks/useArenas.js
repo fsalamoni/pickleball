@@ -31,6 +31,14 @@ import {
   addArenaUnavailability,
   deleteArenaUnavailability,
   listArenaUnavailabilities,
+  createInventoryProduct,
+  listInventoryProducts,
+  updateInventoryProduct,
+  deleteInventoryProduct,
+  addInventoryEntry,
+  listInventoryEntries,
+  addInventoryExit,
+  listInventoryExits,
   createCourtSchedule,
   updateCourtSchedule,
   deleteCourtSchedule,
@@ -359,5 +367,76 @@ export function useDeleteArenaUnavailability(arenaId) {
     onSuccess: () => {
       qc.invalidateQueries({ queryKey: ['arena-unavailabilities', arenaId] });
     },
+  });
+}
+
+/* ---------------- Inventory (Mercado - Sprint 5) ------------------ */
+
+export function useInventoryProducts(arenaId) {
+  return useQuery({
+    queryKey: ['inventory-products', arenaId],
+    queryFn: () => listInventoryProducts(arenaId),
+    enabled: !!arenaId,
+  });
+}
+
+export function useCreateInventoryProduct(arenaId) {
+  const { user } = useAuth();
+  const qc = useQueryClient();
+  return useMutation({
+    mutationFn: (input) => createInventoryProduct(arenaId, input, user),
+    onSuccess: () => qc.invalidateQueries({ queryKey: ['inventory-products', arenaId] }),
+  });
+}
+
+export function useUpdateInventoryProduct(arenaId) {
+  const { user } = useAuth();
+  const qc = useQueryClient();
+  return useMutation({
+    mutationFn: ({ productId, updates }) => updateInventoryProduct(productId, updates, user),
+    onSuccess: () => qc.invalidateQueries({ queryKey: ['inventory-products', arenaId] }),
+  });
+}
+
+export function useDeleteInventoryProduct(arenaId) {
+  const { user } = useAuth();
+  const qc = useQueryClient();
+  return useMutation({
+    mutationFn: (productId) => deleteInventoryProduct(productId, user),
+    onSuccess: () => qc.invalidateQueries({ queryKey: ['inventory-products', arenaId] }),
+  });
+}
+
+export function useInventoryEntries(arenaId, opts = {}) {
+  return useQuery({
+    queryKey: ['inventory-entries', arenaId, opts],
+    queryFn: () => listInventoryEntries(arenaId, opts),
+    enabled: !!arenaId,
+  });
+}
+
+export function useAddInventoryEntry(arenaId) {
+  const { user } = useAuth();
+  const qc = useQueryClient();
+  return useMutation({
+    mutationFn: (input) => addInventoryEntry(arenaId, input, user),
+    onSuccess: () => qc.invalidateQueries({ queryKey: ['inventory-entries', arenaId] }),
+  });
+}
+
+export function useInventoryExits(arenaId, opts = {}) {
+  return useQuery({
+    queryKey: ['inventory-exits', arenaId, opts],
+    queryFn: () => listInventoryExits(arenaId, opts),
+    enabled: !!arenaId,
+  });
+}
+
+export function useAddInventoryExit(arenaId) {
+  const { user } = useAuth();
+  const qc = useQueryClient();
+  return useMutation({
+    mutationFn: (input) => addInventoryExit(arenaId, input, user),
+    onSuccess: () => qc.invalidateQueries({ queryKey: ['inventory-exits', arenaId] }),
   });
 }

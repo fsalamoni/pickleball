@@ -79,6 +79,7 @@ export default function V2ArenaManage() {
     { value: 'calendario-admin', label: '📅 Reservas (Admin)' },
     { value: 'pagamento', label: '💳 Pagamento' },
     { value: 'regras', label: '📋 Regras' },
+    { value: 'mercado', label: '🛒 Mercado' },
     { value: 'quadras', label: 'Quadras' },
     { value: 'precos', label: 'Preços' },
     { value: 'fotos', label: 'Fotos' },
@@ -142,6 +143,7 @@ export default function V2ArenaManage() {
         {tab === 'calendario-admin' && <V2AdminBookingCalendar arenaId={arena.id} />}
         {tab === 'pagamento' && <V2ArenaPaymentTab />}
         {tab === 'regras' && <V2ArenaRulesTab />}
+        {tab === 'mercado' && <V2ArenaMercadoTab />}
         {tab === 'quadras' && <V2CourtsTab arena={arena} />}
         {tab === 'precos' && <V2Surface id="arena-manage-precos"><V2PricingEditor arena={arena} /></V2Surface>}
         {tab === 'fotos' && <div id="arena-manage-fotos"><PhotosTab arena={arena} /></div>}

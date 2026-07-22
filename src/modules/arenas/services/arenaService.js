@@ -33,6 +33,7 @@ import { normalizeCourtInput, nextSortOrder, renumberSortOrder } from '../domain
 import { normalizeScheduleInput } from '../domain/court_schedule.js';
 import { normalizePriceRule, normalizePriceOverride } from '../domain/pricing.js';
 import { normalizeReviewResponse } from '../domain/review_response.js';
+import { normalizeInventoryProduct, normalizeInventoryEntry, normalizeInventoryExit } from '../domain/inventory.js';
 
 const COL = ARENA_COLLECTIONS;
 
@@ -603,5 +604,91 @@ export async function listArenaUnavailabilities(arenaId, { from, to } = {}) {
   if (to) filters.push(where('date', '<=', to));
   filters.push(orderBy('date', 'asc'));
   const snap = await getDocs(query(collection(db, COL.unavailabilities), ...filters));
+  return snap.docs.map((d) => ({ id: d.id, ...d.data() }));
+}
+
+/* ---------------------- Inventory (Mercado - Sprint 5) ------------ */
+
+export async function createInventoryProduct(arenaId, input, actor) {
+  if (!db || !arenaId) throw new Error('Arena inválida.');
+  const { valid, error, value } = normalizeInventoryProduct(input);
+  if (!valid) throw new Error(error);
+  const ref = await addDoc(collection(db, COL.inventory_products), {
+    ...value, arena_id: arenaId,
+    created_by: actor?.uid || null,
+    created_at: serverTimestamp(),
+    updated_at: serverTimestamp(),
+  });
+  await createAuditLog({ action: 'arena_inventory_product_created', actor, details: { arena_id: arenaId, name: value.name } });
+  return ref.id;
+}
+
+export async function listInventoryProducts(arenaId, { activeOnly = false } = {}) {
+  if (!arenaId || !db) return [];
+  const filters = [where('arena_id', '==', arenaId)];
+  if (activeOnly) filters.push(where('active', '==', true));
+  filters.push(orderBy('name', 'asc'));
+  const snap = await getDocs(query(collection(db, COL.inventory_products), ...filters));
+  return snap.docs.map((d) => ({ id: d.id, ...d.data() }));
+}
+
+export async function updateInventoryProduct(productId, updates, actor) {
+  if (!db || !productId) throw new Error('Produto inválido.');
+  await updateDoc(doc(db, COL.inventory_products, productId), {
+    ...updates, updated_at: serverTimestamp(), updated_by: actor?.uid || null,
+  });
+}
+
+export async function deleteInventoryProduct(productId, actor) {
+  if (!db || !productId) throw new Error('Produto inválido.');
+  await deleteDoc(doc(db, COL.inventory_products, productId));
+  await createAuditLog({ action: 'arena_inventory_product_deleted', actor, details: { product_id: productId } });
+}
+
+export async function addInventoryEntry(arenaId, input, actor) {
+  if (!db || !arenaId) throw new Error('Arena inválida.');
+  const { valid, error, value } = normalizeInventoryEntry(input);
+  if (!valid) throw new Error(error);
+  const ref = await addDoc(collection(db, COL.inventory_entries), {
+    ...value, arena_id: arenaId,
+    created_by: actor?.uid || null,
+    created_at: serverTimestamp(),
+  });
+  await createAuditLog({ action: 'arena_inventory_entry_added', actor, details: { arena_id: arenaId, product_id: value.product_id, quantity: value.quantity, total_cost: value.total_cost } });
+  return ref.id;
+}
+
+export async function listInventoryEntries(arenaId, { from, to, productId } = {}) {
+  if (!arenaId || !db) return [];
+  const filters = [where('arena_id', '==', arenaId)];
+  if (from) filters.push(where('date', '>=', from));
+  if (to) filters.push(where('date', '<=', to));
+  if (productId) filters.push(where('product_id', '==', productId));
+  filters.push(orderBy('date', 'desc'));
+  const snap = await getDocs(query(collection(db, COL.inventory_entries), ...filters));
+  return snap.docs.map((d) => ({ id: d.id, ...d.data() }));
+}
+
+export async function addInventoryExit(arenaId, input, actor) {
+  if (!db || !arenaId) throw new Error('Arena inválida.');
+  const { valid, error, value } = normalizeInventoryExit(input);
+  if (!valid) throw new Error(error);
+  const ref = await addDoc(collection(db, COL.inventory_exits), {
+    ...value, arena_id: arenaId,
+    created_by: actor?.uid || null,
+    created_at: serverTimestamp(),
+  });
+  await createAuditLog({ action: 'arena_inventory_exit_added', actor, details: { arena_id: arenaId, product_id: value.product_id, quantity: value.quantity, total_price: value.total_price, exit_type: value.exit_type } });
+  return ref.id;
+}
+
+export async function listInventoryExits(arenaId, { from, to, productId } = {}) {
+  if (!arenaId || !db) return [];
+  const filters = [where('arena_id', '==', arenaId)];
+  if (from) filters.push(where('date', '>=', from));
+  if (to) filters.push(where('date', '<=', to));
+  if (productId) filters.push(where('product_id', '==', productId));
+  filters.push(orderBy('date', 'desc'));
+  const snap = await getDocs(query(collection(db, COL.inventory_exits), ...filters));
   return snap.docs.map((d) => ({ id: d.id, ...d.data() }));
 }
