@@ -25,7 +25,7 @@ import { normalizeCourtInput, COURT, nextSortOrder, sortCourts } from '@/modules
 import {
   useArenaCourts, useCreateCourt, useUpdateCourt, useDeleteCourt, useReorderCourts, useNormalizeCourtOrder,
 } from '@/modules/arenas/hooks/useArenas';
-import ConfirmDialog from '@/components/ConfirmDialog';
+import { ConfirmDialog } from '@/components/ui/confirm-dialog';
 import V2CourtSchedulesModal from '@/v2/components/arenas/V2CourtSchedulesModal';
 import { V2Badge, V2Button, V2Field, V2Input, V2Select, V2Surface, V2Textarea } from '@/v2/ui/primitives';
 
