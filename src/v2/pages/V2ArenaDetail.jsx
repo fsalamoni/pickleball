@@ -171,18 +171,6 @@ export default function V2ArenaDetail() {
       {/* Sprint 5: Regras estruturadas (público) — preferido sobre house_rules_md */}
       <ArenaRulesSection arena={arena} />
 
-      {/* Sprint 5: Calendário interativo público (multi-seleção) */}
-      <V2BookingCalendarSection arenaId={arenaId} arena={arena} />
-
-      {/* Sprint 5: Pagamento PIX (público) */}
-      <V2ArenaPaymentSection arena={arena} />
-
-      {/* Sprint 4 ARE-14: Torneios da arena */}
-      <ArenaTournamentsSection arenaId={arenaId} />
-
-      {/* Sprint 4 ARE-15: Professores residentes */}
-      <ArenaCoachesSection arenaId={arenaId} />
-
       {/* Contact + hours */}
       <div className="mt-6 grid gap-6 sm:grid-cols-2">
         <V2Surface>
@@ -201,6 +189,16 @@ export default function V2ArenaDetail() {
           <p className="mt-3 text-sm text-gray-500">{arena.hours || 'Horário não informado.'}</p>
         </V2Surface>
       </div>
+
+      {/* Calendário interativo (Sprint 5) — entre Contato/Funcionamento e Próximos horários */}
+      <V2BookingCalendarSection arenaId={arenaId} arena={arena} />
+
+      {/* Pagamento PIX (Sprint 5) */}
+      <V2ArenaPaymentSection arena={arena} />
+
+      {/* Torneios + Professores residentes (Sprint 4) */}
+      <ArenaTournamentsSection arenaId={arenaId} />
+      <ArenaCoachesSection arenaId={arenaId} />
 
       {upcomingSlots.length > 0 && (
         <V2Surface className="mt-6">
@@ -323,10 +321,17 @@ function ArenaCoachesSection({ arenaId }) {
 
 function V2BookingCalendarSection({ arenaId, arena }) {
   return (
-    <div className="mt-6">
-      <h3 className="font-display text-lg font-bold text-ink mb-3">📅 Reserve sua quadra</h3>
-      <V2BookingCalendar arenaId={arenaId} arena={arena} />
-    </div>
+    <V2Surface className="mt-6">
+      <h3 className="flex items-center gap-1.5 font-display text-base font-bold text-ink">
+        <Calendar className="h-4 w-4" /> Reserve sua quadra
+      </h3>
+      <p className="mt-1 text-sm text-gray-500">
+        Clique nos horários disponíveis para selecioná-los. Você pode escolher mais de um.
+      </p>
+      <div className="mt-3">
+        <V2BookingCalendar arenaId={arenaId} arena={arena} />
+      </div>
+    </V2Surface>
   );
 }
 

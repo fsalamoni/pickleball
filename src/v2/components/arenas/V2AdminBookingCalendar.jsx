@@ -23,8 +23,8 @@ import {
 } from 'lucide-react';
 import { useAuth } from '@/core/lib/FirebaseAuthContext';
 import { cn } from '@/core/lib/utils';
-import { useArena, useArenaCourts, useArenaCourtSchedules, useArenaBookings, useArenaUnavailabilities, useAddArenaUnavailability, useDeleteArenaUnavailability } from '@/modules/arenas/hooks/useArenas';
-import { useUpdateBookingStatus } from '@/modules/arenas/hooks/useBookings';
+import { useArena, useArenaCourts, useArenaCourtSchedules,  useArenaUnavailabilities, useAddArenaUnavailability, useDeleteArenaUnavailability } from '@/modules/arenas/hooks/useArenas';
+import { useUpdateBookingStatus, useArenaBookings } from '@/modules/arenas/hooks/useBookings';
 import { getSlotStatus, generateTimeSlots, isSlotClickable, SLOT_STATUS_COLORS, SLOT_STATUS_LABELS, SLOT_STATUS } from '@/modules/arenas/domain/slot_status';
 import { weekdayOf } from '@/modules/arenas/domain/booking';
 import { BOOKING_STATUS } from '@/modules/arenas/domain/constants';
