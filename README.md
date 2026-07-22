@@ -50,6 +50,11 @@ A PickleRush existe para:
 - 🏟️ diretório de arenas com perfil, fotos, contatos e preços
 - 🪜 onboarding guiado pós-criação (4 passos: fotos → preços → horários → compartilhar)
 - 🧭 "Minhas arenas" no sidebar com badge de reservas pendentes (só aparece para quem gerencia)
+- 🎾 quadras nomeadas (coberta/descoberta, superfície, ativas/inativas, ordenáveis)
+- 🕐 janelas de horário recorrentes por quadra (ex: "Seg–Sex 08:00–12:00")
+- 📅 calendário mensal de reservas com filtro por quadra e cores por status
+- 💰 regras de preço por dia/horário, com opção de aplicar só a uma quadra específica
+- 🛡️ detecção de conflito em tempo real (valida schedule + reservas ativas antes de criar)
 - 📆 solicitação de reservas avulsas e recorrentes
 - 💸 negociação manual de valor
 - 🧾 acompanhamento de pagamento e histórico

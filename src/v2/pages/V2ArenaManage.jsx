@@ -4,6 +4,7 @@ import { toast } from 'sonner';
 import { collection, getDocs, query, where } from 'firebase/firestore';
 import { ArrowLeft, Building2, Trash2, UserPlus, Users } from 'lucide-react';
 import V2CourtsTab from '@/v2/components/arenas/V2CourtsTab';
+import V2ArenaCalendar from '@/v2/components/arenas/V2ArenaCalendar';
 import { db } from '@/core/config/firebase';
 import { useFeatureFlag } from '@/core/lib/FeatureFlagsContext';
 import { FEATURE_FLAG } from '@/core/featureFlags';
@@ -72,6 +73,8 @@ export default function V2ArenaManage() {
 
   const tabs = [
     { value: 'reservas', label: 'Reservas' },
+    { value: 'calendario', label: 'Calendário' },
+    { value: 'quadras', label: 'Quadras' },
     { value: 'precos', label: 'Preços' },
     { value: 'fotos', label: 'Fotos' },
     { value: 'info', label: 'Informações' },
@@ -129,6 +132,7 @@ export default function V2ArenaManage() {
 
       <div className="mt-6">
         {tab === 'reservas' && <BookingsTab arena={arena} />}
+        {tab === 'calendario' && <V2ArenaCalendar arena={arena} />}
         {tab === 'quadras' && <V2CourtsTab arena={arena} />}
         {tab === 'precos' && <V2Surface id="arena-manage-precos"><V2PricingEditor arena={arena} /></V2Surface>}
         {tab === 'fotos' && <div id="arena-manage-fotos"><PhotosTab arena={arena} /></div>}
