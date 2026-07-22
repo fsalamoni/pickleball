@@ -58,6 +58,8 @@ A PickleRush existe para:
 - 🛡️ detecção de conflito em tempo real (valida schedule + reservas ativas antes de criar)
 - ⚡ reserva instantânea (auto-confirmada, requer pagamento adiantado, opt-in por arena)
 - 🏪 PDV (loja) com produtos, vendas, pagamentos (PIX por QR/código ou dinheiro na arena)
+- 💬 resposta pública de reviews pela arena (gerente ou dono)
+- 📋 regras da casa (markdown) exibidas na página pública da arena
 - 📆 solicitação de reservas avulsas e recorrentes
 - 💸 negociação manual de valor
 - 🧾 acompanhamento de pagamento e histórico

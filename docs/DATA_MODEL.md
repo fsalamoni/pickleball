@@ -157,6 +157,13 @@ Gestores da arena. Id determinista evita duplicidade.
 - `arena_id`, `user_id`, `user_name` (desnormalizado), `user_photo`, `role` (`'owner'|'manager'`).
 - `added_by` (uid), `created_at`.
 
+### `arenas/{id}` (campos extras Sprint 2/3)
+- `allow_instant_booking: bool` (Sprint 2 ARE-03) — opt-in para reserva
+  instantânea (pula REQUESTED → CONFIRMED direto).
+- `house_rules_md: string` (Sprint 3 ARE-18) — markdown com regras da casa,
+  max 2000. Exibido em /arenas/:id → bloco "Regras da casa" (collapsible).
+  Manager edita em /arenas/:id/gerir → tab "Informações".
+
 ### `arena_courts/{id}` (Sprint 1 ARE-01)
 Quadras nomeadas da arena (substitui o `court_count: int` legado).
 - `arena_id`, `name` (max 60, obrigatório), `court_type` (`'indoor'|'outdoor'|'covered'`),
@@ -184,8 +191,8 @@ Reservas da arena. `arena_id`, `athlete_id`, `athlete_name`, `athlete_photo`.
 ### `arena_reviews/{id}`
 Avaliações/reclamações/sugestões. `arena_id`, `user_id`, `user_name`,
 `rating` (1-5, só se `type='review'`), `type` (`'review'|'complaint'|'suggestion'`),
-`comment`, `response` (resposta da arena, opcional), `responded_at`,
-`created_at`.
+`comment`, `response` (resposta da arena, opcional, max 500),
+`responded_at`, `responded_by` (uid), `updated_at`, `created_at`.
 
 ### `arena_favorites/{uid_arenaId}`
 Favoritos do atleta. Id determinista. `user_id`, `arena_id`, `created_at`.

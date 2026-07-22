@@ -173,6 +173,15 @@ campos em `docs/DATA_MODEL.md`.
   - `arena_court_schedules` (janelas recorrentes: `weekdays[]`/`start_time`/`end_time`/`court_id`)
   - `price_rules[]` em `arenas` agora pode ter `court_id` (ARE-05) — regra aplica só à quadra ou a todas se vazio
   - `arena_bookings` tem `court_id` opcional (FOREIGN KEY não-enforçada)
+  **Sprint 2 ARE-03/06/08**:
+  - `arenas/{id}.allow_instant_booking: bool` (opt-in para reserva instantânea)
+  - `arena_bookings.is_instant: bool` + `payment_method`
+  - `arena_products` / `arena_sales` / `arena_payments` (PDV, 3 coleções V3)
+  **Sprint 3 ARE-09/18**:
+  - `arena_reviews.response`/`responded_at`/`responded_by` (populável
+    por manager — UI em V2ArenaReviews)
+  - `arenas/{id}.house_rules_md` (markdown regras da casa, exibido
+    público em /arenas/:id → bloco "Regras da casa")
 - **Clubes**: `clubs` · `club_members` (id `clubId_uid`, tem `role`) ·
   `club_join_requests` (id `clubId_uid`) · `club_member_invites`
   (id `clubId_uid`) · `club_posts` (mural) · `club_forum_threads` ·

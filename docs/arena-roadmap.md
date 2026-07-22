@@ -1,33 +1,34 @@
 # Roadmap de Arena — implementação completa
 
 > **Status**: **Sprint 0 ✅ DONE** (PRs #46, #47), **Sprint 1 ✅ DONE**
-> (PRs #48–#51), **Sprint 2 em andamento** (PR novo: ARE-08 métricas +
-> ARE-03 reserva instantânea; ARE-06 PDV já existia do Arena V3).
+> (PRs #48–#51), **Sprint 2 ✅ DONE** (PR #53), **Sprint 3 ✅ DONE** (PR #54).
+> Sprint 4 (Integrações) **bloqueada** por ORG-20 (circuitos) e PRO-15
+> (professor residente) que ainda não existem.
 >
 > **Escopo**: persona **proprietário de arena** (ARE-01 a ARE-20 do doc de UX)
 > + cross-cutting necessário para ela fechar. **Não** cobre gestão de
 > torneio (05-organizador), dia de jogo (06), professor (08), clubes (09) —
 > esses têm seu próprio roadmap.
 >
-> **Estado atual no repositório (origin/main @ d03a61e + hotfix #52)**:
+> **Estado atual no repositório (origin/main @ 4e5ee58)**:
 > - Sprint 0 (Descoberta) ✅: `Minhas arenas` no sidebar (ARE-11), onboarding
 >   4-passos (ARE-20), aba "Arenas" no admin/painel, QW-14/15
 > - Sprint 1 (Fundação) ✅: ARE-01 quadras, ARE-02 calendário, ARE-04
 >   janelas de horário, ARE-05 preço por quadra, ARE-07 detecção de conflito
-> - Sprint 2 (Operação) em andamento:
->   - ARE-06 PDV: ✅ já existia (Arena V3) — 4 flags, 3 coleções, 2 rotas
->   - ARE-08 Painel de métricas: ✅ PR atual
->   - ARE-03 Reserva instantânea: ✅ PR atual
-> - 18 páginas V2Arena* (V2ArenaMetrics adicionado) no ar
+> - Sprint 2 (Operação) ✅: ARE-06 PDV, ARE-08 painel de métricas,
+>   ARE-03 reserva instantânea
+> - Sprint 3 (Engajamento) ✅: ARE-09 resposta de reviews, ARE-18
+>   regras da casa (house rules)
+> - Sprint 4 (Integrações) 🚧 bloqueada: ARE-14/15 dependem de
+>   ORG-20 (circuitos) + PRO-15 (professor residente)
+> - 18+ páginas V2Arena* no ar
 > - 13 services + 1 hook monolítico `useArenaV3.js` (749 linhas)
 > - 30 feature flags `ARENA_MODULE_*` (4-level gate)
-> - 36 firestore collections (Sprint 1+2: +arena_courts, +arena_court_schedules,
->   +arena_products, +arena_sales, +arena_payments)
->   + 5 Cloud Functions
+> - 36 firestore collections
 > - `/admin/v3-bootstrap` (liga tudo de uma vez)
 > - Domínio de booking/pricing/calendar/court/court_schedule/booking_conflict
->   /instant_booking/arena_metrics **bem testado** (8 arquivos de teste,
->   857 tests passing)
+>   /instant_booking/arena_metrics/review_response **bem testado**
+>   (9 arquivos de teste, 876 tests passing)
 
 ---
 
