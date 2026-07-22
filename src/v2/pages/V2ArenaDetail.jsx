@@ -22,6 +22,7 @@ import { useArenaBookings } from '@/modules/arenas/hooks/useBookings';
 import { useCanArenaUseModule } from '@/modules/arenas/hooks/useArenaV3';
 import { useArenaTournaments } from '@/modules/tournament/hooks/useTournament';
 import { useArenaCoaches } from '@/modules/coaches/hooks/useCoaches';
+import V2BookingCalendar from '@/v2/components/arenas/V2BookingCalendar';
 import { V2Badge, V2Button, V2EmptyState, V2Skeleton, V2Surface } from '@/v2/ui/primitives';
 
 function arenaPhotoUrl(photo) {
@@ -175,6 +176,9 @@ export default function V2ArenaDetail() {
         </details>
       )}
 
+      {/* Sprint 5: Calendário interativo público (multi-seleção) */}
+      <V2BookingCalendarSection arenaId={arenaId} arena={arena} />
+
       {/* Sprint 4 ARE-14: Torneios da arena */}
       <ArenaTournamentsSection arenaId={arenaId} />
 
@@ -314,5 +318,16 @@ function ArenaCoachesSection({ arenaId }) {
         ))}
       </div>
     </V2Surface>
+  );
+}
+
+
+
+function V2BookingCalendarSection({ arenaId, arena }) {
+  return (
+    <div className="mt-6">
+      <h3 className="font-display text-lg font-bold text-ink mb-3">📅 Reserve sua quadra</h3>
+      <V2BookingCalendar arenaId={arenaId} arena={arena} />
+    </div>
   );
 }

@@ -9,6 +9,7 @@
  */
 
 import {
+  addDoc,
   collection,
   doc,
   getDoc,
@@ -18,6 +19,7 @@ import {
   deleteDoc,
   query,
   where,
+  orderBy,
   serverTimestamp,
   writeBatch,
 } from 'firebase/firestore';
@@ -555,3 +557,51 @@ export async function deleteCourtSchedule(scheduleId, actor) {
   });
 }
 
+
+/* ---------------------- Unavailabilities (Sprint 5) ----------------- */
+
+export async function addArenaUnavailability(arenaId, input, actor) {
+  if (!db || !arenaId) throw new Error('Arena inválida.');
+  if (!input.date || !input.start_time || !input.end_time) {
+    throw new Error('Data, hora início e fim são obrigatórios.');
+  }
+  const ref = await addDoc(collection(db, COL.unavailabilities), {
+    arena_id: arenaId,
+    court_id: input.court_id || null,
+    date: input.date,
+    start_time: input.start_time,
+    end_time: input.end_time,
+    notes: str(input.notes || '').slice(0, 500),
+    created_by: actor?.uid || null,
+    created_at: serverTimestamp(),
+    updated_at: serverTimestamp(),
+  });
+  await createAuditLog({
+    action: 'arena_unavailability_added',
+    actor,
+    details: { arena_id: arenaId, court_id: input.court_id, date: input.date },
+  });
+  return ref.id;
+}
+
+export async function deleteArenaUnavailability(unavId, actor) {
+  if (!db || !unavId) throw new Error('Indisponibilidade inválida.');
+  const snap = await getDoc(doc(db, COL.unavailabilities, unavId));
+  const meta = snap.exists() ? snap.data() : null;
+  await deleteDoc(doc(db, COL.unavailabilities, unavId));
+  await createAuditLog({
+    action: 'arena_unavailability_deleted',
+    actor,
+    details: { unavailability_id: unavId, arena_id: meta?.arena_id },
+  });
+}
+
+export async function listArenaUnavailabilities(arenaId, { from, to } = {}) {
+  if (!arenaId || !db) return [];
+  const filters = [where('arena_id', '==', arenaId)];
+  if (from) filters.push(where('date', '>=', from));
+  if (to) filters.push(where('date', '<=', to));
+  filters.push(orderBy('date', 'asc'));
+  const snap = await getDocs(query(collection(db, COL.unavailabilities), ...filters));
+  return snap.docs.map((d) => ({ id: d.id, ...d.data() }));
+}

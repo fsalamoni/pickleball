@@ -956,7 +956,16 @@ service cloud.firestore {
     }
 
 
-    // ---- Sprint 4 PRO-15: Professores residentes ----
+    // ---- Sprint 5: Unavailabilities (admin marca slots como indisponíveis) ----
+    match /arena_unavailabilities/{unavId} {
+      allow read: if true;
+      allow create, update, delete: if isAuthed() && (
+        isPlatformAdmin() ||
+        exists(/databases/$(database)/documents/arena_managers/$(request.resource.data.arena_id + '_' + request.auth.uid))
+      );
+    }
+
+// ---- Sprint 4 PRO-15: Professores residentes ----
     // coaches/{uid} — perfil público do professor
     match /coaches/{coachId} {
       allow read: if true;
