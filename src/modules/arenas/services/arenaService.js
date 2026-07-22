@@ -27,6 +27,7 @@ import { createAuditLog } from '@/core/services/auditService';
 import { notifyUsers, NOTIFICATION_TYPE } from '@/core/services/notificationService';
 import { ARENA_COLLECTIONS, ARENA_MANAGER_ROLE, REVIEW_TYPE, REVIEW_TYPE_LABELS } from '../domain/constants.js';
 import { normalizeArenaInput } from '../domain/arena.js';
+import { normalizeCourtInput, nextSortOrder, renumberSortOrder } from '../domain/court.js';
 import { normalizePriceRule, normalizePriceOverride } from '../domain/pricing.js';
 
 const COL = ARENA_COLLECTIONS;
@@ -299,3 +300,125 @@ export async function deleteArenaReview(review, actor) {
   await deleteDoc(doc(db, COL.reviews, review.id));
   await createAuditLog({ action: 'arena_review_deleted', actor, details: { arena_id: review.arena_id, review_id: review.id } });
 }
+
+/* ---------------------- Courts (ARE-01, Sprint 1) -------------------- */
+
+/**
+ * Lista as quadras de uma arena. Retorna array vazio se não houver quadras
+ * (não confundir com erro).
+ */
+export async function listArenaCourts(arenaId) {
+  if (!db || !arenaId) return [];
+  const snap = await getDocs(query(collection(db, COL.courts), where('arena_id', '==', arenaId)));
+  return snap.docs.map((d) => ({ id: d.id, ...d.data() }));
+}
+
+/**
+ * Cria uma quadra nova em uma arena. Valida input, escolhe sort_order
+ * automático (max+1), faz audit log. Lança erro se input inválido.
+ */
+export async function createArenaCourt(arenaId, input, actor) {
+  if (!db || !arenaId) throw new Error('Arena inválida.');
+  const { valid, errors, value } = normalizeCourtInput(input);
+  if (!valid) {
+    const first = Object.values(errors)[0];
+    throw new Error(first || 'Dados da quadra inválidos.');
+  }
+  const existing = await listArenaCourts(arenaId);
+  const ref = doc(collection(db, COL.courts));
+  const payload = {
+    arena_id: arenaId,
+    ...value,
+    sort_order: Number.isFinite(input.sort_order) ? value.sort_order : nextSortOrder(existing),
+    created_at: serverTimestamp(),
+    updated_at: serverTimestamp(),
+  };
+  await setDoc(ref, payload);
+  await createAuditLog({
+    action: 'arena_court_created',
+    actor,
+    details: { arena_id: arenaId, court_id: ref.id, name: value.name },
+  });
+  return ref.id;
+}
+
+/**
+ * Atualiza uma quadra. Merge com normalização. Audit log best-effort.
+ */
+export async function updateArenaCourt(courtId, input, actor) {
+  if (!db || !courtId) throw new Error('Quadra inválida.');
+  const { valid, errors, value } = normalizeCourtInput(input);
+  if (!valid) {
+    const first = Object.values(errors)[0];
+    throw new Error(first || 'Dados da quadra inválidos.');
+  }
+  await updateDoc(doc(db, COL.courts, courtId), { ...value, updated_at: serverTimestamp() });
+  await createAuditLog({
+    action: 'arena_court_updated',
+    actor,
+    details: { court_id: courtId, arena_id: input.arena_id, name: value.name },
+  });
+}
+
+/**
+ * Remove uma quadra. Não remove bookings existentes que referenciam essa
+ * quadra (Firestore não tem constraint; fica como `court_id` órfão no
+ * histórico, o que é OK porque UI mostra o nome congelado).
+ */
+export async function deleteArenaCourt(courtId, actor) {
+  if (!db || !courtId) throw new Error('Quadra inválida.');
+  const ref = doc(db, COL.courts, courtId);
+  const snap = await getDoc(ref);
+  const arenaId = snap.exists() ? snap.data().arena_id : null;
+  await deleteDoc(ref);
+  await createAuditLog({
+    action: 'arena_court_deleted',
+    actor,
+    details: { court_id: courtId, arena_id: arenaId },
+  });
+}
+
+/**
+ * Reordena quadras: recebe array de {id, sort_order} e aplica.
+ * Usa batch write (all-or-nothing) pra evitar estado intermediário.
+ */
+export async function reorderArenaCourts(arenaId, orderedIds, actor) {
+  if (!db || !arenaId) throw new Error('Arena inválida.');
+  if (!Array.isArray(orderedIds) || orderedIds.length === 0) return;
+  // Valida que todos os IDs são strings não-vazias e sem duplicatas
+  const seen = new Set();
+  for (const id of orderedIds) {
+    if (typeof id !== 'string' || !id) throw new Error('IDs de quadra inválidos.');
+    if (seen.has(id)) throw new Error('IDs de quadra duplicados.');
+    seen.add(id);
+  }
+  // Aplica via setDoc merge (Firestore não tem batch.updateDoc no Web SDK
+  // sem import extra; setDoc merge é equivalente e atômico por doc).
+  await Promise.all(
+    orderedIds.map((id, idx) =>
+      setDoc(
+        doc(db, COL.courts, id),
+        { sort_order: idx, arena_id: arenaId, updated_at: serverTimestamp() },
+        { merge: true },
+      ),
+    ),
+  );
+  await createAuditLog({
+    action: 'arena_courts_reordered',
+    actor,
+    details: { arena_id: arenaId, count: orderedIds.length },
+  });
+}
+
+/**
+ * Renumera sort_order sequencialmente baseado na ordem atual (helper
+ * idempotente, útil pra "normalizar" depois de várias edições manuais).
+ */
+export async function normalizeArenaCourtsOrder(arenaId, actor) {
+  if (!db || !arenaId) throw new Error('Arena inválida.');
+  const courts = await listArenaCourts(arenaId);
+  const renumbered = renumberSortOrder(courts);
+  const orderedIds = renumbered.map((c) => c.id);
+  await reorderArenaCourts(arenaId, orderedIds, actor);
+}
+

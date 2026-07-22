@@ -18,7 +18,14 @@ import {
   deleteArena,
   addArenaManager,
   removeArenaManager,
+  listArenaCourts,
+  createArenaCourt,
+  updateArenaCourt,
+  deleteArenaCourt,
+  reorderArenaCourts,
+  normalizeArenaCourtsOrder,
 } from '../services/arenaService.js';
+import { sortCourts } from '../domain/court.js';
 
 export function useArenas() {
   return useQuery({ queryKey: ['arenas'], queryFn: listArenas, staleTime: 30_000 });
@@ -158,3 +165,65 @@ export function useRemoveManager() {
     onSuccess: (_d, { arenaId }) => qc.invalidateQueries({ queryKey: ['arena-managers', arenaId] }),
   });
 }
+
+/* ---------------------- Courts (ARE-01, Sprint 1) -------------------- */
+
+/**
+ * Lista quadras de uma arena, ordenadas por sort_order. Retorna lista
+ * vazia se arenaId ausente ou ainda carregando.
+ */
+export function useArenaCourts(arenaId) {
+  return useQuery({
+    queryKey: ['arena-courts', arenaId],
+    queryFn: async () => sortCourts(await listArenaCourts(arenaId)),
+    enabled: !!arenaId,
+    staleTime: 30_000,
+  });
+}
+
+function useCourtMutation(arenaId) {
+  const { user } = useAuth();
+  const qc = useQueryClient();
+  return { user, qc, invalidate: () => qc.invalidateQueries({ queryKey: ['arena-courts', arenaId] }) };
+}
+
+export function useCreateCourt(arenaId) {
+  const { user, invalidate } = useCourtMutation(arenaId);
+  return useMutation({
+    mutationFn: (input) => createArenaCourt(arenaId, input, user),
+    onSuccess: invalidate,
+  });
+}
+
+export function useUpdateCourt(arenaId) {
+  const { user, invalidate } = useCourtMutation(arenaId);
+  return useMutation({
+    mutationFn: ({ courtId, input }) => updateArenaCourt(courtId, input, user),
+    onSuccess: invalidate,
+  });
+}
+
+export function useDeleteCourt(arenaId) {
+  const { user, invalidate } = useCourtMutation(arenaId);
+  return useMutation({
+    mutationFn: (courtId) => deleteArenaCourt(courtId, user),
+    onSuccess: invalidate,
+  });
+}
+
+export function useReorderCourts(arenaId) {
+  const { user, invalidate } = useCourtMutation(arenaId);
+  return useMutation({
+    mutationFn: (orderedIds) => reorderArenaCourts(arenaId, orderedIds, user),
+    onSuccess: invalidate,
+  });
+}
+
+export function useNormalizeCourtOrder(arenaId) {
+  const { user, invalidate } = useCourtMutation(arenaId);
+  return useMutation({
+    mutationFn: () => normalizeArenaCourtsOrder(arenaId, user),
+    onSuccess: invalidate,
+  });
+}
+
