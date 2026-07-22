@@ -3,6 +3,7 @@ import { Link, Navigate, useParams } from 'react-router-dom';
 import {
   ArrowLeft, Building2, CalendarPlus, Clock, Globe, Instagram, Mail, MapPin,
   MessageCircle, Phone, Settings, Star, Trophy, Users,
+  GraduationCap,
 } from 'lucide-react';
 import { PhotoLightbox } from '@/components/ui/photo-lightbox';
 import { useFeatureFlag } from '@/core/lib/FeatureFlagsContext';
@@ -19,6 +20,8 @@ import { bookingSlots, sortSlots } from '@/modules/arenas/domain/booking';
 import { useArena, useMyManagedArenas } from '@/modules/arenas/hooks/useArenas';
 import { useArenaBookings } from '@/modules/arenas/hooks/useBookings';
 import { useCanArenaUseModule } from '@/modules/arenas/hooks/useArenaV3';
+import { useArenaTournaments } from '@/modules/tournament/hooks/useTournament';
+import { useArenaCoaches } from '@/modules/coaches/hooks/useCoaches';
 import { V2Badge, V2Button, V2EmptyState, V2Skeleton, V2Surface } from '@/v2/ui/primitives';
 
 function arenaPhotoUrl(photo) {
@@ -172,6 +175,12 @@ export default function V2ArenaDetail() {
         </details>
       )}
 
+      {/* Sprint 4 ARE-14: Torneios da arena */}
+      <ArenaTournamentsSection arenaId={arenaId} />
+
+      {/* Sprint 4 ARE-15: Professores residentes */}
+      <ArenaCoachesSection arenaId={arenaId} />
+
       {/* Contact + hours */}
       <div className="mt-6 grid gap-6 sm:grid-cols-2">
         <V2Surface>
@@ -244,5 +253,66 @@ export default function V2ArenaDetail() {
 
       {bookingOpen && <BookingRequestDialog arena={arena} open={bookingOpen} onOpenChange={setBookingOpen} />}
     </div>
+  );
+}
+
+function ArenaTournamentsSection({ arenaId }) {
+  const { data: tournaments = [], isLoading } = useArenaTournaments(arenaId);
+  if (isLoading) return null;
+  if (tournaments.length === 0) return null;
+  return (
+    <V2Surface className="mt-6">
+      <h3 className="flex items-center gap-1.5 font-display text-base font-bold text-ink">
+        <Trophy className="h-4 w-4" /> Torneios desta arena
+      </h3>
+      <div className="mt-3 grid gap-3 sm:grid-cols-2">
+        {tournaments.slice(0, 6).map((t) => (
+          <Link key={t.id} to={`/torneios/${t.id}`} className="block rounded-2xl border border-gray-100 bg-paper p-3 transition-transform hover:scale-[1.02]">
+            <div className="flex items-center gap-2">
+              <Trophy className="h-4 w-4 text-amber-500" />
+              <h4 className="flex-1 text-sm font-bold text-ink line-clamp-1">{t.name}</h4>
+              {t.status && <V2Badge tone="neutral">{t.status}</V2Badge>}
+            </div>
+            {t.starts_at && (
+              <p className="mt-1 text-xs text-gray-500">
+                {t.starts_at?.toDate?.()?.toLocaleDateString?.('pt-BR') || t.starts_at}
+              </p>
+            )}
+            {t.city && <p className="text-xs text-gray-400">📍 {t.city}{t.state && `, ${t.state}`}</p>}
+          </Link>
+        ))}
+      </div>
+    </V2Surface>
+  );
+}
+
+function ArenaCoachesSection({ arenaId }) {
+  const { data: coaches = [], isLoading } = useArenaCoaches(arenaId);
+  if (isLoading) return null;
+  if (coaches.length === 0) return null;
+  return (
+    <V2Surface className="mt-6">
+      <h3 className="flex items-center gap-1.5 font-display text-base font-bold text-ink">
+        <GraduationCap className="h-4 w-4" /> Professores residentes
+      </h3>
+      <div className="mt-3 grid gap-3 sm:grid-cols-2">
+        {coaches.slice(0, 6).map((c) => (
+          <Link key={c.id} to={`/coaches/${c.id}`} className="flex items-center gap-3 rounded-2xl border border-gray-100 bg-paper p-3 transition-transform hover:scale-[1.02]">
+            <div className="flex h-10 w-10 items-center justify-center rounded-2xl bg-gradient-to-br from-emerald-500 to-amber-500 text-sm font-bold text-white">
+              {c.display_name?.[0] || '?'}
+            </div>
+            <div className="flex-1 min-w-0">
+              <h4 className="text-sm font-bold text-ink line-clamp-1">{c.display_name}</h4>
+              {c.modalities?.length > 0 && (
+                <p className="text-xs text-gray-500 line-clamp-1">{c.modalities.join(' · ')}</p>
+              )}
+              {c.hourly_rate != null && (
+                <p className="text-xs font-bold text-emerald-700">R$ {Number(c.hourly_rate).toFixed(2)}/h</p>
+              )}
+            </div>
+          </Link>
+        ))}
+      </div>
+    </V2Surface>
   );
 }
