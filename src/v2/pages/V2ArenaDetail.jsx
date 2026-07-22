@@ -162,6 +162,16 @@ export default function V2ArenaDetail() {
         </div>
       </div>
 
+      {/* Sprint 3 ARE-18: Regras da casa (público) */}
+      {arena.house_rules_md && (
+        <details className="mt-6 rounded-4xl border border-gray-100 bg-paper-pure p-5 shadow-organic-sm">
+          <summary className="cursor-pointer text-sm font-bold text-ink">
+            📋 Regras da casa
+          </summary>
+          <p className="mt-3 whitespace-pre-line text-sm leading-7 text-gray-600">{arena.house_rules_md}</p>
+        </details>
+      )}
+
       {/* Contact + hours */}
       <div className="mt-6 grid gap-6 sm:grid-cols-2">
         <V2Surface>

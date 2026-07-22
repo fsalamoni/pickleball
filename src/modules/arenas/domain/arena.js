@@ -56,6 +56,8 @@ export function normalizeArenaInput(input = {}) {
       return n;
     })(),
     active: input.active !== false,
+    house_rules_md: str(input.house_rules_md).slice(0, 2000),
+    allow_instant_booking: input.allow_instant_booking === true, // Sprint 2 ARE-03
   };
 
   return { valid: Object.keys(errors).length === 0, errors, value };
