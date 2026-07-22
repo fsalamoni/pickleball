@@ -23,7 +23,8 @@ import { useCanArenaUseModule } from '@/modules/arenas/hooks/useArenaV3';
 import { useArenaTournaments } from '@/modules/tournament/hooks/useTournament';
 import { useArenaCoaches } from '@/modules/coaches/hooks/useCoaches';
 import V2BookingCalendar from '@/v2/components/arenas/V2BookingCalendar';
-import { V2Badge, V2Button, V2EmptyState, V2Skeleton, V2Surface } from '@/v2/ui/primitives';
+import { isPixConfigured, PIX_KEY_TYPE_LABELS } from '@/modules/arenas/domain/pix_payment';
+import { V2Badge, V2Button, V2EmptyState, V2Field, V2Input, V2Skeleton, V2Surface } from '@/v2/ui/primitives';
 
 function arenaPhotoUrl(photo) {
   return typeof photo === 'string' ? photo : photo?.url;
@@ -179,6 +180,9 @@ export default function V2ArenaDetail() {
       {/* Sprint 5: Calendário interativo público (multi-seleção) */}
       <V2BookingCalendarSection arenaId={arenaId} arena={arena} />
 
+      {/* Sprint 5: Pagamento PIX (público) */}
+      <V2ArenaPaymentSection arena={arena} />
+
       {/* Sprint 4 ARE-14: Torneios da arena */}
       <ArenaTournamentsSection arenaId={arenaId} />
 
@@ -329,5 +333,58 @@ function V2BookingCalendarSection({ arenaId, arena }) {
       <h3 className="font-display text-lg font-bold text-ink mb-3">📅 Reserve sua quadra</h3>
       <V2BookingCalendar arenaId={arenaId} arena={arena} />
     </div>
+  );
+}
+
+function V2ArenaPaymentSection({ arena }) {
+  const payment = arena?.payment;
+  const [copied, setCopied] = useState(false);
+  if (!isPixConfigured(payment) || !payment.active) return null;
+  async function copyKey() {
+    if (!payment.pix_key) return;
+    try {
+      await navigator.clipboard.writeText(payment.pix_key);
+      setCopied(true);
+      setTimeout(() => setCopied(false), 2000);
+    } catch (err) { /* noop */ }
+  }
+  return (
+    <V2Surface className="mt-6">
+      <h3 className="flex items-center gap-1.5 font-display text-base font-bold text-ink">
+        💳 Pagar com PIX
+      </h3>
+      {payment.receiver_name && (
+        <p className="mt-1 text-sm text-gray-500">Recebedor: <span className="font-bold text-ink">{payment.receiver_name}</span></p>
+      )}
+      {payment.description && (
+        <p className="mt-2 whitespace-pre-line text-sm text-gray-600">{payment.description}</p>
+      )}
+      {payment.qr_code_url && (
+        <div className="mt-3 flex justify-center">
+          <img src={payment.qr_code_url} alt="QR Code PIX" className="max-w-[240px] rounded-2xl border border-gray-200 bg-white p-3" />
+        </div>
+      )}
+      {payment.pix_key && (
+        <div className="mt-3">
+          <p className="text-[11px] font-bold uppercase tracking-widest text-gray-400">
+            Chave PIX ({PIX_KEY_TYPE_LABELS[payment.pix_key_type] || payment.pix_key_type})
+          </p>
+          <div className="mt-1 flex items-center gap-2">
+            <code className="flex-1 break-all rounded-2xl border border-gray-200 bg-paper px-3 py-2 text-sm font-mono">
+              {payment.pix_key}
+            </code>
+            <V2Button size="sm" variant="secondary" onClick={copyKey}>
+              {copied ? <><Check className="h-3.5 w-3.5" /> Copiado</> : <><Copy className="h-3.5 w-3.5" /> Copiar</>}
+            </V2Button>
+          </div>
+        </div>
+      )}
+      {payment.instructions && (
+        <div className="mt-3 rounded-2xl border border-amber-200 bg-amber-50 p-3">
+          <p className="text-xs font-bold uppercase text-amber-800">Instruções</p>
+          <p className="mt-1 whitespace-pre-line text-sm text-amber-900">{payment.instructions}</p>
+        </div>
+      )}
+    </V2Surface>
   );
 }
