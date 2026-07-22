@@ -20,12 +20,13 @@
 
 import React, { useState } from 'react';
 import { toast } from 'sonner';
-import { ChevronDown, ChevronUp, Pencil, Plus, Trash2 } from 'lucide-react';
+import { ChevronDown, ChevronUp, Clock, Pencil, Plus, Trash2 } from 'lucide-react';
 import { normalizeCourtInput, COURT, nextSortOrder, sortCourts } from '@/modules/arenas/domain/court';
 import {
   useArenaCourts, useCreateCourt, useUpdateCourt, useDeleteCourt, useReorderCourts, useNormalizeCourtOrder,
 } from '@/modules/arenas/hooks/useArenas';
 import ConfirmDialog from '@/components/ConfirmDialog';
+import V2CourtSchedulesModal from '@/v2/components/arenas/V2CourtSchedulesModal';
 import { V2Badge, V2Button, V2Field, V2Input, V2Select, V2Surface, V2Textarea } from '@/v2/ui/primitives';
 
 const COURT_TYPE_OPTIONS = Object.entries(COURT.TYPE_LABELS).map(([value, label]) => ({ value, label }));
@@ -115,6 +116,7 @@ export default function V2CourtsTab({ arena }) {
   const [adding, setAdding] = useState(false);
   const [editing, setEditing] = useState(null); // court sendo editado
   const [deleting, setDeleting] = useState(null);
+  const [schedulesCourt, setSchedulesCourt] = useState(null); // court com modal de horários aberto
 
   const active = courts.filter((c) => c.is_active !== false).length;
   const inactive = courts.length - active;
@@ -265,6 +267,15 @@ export default function V2CourtsTab({ arena }) {
                 <div className="flex items-center gap-1">
                   <button
                     type="button"
+                    onClick={() => setSchedulesCourt(c)}
+                    className="flex h-9 w-9 items-center justify-center rounded-full text-gray-500 hover:bg-gray-100 hover:text-ink"
+                    aria-label="Gerenciar horários"
+                    title="Gerenciar horários"
+                  >
+                    <Clock className="h-4 w-4" />
+                  </button>
+                  <button
+                    type="button"
                     onClick={() => setEditing(c)}
                     className="flex h-9 w-9 items-center justify-center rounded-full text-gray-500 hover:bg-gray-100 hover:text-ink"
                     aria-label="Editar quadra"
@@ -316,6 +327,15 @@ export default function V2CourtsTab({ arena }) {
         onConfirm={handleDelete}
         loading={deleteCourt.isPending}
       />
+
+      {schedulesCourt && (
+        <V2CourtSchedulesModal
+          arenaId={arena.id}
+          court={schedulesCourt}
+          open={!!schedulesCourt}
+          onClose={() => setSchedulesCourt(null)}
+        />
+      )}
     </V2Surface>
   );
 }
