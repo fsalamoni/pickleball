@@ -24,6 +24,7 @@ import { useArenaTournaments } from '@/modules/tournament/hooks/useTournament';
 import { useArenaCoaches } from '@/modules/coaches/hooks/useCoaches';
 import V2BookingCalendar from '@/v2/components/arenas/V2BookingCalendar';
 import { isPixConfigured, PIX_KEY_TYPE_LABELS } from '@/modules/arenas/domain/pix_payment';
+import { groupRulesByCategory } from '@/modules/arenas/domain/arena_rules';
 import { V2Badge, V2Button, V2EmptyState, V2Field, V2Input, V2Skeleton, V2Surface } from '@/v2/ui/primitives';
 
 function arenaPhotoUrl(photo) {
@@ -167,15 +168,8 @@ export default function V2ArenaDetail() {
         </div>
       </div>
 
-      {/* Sprint 3 ARE-18: Regras da casa (público) */}
-      {arena.house_rules_md && (
-        <details className="mt-6 rounded-4xl border border-gray-100 bg-paper-pure p-5 shadow-organic-sm">
-          <summary className="cursor-pointer text-sm font-bold text-ink">
-            📋 Regras da casa
-          </summary>
-          <p className="mt-3 whitespace-pre-line text-sm leading-7 text-gray-600">{arena.house_rules_md}</p>
-        </details>
-      )}
+      {/* Sprint 5: Regras estruturadas (público) — preferido sobre house_rules_md */}
+      <ArenaRulesSection arena={arena} />
 
       {/* Sprint 5: Calendário interativo público (multi-seleção) */}
       <V2BookingCalendarSection arenaId={arenaId} arena={arena} />
@@ -384,6 +378,43 @@ function V2ArenaPaymentSection({ arena }) {
           <p className="text-xs font-bold uppercase text-amber-800">Instruções</p>
           <p className="mt-1 whitespace-pre-line text-sm text-amber-900">{payment.instructions}</p>
         </div>
+      )}
+    </V2Surface>
+  );
+}
+
+function ArenaRulesSection({ arena }) {
+  const rules = Array.isArray(arena?.rules) && arena.rules.length > 0 ? arena.rules : null;
+  const hasLegacy = arena?.house_rules_md;
+  if (!rules && !hasLegacy) return null;
+  const grouped = rules ? groupRulesByCategory(rules) : null;
+  return (
+    <V2Surface className="mt-6">
+      <h3 className="flex items-center gap-1.5 font-display text-base font-bold text-ink">
+        📋 Regras da arena
+      </h3>
+      {grouped ? (
+        <div className="mt-3 space-y-4">
+          {Object.entries(grouped).map(([cat, items]) => (
+            <div key={cat}>
+              <h4 className="mb-1.5 text-xs font-bold uppercase tracking-widest text-emerald-700">
+                {cat}
+              </h4>
+              <ol className="list-decimal space-y-2 pl-5">
+                {items.map((r) => (
+                  <li key={r.id} className="text-sm text-gray-700">
+                    <span className="font-bold text-ink">{r.title}</span>
+                    {r.description && (
+                      <span className="ml-1 text-gray-600">— {r.description}</span>
+                    )}
+                  </li>
+                ))}
+              </ol>
+            </div>
+          ))}
+        </div>
+      ) : (
+        <p className="mt-3 whitespace-pre-line text-sm leading-7 text-gray-600">{hasLegacy}</p>
       )}
     </V2Surface>
   );

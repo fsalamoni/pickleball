@@ -4,6 +4,8 @@
  * Sem I/O — testável isoladamente.
  */
 
+import { normalizeArenaRules } from './arena_rules.js';
+
 function str(value) {
   return String(value ?? '').trim();
 }
@@ -56,7 +58,8 @@ export function normalizeArenaInput(input = {}) {
       return n;
     })(),
     active: input.active !== false,
-    house_rules_md: str(input.house_rules_md).slice(0, 2000),
+    house_rules_md: str(input.house_rules_md).slice(0, 2000), // legacy (Sprint 3)
+    rules: normalizeArenaRules(input.rules), // Sprint 5 (preferred)
     allow_instant_booking: input.allow_instant_booking === true, // Sprint 2 ARE-03
     payment: input.payment && typeof input.payment === 'object' ? input.payment : null, // Sprint 5
   };

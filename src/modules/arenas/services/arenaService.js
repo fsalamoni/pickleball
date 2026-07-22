@@ -121,7 +121,7 @@ export async function updateArena(id, updates, actor) {
     'name', 'description', 'city', 'state', 'address', 'neighborhood',
     'contact_phone', 'contact_whatsapp', 'contact_email', 'instagram',
     'website', 'hours', 'court_count', 'base_price', 'active',
-    'house_rules_md', 'allow_instant_booking', 'payment', // Sprint 3 ARE-18 + Sprint 2 ARE-03 + Sprint 5 ARE-12
+    'house_rules_md', 'rules', 'allow_instant_booking', 'payment', // Sprint 3 ARE-18 + Sprint 5 + Sprint 2 ARE-03 + Sprint 5 ARE-12
   ];
   const sanitized = {};
   allowed.forEach((key) => {
