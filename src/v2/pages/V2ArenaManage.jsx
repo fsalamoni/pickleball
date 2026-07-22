@@ -5,6 +5,7 @@ import { collection, getDocs, query, where } from 'firebase/firestore';
 import { ArrowLeft, Building2, Trash2, UserPlus, Users } from 'lucide-react';
 import V2CourtsTab from '@/v2/components/arenas/V2CourtsTab';
 import V2ArenaCalendar from '@/v2/components/arenas/V2ArenaCalendar';
+import V2ArenaMetrics from '@/v2/components/arenas/V2ArenaMetrics';
 import { db } from '@/core/config/firebase';
 import { useFeatureFlag } from '@/core/lib/FeatureFlagsContext';
 import { FEATURE_FLAG } from '@/core/featureFlags';
@@ -72,6 +73,7 @@ export default function V2ArenaManage() {
   const isOwner = arena.owner_id === user?.uid || isPlatformAdmin;
 
   const tabs = [
+    { value: 'metricas', label: 'Métricas' },
     { value: 'reservas', label: 'Reservas' },
     { value: 'calendario', label: 'Calendário' },
     { value: 'quadras', label: 'Quadras' },
@@ -131,6 +133,7 @@ export default function V2ArenaManage() {
       </div>
 
       <div className="mt-6">
+        {tab === 'metricas' && <V2ArenaMetrics arena={arena} />}
         {tab === 'reservas' && <BookingsTab arena={arena} />}
         {tab === 'calendario' && <V2ArenaCalendar arena={arena} />}
         {tab === 'quadras' && <V2CourtsTab arena={arena} />}

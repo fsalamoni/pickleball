@@ -53,8 +53,11 @@ A PickleRush existe para:
 - 🎾 quadras nomeadas (coberta/descoberta, superfície, ativas/inativas, ordenáveis)
 - 🕐 janelas de horário recorrentes por quadra (ex: "Seg–Sex 08:00–12:00")
 - 📅 calendário mensal de reservas com filtro por quadra e cores por status
+- 📈 painel do proprietário com receita, ocupação, conversão, rating, próximas reservas (mês a mês)
 - 💰 regras de preço por dia/horário, com opção de aplicar só a uma quadra específica
 - 🛡️ detecção de conflito em tempo real (valida schedule + reservas ativas antes de criar)
+- ⚡ reserva instantânea (auto-confirmada, requer pagamento adiantado, opt-in por arena)
+- 🏪 PDV (loja) com produtos, vendas, pagamentos (PIX por QR/código ou dinheiro na arena)
 - 📆 solicitação de reservas avulsas e recorrentes
 - 💸 negociação manual de valor
 - 🧾 acompanhamento de pagamento e histórico

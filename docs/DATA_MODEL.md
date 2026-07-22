@@ -140,6 +140,7 @@ Perfil público-editável da arena. Criado pelo próprio dono.
 - `contact_phone`, `contact_whatsapp`, `contact_email`, `instagram` (handle),
   `website` (URL normalizada com `https://`).
 - `hours` (max 400, texto livre), `base_price` (number, fallback), `active` (bool).
+- `allow_instant_booking: bool` (Sprint 2 ARE-03) — opt-in da arena pra permitir reserva instantânea.
 - `price_rules[]` (Sprint 1 ARE-05: cada regra pode ter `court_id` opcional):
   - `id`, `label`, `weekdays[]` (0-6), `start`, `end` ('HH:MM'),
     `price`, `court_id` (opcional: aplica só a essa quadra ou a todas se vazio).
@@ -174,6 +175,9 @@ Reservas da arena. `arena_id`, `athlete_id`, `athlete_name`, `athlete_photo`.
 - `kind` (`'single'|'recurring'`), `slots[]` (`{date, start, end, court_id?}`),
   `recurrence` (objeto, só se kind=recurring), `notes` (max 600).
 - `status` (`'requested'|'negotiating'|'confirmed'|'declined'|'cancelled'|'completed'`).
+- `is_instant: bool` (Sprint 2 ARE-03) — se true, status inicial = `confirmed`.
+- `payment_method` (opcional, se `is_instant=true` é obrigatório):
+  `'pix'|'credit_card'|'debit_card'|'cash'|'wallet'|'bank_transfer'`.
 - `proposed_price`, `agreed_price`, `payment_status` (`'none'|'pending'|'paid'|'refunded'`).
 - `created_by`, `created_at`, `updated_at`, `created_at_ms`.
 
@@ -185,6 +189,22 @@ Avaliações/reclamações/sugestões. `arena_id`, `user_id`, `user_name`,
 
 ### `arena_favorites/{uid_arenaId}`
 Favoritos do atleta. Id determinista. `user_id`, `arena_id`, `created_at`.
+
+### `arena_products/{id}` (V3, do Arena V3 — PDV)
+Produtos da loja. `arena_id`, `name` (max 80), `description` (max 500),
+`price` (number), `category` (`'bebidas'|'equipamentos'|'vestuario'|'acessorios'|'alimentos'|'outros'`),
+`stock` (number, opcional = sem controle), `image_url`, `active: bool`,
+`sold_count` (contador). `created_at`, `updated_at`.
+
+### `arena_sales/{id}` (V3, do Arena V3 — PDV)
+Vendas. `arena_id`, `buyer_id`, `buyer_name`, `items[]` (`{product_id, quantity, price}`),
+`total`, `payment_method`, `status` (`'pending'|'paid'|'cancelled'|'refunded'`),
+`split_with[]` (user_ids), `split_details[]` (somas por participante).
+`created_at`, `updated_at`.
+
+### `arena_payments/{id}` (V3, do Arena V3 — PDV)
+Pagamentos individuais. `sale_id`, `arena_id`, `payer_id`, `amount`,
+`payment_method`, `status`. Id = `${saleId}_${userId}`. `created_at`, `updated_at`, `paid_at`.
 
 ## Transversal
 
