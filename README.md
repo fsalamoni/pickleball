@@ -62,6 +62,10 @@ A PickleRush existe para:
 - 📋 regras da casa (markdown) exibidas na página pública da arena
 - 🏆 circuitos de torneios com ranking acumulado (séries de torneios + pontuação)
 - 👨‍🏫 diretório de professores com perfil, valor/hora e vínculo de residência em arenas
+- 📅 calendário interativo de reservas com seleção multi-slot e auto-preço
+- 💳 pagamento PIX com QR code e chave copiável
+- 📋 regras estruturadas (lista por categoria) na página pública
+- 🛒 gestão de estoque/mercado (entradas, saídas, margem por produto)
 - 🏟️ integração arena × torneio (torneios aparecem na página da arena)
 - 🤝 integração arena × professor (coaches residentes aparecem na arena)
 - 📆 solicitação de reservas avulsas e recorrentes

@@ -194,6 +194,13 @@ campos em `docs/DATA_MODEL.md`.
   **Sprint 4 ARE-14/15** (Integrações):
   - `tournaments/{id}.arena_id` (opcional, vincula torneio a arena)
   - Página da arena mostra tournaments vinculados e coaches residentes
+  **Sprint 5 (Refinamento)**:
+  - `arena_unavailabilities/{id}` (admin marca slot indisponível)
+  - `arenas/{id}.payment` (PIX: pix_key, qr_code_url, receiver_name)
+  - `arenas/{id}.rules[]` (lista de regras com título+descrição+categoria)
+  - `arena_inventory_products/{id}` (mestre: nome, marca, categoria)
+  - `arena_inventory_entries/{id}` (compra: qty, custo, fornecedor)
+  - `arena_inventory_exits/{id}` (venda: qty, preço, tipo)
 - **Clubes**: `clubs` · `club_members` (id `clubId_uid`, tem `role`) ·
   `club_join_requests` (id `clubId_uid`) · `club_member_invites`
   (id `clubId_uid`) · `club_posts` (mural) · `club_forum_threads` ·

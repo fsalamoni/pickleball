@@ -1,9 +1,8 @@
 # Roadmap de Arena — implementação completa
 
-> **Status**: **Sprint 0 ✅ DONE** (PRs #46, #47), **Sprint 1 ✅ DONE**
-> (PRs #48–#51), **Sprint 2 ✅ DONE** (PR #53), **Sprint 3 ✅ DONE** (PR #54),
-> **Sprint 4 ✅ DONE** (PRs #55 ORG-20, #56 PRO-15, #57 ARE-14/15).
-> Roadmap Arena CONCLUÍDO.
+> **Status**: Sprints 0+1+2+3+4 ✅ DONE, **Sprint 5 (Refinamento) ✅ DONE**
+> (PRs #58 hotfix, #59 calendar, #60 PIX, #61 regras, #62 mercado).
+> Roadmap Arena COMPLETAMENTE CONCLUÍDO.
 >
 > **Escopo**: persona **proprietário de arena** (ARE-01 a ARE-20 do doc de UX)
 > + cross-cutting necessário para ela fechar. **Não** cobre gestão de
@@ -21,14 +20,17 @@
 >   regras da casa (house rules)
 > - Sprint 4 (Integrações) ✅: ORG-20 circuitos, PRO-15 professores residentes,
   ARE-14 arena × torneio, ARE-15 arena × professor
+- Sprint 5 (Refinamento) ✅: HOTFIX ConfirmDialog, calendar interativo
+  público+admin com auto-preço, pagamento PIX (QR+chave), regras
+  estruturadas (lista por categoria), mercado/estoque (entrada+saída+margem)
 > - 18+ páginas V2Arena* no ar
 > - 13 services + 1 hook monolítico `useArenaV3.js` (749 linhas)
 > - 30 feature flags `ARENA_MODULE_*` (4-level gate)
-> - 36 firestore collections
+> - 39 firestore collections (Sprint 5: +3 inventory: products, entries, exits)
 > - `/admin/v3-bootstrap` (liga tudo de uma vez)
 > - Domínio de booking/pricing/calendar/court/court_schedule/booking_conflict
 >   /instant_booking/arena_metrics/review_response **bem testado**
->   (9 arquivos de teste, 938 tests passing — Sprint 4: +62)
+>   (11 arquivos de teste, 1020 tests passing — Sprint 5: +82)
 
 ---
 
