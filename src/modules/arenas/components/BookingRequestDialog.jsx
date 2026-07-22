@@ -28,15 +28,22 @@ function slotLabel(slot) {
   return `${slot.date} · ${slot.start}–${slot.end}`;
 }
 
-export default function BookingRequestDialog({ arena, open, onOpenChange }) {
+export default function BookingRequestDialog({ arena, open, onOpenChange, court: initialCourt, preselectedSlots = [], onClose }) {
+  // Compat: se open prop não for passado, usar onClose como fallback
+  const _open = open !== undefined ? open : true;
+  const _onOpenChange = onOpenChange || onClose || (() => {});
   const { user } = useAuth();
   const createBooking = useCreateBooking();
   const { data: existingBookings = [] } = useArenaBookings(arena.id);
   const { data: courts = [] } = useArenaCourts(arena.id);
   const activeCourts = useMemo(() => courts.filter((c) => c.is_active !== false), [courts]);
-  const [courtId, setCourtId] = useState('');
-  const [kind, setKind] = useState(BOOKING_KIND.SINGLE);
-  const [single, setSingle] = useState({ date: '', start: '18:00', end: '19:00' });
+  const [courtId, setCourtId] = useState(initialCourt?.id || '');
+  const [kind, setKind] = useState(preselectedSlots.length > 0 ? 'multi' : BOOKING_KIND.SINGLE);
+  // Se veio do calendário, pode ter múltiplos slots
+  const initialMultiSlots = preselectedSlots.length > 0 ? preselectedSlots : [];
+  const firstSlot = preselectedSlots[0] || { date: '', start: '18:00', end: '19:00' };
+  const [single, setSingle] = useState({ date: firstSlot.date, start: firstSlot.start, end: firstSlot.end });
+  const [multiSlots, setMultiSlots] = useState(initialMultiSlots);
   const [recurring, setRecurring] = useState({ weekday: 1, start: '18:00', end: '19:00', weeks: 8, fromDate: '' });
   const [notes, setNotes] = useState('');
   const [isInstant, setIsInstant] = useState(false);
@@ -93,6 +100,9 @@ export default function BookingRequestDialog({ arena, open, onOpenChange }) {
   }, [kind, single, recurring, arena, user?.uid]);
 
   const candidateSlots = useMemo(() => {
+    if (kind === 'multi' || (multiSlots && multiSlots.length > 0)) {
+      return sortSlots(multiSlots);
+    }
     if (kind === BOOKING_KIND.SINGLE) {
       const slot = { date: single.date, start: single.start, end: single.end };
       return isValidSlot(slot) ? [slot] : [];
@@ -104,7 +114,7 @@ export default function BookingRequestDialog({ arena, open, onOpenChange }) {
       weeks: recurring.weeks,
       fromDate: recurring.fromDate,
     }));
-  }, [kind, single, recurring]);
+  }, [kind, single, recurring, multiSlots]);
 
   const confirmedBookings = useMemo(
     () => existingBookings.filter((booking) => booking.status === BOOKING_STATUS.CONFIRMED),
@@ -171,7 +181,7 @@ export default function BookingRequestDialog({ arena, open, onOpenChange }) {
   }
 
   return (
-    <Dialog open={open} onOpenChange={onOpenChange}>
+    <Dialog open={_open} onOpenChange={_onOpenChange}>
       <DialogContent className="max-w-lg">
         <DialogHeader>
           <DialogTitle>Reservar em {arena.name}</DialogTitle>

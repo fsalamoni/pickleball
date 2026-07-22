@@ -28,6 +28,9 @@ import {
   deleteArenaReviewResponse,
   listArenaCourtSchedules,
   listCourtSchedules,
+  addArenaUnavailability,
+  deleteArenaUnavailability,
+  listArenaUnavailabilities,
   createCourtSchedule,
   updateCourtSchedule,
   deleteCourtSchedule,
@@ -326,3 +329,35 @@ export function useDeleteSchedule(courtId) {
   });
 }
 
+
+/* ---------------- Unavailabilities (Sprint 5) --------------------- */
+
+export function useArenaUnavailabilities(arenaId, { from, to } = {}) {
+  return useQuery({
+    queryKey: ['arena-unavailabilities', arenaId, from, to],
+    queryFn: () => listArenaUnavailabilities(arenaId, { from, to }),
+    enabled: !!arenaId,
+  });
+}
+
+export function useAddArenaUnavailability(arenaId) {
+  const { user } = useAuth();
+  const qc = useQueryClient();
+  return useMutation({
+    mutationFn: (input) => addArenaUnavailability(arenaId, input, user),
+    onSuccess: () => {
+      qc.invalidateQueries({ queryKey: ['arena-unavailabilities', arenaId] });
+    },
+  });
+}
+
+export function useDeleteArenaUnavailability(arenaId) {
+  const { user } = useAuth();
+  const qc = useQueryClient();
+  return useMutation({
+    mutationFn: (unavId) => deleteArenaUnavailability(unavId, user),
+    onSuccess: () => {
+      qc.invalidateQueries({ queryKey: ['arena-unavailabilities', arenaId] });
+    },
+  });
+}
