@@ -955,5 +955,27 @@ service cloud.firestore {
       allow create, update, delete: if isCircuitAdmin(resultId.split('_')[0]) || isPlatformAdmin();
     }
 
+
+    // ---- Sprint 4 PRO-15: Professores residentes ----
+    // coaches/{uid} — perfil público do professor
+    match /coaches/{coachId} {
+      allow read: if true;
+      allow create, update: if isAuthed() && (
+        request.auth.uid == coachId || isPlatformAdmin()
+      );
+      allow delete: if isPlatformAdmin();
+    }
+    // coach_arenas/{coachId_arenaId} — residência
+    match /coach_arenas/{resId} {
+      allow read: if true;
+      allow create, update, delete: if isAuthed() && (
+        isPlatformAdmin() ||
+        // coach pode adicionar/remover residência dele
+        request.auth.uid == resId.split('_')[0] ||
+        // arena manager pode adicionar/remover
+        exists(/databases/$(database)/documents/arena_managers/$(resId.split('_')[1] + '_' + request.auth.uid))
+      );
+    }
+
   }
 }

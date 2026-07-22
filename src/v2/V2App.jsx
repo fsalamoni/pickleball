@@ -30,6 +30,8 @@ const V2CreateArena = lazy(() => import('@/v2/pages/V2CreateArena'));
 const V2CreateClub = lazy(() => import('@/v2/pages/V2CreateClub'));
 const V2Circuits = lazy(() => import('@/v2/pages/V2Circuits'));
 const V2CircuitManage = lazy(() => import('@/v2/pages/V2CircuitManage'));
+const V2Coaches = lazy(() => import('@/v2/pages/V2Coaches'));
+const V2CoachProfile = lazy(() => import('@/v2/pages/V2CoachProfile'));
 const V2ProfileEdit = lazy(() => import('@/v2/pages/V2ProfileEdit'));
 const V2AdminMetrics = lazy(() => import('@/v2/pages/V2AdminMetrics'));
 const V2AdminTournaments = lazy(() => import('@/v2/pages/V2AdminTournaments'));
@@ -123,6 +125,8 @@ export default function V2App() {
           <Route path="arenas/:arenaId/gerir/operacoes" element={<V2ArenaOperations />} />
           <Route path="circuits" element={<V2Circuits />} />
           <Route path="circuits/:circuitId" element={<V2CircuitManage />} />
+          <Route path="coaches" element={<V2Coaches />} />
+          <Route path="coaches/:coachId" element={<V2CoachProfile />} />
           <Route path="arenas/:arenaId/avancado" element={<V2ArenaAdvanced />} />
           <Route path="arenas/:arenaId/gerir/avancado" element={<V2ArenaAdvanced />} />
           <Route path="minhas-reservas" element={<V2Bookings />} />

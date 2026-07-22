@@ -307,6 +307,13 @@ export const FEATURE_FLAG = Object.freeze({
    * Circuitos (Sprint 4 ORG-20): série de torneios com ranking acumulado.
    */
   CIRCUITS: 'circuits',
+
+  /**
+   * Professores residentes (Sprint 4 PRO-15): coaches podem se cadastrar
+   * com perfil público (bio, valor/hora, regiões, modalidades) e vincular
+   * a arenas como residentes. Desligado, a rota /coaches e o menu somem.
+   */
+  COACH_RESIDENT: 'coach_resident',
 });
 
 /** Metadados de exibição para o painel de flags (admin master). */
@@ -561,6 +568,16 @@ export const FEATURE_FLAG_META = Object.freeze({
       + 'ranking acumulado. Cada torneio atribui pontos por posição final '
       + 'e o sistema computa o ranking agregado. Desligado, a rota '
       + '/circuits e o menu somem.',
+  },
+
+  // ---- Sprint 4 PRO-15 Professores residentes ----
+  [FEATURE_FLAG.COACH_RESIDENT]: {
+    label: 'Professores residentes (Sprint 4 PRO-15)',
+    description:
+      'Permite a qualquer usuário se tornar professor (cadastrar bio, '
+      + 'valor/hora, regiões, modalidades) e listar no diretório. Permite '
+      + 'também vincular um professor como residente de uma arena. '
+      + 'Desligado, a rota /coaches e o menu somem.',
   },
 });
 
