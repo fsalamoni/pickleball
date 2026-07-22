@@ -5,6 +5,7 @@ import { cn } from '@/core/lib/utils';
 import { WEEKDAY_SHORT } from '@/modules/arenas/domain/constants';
 import { useSaveArenaPricing } from '@/modules/arenas/hooks/useArenas';
 import { V2Button } from '@/v2/ui/primitives';
+import { useArenaCourts } from '@/modules/arenas/hooks/useArenas';
 
 /**
  * Componente nativo V2 de edição dos dados descritivos e de contato da Arena.

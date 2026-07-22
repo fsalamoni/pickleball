@@ -128,6 +128,64 @@ Lógica pura em `chat/domain/conversations.js`.
 Mensagens: `conversation_id`, `sender_id`, `text`, `created_at`.
 Mensagens/convites geram `chat_message` / `chat_invite`.
 
+## Arenas
+
+> Sprint 0 + Sprint 1. Coleções top-level, ids autogen (exceto
+> `arena_managers` que tem id determinista `arenaId_uid`).
+
+### `arenas/{id}`
+Perfil público-editável da arena. Criado pelo próprio dono.
+- `name`, `description` (max 2000), `address` (max 240), `neighborhood` (max 120).
+- `city`, `state` (UF, max 2), `court_count` (legado, mantido p/ compat).
+- `contact_phone`, `contact_whatsapp`, `contact_email`, `instagram` (handle),
+  `website` (URL normalizada com `https://`).
+- `hours` (max 400, texto livre), `base_price` (number, fallback), `active` (bool).
+- `price_rules[]` (Sprint 1 ARE-05: cada regra pode ter `court_id` opcional):
+  - `id`, `label`, `weekdays[]` (0-6), `start`, `end` ('HH:MM'),
+    `price`, `court_id` (opcional: aplica só a essa quadra ou a todas se vazio).
+- `price_overrides[]` (Sprint 1 ARE-05: cada override pode ter `court_id`):
+  - `id`, `label`, `date` ('YYYY-MM-DD', opcional), `client_id` (opcional),
+    `price`, `note`, `court_id` (opcional).
+- `photos[]` (até 20): `{url, path, name}`. Primeira foto é a capa.
+- `onboarding_complete` (Sprint 0 ARE-20): `{fotos, precos, horarios, compartilhar}` (4 booleans).
+- `onboarding_completed_at` (timestamp).
+- `created_at`, `updated_at` (serverTimestamp).
+
+### `arena_managers/{arenaId_uid}`
+Gestores da arena. Id determinista evita duplicidade.
+- `arena_id`, `user_id`, `user_name` (desnormalizado), `user_photo`, `role` (`'owner'|'manager'`).
+- `added_by` (uid), `created_at`.
+
+### `arena_courts/{id}` (Sprint 1 ARE-01)
+Quadras nomeadas da arena (substitui o `court_count: int` legado).
+- `arena_id`, `name` (max 60, obrigatório), `court_type` (`'indoor'|'outdoor'|'covered'`),
+  `surface_type` (`'concrete'|'synthetic'|'wood'|'asphalt'`, opcional),
+  `is_active` (bool, soft delete), `sort_order` (0-9999, editável).
+- `notes` (max 500), `created_at`, `updated_at`.
+
+### `arena_court_schedules/{id}` (Sprint 1 ARE-04)
+Janelas de horário recorrentes por quadra.
+- `arena_id`, `court_id`, `weekdays[]` (0-6), `start_time`, `end_time` ('HH:MM').
+- `label` (max 60, opcional), `is_active` (bool, soft delete).
+- `created_at`, `updated_at`.
+
+### `arena_bookings/{id}`
+Reservas da arena. `arena_id`, `athlete_id`, `athlete_name`, `athlete_photo`.
+- `kind` (`'single'|'recurring'`), `slots[]` (`{date, start, end, court_id?}`),
+  `recurrence` (objeto, só se kind=recurring), `notes` (max 600).
+- `status` (`'requested'|'negotiating'|'confirmed'|'declined'|'cancelled'|'completed'`).
+- `proposed_price`, `agreed_price`, `payment_status` (`'none'|'pending'|'paid'|'refunded'`).
+- `created_by`, `created_at`, `updated_at`, `created_at_ms`.
+
+### `arena_reviews/{id}`
+Avaliações/reclamações/sugestões. `arena_id`, `user_id`, `user_name`,
+`rating` (1-5, só se `type='review'`), `type` (`'review'|'complaint'|'suggestion'`),
+`comment`, `response` (resposta da arena, opcional), `responded_at`,
+`created_at`.
+
+### `arena_favorites/{uid_arenaId}`
+Favoritos do atleta. Id determinista. `user_id`, `arena_id`, `created_at`.
+
 ## Transversal
 
 ### `notifications/{id}`

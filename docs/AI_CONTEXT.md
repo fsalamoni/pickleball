@@ -135,6 +135,12 @@ navegação nova.
 > `Minhas reservas` só aparece se `ARENAS` estiver ligada (Sprint 0
 > ARE-11 + QW-14).
 
+**Tabs do /arenas/:id/gerir** (Sprint 1 ARE-02/04/05/07): Reservas, Calendário
+(visualização mensal 6x7 com filtro por quadra e cores por status), Quadras
+(CRUD com reorder, soft delete, modal de horários), Preços (com campo
+"Aplicar à quadra" em cada regra/override), Fotos, Informações, Admins,
+Retornos.
+
 Guards: `ProtectedRoute` (auth) e `AdminRoute` (platform_admin). Redirects
 legados `/dashboard`,`/boloes*` → rotas novas. Páginas via `React.lazy`.
 `basename = import.meta.env.BASE_URL`. Em DEV sem Firebase há "local preview"
@@ -162,6 +168,11 @@ campos em `docs/DATA_MODEL.md`.
   `/arenas/:id/onboarding` (Sprint 0 ARE-20) e usado para nutrir campanhas
   de "complete seu perfil". A página `/arenas/:id/gerir` é o painel
   operacional (fotos, preços, regras, membros, módulos).
+  **Sprint 1 ARE-01/02/04/05/07**:
+  - `arena_courts` (quadras nomeadas com `court_type`/`surface_type`/`is_active`/`sort_order`)
+  - `arena_court_schedules` (janelas recorrentes: `weekdays[]`/`start_time`/`end_time`/`court_id`)
+  - `price_rules[]` em `arenas` agora pode ter `court_id` (ARE-05) — regra aplica só à quadra ou a todas se vazio
+  - `arena_bookings` tem `court_id` opcional (FOREIGN KEY não-enforçada)
 - **Clubes**: `clubs` · `club_members` (id `clubId_uid`, tem `role`) ·
   `club_join_requests` (id `clubId_uid`) · `club_member_invites`
   (id `clubId_uid`) · `club_posts` (mural) · `club_forum_threads` ·
