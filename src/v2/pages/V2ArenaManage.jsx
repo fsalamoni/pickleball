@@ -10,8 +10,8 @@ import V2AdminBookingCalendar from '@/v2/components/arenas/V2AdminBookingCalenda
 import V2ArenaPaymentTab from '@/v2/components/arenas/V2ArenaPaymentTab';
 import V2ArenaRulesTab from '@/v2/components/arenas/V2ArenaRulesTab';
 import V2ArenaMercadoTab from '@/v2/components/arenas/V2ArenaMercadoTab';
+import FeatureFlagGuard from '@/v2/components/FeatureFlagGuard';
 import { db } from '@/core/config/firebase';
-import { useFeatureFlag } from '@/core/lib/FeatureFlagsContext';
 import { FEATURE_FLAG } from '@/core/featureFlags';
 import { useAuth } from '@/core/lib/FirebaseAuthContext';
 import { ImageUpload } from '@/components/ui/image-upload';
@@ -31,7 +31,6 @@ import { V2Badge, V2Button, V2Field, V2Input, V2Skeleton, V2Surface } from '@/v2
 import { cn } from '@/core/lib/utils';
 
 export default function V2ArenaManage() {
-  const enabled = useFeatureFlag(FEATURE_FLAG.ARENAS);
   const { arenaId } = useParams();
   const { user, isPlatformAdmin } = useAuth();
   const { data: arena, isLoading } = useArena(arenaId);
@@ -39,6 +38,30 @@ export default function V2ArenaManage() {
   const deleteArena = useDeleteArena();
   const location = useLocation();
   const [tab, setTab] = useState('reservas');
+
+  return (
+    <FeatureFlagGuard
+      flag={FEATURE_FLAG.ARENAS}
+      label="Arenas"
+      description="O painel de gestão de arenas fica disponível quando a flag Arenas está ligada."
+    >
+      <V2ArenaManageContent
+        arenaId={arenaId}
+        user={user}
+        isPlatformAdmin={isPlatformAdmin}
+        arena={arena}
+        managed={managed}
+        isLoading={isLoading}
+        deleteArena={deleteArena}
+        location={location}
+        tab={tab}
+        setTab={setTab}
+      />
+    </FeatureFlagGuard>
+  );
+}
+
+function V2ArenaManageContent({ arenaId, user, isPlatformAdmin, arena, managed, isLoading, deleteArena, location, tab, setTab }) {
 
   // Sprint 0.1 (â€ncora pro stepper de onboarding): ao montar, lê o hash
   // (#fotos / #precos / #horarios) e troca a tab + scroll até a seÃ§Ã£o.
@@ -58,7 +81,6 @@ export default function V2ArenaManage() {
     });
   }, [location.hash]);
 
-  if (!enabled) return <Navigate to="/" replace />;
   if (isLoading) return <div className="mx-auto max-w-[1000px] space-y-4"><V2Skeleton className="h-40 rounded-4xl" /><V2Skeleton className="h-64 rounded-4xl" /></div>;
   if (!arena) {
     return (

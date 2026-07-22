@@ -69,7 +69,7 @@ function useV2Nav() {
       title: 'Plataforma',
       items: [
         { to: '/', label: 'Visão Geral', icon: LayoutGrid, exact: true },
-        arenasOn && { to: '/arenas', label: 'Explorar Quadras', icon: MapPin },
+        (arenasOn || isPlatformAdmin) && { to: '/arenas', label: 'Explorar Quadras', icon: MapPin, tag: !arenasOn && isPlatformAdmin ? 'Off' : undefined },
         { to: '/torneios', label: 'Torneios', icon: Trophy, tag: 'Novo' },
         circuitsOn && { to: '/circuits', label: 'Circuitos', icon: Award },
         coachesOn && { to: '/coaches', label: 'Professores', icon: GraduationCap },

@@ -1,15 +1,15 @@
 import React, { useState } from 'react';
-import { Link, Navigate, useParams } from 'react-router-dom';
+import { Link, useParams } from 'react-router-dom';
 import {
   ArrowLeft, Building2, CalendarPlus, Clock, Globe, Instagram, Mail, MapPin,
   MessageCircle, Phone, Settings, Star, Trophy, Users,
   GraduationCap,
 } from 'lucide-react';
 import { PhotoLightbox } from '@/components/ui/photo-lightbox';
-import { useFeatureFlag } from '@/core/lib/FeatureFlagsContext';
 import { FEATURE_FLAG } from '@/core/featureFlags';
 import { useAuth } from '@/core/lib/FirebaseAuthContext';
 import V2ChatLauncherButton from '@/v2/components/chat/V2ChatLauncherButton';
+import FeatureFlagGuard from '@/v2/components/FeatureFlagGuard';
 import { V2FavoriteArenaButton, V2ArenaShareButton } from '@/v2/components/arenas/V2ArenaActions';
 import V2ArenaReviews from '@/v2/components/arenas/V2ArenaReviews';
 import BookingRequestDialog from '@/modules/arenas/components/BookingRequestDialog';
@@ -73,7 +73,6 @@ function ContactRow({ icon: Icon, href, label }) {
 }
 
 export default function V2ArenaDetail() {
-  const enabled = useFeatureFlag(FEATURE_FLAG.ARENAS);
   const { arenaId } = useParams();
   const { user } = useAuth();
   const { data: arena, isLoading } = useArena(arenaId);
@@ -81,7 +80,27 @@ export default function V2ArenaDetail() {
   const { data: bookings = [] } = useArenaBookings(arenaId);
   const [bookingOpen, setBookingOpen] = useState(false);
 
-  if (!enabled) return <Navigate to="/" replace />;
+  return (
+    <FeatureFlagGuard
+      flag={FEATURE_FLAG.ARENAS}
+      label="Arenas"
+      description="As quadras e reservas ficam disponíveis quando a flag Arenas está ligada."
+    >
+      <V2ArenaDetailContent
+        arenaId={arenaId}
+        user={user}
+        arena={arena}
+        managed={managed}
+        bookings={bookings}
+        isLoading={isLoading}
+        bookingOpen={bookingOpen}
+        setBookingOpen={setBookingOpen}
+      />
+    </FeatureFlagGuard>
+  );
+}
+
+function V2ArenaDetailContent({ arenaId, user, arena, managed, bookings, isLoading, bookingOpen, setBookingOpen }) {
 
   if (isLoading) {
     return (

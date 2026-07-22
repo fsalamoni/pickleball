@@ -2,8 +2,8 @@ import React, { useState } from 'react';
 import { Link, Navigate, useNavigate } from 'react-router-dom';
 import { toast } from 'sonner';
 import { ArrowLeft } from 'lucide-react';
-import { useFeatureFlag } from '@/core/lib/FeatureFlagsContext';
 import { FEATURE_FLAG } from '@/core/featureFlags';
+import FeatureFlagGuard from '@/v2/components/FeatureFlagGuard';
 import { useAuth } from '@/core/lib/FirebaseAuthContext';
 import { useCreateArena } from '@/modules/arenas/hooks/useArenas';
 import { V2Button, V2Field, V2Input, V2SectionHeader, V2Surface, V2Textarea } from '@/v2/ui/primitives';
@@ -15,14 +15,24 @@ const INITIAL = {
 };
 
 export default function V2CreateArena() {
-  const enabled = useFeatureFlag(FEATURE_FLAG.ARENAS);
+  return (
+    <FeatureFlagGuard
+      flag={FEATURE_FLAG.ARENAS}
+      label="Arenas"
+      description="O cadastro de arenas fica disponível quando a flag Arenas está ligada."
+    >
+      <V2CreateArenaContent />
+    </FeatureFlagGuard>
+  );
+}
+
+function V2CreateArenaContent() {
   const navigate = useNavigate();
   const { isAuthenticated } = useAuth();
   const createArena = useCreateArena();
   const [form, setForm] = useState(INITIAL);
   const [errors, setErrors] = useState({});
 
-  if (!enabled) return <Navigate to="/" replace />;
 
   const set = (key) => (e) => setForm((prev) => ({ ...prev, [key]: e.target.value }));
 
