@@ -986,5 +986,35 @@ service cloud.firestore {
       );
     }
 
+
+    // ---- Sprint 5: Inventory / Mercado ----
+    match /arena_inventory_products/{productId} {
+      allow read: if isAuthed();
+      allow create, update, delete: if isAuthed() && (
+        isPlatformAdmin() ||
+        exists(/databases/$(database)/documents/arena_managers/$(request.resource.data.arena_id + '_' + request.auth.uid))
+      );
+    }
+    match /arena_inventory_entries/{entryId} {
+      allow read: if isAuthed() && (
+        isPlatformAdmin() ||
+        exists(/databases/$(database)/documents/arena_managers/$(resource.data.arena_id + '_' + request.auth.uid))
+      );
+      allow create, update, delete: if isAuthed() && (
+        isPlatformAdmin() ||
+        exists(/databases/$(database)/documents/arena_managers/$(request.resource.data.arena_id + '_' + request.auth.uid))
+      );
+    }
+    match /arena_inventory_exits/{exitId} {
+      allow read: if isAuthed() && (
+        isPlatformAdmin() ||
+        exists(/databases/$(database)/documents/arena_managers/$(resource.data.arena_id + '_' + request.auth.uid))
+      );
+      allow create, update, delete: if isAuthed() && (
+        isPlatformAdmin() ||
+        exists(/databases/$(database)/documents/arena_managers/$(request.resource.data.arena_id + '_' + request.auth.uid))
+      );
+    }
+
   }
 }
