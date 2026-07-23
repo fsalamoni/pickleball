@@ -24,7 +24,8 @@ import {
 import { useAuth } from '@/core/lib/FirebaseAuthContext';
 import { cn } from '@/core/lib/utils';
 import { useArena, useArenaCourts, useArenaCourtSchedules,  useArenaUnavailabilities, useAddArenaUnavailability, useDeleteArenaUnavailability } from '@/modules/arenas/hooks/useArenas';
-import { useUpdateBookingStatus, useArenaBookings, useCreateManualBooking } from '@/modules/arenas/hooks/useBookings';
+import { useUpdateBookingStatus, useArenaBookings, useCreateManualBooking, useTransferBooking } from '@/modules/arenas/hooks/useBookings';
+import AthleteMultiPicker from '@/modules/athletes/components/AthleteMultiPicker';
 import { getSlotStatus, generateTimeSlots, isSlotClickable, SLOT_STATUS_COLORS, SLOT_STATUS_LABELS, SLOT_STATUS } from '@/modules/arenas/domain/slot_status';
 import { weekdayOf } from '@/modules/arenas/domain/booking';
 import { BOOKING_STATUS } from '@/modules/arenas/domain/constants';
@@ -450,16 +451,63 @@ export default function V2AdminBookingCalendar({ arenaId, embedded = false }) {
         />
       )}
 
-      {/* Transferência de responsável: integração com diretório de atletas (próximo passo) */}
+      {/* Transferir responsável: atleta da plataforma ou cliente avulso por nome */}
       {transferOpen && selectedSlot?.booking && (
-        <Dialog open onOpenChange={() => setTransferOpen(false)}>
-          <DialogContent>
-            <DialogHeader><DialogTitle>Transferir reserva</DialogTitle><DialogDescription>Em construção: integração com diretório de atletas.</DialogDescription></DialogHeader>
-            <div className="flex justify-end"><V2Button variant="ghost" size="sm" onClick={() => setTransferOpen(false)}>Fechar</V2Button></div>
-          </DialogContent>
-        </Dialog>
+        <TransferBookingDialog
+          booking={selectedSlot.booking}
+          onClose={() => setTransferOpen(false)}
+          onDone={() => { setTransferOpen(false); setSelectedSlot(null); }}
+        />
       )}
     </div>
+  );
+}
+
+function TransferBookingDialog({ booking, onClose, onDone }) {
+  const transfer = useTransferBooking();
+  const [picked, setPicked] = useState([]);
+  const [freeName, setFreeName] = useState('');
+
+  async function submit() {
+    const athlete = picked[0];
+    const target = athlete
+      ? { athlete_id: athlete.athlete_id, athlete_name: athlete.name, athlete_photo: athlete.photo }
+      : { athlete_id: null, athlete_name: freeName.trim() };
+    if (!target.athlete_name) { toast.error('Escolha um atleta ou informe um nome.'); return; }
+    try {
+      await transfer.mutateAsync({ booking, target });
+      toast.success('Reserva transferida.');
+      onDone();
+    } catch (err) {
+      toast.error(err?.message || 'Não foi possível transferir.');
+    }
+  }
+
+  return (
+    <Dialog open onOpenChange={(v) => { if (!v) onClose(); }}>
+      <DialogContent className="max-w-md">
+        <DialogHeader>
+          <DialogTitle className="flex items-center gap-2"><UserCog className="h-5 w-5" /> Transferir reserva</DialogTitle>
+          <DialogDescription>Reatribua a reserva a outro atleta da plataforma ou a um cliente avulso.</DialogDescription>
+        </DialogHeader>
+        <div className="space-y-4">
+          <div>
+            <V2Field label="Atleta da plataforma">
+              <AthleteMultiPicker value={picked.slice(0, 1)} onChange={(v) => setPicked(v.slice(-1))} />
+            </V2Field>
+          </div>
+          {picked.length === 0 && (
+            <V2Field label="Ou nome do cliente avulso">
+              <V2Input value={freeName} onChange={(e) => setFreeName(e.target.value)} maxLength={80} placeholder="Ex.: João (telefone)" />
+            </V2Field>
+          )}
+        </div>
+        <div className="mt-4 flex justify-end gap-2">
+          <V2Button variant="ghost" size="sm" onClick={onClose}>Cancelar</V2Button>
+          <V2Button size="sm" onClick={submit} disabled={transfer.isPending}>{transfer.isPending ? 'Transferindo…' : 'Transferir'}</V2Button>
+        </div>
+      </DialogContent>
+    </Dialog>
   );
 }
 

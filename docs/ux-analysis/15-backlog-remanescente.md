@@ -136,10 +136,19 @@ que pode se unificar foi unificado**. Pontos pertinentes ainda abertos:
   instantânea (ARE-03), preços estruturados (ARE-07), membros/pacotes, PDV/PIX,
   mercado, marketing, operações, ligas, multi-unidade, reserva manual, refino de
   navegação (2 níveis) e design.
-- 🟡 Vários `arena_module_*` avançados existem como **flag/estrutura** mas podem
-  ser stubs: **AI** (pricing/forecast/matchmaking), **IoT** (sensores,
-  iluminação, QR kiosk, video replay), **white-label** (domínio/app/branding).
-  Verificar profundidade antes de divulgar.
+- ✅ **Reservas — cancelar e alterar** (atleta/professor nas próprias, arena em
+  qualquer) no painel de reservas e no calendário admin; **transferir
+  responsável** (atleta da plataforma ou cliente avulso) — antes "em construção".
+- ✅ **Auditoria Arena V3 + Open Match** (nesta sessão): as páginas de módulos
+  (Modules, Advanced, Matchmaking, Members/PDV/Classes/Leagues/Marketing/
+  Operations, Open Match público+admin) são implementações reais (200–400 linhas
+  cada) com domínio testado — não são stubs. O único "em construção" encontrado
+  (transferir reserva) foi concluído.
+- 🟡 Famílias **aspiracionais** que dependem de hardware/serviços externos e não
+  se "desenvolvem integralmente" só no app: **IoT** (sensores, iluminação, QR
+  kiosk, video replay) exige dispositivos; **AI** (pricing/forecast) exige
+  modelo/serviço; **white-label** (domínio/app) exige infra de hosting/CI. Ficam
+  como scaffolding atrás de flag até haver o backend/integração correspondente.
 - ⏳ **ARE-07 / QW-25** heatmap de preços sobre a grade.
 - ⏳ política de cancelamento automática (prazo/taxa); lista de espera por
   horário; no-show tracking; CRM leve de clientes.

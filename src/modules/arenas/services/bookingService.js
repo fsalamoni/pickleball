@@ -393,4 +393,39 @@ export async function editBookingSlot(booking, actor, input, { byManager = false
   await createAuditLog({ action: 'arena_booking_edited', actor, details: { booking_id: booking.id, court_id: courtId, date: slot.date } });
 }
 
+/**
+ * Transfere o responsável de uma reserva (a arena reatribui a outro atleta da
+ * plataforma ou a um cliente avulso por nome). Notifica o novo e o antigo
+ * responsável. Autorizado ao gestor da arena/admin (via regras Firestore).
+ *
+ * @param {object} booking
+ * @param {object} actor
+ * @param {{ athlete_id?: string|null, athlete_name: string, athlete_photo?: string }} target
+ */
+export async function transferBooking(booking, actor, target) {
+  if (!actor?.uid) throw new Error('Usuário não autenticado.');
+  const name = str(target.athlete_name);
+  if (!name) throw new Error('Informe o novo responsável pela reserva.');
+  const previousAthleteId = booking.athlete_id || null;
+  await updateDoc(doc(db, COL.bookings, booking.id), {
+    athlete_id: str(target.athlete_id) || null,
+    athlete_name: name,
+    athlete_photo: str(target.athlete_photo) || '',
+    updated_at: serverTimestamp(),
+  });
+  const recipients = [];
+  if (target.athlete_id) recipients.push(target.athlete_id);
+  if (previousAthleteId && previousAthleteId !== target.athlete_id) recipients.push(previousAthleteId);
+  if (recipients.length > 0) {
+    notifyUsers(recipients, {
+      title: `Responsável da reserva atualizado — "${str(booking.arena_name).slice(0, 40)}"`,
+      message: `A reserva agora está no nome de ${name}.`,
+      type: NOTIFICATION_TYPE.GENERIC,
+      link: '/minhas-reservas',
+      actor,
+    });
+  }
+  await createAuditLog({ action: 'arena_booking_transferred', actor, details: { booking_id: booking.id, to: target.athlete_id || name } });
+}
+
 export { weekdayOf };
