@@ -427,6 +427,14 @@ export const FEATURE_FLAG = Object.freeze({
    * a arenas como residentes. Desligado, a rota /coaches e o menu somem.
    */
   COACH_RESIDENT: 'coach_resident',
+
+  /**
+   * Aulas de professores (produto completo — PRO-05..PRO-14): disponibilidade
+   * semanal do professor, solicitação/agenda de aulas, roster de alunos e
+   * pacotes/créditos. Estende o Sistema A (professor = usuário) de forma
+   * aditiva. Desligada, nenhuma rota/menu/tela nova aparece.
+   */
+  COACH_LESSONS: 'coach_lessons',
 });
 
 /** Metadados de exibição para o painel de flags (admin master). */
@@ -797,6 +805,15 @@ export const FEATURE_FLAG_META = Object.freeze({
       + 'valor/hora, regiões, modalidades) e listar no diretório. Permite '
       + 'também vincular um professor como residente de uma arena. '
       + 'Desligado, a rota /coaches e o menu somem.',
+  },
+  [FEATURE_FLAG.COACH_LESSONS]: {
+    label: 'Aulas de professores (agenda, alunos e pacotes)',
+    description:
+      'Habilita o produto completo do professor: disponibilidade semanal, '
+      + 'solicitação e agenda de aulas (avulsas e recorrentes), roster de '
+      + 'alunos com ficha de evolução e pacotes/créditos pré-pagos. É aditivo '
+      + '(coleções próprias) e não altera o diretório nem as arenas. '
+      + 'Desligado, as telas /aulas e as seções novas do perfil somem.',
   },
 });
 
