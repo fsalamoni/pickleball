@@ -9,6 +9,8 @@ import {
   proposeBookingPrice,
   setBookingPayment,
   deleteBooking,
+  editBookingSlot,
+  transferBooking,
 } from '../services/bookingService.js';
 
 export function useMyBookings() {
@@ -95,6 +97,32 @@ export function useDeleteBooking() {
   return useMutation({
     mutationFn: (booking) => deleteBooking(booking, user),
     onSuccess: (_d, booking) => {
+      qc.invalidateQueries({ queryKey: ['my-bookings'] });
+      qc.invalidateQueries({ queryKey: ['arena-bookings', booking.arena_id] });
+    },
+  });
+}
+
+export function useEditBooking() {
+  const { user } = useAuth();
+  const qc = useQueryClient();
+  return useMutation({
+    mutationFn: ({ booking, input, options }) => editBookingSlot(booking, user, input, options),
+    onSuccess: (_d, { booking }) => {
+      qc.invalidateQueries({ queryKey: ['my-bookings'] });
+      qc.invalidateQueries({ queryKey: ['booking-participations'] });
+      qc.invalidateQueries({ queryKey: ['coach-bookings'] });
+      qc.invalidateQueries({ queryKey: ['arena-bookings', booking.arena_id] });
+    },
+  });
+}
+
+export function useTransferBooking() {
+  const { user } = useAuth();
+  const qc = useQueryClient();
+  return useMutation({
+    mutationFn: ({ booking, target }) => transferBooking(booking, user, target),
+    onSuccess: (_d, { booking }) => {
       qc.invalidateQueries({ queryKey: ['my-bookings'] });
       qc.invalidateQueries({ queryKey: ['arena-bookings', booking.arena_id] });
     },

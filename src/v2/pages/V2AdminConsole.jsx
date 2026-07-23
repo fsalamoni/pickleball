@@ -66,8 +66,10 @@ import {
 import { ConfirmDialog } from '@/components/ui/confirm-dialog';
 import { ImageUpload } from '@/components/ui/image-upload';
 import { useNavigate, useSearchParams } from 'react-router-dom';
-import { UserCog, Wrench, Settings } from 'lucide-react';
+import { UserCog, Wrench, Settings, Power } from 'lucide-react';
 import ProfilesTab from './V2AdminProfiles.jsx';
+import ArenaV3FlagsPanel from '@/v2/components/admin/ArenaV3FlagsPanel';
+import { FLAG_GROUPS, FLAG_GROUP_OTHER, FLAG_GROUP_ARENA_V3, bucketAllFlags } from '@/core/featureFlagGroups';
 import { AuditLogTable } from '@/components/AuditLogTable';
 import { useAuth } from '@/core/lib/FirebaseAuthContext';
 import { useFeatureFlags, useFeatureFlag } from '@/core/lib/FeatureFlagsContext';
@@ -112,18 +114,34 @@ import {
   V2Toggle,
 } from '@/v2/ui/primitives';
 
-const TABS = Object.freeze([
-  { id: 'overview',  label: 'Visão geral',      icon: LayoutDashboard },
-  { id: 'tournaments', label: 'Torneios',         icon: Trophy },
-  { id: 'partners',  label: 'Parceiros',        icon: Handshake },
-  { id: 'arenas',    label: 'Arenas',           icon: Building2 },
-  { id: 'profiles',  label: 'Perfis',           icon: UserCog },
-  { id: 'flags',     label: 'Funcionalidades',  icon: Flag },
-  { id: 'branding',  label: 'Branding',         icon: Palette },
-  { id: 'content',   label: 'Conteúdo',         icon: TextIcon },
-  { id: 'audit',     label: 'Auditoria',        icon: ListChecks },
-  { id: 'tools',     label: 'Avançado',         icon: Wrench },
+// Navegação em dois níveis: seções amplas por tema, cada uma com sub-abas.
+const SECTIONS = Object.freeze([
+  { id: 'overview', label: 'Visão geral', icon: LayoutDashboard, tabs: [
+    { id: 'overview', label: 'Resumo', icon: LayoutDashboard },
+  ] },
+  { id: 'community', label: 'Comunidade', icon: Users, tabs: [
+    { id: 'tournaments', label: 'Torneios', icon: Trophy },
+    { id: 'profiles', label: 'Perfis', icon: UserCog },
+    { id: 'partners', label: 'Parceiros', icon: Handshake },
+  ] },
+  { id: 'arenasSection', label: 'Arenas', icon: Building2, tabs: [
+    { id: 'arenas', label: 'Arenas', icon: Building2 },
+    { id: 'v3boot', label: 'Arena V3: Boot', icon: Power },
+  ] },
+  { id: 'features', label: 'Funcionalidades', icon: Flag, tabs: [
+    { id: 'flags', label: 'Flags por assunto', icon: Flag },
+  ] },
+  { id: 'platform', label: 'Plataforma', icon: Palette, tabs: [
+    { id: 'branding', label: 'Branding', icon: Palette },
+    { id: 'content', label: 'Conteúdo', icon: TextIcon },
+  ] },
+  { id: 'governance', label: 'Governança', icon: ListChecks, tabs: [
+    { id: 'audit', label: 'Auditoria', icon: ListChecks },
+    { id: 'tools', label: 'Avançado', icon: Wrench },
+  ] },
 ]);
+
+const ALL_TABS = SECTIONS.flatMap((s) => s.tabs);
 
 const DEFAULT_BRANDING = Object.freeze({
   platform_name: 'PickleRush',
@@ -149,9 +167,9 @@ export default function V2AdminConsole() {
   const [searchParams, setSearchParams] = useSearchParams();
   const navigate = useNavigate();
 
-  // Tab ativa vem de ?tab= (deep link). Default: overview. Validada contra TABS.
+  // Tab ativa vem de ?tab= (deep link). Default: overview. Validada contra ALL_TABS.
   const tabFromUrl = searchParams.get('tab');
-  const tab = TABS.some((t) => t.id === tabFromUrl) ? tabFromUrl : 'overview';
+  const tab = ALL_TABS.some((t) => t.id === tabFromUrl) ? tabFromUrl : 'overview';
   const setTab = (id) => {
     const next = new URLSearchParams(searchParams);
     next.set('tab', id);
@@ -160,6 +178,8 @@ export default function V2AdminConsole() {
 
   if (!isPlatformAdmin) return <Navigate to="/" replace />;
   if (!enabled) return <Navigate to="/admin/metricas" replace />;
+
+  const activeSection = SECTIONS.find((s) => s.tabs.some((t) => t.id === tab)) || SECTIONS[0];
 
   return (
     <div className="mx-auto max-w-[1200px]">
@@ -177,13 +197,14 @@ export default function V2AdminConsole() {
         }
       />
 
-      <ConsoleTabs tab={tab} setTab={setTab} />
+      <ConsoleTabs tab={tab} setTab={setTab} activeSection={activeSection} />
 
       <div className="mt-6">
         {tab === 'overview'   && <OverviewTab />}
         {tab === 'tournaments' && <TournamentsTab />}
         {tab === 'partners'   && <PartnersTab />}
         {tab === 'arenas'     && <ArenasTab />}
+        {tab === 'v3boot'     && <ArenaV3FlagsPanel />}
         {tab === 'profiles'   && <ProfilesTab embedded />}
         {tab === 'flags'      && <FlagsTab />}
         {tab === 'branding'   && <BrandingTab />}
@@ -197,28 +218,56 @@ export default function V2AdminConsole() {
 
 /* ----------------------------- Tabs nav -------------------------------- */
 
-function ConsoleTabs({ tab, setTab }) {
+function ConsoleTabs({ tab, setTab, activeSection }) {
   return (
-    <div className="sticky top-2 z-20 -mx-4 mb-2 overflow-x-auto bg-paper-pure/80 px-4 py-2 backdrop-blur sm:top-3">
-      <div className="inline-flex gap-1.5 rounded-full border border-gray-100 bg-paper-pure p-1.5 shadow-sm">
-        {TABS.map(({ id, label, icon: Icon }) => {
-          const active = tab === id;
-          return (
-            <button
-              key={id}
-              type="button"
-              onClick={() => setTab(id)}
-              className={cn(
-                'inline-flex shrink-0 items-center gap-1.5 rounded-full px-4 py-2 text-xs font-semibold transition-colors',
-                active ? 'bg-ink text-white shadow-sm' : 'text-gray-500 hover:text-ink',
-              )}
-            >
-              <Icon className="h-3.5 w-3.5" />
-              {label}
-            </button>
-          );
-        })}
+    <div className="sticky top-2 z-20 -mx-4 mb-2 space-y-2 bg-paper-pure/80 px-4 py-2 backdrop-blur sm:top-3">
+      {/* Nível 1: seções amplas */}
+      <div className="overflow-x-auto">
+        <div className="inline-flex gap-1.5 rounded-full border border-gray-100 bg-paper-pure p-1.5 shadow-sm">
+          {SECTIONS.map((section) => {
+            const Icon = section.icon;
+            const active = section.id === activeSection.id;
+            return (
+              <button
+                key={section.id}
+                type="button"
+                onClick={() => setTab(section.tabs[0].id)}
+                className={cn(
+                  'inline-flex shrink-0 items-center gap-1.5 rounded-full px-4 py-2 text-xs font-semibold transition-colors',
+                  active ? 'bg-ink text-white shadow-sm' : 'text-gray-500 hover:text-ink',
+                )}
+              >
+                <Icon className="h-3.5 w-3.5" />
+                {section.label}
+              </button>
+            );
+          })}
+        </div>
       </div>
+      {/* Nível 2: sub-abas da seção ativa (só quando há mais de uma) */}
+      {activeSection.tabs.length > 1 && (
+        <div className="overflow-x-auto">
+          <div className="inline-flex flex-wrap gap-1.5 px-1">
+            {activeSection.tabs.map(({ id, label, icon: Icon }) => {
+              const active = tab === id;
+              return (
+                <button
+                  key={id}
+                  type="button"
+                  onClick={() => setTab(id)}
+                  className={cn(
+                    'inline-flex shrink-0 items-center gap-1.5 rounded-full border px-3.5 py-1.5 text-xs font-semibold transition-colors',
+                    active ? 'border-ink bg-ink/5 text-ink' : 'border-gray-200 text-gray-500 hover:border-ink/40 hover:text-ink',
+                  )}
+                >
+                  <Icon className="h-3.5 w-3.5" />
+                  {label}
+                </button>
+              );
+            })}
+          </div>
+        </div>
+      )}
     </div>
   );
 }
@@ -726,10 +775,27 @@ function PartnersTab() {
 
 /* ---------------------- 4. Flags (funcionalidades) ------------------------------ */
 
+function FlagRow({ flagKey, checked, disabled, onToggle }) {
+  const meta = FEATURE_FLAG_META[flagKey];
+  return (
+    <div className="flex items-start justify-between gap-4 rounded-2xl border border-gray-100 bg-paper p-4">
+      <div className="min-w-0">
+        <div className="flex flex-wrap items-center gap-2">
+          <span className="text-sm font-semibold text-ink">{meta?.label || flagKey}</span>
+          <code className="rounded bg-paper-pure px-1.5 py-0.5 font-mono text-[10px] text-gray-500">{flagKey}</code>
+        </div>
+        {meta?.description && <p className="mt-0.5 text-xs text-gray-500">{meta.description}</p>}
+      </div>
+      <V2Toggle checked={checked} onChange={(v) => !disabled && onToggle(flagKey, v)} />
+    </div>
+  );
+}
+
 function FlagsTab() {
   const { user } = useAuth();
   const { flags, isLoading } = useFeatureFlags();
   const [pending, setPending] = useState(null);
+  const [q, setQ] = useState('');
 
   async function toggle(flagKey, enabled) {
     setPending(flagKey);
@@ -743,30 +809,70 @@ function FlagsTab() {
     }
   }
 
+  const buckets = useMemo(() => bucketAllFlags(), []);
+  const term = q.trim().toLowerCase();
+  const matches = (key) => !term
+    || key.toLowerCase().includes(term)
+    || (FEATURE_FLAG_META[key]?.label || '').toLowerCase().includes(term);
+
+  const groupsToRender = [...FLAG_GROUPS, FLAG_GROUP_OTHER];
+  const totalFlags = Object.values(buckets).reduce((n, arr) => n + arr.length, 0);
+  const activeFlags = Object.keys(flags || {}).filter((k) => flags[k]).length;
+
   return (
-    <V2Surface>
-      <div className="flex items-center gap-2">
-        <Flag className="h-5 w-5 text-ink" />
-        <h2 className="font-display text-lg font-bold text-ink">Funcionalidades (flags)</h2>
-      </div>
-      <p className="mt-1 text-xs text-gray-500">
-        Ative ou desative funcionalidades em tempo real. Cada flag nasce desligada e é puramente aditiva.
-      </p>
-      <div className="mt-4 space-y-2">
-        {Object.entries(FEATURE_FLAG_META).map(([key, meta]) => (
-          <div key={key} className="flex items-start justify-between gap-4 rounded-2xl border border-gray-100 bg-paper p-4">
-            <div className="min-w-0">
-              <div className="text-sm font-semibold text-ink">{meta.label}</div>
-              <p className="mt-0.5 text-xs text-gray-500">{meta.description}</p>
+    <div className="space-y-4">
+      <V2Surface>
+        <div className="flex flex-wrap items-center justify-between gap-3">
+          <div className="flex items-center gap-2">
+            <Flag className="h-5 w-5 text-ink" />
+            <div>
+              <h2 className="font-display text-lg font-bold text-ink">Funcionalidades (flags)</h2>
+              <p className="text-xs text-gray-500">{activeFlags} ativas de {totalFlags} — organizadas por assunto. Cada flag é aditiva.</p>
             </div>
-            <V2Toggle
-              checked={Boolean(flags?.[key])}
-              onChange={(v) => !isLoading && pending !== key && toggle(key, v)}
-            />
           </div>
-        ))}
-      </div>
-    </V2Surface>
+          <input
+            type="text" value={q} onChange={(e) => setQ(e.target.value)}
+            placeholder="Buscar flag…"
+            className="h-10 w-56 rounded-2xl border border-gray-200 bg-paper-pure px-4 text-sm"
+          />
+        </div>
+      </V2Surface>
+
+      {groupsToRender.map((group) => {
+        const keys = (buckets[group.id] || []).filter(matches);
+        if (keys.length === 0) return null;
+        const on = keys.filter((k) => flags?.[k]).length;
+        return (
+          <V2Surface key={group.id}>
+            <div className="mb-3 flex items-center gap-2">
+              <h3 className="font-display text-base font-bold text-ink">{group.label}</h3>
+              <V2Badge tone="neutral">{on} / {keys.length}</V2Badge>
+            </div>
+            <div className="space-y-2">
+              {keys.map((key) => (
+                <FlagRow
+                  key={key}
+                  flagKey={key}
+                  checked={Boolean(flags?.[key])}
+                  disabled={isLoading || pending === key}
+                  onToggle={toggle}
+                />
+              ))}
+            </div>
+          </V2Surface>
+        );
+      })}
+
+      {/* Arena V3: painel dedicado (agrupado por família) — todas as flags do V3 */}
+      {(buckets[FLAG_GROUP_ARENA_V3.id] || []).some(matches) && (
+        <div>
+          <div className="mb-2 flex items-center gap-2 px-1">
+            <h3 className="font-display text-base font-bold text-ink">{FLAG_GROUP_ARENA_V3.label}</h3>
+          </div>
+          <ArenaV3FlagsPanel />
+        </div>
+      )}
+    </div>
   );
 }
 
