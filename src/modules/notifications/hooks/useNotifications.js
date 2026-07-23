@@ -1,5 +1,5 @@
 import { useEffect, useState } from 'react';
-import { collection, query, where, onSnapshot, doc, updateDoc, serverTimestamp } from 'firebase/firestore';
+import { collection, query, where, onSnapshot, doc, updateDoc, serverTimestamp, writeBatch } from 'firebase/firestore';
 import { db } from '@/core/config/firebase';
 import { logger } from '@/core/lib/logger';
 import { useAuth } from '@/core/lib/FirebaseAuthContext';
@@ -48,7 +48,24 @@ export function useNotifications() {
     });
   };
 
+  // Marca todas as não lidas de uma vez, em lotes (limite do Firestore é
+  // 500 operações por batch; 450 deixa folga).
+  const markAllAsRead = async () => {
+    const unread = notifications.filter((n) => !n.read);
+    if (unread.length === 0) return;
+    for (let i = 0; i < unread.length; i += 450) {
+      const batch = writeBatch(db);
+      unread.slice(i, i + 450).forEach((n) => {
+        batch.update(doc(db, 'notifications', n.id), {
+          read: true,
+          read_at: serverTimestamp(),
+        });
+      });
+      await batch.commit();
+    }
+  };
+
   const unreadCount = notifications.filter((n) => !n.read).length;
 
-  return { notifications, unreadCount, isLoading, markAsRead };
+  return { notifications, unreadCount, isLoading, markAsRead, markAllAsRead };
 }

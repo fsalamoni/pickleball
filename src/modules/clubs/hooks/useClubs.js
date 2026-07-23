@@ -5,6 +5,8 @@ import {
   getClub,
   listClubs,
   listMyClubs,
+  listClubsByCoach,
+  listClubsByArena,
   updateClub,
   deleteClub,
   regenerateInviteCode,
@@ -82,6 +84,29 @@ export function useMyClubs() {
 
 export function useClub(id) {
   return useQuery({ queryKey: ['club', id], queryFn: () => getClub(id), enabled: !!id });
+}
+
+export function useClubsByCoach(coachId) {
+  return useQuery({ queryKey: ['clubs-by-coach', coachId], queryFn: () => listClubsByCoach(coachId), enabled: !!coachId });
+}
+
+export function useClubsByArena(arenaId) {
+  return useQuery({ queryKey: ['clubs-by-arena', arenaId], queryFn: () => listClubsByArena(arenaId), enabled: !!arenaId });
+}
+
+/** Vincula/atualiza um clube a um professor ou arena (updateClub genérico). */
+export function useLinkClub() {
+  const { user } = useAuth();
+  const qc = useQueryClient();
+  return useMutation({
+    mutationFn: ({ clubId, patch }) => updateClub(clubId, patch, user),
+    onSuccess: (_d, vars) => {
+      qc.invalidateQueries({ queryKey: ['clubs'] });
+      qc.invalidateQueries({ queryKey: ['clubs-by-coach'] });
+      qc.invalidateQueries({ queryKey: ['clubs-by-arena'] });
+      qc.invalidateQueries({ queryKey: ['club', vars.clubId] });
+    },
+  });
 }
 
 export function useMyMembership(clubId) {

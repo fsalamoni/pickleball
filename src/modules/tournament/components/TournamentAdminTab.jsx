@@ -24,6 +24,8 @@ import {
   Users,
   Archive,
   ArchiveRestore,
+  Ban,
+  Wallet,
 } from 'lucide-react';
 import {
   useTournamentAdmins,
@@ -50,6 +52,7 @@ import { useAuth } from '@/core/lib/FirebaseAuthContext';
 import { useFeatureFlag } from '@/core/lib/FeatureFlagsContext';
 import { FEATURE_FLAG } from '@/core/featureFlags';
 import DuplicateTournamentDialog from '@/modules/tournament/components/DuplicateTournamentDialog';
+import TournamentAnnouncementsCard from '@/modules/tournament/components/TournamentAnnouncementsCard';
 
 function buildFormState(tournament) {
   return {
@@ -63,6 +66,10 @@ function buildFormState(tournament) {
     starts_at: tournament?.starts_at || '',
     ends_at: tournament?.ends_at || '',
     registration_deadline: tournament?.registration_deadline || '',
+    payment_pix_key: tournament?.payment_pix_key || '',
+    payment_pix_name: tournament?.payment_pix_name || '',
+    payment_pix_city: tournament?.payment_pix_city || '',
+    payment_instructions: tournament?.payment_instructions || '',
   };
 }
 
@@ -107,6 +114,9 @@ export default function TournamentAdminTab({ tournament }) {
   const duplicationOn = useFeatureFlag(FEATURE_FLAG.TOURNAMENT_DUPLICATION);
   const [duplicateOpen, setDuplicateOpen] = useState(false);
   const lifecycleOn = useFeatureFlag(FEATURE_FLAG.TOURNAMENT_LIFECYCLE);
+  const cancelActionOn = useFeatureFlag(FEATURE_FLAG.TOURNAMENT_CANCEL_ACTION);
+  const paymentOn = useFeatureFlag(FEATURE_FLAG.PAYMENT_INSTRUCTIONS);
+  const announcementsOn = useFeatureFlag(FEATURE_FLAG.TOURNAMENT_ANNOUNCEMENTS);
   const lockMutation = useSetResultsLocked(tournament.id);
   const isFinished = tournament.status === TOURNAMENT_STATUS.FINISHED;
   const isLocked = Boolean(tournament.results_locked);
@@ -179,6 +189,12 @@ export default function TournamentAdminTab({ tournament }) {
         starts_at: form.starts_at || null,
         ends_at: form.ends_at || null,
         registration_deadline: form.registration_deadline || null,
+        ...(paymentOn ? {
+          payment_pix_key: form.payment_pix_key.trim(),
+          payment_pix_name: form.payment_pix_name.trim(),
+          payment_pix_city: form.payment_pix_city.trim(),
+          payment_instructions: form.payment_instructions.trim(),
+        } : {}),
         scoring: {
           ...(tournament?.scoring || {}),
           ruleset: form.ruleset,
@@ -379,6 +395,58 @@ export default function TournamentAdminTab({ tournament }) {
                 </div>
               </div>
             </PlatformFormSection>
+
+            {paymentOn && (
+              <PlatformFormSection
+                icon={Wallet}
+                title="Pagamento das inscrições (PIX)"
+                description="Com a chave configurada, o atleta vê o QR Code e o código copia e cola ao se inscrever em modalidades pagas, e pode avisar quando pagar. A confirmação continua manual, feita por você."
+              >
+                <div className="grid grid-cols-1 gap-4 md:grid-cols-2">
+                  <div className="md:col-span-2">
+                    <Label>Chave PIX (CPF/CNPJ, e-mail, telefone ou chave aleatória)</Label>
+                    <Input
+                      value={form.payment_pix_key}
+                      onChange={(e) => set('payment_pix_key', e.target.value)}
+                      placeholder="ex.: organizador@email.com"
+                      className="mt-2"
+                    />
+                  </div>
+                  <div>
+                    <Label>Nome do recebedor</Label>
+                    <Input
+                      value={form.payment_pix_name}
+                      onChange={(e) => set('payment_pix_name', e.target.value)}
+                      maxLength={25}
+                      placeholder="como aparece no banco"
+                      className="mt-2"
+                    />
+                  </div>
+                  <div>
+                    <Label>Cidade do recebedor</Label>
+                    <Input
+                      value={form.payment_pix_city}
+                      onChange={(e) => set('payment_pix_city', e.target.value)}
+                      maxLength={15}
+                      placeholder="ex.: Sao Paulo"
+                      className="mt-2"
+                    />
+                  </div>
+                  <div className="md:col-span-2">
+                    <Label>Instruções adicionais (opcional)</Label>
+                    <textarea
+                      className="mt-2 flex min-h-20 w-full rounded-[1rem] border border-input bg-background px-3 py-3 text-sm"
+                      value={form.payment_instructions}
+                      onChange={(e) => set('payment_instructions', e.target.value)}
+                      placeholder="ex.: envie o comprovante no WhatsApp (11) 99999-9999"
+                    />
+                  </div>
+                  <div className="md:col-span-2 rounded-[1.25rem] border border-gray-200 bg-acid/10 p-4 text-sm leading-6 text-green-800">
+                    Deixe a chave em branco para não exibir instruções de pagamento. O valor cobrado é a taxa definida em cada modalidade.
+                  </div>
+                </div>
+              </PlatformFormSection>
+            )}
         </PlatformSurfaceCard>
 
         <div className="space-y-5">
@@ -406,6 +474,31 @@ export default function TournamentAdminTab({ tournament }) {
                   </div>
                 </button>
               ))}
+
+              {cancelActionOn && !isCancelled && (
+                <ConfirmDialog
+                  title="Cancelar o torneio?"
+                  description="O torneio passa ao status &quot;Cancelado&quot;: sai das listas ativas e fica liberado para arquivamento. Os dados (modalidades, inscrições e jogos) são preservados e você pode reverter escolhendo outro status depois."
+                  confirmLabel="Cancelar torneio"
+                  onConfirm={() => setStatus(TOURNAMENT_STATUS.CANCELLED)}
+                  trigger={(
+                    <button
+                      type="button"
+                      className="flex w-full items-start gap-3 rounded-[1.35rem] border border-red-100 bg-red-50/60 p-4 text-left transition-transform duration-200 hover:-translate-y-0.5"
+                    >
+                      <div className="flex h-10 w-10 shrink-0 items-center justify-center rounded-2xl bg-red-100 text-red-600">
+                        <Ban className="h-4.5 w-4.5" />
+                      </div>
+                      <div>
+                        <div className="font-semibold text-red-700">Cancelar torneio</div>
+                        <p className="mt-1 text-sm leading-6 text-red-600/80">
+                          Marca o evento como cancelado e libera o arquivamento. Reversível.
+                        </p>
+                      </div>
+                    </button>
+                  )}
+                />
+              )}
             </div>
           </PlatformSurfaceCard>
 
@@ -515,6 +608,8 @@ export default function TournamentAdminTab({ tournament }) {
           )}
         </div>
       </div>
+
+      {announcementsOn && <TournamentAnnouncementsCard tournament={tournament} />}
 
       {duplicationOn && duplicateOpen && (
         <DuplicateTournamentDialog

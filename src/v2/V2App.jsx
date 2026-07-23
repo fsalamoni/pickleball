@@ -32,6 +32,8 @@ const V2Circuits = lazy(() => import('@/v2/pages/V2Circuits'));
 const V2CircuitManage = lazy(() => import('@/v2/pages/V2CircuitManage'));
 const V2Coaches = lazy(() => import('@/v2/pages/V2Coaches'));
 const V2CoachProfile = lazy(() => import('@/v2/pages/V2CoachProfile'));
+const V2CoachAgenda = lazy(() => import('@/v2/pages/V2CoachAgenda'));
+const V2StudentLessons = lazy(() => import('@/v2/pages/V2StudentLessons'));
 const V2ProfileEdit = lazy(() => import('@/v2/pages/V2ProfileEdit'));
 const V2AdminMetrics = lazy(() => import('@/v2/pages/V2AdminMetrics'));
 const V2AdminTournaments = lazy(() => import('@/v2/pages/V2AdminTournaments'));
@@ -56,6 +58,7 @@ const V2ArenaMembers = lazy(() => import('@/v2/pages/V2ArenaMembers'));
 const V2ArenaAdminMembers = lazy(() => import('@/v2/pages/V2ArenaAdminMembers'));
 const V2ArenaPDV = lazy(() => import('@/v2/pages/V2ArenaPDV'));
 const V2ArenaClasses = lazy(() => import('@/v2/pages/V2ArenaClasses'));
+const V2ArenaCoaches = lazy(() => import('@/v2/pages/V2ArenaCoaches'));
 const V2ArenaLeagues = lazy(() => import('@/v2/pages/V2ArenaLeagues'));
 const V2ArenaMarketing = lazy(() => import('@/v2/pages/V2ArenaMarketing'));
 const V2ArenaOperations = lazy(() => import('@/v2/pages/V2ArenaOperations'));
@@ -114,6 +117,7 @@ export default function V2App() {
           <Route path="arenas/:arenaId/matchmaking" element={<V2ArenaMatchmaking />} />
           <Route path="arenas/:arenaId/membros" element={<V2ArenaMembers />} />
           <Route path="arenas/:arenaId/gerir/membros" element={<V2ArenaAdminMembers />} />
+          <Route path="arenas/:arenaId/gerir/professores" element={<V2ArenaCoaches />} />
           <Route path="arenas/:arenaId/loja" element={<V2ArenaPDV />} />
           <Route path="arenas/:arenaId/gerir/pdv" element={<V2ArenaPDV />} />
           <Route path="arenas/:arenaId/aulas" element={<V2ArenaClasses />} />
@@ -127,6 +131,8 @@ export default function V2App() {
           <Route path="circuits/:circuitId" element={<V2CircuitManage />} />
           <Route path="coaches" element={<V2Coaches />} />
           <Route path="coaches/:coachId" element={<V2CoachProfile />} />
+          <Route path="aulas" element={<V2CoachAgenda />} />
+          <Route path="minhas-aulas" element={<V2StudentLessons />} />
           <Route path="arenas/:arenaId/avancado" element={<V2ArenaAdvanced />} />
           <Route path="arenas/:arenaId/gerir/avancado" element={<V2ArenaAdvanced />} />
           <Route path="minhas-reservas" element={<V2Bookings />} />

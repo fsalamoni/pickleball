@@ -97,7 +97,7 @@ export function V2ProfileFields({ form, setField, errors = {} }) {
           className="w-full rounded-2xl border border-gray-200 bg-paper px-4 py-3 text-sm text-ink outline-none focus-visible:ring-4 focus-visible:ring-acid/30"
         />
         <p className="text-[10px] text-gray-400">
-          {(form.house_rules_md || '').length}/2000. Exibido em /arenas/:id → seção "Regras".
+          {(form.house_rules_md || '').length}/2000. Exibido em /arenas/:id → seção &quot;Regras&quot;.
         </p>
       </div>
     </div>

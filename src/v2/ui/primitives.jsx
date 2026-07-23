@@ -214,7 +214,22 @@ export function V2EmptyState({ icon: Icon, title, description, action, className
   );
 }
 
-export function V2Skeleton({ className }) {
+export function V2Skeleton({ className, lines }) {
+  // Modo multilinha: N barras empilhadas (a última mais curta), para
+  // placeholders de listas/formulários. Sem `lines`, mantém o bloco único
+  // (a altura vem do `className`, como antes).
+  if (lines && lines > 1) {
+    return (
+      <div className={cn('space-y-2', className)}>
+        {Array.from({ length: lines }).map((_, i) => (
+          <div
+            key={i}
+            className={cn('h-5 animate-pulse rounded-2xl bg-gray-100', i === lines - 1 && 'w-2/3')}
+          />
+        ))}
+      </div>
+    );
+  }
   return <div className={cn('animate-pulse rounded-3xl bg-gray-100', className)} />;
 }
 

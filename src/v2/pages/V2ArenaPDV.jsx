@@ -17,6 +17,7 @@ import {
   useCanArenaUseModule, useArenaProducts, useCreateProduct, useDeleteProduct, useCreateSale,
 } from '@/modules/arenas/hooks/useArenaV3';
 import { formatPrice } from '@/modules/arenas/domain/pricing';
+import ConfirmDialog from '@/components/ConfirmDialog';
 import { V2Badge, V2Button, V2EmptyState, V2Field, V2Input, V2Skeleton, V2Surface, V2Textarea } from '@/v2/ui/primitives';
 
 function ProductCard({ product, onBuy, isBuying }) {
@@ -159,7 +160,6 @@ export default function V2ArenaPDV() {
   };
 
   const handleDelete = async (product) => {
-    if (!window.confirm(`Excluir "${product.name}"?`)) return;
     try {
       await del.mutateAsync({ prodId: product.id });
       toast.success('Produto excluído');
@@ -214,13 +214,20 @@ export default function V2ArenaPDV() {
               <ProductCard product={product} onBuy={handleBuy} isBuying={buy.isPending} />
               {canManage && (
                 <div className="mt-2 flex justify-end">
-                  <button
-                    type="button"
-                    onClick={() => handleDelete(product)}
-                    className="text-xs font-bold text-red-500 hover:text-red-700"
-                  >
-                    <Trash2 className="mr-1 inline h-3 w-3" /> Excluir
-                  </button>
+                  <ConfirmDialog
+                    title="Excluir produto?"
+                    description={`"${product.name}" será removido do catálogo do PDV.`}
+                    confirmLabel="Excluir"
+                    onConfirm={() => handleDelete(product)}
+                    trigger={(
+                      <button
+                        type="button"
+                        className="text-xs font-bold text-red-500 hover:text-red-700"
+                      >
+                        <Trash2 className="mr-1 inline h-3 w-3" /> Excluir
+                      </button>
+                    )}
+                  />
                 </div>
               )}
             </div>

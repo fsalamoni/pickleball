@@ -7,7 +7,7 @@ import { useAuth } from '@/core/lib/FirebaseAuthContext';
 import {
   getCoach, listCoaches, upsertCoachProfile,
   listCoachResidencies, listArenaCoaches,
-  addCoachResidency, removeCoachResidency,
+  addCoachResidency, removeCoachResidency, updateCoachResidency,
 } from '../services/coachService';
 import { filterCoaches, canAcceptStudents, coachTenureDays } from '../domain/coach.js';
 
@@ -72,6 +72,18 @@ export function useRemoveCoachResidency() {
   const qc = useQueryClient();
   return useMutation({
     mutationFn: ({ coachId, arenaId }) => removeCoachResidency(coachId, arenaId, user),
+    onSuccess: (_, vars) => {
+      qc.invalidateQueries({ queryKey: ['coaches', 'residencies', vars.coachId] });
+      qc.invalidateQueries({ queryKey: ['coaches', 'arena', vars.arenaId] });
+    },
+  });
+}
+
+export function useUpdateCoachResidency() {
+  const { user } = useAuth();
+  const qc = useQueryClient();
+  return useMutation({
+    mutationFn: ({ coachId, arenaId, patch }) => updateCoachResidency(coachId, arenaId, patch, user),
     onSuccess: (_, vars) => {
       qc.invalidateQueries({ queryKey: ['coaches', 'residencies', vars.coachId] });
       qc.invalidateQueries({ queryKey: ['coaches', 'arena', vars.arenaId] });

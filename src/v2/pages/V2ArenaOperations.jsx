@@ -146,7 +146,7 @@ export default function V2ArenaOperations() {
                       <button
                         type="button"
                         onClick={() => updateMaint.mutate({ orderId: m.id, status: 'done' })}
-                        className="rounded-full p-1.5 text-emerald-500 hover:bg-emerald-50"
+                        className="rounded-full p-1.5 text-green-500 hover:bg-green-50"
                       >
                         <Check className="h-4 w-4" />
                       </button>
@@ -182,7 +182,7 @@ export default function V2ArenaOperations() {
                           className="flex w-full items-center gap-2 rounded-lg p-1.5 text-left hover:bg-gray-50"
                         >
                           {item.completed ? (
-                            <Check className="h-4 w-4 text-emerald-500" />
+                            <Check className="h-4 w-4 text-green-500" />
                           ) : (
                             <X className="h-4 w-4 text-gray-300" />
                           )}

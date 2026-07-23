@@ -157,6 +157,84 @@ export async function createBooking(arena, user, profile, input) {
   return id;
 }
 
+/**
+ * Cria uma reserva MANUAL feita pelo admin/gestor da arena (ex.: cliente que
+ * ligou ou apareceu no balcão). Diferente de `createBooking`:
+ *  - nasce já CONFIRMED (o admin está confirmando na hora);
+ *  - o "cliente" é um nome livre (`client_name`), sem conta vinculada;
+ *  - exige `court_id` (a reserva ocupa o slot de uma quadra específica no
+ *    calendário) e valida conflito com o mesmo validador testado (ARE-07).
+ *
+ * @param {object} arena
+ * @param {object} actor - admin autenticado (precisa de `.uid`)
+ * @param {{ court_id, date, start, end, client_name, agreed_price, paid, notes }} input
+ * @returns {Promise<string>} id da reserva criada
+ */
+export async function createManualBooking(arena, actor, input) {
+  if (!actor?.uid) throw new Error('Usuário não autenticado.');
+  const courtId = str(input.court_id);
+  if (!courtId) throw new Error('Escolha uma quadra específica para criar a reserva.');
+  const clientName = str(input.client_name);
+  if (!clientName) throw new Error('Informe o nome do cliente da reserva.');
+
+  const slot = { date: str(input.date), start: str(input.start), end: str(input.end) };
+  if (!isValidSlot(slot)) throw new Error('Preencha a data e um horário válido (fim depois do início).');
+
+  const existingBookings = await listArenaBookings(arena.id);
+  // Mescla schedules da quadra + da arena (sem court_id), igual ao filtro do
+  // calendário admin, para a validação de janela refletir o que o admin vê.
+  let courtSchedules = [];
+  try {
+    const all = await listArenaCourtSchedules(arena.id);
+    courtSchedules = all.filter((s) => !s.court_id || s.court_id === courtId);
+  } catch (err) {
+    courtSchedules = [];
+  }
+  const v = validateBookingRequest({
+    date: slot.date,
+    start_time: slot.start,
+    end_time: slot.end,
+    court_id: courtId,
+    existingBookings,
+    court_schedules: courtSchedules,
+  });
+  if (!v.ok) throw new Error(v.message);
+
+  const agreedPrice = num(input.agreed_price);
+  const id = doc(collection(db, COL.bookings)).id;
+  const payload = {
+    id,
+    arena_id: arena.id,
+    arena_name: str(arena.name),
+    court_id: courtId,
+    athlete_id: null,
+    athlete_name: clientName,
+    athlete_photo: '',
+    kind: BOOKING_KIND.SINGLE,
+    slots: [slot],
+    recurrence: null,
+    notes: str(input.notes).slice(0, 600),
+    status: BOOKING_STATUS.CONFIRMED,
+    is_instant: false,
+    is_manual: true,
+    payment_method: null,
+    proposed_price: agreedPrice,
+    agreed_price: agreedPrice,
+    payment_status: input.paid ? PAYMENT_STATUS.PAID : PAYMENT_STATUS.NONE,
+    created_by: actor.uid,
+    created_at: serverTimestamp(),
+    created_at_ms: Date.now(),
+    updated_at: serverTimestamp(),
+  };
+  await setDoc(doc(db, COL.bookings, id), payload);
+  await createAuditLog({
+    action: 'arena_booking_manual_created',
+    actor,
+    details: { arena_id: arena.id, booking_id: id, court_id: courtId },
+  });
+  return id;
+}
+
 export async function getBooking(id) {
   if (!db || !id) return null;
   const snap = await getDoc(doc(db, COL.bookings, id));

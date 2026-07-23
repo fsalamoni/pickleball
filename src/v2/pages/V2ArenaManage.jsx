@@ -2,7 +2,11 @@ import React, { useEffect, useMemo, useState } from 'react';
 import { Link, Navigate, useLocation, useParams } from 'react-router-dom';
 import { toast } from 'sonner';
 import { collection, getDocs, query, where } from 'firebase/firestore';
-import { ArrowLeft, Building2, Settings, Trash2, UserPlus, Users } from 'lucide-react';
+import {
+  ArrowLeft, Building2, Settings, Trash2, UserPlus, Users,
+  BarChart3, CalendarClock, CalendarDays, CalendarRange, Wallet, ClipboardList,
+  Package, LayoutGrid, DollarSign, Image, Info, Star, GraduationCap,
+} from 'lucide-react';
 import V2CourtsTab from '@/v2/components/arenas/V2CourtsTab';
 import V2ArenaCalendar from '@/v2/components/arenas/V2ArenaCalendar';
 import V2ArenaMetrics from '@/v2/components/arenas/V2ArenaMetrics';
@@ -13,12 +17,16 @@ import V2ArenaMercadoTab from '@/v2/components/arenas/V2ArenaMercadoTab';
 import FeatureFlagGuard from '@/v2/components/FeatureFlagGuard';
 import { db } from '@/core/config/firebase';
 import { FEATURE_FLAG } from '@/core/featureFlags';
+import { useFeatureFlag } from '@/core/lib/FeatureFlagsContext';
 import { useAuth } from '@/core/lib/FirebaseAuthContext';
 import { ImageUpload } from '@/components/ui/image-upload';
 import { PhotoLightbox } from '@/components/ui/photo-lightbox';
 import ConfirmDialog from '@/components/ConfirmDialog';
 import { V2ProfileFields, V2PricingEditor } from '@/v2/components/arenas/V2ArenaEditors';
 import V2ArenaReviews from '@/v2/components/arenas/V2ArenaReviews';
+import { ArenaCoachesManager } from '@/v2/pages/V2ArenaCoaches';
+import BookingParticipantsPanel from '@/modules/arenas/components/BookingParticipantsPanel';
+import LinkedClubsSection from '@/modules/clubs/components/LinkedClubsSection';
 import V2BookingRow from '@/v2/components/arenas/V2BookingRow';
 import { sortBookings } from '@/modules/arenas/domain/booking';
 import { ARENA_MANAGER_ROLE, BOOKING_STATUS } from '@/modules/arenas/domain/constants';
@@ -29,6 +37,72 @@ import {
 import { useArenaBookings } from '@/modules/arenas/hooks/useBookings';
 import { V2Badge, V2Button, V2Field, V2Input, V2Skeleton, V2Surface } from '@/v2/ui/primitives';
 import { cn } from '@/core/lib/utils';
+
+// Navegação em dois níveis do admin da arena. Ordem = ciclo de vida, do
+// início ao fim: identidade → estrutura/preços → reservas → comercial →
+// resultados → equipe/parceiros. Cada seção agrupa sub-abas por tema.
+// `coachResidentOn` injeta a aba de professores parceiros na seção de equipe.
+function buildArenaSections({ coachResidentOn, linkedClubsOn }) {
+  return [
+    {
+      id: 'perfil',
+      label: 'Perfil',
+      icon: Building2,
+      tabs: [
+        { value: 'info', label: 'Informações', icon: Info },
+        { value: 'fotos', label: 'Fotos', icon: Image },
+      ],
+    },
+    {
+      id: 'estrutura',
+      label: 'Estrutura e preços',
+      icon: LayoutGrid,
+      tabs: [
+        { value: 'quadras', label: 'Quadras', icon: LayoutGrid },
+        { value: 'precos', label: 'Preços', icon: DollarSign },
+        { value: 'regras', label: 'Regras', icon: ClipboardList },
+      ],
+    },
+    {
+      id: 'reservas',
+      label: 'Reservas',
+      icon: CalendarClock,
+      tabs: [
+        { value: 'reservas', label: 'Solicitações', icon: CalendarClock },
+        { value: 'calendario', label: 'Calendário', icon: CalendarDays },
+        { value: 'calendario-admin', label: 'Reservas (admin)', icon: CalendarRange },
+      ],
+    },
+    {
+      id: 'comercial',
+      label: 'Pagamentos e loja',
+      icon: Wallet,
+      tabs: [
+        { value: 'pagamento', label: 'Pagamento', icon: Wallet },
+        { value: 'mercado', label: 'Mercado', icon: Package },
+      ],
+    },
+    {
+      id: 'desempenho',
+      label: 'Desempenho',
+      icon: BarChart3,
+      tabs: [
+        { value: 'metricas', label: 'Métricas', icon: BarChart3 },
+        { value: 'retornos', label: 'Retornos', icon: Star },
+      ],
+    },
+    {
+      id: 'equipe',
+      label: 'Equipe e parceiros',
+      icon: Users,
+      tabs: [
+        { value: 'admins', label: 'Admins', icon: Users },
+        ...(coachResidentOn ? [{ value: 'professores', label: 'Professores', icon: GraduationCap }] : []),
+        ...(linkedClubsOn ? [{ value: 'clubes', label: 'Clubes', icon: Users }] : []),
+      ],
+    },
+  ];
+}
 
 export default function V2ArenaManage() {
   const { arenaId } = useParams();
@@ -63,10 +137,10 @@ export default function V2ArenaManage() {
 
 function V2ArenaManageContent({ arenaId, user, isPlatformAdmin, arena, managed, isLoading, deleteArena, location, tab, setTab }) {
 
-  // Sprint 0.1 (â€ncora pro stepper de onboarding): ao montar, lê o hash
-  // (#fotos / #precos / #horarios) e troca a tab + scroll até a seÃ§Ã£o.
-  // Cada panel abaixo tem um `id` correspondente, e #horarios aponta para
-  // a tab 'info' (que é onde fica o campo hours) e rola até o campo.
+  // Âncora para o stepper de onboarding: ao montar, lê o hash
+  // (#fotos / #precos / #horarios), troca a aba e rola até a seção.
+  // Cada panel abaixo tem um `id` correspondente; #horarios aponta para
+  // a aba 'info' (onde fica o campo de horário de funcionamento).
   useEffect(() => {
     const hash = location.hash?.replace('#', '').toLowerCase();
     if (!hash) return;
@@ -80,6 +154,11 @@ function V2ArenaManageContent({ arenaId, user, isPlatformAdmin, arena, managed, 
       el?.scrollIntoView({ behavior: 'smooth', block: 'start' });
     });
   }, [location.hash]);
+
+  const coachResidentOn = useFeatureFlag(FEATURE_FLAG.COACH_RESIDENT);
+  const linkedClubsOn = useFeatureFlag(FEATURE_FLAG.LINKED_CLUBS);
+  // Lembra a última sub-aba visitada em cada seção principal.
+  const [sectionMemory, setSectionMemory] = useState({});
 
   if (isLoading) return <div className="mx-auto max-w-[1000px] space-y-4"><V2Skeleton className="h-40 rounded-4xl" /><V2Skeleton className="h-64 rounded-4xl" /></div>;
   if (!arena) {
@@ -98,28 +177,23 @@ function V2ArenaManageContent({ arenaId, user, isPlatformAdmin, arena, managed, 
   if (!canManage) return <Navigate to={`/arenas/${arena.id}`} replace />;
   const isOwner = arena.owner_id === user?.uid || isPlatformAdmin;
 
-  // Tabs organizadas em 2 linhas (mesmo padrão visual: pill rounded-full)
-  // Linha 1 = Operação do dia-a-dia
-  // Linha 2 = Configuração da arena
-  const tabRows = [
-    [
-      { value: 'metricas', label: 'Métricas' },
-      { value: 'reservas', label: 'Reservas' },
-      { value: 'calendario', label: 'Calendário' },
-      { value: 'calendario-admin', label: 'Reservas (Admin)' },
-      { value: 'pagamento', label: 'Pagamento' },
-      { value: 'regras', label: 'Regras' },
-      { value: 'mercado', label: 'Mercado' },
-    ],
-    [
-      { value: 'quadras', label: 'Quadras' },
-      { value: 'precos', label: 'Preços' },
-      { value: 'fotos', label: 'Fotos' },
-      { value: 'info', label: 'Informações' },
-      { value: 'admins', label: 'Admins' },
-      { value: 'retornos', label: 'Retornos' },
-    ],
-  ];
+  // Navegação em dois níveis: poucas SEÇÕES principais (por tema), cada uma
+  // com suas sub-abas. Ordem = ciclo de vida da arena, do início ao fim:
+  // identidade → estrutura/preços → reservas (operação) → dinheiro →
+  // resultados → equipe.
+  const sections = buildArenaSections({ coachResidentOn, linkedClubsOn });
+  const activeSectionId = sections.find((s) => s.tabs.some((t) => t.value === tab))?.id
+    || sections[0].id;
+  const activeSection = sections.find((s) => s.id === activeSectionId) || sections[0];
+
+  const selectTab = (sectionId, value) => {
+    setTab(value);
+    setSectionMemory((m) => ({ ...m, [sectionId]: value }));
+  };
+  const selectSection = (section) => {
+    if (section.id === activeSectionId) return;
+    selectTab(section.id, sectionMemory[section.id] || section.tabs[0].value);
+  };
 
   return (
     <div className="mx-auto max-w-[1000px]">
@@ -158,19 +232,44 @@ function V2ArenaManageContent({ arenaId, user, isPlatformAdmin, arena, managed, 
         </div>
       </div>
 
-      <div className="mt-6 space-y-2">
-        {tabRows.map((row, rowIdx) => (
-          <div key={rowIdx} className="overflow-x-auto">
-            <div className="inline-flex gap-1.5 rounded-full border border-gray-100 bg-paper-pure p-1.5 shadow-sm">
-              {row.map((t) => (
-                <button key={t.value} onClick={() => setTab(t.value)}
-                  className={cn('whitespace-nowrap rounded-full px-4 py-2 text-sm font-semibold transition-colors', tab === t.value ? 'bg-ink text-white shadow-md' : 'text-gray-500 hover:text-ink')}>
-                  {t.label}
+      <div className="mt-6 space-y-3">
+        {/* Nível 1: seções principais (temas) */}
+        <div className="overflow-x-auto">
+          <div className="inline-flex gap-1.5 rounded-full border border-gray-100 bg-paper-pure p-1.5 shadow-sm">
+            {sections.map((section) => {
+              const Icon = section.icon;
+              const active = section.id === activeSectionId;
+              return (
+                <button key={section.id} onClick={() => selectSection(section)}
+                  aria-current={active ? 'page' : undefined}
+                  className={cn('inline-flex items-center gap-1.5 whitespace-nowrap rounded-full px-4 py-2 text-sm font-semibold transition-colors', active ? 'bg-ink text-white shadow-md' : 'text-gray-500 hover:text-ink')}>
+                  {Icon && <Icon className={cn('h-4 w-4', active ? 'text-acid' : 'text-gray-400')} />}
+                  {section.label}
                 </button>
-              ))}
+              );
+            })}
+          </div>
+        </div>
+
+        {/* Nível 2: sub-abas da seção ativa (só quando há mais de uma) */}
+        {activeSection.tabs.length > 1 && (
+          <div className="overflow-x-auto">
+            <div className="inline-flex flex-wrap gap-1.5 px-1">
+              {activeSection.tabs.map((t) => {
+                const Icon = t.icon;
+                const active = tab === t.value;
+                return (
+                  <button key={t.value} onClick={() => selectTab(activeSection.id, t.value)}
+                    aria-current={active ? 'page' : undefined}
+                    className={cn('inline-flex items-center gap-1.5 whitespace-nowrap rounded-full border px-3.5 py-1.5 text-sm font-semibold transition-colors', active ? 'border-ink bg-ink/5 text-ink' : 'border-gray-200 text-gray-500 hover:border-ink/40 hover:text-ink')}>
+                    {Icon && <Icon className={cn('h-3.5 w-3.5', active ? 'text-ink' : 'text-gray-400')} />}
+                    {t.label}
+                  </button>
+                );
+              })}
             </div>
           </div>
-        ))}
+        )}
       </div>
 
       <div className="mt-6">
@@ -186,6 +285,8 @@ function V2ArenaManageContent({ arenaId, user, isPlatformAdmin, arena, managed, 
         {tab === 'fotos' && <div id="arena-manage-fotos"><PhotosTab arena={arena} /></div>}
         {tab === 'info' && <InfoTab arena={arena} />}
         {tab === 'admins' && <ManagersTab arena={arena} />}
+        {tab === 'professores' && coachResidentOn && <ArenaCoachesManager arena={arena} />}
+        {tab === 'clubes' && linkedClubsOn && <LinkedClubsSection ownerType="arena" ownerId={arena.id} canManage title="Clubes da arena" />}
         {tab === 'retornos' && <V2ArenaReviews arena={arena} canModerate />}
       </div>
     </div>
@@ -261,12 +362,21 @@ function PhotosTab({ arena }) {
 }
 
 function BookingsTab({ arena }) {
+  const sharedBookingsOn = useFeatureFlag(FEATURE_FLAG.SHARED_BOOKINGS);
   const { data: bookings = [], isLoading } = useArenaBookings(arena.id);
   const grouped = useMemo(() => {
     const active = sortBookings(bookings.filter((b) => [BOOKING_STATUS.REQUESTED, BOOKING_STATUS.NEGOTIATING, BOOKING_STATUS.CONFIRMED].includes(b.status)));
     const past = sortBookings(bookings.filter((b) => [BOOKING_STATUS.DECLINED, BOOKING_STATUS.CANCELLED, BOOKING_STATUS.COMPLETED].includes(b.status)));
     return { active, past };
   }, [bookings]);
+
+  const sharedOn = sharedBookingsOn;
+  const renderBooking = (b) => (
+    <div key={b.id}>
+      <V2BookingRow booking={b} perspective="arena" />
+      {sharedOn && b.shared && <BookingParticipantsPanel booking={b} />}
+    </div>
+  );
 
   if (isLoading) return <V2Skeleton className="h-40 rounded-4xl" />;
   if (bookings.length === 0) return <V2Surface className="text-center"><p className="py-6 text-sm text-gray-500">Nenhuma solicitação de reserva ainda.</p></V2Surface>;
@@ -276,12 +386,12 @@ function BookingsTab({ arena }) {
       <V2Surface className="space-y-2 p-4 sm:p-5">
         <h3 className="text-sm font-bold text-ink">Ativas</h3>
         {grouped.active.length === 0 ? <p className="text-sm text-gray-500">Nenhuma reserva ativa.</p>
-          : grouped.active.map((b) => <V2BookingRow key={b.id} booking={b} perspective="arena" />)}
+          : grouped.active.map(renderBooking)}
       </V2Surface>
       {grouped.past.length > 0 && (
         <V2Surface className="space-y-2 p-4 sm:p-5">
           <h3 className="text-sm font-bold text-ink">Histórico</h3>
-          {grouped.past.map((b) => <V2BookingRow key={b.id} booking={b} perspective="arena" />)}
+          {grouped.past.map(renderBooking)}
         </V2Surface>
       )}
     </div>

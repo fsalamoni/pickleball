@@ -78,7 +78,7 @@ function SlotCard({ slot, arenaId, onJoin, onJoinWaitlist, onLeave, isIn, isInWa
         </div>
         <div className="mt-1 h-2 w-full overflow-hidden rounded-full bg-gray-100">
           <div
-            className={['h-full rounded-full transition-all', isFull ? 'bg-red-400' : 'bg-emerald-400'].join(' ')}
+            className={['h-full rounded-full transition-all', isFull ? 'bg-red-400' : 'bg-green-400'].join(' ')}
             style={{ width: `${fillPct}%` }}
           />
         </div>

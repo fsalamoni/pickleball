@@ -250,13 +250,34 @@ service cloud.firestore {
     // Reservas: legíveis/gerenciáveis pelo atleta solicitante e pelos gestores
     // da arena. Criação só pelo próprio atleta.
     match /arena_bookings/{bookingId} {
+      // Lê: dono original, participantes (aceitos e convidados), o professor
+      // (coach_id), qualquer autenticado numa reserva ABERTA (para ingressar),
+      // o gestor da arena e o admin.
       allow read: if isAuthed() && (
         resource.data.athlete_id == request.auth.uid
+        || request.auth.uid in resource.data.get('participant_ids', [])
+        || request.auth.uid in resource.data.get('invited_ids', [])
+        || resource.data.get('coach_id', null) == request.auth.uid
+        || resource.data.get('open_join', false) == true
         || isArenaManager(resource.data.arena_id)
         || isPlatformAdmin());
-      allow create: if isAuthed() && request.resource.data.athlete_id == request.auth.uid;
+      // Cria: o próprio atleta, o professor (coach_id), o gestor (reserva
+      // manual, athlete_id pode ser null) ou o admin.
+      allow create: if isAuthed() && (
+        request.resource.data.athlete_id == request.auth.uid
+        || request.resource.data.get('coach_id', null) == request.auth.uid
+        || isArenaManager(request.resource.data.arena_id)
+        || isPlatformAdmin());
+      // Atualiza/exclui: dono original, participantes (aceitos e convidados —
+      // o convidado aceita/recusa), o professor, quem está ingressando numa
+      // reserva aberta (aparece nos novos participant_ids), o gestor e o admin.
       allow update, delete: if isAuthed() && (
         resource.data.athlete_id == request.auth.uid
+        || request.auth.uid in resource.data.get('participant_ids', [])
+        || request.auth.uid in resource.data.get('invited_ids', [])
+        || resource.data.get('coach_id', null) == request.auth.uid
+        || (resource.data.get('open_join', false) == true
+            && request.auth.uid in request.resource.data.get('participant_ids', []))
         || isArenaManager(resource.data.arena_id)
         || isPlatformAdmin());
     }
@@ -514,8 +535,27 @@ service cloud.firestore {
       allow update: if isPlatformAdmin()
         || isTournamentAdmin(resource.data.tournament_id)
         || (isAuthed() && resource.data.created_by == request.auth.uid)
-        || isRegistrationEmailOwnerUpdate();
+        || isRegistrationEmailOwnerUpdate()
+        // Convite de dupla (flag partner_invites): o convidado responde ao
+        // convite alterando SOMENTE os campos do convite.
+        || (isAuthed()
+          && resource.data.partner_invite_uid == request.auth.uid
+          && request.resource.data.diff(resource.data).affectedKeys().hasOnly([
+            'partner_invite_status',
+            'partner_invite_responded_at',
+            'updated_at',
+          ]));
       allow delete: if isPlatformAdmin() || isTournamentAdmin(resource.data.tournament_id);
+    }
+
+    match /tournament_announcements/{aid} {
+      // Avisos do organizador (flag tournament_announcements): histórico
+      // legível por autenticados; escrita apenas por admins do torneio.
+      allow read: if isAuthed();
+      allow create: if isPlatformAdmin()
+        || isTournamentAdmin(request.resource.data.tournament_id);
+      allow update, delete: if isPlatformAdmin()
+        || isTournamentAdmin(resource.data.tournament_id);
     }
 
     match /tournament_matches/{mid} {
@@ -983,6 +1023,113 @@ service cloud.firestore {
         request.auth.uid == resId.split('_')[0] ||
         // arena manager pode adicionar/remover
         exists(/databases/$(database)/documents/arena_managers/$(resId.split('_')[1] + '_' + request.auth.uid))
+      );
+    }
+
+// ---- Produto de aulas do professor (flag coach_lessons) — aditivo ----
+    // coach_availability/{coachId} — disponibilidade semanal (1 doc/professor).
+    // Leitura pública (o aluno precisa ver horários); escrita só do professor.
+    match /coach_availability/{coachId} {
+      allow read: if true;
+      allow create, update, delete: if isAuthed() && (
+        request.auth.uid == coachId || isPlatformAdmin()
+      );
+    }
+    // coach_lessons/{lessonId} — aula (avulsa/recorrente).
+    // Lê o professor e o aluno vinculado (e admin). Cria o professor, o aluno
+    // (student_id == uid) ou admin. Atualiza/exclui o professor ou o aluno
+    // vinculado (a UI/serviço restringe o aluno a cancelar).
+    match /coach_lessons/{lessonId} {
+      allow read: if isAuthed() && (
+        request.auth.uid == resource.data.coach_id ||
+        request.auth.uid == resource.data.student_id ||
+        isPlatformAdmin()
+      );
+      allow create: if isAuthed() && (
+        request.auth.uid == request.resource.data.coach_id ||
+        request.auth.uid == request.resource.data.student_id ||
+        isPlatformAdmin()
+      );
+      allow update, delete: if isAuthed() && (
+        request.auth.uid == resource.data.coach_id ||
+        request.auth.uid == resource.data.student_id ||
+        isPlatformAdmin()
+      );
+    }
+    // coach_students/{coachId_studentId} — vínculo aluno↔professor.
+    // Lê o professor e o aluno. Cria/edita/remove o professor; o aluno pode
+    // atualizar (aceitar o convite mudando o próprio status).
+    match /coach_students/{linkId} {
+      allow read: if isAuthed() && (
+        request.auth.uid == resource.data.coach_id ||
+        request.auth.uid == resource.data.student_id ||
+        isPlatformAdmin()
+      );
+      allow create: if isAuthed() && (
+        request.auth.uid == request.resource.data.coach_id || isPlatformAdmin()
+      );
+      allow update: if isAuthed() && (
+        request.auth.uid == resource.data.coach_id ||
+        request.auth.uid == resource.data.student_id ||
+        isPlatformAdmin()
+      );
+      allow delete: if isAuthed() && (
+        request.auth.uid == resource.data.coach_id || isPlatformAdmin()
+      );
+    }
+    // coach_packages/{id} — definição de pacote. Leitura pública (aluno vê a
+    // oferta); escrita do professor/admin.
+    match /coach_packages/{packageId} {
+      allow read: if true;
+      allow create: if isAuthed() && (
+        request.auth.uid == request.resource.data.coach_id || isPlatformAdmin()
+      );
+      allow update, delete: if isAuthed() && (
+        request.auth.uid == resource.data.coach_id || isPlatformAdmin()
+      );
+    }
+    // coach_package_sales/{id} — venda/crédito. Lê o professor e o aluno;
+    // escreve o professor/admin.
+    match /coach_package_sales/{saleId} {
+      allow read: if isAuthed() && (
+        request.auth.uid == resource.data.coach_id ||
+        request.auth.uid == resource.data.student_id ||
+        isPlatformAdmin()
+      );
+      allow create: if isAuthed() && (
+        request.auth.uid == request.resource.data.coach_id || isPlatformAdmin()
+      );
+      allow update, delete: if isAuthed() && (
+        request.auth.uid == resource.data.coach_id || isPlatformAdmin()
+      );
+    }
+    // coach_content/{id} — biblioteca de conteúdo do professor. Lê: público, o
+    // professor, e alunos vinculados (existe coach_students/{coachId_uid}).
+    // Escreve: o professor/admin.
+    match /coach_content/{contentId} {
+      allow read: if resource.data.visibility == 'public' || (isAuthed() && (
+        request.auth.uid == resource.data.coach_id ||
+        isPlatformAdmin() ||
+        exists(/databases/$(database)/documents/coach_students/$(resource.data.coach_id + '_' + request.auth.uid))
+      ));
+      allow create: if isAuthed() && (
+        request.auth.uid == request.resource.data.coach_id || isPlatformAdmin()
+      );
+      allow update, delete: if isAuthed() && (
+        request.auth.uid == resource.data.coach_id || isPlatformAdmin()
+      );
+    }
+    // coach_products/{id} — loja do professor. Lê: produtos públicos (qualquer
+    // um) e todos os do próprio professor/admin. Escreve: o professor/admin.
+    match /coach_products/{productId} {
+      allow read: if resource.data.visible_public == true || (isAuthed() && (
+        request.auth.uid == resource.data.coach_id || isPlatformAdmin()
+      ));
+      allow create: if isAuthed() && (
+        request.auth.uid == request.resource.data.coach_id || isPlatformAdmin()
+      );
+      allow update, delete: if isAuthed() && (
+        request.auth.uid == resource.data.coach_id || isPlatformAdmin()
       );
     }
 

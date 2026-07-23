@@ -18,6 +18,7 @@ import {
   useCreatePackage, useDeletePackage,
 } from '@/modules/arenas/hooks/useArenaV3';
 import { computeTier, MEMBER_TIER } from '@/modules/arenas/domain/members';
+import ConfirmDialog from '@/components/ConfirmDialog';
 import { V2Badge, V2Button, V2EmptyState, V2Field, V2Input, V2Skeleton, V2Surface, V2Textarea } from '@/v2/ui/primitives';
 
 function CreatePackageForm({ arenaId, onClose }) {
@@ -104,7 +105,6 @@ export default function V2ArenaAdminMembers() {
   if (!canManage) return <Navigate to={`/arenas/${arena.id}`} replace />;
 
   const handleDelete = async (pkg) => {
-    if (!window.confirm(`Excluir o pacote "${pkg.name}"?`)) return;
     try {
       await del.mutateAsync({ pkgId: pkg.id });
       toast.success('Pacote excluído');
@@ -113,8 +113,9 @@ export default function V2ArenaAdminMembers() {
     }
   };
 
+  // Tons distintos dentro dos suportados pelo V2Badge.
   const tierColors = {
-    bronze: 'amber', silver: 'gray', gold: 'yellow', platinum: 'violet',
+    bronze: 'amber', silver: 'neutral', gold: 'acid', platinum: 'ink',
   };
 
   return (
@@ -169,13 +170,20 @@ export default function V2ArenaAdminMembers() {
                 </div>
                 <div className="flex items-center gap-2">
                   {pkg.active ? <V2Badge tone="green">Ativo</V2Badge> : <V2Badge tone="neutral">Inativo</V2Badge>}
-                  <button
-                    type="button"
-                    onClick={() => handleDelete(pkg)}
-                    className="rounded-full border border-red-200 bg-red-50 px-3 py-1 text-xs font-bold text-red-600 hover:bg-red-100"
-                  >
-                    <Trash2 className="mr-1 inline h-3 w-3" /> Excluir
-                  </button>
+                  <ConfirmDialog
+                    title="Excluir pacote?"
+                    description={`O pacote "${pkg.name}" será removido. Membros que já o adquiriram não são afetados.`}
+                    confirmLabel="Excluir"
+                    onConfirm={() => handleDelete(pkg)}
+                    trigger={(
+                      <button
+                        type="button"
+                        className="rounded-full border border-red-200 bg-red-50 px-3 py-1 text-xs font-bold text-red-600 hover:bg-red-100"
+                      >
+                        <Trash2 className="mr-1 inline h-3 w-3" /> Excluir
+                      </button>
+                    )}
+                  />
                 </div>
               </div>
             ))}

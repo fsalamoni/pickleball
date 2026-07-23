@@ -3,16 +3,19 @@ import { Link, useParams } from 'react-router-dom';
 import {
   ArrowLeft, Building2, Calendar, CalendarPlus, Check, Clock, Copy, Globe, Instagram, Mail, MapPin,
   MessageCircle, Phone, Settings, Star, Trophy, Users,
-  GraduationCap,
+  GraduationCap, CreditCard, ClipboardList,
 } from 'lucide-react';
 import { PhotoLightbox } from '@/components/ui/photo-lightbox';
 import { FEATURE_FLAG } from '@/core/featureFlags';
+import { useFeatureFlag } from '@/core/lib/FeatureFlagsContext';
 import { useAuth } from '@/core/lib/FirebaseAuthContext';
 import V2ChatLauncherButton from '@/v2/components/chat/V2ChatLauncherButton';
 import FeatureFlagGuard from '@/v2/components/FeatureFlagGuard';
 import { V2FavoriteArenaButton, V2ArenaShareButton } from '@/v2/components/arenas/V2ArenaActions';
 import V2ArenaReviews from '@/v2/components/arenas/V2ArenaReviews';
 import BookingRequestDialog from '@/modules/arenas/components/BookingRequestDialog';
+import SharedBookingDialog from '@/modules/arenas/components/SharedBookingDialog';
+import LinkedClubsSection from '@/modules/clubs/components/LinkedClubsSection';
 import { formatArenaAddress, arenaContactLinks } from '@/modules/arenas/domain/arena';
 import { formatPrice } from '@/modules/arenas/domain/pricing';
 import { BOOKING_STATUS, WEEKDAY_SHORT } from '@/modules/arenas/domain/constants';
@@ -25,10 +28,16 @@ import { useArenaCoaches } from '@/modules/coaches/hooks/useCoaches';
 import V2BookingCalendar from '@/v2/components/arenas/V2BookingCalendar';
 import { isPixConfigured, PIX_KEY_TYPE_LABELS } from '@/modules/arenas/domain/pix_payment';
 import { groupRulesByCategory } from '@/modules/arenas/domain/arena_rules';
-import { V2Badge, V2Button, V2EmptyState, V2Field, V2Input, V2Skeleton, V2Surface } from '@/v2/ui/primitives';
+import { V2Badge, V2Button, V2EmptyState, V2Skeleton, V2Surface } from '@/v2/ui/primitives';
 
 function arenaPhotoUrl(photo) {
   return typeof photo === 'string' ? photo : photo?.url;
+}
+
+/** 'YYYY-MM-DD' → 'dd/mm' (pt-BR); devolve o original se não casar. */
+function formatSlotDate(iso) {
+  const m = String(iso || '').match(/^(\d{4})-(\d{2})-(\d{2})$/);
+  return m ? `${m[3]}/${m[2]}` : iso;
 }
 
 function ArenaModuleLinks({ arenaId }) {
@@ -101,6 +110,9 @@ export default function V2ArenaDetail() {
 }
 
 function V2ArenaDetailContent({ arenaId, user, arena, managed, bookings, isLoading, bookingOpen, setBookingOpen }) {
+  const sharedBookingsOn = useFeatureFlag(FEATURE_FLAG.SHARED_BOOKINGS);
+  const linkedClubsOn = useFeatureFlag(FEATURE_FLAG.LINKED_CLUBS);
+  const [sharedOpen, setSharedOpen] = useState(false);
 
   if (isLoading) {
     return (
@@ -187,6 +199,20 @@ function V2ArenaDetailContent({ arenaId, user, arena, managed, bookings, isLoadi
         </div>
       </div>
 
+      {/* Reservar é a ação principal do visitante: o calendário interativo
+          vem logo após o hero, antes de regras/contato. */}
+      <V2BookingCalendarSection arenaId={arenaId} arena={arena} />
+
+      {sharedBookingsOn && user && (
+        <div className="mt-3 flex flex-col items-center gap-1">
+          <V2Button variant="secondary" onClick={() => setSharedOpen(true)}>
+            <Users className="h-4 w-4" /> Reserva compartilhada — dividir a quadra
+          </V2Button>
+          <p className="text-xs text-gray-400">Convide atletas e divida o valor, ou deixe a reserva aberta.</p>
+        </div>
+      )}
+      {sharedBookingsOn && <SharedBookingDialog arena={arena} open={sharedOpen} onOpenChange={setSharedOpen} />}
+
       {/* Sprint 5: Regras estruturadas (público) — preferido sobre house_rules_md */}
       <ArenaRulesSection arena={arena} />
 
@@ -209,15 +235,17 @@ function V2ArenaDetailContent({ arenaId, user, arena, managed, bookings, isLoadi
         </V2Surface>
       </div>
 
-      {/* Calendário interativo (Sprint 5) — entre Contato/Funcionamento e Próximos horários */}
-      <V2BookingCalendarSection arenaId={arenaId} arena={arena} />
-
       {/* Pagamento PIX (Sprint 5) */}
       <V2ArenaPaymentSection arena={arena} />
 
       {/* Torneios + Professores residentes (Sprint 4) */}
       <ArenaTournamentsSection arenaId={arenaId} />
       <ArenaCoachesSection arenaId={arenaId} />
+      {linkedClubsOn && (
+        <div className="mt-6">
+          <LinkedClubsSection ownerType="arena" ownerId={arenaId} title="Clubes da arena" />
+        </div>
+      )}
 
       {upcomingSlots.length > 0 && (
         <V2Surface className="mt-6">
@@ -226,7 +254,7 @@ function V2ArenaDetailContent({ arenaId, user, arena, managed, bookings, isLoadi
           <div className="mt-4 flex flex-wrap gap-2">
             {upcomingSlots.map((slot) => (
               <span key={`${slot.date}_${slot.start}`} className="rounded-full border border-gray-100 bg-paper px-3 py-1.5 text-xs text-gray-600">
-                {slot.date} · {slot.start}–{slot.end}
+                {formatSlotDate(slot.date)} · {slot.start}–{slot.end}
               </span>
             ))}
           </div>
@@ -297,7 +325,7 @@ function ArenaTournamentsSection({ arenaId }) {
                 {t.starts_at?.toDate?.()?.toLocaleDateString?.('pt-BR') || t.starts_at}
               </p>
             )}
-            {t.city && <p className="text-xs text-gray-400">📍 {t.city}{t.state && `, ${t.state}`}</p>}
+            {t.city && <p className="flex items-center gap-1 text-xs text-gray-400"><MapPin className="h-3 w-3" /> {t.city}{t.state && `, ${t.state}`}</p>}
           </Link>
         ))}
       </div>
@@ -306,30 +334,41 @@ function ArenaTournamentsSection({ arenaId }) {
 }
 
 function ArenaCoachesSection({ arenaId }) {
+  const coachResidentOn = useFeatureFlag(FEATURE_FLAG.COACH_RESIDENT);
   const { data: coaches = [], isLoading } = useArenaCoaches(arenaId);
+  if (!coachResidentOn) return null;
   if (isLoading) return null;
   if (coaches.length === 0) return null;
   return (
     <V2Surface className="mt-6">
       <h3 className="flex items-center gap-1.5 font-display text-base font-bold text-ink">
-        <GraduationCap className="h-4 w-4" /> Professores residentes
+        <GraduationCap className="h-4 w-4" /> Professores parceiros
       </h3>
+      <p className="mt-1 text-sm text-gray-500">Profissionais que dão aula nesta arena. Toque para ver o perfil.</p>
       <div className="mt-3 grid gap-3 sm:grid-cols-2">
         {coaches.slice(0, 6).map((c) => (
-          <Link key={c.id} to={`/coaches/${c.id}`} className="flex items-center gap-3 rounded-2xl border border-gray-100 bg-paper p-3 transition-transform hover:scale-[1.02]">
-            <div className="flex h-10 w-10 items-center justify-center rounded-2xl bg-gradient-to-br from-emerald-500 to-amber-500 text-sm font-bold text-white">
-              {c.display_name?.[0] || '?'}
+          <div key={c.id} className="flex flex-col gap-3 rounded-2xl border border-gray-100 bg-paper p-3">
+            <div className="flex items-center gap-3">
+              <div className="flex h-10 w-10 items-center justify-center rounded-2xl bg-ink text-sm font-bold text-acid">
+                {c.display_name?.[0] || '?'}
+              </div>
+              <div className="flex-1 min-w-0">
+                <h4 className="text-sm font-bold text-ink line-clamp-1">{c.display_name}</h4>
+                {c.modalities?.length > 0 && (
+                  <p className="text-xs text-gray-500 line-clamp-1">{c.modalities.join(' · ')}</p>
+                )}
+                {c.hourly_rate != null && (
+                  <p className="text-xs font-bold text-ink">R$ {Number(c.hourly_rate).toFixed(2)}/h</p>
+                )}
+              </div>
             </div>
-            <div className="flex-1 min-w-0">
-              <h4 className="text-sm font-bold text-ink line-clamp-1">{c.display_name}</h4>
-              {c.modalities?.length > 0 && (
-                <p className="text-xs text-gray-500 line-clamp-1">{c.modalities.join(' · ')}</p>
-              )}
-              {c.hourly_rate != null && (
-                <p className="text-xs font-bold text-emerald-700">R$ {Number(c.hourly_rate).toFixed(2)}/h</p>
-              )}
-            </div>
-          </Link>
+            <Link
+              to={`/coaches/${c.id}`}
+              className="inline-flex items-center justify-center gap-1.5 rounded-full bg-ink px-3 py-1.5 text-xs font-bold text-acid transition-colors hover:bg-ink/90"
+            >
+              <MessageCircle className="h-3.5 w-3.5" /> Ver perfil e contato
+            </Link>
+          </div>
         ))}
       </div>
     </V2Surface>
@@ -369,7 +408,7 @@ function V2ArenaPaymentSection({ arena }) {
   return (
     <V2Surface className="mt-6">
       <h3 className="flex items-center gap-1.5 font-display text-base font-bold text-ink">
-        💳 Pagar com PIX
+        <CreditCard className="h-4 w-4" /> Pagar com PIX
       </h3>
       {payment.receiver_name && (
         <p className="mt-1 text-sm text-gray-500">Recebedor: <span className="font-bold text-ink">{payment.receiver_name}</span></p>
@@ -415,13 +454,13 @@ function ArenaRulesSection({ arena }) {
   return (
     <V2Surface className="mt-6">
       <h3 className="flex items-center gap-1.5 font-display text-base font-bold text-ink">
-        📋 Regras da arena
+        <ClipboardList className="h-4 w-4" /> Regras da arena
       </h3>
       {grouped ? (
         <div className="mt-3 space-y-4">
           {Object.entries(grouped).map(([cat, items]) => (
             <div key={cat}>
-              <h4 className="mb-1.5 text-xs font-bold uppercase tracking-widest text-emerald-700">
+              <h4 className="mb-1.5 text-xs font-bold uppercase tracking-widest text-gray-400">
                 {cat}
               </h4>
               <ol className="list-decimal space-y-2 pl-5">

@@ -111,6 +111,8 @@ export async function createClub(creator, profile, data) {
     contact_phone: trimmed(data.contact_phone),
     instagram: trimmed(data.instagram),
     home_venue: trimmed(data.home_venue),
+    linked_coach_id: trimmed(data.linked_coach_id) || null,
+    linked_arena_id: trimmed(data.linked_arena_id) || null,
     invite_code: inviteCode(),
     member_count: 1,
     created_by: creator.uid,
@@ -155,6 +157,20 @@ export async function listClubs() {
   return snap.docs.map((d) => ({ id: d.id, ...d.data() }));
 }
 
+/** Clubes vinculados a um professor. */
+export async function listClubsByCoach(coachId) {
+  if (!db || !coachId) return [];
+  const snap = await getDocs(query(collection(db, COL.clubs), where('linked_coach_id', '==', coachId)));
+  return snap.docs.map((d) => ({ id: d.id, ...d.data() }));
+}
+
+/** Clubes vinculados a uma arena. */
+export async function listClubsByArena(arenaId) {
+  if (!db || !arenaId) return [];
+  const snap = await getDocs(query(collection(db, COL.clubs), where('linked_arena_id', '==', arenaId)));
+  return snap.docs.map((d) => ({ id: d.id, ...d.data() }));
+}
+
 export async function listMyClubs(userId) {
   if (!db || !userId) return [];
   const memberSnap = await getDocs(query(collection(db, COL.members), where('user_id', '==', userId)));
@@ -168,7 +184,7 @@ export async function listMyClubs(userId) {
 }
 
 export async function updateClub(id, updates, actor) {
-  const allowed = ['name', 'description', 'city', 'state', 'logo_url', 'contact_email', 'contact_phone', 'instagram', 'home_venue'];
+  const allowed = ['name', 'description', 'city', 'state', 'logo_url', 'contact_email', 'contact_phone', 'instagram', 'home_venue', 'linked_coach_id', 'linked_arena_id'];
   const sanitized = {};
   allowed.forEach((key) => {
     if (updates[key] !== undefined) sanitized[key] = trimmed(updates[key]);

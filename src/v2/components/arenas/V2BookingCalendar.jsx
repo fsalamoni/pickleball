@@ -17,7 +17,7 @@
  * Status agregado por dia (1 cor por dia na grade):
  *  - "Fechado" cinza: arena sem schedule aberto naquele dia OU todos os
  *    slots são CLOSED. NÃO clicável.
- *  - "Disponível" emerald: tem pelo menos 1 slot AVAILABLE
+ *  - "Disponível" verde: tem pelo menos 1 slot AVAILABLE
  *  - "Ocupado" amber/vermelho: tem slots mas todos PENDING/CONFIRMED.
  *    Clicável para ver detalhe (sem seleção).
  *
@@ -149,7 +149,7 @@ export default function V2BookingCalendar({ arenaId, arena: arenaProp }) {
           <ChevronLeft className="h-4 w-4" /> Mês anterior
         </V2Button>
         <div className="flex items-center gap-1.5 rounded-2xl border border-gray-200 bg-paper px-3 py-1.5 text-sm font-bold text-ink capitalize">
-          <Calendar className="h-4 w-4 text-emerald-700" />
+          <Calendar className="h-4 w-4 text-green-700" />
           {monthLabel}
         </div>
         <V2Button size="sm" variant="ghost" onClick={() => setYearMonth(addMonths(yearMonth, 1))}>
@@ -170,7 +170,7 @@ export default function V2BookingCalendar({ arenaId, arena: arenaProp }) {
       {/* Legenda */}
       <div className="flex flex-wrap gap-2 text-xs">
         <div className="flex items-center gap-1">
-          <span className="h-3 w-3 rounded-full bg-emerald-500" />
+          <span className="h-3 w-3 rounded-full bg-green-500" />
           <span className="text-gray-600">Tem horário livre</span>
         </div>
         <div className="flex items-center gap-1">
@@ -240,16 +240,16 @@ export default function V2BookingCalendar({ arenaId, arena: arenaProp }) {
                 className={cn(
                   'flex min-h-[76px] flex-col items-stretch gap-1 border-b border-r border-gray-100 p-1.5 text-left transition-all',
                   !inMonth && 'bg-gray-50/50 text-gray-300',
-                  inMonth && !past && !closed && 'hover:bg-emerald-50 cursor-pointer',
+                  inMonth && !past && !closed && 'hover:bg-green-50 cursor-pointer',
                   inMonth && past && 'bg-gray-50/30 text-gray-300 cursor-not-allowed',
                   inMonth && !past && closed && 'bg-gray-50/70 text-gray-400 cursor-not-allowed',
-                  isToday && 'ring-2 ring-inset ring-emerald-500',
+                  isToday && 'ring-2 ring-inset ring-green-500',
                 )}
               >
                 <div className="flex items-start justify-between">
                   <span className={cn(
                     'text-xs font-bold',
-                    isToday && 'text-emerald-700',
+                    isToday && 'text-green-700',
                     inMonth ? 'text-ink' : 'text-gray-300',
                   )}>
                     {Number(date.slice(-2))}
@@ -289,7 +289,7 @@ export default function V2BookingCalendar({ arenaId, arena: arenaProp }) {
 
       {!isAuthenticated && (
         <p className="text-center text-xs text-gray-400">
-          <Link to="/login" className="text-emerald-700 underline">Faça login</Link> para reservar.
+          <Link to="/login" className="text-green-700 underline">Faça login</Link> para reservar.
         </p>
       )}
 

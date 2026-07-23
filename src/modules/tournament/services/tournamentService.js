@@ -158,7 +158,7 @@ export async function setTournamentStatus(id, status, actor) {
         title: `Inscrições abertas: "${String(tournament.name || 'Novo torneio').slice(0, 60)}"`,
         message: 'Um torneio público está com inscrições abertas. Toque para ver e participar.',
         type: NOTIFICATION_TYPE.TOURNAMENT_OPEN,
-        link: '/torneios/publicos',
+        link: '/torneios',
         actor,
       });
     } catch (err) {

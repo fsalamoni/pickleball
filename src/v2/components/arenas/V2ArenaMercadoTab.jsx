@@ -27,6 +27,7 @@ import {
   calculateStock, calculateMargin, filterProductsByCategory, searchProducts,
 } from '@/modules/arenas/domain/inventory';
 import { formatPrice } from '@/modules/arenas/domain/pricing';
+import ConfirmDialog from '@/components/ConfirmDialog';
 import { cn } from '@/core/lib/utils';
 import {
   V2Badge, V2Button, V2Field, V2Input, V2Select, V2Surface, V2Textarea, V2EmptyState, V2Skeleton,
@@ -48,7 +49,7 @@ export default function V2ArenaMercadoTab() {
   return (
     <div className="space-y-3">
       <div className="flex flex-wrap items-center gap-2">
-        <Package className="h-5 w-5 text-emerald-700" />
+        <Package className="h-5 w-5 text-green-700" />
         <h2 className="font-display text-xl font-bold text-ink">Mercado / Estoque</h2>
       </div>
       <div className="flex flex-wrap gap-1">
@@ -104,7 +105,6 @@ function ProductsSection({ arenaId }) {
   }
 
   async function handleDelete(p) {
-    if (!confirm(`Remover "${p.name}"?`)) return;
     try {
       await remove.mutateAsync(p.id);
       toast.success('Produto removido.');
@@ -128,7 +128,7 @@ function ProductsSection({ arenaId }) {
       </div>
 
       {creating && (
-        <form onSubmit={handleCreate} className="mt-3 space-y-2 rounded-2xl border border-emerald-200 bg-emerald-50/40 p-3">
+        <form onSubmit={handleCreate} className="mt-3 space-y-2 rounded-2xl border border-green-200 bg-green-50/40 p-3">
           <div className="grid grid-cols-1 gap-2 sm:grid-cols-2">
             <V2Field label="Nome do produto" required>
               <V2Input value={form.name} onChange={(e) => setForm({ ...form, name: e.target.value })} required maxLength={80} />
@@ -165,7 +165,7 @@ function ProductsSection({ arenaId }) {
         ) : (
           filtered.map((p) => (
             <div key={p.id} className="flex items-center gap-2 rounded-2xl border border-gray-100 bg-paper p-3">
-              <div className="flex h-10 w-10 items-center justify-center rounded-2xl bg-gradient-to-br from-emerald-500 to-amber-500 text-white">
+              <div className="flex h-10 w-10 items-center justify-center rounded-2xl bg-ink text-acid">
                 <Package className="h-4 w-4" />
               </div>
               <div className="flex-1 min-w-0">
@@ -175,16 +175,24 @@ function ProductsSection({ arenaId }) {
                 </div>
                 <div className="text-xs text-gray-500">
                   {p.brand && <span>{p.brand} · </span>}
-                  <V2Badge tone="sky">{p.category}</V2Badge>
+                  <V2Badge tone="blue">{p.category}</V2Badge>
                   {p.unit && p.unit !== 'un' && <span> · {p.unit}</span>}
                 </div>
               </div>
               <button onClick={() => handleToggleActive(p)} className="text-xs text-gray-500 hover:text-ink">
                 {p.active ? 'Desativar' : 'Ativar'}
               </button>
-              <button onClick={() => handleDelete(p)} className="text-red-500 hover:text-red-700">
-                <Trash2 className="h-4 w-4" />
-              </button>
+              <ConfirmDialog
+                title="Remover produto?"
+                description={`"${p.name}" será removido do catálogo. As entradas e saídas já registradas são preservadas.`}
+                confirmLabel="Remover"
+                onConfirm={() => handleDelete(p)}
+                trigger={(
+                  <button type="button" className="text-red-500 hover:text-red-700" aria-label={`Remover ${p.name}`}>
+                    <Trash2 className="h-4 w-4" />
+                  </button>
+                )}
+              />
             </div>
           ))
         )}
@@ -219,7 +227,7 @@ function EntriesSection({ arenaId }) {
     <V2Surface>
       <div className="flex items-center justify-between">
         <h3 className="font-display text-base font-bold text-ink flex items-center gap-2">
-          <TrendingUp className="h-4 w-4 text-emerald-700" /> Entradas (compras)
+          <TrendingUp className="h-4 w-4 text-green-700" /> Entradas (compras)
         </h3>
         <V2Button size="sm" onClick={() => setCreating(true)} disabled={products.length === 0}>
           <Plus className="h-4 w-4" /> Nova entrada
@@ -230,7 +238,7 @@ function EntriesSection({ arenaId }) {
       )}
 
       {creating && (
-        <form onSubmit={handleSubmit} className="mt-3 space-y-2 rounded-2xl border border-emerald-200 bg-emerald-50/40 p-3">
+        <form onSubmit={handleSubmit} className="mt-3 space-y-2 rounded-2xl border border-green-200 bg-green-50/40 p-3">
           <div className="grid grid-cols-1 gap-2 sm:grid-cols-2">
             <V2Field label="Produto" required>
               <V2Select value={form.product_id} onChange={setField('product_id')} required>
@@ -275,7 +283,7 @@ function EntriesSection({ arenaId }) {
           entries.map((e) => {
             const product = products.find((p) => p.id === e.product_id);
             return (
-              <div key={e.id} className="rounded-2xl border border-emerald-200 bg-emerald-50/40 p-3">
+              <div key={e.id} className="rounded-2xl border border-green-200 bg-green-50/40 p-3">
                 <div className="flex items-start justify-between">
                   <div className="flex-1">
                     <div className="text-sm font-bold text-ink">{product?.name || 'Produto removido'}</div>
@@ -284,7 +292,7 @@ function EntriesSection({ arenaId }) {
                     </div>
                     {e.supplier && <div className="text-xs text-gray-400">Fornecedor: {e.supplier}</div>}
                     {e.buyer_name && <div className="text-xs text-gray-400">Responsável: {e.buyer_name}</div>}
-                    {e.notes && <div className="mt-1 text-xs text-gray-600 italic">"{e.notes}"</div>}
+                    {e.notes && <div className="mt-1 text-xs text-gray-600 italic">&quot;{e.notes}&quot;</div>}
                   </div>
                 </div>
               </div>
@@ -346,7 +354,7 @@ function ExitsSection({ arenaId }) {
             <div key={s.product.id} className={cn('rounded-2xl border p-3',
               s.quantity <= 0 ? 'border-red-200 bg-red-50' :
               s.quantity < 5 ? 'border-amber-200 bg-amber-50/40' :
-              'border-emerald-200 bg-emerald-50/40',
+              'border-green-200 bg-green-50/40',
             )}>
               <div className="flex items-center gap-2">
                 <div className="flex-1 min-w-0">
@@ -360,10 +368,10 @@ function ExitsSection({ arenaId }) {
               </div>
               <div className="mt-2 grid grid-cols-2 gap-1 text-[10px] text-gray-500">
                 <div>Investido: <span className="font-bold text-ink">{formatPrice(s.total_invested)}</span></div>
-                <div>Receita: <span className="font-bold text-emerald-700">{formatPrice(s.total_revenue)}</span></div>
+                <div>Receita: <span className="font-bold text-green-700">{formatPrice(s.total_revenue)}</span></div>
               </div>
               {s.total_invested > 0 && (
-                <div className={cn('mt-1 text-xs font-bold', s.margin >= 0 ? 'text-emerald-700' : 'text-red-600')}>
+                <div className={cn('mt-1 text-xs font-bold', s.margin >= 0 ? 'text-green-700' : 'text-red-600')}>
                   Margem: {s.margin >= 0 ? '+' : ''}{s.margin.toFixed(1)}%
                 </div>
               )}
@@ -431,7 +439,7 @@ function ExitsSection({ arenaId }) {
                       <V2Badge tone="amber">{EXIT_TYPE_LABELS[x.exit_type] || x.exit_type}</V2Badge>
                       {x.buyer_name && <span className="ml-2 text-gray-400">{x.buyer_name}</span>}
                     </div>
-                    {x.reason && <div className="mt-1 text-xs text-gray-600 italic">"{x.reason}"</div>}
+                    {x.reason && <div className="mt-1 text-xs text-gray-600 italic">&quot;{x.reason}&quot;</div>}
                   </div>
                 </div>
               </div>

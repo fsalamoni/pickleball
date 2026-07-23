@@ -18,7 +18,7 @@
  */
 
 import React, { useEffect, useMemo, useState } from 'react';
-import { Link, useNavigate, useParams } from 'react-router-dom';
+import { Link, Navigate, useNavigate, useParams } from 'react-router-dom';
 import { doc, getDoc, serverTimestamp, setDoc } from 'firebase/firestore';
 import {
   ArrowLeft, ArrowRight, Camera, Check, CircleDot, Clock, Copy, Share2,
@@ -291,7 +291,7 @@ function V2ArenaOnboardingContent({ arenaId, user }) {
         </div>
 
         {allDone && activeIdx === STEPS.length - 1 && (
-          <div className="mt-4 flex flex-wrap items-center justify-between gap-3 rounded-2xl bg-emerald-50 p-3 text-sm text-emerald-900">
+          <div className="mt-4 flex flex-wrap items-center justify-between gap-3 rounded-2xl bg-green-50 p-3 text-sm text-green-900">
             <div className="flex items-center gap-2">
               <Check className="h-4 w-4" />
               Tudo pronto! Sua arena já está configurada.
@@ -322,7 +322,7 @@ function ProgressBar({ steps, progress, activeIdx, setActiveIdx }) {
                 active
                   ? 'border-ink bg-ink text-white'
                   : done
-                    ? 'border-emerald-200 bg-emerald-50 text-emerald-900'
+                    ? 'border-green-200 bg-green-50 text-green-900'
                     : 'border-gray-200 bg-white text-gray-500 hover:border-gray-300',
               )}
             >
@@ -332,7 +332,7 @@ function ProgressBar({ steps, progress, activeIdx, setActiveIdx }) {
                   active
                     ? 'bg-acid text-ink'
                     : done
-                      ? 'bg-emerald-500 text-white'
+                      ? 'bg-green-500 text-white'
                       : 'bg-gray-200 text-gray-500',
                 )}
               >

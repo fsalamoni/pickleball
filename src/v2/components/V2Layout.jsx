@@ -25,8 +25,11 @@ import {
   Plus,
   ChevronRight,
   Bell,
+  LogOut,
+  Pencil,
   Search as SearchIcon,
   Power,
+  GraduationCap,
 } from 'lucide-react';
 import { useAuth } from '@/core/lib/FirebaseAuthContext';
 import { useAutoRecomputeRatings } from '@/modules/rating/hooks/useRating';
@@ -34,6 +37,7 @@ import AuthFunnelTracker from '@/modules/analytics/components/AuthFunnelTracker'
 import { useFeatureFlag } from '@/core/lib/FeatureFlagsContext';
 import { FEATURE_FLAG } from '@/core/featureFlags';
 import { useMyArenaSummary } from '@/modules/arenas/hooks/useMyArenaSummary';
+import { useCoach } from '@/modules/coaches/hooks/useCoaches';
 import { useNotifications } from '@/modules/notifications/hooks/useNotifications';
 import { getLevelByCode } from '@/modules/leveling/data/levels';
 import {
@@ -45,11 +49,46 @@ import {
 } from '@/components/ui/dropdown-menu';
 import { cn } from '@/core/lib/utils';
 import { V2Avatar } from '@/v2/ui/primitives';
+import ProfileCompletionModal from '@/components/ProfileCompletionModal';
+import V2OnboardingWizard from '@/v2/components/onboarding/V2OnboardingWizard';
 
 const BRAND = 'PickleRush';
 
+/**
+ * Títulos por rota (flag page_titles). Prefixos ordenados do mais específico
+ * para o mais genérico; '/' é o fallback exato.
+ */
+const PAGE_TITLES = [
+  ['/torneios', 'Torneios'],
+  ['/arenas', 'Arenas'],
+  ['/minhas-reservas', 'Minhas reservas'],
+  ['/atletas', 'Atletas'],
+  ['/atleta/', 'Atleta'],
+  ['/ranking', 'Ranking'],
+  ['/encontrar-jogadores', 'Encontrar jogadores'],
+  ['/procura-jogo', 'Procura-se jogo'],
+  ['/clubes', 'Clubes'],
+  ['/novidades', 'Comunidade'],
+  ['/parceiros', 'Parceiros'],
+  ['/chat', 'Mensagens'],
+  ['/meu-desempenho', 'Meu desempenho'],
+  ['/perfil', 'Meu perfil'],
+  ['/regras', 'Regras'],
+  ['/nivelamento', 'Nivelamento'],
+  ['/historia', 'História do esporte'],
+  ['/conduta', 'Conduta e fair play'],
+  ['/politica-uso', 'Política de uso'],
+  ['/admin', 'Admin'],
+];
+
+function resolvePageTitle(pathname) {
+  if (pathname === '/') return 'Visão Geral';
+  const match = PAGE_TITLES.find(([prefix]) => pathname.startsWith(prefix));
+  return match ? match[1] : null;
+}
+
 function useV2Nav() {
-  const { isPlatformAdmin } = useAuth();
+  const { isPlatformAdmin, user } = useAuth();
   const performanceOn = useFeatureFlag(FEATURE_FLAG.PLAYER_PERFORMANCE);
   const ratingOn = useFeatureFlag(FEATURE_FLAG.PLAYER_RATING);
   const matchmakingOn = useFeatureFlag(FEATURE_FLAG.MATCHMAKING);
@@ -60,8 +99,12 @@ function useV2Nav() {
   const arenasOn = useFeatureFlag(FEATURE_FLAG.ARENAS);
   const circuitsOn = useFeatureFlag(FEATURE_FLAG.CIRCUITS);
   const coachesOn = useFeatureFlag(FEATURE_FLAG.COACH_RESIDENT);
+  const coachLessonsOn = useFeatureFlag(FEATURE_FLAG.COACH_LESSONS);
   const { totalArenas: myArenasCount, totalPendingBookings: myPendingBookings } = useMyArenaSummary();
   const showMyArenas = arenasOn && myArenasCount > 0;
+  // Só busca o perfil de professor quando a área de aulas está ligada.
+  const { data: myCoachProfile } = useCoach(coachLessonsOn ? user?.uid : null);
+  const isCoach = coachLessonsOn && !!myCoachProfile;
   const sportHistoryOn = useFeatureFlag(FEATURE_FLAG.SPORT_HISTORY);
 
   return useMemo(() => [
@@ -102,6 +145,8 @@ function useV2Nav() {
             : undefined,
         },
         arenasOn && { to: '/minhas-reservas', label: 'Minhas reservas', icon: Building2 },
+        isCoach && { to: '/aulas', label: 'Ensino', icon: GraduationCap },
+        coachLessonsOn && { to: '/minhas-aulas', label: 'Minhas aulas', icon: GraduationCap },
         { to: '/perfil', label: 'Meu Perfil', icon: User },
       ].filter(Boolean),
     },
@@ -122,7 +167,7 @@ function useV2Nav() {
         { to: '/politica-uso', label: 'Política de uso', icon: FileText },
       ].filter(Boolean),
     },
-  ].filter(Boolean), [performanceOn, ratingOn, matchmakingOn, openGamesOn, affiliatesOn, communityFeedOn, arenasOn, sportHistoryOn, isPlatformAdmin, adminConsoleOn, myArenasCount, myPendingBookings, showMyArenas]);
+  ].filter(Boolean), [performanceOn, ratingOn, matchmakingOn, openGamesOn, affiliatesOn, communityFeedOn, arenasOn, circuitsOn, coachesOn, coachLessonsOn, isCoach, sportHistoryOn, isPlatformAdmin, adminConsoleOn, myArenasCount, myPendingBookings, showMyArenas]);
 }
 
 function isActive(pathname, item) {
@@ -175,7 +220,18 @@ function NavItem({ item, active, onClick }) {
 
 function NotificationsMenu() {
   const navigate = useNavigate();
-  const { notifications, unreadCount, markAsRead } = useNotifications();
+  const { notifications, unreadCount, markAsRead, markAllAsRead } = useNotifications();
+  const markAllOn = useFeatureFlag(FEATURE_FLAG.NOTIFICATIONS_MARK_ALL);
+
+  const handleMarkAll = async (event) => {
+    // Mantém o dropdown aberto enquanto marca.
+    event.preventDefault();
+    try {
+      await markAllAsRead();
+    } catch {
+      // Falha silenciosa: as notificações continuam não lidas.
+    }
+  };
 
   return (
     <DropdownMenu>
@@ -190,7 +246,18 @@ function NotificationsMenu() {
         </button>
       </DropdownMenuTrigger>
       <DropdownMenuContent align="end" className="w-80">
-        <div className="p-2 font-bold">Notificações</div>
+        <div className="flex items-center justify-between gap-2 p-2">
+          <span className="font-bold">Notificações</span>
+          {markAllOn && unreadCount > 0 && (
+            <button
+              type="button"
+              onClick={handleMarkAll}
+              className="text-xs font-semibold text-gray-500 transition-colors hover:text-ink"
+            >
+              Marcar todas como lidas
+            </button>
+          )}
+        </div>
         {notifications.length === 0 ? (
           <div className="p-4 text-center text-sm text-gray-500">Nenhuma notificação.</div>
         ) : (
@@ -216,6 +283,80 @@ function NotificationsMenu() {
   );
 }
 
+const BOTTOM_NAV_ITEMS = [
+  { to: '/', label: 'Início', icon: LayoutGrid, exact: true },
+  { to: '/torneios', label: 'Torneios', icon: Trophy },
+  { to: '/atletas', label: 'Atletas', icon: Users },
+  { to: '/chat', label: 'Chat', icon: MessageSquare },
+  { to: '/perfil', label: 'Perfil', icon: User },
+];
+
+function MobileBottomNav({ pathname }) {
+  return (
+    <nav
+      aria-label="Navegação principal"
+      className="fixed inset-x-0 bottom-0 z-30 border-t border-gray-100 bg-paper-pure/95 backdrop-blur-md lg:hidden"
+      style={{ paddingBottom: 'env(safe-area-inset-bottom)' }}
+    >
+      <div className="mx-auto flex h-16 max-w-lg items-stretch justify-around">
+        {BOTTOM_NAV_ITEMS.map((item) => {
+          const Icon = item.icon;
+          const active = isActive(pathname, item);
+          return (
+            <Link
+              key={item.to}
+              to={item.to}
+              aria-current={active ? 'page' : undefined}
+              className={cn(
+                'flex flex-1 flex-col items-center justify-center gap-0.5 text-[11px] font-semibold transition-colors',
+                active ? 'text-ink' : 'text-gray-400',
+              )}
+            >
+              <span className={cn('flex h-8 w-14 items-center justify-center rounded-full transition-colors', active && 'bg-ink')}>
+                <Icon className={cn('h-5 w-5', active && 'text-acid')} />
+              </span>
+              {item.label}
+            </Link>
+          );
+        })}
+      </div>
+    </nav>
+  );
+}
+
+function UserMenu({ displayName, displayPhoto, levelLabel, onLogout }) {
+  const navigate = useNavigate();
+  return (
+    <DropdownMenu>
+      <DropdownMenuTrigger asChild>
+        <button
+          className="btn-press hidden items-center justify-center rounded-full transition-opacity hover:opacity-80 sm:flex"
+          aria-label="Menu do usuário"
+        >
+          <V2Avatar name={displayName} photoUrl={displayPhoto} size="md" />
+        </button>
+      </DropdownMenuTrigger>
+      <DropdownMenuContent align="end" className="w-60">
+        <div className="px-2 py-2">
+          <p className="truncate text-sm font-bold text-ink">{displayName}</p>
+          {levelLabel && <p className="truncate text-xs text-gray-500">{levelLabel}</p>}
+        </div>
+        <DropdownMenuSeparator />
+        <DropdownMenuItem className="cursor-pointer" onClick={() => navigate('/perfil')}>
+          <User className="mr-2 h-4 w-4" /> Meu perfil
+        </DropdownMenuItem>
+        <DropdownMenuItem className="cursor-pointer" onClick={() => navigate('/perfil/editar')}>
+          <Pencil className="mr-2 h-4 w-4" /> Editar perfil
+        </DropdownMenuItem>
+        <DropdownMenuSeparator />
+        <DropdownMenuItem className="cursor-pointer text-red-600 focus:text-red-600" onClick={onLogout}>
+          <LogOut className="mr-2 h-4 w-4" /> Sair
+        </DropdownMenuItem>
+      </DropdownMenuContent>
+    </DropdownMenu>
+  );
+}
+
 export default function V2Layout({ children }) {
   const { userProfile, signOut } = useAuth();
   // Mantém o ranking atualizado automaticamente para o admin da plataforma.
@@ -226,6 +367,10 @@ export default function V2Layout({ children }) {
   const mainRef = useRef(null);
   const [mobileOpen, setMobileOpen] = useState(false);
   const [searchQuery, setSearchQuery] = useState('');
+  const profileOnboardingOn = useFeatureFlag(FEATURE_FLAG.PROFILE_ONBOARDING);
+  const onboardingWizardOn = useFeatureFlag(FEATURE_FLAG.ONBOARDING_WIZARD);
+  const userMenuOn = useFeatureFlag(FEATURE_FLAG.NAV_USER_MENU);
+  const bottomNavOn = useFeatureFlag(FEATURE_FLAG.MOBILE_BOTTOM_NAV);
 
   const displayName = userProfile?.platform_name || userProfile?.full_name || 'Atleta';
   const displayPhoto = userProfile?.photo_url || null;
@@ -235,6 +380,13 @@ export default function V2Layout({ children }) {
   useEffect(() => {
     mainRef.current?.scrollTo({ top: 0, left: 0, behavior: 'auto' });
   }, [location.pathname]);
+
+  const pageTitlesOn = useFeatureFlag(FEATURE_FLAG.PAGE_TITLES);
+  useEffect(() => {
+    if (!pageTitlesOn) return;
+    const title = resolvePageTitle(location.pathname);
+    document.title = title ? `${title} · ${BRAND}` : BRAND;
+  }, [pageTitlesOn, location.pathname]);
 
   const closeMobile = () => setMobileOpen(false);
 
@@ -254,6 +406,12 @@ export default function V2Layout({ children }) {
     <div className="v2-root flex h-[100dvh] w-full overflow-hidden bg-paper font-inter text-ink">
       {/* Instrumentação de funil (flag funnel_analytics; não renderiza nada) */}
       <AuthFunnelTracker />
+      {/* Onboarding: o assistente em passos (flag onboarding_wizard) tem
+          precedência sobre o modal simples de completude (profile_onboarding);
+          ambos podem ser adiados pela sessão. */}
+      {onboardingWizardOn
+        ? <V2OnboardingWizard />
+        : profileOnboardingOn && <ProfileCompletionModal />}
       <aside className="z-30 hidden w-[280px] flex-shrink-0 flex-col border-r border-gray-100 bg-paper-pure lg:flex">
         <div className="flex h-24 items-center px-8">
           <BrandLockup />
@@ -304,20 +462,21 @@ export default function V2Layout({ children }) {
                 value={searchQuery}
                 onChange={(e) => setSearchQuery(e.target.value)}
                 className="block w-full rounded-full border border-transparent bg-white py-3 pl-11 pr-4 text-sm text-ink shadow-sm transition-colors placeholder:text-gray-400 focus:border-gray-300 focus:outline-none focus:ring-4 focus:ring-gray-100"
-                placeholder="Buscar atletas, cidades, clubes..."
+                placeholder="Buscar atletas..."
               />
             </div>
           </form>
 
           <div className="ml-auto flex items-center gap-2 sm:gap-4">
-            <Link
-              to="/v1/inicio"
-              className="hidden rounded-full border border-gray-200 bg-white px-4 py-2 text-xs font-semibold text-gray-500 transition-colors hover:border-ink hover:text-ink sm:inline-flex"
-              title="Voltar para a versão anterior da plataforma"
-            >
-              App anterior
-            </Link>
             <NotificationsMenu />
+            {userMenuOn && (
+              <UserMenu
+                displayName={displayName}
+                displayPhoto={displayPhoto}
+                levelLabel={levelLabel}
+                onLogout={handleLogout}
+              />
+            )}
             <Link
               to="/procura-jogo"
               className="btn-press flex items-center gap-2 rounded-full bg-acid px-5 py-3 text-sm font-bold text-ink shadow-glow transition-all hover:bg-acid-light sm:px-6"
@@ -330,6 +489,7 @@ export default function V2Layout({ children }) {
         <main ref={mainRef} className="flex-1 overflow-y-auto overflow-x-hidden px-4 pb-24 pt-28 sm:px-6 lg:px-10 lg:pb-12">
           {children}
         </main>
+        {bottomNavOn && <MobileBottomNav pathname={location.pathname} />}
       </div>
 
       <div

@@ -173,7 +173,7 @@ export const ARENA_MODULE_META = Object.freeze({
     label: 'PDV / Loja',
     description: 'Catálogo de produtos, Pix nativo e split payment.',
     icon: 'ShoppingCart',
-    color: 'emerald',
+    color: 'green',
     sprint: 3,
     children: [
       ARENA_MODULE_ID.PDV_CATALOG,
@@ -185,21 +185,21 @@ export const ARENA_MODULE_META = Object.freeze({
     label: 'Catálogo de produtos',
     description: 'Venda de água, raquete, grip, bola, vestuário.',
     icon: 'Store',
-    color: 'emerald',
+    color: 'green',
     parent: ARENA_MODULE_ID.PDV,
   },
   [ARENA_MODULE_ID.PDV_PIX_NATIVE]: {
     label: 'Pix nativo',
     description: 'QR gerado no app, sem maquininha.',
     icon: 'QrCode',
-    color: 'emerald',
+    color: 'green',
     parent: ARENA_MODULE_ID.PDV,
   },
   [ARENA_MODULE_ID.PDV_SPLIT]: {
     label: 'Split payment',
     description: 'Divide o pagamento entre 2-4 jogadores.',
     icon: 'Split',
-    color: 'emerald',
+    color: 'green',
     parent: ARENA_MODULE_ID.PDV,
   },
 

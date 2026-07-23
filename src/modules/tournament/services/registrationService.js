@@ -38,7 +38,14 @@ import {
   recomputeRegistrationFlags,
 } from '../domain/claimMigration.js';
 import { getModality } from './modalityService.js';
-import { getTournament, isTournamentAdmin } from './tournamentService.js';
+import { getTournament, isTournamentAdmin, listTournamentAdmins } from './tournamentService.js';
+import { notifyUsers, NOTIFICATION_TYPE } from '@/core/services/notificationService';
+import {
+  PARTNER_INVITE_STATUS,
+  buildPartnerInviteFields,
+  canRespondToPartnerInvite,
+} from '../domain/partnerInvite.js';
+import { canSelfCheckIn } from '../domain/checkin.js';
 
 const COL = 'tournament_registrations';
 const SAFE_BATCH_WRITE_SIZE = 450; // abaixo do limite de 500 operações por batch do Firestore
@@ -129,13 +136,73 @@ export async function createRegistration(input, actor) {
   };
   payload.label = buildRegistrationLabel(payload, modality.format);
 
+  // Convite de dupla (flag partner_invites): quando o inscrito escolheu um
+  // parceiro cadastrado, a inscrição nasce com o convite pendente.
+  const withPartnerInvite = Boolean(input.partner_invite && playerBUserId && playerBUserId !== actor?.uid);
+  if (withPartnerInvite) {
+    Object.assign(payload, buildPartnerInviteFields(playerBUserId));
+  }
+
   await setDoc(doc(db, COL, id), payload);
   await createAuditLog({
     action: 'registration_created',
     actor,
     details: { tournament_id, modality_id, registration_id: id },
   });
+
+  if (withPartnerInvite) {
+    try {
+      await notifyUsers([playerBUserId], {
+        title: 'Convite de dupla',
+        message: `${payload.player_a_name || 'Um atleta'} te inscreveu como dupla em "${tournament.name}". Abra o torneio para confirmar ou recusar.`,
+        type: NOTIFICATION_TYPE.PARTNER_INVITE,
+        link: `/torneios/${tournament_id}`,
+        actor,
+      });
+    } catch (err) {
+      // Best-effort: a inscrição vale mesmo se a notificação falhar.
+      logger.error('Falha ao notificar o parceiro convidado:', err);
+    }
+  }
   return id;
+}
+
+/**
+ * O parceiro convidado responde ao convite de dupla (flag partner_invites).
+ * Só o próprio convidado, e só enquanto o convite está pendente. Não altera
+ * o status da inscrição — apenas o status do convite.
+ */
+export async function respondPartnerInvite(id, accept, actor) {
+  const registration = await getRegistration(id);
+  if (!registration) throw new Error('Inscrição não encontrada.');
+  if (!canRespondToPartnerInvite(registration, actor?.uid)) {
+    throw new Error('Este convite não está mais disponível para resposta.');
+  }
+  const status = accept ? PARTNER_INVITE_STATUS.ACCEPTED : PARTNER_INVITE_STATUS.DECLINED;
+  await updateDoc(doc(db, COL, id), {
+    partner_invite_status: status,
+    partner_invite_responded_at: serverTimestamp(),
+    updated_at: serverTimestamp(),
+  });
+  await createAuditLog({
+    action: accept ? 'partner_invite_accepted' : 'partner_invite_declined',
+    actor,
+    details: { registration_id: id, tournament_id: registration.tournament_id },
+  });
+  try {
+    const recipients = [registration.created_by, registration.player_a_user_id].filter(Boolean);
+    await notifyUsers(recipients, {
+      title: accept ? 'Dupla confirmada' : 'Convite de dupla recusado',
+      message: accept
+        ? `${registration.player_b_name || 'Seu parceiro'} confirmou a dupla em "${registration.label || 'sua inscrição'}".`
+        : `${registration.player_b_name || 'Seu parceiro'} recusou o convite de dupla. Ajuste ou cancele a inscrição.`,
+      type: NOTIFICATION_TYPE.PARTNER_RESPONSE,
+      link: `/torneios/${registration.tournament_id}`,
+      actor,
+    });
+  } catch (err) {
+    logger.error('Falha ao notificar a resposta do convite de dupla:', err);
+  }
 }
 
 function selectedModalityIsDoubles(format) {
@@ -561,6 +628,64 @@ export async function promoteFromWaitlist(id, actor) {
 
 export async function cancelRegistration(id, actor) {
   await updateRegistration(id, { status: REGISTRATION_STATUS.CANCELLED }, actor);
+}
+
+/**
+ * O inscrito declara que efetuou o pagamento da inscrição (flag
+ * payment_instructions). Não muda o status — apenas registra o carimbo e
+ * avisa os admins do torneio para conciliarem e confirmarem.
+ */
+export async function declareRegistrationPayment(id, actor) {
+  const registration = await getRegistration(id);
+  if (!registration) throw new Error('Inscrição não encontrada.');
+  await updateRegistration(id, { payment_declared_at: serverTimestamp() }, actor);
+  try {
+    const admins = await listTournamentAdmins(registration.tournament_id);
+    const adminIds = admins.map((a) => a.user_id).filter(Boolean);
+    await notifyUsers(adminIds, {
+      title: 'Pagamento informado',
+      message: `${registration.label || registration.player_a_name || 'Um inscrito'} informou o pagamento da inscrição. Confira e confirme.`,
+      type: NOTIFICATION_TYPE.GENERIC,
+      link: `/torneios/${registration.tournament_id}/admin`,
+      actor,
+    });
+  } catch (err) {
+    // Best-effort: a declaração vale mesmo se a notificação falhar.
+    logger.error('Falha ao notificar admins sobre pagamento informado:', err);
+  }
+}
+
+/**
+ * Marca o check-in de uma inscrição confirmada (admin do torneio). O status
+ * "Check-in feito" já era aceito pelo sorteio como equivalente a confirmado;
+ * aqui apenas o registramos com carimbo de horário.
+ */
+export async function checkInRegistration(id, actor) {
+  await updateRegistration(id, { status: REGISTRATION_STATUS.CHECKED_IN, checked_in_at: serverTimestamp() }, actor);
+}
+
+/** Desfaz o check-in, devolvendo a inscrição ao status confirmado. */
+export async function undoRegistrationCheckIn(id, actor) {
+  await updateRegistration(id, { status: REGISTRATION_STATUS.CONFIRMED, checked_in_at: null }, actor);
+}
+
+/**
+ * Check-in feito pelo próprio atleta (flag athlete_self_checkin): válido
+ * apenas com o torneio em andamento e a inscrição confirmada, pelo criador
+ * da inscrição ou jogador A vinculado.
+ */
+export async function selfCheckInRegistration(id, actor) {
+  const registration = await getRegistration(id);
+  if (!registration) throw new Error('Inscrição não encontrada.');
+  const tournament = await getTournament(registration.tournament_id);
+  if (!canSelfCheckIn({ tournament, registration, uid: actor?.uid })) {
+    throw new Error('O check-in não está disponível para esta inscrição.');
+  }
+  await updateRegistration(id, {
+    status: REGISTRATION_STATUS.CHECKED_IN,
+    checked_in_at: serverTimestamp(),
+    checked_in_by: 'athlete',
+  }, actor);
 }
 
 export async function deleteRegistration(id, actor) {

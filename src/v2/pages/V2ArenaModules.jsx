@@ -38,7 +38,7 @@ import { V2Badge, V2Button, V2EmptyState, V2Skeleton, V2Surface } from '@/v2/ui/
 const COLOR_CLASSES = {
   blue: 'bg-blue-50 text-blue-700 border-blue-100',
   amber: 'bg-amber-50 text-amber-700 border-amber-100',
-  emerald: 'bg-emerald-50 text-emerald-700 border-emerald-100',
+  green: 'bg-green-50 text-green-700 border-green-100',
   purple: 'bg-purple-50 text-purple-700 border-purple-100',
   yellow: 'bg-yellow-50 text-yellow-700 border-yellow-100',
   pink: 'bg-pink-50 text-pink-700 border-pink-100',
@@ -92,7 +92,7 @@ function ModuleCard({ moduleId, arenaId, isChild = false }) {
       className={[
         'rounded-3xl border p-5 transition',
         isChild ? 'ml-6 mt-2' : '',
-        canUse ? 'border-emerald-200 bg-emerald-50/40' : 'border-gray-100 bg-paper-pure',
+        canUse ? 'border-green-200 bg-green-50/40' : 'border-gray-100 bg-paper-pure',
       ].join(' ')}
     >
       <div className="flex flex-wrap items-start justify-between gap-3">
@@ -130,7 +130,7 @@ function ModuleCard({ moduleId, arenaId, isChild = false }) {
             onClick={handleToggle}
             className={[
               'relative inline-flex h-7 w-12 shrink-0 cursor-pointer items-center rounded-full transition',
-              canUse ? 'bg-emerald-500' : 'bg-gray-300',
+              canUse ? 'bg-green-500' : 'bg-gray-300',
               disabled ? 'cursor-not-allowed opacity-50' : '',
             ].join(' ')}
           >

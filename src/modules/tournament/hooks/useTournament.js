@@ -26,6 +26,10 @@ import {
 } from '../services/modalityService';
 import { duplicateTournament } from '../services/tournamentDuplicationService';
 import {
+  listTournamentAnnouncements,
+  sendTournamentAnnouncement,
+} from '../services/announcementService';
+import {
   listRegistrations,
   listRegistrationsByTournament,
   listMyRegistrations,
@@ -34,6 +38,11 @@ import {
   confirmRegistrationPayment,
   promoteFromWaitlist,
   cancelRegistration,
+  declareRegistrationPayment,
+  respondPartnerInvite,
+  checkInRegistration,
+  undoRegistrationCheckIn,
+  selfCheckInRegistration,
   deleteRegistration,
   ensurePlaceholderRegistrations,
   clearPlaceholderRegistrations,
@@ -403,6 +412,90 @@ export function useCancelRegistration(modalityId) {
     mutationFn: (id) => cancelRegistration(id, user),
     onSuccess: () => {
       qc.invalidateQueries({ queryKey: ['registrations', modalityId] });
+      qc.invalidateQueries({ queryKey: ['registrations-tournament'] });
+    },
+  });
+}
+
+/**
+ * O inscrito declara o pagamento da própria inscrição (flag
+ * payment_instructions): grava o carimbo e notifica os admins do torneio.
+ */
+export function useDeclareRegistrationPayment(modalityId) {
+  const { user } = useAuth();
+  const qc = useQueryClient();
+  return useMutation({
+    mutationFn: (id) => declareRegistrationPayment(id, user),
+    onSuccess: () => {
+      qc.invalidateQueries({ queryKey: ['registrations', modalityId] });
+      qc.invalidateQueries({ queryKey: ['registrations-tournament'] });
+    },
+  });
+}
+
+/** Histórico de avisos do torneio (flag tournament_announcements). */
+export function useTournamentAnnouncements(tournamentId, { enabled = true } = {}) {
+  return useQuery({
+    queryKey: ['tournament-announcements', tournamentId],
+    queryFn: () => listTournamentAnnouncements(tournamentId),
+    enabled: Boolean(tournamentId) && enabled,
+  });
+}
+
+/** Envia um aviso aos inscritos (flag tournament_announcements). */
+export function useSendTournamentAnnouncement(tournamentId) {
+  const { user } = useAuth();
+  const qc = useQueryClient();
+  return useMutation({
+    mutationFn: (input) => sendTournamentAnnouncement(input, user),
+    onSuccess: () => {
+      qc.invalidateQueries({ queryKey: ['tournament-announcements', tournamentId] });
+    },
+  });
+}
+
+/**
+ * O parceiro convidado aceita/recusa o convite de dupla (flag partner_invites).
+ */
+export function useRespondPartnerInvite() {
+  const { user } = useAuth();
+  const qc = useQueryClient();
+  return useMutation({
+    mutationFn: ({ id, accept }) => respondPartnerInvite(id, accept, user),
+    onSuccess: () => {
+      qc.invalidateQueries({ queryKey: ['registrations'] });
+      qc.invalidateQueries({ queryKey: ['registrations-tournament'] });
+      qc.invalidateQueries({ queryKey: ['my-registrations'] });
+    },
+  });
+}
+
+/**
+ * Marca ou desfaz o check-in de uma inscrição (flag tournament_checkin).
+ * `checkedIn: true` → status "Check-in feito"; `false` → volta a confirmada.
+ */
+export function useSetRegistrationCheckIn(modalityId) {
+  const { user } = useAuth();
+  const qc = useQueryClient();
+  return useMutation({
+    mutationFn: ({ id, checkedIn }) => (
+      checkedIn ? checkInRegistration(id, user) : undoRegistrationCheckIn(id, user)
+    ),
+    onSuccess: () => {
+      qc.invalidateQueries({ queryKey: ['registrations', modalityId] });
+      qc.invalidateQueries({ queryKey: ['registrations-tournament'] });
+    },
+  });
+}
+
+/** Check-in feito pelo próprio atleta (flag athlete_self_checkin). */
+export function useSelfCheckIn() {
+  const { user } = useAuth();
+  const qc = useQueryClient();
+  return useMutation({
+    mutationFn: (id) => selfCheckInRegistration(id, user),
+    onSuccess: () => {
+      qc.invalidateQueries({ queryKey: ['registrations'] });
       qc.invalidateQueries({ queryKey: ['registrations-tournament'] });
     },
   });

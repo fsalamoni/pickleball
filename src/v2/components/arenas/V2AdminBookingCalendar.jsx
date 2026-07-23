@@ -24,7 +24,7 @@ import {
 import { useAuth } from '@/core/lib/FirebaseAuthContext';
 import { cn } from '@/core/lib/utils';
 import { useArena, useArenaCourts, useArenaCourtSchedules,  useArenaUnavailabilities, useAddArenaUnavailability, useDeleteArenaUnavailability } from '@/modules/arenas/hooks/useArenas';
-import { useUpdateBookingStatus, useArenaBookings } from '@/modules/arenas/hooks/useBookings';
+import { useUpdateBookingStatus, useArenaBookings, useCreateManualBooking } from '@/modules/arenas/hooks/useBookings';
 import { getSlotStatus, generateTimeSlots, isSlotClickable, SLOT_STATUS_COLORS, SLOT_STATUS_LABELS, SLOT_STATUS } from '@/modules/arenas/domain/slot_status';
 import { weekdayOf } from '@/modules/arenas/domain/booking';
 import { BOOKING_STATUS } from '@/modules/arenas/domain/constants';
@@ -58,11 +58,15 @@ export default function V2AdminBookingCalendar({ arenaId, embedded = false }) {
   const addUnav = useAddArenaUnavailability(arenaId);
   const removeUnav = useDeleteArenaUnavailability(arenaId);
   const updateStatus = useUpdateBookingStatus();
+  const createManual = useCreateManualBooking();
 
   const [date, setDate] = useState(() => new Date().toISOString().slice(0, 10));
   const [courtId, setCourtId] = useState('all');
   const [selectedSlot, setSelectedSlot] = useState(null); // { time, status, booking, unavailability }
   const [unavForm, setUnavForm] = useState({ notes: '' });
+  // Formulário de reserva manual (admin cria em nome de um cliente).
+  const [manualOpen, setManualOpen] = useState(false);
+  const [manualForm, setManualForm] = useState({ client_name: '', price: '', paid: false });
   const [transferOpen, setTransferOpen] = useState(false);
   const [rescheduleOpen, setRescheduleOpen] = useState(false);
 
@@ -121,6 +125,40 @@ export default function V2AdminBookingCalendar({ arenaId, embedded = false }) {
     if (!slot || !isSlotClickable(slot.status)) return;
     setSelectedSlot(slot);
     setUnavForm({ notes: '' });
+    setManualOpen(false);
+    setManualForm({ client_name: '', price: '', paid: false });
+  }
+
+  function slotEndTime(time) {
+    return `${String(parseInt(time.split(':')[0], 10) + 1).padStart(2, '0')}:00`;
+  }
+
+  async function handleCreateManual() {
+    if (!selectedSlot || !arena) return;
+    if (courtId === 'all') {
+      toast.error('Escolha uma quadra específica no filtro acima para criar a reserva.');
+      return;
+    }
+    try {
+      await createManual.mutateAsync({
+        arena,
+        input: {
+          court_id: courtId,
+          date,
+          start: selectedSlot.time,
+          end: slotEndTime(selectedSlot.time),
+          client_name: manualForm.client_name,
+          agreed_price: manualForm.price,
+          paid: manualForm.paid,
+        },
+      });
+      toast.success('Reserva criada e confirmada.');
+      setSelectedSlot(null);
+      setManualOpen(false);
+      setManualForm({ client_name: '', price: '', paid: false });
+    } catch (err) {
+      toast.error(err.message);
+    }
   }
 
   async function handleMarkUnavailable() {
@@ -183,7 +221,7 @@ export default function V2AdminBookingCalendar({ arenaId, embedded = false }) {
           <ChevronLeft className="h-4 w-4" /> Anterior
         </V2Button>
         <div className="flex items-center gap-1.5 rounded-2xl border border-gray-200 bg-paper px-3 py-1.5 text-sm font-bold text-ink">
-          <Calendar className="h-4 w-4 text-emerald-700" />
+          <Calendar className="h-4 w-4 text-green-700" />
           {formatDateBR(date)}
         </div>
         <V2Button size="sm" variant="ghost" onClick={() => setDate(addDays(date, 1))}>
@@ -246,7 +284,7 @@ export default function V2AdminBookingCalendar({ arenaId, embedded = false }) {
 
       {/* Painel de ações do slot selecionado */}
       {selectedSlot && (
-        <V2Surface className="mt-4 border-2 border-emerald-300">
+        <V2Surface className="mt-4 border-2 border-green-300">
           <div className="flex items-start justify-between">
             <div>
               <h3 className="font-display text-base font-bold text-ink">
@@ -264,7 +302,7 @@ export default function V2AdminBookingCalendar({ arenaId, embedded = false }) {
             <div className="mt-3 space-y-2">
               <div className="rounded-2xl border border-gray-100 bg-paper p-3">
                 <div className="flex items-center gap-2">
-                  <div className="flex h-10 w-10 items-center justify-center rounded-full bg-gradient-to-br from-emerald-500 to-amber-500 text-sm font-bold text-white">
+                  <div className="flex h-10 w-10 items-center justify-center rounded-full bg-ink text-sm font-bold text-acid">
                     {selectedSlot.booking.athlete_name?.[0] || '?'}
                   </div>
                   <div className="flex-1 min-w-0">
@@ -276,7 +314,7 @@ export default function V2AdminBookingCalendar({ arenaId, embedded = false }) {
                   </div>
                 </div>
                 {selectedSlot.booking.notes && (
-                  <p className="mt-2 text-xs text-gray-600">"{selectedSlot.booking.notes}"</p>
+                  <p className="mt-2 text-xs text-gray-600">&quot;{selectedSlot.booking.notes}&quot;</p>
                 )}
               </div>
 
@@ -340,10 +378,57 @@ export default function V2AdminBookingCalendar({ arenaId, embedded = false }) {
                 <V2Button size="sm" onClick={handleMarkUnavailable} disabled={addUnav.isPending}>
                   <Ban className="h-3.5 w-3.5" /> Marcar indisponível
                 </V2Button>
-                <V2Button size="sm" variant="secondary" onClick={() => {/* TODO: criar reserva manual */ toast.info('Em breve: criar reserva manual')}}>
+                <V2Button size="sm" variant="secondary" onClick={() => setManualOpen((v) => !v)}>
                   <Plus className="h-3.5 w-3.5" /> Criar reserva
                 </V2Button>
               </div>
+
+              {manualOpen && (
+                <div className="mt-2 space-y-2 rounded-2xl border border-gray-100 bg-paper p-3">
+                  {courtId === 'all' ? (
+                    <p className="text-sm text-amber-700">
+                      Escolha uma quadra específica no filtro acima para criar a reserva neste horário.
+                    </p>
+                  ) : (
+                    <>
+                      <V2Field label="Nome do cliente" required>
+                        <V2Input
+                          value={manualForm.client_name}
+                          onChange={(e) => setManualForm((f) => ({ ...f, client_name: e.target.value }))}
+                          maxLength={80}
+                          placeholder="Ex: João (telefone)"
+                        />
+                      </V2Field>
+                      <V2Field label="Valor (R$, opcional)">
+                        <V2Input
+                          type="number"
+                          min="0"
+                          step="0.01"
+                          value={manualForm.price}
+                          onChange={(e) => setManualForm((f) => ({ ...f, price: e.target.value }))}
+                          placeholder="0,00"
+                        />
+                      </V2Field>
+                      <label className="flex items-center gap-2 text-sm text-gray-600">
+                        <input
+                          type="checkbox"
+                          checked={manualForm.paid}
+                          onChange={(e) => setManualForm((f) => ({ ...f, paid: e.target.checked }))}
+                          className="h-4 w-4 rounded border-gray-300"
+                        />
+                        Já está pago
+                      </label>
+                      <p className="text-xs text-gray-400">
+                        {date} · {selectedSlot.time}–{slotEndTime(selectedSlot.time)} · a reserva já entra como confirmada.
+                      </p>
+                      <V2Button size="sm" onClick={handleCreateManual} disabled={createManual.isPending || !manualForm.client_name.trim()}>
+                        <CheckCircle className="h-3.5 w-3.5" />
+                        {createManual.isPending ? 'Criando…' : 'Confirmar reserva'}
+                      </V2Button>
+                    </>
+                  )}
+                </div>
+              )}
             </div>
           )}
         </V2Surface>

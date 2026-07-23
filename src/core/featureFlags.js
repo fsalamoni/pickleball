@@ -246,6 +246,119 @@ export const FEATURE_FLAG = Object.freeze({
    */
   ADMIN_CONSOLE: 'admin_console',
 
+  /**
+   * Completude de perfil (onboarding): monta o modal "Complete seu perfil"
+   * no layout autenticado quando faltam os dados obrigatórios para torneios
+   * (nome, nascimento, telefone, experiência). O atleta pode adiar ("Deixar
+   * para depois", válido pela sessão) — o bloqueio duro continua existindo
+   * apenas na inscrição. Aditivo — desligado, nada aparece.
+   */
+  PROFILE_ONBOARDING: 'profile_onboarding',
+
+  /**
+   * Menu do usuário no topo (desktop): avatar no cabeçalho que abre um menu
+   * com Meu perfil, Editar perfil e Sair. Hoje não existe nenhuma forma de
+   * sair da conta no desktop (o botão "Sair" só existe no menu mobile).
+   * Aditivo — desligado, o cabeçalho permanece como está.
+   */
+  NAV_USER_MENU: 'nav_user_menu',
+
+  /**
+   * Navegação inferior no mobile: barra fixa com os 5 destinos principais
+   * (Início, Torneios, Atletas, Chat, Perfil) para navegar com 1 toque sem
+   * abrir o menu lateral. Aditivo — desligado, a barra não é renderizada.
+   */
+  MOBILE_BOTTOM_NAV: 'mobile_bottom_nav',
+
+  /**
+   * Cancelar torneio: adiciona ao hub administrativo a ação "Cancelar
+   * torneio" (com confirmação). O status CANCELLED já existe e é
+   * pré-requisito para arquivar, mas não havia botão para alcançá-lo.
+   * Aditivo — desligado, as ações de status permanecem as atuais.
+   */
+  TOURNAMENT_CANCEL_ACTION: 'tournament_cancel_action',
+
+  /**
+   * Marcar todas como lidas: botão no menu de notificações que marca todas
+   * as notificações não lidas de uma vez. Aditivo — desligado, o menu
+   * permanece como está.
+   */
+  NOTIFICATIONS_MARK_ALL: 'notifications_mark_all',
+
+  /**
+   * Check-in de atletas: na aba de inscrições do torneio, o admin pode
+   * marcar/desfazer o check-in de inscrições confirmadas. O status
+   * "Check-in feito" já existia e já era considerado pelo sorteio; esta
+   * flag adiciona a UI que faltava para registrá-lo. Aditivo — desligado,
+   * a aba permanece como está.
+   */
+  TOURNAMENT_CHECKIN: 'tournament_checkin',
+
+  /**
+   * Instruções de pagamento (PIX) na inscrição: o admin configura a chave
+   * PIX do torneio (aba Geral) e, ao se inscrever numa modalidade paga, o
+   * atleta vê o valor, o QR Code e o "copia e cola" com botão de copiar,
+   * podendo declarar "já paguei" (avisa os admins para confirmar). A
+   * confirmação continua manual, pelo admin, como hoje. Aditivo —
+   * desligado, o fluxo de inscrição permanece exatamente como está.
+   */
+  PAYMENT_INSTRUCTIONS: 'payment_instructions',
+
+  /**
+   * Resumo operacional do torneio: adiciona ao hub administrativo uma aba
+   * "Resumo" com os contadores que hoje ficam espalhados (inscrições por
+   * status, pagamentos pendentes, % de jogos concluídos, jogos sem horário)
+   * e alertas de pendências. Somente leitura — nenhum dado novo é gravado.
+   * Aditivo — desligado, a aba não aparece.
+   */
+  TOURNAMENT_OPS_DASHBOARD: 'tournament_ops_dashboard',
+
+  /**
+   * Convite e aceite de dupla: na inscrição de duplas, o atleta pode escolher
+   * o parceiro entre os atletas do diretório (vinculando a conta real) — o
+   * parceiro recebe uma notificação e confirma ou recusa na página do
+   * torneio. O preenchimento manual continua disponível para convidados sem
+   * conta. O status do convite não altera a máquina de status da inscrição.
+   * Aditivo — desligado, a inscrição de duplas permanece exatamente como está.
+   */
+  PARTNER_INVITES: 'partner_invites',
+
+  /**
+   * Check-in pelo próprio atleta: com o torneio em andamento, o inscrito com
+   * inscrição confirmada vê o botão "Fazer check-in" no card da modalidade e
+   * confirma presença com um toque (mesmo status usado pelo check-in do
+   * organizador e considerado pelo sorteio). Aditivo — desligado, o botão
+   * não aparece e o check-in segue exclusivo do organizador.
+   */
+  ATHLETE_SELF_CHECKIN: 'athlete_self_checkin',
+
+  /**
+   * Título da aba do navegador por página: define document.title conforme a
+   * rota ("Torneios · PickleRush"), melhorando histórico, favoritos e a
+   * navegação entre abas. Aditivo — desligado, o título permanece fixo.
+   */
+  PAGE_TITLES: 'page_titles',
+
+  /**
+   * Onboarding em passos: no primeiro acesso, um assistente em 3 passos pede
+   * os dados essenciais (os mesmos exigidos em torneios), os interesses do
+   * usuário (jogar, organizar, arena, ensinar, acompanhar — gravados em
+   * `interests`) e convida ao nivelamento. Fechar adia pela sessão; concluir
+   * grava `onboarding_completed_at`. Quando ligada, substitui o modal simples
+   * de completude de perfil (profile_onboarding). Aditivo — desligado, nada
+   * aparece.
+   */
+  ONBOARDING_WIZARD: 'onboarding_wizard',
+
+  /**
+   * Avisos aos inscritos: o admin do torneio envia um aviso (título +
+   * mensagem) para todos os inscritos com conta vinculada — do torneio todo
+   * ou de uma modalidade — como notificação in-app, com histórico dos avisos
+   * enviados e texto pronto para colar em grupo de WhatsApp. Aditivo —
+   * desligado, o card de comunicação não aparece.
+   */
+  TOURNAMENT_ANNOUNCEMENTS: 'tournament_announcements',
+
   // ---- Arena V3 (sprint 0+) — opt-in master + 50 sub-flags ---------------
   // Master switch que liga/desliga TODOS os módulos opt-in das arenas.
   // Sub-flags controlam cada família de módulo; sub-sub-flags controlam
@@ -314,6 +427,31 @@ export const FEATURE_FLAG = Object.freeze({
    * a arenas como residentes. Desligado, a rota /coaches e o menu somem.
    */
   COACH_RESIDENT: 'coach_resident',
+
+  /**
+   * Aulas de professores (produto completo — PRO-05..PRO-14): disponibilidade
+   * semanal do professor, solicitação/agenda de aulas, roster de alunos e
+   * pacotes/créditos. Estende o Sistema A (professor = usuário) de forma
+   * aditiva. Desligada, nenhuma rota/menu/tela nova aparece.
+   */
+  COACH_LESSONS: 'coach_lessons',
+
+  /**
+   * Reservas compartilhadas (multi-atleta): uma reserva de quadra pode ter
+   * vários participantes com sub-horários próprios; o solicitante convida
+   * atletas (aceite/recusa) ou deixa a reserva aberta (com/sem limite); todos
+   * os que entram viram co-proprietários; o valor é rateado por tempo. Serve
+   * também às reservas de aula (professor + alunos). Aditivo.
+   */
+  SHARED_BOOKINGS: 'shared_bookings',
+
+  /**
+   * Clubes vinculados a professores e arenas: um professor ou arena pode criar
+   * ou vincular clubes próprios (para eventos, times, treinos). As páginas
+   * pública e admin de professores/arenas mostram os clubes SÓ quando houver
+   * clubes vinculados. Aditivo.
+   */
+  LINKED_CLUBS: 'linked_clubs',
 });
 
 /** Metadados de exibição para o painel de flags (admin master). */
@@ -545,6 +683,112 @@ export const FEATURE_FLAG_META = Object.freeze({
       + 'e diagnóstico. Desligado, só existem as 3 rotas independentes '
       + '(Métricas / Torneios / Parceiros) e o item do menu some.',
   },
+  [FEATURE_FLAG.PROFILE_ONBOARDING]: {
+    label: 'Completar perfil (onboarding)',
+    description:
+      'Mostra o modal "Complete seu perfil" no app autenticado quando faltam '
+      + 'os dados obrigatórios para torneios (nome, nascimento, telefone e '
+      + 'experiência). O atleta pode adiar pela sessão; o bloqueio duro segue '
+      + 'existindo apenas na inscrição. Desligado, nada aparece.',
+  },
+  [FEATURE_FLAG.NAV_USER_MENU]: {
+    label: 'Menu do usuário no topo (desktop)',
+    description:
+      'Adiciona o avatar do usuário no cabeçalho, abrindo um menu com Meu '
+      + 'perfil, Editar perfil e Sair — inclui a saída da conta no desktop, '
+      + 'que hoje só existe no menu mobile. Desligado, o cabeçalho fica igual.',
+  },
+  [FEATURE_FLAG.MOBILE_BOTTOM_NAV]: {
+    label: 'Navegação inferior (mobile)',
+    description:
+      'Exibe uma barra fixa na base da tela em celulares com os 5 destinos '
+      + 'principais (Início, Torneios, Atletas, Chat, Perfil), permitindo '
+      + 'navegar com 1 toque sem abrir o menu lateral. Desligado, a barra '
+      + 'não é renderizada.',
+  },
+  [FEATURE_FLAG.TOURNAMENT_CANCEL_ACTION]: {
+    label: 'Cancelar torneio',
+    description:
+      'Adiciona ao hub administrativo do torneio a ação "Cancelar torneio" '
+      + 'com confirmação. O status Cancelado já existia e é pré-requisito '
+      + 'para arquivar, mas não havia botão para alcançá-lo. Desligado, as '
+      + 'ações de status permanecem as atuais.',
+  },
+  [FEATURE_FLAG.NOTIFICATIONS_MARK_ALL]: {
+    label: 'Marcar notificações como lidas (todas)',
+    description:
+      'Adiciona ao menu de notificações um botão para marcar todas as não '
+      + 'lidas de uma vez. Desligado, o menu permanece como está.',
+  },
+  [FEATURE_FLAG.TOURNAMENT_CHECKIN]: {
+    label: 'Check-in de atletas no torneio',
+    description:
+      'Permite ao admin do torneio marcar e desfazer o check-in de '
+      + 'inscrições confirmadas na aba de inscrições, com contador por '
+      + 'modalidade. O sorteio já considerava o status "Check-in feito"; '
+      + 'esta flag adiciona a interface para registrá-lo. Desligado, a aba '
+      + 'permanece como está.',
+  },
+  [FEATURE_FLAG.PAYMENT_INSTRUCTIONS]: {
+    label: 'Instruções de pagamento (PIX)',
+    description:
+      'O admin configura a chave PIX do torneio na aba Geral e o atleta, ao '
+      + 'se inscrever numa modalidade paga, vê o valor, o QR Code e o código '
+      + '"copia e cola", podendo declarar que pagou (os admins são avisados '
+      + 'para conferir e confirmar). A confirmação do pagamento continua '
+      + 'manual, como hoje. Desligado, o fluxo de inscrição fica igual.',
+  },
+  [FEATURE_FLAG.TOURNAMENT_OPS_DASHBOARD]: {
+    label: 'Resumo operacional do torneio',
+    description:
+      'Adiciona ao hub administrativo do torneio uma aba "Resumo" com '
+      + 'inscrições por status, pagamentos pendentes, progresso dos jogos, '
+      + 'jogos sem horário e alertas de pendências — a visão única de "como '
+      + 'está meu torneio". Somente leitura. Desligado, a aba não aparece.',
+  },
+  [FEATURE_FLAG.PARTNER_INVITES]: {
+    label: 'Convite e aceite de dupla',
+    description:
+      'Na inscrição de duplas, o atleta escolhe o parceiro entre os atletas '
+      + 'do diretório (a inscrição fica vinculada à conta real dele). O '
+      + 'parceiro é notificado e confirma ou recusa na página do torneio; o '
+      + 'organizador vê o status do convite nas inscrições. O preenchimento '
+      + 'manual continua disponível para convidados sem conta. Desligado, a '
+      + 'inscrição de duplas fica exatamente como está.',
+  },
+  [FEATURE_FLAG.ATHLETE_SELF_CHECKIN]: {
+    label: 'Check-in pelo próprio atleta',
+    description:
+      'Com o torneio em andamento, o inscrito confirma presença com um toque '
+      + 'no card da modalidade ("Fazer check-in"). Usa o mesmo status do '
+      + 'check-in do organizador e já é considerado pelo sorteio. Desligado, '
+      + 'o check-in segue exclusivo do organizador.',
+  },
+  [FEATURE_FLAG.PAGE_TITLES]: {
+    label: 'Título da aba por página',
+    description:
+      'Define o título da aba do navegador conforme a página ("Torneios · '
+      + 'PickleRush"), melhorando histórico, favoritos e a troca entre abas. '
+      + 'Desligado, o título permanece fixo.',
+  },
+  [FEATURE_FLAG.ONBOARDING_WIZARD]: {
+    label: 'Onboarding em passos (com persona)',
+    description:
+      'No primeiro acesso, assistente em 3 passos: dados essenciais, '
+      + 'interesses (jogar, organizar torneios, arena, aulas, acompanhar) e '
+      + 'convite ao nivelamento. Fechar adia pela sessão; concluir grava a '
+      + 'conclusão no perfil. Quando ligada, substitui o modal simples de '
+      + '"Completar perfil". Desligado, nada aparece.',
+  },
+  [FEATURE_FLAG.TOURNAMENT_ANNOUNCEMENTS]: {
+    label: 'Avisos aos inscritos',
+    description:
+      'O admin do torneio envia um aviso (título e mensagem) para todos os '
+      + 'inscritos com conta vinculada — do torneio inteiro ou de uma '
+      + 'modalidade — como notificação in-app, com histórico dos envios e '
+      + 'texto pronto para colar no grupo de WhatsApp. Desligado, o card de '
+      + 'comunicação não aparece.',
+  },
 
   // ---- Arena V3 (sprint 0+) — master switch -----------------------------
   [FEATURE_FLAG.ARENA_MODULES]: {
@@ -578,6 +822,32 @@ export const FEATURE_FLAG_META = Object.freeze({
       + 'valor/hora, regiões, modalidades) e listar no diretório. Permite '
       + 'também vincular um professor como residente de uma arena. '
       + 'Desligado, a rota /coaches e o menu somem.',
+  },
+  [FEATURE_FLAG.COACH_LESSONS]: {
+    label: 'Aulas de professores (agenda, alunos e pacotes)',
+    description:
+      'Habilita o produto completo do professor: disponibilidade semanal, '
+      + 'solicitação e agenda de aulas (avulsas e recorrentes), roster de '
+      + 'alunos com ficha de evolução e pacotes/créditos pré-pagos. É aditivo '
+      + '(coleções próprias) e não altera o diretório nem as arenas. '
+      + 'Desligado, as telas /aulas e as seções novas do perfil somem.',
+  },
+  [FEATURE_FLAG.SHARED_BOOKINGS]: {
+    label: 'Reservas compartilhadas (multi-atleta e aulas)',
+    description:
+      'Permite reservas de quadra com vários atletas: o solicitante convida '
+      + 'outros (aceite/recusa, cada um com seu horário) ou deixa a reserva '
+      + 'aberta (com ou sem limite). Todos os participantes viram '
+      + 'co-proprietários e o valor é rateado por tempo. Também suporta reservas '
+      + 'de aula (professor + alunos). Aditivo; desligado, a reserva segue com '
+      + 'dono único.',
+  },
+  [FEATURE_FLAG.LINKED_CLUBS]: {
+    label: 'Clubes de professores e arenas',
+    description:
+      'Permite a professores e arenas criar ou vincular clubes próprios (para '
+      + 'eventos, times e treinos). As páginas pública e admin exibem os clubes '
+      + 'apenas quando houver clubes vinculados. Aditivo.',
   },
 });
 

@@ -83,6 +83,31 @@ export default function V2ArenaMatchmaking() {
     prefer_same_city: true,
   });
 
+  // Hooks derivados precisam vir ANTES de qualquer early return (regras dos
+  // hooks do React): a ordem de chamada deve ser estável entre renders.
+  const criteriaValidation = useMemo(
+    () => normalizeMatchmakingCriteria(criteriaInput),
+    [criteriaInput],
+  );
+  const criteria = criteriaValidation.value;
+
+  // Acha matches, excluindo o próprio user
+  const candidates = useMemo(
+    () => athletes.filter((a) => a.uid !== user?.uid),
+    [athletes, user],
+  );
+
+  const matches = useMemo(() => {
+    const userLevel = userProfile?.leveling_level || userProfile?.level;
+    const userForScore = {
+      uid: user?.uid,
+      level: userLevel,
+      city: userProfile?.city,
+      state: userProfile?.state,
+    };
+    return topMatches(userForScore, candidates, criteria, 30);
+  }, [user, userProfile, candidates, criteria]);
+
   // Sem login
   if (!user) {
     return (
@@ -137,25 +162,6 @@ export default function V2ArenaMatchmaking() {
       </div>
     );
   }
-
-  const criteriaValidation = normalizeMatchmakingCriteria(criteriaInput);
-  const criteria = criteriaValidation.value;
-
-  // Acha matches, excluindo o próprio user
-  const candidates = useMemo(() => {
-    return athletes.filter((a) => a.uid !== user?.uid);
-  }, [athletes, user]);
-
-  const matches = useMemo(() => {
-    const userLevel = userProfile?.leveling_level || userProfile?.level;
-    const userForScore = {
-      uid: user?.uid,
-      level: userLevel,
-      city: userProfile?.city,
-      state: userProfile?.state,
-    };
-    return topMatches(userForScore, candidates, criteria, 30);
-  }, [user, userProfile, candidates, criteria]);
 
   const handleChat = (candidate) => {
     // Por ora: navegar para a página de chat (já existe)

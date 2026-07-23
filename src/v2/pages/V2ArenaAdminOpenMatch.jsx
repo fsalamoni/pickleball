@@ -28,6 +28,7 @@ import {
   useCanArenaUseModule,
 } from '@/modules/arenas/hooks/useArenaV3';
 import { getAvailableSpots, getSlotFillPct, computeSlotStatus } from '@/modules/arenas/domain/openMatch';
+import ConfirmDialog from '@/components/ConfirmDialog';
 import { V2Badge, V2Button, V2EmptyState, V2Skeleton, V2Surface, V2Input, V2Field, V2Textarea } from '@/v2/ui/primitives';
 
 function CreateSlotForm({ arenaId, onClose }) {
@@ -235,21 +236,35 @@ function SlotAdminCard({ slot, onCancel, onDelete }) {
       </div>
       <div className="mt-3 flex items-center gap-2">
         {slot.status !== 'cancelled' && (
-          <button
-            type="button"
-            onClick={() => onCancel(slot)}
-            className="rounded-full border border-amber-200 bg-amber-50 px-3 py-1 text-xs font-bold text-amber-700 hover:bg-amber-100"
-          >
-            <X className="mr-1 inline h-3 w-3" /> Cancelar
-          </button>
+          <ConfirmDialog
+            title="Cancelar este slot?"
+            description={`O slot de ${slot.date} ${slot.start} será cancelado e os inscritos serão notificados.`}
+            confirmLabel="Cancelar slot"
+            onConfirm={() => onCancel(slot)}
+            trigger={(
+              <button
+                type="button"
+                className="rounded-full border border-amber-200 bg-amber-50 px-3 py-1 text-xs font-bold text-amber-700 hover:bg-amber-100"
+              >
+                <X className="mr-1 inline h-3 w-3" /> Cancelar
+              </button>
+            )}
+          />
         )}
-        <button
-          type="button"
-          onClick={() => onDelete(slot)}
-          className="rounded-full border border-red-200 bg-red-50 px-3 py-1 text-xs font-bold text-red-600 hover:bg-red-100"
-        >
-          <Trash2 className="mr-1 inline h-3 w-3" /> Excluir
-        </button>
+        <ConfirmDialog
+          title="Excluir slot definitivamente?"
+          description={`O slot de ${slot.date} ${slot.start} será removido. Essa ação não pode ser desfeita.`}
+          confirmLabel="Excluir"
+          onConfirm={() => onDelete(slot)}
+          trigger={(
+            <button
+              type="button"
+              className="rounded-full border border-red-200 bg-red-50 px-3 py-1 text-xs font-bold text-red-600 hover:bg-red-100"
+            >
+              <Trash2 className="mr-1 inline h-3 w-3" /> Excluir
+            </button>
+          )}
+        />
       </div>
     </div>
   );
@@ -286,7 +301,6 @@ export default function V2ArenaAdminOpenMatch() {
   if (!canManage) return <Navigate to={`/arenas/${arena.id}`} replace />;
 
   const handleCancel = async (slot) => {
-    if (!window.confirm(`Cancelar o slot de ${slot.date} ${slot.start}? Os inscritos serão notificados.`)) return;
     try {
       await cancel.mutateAsync({ slotId: slot.id, reason: 'Cancelado pelo gestor' });
       toast.success('Slot cancelado');
@@ -296,7 +310,6 @@ export default function V2ArenaAdminOpenMatch() {
   };
 
   const handleDelete = async (slot) => {
-    if (!window.confirm(`Excluir definitivamente o slot de ${slot.date} ${slot.start}? Essa ação não pode ser desfeita.`)) return;
     try {
       await del.mutateAsync(slot.id);
       toast.success('Slot excluído');
@@ -334,7 +347,7 @@ export default function V2ArenaAdminOpenMatch() {
       {!canUseModule && (
         <V2Surface className="mb-6 border-amber-200 bg-amber-50/50">
           <p className="text-sm text-amber-800">
-            <strong>Módulo não habilitado.</strong> Você precisa ativar o módulo "Open Match" nos
+            <strong>Módulo não habilitado.</strong> Você precisa ativar o módulo &quot;Open Match&quot; nos
             <Link to={`/arenas/${arena.id}/gerir/modulos`} className="ml-1 font-bold underline">Módulos da arena</Link>.
           </p>
         </V2Surface>
