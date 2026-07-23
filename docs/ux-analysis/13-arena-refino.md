@@ -78,6 +78,11 @@ testes verdes, build ok.
 - **Funcionalidade concluída**: "Criar reserva" manual no calendário admin
   (era stub "Em breve") — serviço `createManualBooking` + hook + UI + regra
   Firestore para o gestor criar reserva em nome de cliente.
+- **Diretório (`V2Arenas`)**: filtro por cidade em chips, estado vazio
+  contextual ("Limpar filtros"), gradiente `from-black` → `from-ink`.
+- **Página pública**: calendário de reserva movido para logo após o hero
+  (ação principal do visitante).
+- **Higiene**: imports mortos removidos (`Navigate`, `V2Field`/`V2Input`).
 
 Status: 1085 testes verdes, lint limpo, build ok em todos os passos.
 
