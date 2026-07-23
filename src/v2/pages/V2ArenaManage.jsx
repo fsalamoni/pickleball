@@ -24,6 +24,7 @@ import { PhotoLightbox } from '@/components/ui/photo-lightbox';
 import ConfirmDialog from '@/components/ConfirmDialog';
 import { V2ProfileFields, V2PricingEditor } from '@/v2/components/arenas/V2ArenaEditors';
 import V2ArenaReviews from '@/v2/components/arenas/V2ArenaReviews';
+import { ArenaCoachesManager } from '@/v2/pages/V2ArenaCoaches';
 import V2BookingRow from '@/v2/components/arenas/V2BookingRow';
 import { sortBookings } from '@/modules/arenas/domain/booking';
 import { ARENA_MANAGER_ROLE, BOOKING_STATUS } from '@/modules/arenas/domain/constants';
@@ -37,64 +38,68 @@ import { cn } from '@/core/lib/utils';
 
 // Navegação em dois níveis do admin da arena. Ordem = ciclo de vida, do
 // início ao fim: identidade → estrutura/preços → reservas → comercial →
-// resultados → equipe. Cada seção agrupa sub-abas por tema.
-const ARENA_SECTIONS = [
-  {
-    id: 'perfil',
-    label: 'Perfil',
-    icon: Building2,
-    tabs: [
-      { value: 'info', label: 'Informações', icon: Info },
-      { value: 'fotos', label: 'Fotos', icon: Image },
-    ],
-  },
-  {
-    id: 'estrutura',
-    label: 'Estrutura e preços',
-    icon: LayoutGrid,
-    tabs: [
-      { value: 'quadras', label: 'Quadras', icon: LayoutGrid },
-      { value: 'precos', label: 'Preços', icon: DollarSign },
-      { value: 'regras', label: 'Regras', icon: ClipboardList },
-    ],
-  },
-  {
-    id: 'reservas',
-    label: 'Reservas',
-    icon: CalendarClock,
-    tabs: [
-      { value: 'reservas', label: 'Solicitações', icon: CalendarClock },
-      { value: 'calendario', label: 'Calendário', icon: CalendarDays },
-      { value: 'calendario-admin', label: 'Reservas (admin)', icon: CalendarRange },
-    ],
-  },
-  {
-    id: 'comercial',
-    label: 'Pagamentos e loja',
-    icon: Wallet,
-    tabs: [
-      { value: 'pagamento', label: 'Pagamento', icon: Wallet },
-      { value: 'mercado', label: 'Mercado', icon: Package },
-    ],
-  },
-  {
-    id: 'desempenho',
-    label: 'Desempenho',
-    icon: BarChart3,
-    tabs: [
-      { value: 'metricas', label: 'Métricas', icon: BarChart3 },
-      { value: 'retornos', label: 'Retornos', icon: Star },
-    ],
-  },
-  {
-    id: 'equipe',
-    label: 'Equipe',
-    icon: Users,
-    tabs: [
-      { value: 'admins', label: 'Admins', icon: Users },
-    ],
-  },
-];
+// resultados → equipe/parceiros. Cada seção agrupa sub-abas por tema.
+// `coachResidentOn` injeta a aba de professores parceiros na seção de equipe.
+function buildArenaSections({ coachResidentOn }) {
+  return [
+    {
+      id: 'perfil',
+      label: 'Perfil',
+      icon: Building2,
+      tabs: [
+        { value: 'info', label: 'Informações', icon: Info },
+        { value: 'fotos', label: 'Fotos', icon: Image },
+      ],
+    },
+    {
+      id: 'estrutura',
+      label: 'Estrutura e preços',
+      icon: LayoutGrid,
+      tabs: [
+        { value: 'quadras', label: 'Quadras', icon: LayoutGrid },
+        { value: 'precos', label: 'Preços', icon: DollarSign },
+        { value: 'regras', label: 'Regras', icon: ClipboardList },
+      ],
+    },
+    {
+      id: 'reservas',
+      label: 'Reservas',
+      icon: CalendarClock,
+      tabs: [
+        { value: 'reservas', label: 'Solicitações', icon: CalendarClock },
+        { value: 'calendario', label: 'Calendário', icon: CalendarDays },
+        { value: 'calendario-admin', label: 'Reservas (admin)', icon: CalendarRange },
+      ],
+    },
+    {
+      id: 'comercial',
+      label: 'Pagamentos e loja',
+      icon: Wallet,
+      tabs: [
+        { value: 'pagamento', label: 'Pagamento', icon: Wallet },
+        { value: 'mercado', label: 'Mercado', icon: Package },
+      ],
+    },
+    {
+      id: 'desempenho',
+      label: 'Desempenho',
+      icon: BarChart3,
+      tabs: [
+        { value: 'metricas', label: 'Métricas', icon: BarChart3 },
+        { value: 'retornos', label: 'Retornos', icon: Star },
+      ],
+    },
+    {
+      id: 'equipe',
+      label: 'Equipe e parceiros',
+      icon: Users,
+      tabs: [
+        { value: 'admins', label: 'Admins', icon: Users },
+        ...(coachResidentOn ? [{ value: 'professores', label: 'Professores', icon: GraduationCap }] : []),
+      ],
+    },
+  ];
+}
 
 export default function V2ArenaManage() {
   const { arenaId } = useParams();
@@ -172,9 +177,10 @@ function V2ArenaManageContent({ arenaId, user, isPlatformAdmin, arena, managed, 
   // com suas sub-abas. Ordem = ciclo de vida da arena, do início ao fim:
   // identidade → estrutura/preços → reservas (operação) → dinheiro →
   // resultados → equipe.
-  const activeSectionId = ARENA_SECTIONS.find((s) => s.tabs.some((t) => t.value === tab))?.id
-    || ARENA_SECTIONS[0].id;
-  const activeSection = ARENA_SECTIONS.find((s) => s.id === activeSectionId) || ARENA_SECTIONS[0];
+  const sections = buildArenaSections({ coachResidentOn });
+  const activeSectionId = sections.find((s) => s.tabs.some((t) => t.value === tab))?.id
+    || sections[0].id;
+  const activeSection = sections.find((s) => s.id === activeSectionId) || sections[0];
 
   const selectTab = (sectionId, value) => {
     setTab(value);
@@ -219,11 +225,6 @@ function V2ArenaManageContent({ arenaId, user, isPlatformAdmin, arena, managed, 
           <V2Button asChild variant="secondary" size="sm">
             <Link to={`/arenas/${arena.id}/gerir/membros`}>Membros</Link>
           </V2Button>
-          {coachResidentOn && (
-            <V2Button asChild variant="secondary" size="sm">
-              <Link to={`/arenas/${arena.id}/gerir/professores`}><GraduationCap className="h-4 w-4" /> Professores</Link>
-            </V2Button>
-          )}
         </div>
       </div>
 
@@ -231,7 +232,7 @@ function V2ArenaManageContent({ arenaId, user, isPlatformAdmin, arena, managed, 
         {/* Nível 1: seções principais (temas) */}
         <div className="overflow-x-auto">
           <div className="inline-flex gap-1.5 rounded-full border border-gray-100 bg-paper-pure p-1.5 shadow-sm">
-            {ARENA_SECTIONS.map((section) => {
+            {sections.map((section) => {
               const Icon = section.icon;
               const active = section.id === activeSectionId;
               return (
@@ -280,6 +281,7 @@ function V2ArenaManageContent({ arenaId, user, isPlatformAdmin, arena, managed, 
         {tab === 'fotos' && <div id="arena-manage-fotos"><PhotosTab arena={arena} /></div>}
         {tab === 'info' && <InfoTab arena={arena} />}
         {tab === 'admins' && <ManagersTab arena={arena} />}
+        {tab === 'professores' && coachResidentOn && <ArenaCoachesManager arena={arena} />}
         {tab === 'retornos' && <V2ArenaReviews arena={arena} canModerate />}
       </div>
     </div>

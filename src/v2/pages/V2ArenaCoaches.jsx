@@ -206,6 +206,59 @@ function PartnerCard({ arenaId, coach }) {
   );
 }
 
+/* ---------------------- Gerenciador reutilizável ---------------------- */
+
+/**
+ * Corpo da gestão de parceiros — usado tanto na página dedicada quanto como
+ * aba dentro do hub admin da arena (V2ArenaManage).
+ */
+export function ArenaCoachesManager({ arena, showTitle = true }) {
+  const { data: partners = [], isLoading: partnersLoading } = useArenaCoaches(arena.id, { activeOnly: false });
+  const [adding, setAdding] = useState(false);
+  const linkedIds = useMemo(() => new Set(partners.map((c) => c.id)), [partners]);
+
+  return (
+    <div className="space-y-4">
+      <V2Surface>
+        <div className="mb-4 flex flex-wrap items-center justify-between gap-2">
+          <div className="flex items-center gap-2">
+            <GraduationCap className="h-5 w-5 text-ink" />
+            <h2 className="font-display text-lg font-bold text-ink">
+              {showTitle ? 'Professores parceiros' : 'Parceiros'} ({partners.length})
+            </h2>
+          </div>
+          {!adding && (
+            <V2Button size="sm" onClick={() => setAdding(true)}><Plus className="mr-1.5 h-4 w-4" /> Vincular professor</V2Button>
+          )}
+        </div>
+        <p className="-mt-2 mb-3 text-sm text-gray-500">
+          Vincule professores cadastrados na plataforma. Os parceiros ativos aparecem na página pública da arena.
+        </p>
+
+        {adding && (
+          <div className="mb-4">
+            <AddPartner arenaId={arena.id} linkedIds={linkedIds} onDone={() => setAdding(false)} />
+          </div>
+        )}
+
+        {partnersLoading ? (
+          <V2Skeleton lines={3} />
+        ) : partners.length === 0 ? (
+          <V2EmptyState
+            icon={GraduationCap}
+            title="Nenhum professor parceiro"
+            description="Vincule professores cadastrados na plataforma para divulgá-los na página da arena."
+          />
+        ) : (
+          <div className="space-y-2">
+            {partners.map((coach) => <PartnerCard key={coach.id} arenaId={arena.id} coach={coach} />)}
+          </div>
+        )}
+      </V2Surface>
+    </div>
+  );
+}
+
 /* ------------------------------- Página -------------------------------- */
 
 function V2ArenaCoachesContent() {
@@ -213,10 +266,6 @@ function V2ArenaCoachesContent() {
   const { user, isPlatformAdmin } = useAuth();
   const { data: arena, isLoading: arenaLoading } = useArena(arenaId);
   const { data: managed = [] } = useMyManagedArenas();
-  const { data: partners = [], isLoading: partnersLoading } = useArenaCoaches(arenaId, { activeOnly: false });
-  const [adding, setAdding] = useState(false);
-
-  const linkedIds = useMemo(() => new Set(partners.map((c) => c.id)), [partners]);
 
   if (arenaLoading) return <V2Skeleton className="mx-auto h-96 max-w-[1000px] rounded-4xl" />;
   if (!arena) {
@@ -237,39 +286,10 @@ function V2ArenaCoachesContent() {
         <Link to={`/arenas/${arena.id}/gerir`} className="mb-3 inline-flex items-center gap-1.5 text-xs font-bold uppercase tracking-wider text-gray-500 hover:text-ink">
           <ArrowLeft className="h-3.5 w-3.5" /> Voltar ao hub admin
         </Link>
-        <div className="flex flex-wrap items-end justify-between gap-3">
-          <div>
-            <h1 className="font-display text-3xl font-bold tracking-tight text-ink">Professores parceiros · {arena.name}</h1>
-            <p className="mt-2 font-medium text-gray-500">Vincule professores à arena. Os parceiros ativos aparecem na página pública.</p>
-          </div>
-          {!adding && (
-            <V2Button onClick={() => setAdding(true)}><Plus className="mr-1.5 h-4 w-4" /> Vincular professor</V2Button>
-          )}
-        </div>
+        <h1 className="font-display text-3xl font-bold tracking-tight text-ink">Professores parceiros · {arena.name}</h1>
+        <p className="mt-2 font-medium text-gray-500">Vincule professores à arena. Os parceiros ativos aparecem na página pública.</p>
       </div>
-
-      {adding && (
-        <div className="mb-6">
-          <AddPartner arenaId={arena.id} linkedIds={linkedIds} onDone={() => setAdding(false)} />
-        </div>
-      )}
-
-      <V2Surface>
-        <h2 className="mb-4 font-display text-lg font-bold text-ink">Parceiros ({partners.length})</h2>
-        {partnersLoading ? (
-          <V2Skeleton lines={3} />
-        ) : partners.length === 0 ? (
-          <V2EmptyState
-            icon={GraduationCap}
-            title="Nenhum professor parceiro"
-            description="Vincule professores cadastrados na plataforma para divulgá-los na página da arena."
-          />
-        ) : (
-          <div className="space-y-2">
-            {partners.map((coach) => <PartnerCard key={coach.id} arenaId={arena.id} coach={coach} />)}
-          </div>
-        )}
-      </V2Surface>
+      <ArenaCoachesManager arena={arena} showTitle={false} />
     </div>
   );
 }
