@@ -193,6 +193,10 @@ function V2ArenaDetailContent({ arenaId, user, arena, managed, bookings, isLoadi
         </div>
       </div>
 
+      {/* Reservar é a ação principal do visitante: o calendário interativo
+          vem logo após o hero, antes de regras/contato. */}
+      <V2BookingCalendarSection arenaId={arenaId} arena={arena} />
+
       {/* Sprint 5: Regras estruturadas (público) — preferido sobre house_rules_md */}
       <ArenaRulesSection arena={arena} />
 
@@ -214,9 +218,6 @@ function V2ArenaDetailContent({ arenaId, user, arena, managed, bookings, isLoadi
           <p className="mt-3 text-sm text-gray-500">{arena.hours || 'Horário não informado.'}</p>
         </V2Surface>
       </div>
-
-      {/* Calendário interativo (Sprint 5) — entre Contato/Funcionamento e Próximos horários */}
-      <V2BookingCalendarSection arenaId={arenaId} arena={arena} />
 
       {/* Pagamento PIX (Sprint 5) */}
       <V2ArenaPaymentSection arena={arena} />
