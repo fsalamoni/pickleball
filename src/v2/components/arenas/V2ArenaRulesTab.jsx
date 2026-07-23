@@ -12,7 +12,7 @@
 import React, { useState } from 'react';
 import { useParams } from 'react-router-dom';
 import { toast } from 'sonner';
-import { Save, Plus, Trash2, ChevronUp, ChevronDown, ListChecks } from 'lucide-react';
+import { Save, Plus, Trash2, ChevronUp, ChevronDown, ListChecks, Lightbulb } from 'lucide-react';
 import { useArena, useUpdateArena } from '@/modules/arenas/hooks/useArenas';
 import {
   normalizeArenaRules, ARENA_RULE_CATEGORIES,
@@ -179,7 +179,7 @@ export default function V2ArenaRulesTab() {
       </V2Surface>
 
       <V2Surface className="border-amber-200 bg-amber-50/40">
-        <h4 className="text-sm font-bold text-amber-800">💡 Dica</h4>
+        <h4 className="flex items-center gap-1.5 text-sm font-bold text-amber-800"><Lightbulb className="h-4 w-4" /> Dica</h4>
         <p className="mt-1 text-sm text-amber-900">
           Use categorias para agrupar (ex: Pagamento → &quot;PIX antecipado&quot;, &quot;Sem devolução em 24h&quot;).
           Regras curtas e diretas funcionam melhor.

@@ -455,7 +455,7 @@ export default function V2DaySlotsDialog({ arena, arenaId, date, courtId: initia
                                   {booking.athlete_name}
                                 </div>
                               )}
-                              {isSelected && <div className="mt-1 text-[10px] font-bold text-emerald-700">✓ Selecionado</div>}
+                              {isSelected && <div className="mt-1 flex items-center gap-1 text-[10px] font-bold text-green-700"><Check className="h-3 w-3" /> Selecionado</div>}
                             </button>
                           );
                         })}

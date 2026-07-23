@@ -13,7 +13,7 @@
 import React, { useState } from 'react';
 import { useParams } from 'react-router-dom';
 import { toast } from 'sonner';
-import { CreditCard, Save, Copy, Check, Image as ImageIcon } from 'lucide-react';
+import { CreditCard, Save, Copy, Check, Image as ImageIcon, Lightbulb } from 'lucide-react';
 import { useAuth } from '@/core/lib/FirebaseAuthContext';
 import { useArena, useUpdateArena } from '@/modules/arenas/hooks/useArenas';
 import { normalizePixPayment, PIX_KEY_TYPES, PIX_KEY_TYPE_LABELS } from '@/modules/arenas/domain/pix_payment';
@@ -165,7 +165,7 @@ export default function V2ArenaPaymentTab() {
       </V2Surface>
 
       <V2Surface className="border-emerald-200 bg-emerald-50/40">
-        <h4 className="font-display text-sm font-bold text-ink">💡 Como obter seu QR Code</h4>
+        <h4 className="flex items-center gap-1.5 font-display text-sm font-bold text-ink"><Lightbulb className="h-4 w-4 text-gray-400" /> Como obter seu QR Code</h4>
         <ol className="mt-2 list-decimal pl-5 text-sm text-gray-600 space-y-1">
           <li>Abra o app do seu banco (inter, Nubank, Itaú, Bradesco, etc.)</li>
           <li>Vá em PIX → &quot;Cobrar&quot; ou &quot;Receber&quot;</li>

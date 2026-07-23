@@ -2,7 +2,11 @@ import React, { useEffect, useMemo, useState } from 'react';
 import { Link, Navigate, useLocation, useParams } from 'react-router-dom';
 import { toast } from 'sonner';
 import { collection, getDocs, query, where } from 'firebase/firestore';
-import { ArrowLeft, Building2, Settings, Trash2, UserPlus, Users } from 'lucide-react';
+import {
+  ArrowLeft, Building2, Settings, Trash2, UserPlus, Users,
+  BarChart3, CalendarClock, CalendarDays, CalendarRange, Wallet, ClipboardList,
+  Package, LayoutGrid, DollarSign, Image, Info, Star,
+} from 'lucide-react';
 import V2CourtsTab from '@/v2/components/arenas/V2CourtsTab';
 import V2ArenaCalendar from '@/v2/components/arenas/V2ArenaCalendar';
 import V2ArenaMetrics from '@/v2/components/arenas/V2ArenaMetrics';
@@ -63,10 +67,10 @@ export default function V2ArenaManage() {
 
 function V2ArenaManageContent({ arenaId, user, isPlatformAdmin, arena, managed, isLoading, deleteArena, location, tab, setTab }) {
 
-  // Sprint 0.1 (â€ncora pro stepper de onboarding): ao montar, lê o hash
-  // (#fotos / #precos / #horarios) e troca a tab + scroll até a seÃ§Ã£o.
-  // Cada panel abaixo tem um `id` correspondente, e #horarios aponta para
-  // a tab 'info' (que é onde fica o campo hours) e rola até o campo.
+  // Âncora para o stepper de onboarding: ao montar, lê o hash
+  // (#fotos / #precos / #horarios), troca a aba e rola até a seção.
+  // Cada panel abaixo tem um `id` correspondente; #horarios aponta para
+  // a aba 'info' (onde fica o campo de horário de funcionamento).
   useEffect(() => {
     const hash = location.hash?.replace('#', '').toLowerCase();
     if (!hash) return;
@@ -98,27 +102,33 @@ function V2ArenaManageContent({ arenaId, user, isPlatformAdmin, arena, managed, 
   if (!canManage) return <Navigate to={`/arenas/${arena.id}`} replace />;
   const isOwner = arena.owner_id === user?.uid || isPlatformAdmin;
 
-  // Tabs organizadas em 2 linhas (mesmo padrão visual: pill rounded-full)
-  // Linha 1 = Operação do dia-a-dia
-  // Linha 2 = Configuração da arena
-  const tabRows = [
-    [
-      { value: 'metricas', label: 'Métricas' },
-      { value: 'reservas', label: 'Reservas' },
-      { value: 'calendario', label: 'Calendário' },
-      { value: 'calendario-admin', label: 'Reservas (Admin)' },
-      { value: 'pagamento', label: 'Pagamento' },
-      { value: 'regras', label: 'Regras' },
-      { value: 'mercado', label: 'Mercado' },
-    ],
-    [
-      { value: 'quadras', label: 'Quadras' },
-      { value: 'precos', label: 'Preços' },
-      { value: 'fotos', label: 'Fotos' },
-      { value: 'info', label: 'Informações' },
-      { value: 'admins', label: 'Admins' },
-      { value: 'retornos', label: 'Retornos' },
-    ],
+  // Abas agrupadas por finalidade, com rótulo de grupo visível e ícone por
+  // aba (mesmo padrão visual: pill rounded-full). Grupo 1 = operação do
+  // dia-a-dia; grupo 2 = configuração da arena.
+  const tabGroups = [
+    {
+      title: 'Operação',
+      items: [
+        { value: 'metricas', label: 'Métricas', icon: BarChart3 },
+        { value: 'reservas', label: 'Reservas', icon: CalendarClock },
+        { value: 'calendario', label: 'Calendário', icon: CalendarDays },
+        { value: 'calendario-admin', label: 'Reservas (Admin)', icon: CalendarRange },
+        { value: 'pagamento', label: 'Pagamento', icon: Wallet },
+        { value: 'regras', label: 'Regras', icon: ClipboardList },
+        { value: 'mercado', label: 'Mercado', icon: Package },
+      ],
+    },
+    {
+      title: 'Configuração da arena',
+      items: [
+        { value: 'quadras', label: 'Quadras', icon: LayoutGrid },
+        { value: 'precos', label: 'Preços', icon: DollarSign },
+        { value: 'fotos', label: 'Fotos', icon: Image },
+        { value: 'info', label: 'Informações', icon: Info },
+        { value: 'admins', label: 'Admins', icon: Users },
+        { value: 'retornos', label: 'Retornos', icon: Star },
+      ],
+    },
   ];
 
   return (
@@ -158,16 +168,25 @@ function V2ArenaManageContent({ arenaId, user, isPlatformAdmin, arena, managed, 
         </div>
       </div>
 
-      <div className="mt-6 space-y-2">
-        {tabRows.map((row, rowIdx) => (
-          <div key={rowIdx} className="overflow-x-auto">
-            <div className="inline-flex gap-1.5 rounded-full border border-gray-100 bg-paper-pure p-1.5 shadow-sm">
-              {row.map((t) => (
-                <button key={t.value} onClick={() => setTab(t.value)}
-                  className={cn('whitespace-nowrap rounded-full px-4 py-2 text-sm font-semibold transition-colors', tab === t.value ? 'bg-ink text-white shadow-md' : 'text-gray-500 hover:text-ink')}>
-                  {t.label}
-                </button>
-              ))}
+      <div className="mt-6 space-y-3">
+        {tabGroups.map((group) => (
+          <div key={group.title}>
+            <p className="mb-1.5 px-1 text-[11px] font-bold uppercase tracking-widest text-gray-400">{group.title}</p>
+            <div className="overflow-x-auto">
+              <div className="inline-flex gap-1.5 rounded-full border border-gray-100 bg-paper-pure p-1.5 shadow-sm">
+                {group.items.map((t) => {
+                  const Icon = t.icon;
+                  const active = tab === t.value;
+                  return (
+                    <button key={t.value} onClick={() => setTab(t.value)}
+                      aria-current={active ? 'page' : undefined}
+                      className={cn('inline-flex items-center gap-1.5 whitespace-nowrap rounded-full px-4 py-2 text-sm font-semibold transition-colors', active ? 'bg-ink text-white shadow-md' : 'text-gray-500 hover:text-ink')}>
+                      {Icon && <Icon className={cn('h-4 w-4', active ? 'text-acid' : 'text-gray-400')} />}
+                      {t.label}
+                    </button>
+                  );
+                })}
+              </div>
             </div>
           </div>
         ))}
