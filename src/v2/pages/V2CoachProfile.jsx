@@ -9,9 +9,13 @@ import React, { useState } from 'react';
 import { Link, useParams, Navigate } from 'react-router-dom';
 import { ArrowLeft, GraduationCap, MapPin, Award, MessageCircle, Plus, Trash2 } from 'lucide-react';
 import { toast } from 'sonner';
+import { FEATURE_FLAG } from '@/core/featureFlags';
+import { useFeatureFlag } from '@/core/lib/FeatureFlagsContext';
 import { useAuth } from '@/core/lib/FirebaseAuthContext';
 import { useCoach, useCoachResidencies, useAddCoachResidency, useRemoveCoachResidency } from '@/modules/coaches/hooks/useCoaches';
 import { useArena, useMyManagedArenas } from '@/modules/arenas/hooks/useArenas';
+import { canAcceptStudents } from '@/modules/coaches/domain/coach';
+import RequestLessonDialog from '@/modules/coaches/components/RequestLessonDialog';
 import {
   V2Badge, V2Button, V2EmptyState, V2Surface, V2Skeleton,
 } from '@/v2/ui/primitives';
@@ -34,7 +38,7 @@ function ResidencyCard({ residency, canRemove, onRemove }) {
           {residency.notes && <p className="mt-1 text-xs text-gray-500">{residency.notes}</p>}
         </div>
         <div className="flex flex-col items-end gap-1">
-          {residency.status === 'paused' ? <V2Badge tone="amber">Pausado</V2Badge> : <V2Badge tone="emerald">Ativo</V2Badge>}
+          {residency.status === 'paused' ? <V2Badge tone="amber">Pausado</V2Badge> : <V2Badge tone="green">Ativo</V2Badge>}
           {canRemove && (
             <button onClick={onRemove} className="text-red-500 hover:text-red-700" aria-label="Remover residência">
               <Trash2 className="h-3.5 w-3.5" />
@@ -76,7 +80,7 @@ function AddResidencyForm({ coachId, onClose }) {
   }
 
   return (
-    <V2Surface className="border-emerald-200 bg-emerald-50/40">
+    <V2Surface className="border-green-200 bg-green-50/40">
       <h4 className="font-display text-sm font-bold text-ink">Adicionar residência</h4>
       <form onSubmit={handleSubmit} className="mt-2 space-y-2">
         <select value={arenaId} onChange={(e) => setArenaId(e.target.value)} className="w-full rounded-2xl border border-gray-200 bg-paper px-3 py-2 text-sm" required>
@@ -105,16 +109,19 @@ export default function V2CoachProfile() {
   const { data: residencies = [] } = useCoachResidencies(coachId);
   const remove = useRemoveCoachResidency();
   const [adding, setAdding] = useState(false);
+  const [requesting, setRequesting] = useState(false);
+  const lessonsOn = useFeatureFlag(FEATURE_FLAG.COACH_LESSONS);
 
   const isOwn = user?.uid === coachId;
   const isPlatformAdmin = user?.isPlatformAdmin;
+  const canRequestLesson = lessonsOn && !isOwn && coach && canAcceptStudents(coach);
 
   if (!isAuthenticated) return <Navigate to="/login" replace />;
   if (isLoading) return <div className="p-4"><V2Skeleton lines={6} /></div>;
   if (!coach) return (
     <div className="p-4">
       <V2EmptyState icon={GraduationCap} title="Professor não encontrado" />
-      <Link to="/coaches" className="mt-3 inline-block text-sm font-bold text-emerald-700">← Voltar ao diretório</Link>
+      <Link to="/coaches" className="mt-3 inline-block text-sm font-bold text-ink">← Voltar ao diretório</Link>
     </div>
   );
 
@@ -127,19 +134,19 @@ export default function V2CoachProfile() {
       {/* Header */}
       <V2Surface>
         <div className="flex items-start gap-3">
-          <div className="flex h-16 w-16 items-center justify-center rounded-2xl bg-gradient-to-br from-emerald-500 to-amber-500 text-2xl font-bold text-white">
+          <div className="flex h-16 w-16 items-center justify-center rounded-2xl bg-ink text-2xl font-bold text-acid">
             {coach.display_name?.[0] || '?'}
           </div>
           <div className="flex-1">
             <div className="flex items-center gap-2">
               <h1 className="font-display text-2xl font-bold text-ink">{coach.display_name}</h1>
-              {coach.accepting_students && <V2Badge tone="emerald">Aceitando alunos</V2Badge>}
+              {coach.accepting_students && <V2Badge tone="green">Aceitando alunos</V2Badge>}
               {!coach.active && <V2Badge tone="red">Inativo</V2Badge>}
             </div>
             {coach.bio && <p className="mt-2 whitespace-pre-line text-sm text-gray-600">{coach.bio}</p>}
             <div className="mt-3 flex flex-wrap gap-1.5">
               {(coach.modalities || []).map((m) => (
-                <V2Badge key={m} tone="sky">{m}</V2Badge>
+                <V2Badge key={m} tone="blue">{m}</V2Badge>
               ))}
             </div>
             {coach.regions?.length > 0 && (
@@ -148,7 +155,7 @@ export default function V2CoachProfile() {
               </div>
             )}
             {coach.hourly_rate != null && (
-              <div className="mt-2 inline-flex items-center gap-1 rounded-2xl bg-emerald-50 px-3 py-1.5 text-sm font-bold text-emerald-700">
+              <div className="mt-2 inline-flex items-center gap-1 rounded-2xl bg-green-50 px-3 py-1.5 text-sm font-bold text-green-700">
                 <Award className="h-4 w-4" /> R$ {Number(coach.hourly_rate).toFixed(2)}/h
               </div>
             )}
@@ -160,9 +167,19 @@ export default function V2CoachProfile() {
                 </div>
               </div>
             )}
-            <div className="mt-3 flex gap-2">
+            <div className="mt-3 flex flex-wrap items-center gap-2">
+              {canRequestLesson && (
+                <V2Button size="sm" onClick={() => setRequesting(true)}>
+                  <MessageCircle className="h-4 w-4" /> Solicitar aula
+                </V2Button>
+              )}
+              {isOwn && lessonsOn && (
+                <Link to="/aulas" className="text-xs font-bold text-ink hover:underline">
+                  Minha agenda de aulas →
+                </Link>
+              )}
               {isOwn && (
-                <Link to="/coaches" className="text-xs font-bold text-emerald-700 hover:underline">
+                <Link to="/coaches" className="text-xs font-bold text-ink hover:underline">
                   Editar meu perfil →
                 </Link>
               )}
@@ -195,6 +212,10 @@ export default function V2CoachProfile() {
           )}
         </div>
       </V2Surface>
+
+      {canRequestLesson && (
+        <RequestLessonDialog coach={coach} open={requesting} onOpenChange={setRequesting} />
+      )}
     </div>
   );
 }

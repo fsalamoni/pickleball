@@ -37,6 +37,7 @@ import AuthFunnelTracker from '@/modules/analytics/components/AuthFunnelTracker'
 import { useFeatureFlag } from '@/core/lib/FeatureFlagsContext';
 import { FEATURE_FLAG } from '@/core/featureFlags';
 import { useMyArenaSummary } from '@/modules/arenas/hooks/useMyArenaSummary';
+import { useCoach } from '@/modules/coaches/hooks/useCoaches';
 import { useNotifications } from '@/modules/notifications/hooks/useNotifications';
 import { getLevelByCode } from '@/modules/leveling/data/levels';
 import {
@@ -87,7 +88,7 @@ function resolvePageTitle(pathname) {
 }
 
 function useV2Nav() {
-  const { isPlatformAdmin } = useAuth();
+  const { isPlatformAdmin, user } = useAuth();
   const performanceOn = useFeatureFlag(FEATURE_FLAG.PLAYER_PERFORMANCE);
   const ratingOn = useFeatureFlag(FEATURE_FLAG.PLAYER_RATING);
   const matchmakingOn = useFeatureFlag(FEATURE_FLAG.MATCHMAKING);
@@ -98,8 +99,12 @@ function useV2Nav() {
   const arenasOn = useFeatureFlag(FEATURE_FLAG.ARENAS);
   const circuitsOn = useFeatureFlag(FEATURE_FLAG.CIRCUITS);
   const coachesOn = useFeatureFlag(FEATURE_FLAG.COACH_RESIDENT);
+  const coachLessonsOn = useFeatureFlag(FEATURE_FLAG.COACH_LESSONS);
   const { totalArenas: myArenasCount, totalPendingBookings: myPendingBookings } = useMyArenaSummary();
   const showMyArenas = arenasOn && myArenasCount > 0;
+  // Só busca o perfil de professor quando a área de aulas está ligada.
+  const { data: myCoachProfile } = useCoach(coachLessonsOn ? user?.uid : null);
+  const isCoach = coachLessonsOn && !!myCoachProfile;
   const sportHistoryOn = useFeatureFlag(FEATURE_FLAG.SPORT_HISTORY);
 
   return useMemo(() => [
@@ -140,6 +145,8 @@ function useV2Nav() {
             : undefined,
         },
         arenasOn && { to: '/minhas-reservas', label: 'Minhas reservas', icon: Building2 },
+        isCoach && { to: '/aulas', label: 'Ensino', icon: GraduationCap },
+        coachLessonsOn && { to: '/minhas-aulas', label: 'Minhas aulas', icon: GraduationCap },
         { to: '/perfil', label: 'Meu Perfil', icon: User },
       ].filter(Boolean),
     },
@@ -160,7 +167,7 @@ function useV2Nav() {
         { to: '/politica-uso', label: 'Política de uso', icon: FileText },
       ].filter(Boolean),
     },
-  ].filter(Boolean), [performanceOn, ratingOn, matchmakingOn, openGamesOn, affiliatesOn, communityFeedOn, arenasOn, sportHistoryOn, isPlatformAdmin, adminConsoleOn, myArenasCount, myPendingBookings, showMyArenas]);
+  ].filter(Boolean), [performanceOn, ratingOn, matchmakingOn, openGamesOn, affiliatesOn, communityFeedOn, arenasOn, circuitsOn, coachesOn, coachLessonsOn, isCoach, sportHistoryOn, isPlatformAdmin, adminConsoleOn, myArenasCount, myPendingBookings, showMyArenas]);
 }
 
 function isActive(pathname, item) {

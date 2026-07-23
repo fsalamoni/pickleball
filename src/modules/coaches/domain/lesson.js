@@ -30,6 +30,7 @@ export {
   PAYMENT_STATUS,
   BOOKING_KIND as LESSON_KIND,
   canTransition,
+  isValidSlot,
 };
 
 const str = (v) => String(v ?? '').trim();
