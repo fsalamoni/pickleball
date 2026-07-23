@@ -58,7 +58,7 @@ Catálogo acionável de melhorias de usabilidade e experiência (UX/UI) para as 
 
 ## Status de implementação (neste branch)
 
-Já implementados atrás de flags (todas nascem desligadas): QW-01…QW-12 (quick wins), ONB-01 (`profile_onboarding`), NAV-01 (`mobile_bottom_nav`), NAV-02 (`nav_user_menu`), NAV-08 (`page_titles`), ORG-04 parcial (`tournament_cancel_action`), ORG-05 (`tournament_ops_dashboard`), ORG-08 (`tournament_checkin`), ATL-03 (`athlete_self_checkin`), ATL-04 (`partner_invites`), ATL-08/TRV-05 fase 1 (`payment_instructions`), ATL-23 parcial (`notifications_mark_all`), ARE-02 fase 1 (`arena_calendar`).
+Já implementados atrás de flags (todas nascem desligadas): QW-01…QW-12 (quick wins), ONB-01 (`profile_onboarding`), ONB-02 (`onboarding_wizard`), NAV-01 (`mobile_bottom_nav`), NAV-02 (`nav_user_menu`), NAV-08 (`page_titles`), ORG-04 parcial (`tournament_cancel_action`), ORG-05 (`tournament_ops_dashboard`), ORG-08 (`tournament_checkin`), ORG-09 (`tournament_announcements`), ATL-03 (`athlete_self_checkin`), ATL-04 (`partner_invites`), ATL-08/TRV-05 fase 1 (`payment_instructions`), ATL-23 parcial (`notifications_mark_all`), ARE-02 fase 1 (`arena_calendar`).
 
 ## Convenção de implementação
 
