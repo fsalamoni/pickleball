@@ -153,3 +153,36 @@ professor (Sistema A) quando necessário. Rotas novas usam `FeatureFlagGuard`
   → aluno solicita → professor confirma → aparece nas duas agendas).
 - Nada dos 3 sistemas existentes é alterado; com a flag desligada, nenhuma
   rota/menu/telas novas aparecem.
+
+## Status de implementação
+
+**Fases A, B e C concluídas** (produto núcleo completo atrás de `coach_lessons`).
+
+- **Fase A — Agenda e aula** ✓
+  - Domínio: `coaches/domain/availability.js` (janelas, exceções, geração de
+    slots livres) e `coaches/domain/lesson.js` (aula avulsa/recorrente,
+    formatos, máquina de status reusando `BOOKING_STATUS`/`canTransition`,
+    partição próximas/histórico). Testados.
+  - Serviço `services/lessonService.js` (+ `coach_availability`, `coach_lessons`),
+    hooks `hooks/useLessons.js`.
+  - UI: `V2CoachAgenda` (`/aulas`) com editor de disponibilidade + agenda;
+    `V2StudentLessons` (`/minhas-aulas`); `RequestLessonDialog` no perfil público.
+- **Fase B — Alunos** ✓
+  - Domínio `coaches/domain/student.js` (vínculo, status com guarda, tags,
+    ficha, filtros/resumo). Testado. Serviço `studentService.js`
+    (`coach_students`), hooks `useStudents.js`, `CoachStudentsSection`
+    (adicionar do histórico, editar ficha, pausar/reativar, remover).
+- **Fase C — Pacotes e financeiro** ✓
+  - Domínio `coaches/domain/package.js` (créditos, validade, receita, CSV).
+    Testado. Serviço `packageService.js` (`coach_packages`,
+    `coach_package_sales`; débito best-effort ao concluir aula), hooks
+    `usePackages.js`, `CoachPackagesSection` (financeiro, ofertar/vender,
+    créditos, export CSV) e saldo do aluno em `V2StudentLessons`.
+
+Regras Firestore aditivas para as 5 coleções novas. Nav (`V2Layout`): "Ensino"
+(professor) e "Minhas aulas" (aluno), gated por `coach_lessons`.
+
+**Fase D — Diferenciação (PRO-16/17/18): pendente/opcional.** Clínicas como
+eventos inscritíveis, nivelamento validado por professor (integra `leveling`) e
+biblioteca de conteúdo. Cada uma pode ganhar sub-flag própria e ser construída
+sobre o núcleo já entregue.
