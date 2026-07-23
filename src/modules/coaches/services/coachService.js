@@ -118,6 +118,26 @@ export async function removeCoachResidency(coachId, arenaId, actor) {
   });
 }
 
+/**
+ * Atualiza campos editáveis de uma residência (status active/paused e notas),
+ * preservando o restante. Autorizado para o coach, gestor da arena ou admin.
+ */
+export async function updateCoachResidency(coachId, arenaId, patch = {}, actor) {
+  const isAuthorized = await isResidencyAuthorized(coachId, arenaId, actor);
+  if (!isAuthorized) {
+    throw new Error('Sem permissão para editar essa residência.');
+  }
+  const update = { updated_at: serverTimestamp() };
+  if (patch.status !== undefined) update.status = patch.status === 'paused' ? 'paused' : 'active';
+  if (patch.notes !== undefined) update.notes = str(patch.notes).slice(0, 500);
+  await updateDoc(doc(db, COACH_COLLECTIONS.residencies, residencyId(coachId, arenaId)), update);
+  await createAuditLog({
+    action: 'coach_residency_updated',
+    actor,
+    details: { coach_id: coachId, arena_id: arenaId, status: update.status },
+  });
+}
+
 async function isResidencyAuthorized(coachId, arenaId, actor) {
   if (!actor?.uid) return false;
   if (actor.isPlatformAdmin) return true;

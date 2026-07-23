@@ -5,7 +5,7 @@ import { collection, getDocs, query, where } from 'firebase/firestore';
 import {
   ArrowLeft, Building2, Settings, Trash2, UserPlus, Users,
   BarChart3, CalendarClock, CalendarDays, CalendarRange, Wallet, ClipboardList,
-  Package, LayoutGrid, DollarSign, Image, Info, Star,
+  Package, LayoutGrid, DollarSign, Image, Info, Star, GraduationCap,
 } from 'lucide-react';
 import V2CourtsTab from '@/v2/components/arenas/V2CourtsTab';
 import V2ArenaCalendar from '@/v2/components/arenas/V2ArenaCalendar';
@@ -17,6 +17,7 @@ import V2ArenaMercadoTab from '@/v2/components/arenas/V2ArenaMercadoTab';
 import FeatureFlagGuard from '@/v2/components/FeatureFlagGuard';
 import { db } from '@/core/config/firebase';
 import { FEATURE_FLAG } from '@/core/featureFlags';
+import { useFeatureFlag } from '@/core/lib/FeatureFlagsContext';
 import { useAuth } from '@/core/lib/FirebaseAuthContext';
 import { ImageUpload } from '@/components/ui/image-upload';
 import { PhotoLightbox } from '@/components/ui/photo-lightbox';
@@ -84,6 +85,8 @@ function V2ArenaManageContent({ arenaId, user, isPlatformAdmin, arena, managed, 
       el?.scrollIntoView({ behavior: 'smooth', block: 'start' });
     });
   }, [location.hash]);
+
+  const coachResidentOn = useFeatureFlag(FEATURE_FLAG.COACH_RESIDENT);
 
   if (isLoading) return <div className="mx-auto max-w-[1000px] space-y-4"><V2Skeleton className="h-40 rounded-4xl" /><V2Skeleton className="h-64 rounded-4xl" /></div>;
   if (!arena) {
@@ -165,6 +168,11 @@ function V2ArenaManageContent({ arenaId, user, isPlatformAdmin, arena, managed, 
           <V2Button asChild variant="secondary" size="sm">
             <Link to={`/arenas/${arena.id}/gerir/membros`}>Membros</Link>
           </V2Button>
+          {coachResidentOn && (
+            <V2Button asChild variant="secondary" size="sm">
+              <Link to={`/arenas/${arena.id}/gerir/professores`}><GraduationCap className="h-4 w-4" /> Professores</Link>
+            </V2Button>
+          )}
         </div>
       </div>
 

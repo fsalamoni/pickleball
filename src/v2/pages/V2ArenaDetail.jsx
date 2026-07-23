@@ -7,6 +7,7 @@ import {
 } from 'lucide-react';
 import { PhotoLightbox } from '@/components/ui/photo-lightbox';
 import { FEATURE_FLAG } from '@/core/featureFlags';
+import { useFeatureFlag } from '@/core/lib/FeatureFlagsContext';
 import { useAuth } from '@/core/lib/FirebaseAuthContext';
 import V2ChatLauncherButton from '@/v2/components/chat/V2ChatLauncherButton';
 import FeatureFlagGuard from '@/v2/components/FeatureFlagGuard';
@@ -313,14 +314,17 @@ function ArenaTournamentsSection({ arenaId }) {
 }
 
 function ArenaCoachesSection({ arenaId }) {
+  const coachResidentOn = useFeatureFlag(FEATURE_FLAG.COACH_RESIDENT);
   const { data: coaches = [], isLoading } = useArenaCoaches(arenaId);
+  if (!coachResidentOn) return null;
   if (isLoading) return null;
   if (coaches.length === 0) return null;
   return (
     <V2Surface className="mt-6">
       <h3 className="flex items-center gap-1.5 font-display text-base font-bold text-ink">
-        <GraduationCap className="h-4 w-4" /> Professores residentes
+        <GraduationCap className="h-4 w-4" /> Professores parceiros
       </h3>
+      <p className="mt-1 text-sm text-gray-500">Profissionais que dão aula nesta arena. Toque para ver o perfil.</p>
       <div className="mt-3 grid gap-3 sm:grid-cols-2">
         {coaches.slice(0, 6).map((c) => (
           <Link key={c.id} to={`/coaches/${c.id}`} className="flex items-center gap-3 rounded-2xl border border-gray-100 bg-paper p-3 transition-transform hover:scale-[1.02]">
