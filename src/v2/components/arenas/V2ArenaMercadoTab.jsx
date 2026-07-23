@@ -27,6 +27,7 @@ import {
   calculateStock, calculateMargin, filterProductsByCategory, searchProducts,
 } from '@/modules/arenas/domain/inventory';
 import { formatPrice } from '@/modules/arenas/domain/pricing';
+import ConfirmDialog from '@/components/ConfirmDialog';
 import { cn } from '@/core/lib/utils';
 import {
   V2Badge, V2Button, V2Field, V2Input, V2Select, V2Surface, V2Textarea, V2EmptyState, V2Skeleton,
@@ -104,7 +105,6 @@ function ProductsSection({ arenaId }) {
   }
 
   async function handleDelete(p) {
-    if (!confirm(`Remover "${p.name}"?`)) return;
     try {
       await remove.mutateAsync(p.id);
       toast.success('Produto removido.');
@@ -182,9 +182,17 @@ function ProductsSection({ arenaId }) {
               <button onClick={() => handleToggleActive(p)} className="text-xs text-gray-500 hover:text-ink">
                 {p.active ? 'Desativar' : 'Ativar'}
               </button>
-              <button onClick={() => handleDelete(p)} className="text-red-500 hover:text-red-700">
-                <Trash2 className="h-4 w-4" />
-              </button>
+              <ConfirmDialog
+                title="Remover produto?"
+                description={`"${p.name}" será removido do catálogo. As entradas e saídas já registradas são preservadas.`}
+                confirmLabel="Remover"
+                onConfirm={() => handleDelete(p)}
+                trigger={(
+                  <button type="button" className="text-red-500 hover:text-red-700" aria-label={`Remover ${p.name}`}>
+                    <Trash2 className="h-4 w-4" />
+                  </button>
+                )}
+              />
             </div>
           ))
         )}
