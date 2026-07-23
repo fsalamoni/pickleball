@@ -1040,6 +1040,27 @@ service cloud.firestore {
         isPlatformAdmin()
       );
     }
+    // coach_students/{coachId_studentId} — vínculo aluno↔professor.
+    // Lê o professor e o aluno. Cria/edita/remove o professor; o aluno pode
+    // atualizar (aceitar o convite mudando o próprio status).
+    match /coach_students/{linkId} {
+      allow read: if isAuthed() && (
+        request.auth.uid == resource.data.coach_id ||
+        request.auth.uid == resource.data.student_id ||
+        isPlatformAdmin()
+      );
+      allow create: if isAuthed() && (
+        request.auth.uid == request.resource.data.coach_id || isPlatformAdmin()
+      );
+      allow update: if isAuthed() && (
+        request.auth.uid == resource.data.coach_id ||
+        request.auth.uid == resource.data.student_id ||
+        isPlatformAdmin()
+      );
+      allow delete: if isAuthed() && (
+        request.auth.uid == resource.data.coach_id || isPlatformAdmin()
+      );
+    }
 
 
     // ---- Sprint 5: Inventory / Mercado ----
