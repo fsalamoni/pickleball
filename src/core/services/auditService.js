@@ -15,6 +15,7 @@ export const AUDIT_ACTION_LABELS = {
   registration_created: 'Inscrição realizada',
   registration_updated: 'Inscrição atualizada',
   provisional_registrations_claimed: 'Inscrições provisórias vinculadas',
+  provisional_registrations_migrated: 'Dados provisórios migrados para conta definitiva',
   registration_deleted: 'Inscrição removida',
   matches_generated: 'Jogos gerados (sorteio)',
   match_result_recorded: 'Resultado lançado',

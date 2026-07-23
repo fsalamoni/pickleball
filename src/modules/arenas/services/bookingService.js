@@ -24,6 +24,9 @@ import { createAuditLog } from '@/core/services/auditService';
 import { notifyUsers, NOTIFICATION_TYPE } from '@/core/services/notificationService';
 import { ARENA_COLLECTIONS, BOOKING_STATUS, BOOKING_KIND, PAYMENT_STATUS, BOOKING_STATUS_LABELS } from '../domain/constants.js';
 import { expandRecurring, isValidSlot, canTransition, weekdayOf, hasConflictWithConfirmed } from '../domain/booking.js';
+import { validateBookingRequest } from '../domain/booking_conflict.js';
+import { canBeInstantBooking, getInitialBookingStatus } from '../domain/instant_booking.js';
+import { listArenaCourtSchedules, listCourtSchedules } from './arenaService.js';
 import { listArenaManagerIds } from './arenaService.js';
 
 const COL = ARENA_COLLECTIONS;
@@ -67,10 +70,56 @@ export async function createBooking(arena, user, profile, input) {
   }
 
   const existingBookings = await listArenaBookings(arena.id);
-  if (hasConflictWithConfirmed(slots, existingBookings)) {
+  // Validação ARE-07: usa validateBookingRequest que considera schedules,
+  // court_id e status ativos (não só CONFIRMED). Erros vêm com reason
+  // específico pra UI renderizar mensagem apropriada.
+  if (kind === BOOKING_KIND.SINGLE && slots.length === 1) {
+    const courtId = str(input.court_id);
+    // Carrega schedules da quadra se informada, senão da arena toda
+    let courtSchedules = [];
+    try {
+      courtSchedules = courtId
+        ? await listCourtSchedules(courtId)
+        : await listArenaCourtSchedules(arena.id);
+    } catch (err) {
+      // Não bloquear se falhar leitura de schedules (degrada gracefully)
+      courtSchedules = [];
+    }
+    const v = validateBookingRequest({
+      date: slots[0].date,
+      start_time: slots[0].start,
+      end_time: slots[0].end,
+      court_id: courtId || null,
+      existingBookings,
+      court_schedules: courtSchedules,
+    });
+    if (!v.ok) throw new Error(v.message);
+
+    // ARE-03: validação específica de reserva instantânea
+    const isInstant = input.is_instant === true;
+    if (isInstant) {
+      const instant = canBeInstantBooking(
+        {
+          date: slots[0].date,
+          start_time: slots[0].start,
+          end_time: slots[0].end,
+          court_id: courtId || null,
+          proposed_price: input.proposed_price,
+          payment_method: input.payment_method,
+        },
+        arena,
+        existingBookings,
+        courtSchedules,
+      );
+      if (!instant.ok) throw new Error(instant.message);
+    }
+  } else if (hasConflictWithConfirmed(slots, existingBookings)) {
+    // Recorrente ou edge case: fallback no validador legado
     throw new Error('Já existe uma reserva confirmada nesse horário. Escolha outro período.');
   }
 
+  const isInstant = input.is_instant === true;
+  const initialStatus = getInitialBookingStatus(isInstant);
   const id = doc(collection(db, COL.bookings)).id;
   const payload = {
     id,
@@ -83,7 +132,9 @@ export async function createBooking(arena, user, profile, input) {
     slots,
     recurrence,
     notes: str(input.notes).slice(0, 600),
-    status: BOOKING_STATUS.REQUESTED,
+    status: initialStatus,
+    is_instant: isInstant,
+    payment_method: str(input.payment_method) || null,
     proposed_price: num(input.proposed_price),
     agreed_price: null,
     payment_status: PAYMENT_STATUS.NONE,

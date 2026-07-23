@@ -26,6 +26,14 @@ describe('normalizePriceRule', () => {
   it('rejeita sem dias', () => {
     expect(normalizePriceRule({ weekdays: [], start: '08:00', end: '09:00', price: 10 }).valid).toBe(false);
   });
+  it('preserva court_id quando informado (ARE-05)', () => {
+    const { value } = normalizePriceRule({ weekdays: [1], start: '08:00', end: '12:00', price: 80, court_id: 'c1' });
+    expect(value.court_id).toBe('c1');
+  });
+  it('court_id null quando vazio', () => {
+    const { value } = normalizePriceRule({ weekdays: [1], start: '08:00', end: '12:00', price: 80 });
+    expect(value.court_id).toBeNull();
+  });
 });
 
 describe('normalizePriceOverride', () => {
@@ -81,6 +89,46 @@ describe('resolveArenaPrice', () => {
     const r = resolveArenaPrice({}, { date: '2026-06-06', weekday: 6, time: '09:00' });
     expect(r.source).toBe('none');
     expect(r.price).toBeNull();
+  });
+  // ARE-05: court_id
+  it('ARE-05: usa regra com court_id matching quando slot tem courtId', () => {
+    const a = {
+      base_price: 80,
+      price_rules: [
+        { weekdays: [1], start: '08:00', end: '22:00', price: 100, label: 'Todas' },
+        { weekdays: [1], start: '08:00', end: '22:00', price: 150, court_id: 'c1', label: 'Coberta' },
+      ],
+    };
+    const r1 = resolveArenaPrice(a, { weekday: 1, time: '10:00', courtId: 'c1' });
+    expect(r1.price).toBe(150);
+    expect(r1.label).toBe('Coberta');
+    const r2 = resolveArenaPrice(a, { weekday: 1, time: '10:00', courtId: 'c2' });
+    expect(r2.price).toBe(100);
+    expect(r2.label).toBe('Todas');
+  });
+  it('ARE-05: sem courtId no slot, usa regra sem court_id', () => {
+    const a = {
+      base_price: 80,
+      price_rules: [
+        { weekdays: [1], start: '08:00', end: '22:00', price: 100, label: 'Todas' },
+        { weekdays: [1], start: '08:00', end: '22:00', price: 150, court_id: 'c1', label: 'Coberta' },
+      ],
+    };
+    const r = resolveArenaPrice(a, { weekday: 1, time: '10:00' });
+    expect(r.price).toBe(100);
+  });
+  it('ARE-05: override com court_id tem prioridade sobre sem court_id', () => {
+    const a = {
+      base_price: 80,
+      price_overrides: [
+        { date: '2026-12-25', price: 0, label: 'Natal (todas)' },
+        { date: '2026-12-25', court_id: 'c1', price: 200, label: 'Natal coberta' },
+      ],
+    };
+    const r1 = resolveArenaPrice(a, { date: '2026-12-25', weekday: 5, time: '10:00', courtId: 'c1' });
+    expect(r1.price).toBe(200);
+    const r2 = resolveArenaPrice(a, { date: '2026-12-25', weekday: 5, time: '10:00', courtId: 'c2' });
+    expect(r2.price).toBe(0);
   });
 });
 

@@ -18,19 +18,78 @@ import { BOOKING_KIND, BOOKING_STATUS, WEEKDAY_LABELS } from '../domain/constant
 import { resolveArenaPrice, formatPrice } from '../domain/pricing.js';
 import { bookingSlots, expandRecurring, hasConflictWithConfirmed, isValidSlot, sortSlots, weekdayOf } from '../domain/booking.js';
 import { useArenaBookings, useCreateBooking } from '../hooks/useBookings.js';
+import { useArenaCourts, useCourtSchedules } from '../hooks/useArenas.js';
+import { validateBookingRequest, getCourtAvailabilityForDate, BLOCKING_STATUSES } from '../domain/booking_conflict.js';
+import { normalizeTime } from '../domain/court_schedule.js';
+import { canBeInstantBooking, arenaSupportsInstant, INSTANT_BOOKING_LABELS } from '../domain/instant_booking.js';
+import { PAYMENT_METHOD } from '../domain/pdv.js';
 
 function slotLabel(slot) {
   return `${slot.date} · ${slot.start}–${slot.end}`;
 }
 
-export default function BookingRequestDialog({ arena, open, onOpenChange }) {
+export default function BookingRequestDialog({ arena, open, onOpenChange, court: initialCourt, preselectedSlots = [], onClose }) {
+  // Compat: se open prop não for passado, usar onClose como fallback
+  const _open = open !== undefined ? open : true;
+  const _onOpenChange = onOpenChange || onClose || (() => {});
   const { user } = useAuth();
   const createBooking = useCreateBooking();
   const { data: existingBookings = [] } = useArenaBookings(arena.id);
-  const [kind, setKind] = useState(BOOKING_KIND.SINGLE);
-  const [single, setSingle] = useState({ date: '', start: '18:00', end: '19:00' });
+  const { data: courts = [] } = useArenaCourts(arena.id);
+  const activeCourts = useMemo(() => courts.filter((c) => c.is_active !== false), [courts]);
+  const [courtId, setCourtId] = useState(initialCourt?.id || '');
+  const [kind, setKind] = useState(preselectedSlots.length > 0 ? 'multi' : BOOKING_KIND.SINGLE);
+  // Se veio do calendário, pode ter múltiplos slots
+  const initialMultiSlots = preselectedSlots.length > 0 ? preselectedSlots : [];
+  const firstSlot = preselectedSlots[0] || { date: '', start: '18:00', end: '19:00' };
+  const [single, setSingle] = useState({ date: firstSlot.date, start: firstSlot.start, end: firstSlot.end });
+  const [multiSlots, setMultiSlots] = useState(initialMultiSlots);
   const [recurring, setRecurring] = useState({ weekday: 1, start: '18:00', end: '19:00', weeks: 8, fromDate: '' });
   const [notes, setNotes] = useState('');
+  const [isInstant, setIsInstant] = useState(false);
+  const [paymentMethod, setPaymentMethod] = useState(PAYMENT_METHOD.PIX);
+
+  // Arena permite instant?
+  const supportsInstant = arenaSupportsInstant(arena);
+
+  // Reset courtId quando dialog abre/fecha
+  React.useEffect(() => {
+    if (open) setCourtId('');
+  }, [open]);
+
+  // Carrega schedules da quadra selecionada (ou todas se sem quadra)
+  const { data: courtSchedulesData } = useCourtSchedules(courtId);
+  const courtSchedules = useMemo(() => {
+    if (!courtId) return [];
+    return courtSchedulesData?.list || [];
+  }, [courtId, courtSchedulesData]);
+
+  // Validação em tempo real do slot (apenas SINGLE)
+  const singleValidation = useMemo(() => {
+    if (kind !== BOOKING_KIND.SINGLE) return { ok: true };
+    if (!single.date || !normalizeTime(single.start) || !normalizeTime(single.end)) {
+      return { ok: false, reason: 'incomplete', message: 'Preencha data e horários.' };
+    }
+    return validateBookingRequest({
+      date: single.date,
+      start_time: single.start,
+      end_time: single.end,
+      court_id: courtId || null,
+      existingBookings,
+      court_schedules: courtSchedules,
+    });
+  }, [kind, single, courtId, courtSchedules, existingBookings]);
+
+  // Disponibilidade do dia (apenas SINGLE com data)
+  const dayAvailability = useMemo(() => {
+    if (kind !== BOOKING_KIND.SINGLE || !single.date || !courtId) return null;
+    return getCourtAvailabilityForDate({
+      date: single.date,
+      court_schedules: courtSchedules,
+      existingBookings,
+      duration: 60,
+    });
+  }, [kind, single.date, courtId, courtSchedules, existingBookings]);
 
   const estimate = useMemo(() => {
     if (kind === BOOKING_KIND.SINGLE) {
@@ -41,6 +100,9 @@ export default function BookingRequestDialog({ arena, open, onOpenChange }) {
   }, [kind, single, recurring, arena, user?.uid]);
 
   const candidateSlots = useMemo(() => {
+    if (kind === 'multi' || (multiSlots && multiSlots.length > 0)) {
+      return sortSlots(multiSlots);
+    }
     if (kind === BOOKING_KIND.SINGLE) {
       const slot = { date: single.date, start: single.start, end: single.end };
       return isValidSlot(slot) ? [slot] : [];
@@ -52,7 +114,7 @@ export default function BookingRequestDialog({ arena, open, onOpenChange }) {
       weeks: recurring.weeks,
       fromDate: recurring.fromDate,
     }));
-  }, [kind, single, recurring]);
+  }, [kind, single, recurring, multiSlots]);
 
   const confirmedBookings = useMemo(
     () => existingBookings.filter((booking) => booking.status === BOOKING_STATUS.CONFIRMED),
@@ -71,15 +133,47 @@ export default function BookingRequestDialog({ arena, open, onOpenChange }) {
 
   async function handleSubmit() {
     try {
+      if (kind === BOOKING_KIND.SINGLE && !singleValidation.ok) {
+        toast.error(singleValidation.message);
+        return;
+      }
+      if (isInstant && kind === BOOKING_KIND.SINGLE) {
+        const instant = canBeInstantBooking(
+          {
+            date: single.date,
+            start_time: single.start,
+            end_time: single.end,
+            court_id: courtId || null,
+            proposed_price: estimate?.price ?? null,
+            payment_method: paymentMethod,
+          },
+          arena,
+          existingBookings,
+          courtSchedules,
+        );
+        if (!instant.ok) {
+          toast.error(instant.message);
+          return;
+        }
+      }
       if (hasConflict) {
         toast.error('Há conflito com uma reserva já confirmada. Escolha outro horário.');
         return;
       }
       const input = kind === BOOKING_KIND.SINGLE
-        ? { kind, ...single, notes, proposed_price: estimate?.price ?? null }
-        : { kind, recurring, notes, proposed_price: estimate?.price ?? null };
+        ? {
+            kind, ...single, court_id: courtId || null, notes,
+            is_instant: isInstant,
+            payment_method: isInstant ? paymentMethod : null,
+            proposed_price: estimate?.price ?? null,
+          }
+        : { kind, recurring, court_id: courtId || null, notes, proposed_price: estimate?.price ?? null };
       await createBooking.mutateAsync({ arena, input });
-      toast.success('Solicitação enviada! A arena vai responder em breve.');
+      toast.success(
+        isInstant
+          ? 'Reserva instantânea confirmada! Compareça no horário marcado.'
+          : 'Solicitação enviada! A arena vai responder em breve.',
+      );
       onOpenChange(false);
     } catch (err) {
       toast.error(err?.message || 'Não foi possível solicitar a reserva.');
@@ -87,7 +181,7 @@ export default function BookingRequestDialog({ arena, open, onOpenChange }) {
   }
 
   return (
-    <Dialog open={open} onOpenChange={onOpenChange}>
+    <Dialog open={_open} onOpenChange={_onOpenChange}>
       <DialogContent className="max-w-lg">
         <DialogHeader>
           <DialogTitle>Reservar em {arena.name}</DialogTitle>
@@ -114,19 +208,92 @@ export default function BookingRequestDialog({ arena, open, onOpenChange }) {
             ))}
           </div>
 
+          {kind === BOOKING_KIND.SINGLE && supportsInstant && (
+            <div className="space-y-2">
+              <Label className="text-xs">{INSTANT_BOOKING_LABELS.TITLE}</Label>
+              <div className="grid grid-cols-1 gap-2 sm:grid-cols-2">
+                <button
+                  type="button"
+                  onClick={() => setIsInstant(false)}
+                  className={cn(
+                    'rounded-2xl border p-3 text-left transition-colors',
+                    !isInstant ? 'border-ink bg-ink text-white' : 'border-gray-200 bg-paper hover:border-gray-300',
+                  )}
+                >
+                  <div className="text-sm font-bold">{INSTANT_BOOKING_LABELS.REQUEST.title}</div>
+                  <div className={cn('mt-1 text-xs', !isInstant ? 'text-white/80' : 'text-gray-500')}>
+                    {INSTANT_BOOKING_LABELS.REQUEST.description}
+                  </div>
+                </button>
+                <button
+                  type="button"
+                  onClick={() => setIsInstant(true)}
+                  className={cn(
+                    'rounded-2xl border p-3 text-left transition-colors',
+                    isInstant ? 'border-emerald-500 bg-emerald-500 text-white' : 'border-gray-200 bg-paper hover:border-emerald-300',
+                  )}
+                >
+                  <div className="text-sm font-bold">⚡ {INSTANT_BOOKING_LABELS.INSTANT.title}</div>
+                  <div className={cn('mt-1 text-xs', isInstant ? 'text-white/90' : 'text-gray-500')}>
+                    {INSTANT_BOOKING_LABELS.INSTANT.description}
+                  </div>
+                </button>
+              </div>
+              {isInstant && (
+                <div className="space-y-1">
+                  <Label className="text-xs">Forma de pagamento</Label>
+                  <select
+                    value={paymentMethod}
+                    onChange={(e) => setPaymentMethod(e.target.value)}
+                    className="h-10 w-full rounded-md border border-input bg-background px-3 text-sm"
+                  >
+                    {Object.entries({
+                      pix: 'PIX (QR/código)',
+                      credit_card: 'Cartão de crédito',
+                      debit_card: 'Cartão de débito',
+                      cash: 'Dinheiro (na arena)',
+                    }).map(([v, l]) => (
+                      <option key={v} value={v}>{l}</option>
+                    ))}
+                  </select>
+                  <p className="text-[10px] text-gray-400">
+                    Pagamento é registrado mas a confirmação na arena é manual (PIX por QR/código ou dinheiro na hora).
+                  </p>
+                </div>
+              )}
+            </div>
+          )}
+
           {kind === BOOKING_KIND.SINGLE ? (
-            <div className="grid grid-cols-3 gap-2">
-              <div className="col-span-3 sm:col-span-1">
-                <Label className="text-xs">Data</Label>
-                <Input type="date" value={single.date} onChange={(e) => setSingle((s) => ({ ...s, date: e.target.value }))} />
-              </div>
-              <div>
-                <Label className="text-xs">Início</Label>
-                <Input type="time" value={single.start} onChange={(e) => setSingle((s) => ({ ...s, start: e.target.value }))} />
-              </div>
-              <div>
-                <Label className="text-xs">Fim</Label>
-                <Input type="time" value={single.end} onChange={(e) => setSingle((s) => ({ ...s, end: e.target.value }))} />
+            <div className="space-y-2">
+              {activeCourts.length > 0 && (
+                <div>
+                  <Label className="text-xs">Quadra</Label>
+                  <select
+                    value={courtId}
+                    onChange={(e) => setCourtId(e.target.value)}
+                    className="h-10 w-full rounded-md border border-input bg-background px-3 text-sm"
+                  >
+                    <option value="">Qualquer uma (sem quadra específica)</option>
+                    {activeCourts.map((c) => (
+                      <option key={c.id} value={c.id}>{c.name}</option>
+                    ))}
+                  </select>
+                </div>
+              )}
+              <div className="grid grid-cols-3 gap-2">
+                <div className="col-span-3 sm:col-span-1">
+                  <Label className="text-xs">Data</Label>
+                  <Input type="date" value={single.date} onChange={(e) => setSingle((s) => ({ ...s, date: e.target.value }))} />
+                </div>
+                <div>
+                  <Label className="text-xs">Início</Label>
+                  <Input type="time" value={single.start} onChange={(e) => setSingle((s) => ({ ...s, start: e.target.value }))} />
+                </div>
+                <div>
+                  <Label className="text-xs">Fim</Label>
+                  <Input type="time" value={single.end} onChange={(e) => setSingle((s) => ({ ...s, end: e.target.value }))} />
+                </div>
               </div>
             </div>
           ) : (
@@ -196,6 +363,40 @@ export default function BookingRequestDialog({ arena, open, onOpenChange }) {
             </PlatformNotice>
           )}
 
+          {kind === BOOKING_KIND.SINGLE && !singleValidation.ok && singleValidation.message && (
+            <PlatformNotice className="border-rose-300 bg-rose-50/85 text-rose-950">
+              {singleValidation.message}
+            </PlatformNotice>
+          )}
+
+          {kind === BOOKING_KIND.SINGLE && dayAvailability && dayAvailability.free.length > 0 && courtId && (
+            <div className="rounded-[1rem] border border-emerald-100 bg-emerald-50/60 p-3">
+              <div className="text-xs font-semibold uppercase tracking-[0.16em] text-emerald-700">
+                Horários livres na data ({dayAvailability.free.length} janela(s) com 60+ min)
+              </div>
+              <div className="mt-2 flex flex-wrap gap-2">
+                {dayAvailability.free.slice(0, 8).map((slot, i) => (
+                  <button
+                    type="button"
+                    key={`free_${i}`}
+                    onClick={() => {
+                      // Sugere 1h dentro da primeira janela livre
+                      const start = slot.start;
+                      const startMin = Number(start.split(':')[0]) * 60 + Number(start.split(':')[1]);
+                      const endMin = Math.min(startMin + 60, Number(slot.end.split(':')[0]) * 60 + Number(slot.end.split(':')[1]));
+                      const endH = String(Math.floor(endMin / 60)).padStart(2, '0');
+                      const endM = String(endMin % 60).padStart(2, '0');
+                      setSingle((s) => ({ ...s, start, end: `${endH}:${endM}` }));
+                    }}
+                    className="rounded-full border border-emerald-200 bg-white px-3 py-1 text-xs font-semibold text-emerald-800 hover:bg-emerald-100"
+                  >
+                    {slot.start}–{slot.end}
+                  </button>
+                ))}
+              </div>
+            </div>
+          )}
+
           {upcomingConfirmedSlots.length > 0 && (
             <div className="rounded-[1rem] border border-gray-100 bg-paper p-3">
               <div className="text-xs font-semibold uppercase tracking-[0.16em] text-gray-400">Próximos horários já confirmados</div>
@@ -219,7 +420,7 @@ export default function BookingRequestDialog({ arena, open, onOpenChange }) {
 
         <DialogFooter>
           <Button variant="outline" onClick={() => onOpenChange(false)}>Cancelar</Button>
-          <Button onClick={handleSubmit} disabled={createBooking.isPending || hasConflict || candidateSlots.length === 0}>
+          <Button onClick={handleSubmit} disabled={createBooking.isPending || hasConflict || candidateSlots.length === 0 || (kind === BOOKING_KIND.SINGLE && !singleValidation.ok)}>
             {createBooking.isPending ? 'Enviando…' : 'Solicitar reserva'}
           </Button>
         </DialogFooter>

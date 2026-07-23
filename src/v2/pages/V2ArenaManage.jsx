@@ -1,10 +1,17 @@
-import React, { useMemo, useState } from 'react';
-import { Link, Navigate, useParams } from 'react-router-dom';
+import React, { useEffect, useMemo, useState } from 'react';
+import { Link, Navigate, useLocation, useParams } from 'react-router-dom';
 import { toast } from 'sonner';
 import { collection, getDocs, query, where } from 'firebase/firestore';
-import { ArrowLeft, Building2, Trash2, UserPlus, Users } from 'lucide-react';
+import { ArrowLeft, Building2, Settings, Trash2, UserPlus, Users } from 'lucide-react';
+import V2CourtsTab from '@/v2/components/arenas/V2CourtsTab';
+import V2ArenaCalendar from '@/v2/components/arenas/V2ArenaCalendar';
+import V2ArenaMetrics from '@/v2/components/arenas/V2ArenaMetrics';
+import V2AdminBookingCalendar from '@/v2/components/arenas/V2AdminBookingCalendar';
+import V2ArenaPaymentTab from '@/v2/components/arenas/V2ArenaPaymentTab';
+import V2ArenaRulesTab from '@/v2/components/arenas/V2ArenaRulesTab';
+import V2ArenaMercadoTab from '@/v2/components/arenas/V2ArenaMercadoTab';
+import FeatureFlagGuard from '@/v2/components/FeatureFlagGuard';
 import { db } from '@/core/config/firebase';
-import { useFeatureFlag } from '@/core/lib/FeatureFlagsContext';
 import { FEATURE_FLAG } from '@/core/featureFlags';
 import { useAuth } from '@/core/lib/FirebaseAuthContext';
 import { ImageUpload } from '@/components/ui/image-upload';
@@ -12,7 +19,6 @@ import { PhotoLightbox } from '@/components/ui/photo-lightbox';
 import ConfirmDialog from '@/components/ConfirmDialog';
 import { V2ProfileFields, V2PricingEditor } from '@/v2/components/arenas/V2ArenaEditors';
 import V2ArenaReviews from '@/v2/components/arenas/V2ArenaReviews';
-import V2ArenaWeekAgenda from '@/v2/components/arenas/V2ArenaWeekAgenda';
 import V2BookingRow from '@/v2/components/arenas/V2BookingRow';
 import { sortBookings } from '@/modules/arenas/domain/booking';
 import { ARENA_MANAGER_ROLE, BOOKING_STATUS } from '@/modules/arenas/domain/constants';
@@ -25,16 +31,56 @@ import { V2Badge, V2Button, V2Field, V2Input, V2Skeleton, V2Surface } from '@/v2
 import { cn } from '@/core/lib/utils';
 
 export default function V2ArenaManage() {
-  const enabled = useFeatureFlag(FEATURE_FLAG.ARENAS);
-  const calendarOn = useFeatureFlag(FEATURE_FLAG.ARENA_CALENDAR);
   const { arenaId } = useParams();
   const { user, isPlatformAdmin } = useAuth();
   const { data: arena, isLoading } = useArena(arenaId);
   const { data: managed = [] } = useMyManagedArenas();
   const deleteArena = useDeleteArena();
+  const location = useLocation();
   const [tab, setTab] = useState('reservas');
 
-  if (!enabled) return <Navigate to="/" replace />;
+  return (
+    <FeatureFlagGuard
+      flag={FEATURE_FLAG.ARENAS}
+      label="Arenas"
+      description="O painel de gestão de arenas fica disponível quando a flag Arenas está ligada."
+    >
+      <V2ArenaManageContent
+        arenaId={arenaId}
+        user={user}
+        isPlatformAdmin={isPlatformAdmin}
+        arena={arena}
+        managed={managed}
+        isLoading={isLoading}
+        deleteArena={deleteArena}
+        location={location}
+        tab={tab}
+        setTab={setTab}
+      />
+    </FeatureFlagGuard>
+  );
+}
+
+function V2ArenaManageContent({ arenaId, user, isPlatformAdmin, arena, managed, isLoading, deleteArena, location, tab, setTab }) {
+
+  // Sprint 0.1 (â€ncora pro stepper de onboarding): ao montar, lê o hash
+  // (#fotos / #precos / #horarios) e troca a tab + scroll até a seÃ§Ã£o.
+  // Cada panel abaixo tem um `id` correspondente, e #horarios aponta para
+  // a tab 'info' (que é onde fica o campo hours) e rola até o campo.
+  useEffect(() => {
+    const hash = location.hash?.replace('#', '').toLowerCase();
+    if (!hash) return;
+    const target = hash === 'horarios' ? 'info' : hash;
+    const valid = ['reservas', 'precos', 'fotos', 'info', 'admins', 'retornos'].includes(target);
+    if (!valid) return;
+    setTab(target);
+    // Espera o próximo frame pra garantir que o panel está montado
+    requestAnimationFrame(() => {
+      const el = document.getElementById(`arena-manage-${hash}`);
+      el?.scrollIntoView({ behavior: 'smooth', block: 'start' });
+    });
+  }, [location.hash]);
+
   if (isLoading) return <div className="mx-auto max-w-[1000px] space-y-4"><V2Skeleton className="h-40 rounded-4xl" /><V2Skeleton className="h-64 rounded-4xl" /></div>;
   if (!arena) {
     return (
@@ -52,14 +98,27 @@ export default function V2ArenaManage() {
   if (!canManage) return <Navigate to={`/arenas/${arena.id}`} replace />;
   const isOwner = arena.owner_id === user?.uid || isPlatformAdmin;
 
-  const tabs = [
-    { value: 'reservas', label: 'Reservas' },
-    ...(calendarOn ? [{ value: 'agenda', label: 'Agenda' }] : []),
-    { value: 'precos', label: 'Preços' },
-    { value: 'fotos', label: 'Fotos' },
-    { value: 'info', label: 'Informações' },
-    { value: 'admins', label: 'Admins' },
-    { value: 'retornos', label: 'Retornos' },
+  // Tabs organizadas em 2 linhas (mesmo padrão visual: pill rounded-full)
+  // Linha 1 = Operação do dia-a-dia
+  // Linha 2 = Configuração da arena
+  const tabRows = [
+    [
+      { value: 'metricas', label: 'Métricas' },
+      { value: 'reservas', label: 'Reservas' },
+      { value: 'calendario', label: 'Calendário' },
+      { value: 'calendario-admin', label: 'Reservas (Admin)' },
+      { value: 'pagamento', label: 'Pagamento' },
+      { value: 'regras', label: 'Regras' },
+      { value: 'mercado', label: 'Mercado' },
+    ],
+    [
+      { value: 'quadras', label: 'Quadras' },
+      { value: 'precos', label: 'Preços' },
+      { value: 'fotos', label: 'Fotos' },
+      { value: 'info', label: 'Informações' },
+      { value: 'admins', label: 'Admins' },
+      { value: 'retornos', label: 'Retornos' },
+    ],
   ];
 
   return (
@@ -86,24 +145,45 @@ export default function V2ArenaManage() {
         <span className="rounded-full border border-white/10 bg-white/10 px-3 py-1 text-xs font-bold uppercase tracking-wider text-acid">Central da arena</span>
         <h1 className="mt-4 font-display text-3xl font-bold text-white sm:text-4xl">{arena.name}</h1>
         <p className="mt-3 max-w-2xl text-sm leading-7 text-gray-300">Gerencie reservas, preços, fotos, admins e informações públicas no mesmo fluxo operacional.</p>
-      </div>
-
-      <div className="mt-6 overflow-x-auto">
-        <div className="inline-flex gap-1.5 rounded-full border border-gray-100 bg-paper-pure p-1.5 shadow-sm">
-          {tabs.map((t) => (
-            <button key={t.value} onClick={() => setTab(t.value)}
-              className={cn('whitespace-nowrap rounded-full px-5 py-2.5 text-sm font-semibold transition-colors', tab === t.value ? 'bg-ink text-white shadow-md' : 'text-gray-500 hover:text-ink')}>
-              {t.label}
-            </button>
-          ))}
+        <div className="mt-5 flex flex-wrap gap-2">
+          <V2Button asChild variant="secondary" size="sm">
+            <Link to={`/arenas/${arena.id}/gerir/modulos`}><Settings className="h-4 w-4" /> Módulos V3</Link>
+          </V2Button>
+          <V2Button asChild variant="secondary" size="sm">
+            <Link to={`/arenas/${arena.id}/gerir/open-match`}>Open Match</Link>
+          </V2Button>
+          <V2Button asChild variant="secondary" size="sm">
+            <Link to={`/arenas/${arena.id}/gerir/membros`}>Membros</Link>
+          </V2Button>
         </div>
       </div>
 
+      <div className="mt-6 space-y-2">
+        {tabRows.map((row, rowIdx) => (
+          <div key={rowIdx} className="overflow-x-auto">
+            <div className="inline-flex gap-1.5 rounded-full border border-gray-100 bg-paper-pure p-1.5 shadow-sm">
+              {row.map((t) => (
+                <button key={t.value} onClick={() => setTab(t.value)}
+                  className={cn('whitespace-nowrap rounded-full px-4 py-2 text-sm font-semibold transition-colors', tab === t.value ? 'bg-ink text-white shadow-md' : 'text-gray-500 hover:text-ink')}>
+                  {t.label}
+                </button>
+              ))}
+            </div>
+          </div>
+        ))}
+      </div>
+
       <div className="mt-6">
+        {tab === 'metricas' && <V2ArenaMetrics arena={arena} />}
         {tab === 'reservas' && <BookingsTab arena={arena} />}
-        {tab === 'agenda' && calendarOn && <AgendaTab arena={arena} />}
-        {tab === 'precos' && <V2Surface><V2PricingEditor arena={arena} /></V2Surface>}
-        {tab === 'fotos' && <PhotosTab arena={arena} />}
+        {tab === 'calendario' && <V2ArenaCalendar arena={arena} />}
+        {tab === 'calendario-admin' && <V2AdminBookingCalendar arenaId={arena.id} />}
+        {tab === 'pagamento' && <V2ArenaPaymentTab />}
+        {tab === 'regras' && <V2ArenaRulesTab />}
+        {tab === 'mercado' && <V2ArenaMercadoTab />}
+        {tab === 'quadras' && <V2CourtsTab arena={arena} />}
+        {tab === 'precos' && <V2Surface id="arena-manage-precos"><V2PricingEditor arena={arena} /></V2Surface>}
+        {tab === 'fotos' && <div id="arena-manage-fotos"><PhotosTab arena={arena} /></div>}
         {tab === 'info' && <InfoTab arena={arena} />}
         {tab === 'admins' && <ManagersTab arena={arena} />}
         {tab === 'retornos' && <V2ArenaReviews arena={arena} canModerate />}
@@ -120,6 +200,7 @@ function InfoTab({ arena }) {
     contact_phone: arena.contact_phone || '', contact_whatsapp: arena.contact_whatsapp || '',
     contact_email: arena.contact_email || '', instagram: arena.instagram || '', website: arena.website || '',
     court_count: arena.court_count ?? '', hours: arena.hours || '',
+    house_rules_md: arena.house_rules_md || '',
   });
   const setField = (key) => (e) => setForm((p) => ({ ...p, [key]: e.target.value }));
 
@@ -129,7 +210,7 @@ function InfoTab({ arena }) {
   }
 
   return (
-    <V2Surface className="space-y-4 p-5 sm:p-6">
+    <V2Surface id="arena-manage-horarios" className="space-y-4 p-5 sm:p-6">
       <V2ProfileFields form={form} setField={setField} />
       <div className="flex justify-end pt-2">
         <V2Button onClick={save} disabled={update.isPending}>{update.isPending ? 'Salvando…' : 'Salvar informações'}</V2Button>
@@ -177,12 +258,6 @@ function PhotosTab({ arena }) {
       {photos.length < 20 && <ImageUpload value="" onChange={addPhoto} folder="arenas" label="Adicionar foto" hint="JPG/PNG da arena, quadras, estrutura." />}
     </V2Surface>
   );
-}
-
-function AgendaTab({ arena }) {
-  const { data: bookings = [], isLoading } = useArenaBookings(arena.id);
-  if (isLoading) return <V2Skeleton className="h-64" />;
-  return <V2ArenaWeekAgenda bookings={bookings} />;
 }
 
 function BookingsTab({ arena }) {

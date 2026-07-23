@@ -128,6 +128,135 @@ Lógica pura em `chat/domain/conversations.js`.
 Mensagens: `conversation_id`, `sender_id`, `text`, `created_at`.
 Mensagens/convites geram `chat_message` / `chat_invite`.
 
+## Arenas
+
+> Sprint 0 + Sprint 1. Coleções top-level, ids autogen (exceto
+> `arena_managers` que tem id determinista `arenaId_uid`).
+
+### `arenas/{id}`
+Perfil público-editável da arena. Criado pelo próprio dono.
+- `name`, `description` (max 2000), `address` (max 240), `neighborhood` (max 120).
+- `city`, `state` (UF, max 2), `court_count` (legado, mantido p/ compat).
+- `contact_phone`, `contact_whatsapp`, `contact_email`, `instagram` (handle),
+  `website` (URL normalizada com `https://`).
+- `hours` (max 400, texto livre), `base_price` (number, fallback), `active` (bool).
+- `allow_instant_booking: bool` (Sprint 2 ARE-03) — opt-in da arena pra permitir reserva instantânea.
+- `price_rules[]` (Sprint 1 ARE-05: cada regra pode ter `court_id` opcional):
+  - `id`, `label`, `weekdays[]` (0-6), `start`, `end` ('HH:MM'),
+    `price`, `court_id` (opcional: aplica só a essa quadra ou a todas se vazio).
+- `price_overrides[]` (Sprint 1 ARE-05: cada override pode ter `court_id`):
+  - `id`, `label`, `date` ('YYYY-MM-DD', opcional), `client_id` (opcional),
+    `price`, `note`, `court_id` (opcional).
+- `photos[]` (até 20): `{url, path, name}`. Primeira foto é a capa.
+- `onboarding_complete` (Sprint 0 ARE-20): `{fotos, precos, horarios, compartilhar}` (4 booleans).
+- `onboarding_completed_at` (timestamp).
+- `created_at`, `updated_at` (serverTimestamp).
+
+### `arena_managers/{arenaId_uid}`
+Gestores da arena. Id determinista evita duplicidade.
+- `arena_id`, `user_id`, `user_name` (desnormalizado), `user_photo`, `role` (`'owner'|'manager'`).
+- `added_by` (uid), `created_at`.
+
+### `arenas/{id}` (campos extras Sprint 2/3)
+- `allow_instant_booking: bool` (Sprint 2 ARE-03) — opt-in para reserva
+  instantânea (pula REQUESTED → CONFIRMED direto).
+- `house_rules_md: string` (Sprint 3 ARE-18) — markdown com regras da casa,
+  max 2000. Exibido em /arenas/:id → bloco "Regras da casa" (collapsible).
+  Manager edita em /arenas/:id/gerir → tab "Informações".
+
+
+### `circuits/{id}` (Sprint 4 ORG-20)
+Séries de torneios com ranking acumulado.
+- `name` (max 80), `description` (max 500), `season` (max 40,
+  obrigatório — ex: "2026 Verão"), `categories[]` (max 10,
+  cada uma max 30, obrigatório pelo menos 1).
+- `start_date`, `end_date` (ISO date strings, end >= start).
+- `active: bool` (soft archive).
+- `points_table: object` (custom; default = 1º=100, 2º=75, 3/4º=50,
+  5-8º=30, 9-16º=20, 17-32º=10, 33-56º=5).
+- `created_by`, `created_at`, `updated_at`.
+
+### `circuit_admins/{circuitId_uid}` (Sprint 4 ORG-20)
+Id determinístico. `circuit_id`, `user_id`, `role`
+(`'owner'|'manager'`), `added_at`, `added_by`.
+
+### `circuit_tournaments/{circuitId_tournamentId}` (Sprint 4 ORG-20)
+Link entre circuito e torneio. `added_at`, `added_by`.
+
+### `circuit_results/{circuitId_tournamentId_userId}` (Sprint 4 ORG-20)
+Resultado de 1 atleta em 1 torneio do circuito. `user_id`,
+`user_name`, `user_photo`, `tournament_id`, `position`
+(1-9999), `total_participants`, `points` (calculado da tabela),
+`updated_at`, `updated_by`.
+
+### `coaches/{uid}` (Sprint 4 PRO-15)
+Perfil público do professor. `uid` = user id.
+- `display_name` (max 80, obrigatório), `bio` (max 1000),
+  `hourly_rate: number|null`, `regions[]` (max 10),
+  `modalities[]` (max 5, obrigatório pelo menos 1),
+  `certifications[]` (max 10).
+- `accepting_students: bool`, `active: bool`.
+- `user_id`, `created_at`, `updated_at`.
+
+### `coach_arenas/{coachId_arenaId}` (Sprint 4 PRO-15)
+Residência (vínculo coach ↔ arena).
+- `coach_id`, `arena_id`, `status` (`'active'|'paused'`),
+  `weekly_schedule` (objeto opcional), `notes` (max 500).
+- `added_at`, `added_by`.
+
+### `tournaments/{id}` (Sprint 4 ARE-14)
+Campo extra: `arena_id: string|null` (opcional, vincula torneio
+a uma arena específica). Default null (torneio independente).
+
+### `arena_courts/{id}` (Sprint 1 ARE-01)
+Quadras nomeadas da arena (substitui o `court_count: int` legado).
+- `arena_id`, `name` (max 60, obrigatório), `court_type` (`'indoor'|'outdoor'|'covered'`),
+  `surface_type` (`'concrete'|'synthetic'|'wood'|'asphalt'`, opcional),
+  `is_active` (bool, soft delete), `sort_order` (0-9999, editável).
+- `notes` (max 500), `created_at`, `updated_at`.
+
+### `arena_court_schedules/{id}` (Sprint 1 ARE-04)
+Janelas de horário recorrentes por quadra.
+- `arena_id`, `court_id`, `weekdays[]` (0-6), `start_time`, `end_time` ('HH:MM').
+- `label` (max 60, opcional), `is_active` (bool, soft delete).
+- `created_at`, `updated_at`.
+
+### `arena_bookings/{id}`
+Reservas da arena. `arena_id`, `athlete_id`, `athlete_name`, `athlete_photo`.
+- `kind` (`'single'|'recurring'`), `slots[]` (`{date, start, end, court_id?}`),
+  `recurrence` (objeto, só se kind=recurring), `notes` (max 600).
+- `status` (`'requested'|'negotiating'|'confirmed'|'declined'|'cancelled'|'completed'`).
+- `is_instant: bool` (Sprint 2 ARE-03) — se true, status inicial = `confirmed`.
+- `payment_method` (opcional, se `is_instant=true` é obrigatório):
+  `'pix'|'credit_card'|'debit_card'|'cash'|'wallet'|'bank_transfer'`.
+- `proposed_price`, `agreed_price`, `payment_status` (`'none'|'pending'|'paid'|'refunded'`).
+- `created_by`, `created_at`, `updated_at`, `created_at_ms`.
+
+### `arena_reviews/{id}`
+Avaliações/reclamações/sugestões. `arena_id`, `user_id`, `user_name`,
+`rating` (1-5, só se `type='review'`), `type` (`'review'|'complaint'|'suggestion'`),
+`comment`, `response` (resposta da arena, opcional, max 500),
+`responded_at`, `responded_by` (uid), `updated_at`, `created_at`.
+
+### `arena_favorites/{uid_arenaId}`
+Favoritos do atleta. Id determinista. `user_id`, `arena_id`, `created_at`.
+
+### `arena_products/{id}` (V3, do Arena V3 — PDV)
+Produtos da loja. `arena_id`, `name` (max 80), `description` (max 500),
+`price` (number), `category` (`'bebidas'|'equipamentos'|'vestuario'|'acessorios'|'alimentos'|'outros'`),
+`stock` (number, opcional = sem controle), `image_url`, `active: bool`,
+`sold_count` (contador). `created_at`, `updated_at`.
+
+### `arena_sales/{id}` (V3, do Arena V3 — PDV)
+Vendas. `arena_id`, `buyer_id`, `buyer_name`, `items[]` (`{product_id, quantity, price}`),
+`total`, `payment_method`, `status` (`'pending'|'paid'|'cancelled'|'refunded'`),
+`split_with[]` (user_ids), `split_details[]` (somas por participante).
+`created_at`, `updated_at`.
+
+### `arena_payments/{id}` (V3, do Arena V3 — PDV)
+Pagamentos individuais. `sale_id`, `arena_id`, `payer_id`, `amount`,
+`payment_method`, `status`. Id = `${saleId}_${userId}`. `created_at`, `updated_at`, `paid_at`.
+
 ## Transversal
 
 ### `notifications/{id}`

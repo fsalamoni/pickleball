@@ -340,14 +340,6 @@ export const FEATURE_FLAG = Object.freeze({
   PAGE_TITLES: 'page_titles',
 
   /**
-   * Agenda visual da arena: adiciona à central de gestão da arena uma aba
-   * "Agenda" com a grade da semana (reservas confirmadas e pendentes por dia
-   * e horário), navegável entre semanas. Somente leitura nesta fase. Requer
-   * a flag de Arenas ligada. Aditivo — desligado, a aba não aparece.
-   */
-  ARENA_CALENDAR: 'arena_calendar',
-
-  /**
    * Onboarding em passos: no primeiro acesso, um assistente em 3 passos pede
    * os dados essenciais (os mesmos exigidos em torneios), os interesses do
    * usuário (jogar, organizar, arena, ensinar, acompanhar — gravados em
@@ -366,6 +358,75 @@ export const FEATURE_FLAG = Object.freeze({
    * desligado, o card de comunicação não aparece.
    */
   TOURNAMENT_ANNOUNCEMENTS: 'tournament_announcements',
+
+  // ---- Arena V3 (sprint 0+) — opt-in master + 50 sub-flags ---------------
+  // Master switch que liga/desliga TODOS os módulos opt-in das arenas.
+  // Sub-flags controlam cada família de módulo; sub-sub-flags controlam
+  // funcionalidades dentro de cada família. Cada arena ainda pode ligar/
+  // desligar individualmente via `arena_module_states/{arenaId_moduleId}`.
+  ARENA_MODULES: 'arena_modules',
+  ARENA_MODULE_MATCHMAKING: 'arena_module_matchmaking',
+  ARENA_MODULE_MATCHMAKING_OPEN_MATCH: 'arena_module_matchmaking_open_match',
+  ARENA_MODULE_MATCHMAKING_PARTNER_FINDER: 'arena_module_matchmaking_partner_finder',
+  ARENA_MODULE_MATCHMAKING_WAITLIST: 'arena_module_matchmaking_waitlist',
+  ARENA_MODULE_MEMBERS: 'arena_module_members',
+  ARENA_MODULE_MEMBERS_TIERS: 'arena_module_members_tiers',
+  ARENA_MODULE_MEMBERS_PACKAGES: 'arena_module_members_packages',
+  ARENA_MODULE_MEMBERS_SUBSCRIPTION: 'arena_module_members_subscription',
+  ARENA_MODULE_MEMBERS_WALLET: 'arena_module_members_wallet',
+  ARENA_MODULE_PDV: 'arena_module_pdv',
+  ARENA_MODULE_PDV_CATALOG: 'arena_module_pdv_catalog',
+  ARENA_MODULE_PDV_PIX_NATIVE: 'arena_module_pdv_pix_native',
+  ARENA_MODULE_PDV_SPLIT: 'arena_module_pdv_split',
+  ARENA_MODULE_CLASSES: 'arena_module_classes',
+  ARENA_MODULE_CLASSES_CATALOG: 'arena_module_classes_catalog',
+  ARENA_MODULE_CLASSES_PACKAGES: 'arena_module_classes_packages',
+  ARENA_MODULE_CLASSES_MARKETPLACE: 'arena_module_classes_marketplace',
+  ARENA_MODULE_LEAGUES: 'arena_module_leagues',
+  ARENA_MODULE_LEAGUES_INTERNAL: 'arena_module_leagues_internal',
+  ARENA_MODULE_LEAGUES_LADDER: 'arena_module_leagues_ladder',
+  ARENA_MODULE_LEAGUES_OPEN_PLAY: 'arena_module_leagues_open_play',
+  ARENA_MODULE_LEAGUES_PRIZING: 'arena_module_leagues_prizing',
+  ARENA_MODULE_MARKETING: 'arena_module_marketing',
+  ARENA_MODULE_MARKETING_CAMPAIGNS: 'arena_module_marketing_campaigns',
+  ARENA_MODULE_MARKETING_LOYALTY: 'arena_module_marketing_loyalty',
+  ARENA_MODULE_MARKETING_COUPONS: 'arena_module_marketing_coupons',
+  ARENA_MODULE_MARKETING_REFERRAL: 'arena_module_marketing_referral',
+  ARENA_MODULE_MARKETING_NPS: 'arena_module_marketing_nps',
+  ARENA_MODULE_OPERATIONS: 'arena_module_operations',
+  ARENA_MODULE_OPERATIONS_CHECKLIST: 'arena_module_operations_checklist',
+  ARENA_MODULE_OPERATIONS_MAINTENANCE: 'arena_module_operations_maintenance',
+  ARENA_MODULE_OPERATIONS_INVENTORY: 'arena_module_operations_inventory',
+  ARENA_MODULE_OPERATIONS_STAFF: 'arena_module_operations_staff',
+  ARENA_MODULE_IOT: 'arena_module_iot',
+  ARENA_MODULE_IOT_QR_KIOSK: 'arena_module_iot_qr_kiosk',
+  ARENA_MODULE_IOT_LIGHTING: 'arena_module_iot_lighting',
+  ARENA_MODULE_IOT_SENSORS: 'arena_module_iot_sensors',
+  ARENA_MODULE_IOT_VIDEO_REPLAY: 'arena_module_iot_video_replay',
+  ARENA_MODULE_MULTI_UNIT: 'arena_module_multi_unit',
+  ARENA_MODULE_MULTI_UNIT_NETWORK: 'arena_module_multi_unit_network',
+  ARENA_MODULE_MULTI_UNIT_CONSOLIDATED_BI: 'arena_module_multi_unit_consolidated_bi',
+  ARENA_MODULE_MULTI_UNIT_CROSS_BOOKING: 'arena_module_multi_unit_cross_booking',
+  ARENA_MODULE_WHITE_LABEL: 'arena_module_white_label',
+  ARENA_MODULE_WHITE_LABEL_BRANDING: 'arena_module_white_label_branding',
+  ARENA_MODULE_WHITE_LABEL_DOMAIN: 'arena_module_white_label_domain',
+  ARENA_MODULE_WHITE_LABEL_APP: 'arena_module_white_label_app',
+  ARENA_MODULE_AI: 'arena_module_ai',
+  ARENA_MODULE_AI_PRICING: 'arena_module_ai_pricing',
+  ARENA_MODULE_AI_MATCHMAKING: 'arena_module_ai_matchmaking',
+  ARENA_MODULE_AI_FORECAST: 'arena_module_ai_forecast',
+
+  /**
+   * Circuitos (Sprint 4 ORG-20): série de torneios com ranking acumulado.
+   */
+  CIRCUITS: 'circuits',
+
+  /**
+   * Professores residentes (Sprint 4 PRO-15): coaches podem se cadastrar
+   * com perfil público (bio, valor/hora, regiões, modalidades) e vincular
+   * a arenas como residentes. Desligado, a rota /coaches e o menu somem.
+   */
+  COACH_RESIDENT: 'coach_resident',
 });
 
 /** Metadados de exibição para o painel de flags (admin master). */
@@ -685,14 +746,6 @@ export const FEATURE_FLAG_META = Object.freeze({
       + 'PickleRush"), melhorando histórico, favoritos e a troca entre abas. '
       + 'Desligado, o título permanece fixo.',
   },
-  [FEATURE_FLAG.ARENA_CALENDAR]: {
-    label: 'Agenda visual da arena',
-    description:
-      'Aba "Agenda" na central de gestão da arena com a grade da semana: '
-      + 'reservas confirmadas e pendentes por dia e horário, com navegação '
-      + 'entre semanas. Somente leitura nesta fase. Requer "Arenas" ligada. '
-      + 'Desligado, a aba não aparece.',
-  },
   [FEATURE_FLAG.ONBOARDING_WIZARD]: {
     label: 'Onboarding em passos (com persona)',
     description:
@@ -710,6 +763,40 @@ export const FEATURE_FLAG_META = Object.freeze({
       + 'modalidade — como notificação in-app, com histórico dos envios e '
       + 'texto pronto para colar no grupo de WhatsApp. Desligado, o card de '
       + 'comunicação não aparece.',
+  },
+
+  // ---- Arena V3 (sprint 0+) — master switch -----------------------------
+  [FEATURE_FLAG.ARENA_MODULES]: {
+    label: 'Arena V3 — Módulos opt-in (master)',
+    description:
+      'Master switch dos novos módulos de gestão de arenas (Arena V3). '
+      + 'Quando desligado, TODOS os sub-módulos (matchmaking, membros, PDV, '
+      + 'aulas, torneios internos, marketing, operações, IoT, multi-unidade, '
+      + 'white label, AI) ficam inertes mesmo se a arena habilitou. Quando '
+      + 'ligado, cada sub-flag controla uma família de funcionalidades. As '
+      + 'arenas ainda podem ligar/desligar individualmente via "Módulos da '
+      + 'arena" no painel admin. Desligado, as rotas /arenas/:id/gerir/modulos '
+      + 'somem e nada muda no comportamento atual.',
+  },
+
+  // ---- Sprint 4 ORG-20 Circuitos ----
+  [FEATURE_FLAG.CIRCUITS]: {
+    label: 'Circuitos de torneios (Sprint 4 ORG-20)',
+    description:
+      'Permite ao organizador criar séries de torneios (circuitos) com '
+      + 'ranking acumulado. Cada torneio atribui pontos por posição final '
+      + 'e o sistema computa o ranking agregado. Desligado, a rota '
+      + '/circuits e o menu somem.',
+  },
+
+  // ---- Sprint 4 PRO-15 Professores residentes ----
+  [FEATURE_FLAG.COACH_RESIDENT]: {
+    label: 'Professores residentes (Sprint 4 PRO-15)',
+    description:
+      'Permite a qualquer usuário se tornar professor (cadastrar bio, '
+      + 'valor/hora, regiões, modalidades) e listar no diretório. Permite '
+      + 'também vincular um professor como residente de uma arena. '
+      + 'Desligado, a rota /coaches e o menu somem.',
   },
 });
 

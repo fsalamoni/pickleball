@@ -18,7 +18,33 @@ import {
   deleteArena,
   addArenaManager,
   removeArenaManager,
+  listArenaCourts,
+  createArenaCourt,
+  updateArenaCourt,
+  deleteArenaCourt,
+  reorderArenaCourts,
+  normalizeArenaCourtsOrder,
+  respondToArenaReview,
+  deleteArenaReviewResponse,
+  listArenaCourtSchedules,
+  listCourtSchedules,
+  addArenaUnavailability,
+  deleteArenaUnavailability,
+  listArenaUnavailabilities,
+  createInventoryProduct,
+  listInventoryProducts,
+  updateInventoryProduct,
+  deleteInventoryProduct,
+  addInventoryEntry,
+  listInventoryEntries,
+  addInventoryExit,
+  listInventoryExits,
+  createCourtSchedule,
+  updateCourtSchedule,
+  deleteCourtSchedule,
 } from '../services/arenaService.js';
+import { sortCourts } from '../domain/court.js';
+import { sortSchedules, groupSchedulesByWeekday } from '../domain/court_schedule.js';
 
 export function useArenas() {
   return useQuery({ queryKey: ['arenas'], queryFn: listArenas, staleTime: 30_000 });
@@ -156,5 +182,261 @@ export function useRemoveManager() {
   return useMutation({
     mutationFn: ({ arenaId, userId }) => removeArenaManager(arenaId, userId, user),
     onSuccess: (_d, { arenaId }) => qc.invalidateQueries({ queryKey: ['arena-managers', arenaId] }),
+  });
+}
+
+/* ---------------------- Courts (ARE-01, Sprint 1) -------------------- */
+
+/**
+ * Lista quadras de uma arena, ordenadas por sort_order. Retorna lista
+ * vazia se arenaId ausente ou ainda carregando.
+ */
+export function useArenaCourts(arenaId) {
+  return useQuery({
+    queryKey: ['arena-courts', arenaId],
+    queryFn: async () => sortCourts(await listArenaCourts(arenaId)),
+    enabled: !!arenaId,
+    staleTime: 30_000,
+  });
+}
+
+function useCourtMutation(arenaId) {
+  const { user } = useAuth();
+  const qc = useQueryClient();
+  return { user, qc, invalidate: () => qc.invalidateQueries({ queryKey: ['arena-courts', arenaId] }) };
+}
+
+export function useCreateCourt(arenaId) {
+  const { user, invalidate } = useCourtMutation(arenaId);
+  return useMutation({
+    mutationFn: (input) => createArenaCourt(arenaId, input, user),
+    onSuccess: invalidate,
+  });
+}
+
+export function useUpdateCourt(arenaId) {
+  const { user, invalidate } = useCourtMutation(arenaId);
+  return useMutation({
+    mutationFn: ({ courtId, input }) => updateArenaCourt(courtId, input, user),
+    onSuccess: invalidate,
+  });
+}
+
+export function useDeleteCourt(arenaId) {
+  const { user, invalidate } = useCourtMutation(arenaId);
+  return useMutation({
+    mutationFn: (courtId) => deleteArenaCourt(courtId, user),
+    onSuccess: invalidate,
+  });
+}
+
+export function useReorderCourts(arenaId) {
+  const { user, invalidate } = useCourtMutation(arenaId);
+  return useMutation({
+    mutationFn: (orderedIds) => reorderArenaCourts(arenaId, orderedIds, user),
+    onSuccess: invalidate,
+  });
+}
+
+export function useNormalizeCourtOrder(arenaId) {
+  const { user, invalidate } = useCourtMutation(arenaId);
+  return useMutation({
+    mutationFn: () => normalizeArenaCourtsOrder(arenaId, user),
+    onSuccess: invalidate,
+  });
+}
+
+/* ---------------- Review responses (Sprint 3 ARE-09) --------------- */
+
+export function useRespondToReview() {
+  const { user } = useAuth();
+  const qc = useQueryClient();
+  return useMutation({
+    mutationFn: ({ reviewId, response }) => respondToArenaReview(reviewId, response, user),
+    onSuccess: () => {
+      qc.invalidateQueries({ queryKey: ['arena-reviews'] });
+    },
+  });
+}
+
+export function useDeleteReviewResponse() {
+  const { user } = useAuth();
+  const qc = useQueryClient();
+  return useMutation({
+    mutationFn: (reviewId) => deleteArenaReviewResponse(reviewId, user),
+    onSuccess: () => {
+      qc.invalidateQueries({ queryKey: ['arena-reviews'] });
+    },
+  });
+}
+
+/* ---------------- Court Schedules (ARE-04, Sprint 1) ----------------- */
+
+/**
+ * Lista todos os schedules de uma arena (todas as quadras), ordenados.
+ * Útil pra render agregado (calendário semanal).
+ */
+export function useArenaCourtSchedules(arenaId) {
+  return useQuery({
+    queryKey: ['arena-court-schedules', arenaId],
+    queryFn: async () => sortSchedules(await listArenaCourtSchedules(arenaId)),
+    enabled: !!arenaId,
+    staleTime: 60_000,
+  });
+}
+
+/**
+ * Lista schedules de uma quadra específica, ordenados.
+ * Retorna também o agrupamento por weekday (helper pronto pra UI).
+ */
+export function useCourtSchedules(courtId) {
+  return useQuery({
+    queryKey: ['court-schedules', courtId],
+    queryFn: async () => {
+      const list = sortSchedules(await listCourtSchedules(courtId));
+      return { list, byWeekday: groupSchedulesByWeekday(list) };
+    },
+    enabled: !!courtId,
+    staleTime: 60_000,
+  });
+}
+
+function useScheduleMutation(courtId) {
+  const { user } = useAuth();
+  const qc = useQueryClient();
+  return {
+    user,
+    invalidate: () => {
+      qc.invalidateQueries({ queryKey: ['court-schedules', courtId] });
+      qc.invalidateQueries({ queryKey: ['arena-court-schedules'] });
+    },
+  };
+}
+
+export function useCreateSchedule(arenaId, courtId) {
+  const { user, invalidate } = useScheduleMutation(courtId);
+  return useMutation({
+    mutationFn: (input) => createCourtSchedule(arenaId, courtId, input, user),
+    onSuccess: invalidate,
+  });
+}
+
+export function useUpdateSchedule(courtId) {
+  const { user, invalidate } = useScheduleMutation(courtId);
+  return useMutation({
+    mutationFn: ({ scheduleId, input }) => updateCourtSchedule(scheduleId, input, user),
+    onSuccess: invalidate,
+  });
+}
+
+export function useDeleteSchedule(courtId) {
+  const { user, invalidate } = useScheduleMutation(courtId);
+  return useMutation({
+    mutationFn: (scheduleId) => deleteCourtSchedule(scheduleId, user),
+    onSuccess: invalidate,
+  });
+}
+
+
+/* ---------------- Unavailabilities (Sprint 5) --------------------- */
+
+export function useArenaUnavailabilities(arenaId, { from, to } = {}) {
+  return useQuery({
+    queryKey: ['arena-unavailabilities', arenaId, from, to],
+    queryFn: () => listArenaUnavailabilities(arenaId, { from, to }),
+    enabled: !!arenaId,
+  });
+}
+
+export function useAddArenaUnavailability(arenaId) {
+  const { user } = useAuth();
+  const qc = useQueryClient();
+  return useMutation({
+    mutationFn: (input) => addArenaUnavailability(arenaId, input, user),
+    onSuccess: () => {
+      qc.invalidateQueries({ queryKey: ['arena-unavailabilities', arenaId] });
+    },
+  });
+}
+
+export function useDeleteArenaUnavailability(arenaId) {
+  const { user } = useAuth();
+  const qc = useQueryClient();
+  return useMutation({
+    mutationFn: (unavId) => deleteArenaUnavailability(unavId, user),
+    onSuccess: () => {
+      qc.invalidateQueries({ queryKey: ['arena-unavailabilities', arenaId] });
+    },
+  });
+}
+
+/* ---------------- Inventory (Mercado - Sprint 5) ------------------ */
+
+export function useInventoryProducts(arenaId) {
+  return useQuery({
+    queryKey: ['inventory-products', arenaId],
+    queryFn: () => listInventoryProducts(arenaId),
+    enabled: !!arenaId,
+  });
+}
+
+export function useCreateInventoryProduct(arenaId) {
+  const { user } = useAuth();
+  const qc = useQueryClient();
+  return useMutation({
+    mutationFn: (input) => createInventoryProduct(arenaId, input, user),
+    onSuccess: () => qc.invalidateQueries({ queryKey: ['inventory-products', arenaId] }),
+  });
+}
+
+export function useUpdateInventoryProduct(arenaId) {
+  const { user } = useAuth();
+  const qc = useQueryClient();
+  return useMutation({
+    mutationFn: ({ productId, updates }) => updateInventoryProduct(productId, updates, user),
+    onSuccess: () => qc.invalidateQueries({ queryKey: ['inventory-products', arenaId] }),
+  });
+}
+
+export function useDeleteInventoryProduct(arenaId) {
+  const { user } = useAuth();
+  const qc = useQueryClient();
+  return useMutation({
+    mutationFn: (productId) => deleteInventoryProduct(productId, user),
+    onSuccess: () => qc.invalidateQueries({ queryKey: ['inventory-products', arenaId] }),
+  });
+}
+
+export function useInventoryEntries(arenaId, opts = {}) {
+  return useQuery({
+    queryKey: ['inventory-entries', arenaId, opts],
+    queryFn: () => listInventoryEntries(arenaId, opts),
+    enabled: !!arenaId,
+  });
+}
+
+export function useAddInventoryEntry(arenaId) {
+  const { user } = useAuth();
+  const qc = useQueryClient();
+  return useMutation({
+    mutationFn: (input) => addInventoryEntry(arenaId, input, user),
+    onSuccess: () => qc.invalidateQueries({ queryKey: ['inventory-entries', arenaId] }),
+  });
+}
+
+export function useInventoryExits(arenaId, opts = {}) {
+  return useQuery({
+    queryKey: ['inventory-exits', arenaId, opts],
+    queryFn: () => listInventoryExits(arenaId, opts),
+    enabled: !!arenaId,
+  });
+}
+
+export function useAddInventoryExit(arenaId) {
+  const { user } = useAuth();
+  const qc = useQueryClient();
+  return useMutation({
+    mutationFn: (input) => addInventoryExit(arenaId, input, user),
+    onSuccess: () => qc.invalidateQueries({ queryKey: ['inventory-exits', arenaId] }),
   });
 }

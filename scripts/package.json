@@ -1,0 +1,20 @@
+{
+  "name": "picklerush-arena-v3-scripts",
+  "version": "1.0.0",
+  "private": true,
+  "type": "module",
+  "description": "Scripts Node.js para setup e manutenção da Arena V3 (Firestore, feature flags, admin).",
+  "scripts": {
+    "migrate-flags": "node migrate-arena-v3-flags.mjs",
+    "check-admin": "node check-platform-admin.mjs",
+    "promote-admin": "node promote-platform-admin.mjs",
+    "grant-manager": "node grant-arena-manager.mjs",
+    "health-check": "node health-check-arena-v3.mjs"
+  },
+  "engines": {
+    "node": ">=20"
+  },
+  "dependencies": {
+    "firebase-admin": "^12.0.0"
+  }
+}

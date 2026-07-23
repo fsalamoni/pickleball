@@ -1,13 +1,14 @@
 import React, { useMemo, useState } from 'react';
 import { toast } from 'sonner';
-import { Star, MessageSquareWarning, Lightbulb, Trash2 } from 'lucide-react';
+import { Star, MessageSquareWarning, Lightbulb, Trash2, Reply, Edit3, X } from 'lucide-react';
 import { cn } from '@/core/lib/utils';
 import { useAuth } from '@/core/lib/FirebaseAuthContext';
 import ConfirmDialog from '@/components/ConfirmDialog';
 import { UserAvatar } from '@/components/ui/user-avatar';
 import { REVIEW_TYPE, REVIEW_TYPE_LABELS } from '@/modules/arenas/domain/constants';
 import { aggregateRatings } from '@/modules/arenas/domain/arena';
-import { useArenaReviews, useAddReview, useDeleteReview } from '@/modules/arenas/hooks/useArenas';
+import { normalizeReviewResponse, hasResponse, responseAgeHours } from '@/modules/arenas/domain/review_response';
+import { useArenaReviews, useAddReview, useDeleteReview, useRespondToReview, useDeleteReviewResponse } from '@/modules/arenas/hooks/useArenas';
 import { V2Badge, V2Button, V2Surface } from '@/v2/ui/primitives';
 
 const TYPE_ICON = {
@@ -36,6 +37,9 @@ export default function V2ArenaReviews({ arena, canModerate = false }) {
   const [type, setType] = useState(REVIEW_TYPE.REVIEW);
   const [rating, setRating] = useState(0);
   const [comment, setComment] = useState('');
+  const [respondingTo, setRespondingTo] = useState(null); // review.id ou null
+  const respondMutation = useRespondToReview();
+  const deleteResponseMutation = useDeleteReviewResponse();
 
   const summary = useMemo(() => aggregateRatings(reviews), [reviews]);
 
@@ -138,11 +142,120 @@ export default function V2ArenaReviews({ arena, canModerate = false }) {
                 {canModerate && (r.type ?? 'review') !== 'review' && (
                   <V2Badge tone="amber" className="mt-2">Requer atenção da arena</V2Badge>
                 )}
+
+                {/* Resposta da arena (Sprint 3 ARE-09) */}
+                {hasResponse(r) && respondingTo !== r.id && (
+                  <div className="mt-3 rounded-2xl border border-emerald-200 bg-emerald-50 p-3">
+                    <div className="flex items-center justify-between gap-2">
+                      <div className="flex items-center gap-2 text-xs font-bold text-emerald-800">
+                        <Reply className="h-3 w-3" /> Resposta da arena
+                        {responseAgeHours(r) != null && (
+                          <span className="text-emerald-600/70">· há {responseAgeHours(r)}h</span>
+                        )}
+                      </div>
+                      {canModerate && (
+                        <div className="flex items-center gap-1">
+                          <button
+                            type="button"
+                            onClick={() => setRespondingTo(r.id)}
+                            className="flex h-7 w-7 items-center justify-center rounded-full text-emerald-700 hover:bg-emerald-100"
+                            aria-label="Editar resposta"
+                            title="Editar resposta"
+                          >
+                            <Edit3 className="h-3.5 w-3.5" />
+                          </button>
+                          <ConfirmDialog
+                            title="Remover resposta?"
+                            description="A resposta da arena será removida. O comentário original permanece."
+                            confirmLabel="Remover"
+                            onConfirm={() => deleteResponseMutation.mutate(r.id)}
+                            trigger={(
+                              <button
+                                type="button"
+                                className="flex h-7 w-7 items-center justify-center rounded-full text-red-500 hover:bg-red-50"
+                                aria-label="Remover resposta"
+                              >
+                                <X className="h-3.5 w-3.5" />
+                              </button>
+                            )}
+                          />
+                        </div>
+                      )}
+                    </div>
+                    <p className="mt-1 text-sm text-emerald-900">{r.response}</p>
+                  </div>
+                )}
+
+                {/* Form de resposta (apenas se canModerate E respondingTo === r.id) */}
+                {canModerate && respondingTo === r.id && (
+                  <ResponseForm
+                    initial={r.response || ''}
+                    busy={respondMutation.isPending}
+                    onCancel={() => setRespondingTo(null)}
+                    onSubmit={async (text) => {
+                      try {
+                        await respondMutation.mutateAsync({ reviewId: r.id, response: text });
+                        toast.success('Resposta publicada.');
+                        setRespondingTo(null);
+                      } catch (err) {
+                        toast.error(err?.message || 'Não foi possível publicar a resposta.');
+                      }
+                    }}
+                  />
+                )}
+
+                {!hasResponse(r) && canModerate && respondingTo !== r.id && (
+                  <button
+                    type="button"
+                    onClick={() => setRespondingTo(r.id)}
+                    className="mt-2 inline-flex items-center gap-1 text-xs font-semibold text-emerald-700 hover:text-emerald-800"
+                  >
+                    <Reply className="h-3 w-3" /> Responder
+                  </button>
+                )}
               </div>
             );
           })
         )}
       </div>
     </V2Surface>
+  );
+}
+
+function ResponseForm({ initial = '', busy, onCancel, onSubmit }) {
+  const [text, setText] = useState(initial);
+  const [error, setError] = useState(null);
+  const handleSubmit = (e) => {
+    e?.preventDefault?.();
+    const r = normalizeReviewResponse({ response: text });
+    if (!r.valid) { setError(r.error); return; }
+    setError(null);
+    onSubmit(r.value);
+  };
+  return (
+    <form onSubmit={handleSubmit} className="mt-3 space-y-2 rounded-2xl border border-emerald-200 bg-emerald-50/60 p-3">
+      <textarea
+        value={text}
+        onChange={(e) => setText(e.target.value)}
+        rows={3}
+        maxLength={500}
+        placeholder="Escreva a resposta pública da arena…"
+        className="w-full rounded-xl border border-emerald-200 bg-white px-3 py-2 text-sm outline-none focus-visible:border-emerald-400"
+      />
+      <div className="flex items-center justify-between text-xs">
+        <span className={cn(text.length > 500 ? 'text-red-600' : 'text-gray-400')}>
+          {text.length}/500
+        </span>
+        {error && <span className="text-red-600">{error}</span>}
+      </div>
+      <div className="flex justify-end gap-2">
+        <V2Button type="button" variant="ghost" size="sm" onClick={onCancel} disabled={busy}>
+          Cancelar
+        </V2Button>
+        <V2Button type="submit" size="sm" disabled={busy}>
+          {busy ? 'Publicando…' : initial ? 'Atualizar resposta' : 'Publicar resposta'}
+        </V2Button>
+      </div>
+    </form>
   );
 }

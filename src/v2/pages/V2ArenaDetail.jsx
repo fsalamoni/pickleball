@@ -1,14 +1,15 @@
 import React, { useState } from 'react';
-import { Link, Navigate, useParams } from 'react-router-dom';
+import { Link, useParams } from 'react-router-dom';
 import {
-  ArrowLeft, Building2, CalendarPlus, Clock, Globe, Instagram, Mail, MapPin,
-  MessageCircle, Phone, Settings, Star, Trophy,
+  ArrowLeft, Building2, Calendar, CalendarPlus, Check, Clock, Copy, Globe, Instagram, Mail, MapPin,
+  MessageCircle, Phone, Settings, Star, Trophy, Users,
+  GraduationCap,
 } from 'lucide-react';
 import { PhotoLightbox } from '@/components/ui/photo-lightbox';
-import { useFeatureFlag } from '@/core/lib/FeatureFlagsContext';
 import { FEATURE_FLAG } from '@/core/featureFlags';
 import { useAuth } from '@/core/lib/FirebaseAuthContext';
 import V2ChatLauncherButton from '@/v2/components/chat/V2ChatLauncherButton';
+import FeatureFlagGuard from '@/v2/components/FeatureFlagGuard';
 import { V2FavoriteArenaButton, V2ArenaShareButton } from '@/v2/components/arenas/V2ArenaActions';
 import V2ArenaReviews from '@/v2/components/arenas/V2ArenaReviews';
 import BookingRequestDialog from '@/modules/arenas/components/BookingRequestDialog';
@@ -18,10 +19,48 @@ import { BOOKING_STATUS, WEEKDAY_SHORT } from '@/modules/arenas/domain/constants
 import { bookingSlots, sortSlots } from '@/modules/arenas/domain/booking';
 import { useArena, useMyManagedArenas } from '@/modules/arenas/hooks/useArenas';
 import { useArenaBookings } from '@/modules/arenas/hooks/useBookings';
-import { V2Badge, V2Button, V2EmptyState, V2Skeleton, V2Surface } from '@/v2/ui/primitives';
+import { useCanArenaUseModule } from '@/modules/arenas/hooks/useArenaV3';
+import { useArenaTournaments } from '@/modules/tournament/hooks/useTournament';
+import { useArenaCoaches } from '@/modules/coaches/hooks/useCoaches';
+import V2BookingCalendar from '@/v2/components/arenas/V2BookingCalendar';
+import { isPixConfigured, PIX_KEY_TYPE_LABELS } from '@/modules/arenas/domain/pix_payment';
+import { groupRulesByCategory } from '@/modules/arenas/domain/arena_rules';
+import { V2Badge, V2Button, V2EmptyState, V2Field, V2Input, V2Skeleton, V2Surface } from '@/v2/ui/primitives';
 
 function arenaPhotoUrl(photo) {
   return typeof photo === 'string' ? photo : photo?.url;
+}
+
+function ArenaModuleLinks({ arenaId }) {
+  const canOpenMatch = useCanArenaUseModule(arenaId, 'matchmaking_open_match');
+  const canMatchmaking = useCanArenaUseModule(arenaId, 'matchmaking_partner_finder');
+  const canMembers = useCanArenaUseModule(arenaId, 'members');
+  if (!canOpenMatch && !canMatchmaking && !canMembers) return null;
+  return (
+    <>
+      {canOpenMatch && (
+        <V2Button asChild variant="secondary" size="sm">
+          <Link to={`/arenas/${arenaId}/open-match`}>
+            <Trophy className="h-4 w-4" /> Open Match
+          </Link>
+        </V2Button>
+      )}
+      {canMatchmaking && (
+        <V2Button asChild variant="secondary" size="sm">
+          <Link to={`/arenas/${arenaId}/matchmaking`}>
+            <Users className="h-4 w-4" /> Matchmaking
+          </Link>
+        </V2Button>
+      )}
+      {canMembers && (
+        <V2Button asChild variant="secondary" size="sm">
+          <Link to={`/arenas/${arenaId}/membros`}>
+            <Trophy className="h-4 w-4" /> Membros
+          </Link>
+        </V2Button>
+      )}
+    </>
+  );
 }
 
 function ContactRow({ icon: Icon, href, label }) {
@@ -34,7 +73,6 @@ function ContactRow({ icon: Icon, href, label }) {
 }
 
 export default function V2ArenaDetail() {
-  const enabled = useFeatureFlag(FEATURE_FLAG.ARENAS);
   const { arenaId } = useParams();
   const { user } = useAuth();
   const { data: arena, isLoading } = useArena(arenaId);
@@ -42,7 +80,27 @@ export default function V2ArenaDetail() {
   const { data: bookings = [] } = useArenaBookings(arenaId);
   const [bookingOpen, setBookingOpen] = useState(false);
 
-  if (!enabled) return <Navigate to="/" replace />;
+  return (
+    <FeatureFlagGuard
+      flag={FEATURE_FLAG.ARENAS}
+      label="Arenas"
+      description="As quadras e reservas ficam disponíveis quando a flag Arenas está ligada."
+    >
+      <V2ArenaDetailContent
+        arenaId={arenaId}
+        user={user}
+        arena={arena}
+        managed={managed}
+        bookings={bookings}
+        isLoading={isLoading}
+        bookingOpen={bookingOpen}
+        setBookingOpen={setBookingOpen}
+      />
+    </FeatureFlagGuard>
+  );
+}
+
+function V2ArenaDetailContent({ arenaId, user, arena, managed, bookings, isLoading, bookingOpen, setBookingOpen }) {
 
   if (isLoading) {
     return (
@@ -122,11 +180,15 @@ export default function V2ArenaDetail() {
             {canManage && (
               <V2Button asChild variant="ghost" size="sm"><Link to={`/arenas/${arena.id}/gerir`}><Settings className="h-4 w-4" /> Gerir</Link></V2Button>
             )}
+            <ArenaModuleLinks arenaId={arena.id} />
           </div>
 
           {arena.description && <p className="mt-6 whitespace-pre-line text-sm leading-7 text-gray-500">{arena.description}</p>}
         </div>
       </div>
+
+      {/* Sprint 5: Regras estruturadas (público) — preferido sobre house_rules_md */}
+      <ArenaRulesSection arena={arena} />
 
       {/* Contact + hours */}
       <div className="mt-6 grid gap-6 sm:grid-cols-2">
@@ -146,6 +208,16 @@ export default function V2ArenaDetail() {
           <p className="mt-3 text-sm text-gray-500">{arena.hours || 'Horário não informado.'}</p>
         </V2Surface>
       </div>
+
+      {/* Calendário interativo (Sprint 5) — entre Contato/Funcionamento e Próximos horários */}
+      <V2BookingCalendarSection arenaId={arenaId} arena={arena} />
+
+      {/* Pagamento PIX (Sprint 5) */}
+      <V2ArenaPaymentSection arena={arena} />
+
+      {/* Torneios + Professores residentes (Sprint 4) */}
+      <ArenaTournamentsSection arenaId={arenaId} />
+      <ArenaCoachesSection arenaId={arenaId} />
 
       {upcomingSlots.length > 0 && (
         <V2Surface className="mt-6">
@@ -200,5 +272,174 @@ export default function V2ArenaDetail() {
 
       {bookingOpen && <BookingRequestDialog arena={arena} open={bookingOpen} onOpenChange={setBookingOpen} />}
     </div>
+  );
+}
+
+function ArenaTournamentsSection({ arenaId }) {
+  const { data: tournaments = [], isLoading } = useArenaTournaments(arenaId);
+  if (isLoading) return null;
+  if (tournaments.length === 0) return null;
+  return (
+    <V2Surface className="mt-6">
+      <h3 className="flex items-center gap-1.5 font-display text-base font-bold text-ink">
+        <Trophy className="h-4 w-4" /> Torneios desta arena
+      </h3>
+      <div className="mt-3 grid gap-3 sm:grid-cols-2">
+        {tournaments.slice(0, 6).map((t) => (
+          <Link key={t.id} to={`/torneios/${t.id}`} className="block rounded-2xl border border-gray-100 bg-paper p-3 transition-transform hover:scale-[1.02]">
+            <div className="flex items-center gap-2">
+              <Trophy className="h-4 w-4 text-amber-500" />
+              <h4 className="flex-1 text-sm font-bold text-ink line-clamp-1">{t.name}</h4>
+              {t.status && <V2Badge tone="neutral">{t.status}</V2Badge>}
+            </div>
+            {t.starts_at && (
+              <p className="mt-1 text-xs text-gray-500">
+                {t.starts_at?.toDate?.()?.toLocaleDateString?.('pt-BR') || t.starts_at}
+              </p>
+            )}
+            {t.city && <p className="text-xs text-gray-400">📍 {t.city}{t.state && `, ${t.state}`}</p>}
+          </Link>
+        ))}
+      </div>
+    </V2Surface>
+  );
+}
+
+function ArenaCoachesSection({ arenaId }) {
+  const { data: coaches = [], isLoading } = useArenaCoaches(arenaId);
+  if (isLoading) return null;
+  if (coaches.length === 0) return null;
+  return (
+    <V2Surface className="mt-6">
+      <h3 className="flex items-center gap-1.5 font-display text-base font-bold text-ink">
+        <GraduationCap className="h-4 w-4" /> Professores residentes
+      </h3>
+      <div className="mt-3 grid gap-3 sm:grid-cols-2">
+        {coaches.slice(0, 6).map((c) => (
+          <Link key={c.id} to={`/coaches/${c.id}`} className="flex items-center gap-3 rounded-2xl border border-gray-100 bg-paper p-3 transition-transform hover:scale-[1.02]">
+            <div className="flex h-10 w-10 items-center justify-center rounded-2xl bg-gradient-to-br from-emerald-500 to-amber-500 text-sm font-bold text-white">
+              {c.display_name?.[0] || '?'}
+            </div>
+            <div className="flex-1 min-w-0">
+              <h4 className="text-sm font-bold text-ink line-clamp-1">{c.display_name}</h4>
+              {c.modalities?.length > 0 && (
+                <p className="text-xs text-gray-500 line-clamp-1">{c.modalities.join(' · ')}</p>
+              )}
+              {c.hourly_rate != null && (
+                <p className="text-xs font-bold text-emerald-700">R$ {Number(c.hourly_rate).toFixed(2)}/h</p>
+              )}
+            </div>
+          </Link>
+        ))}
+      </div>
+    </V2Surface>
+  );
+}
+
+
+
+function V2BookingCalendarSection({ arenaId, arena }) {
+  return (
+    <V2Surface className="mt-6">
+      <h3 className="flex items-center gap-1.5 font-display text-base font-bold text-ink">
+        <Calendar className="h-4 w-4" /> Reserve sua quadra
+      </h3>
+      <p className="mt-1 text-sm text-gray-500">
+        Clique nos horários disponíveis para selecioná-los. Você pode escolher mais de um.
+      </p>
+      <div className="mt-3">
+        <V2BookingCalendar arenaId={arenaId} arena={arena} />
+      </div>
+    </V2Surface>
+  );
+}
+
+function V2ArenaPaymentSection({ arena }) {
+  const payment = arena?.payment;
+  const [copied, setCopied] = useState(false);
+  if (!isPixConfigured(payment) || !payment.active) return null;
+  async function copyKey() {
+    if (!payment.pix_key) return;
+    try {
+      await navigator.clipboard.writeText(payment.pix_key);
+      setCopied(true);
+      setTimeout(() => setCopied(false), 2000);
+    } catch (err) { /* noop */ }
+  }
+  return (
+    <V2Surface className="mt-6">
+      <h3 className="flex items-center gap-1.5 font-display text-base font-bold text-ink">
+        💳 Pagar com PIX
+      </h3>
+      {payment.receiver_name && (
+        <p className="mt-1 text-sm text-gray-500">Recebedor: <span className="font-bold text-ink">{payment.receiver_name}</span></p>
+      )}
+      {payment.description && (
+        <p className="mt-2 whitespace-pre-line text-sm text-gray-600">{payment.description}</p>
+      )}
+      {payment.qr_code_url && (
+        <div className="mt-3 flex justify-center">
+          <img src={payment.qr_code_url} alt="QR Code PIX" className="max-w-[240px] rounded-2xl border border-gray-200 bg-white p-3" />
+        </div>
+      )}
+      {payment.pix_key && (
+        <div className="mt-3">
+          <p className="text-[11px] font-bold uppercase tracking-widest text-gray-400">
+            Chave PIX ({PIX_KEY_TYPE_LABELS[payment.pix_key_type] || payment.pix_key_type})
+          </p>
+          <div className="mt-1 flex items-center gap-2">
+            <code className="flex-1 break-all rounded-2xl border border-gray-200 bg-paper px-3 py-2 text-sm font-mono">
+              {payment.pix_key}
+            </code>
+            <V2Button size="sm" variant="secondary" onClick={copyKey}>
+              {copied ? <><Check className="h-3.5 w-3.5" /> Copiado</> : <><Copy className="h-3.5 w-3.5" /> Copiar</>}
+            </V2Button>
+          </div>
+        </div>
+      )}
+      {payment.instructions && (
+        <div className="mt-3 rounded-2xl border border-amber-200 bg-amber-50 p-3">
+          <p className="text-xs font-bold uppercase text-amber-800">Instruções</p>
+          <p className="mt-1 whitespace-pre-line text-sm text-amber-900">{payment.instructions}</p>
+        </div>
+      )}
+    </V2Surface>
+  );
+}
+
+function ArenaRulesSection({ arena }) {
+  const rules = Array.isArray(arena?.rules) && arena.rules.length > 0 ? arena.rules : null;
+  const hasLegacy = arena?.house_rules_md;
+  if (!rules && !hasLegacy) return null;
+  const grouped = rules ? groupRulesByCategory(rules) : null;
+  return (
+    <V2Surface className="mt-6">
+      <h3 className="flex items-center gap-1.5 font-display text-base font-bold text-ink">
+        📋 Regras da arena
+      </h3>
+      {grouped ? (
+        <div className="mt-3 space-y-4">
+          {Object.entries(grouped).map(([cat, items]) => (
+            <div key={cat}>
+              <h4 className="mb-1.5 text-xs font-bold uppercase tracking-widest text-emerald-700">
+                {cat}
+              </h4>
+              <ol className="list-decimal space-y-2 pl-5">
+                {items.map((r) => (
+                  <li key={r.id} className="text-sm text-gray-700">
+                    <span className="font-bold text-ink">{r.title}</span>
+                    {r.description && (
+                      <span className="ml-1 text-gray-600">— {r.description}</span>
+                    )}
+                  </li>
+                ))}
+              </ol>
+            </div>
+          ))}
+        </div>
+      ) : (
+        <p className="mt-3 whitespace-pre-line text-sm leading-7 text-gray-600">{hasLegacy}</p>
+      )}
+    </V2Surface>
   );
 }

@@ -121,13 +121,25 @@ navegação nova.
 | `/perfil` `/perfil/editar` | autenticado (V2) | Profile (dados + nivelamento) |
 | `/torneios` `/torneios/criar` `/torneios/ingressar` `/torneios/guia` | autenticado (V2) | lista/criar/ingressar/guia |
 | `/torneios/:id` `/torneios/:id/:tab` `/torneios/:id/modalidades/:modId` | autenticado (V2) | Tournament (abas) + página de modalidade |
-| `/arenas` `/arenas/criar` `/arenas/:id` `/arenas/:id/gerir` `/minhas-reservas` | autenticado (V2) | arenas + reservas |
+| `/arenas` `/arenas/criar` `/arenas/:id` `/arenas/:id/gerir` `/arenas/:id/onboarding` `/minhas-reservas` | autenticado (V2) | arenas + reservas (onboarding é o stepper de 4 passos pós-criação) |
 | `/atletas` `/atleta/:uid` | autenticado (V2) | diretório + perfil público |
 | `/clubes` `/clubes/criar` `/clubes/:id` `/clubes/:id/eventos/:eventId` | autenticado (V2) | clubes + eventos |
 | `/chat` `/novidades` | autenticado (V2) | mensagens + feed |
 | `/ranking` `/encontrar-jogadores` `/procura-jogo` `/parceiros` | autenticado (V2) | rating + jogos + parceiros |
 | `/meu-desempenho` | autenticado (V2) | performance |
 | `/admin/torneios` `/admin/metricas` `/admin/parceiros` | platform_admin (V2) | painel |
+
+> Itens do sidebar são **condicionais**: a flag `ARENAS` liga `/arenas` na
+> seção Plataforma; com o user sendo `manager`/`owner` de alguma arena,
+> surge "Minhas arenas" (com badge de reservas pendentes) na seção Você;
+> `Minhas reservas` só aparece se `ARENAS` estiver ligada (Sprint 0
+> ARE-11 + QW-14).
+
+**Tabs do /arenas/:id/gerir** (Sprint 1 ARE-02/04/05/07): Reservas, Calendário
+(visualização mensal 6x7 com filtro por quadra e cores por status), Quadras
+(CRUD com reorder, soft delete, modal de horários), Preços (com campo
+"Aplicar à quadra" em cada regra/override), Fotos, Informações, Admins,
+Retornos.
 
 Guards: `ProtectedRoute` (auth) e `AdminRoute` (platform_admin). Redirects
 legados `/dashboard`,`/boloes*` → rotas novas. Páginas via `React.lazy`.
@@ -148,6 +160,47 @@ campos em `docs/DATA_MODEL.md`.
   `archived` (mais `archived_at`/`archived_by`); arquivar exige
   `status === 'cancelled'` (validação cliente+server) e esconde o torneio
   do público (apenas criador + `platform_admin` continuam vendo).
+- **Arenas**: `arenas` · `arena_managers` (id `arenaId_uid`, tem `role`
+  `owner|manager`) · `arena_bookings` · `arena_reviews` · `arena_favorites`.
+  O doc `arenas/{id}` tem um objeto `onboarding_complete` com 4 booleans
+  (`fotos`, `precos`, `horarios`, `compartilhar`) mais
+  `onboarding_completed_at`; populado pelo stepper
+  `/arenas/:id/onboarding` (Sprint 0 ARE-20) e usado para nutrir campanhas
+  de "complete seu perfil". A página `/arenas/:id/gerir` é o painel
+  operacional (fotos, preços, regras, membros, módulos).
+  **Sprint 1 ARE-01/02/04/05/07**:
+  - `arena_courts` (quadras nomeadas com `court_type`/`surface_type`/`is_active`/`sort_order`)
+  - `arena_court_schedules` (janelas recorrentes: `weekdays[]`/`start_time`/`end_time`/`court_id`)
+  - `price_rules[]` em `arenas` agora pode ter `court_id` (ARE-05) — regra aplica só à quadra ou a todas se vazio
+  - `arena_bookings` tem `court_id` opcional (FOREIGN KEY não-enforçada)
+  **Sprint 2 ARE-03/06/08**:
+  - `arenas/{id}.allow_instant_booking: bool` (opt-in para reserva instantânea)
+  - `arena_bookings.is_instant: bool` + `payment_method`
+  - `arena_products` / `arena_sales` / `arena_payments` (PDV, 3 coleções V3)
+  **Sprint 3 ARE-09/18**:
+  - `arena_reviews.response`/`responded_at`/`responded_by` (populável
+    por manager — UI em V2ArenaReviews)
+  - `arenas/{id}.house_rules_md` (markdown regras da casa, exibido
+    público em /arenas/:id → bloco "Regras da casa")
+  **Sprint 4 ORG-20** (Circuitos):
+  - `circuits/{id}` (metadados: name, season, categories[], points_table)
+  - `circuit_admins/{circuitId_uid}` (admin doc, role owner|manager)
+  - `circuit_tournaments/{circuitId_tournamentId}` (link)
+  - `circuit_results/{circuitId_tournamentId_userId}` (resultado por atleta)
+  - Computa ranking agregado (computeCircuitRanking)
+  **Sprint 4 PRO-15** (Professores):
+  - `coaches/{uid}` (perfil: bio, hourly_rate, regions, modalities, certifications)
+  - `coach_arenas/{coachId_arenaId}` (residência)
+  **Sprint 4 ARE-14/15** (Integrações):
+  - `tournaments/{id}.arena_id` (opcional, vincula torneio a arena)
+  - Página da arena mostra tournaments vinculados e coaches residentes
+  **Sprint 5 (Refinamento)**:
+  - `arena_unavailabilities/{id}` (admin marca slot indisponível)
+  - `arenas/{id}.payment` (PIX: pix_key, qr_code_url, receiver_name)
+  - `arenas/{id}.rules[]` (lista de regras com título+descrição+categoria)
+  - `arena_inventory_products/{id}` (mestre: nome, marca, categoria)
+  - `arena_inventory_entries/{id}` (compra: qty, custo, fornecedor)
+  - `arena_inventory_exits/{id}` (venda: qty, preço, tipo)
 - **Clubes**: `clubs` · `club_members` (id `clubId_uid`, tem `role`) ·
   `club_join_requests` (id `clubId_uid`) · `club_member_invites`
   (id `clubId_uid`) · `club_posts` (mural) · `club_forum_threads` ·

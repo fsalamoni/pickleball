@@ -13,7 +13,7 @@
  * migração de V1 → V2). O cache key inclui o nome do produto e a versão; a
  * próxima ativação apaga caches antigos em `activate`.
  */
-const VERSION = 'v4';
+const VERSION = 'v7';
 const CACHE = `picklerush-${VERSION}`;
 const SHELL_URL = '/index.html';
 

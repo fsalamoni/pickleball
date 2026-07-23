@@ -1,0 +1,907 @@
+rules_version = '2';
+service cloud.firestore {
+  match /databases/{database}/documents {
+
+    function isAuthed() { return request.auth != null; }
+    function isOwner(uid) { return isAuthed() && request.auth.uid == uid; }
+    function isPlatformAdmin() {
+      return isAuthed()
+        && exists(/databases/$(database)/documents/users/$(request.auth.uid))
+        && get(/databases/$(database)/documents/users/$(request.auth.uid)).data.role == 'platform_admin';
+    }
+    function isPlatformOwnerEmail() {
+      return isAuthed() && request.auth.token.email == 'fsalamoni@gmail.com';
+    }
+    function isTournamentAdmin(tid) {
+      return isAuthed()
+        && exists(/databases/$(database)/documents/tournament_admins/$(tid + '_' + request.auth.uid));
+    }
+    // Criador do torneio (dono do recurso).
+    function isTournamentCreator(tid) {
+      return isAuthed()
+        && exists(/databases/$(database)/documents/tournaments/$(tid))
+        && get(/databases/$(database)/documents/tournaments/$(tid)).data.creator_uid == request.auth.uid;
+    }
+    // Quem pode ver/usar um torneio, respeitando o flag 'archived' (criador +
+    // admin continuam vendo; público some). Para coleções filhas, chame
+    // isTournamentVisibleByTid(request.resource.data.tournament_id).
+    function isTournamentVisibleByTid(tid) {
+      return exists(/databases/$(database)/documents/tournaments/$(tid))
+        && (
+          get(/databases/$(database)/documents/tournaments/$(tid)).data.get('archived', false) != true
+          || isPlatformAdmin()
+          || isTournamentCreator(tid)
+        );
+    }
+    function isClubMember(clubId) {
+      return isAuthed()
+        && exists(/databases/$(database)/documents/club_members/$(clubId + '_' + request.auth.uid));
+    }
+    function isClubAdmin(clubId) {
+      return isAuthed()
+        && exists(/databases/$(database)/documents/club_members/$(clubId + '_' + request.auth.uid))
+        && get(/databases/$(database)/documents/club_members/$(clubId + '_' + request.auth.uid)).data.role == 'admin';
+    }
+    function isClubCreator(clubId) {
+      return isAuthed()
+        && exists(/databases/$(database)/documents/clubs/$(clubId))
+        && get(/databases/$(database)/documents/clubs/$(clubId)).data.created_by == request.auth.uid;
+    }
+    // Gestor (dono ou administrador) de uma arena — doc determinístico arenaId_uid.
+    function isArenaManager(arenaId) {
+      return isAuthed()
+        && exists(/databases/$(database)/documents/arena_managers/$(arenaId + '_' + request.auth.uid));
+    }
+    // Dados/relações de um evento (para validar subcoleções pelo documento-pai).
+    function eventData(eventId) {
+      return get(/databases/$(database)/documents/club_events/$(eventId)).data;
+    }
+    function eventClubId(eventId) {
+      return eventData(eventId).club_id;
+    }
+    // Eventos antigos sem o campo `visibility` são tratados como públicos.
+    function eventIsPublic(eventId) {
+      return eventData(eventId).get('visibility', 'public') != 'private';
+    }
+    // Convidado/participante do evento (doc em event_invites com id determinístico).
+    function isEventInvitee(eventId) {
+      return isAuthed()
+        && exists(/databases/$(database)/documents/event_invites/$(eventId + '_' + request.auth.uid));
+    }
+    // Quem pode ver/usar o evento: admin da plataforma, criador, admin do clube,
+    // convidado/participante, ou — se público — qualquer membro do clube.
+    function isEventParticipant(eventId) {
+      return isAuthed()
+        && exists(/databases/$(database)/documents/club_events/$(eventId))
+        && (isPlatformAdmin()
+            || eventData(eventId).created_by == request.auth.uid
+            || isClubAdmin(eventClubId(eventId))
+            || isEventInvitee(eventId)
+            || (eventIsPublic(eventId) && isClubMember(eventClubId(eventId))));
+    }
+    function isEventClubMember(eventId) {
+      return isEventParticipant(eventId);
+    }
+    function isEventClubModerator(eventId) {
+      return isAuthed()
+        && exists(/databases/$(database)/documents/club_events/$(eventId))
+        && (isClubAdmin(eventClubId(eventId)) || isPlatformAdmin()
+            || eventData(eventId).created_by == request.auth.uid);
+    }
+    // Membro de uma conversa (validação pelo documento-pai para as mensagens).
+    function isConversationMember(cid) {
+      return isAuthed()
+        && exists(/databases/$(database)/documents/conversations/$(cid))
+        && request.auth.uid in get(/databases/$(database)/documents/conversations/$(cid)).data.member_ids;
+    }
+    // Clube de um tópico de fórum (para validar comentários/votos pelo pai).
+    function forumThreadClubId(tid) {
+      return get(/databases/$(database)/documents/club_forum_threads/$(tid)).data.club_id;
+    }
+    function isForumThreadMember(tid) {
+      return isAuthed()
+        && exists(/databases/$(database)/documents/club_forum_threads/$(tid))
+        && isClubMember(forumThreadClubId(tid));
+    }
+    function isForumThreadModerator(tid) {
+      return isAuthed()
+        && exists(/databases/$(database)/documents/club_forum_threads/$(tid))
+        && (isClubAdmin(forumThreadClubId(tid)) || isPlatformAdmin());
+    }
+    function isPlayerARegistrationEmailOwner() {
+      return isAuthed()
+        && request.auth.token.email is string
+        && resource.data.player_a_email_lc == request.auth.token.email.lower()
+        && request.resource.data.player_a_email_lc == request.auth.token.email.lower()
+        && request.resource.data.player_a_user_id == request.auth.uid;
+    }
+    function isPlayerBRegistrationEmailOwner() {
+      return isAuthed()
+        && request.auth.token.email is string
+        && resource.data.player_b_email_lc == request.auth.token.email.lower()
+        && request.resource.data.player_b_email_lc == request.auth.token.email.lower()
+        && request.resource.data.player_b_user_id == request.auth.uid;
+    }
+    function isRegistrationEmailOwnerUpdate() {
+      return (isPlayerARegistrationEmailOwner()
+          && request.resource.data.diff(resource.data).affectedKeys().hasOnly([
+            'user_id',
+            'player_a_user_id',
+            'player_a_name',
+            'player_a_email',
+            'player_a_email_lc',
+            'player_a_level',
+            'player_a_competition_gender',
+            'player_a_photo',
+            'player_a_provisional',
+            'is_provisional',
+            'label',
+            'claimed_at',
+            'updated_at',
+          ]))
+        || (isPlayerBRegistrationEmailOwner()
+          && request.resource.data.diff(resource.data).affectedKeys().hasOnly([
+            'player_b_user_id',
+            'player_b_name',
+            'player_b_email',
+            'player_b_email_lc',
+            'player_b_level',
+            'player_b_competition_gender',
+            'player_b_photo',
+            'player_b_provisional',
+            'is_provisional',
+            'label',
+            'claimed_at',
+            'updated_at',
+          ]));
+    }
+
+    // ---- Platform settings (feature flags) -------------------------------
+    // Documento único `platform_settings/global`. Leitura pública (as flags
+    // governam a UI inclusive na visão de espectador). Escrita só do admin
+    // master da plataforma.
+    match /platform_settings/{docId} {
+      allow read: if true;
+      allow write: if isPlatformAdmin();
+    }
+
+    // ---- Player ratings (ELO + ranking nacional) -------------------------
+    // Ranking materializado por replay dos jogos finalizados. Leitura pública
+    // (a página /ranking é aberta). Escrita só do admin master, via recálculo.
+    match /player_ratings/{uid} {
+      allow read: if true;
+      allow write: if isPlatformAdmin();
+    }
+
+    // Histórico de rating (snapshots por recálculo). Leitura pública; escrita só admin.
+    match /rating_history/{uid} {
+      allow read: if true;
+      allow write: if isPlatformAdmin();
+    }
+
+    // Metas pessoais do jogador (id uid_goalId). Apenas o próprio dono.
+    match /player_goals/{id} {
+      allow read: if isAuthed() && resource.data.uid == request.auth.uid;
+      allow create: if isAuthed() && request.resource.data.uid == request.auth.uid;
+      allow update, delete: if isAuthed() && resource.data.uid == request.auth.uid;
+    }
+
+    // ---- Galeria de fotos do torneio -------------------------------------
+    // Leitura pública (aparece na visão de espectador). Envio/remoção só por
+    // admin do torneio (ou admin master).
+    match /tournament_photos/{id} {
+      allow read: if true;
+      allow create: if isTournamentAdmin(request.resource.data.tournament_id) || isPlatformAdmin();
+      allow delete: if (resource.data.tournament_id != null
+        && isTournamentAdmin(resource.data.tournament_id)) || isPlatformAdmin();
+    }
+
+    // ---- Seguir atletas --------------------------------------------------
+    // Id determinista followerUid_targetUid. Leitura por autenticados; criar/
+    // remover apenas o próprio seguidor.
+    match /follows/{id} {
+      allow read: if isAuthed();
+      allow create: if isAuthed() && request.resource.data.follower_uid == request.auth.uid;
+      allow delete: if isAuthed() && resource.data.follower_uid == request.auth.uid;
+    }
+
+    // ---- Procura-se jogo (partidas sociais abertas) ----------------------
+    // Mural de convites. Leitura por autenticados; criação pelo próprio autor;
+    // edição/remoção só do autor (ou admin master).
+    match /open_games/{gameId} {
+      allow read: if isAuthed();
+      allow create: if isAuthed() && request.resource.data.created_by == request.auth.uid;
+      allow update, delete: if isAuthed()
+        && (resource.data.created_by == request.auth.uid || isPlatformAdmin());
+    }
+
+    // ---- Afiliados e parcerias -------------------------------------------
+    // Catálogo de links de afiliado/patrocinadores. Leitura pública (a página
+    // de parceiros é aberta). Escrita só do admin master.
+    match /affiliate_links/{linkId} {
+      allow read: if true;
+      allow write: if isPlatformAdmin();
+    }
+
+    // ---- Arenas -----------------------------------------------------------
+    // Diretório de arenas/quadras. Leitura pública (a página da arena é
+    // compartilhável por QR). Criação pelo próprio dono; edição/exclusão pelos
+    // gestores (ou admin master).
+    match /arenas/{arenaId} {
+      allow read: if true;
+      allow create: if isAuthed() && request.resource.data.owner_id == request.auth.uid;
+      allow update: if isArenaManager(arenaId) || isPlatformAdmin();
+      allow delete: if (isAuthed() && resource.data.owner_id == request.auth.uid) || isPlatformAdmin();
+    }
+    // Gestores da arena (id determinístico arenaId_uid). O criador registra a si
+    // mesmo como dono; gestores existentes adicionam outros; cada um pode sair.
+    match /arena_managers/{docId} {
+      allow read: if true;
+      allow create: if isAuthed() && (
+        request.resource.data.user_id == request.auth.uid
+        || isArenaManager(request.resource.data.arena_id)
+        || isPlatformAdmin());
+      allow update: if isArenaManager(resource.data.arena_id) || isPlatformAdmin();
+      allow delete: if isAuthed() && (
+        resource.data.user_id == request.auth.uid
+        || isArenaManager(resource.data.arena_id)
+        || isPlatformAdmin());
+    }
+    // Reservas: legíveis/gerenciáveis pelo atleta solicitante e pelos gestores
+    // da arena. Criação só pelo próprio atleta.
+    match /arena_bookings/{bookingId} {
+      allow read: if isAuthed() && (
+        resource.data.athlete_id == request.auth.uid
+        || isArenaManager(resource.data.arena_id)
+        || isPlatformAdmin());
+      allow create: if isAuthed() && request.resource.data.athlete_id == request.auth.uid;
+      allow update, delete: if isAuthed() && (
+        resource.data.athlete_id == request.auth.uid
+        || isArenaManager(resource.data.arena_id)
+        || isPlatformAdmin());
+    }
+    // Avaliações/reclamações/sugestões — leitura pública; cada um cria/edita as
+    // suas; a própria arena e o admin podem remover.
+    match /arena_reviews/{reviewId} {
+      allow read: if true;
+      allow create, update: if isAuthed() && request.resource.data.user_id == request.auth.uid;
+      allow delete: if isAuthed() && (
+        resource.data.user_id == request.auth.uid
+        || isArenaManager(resource.data.arena_id)
+        || isPlatformAdmin());
+    }
+    // Favoritos do atleta (id determinístico uid_arenaId) — só o próprio dono.
+    match /arena_favorites/{docId} {
+      allow read: if isAuthed() && resource.data.user_id == request.auth.uid;
+      allow create: if isAuthed() && request.resource.data.user_id == request.auth.uid;
+      allow delete: if isAuthed() && resource.data.user_id == request.auth.uid;
+    }
+
+    // ---- Arena V3 (sprint 0+) -------------------------------------------
+    // Settings da arena (1:1 com arenas/{id}). Leitura/escrita só por
+    // gestores da arena + platform admin.
+    match /arena_settings/{arenaId} {
+      allow read: if isAuthed() && (isArenaManager(arenaId) || isPlatformAdmin());
+      allow create, update: if isAuthed() && (isArenaManager(arenaId) || isPlatformAdmin());
+      allow delete: if isPlatformAdmin();
+    }
+    // Estado dos módulos opt-in por arena. Doc id: {arenaId}_{moduleId}.
+    // Leitura pública (atletas precisam saber o que a arena oferece).
+    // Escrita só por gestores da arena + platform admin.
+    match /arena_module_states/{docId} {
+      allow read: if true;
+      allow create, update: if isAuthed() && (
+        isArenaManager(request.resource.data.arena_id) || isPlatformAdmin()
+      );
+      allow delete: if isAuthed() && (
+        isArenaManager(resource.data.arena_id) || isPlatformAdmin()
+      );
+    }
+    // Open Match slots (sprint 1) — vagas abertas publicadas pela arena.
+    match /arena_open_slots/{slotId} {
+      allow read: if true;
+      allow create, update: if isAuthed() && (
+        isArenaManager(request.resource.data.arena_id) || isPlatformAdmin()
+      );
+      allow delete: if isAuthed() && (
+        isArenaManager(resource.data.arena_id) || isPlatformAdmin()
+      );
+    }
+    // Waitlist (sprint 1) — fila de espera por slot.
+    match /arena_waitlist/{waitlistId} {
+      allow read: if isAuthed() && (
+        resource.data.athlete_id == request.auth.uid
+        || isArenaManager(resource.data.arena_id)
+        || isPlatformAdmin()
+      );
+      allow create: if isAuthed() && request.resource.data.athlete_id == request.auth.uid;
+      allow update: if isAuthed() && (
+        isArenaManager(resource.data.arena_id) || isPlatformAdmin()
+      );
+      allow delete: if isAuthed() && (
+        resource.data.athlete_id == request.auth.uid
+        || isArenaManager(resource.data.arena_id)
+        || isPlatformAdmin()
+      );
+    }
+    // Members (sprint 2) — relação atleta-arena.
+    match /arena_members/{docId} {
+      allow read: if isAuthed() && (
+        resource.data.user_id == request.auth.uid
+        || isArenaManager(resource.data.arena_id)
+        || isPlatformAdmin()
+      );
+      allow create, update: if isAuthed() && (
+        isArenaManager(request.resource.data.arena_id) || isPlatformAdmin()
+      );
+      allow delete: if isAuthed() && (
+        resource.data.user_id == request.auth.uid
+        || isArenaManager(resource.data.arena_id)
+        || isPlatformAdmin()
+      );
+    }
+    // Packages (sprint 2) — pacotes pré-pagos. Leitura pública (catálogo).
+    match /arena_packages/{pkgId} {
+      allow read: if true;
+      allow create, update: if isAuthed() && (
+        isArenaManager(request.resource.data.arena_id) || isPlatformAdmin()
+      );
+      allow delete: if isAuthed() && (
+        isArenaManager(resource.data.arena_id) || isPlatformAdmin()
+      );
+    }
+    // Wallets (sprint 2) — wallet do atleta na arena.
+    match /arena_wallets/{docId} {
+      allow read: if isAuthed() && (
+        resource.data.user_id == request.auth.uid
+        || isArenaManager(resource.data.arena_id)
+        || isPlatformAdmin()
+      );
+      allow create, update: if isAuthed() && (
+        isArenaManager(request.resource.data.arena_id) || isPlatformAdmin()
+      );
+      allow delete: if isPlatformAdmin();
+    }
+    // Subscriptions (sprint 2) — mensalidades.
+    match /arena_subscriptions/{subId} {
+      allow read: if isAuthed() && (
+        resource.data.user_id == request.auth.uid
+        || isArenaManager(resource.data.arena_id)
+        || isPlatformAdmin()
+      );
+      allow create, update: if isAuthed() && (
+        isArenaManager(request.resource.data.arena_id) || isPlatformAdmin()
+      );
+      allow delete: if isPlatformAdmin();
+    }
+    // Products (sprint 3) — catálogo PDV.
+    match /arena_products/{prodId} {
+      allow read: if true;
+      allow create, update: if isAuthed() && (
+        isArenaManager(request.resource.data.arena_id) || isPlatformAdmin()
+      );
+      allow delete: if isAuthed() && (
+        isArenaManager(resource.data.arena_id) || isPlatformAdmin()
+      );
+    }
+    // Sales (sprint 3) — vendas.
+    match /arena_sales/{saleId} {
+      allow read: if isAuthed() && (
+        resource.data.buyer_id == request.auth.uid
+        || isArenaManager(resource.data.arena_id)
+        || isPlatformAdmin()
+      );
+      allow create: if isAuthed();
+      allow update, delete: if isAuthed() && (
+        isArenaManager(resource.data.arena_id) || isPlatformAdmin()
+      );
+    }
+    // Payments (sprint 3).
+    match /arena_payments/{paymentId} {
+      allow read: if isAuthed() && (
+        resource.data.payer_id == request.auth.uid
+        || isArenaManager(resource.data.arena_id)
+        || isPlatformAdmin()
+      );
+      allow create: if isAuthed();
+      allow update: if isAuthed() && (
+        resource.data.payer_id == request.auth.uid
+        || isArenaManager(resource.data.arena_id)
+        || isPlatformAdmin()
+      );
+      allow delete: if isPlatformAdmin();
+    }
+
+    // ---- Users -----------------------------------------------------------
+    match /users/{userId} {
+      allow read: if isOwner(userId) || isPlatformAdmin();
+      allow create, update: if isOwner(userId);
+      allow delete: if isPlatformAdmin();
+    }
+
+    // ---- Tournaments -----------------------------------------------------
+    match /tournaments/{tid} {
+      // Leitura: pública se NÃO arquivado; se arquivado, só platform_admin
+      // e criador continuam vendo (preserva histórico pra eles, esconde
+      // da UI pública, das listas de torneio e da visão de espectador).
+      allow read: if resource.data.get('archived', false) != true
+        || isPlatformAdmin()
+        || isTournamentCreator(tid);
+      allow create: if isAuthed() && request.resource.data.creator_uid == request.auth.uid;
+      // Update: a regra antiga (platform_admin / tournament_admin / criador)
+      // continua valendo para todos os campos. Para o campo 'archived'
+      // especificamente:
+      //  - só platform_admin ou criador podem alterá-lo (NÃO tournament_admin);
+      //  - arquivar (archived: true) só é permitido se o status atual for
+      //    'cancelled' (validação servidor — o service valida cliente-side).
+      allow update: if (isPlatformAdmin() || isTournamentAdmin(tid)
+        || (isAuthed() && resource.data.creator_uid == request.auth.uid))
+        && (
+          !request.resource.data.diff(resource.data).affectedKeys().hasAny(['archived'])
+          || (
+            (isPlatformAdmin() || (isAuthed() && resource.data.creator_uid == request.auth.uid))
+            && (!request.resource.data.archived || resource.data.status == 'cancelled')
+          )
+        );
+      allow delete: if isPlatformAdmin()
+        || (isAuthed() && resource.data.creator_uid == request.auth.uid);
+    }
+
+    match /tournament_admins/{docId} {
+      allow read: if isAuthed();
+      // Owner cria o registro inicial dele próprio durante createTournament.
+      allow create: if isAuthed()
+        && (request.resource.data.user_id == request.auth.uid
+            || isTournamentAdmin(request.resource.data.tournament_id)
+            || isPlatformAdmin());
+      allow update, delete: if isPlatformAdmin()
+        || isTournamentAdmin(resource.data.tournament_id);
+    }
+
+    match /tournament_modalities/{mid} {
+      // Leitura pública (modalidades integram o quadro do torneio).
+      // O flag 'archived' do torneio-pai já é filtrado pela rule de
+      // /tournaments/{tid} — público que não tem acesso ao torneio
+      // não chega aqui. Usar isTournamentVisibleByTid aqui estoura
+      // o limite de lookups do Firestore (4 lookups × N docs/query)
+      // e causa permission-denied pra todo mundo.
+      allow read: if true;
+      allow create, update, delete: if isPlatformAdmin()
+        || isTournamentAdmin(request.resource.data.tournament_id)
+        || isTournamentAdmin(resource.data.tournament_id);
+    }
+
+    match /tournament_registrations/{rid} {
+      // Inscritos: leitura pública (quadro do torneio inclui nomes).
+      // O flag 'archived' do torneio-pai já é filtrado pela rule de
+      // /tournaments/{tid} — público que não tem acesso ao torneio
+      // arquivado não chega aqui. Manter como pública evita o estouro
+      // de lookups do Firestore (CRÍTICO: listMyRegistrations faz 3
+      // queries paralelas com where(user_id|player_a_user_id|player_b_user_id)
+      // — cada doc disparava isTournamentVisibleByTid e batia o limite
+      // de 20 lookups/query → permission-denied → useMyTournaments
+      // quebrava silenciosamente e o admin via "como se nunca tivesse
+      // criado torneios"). Bug introduzido em #33, corrigido em #37.
+      allow read: if true;
+      // Próprio jogador inscreve-se, OU admin do torneio inscreve.
+      allow create: if isAuthed()
+        && (request.resource.data.created_by == request.auth.uid
+            || isTournamentAdmin(request.resource.data.tournament_id)
+            || isPlatformAdmin());
+      allow update: if isPlatformAdmin()
+        || isTournamentAdmin(resource.data.tournament_id)
+        || (isAuthed() && resource.data.created_by == request.auth.uid)
+        || isRegistrationEmailOwnerUpdate();
+      allow delete: if isPlatformAdmin() || isTournamentAdmin(resource.data.tournament_id);
+    }
+
+    match /tournament_matches/{mid} {
+      // Jogos: leitura pública (quadro do torneio é público).
+      // O flag 'archived' do torneio-pai já é filtrado pela rule de
+      // /tournaments/{tid} — público não chega num torneio arquivado.
+      // Usar isTournamentVisibleByTid aqui causa o mesmo estouro de
+      // lookups documentado em /tournament_registrations.
+      allow read: if true;
+      allow create, update, delete: if isPlatformAdmin()
+        || isTournamentAdmin(request.resource.data.tournament_id)
+        || isTournamentAdmin(resource.data.tournament_id);
+    }
+
+    match /tournament_groups/{gid} {
+      // Grupos: leitura respeita o flag 'archived' do torneio-pai.
+      allow read: if isTournamentVisibleByTid(resource.data.tournament_id);
+      allow create, update, delete: if isPlatformAdmin()
+        || isTournamentAdmin(request.resource.data.tournament_id)
+        || isTournamentAdmin(resource.data.tournament_id);
+    }
+
+    match /tournament_rankings/{rid} {
+      // Ranking materializado: leitura respeita o flag 'archived' do torneio-pai.
+      allow read: if isTournamentVisibleByTid(resource.data.tournament_id);
+      allow write: if isPlatformAdmin()
+        || isTournamentAdmin(request.resource.data.tournament_id)
+        || isTournamentAdmin(resource.data.tournament_id);
+    }
+
+    match /tournament_courts/{cid} {
+      // Quadras: leitura pública (info do torneio).
+      // O flag 'archived' do torneio-pai já é filtrado pela rule de
+      // /tournaments/{tid} — público não chega num torneio arquivado.
+      allow read: if true;
+      allow create, update, delete: if isPlatformAdmin()
+        || isTournamentAdmin(request.resource.data.tournament_id)
+        || isTournamentAdmin(resource.data.tournament_id);
+    }
+
+    // ---- Notifications ---------------------------------------------------
+    match /notifications/{nid} {
+      allow read, update: if isAuthed() && resource.data.user_id == request.auth.uid;
+      allow create: if isAuthed();
+      allow delete: if isPlatformAdmin();
+    }
+
+    // ---- Audit logs (read by platform admin only) ------------------------
+    match /audit_logs/{lid} {
+      allow read: if isPlatformAdmin();
+      allow create: if isAuthed();
+      allow update, delete: if false;
+    }
+
+    // ---- Athlete directory (public projection of users) ------------------
+    // Documento público controlado: o cliente só grava aqui os campos que o
+    // próprio atleta autorizou. Dados privados nunca chegam a esta coleção.
+    match /athlete_profiles/{uid} {
+      allow read: if isAuthed();
+      // platform_admin também pode escrever — usado por
+      // `restoreAthleteProfileFromUserDoc` pra recuperar perfis corrompidos
+      // pelo bug antigo do `syncAthleteProfile`.
+      allow create, update: if isOwner(uid) || isPlatformAdmin();
+      allow delete: if isOwner(uid) || isPlatformAdmin();
+    }
+
+    // ---- Clubs -----------------------------------------------------------
+    match /clubs/{clubId} {
+      allow read: if isAuthed();
+      allow create: if isAuthed() && request.resource.data.created_by == request.auth.uid;
+      // Admins editam tudo; qualquer membro pode atualizar apenas o contador
+      // cosmético de membros (entrar/sair do clube).
+      allow update: if isClubAdmin(clubId) || isPlatformAdmin()
+        || (isAuthed()
+            && request.resource.data.diff(resource.data).affectedKeys().hasOnly(['member_count', 'updated_at']));
+      allow delete: if isPlatformAdmin()
+        || (isAuthed() && resource.data.created_by == request.auth.uid);
+    }
+
+    match /club_members/{docId} {
+      allow read: if isAuthed();
+      // Auto-ingresso como membro, criador registrando-se como admin, ou um
+      // admin adicionando alguém.
+      allow create: if isAuthed() && (
+        (request.resource.data.user_id == request.auth.uid
+          && (request.resource.data.role == 'member' || isClubCreator(request.resource.data.club_id)))
+        || isClubAdmin(request.resource.data.club_id)
+        || isPlatformAdmin()
+      );
+      allow update: if isClubAdmin(resource.data.club_id) || isPlatformAdmin();
+      // Admin remove membros; qualquer um remove a própria associação (sair).
+      allow delete: if isClubAdmin(resource.data.club_id) || isPlatformAdmin()
+        || (isAuthed() && resource.data.user_id == request.auth.uid);
+    }
+
+    // Pedidos de ingresso: não-membro pede para entrar; admin aprova/recusa.
+    match /club_join_requests/{docId} {
+      allow read: if isAuthed() && (
+        resource == null
+        || resource.data.user_id == request.auth.uid
+        || isClubAdmin(resource.data.club_id)
+        || isPlatformAdmin()
+      );
+      allow create: if isAuthed()
+        && request.resource.data.user_id == request.auth.uid
+        && request.resource.data.status == 'pending'
+        && !isClubMember(request.resource.data.club_id);
+      allow update: if isAuthed() && (
+        isClubAdmin(resource.data.club_id) || isPlatformAdmin()
+        || resource.data.user_id == request.auth.uid
+      );
+      allow delete: if isAuthed() && (
+        isClubAdmin(resource.data.club_id) || isPlatformAdmin()
+        || resource.data.user_id == request.auth.uid
+      );
+    }
+
+    // Convites de associação: admin convida atleta; o convidado aceita/recusa.
+    match /club_member_invites/{docId} {
+      allow read: if isAuthed() && (
+        resource == null
+        || resource.data.user_id == request.auth.uid
+        || isClubAdmin(resource.data.club_id)
+        || isPlatformAdmin()
+      );
+      allow create: if isAuthed()
+        && (isClubAdmin(request.resource.data.club_id) || isPlatformAdmin());
+      allow update: if isAuthed() && (
+        resource.data.user_id == request.auth.uid
+        || isClubAdmin(resource.data.club_id) || isPlatformAdmin()
+      );
+      allow delete: if isAuthed() && (
+        resource.data.user_id == request.auth.uid
+        || isClubAdmin(resource.data.club_id) || isPlatformAdmin()
+      );
+    }
+
+    match /club_events/{eventId} {
+      // Público (ou legado sem o campo): qualquer membro do clube lê.
+      // Privado: apenas criador, admin do clube, plataforma ou convidado.
+      allow read: if isPlatformAdmin()
+        || (isAuthed() && resource.data.created_by == request.auth.uid)
+        || isClubAdmin(resource.data.club_id)
+        || isEventInvitee(eventId)
+        || (resource.data.get('visibility', 'public') != 'private' && isClubMember(resource.data.club_id));
+      allow create: if isClubMember(request.resource.data.club_id)
+        && request.resource.data.created_by == request.auth.uid;
+      // Criador, admin e participantes (incluindo convidados) editam livremente.
+      allow update: if isPlatformAdmin()
+        || (isAuthed() && resource.data.created_by == request.auth.uid)
+        || isClubAdmin(resource.data.club_id)
+        || isEventInvitee(eventId)
+        || (resource.data.get('visibility', 'public') != 'private' && isClubMember(resource.data.club_id));
+      allow delete: if isClubAdmin(resource.data.club_id) || isPlatformAdmin()
+        || (isAuthed() && resource.data.created_by == request.auth.uid);
+
+      // Datas do evento (data, local, horário) — editáveis pelos participantes.
+      match /dates/{dateId} {
+        allow read: if isEventClubMember(eventId) || isPlatformAdmin();
+        allow create, update, delete: if isEventClubMember(eventId) || isPlatformAdmin();
+      }
+
+      // Resposta por data (vou/talvez/não vou). Cada um grava a própria resposta.
+      match /date_rsvps/{docId} {
+        allow read: if isEventClubMember(eventId) || isPlatformAdmin();
+        allow create, update: if isAuthed()
+          && request.resource.data.user_id == request.auth.uid
+          && isEventClubMember(eventId);
+        allow delete: if (isAuthed() && resource.data.user_id == request.auth.uid)
+          || isEventClubModerator(eventId);
+      }
+
+      // Chat cronológico do evento.
+      match /messages/{messageId} {
+        allow read: if isEventClubMember(eventId) || isPlatformAdmin();
+        allow create: if isEventClubMember(eventId)
+          && request.resource.data.sender_id == request.auth.uid;
+        allow update, delete: if (isAuthed() && resource.data.sender_id == request.auth.uid)
+          || isEventClubModerator(eventId);
+      }
+
+      // Participantes do dia de jogo (edição livre pelos participantes).
+      match /participants/{participantId} {
+        allow read: if isEventClubMember(eventId) || isPlatformAdmin();
+        allow create, update, delete: if isEventClubMember(eventId) || isPlatformAdmin();
+      }
+
+      // Jogos organizados/sorteados (edição livre pelos participantes).
+      match /games/{gameId} {
+        allow read: if isEventClubMember(eventId) || isPlatformAdmin();
+        allow create, update, delete: if isEventClubMember(eventId) || isPlatformAdmin();
+      }
+    }
+
+    // ---- Convites/participações em eventos (coleção de nível superior) -----
+    // Id determinístico `${eventId}_${uid}`. Permite ao usuário listar seus
+    // próprios convites (início) e aos participantes verem a lista do evento.
+    match /event_invites/{docId} {
+      // `resource == null` cobre o `get` de um convite ainda inexistente (ex.:
+      // verificação antes de criar) — sem isso o acesso a resource.data falha.
+      allow read: if isAuthed() && (
+        resource == null
+        || resource.data.user_id == request.auth.uid
+        || isEventParticipant(resource.data.event_id)
+      );
+      // Auto-resposta a evento público, aceite de convite, ou um participante
+      // convidando outro atleta.
+      allow create: if isAuthed() && (
+        (request.resource.data.user_id == request.auth.uid
+          && (eventIsPublic(request.resource.data.event_id) || isEventInvitee(request.resource.data.event_id)))
+        || isEventParticipant(request.resource.data.event_id)
+      );
+      allow update: if isAuthed()
+        && (resource.data.user_id == request.auth.uid || isEventParticipant(resource.data.event_id));
+      allow delete: if isAuthed()
+        && (resource.data.user_id == request.auth.uid
+            || isEventClubModerator(resource.data.event_id)
+            || isEventParticipant(resource.data.event_id));
+    }
+
+    match /club_event_rsvps/{docId} {
+      allow read: if isClubMember(resource.data.club_id) || isPlatformAdmin();
+      allow create: if isAuthed()
+        && request.resource.data.user_id == request.auth.uid
+        && isClubMember(request.resource.data.club_id);
+      allow update: if isAuthed() && resource.data.user_id == request.auth.uid;
+      allow delete: if (isAuthed() && resource.data.user_id == request.auth.uid)
+        || isClubAdmin(resource.data.club_id) || isPlatformAdmin();
+    }
+
+    match /club_posts/{postId} {
+      allow read: if isClubMember(resource.data.club_id) || isPlatformAdmin();
+      allow create: if isClubMember(request.resource.data.club_id)
+        && request.resource.data.author_id == request.auth.uid;
+      allow update: if isAuthed() && resource.data.author_id == request.auth.uid;
+      allow delete: if (isAuthed() && resource.data.author_id == request.auth.uid)
+        || isClubAdmin(resource.data.club_id) || isPlatformAdmin();
+    }
+
+    // ---- Club forum: threads, comments and poll votes --------------------
+    // Comentários e votos ficam em subcoleções do tópico, validados pelo clube
+    // do tópico-pai. Isso evita índices compostos e mantém o acesso restrito
+    // aos membros do clube.
+    match /club_forum_threads/{threadId} {
+      allow read: if isClubMember(resource.data.club_id) || isPlatformAdmin();
+      allow create: if isClubMember(request.resource.data.club_id)
+        && request.resource.data.author_id == request.auth.uid;
+      // Autor edita o próprio tópico; admins moderam; qualquer membro pode
+      // apenas atualizar os campos cosméticos ao comentar (contador/atividade).
+      allow update: if isClubAdmin(resource.data.club_id) || isPlatformAdmin()
+        || (isAuthed() && resource.data.author_id == request.auth.uid)
+        || (isClubMember(resource.data.club_id)
+            && request.resource.data.diff(resource.data).affectedKeys()
+                 .hasOnly(['comment_count', 'last_activity_ms', 'participant_ids', 'updated_at']));
+      allow delete: if isClubAdmin(resource.data.club_id) || isPlatformAdmin()
+        || (isAuthed() && resource.data.author_id == request.auth.uid);
+
+      match /comments/{commentId} {
+        allow read: if isForumThreadMember(threadId) || isPlatformAdmin();
+        allow create: if isForumThreadMember(threadId)
+          && request.resource.data.author_id == request.auth.uid;
+        allow update: if isAuthed() && resource.data.author_id == request.auth.uid;
+        allow delete: if (isAuthed() && resource.data.author_id == request.auth.uid)
+          || isForumThreadModerator(threadId);
+      }
+
+      match /poll_votes/{voterId} {
+        allow read: if isForumThreadMember(threadId) || isPlatformAdmin();
+        // O id do documento é o uid do votante: cada um só grava o próprio voto.
+        allow create, update: if isAuthed()
+          && voterId == request.auth.uid
+          && isForumThreadMember(threadId);
+        allow delete: if isAuthed() && voterId == request.auth.uid;
+      }
+    }
+
+    // ---- Chat: conversations and messages --------------------------------
+    // Mensagens ficam na subcoleção `conversations/{id}/messages`: o acesso é
+    // validado pelo documento-pai (membros da conversa), sem denormalizar
+    // membros em cada mensagem nem exigir índices compostos.
+    match /conversations/{conversationId} {
+      // get permite ler um documento inexistente (resource == null) para que o
+      // cliente verifique/abra conversas diretas de id determinístico.
+      allow get: if isAuthed()
+        && (resource == null || request.auth.uid in resource.data.member_ids);
+      allow list: if isAuthed() && request.auth.uid in resource.data.member_ids;
+      allow create: if isAuthed()
+        && request.auth.uid in request.resource.data.member_ids
+        && request.resource.data.created_by == request.auth.uid;
+      // Qualquer participante pode atualizar (resumo, renomear, sair, ocultar);
+      // sair/excluir operam sobre o documento atual, onde ainda é membro.
+      allow update, delete: if isAuthed() && request.auth.uid in resource.data.member_ids;
+
+      match /messages/{messageId} {
+        allow read: if isConversationMember(conversationId);
+        allow create: if isConversationMember(conversationId)
+          && request.resource.data.sender_id == request.auth.uid;
+        allow update, delete: if isAuthed() && resource.data.sender_id == request.auth.uid;
+      }
+    }
+
+    // ============================================================
+    // ARENA V3 — Sprints 1-11 (regras adicionadas em 2026-07-21)
+    // ============================================================
+
+    // Sprint 1: Matches entre atletas (parceria encontrada via matchmaking)
+    match /arena_matches/{matchId} {
+      allow read: if isAuthed();
+      allow create: if isAuthed() && (
+        request.resource.data.user_a == request.auth.uid ||
+        request.resource.data.user_b == request.auth.uid
+      );
+      allow update, delete: if isAuthed() && (
+        isArenaManager(request.resource.data.arena_id) ||
+        resource.data.user_a == request.auth.uid ||
+        resource.data.user_b == request.auth.uid
+      );
+    }
+
+    // Sprint 4: Aulas, instrutores e reservas de aulas
+    match /arena_coaches/{coachId} {
+      allow read: if isAuthed();
+      allow create, update, delete: if isArenaManager(request.resource.data.arena_id) || isPlatformAdmin();
+    }
+
+    match /arena_classes/{classId} {
+      allow read: if isAuthed();
+      allow create, update, delete: if isArenaManager(request.resource.data.arena_id) || isPlatformAdmin();
+    }
+
+    match /arena_class_bookings/{bookingId} {
+      allow read: if isAuthed() && (
+        resource.data.user_id == request.auth.uid ||
+        isArenaManager(resource.data.arena_id) ||
+        isPlatformAdmin()
+      );
+      allow create: if isAuthed() && request.resource.data.user_id == request.auth.uid;
+      allow update, delete: if isAuthed() && resource.data.user_id == request.auth.uid;
+    }
+
+    // Sprint 5: Torneios internos e ladder
+    match /arena_internal_tournaments/{tournamentId} {
+      allow read: if isAuthed();
+      allow create, update: if isArenaManager(request.resource.data.arena_id) || isPlatformAdmin();
+      allow delete: if isArenaManager(resource.data.arena_id) || isPlatformAdmin();
+    }
+
+    match /arena_ladders/{ladderId} {
+      allow read: if isAuthed();
+      allow write: if isArenaManager(request.resource.data.arena_id) || isPlatformAdmin();
+    }
+
+    // Sprint 6: Marketing (cupons, campanhas, NPS, referral)
+    match /arena_coupons/{couponId} {
+      allow read: if isAuthed();
+      allow create, update, delete: if isArenaManager(request.resource.data.arena_id) || isPlatformAdmin();
+    }
+
+    match /arena_campaigns/{campaignId} {
+      allow read: if isAuthed();
+      allow create, update, delete: if isArenaManager(request.resource.data.arena_id) || isPlatformAdmin();
+    }
+
+    match /arena_nps_responses/{responseId} {
+      allow read: if isArenaManager(request.resource.data.arena_id) || isPlatformAdmin();
+      allow create: if isAuthed() && request.resource.data.user_id == request.auth.uid;
+    }
+
+    match /arena_referrals/{referralId} {
+      allow read: if isAuthed() && (
+        resource.data.referrer_id == request.auth.uid ||
+        resource.data.referred_id == request.auth.uid ||
+        isPlatformAdmin()
+      );
+      allow create: if isAuthed();
+      allow update, delete: if isAuthed() && resource.data.referrer_id == request.auth.uid;
+    }
+
+    // Sprint 7: Operações (checklists, manutenção)
+    match /arena_checklists/{checklistId} {
+      allow read: if isAuthed();
+      allow create, update, delete: if isArenaManager(request.resource.data.arena_id) || isPlatformAdmin();
+    }
+
+    match /arena_maintenance_orders/{orderId} {
+      allow read: if isArenaManager(request.resource.data.arena_id) || isPlatformAdmin();
+      allow create, update, delete: if isArenaManager(request.resource.data.arena_id) || isPlatformAdmin();
+    }
+
+    // Sprints 8-11: IoT, Multi-unit (network)
+    match /arena_devices/{deviceId} {
+      allow read: if isAuthed();
+      allow create, update, delete: if isArenaManager(request.resource.data.arena_id) || isPlatformAdmin();
+    }
+
+    match /arena_networks/{networkId} {
+      allow read: if isAuthed();
+      allow create, update, delete: if isPlatformAdmin();
+    }
+
+    match /arena_network_memberships/{membershipId} {
+      allow read: if isAuthed();
+      allow create, update, delete: if isPlatformAdmin();
+    }
+
+    // Sprint 2: Configuração de tiers (apenas platform admin)
+    match /arena_tier_configs/{configId} {
+      allow read: if isAuthed();
+      allow write: if isPlatformAdmin();
+    }
+  }
+}

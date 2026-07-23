@@ -28,12 +28,14 @@ import {
   LogOut,
   Pencil,
   Search as SearchIcon,
+  Power,
 } from 'lucide-react';
 import { useAuth } from '@/core/lib/FirebaseAuthContext';
 import { useAutoRecomputeRatings } from '@/modules/rating/hooks/useRating';
 import AuthFunnelTracker from '@/modules/analytics/components/AuthFunnelTracker';
 import { useFeatureFlag } from '@/core/lib/FeatureFlagsContext';
 import { FEATURE_FLAG } from '@/core/featureFlags';
+import { useMyArenaSummary } from '@/modules/arenas/hooks/useMyArenaSummary';
 import { useNotifications } from '@/modules/notifications/hooks/useNotifications';
 import { getLevelByCode } from '@/modules/leveling/data/levels';
 import {
@@ -93,6 +95,10 @@ function useV2Nav() {
   const affiliatesOn = useFeatureFlag(FEATURE_FLAG.AFFILIATE_LINKS);
   const communityFeedOn = useFeatureFlag(FEATURE_FLAG.COMMUNITY_FEED);
   const arenasOn = useFeatureFlag(FEATURE_FLAG.ARENAS);
+  const circuitsOn = useFeatureFlag(FEATURE_FLAG.CIRCUITS);
+  const coachesOn = useFeatureFlag(FEATURE_FLAG.COACH_RESIDENT);
+  const { totalArenas: myArenasCount, totalPendingBookings: myPendingBookings } = useMyArenaSummary();
+  const showMyArenas = arenasOn && myArenasCount > 0;
   const sportHistoryOn = useFeatureFlag(FEATURE_FLAG.SPORT_HISTORY);
 
   return useMemo(() => [
@@ -100,8 +106,10 @@ function useV2Nav() {
       title: 'Plataforma',
       items: [
         { to: '/', label: 'Visão Geral', icon: LayoutGrid, exact: true },
-        arenasOn && { to: '/arenas', label: 'Explorar Quadras', icon: MapPin },
+        (arenasOn || isPlatformAdmin) && { to: '/arenas', label: 'Explorar Quadras', icon: MapPin, tag: !arenasOn && isPlatformAdmin ? 'Off' : undefined },
         { to: '/torneios', label: 'Torneios', icon: Trophy, tag: 'Novo' },
+        circuitsOn && { to: '/circuits', label: 'Circuitos', icon: Award },
+        coachesOn && { to: '/coaches', label: 'Professores', icon: GraduationCap },
         communityFeedOn && { to: '/novidades', label: 'Comunidade', icon: Zap },
       ].filter(Boolean),
     },
@@ -121,17 +129,24 @@ function useV2Nav() {
       items: [
         { to: '/chat', label: 'Mensagens', icon: MessageSquare },
         performanceOn && { to: '/meu-desempenho', label: 'Meu desempenho', icon: BarChart3 },
-        { to: '/minhas-reservas', label: 'Minhas reservas', icon: Building2 },
+        showMyArenas && {
+          to: '/arenas',
+          label: 'Minhas arenas',
+          icon: Building2,
+          badge: myPendingBookings,
+          badgeHint: myPendingBookings > 0
+            ? `${myPendingBookings} pedido(s) de reserva aguardando resposta`
+            : undefined,
+        },
+        arenasOn && { to: '/minhas-reservas', label: 'Minhas reservas', icon: Building2 },
         { to: '/perfil', label: 'Meu Perfil', icon: User },
       ].filter(Boolean),
     },
     isPlatformAdmin && {
       title: 'Admin geral',
       items: [
+        { to: '/admin/v3-bootstrap', label: 'Arena V3: Boot', icon: Power, tag: 'V3' },
         adminConsoleOn && { to: '/admin/painel', label: 'Painel', icon: LayoutDashboard, tag: 'Novo' },
-        { to: '/admin/metricas', label: 'Métricas', icon: Settings },
-        { to: '/admin/torneios', label: 'Torneios', icon: Settings },
-        { to: '/admin/parceiros', label: 'Parceiros', icon: Settings },
       ].filter(Boolean),
     },
     {
@@ -144,7 +159,7 @@ function useV2Nav() {
         { to: '/politica-uso', label: 'Política de uso', icon: FileText },
       ].filter(Boolean),
     },
-  ].filter(Boolean), [performanceOn, ratingOn, matchmakingOn, openGamesOn, affiliatesOn, communityFeedOn, arenasOn, sportHistoryOn, isPlatformAdmin, adminConsoleOn]);
+  ].filter(Boolean), [performanceOn, ratingOn, matchmakingOn, openGamesOn, affiliatesOn, communityFeedOn, arenasOn, sportHistoryOn, isPlatformAdmin, adminConsoleOn, myArenasCount, myPendingBookings, showMyArenas]);
 }
 
 function isActive(pathname, item) {
@@ -165,6 +180,7 @@ function BrandLockup() {
 
 function NavItem({ item, active, onClick }) {
   const Icon = item.icon;
+  const showBadge = typeof item.badge === 'number' && item.badge > 0;
   return (
     <Link
       to={item.to}
@@ -176,8 +192,19 @@ function NavItem({ item, active, onClick }) {
     >
       <Icon className={cn('h-5 w-5 shrink-0 transition-colors', active ? 'text-acid' : 'text-gray-400 group-hover:text-acid')} />
       <span className="ml-3 font-medium">{item.label}</span>
-      {item.tag && (
+      {item.tag && !showBadge && (
         <span className="ml-auto rounded-full bg-acid/20 px-2 py-0.5 text-[10px] font-bold text-ink-lighter">{item.tag}</span>
+      )}
+      {showBadge && (
+        <span
+          className={cn(
+            'ml-auto flex h-5 min-w-[1.25rem] items-center justify-center rounded-full px-1.5 text-[10px] font-bold',
+            active ? 'bg-acid text-ink' : 'bg-acid/90 text-ink',
+          )}
+          title={item.badgeHint || `${item.badge} pendência(s)`}
+        >
+          {item.badge > 99 ? '99+' : item.badge}
+        </span>
       )}
     </Link>
   );

@@ -4,6 +4,7 @@ import {
   listMyTournaments,
   listAllTournaments,
   listPublicTournaments,
+  listArenaTournaments,
   listTournamentAdmins,
   isTournamentAdmin,
   createTournament,
@@ -112,6 +113,15 @@ export function useAllTournaments({ includeArchived = false } = {}) {
 
 export function usePublicTournaments() {
   return useQuery({ queryKey: ['tournaments-public'], queryFn: listPublicTournaments });
+}
+
+// Sprint 4 ARE-14: tournaments de uma arena
+export function useArenaTournaments(arenaId) {
+  return useQuery({
+    queryKey: ['arena-tournaments', arenaId],
+    queryFn: () => listArenaTournaments(arenaId),
+    enabled: !!arenaId,
+  });
 }
 
 export function useCreateTournament() {

@@ -281,10 +281,21 @@ export function V2Textarea({ className, rows = 4, ...props }) {
   return <textarea rows={rows} className={cn(FIELD_CONTROL, 'min-h-[7rem] resize-y', className)} {...props} />;
 }
 
-export function V2Select({ className, children, ...props }) {
+export function V2Select({ className, children, options, ...props }) {
+  // Aceita tanto `children` (manual) quanto `options` (array de {value,label} ou {value,disabled}).
+  // Se ambos forem passados, ignora `options` em favor dos `children` (autor do componente
+  // tem prioridade). Esse contrato era o esperado mas não estava implementado — V2CourtsTab
+  // passava `options` e o select renderizava VAZIO (cn is not defined + options ignorado).
   return (
     <select className={cn(FIELD_CONTROL, 'h-12 appearance-none bg-[length:1rem] pr-10', className)} {...props}>
-      {children}
+      {children || (options || []).map((opt) => {
+        const o = typeof opt === 'string' ? { value: opt, label: opt } : opt;
+        return (
+          <option key={o.value} value={o.value} disabled={o.disabled}>
+            {o.label}
+          </option>
+        );
+      })}
     </select>
   );
 }

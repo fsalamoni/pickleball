@@ -36,6 +36,7 @@ export function normalizePriceRule(input = {}) {
   const price = num(input.price);
   const start = String(input.start ?? '').trim();
   const end = String(input.end ?? '').trim();
+  const courtId = String(input.court_id ?? '').trim(); // ARE-05: regra por quadra
   const valid = weekdays.length > 0
     && price != null && price >= 0
     && timeToMinutes(start) != null
@@ -50,6 +51,7 @@ export function normalizePriceRule(input = {}) {
       start,
       end,
       price: price ?? 0,
+      court_id: courtId || null, // ARE-05
     },
   };
 }
@@ -76,17 +78,36 @@ export function normalizePriceOverride(input = {}) {
 
 /**
  * Resolve o preço para um horário específico.
+ *
+ * Hierarquia (ARE-05, com court_id):
+ *  1. Override com court_id matching
+ *  2. Override sem court_id (todas)
+ *  3. Regra com court_id matching
+ *  4. Regra sem court_id (todas)
+ *  5. base_price
+ *
  * @param {{ base_price?: number|null, price_rules?: object[], price_overrides?: object[] }} arena
- * @param {{ date?: string, weekday?: number, time?: string, clientId?: string }} slot
+ * @param {{ date?: string, weekday?: number, time?: string, clientId?: string, courtId?: string|null }} slot
  * @returns {{ price: number|null, source: 'override'|'rule'|'base'|'none', label: string }}
  */
 export function resolveArenaPrice(arena = {}, slot = {}) {
   const overrides = Array.isArray(arena.price_overrides) ? arena.price_overrides : [];
   const rules = Array.isArray(arena.price_rules) ? arena.price_rules : [];
-  const { date, weekday, time, clientId } = slot;
+  const { date, weekday, time, clientId, courtId } = slot;
 
-  // 1) Exceções: por data exata ou por cliente específico.
-  const override = overrides.find((o) => {
+  // Helper: match por data exata OU cliente específico. Se slot tem courtId,
+  // prioriza override com court_id matching, depois sem court_id.
+  const matchingOverrides = (filterCourt) => overrides.filter((o) => {
+    if (o.date && date && o.date === date) return true;
+    if (o.client_id && clientId && o.client_id === clientId) return true;
+    return false;
+  }).filter((o) => filterCourt
+    ? (o.court_id && o.court_id === filterCourt)
+    : !o.court_id);
+
+  let override = null;
+  if (courtId) override = matchingOverrides(courtId)[0];
+  if (!override) override = overrides.find((o) => {
     if (o.date && date && o.date === date) return true;
     if (o.client_id && clientId && o.client_id === clientId) return true;
     return false;
@@ -95,16 +116,30 @@ export function resolveArenaPrice(arena = {}, slot = {}) {
     return { price: num(override.price), source: 'override', label: override.label || 'Exceção' };
   }
 
-  // 2) Regra por dia da semana + faixa de horário.
+  // 2) Regra por dia da semana + faixa de horário. Mesma lógica de prioridade court.
   const minutes = timeToMinutes(time);
   if (Number.isFinite(weekday) && minutes != null) {
-    const rule = rules.find((r) => {
+    const matches = (filterCourt) => rules.filter((r) => {
+      const s = timeToMinutes(r.start);
+      const e = timeToMinutes(r.end);
+      const wdMatch = Array.isArray(r.weekdays) && r.weekdays.includes(weekday);
+      const timeMatch = s != null && e != null && minutes >= s && minutes < e;
+      const courtMatch = filterCourt
+        ? (r.court_id && r.court_id === filterCourt)
+        : !r.court_id;
+      return wdMatch && timeMatch && courtMatch;
+    });
+
+    let rule = null;
+    if (courtId) rule = matches(courtId)[0];
+    if (!rule) rule = rules.find((r) => {
       const s = timeToMinutes(r.start);
       const e = timeToMinutes(r.end);
       return Array.isArray(r.weekdays)
         && r.weekdays.includes(weekday)
         && s != null && e != null
-        && minutes >= s && minutes < e;
+        && minutes >= s && minutes < e
+        && !r.court_id; // só regras sem court_id no fallback
     });
     if (rule) return { price: num(rule.price), source: 'rule', label: rule.label || 'Preço padrão' };
   }

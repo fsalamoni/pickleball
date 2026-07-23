@@ -8,6 +8,12 @@ export const ARENA_COLLECTIONS = Object.freeze({
   bookings: 'arena_bookings',
   reviews: 'arena_reviews',
   favorites: 'arena_favorites',
+  courts: 'arena_courts',
+  court_schedules: 'arena_court_schedules',
+  unavailabilities: 'arena_unavailabilities',
+  inventory_products: 'arena_inventory_products',
+  inventory_entries: 'arena_inventory_entries',
+  inventory_exits: 'arena_inventory_exits',
 });
 
 export const ARENA_MANAGER_ROLE = Object.freeze({

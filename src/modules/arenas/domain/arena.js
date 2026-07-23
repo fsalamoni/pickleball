@@ -4,6 +4,8 @@
  * Sem I/O — testável isoladamente.
  */
 
+import { normalizeArenaRules } from './arena_rules.js';
+
 function str(value) {
   return String(value ?? '').trim();
 }
@@ -50,8 +52,16 @@ export function normalizeArenaInput(input = {}) {
     website,
     hours: str(input.hours).slice(0, 400),
     court_count: Number.isFinite(Number(input.court_count)) ? Math.max(0, Math.trunc(Number(input.court_count))) : 0,
-    base_price: Number.isFinite(Number(input.base_price)) ? Math.max(0, Number(input.base_price)) : null,
+    base_price: (() => {
+      const n = Number(input.base_price);
+      if (!Number.isFinite(n) || n < 0) return null;
+      return n;
+    })(),
     active: input.active !== false,
+    house_rules_md: str(input.house_rules_md).slice(0, 2000), // legacy (Sprint 3)
+    rules: normalizeArenaRules(input.rules), // Sprint 5 (preferred)
+    allow_instant_booking: input.allow_instant_booking === true, // Sprint 2 ARE-03
+    payment: input.payment && typeof input.payment === 'object' ? input.payment : null, // Sprint 5
   };
 
   return { valid: Object.keys(errors).length === 0, errors, value };
@@ -71,7 +81,10 @@ export function arenaContactLinks(arena) {
   if (!arena) return {};
   const links = {};
   const wa = str(arena.contact_whatsapp || arena.contact_phone).replace(/\D/g, '');
-  if (wa) links.whatsapp = `https://wa.me/${wa.length <= 11 ? `55${wa}` : wa}`;
+  if (wa) {
+    const phone = wa.length <= 11 ? `55${wa}` : wa;
+    links.whatsapp = `https://wa.me/${phone}`;
+  }
   if (str(arena.contact_phone)) links.phone = `tel:${str(arena.contact_phone).replace(/\s/g, '')}`;
   if (str(arena.contact_email)) links.email = `mailto:${str(arena.contact_email)}`;
   if (str(arena.instagram)) links.instagram = `https://instagram.com/${normalizeInstagram(arena.instagram)}`;

@@ -9,6 +9,7 @@
  */
 
 import {
+  addDoc,
   collection,
   doc,
   getDoc,
@@ -18,6 +19,7 @@ import {
   deleteDoc,
   query,
   where,
+  orderBy,
   serverTimestamp,
   writeBatch,
 } from 'firebase/firestore';
@@ -27,7 +29,11 @@ import { createAuditLog } from '@/core/services/auditService';
 import { notifyUsers, NOTIFICATION_TYPE } from '@/core/services/notificationService';
 import { ARENA_COLLECTIONS, ARENA_MANAGER_ROLE, REVIEW_TYPE, REVIEW_TYPE_LABELS } from '../domain/constants.js';
 import { normalizeArenaInput } from '../domain/arena.js';
+import { normalizeCourtInput, nextSortOrder, renumberSortOrder } from '../domain/court.js';
+import { normalizeScheduleInput } from '../domain/court_schedule.js';
 import { normalizePriceRule, normalizePriceOverride } from '../domain/pricing.js';
+import { normalizeReviewResponse } from '../domain/review_response.js';
+import { normalizeInventoryProduct, normalizeInventoryEntry, normalizeInventoryExit } from '../domain/inventory.js';
 
 const COL = ARENA_COLLECTIONS;
 
@@ -90,7 +96,17 @@ export async function createArena(user, profile, input) {
 export async function getArena(id) {
   if (!db || !id) return null;
   const snap = await getDoc(doc(db, COL.arenas, id));
-  return snap.exists() ? { id: snap.id, ...snap.data() } : null;
+  if (snap.exists()) return { id: snap.id, ...snap.data() };
+  // Fallback case-insensitive: link compartilhado pode ter case diferente
+  try {
+    const all = await getDocs(collection(db, COL.arenas));
+    const lower = String(id).toLowerCase();
+    const match = all.docs.find((d) => d.id.toLowerCase() === lower);
+    if (match) return { id: match.id, ...match.data() };
+  } catch (e) {
+    logger.warn('getArena fallback failed', e);
+  }
+  return null;
 }
 
 export async function listArenas() {
@@ -116,6 +132,7 @@ export async function updateArena(id, updates, actor) {
     'name', 'description', 'city', 'state', 'address', 'neighborhood',
     'contact_phone', 'contact_whatsapp', 'contact_email', 'instagram',
     'website', 'hours', 'court_count', 'base_price', 'active',
+    'house_rules_md', 'rules', 'allow_instant_booking', 'payment', // Sprint 3 ARE-18 + Sprint 5 + Sprint 2 ARE-03 + Sprint 5 ARE-12
   ];
   const sanitized = {};
   allowed.forEach((key) => {
@@ -298,4 +315,390 @@ export async function addArenaReview(arena, user, profile, input) {
 export async function deleteArenaReview(review, actor) {
   await deleteDoc(doc(db, COL.reviews, review.id));
   await createAuditLog({ action: 'arena_review_deleted', actor, details: { arena_id: review.arena_id, review_id: review.id } });
+}
+
+/* ---------------------- Review responses (Sprint 3 ARE-09) ---------- */
+
+/**
+ * Manager responde (ou atualiza) a uma review. Valida tamanho, atualiza
+ * `response` + `responded_at` + `responded_by`. Audit log best-effort.
+ */
+export async function respondToArenaReview(reviewId, responseText, actor) {
+  if (!db || !reviewId) throw new Error('Review inválida.');
+  const { valid, error, value } = normalizeReviewResponse({ response: responseText });
+  if (!valid) throw new Error(error);
+  await updateDoc(doc(db, COL.reviews, reviewId), {
+    response: value,
+    responded_at: serverTimestamp(),
+    responded_by: actor?.uid || null,
+    updated_at: serverTimestamp(),
+  });
+  await createAuditLog({
+    action: 'arena_review_responded',
+    actor,
+    details: { review_id: reviewId, response_length: value.length },
+  });
+}
+
+/** Manager remove sua resposta (volta o review ao estado sem response). */
+export async function deleteArenaReviewResponse(reviewId, actor) {
+  if (!db || !reviewId) throw new Error('Review inválida.');
+  await updateDoc(doc(db, COL.reviews, reviewId), {
+    response: null,
+    responded_at: null,
+    responded_by: null,
+    updated_at: serverTimestamp(),
+  });
+  await createAuditLog({
+    action: 'arena_review_response_deleted',
+    actor,
+    details: { review_id: reviewId },
+  });
+}
+
+/* ---------------------- Courts (ARE-01, Sprint 1) -------------------- */
+
+/**
+ * Lista as quadras de uma arena. Retorna array vazio se não houver quadras
+ * (não confundir com erro).
+ */
+export async function listArenaCourts(arenaId) {
+  if (!db || !arenaId) return [];
+  const snap = await getDocs(query(collection(db, COL.courts), where('arena_id', '==', arenaId)));
+  return snap.docs.map((d) => ({ id: d.id, ...d.data() }));
+}
+
+/**
+ * Cria uma quadra nova em uma arena. Valida input, escolhe sort_order
+ * automático (max+1), faz audit log. Lança erro se input inválido.
+ */
+export async function createArenaCourt(arenaId, input, actor) {
+  if (!db || !arenaId) throw new Error('Arena inválida.');
+  const { valid, errors, value } = normalizeCourtInput(input);
+  if (!valid) {
+    const first = Object.values(errors)[0];
+    throw new Error(first || 'Dados da quadra inválidos.');
+  }
+  const existing = await listArenaCourts(arenaId);
+  const ref = doc(collection(db, COL.courts));
+  const payload = {
+    arena_id: arenaId,
+    ...value,
+    sort_order: Number.isFinite(input.sort_order) ? value.sort_order : nextSortOrder(existing),
+    created_at: serverTimestamp(),
+    updated_at: serverTimestamp(),
+  };
+  await setDoc(ref, payload);
+  await createAuditLog({
+    action: 'arena_court_created',
+    actor,
+    details: { arena_id: arenaId, court_id: ref.id, name: value.name },
+  });
+  return ref.id;
+}
+
+/**
+ * Atualiza uma quadra. Merge com normalização. Audit log best-effort.
+ */
+export async function updateArenaCourt(courtId, input, actor) {
+  if (!db || !courtId) throw new Error('Quadra inválida.');
+  const { valid, errors, value } = normalizeCourtInput(input);
+  if (!valid) {
+    const first = Object.values(errors)[0];
+    throw new Error(first || 'Dados da quadra inválidos.');
+  }
+  await updateDoc(doc(db, COL.courts, courtId), { ...value, updated_at: serverTimestamp() });
+  await createAuditLog({
+    action: 'arena_court_updated',
+    actor,
+    details: { court_id: courtId, arena_id: input.arena_id, name: value.name },
+  });
+}
+
+/**
+ * Remove uma quadra. Não remove bookings existentes que referenciam essa
+ * quadra (Firestore não tem constraint; fica como `court_id` órfão no
+ * histórico, o que é OK porque UI mostra o nome congelado).
+ */
+export async function deleteArenaCourt(courtId, actor) {
+  if (!db || !courtId) throw new Error('Quadra inválida.');
+  const ref = doc(db, COL.courts, courtId);
+  const snap = await getDoc(ref);
+  const arenaId = snap.exists() ? snap.data().arena_id : null;
+  await deleteDoc(ref);
+  await createAuditLog({
+    action: 'arena_court_deleted',
+    actor,
+    details: { court_id: courtId, arena_id: arenaId },
+  });
+}
+
+/**
+ * Reordena quadras: recebe array de {id, sort_order} e aplica.
+ * Usa batch write (all-or-nothing) pra evitar estado intermediário.
+ */
+export async function reorderArenaCourts(arenaId, orderedIds, actor) {
+  if (!db || !arenaId) throw new Error('Arena inválida.');
+  if (!Array.isArray(orderedIds) || orderedIds.length === 0) return;
+  // Valida que todos os IDs são strings não-vazias e sem duplicatas
+  const seen = new Set();
+  for (const id of orderedIds) {
+    if (typeof id !== 'string' || !id) throw new Error('IDs de quadra inválidos.');
+    if (seen.has(id)) throw new Error('IDs de quadra duplicados.');
+    seen.add(id);
+  }
+  // Aplica via setDoc merge (Firestore não tem batch.updateDoc no Web SDK
+  // sem import extra; setDoc merge é equivalente e atômico por doc).
+  await Promise.all(
+    orderedIds.map((id, idx) =>
+      setDoc(
+        doc(db, COL.courts, id),
+        { sort_order: idx, arena_id: arenaId, updated_at: serverTimestamp() },
+        { merge: true },
+      ),
+    ),
+  );
+  await createAuditLog({
+    action: 'arena_courts_reordered',
+    actor,
+    details: { arena_id: arenaId, count: orderedIds.length },
+  });
+}
+
+/**
+ * Renumera sort_order sequencialmente baseado na ordem atual (helper
+ * idempotente, útil pra "normalizar" depois de várias edições manuais).
+ */
+export async function normalizeArenaCourtsOrder(arenaId, actor) {
+  if (!db || !arenaId) throw new Error('Arena inválida.');
+  const courts = await listArenaCourts(arenaId);
+  const renumbered = renumberSortOrder(courts);
+  const orderedIds = renumbered.map((c) => c.id);
+  await reorderArenaCourts(arenaId, orderedIds, actor);
+}
+
+/* ---------------------- Court Schedules (ARE-04, Sprint 1) ---------- */
+
+/**
+ * Lista schedules (janelas de horário recorrentes) de uma arena.
+ * Retorna array vazio se não houver schedules.
+ */
+export async function listArenaCourtSchedules(arenaId) {
+  if (!db || !arenaId) return [];
+  const snap = await getDocs(
+    query(collection(db, COL.court_schedules), where('arena_id', '==', arenaId)),
+  );
+  return snap.docs.map((d) => ({ id: d.id, ...d.data() }));
+}
+
+/**
+ * Lista schedules de UMA quadra específica. Útil pra UI que expande
+ * a quadra e mostra os horários dela.
+ */
+export async function listCourtSchedules(courtId) {
+  if (!db || !courtId) return [];
+  const snap = await getDocs(
+    query(collection(db, COL.court_schedules), where('court_id', '==', courtId)),
+  );
+  return snap.docs.map((d) => ({ id: d.id, ...d.data() }));
+}
+
+/**
+ * Cria uma janela de horário recorrente. Audit log best-effort.
+ */
+export async function createCourtSchedule(arenaId, courtId, input, actor) {
+  if (!db || !arenaId || !courtId) throw new Error('Arena ou quadra inválida.');
+  const { valid, errors, value } = normalizeScheduleInput(input);
+  if (!valid) {
+    const first = Object.values(errors)[0];
+    throw new Error(first || 'Dados do horário inválidos.');
+  }
+  const ref = doc(collection(db, COL.court_schedules));
+  await setDoc(ref, {
+    arena_id: arenaId,
+    court_id: courtId,
+    ...value,
+    created_at: serverTimestamp(),
+    updated_at: serverTimestamp(),
+  });
+  await createAuditLog({
+    action: 'arena_court_schedule_created',
+    actor,
+    details: { arena_id: arenaId, court_id: courtId, schedule_id: ref.id, weekdays: value.weekdays },
+  });
+  return ref.id;
+}
+
+/**
+ * Atualiza uma janela de horário. Audit log best-effort.
+ */
+export async function updateCourtSchedule(scheduleId, input, actor) {
+  if (!db || !scheduleId) throw new Error('Horário inválido.');
+  const { valid, errors, value } = normalizeScheduleInput(input);
+  if (!valid) {
+    const first = Object.values(errors)[0];
+    throw new Error(first || 'Dados do horário inválidos.');
+  }
+  await updateDoc(doc(db, COL.court_schedules, scheduleId), {
+    ...value,
+    updated_at: serverTimestamp(),
+  });
+  await createAuditLog({
+    action: 'arena_court_schedule_updated',
+    actor,
+    details: { schedule_id: scheduleId, arena_id: input.arena_id, court_id: input.court_id, weekdays: value.weekdays },
+  });
+}
+
+/**
+ * Remove uma janela de horário. Bookings existentes que referenciam
+ * implicitamente esse slot continuam no histórico (a referência é por
+ * arena_id+court_id+date, não por schedule_id).
+ */
+export async function deleteCourtSchedule(scheduleId, actor) {
+  if (!db || !scheduleId) throw new Error('Horário inválido.');
+  const ref = doc(db, COL.court_schedules, scheduleId);
+  const snap = await getDoc(ref);
+  const meta = snap.exists() ? snap.data() : null;
+  await deleteDoc(ref);
+  await createAuditLog({
+    action: 'arena_court_schedule_deleted',
+    actor,
+    details: { schedule_id: scheduleId, arena_id: meta?.arena_id, court_id: meta?.court_id },
+  });
+}
+
+
+/* ---------------------- Unavailabilities (Sprint 5) ----------------- */
+
+export async function addArenaUnavailability(arenaId, input, actor) {
+  if (!db || !arenaId) throw new Error('Arena inválida.');
+  if (!input.date || !input.start_time || !input.end_time) {
+    throw new Error('Data, hora início e fim são obrigatórios.');
+  }
+  const ref = await addDoc(collection(db, COL.unavailabilities), {
+    arena_id: arenaId,
+    court_id: input.court_id || null,
+    date: input.date,
+    start_time: input.start_time,
+    end_time: input.end_time,
+    notes: str(input.notes || '').slice(0, 500),
+    created_by: actor?.uid || null,
+    created_at: serverTimestamp(),
+    updated_at: serverTimestamp(),
+  });
+  await createAuditLog({
+    action: 'arena_unavailability_added',
+    actor,
+    details: { arena_id: arenaId, court_id: input.court_id, date: input.date },
+  });
+  return ref.id;
+}
+
+export async function deleteArenaUnavailability(unavId, actor) {
+  if (!db || !unavId) throw new Error('Indisponibilidade inválida.');
+  const snap = await getDoc(doc(db, COL.unavailabilities, unavId));
+  const meta = snap.exists() ? snap.data() : null;
+  await deleteDoc(doc(db, COL.unavailabilities, unavId));
+  await createAuditLog({
+    action: 'arena_unavailability_deleted',
+    actor,
+    details: { unavailability_id: unavId, arena_id: meta?.arena_id },
+  });
+}
+
+export async function listArenaUnavailabilities(arenaId, { from, to } = {}) {
+  if (!arenaId || !db) return [];
+  const filters = [where('arena_id', '==', arenaId)];
+  if (from) filters.push(where('date', '>=', from));
+  if (to) filters.push(where('date', '<=', to));
+  filters.push(orderBy('date', 'asc'));
+  const snap = await getDocs(query(collection(db, COL.unavailabilities), ...filters));
+  return snap.docs.map((d) => ({ id: d.id, ...d.data() }));
+}
+
+/* ---------------------- Inventory (Mercado - Sprint 5) ------------ */
+
+export async function createInventoryProduct(arenaId, input, actor) {
+  if (!db || !arenaId) throw new Error('Arena inválida.');
+  const { valid, error, value } = normalizeInventoryProduct(input);
+  if (!valid) throw new Error(error);
+  const ref = await addDoc(collection(db, COL.inventory_products), {
+    ...value, arena_id: arenaId,
+    created_by: actor?.uid || null,
+    created_at: serverTimestamp(),
+    updated_at: serverTimestamp(),
+  });
+  await createAuditLog({ action: 'arena_inventory_product_created', actor, details: { arena_id: arenaId, name: value.name } });
+  return ref.id;
+}
+
+export async function listInventoryProducts(arenaId, { activeOnly = false } = {}) {
+  if (!arenaId || !db) return [];
+  const filters = [where('arena_id', '==', arenaId)];
+  if (activeOnly) filters.push(where('active', '==', true));
+  filters.push(orderBy('name', 'asc'));
+  const snap = await getDocs(query(collection(db, COL.inventory_products), ...filters));
+  return snap.docs.map((d) => ({ id: d.id, ...d.data() }));
+}
+
+export async function updateInventoryProduct(productId, updates, actor) {
+  if (!db || !productId) throw new Error('Produto inválido.');
+  await updateDoc(doc(db, COL.inventory_products, productId), {
+    ...updates, updated_at: serverTimestamp(), updated_by: actor?.uid || null,
+  });
+}
+
+export async function deleteInventoryProduct(productId, actor) {
+  if (!db || !productId) throw new Error('Produto inválido.');
+  await deleteDoc(doc(db, COL.inventory_products, productId));
+  await createAuditLog({ action: 'arena_inventory_product_deleted', actor, details: { product_id: productId } });
+}
+
+export async function addInventoryEntry(arenaId, input, actor) {
+  if (!db || !arenaId) throw new Error('Arena inválida.');
+  const { valid, error, value } = normalizeInventoryEntry(input);
+  if (!valid) throw new Error(error);
+  const ref = await addDoc(collection(db, COL.inventory_entries), {
+    ...value, arena_id: arenaId,
+    created_by: actor?.uid || null,
+    created_at: serverTimestamp(),
+  });
+  await createAuditLog({ action: 'arena_inventory_entry_added', actor, details: { arena_id: arenaId, product_id: value.product_id, quantity: value.quantity, total_cost: value.total_cost } });
+  return ref.id;
+}
+
+export async function listInventoryEntries(arenaId, { from, to, productId } = {}) {
+  if (!arenaId || !db) return [];
+  const filters = [where('arena_id', '==', arenaId)];
+  if (from) filters.push(where('date', '>=', from));
+  if (to) filters.push(where('date', '<=', to));
+  if (productId) filters.push(where('product_id', '==', productId));
+  filters.push(orderBy('date', 'desc'));
+  const snap = await getDocs(query(collection(db, COL.inventory_entries), ...filters));
+  return snap.docs.map((d) => ({ id: d.id, ...d.data() }));
+}
+
+export async function addInventoryExit(arenaId, input, actor) {
+  if (!db || !arenaId) throw new Error('Arena inválida.');
+  const { valid, error, value } = normalizeInventoryExit(input);
+  if (!valid) throw new Error(error);
+  const ref = await addDoc(collection(db, COL.inventory_exits), {
+    ...value, arena_id: arenaId,
+    created_by: actor?.uid || null,
+    created_at: serverTimestamp(),
+  });
+  await createAuditLog({ action: 'arena_inventory_exit_added', actor, details: { arena_id: arenaId, product_id: value.product_id, quantity: value.quantity, total_price: value.total_price, exit_type: value.exit_type } });
+  return ref.id;
+}
+
+export async function listInventoryExits(arenaId, { from, to, productId } = {}) {
+  if (!arenaId || !db) return [];
+  const filters = [where('arena_id', '==', arenaId)];
+  if (from) filters.push(where('date', '>=', from));
+  if (to) filters.push(where('date', '<=', to));
+  if (productId) filters.push(where('product_id', '==', productId));
+  filters.push(orderBy('date', 'desc'));
+  const snap = await getDocs(query(collection(db, COL.inventory_exits), ...filters));
+  return snap.docs.map((d) => ({ id: d.id, ...d.data() }));
 }

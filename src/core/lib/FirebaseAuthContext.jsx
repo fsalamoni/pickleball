@@ -2,10 +2,14 @@ import React, { createContext, useState, useContext, useEffect } from 'react';
 import {
   onAuthStateChanged,
   signInWithPopup,
+  signInWithEmailAndPassword,
+  createUserWithEmailAndPassword,
+  sendPasswordResetEmail as fbSendPasswordResetEmail,
+  updateProfile as fbUpdateProfile,
   signOut as firebaseSignOut,
 } from 'firebase/auth';
 import { doc, getDoc, setDoc, serverTimestamp } from 'firebase/firestore';
-import { auth, googleProvider, db, firebaseDisabledReason } from '@/core/config/firebase';
+import { auth, googleProvider, appleProvider, db, firebaseDisabledReason } from '@/core/config/firebase';
 import { logger } from '@/core/lib/logger';
 import { createAuditLog } from '@/core/services/auditService';
 import { claimProvisionalRegistrationsForUser } from '@/modules/tournament/services/registrationService';
@@ -16,6 +20,50 @@ const AuthContext = createContext(null);
 
 // Mantido como alias para compat com código legado.
 const isPlatformOwnerEmail = isOwnerEmail;
+
+/** Traduz os códigos de erro do Firebase Auth em mensagens claras (pt-BR). */
+function mapAuthError(error, fallback = 'Não foi possível entrar. Tente novamente.') {
+  switch (error?.code) {
+    case 'auth/popup-closed-by-user':
+    case 'auth/cancelled-popup-request':
+      return 'Login cancelado. Tente novamente.';
+    case 'auth/popup-blocked':
+      return 'Pop-up bloqueado pelo navegador. Libere os pop-ups e tente de novo.';
+    case 'auth/network-request-failed':
+      return 'Erro de conexão. Verifique sua internet.';
+    case 'auth/operation-not-supported-in-this-environment':
+      return 'Seu navegador não suporta este login. Tente abrir em outro navegador.';
+    case 'auth/web-storage-unsupported':
+      return 'Seu navegador bloqueou o armazenamento necessário para entrar.';
+    case 'auth/unauthorized-domain':
+      return 'Domínio não autorizado para login.';
+    case 'auth/invalid-email':
+      return 'E-mail inválido.';
+    case 'auth/user-disabled':
+      return 'Esta conta foi desativada.';
+    case 'auth/user-not-found':
+    case 'auth/wrong-password':
+    case 'auth/invalid-credential':
+    case 'auth/invalid-login-credentials':
+      return 'E-mail ou senha incorretos.';
+    case 'auth/missing-password':
+      return 'Informe a senha.';
+    case 'auth/email-already-in-use':
+      return 'Já existe uma conta com este e-mail. Faça login em vez de criar uma nova.';
+    case 'auth/weak-password':
+      return 'A senha precisa ter ao menos 6 caracteres.';
+    case 'auth/too-many-requests':
+      return 'Muitas tentativas. Aguarde alguns minutos e tente novamente.';
+    case 'auth/account-exists-with-different-credential':
+      return 'Este e-mail já está vinculado a outro método de login. Entre pelo método usado originalmente.';
+    case 'auth/operation-not-allowed':
+      return 'Este método de login não está habilitado. Contate o organizador.';
+    case 'auth/configuration-missing':
+      return firebaseDisabledReason || 'Login indisponível neste ambiente.';
+    default:
+      return fallback;
+  }
+}
 
 export const AuthProvider = ({ children }) => {
   const [user, setUser] = useState(null);
@@ -53,7 +101,7 @@ export const AuthProvider = ({ children }) => {
               { merge: true },
             );
             const mergedProfile = { uid: firebaseUser.uid, ...existingProfile, ...autoAdminUpdates };
-            await claimProvisionalRegistrationsForUser(firebaseUser, mergedProfile);
+            await claimProvisionalRegistrationsForUser(firebaseUser, mergedProfile, { aliasEmails: mergedProfile.claim_alias_emails });
             setUserProfile(mergedProfile);
             // Mantém o diretório público de atletas atualizado (best-effort,
             // não bloqueia o login; respeita as preferências de privacidade).
@@ -88,7 +136,7 @@ export const AuthProvider = ({ children }) => {
               last_login: serverTimestamp(),
             };
             await setDoc(userDocRef, newProfile);
-            await claimProvisionalRegistrationsForUser(firebaseUser, newProfile);
+            await claimProvisionalRegistrationsForUser(firebaseUser, newProfile, { aliasEmails: newProfile.claim_alias_emails });
             setUserProfile(newProfile);
             syncAthleteProfile(firebaseUser, newProfile);
             logger.info('New user profile created:', firebaseUser.uid);
@@ -108,8 +156,8 @@ export const AuthProvider = ({ children }) => {
     return () => unsubscribe();
   }, []);
 
-  const signInWithGoogle = async () => {
-    if (!auth || !googleProvider) {
+  const requireAuthReady = (provider) => {
+    if (!auth || (provider && !provider.ok)) {
       const error = {
         type: 'signin_error',
         message: firebaseDisabledReason || 'Login indisponível neste ambiente.',
@@ -118,22 +166,61 @@ export const AuthProvider = ({ children }) => {
       setAuthError(error);
       throw new Error(error.message);
     }
+  };
 
+  const runSignIn = async (fn) => {
     try {
       setAuthError(null);
-      const result = await signInWithPopup(auth, googleProvider);
-      return result;
+      return await fn();
     } catch (error) {
-      let userMessage = 'Erro ao fazer login com Google.';
-      if (error.code === 'auth/popup-closed-by-user') userMessage = 'Login cancelado. Tente novamente.';
-      else if (error.code === 'auth/popup-blocked') userMessage = 'Pop-up bloqueado pelo navegador.';
-      else if (error.code === 'auth/network-request-failed') userMessage = 'Erro de conexão. Verifique sua internet.';
-      else if (error.code === 'auth/operation-not-supported-in-this-environment') userMessage = 'Seu navegador não suporta este login. Tente abrir em outro navegador.';
-      else if (error.code === 'auth/web-storage-unsupported') userMessage = 'Seu navegador bloqueou o armazenamento necessário para entrar.';
-      else if (error.code === 'auth/unauthorized-domain') userMessage = 'Domínio não autorizado.';
-      setAuthError({ type: 'signin_error', message: userMessage, code: error.code });
+      setAuthError({ type: 'signin_error', message: mapAuthError(error), code: error.code });
       throw error;
     }
+  };
+
+  const signInWithGoogle = async () => {
+    requireAuthReady({ ok: Boolean(googleProvider) });
+    return runSignIn(() => signInWithPopup(auth, googleProvider));
+  };
+
+  const signInWithApple = async () => {
+    requireAuthReady({ ok: Boolean(appleProvider) });
+    return runSignIn(() => signInWithPopup(auth, appleProvider));
+  };
+
+  const signInWithEmailPassword = async (email, password) => {
+    requireAuthReady();
+    return runSignIn(() =>
+      signInWithEmailAndPassword(auth, String(email || '').trim(), password));
+  };
+
+  const registerWithEmailPassword = async (email, password, name = '') => {
+    requireAuthReady();
+    return runSignIn(async () => {
+      const cred = await createUserWithEmailAndPassword(auth, String(email || '').trim(), password);
+      const displayName = String(name || '').trim();
+      if (displayName) {
+        // Best-effort: nome de exibição na conta de auth. O perfil no Firestore
+        // é criado pelo onAuthStateChanged; a vinculação por e-mail das
+        // inscrições provisórias acontece lá, igual aos demais provedores.
+        try {
+          await fbUpdateProfile(cred.user, { displayName });
+          await setDoc(
+            doc(db, 'users', cred.user.uid),
+            { full_name: displayName, platform_name: displayName, updated_at: serverTimestamp() },
+            { merge: true },
+          );
+        } catch {
+          // não bloqueia o cadastro se o nome não puder ser salvo agora
+        }
+      }
+      return cred;
+    });
+  };
+
+  const sendPasswordReset = async (email) => {
+    requireAuthReady();
+    return runSignIn(() => fbSendPasswordResetEmail(auth, String(email || '').trim()));
   };
 
   const signOut = async () => {
@@ -159,7 +246,7 @@ export const AuthProvider = ({ children }) => {
       userEmail: user.email,
       details: { changed_fields: Object.keys(updates) },
     });
-    await claimProvisionalRegistrationsForUser(user, { ...userProfile, ...updates });
+    await claimProvisionalRegistrationsForUser(user, { ...userProfile, ...updates }, { aliasEmails: updates.claim_alias_emails || userProfile?.claim_alias_emails });
     const nextProfile = { ...userProfile, ...updates };
     setUserProfile(nextProfile);
     // Reflete imediatamente as mudanças (inclusive privacidade) no diretório.
@@ -172,9 +259,17 @@ export const AuthProvider = ({ children }) => {
     isAuthenticated,
     isLoadingAuth,
     authError,
-    isAuthAvailable: Boolean(auth && googleProvider && db),
+    // Auth disponível quando o Firebase está configurado: e-mail/senha funciona
+    // sem provedor OAuth; Google/Apple têm flags próprias para exibir os botões.
+    isAuthAvailable: Boolean(auth && db),
+    isGoogleAvailable: Boolean(auth && googleProvider && db),
+    isAppleAvailable: Boolean(auth && appleProvider && db),
     authUnavailableReason: firebaseDisabledReason,
     signInWithGoogle,
+    signInWithApple,
+    signInWithEmailPassword,
+    registerWithEmailPassword,
+    sendPasswordReset,
     signOut,
     updateUserProfile,
     isPlatformAdmin: userProfile?.role === 'platform_admin',
