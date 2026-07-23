@@ -3,7 +3,7 @@ import { Link, useParams } from 'react-router-dom';
 import {
   ArrowLeft, Building2, Calendar, CalendarPlus, Check, Clock, Copy, Globe, Instagram, Mail, MapPin,
   MessageCircle, Phone, Settings, Star, Trophy, Users,
-  GraduationCap,
+  GraduationCap, CreditCard, ClipboardList,
 } from 'lucide-react';
 import { PhotoLightbox } from '@/components/ui/photo-lightbox';
 import { FEATURE_FLAG } from '@/core/featureFlags';
@@ -29,6 +29,12 @@ import { V2Badge, V2Button, V2EmptyState, V2Field, V2Input, V2Skeleton, V2Surfac
 
 function arenaPhotoUrl(photo) {
   return typeof photo === 'string' ? photo : photo?.url;
+}
+
+/** 'YYYY-MM-DD' → 'dd/mm' (pt-BR); devolve o original se não casar. */
+function formatSlotDate(iso) {
+  const m = String(iso || '').match(/^(\d{4})-(\d{2})-(\d{2})$/);
+  return m ? `${m[3]}/${m[2]}` : iso;
 }
 
 function ArenaModuleLinks({ arenaId }) {
@@ -226,7 +232,7 @@ function V2ArenaDetailContent({ arenaId, user, arena, managed, bookings, isLoadi
           <div className="mt-4 flex flex-wrap gap-2">
             {upcomingSlots.map((slot) => (
               <span key={`${slot.date}_${slot.start}`} className="rounded-full border border-gray-100 bg-paper px-3 py-1.5 text-xs text-gray-600">
-                {slot.date} · {slot.start}–{slot.end}
+                {formatSlotDate(slot.date)} · {slot.start}–{slot.end}
               </span>
             ))}
           </div>
@@ -297,7 +303,7 @@ function ArenaTournamentsSection({ arenaId }) {
                 {t.starts_at?.toDate?.()?.toLocaleDateString?.('pt-BR') || t.starts_at}
               </p>
             )}
-            {t.city && <p className="text-xs text-gray-400">📍 {t.city}{t.state && `, ${t.state}`}</p>}
+            {t.city && <p className="flex items-center gap-1 text-xs text-gray-400"><MapPin className="h-3 w-3" /> {t.city}{t.state && `, ${t.state}`}</p>}
           </Link>
         ))}
       </div>
@@ -317,7 +323,7 @@ function ArenaCoachesSection({ arenaId }) {
       <div className="mt-3 grid gap-3 sm:grid-cols-2">
         {coaches.slice(0, 6).map((c) => (
           <Link key={c.id} to={`/coaches/${c.id}`} className="flex items-center gap-3 rounded-2xl border border-gray-100 bg-paper p-3 transition-transform hover:scale-[1.02]">
-            <div className="flex h-10 w-10 items-center justify-center rounded-2xl bg-gradient-to-br from-emerald-500 to-amber-500 text-sm font-bold text-white">
+            <div className="flex h-10 w-10 items-center justify-center rounded-2xl bg-ink text-sm font-bold text-acid">
               {c.display_name?.[0] || '?'}
             </div>
             <div className="flex-1 min-w-0">
@@ -326,7 +332,7 @@ function ArenaCoachesSection({ arenaId }) {
                 <p className="text-xs text-gray-500 line-clamp-1">{c.modalities.join(' · ')}</p>
               )}
               {c.hourly_rate != null && (
-                <p className="text-xs font-bold text-emerald-700">R$ {Number(c.hourly_rate).toFixed(2)}/h</p>
+                <p className="text-xs font-bold text-ink">R$ {Number(c.hourly_rate).toFixed(2)}/h</p>
               )}
             </div>
           </Link>
@@ -369,7 +375,7 @@ function V2ArenaPaymentSection({ arena }) {
   return (
     <V2Surface className="mt-6">
       <h3 className="flex items-center gap-1.5 font-display text-base font-bold text-ink">
-        💳 Pagar com PIX
+        <CreditCard className="h-4 w-4" /> Pagar com PIX
       </h3>
       {payment.receiver_name && (
         <p className="mt-1 text-sm text-gray-500">Recebedor: <span className="font-bold text-ink">{payment.receiver_name}</span></p>
@@ -415,13 +421,13 @@ function ArenaRulesSection({ arena }) {
   return (
     <V2Surface className="mt-6">
       <h3 className="flex items-center gap-1.5 font-display text-base font-bold text-ink">
-        📋 Regras da arena
+        <ClipboardList className="h-4 w-4" /> Regras da arena
       </h3>
       {grouped ? (
         <div className="mt-3 space-y-4">
           {Object.entries(grouped).map(([cat, items]) => (
             <div key={cat}>
-              <h4 className="mb-1.5 text-xs font-bold uppercase tracking-widest text-emerald-700">
+              <h4 className="mb-1.5 text-xs font-bold uppercase tracking-widest text-gray-400">
                 {cat}
               </h4>
               <ol className="list-decimal space-y-2 pl-5">
