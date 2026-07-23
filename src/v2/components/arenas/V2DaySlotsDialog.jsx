@@ -233,7 +233,7 @@ export default function V2DaySlotsDialog({ arena, arenaId, date, courtId: initia
           {/* Header */}
           <div className="flex items-center justify-between border-b border-gray-100 p-4">
             <div className="flex items-center gap-2">
-              <Calendar className="h-5 w-5 text-emerald-700" />
+              <Calendar className="h-5 w-5 text-green-700" />
               <h3 className="font-display text-lg font-bold text-ink capitalize">{dateLabel}</h3>
             </div>
             <button
@@ -343,7 +343,7 @@ export default function V2DaySlotsDialog({ arena, arenaId, date, courtId: initia
                                 </span>
                               </div>
                               {b.proposed_price != null && (
-                                <div className="mt-1 text-xs font-bold text-emerald-700">
+                                <div className="mt-1 text-xs font-bold text-green-700">
                                   {formatPrice(b.proposed_price)}
                                 </div>
                               )}
@@ -442,7 +442,7 @@ export default function V2DaySlotsDialog({ arena, arenaId, date, courtId: initia
                               className={cn(
                                 'flex flex-col items-center justify-center rounded-2xl border-2 p-3 transition-all',
                                 c.bg, c.border,
-                                isSelected && 'ring-2 ring-emerald-500 ring-offset-1',
+                                isSelected && 'ring-2 ring-green-500 ring-offset-1',
                                 canSelect ? 'hover:scale-[1.03] cursor-pointer' : 'cursor-not-allowed opacity-70',
                               )}
                             >
@@ -473,7 +473,7 @@ export default function V2DaySlotsDialog({ arena, arenaId, date, courtId: initia
               <div className="flex flex-wrap items-center justify-between gap-3">
                 <div className="flex-1 min-w-0">
                   <div className="flex items-center gap-2">
-                    <ShoppingCart className="h-4 w-4 text-emerald-700" />
+                    <ShoppingCart className="h-4 w-4 text-green-700" />
                     <span className="text-sm font-bold text-ink">
                       {selectedSlots.length} horário{selectedSlots.length > 1 ? 's' : ''} selecionado{selectedSlots.length > 1 ? 's' : ''}
                     </span>
@@ -484,7 +484,7 @@ export default function V2DaySlotsDialog({ arena, arenaId, date, courtId: initia
                   <div className="mt-1 text-xs text-gray-500">
                     {selectedSlots.map((s) => s.start).join(' · ')} · {price.durationMinutes}min
                   </div>
-                  <div className="mt-1 text-base font-bold text-emerald-700">
+                  <div className="mt-1 text-base font-bold text-green-700">
                     Total: {formatPrice(price.total)}
                   </div>
                 </div>

@@ -221,7 +221,7 @@ export default function V2AdminBookingCalendar({ arenaId, embedded = false }) {
           <ChevronLeft className="h-4 w-4" /> Anterior
         </V2Button>
         <div className="flex items-center gap-1.5 rounded-2xl border border-gray-200 bg-paper px-3 py-1.5 text-sm font-bold text-ink">
-          <Calendar className="h-4 w-4 text-emerald-700" />
+          <Calendar className="h-4 w-4 text-green-700" />
           {formatDateBR(date)}
         </div>
         <V2Button size="sm" variant="ghost" onClick={() => setDate(addDays(date, 1))}>
@@ -284,7 +284,7 @@ export default function V2AdminBookingCalendar({ arenaId, embedded = false }) {
 
       {/* Painel de ações do slot selecionado */}
       {selectedSlot && (
-        <V2Surface className="mt-4 border-2 border-emerald-300">
+        <V2Surface className="mt-4 border-2 border-green-300">
           <div className="flex items-start justify-between">
             <div>
               <h3 className="font-display text-base font-bold text-ink">
@@ -302,7 +302,7 @@ export default function V2AdminBookingCalendar({ arenaId, embedded = false }) {
             <div className="mt-3 space-y-2">
               <div className="rounded-2xl border border-gray-100 bg-paper p-3">
                 <div className="flex items-center gap-2">
-                  <div className="flex h-10 w-10 items-center justify-center rounded-full bg-gradient-to-br from-emerald-500 to-amber-500 text-sm font-bold text-white">
+                  <div className="flex h-10 w-10 items-center justify-center rounded-full bg-ink text-sm font-bold text-acid">
                     {selectedSlot.booking.athlete_name?.[0] || '?'}
                   </div>
                   <div className="flex-1 min-w-0">

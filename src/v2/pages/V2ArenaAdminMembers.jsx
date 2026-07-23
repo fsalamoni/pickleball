@@ -113,8 +113,9 @@ export default function V2ArenaAdminMembers() {
     }
   };
 
+  // Tons distintos dentro dos suportados pelo V2Badge.
   const tierColors = {
-    bronze: 'amber', silver: 'gray', gold: 'yellow', platinum: 'violet',
+    bronze: 'amber', silver: 'neutral', gold: 'acid', platinum: 'ink',
   };
 
   return (

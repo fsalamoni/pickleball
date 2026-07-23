@@ -8,7 +8,7 @@
  * - Dia "fechado" cinza: arena sem schedule aberto naquele dia da semana
  *   (admin não definiu horário aberto) OU todos os slots são CLOSED.
  *   NÃO clicável.
- * - Dia "disponível" emerald: tem pelo menos 1 slot AVAILABLE.
+ * - Dia "disponível" verde: tem pelo menos 1 slot AVAILABLE.
  * - Dia "ocupado" amber/vermelho: tem slots mas todos PENDING/CONFIRMED.
  *   Clicável para ver detalhe (sem seleção).
  * - Dia "indisponível" laranja: admin marcou indisponibilidade no dia todo.

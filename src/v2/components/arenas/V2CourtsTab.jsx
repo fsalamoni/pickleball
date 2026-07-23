@@ -185,7 +185,7 @@ export default function V2CourtsTab({ arena }) {
           <div className="flex items-center gap-2">
             <h3 className="font-display text-lg font-bold text-ink">Quadras</h3>
             <V2Badge tone="neutral">{active} ativa{active === 1 ? '' : 's'}</V2Badge>
-            {inactive > 0 && <V2Badge tone="warning">{inactive} inativa{inactive === 1 ? '' : 's'}</V2Badge>}
+            {inactive > 0 && <V2Badge tone="amber">{inactive} inativa{inactive === 1 ? '' : 's'}</V2Badge>}
           </div>
           <p className="mt-1 text-sm text-gray-500">
             Cadastre cada quadra individualmente. Atletas veem só as ativas.

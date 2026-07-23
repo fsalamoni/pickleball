@@ -25,7 +25,7 @@ function NpsCard({ nps, count, onSubmit, user }) {
   if (submitted) {
     return (
       <V2Surface>
-        <p className="text-sm text-emerald-700">Obrigado pela sua avaliação! 🎉</p>
+        <p className="text-sm text-green-700">Obrigado pela sua avaliação! 🎉</p>
       </V2Surface>
     );
   }
@@ -159,7 +159,7 @@ export default function V2ArenaMarketing() {
       {canNps && nps && (
         <V2Surface className="mb-6">
           <div className="flex flex-wrap items-center gap-3">
-            <div className="flex h-12 w-12 items-center justify-center rounded-2xl bg-emerald-100 text-emerald-700">
+            <div className="flex h-12 w-12 items-center justify-center rounded-2xl bg-green-100 text-green-700">
               <Star className="h-6 w-6" />
             </div>
             <div>

@@ -33,10 +33,10 @@ import { formatPrice } from '@/modules/arenas/domain/pricing';
 function Stat({ label, value, sub, tone = 'default', icon: Icon }) {
   const toneColors = {
     default: 'text-ink',
-    success: 'text-emerald-700',
+    success: 'text-green-700',
     warning: 'text-amber-700',
-    info: 'text-sky-700',
-    danger: 'text-rose-700',
+    info: 'text-blue-700',
+    danger: 'text-red-600',
   };
   return (
     <V2Surface className="p-4">
@@ -198,7 +198,7 @@ export default function V2ArenaMetrics({ arena }) {
         </div>
         <div className="mt-3 flex flex-wrap gap-2">
           {Object.entries(metrics.bookings.by_status).map(([status, count]) => (
-            <V2Badge key={status} tone={count > 0 ? 'info' : 'neutral'}>
+            <V2Badge key={status} tone={count > 0 ? 'blue' : 'neutral'}>
               {status}: {count}
             </V2Badge>
           ))}
@@ -223,7 +223,7 @@ export default function V2ArenaMetrics({ arena }) {
                   </div>
                   <div className="text-xs text-gray-500">{b.athlete_name || 'Atleta'}</div>
                 </div>
-                <div className="text-xs font-semibold text-emerald-700">
+                <div className="text-xs font-semibold text-green-700">
                   {b.agreed_price ? formatPrice(b.agreed_price) : b.proposed_price ? formatPrice(b.proposed_price) : '—'}
                 </div>
               </li>

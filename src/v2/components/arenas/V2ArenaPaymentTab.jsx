@@ -71,7 +71,7 @@ export default function V2ArenaPaymentTab() {
     <div className="space-y-4">
       <V2Surface>
         <h3 className="font-display text-lg font-bold text-ink flex items-center gap-2">
-          <CreditCard className="h-5 w-5 text-emerald-700" /> Pagamento via PIX
+          <CreditCard className="h-5 w-5 text-green-700" /> Pagamento via PIX
         </h3>
         <p className="mt-1 text-sm text-gray-500">
           Configure como o atleta pode te pagar via PIX. Os dados aparecerão na página pública da arena.
@@ -164,7 +164,7 @@ export default function V2ArenaPaymentTab() {
         </form>
       </V2Surface>
 
-      <V2Surface className="border-emerald-200 bg-emerald-50/40">
+      <V2Surface className="border-green-200 bg-green-50/40">
         <h4 className="flex items-center gap-1.5 font-display text-sm font-bold text-ink"><Lightbulb className="h-4 w-4 text-gray-400" /> Como obter seu QR Code</h4>
         <ol className="mt-2 list-decimal pl-5 text-sm text-gray-600 space-y-1">
           <li>Abra o app do seu banco (inter, Nubank, Itaú, Bradesco, etc.)</li>

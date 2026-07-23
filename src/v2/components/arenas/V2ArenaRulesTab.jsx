@@ -87,7 +87,7 @@ export default function V2ArenaRulesTab() {
         <div className="flex items-center justify-between">
           <div>
             <h3 className="font-display text-lg font-bold text-ink flex items-center gap-2">
-              <ListChecks className="h-5 w-5 text-emerald-700" /> Regras da arena
+              <ListChecks className="h-5 w-5 text-green-700" /> Regras da arena
             </h3>
             <p className="mt-1 text-sm text-gray-500">
               Adicione regras uma a uma. Os atletas verão na página pública da arena.

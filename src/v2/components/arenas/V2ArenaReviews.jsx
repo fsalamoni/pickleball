@@ -145,12 +145,12 @@ export default function V2ArenaReviews({ arena, canModerate = false }) {
 
                 {/* Resposta da arena (Sprint 3 ARE-09) */}
                 {hasResponse(r) && respondingTo !== r.id && (
-                  <div className="mt-3 rounded-2xl border border-emerald-200 bg-emerald-50 p-3">
+                  <div className="mt-3 rounded-2xl border border-green-200 bg-green-50 p-3">
                     <div className="flex items-center justify-between gap-2">
-                      <div className="flex items-center gap-2 text-xs font-bold text-emerald-800">
+                      <div className="flex items-center gap-2 text-xs font-bold text-green-800">
                         <Reply className="h-3 w-3" /> Resposta da arena
                         {responseAgeHours(r) != null && (
-                          <span className="text-emerald-600/70">· há {responseAgeHours(r)}h</span>
+                          <span className="text-green-600/70">· há {responseAgeHours(r)}h</span>
                         )}
                       </div>
                       {canModerate && (
@@ -158,7 +158,7 @@ export default function V2ArenaReviews({ arena, canModerate = false }) {
                           <button
                             type="button"
                             onClick={() => setRespondingTo(r.id)}
-                            className="flex h-7 w-7 items-center justify-center rounded-full text-emerald-700 hover:bg-emerald-100"
+                            className="flex h-7 w-7 items-center justify-center rounded-full text-green-700 hover:bg-green-100"
                             aria-label="Editar resposta"
                             title="Editar resposta"
                           >
@@ -182,7 +182,7 @@ export default function V2ArenaReviews({ arena, canModerate = false }) {
                         </div>
                       )}
                     </div>
-                    <p className="mt-1 text-sm text-emerald-900">{r.response}</p>
+                    <p className="mt-1 text-sm text-green-900">{r.response}</p>
                   </div>
                 )}
 
@@ -208,7 +208,7 @@ export default function V2ArenaReviews({ arena, canModerate = false }) {
                   <button
                     type="button"
                     onClick={() => setRespondingTo(r.id)}
-                    className="mt-2 inline-flex items-center gap-1 text-xs font-semibold text-emerald-700 hover:text-emerald-800"
+                    className="mt-2 inline-flex items-center gap-1 text-xs font-semibold text-green-700 hover:text-green-800"
                   >
                     <Reply className="h-3 w-3" /> Responder
                   </button>
@@ -233,14 +233,14 @@ function ResponseForm({ initial = '', busy, onCancel, onSubmit }) {
     onSubmit(r.value);
   };
   return (
-    <form onSubmit={handleSubmit} className="mt-3 space-y-2 rounded-2xl border border-emerald-200 bg-emerald-50/60 p-3">
+    <form onSubmit={handleSubmit} className="mt-3 space-y-2 rounded-2xl border border-green-200 bg-green-50/60 p-3">
       <textarea
         value={text}
         onChange={(e) => setText(e.target.value)}
         rows={3}
         maxLength={500}
         placeholder="Escreva a resposta pública da arena…"
-        className="w-full rounded-xl border border-emerald-200 bg-white px-3 py-2 text-sm outline-none focus-visible:border-emerald-400"
+        className="w-full rounded-xl border border-green-200 bg-white px-3 py-2 text-sm outline-none focus-visible:border-green-400"
       />
       <div className="flex items-center justify-between text-xs">
         <span className={cn(text.length > 500 ? 'text-red-600' : 'text-gray-400')}>

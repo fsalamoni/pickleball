@@ -30,14 +30,15 @@ import { useArenaCourts } from '@/modules/arenas/hooks/useArenas';
 import { V2Badge, V2Button, V2Surface } from '@/v2/ui/primitives';
 import { cn } from '@/core/lib/utils';
 
+// Tons alinhados aos suportados pelo V2Badge (neutral/acid/ink/green/blue/amber/red).
 const STATUS_TONE = {
   requested: 'amber',
-  negotiating: 'sky',
-  confirmed: 'emerald',
-  declined: 'gray',
-  cancelled: 'gray',
-  completed: 'sky',
-  no_show: 'rose',
+  negotiating: 'blue',
+  confirmed: 'green',
+  declined: 'red',
+  cancelled: 'neutral',
+  completed: 'blue',
+  no_show: 'red',
 };
 
 const STATUS_LABEL = {
@@ -124,9 +125,9 @@ export default function V2ArenaCalendar({ arena }) {
           <V2Button variant="ghost" size="sm" onClick={goToday}>Hoje</V2Button>
         </div>
         <div className="flex flex-wrap items-center gap-2 text-xs">
-          <V2Badge tone="info">{stats.total} reservas</V2Badge>
-          <V2Badge tone="success">{stats.confirmed} confirmadas</V2Badge>
-          <V2Badge tone="warning">{stats.requested} pendentes</V2Badge>
+          <V2Badge tone="blue">{stats.total} reservas</V2Badge>
+          <V2Badge tone="green">{stats.confirmed} confirmadas</V2Badge>
+          <V2Badge tone="amber">{stats.requested} pendentes</V2Badge>
           {courts.length > 0 && (
             <select
               value={courtFilter}
@@ -183,7 +184,7 @@ export default function V2ArenaCalendar({ arena }) {
                           key={`${s.booking_id}_${s.start}_${i}`}
                           className={cn(
                             'truncate rounded px-1 py-0.5 text-[9px] font-semibold',
-                            s.booking_status === 'confirmed' && 'bg-emerald-100 text-emerald-800',
+                            s.booking_status === 'confirmed' && 'bg-green-100 text-green-800',
                             s.booking_status === 'requested' && 'bg-amber-100 text-amber-800',
                             s.booking_status === 'negotiating' && 'bg-sky-100 text-sky-800',
                             (s.booking_status === 'cancelled' || s.booking_status === 'declined') && 'bg-gray-100 text-gray-500 line-through',

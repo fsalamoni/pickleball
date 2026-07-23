@@ -230,7 +230,7 @@ export default function BookingRequestDialog({ arena, open, onOpenChange, court:
                   onClick={() => setIsInstant(true)}
                   className={cn(
                     'rounded-2xl border p-3 text-left transition-colors',
-                    isInstant ? 'border-emerald-500 bg-emerald-500 text-white' : 'border-gray-200 bg-paper hover:border-emerald-300',
+                    isInstant ? 'border-green-500 bg-green-500 text-white' : 'border-gray-200 bg-paper hover:border-green-300',
                   )}
                 >
                   <div className="text-sm font-bold">⚡ {INSTANT_BOOKING_LABELS.INSTANT.title}</div>
@@ -370,8 +370,8 @@ export default function BookingRequestDialog({ arena, open, onOpenChange, court:
           )}
 
           {kind === BOOKING_KIND.SINGLE && dayAvailability && dayAvailability.free.length > 0 && courtId && (
-            <div className="rounded-[1rem] border border-emerald-100 bg-emerald-50/60 p-3">
-              <div className="text-xs font-semibold uppercase tracking-[0.16em] text-emerald-700">
+            <div className="rounded-[1rem] border border-green-100 bg-green-50/60 p-3">
+              <div className="text-xs font-semibold uppercase tracking-[0.16em] text-green-700">
                 Horários livres na data ({dayAvailability.free.length} janela(s) com 60+ min)
               </div>
               <div className="mt-2 flex flex-wrap gap-2">
@@ -388,7 +388,7 @@ export default function BookingRequestDialog({ arena, open, onOpenChange, court:
                       const endM = String(endMin % 60).padStart(2, '0');
                       setSingle((s) => ({ ...s, start, end: `${endH}:${endM}` }));
                     }}
-                    className="rounded-full border border-emerald-200 bg-white px-3 py-1 text-xs font-semibold text-emerald-800 hover:bg-emerald-100"
+                    className="rounded-full border border-green-200 bg-white px-3 py-1 text-xs font-semibold text-green-800 hover:bg-green-100"
                   >
                     {slot.start}–{slot.end}
                   </button>

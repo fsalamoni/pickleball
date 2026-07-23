@@ -40,8 +40,8 @@ export const SLOT_STATUS_COLORS = Object.freeze({
   unavailable: { bg: 'bg-orange-50', text: 'text-orange-700', dot: 'bg-orange-500', border: 'border-orange-200' },
   pending: { bg: 'bg-amber-50', text: 'text-amber-800', dot: 'bg-amber-500', border: 'border-amber-300' },
   confirmed: { bg: 'bg-red-50', text: 'text-red-800', dot: 'bg-red-500', border: 'border-red-300' },
-  completed: { bg: 'bg-emerald-50', text: 'text-emerald-700', dot: 'bg-emerald-400', border: 'border-emerald-200' },
-  available: { bg: 'bg-emerald-50', text: 'text-emerald-800', dot: 'bg-emerald-500', border: 'border-emerald-300' },
+  completed: { bg: 'bg-green-50', text: 'text-green-700', dot: 'bg-green-400', border: 'border-green-200' },
+  available: { bg: 'bg-green-50', text: 'text-green-800', dot: 'bg-green-500', border: 'border-green-300' },
 });
 
 const ACTIVE_BOOKING_STATUSES = new Set([
