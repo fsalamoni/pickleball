@@ -25,6 +25,7 @@ import ConfirmDialog from '@/components/ConfirmDialog';
 import { V2ProfileFields, V2PricingEditor } from '@/v2/components/arenas/V2ArenaEditors';
 import V2ArenaReviews from '@/v2/components/arenas/V2ArenaReviews';
 import { ArenaCoachesManager } from '@/v2/pages/V2ArenaCoaches';
+import BookingParticipantsPanel from '@/modules/arenas/components/BookingParticipantsPanel';
 import V2BookingRow from '@/v2/components/arenas/V2BookingRow';
 import { sortBookings } from '@/modules/arenas/domain/booking';
 import { ARENA_MANAGER_ROLE, BOOKING_STATUS } from '@/modules/arenas/domain/constants';
@@ -357,12 +358,21 @@ function PhotosTab({ arena }) {
 }
 
 function BookingsTab({ arena }) {
+  const sharedBookingsOn = useFeatureFlag(FEATURE_FLAG.SHARED_BOOKINGS);
   const { data: bookings = [], isLoading } = useArenaBookings(arena.id);
   const grouped = useMemo(() => {
     const active = sortBookings(bookings.filter((b) => [BOOKING_STATUS.REQUESTED, BOOKING_STATUS.NEGOTIATING, BOOKING_STATUS.CONFIRMED].includes(b.status)));
     const past = sortBookings(bookings.filter((b) => [BOOKING_STATUS.DECLINED, BOOKING_STATUS.CANCELLED, BOOKING_STATUS.COMPLETED].includes(b.status)));
     return { active, past };
   }, [bookings]);
+
+  const sharedOn = sharedBookingsOn;
+  const renderBooking = (b) => (
+    <div key={b.id}>
+      <V2BookingRow booking={b} perspective="arena" />
+      {sharedOn && b.shared && <BookingParticipantsPanel booking={b} />}
+    </div>
+  );
 
   if (isLoading) return <V2Skeleton className="h-40 rounded-4xl" />;
   if (bookings.length === 0) return <V2Surface className="text-center"><p className="py-6 text-sm text-gray-500">Nenhuma solicitação de reserva ainda.</p></V2Surface>;
@@ -372,12 +382,12 @@ function BookingsTab({ arena }) {
       <V2Surface className="space-y-2 p-4 sm:p-5">
         <h3 className="text-sm font-bold text-ink">Ativas</h3>
         {grouped.active.length === 0 ? <p className="text-sm text-gray-500">Nenhuma reserva ativa.</p>
-          : grouped.active.map((b) => <V2BookingRow key={b.id} booking={b} perspective="arena" />)}
+          : grouped.active.map(renderBooking)}
       </V2Surface>
       {grouped.past.length > 0 && (
         <V2Surface className="space-y-2 p-4 sm:p-5">
           <h3 className="text-sm font-bold text-ink">Histórico</h3>
-          {grouped.past.map((b) => <V2BookingRow key={b.id} booking={b} perspective="arena" />)}
+          {grouped.past.map(renderBooking)}
         </V2Surface>
       )}
     </div>

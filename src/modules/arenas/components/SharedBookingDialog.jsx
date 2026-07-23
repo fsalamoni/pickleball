@@ -34,10 +34,13 @@ export default function SharedBookingDialog({
   const [courtId, setCourtId] = useState('');
   const [slot, setSlot] = useState({ date: '', start: '18:00', end: '19:00' });
   const [invitees, setInvitees] = useState([]);
+  const [studentSel, setStudentSel] = useState(students);
   const [openJoin, setOpenJoin] = useState(false);
   const [limited, setLimited] = useState(false);
   const [maxParticipants, setMaxParticipants] = useState(4);
   const [notes, setNotes] = useState('');
+
+  const selectedStudents = asCoach ? studentSel : invitees;
 
   const estimate = useMemo(() => {
     if (!slot.date) return null;
@@ -48,9 +51,9 @@ export default function SharedBookingDialog({
   const previewParticipants = useMemo(() => {
     const list = [];
     if (!asCoach) list.push({ athlete_id: user?.uid, name: 'Você', status: PARTICIPANT_STATUS.ACCEPTED });
-    [...invitees, ...students].forEach((p) => list.push({ athlete_id: p.athlete_id, name: p.name, status: PARTICIPANT_STATUS.ACCEPTED }));
+    selectedStudents.forEach((p) => list.push({ athlete_id: p.athlete_id, name: p.name, status: PARTICIPANT_STATUS.ACCEPTED }));
     return list;
-  }, [asCoach, user?.uid, invitees, students]);
+  }, [asCoach, user?.uid, selectedStudents]);
 
   const split = useMemo(() => {
     if (estimate?.price == null || previewParticipants.length === 0) return null;
@@ -70,7 +73,7 @@ export default function SharedBookingDialog({
         input: {
           court_id: courtId,
           date: slot.date, start: slot.start, end: slot.end,
-          invitees: asCoach ? students : invitees,
+          invitees: selectedStudents,
           open_join: openJoin,
           max_participants: limited ? Number(maxParticipants) : null,
           notes,
@@ -123,15 +126,14 @@ export default function SharedBookingDialog({
 
           <div>
             <Label className="text-xs">{asCoach ? 'Alunos nesta aula (opcional)' : 'Convidar atletas (opcional)'}</Label>
-            {asCoach ? (
-              <p className="mt-1 text-xs text-gray-500">
-                {students.length > 0 ? `${students.length} aluno(s) selecionado(s).` : 'Nenhum aluno — a aula pode ficar aberta abaixo.'}
-              </p>
-            ) : (
-              <div className="mt-1">
+            <div className="mt-1">
+              {asCoach ? (
+                <AthleteMultiPicker value={studentSel} onChange={setStudentSel} exclude={coachId ? [coachId] : []} placeholder="Buscar aluno…" />
+              ) : (
                 <AthleteMultiPicker value={invitees} onChange={setInvitees} exclude={[user?.uid]} />
-              </div>
-            )}
+              )}
+              {asCoach && <p className="mt-1 text-xs text-gray-400">Deixe vazio para reservar sem aluno, ou marque a reserva como aberta abaixo.</p>}
+            </div>
           </div>
 
           <div className="space-y-2 rounded-2xl border border-gray-100 bg-paper p-3">

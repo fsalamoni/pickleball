@@ -32,7 +32,9 @@ import CoachPackagesSection from '@/modules/coaches/components/CoachPackagesSect
 import CoachContentSection from '@/modules/coaches/components/CoachContentSection';
 import CoachStoreSection from '@/modules/coaches/components/CoachStoreSection';
 import CoachPartnersSection from '@/modules/coaches/components/CoachPartnersSection';
+import CoachCourtBookingsSection from '@/modules/coaches/components/CoachCourtBookingsSection';
 import { CoachInfoSection, CoachPhotosSection } from '@/modules/coaches/components/CoachProfileSections';
+import { useFeatureFlag } from '@/core/lib/FeatureFlagsContext';
 import ConfirmDialog from '@/components/ConfirmDialog';
 import { cn } from '@/core/lib/utils';
 import {
@@ -279,6 +281,7 @@ function V2CoachAgendaContent() {
   const { data: coach, isLoading: coachLoading } = useCoach(user?.uid);
   const { data: lessons = [], isLoading: lessonsLoading } = useCoachLessons(user?.uid);
   const respond = useRespondLesson();
+  const sharedBookingsOn = useFeatureFlag(FEATURE_FLAG.SHARED_BOOKINGS);
   const [tab, setTab] = useState('agenda');
 
   const { upcoming, history } = useMemo(() => partitionLessons(lessons), [lessons]);
@@ -366,6 +369,7 @@ function V2CoachAgendaContent() {
         {tab === 'agenda' && (
           <>
             <AvailabilityEditor coachId={coachId} />
+            {sharedBookingsOn && <CoachCourtBookingsSection coach={coach} />}
             <V2Surface>
               <h2 className="mb-4 font-display text-lg font-bold text-ink">Próximas aulas</h2>
               {lessonsLoading ? (

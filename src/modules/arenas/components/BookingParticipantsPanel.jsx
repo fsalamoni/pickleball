@@ -68,6 +68,7 @@ export default function BookingParticipantsPanel({ booking }) {
           <Users className="h-3.5 w-3.5" /> Participantes ({accepted.length}{booking.max_participants ? `/${booking.max_participants}` : ''})
         </div>
         <div className="flex items-center gap-1.5">
+          {booking.booking_type === 'coach_lesson' && <V2Badge tone="ink">Aula com professor</V2Badge>}
           {booking.open_join && <V2Badge tone="blue"><DoorOpen className="mr-1 inline h-3 w-3" />Aberta{remainingSlots(booking) != null ? ` · ${remainingSlots(booking)} vaga(s)` : ''}</V2Badge>}
         </div>
       </div>
