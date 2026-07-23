@@ -29,6 +29,7 @@ import {
   Pencil,
   Search as SearchIcon,
   Power,
+  GraduationCap,
 } from 'lucide-react';
 import { useAuth } from '@/core/lib/FirebaseAuthContext';
 import { useAutoRecomputeRatings } from '@/modules/rating/hooks/useRating';

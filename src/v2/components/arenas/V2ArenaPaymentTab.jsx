@@ -168,7 +168,7 @@ export default function V2ArenaPaymentTab() {
         <h4 className="font-display text-sm font-bold text-ink">💡 Como obter seu QR Code</h4>
         <ol className="mt-2 list-decimal pl-5 text-sm text-gray-600 space-y-1">
           <li>Abra o app do seu banco (inter, Nubank, Itaú, Bradesco, etc.)</li>
-          <li>Vá em PIX → "Cobrar" ou "Receber"</li>
+          <li>Vá em PIX → &quot;Cobrar&quot; ou &quot;Receber&quot;</li>
           <li>Salve o QR Code como imagem (print ou share)</li>
           <li>Faça upload no Drive, Dropbox, ou similar</li>
           <li>Cole a URL pública da imagem acima</li>

@@ -276,7 +276,7 @@ export default function V2AdminBookingCalendar({ arenaId, embedded = false }) {
                   </div>
                 </div>
                 {selectedSlot.booking.notes && (
-                  <p className="mt-2 text-xs text-gray-600">"{selectedSlot.booking.notes}"</p>
+                  <p className="mt-2 text-xs text-gray-600">&quot;{selectedSlot.booking.notes}&quot;</p>
                 )}
               </div>
 

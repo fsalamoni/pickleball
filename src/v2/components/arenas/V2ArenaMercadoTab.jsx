@@ -284,7 +284,7 @@ function EntriesSection({ arenaId }) {
                     </div>
                     {e.supplier && <div className="text-xs text-gray-400">Fornecedor: {e.supplier}</div>}
                     {e.buyer_name && <div className="text-xs text-gray-400">Responsável: {e.buyer_name}</div>}
-                    {e.notes && <div className="mt-1 text-xs text-gray-600 italic">"{e.notes}"</div>}
+                    {e.notes && <div className="mt-1 text-xs text-gray-600 italic">&quot;{e.notes}&quot;</div>}
                   </div>
                 </div>
               </div>
@@ -431,7 +431,7 @@ function ExitsSection({ arenaId }) {
                       <V2Badge tone="amber">{EXIT_TYPE_LABELS[x.exit_type] || x.exit_type}</V2Badge>
                       {x.buyer_name && <span className="ml-2 text-gray-400">{x.buyer_name}</span>}
                     </div>
-                    {x.reason && <div className="mt-1 text-xs text-gray-600 italic">"{x.reason}"</div>}
+                    {x.reason && <div className="mt-1 text-xs text-gray-600 italic">&quot;{x.reason}&quot;</div>}
                   </div>
                 </div>
               </div>

@@ -1043,7 +1043,7 @@ function AuditTab() {
           <h2 className="font-display text-lg font-bold text-ink">Diagnóstico</h2>
         </div>
         <p className="mt-1 text-xs text-gray-500">
-          Para "user sumiu", "perfil zerado" ou "useMyTournaments retorna vazio". Lê o Firestore
+          Para &quot;user sumiu&quot;, &quot;perfil zerado&quot; ou &quot;useMyTournaments retorna vazio&quot;. Lê o Firestore
           bruto (sem hooks/cache) e mostra contagens + erros por seção.
         </p>
         <div className="mt-4 flex flex-wrap gap-2">

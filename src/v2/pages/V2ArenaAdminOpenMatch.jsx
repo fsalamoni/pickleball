@@ -334,7 +334,7 @@ export default function V2ArenaAdminOpenMatch() {
       {!canUseModule && (
         <V2Surface className="mb-6 border-amber-200 bg-amber-50/50">
           <p className="text-sm text-amber-800">
-            <strong>Módulo não habilitado.</strong> Você precisa ativar o módulo "Open Match" nos
+            <strong>Módulo não habilitado.</strong> Você precisa ativar o módulo &quot;Open Match&quot; nos
             <Link to={`/arenas/${arena.id}/gerir/modulos`} className="ml-1 font-bold underline">Módulos da arena</Link>.
           </p>
         </V2Surface>

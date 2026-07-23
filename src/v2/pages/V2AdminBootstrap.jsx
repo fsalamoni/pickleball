@@ -314,7 +314,7 @@ export default function V2AdminBootstrap() {
             <strong>4.</strong> Se for platform owner, pode também promover outros users a
             <code className="rounded bg-paper px-1">platform_admin</code> editando o doc
             <code className="rounded bg-paper px-1">users/&#123;uid&#125;</code> com o campo{' '}
-            <code className="rounded bg-paper px-1">role: "platform_admin"</code>.
+            <code className="rounded bg-paper px-1">role: &quot;platform_admin&quot;</code>.
           </li>
         </ol>
       </V2Surface>

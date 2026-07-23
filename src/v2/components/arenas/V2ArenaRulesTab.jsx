@@ -181,7 +181,7 @@ export default function V2ArenaRulesTab() {
       <V2Surface className="border-amber-200 bg-amber-50/40">
         <h4 className="text-sm font-bold text-amber-800">💡 Dica</h4>
         <p className="mt-1 text-sm text-amber-900">
-          Use categorias para agrupar (ex: Pagamento → "PIX antecipado", "Sem devolução em 24h").
+          Use categorias para agrupar (ex: Pagamento → &quot;PIX antecipado&quot;, &quot;Sem devolução em 24h&quot;).
           Regras curtas e diretas funcionam melhor.
         </p>
       </V2Surface>
