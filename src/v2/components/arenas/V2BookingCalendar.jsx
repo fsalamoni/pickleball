@@ -211,6 +211,23 @@ export default function V2BookingCalendar({ arenaId, arena: arenaProp }) {
             const c = SLOT_STATUS_COLORS[meta.dayStatus];
             const closed = meta.isAllClosed;
             const clickable = inMonth && !past && !closed;
+            // Badges numéricos: mostra contagem de pendentes e reservados
+            // para dar visibilidade mesmo no overview do mês.
+            const pendingCount = meta.count?.pending || 0;
+            const confirmedCount = meta.count?.confirmed || 0;
+            const totalActive = pendingCount + confirmedCount;
+            // Tooltip explicativo
+            const tooltip = (() => {
+              if (!inMonth) return '';
+              if (past) return `${date} (passou)`;
+              if (closed && totalActive === 0) return `${date} · Sem horários abertos`;
+              const parts = [`${date}`];
+              if (meta.count?.available) parts.push(`${meta.count.available} livre`);
+              if (pendingCount) parts.push(`${pendingCount} em andamento`);
+              if (confirmedCount) parts.push(`${confirmedCount} reservado`);
+              if (meta.count?.unavailable) parts.push(`${meta.count.unavailable} indisponível`);
+              return parts.join(' · ');
+            })();
 
             return (
               <button
@@ -218,8 +235,10 @@ export default function V2BookingCalendar({ arenaId, arena: arenaProp }) {
                 type="button"
                 disabled={!clickable}
                 onClick={() => handleDayClick(date)}
+                title={tooltip}
+                aria-label={tooltip || date}
                 className={cn(
-                  'flex min-h-[68px] flex-col items-center justify-start gap-1 border-b border-r border-gray-100 p-2 text-left transition-all',
+                  'flex min-h-[76px] flex-col items-stretch gap-1 border-b border-r border-gray-100 p-1.5 text-left transition-all',
                   !inMonth && 'bg-gray-50/50 text-gray-300',
                   inMonth && !past && !closed && 'hover:bg-emerald-50 cursor-pointer',
                   inMonth && past && 'bg-gray-50/30 text-gray-300 cursor-not-allowed',
@@ -227,15 +246,37 @@ export default function V2BookingCalendar({ arenaId, arena: arenaProp }) {
                   isToday && 'ring-2 ring-inset ring-emerald-500',
                 )}
               >
-                <span className={cn(
-                  'text-xs font-bold',
-                  isToday && 'text-emerald-700',
-                  inMonth ? 'text-ink' : 'text-gray-300',
-                )}>
-                  {Number(date.slice(-2))}
-                </span>
-                {inMonth && !past && !closed && (
-                  <span className={cn('h-2 w-2 rounded-full', c.dot)} aria-label={SLOT_STATUS_LABELS[meta.dayStatus]} />
+                <div className="flex items-start justify-between">
+                  <span className={cn(
+                    'text-xs font-bold',
+                    isToday && 'text-emerald-700',
+                    inMonth ? 'text-ink' : 'text-gray-300',
+                  )}>
+                    {Number(date.slice(-2))}
+                  </span>
+                  {inMonth && !past && !closed && (
+                    <span className={cn('h-2 w-2 rounded-full', c.dot)} aria-label={SLOT_STATUS_LABELS[meta.dayStatus]} />
+                  )}
+                </div>
+                {inMonth && !past && totalActive > 0 && (
+                  <div className="flex flex-wrap gap-1">
+                    {pendingCount > 0 && (
+                      <span
+                        className="rounded-full bg-amber-500 px-1.5 py-0.5 text-[9px] font-bold leading-none text-white"
+                        title={`${pendingCount} solicitação(ões) em andamento`}
+                      >
+                        {pendingCount}
+                      </span>
+                    )}
+                    {confirmedCount > 0 && (
+                      <span
+                        className="rounded-full bg-red-500 px-1.5 py-0.5 text-[9px] font-bold leading-none text-white"
+                        title={`${confirmedCount} já reservado(s)`}
+                      >
+                        {confirmedCount}
+                      </span>
+                    )}
+                  </div>
                 )}
                 {inMonth && past && (
                   <span className="text-[9px] text-gray-300">passou</span>
