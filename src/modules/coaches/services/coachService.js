@@ -19,6 +19,7 @@ import {
 import { db } from '@/core/config/firebase';
 import { logger } from '@/core/lib/logger';
 import { createAuditLog } from '@/core/services/auditService';
+import { notifyUsers, NOTIFICATION_TYPE } from '@/core/services/notificationService';
 import { normalizeCoachProfile, normalizeCoachResidency } from '../domain/coach.js';
 
 export const COACH_COLLECTIONS = {
@@ -98,6 +99,22 @@ export async function addCoachResidency(input, actor) {
     added_at: serverTimestamp(),
     added_by: actor?.uid || null,
   });
+  // Se quem vinculou não foi o próprio professor (ex.: gestor da arena),
+  // avisa o professor de que virou parceiro daquela arena.
+  if (actor?.uid && actor.uid !== value.coach_id) {
+    let arenaName = 'uma arena';
+    try {
+      const arenaSnap = await getDoc(doc(db, 'arenas', value.arena_id));
+      if (arenaSnap.exists()) arenaName = arenaSnap.data().name || arenaName;
+    } catch { /* nome é opcional */ }
+    notifyUsers([value.coach_id], {
+      title: 'Você é professor parceiro de uma arena',
+      message: `${arenaName} adicionou você como professor parceiro. Veja no seu painel.`,
+      type: NOTIFICATION_TYPE.GENERIC,
+      link: '/aulas',
+      actor: { uid: actor.uid },
+    });
+  }
   await createAuditLog({
     action: 'coach_residency_added',
     actor,

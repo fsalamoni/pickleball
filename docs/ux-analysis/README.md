@@ -31,6 +31,9 @@ Catálogo acionável de melhorias de usabilidade e experiência (UX/UI) para as 
 | [10](./10-transversais-engajamento.md) | Transversais e engajamento | TRV-01…TRV-20 |
 | [11](./11-quick-wins.md) | Quick wins (baixo esforço, alto retorno) | QW-01…QW-25 |
 | [12](./12-roadmap-priorizacao.md) | Roadmap e priorização | — |
+| [13](./13-arena-refino.md) | Refino de UX/UI das arenas (entregue) | — |
+| [14](./14-professor-implementacao.md) | Professor — plano e implementação (entregue) | PRO-05…PRO-18 |
+| **[15](./15-backlog-remanescente.md)** | **Backlog remanescente (o que ainda falta) — comece por aqui** | — |
 
 ## Diagnóstico em uma página
 
