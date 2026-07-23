@@ -1010,6 +1010,37 @@ service cloud.firestore {
       );
     }
 
+// ---- Produto de aulas do professor (flag coach_lessons) — aditivo ----
+    // coach_availability/{coachId} — disponibilidade semanal (1 doc/professor).
+    // Leitura pública (o aluno precisa ver horários); escrita só do professor.
+    match /coach_availability/{coachId} {
+      allow read: if true;
+      allow create, update, delete: if isAuthed() && (
+        request.auth.uid == coachId || isPlatformAdmin()
+      );
+    }
+    // coach_lessons/{lessonId} — aula (avulsa/recorrente).
+    // Lê o professor e o aluno vinculado (e admin). Cria o professor, o aluno
+    // (student_id == uid) ou admin. Atualiza/exclui o professor ou o aluno
+    // vinculado (a UI/serviço restringe o aluno a cancelar).
+    match /coach_lessons/{lessonId} {
+      allow read: if isAuthed() && (
+        request.auth.uid == resource.data.coach_id ||
+        request.auth.uid == resource.data.student_id ||
+        isPlatformAdmin()
+      );
+      allow create: if isAuthed() && (
+        request.auth.uid == request.resource.data.coach_id ||
+        request.auth.uid == request.resource.data.student_id ||
+        isPlatformAdmin()
+      );
+      allow update, delete: if isAuthed() && (
+        request.auth.uid == resource.data.coach_id ||
+        request.auth.uid == resource.data.student_id ||
+        isPlatformAdmin()
+      );
+    }
+
 
     // ---- Sprint 5: Inventory / Mercado ----
     match /arena_inventory_products/{productId} {
