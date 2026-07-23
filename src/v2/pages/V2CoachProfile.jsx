@@ -7,7 +7,7 @@
 
 import React, { useState } from 'react';
 import { Link, useParams, Navigate } from 'react-router-dom';
-import { ArrowLeft, GraduationCap, MapPin, Award, MessageCircle, Plus, Trash2, Video } from 'lucide-react';
+import { ArrowLeft, GraduationCap, MapPin, Award, MessageCircle, Plus, Trash2, Video, Phone, Mail, Store, Image as ImageIcon } from 'lucide-react';
 import { toast } from 'sonner';
 import { FEATURE_FLAG } from '@/core/featureFlags';
 import { useFeatureFlag } from '@/core/lib/FeatureFlagsContext';
@@ -17,8 +17,11 @@ import { useArena, useMyManagedArenas } from '@/modules/arenas/hooks/useArenas';
 import { canAcceptStudents } from '@/modules/coaches/domain/coach';
 import { STUDENT_STATUS } from '@/modules/coaches/domain/student';
 import { visibleContent, sortContent, contentCategoryLabel, CONTENT_VISIBILITY } from '@/modules/coaches/domain/content';
+import { coachProductCategoryLabel, formatCoachProductPrice } from '@/modules/coaches/domain/coachProduct';
 import { useStudentCoaches } from '@/modules/coaches/hooks/useStudents';
 import { useCoachContent } from '@/modules/coaches/hooks/useContent';
+import { useCoachProducts } from '@/modules/coaches/hooks/useCoachProducts';
+import { PhotoLightbox } from '@/components/ui/photo-lightbox';
 import RequestLessonDialog from '@/modules/coaches/components/RequestLessonDialog';
 import {
   V2Badge, V2Button, V2EmptyState, V2Surface, V2Skeleton,
@@ -125,6 +128,8 @@ export default function V2CoachProfile() {
   const isStudent = myLinks.some((l) => l.coach_id === coachId && l.status === STUDENT_STATUS.ACTIVE);
   const { data: contentRaw = [] } = useCoachContent(lessonsOn ? coachId : null, { full: isOwn || isStudent });
   const libraryItems = sortContent(visibleContent(contentRaw, { isOwner: isOwn, isStudent }));
+  // Loja pública: sempre só os produtos marcados como públicos (preview fiel).
+  const { data: storeProducts = [] } = useCoachProducts(lessonsOn ? coachId : null, { full: false });
 
   if (!isAuthenticated) return <Navigate to="/login" replace />;
   if (isLoading) return <div className="p-4"><V2Skeleton lines={6} /></div>;
@@ -183,6 +188,23 @@ export default function V2CoachProfile() {
                   <MessageCircle className="h-4 w-4" /> Solicitar aula
                 </V2Button>
               )}
+              {coach.contact_whatsapp && (
+                <a
+                  href={`https://wa.me/${String(coach.contact_whatsapp).replace(/\D/g, '')}`}
+                  target="_blank" rel="noreferrer"
+                  className="inline-flex items-center gap-1.5 rounded-full border border-green-200 bg-green-50 px-3 py-1.5 text-xs font-bold text-green-700 hover:bg-green-100"
+                >
+                  <Phone className="h-3.5 w-3.5" /> WhatsApp
+                </a>
+              )}
+              {coach.contact_email && (
+                <a
+                  href={`mailto:${coach.contact_email}`}
+                  className="inline-flex items-center gap-1.5 rounded-full border border-gray-200 px-3 py-1.5 text-xs font-bold text-ink hover:bg-paper"
+                >
+                  <Mail className="h-3.5 w-3.5" /> E-mail
+                </a>
+              )}
               {isOwn && lessonsOn && (
                 <Link to="/aulas" className="text-xs font-bold text-ink hover:underline">
                   Minha agenda de aulas →
@@ -201,10 +223,53 @@ export default function V2CoachProfile() {
         </div>
       </V2Surface>
 
+      {/* Fotos */}
+      {coach.photos?.length > 0 && (
+        <V2Surface>
+          <h3 className="flex items-center gap-1.5 font-display text-base font-bold text-ink">
+            <ImageIcon className="h-4 w-4" /> Fotos
+          </h3>
+          <div className="mt-3 grid grid-cols-2 gap-2 sm:grid-cols-3">
+            {coach.photos.map((url, i) => (
+              <PhotoLightbox
+                key={url || i}
+                src={url}
+                alt={`Foto ${i + 1} de ${coach.display_name}`}
+                trigger={<img src={url} alt="" className="h-28 w-full cursor-zoom-in rounded-2xl object-cover" />}
+              />
+            ))}
+          </div>
+        </V2Surface>
+      )}
+
+      {/* Loja pública */}
+      {lessonsOn && storeProducts.length > 0 && (
+        <V2Surface>
+          <h3 className="flex items-center gap-1.5 font-display text-base font-bold text-ink">
+            <Store className="h-4 w-4" /> Loja
+          </h3>
+          <p className="mt-1 text-sm text-gray-500">Produtos à venda com este professor. Combine o pagamento diretamente.</p>
+          <div className="mt-3 grid gap-3 sm:grid-cols-2">
+            {storeProducts.map((p) => (
+              <div key={p.id} className="rounded-2xl border border-gray-100 bg-paper p-3">
+                <div className="flex items-start justify-between gap-2">
+                  <div className="min-w-0">
+                    <p className="font-bold text-ink line-clamp-1">{p.name}</p>
+                    {p.description && <p className="mt-0.5 text-xs text-gray-500 line-clamp-2">{p.description}</p>}
+                  </div>
+                  <V2Badge tone="neutral">{coachProductCategoryLabel(p.category)}</V2Badge>
+                </div>
+                <p className="mt-2 font-display text-lg font-bold text-ink">{formatCoachProductPrice(p.price)}</p>
+              </div>
+            ))}
+          </div>
+        </V2Surface>
+      )}
+
       {/* Residências */}
       <V2Surface>
         <div className="flex items-center justify-between">
-          <h3 className="font-display text-base font-bold text-ink">Arenas onde é residente</h3>
+          <h3 className="font-display text-base font-bold text-ink">Arenas parceiras</h3>
           {(isOwn || isPlatformAdmin) && !adding && (
             <V2Button size="sm" onClick={() => setAdding(true)}><Plus className="h-4 w-4" /> Adicionar</V2Button>
           )}

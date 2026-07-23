@@ -20,8 +20,17 @@ export const COACH_MODALITIES_MAX = 5;
 export const COACH_MODALITY_MAX = 30;
 export const COACH_CERTIFICATIONS_MAX = 10;
 export const COACH_CERTIFICATION_MAX = 120;
+export const COACH_PHOTOS_MAX = 8;
 
 const str = (v) => String(v ?? '').trim();
+
+/** Sanitiza uma lista de URLs de foto (http/https). */
+export function normalizeCoachPhotos(input) {
+  return (Array.isArray(input) ? input : [])
+    .map((p) => str(p))
+    .filter((p) => /^https?:\/\//i.test(p))
+    .slice(0, COACH_PHOTOS_MAX);
+}
 
 /**
  * Normaliza e valida o perfil de um coach.
@@ -66,6 +75,9 @@ export function normalizeCoachProfile(input = {}) {
       regions,
       modalities,
       certifications,
+      photos: normalizeCoachPhotos(input.photos),
+      contact_whatsapp: str(input.contact_whatsapp).slice(0, 40),
+      contact_email: str(input.contact_email).slice(0, 160),
       accepting_students: input.accepting_students !== false, // default true
       active: input.active !== false, // default true
     },

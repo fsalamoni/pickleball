@@ -1103,6 +1103,19 @@ service cloud.firestore {
         request.auth.uid == resource.data.coach_id || isPlatformAdmin()
       );
     }
+    // coach_products/{id} — loja do professor. Lê: produtos públicos (qualquer
+    // um) e todos os do próprio professor/admin. Escreve: o professor/admin.
+    match /coach_products/{productId} {
+      allow read: if resource.data.visible_public == true || (isAuthed() && (
+        request.auth.uid == resource.data.coach_id || isPlatformAdmin()
+      ));
+      allow create: if isAuthed() && (
+        request.auth.uid == request.resource.data.coach_id || isPlatformAdmin()
+      );
+      allow update, delete: if isAuthed() && (
+        request.auth.uid == resource.data.coach_id || isPlatformAdmin()
+      );
+    }
 
 
     // ---- Sprint 5: Inventory / Mercado ----

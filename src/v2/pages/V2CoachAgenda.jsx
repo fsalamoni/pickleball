@@ -13,6 +13,7 @@ import { Link, Navigate } from 'react-router-dom';
 import { toast } from 'sonner';
 import {
   GraduationCap, Plus, Trash2, Clock, CalendarDays, CalendarOff, Check, X,
+  UserCircle, Image as ImageIcon, Users, Wallet, Package, Store, BookOpen, Handshake,
 } from 'lucide-react';
 import { FEATURE_FLAG } from '@/core/featureFlags';
 import FeatureFlagGuard from '@/v2/components/FeatureFlagGuard';
@@ -29,10 +30,61 @@ import {
 import CoachStudentsSection from '@/modules/coaches/components/CoachStudentsSection';
 import CoachPackagesSection from '@/modules/coaches/components/CoachPackagesSection';
 import CoachContentSection from '@/modules/coaches/components/CoachContentSection';
+import CoachStoreSection from '@/modules/coaches/components/CoachStoreSection';
+import CoachPartnersSection from '@/modules/coaches/components/CoachPartnersSection';
+import { CoachInfoSection, CoachPhotosSection } from '@/modules/coaches/components/CoachProfileSections';
 import ConfirmDialog from '@/components/ConfirmDialog';
+import { cn } from '@/core/lib/utils';
 import {
   V2Badge, V2Button, V2EmptyState, V2Field, V2Input, V2Skeleton, V2Surface,
 } from '@/v2/ui/primitives';
+
+// Navegação em dois níveis do hub do professor (espelha o admin da arena).
+// Ordem lógica: perfil → agenda → alunos → comercial → conteúdo → parceiros.
+const COACH_SECTIONS = [
+  {
+    id: 'perfil',
+    label: 'Perfil',
+    icon: UserCircle,
+    tabs: [
+      { value: 'info', label: 'Informações', icon: UserCircle },
+      { value: 'fotos', label: 'Fotos', icon: ImageIcon },
+    ],
+  },
+  {
+    id: 'agenda',
+    label: 'Agenda',
+    icon: CalendarDays,
+    tabs: [{ value: 'agenda', label: 'Calendário', icon: CalendarDays }],
+  },
+  {
+    id: 'alunos',
+    label: 'Alunos',
+    icon: Users,
+    tabs: [{ value: 'alunos', label: 'Alunos', icon: Users }],
+  },
+  {
+    id: 'comercial',
+    label: 'Comercial',
+    icon: Wallet,
+    tabs: [
+      { value: 'pacotes', label: 'Pacotes', icon: Package },
+      { value: 'loja', label: 'Loja', icon: Store },
+    ],
+  },
+  {
+    id: 'conteudo',
+    label: 'Conteúdo',
+    icon: BookOpen,
+    tabs: [{ value: 'conteudo', label: 'Conteúdo', icon: BookOpen }],
+  },
+  {
+    id: 'parceiros',
+    label: 'Parceiros',
+    icon: Handshake,
+    tabs: [{ value: 'parceiros', label: 'Parceiros', icon: Handshake }],
+  },
+];
 
 const WEEKDAY_SHORT = ['Dom', 'Seg', 'Ter', 'Qua', 'Qui', 'Sex', 'Sáb'];
 
@@ -227,6 +279,7 @@ function V2CoachAgendaContent() {
   const { data: coach, isLoading: coachLoading } = useCoach(user?.uid);
   const { data: lessons = [], isLoading: lessonsLoading } = useCoachLessons(user?.uid);
   const respond = useRespondLesson();
+  const [tab, setTab] = useState('agenda');
 
   const { upcoming, history } = useMemo(() => partitionLessons(lessons), [lessons]);
 
@@ -248,6 +301,8 @@ function V2CoachAgendaContent() {
     );
   }
 
+  const activeSection = COACH_SECTIONS.find((s) => s.tabs.some((t) => t.value === tab)) || COACH_SECTIONS[0];
+
   const handleAction = async (lesson, nextStatus) => {
     try {
       await respond.mutateAsync({ lesson, nextStatus });
@@ -257,42 +312,88 @@ function V2CoachAgendaContent() {
     }
   };
 
+  const coachId = user.uid;
+
   return (
-    <div className="mx-auto max-w-[900px] space-y-6 p-4">
-      <div>
-        <h1 className="font-display text-3xl font-bold tracking-tight text-ink">Minhas aulas · professor</h1>
-        <p className="mt-2 font-medium text-gray-500">Defina sua disponibilidade e gerencie as solicitações de aula.</p>
+    <div className="mx-auto max-w-[900px] p-4">
+      <div className="mb-2 flex items-center justify-between gap-2">
+        <h1 className="font-display text-3xl font-bold tracking-tight text-ink">Painel do professor</h1>
+        <Link to={`/coaches/${coachId}`} className="text-xs font-bold text-ink hover:underline">Ver perfil público →</Link>
       </div>
+      <p className="mb-5 font-medium text-gray-500">Gerencie perfil, agenda, alunos, comercial, conteúdo e parcerias.</p>
 
-      <AvailabilityEditor coachId={user.uid} />
-
-      <CoachStudentsSection coachId={user.uid} lessons={lessons} />
-
-      <CoachPackagesSection coachId={user.uid} />
-
-      <CoachContentSection coachId={user.uid} />
-
-      <V2Surface>
-        <h2 className="mb-4 font-display text-lg font-bold text-ink">Próximas aulas</h2>
-        {lessonsLoading ? (
-          <V2Skeleton lines={3} />
-        ) : upcoming.length === 0 ? (
-          <V2EmptyState icon={CalendarDays} title="Nenhuma aula agendada" description="Solicitações de aula dos alunos aparecem aqui para você confirmar." />
-        ) : (
-          <div className="space-y-2">
-            {upcoming.map((l) => <LessonCard key={l.id} lesson={l} onAction={handleAction} isPending={respond.isPending} />)}
+      {/* Navegação em dois níveis */}
+      <div className="space-y-3">
+        <div className="overflow-x-auto">
+          <div className="inline-flex gap-1.5 rounded-full border border-gray-100 bg-paper-pure p-1.5 shadow-sm">
+            {COACH_SECTIONS.map((section) => {
+              const Icon = section.icon;
+              const active = section.id === activeSection.id;
+              return (
+                <button key={section.id} onClick={() => setTab(section.tabs[0].value)}
+                  aria-current={active ? 'page' : undefined}
+                  className={cn('inline-flex items-center gap-1.5 whitespace-nowrap rounded-full px-4 py-2 text-sm font-semibold transition-colors', active ? 'bg-ink text-white shadow-md' : 'text-gray-500 hover:text-ink')}>
+                  {Icon && <Icon className={cn('h-4 w-4', active ? 'text-acid' : 'text-gray-400')} />}
+                  {section.label}
+                </button>
+              );
+            })}
+          </div>
+        </div>
+        {activeSection.tabs.length > 1 && (
+          <div className="overflow-x-auto">
+            <div className="inline-flex flex-wrap gap-1.5 px-1">
+              {activeSection.tabs.map((t) => {
+                const Icon = t.icon;
+                const active = tab === t.value;
+                return (
+                  <button key={t.value} onClick={() => setTab(t.value)}
+                    aria-current={active ? 'page' : undefined}
+                    className={cn('inline-flex items-center gap-1.5 whitespace-nowrap rounded-full border px-3.5 py-1.5 text-sm font-semibold transition-colors', active ? 'border-ink bg-ink/5 text-ink' : 'border-gray-200 text-gray-500 hover:border-ink/40 hover:text-ink')}>
+                    {Icon && <Icon className={cn('h-3.5 w-3.5', active ? 'text-ink' : 'text-gray-400')} />}
+                    {t.label}
+                  </button>
+                );
+              })}
+            </div>
           </div>
         )}
-      </V2Surface>
+      </div>
 
-      {history.length > 0 && (
-        <V2Surface>
-          <h2 className="mb-4 font-display text-lg font-bold text-ink">Histórico</h2>
-          <div className="space-y-2">
-            {history.map((l) => <LessonCard key={l.id} lesson={l} onAction={handleAction} isPending={respond.isPending} />)}
-          </div>
-        </V2Surface>
-      )}
+      <div className="mt-6 space-y-6">
+        {tab === 'info' && <CoachInfoSection coach={coach} />}
+        {tab === 'fotos' && <CoachPhotosSection coach={coach} />}
+        {tab === 'agenda' && (
+          <>
+            <AvailabilityEditor coachId={coachId} />
+            <V2Surface>
+              <h2 className="mb-4 font-display text-lg font-bold text-ink">Próximas aulas</h2>
+              {lessonsLoading ? (
+                <V2Skeleton lines={3} />
+              ) : upcoming.length === 0 ? (
+                <V2EmptyState icon={CalendarDays} title="Nenhuma aula agendada" description="Solicitações de aula dos alunos aparecem aqui para você confirmar." />
+              ) : (
+                <div className="space-y-2">
+                  {upcoming.map((l) => <LessonCard key={l.id} lesson={l} onAction={handleAction} isPending={respond.isPending} />)}
+                </div>
+              )}
+            </V2Surface>
+            {history.length > 0 && (
+              <V2Surface>
+                <h2 className="mb-4 font-display text-lg font-bold text-ink">Histórico</h2>
+                <div className="space-y-2">
+                  {history.map((l) => <LessonCard key={l.id} lesson={l} onAction={handleAction} isPending={respond.isPending} />)}
+                </div>
+              </V2Surface>
+            )}
+          </>
+        )}
+        {tab === 'alunos' && <CoachStudentsSection coachId={coachId} lessons={lessons} />}
+        {tab === 'pacotes' && <CoachPackagesSection coachId={coachId} />}
+        {tab === 'loja' && <CoachStoreSection coachId={coachId} />}
+        {tab === 'conteudo' && <CoachContentSection coachId={coachId} />}
+        {tab === 'parceiros' && <CoachPartnersSection coachId={coachId} />}
+      </div>
     </div>
   );
 }
