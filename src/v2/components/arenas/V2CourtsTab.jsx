@@ -21,6 +21,7 @@
 import React, { useState } from 'react';
 import { toast } from 'sonner';
 import { ChevronDown, ChevronUp, Clock, Pencil, Plus, Trash2 } from 'lucide-react';
+import { cn } from '@/core/lib/utils';
 import { normalizeCourtInput, COURT, nextSortOrder, sortCourts } from '@/modules/arenas/domain/court';
 import {
   useArenaCourts, useCreateCourt, useUpdateCourt, useDeleteCourt, useReorderCourts, useNormalizeCourtOrder,
