@@ -19,26 +19,28 @@ que pode se unificar foi unificado**. Pontos pertinentes ainda abertos:
 - ✅ Vínculo arena↔professor (admin da arena + aba, público dos dois lados,
   perfil profissional = atleta + página de professor, cross-links).
 - ✅ Notificação ao professor quando a arena o adiciona como parceiro.
-- ⏳ **Aceite mútuo da parceria**: hoje a arena vincula unilateralmente
-  (status `active`/`paused`); o professor só pode *sair*. Ideal: convite +
-  aceite (espelhar `partner_invites`), evitando uso indevido de marca (PRO-15).
-- ⏳ **Aula → reserva de quadra automática**: uma aula confirmada numa arena
-  parceira não segura a quadra no calendário da arena. Risco de conflito
-  (professor agenda em quadra já reservada). Unir `coach_lessons` com
-  `arena_bookings` via slot/quadra.
+- ✅ **Reservas compartilhadas** (`shared_bookings`): reserva de quadra com
+  vários atletas, convites (aceite/recusa), reserva aberta (com/sem limite),
+  co-propriedade e rateio do valor por tempo.
+- ✅ **Aula → reserva de quadra**: o professor reserva quadra nas arenas
+  parceiras (`booking_type=coach_lesson`), adiciona alunos ou deixa aberta; a
+  reserva aparece no calendário da arena marcada como "aula com professor".
+  Alunos podem ingressar em reservas abertas.
+- ✅ **Clubes vinculados** (`linked_clubs`): professor/arena criam ou vinculam
+  clubes próprios; seção aparece no público só quando há clubes.
+- ⏳ **Aceite mútuo da parceria**: a arena ainda vincula unilateralmente (o
+  professor só pode *sair*). Ideal: convite + aceite (espelhar `partner_invites`).
+- ⏳ **Pedido de aluno para horário fechado**: hoje o aluno entra em reserva
+  **aberta** do professor; para reserva fechada faltaria um "pedir para entrar"
+  (o professor aprova).
 - ⏳ **Disponibilidade por arena parceira**: a janela de disponibilidade usa
-  `location` em texto livre; poderia ser um seletor das arenas onde o professor
-  é parceiro (`arena_id`), habilitando agenda ciente de quadra.
-- ⏳ **"Agendar com este professor nesta arena"** na página pública da arena:
-  hoje o card leva ao perfil; poderia pré-preencher a solicitação de aula com a
-  arena selecionada.
-- ⏳ **Ponte com o Sistema C (aulas da arena)**: `arena_coaches`/`arena_classes`
-  (aulas operadas pela arena) e `coach_lessons` (aulas do professor) coexistem
-  sem se cruzar. Definir se a arena pode ofertar aulas de um professor parceiro.
+  `location` em texto livre; poderia ser um seletor das arenas parceiras.
+- ⏳ **"Agendar com este professor nesta arena"** direto da página da arena.
+- ⏳ **Ponte com o Sistema C (aulas da arena)**: `arena_classes` (aulas operadas
+  pela arena) e `coach_lessons` seguem separados.
 - ⏳ **Split de receita / comissão** para aulas realizadas na arena parceira.
-- ⏳ **Loja**: produtos do professor (`coach_products`) e mercado da arena são
-  independentes; sem checkout (pagamento combinado direto). Gateway é
-  transversal (ver §9).
+- ⏳ **Checkout/gateway** (o rateio é calculado, mas o pagamento é combinado
+  direto). Gateway é transversal (ver §9).
 
 ---
 
