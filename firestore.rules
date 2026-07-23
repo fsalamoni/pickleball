@@ -254,7 +254,12 @@ service cloud.firestore {
         resource.data.athlete_id == request.auth.uid
         || isArenaManager(resource.data.arena_id)
         || isPlatformAdmin());
-      allow create: if isAuthed() && request.resource.data.athlete_id == request.auth.uid;
+      // Atleta cria a própria reserva; o gestor da arena (e o admin) pode
+      // criar reserva manual em nome de um cliente (athlete_id pode ser null).
+      allow create: if isAuthed() && (
+        request.resource.data.athlete_id == request.auth.uid
+        || isArenaManager(request.resource.data.arena_id)
+        || isPlatformAdmin());
       allow update, delete: if isAuthed() && (
         resource.data.athlete_id == request.auth.uid
         || isArenaManager(resource.data.arena_id)

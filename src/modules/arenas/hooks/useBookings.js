@@ -4,6 +4,7 @@ import {
   listMyBookings,
   listArenaBookings,
   createBooking,
+  createManualBooking,
   updateBookingStatus,
   proposeBookingPrice,
   setBookingPayment,
@@ -36,6 +37,17 @@ export function useCreateBooking() {
     mutationFn: ({ arena, input }) => createBooking(arena, user, userProfile, input),
     onSuccess: (_d, { arena }) => {
       qc.invalidateQueries({ queryKey: ['my-bookings'] });
+      qc.invalidateQueries({ queryKey: ['arena-bookings', arena.id] });
+    },
+  });
+}
+
+export function useCreateManualBooking() {
+  const { user } = useAuth();
+  const qc = useQueryClient();
+  return useMutation({
+    mutationFn: ({ arena, input }) => createManualBooking(arena, user, input),
+    onSuccess: (_d, { arena }) => {
       qc.invalidateQueries({ queryKey: ['arena-bookings', arena.id] });
     },
   });
