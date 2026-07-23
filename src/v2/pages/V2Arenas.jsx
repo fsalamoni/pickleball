@@ -9,6 +9,7 @@ import {
   V2Badge,
   V2Button,
   V2EmptyState,
+  V2FilterChip,
   V2PageIntro,
   V2SearchInput,
   V2Skeleton,
@@ -45,13 +46,25 @@ export default function V2Arenas() {
 function V2ArenasContent() {
   const { data: arenas = [], isLoading } = useArenas();
   const [search, setSearch] = useState('');
+  const [city, setCity] = useState('');
+
+  // Cidades disponíveis (para o filtro por chips), ordenadas em pt-BR.
+  const cities = useMemo(() => {
+    const set = new Set();
+    arenas.forEach((a) => {
+      const c = String(a.city || '').trim();
+      if (c) set.add(c);
+    });
+    return Array.from(set).sort((a, b) => a.localeCompare(b, 'pt-BR'));
+  }, [arenas]);
 
   const filtered = useMemo(() => {
     const term = search.trim().toLowerCase();
     return arenas
+      .filter((a) => (!city ? true : String(a.city || '').trim() === city))
       .filter((a) => (!term ? true : [a.name, a.city, a.state, a.address].filter(Boolean).join(' ').toLowerCase().includes(term)))
       .sort((a, b) => String(a.name || '').localeCompare(String(b.name || ''), 'pt-BR'));
-  }, [arenas, search]);
+  }, [arenas, search, city]);
 
   return (
     <div className="mx-auto max-w-[1400px]">
@@ -68,8 +81,17 @@ function V2ArenasContent() {
           onChange={(e) => setSearch(e.target.value)}
           placeholder="Buscar arena por nome, cidade ou endereço"
         />
+        {cities.length > 1 && (
+          <div className="mt-4 flex flex-wrap gap-2">
+            <V2FilterChip active={city === ''} onClick={() => setCity('')}>Todas as cidades</V2FilterChip>
+            {cities.map((c) => (
+              <V2FilterChip key={c} active={city === c} onClick={() => setCity(c)}>{c}</V2FilterChip>
+            ))}
+          </div>
+        )}
         <p className="mt-4 border-t border-gray-100 pt-4 text-sm text-gray-500">
-          <span className="font-bold text-ink">{filtered.length}</span> arena(s) disponíveis.
+          <span className="font-bold text-ink">{filtered.length}</span> arena(s)
+          {city ? ` em ${city}` : ' disponíveis'}.
         </p>
       </V2Surface>
 
@@ -82,8 +104,14 @@ function V2ArenasContent() {
           <V2EmptyState
             icon={LayoutGrid}
             title="Nenhuma arena encontrada"
-            description="Ajuste a busca ou cadastre uma arena para começar a receber reservas."
-            action={<V2Button asChild><Link to="/arenas/criar">Cadastrar arena</Link></V2Button>}
+            description={(search || city)
+              ? 'Nenhuma arena corresponde ao filtro atual. Limpe os filtros para ver todas.'
+              : 'Cadastre uma arena para começar a receber reservas.'}
+            action={(search || city) ? (
+              <V2Button onClick={() => { setSearch(''); setCity(''); }}>Limpar filtros</V2Button>
+            ) : (
+              <V2Button asChild><Link to="/arenas/criar">Cadastrar arena</Link></V2Button>
+            )}
           />
         </V2Surface>
       ) : (
@@ -112,7 +140,7 @@ function ArenaCard({ arena }) {
         ) : (
           <div className="flex h-full w-full items-center justify-center text-white/30"><Building2 className="h-12 w-12" /></div>
         )}
-        <div className="absolute inset-0 bg-gradient-to-t from-black/60 to-transparent" />
+        <div className="absolute inset-0 bg-gradient-to-t from-ink/70 to-transparent" />
         {price && (
           <div className="absolute bottom-4 right-4 rounded-xl border border-white/20 bg-ink/80 px-3 py-1 font-bold text-white backdrop-blur-md">
             {price}
