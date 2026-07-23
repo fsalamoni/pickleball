@@ -327,20 +327,28 @@ function ArenaCoachesSection({ arenaId }) {
       <p className="mt-1 text-sm text-gray-500">Profissionais que dão aula nesta arena. Toque para ver o perfil.</p>
       <div className="mt-3 grid gap-3 sm:grid-cols-2">
         {coaches.slice(0, 6).map((c) => (
-          <Link key={c.id} to={`/coaches/${c.id}`} className="flex items-center gap-3 rounded-2xl border border-gray-100 bg-paper p-3 transition-transform hover:scale-[1.02]">
-            <div className="flex h-10 w-10 items-center justify-center rounded-2xl bg-ink text-sm font-bold text-acid">
-              {c.display_name?.[0] || '?'}
+          <div key={c.id} className="flex flex-col gap-3 rounded-2xl border border-gray-100 bg-paper p-3">
+            <div className="flex items-center gap-3">
+              <div className="flex h-10 w-10 items-center justify-center rounded-2xl bg-ink text-sm font-bold text-acid">
+                {c.display_name?.[0] || '?'}
+              </div>
+              <div className="flex-1 min-w-0">
+                <h4 className="text-sm font-bold text-ink line-clamp-1">{c.display_name}</h4>
+                {c.modalities?.length > 0 && (
+                  <p className="text-xs text-gray-500 line-clamp-1">{c.modalities.join(' · ')}</p>
+                )}
+                {c.hourly_rate != null && (
+                  <p className="text-xs font-bold text-ink">R$ {Number(c.hourly_rate).toFixed(2)}/h</p>
+                )}
+              </div>
             </div>
-            <div className="flex-1 min-w-0">
-              <h4 className="text-sm font-bold text-ink line-clamp-1">{c.display_name}</h4>
-              {c.modalities?.length > 0 && (
-                <p className="text-xs text-gray-500 line-clamp-1">{c.modalities.join(' · ')}</p>
-              )}
-              {c.hourly_rate != null && (
-                <p className="text-xs font-bold text-ink">R$ {Number(c.hourly_rate).toFixed(2)}/h</p>
-              )}
-            </div>
-          </Link>
+            <Link
+              to={`/coaches/${c.id}`}
+              className="inline-flex items-center justify-center gap-1.5 rounded-full bg-ink px-3 py-1.5 text-xs font-bold text-acid transition-colors hover:bg-ink/90"
+            >
+              <MessageCircle className="h-3.5 w-3.5" /> Ver perfil e contato
+            </Link>
+          </div>
         ))}
       </div>
     </V2Surface>

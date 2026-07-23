@@ -193,6 +193,9 @@ export default function V2CoachProfile() {
                   Editar meu perfil →
                 </Link>
               )}
+              <Link to={`/atleta/${coachId}`} className="text-xs font-bold text-ink hover:underline">
+                Ver perfil de atleta →
+              </Link>
             </div>
           </div>
         </div>

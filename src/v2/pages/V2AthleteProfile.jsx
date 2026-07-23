@@ -1,6 +1,6 @@
 import React from 'react';
 import { Link, Navigate, useParams } from 'react-router-dom';
-import { ArrowLeft, Award, Building2, ChevronRight, Medal, Percent, Swords, Trophy } from 'lucide-react';
+import { ArrowLeft, Award, Building2, ChevronRight, GraduationCap, Medal, Percent, Swords, Trophy } from 'lucide-react';
 import { useFeatureFlag } from '@/core/lib/FeatureFlagsContext';
 import { FEATURE_FLAG } from '@/core/featureFlags';
 import { useAthleteProfile } from '@/modules/athletes/hooks/useAthleteProfile';
@@ -9,6 +9,7 @@ import { MODALITY_FORMAT_LABELS } from '@/modules/tournament/domain/constants';
 import { useRatingHistory } from '@/modules/rating/hooks/useRating';
 import { useHeadToHead } from '@/modules/rating/hooks/useHeadToHead';
 import { useFollowers } from '@/modules/social/hooks/useFollow';
+import { useCoach } from '@/modules/coaches/hooks/useCoaches';
 import FollowButton from '@/modules/social/components/FollowButton';
 import RatingSparkline from '@/modules/rating/components/RatingSparkline';
 import HeadToHeadCard from '@/modules/rating/components/HeadToHeadCard';
@@ -30,11 +31,13 @@ export default function V2AthleteProfile() {
   const ratingHistoryOn = useFeatureFlag(FEATURE_FLAG.RATING_HISTORY);
   const headToHeadOn = useFeatureFlag(FEATURE_FLAG.HEAD_TO_HEAD);
   const achievementsOn = useFeatureFlag(FEATURE_FLAG.ACHIEVEMENTS);
+  const coachResidentOn = useFeatureFlag(FEATURE_FLAG.COACH_RESIDENT);
   const { uid } = useParams();
   const { data, isLoading, isError } = useAthleteProfile(uid);
   const { data: ratingHistory = [] } = useRatingHistory(uid, ratingHistoryOn);
   const { data: h2hData } = useHeadToHead(uid, headToHeadOn);
   const { data: followers = [] } = useFollowers(uid, followOn);
+  const { data: coachProfile } = useCoach(coachResidentOn ? uid : null);
 
   if (!enabled) return <Navigate to="/atletas" replace />;
 
@@ -136,6 +139,32 @@ export default function V2AthleteProfile() {
         <MiniStat icon={Medal} label="Pódios" value={stats.podiums} />
         <MiniStat icon={Trophy} label="Inscrições" value={stats.registrations} />
       </div>
+
+      {coachResidentOn && coachProfile?.active && (
+        <V2Surface className="mt-8 border-acid/40 bg-acid/5">
+          <div className="flex flex-wrap items-center justify-between gap-4">
+            <div className="flex items-start gap-3">
+              <div className="flex h-11 w-11 items-center justify-center rounded-2xl bg-ink text-acid">
+                <GraduationCap className="h-5 w-5" />
+              </div>
+              <div>
+                <h2 className="font-display text-lg font-bold text-ink">Também é professor</h2>
+                <p className="mt-0.5 text-sm text-gray-600">
+                  {athlete.platform_name} atua como professor na plataforma. Veja o perfil profissional para conhecer horários, aulas e contato.
+                </p>
+                {coachProfile.modalities?.length > 0 && (
+                  <div className="mt-2 flex flex-wrap gap-1.5">
+                    {coachProfile.modalities.slice(0, 4).map((m) => <V2Badge key={m} tone="blue">{m}</V2Badge>)}
+                  </div>
+                )}
+              </div>
+            </div>
+            <Link to={`/coaches/${uid}`} className="inline-flex items-center gap-1.5 rounded-full bg-ink px-4 py-2 text-sm font-bold text-acid transition-colors hover:bg-ink/90">
+              <GraduationCap className="h-4 w-4" /> Ver perfil profissional
+            </Link>
+          </div>
+        </V2Surface>
+      )}
 
       {formats.length > 0 && (
         <V2Surface className="mt-8">
