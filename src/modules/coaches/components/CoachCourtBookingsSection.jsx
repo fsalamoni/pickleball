@@ -7,14 +7,19 @@
 
 import React, { useState } from 'react';
 import { Link } from 'react-router-dom';
-import { CalendarPlus, Building2, GraduationCap } from 'lucide-react';
+import { toast } from 'sonner';
+import { CalendarPlus, Building2, GraduationCap, Pencil } from 'lucide-react';
 import { useAuth } from '@/core/lib/FirebaseAuthContext';
 import { useCoachResidencies } from '../hooks/useCoaches.js';
 import { useArena } from '@/modules/arenas/hooks/useArenas';
 import { useCoachBookings } from '@/modules/arenas/hooks/useSharedBookings';
+import { useUpdateBookingStatus } from '@/modules/arenas/hooks/useBookings';
 import { bookingSlots } from '@/modules/arenas/domain/booking';
+import { BOOKING_STATUS, BOOKING_KIND } from '@/modules/arenas/domain/constants';
 import SharedBookingDialog from '@/modules/arenas/components/SharedBookingDialog';
+import BookingEditDialog from '@/modules/arenas/components/BookingEditDialog';
 import BookingParticipantsPanel from '@/modules/arenas/components/BookingParticipantsPanel';
+import ConfirmDialog from '@/components/ConfirmDialog';
 import {
   V2Badge, V2Button, V2EmptyState, V2Skeleton, V2Surface,
 } from '@/v2/ui/primitives';
@@ -41,6 +46,50 @@ function PartnerArenaRow({ residency, coach, onBook }) {
 function whenLabel(booking) {
   const s = bookingSlots(booking)[0];
   return s ? `${s.date} · ${s.start}–${s.end}` : 'Horário a combinar';
+}
+
+function CoachBookingCard({ booking }) {
+  const cancel = useUpdateBookingStatus();
+  const [editing, setEditing] = useState(false);
+  const editable = booking.kind !== BOOKING_KIND.RECURRING
+    && [BOOKING_STATUS.REQUESTED, BOOKING_STATUS.NEGOTIATING, BOOKING_STATUS.CONFIRMED].includes(booking.status);
+
+  const doCancel = async () => {
+    try {
+      await cancel.mutateAsync({ booking, status: BOOKING_STATUS.CANCELLED, options: { byManager: false } });
+      toast.success('Reserva cancelada.');
+    } catch (err) {
+      toast.error(err?.message || 'Não foi possível cancelar.');
+    }
+  };
+
+  return (
+    <div className="rounded-2xl border border-gray-100 bg-paper p-3">
+      <div className="flex flex-wrap items-center justify-between gap-2">
+        <div>
+          <p className="font-bold text-ink">{booking.arena_name}</p>
+          <p className="text-xs text-gray-500">{whenLabel(booking)}</p>
+        </div>
+        <div className="flex items-center gap-1.5">
+          <V2Badge tone="blue">Aula</V2Badge>
+          {editable && (
+            <>
+              <V2Button size="sm" variant="ghost" onClick={() => setEditing(true)}><Pencil className="h-4 w-4" /> Alterar</V2Button>
+              <ConfirmDialog
+                title="Cancelar reserva?"
+                description="A reserva de quadra será cancelada e a arena avisada."
+                confirmLabel="Cancelar reserva"
+                onConfirm={doCancel}
+                trigger={<button type="button" className="rounded-full border border-red-200 px-3 py-1 text-xs font-bold text-red-600 hover:bg-red-50">Cancelar</button>}
+              />
+            </>
+          )}
+        </div>
+      </div>
+      <BookingParticipantsPanel booking={booking} />
+      {editing && <BookingEditDialog booking={booking} open={editing} onOpenChange={setEditing} byManager={false} />}
+    </div>
+  );
 }
 
 export default function CoachCourtBookingsSection({ coach }) {
@@ -81,18 +130,7 @@ export default function CoachCourtBookingsSection({ coach }) {
         <div className="mt-5">
           <p className="mb-2 text-xs font-bold uppercase tracking-wider text-gray-400">Minhas reservas de quadra</p>
           <div className="space-y-3">
-            {bookings.map((b) => (
-              <div key={b.id} className="rounded-2xl border border-gray-100 bg-paper p-3">
-                <div className="flex flex-wrap items-center justify-between gap-2">
-                  <div>
-                    <p className="font-bold text-ink">{b.arena_name}</p>
-                    <p className="text-xs text-gray-500">{whenLabel(b)}</p>
-                  </div>
-                  <V2Badge tone="blue">Aula</V2Badge>
-                </div>
-                <BookingParticipantsPanel booking={b} />
-              </div>
-            ))}
+            {bookings.map((b) => <CoachBookingCard key={b.id} booking={b} />)}
           </div>
         </div>
       )}

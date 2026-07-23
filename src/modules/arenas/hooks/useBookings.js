@@ -9,6 +9,7 @@ import {
   proposeBookingPrice,
   setBookingPayment,
   deleteBooking,
+  editBookingSlot,
 } from '../services/bookingService.js';
 
 export function useMyBookings() {
@@ -96,6 +97,20 @@ export function useDeleteBooking() {
     mutationFn: (booking) => deleteBooking(booking, user),
     onSuccess: (_d, booking) => {
       qc.invalidateQueries({ queryKey: ['my-bookings'] });
+      qc.invalidateQueries({ queryKey: ['arena-bookings', booking.arena_id] });
+    },
+  });
+}
+
+export function useEditBooking() {
+  const { user } = useAuth();
+  const qc = useQueryClient();
+  return useMutation({
+    mutationFn: ({ booking, input, options }) => editBookingSlot(booking, user, input, options),
+    onSuccess: (_d, { booking }) => {
+      qc.invalidateQueries({ queryKey: ['my-bookings'] });
+      qc.invalidateQueries({ queryKey: ['booking-participations'] });
+      qc.invalidateQueries({ queryKey: ['coach-bookings'] });
       qc.invalidateQueries({ queryKey: ['arena-bookings', booking.arena_id] });
     },
   });

@@ -1,6 +1,6 @@
 import React, { useState } from 'react';
 import { toast } from 'sonner';
-import { CalendarClock, Repeat, CheckCircle2, XCircle, DollarSign } from 'lucide-react';
+import { CalendarClock, Repeat, CheckCircle2, XCircle, DollarSign, Pencil } from 'lucide-react';
 import {
   BOOKING_STATUS,
   BOOKING_STATUS_LABELS,
@@ -16,6 +16,7 @@ import {
   useProposeBookingPrice,
   useSetBookingPayment,
 } from '@/modules/arenas/hooks/useBookings';
+import BookingEditDialog from '@/modules/arenas/components/BookingEditDialog';
 import { V2Badge, V2Button } from '@/v2/ui/primitives';
 
 const STATUS_TONE = {
@@ -52,9 +53,13 @@ export default function V2BookingRow({ booking, perspective }) {
   const proposePrice = useProposeBookingPrice();
   const setPayment = useSetBookingPayment();
   const [price, setPrice] = useState(booking.proposed_price ?? '');
+  const [editing, setEditing] = useState(false);
   const options = { byManager: isArena };
 
   const active = [BOOKING_STATUS.REQUESTED, BOOKING_STATUS.NEGOTIATING].includes(booking.status);
+  // Reserva avulsa e ainda alterável → pode editar quadra/horário.
+  const editable = booking.kind !== BOOKING_KIND.RECURRING
+    && [BOOKING_STATUS.REQUESTED, BOOKING_STATUS.NEGOTIATING, BOOKING_STATUS.CONFIRMED].includes(booking.status);
 
   async function act(fn, okMsg) {
     try {
@@ -143,6 +148,11 @@ export default function V2BookingRow({ booking, perspective }) {
           <V2Button size="sm" onClick={handleConfirm}>
             <CheckCircle2 className="h-4 w-4" /> Confirmar
           </V2Button>
+          {editable && (
+            <V2Button size="sm" variant="ghost" onClick={() => setEditing(true)}>
+              <Pencil className="h-4 w-4" /> Alterar
+            </V2Button>
+          )}
           <V2Button size="sm" variant="ghost" className="text-red-500 hover:bg-red-50 hover:text-red-600" onClick={handleDecline}>
             <XCircle className="h-4 w-4" /> {isArena ? 'Recusar' : 'Cancelar'}
           </V2Button>
@@ -161,10 +171,19 @@ export default function V2BookingRow({ booking, perspective }) {
               </V2Button>
             </>
           )}
+          {editable && (
+            <V2Button size="sm" variant="ghost" onClick={() => setEditing(true)}>
+              <Pencil className="h-4 w-4" /> Alterar
+            </V2Button>
+          )}
           <V2Button size="sm" variant="ghost" className="text-red-500 hover:bg-red-50 hover:text-red-600" onClick={handleCancelConfirmed}>
             Cancelar
           </V2Button>
         </div>
+      )}
+
+      {editing && (
+        <BookingEditDialog booking={booking} open={editing} onOpenChange={setEditing} byManager={isArena} />
       )}
     </div>
   );

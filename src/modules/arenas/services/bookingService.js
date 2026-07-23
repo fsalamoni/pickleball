@@ -328,4 +328,69 @@ export async function deleteBooking(booking, actor) {
   await createAuditLog({ action: 'arena_booking_deleted', actor, details: { booking_id: booking.id } });
 }
 
+/**
+ * Altera o horário/quadra de uma reserva avulsa. Serve ao atleta/professor (na
+ * própria reserva) e à arena (em qualquer). Valida conflito. Quando editada por
+ * quem NÃO é gestor e a reserva já estava confirmada, volta para "solicitada"
+ * (a arena reconfirma o novo horário) e limpa o valor acordado.
+ *
+ * @param {object} booking
+ * @param {object} actor
+ * @param {{ court_id?, date, start, end }} input
+ * @param {{ byManager?: boolean }} opts
+ */
+export async function editBookingSlot(booking, actor, input, { byManager = false } = {}) {
+  if (!actor?.uid) throw new Error('Usuário não autenticado.');
+  if (booking.kind === BOOKING_KIND.RECURRING) {
+    throw new Error('Reservas recorrentes não podem ser editadas aqui — cancele e crie novamente.');
+  }
+  if ([BOOKING_STATUS.CANCELLED, BOOKING_STATUS.DECLINED, BOOKING_STATUS.COMPLETED].includes(booking.status)) {
+    throw new Error('Esta reserva não pode mais ser alterada.');
+  }
+  const courtId = input.court_id !== undefined ? str(input.court_id) : (booking.court_id || '');
+  const slot = { date: str(input.date), start: str(input.start), end: str(input.end) };
+  if (!isValidSlot(slot)) throw new Error('Preencha a data e um horário válido (fim depois do início).');
+
+  const existing = await listArenaBookings(booking.arena_id);
+  const others = existing.filter((b) => b.id !== booking.id);
+  let courtSchedules = [];
+  try {
+    const all = await listArenaCourtSchedules(booking.arena_id);
+    courtSchedules = all.filter((s) => !s.court_id || s.court_id === courtId);
+  } catch (err) {
+    courtSchedules = [];
+  }
+  const v = validateBookingRequest({
+    date: slot.date, start_time: slot.start, end_time: slot.end,
+    court_id: courtId || null, existingBookings: others, court_schedules: courtSchedules,
+  });
+  if (!v.ok) throw new Error(v.message);
+
+  const patch = {
+    slots: [slot],
+    court_id: courtId || null,
+    updated_at: serverTimestamp(),
+  };
+  // Editada pelo cliente numa reserva já negociada/confirmada → volta a pendente.
+  if (!byManager && [BOOKING_STATUS.CONFIRMED, BOOKING_STATUS.NEGOTIATING].includes(booking.status)) {
+    patch.status = BOOKING_STATUS.REQUESTED;
+    patch.agreed_price = null;
+    patch.payment_status = PAYMENT_STATUS.NONE;
+  }
+  await updateDoc(doc(db, COL.bookings, booking.id), patch);
+
+  // Notifica a contraparte.
+  const recipients = byManager
+    ? [booking.athlete_id, booking.coach_id].filter(Boolean)
+    : (await listArenaManagerIds(booking.arena_id).catch(() => []));
+  notifyUsers(recipients, {
+    title: `Reserva alterada — "${str(booking.arena_name).slice(0, 40)}"`,
+    message: `Novo horário: ${slot.date} ${slot.start}–${slot.end}.${patch.status === BOOKING_STATUS.REQUESTED ? ' Aguarda reconfirmação da arena.' : ''}`,
+    type: NOTIFICATION_TYPE.GENERIC,
+    link: byManager ? '/minhas-reservas' : `/arenas/${booking.arena_id}/gerir`,
+    actor,
+  });
+  await createAuditLog({ action: 'arena_booking_edited', actor, details: { booking_id: booking.id, court_id: courtId, date: slot.date } });
+}
+
 export { weekdayOf };

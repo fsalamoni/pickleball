@@ -33,6 +33,7 @@ import {
 } from '@/v2/ui/primitives';
 import { ConfirmDialog } from '@/components/ui/confirm-dialog';
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription } from '@/components/ui/dialog';
+import BookingEditDialog from '@/modules/arenas/components/BookingEditDialog';
 
 function addDays(dateStr, days) {
   const d = new Date(dateStr + 'T12:00:00');
@@ -69,6 +70,7 @@ export default function V2AdminBookingCalendar({ arenaId, embedded = false }) {
   const [manualForm, setManualForm] = useState({ client_name: '', price: '', paid: false });
   const [transferOpen, setTransferOpen] = useState(false);
   const [rescheduleOpen, setRescheduleOpen] = useState(false);
+  const [cancelConfirm, setCancelConfirm] = useState(false);
 
   const filtered = useMemo(() => {
     const filterByCourt = (list) => list.filter((it) => {
@@ -192,8 +194,9 @@ export default function V2AdminBookingCalendar({ arenaId, embedded = false }) {
   async function handleCancelBooking() {
     if (!selectedSlot?.booking) return;
     try {
-      await updateStatus.mutateAsync({ booking: selectedSlot.booking, status: BOOKING_STATUS.CANCELLED });
+      await updateStatus.mutateAsync({ booking: selectedSlot.booking, status: BOOKING_STATUS.CANCELLED, options: { byManager: true } });
       toast.success('Reserva cancelada.');
+      setCancelConfirm(false);
       setSelectedSlot(null);
     } catch (err) {
       toast.error(err.message);
@@ -335,10 +338,13 @@ export default function V2AdminBookingCalendar({ arenaId, embedded = false }) {
                     <CheckCircle className="h-3.5 w-3.5" /> Confirmar
                   </V2Button>
                 )}
+                <V2Button size="sm" variant="ghost" className="text-red-500 hover:bg-red-50 hover:text-red-600" onClick={() => setCancelConfirm(true)}>
+                  <X className="h-3.5 w-3.5" /> Cancelar
+                </V2Button>
               </div>
               <ConfirmDialog
-                open={true}
-                onOpenChange={(o) => !o && setSelectedSlot(null)}
+                open={cancelConfirm}
+                onOpenChange={setCancelConfirm}
                 title="Cancelar reserva?"
                 description="A reserva será marcada como cancelada e o horário ficará disponível."
                 confirmLabel="Cancelar reserva"
@@ -434,9 +440,19 @@ export default function V2AdminBookingCalendar({ arenaId, embedded = false }) {
         </V2Surface>
       )}
 
-      {/* Dialogs de transferência/remarcação: em produção usam service próprio */}
+      {/* Remarcar: altera quadra/data/horário da reserva (a arena mantém o status) */}
+      {rescheduleOpen && selectedSlot?.booking && (
+        <BookingEditDialog
+          booking={selectedSlot.booking}
+          open={rescheduleOpen}
+          onOpenChange={(v) => { setRescheduleOpen(v); if (!v) setSelectedSlot(null); }}
+          byManager
+        />
+      )}
+
+      {/* Transferência de responsável: integração com diretório de atletas (próximo passo) */}
       {transferOpen && selectedSlot?.booking && (
-        <Dialog open onOpenChange={onClose => setTransferOpen(false)}>
+        <Dialog open onOpenChange={() => setTransferOpen(false)}>
           <DialogContent>
             <DialogHeader><DialogTitle>Transferir reserva</DialogTitle><DialogDescription>Em construção: integração com diretório de atletas.</DialogDescription></DialogHeader>
             <div className="flex justify-end"><V2Button variant="ghost" size="sm" onClick={() => setTransferOpen(false)}>Fechar</V2Button></div>
