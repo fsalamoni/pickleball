@@ -14,6 +14,7 @@ import FeatureFlagGuard from '@/v2/components/FeatureFlagGuard';
 import { V2FavoriteArenaButton, V2ArenaShareButton } from '@/v2/components/arenas/V2ArenaActions';
 import V2ArenaReviews from '@/v2/components/arenas/V2ArenaReviews';
 import BookingRequestDialog from '@/modules/arenas/components/BookingRequestDialog';
+import SharedBookingDialog from '@/modules/arenas/components/SharedBookingDialog';
 import { formatArenaAddress, arenaContactLinks } from '@/modules/arenas/domain/arena';
 import { formatPrice } from '@/modules/arenas/domain/pricing';
 import { BOOKING_STATUS, WEEKDAY_SHORT } from '@/modules/arenas/domain/constants';
@@ -108,6 +109,8 @@ export default function V2ArenaDetail() {
 }
 
 function V2ArenaDetailContent({ arenaId, user, arena, managed, bookings, isLoading, bookingOpen, setBookingOpen }) {
+  const sharedBookingsOn = useFeatureFlag(FEATURE_FLAG.SHARED_BOOKINGS);
+  const [sharedOpen, setSharedOpen] = useState(false);
 
   if (isLoading) {
     return (
@@ -197,6 +200,16 @@ function V2ArenaDetailContent({ arenaId, user, arena, managed, bookings, isLoadi
       {/* Reservar é a ação principal do visitante: o calendário interativo
           vem logo após o hero, antes de regras/contato. */}
       <V2BookingCalendarSection arenaId={arenaId} arena={arena} />
+
+      {sharedBookingsOn && user && (
+        <div className="mt-3 flex flex-col items-center gap-1">
+          <V2Button variant="secondary" onClick={() => setSharedOpen(true)}>
+            <Users className="h-4 w-4" /> Reserva compartilhada — dividir a quadra
+          </V2Button>
+          <p className="text-xs text-gray-400">Convide atletas e divida o valor, ou deixe a reserva aberta.</p>
+        </div>
+      )}
+      {sharedBookingsOn && <SharedBookingDialog arena={arena} open={sharedOpen} onOpenChange={setSharedOpen} />}
 
       {/* Sprint 5: Regras estruturadas (público) — preferido sobre house_rules_md */}
       <ArenaRulesSection arena={arena} />
