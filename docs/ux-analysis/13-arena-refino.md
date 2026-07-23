@@ -86,6 +86,28 @@ testes verdes, build ok.
 
 Status: 1085 testes verdes, lint limpo, build ok em todos os passos.
 
+## Arena V3 avançado — paleta e fluxos (2ª rodada)
+
+**Ponto 1 — consistência de paleta em todo o Arena V3:**
+- Corrigidos tons de `V2Badge` que caíam em cinza por não existirem no
+  primitivo (`info/success/warning/sky/emerald/rose` → `blue/green/amber/red`)
+  em `V2ArenaCalendar`, `V2ArenaMercadoTab`, `V2ArenaMetrics`, `V2CourtsTab`;
+  tiers `gold/platinum` (yellow/violet → acid/ink) voltam a ter cor distinta.
+- Migradas ~90 classes `emerald-*` → `green-*` (tom de sucesso da paleta) em
+  todo o módulo (slot_status, calendários, reviews, mercado, pagamento, day
+  slots, onboarding, marketing, membros, operações, módulos e o
+  BookingRequestDialog); gradientes `emerald→amber` já viraram `bg-ink/acid`.
+
+**Ponto 2 — refino de fluxos/estados das páginas avançadas:**
+- `window.confirm()`/`confirm()` nativos → `ConfirmDialog` (estilizado e
+  acessível) com microcopy de consequência em Mercado, PDV, Membros e Open
+  Match (cancelar/excluir).
+- `V2Skeleton` ganhou a prop `lines` (N barras): loadings que usavam
+  `<V2Skeleton lines={N}/>` renderizavam **invisíveis** (o primitivo não tinha
+  altura padrão nem a prop) — agora aparecem corretamente.
+- Auditoria: sem `alert/prompt` nativos; todas as páginas avançadas têm
+  estado vazio (`V2EmptyState`).
+
 ## Possíveis próximos passos (opcionais)
 
 - Reordenar a página pública para destacar reserva/preços logo após o hero.
