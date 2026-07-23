@@ -435,6 +435,15 @@ export const FEATURE_FLAG = Object.freeze({
    * aditiva. Desligada, nenhuma rota/menu/tela nova aparece.
    */
   COACH_LESSONS: 'coach_lessons',
+
+  /**
+   * Reservas compartilhadas (multi-atleta): uma reserva de quadra pode ter
+   * vários participantes com sub-horários próprios; o solicitante convida
+   * atletas (aceite/recusa) ou deixa a reserva aberta (com/sem limite); todos
+   * os que entram viram co-proprietários; o valor é rateado por tempo. Serve
+   * também às reservas de aula (professor + alunos). Aditivo.
+   */
+  SHARED_BOOKINGS: 'shared_bookings',
 });
 
 /** Metadados de exibição para o painel de flags (admin master). */
@@ -814,6 +823,16 @@ export const FEATURE_FLAG_META = Object.freeze({
       + 'alunos com ficha de evolução e pacotes/créditos pré-pagos. É aditivo '
       + '(coleções próprias) e não altera o diretório nem as arenas. '
       + 'Desligado, as telas /aulas e as seções novas do perfil somem.',
+  },
+  [FEATURE_FLAG.SHARED_BOOKINGS]: {
+    label: 'Reservas compartilhadas (multi-atleta e aulas)',
+    description:
+      'Permite reservas de quadra com vários atletas: o solicitante convida '
+      + 'outros (aceite/recusa, cada um com seu horário) ou deixa a reserva '
+      + 'aberta (com ou sem limite). Todos os participantes viram '
+      + 'co-proprietários e o valor é rateado por tempo. Também suporta reservas '
+      + 'de aula (professor + alunos). Aditivo; desligado, a reserva segue com '
+      + 'dono único.',
   },
 });
 

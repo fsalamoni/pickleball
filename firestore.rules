@@ -250,18 +250,34 @@ service cloud.firestore {
     // Reservas: legíveis/gerenciáveis pelo atleta solicitante e pelos gestores
     // da arena. Criação só pelo próprio atleta.
     match /arena_bookings/{bookingId} {
+      // Lê: dono original, participantes (aceitos e convidados), o professor
+      // (coach_id), qualquer autenticado numa reserva ABERTA (para ingressar),
+      // o gestor da arena e o admin.
       allow read: if isAuthed() && (
         resource.data.athlete_id == request.auth.uid
+        || request.auth.uid in resource.data.get('participant_ids', [])
+        || request.auth.uid in resource.data.get('invited_ids', [])
+        || resource.data.get('coach_id', null) == request.auth.uid
+        || resource.data.get('open_join', false) == true
         || isArenaManager(resource.data.arena_id)
         || isPlatformAdmin());
-      // Atleta cria a própria reserva; o gestor da arena (e o admin) pode
-      // criar reserva manual em nome de um cliente (athlete_id pode ser null).
+      // Cria: o próprio atleta, o professor (coach_id), o gestor (reserva
+      // manual, athlete_id pode ser null) ou o admin.
       allow create: if isAuthed() && (
         request.resource.data.athlete_id == request.auth.uid
+        || request.resource.data.get('coach_id', null) == request.auth.uid
         || isArenaManager(request.resource.data.arena_id)
         || isPlatformAdmin());
+      // Atualiza/exclui: dono original, participantes (aceitos e convidados —
+      // o convidado aceita/recusa), o professor, quem está ingressando numa
+      // reserva aberta (aparece nos novos participant_ids), o gestor e o admin.
       allow update, delete: if isAuthed() && (
         resource.data.athlete_id == request.auth.uid
+        || request.auth.uid in resource.data.get('participant_ids', [])
+        || request.auth.uid in resource.data.get('invited_ids', [])
+        || resource.data.get('coach_id', null) == request.auth.uid
+        || (resource.data.get('open_join', false) == true
+            && request.auth.uid in request.resource.data.get('participant_ids', []))
         || isArenaManager(resource.data.arena_id)
         || isPlatformAdmin());
     }
