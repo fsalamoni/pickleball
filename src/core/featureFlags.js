@@ -444,6 +444,14 @@ export const FEATURE_FLAG = Object.freeze({
    * também às reservas de aula (professor + alunos). Aditivo.
    */
   SHARED_BOOKINGS: 'shared_bookings',
+
+  /**
+   * Clubes vinculados a professores e arenas: um professor ou arena pode criar
+   * ou vincular clubes próprios (para eventos, times, treinos). As páginas
+   * pública e admin de professores/arenas mostram os clubes SÓ quando houver
+   * clubes vinculados. Aditivo.
+   */
+  LINKED_CLUBS: 'linked_clubs',
 });
 
 /** Metadados de exibição para o painel de flags (admin master). */
@@ -833,6 +841,13 @@ export const FEATURE_FLAG_META = Object.freeze({
       + 'co-proprietários e o valor é rateado por tempo. Também suporta reservas '
       + 'de aula (professor + alunos). Aditivo; desligado, a reserva segue com '
       + 'dono único.',
+  },
+  [FEATURE_FLAG.LINKED_CLUBS]: {
+    label: 'Clubes de professores e arenas',
+    description:
+      'Permite a professores e arenas criar ou vincular clubes próprios (para '
+      + 'eventos, times e treinos). As páginas pública e admin exibem os clubes '
+      + 'apenas quando houver clubes vinculados. Aditivo.',
   },
 });
 

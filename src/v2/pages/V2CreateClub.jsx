@@ -1,5 +1,5 @@
 import React, { useState } from 'react';
-import { Link, useNavigate } from 'react-router-dom';
+import { Link, useNavigate, useSearchParams } from 'react-router-dom';
 import { toast } from 'sonner';
 import { ArrowLeft } from 'lucide-react';
 import { ImageUpload } from '@/components/ui/image-upload';
@@ -14,10 +14,16 @@ const INITIAL = {
 
 export default function V2CreateClub() {
   const navigate = useNavigate();
+  const [params] = useSearchParams();
   const { isAuthenticated } = useAuth();
   const createClub = useCreateClub();
   const [form, setForm] = useState(INITIAL);
   const [errors, setErrors] = useState({});
+
+  // Vínculo opcional: clube criado a partir do admin de um professor/arena.
+  const linkedCoachId = params.get('coach') || null;
+  const linkedArenaId = params.get('arena') || null;
+  const linkedLabel = linkedCoachId ? 'ao seu perfil de professor' : linkedArenaId ? 'à sua arena' : null;
 
   const set = (key) => (e) => setForm((prev) => ({ ...prev, [key]: e.target.value }));
 
@@ -29,9 +35,9 @@ export default function V2CreateClub() {
     setErrors(next);
     if (Object.keys(next).length > 0) return;
     try {
-      const id = await createClub.mutateAsync(form);
+      const id = await createClub.mutateAsync({ ...form, linked_coach_id: linkedCoachId, linked_arena_id: linkedArenaId });
       toast.success('Clube criado com sucesso!');
-      navigate(`/clubes/${id}`);
+      navigate(linkedCoachId ? '/aulas' : linkedArenaId ? `/arenas/${linkedArenaId}/gerir` : `/clubes/${id}`);
     } catch (err) {
       toast.error(err.message || 'Não foi possível criar o clube.');
     }
@@ -47,6 +53,9 @@ export default function V2CreateClub() {
         <span className="rounded-full border border-white/10 bg-white/10 px-3 py-1 text-xs font-bold uppercase tracking-wider text-acid">Novo clube</span>
         <h1 className="mt-4 font-display text-3xl font-bold text-white sm:text-4xl">Crie seu clube e reúna a turma.</h1>
         <p className="mt-3 max-w-2xl text-sm leading-7 text-gray-300">Você será o administrador e poderá convidar atletas por código. Ao criar, libera mural, eventos, fórum e gestão compartilhada.</p>
+        {linkedLabel && (
+          <p className="mt-2 inline-block rounded-full bg-acid/20 px-3 py-1 text-xs font-bold text-acid">Este clube será vinculado {linkedLabel}.</p>
+        )}
       </div>
 
       <V2Surface>

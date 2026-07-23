@@ -26,6 +26,7 @@ import { V2ProfileFields, V2PricingEditor } from '@/v2/components/arenas/V2Arena
 import V2ArenaReviews from '@/v2/components/arenas/V2ArenaReviews';
 import { ArenaCoachesManager } from '@/v2/pages/V2ArenaCoaches';
 import BookingParticipantsPanel from '@/modules/arenas/components/BookingParticipantsPanel';
+import LinkedClubsSection from '@/modules/clubs/components/LinkedClubsSection';
 import V2BookingRow from '@/v2/components/arenas/V2BookingRow';
 import { sortBookings } from '@/modules/arenas/domain/booking';
 import { ARENA_MANAGER_ROLE, BOOKING_STATUS } from '@/modules/arenas/domain/constants';
@@ -41,7 +42,7 @@ import { cn } from '@/core/lib/utils';
 // início ao fim: identidade → estrutura/preços → reservas → comercial →
 // resultados → equipe/parceiros. Cada seção agrupa sub-abas por tema.
 // `coachResidentOn` injeta a aba de professores parceiros na seção de equipe.
-function buildArenaSections({ coachResidentOn }) {
+function buildArenaSections({ coachResidentOn, linkedClubsOn }) {
   return [
     {
       id: 'perfil',
@@ -97,6 +98,7 @@ function buildArenaSections({ coachResidentOn }) {
       tabs: [
         { value: 'admins', label: 'Admins', icon: Users },
         ...(coachResidentOn ? [{ value: 'professores', label: 'Professores', icon: GraduationCap }] : []),
+        ...(linkedClubsOn ? [{ value: 'clubes', label: 'Clubes', icon: Users }] : []),
       ],
     },
   ];
@@ -154,6 +156,7 @@ function V2ArenaManageContent({ arenaId, user, isPlatformAdmin, arena, managed, 
   }, [location.hash]);
 
   const coachResidentOn = useFeatureFlag(FEATURE_FLAG.COACH_RESIDENT);
+  const linkedClubsOn = useFeatureFlag(FEATURE_FLAG.LINKED_CLUBS);
   // Lembra a última sub-aba visitada em cada seção principal.
   const [sectionMemory, setSectionMemory] = useState({});
 
@@ -178,7 +181,7 @@ function V2ArenaManageContent({ arenaId, user, isPlatformAdmin, arena, managed, 
   // com suas sub-abas. Ordem = ciclo de vida da arena, do início ao fim:
   // identidade → estrutura/preços → reservas (operação) → dinheiro →
   // resultados → equipe.
-  const sections = buildArenaSections({ coachResidentOn });
+  const sections = buildArenaSections({ coachResidentOn, linkedClubsOn });
   const activeSectionId = sections.find((s) => s.tabs.some((t) => t.value === tab))?.id
     || sections[0].id;
   const activeSection = sections.find((s) => s.id === activeSectionId) || sections[0];
@@ -283,6 +286,7 @@ function V2ArenaManageContent({ arenaId, user, isPlatformAdmin, arena, managed, 
         {tab === 'info' && <InfoTab arena={arena} />}
         {tab === 'admins' && <ManagersTab arena={arena} />}
         {tab === 'professores' && coachResidentOn && <ArenaCoachesManager arena={arena} />}
+        {tab === 'clubes' && linkedClubsOn && <LinkedClubsSection ownerType="arena" ownerId={arena.id} canManage title="Clubes da arena" />}
         {tab === 'retornos' && <V2ArenaReviews arena={arena} canModerate />}
       </div>
     </div>

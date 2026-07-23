@@ -33,6 +33,7 @@ import CoachContentSection from '@/modules/coaches/components/CoachContentSectio
 import CoachStoreSection from '@/modules/coaches/components/CoachStoreSection';
 import CoachPartnersSection from '@/modules/coaches/components/CoachPartnersSection';
 import CoachCourtBookingsSection from '@/modules/coaches/components/CoachCourtBookingsSection';
+import LinkedClubsSection from '@/modules/clubs/components/LinkedClubsSection';
 import { CoachInfoSection, CoachPhotosSection } from '@/modules/coaches/components/CoachProfileSections';
 import { useFeatureFlag } from '@/core/lib/FeatureFlagsContext';
 import ConfirmDialog from '@/components/ConfirmDialog';
@@ -282,6 +283,7 @@ function V2CoachAgendaContent() {
   const { data: lessons = [], isLoading: lessonsLoading } = useCoachLessons(user?.uid);
   const respond = useRespondLesson();
   const sharedBookingsOn = useFeatureFlag(FEATURE_FLAG.SHARED_BOOKINGS);
+  const linkedClubsOn = useFeatureFlag(FEATURE_FLAG.LINKED_CLUBS);
   const [tab, setTab] = useState('agenda');
 
   const { upcoming, history } = useMemo(() => partitionLessons(lessons), [lessons]);
@@ -396,7 +398,12 @@ function V2CoachAgendaContent() {
         {tab === 'pacotes' && <CoachPackagesSection coachId={coachId} />}
         {tab === 'loja' && <CoachStoreSection coachId={coachId} />}
         {tab === 'conteudo' && <CoachContentSection coachId={coachId} />}
-        {tab === 'parceiros' && <CoachPartnersSection coachId={coachId} />}
+        {tab === 'parceiros' && (
+          <>
+            <CoachPartnersSection coachId={coachId} />
+            {linkedClubsOn && <LinkedClubsSection ownerType="coach" ownerId={coachId} canManage title="Meus clubes" />}
+          </>
+        )}
       </div>
     </div>
   );

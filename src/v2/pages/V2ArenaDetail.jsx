@@ -15,6 +15,7 @@ import { V2FavoriteArenaButton, V2ArenaShareButton } from '@/v2/components/arena
 import V2ArenaReviews from '@/v2/components/arenas/V2ArenaReviews';
 import BookingRequestDialog from '@/modules/arenas/components/BookingRequestDialog';
 import SharedBookingDialog from '@/modules/arenas/components/SharedBookingDialog';
+import LinkedClubsSection from '@/modules/clubs/components/LinkedClubsSection';
 import { formatArenaAddress, arenaContactLinks } from '@/modules/arenas/domain/arena';
 import { formatPrice } from '@/modules/arenas/domain/pricing';
 import { BOOKING_STATUS, WEEKDAY_SHORT } from '@/modules/arenas/domain/constants';
@@ -110,6 +111,7 @@ export default function V2ArenaDetail() {
 
 function V2ArenaDetailContent({ arenaId, user, arena, managed, bookings, isLoading, bookingOpen, setBookingOpen }) {
   const sharedBookingsOn = useFeatureFlag(FEATURE_FLAG.SHARED_BOOKINGS);
+  const linkedClubsOn = useFeatureFlag(FEATURE_FLAG.LINKED_CLUBS);
   const [sharedOpen, setSharedOpen] = useState(false);
 
   if (isLoading) {
@@ -239,6 +241,11 @@ function V2ArenaDetailContent({ arenaId, user, arena, managed, bookings, isLoadi
       {/* Torneios + Professores residentes (Sprint 4) */}
       <ArenaTournamentsSection arenaId={arenaId} />
       <ArenaCoachesSection arenaId={arenaId} />
+      {linkedClubsOn && (
+        <div className="mt-6">
+          <LinkedClubsSection ownerType="arena" ownerId={arenaId} title="Clubes da arena" />
+        </div>
+      )}
 
       {upcomingSlots.length > 0 && (
         <V2Surface className="mt-6">

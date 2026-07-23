@@ -22,6 +22,7 @@ import { useStudentCoaches } from '@/modules/coaches/hooks/useStudents';
 import { useCoachContent } from '@/modules/coaches/hooks/useContent';
 import { useCoachProducts } from '@/modules/coaches/hooks/useCoachProducts';
 import { PhotoLightbox } from '@/components/ui/photo-lightbox';
+import LinkedClubsSection from '@/modules/clubs/components/LinkedClubsSection';
 import RequestLessonDialog from '@/modules/coaches/components/RequestLessonDialog';
 import {
   V2Badge, V2Button, V2EmptyState, V2Surface, V2Skeleton,
@@ -118,6 +119,7 @@ export default function V2CoachProfile() {
   const [adding, setAdding] = useState(false);
   const [requesting, setRequesting] = useState(false);
   const lessonsOn = useFeatureFlag(FEATURE_FLAG.COACH_LESSONS);
+  const linkedClubsOn = useFeatureFlag(FEATURE_FLAG.LINKED_CLUBS);
 
   const isOwn = user?.uid === coachId;
   const isPlatformAdmin = user?.isPlatformAdmin;
@@ -325,6 +327,9 @@ export default function V2CoachProfile() {
           )}
         </V2Surface>
       )}
+
+      {/* Clubes vinculados (só aparece se houver) */}
+      {linkedClubsOn && <LinkedClubsSection ownerType="coach" ownerId={coachId} title="Clubes" />}
 
       {canRequestLesson && (
         <RequestLessonDialog coach={coach} open={requesting} onOpenChange={setRequesting} />
