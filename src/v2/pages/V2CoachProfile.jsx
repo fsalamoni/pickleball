@@ -7,7 +7,7 @@
 
 import React, { useState } from 'react';
 import { Link, useParams, Navigate } from 'react-router-dom';
-import { ArrowLeft, GraduationCap, MapPin, Award, MessageCircle, Plus, Trash2 } from 'lucide-react';
+import { ArrowLeft, GraduationCap, MapPin, Award, MessageCircle, Plus, Trash2, Video } from 'lucide-react';
 import { toast } from 'sonner';
 import { FEATURE_FLAG } from '@/core/featureFlags';
 import { useFeatureFlag } from '@/core/lib/FeatureFlagsContext';
@@ -15,6 +15,10 @@ import { useAuth } from '@/core/lib/FirebaseAuthContext';
 import { useCoach, useCoachResidencies, useAddCoachResidency, useRemoveCoachResidency } from '@/modules/coaches/hooks/useCoaches';
 import { useArena, useMyManagedArenas } from '@/modules/arenas/hooks/useArenas';
 import { canAcceptStudents } from '@/modules/coaches/domain/coach';
+import { STUDENT_STATUS } from '@/modules/coaches/domain/student';
+import { visibleContent, sortContent, contentCategoryLabel, CONTENT_VISIBILITY } from '@/modules/coaches/domain/content';
+import { useStudentCoaches } from '@/modules/coaches/hooks/useStudents';
+import { useCoachContent } from '@/modules/coaches/hooks/useContent';
 import RequestLessonDialog from '@/modules/coaches/components/RequestLessonDialog';
 import {
   V2Badge, V2Button, V2EmptyState, V2Surface, V2Skeleton,
@@ -116,6 +120,12 @@ export default function V2CoachProfile() {
   const isPlatformAdmin = user?.isPlatformAdmin;
   const canRequestLesson = lessonsOn && !isOwn && coach && canAcceptStudents(coach);
 
+  // Relação do visitante com o professor (para conteúdo só-alunos).
+  const { data: myLinks = [] } = useStudentCoaches(lessonsOn && !isOwn ? user?.uid : null);
+  const isStudent = myLinks.some((l) => l.coach_id === coachId && l.status === STUDENT_STATUS.ACTIVE);
+  const { data: contentRaw = [] } = useCoachContent(lessonsOn ? coachId : null, { full: isOwn || isStudent });
+  const libraryItems = sortContent(visibleContent(contentRaw, { isOwner: isOwn, isStudent }));
+
   if (!isAuthenticated) return <Navigate to="/login" replace />;
   if (isLoading) return <div className="p-4"><V2Skeleton lines={6} /></div>;
   if (!coach) return (
@@ -212,6 +222,41 @@ export default function V2CoachProfile() {
           )}
         </div>
       </V2Surface>
+
+      {/* Biblioteca de conteúdo (PRO-18) */}
+      {lessonsOn && (libraryItems.length > 0 || isOwn) && (
+        <V2Surface>
+          <div className="flex items-center justify-between">
+            <h3 className="font-display text-base font-bold text-ink">Biblioteca de conteúdo</h3>
+            {isOwn && (
+              <Link to="/aulas" className="text-xs font-bold text-ink hover:underline">Gerenciar →</Link>
+            )}
+          </div>
+          {libraryItems.length === 0 ? (
+            <p className="mt-3 text-sm text-gray-500">
+              {isOwn ? 'Publique drills e dicas na sua agenda para aparecerem aqui.' : 'Nenhum conteúdo publicado ainda.'}
+            </p>
+          ) : (
+            <div className="mt-3 space-y-2">
+              {libraryItems.map((item) => (
+                <div key={item.id} className="rounded-2xl border border-gray-100 bg-paper p-3">
+                  <div className="flex flex-wrap items-center gap-2">
+                    <p className="font-bold text-ink">{item.title}</p>
+                    <V2Badge tone="blue">{contentCategoryLabel(item.category)}</V2Badge>
+                    {item.visibility === CONTENT_VISIBILITY.STUDENTS && <V2Badge tone="amber">Só alunos</V2Badge>}
+                  </div>
+                  {item.body && <p className="mt-1 whitespace-pre-line text-sm text-gray-600">{item.body}</p>}
+                  {item.video_url && (
+                    <a href={item.video_url} target="_blank" rel="noreferrer" className="mt-1 inline-flex items-center gap-1 text-xs font-bold text-ink hover:underline">
+                      <Video className="h-3 w-3" /> Ver vídeo
+                    </a>
+                  )}
+                </div>
+              ))}
+            </div>
+          )}
+        </V2Surface>
+      )}
 
       {canRequestLesson && (
         <RequestLessonDialog coach={coach} open={requesting} onOpenChange={setRequesting} />

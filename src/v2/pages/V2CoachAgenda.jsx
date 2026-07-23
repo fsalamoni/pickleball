@@ -28,6 +28,7 @@ import {
 } from '@/modules/coaches/domain/lesson';
 import CoachStudentsSection from '@/modules/coaches/components/CoachStudentsSection';
 import CoachPackagesSection from '@/modules/coaches/components/CoachPackagesSection';
+import CoachContentSection from '@/modules/coaches/components/CoachContentSection';
 import ConfirmDialog from '@/components/ConfirmDialog';
 import {
   V2Badge, V2Button, V2EmptyState, V2Field, V2Input, V2Skeleton, V2Surface,
@@ -268,6 +269,8 @@ function V2CoachAgendaContent() {
       <CoachStudentsSection coachId={user.uid} lessons={lessons} />
 
       <CoachPackagesSection coachId={user.uid} />
+
+      <CoachContentSection coachId={user.uid} />
 
       <V2Surface>
         <h2 className="mb-4 font-display text-lg font-bold text-ink">Próximas aulas</h2>

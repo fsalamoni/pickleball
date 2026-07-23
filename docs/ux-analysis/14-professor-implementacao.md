@@ -182,7 +182,17 @@ professor (Sistema A) quando necessário. Rotas novas usam `FeatureFlagGuard`
 Regras Firestore aditivas para as 5 coleções novas. Nav (`V2Layout`): "Ensino"
 (professor) e "Minhas aulas" (aluno), gated por `coach_lessons`.
 
-**Fase D — Diferenciação (PRO-16/17/18): pendente/opcional.** Clínicas como
-eventos inscritíveis, nivelamento validado por professor (integra `leveling`) e
-biblioteca de conteúdo. Cada uma pode ganhar sub-flag própria e ser construída
-sobre o núcleo já entregue.
+**Fase D — Diferenciação (PRO-16/17/18): parcial.**
+
+- **PRO-18 — Biblioteca de conteúdo do professor** ✓
+  - Domínio `coaches/domain/content.js` (categorias, visibilidade público/
+    só-alunos, sanitização de URL de vídeo, filtro por observador). Testado.
+  - Serviço `contentService.js` (`coach_content`; `listPublicCoachContent`
+    separado para visitantes, pois a query completa é rejeitada pelas regras
+    quando há itens só-alunos), hooks `useContent.js`.
+  - UI: `CoachContentSection` (gestão no hub) e seção "Biblioteca de conteúdo"
+    no perfil público, respeitando a visibilidade (aluno vinculado vê os itens
+    só-alunos). Regra Firestore usa `exists(coach_students/{coachId_uid})`.
+- **PRO-16 — Clínicas como eventos** e **PRO-17 — Nivelamento validado**:
+  pendentes. Tocam outros módulos (eventos de clube, `leveling`/ranking) e
+  devem ganhar sub-flag própria; construir sobre o núcleo entregue.
