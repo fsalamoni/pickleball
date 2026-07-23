@@ -108,6 +108,25 @@ Status: 1085 testes verdes, lint limpo, build ok em todos os passos.
 - Auditoria: sem `alert/prompt` nativos; todas as páginas avançadas têm
   estado vazio (`V2EmptyState`).
 
+## Navegação do admin em dois níveis (reorganização)
+
+As 13 abas planas (em 2 grupos) foram reagrupadas em **6 seções principais por
+tema**, cada uma com suas **sub-abas**, na ordem do **ciclo de vida da arena
+(início → fim)**:
+
+1. **Perfil** — Informações, Fotos (identidade pública).
+2. **Estrutura e preços** — Quadras, Preços, Regras (o que a arena oferece).
+3. **Reservas** — Solicitações, Calendário, Reservas (admin) (operação diária).
+4. **Pagamentos e loja** — Pagamento, Mercado (monetização).
+5. **Desempenho** — Métricas, Retornos (resultados).
+6. **Equipe** — Admins.
+
+A seção ativa é derivada da sub-aba atual; ao voltar a uma seção, o admin cai
+na última sub-aba visitada (memória por seção). Sub-linha some quando a seção
+tem uma única aba. Deep-links por hash (#fotos/#precos/#horarios) seguem
+funcionando. Os módulos avançados (Módulos V3, Open Match, Membros,
+Professores) continuam como acesso rápido no cabeçalho.
+
 ## Possíveis próximos passos (opcionais)
 
 - Reordenar a página pública para destacar reserva/preços logo após o hero.
