@@ -29,6 +29,7 @@ import {
   LESSON_KIND,
 } from '../domain/lesson.js';
 import { getCoach } from './coachService.js';
+import { debitForLesson } from './packageService.js';
 
 export const COACH_LESSON_COLLECTIONS = {
   availability: 'coach_availability',
@@ -211,6 +212,11 @@ export async function respondLesson(lesson, nextStatus, actor) {
     status: nextStatus,
     updated_at: serverTimestamp(),
   });
+
+  // Ao concluir, debita 1 crédito do pacote vinculado (best-effort).
+  if (nextStatus === LESSON_STATUS.COMPLETED) {
+    await debitForLesson(lesson, actor);
+  }
 
   // Notifica a contraparte.
   const recipient = isCoach ? lesson.student_id : lesson.coach_id;

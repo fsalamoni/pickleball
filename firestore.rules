@@ -1061,6 +1061,32 @@ service cloud.firestore {
         request.auth.uid == resource.data.coach_id || isPlatformAdmin()
       );
     }
+    // coach_packages/{id} — definição de pacote. Leitura pública (aluno vê a
+    // oferta); escrita do professor/admin.
+    match /coach_packages/{packageId} {
+      allow read: if true;
+      allow create: if isAuthed() && (
+        request.auth.uid == request.resource.data.coach_id || isPlatformAdmin()
+      );
+      allow update, delete: if isAuthed() && (
+        request.auth.uid == resource.data.coach_id || isPlatformAdmin()
+      );
+    }
+    // coach_package_sales/{id} — venda/crédito. Lê o professor e o aluno;
+    // escreve o professor/admin.
+    match /coach_package_sales/{saleId} {
+      allow read: if isAuthed() && (
+        request.auth.uid == resource.data.coach_id ||
+        request.auth.uid == resource.data.student_id ||
+        isPlatformAdmin()
+      );
+      allow create: if isAuthed() && (
+        request.auth.uid == request.resource.data.coach_id || isPlatformAdmin()
+      );
+      allow update, delete: if isAuthed() && (
+        request.auth.uid == resource.data.coach_id || isPlatformAdmin()
+      );
+    }
 
 
     // ---- Sprint 5: Inventory / Mercado ----

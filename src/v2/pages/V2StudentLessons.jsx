@@ -14,10 +14,13 @@ import { FEATURE_FLAG } from '@/core/featureFlags';
 import FeatureFlagGuard from '@/v2/components/FeatureFlagGuard';
 import { useAuth } from '@/core/lib/FirebaseAuthContext';
 import { useStudentLessons, useRespondLesson } from '@/modules/coaches/hooks/useLessons';
+import { useStudentSales } from '@/modules/coaches/hooks/usePackages';
 import {
   partitionLessons, availableActions, lessonStatusLabel, lessonStatusTone,
   lessonFormatLabel, lessonSlots, LESSON_STATUS,
 } from '@/modules/coaches/domain/lesson';
+import { creditsRemaining, isSaleActive } from '@/modules/coaches/domain/package';
+import { formatPrice } from '@/modules/arenas/domain/pricing';
 import ConfirmDialog from '@/components/ConfirmDialog';
 import {
   V2Badge, V2EmptyState, V2Skeleton, V2Surface,
@@ -67,9 +70,33 @@ function StudentLessonCard({ lesson, onCancel, isPending }) {
   );
 }
 
+function PackageBalance({ sales }) {
+  const active = sales.filter((s) => isSaleActive(s));
+  if (active.length === 0) return null;
+  return (
+    <V2Surface>
+      <h2 className="mb-4 font-display text-lg font-bold text-ink">Meus créditos</h2>
+      <div className="space-y-2">
+        {active.map((s) => (
+          <div key={s.id} className="flex flex-wrap items-center justify-between gap-2 rounded-2xl border border-gray-100 bg-paper p-3">
+            <div>
+              <p className="font-bold text-ink">{s.package_name}</p>
+              <p className="text-xs text-gray-500">
+                {formatPrice(s.price)}{s.expires_at && ` · válido até ${s.expires_at}`}
+              </p>
+            </div>
+            <V2Badge tone="green">{creditsRemaining(s)} aula(s) restante(s)</V2Badge>
+          </div>
+        ))}
+      </div>
+    </V2Surface>
+  );
+}
+
 function V2StudentLessonsContent() {
   const { user, isAuthenticated } = useAuth();
   const { data: lessons = [], isLoading } = useStudentLessons(user?.uid);
+  const { data: sales = [] } = useStudentSales(user?.uid);
   const respond = useRespondLesson();
 
   const { upcoming, history } = useMemo(() => partitionLessons(lessons), [lessons]);
@@ -91,6 +118,8 @@ function V2StudentLessonsContent() {
         <h1 className="font-display text-3xl font-bold tracking-tight text-ink">Minhas aulas</h1>
         <p className="mt-2 font-medium text-gray-500">Acompanhe suas aulas com professores.</p>
       </div>
+
+      <PackageBalance sales={sales} />
 
       <V2Surface>
         <h2 className="mb-4 font-display text-lg font-bold text-ink">Próximas</h2>
