@@ -14,6 +14,7 @@ import { toast } from 'sonner';
 import {
   GraduationCap, Plus, Trash2, Clock, CalendarDays, CalendarOff, Check, X,
   UserCircle, Image as ImageIcon, Users, Wallet, Package, Store, BookOpen, Handshake,
+  Sparkles,
 } from 'lucide-react';
 import { FEATURE_FLAG } from '@/core/featureFlags';
 import FeatureFlagGuard from '@/v2/components/FeatureFlagGuard';
@@ -28,6 +29,7 @@ import {
   lessonFormatLabel, lessonSlots, LESSON_STATUS,
 } from '@/modules/coaches/domain/lesson';
 import CoachStudentsSection from '@/modules/coaches/components/CoachStudentsSection';
+import CoachClinicsSection from '@/modules/coaches/components/CoachClinicsSection';
 import CoachPackagesSection from '@/modules/coaches/components/CoachPackagesSection';
 import CoachContentSection from '@/modules/coaches/components/CoachContentSection';
 import CoachStoreSection from '@/modules/coaches/components/CoachStoreSection';
@@ -284,7 +286,18 @@ function V2CoachAgendaContent() {
   const respond = useRespondLesson();
   const sharedBookingsOn = useFeatureFlag(FEATURE_FLAG.SHARED_BOOKINGS);
   const linkedClubsOn = useFeatureFlag(FEATURE_FLAG.LINKED_CLUBS);
+  const clinicsOn = useFeatureFlag(FEATURE_FLAG.COACH_CLINICS);
   const [tab, setTab] = useState('agenda');
+
+  const sections = useMemo(() => {
+    if (!clinicsOn) return COACH_SECTIONS;
+    const extra = { id: 'clinicas', label: 'Clínicas', icon: Sparkles, tabs: [{ value: 'clinicas', label: 'Clínicas', icon: Sparkles }] };
+    // Insere logo após "Alunos".
+    const out = [...COACH_SECTIONS];
+    const idx = out.findIndex((s) => s.id === 'alunos');
+    out.splice(idx >= 0 ? idx + 1 : out.length, 0, extra);
+    return out;
+  }, [clinicsOn]);
 
   const { upcoming, history } = useMemo(() => partitionLessons(lessons), [lessons]);
 
@@ -306,7 +319,7 @@ function V2CoachAgendaContent() {
     );
   }
 
-  const activeSection = COACH_SECTIONS.find((s) => s.tabs.some((t) => t.value === tab)) || COACH_SECTIONS[0];
+  const activeSection = sections.find((s) => s.tabs.some((t) => t.value === tab)) || sections[0];
 
   const handleAction = async (lesson, nextStatus) => {
     try {
@@ -331,7 +344,7 @@ function V2CoachAgendaContent() {
       <div className="space-y-3">
         <div className="overflow-x-auto">
           <div className="inline-flex gap-1.5 rounded-full border border-gray-100 bg-paper-pure p-1.5 shadow-sm">
-            {COACH_SECTIONS.map((section) => {
+            {sections.map((section) => {
               const Icon = section.icon;
               const active = section.id === activeSection.id;
               return (
@@ -395,6 +408,7 @@ function V2CoachAgendaContent() {
           </>
         )}
         {tab === 'alunos' && <CoachStudentsSection coachId={coachId} lessons={lessons} />}
+        {tab === 'clinicas' && clinicsOn && <CoachClinicsSection coachId={coachId} coachName={coach.display_name || user?.displayName || ''} />}
         {tab === 'pacotes' && <CoachPackagesSection coachId={coachId} />}
         {tab === 'loja' && <CoachStoreSection coachId={coachId} />}
         {tab === 'conteudo' && <CoachContentSection coachId={coachId} />}

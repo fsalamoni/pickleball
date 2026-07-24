@@ -1106,6 +1106,29 @@ service cloud.firestore {
         request.auth.uid == resource.data.coach_id || isPlatformAdmin()
       );
     }
+    // coach_clinics/{id} — clínica/workshop aberto (flag coach_clinics).
+    // Leitura pública (descoberta); escreve/remove o professor (coach_id)/admin.
+    match /coach_clinics/{clinicId} {
+      allow read: if true;
+      allow create: if isAuthed() && (
+        request.auth.uid == request.resource.data.coach_id || isPlatformAdmin()
+      );
+      allow update, delete: if isAuthed() && (
+        request.auth.uid == resource.data.coach_id || isPlatformAdmin()
+      );
+    }
+    // coach_clinic_signups/{clinicId_athleteId} — inscrição do atleta.
+    // Leitura pública (contagem de vagas); cria o próprio atleta; remove o
+    // próprio atleta, o professor da clínica (coach_id) ou admin.
+    match /coach_clinic_signups/{signupId} {
+      allow read: if true;
+      allow create: if isAuthed() && request.auth.uid == request.resource.data.athlete_id;
+      allow delete: if isAuthed() && (
+        request.auth.uid == resource.data.athlete_id ||
+        request.auth.uid == resource.data.coach_id ||
+        isPlatformAdmin()
+      );
+    }
     // coach_packages/{id} — definição de pacote. Leitura pública (aluno vê a
     // oferta); escrita do professor/admin.
     match /coach_packages/{packageId} {

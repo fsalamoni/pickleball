@@ -21,6 +21,7 @@ import { coachProductCategoryLabel, formatCoachProductPrice } from '@/modules/co
 import { useStudentCoaches } from '@/modules/coaches/hooks/useStudents';
 import { useCoachContent } from '@/modules/coaches/hooks/useContent';
 import { useCoachProducts } from '@/modules/coaches/hooks/useCoachProducts';
+import CoachClinicsPublic from '@/modules/coaches/components/CoachClinicsPublic';
 import { PhotoLightbox } from '@/components/ui/photo-lightbox';
 import LinkedClubsSection from '@/modules/clubs/components/LinkedClubsSection';
 import RequestLessonDialog from '@/modules/coaches/components/RequestLessonDialog';
@@ -120,6 +121,7 @@ export default function V2CoachProfile() {
   const [requesting, setRequesting] = useState(false);
   const lessonsOn = useFeatureFlag(FEATURE_FLAG.COACH_LESSONS);
   const linkedClubsOn = useFeatureFlag(FEATURE_FLAG.LINKED_CLUBS);
+  const clinicsOn = useFeatureFlag(FEATURE_FLAG.COACH_CLINICS);
 
   const isOwn = user?.uid === coachId;
   const isPlatformAdmin = user?.isPlatformAdmin;
@@ -292,6 +294,9 @@ export default function V2CoachProfile() {
           )}
         </div>
       </V2Surface>
+
+      {/* Clínicas e workshops abertos (flag coach_clinics) */}
+      {clinicsOn && <CoachClinicsPublic coachId={coachId} />}
 
       {/* Biblioteca de conteúdo (PRO-18) */}
       {lessonsOn && (libraryItems.length > 0 || isOwn) && (

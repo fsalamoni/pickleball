@@ -453,6 +453,14 @@ export const FEATURE_FLAG = Object.freeze({
   COACH_LEVELING: 'coach_leveling',
 
   /**
+   * Clínicas/workshops do professor: eventos abertos (data, local, vagas,
+   * preço) criados pelo professor; atletas se inscrevem sozinhos. A descoberta
+   * e a inscrição aparecem no perfil público do professor. Aditivo — não altera
+   * as aulas nem o rating; desligado, nada de clínicas aparece.
+   */
+  COACH_CLINICS: 'coach_clinics',
+
+  /**
    * Reservas compartilhadas (multi-atleta): uma reserva de quadra pode ter
    * vários participantes com sub-horários próprios; o solicitante convida
    * atletas (aceite/recusa) ou deixa a reserva aberta (com/sem limite); todos
@@ -1024,6 +1032,14 @@ export const FEATURE_FLAG_META = Object.freeze({
       + 'tabela de nivelamento), exibindo um selo "nível validado por professor" '
       + 'no perfil do atleta. Aditivo — não altera rating nem ranking. Desligado, '
       + 'nenhum selo ou ação de validação aparece.',
+  },
+  [FEATURE_FLAG.COACH_CLINICS]: {
+    label: 'Clínicas e workshops do professor',
+    description:
+      'Permite ao professor publicar clínicas/workshops abertos (data, local, '
+      + 'vagas e preço); atletas se inscrevem pelo perfil público do professor, '
+      + 'com controle de vagas. Aditivo — não altera aulas nem rating. '
+      + 'Desligado, nenhuma clínica aparece.',
   },
   [FEATURE_FLAG.SHARED_BOOKINGS]: {
     label: 'Reservas compartilhadas (multi-atleta e aulas)',
