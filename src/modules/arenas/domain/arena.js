@@ -62,6 +62,13 @@ export function normalizeArenaInput(input = {}) {
     rules: normalizeArenaRules(input.rules), // Sprint 5 (preferred)
     allow_instant_booking: input.allow_instant_booking === true, // Sprint 2 ARE-03
     payment: input.payment && typeof input.payment === 'object' ? input.payment : null, // Sprint 5
+    // Política de cancelamento (flag cancellation_policy) — sem taxa.
+    cancellation_policy_enabled: input.cancellation_policy_enabled === true,
+    cancellation_deadline_hours: (() => {
+      const n = Number(input.cancellation_deadline_hours);
+      return Number.isFinite(n) && n >= 0 ? Math.trunc(n) : 12;
+    })(),
+    cancellation_notes: str(input.cancellation_notes).slice(0, 500),
   };
 
   return { valid: Object.keys(errors).length === 0, errors, value };

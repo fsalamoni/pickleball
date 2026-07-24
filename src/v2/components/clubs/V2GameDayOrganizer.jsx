@@ -35,6 +35,12 @@ import {
 import { useAthletes } from '@/modules/athletes/hooks/useAthletes';
 import { PARTICIPANT_SOURCE, INVITE_STATUS, GAME_DAY_LIMITS } from '@/modules/clubs/domain/constants';
 import { generateGameDayGames, suggestRounds } from '@/modules/clubs/domain/gameDayDraw';
+import {
+  GAME_DAY_FORMAT, GAME_DAY_FORMAT_LABELS,
+  generateMexicanoSchedule, kingOfCourtFirstRound, kingOfCourtNextRound,
+} from '@/modules/clubs/domain/gameDayFormats';
+import { useFeatureFlag } from '@/core/lib/FeatureFlagsContext';
+import { FEATURE_FLAG } from '@/core/featureFlags';
 
 const SOURCE_LABEL = {
   [PARTICIPANT_SOURCE.CONFIRMED]: 'Confirmou no dia',
@@ -262,15 +268,20 @@ function GamesSection({ eventId, dateId, participants }) {
     [allGames, dateId],
   );
   const replaceGames = useReplaceEventGames(eventId);
+  const addGame = useAddEventGame(eventId);
   const clearGames = useClearEventGames(eventId);
+  const formatsOn = useFeatureFlag(FEATURE_FLAG.GAMEDAY_FORMATS);
   const [rounds, setRounds] = useState(0);
+  const [format, setFormat] = useState(GAME_DAY_FORMAT.AMERICANO);
   const [drawOpen, setDrawOpen] = useState(false);
   const [manualOpen, setManualOpen] = useState(false);
   const [confirmClear, setConfirmClear] = useState(false);
   const [drawing, setDrawing] = useState(false);
+  const [addingRound, setAddingRound] = useState(false);
 
   const effectiveRounds = rounds || suggestRounds(participants.length) || 3;
   const canDraw = participants.length >= 4;
+  const isKingOfCourt = formatsOn && format === GAME_DAY_FORMAT.KING_OF_COURT;
 
   const participantById = useMemo(() => {
     const map = new Map();
@@ -278,25 +289,66 @@ function GamesSection({ eventId, dateId, participants }) {
     return map;
   }, [participants]);
 
+  const toPayload = (g) => ({
+    round: g.round,
+    court: g.court ?? null,
+    kind: 'doubles',
+    side_a: g.side_a.map((id) => ({ id, name: participantById.get(id)?.name || 'Jogador' })),
+    side_b: g.side_b.map((id) => ({ id, name: participantById.get(id)?.name || 'Jogador' })),
+  });
+
   const handleDraw = async () => {
     setDrawing(true);
     try {
       const ids = participants.map((p) => p.id);
       const seed = `gd-${Date.now()}`;
-      const raw = generateGameDayGames(ids, { rounds: effectiveRounds, seed });
-      const payload = raw.map((g) => ({
-        round: g.round,
-        kind: 'doubles',
-        side_a: g.side_a.map((id) => ({ id, name: participantById.get(id)?.name || 'Jogador' })),
-        side_b: g.side_b.map((id) => ({ id, name: participantById.get(id)?.name || 'Jogador' })),
-      }));
+      let raw;
+      if (formatsOn && format === GAME_DAY_FORMAT.MEXICANO) {
+        raw = generateMexicanoSchedule(ids, { rounds: effectiveRounds, seed });
+      } else if (formatsOn && format === GAME_DAY_FORMAT.KING_OF_COURT) {
+        raw = kingOfCourtFirstRound(ids, { seed }); // só a 1ª rodada; as próximas por resultado
+      } else {
+        raw = generateGameDayGames(ids, { rounds: effectiveRounds, seed });
+      }
+      const payload = raw.map(toPayload);
       await replaceGames.mutateAsync({ games: payload, dateId });
-      toast.success(`Sorteio concluído: ${payload.length} jogo(s) em ${effectiveRounds} rodada(s).`);
+      const label = formatsOn ? GAME_DAY_FORMAT_LABELS[format] : 'Americano';
+      toast.success(isKingOfCourt
+        ? `Rei da Quadra iniciado: rodada 1 com ${payload.length} jogo(s). Lance os placares e gere a próxima rodada.`
+        : `Sorteio (${label}) concluído: ${payload.length} jogo(s).`);
       setDrawOpen(false);
     } catch (err) {
       toast.error(err.message || 'Não foi possível sortear.');
     } finally {
       setDrawing(false);
+    }
+  };
+
+  // Rei da Quadra: gera a próxima rodada a partir dos resultados da última.
+  const lastRoundNumber = useMemo(() => {
+    const nums = games.map((g) => g.round).filter((r) => Number.isFinite(r));
+    return nums.length ? Math.max(...nums) : 0;
+  }, [games]);
+  const lastRoundGames = useMemo(
+    () => games.filter((g) => g.round === lastRoundNumber && g.court != null),
+    [games, lastRoundNumber],
+  );
+  const canAddKingRound = isKingOfCourt && lastRoundGames.length > 0
+    && lastRoundGames.every((g) => g.score_a != null && g.score_b != null);
+
+  const handleAddKingRound = async () => {
+    setAddingRound(true);
+    try {
+      const next = kingOfCourtNextRound(lastRoundGames, { round: lastRoundNumber + 1 });
+      if (next.length === 0) { toast.error('Não foi possível gerar a próxima rodada.'); return; }
+      for (let i = 0; i < next.length; i += 1) {
+        await addGame.mutateAsync({ ...toPayload(next[i]), date_id: dateId, order: Date.now() + i });
+      }
+      toast.success(`Rodada ${lastRoundNumber + 1} gerada: ${next.length} jogo(s).`);
+    } catch (err) {
+      toast.error(err.message || 'Não foi possível gerar a próxima rodada.');
+    } finally {
+      setAddingRound(false);
     }
   };
 
@@ -339,6 +391,11 @@ function GamesSection({ eventId, dateId, participants }) {
             <V2Button size="sm" onClick={() => setDrawOpen(true)} disabled={!canDraw}>
               <Shuffle className="mr-1.5 h-4 w-4" /> Sortear jogos
             </V2Button>
+            {isKingOfCourt && games.length > 0 && (
+              <V2Button size="sm" variant="secondary" onClick={handleAddKingRound} disabled={!canAddKingRound || addingRound}>
+                <Plus className="mr-1.5 h-4 w-4" /> {addingRound ? 'Gerando…' : 'Próxima rodada'}
+              </V2Button>
+            )}
             {games.length > 0 && (
               <V2Button size="sm" variant="ghost" className="text-red-500 hover:text-red-600" onClick={() => setConfirmClear(true)}>
                 <Trash2 className="mr-1.5 h-4 w-4" /> Limpar
@@ -384,24 +441,49 @@ function GamesSection({ eventId, dateId, participants }) {
             <DialogHeader>
               <DialogTitle>Sortear jogos do dia</DialogTitle>
               <DialogDescription>
-                Gera jogos de duplas com todos os {participants.length} participantes, na lógica do Americano —
-                priorizando parcerias e adversários inéditos, equilibrando a participação. Repetições só ocorrem
-                após esgotadas as possibilidades. {games.length > 0 && 'Os jogos atuais serão substituídos.'}
+                {formatsOn
+                  ? `Gera os jogos de duplas com os ${participants.length} participantes no formato escolhido.`
+                  : `Gera jogos de duplas com todos os ${participants.length} participantes, na lógica do Americano — priorizando parcerias e adversários inéditos, equilibrando a participação.`}
+                {' '}{games.length > 0 && 'Os jogos atuais deste dia serão substituídos.'}
               </DialogDescription>
             </DialogHeader>
-            <div className="space-y-2">
-              <Label htmlFor="rounds">Número de rodadas</Label>
-              <Input
-                id="rounds"
-                type="number"
-                min={1}
-                max={GAME_DAY_LIMITS.MAX_ROUNDS}
-                value={rounds || effectiveRounds}
-                onChange={(e) => setRounds(Math.max(1, Math.min(GAME_DAY_LIMITS.MAX_ROUNDS, Number(e.target.value) || 0)))}
-              />
-              <p className="text-xs text-gray-500">
-                Com {participants.length} participantes e {Math.floor(participants.length / 4)} jogo(s) por rodada.
-              </p>
+            <div className="space-y-3">
+              {formatsOn && (
+                <div className="space-y-1.5">
+                  <Label htmlFor="gd-format">Formato</Label>
+                  <select
+                    id="gd-format"
+                    value={format}
+                    onChange={(e) => setFormat(e.target.value)}
+                    className="w-full h-10 rounded-md border border-input bg-background px-3 text-sm"
+                  >
+                    {Object.values(GAME_DAY_FORMAT).map((f) => (
+                      <option key={f} value={f}>{GAME_DAY_FORMAT_LABELS[f]}</option>
+                    ))}
+                  </select>
+                  <p className="text-xs text-gray-500">
+                    {format === GAME_DAY_FORMAT.MEXICANO && 'Mexicano: em cada quadra, o 1º e o 4º jogam contra o 2º e o 3º, com rotação entre as rodadas.'}
+                    {format === GAME_DAY_FORMAT.KING_OF_COURT && 'Rei da Quadra: gera só a 1ª rodada. Após lançar os placares, use “Próxima rodada” — vencedores sobem, perdedores descem.'}
+                    {format === GAME_DAY_FORMAT.AMERICANO && 'Americano: prioriza parcerias e adversários inéditos, equilibrando a participação.'}
+                  </p>
+                </div>
+              )}
+              {!isKingOfCourt && (
+                <div className="space-y-2">
+                  <Label htmlFor="rounds">Número de rodadas</Label>
+                  <Input
+                    id="rounds"
+                    type="number"
+                    min={1}
+                    max={GAME_DAY_LIMITS.MAX_ROUNDS}
+                    value={rounds || effectiveRounds}
+                    onChange={(e) => setRounds(Math.max(1, Math.min(GAME_DAY_LIMITS.MAX_ROUNDS, Number(e.target.value) || 0)))}
+                  />
+                  <p className="text-xs text-gray-500">
+                    Com {participants.length} participantes e {Math.floor(participants.length / 4)} jogo(s) por rodada.
+                  </p>
+                </div>
+              )}
             </div>
             <DialogFooter>
               <V2Button variant="ghost" onClick={() => setDrawOpen(false)} disabled={drawing}>Cancelar</V2Button>
@@ -453,6 +535,12 @@ function GameRow({ eventId, game }) {
 
   return (
     <div className="flex items-center gap-2 rounded-lg border border-gray-200 bg-white p-2.5 text-sm">
+      {game.court != null && (
+        <span className={`shrink-0 rounded-full px-2 py-0.5 text-[10px] font-bold ${game.court === 1 ? 'bg-acid text-ink' : 'bg-gray-100 text-gray-500'}`}
+          title={game.court === 1 ? 'Quadra do rei' : `Quadra ${game.court}`}>
+          Q{game.court}
+        </span>
+      )}
       <div className={`flex-1 text-right ${winA ? 'font-bold text-green-700' : 'font-medium text-gray-600'}`}>
         {sideNames(game.side_a)}
       </div>

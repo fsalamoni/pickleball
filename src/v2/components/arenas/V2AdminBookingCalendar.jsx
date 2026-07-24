@@ -20,12 +20,17 @@ import { Link, useNavigate } from 'react-router-dom';
 import { toast } from 'sonner';
 import {
   ChevronLeft, ChevronRight, Calendar, MessageCircle, UserCog, X, Edit3, Ban, Plus, Trash2, CheckCircle,
-  LayoutGrid, List,
+  LayoutGrid, List, UserX,
 } from 'lucide-react';
 import { useAuth } from '@/core/lib/FirebaseAuthContext';
 import { cn } from '@/core/lib/utils';
 import { useArena, useArenaCourts, useArenaCourtSchedules,  useArenaUnavailabilities, useAddArenaUnavailability, useDeleteArenaUnavailability } from '@/modules/arenas/hooks/useArenas';
-import { useUpdateBookingStatus, useArenaBookings, useCreateManualBooking, useTransferBooking } from '@/modules/arenas/hooks/useBookings';
+import { useUpdateBookingStatus, useArenaBookings, useCreateManualBooking, useTransferBooking, useSetBookingNoShow } from '@/modules/arenas/hooks/useBookings';
+import { useFeatureFlag } from '@/core/lib/FeatureFlagsContext';
+import { FEATURE_FLAG } from '@/core/featureFlags';
+import { evaluateCancellation, lateCancellationMessage, normalizeCancellationPolicy } from '@/modules/arenas/domain/cancellation_policy';
+import { useArenaWaitlist, useLeaveWaitlist } from '@/modules/arenas/hooks/useBookingWaitlist';
+import { groupWaitlistBySlot } from '@/modules/arenas/domain/booking_waitlist';
 import { useAddBookingResponsibles, useRemoveBookingResponsible } from '@/modules/arenas/hooks/useSharedBookings';
 import { participantStatusLabel } from '@/modules/arenas/domain/shared_booking';
 import AthleteMultiPicker from '@/modules/athletes/components/AthleteMultiPicker';
@@ -65,6 +70,9 @@ export default function V2AdminBookingCalendar({ arenaId, embedded = false }) {
   const removeUnav = useDeleteArenaUnavailability(arenaId);
   const updateStatus = useUpdateBookingStatus();
   const createManual = useCreateManualBooking();
+  const setNoShow = useSetBookingNoShow();
+  const noShowOn = useFeatureFlag(FEATURE_FLAG.NO_SHOW_TRACKING);
+  const cancellationPolicyOn = useFeatureFlag(FEATURE_FLAG.CANCELLATION_POLICY);
 
   const [date, setDate] = useState(() => new Date().toISOString().slice(0, 10));
   const [courtId, setCourtId] = useState('all');
@@ -208,6 +216,25 @@ export default function V2AdminBookingCalendar({ arenaId, embedded = false }) {
       toast.error(err.message);
     }
   }
+
+  async function handleToggleNoShow() {
+    if (!selectedSlot?.booking) return;
+    try {
+      await setNoShow.mutateAsync({ booking: selectedSlot.booking, isNoShow: !selectedSlot.booking.no_show });
+      toast.success(selectedSlot.booking.no_show ? 'No-show removido.' : 'Marcado como não compareceu.');
+      setSelectedSlot(null);
+    } catch (err) {
+      toast.error(err.message);
+    }
+  }
+
+  // Aviso de cancelamento tardio conforme a política da arena (sem taxa).
+  const cancelInfo = (cancellationPolicyOn && selectedSlot?.booking)
+    ? evaluateCancellation(
+      (selectedSlot.booking.slots || [])[0],
+      normalizeCancellationPolicy(arena),
+    )
+    : { applies: false, late: false };
 
   async function handleConfirmBooking() {
     if (!selectedSlot?.booking) return;
@@ -401,15 +428,25 @@ export default function V2AdminBookingCalendar({ arenaId, embedded = false }) {
                     <CheckCircle className="h-3.5 w-3.5" /> Confirmar
                   </V2Button>
                 )}
+                {noShowOn && (
+                  <V2Button size="sm" variant={selectedSlot.booking.no_show ? 'secondary' : 'ghost'} onClick={handleToggleNoShow} disabled={setNoShow.isPending}>
+                    <UserX className="h-3.5 w-3.5" /> {selectedSlot.booking.no_show ? 'Desfazer no-show' : 'No-show'}
+                  </V2Button>
+                )}
                 <V2Button size="sm" variant="ghost" className="text-red-500 hover:bg-red-50 hover:text-red-600" onClick={() => setCancelConfirm(true)}>
                   <X className="h-3.5 w-3.5" /> Cancelar
                 </V2Button>
               </div>
+              {noShowOn && selectedSlot.booking.no_show && (
+                <V2Badge tone="amber"><UserX className="mr-1 inline h-3 w-3" /> Não compareceu</V2Badge>
+              )}
               <ConfirmDialog
                 open={cancelConfirm}
                 onOpenChange={setCancelConfirm}
                 title="Cancelar reserva?"
-                description="A reserva será marcada como cancelada e o horário ficará disponível."
+                description={cancelInfo.late
+                  ? `${lateCancellationMessage(normalizeCancellationPolicy(arena))} A reserva será cancelada e o horário ficará disponível.`
+                  : 'A reserva será marcada como cancelada e o horário ficará disponível.'}
                 confirmLabel="Cancelar reserva"
                 onConfirm={handleCancelBooking}
                 loading={updateStatus.isPending}
@@ -512,6 +549,9 @@ export default function V2AdminBookingCalendar({ arenaId, embedded = false }) {
           byManager
         />
       )}
+
+      {/* Lista de espera da arena (flag booking_waitlist) */}
+      <ArenaWaitlistPanel arenaId={arenaId} />
 
       {/* Responsáveis: vários atletas por reserva + transferir titularidade */}
       {transferOpen && selectedSlot?.booking && (
@@ -660,3 +700,44 @@ function ManageResponsiblesDialog({ booking, onClose, onDone }) {
   );
 }
 
+
+/**
+ * ArenaWaitlistPanel — lista de espera de reservas da arena (flag
+ * booking_waitlist). Agrupa por horário; o gestor pode remover uma entrada
+ * (ao promover/atender). Desligada a flag, não aparece.
+ */
+function ArenaWaitlistPanel({ arenaId }) {
+  const waitlistOn = useFeatureFlag(FEATURE_FLAG.BOOKING_WAITLIST);
+  const { data: entries = [] } = useArenaWaitlist(arenaId, waitlistOn);
+  const remove = useLeaveWaitlist();
+  if (!waitlistOn || entries.length === 0) return null;
+  const groups = groupWaitlistBySlot(entries);
+  return (
+    <V2Surface className="mt-4">
+      <h3 className="font-display text-base font-bold text-ink">Lista de espera ({entries.length})</h3>
+      <p className="text-xs text-gray-500">Atletas que pediram para ser avisados se um horário vagar.</p>
+      <div className="mt-3 space-y-3">
+        {groups.map((g) => (
+          <div key={g.key} className="rounded-2xl border border-gray-100 bg-paper p-3">
+            <div className="text-sm font-bold text-ink">{g.date} · {g.start}–{g.end}</div>
+            <div className="mt-2 flex flex-wrap gap-2">
+              {g.entries.map((e) => (
+                <span key={e.id} className="inline-flex items-center gap-1.5 rounded-full border border-gray-200 bg-paper-pure px-2.5 py-1 text-xs text-ink">
+                  {e.user_name}
+                  <button type="button" title="Remover da lista"
+                    onClick={async () => {
+                      try { await remove.mutateAsync({ entryId: e.id }); toast.success('Removido da lista de espera.'); }
+                      catch (err) { toast.error(err?.message || 'Não foi possível remover.'); }
+                    }}
+                    className="text-gray-400 hover:text-red-600">
+                    <X className="h-3 w-3" />
+                  </button>
+                </span>
+              ))}
+            </div>
+          </div>
+        ))}
+      </div>
+    </V2Surface>
+  );
+}

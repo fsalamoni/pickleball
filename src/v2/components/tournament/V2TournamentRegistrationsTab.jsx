@@ -14,7 +14,7 @@ import {
   DialogDescription,
 } from '@/components/ui/dialog';
 import { AvatarGroup } from '@/components/ui/user-avatar';
-import { Plus, Check, X, Trash2, ArrowUp, Pencil, UserCheck, Undo2 } from 'lucide-react';
+import { Plus, Check, X, Trash2, ArrowUp, Pencil, UserCheck, Undo2, Download } from 'lucide-react';
 import {
   useModalities,
   useRegistrationsByTournament,
@@ -38,6 +38,7 @@ import {
   TOURNAMENT_VISIBILITY,
   REGISTRATION_PROVISIONAL_LABEL,
 } from '@/modules/tournament/domain/constants';
+import { buildRegistrationsCsv, registrationsCsvFilename } from '@/modules/tournament/domain/registrations_csv';
 import {
   countOccupiedRegistrations,
   hasUnlimitedEntries,
@@ -53,11 +54,39 @@ export default function TournamentRegistrationsTab({ tournament, isAdmin }) {
   const { user } = useAuth();
   const { data: modalities = [] } = useModalities(tournament.id);
   const { data: registrations = [] } = useRegistrationsByTournament(tournament.id);
+  const csvOn = useFeatureFlag(FEATURE_FLAG.REGISTRATIONS_CSV);
   const [openModalityId, setOpenModalityId] = useState(null);
   const openModality = modalities.find((m) => m.id === openModalityId) || null;
 
+  function exportCsv() {
+    const content = buildRegistrationsCsv(registrations, {
+      modalities,
+      statusLabels: REGISTRATION_STATUS_LABELS,
+    });
+    try {
+      const blob = new Blob([content], { type: 'text/csv;charset=utf-8' });
+      const url = URL.createObjectURL(blob);
+      const a = document.createElement('a');
+      a.href = url;
+      a.download = registrationsCsvFilename(tournament.name);
+      document.body.appendChild(a);
+      a.click();
+      document.body.removeChild(a);
+      URL.revokeObjectURL(url);
+    } catch (err) {
+      toast.error('Não foi possível gerar o CSV.');
+    }
+  }
+
   return (
     <div className="space-y-4">
+      {isAdmin && csvOn && registrations.length > 0 && (
+        <div className="flex justify-end">
+          <V2Button size="sm" variant="secondary" onClick={exportCsv}>
+            <Download className="h-4 w-4" /> Exportar inscrições (CSV)
+          </V2Button>
+        </div>
+      )}
       {modalities.length === 0 ? (
         <V2Surface>
           <div className="p-6 text-sm text-gray-500 text-center">

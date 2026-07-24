@@ -4,10 +4,13 @@
 
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
 import { useAuth } from '@/core/lib/FirebaseAuthContext';
+import { useFeatureFlag } from '@/core/lib/FeatureFlagsContext';
+import { FEATURE_FLAG } from '@/core/featureFlags';
 import {
   getCoach, listCoaches, upsertCoachProfile,
   listCoachResidencies, listArenaCoaches,
   addCoachResidency, removeCoachResidency, updateCoachResidency,
+  acceptCoachResidency, declineCoachResidency,
 } from '../services/coachService';
 import { filterCoaches, canAcceptStudents, coachTenureDays } from '../domain/coach.js';
 
@@ -57,12 +60,37 @@ export function useUpsertCoachProfile() {
 export function useAddCoachResidency() {
   const { user } = useAuth();
   const qc = useQueryClient();
+  const mutualOn = useFeatureFlag(FEATURE_FLAG.PARTNERSHIP_MUTUAL);
   return useMutation({
-    mutationFn: (input) => addCoachResidency(input, user),
+    mutationFn: (input) => addCoachResidency(input, user, { requireAcceptance: mutualOn }),
     onSuccess: (_, vars) => {
       qc.invalidateQueries({ queryKey: ['coaches'] });
       qc.invalidateQueries({ queryKey: ['coaches', 'residencies', vars.coach_id] });
       qc.invalidateQueries({ queryKey: ['coaches', 'arena', vars.arena_id] });
+    },
+  });
+}
+
+export function useAcceptCoachResidency() {
+  const { user } = useAuth();
+  const qc = useQueryClient();
+  return useMutation({
+    mutationFn: ({ coachId, arenaId }) => acceptCoachResidency(coachId, arenaId, user),
+    onSuccess: (_, vars) => {
+      qc.invalidateQueries({ queryKey: ['coaches', 'residencies', vars.coachId] });
+      qc.invalidateQueries({ queryKey: ['coaches', 'arena', vars.arenaId] });
+    },
+  });
+}
+
+export function useDeclineCoachResidency() {
+  const { user } = useAuth();
+  const qc = useQueryClient();
+  return useMutation({
+    mutationFn: ({ coachId, arenaId }) => declineCoachResidency(coachId, arenaId, user),
+    onSuccess: (_, vars) => {
+      qc.invalidateQueries({ queryKey: ['coaches', 'residencies', vars.coachId] });
+      qc.invalidateQueries({ queryKey: ['coaches', 'arena', vars.arenaId] });
     },
   });
 }

@@ -26,6 +26,12 @@ describe('computeAchievements', () => {
     expect(computeAchievements({ rating: 1000 }).unlocked.map((a) => a.id)).not.toContain('rating_1100');
   });
 
+  it('desbloqueia conquistas de sequência semanal (weekStreak)', () => {
+    const ids = computeAchievements({ weekStreak: 5 }).unlocked.map((a) => a.id);
+    expect(ids).toContain('week_streak_4');
+    expect(ids).not.toContain('week_streak_12');
+  });
+
   it('unlocked + locked cobrem o catálogo sem sobreposição', () => {
     const r = computeAchievements({ wins: 60, titles: 6, played: 120, tournaments: 12, podiums: 4, rating: 1400 });
     expect(r.unlocked.length + r.locked.length).toBe(ACHIEVEMENTS.length);

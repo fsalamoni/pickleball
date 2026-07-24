@@ -13,6 +13,7 @@ import {
   CalendarDays,
   CheckCircle2,
   Copy,
+  FileStack,
   Lock,
   LockOpen,
   Play,
@@ -112,6 +113,7 @@ export default function TournamentAdminTab({ tournament }) {
   const [email, setEmail] = useState('');
   const [form, setForm] = useState(() => buildFormState(tournament));
   const duplicationOn = useFeatureFlag(FEATURE_FLAG.TOURNAMENT_DUPLICATION);
+  const templatesOn = useFeatureFlag(FEATURE_FLAG.TOURNAMENT_TEMPLATES);
   const [duplicateOpen, setDuplicateOpen] = useState(false);
   const lifecycleOn = useFeatureFlag(FEATURE_FLAG.TOURNAMENT_LIFECYCLE);
   const cancelActionOn = useFeatureFlag(FEATURE_FLAG.TOURNAMENT_CANCEL_ACTION);
@@ -250,6 +252,22 @@ export default function TournamentAdminTab({ tournament }) {
                 <Button variant="outline" onClick={() => setDuplicateOpen(true)}>
                   <Copy className="w-4 h-4 mr-1" />
                   Duplicar torneio
+                </Button>
+              )}
+              {templatesOn && (
+                <Button
+                  variant={tournament.is_template ? 'default' : 'outline'}
+                  onClick={() => updateMutation.mutate(
+                    { is_template: !tournament.is_template },
+                    {
+                      onSuccess: () => toast.success(tournament.is_template ? 'Não é mais um modelo.' : 'Torneio marcado como modelo.'),
+                      onError: (err) => toast.error(err?.message || 'Não foi possível atualizar.'),
+                    },
+                  )}
+                  disabled={updateMutation.isPending}
+                >
+                  <FileStack className="w-4 h-4 mr-1" />
+                  {tournament.is_template ? 'É um modelo' : 'Marcar como modelo'}
                 </Button>
               )}
               {lifecycleOn && isFinished && (

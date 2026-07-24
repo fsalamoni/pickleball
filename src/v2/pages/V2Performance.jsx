@@ -7,6 +7,7 @@ import { useFeatureFlag } from '@/core/lib/FeatureFlagsContext';
 import { FEATURE_FLAG } from '@/core/featureFlags';
 import { useRatingHistory } from '@/modules/rating/hooks/useRating';
 import { usePlayerMatchDates } from '@/modules/progression/hooks/useProgression';
+import { computeWeekStreak } from '@/modules/progression/domain/progression';
 import ProgressionCard from '@/modules/progression/components/ProgressionCard';
 import GoalsCard from '@/modules/progression/components/GoalsCard';
 import RatingSparkline from '@/modules/rating/components/RatingSparkline';
@@ -77,7 +78,7 @@ export default function V2Performance() {
           )}
 
           {achievementsOn && (
-            <div className="mt-8"><AchievementsCard summary={stats} /></div>
+            <div className="mt-8"><AchievementsCard summary={{ ...stats, weekStreak: computeWeekStreak(matchDates) }} /></div>
           )}
 
           {progressionOn && (

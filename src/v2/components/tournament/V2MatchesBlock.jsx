@@ -1,5 +1,5 @@
 import React, { useMemo, useState } from 'react';
-import { Trophy, Swords, Pencil, Play } from 'lucide-react';
+import { Trophy, Swords, Pencil, Play, X } from 'lucide-react';
 import { toast } from 'sonner';
 import { UserAvatar } from '@/components/ui/user-avatar';
 import {
@@ -31,6 +31,8 @@ import { FEATURE_FLAG } from '@/core/featureFlags';
 import { V2Badge, V2Button, V2Surface } from '@/v2/ui/primitives';
 import V2Collapsible from './V2Collapsible';
 import { cn } from '@/core/lib/utils';
+import V2BracketTree from '@/v2/components/tournament/V2BracketTree';
+import { buildBracketColumns } from '@/modules/tournament/domain/bracketLayout';
 
 function formatMatchTime(iso) {
   if (!iso) return '—';
@@ -74,6 +76,7 @@ function MatchesTable({ matches, labelById, peopleById, canEdit = false, modalit
   const hasSchedule = matches.some((m) => m.court || m.scheduled_at);
   const [editMatch, setEditMatch] = useState(null);
   const markInProgress = useMarkMatchInProgress(modalityId);
+  const courtsideOn = useFeatureFlag(FEATURE_FLAG.COURTSIDE_SCORING);
 
   return (
     <>
@@ -191,13 +194,23 @@ function MatchesTable({ matches, labelById, peopleById, canEdit = false, modalit
       </div>
 
       {editMatch && (
-        <V2ScoreEntryDialog
-          match={editMatch}
-          modalityId={modalityId}
-          scoringConfig={scoringConfig}
-          labelById={labelById}
-          onClose={() => setEditMatch(null)}
-        />
+        courtsideOn ? (
+          <CourtsideScoreDialog
+            match={editMatch}
+            modalityId={modalityId}
+            scoringConfig={scoringConfig}
+            labelById={labelById}
+            onClose={() => setEditMatch(null)}
+          />
+        ) : (
+          <V2ScoreEntryDialog
+            match={editMatch}
+            modalityId={modalityId}
+            scoringConfig={scoringConfig}
+            labelById={labelById}
+            onClose={() => setEditMatch(null)}
+          />
+        )
       )}
     </>
   );
@@ -296,6 +309,96 @@ function V2ScoreEntryDialog({ match, modalityId, scoringConfig, labelById, onClo
   );
 }
 
+/**
+ * CourtsideScoreDialog — placar em tela cheia para o mesário (flag
+ * courtside_scoring). Botões grandes +1/−1 por lado e set; WO; reaproveita a
+ * mesma gravação (useRecordMatchResult) e o mesmo payload do diálogo padrão.
+ */
+function CourtsideScoreDialog({ match, modalityId, scoringConfig, labelById, onClose }) {
+  const setsCount = scoringConfig?.sets_per_match || 1;
+  const [games, setGames] = useState(() => {
+    const initial = match.games?.length ? [...match.games] : [];
+    while (initial.length < setsCount) initial.push({ a: 0, b: 0 });
+    return initial.slice(0, setsCount).map((g) => ({ a: Number(g.a) || 0, b: Number(g.b) || 0 }));
+  });
+  const [walkover, setWalkover] = useState(match.walkover || '');
+  const recordMutation = useRecordMatchResult(modalityId, scoringConfig);
+
+  const sideA = match.side_a_ids?.map((id) => labelById.get(id) || id).join(' + ') || match.side_a || 'Lado A';
+  const sideB = match.side_b_ids?.map((id) => labelById.get(id) || id).join(' + ') || match.side_b || 'Lado B';
+
+  const bump = (setIdx, side, delta) => setGames((arr) => arr.map((g, i) => (
+    i === setIdx ? { ...g, [side]: Math.max(0, (Number(g[side]) || 0) + delta) } : g
+  )));
+
+  async function handleSave() {
+    try {
+      const payload = walkover
+        ? { walkover, games: [] }
+        : { walkover: null, games: games.map((g) => ({ a: Number(g.a) || 0, b: Number(g.b) || 0 })) };
+      await recordMutation.mutateAsync({ matchId: match.id, payload });
+      toast.success('Resultado lançado.');
+      onClose();
+    } catch (err) {
+      toast.error(err?.message || 'Falha ao salvar.');
+    }
+  }
+
+  const ScoreCol = ({ name, side }) => (
+    <div className="flex flex-1 flex-col items-center gap-4">
+      <div className="text-center text-lg font-bold text-white sm:text-2xl">{name}</div>
+      {games.map((g, i) => (
+        <div key={i} className="flex flex-col items-center gap-2">
+          {setsCount > 1 && <span className="text-xs uppercase tracking-widest text-white/50">Set {i + 1}</span>}
+          <div className="font-display text-6xl font-bold text-acid tabular-nums sm:text-7xl">{g[side]}</div>
+          <div className="flex gap-2">
+            <button type="button" onClick={() => bump(i, side, -1)}
+              className="flex h-12 w-12 items-center justify-center rounded-2xl bg-white/10 text-2xl font-bold text-white hover:bg-white/20">−</button>
+            <button type="button" onClick={() => bump(i, side, 1)}
+              className="flex h-12 w-12 items-center justify-center rounded-2xl bg-acid text-2xl font-bold text-ink hover:brightness-95">+</button>
+          </div>
+        </div>
+      ))}
+    </div>
+  );
+
+  return (
+    <div className="fixed inset-0 z-50 flex flex-col bg-ink p-4 sm:p-8">
+      <div className="flex items-center justify-between">
+        <span className="text-sm font-bold uppercase tracking-widest text-acid">Placar courtside</span>
+        <button onClick={onClose} className="rounded-full p-2 text-white/70 hover:bg-white/10 hover:text-white" aria-label="Fechar">
+          <X className="h-6 w-6" />
+        </button>
+      </div>
+
+      {!walkover ? (
+        <div className="flex flex-1 items-center justify-center gap-4 sm:gap-12">
+          <ScoreCol name={sideA} side="a" />
+          <span className="text-3xl font-bold text-white/30">×</span>
+          <ScoreCol name={sideB} side="b" />
+        </div>
+      ) : (
+        <div className="flex flex-1 items-center justify-center">
+          <p className="text-2xl font-bold text-white">
+            WO — vitória de {walkover === 'a' ? sideA : sideB}
+          </p>
+        </div>
+      )}
+
+      <div className="flex flex-wrap items-center justify-center gap-2">
+        <button type="button" onClick={() => setWalkover(walkover === 'a' ? '' : 'a')}
+          className={cn('rounded-full px-4 py-2 text-sm font-bold', walkover === 'a' ? 'bg-acid text-ink' : 'bg-white/10 text-white')}>WO Lado A</button>
+        <button type="button" onClick={() => setWalkover(walkover === 'b' ? '' : 'b')}
+          className={cn('rounded-full px-4 py-2 text-sm font-bold', walkover === 'b' ? 'bg-acid text-ink' : 'bg-white/10 text-white')}>WO Lado B</button>
+        <button type="button" onClick={handleSave} disabled={recordMutation.isPending}
+          className="rounded-full bg-acid px-8 py-2 text-sm font-bold text-ink disabled:opacity-60">
+          {recordMutation.isPending ? 'Salvando…' : 'Salvar resultado'}
+        </button>
+      </div>
+    </div>
+  );
+}
+
 export function V2ModalityMatches({ tournament, modality, isAdmin = false }) {
   const { data: matches = [] } = useAllModalityMatches(modality.id);
   const { data: registrations = [] } = useRegistrations(modality.id);
@@ -332,10 +435,25 @@ export function V2ModalityMatches({ tournament, modality, isAdmin = false }) {
   const doneCount = matches.filter((m) => m.status === MATCH_STATUS.FINISHED || m.status === MATCH_STATUS.WALKOVER).length;
   const subtitle = matches.length === 0 ? 'Nenhum jogo gerado ainda' : `${doneCount}/${matches.length} jogos concluídos`;
 
+  const bracketTreeOn = useFeatureFlag(FEATURE_FLAG.BRACKET_TREE);
+  const hasBracket = useMemo(() => buildBracketColumns(matches).columns.length > 0, [matches]);
+  const [treeView, setTreeView] = useState(false);
+  const showTree = bracketTreeOn && hasBracket && treeView;
+
   return (
     <V2Collapsible title={<span className="inline-flex items-center gap-2"><Swords className="h-4 w-4 text-ink" /> {modality.name}</span>} subtitle={subtitle}>
+      {bracketTreeOn && hasBracket && matches.length > 0 && (
+        <div className="mb-3 inline-flex gap-1 rounded-full border border-gray-100 bg-paper-pure p-1">
+          <button type="button" onClick={() => setTreeView(false)}
+            className={cn('rounded-full px-3 py-1 text-xs font-bold', !treeView ? 'bg-ink text-white' : 'text-gray-500')}>Lista</button>
+          <button type="button" onClick={() => setTreeView(true)}
+            className={cn('rounded-full px-3 py-1 text-xs font-bold', treeView ? 'bg-ink text-white' : 'text-gray-500')}>Chave (árvore)</button>
+        </div>
+      )}
       {matches.length === 0 ? (
         <p className="text-sm text-gray-500">Nenhum jogo gerado ainda.</p>
+      ) : showTree ? (
+        <V2BracketTree matches={matches} labelById={labelById} />
       ) : (
         <div className="space-y-3">
           {byStage.map(([stageIndex, stageMatches]) => {

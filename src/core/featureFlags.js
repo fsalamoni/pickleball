@@ -452,6 +452,160 @@ export const FEATURE_FLAG = Object.freeze({
    * clubes vinculados. Aditivo.
    */
   LINKED_CLUBS: 'linked_clubs',
+
+  /**
+   * Exportar para o calendário (ICS): botão que baixa um arquivo .ics do jogo,
+   * do torneio ou da reserva/aula, importável no Google/Apple/Outlook Calendar.
+   * Puro no cliente (gera o .ics), sem backend. Aditivo — desligado, os botões
+   * ficam ocultos.
+   */
+  CALENDAR_EXPORT: 'calendar_export',
+
+  /**
+   * Exportar inscrições em CSV: na gestão do torneio, botão que baixa a lista
+   * de inscritos (nome, contato, modalidade, dupla, status, valor) em CSV com
+   * BOM (abre certo no Excel pt-BR). Aditivo — desligado, o botão fica oculto.
+   */
+  REGISTRATIONS_CSV: 'registrations_csv',
+
+  /**
+   * Página 404 interna: quando uma rota não existe, mostra uma página amigável
+   * com atalhos, em vez de redirecionar silenciosamente para a home. Aditivo —
+   * desligada, o comportamento atual (redirect para /) é mantido.
+   */
+  NOT_FOUND_PAGE: 'not_found_page',
+
+  /**
+   * Formatos do Game Day: além do Americano (atual), habilita Mexicano (rodadas
+   * com pareamento 1&4 vs 2&3 e rotação) e Rei da Quadra (rodadas por resultado,
+   * vencedores sobem e perdedores descem de quadra). Aditivo — desligada, o
+   * sorteio segue só no Americano.
+   */
+  GAMEDAY_FORMATS: 'gameday_formats',
+
+  /**
+   * Ranking de duplas: página que classifica as PARCERIAS (dois atletas juntos)
+   * por vitórias e aproveitamento, a partir dos jogos de duplas finalizados.
+   * Aditivo — desligada, a rota e o link ficam ocultos.
+   */
+  DOUBLES_RANKING: 'doubles_ranking',
+
+  /**
+   * Agenda "Meus jogos": página que reúne os próximos jogos do atleta e o
+   * histórico de partidas, com filtros. Aditivo — desligada, a rota e o link
+   * ficam ocultos (o card do painel atual segue como está).
+   */
+  ATHLETE_AGENDA: 'athlete_agenda',
+
+  /**
+   * Modo Telão/TV do torneio: página em tela cheia (fundo escuro, tipografia
+   * grande, auto-rotação) com jogos em andamento, próximos chamados e resultados
+   * recentes — para exibir num telão no evento. Rota pública /torneios/:id/telao.
+   * Aditivo — desligada, a rota e o link ficam ocultos.
+   */
+  TOURNAMENT_TV_MODE: 'tournament_tv_mode',
+
+  /**
+   * Modelos de torneio: o organizador marca um torneio como "modelo" e cria
+   * novos torneios a partir dele (copiando definições e modalidades, sem
+   * inscritos), reaproveitando a duplicação. Aditivo — desligada, o botão de
+   * marcar modelo e a opção "criar a partir de modelo" ficam ocultos.
+   */
+  TOURNAMENT_TEMPLATES: 'tournament_templates',
+
+  /**
+   * Política de cancelamento da arena: a arena define um prazo (horas antes) para
+   * cancelamento sem atrito; ao cancelar fora do prazo, o sistema avisa que é um
+   * cancelamento tardio. Sem cobrança de taxa (isso depende de gateway — fora do
+   * escopo). Aditivo — desligada, o cancelamento segue como hoje.
+   */
+  CANCELLATION_POLICY: 'cancellation_policy',
+
+  /**
+   * Registro de no-show: a arena marca uma reserva confirmada/concluída como
+   * "não compareceu", com um contador por cliente. Aditivo — desligada, o
+   * marcador e o contador ficam ocultos.
+   */
+  NO_SHOW_TRACKING: 'no_show_tracking',
+
+  /**
+   * Parceria mútua professor↔arena: quando a arena adiciona um professor como
+   * parceiro, o vínculo fica "pendente" até o professor aceitar (ou recusar).
+   * Só aparece publicamente após o aceite. Aditivo — desligada, o vínculo entra
+   * ativo direto (comportamento atual).
+   */
+  PARTNERSHIP_MUTUAL: 'partnership_mutual',
+
+  /**
+   * Ranking interno do clube: agrega os resultados dos jogos dos dias de jogo do
+   * clube num ranking casual (vitórias, saldo, aproveitamento), separado do
+   * ranking nacional. Aditivo — desligada, a aba/seção fica oculta.
+   */
+  CLUB_INTERNAL_RANKING: 'club_internal_ranking',
+
+  /**
+   * Página de configurações (/configuracoes): reúne atalhos de conta e a
+   * exportação de dados pessoais (LGPD) num arquivo JSON. Aditivo — desligada, a
+   * rota e o link ficam ocultos.
+   */
+  SETTINGS_PAGE: 'settings_page',
+
+  /**
+   * Busca global federada: uma página de busca que procura em atletas, torneios,
+   * arenas e clubes ao mesmo tempo, agrupando por tipo. Aditivo — desligada, a
+   * busca do topo segue indo para o diretório de atletas.
+   */
+  GLOBAL_SEARCH: 'global_search',
+
+  /**
+   * CRM leve da arena: consolida os clientes a partir das reservas (nº de
+   * reservas, última reserva, valor acordado somado, no-shows), para a arena
+   * conhecer e contatar seus frequentadores. Aditivo — desligada, a aba fica
+   * oculta.
+   */
+  ARENA_CRM: 'arena_crm',
+
+  /**
+   * Convite de clube por link: o admin copia um link que já leva o código de
+   * convite; quem abre o link entra na tela do clube com o código preenchido.
+   * Aditivo — desligada, o botão some e o ingresso por código segue manual.
+   */
+  CLUB_INVITE_LINK: 'club_invite_link',
+
+  /**
+   * SEO das páginas públicas: define título, meta description e tags Open Graph
+   * (título/descrição/imagem) dinâmicos nas páginas públicas (torneio etc.),
+   * melhorando o preview em links e buscadores. Aditivo — desligada, nada muda.
+   */
+  PUBLIC_SEO: 'public_seo',
+
+  /**
+   * Lista de espera de reservas: quando um horário está ocupado, o atleta pode
+   * pedir para ser avisado se vagar; a arena vê a lista por horário e contata.
+   * Aditivo — desligada, o botão e a lista ficam ocultos.
+   */
+  BOOKING_WAITLIST: 'booking_waitlist',
+
+  /**
+   * Placar courtside: lançamento de resultado em tela cheia, com botões grandes
+   * +1/−1 por lado e set, otimizado para o mesário na beira da quadra. Reaproveita
+   * a mesma gravação do fluxo atual. Aditivo — desligada, usa o diálogo atual.
+   */
+  COURTSIDE_SCORING: 'courtside_scoring',
+
+  /**
+   * Árvore visual de chaves: mostra o mata-mata (chave dos vencedores) como
+   * colunas por rodada com os confrontos, em vez de tabela. Aditivo — desligada,
+   * a visualização atual (tabela) é mantida.
+   */
+  BRACKET_TREE: 'bracket_tree',
+
+  /**
+   * Eventos recorrentes de clube: ao adicionar uma data/dia de jogo, é possível
+   * repeti-la semanalmente por N semanas, criando todas as datas de uma vez.
+   * Aditivo — desligada, cada data é criada individualmente (comportamento atual).
+   */
+  CLUB_RECURRING_EVENTS: 'club_recurring_events',
 });
 
 /** Metadados de exibição para o painel de flags (admin master). */
@@ -848,6 +1002,147 @@ export const FEATURE_FLAG_META = Object.freeze({
       'Permite a professores e arenas criar ou vincular clubes próprios (para '
       + 'eventos, times e treinos). As páginas pública e admin exibem os clubes '
       + 'apenas quando houver clubes vinculados. Aditivo.',
+  },
+  [FEATURE_FLAG.CALENDAR_EXPORT]: {
+    label: 'Exportar para o calendário (ICS)',
+    description:
+      'Habilita botões que baixam um arquivo .ics (evento de calendário) do '
+      + 'jogo, torneio ou reserva/aula, importável no Google, Apple e Outlook '
+      + 'Calendar. Funciona no cliente, sem backend. Desligado, os botões somem.',
+  },
+  [FEATURE_FLAG.REGISTRATIONS_CSV]: {
+    label: 'Exportar inscrições em CSV',
+    description:
+      'Na gestão do torneio, adiciona um botão para baixar a lista de inscritos '
+      + '(nome, contato, modalidade, dupla, status e valor) em CSV compatível '
+      + 'com Excel pt-BR. Desligado, o botão fica oculto.',
+  },
+  [FEATURE_FLAG.NOT_FOUND_PAGE]: {
+    label: 'Página 404 interna',
+    description:
+      'Quando uma rota não existe, mostra uma página amigável com atalhos em vez '
+      + 'de redirecionar silenciosamente para a home. Desligada, mantém o '
+      + 'comportamento atual (redirect para /).',
+  },
+  [FEATURE_FLAG.GAMEDAY_FORMATS]: {
+    label: 'Formatos do Game Day (Mexicano e Rei da Quadra)',
+    description:
+      'No sorteio do dia de jogo do clube, permite escolher o formato: Americano '
+      + '(atual), Mexicano (pareamento 1&4 vs 2&3 com rotação entre rodadas) ou '
+      + 'Rei da Quadra (rodadas por resultado — vencedores sobem, perdedores '
+      + 'descem de quadra). Desligada, o sorteio segue só no Americano.',
+  },
+  [FEATURE_FLAG.DOUBLES_RANKING]: {
+    label: 'Ranking de duplas',
+    description:
+      'Página que classifica as parcerias (dois atletas jogando juntos) por '
+      + 'vitórias e aproveitamento, a partir dos jogos de duplas finalizados. '
+      + 'Desligada, a rota e o link ficam ocultos.',
+  },
+  [FEATURE_FLAG.ATHLETE_AGENDA]: {
+    label: 'Agenda "Meus jogos"',
+    description:
+      'Página que reúne os próximos jogos do atleta e o histórico de partidas, '
+      + 'com filtros. Desligada, a rota e o link ficam ocultos.',
+  },
+  [FEATURE_FLAG.TOURNAMENT_TV_MODE]: {
+    label: 'Modo Telão/TV do torneio',
+    description:
+      'Página em tela cheia (fundo escuro, tipografia grande, auto-rotação) com '
+      + 'jogos em andamento, próximos chamados e resultados recentes, para exibir '
+      + 'num telão no evento. Desligada, a rota e o link ficam ocultos.',
+  },
+  [FEATURE_FLAG.TOURNAMENT_TEMPLATES]: {
+    label: 'Modelos de torneio',
+    description:
+      'Permite marcar um torneio como modelo e criar novos torneios a partir '
+      + 'dele (copiando definições e modalidades, sem inscritos). Desligada, o '
+      + 'botão de modelo e a opção "criar a partir de modelo" ficam ocultos.',
+  },
+  [FEATURE_FLAG.CANCELLATION_POLICY]: {
+    label: 'Política de cancelamento da arena',
+    description:
+      'A arena define um prazo (horas antes) para cancelamento sem atrito; '
+      + 'cancelamentos fora do prazo recebem um aviso de cancelamento tardio. '
+      + 'Sem cobrança de taxa. Desligada, o cancelamento segue como hoje.',
+  },
+  [FEATURE_FLAG.NO_SHOW_TRACKING]: {
+    label: 'Registro de no-show (arena)',
+    description:
+      'Permite à arena marcar uma reserva como "não compareceu" e ver um '
+      + 'contador por cliente. Desligada, o marcador e o contador ficam ocultos.',
+  },
+  [FEATURE_FLAG.PARTNERSHIP_MUTUAL]: {
+    label: 'Parceria mútua professor↔arena',
+    description:
+      'Quando a arena adiciona um professor, o vínculo fica pendente até o '
+      + 'professor aceitar (ou recusar); só aparece publicamente após o aceite. '
+      + 'Desligada, o vínculo entra ativo direto (comportamento atual).',
+  },
+  [FEATURE_FLAG.CLUB_INTERNAL_RANKING]: {
+    label: 'Ranking interno do clube',
+    description:
+      'Agrega os resultados dos jogos dos dias de jogo do clube num ranking '
+      + 'casual (vitórias, saldo, aproveitamento), separado do ranking nacional. '
+      + 'Desligada, a aba fica oculta.',
+  },
+  [FEATURE_FLAG.SETTINGS_PAGE]: {
+    label: 'Página de configurações + exportar dados (LGPD)',
+    description:
+      'Página /configuracoes com atalhos de conta e a exportação dos dados '
+      + 'pessoais do usuário (perfil, inscrições, reservas) em JSON. Desligada, '
+      + 'a rota e o link ficam ocultos.',
+  },
+  [FEATURE_FLAG.GLOBAL_SEARCH]: {
+    label: 'Busca global federada',
+    description:
+      'Página de busca que procura em atletas, torneios, arenas e clubes ao '
+      + 'mesmo tempo, agrupando por tipo. Desligada, a busca do topo segue indo '
+      + 'para o diretório de atletas.',
+  },
+  [FEATURE_FLAG.ARENA_CRM]: {
+    label: 'CRM leve da arena',
+    description:
+      'Consolida os clientes da arena a partir das reservas (nº de reservas, '
+      + 'última reserva, valor somado, no-shows). Desligada, a aba fica oculta.',
+  },
+  [FEATURE_FLAG.CLUB_INVITE_LINK]: {
+    label: 'Convite de clube por link',
+    description:
+      'O admin copia um link que já leva o código de convite; quem abre entra na '
+      + 'tela do clube com o código preenchido. Desligada, o botão some.',
+  },
+  [FEATURE_FLAG.PUBLIC_SEO]: {
+    label: 'SEO das páginas públicas',
+    description:
+      'Define título, meta description e tags Open Graph dinâmicos nas páginas '
+      + 'públicas (torneio etc.), melhorando o preview em links e buscadores. '
+      + 'Desligada, nada muda.',
+  },
+  [FEATURE_FLAG.BOOKING_WAITLIST]: {
+    label: 'Lista de espera de reservas',
+    description:
+      'Quando um horário está ocupado, o atleta pede para ser avisado se vagar; '
+      + 'a arena vê a lista por horário. Desligada, o botão e a lista ficam ocultos.',
+  },
+  [FEATURE_FLAG.COURTSIDE_SCORING]: {
+    label: 'Placar courtside',
+    description:
+      'Lançamento de resultado em tela cheia, com botões grandes +1/−1 por lado e '
+      + 'set, para o mesário na beira da quadra. Reaproveita a mesma gravação. '
+      + 'Desligada, usa o diálogo de placar atual.',
+  },
+  [FEATURE_FLAG.BRACKET_TREE]: {
+    label: 'Árvore visual de chaves',
+    description:
+      'Mostra o mata-mata (chave dos vencedores) como colunas por rodada com os '
+      + 'confrontos, em vez de tabela. Desligada, mantém a visualização atual.',
+  },
+  [FEATURE_FLAG.CLUB_RECURRING_EVENTS]: {
+    label: 'Eventos recorrentes de clube',
+    description:
+      'Ao adicionar uma data/dia de jogo, permite repeti-la semanalmente por N '
+      + 'semanas, criando todas de uma vez. Desligada, cada data é criada uma a uma.',
   },
 });
 

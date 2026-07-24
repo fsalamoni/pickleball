@@ -3,12 +3,16 @@ import { Link, Navigate, useNavigate, useParams, useSearchParams } from 'react-r
 import { toast } from 'sonner';
 import {
   ArrowLeft, Building2, CalendarDays, Hash, Mail, MapPin, MessageSquare,
-  MessagesSquare, Phone, Settings, Users,
+  MessagesSquare, Phone, Settings, Users, Medal, Share2,
 } from 'lucide-react';
 import {
   useClub, useMyMembership, useJoinClub, useLeaveClub, useMyJoinRequest,
   useRequestToJoinClub, useMyClubInvite, useAcceptClubInvite, useDeclineClubInvite,
+  useClubGameResults,
 } from '@/modules/clubs/hooks/useClubs';
+import { computeClubRanking } from '@/modules/clubs/domain/clubRanking';
+import { useFeatureFlag } from '@/core/lib/FeatureFlagsContext';
+import { FEATURE_FLAG } from '@/core/featureFlags';
 import { CLUB_ROLE, JOIN_REQUEST_STATUS } from '@/modules/clubs/domain/constants';
 import V2ClubMembers from '@/v2/components/clubs/V2ClubMembers';
 import V2ClubEvents from '@/v2/components/clubs/V2ClubEvents';
@@ -32,8 +36,10 @@ export default function V2ClubDetail() {
   const requestToJoin = useRequestToJoinClub();
   const acceptInvite = useAcceptClubInvite(clubId);
   const declineInvite = useDeclineClubInvite(clubId);
-  const [code, setCode] = useState('');
+  const clubRankingOn = useFeatureFlag(FEATURE_FLAG.CLUB_INTERNAL_RANKING);
+  const inviteLinkOn = useFeatureFlag(FEATURE_FLAG.CLUB_INVITE_LINK);
   const [searchParams, setSearchParams] = useSearchParams();
+  const [code, setCode] = useState(() => (inviteLinkOn ? (searchParams.get('invite') || '') : ''));
   const activeTab = searchParams.get('tab') || 'members';
   const threadParam = searchParams.get('thread') || null;
 
@@ -108,11 +114,13 @@ export default function V2ClubDetail() {
   const tabs = [
     { value: 'members', label: 'Membros', icon: Users },
     { value: 'events', label: 'Eventos', icon: CalendarDays },
+    ...(clubRankingOn ? [{ value: 'ranking', label: 'Ranking', icon: Medal }] : []),
     { value: 'feed', label: 'Mural', icon: MessageSquare },
     { value: 'forums', label: 'Fóruns', icon: MessagesSquare },
     ...(isAdmin ? [{ value: 'admin', label: 'Administração', icon: Settings }] : []),
   ];
-  const safeTab = activeTab === 'admin' && !isAdmin ? 'members' : activeTab;
+  const safeTab = (activeTab === 'admin' && !isAdmin) || (activeTab === 'ranking' && !clubRankingOn)
+    ? 'members' : activeTab;
 
   return (
     <div className="mx-auto max-w-[1100px]">
@@ -140,11 +148,24 @@ export default function V2ClubDetail() {
               )}
             </div>
           </div>
-          {isMember && (
-            <V2Button variant="ghost" size="sm" onClick={handleLeave} className="border-white/20 bg-white/10 text-white hover:border-white/40">
-              Sair do clube
-            </V2Button>
-          )}
+          <div className="flex flex-col items-end gap-2">
+            {inviteLinkOn && isAdmin && club.invite_code && (
+              <V2Button variant="ghost" size="sm" className="border-white/20 bg-white/10 text-white hover:border-white/40"
+                onClick={() => {
+                  const link = `${window.location.origin}/clubes/${club.id}?invite=${encodeURIComponent(club.invite_code)}`;
+                  navigator.clipboard?.writeText(link)
+                    .then(() => toast.success('Link de convite copiado!'))
+                    .catch(() => toast.error('Não foi possível copiar.'));
+                }}>
+                <Share2 className="h-4 w-4" /> Copiar link de convite
+              </V2Button>
+            )}
+            {isMember && (
+              <V2Button variant="ghost" size="sm" onClick={handleLeave} className="border-white/20 bg-white/10 text-white hover:border-white/40">
+                Sair do clube
+              </V2Button>
+            )}
+          </div>
         </div>
 
         {club.description && <p className="relative z-10 mt-5 max-w-2xl whitespace-pre-wrap text-sm leading-7 text-gray-300">{club.description}</p>}
@@ -217,6 +238,7 @@ export default function V2ClubDetail() {
           <div className="mt-6">
             {safeTab === 'members' && <V2ClubMembers clubId={clubId} isAdmin={isAdmin} />}
             {safeTab === 'events' && <V2ClubEvents clubId={clubId} isAdmin={isAdmin} />}
+            {safeTab === 'ranking' && clubRankingOn && <ClubRankingTab clubId={clubId} />}
             {safeTab === 'feed' && <V2ClubFeed clubId={clubId} isAdmin={isAdmin} />}
             {safeTab === 'forums' && <V2ClubForums clubId={clubId} isAdmin={isAdmin} initialThreadId={threadParam} onThreadChange={setThreadParam} />}
             {safeTab === 'admin' && isAdmin && <V2ClubAdmin club={club} />}
@@ -224,6 +246,61 @@ export default function V2ClubDetail() {
         </>
       )}
     </div>
+  );
+}
+
+function ClubRankingTab({ clubId }) {
+  const { data: games = [], isLoading } = useClubGameResults(clubId, true);
+  const ranking = computeClubRanking(games);
+  if (isLoading) return <V2Skeleton className="h-48 rounded-4xl" />;
+  if (ranking.length === 0) {
+    return (
+      <V2Surface>
+        <V2EmptyState
+          icon={Medal}
+          title="Sem ranking ainda"
+          description="Registre placares nos dias de jogo do clube para montar o ranking interno."
+        />
+      </V2Surface>
+    );
+  }
+  return (
+    <V2Surface className="overflow-hidden p-0">
+      <div className="border-b border-gray-100 p-4">
+        <h3 className="font-display text-lg font-bold text-ink">Ranking interno</h3>
+        <p className="text-sm text-gray-500">Casual, a partir dos placares dos dias de jogo. Não afeta o ranking nacional.</p>
+      </div>
+      <div className="overflow-x-auto">
+        <table className="w-full text-sm">
+          <thead className="bg-paper text-left text-[11px] uppercase tracking-wide text-gray-500">
+            <tr>
+              <th className="px-4 py-3">#</th>
+              <th className="px-4 py-3">Atleta</th>
+              <th className="px-4 py-3 text-center">J</th>
+              <th className="px-4 py-3 text-center">V</th>
+              <th className="px-4 py-3 text-center">D</th>
+              <th className="px-4 py-3 text-center">Aprov.</th>
+              <th className="px-4 py-3 text-center">Saldo</th>
+            </tr>
+          </thead>
+          <tbody>
+            {ranking.map((r, i) => (
+              <tr key={r.id} className="border-t border-gray-100">
+                <td className="px-4 py-3 font-bold text-ink">{i === 0 ? '🥇' : i === 1 ? '🥈' : i === 2 ? '🥉' : i + 1}</td>
+                <td className="px-4 py-3 font-semibold text-ink">{r.name}</td>
+                <td className="px-4 py-3 text-center tabular-nums text-gray-600">{r.games}</td>
+                <td className="px-4 py-3 text-center tabular-nums font-bold text-green-700">{r.wins}</td>
+                <td className="px-4 py-3 text-center tabular-nums text-gray-500">{r.losses}</td>
+                <td className="px-4 py-3 text-center tabular-nums">{Math.round(r.win_rate * 100)}%</td>
+                <td className={cn('px-4 py-3 text-center tabular-nums', r.points_balance > 0 ? 'text-green-700' : r.points_balance < 0 ? 'text-red-600' : 'text-gray-500')}>
+                  {r.points_balance > 0 ? `+${r.points_balance}` : r.points_balance}
+                </td>
+              </tr>
+            ))}
+          </tbody>
+        </table>
+      </div>
+    </V2Surface>
   );
 }
 

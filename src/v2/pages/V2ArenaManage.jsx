@@ -35,14 +35,16 @@ import {
   useArenaManagers, useAddManager, useRemoveManager,
 } from '@/modules/arenas/hooks/useArenas';
 import { useArenaBookings } from '@/modules/arenas/hooks/useBookings';
-import { V2Badge, V2Button, V2Field, V2Input, V2Skeleton, V2Surface } from '@/v2/ui/primitives';
+import { buildArenaClients, arenaCrmSummary } from '@/modules/arenas/domain/arena_crm';
+import { formatPrice } from '@/modules/arenas/domain/pricing';
+import { V2Badge, V2Button, V2EmptyState, V2Field, V2Input, V2Skeleton, V2StatCard, V2Surface } from '@/v2/ui/primitives';
 import { cn } from '@/core/lib/utils';
 
 // Navegação em dois níveis do admin da arena. Ordem = ciclo de vida, do
 // início ao fim: identidade → estrutura/preços → reservas → comercial →
 // resultados → equipe/parceiros. Cada seção agrupa sub-abas por tema.
 // `coachResidentOn` injeta a aba de professores parceiros na seção de equipe.
-function buildArenaSections({ coachResidentOn, linkedClubsOn }) {
+function buildArenaSections({ coachResidentOn, linkedClubsOn, crmOn }) {
   return [
     {
       id: 'perfil',
@@ -71,6 +73,7 @@ function buildArenaSections({ coachResidentOn, linkedClubsOn }) {
         { value: 'reservas', label: 'Solicitações', icon: CalendarClock },
         { value: 'calendario', label: 'Calendário', icon: CalendarDays },
         { value: 'calendario-admin', label: 'Reservas (admin)', icon: CalendarRange },
+        ...(crmOn ? [{ value: 'clientes', label: 'Clientes', icon: Users }] : []),
       ],
     },
     {
@@ -157,6 +160,7 @@ function V2ArenaManageContent({ arenaId, user, isPlatformAdmin, arena, managed, 
 
   const coachResidentOn = useFeatureFlag(FEATURE_FLAG.COACH_RESIDENT);
   const linkedClubsOn = useFeatureFlag(FEATURE_FLAG.LINKED_CLUBS);
+  const crmOn = useFeatureFlag(FEATURE_FLAG.ARENA_CRM);
   // Lembra a última sub-aba visitada em cada seção principal.
   const [sectionMemory, setSectionMemory] = useState({});
 
@@ -181,7 +185,7 @@ function V2ArenaManageContent({ arenaId, user, isPlatformAdmin, arena, managed, 
   // com suas sub-abas. Ordem = ciclo de vida da arena, do início ao fim:
   // identidade → estrutura/preços → reservas (operação) → dinheiro →
   // resultados → equipe.
-  const sections = buildArenaSections({ coachResidentOn, linkedClubsOn });
+  const sections = buildArenaSections({ coachResidentOn, linkedClubsOn, crmOn });
   const activeSectionId = sections.find((s) => s.tabs.some((t) => t.value === tab))?.id
     || sections[0].id;
   const activeSection = sections.find((s) => s.id === activeSectionId) || sections[0];
@@ -277,6 +281,7 @@ function V2ArenaManageContent({ arenaId, user, isPlatformAdmin, arena, managed, 
         {tab === 'reservas' && <BookingsTab arena={arena} />}
         {tab === 'calendario' && <V2ArenaCalendar arena={arena} />}
         {tab === 'calendario-admin' && <V2AdminBookingCalendar arenaId={arena.id} />}
+        {tab === 'clientes' && crmOn && <ArenaCrmTab arenaId={arena.id} />}
         {tab === 'pagamento' && <V2ArenaPaymentTab />}
         {tab === 'regras' && <V2ArenaRulesTab />}
         {tab === 'mercado' && <V2ArenaMercadoTab />}
@@ -289,6 +294,63 @@ function V2ArenaManageContent({ arenaId, user, isPlatformAdmin, arena, managed, 
         {tab === 'clubes' && linkedClubsOn && <LinkedClubsSection ownerType="arena" ownerId={arena.id} canManage title="Clubes da arena" />}
         {tab === 'retornos' && <V2ArenaReviews arena={arena} canModerate />}
       </div>
+    </div>
+  );
+}
+
+function ArenaCrmTab({ arenaId }) {
+  const { data: bookings = [], isLoading } = useArenaBookings(arenaId);
+  const clients = React.useMemo(() => buildArenaClients(bookings), [bookings]);
+  const summary = React.useMemo(() => arenaCrmSummary(clients), [clients]);
+
+  if (isLoading) return <V2Skeleton lines={5} />;
+  if (clients.length === 0) {
+    return (
+      <V2Surface>
+        <V2EmptyState icon={Users} title="Sem clientes ainda" description="Quando houver reservas, seus clientes aparecem aqui com histórico e valores." />
+      </V2Surface>
+    );
+  }
+
+  return (
+    <div className="space-y-4">
+      <div className="grid grid-cols-2 gap-3 sm:grid-cols-4">
+        <V2StatCard label="Clientes" value={summary.clients} />
+        <V2StatCard label="Reservas" value={summary.bookings} />
+        <V2StatCard label="Valor acordado" value={formatPrice(summary.revenue)} />
+        <V2StatCard label="No-shows" value={summary.no_shows} />
+      </div>
+      <V2Surface className="overflow-hidden p-0">
+        <div className="overflow-x-auto">
+          <table className="w-full text-sm">
+            <thead className="bg-paper text-left text-[11px] uppercase tracking-wide text-gray-500">
+              <tr>
+                <th className="px-4 py-3">Cliente</th>
+                <th className="px-4 py-3 text-center">Reservas</th>
+                <th className="px-4 py-3 text-center">Confirmadas</th>
+                <th className="px-4 py-3 text-center">No-show</th>
+                <th className="px-4 py-3 text-right">Valor</th>
+                <th className="px-4 py-3">Última</th>
+              </tr>
+            </thead>
+            <tbody>
+              {clients.map((c) => (
+                <tr key={c.key} className="border-t border-gray-100">
+                  <td className="px-4 py-3 font-semibold text-ink">
+                    {c.athlete_id ? <Link to={`/atletas/${c.athlete_id}`} className="hover:underline">{c.name}</Link> : c.name}
+                    {!c.athlete_id && <span className="ml-1 text-xs text-gray-400">· avulso</span>}
+                  </td>
+                  <td className="px-4 py-3 text-center tabular-nums">{c.bookings}</td>
+                  <td className="px-4 py-3 text-center tabular-nums text-green-700">{c.confirmed}</td>
+                  <td className="px-4 py-3 text-center tabular-nums">{c.no_shows > 0 ? <V2Badge tone="amber">{c.no_shows}</V2Badge> : '—'}</td>
+                  <td className="px-4 py-3 text-right tabular-nums">{c.total_value > 0 ? formatPrice(c.total_value) : '—'}</td>
+                  <td className="px-4 py-3 text-gray-500">{c.last_date || '—'}</td>
+                </tr>
+              ))}
+            </tbody>
+          </table>
+        </div>
+      </V2Surface>
     </div>
   );
 }

@@ -348,6 +348,19 @@ export async function deleteBooking(booking, actor) {
 }
 
 /**
+ * Marca/desmarca uma reserva como "não compareceu" (no-show). Ação da arena
+ * (via regras Firestore). Campo aditivo `no_show` — desligada a flag no cliente,
+ * o marcador some, mas o dado persiste.
+ */
+export async function setBookingNoShow(booking, actor, isNoShow) {
+  await updateDoc(doc(db, COL.bookings, booking.id), {
+    no_show: isNoShow === true,
+    updated_at: serverTimestamp(),
+  });
+  await createAuditLog({ action: 'arena_booking_no_show', actor, details: { booking_id: booking.id, no_show: isNoShow === true } });
+}
+
+/**
  * Altera o horário/quadra de uma reserva avulsa. Serve ao atleta/professor (na
  * própria reserva) e à arena (em qualquer). Valida conflito. Quando editada por
  * quem NÃO é gestor e a reserva já estava confirmada, volta para "solicitada"

@@ -1,6 +1,8 @@
 import React, { Suspense, lazy } from 'react';
 import { Navigate, Route, Routes } from 'react-router-dom';
 import { useAuth } from '@/core/lib/FirebaseAuthContext';
+import { useFeatureFlag } from '@/core/lib/FeatureFlagsContext';
+import { FEATURE_FLAG } from '@/core/featureFlags';
 import V2Layout from '@/v2/components/V2Layout';
 
 // Páginas nativas v2 (design Athleisure Premium).
@@ -65,6 +67,11 @@ const V2ArenaOperations = lazy(() => import('@/v2/pages/V2ArenaOperations'));
 const V2ArenaAdvanced = lazy(() => import('@/v2/pages/V2ArenaAdvanced'));
 const V2EventDetail = lazy(() => import('@/v2/pages/V2EventDetail'));
 const V2AdminBootstrap = lazy(() => import('@/v2/pages/V2AdminBootstrap'));
+const V2NotFound = lazy(() => import('@/v2/pages/V2NotFound'));
+const V2DoublesRanking = lazy(() => import('@/v2/pages/V2DoublesRanking'));
+const V2MyGames = lazy(() => import('@/v2/pages/V2MyGames'));
+const V2Settings = lazy(() => import('@/v2/pages/V2Settings'));
+const V2Search = lazy(() => import('@/v2/pages/V2Search'));
 
 // Conteúdo de referência — nativo v2.
 const V2Rules = lazy(() => import('@/v2/pages/V2Rules'));
@@ -149,6 +156,7 @@ export default function V2App() {
 
           {/* Comunidade */}
           <Route path="atletas" element={<V2Athletes />} />
+          <Route path="buscar" element={<V2Search />} />
           <Route path="atleta/:uid" element={<V2AthleteProfile />} />
           <Route path="clubes" element={<V2Clubs />} />
           <Route path="clubes/criar" element={<V2CreateClub />} />
@@ -159,6 +167,8 @@ export default function V2App() {
 
           {/* Jogo e rating */}
           <Route path="ranking" element={<V2Ranking />} />
+          <Route path="ranking/duplas" element={<V2DoublesRanking />} />
+          <Route path="meus-jogos" element={<V2MyGames />} />
           <Route path="encontrar-jogadores" element={<V2FindPlayers />} />
           <Route path="procura-jogo" element={<V2OpenGames />} />
           <Route path="parceiros" element={<V2Partners />} />
@@ -167,6 +177,7 @@ export default function V2App() {
           <Route path="meu-desempenho" element={<V2Performance />} />
           <Route path="perfil" element={<V2Profile />} />
           <Route path="perfil/editar" element={<V2ProfileEdit />} />
+          <Route path="configuracoes" element={<V2Settings />} />
 
           {/* Conteúdo do esporte */}
           <Route path="regras" element={<V2Rules />} />
@@ -187,9 +198,18 @@ export default function V2App() {
           {/* V3 Bootstrap: liga flags da Arena V3 sem gate de feature flag */}
           <Route path="admin/v3-bootstrap" element={<V2AdminBootstrap />} />
 
-          <Route path="*" element={<Navigate to="/" replace />} />
+          <Route path="*" element={<NotFoundRoute />} />
         </Routes>
       </Suspense>
     </V2Layout>
   );
+}
+
+/**
+ * Rota catch-all: com a flag not_found_page ligada, mostra a página 404 interna;
+ * desligada, mantém o comportamento atual (redirect silencioso para /).
+ */
+function NotFoundRoute() {
+  const notFoundOn = useFeatureFlag(FEATURE_FLAG.NOT_FOUND_PAGE);
+  return notFoundOn ? <V2NotFound /> : <Navigate to="/" replace />;
 }
