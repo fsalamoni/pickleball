@@ -4,7 +4,7 @@
 > (`docs/ux-analysis/01–14`, `docs/arena-roadmap.md`, `docs/ARENA_V3/*`),
 > com uma **limpeza do que já foi implementado**. Este documento é a fonte
 > única de "o que ainda falta". Status apurado por: catálogo de flags
-> (`src/core/featureFlags.js`, 96 flags), trabalho desta branch e verificação
+> (`src/core/featureFlags.js`, 124 flags), trabalho desta branch e verificação
 > no código.
 
 Legenda: ✅ implementado · 🟡 parcial / a verificar · ⏳ pendente.
@@ -201,7 +201,7 @@ que pode se unificar foi unificado**. Pontos pertinentes ainda abertos:
   `prefers-reduced-motion`.
 - ⏳ **TRV-14** performance: paginação/virtualização de listas grandes; imagens
   responsivas com thumbs.
-- ⏳ **TRV-13 (flags)** matriz de dependência entre as 96 flags; bundles por
+- ⏳ **TRV-13 (flags)** matriz de dependência entre as 124 flags; bundles por
   persona.
 
 ---

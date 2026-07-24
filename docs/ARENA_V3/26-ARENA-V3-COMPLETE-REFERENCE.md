@@ -1,4 +1,4 @@
-# Arena V3 — Guia Rápido de Referência (2026-07-21)
+# Arena V3 — Guia Rápido de Referência (2026-07-24, sync com Sprints 6-10)
 
 > **TL;DR**: A Arena V3 está **100% deployada em produção**. Regras, índices, Cloud Functions, repositório GitHub — tudo no ar.
 
@@ -6,16 +6,19 @@
 
 ```
 ┌──────────────────────────────────────────────────────────────┐
-│  PickleRush Arena V3 — STATUS                                │
+│  PickleRush Arena V3 + Sprints 6-10 — STATUS (2026-07-24)  │
 │                                                              │
-│  ✅ Código: 11 sprints completas (1000+ features)            │
-│  ✅ Testes: 668/668 (100% verdes)                             │
+│  ✅ Código: 11 sprints Arena V3 + Sprints 6-10 (Sprints      │
+│     6 bugs + 7 calendar + 8 coach+shared + 8a admin +         │
+│     9 court grid + 10 backlog 10 ondas)                      │
+│  ✅ Testes: 1334+ (100% verdes)                              │
 │  ✅ Build: green, ~22s                                       │
-│  ✅ Firestore Rules: 17 novas collections deployadas         │
-│  ✅ Firestore Indexes: 11 novos compostos                    │
+│  ✅ Lint: 0 errors                                           │
+│  ✅ Firestore: 92 collections (era 39 no Sprint 0)           │
+│  ✅ Feature flags: 124 (era 30 no Sprint 0)                  │
 │  ✅ Cloud Functions: 5/5 deployadas (SP region)              │
-│  ✅ GitHub: main atualizado, branch V3 mergeada              │
-│  ⚠️ Front: precisa rebuild do hosting (próximo deploy CI)   │
+│  ✅ GitHub: main em 56dba26, deploy via GitHub Actions       │
+│  ✅ Bundle deployed: index-CJmY5B8O.js (PR #67, sw-v73.6)   │
 └──────────────────────────────────────────────────────────────┘
 ```
 
@@ -53,7 +56,7 @@ Localização: `src/v2/pages/`
 | 7 | V2ArenaOperations | `/arenas/:id/gerir/operacoes` |
 | 8-11 | V2ArenaAdvanced | `/arenas/:id/avancado` (4 tabs) |
 
-### Backend (17 coleções Firestore + 5 Cloud Functions)
+### Backend (35+ coleções Firestore V3 + 5 Cloud Functions)
 
 ```
 Firestore (antonov-82411 / pickleball DB)

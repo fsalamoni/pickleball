@@ -9,28 +9,47 @@
 > torneio (05-organizador), dia de jogo (06), professor (08), clubes (09) —
 > esses têm seu próprio roadmap.
 >
-> **Estado atual no repositório (origin/main @ 4e5ee58)**:
-> - Sprint 0 (Descoberta) ✅: `Minhas arenas` no sidebar (ARE-11), onboarding
->   4-passos (ARE-20), aba "Arenas" no admin/painel, QW-14/15
-> - Sprint 1 (Fundação) ✅: ARE-01 quadras, ARE-02 calendário, ARE-04
->   janelas de horário, ARE-05 preço por quadra, ARE-07 detecção de conflito
-> - Sprint 2 (Operação) ✅: ARE-06 PDV, ARE-08 painel de métricas,
->   ARE-03 reserva instantânea
-> - Sprint 3 (Engajamento) ✅: ARE-09 resposta de reviews, ARE-18
->   regras da casa (house rules)
-> - Sprint 4 (Integrações) ✅: ORG-20 circuitos, PRO-15 professores residentes,
+> **Estado atual no repositório (origin/main @ 56dba26)**:
+- Sprint 0 (Descoberta) ✅: `Minhas arenas` no sidebar (ARE-11), onboarding
+  4-passos (ARE-20), aba "Arenas" no admin/painel, QW-14/15
+- Sprint 1 (Fundação) ✅: ARE-01 quadras, ARE-02 calendário, ARE-04
+  janelas de horário, ARE-05 preço por quadra, ARE-07 detecção de conflito
+- Sprint 2 (Operação) ✅: ARE-06 PDV, ARE-08 painel de métricas,
+  ARE-03 reserva instantânea
+- Sprint 3 (Engajamento) ✅: ARE-09 resposta de reviews, ARE-18
+  regras da casa (house rules)
+- Sprint 4 (Integrações) ✅: ORG-20 circuitos, PRO-15 professores residentes,
   ARE-14 arena × torneio, ARE-15 arena × professor
 - Sprint 5 (Refinamento) ✅: HOTFIX ConfirmDialog, calendar interativo
   público+admin com auto-preço, pagamento PIX (QR+chave), regras
   estruturadas (lista por categoria), mercado/estoque (entrada+saída+margem)
-> - 18+ páginas V2Arena* no ar
-> - 13 services + 1 hook monolítico `useArenaV3.js` (749 linhas)
-> - 30 feature flags `ARENA_MODULE_*` (4-level gate)
-> - 39 firestore collections (Sprint 5: +3 inventory: products, entries, exits)
-> - `/admin/v3-bootstrap` (liga tudo de uma vez)
-> - Domínio de booking/pricing/calendar/court/court_schedule/booking_conflict
->   /instant_booking/arena_metrics/review_response **bem testado**
->   (11 arquivos de teste, 1020 tests passing — Sprint 5: +82)
+- **Sprint 6 (Bugs críticos)** ✅: PR #64 FeatureFlagGuard (substitui
+  redirect silencioso), PR #65 Calendar/Check/Copy lucide imports
+- **Sprint 7 (Quadras + calendário)** ✅: PR #66 V2CourtsTab cn + V2Select
+  options + **calendário MENSAL** com clique no dia (V2DaySlotsDialog),
+  PR #67 V2DaySlotsDialog com info de reservas + badges numéricos
+- **Sprint 8 (Professores + reservas compartilhadas + refino UX/UI)** ✅
+  (PR #68): shared-bookings (booking_type='coach_lesson', 'shared'),
+  linked-clubs, produto do professor (Fases A-D), coach-arena partner
+- **Sprint 8a (Admin + cancelar/alterar/transferir)** ✅ (PR #69): painel
+  admin 2 níveis, cancelar/alterar reservas, transferir responsável,
+  Arena V3 Boot embutido
+- **Sprint 9 (Reservas por quadra + rateio)** ✅ (PR #70): CourtDayGrid
+  (linhas=horários, colunas=quadras), toda reserva com court_id via
+  pickAvailableCourt, rateio inclui avulsos
+- **Sprint 10 (Backlog ~30 features)** ✅ (PR #71 + #72): 10 ondas com
+  sub-flags (ver §13 abaixo)
+- **23+ páginas V2Arena* no ar** (Sprint 7: +V2DaySlotsDialog, Sprint 8:
+  +V2ArenaCRM, +V2ArenaWaitlist, +V2ArenaCancellationPolicy)
+- 23 services + 1 hook monolítico `useArenaV3.js` (749 linhas)
+- **51 feature flags `ARENA_MODULE_*` + 73 flags normais = 124 totais**
+- **92 firestore collections** (Sprint 6-10: +53 — coach_*, shared,
+  waitlist, crm, cancellation, e todo o Arena V3 skeleton)
+- `/admin/v3-bootstrap` + `/admin/console` (liga tudo de uma vez)
+- Domínio de booking/pricing/calendar/court/court_schedule/booking_conflict
+  /instant_booking/arena_metrics/review_response/cancellation_policy/
+  arena_crm/booking_waitlist/court_assignment/shared_booking **bem testado**
+  (24+ arquivos de teste, **1334+ tests passing** — Sprint 6-10: +314)
 
 ---
 
@@ -558,3 +577,156 @@ Domain puro `instant_booking.js` + 19 tests. Integração no
 ### Próximos sprints
 - Sprint 3 (Engajamento): ARE-09 reviews, ARE-18 termos
 - Sprint 4 (Integrações): ARE-14/15 (depende ORG-20, PRO-15)
+
+---
+
+## 13. Sprints 6–10 (continuação, 2026-07-23 → 2026-07-24)
+
+> Atualizado em **2026-07-24** (origin/main @ `56dba26`). 9 PRs grandes
+> mergeados em outros ambientes paralelos (PRs #64-#72). Esta seção
+> documenta o que foi entregue e o que foi aprendido.
+
+### Sprint 6 — Bugs críticos (PRs #64, #65)
+
+**Tema**: tirar `ReferenceError`s e `redirect silencioso`.
+
+- **PR #64 / sw-v73.3** — `FeatureFlagGuard`
+  - **Problema**: páginas V2 (Arenas, ArenaDetail, ArenaManage, ArenaOnboarding,
+    CreateArena) faziam `if (!enabled) return <Navigate to="/" replace />`
+    quando flag `ARENAS` OFF (default). Resultado: user reportou "arenas
+    fora do ar" — era redirect silencioso para landing.
+  - **Solução**: novo `<FeatureFlagGuard flag= label= description=>` —
+    flag OFF mostra empty state com Flag icon + título + descrição +
+    botão "Ativar {label}" 1-click para platform_admin.
+  - **Aplicado em 5 pages V2 + V2Layout link "Explorar Quadras" sempre
+    visível para admin com tag "Off"**.
+  - Bônus: `getArena()` ganhou fallback case-insensitive.
+  - Bundle: `index-B0jHnHak.js` + `FeatureFlagGuard-DVrqH8Bm.js` (915B).
+- **PR #65 / sw-v73.4** — `lucide imports` em V2ArenaDetail
+  - **Problema**: PR #63 introduziu `<Calendar className="h-4 w-4" />`
+    mas esqueceu de adicionar `Calendar` no import. `ReferenceError:
+    Calendar is not defined` em runtime. Também faltavam `Check` e `Copy`
+    (não causavam erro imediato porque section faz early-return).
+  - **Solução**: 1 linha no import.
+  - Bundle: `index-DKzkhUW2.js`.
+
+### Sprint 7 — Quadras + calendário mensal (PRs #66, #67)
+
+**Tema**: UX de quadras e reservas de arena.
+
+- **PR #66 / sw-v73.5** — `V2CourtsTab + V2Select + calendar MENSAL`
+  - **Bug 1**: `cn is not defined` em V2CourtsTab (linha 255).
+  - **Bug 2**: V2Select ignorava prop `options`, só renderizava `children`
+    (vazio) → campos "Tipo" e "Superfície" vazios.
+  - **Redesign**: V2BookingCalendar reescrito de **DIÁRIO para MENSAL**
+    com clique no dia → `V2DaySlotsDialog` (NOVO) com slots do dia +
+    multi-seleção. `BookingRequestDialog` recebe `preselectedSlots` com
+    `date+start+end+court_id`.
+  - **Domain**: `aggregateDayStatus` extraído para
+    `src/modules/arenas/domain/calendar_aggregate.js` (puro, testável).
+  - **21 testes novos** (calendar_aggregate.test.js).
+  - 6 files, 832 insertions, 190 deletions. Tests: 1020 → 1041.
+  - V2Select agora aceita `children` OU `options` (children > options).
+- **PR #67 / sw-v73.6** — `V2DaySlotsDialog com info de reservas + badges`
+  - Dialog reescrito com 3 seções: resumo do dia (badges com contagens),
+    lista de reservas existentes (nome, horário, quadra, status, preço),
+    indisponibilidades admin (com motivo).
+  - Calendar mensal: badges numéricos amber (PENDING) + vermelho
+    (CONFIRMED) em cada dia.
+  - Tooltip rico: "18:00 · Solicitação: Fulano de Tal".
+  - 2 files, 379 insertions, 99 deletions.
+
+### Sprint 8 — Professores + reservas compartilhadas + refino UX/UI (PR #68)
+
+**Tema**: produto do professor + ponte arenas↔professores.
+
+- **Shared bookings**: `arena_bookings.booking_type` ganhou `'coach_lesson'`
+  e `'shared'` (multi-responsáveis com rateio). Reusa coleção canônica.
+- **Linked clubs**: clubes vinculados a professores (`coach.linked_club_ids`)
+  e arenas. Seção "Clubes" no público dos dois lados.
+- **Coach — produto completo (Fases A-D)**:
+  - **Fase A**: agenda (coach_availability) + aulas (coach_lessons) +
+    loja (coach_products)
+  - **Fase B**: roster (coach_students) + agenda de aulas por aluno
+  - **Fase C**: pacotes (coach_packages) + vendas (coach_package_sales) +
+    financeiro
+  - **Fase D**: biblioteca (coach_content) — drills, vídeos, planos
+- **Coach-arena partner**: espaço admin + público para professores
+  parceiros. `coach_arenas.partnership_status` (mútuo na Onda 7).
+- **Painel do professor 2 níveis** + fotos + loja
+- **Refino UX/UI geral**: `emerald-*` → `green-*` em arenas, V2Badge
+  tones padronizados, V2Layout nav 2 linhas no admin da arena, skeletons
+  visíveis, ConfirmDialog em vez de `confirm()` nativo, emoji → `lucide`.
+
+### Sprint 8a — Admin + cancelar/alterar/transferir (PR #69)
+
+- **Painel admin 2 níveis**: sticky top-2 + sub-tab-bar. Flags agrupadas
+  por assunto (`core`/`nav`/`athlete`/`tournaments`/`arenas`/`coaches`/
+  `community`/`arena_v3`/`other`).
+- **Cancelar/alterar reservas**: atleta, professor e arena podem fazer
+  no painel e no calendário.
+- **Transferir responsável** → **Responsáveis** (multi-responsáveis
+  com rateio). Substituiu o antigo "transferir" (1:1) por N-ário.
+- **Arena V3 Boot embutido** no console — sub-seção de bootstrap.
+
+### Sprint 9 — Reservas por quadra + rateio (PR #70)
+
+- **CourtDayGrid**: linhas=horários, colunas=quadras. Visão clássica
+  de "planilha" de reservas.
+- **TODA reserva tem `court_id`** (não opcional). Auto-atribuição via
+  `pickAvailableCourt` em `domain/court_assignment.js` quando user não
+  escolhe.
+- **Rateio inclui avulsos** (sem conta) — campo `responsibles[]` com
+  `{user_id?, name, percent, share_type}`.
+
+### Sprint 10 — Backlog ~30 funcionalidades (PRs #71, #72)
+
+> Cada sub-feature tem **sua própria flag** (opt-in individual). 10 ondas.
+
+| Onda | Flag(s) | Descrição |
+|---|---|---|
+| 1 | `calendar_export`, `registrations_csv`, `not_found_page` | Exporta `.ics` de aulas/torneios; CSV de inscrições; página 404 interna |
+| 2 | `gameday_formats` | Mexicano + Rei da Quadra em game-day |
+| 3 | `doubles_ranking`, `athlete_agenda` | Ranking de duplas + agenda do atleta |
+| 4 | `tournament_tv_mode` | Telão fullscreen para quadras |
+| 4b | `courtside_scoring`, `bracket_tree` | Placar courtside + árvore visual de chave |
+| 5 | `tournament_templates` | Marcar torneio como modelo pra duplicar |
+| 5b | `tournament_wizard` | Criação de torneio em etapas (assistente) |
+| 6 | `cancellation_policy`, `no_show_tracking` | Política de cancelamento + tracking de no-show |
+| 6b | `arena_crm`, `booking_waitlist` | CRM leve + lista de espera |
+| 7 | `partnership_mutual` | Aceite mútuo professor↔arena |
+| 7b | `coach_leveling`, `coach_clinics` | Validação de nível por professor + clínicas abertas |
+| 8 | `club_internal_ranking` | Ranking interno do clube |
+| 8b | `club_invite_link`, `club_recurring_events`, `club_public_page` | Link de convite + eventos recorrentes + página pública |
+| 9 | `settings_page` | `/configuracoes` (privacidade, notif, LGPD export) |
+| 9b | `notification_prefs`, `public_seo` | Preferências por categoria + meta tags SEO |
+| 10 | `global_search` | Busca federada (atletas+torneios+arenas+clubes) |
+| 10b | `a11y` | Skip-link + main landmark |
+
+### Métricas finais (2026-07-24)
+
+- **1334+ tests passing** (era 1020 no sw-v73.4, +314 com as sprints 6-10)
+- **Lint 0 errors** (era 30 no início do projeto)
+- **Bundle V2ArenaDetail**: 33KB → 39KB (calendar mensal + V2DaySlotsDialog)
+- **Last bundle deployed**: `index-CJmY5B8O.js` (PR #67, sw-v73.6)
+- **9 PRs mergeados** (#64-#72), 27 PRs totais
+- **Last SHA**: `56dba26` (52 commits à frente do snapshot anterior)
+- **92 firestore collections** (eram 39)
+- **124 feature flags** (eram 30)
+- **67 V2 pages** (eram 24)
+- **19 módulos** (eram 17 — adicionados `coaches/` e `circuits/`)
+
+### Próximo (Sprint 11+ — backlog remanescente)
+
+> Ver `docs/ux-analysis/15-backlog-remanescente.md` para a lista
+> consolidada do que ainda falta. Tópicos principais:
+>
+> - **DS** (Design System): unificar 4 sistemas concorrentes, dark mode,
+>   auditoria de contraste acid, motion, ilustrações
+> - **NAV**: busca global ✅ (Onda 10), command palette, breadcrumbs
+> - **Ponte com Sistema C** (aulas da arena): integração aulas da arena
+>   ↔ aulas do professor
+> - **Split de receita / comissão** para aulas realizadas na arena parceira
+> - **Checkout/gateway** (rateio é calculado, mas pagamento é combinado
+>   direto)
+> - **Aceite mútuo da parceria** (Onda 7 entregou; refinamento pode vir)
