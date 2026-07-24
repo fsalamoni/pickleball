@@ -31,6 +31,8 @@ import { FEATURE_FLAG } from '@/core/featureFlags';
 import { V2Badge, V2Button, V2Surface } from '@/v2/ui/primitives';
 import V2Collapsible from './V2Collapsible';
 import { cn } from '@/core/lib/utils';
+import V2BracketTree from '@/v2/components/tournament/V2BracketTree';
+import { buildBracketColumns } from '@/modules/tournament/domain/bracketLayout';
 
 function formatMatchTime(iso) {
   if (!iso) return '—';
@@ -433,10 +435,25 @@ export function V2ModalityMatches({ tournament, modality, isAdmin = false }) {
   const doneCount = matches.filter((m) => m.status === MATCH_STATUS.FINISHED || m.status === MATCH_STATUS.WALKOVER).length;
   const subtitle = matches.length === 0 ? 'Nenhum jogo gerado ainda' : `${doneCount}/${matches.length} jogos concluídos`;
 
+  const bracketTreeOn = useFeatureFlag(FEATURE_FLAG.BRACKET_TREE);
+  const hasBracket = useMemo(() => buildBracketColumns(matches).columns.length > 0, [matches]);
+  const [treeView, setTreeView] = useState(false);
+  const showTree = bracketTreeOn && hasBracket && treeView;
+
   return (
     <V2Collapsible title={<span className="inline-flex items-center gap-2"><Swords className="h-4 w-4 text-ink" /> {modality.name}</span>} subtitle={subtitle}>
+      {bracketTreeOn && hasBracket && matches.length > 0 && (
+        <div className="mb-3 inline-flex gap-1 rounded-full border border-gray-100 bg-paper-pure p-1">
+          <button type="button" onClick={() => setTreeView(false)}
+            className={cn('rounded-full px-3 py-1 text-xs font-bold', !treeView ? 'bg-ink text-white' : 'text-gray-500')}>Lista</button>
+          <button type="button" onClick={() => setTreeView(true)}
+            className={cn('rounded-full px-3 py-1 text-xs font-bold', treeView ? 'bg-ink text-white' : 'text-gray-500')}>Chave (árvore)</button>
+        </div>
+      )}
       {matches.length === 0 ? (
         <p className="text-sm text-gray-500">Nenhum jogo gerado ainda.</p>
+      ) : showTree ? (
+        <V2BracketTree matches={matches} labelById={labelById} />
       ) : (
         <div className="space-y-3">
           {byStage.map(([stageIndex, stageMatches]) => {

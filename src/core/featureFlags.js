@@ -592,6 +592,13 @@ export const FEATURE_FLAG = Object.freeze({
    * a mesma gravação do fluxo atual. Aditivo — desligada, usa o diálogo atual.
    */
   COURTSIDE_SCORING: 'courtside_scoring',
+
+  /**
+   * Árvore visual de chaves: mostra o mata-mata (chave dos vencedores) como
+   * colunas por rodada com os confrontos, em vez de tabela. Aditivo — desligada,
+   * a visualização atual (tabela) é mantida.
+   */
+  BRACKET_TREE: 'bracket_tree',
 });
 
 /** Metadados de exibição para o painel de flags (admin master). */
@@ -1117,6 +1124,12 @@ export const FEATURE_FLAG_META = Object.freeze({
       'Lançamento de resultado em tela cheia, com botões grandes +1/−1 por lado e '
       + 'set, para o mesário na beira da quadra. Reaproveita a mesma gravação. '
       + 'Desligada, usa o diálogo de placar atual.',
+  },
+  [FEATURE_FLAG.BRACKET_TREE]: {
+    label: 'Árvore visual de chaves',
+    description:
+      'Mostra o mata-mata (chave dos vencedores) como colunas por rodada com os '
+      + 'confrontos, em vez de tabela. Desligada, mantém a visualização atual.',
   },
 });
 
