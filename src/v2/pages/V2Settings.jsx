@@ -16,17 +16,38 @@ import { useMyRegistrations } from '@/modules/tournament/hooks/useTournament';
 import { useMyBookings } from '@/modules/arenas/hooks/useBookings';
 import { buildDataExport, dataExportFilename } from '@/modules/athletes/domain/dataExport';
 import {
-  V2Button, V2PageIntro, V2Surface,
+  NOTIFICATION_CATEGORIES,
+  normalizeNotificationPrefs,
+} from '@/modules/notifications/domain/preferences';
+import {
+  V2Button, V2PageIntro, V2Surface, V2Toggle,
 } from '@/v2/ui/primitives';
 
 export default function V2Settings() {
   const enabled = useFeatureFlag(FEATURE_FLAG.SETTINGS_PAGE);
-  const { user, userProfile } = useAuth();
+  const notifPrefsOn = useFeatureFlag(FEATURE_FLAG.NOTIFICATION_PREFS);
+  const { user, userProfile, updateUserProfile } = useAuth();
   const { data: registrations = [] } = useMyRegistrations();
   const { data: bookings = [] } = useMyBookings();
   const [busy, setBusy] = useState(false);
+  const [savingPrefs, setSavingPrefs] = useState(false);
+
+  const prefs = normalizeNotificationPrefs(userProfile?.notification_prefs);
 
   if (!enabled) return <Navigate to="/perfil" replace />;
+
+  async function toggleCategory(categoryId, next) {
+    setSavingPrefs(true);
+    const updated = { ...prefs, [categoryId]: next };
+    try {
+      await updateUserProfile({ notification_prefs: updated });
+      toast.success('Preferências salvas.');
+    } catch (err) {
+      toast.error('Não foi possível salvar as preferências.');
+    } finally {
+      setSavingPrefs(false);
+    }
+  }
 
   function exportData() {
     setBusy(true);
@@ -75,9 +96,31 @@ export default function V2Settings() {
             <Bell className="h-5 w-5 text-ink" />
             <h2 className="font-display text-lg font-bold text-ink">Notificações</h2>
           </div>
-          <p className="mt-1 text-sm text-gray-500">
-            As notificações da plataforma aparecem no sino do topo. Preferências por canal chegam em breve.
-          </p>
+          {notifPrefsOn ? (
+            <>
+              <p className="mt-1 text-sm text-gray-500">
+                Escolha quais categorias de notificação aparecem no sino do topo.
+              </p>
+              <div className="mt-4 space-y-3">
+                {NOTIFICATION_CATEGORIES.map((cat) => (
+                  <div key={cat.id} className="rounded-3xl border border-gray-100 bg-paper-pure p-4 shadow-organic-sm">
+                    <V2Toggle
+                      id={`notif-${cat.id}`}
+                      checked={prefs[cat.id] !== false}
+                      onChange={(next) => toggleCategory(cat.id, next)}
+                      label={cat.label}
+                      hint={cat.description}
+                    />
+                  </div>
+                ))}
+              </div>
+              {savingPrefs && <p className="mt-3 text-xs text-gray-400">Salvando…</p>}
+            </>
+          ) : (
+            <p className="mt-1 text-sm text-gray-500">
+              As notificações da plataforma aparecem no sino do topo. Preferências por canal chegam em breve.
+            </p>
+          )}
         </V2Surface>
 
         <V2Surface>

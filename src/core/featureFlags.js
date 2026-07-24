@@ -286,6 +286,14 @@ export const FEATURE_FLAG = Object.freeze({
   NOTIFICATIONS_MARK_ALL: 'notifications_mark_all',
 
   /**
+   * Preferências de notificação: em Configurações, o usuário liga/desliga
+   * categorias de notificação (mensagens, clubes, torneios, parcerias,
+   * lembretes). A imposição é na leitura do sino — notificações de categorias
+   * silenciadas não aparecem nem contam. Aditivo — desligado, tudo aparece.
+   */
+  NOTIFICATION_PREFS: 'notification_prefs',
+
+  /**
    * Check-in de atletas: na aba de inscrições do torneio, o admin pode
    * marcar/desfazer o check-in de inscrições confirmadas. O status
    * "Check-in feito" já existia e já era considerado pelo sorteio; esta
@@ -880,6 +888,14 @@ export const FEATURE_FLAG_META = Object.freeze({
     description:
       'Adiciona ao menu de notificações um botão para marcar todas as não '
       + 'lidas de uma vez. Desligado, o menu permanece como está.',
+  },
+  [FEATURE_FLAG.NOTIFICATION_PREFS]: {
+    label: 'Preferências de notificação',
+    description:
+      'Adiciona em Configurações o controle de categorias de notificação '
+      + '(mensagens, clubes, torneios, parcerias, lembretes). Notificações de '
+      + 'categorias silenciadas deixam de aparecer no sino. Desligado, todas '
+      + 'as notificações continuam sendo exibidas.',
   },
   [FEATURE_FLAG.TOURNAMENT_CHECKIN]: {
     label: 'Check-in de atletas no torneio',
