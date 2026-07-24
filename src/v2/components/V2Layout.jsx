@@ -28,7 +28,6 @@ import {
   LogOut,
   Pencil,
   Search as SearchIcon,
-  Power,
   GraduationCap,
   CalendarClock,
 } from 'lucide-react';
@@ -160,7 +159,6 @@ function useV2Nav() {
     isPlatformAdmin && {
       title: 'Admin geral',
       items: [
-        { to: '/admin/v3-bootstrap', label: 'Arena V3: Boot', icon: Power, tag: 'V3' },
         adminConsoleOn && { to: '/admin/painel', label: 'Painel', icon: LayoutDashboard, tag: 'Novo' },
       ].filter(Boolean),
     },

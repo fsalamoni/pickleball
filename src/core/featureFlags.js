@@ -1229,6 +1229,23 @@ export const DEFAULT_FEATURE_FLAGS = Object.freeze(
   Object.fromEntries(Object.values(FEATURE_FLAG).map((key) => [key, false])),
 );
 
+/** Todas as chaves de flag conhecidas (fonte única de verdade para contagens). */
+export const ALL_FLAG_KEYS = Object.freeze(Object.values(FEATURE_FLAG));
+
+/**
+ * Conta flags de forma consistente em toda a UI: `total` é o número de flags
+ * definidas em `FEATURE_FLAG`; `active` são as ligadas dentre elas (ignora
+ * chaves órfãs no mapa do Firestore). Use este helper em TODA exibição de
+ * "X ativas de Y" para não divergir entre telas.
+ * @param {Record<string, boolean>|null|undefined} flags
+ * @returns {{ total: number, active: number }}
+ */
+export function countFlags(flags) {
+  const total = ALL_FLAG_KEYS.length;
+  const active = ALL_FLAG_KEYS.filter((key) => Boolean(flags?.[key])).length;
+  return { total, active };
+}
+
 /**
  * Normaliza um mapa de flags vindo do Firestore, garantindo booleanos e
  * preenchendo as ausentes com `false`. Ignora chaves desconhecidas.

@@ -87,6 +87,38 @@ export const FLAG_GROUPS = Object.freeze([
 export const FLAG_GROUP_OTHER = Object.freeze({ id: 'other', label: 'Outras' });
 export const FLAG_GROUP_ARENA_V3 = Object.freeze({ id: 'arena_v3', label: 'Arena V3 (módulos)' });
 
+/** Famílias das flags da Arena V3, para subdividir o grupo na página. */
+export const ARENA_FAMILY_LABEL = Object.freeze({
+  master: 'Master (chave geral)', matchmaking: 'Matchmaking', members: 'Membros',
+  pdv: 'PDV / vendas', classes: 'Aulas', leagues: 'Torneios e ligas',
+  marketing: 'Marketing', operations: 'Operações', iot: 'IoT / sensores',
+  multi: 'Multi-unidade', white: 'White label', ai: 'IA', other: 'Outros',
+});
+
+/** Retorna a família de uma flag de arena (ex.: 'matchmaking'), ou null. */
+export function arenaFlagFamily(key) {
+  const k = String(key);
+  if (k === 'arena_modules') return 'master';
+  const m = k.match(/^arena_module_([a-z]+)/);
+  return m ? m[1] : null;
+}
+
+/**
+ * Rótulo legível para qualquer flag, para exibir no painel: usa a família +
+ * o restante do nome quando for flag de arena (ex.: `arena_module_pdv_split`
+ * → "PDV / vendas · split"). Para flags comuns, humaniza a chave.
+ */
+export function humanizeFlagKey(key) {
+  const family = arenaFlagFamily(key);
+  if (family) {
+    if (key === 'arena_modules') return 'Arena V3 — chave geral (master)';
+    const rest = String(key).replace(/^arena_module_[a-z]+_?/, '').replace(/_/g, ' ').trim();
+    const fam = ARENA_FAMILY_LABEL[family] || family;
+    return rest ? `${fam} · ${rest}` : fam;
+  }
+  return String(key).replace(/_/g, ' ').replace(/\b\w/g, (c) => c.toUpperCase());
+}
+
 /** Retorna o id do grupo de uma flag. Arena V3 e desconhecidas têm tratamento próprio. */
 export function flagGroupId(key) {
   if (key === 'arena_modules' || String(key).startsWith('arena_module_')) return FLAG_GROUP_ARENA_V3.id;
