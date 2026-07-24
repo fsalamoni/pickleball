@@ -30,6 +30,7 @@ import {
   Search as SearchIcon,
   Power,
   GraduationCap,
+  CalendarClock,
 } from 'lucide-react';
 import { useAuth } from '@/core/lib/FirebaseAuthContext';
 import { useAutoRecomputeRatings } from '@/modules/rating/hooks/useRating';
@@ -100,6 +101,8 @@ function useV2Nav() {
   const circuitsOn = useFeatureFlag(FEATURE_FLAG.CIRCUITS);
   const coachesOn = useFeatureFlag(FEATURE_FLAG.COACH_RESIDENT);
   const coachLessonsOn = useFeatureFlag(FEATURE_FLAG.COACH_LESSONS);
+  const doublesRankingOn = useFeatureFlag(FEATURE_FLAG.DOUBLES_RANKING);
+  const athleteAgendaOn = useFeatureFlag(FEATURE_FLAG.ATHLETE_AGENDA);
   const { totalArenas: myArenasCount, totalPendingBookings: myPendingBookings } = useMyArenaSummary();
   const showMyArenas = arenasOn && myArenasCount > 0;
   // Só busca o perfil de professor quando a área de aulas está ligada.
@@ -124,6 +127,7 @@ function useV2Nav() {
       items: [
         { to: '/atletas', label: 'Atletas', icon: Users },
         ratingOn && { to: '/ranking', label: 'Ranking', icon: Medal },
+        doublesRankingOn && { to: '/ranking/duplas', label: 'Ranking de duplas', icon: Medal },
         ratingOn && matchmakingOn && { to: '/encontrar-jogadores', label: 'Encontrar jogadores', icon: Swords },
         openGamesOn && { to: '/procura-jogo', label: 'Procura-se jogo', icon: Megaphone },
         { to: '/clubes', label: 'Clubes', icon: Building2 },
@@ -134,6 +138,7 @@ function useV2Nav() {
       title: 'Você',
       items: [
         { to: '/chat', label: 'Mensagens', icon: MessageSquare },
+        athleteAgendaOn && { to: '/meus-jogos', label: 'Meus jogos', icon: CalendarClock },
         performanceOn && { to: '/meu-desempenho', label: 'Meu desempenho', icon: BarChart3 },
         showMyArenas && {
           to: '/arenas',

@@ -1,6 +1,6 @@
 import React, { useMemo, useState } from 'react';
 import { Link } from 'react-router-dom';
-import { Crown, Search, TrendingUp } from 'lucide-react';
+import { Crown, Search, TrendingUp, Users2 } from 'lucide-react';
 import { useNationalRanking } from '@/modules/rating/hooks/useRating';
 import { useAuth } from '@/core/lib/FirebaseAuthContext';
 import { useFeatureFlag } from '@/core/lib/FeatureFlagsContext';
@@ -111,6 +111,7 @@ export default function V2Ranking() {
   const { data: players = [], isLoading } = useNationalRanking();
   const profilePageOn = useFeatureFlag(FEATURE_FLAG.ATHLETE_PROFILE_PAGE);
   const rankingFiltersOn = useFeatureFlag(FEATURE_FLAG.RANKING_FILTERS);
+  const doublesRankingOn = useFeatureFlag(FEATURE_FLAG.DOUBLES_RANKING);
   const { user } = useAuth();
   const [search, setSearch] = useState('');
   const [stateFilter, setStateFilter] = useState(ALL);
@@ -158,7 +159,15 @@ export default function V2Ranking() {
 
   return (
     <div className="mx-auto max-w-[1100px]">
-      <V2PageIntro title="Ranking nacional" subtitle="Rating calculado a partir dos jogos disputados nos torneios da plataforma." />
+      <V2PageIntro
+        title="Ranking nacional"
+        subtitle="Rating calculado a partir dos jogos disputados nos torneios da plataforma."
+        action={doublesRankingOn ? (
+          <Link to="/ranking/duplas" className="inline-flex items-center gap-1.5 rounded-full border border-gray-200 bg-paper-pure px-4 py-2 text-sm font-semibold text-ink hover:bg-white">
+            <Users2 className="h-4 w-4" /> Ranking de duplas
+          </Link>
+        ) : null}
+      />
 
       <RankingExplainer />
 

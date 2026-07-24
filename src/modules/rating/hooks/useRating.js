@@ -8,13 +8,39 @@ import {
   recomputeAllRatings,
   maybeAutoRecomputeRatings,
   getRatingHistory,
+  listFinishedEngineMatches,
 } from '../services/ratingService.js';
+import { computeDoublesRanking } from '../domain/doublesRanking.js';
 
 /** Ranking nacional materializado (rating ELO). */
 export function useNationalRanking() {
   return useQuery({
     queryKey: ['national-ranking'],
     queryFn: listNationalRanking,
+    staleTime: 60_000,
+  });
+}
+
+/**
+ * Ranking de duplas: agrega os jogos de duplas finalizados por parceria e anexa
+ * nomes/fotos dos atletas. Enabled deve ser controlado pela flag doubles_ranking.
+ */
+export function useDoublesRanking(enabled = true) {
+  return useQuery({
+    queryKey: ['doubles-ranking'],
+    queryFn: async () => {
+      const { matches, nameById } = await listFinishedEngineMatches();
+      const ranking = computeDoublesRanking(matches, { minGames: 1 });
+      return ranking.map((row) => ({
+        ...row,
+        players: row.player_ids.map((id) => ({
+          id,
+          name: nameById.get(id)?.name || 'Atleta',
+          photo: nameById.get(id)?.photo || '',
+        })),
+      }));
+    },
+    enabled,
     staleTime: 60_000,
   });
 }

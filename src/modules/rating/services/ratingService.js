@@ -310,3 +310,48 @@ export async function getRatingHistory(uid) {
   const points = snap.exists() ? snap.data().points : null;
   return Array.isArray(points) ? points : [];
 }
+
+/**
+ * Lê os jogos finalizados normalizados para o motor (side_a/side_b por uid,
+ * winner, pontos) junto com um mapa uid → { name, photo }. Base para rankings
+ * derivados (ex.: ranking de duplas). Read-only, aditivo.
+ * @returns {Promise<{ matches: Array, nameById: Map }>}
+ */
+export async function listFinishedEngineMatches() {
+  if (!db) return { matches: [], nameById: new Map() };
+  const matchesSnap = await getDocs(
+    query(collection(db, 'tournament_matches'), where('status', 'in', FINISHED_STATUSES)),
+  );
+  const finished = matchesSnap.docs.map((d) => d.data());
+  const [regsSnap, profilesSnap] = await Promise.all([
+    getDocs(collection(db, 'tournament_registrations')),
+    getDocs(collection(db, 'athlete_profiles')),
+  ]);
+  const regById = new Map(regsSnap.docs.map((d) => [d.id, d.data()]));
+  const nameById = new Map();
+  profilesSnap.docs.forEach((d) => {
+    const p = d.data();
+    nameById.set(d.id, { name: p.platform_name || p.full_name || 'Atleta', photo: p.photo_url || '' });
+  });
+
+  const matches = [];
+  finished.forEach((m) => {
+    if (m.winner_side !== 'a' && m.winner_side !== 'b') return;
+    const a = resolveSideUids(m.side_a_ids, regById);
+    const b = resolveSideUids(m.side_b_ids, regById);
+    if (!a.complete || !b.complete) return;
+    const games = Array.isArray(m.games) ? m.games : [];
+    const pointsA = games.reduce((sum, g) => sum + (Number(g.a) || 0), 0);
+    const pointsB = games.reduce((sum, g) => sum + (Number(g.b) || 0), 0);
+    matches.push({
+      side_a: a.uids,
+      side_b: b.uids,
+      winner: m.winner_side,
+      points_a: pointsA,
+      points_b: pointsB,
+      tournament_id: m.tournament_id || null,
+      at: toMillis(m.result_recorded_at) || toMillis(m.updated_at) || toMillis(m.created_at),
+    });
+  });
+  return { matches, nameById };
+}

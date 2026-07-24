@@ -482,6 +482,20 @@ export const FEATURE_FLAG = Object.freeze({
    * sorteio segue só no Americano.
    */
   GAMEDAY_FORMATS: 'gameday_formats',
+
+  /**
+   * Ranking de duplas: página que classifica as PARCERIAS (dois atletas juntos)
+   * por vitórias e aproveitamento, a partir dos jogos de duplas finalizados.
+   * Aditivo — desligada, a rota e o link ficam ocultos.
+   */
+  DOUBLES_RANKING: 'doubles_ranking',
+
+  /**
+   * Agenda "Meus jogos": página que reúne os próximos jogos do atleta e o
+   * histórico de partidas, com filtros. Aditivo — desligada, a rota e o link
+   * ficam ocultos (o card do painel atual segue como está).
+   */
+  ATHLETE_AGENDA: 'athlete_agenda',
 });
 
 /** Metadados de exibição para o painel de flags (admin master). */
@@ -907,6 +921,19 @@ export const FEATURE_FLAG_META = Object.freeze({
       + '(atual), Mexicano (pareamento 1&4 vs 2&3 com rotação entre rodadas) ou '
       + 'Rei da Quadra (rodadas por resultado — vencedores sobem, perdedores '
       + 'descem de quadra). Desligada, o sorteio segue só no Americano.',
+  },
+  [FEATURE_FLAG.DOUBLES_RANKING]: {
+    label: 'Ranking de duplas',
+    description:
+      'Página que classifica as parcerias (dois atletas jogando juntos) por '
+      + 'vitórias e aproveitamento, a partir dos jogos de duplas finalizados. '
+      + 'Desligada, a rota e o link ficam ocultos.',
+  },
+  [FEATURE_FLAG.ATHLETE_AGENDA]: {
+    label: 'Agenda "Meus jogos"',
+    description:
+      'Página que reúne os próximos jogos do atleta e o histórico de partidas, '
+      + 'com filtros. Desligada, a rota e o link ficam ocultos.',
   },
 });
 
