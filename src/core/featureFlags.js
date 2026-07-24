@@ -445,6 +445,14 @@ export const FEATURE_FLAG = Object.freeze({
   COACH_LESSONS: 'coach_lessons',
 
   /**
+   * Nível validado por professor: um professor atesta o nível de um aluno
+   * vinculado (a partir da tabela de nivelamento), gerando um selo público
+   * "nível validado por professor" no perfil do atleta. Aditivo — não altera
+   * rating nem ranking; desligado, nenhum selo ou ação aparece.
+   */
+  COACH_LEVELING: 'coach_leveling',
+
+  /**
    * Reservas compartilhadas (multi-atleta): uma reserva de quadra pode ter
    * vários participantes com sub-horários próprios; o solicitante convida
    * atletas (aceite/recusa) ou deixa a reserva aberta (com/sem limite); todos
@@ -1008,6 +1016,14 @@ export const FEATURE_FLAG_META = Object.freeze({
       + 'alunos com ficha de evolução e pacotes/créditos pré-pagos. É aditivo '
       + '(coleções próprias) e não altera o diretório nem as arenas. '
       + 'Desligado, as telas /aulas e as seções novas do perfil somem.',
+  },
+  [FEATURE_FLAG.COACH_LEVELING]: {
+    label: 'Nível validado por professor',
+    description:
+      'Permite ao professor atestar o nível de um aluno vinculado (a partir da '
+      + 'tabela de nivelamento), exibindo um selo "nível validado por professor" '
+      + 'no perfil do atleta. Aditivo — não altera rating nem ranking. Desligado, '
+      + 'nenhum selo ou ação de validação aparece.',
   },
   [FEATURE_FLAG.SHARED_BOOKINGS]: {
     label: 'Reservas compartilhadas (multi-atleta e aulas)',
