@@ -11,7 +11,7 @@ import {
   DialogTitle,
 } from '@/components/ui/dialog';
 import { useAuth } from '@/core/lib/FirebaseAuthContext';
-import { birthDateToBrtDate, validateRequiredProfile } from '@/core/lib/profileValidation';
+import { birthDateToBrtDate, isRequiredProfileComplete, validateRequiredProfile } from '@/core/lib/profileValidation';
 import { PICKLEBALL_EXPERIENCE_LABELS } from '@/modules/tournament/domain/constants';
 import { V2Button, V2Field, V2Input, V2Select } from '@/v2/ui/primitives';
 import { cn } from '@/core/lib/utils';
@@ -53,6 +53,12 @@ export default function V2OnboardingWizard() {
   const [form, setForm] = useState({ platformName: '', birthDate: '', phone: '', pickleballExperience: '' });
   const [interests, setInterests] = useState([]);
 
+  // Trava de abertura latcheada por usuário: decidimos UMA vez (ao carregar o
+  // perfil) se o onboarding deve abrir. Assim, salvar o passo 1 (que completa o
+  // perfil) não fecha o assistente no meio do fluxo — mas, em sessões futuras,
+  // com o perfil já completo, ele não reabre. Só aparece na primeira entrada.
+  const [openLatch, setOpenLatch] = useState(false);
+
   useEffect(() => {
     setForm({
       platformName: userProfile?.platform_name || userProfile?.full_name || '',
@@ -62,9 +68,14 @@ export default function V2OnboardingWizard() {
     });
     setInterests(Array.isArray(userProfile?.interests) ? userProfile.interests : []);
     setErrors({});
-  }, [userProfile?.uid]);
+    setOpenLatch(Boolean(
+      userProfile
+      && !userProfile.onboarding_completed_at
+      && !isRequiredProfileComplete(userProfile),
+    ));
+  }, [userProfile?.uid]); // eslint-disable-line react-hooks/exhaustive-deps
 
-  const shouldOpen = Boolean(userProfile && !userProfile.onboarding_completed_at && !deferred);
+  const shouldOpen = openLatch && !deferred;
 
   const hasLeveling = useMemo(
     () => Boolean(userProfile?.leveling_level || userProfile?.leveling?.result?.level),
@@ -132,6 +143,7 @@ export default function V2OnboardingWizard() {
     setBusy(true);
     try {
       await updateUserProfile({ onboarding_completed_at: Timestamp.now() });
+      setOpenLatch(false);
       toast.success('Tudo pronto. Bom jogo!');
       if (goToLeveling) navigate('/nivelamento');
     } catch (err) {
