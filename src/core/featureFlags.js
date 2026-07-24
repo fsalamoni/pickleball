@@ -294,6 +294,14 @@ export const FEATURE_FLAG = Object.freeze({
   NOTIFICATION_PREFS: 'notification_prefs',
 
   /**
+   * Assistente de criação de torneio: transforma o formulário único de criação
+   * em etapas guiadas (identidade → acesso/regras → calendário) com stepper e
+   * avanço validado. Aditivo — mesmos campos e mesma criação; desligado, o
+   * formulário permanece em página única.
+   */
+  TOURNAMENT_WIZARD: 'tournament_wizard',
+
+  /**
    * Check-in de atletas: na aba de inscrições do torneio, o admin pode
    * marcar/desfazer o check-in de inscrições confirmadas. O status
    * "Check-in feito" já existia e já era considerado pelo sorteio; esta
@@ -912,6 +920,14 @@ export const FEATURE_FLAG_META = Object.freeze({
       + '(mensagens, clubes, torneios, parcerias, lembretes). Notificações de '
       + 'categorias silenciadas deixam de aparecer no sino. Desligado, todas '
       + 'as notificações continuam sendo exibidas.',
+  },
+  [FEATURE_FLAG.TOURNAMENT_WIZARD]: {
+    label: 'Assistente de criação de torneio',
+    description:
+      'Divide a criação do torneio em etapas guiadas (identidade, acesso e '
+      + 'regras, calendário) com indicador de progresso e avanço validado. '
+      + 'Mesmos campos e mesma criação. Desligado, a criação continua em '
+      + 'página única.',
   },
   [FEATURE_FLAG.TOURNAMENT_CHECKIN]: {
     label: 'Check-in de atletas no torneio',
