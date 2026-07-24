@@ -1,8 +1,9 @@
 import React from 'react';
 import { Link, Navigate, useNavigate, useParams } from 'react-router-dom';
 import {
-  Archive, ArrowLeft, Calendar, Check, Copy, Eye, Hash, Images, MapPin, Share2, ShieldCheck, Trophy,
+  Archive, ArrowLeft, Calendar, CalendarPlus, Check, Copy, Eye, Hash, Images, MapPin, Share2, ShieldCheck, Trophy,
 } from 'lucide-react';
+import { buildICS, icsFilename } from '@/modules/tournament/domain/ics';
 import { useClipboard } from '@/core/lib/useClipboard';
 import { useFeatureFlag } from '@/core/lib/FeatureFlagsContext';
 import { FEATURE_FLAG } from '@/core/featureFlags';
@@ -54,6 +55,7 @@ export default function V2Tournament() {
   const { data: modalities = [] } = useModalities(tournamentId);
   const modalityPagesOn = useFeatureFlag(FEATURE_FLAG.MODALITY_PAGES);
   const galleryOn = useFeatureFlag(FEATURE_FLAG.TOURNAMENT_GALLERY);
+  const calendarExportOn = useFeatureFlag(FEATURE_FLAG.CALENDAR_EXPORT);
   const { copy, copied } = useClipboard();
 
   if (isLoading) {
@@ -83,6 +85,36 @@ export default function V2Tournament() {
   const dateRange = formatDateRange(tournament.starts_at, tournament.ends_at);
   const deadline = formatDate(tournament.registration_deadline);
   const location = tournament.city ? `${tournament.city}${tournament.state ? ` / ${tournament.state}` : ''}` : 'Local a definir';
+
+  const toDateSafe = (v) => {
+    if (!v) return null;
+    if (typeof v.toDate === 'function') return v.toDate();
+    const d = new Date(v);
+    return Number.isNaN(d.getTime()) ? null : d;
+  };
+  const downloadTournamentIcs = () => {
+    const start = toDateSafe(tournament.starts_at);
+    if (!start) return;
+    const end = toDateSafe(tournament.ends_at) || new Date(start.getTime() + 2 * 60 * 60 * 1000);
+    const content = buildICS({
+      uid: `tournament-${tournament.id}@picklerush`,
+      start, end,
+      title: tournament.name,
+      description: tournament.description || 'Torneio de pickleball',
+      location: location !== 'Local a definir' ? location : '',
+      url: publicUrl,
+    });
+    if (!content) return;
+    const blob = new Blob([content], { type: 'text/calendar;charset=utf-8' });
+    const url = URL.createObjectURL(blob);
+    const a = document.createElement('a');
+    a.href = url;
+    a.download = icsFilename(tournament.name);
+    document.body.appendChild(a);
+    a.click();
+    document.body.removeChild(a);
+    URL.revokeObjectURL(url);
+  };
 
   const activeTab = ['visao-geral', 'jogos', 'ranking', 'fotos', 'admin'].includes(tab) ? tab : 'visao-geral';
   const goTab = (v) => navigate(`/torneios/${tournamentId}/${v}`);
@@ -152,6 +184,11 @@ export default function V2Tournament() {
             <a href={`/p/${tournament.id}`} target="_blank" rel="noreferrer" className="btn-press inline-flex items-center gap-2 rounded-full border border-white/15 bg-white/10 px-4 py-2 text-sm font-semibold text-white">
               <Eye className="h-4 w-4" /> Visão pública
             </a>
+            {calendarExportOn && toDateSafe(tournament.starts_at) && (
+              <button onClick={downloadTournamentIcs} className="btn-press inline-flex items-center gap-2 rounded-full border border-white/15 bg-white/10 px-4 py-2 text-sm font-semibold text-white">
+                <CalendarPlus className="h-4 w-4" /> Adicionar ao calendário
+              </button>
+            )}
           </div>
         </div>
       </div>

@@ -452,6 +452,28 @@ export const FEATURE_FLAG = Object.freeze({
    * clubes vinculados. Aditivo.
    */
   LINKED_CLUBS: 'linked_clubs',
+
+  /**
+   * Exportar para o calendário (ICS): botão que baixa um arquivo .ics do jogo,
+   * do torneio ou da reserva/aula, importável no Google/Apple/Outlook Calendar.
+   * Puro no cliente (gera o .ics), sem backend. Aditivo — desligado, os botões
+   * ficam ocultos.
+   */
+  CALENDAR_EXPORT: 'calendar_export',
+
+  /**
+   * Exportar inscrições em CSV: na gestão do torneio, botão que baixa a lista
+   * de inscritos (nome, contato, modalidade, dupla, status, valor) em CSV com
+   * BOM (abre certo no Excel pt-BR). Aditivo — desligado, o botão fica oculto.
+   */
+  REGISTRATIONS_CSV: 'registrations_csv',
+
+  /**
+   * Página 404 interna: quando uma rota não existe, mostra uma página amigável
+   * com atalhos, em vez de redirecionar silenciosamente para a home. Aditivo —
+   * desligada, o comportamento atual (redirect para /) é mantido.
+   */
+  NOT_FOUND_PAGE: 'not_found_page',
 });
 
 /** Metadados de exibição para o painel de flags (admin master). */
@@ -848,6 +870,27 @@ export const FEATURE_FLAG_META = Object.freeze({
       'Permite a professores e arenas criar ou vincular clubes próprios (para '
       + 'eventos, times e treinos). As páginas pública e admin exibem os clubes '
       + 'apenas quando houver clubes vinculados. Aditivo.',
+  },
+  [FEATURE_FLAG.CALENDAR_EXPORT]: {
+    label: 'Exportar para o calendário (ICS)',
+    description:
+      'Habilita botões que baixam um arquivo .ics (evento de calendário) do '
+      + 'jogo, torneio ou reserva/aula, importável no Google, Apple e Outlook '
+      + 'Calendar. Funciona no cliente, sem backend. Desligado, os botões somem.',
+  },
+  [FEATURE_FLAG.REGISTRATIONS_CSV]: {
+    label: 'Exportar inscrições em CSV',
+    description:
+      'Na gestão do torneio, adiciona um botão para baixar a lista de inscritos '
+      + '(nome, contato, modalidade, dupla, status e valor) em CSV compatível '
+      + 'com Excel pt-BR. Desligado, o botão fica oculto.',
+  },
+  [FEATURE_FLAG.NOT_FOUND_PAGE]: {
+    label: 'Página 404 interna',
+    description:
+      'Quando uma rota não existe, mostra uma página amigável com atalhos em vez '
+      + 'de redirecionar silenciosamente para a home. Desligada, mantém o '
+      + 'comportamento atual (redirect para /).',
   },
 });
 

@@ -11,6 +11,10 @@ import {
 } from '@/modules/arenas/domain/constants';
 import { bookingSlots } from '@/modules/arenas/domain/booking';
 import { formatPrice } from '@/modules/arenas/domain/pricing';
+import { brtDateTime } from '@/modules/tournament/domain/ics';
+import { useFeatureFlag } from '@/core/lib/FeatureFlagsContext';
+import { FEATURE_FLAG } from '@/core/featureFlags';
+import AddToCalendarButton from '@/modules/tournament/components/AddToCalendarButton';
 import {
   useUpdateBookingStatus,
   useProposeBookingPrice,
@@ -55,6 +59,17 @@ export default function V2BookingRow({ booking, perspective }) {
   const [price, setPrice] = useState(booking.proposed_price ?? '');
   const [editing, setEditing] = useState(false);
   const options = { byManager: isArena };
+
+  const calendarExportOn = useFeatureFlag(FEATURE_FLAG.CALENDAR_EXPORT);
+  const firstSlot = bookingSlots(booking)[0];
+  const calendarEvent = firstSlot && brtDateTime(firstSlot.date, firstSlot.start) ? {
+    uid: `booking-${booking.id}@picklerush`,
+    start: brtDateTime(firstSlot.date, firstSlot.start),
+    end: brtDateTime(firstSlot.date, firstSlot.end),
+    title: `Reserva — ${booking.arena_name || 'Arena'}`,
+    description: booking.notes || 'Reserva de quadra',
+    location: booking.arena_name || '',
+  } : null;
 
   const active = [BOOKING_STATUS.REQUESTED, BOOKING_STATUS.NEGOTIATING].includes(booking.status);
   // Reserva avulsa e ainda alterável → pode editar quadra/horário.
@@ -175,6 +190,9 @@ export default function V2BookingRow({ booking, perspective }) {
             <V2Button size="sm" variant="ghost" onClick={() => setEditing(true)}>
               <Pencil className="h-4 w-4" /> Alterar
             </V2Button>
+          )}
+          {calendarExportOn && calendarEvent && (
+            <AddToCalendarButton event={calendarEvent} variant="ghost" />
           )}
           <V2Button size="sm" variant="ghost" className="text-red-500 hover:bg-red-50 hover:text-red-600" onClick={handleCancelConfirmed}>
             Cancelar
