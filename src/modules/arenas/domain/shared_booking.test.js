@@ -151,6 +151,16 @@ describe('computeSplit — rateio por tempo', () => {
     const sum = Object.values(perParticipant).reduce((s, v) => s + v, 0);
     expect(sum).toBeCloseTo(120, 0);
   });
+
+  it('inclui responsáveis avulsos (sem conta) no rateio', () => {
+    // A (atleta) + 1 avulso sem id → dividem meio a meio.
+    const avulso = { athlete_id: null, name: 'João', status: 'accepted', slot: null };
+    const { perParticipant } = computeSplit(window, [P('a'), avulso], 120);
+    expect(perParticipant.a).toBeCloseTo(60, 1);
+    expect(perParticipant['manual:1']).toBeCloseTo(60, 1);
+    const sum = Object.values(perParticipant).reduce((s, v) => s + v, 0);
+    expect(sum).toBeCloseTo(120, 0);
+  });
 });
 
 describe('normalizeParticipant', () => {

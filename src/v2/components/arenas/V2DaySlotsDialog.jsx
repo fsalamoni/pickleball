@@ -41,6 +41,7 @@ import {
   SLOT_STATUS,
 } from '@/modules/arenas/domain/slot_status';
 import { weekdayOf } from '@/modules/arenas/domain/booking';
+import { isCourtFreeForSlot } from '@/modules/arenas/domain/court_assignment';
 import { formatPrice } from '@/modules/arenas/domain/pricing';
 import { useBookingPrice } from '@/modules/arenas/hooks/useBookingPrice';
 import { V2Button, V2Badge, V2EmptyState, V2Skeleton } from '@/v2/ui/primitives';
@@ -154,6 +155,12 @@ export default function V2DaySlotsDialog({ arena, arenaId, date, courtId: initia
     const dayBookings = activeBookingsOfDay.map((b) => ({ ...b, slots: b._slots }));
     const dayUnavs = unavailabilitiesOfDay;
 
+    // Quando o atleta olha "Todas as quadras" e há mais de uma, o horário só
+    // está de fato indisponível se TODAS as quadras estiverem ocupadas. Contamos
+    // quantas quadras estão livres (schedule + sem reserva + sem indisponibilidade).
+    const multiCourtAll = !courtId && courts.length > 1;
+    const activeCourtList = courts.filter((c) => c.is_active !== false);
+
     return times.map((time) => {
       const slot = { date, start: time, end: `${String(parseInt(time.split(':')[0]) + 1).padStart(2, '0')}:00` };
       const result = getSlotStatus({
@@ -174,12 +181,33 @@ export default function V2DaySlotsDialog({ arena, arenaId, date, courtId: initia
         return timeOverlap(uSlot, slot);
       });
 
-      return {
-        time,
-        ...result,
-        booking: coveringBooking || result.booking,
-        unavailability: coveringUnav || result.unavailability,
-      };
+      let status = result.status;
+      let booking = coveringBooking || result.booking;
+      let unavailability = coveringUnav || result.unavailability;
+      let freeCourts = null;
+      const totalCourts = activeCourtList.length;
+
+      if (multiCourtAll && result.status !== SLOT_STATUS.CLOSED) {
+        freeCourts = activeCourtList.filter((court) => {
+          if (!isCourtFreeForSlot(court.id, { date: slot.date, start: slot.start, end: slot.end }, dayBookings, filteredSchedules)) {
+            return false;
+          }
+          const blocked = dayUnavs.some((u) => (!u.court_id || u.court_id === court.id)
+            && timeOverlap({ date, start: u.start_time, end: u.end_time }, slot));
+          return !blocked;
+        }).length;
+        // Há quadra livre → o horário é selecionável, mesmo que outra quadra esteja ocupada.
+        if (freeCourts > 0) {
+          status = SLOT_STATUS.AVAILABLE;
+          booking = null;
+          unavailability = null;
+        } else if (result.status === SLOT_STATUS.AVAILABLE) {
+          // Nenhuma quadra livre, mas o base achava disponível → está tudo ocupado.
+          status = SLOT_STATUS.CONFIRMED;
+        }
+      }
+
+      return { time, status, booking, unavailability, freeCourts, totalCourts, schedule: result.schedule };
     });
   }, [loadingSchedules, loadingBookings, loadingUnav, weekday, date, courtId, schedules, activeBookingsOfDay, unavailabilitiesOfDay]);
 
@@ -409,10 +437,11 @@ export default function V2DaySlotsDialog({ arena, arenaId, date, courtId: initia
                         })}
                       </div>
                       <div className="grid grid-cols-2 gap-2 sm:grid-cols-3 md:grid-cols-4">
-                        {slotsWithStatus.map(({ time, status, booking, unavailability }) => {
+                        {slotsWithStatus.map(({ time, status, booking, unavailability, freeCourts, totalCourts }) => {
                           const c = SLOT_STATUS_COLORS[status];
                           const isSelected = selectedSlots.some((s) => s.start === time);
                           const canSelect = isSlotSelectable(status);
+                          const showCourts = freeCourts != null && status === SLOT_STATUS.AVAILABLE;
                           const tooltip = (() => {
                             if (status === SLOT_STATUS.UNAVAILABLE) {
                               const reason = unavailability?.notes || 'Indisponível';
@@ -429,6 +458,9 @@ export default function V2DaySlotsDialog({ arena, arenaId, date, courtId: initia
                             }
                             if (status === SLOT_STATUS.CLOSED) {
                               return `${time} · Fechado (sem horário)`;
+                            }
+                            if (showCourts) {
+                              return `${time} · ${freeCourts} de ${totalCourts} quadra(s) livre(s)`;
                             }
                             return `${time} · ${SLOT_STATUS_LABELS[status]}`;
                           })();
@@ -453,6 +485,11 @@ export default function V2DaySlotsDialog({ arena, arenaId, date, courtId: initia
                               {(status === SLOT_STATUS.PENDING || status === SLOT_STATUS.CONFIRMED) && booking?.athlete_name && (
                                 <div className="mt-1 truncate text-[9px] italic text-gray-600">
                                   {booking.athlete_name}
+                                </div>
+                              )}
+                              {showCourts && !isSelected && (
+                                <div className="mt-1 text-[9px] font-semibold text-green-700">
+                                  {freeCourts}/{totalCourts} quadra{totalCourts === 1 ? '' : 's'}
                                 </div>
                               )}
                               {isSelected && <div className="mt-1 flex items-center gap-1 text-[10px] font-bold text-green-700"><Check className="h-3 w-3" /> Selecionado</div>}
