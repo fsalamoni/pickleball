@@ -1,6 +1,8 @@
 /**
  * Serviço da lista de espera de RESERVAS (flag booking_waitlist).
- * Coleção `arena_waitlist`. Distinto do matchmaking waitlist (Arena V3).
+ * Coleção `booking_waitlist` — SEPARADA do `arena_waitlist` do matchmaking
+ * (Arena V3), que usa `athlete_id`/`slot_id`. Compartilhar a mesma coleção
+ * causava contaminação cruzada nas consultas por `arena_id`.
  * Aditivo — não altera reservas existentes.
  */
 
@@ -13,7 +15,7 @@ import { notifyUsers, NOTIFICATION_TYPE } from '@/core/services/notificationServ
 import { normalizeWaitlistEntry, waitlistDocId } from '../domain/booking_waitlist.js';
 import { listArenaManagerIds } from './arenaService.js';
 
-const COL = 'arena_waitlist';
+const COL = 'booking_waitlist';
 
 /** Entra na lista de espera de um horário. Idempotente (id determinístico). */
 export async function joinWaitlist(input, actor) {
@@ -33,14 +35,14 @@ export async function joinWaitlist(input, actor) {
     link: `/arenas/${value.arena_id}/gerir`,
     actor: { uid: actor.uid, displayName: value.user_name },
   });
-  await createAuditLog({ action: 'arena_waitlist_joined', actor, details: { arena_id: value.arena_id, date: value.date, start: value.start } });
+  await createAuditLog({ action: 'booking_waitlist_joined', actor, details: { arena_id: value.arena_id, date: value.date, start: value.start } });
   return id;
 }
 
 /** Sai da lista de espera (o próprio atleta ou o gestor). */
 export async function leaveWaitlist(entryId, actor) {
   await deleteDoc(doc(db, COL, entryId));
-  await createAuditLog({ action: 'arena_waitlist_left', actor, details: { entry_id: entryId } });
+  await createAuditLog({ action: 'booking_waitlist_left', actor, details: { entry_id: entryId } });
 }
 
 /** Lista de espera da arena (gestor). */
