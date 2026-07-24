@@ -571,6 +571,13 @@ export const FEATURE_FLAG = Object.freeze({
    * Aditivo — desligada, o botão some e o ingresso por código segue manual.
    */
   CLUB_INVITE_LINK: 'club_invite_link',
+
+  /**
+   * SEO das páginas públicas: define título, meta description e tags Open Graph
+   * (título/descrição/imagem) dinâmicos nas páginas públicas (torneio etc.),
+   * melhorando o preview em links e buscadores. Aditivo — desligada, nada muda.
+   */
+  PUBLIC_SEO: 'public_seo',
 });
 
 /** Metadados de exibição para o painel de flags (admin master). */
@@ -1076,6 +1083,13 @@ export const FEATURE_FLAG_META = Object.freeze({
     description:
       'O admin copia um link que já leva o código de convite; quem abre entra na '
       + 'tela do clube com o código preenchido. Desligada, o botão some.',
+  },
+  [FEATURE_FLAG.PUBLIC_SEO]: {
+    label: 'SEO das páginas públicas',
+    description:
+      'Define título, meta description e tags Open Graph dinâmicos nas páginas '
+      + 'públicas (torneio etc.), melhorando o preview em links e buscadores. '
+      + 'Desligada, nada muda.',
   },
 });
 

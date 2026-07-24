@@ -21,6 +21,7 @@ import {
 import { useClipboard } from '@/core/lib/useClipboard';
 import { useFeatureFlag } from '@/core/lib/FeatureFlagsContext';
 import { FEATURE_FLAG } from '@/core/featureFlags';
+import { useDocumentMeta } from '@/core/seo/useDocumentMeta';
 import ShareCardButton from '@/modules/sharing/components/ShareCardButton';
 import CertificateButton from '@/modules/tournament/components/CertificateButton';
 import TournamentGallery from '@/modules/tournament/components/TournamentGallery';
@@ -69,6 +70,14 @@ export default function PublicTournament() {
     queryFn: () => getTournament(tournamentId),
     refetchInterval: 30_000,
   });
+
+  const seoOn = useFeatureFlag(FEATURE_FLAG.PUBLIC_SEO);
+  useDocumentMeta({
+    title: tournament?.name,
+    description: tournament?.description
+      || (tournament ? `Torneio de pickleball${tournament.city ? ` em ${tournament.city}` : ''}. Acompanhe modalidades, jogos e ranking.` : ''),
+    url: publicUrl,
+  }, seoOn && !!tournament);
   const { data: modalities = [] } = useQuery({
     queryKey: ['public', 'modalities', tournamentId],
     queryFn: () => listModalities(tournamentId),
