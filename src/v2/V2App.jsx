@@ -71,6 +71,7 @@ const V2NotFound = lazy(() => import('@/v2/pages/V2NotFound'));
 const V2DoublesRanking = lazy(() => import('@/v2/pages/V2DoublesRanking'));
 const V2MyGames = lazy(() => import('@/v2/pages/V2MyGames'));
 const V2Settings = lazy(() => import('@/v2/pages/V2Settings'));
+const V2Search = lazy(() => import('@/v2/pages/V2Search'));
 
 // Conteúdo de referência — nativo v2.
 const V2Rules = lazy(() => import('@/v2/pages/V2Rules'));
@@ -155,6 +156,7 @@ export default function V2App() {
 
           {/* Comunidade */}
           <Route path="atletas" element={<V2Athletes />} />
+          <Route path="buscar" element={<V2Search />} />
           <Route path="atleta/:uid" element={<V2AthleteProfile />} />
           <Route path="clubes" element={<V2Clubs />} />
           <Route path="clubes/criar" element={<V2CreateClub />} />

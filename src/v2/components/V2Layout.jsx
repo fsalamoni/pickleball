@@ -389,6 +389,7 @@ export default function V2Layout({ children }) {
   }, [location.pathname]);
 
   const pageTitlesOn = useFeatureFlag(FEATURE_FLAG.PAGE_TITLES);
+  const globalSearchOn = useFeatureFlag(FEATURE_FLAG.GLOBAL_SEARCH);
   useEffect(() => {
     if (!pageTitlesOn) return;
     const title = resolvePageTitle(location.pathname);
@@ -400,7 +401,8 @@ export default function V2Layout({ children }) {
   const handleSearch = (e) => {
     e.preventDefault();
     const q = searchQuery.trim();
-    navigate(q ? `/atletas?q=${encodeURIComponent(q)}` : '/atletas');
+    const base = globalSearchOn ? '/buscar' : '/atletas';
+    navigate(q ? `${base}?q=${encodeURIComponent(q)}` : base);
     closeMobile();
   };
 

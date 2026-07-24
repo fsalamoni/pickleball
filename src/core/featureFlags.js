@@ -549,6 +549,13 @@ export const FEATURE_FLAG = Object.freeze({
    * rota e o link ficam ocultos.
    */
   SETTINGS_PAGE: 'settings_page',
+
+  /**
+   * Busca global federada: uma página de busca que procura em atletas, torneios,
+   * arenas e clubes ao mesmo tempo, agrupando por tipo. Aditivo — desligada, a
+   * busca do topo segue indo para o diretório de atletas.
+   */
+  GLOBAL_SEARCH: 'global_search',
 });
 
 /** Metadados de exibição para o painel de flags (admin master). */
@@ -1035,6 +1042,13 @@ export const FEATURE_FLAG_META = Object.freeze({
       'Página /configuracoes com atalhos de conta e a exportação dos dados '
       + 'pessoais do usuário (perfil, inscrições, reservas) em JSON. Desligada, '
       + 'a rota e o link ficam ocultos.',
+  },
+  [FEATURE_FLAG.GLOBAL_SEARCH]: {
+    label: 'Busca global federada',
+    description:
+      'Página de busca que procura em atletas, torneios, arenas e clubes ao '
+      + 'mesmo tempo, agrupando por tipo. Desligada, a busca do topo segue indo '
+      + 'para o diretório de atletas.',
   },
 });
 
