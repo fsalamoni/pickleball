@@ -1,14 +1,14 @@
 # MODULES
 
 > O que cada módulo faz, arquivos-chave e fluxos principais. Panorama em
-> `docs/AI_CONTEXT.md`; dados em `docs/DATA_MODEL.md`.
+> `docs/01-AI-CONTEXT.md`; dados em `docs/05-DATA-MODEL.md`.
 
 A plataforma tem **19 módulos** em `src/modules/`. A camada de apresentação
 ativa (V2, `src/v2/`) consome os hooks e services desses módulos. A camada
 legada (V1, `src/pages/`) também, mas está em desuso.
 
 **Feature flags**: cada nova feature vive atrás de uma flag
-(`src/core/featureFlags.js` — 124 flags, ver `AI_CONTEXT.md` §9). UI
+(`src/core/featureFlags.js` — 124 flags, ver `01-AI-CONTEXT.md` §9). UI
 gateada com `<FeatureFlagGuard flag=...>` ou via hook `useFeatureFlag(key)`.
 **Sempre aditivo** — nunca quebra o que está OFF.
 

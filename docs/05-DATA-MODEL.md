@@ -3,7 +3,7 @@
 > Coleções Firestore (database **`pickleball`**), seus campos-chave e
 > relacionamentos. Tudo top-level (sem subcoleções aninhadas). Sem joins:
 > desnormalização e ids deterministas. Campos comuns: `created_at`,
-> `updated_at` (`serverTimestamp`). Para o panorama, ver `docs/AI_CONTEXT.md`.
+> `updated_at` (`serverTimestamp`). Para o panorama, ver `docs/01-AI-CONTEXT.md`.
 
 ## Convenções
 
@@ -261,7 +261,7 @@ Pagamentos individuais. `sale_id`, `arena_id`, `payer_id`, `amount`,
 
 ### `notifications/{id}`
 Notificações do sino. `userId`, `title`, `message`, `type`
-(ver `NOTIFICATION_TYPE` em `AI_CONTEXT.md` §7), `link`, `read`, `actor`,
+(ver `NOTIFICATION_TYPE` em `01-AI-CONTEXT.md` §7), `link`, `read`, `actor`,
 `created_at`. Escrita por `createNotification` / `notifyUsers` (lote ≤400).
 
 ### `audit_logs/{id}`
@@ -421,7 +421,7 @@ Histórico de exports gerados. `user_id`, `data_url`, `expires_at`.
 
 > 35+ coleções criadas pelos módulos Arena V3 (PDV, members, leagues,
 > marketing, IoT, operations, matchmaking). Detalhe completo em
-> `docs/ARENA_V3/26-ARENA-V3-COMPLETE-REFERENCE.md`. Cada módulo
+> `docs/10-ARENA-V3/26-ARENA-V3-COMPLETE-REFERENCE.md`. Cada módulo
 > controla o que está ativo via sub-flag.
 
 **PDV**: `arena_products`, `arena_sales`, `arena_payments`.

@@ -190,7 +190,7 @@ firebase deploy --only hosting --project antonov-82411
 
 ## 📞 Onde pedir ajuda
 
-- **Firestore Rules**: `firestore.rules` na raiz + 25 docs em `docs/ARENA_V3/`
+- **Firestore Rules**: `firestore.rules` na raiz + 25 docs em `docs/10-ARENA-V3/`
 - **Deploy**: `deploy-arena-v3.sh` (one-click) + `24-FIREBASE-SETUP.md`
 - **Troubleshooting**: `24-FIREBASE-SETUP.md` seção "Troubleshooting"
 - **Status completo**: `25-DEPLOY-STATUS-FINAL.md`

@@ -385,7 +385,7 @@ Verifique as 4 condições:
 
 ## 📞 Suporte
 
-Problemas não cobertos aqui? Documente no `docs/ARENA_V3/25-TROUBLESHOOTING.md` (crie conforme necessário).
+Problemas não cobertos aqui? Documente no `docs/10-ARENA-V3/25-TROUBLESHOOTING.md` (crie conforme necessário).
 
 ---
 
@@ -400,7 +400,7 @@ scripts/check-platform-admin.mjs         (verifica admin)
 scripts/promote-platform-admin.mjs       (grant/revoke admin)
 scripts/grant-arena-manager.mjs          (gestor de arena)
 scripts/health-check-arena-v3.mjs        (health check geral)
-docs/ARENA_V3/24-FIREBASE-SETUP.md       (este doc)
+docs/10-ARENA-V3/24-FIREBASE-SETUP.md       (este doc)
 ```
 
 ---

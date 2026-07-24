@@ -191,7 +191,7 @@ Em DEV sem Firebase há "local preview" em `LOCAL_PREVIEW_PROTECTED_PATHS`.
 
 **92 coleções top-level** (39 antes do Arena V3, +53 com as Ondas 1-10).
 Ids deterministas quando indicado (`arenaId_uid`, `coachId_arenaId`).
-Detalhe de campos em `docs/DATA_MODEL.md`.
+Detalhe de campos em `docs/05-DATA-MODEL.md`.
 
 - **Identidade**: `users/{uid}` (perfil + role) · `athlete_profiles/{uid}`
   (perfil público do diretório; `directory_listed: bool` controla visibilidade).
@@ -336,7 +336,7 @@ npm run build     # produção → dist/  (VITE_PWA_ENABLED=true ativa PWA)
 2. **Toda nova feature atrás de uma flag** (`FEATURE_FLAG.*`). Default OFF.
    UI usa `FeatureFlagGuard` ou checa via `useFeatureFlag(key)`.
 3. Mudou Firestore? Atualize **`firestore.rules`** (aditivas, sem quebrar
-   coleções existentes) e `docs/DATA_MODEL.md` + `docs/AI_CONTEXT.md` §6.
+   coleções existentes) e `docs/05-DATA-MODEL.md` + `docs/01-AI-CONTEXT.md` §6.
 4. Toda escrita relevante gera **`audit_logs`** via `auditService`.
 5. Alias de import: `@/` → `src/`.
 6. Antes de commitar: `npm run lint && npm run build && npm test` verdes.
@@ -352,11 +352,11 @@ npm run build     # produção → dist/  (VITE_PWA_ENABLED=true ativa PWA)
 
 ## 12. Mapa dos demais docs
 
-- `docs/ARCHITECTURE.md` — camadas, design system, PWA, testes, padrões.
-- `docs/DATA_MODEL.md` — coleções, campos, relacionamentos, resumo das regras.
-- `docs/MODULES.md` — o que cada módulo faz, arquivos-chave e fluxos.
-- `docs/arena-roadmap.md` — roadmap das arenas (Sprint 0-10, status).
-- `docs/ARENA_V3/00-INDEX.md` → `26-ARENA-V3-COMPLETE-REFERENCE.md` — referência
+- `docs/04-ARCHITECTURE.md` — camadas, design system, PWA, testes, padrões.
+- `docs/05-DATA-MODEL.md` — coleções, campos, relacionamentos, resumo das regras.
+- `docs/06-MODULES.md` — o que cada módulo faz, arquivos-chave e fluxos.
+- `docs/08-ARENA-ROADMAP.md` — roadmap das arenas (Sprint 0-10, status).
+- `docs/10-ARENA-V3/00-INDEX.md` → `26-ARENA-V3-COMPLETE-REFERENCE.md` — referência
   completa do Arena V3.
-- `docs/ux-analysis/01-15` — UX/UI docs, incluindo backlog remanescente (15).
+- `docs/09-UX-ANALYSIS/01-15` — UX/UI docs, incluindo backlog remanescente (15).
 - `docs/feature-flags-catalog.md` — catálogo detalhado de todas as flags.

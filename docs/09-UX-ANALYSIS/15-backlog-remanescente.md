@@ -1,7 +1,7 @@
 # 15 — Backlog remanescente (o que falta)
 
 > Consolidação de **todas** as sugestões espalhadas no repositório
-> (`docs/ux-analysis/01–14`, `docs/arena-roadmap.md`, `docs/ARENA_V3/*`),
+> (`docs/09-UX-ANALYSIS/01–14`, `docs/08-ARENA-ROADMAP.md`, `docs/10-ARENA-V3/*`),
 > com uma **limpeza do que já foi implementado**. Este documento é a fonte
 > única de "o que ainda falta". Status apurado por: catálogo de flags
 > (`src/core/featureFlags.js`, 124 flags), trabalho desta branch e verificação
@@ -60,7 +60,7 @@ que pode se unificar foi unificado**. Pontos pertinentes ainda abertos:
 - ⏳ **DS-16** lint rules/codemods proibindo import de primitivos legados em
   `src/v2` (e QW-13: migrar `V2GameDayOrganizer`, `V2EventDatesPanel`,
   `V2MatchesBlock`).
-- ⏳ **DS-18** reescrever `DESIGN_STANDARD.md` (hoje manda `Platform*`/slate).
+- ⏳ **DS-18** reescrever `07-DESIGN-STANDARD.md` (hoje manda `Platform*`/slate).
 
 ## 2. Navegação / arquitetura de informação (doc 02)
 

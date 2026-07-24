@@ -86,7 +86,7 @@ Novos índices:
 | Domínio puro (testes) | 17 arquivos + 14 arquivos de testes |
 | Cloud Functions | 4 novas + 1 mantida |
 | Scripts Node CLI | 5 |
-| Documentos de regência | 25 (em `docs/ARENA_V3/`) |
+| Documentos de regência | 25 (em `docs/10-ARENA-V3/`) |
 | Testes totais | 668 / 668 (100%) |
 | Build | green, ~22-23s |
 | Breaking changes | 0 |
@@ -121,7 +121,7 @@ Novos índices:
 ## 📂 Arquivos de referência (no repo)
 
 ```
-docs/ARENA_V3/
+docs/10-ARENA-V3/
 ├── 00-INDEX.md                    (visão geral)
 ├── 01-PLAN.md                     (planejamento original)
 ├── 03-PROGRESS.md                 (atualizado)

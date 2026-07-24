@@ -154,7 +154,7 @@ só reorganizar o que já existe.
 |---|---|---|---|---|
 | ARE-11 | UX | B (1d) | `src/v2/components/V2Layout.jsx` (sidebar + dashboard) | `ARENAS` |
 | ARE-20 | UX | B (1d) | novo: `src/v2/pages/V2ArenaOnboarding.jsx` | `ARENA_OWNER_ONBOARDING` |
-| QW-15 | docs | B (0.5d) | `docs/AI_CONTEXT.md` + `README.md` | — |
+| QW-15 | docs | B (0.5d) | `docs/01-AI-CONTEXT.md` + `README.md` | — |
 | QW-14 | UX | B (0.5d) | `src/v2/components/V2Layout.jsx` (condicional) | `ARENAS` |
 | **Testes** | infra | B (0.5d) | setup: `vitest` + `@firebase/rules-unit-testing` (se ainda não tem) | — |
 | **Domínio `arena_owner.test.js`** | test | B (0.5d) | novo | — |
@@ -489,7 +489,7 @@ primeira vez no menu, com checklist de configuração. Já é vitória.
   - Persiste em `arenas/{id}.onboarding_complete` (4 booleans)
   - Substituiu o redirect direto pra `/gerir`
 - **QW-14** "Minhas reservas" condicional à flag `ARENAS`
-- **QW-15** docs (AI_CONTEXT.md + README.md) atualizadas
+- **QW-15** docs (01-AI-CONTEXT.md + README.md) atualizadas
 - **Bônus** aba "Arenas" no `/admin/painel` com 5 stats + tabela
 - **Sprint 0.1** (PR #47, hotfix) — âncoras #fotos/#precos/#horarios em
   V2ArenaManage (resolveu caveat do PR #46)
@@ -718,7 +718,7 @@ Domain puro `instant_booking.js` + 19 tests. Integração no
 
 ### Próximo (Sprint 11+ — backlog remanescente)
 
-> Ver `docs/ux-analysis/15-backlog-remanescente.md` para a lista
+> Ver `docs/09-UX-ANALYSIS/15-backlog-remanescente.md` para a lista
 > consolidada do que ainda falta. Tópicos principais:
 >
 > - **DS** (Design System): unificar 4 sistemas concorrentes, dark mode,

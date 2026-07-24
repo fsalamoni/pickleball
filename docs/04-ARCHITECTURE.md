@@ -1,7 +1,7 @@
 # ARCHITECTURE
 
 > Como o código é organizado e por quê. Para o panorama, leia
-> `docs/AI_CONTEXT.md` primeiro.
+> `docs/01-AI-CONTEXT.md` primeiro.
 
 ## Camadas (por módulo de domínio)
 

@@ -190,7 +190,7 @@ query que precisa deles. O Firebase mostra um link direto no console
 do navegador para criar índice sob demanda.
 
 Para criar todos de uma vez (recomendado), abra o arquivo
-`docs/ARENA_V3/firestore.indexes.json` e rode:
+`docs/10-ARENA-V3/firestore.indexes.json` e rode:
 
 ```bash
 firebase deploy --only firestore:indexes

@@ -1,12 +1,12 @@
 # 01 — Fundação e Design System
 
-Contexto: convivem hoje **quatro camadas visuais**: (a) tokens "Athleisure Premium" `acid/ink/paper` + Outfit/Inter (`tailwind.config.js:33-47`); (b) tokens HSL shadcn com `--primary` esmeralda e fontes Manrope/Sora no body (`src/index.css:67-96,166-179`); (c) classes `arena-*` (`src/index.css:206-241`) mandatadas por `docs/DESIGN_STANDARD.md`; (d) primitivos `V2*` (`src/v2/ui/primitives.jsx`) usados pelas páginas ativas. Resultado: 4 fontes carregadas, 3 botões, 3 empty states, 2 skeletons, 3 avatares, 2 spinners de cores diferentes.
+Contexto: convivem hoje **quatro camadas visuais**: (a) tokens "Athleisure Premium" `acid/ink/paper` + Outfit/Inter (`tailwind.config.js:33-47`); (b) tokens HSL shadcn com `--primary` esmeralda e fontes Manrope/Sora no body (`src/index.css:67-96,166-179`); (c) classes `arena-*` (`src/index.css:206-241`) mandatadas por `docs/07-DESIGN-STANDARD.md`; (d) primitivos `V2*` (`src/v2/ui/primitives.jsx`) usados pelas páginas ativas. Resultado: 4 fontes carregadas, 3 botões, 3 empty states, 2 skeletons, 3 avatares, 2 spinners de cores diferentes.
 
 ---
 
 ### DS-01 — Eleger o sistema V2 como único e oficial (P0 · M)
-**Problema:** `docs/DESIGN_STANDARD.md` manda usar componentes `Platform*` e classes `arena-*`, mas as ~60 páginas ativas usam primitivos `V2*` — o padrão normativo não descreve o código que roda; qualquer tela nova começa com uma decisão ambígua.
-**Proposta:** declarar `src/v2/ui/primitives.jsx` como sistema oficial; reescrever `DESIGN_STANDARD.md` descrevendo os primitivos V2 reais (com exemplos de uso e do's/don'ts); marcar `platform-page.jsx` e classes `arena-*` como deprecadas no próprio arquivo (comentário de cabeçalho) com plano de remoção.
+**Problema:** `docs/07-DESIGN-STANDARD.md` manda usar componentes `Platform*` e classes `arena-*`, mas as ~60 páginas ativas usam primitivos `V2*` — o padrão normativo não descreve o código que roda; qualquer tela nova começa com uma decisão ambígua.
+**Proposta:** declarar `src/v2/ui/primitives.jsx` como sistema oficial; reescrever `07-DESIGN-STANDARD.md` descrevendo os primitivos V2 reais (com exemplos de uso e do's/don'ts); marcar `platform-page.jsx` e classes `arena-*` como deprecadas no próprio arquivo (comentário de cabeçalho) com plano de remoção.
 **Reuso:** conteúdo do guia `Design System/PickleHub - Guia de Implementação Design System.txt`.
 
 ### DS-02 — Remover as fontes Manrope e Sora (P1 · B)
