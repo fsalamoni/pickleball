@@ -9,18 +9,23 @@
 
 import React, { useMemo, useState } from 'react';
 import { toast } from 'sonner';
-import { Users, UserPlus, Pencil, Trash2, Check } from 'lucide-react';
+import { Users, UserPlus, Pencil, Trash2, Check, ShieldCheck } from 'lucide-react';
+import { useAuth } from '@/core/lib/FirebaseAuthContext';
+import { useFeatureFlag } from '@/core/lib/FeatureFlagsContext';
+import { FEATURE_FLAG } from '@/core/featureFlags';
 import {
   filterStudents, sortStudents, rosterSummary, studentStatusLabel,
   studentStatusTone, studentDocId, STUDENT_STATUS,
 } from '../domain/student.js';
 import { LESSON_STATUS, lessonSlots } from '../domain/lesson.js';
+import { VALIDATION_LEVEL_OPTIONS, latestValidation } from '../domain/validation.js';
 import {
   useCoachStudents, useUpsertStudent, useSetStudentStatus, useRemoveStudent,
 } from '../hooks/useStudents.js';
+import { useCoachValidations, useUpsertValidation } from '../hooks/useValidations.js';
 import ConfirmDialog from '@/components/ConfirmDialog';
 import {
-  V2Badge, V2Button, V2EmptyState, V2Field, V2Input, V2Skeleton,
+  V2Badge, V2Button, V2EmptyState, V2Field, V2Input, V2Select, V2Skeleton,
   V2Surface, V2Textarea,
 } from '@/v2/ui/primitives';
 
@@ -88,8 +93,56 @@ function FichaEditor({ coachId, student, onDone }) {
   );
 }
 
-function StudentCard({ coachId, student, completedCount, onStatus, onRemove, isPending }) {
+function ValidationEditor({ coachId, coachName, student, current, onDone }) {
+  const upsert = useUpsertValidation();
+  const [levelId, setLevelId] = useState(current?.level_id || '');
+  const [note, setNote] = useState(current?.note || '');
+
+  const save = async () => {
+    if (!levelId) { toast.error('Selecione um nível.'); return; }
+    try {
+      await upsert.mutateAsync({
+        coach_id: coachId,
+        coach_name: coachName,
+        student_id: student.student_id,
+        student_name: student.student_name,
+        level_id: levelId,
+        note,
+      });
+      toast.success('Nível validado.');
+      onDone();
+    } catch (err) {
+      toast.error(err?.message || 'Não foi possível validar.');
+    }
+  };
+
+  return (
+    <div className="mt-3 space-y-3 rounded-2xl border border-blue-100 bg-blue-50/40 p-3">
+      <p className="text-xs text-gray-600">
+        Ao validar, o aluno recebe um selo público de nível validado por professor no perfil dele.
+      </p>
+      <V2Field label="Nível atestado">
+        <V2Select value={levelId} onChange={(e) => setLevelId(e.target.value)}>
+          <option value="">Selecione…</option>
+          {VALIDATION_LEVEL_OPTIONS.map((l) => (
+            <option key={l.id} value={l.id}>{l.badge ? `${l.badge} — ${l.name}` : l.name}</option>
+          ))}
+        </V2Select>
+      </V2Field>
+      <V2Field label="Observação (opcional, pública)">
+        <V2Input value={note} onChange={(e) => setNote(e.target.value)} maxLength={280} placeholder="Ex.: dink e voleio consistentes" />
+      </V2Field>
+      <div className="flex justify-end gap-2">
+        <V2Button size="sm" variant="ghost" onClick={onDone}>Cancelar</V2Button>
+        <V2Button size="sm" onClick={save} disabled={upsert.isPending}>{upsert.isPending ? 'Salvando…' : 'Validar nível'}</V2Button>
+      </div>
+    </div>
+  );
+}
+
+function StudentCard({ coachId, coachName, student, completedCount, validation, levelingOn, onStatus, onRemove, isPending }) {
   const [editing, setEditing] = useState(false);
+  const [validating, setValidating] = useState(false);
   return (
     <div className="rounded-2xl border border-gray-100 bg-paper p-3">
       <div className="flex items-start justify-between gap-2">
@@ -110,9 +163,22 @@ function StudentCard({ coachId, student, completedCount, onStatus, onRemove, isP
                 {student.tags.map((t) => <V2Badge key={t} tone="blue">{t}</V2Badge>)}
               </div>
             )}
+            {levelingOn && validation?.level_id && (
+              <div className="mt-1">
+                <V2Badge tone="green">
+                  <ShieldCheck className="mr-1 inline h-3 w-3" />
+                  Nível {validation.level_badge || validation.level_name} validado
+                </V2Badge>
+              </div>
+            )}
           </div>
         </div>
         <div className="flex items-center gap-1.5">
+          {levelingOn && (
+            <button type="button" onClick={() => setValidating((v) => !v)} className="rounded-full border border-blue-200 p-1.5 text-blue-600 hover:bg-blue-50" aria-label="Validar nível">
+              <ShieldCheck className="h-3.5 w-3.5" />
+            </button>
+          )}
           <button type="button" onClick={() => setEditing((v) => !v)} className="rounded-full border border-gray-200 p-1.5 text-gray-500 hover:bg-white" aria-label="Editar ficha">
             <Pencil className="h-3.5 w-3.5" />
           </button>
@@ -151,16 +217,38 @@ function StudentCard({ coachId, student, completedCount, onStatus, onRemove, isP
       </div>
 
       {editing && <FichaEditor coachId={coachId} student={student} onDone={() => setEditing(false)} />}
+      {levelingOn && validating && (
+        <ValidationEditor
+          coachId={coachId}
+          coachName={coachName}
+          student={student}
+          current={validation}
+          onDone={() => setValidating(false)}
+        />
+      )}
     </div>
   );
 }
 
 export default function CoachStudentsSection({ coachId, lessons = [] }) {
+  const { user } = useAuth();
+  const levelingOn = useFeatureFlag(FEATURE_FLAG.COACH_LEVELING);
   const { data: students = [], isLoading } = useCoachStudents(coachId);
+  const { data: validations = [] } = useCoachValidations(levelingOn ? coachId : null);
   const upsert = useUpsertStudent();
   const setStatus = useSetStudentStatus();
   const remove = useRemoveStudent();
   const [query, setQuery] = useState('');
+
+  const coachName = user?.displayName || '';
+  const validationByStudent = useMemo(() => {
+    const map = new Map();
+    validations.forEach((v) => {
+      const prev = map.get(v.student_id);
+      map.set(v.student_id, latestValidation([prev, v].filter(Boolean)));
+    });
+    return map;
+  }, [validations]);
 
   const lessonStats = useMemo(() => candidatesFromLessons(lessons), [lessons]);
   const summary = useMemo(() => rosterSummary(students), [students]);
@@ -262,8 +350,11 @@ export default function CoachStudentsSection({ coachId, lessons = [] }) {
             <StudentCard
               key={studentDocId(coachId, s.student_id)}
               coachId={coachId}
+              coachName={coachName}
               student={s}
               completedCount={completedFor(s.student_id)}
+              validation={validationByStudent.get(s.student_id)}
+              levelingOn={levelingOn}
               onStatus={handleStatus}
               onRemove={handleRemove}
               isPending={setStatus.isPending || remove.isPending}

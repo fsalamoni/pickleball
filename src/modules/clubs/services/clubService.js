@@ -189,6 +189,8 @@ export async function updateClub(id, updates, actor) {
   allowed.forEach((key) => {
     if (updates[key] !== undefined) sanitized[key] = trimmed(updates[key]);
   });
+  // is_public é booleano (não passa por trimmed).
+  if (updates.is_public !== undefined) sanitized.is_public = updates.is_public === true;
   await updateDoc(doc(db, COL.clubs, id), { ...sanitized, updated_at: serverTimestamp() });
   await createAuditLog({ action: 'club_updated', actor, details: { club_id: id, fields: Object.keys(sanitized) } });
 }

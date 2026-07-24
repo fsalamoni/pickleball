@@ -14,6 +14,7 @@ const Login = lazy(() => import('@/v2/pages/V2Login'));
 const PublicTournament = lazy(() => import('@/pages/PublicTournament'));
 const PrintTournament = lazy(() => import('@/pages/PrintTournament'));
 const Telao = lazy(() => import('@/pages/Telao'));
+const PublicClub = lazy(() => import('@/pages/PublicClub'));
 
 // App principal (V2 / "Athleisure Premium"). Chunk isolado.
 const V2App = lazy(() => import('@/v2/V2App'));
@@ -105,6 +106,7 @@ export default function App() {
               <Route path="/p/:tournamentId" element={<PublicTournament />} />
               <Route path="/torneios/:tournamentId/imprimir" element={<PrintTournament />} />
               <Route path="/torneios/:tournamentId/telao" element={<Telao />} />
+              <Route path="/c/:clubId" element={<PublicClub />} />
 
               {/* Redirects de compatibilidade com URLs legadas (V1) */}
               <Route path="/inicio" element={<Navigate to="/" replace />} />

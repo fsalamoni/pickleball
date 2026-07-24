@@ -1,17 +1,30 @@
-import { useEffect, useState } from 'react';
+import { useEffect, useMemo, useState } from 'react';
 import { collection, query, where, onSnapshot, doc, updateDoc, serverTimestamp, writeBatch } from 'firebase/firestore';
 import { db } from '@/core/config/firebase';
 import { logger } from '@/core/lib/logger';
 import { useAuth } from '@/core/lib/FirebaseAuthContext';
+import { useFeatureFlag } from '@/core/lib/FeatureFlagsContext';
+import { FEATURE_FLAG } from '@/core/featureFlags';
+import { isNotificationMuted } from '@/modules/notifications/domain/preferences';
 
 export function useNotifications() {
-  const { user } = useAuth();
-  const [notifications, setNotifications] = useState([]);
+  const { user, userProfile } = useAuth();
+  const prefsOn = useFeatureFlag(FEATURE_FLAG.NOTIFICATION_PREFS);
+  const [allNotifications, setAllNotifications] = useState([]);
   const [isLoading, setIsLoading] = useState(true);
+
+  // Imposição das preferências na leitura: quando a flag está ligada, esconde
+  // do sino as notificações de categorias que o usuário silenciou. Desligada,
+  // mostra tudo (comportamento anterior).
+  const notifications = useMemo(() => {
+    if (!prefsOn) return allNotifications;
+    const prefs = userProfile?.notification_prefs;
+    return allNotifications.filter((n) => !isNotificationMuted(prefs, n.type));
+  }, [allNotifications, prefsOn, userProfile?.notification_prefs]);
 
   useEffect(() => {
     if (!user) {
-      setNotifications([]);
+      setAllNotifications([]);
       setIsLoading(false);
       return;
     }
@@ -19,7 +32,7 @@ export function useNotifications() {
     const unsubscribe = onSnapshot(
       q,
       (snap) => {
-        setNotifications(
+        setAllNotifications(
           snap.docs
             .map((d) => ({ id: d.id, ...d.data() }))
             .sort((a, b) => {
@@ -34,7 +47,7 @@ export function useNotifications() {
         // Falha (ex.: regra de leitura) não pode quebrar a aplicação; loga e
         // mantém o sino vazio em vez de travar em "carregando".
         logger.error('Falha ao escutar notificações:', err);
-        setNotifications([]);
+        setAllNotifications([]);
         setIsLoading(false);
       },
     );

@@ -1,6 +1,6 @@
 import React from 'react';
 import { Link, Navigate, useParams } from 'react-router-dom';
-import { ArrowLeft, Award, Building2, ChevronRight, GraduationCap, Medal, Percent, Swords, Trophy } from 'lucide-react';
+import { ArrowLeft, Award, Building2, ChevronRight, GraduationCap, Medal, Percent, ShieldCheck, Swords, Trophy } from 'lucide-react';
 import { useFeatureFlag } from '@/core/lib/FeatureFlagsContext';
 import { FEATURE_FLAG } from '@/core/featureFlags';
 import { useAthleteProfile } from '@/modules/athletes/hooks/useAthleteProfile';
@@ -10,6 +10,8 @@ import { useRatingHistory } from '@/modules/rating/hooks/useRating';
 import { useHeadToHead } from '@/modules/rating/hooks/useHeadToHead';
 import { useFollowers } from '@/modules/social/hooks/useFollow';
 import { useCoach } from '@/modules/coaches/hooks/useCoaches';
+import { useAthleteValidations } from '@/modules/coaches/hooks/useValidations';
+import { latestValidation } from '@/modules/coaches/domain/validation';
 import FollowButton from '@/modules/social/components/FollowButton';
 import RatingSparkline from '@/modules/rating/components/RatingSparkline';
 import HeadToHeadCard from '@/modules/rating/components/HeadToHeadCard';
@@ -32,12 +34,15 @@ export default function V2AthleteProfile() {
   const headToHeadOn = useFeatureFlag(FEATURE_FLAG.HEAD_TO_HEAD);
   const achievementsOn = useFeatureFlag(FEATURE_FLAG.ACHIEVEMENTS);
   const coachResidentOn = useFeatureFlag(FEATURE_FLAG.COACH_RESIDENT);
+  const levelingOn = useFeatureFlag(FEATURE_FLAG.COACH_LEVELING);
   const { uid } = useParams();
   const { data, isLoading, isError } = useAthleteProfile(uid);
   const { data: ratingHistory = [] } = useRatingHistory(uid, ratingHistoryOn);
   const { data: h2hData } = useHeadToHead(uid, headToHeadOn);
   const { data: followers = [] } = useFollowers(uid, followOn);
   const { data: coachProfile } = useCoach(coachResidentOn ? uid : null);
+  const { data: validations = [] } = useAthleteValidations(levelingOn ? uid : null);
+  const validatedLevel = levelingOn ? latestValidation(validations) : null;
 
   if (!enabled) return <Navigate to="/atletas" replace />;
 
@@ -113,6 +118,14 @@ export default function V2AthleteProfile() {
               {athlete.level && (
                 <div className="flex items-center gap-2 rounded-2xl border border-gray-100 bg-paper px-4 py-2 text-sm font-semibold text-gray-600">
                   <Award className="h-4 w-4" /> {athlete.level}
+                </div>
+              )}
+              {validatedLevel?.level_id && (
+                <div
+                  className="flex items-center gap-2 rounded-2xl border border-green-200 bg-green-50 px-4 py-2 text-sm font-semibold text-green-700"
+                  title={validatedLevel.coach_name ? `Validado por ${validatedLevel.coach_name}` : 'Validado por professor'}
+                >
+                  <ShieldCheck className="h-4 w-4" /> Nível {validatedLevel.level_badge || validatedLevel.level_name} validado
                 </div>
               )}
             </div>

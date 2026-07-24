@@ -286,6 +286,22 @@ export const FEATURE_FLAG = Object.freeze({
   NOTIFICATIONS_MARK_ALL: 'notifications_mark_all',
 
   /**
+   * Preferências de notificação: em Configurações, o usuário liga/desliga
+   * categorias de notificação (mensagens, clubes, torneios, parcerias,
+   * lembretes). A imposição é na leitura do sino — notificações de categorias
+   * silenciadas não aparecem nem contam. Aditivo — desligado, tudo aparece.
+   */
+  NOTIFICATION_PREFS: 'notification_prefs',
+
+  /**
+   * Assistente de criação de torneio: transforma o formulário único de criação
+   * em etapas guiadas (identidade → acesso/regras → calendário) com stepper e
+   * avanço validado. Aditivo — mesmos campos e mesma criação; desligado, o
+   * formulário permanece em página única.
+   */
+  TOURNAMENT_WIZARD: 'tournament_wizard',
+
+  /**
    * Check-in de atletas: na aba de inscrições do torneio, o admin pode
    * marcar/desfazer o check-in de inscrições confirmadas. O status
    * "Check-in feito" já existia e já era considerado pelo sorteio; esta
@@ -435,6 +451,22 @@ export const FEATURE_FLAG = Object.freeze({
    * aditiva. Desligada, nenhuma rota/menu/tela nova aparece.
    */
   COACH_LESSONS: 'coach_lessons',
+
+  /**
+   * Nível validado por professor: um professor atesta o nível de um aluno
+   * vinculado (a partir da tabela de nivelamento), gerando um selo público
+   * "nível validado por professor" no perfil do atleta. Aditivo — não altera
+   * rating nem ranking; desligado, nenhum selo ou ação aparece.
+   */
+  COACH_LEVELING: 'coach_leveling',
+
+  /**
+   * Clínicas/workshops do professor: eventos abertos (data, local, vagas,
+   * preço) criados pelo professor; atletas se inscrevem sozinhos. A descoberta
+   * e a inscrição aparecem no perfil público do professor. Aditivo — não altera
+   * as aulas nem o rating; desligado, nada de clínicas aparece.
+   */
+  COACH_CLINICS: 'coach_clinics',
 
   /**
    * Reservas compartilhadas (multi-atleta): uma reserva de quadra pode ter
@@ -606,6 +638,13 @@ export const FEATURE_FLAG = Object.freeze({
    * Aditivo — desligada, cada data é criada individualmente (comportamento atual).
    */
   CLUB_RECURRING_EVENTS: 'club_recurring_events',
+
+  /**
+   * Página pública do clube: o admin marca o clube como público e ganha uma
+   * vitrine sem login (nome, local, descrição, "quero participar"). Rota /c/:id.
+   * Aditivo — desligada, o botão e a rota ficam ocultos (clube segue exigindo login).
+   */
+  CLUB_PUBLIC_PAGE: 'club_public_page',
 });
 
 /** Metadados de exibição para o painel de flags (admin master). */
@@ -874,6 +913,22 @@ export const FEATURE_FLAG_META = Object.freeze({
       'Adiciona ao menu de notificações um botão para marcar todas as não '
       + 'lidas de uma vez. Desligado, o menu permanece como está.',
   },
+  [FEATURE_FLAG.NOTIFICATION_PREFS]: {
+    label: 'Preferências de notificação',
+    description:
+      'Adiciona em Configurações o controle de categorias de notificação '
+      + '(mensagens, clubes, torneios, parcerias, lembretes). Notificações de '
+      + 'categorias silenciadas deixam de aparecer no sino. Desligado, todas '
+      + 'as notificações continuam sendo exibidas.',
+  },
+  [FEATURE_FLAG.TOURNAMENT_WIZARD]: {
+    label: 'Assistente de criação de torneio',
+    description:
+      'Divide a criação do torneio em etapas guiadas (identidade, acesso e '
+      + 'regras, calendário) com indicador de progresso e avanço validado. '
+      + 'Mesmos campos e mesma criação. Desligado, a criação continua em '
+      + 'página única.',
+  },
   [FEATURE_FLAG.TOURNAMENT_CHECKIN]: {
     label: 'Check-in de atletas no torneio',
     description:
@@ -985,6 +1040,22 @@ export const FEATURE_FLAG_META = Object.freeze({
       + 'alunos com ficha de evolução e pacotes/créditos pré-pagos. É aditivo '
       + '(coleções próprias) e não altera o diretório nem as arenas. '
       + 'Desligado, as telas /aulas e as seções novas do perfil somem.',
+  },
+  [FEATURE_FLAG.COACH_LEVELING]: {
+    label: 'Nível validado por professor',
+    description:
+      'Permite ao professor atestar o nível de um aluno vinculado (a partir da '
+      + 'tabela de nivelamento), exibindo um selo "nível validado por professor" '
+      + 'no perfil do atleta. Aditivo — não altera rating nem ranking. Desligado, '
+      + 'nenhum selo ou ação de validação aparece.',
+  },
+  [FEATURE_FLAG.COACH_CLINICS]: {
+    label: 'Clínicas e workshops do professor',
+    description:
+      'Permite ao professor publicar clínicas/workshops abertos (data, local, '
+      + 'vagas e preço); atletas se inscrevem pelo perfil público do professor, '
+      + 'com controle de vagas. Aditivo — não altera aulas nem rating. '
+      + 'Desligado, nenhuma clínica aparece.',
   },
   [FEATURE_FLAG.SHARED_BOOKINGS]: {
     label: 'Reservas compartilhadas (multi-atleta e aulas)',
@@ -1143,6 +1214,13 @@ export const FEATURE_FLAG_META = Object.freeze({
     description:
       'Ao adicionar uma data/dia de jogo, permite repeti-la semanalmente por N '
       + 'semanas, criando todas de uma vez. Desligada, cada data é criada uma a uma.',
+  },
+  [FEATURE_FLAG.CLUB_PUBLIC_PAGE]: {
+    label: 'Página pública do clube',
+    description:
+      'O admin marca o clube como público e ganha uma vitrine sem login (nome, '
+      + 'local, descrição, "quero participar"), em /c/:id. Desligada, o clube '
+      + 'segue exigindo login.',
   },
 });
 

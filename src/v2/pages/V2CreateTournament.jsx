@@ -1,7 +1,7 @@
 import React, { useState } from 'react';
 import { Link, useNavigate } from 'react-router-dom';
 import { toast } from 'sonner';
-import { ArrowLeft, ArrowRight, CalendarDays, FileStack, Globe, Lock, MapPin, ShieldCheck, Trophy } from 'lucide-react';
+import { ArrowLeft, ArrowRight, CalendarDays, Check, FileStack, Globe, Lock, MapPin, ShieldCheck, Trophy } from 'lucide-react';
 import { useAuth } from '@/core/lib/FirebaseAuthContext';
 import { useCreateTournament, useMyTournaments, useDuplicateTournament } from '@/modules/tournament/hooks/useTournament';
 import { listModalities } from '@/modules/tournament/services/modalityService';
@@ -30,11 +30,19 @@ function formatDatePreview(value) {
   return Number.isNaN(date.getTime()) ? 'A definir' : date.toLocaleDateString('pt-BR', { day: '2-digit', month: 'short', year: 'numeric' });
 }
 
+const WIZARD_STEPS = [
+  { id: 'identidade', label: 'Identidade' },
+  { id: 'acesso', label: 'Acesso e regras' },
+  { id: 'calendario', label: 'Calendário' },
+];
+
 export default function V2CreateTournament() {
   const navigate = useNavigate();
   const { isAuthAvailable } = useAuth();
   const createMutation = useCreateTournament();
+  const wizardOn = useFeatureFlag(FEATURE_FLAG.TOURNAMENT_WIZARD);
   const isPreview = import.meta.env.DEV && !isAuthAvailable;
+  const [step, setStep] = useState(0);
   const [form, setForm] = useState({
     name: '', description: '', city: '', state: '', venue: '',
     visibility: TOURNAMENT_VISIBILITY.PUBLIC, ruleset: RULESET.CBP,
@@ -43,9 +51,19 @@ export default function V2CreateTournament() {
   });
   const set = (field, value) => setForm((f) => ({ ...f, [field]: value }));
 
+  const isLastStep = step === WIZARD_STEPS.length - 1;
+  const showStep = (idx) => !wizardOn || step === idx;
+
+  function goNext() {
+    if (step === 0 && !form.name.trim()) { toast.error('Informe o nome do torneio.'); return; }
+    setStep((s) => Math.min(s + 1, WIZARD_STEPS.length - 1));
+  }
+
   async function handleSubmit(e) {
     e.preventDefault();
-    if (!form.name.trim()) return toast.error('Informe o nome do torneio.');
+    // No modo assistente, "Enter"/submit em etapas intermediárias apenas avança.
+    if (wizardOn && !isLastStep) { goNext(); return; }
+    if (!form.name.trim()) { setStep(0); return toast.error('Informe o nome do torneio.'); }
     try {
       const id = await createMutation.mutateAsync({
         name: form.name, description: form.description, city: form.city, state: form.state, venue: form.venue,
@@ -106,6 +124,9 @@ export default function V2CreateTournament() {
               </div>
             )}
 
+            {wizardOn && <WizardStepper steps={WIZARD_STEPS} current={step} onGo={setStep} />}
+
+            {showStep(0) && (<>
             <V2SectionHeader eyebrow="Identidade" title="Dados do evento" titleClassName="text-xl" />
             <V2Field label="Nome do torneio" required>
               <V2Input value={form.name} onChange={(e) => set('name', e.target.value)} placeholder="Ex.: Open de Pickleball de Floripa" />
@@ -119,7 +140,9 @@ export default function V2CreateTournament() {
             </div>
             <V2Field label="Local (quadra/clube)"><V2Input value={form.venue} onChange={(e) => set('venue', e.target.value)} /></V2Field>
             <ArenaSelectField value={form.arena_id} onChange={(v) => set('arena_id', v)} />
+            </>)}
 
+            {showStep(1) && (<>
             <V2SectionHeader eyebrow="Acesso" title="Quem encontra e como entra" titleClassName="text-xl" />
             <div className="grid gap-3 sm:grid-cols-2">
               {VISIBILITY_OPTIONS.map(({ value, title, description, icon: Icon }) => {
@@ -143,20 +166,38 @@ export default function V2CreateTournament() {
                 {Object.values(RULESET).map((r) => <option key={r} value={r}>{RULESET_LABELS[r]}</option>)}
               </V2Select>
             </V2Field>
+            </>)}
 
+            {showStep(2) && (<>
             <V2SectionHeader eyebrow="Calendário" title="Janela do evento" titleClassName="text-xl" />
             <div className="grid gap-4 sm:grid-cols-3">
               <V2Field label="Início"><V2Input type="date" value={form.starts_at} onChange={(e) => set('starts_at', e.target.value)} /></V2Field>
               <V2Field label="Fim"><V2Input type="date" value={form.ends_at} onChange={(e) => set('ends_at', e.target.value)} /></V2Field>
               <V2Field label="Fim das inscrições"><V2Input type="date" value={form.registration_deadline} onChange={(e) => set('registration_deadline', e.target.value)} /></V2Field>
             </div>
+            </>)}
 
-            <div className="flex justify-end gap-2 pt-2">
-              <V2Button type="button" variant="ghost" onClick={() => navigate('/torneios')}>Cancelar</V2Button>
-              <V2Button type="submit" disabled={createMutation.isPending || isPreview}>
-                {createMutation.isPending ? 'Criando…' : 'Criar torneio'} <ArrowRight className="h-4 w-4" />
-              </V2Button>
-            </div>
+            {wizardOn ? (
+              <div className="flex justify-between gap-2 pt-2">
+                <V2Button type="button" variant="ghost" onClick={() => (step === 0 ? navigate('/torneios') : setStep((s) => s - 1))}>
+                  {step === 0 ? 'Cancelar' : <><ArrowLeft className="h-4 w-4" /> Voltar</>}
+                </V2Button>
+                {isLastStep ? (
+                  <V2Button type="submit" disabled={createMutation.isPending || isPreview}>
+                    {createMutation.isPending ? 'Criando…' : 'Criar torneio'} <Check className="h-4 w-4" />
+                  </V2Button>
+                ) : (
+                  <V2Button type="button" onClick={goNext}>Avançar <ArrowRight className="h-4 w-4" /></V2Button>
+                )}
+              </div>
+            ) : (
+              <div className="flex justify-end gap-2 pt-2">
+                <V2Button type="button" variant="ghost" onClick={() => navigate('/torneios')}>Cancelar</V2Button>
+                <V2Button type="submit" disabled={createMutation.isPending || isPreview}>
+                  {createMutation.isPending ? 'Criando…' : 'Criar torneio'} <ArrowRight className="h-4 w-4" />
+                </V2Button>
+              </div>
+            )}
           </form>
         </V2Surface>
       </div>
@@ -221,6 +262,36 @@ function TemplatePicker() {
         </V2Button>
       </div>
     </V2Surface>
+  );
+}
+
+function WizardStepper({ steps, current, onGo }) {
+  return (
+    <div className="flex items-center gap-2">
+      {steps.map((s, i) => {
+        const done = i < current;
+        const active = i === current;
+        return (
+          <React.Fragment key={s.id}>
+            <button
+              type="button"
+              onClick={() => (i <= current ? onGo(i) : null)}
+              disabled={i > current}
+              className={cn(
+                'flex items-center gap-2 rounded-full px-3 py-1.5 text-xs font-bold transition-colors',
+                active ? 'bg-ink text-white' : done ? 'bg-acid/20 text-ink' : 'bg-paper text-gray-400',
+              )}
+            >
+              <span className={cn('flex h-5 w-5 items-center justify-center rounded-full text-[11px]', active ? 'bg-acid text-ink' : done ? 'bg-ink text-acid' : 'bg-gray-200 text-gray-500')}>
+                {done ? <Check className="h-3 w-3" /> : i + 1}
+              </span>
+              <span className="hidden sm:inline">{s.label}</span>
+            </button>
+            {i < steps.length - 1 && <span className="h-px flex-1 bg-gray-200" />}
+          </React.Fragment>
+        );
+      })}
+    </div>
   );
 }
 
