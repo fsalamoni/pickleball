@@ -964,6 +964,22 @@ export async function listEventGames(eventId) {
     .sort((a, b) => (a.order ?? 0) - (b.order ?? 0) || (a.created_at_ms || 0) - (b.created_at_ms || 0));
 }
 
+/**
+ * Reúne todos os jogos dos dias de jogo de um clube (para o ranking interno).
+ * Lê os eventos do clube e concatena os jogos de cada um. Read-only.
+ */
+export async function listClubGameResults(clubId, userId) {
+  if (!db || !clubId) return [];
+  const events = await listClubEvents(clubId, userId);
+  const all = [];
+  for (const ev of (events || [])) {
+    // eslint-disable-next-line no-await-in-loop
+    const games = await listEventGames(ev.id);
+    all.push(...games);
+  }
+  return all;
+}
+
 function sanitizeGameSide(side) {
   return (Array.isArray(side) ? side : [])
     .filter((p) => p && (p.name || p.id))

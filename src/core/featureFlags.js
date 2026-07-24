@@ -535,6 +535,13 @@ export const FEATURE_FLAG = Object.freeze({
    * ativo direto (comportamento atual).
    */
   PARTNERSHIP_MUTUAL: 'partnership_mutual',
+
+  /**
+   * Ranking interno do clube: agrega os resultados dos jogos dos dias de jogo do
+   * clube num ranking casual (vitórias, saldo, aproveitamento), separado do
+   * ranking nacional. Aditivo — desligada, a aba/seção fica oculta.
+   */
+  CLUB_INTERNAL_RANKING: 'club_internal_ranking',
 });
 
 /** Metadados de exibição para o painel de flags (admin master). */
@@ -1007,6 +1014,13 @@ export const FEATURE_FLAG_META = Object.freeze({
       'Quando a arena adiciona um professor, o vínculo fica pendente até o '
       + 'professor aceitar (ou recusar); só aparece publicamente após o aceite. '
       + 'Desligada, o vínculo entra ativo direto (comportamento atual).',
+  },
+  [FEATURE_FLAG.CLUB_INTERNAL_RANKING]: {
+    label: 'Ranking interno do clube',
+    description:
+      'Agrega os resultados dos jogos dos dias de jogo do clube num ranking '
+      + 'casual (vitórias, saldo, aproveitamento), separado do ranking nacional. '
+      + 'Desligada, a aba fica oculta.',
   },
 });
 

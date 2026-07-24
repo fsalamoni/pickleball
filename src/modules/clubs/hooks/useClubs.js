@@ -31,6 +31,7 @@ import {
   acceptClubInvite,
   declineClubInvite,
   listClubEvents,
+  listClubGameResults,
   getClubEvent,
   createClubEvent,
   updateClubEvent,
@@ -374,6 +375,17 @@ export function useClubEvents(clubId) {
     queryKey: ['club-events', clubId, user?.uid],
     queryFn: () => listClubEvents(clubId, user?.uid),
     enabled: !!clubId,
+  });
+}
+
+/** Todos os jogos dos dias de jogo do clube (para o ranking interno). */
+export function useClubGameResults(clubId, enabled = true) {
+  const { user } = useAuth();
+  return useQuery({
+    queryKey: ['club-game-results', clubId, user?.uid],
+    queryFn: () => listClubGameResults(clubId, user?.uid),
+    enabled: !!clubId && enabled,
+    staleTime: 60_000,
   });
 }
 
