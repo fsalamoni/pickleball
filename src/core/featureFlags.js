@@ -556,6 +556,14 @@ export const FEATURE_FLAG = Object.freeze({
    * busca do topo segue indo para o diretório de atletas.
    */
   GLOBAL_SEARCH: 'global_search',
+
+  /**
+   * CRM leve da arena: consolida os clientes a partir das reservas (nº de
+   * reservas, última reserva, valor acordado somado, no-shows), para a arena
+   * conhecer e contatar seus frequentadores. Aditivo — desligada, a aba fica
+   * oculta.
+   */
+  ARENA_CRM: 'arena_crm',
 });
 
 /** Metadados de exibição para o painel de flags (admin master). */
@@ -1049,6 +1057,12 @@ export const FEATURE_FLAG_META = Object.freeze({
       'Página de busca que procura em atletas, torneios, arenas e clubes ao '
       + 'mesmo tempo, agrupando por tipo. Desligada, a busca do topo segue indo '
       + 'para o diretório de atletas.',
+  },
+  [FEATURE_FLAG.ARENA_CRM]: {
+    label: 'CRM leve da arena',
+    description:
+      'Consolida os clientes da arena a partir das reservas (nº de reservas, '
+      + 'última reserva, valor somado, no-shows). Desligada, a aba fica oculta.',
   },
 });
 
