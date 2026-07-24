@@ -86,7 +86,7 @@ export async function listCoaches({ limit: lim = 100, region, modality, activeOn
 /* ----------------------------- Residencies ------------------------- */
 
 /** Adiciona coach como residente de uma arena. */
-export async function addCoachResidency(input, actor) {
+export async function addCoachResidency(input, actor, { requireAcceptance = false } = {}) {
   const { valid, error, value } = normalizeCoachResidency(input);
   if (!valid) throw new Error(error);
   // Permissão: coach OU arena manager OU platform_admin
@@ -94,6 +94,10 @@ export async function addCoachResidency(input, actor) {
   if (!isAuthorized) {
     throw new Error('Sem permissão para criar essa residência.');
   }
+  // Parceria mútua (flag): quando quem adiciona NÃO é o próprio professor, o
+  // vínculo nasce pendente e só fica ativo após o professor aceitar.
+  const managerAdded = actor?.uid && actor.uid !== value.coach_id;
+  if (requireAcceptance && managerAdded) value.status = 'pending';
   await setDoc(doc(db, COACH_COLLECTIONS.residencies, residencyId(value.coach_id, value.arena_id)), {
     ...value,
     added_at: serverTimestamp(),
@@ -108,8 +112,10 @@ export async function addCoachResidency(input, actor) {
       if (arenaSnap.exists()) arenaName = arenaSnap.data().name || arenaName;
     } catch { /* nome é opcional */ }
     notifyUsers([value.coach_id], {
-      title: 'Você é professor parceiro de uma arena',
-      message: `${arenaName} adicionou você como professor parceiro. Veja no seu painel.`,
+      title: value.status === 'pending' ? 'Convite de parceria de arena' : 'Você é professor parceiro de uma arena',
+      message: value.status === 'pending'
+        ? `${arenaName} convidou você como professor parceiro. Aceite ou recuse no seu painel.`
+        : `${arenaName} adicionou você como professor parceiro. Veja no seu painel.`,
       type: NOTIFICATION_TYPE.GENERIC,
       link: '/aulas',
       actor: { uid: actor.uid },
@@ -153,6 +159,35 @@ export async function updateCoachResidency(coachId, arenaId, patch = {}, actor) 
     actor,
     details: { coach_id: coachId, arena_id: arenaId, status: update.status },
   });
+}
+
+/** O professor aceita um convite de parceria (status pending → active). */
+export async function acceptCoachResidency(coachId, arenaId, actor) {
+  if (!actor?.uid || actor.uid !== coachId) throw new Error('Apenas o professor pode aceitar a parceria.');
+  const ref = doc(db, COACH_COLLECTIONS.residencies, residencyId(coachId, arenaId));
+  await updateDoc(ref, { status: 'active', accepted_at: serverTimestamp(), updated_at: serverTimestamp() });
+  // Avisa os gestores da arena.
+  try {
+    const mgrsSnap = await getDocs(query(collection(db, 'arena_managers'), where('arena_id', '==', arenaId)));
+    const ids = mgrsSnap.docs.map((d) => d.data().user_id).filter(Boolean);
+    if (ids.length > 0) {
+      notifyUsers(ids, {
+        title: 'Professor aceitou a parceria',
+        message: 'O professor confirmou a parceria com a sua arena.',
+        type: NOTIFICATION_TYPE.GENERIC,
+        link: `/arenas/${arenaId}/gerir`,
+        actor: { uid: actor.uid },
+      });
+    }
+  } catch { /* notificação é best-effort */ }
+  await createAuditLog({ action: 'coach_residency_accepted', actor, details: { coach_id: coachId, arena_id: arenaId } });
+}
+
+/** O professor recusa um convite de parceria (remove o vínculo pendente). */
+export async function declineCoachResidency(coachId, arenaId, actor) {
+  if (!actor?.uid || actor.uid !== coachId) throw new Error('Apenas o professor pode recusar a parceria.');
+  await deleteDoc(doc(db, COACH_COLLECTIONS.residencies, residencyId(coachId, arenaId)));
+  await createAuditLog({ action: 'coach_residency_declined', actor, details: { coach_id: coachId, arena_id: arenaId } });
 }
 
 async function isResidencyAuthorized(coachId, arenaId, actor) {

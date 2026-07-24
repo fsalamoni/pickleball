@@ -96,7 +96,7 @@ export function normalizeCoachResidency(input = {}) {
     value: {
       coach_id,
       arena_id,
-      status: input.status === 'paused' ? 'paused' : 'active',
+      status: ['paused', 'pending'].includes(input.status) ? input.status : 'active',
       // weekly_schedule: { weekdays[], start, end, court_id? }
       weekly_schedule: input.weekly_schedule && typeof input.weekly_schedule === 'object' ? input.weekly_schedule : null,
       notes: str(input.notes).slice(0, 500),

@@ -7,19 +7,59 @@
 import React from 'react';
 import { Link } from 'react-router-dom';
 import { toast } from 'sonner';
-import { Building2, MapPin, LogOut, Handshake } from 'lucide-react';
-import { useCoachResidencies, useRemoveCoachResidency } from '../hooks/useCoaches.js';
+import { Building2, MapPin, LogOut, Handshake, Check, X } from 'lucide-react';
+import {
+  useCoachResidencies, useRemoveCoachResidency,
+  useAcceptCoachResidency, useDeclineCoachResidency,
+} from '../hooks/useCoaches.js';
 import { useArena } from '@/modules/arenas/hooks/useArenas';
 import ConfirmDialog from '@/components/ConfirmDialog';
 import {
-  V2Badge, V2EmptyState, V2Skeleton, V2Surface,
+  V2Badge, V2Button, V2EmptyState, V2Skeleton, V2Surface,
 } from '@/v2/ui/primitives';
 
 function PartnerArenaCard({ coachId, residency }) {
   const { data: arena } = useArena(residency.arena_id);
   const remove = useRemoveCoachResidency();
+  const accept = useAcceptCoachResidency();
+  const decline = useDeclineCoachResidency();
   if (!arena) return null;
   const isPaused = residency.status === 'paused';
+  const isPending = residency.status === 'pending';
+
+  if (isPending) {
+    return (
+      <div className="rounded-2xl border border-amber-200 bg-amber-50/60 p-3">
+        <div className="flex items-start gap-3">
+          <div className="flex h-10 w-10 items-center justify-center rounded-2xl bg-white text-ink">
+            <Building2 className="h-5 w-5" />
+          </div>
+          <div className="min-w-0 flex-1">
+            <div className="flex flex-wrap items-center gap-2">
+              <Link to={`/arenas/${arena.id}`} className="font-bold text-ink hover:underline">{arena.name}</Link>
+              <V2Badge tone="amber">Convite pendente</V2Badge>
+            </div>
+            <p className="mt-1 text-xs text-amber-800">Esta arena convidou você como professor parceiro.</p>
+          </div>
+        </div>
+        <div className="mt-2 flex justify-end gap-2">
+          <V2Button size="sm" variant="ghost" onClick={async () => {
+            try { await decline.mutateAsync({ coachId, arenaId: arena.id }); toast.success('Convite recusado.'); }
+            catch (err) { toast.error(err?.message || 'Não foi possível recusar.'); }
+          }} disabled={decline.isPending}>
+            <X className="h-3.5 w-3.5" /> Recusar
+          </V2Button>
+          <V2Button size="sm" onClick={async () => {
+            try { await accept.mutateAsync({ coachId, arenaId: arena.id }); toast.success('Parceria aceita!'); }
+            catch (err) { toast.error(err?.message || 'Não foi possível aceitar.'); }
+          }} disabled={accept.isPending}>
+            <Check className="h-3.5 w-3.5" /> Aceitar
+          </V2Button>
+        </div>
+      </div>
+    );
+  }
+
   return (
     <div className="flex items-start justify-between gap-2 rounded-2xl border border-gray-100 bg-paper p-3">
       <div className="flex items-start gap-3">

@@ -527,6 +527,14 @@ export const FEATURE_FLAG = Object.freeze({
    * marcador e o contador ficam ocultos.
    */
   NO_SHOW_TRACKING: 'no_show_tracking',
+
+  /**
+   * Parceria mútua professor↔arena: quando a arena adiciona um professor como
+   * parceiro, o vínculo fica "pendente" até o professor aceitar (ou recusar).
+   * Só aparece publicamente após o aceite. Aditivo — desligada, o vínculo entra
+   * ativo direto (comportamento atual).
+   */
+  PARTNERSHIP_MUTUAL: 'partnership_mutual',
 });
 
 /** Metadados de exibição para o painel de flags (admin master). */
@@ -992,6 +1000,13 @@ export const FEATURE_FLAG_META = Object.freeze({
     description:
       'Permite à arena marcar uma reserva como "não compareceu" e ver um '
       + 'contador por cliente. Desligada, o marcador e o contador ficam ocultos.',
+  },
+  [FEATURE_FLAG.PARTNERSHIP_MUTUAL]: {
+    label: 'Parceria mútua professor↔arena',
+    description:
+      'Quando a arena adiciona um professor, o vínculo fica pendente até o '
+      + 'professor aceitar (ou recusar); só aparece publicamente após o aceite. '
+      + 'Desligada, o vínculo entra ativo direto (comportamento atual).',
   },
 });
 

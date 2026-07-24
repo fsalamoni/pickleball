@@ -64,6 +64,7 @@ export const FLAG_GROUPS = Object.freeze([
     label: 'Professores',
     keys: [
       FEATURE_FLAG.COACH_DIRECTORY, FEATURE_FLAG.COACH_RESIDENT, FEATURE_FLAG.COACH_LESSONS,
+      FEATURE_FLAG.PARTNERSHIP_MUTUAL,
     ],
   },
   {
