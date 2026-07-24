@@ -413,6 +413,14 @@ export default function V2Layout({ children }) {
 
   return (
     <div className="v2-root flex h-[100dvh] w-full overflow-hidden bg-paper font-inter text-ink">
+      {/* Acessibilidade: link "pular para o conteúdo" — primeiro elemento
+          focável, visível só ao receber foco pelo teclado. */}
+      <a
+        href="#conteudo-principal"
+        className="sr-only focus:not-sr-only focus:absolute focus:left-4 focus:top-4 focus:z-50 focus:rounded-full focus:bg-ink focus:px-5 focus:py-3 focus:text-sm focus:font-bold focus:text-white focus:shadow-lg"
+      >
+        Pular para o conteúdo
+      </a>
       {/* Instrumentação de funil (flag funnel_analytics; não renderiza nada) */}
       <AuthFunnelTracker />
       {/* Onboarding: o assistente em passos (flag onboarding_wizard) tem
@@ -495,7 +503,7 @@ export default function V2Layout({ children }) {
           </div>
         </header>
 
-        <main ref={mainRef} className="flex-1 overflow-y-auto overflow-x-hidden px-4 pb-24 pt-28 sm:px-6 lg:px-10 lg:pb-12">
+        <main id="conteudo-principal" tabIndex={-1} ref={mainRef} className="flex-1 overflow-y-auto overflow-x-hidden px-4 pb-24 pt-28 outline-none sm:px-6 lg:px-10 lg:pb-12">
           {children}
         </main>
         {bottomNavOn && <MobileBottomNav pathname={location.pathname} />}
