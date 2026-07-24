@@ -542,6 +542,13 @@ export const FEATURE_FLAG = Object.freeze({
    * ranking nacional. Aditivo — desligada, a aba/seção fica oculta.
    */
   CLUB_INTERNAL_RANKING: 'club_internal_ranking',
+
+  /**
+   * Página de configurações (/configuracoes): reúne atalhos de conta e a
+   * exportação de dados pessoais (LGPD) num arquivo JSON. Aditivo — desligada, a
+   * rota e o link ficam ocultos.
+   */
+  SETTINGS_PAGE: 'settings_page',
 });
 
 /** Metadados de exibição para o painel de flags (admin master). */
@@ -1021,6 +1028,13 @@ export const FEATURE_FLAG_META = Object.freeze({
       'Agrega os resultados dos jogos dos dias de jogo do clube num ranking '
       + 'casual (vitórias, saldo, aproveitamento), separado do ranking nacional. '
       + 'Desligada, a aba fica oculta.',
+  },
+  [FEATURE_FLAG.SETTINGS_PAGE]: {
+    label: 'Página de configurações + exportar dados (LGPD)',
+    description:
+      'Página /configuracoes com atalhos de conta e a exportação dos dados '
+      + 'pessoais do usuário (perfil, inscrições, reservas) em JSON. Desligada, '
+      + 'a rota e o link ficam ocultos.',
   },
 });
 

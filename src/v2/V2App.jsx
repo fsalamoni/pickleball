@@ -70,6 +70,7 @@ const V2AdminBootstrap = lazy(() => import('@/v2/pages/V2AdminBootstrap'));
 const V2NotFound = lazy(() => import('@/v2/pages/V2NotFound'));
 const V2DoublesRanking = lazy(() => import('@/v2/pages/V2DoublesRanking'));
 const V2MyGames = lazy(() => import('@/v2/pages/V2MyGames'));
+const V2Settings = lazy(() => import('@/v2/pages/V2Settings'));
 
 // Conteúdo de referência — nativo v2.
 const V2Rules = lazy(() => import('@/v2/pages/V2Rules'));
@@ -174,6 +175,7 @@ export default function V2App() {
           <Route path="meu-desempenho" element={<V2Performance />} />
           <Route path="perfil" element={<V2Profile />} />
           <Route path="perfil/editar" element={<V2ProfileEdit />} />
+          <Route path="configuracoes" element={<V2Settings />} />
 
           {/* Conteúdo do esporte */}
           <Route path="regras" element={<V2Rules />} />

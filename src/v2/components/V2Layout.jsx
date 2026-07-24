@@ -103,6 +103,7 @@ function useV2Nav() {
   const coachLessonsOn = useFeatureFlag(FEATURE_FLAG.COACH_LESSONS);
   const doublesRankingOn = useFeatureFlag(FEATURE_FLAG.DOUBLES_RANKING);
   const athleteAgendaOn = useFeatureFlag(FEATURE_FLAG.ATHLETE_AGENDA);
+  const settingsPageOn = useFeatureFlag(FEATURE_FLAG.SETTINGS_PAGE);
   const { totalArenas: myArenasCount, totalPendingBookings: myPendingBookings } = useMyArenaSummary();
   const showMyArenas = arenasOn && myArenasCount > 0;
   // Só busca o perfil de professor quando a área de aulas está ligada.
@@ -153,6 +154,7 @@ function useV2Nav() {
         isCoach && { to: '/aulas', label: 'Ensino', icon: GraduationCap },
         coachLessonsOn && { to: '/minhas-aulas', label: 'Minhas aulas', icon: GraduationCap },
         { to: '/perfil', label: 'Meu Perfil', icon: User },
+        settingsPageOn && { to: '/configuracoes', label: 'Configurações', icon: Settings },
       ].filter(Boolean),
     },
     isPlatformAdmin && {
