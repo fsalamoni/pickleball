@@ -9,6 +9,7 @@ import {
   createSharedBooking, acceptBookingInvite, declineBookingInvite,
   joinOpenBooking, leaveBooking, inviteToBooking, updateSharedBookingSettings,
   setParticipantSlot, listMyInvites, listMyParticipations, listCoachBookings,
+  addBookingResponsibles, removeBookingResponsible,
 } from '../services/sharedBookingService.js';
 
 export function useMyBookingInvites() {
@@ -106,6 +107,26 @@ export function useUpdateSharedBookingSettings() {
   const qc = useQueryClient();
   return useMutation({
     mutationFn: ({ booking, patch }) => updateSharedBookingSettings(booking, user, patch),
+    onSuccess: (_d, { booking }) => invalidateAll(qc, booking.arena_id),
+  });
+}
+
+export function useAddBookingResponsibles() {
+  const { user } = useAuth();
+  const qc = useQueryClient();
+  return useMutation({
+    mutationFn: ({ booking, invites, names, byManager }) =>
+      addBookingResponsibles(booking, user, { invites, names }, { byManager }),
+    onSuccess: (_d, { booking }) => invalidateAll(qc, booking.arena_id),
+  });
+}
+
+export function useRemoveBookingResponsible() {
+  const { user } = useAuth();
+  const qc = useQueryClient();
+  return useMutation({
+    mutationFn: ({ booking, athlete_id, index, byManager }) =>
+      removeBookingResponsible(booking, user, { athlete_id, index }, { byManager }),
     onSuccess: (_d, { booking }) => invalidateAll(qc, booking.arena_id),
   });
 }

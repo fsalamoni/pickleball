@@ -18,6 +18,9 @@ import {
   declineInvite,
   joinOpen,
   removeParticipant,
+  removeParticipantAt,
+  seedParticipantsFromOwner,
+  addManualParticipant,
   computeSplit,
 } from './shared_booking.js';
 
@@ -162,5 +165,50 @@ describe('BOOKING_TYPE', () => {
   it('expõe os tipos', () => {
     expect(BOOKING_TYPE.COURT).toBe('court');
     expect(BOOKING_TYPE.COACH_LESSON).toBe('coach_lesson');
+  });
+});
+
+describe('múltiplos responsáveis (manager)', () => {
+  it('seedParticipantsFromOwner cria o titular como aceito quando não há participantes', () => {
+    const seed = seedParticipantsFromOwner({ athlete_id: 'a', athlete_name: 'Ana', athlete_photo: 'x' });
+    expect(seed).toHaveLength(1);
+    expect(seed[0].athlete_id).toBe('a');
+    expect(seed[0].status).toBe(PARTICIPANT_STATUS.ACCEPTED);
+    expect(seed[0].is_initiator).toBe(true);
+  });
+
+  it('seedParticipantsFromOwner mantém participantes já existentes', () => {
+    const existing = [P('a'), P('b', 'invited')];
+    expect(seedParticipantsFromOwner({ athlete_id: 'a', participants: existing })).toBe(existing);
+  });
+
+  it('seedParticipantsFromOwner retorna vazio sem dono', () => {
+    expect(seedParticipantsFromOwner({})).toEqual([]);
+  });
+
+  it('addManualParticipant adiciona avulso aceito e ignora nome vazio', () => {
+    let list = seedParticipantsFromOwner({ athlete_id: 'a', athlete_name: 'Ana' });
+    list = addManualParticipant(list, 'João (11) 99999', 'a');
+    expect(list).toHaveLength(2);
+    expect(list[1].athlete_id).toBeNull();
+    expect(list[1].name).toBe('João (11) 99999');
+    expect(list[1].status).toBe(PARTICIPANT_STATUS.ACCEPTED);
+    expect(addManualParticipant(list, '   ')).toHaveLength(2);
+  });
+
+  it('manager adiciona vários responsáveis: convites + avulso', () => {
+    let list = seedParticipantsFromOwner({ athlete_id: 'a', athlete_name: 'Ana' });
+    list = addInvite(list, { athlete_id: 'b', name: 'Bia' }, 'a');
+    list = addInvite(list, { athlete_id: 'c', name: 'Caio' }, 'a');
+    list = addManualParticipant(list, 'Davi', 'a');
+    expect(ownerIds(list)).toEqual(['a']); // só aceitos com id (Ana)
+    expect(invitedIds(list)).toEqual(['b', 'c']);
+    expect(acceptedParticipants(list)).toHaveLength(2); // Ana + Davi (avulso)
+  });
+
+  it('removeParticipantAt remove por índice (útil p/ avulsos)', () => {
+    const list = [P('a'), addManualParticipant([], 'Avulso')[0]];
+    expect(removeParticipantAt(list, 1)).toHaveLength(1);
+    expect(removeParticipantAt(list, 1)[0].athlete_id).toBe('a');
   });
 });

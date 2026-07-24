@@ -193,6 +193,47 @@ export function removeParticipant(participants = [], athleteId) {
   return (participants || []).filter((p) => p.athlete_id !== athleteId);
 }
 
+/** Remove um participante por índice (útil p/ responsáveis avulsos sem id). */
+export function removeParticipantAt(participants = [], index) {
+  return (participants || []).filter((_, i) => i !== index);
+}
+
+/**
+ * Semeia a lista de participantes a partir do dono original da reserva, quando
+ * ela ainda não é compartilhada. Assim, ao adicionar co-responsáveis a uma
+ * reserva antiga (dono único), o dono vira o primeiro co-proprietário aceito.
+ */
+export function seedParticipantsFromOwner(booking = {}) {
+  if (Array.isArray(booking.participants) && booking.participants.length > 0) {
+    return booking.participants;
+  }
+  if (booking.athlete_id || str(booking.athlete_name)) {
+    return [normalizeParticipant({
+      athlete_id: booking.athlete_id || null,
+      name: booking.athlete_name || '',
+      photo: booking.athlete_photo || '',
+      status: PARTICIPANT_STATUS.ACCEPTED,
+      is_initiator: true,
+    })];
+  }
+  return [];
+}
+
+/**
+ * Adiciona um co-responsável avulso (sem conta na plataforma) já como aceito.
+ * Não faz dedup por id (não há id). Ignora nome vazio.
+ */
+export function addManualParticipant(participants = [], name, invitedBy) {
+  const nm = str(name);
+  if (!nm) return participants;
+  return [
+    ...(participants || []),
+    normalizeParticipant({
+      athlete_id: null, name: nm, status: PARTICIPANT_STATUS.ACCEPTED, invited_by: invitedBy || null,
+    }),
+  ];
+}
+
 /** Sub-horário efetivo de um participante (o próprio ou a janela toda). */
 export function effectiveSlot(participant, window) {
   return participant?.slot || window;

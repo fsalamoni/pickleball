@@ -22,7 +22,8 @@ import { validateBookingRequest } from '../domain/booking_conflict.js';
 import { pickAvailableCourt } from '../domain/court_assignment.js';
 import {
   BOOKING_TYPE, buildParticipants, ownerIds, invitedIds, addInvite,
-  acceptInvite, declineInvite, joinOpen, removeParticipant, isOwner, isInvited, canJoin,
+  acceptInvite, declineInvite, joinOpen, removeParticipant, removeParticipantAt,
+  seedParticipantsFromOwner, addManualParticipant, isOwner, isInvited, canJoin,
 } from '../domain/shared_booking.js';
 import { listArenaCourtSchedules, listArenaCourts } from './arenaService.js';
 import { listArenaManagerIds } from './arenaService.js';
@@ -257,6 +258,84 @@ export async function inviteToBooking(booking, user, invitees = []) {
     });
   }
   await createAuditLog({ action: 'arena_booking_invited', actor: user, details: { booking_id: booking.id, count: newIds.length } });
+}
+
+/**
+ * Adiciona múltiplos responsáveis a QUALQUER reserva (inclusive as de dono único).
+ * Atletas da plataforma entram como convite (aceitam a vinculação); avulsos por
+ * nome entram já como co-responsáveis aceitos. Se a reserva ainda não era
+ * compartilhada, o dono original vira o primeiro co-proprietário aceito.
+ *
+ * Autorizado ao gestor da arena/admin (byManager, via regras Firestore) ou a um
+ * co-proprietário/professor da reserva.
+ *
+ * @param {object} booking
+ * @param {object} actor
+ * @param {{ invites?: Array<{athlete_id,name,photo?}>, names?: string[] }} additions
+ * @param {{ byManager?: boolean }} opts
+ */
+export async function addBookingResponsibles(booking, actor, { invites = [], names = [] } = {}, { byManager = false } = {}) {
+  if (!actor?.uid) throw new Error('Usuário não autenticado.');
+  if (!byManager && !isOwner(booking, actor.uid) && booking.coach_id !== actor.uid) {
+    throw new Error('Sem permissão para adicionar responsáveis.');
+  }
+  const cleanInvites = (invites || []).filter((i) => i && i.athlete_id);
+  const cleanNames = (names || []).map(str).filter(Boolean);
+  if (cleanInvites.length === 0 && cleanNames.length === 0) {
+    throw new Error('Escolha ao menos um atleta ou informe um nome.');
+  }
+  let participants = seedParticipantsFromOwner(booking);
+  cleanInvites.forEach((inv) => { participants = addInvite(participants, inv, actor.uid); });
+  cleanNames.forEach((nm) => { participants = addManualParticipant(participants, nm, actor.uid); });
+
+  await updateDoc(doc(db, COL.bookings, booking.id), {
+    shared: true,
+    ...denorm(participants),
+    updated_at: serverTimestamp(),
+  });
+
+  const inviteeIds = cleanInvites.map((i) => i.athlete_id).filter(Boolean);
+  if (inviteeIds.length > 0) {
+    notifyUsers(inviteeIds, {
+      title: 'Você foi incluído como responsável por uma reserva',
+      message: `Confirme sua participação na reserva de ${str(booking.arena_name).slice(0, 40)}.`,
+      type: NOTIFICATION_TYPE.GENERIC,
+      link: '/minhas-reservas',
+      actor: { uid: actor.uid },
+    });
+  }
+  await createAuditLog({
+    action: 'arena_booking_responsibles_added',
+    actor,
+    details: { booking_id: booking.id, invited: inviteeIds.length, manual: cleanNames.length },
+  });
+}
+
+/**
+ * Remove um responsável da reserva. Atleta da plataforma por athlete_id; avulso
+ * por índice na lista de participantes. Gestor/admin (byManager) ou co-proprietário.
+ */
+export async function removeBookingResponsible(booking, actor, { athlete_id = null, index = null } = {}, { byManager = false } = {}) {
+  if (!actor?.uid) throw new Error('Usuário não autenticado.');
+  if (!byManager && !isOwner(booking, actor.uid) && booking.coach_id !== actor.uid) {
+    throw new Error('Sem permissão para remover responsáveis.');
+  }
+  let participants = seedParticipantsFromOwner(booking);
+  if (athlete_id) participants = removeParticipant(participants, athlete_id);
+  else if (index != null) participants = removeParticipantAt(participants, index);
+  else throw new Error('Informe o responsável a remover.');
+
+  const patch = { ...denorm(participants), updated_at: serverTimestamp() };
+  // Se removeu o dono nominal, promove outro co-proprietário a titular.
+  if (athlete_id && booking.athlete_id === athlete_id) {
+    const nextOwner = participants.find((p) => p.athlete_id && p.status === 'accepted')
+      || participants.find((p) => p.status === 'accepted');
+    patch.athlete_id = nextOwner?.athlete_id || null;
+    patch.athlete_name = nextOwner?.name || '';
+    patch.athlete_photo = nextOwner?.photo || '';
+  }
+  await updateDoc(doc(db, COL.bookings, booking.id), patch);
+  await createAuditLog({ action: 'arena_booking_responsible_removed', actor, details: { booking_id: booking.id } });
 }
 
 /** Edita configurações da reserva (aberta/limite/notas). Qualquer co-proprietário. */
