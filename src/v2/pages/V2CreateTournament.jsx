@@ -1,10 +1,13 @@
 import React, { useState } from 'react';
 import { Link, useNavigate } from 'react-router-dom';
 import { toast } from 'sonner';
-import { ArrowLeft, ArrowRight, CalendarDays, Globe, Lock, MapPin, ShieldCheck, Trophy } from 'lucide-react';
+import { ArrowLeft, ArrowRight, CalendarDays, FileStack, Globe, Lock, MapPin, ShieldCheck, Trophy } from 'lucide-react';
 import { useAuth } from '@/core/lib/FirebaseAuthContext';
-import { useCreateTournament } from '@/modules/tournament/hooks/useTournament';
+import { useCreateTournament, useMyTournaments, useDuplicateTournament } from '@/modules/tournament/hooks/useTournament';
+import { listModalities } from '@/modules/tournament/services/modalityService';
 import { useMyManagedArenas } from '@/modules/arenas/hooks/useArenas';
+import { useFeatureFlag } from '@/core/lib/FeatureFlagsContext';
+import { FEATURE_FLAG } from '@/core/featureFlags';
 import {
   RULESET,
   RULESET_LABELS,
@@ -67,6 +70,8 @@ export default function V2CreateTournament() {
       <Link to="/torneios" className="mb-5 inline-flex items-center gap-1.5 text-sm font-semibold text-gray-500 hover:text-ink">
         <ArrowLeft className="h-4 w-4" /> Voltar aos torneios
       </Link>
+
+      <TemplatePicker />
 
       <div className="grid gap-6 xl:grid-cols-[1.05fr,0.95fr]">
         {/* Hero + preview */}
@@ -156,6 +161,66 @@ export default function V2CreateTournament() {
         </V2Surface>
       </div>
     </div>
+  );
+}
+
+function TemplatePicker() {
+  const navigate = useNavigate();
+  const templatesOn = useFeatureFlag(FEATURE_FLAG.TOURNAMENT_TEMPLATES);
+  const { data: myTournaments = [] } = useMyTournaments();
+  const duplicate = useDuplicateTournament();
+  const [templateId, setTemplateId] = useState('');
+  const [name, setName] = useState('');
+  const [busy, setBusy] = useState(false);
+
+  const templates = (myTournaments || []).filter((t) => t.is_template);
+  if (!templatesOn || templates.length === 0) return null;
+
+  async function createFromTemplate() {
+    const source = templates.find((t) => t.id === templateId);
+    if (!source) { toast.error('Escolha um modelo.'); return; }
+    setBusy(true);
+    try {
+      const modalities = await listModalities(source.id);
+      const res = await duplicate.mutateAsync({
+        source,
+        copyDefinitions: true,
+        name: name.trim() || `${source.name} (novo)`,
+        modalities: (modalities || []).map((m) => ({ modality: m, copyRegistrations: false })),
+      });
+      toast.success('Torneio criado a partir do modelo.');
+      navigate(`/torneios/${res.tournamentId}`);
+    } catch (err) {
+      toast.error(err?.message || 'Não foi possível criar a partir do modelo.');
+    } finally {
+      setBusy(false);
+    }
+  }
+
+  return (
+    <V2Surface className="mb-6 border-2 border-dashed border-acid/40">
+      <div className="flex items-center gap-2">
+        <FileStack className="h-5 w-5 text-ink" />
+        <h2 className="font-display text-lg font-bold text-ink">Criar a partir de um modelo</h2>
+      </div>
+      <p className="mt-1 text-sm text-gray-500">
+        Reaproveite a estrutura de um torneio marcado como modelo (definições e modalidades, sem inscritos).
+      </p>
+      <div className="mt-3 grid gap-3 sm:grid-cols-[1fr,1fr,auto] sm:items-end">
+        <V2Field label="Modelo">
+          <V2Select value={templateId} onChange={(e) => setTemplateId(e.target.value)}>
+            <option value="">— Escolher modelo —</option>
+            {templates.map((t) => <option key={t.id} value={t.id}>{t.name}</option>)}
+          </V2Select>
+        </V2Field>
+        <V2Field label="Nome do novo torneio">
+          <V2Input value={name} onChange={(e) => setName(e.target.value)} placeholder="Deixe em branco para usar o nome do modelo" />
+        </V2Field>
+        <V2Button type="button" onClick={createFromTemplate} disabled={busy || !templateId}>
+          {busy ? 'Criando…' : 'Criar do modelo'}
+        </V2Button>
+      </div>
+    </V2Surface>
   );
 }
 

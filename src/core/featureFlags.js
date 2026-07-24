@@ -504,6 +504,14 @@ export const FEATURE_FLAG = Object.freeze({
    * Aditivo — desligada, a rota e o link ficam ocultos.
    */
   TOURNAMENT_TV_MODE: 'tournament_tv_mode',
+
+  /**
+   * Modelos de torneio: o organizador marca um torneio como "modelo" e cria
+   * novos torneios a partir dele (copiando definições e modalidades, sem
+   * inscritos), reaproveitando a duplicação. Aditivo — desligada, o botão de
+   * marcar modelo e a opção "criar a partir de modelo" ficam ocultos.
+   */
+  TOURNAMENT_TEMPLATES: 'tournament_templates',
 });
 
 /** Metadados de exibição para o painel de flags (admin master). */
@@ -949,6 +957,13 @@ export const FEATURE_FLAG_META = Object.freeze({
       'Página em tela cheia (fundo escuro, tipografia grande, auto-rotação) com '
       + 'jogos em andamento, próximos chamados e resultados recentes, para exibir '
       + 'num telão no evento. Desligada, a rota e o link ficam ocultos.',
+  },
+  [FEATURE_FLAG.TOURNAMENT_TEMPLATES]: {
+    label: 'Modelos de torneio',
+    description:
+      'Permite marcar um torneio como modelo e criar novos torneios a partir '
+      + 'dele (copiando definições e modalidades, sem inscritos). Desligada, o '
+      + 'botão de modelo e a opção "criar a partir de modelo" ficam ocultos.',
   },
 });
 
