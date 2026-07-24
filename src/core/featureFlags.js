@@ -512,6 +512,21 @@ export const FEATURE_FLAG = Object.freeze({
    * marcar modelo e a opção "criar a partir de modelo" ficam ocultos.
    */
   TOURNAMENT_TEMPLATES: 'tournament_templates',
+
+  /**
+   * Política de cancelamento da arena: a arena define um prazo (horas antes) para
+   * cancelamento sem atrito; ao cancelar fora do prazo, o sistema avisa que é um
+   * cancelamento tardio. Sem cobrança de taxa (isso depende de gateway — fora do
+   * escopo). Aditivo — desligada, o cancelamento segue como hoje.
+   */
+  CANCELLATION_POLICY: 'cancellation_policy',
+
+  /**
+   * Registro de no-show: a arena marca uma reserva confirmada/concluída como
+   * "não compareceu", com um contador por cliente. Aditivo — desligada, o
+   * marcador e o contador ficam ocultos.
+   */
+  NO_SHOW_TRACKING: 'no_show_tracking',
 });
 
 /** Metadados de exibição para o painel de flags (admin master). */
@@ -964,6 +979,19 @@ export const FEATURE_FLAG_META = Object.freeze({
       'Permite marcar um torneio como modelo e criar novos torneios a partir '
       + 'dele (copiando definições e modalidades, sem inscritos). Desligada, o '
       + 'botão de modelo e a opção "criar a partir de modelo" ficam ocultos.',
+  },
+  [FEATURE_FLAG.CANCELLATION_POLICY]: {
+    label: 'Política de cancelamento da arena',
+    description:
+      'A arena define um prazo (horas antes) para cancelamento sem atrito; '
+      + 'cancelamentos fora do prazo recebem um aviso de cancelamento tardio. '
+      + 'Sem cobrança de taxa. Desligada, o cancelamento segue como hoje.',
+  },
+  [FEATURE_FLAG.NO_SHOW_TRACKING]: {
+    label: 'Registro de no-show (arena)',
+    description:
+      'Permite à arena marcar uma reserva como "não compareceu" e ver um '
+      + 'contador por cliente. Desligada, o marcador e o contador ficam ocultos.',
   },
 });
 

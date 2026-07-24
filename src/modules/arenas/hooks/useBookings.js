@@ -11,6 +11,7 @@ import {
   deleteBooking,
   editBookingSlot,
   transferBooking,
+  setBookingNoShow,
 } from '../services/bookingService.js';
 
 export function useMyBookings() {
@@ -84,6 +85,18 @@ export function useSetBookingPayment() {
   const qc = useQueryClient();
   return useMutation({
     mutationFn: ({ booking, paymentStatus }) => setBookingPayment(booking, paymentStatus, user),
+    onSuccess: (_d, { booking }) => {
+      qc.invalidateQueries({ queryKey: ['my-bookings'] });
+      qc.invalidateQueries({ queryKey: ['arena-bookings', booking.arena_id] });
+    },
+  });
+}
+
+export function useSetBookingNoShow() {
+  const { user } = useAuth();
+  const qc = useQueryClient();
+  return useMutation({
+    mutationFn: ({ booking, isNoShow }) => setBookingNoShow(booking, user, isNoShow),
     onSuccess: (_d, { booking }) => {
       qc.invalidateQueries({ queryKey: ['my-bookings'] });
       qc.invalidateQueries({ queryKey: ['arena-bookings', booking.arena_id] });
