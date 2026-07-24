@@ -30,6 +30,8 @@ import {
   Search as SearchIcon,
   GraduationCap,
   CalendarClock,
+  ChevronsLeft,
+  ChevronsRight,
 } from 'lucide-react';
 import { useAuth } from '@/core/lib/FirebaseAuthContext';
 import { useAutoRecomputeRatings } from '@/modules/rating/hooks/useRating';
@@ -110,7 +112,7 @@ function useV2Nav() {
   const isCoach = coachLessonsOn && !!myCoachProfile;
   const sportHistoryOn = useFeatureFlag(FEATURE_FLAG.SPORT_HISTORY);
 
-  return useMemo(() => [
+  const sections = useMemo(() => [
     {
       title: 'Plataforma',
       items: [
@@ -173,6 +175,100 @@ function useV2Nav() {
       ].filter(Boolean),
     },
   ].filter(Boolean), [performanceOn, ratingOn, matchmakingOn, openGamesOn, affiliatesOn, communityFeedOn, arenasOn, circuitsOn, coachesOn, coachLessonsOn, isCoach, sportHistoryOn, isPlatformAdmin, adminConsoleOn, myArenasCount, myPendingBookings, showMyArenas]);
+
+  // Árvore de hubs (flag nav_hubs): destinos centrais (nível 1, barra lateral)
+  // com suas subpáginas (nível 2, barra superior). Organizada por tema.
+  const hubs = useMemo(() => {
+    const hub = (h) => {
+      const children = (h.children || []).filter(Boolean);
+      return { ...h, children };
+    };
+    return [
+      hub({ id: 'inicio', label: 'Início', icon: LayoutGrid, to: '/', exact: true, children: [] }),
+      hub({
+        id: 'competir', label: 'Competir', icon: Trophy, to: '/torneios',
+        children: [
+          { to: '/torneios', label: 'Torneios', icon: Trophy },
+          circuitsOn && { to: '/circuits', label: 'Circuitos', icon: Award },
+          ratingOn && { to: '/ranking', label: 'Ranking', icon: Medal },
+          doublesRankingOn && { to: '/ranking/duplas', label: 'Ranking de duplas', icon: Medal },
+        ],
+      }),
+      hub({
+        id: 'jogar', label: 'Jogar', icon: Swords, to: openGamesOn ? '/procura-jogo' : '/meus-jogos',
+        children: [
+          ratingOn && matchmakingOn && { to: '/encontrar-jogadores', label: 'Encontrar jogadores', icon: Swords },
+          openGamesOn && { to: '/procura-jogo', label: 'Procura-se jogo', icon: Megaphone },
+          athleteAgendaOn && { to: '/meus-jogos', label: 'Meus jogos', icon: CalendarClock },
+          performanceOn && { to: '/meu-desempenho', label: 'Meu desempenho', icon: BarChart3 },
+        ],
+      }),
+      hub({
+        id: 'comunidade', label: 'Comunidade', icon: Users, to: '/atletas',
+        children: [
+          { to: '/atletas', label: 'Atletas', icon: Users },
+          { to: '/clubes', label: 'Clubes', icon: Building2 },
+          communityFeedOn && { to: '/novidades', label: 'Novidades', icon: Zap },
+          { to: '/chat', label: 'Mensagens', icon: MessageSquare },
+          affiliatesOn && { to: '/parceiros', label: 'Parceiros', icon: HeartHandshake },
+        ],
+      }),
+      (arenasOn || isPlatformAdmin) && hub({
+        id: 'arenas', label: 'Arenas', icon: Building2, to: '/arenas',
+        badge: showMyArenas ? myPendingBookings : 0,
+        badgeHint: showMyArenas && myPendingBookings > 0 ? `${myPendingBookings} pedido(s) de reserva aguardando resposta` : undefined,
+        children: [
+          { to: '/arenas', label: 'Explorar quadras', icon: MapPin },
+          arenasOn && { to: '/minhas-reservas', label: 'Minhas reservas', icon: CalendarClock },
+        ],
+      }),
+      (coachesOn || isCoach || coachLessonsOn) && hub({
+        id: 'ensino', label: 'Ensino', icon: GraduationCap, to: coachesOn ? '/coaches' : '/minhas-aulas',
+        children: [
+          coachesOn && { to: '/coaches', label: 'Professores', icon: GraduationCap },
+          isCoach && { to: '/aulas', label: 'Painel do professor', icon: GraduationCap },
+          coachLessonsOn && { to: '/minhas-aulas', label: 'Minhas aulas', icon: CalendarClock },
+        ],
+      }),
+      hub({
+        id: 'aprender', label: 'Aprender', icon: BookOpen, to: '/regras',
+        children: [
+          { to: '/regras', label: 'Regras', icon: BookOpen },
+          { to: '/nivelamento', label: 'Nivelamento', icon: Award },
+          sportHistoryOn && { to: '/historia', label: 'História do esporte', icon: History },
+          { to: '/conduta', label: 'Conduta e fair play', icon: HeartHandshake },
+          { to: '/politica-uso', label: 'Política de uso', icon: FileText },
+        ],
+      }),
+      hub({
+        id: 'perfil', label: 'Perfil', icon: User, to: '/perfil',
+        children: [
+          { to: '/perfil', label: 'Meu perfil', icon: User },
+          settingsPageOn && { to: '/configuracoes', label: 'Configurações', icon: Settings },
+        ],
+      }),
+      isPlatformAdmin && adminConsoleOn && hub({
+        id: 'admin', label: 'Admin', icon: LayoutDashboard, to: '/admin/painel',
+        children: [{ to: '/admin/painel', label: 'Painel admin', icon: LayoutDashboard }],
+      }),
+    ].filter(Boolean).filter((h) => h.id === 'inicio' || h.children.length > 0);
+  }, [performanceOn, ratingOn, matchmakingOn, openGamesOn, affiliatesOn, communityFeedOn, arenasOn, circuitsOn, coachesOn, coachLessonsOn, isCoach, sportHistoryOn, isPlatformAdmin, adminConsoleOn, doublesRankingOn, athleteAgendaOn, settingsPageOn, myPendingBookings, showMyArenas]);
+
+  return { sections, hubs };
+}
+
+/** Hub ativo: o que contém a subpágina mais específica que casa com o path. */
+function findActiveHub(pathname, hubs) {
+  if (pathname === '/') return hubs.find((h) => h.id === 'inicio') || null;
+  let best = null;
+  let bestLen = -1;
+  for (const h of hubs) {
+    const candidates = h.children.length ? h.children : [{ to: h.to, exact: h.exact }];
+    for (const c of candidates) {
+      if (isActive(pathname, c) && c.to.length > bestLen) { best = h; bestLen = c.to.length; }
+    }
+  }
+  return best;
 }
 
 function isActive(pathname, item) {
@@ -362,13 +458,75 @@ function UserMenu({ displayName, displayPhoto, levelLabel, onLogout }) {
   );
 }
 
+/** Item de hub na barra lateral (nível 1) — colapsável para só ícone. */
+function HubItem({ hub, active, collapsed, onClick }) {
+  const Icon = hub.icon;
+  const badge = typeof hub.badge === 'number' && hub.badge > 0 ? hub.badge : 0;
+  return (
+    <Link
+      to={hub.to}
+      onClick={onClick}
+      title={collapsed ? hub.label : hub.badgeHint || undefined}
+      aria-label={collapsed ? hub.label : undefined}
+      className={cn(
+        'btn-press group relative flex items-center rounded-2xl transition-all',
+        collapsed ? 'justify-center px-0 py-3' : 'px-3.5 py-3',
+        active ? 'bg-ink text-white' : 'text-gray-500 hover:bg-gray-50 hover:text-ink',
+      )}
+    >
+      <span className="relative flex items-center">
+        <Icon className={cn('h-5 w-5 shrink-0 transition-colors', active ? 'text-acid' : 'text-gray-400 group-hover:text-acid')} />
+        {collapsed && badge > 0 && (
+          <span className="absolute -right-1.5 -top-1.5 flex h-4 min-w-[1rem] items-center justify-center rounded-full bg-acid px-1 text-[9px] font-bold text-ink">
+            {badge > 99 ? '99+' : badge}
+          </span>
+        )}
+      </span>
+      {!collapsed && <span className="ml-3 truncate font-medium">{hub.label}</span>}
+      {!collapsed && badge > 0 && (
+        <span className="ml-auto flex h-5 min-w-[1.25rem] items-center justify-center rounded-full bg-acid px-1.5 text-[10px] font-bold text-ink">
+          {badge > 99 ? '99+' : badge}
+        </span>
+      )}
+    </Link>
+  );
+}
+
+/** Barra superior de subpáginas (nível 2) do hub ativo. Quebra em 2 linhas. */
+function SubnavBar({ hub, pathname, onNavigate }) {
+  return (
+    <div className="z-10 flex-shrink-0 border-b border-gray-100 bg-paper-pure/95 px-4 py-2 backdrop-blur sm:px-6 lg:px-10">
+      <div className="hide-scrollbar flex flex-wrap items-center gap-1.5">
+        {hub.children.map((c) => {
+          const Icon = c.icon;
+          const active = isActive(pathname, c);
+          return (
+            <Link
+              key={c.to + c.label}
+              to={c.to}
+              onClick={onNavigate}
+              className={cn(
+                'inline-flex items-center gap-1.5 whitespace-nowrap rounded-full border px-3.5 py-1.5 text-sm font-semibold transition-colors',
+                active ? 'border-ink bg-ink text-white' : 'border-gray-200 text-gray-500 hover:border-ink/40 hover:text-ink',
+              )}
+            >
+              {Icon && <Icon className={cn('h-3.5 w-3.5', active ? 'text-acid' : 'text-gray-400')} />}
+              {c.label}
+            </Link>
+          );
+        })}
+      </div>
+    </div>
+  );
+}
+
 export default function V2Layout({ children }) {
   const { userProfile, signOut } = useAuth();
   // Mantém o ranking atualizado automaticamente para o admin da plataforma.
   useAutoRecomputeRatings();
   const location = useLocation();
   const navigate = useNavigate();
-  const nav = useV2Nav();
+  const { sections, hubs } = useV2Nav();
   const mainRef = useRef(null);
   const [mobileOpen, setMobileOpen] = useState(false);
   const [searchQuery, setSearchQuery] = useState('');
@@ -376,6 +534,24 @@ export default function V2Layout({ children }) {
   const onboardingWizardOn = useFeatureFlag(FEATURE_FLAG.ONBOARDING_WIZARD);
   const userMenuOn = useFeatureFlag(FEATURE_FLAG.NAV_USER_MENU);
   const bottomNavOn = useFeatureFlag(FEATURE_FLAG.MOBILE_BOTTOM_NAV);
+  const navHubsOn = useFeatureFlag(FEATURE_FLAG.NAV_HUBS);
+
+  // Colapso da barra lateral (só ícones), persistido por usuário.
+  const [collapsed, setCollapsed] = useState(() => {
+    try { return localStorage.getItem('v2_nav_collapsed') === '1'; } catch { return false; }
+  });
+  const toggleCollapsed = () => setCollapsed((v) => {
+    const next = !v;
+    try { localStorage.setItem('v2_nav_collapsed', next ? '1' : '0'); } catch { /* ignore */ }
+    return next;
+  });
+
+  const activeHub = useMemo(() => findActiveHub(location.pathname, hubs), [location.pathname, hubs]);
+  const subnavHub = navHubsOn && activeHub && activeHub.children.length > 1 ? activeHub : null;
+  // Fonte da navegação do drawer mobile: hubs (novo) ou seções (legado).
+  const drawerGroups = navHubsOn
+    ? hubs.map((h) => ({ title: h.label, items: h.children.length ? h.children : [{ to: h.to, label: h.label, icon: h.icon, exact: h.exact }] }))
+    : sections;
 
   const displayName = userProfile?.platform_name || userProfile?.full_name || 'Atleta';
   const displayPhoto = userProfile?.photo_url || null;
@@ -427,40 +603,86 @@ export default function V2Layout({ children }) {
       {onboardingWizardOn
         ? <V2OnboardingWizard />
         : profileOnboardingOn && <ProfileCompletionModal />}
-      <aside className="z-30 hidden w-[280px] flex-shrink-0 flex-col border-r border-gray-100 bg-paper-pure lg:flex">
-        <div className="flex h-24 items-center px-8">
-          <BrandLockup />
-        </div>
-        <nav className="hide-scrollbar flex-1 space-y-1 overflow-y-auto px-4 py-4">
-          {nav.map((section) => (
-            <div key={section.title} className="mb-6 last:mb-0">
-              <p className="mb-3 px-4 text-[11px] font-bold uppercase tracking-widest text-gray-400">{section.title}</p>
-              <div className="space-y-1.5">
-                {section.items.map((item) => (
-                  <NavItem key={item.to} item={item} active={isActive(location.pathname, item)} />
-                ))}
+      {navHubsOn ? (
+        <aside className={cn(
+          'z-30 hidden flex-shrink-0 flex-col border-r border-gray-100 bg-paper-pure transition-[width] duration-200 lg:flex',
+          collapsed ? 'w-[76px]' : 'w-[248px]',
+        )}>
+          <div className={cn('flex h-20 items-center', collapsed ? 'justify-center px-2' : 'px-6')}>
+            {collapsed ? (
+              <Link to="/" aria-label="PickleRush"><img src="/logo-claro.png" alt="PickleRush" className="h-9 w-9 object-contain" /></Link>
+            ) : <BrandLockup />}
+          </div>
+          <nav className="hide-scrollbar flex-1 space-y-1.5 overflow-y-auto px-3 py-4">
+            {hubs.map((hub) => (
+              <HubItem key={hub.id} hub={hub} active={activeHub?.id === hub.id} collapsed={collapsed} />
+            ))}
+          </nav>
+          <button
+            type="button"
+            onClick={toggleCollapsed}
+            className={cn(
+              'mx-3 mb-3 flex items-center gap-2 rounded-2xl border border-gray-100 py-2.5 text-sm font-semibold text-gray-500 transition-colors hover:border-ink/30 hover:text-ink',
+              collapsed ? 'justify-center px-0' : 'px-3.5',
+            )}
+            title={collapsed ? 'Expandir menu' : 'Recolher menu'}
+            aria-label={collapsed ? 'Expandir menu' : 'Recolher menu'}
+          >
+            {collapsed ? <ChevronsRight className="h-4 w-4" /> : <><ChevronsLeft className="h-4 w-4" /> Recolher</>}
+          </button>
+          {!collapsed && (
+            <Link
+              to="/perfil"
+              className="mx-3 mb-4 flex items-center gap-3 rounded-2.5xl border border-gray-100 bg-paper p-3 transition-colors hover:border-gray-200"
+            >
+              <V2Avatar name={displayName} photoUrl={displayPhoto} size="md" />
+              <div className="min-w-0 flex-1">
+                <p className="truncate text-sm font-bold text-ink">{displayName}</p>
+                <p className="truncate text-xs font-medium text-gray-500">{levelLabel}</p>
               </div>
+              <ChevronRight className="h-4 w-4 text-gray-400" />
+            </Link>
+          )}
+        </aside>
+      ) : (
+        <aside className="z-30 hidden w-[280px] flex-shrink-0 flex-col border-r border-gray-100 bg-paper-pure lg:flex">
+          <div className="flex h-24 items-center px-8">
+            <BrandLockup />
+          </div>
+          <nav className="hide-scrollbar flex-1 space-y-1 overflow-y-auto px-4 py-4">
+            {sections.map((section) => (
+              <div key={section.title} className="mb-6 last:mb-0">
+                <p className="mb-3 px-4 text-[11px] font-bold uppercase tracking-widest text-gray-400">{section.title}</p>
+                <div className="space-y-1.5">
+                  {section.items.map((item) => (
+                    <NavItem key={item.to} item={item} active={isActive(location.pathname, item)} />
+                  ))}
+                </div>
+              </div>
+            ))}
+          </nav>
+          <Link
+            to="/perfil"
+            className="mx-4 mb-4 flex items-center gap-3 rounded-2.5xl border border-gray-100 bg-paper p-4 transition-colors hover:border-gray-200"
+          >
+            <div className="relative">
+              <V2Avatar name={displayName} photoUrl={displayPhoto} size="md" />
+              <div className="absolute -bottom-1 -right-1 flex h-4 w-4 items-center justify-center rounded-full border-2 border-paper bg-acid" />
             </div>
-          ))}
-        </nav>
-        <Link
-          to="/perfil"
-          className="mx-4 mb-4 flex items-center gap-3 rounded-2.5xl border border-gray-100 bg-paper p-4 transition-colors hover:border-gray-200"
-        >
-          <div className="relative">
-            <V2Avatar name={displayName} photoUrl={displayPhoto} size="md" />
-            <div className="absolute -bottom-1 -right-1 flex h-4 w-4 items-center justify-center rounded-full border-2 border-paper bg-acid" />
-          </div>
-          <div className="min-w-0 flex-1">
-            <p className="truncate text-sm font-bold text-ink">{displayName}</p>
-            <p className="truncate text-xs font-medium text-gray-500">{levelLabel}</p>
-          </div>
-          <ChevronRight className="h-4 w-4 text-gray-400" />
-        </Link>
-      </aside>
+            <div className="min-w-0 flex-1">
+              <p className="truncate text-sm font-bold text-ink">{displayName}</p>
+              <p className="truncate text-xs font-medium text-gray-500">{levelLabel}</p>
+            </div>
+            <ChevronRight className="h-4 w-4 text-gray-400" />
+          </Link>
+        </aside>
+      )}
 
       <div className="relative flex w-full flex-1 flex-col">
-        <header className="glass absolute top-0 z-20 flex h-20 w-full items-center justify-between px-4 sm:px-6 lg:px-10">
+        <header className={cn(
+          'glass z-20 flex h-20 w-full items-center justify-between px-4 sm:px-6 lg:px-10',
+          navHubsOn ? 'flex-shrink-0 border-b border-gray-100' : 'absolute top-0',
+        )}>
           <button
             onClick={() => setMobileOpen(true)}
             className="mr-3 flex h-10 w-10 items-center justify-center rounded-full bg-white text-ink shadow-sm lg:hidden"
@@ -501,7 +723,17 @@ export default function V2Layout({ children }) {
           </div>
         </header>
 
-        <main id="conteudo-principal" tabIndex={-1} ref={mainRef} className="flex-1 overflow-y-auto overflow-x-hidden px-4 pb-24 pt-28 outline-none sm:px-6 lg:px-10 lg:pb-12">
+        {subnavHub && <SubnavBar hub={subnavHub} pathname={location.pathname} />}
+
+        <main
+          id="conteudo-principal"
+          tabIndex={-1}
+          ref={mainRef}
+          className={cn(
+            'flex-1 overflow-y-auto overflow-x-hidden px-4 pb-24 outline-none sm:px-6 lg:px-10 lg:pb-12',
+            navHubsOn ? 'pt-6' : 'pt-28',
+          )}
+        >
           {children}
         </main>
         {bottomNavOn && <MobileBottomNav pathname={location.pathname} />}
@@ -527,7 +759,7 @@ export default function V2Layout({ children }) {
           </button>
         </div>
         <div className="hide-scrollbar flex-1 overflow-y-auto px-6 pb-10">
-          {nav.map((section) => (
+          {drawerGroups.map((section) => (
             <div key={section.title} className="mb-8">
               <p className="mb-3 text-[11px] font-bold uppercase tracking-widest text-white/40">{section.title}</p>
               <div className="space-y-1">

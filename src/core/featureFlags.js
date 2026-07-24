@@ -271,6 +271,14 @@ export const FEATURE_FLAG = Object.freeze({
   MOBILE_BOTTOM_NAV: 'mobile_bottom_nav',
 
   /**
+   * Navegação em hubs: barra lateral enxuta com destinos centrais (colapsável
+   * para só ícones) + barra superior de subpáginas do hub ativo. Substitui a
+   * lista longa de itens por 2 níveis organizados por tema. Aditivo — desligada,
+   * a barra lateral atual (seções planas) é renderizada como antes.
+   */
+  NAV_HUBS: 'nav_hubs',
+
+  /**
    * Cancelar torneio: adiciona ao hub administrativo a ação "Cancelar
    * torneio" (com confirmação). O status CANCELLED já existe e é
    * pré-requisito para arquivar, mas não havia botão para alcançá-lo.
@@ -898,6 +906,14 @@ export const FEATURE_FLAG_META = Object.freeze({
       + 'principais (Início, Torneios, Atletas, Chat, Perfil), permitindo '
       + 'navegar com 1 toque sem abrir o menu lateral. Desligado, a barra '
       + 'não é renderizada.',
+  },
+  [FEATURE_FLAG.NAV_HUBS]: {
+    label: 'Navegação em hubs (lateral colapsável + subpáginas no topo)',
+    description:
+      'Reorganiza a navegação em 2 níveis: barra lateral enxuta com os destinos '
+      + 'centrais (colapsável para só ícones) e uma barra superior com as '
+      + 'subpáginas do hub ativo. Desligada, a barra lateral atual (lista de '
+      + 'seções) permanece como está.',
   },
   [FEATURE_FLAG.TOURNAMENT_CANCEL_ACTION]: {
     label: 'Cancelar torneio',
