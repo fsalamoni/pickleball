@@ -474,6 +474,14 @@ export const FEATURE_FLAG = Object.freeze({
    * desligada, o comportamento atual (redirect para /) é mantido.
    */
   NOT_FOUND_PAGE: 'not_found_page',
+
+  /**
+   * Formatos do Game Day: além do Americano (atual), habilita Mexicano (rodadas
+   * com pareamento 1&4 vs 2&3 e rotação) e Rei da Quadra (rodadas por resultado,
+   * vencedores sobem e perdedores descem de quadra). Aditivo — desligada, o
+   * sorteio segue só no Americano.
+   */
+  GAMEDAY_FORMATS: 'gameday_formats',
 });
 
 /** Metadados de exibição para o painel de flags (admin master). */
@@ -891,6 +899,14 @@ export const FEATURE_FLAG_META = Object.freeze({
       'Quando uma rota não existe, mostra uma página amigável com atalhos em vez '
       + 'de redirecionar silenciosamente para a home. Desligada, mantém o '
       + 'comportamento atual (redirect para /).',
+  },
+  [FEATURE_FLAG.GAMEDAY_FORMATS]: {
+    label: 'Formatos do Game Day (Mexicano e Rei da Quadra)',
+    description:
+      'No sorteio do dia de jogo do clube, permite escolher o formato: Americano '
+      + '(atual), Mexicano (pareamento 1&4 vs 2&3 com rotação entre rodadas) ou '
+      + 'Rei da Quadra (rodadas por resultado — vencedores sobem, perdedores '
+      + 'descem de quadra). Desligada, o sorteio segue só no Americano.',
   },
 });
 

@@ -70,6 +70,7 @@ export const FLAG_GROUPS = Object.freeze([
     label: 'Comunidade e parceiros',
     keys: [
       FEATURE_FLAG.COMMUNITY_FEED, FEATURE_FLAG.LINKED_CLUBS, FEATURE_FLAG.AFFILIATE_LINKS,
+      FEATURE_FLAG.GAMEDAY_FORMATS,
     ],
   },
 ]);

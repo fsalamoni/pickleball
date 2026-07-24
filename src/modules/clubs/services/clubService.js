@@ -986,6 +986,7 @@ function buildGamePayload(id, eventId, data, user) {
     event_id: eventId,
     date_id: data.date_id || null,
     round: data.round ?? null,
+    court: data.court ?? null,
     kind: data.kind === 'singles' ? 'singles' : 'doubles',
     side_a,
     side_b,
