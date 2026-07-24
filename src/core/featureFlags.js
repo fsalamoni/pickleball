@@ -585,6 +585,13 @@ export const FEATURE_FLAG = Object.freeze({
    * Aditivo — desligada, o botão e a lista ficam ocultos.
    */
   BOOKING_WAITLIST: 'booking_waitlist',
+
+  /**
+   * Placar courtside: lançamento de resultado em tela cheia, com botões grandes
+   * +1/−1 por lado e set, otimizado para o mesário na beira da quadra. Reaproveita
+   * a mesma gravação do fluxo atual. Aditivo — desligada, usa o diálogo atual.
+   */
+  COURTSIDE_SCORING: 'courtside_scoring',
 });
 
 /** Metadados de exibição para o painel de flags (admin master). */
@@ -1103,6 +1110,13 @@ export const FEATURE_FLAG_META = Object.freeze({
     description:
       'Quando um horário está ocupado, o atleta pede para ser avisado se vagar; '
       + 'a arena vê a lista por horário. Desligada, o botão e a lista ficam ocultos.',
+  },
+  [FEATURE_FLAG.COURTSIDE_SCORING]: {
+    label: 'Placar courtside',
+    description:
+      'Lançamento de resultado em tela cheia, com botões grandes +1/−1 por lado e '
+      + 'set, para o mesário na beira da quadra. Reaproveita a mesma gravação. '
+      + 'Desligada, usa o diálogo de placar atual.',
   },
 });
 
