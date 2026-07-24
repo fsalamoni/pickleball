@@ -22,6 +22,7 @@
  */
 
 import React, { useMemo, useState } from 'react';
+import { toast } from 'sonner';
 import {
   Calendar, X, ShoppingCart, Loader2, Users, Ban, Check, Clock, AlertCircle, MapPin,
 } from 'lucide-react';
@@ -32,6 +33,10 @@ import {
   useArenaUnavailabilities,
 } from '@/modules/arenas/hooks/useArenas';
 import { useArenaBookings } from '@/modules/arenas/hooks/useBookings';
+import { useJoinWaitlist, useMyWaitlist } from '@/modules/arenas/hooks/useBookingWaitlist';
+import { useFeatureFlag } from '@/core/lib/FeatureFlagsContext';
+import { FEATURE_FLAG } from '@/core/featureFlags';
+import { isOnWaitlist } from '@/modules/arenas/domain/booking_waitlist';
 import {
   getSlotStatus,
   generateTimeSlots,
@@ -97,6 +102,7 @@ function expandBookingSlots(booking) {
 
 export default function V2DaySlotsDialog({ arena, arenaId, date, courtId: initialCourtId, courts = [], onClose }) {
   const { isAuthenticated } = useAuth();
+  const waitlistOn = useFeatureFlag(FEATURE_FLAG.BOOKING_WAITLIST);
   const { data: schedules = [], isLoading: loadingSchedules } = useArenaCourtSchedules(arenaId);
   const { data: bookings = [], isLoading: loadingBookings } = useArenaBookings(arenaId);
   const { data: unavailabilities = [], isLoading: loadingUnav } = useArenaUnavailabilities(arenaId);
@@ -375,6 +381,11 @@ export default function V2DaySlotsDialog({ arena, arenaId, date, courtId: initia
                                   {formatPrice(b.proposed_price)}
                                 </div>
                               )}
+                              {waitlistOn && isAuthenticated && b._slots[0] && (
+                                <div className="mt-2">
+                                  <WaitlistButton arena={arena} slot={b._slots[0]} />
+                                </div>
+                              )}
                             </li>
                           );
                         })}
@@ -553,5 +564,33 @@ export default function V2DaySlotsDialog({ arena, arenaId, date, courtId: initia
         />
       )}
     </>
+  );
+}
+
+/**
+ * WaitlistButton — atleta pede para ser avisado se um horário ocupado vagar
+ * (flag booking_waitlist). Mostra estado "na lista" quando já inscrito.
+ */
+function WaitlistButton({ arena, slot }) {
+  const join = useJoinWaitlist();
+  const { user } = useAuth();
+  const { data: myWaitlist = [] } = useMyWaitlist(true);
+  const already = isOnWaitlist(myWaitlist, user?.uid, { ...slot, court_id: slot.court_id || null });
+
+  if (already) {
+    return <V2Badge tone="blue">Na lista de espera</V2Badge>;
+  }
+  return (
+    <V2Button size="sm" variant="secondary" disabled={join.isPending}
+      onClick={async () => {
+        try {
+          await join.mutateAsync({ arena_id: arena.id, date: slot.date, start: slot.start, end: slot.end, court_id: slot.court_id || null });
+          toast.success('Você entrou na lista de espera. Avisaremos se vagar.');
+        } catch (err) {
+          toast.error(err?.message || 'Não foi possível entrar na lista.');
+        }
+      }}>
+      Avise-me se vagar
+    </V2Button>
   );
 }

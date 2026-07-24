@@ -578,6 +578,13 @@ export const FEATURE_FLAG = Object.freeze({
    * melhorando o preview em links e buscadores. Aditivo — desligada, nada muda.
    */
   PUBLIC_SEO: 'public_seo',
+
+  /**
+   * Lista de espera de reservas: quando um horário está ocupado, o atleta pode
+   * pedir para ser avisado se vagar; a arena vê a lista por horário e contata.
+   * Aditivo — desligada, o botão e a lista ficam ocultos.
+   */
+  BOOKING_WAITLIST: 'booking_waitlist',
 });
 
 /** Metadados de exibição para o painel de flags (admin master). */
@@ -1090,6 +1097,12 @@ export const FEATURE_FLAG_META = Object.freeze({
       'Define título, meta description e tags Open Graph dinâmicos nas páginas '
       + 'públicas (torneio etc.), melhorando o preview em links e buscadores. '
       + 'Desligada, nada muda.',
+  },
+  [FEATURE_FLAG.BOOKING_WAITLIST]: {
+    label: 'Lista de espera de reservas',
+    description:
+      'Quando um horário está ocupado, o atleta pede para ser avisado se vagar; '
+      + 'a arena vê a lista por horário. Desligada, o botão e a lista ficam ocultos.',
   },
 });
 

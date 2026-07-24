@@ -29,6 +29,8 @@ import { useUpdateBookingStatus, useArenaBookings, useCreateManualBooking, useTr
 import { useFeatureFlag } from '@/core/lib/FeatureFlagsContext';
 import { FEATURE_FLAG } from '@/core/featureFlags';
 import { evaluateCancellation, lateCancellationMessage, normalizeCancellationPolicy } from '@/modules/arenas/domain/cancellation_policy';
+import { useArenaWaitlist, useLeaveWaitlist } from '@/modules/arenas/hooks/useBookingWaitlist';
+import { groupWaitlistBySlot } from '@/modules/arenas/domain/booking_waitlist';
 import { useAddBookingResponsibles, useRemoveBookingResponsible } from '@/modules/arenas/hooks/useSharedBookings';
 import { participantStatusLabel } from '@/modules/arenas/domain/shared_booking';
 import AthleteMultiPicker from '@/modules/athletes/components/AthleteMultiPicker';
@@ -548,6 +550,9 @@ export default function V2AdminBookingCalendar({ arenaId, embedded = false }) {
         />
       )}
 
+      {/* Lista de espera da arena (flag booking_waitlist) */}
+      <ArenaWaitlistPanel arenaId={arenaId} />
+
       {/* Responsáveis: vários atletas por reserva + transferir titularidade */}
       {transferOpen && selectedSlot?.booking && (
         <ManageResponsiblesDialog
@@ -695,3 +700,44 @@ function ManageResponsiblesDialog({ booking, onClose, onDone }) {
   );
 }
 
+
+/**
+ * ArenaWaitlistPanel — lista de espera de reservas da arena (flag
+ * booking_waitlist). Agrupa por horário; o gestor pode remover uma entrada
+ * (ao promover/atender). Desligada a flag, não aparece.
+ */
+function ArenaWaitlistPanel({ arenaId }) {
+  const waitlistOn = useFeatureFlag(FEATURE_FLAG.BOOKING_WAITLIST);
+  const { data: entries = [] } = useArenaWaitlist(arenaId, waitlistOn);
+  const remove = useLeaveWaitlist();
+  if (!waitlistOn || entries.length === 0) return null;
+  const groups = groupWaitlistBySlot(entries);
+  return (
+    <V2Surface className="mt-4">
+      <h3 className="font-display text-base font-bold text-ink">Lista de espera ({entries.length})</h3>
+      <p className="text-xs text-gray-500">Atletas que pediram para ser avisados se um horário vagar.</p>
+      <div className="mt-3 space-y-3">
+        {groups.map((g) => (
+          <div key={g.key} className="rounded-2xl border border-gray-100 bg-paper p-3">
+            <div className="text-sm font-bold text-ink">{g.date} · {g.start}–{g.end}</div>
+            <div className="mt-2 flex flex-wrap gap-2">
+              {g.entries.map((e) => (
+                <span key={e.id} className="inline-flex items-center gap-1.5 rounded-full border border-gray-200 bg-paper-pure px-2.5 py-1 text-xs text-ink">
+                  {e.user_name}
+                  <button type="button" title="Remover da lista"
+                    onClick={async () => {
+                      try { await remove.mutateAsync({ entryId: e.id }); toast.success('Removido da lista de espera.'); }
+                      catch (err) { toast.error(err?.message || 'Não foi possível remover.'); }
+                    }}
+                    className="text-gray-400 hover:text-red-600">
+                    <X className="h-3 w-3" />
+                  </button>
+                </span>
+              ))}
+            </div>
+          </div>
+        ))}
+      </div>
+    </V2Surface>
+  );
+}

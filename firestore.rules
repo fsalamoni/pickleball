@@ -297,6 +297,21 @@ service cloud.firestore {
       allow create: if isAuthed() && request.resource.data.user_id == request.auth.uid;
       allow delete: if isAuthed() && resource.data.user_id == request.auth.uid;
     }
+    // Lista de espera de reservas (flag booking_waitlist). O atleta cria/remove a
+    // própria entrada; o gestor da arena lê e pode remover (ao promover/atender).
+    match /arena_waitlist/{docId} {
+      allow read: if isAuthed() && (
+        resource.data.user_id == request.auth.uid
+        || isArenaManager(resource.data.arena_id)
+        || isPlatformAdmin()
+      );
+      allow create: if isAuthed() && request.resource.data.user_id == request.auth.uid;
+      allow delete: if isAuthed() && (
+        resource.data.user_id == request.auth.uid
+        || isArenaManager(resource.data.arena_id)
+        || isPlatformAdmin()
+      );
+    }
     // Quadras da arena (Sprint 1, ARE-01). Leitura pública (atletas
     // precisam ver as quadras ativas pra reservar); escrita só por
     // gestores da arena + platform admin.
