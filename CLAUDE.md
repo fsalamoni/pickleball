@@ -12,7 +12,7 @@
 
 - **O que é**: PWA para pickleball amador BR — torneios, clubes, arenas, professores, comunidade.
 - **Stack**: React 18 + Vite, Tailwind + shadcn/ui, Firebase (Firestore db `pickleball`), React Query, Vitest, Playwright.
-- **Estado**: 19 módulos, 67 V2 pages, 92 coleções Firestore, 124 feature flags, **1334+ testes verdes**.
+- **Estado**: 19 módulos, 67 V2 pages, 94 coleções Firestore, 124 feature flags, **1334+ testes verdes**.
 - **Live**: https://picklerush.web.app (Firebase site `picklerush`; `pickletour` é redirect-only).
 - **Deploy**: push em `main` → GitHub Actions → Firebase Hosting + Rules + Cloud Function.
 - **Repositório**: https://github.com/fsalamoni/pickleball
@@ -119,7 +119,7 @@ Estes princípios vieram de bugs reais que custaram horas pra arrumar. São ineg
 │   ├── pages/                      # V1 legado (em desuso)
 │   └── components/                 # shadcn/ui primitives
 │
-├── firestore.rules                 # ⭐ regras de segurança (92 coleções)
+├── firestore.rules                 # ⭐ regras de segurança (94 coleções)
 ├── firestore.indexes.json          # índices compostos
 ├── firebase.json                   # config hosting
 ├── functions/                      # Cloud Functions (region SP)
@@ -326,7 +326,9 @@ chore(deps): bump firebase to 12.x
 
 ## 10. Métricas atuais (snapshot 2026-07-24)
 
-> Última atualização: 2026-07-24, main em `539faba` (após docs sync).
+> Última atualização: 2026-07-24, após sub-ondas 8b–5b (PR #72), fixes de UX
+> (onboarding só na 1ª entrada, diálogos roláveis em paisagem) e dedup da
+> coleção `arena_waitlist` → `booking_waitlist`.
 
 | Métrica | Valor | Delta do início do agente |
 |---|---|---|
@@ -334,7 +336,7 @@ chore(deps): bump firebase to 12.x
 | **Lint errors** | 0 | era 30+ |
 | **Módulos** | 19 | +2 (coaches, circuits) |
 | **V2 pages** | 67 | +43 |
-| **Coleções Firestore** | 92 | +53 |
+| **Coleções Firestore** | 94 | +55 |
 | **Feature flags** | 124 (51 ARENA_MODULE_*) | +94 |
 | **PRs mergeados** | 27 totais (Sprints 0-10) | — |
 | **Origin/main** | `539faba` | — |
@@ -355,6 +357,19 @@ Quando você for commitar, atualize esta seção se os números mudarem.
 - **Firestore rule rejeitou?** → Testar no console do Firebase com simulador.
 - **Não sabe por onde começar?** → Volte ao §3 (mapa) ou §5 (decisão rápida).
 
+**Gotchas de bugs reais (aprendidos na marra):**
+- **Diálogo cortado em paisagem (tablet/celular):** `DialogContent`/`AlertDialogContent`
+  precisam de `max-h-[90dvh] overflow-y-auto`. Sem isso, em telas baixas o
+  rodapé (campos + botão salvar) fica fora da viewport e inacessível.
+- **Modal de onboarding reaparecendo toda sessão:** não confie só num flag de
+  sessão (`sessionStorage`). Gate a abertura por `isRequiredProfileComplete` (e
+  `onboarding_completed_at`), com trava latcheada por usuário, para abrir **só na
+  primeira entrada** e não fechar no meio do fluxo ao salvar.
+- **Colisão de coleção Firestore:** antes de reusar um nome de coleção (ex.:
+  `arena_waitlist`), confirme que outra feature não o usa com outro shape —
+  consultas por `arena_id` contaminam entre features. Use coleção própria
+  (ex.: `booking_waitlist`).
+
 ---
 
 ## 12. Resumo de 1 página (cola)
@@ -365,7 +380,7 @@ STACK        React+Vite, Tailwind+shadcn, Firebase (db 'pickleball'), React Quer
 MODELO       19 módulos em src/modules/X/{domain,services,hooks,pages,components}/
 UI ATIVA     src/v2/ (67 pages, 2-level nav, dark ink/acid/paper)
 FEATURES     124 flags em src/core/featureFlags.js (default OFF)
-SCHEMA       92 coleções top-level em firestore.rules
+SCHEMA       94 coleções top-level em firestore.rules
 TESTES       1334+ vitest (domain obrigatório)
 DEPLOY       push main → GitHub Actions → firebase hosting (sites picklerush+pickletour)
 SEGURANÇA    firestore.rules (aditivas), audit_logs em mutações
@@ -379,7 +394,7 @@ ADMIN        fsalamoni@gmail.com (platform_admin, uid Kx7CC0NVgogh8cCF4wIRmpOvo7
 
 ---
 
-> **Última atualização**: 2026-07-24 (origin/main @ `539faba`).
+> **Última atualização**: 2026-07-24 (pós sub-ondas 8b–5b + fixes de UX).
 > Ao mudar arquitetura, coleção, módulo, rota, fluxo de deploy, padrão de
 > código ou processo → atualizar este arquivo + 01-AI-CONTEXT + o doc
 > específico. Manter a estrutura: §0 TL;DR + §1 como usar + §2 princípios +

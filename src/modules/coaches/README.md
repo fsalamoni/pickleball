@@ -78,15 +78,17 @@
 - `visibility` ('public'|'students_only')
 
 ### `coach_clinics/{clinicId}` (Onda 7b)
-- `coach_id`, `title`, `description`, `scheduled_at`, `duration_min`
-- `location`, `capacity`, `price`, `leveling_min`/`max`
-- `status` ('draft'|'open'|'full'|'closed'|'cancelled')
+- `coach_id`, `coach_name`, `title`, `description`, `location`, `level`
+- `date` (YYYY-MM-DD), `start`, `end` (HH:MM), `capacity`, `price`
+- `status` ('open'|'cancelled'), `signup_count`, `created_at_ms`
 
-### `coach_clinic_signups/{signupId}` (Onda 7b)
-- `clinic_id`, `user_id`, `payment_status`
+### `coach_clinic_signups/{clinicId_athleteId}` (Onda 7b)
+- `clinic_id`, `coach_id`, `athlete_id`, `athlete_name`, `created_at_ms`
+- id determinístico; leitura pública (contagem de vagas), auto-inscrição do atleta
 
-### `coach_level_validations/{validationId}` (Onda 7b)
-- `coach_id`, `athlete_id`, `validated_level`, `notes`
+### `coach_level_validations/{coachId_studentId}` (Onda 7b)
+- `coach_id`, `coach_name`, `student_id`, `student_name`
+- `level_id`, `level_name`, `level_badge`, `note`, `created_at_ms`
 
 ### `coach_products/{productId}` (Fase A — loja)
 - `coach_id`, `name`, `price`, `stock`, `image_url`, `category`, `active`

@@ -26,7 +26,10 @@ export const DialogContent = React.forwardRef(({ className, children, ...props }
     <DialogPrimitive.Content
       ref={ref}
       className={cn(
-        'fixed left-[50%] top-[50%] z-50 grid w-full max-w-lg translate-x-[-50%] translate-y-[-50%] gap-4 border bg-background p-6 shadow-lg duration-200 data-[state=open]:animate-in data-[state=closed]:animate-out sm:rounded-lg',
+        // max-h + overflow-y-auto: em telas baixas (tablet em paisagem, celular
+        // deitado) o diálogo pode ser mais alto que a viewport; sem isso o topo
+        // e o rodapé (campos e botão salvar) ficam cortados e inacessíveis.
+        'fixed left-[50%] top-[50%] z-50 grid max-h-[90dvh] w-full max-w-lg translate-x-[-50%] translate-y-[-50%] gap-4 overflow-y-auto overscroll-contain border bg-background p-6 shadow-lg duration-200 data-[state=open]:animate-in data-[state=closed]:animate-out sm:rounded-lg',
         className,
       )}
       {...props}

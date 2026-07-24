@@ -18,7 +18,9 @@ export const AlertDialogContent = React.forwardRef(({ className, ...props }, ref
     <AlertDialogPrimitive.Content
       ref={ref}
       className={cn(
-        'fixed left-[50%] top-[50%] z-50 grid w-full max-w-lg translate-x-[-50%] translate-y-[-50%] gap-4 border bg-background p-6 shadow-lg sm:rounded-lg',
+        // max-h + overflow-y-auto: em telas baixas (paisagem no tablet/celular)
+        // o conteúdo pode exceder a viewport; sem isso o rodapé fica cortado.
+        'fixed left-[50%] top-[50%] z-50 grid max-h-[90dvh] w-full max-w-lg translate-x-[-50%] translate-y-[-50%] gap-4 overflow-y-auto overscroll-contain border bg-background p-6 shadow-lg sm:rounded-lg',
         className,
       )}
       {...props}

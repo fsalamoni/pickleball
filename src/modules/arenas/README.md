@@ -64,8 +64,10 @@
 - `status`: 'requested' | 'negotiating' | 'confirmed' | 'declined' | 'cancelled' | 'completed'
 - `is_instant`, `payment_method`, `proposed_price`, `agreed_price`, `payment_status`
 
-### `arena_waitlist/{entryId}` (Onda 6b)
-- Lista de espera quando slot cheio
+### `booking_waitlist/{entryId}` (Onda 6b)
+- Lista de espera de reservas quando o horário está ocupado (`user_id`, `arena_id`,
+  `date`, `start`). Coleção própria, separada do `arena_waitlist` do matchmaking
+  Arena V3 (que usa `athlete_id`/`slot_id`).
 
 ### `arena_reviews/{id}` (rating 1-5 + response do manager)
 
