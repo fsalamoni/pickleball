@@ -271,6 +271,14 @@ export const FEATURE_FLAG = Object.freeze({
   MOBILE_BOTTOM_NAV: 'mobile_bottom_nav',
 
   /**
+   * Navegação em hubs: barra lateral enxuta com destinos centrais (colapsável
+   * para só ícones) + barra superior de subpáginas do hub ativo. Substitui a
+   * lista longa de itens por 2 níveis organizados por tema. Aditivo — desligada,
+   * a barra lateral atual (seções planas) é renderizada como antes.
+   */
+  NAV_HUBS: 'nav_hubs',
+
+  /**
    * Cancelar torneio: adiciona ao hub administrativo a ação "Cancelar
    * torneio" (com confirmação). O status CANCELLED já existe e é
    * pré-requisito para arquivar, mas não havia botão para alcançá-lo.
@@ -899,6 +907,14 @@ export const FEATURE_FLAG_META = Object.freeze({
       + 'navegar com 1 toque sem abrir o menu lateral. Desligado, a barra '
       + 'não é renderizada.',
   },
+  [FEATURE_FLAG.NAV_HUBS]: {
+    label: 'Navegação em hubs (lateral colapsável + subpáginas no topo)',
+    description:
+      'Reorganiza a navegação em 2 níveis: barra lateral enxuta com os destinos '
+      + 'centrais (colapsável para só ícones) e uma barra superior com as '
+      + 'subpáginas do hub ativo. Desligada, a barra lateral atual (lista de '
+      + 'seções) permanece como está.',
+  },
   [FEATURE_FLAG.TOURNAMENT_CANCEL_ACTION]: {
     label: 'Cancelar torneio',
     description:
@@ -1228,6 +1244,23 @@ export const FEATURE_FLAG_META = Object.freeze({
 export const DEFAULT_FEATURE_FLAGS = Object.freeze(
   Object.fromEntries(Object.values(FEATURE_FLAG).map((key) => [key, false])),
 );
+
+/** Todas as chaves de flag conhecidas (fonte única de verdade para contagens). */
+export const ALL_FLAG_KEYS = Object.freeze(Object.values(FEATURE_FLAG));
+
+/**
+ * Conta flags de forma consistente em toda a UI: `total` é o número de flags
+ * definidas em `FEATURE_FLAG`; `active` são as ligadas dentre elas (ignora
+ * chaves órfãs no mapa do Firestore). Use este helper em TODA exibição de
+ * "X ativas de Y" para não divergir entre telas.
+ * @param {Record<string, boolean>|null|undefined} flags
+ * @returns {{ total: number, active: number }}
+ */
+export function countFlags(flags) {
+  const total = ALL_FLAG_KEYS.length;
+  const active = ALL_FLAG_KEYS.filter((key) => Boolean(flags?.[key])).length;
+  return { total, active };
+}
 
 /**
  * Normaliza um mapa de flags vindo do Firestore, garantindo booleanos e

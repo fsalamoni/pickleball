@@ -66,14 +66,16 @@ import {
 import { ConfirmDialog } from '@/components/ui/confirm-dialog';
 import { ImageUpload } from '@/components/ui/image-upload';
 import { useNavigate, useSearchParams } from 'react-router-dom';
-import { UserCog, Wrench, Settings, Power } from 'lucide-react';
+import { UserCog, Wrench, Settings } from 'lucide-react';
 import ProfilesTab from './V2AdminProfiles.jsx';
-import ArenaV3FlagsPanel from '@/v2/components/admin/ArenaV3FlagsPanel';
-import { FLAG_GROUPS, FLAG_GROUP_OTHER, FLAG_GROUP_ARENA_V3, bucketAllFlags } from '@/core/featureFlagGroups';
+import {
+  FLAG_GROUPS, FLAG_GROUP_OTHER, FLAG_GROUP_ARENA_V3, bucketAllFlags,
+  arenaFlagFamily, ARENA_FAMILY_LABEL, humanizeFlagKey,
+} from '@/core/featureFlagGroups';
 import { AuditLogTable } from '@/components/AuditLogTable';
 import { useAuth } from '@/core/lib/FirebaseAuthContext';
 import { useFeatureFlags, useFeatureFlag } from '@/core/lib/FeatureFlagsContext';
-import { FEATURE_FLAG, FEATURE_FLAG_META } from '@/core/featureFlags';
+import { FEATURE_FLAG, FEATURE_FLAG_META, countFlags } from '@/core/featureFlags';
 import {
   getPlatformSettings,
   setFeatureFlag,
@@ -126,7 +128,6 @@ const SECTIONS = Object.freeze([
   ] },
   { id: 'arenasSection', label: 'Arenas', icon: Building2, tabs: [
     { id: 'arenas', label: 'Arenas', icon: Building2 },
-    { id: 'v3boot', label: 'Arena V3: Boot', icon: Power },
   ] },
   { id: 'features', label: 'Funcionalidades', icon: Flag, tabs: [
     { id: 'flags', label: 'Flags por assunto', icon: Flag },
@@ -204,7 +205,6 @@ export default function V2AdminConsole() {
         {tab === 'tournaments' && <TournamentsTab />}
         {tab === 'partners'   && <PartnersTab />}
         {tab === 'arenas'     && <ArenasTab />}
-        {tab === 'v3boot'     && <ArenaV3FlagsPanel />}
         {tab === 'profiles'   && <ProfilesTab embedded />}
         {tab === 'flags'      && <FlagsTab />}
         {tab === 'branding'   && <BrandingTab />}
@@ -309,11 +309,7 @@ function OverviewTab() {
     return () => { active = false; };
   }, []);
 
-  const flagsOn = useMemo(
-    () => Object.entries(flags || {}).filter(([, v]) => v).length,
-    [flags],
-  );
-  const flagsTotal = Object.keys(FEATURE_FLAG_META).length;
+  const { total: flagsTotal, active: flagsOn } = useMemo(() => countFlags(flags), [flags]);
   const activePartners = links.filter((l) => l.active !== false).length;
 
   return (
@@ -777,11 +773,12 @@ function PartnersTab() {
 
 function FlagRow({ flagKey, checked, disabled, onToggle }) {
   const meta = FEATURE_FLAG_META[flagKey];
+  const label = meta?.label || humanizeFlagKey(flagKey);
   return (
     <div className="flex items-start justify-between gap-4 rounded-2xl border border-gray-100 bg-paper p-4">
       <div className="min-w-0">
         <div className="flex flex-wrap items-center gap-2">
-          <span className="text-sm font-semibold text-ink">{meta?.label || flagKey}</span>
+          <span className="text-sm font-semibold text-ink">{label}</span>
           <code className="rounded bg-paper-pure px-1.5 py-0.5 font-mono text-[10px] text-gray-500">{flagKey}</code>
         </div>
         {meta?.description && <p className="mt-0.5 text-xs text-gray-500">{meta.description}</p>}
@@ -791,10 +788,25 @@ function FlagRow({ flagKey, checked, disabled, onToggle }) {
   );
 }
 
+/** Cabeçalho de grupo com contagem e ações em massa (ligar/desligar todas). */
+function FlagGroupHeader({ label, on, total, onBulk, busy }) {
+  return (
+    <div className="mb-3 flex flex-wrap items-center gap-2">
+      <h3 className="font-display text-base font-bold text-ink">{label}</h3>
+      <V2Badge tone="neutral">{on} / {total}</V2Badge>
+      <div className="ml-auto flex items-center gap-1.5">
+        <V2Button variant="ghost" size="sm" disabled={busy || on === total} onClick={() => onBulk(true)}>Ligar todas</V2Button>
+        <V2Button variant="ghost" size="sm" disabled={busy || on === 0} onClick={() => onBulk(false)}>Desligar todas</V2Button>
+      </div>
+    </div>
+  );
+}
+
 function FlagsTab() {
   const { user } = useAuth();
-  const { flags, isLoading } = useFeatureFlags();
+  const { flags, isLoading, refresh } = useFeatureFlags();
   const [pending, setPending] = useState(null);
+  const [bulkBusy, setBulkBusy] = useState(false);
   const [q, setQ] = useState('');
 
   async function toggle(flagKey, enabled) {
@@ -809,15 +821,42 @@ function FlagsTab() {
     }
   }
 
+  async function bulkToggle(keys, enabled) {
+    setBulkBusy(true);
+    try {
+      for (const key of keys) {
+        try { await setFeatureFlag(key, enabled, user); } catch { /* segue as demais */ }
+      }
+      await refresh?.();
+      toast.success(enabled ? 'Funcionalidades ativadas.' : 'Funcionalidades desativadas.');
+    } finally {
+      setBulkBusy(false);
+    }
+  }
+
   const buckets = useMemo(() => bucketAllFlags(), []);
   const term = q.trim().toLowerCase();
   const matches = (key) => !term
     || key.toLowerCase().includes(term)
-    || (FEATURE_FLAG_META[key]?.label || '').toLowerCase().includes(term);
+    || (FEATURE_FLAG_META[key]?.label || humanizeFlagKey(key)).toLowerCase().includes(term);
 
-  const groupsToRender = [...FLAG_GROUPS, FLAG_GROUP_OTHER];
-  const totalFlags = Object.values(buckets).reduce((n, arr) => n + arr.length, 0);
-  const activeFlags = Object.keys(flags || {}).filter((k) => flags[k]).length;
+  // TODOS os grupos, incluindo a Arena V3 — sem página/painel separado.
+  const groupsToRender = [...FLAG_GROUPS, FLAG_GROUP_ARENA_V3, FLAG_GROUP_OTHER];
+  const { total: totalFlags, active: activeFlags } = countFlags(flags);
+
+  const renderRows = (keys) => (
+    <div className="space-y-2">
+      {keys.map((key) => (
+        <FlagRow
+          key={key}
+          flagKey={key}
+          checked={Boolean(flags?.[key])}
+          disabled={isLoading || bulkBusy || pending === key}
+          onToggle={toggle}
+        />
+      ))}
+    </div>
+  );
 
   return (
     <div className="space-y-4">
@@ -827,7 +866,7 @@ function FlagsTab() {
             <Flag className="h-5 w-5 text-ink" />
             <div>
               <h2 className="font-display text-lg font-bold text-ink">Funcionalidades (flags)</h2>
-              <p className="text-xs text-gray-500">{activeFlags} ativas de {totalFlags} — organizadas por assunto. Cada flag é aditiva.</p>
+              <p className="text-xs text-gray-500">{activeFlags} ativas de {totalFlags} — todas as funcionalidades da plataforma, por assunto. Cada flag é aditiva.</p>
             </div>
           </div>
           <input
@@ -842,36 +881,41 @@ function FlagsTab() {
         const keys = (buckets[group.id] || []).filter(matches);
         if (keys.length === 0) return null;
         const on = keys.filter((k) => flags?.[k]).length;
+        const isArena = group.id === FLAG_GROUP_ARENA_V3.id;
+
+        // Arena V3: subdivide por família (mesmo FlagRow oficial).
+        const families = isArena
+          ? [...new Set(keys.map((k) => arenaFlagFamily(k) || 'other'))]
+            .sort((a, b) => (a === 'master' ? -1 : b === 'master' ? 1 : a.localeCompare(b)))
+          : null;
+
         return (
           <V2Surface key={group.id}>
-            <div className="mb-3 flex items-center gap-2">
-              <h3 className="font-display text-base font-bold text-ink">{group.label}</h3>
-              <V2Badge tone="neutral">{on} / {keys.length}</V2Badge>
-            </div>
-            <div className="space-y-2">
-              {keys.map((key) => (
-                <FlagRow
-                  key={key}
-                  flagKey={key}
-                  checked={Boolean(flags?.[key])}
-                  disabled={isLoading || pending === key}
-                  onToggle={toggle}
-                />
-              ))}
-            </div>
+            <FlagGroupHeader
+              label={group.label}
+              on={on}
+              total={keys.length}
+              busy={bulkBusy}
+              onBulk={(v) => bulkToggle(keys, v)}
+            />
+            {isArena ? (
+              <div className="space-y-4">
+                {families.map((fam) => {
+                  const famKeys = keys.filter((k) => (arenaFlagFamily(k) || 'other') === fam);
+                  return (
+                    <div key={fam}>
+                      <p className="mb-2 text-[11px] font-bold uppercase tracking-widest text-gray-400">
+                        {ARENA_FAMILY_LABEL[fam] || fam}
+                      </p>
+                      {renderRows(famKeys)}
+                    </div>
+                  );
+                })}
+              </div>
+            ) : renderRows(keys)}
           </V2Surface>
         );
       })}
-
-      {/* Arena V3: painel dedicado (agrupado por família) — todas as flags do V3 */}
-      {(buckets[FLAG_GROUP_ARENA_V3.id] || []).some(matches) && (
-        <div>
-          <div className="mb-2 flex items-center gap-2 px-1">
-            <h3 className="font-display text-base font-bold text-ink">{FLAG_GROUP_ARENA_V3.label}</h3>
-          </div>
-          <ArenaV3FlagsPanel />
-        </div>
-      )}
     </div>
   );
 }

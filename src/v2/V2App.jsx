@@ -66,7 +66,6 @@ const V2ArenaMarketing = lazy(() => import('@/v2/pages/V2ArenaMarketing'));
 const V2ArenaOperations = lazy(() => import('@/v2/pages/V2ArenaOperations'));
 const V2ArenaAdvanced = lazy(() => import('@/v2/pages/V2ArenaAdvanced'));
 const V2EventDetail = lazy(() => import('@/v2/pages/V2EventDetail'));
-const V2AdminBootstrap = lazy(() => import('@/v2/pages/V2AdminBootstrap'));
 const V2NotFound = lazy(() => import('@/v2/pages/V2NotFound'));
 const V2DoublesRanking = lazy(() => import('@/v2/pages/V2DoublesRanking'));
 const V2MyGames = lazy(() => import('@/v2/pages/V2MyGames'));
@@ -195,8 +194,8 @@ export default function V2App() {
           <Route path="admin/owner-restore" element={<V2AdminOwnerRestore />} />
           <Route path="admin/owner-debug" element={<V2AdminOwnerDebug />} />
 
-          {/* V3 Bootstrap: liga flags da Arena V3 sem gate de feature flag */}
-          <Route path="admin/v3-bootstrap" element={<V2AdminBootstrap />} />
+          {/* Arena V3 Boot foi consolidada na aba Funcionalidades do painel admin. */}
+          <Route path="admin/v3-bootstrap" element={<Navigate to="/admin/painel?tab=flags" replace />} />
 
           <Route path="*" element={<NotFoundRoute />} />
         </Routes>
