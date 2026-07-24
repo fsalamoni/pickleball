@@ -1,7 +1,7 @@
 # 13 — Refino de UX/UI das Arenas (pública + admin)
 
 > Atualização de planejamento após a sincronização do branch de análise com o
-> `main` (merge do Arena V3 + Sprints 0–5). O roadmap `docs/arena-roadmap.md`
+> `main` (merge do Arena V3 + Sprints 0–5). O roadmap `docs/08-ARENA-ROADMAP.md`
 > entregou as **funcionalidades**; este documento cobre o **refinamento** de
 > UX/UI, design e navegação das duas telas centrais da persona proprietário:
 > a página **pública** (`V2ArenaDetail`) e a de **admin** (`V2ArenaManage`).

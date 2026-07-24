@@ -80,7 +80,7 @@ d4697a8 feat(arena-v3): add sprint 0 foundation (services, hooks, page, rules, f
 
 1. `git checkout feature/arena-management-v3`
 2. `npx vitest run` (confirmar 569 passing)
-3. Ler `docs/ARENA_V3/01-PLAN.md` e `03-PROGRESS.md`
+3. Ler `docs/10-ARENA-V3/01-PLAN.md` e `03-PROGRESS.md`
 4. Próximo sprint: implementar seguindo padrão dos sprints 0/1:
    - Documentar (template em `20-SPRINT-1-MATCHMAKING.md`)
    - Domain puro + testes

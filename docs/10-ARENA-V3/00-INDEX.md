@@ -40,12 +40,13 @@
 | 01 | `01-PLAN.md` | Roadmap de 12 sprints |
 | 02 | `02-FOUNDATION.md` | Sprint 0 — Fundação |
 | 03 | `03-PROGRESS.md` | Status de cada sprint |
-| 10 | `10-MODULES-CATALOG.md` | Catálogo de módulos opt-in (29) |
+| 10 | `10-MODULES-CATALOG.md` | Catálogo de módulos opt-in (51+) |
 | 11 | `11-DATA-MODEL.md` | Schema Firestore completo |
 | 12 | `12-FEATURE-FLAGS.md` | Mapeamento flag → módulo |
 | 13 | `13-ROUTING-UX.md` | Mapa de rotas + UX |
 | 14 | `14-FIRESTORE-RULES.md` | Regras para novas coleções |
 | 15 | `15-BUSINESS-LOGIC.md` | Domínio puro (regras) |
+| 26 | `26-ARENA-V3-COMPLETE-REFERENCE.md` | Guia rápido de referência (status atual) |
 | 20 | `20-SPRINT-1-MATCHMAKING.md` | Open Match + Matchmaking + Waitlist |
 | 21 | `21-SPRINT-2-MEMBERS-PACKAGES.md` | Membros + Pacotes + Wallet |
 | 22 | `22-SPRINT-3-PDV-PAYMENTS.md` | PDV + Pagamentos |
