@@ -1,7 +1,7 @@
 import React from 'react';
 import { Link, Navigate, useNavigate, useParams } from 'react-router-dom';
 import {
-  Archive, ArrowLeft, Calendar, CalendarPlus, Check, Copy, Eye, Hash, Images, MapPin, Share2, ShieldCheck, Trophy,
+  Archive, ArrowLeft, Calendar, CalendarPlus, Check, Copy, Eye, Hash, Images, MapPin, MonitorPlay, Share2, ShieldCheck, Trophy,
 } from 'lucide-react';
 import { buildICS, icsFilename } from '@/modules/tournament/domain/ics';
 import { useClipboard } from '@/core/lib/useClipboard';
@@ -56,6 +56,7 @@ export default function V2Tournament() {
   const modalityPagesOn = useFeatureFlag(FEATURE_FLAG.MODALITY_PAGES);
   const galleryOn = useFeatureFlag(FEATURE_FLAG.TOURNAMENT_GALLERY);
   const calendarExportOn = useFeatureFlag(FEATURE_FLAG.CALENDAR_EXPORT);
+  const tvModeOn = useFeatureFlag(FEATURE_FLAG.TOURNAMENT_TV_MODE);
   const { copy, copied } = useClipboard();
 
   if (isLoading) {
@@ -184,6 +185,11 @@ export default function V2Tournament() {
             <a href={`/p/${tournament.id}`} target="_blank" rel="noreferrer" className="btn-press inline-flex items-center gap-2 rounded-full border border-white/15 bg-white/10 px-4 py-2 text-sm font-semibold text-white">
               <Eye className="h-4 w-4" /> Visão pública
             </a>
+            {tvModeOn && (
+              <a href={`/torneios/${tournament.id}/telao`} target="_blank" rel="noreferrer" className="btn-press inline-flex items-center gap-2 rounded-full border border-white/15 bg-white/10 px-4 py-2 text-sm font-semibold text-white">
+                <MonitorPlay className="h-4 w-4" /> Telão
+              </a>
+            )}
             {calendarExportOn && toDateSafe(tournament.starts_at) && (
               <button onClick={downloadTournamentIcs} className="btn-press inline-flex items-center gap-2 rounded-full border border-white/15 bg-white/10 px-4 py-2 text-sm font-semibold text-white">
                 <CalendarPlus className="h-4 w-4" /> Adicionar ao calendário

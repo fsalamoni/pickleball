@@ -496,6 +496,14 @@ export const FEATURE_FLAG = Object.freeze({
    * ficam ocultos (o card do painel atual segue como está).
    */
   ATHLETE_AGENDA: 'athlete_agenda',
+
+  /**
+   * Modo Telão/TV do torneio: página em tela cheia (fundo escuro, tipografia
+   * grande, auto-rotação) com jogos em andamento, próximos chamados e resultados
+   * recentes — para exibir num telão no evento. Rota pública /torneios/:id/telao.
+   * Aditivo — desligada, a rota e o link ficam ocultos.
+   */
+  TOURNAMENT_TV_MODE: 'tournament_tv_mode',
 });
 
 /** Metadados de exibição para o painel de flags (admin master). */
@@ -934,6 +942,13 @@ export const FEATURE_FLAG_META = Object.freeze({
     description:
       'Página que reúne os próximos jogos do atleta e o histórico de partidas, '
       + 'com filtros. Desligada, a rota e o link ficam ocultos.',
+  },
+  [FEATURE_FLAG.TOURNAMENT_TV_MODE]: {
+    label: 'Modo Telão/TV do torneio',
+    description:
+      'Página em tela cheia (fundo escuro, tipografia grande, auto-rotação) com '
+      + 'jogos em andamento, próximos chamados e resultados recentes, para exibir '
+      + 'num telão no evento. Desligada, a rota e o link ficam ocultos.',
   },
 });
 
