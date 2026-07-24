@@ -19,11 +19,12 @@ import { notifyUsers, NOTIFICATION_TYPE } from '@/core/services/notificationServ
 import { ARENA_COLLECTIONS, BOOKING_STATUS, BOOKING_KIND, PAYMENT_STATUS } from '../domain/constants.js';
 import { isValidSlot } from '../domain/booking.js';
 import { validateBookingRequest } from '../domain/booking_conflict.js';
+import { pickAvailableCourt } from '../domain/court_assignment.js';
 import {
   BOOKING_TYPE, buildParticipants, ownerIds, invitedIds, addInvite,
   acceptInvite, declineInvite, joinOpen, removeParticipant, isOwner, isInvited, canJoin,
 } from '../domain/shared_booking.js';
-import { listArenaCourtSchedules } from './arenaService.js';
+import { listArenaCourtSchedules, listArenaCourts } from './arenaService.js';
 import { listArenaManagerIds } from './arenaService.js';
 
 const COL = ARENA_COLLECTIONS;
@@ -81,12 +82,18 @@ async function courtSchedulesFor(arenaId, courtId) {
  */
 export async function createSharedBooking(arena, user, profile, input) {
   if (!user?.uid) throw new Error('Usuário não autenticado.');
-  const courtId = str(input.court_id);
-  if (!courtId) throw new Error('Escolha uma quadra para a reserva.');
   const slot = { date: str(input.date), start: str(input.start), end: str(input.end) };
   if (!isValidSlot(slot)) throw new Error('Preencha a data e um horário válido (fim depois do início).');
 
   const existing = await listArenaBookings(arena.id);
+  // Quadra escolhida OU atribuição automática de uma quadra livre.
+  let courtId = str(input.court_id);
+  if (!courtId) {
+    const courts = await listArenaCourts(arena.id).catch(() => []);
+    const allSchedules = await listArenaCourtSchedules(arena.id).catch(() => []);
+    courtId = pickAvailableCourt(courts, slot, existing, allSchedules);
+    if (!courtId) throw new Error('Nenhuma quadra livre neste horário. Escolha outro horário.');
+  }
   const v = validateBookingRequest({
     date: slot.date, start_time: slot.start, end_time: slot.end,
     court_id: courtId, existingBookings: existing, court_schedules: await courtSchedulesFor(arena.id, courtId),
