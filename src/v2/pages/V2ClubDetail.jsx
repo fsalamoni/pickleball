@@ -3,7 +3,7 @@ import { Link, Navigate, useNavigate, useParams, useSearchParams } from 'react-r
 import { toast } from 'sonner';
 import {
   ArrowLeft, Building2, CalendarDays, Hash, Mail, MapPin, MessageSquare,
-  MessagesSquare, Phone, Settings, Users, Medal,
+  MessagesSquare, Phone, Settings, Users, Medal, Share2,
 } from 'lucide-react';
 import {
   useClub, useMyMembership, useJoinClub, useLeaveClub, useMyJoinRequest,
@@ -37,8 +37,9 @@ export default function V2ClubDetail() {
   const acceptInvite = useAcceptClubInvite(clubId);
   const declineInvite = useDeclineClubInvite(clubId);
   const clubRankingOn = useFeatureFlag(FEATURE_FLAG.CLUB_INTERNAL_RANKING);
-  const [code, setCode] = useState('');
+  const inviteLinkOn = useFeatureFlag(FEATURE_FLAG.CLUB_INVITE_LINK);
   const [searchParams, setSearchParams] = useSearchParams();
+  const [code, setCode] = useState(() => (inviteLinkOn ? (searchParams.get('invite') || '') : ''));
   const activeTab = searchParams.get('tab') || 'members';
   const threadParam = searchParams.get('thread') || null;
 
@@ -147,11 +148,24 @@ export default function V2ClubDetail() {
               )}
             </div>
           </div>
-          {isMember && (
-            <V2Button variant="ghost" size="sm" onClick={handleLeave} className="border-white/20 bg-white/10 text-white hover:border-white/40">
-              Sair do clube
-            </V2Button>
-          )}
+          <div className="flex flex-col items-end gap-2">
+            {inviteLinkOn && isAdmin && club.invite_code && (
+              <V2Button variant="ghost" size="sm" className="border-white/20 bg-white/10 text-white hover:border-white/40"
+                onClick={() => {
+                  const link = `${window.location.origin}/clubes/${club.id}?invite=${encodeURIComponent(club.invite_code)}`;
+                  navigator.clipboard?.writeText(link)
+                    .then(() => toast.success('Link de convite copiado!'))
+                    .catch(() => toast.error('Não foi possível copiar.'));
+                }}>
+                <Share2 className="h-4 w-4" /> Copiar link de convite
+              </V2Button>
+            )}
+            {isMember && (
+              <V2Button variant="ghost" size="sm" onClick={handleLeave} className="border-white/20 bg-white/10 text-white hover:border-white/40">
+                Sair do clube
+              </V2Button>
+            )}
+          </div>
         </div>
 
         {club.description && <p className="relative z-10 mt-5 max-w-2xl whitespace-pre-wrap text-sm leading-7 text-gray-300">{club.description}</p>}

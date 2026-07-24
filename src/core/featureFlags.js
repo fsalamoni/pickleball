@@ -564,6 +564,13 @@ export const FEATURE_FLAG = Object.freeze({
    * oculta.
    */
   ARENA_CRM: 'arena_crm',
+
+  /**
+   * Convite de clube por link: o admin copia um link que já leva o código de
+   * convite; quem abre o link entra na tela do clube com o código preenchido.
+   * Aditivo — desligada, o botão some e o ingresso por código segue manual.
+   */
+  CLUB_INVITE_LINK: 'club_invite_link',
 });
 
 /** Metadados de exibição para o painel de flags (admin master). */
@@ -1063,6 +1070,12 @@ export const FEATURE_FLAG_META = Object.freeze({
     description:
       'Consolida os clientes da arena a partir das reservas (nº de reservas, '
       + 'última reserva, valor somado, no-shows). Desligada, a aba fica oculta.',
+  },
+  [FEATURE_FLAG.CLUB_INVITE_LINK]: {
+    label: 'Convite de clube por link',
+    description:
+      'O admin copia um link que já leva o código de convite; quem abre entra na '
+      + 'tela do clube com o código preenchido. Desligada, o botão some.',
   },
 });
 
