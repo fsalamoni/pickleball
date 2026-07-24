@@ -20,11 +20,14 @@ import { Link, useNavigate } from 'react-router-dom';
 import { toast } from 'sonner';
 import {
   ChevronLeft, ChevronRight, Calendar, MessageCircle, UserCog, X, Edit3, Ban, Plus, Trash2, CheckCircle,
+  LayoutGrid, List,
 } from 'lucide-react';
 import { useAuth } from '@/core/lib/FirebaseAuthContext';
 import { cn } from '@/core/lib/utils';
 import { useArena, useArenaCourts, useArenaCourtSchedules,  useArenaUnavailabilities, useAddArenaUnavailability, useDeleteArenaUnavailability } from '@/modules/arenas/hooks/useArenas';
 import { useUpdateBookingStatus, useArenaBookings, useCreateManualBooking, useTransferBooking } from '@/modules/arenas/hooks/useBookings';
+import { useAddBookingResponsibles, useRemoveBookingResponsible } from '@/modules/arenas/hooks/useSharedBookings';
+import { participantStatusLabel } from '@/modules/arenas/domain/shared_booking';
 import AthleteMultiPicker from '@/modules/athletes/components/AthleteMultiPicker';
 import { getSlotStatus, generateTimeSlots, isSlotClickable, SLOT_STATUS_COLORS, SLOT_STATUS_LABELS, SLOT_STATUS } from '@/modules/arenas/domain/slot_status';
 import { weekdayOf } from '@/modules/arenas/domain/booking';
@@ -35,6 +38,7 @@ import {
 import { ConfirmDialog } from '@/components/ui/confirm-dialog';
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription } from '@/components/ui/dialog';
 import BookingEditDialog from '@/modules/arenas/components/BookingEditDialog';
+import CourtDayGrid from '@/v2/components/arenas/CourtDayGrid';
 
 function addDays(dateStr, days) {
   const d = new Date(dateStr + 'T12:00:00');
@@ -64,6 +68,7 @@ export default function V2AdminBookingCalendar({ arenaId, embedded = false }) {
 
   const [date, setDate] = useState(() => new Date().toISOString().slice(0, 10));
   const [courtId, setCourtId] = useState('all');
+  const [viewMode, setViewMode] = useState('grid'); // 'grid' = grade por quadra, 'list' = lista de horários
   const [selectedSlot, setSelectedSlot] = useState(null); // { time, status, booking, unavailability }
   const [unavForm, setUnavForm] = useState({ notes: '' });
   // Formulário de reserva manual (admin cria em nome de um cliente).
@@ -236,55 +241,101 @@ export default function V2AdminBookingCalendar({ arenaId, embedded = false }) {
           <option value="all">Todas as quadras</option>
           {courts.filter((c) => c.is_active).map((c) => <option key={c.id} value={c.id}>{c.name}</option>)}
         </select>
+        <div className="ml-auto flex items-center gap-1 rounded-2xl border border-gray-200 bg-paper p-1">
+          <button
+            type="button"
+            onClick={() => setViewMode('grid')}
+            className={cn('flex items-center gap-1 rounded-xl px-2.5 py-1.5 text-xs font-bold transition-all',
+              viewMode === 'grid' ? 'bg-ink text-acid' : 'text-gray-500 hover:text-ink')}
+            title="Grade por quadra"
+          >
+            <LayoutGrid className="h-3.5 w-3.5" /> Quadras
+          </button>
+          <button
+            type="button"
+            onClick={() => setViewMode('list')}
+            className={cn('flex items-center gap-1 rounded-xl px-2.5 py-1.5 text-xs font-bold transition-all',
+              viewMode === 'list' ? 'bg-ink text-acid' : 'text-gray-500 hover:text-ink')}
+            title="Lista de horários"
+          >
+            <List className="h-3.5 w-3.5" /> Lista
+          </button>
+        </div>
       </div>
 
-      {/* Legenda */}
-      <div className="flex flex-wrap gap-2 text-xs">
-        {Object.entries(SLOT_STATUS_LABELS).map(([k, v]) => {
-          const c = SLOT_STATUS_COLORS[k];
-          return (
-            <div key={k} className="flex items-center gap-1">
-              <span className={cn('h-3 w-3 rounded-full', c.dot)} />
-              <span className="text-gray-600">{v}</span>
-            </div>
-          );
-        })}
-      </div>
-
-      {/* Grid de slots */}
-      <div className="grid grid-cols-2 gap-2 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-6">
-        {slotsWithStatus.map(({ time, status, booking, unavailability }) => {
-          const c = SLOT_STATUS_COLORS[status];
-          const clickable = isSlotClickable(status);
-          return (
-            <button
-              key={time}
-              type="button"
-              disabled={!clickable}
-              onClick={() => onSlotClick(time)}
-              title={
-                status === SLOT_STATUS.UNAVAILABLE ? unavailability?.notes :
-                (booking?.athlete_name ? `${booking.athlete_name}${booking.notes ? ' · ' + booking.notes : ''}` : undefined)
-              }
-              className={cn(
-                'flex flex-col items-center justify-center rounded-2xl border-2 p-3 transition-all',
-                c.bg, c.border,
-                clickable ? 'hover:scale-[1.03] cursor-pointer' : 'cursor-not-allowed opacity-60',
-              )}
-            >
-              <div className={cn('font-display text-base font-bold', c.text)}>{time}</div>
-              <div className={cn('text-[10px] uppercase tracking-widest', c.text)}>
-                {SLOT_STATUS_LABELS[status]}
-              </div>
-              {booking?.athlete_name && (
-                <div className="mt-0.5 truncate text-[10px] text-gray-600 max-w-full">
-                  {booking.athlete_name.split(' ')[0]}
+      {/* Grade por quadra: linhas = horários, colunas = quadras (mostra o que está livre/ocupado por quadra) */}
+      {viewMode === 'grid' ? (
+        <CourtDayGrid
+          courts={courtId === 'all' ? courts : courts.filter((c) => c.id === courtId)}
+          activeBookings={bookings.filter((b) =>
+            b.status === BOOKING_STATUS.REQUESTED ||
+            b.status === BOOKING_STATUS.NEGOTIATING ||
+            b.status === BOOKING_STATUS.CONFIRMED
+          )}
+          completedBookings={bookings.filter((b) => b.status === BOOKING_STATUS.COMPLETED)}
+          schedules={schedules}
+          unavailabilities={unavailabilities.filter((u) => u.date === date)}
+          date={date}
+          selected={selectedSlot ? { time: selectedSlot.time, courtId } : null}
+          onSelectCell={(court, slot) => {
+            setCourtId(court.id);
+            setSelectedSlot(slot);
+            setUnavForm({ notes: '' });
+            setManualOpen(false);
+            setManualForm({ client_name: '', price: '', paid: false });
+          }}
+        />
+      ) : (
+        <>
+          {/* Legenda */}
+          <div className="flex flex-wrap gap-2 text-xs">
+            {Object.entries(SLOT_STATUS_LABELS).map(([k, v]) => {
+              const c = SLOT_STATUS_COLORS[k];
+              return (
+                <div key={k} className="flex items-center gap-1">
+                  <span className={cn('h-3 w-3 rounded-full', c.dot)} />
+                  <span className="text-gray-600">{v}</span>
                 </div>
-              )}
-            </button>
-          );
-        })}
-      </div>
+              );
+            })}
+          </div>
+
+          {/* Grid de slots */}
+          <div className="grid grid-cols-2 gap-2 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-6">
+            {slotsWithStatus.map(({ time, status, booking, unavailability }) => {
+              const c = SLOT_STATUS_COLORS[status];
+              const clickable = isSlotClickable(status);
+              return (
+                <button
+                  key={time}
+                  type="button"
+                  disabled={!clickable}
+                  onClick={() => onSlotClick(time)}
+                  title={
+                    status === SLOT_STATUS.UNAVAILABLE ? unavailability?.notes :
+                    (booking?.athlete_name ? `${booking.athlete_name}${booking.notes ? ' · ' + booking.notes : ''}` : undefined)
+                  }
+                  className={cn(
+                    'flex flex-col items-center justify-center rounded-2xl border-2 p-3 transition-all',
+                    c.bg, c.border,
+                    clickable ? 'hover:scale-[1.03] cursor-pointer' : 'cursor-not-allowed opacity-60',
+                  )}
+                >
+                  <div className={cn('font-display text-base font-bold', c.text)}>{time}</div>
+                  <div className={cn('text-[10px] uppercase tracking-widest', c.text)}>
+                    {SLOT_STATUS_LABELS[status]}
+                  </div>
+                  {booking?.athlete_name && (
+                    <div className="mt-0.5 truncate text-[10px] text-gray-600 max-w-full">
+                      {booking.athlete_name.split(' ')[0]}
+                    </div>
+                  )}
+                </button>
+              );
+            })}
+          </div>
+        </>
+      )}
 
       {/* Painel de ações do slot selecionado */}
       {selectedSlot && (
@@ -320,6 +371,17 @@ export default function V2AdminBookingCalendar({ arenaId, embedded = false }) {
                 {selectedSlot.booking.notes && (
                   <p className="mt-2 text-xs text-gray-600">&quot;{selectedSlot.booking.notes}&quot;</p>
                 )}
+                {Array.isArray(selectedSlot.booking.participants) && selectedSlot.booking.participants.length > 0 && (
+                  <div className="mt-2 flex flex-wrap gap-1.5">
+                    {selectedSlot.booking.participants.map((p, i) => (
+                      <span key={p.athlete_id || `m-${i}`}
+                        className="inline-flex items-center gap-1 rounded-full border border-gray-200 bg-paper-pure px-2 py-0.5 text-[11px] text-ink">
+                        {p.name || 'Responsável'}
+                        <span className="text-gray-400">· {participantStatusLabel(p.status)}</span>
+                      </span>
+                    ))}
+                  </div>
+                )}
               </div>
 
               <div className="grid grid-cols-2 gap-2 sm:grid-cols-4">
@@ -329,7 +391,7 @@ export default function V2AdminBookingCalendar({ arenaId, embedded = false }) {
                   </V2Button>
                 )}
                 <V2Button size="sm" variant="secondary" onClick={() => setTransferOpen(true)}>
-                  <UserCog className="h-3.5 w-3.5" /> Transferir
+                  <UserCog className="h-3.5 w-3.5" /> Responsáveis
                 </V2Button>
                 <V2Button size="sm" variant="secondary" onClick={() => setRescheduleOpen(true)}>
                   <Edit3 className="h-3.5 w-3.5" /> Remarcar
@@ -451,9 +513,9 @@ export default function V2AdminBookingCalendar({ arenaId, embedded = false }) {
         />
       )}
 
-      {/* Transferir responsável: atleta da plataforma ou cliente avulso por nome */}
+      {/* Responsáveis: vários atletas por reserva + transferir titularidade */}
       {transferOpen && selectedSlot?.booking && (
-        <TransferBookingDialog
+        <ManageResponsiblesDialog
           booking={selectedSlot.booking}
           onClose={() => setTransferOpen(false)}
           onDone={() => { setTransferOpen(false); setSelectedSlot(null); }}
@@ -463,48 +525,135 @@ export default function V2AdminBookingCalendar({ arenaId, embedded = false }) {
   );
 }
 
-function TransferBookingDialog({ booking, onClose, onDone }) {
+/**
+ * Gerencia os responsáveis de uma reserva: adiciona vários atletas da plataforma
+ * (como convite, que eles aceitam) e/ou responsáveis avulsos por nome (já
+ * confirmados); remove responsáveis; e transfere a titularidade principal.
+ * Todos os responsáveis têm os mesmos poderes sobre a reserva.
+ */
+function ManageResponsiblesDialog({ booking, onClose, onDone }) {
+  const addResp = useAddBookingResponsibles();
+  const removeResp = useRemoveBookingResponsible();
   const transfer = useTransferBooking();
   const [picked, setPicked] = useState([]);
   const [freeName, setFreeName] = useState('');
 
-  async function submit() {
-    const athlete = picked[0];
-    const target = athlete
-      ? { athlete_id: athlete.athlete_id, athlete_name: athlete.name, athlete_photo: athlete.photo }
-      : { athlete_id: null, athlete_name: freeName.trim() };
-    if (!target.athlete_name) { toast.error('Escolha um atleta ou informe um nome.'); return; }
+  const participants = Array.isArray(booking.participants) ? booking.participants : [];
+  // Lista exibida: se ainda não é compartilhada, mostra o titular como 1º responsável.
+  const currentList = participants.length > 0
+    ? participants
+    : (booking.athlete_name || booking.athlete_id
+      ? [{ athlete_id: booking.athlete_id || null, name: booking.athlete_name || 'Titular', status: 'accepted', is_initiator: true }]
+      : []);
+
+  async function addResponsibles() {
+    const invites = picked.map((a) => ({ athlete_id: a.athlete_id, name: a.name, photo: a.photo }));
+    const names = freeName.trim() ? [freeName.trim()] : [];
+    if (invites.length === 0 && names.length === 0) {
+      toast.error('Escolha atletas ou informe um nome.');
+      return;
+    }
     try {
-      await transfer.mutateAsync({ booking, target });
-      toast.success('Reserva transferida.');
+      await addResp.mutateAsync({ booking, invites, names, byManager: true });
+      toast.success(invites.length > 0
+        ? 'Responsáveis convidados. Eles confirmam a participação.'
+        : 'Responsável adicionado.');
       onDone();
     } catch (err) {
-      toast.error(err?.message || 'Não foi possível transferir.');
+      toast.error(err?.message || 'Não foi possível adicionar responsáveis.');
     }
   }
+
+  async function removeOne(p, index) {
+    try {
+      await removeResp.mutateAsync({ booking, athlete_id: p.athlete_id || null, index, byManager: true });
+      toast.success('Responsável removido.');
+      onDone();
+    } catch (err) {
+      toast.error(err?.message || 'Não foi possível remover.');
+    }
+  }
+
+  async function makePrimary(p) {
+    if (!p.athlete_id && !p.name) return;
+    try {
+      await transfer.mutateAsync({ booking, target: { athlete_id: p.athlete_id || null, athlete_name: p.name, athlete_photo: p.photo || '' } });
+      toast.success('Titular atualizado.');
+      onDone();
+    } catch (err) {
+      toast.error(err?.message || 'Não foi possível atualizar o titular.');
+    }
+  }
+
+  const busy = addResp.isPending || removeResp.isPending || transfer.isPending;
 
   return (
     <Dialog open onOpenChange={(v) => { if (!v) onClose(); }}>
       <DialogContent className="max-w-md">
         <DialogHeader>
-          <DialogTitle className="flex items-center gap-2"><UserCog className="h-5 w-5" /> Transferir reserva</DialogTitle>
-          <DialogDescription>Reatribua a reserva a outro atleta da plataforma ou a um cliente avulso.</DialogDescription>
+          <DialogTitle className="flex items-center gap-2"><UserCog className="h-5 w-5" /> Responsáveis da reserva</DialogTitle>
+          <DialogDescription>
+            Uma reserva pode ter vários responsáveis, todos com os mesmos poderes. Atletas da plataforma recebem um convite e confirmam a vinculação; avulsos entram já confirmados.
+          </DialogDescription>
         </DialogHeader>
+
         <div className="space-y-4">
-          <div>
-            <V2Field label="Atleta da plataforma">
-              <AthleteMultiPicker value={picked.slice(0, 1)} onChange={(v) => setPicked(v.slice(-1))} />
+          {/* Responsáveis atuais */}
+          {currentList.length > 0 && (
+            <div>
+              <p className="mb-1.5 text-xs font-bold uppercase tracking-wide text-gray-500">Atuais</p>
+              <div className="space-y-1.5">
+                {currentList.map((p, i) => {
+                  const isTitular = (p.athlete_id && p.athlete_id === booking.athlete_id)
+                    || (!p.athlete_id && p.name === booking.athlete_name);
+                  return (
+                    <div key={p.athlete_id || `m-${i}`} className="flex items-center gap-2 rounded-2xl border border-gray-100 bg-paper px-3 py-2">
+                      <div className="flex h-8 w-8 items-center justify-center rounded-full bg-ink text-xs font-bold text-acid">
+                        {p.name?.[0] || '?'}
+                      </div>
+                      <div className="min-w-0 flex-1">
+                        <div className="truncate text-sm font-bold text-ink">{p.name || 'Responsável'}</div>
+                        <div className="text-[11px] text-gray-500">
+                          {participantStatusLabel(p.status)}{isTitular ? ' · titular' : ''}{p.athlete_id ? '' : ' · avulso'}
+                        </div>
+                      </div>
+                      {!isTitular && (p.athlete_id || p.name) && (
+                        <button type="button" onClick={() => makePrimary(p)} disabled={busy}
+                          className="rounded-lg px-2 py-1 text-[11px] font-semibold text-gray-500 hover:bg-gray-100 hover:text-ink">
+                          Tornar titular
+                        </button>
+                      )}
+                      {(currentList.length > 1) && (
+                        <button type="button" onClick={() => removeOne(p, i)} disabled={busy}
+                          title="Remover responsável"
+                          className="rounded-lg p-1 text-gray-400 hover:bg-red-50 hover:text-red-600">
+                          <X className="h-4 w-4" />
+                        </button>
+                      )}
+                    </div>
+                  );
+                })}
+              </div>
+            </div>
+          )}
+
+          {/* Adicionar novos */}
+          <div className="space-y-2 rounded-2xl border border-gray-100 bg-paper-pure p-3">
+            <p className="text-xs font-bold uppercase tracking-wide text-gray-500">Adicionar responsáveis</p>
+            <V2Field label="Atletas da plataforma (convite)">
+              <AthleteMultiPicker value={picked} onChange={setPicked} />
             </V2Field>
-          </div>
-          {picked.length === 0 && (
-            <V2Field label="Ou nome do cliente avulso">
+            <V2Field label="Ou responsável avulso (nome)">
               <V2Input value={freeName} onChange={(e) => setFreeName(e.target.value)} maxLength={80} placeholder="Ex.: João (telefone)" />
             </V2Field>
-          )}
+            <V2Button size="sm" onClick={addResponsibles} disabled={busy}>
+              {addResp.isPending ? 'Adicionando…' : 'Adicionar'}
+            </V2Button>
+          </div>
         </div>
+
         <div className="mt-4 flex justify-end gap-2">
-          <V2Button variant="ghost" size="sm" onClick={onClose}>Cancelar</V2Button>
-          <V2Button size="sm" onClick={submit} disabled={transfer.isPending}>{transfer.isPending ? 'Transferindo…' : 'Transferir'}</V2Button>
+          <V2Button variant="ghost" size="sm" onClick={onClose}>Fechar</V2Button>
         </div>
       </DialogContent>
     </Dialog>

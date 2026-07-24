@@ -193,9 +193,59 @@ export function removeParticipant(participants = [], athleteId) {
   return (participants || []).filter((p) => p.athlete_id !== athleteId);
 }
 
+/** Remove um participante por índice (útil p/ responsáveis avulsos sem id). */
+export function removeParticipantAt(participants = [], index) {
+  return (participants || []).filter((_, i) => i !== index);
+}
+
+/**
+ * Semeia a lista de participantes a partir do dono original da reserva, quando
+ * ela ainda não é compartilhada. Assim, ao adicionar co-responsáveis a uma
+ * reserva antiga (dono único), o dono vira o primeiro co-proprietário aceito.
+ */
+export function seedParticipantsFromOwner(booking = {}) {
+  if (Array.isArray(booking.participants) && booking.participants.length > 0) {
+    return booking.participants;
+  }
+  if (booking.athlete_id || str(booking.athlete_name)) {
+    return [normalizeParticipant({
+      athlete_id: booking.athlete_id || null,
+      name: booking.athlete_name || '',
+      photo: booking.athlete_photo || '',
+      status: PARTICIPANT_STATUS.ACCEPTED,
+      is_initiator: true,
+    })];
+  }
+  return [];
+}
+
+/**
+ * Adiciona um co-responsável avulso (sem conta na plataforma) já como aceito.
+ * Não faz dedup por id (não há id). Ignora nome vazio.
+ */
+export function addManualParticipant(participants = [], name, invitedBy) {
+  const nm = str(name);
+  if (!nm) return participants;
+  return [
+    ...(participants || []),
+    normalizeParticipant({
+      athlete_id: null, name: nm, status: PARTICIPANT_STATUS.ACCEPTED, invited_by: invitedBy || null,
+    }),
+  ];
+}
+
 /** Sub-horário efetivo de um participante (o próprio ou a janela toda). */
 export function effectiveSlot(participant, window) {
   return participant?.slot || window;
+}
+
+/**
+ * Chave estável de um participante para o rateio: o athlete_id quando existe,
+ * ou uma chave por índice para responsáveis avulsos (sem conta na plataforma).
+ * Garante que avulsos também entram na divisão do valor.
+ */
+export function participantKey(participant, index) {
+  return (participant && participant.athlete_id) ? participant.athlete_id : `manual:${index}`;
 }
 
 /**
@@ -211,7 +261,9 @@ export function effectiveSlot(participant, window) {
 export function computeSplit(window = {}, participants = [], totalPrice) {
   const ws = timeToMinutes(window.start);
   const we = timeToMinutes(window.end);
-  const accepted = acceptedParticipants(participants).filter((p) => p.athlete_id);
+  // Inclui TODOS os responsáveis aceitos — inclusive avulsos (sem conta) — para
+  // que o valor seja de fato dividido pelo número de atletas na reserva.
+  const accepted = acceptedParticipants(participants);
   const price = Number(totalPrice);
   const empty = { perParticipant: {}, total: 0, minutes: 0 };
   if (ws == null || we == null || we <= ws || !Number.isFinite(price) || price < 0) return empty;
@@ -219,20 +271,22 @@ export function computeSplit(window = {}, participants = [], totalPrice) {
 
   const totalMinutes = we - ws;
   const perMinute = price / totalMinutes;
+  // Chave estável por participante (id, ou índice para avulsos).
+  const keyed = accepted.map((p, i) => ({ p, key: participantKey(p, i) }));
   const acc = {};
-  accepted.forEach((p) => { acc[p.athlete_id] = 0; });
+  keyed.forEach(({ key }) => { acc[key] = 0; });
 
   for (let m = ws; m < we; m += 1) {
-    const present = accepted.filter((p) => {
+    const present = keyed.filter(({ p }) => {
       const s = effectiveSlot(p, window);
       const ps = timeToMinutes(s.start);
       const pe = timeToMinutes(s.end);
       if (ps == null || pe == null) return true; // sem sub-horário = janela toda
       return m >= ps && m < pe;
     });
-    const share = present.length > 0 ? present : accepted; // minuto vazio: todos
+    const share = present.length > 0 ? present : keyed; // minuto vazio: todos
     const cost = perMinute / share.length;
-    share.forEach((p) => { acc[p.athlete_id] += cost; });
+    share.forEach(({ key }) => { acc[key] += cost; });
   }
 
   // Arredonda para centavos preservando o total.

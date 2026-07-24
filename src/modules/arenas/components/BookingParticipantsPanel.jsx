@@ -13,7 +13,7 @@ import { bookingSlots } from '../domain/booking.js';
 import { formatPrice } from '../domain/pricing.js';
 import {
   acceptedParticipants, isOwner, isInvited, canJoin, computeSplit, isFull,
-  remainingSlots, PARTICIPANT_STATUS,
+  remainingSlots, participantKey, PARTICIPANT_STATUS,
 } from '../domain/shared_booking.js';
 import {
   useAcceptBookingInvite, useDeclineBookingInvite, useJoinOpenBooking,
@@ -101,22 +101,25 @@ export default function BookingParticipantsPanel({ booking }) {
 
       {/* Lista de participantes com rateio */}
       <div className="mt-2 space-y-1.5">
-        {accepted.map((p) => (
-          <div key={p.athlete_id} className="flex items-center justify-between gap-2 rounded-xl bg-paper px-2.5 py-1.5">
-            <div className="flex items-center gap-2">
-              <V2Avatar name={p.name} photoUrl={p.photo} size="sm" />
-              <div>
-                <p className="text-sm font-semibold text-ink">{p.name}{p.athlete_id === uid ? ' (você)' : ''}{p.is_initiator ? ' · dono' : ''}</p>
-                {p.slot && <p className="text-[11px] text-gray-500">{p.slot.start}–{p.slot.end}</p>}
+        {accepted.map((p, i) => {
+          const key = participantKey(p, i);
+          return (
+            <div key={key} className="flex items-center justify-between gap-2 rounded-xl bg-paper px-2.5 py-1.5">
+              <div className="flex items-center gap-2">
+                <V2Avatar name={p.name} photoUrl={p.photo} size="sm" />
+                <div>
+                  <p className="text-sm font-semibold text-ink">{p.name}{p.athlete_id === uid ? ' (você)' : ''}{p.is_initiator ? ' · dono' : ''}{!p.athlete_id ? ' · avulso' : ''}</p>
+                  {p.slot && <p className="text-[11px] text-gray-500">{p.slot.start}–{p.slot.end}</p>}
+                </div>
               </div>
+              {split?.perParticipant?.[key] != null && (
+                <span className="text-sm font-bold text-ink">{formatPrice(split.perParticipant[key])}</span>
+              )}
             </div>
-            {split?.perParticipant?.[p.athlete_id] != null && (
-              <span className="text-sm font-bold text-ink">{formatPrice(split.perParticipant[p.athlete_id])}</span>
-            )}
-          </div>
-        ))}
-        {pending.map((p) => (
-          <div key={p.athlete_id} className="flex items-center gap-2 rounded-xl bg-paper px-2.5 py-1.5 opacity-70">
+          );
+        })}
+        {pending.map((p, i) => (
+          <div key={p.athlete_id || `pending-${i}`} className="flex items-center gap-2 rounded-xl bg-paper px-2.5 py-1.5 opacity-70">
             <V2Avatar name={p.name} photoUrl={p.photo} size="sm" />
             <p className="flex-1 text-sm text-gray-600">{p.name}</p>
             <V2Badge tone="amber">Convidado</V2Badge>

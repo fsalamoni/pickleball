@@ -26,7 +26,8 @@ import { ARENA_COLLECTIONS, BOOKING_STATUS, BOOKING_KIND, PAYMENT_STATUS, BOOKIN
 import { expandRecurring, isValidSlot, canTransition, weekdayOf, hasConflictWithConfirmed } from '../domain/booking.js';
 import { validateBookingRequest } from '../domain/booking_conflict.js';
 import { canBeInstantBooking, getInitialBookingStatus } from '../domain/instant_booking.js';
-import { listArenaCourtSchedules, listCourtSchedules } from './arenaService.js';
+import { pickAvailableCourt } from '../domain/court_assignment.js';
+import { listArenaCourtSchedules, listCourtSchedules, listArenaCourts } from './arenaService.js';
 import { listArenaManagerIds } from './arenaService.js';
 
 const COL = ARENA_COLLECTIONS;
@@ -118,6 +119,17 @@ export async function createBooking(arena, user, profile, input) {
     throw new Error('Já existe uma reserva confirmada nesse horário. Escolha outro período.');
   }
 
+  // Resolve a quadra: usa a escolhida ou atribui automaticamente uma livre,
+  // para a reserva sempre ficar vinculada a uma quadra específica no calendário.
+  let assignedCourtId = str(input.court_id) || null;
+  if (!assignedCourtId) {
+    const courts = await listArenaCourts(arena.id).catch(() => []);
+    if (courts.length > 0) {
+      const allSchedules = await listArenaCourtSchedules(arena.id).catch(() => []);
+      assignedCourtId = pickAvailableCourt(courts, slots[0], existingBookings, allSchedules);
+    }
+  }
+
   const isInstant = input.is_instant === true;
   const initialStatus = getInitialBookingStatus(isInstant);
   const id = doc(collection(db, COL.bookings)).id;
@@ -125,6 +137,7 @@ export async function createBooking(arena, user, profile, input) {
     id,
     arena_id: arena.id,
     arena_name: str(arena.name),
+    court_id: assignedCourtId,
     athlete_id: user.uid,
     athlete_name: displayName(user, profile),
     athlete_photo: profile?.photo_url || user.photoURL || '',
@@ -172,8 +185,6 @@ export async function createBooking(arena, user, profile, input) {
  */
 export async function createManualBooking(arena, actor, input) {
   if (!actor?.uid) throw new Error('Usuário não autenticado.');
-  const courtId = str(input.court_id);
-  if (!courtId) throw new Error('Escolha uma quadra específica para criar a reserva.');
   const clientName = str(input.client_name);
   if (!clientName) throw new Error('Informe o nome do cliente da reserva.');
 
@@ -181,6 +192,14 @@ export async function createManualBooking(arena, actor, input) {
   if (!isValidSlot(slot)) throw new Error('Preencha a data e um horário válido (fim depois do início).');
 
   const existingBookings = await listArenaBookings(arena.id);
+  // Quadra escolhida OU atribuição automática de uma quadra livre.
+  let courtId = str(input.court_id);
+  if (!courtId) {
+    const courts = await listArenaCourts(arena.id).catch(() => []);
+    const allSchedules = await listArenaCourtSchedules(arena.id).catch(() => []);
+    courtId = pickAvailableCourt(courts, slot, existingBookings, allSchedules);
+    if (!courtId) throw new Error('Nenhuma quadra livre neste horário. Escolha outro horário.');
+  }
   // Mescla schedules da quadra + da arena (sem court_id), igual ao filtro do
   // calendário admin, para a validação de janela refletir o que o admin vê.
   let courtSchedules = [];
@@ -347,12 +366,18 @@ export async function editBookingSlot(booking, actor, input, { byManager = false
   if ([BOOKING_STATUS.CANCELLED, BOOKING_STATUS.DECLINED, BOOKING_STATUS.COMPLETED].includes(booking.status)) {
     throw new Error('Esta reserva não pode mais ser alterada.');
   }
-  const courtId = input.court_id !== undefined ? str(input.court_id) : (booking.court_id || '');
+  let courtId = input.court_id !== undefined ? str(input.court_id) : (booking.court_id || '');
   const slot = { date: str(input.date), start: str(input.start), end: str(input.end) };
   if (!isValidSlot(slot)) throw new Error('Preencha a data e um horário válido (fim depois do início).');
 
   const existing = await listArenaBookings(booking.arena_id);
   const others = existing.filter((b) => b.id !== booking.id);
+  // Sem quadra escolhida → atribui automaticamente uma livre.
+  if (!courtId) {
+    const courts = await listArenaCourts(booking.arena_id).catch(() => []);
+    const allSchedules = await listArenaCourtSchedules(booking.arena_id).catch(() => []);
+    courtId = pickAvailableCourt(courts, slot, others, allSchedules) || '';
+  }
   let courtSchedules = [];
   try {
     const all = await listArenaCourtSchedules(booking.arena_id);
