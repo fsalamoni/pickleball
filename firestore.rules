@@ -639,7 +639,9 @@ service cloud.firestore {
 
     // ---- Clubs -----------------------------------------------------------
     match /clubs/{clubId} {
-      allow read: if isAuthed();
+      // Leitura autenticada, OU pública quando o clube foi marcado como público
+      // (flag club_public_page — vitrine sem login).
+      allow read: if isAuthed() || resource.data.is_public == true;
       allow create: if isAuthed() && request.resource.data.created_by == request.auth.uid;
       // Admins editam tudo; qualquer membro pode atualizar apenas o contador
       // cosmético de membros (entrar/sair do clube).

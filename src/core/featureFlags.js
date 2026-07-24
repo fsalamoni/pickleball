@@ -606,6 +606,13 @@ export const FEATURE_FLAG = Object.freeze({
    * Aditivo — desligada, cada data é criada individualmente (comportamento atual).
    */
   CLUB_RECURRING_EVENTS: 'club_recurring_events',
+
+  /**
+   * Página pública do clube: o admin marca o clube como público e ganha uma
+   * vitrine sem login (nome, local, descrição, "quero participar"). Rota /c/:id.
+   * Aditivo — desligada, o botão e a rota ficam ocultos (clube segue exigindo login).
+   */
+  CLUB_PUBLIC_PAGE: 'club_public_page',
 });
 
 /** Metadados de exibição para o painel de flags (admin master). */
@@ -1143,6 +1150,13 @@ export const FEATURE_FLAG_META = Object.freeze({
     description:
       'Ao adicionar uma data/dia de jogo, permite repeti-la semanalmente por N '
       + 'semanas, criando todas de uma vez. Desligada, cada data é criada uma a uma.',
+  },
+  [FEATURE_FLAG.CLUB_PUBLIC_PAGE]: {
+    label: 'Página pública do clube',
+    description:
+      'O admin marca o clube como público e ganha uma vitrine sem login (nome, '
+      + 'local, descrição, "quero participar"), em /c/:id. Desligada, o clube '
+      + 'segue exigindo login.',
   },
 });
 
