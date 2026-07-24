@@ -599,6 +599,13 @@ export const FEATURE_FLAG = Object.freeze({
    * a visualização atual (tabela) é mantida.
    */
   BRACKET_TREE: 'bracket_tree',
+
+  /**
+   * Eventos recorrentes de clube: ao adicionar uma data/dia de jogo, é possível
+   * repeti-la semanalmente por N semanas, criando todas as datas de uma vez.
+   * Aditivo — desligada, cada data é criada individualmente (comportamento atual).
+   */
+  CLUB_RECURRING_EVENTS: 'club_recurring_events',
 });
 
 /** Metadados de exibição para o painel de flags (admin master). */
@@ -1130,6 +1137,12 @@ export const FEATURE_FLAG_META = Object.freeze({
     description:
       'Mostra o mata-mata (chave dos vencedores) como colunas por rodada com os '
       + 'confrontos, em vez de tabela. Desligada, mantém a visualização atual.',
+  },
+  [FEATURE_FLAG.CLUB_RECURRING_EVENTS]: {
+    label: 'Eventos recorrentes de clube',
+    description:
+      'Ao adicionar uma data/dia de jogo, permite repeti-la semanalmente por N '
+      + 'semanas, criando todas de uma vez. Desligada, cada data é criada uma a uma.',
   },
 });
 

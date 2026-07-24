@@ -11,6 +11,8 @@ import { EmptyState } from '@/components/ui/empty-state';
 import { Tabs, TabsList, TabsTrigger, TabsContent } from '@/components/ui/tabs';
 import { ConfirmDialog } from '@/components/ui/confirm-dialog';
 import { useAuth } from '@/core/lib/FirebaseAuthContext';
+import { useFeatureFlag } from '@/core/lib/FeatureFlagsContext';
+import { FEATURE_FLAG } from '@/core/featureFlags';
 import {
   useEventDates,
   useAddEventDate,
@@ -41,8 +43,9 @@ export default function EventDatesPanel({ event, clubId, showGames = false }) {
   const { data: dates = [], isLoading } = useEventDates(eventId);
   const { data: rsvps = [] } = useEventDateRsvps(eventId);
   const addDate = useAddEventDate(eventId);
+  const recurringOn = useFeatureFlag(FEATURE_FLAG.CLUB_RECURRING_EVENTS);
   const [adding, setAdding] = useState(false);
-  const [form, setForm] = useState({ date_time: '', location: event.location || '', note: '' });
+  const [form, setForm] = useState({ date_time: '', location: event.location || '', note: '', repeat_weeks: 1 });
 
   const rsvpsByDate = useMemo(() => {
     const map = new Map();
@@ -60,9 +63,18 @@ export default function EventDatesPanel({ event, clubId, showGames = false }) {
       return;
     }
     try {
-      await addDate.mutateAsync({ club_id: event.club_id, date_time: form.date_time, location: form.location, note: form.note });
-      toast.success(`${showGames ? 'Dia de jogo' : 'Data'} adicionado.`);
-      setForm({ date_time: '', location: event.location || '', note: '' });
+      const weeks = recurringOn ? Math.max(1, Math.min(52, Number(form.repeat_weeks) || 1)) : 1;
+      const base = new Date(form.date_time);
+      for (let i = 0; i < weeks; i += 1) {
+        const dt = new Date(base.getTime());
+        dt.setDate(dt.getDate() + i * 7);
+        // Formato datetime-local (sem timezone) preservado.
+        const iso = `${dt.getFullYear()}-${String(dt.getMonth() + 1).padStart(2, '0')}-${String(dt.getDate()).padStart(2, '0')}T${String(dt.getHours()).padStart(2, '0')}:${String(dt.getMinutes()).padStart(2, '0')}`;
+        // eslint-disable-next-line no-await-in-loop
+        await addDate.mutateAsync({ club_id: event.club_id, date_time: iso, location: form.location, note: form.note });
+      }
+      toast.success(weeks > 1 ? `${weeks} ${showGames ? 'dias de jogo' : 'datas'} adicionados.` : `${showGames ? 'Dia de jogo' : 'Data'} adicionado.`);
+      setForm({ date_time: '', location: event.location || '', note: '', repeat_weeks: 1 });
       setAdding(false);
     } catch (err) {
       toast.error(err.message || 'Não foi possível adicionar.');
@@ -101,6 +113,15 @@ export default function EventDatesPanel({ event, clubId, showGames = false }) {
                 <Label htmlFor="new_date_note">Observação</Label>
                 <Input id="new_date_note" value={form.note} onChange={(e) => setForm((p) => ({ ...p, note: e.target.value }))} maxLength={200} placeholder="Ex.: levar bola, quadra 2…" />
               </div>
+              {recurringOn && (
+                <div className="space-y-1.5 sm:col-span-2">
+                  <Label htmlFor="new_date_repeat">Repetir semanalmente por (semanas)</Label>
+                  <Input id="new_date_repeat" type="number" min={1} max={52}
+                    value={form.repeat_weeks}
+                    onChange={(e) => setForm((p) => ({ ...p, repeat_weeks: e.target.value }))} />
+                  <p className="text-xs text-gray-500">1 = só esta data. Ex.: 4 cria esta e mais 3 semanas seguidas.</p>
+                </div>
+              )}
               <div className="flex justify-end gap-2 sm:col-span-2">
                 <V2Button type="button" variant="ghost" size="sm" onClick={() => setAdding(false)}>Cancelar</V2Button>
                 <V2Button type="submit" size="sm" disabled={addDate.isPending}>Adicionar</V2Button>
