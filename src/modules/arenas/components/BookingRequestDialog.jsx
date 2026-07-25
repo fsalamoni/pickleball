@@ -1,5 +1,6 @@
 import React, { useMemo, useState } from 'react';
 import { toast } from 'sonner';
+import { Check } from 'lucide-react';
 import {
   Dialog,
   DialogContent,
@@ -17,9 +18,9 @@ import { useAuth } from '@/core/lib/FirebaseAuthContext';
 import { BOOKING_KIND, BOOKING_STATUS, WEEKDAY_LABELS } from '../domain/constants.js';
 import { resolveArenaPrice, formatPrice } from '../domain/pricing.js';
 import { bookingSlots, expandRecurring, isValidSlot, sortSlots, weekdayOf } from '../domain/booking.js';
-import { pickAvailableCourtForSlots } from '../domain/court_assignment.js';
+import { pickAvailableCourtForSlots, unavailableCourtsForSlots } from '../domain/court_assignment.js';
 import { useArenaBookings, useCreateBooking } from '../hooks/useBookings.js';
-import { useArenaCourts, useCourtSchedules } from '../hooks/useArenas.js';
+import { useArenaCourts, useArenaCourtSchedules } from '../hooks/useArenas.js';
 import { validateBookingRequest, getCourtAvailabilityForDate, checkBookingConflict, BLOCKING_STATUSES } from '../domain/booking_conflict.js';
 import { normalizeTime } from '../domain/court_schedule.js';
 import { canBeInstantBooking, arenaSupportsInstant, INSTANT_BOOKING_LABELS } from '../domain/instant_booking.js';
@@ -37,8 +38,12 @@ export default function BookingRequestDialog({ arena, open, onOpenChange, court:
   const createBooking = useCreateBooking();
   const { data: existingBookings = [] } = useArenaBookings(arena.id);
   const { data: courts = [] } = useArenaCourts(arena.id);
+  const { data: allSchedules = [] } = useArenaCourtSchedules(arena.id);
   const activeCourts = useMemo(() => courts.filter((c) => c.is_active !== false), [courts]);
-  const [courtId, setCourtId] = useState(initialCourt?.id || '');
+  // Seleção de quadra: 'any' (a arena atribui uma livre), 'specific' (uma ou
+  // mais escolhidas) ou 'all' (todas — cada quadra vira uma reserva).
+  const [courtMode, setCourtMode] = useState(initialCourt?.id ? 'specific' : 'any');
+  const [selectedCourtIds, setSelectedCourtIds] = useState(initialCourt?.id ? [initialCourt.id] : []);
   const [kind, setKind] = useState(preselectedSlots.length > 0 ? 'multi' : BOOKING_KIND.SINGLE);
   // Se veio do calendário, pode ter múltiplos slots
   const initialMultiSlots = preselectedSlots.length > 0 ? preselectedSlots : [];
@@ -53,44 +58,62 @@ export default function BookingRequestDialog({ arena, open, onOpenChange, court:
   // Arena permite instant?
   const supportsInstant = arenaSupportsInstant(arena);
 
-  // Reset courtId quando dialog abre/fecha
+  // Reset da seleção quando o dialog reabre.
   React.useEffect(() => {
-    if (open) setCourtId('');
-  }, [open]);
+    if (open) {
+      setCourtMode(initialCourt?.id ? 'specific' : 'any');
+      setSelectedCourtIds(initialCourt?.id ? [initialCourt.id] : []);
+    }
+  }, [open, initialCourt?.id]);
 
-  // Carrega schedules da quadra selecionada (ou todas se sem quadra)
-  const { data: courtSchedulesData } = useCourtSchedules(courtId);
-  const courtSchedules = useMemo(() => {
-    if (!courtId) return [];
-    return courtSchedulesData?.list || [];
-  }, [courtId, courtSchedulesData]);
+  // Quadras-alvo efetivas conforme o modo escolhido. Vazio em 'any' (a arena
+  // atribui automaticamente) e quando não há quadras cadastradas.
+  const effectiveCourtIds = useMemo(() => {
+    if (activeCourts.length === 0) return [];
+    if (courtMode === 'all') return activeCourts.map((c) => c.id);
+    if (courtMode === 'specific') return selectedCourtIds.filter((id) => activeCourts.some((c) => c.id === id));
+    return [];
+  }, [courtMode, selectedCourtIds, activeCourts]);
+  const isMultiCourt = effectiveCourtIds.length > 1;
 
-  // Validação em tempo real do slot (apenas SINGLE)
+  // Schedules relevantes a uma quadra (inclui janelas gerais da arena sem court_id).
+  const schedulesForCourt = React.useCallback(
+    (cid) => allSchedules.filter((s) => !s.court_id || s.court_id === cid),
+    [allSchedules],
+  );
+
+  // Validação em tempo real do slot (apenas SINGLE). Em 'any', o conflito é
+  // tratado por hasConflict (atribuição automática). Com quadras escolhidas,
+  // valida CADA uma (todas precisam estar dentro da janela e livres).
   const singleValidation = useMemo(() => {
     if (kind !== BOOKING_KIND.SINGLE) return { ok: true };
     if (!single.date || !normalizeTime(single.start) || !normalizeTime(single.end)) {
       return { ok: false, reason: 'incomplete', message: 'Preencha data e horários.' };
     }
-    return validateBookingRequest({
-      date: single.date,
-      start_time: single.start,
-      end_time: single.end,
-      court_id: courtId || null,
-      existingBookings,
-      court_schedules: courtSchedules,
-    });
-  }, [kind, single, courtId, courtSchedules, existingBookings]);
+    if (effectiveCourtIds.length === 0) return { ok: true };
+    for (const cid of effectiveCourtIds) {
+      const v = validateBookingRequest({
+        date: single.date, start_time: single.start, end_time: single.end,
+        court_id: cid, existingBookings, court_schedules: schedulesForCourt(cid),
+      });
+      if (!v.ok) {
+        const name = activeCourts.find((c) => c.id === cid)?.name;
+        return { ok: false, message: effectiveCourtIds.length > 1 && name ? `${name}: ${v.message}` : v.message };
+      }
+    }
+    return { ok: true };
+  }, [kind, single, effectiveCourtIds, schedulesForCourt, existingBookings, activeCourts]);
 
-  // Disponibilidade do dia (apenas SINGLE com data)
+  // Disponibilidade do dia (apenas SINGLE com data e UMA quadra escolhida)
   const dayAvailability = useMemo(() => {
-    if (kind !== BOOKING_KIND.SINGLE || !single.date || !courtId) return null;
+    if (kind !== BOOKING_KIND.SINGLE || !single.date || effectiveCourtIds.length !== 1) return null;
     return getCourtAvailabilityForDate({
       date: single.date,
-      court_schedules: courtSchedules,
+      court_schedules: schedulesForCourt(effectiveCourtIds[0]),
       existingBookings,
       duration: 60,
     });
-  }, [kind, single.date, courtId, courtSchedules, existingBookings]);
+  }, [kind, single.date, effectiveCourtIds, schedulesForCourt, existingBookings]);
 
   const estimate = useMemo(() => {
     if (kind === BOOKING_KIND.SINGLE) {
@@ -127,21 +150,22 @@ export default function BookingRequestDialog({ arena, open, onOpenChange, court:
     [confirmedBookings],
   );
 
-  // Conflito POR-QUADRA: com quadra escolhida, checa só aquela quadra; em
-  // "qualquer quadra", só há conflito se NENHUMA quadra estiver livre para
-  // todos os slots. Sem quadras cadastradas, cai no conflito por horário.
+  // Conflito POR-QUADRA:
+  //  - quadras escolhidas (específicas/todas): conflito se QUALQUER uma delas
+  //    não estiver livre para todos os slots (todas precisam ser reserváveis);
+  //  - "qualquer disponível": só há conflito se NENHUMA quadra estiver livre;
+  //  - sem quadras cadastradas: cai no conflito por horário.
   const hasConflict = useMemo(() => {
     if (candidateSlots.length === 0) return false;
-    if (courtId) {
-      const cand = candidateSlots.map((s) => ({ ...s, court_id: courtId }));
-      return checkBookingConflict(cand, existingBookings).hasConflict;
+    if (effectiveCourtIds.length > 0) {
+      return unavailableCourtsForSlots(effectiveCourtIds, candidateSlots, existingBookings, allSchedules).length > 0;
     }
     if (activeCourts.length === 0) {
       const cand = candidateSlots.map((s) => ({ ...s, court_id: null }));
       return checkBookingConflict(cand, existingBookings).hasConflict;
     }
-    return !pickAvailableCourtForSlots(activeCourts, candidateSlots, existingBookings, courtSchedules);
-  }, [candidateSlots, courtId, existingBookings, activeCourts, courtSchedules]);
+    return !pickAvailableCourtForSlots(activeCourts, candidateSlots, existingBookings, allSchedules);
+  }, [candidateSlots, effectiveCourtIds, existingBookings, activeCourts, allSchedules]);
 
   async function handleSubmit() {
     try {
@@ -149,19 +173,25 @@ export default function BookingRequestDialog({ arena, open, onOpenChange, court:
         toast.error(singleValidation.message);
         return;
       }
-      if (isInstant && kind === BOOKING_KIND.SINGLE) {
+      if (courtMode === 'specific' && activeCourts.length > 0 && effectiveCourtIds.length === 0) {
+        toast.error('Marque ao menos uma quadra.');
+        return;
+      }
+      const instantEligible = isInstant && !isMultiCourt;
+      if (instantEligible && kind === BOOKING_KIND.SINGLE) {
+        const instantCourtId = effectiveCourtIds[0] || null;
         const instant = canBeInstantBooking(
           {
             date: single.date,
             start_time: single.start,
             end_time: single.end,
-            court_id: courtId || null,
+            court_id: instantCourtId,
             proposed_price: estimate?.price ?? null,
             payment_method: paymentMethod,
           },
           arena,
           existingBookings,
-          courtSchedules,
+          schedulesForCourt(instantCourtId),
         );
         if (!instant.ok) {
           toast.error(instant.message);
@@ -174,17 +204,19 @@ export default function BookingRequestDialog({ arena, open, onOpenChange, court:
       }
       const input = kind === BOOKING_KIND.SINGLE
         ? {
-            kind, ...single, court_id: courtId || null, notes,
-            is_instant: isInstant,
-            payment_method: isInstant ? paymentMethod : null,
+            kind, ...single, court_ids: effectiveCourtIds, notes,
+            is_instant: instantEligible,
+            payment_method: instantEligible ? paymentMethod : null,
             proposed_price: estimate?.price ?? null,
           }
-        : { kind, recurring, court_id: courtId || null, notes, proposed_price: estimate?.price ?? null };
+        : { kind, recurring, court_ids: effectiveCourtIds, notes, proposed_price: estimate?.price ?? null };
       await createBooking.mutateAsync({ arena, input });
       toast.success(
-        isInstant
-          ? 'Reserva instantânea confirmada! Compareça no horário marcado.'
-          : 'Solicitação enviada! A arena vai responder em breve.',
+        isMultiCourt
+          ? `Solicitação enviada para ${effectiveCourtIds.length} quadras! A arena vai responder em breve.`
+          : instantEligible
+            ? 'Reserva instantânea confirmada! Compareça no horário marcado.'
+            : 'Solicitação enviada! A arena vai responder em breve.',
       );
       onOpenChange(false);
     } catch (err) {
@@ -220,7 +252,7 @@ export default function BookingRequestDialog({ arena, open, onOpenChange, court:
             ))}
           </div>
 
-          {kind === BOOKING_KIND.SINGLE && supportsInstant && (
+          {kind === BOOKING_KIND.SINGLE && supportsInstant && !isMultiCourt && (
             <div className="space-y-2">
               <Label className="text-xs">{INSTANT_BOOKING_LABELS.TITLE}</Label>
               <div className="grid grid-cols-1 gap-2 sm:grid-cols-2">
@@ -276,23 +308,65 @@ export default function BookingRequestDialog({ arena, open, onOpenChange, court:
             </div>
           )}
 
-          {kind === BOOKING_KIND.SINGLE ? (
+          {activeCourts.length > 0 && (
             <div className="space-y-2">
-              {activeCourts.length > 0 && (
-                <div>
-                  <Label className="text-xs">Quadra</Label>
-                  <select
-                    value={courtId}
-                    onChange={(e) => setCourtId(e.target.value)}
-                    className="h-10 w-full rounded-md border border-input bg-background px-3 text-sm"
+              <Label className="text-xs">Quadras</Label>
+              <div className="flex flex-wrap gap-2">
+                {[
+                  { m: 'any', label: 'Qualquer disponível' },
+                  { m: 'specific', label: 'Específicas' },
+                  { m: 'all', label: `Todas (${activeCourts.length})` },
+                ].map(({ m, label }) => (
+                  <button
+                    key={m}
+                    type="button"
+                    onClick={() => { setCourtMode(m); if (m !== 'specific') setSelectedCourtIds([]); }}
+                    className={cn(
+                      'rounded-full border px-3 py-1.5 text-xs font-medium transition-colors',
+                      courtMode === m ? 'border-ink bg-ink text-white' : 'border-gray-200 text-gray-500 hover:bg-paper',
+                    )}
                   >
-                    <option value="">Qualquer uma (sem quadra específica)</option>
-                    {activeCourts.map((c) => (
-                      <option key={c.id} value={c.id}>{c.name}</option>
-                    ))}
-                  </select>
+                    {label}
+                  </button>
+                ))}
+              </div>
+              {courtMode === 'specific' && (
+                <div className="grid grid-cols-2 gap-1.5">
+                  {activeCourts.map((c) => {
+                    const checked = selectedCourtIds.includes(c.id);
+                    return (
+                      <button
+                        key={c.id}
+                        type="button"
+                        onClick={() => setSelectedCourtIds((prev) => (checked ? prev.filter((id) => id !== c.id) : [...prev, c.id]))}
+                        className={cn(
+                          'flex items-center gap-2 rounded-xl border px-3 py-2 text-left text-sm transition-colors',
+                          checked ? 'border-ink bg-ink/5 text-ink' : 'border-gray-200 text-gray-600 hover:bg-paper',
+                        )}
+                      >
+                        <span className={cn('flex h-4 w-4 shrink-0 items-center justify-center rounded border', checked ? 'border-ink bg-ink text-white' : 'border-gray-300')}>
+                          {checked && <Check className="h-3 w-3" />}
+                        </span>
+                        <span className="truncate">{c.name}</span>
+                      </button>
+                    );
+                  })}
                 </div>
               )}
+              <p className="text-[11px] text-gray-400">
+                {courtMode === 'all'
+                  ? `Reserva as ${activeCourts.length} quadras — uma reserva por quadra.`
+                  : courtMode === 'specific'
+                    ? (selectedCourtIds.length > 0
+                        ? `${selectedCourtIds.length} quadra(s) selecionada(s) — uma reserva por quadra.`
+                        : 'Marque uma ou mais quadras.')
+                    : 'A arena atribui automaticamente uma quadra livre.'}
+              </p>
+            </div>
+          )}
+
+          {kind === BOOKING_KIND.SINGLE ? (
+            <div className="space-y-2">
               <div className="grid grid-cols-3 gap-2">
                 <div className="col-span-3 sm:col-span-1">
                   <Label className="text-xs">Data</Label>
@@ -381,7 +455,7 @@ export default function BookingRequestDialog({ arena, open, onOpenChange, court:
             </PlatformNotice>
           )}
 
-          {kind === BOOKING_KIND.SINGLE && dayAvailability && dayAvailability.free.length > 0 && courtId && (
+          {kind === BOOKING_KIND.SINGLE && dayAvailability && dayAvailability.free.length > 0 && (
             <div className="rounded-[1rem] border border-green-100 bg-green-50/60 p-3">
               <div className="text-xs font-semibold uppercase tracking-[0.16em] text-green-700">
                 Horários livres na data ({dayAvailability.free.length} janela(s) com 60+ min)
@@ -432,8 +506,8 @@ export default function BookingRequestDialog({ arena, open, onOpenChange, court:
 
         <DialogFooter>
           <Button variant="outline" onClick={() => onOpenChange(false)}>Cancelar</Button>
-          <Button onClick={handleSubmit} disabled={createBooking.isPending || hasConflict || candidateSlots.length === 0 || (kind === BOOKING_KIND.SINGLE && !singleValidation.ok)}>
-            {createBooking.isPending ? 'Enviando…' : 'Solicitar reserva'}
+          <Button onClick={handleSubmit} disabled={createBooking.isPending || hasConflict || candidateSlots.length === 0 || (kind === BOOKING_KIND.SINGLE && !singleValidation.ok) || (courtMode === 'specific' && activeCourts.length > 0 && effectiveCourtIds.length === 0)}>
+            {createBooking.isPending ? 'Enviando…' : (isMultiCourt ? `Solicitar ${effectiveCourtIds.length} reservas` : 'Solicitar reserva')}
           </Button>
         </DialogFooter>
       </DialogContent>
