@@ -793,30 +793,61 @@ export default function V2Layout({ children }) {
           </button>
         </div>
         <div className="hide-scrollbar flex-1 overflow-y-auto px-6 pb-10">
-          {drawerGroups.map((section) => (
-            <div key={section.title} className="mb-8">
-              <p className="mb-3 text-[11px] font-bold uppercase tracking-widest text-white/40">{section.title}</p>
-              <div className="space-y-1">
-                {section.items.map((item) => {
-                  const Icon = item.icon;
-                  return (
-                    <Link
-                      key={item.to}
-                      to={item.to}
-                      onClick={closeMobile}
-                      className={cn(
-                        'flex items-center gap-3 rounded-2xl px-4 py-3 text-lg font-display font-semibold transition-colors',
-                        isActive(location.pathname, item) ? 'bg-white/10 text-acid' : 'text-white hover:text-acid',
-                      )}
-                    >
-                      <Icon className="h-5 w-5" />
-                      {item.label}
-                    </Link>
-                  );
-                })}
-              </div>
+          {navHubsOn ? (
+            /* Hubs: lista enxuta (nível 1). As subpáginas aparecem na barra
+               superior ao entrar no hub — igual ao desktop. */
+            <div className="space-y-1">
+              {hubs.map((hub) => {
+                const Icon = hub.icon;
+                const active = activeHub?.id === hub.id;
+                const badge = typeof hub.badge === 'number' && hub.badge > 0 ? hub.badge : 0;
+                return (
+                  <Link
+                    key={hub.id}
+                    to={hub.to}
+                    onClick={closeMobile}
+                    className={cn(
+                      'flex items-center gap-3 rounded-2xl px-4 py-3 text-lg font-display font-semibold transition-colors',
+                      active ? 'bg-white/10 text-acid' : 'text-white hover:text-acid',
+                    )}
+                  >
+                    <Icon className="h-5 w-5" />
+                    <span className="flex-1">{hub.label}</span>
+                    {badge > 0 && (
+                      <span className="flex h-5 min-w-[1.25rem] items-center justify-center rounded-full bg-acid px-1.5 text-[10px] font-bold text-ink">
+                        {badge > 99 ? '99+' : badge}
+                      </span>
+                    )}
+                  </Link>
+                );
+              })}
             </div>
-          ))}
+          ) : (
+            drawerGroups.map((section) => (
+              <div key={section.title} className="mb-8">
+                <p className="mb-3 text-[11px] font-bold uppercase tracking-widest text-white/40">{section.title}</p>
+                <div className="space-y-1">
+                  {section.items.map((item) => {
+                    const Icon = item.icon;
+                    return (
+                      <Link
+                        key={item.to}
+                        to={item.to}
+                        onClick={closeMobile}
+                        className={cn(
+                          'flex items-center gap-3 rounded-2xl px-4 py-3 text-lg font-display font-semibold transition-colors',
+                          isActive(location.pathname, item) ? 'bg-white/10 text-acid' : 'text-white hover:text-acid',
+                        )}
+                      >
+                        <Icon className="h-5 w-5" />
+                        {item.label}
+                      </Link>
+                    );
+                  })}
+                </div>
+              </div>
+            ))
+          )}
           <div className="mt-8 space-y-1 border-t border-white/10 pt-6">
             <Link
               to="/politica-uso"
