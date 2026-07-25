@@ -30,7 +30,17 @@ const LOCAL_PREVIEW_PROTECTED_PATHS = new Set([
 
 const queryClient = new QueryClient({
   defaultOptions: {
-    queries: { staleTime: 30_000, refetchOnWindowFocus: false },
+    queries: {
+      // Navegação ágil: reusa o cache por 2 min (menos refetch ao trocar de
+      // página) e mantém o cache por 10 min mesmo sem observadores, então
+      // voltar a uma página é instantâneo. Mutations invalidam o que muda.
+      staleTime: 2 * 60_000,
+      gcTime: 10 * 60_000,
+      refetchOnWindowFocus: false,
+      // Falha rápido em erro (evita 3 tentativas com backoff ~7s antes de
+      // mostrar o estado de erro).
+      retry: 1,
+    },
   },
 });
 

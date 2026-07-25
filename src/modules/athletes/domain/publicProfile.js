@@ -61,7 +61,7 @@ export function buildAthletePublicProfile(uid, profile = {}, clubs = [], options
     .filter((club) => club && club.id)
     .map((club) => ({ id: club.id, name: club.name || '' }));
 
-  // Treinador: campos só são projetados quando o atleta se declara treinador.
+  // Professor: campos só são projetados quando o atleta se declara professor.
   const isCoach = profile.is_coach === true;
 
   return {
@@ -86,7 +86,7 @@ export function buildAthletePublicProfile(uid, profile = {}, clubs = [], options
     address: addressPublic ? trimmed(profile.address) : '',
     // Controle de listagem no diretório (padrão: listado).
     directory_listed: profile.directory_listed !== false,
-    // Diretório de treinadores (opt-in): vazios quando não é treinador.
+    // Diretório de professores (opt-in): vazios quando não é professor.
     is_coach: isCoach,
     coach_bio: isCoach ? trimmed(profile.coach_bio) : '',
     coach_price: isCoach ? trimmed(profile.coach_price) : '',

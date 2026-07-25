@@ -20,13 +20,14 @@ import {
   useAddTournamentToCircuit, useRemoveTournamentFromCircuit,
   useUpdateCircuit, useMyCircuits,
 } from '@/modules/circuits/hooks/useCircuits';
+import { useMyTournaments } from '@/modules/tournament/hooks/useTournament';
 import {
-  V2Badge, V2Button, V2EmptyState, V2Field, V2Input, V2Surface, V2Textarea,
+  V2Badge, V2Button, V2EmptyState, V2Field, V2Input, V2Select, V2Surface, V2Textarea,
   V2Skeleton,
 } from '@/v2/ui/primitives';
 
 const RANK_TONES = {
-  1: 'amber', 2: 'sky', 3: 'orange',
+  1: 'amber', 2: 'blue', 3: 'neutral',
 };
 
 function RankBadge({ rank }) {
@@ -42,7 +43,7 @@ function CircuitInfo({ circuit, isAdmin, onEdit }) {
         <div className="flex-1">
           <h2 className="font-display text-2xl font-bold text-ink">{circuit.name}</h2>
           <div className="mt-1 flex flex-wrap items-center gap-2 text-sm text-gray-500">
-            <V2Badge tone="emerald"><Calendar className="h-3 w-3" /> {circuit.season}</V2Badge>
+            <V2Badge tone="green"><Calendar className="h-3 w-3" /> {circuit.season}</V2Badge>
             {circuit.start_date && <span>· {circuit.start_date} → {circuit.end_date || 'em aberto'}</span>}
             {!circuit.active && <V2Badge tone="red">Inativo</V2Badge>}
           </div>
@@ -58,7 +59,7 @@ function CircuitInfo({ circuit, isAdmin, onEdit }) {
       )}
       <div className="mt-4 flex flex-wrap gap-1.5">
         {(circuit.categories || []).map((cat) => (
-          <V2Badge key={cat} tone="sky">{cat}</V2Badge>
+          <V2Badge key={cat} tone="blue">{cat}</V2Badge>
         ))}
       </div>
     </V2Surface>
@@ -67,17 +68,31 @@ function CircuitInfo({ circuit, isAdmin, onEdit }) {
 
 function TournamentList({ circuitId, isAdmin }) {
   const { data: tournaments = [], isLoading } = useCircuitTournaments(circuitId);
+  const { data: myTournaments = [] } = useMyTournaments();
   const [adding, setAdding] = useState(false);
   const [tournamentId, setTournamentId] = useState('');
   const add = useAddTournamentToCircuit();
   const remove = useRemoveTournamentFromCircuit();
 
+  // Mapa id → nome, para exibir o nome em vez do id cru.
+  const nameById = useMemo(() => {
+    const m = {};
+    (myTournaments || []).forEach((t) => { m[t.id] = t.name; });
+    return m;
+  }, [myTournaments]);
+
+  const linkedIds = useMemo(() => new Set(tournaments.map((t) => t.tournament_id)), [tournaments]);
+  const options = useMemo(
+    () => (myTournaments || []).filter((t) => !linkedIds.has(t.id)),
+    [myTournaments, linkedIds],
+  );
+
   const handleAdd = async (e) => {
     e.preventDefault();
-    if (!tournamentId.trim()) return;
+    if (!tournamentId.trim()) { toast.error('Escolha um torneio.'); return; }
     try {
       await add.mutateAsync({ circuitId, tournamentId: tournamentId.trim() });
-      toast.success('Torneio adicionado.');
+      toast.success('Torneio vinculado ao circuito.');
       setTournamentId('');
       setAdding(false);
     } catch (err) {
@@ -93,35 +108,37 @@ function TournamentList({ circuitId, isAdmin }) {
           <Trophy className="h-4 w-4" /> Torneios do circuito
         </h3>
         {isAdmin && !adding && (
-          <V2Button size="sm" onClick={() => setAdding(true)}><Plus className="h-4 w-4" /> Adicionar</V2Button>
+          <V2Button size="sm" onClick={() => setAdding(true)}><Plus className="h-4 w-4" /> Vincular torneio</V2Button>
         )}
       </div>
       {adding && (
-        <form onSubmit={handleAdd} className="mt-3 flex gap-2">
-          <input
-            type="text"
-            value={tournamentId}
-            onChange={(e) => setTournamentId(e.target.value)}
-            placeholder="ID do torneio (ex: abc123)"
-            className="flex-1 rounded-2xl border border-gray-200 bg-paper px-4 py-2 text-sm outline-none focus-visible:ring-4 focus-visible:ring-acid/30"
-          />
-          <V2Button type="submit" size="sm" disabled={add.isPending}>
-            {add.isPending ? 'Adicionando…' : 'Adicionar'}
+        <form onSubmit={handleAdd} className="mt-3 flex flex-wrap gap-2">
+          <V2Select value={tournamentId} onChange={(e) => setTournamentId(e.target.value)} className="min-w-0 flex-1">
+            <option value="">— Escolha um dos seus torneios —</option>
+            {options.map((t) => <option key={t.id} value={t.id}>{t.name}</option>)}
+          </V2Select>
+          <V2Button type="submit" size="sm" disabled={add.isPending || !tournamentId}>
+            {add.isPending ? 'Vinculando…' : 'Vincular'}
           </V2Button>
           <V2Button type="button" variant="ghost" size="sm" onClick={() => { setAdding(false); setTournamentId(''); }}>
             Cancelar
           </V2Button>
         </form>
       )}
+      {adding && options.length === 0 && (
+        <p className="mt-2 text-xs text-gray-400">Você não tem torneios disponíveis para vincular (ou todos já estão no circuito).</p>
+      )}
       <div className="mt-3 space-y-2">
         {tournaments.length === 0 ? (
-          <p className="text-sm text-gray-500">Nenhum torneio adicionado ainda.</p>
+          <p className="text-sm text-gray-500">Nenhum torneio vinculado ainda. Use “Vincular torneio” para montar as etapas do circuito.</p>
         ) : (
           tournaments.map((t) => (
             <div key={t.id} className="flex items-center justify-between rounded-2xl border border-gray-100 bg-paper p-3">
-              <div className="flex-1">
-                <div className="text-sm font-bold text-ink">Torneio: {t.tournament_id}</div>
-                <div className="text-xs text-gray-400">Adicionado em {t.added_at?.toDate?.()?.toLocaleDateString?.('pt-BR') || '—'}</div>
+              <div className="min-w-0 flex-1">
+                <Link to={`/torneios/${t.tournament_id}`} className="truncate text-sm font-bold text-ink hover:underline">
+                  {nameById[t.tournament_id] || `Torneio ${t.tournament_id}`}
+                </Link>
+                <div className="text-xs text-gray-400">Vinculado em {t.added_at?.toDate?.()?.toLocaleDateString?.('pt-BR') || '—'}</div>
               </div>
               {isAdmin && (
                 <V2Button variant="ghost" size="sm" onClick={() => remove.mutate({ circuitId, tournamentId: t.tournament_id })}>

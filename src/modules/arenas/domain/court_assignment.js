@@ -54,6 +54,21 @@ export function pickAvailableCourt(courts, slot, existingBookings = [], courtSch
 }
 
 /**
+ * Escolhe uma quadra livre para TODOS os slots (ex.: reserva recorrente).
+ * Retorna o court_id de uma quadra livre em todos os horários, ou null.
+ */
+export function pickAvailableCourtForSlots(courts, slots = [], existingBookings = [], courtSchedules = []) {
+  const list = Array.isArray(slots) ? slots.filter(Boolean) : [];
+  if (list.length === 0) return null;
+  for (const court of activeCourts(courts)) {
+    if (list.every((slot) => isCourtFreeForSlot(court.id, slot, existingBookings, courtSchedules))) {
+      return court.id;
+    }
+  }
+  return null;
+}
+
+/**
  * Para um slot, retorna a disponibilidade de cada quadra ativa.
  * @returns {Array<{ court_id, name, available, booking_id|null }>}
  */

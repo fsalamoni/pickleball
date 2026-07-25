@@ -23,11 +23,11 @@ import { db } from '@/core/config/firebase';
 import { createAuditLog } from '@/core/services/auditService';
 import { notifyUsers, NOTIFICATION_TYPE } from '@/core/services/notificationService';
 import { ARENA_COLLECTIONS, BOOKING_STATUS, BOOKING_KIND, PAYMENT_STATUS, BOOKING_STATUS_LABELS } from '../domain/constants.js';
-import { expandRecurring, isValidSlot, canTransition, weekdayOf, hasConflictWithConfirmed } from '../domain/booking.js';
-import { validateBookingRequest } from '../domain/booking_conflict.js';
+import { expandRecurring, isValidSlot, canTransition, weekdayOf } from '../domain/booking.js';
+import { validateBookingRequest, checkBookingConflict } from '../domain/booking_conflict.js';
 import { canBeInstantBooking, getInitialBookingStatus } from '../domain/instant_booking.js';
-import { pickAvailableCourt } from '../domain/court_assignment.js';
-import { listArenaCourtSchedules, listCourtSchedules, listArenaCourts } from './arenaService.js';
+import { pickAvailableCourt, pickAvailableCourtForSlots } from '../domain/court_assignment.js';
+import { listArenaCourtSchedules, listArenaCourts } from './arenaService.js';
 import { listArenaManagerIds } from './arenaService.js';
 
 const COL = ARENA_COLLECTIONS;
@@ -71,40 +71,48 @@ export async function createBooking(arena, user, profile, input) {
   }
 
   const existingBookings = await listArenaBookings(arena.id);
-  // Validação ARE-07: usa validateBookingRequest que considera schedules,
-  // court_id e status ativos (não só CONFIRMED). Erros vêm com reason
-  // específico pra UI renderizar mensagem apropriada.
-  if (kind === BOOKING_KIND.SINGLE && slots.length === 1) {
-    const courtId = str(input.court_id);
-    // Carrega schedules da quadra se informada, senão da arena toda
-    let courtSchedules = [];
-    try {
-      courtSchedules = courtId
-        ? await listCourtSchedules(courtId)
-        : await listArenaCourtSchedules(arena.id);
-    } catch (err) {
-      // Não bloquear se falhar leitura de schedules (degrada gracefully)
-      courtSchedules = [];
+  const courts = await listArenaCourts(arena.id).catch(() => []);
+  const allSchedules = await listArenaCourtSchedules(arena.id).catch(() => []);
+
+  // Toda reserva ocupa uma QUADRA específica. Resolvemos a quadra ANTES de
+  // validar: usa a escolhida ou atribui automaticamente uma livre para TODOS os
+  // slots. Isto corrige o bug em que a validação com court_id nulo bloqueava o
+  // horário em TODAS as quadras (reserva "bloqueava o calendário inteiro").
+  let assignedCourtId = str(input.court_id) || null;
+  if (!assignedCourtId && courts.length > 0) {
+    assignedCourtId = pickAvailableCourtForSlots(courts, slots, existingBookings, allSchedules);
+    if (!assignedCourtId) {
+      throw new Error('Nenhuma quadra livre nesse horário. Escolha outro período ou uma quadra específica.');
     }
+  }
+
+  // Schedules relevantes: da quadra resolvida (+ schedules gerais da arena sem
+  // court_id). Sem quadras cadastradas, usa os da arena inteira.
+  const courtSchedules = assignedCourtId
+    ? allSchedules.filter((s) => !s.court_id || s.court_id === assignedCourtId)
+    : allSchedules;
+
+  // Validação ARE-07 por-quadra: considera schedules, court_id e status ativos.
+  if (kind === BOOKING_KIND.SINGLE && slots.length === 1) {
     const v = validateBookingRequest({
       date: slots[0].date,
       start_time: slots[0].start,
       end_time: slots[0].end,
-      court_id: courtId || null,
+      court_id: assignedCourtId,
       existingBookings,
       court_schedules: courtSchedules,
     });
     if (!v.ok) throw new Error(v.message);
 
     // ARE-03: validação específica de reserva instantânea
-    const isInstant = input.is_instant === true;
-    if (isInstant) {
+    const isInstantSingle = input.is_instant === true;
+    if (isInstantSingle) {
       const instant = canBeInstantBooking(
         {
           date: slots[0].date,
           start_time: slots[0].start,
           end_time: slots[0].end,
-          court_id: courtId || null,
+          court_id: assignedCourtId,
           proposed_price: input.proposed_price,
           payment_method: input.payment_method,
         },
@@ -114,19 +122,12 @@ export async function createBooking(arena, user, profile, input) {
       );
       if (!instant.ok) throw new Error(instant.message);
     }
-  } else if (hasConflictWithConfirmed(slots, existingBookings)) {
-    // Recorrente ou edge case: fallback no validador legado
-    throw new Error('Já existe uma reserva confirmada nesse horário. Escolha outro período.');
-  }
-
-  // Resolve a quadra: usa a escolhida ou atribui automaticamente uma livre,
-  // para a reserva sempre ficar vinculada a uma quadra específica no calendário.
-  let assignedCourtId = str(input.court_id) || null;
-  if (!assignedCourtId) {
-    const courts = await listArenaCourts(arena.id).catch(() => []);
-    if (courts.length > 0) {
-      const allSchedules = await listArenaCourtSchedules(arena.id).catch(() => []);
-      assignedCourtId = pickAvailableCourt(courts, slots[0], existingBookings, allSchedules);
+  } else {
+    // Recorrente: valida conflito POR-QUADRA em todos os slots.
+    const candidateSlots = slots.map((s) => ({ ...s, court_id: assignedCourtId }));
+    const conflict = checkBookingConflict(candidateSlots, existingBookings);
+    if (conflict.hasConflict) {
+      throw new Error('Já existe uma reserva ativa em um dos horários para esta quadra. Escolha outro período.');
     }
   }
 
@@ -283,8 +284,12 @@ export async function updateBookingStatus(booking, nextStatus, actor, { agreedPr
   if (nextStatus === BOOKING_STATUS.CONFIRMED) {
     const existingBookings = await listArenaBookings(booking.arena_id);
     const others = existingBookings.filter((item) => item.id !== booking.id);
-    if (hasConflictWithConfirmed(booking.slots || [], others)) {
-      throw new Error('Não é possível confirmar: já existe outra reserva confirmada em conflito com este horário.');
+    // Conflito POR-QUADRA: só bloqueia se outra reserva ativa ocupa a MESMA
+    // quadra no mesmo horário (não o calendário inteiro).
+    const candidateSlots = (booking.slots || []).map((s) => ({ ...s, court_id: booking.court_id || null }));
+    const conflict = checkBookingConflict(candidateSlots, others);
+    if (conflict.hasConflict) {
+      throw new Error('Não é possível confirmar: já existe outra reserva ativa em conflito nesta quadra e horário.');
     }
   }
   const patch = { status: nextStatus, updated_at: serverTimestamp() };

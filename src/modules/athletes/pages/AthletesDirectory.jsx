@@ -222,7 +222,7 @@ export default function AthletesDirectory() {
                   : 'border-gray-100 bg-white/80 text-gray-600 hover:bg-acid/10'
               }`}
             >
-              <GraduationCap className="h-4 w-4" /> Somente treinadores
+              <GraduationCap className="h-4 w-4" /> Somente professores
             </button>
           )}
 
@@ -343,7 +343,7 @@ function AthleteCard({ athlete, onOpen, showCoach }) {
             </div>
             {isCoach && (
               <Badge variant="success" className="mt-1.5 rounded-full">
-                <GraduationCap className="mr-1 h-3 w-3" /> Treinador
+                <GraduationCap className="mr-1 h-3 w-3" /> Professor
               </Badge>
             )}
           </div>
@@ -426,7 +426,7 @@ function AthleteDialog({ athlete, open, onClose, showCoach, showProfileLink, sho
           {isCoach && (
             <div className="rounded-[1rem] border border-green-200 bg-green-50 p-3">
               <div className="mb-1 flex items-center gap-2 text-xs font-semibold uppercase tracking-[0.16em] text-green-700/80">
-                <GraduationCap className="h-3.5 w-3.5" /> Treinador
+                <GraduationCap className="h-3.5 w-3.5" /> Professor
               </div>
               {athlete.coach_bio && <p className="text-sm text-gray-600">{athlete.coach_bio}</p>}
               <div className="mt-2 flex flex-wrap gap-x-4 gap-y-1 text-xs text-gray-500">

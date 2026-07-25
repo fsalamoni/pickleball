@@ -108,7 +108,7 @@ function AthleteCard({ athlete, profilePageOn, coachOn }) {
           </div>
           {isCoach && (
             <V2Badge tone="green" className="mt-2">
-              <GraduationCap className="h-3 w-3" /> Treinador
+              <GraduationCap className="h-3 w-3" /> Professor
             </V2Badge>
           )}
         </div>

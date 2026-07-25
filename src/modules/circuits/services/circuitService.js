@@ -92,13 +92,17 @@ export async function updateCircuit(circuitId, updates, actor) {
   await createAuditLog({ action: 'circuit_updated', actor, details: { circuit_id: circuitId, fields: Object.keys(sanitized) } });
 }
 
-/** Lista circuitos públicos. */
+/**
+ * Lista circuitos públicos. Ordena por created_at (índice de campo único,
+ * automático) e filtra `active` em memória — evita exigir índice composto
+ * (active + created_at), cuja ausência fazia a query falhar e o painel ficar
+ * vazio mesmo com circuitos criados.
+ */
 export async function listCircuits({ limit: lim = 50, activeOnly = true } = {}) {
-  const filters = [orderBy('created_at', 'desc')];
-  if (activeOnly) filters.push(where('active', '==', true));
-  const q = query(collection(db, CIRCUIT_COLLECTIONS.circuits), ...filters, limit(lim));
+  const q = query(collection(db, CIRCUIT_COLLECTIONS.circuits), orderBy('created_at', 'desc'), limit(lim));
   const snap = await getDocs(q);
-  return snap.docs.map((d) => ({ id: d.id, ...d.data() }));
+  const items = snap.docs.map((d) => ({ id: d.id, ...d.data() }));
+  return activeOnly ? items.filter((c) => c.active !== false) : items;
 }
 
 /** Lista circuitos que o user é admin/owner. */

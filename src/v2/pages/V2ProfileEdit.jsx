@@ -147,9 +147,9 @@ export default function V2ProfileEdit() {
         coach_price: isCoach ? coachPrice.trim() : '',
         coach_regions: isCoach ? coachRegions.trim() : '',
       });
-      toast.success('Informações de treinador salvas.');
+      toast.success('Informações de professor salvas.');
     } catch (err) {
-      toast.error(err.message || 'Erro ao salvar informações de treinador.');
+      toast.error(err.message || 'Erro ao salvar informações de professor.');
     } finally {
       setCoachBusy(false);
     }
@@ -209,7 +209,7 @@ export default function V2ProfileEdit() {
       <div className="relative mb-6 overflow-hidden rounded-4xl bg-mesh p-8 shadow-organic">
         <span className="rounded-full border border-white/10 bg-white/10 px-3 py-1 text-xs font-bold uppercase tracking-wider text-acid">Seu perfil</span>
         <h1 className="mt-4 font-display text-3xl font-bold text-white sm:text-4xl">Como você aparece para a comunidade.</h1>
-        <p className="mt-3 max-w-2xl text-sm leading-7 text-gray-300">Organize identidade, privacidade, nível e informações de treinador. Cada bloco salva de forma independente.</p>
+        <p className="mt-3 max-w-2xl text-sm leading-7 text-gray-300">Organize identidade, privacidade, nível e informações de professor. Cada bloco salva de forma independente.</p>
       </div>
 
       <div className="space-y-6">
@@ -298,10 +298,10 @@ export default function V2ProfileEdit() {
         {/* Coach */}
         {coachDirectoryOn && (
           <V2Surface>
-            <V2SectionHeader eyebrow="Treinador" title="Perfil de aulas e clínicas" titleClassName="text-xl"
-              description="Ative para aparecer no filtro de treinadores do diretório." />
+            <V2SectionHeader eyebrow="Professor" title="Perfil de aulas e clínicas" titleClassName="text-xl"
+              description="Ative para aparecer no filtro de professores do diretório." />
             <div className="mt-5 rounded-3xl border border-gray-100 bg-paper p-5">
-              <V2Toggle id="is_coach" label="Sou treinador(a)" hint="Aparecer no filtro de treinadores e exibir informações de aula" checked={isCoach} onChange={setIsCoach} />
+              <V2Toggle id="is_coach" label="Sou professor(a)" hint="Aparecer no filtro de professores e exibir informações de aula" checked={isCoach} onChange={setIsCoach} />
             </div>
             {isCoach && (
               <div className="mt-4 space-y-4">
@@ -313,7 +313,7 @@ export default function V2ProfileEdit() {
               </div>
             )}
             <div className="mt-5 flex justify-end">
-              <V2Button onClick={saveCoach} disabled={coachBusy}>{coachBusy ? 'Salvando…' : 'Salvar informações de treinador'}</V2Button>
+              <V2Button onClick={saveCoach} disabled={coachBusy}>{coachBusy ? 'Salvando…' : 'Salvar informações de professor'}</V2Button>
             </div>
           </V2Surface>
         )}

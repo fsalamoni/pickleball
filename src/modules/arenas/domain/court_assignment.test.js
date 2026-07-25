@@ -1,6 +1,6 @@
 import { describe, it, expect } from 'vitest';
 import {
-  activeCourts, isCourtFreeForSlot, pickAvailableCourt,
+  activeCourts, isCourtFreeForSlot, pickAvailableCourt, pickAvailableCourtForSlots,
   courtAvailabilityForSlot, countAvailableCourts,
 } from './court_assignment.js';
 
@@ -43,6 +43,33 @@ describe('pickAvailableCourt', () => {
       { id: 'b2', status: 'confirmed', court_id: 'c2', slots: [{ date: '2026-08-01', start: '18:00', end: '19:00' }] },
     ];
     expect(pickAvailableCourt(courts, slot, existing)).toBeNull();
+  });
+});
+
+describe('pickAvailableCourtForSlots (recorrente/multi-slot)', () => {
+  const slotA = { date: '2026-08-01', start: '18:00', end: '19:00' };
+  const slotB = { date: '2026-08-08', start: '18:00', end: '19:00' };
+
+  it('escolhe uma quadra livre em TODOS os slots', () => {
+    expect(pickAvailableCourtForSlots(courts, [slotA, slotB], [])).toBe('c1');
+  });
+
+  it('pula quadra ocupada em qualquer um dos slots', () => {
+    // c1 ocupada só na 2ª data → deve escolher c2 (livre nas duas)
+    const existing = [{ id: 'b1', status: 'confirmed', court_id: 'c1', slots: [{ date: '2026-08-08', start: '18:00', end: '19:00' }] }];
+    expect(pickAvailableCourtForSlots(courts, [slotA, slotB], existing)).toBe('c2');
+  });
+
+  it('retorna null quando nenhuma quadra cobre todos os slots', () => {
+    const existing = [
+      { id: 'b1', status: 'confirmed', court_id: 'c1', slots: [{ date: '2026-08-08', start: '18:00', end: '19:00' }] },
+      { id: 'b2', status: 'confirmed', court_id: 'c2', slots: [{ date: '2026-08-01', start: '18:00', end: '19:00' }] },
+    ];
+    expect(pickAvailableCourtForSlots(courts, [slotA, slotB], existing)).toBeNull();
+  });
+
+  it('retorna null para lista vazia', () => {
+    expect(pickAvailableCourtForSlots(courts, [], [])).toBeNull();
   });
 });
 
