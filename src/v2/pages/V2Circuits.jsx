@@ -100,6 +100,15 @@ export default function V2Circuits() {
 
       {creating && <CreateCircuitForm onClose={() => setCreating(false)} />}
 
+      <V2Surface className="border-gray-100 bg-paper-pure">
+        <p className="text-sm leading-6 text-gray-600">
+          <strong className="text-ink">O que é um circuito?</strong> É uma série de torneios
+          ligados por uma pontuação acumulada. Cada etapa (torneio) distribui pontos conforme a
+          colocação; ao final, um ranking geral consolida os melhores da temporada por categoria.
+          Crie o circuito, vincule os torneios que fazem parte dele e acompanhe o ranking acumulado.
+        </p>
+      </V2Surface>
+
       {isLoading ? (
         <V2Skeleton lines={4} />
       ) : circuits.length === 0 ? (
@@ -121,7 +130,7 @@ export default function V2Circuits() {
                   <div className="flex-1">
                     <h3 className="font-display text-base font-bold text-ink">{c.name}</h3>
                     <div className="mt-1 flex flex-wrap items-center gap-2 text-sm text-gray-500">
-                      <V2Badge tone="emerald"><Calendar className="h-3 w-3" /> {c.season}</V2Badge>
+                      <V2Badge tone="green"><Calendar className="h-3 w-3" /> {c.season}</V2Badge>
                       {c.start_date && <span>· {c.start_date} → {c.end_date || 'em aberto'}</span>}
                     </div>
                     {c.description && (
@@ -129,7 +138,7 @@ export default function V2Circuits() {
                     )}
                     <div className="mt-2 flex flex-wrap gap-1.5">
                       {(c.categories || []).map((cat) => (
-                        <V2Badge key={cat} tone="sky">{cat}</V2Badge>
+                        <V2Badge key={cat} tone="blue">{cat}</V2Badge>
                       ))}
                     </div>
                   </div>
