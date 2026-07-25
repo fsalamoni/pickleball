@@ -71,7 +71,9 @@ function findActiveBooking(bookings, courtId, dateStr, timeStr) {
   return bookings.find((b) => {
     if (!ACTIVE_BOOKING_STATUSES.has(b.status)) return false;
     if (courtId && b.court_id && b.court_id !== courtId) return false;
-    if (courtId && !b.court_id) return false; // booking legado sem court_id não bloqueia quadras específicas
+    // Reserva sem court_id ("qualquer quadra", legado) ocupa uma quadra não
+    // especificada → bloqueia TODAS as quadras (igual à lógica de conflito),
+    // para não "sumir" nas visões por quadra e só aparecer no agregado.
     if (Array.isArray(b.slots)) {
       return b.slots.some((slot) => slot.date === dateStr && timeToMinutes(slot.start) <= time && time < timeToMinutes(slot.end));
     }

@@ -25,6 +25,7 @@ import React, { useMemo, useState } from 'react';
 import { toast } from 'sonner';
 import {
   Calendar, X, ShoppingCart, Loader2, Users, Ban, Check, Clock, AlertCircle, MapPin,
+  Trash2, UserPlus,
 } from 'lucide-react';
 import { useAuth } from '@/core/lib/FirebaseAuthContext';
 import { cn } from '@/core/lib/utils';
@@ -32,7 +33,10 @@ import {
   useArenaCourtSchedules,
   useArenaUnavailabilities,
 } from '@/modules/arenas/hooks/useArenas';
-import { useArenaBookings } from '@/modules/arenas/hooks/useBookings';
+import { useArenaBookings, useUpdateBookingStatus } from '@/modules/arenas/hooks/useBookings';
+import { useInviteToBooking } from '@/modules/arenas/hooks/useSharedBookings';
+import { BOOKING_STATUS } from '@/modules/arenas/domain/constants';
+import AthleteMultiPicker from '@/modules/athletes/components/AthleteMultiPicker';
 import { useJoinWaitlist, useMyWaitlist } from '@/modules/arenas/hooks/useBookingWaitlist';
 import { useFeatureFlag } from '@/core/lib/FeatureFlagsContext';
 import { FEATURE_FLAG } from '@/core/featureFlags';
@@ -101,15 +105,21 @@ function expandBookingSlots(booking) {
 }
 
 export default function V2DaySlotsDialog({ arena, arenaId, date, courtId: initialCourtId, courts = [], onClose }) {
-  const { isAuthenticated } = useAuth();
+  const { isAuthenticated, user } = useAuth();
   const waitlistOn = useFeatureFlag(FEATURE_FLAG.BOOKING_WAITLIST);
   const { data: schedules = [], isLoading: loadingSchedules } = useArenaCourtSchedules(arenaId);
   const { data: bookings = [], isLoading: loadingBookings } = useArenaBookings(arenaId);
   const { data: unavailabilities = [], isLoading: loadingUnav } = useArenaUnavailabilities(arenaId);
+  const cancelBooking = useUpdateBookingStatus();
+  const inviteToBooking = useInviteToBooking();
 
   const [courtId, setCourtId] = useState(initialCourtId || '');
   const [selectedSlots, setSelectedSlots] = useState([]);
   const [bookingOpen, setBookingOpen] = useState(false);
+  // Cancelamento das próprias reservas (seleção múltipla) + convite.
+  const [selectedCancel, setSelectedCancel] = useState([]); // booking ids
+  const [inviteFor, setInviteFor] = useState(null); // booking a convidar
+  const [inviteSel, setInviteSel] = useState([]);
 
   const weekday = weekdayOf(date);
   const dateLabel = useMemo(() => {
@@ -253,6 +263,54 @@ export default function V2DaySlotsDialog({ arena, arenaId, date, courtId: initia
     setBookingOpen(true);
   }
 
+  // Reservas do próprio usuário no dia (canceláveis por ele).
+  const myBookingsOfDay = useMemo(
+    () => activeBookingsOfDay.filter((b) => b.athlete_id === user?.uid && b.status !== BOOKING_STATUS.CANCELLED),
+    [activeBookingsOfDay, user?.uid],
+  );
+
+  function toggleCancelSelect(id) {
+    setSelectedCancel((prev) => (prev.includes(id) ? prev.filter((x) => x !== id) : [...prev, id]));
+  }
+
+  async function cancelOne(booking) {
+    try {
+      await cancelBooking.mutateAsync({ booking, status: BOOKING_STATUS.CANCELLED, options: { byManager: false } });
+      setSelectedCancel((prev) => prev.filter((x) => x !== booking.id));
+      toast.success('Reserva cancelada.');
+    } catch (err) {
+      toast.error(err?.message || 'Não foi possível cancelar a reserva.');
+    }
+  }
+
+  async function cancelSelected() {
+    const targets = myBookingsOfDay.filter((b) => selectedCancel.includes(b.id));
+    if (targets.length === 0) return;
+    let ok = 0;
+    for (const b of targets) {
+      try {
+        // eslint-disable-next-line no-await-in-loop
+        await cancelBooking.mutateAsync({ booking: b, status: BOOKING_STATUS.CANCELLED, options: { byManager: false } });
+        ok += 1;
+      } catch { /* segue cancelando as demais */ }
+    }
+    setSelectedCancel([]);
+    if (ok > 0) toast.success(`${ok} reserva(s) cancelada(s).`);
+    else toast.error('Não foi possível cancelar as reservas selecionadas.');
+  }
+
+  async function sendInvites() {
+    if (!inviteFor || inviteSel.length === 0) { setInviteFor(null); return; }
+    try {
+      await inviteToBooking.mutateAsync({ booking: inviteFor, invitees: inviteSel });
+      toast.success('Convite(s) enviado(s).');
+      setInviteFor(null);
+      setInviteSel([]);
+    } catch (err) {
+      toast.error(err?.message || 'Não foi possível convidar.');
+    }
+  }
+
   const loading = loadingSchedules || loadingBookings || loadingUnav;
   const hasAvailable = slotsWithStatus.some((s) => s.status === SLOT_STATUS.AVAILABLE);
   const noSchedule = !loading && slotsWithStatus.length === 0;
@@ -336,9 +394,26 @@ export default function V2DaySlotsDialog({ arena, arenaId, date, courtId: initia
                 {/* Reservas existentes */}
                 {activeBookingsOfDay.length > 0 && (
                   <div className="border-b border-gray-100 p-4">
-                    <p className="text-[10px] font-bold uppercase tracking-widest text-gray-500">
-                      <Users className="mr-1 inline h-3 w-3" /> Reservas neste dia ({activeBookingsOfDay.length})
-                    </p>
+                    <div className="flex flex-wrap items-center justify-between gap-2">
+                      <p className="text-[10px] font-bold uppercase tracking-widest text-gray-500">
+                        <Users className="mr-1 inline h-3 w-3" /> Reservas neste dia ({activeBookingsOfDay.length})
+                      </p>
+                      {selectedCancel.length > 0 && (
+                        <button
+                          type="button"
+                          onClick={cancelSelected}
+                          disabled={cancelBooking.isPending}
+                          className="inline-flex items-center gap-1 rounded-full bg-red-600 px-3 py-1 text-xs font-bold text-white hover:bg-red-700 disabled:opacity-60"
+                        >
+                          <Trash2 className="h-3 w-3" /> Cancelar selecionadas ({selectedCancel.length})
+                        </button>
+                      )}
+                    </div>
+                    {myBookingsOfDay.length > 0 && (
+                      <p className="mt-1 text-[11px] text-gray-400">
+                        Marque suas reservas para cancelar em conjunto, ou cancele/convide em cada uma.
+                      </p>
+                    )}
                     <ul className="mt-2 space-y-2">
                       {activeBookingsOfDay
                         .sort((a, b) => {
@@ -355,6 +430,11 @@ export default function V2DaySlotsDialog({ arena, arenaId, date, courtId: initia
                           const courtName = b.court_id
                             ? courts.find((c) => c.id === b.court_id)?.name || 'Quadra'
                             : 'Qualquer quadra';
+                          const mine = isAuthenticated && b.athlete_id === user?.uid;
+                          const canCancel = mine && b.status !== BOOKING_STATUS.CANCELLED && b.status !== BOOKING_STATUS.COMPLETED;
+                          const acceptedCount = Array.isArray(b.participants)
+                            ? b.participants.filter((p) => p.status === 'accepted').length
+                            : 0;
                           return (
                             <li key={b.id} className={cn(
                               'rounded-2xl border p-3 text-sm',
@@ -363,10 +443,23 @@ export default function V2DaySlotsDialog({ arena, arenaId, date, courtId: initia
                               'border-gray-200 bg-paper',
                             )}>
                               <div className="flex flex-wrap items-center gap-2">
+                                {canCancel && (
+                                  <input
+                                    type="checkbox"
+                                    checked={selectedCancel.includes(b.id)}
+                                    onChange={() => toggleCancelSelect(b.id)}
+                                    className="h-4 w-4 rounded border-gray-300"
+                                    aria-label="Selecionar reserva para cancelar"
+                                  />
+                                )}
                                 <span className="font-bold text-ink">{b.athlete_name || 'Atleta'}</span>
+                                {mine && <V2Badge tone="blue">Sua reserva</V2Badge>}
                                 <V2Badge tone={statusBadgeTone(b.status)}>
                                   {BOOKING_STATUS_LABELS[b.status] || b.status}
                                 </V2Badge>
+                                {acceptedCount > 1 && (
+                                  <V2Badge tone="neutral"><Users className="h-3 w-3" /> {acceptedCount}</V2Badge>
+                                )}
                               </div>
                               <div className="mt-1 flex flex-wrap items-center gap-x-3 gap-y-1 text-xs text-gray-600">
                                 <span className="flex items-center gap-1">
@@ -381,10 +474,50 @@ export default function V2DaySlotsDialog({ arena, arenaId, date, courtId: initia
                                   {formatPrice(b.proposed_price)}
                                 </div>
                               )}
-                              {waitlistOn && isAuthenticated && b._slots[0] && (
-                                <div className="mt-2">
-                                  <WaitlistButton arena={arena} slot={b._slots[0]} />
-                                </div>
+                              {mine ? (
+                                <>
+                                  <div className="mt-2 flex flex-wrap gap-2">
+                                    <button
+                                      type="button"
+                                      onClick={() => { setInviteFor(inviteFor?.id === b.id ? null : b); setInviteSel([]); }}
+                                      className="inline-flex items-center gap-1 rounded-full border border-gray-200 bg-white px-3 py-1 text-xs font-semibold text-ink hover:bg-paper"
+                                    >
+                                      <UserPlus className="h-3 w-3" /> Convidar participantes
+                                    </button>
+                                    {canCancel && (
+                                      <button
+                                        type="button"
+                                        onClick={() => cancelOne(b)}
+                                        disabled={cancelBooking.isPending}
+                                        className="inline-flex items-center gap-1 rounded-full border border-red-200 bg-white px-3 py-1 text-xs font-semibold text-red-600 hover:bg-red-50 disabled:opacity-60"
+                                      >
+                                        <Trash2 className="h-3 w-3" /> Cancelar
+                                      </button>
+                                    )}
+                                  </div>
+                                  {inviteFor?.id === b.id && (
+                                    <div className="mt-2 rounded-2xl border border-gray-100 bg-paper-pure p-3">
+                                      <AthleteMultiPicker
+                                        value={inviteSel}
+                                        onChange={setInviteSel}
+                                        exclude={[user?.uid, ...(b.participant_ids || []), ...(b.invited_ids || [])]}
+                                        placeholder="Buscar atleta para convidar…"
+                                      />
+                                      <div className="mt-2 flex justify-end gap-2">
+                                        <V2Button size="sm" variant="ghost" onClick={() => { setInviteFor(null); setInviteSel([]); }}>Fechar</V2Button>
+                                        <V2Button size="sm" onClick={sendInvites} disabled={inviteToBooking.isPending || inviteSel.length === 0}>
+                                          {inviteToBooking.isPending ? 'Enviando…' : `Convidar (${inviteSel.length})`}
+                                        </V2Button>
+                                      </div>
+                                    </div>
+                                  )}
+                                </>
+                              ) : (
+                                waitlistOn && isAuthenticated && b._slots[0] && (
+                                  <div className="mt-2">
+                                    <WaitlistButton arena={arena} slot={b._slots[0]} />
+                                  </div>
+                                )
                               )}
                             </li>
                           );
@@ -554,8 +687,10 @@ export default function V2DaySlotsDialog({ arena, arenaId, date, courtId: initia
       {bookingOpen && (
         <BookingRequestDialog
           arena={arena}
-          court={selectedSlots[0]?.courtId ? courts.find((c) => c.id === selectedSlots[0].courtId) : null}
+          court={courtId ? courts.find((c) => c.id === courtId) : null}
           preselectedSlots={selectedSlots}
+          initialMode={courtId ? 'specific' : (courts.length > 1 ? 'all' : 'any')}
+          initialCourtIds={courtId ? [courtId] : []}
           onClose={() => {
             setBookingOpen(false);
             clearSelection();
