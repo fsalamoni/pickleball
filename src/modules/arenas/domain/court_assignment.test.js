@@ -2,7 +2,7 @@ import { describe, it, expect } from 'vitest';
 import {
   activeCourts, isCourtFreeForSlot, pickAvailableCourt, pickAvailableCourtForSlots,
   courtAvailabilityForSlot, countAvailableCourts,
-  resolveTargetCourts, unavailableCourtsForSlots,
+  resolveTargetCourts, unavailableCourtsForSlots, availableCourtsForSlots,
 } from './court_assignment.js';
 
 const courts = [
@@ -109,6 +109,26 @@ describe('unavailableCourtsForSlots', () => {
   });
   it('lista de slots vazia → nenhuma indisponível', () => {
     expect(unavailableCourtsForSlots(['c1', 'c2'], [], [])).toEqual([]);
+  });
+});
+
+describe('availableCourtsForSlots (todas as disponíveis)', () => {
+  const slotA = { date: '2026-08-01', start: '18:00', end: '19:00' };
+  const slotB = { date: '2026-08-08', start: '18:00', end: '19:00' };
+
+  it('todas livres → todas as ativas', () => {
+    expect(availableCourtsForSlots(courts, [slotA, slotB], [])).toEqual(['c1', 'c2']);
+  });
+  it('exclui a quadra ocupada em algum slot', () => {
+    const existing = [{ id: 'b1', status: 'confirmed', court_id: 'c1', slots: [slotA] }];
+    expect(availableCourtsForSlots(courts, [slotA], existing)).toEqual(['c2']);
+  });
+  it('reserva legada sem court_id ocupa todas → nenhuma disponível', () => {
+    const existing = [{ id: 'b1', status: 'confirmed', court_id: null, slots: [slotA] }];
+    expect(availableCourtsForSlots(courts, [slotA], existing)).toEqual([]);
+  });
+  it('lista de slots vazia → vazio', () => {
+    expect(availableCourtsForSlots(courts, [], [])).toEqual([]);
   });
 });
 

@@ -103,6 +103,21 @@ export function unavailableCourtsForSlots(courtIds = [], slots = [], existingBoo
 }
 
 /**
+ * Quadras ativas LIVRES para TODOS os slots (o complemento de
+ * `unavailableCourtsForSlots` sobre todas as ativas). Base para reservar
+ * "todas as disponíveis": reserva cada quadra livre e ignora as ocupadas.
+ *
+ * @returns {string[]} court_ids livres em todos os slots (ordem canônica).
+ */
+export function availableCourtsForSlots(courts, slots = [], existingBookings = [], courtSchedules = []) {
+  const list = Array.isArray(slots) ? slots.filter(Boolean) : [];
+  if (list.length === 0) return [];
+  return activeCourts(courts)
+    .filter((c) => list.every((slot) => isCourtFreeForSlot(c.id, slot, existingBookings, courtSchedules)))
+    .map((c) => c.id);
+}
+
+/**
  * Para um slot, retorna a disponibilidade de cada quadra ativa.
  * @returns {Array<{ court_id, name, available, booking_id|null }>}
  */

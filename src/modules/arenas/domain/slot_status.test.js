@@ -95,14 +95,18 @@ describe('getSlotStatus', () => {
     const r = getSlotStatus({ date, time: '10:00', courtId: 'c1', bookings_completed: completed, schedules });
     expect(r.status).toBe(SLOT_STATUS.COMPLETED);
   });
-  it('booking com court_id null (legado) não bloqueia quadras específicas', () => {
+  it('booking com court_id null ("qualquer quadra", legado) bloqueia qualquer quadra', () => {
     const bookings = [{
       status: BOOKING_STATUS.CONFIRMED, court_id: null,
       slots: [{ date, start: '10:00', end: '11:00' }],
     }];
     const schedules = [{ weekdays: [3], start_time: '08:00', end_time: '18:00', is_active: true }];
-    const r = getSlotStatus({ date, time: '10:00', courtId: 'c1', bookings, schedules });
-    expect(r.status).toBe(SLOT_STATUS.AVAILABLE);
+    // Ocupa uma quadra não especificada → aparece reservado em cada quadra
+    // (consistente com a lógica de conflito), não só no agregado.
+    const r1 = getSlotStatus({ date, time: '10:00', courtId: 'c1', bookings, schedules });
+    expect(r1.status).toBe(SLOT_STATUS.CONFIRMED);
+    const r2 = getSlotStatus({ date, time: '10:00', courtId: 'c2', bookings, schedules });
+    expect(r2.status).toBe(SLOT_STATUS.CONFIRMED);
   });
 });
 

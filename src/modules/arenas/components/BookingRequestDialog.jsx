@@ -18,19 +18,20 @@ import { useAuth } from '@/core/lib/FirebaseAuthContext';
 import { BOOKING_KIND, BOOKING_STATUS, WEEKDAY_LABELS } from '../domain/constants.js';
 import { resolveArenaPrice, formatPrice } from '../domain/pricing.js';
 import { bookingSlots, expandRecurring, isValidSlot, sortSlots, weekdayOf } from '../domain/booking.js';
-import { pickAvailableCourtForSlots, unavailableCourtsForSlots } from '../domain/court_assignment.js';
+import { pickAvailableCourtForSlots, unavailableCourtsForSlots, availableCourtsForSlots } from '../domain/court_assignment.js';
 import { useArenaBookings, useCreateBooking } from '../hooks/useBookings.js';
 import { useArenaCourts, useArenaCourtSchedules } from '../hooks/useArenas.js';
 import { validateBookingRequest, getCourtAvailabilityForDate, checkBookingConflict, BLOCKING_STATUSES } from '../domain/booking_conflict.js';
 import { normalizeTime } from '../domain/court_schedule.js';
 import { canBeInstantBooking, arenaSupportsInstant, INSTANT_BOOKING_LABELS } from '../domain/instant_booking.js';
 import { PAYMENT_METHOD } from '../domain/pdv.js';
+import AthleteMultiPicker from '@/modules/athletes/components/AthleteMultiPicker';
 
 function slotLabel(slot) {
   return `${slot.date} · ${slot.start}–${slot.end}`;
 }
 
-export default function BookingRequestDialog({ arena, open, onOpenChange, court: initialCourt, preselectedSlots = [], onClose }) {
+export default function BookingRequestDialog({ arena, open, onOpenChange, court: initialCourt, preselectedSlots = [], initialMode, initialCourtIds = [], onClose }) {
   // Compat: se open prop não for passado, usar onClose como fallback
   const _open = open !== undefined ? open : true;
   const _onOpenChange = onOpenChange || onClose || (() => {});
@@ -41,10 +42,12 @@ export default function BookingRequestDialog({ arena, open, onOpenChange, court:
   const { data: allSchedules = [] } = useArenaCourtSchedules(arena.id);
   const activeCourts = useMemo(() => courts.filter((c) => c.is_active !== false), [courts]);
   // Seleção de quadra: 'any' (a arena atribui uma livre), 'specific' (uma ou
-  // mais escolhidas) ou 'all' (todas — cada quadra vira uma reserva).
-  const [courtMode, setCourtMode] = useState(initialCourt?.id ? 'specific' : 'any');
-  const [selectedCourtIds, setSelectedCourtIds] = useState(initialCourt?.id ? [initialCourt.id] : []);
-  const [kind, setKind] = useState(preselectedSlots.length > 0 ? 'multi' : BOOKING_KIND.SINGLE);
+  // mais escolhidas) ou 'all' (todas as disponíveis — cada quadra vira uma reserva).
+  const defaultMode = initialMode || (initialCourtIds.length > 0 ? 'specific' : (initialCourt?.id ? 'specific' : 'any'));
+  const defaultSelected = initialCourtIds.length > 0 ? initialCourtIds : (initialCourt?.id ? [initialCourt.id] : []);
+  const [courtMode, setCourtMode] = useState(defaultMode);
+  const [selectedCourtIds, setSelectedCourtIds] = useState(defaultSelected);
+  const [kind, setKind] = useState(preselectedSlots.length > 1 ? 'multi' : BOOKING_KIND.SINGLE);
   // Se veio do calendário, pode ter múltiplos slots
   const initialMultiSlots = preselectedSlots.length > 0 ? preselectedSlots : [];
   const firstSlot = preselectedSlots[0] || { date: '', start: '18:00', end: '19:00' };
@@ -54,33 +57,65 @@ export default function BookingRequestDialog({ arena, open, onOpenChange, court:
   const [notes, setNotes] = useState('');
   const [isInstant, setIsInstant] = useState(false);
   const [paymentMethod, setPaymentMethod] = useState(PAYMENT_METHOD.PIX);
+  const [invitees, setInvitees] = useState([]);
 
   // Arena permite instant?
   const supportsInstant = arenaSupportsInstant(arena);
 
   // Reset da seleção quando o dialog reabre.
+  const initialCourtKey = initialCourtIds.join(',');
   React.useEffect(() => {
     if (open) {
-      setCourtMode(initialCourt?.id ? 'specific' : 'any');
-      setSelectedCourtIds(initialCourt?.id ? [initialCourt.id] : []);
+      setCourtMode(defaultMode);
+      setSelectedCourtIds(defaultSelected);
     }
-  }, [open, initialCourt?.id]);
-
-  // Quadras-alvo efetivas conforme o modo escolhido. Vazio em 'any' (a arena
-  // atribui automaticamente) e quando não há quadras cadastradas.
-  const effectiveCourtIds = useMemo(() => {
-    if (activeCourts.length === 0) return [];
-    if (courtMode === 'all') return activeCourts.map((c) => c.id);
-    if (courtMode === 'specific') return selectedCourtIds.filter((id) => activeCourts.some((c) => c.id === id));
-    return [];
-  }, [courtMode, selectedCourtIds, activeCourts]);
-  const isMultiCourt = effectiveCourtIds.length > 1;
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [open, initialCourt?.id, initialMode, initialCourtKey]);
 
   // Schedules relevantes a uma quadra (inclui janelas gerais da arena sem court_id).
   const schedulesForCourt = React.useCallback(
     (cid) => allSchedules.filter((s) => !s.court_id || s.court_id === cid),
     [allSchedules],
   );
+
+  const candidateSlots = useMemo(() => {
+    if (kind === 'multi' || (multiSlots && multiSlots.length > 0)) {
+      return sortSlots(multiSlots);
+    }
+    if (kind === BOOKING_KIND.SINGLE) {
+      const slot = { date: single.date, start: single.start, end: single.end };
+      return isValidSlot(slot) ? [slot] : [];
+    }
+    return sortSlots(expandRecurring({
+      weekday: Number(recurring.weekday),
+      start: recurring.start,
+      end: recurring.end,
+      weeks: recurring.weeks,
+      fromDate: recurring.fromDate,
+    }));
+  }, [kind, single, recurring, multiSlots]);
+
+  // Quadras-alvo efetivas conforme o modo escolhido:
+  //  - 'all'      → todas as quadras LIVRES nos horários (reserva as disponíveis);
+  //  - 'specific' → as escolhidas que existem/estão ativas;
+  //  - 'any'      → [] (a arena atribui automaticamente uma quadra livre).
+  const effectiveCourtIds = useMemo(() => {
+    if (activeCourts.length === 0) return [];
+    if (courtMode === 'all') return availableCourtsForSlots(activeCourts, candidateSlots, existingBookings, allSchedules);
+    if (courtMode === 'specific') return selectedCourtIds.filter((id) => activeCourts.some((c) => c.id === id));
+    return [];
+  }, [courtMode, selectedCourtIds, activeCourts, candidateSlots, existingBookings, allSchedules]);
+  const isMultiCourt = effectiveCourtIds.length > 1;
+  // Quantas quadras existem e quantas estão livres (para o resumo do modo 'all').
+  const allFreeCount = useMemo(() => {
+    if (candidateSlots.length === 0) return activeCourts.length;
+    return availableCourtsForSlots(activeCourts, candidateSlots, existingBookings, allSchedules).length;
+  }, [activeCourts, candidateSlots, existingBookings, allSchedules]);
+  // Quadras ocupadas nos horários escolhidos (para marcar disponível/reservada
+  // no modo "Específicas").
+  const busyCourtIds = useMemo(() => new Set(
+    unavailableCourtsForSlots(activeCourts.map((c) => c.id), candidateSlots, existingBookings, allSchedules),
+  ), [activeCourts, candidateSlots, existingBookings, allSchedules]);
 
   // Validação em tempo real do slot (apenas SINGLE). Em 'any', o conflito é
   // tratado por hasConflict (atribuição automática). Com quadras escolhidas,
@@ -123,23 +158,6 @@ export default function BookingRequestDialog({ arena, open, onOpenChange, court:
     return resolveArenaPrice(arena, { weekday: Number(recurring.weekday), time: recurring.start, clientId: user?.uid });
   }, [kind, single, recurring, arena, user?.uid]);
 
-  const candidateSlots = useMemo(() => {
-    if (kind === 'multi' || (multiSlots && multiSlots.length > 0)) {
-      return sortSlots(multiSlots);
-    }
-    if (kind === BOOKING_KIND.SINGLE) {
-      const slot = { date: single.date, start: single.start, end: single.end };
-      return isValidSlot(slot) ? [slot] : [];
-    }
-    return sortSlots(expandRecurring({
-      weekday: Number(recurring.weekday),
-      start: recurring.start,
-      end: recurring.end,
-      weeks: recurring.weeks,
-      fromDate: recurring.fromDate,
-    }));
-  }, [kind, single, recurring, multiSlots]);
-
   const confirmedBookings = useMemo(
     () => existingBookings.filter((booking) => booking.status === BOOKING_STATUS.CONFIRMED),
     [existingBookings],
@@ -174,7 +192,11 @@ export default function BookingRequestDialog({ arena, open, onOpenChange, court:
         return;
       }
       if (courtMode === 'specific' && activeCourts.length > 0 && effectiveCourtIds.length === 0) {
-        toast.error('Marque ao menos uma quadra.');
+        toast.error('Marque ao menos uma quadra disponível.');
+        return;
+      }
+      if (courtMode === 'all' && activeCourts.length > 0 && effectiveCourtIds.length === 0) {
+        toast.error('Nenhuma quadra livre nos horários escolhidos.');
         return;
       }
       const instantEligible = isInstant && !isMultiCourt;
@@ -202,14 +224,23 @@ export default function BookingRequestDialog({ arena, open, onOpenChange, court:
         toast.error('Há conflito com uma reserva já confirmada. Escolha outro horário.');
         return;
       }
-      const input = kind === BOOKING_KIND.SINGLE
-        ? {
-            kind, ...single, court_ids: effectiveCourtIds, notes,
-            is_instant: instantEligible,
-            payment_method: instantEligible ? paymentMethod : null,
-            proposed_price: estimate?.price ?? null,
-          }
-        : { kind, recurring, court_ids: effectiveCourtIds, notes, proposed_price: estimate?.price ?? null };
+      // Convites só quando a reserva é de UMA quadra (dividir a quadra).
+      const canInvite = !isMultiCourt && kind === BOOKING_KIND.SINGLE;
+      const inviteesToSend = canInvite ? invitees : [];
+      let input;
+      if (kind === BOOKING_KIND.RECURRING) {
+        input = { kind, recurring, court_ids: effectiveCourtIds, notes, proposed_price: estimate?.price ?? null };
+      } else if (kind === 'multi') {
+        input = { kind: 'multi', slots: candidateSlots, court_ids: effectiveCourtIds, notes, proposed_price: estimate?.price ?? null };
+      } else {
+        input = {
+          kind, ...single, court_ids: effectiveCourtIds, notes,
+          is_instant: instantEligible,
+          payment_method: instantEligible ? paymentMethod : null,
+          proposed_price: estimate?.price ?? null,
+          invitees: inviteesToSend,
+        };
+      }
       await createBooking.mutateAsync({ arena, input });
       toast.success(
         isMultiCourt
@@ -315,7 +346,7 @@ export default function BookingRequestDialog({ arena, open, onOpenChange, court:
                 {[
                   { m: 'any', label: 'Qualquer disponível' },
                   { m: 'specific', label: 'Específicas' },
-                  { m: 'all', label: `Todas (${activeCourts.length})` },
+                  { m: 'all', label: `Todas (${allFreeCount}/${activeCourts.length})` },
                 ].map(({ m, label }) => (
                   <button
                     key={m}
@@ -334,20 +365,24 @@ export default function BookingRequestDialog({ arena, open, onOpenChange, court:
                 <div className="grid grid-cols-2 gap-1.5">
                   {activeCourts.map((c) => {
                     const checked = selectedCourtIds.includes(c.id);
+                    const busy = candidateSlots.length > 0 && busyCourtIds.has(c.id);
                     return (
                       <button
                         key={c.id}
                         type="button"
+                        disabled={busy}
                         onClick={() => setSelectedCourtIds((prev) => (checked ? prev.filter((id) => id !== c.id) : [...prev, c.id]))}
                         className={cn(
                           'flex items-center gap-2 rounded-xl border px-3 py-2 text-left text-sm transition-colors',
-                          checked ? 'border-ink bg-ink/5 text-ink' : 'border-gray-200 text-gray-600 hover:bg-paper',
+                          busy ? 'cursor-not-allowed border-gray-100 bg-gray-50 text-gray-400'
+                            : checked ? 'border-ink bg-ink/5 text-ink' : 'border-gray-200 text-gray-600 hover:bg-paper',
                         )}
                       >
-                        <span className={cn('flex h-4 w-4 shrink-0 items-center justify-center rounded border', checked ? 'border-ink bg-ink text-white' : 'border-gray-300')}>
-                          {checked && <Check className="h-3 w-3" />}
+                        <span className={cn('flex h-4 w-4 shrink-0 items-center justify-center rounded border', checked && !busy ? 'border-ink bg-ink text-white' : 'border-gray-300')}>
+                          {checked && !busy && <Check className="h-3 w-3" />}
                         </span>
-                        <span className="truncate">{c.name}</span>
+                        <span className="min-w-0 flex-1 truncate">{c.name}</span>
+                        {busy && <span className="shrink-0 text-[9px] font-bold uppercase text-red-500">Reservada</span>}
                       </button>
                     );
                   })}
@@ -355,11 +390,13 @@ export default function BookingRequestDialog({ arena, open, onOpenChange, court:
               )}
               <p className="text-[11px] text-gray-400">
                 {courtMode === 'all'
-                  ? `Reserva as ${activeCourts.length} quadras — uma reserva por quadra.`
+                  ? (allFreeCount > 0
+                      ? `${allFreeCount} de ${activeCourts.length} quadra(s) livre(s) ${allFreeCount === 1 ? 'será reservada' : 'serão reservadas'} — uma reserva por quadra.`
+                      : 'Nenhuma quadra livre nos horários escolhidos.')
                   : courtMode === 'specific'
                     ? (selectedCourtIds.length > 0
                         ? `${selectedCourtIds.length} quadra(s) selecionada(s) — uma reserva por quadra.`
-                        : 'Marque uma ou mais quadras.')
+                        : 'Marque uma ou mais quadras (as reservadas ficam desabilitadas).')
                     : 'A arena atribui automaticamente uma quadra livre.'}
               </p>
             </div>
@@ -410,6 +447,18 @@ export default function BookingRequestDialog({ arena, open, onOpenChange, court:
                 <Label className="text-xs">Nº de semanas</Label>
                 <Input type="number" min="1" max="52" value={recurring.weeks} onChange={(e) => setRecurring((s) => ({ ...s, weeks: e.target.value }))} />
               </div>
+            </div>
+          )}
+
+          {!isMultiCourt && kind === BOOKING_KIND.SINGLE && (
+            <div>
+              <Label className="text-xs">Convidar participantes (opcional)</Label>
+              <div className="mt-1">
+                <AthleteMultiPicker value={invitees} onChange={setInvitees} exclude={[user?.uid]} placeholder="Buscar atleta para dividir a quadra…" />
+              </div>
+              <p className="mt-1 text-[11px] text-gray-400">
+                Os convidados recebem um convite para dividir a quadra e o valor. Convites valem para reservas de uma quadra.
+              </p>
             </div>
           )}
 
@@ -506,7 +555,7 @@ export default function BookingRequestDialog({ arena, open, onOpenChange, court:
 
         <DialogFooter>
           <Button variant="outline" onClick={() => onOpenChange(false)}>Cancelar</Button>
-          <Button onClick={handleSubmit} disabled={createBooking.isPending || hasConflict || candidateSlots.length === 0 || (kind === BOOKING_KIND.SINGLE && !singleValidation.ok) || (courtMode === 'specific' && activeCourts.length > 0 && effectiveCourtIds.length === 0)}>
+          <Button onClick={handleSubmit} disabled={createBooking.isPending || hasConflict || candidateSlots.length === 0 || (kind === BOOKING_KIND.SINGLE && !singleValidation.ok) || (courtMode !== 'any' && activeCourts.length > 0 && effectiveCourtIds.length === 0)}>
             {createBooking.isPending ? 'Enviando…' : (isMultiCourt ? `Solicitar ${effectiveCourtIds.length} reservas` : 'Solicitar reserva')}
           </Button>
         </DialogFooter>

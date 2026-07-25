@@ -33,6 +33,7 @@ import {
   activeCourts,
   unavailableCourtsForSlots,
 } from '../domain/court_assignment.js';
+import { buildParticipants, ownerIds, invitedIds } from '../domain/shared_booking.js';
 import { listArenaCourtSchedules, listArenaCourts } from './arenaService.js';
 import { listArenaManagerIds } from './arenaService.js';
 
@@ -57,6 +58,9 @@ function num(v) {
 export async function createBooking(arena, user, profile, input) {
   if (!user?.uid) throw new Error('Usuário não autenticado.');
   const kind = input.kind === BOOKING_KIND.RECURRING ? BOOKING_KIND.RECURRING : BOOKING_KIND.SINGLE;
+  // 'multi' = vários horários avulsos selecionados no calendário (uma reserva
+  // cobrindo múltiplos slots). Persistida como SINGLE com `slots` múltiplos.
+  const isMultiSlot = input.kind === 'multi' && Array.isArray(input.slots) && input.slots.length > 0;
 
   let slots = [];
   let recurrence = null;
@@ -70,6 +74,11 @@ export async function createBooking(arena, user, profile, input) {
     };
     slots = expandRecurring(recurrence);
     if (slots.length === 0) throw new Error('Preencha o dia da semana, os horários e o número de semanas.');
+  } else if (isMultiSlot) {
+    slots = input.slots
+      .map((s) => ({ date: str(s.date), start: str(s.start), end: str(s.end) }))
+      .filter((s) => isValidSlot(s));
+    if (slots.length === 0) throw new Error('Selecione ao menos um horário válido.');
   } else {
     const slot = { date: str(input.date), start: str(input.start), end: str(input.end) };
     if (!isValidSlot(slot)) throw new Error('Preencha a data e um horário válido (fim depois do início).');
@@ -153,12 +162,23 @@ export async function createBooking(arena, user, profile, input) {
     }
   }
 
+  // Convite de participantes: só numa reserva de UMA quadra (dividir uma quadra
+  // entre atletas). Ignorado ao reservar várias quadras de uma vez.
+  const rawInvitees = Array.isArray(input.invitees) ? input.invitees.filter((i) => i && i.athlete_id) : [];
+  const attachInvites = rawInvitees.length > 0 && targetCourtIds.length === 1;
+  const athleteName = displayName(user, profile);
+  const participants = attachInvites
+    ? buildParticipants(
+        { athlete_id: user.uid, name: athleteName, photo: profile?.photo_url || user.photoURL || '' },
+        rawInvitees,
+      )
+    : null;
+
   // ── Escrita: uma reserva por quadra-alvo (lote atômico) ──────────────────
   const initialStatus = getInitialBookingStatus(isInstant);
   // Reservas de várias quadras compartilham um booking_group_id (aditivo),
   // para exibir/gerenciar em conjunto sem quebrar reservas antigas.
   const groupId = targetCourtIds.length > 1 ? doc(collection(db, COL.bookings)).id : null;
-  const athleteName = displayName(user, profile);
   const batch = writeBatch(db);
   const createdIds = [];
   const nowMs = Date.now();
@@ -179,6 +199,11 @@ export async function createBooking(arena, user, profile, input) {
       notes: str(input.notes).slice(0, 600),
       status: initialStatus,
       is_instant: isInstant,
+      // Participantes convidados (reserva compartilhada) — só quando 1 quadra.
+      shared: attachInvites,
+      participants: participants || [],
+      participant_ids: participants ? ownerIds(participants) : [],
+      invited_ids: participants ? invitedIds(participants) : [],
       payment_method: str(input.payment_method) || null,
       proposed_price: num(input.proposed_price),
       agreed_price: null,
@@ -201,6 +226,18 @@ export async function createBooking(arena, user, profile, input) {
     link: `/arenas/${arena.id}/gerir`,
     actor: { uid: user.uid, displayName: athleteName },
   });
+  if (attachInvites) {
+    const inviteeIds = invitedIds(participants);
+    if (inviteeIds.length > 0) {
+      notifyUsers(inviteeIds, {
+        title: 'Convite para dividir uma quadra',
+        message: `${athleteName} convidou você para ${slots[0].date} ${slots[0].start}–${slots[0].end} em ${str(arena.name).slice(0, 40)}.`,
+        type: NOTIFICATION_TYPE.GENERIC,
+        link: '/minhas-reservas',
+        actor: { uid: user.uid, displayName: athleteName },
+      });
+    }
+  }
   await createAuditLog({ action: 'arena_booking_requested', actor: user, details: { arena_id: arena.id, booking_ids: createdIds, group_id: groupId, kind, courts: targetCourtIds.length } });
   return createdIds.length === 1 ? createdIds[0] : createdIds;
 }
