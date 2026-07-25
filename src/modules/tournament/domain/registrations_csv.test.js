@@ -42,7 +42,7 @@ describe('buildRegistrationsCsv', () => {
 
   it('mapeia modalidade, status e pagamento por rótulo', () => {
     const csv = buildRegistrationsCsv(regs, { modalities, statusLabels, paymentLabels });
-    const lines = csv.replace(/^﻿/, '').split('\r\n');
+    const lines = csv.replace(/^\uFEFF/, '').split('\r\n');
     expect(lines).toHaveLength(2);
     expect(lines[1]).toContain('Duplas Masculino');
     expect(lines[1]).toContain('Ana / Bia');
@@ -54,7 +54,7 @@ describe('buildRegistrationsCsv', () => {
     const csv = buildRegistrationsCsv([
       { modality_id: 'm1', player_a_name: 'Caio', status: 'waitlist', is_provisional: true },
     ], { modalities, statusLabels: { waitlist: 'Lista de espera' } });
-    const line = csv.replace(/^﻿/, '').split('\r\n')[1];
+    const line = csv.replace(/^\uFEFF/, '').split('\r\n')[1];
     expect(line).toContain('Caio');
     expect(line).toContain('Lista de espera');
     expect(line.endsWith('Sim;')).toBe(true); // provisória=Sim, pagamento vazio
@@ -62,7 +62,7 @@ describe('buildRegistrationsCsv', () => {
 
   it('lista vazia gera só o cabeçalho', () => {
     const csv = buildRegistrationsCsv([], { modalities });
-    expect(csv.replace(/^﻿/, '').split('\r\n')).toHaveLength(1);
+    expect(csv.replace(/^\uFEFF/, '').split('\r\n')).toHaveLength(1);
   });
 });
 

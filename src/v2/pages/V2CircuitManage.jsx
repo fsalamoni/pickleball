@@ -18,13 +18,16 @@ import { cn } from '@/core/lib/utils';
 import {
   useCircuit, useCircuitTournaments, useCircuitRanking,
   useAddTournamentToCircuit, useRemoveTournamentFromCircuit,
-  useUpdateCircuit, useMyCircuits,
+  useRecordCircuitResults, useUpdateCircuit, useMyCircuits,
 } from '@/modules/circuits/hooks/useCircuits';
 import { useMyTournaments } from '@/modules/tournament/hooks/useTournament';
+import { useAllAthletes } from '@/modules/athletes/hooks/useAthletes';
 import {
   V2Badge, V2Button, V2EmptyState, V2Field, V2Input, V2Select, V2Surface, V2Textarea,
   V2Skeleton,
 } from '@/v2/ui/primitives';
+
+const athleteLabel = (a) => a.platform_name || a.full_name || a.name || 'Atleta';
 
 const RANK_TONES = {
   1: 'amber', 2: 'blue', 3: 'neutral',
@@ -153,6 +156,107 @@ function TournamentList({ circuitId, isAdmin }) {
   );
 }
 
+function CircuitResultsEntry({ circuit, circuitId }) {
+  const { data: linked = [] } = useCircuitTournaments(circuitId);
+  const { data: myTournaments = [] } = useMyTournaments();
+  const { data: athletes = [] } = useAllAthletes();
+  const record = useRecordCircuitResults();
+  const [tid, setTid] = useState('');
+  const [rows, setRows] = useState([{ user_id: '', position: '' }]);
+
+  const nameById = useMemo(() => {
+    const m = {};
+    (myTournaments || []).forEach((t) => { m[t.id] = t.name; });
+    return m;
+  }, [myTournaments]);
+
+  const sortedAthletes = useMemo(
+    () => [...(athletes || [])].filter((a) => a.id).sort((a, b) => athleteLabel(a).localeCompare(athleteLabel(b), 'pt-BR')),
+    [athletes],
+  );
+
+  const setRow = (i, patch) => setRows((rs) => rs.map((r, idx) => (idx === i ? { ...r, ...patch } : r)));
+  const addRow = () => setRows((rs) => [...rs, { user_id: '', position: '' }]);
+  const removeRow = (i) => setRows((rs) => (rs.length > 1 ? rs.filter((_, idx) => idx !== i) : rs));
+
+  const save = async () => {
+    if (!tid) { toast.error('Escolha o torneio (etapa) do circuito.'); return; }
+    const athleteMap = Object.fromEntries((athletes || []).map((a) => [a.id, a]));
+    const results = rows
+      .filter((r) => r.user_id && Number(r.position) >= 1)
+      .map((r) => {
+        const a = athleteMap[r.user_id];
+        return {
+          user_id: r.user_id,
+          user_name: a ? athleteLabel(a) : '',
+          user_photo: a?.photo_url || null,
+          position: Number(r.position),
+          points_table: circuit.points_table,
+        };
+      });
+    if (results.length === 0) { toast.error('Adicione ao menos um atleta e sua colocação.'); return; }
+    try {
+      const n = await record.mutateAsync({ circuitId, tournamentId: tid, results });
+      toast.success(`${n} resultado(s) registrado(s). Ranking atualizado.`);
+      setRows([{ user_id: '', position: '' }]);
+    } catch (err) {
+      toast.error(err.message || 'Não foi possível registrar os resultados.');
+    }
+  };
+
+  if (linked.length === 0) return null;
+
+  return (
+    <V2Surface>
+      <h3 className="flex items-center gap-1.5 font-display text-base font-bold text-ink">
+        <Award className="h-4 w-4" /> Registrar resultados
+      </h3>
+      <p className="mt-1 text-xs text-gray-500">
+        Escolha a etapa (torneio) e informe a colocação de cada atleta. Os pontos são calculados
+        pela tabela do circuito e somados no ranking.
+      </p>
+      <div className="mt-3 space-y-2">
+        <V2Field label="Etapa (torneio)">
+          <V2Select value={tid} onChange={(e) => setTid(e.target.value)}>
+            <option value="">— Escolha o torneio —</option>
+            {linked.map((t) => (
+              <option key={t.tournament_id} value={t.tournament_id}>
+                {nameById[t.tournament_id] || `Torneio ${t.tournament_id}`}
+              </option>
+            ))}
+          </V2Select>
+        </V2Field>
+
+        {rows.map((r, i) => (
+          <div key={i} className="flex items-end gap-2">
+            <V2Field label={i === 0 ? 'Atleta' : ''} className="min-w-0 flex-1">
+              <V2Select value={r.user_id} onChange={(e) => setRow(i, { user_id: e.target.value })}>
+                <option value="">— Atleta —</option>
+                {sortedAthletes.map((a) => <option key={a.id} value={a.id}>{athleteLabel(a)}</option>)}
+              </V2Select>
+            </V2Field>
+            <V2Field label={i === 0 ? 'Colocação' : ''} className="w-28">
+              <V2Input type="number" min="1" value={r.position} onChange={(e) => setRow(i, { position: e.target.value })} placeholder="1" />
+            </V2Field>
+            <V2Button type="button" variant="ghost" size="sm" onClick={() => removeRow(i)} disabled={rows.length === 1}>
+              <Trash2 className="h-3.5 w-3.5" />
+            </V2Button>
+          </div>
+        ))}
+
+        <div className="flex flex-wrap items-center gap-2 pt-1">
+          <V2Button type="button" variant="ghost" size="sm" onClick={addRow}>
+            <Plus className="h-4 w-4" /> Adicionar atleta
+          </V2Button>
+          <V2Button type="button" size="sm" onClick={save} disabled={record.isPending || !tid}>
+            {record.isPending ? 'Salvando…' : 'Salvar resultados'}
+          </V2Button>
+        </div>
+      </div>
+    </V2Surface>
+  );
+}
+
 function Ranking({ circuitId }) {
   const { data: ranking = [], isLoading, pointsTable } = useCircuitRanking(circuitId);
   if (isLoading) return <V2Skeleton lines={5} />;
@@ -166,7 +270,7 @@ function Ranking({ circuitId }) {
       </p>
       <div className="mt-3 space-y-1.5">
         {ranking.length === 0 ? (
-          <V2EmptyState icon={Trophy} title="Sem resultados ainda" hint="Adicione torneios e registre os resultados." />
+          <V2EmptyState icon={Trophy} title="Sem resultados ainda" description="Vincule torneios e registre os resultados para o ranking aparecer." />
         ) : (
           ranking.slice(0, 50).map((u) => (
             <div key={u.user_id} className={cn(
@@ -269,7 +373,7 @@ export default function V2CircuitManage() {
   if (isLoading) return <div className="p-4"><V2Skeleton lines={6} /></div>;
   if (!circuit) return (
     <div className="p-4">
-      <V2EmptyState icon={Trophy} title="Circuito não encontrado" hint="Confira o link ou volte para a lista." />
+      <V2EmptyState icon={Trophy} title="Circuito não encontrado" description="Confira o link ou volte para a lista." />
       <Link to="/circuits" className="mt-3 inline-block text-sm font-bold text-emerald-700">← Ver circuitos</Link>
     </div>
   );
@@ -281,6 +385,7 @@ export default function V2CircuitManage() {
       </Link>
       <CircuitInfo circuit={circuit} isAdmin={isAdmin} onEdit={() => setEditing(true)} />
       <TournamentList circuitId={circuitId} isAdmin={isAdmin} />
+      {isAdmin && <CircuitResultsEntry circuit={circuit} circuitId={circuitId} />}
       <Ranking circuitId={circuitId} />
       {editing && <EditCircuitModal circuit={circuit} onClose={() => setEditing(false)} />}
     </div>
