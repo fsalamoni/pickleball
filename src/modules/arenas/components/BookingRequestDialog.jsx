@@ -16,10 +16,11 @@ import { PlatformNotice } from '@/components/ui/platform-page';
 import { useAuth } from '@/core/lib/FirebaseAuthContext';
 import { BOOKING_KIND, BOOKING_STATUS, WEEKDAY_LABELS } from '../domain/constants.js';
 import { resolveArenaPrice, formatPrice } from '../domain/pricing.js';
-import { bookingSlots, expandRecurring, hasConflictWithConfirmed, isValidSlot, sortSlots, weekdayOf } from '../domain/booking.js';
+import { bookingSlots, expandRecurring, isValidSlot, sortSlots, weekdayOf } from '../domain/booking.js';
+import { pickAvailableCourtForSlots } from '../domain/court_assignment.js';
 import { useArenaBookings, useCreateBooking } from '../hooks/useBookings.js';
 import { useArenaCourts, useCourtSchedules } from '../hooks/useArenas.js';
-import { validateBookingRequest, getCourtAvailabilityForDate, BLOCKING_STATUSES } from '../domain/booking_conflict.js';
+import { validateBookingRequest, getCourtAvailabilityForDate, checkBookingConflict, BLOCKING_STATUSES } from '../domain/booking_conflict.js';
 import { normalizeTime } from '../domain/court_schedule.js';
 import { canBeInstantBooking, arenaSupportsInstant, INSTANT_BOOKING_LABELS } from '../domain/instant_booking.js';
 import { PAYMENT_METHOD } from '../domain/pdv.js';
@@ -126,10 +127,21 @@ export default function BookingRequestDialog({ arena, open, onOpenChange, court:
     [confirmedBookings],
   );
 
-  const hasConflict = useMemo(
-    () => candidateSlots.length > 0 && hasConflictWithConfirmed(candidateSlots, confirmedBookings),
-    [candidateSlots, confirmedBookings],
-  );
+  // Conflito POR-QUADRA: com quadra escolhida, checa só aquela quadra; em
+  // "qualquer quadra", só há conflito se NENHUMA quadra estiver livre para
+  // todos os slots. Sem quadras cadastradas, cai no conflito por horário.
+  const hasConflict = useMemo(() => {
+    if (candidateSlots.length === 0) return false;
+    if (courtId) {
+      const cand = candidateSlots.map((s) => ({ ...s, court_id: courtId }));
+      return checkBookingConflict(cand, existingBookings).hasConflict;
+    }
+    if (activeCourts.length === 0) {
+      const cand = candidateSlots.map((s) => ({ ...s, court_id: null }));
+      return checkBookingConflict(cand, existingBookings).hasConflict;
+    }
+    return !pickAvailableCourtForSlots(activeCourts, candidateSlots, existingBookings, courtSchedules);
+  }, [candidateSlots, courtId, existingBookings, activeCourts, courtSchedules]);
 
   async function handleSubmit() {
     try {
