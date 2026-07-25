@@ -2,6 +2,7 @@ import { describe, it, expect } from 'vitest';
 import {
   activeCourts, isCourtFreeForSlot, pickAvailableCourt, pickAvailableCourtForSlots,
   courtAvailabilityForSlot, countAvailableCourts,
+  resolveTargetCourts, unavailableCourtsForSlots,
 } from './court_assignment.js';
 
 const courts = [
@@ -70,6 +71,44 @@ describe('pickAvailableCourtForSlots (recorrente/multi-slot)', () => {
 
   it('retorna null para lista vazia', () => {
     expect(pickAvailableCourtForSlots(courts, [], [])).toBeNull();
+  });
+});
+
+describe('resolveTargetCourts', () => {
+  it("mode 'all' → todas as quadras ativas (ordenadas), ignora inativas", () => {
+    expect(resolveTargetCourts(courts, { mode: 'all' })).toEqual(['c1', 'c2']);
+  });
+  it("mode 'specific' → só as escolhidas que estão ativas", () => {
+    expect(resolveTargetCourts(courts, { mode: 'specific', courtIds: ['c2'] })).toEqual(['c2']);
+    // c3 é inativa → descartada mesmo se escolhida
+    expect(resolveTargetCourts(courts, { mode: 'specific', courtIds: ['c1', 'c3'] })).toEqual(['c1']);
+  });
+  it("mode 'specific' com id inexistente → vazio", () => {
+    expect(resolveTargetCourts(courts, { mode: 'specific', courtIds: ['zzz'] })).toEqual([]);
+  });
+  it("mode 'any' (ou desconhecido) → vazio (chamador atribui automaticamente)", () => {
+    expect(resolveTargetCourts(courts, { mode: 'any' })).toEqual([]);
+    expect(resolveTargetCourts(courts, {})).toEqual([]);
+  });
+});
+
+describe('unavailableCourtsForSlots', () => {
+  const slotA = { date: '2026-08-01', start: '18:00', end: '19:00' };
+  const slotB = { date: '2026-08-08', start: '18:00', end: '19:00' };
+
+  it('todas livres → nenhuma indisponível', () => {
+    expect(unavailableCourtsForSlots(['c1', 'c2'], [slotA, slotB], [])).toEqual([]);
+  });
+  it('aponta a quadra ocupada em qualquer slot', () => {
+    const existing = [{ id: 'b1', status: 'confirmed', court_id: 'c1', slots: [{ date: '2026-08-08', start: '18:00', end: '19:00' }] }];
+    expect(unavailableCourtsForSlots(['c1', 'c2'], [slotA, slotB], existing)).toEqual(['c1']);
+  });
+  it('reservar TODAS falha se ao menos uma está ocupada', () => {
+    const existing = [{ id: 'b1', status: 'confirmed', court_id: 'c2', slots: [slotA] }];
+    expect(unavailableCourtsForSlots(['c1', 'c2'], [slotA], existing)).toEqual(['c2']);
+  });
+  it('lista de slots vazia → nenhuma indisponível', () => {
+    expect(unavailableCourtsForSlots(['c1', 'c2'], [], [])).toEqual([]);
   });
 });
 

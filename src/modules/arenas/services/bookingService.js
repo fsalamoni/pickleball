@@ -15,6 +15,7 @@ import {
   setDoc,
   updateDoc,
   deleteDoc,
+  writeBatch,
   query,
   where,
   serverTimestamp,
@@ -26,7 +27,12 @@ import { ARENA_COLLECTIONS, BOOKING_STATUS, BOOKING_KIND, PAYMENT_STATUS, BOOKIN
 import { expandRecurring, isValidSlot, canTransition, weekdayOf } from '../domain/booking.js';
 import { validateBookingRequest, checkBookingConflict } from '../domain/booking_conflict.js';
 import { canBeInstantBooking, getInitialBookingStatus } from '../domain/instant_booking.js';
-import { pickAvailableCourt, pickAvailableCourtForSlots } from '../domain/court_assignment.js';
+import {
+  pickAvailableCourt,
+  pickAvailableCourtForSlots,
+  activeCourts,
+  unavailableCourtsForSlots,
+} from '../domain/court_assignment.js';
 import { listArenaCourtSchedules, listArenaCourts } from './arenaService.js';
 import { listArenaManagerIds } from './arenaService.js';
 
@@ -74,101 +80,129 @@ export async function createBooking(arena, user, profile, input) {
   const courts = await listArenaCourts(arena.id).catch(() => []);
   const allSchedules = await listArenaCourtSchedules(arena.id).catch(() => []);
 
-  // Toda reserva ocupa uma QUADRA específica. Resolvemos a quadra ANTES de
-  // validar: usa a escolhida ou atribui automaticamente uma livre para TODOS os
-  // slots. Isto corrige o bug em que a validação com court_id nulo bloqueava o
-  // horário em TODAS as quadras (reserva "bloqueava o calendário inteiro").
-  let assignedCourtId = str(input.court_id) || null;
-  if (!assignedCourtId && courts.length > 0) {
-    assignedCourtId = pickAvailableCourtForSlots(courts, slots, existingBookings, allSchedules);
-    if (!assignedCourtId) {
-      throw new Error('Nenhuma quadra livre nesse horário. Escolha outro período ou uma quadra específica.');
-    }
+  // ── Quadras-alvo ─────────────────────────────────────────────────────────
+  // O solicitante pode reservar UMA quadra específica, VÁRIAS específicas ou
+  // TODAS as quadras — e nesse caso CADA quadra vira uma reserva independente.
+  // Sem escolha ("qualquer disponível"), o sistema atribui automaticamente uma
+  // quadra livre para todos os slots. Resolver a(s) quadra(s) ANTES de validar
+  // corrige o bug em que court_id nulo bloqueava o horário em TODAS as quadras.
+  const actives = activeCourts(courts);
+  const activeIdSet = new Set(actives.map((c) => c.id));
+
+  // `court_ids` (array) tem prioridade; senão cai no `court_id` único
+  // (retrocompat) ou no modo automático. Mantém só quadras ativas existentes,
+  // deduplicadas e na ordem canônica.
+  let explicitCourtIds = [];
+  if (Array.isArray(input.court_ids)) {
+    explicitCourtIds = input.court_ids.map((c) => str(c)).filter((c) => activeIdSet.has(c));
+  } else if (str(input.court_id)) {
+    explicitCourtIds = [str(input.court_id)].filter((c) => activeIdSet.has(c));
   }
+  explicitCourtIds = actives.map((c) => c.id).filter((id) => explicitCourtIds.includes(id));
 
-  // Schedules relevantes: da quadra resolvida (+ schedules gerais da arena sem
-  // court_id). Sem quadras cadastradas, usa os da arena inteira.
-  const courtSchedules = assignedCourtId
-    ? allSchedules.filter((s) => !s.court_id || s.court_id === assignedCourtId)
-    : allSchedules;
-
-  // Validação ARE-07 por-quadra: considera schedules, court_id e status ativos.
-  if (kind === BOOKING_KIND.SINGLE && slots.length === 1) {
-    const v = validateBookingRequest({
-      date: slots[0].date,
-      start_time: slots[0].start,
-      end_time: slots[0].end,
-      court_id: assignedCourtId,
-      existingBookings,
-      court_schedules: courtSchedules,
-    });
-    if (!v.ok) throw new Error(v.message);
-
-    // ARE-03: validação específica de reserva instantânea
-    const isInstantSingle = input.is_instant === true;
-    if (isInstantSingle) {
-      const instant = canBeInstantBooking(
-        {
-          date: slots[0].date,
-          start_time: slots[0].start,
-          end_time: slots[0].end,
-          court_id: assignedCourtId,
-          proposed_price: input.proposed_price,
-          payment_method: input.payment_method,
-        },
-        arena,
-        existingBookings,
-        courtSchedules,
+  let targetCourtIds;
+  if (explicitCourtIds.length > 0) {
+    // Específicas / todas: cada quadra precisa estar livre em TODOS os slots.
+    const busy = unavailableCourtsForSlots(explicitCourtIds, slots, existingBookings, allSchedules);
+    if (busy.length > 0) {
+      const names = busy.map((id) => actives.find((c) => c.id === id)?.name || 'quadra').join(', ');
+      throw new Error(
+        explicitCourtIds.length > 1
+          ? `Estas quadras não estão livres no período escolhido: ${names}. Ajuste o horário ou remova-as da seleção.`
+          : 'A quadra escolhida não está livre no período. Escolha outro horário ou quadra.',
       );
-      if (!instant.ok) throw new Error(instant.message);
     }
+    targetCourtIds = explicitCourtIds;
+  } else if (actives.length > 0) {
+    // "Qualquer disponível": atribui uma quadra livre para todos os slots.
+    const auto = pickAvailableCourtForSlots(courts, slots, existingBookings, allSchedules);
+    if (!auto) throw new Error('Nenhuma quadra livre nesse horário. Escolha outro período ou uma quadra específica.');
+    targetCourtIds = [auto];
   } else {
-    // Recorrente: valida conflito POR-QUADRA em todos os slots.
-    const candidateSlots = slots.map((s) => ({ ...s, court_id: assignedCourtId }));
-    const conflict = checkBookingConflict(candidateSlots, existingBookings);
-    if (conflict.hasConflict) {
-      throw new Error('Já existe uma reserva ativa em um dos horários para esta quadra. Escolha outro período.');
+    // Arena sem quadras cadastradas: reserva sem court_id (comportamento legado).
+    targetCourtIds = [null];
+  }
+
+  // Reserva instantânea só faz sentido para UMA quadra.
+  const isInstant = input.is_instant === true && targetCourtIds.length <= 1;
+
+  // ── Validação por-quadra ANTES de escrever (all-or-nothing) ──────────────
+  for (const cid of targetCourtIds) {
+    const courtSchedules = cid
+      ? allSchedules.filter((s) => !s.court_id || s.court_id === cid)
+      : allSchedules;
+    if (kind === BOOKING_KIND.SINGLE && slots.length === 1) {
+      const v = validateBookingRequest({
+        date: slots[0].date, start_time: slots[0].start, end_time: slots[0].end,
+        court_id: cid, existingBookings, court_schedules: courtSchedules,
+      });
+      if (!v.ok) throw new Error(v.message);
+      if (isInstant) {
+        const instant = canBeInstantBooking(
+          { date: slots[0].date, start_time: slots[0].start, end_time: slots[0].end, court_id: cid, proposed_price: input.proposed_price, payment_method: input.payment_method },
+          arena, existingBookings, courtSchedules,
+        );
+        if (!instant.ok) throw new Error(instant.message);
+      }
+    } else {
+      const candidateSlots = slots.map((s) => ({ ...s, court_id: cid }));
+      const conflict = checkBookingConflict(candidateSlots, existingBookings);
+      if (conflict.hasConflict) {
+        throw new Error('Já existe uma reserva ativa em um dos horários para esta quadra. Escolha outro período.');
+      }
     }
   }
 
-  const isInstant = input.is_instant === true;
+  // ── Escrita: uma reserva por quadra-alvo (lote atômico) ──────────────────
   const initialStatus = getInitialBookingStatus(isInstant);
-  const id = doc(collection(db, COL.bookings)).id;
-  const payload = {
-    id,
-    arena_id: arena.id,
-    arena_name: str(arena.name),
-    court_id: assignedCourtId,
-    athlete_id: user.uid,
-    athlete_name: displayName(user, profile),
-    athlete_photo: profile?.photo_url || user.photoURL || '',
-    kind,
-    slots,
-    recurrence,
-    notes: str(input.notes).slice(0, 600),
-    status: initialStatus,
-    is_instant: isInstant,
-    payment_method: str(input.payment_method) || null,
-    proposed_price: num(input.proposed_price),
-    agreed_price: null,
-    payment_status: PAYMENT_STATUS.NONE,
-    created_by: user.uid,
-    created_at: serverTimestamp(),
-    created_at_ms: Date.now(),
-    updated_at: serverTimestamp(),
-  };
-  await setDoc(doc(db, COL.bookings, id), payload);
+  // Reservas de várias quadras compartilham um booking_group_id (aditivo),
+  // para exibir/gerenciar em conjunto sem quebrar reservas antigas.
+  const groupId = targetCourtIds.length > 1 ? doc(collection(db, COL.bookings)).id : null;
+  const athleteName = displayName(user, profile);
+  const batch = writeBatch(db);
+  const createdIds = [];
+  const nowMs = Date.now();
+  for (const cid of targetCourtIds) {
+    const id = doc(collection(db, COL.bookings)).id;
+    batch.set(doc(db, COL.bookings, id), {
+      id,
+      arena_id: arena.id,
+      arena_name: str(arena.name),
+      court_id: cid,
+      booking_group_id: groupId,
+      athlete_id: user.uid,
+      athlete_name: athleteName,
+      athlete_photo: profile?.photo_url || user.photoURL || '',
+      kind,
+      slots,
+      recurrence,
+      notes: str(input.notes).slice(0, 600),
+      status: initialStatus,
+      is_instant: isInstant,
+      payment_method: str(input.payment_method) || null,
+      proposed_price: num(input.proposed_price),
+      agreed_price: null,
+      payment_status: PAYMENT_STATUS.NONE,
+      created_by: user.uid,
+      created_at: serverTimestamp(),
+      created_at_ms: nowMs,
+      updated_at: serverTimestamp(),
+    });
+    createdIds.push(id);
+  }
+  await batch.commit();
 
+  const courtCountLabel = targetCourtIds.length > 1 ? ` (${targetCourtIds.length} quadras)` : '';
   const managerIds = await listArenaManagerIds(arena.id).catch(() => []);
   notifyUsers(managerIds, {
     title: `Nova solicitação de reserva em "${str(arena.name).slice(0, 50)}"`,
-    message: `${payload.athlete_name} solicitou ${kind === BOOKING_KIND.RECURRING ? `${slots.length} horários (recorrente)` : `${slots[0].date} ${slots[0].start}`}. Toque para responder.`,
+    message: `${athleteName} solicitou ${kind === BOOKING_KIND.RECURRING ? `${slots.length} horários (recorrente)` : `${slots[0].date} ${slots[0].start}`}${courtCountLabel}. Toque para responder.`,
     type: NOTIFICATION_TYPE.GENERIC,
     link: `/arenas/${arena.id}/gerir`,
-    actor: { uid: user.uid, displayName: payload.athlete_name },
+    actor: { uid: user.uid, displayName: athleteName },
   });
-  await createAuditLog({ action: 'arena_booking_requested', actor: user, details: { arena_id: arena.id, booking_id: id, kind } });
-  return id;
+  await createAuditLog({ action: 'arena_booking_requested', actor: user, details: { arena_id: arena.id, booking_ids: createdIds, group_id: groupId, kind, courts: targetCourtIds.length } });
+  return createdIds.length === 1 ? createdIds[0] : createdIds;
 }
 
 /**

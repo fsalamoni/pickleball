@@ -69,6 +69,40 @@ export function pickAvailableCourtForSlots(courts, slots = [], existingBookings 
 }
 
 /**
+ * Resolve a lista de quadras-alvo de uma reserva a partir da escolha do usuário.
+ * Cada quadra-alvo vira uma reserva independente (uma quadra por documento).
+ *
+ * @param {Array} courts - quadras da arena
+ * @param {{ mode: 'any'|'specific'|'all', courtIds?: string[] }} choice
+ * @returns {string[]} court_ids a reservar. Vazio para 'any' (o chamador
+ *   atribui automaticamente uma quadra livre) ou quando não há quadra válida.
+ */
+export function resolveTargetCourts(courts, { mode, courtIds } = {}) {
+  const actives = activeCourts(courts);
+  if (mode === 'all') return actives.map((c) => c.id);
+  if (mode === 'specific') {
+    const set = new Set((Array.isArray(courtIds) ? courtIds : []).map((c) => String(c)));
+    return actives.filter((c) => set.has(String(c.id))).map((c) => c.id);
+  }
+  return [];
+}
+
+/**
+ * Dentre `courtIds`, quais NÃO estão livres para TODOS os slots (por conflito de
+ * reserva ativa ou fora da janela de horários). Base para reservar "todas" ou
+ * um conjunto específico: só prossegue se o retorno for vazio.
+ *
+ * @returns {string[]} court_ids indisponíveis (subconjunto de `courtIds`).
+ */
+export function unavailableCourtsForSlots(courtIds = [], slots = [], existingBookings = [], courtSchedules = []) {
+  const list = Array.isArray(slots) ? slots.filter(Boolean) : [];
+  if (list.length === 0) return [];
+  return (Array.isArray(courtIds) ? courtIds : []).filter(
+    (cid) => !list.every((slot) => isCourtFreeForSlot(cid, slot, existingBookings, courtSchedules)),
+  );
+}
+
+/**
  * Para um slot, retorna a disponibilidade de cada quadra ativa.
  * @returns {Array<{ court_id, name, available, booking_id|null }>}
  */
