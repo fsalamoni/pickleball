@@ -71,6 +71,17 @@ export const AuthProvider = ({ children }) => {
   const [isAuthenticated, setIsAuthenticated] = useState(false);
   const [isLoadingAuth, setIsLoadingAuth] = useState(true);
   const [authError, setAuthError] = useState(null);
+  // "Ver como usuário": um admin da plataforma pode se ver como usuário comum
+  // (sem poderes de admin) para conferir a experiência. Só afeta a visão do
+  // próprio admin; persistido localmente.
+  const [viewAsUser, setViewAsUserState] = useState(() => {
+    try { return localStorage.getItem('v2_view_as_user') === '1'; } catch { return false; }
+  });
+  const setViewAsUser = (next) => {
+    setViewAsUserState(next);
+    try { localStorage.setItem('v2_view_as_user', next ? '1' : '0'); } catch { /* ignore */ }
+  };
+  const toggleViewAsUser = () => setViewAsUser(!viewAsUser);
 
   useEffect(() => {
     if (!auth || !db) {
@@ -272,8 +283,15 @@ export const AuthProvider = ({ children }) => {
     sendPasswordReset,
     signOut,
     updateUserProfile,
-    isPlatformAdmin: userProfile?.role === 'platform_admin',
-    canCreatePools: userProfile?.role === 'platform_admin' || userProfile?.can_create_pools === true,
+    // Admin EFETIVO: respeita o modo "ver como usuário" — assim todo o app
+    // (nav, rotas, permissões de UI) trata o admin como usuário comum quando
+    // o modo está ativo. O admin REAL é exposto à parte, só para o botão.
+    isPlatformAdmin: userProfile?.role === 'platform_admin' && !viewAsUser,
+    isRealPlatformAdmin: userProfile?.role === 'platform_admin',
+    canCreatePools: !viewAsUser && (userProfile?.role === 'platform_admin' || userProfile?.can_create_pools === true),
+    viewAsUser,
+    setViewAsUser,
+    toggleViewAsUser,
   };
 
   return <AuthContext.Provider value={value}>{children}</AuthContext.Provider>;

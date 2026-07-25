@@ -32,6 +32,8 @@ import {
   CalendarClock,
   ChevronsLeft,
   ChevronsRight,
+  Eye,
+  ShieldCheck,
 } from 'lucide-react';
 import { useAuth } from '@/core/lib/FirebaseAuthContext';
 import { useAutoRecomputeRatings } from '@/modules/rating/hooks/useRating';
@@ -210,7 +212,6 @@ function useV2Nav() {
           { to: '/clubes', label: 'Clubes', icon: Building2 },
           communityFeedOn && { to: '/novidades', label: 'Novidades', icon: Zap },
           { to: '/chat', label: 'Mensagens', icon: MessageSquare },
-          affiliatesOn && { to: '/parceiros', label: 'Parceiros', icon: HeartHandshake },
         ],
       }),
       (arenasOn || isPlatformAdmin) && hub({
@@ -223,7 +224,7 @@ function useV2Nav() {
         ],
       }),
       (coachesOn || isCoach || coachLessonsOn) && hub({
-        id: 'ensino', label: 'Ensino', icon: GraduationCap, to: coachesOn ? '/coaches' : '/minhas-aulas',
+        id: 'ensino', label: 'Professores', icon: GraduationCap, to: coachesOn ? '/coaches' : '/minhas-aulas',
         children: [
           coachesOn && { to: '/coaches', label: 'Professores', icon: GraduationCap },
           isCoach && { to: '/aulas', label: 'Painel do professor', icon: GraduationCap },
@@ -231,13 +232,12 @@ function useV2Nav() {
         ],
       }),
       hub({
-        id: 'aprender', label: 'Aprender', icon: BookOpen, to: '/regras',
+        id: 'aprender', label: 'Pickleball', icon: BookOpen, to: '/regras',
         children: [
           { to: '/regras', label: 'Regras', icon: BookOpen },
           { to: '/nivelamento', label: 'Nivelamento', icon: Award },
           sportHistoryOn && { to: '/historia', label: 'História do esporte', icon: History },
           { to: '/conduta', label: 'Conduta e fair play', icon: HeartHandshake },
-          { to: '/politica-uso', label: 'Política de uso', icon: FileText },
         ],
       }),
       hub({
@@ -246,6 +246,11 @@ function useV2Nav() {
           { to: '/perfil', label: 'Meu perfil', icon: User },
           settingsPageOn && { to: '/configuracoes', label: 'Configurações', icon: Settings },
         ],
+      }),
+      // Parceiros da plataforma — seção própria e exclusiva, por último na lista.
+      affiliatesOn && hub({
+        id: 'parceiros', label: 'Parceiros', icon: HeartHandshake, to: '/parceiros',
+        children: [{ to: '/parceiros', label: 'Parceiros', icon: HeartHandshake }],
       }),
       isPlatformAdmin && adminConsoleOn && hub({
         id: 'admin', label: 'Admin', icon: LayoutDashboard, to: '/admin/painel',
@@ -521,7 +526,7 @@ function SubnavBar({ hub, pathname, onNavigate }) {
 }
 
 export default function V2Layout({ children }) {
-  const { userProfile, signOut } = useAuth();
+  const { userProfile, signOut, isRealPlatformAdmin, viewAsUser, toggleViewAsUser } = useAuth();
   // Mantém o ranking atualizado automaticamente para o admin da plataforma.
   useAutoRecomputeRatings();
   const location = useLocation();
@@ -618,6 +623,20 @@ export default function V2Layout({ children }) {
               <HubItem key={hub.id} hub={hub} active={activeHub?.id === hub.id} collapsed={collapsed} />
             ))}
           </nav>
+          {/* Política de uso — separada da navegação, no rodapé da barra. */}
+          <Link
+            to="/politica-uso"
+            title={collapsed ? 'Política de uso' : undefined}
+            aria-label={collapsed ? 'Política de uso' : undefined}
+            className={cn(
+              'btn-press group mx-3 mb-2 flex items-center rounded-2xl py-2.5 text-sm font-medium transition-colors',
+              collapsed ? 'justify-center px-0' : 'px-3.5',
+              isActive(location.pathname, { to: '/politica-uso' }) ? 'bg-ink text-white' : 'text-gray-500 hover:bg-gray-50 hover:text-ink',
+            )}
+          >
+            <FileText className={cn('h-4 w-4 shrink-0', isActive(location.pathname, { to: '/politica-uso' }) ? 'text-acid' : 'text-gray-400 group-hover:text-acid')} />
+            {!collapsed && <span className="ml-3">Política de uso</span>}
+          </Link>
           <button
             type="button"
             onClick={toggleCollapsed}
@@ -705,6 +724,21 @@ export default function V2Layout({ children }) {
           </form>
 
           <div className="ml-auto flex items-center gap-2 sm:gap-4">
+            {isRealPlatformAdmin && (
+              <button
+                type="button"
+                onClick={toggleViewAsUser}
+                title={viewAsUser ? 'Você está vendo como usuário comum. Toque para voltar à visão de admin.' : 'Ver a plataforma como um usuário comum.'}
+                aria-pressed={viewAsUser}
+                className={cn(
+                  'btn-press flex items-center gap-2 rounded-full px-3 py-2 text-xs font-bold shadow-sm transition-colors',
+                  viewAsUser ? 'bg-amber-400 text-ink hover:bg-amber-300' : 'bg-white text-gray-600 hover:text-ink',
+                )}
+              >
+                {viewAsUser ? <Eye className="h-4 w-4" /> : <ShieldCheck className="h-4 w-4" />}
+                <span className="hidden md:inline">{viewAsUser ? 'Vendo como usuário' : 'Visão admin'}</span>
+              </button>
+            )}
             <NotificationsMenu />
             {userMenuOn && (
               <UserMenu
@@ -783,9 +817,16 @@ export default function V2Layout({ children }) {
               </div>
             </div>
           ))}
-          <div className="mt-8 border-t border-white/10 pt-6">
+          <div className="mt-8 space-y-1 border-t border-white/10 pt-6">
+            <Link
+              to="/politica-uso"
+              onClick={closeMobile}
+              className="flex items-center gap-3 rounded-2xl px-4 py-3 text-lg font-display font-semibold text-white transition-colors hover:text-acid"
+            >
+              <FileText className="h-5 w-5" /> Política de uso
+            </Link>
             <button onClick={handleLogout} className="flex w-full items-center gap-3 rounded-2xl px-4 py-3 text-lg font-display font-semibold text-red-400 transition-colors hover:bg-white/10">
-              <Settings className="h-5 w-5" /> Sair
+              <LogOut className="h-5 w-5" /> Sair
             </button>
           </div>
         </div>
