@@ -1,19 +1,21 @@
 /**
  * CoachPartnersSection — parceiros do professor (arenas onde ele atende).
- * O professor vê os vínculos e pode sair de uma parceria. Espelha os
- * "professores parceiros" da arena, pelo lado do professor.
+ * O professor vê os vínculos, pode aceitar/recusar convites pendentes,
+ * sair de parcerias ativas e SOLICITAR parceria com uma arena (item 4.2).
+ * Espelha os "professores parceiros" da arena, pelo lado do professor.
  */
 
-import React from 'react';
+import React, { useState } from 'react';
 import { Link } from 'react-router-dom';
 import { toast } from 'sonner';
-import { Building2, MapPin, LogOut, Handshake, Check, X } from 'lucide-react';
+import { Building2, MapPin, LogOut, Handshake, Check, X, Plus } from 'lucide-react';
 import {
   useCoachResidencies, useRemoveCoachResidency,
   useAcceptCoachResidency, useDeclineCoachResidency,
 } from '../hooks/useCoaches.js';
 import { useArena } from '@/modules/arenas/hooks/useArenas';
 import ConfirmDialog from '@/components/ConfirmDialog';
+import CoachAddArenaForm from './CoachAddArenaForm';
 import {
   V2Badge, V2Button, V2EmptyState, V2Skeleton, V2Surface,
 } from '@/v2/ui/primitives';
@@ -95,23 +97,37 @@ function PartnerArenaCard({ coachId, residency }) {
 
 export default function CoachPartnersSection({ coachId }) {
   const { data: residencies = [], isLoading } = useCoachResidencies(coachId);
+  const [adding, setAdding] = useState(false);
 
   return (
     <V2Surface>
-      <div className="mb-4 flex items-center gap-2">
-        <Handshake className="h-5 w-5 text-ink" />
-        <h2 className="font-display text-lg font-bold text-ink">Parceiros</h2>
+      <div className="mb-4 flex items-center justify-between">
+        <div className="flex items-center gap-2">
+          <Handshake className="h-5 w-5 text-ink" />
+          <h2 className="font-display text-lg font-bold text-ink">Parceiros</h2>
+        </div>
+        <V2Button size="sm" variant="ghost" onClick={() => setAdding((s) => !s)}>
+          <Plus className="h-4 w-4" /> {adding ? 'Fechar' : 'Adicionar arena'}
+        </V2Button>
       </div>
       <p className="-mt-2 mb-3 text-sm text-gray-500">
-        Arenas onde você atende. As arenas adicionam você como parceiro; aqui você acompanha e pode sair.
+        Arenas onde você atende. Você pode ser convidado por uma arena ou
+        solicitar a parceria (item 4.2) — a arena avalia antes de publicar.
       </p>
+
+      {adding && (
+        <div className="mb-4 rounded-2xl border border-green-200 bg-green-50/40 p-3">
+          <CoachAddArenaForm coachId={coachId} onClose={() => setAdding(false)} />
+        </div>
+      )}
+
       {isLoading ? (
         <V2Skeleton lines={3} />
       ) : residencies.length === 0 ? (
         <V2EmptyState
           icon={Handshake}
           title="Nenhuma parceria ainda"
-          description="Quando uma arena vincular você como professor parceiro, ela aparece aqui e no seu perfil público."
+          description="Adicione uma arena parceira ou aguarde um convite. As parcerias aparecem no seu perfil público."
         />
       ) : (
         <div className="space-y-2">

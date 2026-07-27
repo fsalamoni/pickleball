@@ -7,7 +7,7 @@
 
 import {
   collection, doc, getDoc, getDocs, setDoc, updateDoc, deleteDoc,
-  query, where, orderBy, serverTimestamp, writeBatch, increment, limit,
+  query, where, serverTimestamp, writeBatch, increment, limit,
 } from 'firebase/firestore';
 import { db } from '@/core/config/firebase';
 import { logger } from '@/core/lib/logger';
@@ -151,26 +151,36 @@ export async function createSale(arenaId, items, paymentMethod, splitWith, user,
   return saleId;
 }
 
-/** Lista vendas da arena. */
+/** Lista vendas da arena. Query simples por arena_id, ordenação em memória. */
 export async function listArenaSales(arenaId, { limit: lim = 200 } = {}) {
   if (!db || !arenaId) return [];
-  const snap = await getDocs(query(collection(db, COL_SALES), where('arena_id', '==', arenaId), orderBy('created_at', 'desc'), limit(lim)));
-  return snap.docs.map((d) => ({ id: d.id, ...d.data() }));
+  const snap = await getDocs(query(collection(db, COL_SALES), where('arena_id', '==', arenaId)));
+  return snap.docs
+    .map((d) => ({ id: d.id, ...d.data() }))
+    .sort((a, b) => Number(b.created_at_ms || 0) - Number(a.created_at_ms || 0))
+    .slice(0, lim);
 }
 
-/** Lista vendas do user. */
+/** Lista vendas do user. Query simples, ordenação em memória. */
 export async function listUserSales(userId, { limit: lim = 100 } = {}) {
   if (!db || !userId) return [];
-  const snap = await getDocs(query(collection(db, COL_SALES), where('buyer_id', '==', userId), orderBy('created_at', 'desc'), limit(lim)));
-  return snap.docs.map((d) => ({ id: d.id, ...d.data() }));
+  const snap = await getDocs(query(collection(db, COL_SALES), where('buyer_id', '==', userId)));
+  return snap.docs
+    .map((d) => ({ id: d.id, ...d.data() }))
+    .sort((a, b) => Number(b.created_at_ms || 0) - Number(a.created_at_ms || 0))
+    .slice(0, lim);
 }
 
 /* ----------------------- Payments ---------------------- */
 
+/** Lista pagamentos da arena. Query simples, ordenação em memória. */
 export async function listArenaPayments(arenaId, { limit: lim = 200 } = {}) {
   if (!db || !arenaId) return [];
-  const snap = await getDocs(query(collection(db, COL_PAYMENTS), where('arena_id', '==', arenaId), orderBy('created_at', 'desc'), limit(lim)));
-  return snap.docs.map((d) => ({ id: d.id, ...d.data() }));
+  const snap = await getDocs(query(collection(db, COL_PAYMENTS), where('arena_id', '==', arenaId)));
+  return snap.docs
+    .map((d) => ({ id: d.id, ...d.data() }))
+    .sort((a, b) => Number(b.created_at_ms || 0) - Number(a.created_at_ms || 0))
+    .slice(0, lim);
 }
 
 export async function confirmPayment(paymentId, actor) {

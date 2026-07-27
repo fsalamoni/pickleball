@@ -1032,6 +1032,15 @@ service cloud.firestore {
       );
       allow delete: if isPlatformAdmin();
     }
+    // coach_favorites/{uid_coachId} — professor favorito do atleta
+    match /coach_favorites/{favId} {
+      allow read: if isAuthed() && request.auth.uid == favId.split('_')[0];
+      allow create: if isAuthed()
+        && request.auth.uid == favId.split('_')[0]
+        && request.resource.data.user_id == request.auth.uid
+        && request.resource.data.coach_id == favId.split('_')[1];
+      allow delete: if isAuthed() && request.auth.uid == favId.split('_')[0];
+    }
     // coach_arenas/{coachId_arenaId} — residência
     match /coach_arenas/{resId} {
       allow read: if true;

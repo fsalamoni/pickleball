@@ -11,6 +11,8 @@ import { useAuth } from '@/core/lib/FirebaseAuthContext';
 import { generateWeekSlots } from '../domain/availability.js';
 import { LESSON_FORMAT, LESSON_FORMAT_LABELS, isValidSlot } from '../domain/lesson.js';
 import { useCoachAvailability, useCoachBusySlots, useRequestLesson } from '../hooks/useLessons.js';
+import { useCoachResidencies } from '../hooks/useCoaches.js';
+import { useArenas } from '@/modules/arenas/hooks/useArenas';
 
 const WEEKDAY_SHORT = ['Dom', 'Seg', 'Ter', 'Qua', 'Qui', 'Sex', 'Sáb'];
 
@@ -35,6 +37,8 @@ export default function RequestLessonDialog({ coach, open, onOpenChange }) {
   const { user } = useAuth();
   const { data: availability } = useCoachAvailability(coachId);
   const { data: busy = [] } = useCoachBusySlots(coachId);
+  const { data: residencies = [] } = useCoachResidencies(coachId);
+  const { data: allArenas = [] } = useArenas();
   const request = useRequestLesson();
 
   const [mode, setMode] = useState('slots'); // 'slots' | 'custom'
@@ -42,6 +46,18 @@ export default function RequestLessonDialog({ coach, open, onOpenChange }) {
   const [custom, setCustom] = useState({ date: '', start: '08:00', end: '09:00' });
   const [format, setFormat] = useState(LESSON_FORMAT.PRIVATE);
   const [notes, setNotes] = useState('');
+  // Arenas parceiras: o aluno escolhe em qual arena quer a aula (item 3.1).
+  // Se o professor não tem residência ativa, fica em branco (o professor confirma local).
+  const [arenaId, setArenaId] = useState('');
+  const activeResidencies = useMemo(
+    () => (residencies || []).filter((r) => r.status !== 'paused'),
+    [residencies],
+  );
+  const arenaNameById = useMemo(() => {
+    const m = new Map();
+    for (const a of allArenas) m.set(a.id, a.name);
+    return m;
+  }, [allArenas]);
 
   const freeDays = useMemo(() => {
     if (!availability) return [];
@@ -62,6 +78,7 @@ export default function RequestLessonDialog({ coach, open, onOpenChange }) {
           slots: [slot],
           format,
           notes,
+          arena_id: arenaId || null,
           student_name: user.displayName || user.email || '',
           student_email: user.email || '',
         },
@@ -84,6 +101,25 @@ export default function RequestLessonDialog({ coach, open, onOpenChange }) {
         </DialogHeader>
 
         <div className="space-y-4">
+          {/* Arena (item 3.1): o aluno escolhe a arena parceira (se houver) */}
+          {activeResidencies.length > 0 && (
+            <div>
+              <Label className="text-xs">Onde quer a aula?</Label>
+              <select
+                value={arenaId}
+                onChange={(e) => setArenaId(e.target.value)}
+                className="mt-1 w-full rounded-md border border-input bg-background px-3 py-2 text-sm ring-offset-background focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring"
+              >
+                <option value="">Combinar com o professor (sem arena definida)</option>
+                {activeResidencies.map((r) => (
+                  <option key={r.id} value={r.arena_id}>{arenaNameById.get(r.arena_id) || r.arena_id}</option>
+                ))}
+              </select>
+              <p className="mt-1 text-[11px] text-gray-500">
+                O professor oferece aulas em uma ou mais arenas parceiras. Escolha a que prefere.
+              </p>
+            </div>
+          )}
           {/* Formato */}
           <div>
             <Label className="text-xs">Formato da aula</Label>
@@ -190,7 +226,11 @@ export default function RequestLessonDialog({ coach, open, onOpenChange }) {
 
           {slot && (
             <div className="rounded-lg bg-acid/10 p-3 text-sm text-ink">
-              Aula <strong>{LESSON_FORMAT_LABELS[format]}</strong> em <strong>{fmtDay(slot.date)}</strong>, {slot.start}–{slot.end}.
+              Aula <strong>{LESSON_FORMAT_LABELS[format]}</strong> em <strong>{fmtDay(slot.date)}</strong>, {slot.start}–{slot.end}
+              {arenaId && (() => {
+                const name = arenaNameById.get(arenaId);
+                return name ? <> em <strong>{name}</strong></> : null;
+              })()}.
               {coach?.hourly_rate != null && (
                 <span className="text-ink/70"> · Valor de referência: R$ {Number(coach.hourly_rate).toFixed(2)}/h (o professor confirma).</span>
               )}

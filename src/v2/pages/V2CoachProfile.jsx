@@ -7,13 +7,12 @@
 
 import React, { useState } from 'react';
 import { Link, useParams, Navigate } from 'react-router-dom';
-import { ArrowLeft, GraduationCap, MapPin, Award, MessageCircle, Plus, Trash2, Video, Phone, Mail, Store, Image as ImageIcon } from 'lucide-react';
-import { toast } from 'sonner';
+import { ArrowLeft, GraduationCap, MapPin, Award, MessageCircle, Video, Phone, Mail, Store, Image as ImageIcon } from 'lucide-react';
 import { FEATURE_FLAG } from '@/core/featureFlags';
 import { useFeatureFlag } from '@/core/lib/FeatureFlagsContext';
 import { useAuth } from '@/core/lib/FirebaseAuthContext';
-import { useCoach, useCoachResidencies, useAddCoachResidency, useRemoveCoachResidency } from '@/modules/coaches/hooks/useCoaches';
-import { useArena, useMyManagedArenas } from '@/modules/arenas/hooks/useArenas';
+import { useCoach, useCoachResidencies } from '@/modules/coaches/hooks/useCoaches';
+import { useArena } from '@/modules/arenas/hooks/useArenas';
 import { canAcceptStudents } from '@/modules/coaches/domain/coach';
 import { STUDENT_STATUS } from '@/modules/coaches/domain/student';
 import { visibleContent, sortContent, contentCategoryLabel, CONTENT_VISIBILITY } from '@/modules/coaches/domain/content';
@@ -25,11 +24,13 @@ import CoachClinicsPublic from '@/modules/coaches/components/CoachClinicsPublic'
 import { PhotoLightbox } from '@/components/ui/photo-lightbox';
 import LinkedClubsSection from '@/modules/clubs/components/LinkedClubsSection';
 import RequestLessonDialog from '@/modules/coaches/components/RequestLessonDialog';
+import { V2FavoriteCoachButton, V2CoachShareButton } from '@/v2/components/coach/V2CoachActions';
+import V2CoachAvailabilityCalendar from '@/v2/components/coach/V2CoachAvailabilityCalendar';
 import {
   V2Badge, V2Button, V2EmptyState, V2Surface, V2Skeleton,
 } from '@/v2/ui/primitives';
 
-function ResidencyCard({ residency, canRemove, onRemove }) {
+function ResidencyCard({ residency }) {
   const { data: arena } = useArena(residency.arena_id);
   if (!arena) return null;
   return (
@@ -48,66 +49,9 @@ function ResidencyCard({ residency, canRemove, onRemove }) {
         </div>
         <div className="flex flex-col items-end gap-1">
           {residency.status === 'paused' ? <V2Badge tone="amber">Pausado</V2Badge> : <V2Badge tone="green">Ativo</V2Badge>}
-          {canRemove && (
-            <button onClick={onRemove} className="text-red-500 hover:text-red-700" aria-label="Remover residência">
-              <Trash2 className="h-3.5 w-3.5" />
-            </button>
-          )}
         </div>
       </div>
     </div>
-  );
-}
-
-function AddResidencyForm({ coachId, onClose }) {
-  const { data: myArenas = [] } = useMyManagedArenas();
-  const [arenaId, setArenaId] = useState('');
-  const [notes, setNotes] = useState('');
-  const add = useAddCoachResidency();
-
-  const handleSubmit = async (e) => {
-    e.preventDefault();
-    if (!arenaId) {
-      toast.error('Selecione uma arena.');
-      return;
-    }
-    try {
-      await add.mutateAsync({ coach_id: coachId, arena_id: arenaId, notes });
-      toast.success('Residência adicionada!');
-      onClose();
-    } catch (err) {
-      toast.error(err.message);
-    }
-  };
-
-  if (myArenas.length === 0) {
-    return (
-      <V2Surface className="border-amber-200 bg-amber-50/40">
-        <p className="text-sm text-amber-800">Você precisa gerenciar pelo menos uma arena para adicionar residência.</p>
-      </V2Surface>
-    );
-  }
-
-  return (
-    <V2Surface className="border-green-200 bg-green-50/40">
-      <h4 className="font-display text-sm font-bold text-ink">Adicionar residência</h4>
-      <form onSubmit={handleSubmit} className="mt-2 space-y-2">
-        <select value={arenaId} onChange={(e) => setArenaId(e.target.value)} className="w-full rounded-2xl border border-gray-200 bg-paper px-3 py-2 text-sm" required>
-          <option value="">Selecione uma arena...</option>
-          {myArenas.map((a) => (
-            <option key={a.id} value={a.id}>{a.name}{a.city ? ` (${a.city})` : ''}</option>
-          ))}
-        </select>
-        <input type="text" value={notes} onChange={(e) => setNotes(e.target.value)} placeholder="Notas (opcional)" maxLength={500}
-          className="w-full rounded-2xl border border-gray-200 bg-paper px-3 py-2 text-sm" />
-        <div className="flex justify-end gap-2">
-          <V2Button type="button" variant="ghost" size="sm" onClick={onClose}>Cancelar</V2Button>
-          <V2Button type="submit" size="sm" disabled={add.isPending}>
-            {add.isPending ? 'Adicionando…' : 'Adicionar'}
-          </V2Button>
-        </div>
-      </form>
-    </V2Surface>
   );
 }
 
@@ -116,15 +60,12 @@ export default function V2CoachProfile() {
   const { user, isAuthenticated } = useAuth();
   const { data: coach, isLoading } = useCoach(coachId);
   const { data: residencies = [] } = useCoachResidencies(coachId);
-  const remove = useRemoveCoachResidency();
-  const [adding, setAdding] = useState(false);
   const [requesting, setRequesting] = useState(false);
   const lessonsOn = useFeatureFlag(FEATURE_FLAG.COACH_LESSONS);
   const linkedClubsOn = useFeatureFlag(FEATURE_FLAG.LINKED_CLUBS);
   const clinicsOn = useFeatureFlag(FEATURE_FLAG.COACH_CLINICS);
 
   const isOwn = user?.uid === coachId;
-  const isPlatformAdmin = user?.isPlatformAdmin;
   const canRequestLesson = lessonsOn && !isOwn && coach && canAcceptStudents(coach);
 
   // Relação do visitante com o professor (para conteúdo só-alunos).
@@ -209,19 +150,16 @@ export default function V2CoachProfile() {
                   <Mail className="h-3.5 w-3.5" /> E-mail
                 </a>
               )}
-              {isOwn && lessonsOn && (
-                <Link to="/aulas" className="text-xs font-bold text-ink hover:underline">
-                  Minha agenda de aulas →
-                </Link>
-              )}
-              {isOwn && (
-                <Link to="/coaches" className="text-xs font-bold text-ink hover:underline">
-                  Editar meu perfil →
-                </Link>
-              )}
+              {/*
+                Página pública: NÃO mostrar botões de gestão (item 3.2).
+                Gestão vai pro Painel do Professor (/aulas). Mantemos só
+                'Ver perfil de atleta' (navegação, não gestão) + Like + Share.
+              */}
               <Link to={`/atleta/${coachId}`} className="text-xs font-bold text-ink hover:underline">
                 Ver perfil de atleta →
               </Link>
+              <V2FavoriteCoachButton coach={coach} />
+              <V2CoachShareButton coach={coach} />
             </div>
           </div>
         </div>
@@ -270,26 +208,21 @@ export default function V2CoachProfile() {
         </V2Surface>
       )}
 
-      {/* Residências */}
+      {/* Calendário público de disponibilidade (item 3.1) */}
+      <V2CoachAvailabilityCalendar
+        coach={coach}
+        onRequestLesson={() => setRequesting(true)}
+      />
+
+      {/* Residências — apenas visualização pública (item 3.2) */}
       <V2Surface>
-        <div className="flex items-center justify-between">
-          <h3 className="font-display text-base font-bold text-ink">Arenas parceiras</h3>
-          {(isOwn || isPlatformAdmin) && !adding && (
-            <V2Button size="sm" onClick={() => setAdding(true)}><Plus className="h-4 w-4" /> Adicionar</V2Button>
-          )}
-        </div>
-        {adding && <div className="mt-3"><AddResidencyForm coachId={coachId} onClose={() => setAdding(false)} /></div>}
+        <h3 className="font-display text-base font-bold text-ink">Arenas parceiras</h3>
         <div className="mt-3 space-y-2">
           {residencies.length === 0 ? (
             <p className="text-sm text-gray-500">Nenhuma arena vinculada ainda.</p>
           ) : (
             residencies.map((r) => (
-              <ResidencyCard
-                key={r.id}
-                residency={r}
-                canRemove={isOwn || isPlatformAdmin}
-                onRemove={() => remove.mutate({ coachId, arenaId: r.arena_id })}
-              />
+              <ResidencyCard key={r.id} residency={r} />
             ))
           )}
         </div>
@@ -298,19 +231,12 @@ export default function V2CoachProfile() {
       {/* Clínicas e workshops abertos (flag coach_clinics) */}
       {clinicsOn && <CoachClinicsPublic coachId={coachId} />}
 
-      {/* Biblioteca de conteúdo (PRO-18) */}
-      {lessonsOn && (libraryItems.length > 0 || isOwn) && (
+      {/* Biblioteca de conteúdo (PRO-18) — só visualização pública (item 3.2) */}
+      {lessonsOn && libraryItems.length > 0 && (
         <V2Surface>
-          <div className="flex items-center justify-between">
-            <h3 className="font-display text-base font-bold text-ink">Biblioteca de conteúdo</h3>
-            {isOwn && (
-              <Link to="/aulas" className="text-xs font-bold text-ink hover:underline">Gerenciar →</Link>
-            )}
-          </div>
+          <h3 className="font-display text-base font-bold text-ink">Biblioteca de conteúdo</h3>
           {libraryItems.length === 0 ? (
-            <p className="mt-3 text-sm text-gray-500">
-              {isOwn ? 'Publique drills e dicas na sua agenda para aparecerem aqui.' : 'Nenhum conteúdo publicado ainda.'}
-            </p>
+            <p className="mt-3 text-sm text-gray-500">Nenhum conteúdo publicado ainda.</p>
           ) : (
             <div className="mt-3 space-y-2">
               {libraryItems.map((item) => (

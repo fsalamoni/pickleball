@@ -26,7 +26,10 @@ import { syncAthleteProfile } from '@/modules/athletes/services/athleteService';
 export const COACH_COLLECTIONS = {
   coaches: 'coaches',
   residencies: 'coach_arenas',
+  favorites: 'coach_favorites',
 };
+
+const COACH_FAVORITE_ID = (uid, coachId) => `${uid}_${coachId}`;
 
 function residencyId(coachId, arenaId) { return `${coachId}_${arenaId}`; }
 function str(v) { return String(v ?? '').trim(); }
@@ -182,6 +185,38 @@ export async function listCoaches({ limit: lim = 100, region, modality, activeOn
   }
   list.sort((a, b) => String(a.display_name || '').localeCompare(String(b.display_name || '')));
   return list.slice(0, lim);
+}
+
+/* ----------------------------- Favorites -------------------------- */
+
+/**
+ * Lista os IDs dos professores favoritos de um usuário. Query simples
+ * (sem orderBy) para não depender de índice composto. Ordena em memória.
+ */
+export async function listMyFavoriteCoaches(userId) {
+  if (!db || !userId) return [];
+  const snap = await getDocs(query(collection(db, COACH_COLLECTIONS.favorites), where('user_id', '==', userId)));
+  return snap.docs.map((d) => d.data().coach_id).filter(Boolean);
+}
+
+/** Adiciona professor aos favoritos. */
+export async function favoriteCoach(user, coach) {
+  if (!user?.uid) throw new Error('Usuário não autenticado.');
+  if (!coach?.id) throw new Error('Professor inválido.');
+  await setDoc(doc(db, COACH_COLLECTIONS.favorites, COACH_FAVORITE_ID(user.uid, coach.id)), {
+    id: COACH_FAVORITE_ID(user.uid, coach.id),
+    user_id: user.uid,
+    coach_id: coach.id,
+    coach_name: str(coach.display_name || coach.name),
+    created_at: serverTimestamp(),
+    created_at_ms: Date.now(),
+  });
+}
+
+/** Remove professor dos favoritos. */
+export async function unfavoriteCoach(userId, coachId) {
+  if (!userId || !coachId) return;
+  await deleteDoc(doc(db, COACH_COLLECTIONS.favorites, COACH_FAVORITE_ID(userId, coachId)));
 }
 
 /* ----------------------------- Residencies ------------------------- */

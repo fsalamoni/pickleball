@@ -11,6 +11,7 @@ import {
   listCoachResidencies, listArenaCoaches,
   addCoachResidency, removeCoachResidency, updateCoachResidency,
   acceptCoachResidency, declineCoachResidency,
+  listMyFavoriteCoaches, favoriteCoach, unfavoriteCoach,
 } from '../services/coachService';
 import { filterCoaches, canAcceptStudents, coachTenureDays } from '../domain/coach.js';
 
@@ -134,5 +135,29 @@ export function useUpdateCoachResidency() {
       qc.invalidateQueries({ queryKey: ['coaches', 'residencies', vars.coachId] });
       qc.invalidateQueries({ queryKey: ['coaches', 'arena', vars.arenaId] });
     },
+  });
+}
+
+/* ----------------------- Favorites (Wave B) ------------------------ */
+
+export function useMyFavoriteCoaches() {
+  const { user } = useAuth();
+  return useQuery({
+    queryKey: ['coach-favorites', user?.uid],
+    queryFn: () => listMyFavoriteCoaches(user?.uid),
+    enabled: !!user?.uid,
+    staleTime: 30_000,
+  });
+}
+
+export function useToggleFavoriteCoach() {
+  const { user } = useAuth();
+  const qc = useQueryClient();
+  return useMutation({
+    mutationFn: async ({ coach, isFavorite }) => {
+      if (isFavorite) return unfavoriteCoach(user.uid, coach.id);
+      return favoriteCoach(user, coach);
+    },
+    onSuccess: () => qc.invalidateQueries({ queryKey: ['coach-favorites'] }),
   });
 }

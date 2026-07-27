@@ -20,7 +20,7 @@ import { formatArenaAddress, arenaContactLinks } from '@/modules/arenas/domain/a
 import { formatPrice } from '@/modules/arenas/domain/pricing';
 import { BOOKING_STATUS, WEEKDAY_SHORT } from '@/modules/arenas/domain/constants';
 import { bookingSlots, sortSlots } from '@/modules/arenas/domain/booking';
-import { useArena, useMyManagedArenas } from '@/modules/arenas/hooks/useArenas';
+import { useArena, useMyManagedArenas, useArenaCourts } from '@/modules/arenas/hooks/useArenas';
 import { useArenaBookings } from '@/modules/arenas/hooks/useBookings';
 import { useCanArenaUseModule } from '@/modules/arenas/hooks/useArenaV3';
 import { useArenaTournaments } from '@/modules/tournament/hooks/useTournament';
@@ -257,20 +257,40 @@ function V2ArenaDetailContent({ arenaId, user, arena, managed, bookings, isLoadi
         </V2Surface>
       )}
 
-      {(arena.base_price != null || (arena.price_rules || []).length > 0) && (
+      {(arena.base_price != null || (arena.price_rules || []).length > 0 || (arena.price_overrides || []).length > 0) && (
         <V2Surface className="mt-6">
           <h3 className="font-display text-base font-bold text-ink">Preços</h3>
-          {arena.base_price != null && <p className="mt-2 text-sm text-gray-500">Preço base: <strong className="text-ink">{formatPrice(arena.base_price)}</strong></p>}
-          <div className="mt-3 space-y-2">
-            {(arena.price_rules || []).map((r) => (
-              <div key={r.id} className="flex items-center justify-between rounded-2xl border border-gray-100 bg-paper px-4 py-2.5 text-sm">
-                <span className="text-gray-500">
-                  {(r.weekdays || []).map((d) => WEEKDAY_SHORT[d]).join(', ')} · {r.start}–{r.end}{r.label ? ` · ${r.label}` : ''}
-                </span>
-                <strong className="text-ink">{formatPrice(r.price)}</strong>
+          {arena.base_price != null && (
+            <p className="mt-2 text-sm text-gray-500">Preço base: <strong className="text-ink">{formatPrice(arena.base_price)}</strong></p>
+          )}
+          {(arena.price_rules || []).length > 0 && (
+            <div className="mt-3 space-y-2">
+              {(arena.price_rules || []).map((r) => (
+                <div key={r.id} className="flex items-center justify-between rounded-2xl border border-gray-100 bg-paper px-4 py-2.5 text-sm">
+                  <span className="text-gray-500">
+                    {(r.weekdays || []).map((d) => WEEKDAY_SHORT[d]).join(', ')} · {r.start}–{r.end}{r.label ? ` · ${r.label}` : ''}
+                  </span>
+                  <strong className="text-ink">{formatPrice(r.price)}</strong>
+                </div>
+              ))}
+            </div>
+          )}
+          {(arena.price_overrides || []).length > 0 && (
+            <div className="mt-3">
+              <h4 className="text-xs font-bold uppercase tracking-widest text-gray-400">Datas especiais</h4>
+              <div className="mt-2 space-y-2">
+                {(arena.price_overrides || []).map((o) => (
+                  <div key={o.id} className="flex items-center justify-between rounded-2xl border border-amber-100 bg-amber-50/40 px-4 py-2.5 text-sm">
+                    <span className="text-gray-700">
+                      {o.date ? `${o.date}${o.label ? ` · ${o.label}` : ''}` : o.label || 'Data especial'}
+                      {o.note ? <span className="ml-1 text-xs text-gray-500">— {o.note}</span> : null}
+                    </span>
+                    <strong className="text-ink">{formatPrice(o.price)}</strong>
+                  </div>
+                ))}
               </div>
-            ))}
-          </div>
+            </div>
+          )}
           <p className="mt-3 text-xs text-gray-400">Valores de referência; o valor final é confirmado pela arena na reserva.</p>
         </V2Surface>
       )}
@@ -295,6 +315,9 @@ function V2ArenaDetailContent({ arenaId, user, arena, managed, bookings, isLoadi
       </div>
 
       {bookingOpen && <BookingRequestDialog arena={arena} open={bookingOpen} onOpenChange={setBookingOpen} />}
+
+      {/* Quadras (item 2 — preço e regras completos) */}
+      <ArenaCourtsSection arenaId={arenaId} />
     </div>
   );
 }
@@ -438,6 +461,38 @@ function V2ArenaPaymentSection({ arena }) {
           <p className="mt-1 whitespace-pre-line text-sm text-amber-900">{payment.instructions}</p>
         </div>
       )}
+    </V2Surface>
+  );
+}
+
+function ArenaCourtsSection({ arenaId }) {
+  const { data: courts = [], isLoading } = useArenaCourts(arenaId);
+  if (isLoading) return null;
+  if (courts.length === 0) return null;
+  const COURT_TYPE_LABEL = {
+    indoor: 'Coberta',
+    outdoor: 'Descoberta',
+    covered: 'Semi-coberta',
+  };
+  return (
+    <V2Surface className="mt-6">
+      <h3 className="font-display text-base font-bold text-ink">Quadras</h3>
+      <p className="mt-1 text-sm text-gray-500">{courts.length} quadra(s) disponíve{(courts.length === 1 ? 'l' : 'is')}.</p>
+      <ul className="mt-3 space-y-2">
+        {courts.map((c) => (
+          <li key={c.id} className="flex items-start justify-between gap-2 rounded-2xl border border-gray-100 bg-paper px-4 py-2.5 text-sm">
+            <div>
+              <p className="font-bold text-ink">{c.name}</p>
+              <p className="text-xs text-gray-500">
+                {COURT_TYPE_LABEL[c.court_type] || c.court_type}
+                {c.surface_type ? ` · ${c.surface_type}` : ''}
+              </p>
+              {c.notes && <p className="mt-1 text-xs text-gray-500">{c.notes}</p>}
+            </div>
+            {c.is_active === false && <V2Badge tone="neutral">Inativa</V2Badge>}
+          </li>
+        ))}
+      </ul>
     </V2Surface>
   );
 }
