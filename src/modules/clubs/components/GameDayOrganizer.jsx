@@ -31,10 +31,13 @@ import {
   useReplaceEventGames,
   useClearEventGames,
   useClubMembers,
+  useMyMembership,
 } from '@/modules/clubs/hooks/useClubs';
+import { useAuth } from '@/core/lib/FirebaseAuthContext';
 import { useAthletes } from '@/modules/athletes/hooks/useAthletes';
 import { PARTICIPANT_SOURCE, INVITE_STATUS, GAME_DAY_LIMITS } from '@/modules/clubs/domain/constants';
 import { generateGameDayGames, suggestRounds } from '@/modules/clubs/domain/gameDayDraw';
+import PublishToRankingToggle from '@/modules/clubs/components/PublishToRankingToggle';
 
 const SOURCE_LABEL = {
   [PARTICIPANT_SOURCE.CONFIRMED]: 'Confirmou no dia',
@@ -45,9 +48,20 @@ const SOURCE_LABEL = {
 /**
  * Organização de jogos de UM dia de jogo (date_id). Tem participantes e jogos
  * próprios, escopados àquela data.
+ *
+ * Inclui o `PublishToRankingToggle` (Wave C) na mesma seção da
+ * organização de jogos — abaixo da lista de jogos do dia, dentro do
+ * mesmo bloco visual. O criador do evento OU admins do clube podem
+ * LIGAR a chave para lançar os resultados decididos no ranking.
  */
 export default function GameDayOrganizer({ event, clubId, dateId }) {
   const eventId = event.id;
+  const { user } = useAuth();
+  const { data: membership } = useMyMembership(clubId);
+  const isCreator = Boolean(user?.uid && event?.created_by === user.uid);
+  const isAdmin = membership?.role === 'admin';
+  const canManage = isCreator || isAdmin;
+
   const { data: allParticipants = [], isLoading } = useEventParticipants(eventId);
   const participants = useMemo(
     () => allParticipants.filter((p) => (p.date_id || null) === (dateId || null)),
@@ -58,6 +72,13 @@ export default function GameDayOrganizer({ event, clubId, dateId }) {
     <div className="space-y-5">
       <ParticipantsSection eventId={eventId} clubId={clubId} dateId={dateId} participants={participants} isLoading={isLoading} />
       <GamesSection eventId={eventId} dateId={dateId} participants={participants} />
+      <PublishToRankingToggle
+        event={event}
+        clubId={clubId}
+        dateId={dateId}
+        canManage={canManage}
+        participants={participants}
+      />
     </div>
   );
 }
