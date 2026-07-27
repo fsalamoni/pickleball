@@ -8,7 +8,7 @@
  *  - Botão "Sou professor" para criar/editar próprio perfil
  */
 
-import React, { useState, useMemo } from 'react';
+import React, { useState, useEffect, useRef } from 'react';
 import { Link, Navigate } from 'react-router-dom';
 import { toast } from 'sonner';
 import { GraduationCap, MapPin, Plus, Edit3, Star, Award, Search } from 'lucide-react';
@@ -143,10 +143,21 @@ function CoachCard({ coach }) {
 }
 
 export default function V2Coaches() {
-  const { isAuthenticated, user } = useAuth();
+  const { isAuthenticated, user, userProfile } = useAuth();
   const [region, setRegion] = useState('');
   const [modality, setModality] = useState('');
-  const { data: coaches = [], isLoading } = useCoaches({ region, modality, acceptingOnly: true });
+  // Regra: o filtro de cidade/estado começa com a cidade do usuário logado.
+  // Latcheado uma vez — se o usuário limpar o campo, mostra todos.
+  const cityDefaulted = useRef(false);
+  useEffect(() => {
+    if (!cityDefaulted.current && userProfile?.city) {
+      setRegion(userProfile.city);
+      cityDefaulted.current = true;
+    }
+  }, [userProfile?.city]);
+  // Mostra TODOS os professores ativos (não só os "aceitando"); a busca é
+  // automática (reativa a region/modality).
+  const { data: coaches = [], isLoading } = useCoaches({ region, modality, acceptingOnly: false });
   const { data: myProfile } = useCoach(user?.uid);
   const [editing, setEditing] = useState(false);
 
@@ -187,7 +198,12 @@ export default function V2Coaches() {
         <V2EmptyState
           icon={GraduationCap}
           title="Nenhum professor encontrado"
-          description="Ajuste os filtros ou volte mais tarde."
+          description={(region || modality)
+            ? 'Nenhum professor com esses filtros. Limpe a cidade/modalidade para ver todos os professores da plataforma.'
+            : 'Ainda não há professores cadastrados. Cadastre-se como professor para ser o primeiro.'}
+          action={(region || modality)
+            ? <V2Button size="sm" variant="ghost" onClick={() => { setRegion(''); setModality(''); }}>Limpar filtros</V2Button>
+            : undefined}
         />
       ) : (
         <div className="space-y-3">

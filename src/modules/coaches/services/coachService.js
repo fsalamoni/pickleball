@@ -159,25 +159,29 @@ export async function getCoach(coachId) {
   return { id: snap.id, ...snap.data() };
 }
 
-/** Lista coaches (com filtros opcionais). */
+/**
+ * Lista coaches (com filtros opcionais). Faz uma busca simples e aplica os
+ * filtros (active/accepting/region/modality) e a ordenação em memória, para
+ * NÃO depender de índice composto (active+accepting+display_name) — a ausência
+ * do índice fazia a query falhar e a lista vir vazia (professores não
+ * apareciam na busca).
+ */
 export async function listCoaches({ limit: lim = 100, region, modality, activeOnly = true, acceptingOnly = true } = {}) {
-  const filters = [];
-  if (activeOnly) filters.push(where('active', '==', true));
-  if (acceptingOnly) filters.push(where('accepting_students', '==', true));
-  filters.push(limit(lim));
-  const q = query(collection(db, COACH_COLLECTIONS.coaches), ...filters, orderBy('display_name', 'asc'));
-  const snap = await getDocs(q);
-  const list = snap.docs.map((d) => ({ id: d.id, ...d.data() }));
-  // filtros client-side (region/modality) pq array-contains-any não combina com outras restrições
+  if (!db) return [];
+  const snap = await getDocs(query(collection(db, COACH_COLLECTIONS.coaches), limit(500)));
+  let list = snap.docs.map((d) => ({ id: d.id, ...d.data() }));
+  if (activeOnly) list = list.filter((c) => c.active !== false);
+  if (acceptingOnly) list = list.filter((c) => c.accepting_students !== false);
   if (region) {
     const r = region.toLowerCase();
-    return list.filter((c) => (c.regions || []).some((x) => x.toLowerCase().includes(r)));
+    list = list.filter((c) => (c.regions || []).some((x) => String(x).toLowerCase().includes(r)));
   }
   if (modality) {
     const m = modality.toLowerCase();
-    return list.filter((c) => (c.modalities || []).some((x) => x.toLowerCase().includes(m)));
+    list = list.filter((c) => (c.modalities || []).some((x) => String(x).toLowerCase().includes(m)));
   }
-  return list;
+  list.sort((a, b) => String(a.display_name || '').localeCompare(String(b.display_name || '')));
+  return list.slice(0, lim);
 }
 
 /* ----------------------------- Residencies ------------------------- */
