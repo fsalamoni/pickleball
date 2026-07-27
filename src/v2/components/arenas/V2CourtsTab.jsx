@@ -283,21 +283,15 @@ export default function V2CourtsTab({ arena }) {
                   >
                     <Pencil className="h-4 w-4" />
                   </button>
-                  <ConfirmDialog
-                    title={`Excluir "${c.name}"?`}
-                    description="A quadra será removida permanentemente. Reservas existentes manterão referência histórica."
-                    confirmLabel="Excluir"
-                    onConfirm={handleDelete}
-                    trigger={
-                      <button
-                        type="button"
-                        className="flex h-9 w-9 items-center justify-center rounded-full text-red-500 hover:bg-red-50"
-                        aria-label="Excluir quadra"
-                      >
-                        <Trash2 className="h-4 w-4" />
-                      </button>
-                    }
-                  />
+                  <button
+                    type="button"
+                    onClick={() => setDeleting(c)}
+                    className="flex h-9 w-9 items-center justify-center rounded-full text-red-500 hover:bg-red-50"
+                    aria-label="Excluir quadra"
+                    title="Excluir quadra"
+                  >
+                    <Trash2 className="h-4 w-4" />
+                  </button>
                 </div>
               </li>
             );

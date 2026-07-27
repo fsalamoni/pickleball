@@ -31,12 +31,12 @@ function displayName(u, p) {
 
 export async function listArenaProducts(arenaId, { onlyActive = true, lim = 200 } = {}) {
   if (!db || !arenaId) return [];
-  const c = [where('arena_id', '==', arenaId)];
-  if (onlyActive) c.push(where('active', '==', true));
-  c.push(orderBy('name', 'asc'));
-  c.push(limit(lim));
-  const snap = await getDocs(query(collection(db, COL_PRODUCTS), ...c));
-  return snap.docs.map((d) => ({ id: d.id, ...d.data() }));
+  // Query simples por arena_id (sem orderBy → sem índice composto); filtra e
+  // ordena em memória para não falhar sem o índice.
+  const snap = await getDocs(query(collection(db, COL_PRODUCTS), where('arena_id', '==', arenaId), limit(lim)));
+  let list = snap.docs.map((d) => ({ id: d.id, ...d.data() }));
+  if (onlyActive) list = list.filter((p) => p.active !== false);
+  return list.sort((a, b) => String(a.name || '').localeCompare(String(b.name || '')));
 }
 
 export async function createArenaProduct(arenaId, input, actor) {
