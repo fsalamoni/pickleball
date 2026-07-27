@@ -117,12 +117,12 @@ function CoachCard({ coach }) {
           <div className="flex-1">
             <div className="flex items-center gap-2">
               <h3 className="font-display text-base font-bold text-ink">{coach.display_name}</h3>
-              {coach.accepting_students && <V2Badge tone="emerald">Aceitando</V2Badge>}
+              {coach.accepting_students && <V2Badge tone="green">Aceitando</V2Badge>}
             </div>
             {coach.bio && <p className="mt-1 line-clamp-2 text-sm text-gray-600">{coach.bio}</p>}
             <div className="mt-2 flex flex-wrap gap-1.5">
               {(coach.modalities || []).map((m) => (
-                <V2Badge key={m} tone="sky">{m}</V2Badge>
+                <V2Badge key={m} tone="blue">{m}</V2Badge>
               ))}
             </div>
             {coach.regions?.length > 0 && (
