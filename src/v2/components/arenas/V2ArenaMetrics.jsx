@@ -26,7 +26,7 @@ import { calculateArenaMetrics, formatPeriodLabel, nowYearMonth } from '@/module
 import { useArenaBookings } from '@/modules/arenas/hooks/useBookings';
 import { useArenaSales } from '@/modules/arenas/hooks/useArenaV3';
 import { useArenaReviews } from '@/modules/arenas/hooks/useArenas';
-import { useArenaCourtSchedules, useArenaCourts } from '@/modules/arenas/hooks/useArenas';
+import { useArenaCourtSchedules, useArenaCourts, useInventoryEntries, useInventoryExits } from '@/modules/arenas/hooks/useArenas';
 import { V2Badge, V2Button, V2Surface } from '@/v2/ui/primitives';
 import { formatPrice } from '@/modules/arenas/domain/pricing';
 
@@ -99,6 +99,25 @@ export default function V2ArenaMetrics({ arena }) {
     [sales, cursor.year, cursor.month],
   );
 
+  // Mercado / estoque do mês (contabiliza no desempenho): receita das saídas
+  // do tipo "venda" e o investido nas entradas do mês.
+  const { data: invEntries = [] } = useInventoryEntries(arena.id);
+  const { data: invExits = [] } = useInventoryExits(arena.id);
+  const market = useMemo(() => {
+    const inMonth = (d) => String(d || '').startsWith(monthPrefix);
+    const salesExits = invExits.filter((x) => inMonth(x.date) && (x.exit_type || 'sale') === 'sale');
+    const revenue = salesExits.reduce((s, x) => s + Number(x.total_price || 0), 0);
+    const units = salesExits.reduce((s, x) => s + Number(x.quantity || 0), 0);
+    const invested = invEntries.filter((e) => inMonth(e.date)).reduce((s, e) => s + Number(e.total_cost || 0), 0);
+    return {
+      revenue: Math.round(revenue * 100) / 100,
+      invested: Math.round(invested * 100) / 100,
+      net: Math.round((revenue - invested) * 100) / 100,
+      units,
+      count: salesExits.length,
+    };
+  }, [invExits, invEntries, monthPrefix]);
+
   const metrics = useMemo(() => calculateArenaMetrics({
     bookings: bookingsInMonth,
     sales: salesInMonth,
@@ -134,11 +153,11 @@ export default function V2ArenaMetrics({ arena }) {
       {/* Stats principais */}
       <div className="grid grid-cols-2 gap-3 md:grid-cols-4">
         <Stat
-          label="Receita confirmada"
-          value={formatPrice(metrics.revenue.confirmed)}
+          label="Receita total (mês)"
+          value={formatPrice(metrics.revenue.confirmed + metrics.revenue_by_source.sales + market.revenue)}
           tone="success"
           icon={TrendingUp}
-          sub={metrics.revenue.pending > 0 ? `+ ${formatPrice(metrics.revenue.pending)} pendente` : null}
+          sub={`Reservas + PDV + Mercado${metrics.revenue.pending > 0 ? ` · +${formatPrice(metrics.revenue.pending)} pendente` : ''}`}
         />
         <Stat
           label="Reservas"
@@ -163,7 +182,7 @@ export default function V2ArenaMetrics({ arena }) {
       </div>
 
       {/* Receita por origem */}
-      <div className="grid grid-cols-1 gap-3 md:grid-cols-2">
+      <div className="grid grid-cols-1 gap-3 md:grid-cols-3">
         <V2Surface className="p-4">
           <div className="flex items-center gap-2 text-sm font-bold text-ink">
             <Calendar className="h-4 w-4 text-gray-500" />
@@ -173,7 +192,7 @@ export default function V2ArenaMetrics({ arena }) {
             {formatPrice(metrics.revenue_by_source.bookings)}
           </div>
           <div className="mt-1 text-xs text-gray-500">
-            Soma de agreed_price em bookings CONFIRMED/COMPLETED
+            Reservas confirmadas/concluídas no mês
           </div>
         </V2Surface>
         <V2Surface className="p-4">
@@ -186,6 +205,19 @@ export default function V2ArenaMetrics({ arena }) {
           </div>
           <div className="mt-1 text-xs text-gray-500">
             {metrics.sales.paid} de {metrics.sales.total} vendas pagas
+          </div>
+        </V2Surface>
+        <V2Surface className="p-4">
+          <div className="flex items-center gap-2 text-sm font-bold text-ink">
+            <ShoppingBag className="h-4 w-4 text-gray-500" />
+            Mercado / estoque
+          </div>
+          <div className="mt-2 font-display text-2xl font-bold text-ink">
+            {formatPrice(market.revenue)}
+          </div>
+          <div className="mt-1 text-xs text-gray-500">
+            {market.count} venda(s) · {market.units} un · investido {formatPrice(market.invested)}
+            {' · '}<span className={market.net >= 0 ? 'font-bold text-green-700' : 'font-bold text-red-600'}>líquido {formatPrice(market.net)}</span>
           </div>
         </V2Surface>
       </div>

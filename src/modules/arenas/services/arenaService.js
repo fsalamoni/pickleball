@@ -636,11 +636,12 @@ export async function createInventoryProduct(arenaId, input, actor) {
 
 export async function listInventoryProducts(arenaId, { activeOnly = false } = {}) {
   if (!arenaId || !db) return [];
-  const filters = [where('arena_id', '==', arenaId)];
-  if (activeOnly) filters.push(where('active', '==', true));
-  filters.push(orderBy('name', 'asc'));
-  const snap = await getDocs(query(collection(db, COL.inventory_products), ...filters));
-  return snap.docs.map((d) => ({ id: d.id, ...d.data() }));
+  // Sem orderBy no Firestore: evita índice composto (arena_id + name/active) que
+  // fazia a query falhar e o catálogo aparecer vazio. Ordena em memória.
+  const snap = await getDocs(query(collection(db, COL.inventory_products), where('arena_id', '==', arenaId)));
+  let list = snap.docs.map((d) => ({ id: d.id, ...d.data() }));
+  if (activeOnly) list = list.filter((p) => p.active !== false);
+  return list.sort((a, b) => String(a.name || '').localeCompare(String(b.name || '')));
 }
 
 export async function updateInventoryProduct(productId, updates, actor) {
@@ -671,13 +672,14 @@ export async function addInventoryEntry(arenaId, input, actor) {
 
 export async function listInventoryEntries(arenaId, { from, to, productId } = {}) {
   if (!arenaId || !db) return [];
-  const filters = [where('arena_id', '==', arenaId)];
-  if (from) filters.push(where('date', '>=', from));
-  if (to) filters.push(where('date', '<=', to));
-  if (productId) filters.push(where('product_id', '==', productId));
-  filters.push(orderBy('date', 'desc'));
-  const snap = await getDocs(query(collection(db, COL.inventory_entries), ...filters));
-  return snap.docs.map((d) => ({ id: d.id, ...d.data() }));
+  // Query simples por arena_id (sem orderBy/ranges → sem índice composto);
+  // filtros de período/produto e ordenação aplicados em memória.
+  const snap = await getDocs(query(collection(db, COL.inventory_entries), where('arena_id', '==', arenaId)));
+  let list = snap.docs.map((d) => ({ id: d.id, ...d.data() }));
+  if (from) list = list.filter((e) => String(e.date || '') >= from);
+  if (to) list = list.filter((e) => String(e.date || '') <= to);
+  if (productId) list = list.filter((e) => e.product_id === productId);
+  return list.sort((a, b) => String(b.date || '').localeCompare(String(a.date || '')));
 }
 
 export async function addInventoryExit(arenaId, input, actor) {
@@ -695,11 +697,10 @@ export async function addInventoryExit(arenaId, input, actor) {
 
 export async function listInventoryExits(arenaId, { from, to, productId } = {}) {
   if (!arenaId || !db) return [];
-  const filters = [where('arena_id', '==', arenaId)];
-  if (from) filters.push(where('date', '>=', from));
-  if (to) filters.push(where('date', '<=', to));
-  if (productId) filters.push(where('product_id', '==', productId));
-  filters.push(orderBy('date', 'desc'));
-  const snap = await getDocs(query(collection(db, COL.inventory_exits), ...filters));
-  return snap.docs.map((d) => ({ id: d.id, ...d.data() }));
+  const snap = await getDocs(query(collection(db, COL.inventory_exits), where('arena_id', '==', arenaId)));
+  let list = snap.docs.map((d) => ({ id: d.id, ...d.data() }));
+  if (from) list = list.filter((x) => String(x.date || '') >= from);
+  if (to) list = list.filter((x) => String(x.date || '') <= to);
+  if (productId) list = list.filter((x) => x.product_id === productId);
+  return list.sort((a, b) => String(b.date || '').localeCompare(String(a.date || '')));
 }

@@ -14,7 +14,7 @@
 
 import {
   addDoc, collection, deleteDoc, doc, getDoc, getDocs,
-  limit, orderBy, query, serverTimestamp, setDoc, updateDoc, where,
+  limit, query, serverTimestamp, setDoc, updateDoc, where,
 } from 'firebase/firestore';
 import { db } from '@/core/config/firebase';
 import { logger } from '@/core/lib/logger';
@@ -301,24 +301,30 @@ async function isResidencyAuthorized(coachId, arenaId, actor) {
   return false;
 }
 
+/** Ordena residências por data (mais recentes primeiro) em memória. */
+function sortResidenciesByDate(list) {
+  const ms = (t) => (t?.seconds ? t.seconds * 1000 : (typeof t?.toMillis === 'function' ? t.toMillis() : (typeof t === 'number' ? t : 0)));
+  return list.slice().sort((a, b) => ms(b.added_at) - ms(a.added_at));
+}
+
 export async function listCoachResidencies(coachId) {
   if (!coachId) return [];
-  const q = query(collection(db, COACH_COLLECTIONS.residencies), where('coach_id', '==', coachId), orderBy('added_at', 'desc'));
-  const snap = await getDocs(q);
-  return snap.docs.map((d) => ({ id: d.id, ...d.data() }));
+  // Sem orderBy: evita índice composto (where + orderBy) que fazia a query
+  // falhar e as parcerias "salvas" não aparecerem. Ordena em memória.
+  const snap = await getDocs(query(collection(db, COACH_COLLECTIONS.residencies), where('coach_id', '==', coachId)));
+  return sortResidenciesByDate(snap.docs.map((d) => ({ id: d.id, ...d.data() })));
 }
 
 export async function listArenaCoaches(arenaId, { activeOnly = true } = {}) {
   if (!arenaId) return [];
-  const filters = [where('arena_id', '==', arenaId)];
-  const q = query(collection(db, COACH_COLLECTIONS.residencies), ...filters, orderBy('added_at', 'desc'));
-  const snap = await getDocs(q);
-  const residencies = snap.docs.map((d) => ({ id: d.id, ...d.data() }));
-  // filtra status
-  const filtered = activeOnly ? residencies.filter((r) => r.status === 'active') : residencies;
+  const snap = await getDocs(query(collection(db, COACH_COLLECTIONS.residencies), where('arena_id', '==', arenaId)));
+  const residencies = sortResidenciesByDate(snap.docs.map((d) => ({ id: d.id, ...d.data() })));
+  // filtra status (aceita legado sem status: trata como ativo)
+  const filtered = activeOnly ? residencies.filter((r) => (r.status || 'active') === 'active') : residencies;
   // hidrata com perfil
   const enriched = [];
   for (const r of filtered) {
+    // eslint-disable-next-line no-await-in-loop
     const profile = await getCoach(r.coach_id);
     if (profile) enriched.push({ ...profile, residency: r });
   }

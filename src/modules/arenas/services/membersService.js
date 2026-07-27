@@ -42,8 +42,11 @@ function displayName(u, p) {
 
 export async function listArenaMembers(arenaId, { limit: lim = 200 } = {}) {
   if (!db || !arenaId) return [];
-  const snap = await getDocs(query(collection(db, COL_MEMBERS), where('arena_id', '==', arenaId), orderBy('points', 'desc'), limit(lim)));
-  return snap.docs.map((d) => ({ id: d.id, ...d.data() }));
+  // Sem orderBy no Firestore (o índice de arena_members é por tier, não points)
+  // → ordena por pontos em memória para não falhar.
+  const snap = await getDocs(query(collection(db, COL_MEMBERS), where('arena_id', '==', arenaId), limit(lim)));
+  return snap.docs.map((d) => ({ id: d.id, ...d.data() }))
+    .sort((a, b) => Number(b.points || 0) - Number(a.points || 0));
 }
 
 export async function getArenaMember(arenaId, userId) {
@@ -115,12 +118,11 @@ export async function addPointsToMember(arenaId, userId, points, actor) {
 
 export async function listArenaPackages(arenaId, { onlyActive = true, lim = 100 } = {}) {
   if (!db || !arenaId) return [];
-  const constraints = [where('arena_id', '==', arenaId)];
-  if (onlyActive) constraints.push(where('active', '==', true));
-  constraints.push(orderBy('price', 'asc'));
-  constraints.push(limit(lim));
-  const snap = await getDocs(query(collection(db, COL_PACKAGES), ...constraints));
-  return snap.docs.map((d) => ({ id: d.id, ...d.data() }));
+  // Índice de arena_packages é por active, não price → ordena em memória.
+  const snap = await getDocs(query(collection(db, COL_PACKAGES), where('arena_id', '==', arenaId), limit(lim)));
+  let list = snap.docs.map((d) => ({ id: d.id, ...d.data() }));
+  if (onlyActive) list = list.filter((p) => p.active !== false);
+  return list.sort((a, b) => Number(a.price || 0) - Number(b.price || 0));
 }
 
 export async function createArenaPackage(arenaId, input, actor) {
