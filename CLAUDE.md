@@ -12,7 +12,7 @@
 
 - **O que é**: PWA para pickleball amador BR — torneios, clubes, arenas, professores, comunidade.
 - **Stack**: React 18 + Vite, Tailwind + shadcn/ui, Firebase (Firestore db `pickleball`), React Query, Vitest, Playwright.
-- **Estado**: 19 módulos, 66 V2 pages, 92 coleções Firestore, 125 feature flags, **1350 testes verdes** (mantido em 3 PRs).
+- **Estado**: 19 módulos, 66 V2 pages, 93 coleções Firestore (+coach_favorites), 125 feature flags, **1350 testes verdes** (Wave B).
 - **Live**: https://picklerush.web.app (Firebase site `picklerush`; `pickletour` é redirect-only).
 - **Deploy**: push em `main` → GitHub Actions → Firebase Hosting + Rules + Cloud Function.
 - **Repositório**: https://github.com/fsalamoni/pickleball
@@ -324,14 +324,12 @@ chore(deps): bump firebase to 12.x
 
 ---
 
-## 10. Métricas atuais (snapshot 2026-07-27, 16:10 GMT-3)
+## 10. Métricas atuais (snapshot 2026-07-27, 16:46 GMT-3)
 
-> Última atualização: 2026-07-27, após PRs #73–#84 (Sprints 11-13): navegação
-> em hubs (NAV_HUBS), reservas por quadra com auto-atribuição (court_id
-> obrigatório), "ver como usuário", professor bidirecional, BookingRequestDialog
-> reescrito com 3 modos, V2AdminBootstrap consolidada no console, hub "Aulas",
-> V2Surface colapsável, padrão "query simples + memória" para evitar
-> índices compostos faltando.
+> Última atualização: 2026-07-27, após PRs #73–#84 (Sprints 11-13) + Wave B
+> (Sprint 14): página pública do professor completa (calendário, like/share,
+> sem botões de gestão), painel do professor com "vincular arena", arena
+> pública com lista de quadras + price_overrides, pdvService em memória.
 
 | Métrica | Valor | Delta do início do agente |
 |---|---|---|
@@ -339,11 +337,12 @@ chore(deps): bump firebase to 12.x
 | **Lint errors** | 0 | era 30+ |
 | **Módulos** | 19 | +2 (coaches, circuits) |
 | **V2 pages** | 66 | +42 (V2AdminBootstrap removida, consolidada no console) |
-| **Coleções Firestore** | 92 | +53 |
+| **V2 components (src/v2/components/)** | +2 pastas (coach, arenas) | — |
+| **Coleções Firestore** | 93 (+coach_favorites) | +54 |
 | **Feature flags** | 125 (51 ARENA_MODULE_* + 1 NAV_HUBS) | +95 |
-| **PRs mergeados** | 39 totais (Sprints 0-13) | — |
-| **Origin/main** | `eacc48f` (PR #84) | — |
-| **Bundle deployed** | (atualizar após próximo deploy) | — |
+| **PRs mergeados** | 40 totais (Sprints 0-14) | — |
+| **Origin/main** | `5b8395d` (Wave B) | — |
+| **Bundle deployed** | (deploy em curso) | — |
 | **Live URL** | https://picklerush.web.app | — |
 
 Quando você for commitar, atualize esta seção se os números mudarem.

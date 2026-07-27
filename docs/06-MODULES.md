@@ -177,6 +177,14 @@ faltando). Padrão emergente — ver `02-STANDARDS.md §5.3.2`.
 **Perfil › Professor** (PR #82): ganha acesso direto ao Painel do
 Professor + texto atualizado.
 
+**Página pública sem botões de gestão** (Wave B, item 3.2):
+- ✅ Mantém: "Ver perfil de atleta" (navegação), "Solicitar aula" (CTA)
+- ✅ Mantém: Like (Heart) + Share (QR + WhatsApp + PNG)
+- ❌ Removidos: "Adicionar arena" (vai pro painel), "Gerenciar biblioteca"
+  (vai pro painel), "Minha agenda de aulas" (vai pro painel),
+  "Editar meu perfil" (vai pro painel)
+- ❌ `AddResidencyForm` + função "remover residência" removidas
+
 ## athletes/ — diretório de atletas
 
 Perfis públicos pesquisáveis (`athlete_profiles`, `directory_listed`).

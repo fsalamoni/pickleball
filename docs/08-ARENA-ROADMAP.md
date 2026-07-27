@@ -927,3 +927,96 @@ específica, suportar multi-quadra, e unificar o "professor".
 > - **Ponte com Sistema C** (aulas da arena)
 > - **Split de receita / comissão** para aulas em arena parceira
 > - **Checkout/gateway** (rateio calculado, pagamento combinado)
+
+---
+
+## 16. Sprint 14 — Wave B: página pública do professor + arena pública (2026-07-27, 16:46)
+
+> Atualizado em **2026-07-27, 16:46 GMT-3** (origin/main @ `5b8395d`).
+> Branch `wave/b-coach-public-panel` mergeada como squash em main.
+> Atende à lista completa de itens do user (1.1-1.4, 2, 3.1-3.3, 4.1-4.2).
+
+### PR (squash-merge) — feat(coaches+arenas): página pública do professor, painel e arena pública
+12 files: 4 criados, 8 modificados (726 insertions, 131 deletions).
+
+#### Página pública do professor (V2CoachProfile)
+- **3.1** **Calendário público de disponibilidade** (V2CoachAvailabilityCalendar):
+  - 14 dias de slots livres via `generateWeekSlots` (domínio puro)
+  - CTA "marcar aula" abre `RequestLessonDialog`
+  - CTA "propor horário" pro caso sem agenda publicada
+  - Lazy-loaded via `useFeatureFlag(COACH_LESSONS)`
+- **3.1** **Seleção de arena no "marcar aula"**: `RequestLessonDialog` com
+  dropdown de arenas parceiras ativas. `arena_id` enviado ao `requestLesson`.
+  Resumo final inclui o nome da arena escolhida.
+- **3.2** **Remove botões de gestão**:
+  - ❌ Removidos: Adicionar arena, Gerenciar biblioteca,
+    Minha agenda de aulas, Editar meu perfil
+  - ✅ Mantido: "Ver perfil de atleta" (não é gestão)
+  - ❌ `AddResidencyForm` + função "remover residência": removidas
+- **3.3** **Curtir (favorite) + Compartilhar (share)**:
+  - Nova coleção `coach_favorites/{uid_coachId}`
+  - `firestore.rules`: match /coach_favorites/{favId}
+  - `V2FavoriteCoachButton` (Heart) + `V2CoachShareButton`
+  - `CoachShareDialog`: card com QR Code, WhatsApp, copiar, download PNG
+
+#### Painel do professor (V2CoachAgenda)
+- **4.1** Calendário e funções pertinentes: `AvailabilityEditor` + `LessonCard`
+  já existiam. Verificado.
+- **4.2** **"Vincular arena"** (que foi retirado da pública):
+  - `CoachAddArenaForm`: busca arena por nome/cidade
+  - Cria vínculo `pending` (via `useAddCoachResidency`)
+  - Botão "Adicionar arena" no `CoachPartnersSection`
+  - Texto explicativo: "Você pode ser convidado por uma arena ou
+    solicitar a parceria"
+
+#### Página pública da arena (V2ArenaDetail)
+- **2** **Lista de quadras** (`ArenaCourtsSection`) com tipo + superfície
+  + status — usa `useArenaCourts` (já existia)
+- **2** **`price_overrides`** agora exibidos em "Datas especiais" (amber)
+
+#### Persistência (item 1.4)
+- `pdvService.listArenaSales / listUserSales / listArenaPayments` usam
+  query simples + sort por `created_at_ms` em memória (mesmo padrão
+  dos PRs #82/#84 — sem depender de índice composto)
+
+### Métricas finais (Sprint 14)
+
+- **1350 testes verdes** (sem mudança de count)
+- **Lint 0 errors**
+- **125 feature flags** (sem mudança)
+- **66 V2 pages** (sem mudança)
+- **93 coleções Firestore** (+1: `coach_favorites`)
+- **40 PRs totais**
+- **Last SHA**: `5b8395d` (Wave B mergeada em main)
+- **Deploy**: em curso via GitHub Actions
+
+### Decisões de arquitetura importantes (Sprint 14)
+
+1. **`coach_favorites/{uid_coachId}`** — id determinístico, mesmo padrão
+   de `arena_favorites/{uid_arenaId}`. Read/create/delete só pelo próprio uid.
+2. **`V2CoachAvailabilityCalendar` reusa `generateWeekSlots`** (puro,
+   testado) + `useCoachAvailability`/`useCoachBusySlots` — sem
+   dependência de gestão. Compatível com flag `COACH_LESSONS`.
+3. **`V2CoachShareDialog` espelha `ArenaShareDialog`** — mesmo padrão
+   de card (QR + WhatsApp + copy + PNG). Lazy-loaded para não impactar
+   bundle principal.
+4. **Página pública SEM botões de gestão** — toda gestão fica no Painel
+   (`/aulas`). Mantém só navegação (Ver perfil de atleta) + interação
+   social (Like/Share) + CTA (Solicitar aula).
+5. **Professor pode SOLICITAR parceria com arena** (item 4.2) — fluxo:
+   professor busca arena → cria `coach_arenas/{coachId_arenaId}` com
+   `status: 'pending'` → arena recebe notificação → arena aceita/recusa.
+6. **`pdvService` em memória** — vendas/pagamentos agora usam query
+   simples + sort por `created_at_ms` em memória. Padrão consistente
+   com PRs #82 e #84.
+
+### Próximo (Sprint 15+ — backlog remanescente)
+
+> Ver `docs/09-UX-ANALYSIS/15-backlog-remanescente.md` para a lista
+> consolidada do que ainda falta. Tópicos principais:
+>
+> - **DS** (Design System): unificar 4 sistemas, dark mode, contraste acid
+> - **NAV**: command palette, breadcrumbs
+> - **Ponte com Sistema C** (aulas da arena)
+> - **Split de receita / comissão** para aulas em arena parceira
+> - **Checkout/gateway** (rateio calculado, pagamento combinado)

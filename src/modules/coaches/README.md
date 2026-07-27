@@ -30,6 +30,29 @@
 
 ## Ondas adicionais
 
+### Wave B (Sprint 14, 2026-07-27) — página pública + painel
+
+- **Curtir + Compartilhar** (`src/v2/components/coach/V2CoachActions.jsx`):
+  mesma UI de `V2ArenaActions` (Heart + Share2).
+  Coleção `coach_favorites/{uid_coachId}`. Reusa `qrcode` + `html-to-image`
+  (lazy) para o card de share.
+- **Calendário público** (`V2CoachAvailabilityCalendar.jsx`): 14 dias
+  de slots livres via `generateWeekSlots`. Clicar em slot abre
+  `RequestLessonDialog` com arena pré-selecionada.
+- **`CoachAddArenaForm.jsx`**: professor pode buscar arena e criar
+  vínculo `pending`. Arena aceita depois.
+- **`CoachShareDialog.jsx`**: card de share com QR Code, WhatsApp,
+  copy link, download PNG.
+- **`RequestLessonDialog`**: agora tem seletor de arena parceira
+  (se professor tem mais de uma residência ativa).
+
+**Página pública sem botões de gestão** (item 3.2): removidos
+"Adicionar arena", "Gerenciar biblioteca", "Minha agenda de aulas",
+"Editar meu perfil". Mantém: "Ver perfil de atleta" + Like/Share +
+"Solicitar aula".
+
+
+
 - **Onda 7b**: `coach_leveling` (validação por professor) +
   `coach_clinics` (clínicas/workshops abertos)
 - **Onda 7**: `partnership_mutual` (aceite mútuo professor↔arena)

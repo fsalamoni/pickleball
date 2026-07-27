@@ -246,6 +246,16 @@ Avaliações/reclamações/sugestões. `arena_id`, `user_id`, `user_name`,
 ### `arena_favorites/{uid_arenaId}`
 Favoritos do atleta. Id determinista. `user_id`, `arena_id`, `created_at`.
 
+### `coach_favorites/{uid_coachId}` (Wave B — id determinístico)
+Favoritos do professor (curtir). Id determinístico.
+- `user_id` (uid do atleta que curtiu)
+- `coach_id` (uid do professor)
+- `coach_name` (desnormalizado para mostrar no diretório de favoritos)
+- `created_at`, `created_at_ms`
+
+Regras Firestore: read/create/delete apenas pelo próprio `user_id`
+(mesmo padrão de `arena_favorites`). Ver `firestore.rules`.
+
 ### `arena_products/{id}` (V3, do Arena V3 — PDV)
 Produtos da loja. `arena_id`, `name` (max 80), `description` (max 500),
 `price` (number), `category` (`'bebidas'|'equipamentos'|'vestuario'|'acessorios'|'alimentos'|'outros'`),

@@ -187,9 +187,19 @@ Guards: `ProtectedRoute` (auth), `AdminRoute` (platform_admin),
 rotas novas. Páginas via `React.lazy`. `basename = import.meta.env.BASE_URL`.
 Em DEV sem Firebase há "local preview" em `LOCAL_PREVIEW_PROTECTED_PATHS`.
 
+**V2CoachAvailabilityCalendar** (Wave B): calendário público de
+disponibilidade do professor (14 dias, slots livres derivados de
+`generateWeekSlots`). CTA "marcar aula" abre `RequestLessonDialog` com
+seleção de arena parceira. Lazy-loaded via `useFeatureFlag(COACH_LESSONS)`.
+
+**V2FavoriteCoachButton + V2CoachShareButton** (Wave B): espelham o
+padrão de arenas (V2ArenaActions). `coach_favorites/{uid_coachId}` no
+Firestore. Share com QR Code + WhatsApp + download PNG.
+
 ## 6. Modelo de dados (Firestore, database `pickleball`)
 
-**92 coleções top-level** (39 antes do Arena V3, +53 com as Ondas 1-10).
+**93 coleções top-level** (39 antes do Arena V3, +54 com as Ondas 1-10 + Wave B).
+- **Wave B (2026-07-27)**: +1 coleção `coach_favorites/{uid_coachId}` (curtir professor).
 Ids deterministas quando indicado (`arenaId_uid`, `coachId_arenaId`).
 Detalhe de campos em `docs/05-DATA-MODEL.md`.
 

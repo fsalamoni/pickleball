@@ -443,6 +443,28 @@ return list.sort((a, b) => String(a.name || '').localeCompare(String(b.name || '
 - `listInventoryProducts/Entries/Exits` (`modules/arenas/services/arenaService.js`)
 - PDV produtos, membros, pacotes
 
+### 5.3.3 `coach_favorites/{uid_coachId}` (Wave B)
+
+Curtir professor (mesmo padrão de `arena_favorites/{uid_arenaId}`).
+Id determinístico; regras: read/create/delete só pelo próprio uid.
+
+```js
+// firestore.rules
+match /coach_favorites/{favId} {
+  allow read: if isAuthed() && request.auth.uid == favId.split('_')[0];
+  allow create: if isAuthed()
+    && request.auth.uid == favId.split('_')[0]
+    && request.resource.data.user_id == request.auth.uid
+    && request.resource.data.coach_id == favId.split('_')[1];
+  allow delete: if isAuthed() && request.auth.uid == favId.split('_')[0];
+}
+```
+
+Service: `favoriteCoach / unfavoriteCoach / listMyFavoriteCoaches` em
+`src/modules/coaches/services/coachService.js`. Hook: `useToggleFavoriteCoach`.
+Componente: `V2FavoriteCoachButton` (Heart) em
+`src/v2/components/coach/V2CoachActions.jsx`.
+
 ### 5.4 Ids deterministas
 
 Quando o doc é um par recurso+user, use id determinista:

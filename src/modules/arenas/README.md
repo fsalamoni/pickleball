@@ -136,6 +136,16 @@ import { useArenaCancellation } from '@/modules/arenas/hooks/useArenaCancellatio
 - `ATHLETE_SELF_CHECKIN` — auto check-in
 - `ARENA_MODULE_*` (51 sub-flags) — sub-módulos V3
 
+## Wave B (Sprint 14, 2026-07-27) — página pública completa
+
+- **`ArenaCourtsSection`** (em `V2ArenaDetail`): lista de quadras
+  (nome + tipo + superfície + status ativa). Reusa `useArenaCourts`.
+- **`price_overrides`** agora exibidos em "Datas especiais" (amber)
+  na seção de preços.
+- **`pdvService`** em memória (item 1.4): `listArenaSales / listUserSales
+  / listArenaPayments` agora usam query simples + sort por
+  `created_at_ms` em memória. Padrão consistente com PRs #82/#84.
+
 ## Onde achar mais
 
 - `docs/06-MODULES.md` § arenas
