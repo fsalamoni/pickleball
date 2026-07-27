@@ -1068,6 +1068,13 @@ export async function clearGameDayData(eventId, dateId) {
       getDocs(collection(db, COL.events, eventId, COL.eventParticipants)),
       getDocs(collection(db, COL.events, eventId, COL.eventGames)),
     ]);
+    // Wave C: também limpa o espelhamento no ranking nacional.
+    try {
+      const { clearPublishedGamesForDate } = await import('./rankingPublishingService.js');
+      await clearPublishedGamesForDate(eventId, dateId);
+    } catch (err) {
+      logger.error('Falha ao limpar o espelhamento do ranking (Wave C):', err);
+    }
     const ops = [
       ...parts.docs.filter((d) => d.data().date_id === dateId),
       ...games.docs.filter((d) => d.data().date_id === dateId),

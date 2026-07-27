@@ -11,6 +11,9 @@
  *  - club_events/{id}/messages     (chat cronológico do evento)
  *  - club_events/{id}/participants (participantes do dia de jogo)
  *  - club_events/{id}/games        (jogos organizados/sorteados do dia de jogo)
+ *  - club_event_games             (Wave C — jogos decididos de dia de jogo
+ *                                  publicados no ranking da plataforma;
+ *                                  id = `${eventId}_${dateId}_${gameId}`)
  *  - club_posts              (mural de avisos/interação)
  *  - club_forum_threads      (tópicos de fórum do clube)
  *  - club_forum_threads/{id}/comments    (subcoleção de comentários do tópico)
@@ -25,6 +28,10 @@ export const CLUB_COLLECTIONS = Object.freeze({
   events: 'club_events',
   rsvps: 'club_event_rsvps',
   eventInvites: 'event_invites',
+  // Top-level materializada (Wave C): jogos decididos de dias de jogo
+  // publicados no ranking nacional. id determinístico:
+  // `${eventId}_${dateId}_${gameId}`.
+  clubEventGames: 'club_event_games',
   posts: 'club_posts',
   forumThreads: 'club_forum_threads',
   forumComments: 'comments',
@@ -174,4 +181,21 @@ export const GAME_DAY_LIMITS = Object.freeze({
   MAX_PARTICIPANTS: 64,
   MAX_ROUNDS: 30,
   MESSAGE_MAX: 4000,
+});
+
+/**
+ * Resultado da tentativa de publicar um jogo de dia de jogo no ranking.
+ *  - 'published'          : jogo escrito em `club_event_games`
+ *  - 'skipped'            : jogo sem resultado, sem `user_id` ou duplicado
+ *  - 'already_published'  : jogo já estava espelhado (idempotência)
+ */
+export const GAME_DAY_RANKING_RESULT = Object.freeze({
+  PUBLISHED: 'published',
+  SKIPPED: 'skipped',
+  ALREADY_PUBLISHED: 'already_published',
+});
+
+/** Origem da publicação de um jogo no ranking (Wave C). */
+export const GAME_DAY_RANKING_SOURCE = Object.freeze({
+  CLUB_EVENT_GAME: 'club_event_game',
 });

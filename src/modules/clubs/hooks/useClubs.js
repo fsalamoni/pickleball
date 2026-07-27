@@ -67,6 +67,12 @@ import {
   createClubPost,
   deleteClubPost,
 } from '../services/clubService';
+import {
+  publishEventDateToRanking,
+  unpublishEventDateFromRanking,
+  getEventDateRankingMeta,
+  listPublishedGamesForDate,
+} from '../services/rankingPublishingService';
 
 /* --------------------------------- Clubs -------------------------------- */
 
@@ -708,5 +714,54 @@ export function useDeleteClubPost(clubId) {
   return useMutation({
     mutationFn: (postId) => deleteClubPost(postId, user),
     onSuccess: () => qc.invalidateQueries({ queryKey: ['club-posts', clubId] }),
+  });
+}
+
+/* -------------------- Ranking publishing (Wave C) ----------------------- */
+
+export function useEventDateRankingMeta(eventId, dateId) {
+  return useQuery({
+    queryKey: ['event-date-ranking-meta', eventId, dateId],
+    queryFn: () => getEventDateRankingMeta(eventId, dateId),
+    enabled: !!eventId && !!dateId,
+    staleTime: 30_000,
+  });
+}
+
+export function usePublishedGamesForDate(eventId, dateId) {
+  return useQuery({
+    queryKey: ['published-games-for-date', eventId, dateId],
+    queryFn: () => listPublishedGamesForDate(eventId, dateId),
+    enabled: !!eventId && !!dateId,
+  });
+}
+
+export function usePublishEventDateToRanking(event, clubId) {
+  const { user } = useAuth();
+  const qc = useQueryClient();
+  return useMutation({
+    mutationFn: ({ dateId }) => publishEventDateToRanking(event, dateId, clubId, user),
+    onSuccess: (_data, vars) => {
+      qc.invalidateQueries({ queryKey: ['event-date-ranking-meta', event.id, vars.dateId] });
+      qc.invalidateQueries({ queryKey: ['published-games-for-date', event.id, vars.dateId] });
+      qc.invalidateQueries({ queryKey: ['event-dates', event.id] });
+      qc.invalidateQueries({ queryKey: ['club-game-results', clubId] });
+      qc.invalidateQueries({ queryKey: ['national-ranking'] });
+    },
+  });
+}
+
+export function useUnpublishEventDateFromRanking(event, clubId) {
+  const { user } = useAuth();
+  const qc = useQueryClient();
+  return useMutation({
+    mutationFn: ({ dateId }) => unpublishEventDateFromRanking(event, dateId, user),
+    onSuccess: (_data, vars) => {
+      qc.invalidateQueries({ queryKey: ['event-date-ranking-meta', event.id, vars.dateId] });
+      qc.invalidateQueries({ queryKey: ['published-games-for-date', event.id, vars.dateId] });
+      qc.invalidateQueries({ queryKey: ['event-dates', event.id] });
+      qc.invalidateQueries({ queryKey: ['club-game-results', clubId] });
+      qc.invalidateQueries({ queryKey: ['national-ranking'] });
+    },
   });
 }

@@ -118,3 +118,53 @@ describe('computeRatings', () => {
     expect(p.tournaments).toBe(0);
   });
 });
+
+/* ---------- Wave C: ranking recebe matches de club_event_games ---------- */
+
+describe('computeRatings — match de club_event_game (Wave C)', () => {
+  it('processa match de dia de jogo sem tournament_id (Wave C)', () => {
+    // u_ana/u_beto (dupla) vencem u_caio/u_duda (dupla) por 11 a 9.
+    const result = computeRatings([
+      {
+        side_a: ['u_ana', 'u_beto'],
+        side_b: ['u_caio', 'u_duda'],
+        winner: 'a',
+        points_a: 11,
+        points_b: 9,
+        source: 'club_event_game',
+        event_id: 'ev1',
+        club_id: 'club1',
+        at: Date.now(),
+      },
+    ]);
+    const ana = result.find((p) => p.player_id === 'u_ana');
+    const caio = result.find((p) => p.player_id === 'u_caio');
+    expect(ana).toBeTruthy();
+    expect(caio).toBeTruthy();
+    expect(ana.wins).toBe(1);
+    expect(caio.losses).toBe(1);
+    // Sem tournament_id: tournaments continua 0.
+    expect(ana.tournaments).toBe(0);
+  });
+
+  it('mistura matches de torneio e de club_event_games no mesmo cálculo', () => {
+    const result = computeRatings([
+      // Jogo de torneio.
+      { side_a: ['p1'], side_b: ['p2'], winner: 'a', tournament_id: 't1', at: 1 },
+      // Jogo de dia de jogo (sem tournament_id).
+      { side_a: ['p1', 'p2'], side_b: ['p3', 'p4'], winner: 'a', source: 'club_event_game', at: 2 },
+    ]);
+    const p1 = result.find((p) => p.player_id === 'p1');
+    // p1 jogou 2 vezes (1 torneio + 1 dia de jogo), mas só conta 1 torneio
+    // porque o jogo de club_event_game não tem tournament_id.
+    expect(p1.games).toBe(2);
+    expect(p1.tournaments).toBe(1);
+  });
+
+  it('ignora match sem winner_side (defensivo)', () => {
+    const result = computeRatings([
+      { side_a: ['p1'], side_b: ['p2'], winner: null, source: 'club_event_game' },
+    ]);
+    expect(result).toEqual([]);
+  });
+});

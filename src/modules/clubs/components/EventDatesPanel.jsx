@@ -18,9 +18,12 @@ import {
   useDeleteEventDate,
   useEventDateRsvps,
   useSetEventDateRsvp,
+  useMyMembership,
+  useEventParticipants,
 } from '@/modules/clubs/hooks/useClubs';
 import { RSVP_STATUS, RSVP_STATUS_LABELS } from '@/modules/clubs/domain/constants';
 import GameDayOrganizer from '@/modules/clubs/components/GameDayOrganizer';
+import PublishToRankingToggle from '@/modules/clubs/components/PublishToRankingToggle';
 
 function formatDateTime(value) {
   if (!value) return 'Data a definir';
@@ -143,6 +146,8 @@ function DateCard({ event, clubId, date, rsvps, showGames, term }) {
   const setRsvp = useSetEventDateRsvp(eventId);
   const updateDate = useUpdateEventDate(eventId);
   const deleteDate = useDeleteEventDate(eventId);
+  const { data: membership } = useMyMembership(clubId);
+  const { data: allParticipants = [] } = useEventParticipants(eventId);
   const [open, setOpen] = useState(false);
   const [editing, setEditing] = useState(false);
   const [confirmDelete, setConfirmDelete] = useState(false);
@@ -152,6 +157,14 @@ function DateCard({ event, clubId, date, rsvps, showGames, term }) {
     location: date.location || '',
     note: date.note || '',
   });
+
+  const isCreator = Boolean(user?.uid && event?.created_by === user.uid);
+  const isAdmin = membership?.role === 'admin';
+  const canManage = isCreator || isAdmin;
+  const dateParticipants = useMemo(
+    () => (allParticipants || []).filter((p) => (p.date_id || null) === (date.id || null)),
+    [allParticipants, date.id],
+  );
 
   const myStatus = rsvps.find((r) => r.user_id === user?.uid)?.status;
   const grouped = {
@@ -237,7 +250,16 @@ function DateCard({ event, clubId, date, rsvps, showGames, term }) {
                 />
               </TabsContent>
               <TabsContent value="jogos">
-                <GameDayOrganizer event={event} clubId={clubId} dateId={date.id} />
+                <div className="space-y-3">
+                  <GameDayOrganizer event={event} clubId={clubId} dateId={date.id} />
+                  <PublishToRankingToggle
+                    event={event}
+                    clubId={clubId}
+                    dateId={date.id}
+                    canManage={canManage}
+                    participants={dateParticipants}
+                  />
+                </div>
               </TabsContent>
             </Tabs>
           ) : (

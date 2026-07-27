@@ -794,6 +794,68 @@ service cloud.firestore {
             || isEventParticipant(resource.data.event_id));
     }
 
+    // ---- Lançamento de resultados de dias de jogo no ranking (Wave C) ----
+    // Coleção top-level materializada a partir dos jogos com resultado
+    // (`score_a` e `score_b`) dos dias de jogo de eventos de clubes
+    // (`club_events/{id}/dates/{dateId}`). O criador do evento ou um admin
+    // do clube liga `publish_to_ranking` no dia de jogo; o serviço
+    // `rankingPublishingService` espelha os jogos decididos nesta coleção
+    // e dispara o recálculo do rating nacional.
+    //
+    // Schema (mirrored de `tournament_matches` + extras):
+    //   id = `${eventId}_${dateId}_${gameId}` (id determinístico para idempotência)
+    //   event_id, date_id, club_id, source='club_event_game',
+    //   side_a_ids, side_b_ids, side_a, side_b,
+    //   score_a, score_b, winner_side ('a'|'b'),
+    //   status='finished', kind ('doubles'|'singles'),
+    //   result_recorded_at, created_at, published_by
+    //
+    // Jogos SEM resultado (score null) NÃO são publicados. Apenas jogadores
+    // com `user_id` válido (não guests) entram no ranking.
+    match /club_event_games/{gameId} {
+      // Leitura pública: faz parte do ranking oficial da plataforma.
+      allow read: if true;
+      // Criação: apenas criadores do evento, admins do clube vinculado ou
+      // admin da plataforma. Validação de schema: side_a_ids/side_b_ids
+      // paralelos ao tamanho do `kind` (singles=1, doubles=2).
+      allow create: if isAuthed() && (
+        isPlatformAdmin()
+        || isClubEventCreator(request.resource.data.event_id)
+        || isClubAdmin(request.resource.data.club_id)
+      ) && request.resource.data.keys().hasAll([
+        'event_id', 'date_id', 'club_id', 'side_a_ids', 'side_b_ids',
+        'score_a', 'score_b', 'winner_side', 'status'
+      ]) && (
+        (request.resource.data.kind == 'singles'
+          && request.resource.data.side_a_ids.size() == 1
+          && request.resource.data.side_b_ids.size() == 1)
+        || (request.resource.data.kind == 'doubles'
+          && request.resource.data.side_a_ids.size() == 2
+          && request.resource.data.side_b_ids.size() == 2)
+      );
+      // Atualização: mesmos perfis. Imutável em `event_id`/`date_id`/`club_id`.
+      allow update: if isAuthed() && (
+        isPlatformAdmin()
+        || isClubEventCreator(request.resource.data.event_id)
+        || isClubAdmin(request.resource.data.club_id)
+      ) && request.resource.data.event_id == resource.data.event_id
+        && request.resource.data.date_id == resource.data.date_id
+        && request.resource.data.club_id == resource.data.club_id;
+      // Exclusão: despublicar um dia de jogo. Admin da plataforma ou admin
+      // do clube vinculado.
+      allow delete: if isAuthed() && (
+        isPlatformAdmin()
+        || isClubEventCreator(resource.data.event_id)
+        || isClubAdmin(resource.data.club_id)
+      );
+    }
+    // Helper: criador do evento `club_events/{id}`.
+    function isClubEventCreator(eventId) {
+      return isAuthed()
+        && exists(/databases/$(database)/documents/club_events/$(eventId))
+        && get(/databases/$(database)/documents/club_events/$(eventId)).data.created_by == request.auth.uid;
+    }
+
     match /club_event_rsvps/{docId} {
       allow read: if isClubMember(resource.data.club_id) || isPlatformAdmin();
       allow create: if isAuthed()

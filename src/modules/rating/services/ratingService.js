@@ -89,10 +89,13 @@ export async function recomputeAllRatings(actor, options = {}) {
   const { onlyPublicClosed = false } = options;
 
   // 1) Jogos finalizados (status in finished/walkover); ordenação cronológica no cliente.
-  const matchesSnap = await getDocs(
-    query(collection(db, 'tournament_matches'), where('status', 'in', FINISHED_STATUSES)),
-  );
-  let finishedMatches = matchesSnap.docs.map((d) => d.data());
+  //    Inclui `tournament_matches` (torneios) + `club_event_games` (Wave C:
+  //    resultados de dias de jogo publicados no ranking).
+  const [tournamentMatchesSnap, clubEventGamesSnap] = await Promise.all([
+    getDocs(query(collection(db, 'tournament_matches'), where('status', 'in', FINISHED_STATUSES))),
+    getDocs(query(collection(db, 'club_event_games'), where('status', '==', MATCH_STATUS.FINISHED))),
+  ]);
+  let finishedMatches = tournamentMatchesSnap.docs.map((d) => d.data());
 
   // Ranking oficial: restringe aos torneios públicos e encerrados existentes.
   let ratingSignature = null;
@@ -103,6 +106,12 @@ export async function recomputeAllRatings(actor, options = {}) {
     finishedMatches = finishedMatches.filter((m) => eligibleIds.has(m.tournament_id));
     ratingSignature = computeRatingSignature(tournaments);
   }
+
+  // Jogos de dia de jogo (Wave C) sempre contam no ranking (não exigem
+  // torneio público/encerrado). O criador do evento do clube opta por
+  // publicar; o serviço `rankingPublishingService` garante que apenas
+  // jogos decididos + com uids válidos sejam espelhados.
+  const clubEventMatches = clubEventGamesSnap.docs.map((d) => d.data());
 
   // 2) Inscrições (regId → uids) e 3) perfis (uid → dados/semente).
   const [regsSnap, profilesSnap] = await Promise.all([
@@ -120,6 +129,8 @@ export async function recomputeAllRatings(actor, options = {}) {
 
   // 4) Normaliza os jogos para o motor (somente jogos com os dois lados completos).
   const engineMatches = [];
+
+  // 4a) Jogos de torneio (regId → uids via `tournament_registrations`).
   finishedMatches.forEach((m) => {
     if (m.winner_side !== 'a' && m.winner_side !== 'b') return;
     const a = resolveSideUids(m.side_a_ids, regById);
@@ -136,6 +147,29 @@ export async function recomputeAllRatings(actor, options = {}) {
       points_b: pointsB,
       tournament_id: m.tournament_id || null,
       at: toMillis(m.result_recorded_at) || toMillis(m.updated_at) || toMillis(m.created_at),
+    });
+  });
+
+  // 4b) Jogos de dia de jogo (Wave C) — uids já são dos próprios atletas
+  // (não passam por `tournament_registrations`).
+  clubEventMatches.forEach((m) => {
+    if (m.winner_side !== 'a' && m.winner_side !== 'b') return;
+    const sideA = Array.isArray(m.side_a_ids) ? m.side_a_ids : [];
+    const sideB = Array.isArray(m.side_b_ids) ? m.side_b_ids : [];
+    if (sideA.length === 0 || sideB.length === 0) return;
+    if (sideA.some((u) => !u) || sideB.some((u) => !u)) return;
+    engineMatches.push({
+      side_a: sideA,
+      side_b: sideB,
+      winner: m.winner_side,
+      points_a: Number(m.score_a) || 0,
+      points_b: Number(m.score_b) || 0,
+      tournament_id: m.tournament_id || null,
+      // Wave C: jogos de dia de jogo identificam-se por `source`.
+      source: m.source || 'club_event_game',
+      event_id: m.event_id || null,
+      club_id: m.club_id || null,
+      at: toMillis(m.result_recorded_at) || toMillis(m.created_at) || Date.now(),
     });
   });
 
@@ -228,6 +262,7 @@ export async function recomputeAllRatings(actor, options = {}) {
       players: rows.length,
       matches_used: engineMatches.length,
       matches_total: finishedMatches.length,
+      club_event_matches_total: clubEventMatches.length,
       stale_removed: staleIds.length,
       auto: Boolean(onlyPublicClosed && options.auto),
     },
@@ -237,6 +272,7 @@ export async function recomputeAllRatings(actor, options = {}) {
     players: rows.length,
     matchesUsed: engineMatches.length,
     matchesTotal: finishedMatches.length,
+    clubEventMatchesTotal: clubEventMatches.length,
     staleRemoved: staleIds.length,
   };
 }
