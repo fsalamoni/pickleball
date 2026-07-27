@@ -49,7 +49,7 @@ export default function V2Clubs() {
         </div>
       )}
 
-      <V2Surface className="mb-8">
+      <V2Surface collapsible collapseId="clubs-busca" title="Buscar clubes" className="mb-8">
         <V2SearchInput
           icon={Search}
           value={search}

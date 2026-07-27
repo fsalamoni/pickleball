@@ -218,9 +218,8 @@ function V2ArenaDetailContent({ arenaId, user, arena, managed, bookings, isLoadi
 
       {/* Contact + hours */}
       <div className="mt-6 grid gap-6 sm:grid-cols-2">
-        <V2Surface>
-          <h3 className="font-display text-base font-bold text-ink">Contato e redes</h3>
-          <div className="mt-3 flex flex-col gap-2">
+        <V2Surface collapsible collapseId="arena-contato" title="Contato e redes">
+          <div className="flex flex-col gap-2">
             <ContactRow icon={MessageCircle} href={links.whatsapp} label="WhatsApp" />
             <ContactRow icon={Phone} href={links.phone} label={arena.contact_phone || 'Telefone'} />
             <ContactRow icon={Mail} href={links.email} label={arena.contact_email || 'E-mail'} />
@@ -229,9 +228,8 @@ function V2ArenaDetailContent({ arenaId, user, arena, managed, bookings, isLoadi
             {!hasContacts && <p className="text-sm text-gray-400">Sem contatos informados.</p>}
           </div>
         </V2Surface>
-        <V2Surface>
-          <h3 className="flex items-center gap-1.5 font-display text-base font-bold text-ink"><Clock className="h-4 w-4" /> Funcionamento</h3>
-          <p className="mt-3 text-sm text-gray-500">{arena.hours || 'Horário não informado.'}</p>
+        <V2Surface collapsible collapseId="arena-funcionamento" title="Funcionamento">
+          <p className="text-sm text-gray-500">{arena.hours || 'Horário não informado.'}</p>
         </V2Surface>
       </div>
 
@@ -248,10 +246,8 @@ function V2ArenaDetailContent({ arenaId, user, arena, managed, bookings, isLoadi
       )}
 
       {upcomingSlots.length > 0 && (
-        <V2Surface className="mt-6">
-          <p className="text-[11px] font-bold uppercase tracking-widest text-gray-400">Agenda</p>
-          <h3 className="mt-1 font-display text-lg font-bold text-ink">Próximos horários confirmados</h3>
-          <div className="mt-4 flex flex-wrap gap-2">
+        <V2Surface collapsible collapseId="arena-agenda" eyebrow="Agenda" title="Próximos horários confirmados" className="mt-6">
+          <div className="flex flex-wrap gap-2">
             {upcomingSlots.map((slot) => (
               <span key={`${slot.date}_${slot.start}`} className="rounded-full border border-gray-100 bg-paper px-3 py-1.5 text-xs text-gray-600">
                 {formatSlotDate(slot.date)} · {slot.start}–{slot.end}
