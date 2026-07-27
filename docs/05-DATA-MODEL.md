@@ -400,6 +400,27 @@ professor↔alunos. **NÃO é coleção nova** — é o campo aditivo
 - `status` ('waiting'|'notified'|'converted'|'expired'),
   `created_at`, `notified_at`.
 
+### `club_event_games/{eventId_dateId_gameId}` (Wave C — id determinístico)
+Espelhamento de jogos decididos de dias de jogo para o ranking nacional.
+Ativado pela flag `publish_to_ranking` no `club_events/{id}/dates/{dateId}`.
+Mesmo schema de `tournament_matches` + campos extras:
+- `source: 'club_event_game'`, `event_id`, `date_id`, `club_id`,
+  `event_title`, `game_id`, `published_by`
+- `side_a_ids`/`side_b_ids` são **uids** (não passam por
+  `tournament_registrations`).
+- `status: 'finished'`, `winner_side: 'a'|'b'`, `score_a`, `score_b`.
+- `sets_a`/`sets_b` espelham o placar (helper p/ rankings derivados).
+- `kind: 'singles'|'doubles'`, `result_recorded_at`.
+
+Regras: `firestore.rules` — read público; create/update/delete apenas
+criador do evento + admin do clube + platform admin.
+
+### `club_events/{id}/dates/{dateId}` (campos Wave C)
+- `publish_to_ranking: bool` (default false) — chave de publicação.
+- `published_at`, `published_by`, `published_count` — auditoria.
+- `unpublished_at`, `unpublished_by` — quando despublicado.
+- `last_publish_summary` — `{ published, skipped, already_published, removed }`.
+
 ## Torneios (Ondas 1-10)
 
 ### `tournament_announcements/{id}` (Onda 9b)

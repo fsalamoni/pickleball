@@ -465,6 +465,60 @@ Service: `favoriteCoach / unfavoriteCoach / listMyFavoriteCoaches` em
 Componente: `V2FavoriteCoachButton` (Heart) em
 `src/v2/components/coach/V2CoachActions.jsx`.
 
+### 5.3.4 `club_event_games/{eventId_dateId_gameId}` (Wave C)
+
+Lançamento de resultados de dias de jogo no ranking nacional.
+Id determinístico = `${eventId}_${dateId}_${gameId}` (mesma forma usada
+em `clubEventGames` constants). Lançar é **opt-in**: o criador do
+evento OU um admin do clube liga a chave `publish_to_ranking` no dia
+de jogo. Por padrão a chave está **desligada** (não lança nada).
+
+**Garantias de design:**
+- Apenas jogos DECIDIDOS (`score_a != null && score_b != null && score_a != score_b`) são publicados.
+- Apenas jogadores com `user_id` válido (não guests) entram no ranking.
+- Idempotência: rodar a publicação várias vezes não duplica; jogos
+  removidos do dia de jogo também são removidos do ranking.
+- Singles (1×1) e doubles (2×2) suportados; outros tamanhos pulados.
+- Ao despublicar, os jogos saem do ranking e o `recomputeAllRatings` é
+  acionado.
+- Schema espelha `tournament_matches` (lado A/B, winner, sets, status)
+  + campos `source='club_event_game'`, `event_id`, `date_id`, `club_id`,
+  `event_title`, `game_id`, `published_by`.
+
+**Regras Firestore (resumo):**
+```js
+match /club_event_games/{gameId} {
+  allow read: if true;
+  allow create, update, delete: if isAuthed() && (
+    isPlatformAdmin()
+    || isClubEventCreator(request.resource.data.event_id)
+    || isClubAdmin(request.resource.data.club_id)
+  );
+  // event_id/date_id/club_id imutáveis após criação.
+}
+```
+
+**Quem pode ligar/desligar a chave:**
+- Criador do evento (`club_events/{id}.created_by == auth.uid`)
+- Admin do clube (`club_members/{clubId_uid}.role == 'admin'`)
+- Admin da plataforma
+
+**Service:** `rankingPublishingService.publishEventDateToRanking /
+unpublishEventDateFromRanking` em
+`src/modules/clubs/services/rankingPublishingService.js`.
+
+**Domínio puro:** `buildPublishableMatch / buildPublishableMatches` em
+`src/modules/clubs/domain/rankingPublishing.js` (19 testes unitários).
+
+**Hooks:** `useEventDateRankingMeta`, `usePublishEventDateToRanking`,
+`useUnpublishEventDateFromRanking`, `usePublishedGamesForDate` em
+`src/modules/clubs/hooks/useClubs.js`.
+
+**UI:** `PublishToRankingToggle` em
+`src/modules/clubs/components/PublishToRankingToggle.jsx` (switch com
+tooltip, botão "Republicar" idempotente, ConfirmDialog para despublicar,
+resumo de jogos decididos/eligíveis).
+
 ### 5.4 Ids deterministas
 
 Quando o doc é um par recurso+user, use id determinista:

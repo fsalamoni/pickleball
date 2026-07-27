@@ -185,6 +185,19 @@ Professor + texto atualizado.
   "Editar meu perfil" (vai pro painel)
 - ❌ `AddResidencyForm` + função "remover residência" removidas
 
+**Dias de jogo → ranking nacional (Wave C, Sprint 15)**:
+- `club_events/{id}/dates/{dateId}.publish_to_ranking` (default false)
+- Criador do evento + admins do clube podem LIGAR a chave para espelhar
+  os jogos com resultado decidido em `club_event_games`
+- Apenas jogos DECIDIDOS (com placar lançado) entram no ranking; jogos
+  sem resultado são pulados
+- Publicação é idempotente (Republicar não duplica); despublicar remove
+  os jogos espelhados e recalcula o rating
+- `recomputeAllRatings` agora lê AMBAS as coleções
+  (`tournament_matches` + `club_event_games`)
+- `clearGameDayData` também limpa os espelhamentos quando o dia de
+  jogo é excluído
+
 ## athletes/ — diretório de atletas
 
 Perfis públicos pesquisáveis (`athlete_profiles`, `directory_listed`).

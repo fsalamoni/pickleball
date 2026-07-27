@@ -1020,3 +1020,149 @@ específica, suportar multi-quadra, e unificar o "professor".
 > - **Ponte com Sistema C** (aulas da arena)
 > - **Split de receita / comissão** para aulas em arena parceira
 > - **Checkout/gateway** (rateio calculado, pagamento combinado)
+
+---
+
+## 17. Sprint 15 — Wave C: lançar resultados de dias de jogo no ranking (2026-07-27, 20:30)
+
+> Atualizado em **2026-07-27, 20:30 GMT-3** (origin/main @ `d5694a6`).
+> Branch `wave/c-ranking-game-days` mergeada como squash em main.
+> Atende à solicitação do user: "dentro de clubes, em 'dias de jogo',
+> o criador do evento (e admins do clube) podem LIGAR uma chave para
+> lançar os resultados no ranking da plataforma e no histórico dos
+> atletas. Por padrão desligada. Apenas jogos com resultados lançados
+> entram no ranking."
+
+### PR (squash-merge) — feat(clubs+rating): lançar resultados de dias de jogo no ranking nacional
+11 files: 4 novos, 7 modificados. 22 testes novos.
+
+#### Modelo de dados
+- Nova coleção `club_event_games/{eventId_dateId_gameId}` (id determinístico)
+  com schema espelhado de `tournament_matches` + campos extras:
+  - `source: 'club_event_game'`, `event_id`, `date_id`, `club_id`,
+    `event_title`, `game_id`, `published_by`
+  - `side_a_ids`/`side_b_ids` são **uids** (não passam por
+    `tournament_registrations`)
+  - `status: 'finished'`, `winner_side`, `score_a`/`score_b`, `kind`
+- `club_events/{id}/dates/{dateId}.publish_to_ranking: bool` (default
+  false) + `published_at`, `published_by`, `published_count`,
+  `unpublished_at`, `unpublished_by`, `last_publish_summary`
+
+#### firestore.rules (novo bloco + helper)
+- `match /club_event_games/{gameId}`:
+  - `allow read: if true` (faz parte do ranking público)
+  - `create/update/delete`: só criador do evento + admin do clube +
+    platform admin; validação de schema (singles 1×1 / doubles 2×2)
+  - `event_id`/`date_id`/`club_id` imutáveis
+- `function isClubEventCreator(eventId)` — checa `created_by` no
+  documento `club_events/{id}`
+
+#### Domínio puro (19 testes)
+- `src/modules/clubs/domain/rankingPublishing.js`:
+  - `isGameDecided` (rejeita null/undefined/empate)
+  - `winnerSideOf` ('a' ou 'b')
+  - `inferKind` (singles vs doubles)
+  - `resolveSideUids` (filtra guests sem user_id)
+  - `buildPublishableMatch` (monta payload respeitando schema)
+  - `buildPublishableMatches` (idempotente: toWrite + toRemove +
+    contadores `published`/`skipped`/`already_published`/`removed`)
+  - `summarizeResult` (rótulos legíveis)
+- 19 testes unitários cobrindo decidido/empate/null/guest/tamanhos
+  diferentes/singles/doubles/idempotência
+
+#### Service
+- `src/modules/clubs/services/rankingPublishingService.js`:
+  - `publishEventDateToRanking(event, dateId, clubId, actor)`:
+    1. Lê evento + data + participants + games
+    2. Resolve `publishedIds` atuais (idempotência)
+    3. Calcula `toWrite`/`toRemove` via domínio puro
+    4. Aplica batch no Firestore
+    5. Marca o dia com `publish_to_ranking: true` + auditoria
+    6. Aciona `maybeAutoRecomputeRatings({ force: true })` best-effort
+    7. Audit log `club_event_date_published_to_ranking`
+  - `unpublishEventDateFromRanking` (operação simétrica)
+  - `getEventDateRankingMeta`, `listPublishedGamesForDate`,
+    `clearPublishedGamesForDate`
+
+#### Hooks (React Query)
+- `useEventDateRankingMeta(eventId, dateId)` — meta + `publishedIds`
+- `usePublishedGamesForDate(eventId, dateId)`
+- `usePublishEventDateToRanking(event, clubId)` — invalida caches
+  relevantes (event-dates, club-game-results, national-ranking, etc.)
+- `useUnpublishEventDateFromRanking(event, clubId)` — simétrico
+
+#### Motor de rating
+- `recomputeAllRatings` em `src/modules/rating/services/ratingService.js`:
+  - Agora lê AMBAS as coleções em paralelo:
+    - `tournament_matches` (filtro de torneio público+encerrado,
+      mantido)
+    - `club_event_games` (Wave C — sem filtro, sempre conta)
+  - Matches de `club_event_game` processados em **4b** com
+    `side_a_ids`/`side_b_ids` já como uids (não passam por
+    `tournament_registrations`)
+  - Audit log inclui `club_event_matches_total`
+- 3 testes do motor ELO cobrindo match de club_event_game
+  (sem tournament_id) + mistura com torneio + match sem winner
+
+#### UI
+- `src/modules/clubs/components/PublishToRankingToggle.jsx` (NOVO):
+  - Switch "Lançar resultados no ranking" no DateCard (aba Jogos)
+  - Visível SÓ para criador do evento + admin do clube
+  - Tooltip + texto: "apenas jogos com resultados lançados entram
+    no ranking"
+  - Botão "Republicar" (idempotente) + ConfirmDialog para despublicar
+  - Resumo de jogos decididos/eligíveis/com-guest (UX explicativa)
+  - Badge "resultados deste dia estão no ranking nacional" para
+    visualizadores (não-managers) quando ativo
+- `EventDatesPanel.jsx`: DateCard agora computa `canManage` (criador OU
+  admin via `useMyMembership`) e lê participants do dia; o toggle
+  fica dentro da aba "Jogos", logo após o `GameDayOrganizer`
+
+#### Limpeza
+- `clearGameDayData` em `clubService.js` agora também chama
+  `clearPublishedGamesForDate` — quando o dia de jogo é excluído, os
+  espelhamentos no ranking também são removidos (consistência
+  garantida)
+
+### Métricas finais (Sprint 15)
+
+- **1372 testes verdes** (+22 do Wave C)
+- **Lint 0 errors**
+- **94 coleções Firestore** (+1: `club_event_games`)
+- **41 PRs totais**
+- **Last SHA**: `d5694a6` (Wave C mergeada em main)
+- **Deploy**: em curso via GitHub Actions
+
+### Decisões de arquitetura importantes (Sprint 15)
+
+1. **D-CRIADOR+ADMIN-DEVEM-LIGAR-CHAVE (Wave C)**: a chave
+   `publish_to_ranking` é **OFF por padrão**. Só o criador do evento
+   OU admins do clube podem LIGAR/DESLIGAR. O platform admin tem
+   poder de override.
+2. **D-OPT-IN-POR-DIA-DE-JOGO (Wave C)**: cada `date_id` (dia de
+   jogo) tem sua própria chave. Um evento pode ter vários dias;
+   cada dia é publicado/despublicado independentemente.
+3. **D-ID-DETERMINISTICO-IDEMPOTENTE (Wave C)**: id
+   `${eventId}_${dateId}_${gameId}` garante idempotência. Re-rodar a
+   publicação não duplica; jogos removidos do dia também saem do
+   ranking.
+4. **D-SOMENTE-JOGOS-DECIDIDOS (Wave C)**: placar definido, lados 1×1
+   ou 2×2, todos os jogadores com `user_id` válido. Outros casos são
+   pulados (não bloqueiam a publicação; são apenas ignorados).
+5. **D-RECALCULO-AUTOMATICO-AFTER-PUBLISH (Wave C)**:
+   `maybeAutoRecomputeRatings(actor, { force: true })` é chamado
+   após publish/unpublish (best-effort; falhas são logadas).
+6. **D-LIMPEZA-TRANSACIONAL (Wave C)**: `clearGameDayData` (chamado
+   ao excluir um dia de jogo) também remove os espelhamentos no
+   ranking, evitando "fantasmas" no histórico dos atletas.
+
+### Próximo (Sprint 16+ — backlog remanescente)
+
+> Ver `docs/09-UX-ANALYSIS/15-backlog-remanescente.md` para a lista
+> consolidada do que ainda falta. Tópicos principais:
+>
+> - **DS** (Design System): unificar 4 sistemas, dark mode, contraste acid
+> - **NAV**: command palette, breadcrumbs
+> - **Wave D**: Sistema C (aulas da arena) — integração com Sistema A
+> - **Wave E**: Split de receita / comissão para aulas em arena parceira
+> - **Wave F**: Checkout/gateway (rateio calculado, pagamento combinado)

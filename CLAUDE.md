@@ -12,7 +12,7 @@
 
 - **O que é**: PWA para pickleball amador BR — torneios, clubes, arenas, professores, comunidade.
 - **Stack**: React 18 + Vite, Tailwind + shadcn/ui, Firebase (Firestore db `pickleball`), React Query, Vitest, Playwright.
-- **Estado**: 19 módulos, 66 V2 pages, 93 coleções Firestore (+coach_favorites), 125 feature flags, **1350 testes verdes** (Wave B).
+- **Estado**: 19 módulos, 66 V2 pages, 94 coleções Firestore (+coach_favorites, +club_event_games), 125 feature flags, **1372 testes verdes** (Wave C).
 - **Live**: https://picklerush.web.app (Firebase site `picklerush`; `pickletour` é redirect-only).
 - **Deploy**: push em `main` → GitHub Actions → Firebase Hosting + Rules + Cloud Function.
 - **Repositório**: https://github.com/fsalamoni/pickleball
@@ -324,24 +324,25 @@ chore(deps): bump firebase to 12.x
 
 ---
 
-## 10. Métricas atuais (snapshot 2026-07-27, 16:46 GMT-3)
+## 10. Métricas atuais (snapshot 2026-07-27, 20:30 GMT-3)
 
 > Última atualização: 2026-07-27, após PRs #73–#84 (Sprints 11-13) + Wave B
-> (Sprint 14): página pública do professor completa (calendário, like/share,
-> sem botões de gestão), painel do professor com "vincular arena", arena
-> pública com lista de quadras + price_overrides, pdvService em memória.
+> (Sprint 14) + Wave C (Sprint 15): "Lançar resultados de dias de jogo no
+> ranking nacional". Criador do evento + admins do clube ligam uma chave
+> (default OFF) que espelha os jogos com placar em `club_event_games` e
+> dispara recálculo do rating.
 
 | Métrica | Valor | Delta do início do agente |
 |---|---|---|
-| **Testes Vitest** | 1350 passing | +942 (era 408) |
+| **Testes Vitest** | 1372 passing | +964 (era 408) |
 | **Lint errors** | 0 | era 30+ |
 | **Módulos** | 19 | +2 (coaches, circuits) |
 | **V2 pages** | 66 | +42 (V2AdminBootstrap removida, consolidada no console) |
 | **V2 components (src/v2/components/)** | +2 pastas (coach, arenas) | — |
-| **Coleções Firestore** | 93 (+coach_favorites) | +54 |
+| **Coleções Firestore** | 94 (+coach_favorites, +club_event_games) | +55 |
 | **Feature flags** | 125 (51 ARENA_MODULE_* + 1 NAV_HUBS) | +95 |
-| **PRs mergeados** | 40 totais (Sprints 0-14) | — |
-| **Origin/main** | `5b8395d` (Wave B) | — |
+| **PRs mergeados** | 41 totais (Sprints 0-15) | — |
+| **Origin/main** | `d5694a6` (Wave C) | — |
 | **Bundle deployed** | (deploy em curso) | — |
 | **Live URL** | https://picklerush.web.app | — |
 

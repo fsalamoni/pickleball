@@ -198,7 +198,8 @@ Firestore. Share com QR Code + WhatsApp + download PNG.
 
 ## 6. Modelo de dados (Firestore, database `pickleball`)
 
-**93 coleções top-level** (39 antes do Arena V3, +54 com as Ondas 1-10 + Wave B).
+**94 coleções top-level** (39 antes do Arena V3, +55 com as Ondas 1-10 + Wave B + Wave C).
+- **Wave C (2026-07-27)**: +1 coleção `club_event_games/{eventId_dateId_gameId}` (espelhamento de jogos decididos de dias de jogo no ranking nacional).
 - **Wave B (2026-07-27)**: +1 coleção `coach_favorites/{uid_coachId}` (curtir professor).
 Ids deterministas quando indicado (`arenaId_uid`, `coachId_arenaId`).
 Detalhe de campos em `docs/05-DATA-MODEL.md`.
