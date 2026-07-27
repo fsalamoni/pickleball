@@ -224,11 +224,11 @@ function useV2Nav() {
         ],
       }),
       (coachesOn || isCoach || coachLessonsOn) && hub({
-        id: 'ensino', label: 'Professores', icon: GraduationCap, to: coachesOn ? '/coaches' : '/minhas-aulas',
+        id: 'ensino', label: 'Aulas', icon: GraduationCap, to: coachesOn ? '/coaches' : '/minhas-aulas',
         children: [
           coachesOn && { to: '/coaches', label: 'Professores', icon: GraduationCap },
-          isCoach && { to: '/aulas', label: 'Painel do professor', icon: GraduationCap },
           coachLessonsOn && { to: '/minhas-aulas', label: 'Minhas aulas', icon: CalendarClock },
+          isCoach && { to: '/aulas', label: 'Painel do professor', icon: GraduationCap },
         ],
       }),
       hub({

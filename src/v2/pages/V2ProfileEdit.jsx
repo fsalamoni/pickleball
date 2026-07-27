@@ -338,12 +338,23 @@ export default function V2ProfileEdit() {
         {coachDirectoryOn && (
           <V2Surface>
             <V2SectionHeader eyebrow="Professor" title="Perfil de aulas e clínicas" titleClassName="text-xl"
-              description="Ative para aparecer no filtro de professores do diretório." />
+              description="Ative para aparecer na busca de professores. Depois de salvar, você acessa o Painel do Professor (horários, aulas, alunos, pacotes) por aqui ou pelo menu Aulas." />
             <div className="mt-5 rounded-3xl border border-gray-100 bg-paper p-5">
-              <V2Toggle id="is_coach" label="Sou professor(a)" hint="Aparecer no filtro de professores e exibir informações de aula" checked={isCoach} onChange={setIsCoach} />
+              <V2Toggle id="is_coach" label="Sou professor(a)" hint="Aparecer na busca de professores e exibir informações de aula" checked={isCoach} onChange={setIsCoach} />
             </div>
             {isCoach && (
               <div className="mt-4 space-y-4">
+                {myCoach && (
+                  <Link
+                    to="/aulas"
+                    className="flex items-center justify-between gap-3 rounded-2xl border border-ink/15 bg-ink/[0.03] px-4 py-3 transition-colors hover:border-ink/30"
+                  >
+                    <span className="flex items-center gap-2 text-sm font-bold text-ink">
+                      <Shield className="h-4 w-4" /> Painel do Professor
+                    </span>
+                    <span className="text-xs font-semibold text-gray-500">Horários, aulas, alunos e pacotes →</span>
+                  </Link>
+                )}
                 <V2Field label="Sobre suas aulas"><V2Textarea value={coachBio} onChange={(e) => setCoachBio(e.target.value)} maxLength={1000} rows={3} placeholder="Ex.: Aulas para iniciantes e intermediários, foco em fundamentos e tática." /></V2Field>
                 <V2Field label="Modalidades (separadas por vírgula)" required>
                   <V2Input value={coachModalities} onChange={(e) => setCoachModalities(e.target.value)} maxLength={160} placeholder="Ex.: Iniciantes, Avançado, DUPR 4.0+" />
