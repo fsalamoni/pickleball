@@ -12,7 +12,7 @@
 
 - **O que é**: PWA para pickleball amador BR — torneios, clubes, arenas, professores, comunidade.
 - **Stack**: React 18 + Vite, Tailwind + shadcn/ui, Firebase (Firestore db `pickleball`), React Query, Vitest, Playwright.
-- **Estado**: 19 módulos, 66 V2 pages, 92 coleções Firestore, 125 feature flags, **1350 testes verdes**.
+- **Estado**: 19 módulos, 66 V2 pages, 92 coleções Firestore, 125 feature flags, **1350 testes verdes** (mantido em 3 PRs).
 - **Live**: https://picklerush.web.app (Firebase site `picklerush`; `pickletour` é redirect-only).
 - **Deploy**: push em `main` → GitHub Actions → Firebase Hosting + Rules + Cloud Function.
 - **Repositório**: https://github.com/fsalamoni/pickleball
@@ -324,12 +324,14 @@ chore(deps): bump firebase to 12.x
 
 ---
 
-## 10. Métricas atuais (snapshot 2026-07-27)
+## 10. Métricas atuais (snapshot 2026-07-27, 16:10 GMT-3)
 
-> Última atualização: 2026-07-27, após PRs #73–#81 (Sprints 11-12): navegação
+> Última atualização: 2026-07-27, após PRs #73–#84 (Sprints 11-13): navegação
 > em hubs (NAV_HUBS), reservas por quadra com auto-atribuição (court_id
 > obrigatório), "ver como usuário", professor bidirecional, BookingRequestDialog
-> reescrito com 3 modos de seleção, V2AdminBootstrap consolidada no console.
+> reescrito com 3 modos, V2AdminBootstrap consolidada no console, hub "Aulas",
+> V2Surface colapsável, padrão "query simples + memória" para evitar
+> índices compostos faltando.
 
 | Métrica | Valor | Delta do início do agente |
 |---|---|---|
@@ -339,8 +341,8 @@ chore(deps): bump firebase to 12.x
 | **V2 pages** | 66 | +42 (V2AdminBootstrap removida, consolidada no console) |
 | **Coleções Firestore** | 92 | +53 |
 | **Feature flags** | 125 (51 ARENA_MODULE_* + 1 NAV_HUBS) | +95 |
-| **PRs mergeados** | 36 totais (Sprints 0-12) | — |
-| **Origin/main** | `80f7bb6` (PR #81) | — |
+| **PRs mergeados** | 39 totais (Sprints 0-13) | — |
+| **Origin/main** | `eacc48f` (PR #84) | — |
 | **Bundle deployed** | (atualizar após próximo deploy) | — |
 | **Live URL** | https://picklerush.web.app | — |
 

@@ -165,6 +165,18 @@ de nível.
 **Onda 7b**: clínicas/workshops abertos (coach_clinics) e validação de
 nível (coach_level_validations).
 
+**Hub "Aulas"** (PR #82): renomeado de "Professores" para "Aulas".
+Ordem: Professores / Minhas aulas / Painel do professor. Painel do
+professor só aparece para quem é professor.
+
+**`listCoaches` in-memory** (PR #82): query simples (`limit(500)`) +
+filtros/ordenação em memória. Resolve bug onde professores não
+apareciam na busca (índice composto `active+accepting+display_name`
+faltando). Padrão emergente — ver `02-STANDARDS.md §5.3.2`.
+
+**Perfil › Professor** (PR #82): ganha acesso direto ao Painel do
+Professor + texto atualizado.
+
 ## athletes/ — diretório de atletas
 
 Perfis públicos pesquisáveis (`athlete_profiles`, `directory_listed`).

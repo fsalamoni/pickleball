@@ -9,7 +9,7 @@
 > torneio (05-organizador), dia de jogo (06), professor (08), clubes (09) —
 > esses têm seu próprio roadmap.
 >
-> **Estado atual no repositório (origin/main @ 80f7bb6)**:
+> **Estado atual no repositório (origin/main @ eacc48f)**:
 - Sprint 0 (Descoberta) ✅: `Minhas arenas` no sidebar (ARE-11), onboarding
   4-passos (ARE-20), aba "Arenas" no admin/painel, QW-14/15
 - Sprint 1 (Fundação) ✅: ARE-01 quadras, ARE-02 calendário, ARE-04
@@ -837,6 +837,87 @@ específica, suportar multi-quadra, e unificar o "professor".
    com `coaches/{uid}` automaticamente.
 
 ### Próximo (Sprint 13+ — backlog remanescente)
+
+> Ver `docs/09-UX-ANALYSIS/15-backlog-remanescente.md` para a lista
+> consolidada do que ainda falta. Tópicos principais:
+>
+> - **DS** (Design System): unificar 4 sistemas, dark mode, contraste acid
+> - **NAV**: command palette, breadcrumbs
+> - **Ponte com Sistema C** (aulas da arena)
+> - **Split de receita / comissão** para aulas em arena parceira
+> - **Checkout/gateway** (rateio calculado, pagamento combinado)
+
+---
+
+## 15. Sprint 13 — Persistência do admin + UI colapsável (2026-07-27)
+
+> Atualizado em **2026-07-27, 16:10 GMT-3** (origin/main @ `eacc48f`, PR #84).
+> 3 PRs mergeados em outros ambientes: PRs #82, #83, #84.
+> Esta seção documenta o que foi entregue e o que foi aprendido.
+
+### PR #82 (bf07a80) — fix(coaches): busca lista todos + filtro por cidade; hub "Aulas"
+- **`listCoaches` reescrito sem índice composto** — query simples
+  (`limit(500)`) + filtros/ordenação em memória
+- Resolve bug onde professores não apareciam na busca (índice
+  `active+accepting+display_name` faltando)
+- Filtro cidade/estado: inicia com cidade do usuário; limpar → todos
+- Busca automática (debounced)
+- **Hub renomeado**: "Professores" → **"Aulas"**
+- Ordem: Professores / Minhas aulas / Painel do professor
+- Perfil › Professor: acesso direto ao Painel + texto atualizado
+- 4 files, 51 insertions, 20 deletions
+- 1350 testes verdes
+
+### PR #83 (0c10d18) — feat(ui): cards de seção colapsáveis
+- **`V2Surface` ganha modo `collapsible`** (retrocompatível)
+- **`V2CollapsibleSection`** (NOVO) — alias para `<V2Surface collapsible>`
+- Aplicado em: Meu perfil, Professores, Circuitos, Clubes, Arena pública
+- Estado lembrado por seção via localStorage (`collapseId` ou título)
+- Chevron importado de `lucide-react`
+- 6 files, 121 insertions, 35 deletions
+- 1350 testes verdes
+
+### PR #84 (eacc48f) — fix(arenas): persistência do admin
+- **Excluir quadra**: botão renderiza e deleta de fato
+- **Catálogo/entradas/saídas do mercado** voltam a aparecer
+  (era `where+orderBy` sem índice — agora query simples + filtro/ord em memória)
+- **Parcerias professor↔arena** voltam a aparecer
+- **Receita do mercado contabilizada no desempenho** da arena
+- Mesmo fix em PDV produtos, membros, pacotes
+- 6 files, 99 insertions, 64 deletions
+- 1350 testes verdes
+
+### Métricas finais (2026-07-27, 16:10 GMT-3)
+
+- **1350 testes verdes** (sem mudança de count)
+- **Lint 0 errors**
+- **125 feature flags** (sem mudança)
+- **66 V2 pages** (sem mudança)
+- **92 coleções Firestore** (sem mudança)
+- **3 PRs mergeados** (#82-#84), 39 PRs totais
+- **Last SHA**: `eacc48f` (PR #84)
+
+### Decisões de arquitetura importantes (Sprint 13)
+
+1. **Padrão "query simples + filtro/ordenação em memória"** — emergente,
+   bom até ~500 docs/arena. Trade-off: mais memória + mais lento, mas
+   sempre funciona sem depender de índice composto. Documentado em
+   `02-STANDARDS.md §5.3.2`.
+
+2. **`V2CollapsibleSection`** é retrocompatível — sem `collapsible` prop,
+   mesma API. Sem migração.
+
+3. **localStorage** como persistência do estado colapsado — chave
+   `collapseId` ou título. Lembra entre sessões.
+
+4. **Hub "Aulas"** reflete a visão produto (user quer aulas, não
+   "professores" como seção).
+
+5. **Padrão "fix de query" se repete**: arenaService (mercado, partners),
+   coachService (listCoaches), membersService, pdvService — todos
+   seguindo a mesma fórmula.
+
+### Próximo (Sprint 14+ — backlog remanescente)
 
 > Ver `docs/09-UX-ANALYSIS/15-backlog-remanescente.md` para a lista
 > consolidada do que ainda falta. Tópicos principais:

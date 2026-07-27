@@ -407,6 +407,42 @@ não escolhe quadra, chama `pickAvailableCourt` para auto-atribuir.
 NUNCA criar reserva sem `court_id`. Se `pickAvailableCourt` retorna
 null, o service **erra** com mensagem clara — sem fallback silencioso.
 
+### 5.3.2 Padrão "query simples + filtro/ordenação em memória" (PRs #82, #84)
+
+Quando uma query Firestore precisa de **índice composto** (ex.:
+`where('arena_id', '==', X), where('active', '==', true), orderBy('name')`)
+e o índice **falta ou dá problema**, use o padrão abaixo em vez de criar
+índice:
+
+```js
+// ❌ ANTES — quebra sem índice composto
+const q = query(collection(db, 'x'),
+  where('arena_id', '==', arenaId),
+  where('active', '==', true),
+  orderBy('name', 'asc'));
+
+// ✅ DEPOIS — query simples + filtro/ordenação em memória
+const snap = await getDocs(query(collection(db, 'x'),
+  where('arena_id', '==', arenaId)));
+let list = snap.docs.map((d) => ({ id: d.id, ...d.data() }));
+if (activeOnly) list = list.filter((p) => p.active !== false);
+return list.sort((a, b) => String(a.name || '').localeCompare(String(b.name || '')));
+```
+
+**Quando usar**:
+- Coleção ≤ 500 docs por filtro principal (caso típico por arena)
+- Performance não é crítica (< 1s aceitável)
+- Índice composto está dando problema
+
+**Quando NÃO usar**:
+- Coleção com > 1000 docs por filtro (usar paginação server-side)
+- Filtro é numérico/range em campo não-indexed
+
+**Aplicado em** (no momento):
+- `listCoaches` (`modules/coaches/services/coachService.js`)
+- `listInventoryProducts/Entries/Exits` (`modules/arenas/services/arenaService.js`)
+- PDV produtos, membros, pacotes
+
 ### 5.4 Ids deterministas
 
 Quando o doc é um par recurso+user, use id determinista:
@@ -572,6 +608,33 @@ Aceita **2 APIs**:
 ```
 
 **Children > options** se ambos passados. NUNCA confie só em uma API.
+
+### 7.5.1 V2Surface colapsável (PR #83)
+
+`V2Surface` ganhou modo `collapsible` (retrocompatível). Quando o
+componente é usado como seção de dados, prefira a versão colapsável
+com `V2CollapsibleSection`:
+
+```jsx
+// Modo legado (não muda)
+<V2Surface className="p-6">...</V2Surface>
+
+// Modo colapsável
+<V2CollapsibleSection
+  title="Dados pessoais"
+  eyebrow="Perfil"
+  description="Edite suas informações"
+  defaultCollapsed={false}
+  collapseId="profile-pessoal"  {/* localStorage key */}
+>
+  ...
+</V2CollapsibleSection>
+```
+
+- Estado é lembrado por seção via localStorage (`collapseId` ou título)
+- Chevron importado de `lucide-react`
+- Use em toda seção interna de dados — **nunca em heroes**
+- Aplicado em: Meu perfil, Professores, Circuitos, Clubes, Arena pública
 
 ### 7.5 Confirmação de ações destrutivas (LIÇÃO sw-v73.3)
 
