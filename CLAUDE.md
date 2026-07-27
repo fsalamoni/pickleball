@@ -12,7 +12,7 @@
 
 - **O que é**: PWA para pickleball amador BR — torneios, clubes, arenas, professores, comunidade.
 - **Stack**: React 18 + Vite, Tailwind + shadcn/ui, Firebase (Firestore db `pickleball`), React Query, Vitest, Playwright.
-- **Estado**: 19 módulos, 67 V2 pages, 94 coleções Firestore, 124 feature flags, **1334+ testes verdes**.
+- **Estado**: 19 módulos, 66 V2 pages, 92 coleções Firestore, 125 feature flags, **1350 testes verdes**.
 - **Live**: https://picklerush.web.app (Firebase site `picklerush`; `pickletour` é redirect-only).
 - **Deploy**: push em `main` → GitHub Actions → Firebase Hosting + Rules + Cloud Function.
 - **Repositório**: https://github.com/fsalamoni/pickleball
@@ -324,23 +324,24 @@ chore(deps): bump firebase to 12.x
 
 ---
 
-## 10. Métricas atuais (snapshot 2026-07-24)
+## 10. Métricas atuais (snapshot 2026-07-27)
 
-> Última atualização: 2026-07-24, após sub-ondas 8b–5b (PR #72), fixes de UX
-> (onboarding só na 1ª entrada, diálogos roláveis em paisagem) e dedup da
-> coleção `arena_waitlist` → `booking_waitlist`.
+> Última atualização: 2026-07-27, após PRs #73–#81 (Sprints 11-12): navegação
+> em hubs (NAV_HUBS), reservas por quadra com auto-atribuição (court_id
+> obrigatório), "ver como usuário", professor bidirecional, BookingRequestDialog
+> reescrito com 3 modos de seleção, V2AdminBootstrap consolidada no console.
 
 | Métrica | Valor | Delta do início do agente |
 |---|---|---|
-| **Testes Vitest** | 1334+ passing | +926 (era 408) |
+| **Testes Vitest** | 1350 passing | +942 (era 408) |
 | **Lint errors** | 0 | era 30+ |
 | **Módulos** | 19 | +2 (coaches, circuits) |
-| **V2 pages** | 67 | +43 |
-| **Coleções Firestore** | 94 | +55 |
-| **Feature flags** | 124 (51 ARENA_MODULE_*) | +94 |
-| **PRs mergeados** | 27 totais (Sprints 0-10) | — |
-| **Origin/main** | `539faba` | — |
-| **Bundle deployed** | `index-CJmY5B8O.js` (PR #67) | — |
+| **V2 pages** | 66 | +42 (V2AdminBootstrap removida, consolidada no console) |
+| **Coleções Firestore** | 92 | +53 |
+| **Feature flags** | 125 (51 ARENA_MODULE_* + 1 NAV_HUBS) | +95 |
+| **PRs mergeados** | 36 totais (Sprints 0-12) | — |
+| **Origin/main** | `80f7bb6` (PR #81) | — |
+| **Bundle deployed** | (atualizar após próximo deploy) | — |
 | **Live URL** | https://picklerush.web.app | — |
 
 Quando você for commitar, atualize esta seção se os números mudarem.
@@ -381,7 +382,7 @@ MODELO       19 módulos em src/modules/X/{domain,services,hooks,pages,component
 UI ATIVA     src/v2/ (67 pages, 2-level nav, dark ink/acid/paper)
 FEATURES     124 flags em src/core/featureFlags.js (default OFF)
 SCHEMA       94 coleções top-level em firestore.rules
-TESTES       1334+ vitest (domain obrigatório)
+TESTES       1350 vitest (domain obrigatório)
 DEPLOY       push main → GitHub Actions → firebase hosting (sites picklerush+pickletour)
 SEGURANÇA    firestore.rules (aditivas), audit_logs em mutações
 PWA          VITE_PWA_ENABLED=true; sw-vN.js versionado; auto-unregister; reload deferido

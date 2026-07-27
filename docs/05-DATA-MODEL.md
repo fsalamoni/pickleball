@@ -223,8 +223,13 @@ Janelas de horário recorrentes por quadra.
 
 ### `arena_bookings/{id}`
 Reservas da arena. `arena_id`, `athlete_id`, `athlete_name`, `athlete_photo`.
-- `kind` (`'single'|'recurring'`), `slots[]` (`{date, start, end, court_id?}`),
+- `kind` (`'single'|'recurring'|'multi'`), `slots[]` (`{date, start, end, court_id?}`),
   `recurrence` (objeto, só se kind=recurring), `notes` (max 600).
+- **`court_id` é OBRIGATÓRIO** (PR #75) — auto-atribuído via
+  `pickAvailableCourt` se user não escolhe. Nunca null.
+- **`booking_group_id`** (PR #77, aditivo) — agrupa reservas do mesmo
+  pedido multi-quadra (modo "específicas" ou "todas"). Reservas do
+  mesmo grupo compartilham `notes`, `athlete_id`, `recurrence` etc.
 - `status` (`'requested'|'negotiating'|'confirmed'|'declined'|'cancelled'|'completed'`).
 - `is_instant: bool` (Sprint 2 ARE-03) — se true, status inicial = `confirmed`.
 - `payment_method` (opcional, se `is_instant=true` é obrigatório):
@@ -336,21 +341,26 @@ Biblioteca de conteúdo do professor (drills, vídeos, planos de aula).
   'article'), `content_url` (opcional), `thumbnail_url`, `leveling_level`.
 - `visibility` ('public'|'students_only'), `created_at`.
 
-### `coach_clinics/{clinicId}` (Onda 7b)
+### `coach_clinics/{clinicId}` (Onda 7b — refinado em PRs #73-#81)
 Clínicas/workshops abertos (aula para grupo, não alunos regulares).
-- `coach_id`, `title`, `description` (max 2000), `scheduled_at`,
-  `duration_min`, `location`, `capacity`, `price`, `leveling_min`/`max`.
-- `status` ('draft'|'open'|'full'|'closed'|'cancelled'),
-  `signup_count`, `created_at`.
+- `coach_id`, `coach_name` (desnormalizado), `title`, `description` (max 2000),
+  `location`, `level` (em vez de `leveling_min`/`max`),
+  `date` (YYYY-MM-DD), `start`, `end` (HH:MM) — em vez de
+  `scheduled_at`/`duration_min` (PR #73+).
+- `capacity`, `price`, `leveling_min`/`max` (legado, mantido p/ compat).
+- `status` ('open'|'cancelled') — simplificado em PR #73+.
+- `signup_count`, `created_at_ms` (em vez de `created_at`).
 
-### `coach_clinic_signups/{signupId}` (Onda 7b)
-Inscrição em clínica. `clinic_id`, `user_id`, `user_name`,
-`payment_status`, `created_at`.
+### `coach_clinic_signups/{clinicId_athleteId}` (Onda 7b — refinado)
+Inscrição em clínica. **Id determinístico**.
+- `clinic_id`, `coach_id`, `athlete_id`, `athlete_name` (desnormalizado).
+- `created_at_ms`. Leitura pública (contagem de vagas), auto-inscrição do atleta.
 
-### `coach_level_validations/{validationId}` (Onda 7b)
-Validação de nível de um atleta por um professor.
-- `coach_id`, `athlete_id`, `validated_level`, `notes`,
-  `validated_at`. Aparece em `users.leveling_*` quando aplicado.
+### `coach_level_validations/{coachId_studentId}` (Onda 7b — refinado)
+Validação de nível de um atleta por um professor. **Id determinístico**.
+- `coach_id`, `coach_name` (desnormalizado), `student_id`, `student_name`,
+  `level_id`, `level_name`, `level_badge`, `note`, `created_at_ms`.
+- Aparece em `users.leveling_*` quando aplicado.
 
 ### `coach_products/{productId}` (Fase A — loja do professor)
 Loja: equipamento, roupas, acessórios vendidos pelo professor.

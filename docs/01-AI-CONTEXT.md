@@ -43,7 +43,7 @@ Pilares:
   `tournaments/{id}`). Toda a lógica de UI/Hooks roda no client; a
   segurança é garantida por `firestore.rules`.
 - **React Query** (`@tanstack/react-query`) para data fetching/cache.
-- **Vitest** (unit, **1334+ testes**) + **Playwright** (E2E).
+- **Vitest** (unit, **1350 testes**) + **Playwright** (E2E).
 - **react-router-dom** (BrowserRouter), **react-hook-form + zod**, `sonner`
   (toasts), `date-fns`, `lucide-react`, `ics` (calendar export).
 
@@ -55,7 +55,7 @@ experiência oficial e integral**), cada módulo em camadas
 services falam com Firestore; hooks expõem React Query; UI consome hooks.
 V2 (`src/v2/`) é a camada de apresentação ativa; **reusa integralmente** os
 hooks e services dos módulos em `src/modules/`. **Feature flags controlam
-toda nova funcionalidade** (`src/core/featureFlags.js` — 124 flags, +94 nas
+toda nova funcionalidade** (`src/core/featureFlags.js` — 125 flags, +95 nas
 Ondas 1-10).
 
 ```
@@ -71,7 +71,7 @@ src/
 │   ├── lib/profileValidation.js  # perfil obrigatório, cálculo de idade
 │   ├── lib/{logger,utils,useClipboard}.js
 │   ├── domain/types.js           # typedefs JSDoc compartilhados
-│   ├── featureFlags.js           # 124 flags (FEATURE_FLAG)
+│   ├── featureFlags.js           # 125 flags (FEATURE_FLAG)
 │   ├── featureFlagGroups.js      # agrupamento por assunto (admin)
 │   └── services/                 # auditService, notificationService,
 │                                 # baseService, storageService, observabilityService
@@ -99,7 +99,7 @@ src/
     ├── V2App.jsx        # Tabela de rotas (ativo em /*, autenticado)
     ├── components/      # V2Layout + componentes por módulo
     │                    #   + FeatureFlagGuard (padrão para flag-gating)
-    ├── pages/           # 67 páginas V2: V2Dashboard, V2Arenas, V2Tournament,
+    ├── pages/           # 66 páginas V2: V2Dashboard, V2Arenas, V2Tournament,
     │                    #   V2Coaches, V2CoachProfile, V2CoachAgenda,
     │                    #   V2StudentLessons, V2Settings, V2NotFound, V2Search...
     └── ui/primitives.jsx # V2Button, V2Card, V2Badge, V2Dialog, V2Skeleton, ...
@@ -264,7 +264,7 @@ componentes ou services.
 
 ## 9. Feature flags (catálogo)
 
-`src/core/featureFlags.js` define 124 flags (FEATURE_FLAG). Defaults no
+`src/core/featureFlags.js` define 125 flags (FEATURE_FLAG). Defaults no
 Firestore em `platform_settings/feature_flags/{key}`. Migration em
 `migrateLegacyFlags` (sempre bump `FLAGS_MIGRATION_VERSION`). Padrão de
 uso:
@@ -311,7 +311,7 @@ Ondas recentes (PR #71 + #72):
 ```bash
 npm run dev       # Vite dev (http://localhost:5173)
 npm run lint      # ESLint (--quiet no CI) — esperado 0 errors
-npm run test      # Vitest unit (1334+ testes)
+npm run test      # Vitest unit (1350 testes)
 npm run e2e       # Playwright
 npm run build     # produção → dist/  (VITE_PWA_ENABLED=true ativa PWA)
 ```
@@ -330,7 +330,17 @@ npm run build     # produção → dist/  (VITE_PWA_ENABLED=true ativa PWA)
   Auto-unregister de SWs stale (`sw-vN.js`) é padrão, sempre. Reload é
   **deferido** se o user está interagindo (5s de janela de idle).
 
-## 11. Convenções para quem edita (humano ou IA)
+## 11. "Ver como usuário" (debug do admin)
+
+`/admin/painel` e `/admin/console` mostram o cabeçalho com toggle "Ver como
+usuário" (apenas para `platform_admin`). Quando ativo:
+- `isPlatformAdmin` retorna `false`
+- `canCreatePools` retorna `false`
+- O app se comporta como user comum
+
+Útil pra debugar UX do usuário sem precisar fazer logout.
+
+## 12. Convenções para quem edita (humano ou IA)
 
 1. **Lógica pura → `domain/` com teste.** Service só I/O; componente só UI.
 2. **Toda nova feature atrás de uma flag** (`FEATURE_FLAG.*`). Default OFF.
@@ -350,7 +360,7 @@ npm run build     # produção → dist/  (VITE_PWA_ENABLED=true ativa PWA)
     Reload deferido se user interagindo (5s janela).
 12. Deploy só com a tríade verde; confira o run do workflow após o push.
 
-## 12. Mapa dos demais docs
+## 13. Mapa dos demais docs
 
 - `docs/04-ARCHITECTURE.md` — camadas, design system, PWA, testes, padrões.
 - `docs/05-DATA-MODEL.md` — coleções, campos, relacionamentos, resumo das regras.

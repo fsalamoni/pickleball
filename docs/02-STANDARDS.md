@@ -231,6 +231,20 @@ firebase.firestore().doc('platform_settings/feature_flags/my_new_feature')
 
 ---
 
+
+### 3.6 Navegação em hubs (`NAV_HUBS`)
+
+Quando a flag `NAV_HUBS` está ON, o `V2Layout` muda:
+
+- **Sidebar lateral**: mostra apenas os **hubs** (nível 1) — não mais a
+  lista plana. Colapsável para só ícones.
+- **Barra superior**: mostra as **subpáginas do hub ativo** (nível 2).
+- **Mobile**: mesmo padrão (drawer com hubs + barra superior com subs).
+
+Quando OFF, renderiza a lista plana antiga (legado).
+
+OFF por default. Aditivo — pode ser ativado em runtime pelo admin.
+
 ## 4. Páginas V2 (Athleisure Premium)
 
 ### 4.1 Estrutura padrão de uma página V2
@@ -382,6 +396,16 @@ match /my_new_collection/{id} {
 - Service lê com default se faltar: `const name = data.name ?? 'Anônimo';`
 - Atualizar regra só se o novo campo **restringir** algo (improvável)
 - Documentar em `05-DATA-MODEL.md`
+
+
+### 5.3.1 court_id é OBRIGATÓRIO em `arena_bookings` (PR #75)
+
+Desde o PR #75, TODA reserva deve ter `court_id` setado. O service
+`createBooking` PERSISTE o `court_id` (antes era perdido!) e, se o user
+não escolhe quadra, chama `pickAvailableCourt` para auto-atribuir.
+
+NUNCA criar reserva sem `court_id`. Se `pickAvailableCourt` retorna
+null, o service **erra** com mensagem clara — sem fallback silencioso.
 
 ### 5.4 Ids deterministas
 
@@ -801,3 +825,20 @@ NUNCA:
 
 > **Última atualização**: 2026-07-24. Mudou o padrão? Atualize este doc
 > **e** o `CLAUDE.md` §5 + a memory do agente.
+
+## 14. "Ver como usuário" (debug)
+
+Toggle no header (visível só para `platform_admin`). Quando ativo:
+- `useAuth().isPlatformAdmin` retorna `false`
+- `useAuth().canCreatePools` retorna `false`
+- O app se comporta como user comum
+
+Útil pra debugar UX do usuário sem fazer logout.
+
+Lógica: `core/lib/FirebaseAuthContext.jsx` tem o state `impersonate: bool`
+que, quando true, faz os getters retornarem `false`.
+
+```js
+const { impersonate, setImpersonate, isPlatformAdmin, canCreatePools } = useAuth();
+// isPlatformAdmin = role === 'platform_admin' && !impersonate
+```

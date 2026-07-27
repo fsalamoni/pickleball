@@ -9,7 +9,7 @@
 > torneio (05-organizador), dia de jogo (06), professor (08), clubes (09) —
 > esses têm seu próprio roadmap.
 >
-> **Estado atual no repositório (origin/main @ 56dba26)**:
+> **Estado atual no repositório (origin/main @ 80f7bb6)**:
 - Sprint 0 (Descoberta) ✅: `Minhas arenas` no sidebar (ARE-11), onboarding
   4-passos (ARE-20), aba "Arenas" no admin/painel, QW-14/15
 - Sprint 1 (Fundação) ✅: ARE-01 quadras, ARE-02 calendário, ARE-04
@@ -730,3 +730,119 @@ Domain puro `instant_booking.js` + 19 tests. Integração no
 > - **Checkout/gateway** (rateio é calculado, mas pagamento é combinado
 >   direto)
 > - **Aceite mútuo da parceria** (Onda 7 entregou; refinamento pode vir)
+
+---
+
+## 14. Sprints 11-12 — UX/UI + reservas por quadra (2026-07-24 → 2026-07-27)
+
+> Atualizado em **2026-07-27** (origin/main @ `80f7bb6`, PR #81).
+> 9 PRs grandes mergeados em outros ambientes: PRs #73-#81.
+> Esta seção documenta o que foi entregue e o que foi aprendido.
+
+### Sprint 11 — UX/UI fixes (PRs #73, #74, #79, #80)
+
+**Tema**: pequenos fixes de UX que incomodavam no dia-a-dia, mais a
+grande mudança de navegação em hubs.
+
+- **PR #73** — `fix(ux): onboarding só na 1ª entrada, diálogos roláveis, dedup waitlist`
+  - Onboarding wizard só dispara na 1ª entrada (não mais sempre)
+  - Diálogos roláveis em modo paisagem
+  - **Dedup `arena_waitlist`**: removida duplicação
+  - 8 files, 66 insertions, 27 deletions
+- **PR #74** — `feat(nav+admin): navegação em hubs (flag) + consolidação de flags`
+  - **Nova flag `NAV_HUBS`**: navegação 2 níveis
+  - Consolidação de flags (contagem única, agrupamento)
+  - **V2AdminBootstrap** consolidada no console (`/admin/console?tab=flags`)
+  - V2AdminBootstrap.jsx + ArenaV3FlagsPanel.jsx **deletados**
+  - 7 files, 422 insertions, 578 deletions
+- **PR #79** — `feat(nav+admin): ver como usuário + Política de uso + Parceiros`
+  - **"Ver como usuário"** no header (toggle debug, só admin)
+  - **"Política de uso"** no rodapé (link próprio)
+  - "Parceiros" vira seção própria
+  - **Renames**: "Aprender"→"Pickleball", "Ensino"→"Professores"
+  - 2 files, 68 insertions, 9 deletions
+- **PR #80** — `fix(nav): drawer mobile mostra só os hubs`
+  - 1 file, 54 insertions, 23 deletions
+
+### Sprint 12 — Reservas por quadra + circuitos + professor (PRs #75-#78, #81)
+
+**Tema**: o coração das arenas — vincular toda reserva a uma quadra
+específica, suportar multi-quadra, e unificar o "professor".
+
+- **PR #75** — `fix: reservas por quadra, circuitos no painel, unificar 'professor'`
+  - **Toda reserva AGORA tem `court_id`** (auto-atribuído via
+    `pickAvailableCourt` em `domain/court_assignment.js`)
+  - 8 asserts no domain: `activeCourts`, `isCourtFreeForSlot`,
+    `pickAvailableCourt`, `courtAvailabilityForSlot`,
+    `countAvailableCourts`
+  - **Rename "treinador"→"professor"** (label flag `COACH_DIRECTORY`)
+  - Calendário admin por quadra (grade tempo × quadra)
+  - Circuitos no painel
+  - 13 files, 188 insertions, 89 deletions
+  - 608 testes de arena verdes
+- **PR #76** — `feat(circuits): registrar resultados por etapa`
+  - UI de registro de resultados por etapa
+  - Pontos pela tabela do circuito
+  - 3 erros de lint pré-existentes corrigidos
+  - 2 files, 111 insertions, 6 deletions
+- **PR #77** — `fix(arenas): reservar todas/específicas quadras (uma por quadra)`
+  - **3 modos** no BookingRequestDialog: qualquer / específicas / todas
+  - Modo específicas/todas: cada quadra = reserva independente
+  - `booking_group_id` aditivo (lote atômico)
+  - Domain: `resolveTargetCourts`, `unavailableCourtsForSlots` (+12 tests)
+  - 4 files, 323 insertions, 142 deletions
+- **PR #78** — `fix(arenas): reservar/cancelar por quadra + convidar participantes`
+  - Modo "todas" cria reserva por quadra
+  - Filtro do calendário define modo
+  - **Cancelar próprias reservas** (individual e em lote)
+  - **Convidar participantes** no modal de dia
+  - Suporte a múltiplos horários (kind `multi`)
+  - +16 testes (1350 total)
+  - 7 files, 331 insertions, 69 deletions
+- **PR #81** — `feat(coaches): "Sou professor" bidirecional`
+  - Sync `users/{uid}` ↔ `coaches/{uid}` (dois sentidos)
+  - "Sou professor" do perfil (V2ProfileEdit) salva em `coaches/{uid}` +
+    `users/{uid}.is_coach=true`
+  - Salvar em `/coaches` reflete no perfil
+  - Campo Modalidades no perfil + pré-preenchimento
+  - 4 files, 167 insertions, 6 deletions
+  - 1350 testes verdes
+
+### Métricas finais (2026-07-27)
+
+- **1350 testes verdes** (era 1334, +16 com PR #78)
+- **Lint 0 errors**
+- **125 feature flags** (124 + 1: NAV_HUBS)
+- **66 V2 pages** (67 - 1: V2AdminBootstrap removida)
+- **9 PRs mergeados** (#73-#81), 36 PRs totais
+- **Last SHA**: `80f7bb6` (PR #81)
+
+### Decisões de arquitetura importantes (Sprints 11-12)
+
+1. **TODA reserva tem `court_id` obrigatório** (PR #75) — auto-atribuído
+   via `pickAvailableCourt`. Service **erra** se nenhuma quadra livre
+   (sem fallback silencioso).
+2. **`booking_group_id` aditivo** em `arena_bookings` (PR #77) — agrupa
+   reservas do mesmo pedido multi-quadra.
+3. **3 modos no BookingRequestDialog** (PR #77): qualquer / específicas /
+   todas. Cada modo gera padrão diferente de reservas.
+4. **NAV_HUBS** (PR #74): nova navegação 2 níveis. OFF por default.
+5. **"Ver como usuário"** (PR #79): toggle no header. Faz
+   `isPlatformAdmin`/`canCreatePools` retornarem `false`.
+6. **V2AdminBootstrap consolidada** (PR #74) — não existe mais, foi
+   absorvida pelo console.
+7. **Renames** (PR #75, #79): "treinador"→"professor", "Aprender"→
+   "Pickleball", "Ensino"→"Professores".
+8. **Professor unificado** (PR #81): "Sou professor" do perfil sincroniza
+   com `coaches/{uid}` automaticamente.
+
+### Próximo (Sprint 13+ — backlog remanescente)
+
+> Ver `docs/09-UX-ANALYSIS/15-backlog-remanescente.md` para a lista
+> consolidada do que ainda falta. Tópicos principais:
+>
+> - **DS** (Design System): unificar 4 sistemas, dark mode, contraste acid
+> - **NAV**: command palette, breadcrumbs
+> - **Ponte com Sistema C** (aulas da arena)
+> - **Split de receita / comissão** para aulas em arena parceira
+> - **Checkout/gateway** (rateio calculado, pagamento combinado)

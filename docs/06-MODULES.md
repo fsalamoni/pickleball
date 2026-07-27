@@ -112,10 +112,17 @@ PDV, membros, ligas, marketing, IoT, operations, matchmaking.
 - **hooks**: `useArena`, `useArenaBookings`, `useArenaCourts`, `useArenaWaitlist`
   (Onda 6b), `useArenaCRM` (Onda 6b), `useArenaCancellation` (Onda 6).
 
-Reservas: simple/recurring + **shared** (múltiplos responsáveis com rateio
-por tempo de uso, PR #68 + #70) + **coach_lesson** (aula do professor em
-arena parceira, PR #68). Auto-atribuição de `court_id` se user não escolhe
-(`pickAvailableCourt` em `domain/court_assignment.js`).
+Reservas: simple/recurring + **multi** (PR #78) + **shared** (múltiplos
+responsáveis com rateio por tempo de uso, PR #68 + #70) + **coach_lesson**
+(aula do professor em arena parceira, PR #68). `court_id` é **obrigatório**
+em toda reserva (PR #75) — auto-atribuído via `pickAvailableCourt` se user
+não escolhe (`domain/court_assignment.js`).
+
+**BookingRequestDialog reescrito** (PRs #77, #78): 3 modos de seleção
+de quadras — qualquer disponível (auto), específicas (1+ escolhidas, cada
+uma = reserva independente com `booking_group_id`), todas (cada quadra
+ativa = reserva). Convida participantes. Suporte a múltiplos horários
+(kind `multi`). Cancelar individual ou em lote no calendário.
 
 **Política de cancelamento (Onda 6)**: regras percentuais baseadas em
 `tempo até o slot`. Reembolso integral antes do limite, parcial depois,
@@ -256,6 +263,10 @@ Painel exclusivo de `platform_admin` (`/admin/*`).
   `V2AdminOwnerRestore`.
 - **V1 (legado)**: `AdminTournaments`, `AdminMetrics`, `AdminPartners`.
 - **services**: `adminService`, `platformSettingsService` (feature flags).
+- **"Ver como usuário"** (PR #79): toggle no header (só admin) que faz
+  `isPlatformAdmin`/`canCreatePools` retornarem `false`. App se comporta
+  como user comum. Útil pra debug. Lógica em `FirebaseAuthContext.jsx`
+  via flag `impersonate`.
   Ações geram `audit_logs` (`platform_archive_tournament`,
   `platform_delete_tournament`, `feature_flag_changed`…).
 
