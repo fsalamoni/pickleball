@@ -517,7 +517,11 @@ unpublishEventDateFromRanking` em
 **UI:** `PublishToRankingToggle` em
 `src/modules/clubs/components/PublishToRankingToggle.jsx` (switch com
 tooltip, botão "Republicar" idempotente, ConfirmDialog para despublicar,
-resumo de jogos decididos/eligíveis).
+resumo de jogos decididos/eligíveis). Renderizado **dentro do
+`GameDayOrganizer`** (mesma seção da organização de jogos), logo
+após a lista de jogos do dia. `canManage` é computado pelo
+`GameDayOrganizer` (`useAuth` + `useMyMembership` +
+`event.created_by`).
 
 ### 5.4 Ids deterministas
 

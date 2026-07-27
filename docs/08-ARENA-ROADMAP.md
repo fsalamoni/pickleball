@@ -1106,17 +1106,23 @@ específica, suportar multi-quadra, e unificar o "professor".
 
 #### UI
 - `src/modules/clubs/components/PublishToRankingToggle.jsx` (NOVO):
-  - Switch "Lançar resultados no ranking" no DateCard (aba Jogos)
+  - Switch "Lançar resultados no ranking" — renderizado **dentro do
+    `GameDayOrganizer`**, na mesma seção da organização de jogos
+    (logo após a lista de jogos do dia, com o resumo de
+    decididos/eligíveis/com-guest).
   - Visível SÓ para criador do evento + admin do clube
+    (computado dentro do `GameDayOrganizer` via `useAuth` +
+    `useMyMembership` + `event.created_by`).
   - Tooltip + texto: "apenas jogos com resultados lançados entram
-    no ranking"
-  - Botão "Republicar" (idempotente) + ConfirmDialog para despublicar
-  - Resumo de jogos decididos/eligíveis/com-guest (UX explicativa)
+    no ranking".
+  - Botão "Republicar" (idempotente) + ConfirmDialog para despublicar.
   - Badge "resultados deste dia estão no ranking nacional" para
-    visualizadores (não-managers) quando ativo
-- `EventDatesPanel.jsx`: DateCard agora computa `canManage` (criador OU
-  admin via `useMyMembership`) e lê participants do dia; o toggle
-  fica dentro da aba "Jogos", logo após o `GameDayOrganizer`
+    visualizadores (não-managers) quando ativo.
+- `GameDayOrganizer.jsx`: agora computa `canManage` internamente
+  (criador + admin) e renderiza o `PublishToRankingToggle` na
+  mesma seção da organização de jogos.
+- `EventDatesPanel.jsx`: aba "Jogos" do DateCard agora renderiza só
+  o `GameDayOrganizer` (o toggle vive dentro dele, mesma seção).
 
 #### Limpeza
 - `clearGameDayData` em `clubService.js` agora também chama
@@ -1166,3 +1172,25 @@ específica, suportar multi-quadra, e unificar o "professor".
 > - **Wave D**: Sistema C (aulas da arena) — integração com Sistema A
 > - **Wave E**: Split de receita / comissão para aulas em arena parceira
 > - **Wave F**: Checkout/gateway (rateio calculado, pagamento combinado)
+
+### Wave C.1 (2026-07-27, 23:55) — reposicionamento do switch
+
+> Ajuste de UX solicitado pelo user. Branch `wave/c-ranking-toggle-position`
+> mergeada em main como `c939e17`.
+
+**O que mudou:**
+- O switch "Lançar resultados no ranking" foi movido para **dentro
+  do `GameDayOrganizer`** (mesma seção da organização de jogos),
+  abaixo da lista de jogos do dia. Antes ficava em uma seção
+  separada dentro da aba "Jogos" do DateCard.
+- `GameDayOrganizer.jsx` agora computa `canManage` internamente
+  (`useAuth` + `useMyMembership` + `event.created_by`) — sem
+  precisar receber via prop.
+- `EventDatesPanel.jsx`: removidos imports/variáveis órfãs
+  (`canManage`, `dateParticipants`, `isCreator`, `isAdmin`,
+  `useMyMembership`, `useEventParticipants`,
+  `PublishToRankingToggle`).
+
+**Arquivos:** 2 (`GameDayOrganizer.jsx`, `EventDatesPanel.jsx`).
+**Testes:** 1372 (sem mudança de count).
+**Build:** OK.

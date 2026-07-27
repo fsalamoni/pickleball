@@ -104,3 +104,11 @@ import { useClubPublicPage } from '@/modules/clubs/hooks/useClubPublicPage';
 ## Onde achar mais
 - `docs/06-MODULES.md` § clubs
 - `docs/09-UX-ANALYSIS/09-clubes-comunidade.md` (CLU-*)
+
+### Posicionamento do switch (Wave C.1)
+
+O switch "Lançar resultados no ranking" é renderizado **dentro do
+`GameDayOrganizer`**, na mesma seção da organização de jogos — logo
+abaixo da lista de jogos do dia. Não fica em uma seção separada nem
+numa aba à parte. `canManage` é calculado pelo próprio
+`GameDayOrganizer` (criador do evento OU admin do clube).
