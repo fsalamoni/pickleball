@@ -17,6 +17,7 @@ import { V2LevelingQuestionnaire } from '@/v2/components/leveling/V2LevelingQues
 import { V2LevelingResultCard } from '@/v2/components/leveling/V2LevelingQuestionnaire';
 import { PICKLEBALL_EXPERIENCE_LABELS, COMPETITION_GENDER_LABELS } from '@/modules/tournament/domain/constants';
 import V2ParticipationHistoryCard from '@/v2/components/tournament/V2ParticipationHistoryCard';
+import { useCoach, useSyncCoachFromProfile } from '@/modules/coaches/hooks/useCoaches';
 import {
   V2Button, V2Field, V2Input, V2SectionHeader, V2Select, V2Surface, V2Textarea, V2Toggle,
 } from '@/v2/ui/primitives';
@@ -25,6 +26,10 @@ export default function V2ProfileEdit() {
   const { user, userProfile, updateUserProfile } = useAuth();
   const { track } = useFunnel();
   const coachDirectoryOn = useFeatureFlag(FEATURE_FLAG.COACH_DIRECTORY);
+  // Perfil completo de professor (coleção coaches) — fonte para pré-preencher
+  // e para manter em sincronia com o "Sou professor" do perfil.
+  const { data: myCoach } = useCoach(user?.uid);
+  const syncCoach = useSyncCoachFromProfile();
 
   const [platformName, setPlatformName] = useState(userProfile?.platform_name || userProfile?.full_name || '');
   const [birthDate, setBirthDate] = useState(userProfile?.birth_date || '');
@@ -45,6 +50,7 @@ export default function V2ProfileEdit() {
   const [coachBio, setCoachBio] = useState(userProfile?.coach_bio || '');
   const [coachPrice, setCoachPrice] = useState(userProfile?.coach_price || '');
   const [coachRegions, setCoachRegions] = useState(userProfile?.coach_regions || '');
+  const [coachModalities, setCoachModalities] = useState(userProfile?.coach_modalities || '');
   const [errors, setErrors] = useState({});
   const [busy, setBusy] = useState(false);
   const [communityBusy, setCommunityBusy] = useState(false);
@@ -77,8 +83,22 @@ export default function V2ProfileEdit() {
     setCoachBio(userProfile?.coach_bio || '');
     setCoachPrice(userProfile?.coach_price || '');
     setCoachRegions(userProfile?.coach_regions || '');
+    setCoachModalities(userProfile?.coach_modalities || '');
     setVisibleResult(userProfile?.leveling_assessment?.result || null);
   }, [userProfile, user?.photoURL]);
+
+  // Pré-preenche a seção "Sou professor" a partir do perfil completo (coleção
+  // coaches) quando o espelho em users ainda não tem os dados — ex.: cadastro
+  // feito só na página /coaches. Mantém as duas fontes coerentes na tela.
+  useEffect(() => {
+    if (!myCoach) return;
+    if (userProfile?.is_coach !== true && myCoach.active !== false) setIsCoach(true);
+    if (!userProfile?.coach_bio && myCoach.bio) setCoachBio(myCoach.bio);
+    if (!userProfile?.coach_price && myCoach.hourly_rate != null) setCoachPrice(String(myCoach.hourly_rate));
+    if (!userProfile?.coach_regions && (myCoach.regions || []).length) setCoachRegions(myCoach.regions.join(', '));
+    if (!userProfile?.coach_modalities && (myCoach.modalities || []).length) setCoachModalities(myCoach.modalities.join(', '));
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [myCoach]);
 
   const onSaveIdentity = async (e) => {
     e.preventDefault();
@@ -139,13 +159,32 @@ export default function V2ProfileEdit() {
   };
 
   const saveCoach = async () => {
+    if (isCoach && !coachModalities.trim() && !(myCoach?.modalities || []).length) {
+      toast.error('Informe ao menos uma modalidade (ex.: Iniciantes, Avançado, DUPR 4.0+).');
+      return;
+    }
     setCoachBusy(true);
     try {
+      // 1) Espelho no perfil do usuário (users + diretório de atletas).
       await updateUserProfile({
         is_coach: isCoach,
         coach_bio: isCoach ? coachBio.trim() : '',
         coach_price: isCoach ? coachPrice.trim() : '',
         coach_regions: isCoach ? coachRegions.trim() : '',
+        coach_modalities: isCoach ? coachModalities.trim() : '',
+      });
+      // 2) Perfil completo de professor (coleção coaches), preservando os campos
+      //    avançados (certificações, fotos, contatos). Vincula as duas fontes.
+      await syncCoach.mutateAsync({
+        coachId: user.uid,
+        essentials: {
+          is_coach: isCoach,
+          bio: coachBio,
+          hourly_rate: coachPrice,
+          regions: coachRegions,
+          modalities: coachModalities,
+          display_name: platformName,
+        },
       });
       toast.success('Informações de professor salvas.');
     } catch (err) {
@@ -305,15 +344,22 @@ export default function V2ProfileEdit() {
             </div>
             {isCoach && (
               <div className="mt-4 space-y-4">
-                <V2Field label="Sobre suas aulas"><V2Textarea value={coachBio} onChange={(e) => setCoachBio(e.target.value)} maxLength={400} rows={3} placeholder="Ex.: Aulas para iniciantes e intermediários, foco em fundamentos e tática." /></V2Field>
+                <V2Field label="Sobre suas aulas"><V2Textarea value={coachBio} onChange={(e) => setCoachBio(e.target.value)} maxLength={1000} rows={3} placeholder="Ex.: Aulas para iniciantes e intermediários, foco em fundamentos e tática." /></V2Field>
+                <V2Field label="Modalidades (separadas por vírgula)" required>
+                  <V2Input value={coachModalities} onChange={(e) => setCoachModalities(e.target.value)} maxLength={160} placeholder="Ex.: Iniciantes, Avançado, DUPR 4.0+" />
+                </V2Field>
                 <div className="grid gap-4 sm:grid-cols-2">
-                  <V2Field label="Valor (opcional)"><V2Input value={coachPrice} onChange={(e) => setCoachPrice(e.target.value)} maxLength={60} placeholder="Ex.: R$ 80/aula" /></V2Field>
+                  <V2Field label="Valor (opcional)"><V2Input value={coachPrice} onChange={(e) => setCoachPrice(e.target.value)} maxLength={60} placeholder="Ex.: 80 (R$/hora)" /></V2Field>
                   <V2Field label="Regiões de atuação (opcional)"><V2Input value={coachRegions} onChange={(e) => setCoachRegions(e.target.value)} maxLength={120} placeholder="Ex.: Zona Sul, online" /></V2Field>
                 </div>
+                <p className="text-xs text-gray-500">
+                  Estas informações formam seu perfil público de professor. Para foto, certificações e contatos,
+                  {' '}<Link to="/coaches" className="font-semibold text-ink underline">gerencie seu perfil completo em Professores</Link>. Tudo fica sincronizado.
+                </p>
               </div>
             )}
             <div className="mt-5 flex justify-end">
-              <V2Button onClick={saveCoach} disabled={coachBusy}>{coachBusy ? 'Salvando…' : 'Salvar informações de professor'}</V2Button>
+              <V2Button onClick={saveCoach} disabled={coachBusy || syncCoach.isPending}>{(coachBusy || syncCoach.isPending) ? 'Salvando…' : 'Salvar informações de professor'}</V2Button>
             </div>
           </V2Surface>
         )}

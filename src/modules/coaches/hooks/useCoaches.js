@@ -7,7 +7,7 @@ import { useAuth } from '@/core/lib/FirebaseAuthContext';
 import { useFeatureFlag } from '@/core/lib/FeatureFlagsContext';
 import { FEATURE_FLAG } from '@/core/featureFlags';
 import {
-  getCoach, listCoaches, upsertCoachProfile,
+  getCoach, listCoaches, upsertCoachProfile, syncCoachDocFromEssentials,
   listCoachResidencies, listArenaCoaches,
   addCoachResidency, removeCoachResidency, updateCoachResidency,
   acceptCoachResidency, declineCoachResidency,
@@ -50,6 +50,24 @@ export function useUpsertCoachProfile() {
   const qc = useQueryClient();
   return useMutation({
     mutationFn: ({ coachId, input }) => upsertCoachProfile(coachId, input, user),
+    onSuccess: (_, vars) => {
+      qc.invalidateQueries({ queryKey: ['coaches'] });
+      qc.invalidateQueries({ queryKey: ['coaches', 'detail', vars.coachId] });
+    },
+  });
+}
+
+/**
+ * Sincroniza o doc de professor a partir do "Sou professor" do editor de perfil.
+ * Preserva os campos avançados e espelha o resumo em users/diretório.
+ */
+export function useSyncCoachFromProfile() {
+  const { user, isPlatformAdmin } = useAuth();
+  const qc = useQueryClient();
+  return useMutation({
+    mutationFn: ({ coachId, essentials }) => syncCoachDocFromEssentials(
+      coachId, essentials, { uid: user?.uid, isPlatformAdmin, displayName: user?.displayName },
+    ),
     onSuccess: (_, vars) => {
       qc.invalidateQueries({ queryKey: ['coaches'] });
       qc.invalidateQueries({ queryKey: ['coaches', 'detail', vars.coachId] });

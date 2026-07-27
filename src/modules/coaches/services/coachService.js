@@ -21,6 +21,7 @@ import { logger } from '@/core/lib/logger';
 import { createAuditLog } from '@/core/services/auditService';
 import { notifyUsers, NOTIFICATION_TYPE } from '@/core/services/notificationService';
 import { normalizeCoachProfile, normalizeCoachResidency } from '../domain/coach.js';
+import { syncAthleteProfile } from '@/modules/athletes/services/athleteService';
 
 export const COACH_COLLECTIONS = {
   coaches: 'coaches',
@@ -29,6 +30,39 @@ export const COACH_COLLECTIONS = {
 
 function residencyId(coachId, arenaId) { return `${coachId}_${arenaId}`; }
 function str(v) { return String(v ?? '').trim(); }
+function toList(v) {
+  if (Array.isArray(v)) return v.map((x) => str(x)).filter(Boolean);
+  return str(v).split(',').map((x) => x.trim()).filter(Boolean);
+}
+
+/**
+ * Espelha o resumo do perfil de professor em `users/{uid}` e no diretório
+ * público de atletas, mantendo as duas fontes (coaches ↔ users) em sincronia.
+ * Assim, editar em /coaches reflete no editor de perfil e no diretório, e
+ * vice-versa. Best-effort: falhas não interrompem o fluxo principal.
+ */
+async function mirrorCoachToUser(coachId, value) {
+  const mirror = {
+    is_coach: value.active !== false,
+    coach_bio: value.bio || '',
+    coach_price: value.hourly_rate == null ? '' : String(value.hourly_rate),
+    coach_regions: (value.regions || []).join(', '),
+    coach_modalities: (value.modalities || []).join(', '),
+    updated_at: serverTimestamp(),
+  };
+  try {
+    const userRef = doc(db, 'users', coachId);
+    const userSnap = await getDoc(userRef);
+    await setDoc(userRef, mirror, { merge: true });
+    const mergedProfile = { uid: coachId, ...(userSnap.exists() ? userSnap.data() : {}), ...mirror };
+    await syncAthleteProfile(
+      { uid: coachId, email: mergedProfile.email, photoURL: mergedProfile.photo_url },
+      mergedProfile,
+    );
+  } catch (err) {
+    logger.error('Falha ao espelhar perfil de professor no usuário/diretório:', err);
+  }
+}
 
 /* ----------------------------- Profile ----------------------------- */
 
@@ -47,11 +81,74 @@ export async function upsertCoachProfile(coachId, input, actor) {
     updated_at: serverTimestamp(),
     created_at: serverTimestamp(),
   }, { merge: true });
+  // Espelha o resumo em users/{uid} + diretório (mantém "Sou professor" do
+  // editor de perfil em sincronia com o perfil completo).
+  await mirrorCoachToUser(coachId, value);
   await createAuditLog({
     action: 'coach_profile_updated',
     actor,
     details: { coach_id: coachId, display_name: value.display_name },
   });
+  return coachId;
+}
+
+/**
+ * Sincroniza o documento de professor (`coaches/{uid}`) a partir dos campos
+ * essenciais editados no "Sou professor" do perfil do usuário, PRESERVANDO os
+ * campos avançados já cadastrados (certificações, fotos, contatos, modalidades
+ * não informadas). Também espelha o resumo em users/diretório.
+ *
+ * - is_coach=false → apenas desativa o perfil (esconde do diretório) sem apagar.
+ * - is_coach=true  → faz upsert (merge) do perfil, exigindo ao menos uma
+ *   modalidade (informada ou já existente).
+ *
+ * @param {string} coachId
+ * @param {{ is_coach, bio?, hourly_rate?, regions?, modalities?, display_name? }} essentials
+ * @param {object} actor
+ */
+export async function syncCoachDocFromEssentials(coachId, essentials = {}, actor) {
+  if (!coachId) throw new Error('coachId é obrigatório.');
+  if (actor?.uid !== coachId && !actor?.isPlatformAdmin) {
+    throw new Error('Sem permissão para editar este perfil.');
+  }
+  const existing = await getCoach(coachId);
+
+  if (!essentials.is_coach) {
+    if (existing && existing.active !== false) {
+      await updateDoc(doc(db, COACH_COLLECTIONS.coaches, coachId), { active: false, updated_at: serverTimestamp() });
+      await mirrorCoachToUser(coachId, { ...existing, active: false });
+    }
+    await createAuditLog({ action: 'coach_profile_deactivated', actor, details: { coach_id: coachId } });
+    return coachId;
+  }
+
+  const regionsArr = essentials.regions !== undefined ? toList(essentials.regions) : (existing?.regions || []);
+  const modalitiesArr = essentials.modalities !== undefined ? toList(essentials.modalities) : [];
+  const merged = {
+    display_name: existing?.display_name || str(essentials.display_name) || 'Professor',
+    bio: essentials.bio !== undefined ? str(essentials.bio) : (existing?.bio || ''),
+    hourly_rate: essentials.hourly_rate === '' || essentials.hourly_rate == null
+      ? (existing?.hourly_rate ?? null)
+      : Number(essentials.hourly_rate),
+    regions: regionsArr,
+    modalities: modalitiesArr.length ? modalitiesArr : (existing?.modalities || []),
+    certifications: existing?.certifications || [],
+    photos: existing?.photos || [],
+    contact_whatsapp: existing?.contact_whatsapp || '',
+    contact_email: existing?.contact_email || '',
+    accepting_students: existing?.accepting_students !== false,
+    active: true,
+  };
+  const { valid, error, value } = normalizeCoachProfile(merged);
+  if (!valid) throw new Error(error);
+  await setDoc(doc(db, COACH_COLLECTIONS.coaches, coachId), {
+    ...value,
+    user_id: coachId,
+    updated_at: serverTimestamp(),
+    created_at: existing?.created_at || serverTimestamp(),
+  }, { merge: true });
+  await mirrorCoachToUser(coachId, value);
+  await createAuditLog({ action: 'coach_profile_synced_from_profile', actor, details: { coach_id: coachId } });
   return coachId;
 }
 
