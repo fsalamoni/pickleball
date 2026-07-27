@@ -1,5 +1,6 @@
 import React from 'react';
 import { Slot } from '@radix-ui/react-slot';
+import { ChevronDown } from 'lucide-react';
 import { cn } from '@/core/lib/utils';
 
 /**
@@ -13,18 +14,111 @@ import { cn } from '@/core/lib/utils';
  * - Respiro generoso (p-6/p-8) e bordas suaves (border-gray-100).
  */
 
-export function V2Surface({ as: Tag = 'div', className, children, ...props }) {
+/**
+ * Superfície (card) do design system. Retrocompatível: sem `collapsible`,
+ * comporta-se como antes.
+ *
+ * Modo colapsável (`collapsible`): renderiza um cabeçalho sempre visível
+ * (eyebrow/title/description + headerAction) com um chevron; o corpo
+ * (`children`) recolhe/expande. O estado é lembrado por seção via localStorage
+ * (`collapseId` ou o título). Use em toda seção interna de dados — nunca em heroes.
+ */
+export function V2Surface({
+  as: Tag = 'div', className, children,
+  collapsible = false, title, eyebrow, description, headerAction,
+  defaultCollapsed = false, collapseId,
+  ...props
+}) {
+  if (!collapsible) {
+    return (
+      <Tag
+        className={cn(
+          'rounded-4xl border border-gray-100 bg-paper-pure p-6 shadow-organic-sm sm:p-8',
+          className,
+        )}
+        {...props}
+      >
+        {children}
+      </Tag>
+    );
+  }
   return (
-    <Tag
-      className={cn(
-        'rounded-4xl border border-gray-100 bg-paper-pure p-6 shadow-organic-sm sm:p-8',
-        className,
-      )}
+    <V2CollapsibleSurface
+      Tag={Tag}
+      className={className}
+      title={title}
+      eyebrow={eyebrow}
+      description={description}
+      headerAction={headerAction}
+      defaultCollapsed={defaultCollapsed}
+      collapseId={collapseId}
       {...props}
     >
       {children}
+    </V2CollapsibleSurface>
+  );
+}
+
+function useCollapseState(storageKey, defaultCollapsed) {
+  const [collapsed, setCollapsed] = React.useState(() => {
+    if (!storageKey) return defaultCollapsed;
+    try {
+      const v = localStorage.getItem(storageKey);
+      if (v != null) return v === '1';
+    } catch { /* ignore */ }
+    return defaultCollapsed;
+  });
+  const toggle = React.useCallback(() => {
+    setCollapsed((c) => {
+      const next = !c;
+      try { if (storageKey) localStorage.setItem(storageKey, next ? '1' : '0'); } catch { /* ignore */ }
+      return next;
+    });
+  }, [storageKey]);
+  return [collapsed, toggle];
+}
+
+function V2CollapsibleSurface({
+  Tag = 'div', className, children,
+  title, eyebrow, description, headerAction, defaultCollapsed, collapseId,
+  ...props
+}) {
+  const storageKey = collapseId || title ? `v2_collapse_${collapseId || title}` : null;
+  const [collapsed, toggle] = useCollapseState(storageKey, defaultCollapsed);
+  return (
+    <Tag
+      className={cn('rounded-4xl border border-gray-100 bg-paper-pure shadow-organic-sm', className)}
+      {...props}
+    >
+      <div className="flex items-start justify-between gap-3 p-6 sm:p-8">
+        <button
+          type="button"
+          onClick={toggle}
+          aria-expanded={!collapsed}
+          className="group flex min-w-0 flex-1 items-start gap-3 text-left"
+        >
+          <ChevronDown
+            className={cn('mt-1 h-5 w-5 shrink-0 text-gray-400 transition-transform group-hover:text-ink', collapsed ? '' : 'rotate-180')}
+          />
+          <span className="min-w-0">
+            {eyebrow && <span className="block text-[11px] font-bold uppercase tracking-widest text-gray-400">{eyebrow}</span>}
+            {title && <span className="mt-1 block font-display text-xl font-bold text-ink sm:text-2xl">{title}</span>}
+            {description && !collapsed && <span className="mt-2 block max-w-2xl font-medium text-gray-500">{description}</span>}
+          </span>
+        </button>
+        {headerAction && <div className="shrink-0">{headerAction}</div>}
+      </div>
+      {!collapsed && <div className="px-6 pb-6 sm:px-8 sm:pb-8">{children}</div>}
     </Tag>
   );
+}
+
+/**
+ * Açúcar sintático: seção interna colapsável (card com cabeçalho + corpo).
+ * Equivale a `<V2Surface collapsible ...>`.
+ */
+export function V2CollapsibleSection(props) {
+  return <V2Surface collapsible {...props} />;
 }
 
 export function V2PageIntro({ title, subtitle, action, className }) {

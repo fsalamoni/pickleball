@@ -100,12 +100,12 @@ export default function V2Circuits() {
 
       {creating && <CreateCircuitForm onClose={() => setCreating(false)} />}
 
-      <V2Surface className="border-gray-100 bg-paper-pure">
+      <V2Surface collapsible collapseId="circuits-explicacao" title="O que é um circuito?" className="border-gray-100 bg-paper-pure">
         <p className="text-sm leading-6 text-gray-600">
-          <strong className="text-ink">O que é um circuito?</strong> É uma série de torneios
-          ligados por uma pontuação acumulada. Cada etapa (torneio) distribui pontos conforme a
-          colocação; ao final, um ranking geral consolida os melhores da temporada por categoria.
-          Crie o circuito, vincule os torneios que fazem parte dele e acompanhe o ranking acumulado.
+          É uma série de torneios ligados por uma pontuação acumulada. Cada etapa (torneio)
+          distribui pontos conforme a colocação; ao final, um ranking geral consolida os melhores
+          da temporada por categoria. Crie o circuito, vincule os torneios que fazem parte dele e
+          acompanhe o ranking acumulado.
         </p>
       </V2Surface>
 

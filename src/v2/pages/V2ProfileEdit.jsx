@@ -19,7 +19,7 @@ import { PICKLEBALL_EXPERIENCE_LABELS, COMPETITION_GENDER_LABELS } from '@/modul
 import V2ParticipationHistoryCard from '@/v2/components/tournament/V2ParticipationHistoryCard';
 import { useCoach, useSyncCoachFromProfile } from '@/modules/coaches/hooks/useCoaches';
 import {
-  V2Button, V2Field, V2Input, V2SectionHeader, V2Select, V2Surface, V2Textarea, V2Toggle,
+  V2Button, V2Field, V2Input, V2Select, V2Surface, V2Textarea, V2Toggle,
 } from '@/v2/ui/primitives';
 
 export default function V2ProfileEdit() {
@@ -253,8 +253,7 @@ export default function V2ProfileEdit() {
 
       <div className="space-y-6">
         {/* Identity */}
-        <V2Surface>
-          <V2SectionHeader eyebrow="Identidade" title="Dados do participante" titleClassName="text-xl" />
+        <V2Surface collapsible collapseId="perfil-identidade" eyebrow="Identidade" title="Dados do participante">
           <div className="mt-5">
             <ImageUpload
               value={photoUrl}
@@ -298,9 +297,8 @@ export default function V2ProfileEdit() {
         </V2Surface>
 
         {/* Community & privacy */}
-        <V2Surface>
-          <V2SectionHeader eyebrow="Comunidade" title="Comunidade e privacidade" titleClassName="text-xl"
-            description="Defina como você aparece no diretório e quais contatos são públicos." />
+        <V2Surface collapsible collapseId="perfil-comunidade" eyebrow="Comunidade" title="Comunidade e privacidade"
+          description="Defina como você aparece no diretório e quais contatos são públicos.">
           <div className="mt-5 grid gap-4 sm:grid-cols-2">
             <V2Field label="Gênero">
               <V2Select value={gender} onChange={(e) => setGender(e.target.value)}>
@@ -336,9 +334,8 @@ export default function V2ProfileEdit() {
 
         {/* Coach */}
         {coachDirectoryOn && (
-          <V2Surface>
-            <V2SectionHeader eyebrow="Professor" title="Perfil de aulas e clínicas" titleClassName="text-xl"
-              description="Ative para aparecer na busca de professores. Depois de salvar, você acessa o Painel do Professor (horários, aulas, alunos, pacotes) por aqui ou pelo menu Aulas." />
+          <V2Surface collapsible collapseId="perfil-professor" eyebrow="Professor" title="Perfil de aulas e clínicas"
+            description="Ative para aparecer na busca de professores. Depois de salvar, você acessa o Painel do Professor (horários, aulas, alunos, pacotes) por aqui ou pelo menu Aulas.">
             <div className="mt-5 rounded-3xl border border-gray-100 bg-paper p-5">
               <V2Toggle id="is_coach" label="Sou professor(a)" hint="Aparecer na busca de professores e exibir informações de aula" checked={isCoach} onChange={setIsCoach} />
             </div>
@@ -378,9 +375,8 @@ export default function V2ProfileEdit() {
         <V2ParticipationHistoryCard />
 
         {/* Leveling */}
-        <V2Surface>
-          <V2SectionHeader eyebrow="Nivelamento" title="Seu nível competitivo" titleClassName="text-xl"
-            description="Informe pela tabela detalhada ou preencha o formulário para obter a recomendação." />
+        <V2Surface collapsible collapseId="perfil-nivelamento" eyebrow="Nivelamento" title="Seu nível competitivo"
+          description="Informe pela tabela detalhada ou preencha o formulário para obter a recomendação.">
           <div className="mt-5 grid gap-3 sm:grid-cols-[1fr,auto] sm:items-end">
             <V2Field label="Meu nível informado" hint={selectedLevel?.tagline}>
               <V2Select value={manualLevel} onChange={(e) => setManualLevel(e.target.value)}>

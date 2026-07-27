@@ -180,7 +180,7 @@ export default function V2Coaches() {
       {editing && <CoachForm existing={myProfile} onClose={() => setEditing(false)} />}
 
       {/* Filtros */}
-      <V2Surface>
+      <V2Surface collapsible collapseId="coaches-filtros" title="Filtros">
         <div className="grid grid-cols-1 gap-2 sm:grid-cols-2">
           <V2Field label="Cidade / Estado">
             <V2Input value={region} onChange={(e) => setRegion(e.target.value)} placeholder="São Paulo" />
