@@ -227,3 +227,54 @@ numa aba à parte. `canManage` é calculado pelo próprio
 **Regras:**
 - `firestore.rules` — 4 novos blocos (read público, write só
   `isPlatformAdmin()` ou `isClubAdmin(club_id)`)
+
+## Wave C.4 (Sprint 18, 2026-07-28) — filtro + backfill + UX
+
+> "Você fez algo que excluiu o conteúdo do ranking dos clubes."
+> 3 problemas corrigidos sem alterar a arquitetura materializada
+> da Wave C.3.
+
+### 1. Filtro de clube no ranking nacional
+
+**Antes:** dropdown "Todos os clubes" não listava nenhum clube
+porque `clubOptions` era derivado **apenas** de `player_ratings`
+(que tem `clubs` denormalizado, e nem todos os atletas têm).
+
+**Depois:** `useClubs()` carrega o diretório oficial de clubes
+(sempre completo) + mescla com denormalizados para nomes. Ordenado
+por nome.
+
+### 2. "0 atletas do clube" no ranking interno
+
+**Antes:** `clubUids` no hook vinha dos documentos materializados
+— vazio para clubes legados → badge "0 atletas do clube" mesmo com
+16 membros.
+
+**Depois:** `loadClubUids(clubId)` lê `club_members` +
+`athlete_profiles.club_ids` (array-contains) — sempre reflete a
+realidade do clube.
+
+### 3. "Sem ranking ainda" sem CTA
+
+**Causa:** Wave C.3 trocou o cálculo client-side por leitura
+materializada. Para dados LEGADOS, o materializado nunca foi
+populado.
+
+**4 caminhos para garantir que está populado:**
+
+1. **Cloud Function mensal** `recomputeAllClubsMonthly`
+   (`0 4 1 * *`, 1º dia às 4h) — auto-cura mensal.
+2. **Botão "Recalcular rankings de todos os clubes"** no
+   `AdminMetrics` (platform admin) — backfill total via Callable.
+3. **Botão "Materializar ranking agora"** no `ClubRankingTab`
+   (admin do clube) + CTA no empty state — backfill local.
+4. **Workflow de deploy** com passo "Backfill club internal rankings".
+
+### Arquivos modificados
+
+- `src/modules/rating/pages/NationalRanking.jsx` — `useClubs()`
+- `src/modules/clubs/hooks/useClubInternalRanking.js` — `loadClubUids()`
+- `src/v2/pages/V2ClubDetail.jsx` — botão "Materializar ranking agora"
+- `src/modules/admin/pages/AdminMetrics.jsx` — Panel de backfill
+- `functions/index.js` — `recomputeAllClubsMonthly` (schedule)
+- `.github/workflows/deploy-firebase.yml` — passo backfill

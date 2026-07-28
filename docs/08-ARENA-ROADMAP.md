@@ -1443,3 +1443,105 @@ Removidos (Wave C.2, substituídos):
    disparar o recálculo de todos os clubes (cold start, correção,
    etc.). `recomputeOneClubInternalRanking` para admin do clube
    (correção local).
+
+---
+
+## 20. Sprint 18 — Wave C.4: filtro de clube + backfill do materializado (2026-07-28, 19:15)
+
+> Atualizado em **2026-07-28, 19:15 GMT-3** (origin/main @ `0a501e9`).
+> Branch `wave/c-club-ranking-backfill` mergeada como squash em main.
+> Atende à reclamação: o filtro de clube do ranking nacional não
+> listava nenhum clube; o ranking interno do clube mostrava "0
+> atletas do clube" mesmo com 16 membros; e não havia CTA para
+> materializar o ranking legado.
+
+### PR (squash-merge) — fix(clubs+rating): filtro + backfill + UX
+6 files: 5 modificados + 1 workflow. 0 testes novos (mudança cirúrgica).
+
+### Problema 1 — Filtro de clube no ranking nacional
+
+**Sintoma:** dropdown "Todos os clubes" não listava nenhum clube.
+
+**Causa:** `clubOptions` era derivado **apenas** de `player_ratings`
+(que tem `clubs` denormalizado por atleta). Atletas que nunca
+sincronizaram o `clubs` no perfil apareciam sem clube no filtro.
+
+**Fix:** `useClubs()` carrega o diretório oficial de clubes (sempre
+completo) e mescla com os denormalizados para nomes. Ordenado por
+nome.
+
+### Problema 2 — "0 atletas do clube" no ranking interno
+
+**Sintoma:** o badge "0 atletas do clube" aparecia mesmo para um
+clube com 16 membros.
+
+**Causa:** o hook `useClubInternalRanking` derivava `clubUids` da
+lista de documentos materializados — que estavam VAZIOS para todos
+os clubes criados antes da Wave C.3 (o materializado nunca tinha
+sido populado para dados legados).
+
+**Fix:** `loadClubUids(clubId)` lê **diretamente** `club_members` +
+`athlete_profiles` (com `club_ids array-contains`), e retorna a
+contagem REAL de atletas do clube. O badge agora reflete a realidade
+do clube, não o estado do materializado.
+
+### Problema 3 — "Sem ranking ainda" sem CTA
+
+**Sintoma:** o ranking interno ficava vazio sem nenhuma ação
+disponível para popular.
+
+**Causa:** a Wave C.3 trocou o cálculo client-side por leitura
+materializada. Para dados LEGADOS (pré-Wave C.3), o materializado
+nunca foi populado. Sem Cloud Function deployada, sem backfill, sem
+UI para disparar.
+
+**Fix (defesa em profundidade, 4 caminhos):**
+
+1. **Cloud Function mensal** `recomputeAllClubsMonthly`
+   (`0 4 1 * *`, 1º dia de cada mês às 4h) — recalcula **TODOS os
+   clubes** automaticamente, sem depender de ninguém.
+2. **Botão "Recalcular rankings de todos os clubes"** no
+   `AdminMetrics` (platform admin) — backfill manual.
+3. **Botão "Materializar ranking agora"** no `ClubRankingTab`
+   (admin do clube) + CTA no empty state — backfill local.
+4. **Workflow de deploy** `.github/workflows/deploy-firebase.yml`
+   adiciona passo "Backfill club internal rankings" (informativo:
+   documenta o caminho).
+
+### Mudanças por arquivo
+
+| Arquivo | Mudança |
+|---|---|
+| `src/modules/rating/pages/NationalRanking.jsx` | `useClubs()` + merge com denormalizados |
+| `src/modules/clubs/hooks/useClubInternalRanking.js` | `loadClubUids(clubId)` + `totalClubMembers` |
+| `src/v2/pages/V2ClubDetail.jsx` | Botão "Materializar ranking agora" no header + empty state |
+| `src/modules/admin/pages/AdminMetrics.jsx` | Panel "Ranking interno dos clubes" com botão de backfill |
+| `functions/index.js` | `recomputeAllClubsMonthly` (schedule mensal) |
+| `.github/workflows/deploy-firebase.yml` | Passo "Backfill club internal rankings" |
+
+### Métricas finais (Sprint 18)
+
+- **1372 testes verdes** (sem mudança)
+- **Lint 0 errors**
+- **98 coleções** (sem mudança)
+- **126 feature flags** (sem mudança)
+- **8 Cloud Functions** (5 ranking clube + 2 callable admin + 1 schedule mensal)
+- **44 PRs totais** (Sprints 0-18)
+- **Last SHA**: `0a501e9`
+- **Deploy**: em curso via GitHub Actions
+
+### Decisões de arquitetura (Sprint 18)
+
+1. **D-CLUBE-UIDS-DO-DIRETORIO (Wave C.4)**: o badge "N atletas do
+   clube" reflete o estado real do clube (membros + perfis com
+   `club_ids`), não o materializado. Mostra a verdade do banco.
+2. **D-FILTRO-CLUBES-DO-DIRETORIO (Wave C.4)**: o filtro de clube
+   no ranking nacional usa `useClubs()` (diretório), não o
+   denormalizado em `player_ratings`.
+3. **D-BACKFILL-DEFESA-EM-PROFUNDIDADE (Wave C.4)**: 4 caminhos
+   para garantir que o materializado está populado (schedule
+   mensal, callable admin, botão no clube, passo no deploy).
+   Nenhum caminho é o único caminho.
+4. **D-CLOUD-FUNCTION-MENSAL-PROTECTORA (Wave C.4)**:
+   `recomputeAllClubsMonthly` no dia 1 às 4h garante que o sistema
+   **se auto-cura** mesmo sem interação humana.

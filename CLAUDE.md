@@ -12,7 +12,7 @@
 
 - **O que é**: PWA para pickleball amador BR — torneios, clubes, arenas, professores, comunidade.
 - **Stack**: React 18 + Vite, Tailwind + shadcn/ui, Firebase (Firestore db `pickleball`), React Query, Vitest, Playwright.
-- **Estado**: 19 módulos, 66 V2 pages, 98 coleções Firestore (+coach_favorites, +club_event_games, +4 club_internal_ratings), 126 feature flags, **1372 testes verdes** (Wave C.3).
+- **Estado**: 19 módulos, 66 V2 pages, 98 coleções Firestore, 126 feature flags, **1372 testes verdes** (Wave C.4).
 - **Live**: https://picklerush.web.app (Firebase site `picklerush`; `pickletour` é redirect-only).
 - **Deploy**: push em `main` → GitHub Actions → Firebase Hosting + Rules + Cloud Function.
 - **Repositório**: https://github.com/fsalamoni/pickleball
@@ -324,12 +324,15 @@ chore(deps): bump firebase to 12.x
 
 ---
 
-## 10. Métricas atuais (snapshot 2026-07-28, 15:30 GMT-3)
+## 10. Métricas atuais (snapshot 2026-07-28, 19:15 GMT-3)
 
 > Última atualização: 2026-07-28, após PRs #73–#84 (Sprints 11-13) + Wave B
 > (Sprint 14) + Wave C (Sprint 15) + Wave C.2 (Sprint 16) + Wave C.3
-> (Sprint 17): **Ranking interno do clube MATERIALIZADO no Firestore**.
-> Cloud Function recalcula automaticamente; frontend só LÊ.
+> (Sprint 17) + Wave C.4 (Sprint 18): **Filtro de clube no ranking
+> nacional** (useClubs()) + **backfill do materializado** (admin
+> master + Cloud Function mensal `recomputeAllClubsMonthly`) +
+> **UX do ranking interno** (mostra contagem real de atletas, não do
+> materializado; botão "Materializar ranking agora" no empty state).
 
 | Métrica | Valor | Delta do início do agente |
 |---|---|---|
@@ -338,11 +341,11 @@ chore(deps): bump firebase to 12.x
 | **Módulos** | 19 | +2 (coaches, circuits) |
 | **V2 pages** | 66 | +42 (V2AdminBootstrap removida, consolidada no console) |
 | **V2 components (src/v2/components/)** | +2 pastas (coach, arenas) | — |
-| **Coleções Firestore** | 98 (+coach_favorites, +club_event_games, +4 club_internal_ratings) | +59 |
-| **Feature flags** | 126 (+CLUB_INTERNAL_DOUBLES_RANKING) | +96 |
-| **Cloud Functions** | 7 (5 ranking clube + 2 callable admin) | +7 |
-| **PRs mergeados** | 43 totais (Sprints 0-17) | — |
-| **Origin/main** | `b4f4d5a` (Wave C.3) | — |
+| **Coleções Firestore** | 98 (sem mudança) | +59 |
+| **Feature flags** | 126 (sem mudança) | +96 |
+| **Cloud Functions** | 8 (5 ranking clube + 2 callable admin + 1 schedule mensal) | +8 |
+| **PRs mergeados** | 44 totais (Sprints 0-18) | — |
+| **Origin/main** | `0a501e9` (Wave C.4) | — |
 | **Bundle deployed** | (deploy em curso) | — |
 | **Live URL** | https://picklerush.web.app | — |
 

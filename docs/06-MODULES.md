@@ -185,6 +185,24 @@ Professor + texto atualizado.
   "Editar meu perfil" (vai pro painel)
 - ❌ `AddResidencyForm` + função "remover residência" removidas
 
+**Fix do filtro de clube + backfill do materializado (Wave C.4, Sprint 18)**:
+- **Filtro de clube no ranking nacional** (`NationalRanking.jsx`):
+  agora carrega `useClubs()` (diretório oficial) + mescla com
+  `player_ratings.clubs` denormalizado. Antes: dropdown
+  "Todos os clubes" não listava nenhum clube.
+- **`loadClubUids(clubId)`** no hook `useClubInternalRanking`:
+  lê `club_members` + `athlete_profiles.club_ids` (array-contains).
+  Antes: `clubUids` vinha do materializado (vazio para clubes
+  legados) → badge "0 atletas do clube" mesmo com 16 membros.
+- **Botão "Recalcular rankings de todos os clubes"** no `AdminMetrics`
+  (platform admin) — backfill manual via Callable.
+- **Botão "Materializar ranking agora"** no `ClubRankingTab` (admin
+  do clube) + CTA no empty state individual.
+- **Cloud Function mensal `recomputeAllClubsMonthly`** (1º dia às
+  4h) — auto-cura mensal sem interação humana.
+- **Workflow de deploy** com passo "Backfill club internal rankings"
+  (documenta o caminho).
+
 **Ranking interno do clube MATERIALIZADO no Firestore (Wave C.3, Sprint 17)**:
 - Cloud Function `recomputeClubInternalRankings` materializa 4 coleções
   top-level com W/L/Aprov/Saldo **e** `display_name`/`photo_url`:
