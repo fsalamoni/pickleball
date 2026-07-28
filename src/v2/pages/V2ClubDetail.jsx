@@ -1,5 +1,5 @@
 import React, { useState } from 'react';
-import { Link, Navigate, useNavigate, useParams, useSearchParams } from 'react-router-dom';
+import { Link, useNavigate, useParams, useSearchParams } from 'react-router-dom';
 import { toast } from 'sonner';
 import {
   ArrowLeft, Building2, CalendarDays, Hash, Mail, MapPin, MessageSquare,
@@ -14,9 +14,6 @@ import { useClubInternalRanking } from '@/modules/clubs/hooks/useClubInternalRan
 import { useFeatureFlag } from '@/core/lib/FeatureFlagsContext';
 import { FEATURE_FLAG } from '@/core/featureFlags';
 import { CLUB_ROLE, JOIN_REQUEST_STATUS } from '@/modules/clubs/domain/constants';
-import { useQuery } from '@tanstack/react-query';
-import { collection, getDocs, query as fsQuery, where } from 'firebase/firestore';
-import { db } from '@/core/config/firebase';
 import V2ClubMembers from '@/v2/components/clubs/V2ClubMembers';
 import V2ClubEvents from '@/v2/components/clubs/V2ClubEvents';
 import V2ClubFeed from '@/v2/components/clubs/V2ClubFeed';
@@ -443,7 +440,7 @@ function DoublesRankingTable({ ranking, emptyMessage }) {
             <tr key={r.pair_key} className="border-t border-gray-100">
               <td className="px-4 py-3 font-bold text-ink">{i === 0 ? '🥇' : i === 1 ? '🥈' : i === 2 ? '🥉' : i + 1}</td>
               <td className="px-4 py-3 font-semibold text-ink">
-                <PairMembers ids={r.player_ids} />
+                <PairMembers members={r.members} />
               </td>
               <td className="px-4 py-3 text-center tabular-nums text-gray-600">{r.games}</td>
               <td className="px-4 py-3 text-center tabular-nums font-bold text-green-700">{r.wins}</td>
@@ -460,37 +457,23 @@ function DoublesRankingTable({ ranking, emptyMessage }) {
   );
 }
 
-function PairMembers({ ids }) {
-  // Resolve nome/foto de cada uid via `useAllAthletes` (em cache).
-  const { data: athletes = [] } = useAllAthletesSafe();
-  const map = new Map(athletes.map((a) => [a.id, a]));
+function PairMembers({ members }) {
+  // Wave C.3: nomes/fotos vêm do materializado (server-side). Fallback
+  // para id em caso de race condition.
+  const list = (members || []).length > 0
+    ? members
+    : []; // vazio evita usar ids crus
   return (
     <div className="flex flex-wrap items-center gap-2">
-      {ids.map((id, idx) => {
-        const a = map.get(id);
-        return (
-          <span key={id} className="inline-flex items-center gap-1.5">
-            {idx > 0 && <span className="text-xs text-gray-400">+</span>}
-            <V2Avatar size="xs" name={a?.platform_name || a?.full_name || id} photoUrl={a?.photo_url} />
-            <span className="text-sm">{a?.platform_name || a?.full_name || id.slice(0, 6)}</span>
-          </span>
-        );
-      })}
+      {list.map((m, idx) => (
+        <span key={m.id} className="inline-flex items-center gap-1.5">
+          {idx > 0 && <span className="text-xs text-gray-400">+</span>}
+          <V2Avatar size="xs" name={m.name} photoUrl={m.photo_url} />
+          <span className="text-sm">{m.name}</span>
+        </span>
+      ))}
     </div>
   );
-}
-
-function useAllAthletesSafe() {
-  // Evita import circular e mantém o cache leve.
-  return useQuery({
-    queryKey: ['athletes-all-lookup'],
-    queryFn: async () => {
-      if (!db) return [];
-      const snap = await getDocs(collection(db, 'athlete_profiles'));
-      return snap.docs.map((d) => ({ id: d.id, ...d.data() }));
-    },
-    staleTime: 5 * 60_000,
-  });
 }
 
 function InfoChip({ icon: Icon, children }) {

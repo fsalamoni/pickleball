@@ -173,6 +173,49 @@ service cloud.firestore {
       allow write: if isPlatformAdmin();
     }
 
+    // ---- Wave C.3 — Ranking interno do clube (materializado) ----
+    // Cada clube tem 4 coleções materializadas pelo Cloud Function
+    // `recomputeClubInternalRankings`:
+    //   - club_internal_ratings / club_internal_ratings_ext
+    //   - club_internal_doubles_ratings / club_internal_doubles_ratings_ext
+    // Cada documento tem `id = ${clubId}_${userId|pairKey}` e
+    // `club_id` para queries. Read público (faz parte do clube
+    // visível para os membros). Write só do admin do clube + platform
+    // admin — o Cloud Function roda com service account (admin SDK,
+    // ignora regras) e o `isPlatformAdmin()` cobre a escrita manual.
+    match /club_internal_ratings/{docId} {
+      allow read: if true;
+      allow write: if isAuthed() && (
+        isPlatformAdmin()
+        || (resource != null && isClubAdmin(resource.data.club_id))
+        || (request.resource != null && isClubAdmin(request.resource.data.club_id))
+      );
+    }
+    match /club_internal_ratings_ext/{docId} {
+      allow read: if true;
+      allow write: if isAuthed() && (
+        isPlatformAdmin()
+        || (resource != null && isClubAdmin(resource.data.club_id))
+        || (request.resource != null && isClubAdmin(request.resource.data.club_id))
+      );
+    }
+    match /club_internal_doubles_ratings/{docId} {
+      allow read: if true;
+      allow write: if isAuthed() && (
+        isPlatformAdmin()
+        || (resource != null && isClubAdmin(resource.data.club_id))
+        || (request.resource != null && isClubAdmin(request.resource.data.club_id))
+      );
+    }
+    match /club_internal_doubles_ratings_ext/{docId} {
+      allow read: if true;
+      allow write: if isAuthed() && (
+        isPlatformAdmin()
+        || (resource != null && isClubAdmin(resource.data.club_id))
+        || (request.resource != null && isClubAdmin(request.resource.data.club_id))
+      );
+    }
+
     // Histórico de rating (snapshots por recálculo). Leitura pública; escrita só admin.
     match /rating_history/{uid} {
       allow read: if true;

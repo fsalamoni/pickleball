@@ -25,6 +25,7 @@ const { onSchedule } = require('firebase-functions/v2/scheduler');
 const { setGlobalOptions } = require('firebase-functions/v2');
 const logger = require('firebase-functions/logger');
 const { recomputeAllRatings, isEligible } = require('./ranking');
+const { recomputeClubInternalRankings } = require('./clubRanking');
 
 if (!getApps().length) initializeApp();
 
@@ -292,3 +293,226 @@ exports.autoCloseChecklists = onSchedule(
   },
 );
 
+
+// =====================================================================
+// CLUBE — Ranking interno (Wave C.3): materializado no Firestore
+// =====================================================================
+// Gatilhos: quando um resultado de jogo é gravado em qualquer fonte
+// (evento do clube, Wave C, torneio), os clubes afetados são
+// recalculados. O frontend apenas LÊ `club_internal_ratings` e
+// `club_internal_ratings_ext`.
+
+/**
+ * Recalcula o ranking de um clube. Garante que o ranking fica
+ * consistente após mudanças em jogos/membros. Idempotente.
+ */
+async function recalcOneClub(clubId) {
+  if (!clubId) return;
+  try {
+    const res = await recomputeClubInternalRankings(getFirestore(getApp(), DATABASE_ID), clubId);
+    logger.info('club_internal_ranking recalculado.', { clubId, ...res });
+  } catch (err) {
+    logger.error(`Falha ao recalcular o ranking do clube ${clubId}:`, err);
+  }
+}
+
+/** Mapeia uids de um match → clubes que precisam recalcular. */
+async function clubIdsForUids(db, uids) {
+  if (!uids || uids.length === 0) return new Set();
+  const set = new Set();
+  const CHUNK = 30;
+  for (let i = 0; i < uids.length; i += CHUNK) {
+    const slice = uids.slice(i, i + CHUNK);
+    const snap = await db.collection('athlete_profiles').where('__name__', 'in', slice).get();
+    snap.docs.forEach((d) => {
+      const data = d.data();
+      if (Array.isArray(data.club_ids)) data.club_ids.forEach((cid) => set.add(cid));
+    });
+  }
+  return set;
+}
+
+// (1) Jogos do clube: subcoleção `club_events/{eventId}/games/{gameId}`.
+//     Mudança aqui afeta o clube dono do evento.
+exports.recomputeClubRankingOnClubGame = onDocumentWritten(
+  {
+    document: 'club_events/{eventId}/games/{gameId}',
+    database: DATABASE_ID,
+    region: REGION,
+    timeoutSeconds: 120,
+    memory: '512MiB',
+  },
+  async (event) => {
+    const db = getFirestore(getApp(), DATABASE_ID);
+    const eventSnap = await db.collection('club_events').doc(event.params.eventId).get();
+    if (!eventSnap.exists) return;
+    const clubId = eventSnap.data().club_id;
+    await recalcOneClub(clubId);
+  },
+);
+
+// (2) `club_event_games` (Wave C): o espelhamento é top-level.
+//     Mudança aqui pode afetar o clube dono + clubes dos uids externos.
+exports.recomputeClubRankingOnClubEventGame = onDocumentWritten(
+  {
+    document: 'club_event_games/{gameId}',
+    database: DATABASE_ID,
+    region: REGION,
+    timeoutSeconds: 120,
+    memory: '512MiB',
+  },
+  async (event) => {
+    const db = getFirestore(getApp(), DATABASE_ID);
+    const data = event.data && event.data.after && event.data.after.exists ? event.data.after.data() : null;
+    const before = event.data && event.data.before && event.data.before.exists ? event.data.before.data() : null;
+    const payload = data || before;
+    if (!payload) return;
+    const affected = new Set();
+    if (payload.club_id) affected.add(payload.club_id);
+    const uids = []
+      .concat(payload.side_a_ids || [])
+      .concat(payload.side_b_ids || []);
+    const extraClubs = await clubIdsForUids(db, uids);
+    extraClubs.forEach((c) => affected.add(c));
+    for (const clubId of affected) {
+      // eslint-disable-next-line no-await-in-loop
+      await recalcOneClub(clubId);
+    }
+  },
+);
+
+// (3) `tournament_matches`: mudança pode afetar vários clubes.
+exports.recomputeClubRankingOnTournamentMatch = onDocumentWritten(
+  {
+    document: 'tournament_matches/{matchId}',
+    database: DATABASE_ID,
+    region: REGION,
+    timeoutSeconds: 180,
+    memory: '512MiB',
+  },
+  async (event) => {
+    const db = getFirestore(getApp(), DATABASE_ID);
+    const data = event.data && event.data.after && event.data.after.exists ? event.data.after.data() : null;
+    const before = event.data && event.data.before && event.data.before.exists ? event.data.before.data() : null;
+    const payload = data || before;
+    if (!payload) return;
+    // Resolve registration → uids
+    const regIds = []
+      .concat(payload.side_a_ids || [])
+      .concat(payload.side_b_ids || []);
+    if (regIds.length === 0) return;
+    const regSnap = await db.getAll(
+      ...regIds.slice(0, 30).map((rid) => db.collection('tournament_registrations').doc(rid)),
+    );
+    const uids = new Set();
+    regSnap.forEach((s) => {
+      const d = s.data();
+      if (d && d.player_a_user_id) uids.add(d.player_a_user_id);
+      if (d && d.player_b_user_id) uids.add(d.player_b_user_id);
+    });
+    if (uids.size === 0) return;
+    const affected = await clubIdsForUids(db, Array.from(uids));
+    for (const clubId of affected) {
+      // eslint-disable-next-line no-await-in-loop
+      await recalcOneClub(clubId);
+    }
+  },
+);
+
+// (4) Membership muda (`club_members/{memberId}`): recalcula o clube.
+exports.recomputeClubRankingOnMemberChange = onDocumentWritten(
+  {
+    document: 'club_members/{memberId}',
+    database: DATABASE_ID,
+    region: REGION,
+    timeoutSeconds: 60,
+    memory: '256MiB',
+  },
+  async (event) => {
+    const after = event.data && event.data.after && event.data.after.exists ? event.data.after.data() : null;
+    const before = event.data && event.data.before && event.data.before.exists ? event.data.before.data() : null;
+    const payload = after || before;
+    if (!payload) return;
+    await recalcOneClub(payload.club_id);
+  },
+);
+
+// (5) `athlete_profiles/{uid}` mudou `club_ids`: recalcula cada clube.
+exports.recomputeClubRankingOnAthleteProfileChange = onDocumentWritten(
+  {
+    document: 'athlete_profiles/{uid}',
+    database: DATABASE_ID,
+    region: REGION,
+    timeoutSeconds: 60,
+    memory: '256MiB',
+  },
+  async (event) => {
+    const db = getFirestore(getApp(), DATABASE_ID);
+    const after = event.data && event.data.after && event.data.after.exists ? event.data.after.data() : null;
+    const before = event.data && event.data.before && event.data.before.exists ? event.data.before.data() : null;
+    const afterIds = new Set((after && after.club_ids) || []);
+    const beforeIds = new Set((before && before.club_ids) || []);
+    const all = new Set([...afterIds, ...beforeIds]);
+    for (const clubId of all) {
+      // eslint-disable-next-line no-await-in-loop
+      await recalcOneClub(clubId);
+    }
+  },
+);
+
+// (6) Admin: recalcular todos os clubes (backfill). Callable.
+const { onCall, HttpsError } = require('firebase-functions/v2/https');
+
+exports.recomputeAllClubInternalRankings = onCall(
+  {
+    region: REGION,
+    timeoutSeconds: 540,
+    memory: '1GiB',
+  },
+  async (req) => {
+    if (!req.auth || !req.auth.token || !req.auth.token.platform_admin) {
+      throw new HttpsError('permission-denied', 'Apenas platform_admin pode recalcular todos os clubes.');
+    }
+    const db = getFirestore(getApp(), DATABASE_ID);
+    const clubsSnap = await db.collection('clubs').get();
+    let ok = 0;
+    let failed = 0;
+    for (const d of clubsSnap.docs) {
+      try {
+        // eslint-disable-next-line no-await-in-loop
+        await recomputeClubInternalRankings(db, d.id);
+        ok += 1;
+      } catch (err) {
+        failed += 1;
+        logger.error(`Falha ao recalcular clube ${d.id}:`, err);
+      }
+    }
+    return { ok, failed, total: clubsSnap.size };
+  },
+);
+
+exports.recomputeOneClubInternalRanking = onCall(
+  {
+    region: REGION,
+    timeoutSeconds: 120,
+    memory: '512MiB',
+  },
+  async (req) => {
+    if (!req.auth || !req.auth.token) {
+      throw new HttpsError('unauthenticated', 'Faça login para recalcular.');
+    }
+    const { clubId } = req.data || {};
+    if (!clubId) throw new HttpsError('invalid-argument', 'clubId obrigatório');
+    const db = getFirestore(getApp(), DATABASE_ID);
+    // Admins do clube OU platform admin podem disparar.
+    const isAdmin = req.auth.token.platform_admin;
+    if (!isAdmin) {
+      const memberSnap = await db.collection('club_members').doc(`${clubId}_${req.auth.uid}`).get();
+      if (!memberSnap.exists || memberSnap.data().role !== 'admin') {
+        throw new HttpsError('permission-denied', 'Apenas admins do clube ou platform admin podem recalcular.');
+      }
+    }
+    const res = await recomputeClubInternalRankings(db, clubId);
+    return res;
+  },
+);
