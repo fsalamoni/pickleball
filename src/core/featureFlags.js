@@ -589,6 +589,15 @@ export const FEATURE_FLAG = Object.freeze({
    * externos (torneios + dias de jogo de outros clubes) via toggle.
    */
   CLUB_INTERNAL_DOUBLES_RANKING: 'club_internal_doubles_ranking',
+  /**
+   * Backfill do ranking interno do clube (Wave C.5). Aditivo — só
+   * aparece se `CLUB_INTERNAL_RANKING` estiver ON. Expõe no Painel
+   * Administrativo o botão "Recalcular rankings de todos os clubes" e
+   * a coluna "Status" (membros vs materializado) na lista de clubes
+   * vazios, permitindo identificar e popular os clubes com materializado
+   * defasado em um clique.
+   */
+  CLUB_INTERNAL_BACKFILL: 'club_internal_backfill',
 
   /**
    * Página de configurações (/configuracoes): reúne atalhos de conta e a
@@ -1188,6 +1197,14 @@ export const FEATURE_FLAG_META = Object.freeze({
       + 'resultados externos" que mistura também torneios e dias de jogo de '
       + 'outros clubes onde os atletas do clube participaram. Requer a flag '
       + '`CLUB_INTERNAL_RANKING` ligada.',
+  },
+  [FEATURE_FLAG.CLUB_INTERNAL_BACKFILL]: {
+    label: 'Backfill do ranking interno do clube (Wave C.5)',
+    description:
+      'Expõe no Painel Administrativo o botão "Recalcular rankings de todos os '
+      + 'clubes" + a lista de clubes com materializado defasado. Use uma vez após '
+      + 'o deploy da Wave C.3 para popular o materializado dos clubes legados. '
+      + 'Requer a flag `CLUB_INTERNAL_RANKING` ligada.',
   },
   [FEATURE_FLAG.SETTINGS_PAGE]: {
     label: 'Página de configurações + exportar dados (LGPD)',

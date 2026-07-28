@@ -10,6 +10,7 @@ import { useFeatureFlags, useFeatureFlag } from '@/core/lib/FeatureFlagsContext'
 import { FEATURE_FLAG, FEATURE_FLAG_META } from '@/core/featureFlags';
 import { setFeatureFlag } from '@/core/services/platformSettingsService';
 import { useRecomputeRatings } from '@/modules/rating/hooks/useRating';
+import ClubRankingBackfillPanel from '@/modules/admin/components/ClubRankingBackfillPanel';
 import { V2Button, V2PageIntro, V2Skeleton, V2StatCard, V2Surface, V2Toggle } from '@/v2/ui/primitives';
 
 export default function V2AdminMetrics() {
@@ -63,6 +64,7 @@ export default function V2AdminMetrics() {
           )}
 
           <div className="mt-6"><RatingsPanel /></div>
+          <div className="mt-6"><ClubRankingBackfillPanel /></div>
           <div className="mt-6"><FeatureFlagsPanel /></div>
           <div className="mt-6"><AuditLogTable /></div>
         </>

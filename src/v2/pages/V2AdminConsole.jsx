@@ -83,6 +83,7 @@ import {
 } from '@/core/services/platformSettingsService';
 import { db, firebaseDisabledReason, firebaseServicesEnabled } from '@/core/config/firebase';
 import { useRecomputeRatings } from '@/modules/rating/hooks/useRating';
+import ClubRankingBackfillPanel from '@/modules/admin/components/ClubRankingBackfillPanel';
 import {
   cancelAndArchiveTournament,
   deleteTournamentCascading,
@@ -348,6 +349,10 @@ function OverviewTab() {
       <div className="grid gap-6 lg:grid-cols-2">
         <QuickActions />
         <GovernanceSummary activePartners={activePartners} flagsOn={flagsOn} flagsTotal={flagsTotal} />
+      </div>
+
+      <div className="mt-6">
+        <ClubRankingBackfillPanel />
       </div>
     </div>
   );

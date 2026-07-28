@@ -264,7 +264,11 @@ function ClubRankingTab({ clubId, isAdmin }) {
       // refetch imediatamente — o Cloud Function acabou de materializar.
       setTimeout(() => refetch(), 1500);
     } catch (err) {
-      toast.error(err?.message || 'Não foi possível recalcular.');
+      // Erro 500 do Cloud Function: tenta extrair mensagem útil.
+      // O `httpsCallable` embrulha o erro em `functionsError` com `message` e `details`.
+      const detail = err?.details || err?.message || 'Não foi possível recalcular.';
+      console.error('recomputeOneClubInternalRanking falhou:', err);
+      toast.error(`Falha ao materializar: ${detail}`);
     }
   }
 

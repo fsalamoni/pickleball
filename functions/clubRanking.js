@@ -112,37 +112,6 @@ function normalizeTournamentMatch(m, regById) {
   if (!m) return null;
   if (FINISHED_STATUSES.indexOf(m.status) < 0) return null;
   if (m.winner_side !== 'a' && m.winner_side !== 'b') return null;
-  const a = (m.side_a_ids || []).map((rid) => {
-    const r = regById.get(rid);
-    return r && r.player_a_user_id ? r.player_a_user_id : null;
-  }).filter(Boolean);
-  const b = (m.side_b_ids || []).map((rid) => {
-    const r = regById.get(rid);
-    return r && r.player_a_user_id ? r.player_a_user_id : null;
-  }).filter(Boolean);
-  if (a.length === 0 || b.length === 0) return null;
-  if (a.length > 2 || b.length > 2) return null;
-  if (a.length !== b.length) return null;
-  // Para duplas, registration player_b_user_id é o 2º jogador.
-  const aFull = (m.side_a_ids || []).map((rid) => {
-    const r = regById.get(rid);
-    if (!r) return null;
-    return r.player_a_user_id || null;
-  }).filter(Boolean);
-  const bFull = (m.side_b_ids || []).map((rid) => {
-    const r = regById.get(rid);
-    if (!r) return null;
-    return r.player_a_user_id || null;
-  }).filter(Boolean);
-  // Heurística: se registration tem player_b_user_id, é dupla.
-  const aIsDoubles = (m.side_a_ids || []).some((rid) => {
-    const r = regById.get(rid);
-    return r && r.player_b_user_id;
-  });
-  const bIsDoubles = (m.side_b_ids || []).some((rid) => {
-    const r = regById.get(rid);
-    return r && r.player_b_user_id;
-  });
   const aIds = [];
   const bIds = [];
   (m.side_a_ids || []).forEach((rid) => {
@@ -168,17 +137,18 @@ function normalizeTournamentMatch(m, regById) {
     points_a: Number(m.score_a) || 0,
     points_b: Number(m.score_b) || 0,
     tournament_id: m.tournament_id || null,
+    club_id: m.tournament_club_id || null, // preenchido pelo caller se aplicável
   };
 }
 
 /* --------------------- Aggregations (pure) --------------------- */
 
 /** Conjunto de uids de atletas atualmente no clube (membros + perfis). */
-function collectClubUids(members, profiles) {
+function collectClubUids(clubId, members, profiles) {
   const set = new Set();
   (members || []).forEach((m) => { if (m && m.user_id) set.add(m.user_id); });
   (profiles || []).forEach((p) => {
-    if (p && Array.isArray(p.club_ids) && p.club_ids.includes(this.clubId_)) {
+    if (p && Array.isArray(p.club_ids) && p.club_ids.includes(clubId)) {
       if (p.id) set.add(p.id);
     }
   });
@@ -193,7 +163,8 @@ function applyToIndividual(bucket, match) {
   if (match.winner !== 'a' && match.winner !== 'b') return;
   const aWon = match.winner === 'a';
   a.forEach((uid) => {
-    const row = bucket.get(uid) || { games: 0, wins: 0, losses: 0, points_for: 0, points_against: 0 };
+    const row = bucket.get(uid) || { user_id: uid, games: 0, wins: 0, losses: 0, points_for: 0, points_against: 0 };
+    row.user_id = uid; // garante o campo, mesmo se o row veio de cache
     row.games += 1;
     row.points_for += match.points_a;
     row.points_against += match.points_b;
@@ -201,7 +172,8 @@ function applyToIndividual(bucket, match) {
     bucket.set(uid, row);
   });
   b.forEach((uid) => {
-    const row = bucket.get(uid) || { games: 0, wins: 0, losses: 0, points_for: 0, points_against: 0 };
+    const row = bucket.get(uid) || { user_id: uid, games: 0, wins: 0, losses: 0, points_for: 0, points_against: 0 };
+    row.user_id = uid;
     row.games += 1;
     row.points_for += match.points_b;
     row.points_against += match.points_a;
@@ -227,21 +199,23 @@ function applyToDoubles(bucket, match) {
   bucket.set(keyB, rowB);
 }
 
-/** Filtra matches pelos uids do clube e, opcionalmente, só os do próprio clube. */
+/**
+ * Filtra matches pelos uids do clube e, opcionalmente, só os do próprio clube.
+ *
+ * Critérios:
+ *  - O match precisa envolver pelo menos 1 uid do clube (caso contrário
+ *    não nos diz respeito).
+ *  - Se for "do clube" (club_event_game / club_game) sempre entra.
+ *  - Se for externo (tournament_match), só entra quando `includeExternal`.
+ */
 function filterMatchesForClub(matches, clubUids, includeExternal) {
   const out = [];
   (matches || []).forEach((m) => {
     let involves = false;
-    let isClub = false;
-    if (m.source && CLUB_GAME_SOURCES.has(m.source)) {
-      // clube "próprio" = m.club_id === clubId_; quando vem de
-      // `club_events/.../games` não tem club_id — vamos checar fora.
-      isClub = true;
-    }
     for (const uid of m.side_a) if (clubUids.has(uid)) { involves = true; break; }
     if (!involves) for (const uid of m.side_b) if (clubUids.has(uid)) { involves = true; break; }
     if (!involves) return;
-    if (isClub || CLUB_GAME_SOURCES.has(m.source)) {
+    if (CLUB_GAME_SOURCES.has(m.source)) {
       out.push(m);
     } else if (includeExternal) {
       out.push(m);
@@ -405,6 +379,19 @@ async function loadTournamentRegistrations(db, regIds) {
   return map;
 }
 
+/** Carrega os torneios (precisamos do club_id do torneio). */
+async function loadTournaments(db, tournamentIds) {
+  if (!tournamentIds || tournamentIds.length === 0) return new Map();
+  const CHUNK = 30;
+  const map = new Map();
+  for (let i = 0; i < tournamentIds.length; i += CHUNK) {
+    const slice = tournamentIds.slice(i, i + CHUNK);
+    const snap = await db.collection(COL_TOURNAMENTS).where('__name__', 'in', slice).get();
+    snap.docs.forEach((d) => map.set(d.id, { id: d.id, ...d.data() }));
+  }
+  return map;
+}
+
 /* --------------------- Public API --------------------- */
 
 /** Pipeline principal: recalcula e MATERIALIZA o ranking interno do clube. */
@@ -430,12 +417,18 @@ async function recomputeClubInternalRankings(db, clubId) {
   ]);
 
   // 3) Para `tournament_matches`, precisamos resolver registration → uids
+  //    e descobrir o club_id do torneio (para diferenciar "do clube" de "externo").
   const regIds = new Set();
+  const tournamentClubIdById = new Map();
   tournamentMatches.forEach((m) => {
     (m.side_a_ids || []).forEach((rid) => regIds.add(rid));
     (m.side_b_ids || []).forEach((rid) => regIds.add(rid));
+    if (m.tournament_id) tournamentClubIdById.set(m.tournament_id, m.tournament_id);
   });
-  const regById = await loadTournamentRegistrations(db, Array.from(regIds));
+  const [regById, tournamentById] = await Promise.all([
+    loadTournamentRegistrations(db, Array.from(regIds)),
+    loadTournaments(db, Array.from(tournamentClubIdById.keys())),
+  ]);
 
   // 4) Normaliza todos os jogos
   const profileById = new Map(profileDocs.map((p) => [p.id, p]));
@@ -453,8 +446,18 @@ async function recomputeClubInternalRankings(db, clubId) {
     if (n) n.is_club = false, n.club_id = g.club_id, allMatches.push(n);
   });
   tournamentMatches.forEach((g) => {
-    const n = normalizeTournamentMatch(g, regById);
-    if (n) n.is_club = false, allMatches.push(n);
+    // Enriquece o match com o club_id do torneio (se houver) ANTES de normalizar.
+    const t = g.tournament_id ? tournamentById.get(g.tournament_id) : null;
+    const enriched = { ...g, tournament_club_id: t ? t.club_id || null : null };
+    const n = normalizeTournamentMatch(enriched, regById);
+    if (!n) return;
+    // Regra: o match é "do clube" quando o torneio pertence a este clube
+    // (torneios privados do clube contam no interno mesmo se jogados por
+    // um atleta do clube contra um externo). Caso contrário é externo.
+    const isClubTournament = !!(t && t.club_id === clubId);
+    n.is_club = isClubTournament;
+    n.club_id = isClubTournament ? clubId : null;
+    allMatches.push(n);
   });
 
   // 5) Separa em "interno" (só do clube) e "ext" (interno + externo)

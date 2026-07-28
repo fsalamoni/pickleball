@@ -463,6 +463,20 @@ exports.recomputeClubRankingOnAthleteProfileChange = onDocumentWritten(
 // (6) Admin: recalcular todos os clubes (backfill). Callable.
 const { onCall, HttpsError } = require('firebase-functions/v2/https');
 
+async function isPlatformAdminUser(req, db) {
+  if (!req || !req.auth) return false;
+  // 1) Custom claim (rápido).
+  if (req.auth.token && req.auth.token.platform_admin) return true;
+  // 2) Fallback: doc users/{uid}.role === 'platform_admin'.
+  try {
+    const userSnap = await db.collection('users').doc(req.auth.uid).get();
+    if (userSnap.exists && userSnap.data().role === 'platform_admin') return true;
+  } catch (err) {
+    // silencioso
+  }
+  return false;
+}
+
 exports.recomputeAllClubInternalRankings = onCall(
   {
     region: REGION,
@@ -470,24 +484,27 @@ exports.recomputeAllClubInternalRankings = onCall(
     memory: '1GiB',
   },
   async (req) => {
-    if (!req.auth || !req.auth.token || !req.auth.token.platform_admin) {
+    const db = getFirestore(getApp(), DATABASE_ID);
+    if (!(await isPlatformAdminUser(req, db))) {
       throw new HttpsError('permission-denied', 'Apenas platform_admin pode recalcular todos os clubes.');
     }
-    const db = getFirestore(getApp(), DATABASE_ID);
     const clubsSnap = await db.collection('clubs').get();
-    let ok = 0;
+    let processed = 0;
     let failed = 0;
+    const errors = [];
     for (const d of clubsSnap.docs) {
       try {
         // eslint-disable-next-line no-await-in-loop
         await recomputeClubInternalRankings(db, d.id);
-        ok += 1;
+        processed += 1;
       } catch (err) {
         failed += 1;
+        const msg = (err && err.message) ? err.message : String(err);
+        errors.push({ clubId: d.id, error: msg });
         logger.error(`Falha ao recalcular clube ${d.id}:`, err);
       }
     }
-    return { ok, failed, total: clubsSnap.size };
+    return { processed, failed, total: clubsSnap.size, errors };
   },
 );
 
@@ -505,7 +522,7 @@ exports.recomputeOneClubInternalRanking = onCall(
     if (!clubId) throw new HttpsError('invalid-argument', 'clubId obrigatório');
     const db = getFirestore(getApp(), DATABASE_ID);
     // Admins do clube OU platform admin podem disparar.
-    const isAdmin = req.auth.token.platform_admin;
+    const isAdmin = await isPlatformAdminUser(req, db);
     if (!isAdmin) {
       const memberSnap = await db.collection('club_members').doc(`${clubId}_${req.auth.uid}`).get();
       if (!memberSnap.exists || memberSnap.data().role !== 'admin') {
