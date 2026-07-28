@@ -278,3 +278,61 @@ populado.
 - `src/modules/admin/pages/AdminMetrics.jsx` — Panel de backfill
 - `functions/index.js` — `recomputeAllClubsMonthly` (schedule)
 - `.github/workflows/deploy-firebase.yml` — passo backfill
+
+## Wave C.5 (Sprint 19, 2026-07-28) — corrigir materializado + Painel Admin V2
+
+> A Wave C.4 tinha o botão em arquivo órfão (`AdminMetrics.jsx`
+> legado) e o "Materializar ranking agora" dava 500. Investigação
+> revelou 3 bugs reais do materializado server-side.
+
+### Bug #1 (CRÍTICO) — user_id undefined
+
+`applyToIndividual` no `functions/clubRanking.js` não setava
+`user_id` no row. Resultado: o doc era `{clubId}_undefined` com
+`user_id: undefined`. O painel "0 atletas do clube" era a ponta
+visível.
+
+**Fix:** `user_id: uid` no row default + re-setado após `bucket.get`.
+
+### Bug #2 — torneio do clube não contava
+
+Torneios do clube (Wave B) não tinham como ser identificados como
+`is_club=true` no pipeline (o `tournament_match` não tem `club_id`).
+
+**Fix:** novo `loadTournaments()` resolve `tournament.club_id`. Match
+de torneio 'do clube' → `is_club=true` → conta no escopo interno.
+
+### Bug #3 — callable rejeitava platform_admin sem custom claim
+
+`req.auth.token.platform_admin` falha para usuários com
+`role: 'platform_admin'` apenas no Firestore (caso do Fsa).
+
+**Fix:** `isPlatformAdminUser()` checa custom claim primeiro,
+depois `users/{uid}.role`.
+
+### Backfill movido pro Painel Admin V2
+
+Novo `ClubRankingBackfillPanel` (em `src/modules/admin/components/`),
+usado em:
+- `V2AdminConsole` (Visão geral)
+- `V2AdminMetrics` (`/admin/metricas`)
+
+Mostra contagem (clubes/materializados/vazios), botão de backfill
+total com confirm, lista de clubes vazios com botão granular
+"Recalcular" por clube. O `ClubRankingPanel` legado foi removido.
+
+### Feature flag
+
+`CLUB_INTERNAL_BACKFILL` (default ON quando `CLUB_INTERNAL_RANKING`
+está ON). Puramente aditivo.
+
+### Testes
+
+5 testes novos em `clubRankingServer.test.js`:
+- `user_id` é setado no row (regressão Wave C.4)
+- doc id determinístico a partir de `user_id`
+- agregação de múltiplos matches
+- match sem winner é ignorado
+- duplas (2×2) geram 4 rows com `user_id` correto
+
+**1377 passing** total.

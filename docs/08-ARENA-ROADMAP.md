@@ -1545,3 +1545,118 @@ UI para disparar.
 4. **D-CLOUD-FUNCTION-MENSAL-PROTECTORA (Wave C.4)**:
    `recomputeAllClubsMonthly` no dia 1 às 4h garante que o sistema
    **se auto-cura** mesmo sem interação humana.
+
+---
+
+## 21. Sprint 19 — Wave C.5: corrigir materialização + Painel Admin V2 (2026-07-28, 19:50)
+
+> Atualizado em **2026-07-28, 19:50 GMT-3** (origin/main @ `25bf67a`).
+> Branch `wave/c-club-ranking-fix` mergeada como squash em main.
+> 9 files, 470+/97-. 5 testes novos.
+
+### Diagnóstico (a partir de feedback do user)
+
+A Wave C.4 tinha o botão "Recalcular rankings de todos os clubes" em
+`AdminMetrics.jsx` (arquivo legado, não roteado), e o "Materializar
+ranking agora" dava **erro 500**. Investigação revelou 3 bugs reais
+no materializado server-side, não cobertos pelos testes existentes
+(que só validavam a lógica client-side).
+
+### Bug #1 (CRÍTICO) — user_id undefined no materializado
+
+**Sintoma:** o painel "0 atletas do clube" mostrava 0 mesmo com
+membros. A causa: `applyToIndividual()` no `functions/clubRanking.js`
+não setava `user_id` no row criado. Resultado: o doc materializado
+era `{clubId}_undefined` com `user_id: undefined`.
+
+**Causa raiz:** a linha 196 (e 204) fazia:
+```js
+const row = bucket.get(uid) || { games: 0, ... };
+```
+Sem `user_id`. O doc só era identificável por `__name__` (o docId
+incluía `undefined` no final). O `enrichWithProfiles` não encontrava
+o uid e o ranking ficava com 0 atletas para o clube.
+
+**Fix:** `user_id: uid` no row default, e re-setado após `bucket.get`
+para garantir mesmo se vier de cache.
+
+### Bug #2 — tournament_match nunca era "do clube"
+
+**Sintoma:** torneios privados do clube (Wave B) — onde todos os
+atletas são do clube — não contavam para o ranking interno.
+
+**Causa raiz:** o pipeline filtrava `is_club=true` para o escopo
+'internal', mas `tournament_match` não tinha `club_id`. O `match`
+em si não tem como saber o `club_id` do torneio.
+
+**Fix:** novo `loadTournaments()` (chunks de 30) carrega `tournaments/`
+e resolve `tournament.club_id`. Match de torneio 'do clube' →
+`is_club=true` → conta no escopo interno. Torneios públicos
+continuam sendo 'ext' (só contam se admin ligar "Incluir resultados
+externos").
+
+### Bug #3 — callable rejeitava platform_admin sem custom claim
+
+**Sintoma:** "Materializar ranking agora" dava erro 500.
+
+**Causa raiz:** `recomputeOneClubInternalRanking` checava
+`req.auth.token.platform_admin`, mas o Fsa tem `role: 'platform_admin'`
+no Firestore (`users/{uid}`), **NÃO** no custom claim do Firebase Auth.
+
+**Fix:** nova função `isPlatformAdminUser(req, db)`:
+1. Custom claim (rápido) — `req.auth.token.platform_admin`.
+2. Fallback no Firestore — `users/{uid}.role === 'platform_admin'`.
+
+### Bug #4 — botão do admin não estava no Painel
+
+**Sintoma:** user não achava o botão. Estava em `AdminMetrics.jsx`
+legado, não roteado.
+
+**Fix:** novo componente **`ClubRankingBackfillPanel`** em
+`src/modules/admin/components/`, usado em:
+- `V2AdminConsole` (aba "Visão geral", depois do QuickActions)
+- `V2AdminMetrics` (`/admin/metricas`, entre Ratings e FeatureFlags)
+
+Mostra: 3 cards (clubes / materializados / vazios), botão de
+backfill total com confirm, lista granular por clube com
+botão "Recalcular" individual. O `ClubRankingPanel` legado foi
+removido (evita confusão).
+
+### Bug #5 — handleAdminRecompute engolia erro
+
+**Sintoma:** "Materializar ranking agora" mostrava "Não foi possível
+recalcular." sem detalhes.
+
+**Fix:** extrai `err.details` (do `httpsCallable`), `console.error`
+para debug, mostra mensagem útil no toast.
+
+### Decisões D- (Wave C.5)
+
+1. **D-USER-ID-FIRST-CLASS-FIELD (Wave C.5)**: `user_id` é um
+   campo de primeira classe em cada row, setado no momento da
+   criação e re-setado após `bucket.get`. Defensivo.
+2. **D-TORNEIO-DO-CLUBE-CLUB-ID (Wave C.5)**: o `tournament.club_id`
+   é a fonte de verdade para "torneio do clube". Match herda
+   `is_club = (tournament.club_id === this clubId)`.
+3. **D-PLATFORM-ADMIN-CUSTOM-CLAIM-OR-DOC (Wave C.5)**: callable
+   aceita `platform_admin` por custom claim OU por `users.role`.
+   Custom claim é checado primeiro (rápido), Firestore é fallback
+   (compatibilidade).
+4. **D-PAINEL-ADMIN-V2-EH-A-CASA (Wave C.5)**: ferramentas de admin
+   moram em `V2AdminConsole` (hub) **E** `V2AdminMetrics` (página
+   dedicada). Arquivos legados (`AdminMetrics.jsx`) sem rota são
+   removidos quando migrados, para evitar confusão.
+5. **D-BACKFILL-DEFAULT-ON (Wave C.5)**: `CLUB_INTERNAL_BACKFILL`
+   nasce **ON** quando `CLUB_INTERNAL_RANKING` está ON. O painel
+   é onde o admin master SEMPRE vai quando precisa de backfill.
+
+### Métricas finais (Sprint 19)
+
+- **1377 testes verdes** (+5 novos)
+- **0 lint errors**
+- **98 coleções** (sem mudança)
+- **127 feature flags** (+CLUB_INTERNAL_BACKFILL)
+- **8 Cloud Functions** (sem mudança)
+- **45 PRs totais** (Sprints 0-19)
+- **Last SHA**: `25bf67a`
+- **Deploy**: em curso via GitHub Actions

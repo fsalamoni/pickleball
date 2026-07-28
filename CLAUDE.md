@@ -12,7 +12,7 @@
 
 - **O que é**: PWA para pickleball amador BR — torneios, clubes, arenas, professores, comunidade.
 - **Stack**: React 18 + Vite, Tailwind + shadcn/ui, Firebase (Firestore db `pickleball`), React Query, Vitest, Playwright.
-- **Estado**: 19 módulos, 66 V2 pages, 98 coleções Firestore, 126 feature flags, **1372 testes verdes** (Wave C.4).
+- **Estado**: 19 módulos, 66 V2 pages, 98 coleções Firestore, 127 feature flags, **1377 testes verdes** (Wave C.5).
 - **Live**: https://picklerush.web.app (Firebase site `picklerush`; `pickletour` é redirect-only).
 - **Deploy**: push em `main` → GitHub Actions → Firebase Hosting + Rules + Cloud Function.
 - **Repositório**: https://github.com/fsalamoni/pickleball
@@ -326,26 +326,30 @@ chore(deps): bump firebase to 12.x
 
 ## 10. Métricas atuais (snapshot 2026-07-28, 19:15 GMT-3)
 
-> Última atualização: 2026-07-28, após PRs #73–#84 (Sprints 11-13) + Wave B
-> (Sprint 14) + Wave C (Sprint 15) + Wave C.2 (Sprint 16) + Wave C.3
-> (Sprint 17) + Wave C.4 (Sprint 18): **Filtro de clube no ranking
-> nacional** (useClubs()) + **backfill do materializado** (admin
-> master + Cloud Function mensal `recomputeAllClubsMonthly`) +
-> **UX do ranking interno** (mostra contagem real de atletas, não do
-> materializado; botão "Materializar ranking agora" no empty state).
+> Última atualização: 2026-07-28, 19:50 GMT-3, após Wave C.5
+> (Sprint 19): **3 bugs do materializado corrigidos no servidor**:
+> - `applyToIndividual` agora seta `user_id` no row (era o bug que
+>   deixava o doc com `user_id: undefined` e id `{clubId}_undefined`).
+> - Torneios do clube (Wave B) agora contam como `is_club=true` no
+>   escopo interno (resolvido via `tournament.club_id`).
+> - Callable `recomputeOneClubInternalRanking` aceita `platform_admin`
+>   por custom claim **OU** `users/{uid}.role === 'platform_admin'`.
+> **Backfill movido pro Painel Admin V2**: novo componente
+> `ClubRankingBackfillPanel` em V2AdminConsole (Visão geral) e
+> V2AdminMetrics — substituindo o `ClubRankingPanel` legado.
 
 | Métrica | Valor | Delta do início do agente |
 |---|---|---|
-| **Testes Vitest** | 1372 passing | +964 (era 408) |
+| **Testes Vitest** | 1377 passing (+5 novos) | +969 (era 408) |
 | **Lint errors** | 0 | era 30+ |
 | **Módulos** | 19 | +2 (coaches, circuits) |
 | **V2 pages** | 66 | +42 (V2AdminBootstrap removida, consolidada no console) |
 | **V2 components (src/v2/components/)** | +2 pastas (coach, arenas) | — |
 | **Coleções Firestore** | 98 (sem mudança) | +59 |
-| **Feature flags** | 126 (sem mudança) | +96 |
+| **Feature flags** | 127 (+CLUB_INTERNAL_BACKFILL) | +97 |
 | **Cloud Functions** | 8 (5 ranking clube + 2 callable admin + 1 schedule mensal) | +8 |
-| **PRs mergeados** | 44 totais (Sprints 0-18) | — |
-| **Origin/main** | `0a501e9` (Wave C.4) | — |
+| **PRs mergeados** | 45 totais (Sprints 0-19) | — |
+| **Origin/main** | `25bf67a` (Wave C.5) | — |
 | **Bundle deployed** | (deploy em curso) | — |
 | **Live URL** | https://picklerush.web.app | — |
 

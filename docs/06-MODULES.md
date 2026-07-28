@@ -185,6 +185,27 @@ Professor + texto atualizado.
   "Editar meu perfil" (vai pro painel)
 - ❌ `AddResidencyForm` + função "remover residência" removidas
 
+**Correções do materializado server-side (Wave C.5, Sprint 19)**:
+- **Bug #1 (crítico)**: `applyToIndividual` agora seta `user_id` no
+  row (era `undefined`, gerando doc id `{clubId}_undefined`).
+- **Bug #2**: torneios do clube (Wave B) agora contam como
+  `is_club=true` no escopo interno, via resolução de
+  `tournament.club_id` (novo `loadTournaments()` em chunks de 30).
+- **Bug #3**: callable `recomputeOneClubInternalRanking` aceita
+  `platform_admin` por custom claim **OU** por `users/{uid}.role`
+  (Fsa tinha role no Firestore, não no claim → 500 fix).
+- **Painel Admin V2** — novo `ClubRankingBackfillPanel` em
+  `src/modules/admin/components/`, usado em V2AdminConsole
+  (Visão geral) e V2AdminMetrics (`/admin/metricas`). Mostra
+  contagem (clubes/materializados/vazios), botão de backfill
+  total com confirm, lista de clubes vazios com botão granular
+  'Recalcular' por clube. Substituiu o `ClubRankingPanel` legado
+  (removido).
+- **Feature flag** `CLUB_INTERNAL_BACKFILL` (default ON quando
+  `CLUB_INTERNAL_RANKING` está ON).
+- **5 testes novos** em `clubRankingServer.test.js` cobrindo a
+  regressão `user_id` (1377 passing total).
+
 **Fix do filtro de clube + backfill do materializado (Wave C.4, Sprint 18)**:
 - **Filtro de clube no ranking nacional** (`NationalRanking.jsx`):
   agora carrega `useClubs()` (diretório oficial) + mescla com
