@@ -112,3 +112,52 @@ O switch "Lançar resultados no ranking" é renderizado **dentro do
 abaixo da lista de jogos do dia. Não fica em uma seção separada nem
 numa aba à parte. `canManage` é calculado pelo próprio
 `GameDayOrganizer` (criador do evento OU admin do clube).
+
+## Wave C.2 (Sprint 16, 2026-07-28) — ranking interno em duplas
+
+> O `ClubRankingTab` (aba "Ranking" do clube) agora tem sub-abas
+> **Individual** | **Duplas**. Acompanham um toggle "Incluir
+> resultados externos" (só admins do clube; default OFF) que,
+> quando ligado, considera também placares de **torneios da
+> plataforma** e de **dias de jogo de outros clubes** em que
+> atletas do clube participaram.
+
+### Como funciona (fluxo)
+
+1. O user abre a aba "Ranking" do clube (membro do clube).
+2. Por padrão, vê a sub-aba "Individual" com o ranking só dos
+   jogos do próprio clube.
+3. Se `CLUB_INTERNAL_DOUBLES_RANKING` estiver ON, pode alternar
+   para a sub-aba "Duplas" — parcerias que jogaram juntas
+   (ordenadas por vitórias/derrotas/saldo).
+4. Admin do clube pode LIGAR "Incluir resultados externos" para
+   o ranking também refletir torneios + dias de jogo fora do
+   clube. Default OFF.
+
+### Fontes coletadas pelo service
+
+- **Jogos do próprio clube** (sempre): `club_events/{id}/.../games`
+- **Wave C do próprio clube** (sempre): `club_event_games` onde
+  `club_id == clubId`
+- **Wave C de outros clubes** (só se `includeExternal`): filtrado
+  pelos uids do clube
+- **Tournament matches** (só se `includeExternal`): finalizados
+  onde uids do clube aparecem
+
+### Arquivos novos
+
+- `src/modules/clubs/domain/clubRankingSources.js` (13 testes)
+- `src/modules/clubs/services/clubInternalRankingService.js`
+- `src/modules/clubs/hooks/useClubInternalRanking.js`
+
+### Arquivos modificados
+
+- `src/core/featureFlags.js` (nova flag `CLUB_INTERNAL_DOUBLES_RANKING`)
+- `src/v2/pages/V2ClubDetail.jsx` (sub-abas + toggle + tabelas
+  individual/duplas)
+
+### Quem pode LIGAR "Incluir resultados externos"
+
+- Admin do clube (member role 'admin' em `club_members/{clubId_uid}`)
+- Platform admin (não tem UI direta; pelo Firestore)
+- Default OFF: cada user vê só os jogos do clube (escopo padrão)

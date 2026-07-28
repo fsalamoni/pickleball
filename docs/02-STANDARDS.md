@@ -523,6 +523,43 @@ após a lista de jogos do dia. `canManage` é computado pelo
 `GameDayOrganizer` (`useAuth` + `useMyMembership` +
 `event.created_by`).
 
+### 5.3.5 `useClubInternalRanking` (Wave C.2 — ranking do clube)
+
+Ranking interno do clube (Individual + Duplas) com agregação
+opcional de fontes externas (torneios + dias de jogo de outros
+clubes).
+
+**Composição:**
+- `fetchClubInternalRankingSources(clubId, { includeExternal })`
+  coleta as 3 fontes em paralelo:
+  1. **Jogos do próprio clube** (`club_events/{id}/.../games`)
+  2. **`club_event_games`** do próprio clube
+  3. **Fontes externas** (só se `includeExternal=true`):
+     - `club_event_games` de outros clubes (filtrado pelos uids
+       do clube via `array-contains-any` chunked em 30).
+     - `tournament_matches` finalizados (idem).
+- `normalizeAllSources` (puro) padroniza os matches de
+  formatos diferentes (`side_a_ids`/`side_b_ids` ou objetos).
+- `filterMatchesForClub` (puro) mantém só os matches que
+  envolvem pelo menos um uid do clube; flags `includeClub`/
+  `includeExternal` controlam quais fontes entram.
+- `computeClubRanking` (individual) + `computeDoublesRanking`
+  (duplas, reusado do ranking nacional) derivam as tabelas.
+
+**Permissões do toggle "Incluir externos":**
+- **SÓ** o criador do evento OU admin do clube liga/desliga.
+- Default: OFF (escopo só do clube).
+
+**Sem mudança em `firestore.rules`**: o ranking é read-only.
+Apenas a leitura de `tournament_matches` e `club_event_games`
+(que já são públicos ou controlados pelas regras existentes).
+
+**Sub-abas (UI):**
+- `Individual` (sempre visível)
+- `Duplas` (só se `CLUB_INTERNAL_DOUBLES_RANKING` ON)
+- Subcomponentes: `IndividualRankingTable`, `DoublesRankingTable`,
+  `ExternalToggle`, `PairMembers`.
+
 ### 5.4 Ids deterministas
 
 Quando o doc é um par recurso+user, use id determinista:

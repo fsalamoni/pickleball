@@ -1194,3 +1194,104 @@ específica, suportar multi-quadra, e unificar o "professor".
 **Arquivos:** 2 (`GameDayOrganizer.jsx`, `EventDatesPanel.jsx`).
 **Testes:** 1372 (sem mudança de count).
 **Build:** OK.
+
+---
+
+## 18. Sprint 16 — Wave C.2: ranking interno do clube em duplas (2026-07-28, 14:25)
+
+> Atualizado em **2026-07-28, 14:25 GMT-3** (origin/main @ `9001509`).
+> Branch `wave/c-club-doubles-ranking` mergeada como squash em main.
+> Atende à solicitação: "dentro de clubes, além do ranking individual
+> baseado em dias de jogos, ter também o ranking em dupla. Na parte de
+> ranking do clube deve ter duas sub-abas (individual | duplas). Ter um
+> botão que faça incorporar ao ranking interno as informações de
+> resultados de atletas e duplas do clube em torneios e outros dias de
+> jogos criados fora do clube."
+
+### PR (squash-merge) — feat(clubs+rating): ranking interno em DUPLAS no clube + agregação de fontes externas
+5 files: 4 novos, 1 modificado. 13 testes novos.
+
+#### Domínio (puro, 13 testes)
+- `src/modules/clubs/domain/clubRankingSources.js`:
+  - `flattenSideToUids` (extrai `user_id` de objetos ou mantém strings)
+  - `normalizeMatch` (aceita `side_a_ids`/`side_b_ids` OU
+    `side_a`/`side_b` como objetos; infere `winner` pelo placar se
+    ausente)
+  - `normalizeAllSources` (combina `clubGames` + `clubEventGames` +
+    `tournamentMatches`)
+  - `filterMatchesForClub` (mantém só matches com pelo menos um uid
+    do clube; flags `includeClub`/`includeExternal`; descarta sem
+    vencedor decidido; dedup por id)
+  - `summarizeSources` (contadores `club`, `external`, `doubles`,
+    `singles`)
+
+#### Service (com I/O)
+- `src/modules/clubs/services/clubInternalRankingService.js`:
+  - `listClubAthleteUids(clubId)` — união de membros + atletas que
+    declaram o clube em `athlete_profiles.club_ids`
+  - `fetchClubGames` — subcoleção `games` de cada evento do clube
+  - `fetchClubEventGamesForClub` — `club_event_games` do clube
+  - `fetchExternalClubEventGames` — `club_event_games` de outros
+    clubes (chunked 30, `array-contains-any` em `side_a_ids`/`side_b_ids`)
+  - `fetchExternalTournamentMatches` — `tournament_matches` finalizados
+    com uids do clube (chunked 30)
+  - `fetchClubInternalRankingSources(clubId, { includeExternal })`
+    — orquestra tudo em paralelo
+
+#### Hook (React Query)
+- `useClubInternalRanking(clubId, { includeExternal })`:
+  - Retorna `{ sources, clubUids, matches, individual, doubles }`
+  - Individual via `computeClubRanking` (do `clubRanking.js`)
+  - Doubles via `computeDoublesRanking` (reusado do ranking nacional)
+  - Cache 60s; depende de `includeExternal` e `user.uid`
+
+#### Feature flag
+- `CLUB_INTERNAL_DOUBLES_RANKING` (padrão ON; depende de
+  `CLUB_INTERNAL_RANKING`). Descrita em `src/core/featureFlags.js`.
+
+#### UI (`V2ClubDetail.jsx`, `ClubRankingTab`)
+- **Sub-abas** `Individual` | `Duplas` (User/Users2 icons).
+- **Toggle "Incluir resultados externos"** (SÓ admins do clube):
+  - Default OFF (escopo só do clube).
+  - Quando ON, considera também `tournament_matches` +
+    `club_event_games` de outros clubes.
+- **Badges** no header da tab:
+  - `N atletas do clube` (cinza)
+  - `N jogo(s) do clube` (verde)
+  - `N externo(s)` (amber, só quando o toggle está ON)
+- **Tabela de duplas** mostra os 2 atletas da parceria (com
+  `V2Avatar`).
+- Subcomponentes extraídos: `IndividualRankingTable`,
+  `DoublesRankingTable`, `ExternalToggle`, `PairMembers`,
+  `useAllAthletesSafe`.
+
+### Métricas finais (Sprint 16)
+
+- **1385 testes verdes** (+13 do Wave C.2)
+- **Lint 0 errors**
+- **94 coleções** (sem mudança)
+- **126 feature flags** (+1: `CLUB_INTERNAL_DOUBLES_RANKING`)
+- **42 PRs totais** (Sprints 0-16)
+- **Last SHA**: `9001509`
+- **Deploy**: em curso via GitHub Actions
+
+### Decisões de arquitetura (Sprint 16)
+
+1. **D-RANKING-DUPLAS-REUSA-MOTOR-NACIONAL (Wave C.2)**: o ranking
+   de duplas do clube reusa o `computeDoublesRanking` (do
+   `doublesRanking.js`, mesmo motor do ranking nacional) — uma única
+   implementação para "parceria com mais vitórias".
+2. **D-TOGGLE-EXTERNOS-SÓ-ADMIN (Wave C.2)**: o toggle
+   "Incluir resultados externos" é SÓ visível para admins do clube.
+   Default OFF. Não é exposto na home.
+3. **D-CHUNKED-30-PARA-FONTES-EXTERNAS (Wave C.2)**:
+   `array-contains-any` aceita no máximo 30 uids por query. O
+   service particiona em chunks. Para clubes com mais de 30 atletas
+   faz N queries em paralelo. Defensivo contra coleções grandes.
+4. **D-UPSERT-DOUBLE-RANKING-DEDUP (Wave C.2)**: `filterMatchesForClub`
+   dedup por `id` defensivo (mesmo jogo chegando por 2 fontes).
+5. **D-NORMALIZACAO-DUAL-FORMAT (Wave C.2)**: `normalizeMatch` aceita
+   o formato do `tournament_matches`/`club_event_games` (lados como
+   `side_a_ids`/`side_b_ids`) E o formato do `gameDayOrganizer`
+   (lados como objetos `{id, name, user_id}`). Infere `winner` pelo
+   placar se `winner_side` ausente (formato do organizador).

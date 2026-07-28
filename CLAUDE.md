@@ -12,7 +12,7 @@
 
 - **O que é**: PWA para pickleball amador BR — torneios, clubes, arenas, professores, comunidade.
 - **Stack**: React 18 + Vite, Tailwind + shadcn/ui, Firebase (Firestore db `pickleball`), React Query, Vitest, Playwright.
-- **Estado**: 19 módulos, 66 V2 pages, 94 coleções Firestore (+coach_favorites, +club_event_games), 125 feature flags, **1372 testes verdes** (Wave C).
+- **Estado**: 19 módulos, 66 V2 pages, 94 coleções Firestore (+coach_favorites, +club_event_games), 126 feature flags, **1385 testes verdes** (Wave C.2).
 - **Live**: https://picklerush.web.app (Firebase site `picklerush`; `pickletour` é redirect-only).
 - **Deploy**: push em `main` → GitHub Actions → Firebase Hosting + Rules + Cloud Function.
 - **Repositório**: https://github.com/fsalamoni/pickleball
@@ -324,25 +324,25 @@ chore(deps): bump firebase to 12.x
 
 ---
 
-## 10. Métricas atuais (snapshot 2026-07-27, 20:30 GMT-3)
+## 10. Métricas atuais (snapshot 2026-07-28, 14:25 GMT-3)
 
-> Última atualização: 2026-07-27, após PRs #73–#84 (Sprints 11-13) + Wave B
-> (Sprint 14) + Wave C (Sprint 15): "Lançar resultados de dias de jogo no
-> ranking nacional". Criador do evento + admins do clube ligam uma chave
-> (default OFF) que espelha os jogos com placar em `club_event_games` e
-> dispara recálculo do rating.
+> Última atualização: 2026-07-28, após PRs #73–#84 (Sprints 11-13) + Wave B
+> (Sprint 14) + Wave C (Sprint 15) + Wave C.2 (Sprint 16): "Ranking interno
+> do clube em duplas + agregação de fontes externas". Sub-abas
+> Individual | Duplas no `ClubRankingTab`, com toggle para incluir
+> resultados de torneios + dias de jogo de outros clubes.
 
 | Métrica | Valor | Delta do início do agente |
 |---|---|---|
-| **Testes Vitest** | 1372 passing | +964 (era 408) |
+| **Testes Vitest** | 1385 passing | +977 (era 408) |
 | **Lint errors** | 0 | era 30+ |
 | **Módulos** | 19 | +2 (coaches, circuits) |
 | **V2 pages** | 66 | +42 (V2AdminBootstrap removida, consolidada no console) |
 | **V2 components (src/v2/components/)** | +2 pastas (coach, arenas) | — |
 | **Coleções Firestore** | 94 (+coach_favorites, +club_event_games) | +55 |
-| **Feature flags** | 125 (51 ARENA_MODULE_* + 1 NAV_HUBS) | +95 |
-| **PRs mergeados** | 41 totais (Sprints 0-15) | — |
-| **Origin/main** | `d5694a6` (Wave C) | — |
+| **Feature flags** | 126 (+CLUB_INTERNAL_DOUBLES_RANKING) | +96 |
+| **PRs mergeados** | 42 totais (Sprints 0-16) | — |
+| **Origin/main** | `9001509` (Wave C.2) | — |
 | **Bundle deployed** | (deploy em curso) | — |
 | **Live URL** | https://picklerush.web.app | — |
 

@@ -185,6 +185,24 @@ Professor + texto atualizado.
   "Editar meu perfil" (vai pro painel)
 - ❌ `AddResidencyForm` + função "remover residência" removidas
 
+**Ranking interno do clube em duplas (Wave C.2, Sprint 16)**:
+- `ClubRankingTab` agora tem sub-abas **Individual** | **Duplas** (a
+  segunda só aparece se `CLUB_INTERNAL_DOUBLES_RANKING` estiver ON).
+- Ranking de duplas via `computeDoublesRanking` (domínio puro,
+  reusado do ranking nacional) — agrupa parcerias pelo par de
+  uids e soma vitórias/derrotas/saldo.
+- **Toggle "Incluir resultados externos"** (só admins do clube):
+  - Default OFF (escopo só do clube).
+  - Quando ON, agrega também:
+    * `tournament_matches` finalizados em que atletas do clube
+      participaram.
+    * `club_event_games` (Wave C) de outros clubes.
+- `useClubInternalRanking(clubId, { includeExternal })` centraliza
+  a coleta de fontes e o cálculo.
+- `clubRankingSources` (domínio puro) normaliza matches de qualquer
+  formato (`side_a_ids`/`side_b_ids` ou objetos) e filtra pelos
+  uids do clube. 13 testes unitários.
+
 **Dias de jogo → ranking nacional (Wave C, Sprint 15)**:
 - `club_events/{id}/dates/{dateId}.publish_to_ranking` (default false)
 - Criador do evento + admins do clube podem LIGAR a chave para espelhar
