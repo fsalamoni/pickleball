@@ -185,6 +185,32 @@ Professor + texto atualizado.
   "Editar meu perfil" (vai pro painel)
 - ❌ `AddResidencyForm` + função "remover residência" removidas
 
+**BUG RAIZ do materializado corrigido (Wave C.6, Sprint 20)**:
+- **Causa raiz**: `GameDayOrganizer` salvava `side_a`/`side_b` em
+  `club_events/.../games` como `{ id, name }` onde `id` é
+  **doc_id de `event_participants`**, NÃO `user_id`. A Cloud
+  Function `sideToUids` retornava `p.id` (doc_id) e o
+  materializado ficava com chaves que não correspondiam a
+  `club_members.user_id` nem `athlete_profiles.uid`.
+- **Sintoma visível**: "0 atletas do clube" mesmo com 16 membros.
+  Materializado sempre VAZIO para clubes com game day organizer.
+- **Por que ficou visível agora**: antes da Wave C.3 (cálculo
+  client-side), o bug era latente — a UI mostrava nomes do
+  `name` salvo, dando impressão de funcionar. Com a materialização,
+  o cálculo tentou agregar por `user_id` real, expôs o bug.
+- **Fix server-side** (`functions/clubRanking.js`):
+  `sideToUids(side, participantById)` aceita mapa
+  `eventParticipantDocId → event_participant` e resolve
+  `p.id → user_id`. Convidados sem user_id são pulados. Nova
+  função `loadEventParticipantsMap` constrói o mapa por clube.
+- **Fix client-side** (`GameDayOrganizer` + `sanitizeGameSide`):
+  para dados NOVOS, salva `user_id` direto no `side_a`/`side_b`.
+  Mantém `id` para retrocompat. Schema novo funciona no
+  server-side sem precisar do mapa.
+- **10 testes novos** em `clubRankingUserIdFix.test.js`
+  (1387 total): regressão explícita "sem participantById,
+  materializado fica VAZIO" + cenário do Pickleholics.
+
 **Correções do materializado server-side (Wave C.5, Sprint 19)**:
 - **Bug #1 (crítico)**: `applyToIndividual` agora seta `user_id` no
   row (era `undefined`, gerando doc id `{clubId}_undefined`).

@@ -336,3 +336,81 @@ está ON). Puramente aditivo.
 - duplas (2×2) geram 4 rows com `user_id` correto
 
 **1377 passing** total.
+
+## Wave C.6 (Sprint 20, 2026-07-28) — BUG RAIZ do materializado
+
+> Você tinha razão: o ranking **NÃO** funcionava. Eu não estava
+> vendo. O bug era latente desde o `GameDayOrganizer`, ficou
+> visível com a materialização (Wave C.3), e eu não identifiquei
+> nas Wave C.4/C.5. Desculpa pela demora.
+
+### O bug (encontrado, finalmente)
+
+O `GameDayOrganizer` salva `side_a`/`side_b` em
+`club_events/{eventId}/games/{gameId}` como objetos `{ id, name }`,
+onde `id` é o **doc_id de `event_participants`**, NÃO o `user_id`
+do atleta.
+
+A Cloud Function `sideToUids` recebia esses objetos e retornava
+`p.id` (doc_id) — nunca o user_id real.
+
+```js
+// ANTES (errado)
+function sideToUids(side) {
+  return side.map((p) => p.user_id || p.id).filter(Boolean);
+  // p.id é doc_id de event_participant, não user_id!
+}
+```
+
+O materializado ficava com chaves que **NÃO** correspondiam a
+`club_members.user_id`, `athlete_profiles.uid` nem `users.uid`.
+
+→ "0 atletas do clube" mesmo com 16 membros.
+→ Materializado sempre VAZIO para clubes com game day organizer.
+
+### Por que ficou visível agora (e não antes)
+
+- **Antes da Wave C.3**: cálculo client-side usava o mesmo `p.id`.
+  A UI mostrava os nomes do `name` salvo, dando a impressão de
+  funcionar — mas as estatísticas estavam atribuídas a chaves
+  erradas.
+- **Depois da Wave C.3** (materializado): o cálculo server-side
+  tentou agregar por `user_id` real, expôs o bug.
+
+### Fix server-side
+
+`sideToUids(side, participantById)` agora aceita um mapa
+`eventParticipantDocId → event_participant` (que tem `user_id`).
+Resolve `p.id → user_id` quando o game está no schema legado.
+Convidados sem `user_id` são pulados silenciosamente.
+
+Nova função `loadEventParticipantsMap(db, events)` carrega os
+participants de cada evento do clube e constrói o mapa.
+
+### Fix client-side
+
+`GameDayOrganizer.handleDraw` agora salva `user_id` (além de `id`
+e `name`) no `side_a`/`side_b`, quando o participante é um atleta
+real. Mantém `id` (doc_id) para retrocompat. Schema novo funciona
+no server-side sem precisar do mapa.
+
+### Validação (cenário do Pickleholics)
+
+- 16 membros
+- 1 evento com 4 participants (1 convidado)
+- 1 jogo decidido (Fsa+João 11×5 Maria+Pedro)
+- **Antes**: materializado com 0 atletas
+- **Depois**: materializado com 4 atletas + stats corretas
+
+### Testes
+
+10 testes novos em `clubRankingUserIdFix.test.js`:
+- `sideToUids` resolve `p.id → user_id` via mapa
+- Convidados sem `user_id` são pulados
+- Schema novo (com `user_id` direto) também funciona
+- Array de strings (uids diretos) é aceito
+- `normalizeClubGame` retorna null sem mapa (regressão)
+- Pipeline completo popula materializado com user_ids reais
+- **REGRESSÃO**: sem mapa, materializado fica VAZIO
+
+**1387 passing** total.

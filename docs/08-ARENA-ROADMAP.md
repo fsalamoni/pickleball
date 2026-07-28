@@ -1660,3 +1660,134 @@ para debug, mostra mensagem útil no toast.
 - **45 PRs totais** (Sprints 0-19)
 - **Last SHA**: `25bf67a`
 - **Deploy**: em curso via GitHub Actions
+
+---
+
+## 22. Sprint 20 — Wave C.6: BUG RAIZ do materializado (2026-07-28, 20:10)
+
+> Atualizado em **2026-07-28, 20:10 GMT-3** (origin/main @ `82cecc0`).
+> Branch `wave/c6-diagnose` mergeada como squash em main.
+> 4 files, 272+/12-. 10 testes novos.
+
+### Diagnóstico (a partir de feedback do user)
+
+> "Antes de eu falar sobre o botão de incluir resultados externos o
+> ranking dos clubes funcionava e tinha dados reais. Você conseguiu
+> estragar e não está conseguindo arrumar."
+
+Investigação estática do pipeline revelou **BUG RAIZ** latente desde
+o `gameDayOrganizer`, que ficou visível com a materialização (Wave C.3).
+
+### O bug
+
+O `GameDayOrganizer` salva `side_a`/`side_b` em
+`club_events/{eventId}/games/{gameId}` como objetos `{ id, name }`,
+onde `id` é o **doc_id de `event_participants`**, NÃO o `user_id`
+do atleta.
+
+A Cloud Function `sideToUids` (em `functions/clubRanking.js`) recebia
+esses objetos e retornava `p.id` (doc_id) — nunca o user_id real.
+
+```js
+// ANTES (errado)
+function sideToUids(side) {
+  return side.map((p) => p.user_id || p.id).filter(Boolean);
+  //           ^^^^^^^^^^^^^^^^^^^^^^^^
+  //           p.id é doc_id de event_participant, não user_id!
+}
+```
+
+**Resultado**: o materializado (`club_internal_ratings`) ficava
+agregado por chaves que **NÃO** correspondiam a:
+- `club_members.user_id` (para filtrar por clube)
+- `athlete_profiles/{uid}` (para resolver nomes)
+- `users/{uid}` (para autenticação)
+
+→ "0 atletas do clube" mesmo com 16 membros.
+→ Ranking materializado sempre VAZIO para clubes com game day organizer.
+
+### Por que ficou visível agora
+
+- **Antes da Wave C.3** (cálculo client-side): o cliente também
+  usava o mesmo `p.id` — a UI mostrava os nomes do `name` salvo no
+  doc, dando a **impressão de funcionar** (mas as estatísticas
+  estavam atribuídas a chaves erradas).
+- **Depois da Wave C.3** (materializado): o cálculo server-side
+  tentou agregar por `user_id` (para depois cruzar com
+  `club_members.user_id`), mas o input era `doc_id`. O materializado
+  ficou com chaves "doc_id" que **não batem** com `user_id` de ninguém.
+
+### Fix (Wave C.6)
+
+#### Server-side (`functions/clubRanking.js`)
+
+`sideToUids(side, participantById)` agora aceita um mapa
+`eventParticipantDocId → event_participant` (que tem `user_id`):
+
+```js
+function sideToUids(side, participantById) {
+  return side.map((p) => {
+    if (typeof p === 'string') return p;
+    if (p.user_id) return p.user_id;          // schema novo
+    if (p.id && participantById) {             // schema legado
+      const ep = participantById.get(p.id);
+      if (ep && ep.user_id) return ep.user_id;
+    }
+    return null; // convidado sem user_id é pulado
+  }).filter(Boolean);
+}
+```
+
+Nova função `loadEventParticipantsMap(db, events)` carrega os
+participants de cada evento do clube e constrói o mapa. Pipeline
+chama o normalizador com o mapa.
+
+#### Client-side (`GameDayOrganizer` + `sanitizeGameSide`)
+
+Para dados NOVOS, salva `user_id` (além de `id` e `name`):
+
+```js
+// GameDayOrganizer.handleDraw
+side_a: g.side_a.map((id) => {
+  const p = participantById.get(id);
+  return { id, name: p?.name, user_id: p?.user_id || null };
+})
+```
+
+Schema novo funciona no server-side **sem** precisar do mapa.
+
+### Validação contra cenário do Pickleholics
+
+- 16 membros
+- 1 evento com 4 participants (1 convidado)
+- 1 jogo decidido (Fsa+João 11×5 Maria+Pedro)
+- **Antes**: materializado com 0 atletas (doc_ids não correspondem)
+- **Depois**: materializado com 4 atletas + stats corretas
+
+### Métricas finais (Sprint 20)
+
+- **1387 testes verdes** (+10 novos)
+- **0 lint errors**
+- **98 coleções** (sem mudança)
+- **127 feature flags** (sem mudança)
+- **8 Cloud Functions** (sem mudança)
+- **46 PRs totais** (Sprints 0-20)
+- **Last SHA**: `82cecc0`
+- **Deploy**: em curso via GitHub Actions
+
+### Decisões D- (Wave C.6)
+
+1. **D-USER-ID-NO-SCHEMA (Wave C.6)**: o documento do game DEVE
+   ter `user_id` no `side_a`/`side_b`, não só `id` (que é doc_id
+   de event_participant). Schema legado é aceito com fallback
+   server-side via `participantById`.
+2. **D-CONVIDADO-FORA-DO-RANKING (Wave C.6)**: participantes sem
+   `user_id` (convidados) são pulados do ranking. Não há uid real
+   para agregar, então é justo ignorar.
+3. **D-PIPELINE-LEVA-MAPA (Wave C.6)**: o normalizador de
+   `club_events/.../games` recebe o mapa de participants como
+   parâmetro. Pipeline carrega o mapa uma vez por clube e
+   reusa em todos os games.
+4. **D-TESTES-DE-REGRESSAO (Wave C.6)**: cada bug do materializado
+   agora tem teste de regressão explícito ("sem participantById,
+   materializado fica VAZIO"). Impede regressões futuras.

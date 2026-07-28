@@ -12,7 +12,7 @@
 
 - **O que é**: PWA para pickleball amador BR — torneios, clubes, arenas, professores, comunidade.
 - **Stack**: React 18 + Vite, Tailwind + shadcn/ui, Firebase (Firestore db `pickleball`), React Query, Vitest, Playwright.
-- **Estado**: 19 módulos, 66 V2 pages, 98 coleções Firestore, 127 feature flags, **1377 testes verdes** (Wave C.5).
+- **Estado**: 19 módulos, 66 V2 pages, 98 coleções Firestore, 127 feature flags, **1387 testes verdes** (Wave C.6).
 - **Live**: https://picklerush.web.app (Firebase site `picklerush`; `pickletour` é redirect-only).
 - **Deploy**: push em `main` → GitHub Actions → Firebase Hosting + Rules + Cloud Function.
 - **Repositório**: https://github.com/fsalamoni/pickleball
@@ -326,8 +326,16 @@ chore(deps): bump firebase to 12.x
 
 ## 10. Métricas atuais (snapshot 2026-07-28, 19:15 GMT-3)
 
-> Última atualização: 2026-07-28, 19:50 GMT-3, após Wave C.5
-> (Sprint 19): **3 bugs do materializado corrigidos no servidor**:
+> Última atualização: 2026-07-28, 20:10 GMT-3, após Wave C.6
+> (Sprint 20): **BUG RAIZ do materializado corrigido**:
+> `sideToUids` retornava `p.id` (doc_id de `event_participants`)
+> em vez do `user_id` real. O materializado ficava agregado por
+> chaves que não correspondiam a `club_members.user_id`,
+> `athlete_profiles.uid` nem `users.uid` → "0 atletas do clube"
+> mesmo com 16 membros. **Era um bug latente desde o
+> gameDayOrganizer**, mas ficou visível com a materialização da
+> Wave C.3. Corrigido com mapa de participants no servidor +
+> `user_id` no schema novo (client).
 > - `applyToIndividual` agora seta `user_id` no row (era o bug que
 >   deixava o doc com `user_id: undefined` e id `{clubId}_undefined`).
 > - Torneios do clube (Wave B) agora contam como `is_club=true` no
@@ -340,7 +348,7 @@ chore(deps): bump firebase to 12.x
 
 | Métrica | Valor | Delta do início do agente |
 |---|---|---|
-| **Testes Vitest** | 1377 passing (+5 novos) | +969 (era 408) |
+| **Testes Vitest** | 1387 passing (+10 novos) | +979 (era 408) |
 | **Lint errors** | 0 | era 30+ |
 | **Módulos** | 19 | +2 (coaches, circuits) |
 | **V2 pages** | 66 | +42 (V2AdminBootstrap removida, consolidada no console) |
@@ -348,8 +356,8 @@ chore(deps): bump firebase to 12.x
 | **Coleções Firestore** | 98 (sem mudança) | +59 |
 | **Feature flags** | 127 (+CLUB_INTERNAL_BACKFILL) | +97 |
 | **Cloud Functions** | 8 (5 ranking clube + 2 callable admin + 1 schedule mensal) | +8 |
-| **PRs mergeados** | 45 totais (Sprints 0-19) | — |
-| **Origin/main** | `25bf67a` (Wave C.5) | — |
+| **PRs mergeados** | 46 totais (Sprints 0-20) | — |
+| **Origin/main** | `82cecc0` (Wave C.6) | — |
 | **Bundle deployed** | (deploy em curso) | — |
 | **Live URL** | https://picklerush.web.app | — |
 
