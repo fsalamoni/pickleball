@@ -421,6 +421,31 @@ criador do evento + admin do clube + platform admin.
 - `unpublished_at`, `unpublished_by` — quando despublicado.
 - `last_publish_summary` — `{ published, skipped, already_published, removed }`.
 
+### `club_internal_ratings/{clubId_userId}` (Wave C.3 — id determinístico)
+Ranking individual do clube MATERIALIZADO (escopo só clube).
+- `id = ${clubId}_${userId}`, `club_id`, `user_id`
+- `display_name`, `photo_url` (denormalizados)
+- `games, wins, losses, points_for, points_against, points_balance, win_rate`
+- `scope: 'internal'`, `updated_at`
+
+### `club_internal_ratings_ext/{clubId_userId}` (Wave C.3)
+Ranking individual do clube MATERIALIZADO **com fontes externas**
+(torneios + dias de jogo de outros clubes). Mesmo schema, `scope: 'ext'`.
+
+### `club_internal_doubles_ratings/{clubId_pairKey}` (Wave C.3)
+Ranking de duplas (parcerias) do clube MATERIALIZADO (escopo só clube).
+- `id = ${clubId}_${pairKey}`, `club_id`, `pair_key`
+- `player_ids[2]`, `display_names[2]`, `photos[2]`
+- mesmos contadores + `win_rate` + `scope: 'internal'` + `updated_at`
+
+### `club_internal_doubles_ratings_ext/{clubId_pairKey}` (Wave C.3)
+Ranking de duplas MATERIALIZADO com fontes externas. Mesmo schema,
+`scope: 'ext'`.
+
+Regras: `firestore.rules` — read público; write só `isPlatformAdmin()`
+OU `isClubAdmin(club_id)`. O Cloud Function escreve com service account
+(admin SDK ignora as regras). Ver `functions/clubRanking.js`.
+
 ## Torneios (Ondas 1-10)
 
 ### `tournament_announcements/{id}` (Onda 9b)

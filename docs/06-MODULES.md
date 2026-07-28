@@ -185,6 +185,27 @@ Professor + texto atualizado.
   "Editar meu perfil" (vai pro painel)
 - ❌ `AddResidencyForm` + função "remover residência" removidas
 
+**Ranking interno do clube MATERIALIZADO no Firestore (Wave C.3, Sprint 17)**:
+- Cloud Function `recomputeClubInternalRankings` materializa 4 coleções
+  top-level com W/L/Aprov/Saldo **e** `display_name`/`photo_url`:
+  - `club_internal_ratings/{clubId_userId}` (individual, só clube)
+  - `club_internal_ratings_ext/{clubId_userId}` (individual, com externos)
+  - `club_internal_doubles_ratings/{clubId_pairKey}` (duplas, só clube)
+  - `club_internal_doubles_ratings_ext/{clubId_pairKey}` (duplas, com externos)
+- **5 gatilhos** (5 onDocumentWritten) cobrem todas as origens de
+  resultado: `club_events/{id}/games/{id}`, `club_event_games/{id}`,
+  `tournament_matches/{id}`, `club_members/{id}`,
+  `athlete_profiles/{id}` (quando `club_ids` muda).
+- **2 callable** (admin): `recomputeAllClubInternalRankings`
+  (platform admin) e `recomputeOneClubInternalRanking`
+  (admin do clube OU platform admin).
+- Frontend **só LÊ** (hook `useClubInternalRanking`). Toggle
+  "Incluir resultados externos" = trocar coleção. Sem nenhum
+  cálculo client-side. Sem latência. Múltiplos users leem do
+  mesmo materializado.
+- Bug do nome (Wave C.2 mostrava uid) resolvido: `display_name`
+  e `photo_url` desnormalizados no documento materializado.
+
 **Ranking interno do clube em duplas (Wave C.2, Sprint 16)**:
 - `ClubRankingTab` agora tem sub-abas **Individual** | **Duplas** (a
   segunda só aparece se `CLUB_INTERNAL_DOUBLES_RANKING` estiver ON).

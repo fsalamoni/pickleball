@@ -560,6 +560,85 @@ Apenas a leitura de `tournament_matches` e `club_event_games`
 - Subcomponentes: `IndividualRankingTable`, `DoublesRankingTable`,
   `ExternalToggle`, `PairMembers`.
 
+### 5.3.6 Ranking interno do clube MATERIALIZADO (Wave C.3)
+
+Todos os cálculos de ranking do clube são feitos **no servidor** via
+Cloud Function (`functions/clubRanking.js` →
+`recomputeClubInternalRankings`). O frontend apenas **LÊ** o
+materializado. Toggle "Incluir resultados externos" = ler da coleção
+`_ext` em vez da interna — sem recalcular.
+
+**Por que materializar?**
+- Sem latência: ranking abre instantaneamente, mesmo com 10k+ jogos.
+- Múltiplos users: a leitura é servida do mesmo materializado, sem
+  custo de CPU cliente.
+- Coerência: o ranking nunca está inconsistente com os dados;
+  recalcula automaticamente em qualquer mudança.
+
+**Coleções materializadas (4):**
+- `club_internal_ratings/{clubId_userId}` — individual, só clube
+- `club_internal_ratings_ext/{clubId_userId}` — individual, com externos
+- `club_internal_doubles_ratings/{clubId_pairKey}` — duplas, só clube
+- `club_internal_doubles_ratings_ext/{clubId_pairKey}` — duplas, com externos
+
+**Schema (todas as 4 coleções):**
+- `id = ${clubId}_${userId|pairKey}`
+- `club_id`, `user_id`/`pair_key`/`player_ids[]`
+- `display_name`, `photo_url` (denormalizados — resolve o bug do uid)
+- `games, wins, losses, points_for, points_against, points_balance, win_rate`
+- `scope: 'internal' | 'ext'`
+- `updated_at` (serverTimestamp)
+
+**Gatilhos (5 onDocumentWritten) — `functions/index.js`:**
+1. `recomputeClubRankingOnClubGame`: `club_events/{id}/games/{id}`
+2. `recomputeClubRankingOnClubEventGame`: `club_event_games/{id}`
+   (afeta dono + clubes dos uids externos)
+3. `recomputeClubRankingOnTournamentMatch`: `tournament_matches/{id}`
+   (resolve registration → uids → clubes via `athlete_profiles.club_ids`)
+4. `recomputeClubRankingOnMemberChange`: `club_members/{id}`
+5. `recomputeClubRankingOnAthleteProfileChange`: `athlete_profiles/{id}`
+
+**Callable (admin):**
+- `recomputeAllClubInternalRankings({})` — só `platform_admin`
+- `recomputeOneClubInternalRanking({ clubId })` — admin do clube ou
+  `platform_admin`
+
+**Regras Firestore:**
+```js
+match /club_internal_ratings/{docId} {
+  allow read: if true;
+  allow write: if isAuthed() && (
+    isPlatformAdmin()
+    || (resource != null && isClubAdmin(resource.data.club_id))
+    || (request.resource != null && isClubAdmin(request.resource.data.club_id))
+  );
+}
+// (mesma estrutura para _ext, _doubles_, _doubles_ext)
+```
+
+**Pipeline server-side (`recomputeClubInternalRankings`):**
+1. Carrega `club_members` + `athlete_profiles` (chunked 30) +
+   `club_events` (com subcoleção `games`).
+2. Carrega `club_event_games` do próprio clube + de outros
+   clubes (chunked 30) + `tournament_matches` finalizados
+   (chunked 30).
+3. Resolve registrations → uids (chunked 30).
+4. Normaliza cada match (4 normalizadores puros).
+5. Aplica `applyToIndividual` + `applyToDoubles` para o escopo
+   `internal` (só clube) e `ext` (interno + externo).
+6. Enriquece com `display_name`/`photo_url` via profiles.
+7. Ordena (`sortIndividual`/`sortDoubles`).
+8. Escreve materializado em batch (substitui o conjunto anterior;
+   remove documentos de atletas que saíram).
+
+**Frontend (`useClubInternalRanking`):**
+- Lê `club_internal_ratings` (ou `_ext` se `includeExternal=true`)
+  com `where('club_id', '==', clubId), orderBy('wins', 'desc')`.
+- Lê `club_internal_doubles_ratings` (ou `_ext`).
+- Resolve profiles defensivos para nomes/fotos que faltarem
+  no materializado.
+- Sem cálculo. Toggle = trocar coleção. Cache 30s.
+
 ### 5.4 Ids deterministas
 
 Quando o doc é um par recurso+user, use id determinista:

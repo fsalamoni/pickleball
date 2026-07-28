@@ -161,3 +161,69 @@ numa aba à parte. `canManage` é calculado pelo próprio
 - Admin do clube (member role 'admin' em `club_members/{clubId_uid}`)
 - Platform admin (não tem UI direta; pelo Firestore)
 - Default OFF: cada user vê só os jogos do clube (escopo padrão)
+
+## Wave C.3 (Sprint 17, 2026-07-28) — ranking MATERIALIZADO no Firestore
+
+> **Quebra de arquitetura**: o cálculo de ranking (individual e
+> duplas) foi movido do cliente para o **servidor** (Cloud
+> Function). O frontend apenas **LÊ** o materializado. Toggle
+> "Incluir resultados externos" = trocar coleção. **Zero
+> cálculo client-side**.
+
+### Por que materializar?
+
+- **Sem latência**: ranking abre instantaneamente, mesmo com
+  10k+ jogos.
+- **Múltiplos users**: a leitura é servida do mesmo materializado,
+  sem custo de CPU cliente.
+- **Coerência**: o ranking nunca está inconsistente com os dados;
+  recalcula automaticamente em qualquer mudança.
+
+### Coleções (4) — top-level, materializadas
+
+| Coleção | Conteúdo | Escopo |
+|---|---|---|
+| `club_internal_ratings/{clubId_userId}` | Individual | Só clube |
+| `club_internal_ratings_ext/{clubId_userId}` | Individual | Com externos |
+| `club_internal_doubles_ratings/{clubId_pairKey}` | Duplas | Só clube |
+| `club_internal_doubles_ratings_ext/{clubId_pairKey}` | Duplas | Com externos |
+
+### Cloud Functions (5 gatilhos + 2 callable)
+
+| Função | Tipo | Origem |
+|---|---|---|
+| `recomputeClubRankingOnClubGame` | onDocumentWritten | `club_events/{id}/games/{id}` |
+| `recomputeClubRankingOnClubEventGame` | onDocumentWritten | `club_event_games/{id}` |
+| `recomputeClubRankingOnTournamentMatch` | onDocumentWritten | `tournament_matches/{id}` |
+| `recomputeClubRankingOnMemberChange` | onDocumentWritten | `club_members/{id}` |
+| `recomputeClubRankingOnAthleteProfileChange` | onDocumentWritten | `athlete_profiles/{id}` |
+| `recomputeAllClubInternalRankings` | callable (admin) | backfill total (platform_admin) |
+| `recomputeOneClubInternalRanking` | callable (admin) | 1 clube (admin clube ou platform_admin) |
+
+### Bug fix (Wave C.2 → Wave C.3)
+
+- **Wave C.2**: ranking individual mostrava `uid` em vez do nome
+  (cálculo client-side construía `name: uid` literal).
+- **Wave C.3**: `display_name` e `photo_url` desnormalizados no
+  documento materializado, no servidor. **Bug resolvido na
+  arquitetura**.
+
+### Arquivos
+
+**Server:**
+- `functions/clubRanking.js` (NOVO) — motor completo + helpers
+- `functions/index.js` — 5 handlers + 2 callable
+
+**Cliente:**
+- `src/modules/clubs/hooks/useClubInternalRanking.js` (reescrito) — só LÊ
+- `src/modules/clubs/hooks/useClubRankingAdmin.js` (NOVO) — backfill
+- `src/v2/pages/V2ClubDetail.jsx` — lê `r.name` e `r.members` materializados
+
+**Removidos (Wave C.2):**
+- `src/modules/clubs/services/clubInternalRankingService.js`
+- `src/modules/clubs/domain/clubRankingSources.js`
+- `src/modules/clubs/domain/clubRankingSources.test.js`
+
+**Regras:**
+- `firestore.rules` — 4 novos blocos (read público, write só
+  `isPlatformAdmin()` ou `isClubAdmin(club_id)`)

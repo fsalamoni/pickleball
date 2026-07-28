@@ -1295,3 +1295,151 @@ específica, suportar multi-quadra, e unificar o "professor".
    `side_a_ids`/`side_b_ids`) E o formato do `gameDayOrganizer`
    (lados como objetos `{id, name, user_id}`). Infere `winner` pelo
    placar se `winner_side` ausente (formato do organizador).
+
+---
+
+## 19. Sprint 17 — Wave C.3: ranking interno do clube materializado (2026-07-28, 15:30)
+
+> Atualizado em **2026-07-28, 15:30 GMT-3** (origin/main @ `b4f4d5a`).
+> Branch `wave/c-club-ranking-materialized` mergeada como squash em main.
+> Atende à solicitação: "todos esses cálculos sempre devem ser
+> automáticos, assim que um resultado é lançado na plataforma, o cálculo
+> deve ser realizado dentro do banco de dados. O frontende deve apenas
+> mostrar o cálculo que já existe no banco de dados. Pense na estrutura
+> técnica mais adequada para a plataforma, de modo que não haja
+> latência e que a utilização por múltiplos usuários seja facilitada
+> ao máximo."
+
+### PR (squash-merge) — feat(clubs+rating): ranking interno materializado no Firestore
+9 files: 4 novos, 4 modificados, 1 substituído. **5 Cloud Functions + 2 callable**.
+
+### Arquitetura — materialização server-side
+
+**4 coleções top-level** materializadas pelo Cloud Function:
+
+| Coleção | Escopo | Conteúdo |
+|---|---|---|
+| `club_internal_ratings/{clubId_userId}` | Só clube | Individual |
+| `club_internal_ratings_ext/{clubId_userId}` | Com externos | Individual |
+| `club_internal_doubles_ratings/{clubId_pairKey}` | Só clube | Duplas |
+| `club_internal_doubles_ratings_ext/{clubId_pairKey}` | Com externos | Duplas |
+
+Cada documento tem: `display_name`, `photo_url`, `games`, `wins`,
+`losses`, `points_for`, `points_against`, `points_balance`,
+`win_rate`, `scope`, `updated_at`.
+
+**Toggle "Incluir resultados externos" no frontend = trocar a
+coleção lida**. Zero cálculo client-side.
+
+### Cloud Functions (`functions/clubRanking.js`)
+
+**`recomputeClubInternalRankings(db, clubId)`** — pipeline completo:
+1. Carrega `club_members` + `athlete_profiles` + `club_events` (com subcoleção `games`).
+2. Carrega `club_event_games` (próprio + de outros clubes) + `tournament_matches` (chunked 30).
+3. Resolve registrations → uids.
+4. Normaliza matches (4 normalizadores puros).
+5. Aplica `applyToIndividual` + `applyToDoubles` para 2 escopos (internal, ext).
+6 Enriquece com `display_name`/`photo_url` via profiles.
+7. Ordena (`sortIndividual`/`sortDoubles`).
+8. Escreve materializado em batch (substitui o conjunto anterior).
+
+**Pure helpers** (testáveis manualmente): `pairKey`, `normalizeClubGame`,
+`normalizeClubEventGame`, `normalizeTournamentMatch`, `sideToUids`,
+`applyToIndividual`, `applyToDoubles`, `filterMatchesForClub`,
+`sortIndividual`, `sortDoubles`, `enrichWithProfiles`.
+
+### Handlers (`functions/index.js`)
+
+**5 gatilhos (onDocumentWritten):**
+1. `recomputeClubRankingOnClubGame`: `club_events/{id}/games/{id}`
+2. `recomputeClubRankingOnClubEventGame`: `club_event_games/{id}` (afeta dono + clubes externos)
+3. `recomputeClubRankingOnTournamentMatch`: `tournament_matches/{id}` (resolve registration → uids → clubes)
+4. `recomputeClubRankingOnMemberChange`: `club_members/{id}`
+5. `recomputeClubRankingOnAthleteProfileChange`: `athlete_profiles/{id}` (quando `club_ids` muda)
+
+**2 callable (admin):**
+1. `recomputeAllClubInternalRankings({})` — só `platform_admin` (backfill total)
+2. `recomputeOneClubInternalRanking({ clubId })` — admin do clube ou `platform_admin`
+
+### Firestore Rules
+
+```js
+match /club_internal_ratings/{docId} {
+  allow read: if true;
+  allow write: if isAuthed() && (
+    isPlatformAdmin()
+    || (resource != null && isClubAdmin(resource.data.club_id))
+    || (request.resource != null && isClubAdmin(request.resource.data.club_id))
+  );
+}
+// (mesma estrutura para _ext, _doubles_, _doubles_ext)
+```
+
+### Frontend
+
+**`useClubInternalRanking`** (reescrito) — **só LÊ**:
+- `getDocs(query(collection(db, 'club_internal_ratings'), where('club_id', '==', clubId), orderBy('wins', 'desc')))`
+- Toggle = troca para `_ext`.
+- Resolve profiles defensivos para nomes/fotos faltantes.
+- Cache 30s (mais agressivo que Wave C.2 — ranking pode ter sido atualizado).
+
+**`useClubRankingAdmin`** (NOVO):
+- `useRecomputeAllClubRankings` (platform admin)
+- `useRecomputeOneClubRanking` (admin clube ou platform admin)
+
+**`V2ClubDetail.jsx`**:
+- `ClubRankingTab` lê `r.name` e `r.members` do materializado.
+- `PairMembers` usa `members` (já vem com nome/foto do server).
+- Removidos imports/useAllAthletesSafe orfãos + `PairMembers` que dependia de cache local.
+
+### Bug fix (nome)
+
+Wave C.2: ranking individual mostrava `uid` em vez do nome (porque o
+cálculo client-side construía objetos com `name: uid` literal).
+Wave C.3: `display_name` e `photo_url` desnormalizados no documento
+materializado, no servidor. **Bug resolvido na arquitetura**.
+
+### Limpeza
+
+Removidos (Wave C.2, substituídos):
+- `src/modules/clubs/services/clubInternalRankingService.js`
+- `src/modules/clubs/domain/clubRankingSources.js`
+- `src/modules/clubs/domain/clubRankingSources.test.js`
+
+### Métricas finais (Sprint 17)
+
+- **1372 testes verdes** (mantidos; os 13 do Wave C.2 foram removidos com o service orfão)
+- **Lint 0 errors**
+- **98 coleções Firestore** (+4)
+- **126 feature flags** (sem mudança)
+- **7 Cloud Functions** (5 gatilhos + 2 callable)
+- **43 PRs totais** (Sprints 0-17)
+- **Last SHA**: `b4f4d5a`
+- **Deploy**: em curso via GitHub Actions
+
+### Decisões de arquitetura (Sprint 17)
+
+1. **D-RANKING-CLUBE-MATERIALIZADO-SERVER-SIDE (Wave C.3)**: o
+   cálculo de ranking é feito exclusivamente no Cloud Function.
+   Frontend **só lê**. Sem latência, sem inconsistência, sem
+   custo de CPU cliente.
+2. **D-4-COLECOES-POR-ESCOPO (Wave C.3)**: cada clube tem 4
+   coleções materializadas (individual/doubles × internal/ext).
+   O toggle muda APENAS qual coleção ler.
+3. **D-5-GATILHOS-1-POR-ORIGEM (Wave C.3)**: cada origem de
+   resultado (game do clube, Wave C, torneio, member, profile)
+   tem seu próprio onDocumentWritten, recalculando apenas o(s)
+   clube(s) afetado(s).
+4. **D-CHUNKED-30-PARA-RESOLUCAO-EXTERNA (Wave C.3)**:
+   `array-contains-any` aceita no máximo 30 uids por query.
+   O Cloud Function particiona em chunks.
+5. **D-SERVICE-ACCOUNT-IGNORA-REGRAS (Wave C.3)**: o Cloud
+   Function escreve com service account (admin SDK), que
+   ignora as regras do Firestore. As regras (`isPlatformAdmin()`
+   OU `isClubAdmin()`) cobrem o caso de **escrita manual** via
+   app.
+6. **D-CALLABLE-PARA-BACKFILL (Wave C.3)**:
+   `recomputeAllClubInternalRankings` para o admin master
+   disparar o recálculo de todos os clubes (cold start, correção,
+   etc.). `recomputeOneClubInternalRanking` para admin do clube
+   (correção local).
