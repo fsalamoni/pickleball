@@ -22,6 +22,7 @@ const COL_CLUBS = 'clubs';
 const COL_MEMBERS = 'club_members';
 const COL_EVENTS = 'club_events';
 const COL_EVENT_GAMES_SUBCOL = 'games';
+const COL_EVENT_PARTICIPANTS = 'participants';
 const COL_CLUB_EVENT_GAMES = 'club_event_games';
 const COL_TOURNAMENT_MATCHES = 'tournament_matches';
 const COL_TOURNAMENT_REGISTRATIONS = 'tournament_registrations';
@@ -53,25 +54,47 @@ function doublesId(clubId, key) {
 
 /* --------------------- Pure normalizers --------------------- */
 
-/** Extrai uids de um lado (formato objects `{id, user_id}` ou array de strings). */
-function sideToUids(side) {
+/**
+ * Extrai uids de um lado.
+ *
+ * Aceita 3 formatos:
+ *  1. Array de strings (uids diretos).
+ *  2. Array de objetos `{ user_id, ... }` (schema novo: user_id no doc).
+ *  3. Array de objetos `{ id, name }` (schema LEGADO do `GameDayOrganizer`):
+ *     `id` é o **doc_id de `event_participants`**, NÃO o user_id do atleta.
+ *     Para esse caso, `participantById` (mapa `eventParticipantDocId → ep`)
+ *     é usado para resolver `p.id → user_id`. Convidados sem `user_id`
+ *     são pulados silenciosamente.
+ *
+ * @param {Array} side
+ * @param {Map} [participantById]  opcional, mapa doc_id → event_participant
+ * @returns {string[]}
+ */
+function sideToUids(side, participantById) {
   if (!Array.isArray(side)) return [];
   return side
     .map((p) => {
       if (p == null) return null;
       if (typeof p === 'string') return p;
-      return p.user_id || p.id || null;
+      // Caso 2: schema novo, com user_id direto.
+      if (p.user_id) return p.user_id;
+      // Caso 3: schema legado, id é doc_id de event_participant.
+      if (p.id && participantById) {
+        const ep = participantById.get(p.id);
+        if (ep && ep.user_id) return ep.user_id;
+      }
+      return null;
     })
     .filter(Boolean);
 }
 
 /** Normaliza um match do `club_events/{id}/.../games` (organizer). */
-function normalizeClubGame(g) {
+function normalizeClubGame(g, participantById) {
   if (!g) return null;
   const points_a = Number(g.score_a) || 0;
   const points_b = Number(g.score_b) || 0;
-  const a = sideToUids(g.side_a);
-  const b = sideToUids(g.side_b);
+  const a = sideToUids(g.side_a, participantById);
+  const b = sideToUids(g.side_b, participantById);
   if (a.length === 0 || b.length === 0) return null;
   if (a.length > 2 || b.length > 2) return null;
   if (a.length !== b.length) return null;
@@ -310,6 +333,26 @@ async function loadClubEventGames(db, events) {
   return all;
 }
 
+/**
+ * Carrega os `event_participants` de cada evento do clube e constrói um
+ * mapa `eventParticipantDocId → event_participant` (que tem `user_id`).
+ *
+ * Necessário para que o normalizador de `club_events/.../games` resolva
+ * corretamente o schema legado do `GameDayOrganizer` (que salva `id`
+ * = doc_id de event_participant, não user_id).
+ */
+async function loadEventParticipantsMap(db, events) {
+  const map = new Map();
+  for (const ev of events) {
+    const sub = await db.collection(COL_EVENTS).doc(ev.id).collection(COL_EVENT_PARTICIPANTS).get();
+    sub.docs.forEach((d) => {
+      const data = { id: d.id, ...d.data() };
+      map.set(d.id, data);
+    });
+  }
+  return map;
+}
+
 /** Carrega os `club_event_games` do próprio clube. */
 async function loadClubOwnClubEventGames(db, clubId) {
   const snap = await db.collection(COL_CLUB_EVENT_GAMES).where('club_id', '==', clubId).get();
@@ -408,12 +451,15 @@ async function recomputeClubInternalRankings(db, clubId) {
   members.forEach((m) => { if (m && m.user_id) clubUids.add(m.user_id); });
   profileDocs.forEach((p) => { if (p && p.id) clubUids.add(p.id); });
 
-  // 2) Jogos do clube
-  const [ownClubGamesRaw, ownClubEventGamesRaw, extClubEventGames, tournamentMatches] = await Promise.all([
+  // 2) Jogos do clube + mapa de event_participants (necessário para
+  //    resolver o schema legado do `GameDayOrganizer`, que salva `id`
+  //    = doc_id de event_participant, não user_id).
+  const [ownClubGamesRaw, ownClubEventGamesRaw, extClubEventGames, tournamentMatches, participantById] = await Promise.all([
     loadClubEventGames(db, events),
     loadClubOwnClubEventGames(db, clubId),
     loadExternalClubEventGames(db, clubUids),
     loadExternalTournamentMatches(db, clubUids),
+    loadEventParticipantsMap(db, events),
   ]);
 
   // 3) Para `tournament_matches`, precisamos resolver registration → uids
@@ -434,7 +480,8 @@ async function recomputeClubInternalRankings(db, clubId) {
   const profileById = new Map(profileDocs.map((p) => [p.id, p]));
   const allMatches = [];
   ownClubGamesRaw.forEach((g) => {
-    const n = normalizeClubGame(g);
+    // `participantById` resolve o schema legado do GameDayOrganizer.
+    const n = normalizeClubGame(g, participantById);
     if (n) n.is_club = true, n.club_id = clubId, allMatches.push(n);
   });
   ownClubEventGamesRaw.forEach((g) => {

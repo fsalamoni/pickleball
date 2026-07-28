@@ -305,11 +305,21 @@ function GamesSection({ eventId, dateId, participants }) {
       const ids = participants.map((p) => p.id);
       const seed = `gd-${Date.now()}`;
       const raw = generateGameDayGames(ids, { rounds: effectiveRounds, seed });
+      // Wave C.6: também salva o `user_id` real (se o participante for um
+      // atleta da plataforma) para que o Cloud Function de ranking possa
+      // agregar estatísticas por uid (em vez de por doc_id de participant).
+      // Mantém `id` (doc_id do event_participant) para retrocompat.
       const payload = raw.map((g) => ({
         round: g.round,
         kind: 'doubles',
-        side_a: g.side_a.map((id) => ({ id, name: participantById.get(id)?.name || 'Jogador' })),
-        side_b: g.side_b.map((id) => ({ id, name: participantById.get(id)?.name || 'Jogador' })),
+        side_a: g.side_a.map((id) => {
+          const p = participantById.get(id);
+          return { id, name: p?.name || 'Jogador', user_id: p?.user_id || null };
+        }),
+        side_b: g.side_b.map((id) => {
+          const p = participantById.get(id);
+          return { id, name: p?.name || 'Jogador', user_id: p?.user_id || null };
+        }),
       }));
       await replaceGames.mutateAsync({ games: payload, dateId });
       toast.success(`Sorteio concluído: ${payload.length} jogo(s) em ${effectiveRounds} rodada(s).`);

@@ -986,7 +986,14 @@ function sanitizeGameSide(side) {
   return (Array.isArray(side) ? side : [])
     .filter((p) => p && (p.name || p.id))
     .slice(0, 2)
-    .map((p) => ({ id: p.id || null, name: trimmed(p.name) || 'Jogador' }));
+    .map((p) => ({
+      id: p.id || null,
+      // Wave C.6: preserva o user_id real (se for um atleta da plataforma)
+      // para que o Cloud Function de ranking possa agregar por uid.
+      // Convidados (sem user_id) ficam com `user_id: null`.
+      user_id: p.user_id || null,
+      name: trimmed(p.name) || 'Jogador',
+    }));
 }
 
 export async function addEventGame(eventId, data, user) {
