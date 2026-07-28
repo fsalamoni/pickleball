@@ -15,6 +15,11 @@
  *  3. Resolve nomes/fotos dos atletas que faltarem (defensivo).
  *
  * Sem cálculo client-side. Toggle = trocar a coleção lida.
+ *
+ * IMPORTANTE: as queries `where('club_id', '==', x) + orderBy('wins', 'desc')`
+ * exigem **índices compostos** em cada coleção materializada. Sem o
+ * índice, o Firestore lança `failed-precondition` (código 9). Esses
+ * índices estão em `firestore.indexes.json`. Wave C.6.
  */
 
 import { useQuery } from '@tanstack/react-query';

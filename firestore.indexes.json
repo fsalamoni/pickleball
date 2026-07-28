@@ -193,6 +193,38 @@
         { "fieldPath": "arena_id", "order": "ASCENDING" },
         { "fieldPath": "name", "order": "ASCENDING" }
       ]
+    },
+    {
+      "collectionGroup": "club_internal_ratings",
+      "queryScope": "COLLECTION",
+      "fields": [
+        { "fieldPath": "club_id", "order": "ASCENDING" },
+        { "fieldPath": "wins", "order": "DESCENDING" }
+      ]
+    },
+    {
+      "collectionGroup": "club_internal_ratings_ext",
+      "queryScope": "COLLECTION",
+      "fields": [
+        { "fieldPath": "club_id", "order": "ASCENDING" },
+        { "fieldPath": "wins", "order": "DESCENDING" }
+      ]
+    },
+    {
+      "collectionGroup": "club_internal_doubles_ratings",
+      "queryScope": "COLLECTION",
+      "fields": [
+        { "fieldPath": "club_id", "order": "ASCENDING" },
+        { "fieldPath": "wins", "order": "DESCENDING" }
+      ]
+    },
+    {
+      "collectionGroup": "club_internal_doubles_ratings_ext",
+      "queryScope": "COLLECTION",
+      "fields": [
+        { "fieldPath": "club_id", "order": "ASCENDING" },
+        { "fieldPath": "wins", "order": "DESCENDING" }
+      ]
     }
   ],
   "fieldOverrides": []
