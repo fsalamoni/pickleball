@@ -27,6 +27,7 @@ const COL_INDIVIDUAL_EXT = 'club_internal_ratings_ext';
 const COL_DOUBLES_INTERNAL = 'club_internal_doubles_ratings';
 const COL_DOUBLES_EXT = 'club_internal_doubles_ratings_ext';
 const COL_ATHLETE_PROFILES = 'athlete_profiles';
+const COL_CLUB_MEMBERS = 'club_members';
 
 /** Carrega o mapa uid → profile (display_name, photo_url) para fallback. */
 async function loadAthleteProfiles(neededUids) {
@@ -39,6 +40,29 @@ async function loadAthleteProfiles(neededUids) {
     snap.docs.forEach((d) => map.set(d.id, { id: d.id, ...d.data() }));
   }
   return map;
+}
+
+/** Carrega os uids de TODOS os atletas do clube (membros + perfis com club_ids). */
+async function loadClubUids(clubId) {
+  const set = new Set();
+  // 1) Membros
+  try {
+    const memSnap = await getDocs(query(collection(db, COL_CLUB_MEMBERS), where('club_id', '==', clubId)));
+    memSnap.docs.forEach((d) => {
+      const uid = d.data().user_id;
+      if (uid) set.add(uid);
+    });
+  } catch (err) {
+    // silencioso
+  }
+  // 2) Perfis que declaram o clube em club_ids
+  try {
+    const profSnap = await getDocs(query(collection(db, COL_ATHLETE_PROFILES), where('club_ids', 'array-contains', clubId)));
+    profSnap.docs.forEach((d) => set.add(d.id));
+  } catch (err) {
+    // silencioso
+  }
+  return Array.from(set);
 }
 
 function enrichIndividual(row, profileById) {
@@ -99,9 +123,10 @@ export function useClubInternalRanking(clubId, options = {}) {
       const colIndividual = includeExternal ? COL_INDIVIDUAL_EXT : COL_INDIVIDUAL_INTERNAL;
       const colDoubles = includeExternal ? COL_DOUBLES_EXT : COL_DOUBLES_INTERNAL;
 
-      const [individualSnap, doublesSnap] = await Promise.all([
+      const [individualSnap, doublesSnap, clubUids] = await Promise.all([
         getDocs(query(collection(db, colIndividual), where('club_id', '==', clubId), orderBy('wins', 'desc'))),
         getDocs(query(collection(db, colDoubles), where('club_id', '==', clubId), orderBy('wins', 'desc'))),
+        loadClubUids(clubId),
       ]);
 
       const rawIndividual = individualSnap.docs.map((d) => ({ id: d.id, ...d.data() }));
@@ -128,14 +153,16 @@ export function useClubInternalRanking(clubId, options = {}) {
       const totals = { club: 0, external: 0, doubles: 0, singles: 0 };
       individual.forEach((r) => { totals.singles += 1; totals.club += r.games; });
       doubles.forEach((r) => { totals.doubles += 1; });
-      // Para `external` o frontend não consegue inferir daqui (server não
-      // inclui). Exibimos via badge sem esse número, OU pegamos da
-      // comparação com o scope oposto. Mantemos um placeholder.
       totals.external = includeExternal ? 0 : 0;
 
       return {
         sources: totals,
-        clubUids: individual.map((r) => r.id),
+        // Wave C.4: clubUids agora reflete os atletas REAIS do clube
+        // (membros + perfis), não apenas os do materializado. Isso
+        // mostra "16 atletas do clube" mesmo quando o materializado
+        // ainda está vazio.
+        clubUids,
+        totalClubMembers: clubUids.length,
         individual,
         doubles,
         includeExternal,

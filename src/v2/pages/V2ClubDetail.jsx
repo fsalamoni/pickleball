@@ -4,13 +4,14 @@ import { toast } from 'sonner';
 import {
   ArrowLeft, Building2, CalendarDays, Hash, Mail, MapPin, MessageSquare,
   MessagesSquare, Phone, Settings, Users, Medal, Share2, User, Users2,
-  Globe2, ListChecks,
+  Globe2, ListChecks, RefreshCw,
 } from 'lucide-react';
 import {
   useClub, useMyMembership, useJoinClub, useLeaveClub, useMyJoinRequest,
   useRequestToJoinClub, useMyClubInvite, useAcceptClubInvite, useDeclineClubInvite,
 } from '@/modules/clubs/hooks/useClubs';
 import { useClubInternalRanking } from '@/modules/clubs/hooks/useClubInternalRanking';
+import { useRecomputeOneClubRanking } from '@/modules/clubs/hooks/useClubRankingAdmin';
 import { useFeatureFlag } from '@/core/lib/FeatureFlagsContext';
 import { FEATURE_FLAG } from '@/core/featureFlags';
 import { CLUB_ROLE, JOIN_REQUEST_STATUS } from '@/modules/clubs/domain/constants';
@@ -253,9 +254,23 @@ function ClubRankingTab({ clubId, isAdmin }) {
   const doublesOn = useFeatureFlag(FEATURE_FLAG.CLUB_INTERNAL_DOUBLES_RANKING);
   const [tab, setTab] = useState('individual'); // 'individual' | 'doubles'
   const [includeExternal, setIncludeExternal] = useState(false);
-  const { data, isLoading } = useClubInternalRanking(clubId, { includeExternal });
+  const { data, isLoading, refetch } = useClubInternalRanking(clubId, { includeExternal });
+  const recompute = useRecomputeOneClubRanking();
+
+  async function handleAdminRecompute() {
+    try {
+      await recompute.mutateAsync(clubId);
+      toast.success('Ranking do clube recalculado. Atualizando…');
+      // refetch imediatamente — o Cloud Function acabou de materializar.
+      setTimeout(() => refetch(), 1500);
+    } catch (err) {
+      toast.error(err?.message || 'Não foi possível recalcular.');
+    }
+  }
 
   if (isLoading) return <V2Skeleton className="h-48 rounded-4xl" />;
+
+  const isEmpty = !data?.individual?.length && !data?.doubles?.length;
 
   return (
     <V2Surface className="overflow-hidden p-0">
@@ -264,6 +279,18 @@ function ClubRankingTab({ clubId, isAdmin }) {
           <div>
             <h3 className="font-display text-lg font-bold text-ink">Ranking interno</h3>
             <p className="text-sm text-gray-500">Casual, a partir dos placares dos dias de jogo. Não afeta o ranking nacional.</p>
+            {isAdmin && isEmpty && (
+              <button
+                type="button"
+                onClick={handleAdminRecompute}
+                disabled={recompute.isPending}
+                className="mt-2 inline-flex items-center gap-1.5 rounded-full border border-amber-200 bg-amber-50 px-3 py-1.5 text-xs font-bold text-amber-900 transition-colors hover:bg-amber-100 disabled:opacity-50"
+                title="Materializa o ranking deste clube a partir dos placares já gravados"
+              >
+                <RefreshCw className={cn('h-3.5 w-3.5', recompute.isPending && 'animate-spin')} />
+                {recompute.isPending ? 'Recalculando…' : 'Materializar ranking agora'}
+              </button>
+            )}
           </div>
           <div className="flex flex-wrap items-center gap-2">
             <V2Badge tone="neutral" className="rounded-full">
@@ -324,13 +351,36 @@ function ClubRankingTab({ clubId, isAdmin }) {
       {tab === 'individual' && (
         <IndividualRankingTable
           ranking={data?.individual || []}
-          emptyMessage="Registre placares nos dias de jogo do clube para montar o ranking interno."
+          emptyMessage={
+            isAdmin
+              ? 'O materializado está vazio. Clique em "Materializar ranking agora" para popular a partir dos placares já gravados.'
+              : 'Registre placares nos dias de jogo do clube para montar o ranking interno.'
+          }
+          action={
+            isAdmin
+              ? (
+                <V2Button
+                  size="sm"
+                  variant="ghost"
+                  onClick={handleAdminRecompute}
+                  disabled={recompute.isPending}
+                >
+                  <RefreshCw className={cn('h-4 w-4', recompute.isPending && 'animate-spin')} />
+                  {recompute.isPending ? 'Recalculando…' : 'Materializar ranking agora'}
+                </V2Button>
+              )
+              : null
+          }
         />
       )}
       {tab === 'doubles' && doublesOn && (
         <DoublesRankingTable
           ranking={data?.doubles || []}
-          emptyMessage="Nenhuma dupla com jogos suficientes no clube."
+          emptyMessage={
+            isAdmin
+              ? 'Nenhuma dupla ranqueada ainda — materialize o ranking para começar.'
+              : 'Nenhuma dupla com jogos suficientes no clube.'
+          }
         />
       )}
     </V2Surface>
@@ -371,11 +421,16 @@ function ExternalToggle({ includeExternal, onChange, isAdmin }) {
   );
 }
 
-function IndividualRankingTable({ ranking, emptyMessage }) {
+function IndividualRankingTable({ ranking, emptyMessage, action }) {
   if (ranking.length === 0) {
     return (
       <div className="p-4">
-        <V2EmptyState icon={Medal} title="Sem ranking ainda" description={emptyMessage} />
+        <V2EmptyState
+          icon={Medal}
+          title="Sem ranking ainda"
+          description={emptyMessage}
+          action={action}
+        />
       </div>
     );
   }

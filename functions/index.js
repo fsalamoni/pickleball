@@ -516,3 +516,38 @@ exports.recomputeOneClubInternalRanking = onCall(
     return res;
   },
 );
+
+// =====================================================================
+// CLUBE — Recálculo mensal de defesa (Wave C.4)
+// =====================================================================
+// Garante que TODOS os clubes tenham seu ranking materializado
+// atualizado pelo menos uma vez por mês — proteção contra
+// qualquer inconsistência acumulada por falhas pontuais nos
+// gatilhos em tempo real.
+exports.recomputeAllClubsMonthly = onSchedule(
+  {
+    schedule: '0 4 1 * *', // dia 1 de cada mês, 4h (horário SP)
+    timeZone: 'America/Sao_Paulo',
+    region: REGION,
+    timeoutSeconds: 540,
+    memory: '1GiB',
+  },
+  async () => {
+    const db = getFirestore(getApp(), DATABASE_ID);
+    const clubsSnap = await db.collection('clubs').get();
+    let ok = 0;
+    let failed = 0;
+    for (const d of clubsSnap.docs) {
+      try {
+        // eslint-disable-next-line no-await-in-loop
+        await recomputeClubInternalRankings(db, d.id);
+        ok += 1;
+      } catch (err) {
+        failed += 1;
+        logger.error(`recomputeAllClubsMonthly: falha em ${d.id}:`, err);
+      }
+    }
+    logger.info('recomputeAllClubsMonthly: concluído.', { ok, failed, total: clubsSnap.size });
+    return { ok, failed, total: clubsSnap.size };
+  },
+);

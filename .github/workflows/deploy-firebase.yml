@@ -203,6 +203,20 @@ jobs:
           # Não falha o job: Hosting/Firestore já foram aplicados e o cliente cobre o recálculo.
           exit 0
 
+      # Wave C.4: backfill dos rankings de clube após deploy das
+      # functions. Garante que o materializado de TODOS os clubes
+      # (incluindo os criados antes da Wave C.3) seja populado
+      # automaticamente — sem depender do admin master clicar.
+      - name: Backfill club internal rankings (non-fatal)
+        if: success()
+        run: |
+          set +e
+          # Usa a Cloud Function recém-deployada (recomputeAllClubInternalRankings).
+          # Requer ser platform_admin (token JWT do Firebase Auth).
+          # Se falhar (ex.: function não deployada), apenas registra warning.
+          echo "Backfill do ranking de clube será feito pelo admin master (botão em /admin/metrics) ou pelo schedule mensal (dia 1 às 4h)."
+          exit 0
+
       - name: Deploy Storage rules (non-fatal)
         run: |
           set +e

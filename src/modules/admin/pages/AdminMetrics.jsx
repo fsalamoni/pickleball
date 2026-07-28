@@ -18,6 +18,7 @@ import { useFeatureFlags, useFeatureFlag } from '@/core/lib/FeatureFlagsContext'
 import { FEATURE_FLAG, FEATURE_FLAG_META } from '@/core/featureFlags';
 import { setFeatureFlag } from '@/core/services/platformSettingsService';
 import { useRecomputeRatings } from '@/modules/rating/hooks/useRating';
+import { useRecomputeAllClubRankings } from '@/modules/clubs/hooks/useClubRankingAdmin';
 
 export default function AdminMetrics() {
   const [stats, setStats] = useState(null);
@@ -101,6 +102,7 @@ export default function AdminMetrics() {
       )}
       <FeatureFlagsPanel />
       <RatingsPanel />
+      <ClubRankingPanel />
       <AuditLogTable />
     </div>
   );
@@ -145,6 +147,50 @@ function RatingsPanel() {
             {lastResult.matchesTotal} jogo(s) finalizados utilizados.
           </p>
         )}
+    </PlatformSurfaceCard>
+  );
+}
+
+function ClubRankingPanel() {
+  const clubRankingOn = useFeatureFlag(FEATURE_FLAG.CLUB_INTERNAL_RANKING);
+  const { mutateAsync, isPending } = useRecomputeAllClubRankings();
+  const [lastResult, setLastResult] = useState(null);
+
+  if (!clubRankingOn) return null;
+
+  async function handleRecompute() {
+    try {
+      const result = await mutateAsync();
+      setLastResult(result);
+      toast.success(
+        `Rankings de clube recalculados: ${result.ok}/${result.total} clube(s) (${result.failed} falha(s)).`,
+      );
+    } catch (err) {
+      toast.error(err?.message || 'Não foi possível recalcular os rankings de clube.');
+    }
+  }
+
+  return (
+    <PlatformSurfaceCard contentClassName="space-y-4 p-5 sm:p-6">
+      <div className="flex items-center gap-2">
+        <Trophy className="w-5 h-5 text-amber-600" />
+        <h2 className="text-lg font-semibold font-display text-ink">Ranking interno dos clubes (materializado)</h2>
+      </div>
+      <p className="text-xs text-gray-500">
+        Recalcula o ranking de TODOS os clubes e persiste nas 4 coleções materializadas
+        (<code>club_internal_ratings</code>, <code>_ext</code>, <code>_doubles</code>, <code>_doubles_ext</code>).
+        O frontend só lê do Firestore. Faça isso após deploy inicial, migração de dados ou correção.
+        Operações individuais (novos resultados) são automáticas via Cloud Functions.
+      </p>
+      <Button onClick={handleRecompute} disabled={isPending}>
+        <Trophy className="w-4 h-4" />
+        <span className="ml-1">{isPending ? 'Recalculando…' : 'Recalcular rankings de todos os clubes'}</span>
+      </Button>
+      {lastResult && (
+        <p className="text-xs text-gray-500">
+          Último recálculo: {lastResult.ok} clube(s) processado(s){lastResult.failed ? `, ${lastResult.failed} falha(s)` : ''}.
+        </p>
+      )}
     </PlatformSurfaceCard>
   );
 }

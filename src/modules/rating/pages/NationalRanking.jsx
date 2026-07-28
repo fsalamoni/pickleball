@@ -11,6 +11,7 @@ import { FEATURE_FLAG } from '@/core/featureFlags';
 import { genderLabel } from '@/modules/athletes/domain/constants';
 import ErrorState from '@/components/ErrorState';
 import { useNationalRanking } from '../hooks/useRating.js';
+import { useClubs } from '@/modules/clubs/hooks/useClubs';
 
 const ALL = 'all';
 
@@ -107,6 +108,9 @@ export default function NationalRanking() {
   const profilePageOn = useFeatureFlag(FEATURE_FLAG.ATHLETE_PROFILE_PAGE);
   const rankingFiltersOn = useFeatureFlag(FEATURE_FLAG.RANKING_FILTERS);
   const { data: players = [], isLoading, isError, refetch } = useNationalRanking();
+  // Wave C.4: lista oficial de clubes do diretório (não só os
+  // denormalizados em `player_ratings`).
+  const { data: allClubs = [] } = useClubs();
   const [search, setSearch] = useState('');
   const [stateFilter, setStateFilter] = useState(ALL);
   const [levelFilter, setLevelFilter] = useState(ALL);
@@ -133,10 +137,17 @@ export default function NationalRanking() {
   }, [players]);
 
   const clubOptions = useMemo(() => {
+    // Wave C.4: prioriza o diretório oficial de clubes (sempre
+    // completo) e completa com nomes denormalizados em
+    // `player_ratings` para o caso de um clube sem atletas
+    // ranqueados ainda aparecer.
     const map = new Map();
-    players.forEach((p) => (p.clubs || []).forEach((c) => c?.id && map.set(c.id, c.name)));
-    return Array.from(map.entries()).map(([id, name]) => ({ id, name }));
-  }, [players]);
+    (allClubs || []).forEach((c) => c && c.id && map.set(c.id, c.name || c.id));
+    players.forEach((p) => (p.clubs || []).forEach((c) => c?.id && !map.has(c.id) && map.set(c.id, c.name)));
+    return Array.from(map.entries())
+      .map(([id, name]) => ({ id, name }))
+      .sort((a, b) => a.name.localeCompare(b.name));
+  }, [allClubs, players]);
 
   const filtered = useMemo(() => {
     const q = search.trim().toLowerCase();
