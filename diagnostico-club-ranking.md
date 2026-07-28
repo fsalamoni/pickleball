@@ -1,5 +1,7 @@
 # Diagnóstico do ranking interno do clube
 
+**Última atualização: 2026-07-28, 20:50 GMT-3** — investigação em curso.
+
 Cole este script no **Console do navegador** (F12 → Console) **enquanto
 está logado no app** (`picklerush.web.app`). O script vai listar o que
 está no Firestore para o clube `hyu7TxcWtkUQy382nm2o` (Pickleholics)

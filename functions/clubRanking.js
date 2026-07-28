@@ -529,6 +529,7 @@ async function recomputeClubInternalRankings(db, clubId) {
     out[`individual_${scope}`] = sortIndividual(ib);
     out[`doubles_${scope}`] = sortDoubles(db_);
   }
+  logger.info(`recomputeClubInternalRankings STEP 6: matches_internal=${internal.length}, matches_ext=${ext.length}, athletes_internal=${out.individual_internal.length}, athletes_ext=${out.individual_ext.length}`);
 
   // 7) Materializa nas 4 coleções
   await writeClubInternalRankings(db, clubId, {
