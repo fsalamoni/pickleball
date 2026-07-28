@@ -521,6 +521,7 @@ exports.recomputeOneClubInternalRanking = onCall(
     const { clubId } = req.data || {};
     if (!clubId) throw new HttpsError('invalid-argument', 'clubId obrigatório');
     const db = getFirestore(getApp(), DATABASE_ID);
+    logger.info(`recomputeOneClubInternalRanking START: clubId=${clubId}, uid=${req.auth.uid}`);
     // Admins do clube OU platform admin podem disparar.
     const isAdmin = await isPlatformAdminUser(req, db);
     if (!isAdmin) {
@@ -529,8 +530,14 @@ exports.recomputeOneClubInternalRanking = onCall(
         throw new HttpsError('permission-denied', 'Apenas admins do clube ou platform admin podem recalcular.');
       }
     }
-    const res = await recomputeClubInternalRankings(db, clubId);
-    return res;
+    try {
+      const res = await recomputeClubInternalRankings(db, clubId);
+      logger.info(`recomputeOneClubInternalRanking OK: clubId=${clubId}`, JSON.stringify(res.counts || {}));
+      return res;
+    } catch (err) {
+      logger.error(`recomputeOneClubInternalRanking FAIL: clubId=${clubId}`, err);
+      throw err;
+    }
   },
 );
 

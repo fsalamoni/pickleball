@@ -440,6 +440,9 @@ async function loadTournaments(db, tournamentIds) {
 /** Pipeline principal: recalcula e MATERIALIZA o ranking interno do clube. */
 async function recomputeClubInternalRankings(db, clubId) {
   if (!clubId) throw new Error('clubId obrigatório');
+  // eslint-disable-next-line global-require
+  const logger = require('firebase-functions/logger');
+  logger.info(`recomputeClubInternalRankings START: clubId=${clubId}`);
 
   // 1) Carrega fontes
   const [members, profileDocs, events] = await Promise.all([
@@ -450,6 +453,7 @@ async function recomputeClubInternalRankings(db, clubId) {
   const clubUids = new Set();
   members.forEach((m) => { if (m && m.user_id) clubUids.add(m.user_id); });
   profileDocs.forEach((p) => { if (p && p.id) clubUids.add(p.id); });
+  logger.info(`recomputeClubInternalRankings STEP 1: members=${members.length}, profiles=${profileDocs.length}, events=${events.length}, clubUids=${clubUids.size}`);
 
   // 2) Jogos do clube + mapa de event_participants (necessário para
   //    resolver o schema legado do `GameDayOrganizer`, que salva `id`
@@ -461,6 +465,7 @@ async function recomputeClubInternalRankings(db, clubId) {
     loadExternalTournamentMatches(db, clubUids),
     loadEventParticipantsMap(db, events),
   ]);
+  logger.info(`recomputeClubInternalRankings STEP 2: ownClubGames=${ownClubGamesRaw.length}, ownClubEventGames=${ownClubEventGamesRaw.length}, extGames=${extClubEventGames.length}, tournaments=${tournamentMatches.length}, participants=${participantById.size}`);
 
   // 3) Para `tournament_matches`, precisamos resolver registration → uids
   //    e descobrir o club_id do torneio (para diferenciar "do clube" de "externo").

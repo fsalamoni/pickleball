@@ -259,16 +259,22 @@ function ClubRankingTab({ clubId, isAdmin }) {
 
   async function handleAdminRecompute() {
     try {
-      await recompute.mutateAsync(clubId);
-      toast.success('Ranking do clube recalculado. Atualizando…');
+      const result = await recompute.mutateAsync(clubId);
+      // Mostra os counts do pipeline para diagnóstico.
+      const c = result?.counts || {};
+      const i = result?.internal || {};
+      const e = result?.ext || {};
+      const msg = `Recalculado: ${c.members || 0} membros, ${c.ownClubGames || 0} jogos do clube, `
+        + `${c.ownClubEventGames || 0} games espelhados. `
+        + `Individual: ${i.individual || 0} (int) / ${e.individual || 0} (ext).`;
+      toast.success(msg, { duration: 8000 });
       // refetch imediatamente — o Cloud Function acabou de materializar.
       setTimeout(() => refetch(), 1500);
     } catch (err) {
       // Erro 500 do Cloud Function: tenta extrair mensagem útil.
-      // O `httpsCallable` embrulha o erro em `functionsError` com `message` e `details`.
       const detail = err?.details || err?.message || 'Não foi possível recalcular.';
       console.error('recomputeOneClubInternalRanking falhou:', err);
-      toast.error(`Falha ao materializar: ${detail}`);
+      toast.error(`Falha ao materializar: ${detail}`, { duration: 8000 });
     }
   }
 
