@@ -3,17 +3,20 @@ import { Link, Navigate, useNavigate, useParams, useSearchParams } from 'react-r
 import { toast } from 'sonner';
 import {
   ArrowLeft, Building2, CalendarDays, Hash, Mail, MapPin, MessageSquare,
-  MessagesSquare, Phone, Settings, Users, Medal, Share2,
+  MessagesSquare, Phone, Settings, Users, Medal, Share2, User, Users2,
+  Globe2, ListChecks,
 } from 'lucide-react';
 import {
   useClub, useMyMembership, useJoinClub, useLeaveClub, useMyJoinRequest,
   useRequestToJoinClub, useMyClubInvite, useAcceptClubInvite, useDeclineClubInvite,
-  useClubGameResults,
 } from '@/modules/clubs/hooks/useClubs';
-import { computeClubRanking } from '@/modules/clubs/domain/clubRanking';
+import { useClubInternalRanking } from '@/modules/clubs/hooks/useClubInternalRanking';
 import { useFeatureFlag } from '@/core/lib/FeatureFlagsContext';
 import { FEATURE_FLAG } from '@/core/featureFlags';
 import { CLUB_ROLE, JOIN_REQUEST_STATUS } from '@/modules/clubs/domain/constants';
+import { useQuery } from '@tanstack/react-query';
+import { collection, getDocs, query as fsQuery, where } from 'firebase/firestore';
+import { db } from '@/core/config/firebase';
 import V2ClubMembers from '@/v2/components/clubs/V2ClubMembers';
 import V2ClubEvents from '@/v2/components/clubs/V2ClubEvents';
 import V2ClubFeed from '@/v2/components/clubs/V2ClubFeed';
@@ -238,7 +241,7 @@ export default function V2ClubDetail() {
           <div className="mt-6">
             {safeTab === 'members' && <V2ClubMembers clubId={clubId} isAdmin={isAdmin} />}
             {safeTab === 'events' && <V2ClubEvents clubId={clubId} isAdmin={isAdmin} />}
-            {safeTab === 'ranking' && clubRankingOn && <ClubRankingTab clubId={clubId} />}
+            {safeTab === 'ranking' && clubRankingOn && <ClubRankingTab clubId={clubId} isAdmin={isAdmin} />}
             {safeTab === 'feed' && <V2ClubFeed clubId={clubId} isAdmin={isAdmin} />}
             {safeTab === 'forums' && <V2ClubForums clubId={clubId} isAdmin={isAdmin} initialThreadId={threadParam} onThreadChange={setThreadParam} />}
             {safeTab === 'admin' && isAdmin && <V2ClubAdmin club={club} />}
@@ -249,59 +252,245 @@ export default function V2ClubDetail() {
   );
 }
 
-function ClubRankingTab({ clubId }) {
-  const { data: games = [], isLoading } = useClubGameResults(clubId, true);
-  const ranking = computeClubRanking(games);
+function ClubRankingTab({ clubId, isAdmin }) {
+  const doublesOn = useFeatureFlag(FEATURE_FLAG.CLUB_INTERNAL_DOUBLES_RANKING);
+  const [tab, setTab] = useState('individual'); // 'individual' | 'doubles'
+  const [includeExternal, setIncludeExternal] = useState(false);
+  const { data, isLoading } = useClubInternalRanking(clubId, { includeExternal });
+
   if (isLoading) return <V2Skeleton className="h-48 rounded-4xl" />;
-  if (ranking.length === 0) {
-    return (
-      <V2Surface>
-        <V2EmptyState
-          icon={Medal}
-          title="Sem ranking ainda"
-          description="Registre placares nos dias de jogo do clube para montar o ranking interno."
-        />
-      </V2Surface>
-    );
-  }
+
   return (
     <V2Surface className="overflow-hidden p-0">
       <div className="border-b border-gray-100 p-4">
-        <h3 className="font-display text-lg font-bold text-ink">Ranking interno</h3>
-        <p className="text-sm text-gray-500">Casual, a partir dos placares dos dias de jogo. Não afeta o ranking nacional.</p>
+        <div className="flex flex-wrap items-center justify-between gap-3">
+          <div>
+            <h3 className="font-display text-lg font-bold text-ink">Ranking interno</h3>
+            <p className="text-sm text-gray-500">Casual, a partir dos placares dos dias de jogo. Não afeta o ranking nacional.</p>
+          </div>
+          <div className="flex flex-wrap items-center gap-2">
+            <V2Badge tone="neutral" className="rounded-full">
+              <Users2 className="mr-1 h-3 w-3" />
+              {data?.clubUids?.length || 0} atletas do clube
+            </V2Badge>
+            {data?.sources && (
+              <>
+                <V2Badge tone="green" className="rounded-full">
+                  <ListChecks className="mr-1 h-3 w-3" />
+                  {data.sources.club} jogo(s) do clube
+                </V2Badge>
+                {includeExternal && data.sources.external > 0 && (
+                  <V2Badge tone="amber" className="rounded-full">
+                    <Globe2 className="mr-1 h-3 w-3" />
+                    {data.sources.external} externo(s)
+                  </V2Badge>
+                )}
+              </>
+            )}
+          </div>
+        </div>
+
+        {/* Sub-abas: Individual | Duplas */}
+        {doublesOn && (
+          <div className="mt-3 inline-flex rounded-full border border-gray-100 bg-paper-pure p-1 shadow-sm">
+            <button
+              type="button"
+              onClick={() => setTab('individual')}
+              className={cn(
+                'inline-flex items-center gap-1.5 rounded-full px-4 py-1.5 text-xs font-bold transition-colors',
+                tab === 'individual' ? 'bg-ink text-white' : 'text-gray-500 hover:text-ink',
+              )}
+            >
+              <User className="h-3.5 w-3.5" /> Individual
+            </button>
+            <button
+              type="button"
+              onClick={() => setTab('doubles')}
+              className={cn(
+                'inline-flex items-center gap-1.5 rounded-full px-4 py-1.5 text-xs font-bold transition-colors',
+                tab === 'doubles' ? 'bg-ink text-white' : 'text-gray-500 hover:text-ink',
+              )}
+            >
+              <Users2 className="h-3.5 w-3.5" /> Duplas
+            </button>
+          </div>
+        )}
       </div>
-      <div className="overflow-x-auto">
-        <table className="w-full text-sm">
-          <thead className="bg-paper text-left text-[11px] uppercase tracking-wide text-gray-500">
-            <tr>
-              <th className="px-4 py-3">#</th>
-              <th className="px-4 py-3">Atleta</th>
-              <th className="px-4 py-3 text-center">J</th>
-              <th className="px-4 py-3 text-center">V</th>
-              <th className="px-4 py-3 text-center">D</th>
-              <th className="px-4 py-3 text-center">Aprov.</th>
-              <th className="px-4 py-3 text-center">Saldo</th>
-            </tr>
-          </thead>
-          <tbody>
-            {ranking.map((r, i) => (
-              <tr key={r.id} className="border-t border-gray-100">
-                <td className="px-4 py-3 font-bold text-ink">{i === 0 ? '🥇' : i === 1 ? '🥈' : i === 2 ? '🥉' : i + 1}</td>
-                <td className="px-4 py-3 font-semibold text-ink">{r.name}</td>
-                <td className="px-4 py-3 text-center tabular-nums text-gray-600">{r.games}</td>
-                <td className="px-4 py-3 text-center tabular-nums font-bold text-green-700">{r.wins}</td>
-                <td className="px-4 py-3 text-center tabular-nums text-gray-500">{r.losses}</td>
-                <td className="px-4 py-3 text-center tabular-nums">{Math.round(r.win_rate * 100)}%</td>
-                <td className={cn('px-4 py-3 text-center tabular-nums', r.points_balance > 0 ? 'text-green-700' : r.points_balance < 0 ? 'text-red-600' : 'text-gray-500')}>
-                  {r.points_balance > 0 ? `+${r.points_balance}` : r.points_balance}
-                </td>
-              </tr>
-            ))}
-          </tbody>
-        </table>
-      </div>
+
+      {/* Toggle "Incluir resultados externos" — só para admins do clube */}
+      <ExternalToggle
+        includeExternal={includeExternal}
+        onChange={setIncludeExternal}
+        isAdmin={isAdmin}
+      />
+
+      {tab === 'individual' && (
+        <IndividualRankingTable
+          ranking={data?.individual || []}
+          emptyMessage="Registre placares nos dias de jogo do clube para montar o ranking interno."
+        />
+      )}
+      {tab === 'doubles' && doublesOn && (
+        <DoublesRankingTable
+          ranking={data?.doubles || []}
+          emptyMessage="Nenhuma dupla com jogos suficientes no clube."
+        />
+      )}
     </V2Surface>
   );
+}
+
+function ExternalToggle({ includeExternal, onChange, isAdmin }) {
+  if (!isAdmin) {
+    return null; // Só admins do clube podem ligar/desligar fontes externas
+  }
+  return (
+    <div className="border-b border-gray-100 bg-paper/40 px-4 py-3">
+      <label className="flex cursor-pointer items-start gap-3">
+        <input
+          type="checkbox"
+          checked={includeExternal}
+          onChange={(e) => onChange(e.target.checked)}
+          className="mt-0.5 h-4 w-4 rounded border-gray-300 text-green-600 focus:ring-green-500"
+        />
+        <div className="min-w-0">
+          <div className="flex items-center gap-2 text-sm font-bold text-ink">
+            <Globe2 className="h-4 w-4 text-amber-600" /> Incluir resultados externos
+            {includeExternal && (
+              <V2Badge tone="amber" className="rounded-full text-[10px]">
+                ON
+              </V2Badge>
+            )}
+          </div>
+          <p className="mt-0.5 text-xs text-gray-500">
+            Quando ligado, o ranking do clube também considera os placares
+            dos atletas do clube em <strong>torneios da plataforma</strong> e
+            em <strong>dias de jogo de outros clubes</strong>. Útil para
+            ter um retrato completo do desempenho dos associados.
+          </p>
+        </div>
+      </label>
+    </div>
+  );
+}
+
+function IndividualRankingTable({ ranking, emptyMessage }) {
+  if (ranking.length === 0) {
+    return (
+      <div className="p-4">
+        <V2EmptyState icon={Medal} title="Sem ranking ainda" description={emptyMessage} />
+      </div>
+    );
+  }
+  return (
+    <div className="overflow-x-auto">
+      <table className="w-full text-sm">
+        <thead className="bg-paper text-left text-[11px] uppercase tracking-wide text-gray-500">
+          <tr>
+            <th className="px-4 py-3">#</th>
+            <th className="px-4 py-3">Atleta</th>
+            <th className="px-4 py-3 text-center">J</th>
+            <th className="px-4 py-3 text-center">V</th>
+            <th className="px-4 py-3 text-center">D</th>
+            <th className="px-4 py-3 text-center">Aprov.</th>
+            <th className="px-4 py-3 text-center">Saldo</th>
+          </tr>
+        </thead>
+        <tbody>
+          {ranking.map((r, i) => (
+            <tr key={r.id} className="border-t border-gray-100">
+              <td className="px-4 py-3 font-bold text-ink">{i === 0 ? '🥇' : i === 1 ? '🥈' : i === 2 ? '🥉' : i + 1}</td>
+              <td className="px-4 py-3 font-semibold text-ink">{r.name}</td>
+              <td className="px-4 py-3 text-center tabular-nums text-gray-600">{r.games}</td>
+              <td className="px-4 py-3 text-center tabular-nums font-bold text-green-700">{r.wins}</td>
+              <td className="px-4 py-3 text-center tabular-nums text-gray-500">{r.losses}</td>
+              <td className="px-4 py-3 text-center tabular-nums">{Math.round(r.win_rate * 100)}%</td>
+              <td className={cn('px-4 py-3 text-center tabular-nums', r.points_balance > 0 ? 'text-green-700' : r.points_balance < 0 ? 'text-red-600' : 'text-gray-500')}>
+                {r.points_balance > 0 ? `+${r.points_balance}` : r.points_balance}
+              </td>
+            </tr>
+          ))}
+        </tbody>
+      </table>
+    </div>
+  );
+}
+
+function DoublesRankingTable({ ranking, emptyMessage }) {
+  if (ranking.length === 0) {
+    return (
+      <div className="p-4">
+        <V2EmptyState icon={Users2} title="Sem duplas ranqueadas" description={emptyMessage} />
+      </div>
+    );
+  }
+  return (
+    <div className="overflow-x-auto">
+      <table className="w-full text-sm">
+        <thead className="bg-paper text-left text-[11px] uppercase tracking-wide text-gray-500">
+          <tr>
+            <th className="px-4 py-3">#</th>
+            <th className="px-4 py-3">Dupla</th>
+            <th className="px-4 py-3 text-center">J</th>
+            <th className="px-4 py-3 text-center">V</th>
+            <th className="px-4 py-3 text-center">D</th>
+            <th className="px-4 py-3 text-center">Aprov.</th>
+            <th className="px-4 py-3 text-center">Saldo</th>
+          </tr>
+        </thead>
+        <tbody>
+          {ranking.map((r, i) => (
+            <tr key={r.pair_key} className="border-t border-gray-100">
+              <td className="px-4 py-3 font-bold text-ink">{i === 0 ? '🥇' : i === 1 ? '🥈' : i === 2 ? '🥉' : i + 1}</td>
+              <td className="px-4 py-3 font-semibold text-ink">
+                <PairMembers ids={r.player_ids} />
+              </td>
+              <td className="px-4 py-3 text-center tabular-nums text-gray-600">{r.games}</td>
+              <td className="px-4 py-3 text-center tabular-nums font-bold text-green-700">{r.wins}</td>
+              <td className="px-4 py-3 text-center tabular-nums text-gray-500">{r.losses}</td>
+              <td className="px-4 py-3 text-center tabular-nums">{Math.round(r.win_rate * 100)}%</td>
+              <td className={cn('px-4 py-3 text-center tabular-nums', r.points_balance > 0 ? 'text-green-700' : r.points_balance < 0 ? 'text-red-600' : 'text-gray-500')}>
+                {r.points_balance > 0 ? `+${r.points_balance}` : r.points_balance}
+              </td>
+            </tr>
+          ))}
+        </tbody>
+      </table>
+    </div>
+  );
+}
+
+function PairMembers({ ids }) {
+  // Resolve nome/foto de cada uid via `useAllAthletes` (em cache).
+  const { data: athletes = [] } = useAllAthletesSafe();
+  const map = new Map(athletes.map((a) => [a.id, a]));
+  return (
+    <div className="flex flex-wrap items-center gap-2">
+      {ids.map((id, idx) => {
+        const a = map.get(id);
+        return (
+          <span key={id} className="inline-flex items-center gap-1.5">
+            {idx > 0 && <span className="text-xs text-gray-400">+</span>}
+            <V2Avatar size="xs" name={a?.platform_name || a?.full_name || id} photoUrl={a?.photo_url} />
+            <span className="text-sm">{a?.platform_name || a?.full_name || id.slice(0, 6)}</span>
+          </span>
+        );
+      })}
+    </div>
+  );
+}
+
+function useAllAthletesSafe() {
+  // Evita import circular e mantém o cache leve.
+  return useQuery({
+    queryKey: ['athletes-all-lookup'],
+    queryFn: async () => {
+      if (!db) return [];
+      const snap = await getDocs(collection(db, 'athlete_profiles'));
+      return snap.docs.map((d) => ({ id: d.id, ...d.data() }));
+    },
+    staleTime: 5 * 60_000,
+  });
 }
 
 function InfoChip({ icon: Icon, children }) {

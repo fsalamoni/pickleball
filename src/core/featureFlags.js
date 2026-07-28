@@ -582,6 +582,13 @@ export const FEATURE_FLAG = Object.freeze({
    * ranking nacional. Aditivo — desligada, a aba/seção fica oculta.
    */
   CLUB_INTERNAL_RANKING: 'club_internal_ranking',
+  /**
+   * Ranking interno do clube em DUPLAS (Wave C.2). Aditivo — só
+   * aparece se `CLUB_INTERNAL_RANKING` estiver ON. Adiciona a sub-aba
+   * "Duplas" no ranking do clube e a opção de incluir resultados
+   * externos (torneios + dias de jogo de outros clubes) via toggle.
+   */
+  CLUB_INTERNAL_DOUBLES_RANKING: 'club_internal_doubles_ranking',
 
   /**
    * Página de configurações (/configuracoes): reúne atalhos de conta e a
@@ -1172,6 +1179,15 @@ export const FEATURE_FLAG_META = Object.freeze({
       'Agrega os resultados dos jogos dos dias de jogo do clube num ranking '
       + 'casual (vitórias, saldo, aproveitamento), separado do ranking nacional. '
       + 'Desligada, a aba fica oculta.',
+  },
+  [FEATURE_FLAG.CLUB_INTERNAL_DOUBLES_RANKING]: {
+    label: 'Ranking interno do clube em duplas (Wave C.2)',
+    description:
+      'Adiciona a sub-aba "Duplas" no ranking do clube (parcerias que jogaram '
+      + 'juntas, com vitórias/derrotas/saldo). Acompanha o toggle "Incluir '
+      + 'resultados externos" que mistura também torneios e dias de jogo de '
+      + 'outros clubes onde os atletas do clube participaram. Requer a flag '
+      + '`CLUB_INTERNAL_RANKING` ligada.',
   },
   [FEATURE_FLAG.SETTINGS_PAGE]: {
     label: 'Página de configurações + exportar dados (LGPD)',
