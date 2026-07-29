@@ -414,3 +414,72 @@ no server-side sem precisar do mapa.
 - **REGRESSÃO**: sem mapa, materializado fica VAZIO
 
 **1387 passing** total.
+
+## Wave C.6.1 (Sprint 21, 2026-07-29) — índices compostos no Firestore
+
+> Depois do fix da Wave C.6 (`sideToUids` com doc_id → user_id),
+> o ranking **ainda** aparecia vazio. Investigação revelou o
+> bug real: faltavam **índices compostos** no Firestore.
+
+### O bug
+
+O hook `useClubInternalRanking` faz:
+```js
+getDocs(query(
+  collection(db, 'club_internal_ratings'),
+  where('club_id', '==', clubId),
+  orderBy('wins', 'desc')
+))
+```
+
+Esta query precisa de **índice composto** (`club_id` ASC + `wins` DESC).
+Sem o índice, o Firestore lança `FAILED_PRECONDITION` (código 9).
+React Query trata como erro, `data = undefined`, UI mostra "0
+atletas, sem ranking" mesmo com o materializado já populado no
+servidor.
+
+### Por que passou despercebido
+
+A **Wave C.3** introduziu o materializado + queries no frontend mas
+**esqueceu de criar os índices compostos**. As Waves C.4, C.5 e C.6
+mexeram no backend (Cloud Function, callable, sideToUids) e no
+schema (display_name, user_id) — mas ninguém olhou se a **leitura
+no cliente** tinha índice.
+
+Os testes do `useClubInternalRanking` nunca existiram.
+
+### Fix
+
+Adicionado em `firestore.indexes.json` (4 índices compostos, ASC
+club_id + DESC wins, um por coleção):
+- `club_internal_ratings`
+- `club_internal_ratings_ext`
+- `club_internal_doubles_ratings`
+- `club_internal_doubles_ratings_ext`
+
+O workflow `deploy-firebase.yml` deploya índices automaticamente
+no push para main.
+
+### Comentário no hook
+
+```js
+/**
+ * IMPORTANTE: a query `where('club_id', '==', x) + orderBy('wins', 'desc')`
+ * exige índice composto em `firestore.indexes.json`. Sem o índice,
+ * o Firestore lança `failed-precondition` (código 9).
+ */
+```
+
+### Validação
+
+- **Bundle live**: `index-CAJhIhEv.js`
+- **Firestore rules + indexes**: deployado
+- **0 lint errors**
+- **1387 testes verdes** (sem mudança)
+
+### Lição registrada (ver §5.3.7 do 02-STANDARDS)
+
+Toda coleção materializada com `where + orderBy` em campos
+diferentes PRECISA de índice composto. A Wave C.3 introduziu o
+materializado sem criar os índices — erro de design que passou
+despercebido por 3 sprints.

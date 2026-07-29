@@ -185,6 +185,29 @@ Professor + texto atualizado.
   "Editar meu perfil" (vai pro painel)
 - ❌ `AddResidencyForm` + função "remover residência" removidas
 
+**BUG #2 do materializado corrigido (Wave C.6.1, Sprint 21)**:
+- **Causa**: faltavam **índices compostos** no Firestore para as
+  queries `where('club_id', '==', x) + orderBy('wins', 'desc')`
+  nas 4 coleções materializadas.
+- **Sintoma**: o Firestore lançava `FAILED_PRECONDITION` (código 9),
+  React Query tratava como erro, e o front mostrava "0 atletas do
+  clube, sem ranking" mesmo com o materializado populado no
+  servidor.
+- **Por que passou despercebido até agora**: a Wave C.3 introduziu
+  o materializado e as queries no frontend mas **esqueceu de criar
+  os índices compostos**. As Waves C.4, C.5 e C.6 mexeram no
+  backend (Cloud Function, callable, sideToUids) mas ninguém
+  olhou se a **leitura no cliente** tinha índice. Os testes
+  cobriam o pipeline do servidor; o `useClubInternalRanking`
+  nunca teve teste.
+- **Fix**: 4 índices compostos adicionados em
+  `firestore.indexes.json` (ASC club_id + DESC wins, um por
+  coleção). O workflow `deploy-firebase.yml` deploya
+  automaticamente. Comentário no hook documenta o requisito.
+- **D-MATERIALIZADO-EXIGE-INDICES (Wave C.6.1)**: toda coleção
+  materializada com `where + orderBy` em campos diferentes
+  PRECISA de índice composto.
+
 **BUG RAIZ do materializado corrigido (Wave C.6, Sprint 20)**:
 - **Causa raiz**: `GameDayOrganizer` salvava `side_a`/`side_b` em
   `club_events/.../games` como `{ id, name }` onde `id` é

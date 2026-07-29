@@ -1791,3 +1791,131 @@ Schema novo funciona no server-side **sem** precisar do mapa.
 4. **D-TESTES-DE-REGRESSAO (Wave C.6)**: cada bug do materializado
    agora tem teste de regressão explícito ("sem participantById,
    materializado fica VAZIO"). Impede regressões futuras.
+
+---
+
+## 23. Sprint 21 — Wave C.6.1: índices compostos no Firestore (2026-07-29, 05:25)
+
+> Atualizado em **2026-07-29, 05:25 GMT-3** (origin/main @ `d7a3103`).
+> Branch — commit direto em main (fix mínimo, sem nova branch).
+> 2 files: 1 JSON + 1 doc (useClubInternalRanking).
+
+### Diagnóstico (a partir de feedback do user)
+
+> "Qual é o problema. Até agora há pouco estava funcionando. Leia as
+> mensagens de hoje e veja o que ocorreu."
+
+O user ainda via "0 atletas do clube, sem ranking" no Pickleholics
+**DEPOIS** do meu fix da Wave C.6 (`sideToUids` com doc_id → user_id).
+Investigação estática revelou **outro bug** que mascarava o
+materializado já populado.
+
+### O bug (simples, mas passou por todas as Wave C.3 a C.6)
+
+O hook `useClubInternalRanking` faz esta query no Firestore:
+
+```js
+getDocs(query(
+  collection(db, 'club_internal_ratings'),
+  where('club_id', '==', clubId),
+  orderBy('wins', 'desc')
+))
+```
+
+Esta query precisa de um **índice composto** (`club_id` ASC + `wins`
+DESC). **Sem o índice, o Firestore lança `FAILED_PRECONDITION` (código 9)**.
+
+**E o que o hook fazia com o erro?** Nada — só deixava o React Query
+tratar. Resultado: `data = undefined` → "0 atletas do clube" no
+badge → "Sem ranking ainda" na lista.
+
+E o `loadClubUids(clubId)` (Wave C.4) **também falhava** em paralelo
+porque o Promise.all rejeitava.
+
+### Por que passou por todas as Wave C.3 a C.6
+
+A **Wave C.3** introduziu o materializado e as queries no frontend
+mas **esqueceu de criar os índices compostos**. As Waves C.4, C.5 e
+C.6 mexeram no **backend** (Cloud Function, callable, sideToUids) e
+no **schema** (display_name, user_id) mas ninguém olhou se a
+**leitura no cliente** tinha índice.
+
+Os testes de backend (`clubRankingServer.test.js`, Wave C.5) cobriam
+o pipeline. Os testes de cliente (`clubRanking.test.js`, Wave C.2)
+testavam a lógica ANTIGA client-side (que não usava Firestore). Os
+**testes do `useClubInternalRanking`** nunca existiram.
+
+### Sintomas visíveis
+
+- "0 atletas do clube" no badge (16 membros, mas `data?.clubUids` era
+  undefined)
+- "Sem ranking ainda" no empty state (mesmo com materializado populado
+  no servidor)
+- Toast de "Materializar ranking agora" mostrava "Recalculado: ..."
+  mas o frontend continuava vazio após refetch (porque a query
+  falhava)
+
+### Fix (Wave C.6.1)
+
+Adicionado em `firestore.indexes.json` (4 índices compostos, ASC
+club_id + DESC wins):
+
+```json
+{
+  "collectionGroup": "club_internal_ratings",
+  "queryScope": "COLLECTION",
+  "fields": [
+    { "fieldPath": "club_id", "order": "ASCENDING" },
+    { "fieldPath": "wins", "order": "DESCENDING" }
+  ]
+}
+```
+
+Um para cada coleção materializada:
+- `club_internal_ratings`
+- `club_internal_ratings_ext`
+- `club_internal_doubles_ratings`
+- `club_internal_doubles_ratings_ext`
+
+O workflow `deploy-firebase.yml` já tem passo "Deploy Firestore rules
+and indexes" — o índice é deployado automaticamente no push para main.
+
+Comentário no `useClubInternalRanking.js` documenta o requisito do
+índice composto (para evitar regressão futura).
+
+### Validação
+
+- **Bundle live**: `index-CAJhIhEv.js` (deploy 20:49:54)
+- **Firestore rules + indexes**: deployado no mesmo push
+- **Cloud Functions**: deployadas
+- **0 lint errors**
+- **1387 testes verdes** (sem mudança, fix de infra)
+
+### Métricas finais (Sprint 21)
+
+- **1387 testes verdes**
+- **0 lint errors**
+- **98 coleções** (sem mudança)
+- **102 índices compostos** (+4 novos: 1 por coleção materializada)
+- **127 feature flags** (sem mudança)
+- **8 Cloud Functions** (sem mudança)
+- **47 PRs totais** (Sprints 0-21)
+- **Last SHA**: `d7a3103`
+- **Deploy**: em curso via GitHub Actions
+
+### Decisões D- (Wave C.6.1)
+
+1. **D-MATERIALIZADO-EXIGE-INDICES (Wave C.6.1)**: toda coleção
+   materializada com `where + orderBy` em campos diferentes PRECISA
+   de índice composto. A Wave C.3 introduziu o materializado sem
+   criar os índices — erro de design que passou despercebido.
+2. **D-ERRO-DE-INDICE-DEVE-SER-EXPLICITO (Wave C.6.1)**: hooks que
+   fazem `where + orderBy` devem ter `onError` amigável que detecta
+   `failed-precondition` e mostra link para criar o índice. Wave
+   C.6.2 (futuro) vai implementar.
+3. **D-DEPLOY-INDEXES-AUTOMATICO (Wave C.6.1)**: o workflow
+   `deploy-firebase.yml` já deploya índices automaticamente. O
+   `firestore.indexes.json` é a fonte de verdade.
+4. **D-COMENTARIO-NO-HOOK (Wave C.6.1)**: o comentário no
+   `useClubInternalRanking.js` documenta o requisito do índice
+   composto. Serve como aviso para quem mexer no futuro.

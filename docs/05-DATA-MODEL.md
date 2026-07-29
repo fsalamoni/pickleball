@@ -442,6 +442,19 @@ Ranking de duplas (parcerias) do clube MATERIALIZADO (escopo só clube).
 Ranking de duplas MATERIALIZADO com fontes externas. Mesmo schema,
 `scope: 'ext'`.
 
+**Índices compostos (Wave C.6.1)**: cada uma das 4 coleções
+acima (`club_internal_ratings`, `club_internal_ratings_ext`,
+`club_internal_doubles_ratings`, `club_internal_doubles_ratings_ext`)
+exige o índice composto `club_id ASC + wins DESC` em
+`firestore.indexes.json` para a query do
+`useClubInternalRanking`:
+```js
+getDocs(query(collection(db, 'club_internal_ratings'),
+  where('club_id', '==', clubId), orderBy('wins', 'desc')))
+```
+Sem o índice, o Firestore lança `FAILED_PRECONDITION` (código 9).
+O workflow `deploy-firebase.yml` deploya índices automaticamente.
+
 Regras: `firestore.rules` — read público; write só `isPlatformAdmin()`
 OU `isClubAdmin(club_id)`. O Cloud Function escreve com service account
 (admin SDK ignora as regras). Ver `functions/clubRanking.js`.

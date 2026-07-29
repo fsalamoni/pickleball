@@ -639,6 +639,68 @@ match /club_internal_ratings/{docId} {
   no materializado.
 - Sem cálculo. Toggle = trocar coleção. Cache 30s.
 
+### 5.3.7 Índices compostos para coleções materializadas (Wave C.6.1)
+
+> **REGRA**: toda coleção materializada que tem query com
+> `where` + `orderBy` em campos diferentes PRECISA de **índice
+> composto** declarado em `firestore.indexes.json`. Sem o
+> índice, o Firestore lança `FAILED_PRECONDITION` (código 9) e a
+> UI mostra vazio mesmo com o materializado populado.
+
+**Quando adicionar índice composto:**
+- Toda nova query `where(X, '==', val) + orderBy(Y, 'desc'|'asc')`
+  onde `X !== Y`.
+- Toda query `where(X, 'in', [...]) + orderBy(Y, ...)`.
+
+**Onde declarar:**
+
+```json
+// firestore.indexes.json
+{
+  "indexes": [
+    {
+      "collectionGroup": "club_internal_ratings",
+      "queryScope": "COLLECTION",
+      "fields": [
+        { "fieldPath": "club_id", "order": "ASCENDING" },
+        { "fieldPath": "wins", "order": "DESCENDING" }
+      ]
+    }
+  ]
+}
+```
+
+**Como o deploy acontece:**
+- O workflow `deploy-firebase.yml` tem passo "Deploy Firestore
+  rules and indexes" que aplica o JSON automaticamente no push
+  para main.
+- O índice leva ~1-2 min para propagar no Firestore.
+
+**Como diagnosticar falha de índice:**
+- No console do browser: `Failed to load resource: ... 400 FAILED_PRECONDITION`
+- O link no erro aponta para o Firebase Console onde você pode
+  criar o índice manualmente (mas isso é só para DEV — em prod,
+  o índice deve estar no `firestore.indexes.json`).
+
+**Exemplo real (Wave C.6.1)**: 4 coleções materializadas
+(`club_internal_ratings`, `club_internal_ratings_ext`,
+`club_internal_doubles_ratings`, `club_internal_doubles_ratings_ext`)
+precisavam do mesmo índice (ASC club_id + DESC wins). A Wave C.3
+introduziu o materializado mas esqueceu de criar os índices. Bug
+ficou latente até a Wave C.6.1.
+
+**Convenção de comentário no hook:** hooks que fazem query com
+`where + orderBy` devem ter um comentário no topo explicando
+o requisito do índice composto:
+
+```js
+/**
+ * IMPORTANTE: a query `where('club_id', '==', x) + orderBy('wins', 'desc')`
+ * exige índice composto em `firestore.indexes.json`. Sem o índice,
+ * o Firestore lança `failed-precondition` (código 9).
+ */
+```
+
 ### 5.4 Ids deterministas
 
 Quando o doc é um par recurso+user, use id determinista:
