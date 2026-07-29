@@ -70,6 +70,8 @@ const V2NotFound = lazy(() => import('@/v2/pages/V2NotFound'));
 const V2DoublesRanking = lazy(() => import('@/v2/pages/V2DoublesRanking'));
 const V2MyGames = lazy(() => import('@/v2/pages/V2MyGames'));
 const V2GameDays = lazy(() => import('@/v2/pages/V2GameDays'));
+const V2Legal = lazy(() => import('@/v2/pages/V2Legal'));
+const V2LegalDocument = lazy(() => import('@/v2/pages/V2LegalDocument'));
 const V2Settings = lazy(() => import('@/v2/pages/V2Settings'));
 const V2Search = lazy(() => import('@/v2/pages/V2Search'));
 
@@ -186,6 +188,8 @@ export default function V2App() {
           <Route path="nivelamento" element={<V2Leveling />} />
           <Route path="historia" element={<V2History />} />
           <Route path="conduta" element={<V2Conduct />} />
+          <Route path="legal" element={<V2Legal />} />
+          <Route path="legal/:docRoute" element={<V2LegalDocument />} />
           <Route path="politica-uso" element={<V2Privacy />} />
 
           {/* Admin geral */}

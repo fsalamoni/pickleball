@@ -620,6 +620,19 @@ export const FEATURE_FLAG = Object.freeze({
   SETTINGS_PAGE: 'settings_page',
 
   /**
+   * Central de documentos legais + consentimento (/legal): reúne os documentos
+   * jurídicos da plataforma (Termos de Uso, Política de Privacidade, Termo de
+   * Riscos, Cookies, Diretrizes da Comunidade, Pagamentos/Reembolsos,
+   * Cancelamento e os termos por papel — Organizador, Arena, Professor), com
+   * registro de aceite versionado (`legal_consents`). Inclui um portão de
+   * consentimento bloqueante para os documentos essenciais e caixas de aceite
+   * nos fluxos que assumem um papel. Aditivo — desligada, a rota, o link, o
+   * portão e as caixas de aceite ficam ocultos (comportamento atual: só a
+   * página /politica-uso).
+   */
+  LEGAL_CENTER: 'legal_center',
+
+  /**
    * Busca global federada: uma página de busca que procura em atletas, torneios,
    * arenas e clubes ao mesmo tempo, agrupando por tipo. Aditivo — desligada, a
    * busca do topo segue indo para o diretório de atletas.
@@ -1235,6 +1248,15 @@ export const FEATURE_FLAG_META = Object.freeze({
       'Página /configuracoes com atalhos de conta e a exportação dos dados '
       + 'pessoais do usuário (perfil, inscrições, reservas) em JSON. Desligada, '
       + 'a rota e o link ficam ocultos.',
+  },
+  [FEATURE_FLAG.LEGAL_CENTER]: {
+    label: 'Central de documentos legais + consentimento',
+    description:
+      'Página /legal com todos os documentos jurídicos (Termos de Uso, Política '
+      + 'de Privacidade, Termo de Riscos, Cookies, Diretrizes da Comunidade, '
+      + 'Pagamentos/Reembolsos, Cancelamento e termos por papel), com aceite '
+      + 'versionado, portão de consentimento bloqueante para os essenciais e '
+      + 'caixas de aceite nos fluxos por papel. Desligada, tudo isso fica oculto.',
   },
   [FEATURE_FLAG.GLOBAL_SEARCH]: {
     label: 'Busca global federada',

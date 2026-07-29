@@ -282,6 +282,18 @@ service cloud.firestore {
         && (resource.data.created_by == request.auth.uid || isPlatformAdmin());
     }
 
+    // ---- Consentimento aos documentos legais (legal_consents) -------------
+    // Registro do aceite dos documentos jurídicos, id determinístico
+    // `${uid}_${docKey}`. Cada usuário lê/grava apenas o próprio consentimento;
+    // o platform admin pode ler (auditoria). ADITIVO.
+    match /legal_consents/{consentId} {
+      allow read: if isAuthed()
+        && (resource.data.user_id == request.auth.uid || isPlatformAdmin());
+      allow create, update: if isAuthed()
+        && request.resource.data.user_id == request.auth.uid;
+      allow delete: if isPlatformAdmin();
+    }
+
     // ---- Dia de jogo do atleta (game_days) -------------------------------
     // Dia de jogo criado por um atleta (público ou privado por convite). O
     // criador gerencia tudo; membros (convidados/que entraram pelo convite) e

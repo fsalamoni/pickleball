@@ -18,6 +18,7 @@ import { V2LevelingResultCard } from '@/v2/components/leveling/V2LevelingQuestio
 import { PICKLEBALL_EXPERIENCE_LABELS, COMPETITION_GENDER_LABELS } from '@/modules/tournament/domain/constants';
 import V2ParticipationHistoryCard from '@/v2/components/tournament/V2ParticipationHistoryCard';
 import { useCoach, useSyncCoachFromProfile } from '@/modules/coaches/hooks/useCoaches';
+import { useRoleConsent } from '@/v2/components/legal/useRoleConsent';
 import {
   V2Button, V2Field, V2Input, V2Select, V2Surface, V2Textarea, V2Toggle,
 } from '@/v2/ui/primitives';
@@ -30,6 +31,7 @@ export default function V2ProfileEdit() {
   // e para manter em sincronia com o "Sou professor" do perfil.
   const { data: myCoach } = useCoach(user?.uid);
   const syncCoach = useSyncCoachFromProfile();
+  const coachConsent = useRoleConsent('termos-professor');
 
   const [platformName, setPlatformName] = useState(userProfile?.platform_name || userProfile?.full_name || '');
   const [birthDate, setBirthDate] = useState(userProfile?.birth_date || '');
@@ -163,6 +165,8 @@ export default function V2ProfileEdit() {
       toast.error('Informe ao menos uma modalidade (ex.: Iniciantes, Avançado, DUPR 4.0+).');
       return;
     }
+    // Consentimento aos Termos do Professor exigido só ao ativar o papel.
+    if (isCoach && !coachConsent.guardBeforeSubmit()) return;
     setCoachBusy(true);
     try {
       // 1) Espelho no perfil do usuário (users + diretório de atletas).
@@ -186,6 +190,7 @@ export default function V2ProfileEdit() {
           display_name: platformName,
         },
       });
+      if (isCoach) await coachConsent.recordAfterSuccess();
       toast.success('Informações de professor salvas.');
     } catch (err) {
       toast.error(err.message || 'Erro ao salvar informações de professor.');
@@ -364,6 +369,7 @@ export default function V2ProfileEdit() {
                   Estas informações formam seu perfil público de professor. Para foto, certificações e contatos,
                   {' '}<Link to="/coaches" className="font-semibold text-ink underline">gerencie seu perfil completo em Professores</Link>. Tudo fica sincronizado.
                 </p>
+                {coachConsent.field}
               </div>
             )}
             <div className="mt-5 flex justify-end">

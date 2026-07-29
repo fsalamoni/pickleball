@@ -7,6 +7,7 @@ import FeatureFlagGuard from '@/v2/components/FeatureFlagGuard';
 import { useAuth } from '@/core/lib/FirebaseAuthContext';
 import { useCreateArena } from '@/modules/arenas/hooks/useArenas';
 import { V2Button, V2Field, V2Input, V2SectionHeader, V2Surface, V2Textarea } from '@/v2/ui/primitives';
+import { useRoleConsent } from '@/v2/components/legal/useRoleConsent';
 
 const INITIAL = {
   name: '', description: '', address: '', neighborhood: '', city: '', state: '',
@@ -32,6 +33,7 @@ function V2CreateArenaContent() {
   const createArena = useCreateArena();
   const [form, setForm] = useState(INITIAL);
   const [errors, setErrors] = useState({});
+  const roleConsent = useRoleConsent('termos-arena');
 
 
   const set = (key) => (e) => setForm((prev) => ({ ...prev, [key]: e.target.value }));
@@ -44,8 +46,10 @@ function V2CreateArenaContent() {
     setErrors(next);
     if (Object.keys(next).length > 0) return;
     if (!isAuthenticated) { toast.error('Entre na plataforma para cadastrar uma arena.'); return; }
+    if (!roleConsent.guardBeforeSubmit()) return;
     try {
       const id = await createArena.mutateAsync(form);
+      await roleConsent.recordAfterSuccess();
       toast.success('Arena cadastrada! Vamos configurar o básico?');
       navigate(`/arenas/${id}/onboarding`);
     } catch (err) {
@@ -97,6 +101,8 @@ function V2CreateArenaContent() {
             <V2Field label="Instagram"><V2Input value={form.instagram} onChange={set('instagram')} placeholder="@suaarena" /></V2Field>
             <V2Field label="Site" className="sm:col-span-2"><V2Input value={form.website} onChange={set('website')} placeholder="https://..." /></V2Field>
           </div>
+
+          {roleConsent.field && <div className="pt-2">{roleConsent.field}</div>}
 
           <div className="flex justify-end gap-2 pt-2">
             <V2Button type="button" variant="ghost" onClick={() => navigate('/arenas')}>Cancelar</V2Button>

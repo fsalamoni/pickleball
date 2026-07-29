@@ -17,6 +17,7 @@ import {
 import {
   V2Button, V2Field, V2Input, V2SectionHeader, V2Select, V2Surface, V2Textarea,
 } from '@/v2/ui/primitives';
+import { useRoleConsent } from '@/v2/components/legal/useRoleConsent';
 import { cn } from '@/core/lib/utils';
 
 const VISIBILITY_OPTIONS = [
@@ -50,6 +51,7 @@ export default function V2CreateTournament() {
     arena_id: '', // Sprint 4 ARE-14: arena vinculada (opcional)
   });
   const set = (field, value) => setForm((f) => ({ ...f, [field]: value }));
+  const roleConsent = useRoleConsent('termos-organizador');
 
   const isLastStep = step === WIZARD_STEPS.length - 1;
   const showStep = (idx) => !wizardOn || step === idx;
@@ -64,6 +66,7 @@ export default function V2CreateTournament() {
     // No modo assistente, "Enter"/submit em etapas intermediárias apenas avança.
     if (wizardOn && !isLastStep) { goNext(); return; }
     if (!form.name.trim()) { setStep(0); return toast.error('Informe o nome do torneio.'); }
+    if (!roleConsent.guardBeforeSubmit()) return;
     try {
       const id = await createMutation.mutateAsync({
         name: form.name, description: form.description, city: form.city, state: form.state, venue: form.venue,
@@ -72,6 +75,7 @@ export default function V2CreateTournament() {
         scoring: { ruleset: form.ruleset, win_by_two: true },
         arena_id: form.arena_id || null,
       });
+      await roleConsent.recordAfterSuccess();
       toast.success('Torneio criado!');
       navigate(`/torneios/${id}`);
     } catch (err) {
@@ -176,6 +180,10 @@ export default function V2CreateTournament() {
               <V2Field label="Fim das inscrições"><V2Input type="date" value={form.registration_deadline} onChange={(e) => set('registration_deadline', e.target.value)} /></V2Field>
             </div>
             </>)}
+
+            {(!wizardOn || isLastStep) && roleConsent.field && (
+              <div className="pt-2">{roleConsent.field}</div>
+            )}
 
             {wizardOn ? (
               <div className="flex justify-between gap-2 pt-2">
