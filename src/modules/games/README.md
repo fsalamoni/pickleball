@@ -23,13 +23,26 @@
 - `game_days/{id}/games/{gid}` — jogos sorteados/avulsos (mesmo shape do dia de
   jogo dos clubes: `side_a`/`side_b` = `[{id,name}]`, `score_a`/`score_b`).
 
-### Ranking
+### Ranking (opt-in)
 Ao publicar, os jogos DECIDIDOS são espelhados na MESMA coleção materializada dos
 clubes — `club_event_games` — com `event_id = game_day_id`, `source =
 'athlete_game_day'` e `club_id` **resolvido por partida** (o clube comum a TODOS
-os atletas da partida, ou `null`). Assim o motor de rating nacional
-(`ratingService`) e o ranking interno dos clubes (`functions/clubRanking.js`)
-consomem os resultados sem alteração. Domínio puro em `domain/gameDayRanking.js`.
+os atletas da partida, ou `null`). Assim consomem os resultados sem alteração:
+- **Ranking individual** (`ratingService.recomputeAllRatings`);
+- **Ranking de duplas** (`ratingService.listFinishedEngineMatches` também lê
+  `club_event_games`);
+- **Ranking interno dos clubes** (`functions/clubRanking.js`, quando `club_id`).
+Domínio puro em `domain/gameDayRanking.js`.
+
+### Meu desempenho (sempre, independente do ranking)
+`getMyGameDayGames(uid)` + `useMyGameDayGames` reúnem TODOS os jogos de dia de
+jogo do atleta (decididos) — do espelho publicado (`club_event_games` por
+`array-contains`) e da fonte `game_days/.../games` (mesmo sem publicação),
+deduplicando pelo id determinístico `gd_${gameDayId}_${gameId}`. Isso alimenta:
+- **Estatística** (`usePlayerStats` funde via `foldGameDayGamesIntoStats`);
+- **Meus jogos** (`MyGamesPanel` mescla no histórico).
+Domínio puro em `domain/myGames.js`. A publicação no ranking NÃO afeta o
+desempenho pessoal — este mostra sempre todos os jogos do atleta.
 
 ## Onde achar mais
 - `docs/06-MODULES.md` § games

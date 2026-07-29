@@ -10,7 +10,7 @@ import {
   listGameDayGames, addGameDayGame, updateGameDayGame, deleteGameDayGame,
   replaceGameDayGames, clearGameDayGames,
   joinPublicGameDay, publishGameDayToRanking, unpublishGameDayFromRanking,
-  getGameDayRankingMeta,
+  getGameDayRankingMeta, getMyGameDayGames,
 } from '../services/gameDayService.js';
 
 /* ------------------------------ Dias de jogo ---------------------------- */
@@ -30,6 +30,17 @@ export function useGameDay(id) {
     queryKey: ['game-days', 'detail', id],
     queryFn: () => getGameDay(id),
     enabled: !!id,
+  });
+}
+
+/** Todos os jogos de dia de jogo do atleta (para "Meu desempenho"). */
+export function useMyGameDayGames() {
+  const { user } = useAuth();
+  return useQuery({
+    queryKey: ['game-days', 'my-games', user?.uid],
+    queryFn: () => getMyGameDayGames(user?.uid),
+    enabled: !!user?.uid,
+    staleTime: 20_000,
   });
 }
 

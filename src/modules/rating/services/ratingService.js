@@ -355,10 +355,14 @@ export async function getRatingHistory(uid) {
  */
 export async function listFinishedEngineMatches() {
   if (!db) return { matches: [], nameById: new Map() };
-  const matchesSnap = await getDocs(
-    query(collection(db, 'tournament_matches'), where('status', 'in', FINISHED_STATUSES)),
-  );
+  // Torneios + dias de jogo publicados (club_event_games): a mesma base do
+  // ranking individual, para que o ranking de duplas também os incorpore.
+  const [matchesSnap, clubEventGamesSnap] = await Promise.all([
+    getDocs(query(collection(db, 'tournament_matches'), where('status', 'in', FINISHED_STATUSES))),
+    getDocs(query(collection(db, 'club_event_games'), where('status', '==', MATCH_STATUS.FINISHED))),
+  ]);
   const finished = matchesSnap.docs.map((d) => d.data());
+  const clubEventGames = clubEventGamesSnap.docs.map((d) => d.data());
   const [regsSnap, profilesSnap] = await Promise.all([
     getDocs(collection(db, 'tournament_registrations')),
     getDocs(collection(db, 'athlete_profiles')),
@@ -389,5 +393,23 @@ export async function listFinishedEngineMatches() {
       at: toMillis(m.result_recorded_at) || toMillis(m.updated_at) || toMillis(m.created_at),
     });
   });
+
+  // Dias de jogo (clube e atleta): `side_a_ids`/`side_b_ids` já são uids.
+  clubEventGames.forEach((g) => {
+    if (g.winner_side !== 'a' && g.winner_side !== 'b') return;
+    const a = Array.isArray(g.side_a_ids) ? g.side_a_ids.filter(Boolean) : [];
+    const b = Array.isArray(g.side_b_ids) ? g.side_b_ids.filter(Boolean) : [];
+    if (a.length === 0 || b.length === 0) return;
+    matches.push({
+      side_a: a,
+      side_b: b,
+      winner: g.winner_side,
+      points_a: Number(g.score_a) || 0,
+      points_b: Number(g.score_b) || 0,
+      tournament_id: null,
+      at: toMillis(g.result_recorded_at) || toMillis(g.created_at),
+    });
+  });
+
   return { matches, nameById };
 }

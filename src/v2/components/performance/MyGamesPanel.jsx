@@ -6,9 +6,10 @@
 import React, { useMemo, useState } from 'react';
 import { Link } from 'react-router-dom';
 import { useQuery } from '@tanstack/react-query';
-import { CalendarClock, Trophy, MapPin, History, CheckCircle2, XCircle } from 'lucide-react';
+import { CalendarClock, Trophy, MapPin, History, CheckCircle2, XCircle, Dices } from 'lucide-react';
 import { useAuth } from '@/core/lib/FirebaseAuthContext';
 import { getMyUpcomingMatches, getMyFinishedMatches } from '@/modules/tournament/services/upcomingService';
+import { useMyGameDayGames } from '@/modules/games/hooks/useGameDays';
 import {
   V2Badge, V2Button, V2EmptyState, V2Skeleton, V2Surface,
 } from '@/v2/ui/primitives';
@@ -36,18 +37,48 @@ export default function MyGamesPanel() {
     enabled: !!uid,
     staleTime: 30_000,
   });
+  const { data: gameDayGames = [], isLoading: loadingGd } = useMyGameDayGames();
+
+  // Histórico unificado: torneios + dias de jogo (todos os jogos, sempre).
+  const mergedHistory = useMemo(() => {
+    const tour = history.map((m) => ({
+      key: m.matchId,
+      at: m.at,
+      title: m.tournamentName,
+      to: `/torneios/${m.tournamentId}`,
+      opponent: m.opponent,
+      myScore: m.myScore,
+      oppScore: m.oppScore,
+      won: m.won,
+      walkover: m.walkover,
+      isGameDay: false,
+    }));
+    const gd = gameDayGames.map((g) => ({
+      key: g.id,
+      at: g.at,
+      title: g.label,
+      to: '/dia-de-jogo',
+      opponent: g.opponent,
+      myScore: g.myScore,
+      oppScore: g.oppScore,
+      won: g.won,
+      walkover: g.walkover,
+      isGameDay: true,
+    }));
+    return [...tour, ...gd].sort((a, b) => Number(b.at || 0) - Number(a.at || 0));
+  }, [history, gameDayGames]);
 
   const record = useMemo(() => {
-    const wins = history.filter((m) => m.won).length;
-    return { wins, losses: history.length - wins, total: history.length };
-  }, [history]);
+    const wins = mergedHistory.filter((m) => m.won).length;
+    return { wins, losses: mergedHistory.length - wins, total: mergedHistory.length };
+  }, [mergedHistory]);
 
   const isUpcoming = tab === 'proximos';
-  const loading = isUpcoming ? loadingUp : loadingHist;
+  const loading = isUpcoming ? loadingUp : (loadingHist || loadingGd);
 
   return (
     <div>
-      {history.length > 0 && (
+      {mergedHistory.length > 0 && (
         <div className="mb-4 flex flex-wrap gap-2 text-sm">
           <V2Badge tone="green">{record.wins} vitória{record.wins === 1 ? '' : 's'}</V2Badge>
           <V2Badge tone="red">{record.losses} derrota{record.losses === 1 ? '' : 's'}</V2Badge>
@@ -64,7 +95,7 @@ export default function MyGamesPanel() {
         <button type="button" onClick={() => setTab('historico')}
           className={cn('inline-flex items-center gap-1.5 rounded-full px-4 py-2 text-sm font-semibold transition-colors',
             !isUpcoming ? 'bg-ink text-white' : 'text-gray-500 hover:text-ink')}>
-          <History className="h-4 w-4" /> Histórico ({history.length})
+          <History className="h-4 w-4" /> Histórico ({mergedHistory.length})
         </button>
       </div>
 
@@ -97,19 +128,19 @@ export default function MyGamesPanel() {
             ))}
           </div>
         )
-      ) : history.length === 0 ? (
+      ) : mergedHistory.length === 0 ? (
         <V2Surface>
           <V2EmptyState icon={History} title="Sem histórico ainda"
-            description="Seus jogos finalizados aparecerão aqui com placar e resultado." />
+            description="Seus jogos finalizados (torneios e dias de jogo) aparecerão aqui com placar e resultado." />
         </V2Surface>
       ) : (
         <div className="space-y-3">
-          {history.map((m) => (
-            <V2Surface key={m.matchId} className="flex flex-wrap items-center justify-between gap-3">
+          {mergedHistory.map((m) => (
+            <V2Surface key={m.key} className="flex flex-wrap items-center justify-between gap-3">
               <div className="min-w-0">
                 <div className="flex items-center gap-1.5 text-xs text-gray-500">
-                  <Trophy className="h-3.5 w-3.5" />
-                  <Link to={`/torneios/${m.tournamentId}`} className="hover:underline">{m.tournamentName}</Link>
+                  {m.isGameDay ? <Dices className="h-3.5 w-3.5" /> : <Trophy className="h-3.5 w-3.5" />}
+                  <Link to={m.to} className="hover:underline">{m.title}</Link>
                 </div>
                 <div className="mt-1 font-bold text-ink">vs {m.opponent}</div>
                 <div className="mt-1 text-xs text-gray-500">{formatDateTime(m.at)}</div>
