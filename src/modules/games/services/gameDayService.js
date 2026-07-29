@@ -27,6 +27,7 @@ import {
 import {
   buildGameDayRankingMatches, gameDayRankingId, GAME_DAY_DATE_ID,
 } from '../domain/gameDayRanking.js';
+import { mirrorGameToMyGame, sourceGameToMyGame, gameDayMirrorId } from '../domain/myGames.js';
 
 const COL = 'game_days';
 const COL_OPEN = 'open_games';
@@ -433,6 +434,80 @@ export async function getGameDayRankingMeta(gdId) {
   if (!db || !gdId) return { publishedIds: [] };
   const publishedIds = await listRankingIds(gdId);
   return { publishedIds };
+}
+
+/* --------------------- Meus jogos (desempenho pessoal) ------------------- */
+
+async function loadNamesByUid(uids) {
+  const map = new Map();
+  const unique = Array.from(new Set((uids || []).filter(Boolean)));
+  const CHUNK = 30;
+  for (let i = 0; i < unique.length; i += CHUNK) {
+    const slice = unique.slice(i, i + CHUNK);
+    // eslint-disable-next-line no-await-in-loop
+    const snap = await getDocs(query(collection(db, 'athlete_profiles'), where('__name__', 'in', slice)));
+    snap.docs.forEach((d) => map.set(d.id, d.data().platform_name || d.data().full_name || 'Atleta'));
+  }
+  return map;
+}
+
+/**
+ * Todos os jogos de DIA DE JOGO em que o atleta participou (decididos), para o
+ * "Meu desempenho". Inclui:
+ *  - o espelho publicado (`club_event_games`) — dias de jogo de clube e de atleta
+ *    já publicados no ranking; e
+ *  - a fonte dos dias de jogo do atleta (`game_days`) — SEMPRE, mesmo sem
+ *    publicação no ranking, deduplicando contra o espelho.
+ *
+ * @param {string} uid
+ * @returns {Promise<Array>} jogos normalizados (ver domain/myGames)
+ */
+export async function getMyGameDayGames(uid) {
+  if (!db || !uid) return [];
+
+  // 1) Espelho publicado onde o atleta aparece (2 queries array-contains).
+  const [aSnap, bSnap] = await Promise.all([
+    getDocs(query(collection(db, COL_RANKING), where('side_a_ids', 'array-contains', uid))),
+    getDocs(query(collection(db, COL_RANKING), where('side_b_ids', 'array-contains', uid))),
+  ]);
+  const mirrorDocs = new Map();
+  [...aSnap.docs, ...bSnap.docs].forEach((d) => mirrorDocs.set(d.id, { id: d.id, ...d.data() }));
+
+  // Nomes dos adversários (uids do espelho).
+  const uidSet = new Set();
+  mirrorDocs.forEach((m) => {
+    (m.side_a_ids || []).forEach((x) => uidSet.add(x));
+    (m.side_b_ids || []).forEach((x) => uidSet.add(x));
+  });
+  uidSet.delete(uid);
+  const nameByUid = await loadNamesByUid(Array.from(uidSet));
+
+  const out = [];
+  const seen = new Set();
+  mirrorDocs.forEach((m) => {
+    const g = mirrorGameToMyGame(uid, m, nameByUid);
+    if (g) { out.push(g); seen.add(g.id); }
+  });
+
+  // 2) Fonte dos dias de jogo do atleta (inclui não publicados).
+  const gdSnap = await getDocs(query(collection(db, COL), where('member_uids', 'array-contains', uid)));
+  for (const gd of gdSnap.docs) {
+    const gdData = gd.data();
+    // eslint-disable-next-line no-await-in-loop
+    const [gamesSnap, partsSnap] = await Promise.all([
+      getDocs(collection(db, COL, gd.id, SUB_GAMES)),
+      getDocs(collection(db, COL, gd.id, SUB_PARTICIPANTS)),
+    ]);
+    const partById = new Map(partsSnap.docs.map((p) => [p.id, p.data()]));
+    gamesSnap.docs.forEach((gDoc) => {
+      const game = { id: gDoc.id, ...gDoc.data() };
+      if (seen.has(gameDayMirrorId(gd.id, game.id))) return; // já veio do espelho
+      const g = sourceGameToMyGame(uid, gd.id, gdData.title, game, partById);
+      if (g) { out.push(g); seen.add(g.id); }
+    });
+  }
+
+  return out.sort((a, b) => Number(b.at || 0) - Number(a.at || 0));
 }
 
 export { gameDayRankingId, GAME_DAY_DATE_ID };
