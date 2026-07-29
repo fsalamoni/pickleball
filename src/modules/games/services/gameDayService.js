@@ -135,6 +135,7 @@ async function publishGameDayInvite(gameDay, actor, creatorName, creatorPhoto) {
     id,
     kind: 'game_day',
     game_day_id: gameDay.id,
+    date: gameDay.date || null,
     when_text: whenText || gameDay.title || 'Dia de jogo',
     city: gameDay.city || '',
     state: gameDay.state || '',

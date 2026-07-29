@@ -33,6 +33,7 @@ function trimmed(value) {
  */
 export function normalizeOpenGameInput(input = {}) {
   const value = {
+    date: trimmed(input.date) || null, // 'YYYY-MM-DD' (opcional)
     when_text: trimmed(input.when_text),
     city: trimmed(input.city),
     state: trimmed(input.state).toUpperCase().slice(0, 2),
@@ -42,10 +43,48 @@ export function normalizeOpenGameInput(input = {}) {
   };
 
   const errors = {};
-  if (!value.when_text) errors.when_text = 'Informe quando você quer jogar.';
+  // Aceita a data OU a descrição livre ("quando"); ao menos uma é obrigatória.
+  if (!value.date && !value.when_text) errors.when_text = 'Informe a data ou quando você quer jogar.';
   if (!value.city) errors.city = 'Informe a cidade.';
 
   return { valid: Object.keys(errors).length === 0, errors, value };
+}
+
+/**
+ * Separa os convites abertos em "próximos" (sem data ou com data ≥ hoje) e
+ * "passados" (data < hoje), cada grupo ordenado. Convites sem data ficam entre
+ * os próximos (são convites flexíveis, ex.: "sábado de manhã").
+ *
+ * @param {Array<object>} games
+ * @param {string} todayISO - data de hoje 'YYYY-MM-DD'
+ * @returns {{ upcoming: object[], past: object[] }}
+ */
+export function partitionOpenGamesByDate(games, todayISO) {
+  const open = (games || []).filter((g) => g.status === OPEN_GAME_STATUS.OPEN);
+  const upcoming = [];
+  const past = [];
+  open.forEach((g) => {
+    if (g.date && todayISO && g.date < todayISO) past.push(g);
+    else upcoming.push(g);
+  });
+
+  // Próximos: datados primeiro (mais próximos no topo), depois os sem data
+  // (por mais recentes). Passados: mais recentes primeiro.
+  upcoming.sort((a, b) => {
+    if (a.date && b.date) {
+      if (a.date !== b.date) return a.date < b.date ? -1 : 1;
+      return toMillis(b.created_at) - toMillis(a.created_at);
+    }
+    if (a.date && !b.date) return -1;
+    if (!a.date && b.date) return 1;
+    return toMillis(b.created_at) - toMillis(a.created_at);
+  });
+  past.sort((a, b) => {
+    if (a.date !== b.date) return a.date < b.date ? 1 : -1;
+    return toMillis(b.created_at) - toMillis(a.created_at);
+  });
+
+  return { upcoming, past };
 }
 
 /**
