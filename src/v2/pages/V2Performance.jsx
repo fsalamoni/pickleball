@@ -1,5 +1,5 @@
-import React from 'react';
-import { Award, ListChecks, Medal, Percent, Swords, Trophy } from 'lucide-react';
+import React, { useState } from 'react';
+import { Award, BarChart3, CalendarClock, ListChecks, Medal, Percent, Swords, Trophy } from 'lucide-react';
 import { usePlayerStats } from '@/modules/performance/hooks/usePlayerStats';
 import { MODALITY_FORMAT_LABELS } from '@/modules/tournament/domain/constants';
 import { useAuth } from '@/core/lib/FirebaseAuthContext';
@@ -12,18 +12,48 @@ import ProgressionCard from '@/modules/progression/components/ProgressionCard';
 import GoalsCard from '@/modules/progression/components/GoalsCard';
 import RatingSparkline from '@/modules/rating/components/RatingSparkline';
 import AchievementsCard from '@/modules/achievements/components/AchievementsCard';
+import MyGamesPanel from '@/v2/components/performance/MyGamesPanel';
 import {
   V2PageIntro,
   V2Skeleton,
   V2StatCard,
   V2Surface,
 } from '@/v2/ui/primitives';
+import { cn } from '@/core/lib/utils';
 
 function formatPercent(rate) {
   return rate == null ? '—' : `${Math.round(rate * 100)}%`;
 }
 
 export default function V2Performance() {
+  const athleteAgendaOn = useFeatureFlag(FEATURE_FLAG.ATHLETE_AGENDA);
+  const [tab, setTab] = useState('estatistica');
+
+  return (
+    <div className="mx-auto max-w-[1200px]">
+      <V2PageIntro title="Meu desempenho" subtitle="Estatísticas, histórico e evolução dos seus jogos e torneios." />
+
+      {athleteAgendaOn && (
+        <div className="mb-6 inline-flex gap-1.5 rounded-full border border-gray-100 bg-paper-pure p-1.5">
+          <button type="button" onClick={() => setTab('estatistica')}
+            className={cn('inline-flex items-center gap-1.5 rounded-full px-4 py-2 text-sm font-semibold transition-colors',
+              tab === 'estatistica' ? 'bg-ink text-white' : 'text-gray-500 hover:text-ink')}>
+            <BarChart3 className="h-4 w-4" /> Estatística
+          </button>
+          <button type="button" onClick={() => setTab('jogos')}
+            className={cn('inline-flex items-center gap-1.5 rounded-full px-4 py-2 text-sm font-semibold transition-colors',
+              tab === 'jogos' ? 'bg-ink text-white' : 'text-gray-500 hover:text-ink')}>
+            <CalendarClock className="h-4 w-4" /> Meus jogos
+          </button>
+        </div>
+      )}
+
+      {athleteAgendaOn && tab === 'jogos' ? <MyGamesPanel /> : <StatsPanel />}
+    </div>
+  );
+}
+
+function StatsPanel() {
   const { user } = useAuth();
   const achievementsOn = useFeatureFlag(FEATURE_FLAG.ACHIEVEMENTS);
   const ratingHistoryOn = useFeatureFlag(FEATURE_FLAG.RATING_HISTORY);
@@ -35,9 +65,7 @@ export default function V2Performance() {
   const formats = Object.entries(stats?.byFormat || {});
 
   return (
-    <div className="mx-auto max-w-[1200px]">
-      <V2PageIntro title="Meu desempenho" subtitle="Estatísticas, histórico e evolução dos seus jogos e torneios." />
-
+    <>
       {isLoading ? (
         <div className="grid grid-cols-2 gap-4 md:grid-cols-3 lg:grid-cols-6">
           {[1, 2, 3, 4, 5, 6].map((i) => <V2Skeleton key={i} className="h-40 rounded-4xl" />)}
@@ -91,6 +119,6 @@ export default function V2Performance() {
           )}
         </>
       )}
-    </div>
+    </>
   );
 }

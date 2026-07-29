@@ -1,9 +1,14 @@
 import React, { useMemo, useState } from 'react';
-import { Clock, MapPin, Megaphone, Plus, Trophy, X } from 'lucide-react';
+import { useNavigate } from 'react-router-dom';
+import { toast } from 'sonner';
+import { Clock, Dices, Globe, MapPin, Megaphone, Plus, Trophy, X } from 'lucide-react';
 import { useAuth } from '@/core/lib/FirebaseAuthContext';
 import { useOpenGames, useMyOpenGames, useCloseOpenGame } from '@/modules/games/hooks/useOpenGames';
+import { useJoinPublicGameDay } from '@/modules/games/hooks/useGameDays';
 import { OPEN_GAME_FORMAT_LABELS, OPEN_GAME_STATUS } from '@/modules/games/domain/openGames';
 import { getLevelByCode } from '@/modules/leveling/data/levels';
+import { useFeatureFlag } from '@/core/lib/FeatureFlagsContext';
+import { FEATURE_FLAG } from '@/core/featureFlags';
 import CreateOpenGameDialog from '@/modules/games/components/CreateOpenGameDialog';
 import V2ChatLauncherButton from '@/v2/components/chat/V2ChatLauncherButton';
 import {
@@ -23,10 +28,23 @@ function levelLabel(code) {
 
 export default function V2OpenGames() {
   const { user } = useAuth();
+  const navigate = useNavigate();
   const { data: games = [], isLoading } = useOpenGames();
   const { data: myGames = [] } = useMyOpenGames();
   const closeGame = useCloseOpenGame();
+  const gameDayOn = useFeatureFlag(FEATURE_FLAG.ATHLETE_GAME_DAY);
+  const joinGameDay = useJoinPublicGameDay();
   const [createOpen, setCreateOpen] = useState(false);
+
+  const handleJoinGameDay = async (g) => {
+    try {
+      await joinGameDay.mutateAsync({ id: g.game_day_id, created_by: g.created_by, title: g.when_text });
+      toast.success('Você entrou no dia de jogo! Ele já aparece em "Dia de jogo".');
+      navigate('/dia-de-jogo');
+    } catch (err) {
+      toast.error(err?.message || 'Não foi possível participar.');
+    }
+  };
 
   const others = useMemo(
     () => games
@@ -97,11 +115,18 @@ export default function V2OpenGames() {
                 )}
               </div>
               <div className="mt-4 flex flex-wrap gap-1.5">
-                <V2Badge tone="neutral">{OPEN_GAME_FORMAT_LABELS[g.format] || g.format}</V2Badge>
+                {g.kind === 'game_day'
+                  ? <V2Badge tone="blue"><Dices className="h-3 w-3" /> Dia de jogo</V2Badge>
+                  : <V2Badge tone="neutral">{OPEN_GAME_FORMAT_LABELS[g.format] || g.format}</V2Badge>}
                 {levelLabel(g.level) && <V2Badge tone="acid"><Trophy className="h-3 w-3" /> {levelLabel(g.level)}</V2Badge>}
               </div>
               {g.notes && <p className="mt-3 text-sm text-gray-500">{g.notes}</p>}
-              <div className="mt-auto pt-5">
+              <div className="mt-auto space-y-2 pt-5">
+                {g.kind === 'game_day' && gameDayOn && g.game_day_id && (
+                  <V2Button className="w-full" onClick={() => handleJoinGameDay(g)} disabled={joinGameDay.isPending}>
+                    <Globe className="h-4 w-4" /> Participar do dia de jogo
+                  </V2Button>
+                )}
                 <V2ChatLauncherButton
                   athlete={{ id: g.created_by, platform_name: g.creator_name, photo_url: g.creator_photo }}
                   className="w-full"

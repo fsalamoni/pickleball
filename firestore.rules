@@ -47,6 +47,30 @@ service cloud.firestore {
         && exists(/databases/$(database)/documents/clubs/$(clubId))
         && get(/databases/$(database)/documents/clubs/$(clubId)).data.created_by == request.auth.uid;
     }
+    // ---- Dia de jogo do atleta (game_days) --------------------------------
+    function gameDayData(gdId) {
+      return get(/databases/$(database)/documents/game_days/$(gdId)).data;
+    }
+    function gameDayExists(gdId) {
+      return exists(/databases/$(database)/documents/game_days/$(gdId));
+    }
+    // Criador (dono) de um dia de jogo do atleta.
+    function isGameDayOwnerOf(gdId) {
+      return isAuthed() && gameDayExists(gdId)
+        && gameDayData(gdId).created_by == request.auth.uid;
+    }
+    function gameDayIsPublic(gdId) {
+      return gameDayExists(gdId) && gameDayData(gdId).visibility == 'public';
+    }
+    // Quem pode ver um dia de jogo: dono, membro, ou qualquer um se público.
+    function canAccessGameDay(gdId) {
+      return isAuthed() && gameDayExists(gdId) && (
+        gameDayData(gdId).created_by == request.auth.uid
+        || (request.auth.uid in gameDayData(gdId).member_uids)
+        || gameDayData(gdId).visibility == 'public'
+        || isPlatformAdmin()
+      );
+    }
     // Gestor (dono ou administrador) de uma arena — doc determinístico arenaId_uid.
     function isArenaManager(arenaId) {
       return isAuthed()
@@ -256,6 +280,55 @@ service cloud.firestore {
       allow create: if isAuthed() && request.resource.data.created_by == request.auth.uid;
       allow update, delete: if isAuthed()
         && (resource.data.created_by == request.auth.uid || isPlatformAdmin());
+    }
+
+    // ---- Dia de jogo do atleta (game_days) -------------------------------
+    // Dia de jogo criado por um atleta (público ou privado por convite). O
+    // criador gerencia tudo; membros (convidados/que entraram pelo convite) e
+    // qualquer um (se público) podem ver. ADITIVO.
+    match /game_days/{gdId} {
+      allow read: if isAuthed() && (
+        resource.data.created_by == request.auth.uid
+        || (request.auth.uid in resource.data.member_uids)
+        || resource.data.visibility == 'public'
+        || isPlatformAdmin()
+      );
+      allow create: if isAuthed() && request.resource.data.created_by == request.auth.uid;
+      // Edição plena pelo criador/admin. Um atleta pode se auto-incluir como
+      // membro quando o dia de jogo é público (fluxo "participar"), sem alterar
+      // o dono.
+      allow update: if isAuthed() && (
+        resource.data.created_by == request.auth.uid
+        || isPlatformAdmin()
+        || (
+          resource.data.visibility == 'public'
+          && request.resource.data.created_by == resource.data.created_by
+          && (request.auth.uid in request.resource.data.member_uids)
+        )
+      );
+      allow delete: if isAuthed()
+        && (resource.data.created_by == request.auth.uid || isPlatformAdmin());
+
+      match /participants/{pid} {
+        allow read: if canAccessGameDay(gdId);
+        // O criador insere qualquer participante; um atleta pode se inserir
+        // quando o dia de jogo é público (participar).
+        allow create: if isAuthed() && (
+          isGameDayOwnerOf(gdId)
+          || (gameDayIsPublic(gdId) && request.resource.data.user_id == request.auth.uid)
+        );
+        allow update: if isGameDayOwnerOf(gdId);
+        // O criador remove qualquer um; o atleta pode remover a própria entrada.
+        allow delete: if isAuthed() && (
+          isGameDayOwnerOf(gdId)
+          || resource.data.user_id == request.auth.uid
+        );
+      }
+
+      match /games/{gid} {
+        allow read: if canAccessGameDay(gdId);
+        allow create, update, delete: if isGameDayOwnerOf(gdId);
+      }
     }
 
     // ---- Afiliados e parcerias -------------------------------------------
@@ -863,6 +936,7 @@ service cloud.firestore {
       // paralelos ao tamanho do `kind` (singles=1, doubles=2).
       allow create: if isAuthed() && (
         isPlatformAdmin()
+        || isGameDayOwnerOf(request.resource.data.event_id)
         || isClubEventCreator(request.resource.data.event_id)
         || isClubAdmin(request.resource.data.club_id)
       ) && request.resource.data.keys().hasAll([
@@ -879,15 +953,17 @@ service cloud.firestore {
       // Atualização: mesmos perfis. Imutável em `event_id`/`date_id`/`club_id`.
       allow update: if isAuthed() && (
         isPlatformAdmin()
+        || isGameDayOwnerOf(request.resource.data.event_id)
         || isClubEventCreator(request.resource.data.event_id)
         || isClubAdmin(request.resource.data.club_id)
       ) && request.resource.data.event_id == resource.data.event_id
         && request.resource.data.date_id == resource.data.date_id
         && request.resource.data.club_id == resource.data.club_id;
-      // Exclusão: despublicar um dia de jogo. Admin da plataforma ou admin
-      // do clube vinculado.
+      // Exclusão: despublicar um dia de jogo. Admin da plataforma, criador do
+      // dia de jogo do atleta, criador do evento ou admin do clube vinculado.
       allow delete: if isAuthed() && (
         isPlatformAdmin()
+        || isGameDayOwnerOf(resource.data.event_id)
         || isClubEventCreator(resource.data.event_id)
         || isClubAdmin(resource.data.club_id)
       );

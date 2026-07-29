@@ -404,16 +404,45 @@ professor↔alunos. **NÃO é coleção nova** — é o campo aditivo
 Espelhamento de jogos decididos de dias de jogo para o ranking nacional.
 Ativado pela flag `publish_to_ranking` no `club_events/{id}/dates/{dateId}`.
 Mesmo schema de `tournament_matches` + campos extras:
-- `source: 'club_event_game'`, `event_id`, `date_id`, `club_id`,
-  `event_title`, `game_id`, `published_by`
+- `source: 'club_event_game' | 'athlete_game_day'`, `event_id`, `date_id`,
+  `club_id`, `event_title`, `game_id`, `published_by`
 - `side_a_ids`/`side_b_ids` são **uids** (não passam por
   `tournament_registrations`).
 - `status: 'finished'`, `winner_side: 'a'|'b'`, `score_a`, `score_b`.
 - `sets_a`/`sets_b` espelham o placar (helper p/ rankings derivados).
 - `kind: 'singles'|'doubles'`, `result_recorded_at`.
 
+O **Dia de jogo do atleta** (`game_days`, flag `athlete_game_day`) reaproveita
+esta MESMA coleção: `source='athlete_game_day'`, `event_id = game_day_id`,
+`date_id = 'main'`, id determinístico `gd_${gameDayId}_${gameId}` e `club_id`
+**resolvido por partida** (o clube comum a TODOS os atletas, ou `null`). Assim os
+resultados entram no ranking geral e no ranking interno do clube sem alterar o
+motor de rating (`ratingService`) nem `functions/clubRanking.js`.
+
 Regras: `firestore.rules` — read público; create/update/delete apenas
-criador do evento + admin do clube + platform admin.
+criador do evento do clube, dono do dia de jogo do atleta
+(`isGameDayOwnerOf`), admin do clube + platform admin.
+
+### `game_days/{id}` (flag `athlete_game_day`)
+Dia de jogo criado por um atleta (primo do dia de jogo dos clubes, sem clube dono).
+- `created_by`, `creator_name`, `creator_photo`
+- `title`, `visibility: 'public'|'private'`, `date`, `time`, `location`,
+  `city`, `state`, `notes`, `format`
+- `member_uids[]` — dono + convidados + quem entrou pelo convite (query de
+  visibilidade `array-contains`); `invited_uids[]`
+- `open_game_id` — convite público vinculado em `open_games` (`kind='game_day'`)
+- `publish_to_ranking`, `published_count`, `published_at`, `published_by`
+- `status: 'active'|'archived'`, `created_at_ms`
+
+Subcoleções:
+- `game_days/{id}/participants/{pid}` — `user_id?`, `name`, `photo_url?`,
+  `source: 'owner'|'invited'|'joined'|'guest'`
+- `game_days/{id}/games/{gid}` — `round`, `court`, `kind`, `side_a`/`side_b`
+  (`[{id,name}]`), `score_a`/`score_b`, `order`
+
+Regras: read pelo dono/membros (ou qualquer um se público); escrita plena do
+dono; um atleta se auto-inclui como membro/participante ao "Participar" de um
+dia de jogo público.
 
 ### `club_events/{id}/dates/{dateId}` (campos Wave C)
 - `publish_to_ranking: bool` (default false) — chave de publicação.

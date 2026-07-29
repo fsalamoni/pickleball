@@ -30,6 +30,7 @@ import {
   Search as SearchIcon,
   GraduationCap,
   CalendarClock,
+  Dices,
   ChevronsLeft,
   ChevronsRight,
   Eye,
@@ -71,6 +72,7 @@ const PAGE_TITLES = [
   ['/ranking', 'Ranking'],
   ['/encontrar-jogadores', 'Encontrar jogadores'],
   ['/procura-jogo', 'Procura-se jogo'],
+  ['/dia-de-jogo', 'Dia de jogo'],
   ['/clubes', 'Clubes'],
   ['/novidades', 'Comunidade'],
   ['/parceiros', 'Parceiros'],
@@ -106,6 +108,7 @@ function useV2Nav() {
   const coachLessonsOn = useFeatureFlag(FEATURE_FLAG.COACH_LESSONS);
   const doublesRankingOn = useFeatureFlag(FEATURE_FLAG.DOUBLES_RANKING);
   const athleteAgendaOn = useFeatureFlag(FEATURE_FLAG.ATHLETE_AGENDA);
+  const gameDayOn = useFeatureFlag(FEATURE_FLAG.ATHLETE_GAME_DAY);
   const settingsPageOn = useFeatureFlag(FEATURE_FLAG.SETTINGS_PAGE);
   const { totalArenas: myArenasCount, totalPendingBookings: myPendingBookings } = useMyArenaSummary();
   const showMyArenas = arenasOn && myArenasCount > 0;
@@ -142,7 +145,7 @@ function useV2Nav() {
       title: 'Você',
       items: [
         { to: '/chat', label: 'Mensagens', icon: MessageSquare },
-        athleteAgendaOn && { to: '/meus-jogos', label: 'Meus jogos', icon: CalendarClock },
+        gameDayOn && { to: '/dia-de-jogo', label: 'Dia de jogo', icon: Dices },
         performanceOn && { to: '/meu-desempenho', label: 'Meu desempenho', icon: BarChart3 },
         showMyArenas && {
           to: '/arenas',
@@ -176,7 +179,7 @@ function useV2Nav() {
         { to: '/politica-uso', label: 'Política de uso', icon: FileText },
       ].filter(Boolean),
     },
-  ].filter(Boolean), [performanceOn, ratingOn, matchmakingOn, openGamesOn, affiliatesOn, communityFeedOn, arenasOn, circuitsOn, coachesOn, coachLessonsOn, isCoach, sportHistoryOn, isPlatformAdmin, adminConsoleOn, myArenasCount, myPendingBookings, showMyArenas]);
+  ].filter(Boolean), [performanceOn, ratingOn, matchmakingOn, openGamesOn, affiliatesOn, communityFeedOn, arenasOn, circuitsOn, coachesOn, coachLessonsOn, isCoach, sportHistoryOn, isPlatformAdmin, adminConsoleOn, gameDayOn, myArenasCount, myPendingBookings, showMyArenas]);
 
   // Árvore de hubs (flag nav_hubs): destinos centrais (nível 1, barra lateral)
   // com suas subpáginas (nível 2, barra superior). Organizada por tema.
@@ -197,11 +200,11 @@ function useV2Nav() {
         ],
       }),
       hub({
-        id: 'jogar', label: 'Jogar', icon: Swords, to: openGamesOn ? '/procura-jogo' : '/meus-jogos',
+        id: 'jogar', label: 'Jogar', icon: Swords, to: openGamesOn ? '/procura-jogo' : '/meu-desempenho',
         children: [
           ratingOn && matchmakingOn && { to: '/encontrar-jogadores', label: 'Encontrar jogadores', icon: Swords },
           openGamesOn && { to: '/procura-jogo', label: 'Procura-se jogo', icon: Megaphone },
-          athleteAgendaOn && { to: '/meus-jogos', label: 'Meus jogos', icon: CalendarClock },
+          gameDayOn && { to: '/dia-de-jogo', label: 'Dia de jogo', icon: Dices },
           performanceOn && { to: '/meu-desempenho', label: 'Meu desempenho', icon: BarChart3 },
         ],
       }),
@@ -257,7 +260,7 @@ function useV2Nav() {
         children: [{ to: '/admin/painel', label: 'Painel admin', icon: LayoutDashboard }],
       }),
     ].filter(Boolean).filter((h) => h.id === 'inicio' || h.children.length > 0);
-  }, [performanceOn, ratingOn, matchmakingOn, openGamesOn, affiliatesOn, communityFeedOn, arenasOn, circuitsOn, coachesOn, coachLessonsOn, isCoach, sportHistoryOn, isPlatformAdmin, adminConsoleOn, doublesRankingOn, athleteAgendaOn, settingsPageOn, myPendingBookings, showMyArenas]);
+  }, [performanceOn, ratingOn, matchmakingOn, openGamesOn, affiliatesOn, communityFeedOn, arenasOn, circuitsOn, coachesOn, coachLessonsOn, isCoach, sportHistoryOn, isPlatformAdmin, adminConsoleOn, doublesRankingOn, athleteAgendaOn, gameDayOn, settingsPageOn, myPendingBookings, showMyArenas]);
 
   return { sections, hubs };
 }

@@ -69,6 +69,7 @@ const V2EventDetail = lazy(() => import('@/v2/pages/V2EventDetail'));
 const V2NotFound = lazy(() => import('@/v2/pages/V2NotFound'));
 const V2DoublesRanking = lazy(() => import('@/v2/pages/V2DoublesRanking'));
 const V2MyGames = lazy(() => import('@/v2/pages/V2MyGames'));
+const V2GameDays = lazy(() => import('@/v2/pages/V2GameDays'));
 const V2Settings = lazy(() => import('@/v2/pages/V2Settings'));
 const V2Search = lazy(() => import('@/v2/pages/V2Search'));
 
@@ -168,6 +169,8 @@ export default function V2App() {
           <Route path="ranking" element={<V2Ranking />} />
           <Route path="ranking/duplas" element={<V2DoublesRanking />} />
           <Route path="meus-jogos" element={<V2MyGames />} />
+          <Route path="dia-de-jogo" element={<V2GameDays />} />
+          <Route path="dia-de-jogo/:gameDayId" element={<V2GameDays />} />
           <Route path="encontrar-jogadores" element={<V2FindPlayers />} />
           <Route path="procura-jogo" element={<V2OpenGames />} />
           <Route path="parceiros" element={<V2Partners />} />

@@ -436,12 +436,25 @@ com flags agrupadas por assunto (`core` / `nav` / `athlete` / `tournaments`
 **Arena V3 Boot embutido** — sub-seção de bootstrap dos módulos V3
 (executa migração, ativa sub-flags).
 
-## games/ — jogos abertos e procura-jogo
+## games/ — jogos abertos, procura-jogo e dia de jogo do atleta
 
-- **V2 (ativo)**: `V2OpenGames`, `V2MyGames`.
+- **V2 (ativo)**: `V2OpenGames` (Procura-se jogo), `V2GameDays` (Dia de jogo),
+  `V2MyGames` (rota legada → redireciona a `/meu-desempenho`).
 - **V1 (legado)**: `OpenGames`.
-- Coleções: `games`, `open_games`, `participants`. Gera notificações
-  para quem confirmou presença.
+- Coleções: `games`, `open_games`, `participants`, `game_days` (+ subcoleções
+  `participants`/`games`). Gera notificações para quem confirmou presença.
+- **Dia de jogo do atleta** (flag `athlete_game_day`): qualquer atleta cria seu
+  próprio dia de jogo (público ou privado por convite), insere/convida qualquer
+  atleta da plataforma e organiza os jogos (reaproveita `gameDayDraw`/
+  `gameDayFormats` dos clubes). Dias de jogo públicos publicam um convite em
+  `open_games` (`kind='game_day'`); ao "Participar", o dia de jogo passa a
+  aparecer na aba "Dia de jogo" do atleta. O criador pode publicar os resultados
+  decididos no ranking geral (espelho em `club_event_games`) — e no ranking de um
+  clube quando todos os atletas de uma partida são do mesmo clube (`club_id`
+  resolvido por partida). Visível apenas ao criador e aos membros.
+- **Navegação**: em "Jogar" a aba "Meus jogos" passou a ser sub-aba de "Meu
+  desempenho" (abas "Estatística" + "Meus jogos"); no lugar dela entra "Dia de
+  jogo".
 
 ## partners/ — espaço de parceiros (admin)
 
