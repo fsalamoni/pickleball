@@ -538,6 +538,19 @@ export const FEATURE_FLAG = Object.freeze({
   ATHLETE_AGENDA: 'athlete_agenda',
 
   /**
+   * Dia de jogo do atleta: qualquer atleta cria seu próprio "Dia de jogo"
+   * (público ou privado por convite), insere/convida qualquer atleta da
+   * plataforma, sorteia e organiza os jogos (Americano/Mexicano/Rei da Quadra,
+   * reaproveitando o motor do dia de jogo dos clubes) e, opcionalmente, publica
+   * os resultados decididos no ranking geral da plataforma — e no ranking de um
+   * clube quando todos os atletas de uma partida são do mesmo clube. Dias de
+   * jogo públicos publicam um convite em "Procura-se jogo"; ao participar, o dia
+   * de jogo passa a aparecer para o atleta. Aditivo — desligada, a rota, a aba e
+   * os convites de dia de jogo ficam ocultos.
+   */
+  ATHLETE_GAME_DAY: 'athlete_game_day',
+
+  /**
    * Modo Telão/TV do torneio: página em tela cheia (fundo escuro, tipografia
    * grande, auto-rotação) com jogos em andamento, próximos chamados e resultados
    * recentes — para exibir num telão no evento. Rota pública /torneios/:id/telao.
@@ -1147,6 +1160,16 @@ export const FEATURE_FLAG_META = Object.freeze({
     description:
       'Página que reúne os próximos jogos do atleta e o histórico de partidas, '
       + 'com filtros. Desligada, a rota e o link ficam ocultos.',
+  },
+  [FEATURE_FLAG.ATHLETE_GAME_DAY]: {
+    label: 'Dia de jogo do atleta',
+    description:
+      'Qualquer atleta cria seu próprio "Dia de jogo" (público ou privado por '
+      + 'convite), insere/convida qualquer atleta da plataforma, sorteia e '
+      + 'organiza os jogos e pode publicar os resultados no ranking geral — e no '
+      + 'ranking de um clube quando todos os atletas de uma partida são do mesmo '
+      + 'clube. Dias de jogo públicos publicam um convite em "Procura-se jogo". '
+      + 'Desligada, a rota, a aba e os convites de dia de jogo ficam ocultos.',
   },
   [FEATURE_FLAG.TOURNAMENT_TV_MODE]: {
     label: 'Modo Telão/TV do torneio',
