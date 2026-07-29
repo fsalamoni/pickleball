@@ -456,6 +456,22 @@ com flags agrupadas por assunto (`core` / `nav` / `athlete` / `tournaments`
   desempenho" (abas "Estatística" + "Meus jogos"); no lugar dela entra "Dia de
   jogo".
 
+## legal/ — documentos legais e consentimento
+
+- **Flag**: `legal_center`. **V2**: `V2Legal` (central `/legal`),
+  `V2LegalDocument` (`/legal/:docRoute`).
+- Registro de documentos em `domain/legalDocuments.js` (dado puro, versionado):
+  essenciais (Termos de Uso, Política de Privacidade, Termo de Riscos — aceite
+  **bloqueante** via `LegalConsentGate` no `V2Layout`), complementares (Cookies,
+  Diretrizes da Comunidade, Pagamentos/Reembolsos, Cancelamento) e por papel
+  (Organizador, Arena, Professor — aceite no fluxo que assume o papel via
+  `useRoleConsent`).
+- Consentimento versionado em `legal_consents` (`domain/consent.js` +
+  `services/consentService.js` + `hooks/useConsents.js`). Bump de versão de um
+  documento reabre o portão de aceite.
+- A página legada `/politica-uso` (V2Privacy) segue existindo; com a flag
+  desligada, tudo isso fica oculto e só ela permanece.
+
 ## partners/ — espaço de parceiros (admin)
 
 Área dedicada de parceiros (logos, banners, links). Painel do admin

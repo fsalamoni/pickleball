@@ -31,6 +31,7 @@ import {
   GraduationCap,
   CalendarClock,
   Dices,
+  ScrollText,
   ChevronsLeft,
   ChevronsRight,
   Eye,
@@ -56,6 +57,7 @@ import { cn } from '@/core/lib/utils';
 import { V2Avatar } from '@/v2/ui/primitives';
 import ProfileCompletionModal from '@/components/ProfileCompletionModal';
 import V2OnboardingWizard from '@/v2/components/onboarding/V2OnboardingWizard';
+import LegalConsentGate from '@/v2/components/legal/LegalConsentGate';
 
 const BRAND = 'PickleRush';
 
@@ -83,6 +85,7 @@ const PAGE_TITLES = [
   ['/nivelamento', 'Nivelamento'],
   ['/historia', 'História do esporte'],
   ['/conduta', 'Conduta e fair play'],
+  ['/legal', 'Documentos e consentimento'],
   ['/politica-uso', 'Política de uso'],
   ['/admin', 'Admin'],
 ];
@@ -109,6 +112,7 @@ function useV2Nav() {
   const doublesRankingOn = useFeatureFlag(FEATURE_FLAG.DOUBLES_RANKING);
   const athleteAgendaOn = useFeatureFlag(FEATURE_FLAG.ATHLETE_AGENDA);
   const gameDayOn = useFeatureFlag(FEATURE_FLAG.ATHLETE_GAME_DAY);
+  const legalCenterOn = useFeatureFlag(FEATURE_FLAG.LEGAL_CENTER);
   const settingsPageOn = useFeatureFlag(FEATURE_FLAG.SETTINGS_PAGE);
   const { totalArenas: myArenasCount, totalPendingBookings: myPendingBookings } = useMyArenaSummary();
   const showMyArenas = arenasOn && myArenasCount > 0;
@@ -176,10 +180,11 @@ function useV2Nav() {
         { to: '/nivelamento', label: 'Nivelamento', icon: Award },
         sportHistoryOn && { to: '/historia', label: 'História do esporte', icon: History },
         { to: '/conduta', label: 'Conduta e fair play', icon: HeartHandshake },
+        legalCenterOn && { to: '/legal', label: 'Documentos', icon: ScrollText },
         { to: '/politica-uso', label: 'Política de uso', icon: FileText },
       ].filter(Boolean),
     },
-  ].filter(Boolean), [performanceOn, ratingOn, matchmakingOn, openGamesOn, affiliatesOn, communityFeedOn, arenasOn, circuitsOn, coachesOn, coachLessonsOn, isCoach, sportHistoryOn, isPlatformAdmin, adminConsoleOn, gameDayOn, myArenasCount, myPendingBookings, showMyArenas]);
+  ].filter(Boolean), [performanceOn, ratingOn, matchmakingOn, openGamesOn, affiliatesOn, communityFeedOn, arenasOn, circuitsOn, coachesOn, coachLessonsOn, isCoach, sportHistoryOn, isPlatformAdmin, adminConsoleOn, gameDayOn, legalCenterOn, myArenasCount, myPendingBookings, showMyArenas]);
 
   // Árvore de hubs (flag nav_hubs): destinos centrais (nível 1, barra lateral)
   // com suas subpáginas (nível 2, barra superior). Organizada por tema.
@@ -241,6 +246,7 @@ function useV2Nav() {
           { to: '/nivelamento', label: 'Nivelamento', icon: Award },
           sportHistoryOn && { to: '/historia', label: 'História do esporte', icon: History },
           { to: '/conduta', label: 'Conduta e fair play', icon: HeartHandshake },
+          legalCenterOn && { to: '/legal', label: 'Documentos', icon: ScrollText },
         ],
       }),
       hub({
@@ -248,6 +254,7 @@ function useV2Nav() {
         children: [
           { to: '/perfil', label: 'Meu perfil', icon: User },
           settingsPageOn && { to: '/configuracoes', label: 'Configurações', icon: Settings },
+          legalCenterOn && { to: '/legal', label: 'Documentos', icon: ScrollText },
         ],
       }),
       // Parceiros da plataforma — seção própria e exclusiva, por último na lista.
@@ -260,7 +267,7 @@ function useV2Nav() {
         children: [{ to: '/admin/painel', label: 'Painel admin', icon: LayoutDashboard }],
       }),
     ].filter(Boolean).filter((h) => h.id === 'inicio' || h.children.length > 0);
-  }, [performanceOn, ratingOn, matchmakingOn, openGamesOn, affiliatesOn, communityFeedOn, arenasOn, circuitsOn, coachesOn, coachLessonsOn, isCoach, sportHistoryOn, isPlatformAdmin, adminConsoleOn, doublesRankingOn, athleteAgendaOn, gameDayOn, settingsPageOn, myPendingBookings, showMyArenas]);
+  }, [performanceOn, ratingOn, matchmakingOn, openGamesOn, affiliatesOn, communityFeedOn, arenasOn, circuitsOn, coachesOn, coachLessonsOn, isCoach, sportHistoryOn, isPlatformAdmin, adminConsoleOn, doublesRankingOn, athleteAgendaOn, gameDayOn, legalCenterOn, settingsPageOn, myPendingBookings, showMyArenas]);
 
   return { sections, hubs };
 }
@@ -611,6 +618,8 @@ export default function V2Layout({ children }) {
       {onboardingWizardOn
         ? <V2OnboardingWizard />
         : profileOnboardingOn && <ProfileCompletionModal />}
+      {/* Portão de consentimento aos documentos essenciais (flag legal_center). */}
+      <LegalConsentGate />
       {navHubsOn ? (
         <aside className={cn(
           'z-30 hidden flex-shrink-0 flex-col border-r border-gray-100 bg-paper-pure transition-[width] duration-200 lg:flex',

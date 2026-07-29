@@ -444,6 +444,21 @@ Regras: read pelo dono/membros (ou qualquer um se público); escrita plena do
 dono; um atleta se auto-inclui como membro/participante ao "Participar" de um
 dia de jogo público.
 
+### `legal_consents/{uid_docKey}` (flag `legal_center` — id determinístico)
+Registro do aceite de um documento legal por um usuário. 1 doc por usuário ×
+documento, guardando a última versão aceita (histórico auditável em `audit_logs`).
+- `id = ${uid}_${docKey}`, `user_id`, `doc_key`, `doc_title`
+- `version` (inteiro; aceite válido quando ≥ versão vigente do documento)
+- `accepted_at`, `accepted_at_ms`, `user_agent`
+
+Documentos em `src/modules/legal/domain/legalDocuments.js` (dado puro,
+versionado): essenciais (Termos de Uso, Política de Privacidade, Termo de Riscos
+— aceite bloqueante), complementares (Cookies, Diretrizes da Comunidade,
+Pagamentos/Reembolsos, Cancelamento) e por papel (Organizador, Arena, Professor).
+
+Regras: cada usuário lê/grava apenas o próprio consentimento; platform admin
+pode ler (auditoria) e excluir.
+
 ### `club_events/{id}/dates/{dateId}` (campos Wave C)
 - `publish_to_ranking: bool` (default false) — chave de publicação.
 - `published_at`, `published_by`, `published_count` — auditoria.

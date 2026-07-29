@@ -12,7 +12,7 @@
 
 - **O que é**: PWA para pickleball amador BR — torneios, clubes, arenas, professores, comunidade.
 - **Stack**: React 18 + Vite, Tailwind + shadcn/ui, Firebase (Firestore db `pickleball`), React Query, Vitest, Playwright.
-- **Estado**: 19 módulos, 67 V2 pages, 99 coleções Firestore, **102 índices compostos**, 128 feature flags, **1408 testes verdes** (+ Dia de jogo do atleta).
+- **Estado**: 20 módulos, 69 V2 pages, 100 coleções Firestore, **102 índices compostos**, 129 feature flags, **1422 testes verdes** (+ central de documentos legais).
 - **Live**: https://picklerush.web.app (Firebase site `picklerush`; `pickletour` é redirect-only).
 - **Deploy**: push em `main` → GitHub Actions → Firebase Hosting + Rules + Cloud Function.
 - **Repositório**: https://github.com/fsalamoni/pickleball
@@ -351,14 +351,14 @@ chore(deps): bump firebase to 12.x
 
 | Métrica | Valor | Delta do início do agente |
 |---|---|---|
-| **Testes Vitest** | 1408 passing (+21 dia de jogo) | +1000 (era 408) |
+| **Testes Vitest** | 1422 passing (+14 legal) | +1014 (era 408) |
 | **Lint errors** | 0 | era 30+ |
 | **Módulos** | 19 | +2 (coaches, circuits) |
-| **V2 pages** | 67 | +43 (V2GameDays — Dia de jogo do atleta) |
+| **V2 pages** | 69 | +45 (V2Legal + V2LegalDocument) |
 | **V2 components (src/v2/components/)** | +2 pastas (coach, arenas) | — |
-| **Coleções Firestore** | 99 (+game_days) | +60 |
+| **Coleções Firestore** | 100 (+legal_consents) | +61 |
 | **Índices compostos Firestore** | 4 novos (Wave C.6.1) | +4 |
-| **Feature flags** | 128 (+ATHLETE_GAME_DAY) | +98 |
+| **Feature flags** | 129 (+LEGAL_CENTER) | +99 |
 | **Cloud Functions** | 8 (5 ranking clube + 2 callable admin + 1 schedule mensal) | +8 |
 | **PRs mergeados** | 47 totais (Sprints 0-21) | — |
 | **Origin/main** | `d7a3103` (Wave C.6.1) | — |
