@@ -18,6 +18,7 @@ import { useCreateOpenGame } from '../hooks/useOpenGames.js';
 export default function CreateOpenGameDialog({ open, onOpenChange }) {
   const { user, userProfile } = useAuth();
   const create = useCreateOpenGame();
+  const [date, setDate] = useState('');
   const [whenText, setWhenText] = useState('');
   const [city, setCity] = useState(userProfile?.city || '');
   const [stateUf, setStateUf] = useState(userProfile?.state || '');
@@ -28,7 +29,7 @@ export default function CreateOpenGameDialog({ open, onOpenChange }) {
 
   async function handleSubmit(e) {
     e.preventDefault();
-    const input = { when_text: whenText, city, state: stateUf, level, format, notes };
+    const input = { date, when_text: whenText, city, state: stateUf, level, format, notes };
     const check = normalizeOpenGameInput(input);
     if (!check.valid) {
       setErrors(check.errors);
@@ -41,6 +42,7 @@ export default function CreateOpenGameDialog({ open, onOpenChange }) {
         creator_photo: userProfile?.photo_url || user?.photoURL || null,
       });
       toast.success('Convite publicado no mural.');
+      setDate('');
       setWhenText('');
       setNotes('');
       setErrors({});
@@ -60,12 +62,22 @@ export default function CreateOpenGameDialog({ open, onOpenChange }) {
 
         <form onSubmit={handleSubmit} className="space-y-4">
           <div className="space-y-2">
-            <Label htmlFor="when_text">Quando</Label>
+            <Label htmlFor="date">Data</Label>
+            <Input
+              id="date"
+              type="date"
+              value={date}
+              onChange={(e) => setDate(e.target.value)}
+            />
+          </div>
+
+          <div className="space-y-2">
+            <Label htmlFor="when_text">Horário / descrição (opcional)</Label>
             <Input
               id="when_text"
               value={whenText}
               onChange={(e) => setWhenText(e.target.value)}
-              placeholder="Ex.: Sábado de manhã, ou 12/07 às 19h"
+              placeholder="Ex.: 19h, manhã, tenho quadra reservada"
               maxLength={100}
             />
             {errors.when_text && <p className="text-xs text-red-600">{errors.when_text}</p>}

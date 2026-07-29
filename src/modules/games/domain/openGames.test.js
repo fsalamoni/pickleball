@@ -2,6 +2,7 @@ import { describe, it, expect } from 'vitest';
 import {
   normalizeOpenGameInput,
   filterAndSortOpenGames,
+  partitionOpenGamesByDate,
   OPEN_GAME_FORMAT,
   OPEN_GAME_STATUS,
 } from './openGames.js';
@@ -62,5 +63,45 @@ describe('filterAndSortOpenGames', () => {
 
   it('ignora filtros com valor "all"', () => {
     expect(filterAndSortOpenGames(games, { level: 'all', format: 'all' })).toHaveLength(3);
+  });
+});
+
+describe('normalizeOpenGameInput — data', () => {
+  it('aceita data sem "quando"', () => {
+    const r = normalizeOpenGameInput({ city: 'SP', date: ' 2026-08-01 ' });
+    expect(r.valid).toBe(true);
+    expect(r.value.date).toBe('2026-08-01');
+  });
+  it('exige data OU quando', () => {
+    expect(normalizeOpenGameInput({ city: 'SP' }).valid).toBe(false);
+  });
+});
+
+describe('partitionOpenGamesByDate', () => {
+  const today = '2026-08-10';
+  const g = (id, date, created = 0, status = OPEN_GAME_STATUS.OPEN) => ({ id, date, status, created_at: { seconds: created } });
+
+  it('separa passados (data < hoje) dos próximos e inclui sem-data e hoje nos próximos', () => {
+    const games = [g('a', '2026-08-05'), g('b', '2026-08-15'), g('c', null, 100), g('d', '2026-08-10')];
+    const { upcoming, past } = partitionOpenGamesByDate(games, today);
+    expect(past.map((x) => x.id)).toEqual(['a']);
+    expect(upcoming.map((x) => x.id).sort()).toEqual(['b', 'c', 'd']);
+  });
+
+  it('ordena próximos: datados por data asc, depois sem data', () => {
+    const games = [g('semdata', null, 50), g('longe', '2026-09-01'), g('perto', '2026-08-11')];
+    expect(partitionOpenGamesByDate(games, today).upcoming.map((x) => x.id)).toEqual(['perto', 'longe', 'semdata']);
+  });
+
+  it('ordena passados por data desc (mais recente primeiro)', () => {
+    const games = [g('velho', '2026-07-01'), g('recente', '2026-08-09')];
+    expect(partitionOpenGamesByDate(games, today).past.map((x) => x.id)).toEqual(['recente', 'velho']);
+  });
+
+  it('ignora convites fechados', () => {
+    const games = [g('x', '2026-08-15', 0, OPEN_GAME_STATUS.CLOSED)];
+    const { upcoming, past } = partitionOpenGamesByDate(games, today);
+    expect(upcoming).toHaveLength(0);
+    expect(past).toHaveLength(0);
   });
 });

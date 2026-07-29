@@ -7,17 +7,17 @@
  * Aditivo — desligada a flag, a rota redireciona para o início.
  */
 
-import React, { useState } from 'react';
+import React, { useMemo, useState } from 'react';
 import { Navigate, useNavigate, useParams, Link } from 'react-router-dom';
 import {
-  Plus, CalendarClock, Users, Globe, Lock, ChevronLeft, Trash2, ExternalLink,
+  Plus, CalendarClock, Users, Globe, Lock, ChevronLeft, Trash2, ExternalLink, History,
 } from 'lucide-react';
 import { toast } from 'sonner';
 import { useAuth } from '@/core/lib/FirebaseAuthContext';
 import { useFeatureFlag } from '@/core/lib/FeatureFlagsContext';
 import { FEATURE_FLAG } from '@/core/featureFlags';
 import {
-  V2Badge, V2Button, V2EmptyState, V2PageIntro, V2Skeleton, V2Surface,
+  V2Badge, V2Button, V2CollapsibleSection, V2EmptyState, V2PageIntro, V2Skeleton, V2Surface,
 } from '@/v2/ui/primitives';
 import { ConfirmDialog } from '@/components/ui/confirm-dialog';
 import CreateGameDayDialog from '@/v2/components/games/CreateGameDayDialog';
@@ -39,10 +39,54 @@ export default function V2GameDays() {
 
 /* --------------------------------- Lista -------------------------------- */
 
+function todayISO() {
+  const d = new Date();
+  return `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, '0')}-${String(d.getDate()).padStart(2, '0')}`;
+}
+
+function GameDayCard({ g, onOpen, muted }) {
+  return (
+    <button
+      type="button"
+      onClick={() => onOpen(g.id)}
+      className={`flex h-full flex-col rounded-4xl border border-gray-100 bg-paper-pure p-5 text-left shadow-organic-sm transition-all hover:shadow-organic ${muted ? 'opacity-75' : ''}`}
+    >
+      <div className="flex items-start justify-between gap-2">
+        <h3 className="font-display text-lg font-bold text-ink">{g.title}</h3>
+        {isPublicGameDay(g)
+          ? <V2Badge tone="blue"><Globe className="mr-1 h-3 w-3" /> Público</V2Badge>
+          : <V2Badge tone="neutral"><Lock className="mr-1 h-3 w-3" /> Privado</V2Badge>}
+      </div>
+      {gameDayWhenText(g) && <p className="mt-2 text-sm text-gray-500">{gameDayWhenText(g)}</p>}
+      <div className="mt-auto flex flex-wrap items-center gap-2 pt-4 text-xs text-gray-500">
+        <span className="flex items-center gap-1"><Users className="h-3.5 w-3.5" /> {(g.member_uids || []).length} atleta(s)</span>
+        {g.publish_to_ranking && <V2Badge tone="green">No ranking</V2Badge>}
+      </div>
+    </button>
+  );
+}
+
 function GameDayList() {
   const navigate = useNavigate();
   const { data: gameDays = [], isLoading } = useMyGameDays();
   const [createOpen, setCreateOpen] = useState(false);
+  const today = todayISO();
+  const open = (id) => navigate(`/dia-de-jogo/${id}`);
+
+  // Ordena por data: próximos (sem data ou data ≥ hoje) e passados (data < hoje).
+  const { upcoming, past } = useMemo(() => {
+    const up = [];
+    const pa = [];
+    gameDays.forEach((g) => { if (g.date && g.date < today) pa.push(g); else up.push(g); });
+    up.sort((a, b) => {
+      if (a.date && b.date) return a.date < b.date ? -1 : (a.date > b.date ? 1 : Number(b.created_at_ms || 0) - Number(a.created_at_ms || 0));
+      if (a.date && !b.date) return -1;
+      if (!a.date && b.date) return 1;
+      return Number(b.created_at_ms || 0) - Number(a.created_at_ms || 0);
+    });
+    pa.sort((a, b) => (a.date < b.date ? 1 : (a.date > b.date ? -1 : Number(b.created_at_ms || 0) - Number(a.created_at_ms || 0))));
+    return { upcoming: up, past: pa };
+  }, [gameDays, today]);
 
   return (
     <div className="mx-auto max-w-[1000px]">
@@ -66,27 +110,26 @@ function GameDayList() {
           />
         </V2Surface>
       ) : (
-        <div className="grid gap-4 sm:grid-cols-2">
-          {gameDays.map((g) => (
-            <button
-              key={g.id}
-              type="button"
-              onClick={() => navigate(`/dia-de-jogo/${g.id}`)}
-              className="flex h-full flex-col rounded-4xl border border-gray-100 bg-paper-pure p-5 text-left shadow-organic-sm transition-all hover:shadow-organic"
+        <div className="space-y-8">
+          {upcoming.length > 0 && (
+            <div className="grid gap-4 sm:grid-cols-2">
+              {upcoming.map((g) => <GameDayCard key={g.id} g={g} onOpen={open} />)}
+            </div>
+          )}
+
+          {past.length > 0 && (
+            <V2CollapsibleSection
+              title={`Dias de jogo passados (${past.length})`}
+              eyebrow="Encerrados"
+              collapseId="game-days-past"
+              defaultCollapsed
+              headerAction={<History className="h-5 w-5 text-gray-300" />}
             >
-              <div className="flex items-start justify-between gap-2">
-                <h3 className="font-display text-lg font-bold text-ink">{g.title}</h3>
-                {isPublicGameDay(g)
-                  ? <V2Badge tone="blue"><Globe className="mr-1 h-3 w-3" /> Público</V2Badge>
-                  : <V2Badge tone="neutral"><Lock className="mr-1 h-3 w-3" /> Privado</V2Badge>}
+              <div className="grid gap-4 sm:grid-cols-2">
+                {past.map((g) => <GameDayCard key={g.id} g={g} onOpen={open} muted />)}
               </div>
-              {gameDayWhenText(g) && <p className="mt-2 text-sm text-gray-500">{gameDayWhenText(g)}</p>}
-              <div className="mt-auto flex flex-wrap items-center gap-2 pt-4 text-xs text-gray-500">
-                <span className="flex items-center gap-1"><Users className="h-3.5 w-3.5" /> {(g.member_uids || []).length} atleta(s)</span>
-                {g.publish_to_ranking && <V2Badge tone="green">No ranking</V2Badge>}
-              </div>
-            </button>
-          ))}
+            </V2CollapsibleSection>
+          )}
         </div>
       )}
 
