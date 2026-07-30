@@ -224,8 +224,9 @@ Ids deterministas quando indicado (`arenaId_uid`, `coachId_arenaId`,
 `uid_docKey`, `clubId_userId`, `clubId_pairKey`).
 Detalhe de campos em `docs/05-DATA-MODEL.md`.
 
-- **Identidade**: `users/{uid}` (perfil + role) · `athlete_profiles/{uid}`
-  (perfil público do diretório; `directory_listed: bool` controla visibilidade).
+- **Identidade**: `users/{uid}` (perfil + role + **`dupr_id`** PR #90) ·
+  `athlete_profiles/{uid}` (perfil público do diretório; `directory_listed: bool`
+  controla visibilidade; **`dupr_id`** espelhado PR #90).
 - **Torneios**: `tournaments` · `tournament_modalities` · `tournament_admins`
   (id `tournamentId_uid`) · `tournament_registrations` · `tournament_matches` ·
   `tournament_groups` · `tournament_rankings` (materializado no client) ·

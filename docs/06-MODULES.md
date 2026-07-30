@@ -329,13 +329,20 @@ Professor + texto atualizado.
 
 Perfis públicos pesquisáveis (`athlete_profiles`, `directory_listed`).
 
-- **V2 (ativo)**: `V2Athletes`, `V2AthleteProfile`.
+- **V2 (ativo)**: `V2Athletes`, `V2AthleteProfile`, `V2ProfileEdit`.
 - **V1 (legado)**: `AthletesDirectory`, `AthleteProfile`.
 - **services**: `athleteService` (`syncAthleteProfile`, `listAthletes`,
   `getAthlete`, `removeAthleteProfile`).
 - **domain (puro, testado)**: `publicProfile` (montagem do perfil público).
 - Reusado na busca de atletas para **convidar membros de clube** e como
   audiência do aviso de "torneio aberto".
+- **ID DUPR** (PR #90, Sprint 27): campo `dupr_id` em
+  `users/{uid}` + espelhado em `athlete_profiles/{uid}` via
+  `buildAthletePublicProfile` (trim, null quando vazio).
+  Aparece em: editor de perfil (seção Identidade), cards do
+  diretório (+ busca por DUPR), perfil público (chip no herói),
+  inscrições de torneio (linha "DUPR: X / Y" por dupla), meu
+  perfil (chip). Aditivo/backward-compat, sem índice novo.
 
 ## clubs/ — clubes e comunidade
 
@@ -456,6 +463,11 @@ com flags agrupadas por assunto (`core` / `nav` / `athlete` / `tournaments`
   descrição. Feed ordenado por data (mais próximos primeiro; sem
   data ao final). Convites passados em seção colapsável fechada
   por padrão. Mesmo padrão para "Dia de jogo".
+- **Editar dia de jogo** (PR #89): botão "Editar" no detalhe (só
+  para o criador) reaproveita `CreateGameDayDialog` em modo
+  edição. Atualização de visibilidade sincroniza o convite
+  público em `open_games` (privado→público publica, público→privado
+  remove, público→público atualiza data/descrição).
 - **Dia de jogo em "Meu desempenho"** (Wave #87): `myGames.js`
   agrega todos os jogos de dia de jogo (publicados OU não) do
   atleta, deduplicando por `gd_${gameDayId}_${gameId}`. Alimenta a

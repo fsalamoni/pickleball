@@ -12,7 +12,7 @@
 
 - **O que é**: PWA para pickleball amador BR — torneios, clubes, arenas, professores, comunidade.
 - **Stack**: React 18 + Vite, Tailwind + shadcn/ui, Firebase (Firestore db `pickleball`), React Query, Vitest, Playwright.
-- **Estado**: 20 módulos, 69 V2 pages, 100 coleções Firestore, **102 índices compostos**, 129 feature flags, **1431 testes verdes** (dia de jogo do atleta agora entra em ranking de duplas + Meu desempenho).
+- **Estado**: 21 módulos, 72 V2 pages, 102 coleções Firestore, **102 índices compostos**, 131 feature flags, **1438 testes verdes** (PRs #85-#90: dia de jogo do atleta + LGPD + ID DUPR).
 - **Live**: https://picklerush.web.app (Firebase site `picklerush`; `pickletour` é redirect-only).
 - **Deploy**: push em `main` → GitHub Actions → Firebase Hosting + Rules + Cloud Function.
 - **Repositório**: https://github.com/fsalamoni/pickleball
@@ -324,46 +324,47 @@ chore(deps): bump firebase to 12.x
 
 ---
 
-## 10. Métricas atuais (snapshot 2026-07-30, 00:30 GMT-3)
+## 10. Métricas atuais (snapshot 2026-07-30, 23:50 GMT-3)
 
-> Última atualização: 2026-07-30, 00:30 GMT-3, após 4 PRs novos
-> mergeados em main (#85, #86, #87, #88) — Sprints 22 a 25:
+> Última atualização: 2026-07-30, 23:50 GMT-3, após 2 PRs novos
+> mergeados em main (#89, #90) — Sprints 26 e 27:
 >
-> - **#85 (Sprint 22)**: Dia de jogo do atleta (público/privado) +
->   ranking geral e de clube. Novo módulo `games` (8 arquivos).
->   Flag `athlete_game_day` (default OFF).
-> - **#86 (Sprint 23)**: Central de documentos jurídicos +
->   consentimento versionado. Novo módulo `legal` (8 arquivos).
->   Flag `legal_center` (default OFF). Coleção `legal_consents`
->   (LGPD).
-> - **#87 (Sprint 24)**: Dia de jogo entra no ranking de duplas
->   e em "Meu desempenho". `myGames.js` agrega jogos decididos.
->   9 testes novos.
-> - **#88 (Sprint 25)**: Data nos convites + ordenação por data
->   + passados colapsáveis. `openGames.js` (6 testes novos).
->   Sem índice novo (ordenação em memória).
+> - **#89 (Sprint 26)**: Editar dia de jogo depois de criado. Botão
+>   "Editar" reaproveita `CreateGameDayDialog` em modo edição.
+>   Troca de visibilidade sincroniza o convite público (privado→público
+>   publica convite; público→privado remove; atualiza data/descrição).
+>   Sem teste novo (refactor).
+> - **#90 (Sprint 27)**: ID DUPR no perfil de todo usuário. Campo
+>   `dupr_id` em `users` + espelhado em `athlete_profiles` via
+>   `buildAthletePublicProfile`. Visível em: cards de Atletas
+>   (+ busca por DUPR), página pública do atleta (chip no herói),
+>   inscrições de torneio (linha "DUPR: X / Y" por dupla), meu
+>   perfil (chip). Aditivo/backward-compat, sem índice novo.
+>   1 teste novo (`publicProfile.test.js`).
 >
-> Resumo das últimas 6 sprints:
+> Resumo das últimas 8 sprints:
 > - **Wave C.6 (Sprint 20)**: `sideToUids` resolve `p.id → user_id`
 >   via mapa de participants.
 > - **Wave C.6.1 (Sprint 21)**: índices compostos no Firestore
 >   (4 coleções materializadas).
 > - **#85-#88 (Sprints 22-25)**: 2 novos módulos (`games`, `legal`)
 >   + dia de jogo do atleta + consentimento LGPD.
+> - **#89 (Sprint 26)**: editar dia de jogo.
+> - **#90 (Sprint 27)**: ID DUPR no perfil.
 
 | Métrica | Valor | Delta do início do agente |
 |---|---|---|
-| **Testes Vitest** | 1437 passing (+50 novos) | +1029 (era 408) |
+| **Testes Vitest** | 1438 passing (+1 DUPR) | +1030 (era 408) |
 | **Lint errors** | 0 | era 30+ |
 | **Módulos** | 21 (+games, +legal) | +4 (coaches, circuits, games, legal) |
 | **V2 pages** | 72 (+V2Legal, V2LegalDocument, V2GameDays) | +48 |
 | **V2 components (src/v2/components/)** | +4 pastas (coach, arenas, games, legal, performance) | — |
 | **Coleções Firestore** | 102 (+legal_consents, +game_days) | +63 |
 | **Índices compostos Firestore** | 4 (Wave C.6.1) | +4 |
-| **Feature flags** | 131 (+LEGAL_CENTER, +ATHLETE_GAME_DAY) | +101 |
-| **Cloud Functions** | 8 (5 ranking clube + 2 callable admin + 1 schedule mensal) | +8 |
-| **PRs mergeados** | 51 totais (Sprints 0-25) | — |
-| **Origin/main** | `fe5c191` (PR #88) | — |
+| **Feature flags** | 131 (sem mudança) | +101 |
+| **Cloud Functions** | 8 (sem mudança) | +8 |
+| **PRs mergeados** | 53 totais (Sprints 0-27) | — |
+| **Origin/main** | `e4ace2a` (PR #90) | — |
 | **Bundle deployed** | (deploy em curso) | — |
 | **Live URL** | https://picklerush.web.app | — |
 

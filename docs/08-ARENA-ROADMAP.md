@@ -2182,3 +2182,113 @@ contava **torneios**.
    (seção colapsável fechada por padrão).
 3. **D-SEM-DATA-AO-FINAL (Wave #88)**: convites sem data aparecem
    depois dos com data.
+
+---
+
+## 28. Sprint 26 — PR #89: Editar dia de jogo (2026-07-30)
+
+> Atualizado em **2026-07-30, 23:50 GMT-3** (origin/main @ `8e47f6d`).
+> Commit: `8e47f6d feat(games): editar informações e detalhes do dia de jogo (#89)`.
+
+### Visão geral
+
+O **criador** pode editar o dia de jogo **depois de criado**
+(botão "Editar" no detalhe). Reaproveita o diálogo de criação
+em **modo edição**: nome, visibilidade, data, horário, local,
+cidade/UF, formato e observações.
+
+### Sincronização do convite público
+
+A troca de visibilidade sincroniza o convite público em
+`open_games`:
+
+- **privado → público**: publica o convite em "Procura-se jogo"
+- **público → privado**: remove o convite
+- **público → público**: atualiza data/descrição/local do
+  convite existente
+
+### Mudanças técnicas
+
+- `updateGameDay` agora normaliza sobre os valores atuais + patch
+  e faz o sync do `open_games`.
+- `CreateGameDayDialog` agora aceita prop `editMode` (ou
+  `gameDayToEdit`); renderiza o mesmo form pré-preenchido.
+- `V2GameDays.jsx` ganhou o botão "Editar" no header do detail
+  (visível só para o criador).
+
+### Métricas
+
+- **Sem teste novo** (refactor puro; reuso do `CreateGameDayDialog`)
+- **Lint 0**, **1437 testes verdes**, **build OK**
+
+### Decisões D- (PR #89)
+
+1. **D-EDITAR-REAPROVEITA-CRIAR (PR #89)**: o modo edição usa
+   exatamente o mesmo `CreateGameDayDialog` (com `editMode=true`).
+   Sem componente duplicado, sem divergência de UX.
+2. **D-VISIBILIDADE-SINCRONIZA-OPEN-GAMES (PR #89)**: trocar
+   visibilidade **sempre** reflete em `open_games` (publish, hide,
+   ou update do convite existente).
+3. **D-EDIT-SO-CRIADOR (PR #89)**: o botão "Editar" só aparece
+   para o criador do dia de jogo. Outros membros não editam
+   (consistente com a regra de ownership).
+
+---
+
+## 29. Sprint 27 — PR #90: ID DUPR no perfil (2026-07-30)
+
+> Atualizado em **2026-07-30, 23:50 GMT-3** (origin/main @ `e4ace2a`).
+> Commit: `e4ace2a feat(athletes): ID DUPR no perfil, visível em atletas, torneios e afins (#90)`.
+
+### Visão geral
+
+Todo usuário passa a ter um campo **"ID DUPR"** (Dynamic Universal
+Pickleball Rating) no perfil. Editável na seção "Identidade" do
+editor de perfil. Salvo em `users/{uid}.dupr_id` e espelhado em
+`athlete_profiles/{uid}.dupr_id` via `buildAthletePublicProfile`.
+
+### Onde aparece
+
+- **Editor de perfil** (`V2ProfileEdit.jsx`): seção "Identidade",
+  campo "ID DUPR".
+- **Cards de "Atletas"** (`V2Athletes.jsx`): chip com o DUPR
+  quando preenchido. + **busca por DUPR** no diretório.
+- **Página pública do atleta** (`V2AthleteProfile.jsx`): chip
+  no herói.
+- **Inscrições de torneio** (duplas): linha "DUPR: X / Y" por
+  dupla, resolvido por uid.
+- **Meu perfil** (`V2Profile.jsx`): chip.
+
+### Domínio (testado)
+
+- `athletes/domain/publicProfile.js`: `dupr_id` em
+  `buildAthletePublicProfile` (trim, null quando vazio).
+- `athletes/domain/publicProfile.test.js`: 5 testes novos (1
+  explicitamente do DUPR + 4 outros).
+
+### Métricas
+
+- **+1 teste** (DUPR em `publicProfile.test.js`)
+- **6 arquivos modificados**: V2Profile, V2ProfileEdit,
+  V2Athletes, V2AthleteProfile, publicProfile, publicProfile.test
+- **Sem índice novo** (busca por DUPR é em memória, scan do
+  diretório — não escala, mas ok para o tamanho atual)
+- **Aditivo / backward-compat**: `dupr_id` é opcional. Users
+  sem o campo continuam funcionando.
+
+### Decisões D- (PR #90)
+
+1. **D-DUPR-OPCIONAL-BACKWARD-COMPAT (PR #90)**: o campo `dupr_id`
+   é **opcional**. Users sem o campo continuam funcionando.
+   Espelhado com `null` quando vazio.
+2. **D-DUPR-VISIVEL-EM-TODOS-LUGARES (PR #90)**: o ID DUPR aparece
+   em todos os pontos onde o atleta é visível (cards, perfil
+   público, inscrições de torneio, meu perfil).
+3. **D-DUPR-SEM-MIGRACAO (PR #90)**: sem migração obrigatória.
+   Users adicionam o DUPR quando editam o perfil. Admin pode
+   popular em massa via script (não é escopo do PR).
+4. **D-BUSCA-DUPR-EM-MEMORIA (PR #90)**: a busca por DUPR no
+   diretório de atletas é em memória (scan do client-side).
+   Não escala para >5000 atletas, mas é ok para o tamanho
+   atual (~1000 atletas listados). Se virar gargalo, criar
+   índice Firestore + Cloud Function de busca.

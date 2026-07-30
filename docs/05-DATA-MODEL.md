@@ -23,6 +23,10 @@ Perfil privado/operacional do usuário autenticado.
 - `role`: `'platform_admin' | 'user'`. `can_create_pools: bool`.
 - `leveling_level`, `leveling_method` (`'form' | 'manual'`),
   `leveling_manual_level`, `leveling_assessment` (objeto do questionário).
+- **`dupr_id`** (PR #90, Sprint 27): ID DUPR (Dynamic Universal
+  Pickleball Rating). String trimada, opcional. Espelhado em
+  `athlete_profiles/{uid}.dupr_id` via `buildAthletePublicProfile`.
+  Backward-compat: users sem o campo continuam funcionando.
 - Criado/atualizado pelo `FirebaseAuthContext`.
 
 ### `athlete_profiles/{uid}`
@@ -30,6 +34,9 @@ Perfil **público** do diretório de atletas (espelho controlado de `users`).
 - `directory_listed: bool` — controla visibilidade no diretório (privacidade
   aplicada na escrita; `listAthletes()` filtra `where('directory_listed','==',true)`).
 - Campos públicos: nome de exibição, nível, experiência, cidade etc.
+- **`dupr_id`** (PR #90, Sprint 27): espelho de `users/{uid}.dupr_id`
+  (null quando vazio). Visível no diretório, perfil público,
+  inscrições de torneio e meu perfil.
 - Sincronizado por `athleteService.syncAthleteProfile`.
 
 ## Torneios
