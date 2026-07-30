@@ -85,8 +85,8 @@ const PAGE_TITLES = [
   ['/nivelamento', 'Nivelamento'],
   ['/historia', 'História do esporte'],
   ['/conduta', 'Conduta e fair play'],
-  ['/legal', 'Documentos e consentimento'],
-  ['/politica-uso', 'Política de uso'],
+  ['/legal', 'Termos e Documentos'],
+  ['/politica-uso', 'Termos e Documentos'],
   ['/admin', 'Admin'],
 ];
 
@@ -180,8 +180,7 @@ function useV2Nav() {
         { to: '/nivelamento', label: 'Nivelamento', icon: Award },
         sportHistoryOn && { to: '/historia', label: 'História do esporte', icon: History },
         { to: '/conduta', label: 'Conduta e fair play', icon: HeartHandshake },
-        legalCenterOn && { to: '/legal', label: 'Documentos', icon: ScrollText },
-        { to: '/politica-uso', label: 'Política de uso', icon: FileText },
+        { to: legalCenterOn ? '/legal' : '/politica-uso', label: 'Termos e Documentos', icon: FileText },
       ].filter(Boolean),
     },
   ].filter(Boolean), [performanceOn, ratingOn, matchmakingOn, openGamesOn, affiliatesOn, communityFeedOn, arenasOn, circuitsOn, coachesOn, coachLessonsOn, isCoach, sportHistoryOn, isPlatformAdmin, adminConsoleOn, gameDayOn, legalCenterOn, myArenasCount, myPendingBookings, showMyArenas]);
@@ -205,12 +204,11 @@ function useV2Nav() {
         ],
       }),
       hub({
-        id: 'jogar', label: 'Jogar', icon: Swords, to: openGamesOn ? '/procura-jogo' : '/meu-desempenho',
+        id: 'jogar', label: 'Jogar', icon: Swords, to: openGamesOn ? '/procura-jogo' : (gameDayOn ? '/dia-de-jogo' : '/encontrar-jogadores'),
         children: [
           ratingOn && matchmakingOn && { to: '/encontrar-jogadores', label: 'Encontrar jogadores', icon: Swords },
           openGamesOn && { to: '/procura-jogo', label: 'Procura-se jogo', icon: Megaphone },
           gameDayOn && { to: '/dia-de-jogo', label: 'Dia de jogo', icon: Dices },
-          performanceOn && { to: '/meu-desempenho', label: 'Meu desempenho', icon: BarChart3 },
         ],
       }),
       hub({
@@ -246,15 +244,16 @@ function useV2Nav() {
           { to: '/nivelamento', label: 'Nivelamento', icon: Award },
           sportHistoryOn && { to: '/historia', label: 'História do esporte', icon: History },
           { to: '/conduta', label: 'Conduta e fair play', icon: HeartHandshake },
-          legalCenterOn && { to: '/legal', label: 'Documentos', icon: ScrollText },
+          legalCenterOn && { to: '/legal', label: 'Termos e Documentos', icon: ScrollText },
         ],
       }),
       hub({
         id: 'perfil', label: 'Perfil', icon: User, to: '/perfil',
         children: [
           { to: '/perfil', label: 'Meu perfil', icon: User },
+          performanceOn && { to: '/meu-desempenho', label: 'Meu desempenho', icon: BarChart3 },
           settingsPageOn && { to: '/configuracoes', label: 'Configurações', icon: Settings },
-          legalCenterOn && { to: '/legal', label: 'Documentos', icon: ScrollText },
+          legalCenterOn && { to: '/legal', label: 'Termos e Documentos', icon: ScrollText },
         ],
       }),
       // Parceiros da plataforma — seção própria e exclusiva, por último na lista.
@@ -550,6 +549,10 @@ export default function V2Layout({ children }) {
   const userMenuOn = useFeatureFlag(FEATURE_FLAG.NAV_USER_MENU);
   const bottomNavOn = useFeatureFlag(FEATURE_FLAG.MOBILE_BOTTOM_NAV);
   const navHubsOn = useFeatureFlag(FEATURE_FLAG.NAV_HUBS);
+  const legalCenterOn = useFeatureFlag(FEATURE_FLAG.LEGAL_CENTER);
+  // Local único de "Termos e Documentos" no rodapé da navegação: central legal
+  // completa quando a flag está ligada; página de política como fallback.
+  const legalDocsPath = legalCenterOn ? '/legal' : '/politica-uso';
 
   // Colapso da barra lateral (só ícones), persistido por usuário.
   const [collapsed, setCollapsed] = useState(() => {
@@ -635,19 +638,20 @@ export default function V2Layout({ children }) {
               <HubItem key={hub.id} hub={hub} active={activeHub?.id === hub.id} collapsed={collapsed} />
             ))}
           </nav>
-          {/* Política de uso — separada da navegação, no rodapé da barra. */}
+          {/* Termos e Documentos — separada da navegação, no rodapé da barra.
+              Reúne todos os termos, contratos, documentos e políticas de uso. */}
           <Link
-            to="/politica-uso"
-            title={collapsed ? 'Política de uso' : undefined}
-            aria-label={collapsed ? 'Política de uso' : undefined}
+            to={legalDocsPath}
+            title={collapsed ? 'Termos e Documentos' : undefined}
+            aria-label={collapsed ? 'Termos e Documentos' : undefined}
             className={cn(
               'btn-press group mx-3 mb-2 flex items-center rounded-2xl py-2.5 text-sm font-medium transition-colors',
               collapsed ? 'justify-center px-0' : 'px-3.5',
-              isActive(location.pathname, { to: '/politica-uso' }) ? 'bg-ink text-white' : 'text-gray-500 hover:bg-gray-50 hover:text-ink',
+              isActive(location.pathname, { to: legalDocsPath }) ? 'bg-ink text-white' : 'text-gray-500 hover:bg-gray-50 hover:text-ink',
             )}
           >
-            <FileText className={cn('h-4 w-4 shrink-0', isActive(location.pathname, { to: '/politica-uso' }) ? 'text-acid' : 'text-gray-400 group-hover:text-acid')} />
-            {!collapsed && <span className="ml-3">Política de uso</span>}
+            <FileText className={cn('h-4 w-4 shrink-0', isActive(location.pathname, { to: legalDocsPath }) ? 'text-acid' : 'text-gray-400 group-hover:text-acid')} />
+            {!collapsed && <span className="ml-3">Termos e Documentos</span>}
           </Link>
           <button
             type="button"
@@ -862,11 +866,11 @@ export default function V2Layout({ children }) {
           )}
           <div className="mt-8 space-y-1 border-t border-white/10 pt-6">
             <Link
-              to="/politica-uso"
+              to={legalDocsPath}
               onClick={closeMobile}
               className="flex items-center gap-3 rounded-2xl px-4 py-3 text-lg font-display font-semibold text-white transition-colors hover:text-acid"
             >
-              <FileText className="h-5 w-5" /> Política de uso
+              <FileText className="h-5 w-5" /> Termos e Documentos
             </Link>
             <button onClick={handleLogout} className="flex w-full items-center gap-3 rounded-2xl px-4 py-3 text-lg font-display font-semibold text-red-400 transition-colors hover:bg-white/10">
               <LogOut className="h-5 w-5" /> Sair
