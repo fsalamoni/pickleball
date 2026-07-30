@@ -1,25 +1,33 @@
 import React, { useMemo } from 'react';
 import { Link } from 'react-router-dom';
+import { useQuery } from '@tanstack/react-query';
 import {
   ArrowRight,
   TrendingUp,
   CalendarCheck,
+  CalendarClock,
+  CalendarX,
   Flame,
   Globe,
   Hash,
   MapPin,
-  PenTool,
   Trophy,
 } from 'lucide-react';
 import { useAuth } from '@/core/lib/FirebaseAuthContext';
 import { useMyTournaments, usePublicTournaments } from '@/modules/tournament/hooks/useTournament';
 import { useNationalRanking } from '@/modules/rating/hooks/useRating';
-import MyUpcomingMatches from '@/modules/tournament/components/MyUpcomingMatches';
+import { getMyUpcomingMatches } from '@/modules/tournament/services/upcomingService';
 import {
   TOURNAMENT_STATUS,
   TOURNAMENT_STATUS_LABELS,
 } from '@/modules/tournament/domain/constants';
-import { V2Avatar, V2Skeleton, V2StatCard } from '@/v2/ui/primitives';
+import { PLATFORM_INTEREST_META, sanitizeInterests } from '@/modules/athletes/domain/profileMeta';
+import { interestIcon } from '@/v2/components/profile/profileMetaIcons';
+import { V2Skeleton, V2StatCard } from '@/v2/ui/primitives';
+
+const INTEREST_BY_VALUE = Object.fromEntries(PLATFORM_INTEREST_META.map((m) => [m.value, m]));
+// Ações rápidas padrão (quando o usuário não escolheu interesses).
+const DEFAULT_QUICK_ACTIONS = ['play_tournaments', 'random_partners', 'book_courts', 'ranking'];
 
 const LIVE_STATUSES = new Set([
   TOURNAMENT_STATUS.IN_PROGRESS,
@@ -59,6 +67,11 @@ function locationLabel(t) {
   return t?.city ? `${t.city}${t.state ? ` / ${t.state}` : ''}` : 'Local a definir';
 }
 
+function formatMatchWhen(ms) {
+  if (!ms) return 'Horário a definir';
+  return new Date(ms).toLocaleString('pt-BR', { day: '2-digit', month: 'short', hour: '2-digit', minute: '2-digit' });
+}
+
 export default function V2Dashboard() {
   const { user, userProfile } = useAuth();
   const { data: myTournaments = [], isLoading: loadingMine } = useMyTournaments();
@@ -75,10 +88,41 @@ export default function V2Dashboard() {
     return live[0] || mineNotArchived || publicTournaments[0] || null;
   }, [myTournaments, publicTournaments]);
 
-  const featured = useMemo(
-    () => publicTournaments.find((t) => t.status === TOURNAMENT_STATUS.REGISTRATIONS_OPEN) || publicTournaments[0] || null,
-    [publicTournaments],
-  );
+  // Torneios com inscrição realmente aberta: status aberto E ainda não vencidos
+  // pela data (prazo de inscrição e data de término não podem ter passado).
+  const today = useMemo(() => { const d = new Date(); d.setHours(0, 0, 0, 0); return d; }, []);
+  const openTournaments = useMemo(() => publicTournaments.filter((t) => {
+    if (t.status !== TOURNAMENT_STATUS.REGISTRATIONS_OPEN) return false;
+    const deadline = parseDate(t.registration_deadline);
+    if (deadline && deadline < today) return false;
+    const ends = parseDate(t.ends_at);
+    if (ends && ends < today) return false;
+    return true;
+  }), [publicTournaments, today]);
+  const featured = openTournaments[0] || null;
+
+  // Próximos jogos marcados (agendados) do atleta.
+  const { data: upcomingMatches = [], isLoading: loadingUpcoming } = useQuery({
+    queryKey: ['dashboard-upcoming', user?.uid],
+    queryFn: () => getMyUpcomingMatches(user?.uid, { limit: 4 }),
+    enabled: !!user?.uid,
+    staleTime: 30_000,
+  });
+
+  // Ações rápidas personalizadas pelos interesses do usuário.
+  const quickActions = useMemo(() => {
+    const chosen = sanitizeInterests(userProfile?.interests);
+    const keys = chosen.length > 0 ? chosen : DEFAULT_QUICK_ACTIONS;
+    const seenRoutes = new Set();
+    const out = [];
+    keys.forEach((k) => {
+      const meta = INTEREST_BY_VALUE[k];
+      if (!meta || seenRoutes.has(meta.route)) return;
+      seenRoutes.add(meta.route);
+      out.push(meta);
+    });
+    return out.slice(0, 6);
+  }, [userProfile?.interests]);
 
   const managedCount = useMemo(
     () => myTournaments.filter((t) => t.my_role === 'owner' || t.my_role === 'admin').length,
@@ -172,17 +216,20 @@ export default function V2Dashboard() {
             hint={managedCount > 0 ? `${managedCount} sob sua gestão` : 'Participe ou crie um evento'}
           />
 
-          {/* Action banner */}
+          {/* Torneios com inscrição aberta (com estado vazio explícito) */}
           <div className="group relative col-span-1 flex flex-col items-center justify-between overflow-hidden rounded-4xl bg-gradient-to-r from-blue-600 to-indigo-700 p-8 text-white shadow-organic md:col-span-2 sm:flex-row xl:col-span-2">
             <div className="absolute -bottom-20 -right-20 h-64 w-64 rounded-full border-[40px] border-white/10 transition-transform duration-700 group-hover:scale-110" />
             <div className="relative z-10 mb-6 text-center sm:mb-0 sm:text-left">
-              <h3 className="mb-2 font-display text-2xl font-bold">
-                {featured ? featured.name : 'Explore torneios públicos'}
+              <p className="text-[11px] font-bold uppercase tracking-widest text-blue-200">
+                {featured ? `Inscrições abertas · ${openTournaments.length} torneio(s)` : 'Torneios'}
+              </p>
+              <h3 className="mb-2 mt-1 font-display text-2xl font-bold">
+                {featured ? featured.name : 'Nenhum torneio com inscrição aberta'}
               </h3>
               <p className="max-w-sm text-blue-100 opacity-90">
                 {featured
                   ? `${TOURNAMENT_STATUS_LABELS[featured.status] || ''} • ${locationLabel(featured)}`
-                  : 'Descubra eventos abertos e garanta sua vaga nas próximas etapas.'}
+                  : 'No momento não há torneios com inscrição aberta. Explore os eventos ou crie o seu.'}
               </p>
             </div>
             <Link
@@ -193,16 +240,47 @@ export default function V2Dashboard() {
             </Link>
           </div>
 
-          {/* Quick actions */}
+          {/* Ações rápidas personalizadas pelos interesses */}
           <div className="col-span-1 grid grid-cols-2 gap-4 md:col-span-2 xl:col-span-2">
-            <QuickAction to="/arenas" icon={CalendarCheck} label="Agendar Quadra" />
-            <QuickAction to="/procura-jogo" icon={PenTool} label="Procuro jogo" />
+            {quickActions.map((a) => (
+              <QuickAction key={a.value} to={a.route} icon={interestIcon(a.icon)} label={a.label} />
+            ))}
           </div>
         </div>
       )}
 
-      {/* Meus próximos jogos (flag tournament_ux; some quando não há) */}
-      <div className="mt-10"><MyUpcomingMatches /></div>
+      {/* Próximos jogos marcados (com estado vazio explícito) */}
+      <div className="mt-10">
+        <div className="mb-4 flex items-center gap-2">
+          <CalendarClock className="h-5 w-5 text-ink" />
+          <h2 className="font-display text-xl font-bold text-ink">Próximos jogos</h2>
+        </div>
+        {loadingUpcoming ? (
+          <V2Skeleton className="h-28 rounded-4xl" />
+        ) : upcomingMatches.length === 0 ? (
+          <div className="flex items-center gap-3 rounded-4xl border border-gray-100 bg-paper-pure p-6 text-sm text-gray-500 shadow-organic-sm">
+            <CalendarX className="h-5 w-5 shrink-0 text-gray-400" />
+            Você não tem jogos marcados no momento.
+          </div>
+        ) : (
+          <div className="grid gap-3 sm:grid-cols-2">
+            {upcomingMatches.map((m) => (
+              <Link
+                key={m.matchId}
+                to={`/torneios/${m.tournamentId}`}
+                className="flex items-center justify-between gap-3 rounded-3xl border border-gray-100 bg-paper-pure p-5 shadow-organic-sm transition-all hover:shadow-organic"
+              >
+                <div className="min-w-0">
+                  <div className="flex items-center gap-1.5 text-xs text-gray-500"><Trophy className="h-3.5 w-3.5" /> {m.tournamentName}</div>
+                  <div className="mt-1 font-bold text-ink">vs {m.opponent}</div>
+                  <div className="mt-1 text-xs text-gray-500">{formatMatchWhen(m.scheduledAt)}{m.court ? ` · ${m.court}` : ''}</div>
+                </div>
+                <ArrowRight className="h-5 w-5 shrink-0 text-gray-300" />
+              </Link>
+            ))}
+          </div>
+        )}
+      </div>
 
       {/* Discovery strip */}
       <div className="mt-10 grid grid-cols-1 gap-6 lg:grid-cols-3">

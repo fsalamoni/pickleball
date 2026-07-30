@@ -7,6 +7,7 @@ import { useAuth } from '@/core/lib/FirebaseAuthContext';
 import { useFeatureFlag } from '@/core/lib/FeatureFlagsContext';
 import { FEATURE_FLAG } from '@/core/featureFlags';
 import { birthDateToBrtDate, validateRequiredProfile, isRequiredProfileComplete } from '@/core/lib/profileValidation';
+import { cn } from '@/core/lib/utils';
 import { useFunnel } from '@/modules/analytics/hooks/useFunnel';
 import { FUNNEL_EVENT } from '@/modules/analytics/domain/funnelEvents';
 import { ImageUpload } from '@/components/ui/image-upload';
@@ -19,6 +20,10 @@ import { PICKLEBALL_EXPERIENCE_LABELS, COMPETITION_GENDER_LABELS } from '@/modul
 import V2ParticipationHistoryCard from '@/v2/components/tournament/V2ParticipationHistoryCard';
 import { useCoach, useSyncCoachFromProfile } from '@/modules/coaches/hooks/useCoaches';
 import { useRoleConsent } from '@/v2/components/legal/useRoleConsent';
+import {
+  COURT_SIDE_OPTIONS, PLATFORM_INTEREST_META, sanitizeInterests,
+} from '@/modules/athletes/domain/profileMeta';
+import { interestIcon } from '@/v2/components/profile/profileMetaIcons';
 import {
   V2Button, V2Field, V2Input, V2Select, V2Surface, V2Textarea, V2Toggle,
 } from '@/v2/ui/primitives';
@@ -39,6 +44,9 @@ export default function V2ProfileEdit() {
   const [pickleballExperience, setPickleballExperience] = useState(userProfile?.pickleball_experience || '');
   const [competitionGender, setCompetitionGender] = useState(userProfile?.competition_gender || '');
   const [duprId, setDuprId] = useState(userProfile?.dupr_id || '');
+  const [courtSide, setCourtSide] = useState(userProfile?.court_side || '');
+  const [interests, setInterests] = useState(sanitizeInterests(userProfile?.interests));
+  const [interestsBusy, setInterestsBusy] = useState(false);
   const [manualLevel, setManualLevel] = useState(userProfile?.leveling_level || '');
   const [gender, setGender] = useState(userProfile?.gender || '');
   const [city, setCity] = useState(userProfile?.city || '');
@@ -73,6 +81,8 @@ export default function V2ProfileEdit() {
     setPickleballExperience(userProfile?.pickleball_experience || '');
     setCompetitionGender(userProfile?.competition_gender || '');
     setDuprId(userProfile?.dupr_id || '');
+    setCourtSide(userProfile?.court_side || '');
+    setInterests(sanitizeInterests(userProfile?.interests));
     setManualLevel(userProfile?.leveling_level || '');
     setGender(userProfile?.gender || '');
     setCity(userProfile?.city || '');
@@ -119,6 +129,7 @@ export default function V2ProfileEdit() {
         pickleball_experience: pickleballExperience,
         competition_gender: competitionGender || null,
         dupr_id: duprId.trim() || null,
+        court_side: courtSide || null,
       });
       toast.success('Perfil atualizado.');
       // Marco de funil: só na transição incompleto → completo.
@@ -160,6 +171,23 @@ export default function V2ProfileEdit() {
       toast.error(err.message || 'Erro ao salvar preferências.');
     } finally {
       setCommunityBusy(false);
+    }
+  };
+
+  const toggleInterest = (value) => {
+    setInterests((cur) => (cur.includes(value) ? cur.filter((v) => v !== value) : [...cur, value]));
+  };
+
+  const saveInterests = async () => {
+    if (interests.length === 0) { toast.error('Escolha ao menos um interesse.'); return; }
+    setInterestsBusy(true);
+    try {
+      await updateUserProfile({ interests: sanitizeInterests(interests) });
+      toast.success('Interesses atualizados.');
+    } catch (err) {
+      toast.error(err.message || 'Erro ao salvar interesses.');
+    } finally {
+      setInterestsBusy(false);
     }
   };
 
@@ -301,6 +329,12 @@ export default function V2ProfileEdit() {
             <V2Field label="ID DUPR" hint="Seu identificador no DUPR (Dynamic Universal Pickleball Rating). Fica visível no seu perfil e nos torneios.">
               <V2Input value={duprId} onChange={(e) => setDuprId(e.target.value)} maxLength={20} placeholder="Ex.: ABC123" />
             </V2Field>
+            <V2Field label="Lado da quadra que prefere jogar" hint="Ajuda a encontrar parcerias compatíveis.">
+              <V2Select value={courtSide} onChange={(e) => setCourtSide(e.target.value)}>
+                <option value="">Selecione</option>
+                {COURT_SIDE_OPTIONS.map(({ value, label }) => <option key={value} value={value}>{label}</option>)}
+              </V2Select>
+            </V2Field>
             <div className="flex justify-end">
               <V2Button type="submit" disabled={busy}>{busy ? 'Salvando…' : 'Salvar alterações'}</V2Button>
             </div>
@@ -340,6 +374,40 @@ export default function V2ProfileEdit() {
 
           <div className="mt-5 flex justify-end">
             <V2Button onClick={saveCommunity} disabled={communityBusy}>{communityBusy ? 'Salvando…' : 'Salvar comunidade e privacidade'}</V2Button>
+          </div>
+        </V2Surface>
+
+        {/* Interesses na plataforma */}
+        <V2Surface collapsible collapseId="perfil-interesses" eyebrow="Interesses" title="Meus interesses na plataforma"
+          description="O que você quer fazer por aqui. Usamos isso para destacar o que importa para você no painel.">
+          <div className="mt-5 grid gap-2 sm:grid-cols-2">
+            {PLATFORM_INTEREST_META.map(({ value, label, hint, icon }) => {
+              const Icon = interestIcon(icon);
+              const active = interests.includes(value);
+              return (
+                <button
+                  key={value}
+                  type="button"
+                  onClick={() => toggleInterest(value)}
+                  aria-pressed={active}
+                  className={cn(
+                    'btn-press flex items-start gap-2.5 rounded-2xl border px-4 py-3 text-left text-sm font-semibold transition-colors',
+                    active ? 'border-transparent bg-ink text-white' : 'border-gray-200 bg-paper-pure text-gray-600 hover:border-ink',
+                  )}
+                >
+                  <Icon className={cn('mt-0.5 h-4.5 w-4.5 shrink-0', active ? 'text-acid' : 'text-gray-400')} />
+                  <span>
+                    {label}
+                    {hint && <span className={cn('mt-0.5 block text-xs font-normal', active ? 'text-white/70' : 'text-gray-400')}>{hint}</span>}
+                  </span>
+                </button>
+              );
+            })}
+          </div>
+          <div className="mt-5 flex justify-end">
+            <V2Button onClick={saveInterests} disabled={interestsBusy || interests.length === 0}>
+              {interestsBusy ? 'Salvando…' : 'Salvar interesses'}
+            </V2Button>
           </div>
         </V2Surface>
 

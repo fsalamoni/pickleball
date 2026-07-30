@@ -12,7 +12,7 @@
 
 - **O que é**: PWA para pickleball amador BR — torneios, clubes, arenas, professores, comunidade.
 - **Stack**: React 18 + Vite, Tailwind + shadcn/ui, Firebase (Firestore db `pickleball`), React Query, Vitest, Playwright.
-- **Estado**: 21 módulos, 72 V2 pages, 102 coleções Firestore, **102 índices compostos**, 131 feature flags, **1438 testes verdes** (PRs #85-#90: dia de jogo do atleta + LGPD + ID DUPR).
+- **Estado**: 21 módulos, 72 V2 pages, 102 coleções Firestore, **102 índices compostos**, 131 feature flags, **1447 testes verdes** (perfil: lado da quadra + interesses; cadastro completo obrigatório no onboarding; painel personalizado).
 - **Live**: https://picklerush.web.app (Firebase site `picklerush`; `pickletour` é redirect-only).
 - **Deploy**: push em `main` → GitHub Actions → Firebase Hosting + Rules + Cloud Function.
 - **Repositório**: https://github.com/fsalamoni/pickleball
@@ -354,7 +354,7 @@ chore(deps): bump firebase to 12.x
 
 | Métrica | Valor | Delta do início do agente |
 |---|---|---|
-| **Testes Vitest** | 1438 passing (+1 DUPR) | +1030 (era 408) |
+| **Testes Vitest** | 1447 passing (+16 perfil/cadastro) | +1039 (era 408) |
 | **Lint errors** | 0 | era 30+ |
 | **Módulos** | 21 (+games, +legal) | +4 (coaches, circuits, games, legal) |
 | **V2 pages** | 72 (+V2Legal, V2LegalDocument, V2GameDays) | +48 |
