@@ -31,7 +31,6 @@ import {
   GraduationCap,
   CalendarClock,
   Dices,
-  ScrollText,
   ChevronsLeft,
   ChevronsRight,
   Eye,
@@ -86,7 +85,7 @@ const PAGE_TITLES = [
   ['/historia', 'História do esporte'],
   ['/conduta', 'Conduta e fair play'],
   ['/legal', 'Termos e Documentos'],
-  ['/politica-uso', 'Termos e Documentos'],
+  ['/politica-uso', 'Política de Uso'],
   ['/admin', 'Admin'],
 ];
 
@@ -244,7 +243,6 @@ function useV2Nav() {
           { to: '/nivelamento', label: 'Nivelamento', icon: Award },
           sportHistoryOn && { to: '/historia', label: 'História do esporte', icon: History },
           { to: '/conduta', label: 'Conduta e fair play', icon: HeartHandshake },
-          legalCenterOn && { to: '/legal', label: 'Termos e Documentos', icon: ScrollText },
         ],
       }),
       hub({
@@ -253,7 +251,6 @@ function useV2Nav() {
           { to: '/perfil', label: 'Meu perfil', icon: User },
           performanceOn && { to: '/meu-desempenho', label: 'Meu desempenho', icon: BarChart3 },
           settingsPageOn && { to: '/configuracoes', label: 'Configurações', icon: Settings },
-          legalCenterOn && { to: '/legal', label: 'Termos e Documentos', icon: ScrollText },
         ],
       }),
       // Parceiros da plataforma — seção própria e exclusiva, por último na lista.
