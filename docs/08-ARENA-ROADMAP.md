@@ -1919,3 +1919,266 @@ Comentário no `useClubInternalRanking.js` documenta o requisito do
 4. **D-COMENTARIO-NO-HOOK (Wave C.6.1)**: o comentário no
    `useClubInternalRanking.js` documenta o requisito do índice
    composto. Serve como aviso para quem mexer no futuro.
+
+---
+
+## 24. Sprint 22 — PR #85: Dia de jogo do atleta (público/privado) (2026-07-29)
+
+> Atualizado em **2026-07-30, 00:30 GMT-3** (origin/main @ `6079291`).
+> Commit: `6079291 feat(games): Dia de jogo do atleta (público/privado) + ranking geral e de clube (#85)`.
+
+### Visão geral
+
+Nova funcionalidade **"Dia de jogo" para atletas**, atrás da flag
+`athlete_game_day` (default OFF), com funcionalidade equivalente ao
+dia de jogo dos clubes.
+
+### Mudanças
+
+- **Atleta cria seu dia de jogo público** (publica convite em
+  "Procura-se jogo") ou **privado** (só convidados).
+- Insere/convida qualquer atleta da plataforma.
+- Visível apenas ao criador e aos membros (convidados / que
+  entraram pelo convite).
+- Ao "Participar" em Procura-se jogo, o dia de jogo passa a
+  aparecer na aba "Dia de jogo" do atleta.
+- Organização dos jogos reaproveita o motor dos clubes
+  (Americano / Mexicano / Rei da Quadra) + placar + partidas avulsas.
+- Publicação dos resultados decididos:
+  - **Ranking GERAL** (espelho na mesma coleção `club_event_games`)
+  - **Ranking de um CLUBE** quando todos os atletas de uma partida
+    são do mesmo clube (`club_id` resolvido por partida)
+- Rating nacional e ranking interno dos clubes consomem sem
+  alteração.
+
+### Navegação
+
+- "Meus jogos" passou a ser **sub-aba de "Meu desempenho"**
+  (abas: Estatística + Meus jogos).
+- No lugar dela, em "Jogar", entra "Dia de jogo".
+- `/meus-jogos` redireciona para `/meu-desempenho`.
+
+### Domínio (testado)
+
+- `gameDay.js` (visibilidade/membros) — 7 testes
+- `gameDayRanking.js` (`club_event_games` + clube por partida) — 14 testes
+- Total: **21 testes novos**
+
+### Serviço/hooks
+
+- `game_days` + subcoleções `participants`/`games`
+- Join público
+- `publish`/`unpublish` no ranking
+
+### Firestore rules
+
+- `game_days` + subcoleções
+- `club_event_games` estendida com o que precisar
+
+### Componentes V2
+
+- `src/v2/components/games/AthleteGameDayOrganizer.jsx` (NOVO)
+- `src/v2/components/games/CreateGameDayDialog.jsx` (NOVO)
+- `src/v2/pages/V2GameDays.jsx` (NOVO)
+- `src/v2/pages/V2MyGames.jsx` (modificado)
+- `src/v2/pages/V2OpenGames.jsx` (modificado)
+- `src/v2/pages/V2Performance.jsx` (modificado)
+
+### Métricas
+
+- **+21 testes verdes** (domínio games)
+- **+1 módulo** (`games`)
+- **+1 flag** (`athlete_game_day`)
+- **+1 coleção** (`game_days`)
+- **+1 V2 page** (`V2GameDays`)
+- **+2 V2 components** (`AthleteGameDayOrganizer`, `CreateGameDayDialog`)
+
+---
+
+## 25. Sprint 23 — PR #86: Central de documentos jurídicos (2026-07-29)
+
+> Atualizado em **2026-07-30, 00:30 GMT-3** (origin/main @ `6fd223c`).
+> Commit: `6fd223c feat(legal): central de documentos jurídicos + consentimento versionado (#86)`.
+
+### Visão geral
+
+Novo módulo `legal` atrás da flag `legal_center` (default OFF):
+documentos jurídicos pensados para todas as personas e
+funcionalidades, com registro de aceite versionado e portão de
+consentimento.
+
+### Documentos (registro puro e versionado em `legalDocuments.js`)
+
+**Essenciais** (aceite bloqueante para todos):
+- Termos de Uso
+- Política de Privacidade (LGPD)
+- Termo de Ciência de Riscos e Isenção de Responsabilidade
+
+**Complementares** (informativos):
+- Política de Cookies
+- Diretrizes da Comunidade
+- Política de Pagamentos e Reembolsos
+- Política de Cancelamento
+
+**Por papel** (aceite no fluxo que assume o papel):
+- Termos do Organizador (criar torneio)
+- Termos do Proprietário de Arena (criar arena)
+- Termos do Professor (ativar "Sou professor")
+
+### Consentimento
+
+- Coleção `legal_consents` (id determinístico `uid_docKey`)
+- Lógica pura testada (`domain/consent.js`) — aceite válido quando
+  versão aceita >= vigente. Bump de versão reabre o aceite.
+- **Portão bloqueante** (`LegalConsentGate`) montado no `V2Layout`
+  para os essenciais.
+- Caixa de aceite por papel (`useRoleConsent`) integrada a criar
+  torneio, criar arena e ativar professor.
+
+### UI
+
+- Central `/legal` + página de documento `/legal/:docRoute`
+- Botão "Li e concordo" e estado de aceite
+- Links no nav (Pickleball, Perfil, Aprender)
+- Página legada `/politica-uso` permanece
+
+### Domínio (testado)
+
+- `consent.js` (lógica de aceite versionado) — 9 testes
+- `legalDocuments.js` (registro puro de documentos) — puro (506 linhas)
+
+### Componentes V2
+
+- `src/v2/components/legal/LegalConsentGate.jsx` (NOVO, portão)
+- `src/v2/components/legal/LegalDocumentView.jsx` (NOVO, página de doc)
+- `src/v2/components/legal/legalIcons.js` (NOVO)
+- `src/v2/components/legal/useRoleConsent.jsx` (NOVO)
+- `src/v2/pages/V2Legal.jsx` (NOVO, central)
+- `src/v2/pages/V2LegalDocument.jsx` (NOVO, doc)
+
+### Integrações
+
+- `V2CreateArena.jsx` — caixa de aceite para "Sou arena"
+- `V2CreateTournament.jsx` — caixa de aceite para "Sou organizador"
+- `V2ProfileEdit.jsx` — caixa de aceite para "Sou professor"
+
+### Métricas
+
+- **+9 testes verdes** (consent)
+- **+1 módulo** (`legal`)
+- **+1 flag** (`legal_center`)
+- **+1 coleção** (`legal_consents`)
+- **+2 V2 pages** (`V2Legal`, `V2LegalDocument`)
+- **+4 V2 components** (portão, view, icons, hook)
+
+### Decisões D- (Wave #86)
+
+1. **D-LGPD-CONSENT-VERSIONADO (Wave #86)**: cada documento
+   jurídico tem versão. Bump reabre aceite. Aceite válido quando
+   versão aceita >= vigente.
+2. **D-LGPD-PORTAO-BLOQUEANTE (Wave #86)**: o `LegalConsentGate`
+   bloqueia funcionalidades que requerem aceite essencial.
+   Não-bloqueante para complementares (apenas informativo).
+3. **D-LGPD-DETERMINISTIC-ID (Wave #86)**: `legal_consents/{uid}_{docKey}`.
+   Idempotente. Read público, write só do próprio uid.
+
+---
+
+## 26. Sprint 24 — PR #87: Dia de jogo em duplas + "Meu desempenho" (2026-07-29)
+
+> Atualizado em **2026-07-30, 00:30 GMT-3** (origin/main @ `97e314c`).
+> Commit: `97e314c fix(games): dia de jogo entra no ranking de duplas e em "Meu desempenho" (#87)`.
+
+### Diagnóstico
+
+Ao publicar os resultados de um dia de jogo no ranking, os jogos
+iam para o **ranking individual** mas **NÃO** para o **ranking de
+DUPLAS**. E "Meu desempenho" (estatística + meus jogos) só
+contava **torneios**.
+
+### Fix
+
+- **Ranking de duplas**: `listFinishedEngineMatches` agora também
+  lê `club_event_games` (dias de jogo de clube e de atleta
+  publicados), usando `side_a_ids`/`side_b_ids` (já uids). Assim
+  ranking individual e de duplas passam a refletir a publicação
+  — que é o significado do opt-in.
+- **Meu desempenho**: novo agregado `getMyGameDayGames(uid)`
+  reúne TODOS os jogos de dia de jogo do atleta (decididos) — do
+  **espelho publicado** (`club_event_games` por `array-contains`)
+  e da **fonte** `game_days/.../games` (mesmo sem publicação),
+  deduplicando pelo id `gd_${gameDayId}_${gameId}`.
+  - Alimenta a **Estatística** (fold em `usePlayerStats`)
+  - Alimenta a aba **Meus jogos** (mesclado no histórico do
+    `MyGamesPanel`)
+- **Regra**: o desempenho pessoal mostra **sempre todos os jogos**.
+  A publicação afeta **só** os dois rankings.
+
+### Domínio (testado)
+
+- `myGames.js` (normalização espelho/fonte + fold nas estatísticas)
+  — 9 testes novos
+- Sem índice composto novo (`array-contains` simples)
+
+### Métricas
+
+- **+9 testes verdes** (myGames)
+- **2 arquivos** (ratingService + usePlayerStats) para ranking de duplas
+- **1 arquivo** (usePlayerStats) para fold em Meu desempenho
+
+### Decisões D- (Wave #87)
+
+1. **D-DUPLAS-CONSOME-CLUB-EVENT-GAMES (Wave #87)**: o motor de
+   ranking de duplas (`listFinishedEngineMatches`) lê
+   `club_event_games` para considerar dias de jogo publicados.
+2. **D-MEU-DESEMPENHO-MOSTRA-TUDO (Wave #87)**: o desempenho
+   pessoal **não** respeita o toggle `publish_to_ranking`. Mostra
+   todos os jogos (publicados ou não). Publicação afeta só
+   rankings.
+3. **D-DEDUP-POR-GD-ID (Wave #87)**: `gd_${gameDayId}_${gameId}`
+   é o id estável para deduplicar jogo entre fonte original e
+   espelho publicado.
+
+---
+
+## 27. Sprint 25 — PR #88: Data nos convites + passados colapsáveis (2026-07-29)
+
+> Atualizado em **2026-07-30, 00:30 GMT-3** (origin/main @ `fe5c191`).
+> Commit: `fe5c191 feat(games): data nos convites/dia de jogo + ordenação por data + passados colapsáveis (#88)`.
+
+### Visão geral
+
+"Procura-se jogo" e "Dia de jogo" agora giram em torno da **DATA**.
+
+### Mudanças
+
+- **"Publicar convite"** ganha campo de Data (a descrição livre
+  "quando" vira opcional; exige data OU descrição). O convite de
+  dia de jogo público carrega a data do próprio dia de jogo.
+- **Feed de Procura-se jogo** ordenado por data (mais próximos
+  primeiro; sem data ao final). Convites com data já passada
+  saem para uma seção **"Convites passados"** colapsável (fechada
+  por padrão, abre quando o usuário quiser).
+- **Dia de jogo**: a lista segue o mesmo padrão — próximos
+  ordenados por data e "Dias de jogo passados" em seção colapsável.
+
+### Domínio (testado)
+
+- `partitionOpenGamesByDate` (pure function)
+- `date` em `normalizeOpenGameInput`
+- `openGames.test.js` — 6 testes novos
+
+### Métricas
+
+- **+6 testes verdes** (openGames)
+- **Sem índice composto novo** (ordenação e partição em memória)
+
+### Decisões D- (Wave #88)
+
+1. **D-DATA-OBRIGATORIA-OU-DESCRICAO (Wave #88)**: convite pode ter
+   data **OU** descrição. Não pode ser vazio.
+2. **D-PASSADOS-COLAPSAVEIS (Wave #88)**: feed/dia-de-jogo separa
+   "próximos" (ordenados por data crescente) de "passados"
+   (seção colapsável fechada por padrão).
+3. **D-SEM-DATA-AO-FINAL (Wave #88)**: convites sem data aparecem
+   depois dos com data.

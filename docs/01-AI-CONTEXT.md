@@ -84,24 +84,35 @@ src/
 │   ├── notifications/   # hook do sino + preferências
 │   ├── admin/           # painel da plataforma (métricas, torneios, parceiros)
 │   ├── arenas/          # arenas, reservas, PDV, membros, ligas, marketing
+│   ├── athletes/        # diretório de atletas
+│   ├── chat/            # mensagens
 │   ├── coaches/         # professores (perfil, agenda, alunos, pacotes, clínicas)
-│   ├── games/           # jogos abertos e procura-jogo
+│   ├── clubs/           # clubes e comunidade (game day, ranking interno, feed)
+│   ├── games/           # jogos abertos, procura-jogo, dia de jogo do atleta (PR #85)
+│   ├── legal/           # documentos jurídicos + consentimento versionado (PR #86, LGPD)
+│   ├── leveling/        # nivelamento (CBPE/USAP)
+│   ├── notifications/   # sino + preferências
 │   ├── partners/        # espaço de parceiros (admin)
-│   ├── performance/     # meu desempenho
+│   ├── performance/     # meu desempenho (estatística + meus jogos)
 │   ├── progression/     # progressão do atleta
 │   ├── rating/          # ranking nacional, head-to-head, duplas
 │   ├── sharing/         # compartilhamento, certificados, calendar export
 │   ├── social/          # feed, follows, players, metas
 │   ├── achievements/    # conquistas
 │   ├── circuits/        # circuitos (séries com ranking)
+│   ├── settings/        # configurações do usuário (Onda 9)
 │   └── analytics/       # funil e observabilidade
 └── v2/                  # ⭐ APP ATIVO — "Athleisure Premium"
     ├── V2App.jsx        # Tabela de rotas (ativo em /*, autenticado)
     ├── components/      # V2Layout + componentes por módulo
     │                    #   + FeatureFlagGuard (padrão para flag-gating)
-    ├── pages/           # 66 páginas V2: V2Dashboard, V2Arenas, V2Tournament,
+    │                    #   + /games (AthleteGameDayOrganizer, CreateGameDayDialog)
+    │                    #   + /legal (LegalConsentGate, LegalDocumentView)
+    │                    #   + /performance (MyGamesPanel)
+    ├── pages/           # 72 páginas V2: V2Dashboard, V2Arenas, V2Tournament,
     │                    #   V2Coaches, V2CoachProfile, V2CoachAgenda,
-    │                    #   V2StudentLessons, V2Settings, V2NotFound, V2Search...
+    │                    #   V2StudentLessons, V2Settings, V2NotFound, V2Search,
+    │                    #   V2Legal, V2LegalDocument, V2GameDays, ...
     └── ui/primitives.jsx # V2Button, V2Card, V2Badge, V2Dialog, V2Skeleton, ...
 ```
 
@@ -198,10 +209,19 @@ Firestore. Share com QR Code + WhatsApp + download PNG.
 
 ## 6. Modelo de dados (Firestore, database `pickleball`)
 
-**94 coleções top-level** (39 antes do Arena V3, +55 com as Ondas 1-10 + Wave B + Wave C).
-- **Wave C (2026-07-27)**: +1 coleção `club_event_games/{eventId_dateId_gameId}` (espelhamento de jogos decididos de dias de jogo no ranking nacional).
+**102 coleções top-level** (39 antes do Arena V3, +63 com as Ondas 1-10
++ Wave B + Wave C + PRs #85-#88).
+- **PR #85 (2026-07-29)**: +1 coleção `game_days/{id}` (dia de jogo do
+  atleta, com subcoleções `participants`/`games`).
+- **PR #86 (2026-07-29)**: +1 coleção `legal_consents/{uid_docKey}`
+  (consentimento versionado de documentos jurídicos, LGPD).
+- **Wave C.3 (2026-07-28)**: +4 coleções `club_internal_ratings`/
+  `_ext`/`_doubles`/`_doubles_ext` (ranking interno do clube materializado).
+- **Wave C (2026-07-27)**: +1 coleção `club_event_games/{eventId_dateId_gameId}`
+  (espelhamento de jogos decididos de dias de jogo no ranking nacional).
 - **Wave B (2026-07-27)**: +1 coleção `coach_favorites/{uid_coachId}` (curtir professor).
-Ids deterministas quando indicado (`arenaId_uid`, `coachId_arenaId`).
+Ids deterministas quando indicado (`arenaId_uid`, `coachId_arenaId`,
+`uid_docKey`, `clubId_userId`, `clubId_pairKey`).
 Detalhe de campos em `docs/05-DATA-MODEL.md`.
 
 - **Identidade**: `users/{uid}` (perfil + role) · `athlete_profiles/{uid}`
@@ -230,9 +250,17 @@ Detalhe de campos em `docs/05-DATA-MODEL.md`.
   · `club_member_invites` · `club_posts` (mural) · `club_forum_threads` ·
   `club_events` (com `recurring_rule`) · `club_event_rsvps` · `event_invites` ·
   `dates`/`date_rsvps` (game-day) · `poll_votes` · `comments`.
+- **Games** (PR #85): `game_days/{id}` (com subcoleções
+  `participants`/`games` + `dates/{dateId}`). Visibilidade pública/privada.
+  Publicação no ranking: espelho em `club_event_games` com
+  `source='athlete_game_day'` e `club_id` resolvido por partida.
+- **Legal** (PR #86, LGPD): `legal_consents/{uid_docKey}` (aceite
+  versionado de documentos jurídicos). Documentos em código puro
+  (`domain/legalDocuments.js`).
 - **Chat**: `conversations` · `messages`.
 - **Social**: `follows` · `player_goals` (metas).
-- **Rating**: `player_ratings` · `rating_history`.
+- **Rating**: `player_ratings` · `rating_history` ·
+  `club_internal_ratings` (e `_ext`/`_doubles`/`_doubles_ext` — Wave C.3).
 - **Transversal**: `notifications` (com `preferences` por categoria) ·
   `audit_logs` · `platform_settings`.
 

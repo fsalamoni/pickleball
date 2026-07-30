@@ -245,6 +245,77 @@ Quando OFF, renderiza a lista plana antiga (legado).
 
 OFF por default. Aditivo — pode ser ativado em runtime pelo admin.
 
+### 3.7 Central de documentos jurídicos (`LEGAL_CENTER`)
+
+> **REGRA**: novos documentos jurídicos **DEVEM** ter versão
+> (`version: 'N.M'`). Bump de versão reabre o aceite do usuário.
+
+Quando a flag `LEGAL_CENTER` está ON, o usuário vê:
+- `/legal` — central com lista de documentos
+- `/legal/:docRoute` — página de documento com botão "Li e concordo"
+- `LegalConsentGate` no `V2Layout` bloqueia acesso até aceite dos
+  essenciais
+
+**Estrutura de documentos** (em `domain/legalDocuments.js`):
+- **Essenciais** (aceite bloqueante): Termos de Uso, Política de
+  Privacidade (LGPD), Termo de Riscos.
+- **Complementares** (informativos): Cookies, Diretrizes, Pagamentos,
+  Cancelamento.
+- **Por papel** (aceite no fluxo): Organizador, Arena, Professor.
+
+**Coleção `legal_consents`** (id determinístico `{uid}_{docKey}`):
+```js
+{
+  id: `${uid}_${docKey}`,
+  uid,
+  doc_key,
+  version: '1.0',
+  accepted_at: serverTimestamp,
+  ip_hash: '...',  // opcional, LGPD
+}
+```
+
+**Regras Firestore**:
+- Read público (transparência)
+- Write só do próprio `uid`
+- Service account (admin SDK) escreve via Cloud Functions
+
+**Bump de versão**: se o `version` aceitado < `version` vigente, o
+`LegalConsentGate` reabre o aceite. Não destrói o aceite antigo
+(histórico).
+
+### 3.8 Dia de jogo do atleta (`ATHLETE_GAME_DAY`)
+
+> **REGRA**: dia de jogo do atleta **respeita visibilidade**:
+> público (aparece em "Procura-se jogo") OU privado (só convidados).
+> Publicação no ranking é opt-in por dia (`publish_to_ranking` no
+> `game_days/{id}/dates/{dateId}`).
+
+Quando a flag está ON, o atleta pode:
+- Criar dia de jogo próprio (público ou privado)
+- Convidar/inserir qualquer atleta da plataforma
+- Reaproveitar o motor `gameDayDraw`/`gameDayFormats` (Americano /
+  Mexicano / Rei da Quadra)
+- Publicar resultados decididos no ranking geral (espelho em
+  `club_event_games`)
+- Publicar em ranking de clube quando todos os atletas da partida
+  são do mesmo clube (`club_id` resolvido por partida)
+
+**Estrutura de dados** (mesma do dia de jogo de clube):
+```
+game_days/{id}
+  ├─ club_id: null  (ou club_id se for dia de clube)
+  ├─ visibility: 'public' | 'private'
+  ├─ participants/{uid}
+  └─ games/{gameId}  (mesmo schema dos clubes)
+```
+
+**Regras Firestore**:
+- Read: criador + membros do dia de jogo (se privado) OU público
+  (se público)
+- Write: criador do dia de jogo
+- Publicação: idem + opt-in por `date_id`
+
 ## 4. Páginas V2 (Athleisure Premium)
 
 ### 4.1 Estrutura padrão de uma página V2

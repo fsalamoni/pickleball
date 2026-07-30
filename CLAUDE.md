@@ -324,45 +324,47 @@ chore(deps): bump firebase to 12.x
 
 ---
 
-## 10. Métricas atuais (snapshot 2026-07-29, 05:25 GMT-3)
+## 10. Métricas atuais (snapshot 2026-07-30, 00:30 GMT-3)
 
-> Última atualização: 2026-07-29, 05:25 GMT-3, após Wave C.6.1
-> (Sprint 21): **BUG #2 do materializado corrigido** — faltavam
-> **índices compostos** no Firestore para as queries
-> `where('club_id', '==', x) + orderBy('wins', 'desc')` nas 4
-> coleções materializadas (`club_internal_ratings`,
-> `club_internal_ratings_ext`, `club_internal_doubles_ratings`,
-> `club_internal_doubles_ratings_ext`).
+> Última atualização: 2026-07-30, 00:30 GMT-3, após 4 PRs novos
+> mergeados em main (#85, #86, #87, #88) — Sprints 22 a 25:
 >
-> Sem o índice, o Firestore lançava `FAILED_PRECONDITION` (código 9),
-> React Query tratava como erro, e o front mostrava "0 atletas do
-> clube, sem ranking" mesmo com o materializado populado no servidor.
-> Esse bug existia **desde a Wave C.3** (que introduziu o materializado
-> sem criar os índices). Corrigido em `firestore.indexes.json` com
-> 4 índices compostos (ASC club_id + DESC wins).
+> - **#85 (Sprint 22)**: Dia de jogo do atleta (público/privado) +
+>   ranking geral e de clube. Novo módulo `games` (8 arquivos).
+>   Flag `athlete_game_day` (default OFF).
+> - **#86 (Sprint 23)**: Central de documentos jurídicos +
+>   consentimento versionado. Novo módulo `legal` (8 arquivos).
+>   Flag `legal_center` (default OFF). Coleção `legal_consents`
+>   (LGPD).
+> - **#87 (Sprint 24)**: Dia de jogo entra no ranking de duplas
+>   e em "Meu desempenho". `myGames.js` agrega jogos decididos.
+>   9 testes novos.
+> - **#88 (Sprint 25)**: Data nos convites + ordenação por data
+>   + passados colapsáveis. `openGames.js` (6 testes novos).
+>   Sem índice novo (ordenação em memória).
 >
-> Resumo das correções recentes:
-> - **Wave C.6 (Sprint 20)**: `sideToUids` agora resolve `p.id →
->   user_id` via mapa de participants (corrige bug latente do
->   GameDayOrganizer que salvava doc_id em vez de user_id).
+> Resumo das últimas 6 sprints:
+> - **Wave C.6 (Sprint 20)**: `sideToUids` resolve `p.id → user_id`
+>   via mapa de participants.
 > - **Wave C.6.1 (Sprint 21)**: índices compostos no Firestore
->   (corrige erro de leitura que mascarava o materializado já
->   populado).
+>   (4 coleções materializadas).
+> - **#85-#88 (Sprints 22-25)**: 2 novos módulos (`games`, `legal`)
+>   + dia de jogo do atleta + consentimento LGPD.
 
 | Métrica | Valor | Delta do início do agente |
 |---|---|---|
-| **Testes Vitest** | 1431 passing (+9 myGames) | +1023 (era 408) |
+| **Testes Vitest** | 1437 passing (+50 novos) | +1029 (era 408) |
 | **Lint errors** | 0 | era 30+ |
-| **Módulos** | 19 | +2 (coaches, circuits) |
-| **V2 pages** | 69 | +45 (V2Legal + V2LegalDocument) |
-| **V2 components (src/v2/components/)** | +2 pastas (coach, arenas) | — |
-| **Coleções Firestore** | 100 (+legal_consents) | +61 |
-| **Índices compostos Firestore** | 4 novos (Wave C.6.1) | +4 |
-| **Feature flags** | 129 (+LEGAL_CENTER) | +99 |
+| **Módulos** | 21 (+games, +legal) | +4 (coaches, circuits, games, legal) |
+| **V2 pages** | 72 (+V2Legal, V2LegalDocument, V2GameDays) | +48 |
+| **V2 components (src/v2/components/)** | +4 pastas (coach, arenas, games, legal, performance) | — |
+| **Coleções Firestore** | 102 (+legal_consents, +game_days) | +63 |
+| **Índices compostos Firestore** | 4 (Wave C.6.1) | +4 |
+| **Feature flags** | 131 (+LEGAL_CENTER, +ATHLETE_GAME_DAY) | +101 |
 | **Cloud Functions** | 8 (5 ranking clube + 2 callable admin + 1 schedule mensal) | +8 |
-| **PRs mergeados** | 47 totais (Sprints 0-21) | — |
-| **Origin/main** | `d7a3103` (Wave C.6.1) | — |
-| **Bundle deployed** | `index-CAJhIhEv.js` (Wave C.6.1) | — |
+| **PRs mergeados** | 51 totais (Sprints 0-25) | — |
+| **Origin/main** | `fe5c191` (PR #88) | — |
+| **Bundle deployed** | (deploy em curso) | — |
 | **Live URL** | https://picklerush.web.app | — |
 
 Quando você for commitar, atualize esta seção se os números mudarem.

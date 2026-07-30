@@ -452,6 +452,19 @@ com flags agrupadas por assunto (`core` / `nav` / `athlete` / `tournaments`
   decididos no ranking geral (espelho em `club_event_games`) — e no ranking de um
   clube quando todos os atletas de uma partida são do mesmo clube (`club_id`
   resolvido por partida). Visível apenas ao criador e aos membros.
+- **Data nos convites** (Wave #88): "Publicar convite" exige data OU
+  descrição. Feed ordenado por data (mais próximos primeiro; sem
+  data ao final). Convites passados em seção colapsável fechada
+  por padrão. Mesmo padrão para "Dia de jogo".
+- **Dia de jogo em "Meu desempenho"** (Wave #87): `myGames.js`
+  agrega todos os jogos de dia de jogo (publicados OU não) do
+  atleta, deduplicando por `gd_${gameDayId}_${gameId}`. Alimenta a
+  Estatística (fold em `usePlayerStats`) e a aba Meus jogos
+  (`MyGamesPanel`).
+- **Ranking de duplas consome dia de jogo** (Wave #87):
+  `listFinishedEngineMatches` lê `club_event_games` (dias de jogo
+  publicados) usando `side_a_ids`/`side_b_ids`. Ranking de duplas
+  agora reflete publicação de dia de jogo.
 - **Navegação**: em "Jogar" a aba "Meus jogos" passou a ser sub-aba de "Meu
   desempenho" (abas "Estatística" + "Meus jogos"); no lugar dela entra "Dia de
   jogo".
