@@ -104,12 +104,42 @@ export async function listMyGameDays(uid) {
 /** Atualiza campos do dia de jogo (somente o criador — reforçado nas rules). */
 export async function updateGameDay(id, patch, actor) {
   if (!id) return;
-  const { value } = normalizeGameDayInput({ ...patch });
-  // Mantém apenas os campos editáveis presentes no patch.
+  const current = await getGameDay(id);
+  if (!current) throw new Error('Dia de jogo não encontrado.');
+
+  // Normaliza sobre os valores atuais + patch, mantendo só os campos presentes.
+  const { value } = normalizeGameDayInput({ ...current, ...patch });
   const editable = {};
   ['title', 'visibility', 'date', 'time', 'location', 'city', 'state', 'notes', 'format']
     .forEach((k) => { if (k in patch) editable[k] = value[k]; });
   await updateDoc(doc(db, COL, id), { ...editable, updated_at: serverTimestamp() });
+
+  // Sincroniza o convite público (open_games) conforme a visibilidade resultante.
+  const merged = { ...current, ...editable, id };
+  const creatorName = current.creator_name || displayName(actor);
+  const creatorPhoto = current.creator_photo || actor?.photoURL || null;
+  if (isPublicGameDay(merged)) {
+    if (current.open_game_id) {
+      // Atualiza o convite existente (data/descrição/local).
+      await updateDoc(doc(db, COL_OPEN, current.open_game_id), {
+        date: merged.date || null,
+        when_text: [merged.title, merged.date, merged.time].filter(Boolean).join(' · ') || merged.title || 'Dia de jogo',
+        city: merged.city || '',
+        state: merged.state || '',
+        notes: merged.notes || '',
+        updated_at: serverTimestamp(),
+      }).catch(() => {});
+    } else {
+      // Passou a público: cria o convite.
+      const openGameId = await publishGameDayInvite(merged, actor, creatorName, creatorPhoto);
+      await updateDoc(doc(db, COL, id), { open_game_id: openGameId, updated_at: serverTimestamp() });
+    }
+  } else if (current.open_game_id) {
+    // Passou a privado: remove o convite público.
+    await deleteDoc(doc(db, COL_OPEN, current.open_game_id)).catch(() => {});
+    await updateDoc(doc(db, COL, id), { open_game_id: null, updated_at: serverTimestamp() });
+  }
+
   await createAuditLog({ action: 'game_day_updated', actor, details: { game_day_id: id } });
 }
 
