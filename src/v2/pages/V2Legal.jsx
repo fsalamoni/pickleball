@@ -42,8 +42,8 @@ export default function V2Legal() {
     <div className="mx-auto max-w-[900px]">
       <V2ContentHero
         eyebrow="Transparência"
-        title="Documentos e consentimento"
-        description="Todos os termos e políticas da plataforma, com o registro do seu aceite. Leia com atenção — ao usar a PickleRush você concorda com os documentos essenciais."
+        title="Termos, Documentos e Políticas"
+        description="Todos os termos, contratos, documentos e políticas de uso da plataforma, com o registro do seu aceite. Leia com atenção — ao usar a PickleRush você concorda com os documentos essenciais."
         meta={user && pendingEssentials > 0
           ? `Você tem ${pendingEssentials} documento(s) essencial(is) pendente(s) de aceite.`
           : undefined}
