@@ -38,6 +38,7 @@ export default function V2ProfileEdit() {
   const [phone, setPhone] = useState(userProfile?.phone || '');
   const [pickleballExperience, setPickleballExperience] = useState(userProfile?.pickleball_experience || '');
   const [competitionGender, setCompetitionGender] = useState(userProfile?.competition_gender || '');
+  const [duprId, setDuprId] = useState(userProfile?.dupr_id || '');
   const [manualLevel, setManualLevel] = useState(userProfile?.leveling_level || '');
   const [gender, setGender] = useState(userProfile?.gender || '');
   const [city, setCity] = useState(userProfile?.city || '');
@@ -71,6 +72,7 @@ export default function V2ProfileEdit() {
     setPhone(userProfile?.phone || '');
     setPickleballExperience(userProfile?.pickleball_experience || '');
     setCompetitionGender(userProfile?.competition_gender || '');
+    setDuprId(userProfile?.dupr_id || '');
     setManualLevel(userProfile?.leveling_level || '');
     setGender(userProfile?.gender || '');
     setCity(userProfile?.city || '');
@@ -116,6 +118,7 @@ export default function V2ProfileEdit() {
         phone: phone.trim(),
         pickleball_experience: pickleballExperience,
         competition_gender: competitionGender || null,
+        dupr_id: duprId.trim() || null,
       });
       toast.success('Perfil atualizado.');
       // Marco de funil: só na transição incompleto → completo.
@@ -294,6 +297,9 @@ export default function V2ProfileEdit() {
                 <option value="">Não informar (decido na inscrição)</option>
                 {Object.entries(COMPETITION_GENDER_LABELS).map(([value, label]) => <option key={value} value={value}>{label}</option>)}
               </V2Select>
+            </V2Field>
+            <V2Field label="ID DUPR" hint="Seu identificador no DUPR (Dynamic Universal Pickleball Rating). Fica visível no seu perfil e nos torneios.">
+              <V2Input value={duprId} onChange={(e) => setDuprId(e.target.value)} maxLength={20} placeholder="Ex.: ABC123" />
             </V2Field>
             <div className="flex justify-end">
               <V2Button type="submit" disabled={busy}>{busy ? 'Salvando…' : 'Salvar alterações'}</V2Button>

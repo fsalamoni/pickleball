@@ -84,4 +84,9 @@ describe('buildAthletePublicProfile — regressão de campos vazios', () => {
     expect(out.email).toBe('fulano@example.com');
     expect(out.address).toBe('Rua X');
   });
+
+  it('projeta o ID DUPR (trim) e null quando ausente', () => {
+    expect(buildAthletePublicProfile('uid-1', { platform_name: 'Fulano', dupr_id: '  ABC123 ' }).dupr_id).toBe('ABC123');
+    expect(buildAthletePublicProfile('uid-1', { platform_name: 'Fulano' }).dupr_id).toBeNull();
+  });
 });
