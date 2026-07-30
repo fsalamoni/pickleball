@@ -1,4 +1,4 @@
-import React, { useEffect, useMemo, useState } from 'react';
+import React, { useEffect, useState } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { Timestamp } from 'firebase/firestore';
 import { toast } from 'sonner';
@@ -16,6 +16,7 @@ import {
 } from '@/core/lib/profileValidation';
 import { PICKLEBALL_EXPERIENCE_LABELS } from '@/modules/tournament/domain/constants';
 import { ATHLETE_GENDER_LABELS } from '@/modules/athletes/domain/constants';
+import { LEVEL_OPTIONS, getLevelByCode } from '@/modules/leveling/data/levels';
 import {
   COURT_SIDE_OPTIONS, PLATFORM_INTEREST_META, sanitizeInterests,
 } from '@/modules/athletes/domain/profileMeta';
@@ -51,6 +52,8 @@ export default function V2OnboardingWizard() {
     pickleballExperience: '', courtSide: '',
   });
   const [interests, setInterests] = useState([]);
+  const [levelMode, setLevelMode] = useState(null); // null | 'choose'
+  const [levelCode, setLevelCode] = useState('');
 
   // Trava latcheada por usuário: decidimos UMA vez (ao carregar o perfil) se o
   // cadastro está incompleto. Assim salvar um passo não fecha o assistente no
@@ -69,14 +72,11 @@ export default function V2OnboardingWizard() {
       courtSide: userProfile?.court_side || '',
     });
     setInterests(sanitizeInterests(userProfile?.interests));
+    setLevelCode(userProfile?.leveling_level || '');
+    setLevelMode(null);
     setErrors({});
     setOpenLatch(Boolean(userProfile && !isRegistrationComplete(userProfile)));
   }, [userProfile?.uid]); // eslint-disable-line react-hooks/exhaustive-deps
-
-  const hasLeveling = useMemo(
-    () => Boolean(userProfile?.leveling_level || userProfile?.leveling?.result?.level),
-    [userProfile],
-  );
 
   if (!openLatch) return null;
 
@@ -143,6 +143,29 @@ export default function V2OnboardingWizard() {
     try {
       await updateUserProfile({ interests: sanitizeInterests(interests) });
       setStep(3);
+    } catch (err) {
+      toast.error(err?.message || 'Não foi possível salvar. Tente novamente.');
+    } finally {
+      setBusy(false);
+    }
+  }
+
+  const selectedLevelInfo = getLevelByCode(levelCode);
+
+  async function saveLevelAndFinish() {
+    if (!levelCode) { toast.error('Escolha um nível.'); return; }
+    const level = getLevelByCode(levelCode);
+    setBusy(true);
+    try {
+      await updateUserProfile({
+        level: level ? `${level.name} (USAP ${level.usap})` : levelCode,
+        leveling_level: levelCode,
+        leveling_method: 'manual',
+        leveling_manual_level: levelCode,
+        onboarding_completed_at: Timestamp.now(),
+      });
+      setOpenLatch(false);
+      toast.success('Nível salvo. Bom jogo!');
     } catch (err) {
       toast.error(err?.message || 'Não foi possível salvar. Tente novamente.');
     } finally {
@@ -314,19 +337,73 @@ export default function V2OnboardingWizard() {
                 <Award className="h-5 w-5" />
               </div>
               <p className="text-sm leading-6 text-gray-600">
-                {hasLeveling
-                  ? 'Você já tem um nível registrado. Se quiser, refaça o questionário a qualquer momento.'
-                  : 'Responda o questionário de nivelamento para receber sugestões de torneios e parceiros compatíveis com o seu jogo.'}
+                Saber seu nível ajuda a encontrar torneios, jogos e parceiros compatíveis. Faça o
+                teste de nivelamento (mais preciso) ou escolha seu nível na lista.
               </p>
             </div>
-            <div className="flex flex-wrap items-center justify-between gap-2 pt-1">
-              <button type="button" onClick={() => finish()} disabled={busy} className="text-sm font-semibold text-gray-400 hover:text-ink">
-                Concluir sem nivelamento
-              </button>
-              <V2Button onClick={() => finish({ goToLeveling: true })} disabled={busy}>
-                {busy ? 'Concluindo…' : 'Fazer nivelamento agora'}
-              </V2Button>
-            </div>
+
+            {levelMode === 'choose' ? (
+              <div className="space-y-3">
+                <V2Select value={levelCode} onChange={(e) => setLevelCode(e.target.value)} aria-label="Escolha seu nível">
+                  <option value="">Selecione seu nível…</option>
+                  {LEVEL_OPTIONS.map(({ code, label }) => (
+                    <option key={code} value={code}>{label}</option>
+                  ))}
+                </V2Select>
+
+                {selectedLevelInfo ? (
+                  <div className="rounded-2xl border border-gray-100 bg-paper-pure p-4">
+                    <div className="flex items-center gap-2">
+                      <span className="rounded-full bg-ink px-2.5 py-1 text-xs font-bold text-acid">USAP {selectedLevelInfo.usap}</span>
+                      <span className="font-display text-base font-bold text-ink">{selectedLevelInfo.name}</span>
+                    </div>
+                    {selectedLevelInfo.tagline && <p className="mt-2 text-sm font-semibold text-gray-600">{selectedLevelInfo.tagline}</p>}
+                    <p className="mt-1 text-sm leading-6 text-gray-500">{selectedLevelInfo.description}</p>
+                  </div>
+                ) : (
+                  <p className="text-xs text-gray-400">
+                    Escolha um nível para ver a explicação do que ele significa.
+                  </p>
+                )}
+
+                <div className="flex flex-wrap items-center justify-between gap-2 pt-1">
+                  <button type="button" onClick={() => setLevelMode(null)} className="inline-flex items-center gap-1 text-sm font-semibold text-gray-400 hover:text-ink">
+                    <ChevronLeft className="h-4 w-4" /> Voltar
+                  </button>
+                  <V2Button onClick={saveLevelAndFinish} disabled={busy || !levelCode}>
+                    {busy ? 'Salvando…' : 'Salvar nível e concluir'}
+                  </V2Button>
+                </div>
+              </div>
+            ) : (
+              <>
+                <div className="grid gap-2 sm:grid-cols-2">
+                  <button
+                    type="button"
+                    onClick={() => finish({ goToLeveling: true })}
+                    disabled={busy}
+                    className="btn-press rounded-2xl border border-transparent bg-ink px-4 py-4 text-left text-white transition-transform hover:scale-[1.01]"
+                  >
+                    <span className="block font-display text-base font-bold">Fazer o teste de nivelamento</span>
+                    <span className="mt-1 block text-xs text-gray-300">Cerca de 3 minutos · resultado mais preciso</span>
+                  </button>
+                  <button
+                    type="button"
+                    onClick={() => setLevelMode('choose')}
+                    disabled={busy}
+                    className="btn-press rounded-2xl border border-gray-200 bg-paper-pure px-4 py-4 text-left text-ink transition-colors hover:border-ink"
+                  >
+                    <span className="block font-display text-base font-bold">Escolher meu nível na lista</span>
+                    <span className="mt-1 block text-xs text-gray-500">Com explicação de cada nível</span>
+                  </button>
+                </div>
+                <div className="flex justify-center pt-1">
+                  <button type="button" onClick={() => finish()} disabled={busy} className="text-sm font-semibold text-gray-400 hover:text-ink">
+                    {busy ? 'Concluindo…' : 'Concluir sem informar nível'}
+                  </button>
+                </div>
+              </>
+            )}
           </div>
         )}
       </DialogContent>
