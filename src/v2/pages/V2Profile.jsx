@@ -1,6 +1,6 @@
 import React, { useMemo } from 'react';
 import { Link } from 'react-router-dom';
-import { Award, MapPin, Medal, Pencil, User } from 'lucide-react';
+import { Award, Hash, MapPin, Medal, Pencil, User } from 'lucide-react';
 import { useAuth } from '@/core/lib/FirebaseAuthContext';
 import { useNationalRanking } from '@/modules/rating/hooks/useRating';
 import { genderLabel } from '@/modules/athletes/domain/constants';
@@ -31,6 +31,7 @@ export default function V2Profile() {
     me ? { icon: Medal, label: `Rating ${me.rating}`, tone: 'acid' } : (userProfile?.level ? { icon: Award, label: userProfile.level } : null),
     genderLabel(userProfile?.gender) ? { icon: User, label: genderLabel(userProfile.gender) } : null,
     location ? { icon: MapPin, label: location } : null,
+    userProfile?.dupr_id ? { icon: Hash, label: `DUPR ${userProfile.dupr_id}` } : null,
   ].filter(Boolean);
 
   return (

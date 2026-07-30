@@ -45,6 +45,7 @@ import {
   isRegistrationCapacityReached,
 } from '@/modules/tournament/domain/capacity';
 import { useAuth } from '@/core/lib/FirebaseAuthContext';
+import { useAthletes } from '@/modules/athletes/hooks/useAthletes';
 import ModalityRegistrationDialog from '@/modules/tournament/components/ModalityRegistrationDialog';
 import PixPaymentDialog from '@/modules/tournament/components/PixPaymentDialog';
 import { tournamentHasPixConfig } from '@/modules/tournament/domain/payment';
@@ -119,6 +120,12 @@ export default function TournamentRegistrationsTab({ tournament, isAdmin }) {
 }
 
 function ModalityRegistrationsBlock({ tournament, modality, registrations, isAdmin, currentUserId, onJoin }) {
+  const { data: allAthletes = [] } = useAthletes();
+  const duprByUid = React.useMemo(() => {
+    const m = new Map();
+    allAthletes.forEach((a) => { if (a.dupr_id) m.set(a.id, a.dupr_id); });
+    return m;
+  }, [allAthletes]);
   const confirmMutation = useConfirmRegistrationPayment(modality.id);
   const promoteMutation = usePromoteFromWaitlist(modality.id);
   const cancelMutation = useCancelRegistration(modality.id);
@@ -213,6 +220,12 @@ function ModalityRegistrationsBlock({ tournament, modality, registrations, isAdm
                             {[r.player_a_email, r.player_b_email].filter(Boolean).join(' / ')}
                             {r.is_provisional ? ` · ${REGISTRATION_PROVISIONAL_LABEL.toLowerCase()}` : ''}
                           </div>
+                          {(() => {
+                            const duprs = [duprByUid.get(r.player_a_user_id), duprByUid.get(r.player_b_user_id)].filter(Boolean);
+                            return duprs.length > 0 ? (
+                              <div className="text-xs text-gray-500">DUPR: {duprs.join(' / ')}</div>
+                            ) : null;
+                          })()}
                         </div>
                       </div>
                     </td>

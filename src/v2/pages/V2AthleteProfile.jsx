@@ -1,6 +1,6 @@
 import React from 'react';
 import { Link, Navigate, useParams } from 'react-router-dom';
-import { ArrowLeft, Award, Building2, ChevronRight, GraduationCap, Medal, Percent, ShieldCheck, Swords, Trophy } from 'lucide-react';
+import { ArrowLeft, Award, Building2, ChevronRight, GraduationCap, Hash, Medal, Percent, ShieldCheck, Swords, Trophy } from 'lucide-react';
 import { useFeatureFlag } from '@/core/lib/FeatureFlagsContext';
 import { FEATURE_FLAG } from '@/core/featureFlags';
 import { useAthleteProfile } from '@/modules/athletes/hooks/useAthleteProfile';
@@ -118,6 +118,11 @@ export default function V2AthleteProfile() {
               {athlete.level && (
                 <div className="flex items-center gap-2 rounded-2xl border border-gray-100 bg-paper px-4 py-2 text-sm font-semibold text-gray-600">
                   <Award className="h-4 w-4" /> {athlete.level}
+                </div>
+              )}
+              {athlete.dupr_id && (
+                <div className="flex items-center gap-2 rounded-2xl border border-gray-100 bg-paper px-4 py-2 text-sm font-semibold text-gray-600">
+                  <Hash className="h-4 w-4" /> DUPR {athlete.dupr_id}
                 </div>
               )}
               {validatedLevel?.level_id && (

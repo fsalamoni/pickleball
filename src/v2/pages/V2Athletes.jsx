@@ -1,6 +1,6 @@
 import React, { useMemo } from 'react';
 import { Link, useSearchParams } from 'react-router-dom';
-import { Award, Building2, GraduationCap, MapPin, Search, Users } from 'lucide-react';
+import { Award, Building2, GraduationCap, Hash, MapPin, Search, Users } from 'lucide-react';
 import { useAthletes } from '@/modules/athletes/hooks/useAthletes';
 import { genderLabel } from '@/modules/athletes/domain/constants';
 import { useFeatureFlag } from '@/core/lib/FeatureFlagsContext';
@@ -38,7 +38,7 @@ export default function V2Athletes() {
     return athletes
       .filter((a) => {
         if (!term) return true;
-        return [a.platform_name, a.city, a.state, a.level, ...clubNames(a)]
+        return [a.platform_name, a.city, a.state, a.level, a.dupr_id, ...clubNames(a)]
           .filter(Boolean)
           .join(' ')
           .toLowerCase()
@@ -123,6 +123,11 @@ function AthleteCard({ athlete, profilePageOn, coachOn }) {
         {athlete.level && (
           <div className="flex items-center gap-2">
             <Award className="h-4 w-4 shrink-0 text-gray-400" /> <span className="truncate">{athlete.level}</span>
+          </div>
+        )}
+        {athlete.dupr_id && (
+          <div className="flex items-center gap-2">
+            <Hash className="h-4 w-4 shrink-0 text-gray-400" /> <span className="truncate">DUPR: <span className="font-semibold text-ink">{athlete.dupr_id}</span></span>
           </div>
         )}
       </div>
