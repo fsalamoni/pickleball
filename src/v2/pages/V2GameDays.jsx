@@ -10,7 +10,7 @@
 import React, { useMemo, useState } from 'react';
 import { Navigate, useNavigate, useParams, Link } from 'react-router-dom';
 import {
-  Plus, CalendarClock, Users, Globe, Lock, ChevronLeft, Trash2, ExternalLink, History,
+  Plus, CalendarClock, Users, Globe, Lock, ChevronLeft, Trash2, ExternalLink, History, Pencil,
 } from 'lucide-react';
 import { toast } from 'sonner';
 import { useAuth } from '@/core/lib/FirebaseAuthContext';
@@ -146,6 +146,7 @@ function GameDayDetail({ gameDayId }) {
   const { data: gameDay, isLoading } = useGameDay(gameDayId);
   const del = useDeleteGameDay();
   const [confirmDelete, setConfirmDelete] = useState(false);
+  const [editOpen, setEditOpen] = useState(false);
 
   if (isLoading) {
     return <div className="mx-auto max-w-[900px]"><V2Skeleton className="h-64 rounded-4xl" /></div>;
@@ -196,9 +197,14 @@ function GameDayDetail({ gameDayId }) {
             {gameDay.notes && <p className="mt-2 text-sm text-gray-600">{gameDay.notes}</p>}
           </div>
           {isOwner && (
-            <V2Button variant="ghost" size="sm" className="text-red-500 hover:text-red-600" onClick={() => setConfirmDelete(true)}>
-              <Trash2 className="mr-1.5 h-4 w-4" /> Arquivar
-            </V2Button>
+            <div className="flex shrink-0 flex-wrap gap-2">
+              <V2Button variant="ghost" size="sm" onClick={() => setEditOpen(true)}>
+                <Pencil className="mr-1.5 h-4 w-4" /> Editar
+              </V2Button>
+              <V2Button variant="ghost" size="sm" className="text-red-500 hover:text-red-600" onClick={() => setConfirmDelete(true)}>
+                <Trash2 className="mr-1.5 h-4 w-4" /> Arquivar
+              </V2Button>
+            </div>
           )}
         </div>
         {isPublicGameDay(gameDay) && isOwner && (
@@ -209,6 +215,10 @@ function GameDayDetail({ gameDayId }) {
       </V2Surface>
 
       <AthleteGameDayOrganizer gameDay={gameDay} />
+
+      {isOwner && (
+        <CreateGameDayDialog open={editOpen} onOpenChange={setEditOpen} gameDay={gameDay} />
+      )}
 
       <ConfirmDialog
         open={confirmDelete}
