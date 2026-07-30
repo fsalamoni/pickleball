@@ -31,7 +31,6 @@ import {
   GraduationCap,
   CalendarClock,
   Dices,
-  ScrollText,
   ChevronsLeft,
   ChevronsRight,
   Eye,
@@ -58,6 +57,8 @@ import { V2Avatar } from '@/v2/ui/primitives';
 import ProfileCompletionModal from '@/components/ProfileCompletionModal';
 import V2OnboardingWizard from '@/v2/components/onboarding/V2OnboardingWizard';
 import LegalConsentGate from '@/v2/components/legal/LegalConsentGate';
+import { useMyConsents } from '@/modules/legal/hooks/useConsents';
+import { pendingGateConsents } from '@/modules/legal/domain/consent';
 
 const BRAND = 'PickleRush';
 
@@ -86,7 +87,7 @@ const PAGE_TITLES = [
   ['/historia', 'História do esporte'],
   ['/conduta', 'Conduta e fair play'],
   ['/legal', 'Termos e Documentos'],
-  ['/politica-uso', 'Termos e Documentos'],
+  ['/politica-uso', 'Política de Uso'],
   ['/admin', 'Admin'],
 ];
 
@@ -244,7 +245,6 @@ function useV2Nav() {
           { to: '/nivelamento', label: 'Nivelamento', icon: Award },
           sportHistoryOn && { to: '/historia', label: 'História do esporte', icon: History },
           { to: '/conduta', label: 'Conduta e fair play', icon: HeartHandshake },
-          legalCenterOn && { to: '/legal', label: 'Termos e Documentos', icon: ScrollText },
         ],
       }),
       hub({
@@ -253,7 +253,6 @@ function useV2Nav() {
           { to: '/perfil', label: 'Meu perfil', icon: User },
           performanceOn && { to: '/meu-desempenho', label: 'Meu desempenho', icon: BarChart3 },
           settingsPageOn && { to: '/configuracoes', label: 'Configurações', icon: Settings },
-          legalCenterOn && { to: '/legal', label: 'Termos e Documentos', icon: ScrollText },
         ],
       }),
       // Parceiros da plataforma — seção própria e exclusiva, por último na lista.
@@ -535,7 +534,7 @@ function SubnavBar({ hub, pathname, onNavigate }) {
 }
 
 export default function V2Layout({ children }) {
-  const { userProfile, signOut, isRealPlatformAdmin, viewAsUser, toggleViewAsUser } = useAuth();
+  const { user, userProfile, signOut, isRealPlatformAdmin, viewAsUser, toggleViewAsUser } = useAuth();
   // Mantém o ranking atualizado automaticamente para o admin da plataforma.
   useAutoRecomputeRatings();
   const location = useLocation();
@@ -553,6 +552,17 @@ export default function V2Layout({ children }) {
   // Local único de "Termos e Documentos" no rodapé da navegação: central legal
   // completa quando a flag está ligada; página de política como fallback.
   const legalDocsPath = legalCenterOn ? '/legal' : '/politica-uso';
+
+  // Portão de consentimento essencial e onboarding NUNCA podem ficar abertos ao
+  // mesmo tempo: o Dialog (Radix) do onboarding desativa cliques fora dele
+  // (pointer-events no body), o que travaria o overlay de consentimento — o
+  // usuário via ambos e não conseguia clicar/preencher nada no primeiro acesso.
+  // Regra: mostra o consentimento PRIMEIRO; o onboarding só entra quando os
+  // consentimentos essenciais estão carregados e sem pendências.
+  const { consentMap, isLoading: consentsLoading, isFetched: consentsFetched } = useMyConsents();
+  const consentGateBlocking = legalCenterOn && !!user && (
+    consentsLoading || !consentsFetched || pendingGateConsents(consentMap).length > 0
+  );
 
   // Colapso da barra lateral (só ícones), persistido por usuário.
   const [collapsed, setCollapsed] = useState(() => {
@@ -618,11 +628,13 @@ export default function V2Layout({ children }) {
       {/* Onboarding: o assistente em passos (flag onboarding_wizard) tem
           precedência sobre o modal simples de completude (profile_onboarding);
           ambos podem ser adiados pela sessão. */}
-      {onboardingWizardOn
-        ? <V2OnboardingWizard />
-        : profileOnboardingOn && <ProfileCompletionModal />}
-      {/* Portão de consentimento aos documentos essenciais (flag legal_center). */}
+      {/* Portão de consentimento aos documentos essenciais (flag legal_center).
+          Tem precedência sobre o onboarding para evitar dois modais
+          bloqueantes simultâneos. */}
       <LegalConsentGate />
+      {!consentGateBlocking && (onboardingWizardOn
+        ? <V2OnboardingWizard />
+        : profileOnboardingOn && <ProfileCompletionModal />)}
       {navHubsOn ? (
         <aside className={cn(
           'z-30 hidden flex-shrink-0 flex-col border-r border-gray-100 bg-paper-pure transition-[width] duration-200 lg:flex',

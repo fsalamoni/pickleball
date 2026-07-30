@@ -231,6 +231,62 @@ export const LEGAL_DOCUMENTS = [
 
   /* --------------------------- Complementares --------------------------- */
   {
+    key: 'politica-de-uso',
+    route: 'politica-de-uso',
+    title: 'Política de Uso',
+    eyebrow: 'Complementar',
+    description: 'Condições gerais de uso da plataforma: natureza esportiva da ferramenta, conduta esperada e uso aceitável.',
+    version: 1,
+    effectiveDate: '2026-07-30',
+    category: LEGAL_CATEGORY.COMPLEMENTARY,
+    audience: LEGAL_ROLE.ALL,
+    gate: false,
+    icon: 'FileText',
+    sections: [
+      {
+        icon: 'FileText',
+        title: 'Natureza da plataforma',
+        description: 'Ferramenta esportiva para a comunidade amadora de pickleball.',
+        paragraphs: [
+          'A PickleRush é uma ferramenta tecnológica para a comunidade amadora de pickleball no Brasil: criação e gestão de torneios, reservas de quadra, aulas, clubes, ranking, comunidade e mensagens. Organizadores criam torneios, definem regras, abrem inscrições, sorteiam chaves, lançam resultados e calculam rankings.',
+          'A plataforma não organiza eventos, não fornece quadras, não administra premiações nem intermedia pagamentos. Os valores exibidos (por exemplo, uma taxa de inscrição) servem apenas como referência; a cobrança e o controle financeiro são responsabilidade de quem os cadastra.',
+        ],
+      },
+      {
+        icon: 'ShieldCheck',
+        title: 'Conduta e responsabilidade',
+        description: 'Cada usuário responde pelos próprios atos.',
+        paragraphs: [
+          'O uso deve respeitar a legislação aplicável, as regras do esporte (CBP/USAP) e os princípios de fair play. Fraude no lançamento de resultados, identidade falsa ou ofensa a outros usuários podem levar à suspensão da conta e do torneio.',
+        ],
+      },
+      {
+        icon: 'UserCheck',
+        title: 'Uso aceitável',
+        bullets: [
+          'Fornecer dados verdadeiros e manter a conta segura.',
+          'Não manipular ranking, inscrições, nivelamento ou resultados.',
+          'Não publicar conteúdo ilegal, ofensivo, discriminatório ou spam.',
+          'Não tentar burlar a segurança, fazer engenharia reversa ou coleta automatizada (scraping).',
+        ],
+      },
+      {
+        icon: 'Eye',
+        title: 'Privacidade e dados',
+        paragraphs: [
+          'O tratamento de dados pessoais segue a Política de Privacidade, disponível nesta central. Nomes, inscrições, resultados e ranking são visíveis a outros participantes do mesmo contexto; dados de contato (telefone, e-mail) não são exibidos publicamente.',
+        ],
+      },
+      {
+        icon: 'RefreshCw',
+        title: 'Alterações',
+        paragraphs: [
+          'Esta política pode ser atualizada para refletir mudanças de funcionalidade, requisitos legais ou de segurança. A versão vigente será sempre a publicada nesta central.',
+        ],
+      },
+    ],
+  },
+  {
     key: 'cookies',
     route: 'cookies',
     title: 'Política de Cookies',
