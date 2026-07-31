@@ -27,6 +27,16 @@ Perfil privado/operacional do usuário autenticado.
   Pickleball Rating). String trimada, opcional. Espelhado em
   `athlete_profiles/{uid}.dupr_id` via `buildAthletePublicProfile`.
   Backward-compat: users sem o campo continuam funcionando.
+- **`quadrant`** (PR #91, Sprint 28): lado da quadra.
+  Valores: `'any' | 'left' | 'right'`. Default `'any'`. Espelhado
+  em `athlete_profiles/{uid}.quadrant` (ajuda parcerias).
+- **`interests`** (PR #91, Sprint 28): array de strings
+  multi-seleção de funcionalidades (ver
+  `athletes/domain/profileMeta.js`). Default `[]`. Drive do
+  painel personalizado.
+- **`profile_completeness`** (PR #91, Sprint 28): **calculado em
+  tempo real** (não armazenado). Score 0-1 com base em
+  campos-chave + `interests.length >= 1` + `quadrant !== 'any'`.
 - Criado/atualizado pelo `FirebaseAuthContext`.
 
 ### `athlete_profiles/{uid}`
@@ -37,7 +47,20 @@ Perfil **público** do diretório de atletas (espelho controlado de `users`).
 - **`dupr_id`** (PR #90, Sprint 27): espelho de `users/{uid}.dupr_id`
   (null quando vazio). Visível no diretório, perfil público,
   inscrições de torneio e meu perfil.
+- **`quadrant`** (PR #91, Sprint 28): espelho de `users/{uid}.quadrant`.
+- **`interests`** (PR #91, Sprint 28): espelho de `users/{uid}.interests`
+  (array).
 - Sincronizado por `athleteService.syncAthleteProfile`.
+
+### `legal_consents/{uid}_{docKey}` (PR #86 + #94)
+Registro auditável de aceites legais (LGPD).
+- `uid`: usuário que aceitou.
+- `docKey`: `'privacy_policy' | 'terms_of_use' | 'community_guidelines' | ...`
+- `accepted_at`: timestamp do aceite.
+- `version`: versão do documento aceito.
+- **PR #94 (Sprint 31)**: cada aceite no onboarding vira doc
+  nesta coleção. Versão de Política de Privacidade é bumpada
+  e reabre aceite.
 
 ## Torneios
 

@@ -343,6 +343,20 @@ Perfis públicos pesquisáveis (`athlete_profiles`, `directory_listed`).
   diretório (+ busca por DUPR), perfil público (chip no herói),
   inscrições de torneio (linha "DUPR: X / Y" por dupla), meu
   perfil (chip). Aditivo/backward-compat, sem índice novo.
+- **Lado da quadra + Interesses** (PR #91, Sprint 28):
+  - **Lado da quadra**: campo `quadrant` (qualquer/esquerda/
+    direita) em `users` + espelhado em `athlete_profiles`.
+    Aparece no perfil público (ajuda parcerias).
+  - **Interesses na plataforma**: array `interests` em `users`
+    (multi-seleção de funcionalidades — ver
+    `athletes/domain/profileMeta.js`). Drive do painel
+    personalizado.
+  - **Cadastro completo obrigatório**: `profile_completeness`
+    calculado em tempo real (não armazenado). Valida campos-chave
+    +1+1 (interesses + lado da quadra).
+  - **Painel personalizado**: a home do usuário mostra conteúdo
+    baseado em `interests[]` + papel.
+  - **+1 componente** `profileMetaIcons.js` (ícones por interesse).
 
 ## clubs/ — clubes e comunidade
 
@@ -588,6 +602,41 @@ Página `/configuracoes` (V2Settings) com:
 
 - `services/dataExportService` (gera arquivo em `user_data_exports/`)
 - `domain/dataExport` (formato do export)
+
+---
+
+## core/lib/ — biblioteca compartilhada (perfil + onboarding)
+
+Lógica de perfil e onboarding que não cabe em um módulo (usada
+por `athletes/`, `auth/`, `coaches/`, `arenas/`, etc.).
+
+- **`profileValidation.js` + `profileValidation.test.js`** —
+  validação de `profile_completeness` (campos-chave do perfil).
+- **`onboarding/`** (PRs #92 e #94, Sprints 29 e 31):
+  - **3 caminhos para o nível** no passo final: teste /
+    lista explicativa / pular.
+  - **Onboarding não bloqueia** (PR #94): o wizard pode ser
+    interrompido e retomado.
+  - **Aceite persistido em `legal_consents`** (PR #94 + #86):
+    cada aceite no onboarding vira doc auditável
+    (`legal_consents/{uid}_privacy_policy`).
+- **`profileMeta.js`** + **`profileMetaIcons.js`** (PR #91,
+  Sprint 28): registro de lados da quadra + interesses, com
+  ícones correspondentes. Drive da home personalizada.
+- **`core/lib/utils.js`**: helpers de nível (reusa `LEVEL_TABLE`).
+- **Regra de ouro**: o onboarding é **opcional e destravado**.
+  Nada bloqueia o usuário de usar o app.
+
+---
+
+## nav/ — navegação (V2)
+
+- **PR #93 (Sprint 30)**: "Termos e Documentos" unificado na
+  seção legal do Perfil (não é mais hub standalone).
+- **PR #93 (Sprint 30)**: "Meu desempenho" virou aba dentro de
+  Perfil (não é mais rota standalone).
+- **Regra D-NAV-SEM-DUPLICIDADE**: não há 2 caminhos para a
+  mesma coisa. Cada coisa fica em UM lugar.
 
 ---
 
