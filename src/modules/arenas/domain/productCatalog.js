@@ -80,7 +80,17 @@ export const CATALOG_PACKAGINGS = Object.freeze([
 export const CATALOG_UNITS = Object.freeze(['un', 'kg', 'g', 'L', 'ml', 'pct', 'cx', 'fatia', 'porção']);
 
 export const CATALOG_PRODUCT_SOURCE = Object.freeze({ PLATFORM: 'platform', ARENA: 'arena' });
-export const CATALOG_PRODUCT_STATUS = Object.freeze({ ACTIVE: 'active', PENDING: 'pending', MERGED: 'merged' });
+export const CATALOG_PRODUCT_STATUS = Object.freeze({
+  ACTIVE: 'active', PENDING: 'pending', MERGED: 'merged', REMOVED: 'removed',
+});
+
+/** Hash estável (djb2 → base36) para gerar ids sintéticos determinísticos. */
+export function stringHash(str) {
+  let h = 5381;
+  const s = String(str || '');
+  for (let i = 0; i < s.length; i += 1) { h = ((h << 5) + h) + s.charCodeAt(i); h |= 0; }
+  return (h >>> 0).toString(36);
+}
 
 export const CATALOG_NAME_MAX = 100;
 export const CATALOG_BRAND_MAX = 60;

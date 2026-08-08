@@ -6,7 +6,8 @@ import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
 import { useAuth } from '@/core/lib/FirebaseAuthContext';
 import {
   listCatalogProducts, proposeCatalogProduct, adoptCatalogToArena, adoptManyCatalogToArena,
-  updateCatalogProduct, deleteCatalogProduct, seedCatalog, checkCatalogDuplicates,
+  createCatalogProductAdmin, updateCatalogProductSmart, deleteCatalogProductSmart,
+  seedCatalog, checkCatalogDuplicates,
 } from '../services/catalogService.js';
 
 const CATALOG_KEY = ['catalog-products'];
@@ -57,22 +58,32 @@ export function useAdoptManyCatalogProducts(arenaId) {
   });
 }
 
-/** Moderação (platform_admin): atualizar produto do catálogo. */
-export function useUpdateCatalogProduct() {
+/** Admin (platform_admin): criar produto novo no catálogo. */
+export function useCreateCatalogProduct() {
   const { user } = useAuth();
   const qc = useQueryClient();
   return useMutation({
-    mutationFn: ({ productId, updates }) => updateCatalogProduct(productId, updates, user),
+    mutationFn: (input) => createCatalogProductAdmin(input, user),
     onSuccess: () => qc.invalidateQueries({ queryKey: CATALOG_KEY }),
   });
 }
 
-/** Moderação (platform_admin): remover produto do catálogo. */
+/** Admin (platform_admin): editar produto do catálogo (semente ou Firestore). */
+export function useUpdateCatalogProduct() {
+  const { user } = useAuth();
+  const qc = useQueryClient();
+  return useMutation({
+    mutationFn: ({ product, updates }) => updateCatalogProductSmart(product, updates, user),
+    onSuccess: () => qc.invalidateQueries({ queryKey: CATALOG_KEY }),
+  });
+}
+
+/** Admin (platform_admin): excluir produto do catálogo (semente ou Firestore). */
 export function useDeleteCatalogProduct() {
   const { user } = useAuth();
   const qc = useQueryClient();
   return useMutation({
-    mutationFn: (productId) => deleteCatalogProduct(productId, user),
+    mutationFn: (product) => deleteCatalogProductSmart(product, user),
     onSuccess: () => qc.invalidateQueries({ queryKey: CATALOG_KEY }),
   });
 }
