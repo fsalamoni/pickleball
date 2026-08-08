@@ -51,6 +51,7 @@ import {
   Trophy,
   Users,
   Building2,
+  ShoppingBasket,
   Check,
   X,
 } from 'lucide-react';
@@ -91,6 +92,7 @@ import {
   setTournamentArchived,
 } from '@/modules/admin/services/adminService';
 import { listArenas } from '@/modules/arenas/services/arenaService';
+import AdminCatalogTab from '@/v2/components/admin/AdminCatalogTab';
 import {
   useAffiliateLinks,
   useCreateAffiliateLink,
@@ -129,6 +131,7 @@ const SECTIONS = Object.freeze([
   ] },
   { id: 'arenasSection', label: 'Arenas', icon: Building2, tabs: [
     { id: 'arenas', label: 'Arenas', icon: Building2 },
+    { id: 'catalog', label: 'Catálogo', icon: ShoppingBasket },
   ] },
   { id: 'features', label: 'Funcionalidades', icon: Flag, tabs: [
     { id: 'flags', label: 'Flags por assunto', icon: Flag },
@@ -206,6 +209,7 @@ export default function V2AdminConsole() {
         {tab === 'tournaments' && <TournamentsTab />}
         {tab === 'partners'   && <PartnersTab />}
         {tab === 'arenas'     && <ArenasTab />}
+        {tab === 'catalog'    && <AdminCatalogTab />}
         {tab === 'profiles'   && <ProfilesTab embedded />}
         {tab === 'flags'      && <FlagsTab />}
         {tab === 'branding'   && <BrandingTab />}

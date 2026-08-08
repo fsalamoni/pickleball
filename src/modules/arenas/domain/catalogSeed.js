@@ -10,7 +10,10 @@
  * `dedup_key` (não recria o que já existe).
  */
 
-import { CATALOG_CATEGORIES, buildDedupKey } from './productCatalog.js';
+import {
+  CATALOG_CATEGORIES, buildDedupKey, normalizeCatalogProduct, stringHash,
+  CATALOG_PRODUCT_SOURCE, CATALOG_PRODUCT_STATUS,
+} from './productCatalog.js';
 
 const { BEBIDA, COMIDA, ACESSORIOS, BOLA, RAQUETE, VESTUARIO, EQUIPAMENTO } = CATALOG_CATEGORIES;
 
@@ -214,4 +217,29 @@ export function buildCatalogSeed() {
 /** Quantidade estimada de itens da semente (para exibir na UI de admin). */
 export function catalogSeedCount() {
   return buildCatalogSeed().length;
+}
+
+let _seedProductsCache = null;
+
+/**
+ * Produtos-semente já NORMALIZADOS e com id sintético estável (`seed_<hash>`
+ * derivado da `dedup_key`). É o que torna o catálogo padrão SEMPRE disponível
+ * nos mercados das arenas — sem depender de "popular" nada no Firestore. O
+ * serviço mescla esta lista com as contribuições/edições guardadas no Firestore.
+ * @returns {object[]}
+ */
+export function buildSeedCatalogProducts() {
+  if (_seedProductsCache) return _seedProductsCache;
+  const out = [];
+  for (const raw of buildCatalogSeed()) {
+    const { valid, value } = normalizeCatalogProduct({
+      ...raw,
+      source: CATALOG_PRODUCT_SOURCE.PLATFORM,
+      status: CATALOG_PRODUCT_STATUS.ACTIVE,
+    });
+    if (!valid) continue;
+    out.push({ id: `seed_${stringHash(value.dedup_key)}`, seed: true, ...value });
+  }
+  _seedProductsCache = out;
+  return out;
 }

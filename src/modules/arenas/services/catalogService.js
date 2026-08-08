@@ -11,7 +11,7 @@
  */
 
 import {
-  addDoc, collection, doc, getDocs, getDoc, updateDoc, deleteDoc,
+  addDoc, collection, doc, getDocs, updateDoc, deleteDoc,
   query, where, serverTimestamp, writeBatch,
 } from 'firebase/firestore';
 import { db } from '@/core/config/firebase';
@@ -24,22 +24,48 @@ import {
   normalizeCatalogProduct, findDuplicates, buildDedupKey,
   CATALOG_PRODUCT_SOURCE, CATALOG_PRODUCT_STATUS,
 } from '../domain/productCatalog.js';
-import { buildCatalogSeed } from '../domain/catalogSeed.js';
+import { buildCatalogSeed, buildSeedCatalogProducts } from '../domain/catalogSeed.js';
 
 const COL = ARENA_COLLECTIONS.catalog_products;
 
 /**
- * Lista o catálogo (todos os produtos ativos). Sem orderBy no Firestore para
- * evitar índice composto; ordena em memória por categoria e nome.
+ * Lista o catálogo COMPLETO, sempre disponível: mescla a semente padrão (em
+ * código, ~centenas de itens) com o que está no Firestore (contribuições das
+ * arenas, edições e remoções do admin). Não é preciso "popular" nada — a lista
+ * padrão está sempre presente.
+ *
+ * Regras de mesclagem (por `dedup_key`):
+ *  - Firestore tem precedência sobre a semente (edições do admin sobrepõem).
+ *  - Documentos com status `removed`/`merged` são TOMBSTONES: suprimem o item
+ *    (inclusive o da semente) — é assim que o admin "exclui" um item padrão.
+ *
  * @param {{ includeInactive?: boolean }} [opts]
  * @returns {Promise<object[]>}
  */
-export async function listCatalogProducts({ includeInactive = false } = {}) {
-  if (!db) return [];
-  const snap = await getDocs(collection(db, COL));
-  let list = snap.docs.map((d) => ({ id: d.id, ...d.data() }));
-  if (!includeInactive) list = list.filter((p) => p.status !== CATALOG_PRODUCT_STATUS.MERGED);
-  return list.sort((a, b) =>
+export async function listCatalogProducts({ includeInactive = false } = {}) { // eslint-disable-line no-unused-vars
+  const seed = buildSeedCatalogProducts();
+  let fsDocs = [];
+  if (db) {
+    try {
+      const snap = await getDocs(collection(db, COL));
+      fsDocs = snap.docs.map((d) => ({ id: d.id, ...d.data() }));
+    } catch (err) {
+      logger.warn('[catalog] leitura do Firestore falhou; usando só a semente', err);
+    }
+  }
+
+  const byKey = new Map();
+  for (const s of seed) byKey.set(s.dedup_key, s);
+  for (const d of fsDocs) {
+    const key = d.dedup_key || buildDedupKey(d);
+    if (d.status === CATALOG_PRODUCT_STATUS.REMOVED || d.status === CATALOG_PRODUCT_STATUS.MERGED) {
+      byKey.delete(key); // tombstone: remove o item da lista
+      continue;
+    }
+    byKey.set(key, d); // Firestore sobrepõe a semente
+  }
+
+  return Array.from(byKey.values()).sort((a, b) =>
     String(a.category || '').localeCompare(String(b.category || ''))
     || String(a.subcategory || '').localeCompare(String(b.subcategory || ''))
     || String(a.name || '').localeCompare(String(b.name || '')));
@@ -219,27 +245,81 @@ export async function adoptManyCatalogToArena(arenaId, catalogProducts = [], act
   return { created, skipped };
 }
 
-/** Atualiza um produto do catálogo (moderação — platform_admin). */
-export async function updateCatalogProduct(productId, updates, actor) {
-  if (!db || !productId) throw new Error('Produto inválido.');
-  const clean = { ...updates };
-  // Recomputa chaves quando atributos mudam.
-  if (['name', 'category', 'subcategory', 'brand', 'packaging', 'size', 'flavor'].some((k) => k in clean)) {
-    const snap = await getDoc(doc(db, COL, productId));
-    const merged = { ...(snap.exists() ? snap.data() : {}), ...clean };
-    const { value } = normalizeCatalogProduct(merged);
-    clean.dedup_key = value.dedup_key;
-    clean.search_tokens = value.search_tokens;
-  }
-  await updateDoc(doc(db, COL, productId), { ...clean, updated_at: serverTimestamp(), updated_by: actor?.uid || null });
-  await createAuditLog({ action: 'catalog_product_updated', actor, details: { product_id: productId } }).catch(() => {});
+function isSeedId(id) {
+  return String(id || '').startsWith('seed_');
 }
 
-/** Remove um produto do catálogo (moderação — platform_admin). */
-export async function deleteCatalogProduct(productId, actor) {
-  if (!db || !productId) throw new Error('Produto inválido.');
-  await deleteDoc(doc(db, COL, productId));
-  await createAuditLog({ action: 'catalog_product_deleted', actor, details: { product_id: productId } }).catch(() => {});
+/** Cria um produto novo no catálogo (platform_admin). */
+export async function createCatalogProductAdmin(input, actor) {
+  if (!db) throw new Error('Sem conexão.');
+  const { valid, error, value } = normalizeCatalogProduct({
+    ...input, source: CATALOG_PRODUCT_SOURCE.PLATFORM, status: CATALOG_PRODUCT_STATUS.ACTIVE,
+  });
+  if (!valid) throw new Error(error);
+  const ref = await addDoc(collection(db, COL), {
+    ...value, contributed_by_uid: actor?.uid || null,
+    created_at: serverTimestamp(), updated_at: serverTimestamp(),
+  });
+  await createAuditLog({ action: 'catalog_product_created', actor, details: { name: value.name, admin: true } }).catch(() => {});
+  return { id: ref.id };
+}
+
+/**
+ * Atualiza um produto do catálogo (platform_admin), lidando com itens da semente
+ * (id `seed_*`, que não existem no Firestore): materializa a edição como um doc
+ * do Firestore que sobrepõe a semente e, se a identidade mudou, cria um tombstone
+ * para o item original não duplicar.
+ */
+export async function updateCatalogProductSmart(product, updates, actor) {
+  if (!db || !product) throw new Error('Produto inválido.');
+  const { valid, error, value } = normalizeCatalogProduct({
+    ...product, ...updates,
+    source: product.source || CATALOG_PRODUCT_SOURCE.PLATFORM,
+    status: CATALOG_PRODUCT_STATUS.ACTIVE,
+  });
+  if (!valid) throw new Error(error);
+
+  if (!isSeedId(product.id)) {
+    await updateDoc(doc(db, COL, product.id), { ...value, updated_at: serverTimestamp(), updated_by: actor?.uid || null });
+  } else {
+    // Materializa a edição do item padrão como um novo doc do Firestore.
+    await addDoc(collection(db, COL), {
+      ...value, contributed_by_uid: actor?.uid || null,
+      created_at: serverTimestamp(), updated_at: serverTimestamp(),
+    });
+    // Se a identidade (dedup_key) mudou, suprime o item original da semente.
+    if (value.dedup_key !== product.dedup_key) {
+      await addDoc(collection(db, COL), {
+        dedup_key: product.dedup_key, status: CATALOG_PRODUCT_STATUS.REMOVED,
+        name: product.name || '', category: product.category || '',
+        created_at: serverTimestamp(), created_by: actor?.uid || null,
+      });
+    }
+  }
+  await createAuditLog({ action: 'catalog_product_updated', actor, details: { name: value.name } }).catch(() => {});
+}
+
+/**
+ * Exclui um produto do catálogo (platform_admin). Para itens da semente (ou
+ * cujo dedup_key exista na semente) grava um tombstone para o item não
+ * reaparecer; contribuições puras do Firestore são removidas de fato.
+ */
+export async function deleteCatalogProductSmart(product, actor) {
+  if (!db || !product) throw new Error('Produto inválido.');
+  const seedKeys = new Set(buildSeedCatalogProducts().map((s) => s.dedup_key));
+  const dedupKey = product.dedup_key || buildDedupKey(product);
+
+  if (isSeedId(product.id) || seedKeys.has(dedupKey)) {
+    await addDoc(collection(db, COL), {
+      dedup_key: dedupKey, status: CATALOG_PRODUCT_STATUS.REMOVED,
+      name: product.name || '', category: product.category || '',
+      created_at: serverTimestamp(), created_by: actor?.uid || null,
+    });
+  }
+  if (!isSeedId(product.id)) {
+    await deleteDoc(doc(db, COL, product.id)).catch(() => {});
+  }
+  await createAuditLog({ action: 'catalog_product_deleted', actor, details: { name: product.name || '' } }).catch(() => {});
 }
 
 /**

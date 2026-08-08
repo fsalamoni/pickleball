@@ -15,20 +15,18 @@ import React, { useMemo, useState } from 'react';
 import { useParams } from 'react-router-dom';
 import { toast } from 'sonner';
 import {
-  Package, Search, Plus, Check, ShoppingBasket, Sparkles, AlertTriangle,
+  Package, Search, Plus, Check, ShoppingBasket, AlertTriangle,
   X, PackagePlus, Database,
 } from 'lucide-react';
-import { useAuth } from '@/core/lib/FirebaseAuthContext';
 import {
   useCatalogProducts, useAdoptCatalogProduct, useAdoptManyCatalogProducts,
-  useProposeCatalogProduct, useSeedCatalog, checkCatalogDuplicates,
+  useProposeCatalogProduct, checkCatalogDuplicates,
 } from '@/modules/arenas/hooks/useCatalog';
 import { useInventoryProducts } from '@/modules/arenas/hooks/useArenas';
 import {
   CATALOG_CATEGORIES_LIST, CATALOG_SUBCATEGORIES, CATALOG_PACKAGINGS,
   filterCatalog, catalogProductLabel, findDuplicates,
 } from '@/modules/arenas/domain/productCatalog';
-import { catalogSeedCount } from '@/modules/arenas/domain/catalogSeed';
 import { cn } from '@/core/lib/utils';
 import {
   V2Badge, V2Button, V2Field, V2Input, V2Select, V2Surface, V2Textarea,
@@ -39,10 +37,8 @@ const todayStr = () => new Date().toISOString().slice(0, 10);
 
 export default function V2ArenaCatalogBrowser() {
   const { arenaId } = useParams();
-  const { isPlatformAdmin } = useAuth();
   const { data: catalog = [], isLoading } = useCatalogProducts();
   const { data: myProducts = [] } = useInventoryProducts(arenaId);
-  const seed = useSeedCatalog();
   const adoptMany = useAdoptManyCatalogProducts(arenaId);
 
   const [query, setQuery] = useState('');
@@ -103,15 +99,6 @@ export default function V2ArenaCatalogBrowser() {
       clearSelection();
     } catch (err) {
       toast.error(err.message || 'Não foi possível adicionar em lote.');
-    }
-  }
-
-  async function handleSeed() {
-    try {
-      const r = await seed.mutateAsync();
-      toast.success(`Catálogo populado: ${r.created} novos, ${r.skipped} já existiam.`);
-    } catch (err) {
-      toast.error(err.message || 'Não foi possível popular o catálogo.');
     }
   }
 
@@ -198,16 +185,8 @@ export default function V2ArenaCatalogBrowser() {
       ) : catalog.length === 0 ? (
         <V2EmptyState
           icon={Database}
-          title="Catálogo ainda vazio"
-          description={isPlatformAdmin
-            ? 'Popule o catálogo padrão com centenas de produtos prontos para as arenas usarem.'
-            : 'O catálogo padrão ainda não foi carregado. Você já pode cadastrar produtos próprios na aba Mercado, ou sugerir um produto novo aqui.'}
-          action={isPlatformAdmin ? (
-            <V2Button onClick={handleSeed} disabled={seed.isPending}>
-              <Sparkles className="h-4 w-4" />
-              {seed.isPending ? 'Populando…' : `Popular catálogo padrão (${catalogSeedCount()} itens)`}
-            </V2Button>
-          ) : undefined}
+          title="Catálogo indisponível"
+          description="Não foi possível carregar o catálogo agora. Você já pode cadastrar produtos próprios na aba Mercado, ou tentar novamente."
         />
       ) : filtered.length === 0 ? (
         <V2EmptyState icon={Search} title="Nada encontrado" description="Ajuste a busca ou os filtros — ou sugira um produto novo." />
