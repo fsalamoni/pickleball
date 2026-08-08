@@ -2292,3 +2292,164 @@ editor de perfil. Salvo em `users/{uid}.dupr_id` e espelhado em
    Não escala para >5000 atletas, mas é ok para o tamanho
    atual (~1000 atletas listados). Se virar gargalo, criar
    índice Firestore + Cloud Function de busca.
+
+---
+
+## 30. Sprint 28 — PR #91: Lado da quadra + Interesses (perfil) (2026-07-30)
+
+> Atualizado em **2026-07-31, 01:00 GMT-3** (origin/main @ `5632a01`).
+> Commit: `5632a01 feat(profile): lado da quadra + interesses, cadastro completo obrigatório e painel personalizado (#91)`.
+
+### Visão geral
+
+Perfil de **todos os usuários** ganha:
+- **Campo "Lado da quadra"** (qualquer / esquerda / direita). Espelhado
+  no diretório público (útil para parcerias).
+- **Nova seção "Meus interesses na plataforma"** — multi-seleção
+  mapeando as funcionalidades:
+  - Participar/organizar torneios
+  - Parceria para jogos e treinos
+  - Organizar meu treino
+  - Encontrar professores
+  - Dar aulas
+  - Gerir arena
+  - Reservar quadras
+  - Clubes
+  - Comunidade
+  - Ranking
+- Editável a qualquer momento no editor de perfil.
+
+### Cadastro completo obrigatório
+
+O cadastro não é mais livre — `profile_completeness` é um campo
+calculado que valida se o usuário preencheu os campos-chave. O
+onboarding e o painel personalizado usam esse score para mostrar
+"complete seu perfil" quando aplicável.
+
+### Painel personalizado
+
+A home do usuário mostra conteúdo baseado nos seus **interesses**:
+- Atleta focado em torneios → ver próximos torneios
+- Professor → ver agenda + pedidos de aula
+- Arena → ver PDV + reservas
+- Clube → ver feed + eventos
+
+### Domínio (testado)
+
+- `athletes/domain/profileMeta.js` (NOVO) — registro de lados da
+  quadra + interesses disponíveis.
+- `athletes/domain/profileMeta.test.js` (NOVO) — testes do registro.
+
+### Métricas
+
+- **+16 testes** (perfil + cadastro)
+- **+1 componente** (`profileMetaIcons.js`)
+- **Sem índice novo** (queries em `users` por uid)
+
+### Decisões D- (PR #91)
+
+1. **D-LADO-DA-QUADRA-UTILS-PARCERIAS (PR #91)**: o lado (esquerda/
+   direita) é informação pública (espelhada em `athlete_profiles`)
+   — facilita encontrar parceiros compatíveis.
+2. **D-INTERESSES-DRIVE-HOME (PR #91)**: o painel personalizado
+   usa os interesses declarados pelo usuário. Default: nenhum
+   interesse selecionado (home neutra).
+3. **D-CADASTRO-COMPLETO-OBRIGATORIO (PR #91)**: `profile_completeness`
+   é um score calculado (não um campo armazenado). Valida em tempo
+   real.
+4. **D-INTERESSES-MULTISELECAO (PR #91)**: o usuário pode marcar
+   vários interesses. Não é single-select.
+
+---
+
+## 31. Sprint 29 — PR #92: Onboarding — passo de nível (2026-07-30)
+
+> Atualizado em **2026-07-31, 01:00 GMT-3** (origin/main @ `1fb45ac`).
+> Commit: `1fb45ac feat(onboarding): passo de nível — escolher da lista com explicação ou fazer o teste (#92)`.
+
+### Visão geral
+
+No **passo final do assistente de cadastro** (após escolher papel
++ interesses), o usuário tem **3 opções** para o nível:
+
+1. **Fazer o teste de nivelamento** (CBPE/USAP)
+2. **Escolher meu nível na lista** — seletor com níveis USAP que
+   mostra explicação clara (nome, faixa, resumo, descrição)
+3. **Concluir sem informar nível** (nivelamento é opcional)
+
+### Implementação
+
+- Reusa `LEVEL_TABLE`/`LEVEL_OPTIONS` (mesma tabela que alimenta
+  o teste e o editor de perfil).
+- Padrão de persistência idêntico ao editor de perfil
+  (`leveling_level`, `leveling_method='manual'`).
+- A opção "Escolher da lista" mostra a **explicação** (não só o
+  nome do nível) — combate o problema clássico de "escolho 4.5+
+  porque soa bem".
+
+### Decisões D- (PR #92)
+
+1. **D-NIVEL-MANUAL-OU-TESTE-OU-PULAR (PR #92)**: 3 caminhos no
+   onboarding. Nivelamento é **opcional** (não bloqueia cadastro).
+2. **D-EXPLICACAO-NO-LEVEL-PICKER (PR #92)**: o seletor de nível
+   mostra a explicação clara (faixa, resumo, descrição) para
+   cada nível. Combate auto-superestimativa.
+3. **D-LEVEL-TABLE-REUSO (PR #92)**: a tabela de níveis é a
+   mesma em `editor de perfil` e `onboarding`.
+
+---
+
+## 32. Sprint 30 — PR #93: Nav — unificar "Termos e Documentos" + mover "Meu desempenho" (2026-07-30)
+
+> Atualizado em **2026-07-31, 01:00 GMT-3** (origin/main @ `564865f`).
+> Commit: `564865f feat(nav): unificar "Termos e Documentos" e mover Meu desempenho para Perfil (#93)`.
+
+### Visão geral
+
+Reorganização da navegação:
+- **"Termos e Documentos"** era um link standalone no Perfil.
+  Agora é **absorvido pela seção legal** (que já existe desde
+  o PR #86 / Wave #86).
+- **"Meu desempenho"** era uma rota standalone. Movido para
+  **aba dentro de Perfil** (junto com "Estatística" e "Meus jogos"
+  da Wave #87).
+- `/meus-jogos` redireciona para `/meu-desempenho` (que agora
+  aponta para a aba no Perfil).
+
+### Decisões D- (PR #93)
+
+1. **D-NAV-LEGAL-UNIFICADO (PR #93)**: "Termos e Documentos"
+   não é um hub separado. Fica na seção legal do Perfil.
+2. **D-MEU-DESEMPENHO-ABA-DO-PERFIL (PR #93)**: a rota
+   standalone some; vira aba em Perfil (junto com as outras
+   seções pessoais).
+3. **D-NAV-SEM-DUPLICIDADE (PR #93)**: não há 2 caminhos para
+   a mesma coisa. Cada coisa fica em UM lugar.
+
+---
+
+## 33. Sprint 31 — PR #94: Onboarding — destravar 1º acesso + "Política de Uso" (2026-07-30)
+
+> Atualizado em **2026-07-31, 01:00 GMT-3** (origin/main @ `b54d81f`).
+> Commit: `b54d81f fix(onboarding): destravar 1º acesso + "Política de Uso" na central de documentos (#94)`.
+
+### Visão geral
+
+- **Destravar 1º acesso**: o cadastro mínimo viável não trava
+  o usuário. O onboarding wizard pode ser **interrompido** e
+  retomado depois. Nada bloqueia o usuário de começar a usar
+  o app.
+- **"Política de Uso"** linkada na central de documentos (PR #86)
+  — o que o user aceitou no onboarding vira registro em
+  `legal_consents/{uid}_privacy_policy` e aparece como
+  "aceito em DD/MM/AAAA" no documento.
+
+### Decisões D- (PR #94)
+
+1. **D-ONBOARDING-NAO-BLOQUEIA (PR #94)**: o wizard é opcional.
+   O usuário pode usar o app mesmo sem completar. Lembretes
+   suaves para completar (não modal persistente).
+2. **D-CONSENT-PERSISTIDO-LEGAL (PR #94)**: cada aceite no
+   onboarding vira doc em `legal_consents`. Auditável.
+3. **D-POLITICA-USO-COM-VERSIONAMENTO (PR #94)**: a Política
+   de Privacidade (LGPD) tem versão. Bump reabre aceite.

@@ -12,7 +12,7 @@
 
 - **O que é**: PWA para pickleball amador BR — torneios, clubes, arenas, professores, comunidade.
 - **Stack**: React 18 + Vite, Tailwind + shadcn/ui, Firebase (Firestore db `pickleball`), React Query, Vitest, Playwright.
-- **Estado**: 21 módulos, 72 V2 pages, 102 coleções Firestore, **102 índices compostos**, 131 feature flags, **1447 testes verdes** (perfil: lado da quadra + interesses; cadastro completo obrigatório no onboarding; painel personalizado).
+- **Estado**: 21 módulos, 72 V2 pages, 102 coleções Firestore, **102 índices compostos**, 131 feature flags, **1447 testes verdes** (perfil completo: lado da quadra + interesses + nível; cadastro completo + onboarding destravado; nav reorganizada).
 - **Live**: https://picklerush.web.app (Firebase site `picklerush`; `pickletour` é redirect-only).
 - **Deploy**: push em `main` → GitHub Actions → Firebase Hosting + Rules + Cloud Function.
 - **Repositório**: https://github.com/fsalamoni/pickleball
@@ -324,33 +324,38 @@ chore(deps): bump firebase to 12.x
 
 ---
 
-## 10. Métricas atuais (snapshot 2026-07-30, 23:50 GMT-3)
+## 10. Métricas atuais (snapshot 2026-07-31, 01:00 GMT-3)
 
-> Última atualização: 2026-07-30, 23:50 GMT-3, após 2 PRs novos
-> mergeados em main (#89, #90) — Sprints 26 e 27:
+> Última atualização: 2026-07-31, 01:00 GMT-3, após 4 PRs novos
+> mergeados em main (#91, #92, #93, #94) — Sprints 28 a 31:
 >
-> - **#89 (Sprint 26)**: Editar dia de jogo depois de criado. Botão
->   "Editar" reaproveita `CreateGameDayDialog` em modo edição.
->   Troca de visibilidade sincroniza o convite público (privado→público
->   publica convite; público→privado remove; atualiza data/descrição).
->   Sem teste novo (refactor).
-> - **#90 (Sprint 27)**: ID DUPR no perfil de todo usuário. Campo
->   `dupr_id` em `users` + espelhado em `athlete_profiles` via
->   `buildAthletePublicProfile`. Visível em: cards de Atletas
->   (+ busca por DUPR), página pública do atleta (chip no herói),
->   inscrições de torneio (linha "DUPR: X / Y" por dupla), meu
->   perfil (chip). Aditivo/backward-compat, sem índice novo.
->   1 teste novo (`publicProfile.test.js`).
+> - **#91 (Sprint 28)**: Perfil completo. Campo "Lado da quadra"
+>   (qualquer/esquerda/direita) + nova seção "Meus interesses na
+>   plataforma" (multi-seleção de funcionalidades: organizar
+>   torneios, dar aulas, gerir arena, etc.). Cadastro completo
+>   obrigatório. Painel personalizado por papel. Espelhado em
+>   `athlete_profiles` via `profileMeta`.
+> - **#92 (Sprint 29)**: Onboarding — passo de nível com escolha
+>   da lista (USAP) com explicação clara, além de "Fazer o teste
+>   de nivelamento". Reusa `LEVEL_TABLE`/`LEVEL_OPTIONS`. Opção
+>   "Concluir sem informar nível" permanece (nivelamento opcional).
+> - **#93 (Sprint 30)**: Nav — unificar "Termos e Documentos"
+>   (era link em Perfil) e mover "Meu desempenho" para Perfil
+>   (era standalone). Limpa hubs duplicados.
+> - **#94 (Sprint 31)**: Onboarding — destravar 1º acesso
+>   (cadastro mínimo viável sem travar) + "Política de Uso" na
+>   central de documentos (vínculo entre o que o user aceitou
+>   no onboarding e a central legal).
 >
-> Resumo das últimas 8 sprints:
-> - **Wave C.6 (Sprint 20)**: `sideToUids` resolve `p.id → user_id`
->   via mapa de participants.
-> - **Wave C.6.1 (Sprint 21)**: índices compostos no Firestore
->   (4 coleções materializadas).
-> - **#85-#88 (Sprints 22-25)**: 2 novos módulos (`games`, `legal`)
->   + dia de jogo do atleta + consentimento LGPD.
+> Resumo das últimas 12 sprints:
+> - **Wave C.6 (Sprint 20)**: `sideToUids` resolve `p.id → user_id`.
+> - **Wave C.6.1 (Sprint 21)**: índices compostos.
+> - **#85-#88 (Sprints 22-25)**: 2 novos módulos (`games`, `legal`).
 > - **#89 (Sprint 26)**: editar dia de jogo.
 > - **#90 (Sprint 27)**: ID DUPR no perfil.
+> - **#91-#94 (Sprints 28-31)**: perfil completo (lado + interesses),
+>   onboarding (nível + destravar), nav (unificar termos, mover
+>   desempenho).
 
 | Métrica | Valor | Delta do início do agente |
 |---|---|---|
@@ -363,8 +368,8 @@ chore(deps): bump firebase to 12.x
 | **Índices compostos Firestore** | 4 (Wave C.6.1) | +4 |
 | **Feature flags** | 131 (sem mudança) | +101 |
 | **Cloud Functions** | 8 (sem mudança) | +8 |
-| **PRs mergeados** | 53 totais (Sprints 0-27) | — |
-| **Origin/main** | `e4ace2a` (PR #90) | — |
+| **PRs mergeados** | 57 totais (Sprints 0-31) | — |
+| **Origin/main** | `b54d81f` (PR #94) | — |
 | **Bundle deployed** | (deploy em curso) | — |
 | **Live URL** | https://picklerush.web.app | — |
 

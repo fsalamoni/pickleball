@@ -215,6 +215,8 @@ Firestore. Share com QR Code + WhatsApp + download PNG.
   atleta, com subcoleções `participants`/`games`).
 - **PR #86 (2026-07-29)**: +1 coleção `legal_consents/{uid_docKey}`
   (consentimento versionado de documentos jurídicos, LGPD).
+- **PR #94 (2026-07-30)**: cada aceite no onboarding vira
+  doc nesta coleção (auditável; bump de versão reabre aceite).
 - **Wave C.3 (2026-07-28)**: +4 coleções `club_internal_ratings`/
   `_ext`/`_doubles`/`_doubles_ext` (ranking interno do clube materializado).
 - **Wave C (2026-07-27)**: +1 coleção `club_event_games/{eventId_dateId_gameId}`
@@ -224,9 +226,11 @@ Ids deterministas quando indicado (`arenaId_uid`, `coachId_arenaId`,
 `uid_docKey`, `clubId_userId`, `clubId_pairKey`).
 Detalhe de campos em `docs/05-DATA-MODEL.md`.
 
-- **Identidade**: `users/{uid}` (perfil + role + **`dupr_id`** PR #90) ·
-  `athlete_profiles/{uid}` (perfil público do diretório; `directory_listed: bool`
-  controla visibilidade; **`dupr_id`** espelhado PR #90).
+- **Identidade**: `users/{uid}` (perfil + role + **`dupr_id`** PR #90 +
+  **`quadrant`** + **`interests[]`** + **`profile_completeness`** calculado,
+  PR #91) · `athlete_profiles/{uid}` (perfil público do diretório;
+  `directory_listed: bool` controla visibilidade; **`dupr_id`** + **`quadrant`**
+  + **`interests[]`** espelhados, PRs #90 e #91).
 - **Torneios**: `tournaments` · `tournament_modalities` · `tournament_admins`
   (id `tournamentId_uid`) · `tournament_registrations` · `tournament_matches` ·
   `tournament_groups` · `tournament_rankings` (materializado no client) ·
