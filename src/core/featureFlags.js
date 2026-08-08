@@ -648,6 +648,16 @@ export const FEATURE_FLAG = Object.freeze({
   ARENA_CRM: 'arena_crm',
 
   /**
+   * Catálogo padrão de produtos + Organização e Gestão do mercado da arena.
+   * Cria a listagem geral (catalog_products) que as arenas podem "puxar" para
+   * o seu mercado, complementando com preço de compra/venda, quantidade e
+   * validade; permite contribuir novos produtos ao catálogo (com verificação de
+   * duplicidade) e adiciona a seção "Organização e Gestão" no painel da arena.
+   * Aditivo — desligada, a seção e o catálogo ficam ocultos.
+   */
+  ARENA_PRODUCT_CATALOG: 'arena_product_catalog',
+
+  /**
    * Convite de clube por link: o admin copia um link que já leva o código de
    * convite; quem abre o link entra na tela do clube com o código preenchido.
    * Aditivo — desligada, o botão some e o ingresso por código segue manual.
@@ -1270,6 +1280,16 @@ export const FEATURE_FLAG_META = Object.freeze({
     description:
       'Consolida os clientes da arena a partir das reservas (nº de reservas, '
       + 'última reserva, valor somado, no-shows). Desligada, a aba fica oculta.',
+  },
+  [FEATURE_FLAG.ARENA_PRODUCT_CATALOG]: {
+    label: 'Catálogo padrão de produtos + Organização e Gestão',
+    description:
+      'Listagem geral de produtos (bebidas, comidas, lanches, doces, salgadinhos, '
+      + 'esporte) com marca, embalagem e tamanho, que as arenas puxam para o seu '
+      + 'mercado e complementam com preço de compra/venda, quantidade e validade. '
+      + 'Permite contribuir novos produtos ao catálogo com verificação de '
+      + 'duplicidade e adiciona a seção "Organização e Gestão" no painel da arena. '
+      + 'Desligada, tudo isso fica oculto.',
   },
   [FEATURE_FLAG.CLUB_INVITE_LINK]: {
     label: 'Convite de clube por link',

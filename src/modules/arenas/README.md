@@ -146,6 +146,28 @@ import { useArenaCancellation } from '@/modules/arenas/hooks/useArenaCancellatio
   / listArenaPayments` agora usam query simples + sort por
   `created_at_ms` em memória. Padrão consistente com PRs #82/#84.
 
+## Catálogo padrão + Organização e Gestão do mercado (flag `arena_product_catalog`)
+
+- **`domain/productCatalog.js`** (+test): taxonomia (categorias/subcategorias/
+  embalagens), normalização, `buildDedupKey`, similaridade (Jaccard) e
+  `findDuplicates` — deduplicação antes de contribuir ao catálogo geral.
+- **`domain/catalogSeed.js`**: gera centenas de produtos reais BR por
+  marca × embalagem (refrigerantes, sucos, águas, energéticos, cervejas,
+  salgadinhos, chocolates, salgados, lanches, pizzas, porções, esporte…).
+- **`domain/inventory.js`**: campos ADITIVOS no produto do mercado
+  (`catalog_id`, `subcategory`, `packaging`, `size`, `sale_price`, `min_stock`,
+  `expiry_date`) + helpers `stockStatus`, `daysToExpiry`, `expiryStatus`.
+- **`services/catalogService.js`**: `listCatalogProducts`,
+  `checkCatalogDuplicates`, `proposeCatalogProduct` (bloqueia duplicata exata),
+  `adoptCatalogToArena` (puxa p/ o mercado + entrada inicial), `seedCatalog`
+  (admin, idempotente por `dedup_key`).
+- **`hooks/useCatalog.js`**: React Query do catálogo + mutações.
+- **UI**: `V2ArenaGestaoTab` (guia de primeiros passos + alertas de estoque/
+  validade + resumo) e `V2ArenaCatalogBrowser` (buscar/puxar do catálogo +
+  sugerir produto novo com aviso de duplicidade). Seção **"Organização e
+  Gestão"** no painel da arena (`V2ArenaManage`).
+- **Coleção**: `catalog_products` (ver `docs/05-DATA-MODEL.md`).
+
 ## Onde achar mais
 
 - `docs/06-MODULES.md` § arenas

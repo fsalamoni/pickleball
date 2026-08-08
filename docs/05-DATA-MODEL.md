@@ -569,6 +569,26 @@ Histórico de exports gerados. `user_id`, `data_url`, `expires_at`.
 **Matchmaking**: `arena_open_slots`.
 **Settings**: `arena_settings`, `arena_module_states`.
 
+### `catalog_products/{id}` (flag `arena_product_catalog`)
+
+Catálogo PADRÃO de produtos, **compartilhado por toda a plataforma** — as arenas
+puxam esses itens para o seu mercado (`arena_inventory_products`) e complementam
+com preço de compra/venda, quantidade e validade; também podem contribuir novos
+produtos (com verificação de duplicidade).
+
+Campos: `name`, `category`, `subcategory`, `brand`, `packaging`, `size`,
+`flavor`, `unit`, `description`, `dedup_key` (chave normalizada p/ dedup),
+`search_tokens` (array p/ busca), `source` (`platform`|`arena`), `status`
+(`active`|`pending`|`merged`), `contributed_by_arena_id`, `contributed_by_uid`.
+
+Regras: leitura por qualquer autenticado; criação por `platform_admin` ou gestor
+da arena que contribui (deve declarar `contributed_by_arena_id`);
+atualização/remoção (moderação) só `platform_admin`.
+
+`arena_inventory_products` ganhou campos ADITIVOS opcionais quando o produto vem
+do catálogo/mercado: `catalog_id`, `subcategory`, `packaging`, `size`, `flavor`,
+`sale_price`, `min_stock`, `expiry_date`.
+
 ## Relacionamentos (resumo)
 
 ```
