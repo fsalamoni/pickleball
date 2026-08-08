@@ -5,7 +5,7 @@
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
 import { useAuth } from '@/core/lib/FirebaseAuthContext';
 import {
-  listCatalogProducts, proposeCatalogProduct, adoptCatalogToArena,
+  listCatalogProducts, proposeCatalogProduct, adoptCatalogToArena, adoptManyCatalogToArena,
   updateCatalogProduct, deleteCatalogProduct, seedCatalog, checkCatalogDuplicates,
 } from '../services/catalogService.js';
 
@@ -41,6 +41,18 @@ export function useAdoptCatalogProduct(arenaId) {
     onSuccess: () => {
       qc.invalidateQueries({ queryKey: ['inventory-products', arenaId] });
       qc.invalidateQueries({ queryKey: ['inventory-entries', arenaId] });
+    },
+  });
+}
+
+/** Adiciona vários produtos do catálogo ao mercado da arena de uma vez. */
+export function useAdoptManyCatalogProducts(arenaId) {
+  const { user } = useAuth();
+  const qc = useQueryClient();
+  return useMutation({
+    mutationFn: (catalogProducts) => adoptManyCatalogToArena(arenaId, catalogProducts, user),
+    onSuccess: () => {
+      qc.invalidateQueries({ queryKey: ['inventory-products', arenaId] });
     },
   });
 }

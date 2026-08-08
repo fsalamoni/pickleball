@@ -18,7 +18,8 @@ import { db } from '@/core/config/firebase';
 import { logger } from '@/core/lib/logger';
 import { createAuditLog } from '@/core/services/auditService';
 import { ARENA_COLLECTIONS } from '../domain/constants.js';
-import { createInventoryProduct, addInventoryEntry } from './arenaService.js';
+import { normalizeInventoryProduct } from '../domain/inventory.js';
+import { createInventoryProduct, addInventoryEntry, listInventoryProducts } from './arenaService.js';
 import {
   normalizeCatalogProduct, findDuplicates, buildDedupKey,
   CATALOG_PRODUCT_SOURCE, CATALOG_PRODUCT_STATUS,
@@ -154,6 +155,68 @@ export async function adoptCatalogToArena(arenaId, catalogProduct, arenaFields =
     }, actor).catch((err) => logger.warn('[catalog] entrada inicial falhou', err));
   }
   return { productId };
+}
+
+/**
+ * Adiciona VÁRIOS produtos do catálogo ao mercado da arena de uma vez (em lote).
+ * Não define preço/quantidade (a arena preenche depois só nos que for vender).
+ * Ignora os que já estão no mercado (por catalog_id) — idempotente.
+ *
+ * @param {string} arenaId
+ * @param {object[]} catalogProducts  produtos do catálogo (com id)
+ * @param {object} actor
+ * @returns {Promise<{ created: number, skipped: number }>}
+ */
+export async function adoptManyCatalogToArena(arenaId, catalogProducts = [], actor) {
+  if (!db || !arenaId) throw new Error('Arena inválida.');
+  if (!Array.isArray(catalogProducts) || catalogProducts.length === 0) return { created: 0, skipped: 0 };
+
+  // Já adotados (por catalog_id) para não duplicar no mercado.
+  const existing = await listInventoryProducts(arenaId).catch(() => []);
+  const adopted = new Set(existing.map((p) => p.catalog_id).filter(Boolean));
+
+  let created = 0;
+  let skipped = 0;
+  let batch = writeBatch(db);
+  let inBatch = 0;
+
+  for (const cp of catalogProducts) {
+    if (!cp || (cp.id && adopted.has(cp.id))) { skipped += 1; continue; }
+    const { valid, value } = normalizeInventoryProduct({
+      name: cp.name,
+      brand: cp.brand,
+      category: cp.category,
+      subcategory: cp.subcategory,
+      packaging: cp.packaging,
+      size: cp.size,
+      flavor: cp.flavor,
+      unit: cp.unit || 'un',
+      description: cp.description,
+      catalog_id: cp.id,
+      active: true,
+    });
+    if (!valid) { skipped += 1; continue; }
+    if (cp.id) adopted.add(cp.id);
+
+    const ref = doc(collection(db, ARENA_COLLECTIONS.inventory_products));
+    batch.set(ref, {
+      ...value,
+      arena_id: arenaId,
+      created_by: actor?.uid || null,
+      created_at: serverTimestamp(),
+      updated_at: serverTimestamp(),
+    });
+    created += 1;
+    inBatch += 1;
+    if (inBatch >= 400) { await batch.commit(); batch = writeBatch(db); inBatch = 0; }
+  }
+  if (inBatch > 0) await batch.commit();
+
+  await createAuditLog({
+    action: 'arena_inventory_bulk_adopt', actor,
+    details: { arena_id: arenaId, created, skipped },
+  }).catch(() => {});
+  return { created, skipped };
 }
 
 /** Atualiza um produto do catálogo (moderação — platform_admin). */
