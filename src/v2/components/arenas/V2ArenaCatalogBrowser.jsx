@@ -20,8 +20,8 @@ import {
 } from 'lucide-react';
 import { useAuth } from '@/core/lib/FirebaseAuthContext';
 import {
-  useCatalogProducts, useAdoptCatalogProduct, useProposeCatalogProduct,
-  useSeedCatalog, checkCatalogDuplicates,
+  useCatalogProducts, useAdoptCatalogProduct, useAdoptManyCatalogProducts,
+  useProposeCatalogProduct, useSeedCatalog, checkCatalogDuplicates,
 } from '@/modules/arenas/hooks/useCatalog';
 import { useInventoryProducts } from '@/modules/arenas/hooks/useArenas';
 import {
@@ -43,12 +43,14 @@ export default function V2ArenaCatalogBrowser() {
   const { data: catalog = [], isLoading } = useCatalogProducts();
   const { data: myProducts = [] } = useInventoryProducts(arenaId);
   const seed = useSeedCatalog();
+  const adoptMany = useAdoptManyCatalogProducts(arenaId);
 
   const [query, setQuery] = useState('');
   const [category, setCategory] = useState('all');
   const [subcategory, setSubcategory] = useState('all');
   const [adopting, setAdopting] = useState(null); // produto do catálogo em adoção
   const [suggesting, setSuggesting] = useState(false);
+  const [selected, setSelected] = useState(() => new Set()); // ids selecionados p/ lote
 
   const adoptedCatalogIds = useMemo(
     () => new Set(myProducts.map((p) => p.catalog_id).filter(Boolean)),
@@ -66,6 +68,43 @@ export default function V2ArenaCatalogBrowser() {
     () => filterCatalog(catalog, { query, category, subcategory }),
     [catalog, query, category, subcategory],
   );
+
+  // Produtos filtrados que ainda NÃO estão no mercado (candidatos ao lote).
+  const selectableFiltered = useMemo(
+    () => filtered.filter((p) => !adoptedCatalogIds.has(p.id)),
+    [filtered, adoptedCatalogIds],
+  );
+  const selectedCount = selected.size;
+  const allFilteredSelected = selectableFiltered.length > 0 && selectableFiltered.every((p) => selected.has(p.id));
+
+  function toggleSelect(id) {
+    setSelected((prev) => {
+      const next = new Set(prev);
+      if (next.has(id)) next.delete(id); else next.add(id);
+      return next;
+    });
+  }
+  function selectAllFiltered() {
+    setSelected((prev) => {
+      const next = new Set(prev);
+      selectableFiltered.forEach((p) => next.add(p.id));
+      return next;
+    });
+  }
+  function clearSelection() { setSelected(new Set()); }
+
+  async function handleBulkAdd() {
+    const byId = new Map(catalog.map((p) => [p.id, p]));
+    const products = Array.from(selected).map((id) => byId.get(id)).filter(Boolean);
+    if (products.length === 0) return;
+    try {
+      const r = await adoptMany.mutateAsync(products);
+      toast.success(`${r.created} produto(s) adicionado(s) ao seu mercado${r.skipped ? ` · ${r.skipped} já existiam` : ''}. Defina preço e quantidade na aba Mercado.`);
+      clearSelection();
+    } catch (err) {
+      toast.error(err.message || 'Não foi possível adicionar em lote.');
+    }
+  }
 
   async function handleSeed() {
     try {
@@ -88,9 +127,10 @@ export default function V2ArenaCatalogBrowser() {
         </V2Button>
       </div>
       <p className="text-sm text-gray-500">
-        Puxe produtos prontos da listagem geral da plataforma para o seu mercado — você só preenche
-        preço, quantidade e validade. Não achou? Sugira um produto novo (a plataforma verifica se ele
-        já não existe com outro nome).
+        Esta é a <strong>lista geral</strong> da plataforma (não é o seu estoque). Marque os produtos que a
+        sua arena vende e clique em <strong>Adicionar ao meu mercado</strong> — pode selecionar vários (ou
+        todos) de uma vez. Depois é só definir preço e quantidade na aba Mercado. Não achou? Sugira um
+        produto novo (a plataforma verifica se ele já não existe com outro nome).
       </p>
 
       {suggesting && (
@@ -121,8 +161,37 @@ export default function V2ArenaCatalogBrowser() {
             {subOptions.map((s) => <option key={s} value={s}>{s}</option>)}
           </V2Select>
         </div>
-        <p className="text-xs text-gray-400">{filtered.length} produto(s) no catálogo</p>
+        <div className="flex flex-wrap items-center justify-between gap-2">
+          <p className="text-xs text-gray-400">
+            {filtered.length} no catálogo · {selectableFiltered.length} fora do seu mercado
+          </p>
+          {selectableFiltered.length > 0 && (
+            <button
+              type="button"
+              onClick={allFilteredSelected ? clearSelection : selectAllFiltered}
+              className="text-xs font-bold text-green-700 hover:underline"
+            >
+              {allFilteredSelected ? 'Limpar seleção' : `Selecionar todos (${selectableFiltered.length})`}
+            </button>
+          )}
+        </div>
       </V2Surface>
+
+      {/* Barra de ação em lote — adiciona vários de uma vez ao mercado. */}
+      {selectedCount > 0 && (
+        <div className="sticky top-2 z-10 flex flex-wrap items-center justify-between gap-2 rounded-2xl border border-green-300 bg-green-50 p-3 shadow-organic-sm">
+          <span className="text-sm font-bold text-ink">
+            {selectedCount} produto(s) selecionado(s)
+          </span>
+          <div className="flex items-center gap-2">
+            <V2Button size="sm" variant="ghost" onClick={clearSelection}>Limpar</V2Button>
+            <V2Button size="sm" onClick={handleBulkAdd} disabled={adoptMany.isPending}>
+              <Plus className="h-4 w-4" />
+              {adoptMany.isPending ? 'Adicionando…' : `Adicionar ${selectedCount} ao meu mercado`}
+            </V2Button>
+          </div>
+        </div>
+      )}
 
       {isLoading ? (
         <V2Skeleton lines={4} />
@@ -144,15 +213,28 @@ export default function V2ArenaCatalogBrowser() {
         <V2EmptyState icon={Search} title="Nada encontrado" description="Ajuste a busca ou os filtros — ou sugira um produto novo." />
       ) : (
         <div className="grid gap-2 sm:grid-cols-2">
-          {filtered.slice(0, 300).map((p) => {
+          {filtered.slice(0, 400).map((p) => {
             const adopted = adoptedCatalogIds.has(p.id);
             const isAdopting = adopting?.id === p.id;
+            const isSelected = selected.has(p.id);
             return (
-              <div key={p.id} className={cn('rounded-2xl border p-3 transition-colors', isAdopting ? 'border-green-300 bg-green-50/40' : 'border-gray-100 bg-paper')}>
+              <div key={p.id} className={cn('rounded-2xl border p-3 transition-colors', isAdopting || isSelected ? 'border-green-300 bg-green-50/40' : 'border-gray-100 bg-paper')}>
                 <div className="flex items-start gap-2">
-                  <div className="flex h-9 w-9 shrink-0 items-center justify-center rounded-2xl bg-ink text-acid">
-                    <Package className="h-4 w-4" />
-                  </div>
+                  {adopted ? (
+                    <div className="flex h-9 w-9 shrink-0 items-center justify-center rounded-2xl bg-ink text-acid">
+                      <Package className="h-4 w-4" />
+                    </div>
+                  ) : (
+                    <label className="flex h-9 w-9 shrink-0 cursor-pointer items-center justify-center rounded-2xl border border-gray-200 bg-paper-pure" title="Selecionar para adicionar em lote">
+                      <input
+                        type="checkbox"
+                        checked={isSelected}
+                        onChange={() => toggleSelect(p.id)}
+                        className="h-4 w-4 accent-ink"
+                        aria-label={`Selecionar ${p.name}`}
+                      />
+                    </label>
+                  )}
                   <div className="min-w-0 flex-1">
                     <div className="truncate text-sm font-bold text-ink">{p.name}</div>
                     <div className="mt-0.5 flex flex-wrap items-center gap-1 text-xs text-gray-500">
@@ -180,6 +262,12 @@ export default function V2ArenaCatalogBrowser() {
               </div>
             );
           })}
+          {filtered.length > 400 && (
+            <p className="sm:col-span-2 py-2 text-center text-xs text-gray-400">
+              Mostrando 400 de {filtered.length}. Refine os filtros para ver os demais — ou use
+              &quot;Selecionar todos&quot; para adicioná-los em lote de uma vez.
+            </p>
+          )}
         </div>
       )}
     </div>
