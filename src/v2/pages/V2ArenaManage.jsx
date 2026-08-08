@@ -297,7 +297,9 @@ function V2ArenaManageContent({ arenaId, user, isPlatformAdmin, arena, managed, 
         {tab === 'clientes' && crmOn && <ArenaCrmTab arenaId={arena.id} />}
         {tab === 'pagamento' && <V2ArenaPaymentTab />}
         {tab === 'regras' && <V2ArenaRulesTab />}
-        {tab === 'mercado' && <V2ArenaMercadoTab />}
+        {tab === 'mercado' && (
+          <V2ArenaMercadoTab onGoToCatalog={catalogOn ? () => selectTab('gestao', 'catalogo') : undefined} />
+        )}
         {tab === 'gestao' && catalogOn && (
           <V2ArenaGestaoTab
             onGoToCatalog={() => selectTab('gestao', 'catalogo')}
