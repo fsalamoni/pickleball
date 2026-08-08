@@ -6,6 +6,7 @@ import { describe, it, expect } from 'vitest';
 import {
   normalizeInventoryProduct, normalizeInventoryEntry, normalizeInventoryExit,
   calculateStock, calculateMargin, filterProductsByCategory, searchProducts,
+  stockStatus, daysToExpiry, expiryStatus,
   INVENTORY_CATEGORIES,
 } from './inventory.js';
 
@@ -31,6 +32,62 @@ describe('normalizeInventoryProduct', () => {
   it('aceita unit custom', () => {
     const r = normalizeInventoryProduct({ name: 'X', category: INVENTORY_CATEGORIES.BEBIDA, unit: 'L' });
     expect(r.value.unit).toBe('L');
+  });
+  it('guarda campos aditivos do catálogo e do mercado quando informados', () => {
+    const r = normalizeInventoryProduct({
+      name: 'Coca-Cola 350ml', category: INVENTORY_CATEGORIES.BEBIDA,
+      subcategory: 'Refrigerante', packaging: 'Lata', size: '350ml',
+      catalog_id: 'cat123', sale_price: 6.5, min_stock: 12, expiry_date: '2026-12-31',
+    });
+    expect(r.valid).toBe(true);
+    expect(r.value.subcategory).toBe('Refrigerante');
+    expect(r.value.packaging).toBe('Lata');
+    expect(r.value.catalog_id).toBe('cat123');
+    expect(r.value.sale_price).toBe(6.5);
+    expect(r.value.min_stock).toBe(12);
+    expect(r.value.expiry_date).toBe('2026-12-31');
+  });
+  it('não inclui campos aditivos quando ausentes (retrocompat)', () => {
+    const r = normalizeInventoryProduct({ name: 'Bola', category: INVENTORY_CATEGORIES.BOLA });
+    expect(r.value).not.toHaveProperty('sale_price');
+    expect(r.value).not.toHaveProperty('subcategory');
+    expect(r.value).not.toHaveProperty('expiry_date');
+  });
+  it('ignora validade inválida', () => {
+    const r = normalizeInventoryProduct({ name: 'X', category: INVENTORY_CATEGORIES.BEBIDA, expiry_date: '31/12/2026' });
+    expect(r.value).not.toHaveProperty('expiry_date');
+  });
+});
+
+describe('stockStatus', () => {
+  it('esgotado quando <= 0', () => {
+    expect(stockStatus(0)).toBe('out');
+    expect(stockStatus(-2)).toBe('out');
+  });
+  it('baixo abaixo do mínimo', () => {
+    expect(stockStatus(3, 5)).toBe('low');
+  });
+  it('baixo pela heurística padrão sem mínimo', () => {
+    expect(stockStatus(2)).toBe('low');
+  });
+  it('ok quando suficiente', () => {
+    expect(stockStatus(20, 5)).toBe('ok');
+  });
+});
+
+describe('daysToExpiry / expiryStatus', () => {
+  it('calcula dias', () => {
+    expect(daysToExpiry('2026-01-11', '2026-01-01')).toBe(10);
+    expect(daysToExpiry('2025-12-30', '2026-01-01')).toBe(-2);
+  });
+  it('null sem data', () => {
+    expect(daysToExpiry('')).toBeNull();
+    expect(expiryStatus('foo')).toBeNull();
+  });
+  it('classifica', () => {
+    expect(expiryStatus('2025-12-30', { today: '2026-01-01' })).toBe('expired');
+    expect(expiryStatus('2026-01-10', { today: '2026-01-01', soonDays: 15 })).toBe('soon');
+    expect(expiryStatus('2026-03-01', { today: '2026-01-01', soonDays: 15 })).toBe('ok');
   });
 });
 

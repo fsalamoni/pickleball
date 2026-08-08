@@ -1418,5 +1418,22 @@ service cloud.firestore {
       );
     }
 
+    // ---- Catálogo padrão de produtos (flag arena_product_catalog) ----
+    // Listagem geral compartilhada: leitura por qualquer autenticado. Criação
+    // por platform_admin OU por gestor da arena que está contribuindo (o doc
+    // deve declarar contributed_by_arena_id da qual o usuário é gestor).
+    // Atualização/remoção (moderação) apenas por platform_admin.
+    match /catalog_products/{productId} {
+      allow read: if isAuthed();
+      allow create: if isAuthed() && (
+        isPlatformAdmin() ||
+        (
+          request.resource.data.contributed_by_arena_id != null &&
+          isArenaManager(request.resource.data.contributed_by_arena_id)
+        )
+      );
+      allow update, delete: if isPlatformAdmin();
+    }
+
   }
 }

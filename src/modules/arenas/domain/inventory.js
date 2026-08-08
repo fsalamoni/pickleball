@@ -56,18 +56,78 @@ export function normalizeInventoryProduct(input = {}) {
   if (!isValidCategory(category)) {
     return { valid: false, error: 'Categoria inválida.', value: { name } };
   }
-  return {
-    valid: true,
-    error: null,
-    value: {
-      name,
-      brand: str(input.brand).slice(0, PRODUCT_BRAND_MAX),
-      description: str(input.description).slice(0, PRODUCT_DESCRIPTION_MAX),
-      category,
-      unit: str(input.unit).slice(0, 20) || 'un', // un, kg, L, etc
-      active: input.active !== false,
-    },
+  const value = {
+    name,
+    brand: str(input.brand).slice(0, PRODUCT_BRAND_MAX),
+    description: str(input.description).slice(0, PRODUCT_DESCRIPTION_MAX),
+    category,
+    unit: str(input.unit).slice(0, 20) || 'un', // un, kg, L, etc
+    active: input.active !== false,
   };
+
+  // Campos ADITIVOS (opcionais) — detalhamento vindo do catálogo padrão e as
+  // variáveis do mercado da arena. Só são gravados quando informados, mantendo
+  // total retrocompatibilidade com produtos antigos.
+  const subcategory = str(input.subcategory).slice(0, 50);
+  if (subcategory) value.subcategory = subcategory;
+  const packaging = str(input.packaging).slice(0, 40);
+  if (packaging) value.packaging = packaging;
+  const size = str(input.size).slice(0, 30);
+  if (size) value.size = size;
+  const flavor = str(input.flavor).slice(0, 40);
+  if (flavor) value.flavor = flavor;
+  const catalogId = str(input.catalog_id);
+  if (catalogId) value.catalog_id = catalogId;
+
+  // Preço de venda padrão do produto no mercado da arena (o preço de compra é
+  // registrado por entrada). >= 0.
+  const salePrice = Number(input.sale_price);
+  if (Number.isFinite(salePrice) && salePrice >= 0) {
+    value.sale_price = Math.round(salePrice * 100) / 100;
+  }
+  // Estoque mínimo para alertar reposição.
+  const minStock = Number(input.min_stock);
+  if (Number.isFinite(minStock) && minStock >= 0) {
+    value.min_stock = Math.round(minStock);
+  }
+  // Validade (opcional) do lote atual — YYYY-MM-DD.
+  const expiry = str(input.expiry_date);
+  if (isValidDate(expiry)) value.expiry_date = expiry;
+
+  return { valid: true, error: null, value };
+}
+
+/** Situação do estoque de um produto para alertas na UI. */
+export function stockStatus(quantity, minStock = 0) {
+  const q = Number(quantity) || 0;
+  const min = Number(minStock) || 0;
+  if (q <= 0) return 'out';        // esgotado
+  if (min > 0 && q <= min) return 'low'; // abaixo do mínimo
+  if (q < 5) return 'low';         // heurística padrão quando não há mínimo
+  return 'ok';
+}
+
+/**
+ * Dias até a validade (negativo = vencido). Retorna null quando não há data.
+ * @param {string} expiryDate  YYYY-MM-DD
+ * @param {string} [today]     YYYY-MM-DD (default: hoje)
+ */
+export function daysToExpiry(expiryDate, today) {
+  if (!isValidDate(expiryDate)) return null;
+  const ref = isValidDate(today) ? today : new Date().toISOString().slice(0, 10);
+  const a = Date.parse(`${expiryDate}T00:00:00Z`);
+  const b = Date.parse(`${ref}T00:00:00Z`);
+  if (Number.isNaN(a) || Number.isNaN(b)) return null;
+  return Math.round((a - b) / 86400000);
+}
+
+/** Classifica a validade: 'expired' | 'soon' (<= soonDays) | 'ok' | null. */
+export function expiryStatus(expiryDate, { soonDays = 15, today } = {}) {
+  const d = daysToExpiry(expiryDate, today);
+  if (d === null) return null;
+  if (d < 0) return 'expired';
+  if (d <= soonDays) return 'soon';
+  return 'ok';
 }
 
 /**

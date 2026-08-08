@@ -14,6 +14,7 @@ export const ARENA_COLLECTIONS = Object.freeze({
   inventory_products: 'arena_inventory_products',
   inventory_entries: 'arena_inventory_entries',
   inventory_exits: 'arena_inventory_exits',
+  catalog_products: 'catalog_products',
 });
 
 export const ARENA_MANAGER_ROLE = Object.freeze({
