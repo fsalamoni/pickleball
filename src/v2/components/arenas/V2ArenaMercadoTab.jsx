@@ -29,57 +29,103 @@ import {
 } from '@/modules/arenas/domain/inventory';
 import { CATALOG_SUBCATEGORIES, CATALOG_PACKAGINGS } from '@/modules/arenas/domain/productCatalog';
 import { formatPrice } from '@/modules/arenas/domain/pricing';
+import { useFeatureFlag } from '@/core/lib/FeatureFlagsContext';
+import { FEATURE_FLAG } from '@/core/featureFlags';
 import ProductTypeahead from '@/v2/components/arenas/ProductTypeahead';
+import V2ArenaGestaoTab from '@/v2/components/arenas/V2ArenaGestaoTab';
+import V2ArenaCatalogBrowser from '@/v2/components/arenas/V2ArenaCatalogBrowser';
+import V2ArenaFinanceTab from '@/v2/components/arenas/V2ArenaFinanceTab';
 import ConfirmDialog from '@/components/ConfirmDialog';
 import { cn } from '@/core/lib/utils';
 import {
   V2Badge, V2Button, V2Field, V2Input, V2Select, V2Surface, V2Textarea, V2EmptyState, V2Skeleton,
 } from '@/v2/ui/primitives';
 
-const TABS = [
-  { value: 'produtos', label: 'Produtos' },
-  { value: 'entradas', label: 'Entradas (compra)' },
-  { value: 'saidas', label: 'Saídas (venda)' },
-];
-
 const EXIT_TYPE_LABELS = {
   sale: 'Venda', consumption: 'Consumo interno', loss: 'Perda', gift: 'Brinde', return: 'Devolução',
 };
 
-export default function V2ArenaMercadoTab({ onGoToCatalog }) {
+const SUB_HINTS = {
+  resumo: 'Visão geral do seu mercado: primeiros passos, alertas de estoque e validade.',
+  estoque: 'O que está na sua vitrine: produtos, quantidade em estoque e preço de venda. Adicione do catálogo ou cadastre um produto próprio.',
+  compras: 'Registre o que você comprou e colocou à venda (entradas de estoque).',
+  vendas: 'Registre e acompanhe as vendas. Só é possível vender o que está em estoque; itens esgotados continuam aqui para ver o total vendido.',
+  financeiro: 'Compras, vendas e lucro por período (semanal ou mensal, à sua escolha).',
+};
+
+/**
+ * Mercado da arena — espaço UNIFICADO. Uma página com abas:
+ *  - Resumo       (visão geral: primeiros passos + alertas)
+ *  - Estoque      (vitrine: produtos + adicionar do catálogo / produto próprio)
+ *  - Compras      (entradas)
+ *  - Vendas       (saídas: só o que está/esteve em estoque)
+ *  - Financeiro   (relatórios por período: compras, vendas, lucro)
+ */
+export default function V2ArenaMercadoTab() {
   const { arenaId } = useParams();
-  const [sub, setSub] = useState('produtos');
+  const catalogOn = useFeatureFlag(FEATURE_FLAG.ARENA_PRODUCT_CATALOG);
+  const reportsOn = useFeatureFlag(FEATURE_FLAG.ARENA_MARKET_REPORTS);
+  const [sub, setSub] = useState('resumo');
+  const [estoqueMode, setEstoqueMode] = useState('list'); // list | catalog
+
+  const tabs = [
+    { value: 'resumo', label: 'Resumo' },
+    { value: 'estoque', label: 'Estoque / Vitrine' },
+    { value: 'compras', label: 'Compras' },
+    { value: 'vendas', label: 'Vendas' },
+    reportsOn && { value: 'financeiro', label: 'Financeiro' },
+  ].filter(Boolean);
+
+  const goEstoque = (mode = 'list') => { setSub('estoque'); setEstoqueMode(catalogOn && mode === 'catalog' ? 'catalog' : 'list'); };
+
   return (
     <div className="space-y-3">
-      <div className="flex flex-wrap items-center justify-between gap-2">
-        <div className="flex items-center gap-2">
-          <Package className="h-5 w-5 text-green-700" />
-          <h2 className="font-display text-xl font-bold text-ink">Mercado / Estoque</h2>
-        </div>
-        {onGoToCatalog && (
-          <V2Button size="sm" variant="secondary" onClick={onGoToCatalog}>
-            <ShoppingBasket className="h-4 w-4" /> Puxar do catálogo
-          </V2Button>
-        )}
+      <div className="flex items-center gap-2">
+        <Package className="h-5 w-5 text-green-700" />
+        <h2 className="font-display text-xl font-bold text-ink">Mercado da arena</h2>
       </div>
       <div className="flex flex-wrap gap-1">
-        {TABS.map((t) => (
+        {tabs.map((t) => (
           <button
             key={t.value}
             type="button"
             onClick={() => setSub(t.value)}
             className={cn(
-              'rounded-full px-3 py-1.5 text-xs font-bold transition-colors',
+              'rounded-full px-3.5 py-1.5 text-xs font-bold transition-colors',
               sub === t.value ? 'bg-ink text-paper' : 'bg-paper text-ink hover:bg-paper-pure',
             )}
           >{t.label}</button>
         ))}
       </div>
-      {sub === 'produtos' && <ProductsSection arenaId={arenaId} />}
-      {sub === 'entradas' && <EntriesSection arenaId={arenaId} />}
-      {sub === 'saidas' && <ExitsSection arenaId={arenaId} />}
+      {SUB_HINTS[sub] && <p className="text-sm text-gray-500">{SUB_HINTS[sub]}</p>}
+
+      {sub === 'resumo' && (
+        <V2ArenaGestaoTab
+          onGoToCatalog={() => goEstoque('catalog')}
+          onGoToMercado={() => setSub('compras')}
+        />
+      )}
+      {sub === 'estoque' && (
+        <EstoqueSection arenaId={arenaId} catalogOn={catalogOn} mode={estoqueMode} setMode={setEstoqueMode} />
+      )}
+      {sub === 'compras' && <EntriesSection arenaId={arenaId} />}
+      {sub === 'vendas' && <ExitsSection arenaId={arenaId} />}
+      {sub === 'financeiro' && reportsOn && <V2ArenaFinanceTab />}
     </div>
   );
+}
+
+/** Estoque/Vitrine: lista de produtos + adicionar do catálogo / produto próprio. */
+function EstoqueSection({ arenaId, catalogOn, mode, setMode }) {
+  if (catalogOn && mode === 'catalog') {
+    return (
+      <div className="space-y-2">
+        <V2Button size="sm" variant="ghost" onClick={() => setMode('list')}>← Voltar ao estoque</V2Button>
+        <V2ArenaCatalogBrowser />
+      </div>
+    );
+  }
+  return <ProductsSection arenaId={arenaId} onOpenCatalog={catalogOn ? () => setMode('catalog') : undefined} />;
 }
 
 const EMPTY_PRODUCT = {
@@ -88,7 +134,7 @@ const EMPTY_PRODUCT = {
   sale_price: '', min_stock: '', expiry_date: '',
 };
 
-function ProductsSection({ arenaId }) {
+function ProductsSection({ arenaId, onOpenCatalog }) {
   const { data: products = [], isLoading } = useInventoryProducts(arenaId);
   const { data: entries = [] } = useInventoryEntries(arenaId);
   const { data: exits = [] } = useInventoryExits(arenaId);
@@ -157,7 +203,12 @@ function ProductsSection({ arenaId }) {
           <option value="all">Todas categorias</option>
           {INVENTORY_CATEGORIES_LIST.map((c) => <option key={c} value={c}>{c}</option>)}
         </V2Select>
-        <V2Button size="sm" onClick={() => { setForm(EMPTY_PRODUCT); setCreating((v) => !v); }}>
+        {onOpenCatalog && (
+          <V2Button size="sm" onClick={onOpenCatalog}>
+            <ShoppingBasket className="h-4 w-4" /> Adicionar do catálogo
+          </V2Button>
+        )}
+        <V2Button size="sm" variant="secondary" onClick={() => { setForm(EMPTY_PRODUCT); setCreating((v) => !v); }}>
           <Plus className="h-4 w-4" /> Produto próprio
         </V2Button>
       </div>
@@ -479,15 +530,35 @@ function ExitsSection({ arenaId }) {
     } catch (err) { toast.error(err.message); }
   }
 
-  // Calcular resumo por produto
+  // Resumo por produto + quantidade vendida. "Esteve em estoque" = teve entrada
+  // OU saída registrada (aparece na gestão de vendas mesmo que zerado hoje).
   const summary = useMemo(() => {
     const map = new Map();
+    const soldByProduct = new Map();
+    const movedIds = new Set();
+    for (const e of entries) movedIds.add(e.product_id);
+    for (const x of exits) {
+      movedIds.add(x.product_id);
+      if (x.exit_type === 'sale') soldByProduct.set(x.product_id, (soldByProduct.get(x.product_id) || 0) + Number(x.quantity || 0));
+    }
     for (const p of products) {
       const stock = calculateStock(p.id, entries, exits);
-      map.set(p.id, { product: p, ...stock, margin: calculateMargin(stock) });
+      map.set(p.id, {
+        product: p, ...stock, margin: calculateMargin(stock),
+        sold_qty: soldByProduct.get(p.id) || 0,
+        ever_stocked: movedIds.has(p.id),
+      });
     }
     return map;
   }, [products, entries, exits]);
+
+  // Só produtos que estão ou já estiveram em estoque (o mercado real de vendas).
+  const managedSales = useMemo(
+    () => Array.from(summary.values())
+      .filter((s) => s.product.active !== false && s.ever_stocked)
+      .sort((a, b) => b.sold_qty - a.sold_qty || String(a.product.name).localeCompare(String(b.product.name))),
+    [summary],
+  );
 
   // Só é possível dar SAÍDA do que está em estoque (quantidade > 0). Produtos
   // zerados continuam no mercado, mas não aparecem aqui até repor.
@@ -525,28 +596,35 @@ function ExitsSection({ arenaId }) {
         </p>
       )}
 
-      {/* Resumo por produto */}
-      {products.length > 0 && (
+      {/* Produtos à venda (estão ou já estiveram em estoque): quanto foi vendido,
+          quanto resta e o resultado por produto. */}
+      {managedSales.length === 0 ? (
+        <p className="mt-3 text-sm text-gray-500">
+          Ainda não há produtos em estoque para vender. Registre uma compra (entrada) na aba Compras.
+        </p>
+      ) : (
         <div className="mt-3 grid gap-2 sm:grid-cols-2 lg:grid-cols-3">
-          {Array.from(summary.values()).filter((s) => s.product.active).map((s) => (
+          {managedSales.map((s) => (
             <div key={s.product.id} className={cn('rounded-2xl border p-3',
               s.quantity <= 0 ? 'border-red-200 bg-red-50' :
               s.quantity < 5 ? 'border-amber-200 bg-amber-50/40' :
               'border-green-200 bg-green-50/40',
             )}>
               <div className="flex items-center gap-2">
-                <div className="flex-1 min-w-0">
-                  <div className="text-sm font-bold text-ink truncate">{s.product.name}</div>
+                <div className="min-w-0 flex-1">
+                  <div className="truncate text-sm font-bold text-ink">{s.product.name}</div>
                   <div className="text-[10px] uppercase text-gray-400">{s.product.category}</div>
                 </div>
                 <div className="text-right">
-                  <div className="font-display text-xl font-bold text-ink">{s.quantity}</div>
-                  <div className="text-[10px] text-gray-400">{s.product.unit}</div>
+                  <div className="font-display text-xl font-bold text-ink">{s.sold_qty}</div>
+                  <div className="text-[10px] text-gray-400">vendidos</div>
                 </div>
               </div>
-              <div className="mt-2 grid grid-cols-2 gap-1 text-[10px] text-gray-500">
-                <div>Investido: <span className="font-bold text-ink">{formatPrice(s.total_invested)}</span></div>
-                <div>Receita: <span className="font-bold text-green-700">{formatPrice(s.total_revenue)}</span></div>
+              <div className="mt-2 flex items-center justify-between text-[11px]">
+                <V2Badge tone={s.quantity <= 0 ? 'red' : s.quantity < 5 ? 'amber' : 'green'}>
+                  {s.quantity <= 0 ? 'Esgotado' : `Em estoque: ${s.quantity}`}
+                </V2Badge>
+                <span className="text-gray-500">Receita: <span className="font-bold text-green-700">{formatPrice(s.total_revenue)}</span></span>
               </div>
               {s.total_invested > 0 && (
                 <div className={cn('mt-1 text-xs font-bold', s.margin >= 0 ? 'text-green-700' : 'text-red-600')}>
