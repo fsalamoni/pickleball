@@ -6,7 +6,6 @@ import {
   ArrowLeft, Building2, Settings, Trash2, UserPlus, Users,
   BarChart3, CalendarClock, CalendarDays, CalendarRange, Wallet, ClipboardList,
   Package, LayoutGrid, DollarSign, Image, Info, Star, GraduationCap,
-  ClipboardCheck, ShoppingBasket,
 } from 'lucide-react';
 import V2CourtsTab from '@/v2/components/arenas/V2CourtsTab';
 import V2ArenaCalendar from '@/v2/components/arenas/V2ArenaCalendar';
@@ -15,9 +14,6 @@ import V2AdminBookingCalendar from '@/v2/components/arenas/V2AdminBookingCalenda
 import V2ArenaPaymentTab from '@/v2/components/arenas/V2ArenaPaymentTab';
 import V2ArenaRulesTab from '@/v2/components/arenas/V2ArenaRulesTab';
 import V2ArenaMercadoTab from '@/v2/components/arenas/V2ArenaMercadoTab';
-import V2ArenaGestaoTab from '@/v2/components/arenas/V2ArenaGestaoTab';
-import V2ArenaCatalogBrowser from '@/v2/components/arenas/V2ArenaCatalogBrowser';
-import V2ArenaFinanceTab from '@/v2/components/arenas/V2ArenaFinanceTab';
 import FeatureFlagGuard from '@/v2/components/FeatureFlagGuard';
 import { db } from '@/core/config/firebase';
 import { FEATURE_FLAG } from '@/core/featureFlags';
@@ -48,7 +44,7 @@ import { cn } from '@/core/lib/utils';
 // início ao fim: identidade → estrutura/preços → reservas → comercial →
 // resultados → equipe/parceiros. Cada seção agrupa sub-abas por tema.
 // `coachResidentOn` injeta a aba de professores parceiros na seção de equipe.
-function buildArenaSections({ coachResidentOn, linkedClubsOn, crmOn, catalogOn, reportsOn }) {
+function buildArenaSections({ coachResidentOn, linkedClubsOn, crmOn }) {
   return [
     {
       id: 'perfil',
@@ -80,15 +76,6 @@ function buildArenaSections({ coachResidentOn, linkedClubsOn, crmOn, catalogOn, 
         ...(crmOn ? [{ value: 'clientes', label: 'Clientes', icon: Users }] : []),
       ],
     },
-    ...(catalogOn ? [{
-      id: 'gestao',
-      label: 'Organização e Gestão',
-      icon: ClipboardCheck,
-      tabs: [
-        { value: 'gestao', label: 'Visão geral', icon: ClipboardCheck },
-        { value: 'catalogo', label: 'Catálogo', icon: ShoppingBasket },
-      ],
-    }] : []),
     {
       id: 'comercial',
       label: 'Pagamentos e loja',
@@ -96,7 +83,6 @@ function buildArenaSections({ coachResidentOn, linkedClubsOn, crmOn, catalogOn, 
       tabs: [
         { value: 'pagamento', label: 'Pagamento', icon: Wallet },
         { value: 'mercado', label: 'Mercado', icon: Package },
-        ...(reportsOn ? [{ value: 'financeiro', label: 'Financeiro', icon: BarChart3 }] : []),
       ],
     },
     {
@@ -175,8 +161,6 @@ function V2ArenaManageContent({ arenaId, user, isPlatformAdmin, arena, managed, 
   const coachResidentOn = useFeatureFlag(FEATURE_FLAG.COACH_RESIDENT);
   const linkedClubsOn = useFeatureFlag(FEATURE_FLAG.LINKED_CLUBS);
   const crmOn = useFeatureFlag(FEATURE_FLAG.ARENA_CRM);
-  const catalogOn = useFeatureFlag(FEATURE_FLAG.ARENA_PRODUCT_CATALOG);
-  const reportsOn = useFeatureFlag(FEATURE_FLAG.ARENA_MARKET_REPORTS);
   // Lembra a última sub-aba visitada em cada seção principal.
   const [sectionMemory, setSectionMemory] = useState({});
 
@@ -201,7 +185,7 @@ function V2ArenaManageContent({ arenaId, user, isPlatformAdmin, arena, managed, 
   // com suas sub-abas. Ordem = ciclo de vida da arena, do início ao fim:
   // identidade → estrutura/preços → reservas (operação) → dinheiro →
   // resultados → equipe.
-  const sections = buildArenaSections({ coachResidentOn, linkedClubsOn, crmOn, catalogOn, reportsOn });
+  const sections = buildArenaSections({ coachResidentOn, linkedClubsOn, crmOn });
   const activeSectionId = sections.find((s) => s.tabs.some((t) => t.value === tab))?.id
     || sections[0].id;
   const activeSection = sections.find((s) => s.id === activeSectionId) || sections[0];
@@ -300,17 +284,7 @@ function V2ArenaManageContent({ arenaId, user, isPlatformAdmin, arena, managed, 
         {tab === 'clientes' && crmOn && <ArenaCrmTab arenaId={arena.id} />}
         {tab === 'pagamento' && <V2ArenaPaymentTab />}
         {tab === 'regras' && <V2ArenaRulesTab />}
-        {tab === 'mercado' && (
-          <V2ArenaMercadoTab onGoToCatalog={catalogOn ? () => selectTab('gestao', 'catalogo') : undefined} />
-        )}
-        {tab === 'gestao' && catalogOn && (
-          <V2ArenaGestaoTab
-            onGoToCatalog={() => selectTab('gestao', 'catalogo')}
-            onGoToMercado={() => selectTab('comercial', 'mercado')}
-          />
-        )}
-        {tab === 'catalogo' && catalogOn && <V2ArenaCatalogBrowser />}
-        {tab === 'financeiro' && reportsOn && <V2ArenaFinanceTab />}
+        {tab === 'mercado' && <V2ArenaMercadoTab />}
         {tab === 'quadras' && <V2CourtsTab arena={arena} />}
         {tab === 'precos' && <V2Surface id="arena-manage-precos"><V2PricingEditor arena={arena} /></V2Surface>}
         {tab === 'fotos' && <div id="arena-manage-fotos"><PhotosTab arena={arena} /></div>}
