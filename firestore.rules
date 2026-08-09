@@ -1435,5 +1435,23 @@ service cloud.firestore {
       allow update, delete: if isPlatformAdmin();
     }
 
+    // ---- Relatórios do mercado (flag arena_market_reports) ----
+    // Snapshots financeiros por período. Só o gestor da arena (ou admin) lê e
+    // escreve. Id determinístico arenaId_periodType_periodKey.
+    match /arena_market_reports/{reportId} {
+      allow read: if isAuthed() && (
+        isPlatformAdmin() ||
+        exists(/databases/$(database)/documents/arena_managers/$(resource.data.arena_id + '_' + request.auth.uid))
+      );
+      allow create: if isAuthed() && (
+        isPlatformAdmin() ||
+        isArenaManager(request.resource.data.arena_id)
+      );
+      allow update, delete: if isAuthed() && (
+        isPlatformAdmin() ||
+        isArenaManager(resource.data.arena_id)
+      );
+    }
+
   }
 }

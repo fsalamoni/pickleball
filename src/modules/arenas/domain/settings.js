@@ -54,6 +54,10 @@ export const DEFAULT_ARENA_SETTINGS = Object.freeze({
     font_family: 'Inter',
     theme: 'auto',
   },
+  market: {
+    // Periodicidade dos relatórios financeiros do mercado: 'monthly' | 'weekly'.
+    report_period: 'monthly',
+  },
 });
 
 /**
