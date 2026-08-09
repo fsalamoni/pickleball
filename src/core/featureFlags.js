@@ -658,6 +658,14 @@ export const FEATURE_FLAG = Object.freeze({
   ARENA_PRODUCT_CATALOG: 'arena_product_catalog',
 
   /**
+   * Relatórios financeiros do mercado (entradas/saídas) por período — semanal
+   * ou mensal, à escolha do admin da arena. Adiciona a aba "Financeiro" no
+   * painel da arena, com fechamento de período, edição com aviso de
+   * integralidade e histórico. Aditivo — desligada, a aba fica oculta.
+   */
+  ARENA_MARKET_REPORTS: 'arena_market_reports',
+
+  /**
    * Convite de clube por link: o admin copia um link que já leva o código de
    * convite; quem abre o link entra na tela do clube com o código preenchido.
    * Aditivo — desligada, o botão some e o ingresso por código segue manual.
@@ -1290,6 +1298,14 @@ export const FEATURE_FLAG_META = Object.freeze({
       + 'Permite contribuir novos produtos ao catálogo com verificação de '
       + 'duplicidade e adiciona a seção "Organização e Gestão" no painel da arena. '
       + 'Desligada, tudo isso fica oculto.',
+  },
+  [FEATURE_FLAG.ARENA_MARKET_REPORTS]: {
+    label: 'Relatórios financeiros do mercado (semanal/mensal)',
+    description:
+      'Aba "Financeiro" no painel da arena: consolida entradas (compras) e '
+      + 'saídas (vendas/consumo/perdas) do mercado em relatórios por período '
+      + '(semanal ou mensal, à escolha do admin), com fechamento, edição com '
+      + 'aviso de integralidade e histórico. Desligada, a aba fica oculta.',
   },
   [FEATURE_FLAG.CLUB_INVITE_LINK]: {
     label: 'Convite de clube por link',

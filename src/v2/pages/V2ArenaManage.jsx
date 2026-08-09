@@ -17,6 +17,7 @@ import V2ArenaRulesTab from '@/v2/components/arenas/V2ArenaRulesTab';
 import V2ArenaMercadoTab from '@/v2/components/arenas/V2ArenaMercadoTab';
 import V2ArenaGestaoTab from '@/v2/components/arenas/V2ArenaGestaoTab';
 import V2ArenaCatalogBrowser from '@/v2/components/arenas/V2ArenaCatalogBrowser';
+import V2ArenaFinanceTab from '@/v2/components/arenas/V2ArenaFinanceTab';
 import FeatureFlagGuard from '@/v2/components/FeatureFlagGuard';
 import { db } from '@/core/config/firebase';
 import { FEATURE_FLAG } from '@/core/featureFlags';
@@ -47,7 +48,7 @@ import { cn } from '@/core/lib/utils';
 // início ao fim: identidade → estrutura/preços → reservas → comercial →
 // resultados → equipe/parceiros. Cada seção agrupa sub-abas por tema.
 // `coachResidentOn` injeta a aba de professores parceiros na seção de equipe.
-function buildArenaSections({ coachResidentOn, linkedClubsOn, crmOn, catalogOn }) {
+function buildArenaSections({ coachResidentOn, linkedClubsOn, crmOn, catalogOn, reportsOn }) {
   return [
     {
       id: 'perfil',
@@ -95,6 +96,7 @@ function buildArenaSections({ coachResidentOn, linkedClubsOn, crmOn, catalogOn }
       tabs: [
         { value: 'pagamento', label: 'Pagamento', icon: Wallet },
         { value: 'mercado', label: 'Mercado', icon: Package },
+        ...(reportsOn ? [{ value: 'financeiro', label: 'Financeiro', icon: BarChart3 }] : []),
       ],
     },
     {
@@ -174,6 +176,7 @@ function V2ArenaManageContent({ arenaId, user, isPlatformAdmin, arena, managed, 
   const linkedClubsOn = useFeatureFlag(FEATURE_FLAG.LINKED_CLUBS);
   const crmOn = useFeatureFlag(FEATURE_FLAG.ARENA_CRM);
   const catalogOn = useFeatureFlag(FEATURE_FLAG.ARENA_PRODUCT_CATALOG);
+  const reportsOn = useFeatureFlag(FEATURE_FLAG.ARENA_MARKET_REPORTS);
   // Lembra a última sub-aba visitada em cada seção principal.
   const [sectionMemory, setSectionMemory] = useState({});
 
@@ -198,7 +201,7 @@ function V2ArenaManageContent({ arenaId, user, isPlatformAdmin, arena, managed, 
   // com suas sub-abas. Ordem = ciclo de vida da arena, do início ao fim:
   // identidade → estrutura/preços → reservas (operação) → dinheiro →
   // resultados → equipe.
-  const sections = buildArenaSections({ coachResidentOn, linkedClubsOn, crmOn, catalogOn });
+  const sections = buildArenaSections({ coachResidentOn, linkedClubsOn, crmOn, catalogOn, reportsOn });
   const activeSectionId = sections.find((s) => s.tabs.some((t) => t.value === tab))?.id
     || sections[0].id;
   const activeSection = sections.find((s) => s.id === activeSectionId) || sections[0];
@@ -307,6 +310,7 @@ function V2ArenaManageContent({ arenaId, user, isPlatformAdmin, arena, managed, 
           />
         )}
         {tab === 'catalogo' && catalogOn && <V2ArenaCatalogBrowser />}
+        {tab === 'financeiro' && reportsOn && <V2ArenaFinanceTab />}
         {tab === 'quadras' && <V2CourtsTab arena={arena} />}
         {tab === 'precos' && <V2Surface id="arena-manage-precos"><V2PricingEditor arena={arena} /></V2Surface>}
         {tab === 'fotos' && <div id="arena-manage-fotos"><PhotosTab arena={arena} /></div>}

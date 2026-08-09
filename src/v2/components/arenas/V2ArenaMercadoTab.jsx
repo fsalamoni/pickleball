@@ -29,6 +29,7 @@ import {
 } from '@/modules/arenas/domain/inventory';
 import { CATALOG_SUBCATEGORIES, CATALOG_PACKAGINGS } from '@/modules/arenas/domain/productCatalog';
 import { formatPrice } from '@/modules/arenas/domain/pricing';
+import ProductTypeahead from '@/v2/components/arenas/ProductTypeahead';
 import ConfirmDialog from '@/components/ConfirmDialog';
 import { cn } from '@/core/lib/utils';
 import {
@@ -391,10 +392,12 @@ function EntriesSection({ arenaId }) {
         <form onSubmit={handleSubmit} className="mt-3 space-y-2 rounded-2xl border border-green-200 bg-green-50/40 p-3">
           <div className="grid grid-cols-1 gap-2 sm:grid-cols-2">
             <V2Field label="Produto" required>
-              <V2Select value={form.product_id} onChange={setField('product_id')} required>
-                <option value="">— Selecione —</option>
-                {products.map((p) => <option key={p.id} value={p.id}>{p.name} ({p.brand || 'sem marca'})</option>)}
-              </V2Select>
+              <ProductTypeahead
+                products={products}
+                value={form.product_id}
+                onSelect={(p) => setForm((f) => ({ ...f, product_id: p?.id || '' }))}
+                metaFor={(p) => (p.brand || '')}
+              />
             </V2Field>
             <V2Field label="Data" required>
               <input type="date" value={form.date} onChange={setField('date')} required className="w-full rounded-2xl border border-gray-200 bg-paper px-3 py-2 text-sm" />
@@ -486,16 +489,41 @@ function ExitsSection({ arenaId }) {
     return map;
   }, [products, entries, exits]);
 
+  // Só é possível dar SAÍDA do que está em estoque (quantidade > 0). Produtos
+  // zerados continuam no mercado, mas não aparecem aqui até repor.
+  const inStockProducts = useMemo(
+    () => Array.from(summary.values())
+      .filter((s) => s.product.active !== false && s.quantity > 0)
+      .map((s) => s.product),
+    [summary],
+  );
+  const availableFor = (id) => summary.get(id)?.quantity ?? 0;
+  const selectedAvailable = form.product_id ? availableFor(form.product_id) : null;
+  const overSells = selectedAvailable != null && Number(form.quantity) > selectedAvailable;
+
+  function onSelectProduct(p) {
+    setForm((f) => ({
+      ...f,
+      product_id: p?.id || '',
+      unit_price: p && Number(p.sale_price) > 0 ? p.sale_price : f.unit_price,
+    }));
+  }
+
   return (
     <V2Surface>
       <div className="flex items-center justify-between">
         <h3 className="font-display text-base font-bold text-ink flex items-center gap-2">
           <TrendingDown className="h-4 w-4 text-orange-700" /> Saídas (vendas / consumo / perdas)
         </h3>
-        <V2Button size="sm" onClick={() => setCreating(true)} disabled={products.length === 0}>
+        <V2Button size="sm" onClick={() => setCreating(true)} disabled={inStockProducts.length === 0}>
           <Plus className="h-4 w-4" /> Nova saída
         </V2Button>
       </div>
+      {inStockProducts.length === 0 && (
+        <p className="mt-2 text-xs text-amber-700">
+          Nenhum produto em estoque para vender. Registre uma entrada (compra) primeiro.
+        </p>
+      )}
 
       {/* Resumo por produto */}
       {products.length > 0 && (
@@ -533,19 +561,24 @@ function ExitsSection({ arenaId }) {
       {creating && (
         <form onSubmit={handleSubmit} className="mt-3 space-y-2 rounded-2xl border border-orange-200 bg-orange-50/40 p-3">
           <div className="grid grid-cols-1 gap-2 sm:grid-cols-2">
-            <V2Field label="Produto" required>
-              <V2Select value={form.product_id} onChange={setField('product_id')} required>
-                <option value="">— Selecione —</option>
-                {products.map((p) => <option key={p.id} value={p.id}>{p.name}</option>)}
-              </V2Select>
+            <V2Field label="Produto (em estoque)" required>
+              <ProductTypeahead
+                products={inStockProducts}
+                value={form.product_id}
+                onSelect={onSelectProduct}
+                placeholder="Digite para buscar no estoque…"
+                emptyHint="Nenhum produto em estoque com esse nome."
+                metaFor={(p) => `Em estoque: ${availableFor(p.id)}`}
+              />
             </V2Field>
             <V2Field label="Data" required>
               <input type="date" value={form.date} onChange={setField('date')} required className="w-full rounded-2xl border border-gray-200 bg-paper px-3 py-2 text-sm" />
             </V2Field>
           </div>
           <div className="grid grid-cols-1 gap-2 sm:grid-cols-3">
-            <V2Field label="Quantidade" required>
-              <input type="number" min="1" value={form.quantity} onChange={setField('quantity')} required className="w-full rounded-2xl border border-gray-200 bg-paper px-3 py-2 text-sm" />
+            <V2Field label="Quantidade" required hint={selectedAvailable != null ? `Disponível: ${selectedAvailable}` : undefined}>
+              <input type="number" min="1" value={form.quantity} onChange={setField('quantity')} required className={cn('w-full rounded-2xl border bg-paper px-3 py-2 text-sm', overSells ? 'border-red-300' : 'border-gray-200')} />
+              {overSells && <p className="mt-1 text-xs text-red-600">Quantidade maior que o estoque disponível ({selectedAvailable}).</p>}
             </V2Field>
             <V2Field label="Preço unitário (R$)" required>
               <input type="number" min="0" step="0.01" value={form.unit_price} onChange={setField('unit_price')} required className="w-full rounded-2xl border border-gray-200 bg-paper px-3 py-2 text-sm" />
