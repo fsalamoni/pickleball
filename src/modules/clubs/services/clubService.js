@@ -1057,6 +1057,31 @@ export async function replaceEventGames(eventId, games, user, dateId = null) {
   await commitInChunks(ops);
 }
 
+/**
+ * Sorteio ADITIVO de um dia de jogo (date_id): adiciona novos jogos SEM apagar
+ * os já lançados. Remove apenas os jogos indicados em `removeIds` (jogos sem
+ * resultado que o usuário optou por substituir). Jogos com resultado nunca são
+ * tocados aqui.
+ *
+ * @param {string} eventId
+ * @param {{ removeIds?: string[], games?: Array, orderBase?: number }} plan
+ * @param {object} user
+ * @param {string|null} dateId
+ */
+export async function appendEventGames(eventId, { removeIds = [], games = [], orderBase = 0 } = {}, user, dateId = null) {
+  if (!user?.uid) throw new Error('Usuário não autenticado.');
+  const base = Number.isFinite(orderBase) ? orderBase : 0;
+  const ops = [];
+  removeIds.forEach((id) => {
+    if (id) ops.push({ type: 'delete', ref: doc(db, COL.events, eventId, COL.eventGames, id) });
+  });
+  games.forEach((g, i) => {
+    const ref = doc(collection(db, COL.events, eventId, COL.eventGames));
+    ops.push({ type: 'set', ref, data: buildGamePayload(ref.id, eventId, { ...g, date_id: dateId, order: g.order ?? base + i }, user) });
+  });
+  if (ops.length > 0) await commitInChunks(ops);
+}
+
 export async function clearEventGames(eventId, dateId = null) {
   const snap = await getDocs(collection(db, COL.events, eventId, COL.eventGames));
   const ops = snap.docs

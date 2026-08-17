@@ -62,6 +62,7 @@ import {
   updateEventGame,
   deleteEventGame,
   replaceEventGames,
+  appendEventGames,
   clearEventGames,
   listClubPosts,
   createClubPost,
@@ -677,6 +678,15 @@ export function useReplaceEventGames(eventId) {
   const qc = useQueryClient();
   return useMutation({
     mutationFn: ({ games, dateId = null }) => replaceEventGames(eventId, games, user, dateId),
+    onSuccess: () => qc.invalidateQueries({ queryKey: ['event-games', eventId] }),
+  });
+}
+
+export function useAppendEventGames(eventId) {
+  const { user } = useAuth();
+  const qc = useQueryClient();
+  return useMutation({
+    mutationFn: ({ plan, dateId = null }) => appendEventGames(eventId, plan, user, dateId),
     onSuccess: () => qc.invalidateQueries({ queryKey: ['event-games', eventId] }),
   });
 }

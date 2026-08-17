@@ -346,6 +346,46 @@ export async function replaceGameDayGames(gdId, games, actor) {
   await createAuditLog({ action: 'game_day_games_drawn', actor, details: { game_day_id: gdId, count: games.length } });
 }
 
+/**
+ * Sorteio ADITIVO: adiciona novos jogos SEM apagar os já lançados. Remove
+ * apenas os jogos indicados em `removeIds` (jogos sem resultado que o usuário
+ * optou por substituir). Os jogos com resultado nunca são tocados aqui.
+ *
+ * @param {string} gdId
+ * @param {{ removeIds?: string[], games?: Array, orderBase?: number }} plan
+ * @param {object} actor
+ */
+export async function appendGameDayGames(gdId, { removeIds = [], games = [], orderBase = 0 } = {}, actor) {
+  if (!gdId) throw new Error('Dia de jogo inválido.');
+  const batch = writeBatch(db);
+  removeIds.forEach((id) => {
+    if (id) batch.delete(doc(db, COL, gdId, SUB_GAMES, id));
+  });
+  const base = Number.isFinite(orderBase) ? orderBase : 0;
+  games.forEach((g, i) => {
+    const gid = doc(collection(db, COL, gdId, SUB_GAMES)).id;
+    batch.set(doc(db, COL, gdId, SUB_GAMES, gid), {
+      id: gid,
+      round: g.round ?? null,
+      court: g.court ?? null,
+      kind: g.kind || 'doubles',
+      side_a: g.side_a || [],
+      side_b: g.side_b || [],
+      score_a: g.score_a ?? null,
+      score_b: g.score_b ?? null,
+      order: g.order ?? base + i,
+      created_at: serverTimestamp(),
+      updated_at: serverTimestamp(),
+    });
+  });
+  await batch.commit();
+  await createAuditLog({
+    action: 'game_day_games_drawn',
+    actor,
+    details: { game_day_id: gdId, added: games.length, removed: removeIds.length, mode: 'append' },
+  });
+}
+
 export async function clearGameDayGames(gdId, actor) {
   if (!gdId) return;
   const current = await getDocs(collection(db, COL, gdId, SUB_GAMES));
