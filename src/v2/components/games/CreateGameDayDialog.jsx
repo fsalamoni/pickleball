@@ -7,15 +7,19 @@ import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { V2Button } from '@/v2/ui/primitives';
 import { cn } from '@/core/lib/utils';
-import { GAME_DAY_VISIBILITY, GAME_DAY_VISIBILITY_LABELS } from '@/modules/games/domain/gameDay';
-import { GAME_DAY_FORMAT, GAME_DAY_FORMAT_LABELS } from '@/modules/clubs/domain/gameDayFormats';
+import { GAME_DAY_VISIBILITY, GAME_DAY_VISIBILITY_LABELS, normalizePlayCourts } from '@/modules/games/domain/gameDay';
+import {
+  GAME_DAY_FORMAT, GAME_DAY_FORMAT_LABELS, DRAW_FORMATS, isPlayFormat,
+} from '@/modules/clubs/domain/gameDayFormats';
 import { useCreateGameDay, useUpdateGameDay } from '@/modules/games/hooks/useGameDays';
+import { useAuth } from '@/core/lib/FirebaseAuthContext';
 import { useFeatureFlag } from '@/core/lib/FeatureFlagsContext';
 import { FEATURE_FLAG } from '@/core/featureFlags';
 
 const EMPTY_FORM = {
   title: '', visibility: GAME_DAY_VISIBILITY.PRIVATE, date: '', time: '',
   location: '', city: '', state: '', notes: '', format: GAME_DAY_FORMAT.AMERICANO,
+  play_courts: 1,
 };
 
 function formFromGameDay(gd) {
@@ -30,6 +34,7 @@ function formFromGameDay(gd) {
     state: gd.state || '',
     notes: gd.notes || '',
     format: gd.format || GAME_DAY_FORMAT.AMERICANO,
+    play_courts: normalizePlayCourts(gd.play_courts),
   };
 }
 
@@ -41,13 +46,28 @@ export default function CreateGameDayDialog({ open, onOpenChange, onCreated, gam
   const isEdit = !!gameDay;
   const create = useCreateGameDay();
   const update = useUpdateGameDay();
+  const { userProfile } = useAuth();
   const formatsOn = useFeatureFlag(FEATURE_FLAG.GAMEDAY_FORMATS);
-  const [form, setForm] = useState(() => formFromGameDay(gameDay));
+  const playOn = useFeatureFlag(FEATURE_FLAG.GAMEDAY_PLAY);
 
-  // Reabre sempre sincronizado com o dia de jogo (edição) ou vazio (criação).
+  // Na CRIAÇÃO, os padrões são: visibilidade pública + cidade/UF do usuário.
+  const defaultsForNew = () => ({
+    ...EMPTY_FORM,
+    visibility: GAME_DAY_VISIBILITY.PUBLIC,
+    city: userProfile?.city || '',
+    state: (userProfile?.state || '').toUpperCase().slice(0, 2),
+  });
+  const [form, setForm] = useState(() => (gameDay ? formFromGameDay(gameDay) : defaultsForNew()));
+
+  // Reabre sempre sincronizado com o dia de jogo (edição) ou com os padrões (criação).
   useEffect(() => {
-    if (open) setForm(formFromGameDay(gameDay));
-  }, [open, gameDay]);
+    if (open) setForm(gameDay ? formFromGameDay(gameDay) : defaultsForNew());
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [open, gameDay, userProfile?.city, userProfile?.state]);
+
+  // Formatos oferecidos na criação: os de sorteio + Play (se a flag estiver on).
+  const formatOptions = playOn ? [...DRAW_FORMATS, GAME_DAY_FORMAT.PLAY] : DRAW_FORMATS;
+  const showFormatSelect = formatsOn || playOn;
 
   const set = (k, v) => setForm((s) => ({ ...s, [k]: v }));
   const busy = create.isPending || update.isPending;
@@ -68,7 +88,7 @@ export default function CreateGameDayDialog({ open, onOpenChange, onCreated, gam
         onCreated?.(id);
       }
       onOpenChange(false);
-      if (!isEdit) setForm({ ...EMPTY_FORM });
+      if (!isEdit) setForm(defaultsForNew());
     } catch (err) {
       toast.error(err?.message || (isEdit ? 'Não foi possível salvar.' : 'Não foi possível criar o dia de jogo.'));
     }
@@ -143,18 +163,37 @@ export default function CreateGameDayDialog({ open, onOpenChange, onCreated, gam
             </div>
           </div>
 
-          {formatsOn && (
+          {showFormatSelect && (
             <div>
-              <Label className="text-xs">Formato do sorteio</Label>
+              <Label className="text-xs">Formato do dia de jogo</Label>
               <select
                 value={form.format}
                 onChange={(e) => set('format', e.target.value)}
                 className="mt-1 h-10 w-full rounded-md border border-input bg-background px-3 text-sm"
               >
-                {Object.values(GAME_DAY_FORMAT).map((f) => (
+                {formatOptions.map((f) => (
                   <option key={f} value={f}>{GAME_DAY_FORMAT_LABELS[f]}</option>
                 ))}
               </select>
+              {playOn && isPlayFormat(form.format) && (
+                <p className="mt-1 text-[11px] text-gray-500">
+                  No Play, os jogos são criados por ordem de chegada, quadra a quadra, sem sorteio de grade e sem
+                  resultados. Ao concluir um jogo, o próximo entra automaticamente na quadra liberada.
+                </p>
+              )}
+            </div>
+          )}
+
+          {playOn && isPlayFormat(form.format) && (
+            <div className="w-40">
+              <Label className="text-xs">Quadras disponíveis</Label>
+              <Input
+                type="number"
+                min={1}
+                max={12}
+                value={form.play_courts}
+                onChange={(e) => set('play_courts', normalizePlayCourts(e.target.value))}
+              />
             </div>
           )}
 

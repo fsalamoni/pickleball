@@ -21,7 +21,7 @@ import { useAthletes } from '@/modules/athletes/hooks/useAthletes';
 import { generateGameDayGames, suggestRounds } from '@/modules/clubs/domain/gameDayDraw';
 import { planAdditiveDraw, offsetRounds, splitGamesByResult } from '@/modules/clubs/domain/gameDayDrawMerge';
 import {
-  GAME_DAY_FORMAT, GAME_DAY_FORMAT_LABELS,
+  GAME_DAY_FORMAT, GAME_DAY_FORMAT_LABELS, DRAW_FORMATS,
   generateMexicanoSchedule, kingOfCourtFirstRound, kingOfCourtNextRound,
 } from '@/modules/clubs/domain/gameDayFormats';
 import GameDayLeaderboard from '@/modules/clubs/components/GameDayLeaderboard';
@@ -435,7 +435,7 @@ function GamesSection({ gameDay, participants, isOwner }) {
                     onChange={(e) => setFormat(e.target.value)}
                     className="h-10 w-full rounded-md border border-input bg-background px-3 text-sm"
                   >
-                    {Object.values(GAME_DAY_FORMAT).map((f) => (
+                    {DRAW_FORMATS.map((f) => (
                       <option key={f} value={f}>{GAME_DAY_FORMAT_LABELS[f]}</option>
                     ))}
                   </select>

@@ -17,13 +17,34 @@ export const GAME_DAY_FORMAT = Object.freeze({
   AMERICANO: 'americano',
   MEXICANO: 'mexicano',
   KING_OF_COURT: 'king_of_court',
+  // Play (open play) — organizado por ordem de chegada/espera, quadra a quadra,
+  // sem sorteio de grade e sem resultados. Domínio próprio em
+  // `modules/games/domain/gamePlay.js` (não usa o motor de sorteio acima).
+  PLAY: 'play',
 });
 
 export const GAME_DAY_FORMAT_LABELS = Object.freeze({
   [GAME_DAY_FORMAT.AMERICANO]: 'Americano',
   [GAME_DAY_FORMAT.MEXICANO]: 'Mexicano',
   [GAME_DAY_FORMAT.KING_OF_COURT]: 'Rei da Quadra',
+  [GAME_DAY_FORMAT.PLAY]: 'Play (jogo aberto por ordem de chegada)',
 });
+
+/**
+ * Formatos que usam o SORTEIO de grade (Americano/Mexicano/Rei da Quadra).
+ * O formato Play é organizado dinamicamente por ordem de chegada e por isso
+ * NÃO aparece nos seletores de sorteio — só na criação do dia de jogo.
+ */
+export const DRAW_FORMATS = Object.freeze([
+  GAME_DAY_FORMAT.AMERICANO,
+  GAME_DAY_FORMAT.MEXICANO,
+  GAME_DAY_FORMAT.KING_OF_COURT,
+]);
+
+/** É o formato Play (open play)? */
+export function isPlayFormat(format) {
+  return format === GAME_DAY_FORMAT.PLAY;
+}
 
 /* --------------------------- utilidades RNG --------------------------- */
 

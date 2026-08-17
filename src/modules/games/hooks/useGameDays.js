@@ -11,6 +11,8 @@ import {
   replaceGameDayGames, appendGameDayGames, clearGameDayGames,
   joinPublicGameDay, publishGameDayToRanking, unpublishGameDayFromRanking,
   getGameDayRankingMeta, getMyGameDayGames,
+  createNextPlayGame, createManualPlayGame, finishPlayGame, cancelPlayGame,
+  noShowSwapPlayGame, setPlayParticipantSkip, setPlayParticipantPartner,
 } from '../services/gameDayService.js';
 
 /* ------------------------------ Dias de jogo ---------------------------- */
@@ -174,6 +176,80 @@ export function useClearGameDayGames(gdId) {
   const { user } = useAuth();
   const invalidate = useGamesInvalidate(gdId);
   return useMutation({ mutationFn: () => clearGameDayGames(gdId, user), onSuccess: invalidate });
+}
+
+/* ---------------------------- Play (open play) --------------------------- */
+
+/** Invalida jogos + participantes (o Play cruza os dois). */
+function usePlayInvalidate(gdId) {
+  const qc = useQueryClient();
+  return () => {
+    qc.invalidateQueries({ queryKey: ['game-days', gdId, 'games'] });
+    qc.invalidateQueries({ queryKey: ['game-days', gdId, 'participants'] });
+  };
+}
+
+export function useCreateNextPlayGame(gdId) {
+  const { user } = useAuth();
+  const invalidate = usePlayInvalidate(gdId);
+  return useMutation({
+    mutationFn: (opts = {}) => createNextPlayGame(gdId, user, opts),
+    onSuccess: invalidate,
+  });
+}
+
+export function useCreateManualPlayGame(gdId) {
+  const { user } = useAuth();
+  const invalidate = usePlayInvalidate(gdId);
+  return useMutation({
+    mutationFn: (data) => createManualPlayGame(gdId, data, user),
+    onSuccess: invalidate,
+  });
+}
+
+export function useFinishPlayGame(gdId) {
+  const { user } = useAuth();
+  const invalidate = usePlayInvalidate(gdId);
+  return useMutation({
+    mutationFn: (gid) => finishPlayGame(gdId, gid, user),
+    onSuccess: invalidate,
+  });
+}
+
+export function useCancelPlayGame(gdId) {
+  const { user } = useAuth();
+  const invalidate = usePlayInvalidate(gdId);
+  return useMutation({
+    mutationFn: (gid) => cancelPlayGame(gdId, gid, user),
+    onSuccess: invalidate,
+  });
+}
+
+export function useNoShowSwapPlayGame(gdId) {
+  const { user } = useAuth();
+  const invalidate = usePlayInvalidate(gdId);
+  return useMutation({
+    mutationFn: ({ gid, absentId }) => noShowSwapPlayGame(gdId, gid, absentId, user),
+    onSuccess: invalidate,
+  });
+}
+
+export function useSetPlayParticipantSkip(gdId) {
+  const { user } = useAuth();
+  const invalidate = usePlayInvalidate(gdId);
+  return useMutation({
+    mutationFn: ({ pid, count }) => setPlayParticipantSkip(gdId, pid, count, user),
+    onSuccess: invalidate,
+  });
+}
+
+export function useSetPlayParticipantPartner(gdId) {
+  const { user } = useAuth();
+  const invalidate = usePlayInvalidate(gdId);
+  return useMutation({
+    mutationFn: ({ pid, partnerId }) => setPlayParticipantPartner(gdId, pid, partnerId, user),
+    onSuccess: invalidate,
+  });
 }
 
 /* ------------------------------- Ranking -------------------------------- */

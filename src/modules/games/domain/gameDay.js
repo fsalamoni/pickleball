@@ -54,7 +54,15 @@ export const GAME_DAY_LIMITS = Object.freeze({
   MAX_ROUNDS: 30,
   TITLE_MAX: 80,
   NOTES_MAX: 1000,
+  MAX_COURTS: 12,
 });
+
+/** Normaliza o número de quadras do formato Play (1..MAX_COURTS). */
+export function normalizePlayCourts(value) {
+  const n = Math.floor(Number(value));
+  if (!Number.isFinite(n) || n < 1) return 1;
+  return Math.min(GAME_DAY_LIMITS.MAX_COURTS, n);
+}
 
 function trimmed(value) {
   return String(value ?? '').trim();
@@ -80,6 +88,7 @@ export function normalizeGameDayInput(input = {}) {
     format: Object.values(GAME_DAY_FORMAT).includes(input.format)
       ? input.format
       : GAME_DAY_FORMAT.AMERICANO,
+    play_courts: normalizePlayCourts(input.play_courts),
   };
 
   const errors = {};

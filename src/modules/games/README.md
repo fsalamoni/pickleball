@@ -23,6 +23,30 @@
 - `game_days/{id}/games/{gid}` — jogos sorteados/avulsos (mesmo shape do dia de
   jogo dos clubes: `side_a`/`side_b` = `[{id,name}]`, `score_a`/`score_b`).
 
+### Formato "Play" (open play por ordem de chegada) — flag `gameday_play`
+Formato alternativo do dia de jogo do atleta, escolhido na criação. Sessão de
+jogo aberto com N quadras (`game_days/{id}.play_courts`), **sem sorteio de grade
+e sem resultados**. Os jogos são criados por ORDEM DE CHEGADA/ESPERA, quadra a
+quadra; ao concluir um jogo ("jogo concluído"), o próximo entra automaticamente
+na quadra liberada. Domínio puro em `domain/gamePlay.js` (com testes):
+- `computePlayOrder` — separa disponíveis (numerados por espera), em quadra e
+  pausados; a espera usa `available_since` + `available_tie` (sorteio embutido
+  entre empatados);
+- `buildPlayNextMatch` — escolhe os 4 do próximo jogo respeitando a ordem e as
+  DUPLAS FIXAS (empurra a dupla que furaria a ordem);
+- `assignPlayTeams` — forma as duplas equilibrando NÍVEL e SEXO (prioriza mistas);
+- `freePlayCourts`/`nextFreePlayCourt` — controle de quadras.
+
+Participantes têm campos aditivos `play_status` (derivado), `available_since`,
+`available_tie`, `skip_remaining` (pausar X partidas), `partner_id` (dupla fixa),
+`play_level`, `play_gender`. Serviço: `createNextPlayGame`, `createManualPlayGame`,
+`finishPlayGame` (auto-cria o próximo), `cancelPlayGame`, `noShowSwapPlayGame`
+(substitui ausente pelo próximo da ordem, trocando de lugar), `setPlayParticipantSkip`,
+`setPlayParticipantPartner`. UI dedicada em `v2/components/games/AthletePlayOrganizer.jsx`
+(seções Participantes, Quadras e jogos, e "Ordem de participação"). No Play NÃO há
+ranking do dia nem publicação no ranking. Regras: `game_days` com `format == 'play'`
+permitem que qualquer MEMBRO opere a fila (aditivo em `firestore.rules`).
+
 ### Sorteio aditivo de jogos
 "Sortear jogos" é **aditivo**: gera novos jogos com a lista ATUAL de
 participantes e os ADICIONA aos existentes, sem apagar os que já têm resultado
