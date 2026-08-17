@@ -19,17 +19,19 @@ import { useFeatureFlag } from '@/core/lib/FeatureFlagsContext';
 import { FEATURE_FLAG } from '@/core/featureFlags';
 import { useAthletes } from '@/modules/athletes/hooks/useAthletes';
 import { generateGameDayGames, suggestRounds } from '@/modules/clubs/domain/gameDayDraw';
+import { planAdditiveDraw, offsetRounds, splitGamesByResult } from '@/modules/clubs/domain/gameDayDrawMerge';
 import {
   GAME_DAY_FORMAT, GAME_DAY_FORMAT_LABELS,
   generateMexicanoSchedule, kingOfCourtFirstRound, kingOfCourtNextRound,
 } from '@/modules/clubs/domain/gameDayFormats';
+import GameDayLeaderboard from '@/modules/clubs/components/GameDayLeaderboard';
 import {
   GAME_DAY_LIMITS, GD_PARTICIPANT_SOURCE, GD_PARTICIPANT_SOURCE_LABELS, isGameDayOwner,
 } from '@/modules/games/domain/gameDay';
 import {
   useGameDayParticipants, useAddGameDayParticipant, useRemoveGameDayParticipant,
   useGameDayGames, useAddGameDayGame, useUpdateGameDayGame, useDeleteGameDayGame,
-  useReplaceGameDayGames, useClearGameDayGames,
+  useAppendGameDayGames, useClearGameDayGames,
   useGameDayRankingMeta, usePublishGameDayRanking, useUnpublishGameDayRanking,
 } from '@/modules/games/hooks/useGameDays';
 
@@ -47,6 +49,7 @@ export default function AthleteGameDayOrganizer({ gameDay }) {
     <div className="space-y-5">
       <ParticipantsSection gameDay={gameDay} participants={participants} isLoading={isLoading} isOwner={isOwner} />
       <GamesSection gameDay={gameDay} participants={participants} isOwner={isOwner} />
+      <DailyRankingSection gameDay={gameDay} participants={participants} />
       {isOwner && <RankingSection gameDay={gameDay} participants={participants} />}
     </div>
   );
@@ -212,17 +215,23 @@ function AddAthletesDialog({ open, onClose, pool, onAdd }) {
 
 function GamesSection({ gameDay, participants, isOwner }) {
   const { data: games = [], isLoading } = useGameDayGames(gameDay.id);
-  const replaceGames = useReplaceGameDayGames(gameDay.id);
+  const appendGames = useAppendGameDayGames(gameDay.id);
   const addGame = useAddGameDayGame(gameDay.id);
   const clearGames = useClearGameDayGames(gameDay.id);
   const formatsOn = useFeatureFlag(FEATURE_FLAG.GAMEDAY_FORMATS);
   const [rounds, setRounds] = useState(0);
   const [format, setFormat] = useState(gameDay.format || GAME_DAY_FORMAT.AMERICANO);
   const [drawOpen, setDrawOpen] = useState(false);
+  const [replaceUnscored, setReplaceUnscored] = useState(false);
   const [manualOpen, setManualOpen] = useState(false);
   const [confirmClear, setConfirmClear] = useState(false);
   const [drawing, setDrawing] = useState(false);
   const [addingRound, setAddingRound] = useState(false);
+
+  const { scored: scoredGames, unscored: unscoredGames } = useMemo(
+    () => splitGamesByResult(games),
+    [games],
+  );
 
   const effectiveRounds = rounds || suggestRounds(participants.length) || 3;
   const canDraw = participants.length >= 4;
@@ -242,6 +251,11 @@ function GamesSection({ gameDay, participants, isOwner }) {
     side_b: g.side_b.map((id) => ({ id, name: participantById.get(id)?.name || 'Jogador' })),
   });
 
+  const openDraw = () => {
+    setReplaceUnscored(false); // por padrão, não apaga nada (aditivo)
+    setDrawOpen(true);
+  };
+
   const handleDraw = async () => {
     setDrawing(true);
     try {
@@ -255,12 +269,15 @@ function GamesSection({ gameDay, participants, isOwner }) {
       } else {
         raw = generateGameDayGames(ids, { rounds: effectiveRounds, seed });
       }
-      const payload = raw.map(toPayload);
-      await replaceGames.mutateAsync(payload);
+      // Sorteio ADITIVO: mantém os jogos com resultado, opcionalmente substitui
+      // os sem resultado, e numera as novas rodadas após as já existentes.
+      const plan = planAdditiveDraw({ existingGames: games, replaceUnscored });
+      const payload = offsetRounds(raw, plan.roundBase).map(toPayload);
+      await appendGames.mutateAsync({ removeIds: plan.removeIds, games: payload, orderBase: plan.orderBase });
       const label = formatsOn ? GAME_DAY_FORMAT_LABELS[format] : 'Americano';
       toast.success(isKingOfCourt
-        ? `Rei da Quadra iniciado: rodada 1 com ${payload.length} jogo(s).`
-        : `Sorteio (${label}) concluído: ${payload.length} jogo(s).`);
+        ? `Rei da Quadra: ${payload.length} jogo(s) adicionado(s).`
+        : `Sorteio (${label}): ${payload.length} jogo(s) adicionado(s).`);
       setDrawOpen(false);
     } catch (err) {
       toast.error(err.message || 'Não foi possível sortear.');
@@ -334,7 +351,7 @@ function GamesSection({ gameDay, participants, isOwner }) {
               <V2Button size="sm" variant="ghost" onClick={() => setManualOpen(true)} disabled={participants.length < 2}>
                 <Plus className="mr-1.5 h-4 w-4" /> Inserir partida
               </V2Button>
-              <V2Button size="sm" onClick={() => setDrawOpen(true)} disabled={!canDraw}>
+              <V2Button size="sm" onClick={openDraw} disabled={!canDraw}>
                 <Shuffle className="mr-1.5 h-4 w-4" /> Sortear jogos
               </V2Button>
               {isKingOfCourt && games.length > 0 && (
@@ -387,11 +404,28 @@ function GamesSection({ gameDay, participants, isOwner }) {
             <DialogHeader>
               <DialogTitle>Sortear jogos do dia</DialogTitle>
               <DialogDescription>
-                Gera os jogos de duplas com os {participants.length} participantes.
-                {' '}{games.length > 0 && 'Os jogos atuais serão substituídos.'}
+                Gera novos jogos de duplas com os {participants.length} participantes atuais e os
+                adiciona aos que já existem.
+                {scoredGames.length > 0 && ' Os jogos com resultado lançado são sempre mantidos.'}
               </DialogDescription>
             </DialogHeader>
             <div className="space-y-3">
+              {unscoredGames.length > 0 && (
+                <div className="space-y-2 rounded-lg border border-amber-200 bg-amber-50 p-3">
+                  <p className="text-sm font-medium text-ink">
+                    Há {unscoredGames.length} jogo(s) sem resultado lançado
+                    {scoredGames.length > 0 ? ` e ${scoredGames.length} com resultado` : ''}. O que fazer com os sem resultado?
+                  </p>
+                  <label className="flex items-start gap-2 text-sm text-gray-700">
+                    <input type="radio" name="gd-unscored" className="mt-0.5" checked={!replaceUnscored} onChange={() => setReplaceUnscored(false)} />
+                    <span>Manter e adicionar os novos jogos</span>
+                  </label>
+                  <label className="flex items-start gap-2 text-sm text-gray-700">
+                    <input type="radio" name="gd-unscored" className="mt-0.5" checked={replaceUnscored} onChange={() => setReplaceUnscored(true)} />
+                    <span>Substituir os jogos sem resultado pelos novos</span>
+                  </label>
+                </div>
+              )}
               {formatsOn && (
                 <div className="space-y-1.5">
                   <Label htmlFor="gd-format">Formato</Label>
@@ -577,6 +611,19 @@ function ManualGameDialog({ open, onClose, gdId, participants }) {
         </DialogFooter>
       </DialogContent>
     </Dialog>
+  );
+}
+
+/* ----------------------------- Ranking do dia ---------------------------- */
+
+function DailyRankingSection({ gameDay, participants }) {
+  const { data: games = [] } = useGameDayGames(gameDay.id);
+  return (
+    <V2Surface>
+      <div className="p-4">
+        <GameDayLeaderboard participants={participants} games={games} />
+      </div>
+    </V2Surface>
   );
 }
 

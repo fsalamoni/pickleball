@@ -23,6 +23,24 @@
 - `game_days/{id}/games/{gid}` — jogos sorteados/avulsos (mesmo shape do dia de
   jogo dos clubes: `side_a`/`side_b` = `[{id,name}]`, `score_a`/`score_b`).
 
+### Sorteio aditivo de jogos
+"Sortear jogos" é **aditivo**: gera novos jogos com a lista ATUAL de
+participantes e os ADICIONA aos existentes, sem apagar os que já têm resultado
+lançado. Quando há jogos SEM resultado, o diálogo pergunta se devem ser mantidos
+ou substituídos pelos novos. As rodadas novas são numeradas após as já
+existentes. Domínio puro em `clubs/domain/gameDayDrawMerge.js`
+(`planAdditiveDraw`/`offsetRounds`/`splitGamesByResult`); persistência via
+`appendGameDayGames` (atleta) / `appendEventGames` (clube), que só removem os ids
+indicados e nunca tocam nos jogos com resultado.
+
+### Ranking do dia (classificação interna)
+Entre "Jogos" e "Resultados no ranking", o organizador mostra o **Ranking do
+dia**: cada participante com jogos, vitórias, derrotas, saldo de pontos e pontos
+sofridos. Ordenação: mais vitórias → menos derrotas → melhor saldo → menos
+pontos sofridos. Só conta jogos decididos; é independente do ranking geral da
+plataforma. Domínio puro em `clubs/domain/gameDayLeaderboard.js`; UI compartilhada
+em `clubs/components/GameDayLeaderboard.jsx` (atleta e clube).
+
 ### Ranking (opt-in)
 Ao publicar, os jogos DECIDIDOS são espelhados na MESMA coleção materializada dos
 clubes — `club_event_games` — com `event_id = game_day_id`, `source =

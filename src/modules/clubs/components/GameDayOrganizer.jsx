@@ -28,7 +28,7 @@ import {
   useAddEventGame,
   useUpdateEventGame,
   useDeleteEventGame,
-  useReplaceEventGames,
+  useAppendEventGames,
   useClearEventGames,
   useClubMembers,
   useMyMembership,
@@ -37,6 +37,8 @@ import { useAuth } from '@/core/lib/FirebaseAuthContext';
 import { useAthletes } from '@/modules/athletes/hooks/useAthletes';
 import { PARTICIPANT_SOURCE, INVITE_STATUS, GAME_DAY_LIMITS } from '@/modules/clubs/domain/constants';
 import { generateGameDayGames, suggestRounds } from '@/modules/clubs/domain/gameDayDraw';
+import { planAdditiveDraw, offsetRounds, splitGamesByResult } from '@/modules/clubs/domain/gameDayDrawMerge';
+import GameDayLeaderboard from '@/modules/clubs/components/GameDayLeaderboard';
 import PublishToRankingToggle from '@/modules/clubs/components/PublishToRankingToggle';
 
 const SOURCE_LABEL = {
@@ -72,6 +74,7 @@ export default function GameDayOrganizer({ event, clubId, dateId }) {
     <div className="space-y-5">
       <ParticipantsSection eventId={eventId} clubId={clubId} dateId={dateId} participants={participants} isLoading={isLoading} />
       <GamesSection eventId={eventId} dateId={dateId} participants={participants} />
+      <DailyRankingSection eventId={eventId} dateId={dateId} participants={participants} />
       <PublishToRankingToggle
         event={event}
         clubId={clubId}
@@ -282,10 +285,11 @@ function GamesSection({ eventId, dateId, participants }) {
     () => allGames.filter((g) => (g.date_id || null) === (dateId || null)),
     [allGames, dateId],
   );
-  const replaceGames = useReplaceEventGames(eventId);
+  const appendGames = useAppendEventGames(eventId);
   const clearGames = useClearEventGames(eventId);
   const [rounds, setRounds] = useState(0);
   const [drawOpen, setDrawOpen] = useState(false);
+  const [replaceUnscored, setReplaceUnscored] = useState(false);
   const [manualOpen, setManualOpen] = useState(false);
   const [confirmClear, setConfirmClear] = useState(false);
   const [drawing, setDrawing] = useState(false);
@@ -293,11 +297,21 @@ function GamesSection({ eventId, dateId, participants }) {
   const effectiveRounds = rounds || suggestRounds(participants.length) || 3;
   const canDraw = participants.length >= 4;
 
+  const { scored: scoredGames, unscored: unscoredGames } = useMemo(
+    () => splitGamesByResult(games),
+    [games],
+  );
+
   const participantById = useMemo(() => {
     const map = new Map();
     participants.forEach((p) => map.set(p.id, p));
     return map;
   }, [participants]);
+
+  const openDraw = () => {
+    setReplaceUnscored(false); // por padrão, não apaga nada (aditivo)
+    setDrawOpen(true);
+  };
 
   const handleDraw = async () => {
     setDrawing(true);
@@ -305,11 +319,14 @@ function GamesSection({ eventId, dateId, participants }) {
       const ids = participants.map((p) => p.id);
       const seed = `gd-${Date.now()}`;
       const raw = generateGameDayGames(ids, { rounds: effectiveRounds, seed });
+      // Sorteio ADITIVO: mantém os jogos com resultado, opcionalmente substitui
+      // os sem resultado, e numera as novas rodadas após as já existentes.
+      const plan = planAdditiveDraw({ existingGames: games, replaceUnscored });
       // Wave C.6: também salva o `user_id` real (se o participante for um
       // atleta da plataforma) para que o Cloud Function de ranking possa
       // agregar estatísticas por uid (em vez de por doc_id de participant).
       // Mantém `id` (doc_id do event_participant) para retrocompat.
-      const payload = raw.map((g) => ({
+      const payload = offsetRounds(raw, plan.roundBase).map((g) => ({
         round: g.round,
         kind: 'doubles',
         side_a: g.side_a.map((id) => {
@@ -321,8 +338,11 @@ function GamesSection({ eventId, dateId, participants }) {
           return { id, name: p?.name || 'Jogador', user_id: p?.user_id || null };
         }),
       }));
-      await replaceGames.mutateAsync({ games: payload, dateId });
-      toast.success(`Sorteio concluído: ${payload.length} jogo(s) em ${effectiveRounds} rodada(s).`);
+      await appendGames.mutateAsync({
+        plan: { removeIds: plan.removeIds, games: payload, orderBase: plan.orderBase },
+        dateId,
+      });
+      toast.success(`Sorteio: ${payload.length} jogo(s) adicionado(s).`);
       setDrawOpen(false);
     } catch (err) {
       toast.error(err.message || 'Não foi possível sortear.');
@@ -367,7 +387,7 @@ function GamesSection({ eventId, dateId, participants }) {
             <Button size="sm" variant="outline" onClick={() => setManualOpen(true)} disabled={participants.length < 2}>
               <Plus className="mr-1.5 h-4 w-4" /> Inserir partida
             </Button>
-            <Button size="sm" onClick={() => setDrawOpen(true)} disabled={!canDraw}>
+            <Button size="sm" onClick={openDraw} disabled={!canDraw}>
               <Shuffle className="mr-1.5 h-4 w-4" /> Sortear jogos
             </Button>
             {games.length > 0 && (
@@ -415,12 +435,29 @@ function GamesSection({ eventId, dateId, participants }) {
             <DialogHeader>
               <DialogTitle>Sortear jogos do dia</DialogTitle>
               <DialogDescription>
-                Gera jogos de duplas com todos os {participants.length} participantes, na lógica do Americano —
-                priorizando parcerias e adversários inéditos, equilibrando a participação. Repetições só ocorrem
-                após esgotadas as possibilidades. {games.length > 0 && 'Os jogos atuais serão substituídos.'}
+                Gera jogos de duplas com os {participants.length} participantes atuais, na lógica do Americano —
+                priorizando parcerias e adversários inéditos, equilibrando a participação. Os novos jogos são
+                ADICIONADOS aos existentes.
+                {scoredGames.length > 0 && ' Os jogos com resultado lançado são sempre mantidos.'}
               </DialogDescription>
             </DialogHeader>
-            <div className="space-y-2">
+            <div className="space-y-3">
+              {unscoredGames.length > 0 && (
+                <div className="space-y-2 rounded-lg border border-amber-200 bg-amber-50 p-3">
+                  <p className="text-sm font-medium text-ink">
+                    Há {unscoredGames.length} jogo(s) sem resultado lançado
+                    {scoredGames.length > 0 ? ` e ${scoredGames.length} com resultado` : ''}. O que fazer com os sem resultado?
+                  </p>
+                  <label className="flex items-start gap-2 text-sm text-gray-700">
+                    <input type="radio" name="gd-unscored-club" className="mt-0.5" checked={!replaceUnscored} onChange={() => setReplaceUnscored(false)} />
+                    <span>Manter e adicionar os novos jogos</span>
+                  </label>
+                  <label className="flex items-start gap-2 text-sm text-gray-700">
+                    <input type="radio" name="gd-unscored-club" className="mt-0.5" checked={replaceUnscored} onChange={() => setReplaceUnscored(true)} />
+                    <span>Substituir os jogos sem resultado pelos novos</span>
+                  </label>
+                </div>
+              )}
               <Label htmlFor="rounds">Número de rodadas</Label>
               <Input
                 id="rounds"
@@ -459,6 +496,23 @@ function GamesSection({ eventId, dateId, participants }) {
           loading={clearGames.isPending}
           onConfirm={handleClear}
         />
+      </CardContent>
+    </Card>
+  );
+}
+
+/* ----------------------------- Ranking do dia ---------------------------- */
+
+function DailyRankingSection({ eventId, dateId, participants }) {
+  const { data: allGames = [] } = useEventGames(eventId);
+  const games = useMemo(
+    () => allGames.filter((g) => (g.date_id || null) === (dateId || null)),
+    [allGames, dateId],
+  );
+  return (
+    <Card className="rounded-xl">
+      <CardContent className="p-4">
+        <GameDayLeaderboard participants={participants} games={games} />
       </CardContent>
     </Card>
   );

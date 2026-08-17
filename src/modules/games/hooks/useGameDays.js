@@ -8,7 +8,7 @@ import {
   createGameDay, getGameDay, listMyGameDays, updateGameDay, deleteGameDay,
   listGameDayParticipants, addGameDayParticipant, removeGameDayParticipant,
   listGameDayGames, addGameDayGame, updateGameDayGame, deleteGameDayGame,
-  replaceGameDayGames, clearGameDayGames,
+  replaceGameDayGames, appendGameDayGames, clearGameDayGames,
   joinPublicGameDay, publishGameDayToRanking, unpublishGameDayFromRanking,
   getGameDayRankingMeta, getMyGameDayGames,
 } from '../services/gameDayService.js';
@@ -161,6 +161,13 @@ export function useReplaceGameDayGames(gdId) {
   const { user } = useAuth();
   const invalidate = useGamesInvalidate(gdId);
   return useMutation({ mutationFn: (games) => replaceGameDayGames(gdId, games, user), onSuccess: invalidate });
+}
+
+/** Sorteio aditivo: adiciona novos jogos e (opcionalmente) remove os sem resultado. */
+export function useAppendGameDayGames(gdId) {
+  const { user } = useAuth();
+  const invalidate = useGamesInvalidate(gdId);
+  return useMutation({ mutationFn: (plan) => appendGameDayGames(gdId, plan, user), onSuccess: invalidate });
 }
 
 export function useClearGameDayGames(gdId) {
