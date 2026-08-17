@@ -23,6 +23,7 @@ import { ConfirmDialog } from '@/components/ui/confirm-dialog';
 import CreateGameDayDialog from '@/v2/components/games/CreateGameDayDialog';
 import AthleteGameDayOrganizer from '@/v2/components/games/AthleteGameDayOrganizer';
 import AthletePlayOrganizer from '@/v2/components/games/AthletePlayOrganizer';
+import AthletePlayParticipant from '@/v2/components/games/AthletePlayParticipant';
 import { isPlayFormat } from '@/modules/clubs/domain/gameDayFormats';
 import {
   useMyGameDays, useGameDay, useDeleteGameDay,
@@ -217,7 +218,9 @@ function GameDayDetail({ gameDayId }) {
       </V2Surface>
 
       {isPlayFormat(gameDay.format)
-        ? <AthletePlayOrganizer gameDay={gameDay} />
+        ? (isOwner
+          ? <AthletePlayOrganizer gameDay={gameDay} />
+          : <AthletePlayParticipant gameDay={gameDay} />)
         : <AthleteGameDayOrganizer gameDay={gameDay} />}
 
       {isOwner && (
