@@ -45,11 +45,9 @@ export default function AthletePlayOrganizer({ gameDay }) {
   const { data: participants = [], isLoading } = useGameDayParticipants(gameDay.id);
   const { data: games = [] } = useGameDayGames(gameDay.id);
 
-  const iAmParticipant = useMemo(
-    () => participants.some((p) => p.user_id && p.user_id === user?.uid),
-    [participants, user?.uid],
-  );
-  const canManage = isOwner || iAmParticipant;
+  // Visão do ORGANIZADOR (criador): gestão completa. Só é renderizada para o
+  // criador (ver V2GameDays); demais participantes usam AthletePlayParticipant.
+  const canManage = isOwner;
 
   const view = useMemo(() => computePlayOrder({ participants, games }), [participants, games]);
 
@@ -78,7 +76,7 @@ export default function AthletePlayOrganizer({ gameDay }) {
 
 /* ------------------------------ Participantes ---------------------------- */
 
-function statusBadge(p) {
+export function statusBadge(p) {
   if (p.status === PLAY_STATUS.IN_COURT) return <V2Badge tone="acid">Em quadra</V2Badge>;
   if (p.status === PLAY_STATUS.UNAVAILABLE) {
     return <V2Badge tone="amber">Pausado ({Number(p.skip_remaining) || 0})</V2Badge>;
@@ -309,7 +307,7 @@ function AddAthletesDialog({ open, onClose, pool, onAdd }) {
   );
 }
 
-function SkipDialog({ participant, onClose, onConfirm }) {
+export function SkipDialog({ participant, onClose, onConfirm }) {
   const [count, setCount] = useState(1);
   React.useEffect(() => { if (participant) setCount(1); }, [participant]);
   const open = !!participant;
@@ -346,7 +344,7 @@ function SkipDialog({ participant, onClose, onConfirm }) {
   );
 }
 
-function PartnerDialog({ participant, participants, view, onClose, onConfirm }) {
+export function PartnerDialog({ participant, participants, view, onClose, onConfirm }) {
   const open = !!participant;
   const [search, setSearch] = useState('');
   React.useEffect(() => { if (participant) setSearch(''); }, [participant]);
@@ -405,7 +403,7 @@ function formatPlayTime(ms) {
   return new Date(n).toLocaleTimeString('pt-BR', { hour: '2-digit', minute: '2-digit' });
 }
 
-function PlayCourtsSection({ gameDay, participants, games, view, canManage }) {
+export function PlayCourtsSection({ gameDay, participants, games, view, canManage }) {
   const createNext = useCreateNextPlayGame(gameDay.id);
   const finishGame = useFinishPlayGame(gameDay.id);
   const cancelGame = useCancelPlayGame(gameDay.id);
@@ -485,10 +483,10 @@ function PlayCourtsSection({ gameDay, participants, games, view, canManage }) {
           )}
         </div>
 
-        {participants.length < 4 && (
+        {canManage && participants.length < 4 && (
           <p className="text-xs text-gray-500">Insira ao menos 4 participantes para começar a criar jogos.</p>
         )}
-        {participants.length >= 4 && !canCreateNext && free.length > 0 && (
+        {canManage && participants.length >= 4 && !canCreateNext && free.length > 0 && (
           <p className="text-xs text-gray-500">
             Aguardando jogadores disponíveis: há {availableCount} na ordem (mínimo 4 para um novo jogo).
           </p>
@@ -815,7 +813,7 @@ function ManualPlayGameDialog({ open, onClose, gameDay, participants, view, free
 
 /* -------------------------- Ordem de participação -------------------------- */
 
-function PlayOrderSection({ view }) {
+export function PlayOrderSection({ view }) {
   const { order, inCourt, unavailable } = view;
   const total = order.length + inCourt.length + unavailable.length;
 
