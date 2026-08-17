@@ -22,7 +22,7 @@ import {
   GAME_DAY_LIMITS, GD_PARTICIPANT_SOURCE, GD_PARTICIPANT_SOURCE_LABELS, isGameDayOwner,
 } from '@/modules/games/domain/gameDay';
 import {
-  computePlayOrder, freePlayCourts, PLAY_STATUS, PLAY_GAME_STATUS,
+  computePlayOrder, freePlayCourts, forecastPlayMatches, PLAY_STATUS, PLAY_GAME_STATUS,
 } from '@/modules/games/domain/gamePlay';
 import {
   useGameDayParticipants, useAddGameDayParticipant, useRemoveGameDayParticipant,
@@ -395,6 +395,16 @@ function PartnerDialog({ participant, participants, view, onClose, onConfirm }) 
 
 /* --------------------------------- Quadras --------------------------------- */
 
+function sideNames(side) {
+  return (side || []).map((p) => p.name).join(' / ') || '—';
+}
+
+function formatPlayTime(ms) {
+  const n = Number(ms);
+  if (!Number.isFinite(n) || n <= 0) return '—';
+  return new Date(n).toLocaleTimeString('pt-BR', { hour: '2-digit', minute: '2-digit' });
+}
+
 function PlayCourtsSection({ gameDay, participants, games, view, canManage }) {
   const createNext = useCreateNextPlayGame(gameDay.id);
   const finishGame = useFinishPlayGame(gameDay.id);
@@ -402,6 +412,10 @@ function PlayCourtsSection({ gameDay, participants, games, view, canManage }) {
   const noShow = useNoShowSwapPlayGame(gameDay.id);
   const [manualOpen, setManualOpen] = useState(false);
   const [busy, setBusy] = useState(false);
+  // Diálogos elevados (mantêm a tabela limpa e sem nós dentro de <tr>).
+  const [finishTarget, setFinishTarget] = useState(null); // gid
+  const [cancelTarget, setCancelTarget] = useState(null); // gid
+  const [absentTarget, setAbsentTarget] = useState(null); // { gid, player }
 
   const courts = Math.max(1, Number(gameDay.play_courts) || 1);
   const openGames = useMemo(
@@ -421,6 +435,15 @@ function PlayCourtsSection({ gameDay, participants, games, view, canManage }) {
   const free = freePlayCourts({ courts, games });
   const availableCount = view.order.length;
   const canCreateNext = free.length > 0 && availableCount >= 4;
+  const forecast = useMemo(
+    () => forecastPlayMatches(view.order, { courts }),
+    [view.order, courts],
+  );
+
+  const courtRows = useMemo(
+    () => Array.from({ length: courts }, (_, i) => i + 1).map((court) => ({ court, game: gameByCourt.get(court) || null })),
+    [courts, gameByCourt],
+  );
 
   const handleCreateNext = async (court = null) => {
     setBusy(true);
@@ -471,21 +494,40 @@ function PlayCourtsSection({ gameDay, participants, games, view, canManage }) {
           </p>
         )}
 
-        <div className="grid gap-3 sm:grid-cols-2">
-          {Array.from({ length: courts }, (_, i) => i + 1).map((court) => (
-            <CourtCard
-              key={court}
-              court={court}
-              game={gameByCourt.get(court) || null}
-              canManage={canManage}
-              onFinish={handleFinish}
-              onCancel={(gid) => cancelGame.mutate(gid)}
-              onCreate={() => handleCreateNext(court)}
-              onNoShow={(gid, absentId) => noShow.mutate({ gid, absentId })}
-              canCreate={availableCount >= 4 && !busy}
-            />
-          ))}
+        {/* Tabela de quadras (uma linha por quadra). */}
+        <div className="overflow-x-auto">
+          <table className="w-full min-w-[680px] border-collapse text-sm">
+            <thead>
+              <tr className="border-b border-gray-200 text-[11px] uppercase tracking-wide text-gray-500">
+                <th className="py-2 pr-2 text-left font-semibold">Quadra</th>
+                <th className="py-2 px-2 text-left font-semibold">Início</th>
+                <th className="py-2 px-2 text-right font-semibold">Lado A</th>
+                <th className="py-2 px-1 text-center font-semibold" />
+                <th className="py-2 px-2 text-left font-semibold">Lado B</th>
+                <th className="py-2 px-2 text-left font-semibold">Status</th>
+                <th className="py-2 pl-2 text-right font-semibold">Ações</th>
+              </tr>
+            </thead>
+            <tbody>
+              {courtRows.map(({ court, game }) => (
+                <CourtRow
+                  key={court}
+                  court={court}
+                  game={game}
+                  canManage={canManage}
+                  canCreate={availableCount >= 4 && !busy}
+                  onCreate={() => handleCreateNext(court)}
+                  onFinish={() => setFinishTarget(game.id)}
+                  onCancel={() => setCancelTarget(game.id)}
+                  onPlayer={(player) => setAbsentTarget({ gid: game.id, player })}
+                />
+              ))}
+            </tbody>
+          </table>
         </div>
+
+        {/* Previsão dos próximos participantes. */}
+        <PlayForecastTable forecast={forecast} availableCount={availableCount} />
 
         {finishedGames.length > 0 && (
           <FinishedGamesList games={finishedGames} />
@@ -500,97 +542,162 @@ function PlayCourtsSection({ gameDay, participants, games, view, canManage }) {
         view={view}
         freeCourts={free}
       />
+
+      <ConfirmDialog
+        open={!!finishTarget}
+        onOpenChange={(v) => !v && setFinishTarget(null)}
+        title="Concluir jogo?"
+        description="O jogo será finalizado e o próximo entra automaticamente nesta quadra (se houver 4 disponíveis na ordem)."
+        confirmLabel="Concluir"
+        onConfirm={() => { const g = finishTarget; setFinishTarget(null); if (g) handleFinish(g); }}
+      />
+      <ConfirmDialog
+        open={!!cancelTarget}
+        onOpenChange={(v) => !v && setCancelTarget(null)}
+        destructive
+        title="Cancelar jogo?"
+        description="O jogo será removido e os jogadores voltam para a fila. Nenhum próximo jogo é criado."
+        confirmLabel="Cancelar jogo"
+        onConfirm={() => { const g = cancelTarget; setCancelTarget(null); if (g) cancelGame.mutate(g); }}
+      />
+      <ConfirmDialog
+        open={!!absentTarget}
+        onOpenChange={(v) => !v && setAbsentTarget(null)}
+        title="Marcar como ausente?"
+        description={absentTarget ? `${absentTarget.player.name} sai deste jogo e entra o próximo da ordem de participação. Os dois trocam de lugar.` : ''}
+        confirmLabel="Substituir"
+        onConfirm={() => { const t = absentTarget; setAbsentTarget(null); if (t) noShow.mutate({ gid: t.gid, absentId: t.player.id }); }}
+      />
     </V2Surface>
   );
 }
 
-function sideNames(side) {
-  return (side || []).map((p) => p.name).join(' / ') || '—';
+/** Célula de um lado da partida: jogadores clicáveis (para substituir ausentes). */
+function SideCell({ side, align, canManage, onPlayer }) {
+  const players = (side || []).filter(Boolean);
+  if (players.length === 0) return <span className="text-gray-300">—</span>;
+  return (
+    <div className={`flex flex-col gap-1 ${align === 'right' ? 'items-end' : 'items-start'}`}>
+      {players.map((pl) => (canManage ? (
+        <button
+          key={pl.id}
+          type="button"
+          onClick={() => onPlayer(pl)}
+          title={`Substituir ${pl.name} (marcar ausente → entra o próximo da ordem)`}
+          className="group inline-flex max-w-[160px] items-center gap-1.5 rounded-full px-1 py-0.5 text-left transition-colors hover:bg-red-50"
+        >
+          <UserAvatar name={pl.name} photoUrl={pl.photo_url} size="xs" />
+          <span className="truncate font-medium text-ink group-hover:text-red-600">{pl.name}</span>
+          <UserX className="h-3 w-3 shrink-0 text-gray-300 group-hover:text-red-500" />
+        </button>
+      ) : (
+        <span key={pl.id} className="inline-flex max-w-[160px] items-center gap-1.5">
+          <UserAvatar name={pl.name} photoUrl={pl.photo_url} size="xs" />
+          <span className="truncate font-medium text-ink">{pl.name}</span>
+        </span>
+      )))}
+    </div>
+  );
 }
 
-function CourtCard({ court, game, canManage, onFinish, onCancel, onCreate, onNoShow, canCreate }) {
-  const [confirmFinish, setConfirmFinish] = useState(false);
-  const [confirmCancel, setConfirmCancel] = useState(false);
-  const [absentFor, setAbsentFor] = useState(null); // {id, name}
-
-  const players = game ? [...(game.side_a || []), ...(game.side_b || [])] : [];
-
+function CourtRow({ court, game, canManage, canCreate, onCreate, onFinish, onCancel, onPlayer }) {
+  const busy = !!game;
   return (
-    <div className={`rounded-xl border p-3 ${game ? 'border-gray-200 bg-white' : 'border-dashed border-gray-200 bg-paper'}`}>
-      <div className="mb-2 flex items-center justify-between">
-        <span className={`rounded-full px-2 py-0.5 text-[11px] font-bold ${game ? 'bg-acid text-ink' : 'bg-gray-100 text-gray-500'}`}>
+    <tr className="border-b border-gray-100 align-middle last:border-0">
+      <td className="py-2.5 pr-2">
+        <span className={`inline-flex items-center rounded-full px-2 py-0.5 text-[11px] font-bold ${busy ? 'bg-acid text-ink' : 'bg-gray-100 text-gray-500'}`}>
           Quadra {court}
         </span>
-        {!game && <span className="text-xs text-gray-400">livre</span>}
-      </div>
-
-      {game ? (
-        <>
-          <div className="flex items-center gap-2 text-sm">
-            <div className="flex-1 text-right font-medium text-ink">{sideNames(game.side_a)}</div>
-            <span className="text-xs text-gray-400">vs</span>
-            <div className="flex-1 font-medium text-ink">{sideNames(game.side_b)}</div>
-          </div>
-          {canManage && (
-            <>
-              <div className="mt-3 flex flex-wrap items-center gap-2">
-                <V2Button size="sm" onClick={() => setConfirmFinish(true)}>
-                  <Check className="mr-1.5 h-4 w-4" /> Jogo concluído
-                </V2Button>
-                <V2Button size="sm" variant="ghost" className="text-red-500 hover:text-red-600" onClick={() => setConfirmCancel(true)}>
-                  Cancelar
-                </V2Button>
-              </div>
-              <div className="mt-2 flex flex-wrap gap-1.5">
-                {players.map((pl) => (
-                  <button
-                    key={pl.id}
-                    type="button"
-                    onClick={() => setAbsentFor(pl)}
-                    className="inline-flex items-center gap-1 rounded-full border border-gray-200 px-2 py-0.5 text-[11px] text-gray-500 transition-colors hover:border-red-200 hover:text-red-600"
-                    title={`Marcar ${pl.name} como ausente (substituir pelo próximo da ordem)`}
-                  >
-                    <UserX className="h-3 w-3" /> {pl.name}
-                  </button>
-                ))}
-              </div>
-            </>
-          )}
-
-          <ConfirmDialog
-            open={confirmFinish}
-            onOpenChange={setConfirmFinish}
-            title="Concluir jogo?"
-            description="O jogo será finalizado e o próximo entra automaticamente nesta quadra (se houver 4 disponíveis na ordem)."
-            confirmLabel="Concluir"
-            onConfirm={() => { setConfirmFinish(false); onFinish(game.id); }}
-          />
-          <ConfirmDialog
-            open={confirmCancel}
-            onOpenChange={setConfirmCancel}
-            destructive
-            title="Cancelar jogo?"
-            description="O jogo será removido e os jogadores voltam para a fila. Nenhum próximo jogo é criado."
-            confirmLabel="Cancelar jogo"
-            onConfirm={() => { setConfirmCancel(false); onCancel(game.id); }}
-          />
-          <ConfirmDialog
-            open={!!absentFor}
-            onOpenChange={(v) => !v && setAbsentFor(null)}
-            title="Marcar como ausente?"
-            description={absentFor ? `${absentFor.name} sai deste jogo e entra o próximo da ordem de participação. Os dois trocam de lugar.` : ''}
-            confirmLabel="Substituir"
-            onConfirm={() => { const a = absentFor; setAbsentFor(null); if (a) onNoShow(game.id, a.id); }}
-          />
-        </>
-      ) : (
-        <div className="flex items-center justify-between">
-          <span className="text-sm text-gray-400">Sem jogo em andamento.</span>
-          {canManage && (
+      </td>
+      <td className="py-2.5 px-2 text-gray-500 tabular-nums">{game ? formatPlayTime(game.created_at_ms) : '—'}</td>
+      <td className="py-2.5 px-2 text-right">
+        {game ? <SideCell side={game.side_a} align="right" canManage={canManage} onPlayer={onPlayer} /> : <span className="text-gray-300">—</span>}
+      </td>
+      <td className="py-2.5 px-1 text-center text-xs text-gray-400">{game ? 'vs' : ''}</td>
+      <td className="py-2.5 px-2">
+        {game ? <SideCell side={game.side_b} align="left" canManage={canManage} onPlayer={onPlayer} /> : <span className="text-gray-300">—</span>}
+      </td>
+      <td className="py-2.5 px-2">
+        {game
+          ? <V2Badge tone="acid">Em quadra</V2Badge>
+          : <V2Badge tone="neutral">Livre</V2Badge>}
+      </td>
+      <td className="py-2.5 pl-2 text-right">
+        {game ? (
+          canManage && (
+            <div className="flex flex-wrap justify-end gap-1.5">
+              <V2Button size="sm" onClick={onFinish}>
+                <Check className="mr-1 h-3.5 w-3.5" /> Jogo concluído
+              </V2Button>
+              <V2Button size="sm" variant="ghost" className="text-red-500 hover:text-red-600" onClick={onCancel}>
+                Cancelar
+              </V2Button>
+            </div>
+          )
+        ) : (
+          canManage && (
             <V2Button size="sm" variant="secondary" onClick={onCreate} disabled={!canCreate}>
-              <PlayCircle className="mr-1.5 h-4 w-4" /> Criar jogo
+              <PlayCircle className="mr-1 h-3.5 w-3.5" /> Criar jogo
             </V2Button>
-          )}
+          )
+        )}
+      </td>
+    </tr>
+  );
+}
+
+function PlayForecastTable({ forecast, availableCount }) {
+  return (
+    <div className="space-y-2 rounded-xl border border-gray-100 bg-paper p-3">
+      <div className="flex items-center gap-2">
+        <ListOrdered className="h-4 w-4 text-gray-400" />
+        <h4 className="text-sm font-semibold text-ink">Próximos participantes (previsão)</h4>
+      </div>
+      <p className="text-[11px] text-gray-500">
+        Ordem prevista para as próximas partidas conforme a fila — só indica quem entra (não define as duplas).
+      </p>
+
+      {forecast.length === 0 ? (
+        <p className="py-2 text-sm text-gray-400">
+          {availableCount === 0 ? 'Ninguém aguardando no momento.' : 'Sem previsão disponível.'}
+        </p>
+      ) : (
+        <div className="overflow-x-auto">
+          <table className="w-full min-w-[420px] border-collapse text-sm">
+            <thead>
+              <tr className="border-b border-gray-200 text-[11px] uppercase tracking-wide text-gray-500">
+                <th className="w-28 py-2 pr-2 text-left font-semibold">Previsão</th>
+                <th className="py-2 pl-2 text-left font-semibold">Participantes previstos</th>
+              </tr>
+            </thead>
+            <tbody>
+              {forecast.map((block, i) => (
+                <tr key={i} className="border-b border-gray-100 last:border-0 align-top">
+                  <td className="py-2 pr-2">
+                    <span className="inline-flex items-center rounded-full bg-white px-2 py-0.5 text-[11px] font-bold text-gray-600">
+                      {i + 1}ª próxima
+                    </span>
+                  </td>
+                  <td className="py-2 pl-2">
+                    <div className="flex flex-wrap items-center gap-1.5">
+                      {block.players.map((p) => (
+                        <span key={p.id} className="inline-flex items-center gap-1.5 rounded-full border border-gray-200 bg-white py-0.5 pl-0.5 pr-2 text-xs">
+                          <UserAvatar name={p.name} photoUrl={p.photo_url} size="xs" />
+                          <span className="font-medium text-ink">{p.name}</span>
+                          {p.partner_id && <Link2 className="h-3 w-3 text-blue-500" />}
+                        </span>
+                      ))}
+                      {block.waiting > 0 && (
+                        <span className="inline-flex items-center gap-1 rounded-full border border-dashed border-amber-200 bg-amber-50 px-2 py-0.5 text-[11px] text-amber-700">
+                          +{block.waiting} aguardando conclusão de partida em andamento
+                        </span>
+                      )}
+                    </div>
+                  </td>
+                </tr>
+              ))}
+            </tbody>
+          </table>
         </div>
       )}
     </div>

@@ -3,7 +3,7 @@ import {
   PLAY_STATUS, PLAY_GAME_STATUS,
   playLevelValue, inCourtIdsFromGames, playParticipantStatus,
   computePlayOrder, buildPlayNextMatch, nextAvailableExcluding,
-  assignPlayTeams, freePlayCourts, nextFreePlayCourt,
+  assignPlayTeams, freePlayCourts, nextFreePlayCourt, forecastPlayMatches,
 } from './gamePlay.js';
 
 // Helper: participante disponível com espera crescente por índice.
@@ -197,6 +197,52 @@ describe('assignPlayTeams', () => {
     const { side_a, side_b } = assignPlayTeams(four, { rng });
     const together = (pair) => pair.includes('x') && pair.includes('y');
     expect(together(side_a) || together(side_b)).toBe(true);
+  });
+});
+
+describe('forecastPlayMatches', () => {
+  // n disponíveis, em ordem
+  const avail = (n) => Array.from({ length: n }, (_, i) => P(`p${i}`, { wait: i }));
+
+  it('2 quadras, 2 disponíveis: 1 bloco parcial (2 + 2 aguardando)', () => {
+    const blocks = forecastPlayMatches(avail(2), { courts: 2 });
+    expect(blocks).toHaveLength(1);
+    expect(blocks[0].players.map((p) => p.id)).toEqual(['p0', 'p1']);
+    expect(blocks[0].waiting).toBe(2);
+    expect(blocks[0].full).toBe(false);
+  });
+
+  it('2 quadras, 10 disponíveis: 2 blocos completos (sobra 2 fora da previsão)', () => {
+    const blocks = forecastPlayMatches(avail(10), { courts: 2 });
+    expect(blocks).toHaveLength(2);
+    expect(blocks.every((b) => b.full && b.waiting === 0)).toBe(true);
+    expect(blocks[0].players.map((p) => p.id)).toEqual(['p0', 'p1', 'p2', 'p3']);
+    expect(blocks[1].players.map((p) => p.id)).toEqual(['p4', 'p5', 'p6', 'p7']);
+  });
+
+  it('2 quadras, 6 disponíveis: 1 bloco completo + 1 parcial (2 + 2 aguardando)', () => {
+    const blocks = forecastPlayMatches(avail(6), { courts: 2 });
+    expect(blocks).toHaveLength(2);
+    expect(blocks[0].full).toBe(true);
+    expect(blocks[1].full).toBe(false);
+    expect(blocks[1].players.map((p) => p.id)).toEqual(['p4', 'p5']);
+    expect(blocks[1].waiting).toBe(2);
+  });
+
+  it('sem disponíveis: previsão vazia', () => {
+    expect(forecastPlayMatches([], { courts: 2 })).toEqual([]);
+  });
+
+  it('respeita a dupla que fura a ordem também na previsão', () => {
+    // e,f,g,h(par i),i,j,k,l -> bloco1: e,f,g,j ; bloco2 começa com h,i
+    const order = ['e', 'f', 'g', 'h', 'i', 'j', 'k', 'l'].map((id, idx) => {
+      if (id === 'h') return P('h', { wait: idx, partner: 'i' });
+      if (id === 'i') return P('i', { wait: idx, partner: 'h' });
+      return P(id, { wait: idx });
+    });
+    const blocks = forecastPlayMatches(order, { courts: 2 });
+    expect(blocks[0].players.map((p) => p.id)).toEqual(['e', 'f', 'g', 'j']);
+    expect(blocks[1].players.map((p) => p.id).slice(0, 2)).toEqual(['h', 'i']);
   });
 });
 

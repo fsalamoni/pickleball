@@ -203,6 +203,40 @@ export function nextAvailableExcluding(availableOrdered, excludeIds = []) {
   return (availableOrdered || []).find((p) => !exclude.has(p.id)) || null;
 }
 
+/**
+ * PREVISÃO dos próximos participantes a entrar em quadra, em blocos de até
+ * `slots` (um por quadra), a partir da ORDEM DE PARTICIPAÇÃO atual (disponíveis).
+ * Não organiza duplas — apenas lista quem entra. Preenche blocos até completar
+ * o número de quadras OU até um bloco ficar PARCIAL (faltam jogadores → aguarda
+ * a conclusão de uma partida em andamento), o que ocorrer primeiro.
+ *
+ * @param {Array} availableOrdered  disponíveis, em ordem de espera
+ * @param {{ courts?: number, slots?: number }} [opts]
+ * @returns {Array<{ players: Array, waiting: number, full: boolean }>}
+ */
+export function forecastPlayMatches(availableOrdered, { courts = 1, slots = PLAY_SLOTS } = {}) {
+  const blocks = [];
+  let remaining = (availableOrdered || []).slice();
+  const maxCourts = Math.max(1, courts);
+
+  for (let c = 0; c < maxCourts; c += 1) {
+    if (remaining.length === 0) break;
+    const picked = buildPlayNextMatch(remaining, { slots });
+    if (picked) {
+      const pickedSet = new Set(picked);
+      const players = picked.map((id) => remaining.find((p) => p.id === id)).filter(Boolean);
+      blocks.push({ players, waiting: 0, full: true });
+      remaining = remaining.filter((p) => !pickedSet.has(p.id));
+    } else {
+      // Não dá para completar um jogo → bloco PARCIAL com quem sobrou, e para.
+      const players = remaining.slice(0, slots);
+      blocks.push({ players, waiting: Math.max(0, slots - players.length), full: false });
+      break;
+    }
+  }
+  return blocks;
+}
+
 /* ------------------------------ formação de duplas ------------------------------ */
 
 function isMixedPair(a, b) {
