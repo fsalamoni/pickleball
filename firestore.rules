@@ -62,6 +62,15 @@ service cloud.firestore {
     function gameDayIsPublic(gdId) {
       return gameDayExists(gdId) && gameDayData(gdId).visibility == 'public';
     }
+    // Membro de um dia de jogo NO FORMATO PLAY. No Play (open play), a
+    // organização é colaborativa: qualquer membro pode operar a fila (concluir
+    // jogos, criar o próximo, indicar ausentes) e ajustar a própria participação
+    // (pular partidas, dupla fixa). Confinado a game_days com format == 'play'.
+    function isPlayGameDayMember(gdId) {
+      return isAuthed() && gameDayExists(gdId)
+        && gameDayData(gdId).format == 'play'
+        && (request.auth.uid in gameDayData(gdId).member_uids);
+    }
     // Quem pode ver um dia de jogo: dono, membro, ou qualquer um se público.
     function canAccessGameDay(gdId) {
       return isAuthed() && gameDayExists(gdId) && (
@@ -329,7 +338,9 @@ service cloud.firestore {
           isGameDayOwnerOf(gdId)
           || (gameDayIsPublic(gdId) && request.resource.data.user_id == request.auth.uid)
         );
-        allow update: if isGameDayOwnerOf(gdId);
+        // O criador atualiza qualquer participante; no Play, qualquer membro
+        // também pode (controle de participação e substituição de ausentes).
+        allow update: if isGameDayOwnerOf(gdId) || isPlayGameDayMember(gdId);
         // O criador remove qualquer um; o atleta pode remover a própria entrada.
         allow delete: if isAuthed() && (
           isGameDayOwnerOf(gdId)
@@ -339,7 +350,9 @@ service cloud.firestore {
 
       match /games/{gid} {
         allow read: if canAccessGameDay(gdId);
-        allow create, update, delete: if isGameDayOwnerOf(gdId);
+        // O criador gerencia os jogos; no Play, qualquer membro também pode
+        // (concluir jogo, criar o próximo, cancelar, trocar ausentes).
+        allow create, update, delete: if isGameDayOwnerOf(gdId) || isPlayGameDayMember(gdId);
       }
     }
 

@@ -27,6 +27,10 @@ import {
 import {
   buildGameDayRankingMatches, gameDayRankingId, GAME_DAY_DATE_ID,
 } from '../domain/gameDayRanking.js';
+import {
+  computePlayOrder, buildPlayNextMatch, assignPlayTeams,
+  nextFreePlayCourt, nextAvailableExcluding, PLAY_GAME_STATUS, PLAY_SLOTS,
+} from '../domain/gamePlay.js';
 import { mirrorGameToMyGame, sourceGameToMyGame, gameDayMirrorId } from '../domain/myGames.js';
 
 const COL = 'game_days';
@@ -72,6 +76,8 @@ export async function createGameDay(input, actor, profile) {
   await addGameDayParticipant(id, {
     user_id: actor.uid, name: creatorName, photo_url: creatorPhoto,
     source: GD_PARTICIPANT_SOURCE.OWNER,
+    play_level: profile?.level || profile?.leveling_level || null,
+    play_gender: profile?.gender || null,
   }, actor);
 
   // Dia de jogo público → publica convite em "Procura-se jogo".
@@ -110,7 +116,7 @@ export async function updateGameDay(id, patch, actor) {
   // Normaliza sobre os valores atuais + patch, mantendo só os campos presentes.
   const { value } = normalizeGameDayInput({ ...current, ...patch });
   const editable = {};
-  ['title', 'visibility', 'date', 'time', 'location', 'city', 'state', 'notes', 'format']
+  ['title', 'visibility', 'date', 'time', 'location', 'city', 'state', 'notes', 'format', 'play_courts']
     .forEach((k) => { if (k in patch) editable[k] = value[k]; });
   await updateDoc(doc(db, COL, id), { ...editable, updated_at: serverTimestamp() });
 
@@ -205,6 +211,8 @@ export async function joinPublicGameDay(gameDay, user, profile) {
   await addGameDayParticipant(gameDay.id, {
     user_id: user.uid, name, photo_url: profile?.photo_url || user?.photoURL || null,
     source: GD_PARTICIPANT_SOURCE.JOINED,
+    play_level: profile?.level || profile?.leveling_level || null,
+    play_gender: profile?.gender || null,
   }, user);
 
   notifyUsers([gameDay.created_by], {
@@ -234,6 +242,7 @@ export async function addGameDayParticipant(gdId, entry, actor) {
   if (!gdId) throw new Error('Dia de jogo inválido.');
   const pid = doc(collection(db, COL, gdId, SUB_PARTICIPANTS)).id;
   const source = entry.source || (entry.user_id ? GD_PARTICIPANT_SOURCE.INVITED : GD_PARTICIPANT_SOURCE.GUEST);
+  const now = Date.now();
   await setDoc(doc(db, COL, gdId, SUB_PARTICIPANTS, pid), {
     id: pid,
     user_id: entry.user_id || null,
@@ -241,7 +250,14 @@ export async function addGameDayParticipant(gdId, entry, actor) {
     photo_url: entry.photo_url || null,
     source,
     created_at: serverTimestamp(),
-    created_at_ms: Date.now(),
+    created_at_ms: now,
+    // Campos do formato Play (aditivos; inertes nos demais formatos).
+    play_level: entry.play_level ?? null,
+    play_gender: entry.play_gender ?? null,
+    available_since: now,
+    available_tie: Math.random(),
+    skip_remaining: 0,
+    partner_id: null,
   });
   if (entry.user_id) {
     const patch = { member_uids: arrayUnion(entry.user_id), updated_at: serverTimestamp() };
@@ -393,6 +409,257 @@ export async function clearGameDayGames(gdId, actor) {
   current.docs.forEach((d) => batch.delete(d.ref));
   await batch.commit();
   await createAuditLog({ action: 'game_day_games_cleared', actor, details: { game_day_id: gdId } });
+}
+
+/* ---------------------------- Play (open play) --------------------------- */
+
+/** Monta os lados (2 jogadores) com nome/foto a partir dos ids. */
+function playSideEntries(ids, byId) {
+  return (ids || []).map((id) => {
+    const p = byId.get(id);
+    return {
+      id,
+      name: p?.name || 'Jogador',
+      user_id: p?.user_id || null,
+      photo_url: p?.photo_url || null,
+    };
+  });
+}
+
+/** Grava (no batch) um jogo aberto do Play numa quadra e devolve o id. */
+function writePlayGame(batch, gdId, { court, side_a, side_b, order }) {
+  const gid = doc(collection(db, COL, gdId, SUB_GAMES)).id;
+  batch.set(doc(db, COL, gdId, SUB_GAMES, gid), {
+    id: gid,
+    round: null,
+    court: court ?? null,
+    kind: 'doubles',
+    format: 'play',
+    status: PLAY_GAME_STATUS.OPEN,
+    side_a: side_a || [],
+    side_b: side_b || [],
+    score_a: null,
+    score_b: null,
+    order: order ?? Date.now(),
+    created_at: serverTimestamp(),
+    created_at_ms: Date.now(),
+    updated_at: serverTimestamp(),
+  });
+  return gid;
+}
+
+/** Após criar uma partida, quem estava pulando desconta 1 (e volta à fila ao zerar). */
+function applySkipDecrement(batch, gdId, participants) {
+  const now = Date.now();
+  (participants || []).forEach((p) => {
+    const skip = Number(p.skip_remaining) || 0;
+    if (skip <= 0) return;
+    const nextSkip = skip - 1;
+    const patch = { skip_remaining: nextSkip, updated_at: serverTimestamp() };
+    if (nextSkip === 0) { patch.available_since = now; patch.available_tie = Math.random(); }
+    batch.update(doc(db, COL, gdId, SUB_PARTICIPANTS, p.id), patch);
+  });
+}
+
+/**
+ * Cria o PRÓXIMO jogo do Play por ordem de participação (sorteando entre
+ * empatados via `available_tie`), formando duplas equilibradas por nível/sexo.
+ * @param {string} gdId
+ * @param {object} actor
+ * @param {{ court?: number|null }} [opts]  quadra alvo (padrão: menor livre)
+ * @returns {{ gameId: string, court: number }}
+ */
+export async function createNextPlayGame(gdId, actor, { court = null } = {}) {
+  const gd = await getGameDay(gdId);
+  if (!gd) throw new Error('Dia de jogo não encontrado.');
+  const [participants, games] = await Promise.all([
+    listGameDayParticipants(gdId), listGameDayGames(gdId),
+  ]);
+  const targetCourt = court ?? nextFreePlayCourt({ courts: gd.play_courts || 1, games });
+  if (targetCourt == null) throw new Error('Todas as quadras já estão em jogo.');
+
+  const { order } = computePlayOrder({ participants, games });
+  const ids = buildPlayNextMatch(order, { slots: PLAY_SLOTS });
+  if (!ids) throw new Error('Não há jogadores disponíveis suficientes (mínimo 4) para criar o próximo jogo.');
+
+  const byId = new Map(participants.map((p) => [p.id, p]));
+  const four = ids.map((id) => byId.get(id)).filter(Boolean);
+  const { side_a, side_b } = assignPlayTeams(four);
+
+  const batch = writeBatch(db);
+  const gid = writePlayGame(batch, gdId, {
+    court: targetCourt,
+    side_a: playSideEntries(side_a, byId),
+    side_b: playSideEntries(side_b, byId),
+    order: Date.now(),
+  });
+  const chosen = new Set(ids);
+  applySkipDecrement(batch, gdId, participants.filter((p) => !chosen.has(p.id)));
+  await batch.commit();
+  await createAuditLog({
+    action: 'game_day_play_game_created', actor,
+    details: { game_day_id: gdId, court: targetCourt, game_id: gid },
+  });
+  return { gameId: gid, court: targetCourt };
+}
+
+/** Criação MANUAL de um jogo do Play (jogadores escolhidos à mão). */
+export async function createManualPlayGame(gdId, { court = null, sideAIds = [], sideBIds = [] }, actor) {
+  const participants = await listGameDayParticipants(gdId);
+  const byId = new Map(participants.map((p) => [p.id, p]));
+  const batch = writeBatch(db);
+  const gid = writePlayGame(batch, gdId, {
+    court,
+    side_a: playSideEntries(sideAIds, byId),
+    side_b: playSideEntries(sideBIds, byId),
+    order: Date.now(),
+  });
+  await batch.commit();
+  await createAuditLog({ action: 'game_day_play_game_manual', actor, details: { game_day_id: gdId, game_id: gid, court } });
+  return { gameId: gid };
+}
+
+/**
+ * Conclui um jogo do Play: marca finalizado, devolve os jogadores à fila (mesmo
+ * grupo de espera) e cria AUTOMATICAMENTE o próximo jogo na quadra liberada.
+ */
+export async function finishPlayGame(gdId, gid, actor) {
+  const gd = await getGameDay(gdId);
+  if (!gd) throw new Error('Dia de jogo não encontrado.');
+  const [participants, games] = await Promise.all([
+    listGameDayParticipants(gdId), listGameDayGames(gdId),
+  ]);
+  const game = games.find((g) => g.id === gid);
+  if (!game) throw new Error('Jogo não encontrado.');
+  if (game.status === PLAY_GAME_STATUS.FINISHED) return { finished: gid, next: null };
+
+  const now = Date.now();
+  const playerIds = [...(game.side_a || []), ...(game.side_b || [])].map((p) => p.id).filter(Boolean);
+  const partById = new Map(participants.map((p) => [p.id, p]));
+
+  const batch = writeBatch(db);
+  batch.update(doc(db, COL, gdId, SUB_GAMES, gid), {
+    status: PLAY_GAME_STATUS.FINISHED, finished_at: serverTimestamp(), updated_at: serverTimestamp(),
+  });
+  playerIds.forEach((pid) => {
+    if (!partById.has(pid)) return;
+    batch.update(doc(db, COL, gdId, SUB_PARTICIPANTS, pid), {
+      available_since: now, available_tie: Math.random(), updated_at: serverTimestamp(),
+    });
+  });
+  await batch.commit();
+  await createAuditLog({ action: 'game_day_play_game_finished', actor, details: { game_day_id: gdId, game_id: gid } });
+
+  // Cria o próximo jogo para a quadra liberada (se houver 4 disponíveis).
+  try {
+    const next = await createNextPlayGame(gdId, actor, { court: game.court });
+    return { finished: gid, next };
+  } catch (err) {
+    return { finished: gid, next: null, reason: err.message };
+  }
+}
+
+/** Cancela (remove) um jogo aberto do Play e devolve os jogadores à fila. */
+export async function cancelPlayGame(gdId, gid, actor) {
+  const games = await listGameDayGames(gdId);
+  const game = games.find((g) => g.id === gid);
+  if (!game) return;
+  const now = Date.now();
+  const playerIds = [...(game.side_a || []), ...(game.side_b || [])].map((p) => p.id).filter(Boolean);
+  const batch = writeBatch(db);
+  batch.delete(doc(db, COL, gdId, SUB_GAMES, gid));
+  playerIds.forEach((pid) => {
+    batch.update(doc(db, COL, gdId, SUB_PARTICIPANTS, pid), {
+      available_since: now, available_tie: Math.random(), updated_at: serverTimestamp(),
+    });
+  });
+  await batch.commit();
+  await createAuditLog({ action: 'game_day_play_game_cancelled', actor, details: { game_day_id: gdId, game_id: gid } });
+}
+
+/**
+ * Marca um jogador como AUSENTE num jogo aberto: ele é substituído pelo próximo
+ * da ordem de participação, e os dois TROCAM de lugar (o ausente assume a
+ * posição do substituto na fila).
+ */
+export async function noShowSwapPlayGame(gdId, gid, absentId, actor) {
+  const [participants, games] = await Promise.all([
+    listGameDayParticipants(gdId), listGameDayGames(gdId),
+  ]);
+  const game = games.find((g) => g.id === gid);
+  if (!game || game.status === PLAY_GAME_STATUS.FINISHED) throw new Error('Jogo não disponível.');
+  const inGameIds = [...(game.side_a || []), ...(game.side_b || [])].map((p) => p.id);
+  if (!inGameIds.includes(absentId)) throw new Error('Jogador não está neste jogo.');
+
+  const { order } = computePlayOrder({ participants, games });
+  const repl = nextAvailableExcluding(order, inGameIds);
+  if (!repl) throw new Error('Não há substituto disponível na ordem de participação.');
+
+  const swapSide = (side) => (side || []).map((p) => (p.id === absentId
+    ? { id: repl.id, name: repl.name || 'Jogador', user_id: repl.user_id || null, photo_url: repl.photo_url || null }
+    : p));
+
+  const batch = writeBatch(db);
+  batch.update(doc(db, COL, gdId, SUB_GAMES, gid), {
+    side_a: swapSide(game.side_a), side_b: swapSide(game.side_b), updated_at: serverTimestamp(),
+  });
+  // O ausente assume a posição do substituto na fila (trocam de lugar).
+  batch.update(doc(db, COL, gdId, SUB_PARTICIPANTS, absentId), {
+    available_since: Number(repl.available_since) || Date.now(),
+    available_tie: Number.isFinite(Number(repl.available_tie)) ? Number(repl.available_tie) : Math.random(),
+    updated_at: serverTimestamp(),
+  });
+  await batch.commit();
+  await createAuditLog({
+    action: 'game_day_play_no_show', actor,
+    details: { game_day_id: gdId, game_id: gid, absent_id: absentId, replaced_by: repl.id },
+  });
+  return { replacedBy: repl.id };
+}
+
+/** Define/ajusta a indisponibilidade ("pular X partidas") de um participante. */
+export async function setPlayParticipantSkip(gdId, pid, count, actor) {
+  const n = Math.max(0, Math.floor(Number(count) || 0));
+  const patch = { skip_remaining: n, updated_at: serverTimestamp() };
+  if (n === 0) { patch.available_since = Date.now(); patch.available_tie = Math.random(); }
+  await updateDoc(doc(db, COL, gdId, SUB_PARTICIPANTS, pid), patch);
+  await createAuditLog({ action: 'game_day_play_skip_set', actor, details: { game_day_id: gdId, participant_id: pid, count: n } });
+}
+
+/** Define/limpa a DUPLA FIXA (mútua) de um participante. */
+export async function setPlayParticipantPartner(gdId, pid, partnerId, actor) {
+  const participants = await listGameDayParticipants(gdId);
+  const byId = new Map(participants.map((p) => [p.id, p]));
+  const me = byId.get(pid);
+  if (!me) throw new Error('Participante não encontrado.');
+  if (partnerId && partnerId === pid) throw new Error('Escolha outro participante.');
+
+  const batch = writeBatch(db);
+  const clearOldPartner = (p) => {
+    if (p?.partner_id && p.partner_id !== pid && p.partner_id !== partnerId && byId.has(p.partner_id)) {
+      batch.update(doc(db, COL, gdId, SUB_PARTICIPANTS, p.partner_id), { partner_id: null, updated_at: serverTimestamp() });
+    }
+  };
+
+  if (!partnerId) {
+    clearOldPartner(me);
+    if (me.partner_id && byId.has(me.partner_id)) {
+      batch.update(doc(db, COL, gdId, SUB_PARTICIPANTS, me.partner_id), { partner_id: null, updated_at: serverTimestamp() });
+    }
+    batch.update(doc(db, COL, gdId, SUB_PARTICIPANTS, pid), { partner_id: null, updated_at: serverTimestamp() });
+  } else {
+    const partner = byId.get(partnerId);
+    if (!partner) throw new Error('Parceiro não encontrado.');
+    clearOldPartner(me);
+    clearOldPartner(partner);
+    batch.update(doc(db, COL, gdId, SUB_PARTICIPANTS, pid), { partner_id: partnerId, updated_at: serverTimestamp() });
+    batch.update(doc(db, COL, gdId, SUB_PARTICIPANTS, partnerId), { partner_id: pid, updated_at: serverTimestamp() });
+  }
+  await batch.commit();
+  await createAuditLog({
+    action: 'game_day_play_partner_set', actor,
+    details: { game_day_id: gdId, participant_id: pid, partner_id: partnerId || null },
+  });
 }
 
 /* ------------------------------- Ranking -------------------------------- */

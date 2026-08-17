@@ -524,6 +524,17 @@ export const FEATURE_FLAG = Object.freeze({
   GAMEDAY_FORMATS: 'gameday_formats',
 
   /**
+   * Formato "Play" do dia de jogo do atleta: sessão de jogo aberto (open play)
+   * organizada por ORDEM DE CHEGADA/ESPERA, com N quadras. Não há sorteio de
+   * grade nem registro de resultados: cria-se o próximo jogo por ordem de
+   * participação (sorteando entre empatados), quadra a quadra; ao concluir um
+   * jogo, o próximo é criado automaticamente para a quadra liberada. Suporta
+   * indisponibilidade temporária ("pular X partidas"), duplas fixas e
+   * substituição de ausentes. Aditivo — desligada, o formato Play não aparece.
+   */
+  GAMEDAY_PLAY: 'gameday_play',
+
+  /**
    * Ranking de duplas: página que classifica as PARCERIAS (dois atletas juntos)
    * por vitórias e aproveitamento, a partir dos jogos de duplas finalizados.
    * Aditivo — desligada, a rota e o link ficam ocultos.
@@ -1178,6 +1189,19 @@ export const FEATURE_FLAG_META = Object.freeze({
       + '(atual), Mexicano (pareamento 1&4 vs 2&3 com rotação entre rodadas) ou '
       + 'Rei da Quadra (rodadas por resultado — vencedores sobem, perdedores '
       + 'descem de quadra). Desligada, o sorteio segue só no Americano.',
+  },
+  [FEATURE_FLAG.GAMEDAY_PLAY]: {
+    label: 'Formato Play (open play por ordem de chegada)',
+    description:
+      'No dia de jogo do atleta, adiciona o formato "Play": sessão de jogo '
+      + 'aberto com N quadras, organizada por ordem de chegada/espera. Sem '
+      + 'sorteio de grade e sem resultados — cria o próximo jogo por ordem de '
+      + 'participação (sorteando entre empatados), quadra a quadra; ao concluir '
+      + 'um jogo, o próximo é criado automaticamente para a quadra liberada. As '
+      + 'duplas são equilibradas por nível e sexo (prioriza duplas mistas). '
+      + 'Suporta "pular X partidas", duplas fixas e substituição de ausentes, '
+      + 'com uma "Ordem de participação" sempre atualizada. Desligada, o formato '
+      + 'não aparece na criação do dia de jogo.',
   },
   [FEATURE_FLAG.DOUBLES_RANKING]: {
     label: 'Ranking de duplas',

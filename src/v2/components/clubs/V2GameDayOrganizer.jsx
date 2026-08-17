@@ -36,7 +36,7 @@ import { useAthletes } from '@/modules/athletes/hooks/useAthletes';
 import { PARTICIPANT_SOURCE, INVITE_STATUS, GAME_DAY_LIMITS } from '@/modules/clubs/domain/constants';
 import { generateGameDayGames, suggestRounds } from '@/modules/clubs/domain/gameDayDraw';
 import {
-  GAME_DAY_FORMAT, GAME_DAY_FORMAT_LABELS,
+  GAME_DAY_FORMAT, GAME_DAY_FORMAT_LABELS, DRAW_FORMATS,
   generateMexicanoSchedule, kingOfCourtFirstRound, kingOfCourtNextRound,
 } from '@/modules/clubs/domain/gameDayFormats';
 import { useFeatureFlag } from '@/core/lib/FeatureFlagsContext';
@@ -457,7 +457,7 @@ function GamesSection({ eventId, dateId, participants }) {
                     onChange={(e) => setFormat(e.target.value)}
                     className="w-full h-10 rounded-md border border-input bg-background px-3 text-sm"
                   >
-                    {Object.values(GAME_DAY_FORMAT).map((f) => (
+                    {DRAW_FORMATS.map((f) => (
                       <option key={f} value={f}>{GAME_DAY_FORMAT_LABELS[f]}</option>
                     ))}
                   </select>
