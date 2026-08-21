@@ -23,6 +23,29 @@ function regLabel(reg) {
 }
 
 /**
+ * Nome do(s) parceiro(s) da MINHA dupla numa partida. Cobre os dois formatos:
+ *  - rotação (Americana/Mexicano): a inscrição é individual, então o parceiro é
+ *    a OUTRA inscrição do meu lado da partida (`side_*_ids` menos a minha);
+ *  - dupla fixa: o meu lado é uma única inscrição — o parceiro é o `player_b`
+ *    da própria inscrição (via `partnerNameFor`).
+ * Retorna '' quando é realmente individual (sem parceiro).
+ *
+ * @param {{ myIds: string[], myRegIds: Set<string>, myRegById: Map<string,object>,
+ *           labelById: Map<string,string>, uid: string }} ctx
+ * @returns {string}
+ */
+function resolveMyPartner({ myIds, myRegIds, myRegById, labelById, uid }) {
+  const fromSide = (myIds || [])
+    .filter((id) => !myRegIds.has(id))
+    .map((id) => labelById.get(id) || id)
+    .filter(Boolean)
+    .join(' / ');
+  if (fromSide) return fromSide;
+  const myReg = myRegById.get((myIds || []).find((id) => myRegIds.has(id))) || null;
+  return myReg ? (partnerNameFor(myReg, uid) || '') : '';
+}
+
+/**
  * Lista os próximos jogos agendados do atleta (ordenados por horário).
  * @param {string} uid
  * @param {{ limit?: number }} [options]
@@ -61,14 +84,13 @@ export async function getMyUpcomingMatches(uid, options = {}) {
       if (inA === inB) return;
       const myIds = inA ? aIds : bIds;
       const oppIds = inA ? bIds : aIds;
-      const myReg = myRegById.get(myIds.find((id) => myRegIds.has(id))) || null;
       upcoming.push({
         matchId: m.id,
         tournamentId: m.tournament_id,
         tournamentName: tournamentName.get(m.tournament_id) || 'Torneio',
         scheduledAt: when,
         court: m.court || null,
-        partner: myReg ? (partnerNameFor(myReg, uid) || '') : '',
+        partner: resolveMyPartner({ myIds, myRegIds, myRegById, labelById, uid }),
         opponent: oppIds.map((id) => labelById.get(id) || id).join(' / ') || 'A definir',
       });
     });
@@ -121,14 +143,14 @@ export async function getMyFinishedMatches(uid, options = {}) {
       const pointsA = games.reduce((s, g) => s + (Number(g.a) || 0), 0);
       const pointsB = games.reduce((s, g) => s + (Number(g.b) || 0), 0);
       const when = toTime(m.result_recorded_at) || toTime(m.updated_at) || toTime(m.scheduled_at) || 0;
-      const myReg = myRegById.get(myIds.find((id) => myRegIds.has(id))) || null;
       out.push({
         matchId: m.id,
         tournamentId: m.tournament_id,
         tournamentName: tournamentName.get(m.tournament_id) || 'Torneio',
         at: Number.isNaN(when) ? 0 : when,
-        // Parceiro da MINHA dupla (o outro jogador da inscrição), quando houver.
-        partner: myReg ? (partnerNameFor(myReg, uid) || '') : '',
+        // Parceiro da MINHA dupla: nos formatos de rotação (americana) é a OUTRA
+        // inscrição do meu lado da partida; nas duplas fixas é o player_b.
+        partner: resolveMyPartner({ myIds, myRegIds, myRegById, labelById, uid }),
         opponent: oppIds.map((id) => labelById.get(id) || id).join(' / ') || 'Adversário',
         myScore: mySide === 'a' ? pointsA : pointsB,
         oppScore: mySide === 'a' ? pointsB : pointsA,

@@ -7,7 +7,24 @@
  * títulos — geral e por formato. Sem I/O: apenas transformação de dados.
  */
 
-import { MODALITY_FORMAT, TOURNAMENT_STATUS } from '@/modules/tournament/domain/constants';
+import { MODALITY_FORMAT, TOURNAMENT_STATUS, TOURNAMENT_STAGE_TYPE } from '@/modules/tournament/domain/constants';
+
+/**
+ * Estruturas que geram jogos 2×2 (duplas) MESMO com inscrição individual: a
+ * Americana e o Mexicano montam duplas por rotação a partir dos inscritos
+ * individuais. Uma modalidade com `format: 'singles'` mas com uma dessas fases
+ * é, na prática, jogada em DUPLAS.
+ */
+const ROTATION_DOUBLES_STAGES = new Set([
+  TOURNAMENT_STAGE_TYPE.AMERICANO,
+  TOURNAMENT_STAGE_TYPE.MEXICANO,
+]);
+
+/** A modalidade tem alguma fase de rotação (americana/mexicano) → jogos 2×2. */
+function modalityPlaysDoubles(modality) {
+  const stages = Array.isArray(modality?.stages) ? modality.stages : [];
+  return stages.some((s) => ROTATION_DOUBLES_STAGES.has(s?.type));
+}
 
 /** Aproveitamento (0–1) a partir de vitórias e derrotas, ou null se não houve jogos decididos. */
 export function winRate(wins, losses) {
@@ -34,13 +51,16 @@ export function normalizeStatsFormat(format) {
  * Descobre o formato REAL de uma inscrição para fins de estatística.
  *
  * Regra do produto: o formato é uma propriedade do JOGO, não de quem está
- * cadastrado. Se a inscrição tem um PARCEIRO (mesmo um convidado avulso, sem
- * conta na plataforma — basta o nome), é DUPLAS, qualquer que seja o rótulo da
- * modalidade (inclusive 'americano'). Só é individual quando NÃO há parceiro E
- * a modalidade é explicitamente 'singles'.
+ * cadastrado. É DUPLAS quando:
+ *  - a inscrição tem um PARCEIRO (mesmo convidado avulso, sem conta — basta o
+ *    nome); OU
+ *  - a modalidade é de rotação (Americana/Mexicano): a inscrição é individual,
+ *    mas os jogos são 2×2 — o parceiro muda a cada rodada.
+ * Só é individual quando NÃO há parceiro, NÃO é rotação, E a modalidade é
+ * explicitamente 'singles' (ex.: pontos corridos/chaves 1×1).
  *
  * @param {{ player_b_user_id?: string, player_b_name?: string }|null|undefined} registration
- * @param {{ format?: string }|null|undefined} modality
+ * @param {{ format?: string, stages?: Array<{type?: string}> }|null|undefined} modality
  * @returns {'singles'|'doubles'}
  */
 export function resolveEntryFormat(registration, modality) {
@@ -48,6 +68,8 @@ export function resolveEntryFormat(registration, modality) {
     registration?.player_b_user_id || String(registration?.player_b_name || '').trim(),
   );
   if (hasPartner) return MODALITY_FORMAT.DOUBLES;
+  // Americana/Mexicano: inscrição individual, mas jogos 2×2 (duplas por rotação).
+  if (modalityPlaysDoubles(modality)) return MODALITY_FORMAT.DOUBLES;
   return normalizeStatsFormat(modality?.format);
 }
 

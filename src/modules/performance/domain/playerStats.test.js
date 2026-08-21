@@ -43,6 +43,21 @@ describe('resolveEntryFormat', () => {
     expect(resolveEntryFormat(null, { format: 'americano' })).toBe('doubles');
     expect(resolveEntryFormat({ player_b_name: '  ' }, { format: 'singles' })).toBe('singles');
   });
+
+  it('rotação (americana/mexicano) é DUPLAS mesmo com inscrição individual e format singles', () => {
+    // Caso do bug: torneio americano (inscrição individual, format 'singles',
+    // fase americana) gera jogos 2×2 — deve contar como duplas.
+    expect(resolveEntryFormat({}, { format: 'singles', stages: [{ type: 'americano' }] })).toBe('doubles');
+    expect(resolveEntryFormat(null, { format: 'singles', stages: [{ type: 'mexicano' }] })).toBe('doubles');
+    // fase de rotação em qualquer posição
+    expect(resolveEntryFormat({}, { format: 'singles', stages: [{ type: 'groups' }, { type: 'americano' }] })).toBe('doubles');
+  });
+
+  it('singles real (1×1, sem rotação) continua individual', () => {
+    expect(resolveEntryFormat({}, { format: 'singles', stages: [{ type: 'round_robin' }] })).toBe('singles');
+    expect(resolveEntryFormat({}, { format: 'singles', stages: [{ type: 'knockout' }] })).toBe('singles');
+    expect(resolveEntryFormat({}, { format: 'singles' })).toBe('singles'); // sem stages
+  });
 });
 
 describe('buildPlayerStats', () => {
@@ -111,6 +126,22 @@ describe('buildPlayerStats', () => {
     const s = buildPlayerStats(history);
     expect(s.byFormat.singles).toBeUndefined();
     expect(s.byFormat.doubles).toMatchObject({ played: 8, wins: 4, losses: 4 });
+  });
+
+  it('torneio de rotação (americana) com inscrição individual conta em DUPLAS', () => {
+    const history = [
+      {
+        tournament: { status: TOURNAMENT_IN_PROGRESS },
+        entries: [
+          // Inscrição individual (sem player_b) em modalidade 'singles' com fase
+          // americana → os jogos são 2×2, logo DUPLAS (não "Simples").
+          { registration: {}, modality: { format: 'singles', stages: [{ type: 'americano' }] }, ranking: { played: 6, wins: 4, losses: 2 } },
+        ],
+      },
+    ];
+    const s = buildPlayerStats(history);
+    expect(s.byFormat.singles).toBeUndefined();
+    expect(s.byFormat.doubles).toMatchObject({ played: 6, wins: 4, losses: 2 });
   });
 
   it('inscrição individual de verdade (sem parceiro) conta em singles', () => {
