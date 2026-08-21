@@ -1,7 +1,10 @@
 import { describe, expect, it } from 'vitest';
 import {
   PARTNER_INVITE_STATUS,
+  PARTNER_INVITE_NOTIFICATION_KIND,
   buildPartnerInviteFields,
+  buildPartnerInviteNotificationData,
+  partnerInviteNotificationRegistrationId,
   canRespondToPartnerInvite,
   filterPartnerCandidates,
   findPendingPartnerInvites,
@@ -23,6 +26,38 @@ describe('buildPartnerInviteFields', () => {
   it('retorna objeto vazio sem uid', () => {
     expect(buildPartnerInviteFields('')).toEqual({});
     expect(buildPartnerInviteFields(null)).toEqual({});
+  });
+});
+
+describe('buildPartnerInviteNotificationData / partnerInviteNotificationRegistrationId', () => {
+  it('monta o data da notificação com a inscrição e o torneio/modalidade', () => {
+    expect(buildPartnerInviteNotificationData({ registrationId: 'reg1', tournamentId: 't1', modalityId: 'm1' })).toEqual({
+      kind: PARTNER_INVITE_NOTIFICATION_KIND,
+      registration_id: 'reg1',
+      tournament_id: 't1',
+      modality_id: 'm1',
+    });
+  });
+
+  it('exige a inscrição; campos opcionais caem para null', () => {
+    expect(buildPartnerInviteNotificationData({ registrationId: '' })).toBeNull();
+    expect(buildPartnerInviteNotificationData({})).toBeNull();
+    expect(buildPartnerInviteNotificationData({ registrationId: 'reg2' })).toEqual({
+      kind: PARTNER_INVITE_NOTIFICATION_KIND,
+      registration_id: 'reg2',
+      tournament_id: null,
+      modality_id: null,
+    });
+  });
+
+  it('devolve o id da inscrição só quando a notificação é um convite de dupla', () => {
+    const data = buildPartnerInviteNotificationData({ registrationId: 'reg1', tournamentId: 't1' });
+    expect(partnerInviteNotificationRegistrationId({ data })).toBe('reg1');
+    // Outros tipos de notificação, ou sem data, não são respondíveis inline.
+    expect(partnerInviteNotificationRegistrationId({ data: { kind: 'chat_message' } })).toBeNull();
+    expect(partnerInviteNotificationRegistrationId({})).toBeNull();
+    expect(partnerInviteNotificationRegistrationId(null)).toBeNull();
+    expect(partnerInviteNotificationRegistrationId({ data: { kind: PARTNER_INVITE_NOTIFICATION_KIND } })).toBeNull();
   });
 });
 

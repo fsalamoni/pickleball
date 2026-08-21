@@ -43,6 +43,7 @@ import { notifyUsers, NOTIFICATION_TYPE } from '@/core/services/notificationServ
 import {
   PARTNER_INVITE_STATUS,
   buildPartnerInviteFields,
+  buildPartnerInviteNotificationData,
   canRespondToPartnerInvite,
 } from '../domain/partnerInvite.js';
 import { canSelfCheckIn } from '../domain/checkin.js';
@@ -157,6 +158,13 @@ export async function createRegistration(input, actor) {
         message: `${payload.player_a_name || 'Um atleta'} te inscreveu como dupla em "${tournament.name}". Abra o torneio para confirmar ou recusar.`,
         type: NOTIFICATION_TYPE.PARTNER_INVITE,
         link: `/torneios/${tournament_id}`,
+        // Payload que habilita confirmar/recusar direto no sino (flag
+        // partner_invite_quick_confirm). Aditivo: sem a flag, é apenas um link.
+        data: buildPartnerInviteNotificationData({
+          registrationId: id,
+          tournamentId: tournament_id,
+          modalityId: modality_id,
+        }),
         actor,
       });
     } catch (err) {

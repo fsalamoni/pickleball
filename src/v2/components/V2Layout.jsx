@@ -41,6 +41,7 @@ import { useAutoRecomputeRatings } from '@/modules/rating/hooks/useRating';
 import AuthFunnelTracker from '@/modules/analytics/components/AuthFunnelTracker';
 import { useFeatureFlag } from '@/core/lib/FeatureFlagsContext';
 import { FEATURE_FLAG } from '@/core/featureFlags';
+import PartnerInviteNotificationAction from '@/v2/components/tournament/PartnerInviteNotificationAction';
 import { useMyArenaSummary } from '@/modules/arenas/hooks/useMyArenaSummary';
 import { useCoach } from '@/modules/coaches/hooks/useCoaches';
 import { useNotifications } from '@/modules/notifications/hooks/useNotifications';
@@ -336,6 +337,7 @@ function NotificationsMenu() {
   const navigate = useNavigate();
   const { notifications, unreadCount, markAsRead, markAllAsRead } = useNotifications();
   const markAllOn = useFeatureFlag(FEATURE_FLAG.NOTIFICATIONS_MARK_ALL);
+  const quickConfirmOn = useFeatureFlag(FEATURE_FLAG.PARTNER_INVITE_QUICK_CONFIRM);
 
   const handleMarkAll = async (event) => {
     // Mantém o dropdown aberto enquanto marca.
@@ -387,6 +389,12 @@ function NotificationsMenu() {
               <div className="flex-1 space-y-1">
                 <p className="font-semibold">{n.title}</p>
                 <p className="text-xs text-gray-500">{n.message}</p>
+                {quickConfirmOn && (
+                  <PartnerInviteNotificationAction
+                    notification={n}
+                    onResolved={() => { if (!n.read) markAsRead(n.id); }}
+                  />
+                )}
               </div>
               {!n.read && <div className="ml-2 mt-1 h-2 w-2 rounded-full bg-acid" />}
             </DropdownMenuItem>

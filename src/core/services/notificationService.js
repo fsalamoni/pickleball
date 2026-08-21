@@ -45,6 +45,30 @@ function trimText(value, max) {
   return max ? text.slice(0, max) : text;
 }
 
+/**
+ * Sanitiza o `data` estruturado (opcional) de uma notificação. Mantém apenas um
+ * mapa RASO de valores simples (string/number/boolean/null), descartando o
+ * resto (objetos aninhados, arrays, funções, undefined). Isso permite que uma
+ * notificação carregue um payload de ação — ex.: `{ kind, registration_id }`
+ * para confirmar uma dupla direto no sino — sem risco de gravar algo pesado ou
+ * inválido no Firestore. Retorna `null` quando não há nada aproveitável.
+ */
+function sanitizeData(data) {
+  if (!data || typeof data !== 'object' || Array.isArray(data)) return null;
+  const out = {};
+  let count = 0;
+  for (const [key, value] of Object.entries(data)) {
+    if (count >= 20) break;
+    const k = String(key).slice(0, 60);
+    if (typeof value === 'string') out[k] = value.slice(0, 300);
+    else if (typeof value === 'number' && Number.isFinite(value)) out[k] = value;
+    else if (typeof value === 'boolean' || value === null) out[k] = value;
+    else continue; // ignora aninhados/complexos
+    count += 1;
+  }
+  return count > 0 ? out : null;
+}
+
 /** Normaliza e remove duplicados/vazios de uma lista de uids destinatários. */
 function normalizeRecipients(userIds, actorId) {
   const set = new Set();
@@ -55,13 +79,16 @@ function normalizeRecipients(userIds, actorId) {
   return Array.from(set);
 }
 
-function buildPayload({ userId, title, message, type, link, actor }) {
+function buildPayload({ userId, title, message, type, link, actor, data }) {
   return {
     user_id: userId,
     title: trimText(title, 140) || 'Nova atividade',
     message: trimText(message, 300),
     type: type || NOTIFICATION_TYPE.GENERIC,
     link: trimText(link, 400) || null,
+    // Payload de ação opcional (ex.: confirmar dupla no próprio sino). Aditivo:
+    // notificações sem `data` seguem gravando `null`, como antes.
+    data: sanitizeData(data),
     actor_id: actor?.uid || null,
     actor_name: trimText(actor?.displayName || actor?.name, 140) || null,
     read: false,
@@ -74,13 +101,13 @@ function buildPayload({ userId, title, message, type, link, actor }) {
 /**
  * Cria uma notificação para um único usuário. Best-effort.
  */
-export async function createNotification({ userId, title, message, type, link, actor } = {}) {
+export async function createNotification({ userId, title, message, type, link, actor, data } = {}) {
   if (!db || !userId) return;
   if (actor?.uid && actor.uid === userId) return; // não notifica a si mesmo
   try {
     const ref = doc(collection(db, NOTIFICATION_COLLECTION));
     const batch = writeBatch(db);
-    batch.set(ref, buildPayload({ userId, title, message, type, link, actor }));
+    batch.set(ref, buildPayload({ userId, title, message, type, link, actor, data }));
     await batch.commit();
   } catch (err) {
     logger.error('Falha ao criar notificação:', err);
@@ -91,7 +118,7 @@ export async function createNotification({ userId, title, message, type, link, a
  * Cria a mesma notificação para vários usuários (exceto o ator). Best-effort.
  * Divide em lotes de 400 operações para respeitar o limite do Firestore (500).
  */
-export async function notifyUsers(userIds, { title, message, type, link, actor } = {}) {
+export async function notifyUsers(userIds, { title, message, type, link, actor, data } = {}) {
   if (!db) return;
   const recipients = normalizeRecipients(userIds, actor?.uid);
   if (recipients.length === 0) return;
@@ -102,7 +129,7 @@ export async function notifyUsers(userIds, { title, message, type, link, actor }
       const batch = writeBatch(db);
       slice.forEach((uid) => {
         const ref = doc(collection(db, NOTIFICATION_COLLECTION));
-        batch.set(ref, buildPayload({ userId: uid, title, message, type, link, actor }));
+        batch.set(ref, buildPayload({ userId: uid, title, message, type, link, actor, data }));
       });
       await batch.commit();
     }

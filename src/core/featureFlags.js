@@ -348,6 +348,15 @@ export const FEATURE_FLAG = Object.freeze({
   PARTNER_INVITES: 'partner_invites',
 
   /**
+   * Confirmar dupla no próprio sino: quando o parceiro recebe o convite de
+   * dupla, a notificação passa a oferecer os botões "Confirmar dupla" e
+   * "Recusar" direto no menu de notificações — sem precisar abrir o torneio.
+   * Depende de `partner_invites` (é a mesma inscrição/convite). Aditivo —
+   * desligado, a notificação continua levando à página do torneio, como hoje.
+   */
+  PARTNER_INVITE_QUICK_CONFIRM: 'partner_invite_quick_confirm',
+
+  /**
    * Check-in pelo próprio atleta: com o torneio em andamento, o inscrito com
    * inscrição confirmada vê o botão "Fazer check-in" no card da modalidade e
    * confirma presença com um toque (mesmo status usado pelo check-in do
@@ -1051,6 +1060,14 @@ export const FEATURE_FLAG_META = Object.freeze({
       + 'organizador vê o status do convite nas inscrições. O preenchimento '
       + 'manual continua disponível para convidados sem conta. Desligado, a '
       + 'inscrição de duplas fica exatamente como está.',
+  },
+  [FEATURE_FLAG.PARTNER_INVITE_QUICK_CONFIRM]: {
+    label: 'Confirmar dupla na notificação',
+    description:
+      'Na notificação de convite de dupla (sino), adiciona os botões '
+      + '"Confirmar dupla" e "Recusar" para o parceiro responder ali mesmo, '
+      + 'sem abrir o torneio. Requer "Convite e aceite de dupla". Desligado, a '
+      + 'notificação continua apenas levando à página do torneio.',
   },
   [FEATURE_FLAG.ATHLETE_SELF_CHECKIN]: {
     label: 'Check-in pelo próprio atleta',
