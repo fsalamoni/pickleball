@@ -20,6 +20,23 @@ function formatDateTime(ms) {
   return new Date(ms).toLocaleString('pt-BR', { day: '2-digit', month: 'short', hour: '2-digit', minute: '2-digit' });
 }
 
+/** Rótulo do MEU lado: "Você / Parceiro" nas duplas, "Você" no individual. */
+function mySideLabel(partner) {
+  const p = String(partner || '').trim();
+  return p ? `Você / ${p}` : 'Você';
+}
+
+/** Confronto no formato "minha dupla vs dupla adversária". */
+function MatchupLine({ partner, opponent }) {
+  return (
+    <div className="mt-1 font-bold text-ink">
+      <span>{mySideLabel(partner)}</span>
+      <span className="mx-1.5 font-normal text-gray-400">vs</span>
+      <span>{opponent}</span>
+    </div>
+  );
+}
+
 export default function MyGamesPanel() {
   const { user } = useAuth();
   const uid = user?.uid;
@@ -46,6 +63,7 @@ export default function MyGamesPanel() {
       at: m.at,
       title: m.tournamentName,
       to: `/torneios/${m.tournamentId}`,
+      partner: m.partner || '',
       opponent: m.opponent,
       myScore: m.myScore,
       oppScore: m.oppScore,
@@ -58,6 +76,7 @@ export default function MyGamesPanel() {
       at: g.at,
       title: g.label,
       to: '/dia-de-jogo',
+      partner: g.partner || '',
       opponent: g.opponent,
       myScore: g.myScore,
       oppScore: g.oppScore,
@@ -117,7 +136,7 @@ export default function MyGamesPanel() {
                     <Trophy className="h-3.5 w-3.5" />
                     <Link to={`/torneios/${m.tournamentId}`} className="hover:underline">{m.tournamentName}</Link>
                   </div>
-                  <div className="mt-1 font-bold text-ink">vs {m.opponent}</div>
+                  <MatchupLine partner={m.partner} opponent={m.opponent} />
                   <div className="mt-1 flex flex-wrap gap-x-3 text-xs text-gray-500">
                     <span className="flex items-center gap-1"><CalendarClock className="h-3 w-3" /> {formatDateTime(m.scheduledAt)}</span>
                     {m.court && <span className="flex items-center gap-1"><MapPin className="h-3 w-3" /> {m.court}</span>}
@@ -142,7 +161,7 @@ export default function MyGamesPanel() {
                   {m.isGameDay ? <Dices className="h-3.5 w-3.5" /> : <Trophy className="h-3.5 w-3.5" />}
                   <Link to={m.to} className="hover:underline">{m.title}</Link>
                 </div>
-                <div className="mt-1 font-bold text-ink">vs {m.opponent}</div>
+                <MatchupLine partner={m.partner} opponent={m.opponent} />
                 <div className="mt-1 text-xs text-gray-500">{formatDateTime(m.at)}</div>
               </div>
               <div className="flex items-center gap-3">

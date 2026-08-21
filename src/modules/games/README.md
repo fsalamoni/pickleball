@@ -106,6 +106,15 @@ deduplicando pelo id determinístico `gd_${gameDayId}_${gameId}`. Isso alimenta:
 Domínio puro em `domain/myGames.js`. A publicação no ranking NÃO afeta o
 desempenho pessoal — este mostra sempre todos os jogos do atleta.
 
+**Formato (individual × duplas):** todo jogo de dia de jogo é em DUPLAS
+(americano/mexicano/rei da quadra); o formato NÃO muda por um parceiro não
+estar cadastrado. `mirrorGameToMyGame`/`sourceGameToMyGame` classificam via
+`normalizeStatsFormat` (só `kind === 'singles'` explícito é individual; o resto
+é duplas) — a antiga heurística por nº de jogadores foi removida porque contava
+como individual uma dupla com convidado avulso. Cada jogo normalizado carrega
+também `partner` (parceiro da minha dupla) além de `opponent`, para o histórico
+exibir **minha dupla vs dupla adversária**.
+
 ## Onde achar mais
 - `docs/06-MODULES.md` § games
 - `docs/05-DATA-MODEL.md`

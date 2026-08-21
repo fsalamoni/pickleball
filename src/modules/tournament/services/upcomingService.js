@@ -9,6 +9,7 @@ import { listMyRegistrations, listRegistrations } from './registrationService.js
 import { listAllMatchesForModality } from './matchService.js';
 import { getTournament } from './tournamentService.js';
 import { MATCH_STATUS } from '../domain/constants.js';
+import { partnerNameFor } from '../domain/participation.js';
 
 function toTime(value) {
   if (!value) return NaN;
@@ -34,6 +35,7 @@ export async function getMyUpcomingMatches(uid, options = {}) {
   const myRegs = await listMyRegistrations(uid);
   if (myRegs.length === 0) return [];
   const myRegIds = new Set(myRegs.map((r) => r.id));
+  const myRegById = new Map(myRegs.map((r) => [r.id, r]));
   const modalityIds = [...new Set(myRegs.map((r) => r.modality_id).filter(Boolean))];
   const tournamentIds = [...new Set(myRegs.map((r) => r.tournament_id).filter(Boolean))];
 
@@ -57,13 +59,16 @@ export async function getMyUpcomingMatches(uid, options = {}) {
       const inA = aIds.some((id) => myRegIds.has(id));
       const inB = bIds.some((id) => myRegIds.has(id));
       if (inA === inB) return;
+      const myIds = inA ? aIds : bIds;
       const oppIds = inA ? bIds : aIds;
+      const myReg = myRegById.get(myIds.find((id) => myRegIds.has(id))) || null;
       upcoming.push({
         matchId: m.id,
         tournamentId: m.tournament_id,
         tournamentName: tournamentName.get(m.tournament_id) || 'Torneio',
         scheduledAt: when,
         court: m.court || null,
+        partner: myReg ? (partnerNameFor(myReg, uid) || '') : '',
         opponent: oppIds.map((id) => labelById.get(id) || id).join(' / ') || 'A definir',
       });
     });
@@ -87,6 +92,7 @@ export async function getMyFinishedMatches(uid, options = {}) {
   const myRegs = await listMyRegistrations(uid);
   if (myRegs.length === 0) return [];
   const myRegIds = new Set(myRegs.map((r) => r.id));
+  const myRegById = new Map(myRegs.map((r) => [r.id, r]));
   const modalityIds = [...new Set(myRegs.map((r) => r.modality_id).filter(Boolean))];
   const tournamentIds = [...new Set(myRegs.map((r) => r.tournament_id).filter(Boolean))];
 
@@ -109,16 +115,20 @@ export async function getMyFinishedMatches(uid, options = {}) {
       const inB = bIds.some((id) => myRegIds.has(id));
       if (inA === inB) return;
       const mySide = inA ? 'a' : 'b';
+      const myIds = inA ? aIds : bIds;
       const oppIds = inA ? bIds : aIds;
       const games = Array.isArray(m.games) ? m.games : [];
       const pointsA = games.reduce((s, g) => s + (Number(g.a) || 0), 0);
       const pointsB = games.reduce((s, g) => s + (Number(g.b) || 0), 0);
       const when = toTime(m.result_recorded_at) || toTime(m.updated_at) || toTime(m.scheduled_at) || 0;
+      const myReg = myRegById.get(myIds.find((id) => myRegIds.has(id))) || null;
       out.push({
         matchId: m.id,
         tournamentId: m.tournament_id,
         tournamentName: tournamentName.get(m.tournament_id) || 'Torneio',
         at: Number.isNaN(when) ? 0 : when,
+        // Parceiro da MINHA dupla (o outro jogador da inscrição), quando houver.
+        partner: myReg ? (partnerNameFor(myReg, uid) || '') : '',
         opponent: oppIds.map((id) => labelById.get(id) || id).join(' / ') || 'Adversário',
         myScore: mySide === 'a' ? pointsA : pointsB,
         oppScore: mySide === 'a' ? pointsB : pointsA,

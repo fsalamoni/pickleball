@@ -35,6 +35,12 @@ describe('mirrorGameToMyGame', () => {
     expect(g.source).toBe(MY_GAME_SOURCE.CLUB_GAME_DAY);
   });
 
+  it('inclui o parceiro da minha dupla (meu lado, menos eu)', () => {
+    const g = mirrorGameToMyGame('u1', base, new Map([['u2', 'Bia'], ['u3', 'Caio'], ['u4', 'Duda']]));
+    expect(g.partner).toBe('Bia');
+    expect(g.opponent).toBe('Caio / Duda');
+  });
+
   it('retorna null se o atleta não participa ou jogo indefinido', () => {
     expect(mirrorGameToMyGame('zzz', base)).toBeNull();
     expect(mirrorGameToMyGame('u1', { ...base, winner_side: null })).toBeNull();
@@ -57,7 +63,26 @@ describe('sourceGameToMyGame', () => {
     expect(g.id).toBe(gameDayMirrorId('gd1', 'g1'));
     expect(g.won).toBe(false);
     expect(g.opponent).toBe('Caio / Duda');
+    expect(g.partner).toBe('Bia');
     expect(g.kind).toBe('doubles');
+  });
+
+  it('jogo de duplas com parceiro AVULSO (sem conta) continua duplas', () => {
+    // p_guest não tem user_id (convidado avulso). O jogo é em duplas mesmo assim.
+    const parts = new Map([
+      ['p1', { user_id: 'u1' }], ['pg', { name: 'Convidado' }],
+      ['p3', { user_id: 'u3' }], ['p4', { user_id: 'u4' }],
+    ]);
+    const gameGuest = {
+      id: 'g9',
+      side_a: [{ id: 'p1', name: 'Ana' }, { id: 'pg', name: 'Convidado' }],
+      side_b: [{ id: 'p3', name: 'Caio' }, { id: 'p4', name: 'Duda' }],
+      score_a: 11, score_b: 9, created_at: '2026-07-30',
+    };
+    const g = sourceGameToMyGame('u1', 'gd1', 'x', gameGuest, parts);
+    expect(g.kind).toBe('doubles'); // NÃO vira individual por causa do avulso
+    expect(g.partner).toBe('Convidado');
+    expect(g.won).toBe(true);
   });
 
   it('pula jogo não decidido', () => {

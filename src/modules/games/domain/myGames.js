@@ -10,8 +10,7 @@
  * Sem I/O — recebe documentos já carregados.
  */
 
-import { MODALITY_FORMAT } from '@/modules/tournament/domain/constants.js';
-import { winRate } from '@/modules/performance/domain/playerStats.js';
+import { winRate, normalizeStatsFormat } from '@/modules/performance/domain/playerStats.js';
 import { toMillis } from '@/modules/tournament/domain/participation.js';
 
 /** Origem de um jogo agregado. */
@@ -39,17 +38,22 @@ export function mirrorGameToMyGame(uid, m, nameByUid) {
   const b = Array.isArray(m.side_b_ids) ? m.side_b_ids.filter(Boolean) : [];
   const mine = a.includes(uid) ? 'a' : (b.includes(uid) ? 'b' : null);
   if (!mine) return null;
+  const myUids = mine === 'a' ? a : b;
   const oppUids = mine === 'a' ? b : a;
   const scoreA = Number(m.score_a) || 0;
   const scoreB = Number(m.score_b) || 0;
   const source = m.source === 'athlete_game_day' ? MY_GAME_SOURCE.GAME_DAY : MY_GAME_SOURCE.CLUB_GAME_DAY;
+  const resolveName = (id) => (nameByUid && nameByUid.get(id)) || 'Atleta';
   return {
     id: m.id,
     at: toMillis(m.result_recorded_at) || toMillis(m.created_at) || 0,
-    kind: m.kind === MODALITY_FORMAT.SINGLES ? MODALITY_FORMAT.SINGLES : MODALITY_FORMAT.DOUBLES,
+    // Americano/duplas: sempre duplas; só individual se o espelho marcou singles.
+    kind: normalizeStatsFormat(m.kind),
     label: m.event_title || 'Dia de jogo',
     source,
-    opponent: oppUids.map((id) => (nameByUid && nameByUid.get(id)) || 'Atleta').join(' / ') || 'Adversário',
+    // Parceiro(s) da MINHA dupla (os do meu lado que não sou eu). Vazio = individual.
+    partner: myUids.filter((id) => id !== uid).map(resolveName).join(' / '),
+    opponent: oppUids.map(resolveName).join(' / ') || 'Adversário',
     myScore: mine === 'a' ? scoreA : scoreB,
     oppScore: mine === 'a' ? scoreB : scoreA,
     won: m.winner_side === mine,
@@ -78,15 +82,26 @@ export function sourceGameToMyGame(uid, gameDayId, gdTitle, game, partById) {
   const bU = sideUids(game.side_b);
   const mine = aU.includes(uid) ? 'a' : (bU.includes(uid) ? 'b' : null);
   if (!mine) return null;
+  const mySide = mine === 'a' ? game.side_a : game.side_b;
   const oppSide = mine === 'a' ? game.side_b : game.side_a;
-  const kind = (game.side_a || []).length === 1 && (game.side_b || []).length === 1
-    ? MODALITY_FORMAT.SINGLES : MODALITY_FORMAT.DOUBLES;
+  // Dia de jogo do atleta é sempre em DUPLAS (americano/mexicano/rei da quadra).
+  // O formato não muda por um parceiro não estar cadastrado — vale o `kind` do
+  // jogo (que nasce 'doubles'); a heurística por nº de jogadores foi removida
+  // porque contava como individual um jogo de duplas com parceiro avulso.
+  const kind = normalizeStatsFormat(game.kind);
+  // Parceiro(s) da MINHA dupla: os do meu lado cujo user_id não sou eu (inclui
+  // convidados avulsos, que não têm user_id).
+  const partner = (mySide || [])
+    .filter((p) => partById.get(p.id)?.user_id !== uid)
+    .map((p) => p.name)
+    .join(' / ');
   return {
     id: gameDayMirrorId(gameDayId, game.id),
     at: toMillis(game.updated_at) || toMillis(game.created_at) || 0,
     kind,
     label: gdTitle || 'Dia de jogo',
     source: MY_GAME_SOURCE.GAME_DAY,
+    partner,
     opponent: (oppSide || []).map((p) => p.name).join(' / ') || 'Adversário',
     myScore: mine === 'a' ? sa : sb,
     oppScore: mine === 'a' ? sb : sa,
@@ -114,7 +129,7 @@ export function foldGameDayGamesIntoStats(stats, games) {
   (games || []).forEach((g) => {
     played += 1;
     if (g.won) wins += 1; else losses += 1;
-    const fmt = g.kind === MODALITY_FORMAT.SINGLES ? MODALITY_FORMAT.SINGLES : MODALITY_FORMAT.DOUBLES;
+    const fmt = normalizeStatsFormat(g.kind);
     const b = byFormat[fmt] || { played: 0, wins: 0, losses: 0 };
     b.played += 1;
     if (g.won) b.wins += 1; else b.losses += 1;

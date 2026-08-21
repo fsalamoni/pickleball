@@ -1,5 +1,7 @@
 import { describe, it, expect } from 'vitest';
-import { buildPlayerStats, winRate } from './playerStats.js';
+import {
+  buildPlayerStats, winRate, normalizeStatsFormat, resolveEntryFormat,
+} from './playerStats.js';
 
 const TOURNAMENT_FINISHED = 'finished';
 const TOURNAMENT_IN_PROGRESS = 'in_progress';
@@ -14,6 +16,32 @@ describe('winRate', () => {
   });
   it('retorna null sem jogos decididos', () => {
     expect(winRate(0, 0)).toBeNull();
+  });
+});
+
+describe('normalizeStatsFormat', () => {
+  it('só singles explícito é individual; todo o resto é duplas', () => {
+    expect(normalizeStatsFormat('singles')).toBe('singles');
+    expect(normalizeStatsFormat('doubles')).toBe('doubles');
+    expect(normalizeStatsFormat('americano')).toBe('doubles');
+    expect(normalizeStatsFormat('mexicano')).toBe('doubles');
+    expect(normalizeStatsFormat(undefined)).toBe('doubles');
+    expect(normalizeStatsFormat(null)).toBe('doubles');
+  });
+});
+
+describe('resolveEntryFormat', () => {
+  it('com parceiro é SEMPRE duplas (mesmo modalidade singles/americano)', () => {
+    expect(resolveEntryFormat({ player_b_name: 'João' }, { format: 'singles' })).toBe('doubles');
+    expect(resolveEntryFormat({ player_b_user_id: 'u2' }, { format: 'americano' })).toBe('doubles');
+    // convidado avulso (só nome, sem conta) ainda é dupla
+    expect(resolveEntryFormat({ player_b_name: 'Convidado' }, { format: 'doubles' })).toBe('doubles');
+  });
+
+  it('sem parceiro segue o formato normalizado da modalidade', () => {
+    expect(resolveEntryFormat({}, { format: 'singles' })).toBe('singles');
+    expect(resolveEntryFormat(null, { format: 'americano' })).toBe('doubles');
+    expect(resolveEntryFormat({ player_b_name: '  ' }, { format: 'singles' })).toBe('singles');
   });
 });
 
@@ -66,6 +94,37 @@ describe('buildPlayerStats', () => {
     const s = buildPlayerStats(history);
     expect(s.titles).toBe(1);
     expect(s.podiums).toBe(2);
+  });
+
+  it('americano e duplas com parceiro entram em DUPLAS (nunca em individual)', () => {
+    const history = [
+      {
+        tournament: { status: TOURNAMENT_IN_PROGRESS },
+        entries: [
+          // Modalidade rotulada 'americano' → duplas.
+          { registration: { player_b_name: 'João' }, modality: { format: 'americano' }, ranking: { played: 5, wins: 3, losses: 2 } },
+          // Modalidade rotulada 'singles' MAS com parceiro (ex.: convidado) → duplas.
+          { registration: { player_b_user_id: 'u9' }, modality: { format: 'singles' }, ranking: { played: 3, wins: 1, losses: 2 } },
+        ],
+      },
+    ];
+    const s = buildPlayerStats(history);
+    expect(s.byFormat.singles).toBeUndefined();
+    expect(s.byFormat.doubles).toMatchObject({ played: 8, wins: 4, losses: 4 });
+  });
+
+  it('inscrição individual de verdade (sem parceiro) conta em singles', () => {
+    const history = [
+      {
+        tournament: { status: TOURNAMENT_IN_PROGRESS },
+        entries: [
+          { registration: {}, modality: { format: 'singles' }, ranking: { played: 2, wins: 1, losses: 1 } },
+        ],
+      },
+    ];
+    const s = buildPlayerStats(history);
+    expect(s.byFormat.singles).toMatchObject({ played: 2, wins: 1, losses: 1 });
+    expect(s.byFormat.doubles).toBeUndefined();
   });
 
   it('ignora inscrições sem ranking (torneio não iniciado) mas as conta como inscrição', () => {
