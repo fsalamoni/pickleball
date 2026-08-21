@@ -18,7 +18,7 @@ import { useAuth } from '@/core/lib/FirebaseAuthContext';
 import { useFeatureFlag } from '@/core/lib/FeatureFlagsContext';
 import { FEATURE_FLAG } from '@/core/featureFlags';
 import { useAthletes } from '@/modules/athletes/hooks/useAthletes';
-import { generateGameDayGames, suggestRounds } from '@/modules/clubs/domain/gameDayDraw';
+import { generateGameDayGames, suggestRounds, buildDrawHistory } from '@/modules/clubs/domain/gameDayDraw';
 import { planAdditiveDraw, offsetRounds, splitGamesByResult } from '@/modules/clubs/domain/gameDayDrawMerge';
 import {
   GAME_DAY_FORMAT, GAME_DAY_FORMAT_LABELS, DRAW_FORMATS,
@@ -261,17 +261,22 @@ function GamesSection({ gameDay, participants, isOwner }) {
     try {
       const ids = participants.map((p) => p.id);
       const seed = `gd-${Date.now()}`;
+      // Sorteio ADITIVO: mantém os jogos com resultado, opcionalmente substitui
+      // os sem resultado, e numera as novas rodadas após as já existentes.
+      const plan = planAdditiveDraw({ existingGames: games, replaceUnscored });
       let raw;
       if (formatsOn && format === GAME_DAY_FORMAT.MEXICANO) {
         raw = generateMexicanoSchedule(ids, { rounds: effectiveRounds, seed });
       } else if (formatsOn && format === GAME_DAY_FORMAT.KING_OF_COURT) {
         raw = kingOfCourtFirstRound(ids, { seed });
       } else {
-        raw = generateGameDayGames(ids, { rounds: effectiveRounds, seed });
+        // Americano ciente do histórico do dia: leva em conta as DUPLAS e os
+        // ADVERSÁRIOS já ocorridos (nos jogos mantidos) para variar as formações,
+        // e equilibra a PARTICIPAÇÃO por rodada presente (quem seguiu no dia e
+        // jogou menos entra primeiro, sem forçar quem entrou tarde ao mesmo total).
+        const history = buildDrawHistory(plan.keptGames, ids);
+        raw = generateGameDayGames(ids, { rounds: effectiveRounds, seed, history });
       }
-      // Sorteio ADITIVO: mantém os jogos com resultado, opcionalmente substitui
-      // os sem resultado, e numera as novas rodadas após as já existentes.
-      const plan = planAdditiveDraw({ existingGames: games, replaceUnscored });
       const payload = offsetRounds(raw, plan.roundBase).map(toPayload);
       await appendGames.mutateAsync({ removeIds: plan.removeIds, games: payload, orderBase: plan.orderBase });
       const label = formatsOn ? GAME_DAY_FORMAT_LABELS[format] : 'Americano';

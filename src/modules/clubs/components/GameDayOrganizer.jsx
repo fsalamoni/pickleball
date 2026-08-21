@@ -36,7 +36,7 @@ import {
 import { useAuth } from '@/core/lib/FirebaseAuthContext';
 import { useAthletes } from '@/modules/athletes/hooks/useAthletes';
 import { PARTICIPANT_SOURCE, INVITE_STATUS, GAME_DAY_LIMITS } from '@/modules/clubs/domain/constants';
-import { generateGameDayGames, suggestRounds } from '@/modules/clubs/domain/gameDayDraw';
+import { generateGameDayGames, suggestRounds, buildDrawHistory } from '@/modules/clubs/domain/gameDayDraw';
 import { planAdditiveDraw, offsetRounds, splitGamesByResult } from '@/modules/clubs/domain/gameDayDrawMerge';
 import GameDayLeaderboard from '@/modules/clubs/components/GameDayLeaderboard';
 import PublishToRankingToggle from '@/modules/clubs/components/PublishToRankingToggle';
@@ -318,10 +318,15 @@ function GamesSection({ eventId, dateId, participants }) {
     try {
       const ids = participants.map((p) => p.id);
       const seed = `gd-${Date.now()}`;
-      const raw = generateGameDayGames(ids, { rounds: effectiveRounds, seed });
       // Sorteio ADITIVO: mantém os jogos com resultado, opcionalmente substitui
       // os sem resultado, e numera as novas rodadas após as já existentes.
       const plan = planAdditiveDraw({ existingGames: games, replaceUnscored });
+      // Americano ciente do histórico do dia: considera as DUPLAS e ADVERSÁRIOS
+      // já ocorridos (jogos mantidos) para variar as formações, e equilibra a
+      // PARTICIPAÇÃO por rodada presente (quem seguiu no dia e jogou menos entra
+      // primeiro, sem forçar quem entrou tarde ao mesmo total dos veteranos).
+      const history = buildDrawHistory(plan.keptGames, ids);
+      const raw = generateGameDayGames(ids, { rounds: effectiveRounds, seed, history });
       // Wave C.6: também salva o `user_id` real (se o participante for um
       // atleta da plataforma) para que o Cloud Function de ranking possa
       // agregar estatísticas por uid (em vez de por doc_id de participant).

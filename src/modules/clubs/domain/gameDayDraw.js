@@ -47,6 +47,136 @@ function shuffle(list, rng) {
 const pairKey = (a, b) => (a < b ? `${a}|${b}` : `${b}|${a}`);
 
 /**
+ * Normaliza um lado (side_a/side_b) para uma lista de ids de participante.
+ * Aceita tanto o shape do Firestore (`[{ id, name }]`) quanto ids "crus"
+ * (`['id1', 'id2']`) — os dois convivem no código.
+ * @param {Array} side
+ * @returns {string[]}
+ */
+function sideIds(side) {
+  return (side || [])
+    .map((e) => (e && typeof e === 'object' ? e.id : e))
+    .filter(Boolean);
+}
+
+/**
+ * Constrói o "histórico" do dia de jogo a partir dos jogos MANTIDOS (os que já
+ * têm resultado e, quando o organizador não os substitui, também os sem
+ * resultado). Serve para que um novo sorteio ADITIVO leve em conta o que já
+ * aconteceu no dia:
+ *  - as DUPLAS já formadas (para evitar repetir parcerias);
+ *  - os ADVERSÁRIOS já enfrentados (para evitar repetir confrontos);
+ *  - o nº de PARTIDAS já disputadas por cada atleta e o nº de RODADAS em que
+ *    cada um esteve presente — para equilibrar a participação por TAXA (jogos
+ *    por rodada presente), respeitando o momento em que cada um entrou.
+ *
+ * Só considera ids que estão em `currentIds` (participantes atuais do sorteio);
+ * duplas/confrontos com atletas que já saíram são ignorados, pois eles não
+ * voltam ao sorteio. A "rodada de entrada" de cada atleta é a primeira rodada
+ * numerada em que ele aparece; as "rodadas presentes" são as rodadas existentes
+ * a partir dela (aproximação segura derivada só dos jogos, sem novo schema).
+ *
+ * @param {Array} keptGames  jogos mantidos (`side_a`/`side_b` = `[{id}]` ou `[id]`)
+ * @param {string[]} currentIds  ids dos participantes que entram no novo sorteio
+ * @returns {{ partner: Map<string,number>, opp: Map<string,number>,
+ *             played: Map<string,number>, present: Map<string,number> }}
+ */
+export function buildDrawHistory(keptGames = [], currentIds = []) {
+  const current = new Set((currentIds || []).filter(Boolean));
+  const partner = new Map();
+  const opp = new Map();
+  const played = new Map();
+  const firstRound = new Map(); // id -> primeira rodada em que aparece
+  const roundSet = new Set(); // todas as rodadas numeradas existentes
+
+  const bump = (map, key) => map.set(key, (map.get(key) || 0) + 1);
+
+  (keptGames || []).forEach((g) => {
+    const a = sideIds(g?.side_a);
+    const b = sideIds(g?.side_b);
+    const r = Number.isFinite(g?.round) ? g.round : null;
+    if (r != null) roundSet.add(r);
+
+    // Parcerias (duplas) — pares dentro de cada lado.
+    [a, b].forEach((side) => {
+      for (let i = 0; i < side.length; i += 1) {
+        for (let j = i + 1; j < side.length; j += 1) {
+          if (current.has(side[i]) && current.has(side[j])) bump(partner, pairKey(side[i], side[j]));
+        }
+      }
+    });
+    // Adversários — cruzando os dois lados.
+    a.forEach((x) => b.forEach((y) => {
+      if (current.has(x) && current.has(y)) bump(opp, pairKey(x, y));
+    }));
+
+    // Partidas disputadas e rodada de entrada (só participantes atuais).
+    [...a, ...b].forEach((id) => {
+      if (!current.has(id)) return;
+      bump(played, id);
+      if (r != null && (!firstRound.has(id) || r < firstRound.get(id))) firstRound.set(id, r);
+    });
+  });
+
+  // Rodadas presentes por atleta = nº de rodadas existentes a partir da entrada.
+  const rounds = Array.from(roundSet);
+  const present = new Map();
+  current.forEach((id) => {
+    const entry = firstRound.get(id);
+    const playedN = played.get(id) || 0;
+    if (entry == null) { present.set(id, playedN); return; }
+    let count = 0;
+    for (const r of rounds) if (r >= entry) count += 1;
+    // present >= played sempre (jogos avulsos sem rodada não distorcem a taxa).
+    present.set(id, Math.max(count, playedN));
+  });
+
+  return { partner, opp, played, present };
+}
+
+/**
+ * Semeia os contadores internos do sorteio (índice-a-índice) a partir do
+ * histórico (id-a-id) devolvido por {@link buildDrawHistory}:
+ *  - parcerias e adversários já ocorridos (para o motor evitá-los primeiro);
+ *  - o "déficit de participação" inicial de cada jogador, dado por
+ *    `played - taxaGlobal * present`, onde `taxaGlobal = Σplayed / Σpresent`.
+ *
+ * Assim, quem está ABAIXO da sua taxa justa de jogos (considerando o tempo que
+ * esteve presente) começa com déficit negativo e entra em quadra primeiro nas
+ * novas rodadas; quem está ACIMA descansa primeiro. Isso equilibra a
+ * participação por TAXA — sem forçar quem entrou tarde a igualar o TOTAL de
+ * quem entrou desde o início. Sem histórico, todos começam em 0 (comportamento
+ * idêntico ao sorteio original).
+ */
+function seedFromHistory(history, ids, idToIndex, gamesPlayed, partnerCount, oppCount) {
+  const translatePairs = (srcMap, dstMap) => {
+    (srcMap || new Map()).forEach((count, key) => {
+      const [x, y] = key.split('|');
+      const ix = idToIndex.get(x);
+      const iy = idToIndex.get(y);
+      if (ix == null || iy == null) return; // par com atleta que saiu: ignora
+      const k = pairKey(ix, iy);
+      dstMap.set(k, (dstMap.get(k) || 0) + count);
+    });
+  };
+  translatePairs(history.partner, partnerCount);
+  translatePairs(history.opp, oppCount);
+
+  let sumPlayed = 0;
+  let sumPresent = 0;
+  ids.forEach((id) => {
+    sumPlayed += history.played?.get(id) || 0;
+    sumPresent += history.present?.get(id) || 0;
+  });
+  const rate = sumPresent > 0 ? sumPlayed / sumPresent : 0;
+  ids.forEach((id, i) => {
+    const played = history.played?.get(id) || 0;
+    const present = history.present?.get(id) || 0;
+    gamesPlayed[i] = played - rate * present; // déficit (pode ser fracionário)
+  });
+}
+
+/**
  * Escolhe a melhor das 3 formações de duplas para um grupo de 4 jogadores,
  * minimizando repetições de parceria (peso maior) e de adversários.
  *
@@ -121,7 +251,11 @@ function buildRound(playing, partnerCount, oppCount, rng) {
  * Gera os jogos do dia em `rounds` rodadas, equilibrando a participação.
  *
  * @param {string[]} playerIds  ids/identificadores únicos dos participantes
- * @param {{ rounds?: number, seed?: string }} [options]
+ * @param {{ rounds?: number, seed?: string, history?: object }} [options]
+ *   `history` (opcional): saída de {@link buildDrawHistory} com as duplas e
+ *   adversários já ocorridos e o nº de partidas/rodadas presentes por atleta,
+ *   para um sorteio ADITIVO ciente do que já aconteceu no dia (evita repetir
+ *   parcerias/confrontos e equilibra a participação por taxa).
  * @returns {Array<{ round: number, side_a: [string, string], side_b: [string, string] }>}
  *   Jogos de duplas. Os ids retornados são os mesmos recebidos em `playerIds`.
  */
@@ -131,7 +265,7 @@ export function generateGameDayGames(playerIds, options = {}) {
   if (n < 4) {
     throw new Error('O sorteio do dia de jogo exige no mínimo 4 participantes.');
   }
-  const { seed = 'gameday', rounds = suggestRounds(n) } = options;
+  const { seed = 'gameday', rounds = suggestRounds(n), history = null } = options;
   const totalRounds = Math.max(1, Math.min(60, Math.floor(rounds)));
   const rng = seededRng(seed);
 
@@ -144,6 +278,13 @@ export function generateGameDayGames(playerIds, options = {}) {
   const restCount = new Array(n).fill(0);
   const partnerCount = new Map();
   const oppCount = new Map();
+
+  // Sorteio ADITIVO ciente do histórico: parte das duplas/adversários já
+  // ocorridos e do déficit de participação de cada atleta (ver seedFromHistory).
+  if (history) {
+    const idToIndex = new Map(ids.map((id, i) => [id, i]));
+    seedFromHistory(history, ids, idToIndex, gamesPlayed, partnerCount, oppCount);
+  }
 
   const courts = Math.floor(n / 4);
   const playPerRound = courts * 4;

@@ -57,6 +57,26 @@ existentes. Domínio puro em `clubs/domain/gameDayDrawMerge.js`
 `appendGameDayGames` (atleta) / `appendEventGames` (clube), que só removem os ids
 indicados e nunca tocam nos jogos com resultado.
 
+#### Americano ciente do histórico (variação + equilíbrio)
+Ao re-sortear (formato **Americano**), quando atletas entram/saem ou os jogos
+sem resultado são substituídos, o motor leva em conta o que **já aconteceu no
+dia** — os jogos MANTIDOS (`planAdditiveDraw().keptGames`: sempre os com
+resultado; e também os sem resultado quando não são substituídos). Domínio puro
+em `clubs/domain/gameDayDraw.js`:
+- `buildDrawHistory(keptGames, currentIds)` — extrai, só dos participantes
+  atuais, as **duplas** já formadas, os **adversários** já enfrentados, o nº de
+  **partidas** disputadas e o nº de **rodadas presentes** (derivado da rodada de
+  entrada de cada um);
+- `generateGameDayGames(ids, { rounds, seed, history })` — semeia esses
+  contadores para (a) **evitar repetir** parcerias/confrontos e (b) equilibrar a
+  **participação por TAXA** (jogos ÷ rodadas presentes): quem está abaixo da sua
+  taxa justa entra primeiro; quem entrou tarde recebe participação equilibrada
+  **sem** ser forçado a igualar o TOTAL de quem entrou desde o início.
+
+Sem histórico (1º sorteio) o comportamento é idêntico ao anterior — determinismo
+por seed preservado. Só o Americano usa o histórico; Mexicano/Rei da Quadra
+seguem com sua lógica própria.
+
 ### Ranking do dia (classificação interna)
 Entre "Jogos" e "Resultados no ranking", o organizador mostra o **Ranking do
 dia**: cada participante com jogos, vitórias, derrotas, saldo de pontos e pontos
