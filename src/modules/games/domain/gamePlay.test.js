@@ -2,7 +2,7 @@ import { describe, it, expect } from 'vitest';
 import {
   PLAY_STATUS, PLAY_GAME_STATUS,
   playLevelValue, inCourtIdsFromGames, playParticipantStatus,
-  computePlayOrder, buildPlayNextMatch, nextAvailableExcluding,
+  computePlayOrder, buildPlayNextMatch, nextAvailableExcluding, pickSwapReplacement,
   assignPlayTeams, freePlayCourts, nextFreePlayCourt, forecastPlayMatches,
 } from './gamePlay.js';
 
@@ -152,6 +152,17 @@ describe('buildPlayNextMatch', () => {
     const order = ['a', 'b', 'c'].map((id, i) => P(id, { wait: i }));
     expect(nextAvailableExcluding(order, ['a']).id).toBe('b');
     expect(nextAvailableExcluding(order, ['a', 'b', 'c'])).toBeNull();
+  });
+
+  it('pickSwapReplacement exclui quem está no jogo E quem já saiu deste jogo', () => {
+    const order = ['a', 'b', 'c', 'd'].map((id, i) => P(id, { wait: i }));
+    // 'a' está no jogo → substituto é o próximo da fila, 'b'.
+    expect(pickSwapReplacement(order, { inGameIds: ['a'] }).id).toBe('b');
+    // 'a' já foi substituído para FORA deste jogo: mesmo disponível na fila, não
+    // volta; o substituto da vez é 'c' (pula 'a' e o atual 'b').
+    expect(pickSwapReplacement(order, { inGameIds: ['b'], swappedOutIds: ['a'] }).id).toBe('c');
+    // Sem ninguém elegível → null (não recoloca um já-substituído).
+    expect(pickSwapReplacement(order, { inGameIds: ['c'], swappedOutIds: ['a', 'b', 'd'] })).toBeNull();
   });
 });
 

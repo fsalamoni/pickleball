@@ -204,6 +204,23 @@ export function nextAvailableExcluding(availableOrdered, excludeIds = []) {
 }
 
 /**
+ * Escolhe o substituto de um ausente num jogo aberto (Play). O substituto é o
+ * próximo da ordem de participação que:
+ *  - NÃO está atualmente no jogo (`inGameIds`); E
+ *  - NÃO foi substituído para FORA deste MESMO jogo antes (`swappedOutIds`).
+ *
+ * A segunda condição garante que, ao trocar mais de um jogador na mesma
+ * partida, um atleta já substituído não retorne para a partida de onde saiu.
+ *
+ * @param {Array} availableOrdered  disponíveis, em ordem de espera
+ * @param {{ inGameIds?: string[], swappedOutIds?: string[] }} [ctx]
+ * @returns {object|null}
+ */
+export function pickSwapReplacement(availableOrdered, { inGameIds = [], swappedOutIds = [] } = {}) {
+  return nextAvailableExcluding(availableOrdered, [...inGameIds, ...swappedOutIds]);
+}
+
+/**
  * PREVISÃO dos próximos participantes a entrar em quadra, em blocos de até
  * `slots` (um por quadra), a partir da ORDEM DE PARTICIPAÇÃO atual (disponíveis).
  * Não organiza duplas — apenas lista quem entra. Preenche blocos até completar

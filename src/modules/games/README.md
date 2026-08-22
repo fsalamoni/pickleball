@@ -41,7 +41,10 @@ Participantes têm campos aditivos `play_status` (derivado), `available_since`,
 `available_tie`, `skip_remaining` (pausar X partidas), `partner_id` (dupla fixa),
 `play_level`, `play_gender`. Serviço: `createNextPlayGame`, `createManualPlayGame`,
 `finishPlayGame` (auto-cria o próximo), `cancelPlayGame`, `noShowSwapPlayGame`
-(substitui ausente pelo próximo da ordem, trocando de lugar), `setPlayParticipantSkip`,
+(substitui ausente pelo próximo da ordem, trocando de lugar; grava o ausente em
+`games/{gid}.swapped_out_ids` para que, em novas substituições NA MESMA partida,
+um jogador já substituído NÃO retorne ao jogo de onde saiu — via
+`pickSwapReplacement`), `setPlayParticipantSkip`,
 `setPlayParticipantPartner`. UI dedicada em `v2/components/games/AthletePlayOrganizer.jsx`
 (seções Participantes, Quadras e jogos, e "Ordem de participação"). No Play NÃO há
 ranking do dia nem publicação no ranking. Regras: `game_days` com `format == 'play'`

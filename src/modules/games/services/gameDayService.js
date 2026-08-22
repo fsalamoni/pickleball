@@ -29,7 +29,7 @@ import {
 } from '../domain/gameDayRanking.js';
 import {
   computePlayOrder, buildPlayNextMatch, assignPlayTeams,
-  nextFreePlayCourt, nextAvailableExcluding, PLAY_GAME_STATUS, PLAY_SLOTS,
+  nextFreePlayCourt, pickSwapReplacement, PLAY_GAME_STATUS, PLAY_SLOTS,
 } from '../domain/gamePlay.js';
 import { mirrorGameToMyGame, sourceGameToMyGame, gameDayMirrorId } from '../domain/myGames.js';
 
@@ -591,17 +591,26 @@ export async function noShowSwapPlayGame(gdId, gid, absentId, actor) {
   const inGameIds = [...(game.side_a || []), ...(game.side_b || [])].map((p) => p.id);
   if (!inGameIds.includes(absentId)) throw new Error('Jogador não está neste jogo.');
 
+  // Quem já foi substituído para FORA deste mesmo jogo não pode voltar a ele
+  // (mesmo em uma segunda substituição na mesma partida).
+  const swappedOutIds = Array.isArray(game.swapped_out_ids) ? game.swapped_out_ids.filter(Boolean) : [];
+
   const { order } = computePlayOrder({ participants, games });
-  const repl = nextAvailableExcluding(order, inGameIds);
+  const repl = pickSwapReplacement(order, { inGameIds, swappedOutIds });
   if (!repl) throw new Error('Não há substituto disponível na ordem de participação.');
 
   const swapSide = (side) => (side || []).map((p) => (p.id === absentId
     ? { id: repl.id, name: repl.name || 'Jogador', user_id: repl.user_id || null, photo_url: repl.photo_url || null }
     : p));
 
+  const nextSwappedOut = swappedOutIds.includes(absentId) ? swappedOutIds : [...swappedOutIds, absentId];
   const batch = writeBatch(db);
   batch.update(doc(db, COL, gdId, SUB_GAMES, gid), {
-    side_a: swapSide(game.side_a), side_b: swapSide(game.side_b), updated_at: serverTimestamp(),
+    side_a: swapSide(game.side_a),
+    side_b: swapSide(game.side_b),
+    // Registra o ausente como "substituído para fora" deste jogo (aditivo).
+    swapped_out_ids: nextSwappedOut,
+    updated_at: serverTimestamp(),
   });
   // O ausente assume a posição do substituto na fila (trocam de lugar).
   batch.update(doc(db, COL, gdId, SUB_PARTICIPANTS, absentId), {
