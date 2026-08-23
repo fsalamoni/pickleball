@@ -76,7 +76,7 @@ export default function V2ModalityPage() {
   const registerLabel = registerLabelFor({ alreadyRegistered, canRegister, slotsFull, isAdmin: !!isAdmin });
 
   const badges = [
-    MODALITY_FORMAT_LABELS[modality.format],
+    isTeam ? 'Equipes' : MODALITY_FORMAT_LABELS[modality.format],
     SKILL_LEVEL_LABELS[modality.skill_level],
     GENDER_CATEGORY_LABELS[modality.gender_category],
     AGE_CATEGORY_LABELS[modality.age_category],

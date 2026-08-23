@@ -140,6 +140,18 @@ export default function V2TournamentModalitiesTab({ tournament, isAdmin }) {
     });
   }
 
+  // Seletor de formato unificado: Simples/Duplas/Equipes. "Equipes" (flag) usa
+  // internamente a estrutura de duplas (fases 1×1 = confrontos), com team_config.
+  function handleFormatSelect(value) {
+    if (value === 'team') {
+      setFormat(MODALITY_FORMAT.DOUBLES);
+      setForm((f) => ({ ...f, team_enabled: true }));
+      return;
+    }
+    setForm((f) => ({ ...f, team_enabled: false }));
+    setFormat(value);
+  }
+
   const stageOptions = Object.fromEntries(
     availableStageTypes(form.format, multiPhaseEnabled).map(
       (key) => [key, TOURNAMENT_STAGE_TYPE_LABELS[key]],
@@ -260,25 +272,20 @@ export default function V2TournamentModalitiesTab({ tournament, isAdmin }) {
             </div>
             <div className="space-y-2">
               <label className="text-[11px] font-bold uppercase tracking-widest text-gray-400">Formato</label>
-              <select value={form.format} onChange={(e) => setFormat(e.target.value)} className="w-full rounded-2xl border border-gray-200 bg-paper px-4 py-3 text-sm text-ink outline-none focus-visible:ring-4 focus-visible:ring-acid/30">
+              <select
+                value={form.team_enabled ? 'team' : form.format}
+                onChange={(e) => handleFormatSelect(e.target.value)}
+                className="w-full rounded-2xl border border-gray-200 bg-paper px-4 py-3 text-sm text-ink outline-none focus-visible:ring-4 focus-visible:ring-acid/30"
+              >
                 {Object.entries(MODALITY_FORMAT_LABELS).map(([k, v]) => <option key={k} value={k}>{v}</option>)}
+                {teamsEnabled && <option value="team">Equipes</option>}
               </select>
             </div>
           </div>
 
-          {teamsEnabled && (
-            <div className="mt-4 space-y-3">
-              <label className="flex items-center gap-2 text-sm font-semibold text-ink">
-                <input
-                  type="checkbox"
-                  checked={form.team_enabled}
-                  onChange={(e) => set('team_enabled', e.target.checked)}
-                />
-                Modalidade por equipes (confrontos entre equipes)
-              </label>
-              {form.team_enabled && (
-                <TeamModalityConfig value={form.team_config} onChange={(tc) => set('team_config', tc)} />
-              )}
+          {teamsEnabled && form.team_enabled && (
+            <div className="mt-4">
+              <TeamModalityConfig value={form.team_config} onChange={(tc) => set('team_config', tc)} />
             </div>
           )}
         </V2Surface>
@@ -311,7 +318,7 @@ export default function V2TournamentModalitiesTab({ tournament, isAdmin }) {
           <div className="grid gap-4 sm:grid-cols-2">
             <div className="space-y-2">
               <label className="text-[11px] font-bold uppercase tracking-widest text-gray-400 flex justify-between">
-                <span>Vagas (inscrições / {form.format === MODALITY_FORMAT.SINGLES ? 'atletas' : 'duplas'})</span>
+                <span>Vagas (inscrições / {form.team_enabled ? 'equipes' : (form.format === MODALITY_FORMAT.SINGLES ? 'atletas' : 'duplas')})</span>
                 <label className="flex items-center gap-1.5 text-xs normal-case tracking-normal">
                   <input type="checkbox" checked={form.has_unlimited_entries} onChange={(e) => set('has_unlimited_entries', e.target.checked)} />
                   Sem limite
@@ -421,7 +428,7 @@ export default function V2TournamentModalitiesTab({ tournament, isAdmin }) {
               <div className="flex flex-col justify-between flex-1">
                 <div>
                   <div className="flex flex-wrap items-center gap-1.5 mb-2">
-                    <V2Badge tone="neutral">{MODALITY_FORMAT_LABELS[m.format]}</V2Badge>
+                    <V2Badge tone={m.team_config ? 'acid' : 'neutral'}>{m.team_config ? 'Equipes' : MODALITY_FORMAT_LABELS[m.format]}</V2Badge>
                     <V2Badge tone="neutral">{SKILL_LEVEL_LABELS[m.skill_level]}</V2Badge>
                     <V2Badge tone="neutral">{GENDER_CATEGORY_LABELS[m.gender_category]}</V2Badge>
                   </div>
