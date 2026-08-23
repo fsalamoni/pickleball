@@ -16,6 +16,9 @@ import { V2ModalityRanking } from '@/v2/components/tournament/V2RankingBlock';
 import { AvatarGroup } from '@/components/ui/user-avatar';
 import { V2Badge, V2Button, V2Skeleton, V2Surface } from '@/v2/ui/primitives';
 import { cn } from '@/core/lib/utils';
+import { useFeatureFlag } from '@/core/lib/FeatureFlagsContext';
+import { FEATURE_FLAG } from '@/core/featureFlags';
+import TeamModalityView from '@/v2/components/tournament/TeamModalityView';
 
 function competitionLabel(modality) {
   const stages = Array.isArray(modality.stages) ? modality.stages : [];
@@ -37,6 +40,7 @@ export default function V2ModalityPage() {
   const { data: isAdmin } = useIsTournamentAdmin(tournamentId);
   const { data: modalities = [], isLoading: loadingM } = useModalities(tournamentId);
   const { data: registrations = [] } = useRegistrations(modalityId);
+  const teamsEnabled = useFeatureFlag(FEATURE_FLAG.TEAM_TOURNAMENTS);
   const [registerOpen, setRegisterOpen] = useState(false);
   const [tab, setTab] = useState('info');
 
@@ -56,6 +60,11 @@ export default function V2ModalityPage() {
       </div>
     );
   }
+
+  // Modalidade de EQUIPES: substitui a inscrição/abas padrão pela visão de
+  // equipes (inscrição de elenco, confrontos e classificação). Modalidades
+  // comuns seguem exatamente como antes.
+  const isTeam = teamsEnabled && !!modality.team_config;
 
   const confirmed = registrations.filter((r) => r.status === REGISTRATION_STATUS.CONFIRMED);
   const occupiedCount = countOccupiedRegistrations(registrations);
@@ -123,9 +132,11 @@ export default function V2ModalityPage() {
           </div>
 
           <div className="mt-6 flex flex-wrap gap-2">
-            <V2Button onClick={() => setRegisterOpen(true)} disabled={alreadyRegistered || !canRegister || (slotsFull && !isAdmin)}>
-              <Plus className="h-4 w-4" /> {registerLabel}
-            </V2Button>
+            {!isTeam && (
+              <V2Button onClick={() => setRegisterOpen(true)} disabled={alreadyRegistered || !canRegister || (slotsFull && !isAdmin)}>
+                <Plus className="h-4 w-4" /> {registerLabel}
+              </V2Button>
+            )}
             <V2Button asChild variant="ghost" className="border-white/20 bg-white/10 text-white hover:border-white/40">
               <Link to={`/torneios/${tournamentId}/jogos`}>Ver jogos do torneio</Link>
             </V2Button>
@@ -133,6 +144,12 @@ export default function V2ModalityPage() {
         </div>
       </div>
 
+      {isTeam ? (
+        <div className="mt-6">
+          <TeamModalityView tournament={tournament} modality={modality} isAdmin={!!isAdmin} />
+        </div>
+      ) : (
+        <>
       {/* Tabs */}
       <div className="mt-6 overflow-x-auto">
         <div className="inline-flex gap-1.5 rounded-full border border-gray-100 bg-paper-pure p-1.5 shadow-sm">
@@ -181,6 +198,8 @@ export default function V2ModalityPage() {
       </div>
 
       <ModalityRegistrationDialog modality={modality} tournament={tournament} isAdmin={!!isAdmin} open={registerOpen} onClose={() => setRegisterOpen(false)} />
+        </>
+      )}
     </div>
   );
 }

@@ -312,6 +312,8 @@ function ModalityCard({ modality, confirmed, tournament, currentUserId, allRegis
   const waitlistOn = useFeatureFlag(FEATURE_FLAG.TOURNAMENT_WAITLIST);
   const canWaitlist = slotsFull && waitlistOn && !alreadyRegistered && !isAdmin;
   const modalityPagesOn = useFeatureFlag(FEATURE_FLAG.MODALITY_PAGES);
+  const teamsOn = useFeatureFlag(FEATURE_FLAG.TEAM_TOURNAMENTS);
+  const isTeam = teamsOn && !!modality.team_config;
   const modalityHref = `/torneios/${tournament.id}/modalidades/${modality.id}`;
   const pct = getCapacityProgress(confirmed, modality.max_entries);
   const pendingRegistrations = Math.max(occupied - confirmed, 0);
@@ -449,7 +451,12 @@ function ModalityCard({ modality, confirmed, tournament, currentUserId, allRegis
             {selfCheckinOn && hasCheckedIn(myRegistration) && (
               <V2Badge tone="green">Check-in feito</V2Badge>
             )}
-            {alreadyRegistered ? (
+            {isTeam ? (
+              /* Equipes: a inscrição/gestão fica na página da modalidade. */
+              <V2Button asChild size="sm">
+                <Link to={modalityHref}><Users className="h-4 w-4" /> Ver equipes</Link>
+              </V2Button>
+            ) : alreadyRegistered ? (
               <V2Badge tone="green">Inscrito</V2Badge>
             ) : canRegister ? (
               <V2Button size="sm" onClick={onRegister} disabled={slotsFull && !canWaitlist}>

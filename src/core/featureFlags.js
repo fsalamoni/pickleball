@@ -310,6 +310,17 @@ export const FEATURE_FLAG = Object.freeze({
   TOURNAMENT_WIZARD: 'tournament_wizard',
 
   /**
+   * Torneios por EQUIPES: nova modalidade em que cada inscrição é uma EQUIPE
+   * (elenco de atletas). Duas equipes se enfrentam em um CONFRONTO decidido por
+   * várias ETAPAS (dupla masculina/feminina/mista e simples), com regra
+   * "disputar todas" ou "melhor de X" definida pelo criador. As fases (pontos
+   * corridos/grupos/chaves/mata-mata) reaproveitam o motor atual, tratando cada
+   * confronto como um "jogo". Aditivo — desligado, a opção some da criação de
+   * modalidade e nada muda nos torneios existentes.
+   */
+  TEAM_TOURNAMENTS: 'team_tournaments',
+
+  /**
    * Check-in de atletas: na aba de inscrições do torneio, o admin pode
    * marcar/desfazer o check-in de inscrições confirmadas. O status
    * "Check-in feito" já existia e já era considerado pelo sorteio; esta
@@ -1024,6 +1035,16 @@ export const FEATURE_FLAG_META = Object.freeze({
       + 'regras, calendário) com indicador de progresso e avanço validado. '
       + 'Mesmos campos e mesma criação. Desligado, a criação continua em '
       + 'página única.',
+  },
+  [FEATURE_FLAG.TEAM_TOURNAMENTS]: {
+    label: 'Torneios por equipes',
+    description:
+      'Adiciona a modalidade "Equipes": cada inscrição é uma equipe (elenco de '
+      + 'atletas, com composição masculina, feminina ou mista). Os confrontos '
+      + 'entre equipes são decididos por várias etapas (duplas e simples), com '
+      + 'regra "todas as etapas" ou "melhor de X". O criador define o tamanho da '
+      + 'equipe, as etapas e a regra; o admin escala cada etapa no confronto. '
+      + 'Desligado, a opção não aparece e nada muda nos torneios existentes.',
   },
   [FEATURE_FLAG.TOURNAMENT_CHECKIN]: {
     label: 'Check-in de atletas no torneio',

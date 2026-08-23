@@ -37,6 +37,8 @@ import { useFeatureFlag } from '@/core/lib/FeatureFlagsContext';
 import { FEATURE_FLAG } from '@/core/featureFlags';
 import StageExplanation from '@/modules/tournament/components/StageExplanation';
 import PhasesEditor from '@/modules/tournament/components/PhasesEditor';
+import TeamModalityConfig, { defaultTeamConfig } from '@/v2/components/tournament/TeamModalityConfig';
+import { normalizeTeamConfig } from '@/modules/tournament/domain/teamFormat';
 import { V2Badge, V2Button, V2EmptyState, V2Surface } from '@/v2/ui/primitives';
 
 const PREVIEW_PLAYER_COUNT = 8;
@@ -59,12 +61,16 @@ const emptyForm = {
   play_start_time: '',
   play_end_time: '',
   notes: '',
+  team_enabled: false,
+  team_config: defaultTeamConfig(),
 };
 
 function buildFormState(modality) {
   if (!modality) return emptyForm;
   const stage = modality.stages?.[0] || {};
   return {
+    team_enabled: !!modality.team_config,
+    team_config: modality.team_config || defaultTeamConfig(),
     name: modality.name || '',
     format: modality.format || MODALITY_FORMAT.DOUBLES,
     skill_level: modality.skill_level || SKILL_LEVEL.INTERMEDIATE,
@@ -88,6 +94,7 @@ function buildFormState(modality) {
 
 export default function V2TournamentModalitiesTab({ tournament, isAdmin }) {
   const multiPhaseEnabled = useFeatureFlag(FEATURE_FLAG.MULTI_PHASE_TOURNAMENTS);
+  const teamsEnabled = useFeatureFlag(FEATURE_FLAG.TEAM_TOURNAMENTS);
   const { data: modalities = [], isLoading } = useModalities(tournament.id);
   const createMutation = useCreateModality(tournament.id);
   const updateMutation = useUpdateModality(tournament.id);
@@ -167,6 +174,15 @@ export default function V2TournamentModalitiesTab({ tournament, isAdmin }) {
       return toast.error('O horário de término deve ser depois do horário de início.');
     }
 
+    // Formato de equipes (flag): valida a config antes de montar o payload.
+    const teamOn = teamsEnabled && form.team_enabled;
+    if (teamOn) {
+      const teamCheck = normalizeTeamConfig(form.team_config);
+      if (!teamCheck.valid) {
+        return toast.error(Object.values(teamCheck.errors)[0] || 'Configuração de equipes inválida.');
+      }
+    }
+
     let stages;
     if (multiPhaseEnabled) {
       const { valid, errors } = validatePhases(form.phases, form.format);
@@ -198,6 +214,8 @@ export default function V2TournamentModalitiesTab({ tournament, isAdmin }) {
       play_start_time: form.play_start_time || null,
       play_end_time: form.play_end_time || null,
       notes: form.notes.trim() || null,
+      // Equipes: grava a config quando marcado; senão null (limpa se desmarcado).
+      team_config: teamOn ? form.team_config : null,
     };
 
     try {
@@ -247,6 +265,22 @@ export default function V2TournamentModalitiesTab({ tournament, isAdmin }) {
               </select>
             </div>
           </div>
+
+          {teamsEnabled && (
+            <div className="mt-4 space-y-3">
+              <label className="flex items-center gap-2 text-sm font-semibold text-ink">
+                <input
+                  type="checkbox"
+                  checked={form.team_enabled}
+                  onChange={(e) => set('team_enabled', e.target.checked)}
+                />
+                Modalidade por equipes (confrontos entre equipes)
+              </label>
+              {form.team_enabled && (
+                <TeamModalityConfig value={form.team_config} onChange={(tc) => set('team_config', tc)} />
+              )}
+            </div>
+          )}
         </V2Surface>
 
         <V2Surface className="p-5 sm:p-6">

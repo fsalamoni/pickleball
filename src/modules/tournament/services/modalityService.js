@@ -28,6 +28,7 @@ import { DEFAULT_MAX_ENTRIES, normalizeMaxEntries } from '../domain/capacity.js'
 import { normalizeScoringConfig } from '../domain/scoring.js';
 import { normalizeSchedulingConfig } from '../domain/scheduling.js';
 import { normalizePhases } from '../domain/phases.js';
+import { normalizeTeamConfig } from '../domain/teamFormat.js';
 
 /** Campos de agendamento mantidos na modalidade. */
 const SCHEDULING_FIELDS = [
@@ -59,6 +60,12 @@ export async function createModality(tournamentId, data, actor) {
      * compatibilidade com fases simples (legado) e com fases multi-fase novas.
      */
     stages: normalizePhases(data.stages),
+    /**
+     * Formato de EQUIPES (flag team_tournaments): quando presente, a modalidade
+     * é disputada por equipes e cada "jogo" da fase é um confronto de equipes.
+     * `null` = modalidade comum (comportamento atual, inalterado).
+     */
+    team_config: data.team_config ? normalizeTeamConfig(data.team_config).value : null,
     /**
      * Configuração de agendamento: quadras disponíveis, janela de horários e
      * duração média dos jogos. Usada pelo sorteio para marcar cada jogo em uma
@@ -93,6 +100,12 @@ export async function updateModality(id, updates, actor) {
   // Normaliza as fases quando estiverem sendo atualizadas.
   if (Object.hasOwn(normalizedUpdates, 'stages')) {
     normalizedUpdates.stages = normalizePhases(normalizedUpdates.stages);
+  }
+  // Normaliza a config de equipes quando estiver sendo atualizada.
+  if (Object.hasOwn(normalizedUpdates, 'team_config')) {
+    normalizedUpdates.team_config = normalizedUpdates.team_config
+      ? normalizeTeamConfig(normalizedUpdates.team_config).value
+      : null;
   }
   await updateDoc(doc(db, COL, id), { ...normalizedUpdates, updated_at: serverTimestamp() });
   await createAuditLog({
