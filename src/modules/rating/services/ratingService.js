@@ -132,6 +132,9 @@ export async function recomputeAllRatings(actor, options = {}) {
 
   // 4a) Jogos de torneio (regId → uids via `tournament_registrations`).
   finishedMatches.forEach((m) => {
+    // Confrontos de EQUIPES não pontuam aqui: cada etapa já é espelhada com os
+    // uids reais em `club_event_games` (tratado em 4b).
+    if (m.team_confrontation) return;
     if (m.winner_side !== 'a' && m.winner_side !== 'b') return;
     const a = resolveSideUids(m.side_a_ids, regById);
     const b = resolveSideUids(m.side_b_ids, regById);
@@ -376,6 +379,8 @@ export async function listFinishedEngineMatches() {
 
   const matches = [];
   finished.forEach((m) => {
+    // Confrontos de equipes são espelhados por etapa em `club_event_games`.
+    if (m.team_confrontation) return;
     if (m.winner_side !== 'a' && m.winner_side !== 'b') return;
     const a = resolveSideUids(m.side_a_ids, regById);
     const b = resolveSideUids(m.side_b_ids, regById);

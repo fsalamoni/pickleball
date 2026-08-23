@@ -544,3 +544,86 @@ export function buildTeamRanking(confrontations, teamIds, config) {
   const standings = buildTeamStandings(confrontations, teamIds, config);
   return rankTeamStandings(standings, confrontations, config);
 }
+
+/** Id determinístico do espelho de UMA etapa de confronto no ranking individual. */
+export function etapaMirrorId(matchId, etapaKey) {
+  return `team_${matchId}_${etapaKey}`;
+}
+
+/**
+ * Converte as ETAPAS decididas de um confronto nos documentos espelhados que
+ * alimentam o RANKING INDIVIDUAL de cada atleta (mesma base `club_event_games`
+ * usada pelos dias de jogo). Cada etapa vira um "jogo" com os uids reais dos
+ * jogadores, `kind` 'singles' (1×1) ou 'doubles' (2×2). É idempotente: devolve
+ * o que gravar e o que remover (etapas que deixaram de ser válidas/decididas).
+ *
+ * Só espelha etapas em que TODOS os jogadores dos dois lados têm conta
+ * (uid ∈ `validUids`) e os lados têm o mesmo tamanho (1 ou 2). O simples em
+ * RODÍZIO (vários por lado) não é espelhado — segue contando só para a equipe.
+ *
+ * @param {object} args
+ * @param {string} args.matchId
+ * @param {string} args.tournamentId
+ * @param {string} args.modalityId
+ * @param {string} [args.eventTitle]
+ * @param {Array} args.etapas       [{ id, type, side_a:[uid], side_b:[uid], score_a, score_b }]
+ * @param {Set<string>|string[]} args.validUids  uids com conta (elenco das duas equipes)
+ * @returns {{ toWrite: Array<{id:string, payload:object}>, toRemove: string[] }}
+ */
+export function buildConfrontationRankingMirror({
+  matchId, tournamentId, modalityId, eventTitle = '', etapas = [], validUids = [],
+} = {}) {
+  const valid = validUids instanceof Set ? validUids : new Set(validUids || []);
+  const toWrite = [];
+  const toRemove = [];
+
+  (etapas || []).forEach((etapa, i) => {
+    const key = etapa?.id || `etapa_${i + 1}`;
+    const id = etapaMirrorId(matchId, key);
+    const rawA = (etapa?.side_a || []).filter(Boolean);
+    const rawB = (etapa?.side_b || []).filter(Boolean);
+    const a = rawA.filter((u) => valid.has(u));
+    const b = rawB.filter((u) => valid.has(u));
+
+    const decided = etapaDecided(etapa);
+    const sizeOk = a.length === b.length && (a.length === 1 || a.length === 2);
+    const allReal = a.length === rawA.length && b.length === rawB.length;
+    const noOverlap = !a.some((u) => b.includes(u));
+
+    if (!decided || !sizeOk || !allReal || !noOverlap) {
+      toRemove.push(id);
+      return;
+    }
+    const winner = etapaWinner(etapa);
+    const scoreA = Number(etapa.score_a) || 0;
+    const scoreB = Number(etapa.score_b) || 0;
+    toWrite.push({
+      id,
+      payload: {
+        id,
+        source: 'team_confrontation',
+        event_id: modalityId,
+        event_title: eventTitle || '',
+        tournament_id: tournamentId || null,
+        modality_id: modalityId || null,
+        match_id: matchId,
+        date_id: 'team',
+        club_id: null,
+        game_id: id,
+        kind: a.length === 1 ? 'singles' : 'doubles',
+        side_a: a.join('+'),
+        side_b: b.join('+'),
+        side_a_ids: a,
+        side_b_ids: b,
+        score_a: scoreA,
+        score_b: scoreB,
+        sets_a: scoreA,
+        sets_b: scoreB,
+        winner_side: winner,
+        status: 'finished',
+      },
+    });
+  });
+
+  return { toWrite, toRemove };
+}

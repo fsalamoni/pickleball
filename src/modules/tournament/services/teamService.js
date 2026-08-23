@@ -16,17 +16,19 @@
  */
 
 import {
-  collection, doc, getDoc, getDocs, setDoc, updateDoc, query, where, orderBy, serverTimestamp,
+  collection, doc, getDoc, getDocs, setDoc, updateDoc, writeBatch, query, where, orderBy, serverTimestamp,
 } from 'firebase/firestore';
 import { db } from '@/core/config/firebase';
 import { createAuditLog } from '@/core/services/auditService';
 import { REGISTRATION_STATUS, MATCH_STATUS } from '../domain/constants.js';
 import {
   validateTeamRoster, validateConfrontationLineup, computeConfrontationResult, buildTeamRanking,
+  buildConfrontationRankingMirror,
 } from '../domain/teamFormat.js';
 
 const REG_COL = 'tournament_registrations';
 const MATCH_COL = 'tournament_matches';
+const RANKING_COL = 'club_event_games';
 
 /** Normaliza um membro do elenco para gravação. */
 function normalizeMember(m) {
@@ -128,6 +130,7 @@ export async function listTeamRegistrations(modalityId) {
  */
 export async function recordConfrontation(matchId, {
   etapas = [], config = {}, rosterAIds = [], rosterBIds = [], genderById = new Map(), validate = false,
+  tournamentId = null, modalityId = null, eventTitle = '', validUids = [],
 } = {}, actor) {
   if (!matchId) throw new Error('Confronto inválido.');
   if (validate) {
@@ -152,11 +155,36 @@ export async function recordConfrontation(matchId, {
     updates.status = MATCH_STATUS.IN_PROGRESS;
     updates.winner_side = null;
   }
-  await updateDoc(doc(db, MATCH_COL, matchId), updates);
+
+  // Espelha cada ETAPA decidida (com jogadores com conta) no ranking INDIVIDUAL
+  // (`club_event_games`, a mesma base do ELO e das duplas). Idempotente: grava
+  // as válidas e remove as que deixaram de valer.
+  const mirror = buildConfrontationRankingMirror({
+    matchId, tournamentId, modalityId, eventTitle, etapas, validUids,
+  });
+  const nowIso = new Date().toISOString();
+
+  const batch = writeBatch(db);
+  batch.update(doc(db, MATCH_COL, matchId), updates);
+  mirror.toWrite.forEach(({ id, payload }) => {
+    batch.set(doc(db, RANKING_COL, id), {
+      ...payload,
+      result_recorded_at: nowIso,
+      created_at: nowIso,
+    });
+  });
+  mirror.toRemove.forEach((id) => batch.delete(doc(db, RANKING_COL, id)));
+  await batch.commit();
+
   await createAuditLog({
     action: 'team_confrontation_recorded',
     actor,
-    details: { match_id: matchId, status: updates.status, winner: updates.winner_side || null },
+    details: {
+      match_id: matchId,
+      status: updates.status,
+      winner: updates.winner_side || null,
+      mirrored: mirror.toWrite.length,
+    },
   });
   return { ...updates, result };
 }

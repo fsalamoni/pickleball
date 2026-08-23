@@ -4,6 +4,7 @@ import {
   normalizeTeamConfig, validateTeamRoster, validateConfrontationLineup,
   etapaWinner, etapaDecided, computeConfrontationResult,
   buildTeamStandings, buildTeamRanking, headToHeadWinner,
+  buildConfrontationRankingMirror, etapaMirrorId,
 } from './teamFormat.js';
 
 const M = 'male';
@@ -252,6 +253,28 @@ describe('buildTeamStandings / rankTeamStandings', () => {
     const x = ranked.find((r) => r.team_id === 'X');
     const y = ranked.find((r) => r.team_id === 'Y');
     expect(y.position).toBeLessThan(x.position); // Y (saldo +4) à frente de X (saldo +3)
+  });
+
+  it('buildConfrontationRankingMirror espelha etapas decididas com uids reais', () => {
+    const etapas = [
+      { id: 'e1', type: 'mens_doubles', side_a: ['u1', 'u2'], side_b: ['u3', 'u4'], score_a: 11, score_b: 7 }, // dupla
+      { id: 'e2', type: 'singles', side_a: ['u1'], side_b: ['u3'], score_a: 9, score_b: 11 }, // simples
+      { id: 'e3', type: 'mixed_doubles', side_a: ['u1', 'g0'], side_b: ['u3', 'u4'], score_a: 11, score_b: 5 }, // g0 é convidado (sem conta)
+      { id: 'e4', type: 'singles', side_a: ['u2'], side_b: ['u4'], score_a: null, score_b: null }, // indecidida
+    ];
+    const validUids = ['u1', 'u2', 'u3', 'u4'];
+    const { toWrite, toRemove } = buildConfrontationRankingMirror({
+      matchId: 'm1', tournamentId: 't1', modalityId: 'mod1', eventTitle: 'Torneio X', etapas, validUids,
+    });
+    // e1 (doubles) e e2 (singles) espelhadas; e3 (convidado) e e4 (indecidida) não.
+    expect(toWrite.map((w) => w.id)).toEqual([etapaMirrorId('m1', 'e1'), etapaMirrorId('m1', 'e2')]);
+    expect(toWrite[0].payload.kind).toBe('doubles');
+    expect(toWrite[0].payload.side_a_ids).toEqual(['u1', 'u2']);
+    expect(toWrite[0].payload.winner_side).toBe('a');
+    expect(toWrite[1].payload.kind).toBe('singles');
+    expect(toWrite[1].payload.winner_side).toBe('b');
+    // e3 e e4 vão para remoção (idempotência).
+    expect(toRemove).toEqual([etapaMirrorId('m1', 'e3'), etapaMirrorId('m1', 'e4')]);
   });
 
   it('confronto direto desempata quando tudo o mais é igual', () => {

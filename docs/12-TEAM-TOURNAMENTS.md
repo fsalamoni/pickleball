@@ -120,10 +120,26 @@ modalidade de equipes para a página da modalidade (aba Equipes). O **pareamento
 dos confrontos (pontos corridos/grupos/chaves) usa o **sorteio existente**
 (equipes como participantes) — nada de novo no motor de fases.
 
-**Pendências conhecidas / evoluções**: vincular membros do elenco a **contas**
-da plataforma (hoje é nome + gênero, padrão "convidado"); espelhar confrontos de
-equipes no ranking geral/“Meu desempenho” (hoje o formato de equipes tem
-classificação própria e não alimenta o ELO individual).
+### Evoluções entregues (#111)
+
+- **Elenco pelo padrão da plataforma**: `TeamRegistrationForm` busca atletas no
+  diretório (`listAthletes` + `filterPartnerCandidates`, com `user_id`), como no
+  fluxo de duplas; "convidado" avulso (nome + gênero) segue disponível.
+- **Etapas alimentam o ranking INDIVIDUAL**: ao salvar um confronto,
+  `recordConfrontation` espelha cada etapa decidida (com jogadores com conta) em
+  `club_event_games` — a MESMA base do ELO e do ranking de duplas —, com `kind`
+  `singles` (1×1) ou `doubles` (2×2), `source: 'team_confrontation'`. Assim as
+  duplas caem no ranking de duplas e o simples/duplas somam no ELO individual e
+  em "Meu desempenho". Puro/testado em `buildConfrontationRankingMirror`
+  (idempotente: grava as válidas, remove as que deixaram de valer). O confronto
+  agregado (`tournament_matches` com `team_confrontation`) é **ignorado** pelo
+  motor de rating (para não duplicar). Convidados sem conta contam só p/ a equipe.
+- **Ranking de equipes**: a aba "Ranking de equipes" (`TeamStandingsTable`) usa
+  `buildTeamRanking` (vitórias de confronto → saldo de etapas → saldo de pontos →
+  confronto direto).
+- **Regras**: `firestore.rules` ganhou um ramo ADITIVO em `club_event_games`
+  (create/update/delete) permitindo o **admin do torneio** gravar o espelho
+  quando `source == 'team_confrontation'`.
 
 ---
 

@@ -113,6 +113,11 @@ export default function TeamConfrontationPanel({ modality, match, teamA, teamB, 
       score_a: e.score_a === '' ? null : Number(e.score_a),
       score_b: e.score_b === '' ? null : Number(e.score_b),
     }));
+    // uids REAIS (com conta) dos dois elencos — habilitam o espelho no ranking
+    // individual (jogadores convidados/sem conta não pontuam no ranking).
+    const validUids = [...(teamA?.members || []), ...(teamB?.members || [])]
+      .map((m) => m.user_id)
+      .filter(Boolean);
     try {
       await record.mutateAsync({
         matchId: match.id,
@@ -122,6 +127,10 @@ export default function TeamConfrontationPanel({ modality, match, teamA, teamB, 
         rosterBIds: optsB.map((o) => o.key),
         genderById,
         validate: true,
+        tournamentId: match.tournament_id || null,
+        modalityId: modality.id,
+        eventTitle: modality.name || 'Torneio',
+        validUids,
       });
       toast.success('Confronto salvo.');
     } catch (err) {

@@ -64,7 +64,7 @@ export default function TeamModalityView({ tournament, modality, isAdmin }) {
   const tabs = [
     { value: 'equipes', label: `Equipes (${teams.length})`, icon: Users },
     { value: 'confrontos', label: 'Confrontos', icon: Swords },
-    { value: 'classificacao', label: 'Classificação', icon: Trophy },
+    { value: 'classificacao', label: 'Ranking de equipes', icon: Trophy },
   ];
 
   function closeForm() {

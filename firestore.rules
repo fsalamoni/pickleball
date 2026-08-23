@@ -964,6 +964,10 @@ service cloud.firestore {
         || isGameDayOwnerOf(request.resource.data.event_id)
         || isClubEventCreator(request.resource.data.event_id)
         || isClubAdmin(request.resource.data.club_id)
+        // Espelho de CONFRONTO DE EQUIPES: o admin do torneio grava os
+        // resultados das etapas no ranking individual (flag team_tournaments).
+        || (request.resource.data.source == 'team_confrontation'
+            && isTournamentAdmin(request.resource.data.tournament_id))
       ) && request.resource.data.keys().hasAll([
         'event_id', 'date_id', 'club_id', 'side_a_ids', 'side_b_ids',
         'score_a', 'score_b', 'winner_side', 'status'
@@ -981,6 +985,8 @@ service cloud.firestore {
         || isGameDayOwnerOf(request.resource.data.event_id)
         || isClubEventCreator(request.resource.data.event_id)
         || isClubAdmin(request.resource.data.club_id)
+        || (request.resource.data.source == 'team_confrontation'
+            && isTournamentAdmin(request.resource.data.tournament_id))
       ) && request.resource.data.event_id == resource.data.event_id
         && request.resource.data.date_id == resource.data.date_id
         && request.resource.data.club_id == resource.data.club_id;
@@ -991,6 +997,8 @@ service cloud.firestore {
         || isGameDayOwnerOf(resource.data.event_id)
         || isClubEventCreator(resource.data.event_id)
         || isClubAdmin(resource.data.club_id)
+        || (resource.data.source == 'team_confrontation'
+            && isTournamentAdmin(resource.data.tournament_id))
       );
     }
     // Helper: criador do evento `club_events/{id}`.
