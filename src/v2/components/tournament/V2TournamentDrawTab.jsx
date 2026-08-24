@@ -1,5 +1,6 @@
 import React, { useState, useMemo } from 'react';
 import { V2Surface, V2Button, V2Badge } from '@/v2/ui/primitives';
+import V2Collapsible from '@/v2/components/tournament/V2Collapsible';
 
 
 import { Label } from '@/components/ui/label';
@@ -281,16 +282,11 @@ function ModalityDrawBlock({ tournament, modality, isAdmin }) {
   const hasSchedule = matches.some((m) => m.court || m.scheduled_at);
 
   return (
-    <V2Surface>
-      <div className="p-4">
-        <div className="flex items-start justify-between gap-2 flex-wrap">
-          <div>
-            <h4 className="font-semibold">{modality.name}</h4>
-            <p className="text-xs text-gray-500">
-              Fase: {TOURNAMENT_STAGE_TYPE_LABELS[modality.stages?.[0]?.type]} ·{' '}
-              {matches.length > 0 ? `${matches.length} jogos gerados` : 'Ainda não sorteado'}
-            </p>
-          </div>
+    <V2Collapsible
+      title={modality.name}
+      subtitle={`Fase: ${TOURNAMENT_STAGE_TYPE_LABELS[modality.stages?.[0]?.type] || ''} · ${matches.length > 0 ? `${matches.length} jogos gerados` : 'Ainda não sorteado'}`}
+    >
+        <div className="mb-1 flex flex-wrap justify-end">
           {isAdmin && (
             <div className="flex gap-2 flex-wrap">
               {canAdvance && (
@@ -466,7 +462,6 @@ function ModalityDrawBlock({ tournament, modality, isAdmin }) {
             </table>
           </div>
         )}
-      </div>
 
       <Dialog open={confirmOpen} onOpenChange={(o) => !running && setConfirmOpen(o)}>
         <DialogContent>
@@ -550,7 +545,7 @@ function ModalityDrawBlock({ tournament, modality, isAdmin }) {
           onClose={() => setSubstitution(null)}
         />
       )}
-    </V2Surface>
+    </V2Collapsible>
   );
 }
 

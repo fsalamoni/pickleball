@@ -1,6 +1,7 @@
 import React, { useState } from 'react';
 import { toast } from 'sonner';
 import { V2Surface, V2Button, V2Badge } from '@/v2/ui/primitives';
+import V2Collapsible from '@/v2/components/tournament/V2Collapsible';
 
 
 import { Input } from '@/components/ui/input';
@@ -160,26 +161,21 @@ function ModalityRegistrationsBlock({ tournament, modality, registrations, isAdm
   const slotsFull = isRegistrationCapacityReached(occupied, modality.max_entries);
 
   return (
-    <V2Surface>
-      <div className="p-4">
-        <div className="flex items-start justify-between gap-2 flex-wrap">
-          <div>
-            <h4 className="font-semibold">{modality.name}</h4>
-            <p className="text-xs text-gray-500">
-              {MODALITY_FORMAT_LABELS[modality.format]} · {hasUnlimitedEntries(modality.max_entries)
-                ? `${confirmed} confirmados · vagas abertas`
-                : `${confirmed}/${modality.max_entries} confirmados`}
-              {checkinOn && checkedInCount > 0 ? ` · ${checkedInCount} com check-in` : ''}
-            </p>
-          </div>
-          {canJoin ? (
-            <V2Button size="sm" onClick={() => onJoin(modality)} disabled={slotsFull && !alreadyRegistered}>
-              <Plus className="w-4 h-4 mr-1" /> {slotsFull && !alreadyRegistered ? 'Modalidade lotada' : isAdmin ? 'Inscrever jogador' : 'Inscrever-se'}
-            </V2Button>
-          ) : (
-            <V2Badge tone="neutral">Privado: exige código</V2Badge>
-          )}
-        </div>
+    <V2Collapsible
+      title={modality.name}
+      subtitle={`${MODALITY_FORMAT_LABELS[modality.format]} · ${hasUnlimitedEntries(modality.max_entries)
+        ? `${confirmed} confirmados · vagas abertas`
+        : `${confirmed}/${modality.max_entries} confirmados`}${checkinOn && checkedInCount > 0 ? ` · ${checkedInCount} com check-in` : ''}`}
+    >
+      <div className="mb-3 flex justify-end">
+        {canJoin ? (
+          <V2Button size="sm" onClick={() => onJoin(modality)} disabled={slotsFull && !alreadyRegistered}>
+            <Plus className="w-4 h-4 mr-1" /> {slotsFull && !alreadyRegistered ? 'Modalidade lotada' : isAdmin ? 'Inscrever jogador' : 'Inscrever-se'}
+          </V2Button>
+        ) : (
+          <V2Badge tone="neutral">Privado: exige código</V2Badge>
+        )}
+      </div>
         {ownPendingPayment && (
           <div className="mt-3 flex flex-wrap items-center justify-between gap-2 rounded-2xl border border-amber-200 bg-amber-50 p-3 text-sm text-amber-900">
             <span>
@@ -296,8 +292,6 @@ function ModalityRegistrationsBlock({ tournament, modality, registrations, isAdm
             </table>
           </div>
         )}
-      </div>
-
       {editTarget && (
         <RegistrationEditDialog
           registration={editTarget}
@@ -316,7 +310,7 @@ function ModalityRegistrationsBlock({ tournament, modality, registrations, isAdm
           paymentDeclared={Boolean(ownPendingPayment.payment_declared_at)}
         />
       )}
-    </V2Surface>
+    </V2Collapsible>
   );
 }
 
