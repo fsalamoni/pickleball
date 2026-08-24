@@ -57,6 +57,7 @@ export default function V2Tournament() {
   const galleryOn = useFeatureFlag(FEATURE_FLAG.TOURNAMENT_GALLERY);
   const calendarExportOn = useFeatureFlag(FEATURE_FLAG.CALENDAR_EXPORT);
   const tvModeOn = useFeatureFlag(FEATURE_FLAG.TOURNAMENT_TV_MODE);
+  const adminConsoleOn = useFeatureFlag(FEATURE_FLAG.TOURNAMENT_ADMIN_CONSOLE);
   const { copy, copied } = useClipboard();
 
   if (isLoading) {
@@ -117,6 +118,12 @@ export default function V2Tournament() {
     URL.revokeObjectURL(url);
   };
 
+  // Console dedicado ligado: a gestão sai da página pública. Um /admin direto
+  // redireciona para a página de gestão.
+  if (adminConsoleOn && isAdmin && tab === 'admin') {
+    return <Navigate to={`/torneios/${tournamentId}/gerenciar`} replace />;
+  }
+
   const activeTab = ['visao-geral', 'jogos', 'ranking', 'fotos', 'admin'].includes(tab) ? tab : 'visao-geral';
   const goTab = (v) => navigate(`/torneios/${tournamentId}/${v}`);
 
@@ -125,7 +132,8 @@ export default function V2Tournament() {
     { value: 'jogos', label: 'Jogos' },
     { value: 'ranking', label: 'Ranking' },
     ...(showGallery ? [{ value: 'fotos', label: 'Fotos', icon: Images }] : []),
-    ...(isAdmin ? [{ value: 'admin', label: 'Admin', icon: ShieldCheck }] : []),
+    // Aba "Admin" embutida só quando o console dedicado está desligado.
+    ...(isAdmin && !adminConsoleOn ? [{ value: 'admin', label: 'Admin', icon: ShieldCheck }] : []),
   ];
 
   return (
@@ -172,6 +180,11 @@ export default function V2Tournament() {
           </div>
 
           <div className="mt-6 flex flex-wrap gap-2">
+            {adminConsoleOn && isAdmin && (
+              <Link to={`/torneios/${tournament.id}/gerenciar`} className="btn-press inline-flex items-center gap-2 rounded-full bg-acid px-4 py-2 text-sm font-bold text-ink">
+                <ShieldCheck className="h-4 w-4" /> Gerenciar torneio
+              </Link>
+            )}
             {tournament.invite_code && (
               <button onClick={() => copy(tournament.invite_code, 'Código copiado!')} className="btn-press inline-flex items-center gap-2 rounded-full border border-white/15 bg-white/10 px-4 py-2 text-sm font-semibold text-white">
                 {copied ? <Check className="h-4 w-4 text-acid" /> : <Copy className="h-4 w-4" />} Código: <strong>{tournament.invite_code}</strong>
@@ -231,7 +244,7 @@ export default function V2Tournament() {
         {activeTab === 'jogos' && <V2TournamentMatches tournament={tournament} />}
         {activeTab === 'ranking' && <V2TournamentRanking tournament={tournament} />}
         {activeTab === 'fotos' && showGallery && <V2TournamentGallery tournamentId={tournament.id} canManage={!!isAdmin} />}
-        {activeTab === 'admin' && isAdmin && <V2TournamentAdminPanel tournament={tournament} />}
+        {activeTab === 'admin' && isAdmin && !adminConsoleOn && <V2TournamentAdminPanel tournament={tournament} />}
       </div>
 
       {!showGallery && <div className="mt-6"><V2TournamentGallery tournamentId={tournament.id} canManage={!!isAdmin} /></div>}

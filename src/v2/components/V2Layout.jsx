@@ -116,6 +116,7 @@ function useV2Nav() {
   const gameDayOn = useFeatureFlag(FEATURE_FLAG.ATHLETE_GAME_DAY);
   const legalCenterOn = useFeatureFlag(FEATURE_FLAG.LEGAL_CENTER);
   const settingsPageOn = useFeatureFlag(FEATURE_FLAG.SETTINGS_PAGE);
+  const tournamentAdminConsoleOn = useFeatureFlag(FEATURE_FLAG.TOURNAMENT_ADMIN_CONSOLE);
   const { totalArenas: myArenasCount, totalPendingBookings: myPendingBookings } = useMyArenaSummary();
   const showMyArenas = arenasOn && myArenasCount > 0;
   // Só busca o perfil de professor quando a área de aulas está ligada.
@@ -166,6 +167,7 @@ function useV2Nav() {
         isCoach && { to: '/aulas', label: 'Ensino', icon: GraduationCap },
         coachLessonsOn && { to: '/minhas-aulas', label: 'Minhas aulas', icon: GraduationCap },
         { to: '/perfil', label: 'Meu Perfil', icon: User },
+        tournamentAdminConsoleOn && { to: '/perfil/torneios', label: 'Meus torneios', icon: Trophy },
         settingsPageOn && { to: '/configuracoes', label: 'Configurações', icon: Settings },
       ].filter(Boolean),
     },
@@ -253,6 +255,7 @@ function useV2Nav() {
         children: [
           { to: '/perfil', label: 'Meu perfil', icon: User },
           performanceOn && { to: '/meu-desempenho', label: 'Meu desempenho', icon: BarChart3 },
+          tournamentAdminConsoleOn && { to: '/perfil/torneios', label: 'Meus torneios', icon: Trophy },
           settingsPageOn && { to: '/configuracoes', label: 'Configurações', icon: Settings },
         ],
       }),

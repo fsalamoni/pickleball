@@ -11,6 +11,8 @@ const V2Arenas = lazy(() => import('@/v2/pages/V2Arenas'));
 const V2ArenaDetail = lazy(() => import('@/v2/pages/V2ArenaDetail'));
 const V2Tournaments = lazy(() => import('@/v2/pages/V2Tournaments'));
 const V2Tournament = lazy(() => import('@/v2/pages/V2Tournament'));
+const V2TournamentAdmin = lazy(() => import('@/v2/pages/V2TournamentAdmin'));
+const V2MyTournamentsAdmin = lazy(() => import('@/v2/pages/V2MyTournamentsAdmin'));
 const V2Athletes = lazy(() => import('@/v2/pages/V2Athletes'));
 const V2AthleteProfile = lazy(() => import('@/v2/pages/V2AthleteProfile'));
 const V2Ranking = lazy(() => import('@/v2/pages/V2Ranking'));
@@ -153,6 +155,7 @@ export default function V2App() {
           <Route path="torneios/ingressar" element={<V2JoinTournament />} />
           <Route path="torneios/guia" element={<V2FormatsGuide />} />
           <Route path="torneios/:tournamentId" element={<V2Tournament />} />
+          <Route path="torneios/:tournamentId/gerenciar" element={<V2TournamentAdmin />} />
           <Route path="torneios/:tournamentId/modalidades/:modalityId" element={<V2ModalityPage />} />
           <Route path="torneios/:tournamentId/:tab" element={<V2Tournament />} />
 
@@ -180,6 +183,7 @@ export default function V2App() {
           {/* Você */}
           <Route path="meu-desempenho" element={<V2Performance />} />
           <Route path="perfil" element={<V2Profile />} />
+          <Route path="perfil/torneios" element={<V2MyTournamentsAdmin />} />
           <Route path="perfil/editar" element={<V2ProfileEdit />} />
           <Route path="configuracoes" element={<V2Settings />} />
 

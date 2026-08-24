@@ -321,6 +321,17 @@ export const FEATURE_FLAG = Object.freeze({
   TEAM_TOURNAMENTS: 'team_tournaments',
 
   /**
+   * Console de gestão do torneio em PÁGINA DEDICADA: separa a administração do
+   * torneio da visão pública. Na página pública, o criador/admin vê um botão
+   * "Gerenciar torneio" que abre uma página independente, minimalista e objetiva,
+   * com todas as ferramentas de organização; a aba "Admin" some da página
+   * pública. Também adiciona uma aba em "Perfil" para o criador entrar direto na
+   * gestão dos torneios que criou. Aditivo — desligado, a administração continua
+   * embutida na aba "Admin" da página do torneio, como hoje.
+   */
+  TOURNAMENT_ADMIN_CONSOLE: 'tournament_admin_console',
+
+  /**
    * Check-in de atletas: na aba de inscrições do torneio, o admin pode
    * marcar/desfazer o check-in de inscrições confirmadas. O status
    * "Check-in feito" já existia e já era considerado pelo sorteio; esta
@@ -1045,6 +1056,15 @@ export const FEATURE_FLAG_META = Object.freeze({
       + 'regra "todas as etapas" ou "melhor de X". O criador define o tamanho da '
       + 'equipe, as etapas e a regra; o admin escala cada etapa no confronto. '
       + 'Desligado, a opção não aparece e nada muda nos torneios existentes.',
+  },
+  [FEATURE_FLAG.TOURNAMENT_ADMIN_CONSOLE]: {
+    label: 'Console de gestão do torneio (página dedicada)',
+    description:
+      'Separa a administração do torneio em uma página independente e '
+      + 'minimalista, acessada por um botão "Gerenciar torneio" (visível só ao '
+      + 'criador/admin) na página pública — que perde a aba "Admin". Adiciona '
+      + 'ainda uma aba em "Perfil" para o criador entrar direto na gestão dos '
+      + 'seus torneios. Desligado, a administração segue embutida na aba "Admin".',
   },
   [FEATURE_FLAG.TOURNAMENT_CHECKIN]: {
     label: 'Check-in de atletas no torneio',
