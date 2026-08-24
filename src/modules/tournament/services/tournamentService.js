@@ -403,6 +403,25 @@ export async function listMyTournaments(userId, { includeArchived = false } = {}
   return results;
 }
 
+/**
+ * Torneios que EU gerencio — apenas aqueles em que sou owner/admin (constante em
+ * `tournament_admins`). Diferente de `listMyTournaments`, NÃO inclui torneios em
+ * que apenas participo como atleta inscrito. Usado no console/atalho de gestão.
+ */
+export async function listMyManagedTournaments(userId, { includeArchived = false } = {}) {
+  if (!userId) return [];
+  const adminSnap = await getDocs(query(collection(db, COL.admins), where('user_id', '==', userId)));
+  const results = [];
+  for (const adminDoc of adminSnap.docs) {
+    const { tournament_id: tid, role } = adminDoc.data();
+    const t = await getTournament(tid);
+    if (!t) continue;
+    if (!includeArchived && t.archived) continue;
+    results.push({ ...t, my_role: role || TOURNAMENT_ADMIN_ROLE.ADMIN });
+  }
+  return results;
+}
+
 export async function listAllTournaments({ includeArchived = false } = {}) {
   const snap = await getDocs(query(collection(db, COL.tournaments), orderBy('created_at', 'desc')));
   const docs = snap.docs.map((d) => d.data());

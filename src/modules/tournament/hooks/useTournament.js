@@ -2,6 +2,7 @@ import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import {
   getTournament,
   listMyTournaments,
+  listMyManagedTournaments,
   listAllTournaments,
   listPublicTournaments,
   listArenaTournaments,
@@ -84,6 +85,19 @@ export function useMyTournaments({ includeArchived = false } = {}) {
   return useQuery({
     queryKey: ['my-tournaments', user?.uid, { includeArchived }],
     queryFn: () => (user?.uid ? listMyTournaments(user.uid, { includeArchived }) : Promise.resolve([])),
+    enabled: !!user?.uid,
+  });
+}
+
+/**
+ * Torneios que EU gerencio (owner/admin) — para o atalho de gestão em Perfil.
+ * Não inclui torneios em que apenas participo como atleta.
+ */
+export function useMyManagedTournaments({ includeArchived = false } = {}) {
+  const { user } = useAuth();
+  return useQuery({
+    queryKey: ['my-managed-tournaments', user?.uid, { includeArchived }],
+    queryFn: () => (user?.uid ? listMyManagedTournaments(user.uid, { includeArchived }) : Promise.resolve([])),
     enabled: !!user?.uid,
   });
 }

@@ -10,7 +10,7 @@ import { Link, Navigate } from 'react-router-dom';
 import { Trophy, Settings2, Eye, Plus } from 'lucide-react';
 import { useFeatureFlag } from '@/core/lib/FeatureFlagsContext';
 import { FEATURE_FLAG } from '@/core/featureFlags';
-import { useMyTournaments } from '@/modules/tournament/hooks/useTournament';
+import { useMyManagedTournaments } from '@/modules/tournament/hooks/useTournament';
 import { TOURNAMENT_STATUS_LABELS } from '@/modules/tournament/domain/constants';
 import { V2Badge, V2Button, V2EmptyState, V2Skeleton, V2Surface } from '@/v2/ui/primitives';
 
@@ -23,7 +23,7 @@ function whenText(t) {
 
 export default function V2MyTournamentsAdmin() {
   const consoleOn = useFeatureFlag(FEATURE_FLAG.TOURNAMENT_ADMIN_CONSOLE);
-  const { data: tournaments = [], isLoading } = useMyTournaments({ includeArchived: true });
+  const { data: tournaments = [], isLoading } = useMyManagedTournaments({ includeArchived: true });
 
   if (!consoleOn) return <Navigate to="/perfil" replace />;
 
