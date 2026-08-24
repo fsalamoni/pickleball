@@ -441,7 +441,7 @@ export function V2ModalityMatches({ tournament, modality, isAdmin = false }) {
   const showTree = bracketTreeOn && hasBracket && treeView;
 
   return (
-    <V2Collapsible title={<span className="inline-flex items-center gap-2"><Swords className="h-4 w-4 text-ink" /> {modality.name}</span>} subtitle={subtitle}>
+    <V2Collapsible defaultOpen={false} persistId={`result:${modality.id}`} title={<span className="inline-flex items-center gap-2"><Swords className="h-4 w-4 text-ink" /> {modality.name}</span>} subtitle={subtitle}>
       {bracketTreeOn && hasBracket && matches.length > 0 && (
         <div className="mb-3 inline-flex gap-1 rounded-full border border-gray-100 bg-paper-pure p-1">
           <button type="button" onClick={() => setTreeView(false)}
@@ -476,6 +476,8 @@ export function V2ModalityMatches({ tournament, modality, isAdmin = false }) {
               <V2Collapsible
                 key={stageIndex}
                 tone="nested"
+                defaultOpen={false}
+                persistId={`result:${modality.id}:fase:${stageIndex}`}
                 title={`Fase ${stageIndex + 1} · ${TOURNAMENT_STAGE_TYPE_LABELS[phases[stageIndex]?.type] || ''}`}
                 badges={(
                   <>

@@ -283,6 +283,8 @@ function ModalityDrawBlock({ tournament, modality, isAdmin }) {
 
   return (
     <V2Collapsible
+      defaultOpen={false}
+      persistId={`sorteio:${modality.id}`}
       title={modality.name}
       subtitle={`Fase: ${TOURNAMENT_STAGE_TYPE_LABELS[modality.stages?.[0]?.type] || ''} · ${matches.length > 0 ? `${matches.length} jogos gerados` : 'Ainda não sorteado'}`}
     >

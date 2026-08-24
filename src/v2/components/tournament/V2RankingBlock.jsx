@@ -112,7 +112,7 @@ export function V2ModalityRanking({ modality }) {
   const subtitle = isLoading ? 'Carregando…' : phases.length === 0 ? 'Aguardando resultados' : showPhaseHeaders ? `${phases.length} fases com resultados` : 'Classificação';
 
   return (
-    <V2Collapsible title={<span className="inline-flex items-center gap-2"><Trophy className="h-4 w-4 text-ink" /> {modality.name}</span>} subtitle={subtitle}>
+    <V2Collapsible defaultOpen={false} persistId={`rank:${modality.id}`} title={<span className="inline-flex items-center gap-2"><Trophy className="h-4 w-4 text-ink" /> {modality.name}</span>} subtitle={subtitle}>
       {isLoading ? (
         <p className="text-sm text-gray-500">Carregando…</p>
       ) : phases.length === 0 ? (
@@ -129,7 +129,7 @@ export function V2ModalityRanking({ modality }) {
             );
             if (!showPhaseHeaders) return <div key={phase.stageIndex}>{body}</div>;
             return (
-              <V2Collapsible key={phase.stageIndex} tone="nested" title={`Fase ${phase.stageIndex + 1}`} badges={<V2Badge tone="neutral">{phase.typeLabel}</V2Badge>}>
+              <V2Collapsible key={phase.stageIndex} tone="nested" defaultOpen={false} persistId={`rank:${modality.id}:fase:${phase.stageIndex}`} title={`Fase ${phase.stageIndex + 1}`} badges={<V2Badge tone="neutral">{phase.typeLabel}</V2Badge>}>
                 {body}
               </V2Collapsible>
             );

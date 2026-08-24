@@ -162,6 +162,8 @@ function ModalityRegistrationsBlock({ tournament, modality, registrations, isAdm
 
   return (
     <V2Collapsible
+      defaultOpen={false}
+      persistId={`insc:${modality.id}`}
       title={modality.name}
       subtitle={`${MODALITY_FORMAT_LABELS[modality.format]} · ${hasUnlimitedEntries(modality.max_entries)
         ? `${confirmed} confirmados · vagas abertas`
