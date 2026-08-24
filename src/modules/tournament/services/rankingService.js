@@ -181,15 +181,32 @@ export async function computeModalityRankingStructured(modalityId) {
         return { name: g.name, rows: ranked.map((r) => rowFromRanked(r, regById)) };
       });
     } else {
-      // Sem subdivisão: um único grupo com todos os participantes da fase.
-      const ids = new Set();
-      matches.forEach((m) => {
-        (m.side_a_ids || []).forEach((id) => ids.add(id));
-        (m.side_b_ids || []).forEach((id) => ids.add(id));
-      });
-      const entrants = [...ids].map((id) => ({ id, members: [id] }));
-      const ranked = rankEntrantsInGroup(entrants, matches, phaseScoring);
-      groups = [{ name: null, rows: ranked.map((r) => rowFromRanked(r, regById)) }];
+      // Sem grupos persistidos em `tournament_groups`. Se os JOGOS trazem a
+      // marcação de grupo (`m.group`, gravada no sorteio), reconstrói uma tabela
+      // por grupo a partir dela — assim a classificação fica dividida por grupo
+      // mesmo que os metadados de grupo não tenham sido lidos/gravados. Só cai no
+      // "grupo único" quando os jogos não têm grupo algum (pontos corridos,
+      // chaves, americana etc.).
+      const buildGroupRows = (groupMatches) => {
+        const ids = new Set();
+        groupMatches.forEach((m) => {
+          (m.side_a_ids || []).forEach((id) => ids.add(id));
+          (m.side_b_ids || []).forEach((id) => ids.add(id));
+        });
+        const entrants = [...ids].map((id) => ({ id, members: [id] }));
+        const ranked = rankEntrantsInGroup(entrants, groupMatches, phaseScoring);
+        return ranked.map((r) => rowFromRanked(r, regById));
+      };
+      const groupNames = [...new Set(matches.map((m) => m.group).filter(Boolean))]
+        .sort((a, b) => String(a).localeCompare(String(b), 'pt-BR'));
+      if (groupNames.length > 0) {
+        groups = groupNames.map((name) => ({
+          name,
+          rows: buildGroupRows(matches.filter((m) => m.group === name)),
+        }));
+      } else {
+        groups = [{ name: null, rows: buildGroupRows(matches) }];
+      }
     }
 
     result.push({

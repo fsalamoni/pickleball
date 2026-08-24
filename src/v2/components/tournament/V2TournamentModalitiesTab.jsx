@@ -110,6 +110,19 @@ export default function V2TournamentModalitiesTab({ tournament, isAdmin }) {
     setForm((f) => ({ ...f, [field]: value }));
   }
 
+  // Troca do modelo de chave. "Fase de grupos" divide os atletas em N grupos
+  // (cada um com sua tabela); precisa de ao menos 2 grupos para fazer sentido —
+  // então, ao selecioná-la, garante um padrão de 2 em vez de 1 (grupo único).
+  function setStageType(value) {
+    setForm((f) => {
+      const next = { ...f, stage_type: value };
+      if (value === TOURNAMENT_STAGE_TYPE.GROUPS && (Number(f.group_count) || 1) < 2) {
+        next.group_count = 2;
+      }
+      return next;
+    });
+  }
+
   function setSinglePhaseScoring(patch) {
     setForm((current) => {
       const firstPhase = current.phases?.[0] || defaultPhase(current.format, true);
@@ -344,14 +357,15 @@ export default function V2TournamentModalitiesTab({ tournament, isAdmin }) {
               <div className="grid gap-4 sm:grid-cols-3">
                 <div className="space-y-2">
                   <label className="text-[11px] font-bold uppercase tracking-widest text-gray-400">Modelo da chave</label>
-                  <select value={form.stage_type} onChange={(e) => set('stage_type', e.target.value)} className="w-full rounded-2xl border border-gray-200 bg-paper px-4 py-3 text-sm text-ink outline-none focus-visible:ring-4 focus-visible:ring-acid/30">
+                  <select value={form.stage_type} onChange={(e) => setStageType(e.target.value)} className="w-full rounded-2xl border border-gray-200 bg-paper px-4 py-3 text-sm text-ink outline-none focus-visible:ring-4 focus-visible:ring-acid/30">
                     {Object.entries(stageOptions).map(([k, v]) => <option key={k} value={k}>{v}</option>)}
                   </select>
                 </div>
-                {[TOURNAMENT_STAGE_TYPE.ROUND_ROBIN, TOURNAMENT_STAGE_TYPE.AMERICAN_ROUND_ROBIN, TOURNAMENT_STAGE_TYPE.TWO_STAGE].includes(form.stage_type) && (
+                {form.stage_type === TOURNAMENT_STAGE_TYPE.GROUPS && (
                   <div className="space-y-2">
                     <label className="text-[11px] font-bold uppercase tracking-widest text-gray-400">Qtd. de grupos</label>
-                    <input type="number" min="1" max="16" value={form.group_count} onChange={(e) => set('group_count', e.target.value)} className="w-full rounded-2xl border border-gray-200 bg-paper px-4 py-3 text-sm text-ink outline-none focus-visible:ring-4 focus-visible:ring-acid/30" />
+                    <input type="number" min="2" max="16" value={form.group_count} onChange={(e) => set('group_count', e.target.value)} className="w-full rounded-2xl border border-gray-200 bg-paper px-4 py-3 text-sm text-ink outline-none focus-visible:ring-4 focus-visible:ring-acid/30" />
+                    <p className="text-[11px] leading-relaxed text-gray-400">Os atletas são sorteados e divididos entre os grupos; cada grupo tem seus próprios jogos e sua própria classificação.</p>
                   </div>
                 )}
                 {[TOURNAMENT_STAGE_TYPE.SINGLE_ELIMINATION, TOURNAMENT_STAGE_TYPE.DOUBLE_ELIMINATION, TOURNAMENT_STAGE_TYPE.TWO_STAGE].includes(form.stage_type) && (
