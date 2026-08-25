@@ -11,7 +11,7 @@ import { getTournament } from '@/modules/tournament/services/tournamentService';
 import { listModalities } from '@/modules/tournament/services/modalityService';
 import { listAllMatchesForModality } from '@/modules/tournament/services/matchService';
 import { listRegistrations } from '@/modules/tournament/services/registrationService';
-import { computeModalityRanking } from '@/modules/tournament/services/rankingService';
+import { computeModalityRankingStructured } from '@/modules/tournament/services/rankingService';
 import {
   TOURNAMENT_STATUS,
   TOURNAMENT_STATUS_LABELS,
@@ -194,6 +194,75 @@ export default function PublicTournament() {
   );
 }
 
+/**
+ * Tabela de classificação (uma por grupo) para a visão pública. Recebe as linhas
+ * já ranqueadas de um grupo/fase (formato do ranking estruturado).
+ */
+function PublicRankingTable({ rows }) {
+  return (
+    <>
+      <div className="hidden sm:block overflow-x-auto rounded-3xl border border-gray-100">
+        <table className="w-full text-sm">
+          <thead className="bg-paper">
+            <tr className="text-left">
+              <th className="px-3 py-2">#</th>
+              <th className="px-3 py-2">Participante</th>
+              <th className="px-3 py-2 text-center">PJ</th>
+              <th className="px-3 py-2 text-center">V</th>
+              <th className="px-3 py-2 text-center">Sets</th>
+              <th className="px-3 py-2 text-right" title="Saldo de pontos (PF − PC)">Saldo</th>
+            </tr>
+          </thead>
+          <tbody>
+            {rows.map((r) => {
+              const balance = (r.points_for || 0) - (r.points_against || 0);
+              return (
+                <tr key={r.key} className="border-t">
+                  <td className="px-3 py-2 font-semibold">{r.position}</td>
+                  <td className="px-3 py-2">
+                    <div className="flex items-center gap-2">
+                      <AvatarGroup size="sm" people={r.players || []} />
+                      <span>{r.label}</span>
+                    </div>
+                  </td>
+                  <td className="px-3 py-2 text-center">{r.played}</td>
+                  <td className="px-3 py-2 text-center font-semibold">{r.wins}</td>
+                  <td className="px-3 py-2 text-center">{r.sets_won}–{r.sets_lost}</td>
+                  <td className={`px-3 py-2 text-right font-medium ${balance > 0 ? 'text-green-700' : balance < 0 ? 'text-red-600' : 'text-gray-500'}`}>
+                    {balance > 0 ? `+${balance}` : balance}
+                  </td>
+                </tr>
+              );
+            })}
+          </tbody>
+        </table>
+      </div>
+      <div className="mt-3 space-y-2 sm:hidden">
+        {rows.map((r) => {
+          const balance = (r.points_for || 0) - (r.points_against || 0);
+          return (
+            <div key={r.key} className="rounded-2xl border border-gray-200 bg-white p-3">
+              <div className="flex items-center gap-2">
+                <span className="font-bold tabular-nums">{r.position}</span>
+                <AvatarGroup size="sm" people={r.players || []} />
+                <span className="min-w-0 flex-1 truncate font-medium">{r.label}</span>
+              </div>
+              <div className="mt-2 flex items-center gap-3 text-xs text-gray-500">
+                <span>PJ <strong className="tabular-nums text-ink">{r.played}</strong></span>
+                <span>V <strong className="tabular-nums text-ink">{r.wins}</strong></span>
+                <span>Sets <strong className="tabular-nums text-ink">{r.sets_won}–{r.sets_lost}</strong></span>
+                <span className={`ml-auto font-semibold tabular-nums ${balance > 0 ? 'text-green-700' : balance < 0 ? 'text-red-600' : 'text-gray-500'}`}>
+                  Saldo {balance > 0 ? `+${balance}` : balance}
+                </span>
+              </div>
+            </div>
+          );
+        })}
+      </div>
+    </>
+  );
+}
+
 function PublicModalityBlock({ modality }) {
   const { data: matches = [] } = useQuery({
     queryKey: ['public', 'matches', modality.id, 'all'],
@@ -201,11 +270,16 @@ function PublicModalityBlock({ modality }) {
     refetchInterval: 20_000,
   });
   const multiPhase = matches.some((m) => (m.stage_index ?? 0) > 0);
-  const { data: ranking = [] } = useQuery({
-    queryKey: ['public', 'ranking', modality.id],
-    queryFn: () => computeModalityRanking(modality.id),
+  const { data: rankingData } = useQuery({
+    queryKey: ['public', 'ranking-structured', modality.id],
+    queryFn: () => computeModalityRankingStructured(modality.id),
     refetchInterval: 30_000,
   });
+  const rankingPhases = useMemo(
+    () => (rankingData?.phases || []).filter((p) => p.played && p.groups.some((g) => (g.rows || []).length > 0)),
+    [rankingData],
+  );
+  const showRankingPhaseHeaders = rankingPhases.length > 1;
   const { data: registrations = [] } = useQuery({
     queryKey: ['public', 'registrations', modality.id],
     queryFn: () => listRegistrations(modality.id),
@@ -256,67 +330,26 @@ function PublicModalityBlock({ modality }) {
         </CardTitle>
       </CardHeader>
       <CardContent className="space-y-4">
-        {ranking.length > 0 && (
-          <div>
-            <h4 className="text-sm font-semibold mb-2">Ranking</h4>
-            <div className="hidden sm:block overflow-x-auto rounded-3xl border border-gray-100">
-              <table className="w-full text-sm">
-                <thead className="bg-paper">
-                  <tr className="text-left">
-                    <th className="px-3 py-2">#</th>
-                    <th className="px-3 py-2">Participante</th>
-                    <th className="px-3 py-2 text-center">PJ</th>
-                    <th className="px-3 py-2 text-center">V</th>
-                    <th className="px-3 py-2 text-center">Sets</th>
-                    <th className="px-3 py-2 text-right" title="Saldo de pontos (PF − PC)">Saldo</th>
-                  </tr>
-                </thead>
-                <tbody>
-                  {ranking.slice(0, 16).map((r) => {
-                    const balance = (r.points_for || 0) - (r.points_against || 0);
-                    return (
-                      <tr key={r.participant_id} className="border-t">
-                        <td className="px-3 py-2 font-semibold">{r.position}</td>
-                        <td className="px-3 py-2">
-                          <div className="flex items-center gap-2">
-                            <AvatarGroup size="sm" people={r.players || []} />
-                            <span>{r.label || r.participant_id}</span>
-                          </div>
-                        </td>
-                        <td className="px-3 py-2 text-center">{r.played}</td>
-                        <td className="px-3 py-2 text-center font-semibold">{r.wins}</td>
-                        <td className="px-3 py-2 text-center">{r.sets_won}–{r.sets_lost}</td>
-                        <td className={`px-3 py-2 text-right font-medium ${balance > 0 ? 'text-green-700' : balance < 0 ? 'text-red-600' : 'text-gray-500'}`}>
-                          {balance > 0 ? `+${balance}` : balance}
-                        </td>
-                      </tr>
-                    );
-                  })}
-                </tbody>
-              </table>
-            </div>
-            <div className="mt-3 space-y-2 sm:hidden">
-              {ranking.slice(0, 16).map((r) => {
-                const balance = (r.points_for || 0) - (r.points_against || 0);
-                return (
-                  <div key={r.participant_id} className="rounded-2xl border border-gray-200 bg-white p-3">
-                    <div className="flex items-center gap-2">
-                      <span className="font-bold tabular-nums">{r.position}</span>
-                      <AvatarGroup size="sm" people={r.players || []} />
-                      <span className="min-w-0 flex-1 truncate font-medium">{r.label || r.participant_id}</span>
-                    </div>
-                    <div className="mt-2 flex items-center gap-3 text-xs text-gray-500">
-                      <span>PJ <strong className="tabular-nums text-ink">{r.played}</strong></span>
-                      <span>V <strong className="tabular-nums text-ink">{r.wins}</strong></span>
-                      <span>Sets <strong className="tabular-nums text-ink">{r.sets_won}–{r.sets_lost}</strong></span>
-                      <span className={`ml-auto font-semibold tabular-nums ${balance > 0 ? 'text-green-700' : balance < 0 ? 'text-red-600' : 'text-gray-500'}`}>
-                        Saldo {balance > 0 ? `+${balance}` : balance}
-                      </span>
-                    </div>
+        {rankingPhases.length > 0 && (
+          <div className="space-y-3">
+            <h4 className="text-sm font-semibold">Ranking</h4>
+            {rankingPhases.map((phase) => (
+              <div key={phase.stageIndex} className="space-y-3">
+                {showRankingPhaseHeaders && (
+                  <div className="text-xs font-bold uppercase tracking-wide text-gray-500">
+                    Fase {phase.stageIndex + 1}{phase.typeLabel ? ` · ${phase.typeLabel}` : ''}
                   </div>
-                );
-              })}
-            </div>
+                )}
+                {phase.groups.filter((g) => (g.rows || []).length > 0).map((group, gi) => (
+                  <div key={group.name || gi} className="space-y-2">
+                    {group.name && (
+                      <div className="text-xs font-semibold text-ink">{group.name}</div>
+                    )}
+                    <PublicRankingTable rows={group.rows} />
+                  </div>
+                ))}
+              </div>
+            ))}
           </div>
         )}
 

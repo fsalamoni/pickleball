@@ -6,7 +6,7 @@ import { getTournament } from '@/modules/tournament/services/tournamentService';
 import { listModalities } from '@/modules/tournament/services/modalityService';
 import { listAllMatchesForModality } from '@/modules/tournament/services/matchService';
 import { listRegistrations } from '@/modules/tournament/services/registrationService';
-import { computeModalityRanking } from '@/modules/tournament/services/rankingService';
+import { computeModalityRankingStructured } from '@/modules/tournament/services/rankingService';
 import { MODALITY_FORMAT_LABELS } from '@/modules/tournament/domain/constants';
 
 /**
@@ -89,10 +89,15 @@ function PrintModality({ modality }) {
     queryFn: () => listAllMatchesForModality(modality.id),
   });
   const multiPhase = matches.some((m) => (m.stage_index ?? 0) > 0);
-  const { data: ranking = [] } = useQuery({
-    queryKey: ['print', 'ranking', modality.id],
-    queryFn: () => computeModalityRanking(modality.id),
+  const { data: rankingData } = useQuery({
+    queryKey: ['print', 'ranking-structured', modality.id],
+    queryFn: () => computeModalityRankingStructured(modality.id),
   });
+  const rankingPhases = useMemo(
+    () => (rankingData?.phases || []).filter((p) => p.played && p.groups.some((g) => (g.rows || []).length > 0)),
+    [rankingData],
+  );
+  const showRankingPhaseHeaders = rankingPhases.length > 1;
   const { data: registrations = [] } = useQuery({
     queryKey: ['print', 'registrations', modality.id],
     queryFn: () => listRegistrations(modality.id),
@@ -130,36 +135,50 @@ function PrintModality({ modality }) {
         </span>
       </h2>
 
-      {ranking.length > 0 && (
-        <div className="mb-3">
-          <h3 className="text-xs font-semibold mb-1">Classificação</h3>
-          <table className="w-full text-xs border-collapse">
-            <thead>
-              <tr className="border-b">
-                <th className="py-1 text-left">#</th>
-                <th className="py-1 text-left">Participante</th>
-                <th className="py-1 text-center">PJ</th>
-                <th className="py-1 text-center">V</th>
-                <th className="py-1 text-center">Sets</th>
-                <th className="py-1 text-right">Saldo</th>
-              </tr>
-            </thead>
-            <tbody>
-              {ranking.map((r) => {
-                const balance = (r.points_for || 0) - (r.points_against || 0);
-                return (
-                  <tr key={r.participant_id} className="border-b">
-                    <td className="py-1">{r.position}</td>
-                    <td className="py-1">{r.label || r.participant_id}</td>
-                    <td className="py-1 text-center">{r.played}</td>
-                    <td className="py-1 text-center font-semibold">{r.wins}</td>
-                    <td className="py-1 text-center">{r.sets_won}–{r.sets_lost}</td>
-                    <td className="py-1 text-right font-medium">{balance > 0 ? `+${balance}` : balance}</td>
-                  </tr>
-                );
-              })}
-            </tbody>
-          </table>
+      {rankingPhases.length > 0 && (
+        <div className="mb-3 space-y-3">
+          <h3 className="text-xs font-semibold">Classificação</h3>
+          {rankingPhases.map((phase) => (
+            <div key={phase.stageIndex} className="space-y-2">
+              {showRankingPhaseHeaders && (
+                <div className="text-[11px] font-semibold text-gray-600">
+                  Fase {phase.stageIndex + 1}{phase.typeLabel ? ` · ${phase.typeLabel}` : ''}
+                </div>
+              )}
+              {phase.groups.filter((g) => (g.rows || []).length > 0).map((group, gi) => (
+                <div key={group.name || gi}>
+                  {group.name && <div className="text-[11px] font-semibold mb-0.5">{group.name}</div>}
+                  <table className="w-full text-xs border-collapse">
+                    <thead>
+                      <tr className="border-b">
+                        <th className="py-1 text-left">#</th>
+                        <th className="py-1 text-left">Participante</th>
+                        <th className="py-1 text-center">PJ</th>
+                        <th className="py-1 text-center">V</th>
+                        <th className="py-1 text-center">Sets</th>
+                        <th className="py-1 text-right">Saldo</th>
+                      </tr>
+                    </thead>
+                    <tbody>
+                      {group.rows.map((r) => {
+                        const balance = (r.points_for || 0) - (r.points_against || 0);
+                        return (
+                          <tr key={r.key} className="border-b">
+                            <td className="py-1">{r.position}</td>
+                            <td className="py-1">{r.label}</td>
+                            <td className="py-1 text-center">{r.played}</td>
+                            <td className="py-1 text-center font-semibold">{r.wins}</td>
+                            <td className="py-1 text-center">{r.sets_won}–{r.sets_lost}</td>
+                            <td className="py-1 text-right font-medium">{balance > 0 ? `+${balance}` : balance}</td>
+                          </tr>
+                        );
+                      })}
+                    </tbody>
+                  </table>
+                </div>
+              ))}
+            </div>
+          ))}
         </div>
       )}
 

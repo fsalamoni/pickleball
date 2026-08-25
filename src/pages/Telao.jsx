@@ -107,7 +107,10 @@ export default function Telao() {
                   {board.inProgress.map((m) => (
                     <div key={m.id} className="rounded-3xl border border-acid/30 bg-white/5 p-5">
                       <div className="mb-2 flex items-center justify-between text-sm text-gray-400">
-                        <span>{m.modality_name}</span>
+                        <span className="flex items-center gap-2">
+                          {m.modality_name}
+                          {m.group && <span className="rounded-full bg-white/10 px-2 py-0.5 text-xs font-semibold text-acid">{m.group}</span>}
+                        </span>
                         {m.court && <span className="flex items-center gap-1"><MapPin className="h-4 w-4" /> Quadra {m.court}</span>}
                       </div>
                       <div className="space-y-1 text-2xl font-bold">
@@ -133,7 +136,10 @@ export default function Telao() {
                   ) : board.upcoming.map((m) => (
                     <div key={m.id} className="rounded-2xl border border-white/10 bg-white/5 p-3">
                       <div className="flex items-center justify-between text-xs text-gray-400">
-                        <span>{m.modality_name}</span>
+                        <span className="flex items-center gap-1.5">
+                          {m.modality_name}
+                          {m.group && <span className="rounded-full bg-white/10 px-1.5 py-0.5 font-semibold text-acid">{m.group}</span>}
+                        </span>
                         <span>{m.court ? `Quadra ${m.court}` : ''} {timeText(m.scheduled_at)}</span>
                       </div>
                       <div className="mt-1 truncate text-lg font-semibold">{m.side_a_label}</div>
@@ -153,6 +159,7 @@ export default function Telao() {
                   ) : board.recent.map((m) => (
                     <div key={m.id} className="flex items-center justify-between rounded-2xl border border-white/10 bg-white/5 p-3">
                       <div className="min-w-0">
+                        {m.group && <div className="mb-0.5 text-[11px] font-semibold uppercase tracking-wide text-acid/80">{m.group}</div>}
                         <div className="truncate text-base font-semibold">{m.side_a_label}</div>
                         <div className="truncate text-base text-gray-300">{m.side_b_label}</div>
                       </div>
