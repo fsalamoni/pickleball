@@ -66,7 +66,9 @@ export default function V2ModalityPage() {
   // comuns seguem exatamente como antes.
   const isTeam = teamsEnabled && !!modality.team_config;
 
-  const confirmed = registrations.filter((r) => r.status === REGISTRATION_STATUS.CONFIRMED);
+  const confirmed = registrations.filter(
+    (r) => r.status === REGISTRATION_STATUS.CONFIRMED || r.status === REGISTRATION_STATUS.CHECKED_IN,
+  );
   const occupiedCount = countOccupiedRegistrations(registrations);
   const slotsFull = isRegistrationCapacityReached(occupiedCount, modality.max_entries);
   const hasPrivateAccess = typeof window !== 'undefined' && Boolean(sessionStorage.getItem(`tournament_access_${tournament.id}`));

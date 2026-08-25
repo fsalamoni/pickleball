@@ -56,6 +56,7 @@ import {
   scheduleMatch,
   substitutePlayer,
   markMatchInProgress,
+  revertMatchToScheduled,
   reShuffleRemainingMatches,
   rescheduleMatches,
   advanceStage,
@@ -747,6 +748,18 @@ export function useMarkMatchInProgress(modalityId) {
   const qc = useQueryClient();
   return useMutation({
     mutationFn: (matchId) => markMatchInProgress(matchId, user),
+    onSuccess: () => {
+      qc.invalidateQueries({ queryKey: ['matches', modalityId] });
+      qc.invalidateQueries({ queryKey: ['all-matches', modalityId] });
+    },
+  });
+}
+
+export function useRevertMatchToScheduled(modalityId) {
+  const { user } = useAuth();
+  const qc = useQueryClient();
+  return useMutation({
+    mutationFn: (matchId) => revertMatchToScheduled(matchId, user),
     onSuccess: () => {
       qc.invalidateQueries({ queryKey: ['matches', modalityId] });
       qc.invalidateQueries({ queryKey: ['all-matches', modalityId] });

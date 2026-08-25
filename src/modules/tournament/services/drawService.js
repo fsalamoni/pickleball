@@ -108,7 +108,11 @@ export async function runDraw(params, actor) {
   if (!compat.compatible) throw new Error(compat.reason);
 
   const registrations = await listRegistrations(modalityId);
-  const confirmed = registrations.filter((r) => r.status === REGISTRATION_STATUS.CONFIRMED);
+  // Check-in NÃO retira a inscrição do sorteio: um atleta com check-in continua
+  // confirmado. Aceita CONFIRMED e CHECKED_IN como inscritos válidos.
+  const confirmed = registrations.filter(
+    (r) => r.status === REGISTRATION_STATUS.CONFIRMED || r.status === REGISTRATION_STATUS.CHECKED_IN,
+  );
   if (confirmed.length < 2) throw new Error('São necessários ao menos 2 inscritos confirmados.');
 
   // Define a ordem dos participantes:

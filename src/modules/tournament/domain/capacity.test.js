@@ -14,6 +14,16 @@ describe('capacity helpers', () => {
     expect(normalizeMaxEntries(null)).toBeNull();
   });
 
+  it('trata o sentinela legado -1 como ilimitado (não vira o mínimo 2)', () => {
+    expect(hasUnlimitedEntries(-1)).toBe(true);
+    expect(hasUnlimitedEntries('-1')).toBe(true);
+    expect(normalizeMaxEntries(-1)).toBeNull();
+    expect(isRegistrationCapacityReached(0, -1)).toBe(false);
+    expect(isRegistrationCapacityReached(100, -1)).toBe(false);
+    // valores fechados normais seguem inalterados
+    expect(hasUnlimitedEntries(8)).toBe(false);
+  });
+
   it('normaliza e limita vagas numéricas', () => {
     expect(normalizeMaxEntries('9')).toBe(9);
     expect(normalizeMaxEntries(1)).toBe(2);

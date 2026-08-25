@@ -230,7 +230,7 @@ export default function V2TournamentModalitiesTab({ tournament, isAdmin }) {
       skill_level: form.skill_level,
       gender_category: form.gender_category,
       age_category: form.age_category,
-      max_entries: form.has_unlimited_entries ? -1 : (Number(form.max_entries) || DEFAULT_MAX_ENTRIES),
+      max_entries: form.has_unlimited_entries ? null : (Number(form.max_entries) || DEFAULT_MAX_ENTRIES),
       entry_fee_cents: Math.round(Number(form.entry_fee_brl) * 100) || 0,
       stages,
       court_count: Number(form.court_count) || DEFAULT_COURT_COUNT,

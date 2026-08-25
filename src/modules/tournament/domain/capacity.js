@@ -3,7 +3,12 @@ import { MAX_REGISTRATIONS_PER_MODALITY, REGISTRATION_STATUS } from './constants
 export const DEFAULT_MAX_ENTRIES = 32;
 
 export function hasUnlimitedEntries(maxEntries) {
-  return maxEntries === null || maxEntries === undefined || maxEntries === '';
+  if (maxEntries === null || maxEntries === undefined || maxEntries === '') return true;
+  // Sentinela legado: alguns registros gravaram -1 para "sem limite". Tratamos
+  // qualquer número negativo como ilimitado (antes -1 era normalizado para o
+  // mínimo 2, criando um limite indevido).
+  const n = Number(maxEntries);
+  return Number.isFinite(n) && n < 0;
 }
 
 export function normalizeMaxEntries(maxEntries, { defaultValue = DEFAULT_MAX_ENTRIES, allowUnlimited = true } = {}) {

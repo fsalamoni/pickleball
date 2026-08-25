@@ -522,7 +522,8 @@ export async function ensurePlaceholderRegistrations(modality, actor) {
   const all = await listRegistrations(modality.id);
   const existingPlaceholders = all.filter((r) => r.is_placeholder);
   const realConfirmed = all.filter(
-    (r) => !r.is_placeholder && r.status === REGISTRATION_STATUS.CONFIRMED,
+    (r) => !r.is_placeholder
+      && (r.status === REGISTRATION_STATUS.CONFIRMED || r.status === REGISTRATION_STATUS.CHECKED_IN),
   );
   const need = neededPlaceholderCount(realConfirmed.length, max);
 

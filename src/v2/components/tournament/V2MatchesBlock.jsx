@@ -1,5 +1,5 @@
 import React, { useMemo, useState } from 'react';
-import { Trophy, Swords, Pencil, Play, X } from 'lucide-react';
+import { Trophy, Swords, Pencil, Play, X, Undo2, Minus, Plus, Monitor } from 'lucide-react';
 import { toast } from 'sonner';
 import { UserAvatar } from '@/components/ui/user-avatar';
 import {
@@ -18,6 +18,7 @@ import {
   useRegistrations,
   useRecordMatchResult,
   useMarkMatchInProgress,
+  useRevertMatchToScheduled,
 } from '@/modules/tournament/hooks/useTournament';
 import {
   MATCH_STATUS,
@@ -75,8 +76,17 @@ function MatchesTable({ matches, labelById, peopleById, canEdit = false, modalit
   const hasGroups = matches.some((m) => m.group);
   const hasSchedule = matches.some((m) => m.court || m.scheduled_at);
   const [editMatch, setEditMatch] = useState(null);
+  const [courtsideMatch, setCourtsideMatch] = useState(null);
   const markInProgress = useMarkMatchInProgress(modalityId);
+  const revertInProgress = useRevertMatchToScheduled(modalityId);
   const courtsideOn = useFeatureFlag(FEATURE_FLAG.COURTSIDE_SCORING);
+
+  function undoStart(id) {
+    revertInProgress.mutate(id, {
+      onSuccess: () => toast.success('Início desfeito — jogo voltou para “Agendado”.'),
+      onError: (err) => toast.error(err?.message || 'Não foi possível desfazer o início.'),
+    });
+  }
 
   return (
     <>
@@ -132,6 +142,16 @@ function MatchesTable({ matches, labelById, peopleById, canEdit = false, modalit
                               <Play className="h-3.5 w-3.5 mr-1" /> Iniciar
                             </V2Button>
                           )}
+                          {inProgress && (
+                            <V2Button size="sm" variant="ghost" onClick={() => undoStart(m.id)} disabled={revertInProgress.isPending} title="Voltar o jogo para “Agendado”">
+                              <Undo2 className="h-3.5 w-3.5 mr-1" /> Desfazer início
+                            </V2Button>
+                          )}
+                          {courtsideOn && (
+                            <V2Button size="sm" variant="ghost" onClick={() => setCourtsideMatch(m)} title="Abrir placar ao vivo em tela cheia">
+                              <Monitor className="h-3.5 w-3.5 mr-1" /> Placar ao vivo
+                            </V2Button>
+                          )}
                           <V2Button size="sm" variant="ghost" onClick={() => setEditMatch(m)}>
                             <Pencil className="h-3.5 w-3.5 mr-1" /> {finished ? 'Editar' : 'Lançar'}
                           </V2Button>
@@ -182,7 +202,22 @@ function MatchesTable({ matches, labelById, peopleById, canEdit = false, modalit
                 </div>
               </div>
               {canEdit && !isBye && (
-                <div className="mt-2 flex justify-end">
+                <div className="mt-2 flex flex-wrap justify-end gap-1">
+                  {m.status === MATCH_STATUS.SCHEDULED && (
+                    <V2Button size="sm" variant="ghost" onClick={() => markInProgress.mutate(m.id)} disabled={markInProgress.isPending}>
+                      <Play className="h-3.5 w-3.5 mr-1" /> Iniciar
+                    </V2Button>
+                  )}
+                  {inProgress && (
+                    <V2Button size="sm" variant="ghost" onClick={() => undoStart(m.id)} disabled={revertInProgress.isPending}>
+                      <Undo2 className="h-3.5 w-3.5 mr-1" /> Desfazer início
+                    </V2Button>
+                  )}
+                  {courtsideOn && (
+                    <V2Button size="sm" variant="ghost" onClick={() => setCourtsideMatch(m)}>
+                      <Monitor className="h-3.5 w-3.5 mr-1" /> Placar ao vivo
+                    </V2Button>
+                  )}
                   <V2Button size="sm" variant="ghost" onClick={() => setEditMatch(m)}>
                     <Pencil className="h-3.5 w-3.5 mr-1" /> {finished ? 'Editar resultado' : 'Lançar resultado'}
                   </V2Button>
@@ -193,24 +228,26 @@ function MatchesTable({ matches, labelById, peopleById, canEdit = false, modalit
         })}
       </div>
 
+      {/* Lançamento/edição padrão: modal objetivo (digitar ou +/− por set).
+          O placar ao vivo (courtside, tela cheia) é uma ação separada e
+          opcional — não substitui mais o modal de lançamento. */}
       {editMatch && (
-        courtsideOn ? (
-          <CourtsideScoreDialog
-            match={editMatch}
-            modalityId={modalityId}
-            scoringConfig={scoringConfig}
-            labelById={labelById}
-            onClose={() => setEditMatch(null)}
-          />
-        ) : (
-          <V2ScoreEntryDialog
-            match={editMatch}
-            modalityId={modalityId}
-            scoringConfig={scoringConfig}
-            labelById={labelById}
-            onClose={() => setEditMatch(null)}
-          />
-        )
+        <V2ScoreEntryDialog
+          match={editMatch}
+          modalityId={modalityId}
+          scoringConfig={scoringConfig}
+          labelById={labelById}
+          onClose={() => setEditMatch(null)}
+        />
+      )}
+      {courtsideMatch && (
+        <CourtsideScoreDialog
+          match={courtsideMatch}
+          modalityId={modalityId}
+          scoringConfig={scoringConfig}
+          labelById={labelById}
+          onClose={() => setCourtsideMatch(null)}
+        />
       )}
     </>
   );
@@ -222,6 +259,44 @@ function MatchesTable({ matches, labelById, peopleById, canEdit = false, modalit
  * `useRecordMatchResult` (que define status/vencedor conforme a configuração de
  * pontuação da fase).
  */
+/**
+ * Campo de placar com digitação direta + botões −/+ (um a um). Aceita número
+ * escrito à mão ou ajuste fino pelos botões. Nunca fica negativo.
+ */
+function ScoreStepper({ value, onChange, label }) {
+  const current = Number(value) || 0;
+  return (
+    <div className="flex items-center gap-1.5">
+      <button
+        type="button"
+        aria-label={`Diminuir ${label}`}
+        disabled={current <= 0}
+        onClick={() => onChange(String(Math.max(0, current - 1)))}
+        className="flex h-10 w-10 shrink-0 items-center justify-center rounded-xl border border-gray-200 text-gray-600 transition hover:bg-paper disabled:opacity-40"
+      >
+        <Minus className="h-4 w-4" />
+      </button>
+      <Input
+        type="number"
+        min={0}
+        inputMode="numeric"
+        value={value}
+        aria-label={label}
+        onChange={(e) => onChange(e.target.value)}
+        className="h-10 w-16 text-center text-lg font-bold tabular-nums"
+      />
+      <button
+        type="button"
+        aria-label={`Aumentar ${label}`}
+        onClick={() => onChange(String(current + 1))}
+        className="flex h-10 w-10 shrink-0 items-center justify-center rounded-xl border border-gray-200 text-gray-600 transition hover:bg-paper"
+      >
+        <Plus className="h-4 w-4" />
+      </button>
+    </div>
+  );
+}
+
 function V2ScoreEntryDialog({ match, modalityId, scoringConfig, labelById, onClose }) {
   const setsCount = scoringConfig?.sets_per_match || 1;
   const [games, setGames] = useState(() => {
@@ -253,40 +328,66 @@ function V2ScoreEntryDialog({ match, modalityId, scoringConfig, labelById, onClo
     }
   }
 
+  // Placar de sets já preenchidos (tally objetivo de quem venceu cada set).
+  const setsWon = games.reduce((acc, g) => {
+    if (g.a === '' || g.b === '') return acc;
+    const a = Number(g.a);
+    const b = Number(g.b);
+    if (!Number.isFinite(a) || !Number.isFinite(b) || a === b) return acc;
+    if (a > b) acc.a += 1; else acc.b += 1;
+    return acc;
+  }, { a: 0, b: 0 });
+
+  const updateSet = (i, side, val) =>
+    setGames((arr) => arr.map((x, j) => (j === i ? { ...x, [side]: val } : x)));
+
   return (
     <Dialog open onOpenChange={(o) => !o && onClose()}>
-      <DialogContent>
+      <DialogContent className="max-h-[90dvh] overflow-y-auto sm:max-w-lg">
         <DialogHeader>
-          <DialogTitle>{sideA} vs {sideB}</DialogTitle>
+          <DialogTitle>Lançar resultado</DialogTitle>
         </DialogHeader>
+
+        {/* Cabeçalho objetivo: lados + sets vencidos (quando há mais de 1 set) */}
+        <div className="flex items-center justify-between gap-3 rounded-2xl bg-paper px-4 py-3">
+          <div className="min-w-0 flex-1 truncate text-sm font-semibold text-ink" title={sideA}>{sideA}</div>
+          {setsCount > 1 && !walkover && (
+            <div className="shrink-0 font-display text-lg font-bold tabular-nums text-ink">
+              {setsWon.a} <span className="text-gray-400">×</span> {setsWon.b}
+            </div>
+          )}
+          <div className="min-w-0 flex-1 truncate text-right text-sm font-semibold text-ink" title={sideB}>{sideB}</div>
+        </div>
+
         <div className="space-y-3">
           {!walkover && (
             <div className="space-y-2">
-              {games.map((g, i) => (
-                <div key={i} className="grid grid-cols-[1fr_auto_1fr] items-end gap-2">
-                  <div>
-                    <Label>Set {i + 1} — Lado A</Label>
-                    <Input
-                      type="number"
-                      min={0}
-                      value={g.a}
-                      onChange={(e) => setGames((arr) => arr.map((x, j) => (j === i ? { ...x, a: e.target.value } : x)))}
-                    />
+              {games.map((g, i) => {
+                const a = Number(g.a);
+                const b = Number(g.b);
+                const decided = g.a !== '' && g.b !== '' && Number.isFinite(a) && Number.isFinite(b) && a !== b;
+                const aWins = decided && a > b;
+                const bWins = decided && b > a;
+                return (
+                  <div key={i} className="rounded-2xl border border-gray-100 p-3">
+                    {setsCount > 1 && (
+                      <div className="mb-2 text-[11px] font-bold uppercase tracking-widest text-gray-400">Set {i + 1}</div>
+                    )}
+                    <div className="flex items-center justify-between gap-2">
+                      <div className={cn('rounded-lg px-1', aWins && 'bg-green-50')}>
+                        <ScoreStepper value={g.a} onChange={(v) => updateSet(i, 'a', v)} label={`${sideA} — Set ${i + 1}`} />
+                      </div>
+                      <span className="shrink-0 text-sm font-medium text-gray-400">×</span>
+                      <div className={cn('rounded-lg px-1', bWins && 'bg-green-50')}>
+                        <ScoreStepper value={g.b} onChange={(v) => updateSet(i, 'b', v)} label={`${sideB} — Set ${i + 1}`} />
+                      </div>
+                    </div>
                   </div>
-                  <span className="pb-2 text-gray-400">×</span>
-                  <div>
-                    <Label>Lado B</Label>
-                    <Input
-                      type="number"
-                      min={0}
-                      value={g.b}
-                      onChange={(e) => setGames((arr) => arr.map((x, j) => (j === i ? { ...x, b: e.target.value } : x)))}
-                    />
-                  </div>
-                </div>
-              ))}
+                );
+              })}
             </div>
           )}
+
           <div>
             <Label>Walkover (WO) — opcional</Label>
             <select
@@ -295,14 +396,17 @@ function V2ScoreEntryDialog({ match, modalityId, scoringConfig, labelById, onClo
               onChange={(e) => setWalkover(e.target.value)}
             >
               <option value="">— sem WO —</option>
-              <option value="a">WO para Lado A</option>
-              <option value="b">WO para Lado B</option>
+              <option value="a">WO para {sideA}</option>
+              <option value="b">WO para {sideB}</option>
             </select>
           </div>
         </div>
+
         <DialogFooter>
           <Button variant="outline" onClick={onClose}>Cancelar</Button>
-          <Button onClick={handleSave} disabled={recordMutation.isPending}>Salvar</Button>
+          <Button onClick={handleSave} disabled={recordMutation.isPending}>
+            {recordMutation.isPending ? 'Salvando…' : 'Salvar'}
+          </Button>
         </DialogFooter>
       </DialogContent>
     </Dialog>

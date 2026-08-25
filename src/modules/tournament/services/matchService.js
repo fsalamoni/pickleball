@@ -375,6 +375,25 @@ export async function markMatchInProgress(matchId, actor) {
 }
 
 /**
+ * Desfaz o "Iniciar partida": volta um jogo EM ANDAMENTO para AGENDADO. Útil
+ * quando o botão foi acionado por engano. Não mexe em jogos já com resultado
+ * (encerrado/WO) — nesse caso, o admin deve editar/limpar o resultado primeiro.
+ */
+export async function revertMatchToScheduled(matchId, actor) {
+  const match = await getMatch(matchId);
+  if (!match) throw new Error('Jogo não encontrado.');
+  if (match.status === MATCH_STATUS.FINISHED || match.status === MATCH_STATUS.WALKOVER) {
+    throw new Error('Este jogo já tem resultado. Edite ou limpe o resultado antes de desfazer o início.');
+  }
+  if (match.status === MATCH_STATUS.SCHEDULED) return; // já agendado — nada a fazer
+  await updateDoc(doc(db, COL, matchId), {
+    status: MATCH_STATUS.SCHEDULED,
+    updated_at: serverTimestamp(),
+  });
+  await createAuditLog({ action: 'match_start_reverted', actor, details: { match_id: matchId } });
+}
+
+/**
  * Reagenda (recalcula quadras e horários) os jogos de uma fase SEM alterar os
  * confrontos. Útil após substituições, troca de configuração de quadras/horário
  * ou simplesmente para reorganizar a grade. Bloqueia se algum jogo já começou

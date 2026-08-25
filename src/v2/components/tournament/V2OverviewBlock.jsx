@@ -111,7 +111,8 @@ export function V2TournamentOverview({ tournament, isAdmin }) {
   const [registerModalityId, setRegisterModalityId] = useState(null);
 
   const confirmedByModality = (mid) =>
-    registrations.filter((r) => r.modality_id === mid && r.status === REGISTRATION_STATUS.CONFIRMED).length;
+    registrations.filter((r) => r.modality_id === mid
+      && (r.status === REGISTRATION_STATUS.CONFIRMED || r.status === REGISTRATION_STATUS.CHECKED_IN)).length;
 
   const startsAt = formatDate(tournament.starts_at);
   const endsAt = formatDate(tournament.ends_at);
@@ -123,7 +124,9 @@ export function V2TournamentOverview({ tournament, isAdmin }) {
   const hasPrivateAccess =
     typeof window !== 'undefined' && Boolean(sessionStorage.getItem(`tournament_access_${tournament.id}`));
   const isPublic = (tournament.visibility || TOURNAMENT_VISIBILITY.PRIVATE) === TOURNAMENT_VISIBILITY.PUBLIC;
-  const confirmedRegistrations = registrations.filter((r) => r.status === REGISTRATION_STATUS.CONFIRMED).length;
+  const confirmedRegistrations = registrations.filter(
+    (r) => r.status === REGISTRATION_STATUS.CONFIRMED || r.status === REGISTRATION_STATUS.CHECKED_IN,
+  ).length;
 
   const datesText = startsAt || endsAt
     ? (startsAt && endsAt ? (startsAt === endsAt ? startsAt : `${startsAt} a ${endsAt}`) : startsAt || endsAt)
