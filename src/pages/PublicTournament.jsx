@@ -202,7 +202,15 @@ function PublicRankingTable({ rows }) {
   return (
     <>
       <div className="hidden sm:block overflow-x-auto rounded-3xl border border-gray-100">
-        <table className="w-full text-sm">
+        <table className="w-full table-fixed text-sm">
+          <colgroup>
+            <col className="w-[8%]" />
+            <col className="w-[46%]" />
+            <col className="w-[11%]" />
+            <col className="w-[11%]" />
+            <col className="w-[13%]" />
+            <col className="w-[11%]" />
+          </colgroup>
           <thead className="bg-paper">
             <tr className="text-left">
               <th className="px-3 py-2">#</th>
@@ -218,17 +226,17 @@ function PublicRankingTable({ rows }) {
               const balance = (r.points_for || 0) - (r.points_against || 0);
               return (
                 <tr key={r.key} className="border-t">
-                  <td className="px-3 py-2 font-semibold">{r.position}</td>
+                  <td className="px-3 py-2 font-semibold tabular-nums">{r.position}</td>
                   <td className="px-3 py-2">
-                    <div className="flex items-center gap-2">
+                    <div className="flex min-w-0 items-center gap-2">
                       <AvatarGroup size="sm" people={r.players || []} />
-                      <span>{r.label}</span>
+                      <span className="truncate" title={r.label}>{r.label}</span>
                     </div>
                   </td>
-                  <td className="px-3 py-2 text-center">{r.played}</td>
-                  <td className="px-3 py-2 text-center font-semibold">{r.wins}</td>
-                  <td className="px-3 py-2 text-center">{r.sets_won}–{r.sets_lost}</td>
-                  <td className={`px-3 py-2 text-right font-medium ${balance > 0 ? 'text-green-700' : balance < 0 ? 'text-red-600' : 'text-gray-500'}`}>
+                  <td className="px-3 py-2 text-center tabular-nums">{r.played}</td>
+                  <td className="px-3 py-2 text-center font-semibold tabular-nums">{r.wins}</td>
+                  <td className="px-3 py-2 text-center tabular-nums whitespace-nowrap">{r.sets_won}–{r.sets_lost}</td>
+                  <td className={`px-3 py-2 text-right font-medium tabular-nums ${balance > 0 ? 'text-green-700' : balance < 0 ? 'text-red-600' : 'text-gray-500'}`}>
                     {balance > 0 ? `+${balance}` : balance}
                   </td>
                 </tr>

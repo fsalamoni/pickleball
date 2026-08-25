@@ -33,9 +33,21 @@ function GroupRanking({ group, showName }) {
     <div>
       {showName && group.name && <div className="mb-1 text-xs font-bold text-ink">{group.name}</div>}
 
-      {/* Desktop */}
+      {/* Desktop — table-fixed + colgroup: todas as tabelas de grupo têm as
+          mesmas larguras de coluna (padrão consistente entre os grupos). */}
       <div className="hidden overflow-x-auto sm:block">
-        <table className="w-full text-sm">
+        <table className="w-full table-fixed text-sm">
+          <colgroup>
+            <col className="w-[9%]" />
+            <col className="w-[31%]" />
+            <col className="w-[8%]" />
+            <col className="w-[7%]" />
+            <col className="w-[7%]" />
+            <col className="w-[13%]" />
+            <col className="w-[8%]" />
+            <col className="w-[8%]" />
+            <col className="w-[9%]" />
+          </colgroup>
           <thead className="bg-paper text-gray-500">
             <tr className="text-left">
               <th className="px-3 py-2 font-semibold">Pos.</th>
@@ -56,18 +68,18 @@ function GroupRanking({ group, showName }) {
                 <tr key={r.key} className={cn('border-t border-gray-100', ROW_TONE[r.position])}>
                   <td className="px-3 py-2"><Position position={r.position} /></td>
                   <td className="px-3 py-2">
-                    <div className="flex items-center gap-2">
+                    <div className="flex min-w-0 items-center gap-2">
                       <AvatarGroup size="sm" people={r.players || []} />
-                      <span className="text-ink">{r.label}</span>
+                      <span className="truncate text-ink" title={r.label}>{r.label}</span>
                     </div>
                   </td>
-                  <td className="px-3 py-2 text-center">{r.played}</td>
-                  <td className="px-3 py-2 text-center font-semibold text-ink">{r.wins}</td>
-                  <td className="px-3 py-2 text-center">{r.losses}</td>
-                  <td className="px-3 py-2 text-center">{r.sets_won}–{r.sets_lost}</td>
-                  <td className="px-3 py-2 text-center">{r.points_for}</td>
-                  <td className="px-3 py-2 text-center">{r.points_against}</td>
-                  <td className={cn('px-3 py-2 text-center font-medium', balance > 0 ? 'text-green-600' : balance < 0 ? 'text-red-500' : 'text-gray-600')}>
+                  <td className="px-3 py-2 text-center tabular-nums">{r.played}</td>
+                  <td className="px-3 py-2 text-center font-semibold tabular-nums text-ink">{r.wins}</td>
+                  <td className="px-3 py-2 text-center tabular-nums">{r.losses}</td>
+                  <td className="px-3 py-2 text-center tabular-nums whitespace-nowrap">{r.sets_won}–{r.sets_lost}</td>
+                  <td className="px-3 py-2 text-center tabular-nums">{r.points_for}</td>
+                  <td className="px-3 py-2 text-center tabular-nums">{r.points_against}</td>
+                  <td className={cn('px-3 py-2 text-center font-medium tabular-nums', balance > 0 ? 'text-green-600' : balance < 0 ? 'text-red-500' : 'text-gray-600')}>
                     {balance > 0 ? `+${balance}` : balance}
                   </td>
                 </tr>

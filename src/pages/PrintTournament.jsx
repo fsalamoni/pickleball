@@ -148,7 +148,15 @@ function PrintModality({ modality }) {
               {phase.groups.filter((g) => (g.rows || []).length > 0).map((group, gi) => (
                 <div key={group.name || gi}>
                   {group.name && <div className="text-[11px] font-semibold mb-0.5">{group.name}</div>}
-                  <table className="w-full text-xs border-collapse">
+                  <table className="w-full table-fixed border-collapse text-xs">
+                    <colgroup>
+                      <col className="w-[8%]" />
+                      <col className="w-[46%]" />
+                      <col className="w-[11%]" />
+                      <col className="w-[11%]" />
+                      <col className="w-[13%]" />
+                      <col className="w-[11%]" />
+                    </colgroup>
                     <thead>
                       <tr className="border-b">
                         <th className="py-1 text-left">#</th>
@@ -164,12 +172,12 @@ function PrintModality({ modality }) {
                         const balance = (r.points_for || 0) - (r.points_against || 0);
                         return (
                           <tr key={r.key} className="border-b">
-                            <td className="py-1">{r.position}</td>
-                            <td className="py-1">{r.label}</td>
-                            <td className="py-1 text-center">{r.played}</td>
-                            <td className="py-1 text-center font-semibold">{r.wins}</td>
-                            <td className="py-1 text-center">{r.sets_won}–{r.sets_lost}</td>
-                            <td className="py-1 text-right font-medium">{balance > 0 ? `+${balance}` : balance}</td>
+                            <td className="py-1 tabular-nums">{r.position}</td>
+                            <td className="py-1 truncate" title={r.label}>{r.label}</td>
+                            <td className="py-1 text-center tabular-nums">{r.played}</td>
+                            <td className="py-1 text-center font-semibold tabular-nums">{r.wins}</td>
+                            <td className="py-1 text-center tabular-nums whitespace-nowrap">{r.sets_won}–{r.sets_lost}</td>
+                            <td className="py-1 text-right font-medium tabular-nums">{balance > 0 ? `+${balance}` : balance}</td>
                           </tr>
                         );
                       })}
