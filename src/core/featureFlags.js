@@ -247,6 +247,15 @@ export const FEATURE_FLAG = Object.freeze({
   ADMIN_CONSOLE: 'admin_console',
 
   /**
+   * Moderação de atletas (admin): adiciona no painel admin (aba Perfis) a
+   * ação de OCULTAR/REEXIBIR um atleta. Atletas ocultos (ex.: contas de teste
+   * ou falsas) somem de todas as listas de inscrição e do diretório público,
+   * de forma REVERSÍVEL (marca `hidden` em users/ e athlete_profiles/, sem
+   * apagar nada). Default OFF.
+   */
+  ATHLETE_MODERATION: 'athlete_moderation',
+
+  /**
    * Completude de perfil (onboarding): monta o modal "Complete seu perfil"
    * no layout autenticado quando faltam os dados obrigatórios para torneios
    * (nome, nascimento, telefone, experiência). O atleta pode adiar ("Deixar
@@ -985,6 +994,14 @@ export const FEATURE_FLAG_META = Object.freeze({
       + 'funcionalidades (flags), branding, conteúdo da plataforma, auditoria '
       + 'e diagnóstico. Desligado, só existem as 3 rotas independentes '
       + '(Métricas / Torneios / Parceiros) e o item do menu some.',
+  },
+  [FEATURE_FLAG.ATHLETE_MODERATION]: {
+    label: 'Moderação de atletas (ocultar contas falsas)',
+    description:
+      'No painel admin (aba Perfis), habilita ocultar/reexibir atletas. '
+      + 'Atletas ocultos somem das listas de inscrição e do diretório público '
+      + 'de forma reversível (marca `hidden`, sem apagar o cadastro). Útil para '
+      + 'esconder contas de teste ou falsas. Default OFF.',
   },
   [FEATURE_FLAG.PROFILE_ONBOARDING]: {
     label: 'Completar perfil (onboarding)',

@@ -83,11 +83,15 @@ export default function ModalityRegistrationDialog({
   // homens, feminina só mulheres; aberta e mista mostram ambos (o par misto é
   // validado no envio). Atletas sem gênero declarado não são ocultados.
   const eligiblePlatformUsers = useMemo(
-    () => (platformUsers || []).filter((u) => athleteAllowedByGender(u.competition_gender, modality)),
+    () => (platformUsers || []).filter(
+      (u) => u.hidden !== true && athleteAllowedByGender(u.competition_gender, modality),
+    ),
     [platformUsers, modality],
   );
   const eligibleDirectoryAthletes = useMemo(
-    () => (directoryAthletes || []).filter((a) => athleteAllowedByGender(a.competition_gender ?? a.gender, modality)),
+    () => (directoryAthletes || []).filter(
+      (a) => a.hidden !== true && athleteAllowedByGender(a.competition_gender ?? a.gender, modality),
+    ),
     [directoryAthletes, modality],
   );
   const isFull = modality

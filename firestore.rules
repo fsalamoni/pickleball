@@ -616,7 +616,14 @@ service cloud.firestore {
     // ---- Users -----------------------------------------------------------
     match /users/{userId} {
       allow read: if isOwner(userId) || isPlatformAdmin();
-      allow create, update: if isOwner(userId);
+      allow create: if isOwner(userId);
+      // O dono edita o próprio doc. O platform_admin pode alterar SOMENTE os
+      // campos de moderação (ocultar/reexibir atleta — flag athlete_moderation),
+      // sem tocar em nenhum outro dado do usuário.
+      allow update: if isOwner(userId)
+        || (isPlatformAdmin()
+            && request.resource.data.diff(resource.data).affectedKeys()
+                 .hasOnly(['hidden', 'hidden_at', 'hidden_by', 'updated_at']));
       allow delete: if isPlatformAdmin();
     }
 

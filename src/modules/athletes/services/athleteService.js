@@ -21,6 +21,7 @@ import {
 } from 'firebase/firestore';
 import { db } from '@/core/config/firebase';
 import { logger } from '@/core/lib/logger';
+import { createAuditLog } from '@/core/services/auditService';
 import { ATHLETE_DIRECTORY_COLLECTION } from '../domain/constants.js';
 import { buildAthletePublicProfile, filterEmptyStringFields } from '../domain/publicProfile.js';
 
@@ -130,7 +131,42 @@ export async function listAthletes() {
   const snap = await getDocs(
     query(collection(db, ATHLETE_DIRECTORY_COLLECTION), where('directory_listed', '==', true)),
   );
-  return snap.docs.map((d) => ({ id: d.id, ...d.data() }));
+  // Exclui atletas ocultados pela moderação (contas de teste/falsas). O filtro é
+  // no cliente para não exigir índice composto novo; sem docs ocultos, é no-op.
+  return snap.docs
+    .map((d) => ({ id: d.id, ...d.data() }))
+    .filter((a) => a.hidden !== true);
+}
+
+/**
+ * Oculta/reexibe um atleta (moderação — flag athlete_moderation). Marca `hidden`
+ * no `users/{uid}` (fonte usada pelo seletor admin) e no `athlete_profiles/{uid}`
+ * (espelho usado pelo diretório/seletor de parceiro). Reversível — não apaga
+ * nada. Registra em `audit_logs`.
+ *
+ * @param {string} uid
+ * @param {boolean} hidden
+ * @param {object} actor
+ */
+export async function setAthleteHidden(uid, hidden, actor) {
+  if (!db) throw new Error('Firestore indisponível.');
+  if (!uid) throw new Error('UID do atleta é obrigatório.');
+  const flag = hidden === true;
+  const meta = {
+    hidden: flag,
+    hidden_at: flag ? serverTimestamp() : null,
+    hidden_by: flag ? (actor?.uid || null) : null,
+    updated_at: serverTimestamp(),
+  };
+  // Espelho público primeiro (platform_admin já tem permissão de escrita);
+  // depois a fonte operacional. merge:true nunca sobrescreve outros campos.
+  await setDoc(doc(db, ATHLETE_DIRECTORY_COLLECTION, uid), meta, { merge: true });
+  await setDoc(doc(db, 'users', uid), meta, { merge: true });
+  await createAuditLog({
+    action: flag ? 'athlete_hidden' : 'athlete_unhidden',
+    actor,
+    details: { uid },
+  });
 }
 
 /**

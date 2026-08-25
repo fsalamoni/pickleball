@@ -1,9 +1,11 @@
 import React, { useMemo, useState } from 'react';
 import { Navigate } from 'react-router-dom';
-import { ArrowRight, RotateCcw, ShieldCheck, UserCog, Wand2, AlertTriangle, CheckCircle2 } from 'lucide-react';
+import { ArrowRight, RotateCcw, ShieldCheck, UserCog, Wand2, AlertTriangle, CheckCircle2, Eye, EyeOff, Search } from 'lucide-react';
 import { toast } from 'sonner';
 import { useAuth } from '@/core/lib/FirebaseAuthContext';
-import { restoreAthleteProfileFromUserDoc, listAllAthleteProfiles } from '@/modules/athletes/services/athleteService';
+import { useFeatureFlag } from '@/core/lib/FeatureFlagsContext';
+import { FEATURE_FLAG } from '@/core/featureFlags';
+import { restoreAthleteProfileFromUserDoc, listAllAthleteProfiles, setAthleteHidden } from '@/modules/athletes/services/athleteService';
 import { migrateProvisionalData } from '@/modules/tournament/services/registrationService';
 import { useRecomputeRatings } from '@/modules/rating/hooks/useRating';
 import {
@@ -16,10 +18,14 @@ import {
 
 export default function V2AdminProfiles({ embedded = false }) {
   const { user, isPlatformAdmin } = useAuth();
+  const moderationOn = useFeatureFlag(FEATURE_FLAG.ATHLETE_MODERATION);
   const [profiles, setProfiles] = useState(null);
   const [error, setError] = useState(null);
   const [uid, setUid] = useState('');
   const [busy, setBusy] = useState(false);
+  // Moderação de atletas (flag athlete_moderation): busca + ocultar/reexibir.
+  const [athleteSearch, setAthleteSearch] = useState('');
+  const [togglingUid, setTogglingUid] = useState(null);
 
   // Migração de dados provisórios (migrateProvisionalData)
   const [migUid, setMigUid] = useState('');
@@ -119,6 +125,34 @@ export default function V2AdminProfiles({ embedded = false }) {
       toast.error(err.message || 'Falha ao recalcular ranking.');
     }
   }
+
+  async function handleToggleHidden(profile) {
+    const target = profile.id || profile.uid;
+    if (!target) return;
+    const nextHidden = !(profile.hidden === true);
+    setTogglingUid(target);
+    try {
+      await setAthleteHidden(target, nextHidden, user);
+      toast.success(nextHidden ? 'Atleta ocultado das listas.' : 'Atleta reexibido.');
+      // Atualização otimista local (evita recarregar a lista inteira).
+      setProfiles((list) => (list || []).map((p) => (
+        (p.id || p.uid) === target ? { ...p, hidden: nextHidden } : p
+      )));
+    } catch (err) {
+      toast.error(err.message || 'Falha ao atualizar a visibilidade do atleta.');
+    } finally {
+      setTogglingUid(null);
+    }
+  }
+
+  const filteredProfiles = useMemo(() => {
+    const list = profiles || [];
+    const term = athleteSearch.trim().toLowerCase();
+    if (!term) return list;
+    return list.filter((p) => (
+      `${p.platform_name || ''} ${p.email || ''} ${p.id || p.uid || ''}`.toLowerCase().includes(term)
+    ));
+  }, [profiles, athleteSearch]);
 
   if (!isPlatformAdmin) return <Navigate to="/" replace />;
 
@@ -343,7 +377,22 @@ export default function V2AdminProfiles({ embedded = false }) {
         <h3 className="font-display text-lg font-bold text-ink">Atletas cadastrados na plataforma</h3>
         <p className="mt-1 text-sm text-gray-500">
           Lista inclui quem optou por não aparecer no diretório público.
+          {moderationOn && ' Use “Ocultar” para esconder contas de teste/falsas das listas de inscrição e do diretório — é reversível e não apaga o cadastro.'}
         </p>
+
+        {profiles !== null && profiles.length > 0 && (
+          <div className="relative mt-4 max-w-md">
+            <Search className="absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-gray-400" />
+            <input
+              value={athleteSearch}
+              onChange={(e) => setAthleteSearch(e.target.value)}
+              placeholder="Buscar por nome, email ou UID…"
+              className="h-10 w-full rounded-[1rem] border border-input bg-background pl-9 pr-3 text-sm"
+              autoComplete="off"
+              spellCheck={false}
+            />
+          </div>
+        )}
 
         {profiles === null ? (
           <V2Skeleton className="mt-4 h-32 rounded-2xl" />
@@ -362,29 +411,57 @@ export default function V2AdminProfiles({ embedded = false }) {
                   <th className="px-4 py-3 font-semibold">UID</th>
                   <th className="px-4 py-3 font-semibold">Email</th>
                   <th className="px-4 py-3 font-semibold">Cidade</th>
-                  <th className="px-4 py-3 font-semibold text-right">Foto</th>
+                  <th className="px-4 py-3 font-semibold text-center">Foto</th>
+                  {moderationOn && <th className="px-4 py-3 font-semibold text-right">Visibilidade</th>}
                 </tr>
               </thead>
               <tbody>
-                {profiles.map((p) => (
-                  <tr key={p.id || p.uid} className="border-t border-gray-100">
-                    <td className="px-4 py-3 font-semibold text-ink">
-                      {p.platform_name || '—'}
-                    </td>
-                    <td className="px-4 py-3 font-mono text-xs text-gray-500">{p.id || p.uid}</td>
-                    <td className="px-4 py-3 text-gray-500">{p.email || '—'}</td>
-                    <td className="px-4 py-3 text-gray-500">
-                      {p.city ? `${p.city}${p.state ? `/${p.state}` : ''}` : '—'}
-                    </td>
-                    <td className="px-4 py-3 text-right">
-                      {p.photo_url ? (
-                        <span className="text-green-700">✓</span>
-                      ) : (
-                        <span className="text-amber-700">vazia</span>
+                {filteredProfiles.map((p) => {
+                  const target = p.id || p.uid;
+                  const isHidden = p.hidden === true;
+                  return (
+                    <tr key={target} className={`border-t border-gray-100 ${isHidden ? 'bg-gray-50/60' : ''}`}>
+                      <td className="px-4 py-3 font-semibold text-ink">
+                        <span className={isHidden ? 'text-gray-400 line-through' : ''}>{p.platform_name || '—'}</span>
+                        {isHidden && (
+                          <span className="ml-2 rounded-full bg-gray-200 px-2 py-0.5 align-middle text-[11px] font-semibold text-gray-600">Oculto</span>
+                        )}
+                      </td>
+                      <td className="px-4 py-3 font-mono text-xs text-gray-500">{target}</td>
+                      <td className="px-4 py-3 text-gray-500">{p.email || '—'}</td>
+                      <td className="px-4 py-3 text-gray-500">
+                        {p.city ? `${p.city}${p.state ? `/${p.state}` : ''}` : '—'}
+                      </td>
+                      <td className="px-4 py-3 text-center">
+                        {p.photo_url ? (
+                          <span className="text-green-700">✓</span>
+                        ) : (
+                          <span className="text-amber-700">vazia</span>
+                        )}
+                      </td>
+                      {moderationOn && (
+                        <td className="px-4 py-3 text-right">
+                          <V2Button
+                            size="sm"
+                            variant={isHidden ? 'secondary' : 'ghost'}
+                            onClick={() => handleToggleHidden(p)}
+                            disabled={togglingUid === target}
+                          >
+                            {isHidden ? <Eye className="h-4 w-4" /> : <EyeOff className="h-4 w-4" />}
+                            {togglingUid === target ? '…' : isHidden ? 'Reexibir' : 'Ocultar'}
+                          </V2Button>
+                        </td>
                       )}
+                    </tr>
+                  );
+                })}
+                {filteredProfiles.length === 0 && (
+                  <tr>
+                    <td colSpan={moderationOn ? 6 : 5} className="px-4 py-6 text-center text-sm text-gray-500">
+                      Nenhum atleta encontrado para “{athleteSearch}”.
                     </td>
                   </tr>
-                ))}
+                )}
               </tbody>
             </table>
           </div>
