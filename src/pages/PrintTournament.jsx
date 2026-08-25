@@ -150,20 +150,26 @@ function PrintModality({ modality }) {
                   {group.name && <div className="text-[11px] font-semibold mb-0.5">{group.name}</div>}
                   <table className="w-full table-fixed border-collapse text-xs">
                     <colgroup>
+                      <col className="w-[9%]" />
+                      <col className="w-[31%]" />
                       <col className="w-[8%]" />
-                      <col className="w-[46%]" />
-                      <col className="w-[11%]" />
-                      <col className="w-[11%]" />
+                      <col className="w-[7%]" />
+                      <col className="w-[7%]" />
                       <col className="w-[13%]" />
-                      <col className="w-[11%]" />
+                      <col className="w-[8%]" />
+                      <col className="w-[8%]" />
+                      <col className="w-[9%]" />
                     </colgroup>
                     <thead>
                       <tr className="border-b">
                         <th className="py-1 text-left">#</th>
                         <th className="py-1 text-left">Participante</th>
-                        <th className="py-1 text-center">PJ</th>
-                        <th className="py-1 text-center">V</th>
+                        <th className="py-1 text-center" title="Partidas jogadas">PJ</th>
+                        <th className="py-1 text-center" title="Vitórias">V</th>
+                        <th className="py-1 text-center" title="Derrotas">D</th>
                         <th className="py-1 text-center">Sets</th>
+                        <th className="py-1 text-center" title="Pontos a favor">PF</th>
+                        <th className="py-1 text-center" title="Pontos contra">PC</th>
                         <th className="py-1 text-right">Saldo</th>
                       </tr>
                     </thead>
@@ -176,7 +182,10 @@ function PrintModality({ modality }) {
                             <td className="py-1 truncate" title={r.label}>{r.label}</td>
                             <td className="py-1 text-center tabular-nums">{r.played}</td>
                             <td className="py-1 text-center font-semibold tabular-nums">{r.wins}</td>
+                            <td className="py-1 text-center tabular-nums">{r.losses}</td>
                             <td className="py-1 text-center tabular-nums whitespace-nowrap">{r.sets_won}–{r.sets_lost}</td>
+                            <td className="py-1 text-center tabular-nums">{r.points_for}</td>
+                            <td className="py-1 text-center tabular-nums">{r.points_against}</td>
                             <td className="py-1 text-right font-medium tabular-nums">{balance > 0 ? `+${balance}` : balance}</td>
                           </tr>
                         );

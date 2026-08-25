@@ -204,20 +204,26 @@ function PublicRankingTable({ rows }) {
       <div className="hidden sm:block overflow-x-auto rounded-3xl border border-gray-100">
         <table className="w-full table-fixed text-sm">
           <colgroup>
+            <col className="w-[9%]" />
+            <col className="w-[31%]" />
             <col className="w-[8%]" />
-            <col className="w-[46%]" />
-            <col className="w-[11%]" />
-            <col className="w-[11%]" />
+            <col className="w-[7%]" />
+            <col className="w-[7%]" />
             <col className="w-[13%]" />
-            <col className="w-[11%]" />
+            <col className="w-[8%]" />
+            <col className="w-[8%]" />
+            <col className="w-[9%]" />
           </colgroup>
           <thead className="bg-paper">
             <tr className="text-left">
               <th className="px-3 py-2">#</th>
               <th className="px-3 py-2">Participante</th>
-              <th className="px-3 py-2 text-center">PJ</th>
-              <th className="px-3 py-2 text-center">V</th>
+              <th className="px-3 py-2 text-center" title="Partidas jogadas">PJ</th>
+              <th className="px-3 py-2 text-center" title="Vitórias">V</th>
+              <th className="px-3 py-2 text-center" title="Derrotas">D</th>
               <th className="px-3 py-2 text-center">Sets</th>
+              <th className="px-3 py-2 text-center" title="Pontos a favor">PF</th>
+              <th className="px-3 py-2 text-center" title="Pontos contra">PC</th>
               <th className="px-3 py-2 text-right" title="Saldo de pontos (PF − PC)">Saldo</th>
             </tr>
           </thead>
@@ -235,7 +241,10 @@ function PublicRankingTable({ rows }) {
                   </td>
                   <td className="px-3 py-2 text-center tabular-nums">{r.played}</td>
                   <td className="px-3 py-2 text-center font-semibold tabular-nums">{r.wins}</td>
+                  <td className="px-3 py-2 text-center tabular-nums">{r.losses}</td>
                   <td className="px-3 py-2 text-center tabular-nums whitespace-nowrap">{r.sets_won}–{r.sets_lost}</td>
+                  <td className="px-3 py-2 text-center tabular-nums">{r.points_for}</td>
+                  <td className="px-3 py-2 text-center tabular-nums">{r.points_against}</td>
                   <td className={`px-3 py-2 text-right font-medium tabular-nums ${balance > 0 ? 'text-green-700' : balance < 0 ? 'text-red-600' : 'text-gray-500'}`}>
                     {balance > 0 ? `+${balance}` : balance}
                   </td>
@@ -255,11 +264,14 @@ function PublicRankingTable({ rows }) {
                 <AvatarGroup size="sm" people={r.players || []} />
                 <span className="min-w-0 flex-1 truncate font-medium">{r.label}</span>
               </div>
-              <div className="mt-2 flex items-center gap-3 text-xs text-gray-500">
+              <div className="mt-2 flex flex-wrap items-center gap-x-3 gap-y-1 text-xs text-gray-500">
                 <span>PJ <strong className="tabular-nums text-ink">{r.played}</strong></span>
                 <span>V <strong className="tabular-nums text-ink">{r.wins}</strong></span>
+                <span>D <strong className="tabular-nums text-ink">{r.losses}</strong></span>
                 <span>Sets <strong className="tabular-nums text-ink">{r.sets_won}–{r.sets_lost}</strong></span>
-                <span className={`ml-auto font-semibold tabular-nums ${balance > 0 ? 'text-green-700' : balance < 0 ? 'text-red-600' : 'text-gray-500'}`}>
+                <span>PF <strong className="tabular-nums text-ink">{r.points_for}</strong></span>
+                <span>PC <strong className="tabular-nums text-ink">{r.points_against}</strong></span>
+                <span className={`font-semibold tabular-nums ${balance > 0 ? 'text-green-700' : balance < 0 ? 'text-red-600' : 'text-gray-500'}`}>
                   Saldo {balance > 0 ? `+${balance}` : balance}
                 </span>
               </div>
