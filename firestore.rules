@@ -729,17 +729,31 @@ service cloud.firestore {
       // Usar isTournamentVisibleByTid aqui causa o mesmo estouro de
       // lookups documentado em /tournament_registrations.
       allow read: if true;
-      allow create, update, delete: if isPlatformAdmin()
-        || isTournamentAdmin(request.resource.data.tournament_id)
-        || isTournamentAdmin(resource.data.tournament_id);
+      // Null-safe: create usa request.resource (doc novo); update/delete usam
+      // resource (doc existente) — evita desreferenciar null no delete do re-sorteio.
+      allow create: if isPlatformAdmin() || isTournamentAdmin(request.resource.data.tournament_id);
+      allow update: if isPlatformAdmin()
+        || isTournamentAdmin(resource.data.tournament_id)
+        || isTournamentAdmin(request.resource.data.tournament_id);
+      allow delete: if isPlatformAdmin() || isTournamentAdmin(resource.data.tournament_id);
     }
 
     match /tournament_groups/{gid} {
-      // Grupos: leitura respeita o flag 'archived' do torneio-pai.
-      allow read: if isTournamentVisibleByTid(resource.data.tournament_id);
-      allow create, update, delete: if isPlatformAdmin()
-        || isTournamentAdmin(request.resource.data.tournament_id)
-        || isTournamentAdmin(resource.data.tournament_id);
+      // Grupos: leitura pública (estrutura do torneio é pública, exibida na
+      // classificação e no quadro público) — igual a tournament_matches e
+      // tournament_courts. Usar isTournamentVisibleByTid aqui (que faz get())
+      // fazia as CONSULTAS por coleção (list) serem negadas com
+      // "Missing or insufficient permissions", quebrando o sorteio da fase de
+      // grupos (deletePhaseGroups) e forçando o ranking a cair em "grupo único".
+      // O flag 'archived' do torneio-pai já é filtrado pela rule de /tournaments/{tid}.
+      allow read: if true;
+      // Null-safe: create usa request.resource (doc novo); update/delete usam
+      // resource (doc existente) — evita desreferenciar null no delete do re-sorteio.
+      allow create: if isPlatformAdmin() || isTournamentAdmin(request.resource.data.tournament_id);
+      allow update: if isPlatformAdmin()
+        || isTournamentAdmin(resource.data.tournament_id)
+        || isTournamentAdmin(request.resource.data.tournament_id);
+      allow delete: if isPlatformAdmin() || isTournamentAdmin(resource.data.tournament_id);
     }
 
     match /tournament_rankings/{rid} {
