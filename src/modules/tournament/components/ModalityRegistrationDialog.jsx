@@ -39,7 +39,7 @@ const GENDER_OPTIONS = [
   { value: COMPETITION_GENDER.MALE, label: 'Masculino' },
   { value: COMPETITION_GENDER.FEMALE, label: 'Feminino' },
 ];
-import { evaluateRegistrationEligibility } from '@/modules/tournament/domain/eligibility';
+import { evaluateRegistrationEligibility, athleteAllowedByGender, genderRegistrationErrors } from '@/modules/tournament/domain/eligibility';
 
 /**
  * Dialog reutilizável de inscrição em uma modalidade.
@@ -79,6 +79,17 @@ export default function ModalityRegistrationDialog({
     queryFn: listAthletes,
     enabled: canPickPartner && open,
   });
+  // Restringe as listas de escolha ao gênero da modalidade: masculina mostra só
+  // homens, feminina só mulheres; aberta e mista mostram ambos (o par misto é
+  // validado no envio). Atletas sem gênero declarado não são ocultados.
+  const eligiblePlatformUsers = useMemo(
+    () => (platformUsers || []).filter((u) => athleteAllowedByGender(u.competition_gender, modality)),
+    [platformUsers, modality],
+  );
+  const eligibleDirectoryAthletes = useMemo(
+    () => (directoryAthletes || []).filter((a) => athleteAllowedByGender(a.competition_gender ?? a.gender, modality)),
+    [directoryAthletes, modality],
+  );
   const isFull = modality
     ? isRegistrationCapacityReached(countOccupiedRegistrations(existingRegs), modality.max_entries)
     : false;
@@ -202,6 +213,18 @@ export default function ModalityRegistrationDialog({
       if (modality.format === MODALITY_FORMAT.DOUBLES && !form.player_b_gender) {
         return toast.error('Informe o gênero do jogador B.');
       }
+    }
+    // Gênero é categórico: bloqueia inscrição de gênero incompatível para
+    // TODOS (inclusive admin). Masculina só aceita homens, feminina só
+    // mulheres, e mista exige um de cada. Só bloqueia quando o gênero é
+    // conhecido — o que sempre ocorre no fluxo admin (gênero é obrigatório).
+    const genderErrors = genderRegistrationErrors(modality, {
+      aGender: form.player_a_gender,
+      bGender: form.player_b_gender,
+      isDoubles: modality.format === MODALITY_FORMAT.DOUBLES,
+    });
+    if (genderErrors.length > 0) {
+      return toast.error(genderErrors[0]);
     }
     if (blocked) {
       return toast.error('Não é possível enviar a inscrição: você não atende aos critérios desta modalidade.');
@@ -343,7 +366,7 @@ export default function ModalityRegistrationDialog({
           {canPickAthletes && (
             <AthletePicker
               label="Escolher atleta cadastrado (Jogador A)"
-              users={platformUsers}
+              users={eligiblePlatformUsers}
               selectedUserId={form.player_a_user_id}
               onSelect={(u) => selectAthlete('a', u)}
               onClear={() => clearAthlete('a')}
@@ -382,7 +405,7 @@ export default function ModalityRegistrationDialog({
               {canPickAthletes && (
                 <AthletePicker
                   label="Escolher atleta cadastrado (Jogador B)"
-                  users={platformUsers}
+                  users={eligiblePlatformUsers}
                   selectedUserId={form.player_b_user_id}
                   onSelect={(u) => selectAthlete('b', u)}
                   onClear={() => clearAthlete('b')}
@@ -390,7 +413,7 @@ export default function ModalityRegistrationDialog({
               )}
               {canPickPartner && (
                 <PartnerPicker
-                  athletes={directoryAthletes}
+                  athletes={eligibleDirectoryAthletes}
                   selfUid={user?.uid}
                   existingRegs={existingRegs}
                   selectedUserId={form.player_b_user_id}

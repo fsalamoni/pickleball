@@ -69,6 +69,9 @@ export function buildAthletePublicProfile(uid, profile = {}, clubs = [], options
     platform_name: name,
     age: Number.isFinite(age) ? age : null,
     gender: profile.gender || null,
+    // Categoria competitiva (masculino/feminino) — usada para filtrar o
+    // diretório por gênero na inscrição. Aditivo; preenche nas próximas syncs.
+    competition_gender: profile.competition_gender || null,
     city: trimmed(profile.city) || null,
     state: trimmed(profile.state) || null,
     // ID DUPR (Dynamic Universal Pickleball Rating) — identificador público do

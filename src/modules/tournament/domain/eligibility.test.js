@@ -3,6 +3,9 @@ import {
   evaluatePlayerEligibility,
   evaluateMixedDoublesEligibility,
   evaluateRegistrationEligibility,
+  allowedCompetitionGenders,
+  athleteAllowedByGender,
+  genderRegistrationErrors,
 } from './eligibility.js';
 import {
   AGE_CATEGORY,
@@ -140,6 +143,81 @@ describe('eligibility', () => {
       expect(r.errors.some((e) => /Jogador A.*50/.test(e))).toBe(true);
       // B tem 55, OK
       // Mistas: combinação válida (M + F), nenhum erro adicional
+    });
+  });
+
+  describe('filtro de gênero da lista (athleteAllowedByGender)', () => {
+    it('masculina: aceita homem, rejeita mulher, e não esconde gênero desconhecido', () => {
+      const m = { gender_category: GENDER_CATEGORY.MALE };
+      expect(athleteAllowedByGender(COMPETITION_GENDER.MALE, m)).toBe(true);
+      expect(athleteAllowedByGender(COMPETITION_GENDER.FEMALE, m)).toBe(false);
+      expect(athleteAllowedByGender(null, m)).toBe(true);
+      expect(athleteAllowedByGender('', m)).toBe(true);
+    });
+
+    it('feminina: aceita mulher, rejeita homem', () => {
+      const m = { gender_category: GENDER_CATEGORY.FEMALE };
+      expect(athleteAllowedByGender(COMPETITION_GENDER.FEMALE, m)).toBe(true);
+      expect(athleteAllowedByGender(COMPETITION_GENDER.MALE, m)).toBe(false);
+    });
+
+    it('aberta e mista aceitam ambos os gêneros na lista', () => {
+      for (const cat of [GENDER_CATEGORY.OPEN, GENDER_CATEGORY.MIXED]) {
+        const m = { gender_category: cat };
+        expect(athleteAllowedByGender(COMPETITION_GENDER.MALE, m)).toBe(true);
+        expect(athleteAllowedByGender(COMPETITION_GENDER.FEMALE, m)).toBe(true);
+      }
+      expect(allowedCompetitionGenders({ gender_category: GENDER_CATEGORY.OPEN })).toBe(null);
+      expect(allowedCompetitionGenders({ gender_category: GENDER_CATEGORY.MIXED })).toBe(null);
+    });
+  });
+
+  describe('bloqueio de gênero no envio (genderRegistrationErrors)', () => {
+    it('masculina bloqueia jogador feminino (inclusive admin)', () => {
+      const m = { gender_category: GENDER_CATEGORY.MALE, format: MODALITY_FORMAT.SINGLES };
+      expect(genderRegistrationErrors(m, { aGender: COMPETITION_GENDER.FEMALE })).toHaveLength(1);
+      expect(genderRegistrationErrors(m, { aGender: COMPETITION_GENDER.MALE })).toHaveLength(0);
+    });
+
+    it('feminina bloqueia jogador masculino', () => {
+      const m = { gender_category: GENDER_CATEGORY.FEMALE };
+      expect(genderRegistrationErrors(m, { aGender: COMPETITION_GENDER.MALE })).toHaveLength(1);
+    });
+
+    it('masculina em duplas exige ambos masculinos', () => {
+      const m = { gender_category: GENDER_CATEGORY.MALE };
+      expect(genderRegistrationErrors(m, {
+        aGender: COMPETITION_GENDER.MALE,
+        bGender: COMPETITION_GENDER.FEMALE,
+        isDoubles: true,
+      })).toHaveLength(1);
+      expect(genderRegistrationErrors(m, {
+        aGender: COMPETITION_GENDER.MALE,
+        bGender: COMPETITION_GENDER.MALE,
+        isDoubles: true,
+      })).toHaveLength(0);
+    });
+
+    it('mista em duplas exige um de cada gênero', () => {
+      const m = { gender_category: GENDER_CATEGORY.MIXED };
+      expect(genderRegistrationErrors(m, {
+        aGender: COMPETITION_GENDER.MALE,
+        bGender: COMPETITION_GENDER.MALE,
+        isDoubles: true,
+      })).toHaveLength(1);
+      expect(genderRegistrationErrors(m, {
+        aGender: COMPETITION_GENDER.MALE,
+        bGender: COMPETITION_GENDER.FEMALE,
+        isDoubles: true,
+      })).toHaveLength(0);
+    });
+
+    it('aberta nunca bloqueia por gênero; desconhecido também não', () => {
+      const open = { gender_category: GENDER_CATEGORY.OPEN };
+      expect(genderRegistrationErrors(open, { aGender: COMPETITION_GENDER.MALE })).toHaveLength(0);
+      const male = { gender_category: GENDER_CATEGORY.MALE };
+      expect(genderRegistrationErrors(male, { aGender: '' })).toHaveLength(0);
+      expect(genderRegistrationErrors(male, { aGender: null })).toHaveLength(0);
     });
   });
 });

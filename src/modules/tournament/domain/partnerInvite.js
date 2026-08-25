@@ -123,7 +123,9 @@ export function publicProfileToPartnerFields(profile = {}) {
     name: String(profile.platform_name || '').trim(),
     email: String(profile.email || '').trim(),
     level: profile.leveling_level || profile.level || '',
-    competition_gender: COMPETITION_GENDER_VALUES.has(profile.gender) ? profile.gender : '',
+    competition_gender: COMPETITION_GENDER_VALUES.has(profile.competition_gender)
+      ? profile.competition_gender
+      : (COMPETITION_GENDER_VALUES.has(profile.gender) ? profile.gender : ''),
     user_id: profile.uid || profile.id || null,
     photo_url: profile.photo_url || null,
   };

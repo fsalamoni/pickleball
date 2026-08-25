@@ -152,6 +152,67 @@ export function evaluateMixedDoublesEligibility(modality, profileA, profileB) {
 }
 
 /**
+ * Gêneros de competição aceitos na LISTA de uma modalidade.
+ *  - open   → null (qualquer)
+ *  - male   → ['male']
+ *  - female → ['female']
+ *  - mixed  → null (a lista aceita ambos; a checagem do par é no envio)
+ *
+ * @returns {string[]|null} lista de gêneros aceitos, ou null para "qualquer".
+ */
+export function allowedCompetitionGenders(modality) {
+  const cat = modality?.gender_category;
+  if (cat === GENDER_CATEGORY.MALE) return [COMPETITION_GENDER.MALE];
+  if (cat === GENDER_CATEGORY.FEMALE) return [COMPETITION_GENDER.FEMALE];
+  return null;
+}
+
+/**
+ * O atleta pode aparecer na lista de inscrição da modalidade, pelo gênero?
+ * Gênero desconhecido → true: não escondemos atletas sem gênero definido (o
+ * bloqueio de gênero é aplicado no envio, quando o gênero é conhecido). Assim
+ * a lista deixa de mostrar o gênero OPOSTO em modalidades masculinas/femininas,
+ * sem ocultar atletas reais que ainda não declararam a categoria competitiva.
+ *
+ * @param {string|null|undefined} competitionGender
+ * @param {object} modality
+ * @returns {boolean}
+ */
+export function athleteAllowedByGender(competitionGender, modality) {
+  const allowed = allowedCompetitionGenders(modality);
+  if (!allowed) return true; // open/mixed: qualquer gênero na lista
+  if (!competitionGender) return true; // desconhecido: não filtra da lista
+  return allowed.includes(competitionGender);
+}
+
+/**
+ * Erros de gênero que BLOQUEIAM a inscrição (inclusive para admin — gênero é
+ * categórico, não é apenas recomendação). Só bloqueia quando o gênero do
+ * jogador é conhecido e conflita com a modalidade.
+ *  - masculina/feminina: cada jogador informado precisa ser do gênero da categoria.
+ *  - mista (duplas): os dois não podem ser do mesmo gênero.
+ *
+ * @param {object} modality
+ * @param {{ aGender?: string|null, bGender?: string|null, isDoubles?: boolean }} players
+ * @returns {string[]} mensagens de erro (vazio = ok)
+ */
+export function genderRegistrationErrors(modality, { aGender, bGender, isDoubles = false } = {}) {
+  const cat = modality?.gender_category;
+  const errors = [];
+  if (cat === GENDER_CATEGORY.MALE || cat === GENDER_CATEGORY.FEMALE) {
+    const required = cat === GENDER_CATEGORY.MALE ? COMPETITION_GENDER.MALE : COMPETITION_GENDER.FEMALE;
+    const label = GENDER_CATEGORY_LABELS[cat];
+    if (aGender && aGender !== required) errors.push(`Jogador A: esta modalidade é ${label} — só aceita atletas dessa categoria.`);
+    if (isDoubles && bGender && bGender !== required) errors.push(`Jogador B: esta modalidade é ${label} — só aceita atletas dessa categoria.`);
+  } else if (cat === GENDER_CATEGORY.MIXED && isDoubles) {
+    if (aGender && bGender && aGender === bGender) {
+      errors.push('Duplas Mistas exigem um jogador masculino e uma feminina.');
+    }
+  }
+  return errors;
+}
+
+/**
  * Avalia ambos os jogadores (A e B) de uma inscrição. Concatena os resultados.
  */
 export function evaluateRegistrationEligibility(modality, profileA, profileB) {
