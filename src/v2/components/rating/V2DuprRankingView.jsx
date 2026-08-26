@@ -45,12 +45,17 @@ function DuprExplainer() {
         <div className="mt-3 space-y-2 text-sm leading-6 text-gray-600">
           <p>
             É um <strong>ranking próprio da plataforma</strong>, na <strong>mesma escala do DUPR
-            (2.000 a 8.000)</strong> e com comportamento semelhante: sobe ao vencer, desce ao
-            perder, e converge mais rápido nos primeiros jogos.
+            (2.000 a 8.000)</strong> e desenhado para se comportar como ele.
           </p>
           <ul className="ml-4 list-disc space-y-1">
+            <li><strong>Baseado no placar</strong>, não só em vitória/derrota: uma <strong>derrota
+              apertada contra um adversário mais forte pode subir</strong> o seu rating, e uma vitória
+              magra sobre iguais quase não mexe.</li>
+            <li><strong>Confiabilidade</strong> cresce com os jogos — ratings maduros se movem pouco;
+              novatos convergem rápido (por isso a marca <em>provisório</em> no começo).</li>
             <li><strong>Simples e duplas</strong> têm ratings separados (como no DUPR).</li>
-            <li>A <strong>semente inicial</strong> vem do rating DUPR informado no perfil (quando houver) ou do seu nível de nivelamento.</li>
+            <li>A <strong>semente inicial</strong> vem do rating DUPR informado no perfil (quando houver)
+              ou do seu nível de nivelamento; W.O. não conta.</li>
             <li>Conta os jogos finalizados de <strong>torneios e dias de jogo</strong> da plataforma.</li>
           </ul>
           <p className="text-xs text-gray-500">
@@ -80,6 +85,7 @@ export default function V2DuprRankingView() {
         games: r[`${format}_games`],
         wins: r[`${format}_wins`],
         losses: r[`${format}_losses`],
+        reliability: r[`${format}_reliability`],
         provisional: r[`${format}_provisional`],
       }))
       .filter((r) => (r.games || 0) > 0)
@@ -190,6 +196,11 @@ export default function V2DuprRankingView() {
                 <div className="text-right">
                   <p className="text-xs uppercase tracking-wide text-gray-400">{format === 'doubles' ? 'Duplas' : 'Simples'}</p>
                   <p className="font-display text-xl font-bold text-ink tabular-nums">{fmt(p.rating)}</p>
+                  {Number.isFinite(p.reliability) && (
+                    <p className="text-[10px] text-gray-400" title="Confiabilidade — cresce com o número de jogos">
+                      conf. {p.reliability}%
+                    </p>
+                  )}
                 </div>
               </div>
             );

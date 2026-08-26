@@ -2,13 +2,27 @@
  * Motor de rating "estilo DUPR" — próprio da plataforma, na escala 2.000–8.000.
  *
  * IMPORTANTE: o algoritmo oficial do DUPR é proprietário e NÃO é reproduzido
- * aqui. Este motor é uma aproximação independente que usa a MESMA escala e um
- * comportamento semelhante (sobe ao vencer, desce ao perder; converge mais
- * rápido nos primeiros jogos; simples e duplas separados; margem de vitória tem
- * peso leve). É um ranking INDEPENDENTE — não substitui o rating ELO existente.
+ * aqui. Este é uma aproximação independente na MESMA escala, desenhada para
+ * chegar o mais perto possível do COMPORTAMENTO do DUPR:
  *
- * Puro/determinístico: um replay cronológico completo de todos os jogos
- * finalizados chega sempre ao mesmo resultado (sem estado incremental).
+ *   1) BASEADO NO PLACAR (não em vitória/derrota): usa a PARTICIPAÇÃO no placar
+ *      (pontos do lado / pontos totais) contra a participação ESPERADA pela
+ *      diferença de rating. Assim, uma derrota apertada contra um adversário
+ *      muito mais forte PODE SUBIR o rating, e uma vitória magra sobre iguais
+ *      quase não mexe — igual ao DUPR.
+ *   2) CONFIABILIDADE (reliability): cresce com o número de jogos. Ratings com
+ *      muitos jogos se movem pouco (K menor); novatos convergem rápido (K maior).
+ *   3) SIMPLES E DUPLAS separados. Em duplas, o lado = média dos parceiros e
+ *      cada parceiro se move pelo próprio K/confiabilidade.
+ *   4) W.O. / jogos sem placar NÃO pontuam (o DUPR ignora forfeits).
+ *
+ * Puro/determinístico: um replay cronológico completo dos jogos finalizados
+ * chega sempre ao mesmo resultado.
+ *
+ * Ainda NÃO reproduzido (parte proprietária do DUPR): o "ajuste global em rede"
+ * (recalcular todos os ratings conectados simultaneamente) e o decaimento por
+ * inatividade/half-life. São refinamentos futuros; o replay sequential com
+ * placar + confiabilidade já captura a essência.
  */
 
 /** Limites da escala (iguais aos do DUPR: 2.000–8.000). */
@@ -16,15 +30,21 @@ export const DUPR_MIN = 2.0;
 export const DUPR_MAX = 8.0;
 /** Semente padrão de quem não tem DUPR informado nem nível de nivelamento. */
 export const DUPR_DEFAULT_SEED = 3.0;
-/** Jogos abaixo dos quais o rating é considerado provisório (converge rápido). */
-export const DUPR_PROVISIONAL_GAMES = 5;
-/** "Espalhamento" da curva de expectativa na escala 2–8 (quanto 1.0 de
- *  diferença pesa). ~1.5 → diferença de 1.0 ponto ≈ 82% de expectativa. */
-export const DUPR_SPREAD = 1.5;
-/** Incremento base por jogo (jogador estabelecido). */
-export const DUPR_K = 0.08;
-/** Incremento na fase provisória (converge mais rápido no início). */
-export const DUPR_PROVISIONAL_K = 0.20;
+
+/** "Espalhamento" da curva: quanto 1.0 de diferença de rating altera a
+ *  participação esperada no placar. Calibrado para gaps grandes preverem
+ *  domínio moderado (ex.: +1.0 → ~0.60 de participação esperada). */
+export const DUPR_SHARE_SPREAD = 5.5;
+/** K máximo (rating novo, baixa confiabilidade — converge rápido). */
+export const DUPR_K_MAX = 0.30;
+/** K mínimo (rating maduro, alta confiabilidade — estável). */
+export const DUPR_K_MIN = 0.05;
+/** Constante de decaimento do K conforme os jogos acumulam. */
+export const DUPR_K_TAU = 8;
+/** Constante da curva de confiabilidade (0–100%). ~63% em 10 jogos. */
+export const DUPR_RELIABILITY_TAU = 10;
+/** Abaixo desta confiabilidade o rating é marcado como provisório. */
+export const DUPR_PROVISIONAL_RELIABILITY = 50;
 
 /** Arredonda para 3 casas decimais (formato x.xxx). */
 export function round3(value) {
@@ -36,31 +56,27 @@ export function clampRating(value) {
   return Math.min(DUPR_MAX, Math.max(DUPR_MIN, Number(value) || DUPR_MIN));
 }
 
-/** Probabilidade esperada de vitória do lado A dados os ratings dos dois lados. */
-export function expectedScore(ratingA, ratingB) {
-  return 1 / (1 + 10 ** ((ratingB - ratingA) / DUPR_SPREAD));
-}
-
-/** Fator K conforme experiência (maior enquanto provisório). */
-export function kFactor(gamesPlayed) {
-  return gamesPlayed < DUPR_PROVISIONAL_GAMES ? DUPR_PROVISIONAL_K : DUPR_K;
+/**
+ * Participação ESPERADA do lado A no placar (0–1), dada a diferença de rating.
+ * Ratings iguais → 0.5. Curva logística base-10 com espalhamento configurável.
+ */
+export function expectedShare(ratingA, ratingB) {
+  return 1 / (1 + 10 ** ((ratingB - ratingA) / DUPR_SHARE_SPREAD));
 }
 
 /**
- * Peso leve da margem de vitória (o DUPR considera o placar). Fica entre 1.0
- * (jogo apertado) e 1.5 (jogo muito desequilibrado). Nunca inverte o sinal do
- * ajuste — apenas modula a intensidade dentro de um teto seguro.
- *
- * @param {number} winnerPoints pontos de quem venceu
- * @param {number} loserPoints pontos de quem perdeu
+ * Fator K conforme experiência: alto no começo (converge rápido) decaindo
+ * suavemente para um piso estável conforme a confiabilidade cresce.
  */
-export function movMultiplier(winnerPoints, loserPoints) {
-  const w = Number(winnerPoints) || 0;
-  const l = Number(loserPoints) || 0;
-  const total = w + l;
-  if (total <= 0) return 1;
-  const ratio = Math.abs(w - l) / total; // 0..1
-  return 1 + Math.min(0.5, ratio * 0.5); // 1.0 .. 1.5
+export function kFactor(gamesPlayed) {
+  const g = Math.max(0, Number(gamesPlayed) || 0);
+  return DUPR_K_MIN + (DUPR_K_MAX - DUPR_K_MIN) * Math.exp(-g / DUPR_K_TAU);
+}
+
+/** Confiabilidade (0–100%) a partir do número de jogos. Cresce rápido e satura. */
+export function reliabilityFromGames(gamesPlayed) {
+  const g = Math.max(0, Number(gamesPlayed) || 0);
+  return Math.round(100 * (1 - Math.exp(-g / DUPR_RELIABILITY_TAU)));
 }
 
 /**
@@ -128,11 +144,15 @@ function ensurePlayer(state, id, seeds, defaultSeed) {
   return player;
 }
 
-function updateSide(side, score, expected, mov, pointsFor, pointsAgainst, tournamentId) {
-  const delta = kFactor(side.games) * mov * (score - expected);
+/**
+ * Ajusta o rating de um lado pela diferença entre a participação REAL e a
+ * ESPERADA no placar (baseado no placar, no estilo DUPR).
+ */
+function updateSide(side, actualShare, expShare, win, pointsFor, pointsAgainst, tournamentId) {
+  const delta = kFactor(side.games) * (actualShare - expShare);
   side.rating = clampRating(side.rating + delta);
   side.games += 1;
-  if (score === 1) side.wins += 1; else side.losses += 1;
+  if (win) side.wins += 1; else side.losses += 1;
   if (side.rating > side.peak_rating) side.peak_rating = side.rating;
   side.points_for += Number(pointsFor) || 0;
   side.points_against += Number(pointsAgainst) || 0;
@@ -140,8 +160,8 @@ function updateSide(side, score, expected, mov, pointsFor, pointsAgainst, tourna
 }
 
 /**
- * Aplica um único jogo ao estado mutável. Jogos de simples atualizam o rating
- * de simples; jogos de duplas atualizam o de duplas (lado = média dos dois).
+ * Aplica um único jogo ao estado mutável, com base no PLACAR. Jogos de simples
+ * atualizam o rating de simples; de duplas, o de duplas (lado = média).
  *
  * @param {Map<string, object>} state
  * @param {{ side_a: string[], side_b: string[], winner: 'a'|'b', points_a?: number, points_b?: number, tournament_id?: string }} match
@@ -155,25 +175,26 @@ export function applyDuprMatch(state, match, options = {}) {
   if (idsA.length === 0 || idsB.length === 0) return;
   if (match.winner !== 'a' && match.winner !== 'b') return;
 
+  const pointsA = Number(match.points_a) || 0;
+  const pointsB = Number(match.points_b) || 0;
+  const totalPts = pointsA + pointsB;
+  // Sem placar (W.O./forfeit) não carrega informação de desempenho → ignora,
+  // como o DUPR faz com jogos sem resultado disputado.
+  if (totalPts <= 0) return;
+
   const key = idsA.length > 1 || idsB.length > 1 ? 'doubles' : 'singles';
   const playersA = idsA.map((id) => ensurePlayer(state, id, seeds, defaultSeed));
   const playersB = idsB.map((id) => ensurePlayer(state, id, seeds, defaultSeed));
 
   const teamA = mean(playersA.map((p) => p[key].rating));
   const teamB = mean(playersB.map((p) => p[key].rating));
-  const expA = expectedScore(teamA, teamB);
-  const scoreA = match.winner === 'a' ? 1 : 0;
-
-  const pointsA = Number(match.points_a) || 0;
-  const pointsB = Number(match.points_b) || 0;
-  const mov = movMultiplier(
-    scoreA === 1 ? pointsA : pointsB,
-    scoreA === 1 ? pointsB : pointsA,
-  );
+  const expA = expectedShare(teamA, teamB);
+  const actualA = pointsA / totalPts;
+  const aWon = match.winner === 'a';
   const tournamentId = match.tournament_id || null;
 
-  playersA.forEach((p) => updateSide(p[key], scoreA, expA, mov, pointsA, pointsB, tournamentId));
-  playersB.forEach((p) => updateSide(p[key], 1 - scoreA, 1 - expA, mov, pointsB, pointsA, tournamentId));
+  playersA.forEach((p) => updateSide(p[key], actualA, expA, aWon, pointsA, pointsB, tournamentId));
+  playersB.forEach((p) => updateSide(p[key], 1 - actualA, 1 - expA, !aWon, pointsB, pointsA, tournamentId));
 }
 
 function finalizeSide(side) {
@@ -187,7 +208,8 @@ function finalizeSide(side) {
     points_against: side.points_against,
     points_balance: side.points_for - side.points_against,
     tournaments: side.tournaments.size,
-    provisional: side.games < DUPR_PROVISIONAL_GAMES,
+    reliability: reliabilityFromGames(side.games),
+    provisional: reliabilityFromGames(side.games) < DUPR_PROVISIONAL_RELIABILITY,
   };
 }
 
@@ -195,7 +217,7 @@ function finalizeSide(side) {
  * Recalcula os ratings "estilo DUPR" a partir do histórico completo de jogos
  * finalizados. Retorna um item por jogador, com blocos `singles` e `doubles`.
  *
- * @param {Array<{ side_a: string[], side_b: string[], winner: 'a'|'b', at?: number }>} matches
+ * @param {Array<{ side_a: string[], side_b: string[], winner: 'a'|'b', points_a?: number, points_b?: number, at?: number }>} matches
  * @param {{ seeds?: Record<string, number>, defaultSeed?: number }} [options]
  * @returns {Array<{ player_id: string, singles: object, doubles: object }>}
  */

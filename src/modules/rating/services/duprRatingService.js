@@ -41,6 +41,7 @@ function flattenSide(side) {
     losses: side.losses,
     balance: side.points_balance,
     tournaments: side.tournaments,
+    reliability: side.reliability,
     provisional: side.provisional,
   };
 }
@@ -107,6 +108,7 @@ export async function recomputeDuprRatings(actor) {
       doubles_wins: doubles.wins,
       doubles_losses: doubles.losses,
       doubles_balance: doubles.balance,
+      doubles_reliability: doubles.reliability,
       doubles_provisional: doubles.provisional,
       singles_rating: singles.rating,
       singles_peak: singles.peak,
@@ -114,6 +116,7 @@ export async function recomputeDuprRatings(actor) {
       singles_wins: singles.wins,
       singles_losses: singles.losses,
       singles_balance: singles.balance,
+      singles_reliability: singles.reliability,
       singles_provisional: singles.provisional,
     };
   });
