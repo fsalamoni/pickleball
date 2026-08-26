@@ -11,6 +11,7 @@ import { computeWeekStreak } from '@/modules/progression/domain/progression';
 import ProgressionCard from '@/modules/progression/components/ProgressionCard';
 import GoalsCard from '@/modules/progression/components/GoalsCard';
 import RatingSparkline from '@/modules/rating/components/RatingSparkline';
+import V2DuprRatingBadge from '@/v2/components/rating/V2DuprRatingBadge';
 import AchievementsCard from '@/modules/achievements/components/AchievementsCard';
 import MyGamesPanel from '@/v2/components/performance/MyGamesPanel';
 import {
@@ -72,6 +73,8 @@ function StatsPanel() {
         </div>
       ) : (
         <>
+          {/* Nível 2.0–8.0 (ranking estilo DUPR) — auto-oculto pela flag/dados. */}
+          <V2DuprRatingBadge uid={user?.uid} className="mb-4" />
           <div className="grid grid-cols-2 gap-4 md:grid-cols-3 lg:grid-cols-6">
             <V2StatCard icon={Trophy} accent="ink" label="Torneios" value={stats.tournaments} />
             <V2StatCard icon={ListChecks} accent="blue" label="Inscrições" value={stats.registrations} />

@@ -5,6 +5,7 @@ import { useAuth } from '@/core/lib/FirebaseAuthContext';
 import { useNationalRanking } from '@/modules/rating/hooks/useRating';
 import { genderLabel } from '@/modules/athletes/domain/constants';
 import { V2Avatar, V2Button } from '@/v2/ui/primitives';
+import V2DuprRatingBadge from '@/v2/components/rating/V2DuprRatingBadge';
 
 function memberSince(profile) {
   const ts = profile?.created_at;
@@ -79,6 +80,9 @@ export default function V2Profile() {
                     </div>
                   );
                 })}
+                {/* Nível 2.0–8.0 (ranking estilo DUPR) — auto-oculto se a flag
+                    estiver off ou o atleta ainda não tiver rating calculado. */}
+                <V2DuprRatingBadge uid={user?.uid} />
               </div>
             )}
           </div>

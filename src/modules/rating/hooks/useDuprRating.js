@@ -4,7 +4,17 @@
  */
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
 import { useAuth } from '@/core/lib/FirebaseAuthContext';
-import { listDuprRanking, recomputeDuprRatings } from '../services/duprRatingService.js';
+import { getDuprRatingForUid, listDuprRanking, recomputeDuprRatings } from '../services/duprRatingService.js';
+
+/** Rating "estilo DUPR" de um atleta específico (para perfis). */
+export function useDuprRatingForUid(uid, enabled = true) {
+  return useQuery({
+    queryKey: ['dupr-rating', uid],
+    queryFn: () => getDuprRatingForUid(uid),
+    enabled: !!uid && enabled,
+    staleTime: 60_000,
+  });
+}
 
 /** Ranking "estilo DUPR" materializado (todos os atletas com jogos). */
 export function useDuprRanking(enabled = true) {

@@ -10,10 +10,13 @@ import {
   Flame,
   Globe,
   Hash,
+  Sparkles,
   MapPin,
   Trophy,
 } from 'lucide-react';
 import { useAuth } from '@/core/lib/FirebaseAuthContext';
+import { useFeatureFlag } from '@/core/lib/FeatureFlagsContext';
+import { FEATURE_FLAG } from '@/core/featureFlags';
 import { useMyTournaments, usePublicTournaments } from '@/modules/tournament/hooks/useTournament';
 import { useNationalRanking } from '@/modules/rating/hooks/useRating';
 import { getMyUpcomingMatches } from '@/modules/tournament/services/upcomingService';
@@ -74,6 +77,7 @@ function formatMatchWhen(ms) {
 
 export default function V2Dashboard() {
   const { user, userProfile } = useAuth();
+  const skillRatingOn = useFeatureFlag(FEATURE_FLAG.SKILL_RATING_DUPR);
   const { data: myTournaments = [], isLoading: loadingMine } = useMyTournaments();
   const { data: publicTournaments = [], isLoading: loadingPublic } = usePublicTournaments();
   const { data: ranking = [] } = useNationalRanking();
@@ -286,6 +290,9 @@ export default function V2Dashboard() {
       <div className="mt-10 grid grid-cols-1 gap-6 lg:grid-cols-3">
         <DiscoveryCard to="/atletas" icon={Trophy} title="Atletas" description="Encontre parceiros do seu nível na comunidade." />
         <DiscoveryCard to="/ranking" icon={Globe} title="Ranking nacional" description="Veja quem está no topo e onde você está." />
+        {skillRatingOn && (
+          <DiscoveryCard to="/ranking?tab=dupr" icon={Sparkles} title="Nível 2.0–8.0" description="Seu rating no formato DUPR, pelos jogos da plataforma." />
+        )}
         <DiscoveryCard to="/novidades" icon={Hash} title="Comunidade" description="Movimentos recentes de torneios e jogos." />
       </div>
     </div>

@@ -18,6 +18,7 @@ import HeadToHeadCard from '@/modules/rating/components/HeadToHeadCard';
 import AchievementsCard from '@/modules/achievements/components/AchievementsCard';
 import V2ChatLauncherButton from '@/v2/components/chat/V2ChatLauncherButton';
 import { V2Avatar, V2Badge, V2EmptyState, V2Skeleton, V2Surface } from '@/v2/ui/primitives';
+import V2DuprRatingBadge from '@/v2/components/rating/V2DuprRatingBadge';
 
 function formatPercent(rate) {
   return rate == null ? '—' : `${Math.round(rate * 100)}%`;
@@ -115,6 +116,8 @@ export default function V2AthleteProfile() {
                   <Medal className="h-4 w-4" /> Rating {rating.rating}{rating.position ? ` · ${rating.position}º` : ''}
                 </div>
               )}
+              {/* Nível 2.0–8.0 (ranking estilo DUPR) — auto-oculto pela flag/dados. */}
+              <V2DuprRatingBadge uid={uid} />
               {athlete.level && (
                 <div className="flex items-center gap-2 rounded-2xl border border-gray-100 bg-paper px-4 py-2 text-sm font-semibold text-gray-600">
                   <Award className="h-4 w-4" /> {athlete.level}

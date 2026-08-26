@@ -1,5 +1,5 @@
 import React, { useMemo, useState } from 'react';
-import { Link } from 'react-router-dom';
+import { Link, useSearchParams } from 'react-router-dom';
 import { Crown, Search, TrendingUp, Users2 } from 'lucide-react';
 import { useNationalRanking } from '@/modules/rating/hooks/useRating';
 import { useAuth } from '@/core/lib/FirebaseAuthContext';
@@ -284,9 +284,13 @@ function NationalRankingView() {
  */
 export default function V2Ranking() {
   const duprOn = useFeatureFlag(FEATURE_FLAG.SKILL_RATING_DUPR);
-  const [tab, setTab] = useState('national');
+  const [params, setParams] = useSearchParams();
 
   if (!duprOn) return <NationalRankingView />;
+
+  // Aba controlada pela URL (?tab=dupr) — permite links diretos de outros locais.
+  const tab = params.get('tab') === 'dupr' ? 'dupr' : 'national';
+  const setTab = (t) => setParams(t === 'dupr' ? { tab: 'dupr' } : {}, { replace: true });
 
   const TABS = [
     { id: 'national', label: 'Nacional' },

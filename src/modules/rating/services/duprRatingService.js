@@ -14,6 +14,7 @@
 import {
   collection,
   doc,
+  getDoc,
   getDocs,
   query,
   where,
@@ -152,4 +153,11 @@ export async function listDuprRanking() {
   if (!db) return [];
   const snap = await getDocs(collection(db, RATINGS_COLLECTION));
   return snap.docs.map((d) => ({ id: d.id, ...d.data() }));
+}
+
+/** Rating "estilo DUPR" de um único atleta (ou null se ainda não houver). */
+export async function getDuprRatingForUid(uid) {
+  if (!db || !uid) return null;
+  const snap = await getDoc(doc(db, RATINGS_COLLECTION, uid));
+  return snap.exists() ? { id: snap.id, ...snap.data() } : null;
 }

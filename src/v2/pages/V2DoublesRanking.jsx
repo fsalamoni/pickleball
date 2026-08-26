@@ -26,6 +26,7 @@ function medalEmoji(position) {
 export default function V2DoublesRanking() {
   const enabled = useFeatureFlag(FEATURE_FLAG.DOUBLES_RANKING);
   const ratingOn = useFeatureFlag(FEATURE_FLAG.PLAYER_RATING);
+  const skillRatingOn = useFeatureFlag(FEATURE_FLAG.SKILL_RATING_DUPR);
   const { data: ranking = [], isLoading } = useDoublesRanking(enabled);
   const [q, setQ] = useState('');
 
@@ -42,8 +43,15 @@ export default function V2DoublesRanking() {
       <V2PageIntro
         title="Ranking de duplas"
         subtitle="Parcerias classificadas por vitórias e aproveitamento nos jogos de duplas."
-        action={ratingOn ? (
-          <Link to="/ranking" className="text-sm font-semibold text-green-700 underline">Ver ranking individual</Link>
+        action={(ratingOn || skillRatingOn) ? (
+          <div className="flex flex-wrap items-center gap-3">
+            {ratingOn && (
+              <Link to="/ranking" className="text-sm font-semibold text-green-700 underline">Ver ranking individual</Link>
+            )}
+            {skillRatingOn && (
+              <Link to="/ranking?tab=dupr" className="text-sm font-semibold text-green-700 underline">Ver nível 2.0–8.0</Link>
+            )}
+          </div>
         ) : null}
       />
 
