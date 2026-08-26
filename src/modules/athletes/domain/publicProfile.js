@@ -77,6 +77,10 @@ export function buildAthletePublicProfile(uid, profile = {}, clubs = [], options
     // ID DUPR (Dynamic Universal Pickleball Rating) — identificador público do
     // atleta no DUPR. Exibido nos cards/telas de atleta.
     dupr_id: trimmed(profile.dupr_id) || null,
+    // Rating DUPR informado manualmente (semente do ranking estilo DUPR). Aditivo.
+    dupr_rating: Number.isFinite(Number(profile.dupr_rating)) && Number(profile.dupr_rating) > 0
+      ? Number(profile.dupr_rating)
+      : null,
     // Lado da quadra preferido (útil para encontrar parcerias).
     court_side: profile.court_side || null,
     level: profile.level || null,

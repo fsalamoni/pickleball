@@ -15,6 +15,7 @@ import {
   V2Surface,
 } from '@/v2/ui/primitives';
 import { cn } from '@/core/lib/utils';
+import V2DuprRankingView from '@/v2/components/rating/V2DuprRankingView';
 
 function medalEmoji(position) {
   if (position === 1) return '🥇';
@@ -107,7 +108,7 @@ function RankingExplainer() {
   );
 }
 
-export default function V2Ranking() {
+function NationalRankingView() {
   const { data: players = [], isLoading } = useNationalRanking();
   const profilePageOn = useFeatureFlag(FEATURE_FLAG.ATHLETE_PROFILE_PAGE);
   const rankingFiltersOn = useFeatureFlag(FEATURE_FLAG.RANKING_FILTERS);
@@ -271,6 +272,47 @@ export default function V2Ranking() {
           })}
         </div>
       )}
+    </div>
+  );
+}
+
+/**
+ * Página de Ranking. Com a flag `skill_rating_dupr` LIGADA, mostra uma barra de
+ * abas: "Nacional" (rating ELO existente, inalterado) e "Nível 2.0–8.0" (ranking
+ * estilo DUPR, apartado). Desligada, renderiza apenas o ranking nacional — a
+ * página fica idêntica ao comportamento anterior.
+ */
+export default function V2Ranking() {
+  const duprOn = useFeatureFlag(FEATURE_FLAG.SKILL_RATING_DUPR);
+  const [tab, setTab] = useState('national');
+
+  if (!duprOn) return <NationalRankingView />;
+
+  const TABS = [
+    { id: 'national', label: 'Nacional' },
+    { id: 'dupr', label: 'Nível 2.0–8.0' },
+  ];
+
+  return (
+    <div className="mx-auto max-w-[1100px]">
+      <div className="mb-6 overflow-x-auto">
+        <div className="inline-flex gap-1.5 rounded-full border border-gray-100 bg-paper-pure p-1.5 shadow-sm">
+          {TABS.map((t) => (
+            <button
+              key={t.id}
+              type="button"
+              onClick={() => setTab(t.id)}
+              className={cn(
+                'whitespace-nowrap rounded-full px-5 py-2.5 text-sm font-bold transition-colors',
+                tab === t.id ? 'bg-ink text-white shadow-md' : 'text-gray-500 hover:text-ink',
+              )}
+            >
+              {t.label}
+            </button>
+          ))}
+        </div>
+      </div>
+      {tab === 'dupr' ? <V2DuprRankingView /> : <NationalRankingView />}
     </div>
   );
 }

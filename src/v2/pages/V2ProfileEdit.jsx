@@ -28,6 +28,16 @@ import {
   V2Button, V2Field, V2Input, V2Select, V2Surface, V2Textarea, V2Toggle,
 } from '@/v2/ui/primitives';
 
+/**
+ * Converte o campo "rating DUPR atual" em número na escala 2.000–8.000, ou null
+ * quando vazio/inválido. Aceita vírgula ou ponto.
+ */
+function parseDuprRating(raw) {
+  const n = Number(String(raw ?? '').trim().replace(',', '.'));
+  if (!Number.isFinite(n) || n <= 0) return null;
+  return Math.min(8, Math.max(2, Math.round(n * 1000) / 1000));
+}
+
 export default function V2ProfileEdit() {
   const { user, userProfile, updateUserProfile } = useAuth();
   const { track } = useFunnel();
@@ -44,6 +54,10 @@ export default function V2ProfileEdit() {
   const [pickleballExperience, setPickleballExperience] = useState(userProfile?.pickleball_experience || '');
   const [competitionGender, setCompetitionGender] = useState(userProfile?.competition_gender || '');
   const [duprId, setDuprId] = useState(userProfile?.dupr_id || '');
+  const [duprRating, setDuprRating] = useState(
+    userProfile?.dupr_rating != null ? String(userProfile.dupr_rating) : '',
+  );
+  const skillRatingOn = useFeatureFlag(FEATURE_FLAG.SKILL_RATING_DUPR);
   const [courtSide, setCourtSide] = useState(userProfile?.court_side || '');
   const [interests, setInterests] = useState(sanitizeInterests(userProfile?.interests));
   const [interestsBusy, setInterestsBusy] = useState(false);
@@ -81,6 +95,7 @@ export default function V2ProfileEdit() {
     setPickleballExperience(userProfile?.pickleball_experience || '');
     setCompetitionGender(userProfile?.competition_gender || '');
     setDuprId(userProfile?.dupr_id || '');
+    setDuprRating(userProfile?.dupr_rating != null ? String(userProfile.dupr_rating) : '');
     setCourtSide(userProfile?.court_side || '');
     setInterests(sanitizeInterests(userProfile?.interests));
     setManualLevel(userProfile?.leveling_level || '');
@@ -129,6 +144,7 @@ export default function V2ProfileEdit() {
         pickleball_experience: pickleballExperience,
         competition_gender: competitionGender || null,
         dupr_id: duprId.trim() || null,
+        dupr_rating: parseDuprRating(duprRating),
         court_side: courtSide || null,
       });
       toast.success('Perfil atualizado.');
@@ -329,6 +345,11 @@ export default function V2ProfileEdit() {
             <V2Field label="ID DUPR" hint="Seu identificador no DUPR (Dynamic Universal Pickleball Rating). Fica visível no seu perfil e nos torneios.">
               <V2Input value={duprId} onChange={(e) => setDuprId(e.target.value)} maxLength={20} placeholder="Ex.: ABC123" />
             </V2Field>
+            {skillRatingOn && (
+              <V2Field label="Meu rating DUPR atual (opcional)" hint="Se você já tem um rating DUPR, informe-o (2.000 a 8.000) para servir de ponto de partida no ranking de nível da plataforma. Opcional — se vazio, usamos o seu nivelamento.">
+                <V2Input value={duprRating} onChange={(e) => setDuprRating(e.target.value)} inputMode="decimal" maxLength={6} placeholder="Ex.: 3.500" />
+              </V2Field>
+            )}
             <V2Field label="Lado da quadra que prefere jogar" hint="Ajuda a encontrar parcerias compatíveis.">
               <V2Select value={courtSide} onChange={(e) => setCourtSide(e.target.value)}>
                 <option value="">Selecione</option>

@@ -582,6 +582,24 @@ export const FEATURE_FLAG = Object.freeze({
   DOUBLES_RANKING: 'doubles_ranking',
 
   /**
+   * Ranking "estilo DUPR" (escala 2.000–8.000): ranking INDEPENDENTE, próprio
+   * da plataforma, exibido em uma aba apartada na página de Ranking. Simples e
+   * duplas separados; semeado pelo nível de nivelamento e/ou pelo rating DUPR
+   * informado no perfil; sobe/desce com os resultados dos jogos da plataforma.
+   * Não usa o algoritmo oficial do DUPR (proprietário) — é uma aproximação na
+   * mesma escala. Aditivo; desligada, nada muda na página de Ranking.
+   */
+  SKILL_RATING_DUPR: 'skill_rating_dupr',
+
+  /**
+   * (Reservado — fase 2) Sincronização OFICIAL com o DUPR: só quando houver
+   * acesso de parceiro/clube DUPR + backend com credenciais. Ligar puxa o
+   * rating oficial por ID e envia partidas ao DUPR. Default OFF; sem efeito
+   * enquanto a integração de backend não existir (`duprOfficial.js`).
+   */
+  DUPR_OFFICIAL_SYNC: 'dupr_official_sync',
+
+  /**
    * Agenda "Meus jogos": página que reúne os próximos jogos do atleta e o
    * histórico de partidas, com filtros. Aditivo — desligada, a rota e o link
    * ficam ocultos (o card do painel atual segue como está).
@@ -1284,6 +1302,23 @@ export const FEATURE_FLAG_META = Object.freeze({
       'Página que classifica as parcerias (dois atletas jogando juntos) por '
       + 'vitórias e aproveitamento, a partir dos jogos de duplas finalizados. '
       + 'Desligada, a rota e o link ficam ocultos.',
+  },
+  [FEATURE_FLAG.SKILL_RATING_DUPR]: {
+    label: 'Ranking estilo DUPR (2.0–8.0)',
+    description:
+      'Adiciona na página de Ranking uma aba apartada com um ranking próprio na '
+      + 'escala DUPR (2.000–8.000), simples e duplas separados, semeado pelo '
+      + 'nivelamento e/ou pelo rating DUPR do perfil e movido pelos resultados '
+      + 'dos jogos da plataforma. Não é o rating oficial do DUPR (algoritmo '
+      + 'proprietário) — é uma aproximação na mesma escala. Desligada, a aba '
+      + 'não aparece e a página de Ranking fica inalterada.',
+  },
+  [FEATURE_FLAG.DUPR_OFFICIAL_SYNC]: {
+    label: 'DUPR oficial (fase 2 — reservado)',
+    description:
+      'Reservado para a integração OFICIAL com o DUPR (puxar rating por ID e '
+      + 'enviar partidas). Exige acesso de parceiro/clube DUPR e backend com '
+      + 'credenciais. Sem efeito enquanto a integração não for implementada.',
   },
   [FEATURE_FLAG.ATHLETE_AGENDA]: {
     label: 'Agenda "Meus jogos"',
