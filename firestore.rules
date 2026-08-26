@@ -211,6 +211,11 @@ service cloud.firestore {
       allow read: if true;
       allow write: if isPlatformAdmin();
     }
+    // Evolução do rating "estilo DUPR" (pontos por recálculo). Igual a rating_history.
+    match /skill_rating_history/{uid} {
+      allow read: if true;
+      allow write: if isPlatformAdmin();
+    }
 
     // ---- Wave C.3 — Ranking interno do clube (materializado) ----
     // Cada clube tem 4 coleções materializadas pelo Cloud Function

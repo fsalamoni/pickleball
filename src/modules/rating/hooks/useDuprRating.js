@@ -4,13 +4,28 @@
  */
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
 import { useAuth } from '@/core/lib/FirebaseAuthContext';
-import { getDuprRatingForUid, listDuprRanking, recomputeDuprRatings } from '../services/duprRatingService.js';
+import {
+  getDuprRatingForUid,
+  getDuprRatingHistory,
+  listDuprRanking,
+  recomputeDuprRatings,
+} from '../services/duprRatingService.js';
 
 /** Rating "estilo DUPR" de um atleta específico (para perfis). */
 export function useDuprRatingForUid(uid, enabled = true) {
   return useQuery({
     queryKey: ['dupr-rating', uid],
     queryFn: () => getDuprRatingForUid(uid),
+    enabled: !!uid && enabled,
+    staleTime: 60_000,
+  });
+}
+
+/** Histórico de evolução do rating "estilo DUPR" de um atleta. */
+export function useDuprRatingHistory(uid, enabled = true) {
+  return useQuery({
+    queryKey: ['dupr-rating-history', uid],
+    queryFn: () => getDuprRatingHistory(uid),
     enabled: !!uid && enabled,
     staleTime: 60_000,
   });

@@ -19,6 +19,7 @@ import AchievementsCard from '@/modules/achievements/components/AchievementsCard
 import V2ChatLauncherButton from '@/v2/components/chat/V2ChatLauncherButton';
 import { V2Avatar, V2Badge, V2EmptyState, V2Skeleton, V2Surface } from '@/v2/ui/primitives';
 import V2DuprRatingBadge from '@/v2/components/rating/V2DuprRatingBadge';
+import V2DuprEvolution from '@/v2/components/rating/V2DuprEvolution';
 
 function formatPercent(rate) {
   return rate == null ? '—' : `${Math.round(rate * 100)}%`;
@@ -206,6 +207,9 @@ export default function V2AthleteProfile() {
       {ratingHistoryOn && ratingHistory.length >= 2 && (
         <div className="mt-8"><RatingSparkline points={ratingHistory} /></div>
       )}
+
+      {/* Evolução do Nível 2.0–8.0 (estilo DUPR) — auto-oculto pela flag/dados. */}
+      <V2DuprEvolution uid={uid} />
 
       {achievementsOn && (
         <div className="mt-8"><AchievementsCard summary={{ ...stats, rating: rating?.rating }} /></div>

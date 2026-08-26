@@ -12,6 +12,7 @@ import ProgressionCard from '@/modules/progression/components/ProgressionCard';
 import GoalsCard from '@/modules/progression/components/GoalsCard';
 import RatingSparkline from '@/modules/rating/components/RatingSparkline';
 import V2DuprRatingBadge from '@/v2/components/rating/V2DuprRatingBadge';
+import V2DuprEvolution from '@/v2/components/rating/V2DuprEvolution';
 import AchievementsCard from '@/modules/achievements/components/AchievementsCard';
 import MyGamesPanel from '@/v2/components/performance/MyGamesPanel';
 import {
@@ -107,6 +108,10 @@ function StatsPanel() {
           {ratingHistoryOn && ratingHistory.length >= 2 && (
             <div className="mt-8"><RatingSparkline points={ratingHistory} /></div>
           )}
+
+          {/* Evolução do Nível 2.0–8.0 (estilo DUPR) — auto-oculto pela flag/dados. */}
+          <V2DuprEvolution uid={user?.uid} />
+
 
           {achievementsOn && (
             <div className="mt-8"><AchievementsCard summary={{ ...stats, weekStreak: computeWeekStreak(matchDates) }} /></div>
