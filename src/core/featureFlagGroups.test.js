@@ -11,10 +11,12 @@ describe('featureFlagGroups', () => {
     expect(flagGroupId('arena_module_iot_sensors')).toBe(FLAG_GROUP_ARENA_V3.id);
   });
 
-  it('classifica flags conhecidas nos grupos certos', () => {
-    expect(flagGroupId(FEATURE_FLAG.COACH_LESSONS)).toBe('coaches');
-    expect(flagGroupId(FEATURE_FLAG.SHARED_BOOKINGS)).toBe('arenas');
-    expect(flagGroupId(FEATURE_FLAG.MULTI_PHASE_TOURNAMENTS)).toBe('tournaments');
+  it('classifica a flag remanescente no grupo certo', () => {
+    expect(flagGroupId(FEATURE_FLAG.DUPR_OFFICIAL_SYNC)).toBe('athlete');
+  });
+
+  it('classifica chaves desconhecidas em "other"', () => {
+    expect(flagGroupId('flag_inexistente')).toBe(FLAG_GROUP_OTHER.id);
   });
 
   it('bucketAllFlags cobre TODAS as flags sem perder nenhuma', () => {
