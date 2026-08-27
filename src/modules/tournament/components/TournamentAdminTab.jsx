@@ -50,8 +50,6 @@ import {
 import { collection, query, where, getDocs } from 'firebase/firestore';
 import { db } from '@/core/config/firebase';
 import { useAuth } from '@/core/lib/FirebaseAuthContext';
-import { useFeatureFlag } from '@/core/lib/FeatureFlagsContext';
-import { FEATURE_FLAG } from '@/core/featureFlags';
 import DuplicateTournamentDialog from '@/modules/tournament/components/DuplicateTournamentDialog';
 import TournamentAnnouncementsCard from '@/modules/tournament/components/TournamentAnnouncementsCard';
 
@@ -112,13 +110,13 @@ export default function TournamentAdminTab({ tournament }) {
   const unarchiveMutation = useUnarchiveTournament(tournament.id);
   const [email, setEmail] = useState('');
   const [form, setForm] = useState(() => buildFormState(tournament));
-  const duplicationOn = useFeatureFlag(FEATURE_FLAG.TOURNAMENT_DUPLICATION);
-  const templatesOn = useFeatureFlag(FEATURE_FLAG.TOURNAMENT_TEMPLATES);
+  const duplicationOn = true;
+  const templatesOn = true;
   const [duplicateOpen, setDuplicateOpen] = useState(false);
-  const lifecycleOn = useFeatureFlag(FEATURE_FLAG.TOURNAMENT_LIFECYCLE);
-  const cancelActionOn = useFeatureFlag(FEATURE_FLAG.TOURNAMENT_CANCEL_ACTION);
-  const paymentOn = useFeatureFlag(FEATURE_FLAG.PAYMENT_INSTRUCTIONS);
-  const announcementsOn = useFeatureFlag(FEATURE_FLAG.TOURNAMENT_ANNOUNCEMENTS);
+  const lifecycleOn = true;
+  const cancelActionOn = true;
+  const paymentOn = true;
+  const announcementsOn = true;
   const lockMutation = useSetResultsLocked(tournament.id);
   const isFinished = tournament.status === TOURNAMENT_STATUS.FINISHED;
   const isLocked = Boolean(tournament.results_locked);

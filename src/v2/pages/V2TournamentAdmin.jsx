@@ -13,8 +13,6 @@
 import React from 'react';
 import { Link, Navigate, useParams } from 'react-router-dom';
 import { ArrowLeft, Eye, ShieldCheck } from 'lucide-react';
-import { useFeatureFlag } from '@/core/lib/FeatureFlagsContext';
-import { FEATURE_FLAG } from '@/core/featureFlags';
 import { useTournament, useIsTournamentAdmin } from '@/modules/tournament/hooks/useTournament';
 import { TOURNAMENT_STATUS_LABELS } from '@/modules/tournament/domain/constants';
 import V2TournamentAdminPanel from '@/v2/components/tournament/V2TournamentAdminPanel';
@@ -22,7 +20,7 @@ import { V2Badge, V2Button, V2Skeleton } from '@/v2/ui/primitives';
 
 export default function V2TournamentAdmin() {
   const { tournamentId } = useParams();
-  const consoleOn = useFeatureFlag(FEATURE_FLAG.TOURNAMENT_ADMIN_CONSOLE);
+  const consoleOn = true;
   const { data: tournament, isLoading } = useTournament(tournamentId);
   const { data: isAdmin, isLoading: loadingAdmin } = useIsTournamentAdmin(tournamentId);
 

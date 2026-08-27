@@ -29,8 +29,6 @@ import {
 } from '@/modules/arenas/domain/inventory';
 import { CATALOG_SUBCATEGORIES, CATALOG_PACKAGINGS } from '@/modules/arenas/domain/productCatalog';
 import { formatPrice } from '@/modules/arenas/domain/pricing';
-import { useFeatureFlag } from '@/core/lib/FeatureFlagsContext';
-import { FEATURE_FLAG } from '@/core/featureFlags';
 import ProductTypeahead from '@/v2/components/arenas/ProductTypeahead';
 import V2ArenaGestaoTab from '@/v2/components/arenas/V2ArenaGestaoTab';
 import V2ArenaCatalogBrowser from '@/v2/components/arenas/V2ArenaCatalogBrowser';
@@ -63,8 +61,8 @@ const SUB_HINTS = {
  */
 export default function V2ArenaMercadoTab() {
   const { arenaId } = useParams();
-  const catalogOn = useFeatureFlag(FEATURE_FLAG.ARENA_PRODUCT_CATALOG);
-  const reportsOn = useFeatureFlag(FEATURE_FLAG.ARENA_MARKET_REPORTS);
+  const catalogOn = true;
+  const reportsOn = true;
   const [sub, setSub] = useState('resumo');
   const [estoqueMode, setEstoqueMode] = useState('list'); // list | catalog
 

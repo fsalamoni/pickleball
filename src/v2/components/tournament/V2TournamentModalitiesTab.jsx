@@ -33,8 +33,6 @@ import {
 } from '@/modules/tournament/domain/scheduling';
 import { normalizePhases, validatePhases, defaultPhase } from '@/modules/tournament/domain/phases';
 import { formatScoringSummary } from '@/modules/tournament/domain/scoring';
-import { useFeatureFlag } from '@/core/lib/FeatureFlagsContext';
-import { FEATURE_FLAG } from '@/core/featureFlags';
 import StageExplanation from '@/modules/tournament/components/StageExplanation';
 import PhasesEditor from '@/modules/tournament/components/PhasesEditor';
 import TeamModalityConfig, { defaultTeamConfig } from '@/v2/components/tournament/TeamModalityConfig';
@@ -93,8 +91,8 @@ function buildFormState(modality) {
 }
 
 export default function V2TournamentModalitiesTab({ tournament, isAdmin }) {
-  const multiPhaseEnabled = useFeatureFlag(FEATURE_FLAG.MULTI_PHASE_TOURNAMENTS);
-  const teamsEnabled = useFeatureFlag(FEATURE_FLAG.TEAM_TOURNAMENTS);
+  const multiPhaseEnabled = true;
+  const teamsEnabled = true;
   const { data: modalities = [], isLoading } = useModalities(tournament.id);
   const createMutation = useCreateModality(tournament.id);
   const updateMutation = useUpdateModality(tournament.id);

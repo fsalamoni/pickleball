@@ -13,8 +13,6 @@ import {
 } from '@/modules/clubs/domain/gameDayFormats';
 import { useCreateGameDay, useUpdateGameDay } from '@/modules/games/hooks/useGameDays';
 import { useAuth } from '@/core/lib/FirebaseAuthContext';
-import { useFeatureFlag } from '@/core/lib/FeatureFlagsContext';
-import { FEATURE_FLAG } from '@/core/featureFlags';
 
 const EMPTY_FORM = {
   title: '', visibility: GAME_DAY_VISIBILITY.PRIVATE, date: '', time: '',
@@ -47,8 +45,8 @@ export default function CreateGameDayDialog({ open, onOpenChange, onCreated, gam
   const create = useCreateGameDay();
   const update = useUpdateGameDay();
   const { userProfile } = useAuth();
-  const formatsOn = useFeatureFlag(FEATURE_FLAG.GAMEDAY_FORMATS);
-  const playOn = useFeatureFlag(FEATURE_FLAG.GAMEDAY_PLAY);
+  const formatsOn = true;
+  const playOn = true;
 
   // Na CRIAÇÃO, os padrões são: visibilidade pública + cidade/UF do usuário.
   const defaultsForNew = () => ({

@@ -8,8 +8,6 @@
 import React, { useMemo, useState } from 'react';
 import { Navigate, Link } from 'react-router-dom';
 import { Users2, Search } from 'lucide-react';
-import { useFeatureFlag } from '@/core/lib/FeatureFlagsContext';
-import { FEATURE_FLAG } from '@/core/featureFlags';
 import { useDoublesRanking } from '@/modules/rating/hooks/useRating';
 import {
   V2Avatar, V2EmptyState, V2PageIntro, V2SearchInput, V2Skeleton, V2Surface,
@@ -24,8 +22,8 @@ function medalEmoji(position) {
 }
 
 export default function V2DoublesRanking() {
-  const enabled = useFeatureFlag(FEATURE_FLAG.DOUBLES_RANKING);
-  const ratingOn = useFeatureFlag(FEATURE_FLAG.PLAYER_RATING);
+  const enabled = true;
+  const ratingOn = true;
   const { data: ranking = [], isLoading } = useDoublesRanking(enabled);
   const [q, setQ] = useState('');
 

@@ -3,8 +3,6 @@ import { Link, useSearchParams } from 'react-router-dom';
 import { Award, Building2, GraduationCap, Hash, MapPin, Search, Users } from 'lucide-react';
 import { useAthletes } from '@/modules/athletes/hooks/useAthletes';
 import { genderLabel } from '@/modules/athletes/domain/constants';
-import { useFeatureFlag } from '@/core/lib/FeatureFlagsContext';
-import { FEATURE_FLAG } from '@/core/featureFlags';
 import {
   V2Avatar,
   V2Badge,
@@ -21,8 +19,8 @@ function clubNames(athlete) {
 
 export default function V2Athletes() {
   const { data: athletes = [], isLoading } = useAthletes();
-  const profilePageOn = useFeatureFlag(FEATURE_FLAG.ATHLETE_PROFILE_PAGE);
-  const coachDirectoryOn = useFeatureFlag(FEATURE_FLAG.COACH_DIRECTORY);
+  const profilePageOn = true;
+  const coachDirectoryOn = true;
   const [params, setParams] = useSearchParams();
   const q = params.get('q') || '';
 

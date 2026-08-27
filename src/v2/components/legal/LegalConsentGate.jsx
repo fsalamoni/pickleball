@@ -11,15 +11,12 @@ import React, { useMemo, useState } from 'react';
 import { toast } from 'sonner';
 import { ShieldCheck, ExternalLink } from 'lucide-react';
 import { useAuth } from '@/core/lib/FirebaseAuthContext';
-import { useFeatureFlag } from '@/core/lib/FeatureFlagsContext';
-import { FEATURE_FLAG } from '@/core/featureFlags';
 import { pendingGateConsents } from '@/modules/legal/domain/consent';
 import { useMyConsents, useAcceptConsents } from '@/modules/legal/hooks/useConsents';
 import { V2Button } from '@/v2/ui/primitives';
 import { legalIcon } from './legalIcons';
 
 export default function LegalConsentGate() {
-  const enabled = useFeatureFlag(FEATURE_FLAG.LEGAL_CENTER);
   const { user, isLoadingAuth } = useAuth();
   const { consentMap, isLoading, isFetched } = useMyConsents();
   const acceptAll = useAcceptConsents();
@@ -29,7 +26,7 @@ export default function LegalConsentGate() {
 
   // Só bloqueia quando: flag on, usuário logado, consentimentos carregados e há
   // pendências. Evita "piscar" durante o carregamento.
-  if (!enabled || !user || isLoadingAuth || isLoading || !isFetched || pending.length === 0) {
+  if (!user || isLoadingAuth || isLoading || !isFetched || pending.length === 0) {
     return null;
   }
 

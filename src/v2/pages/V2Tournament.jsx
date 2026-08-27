@@ -5,8 +5,6 @@ import {
 } from 'lucide-react';
 import { buildICS, icsFilename } from '@/modules/tournament/domain/ics';
 import { useClipboard } from '@/core/lib/useClipboard';
-import { useFeatureFlag } from '@/core/lib/FeatureFlagsContext';
-import { FEATURE_FLAG } from '@/core/featureFlags';
 import { useTournament, useIsTournamentAdmin, useModalities } from '@/modules/tournament/hooks/useTournament';
 import {
   MODALITY_FORMAT_LABELS,
@@ -53,11 +51,11 @@ export default function V2Tournament() {
   const { data: tournament, isLoading } = useTournament(tournamentId);
   const { data: isAdmin } = useIsTournamentAdmin(tournamentId);
   const { data: modalities = [] } = useModalities(tournamentId);
-  const modalityPagesOn = useFeatureFlag(FEATURE_FLAG.MODALITY_PAGES);
-  const galleryOn = useFeatureFlag(FEATURE_FLAG.TOURNAMENT_GALLERY);
-  const calendarExportOn = useFeatureFlag(FEATURE_FLAG.CALENDAR_EXPORT);
-  const tvModeOn = useFeatureFlag(FEATURE_FLAG.TOURNAMENT_TV_MODE);
-  const adminConsoleOn = useFeatureFlag(FEATURE_FLAG.TOURNAMENT_ADMIN_CONSOLE);
+  const modalityPagesOn = true;
+  const galleryOn = true;
+  const calendarExportOn = true;
+  const tvModeOn = true;
+  const adminConsoleOn = true;
   const { copy, copied } = useClipboard();
 
   if (isLoading) {

@@ -10,8 +10,6 @@ import { Navigate, Link } from 'react-router-dom';
 import { toast } from 'sonner';
 import { Settings, User, Download, ShieldCheck, Bell } from 'lucide-react';
 import { useAuth } from '@/core/lib/FirebaseAuthContext';
-import { useFeatureFlag } from '@/core/lib/FeatureFlagsContext';
-import { FEATURE_FLAG } from '@/core/featureFlags';
 import { useMyRegistrations } from '@/modules/tournament/hooks/useTournament';
 import { useMyBookings } from '@/modules/arenas/hooks/useBookings';
 import { buildDataExport, dataExportFilename } from '@/modules/athletes/domain/dataExport';
@@ -24,8 +22,8 @@ import {
 } from '@/v2/ui/primitives';
 
 export default function V2Settings() {
-  const enabled = useFeatureFlag(FEATURE_FLAG.SETTINGS_PAGE);
-  const notifPrefsOn = useFeatureFlag(FEATURE_FLAG.NOTIFICATION_PREFS);
+  const enabled = true;
+  const notifPrefsOn = true;
   const { user, userProfile, updateUserProfile } = useAuth();
   const { data: registrations = [] } = useMyRegistrations();
   const { data: bookings = [] } = useMyBookings();

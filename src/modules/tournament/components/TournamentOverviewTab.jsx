@@ -36,8 +36,6 @@ import {
 } from '@/modules/tournament/domain/capacity';
 import ModalityInfoModal from './ModalityInfoModal';
 import ModalityRegistrationDialog from './ModalityRegistrationDialog';
-import { useFeatureFlag } from '@/core/lib/FeatureFlagsContext';
-import { FEATURE_FLAG } from '@/core/featureFlags';
 import { cn } from '@/core/lib/utils';
 
 function formatDate(value) {
@@ -268,9 +266,9 @@ function ModalityCard({
   const canRegister = isAdmin || isPublic || hasPrivateAccess;
   const occupied = countOccupiedRegistrations(allRegistrations.filter((r) => r.modality_id === modality.id));
   const slotsFull = isRegistrationCapacityReached(occupied, modality.max_entries);
-  const waitlistOn = useFeatureFlag(FEATURE_FLAG.TOURNAMENT_WAITLIST);
+  const waitlistOn = true;
   const canWaitlist = slotsFull && waitlistOn && !alreadyRegistered && !isAdmin;
-  const modalityPagesOn = useFeatureFlag(FEATURE_FLAG.MODALITY_PAGES);
+  const modalityPagesOn = true;
   const modalityHref = `/torneios/${tournament.id}/modalidades/${modality.id}`;
   const pct = getCapacityProgress(confirmed, modality.max_entries);
   const pendingRegistrations = Math.max(occupied - confirmed, 0);

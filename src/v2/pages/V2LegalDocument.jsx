@@ -8,8 +8,6 @@ import React from 'react';
 import { Navigate, useParams, Link } from 'react-router-dom';
 import { toast } from 'sonner';
 import { ChevronLeft, CheckCircle2 } from 'lucide-react';
-import { useFeatureFlag } from '@/core/lib/FeatureFlagsContext';
-import { FEATURE_FLAG } from '@/core/featureFlags';
 import { useAuth } from '@/core/lib/FirebaseAuthContext';
 import { getLegalDocumentByRoute } from '@/modules/legal/domain/legalDocuments';
 import { isDocAccepted } from '@/modules/legal/domain/consent';
@@ -18,7 +16,7 @@ import { V2Badge, V2Button, V2EmptyState, V2Surface } from '@/v2/ui/primitives';
 import LegalDocumentView from '@/v2/components/legal/LegalDocumentView';
 
 export default function V2LegalDocument() {
-  const enabled = useFeatureFlag(FEATURE_FLAG.LEGAL_CENTER);
+  const enabled = true;
   const { docRoute } = useParams();
   const { user } = useAuth();
   const doc = getLegalDocumentByRoute(docRoute);

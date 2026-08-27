@@ -27,8 +27,6 @@ import {
 } from '@/modules/tournament/domain/constants';
 import { formatScoringSummary, resolveStageScoringConfig } from '@/modules/tournament/domain/scoring';
 import { normalizePhases } from '@/modules/tournament/domain/phases';
-import { useFeatureFlag } from '@/core/lib/FeatureFlagsContext';
-import { FEATURE_FLAG } from '@/core/featureFlags';
 import { V2Badge, V2Button, V2Surface } from '@/v2/ui/primitives';
 import V2Collapsible from './V2Collapsible';
 import { cn } from '@/core/lib/utils';
@@ -79,7 +77,7 @@ function MatchesTable({ matches, labelById, peopleById, canEdit = false, modalit
   const [courtsideMatch, setCourtsideMatch] = useState(null);
   const markInProgress = useMarkMatchInProgress(modalityId);
   const revertInProgress = useRevertMatchToScheduled(modalityId);
-  const courtsideOn = useFeatureFlag(FEATURE_FLAG.COURTSIDE_SCORING);
+  const courtsideOn = true;
 
   function undoStart(id) {
     revertInProgress.mutate(id, {
@@ -506,7 +504,7 @@ function CourtsideScoreDialog({ match, modalityId, scoringConfig, labelById, onC
 export function V2ModalityMatches({ tournament, modality, isAdmin = false }) {
   const { data: matches = [] } = useAllModalityMatches(modality.id);
   const { data: registrations = [] } = useRegistrations(modality.id);
-  const lifecycleOn = useFeatureFlag(FEATURE_FLAG.TOURNAMENT_LIFECYCLE);
+  const lifecycleOn = true;
   const locked = lifecycleOn && Boolean(tournament.results_locked);
   const canEdit = Boolean(isAdmin) && !locked;
 
@@ -539,7 +537,7 @@ export function V2ModalityMatches({ tournament, modality, isAdmin = false }) {
   const doneCount = matches.filter((m) => m.status === MATCH_STATUS.FINISHED || m.status === MATCH_STATUS.WALKOVER).length;
   const subtitle = matches.length === 0 ? 'Nenhum jogo gerado ainda' : `${doneCount}/${matches.length} jogos concluídos`;
 
-  const bracketTreeOn = useFeatureFlag(FEATURE_FLAG.BRACKET_TREE);
+  const bracketTreeOn = true;
   const hasBracket = useMemo(() => buildBracketColumns(matches).columns.length > 0, [matches]);
   const [treeView, setTreeView] = useState(false);
   const showTree = bracketTreeOn && hasBracket && treeView;

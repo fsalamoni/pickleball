@@ -15,21 +15,18 @@
 import React, { useState } from 'react';
 import { toast } from 'sonner';
 import { ExternalLink, CheckCircle2 } from 'lucide-react';
-import { useFeatureFlag } from '@/core/lib/FeatureFlagsContext';
-import { FEATURE_FLAG } from '@/core/featureFlags';
 import { getLegalDocument } from '@/modules/legal/domain/legalDocuments';
 import { isDocAccepted } from '@/modules/legal/domain/consent';
 import { useMyConsents, useAcceptConsent } from '@/modules/legal/hooks/useConsents';
 
 export function useRoleConsent(docKey) {
-  const enabled = useFeatureFlag(FEATURE_FLAG.LEGAL_CENTER);
   const doc = getLegalDocument(docKey);
   const { consentMap } = useMyConsents();
   const accept = useAcceptConsent();
   const [checked, setChecked] = useState(false);
 
   const alreadyAccepted = !!doc && isDocAccepted(consentMap, doc);
-  const active = enabled && !!doc && !alreadyAccepted;
+  const active = !!doc && !alreadyAccepted;
 
   const guardBeforeSubmit = () => {
     if (!active) return true;
@@ -41,7 +38,7 @@ export function useRoleConsent(docKey) {
   };
 
   const recordAfterSuccess = async () => {
-    if (!enabled || !doc || alreadyAccepted) return;
+    if (!doc || alreadyAccepted) return;
     try {
       await accept.mutateAsync({ key: doc.key, version: doc.version, title: doc.title });
     } catch {
@@ -50,7 +47,7 @@ export function useRoleConsent(docKey) {
   };
 
   let field = null;
-  if (enabled && doc) {
+  if (doc) {
     field = alreadyAccepted ? (
       <div className="flex items-center gap-2 rounded-2xl border border-green-200 bg-green-50 p-3 text-sm text-green-800">
         <CheckCircle2 className="h-4 w-4 shrink-0" />

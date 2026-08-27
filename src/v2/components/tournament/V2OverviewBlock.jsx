@@ -42,8 +42,6 @@ import {
 import { canSelfCheckIn, hasCheckedIn } from '@/modules/tournament/domain/checkin';
 import { useRespondPartnerInvite, useSelfCheckIn } from '@/modules/tournament/hooks/useTournament';
 import { toast } from 'sonner';
-import { useFeatureFlag } from '@/core/lib/FeatureFlagsContext';
-import { FEATURE_FLAG } from '@/core/featureFlags';
 import { V2Badge, V2Button, V2Surface } from '@/v2/ui/primitives';
 import { cn } from '@/core/lib/utils';
 
@@ -262,8 +260,8 @@ function ModalityCard({ modality, confirmed, tournament, currentUserId, allRegis
   );
   const canRegister = isAdmin || isPublic || hasPrivateAccess;
   const modalityRegs = allRegistrations.filter((r) => r.modality_id === modality.id);
-  const partnerInvitesOn = useFeatureFlag(FEATURE_FLAG.PARTNER_INVITES);
-  const paymentOn = useFeatureFlag(FEATURE_FLAG.PAYMENT_INSTRUCTIONS);
+  const partnerInvitesOn = true;
+  const paymentOn = true;
   const respondMutation = useRespondPartnerInvite();
   const [payOpen, setPayOpen] = useState(false);
   // Convite de dupla endereçado a mim, ainda pendente (flag partner_invites).
@@ -284,7 +282,7 @@ function ModalityCard({ modality, confirmed, tournament, currentUserId, allRegis
   );
 
   // Self check-in (flag athlete_self_checkin).
-  const selfCheckinOn = useFeatureFlag(FEATURE_FLAG.ATHLETE_SELF_CHECKIN);
+  const selfCheckinOn = true;
   const selfCheckInMutation = useSelfCheckIn();
   const canCheckInOwn = Boolean(
     selfCheckinOn && myRegistration
@@ -312,10 +310,10 @@ function ModalityCard({ modality, confirmed, tournament, currentUserId, allRegis
   }
   const occupied = countOccupiedRegistrations(modalityRegs);
   const slotsFull = isRegistrationCapacityReached(occupied, modality.max_entries);
-  const waitlistOn = useFeatureFlag(FEATURE_FLAG.TOURNAMENT_WAITLIST);
+  const waitlistOn = true;
   const canWaitlist = slotsFull && waitlistOn && !alreadyRegistered && !isAdmin;
-  const modalityPagesOn = useFeatureFlag(FEATURE_FLAG.MODALITY_PAGES);
-  const teamsOn = useFeatureFlag(FEATURE_FLAG.TEAM_TOURNAMENTS);
+  const modalityPagesOn = true;
+  const teamsOn = true;
   const isTeam = teamsOn && !!modality.team_config;
   const modalityHref = `/torneios/${tournament.id}/modalidades/${modality.id}`;
   const pct = getCapacityProgress(confirmed, modality.max_entries);

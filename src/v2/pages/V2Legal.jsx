@@ -6,8 +6,6 @@
 import React from 'react';
 import { Navigate, Link } from 'react-router-dom';
 import { CheckCircle2, ChevronRight, ScrollText, ShieldAlert } from 'lucide-react';
-import { useFeatureFlag } from '@/core/lib/FeatureFlagsContext';
-import { FEATURE_FLAG } from '@/core/featureFlags';
 import { useAuth } from '@/core/lib/FirebaseAuthContext';
 import { LEGAL_DOCUMENTS, LEGAL_CATEGORY } from '@/modules/legal/domain/legalDocuments';
 import { isDocAccepted } from '@/modules/legal/domain/consent';
@@ -28,7 +26,7 @@ function formatMs(ms) {
 }
 
 export default function V2Legal() {
-  const enabled = useFeatureFlag(FEATURE_FLAG.LEGAL_CENTER);
+  const enabled = true;
   const { user } = useAuth();
   const { consentMap } = useMyConsents();
 

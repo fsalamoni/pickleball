@@ -38,8 +38,6 @@ import { useInviteToBooking } from '@/modules/arenas/hooks/useSharedBookings';
 import { BOOKING_STATUS } from '@/modules/arenas/domain/constants';
 import AthleteMultiPicker from '@/modules/athletes/components/AthleteMultiPicker';
 import { useJoinWaitlist, useMyWaitlist } from '@/modules/arenas/hooks/useBookingWaitlist';
-import { useFeatureFlag } from '@/core/lib/FeatureFlagsContext';
-import { FEATURE_FLAG } from '@/core/featureFlags';
 import { isOnWaitlist } from '@/modules/arenas/domain/booking_waitlist';
 import {
   getSlotStatus,
@@ -106,7 +104,6 @@ function expandBookingSlots(booking) {
 
 export default function V2DaySlotsDialog({ arena, arenaId, date, courtId: initialCourtId, courts = [], onClose }) {
   const { isAuthenticated, user } = useAuth();
-  const waitlistOn = useFeatureFlag(FEATURE_FLAG.BOOKING_WAITLIST);
   const { data: schedules = [], isLoading: loadingSchedules } = useArenaCourtSchedules(arenaId);
   const { data: bookings = [], isLoading: loadingBookings } = useArenaBookings(arenaId);
   const { data: unavailabilities = [], isLoading: loadingUnav } = useArenaUnavailabilities(arenaId);
@@ -513,7 +510,7 @@ export default function V2DaySlotsDialog({ arena, arenaId, date, courtId: initia
                                   )}
                                 </>
                               ) : (
-                                waitlistOn && isAuthenticated && b._slots[0] && (
+                                isAuthenticated && b._slots[0] && (
                                   <div className="mt-2">
                                     <WaitlistButton arena={arena} slot={b._slots[0]} />
                                   </div>

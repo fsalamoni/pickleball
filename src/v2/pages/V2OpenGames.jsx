@@ -7,8 +7,6 @@ import { useOpenGames, useMyOpenGames, useCloseOpenGame } from '@/modules/games/
 import { useJoinPublicGameDay } from '@/modules/games/hooks/useGameDays';
 import { OPEN_GAME_FORMAT_LABELS, OPEN_GAME_STATUS, partitionOpenGamesByDate } from '@/modules/games/domain/openGames';
 import { getLevelByCode } from '@/modules/leveling/data/levels';
-import { useFeatureFlag } from '@/core/lib/FeatureFlagsContext';
-import { FEATURE_FLAG } from '@/core/featureFlags';
 import CreateOpenGameDialog from '@/modules/games/components/CreateOpenGameDialog';
 import V2ChatLauncherButton from '@/v2/components/chat/V2ChatLauncherButton';
 import {
@@ -83,7 +81,7 @@ export default function V2OpenGames() {
   const { data: games = [], isLoading } = useOpenGames();
   const { data: myGames = [] } = useMyOpenGames();
   const closeGame = useCloseOpenGame();
-  const gameDayOn = useFeatureFlag(FEATURE_FLAG.ATHLETE_GAME_DAY);
+  const gameDayOn = true;
   const joinGameDay = useJoinPublicGameDay();
   const [createOpen, setCreateOpen] = useState(false);
 

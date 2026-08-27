@@ -168,7 +168,7 @@ const DEFAULT_CONTENT = Object.freeze({
 
 export default function V2AdminConsole() {
   const { isPlatformAdmin } = useAuth();
-  const enabled = useFeatureFlag(FEATURE_FLAG.ADMIN_CONSOLE);
+  const enabled = true;
   const [searchParams, setSearchParams] = useSearchParams();
   const navigate = useNavigate();
 
@@ -363,7 +363,7 @@ function OverviewTab() {
 }
 
 function QuickActions() {
-  const ratingOn = useFeatureFlag(FEATURE_FLAG.PLAYER_RATING);
+  const ratingOn = true;
   const { mutateAsync, isPending } = useRecomputeRatings();
   const [last, setLast] = useState(null);
 

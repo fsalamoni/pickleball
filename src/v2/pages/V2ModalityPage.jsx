@@ -16,8 +16,6 @@ import { V2ModalityRanking } from '@/v2/components/tournament/V2RankingBlock';
 import { AvatarGroup } from '@/components/ui/user-avatar';
 import { V2Badge, V2Button, V2Skeleton, V2Surface } from '@/v2/ui/primitives';
 import { cn } from '@/core/lib/utils';
-import { useFeatureFlag } from '@/core/lib/FeatureFlagsContext';
-import { FEATURE_FLAG } from '@/core/featureFlags';
 import TeamModalityView from '@/v2/components/tournament/TeamModalityView';
 
 function competitionLabel(modality) {
@@ -40,7 +38,6 @@ export default function V2ModalityPage() {
   const { data: isAdmin } = useIsTournamentAdmin(tournamentId);
   const { data: modalities = [], isLoading: loadingM } = useModalities(tournamentId);
   const { data: registrations = [] } = useRegistrations(modalityId);
-  const teamsEnabled = useFeatureFlag(FEATURE_FLAG.TEAM_TOURNAMENTS);
   const [registerOpen, setRegisterOpen] = useState(false);
   const [tab, setTab] = useState('info');
 
@@ -64,7 +61,7 @@ export default function V2ModalityPage() {
   // Modalidade de EQUIPES: substitui a inscrição/abas padrão pela visão de
   // equipes (inscrição de elenco, confrontos e classificação). Modalidades
   // comuns seguem exatamente como antes.
-  const isTeam = teamsEnabled && !!modality.team_config;
+  const isTeam = !!modality.team_config;
 
   const confirmed = registrations.filter(
     (r) => r.status === REGISTRATION_STATUS.CONFIRMED || r.status === REGISTRATION_STATUS.CHECKED_IN,

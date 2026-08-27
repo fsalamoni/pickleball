@@ -12,8 +12,6 @@ import {
 import { bookingSlots } from '@/modules/arenas/domain/booking';
 import { formatPrice } from '@/modules/arenas/domain/pricing';
 import { brtDateTime } from '@/modules/tournament/domain/ics';
-import { useFeatureFlag } from '@/core/lib/FeatureFlagsContext';
-import { FEATURE_FLAG } from '@/core/featureFlags';
 import AddToCalendarButton from '@/modules/tournament/components/AddToCalendarButton';
 import {
   useUpdateBookingStatus,
@@ -60,7 +58,6 @@ export default function V2BookingRow({ booking, perspective }) {
   const [editing, setEditing] = useState(false);
   const options = { byManager: isArena };
 
-  const calendarExportOn = useFeatureFlag(FEATURE_FLAG.CALENDAR_EXPORT);
   const firstSlot = bookingSlots(booking)[0];
   const calendarEvent = firstSlot && brtDateTime(firstSlot.date, firstSlot.start) ? {
     uid: `booking-${booking.id}@picklerush`,
@@ -191,7 +188,7 @@ export default function V2BookingRow({ booking, perspective }) {
               <Pencil className="h-4 w-4" /> Alterar
             </V2Button>
           )}
-          {calendarExportOn && calendarEvent && (
+          {calendarEvent && (
             <AddToCalendarButton event={calendarEvent} variant="ghost" />
           )}
           <V2Button size="sm" variant="ghost" className="text-red-500 hover:bg-red-50 hover:text-red-600" onClick={handleCancelConfirmed}>

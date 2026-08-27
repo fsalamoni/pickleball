@@ -3,8 +3,6 @@ import { Award, BarChart3, CalendarClock, ListChecks, Medal, Percent, Swords, Tr
 import { usePlayerStats } from '@/modules/performance/hooks/usePlayerStats';
 import { MODALITY_FORMAT_LABELS } from '@/modules/tournament/domain/constants';
 import { useAuth } from '@/core/lib/FirebaseAuthContext';
-import { useFeatureFlag } from '@/core/lib/FeatureFlagsContext';
-import { FEATURE_FLAG } from '@/core/featureFlags';
 import { useRatingHistory } from '@/modules/rating/hooks/useRating';
 import { usePlayerMatchDates } from '@/modules/progression/hooks/useProgression';
 import { computeWeekStreak } from '@/modules/progression/domain/progression';
@@ -27,7 +25,7 @@ function formatPercent(rate) {
 }
 
 export default function V2Performance() {
-  const athleteAgendaOn = useFeatureFlag(FEATURE_FLAG.ATHLETE_AGENDA);
+  const athleteAgendaOn = true;
   const [tab, setTab] = useState('estatistica');
 
   return (
@@ -56,9 +54,9 @@ export default function V2Performance() {
 
 function StatsPanel() {
   const { user } = useAuth();
-  const achievementsOn = useFeatureFlag(FEATURE_FLAG.ACHIEVEMENTS);
-  const ratingHistoryOn = useFeatureFlag(FEATURE_FLAG.RATING_HISTORY);
-  const progressionOn = useFeatureFlag(FEATURE_FLAG.PLAYER_PROGRESSION);
+  const achievementsOn = true;
+  const ratingHistoryOn = true;
+  const progressionOn = true;
   const { stats, isLoading } = usePlayerStats();
   const { data: ratingHistory = [] } = useRatingHistory(user?.uid, ratingHistoryOn);
   const { data: matchDates = [] } = usePlayerMatchDates(user?.uid, progressionOn);

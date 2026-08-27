@@ -4,8 +4,6 @@ import { Timestamp } from 'firebase/firestore';
 import { toast } from 'sonner';
 import { ArrowLeft, Printer, Shield } from 'lucide-react';
 import { useAuth } from '@/core/lib/FirebaseAuthContext';
-import { useFeatureFlag } from '@/core/lib/FeatureFlagsContext';
-import { FEATURE_FLAG } from '@/core/featureFlags';
 import { birthDateToBrtDate, validateRequiredProfile, isRequiredProfileComplete } from '@/core/lib/profileValidation';
 import { cn } from '@/core/lib/utils';
 import { useFunnel } from '@/modules/analytics/hooks/useFunnel';
@@ -41,7 +39,7 @@ function parseDuprRating(raw) {
 export default function V2ProfileEdit() {
   const { user, userProfile, updateUserProfile } = useAuth();
   const { track } = useFunnel();
-  const coachDirectoryOn = useFeatureFlag(FEATURE_FLAG.COACH_DIRECTORY);
+  const coachDirectoryOn = true;
   // Perfil completo de professor (coleção coaches) — fonte para pré-preencher
   // e para manter em sincronia com o "Sou professor" do perfil.
   const { data: myCoach } = useCoach(user?.uid);
@@ -57,7 +55,7 @@ export default function V2ProfileEdit() {
   const [duprRating, setDuprRating] = useState(
     userProfile?.dupr_rating != null ? String(userProfile.dupr_rating) : '',
   );
-  const skillRatingOn = useFeatureFlag(FEATURE_FLAG.SKILL_RATING_DUPR);
+  const skillRatingOn = true;
   const [courtSide, setCourtSide] = useState(userProfile?.court_side || '');
   const [interests, setInterests] = useState(sanitizeInterests(userProfile?.interests));
   const [interestsBusy, setInterestsBusy] = useState(false);

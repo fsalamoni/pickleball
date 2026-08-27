@@ -14,8 +14,6 @@ import {
 } from 'lucide-react';
 import { toast } from 'sonner';
 import { useAuth } from '@/core/lib/FirebaseAuthContext';
-import { useFeatureFlag } from '@/core/lib/FeatureFlagsContext';
-import { FEATURE_FLAG } from '@/core/featureFlags';
 import {
   V2Badge, V2Button, V2CollapsibleSection, V2EmptyState, V2PageIntro, V2Skeleton, V2Surface,
 } from '@/v2/ui/primitives';
@@ -33,7 +31,7 @@ import {
 } from '@/modules/games/domain/gameDay';
 
 export default function V2GameDays() {
-  const enabled = useFeatureFlag(FEATURE_FLAG.ATHLETE_GAME_DAY);
+  const enabled = true;
   const { gameDayId } = useParams();
   if (!enabled) return <Navigate to="/inicio" replace />;
   if (gameDayId) return <GameDayDetail gameDayId={gameDayId} />;

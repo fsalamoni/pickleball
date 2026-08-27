@@ -1,8 +1,6 @@
 import React, { Suspense, lazy } from 'react';
 import { Navigate, Route, Routes } from 'react-router-dom';
 import { useAuth } from '@/core/lib/FirebaseAuthContext';
-import { useFeatureFlag } from '@/core/lib/FeatureFlagsContext';
-import { FEATURE_FLAG } from '@/core/featureFlags';
 import V2Layout from '@/v2/components/V2Layout';
 
 // Páginas nativas v2 (design Athleisure Premium).
@@ -220,6 +218,5 @@ export default function V2App() {
  * desligada, mantém o comportamento atual (redirect silencioso para /).
  */
 function NotFoundRoute() {
-  const notFoundOn = useFeatureFlag(FEATURE_FLAG.NOT_FOUND_PAGE);
-  return notFoundOn ? <V2NotFound /> : <Navigate to="/" replace />;
+  return <V2NotFound />;
 }

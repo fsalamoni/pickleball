@@ -8,8 +8,6 @@ import { V2TournamentMatches } from '@/v2/components/tournament/V2MatchesBlock';
 import TournamentAdminTab from '@/modules/tournament/components/TournamentAdminTab';
 import { V2Badge } from '@/v2/ui/primitives';
 import { cn } from '@/core/lib/utils';
-import { useFeatureFlag } from '@/core/lib/FeatureFlagsContext';
-import { FEATURE_FLAG } from '@/core/featureFlags';
 import { useAuth } from '@/core/lib/FirebaseAuthContext';
 import { useModalities, useMatchesByTournament, useMaybeAutoCloseTournament } from '@/modules/tournament/hooks/useTournament';
 import { useMaybeAutoRecomputeRatings } from '@/modules/rating/hooks/useRating';
@@ -23,8 +21,8 @@ import { TOURNAMENT_STATUS } from '@/modules/tournament/domain/constants';
  */
 function useAutoCloseTournament(tournament) {
   const { isPlatformAdmin } = useAuth();
-  const lifecycleOn = useFeatureFlag(FEATURE_FLAG.TOURNAMENT_LIFECYCLE);
-  const ratingOn = useFeatureFlag(FEATURE_FLAG.PLAYER_RATING);
+  const lifecycleOn = true;
+  const ratingOn = true;
   const { data: modalities = [] } = useModalities(tournament.id);
   const { data: matches = [] } = useMatchesByTournament(tournament.id);
   const autoClose = useMaybeAutoCloseTournament();
@@ -62,7 +60,7 @@ const ADMIN_TABS = [
 
 export default function V2TournamentAdminPanel({ tournament }) {
   const [activeTab, setActiveTab] = useState('geral');
-  const opsOn = useFeatureFlag(FEATURE_FLAG.TOURNAMENT_OPS_DASHBOARD);
+  const opsOn = true;
   useAutoCloseTournament(tournament);
 
   const tabs = opsOn

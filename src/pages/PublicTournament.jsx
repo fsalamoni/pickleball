@@ -19,8 +19,6 @@ import {
   MODALITY_FORMAT_LABELS,
 } from '@/modules/tournament/domain/constants';
 import { useClipboard } from '@/core/lib/useClipboard';
-import { useFeatureFlag } from '@/core/lib/FeatureFlagsContext';
-import { FEATURE_FLAG } from '@/core/featureFlags';
 import { useDocumentMeta } from '@/core/seo/useDocumentMeta';
 import ShareCardButton from '@/modules/sharing/components/ShareCardButton';
 import CertificateButton from '@/modules/tournament/components/CertificateButton';
@@ -49,7 +47,7 @@ function roundLabel(m) {
 export default function PublicTournament() {
   const { tournamentId } = useParams();
   const { copy, copied } = useClipboard();
-  const shareCardsOn = useFeatureFlag(FEATURE_FLAG.SHARE_CARDS);
+  const shareCardsOn = true;
   const publicUrl =
     typeof window !== 'undefined' ? `${window.location.origin}/p/${tournamentId}` : '';
 
@@ -71,13 +69,12 @@ export default function PublicTournament() {
     refetchInterval: 30_000,
   });
 
-  const seoOn = useFeatureFlag(FEATURE_FLAG.PUBLIC_SEO);
   useDocumentMeta({
     title: tournament?.name,
     description: tournament?.description
       || (tournament ? `Torneio de pickleball${tournament.city ? ` em ${tournament.city}` : ''}. Acompanhe modalidades, jogos e ranking.` : ''),
     url: publicUrl,
-  }, seoOn && !!tournament);
+  }, !!tournament);
   const { data: modalities = [] } = useQuery({
     queryKey: ['public', 'modalities', tournamentId],
     queryFn: () => listModalities(tournamentId),

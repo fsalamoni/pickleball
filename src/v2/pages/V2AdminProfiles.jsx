@@ -3,8 +3,6 @@ import { Navigate } from 'react-router-dom';
 import { ArrowRight, RotateCcw, ShieldCheck, UserCog, Wand2, AlertTriangle, CheckCircle2, Eye, EyeOff, Search } from 'lucide-react';
 import { toast } from 'sonner';
 import { useAuth } from '@/core/lib/FirebaseAuthContext';
-import { useFeatureFlag } from '@/core/lib/FeatureFlagsContext';
-import { FEATURE_FLAG } from '@/core/featureFlags';
 import { restoreAthleteProfileFromUserDoc, listAllAthleteProfiles, setAthleteHidden } from '@/modules/athletes/services/athleteService';
 import { migrateProvisionalData } from '@/modules/tournament/services/registrationService';
 import { useRecomputeRatings } from '@/modules/rating/hooks/useRating';
@@ -18,7 +16,7 @@ import {
 
 export default function V2AdminProfiles({ embedded = false }) {
   const { user, isPlatformAdmin } = useAuth();
-  const moderationOn = useFeatureFlag(FEATURE_FLAG.ATHLETE_MODERATION);
+  const moderationOn = true;
   const [profiles, setProfiles] = useState(null);
   const [error, setError] = useState(null);
   const [uid, setUid] = useState('');

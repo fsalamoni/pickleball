@@ -20,8 +20,6 @@ import {
 import {
   V2Badge, V2Button, V2Field, V2Input, V2Select, V2Surface, V2Textarea, V2Skeleton, V2Toggle,
 } from '@/v2/ui/primitives';
-import { useFeatureFlag } from '@/core/lib/FeatureFlagsContext';
-import { FEATURE_FLAG } from '@/core/featureFlags';
 import { DEFAULT_CANCELLATION_HOURS } from '@/modules/arenas/domain/cancellation_policy';
 
 function newBlankRule() {
@@ -199,7 +197,6 @@ export default function V2ArenaRulesTab() {
  * fora do prazo. Desligada a flag, o card não aparece.
  */
 function CancellationPolicyCard({ arena, arenaId, update }) {
-  const on = useFeatureFlag(FEATURE_FLAG.CANCELLATION_POLICY);
   const [form, setForm] = useState({
     enabled: arena.cancellation_policy_enabled === true,
     hours: Number.isFinite(Number(arena.cancellation_deadline_hours)) ? Number(arena.cancellation_deadline_hours) : DEFAULT_CANCELLATION_HOURS,
@@ -214,7 +211,6 @@ function CancellationPolicyCard({ arena, arenaId, update }) {
     });
   }, [arena?.id]);
 
-  if (!on) return null;
 
   async function save() {
     setSaving(true);

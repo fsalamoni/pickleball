@@ -4,8 +4,6 @@ import { Images, Trash2 } from 'lucide-react';
 import { ImageUpload } from '@/components/ui/image-upload';
 import { PhotoLightbox } from '@/components/ui/photo-lightbox';
 import ConfirmDialog from '@/components/ConfirmDialog';
-import { useFeatureFlag } from '@/core/lib/FeatureFlagsContext';
-import { FEATURE_FLAG } from '@/core/featureFlags';
 import {
   useTournamentPhotos,
   useAddTournamentPhoto,
@@ -46,7 +44,7 @@ function PhotoGrid({ photos, canManage, onRemove, alt, emptyText, removeText }) 
 }
 
 export function V2TournamentGallery({ tournamentId, canManage = false }) {
-  const enabled = useFeatureFlag(FEATURE_FLAG.TOURNAMENT_GALLERY);
+  const enabled = true;
   const { data: photos = [] } = useTournamentPhotos(tournamentId, enabled);
   const add = useAddTournamentPhoto(tournamentId);
   const remove = useDeleteTournamentPhoto(tournamentId);

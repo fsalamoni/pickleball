@@ -9,8 +9,6 @@
 import React, { useMemo } from 'react';
 import { Navigate, Link, useSearchParams } from 'react-router-dom';
 import { Search, Users, Trophy, Building2, Users2 } from 'lucide-react';
-import { useFeatureFlag } from '@/core/lib/FeatureFlagsContext';
-import { FEATURE_FLAG } from '@/core/featureFlags';
 import { useAthletes } from '@/modules/athletes/hooks/useAthletes';
 import { usePublicTournaments } from '@/modules/tournament/hooks/useTournament';
 import { useArenas } from '@/modules/arenas/hooks/useArenas';
@@ -23,7 +21,7 @@ import {
 const TYPE_ICON = { athlete: Users, tournament: Trophy, arena: Building2, club: Users2 };
 
 export default function V2Search() {
-  const enabled = useFeatureFlag(FEATURE_FLAG.GLOBAL_SEARCH);
+  const enabled = true;
   const [params, setParams] = useSearchParams();
   const q = params.get('q') || '';
 

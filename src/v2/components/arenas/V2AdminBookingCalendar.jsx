@@ -26,8 +26,6 @@ import { useAuth } from '@/core/lib/FirebaseAuthContext';
 import { cn } from '@/core/lib/utils';
 import { useArena, useArenaCourts, useArenaCourtSchedules,  useArenaUnavailabilities, useAddArenaUnavailability, useDeleteArenaUnavailability } from '@/modules/arenas/hooks/useArenas';
 import { useUpdateBookingStatus, useArenaBookings, useCreateManualBooking, useTransferBooking, useSetBookingNoShow } from '@/modules/arenas/hooks/useBookings';
-import { useFeatureFlag } from '@/core/lib/FeatureFlagsContext';
-import { FEATURE_FLAG } from '@/core/featureFlags';
 import { evaluateCancellation, lateCancellationMessage, normalizeCancellationPolicy } from '@/modules/arenas/domain/cancellation_policy';
 import { useArenaWaitlist, useLeaveWaitlist } from '@/modules/arenas/hooks/useBookingWaitlist';
 import { groupWaitlistBySlot } from '@/modules/arenas/domain/booking_waitlist';
@@ -71,8 +69,8 @@ export default function V2AdminBookingCalendar({ arenaId, embedded = false }) {
   const updateStatus = useUpdateBookingStatus();
   const createManual = useCreateManualBooking();
   const setNoShow = useSetBookingNoShow();
-  const noShowOn = useFeatureFlag(FEATURE_FLAG.NO_SHOW_TRACKING);
-  const cancellationPolicyOn = useFeatureFlag(FEATURE_FLAG.CANCELLATION_POLICY);
+  const noShowOn = true;
+  const cancellationPolicyOn = true;
 
   const [date, setDate] = useState(() => new Date().toISOString().slice(0, 10));
   const [courtId, setCourtId] = useState('all');
@@ -707,7 +705,7 @@ function ManageResponsiblesDialog({ booking, onClose, onDone }) {
  * (ao promover/atender). Desligada a flag, não aparece.
  */
 function ArenaWaitlistPanel({ arenaId }) {
-  const waitlistOn = useFeatureFlag(FEATURE_FLAG.BOOKING_WAITLIST);
+  const waitlistOn = true;
   const { data: entries = [] } = useArenaWaitlist(arenaId, waitlistOn);
   const remove = useLeaveWaitlist();
   if (!waitlistOn || entries.length === 0) return null;

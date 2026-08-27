@@ -37,8 +37,6 @@ import {
   MATCH_STATUS,
 } from '@/modules/tournament/domain/constants';
 import { stageSupportsAdvance } from '@/modules/tournament/domain/progression';
-import { useFeatureFlag } from '@/core/lib/FeatureFlagsContext';
-import { FEATURE_FLAG } from '@/core/featureFlags';
 import MultiPhaseDrawBlock from '@/modules/tournament/components/MultiPhaseDrawBlock';
 
 function formatMatchTime(iso) {
@@ -58,7 +56,7 @@ function roundLabel(m) {
 
 export default function TournamentDrawTab({ tournament, isAdmin }) {
   const { data: modalities = [] } = useModalities(tournament.id);
-  const multiPhaseEnabled = useFeatureFlag(FEATURE_FLAG.MULTI_PHASE_TOURNAMENTS);
+  const multiPhaseEnabled = true;
 
   if (modalities.length === 0) {
     return (
@@ -91,8 +89,8 @@ function ModalityDrawBlock({ tournament, modality, isAdmin }) {
   const redrawKeepGroupsMutation = useRedrawGroupMatchesKeepingGroups();
   const ensurePlaceholdersMutation = useEnsurePlaceholders(modality.id);
   const clearPlaceholdersMutation = useClearPlaceholders(modality.id);
-  const placeholderOn = useFeatureFlag(FEATURE_FLAG.TOURNAMENT_PLACEHOLDER_DRAW);
-  const lifecycleOn = useFeatureFlag(FEATURE_FLAG.TOURNAMENT_LIFECYCLE);
+  const placeholderOn = true;
+  const lifecycleOn = true;
   const locked = lifecycleOn && Boolean(tournament.results_locked);
   const { data: matches = [] } = useMatches(modality.id, 0);
   const { data: registrations = [] } = useRegistrations(modality.id);

@@ -26,8 +26,6 @@ import {
   useEditRegistration,
   useSetRegistrationCheckIn,
 } from '@/modules/tournament/hooks/useTournament';
-import { useFeatureFlag } from '@/core/lib/FeatureFlagsContext';
-import { FEATURE_FLAG } from '@/core/featureFlags';
 import ConfirmDialog from '@/components/ConfirmDialog';
 import { LEVEL_OPTIONS } from '@/modules/leveling/data/levels';
 import {
@@ -56,7 +54,7 @@ export default function TournamentRegistrationsTab({ tournament, isAdmin }) {
   const { user } = useAuth();
   const { data: modalities = [] } = useModalities(tournament.id);
   const { data: registrations = [] } = useRegistrationsByTournament(tournament.id);
-  const csvOn = useFeatureFlag(FEATURE_FLAG.REGISTRATIONS_CSV);
+  const csvOn = true;
   const [openModalityId, setOpenModalityId] = useState(null);
   const openModality = modalities.find((m) => m.id === openModalityId) || null;
 
@@ -132,10 +130,10 @@ function ModalityRegistrationsBlock({ tournament, modality, registrations, isAdm
   const cancelMutation = useCancelRegistration(modality.id);
   const deleteMutation = useDeleteRegistration(modality.id);
   const checkInMutation = useSetRegistrationCheckIn(modality.id);
-  const waitlistOn = useFeatureFlag(FEATURE_FLAG.TOURNAMENT_WAITLIST);
-  const checkinOn = useFeatureFlag(FEATURE_FLAG.TOURNAMENT_CHECKIN);
-  const paymentOn = useFeatureFlag(FEATURE_FLAG.PAYMENT_INSTRUCTIONS);
-  const partnerInvitesOn = useFeatureFlag(FEATURE_FLAG.PARTNER_INVITES);
+  const waitlistOn = true;
+  const checkinOn = true;
+  const paymentOn = true;
+  const partnerInvitesOn = true;
   const [editTarget, setEditTarget] = useState(null);
   const [payOpen, setPayOpen] = useState(false);
   // Inscrição pendente de pagamento do próprio usuário (flag payment_instructions).

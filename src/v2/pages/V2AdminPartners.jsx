@@ -6,8 +6,6 @@ import { ImageUpload } from '@/components/ui/image-upload';
 import ConfirmDialog from '@/components/ConfirmDialog';
 import { PhotoLightbox } from '@/components/ui/photo-lightbox';
 import { useAuth } from '@/core/lib/FirebaseAuthContext';
-import { useFeatureFlag } from '@/core/lib/FeatureFlagsContext';
-import { FEATURE_FLAG } from '@/core/featureFlags';
 import { AFFILIATE_CATEGORY_LABELS, normalizeAffiliateInput } from '@/modules/partners/domain/affiliate';
 import {
   useAffiliateLinks, useCreateAffiliateLink, useUpdateAffiliateLink, useDeleteAffiliateLink,
@@ -19,7 +17,7 @@ import {
 const EMPTY = { title: '', url: '', description: '', category: 'other', image_url: '', active: true, sort_order: 0 };
 
 export default function V2AdminPartners() {
-  const enabled = useFeatureFlag(FEATURE_FLAG.AFFILIATE_LINKS);
+  const enabled = true;
   const { isPlatformAdmin } = useAuth();
   const { data: links = [], isLoading } = useAffiliateLinks();
   const create = useCreateAffiliateLink();

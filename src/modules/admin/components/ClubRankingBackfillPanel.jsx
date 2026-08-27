@@ -21,8 +21,6 @@ import { toast } from 'sonner';
 import { collection, getCountFromServer, getDocs, query, where } from 'firebase/firestore';
 import { db, firebaseDisabledReason, firebaseServicesEnabled } from '@/core/config/firebase';
 import { V2Button, V2Surface } from '@/v2/ui/primitives';
-import { useFeatureFlag } from '@/core/lib/FeatureFlagsContext';
-import { FEATURE_FLAG } from '@/core/featureFlags';
 import {
   useRecomputeAllClubRankings,
   useRecomputeOneClubRanking,
@@ -32,8 +30,8 @@ const COL_CLUBS = 'clubs';
 const COL_RANKINGS = 'club_internal_ratings';
 
 export default function ClubRankingBackfillPanel() {
-  const backfillOn = useFeatureFlag(FEATURE_FLAG.CLUB_INTERNAL_BACKFILL);
-  const rankingOn = useFeatureFlag(FEATURE_FLAG.CLUB_INTERNAL_RANKING);
+  const backfillOn = true;
+  const rankingOn = true;
   const [stats, setStats] = useState({ clubs: 0, materialized: 0, total: 0, loading: true, error: null });
   const [emptyClubs, setEmptyClubs] = useState([]);
   const [loadingEmpty, setLoadingEmpty] = useState(true);

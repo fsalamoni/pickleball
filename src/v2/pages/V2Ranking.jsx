@@ -3,8 +3,6 @@ import { Link, useSearchParams } from 'react-router-dom';
 import { Crown, Search, TrendingUp, Users2 } from 'lucide-react';
 import { useNationalRanking } from '@/modules/rating/hooks/useRating';
 import { useAuth } from '@/core/lib/FirebaseAuthContext';
-import { useFeatureFlag } from '@/core/lib/FeatureFlagsContext';
-import { FEATURE_FLAG } from '@/core/featureFlags';
 import { genderLabel } from '@/modules/athletes/domain/constants';
 import {
   V2Avatar,
@@ -110,9 +108,9 @@ function RankingExplainer() {
 
 function NationalRankingView() {
   const { data: players = [], isLoading } = useNationalRanking();
-  const profilePageOn = useFeatureFlag(FEATURE_FLAG.ATHLETE_PROFILE_PAGE);
-  const rankingFiltersOn = useFeatureFlag(FEATURE_FLAG.RANKING_FILTERS);
-  const doublesRankingOn = useFeatureFlag(FEATURE_FLAG.DOUBLES_RANKING);
+  const profilePageOn = true;
+  const rankingFiltersOn = true;
+  const doublesRankingOn = true;
   const { user } = useAuth();
   const [search, setSearch] = useState('');
   const [stateFilter, setStateFilter] = useState(ALL);
@@ -283,7 +281,7 @@ function NationalRankingView() {
  * página fica idêntica ao comportamento anterior.
  */
 export default function V2Ranking() {
-  const duprOn = useFeatureFlag(FEATURE_FLAG.SKILL_RATING_DUPR);
+  const duprOn = true;
   const [params, setParams] = useSearchParams();
 
   if (!duprOn) return <NationalRankingView />;

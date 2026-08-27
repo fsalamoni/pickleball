@@ -74,8 +74,8 @@ export default function V2AdminMetrics() {
 }
 
 function RatingsPanel() {
-  const ratingOn = useFeatureFlag(FEATURE_FLAG.PLAYER_RATING);
-  const lifecycleOn = useFeatureFlag(FEATURE_FLAG.TOURNAMENT_LIFECYCLE);
+  const ratingOn = true;
+  const lifecycleOn = true;
   const { mutateAsync, isPending } = useRecomputeRatings();
   const [last, setLast] = useState(null);
   if (!ratingOn) return null;

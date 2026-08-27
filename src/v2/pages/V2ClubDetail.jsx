@@ -12,8 +12,6 @@ import {
 } from '@/modules/clubs/hooks/useClubs';
 import { useClubInternalRanking } from '@/modules/clubs/hooks/useClubInternalRanking';
 import { useRecomputeOneClubRanking } from '@/modules/clubs/hooks/useClubRankingAdmin';
-import { useFeatureFlag } from '@/core/lib/FeatureFlagsContext';
-import { FEATURE_FLAG } from '@/core/featureFlags';
 import { CLUB_ROLE, JOIN_REQUEST_STATUS } from '@/modules/clubs/domain/constants';
 import V2ClubMembers from '@/v2/components/clubs/V2ClubMembers';
 import V2ClubEvents from '@/v2/components/clubs/V2ClubEvents';
@@ -37,8 +35,8 @@ export default function V2ClubDetail() {
   const requestToJoin = useRequestToJoinClub();
   const acceptInvite = useAcceptClubInvite(clubId);
   const declineInvite = useDeclineClubInvite(clubId);
-  const clubRankingOn = useFeatureFlag(FEATURE_FLAG.CLUB_INTERNAL_RANKING);
-  const inviteLinkOn = useFeatureFlag(FEATURE_FLAG.CLUB_INVITE_LINK);
+  const clubRankingOn = true;
+  const inviteLinkOn = true;
   const [searchParams, setSearchParams] = useSearchParams();
   const [code, setCode] = useState(() => (inviteLinkOn ? (searchParams.get('invite') || '') : ''));
   const activeTab = searchParams.get('tab') || 'members';
@@ -251,7 +249,7 @@ export default function V2ClubDetail() {
 }
 
 function ClubRankingTab({ clubId, isAdmin }) {
-  const doublesOn = useFeatureFlag(FEATURE_FLAG.CLUB_INTERNAL_DOUBLES_RANKING);
+  const doublesOn = true;
   const [tab, setTab] = useState('individual'); // 'individual' | 'doubles'
   const [includeExternal, setIncludeExternal] = useState(false);
   const { data, isLoading, refetch } = useClubInternalRanking(clubId, { includeExternal });

@@ -6,8 +6,6 @@ import { useAuth } from '@/core/lib/FirebaseAuthContext';
 import { useCreateTournament, useMyTournaments, useDuplicateTournament } from '@/modules/tournament/hooks/useTournament';
 import { listModalities } from '@/modules/tournament/services/modalityService';
 import { useMyManagedArenas } from '@/modules/arenas/hooks/useArenas';
-import { useFeatureFlag } from '@/core/lib/FeatureFlagsContext';
-import { FEATURE_FLAG } from '@/core/featureFlags';
 import {
   RULESET,
   RULESET_LABELS,
@@ -41,7 +39,7 @@ export default function V2CreateTournament() {
   const navigate = useNavigate();
   const { isAuthAvailable } = useAuth();
   const createMutation = useCreateTournament();
-  const wizardOn = useFeatureFlag(FEATURE_FLAG.TOURNAMENT_WIZARD);
+  const wizardOn = true;
   const isPreview = import.meta.env.DEV && !isAuthAvailable;
   const [step, setStep] = useState(0);
   const [form, setForm] = useState({
@@ -215,7 +213,7 @@ export default function V2CreateTournament() {
 
 function TemplatePicker() {
   const navigate = useNavigate();
-  const templatesOn = useFeatureFlag(FEATURE_FLAG.TOURNAMENT_TEMPLATES);
+  const templatesOn = true;
   const { data: myTournaments = [] } = useMyTournaments();
   const duplicate = useDuplicateTournament();
   const [templateId, setTemplateId] = useState('');

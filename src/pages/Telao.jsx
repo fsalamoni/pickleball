@@ -10,8 +10,6 @@ import React, { useMemo } from 'react';
 import { useParams, Navigate } from 'react-router-dom';
 import { useQuery } from '@tanstack/react-query';
 import { Radio, Clock, CheckCircle2, MapPin } from 'lucide-react';
-import { useFeatureFlag } from '@/core/lib/FeatureFlagsContext';
-import { FEATURE_FLAG } from '@/core/featureFlags';
 import { getTournament } from '@/modules/tournament/services/tournamentService';
 import { listModalities } from '@/modules/tournament/services/modalityService';
 import { listAllMatchesForModality } from '@/modules/tournament/services/matchService';
@@ -65,7 +63,7 @@ function timeText(value) {
 
 export default function Telao() {
   const { tournamentId } = useParams();
-  const tvOn = useFeatureFlag(FEATURE_FLAG.TOURNAMENT_TV_MODE);
+  const tvOn = true;
 
   const { data, isLoading } = useQuery({
     queryKey: ['telao', tournamentId],

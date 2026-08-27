@@ -1,8 +1,6 @@
 import React from 'react';
 import { Link, Navigate, useParams } from 'react-router-dom';
 import { ArrowLeft, Award, Building2, ChevronRight, GraduationCap, Hash, Medal, Percent, ShieldCheck, Swords, Trophy } from 'lucide-react';
-import { useFeatureFlag } from '@/core/lib/FeatureFlagsContext';
-import { FEATURE_FLAG } from '@/core/featureFlags';
 import { useAthleteProfile } from '@/modules/athletes/hooks/useAthleteProfile';
 import { genderLabel } from '@/modules/athletes/domain/constants';
 import { MODALITY_FORMAT_LABELS } from '@/modules/tournament/domain/constants';
@@ -30,13 +28,13 @@ function clubNames(athlete) {
 }
 
 export default function V2AthleteProfile() {
-  const enabled = useFeatureFlag(FEATURE_FLAG.ATHLETE_PROFILE_PAGE);
-  const followOn = useFeatureFlag(FEATURE_FLAG.FOLLOW_ATHLETES);
-  const ratingHistoryOn = useFeatureFlag(FEATURE_FLAG.RATING_HISTORY);
-  const headToHeadOn = useFeatureFlag(FEATURE_FLAG.HEAD_TO_HEAD);
-  const achievementsOn = useFeatureFlag(FEATURE_FLAG.ACHIEVEMENTS);
-  const coachResidentOn = useFeatureFlag(FEATURE_FLAG.COACH_RESIDENT);
-  const levelingOn = useFeatureFlag(FEATURE_FLAG.COACH_LEVELING);
+  const enabled = true;
+  const followOn = true;
+  const ratingHistoryOn = true;
+  const headToHeadOn = true;
+  const achievementsOn = true;
+  const coachResidentOn = true;
+  const levelingOn = true;
   const { uid } = useParams();
   const { data, isLoading, isError } = useAthleteProfile(uid);
   const { data: ratingHistory = [] } = useRatingHistory(uid, ratingHistoryOn);

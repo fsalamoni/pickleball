@@ -12,8 +12,6 @@ import { Label } from '@/components/ui/label';
 import { toast } from 'sonner';
 import { AlertTriangle, Info, Search, X } from 'lucide-react';
 import { useAuth } from '@/core/lib/FirebaseAuthContext';
-import { useFeatureFlag } from '@/core/lib/FeatureFlagsContext';
-import { FEATURE_FLAG } from '@/core/featureFlags';
 import { useCreateRegistration, useRegistrations } from '@/modules/tournament/hooks/useTournament';
 import { useAllPlatformUsers } from '@/modules/admin/hooks/usePlatformUsers';
 import { MODALITY_FORMAT, COMPETITION_GENDER } from '@/modules/tournament/domain/constants';
@@ -56,10 +54,10 @@ export default function ModalityRegistrationDialog({
   isAdmin = false,
 }) {
   const { user, userProfile, isPlatformAdmin } = useAuth();
-  const waitlistOn = useFeatureFlag(FEATURE_FLAG.TOURNAMENT_WAITLIST);
-  const adminAthleteRegOn = useFeatureFlag(FEATURE_FLAG.ADMIN_ATHLETE_REGISTRATION);
-  const paymentOn = useFeatureFlag(FEATURE_FLAG.PAYMENT_INSTRUCTIONS);
-  const partnerInvitesOn = useFeatureFlag(FEATURE_FLAG.PARTNER_INVITES);
+  const waitlistOn = true;
+  const adminAthleteRegOn = true;
+  const paymentOn = true;
+  const partnerInvitesOn = true;
   const createMutation = useCreateRegistration();
   // Etapa de pagamento (flag payment_instructions): guarda o id da inscrição
   // recém-criada para exibir as instruções PIX sem fechar o dialog.

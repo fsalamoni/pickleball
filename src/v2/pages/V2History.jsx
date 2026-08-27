@@ -1,8 +1,6 @@
 import React from 'react';
 import { Navigate } from 'react-router-dom';
 import { Flag, Globe2, History, Lightbulb, Sparkles } from 'lucide-react';
-import { useFeatureFlag } from '@/core/lib/FeatureFlagsContext';
-import { FEATURE_FLAG } from '@/core/featureFlags';
 import { V2BulletList, V2ContentHero, V2ContentSection } from '@/v2/ui/primitives';
 
 const MILESTONES = [
@@ -23,7 +21,7 @@ const CURIOSITIES = [
 ];
 
 export default function V2History() {
-  const enabled = useFeatureFlag(FEATURE_FLAG.SPORT_HISTORY);
+  const enabled = true;
   if (!enabled) return <Navigate to="/" replace />;
 
   return (

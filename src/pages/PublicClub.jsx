@@ -11,14 +11,12 @@ import { useParams, Link, Navigate } from 'react-router-dom';
 import { useQuery } from '@tanstack/react-query';
 import { Building2, MapPin, Mail, Phone, Users } from 'lucide-react';
 import { useAuth } from '@/core/lib/FirebaseAuthContext';
-import { useFeatureFlag } from '@/core/lib/FeatureFlagsContext';
-import { FEATURE_FLAG } from '@/core/featureFlags';
 import { getClub } from '@/modules/clubs/services/clubService';
 import { useDocumentMeta } from '@/core/seo/useDocumentMeta';
 
 export default function PublicClub() {
   const { clubId } = useParams();
-  const publicOn = useFeatureFlag(FEATURE_FLAG.CLUB_PUBLIC_PAGE);
+  const publicOn = true;
   const { isAuthenticated } = useAuth();
   const { data: club, isLoading } = useQuery({
     queryKey: ['public-club', clubId],

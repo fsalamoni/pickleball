@@ -8,8 +8,6 @@
 import React, { useState } from 'react';
 import { Link, useParams, Navigate } from 'react-router-dom';
 import { ArrowLeft, GraduationCap, MapPin, Award, MessageCircle, Video, Phone, Mail, Store, Image as ImageIcon } from 'lucide-react';
-import { FEATURE_FLAG } from '@/core/featureFlags';
-import { useFeatureFlag } from '@/core/lib/FeatureFlagsContext';
 import { useAuth } from '@/core/lib/FirebaseAuthContext';
 import { useCoach, useCoachResidencies } from '@/modules/coaches/hooks/useCoaches';
 import { useArena } from '@/modules/arenas/hooks/useArenas';
@@ -61,9 +59,9 @@ export default function V2CoachProfile() {
   const { data: coach, isLoading } = useCoach(coachId);
   const { data: residencies = [] } = useCoachResidencies(coachId);
   const [requesting, setRequesting] = useState(false);
-  const lessonsOn = useFeatureFlag(FEATURE_FLAG.COACH_LESSONS);
-  const linkedClubsOn = useFeatureFlag(FEATURE_FLAG.LINKED_CLUBS);
-  const clinicsOn = useFeatureFlag(FEATURE_FLAG.COACH_CLINICS);
+  const lessonsOn = true;
+  const linkedClubsOn = true;
+  const clinicsOn = true;
 
   const isOwn = user?.uid === coachId;
   const canRequestLesson = lessonsOn && !isOwn && coach && canAcceptStudents(coach);

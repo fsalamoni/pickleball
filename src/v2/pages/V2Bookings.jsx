@@ -3,8 +3,6 @@ import { Link } from 'react-router-dom';
 import { Building2, CalendarClock, Repeat } from 'lucide-react';
 import { useMyBookings } from '@/modules/arenas/hooks/useBookings';
 import { useMyBookingInvites, useMyParticipations } from '@/modules/arenas/hooks/useSharedBookings';
-import { useFeatureFlag } from '@/core/lib/FeatureFlagsContext';
-import { FEATURE_FLAG } from '@/core/featureFlags';
 import BookingParticipantsPanel from '@/modules/arenas/components/BookingParticipantsPanel';
 import {
   BOOKING_STATUS,
@@ -47,7 +45,7 @@ function whenLabel(booking) {
 }
 
 export default function V2Bookings() {
-  const sharedOn = useFeatureFlag(FEATURE_FLAG.SHARED_BOOKINGS);
+  const sharedOn = true;
   const { data: myBookings = [], isLoading } = useMyBookings();
   const { data: invites = [] } = useMyBookingInvites();
   const { data: participations = [] } = useMyParticipations();
