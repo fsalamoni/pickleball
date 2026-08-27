@@ -86,7 +86,12 @@ export default function V2OnboardingWizard() {
 
   async function handlePersonal() {
     const validation = validateRequiredProfile(form);
-    const next = { ...validation.errors };
+    // O tempo de experiência é coletado NO PASSO 1 — então o seu erro (campo
+    // ainda vazio aqui) NÃO pode bloquear o passo 0. Sem essa exclusão, o
+    // assistente nunca avançava do "confirmar os dados" para quem estava
+    // completando o cadastro pela primeira vez.
+    const { pickleballExperience: _laterStep, ...essentialErrors } = validation.errors;
+    const next = { ...essentialErrors };
     if (!form.gender) next.gender = 'Informe seu gênero.';
     if (!form.city.trim()) next.city = 'Informe sua cidade.';
     if (!form.state.trim()) next.state = 'Informe a UF.';

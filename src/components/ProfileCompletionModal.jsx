@@ -84,7 +84,7 @@ export default function ProfileCompletionModal() {
 
   return (
     <AlertDialog open={shouldOpen}>
-      <AlertDialogContent className="max-w-xl">
+      <AlertDialogContent className="max-h-[90dvh] max-w-xl overflow-y-auto">
         <AlertDialogHeader>
           <AlertDialogTitle>Complete seu perfil</AlertDialogTitle>
           <AlertDialogDescription>
