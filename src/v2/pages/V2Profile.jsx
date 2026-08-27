@@ -28,11 +28,13 @@ export default function V2Profile() {
   const location = [userProfile?.city, userProfile?.state].filter(Boolean).join(', ');
   const year = memberSince(userProfile);
 
+  // Rating fica por ÚLTIMO para ficar lado a lado com o selo "Nível 2.0–8.0"
+  // (renderizado logo após os chips).
   const chips = [
-    me ? { icon: Medal, label: `Rating ${me.rating}`, tone: 'acid' } : (userProfile?.level ? { icon: Award, label: userProfile.level } : null),
     genderLabel(userProfile?.gender) ? { icon: User, label: genderLabel(userProfile.gender) } : null,
     location ? { icon: MapPin, label: location } : null,
     userProfile?.dupr_id ? { icon: Hash, label: `DUPR ${userProfile.dupr_id}` } : null,
+    me ? { icon: Medal, label: `Rating ${me.rating}`, tone: 'acid' } : (userProfile?.level ? { icon: Award, label: userProfile.level } : null),
   ].filter(Boolean);
 
   return (

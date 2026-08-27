@@ -1,5 +1,4 @@
 import React from 'react';
-import { Link } from 'react-router-dom';
 import { Sparkles } from 'lucide-react';
 import { useFeatureFlag } from '@/core/lib/FeatureFlagsContext';
 import { FEATURE_FLAG } from '@/core/featureFlags';
@@ -12,9 +11,9 @@ function fmt(rating) {
 }
 
 /**
- * Selo "Nível 2.0–8.0" (ranking estilo DUPR) de um atleta. AUTO-GATED: se a flag
- * `skill_rating_dupr` estiver desligada, ou o atleta ainda não tiver rating
- * calculado, retorna null — sem poluir a tela. Leva para a aba do ranking.
+ * Selo "Nível 2.0–8.0" (ranking estilo DUPR) de um atleta — apenas EXIBE o
+ * nível (não é link). AUTO-GATED: some se a flag `skill_rating_dupr` estiver
+ * off, ou se o atleta ainda não tiver rating calculado.
  *
  * @param {{ uid: string, className?: string }} props
  */
@@ -32,16 +31,15 @@ export default function V2DuprRatingBadge({ uid, className }) {
   if (sGames > 0) parts.push(`S ${fmt(data.singles_rating)}`);
 
   return (
-    <Link
-      to="/ranking?tab=dupr"
-      title="Ranking estilo DUPR (escala 2.0–8.0)"
+    <span
+      title="Nível de habilidade (escala 2.0–8.0)"
       className={cn(
-        'inline-flex items-center gap-2 rounded-2xl border border-acid/40 bg-acid/15 px-4 py-2 text-sm font-semibold text-ink transition hover:brightness-95',
+        'inline-flex items-center gap-2 rounded-2xl border border-acid/40 bg-acid/15 px-4 py-2 text-sm font-semibold text-ink',
         className,
       )}
     >
       <Sparkles className="h-4 w-4 text-acid" />
       Nível 2.0–8.0 · {parts.join(' · ')}
-    </Link>
+    </span>
   );
 }

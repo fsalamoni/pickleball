@@ -1,6 +1,6 @@
 import React, { useMemo, useState } from 'react';
 import { Link } from 'react-router-dom';
-import { Crown, Info, RefreshCw, Search, Sparkles, TrendingUp } from 'lucide-react';
+import { Crown, RefreshCw, Search, TrendingUp } from 'lucide-react';
 import { toast } from 'sonner';
 import { useAuth } from '@/core/lib/FirebaseAuthContext';
 import { useFeatureFlag } from '@/core/lib/FeatureFlagsContext';
@@ -11,6 +11,7 @@ import {
   V2Button,
   V2Badge,
   V2EmptyState,
+  V2PageIntro,
   V2SearchInput,
   V2Skeleton,
   V2Surface,
@@ -35,21 +36,24 @@ function fmt(rating) {
   return Number.isFinite(n) ? n.toFixed(3) : '—';
 }
 
+/** Explicador no MESMO padrão do ranking nacional (V2Surface + <details>). */
 function DuprExplainer() {
   return (
-    <V2Surface className="mb-6 border-acid/30 bg-acid/5">
-      <details>
-        <summary className="flex cursor-pointer items-center gap-2 font-semibold text-ink">
-          <Info className="h-4 w-4 text-ink" /> Como funciona este ranking (escala 2.0–8.0)
+    <V2Surface className="mb-8">
+      <details className="group">
+        <summary className="flex cursor-pointer list-none items-center justify-between gap-2">
+          <span className="font-semibold text-ink">Como funciona este ranking?</span>
+          <span className="text-xs text-gray-400 group-open:hidden">ver explicação</span>
+          <span className="hidden text-xs text-gray-400 group-open:inline">ocultar</span>
         </summary>
-        <div className="mt-3 space-y-2 text-sm leading-6 text-gray-600">
+        <div className="mt-3 space-y-3 text-sm leading-6 text-gray-600">
           <p>
             É um <strong>ranking próprio da plataforma</strong>, na <strong>mesma escala do DUPR
             (2.000 a 8.000)</strong> e desenhado para se comportar como ele.
           </p>
-          <ul className="ml-4 list-disc space-y-1">
+          <ul className="list-disc space-y-1.5 pl-5">
             <li><strong>Baseado no placar</strong>, não só em vitória/derrota: uma <strong>derrota
-              apertada contra um adversário mais forte pode subir</strong> o seu rating, e uma vitória
+              apertada contra um adversário mais forte pode subir</strong> o rating; uma vitória
               magra sobre iguais quase não mexe.</li>
             <li><strong>Confiabilidade</strong> cresce com os jogos — ratings maduros se movem pouco;
               novatos convergem rápido (por isso a marca <em>provisório</em> no começo).</li>
@@ -59,8 +63,8 @@ function DuprExplainer() {
             <li>Conta os jogos finalizados de <strong>torneios e dias de jogo</strong> da plataforma.</li>
           </ul>
           <p className="text-xs text-gray-500">
-            ⚠️ Este <strong>não é o rating oficial do DUPR</strong> (o algoritmo do DUPR é
-            proprietário). É uma aproximação independente, para leitura interna, na mesma escala.
+            ⚠️ Não é o <strong>rating oficial do DUPR</strong> (o algoritmo do DUPR é proprietário) —
+            é uma aproximação independente, na mesma escala.
           </p>
         </div>
       </details>
@@ -105,26 +109,20 @@ export default function V2DuprRankingView() {
 
   return (
     <div>
-      <div className="mb-4 flex flex-wrap items-start justify-between gap-3">
-        <div>
-          <h1 className="flex items-center gap-2 font-display text-2xl font-bold text-ink">
-            <Sparkles className="h-5 w-5 text-acid" /> Nível de habilidade (escala 2.0–8.0)
-          </h1>
-          <p className="mt-1 text-sm text-gray-500">
-            Ranking próprio no formato DUPR, calculado pelos jogos da plataforma. Não é o rating oficial do DUPR.
-          </p>
-        </div>
-        {isPlatformAdmin && (
+      <V2PageIntro
+        title="Nível de habilidade · escala 2.0–8.0"
+        subtitle="Ranking próprio no formato DUPR, calculado pelos jogos da plataforma. Não é o rating oficial do DUPR."
+        action={isPlatformAdmin ? (
           <V2Button variant="secondary" size="sm" onClick={handleRecompute} disabled={recompute.isPending}>
             <RefreshCw className={cn('h-4 w-4', recompute.isPending && 'animate-spin')} />
             {recompute.isPending ? 'Recalculando…' : 'Recalcular'}
           </V2Button>
-        )}
-      </div>
+        ) : null}
+      />
 
       <DuprExplainer />
 
-      <V2Surface className="mb-6 space-y-4">
+      <V2Surface className="mb-8 space-y-4">
         <div className="inline-flex rounded-full border border-gray-100 bg-paper-pure p-1">
           {FORMATS.map((f) => (
             <button

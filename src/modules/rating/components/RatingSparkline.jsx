@@ -2,9 +2,26 @@ import React from 'react';
 import { Card, CardContent } from '@/components/ui/card';
 import { TrendingUp } from 'lucide-react';
 
+/** Número da pontuação: inteiro como está; decimal com até 3 casas (sem zeros à toa). */
+function fmtValue(n) {
+  if (!Number.isFinite(n)) return '—';
+  return Number.isInteger(n) ? String(n) : String(Number(n.toFixed(3)));
+}
+
+/**
+ * Variação (delta) para exibição — arredondada, com poucos dígitos (não afeta o
+ * cálculo). Inteiro fica inteiro; decimal fica com no máx. 2 casas.
+ */
+function fmtDelta(d) {
+  if (!Number.isFinite(d) || d === 0) return '0';
+  const rounded = Number.isInteger(d) ? d : Number(d.toFixed(2));
+  return rounded > 0 ? `+${rounded}` : String(rounded);
+}
+
 /**
  * Mini-gráfico (sparkline em SVG puro) da evolução do rating. Presentational —
- * o gating pela flag `rating_history` é feito pelo componente pai.
+ * o gating pela flag `rating_history` é feito pelo componente pai. A pontuação
+ * ATUAL é destacada; a variação (verde/vermelho) é arredondada.
  *
  * @param {{ points: Array<{ at: number, rating: number }>, title?: string }} props
  */
@@ -34,13 +51,19 @@ export default function RatingSparkline({ points = [], title = 'Evolução do ra
   return (
     <Card>
       <CardContent className="p-4">
-        <div className="mb-2 flex items-center justify-between">
+        <div className="mb-2 flex items-end justify-between gap-3">
           <h2 className="flex items-center gap-2 text-sm font-semibold text-ink">
             <TrendingUp className="h-4 w-4 text-green-600" /> {title}
           </h2>
-          <span className={`text-xs font-medium tabular-nums ${delta > 0 ? 'text-green-700' : delta < 0 ? 'text-red-600' : 'text-gray-500'}`}>
-            {delta > 0 ? `+${delta}` : delta} desde o início
-          </span>
+          <div className="flex items-baseline gap-2">
+            <span className="font-display text-xl font-bold tabular-nums text-ink">{fmtValue(last)}</span>
+            <span
+              title="variação desde o início"
+              className={`text-xs font-semibold tabular-nums ${delta > 0 ? 'text-green-700' : delta < 0 ? 'text-red-600' : 'text-gray-400'}`}
+            >
+              {fmtDelta(delta)}
+            </span>
+          </div>
         </div>
         <svg viewBox={`0 0 ${width} ${height}`} className="h-28 w-full" preserveAspectRatio="none">
           <polyline
@@ -56,8 +79,8 @@ export default function RatingSparkline({ points = [], title = 'Evolução do ra
           )}
         </svg>
         <div className="mt-1 flex justify-between text-[11px] text-gray-400 tabular-nums">
-          <span>{min}</span>
-          <span>{max}</span>
+          <span>{fmtValue(min)}</span>
+          <span>{fmtValue(max)}</span>
         </div>
       </CardContent>
     </Card>

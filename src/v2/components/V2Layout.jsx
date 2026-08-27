@@ -5,7 +5,6 @@ import {
   LayoutDashboard,
   MapPin,
   Trophy,
-  Sparkles,
   Zap,
   Users,
   Medal,
@@ -113,7 +112,6 @@ function useV2Nav() {
   const coachesOn = useFeatureFlag(FEATURE_FLAG.COACH_RESIDENT);
   const coachLessonsOn = useFeatureFlag(FEATURE_FLAG.COACH_LESSONS);
   const doublesRankingOn = useFeatureFlag(FEATURE_FLAG.DOUBLES_RANKING);
-  const skillRatingOn = useFeatureFlag(FEATURE_FLAG.SKILL_RATING_DUPR);
   const athleteAgendaOn = useFeatureFlag(FEATURE_FLAG.ATHLETE_AGENDA);
   const gameDayOn = useFeatureFlag(FEATURE_FLAG.ATHLETE_GAME_DAY);
   const legalCenterOn = useFeatureFlag(FEATURE_FLAG.LEGAL_CENTER);
@@ -144,7 +142,6 @@ function useV2Nav() {
         { to: '/atletas', label: 'Atletas', icon: Users },
         ratingOn && { to: '/ranking', label: 'Ranking', icon: Medal },
         doublesRankingOn && { to: '/ranking/duplas', label: 'Ranking de duplas', icon: Medal },
-        skillRatingOn && { to: '/ranking?tab=dupr', label: 'Nível 2.0–8.0', icon: Sparkles },
         ratingOn && matchmakingOn && { to: '/encontrar-jogadores', label: 'Encontrar jogadores', icon: Swords },
         openGamesOn && { to: '/procura-jogo', label: 'Procura-se jogo', icon: Megaphone },
         { to: '/clubes', label: 'Clubes', icon: Building2 },
@@ -190,7 +187,7 @@ function useV2Nav() {
         { to: legalCenterOn ? '/legal' : '/politica-uso', label: 'Termos e Documentos', icon: FileText },
       ].filter(Boolean),
     },
-  ].filter(Boolean), [performanceOn, ratingOn, matchmakingOn, openGamesOn, affiliatesOn, communityFeedOn, arenasOn, circuitsOn, coachesOn, coachLessonsOn, isCoach, sportHistoryOn, isPlatformAdmin, adminConsoleOn, gameDayOn, legalCenterOn, myArenasCount, myPendingBookings, showMyArenas, skillRatingOn]);
+  ].filter(Boolean), [performanceOn, ratingOn, matchmakingOn, openGamesOn, affiliatesOn, communityFeedOn, arenasOn, circuitsOn, coachesOn, coachLessonsOn, isCoach, sportHistoryOn, isPlatformAdmin, adminConsoleOn, gameDayOn, legalCenterOn, myArenasCount, myPendingBookings, showMyArenas]);
 
   // Árvore de hubs (flag nav_hubs): destinos centrais (nível 1, barra lateral)
   // com suas subpáginas (nível 2, barra superior). Organizada por tema.
@@ -208,7 +205,6 @@ function useV2Nav() {
           circuitsOn && { to: '/circuits', label: 'Circuitos', icon: Award },
           ratingOn && { to: '/ranking', label: 'Ranking', icon: Medal },
           doublesRankingOn && { to: '/ranking/duplas', label: 'Ranking de duplas', icon: Medal },
-          skillRatingOn && { to: '/ranking?tab=dupr', label: 'Nível 2.0–8.0', icon: Sparkles },
         ],
       }),
       hub({
@@ -273,7 +269,7 @@ function useV2Nav() {
         children: [{ to: '/admin/painel', label: 'Painel admin', icon: LayoutDashboard }],
       }),
     ].filter(Boolean).filter((h) => h.id === 'inicio' || h.children.length > 0);
-  }, [performanceOn, ratingOn, matchmakingOn, openGamesOn, affiliatesOn, communityFeedOn, arenasOn, circuitsOn, coachesOn, coachLessonsOn, isCoach, sportHistoryOn, isPlatformAdmin, adminConsoleOn, doublesRankingOn, athleteAgendaOn, gameDayOn, legalCenterOn, settingsPageOn, myPendingBookings, showMyArenas, skillRatingOn]);
+  }, [performanceOn, ratingOn, matchmakingOn, openGamesOn, affiliatesOn, communityFeedOn, arenasOn, circuitsOn, coachesOn, coachLessonsOn, isCoach, sportHistoryOn, isPlatformAdmin, adminConsoleOn, doublesRankingOn, athleteAgendaOn, gameDayOn, legalCenterOn, settingsPageOn, myPendingBookings, showMyArenas]);
 
   return { sections, hubs };
 }
