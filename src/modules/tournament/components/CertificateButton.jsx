@@ -1,8 +1,6 @@
 import React, { Suspense, lazy, useState } from 'react';
 import { Award } from 'lucide-react';
 import { Button } from '@/components/ui/button';
-import { useFeatureFlag } from '@/core/lib/FeatureFlagsContext';
-import { FEATURE_FLAG } from '@/core/featureFlags';
 
 const CertificateDialog = lazy(() => import('./CertificateDialog.jsx'));
 
@@ -13,9 +11,7 @@ const CertificateDialog = lazy(() => import('./CertificateDialog.jsx'));
  * @param {{ tournament: object, size?: string, variant?: string }} props
  */
 export default function CertificateButton({ tournament, size = 'sm', variant = 'outline' }) {
-  const enabled = useFeatureFlag(FEATURE_FLAG.TOURNAMENT_CERTIFICATES);
   const [open, setOpen] = useState(false);
-  if (!enabled) return null;
 
   return (
     <>

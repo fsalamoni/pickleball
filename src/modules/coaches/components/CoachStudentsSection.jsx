@@ -11,8 +11,6 @@ import React, { useMemo, useState } from 'react';
 import { toast } from 'sonner';
 import { Users, UserPlus, Pencil, Trash2, Check, ShieldCheck } from 'lucide-react';
 import { useAuth } from '@/core/lib/FirebaseAuthContext';
-import { useFeatureFlag } from '@/core/lib/FeatureFlagsContext';
-import { FEATURE_FLAG } from '@/core/featureFlags';
 import {
   filterStudents, sortStudents, rosterSummary, studentStatusLabel,
   studentStatusTone, studentDocId, STUDENT_STATUS,
@@ -232,7 +230,7 @@ function StudentCard({ coachId, coachName, student, completedCount, validation, 
 
 export default function CoachStudentsSection({ coachId, lessons = [] }) {
   const { user } = useAuth();
-  const levelingOn = useFeatureFlag(FEATURE_FLAG.COACH_LEVELING);
+  const levelingOn = true;
   const { data: students = [], isLoading } = useCoachStudents(coachId);
   const { data: validations = [] } = useCoachValidations(levelingOn ? coachId : null);
   const upsert = useUpsertStudent();

@@ -21,8 +21,6 @@ import { toast } from 'sonner';
 import { useNavigate } from 'react-router-dom';
 
 import { useAuth } from '@/core/lib/FirebaseAuthContext';
-import { useFeatureFlag } from '@/core/lib/FeatureFlagsContext';
-import { FEATURE_FLAG } from '@/core/featureFlags';
 import { useCoachAvailability, useCoachBusySlots } from '@/modules/coaches/hooks/useLessons';
 import { generateWeekSlots } from '@/modules/coaches/domain/availability';
 import {
@@ -46,7 +44,6 @@ export default function V2CoachAvailabilityCalendar({ coach, onRequestLesson }) 
   const coachId = coach?.id;
   const navigate = useNavigate();
   const { user, isAuthenticated } = useAuth();
-  const lessonsOn = useFeatureFlag(FEATURE_FLAG.COACH_LESSONS);
 
   const { data: availability, isLoading: loadingAvailability } = useCoachAvailability(coachId);
   const { data: busy = [], isLoading: loadingBusy } = useCoachBusySlots(coachId);
@@ -60,7 +57,6 @@ export default function V2CoachAvailabilityCalendar({ coach, onRequestLesson }) 
 
   const isOwn = user?.uid === coachId;
 
-  if (!lessonsOn) return null;
   if (loadingAvailability || loadingBusy) {
     return <V2Skeleton className="h-32" />;
   }

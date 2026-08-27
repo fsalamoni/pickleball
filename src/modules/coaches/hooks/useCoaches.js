@@ -4,8 +4,6 @@
 
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
 import { useAuth } from '@/core/lib/FirebaseAuthContext';
-import { useFeatureFlag } from '@/core/lib/FeatureFlagsContext';
-import { FEATURE_FLAG } from '@/core/featureFlags';
 import {
   getCoach, listCoaches, upsertCoachProfile, syncCoachDocFromEssentials,
   listCoachResidencies, listArenaCoaches,
@@ -79,9 +77,8 @@ export function useSyncCoachFromProfile() {
 export function useAddCoachResidency() {
   const { user } = useAuth();
   const qc = useQueryClient();
-  const mutualOn = useFeatureFlag(FEATURE_FLAG.PARTNERSHIP_MUTUAL);
   return useMutation({
-    mutationFn: (input) => addCoachResidency(input, user, { requireAcceptance: mutualOn }),
+    mutationFn: (input) => addCoachResidency(input, user, { requireAcceptance: true }),
     onSuccess: (_, vars) => {
       qc.invalidateQueries({ queryKey: ['coaches'] });
       qc.invalidateQueries({ queryKey: ['coaches', 'residencies', vars.coach_id] });

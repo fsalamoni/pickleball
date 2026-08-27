@@ -11,8 +11,6 @@ import { EmptyState } from '@/components/ui/empty-state';
 import { Tabs, TabsList, TabsTrigger, TabsContent } from '@/components/ui/tabs';
 import { ConfirmDialog } from '@/components/ui/confirm-dialog';
 import { useAuth } from '@/core/lib/FirebaseAuthContext';
-import { useFeatureFlag } from '@/core/lib/FeatureFlagsContext';
-import { FEATURE_FLAG } from '@/core/featureFlags';
 import {
   useEventDates,
   useAddEventDate,
@@ -43,7 +41,7 @@ export default function EventDatesPanel({ event, clubId, showGames = false }) {
   const { data: dates = [], isLoading } = useEventDates(eventId);
   const { data: rsvps = [] } = useEventDateRsvps(eventId);
   const addDate = useAddEventDate(eventId);
-  const recurringOn = useFeatureFlag(FEATURE_FLAG.CLUB_RECURRING_EVENTS);
+  const recurringOn = true;
   const [adding, setAdding] = useState(false);
   const [form, setForm] = useState({ date_time: '', location: event.location || '', note: '', repeat_weeks: 1 });
 

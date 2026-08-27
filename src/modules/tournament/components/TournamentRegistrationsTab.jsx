@@ -24,8 +24,6 @@ import {
   useDeleteRegistration,
   useEditRegistration,
 } from '@/modules/tournament/hooks/useTournament';
-import { useFeatureFlag } from '@/core/lib/FeatureFlagsContext';
-import { FEATURE_FLAG } from '@/core/featureFlags';
 import ConfirmDialog from '@/components/ConfirmDialog';
 import { LEVEL_OPTIONS } from '@/modules/leveling/data/levels';
 import {
@@ -90,7 +88,6 @@ function ModalityRegistrationsBlock({ tournament, modality, registrations, isAdm
   const promoteMutation = usePromoteFromWaitlist(modality.id);
   const cancelMutation = useCancelRegistration(modality.id);
   const deleteMutation = useDeleteRegistration(modality.id);
-  const waitlistOn = useFeatureFlag(FEATURE_FLAG.TOURNAMENT_WAITLIST);
   const [editTarget, setEditTarget] = useState(null);
   const confirmed = registrations.filter((r) => r.status === REGISTRATION_STATUS.CONFIRMED).length;
   const occupied = countOccupiedRegistrations(registrations);
@@ -170,7 +167,7 @@ function ModalityRegistrationsBlock({ tournament, modality, registrations, isAdm
                             <Check className="w-4 h-4 text-green-600" />
                           </Button>
                         )}
-                        {waitlistOn && r.status === REGISTRATION_STATUS.WAITLIST && (
+                        {r.status === REGISTRATION_STATUS.WAITLIST && (
                           <Button size="icon" variant="ghost" title="Promover da lista de espera" onClick={() => promoteMutation.mutate(r.id)}>
                             <ArrowUp className="w-4 h-4 text-green-600" />
                           </Button>

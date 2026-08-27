@@ -3,8 +3,6 @@ import { Link } from 'react-router-dom';
 import { Crown, RefreshCw, Search, TrendingUp } from 'lucide-react';
 import { toast } from 'sonner';
 import { useAuth } from '@/core/lib/FirebaseAuthContext';
-import { useFeatureFlag } from '@/core/lib/FeatureFlagsContext';
-import { FEATURE_FLAG } from '@/core/featureFlags';
 import { useDuprRanking, useRecomputeDuprRatings } from '@/modules/rating/hooks/useDuprRating';
 import {
   V2Avatar,
@@ -74,7 +72,6 @@ function DuprExplainer() {
 
 export default function V2DuprRankingView() {
   const { user, isPlatformAdmin } = useAuth();
-  const profilePageOn = useFeatureFlag(FEATURE_FLAG.ATHLETE_PROFILE_PAGE);
   const { data: rows = [], isLoading } = useDuprRanking();
   const recompute = useRecomputeDuprRatings();
   const [format, setFormat] = useState('doubles');
@@ -202,10 +199,8 @@ export default function V2DuprRankingView() {
                 </div>
               </div>
             );
-            return profilePageOn ? (
+            return (
               <Link key={p.uid} to={`/atleta/${p.uid}`} className="block">{row}</Link>
-            ) : (
-              <div key={p.uid}>{row}</div>
             );
           })}
         </div>

@@ -5,8 +5,6 @@ import { Card, CardContent } from '@/components/ui/card';
 import { ImageUpload } from '@/components/ui/image-upload';
 import { PhotoLightbox } from '@/components/ui/photo-lightbox';
 import ConfirmDialog from '@/components/ConfirmDialog';
-import { useFeatureFlag } from '@/core/lib/FeatureFlagsContext';
-import { FEATURE_FLAG } from '@/core/featureFlags';
 import {
   useTournamentPhotos,
   useAddTournamentPhoto,
@@ -20,13 +18,11 @@ import {
  * @param {{ tournamentId: string, canManage?: boolean }} props
  */
 export default function TournamentGallery({ tournamentId, canManage = false }) {
-  const enabled = useFeatureFlag(FEATURE_FLAG.TOURNAMENT_GALLERY);
-  const { data: photos = [] } = useTournamentPhotos(tournamentId, enabled);
+  const { data: photos = [] } = useTournamentPhotos(tournamentId, true);
   const add = useAddTournamentPhoto(tournamentId);
   const remove = useDeleteTournamentPhoto(tournamentId);
   const [pending, setPending] = useState('');
 
-  if (!enabled) return null;
   // Sem fotos e sem permissão de gerir: não ocupa espaço.
   if (photos.length === 0 && !canManage) return null;
 

@@ -15,8 +15,6 @@ import {
 } from '@/components/ui/dialog';
 import { V2Surface, V2Button, V2Badge } from '@/v2/ui/primitives';
 import { useAuth } from '@/core/lib/FirebaseAuthContext';
-import { useFeatureFlag } from '@/core/lib/FeatureFlagsContext';
-import { FEATURE_FLAG } from '@/core/featureFlags';
 import { useAthletes } from '@/modules/athletes/hooks/useAthletes';
 import { generateGameDayGames, suggestRounds, buildDrawHistory } from '@/modules/clubs/domain/gameDayDraw';
 import { planAdditiveDraw, offsetRounds, splitGamesByResult } from '@/modules/clubs/domain/gameDayDrawMerge';
@@ -218,7 +216,7 @@ function GamesSection({ gameDay, participants, isOwner }) {
   const appendGames = useAppendGameDayGames(gameDay.id);
   const addGame = useAddGameDayGame(gameDay.id);
   const clearGames = useClearGameDayGames(gameDay.id);
-  const formatsOn = useFeatureFlag(FEATURE_FLAG.GAMEDAY_FORMATS);
+  const formatsOn = true;
   const [rounds, setRounds] = useState(0);
   const [format, setFormat] = useState(gameDay.format || GAME_DAY_FORMAT.AMERICANO);
   const [drawOpen, setDrawOpen] = useState(false);

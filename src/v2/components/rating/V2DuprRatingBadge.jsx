@@ -1,7 +1,5 @@
 import React from 'react';
 import { Sparkles } from 'lucide-react';
-import { useFeatureFlag } from '@/core/lib/FeatureFlagsContext';
-import { FEATURE_FLAG } from '@/core/featureFlags';
 import { useDuprRatingForUid } from '@/modules/rating/hooks/useDuprRating';
 import { cn } from '@/core/lib/utils';
 
@@ -18,10 +16,9 @@ function fmt(rating) {
  * @param {{ uid: string, className?: string }} props
  */
 export default function V2DuprRatingBadge({ uid, className }) {
-  const on = useFeatureFlag(FEATURE_FLAG.SKILL_RATING_DUPR);
-  const { data } = useDuprRatingForUid(uid, on);
+  const { data } = useDuprRatingForUid(uid, true);
 
-  if (!on || !uid || !data) return null;
+  if (!uid || !data) return null;
   const dGames = data.doubles_games || 0;
   const sGames = data.singles_games || 0;
   if (dGames === 0 && sGames === 0) return null;

@@ -1,6 +1,4 @@
 import React from 'react';
-import { useFeatureFlag } from '@/core/lib/FeatureFlagsContext';
-import { FEATURE_FLAG } from '@/core/featureFlags';
 import { useDuprRatingHistory } from '@/modules/rating/hooks/useDuprRating';
 import RatingSparkline from '@/modules/rating/components/RatingSparkline';
 
@@ -13,10 +11,9 @@ import RatingSparkline from '@/modules/rating/components/RatingSparkline';
  * @param {{ uid: string }} props
  */
 export default function V2DuprEvolution({ uid }) {
-  const on = useFeatureFlag(FEATURE_FLAG.SKILL_RATING_DUPR);
-  const { data: history } = useDuprRatingHistory(uid, on);
+  const { data: history } = useDuprRatingHistory(uid, true);
 
-  if (!on || !uid) return null;
+  if (!uid) return null;
 
   const doublesPoints = (history?.doubles || []).filter((p) => Number.isFinite(p?.rating));
   const singlesPoints = (history?.singles || []).filter((p) => Number.isFinite(p?.rating));

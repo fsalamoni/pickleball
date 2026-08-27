@@ -19,8 +19,6 @@ import {
   useClubMembers,
 } from '@/modules/clubs/hooks/useClubs';
 import { useAllAthletes } from '@/modules/athletes/hooks/useAthletes';
-import { useFeatureFlag } from '@/core/lib/FeatureFlagsContext';
-import { FEATURE_FLAG } from '@/core/featureFlags';
 import { V2Badge, V2Button, V2Surface, V2Toggle } from '@/v2/ui/primitives';
 import { cn } from '@/core/lib/utils';
 
@@ -28,7 +26,6 @@ export default function V2ClubAdmin({ club }) {
   const navigate = useNavigate();
   const { copy, copied } = useClipboard();
   const updateClub = useUpdateClub(club.id);
-  const publicPageOn = useFeatureFlag(FEATURE_FLAG.CLUB_PUBLIC_PAGE);
   const regenerate = useRegenerateInviteCode(club.id);
   const deleteClub = useDeleteClub(club.id);
   const [confirmRegen, setConfirmRegen] = useState(false);
@@ -104,7 +101,7 @@ export default function V2ClubAdmin({ club }) {
         <p className="mt-3 text-xs text-gray-400">Ao gerar um novo código, o anterior deixa de funcionar imediatamente.</p>
       </V2Surface>
 
-      {publicPageOn && <V2ClubPublicPageCard club={club} updateClub={updateClub} copy={copy} />}
+      <V2ClubPublicPageCard club={club} updateClub={updateClub} copy={copy} />
 
       <V2Surface>
         <h3 className="font-display text-base font-bold text-ink">Editar clube</h3>

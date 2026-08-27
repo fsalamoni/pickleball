@@ -39,8 +39,6 @@ import {
   GAME_DAY_FORMAT, GAME_DAY_FORMAT_LABELS, DRAW_FORMATS,
   generateMexicanoSchedule, kingOfCourtFirstRound, kingOfCourtNextRound,
 } from '@/modules/clubs/domain/gameDayFormats';
-import { useFeatureFlag } from '@/core/lib/FeatureFlagsContext';
-import { FEATURE_FLAG } from '@/core/featureFlags';
 
 const SOURCE_LABEL = {
   [PARTICIPANT_SOURCE.CONFIRMED]: 'Confirmou no dia',
@@ -270,7 +268,7 @@ function GamesSection({ eventId, dateId, participants }) {
   const replaceGames = useReplaceEventGames(eventId);
   const addGame = useAddEventGame(eventId);
   const clearGames = useClearEventGames(eventId);
-  const formatsOn = useFeatureFlag(FEATURE_FLAG.GAMEDAY_FORMATS);
+  const formatsOn = true;
   const [rounds, setRounds] = useState(0);
   const [format, setFormat] = useState(GAME_DAY_FORMAT.AMERICANO);
   const [drawOpen, setDrawOpen] = useState(false);

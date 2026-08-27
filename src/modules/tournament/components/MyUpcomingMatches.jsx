@@ -4,8 +4,6 @@ import { useQuery } from '@tanstack/react-query';
 import { CalendarClock, MapPin, ArrowRight } from 'lucide-react';
 import { Card, CardContent } from '@/components/ui/card';
 import { useAuth } from '@/core/lib/FirebaseAuthContext';
-import { useFeatureFlag } from '@/core/lib/FeatureFlagsContext';
-import { FEATURE_FLAG } from '@/core/featureFlags';
 import { getMyUpcomingMatches } from '../services/upcomingService.js';
 
 function formatWhen(ms) {
@@ -18,16 +16,15 @@ function formatWhen(ms) {
  * `tournament_ux`. Renderiza `null` quando não há jogos agendados futuros.
  */
 export default function MyUpcomingMatches() {
-  const enabled = useFeatureFlag(FEATURE_FLAG.TOURNAMENT_UX);
   const { user } = useAuth();
   const { data: matches = [] } = useQuery({
     queryKey: ['my-upcoming-matches', user?.uid],
     queryFn: () => getMyUpcomingMatches(user.uid),
-    enabled: !!user?.uid && enabled,
+    enabled: !!user?.uid,
     staleTime: 60_000,
   });
 
-  if (!enabled || matches.length === 0) return null;
+  if (matches.length === 0) return null;
 
   return (
     <section className="space-y-4">
