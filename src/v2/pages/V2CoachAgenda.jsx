@@ -16,8 +16,6 @@ import {
   UserCircle, Image as ImageIcon, Users, Wallet, Package, Store, BookOpen, Handshake,
   Sparkles,
 } from 'lucide-react';
-import { FEATURE_FLAG } from '@/core/featureFlags';
-import FeatureFlagGuard from '@/v2/components/FeatureFlagGuard';
 import { useAuth } from '@/core/lib/FirebaseAuthContext';
 import { useCoach } from '@/modules/coaches/hooks/useCoaches';
 import {
@@ -37,7 +35,6 @@ import CoachPartnersSection from '@/modules/coaches/components/CoachPartnersSect
 import CoachCourtBookingsSection from '@/modules/coaches/components/CoachCourtBookingsSection';
 import LinkedClubsSection from '@/modules/clubs/components/LinkedClubsSection';
 import { CoachInfoSection, CoachPhotosSection } from '@/modules/coaches/components/CoachProfileSections';
-import { useFeatureFlag } from '@/core/lib/FeatureFlagsContext';
 import ConfirmDialog from '@/components/ConfirmDialog';
 import { cn } from '@/core/lib/utils';
 import {
@@ -284,9 +281,9 @@ function V2CoachAgendaContent() {
   const { data: coach, isLoading: coachLoading } = useCoach(user?.uid);
   const { data: lessons = [], isLoading: lessonsLoading } = useCoachLessons(user?.uid);
   const respond = useRespondLesson();
-  const sharedBookingsOn = useFeatureFlag(FEATURE_FLAG.SHARED_BOOKINGS);
-  const linkedClubsOn = useFeatureFlag(FEATURE_FLAG.LINKED_CLUBS);
-  const clinicsOn = useFeatureFlag(FEATURE_FLAG.COACH_CLINICS);
+  const sharedBookingsOn = true;
+  const linkedClubsOn = true;
+  const clinicsOn = true;
   const [tab, setTab] = useState('agenda');
 
   const sections = useMemo(() => {
@@ -424,13 +421,5 @@ function V2CoachAgendaContent() {
 }
 
 export default function V2CoachAgenda() {
-  return (
-    <FeatureFlagGuard
-      flag={FEATURE_FLAG.COACH_LESSONS}
-      label="Aulas de professores"
-      description="A agenda de aulas, disponibilidade e solicitações ficam disponíveis quando a flag Aulas de professores está ligada."
-    >
-      <V2CoachAgendaContent />
-    </FeatureFlagGuard>
-  );
+  return <V2CoachAgendaContent />;
 }

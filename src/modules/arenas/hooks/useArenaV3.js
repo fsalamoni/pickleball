@@ -11,7 +11,6 @@
 
 import { useMemo } from 'react';
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
-import { useFeatureFlag } from '@/core/lib/FeatureFlagsContext';
 import { useAuth } from '@/core/lib/FirebaseAuthContext';
 import { canArenaUseModule, indexModuleStates } from '../domain/modules.js';
 import {
@@ -94,7 +93,11 @@ export function useArenaModuleState(arenaId, moduleId) {
  * Combina: flag global + sub-flag + arena state.
  */
 export function useCanArenaUseModule(arenaId, moduleId) {
-  const platformFlags = useFeatureFlag();
+  // Camada de flag da plataforma dos módulos de arena convertida em código:
+  // o gate depende apenas do opt-in por arena (moduleState.enabled). Mantém
+  // o comportamento atual exatamente (o mapa vazio deixa canArenaUseModule
+  // decidir pelo estado do módulo na arena).
+  const platformFlags = {};
   const { data: states = [] } = useArenaModuleStates(arenaId);
   const indexed = useMemo(() => indexModuleStates(states), [states]);
   return canArenaUseModule({

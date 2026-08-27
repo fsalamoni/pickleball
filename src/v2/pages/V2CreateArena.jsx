@@ -2,8 +2,6 @@ import React, { useState } from 'react';
 import { Link, useNavigate } from 'react-router-dom';
 import { toast } from 'sonner';
 import { ArrowLeft } from 'lucide-react';
-import { FEATURE_FLAG } from '@/core/featureFlags';
-import FeatureFlagGuard from '@/v2/components/FeatureFlagGuard';
 import { useAuth } from '@/core/lib/FirebaseAuthContext';
 import { useCreateArena } from '@/modules/arenas/hooks/useArenas';
 import { V2Button, V2Field, V2Input, V2SectionHeader, V2Surface, V2Textarea } from '@/v2/ui/primitives';
@@ -16,15 +14,7 @@ const INITIAL = {
 };
 
 export default function V2CreateArena() {
-  return (
-    <FeatureFlagGuard
-      flag={FEATURE_FLAG.ARENAS}
-      label="Arenas"
-      description="O cadastro de arenas fica disponível quando a flag Arenas está ligada."
-    >
-      <V2CreateArenaContent />
-    </FeatureFlagGuard>
-  );
+  return <V2CreateArenaContent />;
 }
 
 function V2CreateArenaContent() {

@@ -14,10 +14,7 @@ import V2AdminBookingCalendar from '@/v2/components/arenas/V2AdminBookingCalenda
 import V2ArenaPaymentTab from '@/v2/components/arenas/V2ArenaPaymentTab';
 import V2ArenaRulesTab from '@/v2/components/arenas/V2ArenaRulesTab';
 import V2ArenaMercadoTab from '@/v2/components/arenas/V2ArenaMercadoTab';
-import FeatureFlagGuard from '@/v2/components/FeatureFlagGuard';
 import { db } from '@/core/config/firebase';
-import { FEATURE_FLAG } from '@/core/featureFlags';
-import { useFeatureFlag } from '@/core/lib/FeatureFlagsContext';
 import { useAuth } from '@/core/lib/FirebaseAuthContext';
 import { ImageUpload } from '@/components/ui/image-upload';
 import { PhotoLightbox } from '@/components/ui/photo-lightbox';
@@ -117,24 +114,18 @@ export default function V2ArenaManage() {
   const [tab, setTab] = useState('reservas');
 
   return (
-    <FeatureFlagGuard
-      flag={FEATURE_FLAG.ARENAS}
-      label="Arenas"
-      description="O painel de gestão de arenas fica disponível quando a flag Arenas está ligada."
-    >
-      <V2ArenaManageContent
-        arenaId={arenaId}
-        user={user}
-        isPlatformAdmin={isPlatformAdmin}
-        arena={arena}
-        managed={managed}
-        isLoading={isLoading}
-        deleteArena={deleteArena}
-        location={location}
-        tab={tab}
-        setTab={setTab}
-      />
-    </FeatureFlagGuard>
+    <V2ArenaManageContent
+      arenaId={arenaId}
+      user={user}
+      isPlatformAdmin={isPlatformAdmin}
+      arena={arena}
+      managed={managed}
+      isLoading={isLoading}
+      deleteArena={deleteArena}
+      location={location}
+      tab={tab}
+      setTab={setTab}
+    />
   );
 }
 
@@ -158,9 +149,9 @@ function V2ArenaManageContent({ arenaId, user, isPlatformAdmin, arena, managed, 
     });
   }, [location.hash]);
 
-  const coachResidentOn = useFeatureFlag(FEATURE_FLAG.COACH_RESIDENT);
-  const linkedClubsOn = useFeatureFlag(FEATURE_FLAG.LINKED_CLUBS);
-  const crmOn = useFeatureFlag(FEATURE_FLAG.ARENA_CRM);
+  const coachResidentOn = true;
+  const linkedClubsOn = true;
+  const crmOn = true;
   // Lembra a última sub-aba visitada em cada seção principal.
   const [sectionMemory, setSectionMemory] = useState({});
 
@@ -424,7 +415,7 @@ function PhotosTab({ arena }) {
 }
 
 function BookingsTab({ arena }) {
-  const sharedBookingsOn = useFeatureFlag(FEATURE_FLAG.SHARED_BOOKINGS);
+  const sharedBookingsOn = true;
   const { data: bookings = [], isLoading } = useArenaBookings(arena.id);
   const grouped = useMemo(() => {
     const active = sortBookings(bookings.filter((b) => [BOOKING_STATUS.REQUESTED, BOOKING_STATUS.NEGOTIATING, BOOKING_STATUS.CONFIRMED].includes(b.status)));

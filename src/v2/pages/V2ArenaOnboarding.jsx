@@ -25,8 +25,6 @@ import {
 } from 'lucide-react';
 import { toast } from 'sonner';
 import { db } from '@/core/config/firebase';
-import { FEATURE_FLAG } from '@/core/featureFlags';
-import FeatureFlagGuard from '@/v2/components/FeatureFlagGuard';
 import { useAuth } from '@/core/lib/FirebaseAuthContext';
 import { useArena } from '@/modules/arenas/hooks/useArenas';
 import {
@@ -63,15 +61,7 @@ function computeProgressFromArena(arena) {
 export default function V2ArenaOnboarding() {
   const { arenaId } = useParams();
   const { user } = useAuth();
-  return (
-    <FeatureFlagGuard
-      flag={FEATURE_FLAG.ARENAS}
-      label="Arenas"
-      description="O assistente de cadastro de arenas fica disponível quando a flag Arenas está ligada."
-    >
-      <V2ArenaOnboardingContent arenaId={arenaId} user={user} />
-    </FeatureFlagGuard>
-  );
+  return <V2ArenaOnboardingContent arenaId={arenaId} user={user} />;
 }
 
 function V2ArenaOnboardingContent({ arenaId, user }) {

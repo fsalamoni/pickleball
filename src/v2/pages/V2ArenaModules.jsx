@@ -18,8 +18,6 @@ import { Link, Navigate, useParams } from 'react-router-dom';
 import { toast } from 'sonner';
 import { ArrowLeft, Puzzle, Lock, Info } from 'lucide-react';
 import { useAuth } from '@/core/lib/FirebaseAuthContext';
-import { useFeatureFlag } from '@/core/lib/FeatureFlagsContext';
-import { FEATURE_FLAG } from '@/core/featureFlags';
 import { useArena, useMyManagedArenas } from '@/modules/arenas/hooks/useArenas';
 import {
   useArenaModuleStates,
@@ -54,7 +52,7 @@ function ModuleCard({ moduleId, arenaId, isChild = false }) {
   const toggle = useToggleArenaModule();
   const setState = useSetArenaModuleState();
   const canUse = useCanArenaUseModule(arenaId, moduleId);
-  const flags = useFeatureFlag();
+  const flags = {};
   const parentFlagOn = !isChild || flags?.[`arena_module_${meta?.parent}`];
   const globalFlagOn = !!flags?.[`arena_module_${moduleId}`];
   const masterOn = !!flags?.arena_modules;
@@ -150,7 +148,7 @@ function ModuleCard({ moduleId, arenaId, isChild = false }) {
 function ModuleFamily({ moduleId, arenaId }) {
   const meta = ARENA_MODULE_META[moduleId];
   const canUse = useCanArenaUseModule(arenaId, moduleId);
-  const flags = useFeatureFlag();
+  const flags = {};
   const globalFlagOn = !!flags?.[`arena_module_${moduleId}`];
   const colorCls = COLOR_CLASSES[meta?.color] || COLOR_CLASSES.slate;
 
@@ -183,7 +181,7 @@ function ModuleFamily({ moduleId, arenaId }) {
 export default function V2ArenaModules() {
   const { arenaId } = useParams();
   const { user, isPlatformAdmin } = useAuth();
-  const flags = useFeatureFlag();
+  const flags = {};
   const masterOn = !!flags?.arena_modules;
 
   const { data: arena, isLoading: arenaLoading } = useArena(arenaId);

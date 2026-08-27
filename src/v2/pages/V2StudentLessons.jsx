@@ -10,8 +10,6 @@ import React, { useMemo } from 'react';
 import { Link, Navigate } from 'react-router-dom';
 import { toast } from 'sonner';
 import { CalendarDays, GraduationCap } from 'lucide-react';
-import { FEATURE_FLAG } from '@/core/featureFlags';
-import FeatureFlagGuard from '@/v2/components/FeatureFlagGuard';
 import { useAuth } from '@/core/lib/FirebaseAuthContext';
 import { useStudentLessons, useRespondLesson } from '@/modules/coaches/hooks/useLessons';
 import { useStudentSales } from '@/modules/coaches/hooks/usePackages';
@@ -152,13 +150,5 @@ function V2StudentLessonsContent() {
 }
 
 export default function V2StudentLessons() {
-  return (
-    <FeatureFlagGuard
-      flag={FEATURE_FLAG.COACH_LESSONS}
-      label="Aulas de professores"
-      description="A área de aulas fica disponível quando a flag Aulas de professores está ligada."
-    >
-      <V2StudentLessonsContent />
-    </FeatureFlagGuard>
-  );
+  return <V2StudentLessonsContent />;
 }

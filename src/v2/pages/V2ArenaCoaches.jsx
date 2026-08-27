@@ -14,8 +14,6 @@ import { toast } from 'sonner';
 import {
   ArrowLeft, GraduationCap, Search, Plus, Trash2, Pause, Play, MapPin,
 } from 'lucide-react';
-import { FEATURE_FLAG } from '@/core/featureFlags';
-import FeatureFlagGuard from '@/v2/components/FeatureFlagGuard';
 import { useAuth } from '@/core/lib/FirebaseAuthContext';
 import { useArena, useMyManagedArenas } from '@/modules/arenas/hooks/useArenas';
 import {
@@ -295,13 +293,5 @@ function V2ArenaCoachesContent() {
 }
 
 export default function V2ArenaCoaches() {
-  return (
-    <FeatureFlagGuard
-      flag={FEATURE_FLAG.COACH_RESIDENT}
-      label="Professores residentes"
-      description="A gestão de professores parceiros da arena fica disponível quando a flag Professores residentes está ligada."
-    >
-      <V2ArenaCoachesContent />
-    </FeatureFlagGuard>
-  );
+  return <V2ArenaCoachesContent />;
 }

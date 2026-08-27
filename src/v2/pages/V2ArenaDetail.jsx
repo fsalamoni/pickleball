@@ -6,11 +6,8 @@ import {
   GraduationCap, CreditCard, ClipboardList,
 } from 'lucide-react';
 import { PhotoLightbox } from '@/components/ui/photo-lightbox';
-import { FEATURE_FLAG } from '@/core/featureFlags';
-import { useFeatureFlag } from '@/core/lib/FeatureFlagsContext';
 import { useAuth } from '@/core/lib/FirebaseAuthContext';
 import V2ChatLauncherButton from '@/v2/components/chat/V2ChatLauncherButton';
-import FeatureFlagGuard from '@/v2/components/FeatureFlagGuard';
 import { V2FavoriteArenaButton, V2ArenaShareButton } from '@/v2/components/arenas/V2ArenaActions';
 import V2ArenaReviews from '@/v2/components/arenas/V2ArenaReviews';
 import BookingRequestDialog from '@/modules/arenas/components/BookingRequestDialog';
@@ -90,28 +87,22 @@ export default function V2ArenaDetail() {
   const [bookingOpen, setBookingOpen] = useState(false);
 
   return (
-    <FeatureFlagGuard
-      flag={FEATURE_FLAG.ARENAS}
-      label="Arenas"
-      description="As quadras e reservas ficam disponíveis quando a flag Arenas está ligada."
-    >
-      <V2ArenaDetailContent
-        arenaId={arenaId}
-        user={user}
-        arena={arena}
-        managed={managed}
-        bookings={bookings}
-        isLoading={isLoading}
-        bookingOpen={bookingOpen}
-        setBookingOpen={setBookingOpen}
-      />
-    </FeatureFlagGuard>
+    <V2ArenaDetailContent
+      arenaId={arenaId}
+      user={user}
+      arena={arena}
+      managed={managed}
+      bookings={bookings}
+      isLoading={isLoading}
+      bookingOpen={bookingOpen}
+      setBookingOpen={setBookingOpen}
+    />
   );
 }
 
 function V2ArenaDetailContent({ arenaId, user, arena, managed, bookings, isLoading, bookingOpen, setBookingOpen }) {
-  const sharedBookingsOn = useFeatureFlag(FEATURE_FLAG.SHARED_BOOKINGS);
-  const linkedClubsOn = useFeatureFlag(FEATURE_FLAG.LINKED_CLUBS);
+  const sharedBookingsOn = true;
+  const linkedClubsOn = true;
   const [sharedOpen, setSharedOpen] = useState(false);
 
   if (isLoading) {
@@ -353,7 +344,7 @@ function ArenaTournamentsSection({ arenaId }) {
 }
 
 function ArenaCoachesSection({ arenaId }) {
-  const coachResidentOn = useFeatureFlag(FEATURE_FLAG.COACH_RESIDENT);
+  const coachResidentOn = true;
   const { data: coaches = [], isLoading } = useArenaCoaches(arenaId);
   if (!coachResidentOn) return null;
   if (isLoading) return null;

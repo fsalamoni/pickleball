@@ -39,8 +39,6 @@ import {
 import { useAuth } from '@/core/lib/FirebaseAuthContext';
 import { useAutoRecomputeRatings } from '@/modules/rating/hooks/useRating';
 import AuthFunnelTracker from '@/modules/analytics/components/AuthFunnelTracker';
-import { useFeatureFlag } from '@/core/lib/FeatureFlagsContext';
-import { FEATURE_FLAG } from '@/core/featureFlags';
 import PartnerInviteNotificationAction from '@/v2/components/tournament/PartnerInviteNotificationAction';
 import { useMyArenaSummary } from '@/modules/arenas/hooks/useMyArenaSummary';
 import { useCoach } from '@/modules/coaches/hooks/useCoaches';
@@ -55,7 +53,6 @@ import {
 } from '@/components/ui/dropdown-menu';
 import { cn } from '@/core/lib/utils';
 import { V2Avatar } from '@/v2/ui/primitives';
-import ProfileCompletionModal from '@/components/ProfileCompletionModal';
 import V2OnboardingWizard from '@/v2/components/onboarding/V2OnboardingWizard';
 import LegalConsentGate from '@/v2/components/legal/LegalConsentGate';
 import { useMyConsents } from '@/modules/legal/hooks/useConsents';
@@ -100,29 +97,29 @@ function resolvePageTitle(pathname) {
 
 function useV2Nav() {
   const { isPlatformAdmin, user } = useAuth();
-  const performanceOn = useFeatureFlag(FEATURE_FLAG.PLAYER_PERFORMANCE);
-  const ratingOn = useFeatureFlag(FEATURE_FLAG.PLAYER_RATING);
-  const matchmakingOn = useFeatureFlag(FEATURE_FLAG.MATCHMAKING);
-  const openGamesOn = useFeatureFlag(FEATURE_FLAG.OPEN_GAMES);
-  const adminConsoleOn = useFeatureFlag(FEATURE_FLAG.ADMIN_CONSOLE);
-  const affiliatesOn = useFeatureFlag(FEATURE_FLAG.AFFILIATE_LINKS);
-  const communityFeedOn = useFeatureFlag(FEATURE_FLAG.COMMUNITY_FEED);
-  const arenasOn = useFeatureFlag(FEATURE_FLAG.ARENAS);
-  const circuitsOn = useFeatureFlag(FEATURE_FLAG.CIRCUITS);
-  const coachesOn = useFeatureFlag(FEATURE_FLAG.COACH_RESIDENT);
-  const coachLessonsOn = useFeatureFlag(FEATURE_FLAG.COACH_LESSONS);
-  const doublesRankingOn = useFeatureFlag(FEATURE_FLAG.DOUBLES_RANKING);
-  const athleteAgendaOn = useFeatureFlag(FEATURE_FLAG.ATHLETE_AGENDA);
-  const gameDayOn = useFeatureFlag(FEATURE_FLAG.ATHLETE_GAME_DAY);
-  const legalCenterOn = useFeatureFlag(FEATURE_FLAG.LEGAL_CENTER);
-  const settingsPageOn = useFeatureFlag(FEATURE_FLAG.SETTINGS_PAGE);
-  const tournamentAdminConsoleOn = useFeatureFlag(FEATURE_FLAG.TOURNAMENT_ADMIN_CONSOLE);
+  const performanceOn = true;
+  const ratingOn = true;
+  const matchmakingOn = true;
+  const openGamesOn = true;
+  const adminConsoleOn = true;
+  const affiliatesOn = true;
+  const communityFeedOn = true;
+  const arenasOn = true;
+  const circuitsOn = true;
+  const coachesOn = true;
+  const coachLessonsOn = true;
+  const doublesRankingOn = true;
+  const athleteAgendaOn = true;
+  const gameDayOn = true;
+  const legalCenterOn = true;
+  const settingsPageOn = true;
+  const tournamentAdminConsoleOn = true;
   const { totalArenas: myArenasCount, totalPendingBookings: myPendingBookings } = useMyArenaSummary();
   const showMyArenas = arenasOn && myArenasCount > 0;
   // Só busca o perfil de professor quando a área de aulas está ligada.
   const { data: myCoachProfile } = useCoach(coachLessonsOn ? user?.uid : null);
   const isCoach = coachLessonsOn && !!myCoachProfile;
-  const sportHistoryOn = useFeatureFlag(FEATURE_FLAG.SPORT_HISTORY);
+  const sportHistoryOn = true;
 
   const sections = useMemo(() => [
     {
@@ -339,8 +336,8 @@ function NavItem({ item, active, onClick }) {
 function NotificationsMenu() {
   const navigate = useNavigate();
   const { notifications, unreadCount, markAsRead, markAllAsRead } = useNotifications();
-  const markAllOn = useFeatureFlag(FEATURE_FLAG.NOTIFICATIONS_MARK_ALL);
-  const quickConfirmOn = useFeatureFlag(FEATURE_FLAG.PARTNER_INVITE_QUICK_CONFIRM);
+  const markAllOn = true;
+  const quickConfirmOn = true;
 
   const handleMarkAll = async (event) => {
     // Mantém o dropdown aberto enquanto marca.
@@ -554,12 +551,10 @@ export default function V2Layout({ children }) {
   const mainRef = useRef(null);
   const [mobileOpen, setMobileOpen] = useState(false);
   const [searchQuery, setSearchQuery] = useState('');
-  const profileOnboardingOn = useFeatureFlag(FEATURE_FLAG.PROFILE_ONBOARDING);
-  const onboardingWizardOn = useFeatureFlag(FEATURE_FLAG.ONBOARDING_WIZARD);
-  const userMenuOn = useFeatureFlag(FEATURE_FLAG.NAV_USER_MENU);
-  const bottomNavOn = useFeatureFlag(FEATURE_FLAG.MOBILE_BOTTOM_NAV);
-  const navHubsOn = useFeatureFlag(FEATURE_FLAG.NAV_HUBS);
-  const legalCenterOn = useFeatureFlag(FEATURE_FLAG.LEGAL_CENTER);
+  const userMenuOn = true;
+  const bottomNavOn = true;
+  const navHubsOn = true;
+  const legalCenterOn = true;
   // Local único de "Termos e Documentos" no rodapé da navegação: central legal
   // completa quando a flag está ligada; página de política como fallback.
   const legalDocsPath = legalCenterOn ? '/legal' : '/politica-uso';
@@ -601,8 +596,8 @@ export default function V2Layout({ children }) {
     mainRef.current?.scrollTo({ top: 0, left: 0, behavior: 'auto' });
   }, [location.pathname]);
 
-  const pageTitlesOn = useFeatureFlag(FEATURE_FLAG.PAGE_TITLES);
-  const globalSearchOn = useFeatureFlag(FEATURE_FLAG.GLOBAL_SEARCH);
+  const pageTitlesOn = true;
+  const globalSearchOn = true;
   useEffect(() => {
     if (!pageTitlesOn) return;
     const title = resolvePageTitle(location.pathname);
@@ -643,9 +638,7 @@ export default function V2Layout({ children }) {
           Tem precedência sobre o onboarding para evitar dois modais
           bloqueantes simultâneos. */}
       <LegalConsentGate />
-      {!consentGateBlocking && (onboardingWizardOn
-        ? <V2OnboardingWizard />
-        : profileOnboardingOn && <ProfileCompletionModal />)}
+      {!consentGateBlocking && <V2OnboardingWizard />}
       {navHubsOn ? (
         <aside className={cn(
           'z-30 hidden flex-shrink-0 flex-col border-r border-gray-100 bg-paper-pure transition-[width] duration-200 lg:flex',
