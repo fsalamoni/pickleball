@@ -130,6 +130,8 @@ function makeSide(seed) {
     points_for: 0,
     points_against: 0,
     tournaments: new Set(),
+    // Trajetória: rating APÓS cada jogo (para o gráfico de evolução).
+    trajectory: [],
   };
 }
 
@@ -148,7 +150,7 @@ function ensurePlayer(state, id, seeds, defaultSeed) {
  * Ajusta o rating de um lado pela diferença entre a participação REAL e a
  * ESPERADA no placar (baseado no placar, no estilo DUPR).
  */
-function updateSide(side, actualShare, expShare, win, pointsFor, pointsAgainst, tournamentId) {
+function updateSide(side, actualShare, expShare, win, pointsFor, pointsAgainst, tournamentId, at) {
   const delta = kFactor(side.games) * (actualShare - expShare);
   side.rating = clampRating(side.rating + delta);
   side.games += 1;
@@ -157,6 +159,7 @@ function updateSide(side, actualShare, expShare, win, pointsFor, pointsAgainst, 
   side.points_for += Number(pointsFor) || 0;
   side.points_against += Number(pointsAgainst) || 0;
   if (tournamentId) side.tournaments.add(tournamentId);
+  side.trajectory.push({ at: Number.isFinite(at) ? at : null, rating: round3(side.rating) });
 }
 
 /**
@@ -193,8 +196,9 @@ export function applyDuprMatch(state, match, options = {}) {
   const aWon = match.winner === 'a';
   const tournamentId = match.tournament_id || null;
 
-  playersA.forEach((p) => updateSide(p[key], actualA, expA, aWon, pointsA, pointsB, tournamentId));
-  playersB.forEach((p) => updateSide(p[key], 1 - actualA, 1 - expA, !aWon, pointsB, pointsA, tournamentId));
+  const at = Number.isFinite(match.at) ? match.at : null;
+  playersA.forEach((p) => updateSide(p[key], actualA, expA, aWon, pointsA, pointsB, tournamentId, at));
+  playersB.forEach((p) => updateSide(p[key], 1 - actualA, 1 - expA, !aWon, pointsB, pointsA, tournamentId, at));
 }
 
 function finalizeSide(side) {
@@ -210,6 +214,8 @@ function finalizeSide(side) {
     tournaments: side.tournaments.size,
     reliability: reliabilityFromGames(side.games),
     provisional: reliabilityFromGames(side.games) < DUPR_PROVISIONAL_RELIABILITY,
+    // Evolução: rating após cada jogo, em ordem cronológica.
+    trajectory: side.trajectory,
   };
 }
 

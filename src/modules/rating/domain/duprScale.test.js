@@ -132,6 +132,19 @@ describe('duprScale — atualização BASEADA NO PLACAR (essência do DUPR)', ()
     expect(few.singles.reliability).toBeLessThan(50);
   });
 
+  it('gera a trajetória de evolução (um ponto por jogo, em ordem)', () => {
+    const matches = [
+      { side_a: ['a'], side_b: ['b'], winner: 'a', points_a: 11, points_b: 5, at: 1 },
+      { side_a: ['a'], side_b: ['b'], winner: 'b', points_a: 7, points_b: 11, at: 2 },
+      { side_a: ['a'], side_b: ['b'], winner: 'a', points_a: 11, points_b: 9, at: 3 },
+    ];
+    const a = computeDuprRatings(matches, { seeds: { a: 4, b: 4 } }).find((p) => p.player_id === 'a');
+    expect(a.singles.trajectory).toHaveLength(3);
+    expect(a.singles.trajectory[a.singles.trajectory.length - 1].rating).toBeCloseTo(a.singles.rating, 3);
+    // duplas sem jogos → trajetória vazia
+    expect(a.doubles.trajectory).toHaveLength(0);
+  });
+
   it('rating formatado com no máximo 3 casas (x.xxx)', () => {
     const r = computeDuprRatings([
       { side_a: ['a'], side_b: ['b'], winner: 'a', points_a: 11, points_b: 6, at: 1 },

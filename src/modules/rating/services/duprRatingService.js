@@ -30,7 +30,9 @@ import { computeDuprRatings, seedFromProfile } from '../domain/duprScale.js';
 
 const RATINGS_COLLECTION = 'player_skill_ratings';
 const HISTORY_COLLECTION = 'skill_rating_history';
-const HISTORY_MAX_POINTS = 50;
+// Máximo de pontos guardados por formato (mantém os mais recentes) — a
+// evolução é a trajetória do rating APÓS cada jogo do atleta.
+const HISTORY_MAX_POINTS = 150;
 const SAFE_BATCH_WRITE_SIZE = 450;
 // Ao gravar rating + histórico no mesmo lote são 2 escritas por atleta;
 // mantém o lote abaixo do limite do Firestore (500 ops).
@@ -126,23 +128,27 @@ export async function recomputeDuprRatings(actor) {
     };
   });
 
-  // 7) Materializa (em lotes) o rating atual + acrescenta um ponto ao histórico
-  //    de evolução (skill_rating_history), e limpa órfãos.
-  const [existingSnap, historySnap] = await Promise.all([
-    getDocs(collection(db, RATINGS_COLLECTION)),
-    getDocs(collection(db, HISTORY_COLLECTION)),
-  ]);
-  const historyByUid = new Map(historySnap.docs.map((d) => [d.id, d.data()]));
-  const snapshotAt = Date.now();
+  // Trajetória de evolução por atleta (rating após cada jogo), simples/duplas,
+  // limitada aos pontos mais recentes.
+  const trajByUid = new Map(ranking.map((p) => [p.player_id, {
+    doubles: (p.doubles.trajectory || []).slice(-HISTORY_MAX_POINTS),
+    singles: (p.singles.trajectory || []).slice(-HISTORY_MAX_POINTS),
+  }]));
+
+  // 7) Materializa (em lotes) o rating atual + a evolução (skill_rating_history),
+  //    e limpa órfãos.
+  const existingSnap = await getDocs(collection(db, RATINGS_COLLECTION));
   for (let i = 0; i < rows.length; i += COMBINED_BATCH_ROWS) {
     const batch = writeBatch(db);
     rows.slice(i, i + COMBINED_BATCH_ROWS).forEach((row) => {
       batch.set(doc(db, RATINGS_COLLECTION, row.uid), { ...row, updated_at: serverTimestamp() });
-      // Ponto de evolução: guarda os dois ratings (duplas e simples) na data.
-      const prev = historyByUid.get(row.uid);
-      const points = Array.isArray(prev?.points) ? prev.points.slice(-(HISTORY_MAX_POINTS - 1)) : [];
-      points.push({ at: snapshotAt, doubles: row.doubles_rating, singles: row.singles_rating });
-      batch.set(doc(db, HISTORY_COLLECTION, row.uid), { uid: row.uid, points, updated_at: serverTimestamp() });
+      const traj = trajByUid.get(row.uid) || { doubles: [], singles: [] };
+      batch.set(doc(db, HISTORY_COLLECTION, row.uid), {
+        uid: row.uid,
+        doubles: traj.doubles,
+        singles: traj.singles,
+        updated_at: serverTimestamp(),
+      });
     });
     await batch.commit();
   }
@@ -175,15 +181,18 @@ export async function listDuprRanking() {
 }
 
 /**
- * Histórico de evolução do rating "estilo DUPR" de um atleta: pontos
- * { at, doubles, singles } acrescentados a cada recálculo.
- * @returns {Promise<Array<{ at: number, doubles: number, singles: number }>>}
+ * Evolução do rating "estilo DUPR" de um atleta: a trajetória do rating APÓS
+ * cada jogo, separada por duplas e simples.
+ * @returns {Promise<{ doubles: Array<{ at: number|null, rating: number }>, singles: Array<{ at: number|null, rating: number }> }>}
  */
 export async function getDuprRatingHistory(uid) {
-  if (!db || !uid) return [];
+  if (!db || !uid) return { doubles: [], singles: [] };
   const snap = await getDoc(doc(db, HISTORY_COLLECTION, uid));
-  const points = snap.exists() ? snap.data().points : null;
-  return Array.isArray(points) ? points : [];
+  const data = snap.exists() ? snap.data() : null;
+  return {
+    doubles: Array.isArray(data?.doubles) ? data.doubles : [],
+    singles: Array.isArray(data?.singles) ? data.singles : [],
+  };
 }
 
 /** Rating "estilo DUPR" de um único atleta (ou null se ainda não houver). */
