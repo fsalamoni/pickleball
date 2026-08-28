@@ -20,7 +20,8 @@
 
 const { initializeApp, getApps, getApp } = require('firebase-admin/app');
 const { getFirestore, Timestamp } = require('firebase-admin/firestore');
-const { onDocumentWritten } = require('firebase-functions/v2/firestore');
+const { getMessaging } = require('firebase-admin/messaging');
+const { onDocumentWritten, onDocumentCreated } = require('firebase-functions/v2/firestore');
 const { onSchedule } = require('firebase-functions/v2/scheduler');
 const { setGlobalOptions } = require('firebase-functions/v2');
 const logger = require('firebase-functions/logger');
@@ -102,6 +103,86 @@ exports.expireStaleNotifications = onSchedule(
       logger.error('expireStaleNotifications: erro.', err);
       throw err;
     }
+  },
+);
+
+// =====================================================================
+// PUSH (PWA/FCM) — espelha as notificações in-app para os tokens do usuário
+// =====================================================================
+// ADITIVO E INERTE por padrão: só age quando o usuário optou por push e há
+// tokens em `push_tokens`. Sem tokens (o normal até o opt-in), retorna cedo.
+// Nunca lança — falhas são apenas logadas. Não altera a notificação in-app.
+const PWA_ORIGIN = 'https://picklerush.web.app';
+
+exports.pushOnNotificationCreate = onDocumentCreated(
+  {
+    document: 'notifications/{notifId}',
+    database: DATABASE_ID,
+    region: REGION,
+  },
+  async (event) => {
+    const snap = event.data;
+    const n = snap && typeof snap.data === 'function' ? snap.data() : null;
+    if (!n || !n.user_id) return;
+
+    const db = getFirestore(getApp(), DATABASE_ID);
+    let docs = [];
+    try {
+      const tokensSnap = await db.collection('push_tokens').where('user_id', '==', n.user_id).get();
+      docs = tokensSnap.docs;
+    } catch (err) {
+      logger.error('pushOnNotificationCreate: falha ao ler tokens.', err);
+      return;
+    }
+    const tokens = docs.map((d) => d.data() && d.data().token).filter(Boolean);
+    if (tokens.length === 0) return;
+
+    const rawLink = n.link ? String(n.link) : '/';
+    const link = rawLink.startsWith('http')
+      ? rawLink
+      : `${PWA_ORIGIN}${rawLink.startsWith('/') ? '' : '/'}${rawLink}`;
+
+    const message = {
+      notification: {
+        title: String(n.title || 'PickleRush').slice(0, 120),
+        body: String(n.message || '').slice(0, 300),
+      },
+      webpush: {
+        fcmOptions: { link },
+        notification: { icon: '/pwa-192.png', badge: '/pwa-192.png' },
+      },
+      data: { link, type: String(n.type || 'generic') },
+      tokens,
+    };
+
+    let res;
+    try {
+      res = await getMessaging().sendEachForMulticast(message);
+    } catch (err) {
+      logger.error('pushOnNotificationCreate: falha no envio FCM.', err);
+      return;
+    }
+
+    // Remove tokens inválidos/expirados.
+    const toDelete = [];
+    res.responses.forEach((r, i) => {
+      if (!r.success) {
+        const code = r.error && r.error.code;
+        if (code === 'messaging/registration-token-not-registered'
+          || code === 'messaging/invalid-registration-token'
+          || code === 'messaging/invalid-argument') {
+          if (docs[i]) toDelete.push(docs[i].ref);
+        }
+      }
+    });
+    if (toDelete.length > 0) {
+      const batch = db.batch();
+      toDelete.forEach((ref) => batch.delete(ref));
+      await batch.commit().catch(() => {});
+    }
+    logger.info('pushOnNotificationCreate: push processado.', {
+      user: n.user_id, sent: res.successCount, failed: res.failureCount,
+    });
   },
 );
 

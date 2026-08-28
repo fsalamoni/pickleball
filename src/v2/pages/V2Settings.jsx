@@ -20,10 +20,14 @@ import {
 import {
   V2Button, V2PageIntro, V2Surface, V2Toggle,
 } from '@/v2/ui/primitives';
+import { useFeatureFlag } from '@/core/lib/FeatureFlagsContext';
+import { FEATURE_FLAG } from '@/core/featureFlags';
+import V2PushCard from '@/v2/components/settings/V2PushCard';
 
 export default function V2Settings() {
   const enabled = true;
   const notifPrefsOn = true;
+  const pushOn = useFeatureFlag(FEATURE_FLAG.PUSH_NOTIFICATIONS);
   const { user, userProfile, updateUserProfile } = useAuth();
   const { data: registrations = [] } = useMyRegistrations();
   const { data: bookings = [] } = useMyBookings();
@@ -120,6 +124,8 @@ export default function V2Settings() {
             </p>
           )}
         </V2Surface>
+
+        {pushOn && <V2PushCard />}
 
         <V2Surface>
           <div className="flex items-center gap-2">
