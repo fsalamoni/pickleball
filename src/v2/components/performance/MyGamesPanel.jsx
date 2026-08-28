@@ -6,8 +6,10 @@
 import React, { useMemo, useState } from 'react';
 import { Link } from 'react-router-dom';
 import { useQuery } from '@tanstack/react-query';
-import { CalendarClock, Trophy, MapPin, History, CheckCircle2, XCircle, Dices } from 'lucide-react';
+import { CalendarClock, Trophy, MapPin, History, CheckCircle2, XCircle, Dices, Swords, TrendingUp } from 'lucide-react';
 import { useAuth } from '@/core/lib/FirebaseAuthContext';
+import { useFeatureFlag } from '@/core/lib/FeatureFlagsContext';
+import { FEATURE_FLAG } from '@/core/featureFlags';
 import { getMyUpcomingMatches, getMyFinishedMatches } from '@/modules/tournament/services/upcomingService';
 import { useMyGameDayGames } from '@/modules/games/hooks/useGameDays';
 import {
@@ -37,9 +39,33 @@ function MatchupLine({ partner, opponent }) {
   );
 }
 
+/**
+ * Faixa "pós-jogo" (flag post_game_flow): fecha o ciclo com menos atrito —
+ * marcar o próximo jogo e acompanhar a evolução do rating. Aditiva.
+ */
+function PostGameStrip() {
+  return (
+    <div className="flex flex-wrap items-center justify-between gap-4 rounded-4xl border border-acid/30 bg-acid/10 p-5">
+      <div className="min-w-0">
+        <p className="font-display text-base font-bold text-ink">Fechou mais um jogo? Mantenha o ritmo 🔥</p>
+        <p className="text-sm text-gray-600">Marque o próximo jogo ou veja como seu rating evoluiu.</p>
+      </div>
+      <div className="flex flex-wrap gap-2">
+        <V2Button asChild size="sm">
+          <Link to="/encontrar-jogadores"><Swords className="h-4 w-4" /> Jogar de novo</Link>
+        </V2Button>
+        <V2Button asChild variant="subtle" size="sm">
+          <Link to="/ranking"><TrendingUp className="h-4 w-4" /> Ver minha evolução</Link>
+        </V2Button>
+      </div>
+    </div>
+  );
+}
+
 export default function MyGamesPanel() {
   const { user } = useAuth();
   const uid = user?.uid;
+  const postGameOn = useFeatureFlag(FEATURE_FLAG.POST_GAME_FLOW);
   const [tab, setTab] = useState('proximos');
 
   const { data: upcoming = [], isLoading: loadingUp } = useQuery({
@@ -154,6 +180,7 @@ export default function MyGamesPanel() {
         </V2Surface>
       ) : (
         <div className="space-y-3">
+          {postGameOn && <PostGameStrip />}
           {mergedHistory.map((m) => (
             <V2Surface key={m.key} className="flex flex-wrap items-center justify-between gap-3">
               <div className="min-w-0">
