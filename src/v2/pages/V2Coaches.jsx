@@ -8,12 +8,14 @@
  *  - Botão "Sou professor" para criar/editar próprio perfil
  */
 
-import React, { useState, useEffect, useRef } from 'react';
+import React, { useState, useEffect, useRef, useMemo } from 'react';
 import { Link, Navigate } from 'react-router-dom';
 import { toast } from 'sonner';
 import { GraduationCap, MapPin, Plus, Edit3, Star, Award, Search } from 'lucide-react';
 import { useAuth } from '@/core/lib/FirebaseAuthContext';
 import { useCoaches, useCoach, useUpsertCoachProfile } from '@/modules/coaches/hooks/useCoaches';
+import { useFeatureFlag } from '@/core/lib/FeatureFlagsContext';
+import { FEATURE_FLAG } from '@/core/featureFlags';
 import { cn } from '@/core/lib/utils';
 import {
   V2Badge, V2Button, V2EmptyState, V2Field, V2Input, V2Surface, V2Textarea,
@@ -161,6 +163,26 @@ export default function V2Coaches() {
   const { data: myProfile } = useCoach(user?.uid);
   const [editing, setEditing] = useState(false);
 
+  // Descoberta aprimorada (flag): filtro de preço, "aceitando alunos" e ordenação.
+  const discoveryOn = useFeatureFlag(FEATURE_FLAG.COACH_PUBLIC_DISCOVERY);
+  const [maxPrice, setMaxPrice] = useState('');
+  const [acceptingOnly, setAcceptingOnly] = useState(false);
+  const [sortBy, setSortBy] = useState('relevancia');
+
+  const displayed = useMemo(() => {
+    if (!discoveryOn) return coaches;
+    const cap = maxPrice === '' ? null : Number(maxPrice);
+    let list = coaches.filter((c) => {
+      if (acceptingOnly && !c.accepting_students) return false;
+      if (cap != null && Number.isFinite(cap) && c.hourly_rate != null && Number(c.hourly_rate) > cap) return false;
+      return true;
+    });
+    const price = (c) => (c.hourly_rate == null ? Infinity : Number(c.hourly_rate));
+    if (sortBy === 'preco_asc') list = [...list].sort((a, b) => price(a) - price(b));
+    else if (sortBy === 'preco_desc') list = [...list].sort((a, b) => price(b) - price(a));
+    return list;
+  }, [discoveryOn, coaches, maxPrice, acceptingOnly, sortBy]);
+
   if (!isAuthenticated) return <Navigate to="/login" replace />;
 
   return (
@@ -185,29 +207,56 @@ export default function V2Coaches() {
           <V2Field label="Cidade / Estado">
             <V2Input value={region} onChange={(e) => setRegion(e.target.value)} placeholder="São Paulo" />
           </V2Field>
-          <V2Field label="Modalidade">
-            <V2Input value={modality} onChange={(e) => setModality(e.target.value)} placeholder="Iniciantes" />
+          <V2Field label="Modalidade / nível">
+            <V2Input value={modality} onChange={(e) => setModality(e.target.value)} placeholder="Iniciantes, DUPR 4.0+" />
           </V2Field>
         </div>
+        {discoveryOn && (
+          <div className="mt-2 grid grid-cols-1 gap-2 sm:grid-cols-3">
+            <V2Field label="Preço até (R$/h)">
+              <V2Input type="number" min="0" step="10" value={maxPrice} onChange={(e) => setMaxPrice(e.target.value)} placeholder="150" />
+            </V2Field>
+            <V2Field label="Ordenar por">
+              <select
+                value={sortBy}
+                onChange={(e) => setSortBy(e.target.value)}
+                className="w-full rounded-2xl border border-gray-200 bg-paper-pure px-3 py-2.5 text-sm text-ink"
+              >
+                <option value="relevancia">Relevância</option>
+                <option value="preco_asc">Menor preço</option>
+                <option value="preco_desc">Maior preço</option>
+              </select>
+            </V2Field>
+            <V2Field label="Disponibilidade">
+              <label className="flex items-center gap-2 rounded-2xl border border-gray-200 bg-paper-pure px-3 py-2.5 text-sm text-ink">
+                <input type="checkbox" checked={acceptingOnly} onChange={(e) => setAcceptingOnly(e.target.checked)} />
+                Só aceitando alunos
+              </label>
+            </V2Field>
+          </div>
+        )}
       </V2Surface>
 
       {/* Lista */}
       {isLoading ? (
         <V2Skeleton lines={4} />
-      ) : coaches.length === 0 ? (
+      ) : displayed.length === 0 ? (
         <V2EmptyState
           icon={GraduationCap}
           title="Nenhum professor encontrado"
-          description={(region || modality)
-            ? 'Nenhum professor com esses filtros. Limpe a cidade/modalidade para ver todos os professores da plataforma.'
+          description={(region || modality || maxPrice || acceptingOnly)
+            ? 'Nenhum professor com esses filtros. Limpe os filtros para ver todos os professores da plataforma.'
             : 'Ainda não há professores cadastrados. Cadastre-se como professor para ser o primeiro.'}
-          action={(region || modality)
-            ? <V2Button size="sm" variant="ghost" onClick={() => { setRegion(''); setModality(''); }}>Limpar filtros</V2Button>
+          action={(region || modality || maxPrice || acceptingOnly)
+            ? <V2Button size="sm" variant="ghost" onClick={() => { setRegion(''); setModality(''); setMaxPrice(''); setAcceptingOnly(false); }}>Limpar filtros</V2Button>
             : undefined}
         />
       ) : (
         <div className="space-y-3">
-          {coaches.map((c) => <CoachCard key={c.id} coach={c} />)}
+          {discoveryOn && (
+            <p className="px-1 text-xs text-gray-400">{displayed.length} professor(es)</p>
+          )}
+          {displayed.map((c) => <CoachCard key={c.id} coach={c} />)}
         </div>
       )}
     </div>
