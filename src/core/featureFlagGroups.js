@@ -14,6 +14,14 @@ import { FEATURE_FLAG } from './featureFlags.js';
 /** Grupos "normais" (fora Arena V3), na ordem de exibição. */
 export const FLAG_GROUPS = Object.freeze([
   {
+    id: 'engagement',
+    label: 'Engajamento e retenção',
+    keys: [
+      FEATURE_FLAG.ACTION_HOME, FEATURE_FLAG.SMART_MATCHMAKING,
+      FEATURE_FLAG.POST_GAME_FLOW, FEATURE_FLAG.PUSH_NOTIFICATIONS,
+    ],
+  },
+  {
     id: 'athlete',
     label: 'Atleta, rating e social',
     keys: [FEATURE_FLAG.DUPR_OFFICIAL_SYNC],

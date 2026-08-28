@@ -24,6 +24,9 @@ import {
 import { PLATFORM_INTEREST_META, sanitizeInterests } from '@/modules/athletes/domain/profileMeta';
 import { interestIcon } from '@/v2/components/profile/profileMetaIcons';
 import { V2Skeleton, V2StatCard } from '@/v2/ui/primitives';
+import { useFeatureFlag } from '@/core/lib/FeatureFlagsContext';
+import { FEATURE_FLAG } from '@/core/featureFlags';
+import V2ActionHome from '@/v2/components/home/V2ActionHome';
 
 const INTEREST_BY_VALUE = Object.fromEntries(PLATFORM_INTEREST_META.map((m) => [m.value, m]));
 // Ações rápidas padrão (quando o usuário não escolheu interesses).
@@ -74,6 +77,7 @@ function formatMatchWhen(ms) {
 
 export default function V2Dashboard() {
   const { user, userProfile } = useAuth();
+  const actionHomeOn = useFeatureFlag(FEATURE_FLAG.ACTION_HOME);
   const { data: myTournaments = [], isLoading: loadingMine } = useMyTournaments();
   const { data: publicTournaments = [], isLoading: loadingPublic } = usePublicTournaments();
   const { data: ranking = [] } = useNationalRanking();
@@ -142,6 +146,8 @@ export default function V2Dashboard() {
             : 'Acompanhe seus torneios, quadras e a comunidade em um só lugar.'}
         </p>
       </div>
+
+      {actionHomeOn && <V2ActionHome />}
 
       {isLoading ? (
         <div className="grid grid-cols-1 gap-6 md:grid-cols-2 xl:grid-cols-4">
