@@ -9,7 +9,7 @@
 
 import React, { useMemo, useState } from 'react';
 import { toast } from 'sonner';
-import { Users, UserPlus, Pencil, Trash2, Check, ShieldCheck } from 'lucide-react';
+import { Users, UserPlus, Pencil, Trash2, Check, ShieldCheck, TrendingUp } from 'lucide-react';
 import { useAuth } from '@/core/lib/FirebaseAuthContext';
 import {
   filterStudents, sortStudents, rosterSummary, studentStatusLabel,
@@ -21,6 +21,9 @@ import {
   useCoachStudents, useUpsertStudent, useSetStudentStatus, useRemoveStudent,
 } from '../hooks/useStudents.js';
 import { useCoachValidations, useUpsertValidation } from '../hooks/useValidations.js';
+import { useNationalRanking } from '@/modules/rating/hooks/useRating';
+import { useFeatureFlag } from '@/core/lib/FeatureFlagsContext';
+import { FEATURE_FLAG } from '@/core/featureFlags';
 import ConfirmDialog from '@/components/ConfirmDialog';
 import {
   V2Badge, V2Button, V2EmptyState, V2Field, V2Input, V2Select, V2Skeleton,
@@ -138,7 +141,7 @@ function ValidationEditor({ coachId, coachName, student, current, onDone }) {
   );
 }
 
-function StudentCard({ coachId, coachName, student, completedCount, validation, levelingOn, onStatus, onRemove, isPending }) {
+function StudentCard({ coachId, coachName, student, completedCount, validation, rating, levelingOn, onStatus, onRemove, isPending }) {
   const [editing, setEditing] = useState(false);
   const [validating, setValidating] = useState(false);
   return (
@@ -166,6 +169,14 @@ function StudentCard({ coachId, coachName, student, completedCount, validation, 
                 <V2Badge tone="green">
                   <ShieldCheck className="mr-1 inline h-3 w-3" />
                   Nível {validation.level_badge || validation.level_name} validado
+                </V2Badge>
+              </div>
+            )}
+            {rating?.rating != null && (
+              <div className="mt-1">
+                <V2Badge tone="acid">
+                  <TrendingUp className="mr-1 inline h-3 w-3" />
+                  Rating {rating.rating}{rating.position ? ` · ${rating.position}º` : ''}
                 </V2Badge>
               </div>
             )}
@@ -231,8 +242,21 @@ function StudentCard({ coachId, coachName, student, completedCount, validation, 
 export default function CoachStudentsSection({ coachId, lessons = [] }) {
   const { user } = useAuth();
   const levelingOn = true;
+  const progressOn = useFeatureFlag(FEATURE_FLAG.COACH_STUDENT_PROGRESS);
   const { data: students = [], isLoading } = useCoachStudents(coachId);
   const { data: validations = [] } = useCoachValidations(levelingOn ? coachId : null);
+  const { data: ranking = [] } = useNationalRanking();
+
+  // Evolução do aluno: mapa uid → rating/posição no ranking nacional (gated).
+  const ratingByUid = useMemo(() => {
+    const map = new Map();
+    if (!progressOn) return map;
+    ranking.forEach((p) => {
+      const uid = p.uid || p.id;
+      if (uid) map.set(uid, { rating: p.rating, position: p.position });
+    });
+    return map;
+  }, [progressOn, ranking]);
   const upsert = useUpsertStudent();
   const setStatus = useSetStudentStatus();
   const remove = useRemoveStudent();
@@ -352,6 +376,7 @@ export default function CoachStudentsSection({ coachId, lessons = [] }) {
               student={s}
               completedCount={completedFor(s.student_id)}
               validation={validationByStudent.get(s.student_id)}
+              rating={ratingByUid.get(s.student_id)}
               levelingOn={levelingOn}
               onStatus={handleStatus}
               onRemove={handleRemove}
