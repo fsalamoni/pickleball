@@ -14,6 +14,9 @@ import V2AdminBookingCalendar from '@/v2/components/arenas/V2AdminBookingCalenda
 import V2ArenaPaymentTab from '@/v2/components/arenas/V2ArenaPaymentTab';
 import V2ArenaRulesTab from '@/v2/components/arenas/V2ArenaRulesTab';
 import V2ArenaMercadoTab from '@/v2/components/arenas/V2ArenaMercadoTab';
+import V2ArenaWeekPanel from '@/v2/components/arenas/V2ArenaWeekPanel';
+import { useFeatureFlag } from '@/core/lib/FeatureFlagsContext';
+import { FEATURE_FLAG } from '@/core/featureFlags';
 import { db } from '@/core/config/firebase';
 import { useAuth } from '@/core/lib/FirebaseAuthContext';
 import { ImageUpload } from '@/components/ui/image-upload';
@@ -152,6 +155,7 @@ function V2ArenaManageContent({ arenaId, user, isPlatformAdmin, arena, managed, 
   const coachResidentOn = true;
   const linkedClubsOn = true;
   const crmOn = true;
+  const opsKpisOn = useFeatureFlag(FEATURE_FLAG.ARENA_OPS_KPIS);
   // Lembra a última sub-aba visitada em cada seção principal.
   const [sectionMemory, setSectionMemory] = useState({});
 
@@ -226,6 +230,8 @@ function V2ArenaManageContent({ arenaId, user, isPlatformAdmin, arena, managed, 
           </V2Button>
         </div>
       </div>
+
+      {opsKpisOn && <V2ArenaWeekPanel arenaId={arenaId} />}
 
       <div className="mt-6 space-y-3">
         {/* Nível 1: seções principais (temas) */}
