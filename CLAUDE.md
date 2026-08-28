@@ -12,7 +12,7 @@
 
 - **O que é**: PWA para pickleball amador BR — torneios, clubes, arenas, professores, comunidade.
 - **Stack**: React 18 + Vite, Tailwind + shadcn/ui, Firebase (Firestore db `pickleball`), React Query, Vitest, Playwright.
-- **Estado**: 21 módulos, 72 V2 pages, 102 coleções Firestore, **102 índices compostos**, **1 feature flag** (137 flags ativas viraram código permanente; só `dupr_official_sync` segue como flag), **1608 testes verdes**. Legado V1 removido (`src/modules/*/pages`, `ProfileCompletionModal`, `FeatureFlagGuard`).
+- **Estado**: 21 módulos, 72 V2 pages, 103 coleções Firestore (+push_tokens), **102 índices compostos**, **5 feature flags** (137 ativas viraram código; `dupr_official_sync` + 4 de engajamento default OFF: `action_home`, `smart_matchmaking`, `post_game_flow`, `push_notifications`), **1617 testes verdes**. Legado V1 removido (`src/modules/*/pages`, `ProfileCompletionModal`, `FeatureFlagGuard`).
 - **Live**: https://picklerush.web.app (Firebase site `picklerush`; `pickletour` é redirect-only).
 - **Deploy**: push em `main` → GitHub Actions → Firebase Hosting + Rules + Cloud Function.
 - **Repositório**: https://github.com/fsalamoni/pickleball
@@ -366,7 +366,7 @@ chore(deps): bump firebase to 12.x
 | **V2 components (src/v2/components/)** | +4 pastas (coach, arenas, games, legal, performance) | — |
 | **Coleções Firestore** | 102 (+legal_consents, +game_days) | +63 |
 | **Índices compostos Firestore** | 4 (Wave C.6.1) | +4 |
-| **Feature flags** | 1 (137 ativas viraram código; `dupr_official_sync` remanescente) | −130 |
+| **Feature flags** | 5 (`dupr_official_sync` + 4 de engajamento default OFF) | −126 |
 | **Cloud Functions** | 8 (sem mudança) | +8 |
 | **PRs mergeados** | 57 totais (Sprints 0-31) | — |
 | **Origin/main** | `b54d81f` (PR #94) | — |
@@ -409,7 +409,7 @@ PLATAFORMA   PickleRush (picklerush.web.app)
 STACK        React+Vite, Tailwind+shadcn, Firebase (db 'pickleball'), React Query, Vitest
 MODELO       19 módulos em src/modules/X/{domain,services,hooks,pages,components}/
 UI ATIVA     src/v2/ (67 pages, 2-level nav, dark ink/acid/paper)
-FEATURES     1 flag (dupr_official_sync) em src/core/featureFlags.js — 137 ativas viraram código
+FEATURES     5 flags (dupr_official_sync + action_home/smart_matchmaking/post_game_flow/push_notifications, default OFF)
 SCHEMA       94 coleções top-level em firestore.rules
 TESTES       1350 vitest (domain obrigatório)
 DEPLOY       push main → GitHub Actions → firebase hosting (sites picklerush+pickletour)
