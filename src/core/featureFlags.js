@@ -50,6 +50,39 @@ export const FEATURE_FLAG = Object.freeze({
    * ou sem VAPID, nada é registrado e nada muda.
    */
   PUSH_NOTIFICATIONS: 'push_notifications',
+
+  /** Arena: painel operacional com KPIs semanais (ocupação, receita, mapa de
+   * calor de horários, no-show). Aditivo — desligada, o painel segue como está. */
+  ARENA_OPS_KPIS: 'arena_ops_kpis',
+
+  /** Arena: checkout unificado reserva + PDV + Pix num fluxo só (Pix manual,
+   * sem gateway). Aditivo — desligada, reserva e PDV seguem separados. */
+  ARENA_UNIFIED_CHECKOUT: 'arena_unified_checkout',
+
+  /** Arena: preço dinâmico (desconto em horário de baixa, preço de pico).
+   * Aditivo — desligada, o preço segue a tabela padrão. */
+  ARENA_DYNAMIC_PRICING: 'arena_dynamic_pricing',
+
+  /** Arena: relacionamento com membros (mensalidade/pacotes, campanhas
+   * segmentadas, responder avaliações). Aditivo — desligada, some. */
+  ARENA_MEMBER_CRM: 'arena_member_crm',
+
+  /** Professor: perfil público que se acha — filtros por nível/preço/local e
+   * depoimentos/avaliações. Aditivo — desligada, o diretório segue como está. */
+  COACH_PUBLIC_DISCOVERY: 'coach_public_discovery',
+
+  /** Professor: agenda com reserva + pagamento (Pix manual) num fluxo, com
+   * política de no-show. Aditivo — desligada, a solicitação de aula segue igual. */
+  COACH_BOOKING_PAY: 'coach_booking_pay',
+
+  /** Professor: gestão de alunos ligada à evolução (nível/rating, pacotes,
+   * clínicas) no roster. Aditivo — desligada, o roster segue como está. */
+  COACH_STUDENT_PROGRESS: 'coach_student_progress',
+
+  /** Professor: nível validado pelo professor alimenta a semente do rating
+   * (elo professor↔atleta↔ranking). Aditivo — desligada, a semente segue a
+   * lógica atual (rating DUPR informado / nivelamento). */
+  COACH_LEVEL_RATING_SEED: 'coach_level_rating_seed',
 });
 
 /** Metadados de exibição para o painel de flags (admin master). */
@@ -90,6 +123,54 @@ export const FEATURE_FLAG_META = Object.freeze({
       + 'sorteio saiu", "resultado lançado", "reserva confirmada"), espelhando '
       + 'as notificações in-app. Requer configuração de VAPID/FCM. Desligada ou '
       + 'sem VAPID, nada é registrado e nada muda.',
+  },
+  [FEATURE_FLAG.ARENA_OPS_KPIS]: {
+    label: 'Arena · Painel operacional (KPIs)',
+    description:
+      'Visão sintética "como foi minha semana": ocupação, receita, mapa de '
+      + 'calor de horários e no-show num só lugar. Desligada, o painel segue como está.',
+  },
+  [FEATURE_FLAG.ARENA_UNIFIED_CHECKOUT]: {
+    label: 'Arena · Checkout unificado (reserva + PDV + Pix)',
+    description:
+      'Reservar quadra, adicionar produtos e pagar por Pix num fluxo só '
+      + '(Pix manual, sem gateway). Desligada, reserva e PDV seguem separados.',
+  },
+  [FEATURE_FLAG.ARENA_DYNAMIC_PRICING]: {
+    label: 'Arena · Preço dinâmico',
+    description:
+      'Desconto em horário de baixa e preço de pico para encher a grade. '
+      + 'Desligada, o preço segue a tabela padrão por dia/horário.',
+  },
+  [FEATURE_FLAG.ARENA_MEMBER_CRM]: {
+    label: 'Arena · Relacionamento com membros',
+    description:
+      'Mensalidade/pacotes, campanhas segmentadas e resposta pública às '
+      + 'avaliações, num painel de relacionamento. Desligada, some.',
+  },
+  [FEATURE_FLAG.COACH_PUBLIC_DISCOVERY]: {
+    label: 'Professor · Perfil público que se acha',
+    description:
+      'Filtros por nível, preço e localização no diretório e depoimentos/'
+      + 'avaliações no perfil. Desligada, o diretório segue como está.',
+  },
+  [FEATURE_FLAG.COACH_BOOKING_PAY]: {
+    label: 'Professor · Agenda com reserva + pagamento',
+    description:
+      'Disponibilidade → aluno reserva → paga (Pix manual) num fluxo, com '
+      + 'política de no-show. Desligada, a solicitação de aula segue como está.',
+  },
+  [FEATURE_FLAG.COACH_STUDENT_PROGRESS]: {
+    label: 'Professor · Alunos ligados à evolução',
+    description:
+      'No roster, mostra o progresso do aluno (nível/rating), pacotes e '
+      + 'clínicas. Desligada, o roster segue como está.',
+  },
+  [FEATURE_FLAG.COACH_LEVEL_RATING_SEED]: {
+    label: 'Professor · Nível validado alimenta o rating',
+    description:
+      'O nível validado pelo professor vira semente do rating (elo professor↔'
+      + 'atleta↔ranking). Desligada, a semente segue a lógica atual.',
   },
 });
 

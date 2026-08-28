@@ -22,6 +22,22 @@ export const FLAG_GROUPS = Object.freeze([
     ],
   },
   {
+    id: 'arena_new',
+    label: 'Arena — operação e receita',
+    keys: [
+      FEATURE_FLAG.ARENA_OPS_KPIS, FEATURE_FLAG.ARENA_UNIFIED_CHECKOUT,
+      FEATURE_FLAG.ARENA_DYNAMIC_PRICING, FEATURE_FLAG.ARENA_MEMBER_CRM,
+    ],
+  },
+  {
+    id: 'coach_new',
+    label: 'Professor — descoberta e agenda',
+    keys: [
+      FEATURE_FLAG.COACH_PUBLIC_DISCOVERY, FEATURE_FLAG.COACH_BOOKING_PAY,
+      FEATURE_FLAG.COACH_STUDENT_PROGRESS, FEATURE_FLAG.COACH_LEVEL_RATING_SEED,
+    ],
+  },
+  {
     id: 'athlete',
     label: 'Atleta, rating e social',
     keys: [FEATURE_FLAG.DUPR_OFFICIAL_SYNC],
