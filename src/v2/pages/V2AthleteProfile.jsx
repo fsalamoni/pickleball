@@ -84,10 +84,10 @@ export default function V2AthleteProfile() {
 
       {/* Hero */}
       <div className="overflow-hidden rounded-4xl border border-gray-100 bg-paper-pure shadow-organic-sm">
-        <div className="relative h-44 bg-mesh">
+        <div className="relative h-56 bg-mesh">
           <div className="absolute inset-0 bg-gradient-to-t from-paper-pure to-transparent" />
         </div>
-        <div className="px-6 pb-8 sm:px-8">
+        <div className="relative px-6 pb-8 sm:px-8">
           <div className="-mt-16 mb-6 flex flex-col items-center gap-6 sm:flex-row sm:items-end sm:justify-between">
             <div className="rounded-full border-8 border-paper-pure bg-paper-pure shadow-md">
               <V2Avatar name={athlete.platform_name} photoUrl={athlete.photo_url} size="xl" className="h-32 w-32 text-4xl" />
