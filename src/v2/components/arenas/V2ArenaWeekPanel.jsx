@@ -2,7 +2,7 @@ import React, { useMemo } from 'react';
 import { CalendarRange, DollarSign, Percent, Star, TrendingUp, UserX } from 'lucide-react';
 import { useArenaBookings } from '@/modules/arenas/hooks/useBookings';
 import { useArenaReviews } from '@/modules/arenas/hooks/useArenas';
-import { weekSummary, bookingsHeatmap, HEATMAP_HOURS } from '@/modules/arenas/domain/arena_week';
+import { weekSummary, bookingsHeatmap } from '@/modules/arenas/domain/arena_week';
 import { V2Skeleton, V2Surface } from '@/v2/ui/primitives';
 import { cn } from '@/core/lib/utils';
 
@@ -16,9 +16,10 @@ function isoDaysAgo(n) {
 }
 
 /**
- * Painel operacional "como foi minha semana" (flag arena_ops_kpis).
- * Reúne receita, reservas, ocupação, no-show, avaliação e um mapa de calor de
- * horários — tudo derivado das reservas/avaliações que já existem.
+ * Aba "Semana" da Central da arena (flag arena_ops_kpis): a visão sintética
+ * "como foi minha semana" — receita, reservas, ocupação, no-show, avaliação e
+ * um mapa de calor de horários. Tudo derivado das reservas/avaliações que já
+ * existem. Renderiza como conteúdo de aba (mesmo padrão de Métricas/Retornos).
  */
 export default function V2ArenaWeekPanel({ arenaId }) {
   const { data: bookings = [], isLoading } = useArenaBookings(arenaId);
@@ -37,27 +38,36 @@ export default function V2ArenaWeekPanel({ arenaId }) {
     return Math.round((sum / rated.length) * 10) / 10;
   }, [reviews]);
 
-  if (isLoading) return <V2Skeleton className="mb-8 h-56 rounded-4xl" />;
+  if (isLoading) {
+    return (
+      <div className="space-y-4">
+        <V2Skeleton className="h-28 rounded-4xl" />
+        <V2Skeleton className="h-56 rounded-4xl" />
+      </div>
+    );
+  }
 
   return (
-    <V2Surface className="mb-8">
-      <div className="mb-4 flex items-center gap-2">
-        <CalendarRange className="h-5 w-5 text-acid" />
-        <h2 className="font-display text-lg font-bold text-ink">Como foi sua semana</h2>
-        <span className="text-xs text-gray-400">últimos 7 dias</span>
-      </div>
+    <div className="space-y-6">
+      <div>
+        <div className="mb-4 flex items-center gap-2">
+          <CalendarRange className="h-5 w-5 text-acid" />
+          <h2 className="font-display text-lg font-bold text-ink">Como foi sua semana</h2>
+          <span className="text-xs text-gray-400">últimos 7 dias</span>
+        </div>
 
-      <div className="grid grid-cols-2 gap-3 lg:grid-cols-5">
-        <Kpi icon={DollarSign} accent="acid" label="Receita confirmada" value={BRL.format(week.revenue)} />
-        <Kpi icon={CalendarRange} accent="ink" label="Reservas" value={week.bookings} hint={`${week.confirmed} confirmada(s)`} />
-        <Kpi icon={TrendingUp} accent="ink" label="Horas ocupadas" value={`${week.bookedHours}h`} />
-        <Kpi icon={UserX} accent="ink" label="No-show" value={week.noShowRate == null ? '—' : `${week.noShowRate}%`} hint={`${week.noShows} falta(s)`} />
-        <Kpi icon={Star} accent="acid" label="Avaliação" value={avgRating == null ? '—' : avgRating.toFixed(1)} hint={reviews.length ? `${reviews.length} avaliações` : 'sem avaliações'} />
+        <div className="grid grid-cols-2 gap-3 lg:grid-cols-5">
+          <Kpi icon={DollarSign} accent="acid" label="Receita confirmada" value={BRL.format(week.revenue)} />
+          <Kpi icon={CalendarRange} accent="ink" label="Reservas" value={week.bookings} hint={`${week.confirmed} confirmada(s)`} />
+          <Kpi icon={TrendingUp} accent="ink" label="Horas ocupadas" value={`${week.bookedHours}h`} />
+          <Kpi icon={UserX} accent="ink" label="No-show" value={week.noShowRate == null ? '—' : `${week.noShowRate}%`} hint={`${week.noShows} falta(s)`} />
+          <Kpi icon={Star} accent="acid" label="Avaliação" value={avgRating == null ? '—' : avgRating.toFixed(1)} hint={reviews.length ? `${reviews.length} avaliações` : 'sem avaliações'} />
+        </div>
       </div>
 
       {/* Mapa de calor de horários (padrão geral das reservas confirmadas) */}
-      <div className="mt-6">
-        <div className="mb-2 flex items-center gap-2">
+      <V2Surface>
+        <div className="mb-3 flex items-center gap-2">
           <Percent className="h-4 w-4 text-ink" />
           <h3 className="text-sm font-bold text-ink">Mapa de calor · horários mais cheios</h3>
         </div>
@@ -92,20 +102,20 @@ export default function V2ArenaWeekPanel({ arenaId }) {
             </div>
           </div>
         )}
-      </div>
-    </V2Surface>
+      </V2Surface>
+    </div>
   );
 }
 
 function Kpi({ icon: Icon, accent = 'ink', label, value, hint }) {
   return (
-    <div className="rounded-3xl border border-gray-100 bg-paper-pure p-4 shadow-organic-sm">
-      <div className="mb-1 flex items-center justify-between">
-        <span className="text-[10px] font-bold uppercase tracking-wide text-gray-400">{label}</span>
-        <Icon className={cn('h-4 w-4', accent === 'acid' ? 'text-acid' : 'text-ink')} />
+    <V2Surface className="p-4">
+      <div className="flex items-start justify-between gap-2">
+        <div className="text-xs text-gray-500">{label}</div>
+        <Icon className={cn('h-4 w-4', accent === 'acid' ? 'text-acid' : 'text-gray-400')} />
       </div>
-      <div className="font-display text-xl font-black text-ink tabular-nums">{value}</div>
-      {hint && <div className="mt-0.5 text-[11px] text-gray-500">{hint}</div>}
-    </div>
+      <div className="mt-1 font-display text-2xl font-bold text-ink tabular-nums">{value}</div>
+      {hint && <div className="mt-1 text-xs text-gray-400">{hint}</div>}
+    </V2Surface>
   );
 }

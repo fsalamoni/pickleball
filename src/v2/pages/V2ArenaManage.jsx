@@ -44,7 +44,7 @@ import { cn } from '@/core/lib/utils';
 // início ao fim: identidade → estrutura/preços → reservas → comercial →
 // resultados → equipe/parceiros. Cada seção agrupa sub-abas por tema.
 // `coachResidentOn` injeta a aba de professores parceiros na seção de equipe.
-function buildArenaSections({ coachResidentOn, linkedClubsOn, crmOn }) {
+function buildArenaSections({ coachResidentOn, linkedClubsOn, crmOn, opsKpisOn }) {
   return [
     {
       id: 'perfil',
@@ -90,6 +90,7 @@ function buildArenaSections({ coachResidentOn, linkedClubsOn, crmOn }) {
       label: 'Desempenho',
       icon: BarChart3,
       tabs: [
+        ...(opsKpisOn ? [{ value: 'semana', label: 'Semana', icon: CalendarRange }] : []),
         { value: 'metricas', label: 'Métricas', icon: BarChart3 },
         { value: 'retornos', label: 'Retornos', icon: Star },
       ],
@@ -180,7 +181,7 @@ function V2ArenaManageContent({ arenaId, user, isPlatformAdmin, arena, managed, 
   // com suas sub-abas. Ordem = ciclo de vida da arena, do início ao fim:
   // identidade → estrutura/preços → reservas (operação) → dinheiro →
   // resultados → equipe.
-  const sections = buildArenaSections({ coachResidentOn, linkedClubsOn, crmOn });
+  const sections = buildArenaSections({ coachResidentOn, linkedClubsOn, crmOn, opsKpisOn });
   const activeSectionId = sections.find((s) => s.tabs.some((t) => t.value === tab))?.id
     || sections[0].id;
   const activeSection = sections.find((s) => s.id === activeSectionId) || sections[0];
@@ -231,8 +232,6 @@ function V2ArenaManageContent({ arenaId, user, isPlatformAdmin, arena, managed, 
         </div>
       </div>
 
-      {opsKpisOn && <V2ArenaWeekPanel arenaId={arenaId} />}
-
       <div className="mt-6 space-y-3">
         {/* Nível 1: seções principais (temas) */}
         <div className="overflow-x-auto">
@@ -274,6 +273,7 @@ function V2ArenaManageContent({ arenaId, user, isPlatformAdmin, arena, managed, 
       </div>
 
       <div className="mt-6">
+        {tab === 'semana' && opsKpisOn && <V2ArenaWeekPanel arenaId={arena.id} />}
         {tab === 'metricas' && <V2ArenaMetrics arena={arena} />}
         {tab === 'reservas' && <BookingsTab arena={arena} />}
         {tab === 'calendario' && <V2ArenaCalendar arena={arena} />}
