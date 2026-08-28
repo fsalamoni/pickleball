@@ -1,8 +1,8 @@
 import { useQuery } from '@tanstack/react-query';
 import { listAthletes, listAllAthleteProfiles, getAthlete } from '../services/athleteService';
 
-export function useAthletes() {
-  return useQuery({ queryKey: ['athletes'], queryFn: listAthletes });
+export function useAthletes(enabled = true) {
+  return useQuery({ queryKey: ['athletes'], queryFn: listAthletes, enabled });
 }
 
 /** Todos os perfis da plataforma (para o admin escolher quem convidar). */
