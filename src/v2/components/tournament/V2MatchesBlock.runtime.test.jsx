@@ -28,12 +28,12 @@ const config = normalizeTeamConfig({
 let container;
 let root;
 
-function mount(match) {
+function mount(match, cfg = config) {
   container = document.createElement('div');
   document.body.appendChild(container);
   root = createRoot(container);
   React.act(() => {
-    root.render(<TeamConfrontationScore match={match} config={config} />);
+    root.render(<TeamConfrontationScore match={match} config={cfg} />);
   });
 }
 
@@ -90,12 +90,7 @@ describe('TeamConfrontationScore (runtime)', () => {
         games: [{ a: 11, b: 8 }, { a: 7, b: 11 }, { a: 11, b: 6 }],
       }],
     };
-    container = document.createElement('div');
-    document.body.appendChild(container);
-    root = createRoot(container);
-    React.act(() => {
-      root.render(<TeamConfrontationScore match={match} config={cfg3} />);
-    });
+    mount(match, cfg3);
     const text = container.textContent;
     // Os três games da etapa constam do placar.
     expect(text).toContain('11');
