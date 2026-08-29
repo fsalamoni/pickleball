@@ -13,13 +13,17 @@ const h = vi.hoisted(() => ({
   getTournament: vi.fn(),
   listRegistrations: vi.fn(),
   persistMatches: vi.fn(),
+  clearStale: vi.fn(),
   createAuditLog: vi.fn(),
 }));
 
 vi.mock('./modalityService.js', () => ({ getModality: h.getModality }));
 vi.mock('./tournamentService.js', () => ({ getTournament: h.getTournament }));
 vi.mock('./registrationService.js', () => ({ listRegistrations: h.listRegistrations }));
-vi.mock('./matchService.js', () => ({ persistMatches: h.persistMatches }));
+vi.mock('./matchService.js', () => ({
+  persistMatches: h.persistMatches,
+  clearStaleSingleGroupMarkers: h.clearStale,
+}));
 vi.mock('@/core/services/auditService', () => ({ createAuditLog: h.createAuditLog }));
 vi.mock('@/core/config/firebase', () => ({ db: {} }));
 
@@ -46,6 +50,7 @@ function setup({ stage, format = MODALITY_FORMAT.DOUBLES, team = true, n = 6 } =
   h.getTournament.mockResolvedValue({ id: TID, results_locked: false, starts_at: null });
   h.listRegistrations.mockResolvedValue(regs(n));
   h.persistMatches.mockResolvedValue({ scheduleWarnings: [] });
+  h.clearStale.mockResolvedValue({ cleared: 0, groupsRemoved: 0 });
 }
 
 describe('runDraw — honra o modo de divisão da fase', () => {
@@ -88,5 +93,63 @@ describe('runDraw — honra o modo de divisão da fase', () => {
     );
 
     expect(result.groups).toHaveLength(2);
+  });
+});
+
+describe('runDraw — limpa resíduos de grupo único automaticamente', () => {
+  beforeEach(() => {
+    vi.clearAllMocks();
+  });
+
+  it('fase de grupo único: chama clearStaleSingleGroupMarkers após persistir', async () => {
+    setup({
+      stage: {
+        type: TOURNAMENT_STAGE_TYPE.GROUPS,
+        division_mode: PHASE_DIVISION_MODE.SINGLE,
+      },
+    });
+
+    await runDraw(
+      { tournamentId: TID, modalityId: MID, stageIndex: 0, seed: 's' },
+      { uid: 'admin' },
+    );
+
+    expect(h.persistMatches).toHaveBeenCalledTimes(1);
+    expect(h.clearStale).toHaveBeenCalledTimes(1);
+    expect(h.clearStale).toHaveBeenCalledWith(MID, expect.objectContaining({ id: MID }), { uid: 'admin' });
+  });
+
+  it('fase de nº de grupos: NÃO chama a limpeza (não é grupo único)', async () => {
+    setup({
+      stage: {
+        type: TOURNAMENT_STAGE_TYPE.GROUPS,
+        division_mode: PHASE_DIVISION_MODE.GROUP_COUNT,
+        group_count: 2,
+      },
+    });
+
+    await runDraw(
+      { tournamentId: TID, modalityId: MID, stageIndex: 0, seed: 's' },
+      { uid: 'admin' },
+    );
+
+    expect(h.persistMatches).toHaveBeenCalledTimes(1);
+    expect(h.clearStale).not.toHaveBeenCalled();
+  });
+
+  it('fase de grupos legada (sem division_mode): NÃO chama a limpeza', async () => {
+    setup({
+      stage: {
+        type: TOURNAMENT_STAGE_TYPE.GROUPS,
+        group_count: 2,
+      },
+    });
+
+    await runDraw(
+      { tournamentId: TID, modalityId: MID, stageIndex: 0, seed: 's' },
+      { uid: 'admin' },
+    );
+
+    expect(h.clearStale).not.toHaveBeenCalled();
   });
 });

@@ -12,7 +12,7 @@ import { stageFormatCompatibility } from '../domain/formatExplain.js';
 import { normalizePhase, plannedGroupCount } from '../domain/phases.js';
 import { balancedParticipantOrder, levelRank } from '../domain/seeding.js';
 import { listRegistrations } from './registrationService.js';
-import { persistMatches } from './matchService.js';
+import { persistMatches, clearStaleSingleGroupMarkers } from './matchService.js';
 import { getModality } from './modalityService.js';
 import { getTournament } from './tournamentService.js';
 import {
@@ -21,6 +21,7 @@ import {
   GENDER_CATEGORY,
   COMPETITION_GENDER,
   TOURNAMENT_STAGE_TYPE,
+  PHASE_DIVISION_MODE,
 } from '../domain/constants.js';
 
 /**
@@ -214,6 +215,16 @@ export async function runDraw(params, actor) {
       teamConfrontation: isTeam,
     },
   );
+
+  // Fase de GRUPO ÚNICO: o motor de sorteio sempre nomeia ao menos um grupo
+  // ("Grupo A") para montar o todos-contra-todos, então mesmo aqui os jogos
+  // nascem com o marcador `m.group` e 1 doc em `tournament_groups`. Como a
+  // modalidade define grupo único, limpamos esses resíduos automaticamente logo
+  // após persistir — igual ao botão "Corrigir grupos", só que silencioso — para
+  // o dado nunca ficar inconsistente. Idempotente e restrito às fases single.
+  if (stage.division_mode === PHASE_DIVISION_MODE.SINGLE) {
+    await clearStaleSingleGroupMarkers(modalityId, modality, actor);
+  }
 
   return { ...draw, seed_used: seed, balanced, scheduleWarnings: scheduleWarnings || [] };
 }

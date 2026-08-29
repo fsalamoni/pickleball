@@ -598,6 +598,8 @@ export function useRunDraw() {
       qc.invalidateQueries({ queryKey: ['matches', params.modalityId] });
       qc.invalidateQueries({ queryKey: ['all-matches', params.modalityId] });
       qc.invalidateQueries({ queryKey: ['matches-tournament', params.tournamentId] });
+      qc.invalidateQueries({ queryKey: ['stage-groups', params.modalityId] });
+      qc.invalidateQueries({ queryKey: ['phase-groups', params.modalityId] });
       qc.invalidateQueries({ queryKey: ['ranking', params.modalityId] });
       qc.invalidateQueries({ queryKey: ['ranking-structured', params.modalityId] });
     },
