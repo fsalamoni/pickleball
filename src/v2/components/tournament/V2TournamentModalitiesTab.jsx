@@ -255,7 +255,7 @@ export default function V2TournamentModalitiesTab({ tournament, isAdmin }) {
         // órfãos) para o dado nunca ficar inconsistente. A rotina é idempotente
         // e no-op quando não há nada a limpar; uma falha aqui não desfaz o
         // salvamento (há o botão "Corrigir grupos" na aba Sorteio como reserva).
-        if (hasSingleGroupStage(stages)) {
+        if (hasSingleGroupStage(payload.stages)) {
           try {
             const { cleared, groupsRemoved } = await clearGroupsMutation.mutateAsync({
               ...editingModality,
