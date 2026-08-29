@@ -26,8 +26,8 @@ function competitionLabel(modality) {
 }
 
 function registerLabelFor({ alreadyRegistered, canRegister, slotsFull, isAdmin, isTeam }) {
-  // O organizador inscreve quantas equipes precisar — estar numa delas não o trava.
-  if (isTeam && isAdmin && canRegister) return 'Nova equipe';
+  // Esta é a página do atleta: o CTA é a inscrição dele. O organizador inscreve
+  // e edita equipes no painel (aba Inscrições), não por aqui.
   if (alreadyRegistered) return isTeam ? 'Sua equipe está inscrita' : 'Você já está inscrito';
   if (!canRegister) return 'Torneio privado: exige código';
   if (slotsFull && !isAdmin) return 'Modalidade lotada';
@@ -135,7 +135,7 @@ export default function V2ModalityPage() {
           </div>
 
           <div className="mt-6 flex flex-wrap gap-2">
-            <V2Button onClick={() => setRegisterOpen(true)} disabled={(alreadyRegistered && !(isTeam && isAdmin)) || !canRegister || (slotsFull && !isAdmin)}>
+            <V2Button onClick={() => setRegisterOpen(true)} disabled={alreadyRegistered || !canRegister || (slotsFull && !isAdmin)}>
               <Plus className="h-4 w-4" /> {registerLabel}
             </V2Button>
             <V2Button asChild variant="ghost" className="border-white/20 bg-white/10 text-white hover:border-white/40">

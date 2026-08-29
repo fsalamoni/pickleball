@@ -1360,3 +1360,97 @@ export function buildTeamGroupTables({ matches = [], teamRegistrations = [], con
   }
   return groups.map((name) => tableFor(name, playable.filter((m) => m.group === name)));
 }
+
+/* -------------------------------------------------------------------------
+ * ESTADO DE UM CONFRONTO — o vocabulário do organizador
+ *
+ * Um CONFRONTO (equipe × equipe) é o "jogo" da fase. Ele se divide em ETAPAS
+ * (as partidas: dupla masculina, feminina, mista, simples) e cada etapa é
+ * disputada em GAMES (sets). Dois momentos distintos, na ordem em que
+ * acontecem na quadra:
+ *
+ *   1. INICIAR A PARTIDA — o organizador define a ESCALAÇÃO: quem joga cada
+ *      etapa e, no simples em rodízio, a ordem de entrada;
+ *   2. LANÇAR O RESULTADO — o organizador registra os GAMES de cada etapa.
+ *
+ * Estas funções dizem em que ponto o confronto está, para a UI oferecer a ação
+ * certa (e só ela) em cada momento.
+ * ------------------------------------------------------------------------- */
+
+/** Quantos jogadores a etapa exige por lado (conforme a config). */
+function requiredLineupSize(spec, config, rosterSize) {
+  return etapaLineupSlots(spec, config, rosterSize).length;
+}
+
+/**
+ * Estado da ESCALAÇÃO de um confronto.
+ *
+ * @param {object} match       confronto persistido (com `etapas`)
+ * @param {object} config      team_config
+ * @param {{ rosterASize?: number, rosterBSize?: number }} [sizes] tamanho dos
+ *   elencos (só importa para o simples em rodízio, cuja ordem tem 1 vaga por
+ *   atleta); na ausência, usa o tamanho de equipe da modalidade.
+ * @returns {{
+ *   total: number, escaladas: number, pendentes: number,
+ *   completa: boolean, iniciada: boolean,
+ * }}
+ */
+export function confrontationLineupStatus(match, config = {}, sizes = {}) {
+  const specs = Array.isArray(config.etapas) ? config.etapas : [];
+  const saved = Array.isArray(match?.etapas) ? match.etapas : [];
+  const sizeA = Number(sizes.rosterASize) || Number(config.team_size) || 0;
+  const sizeB = Number(sizes.rosterBSize) || Number(config.team_size) || 0;
+
+  let escaladas = 0;
+  let algumaEscalada = false;
+  specs.forEach((spec, i) => {
+    const etapa = saved.find((e) => e?.id === spec.id) || saved[i] || {};
+    const a = (etapa.side_a || []).filter(Boolean);
+    const b = (etapa.side_b || []).filter(Boolean);
+    if (a.length > 0 || b.length > 0) algumaEscalada = true;
+    if (a.length >= requiredLineupSize(spec, config, sizeA)
+      && b.length >= requiredLineupSize(spec, config, sizeB)) {
+      escaladas += 1;
+    }
+  });
+
+  return {
+    total: specs.length,
+    escaladas,
+    pendentes: Math.max(0, specs.length - escaladas),
+    completa: specs.length > 0 && escaladas === specs.length,
+    iniciada: algumaEscalada,
+  };
+}
+
+/**
+ * Retrato completo de um confronto para a UI (admin e público): estado da
+ * escalação, apuração das etapas e um rótulo curto do momento.
+ *
+ * @param {object} match
+ * @param {object} config
+ * @param {object} [sizes] ver confrontationLineupStatus
+ * @returns {{
+ *   lineup: object, result: object,
+ *   stage: 'pendente'|'escalado'|'em_andamento'|'encerrado',
+ *   label: string,
+ * }}
+ */
+export function confrontationSnapshot(match, config = {}, sizes = {}) {
+  const lineup = confrontationLineupStatus(match, config, sizes);
+  const result = computeConfrontationResult({ etapas: match?.etapas || [] }, config);
+
+  let stage = 'pendente';
+  if (result.decided) stage = 'encerrado';
+  else if (result.etapasDecided > 0) stage = 'em_andamento';
+  else if (lineup.iniciada) stage = 'escalado';
+
+  const label = {
+    pendente: 'Aguardando escalação',
+    escalado: 'Escalado — aguardando resultado',
+    em_andamento: `Em andamento (${result.etapasDecided}/${result.etapasTotal} etapas)`,
+    encerrado: result.winner ? 'Encerrado' : 'Encerrado (empate em etapas)',
+  }[stage];
+
+  return { lineup, result, stage, label };
+}

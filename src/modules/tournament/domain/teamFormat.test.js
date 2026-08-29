@@ -10,7 +10,7 @@ import {
   resolveEtapaScoring, computeEtapaResult, etapaScoreIssues, etapaLineupSlots,
   suggestSideLineup, buildEtapaDrafts, etapasToPayload,
   buildConfrontationStructure, buildTeamGroupTables, matchToConfrontation,
-  isTeamConfrontation,
+  isTeamConfrontation, confrontationLineupStatus, confrontationSnapshot,
 } from './teamFormat.js';
 
 const M = 'male';
@@ -804,5 +804,71 @@ describe('buildConfrontationStructure — chave vs pontos corridos', () => {
   it('fase de grupos não é chave', () => {
     const m = { ...mk('groups', 1, 1), group: 'Grupo A' };
     expect(buildConfrontationStructure([m])[0].isBracket).toBe(false);
+  });
+});
+
+describe('confrontationLineupStatus / confrontationSnapshot', () => {
+  const cfg = normalizeTeamConfig({
+    team_size: 2, gender: TEAM_GENDER.MALE, win_rule: TEAM_WIN_RULE.ALL,
+    etapas: [{ type: TEAM_ETAPA_TYPE.MENS_DOUBLES }, { type: TEAM_ETAPA_TYPE.SINGLES }],
+  }).value;
+
+  const escalada = (games = []) => ({
+    etapas: [
+      { id: 'etapa_1', side_a: ['a1', 'a2'], side_b: ['b1', 'b2'], games: games[0] || [] },
+      { id: 'etapa_2', side_a: ['a1'], side_b: ['b1'], games: games[1] || [] },
+    ],
+  });
+
+  it('confronto sem etapas: nada escalado', () => {
+    const st = confrontationLineupStatus({ etapas: [] }, cfg);
+    expect(st).toMatchObject({ total: 2, escaladas: 0, pendentes: 2, completa: false, iniciada: false });
+    expect(confrontationSnapshot({ etapas: [] }, cfg)).toMatchObject({
+      stage: 'pendente', label: 'Aguardando escalação',
+    });
+  });
+
+  it('escalação parcial conta o que falta', () => {
+    const match = { etapas: [{ id: 'etapa_1', side_a: ['a1', 'a2'], side_b: ['b1', 'b2'] }] };
+    const st = confrontationLineupStatus(match, cfg);
+    expect(st).toMatchObject({ escaladas: 1, pendentes: 1, completa: false, iniciada: true });
+  });
+
+  it('escalação completa sem placar: partida iniciada', () => {
+    expect(confrontationSnapshot(escalada(), cfg)).toMatchObject({ stage: 'escalado' });
+    expect(confrontationLineupStatus(escalada(), cfg).completa).toBe(true);
+  });
+
+  it('uma etapa decidida: em andamento; todas: encerrado', () => {
+    const parcial = escalada([[{ a: 11, b: 5 }]]);
+    expect(confrontationSnapshot(parcial, cfg)).toMatchObject({ stage: 'em_andamento' });
+    expect(confrontationSnapshot(parcial, cfg).label).toContain('1/2');
+
+    const total = escalada([[{ a: 11, b: 5 }], [{ a: 11, b: 7 }]]);
+    const snap = confrontationSnapshot(total, cfg);
+    expect(snap.stage).toBe('encerrado');
+    expect(snap.result.winner).toBe('a');
+  });
+
+  it('empate em etapas aparece no rótulo', () => {
+    const empate = escalada([[{ a: 11, b: 5 }], [{ a: 6, b: 11 }]]);
+    const snap = confrontationSnapshot(empate, cfg);
+    expect(snap.stage).toBe('encerrado');
+    expect(snap.label).toContain('empate');
+  });
+
+  it('no simples em rodízio, a ordem completa depende do tamanho do elenco', () => {
+    const rot = normalizeTeamConfig({
+      team_size: 4, gender: TEAM_GENDER.MIXED,
+      singles_mode: TEAM_SINGLES_MODE.ROTATING, win_rule: TEAM_WIN_RULE.ALL,
+      etapas: [{ type: TEAM_ETAPA_TYPE.SINGLES }],
+    }).value;
+    const match = { etapas: [{ id: 'etapa_1', side_a: ['a1', 'a2'], side_b: ['b1', 'b2'] }] };
+    expect(confrontationLineupStatus(match, rot, { rosterASize: 4, rosterBSize: 4 }).completa).toBe(false);
+    expect(confrontationLineupStatus(
+      { etapas: [{ id: 'etapa_1', side_a: ['a1', 'a2'], side_b: ['b1', 'b2'] }] },
+      rot,
+      { rosterASize: 2, rosterBSize: 2 },
+    ).completa).toBe(true);
   });
 });

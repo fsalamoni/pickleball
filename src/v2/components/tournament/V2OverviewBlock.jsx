@@ -459,12 +459,12 @@ function ModalityCard({ modality, confirmed, tournament, currentUserId, allRegis
                 <V2Button asChild size="sm" variant="ghost">
                   <Link to={modalityHref}><Users className="h-4 w-4" /> Ver equipes</Link>
                 </V2Button>
-                {alreadyRegistered && !isAdmin ? (
+                {alreadyRegistered ? (
                   <V2Badge tone="green">Sua equipe está inscrita</V2Badge>
                 ) : canRegister ? (
                   <V2Button size="sm" onClick={onRegister} disabled={slotsFull && !isAdmin}>
                     <Plus className="h-4 w-4" />
-                    {slotsFull && !isAdmin ? 'Modalidade lotada' : isAdmin ? 'Nova equipe' : 'Inscrever equipe'}
+                    {slotsFull && !isAdmin ? 'Modalidade lotada' : 'Inscrever equipe'}
                   </V2Button>
                 ) : (
                   <V2Badge tone="neutral">Privado: exige código</V2Badge>

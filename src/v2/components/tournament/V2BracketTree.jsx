@@ -28,14 +28,19 @@ function SideRow({ label, score, won, decided }) {
 }
 
 export default function V2BracketTree({ matches = [], labelById }) {
-  const { columns } = buildBracketColumns(matches);
+  // As colunas são as fases finais de uma CHAVE, ou as RODADAS de um grupo —
+  // `buildBracketColumns` decide pelo tipo da fase e já devolve os rótulos.
+  const { columns, kind } = buildBracketColumns(matches);
   if (columns.length === 0) {
-    return <p className="rounded-2xl border border-gray-100 bg-paper p-4 text-sm text-gray-500">Sem chave de mata-mata para exibir.</p>;
+    return <p className="rounded-2xl border border-gray-100 bg-paper p-4 text-sm text-gray-500">Sem jogos em rodadas para exibir.</p>;
   }
   const nameOf = (ids, fallback) => (ids || []).map((id) => labelById?.get?.(id) || id).join(' + ') || fallback || 'A definir';
 
   return (
     <div className="overflow-x-auto">
+      <div className="mb-2 text-[11px] font-semibold uppercase tracking-widest text-gray-400">
+        {kind === 'bracket' ? 'Chave — fases finais' : 'Rodadas'}
+      </div>
       <div className="flex min-w-max gap-4 pb-2">
         {columns.map((col) => (
           <div key={col.round} className="flex min-w-[190px] flex-1 flex-col">

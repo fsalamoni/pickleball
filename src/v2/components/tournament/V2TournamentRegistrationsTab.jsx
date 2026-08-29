@@ -47,6 +47,7 @@ import { useAuth } from '@/core/lib/FirebaseAuthContext';
 import { useAthletes } from '@/modules/athletes/hooks/useAthletes';
 import ModalityRegistrationDialog from '@/modules/tournament/components/ModalityRegistrationDialog';
 import { registrationIncludesUid } from '@/modules/tournament/domain/teamFormat';
+import TeamRegistrationDialog from '@/v2/components/tournament/TeamRegistrationDialog';
 import PixPaymentDialog from '@/modules/tournament/components/PixPaymentDialog';
 import { tournamentHasPixConfig } from '@/modules/tournament/domain/payment';
 import { partnerInviteBadge } from '@/modules/tournament/domain/partnerInvite';
@@ -246,7 +247,7 @@ function ModalityRegistrationsBlock({ tournament, modality, registrations, isAdm
                     </td>
                     {isAdmin && (
                       <td className="px-3 py-2 text-right space-x-1">
-                        <V2Button size="icon" variant="ghost" title="Editar dados do(s) jogador(es)" aria-label="Editar inscrição" onClick={() => setEditTarget(r)}>
+                        <V2Button size="icon" variant="ghost" title={r.kind === 'team' ? 'Editar nome e elenco da equipe' : 'Editar dados do(s) jogador(es)'} aria-label="Editar inscrição" onClick={() => setEditTarget(r)}>
                           <Pencil className="w-4 h-4 text-gray-500" />
                         </V2Button>
                         {r.status === REGISTRATION_STATUS.PENDING_PAYMENT && (
@@ -293,7 +294,18 @@ function ModalityRegistrationsBlock({ tournament, modality, registrations, isAdm
             </table>
           </div>
         )}
-      {editTarget && (
+      {/* Inscrição-EQUIPE: edita nome e elenco no modal de equipes (o formulário
+          de jogador A/B não se aplica). */}
+      {editTarget && editTarget.kind === 'team' && (
+        <TeamRegistrationDialog
+          open
+          tournament={tournament}
+          modality={modality}
+          editingTeam={editTarget}
+          onClose={() => setEditTarget(null)}
+        />
+      )}
+      {editTarget && editTarget.kind !== 'team' && (
         <RegistrationEditDialog
           registration={editTarget}
           modality={modality}
