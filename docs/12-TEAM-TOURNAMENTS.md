@@ -355,32 +355,46 @@ o rodízio poderia chegar com 1–2 jogadores por lado. Ver
 (`tournament_matches` com `team_confrontation`) são ignorados pelo
 `ratingService` justamente porque já entram por etapa em `club_event_games`.
 
-**D. Rotina de limpeza de marcadores de grupo (grupo único).** A exibição já
+**D. Rotina de limpeza de grupo único (marcadores + metadados).** A exibição já
 colapsa grupo único (ponto A), mas dados de sorteios antigos podem ter deixado
-`m.group` gravado nos jogos de uma fase que hoje é grupo único. Isso não muda a
-classificação (que colapsa), mas polui a origem e reativa botões indevidos
-("Editar grupos", coluna de grupo). Há uma rotina **idempotente** e **aditiva**
-que remove só o rótulo de grupo — sem tocar em confrontos, escalações ou
-resultados:
+`m.group` gravado nos jogos e documentos órfãos em `tournament_groups` de uma
+fase que hoje é grupo único. Isso não muda a classificação (que colapsa), mas
+polui a origem e reativa botões indevidos ("Editar grupos", coluna de grupo). Há
+uma rotina **idempotente** e **aditiva** que limpa esses resíduos — sem tocar em
+confrontos, escalações ou resultados:
 
 - **Domínio (puro):** `matchesWithStaleSingleGroup(matches, stages)` retorna os
-  IDs dos jogos com `m.group` numa fase `division_mode: 'single'` (usa o modo
-  **declarado**, respeitando o `stage_index` de cada jogo; fases legadas sem o
-  campo são ignoradas). Em `domain/phases.js`.
+  IDs dos jogos com `m.group` numa fase `division_mode: 'single'`; e
+  `groupDocsInSingleGroupStages(groupDocs, stages)` retorna os IDs dos docs de
+  `tournament_groups` dessas fases. Ambos usam o modo **declarado**, respeitando
+  o `stage_index` (fases legadas sem o campo são ignoradas). Em
+  `domain/phases.js`.
 - **Serviço (I/O):** `clearStaleSingleGroupMarkers(modalityId, modality, actor)`
-  (`services/matchService.js`) lê **todos** os jogos da modalidade, zera o
-  `group` em lote e registra auditoria `tournament_group_markers_cleared`.
-  Retorna `{ cleared: n }` e não escreve nada quando não há o que corrigir.
+  (`services/matchService.js`) lê **todos** os jogos e **todos** os docs de grupo
+  da modalidade, zera o `group` dos jogos e apaga os docs de grupo órfãos das
+  fases single — tudo **no mesmo lote**. Registra auditoria
+  `tournament_group_markers_cleared` (quando limpou jogos) e/ou
+  `tournament_group_metadata_cleared` (quando apagou docs). Retorna
+  `{ cleared, groupsRemoved }` e não escreve nada quando não há o que corrigir.
+- **Automático no sorteio:** o motor sempre nomeia ao menos um grupo ("Grupo A"),
+  então até um sorteio de grupo único gravaria `m.group` + 1 doc. Para o dado
+  **nunca** nascer inconsistente, `runDraw` (`services/drawService.js`) chama a
+  rotina **silenciosamente** logo após persistir, quando a fase sorteada é
+  `division_mode: 'single'`.
 - **Hook:** `useClearStaleSingleGroupMarkers(modalityId)`
-  (`hooks/useTournament.js`).
+  (`hooks/useTournament.js`) — invalida jogos, grupos (`stage-groups`,
+  `phase-groups`) e ranking.
 - **UI (admin):** na aba **Sorteio** (`V2TournamentDrawTab`), quando há
-  marcadores obsoletos, aparece o botão **"Corrigir grupos (N)"**; nessa
-  situação os botões de grupo ("Editar grupos", "Re-sortear mantendo grupos")
-  ficam ocultos, pois não fazem sentido em grupo único.
+  marcadores obsoletos, aparece o botão **"Corrigir grupos (N)"** com um diálogo
+  de **confirmação** antes de aplicar; nessa situação os botões de grupo
+  ("Editar grupos", "Re-sortear mantendo grupos") ficam ocultos, pois não fazem
+  sentido em grupo único.
 
-Observação: a rotina não remove os metadados de `tournament_groups` de fases de
-grupo único — a exibição já os ignora (o ranking colapsa antes de lê-los). Se um
-dia quiser removê-los também, é um passo separado e opcional.
+Observação: a auto-limpeza ao **salvar** a fase como grupo único no
+`PhasesEditor` foi deliberadamente **não** implementada — a limpeza já é
+garantida no sorteio e pelo botão manual, e antes do sorteio não há nada a
+limpar (a exibição já colapsa). Acoplar salvar-config à mutação de jogos
+cruzaria camadas sem ganho.
 
 ---
 
@@ -408,12 +422,15 @@ dia quiser removê-los também, é um passo separado e opcional.
   em `domain/teamFormat.js` → `TeamModalityView.jsx`
 - Classificação do torneio / grupo único: `services/rankingService.js`
   (`computeModalityRankingStructured`)
-- Limpeza de marcadores de grupo (grupo único): `matchesWithStaleSingleGroup`
-  (`domain/phases.js`) + `clearStaleSingleGroupMarkers` (`services/matchService.js`)
-  + `useClearStaleSingleGroupMarkers` (`hooks/useTournament.js`) + botão
-  "Corrigir grupos" em `V2TournamentDrawTab.jsx`
+- Limpeza de grupo único (marcadores + metadados): `matchesWithStaleSingleGroup`
+  e `groupDocsInSingleGroupStages` (`domain/phases.js`) +
+  `clearStaleSingleGroupMarkers` (`services/matchService.js`, também disparado
+  por `runDraw` em `services/drawService.js`) +
+  `useClearStaleSingleGroupMarkers` (`hooks/useTournament.js`) + botão
+  "Corrigir grupos" (com confirmação) em `V2TournamentDrawTab.jsx`
 - Espelho no ranking individual (duplas/simples): `buildConfrontationRankingMirror`
   em `domain/teamFormat.js`, gravado por `services/teamService.js`
+  (`recordConfrontation`); teste de integração em `services/teamService.test.js`
 - Sorteio: `services/drawService.js`, `services/phaseService.js`
 - Ponte com o motor genérico: `domain/scoring.js`, `domain/ranking.js`,
   `domain/phaseProgression.js`
