@@ -5,6 +5,9 @@ import {
   buildNextPhaseEntrants,
 } from './phaseProgression.js';
 import { normalizePhase } from './phases.js';
+import {
+  normalizeTeamConfig, TEAM_GENDER, TEAM_WIN_RULE, TEAM_ETAPA_TYPE,
+} from './teamFormat.js';
 import { DEFAULT_SCORING_CONFIG } from './scoring.js';
 import {
   TOURNAMENT_STAGE_TYPE,
@@ -219,5 +222,46 @@ describe('buildNextPhaseEntrants — final por duplas (PAIR_TOP_TWO)', () => {
     expect(bracketOrder).toHaveLength(2);
     expect(bracketOrder[0].members.sort()).toEqual(['AB1', 'AB2']);
     expect(bracketOrder[1].members.sort()).toEqual(['CD1', 'CD2']);
+  });
+});
+
+describe('rankEntrantsInGroup — modalidade de EQUIPES', () => {
+  const teamConfig = normalizeTeamConfig({
+    team_size: 2,
+    gender: TEAM_GENDER.MALE,
+    win_rule: TEAM_WIN_RULE.ALL,
+    etapas: [{ type: TEAM_ETAPA_TYPE.MENS_DOUBLES }, { type: TEAM_ETAPA_TYPE.SINGLES }],
+  }).value;
+
+  /** Confronto em que `winner` leva as duas etapas. */
+  const confronto = (a, b, winner) => ({
+    id: `${a}x${b}`,
+    side_a_ids: [a],
+    side_b_ids: [b],
+    team_confrontation: true,
+    etapas: [
+      { id: 'etapa_1', games: [{ a: winner === a ? 11 : 4, b: winner === a ? 4 : 11 }] },
+      { id: 'etapa_2', games: [{ a: winner === a ? 11 : 6, b: winner === a ? 6 : 11 }] },
+    ],
+  });
+
+  const entrants = ['t1', 't2', 't3'].map((id) => ({ id, members: [id], label: id }));
+
+  it('classifica por vitórias de confronto, não por games individuais', () => {
+    const matches = [
+      confronto('t1', 't2', 't1'),
+      confronto('t2', 't3', 't2'),
+      confronto('t1', 't3', 't1'),
+    ];
+    const ranked = rankEntrantsInGroup(entrants, matches, {}, { teamConfig });
+    expect(ranked.map((e) => e.id)).toEqual(['t1', 't2', 't3']);
+    expect(ranked[0].stats).toMatchObject({ wins: 2, losses: 0, sets_won: 4, sets_lost: 0 });
+    expect(ranked[2].stats).toMatchObject({ wins: 0, losses: 2 });
+  });
+
+  it('sem confrontos disputados, mantém a ordem de entrada', () => {
+    const ranked = rankEntrantsInGroup(entrants, [], {}, { teamConfig });
+    expect(ranked.map((e) => e.id)).toEqual(['t1', 't2', 't3']);
+    expect(ranked[0].rank).toBe(1);
   });
 });

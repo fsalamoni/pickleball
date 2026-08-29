@@ -31,11 +31,15 @@ const isRotation = (t) => ROTATION_TYPES.includes(t);
 
 /* ----- Textos de ajuda (o que é cada opção e o que preencher a seguir) ----- */
 
-const DIVISION_HELP = {
+/**
+ * `unit` é a unidade que disputa a fase: "atletas" no normal, "equipes" numa
+ * modalidade de equipes — os textos de ajuda falam a língua do formato.
+ */
+const divisionHelp = (unit) => ({
   [PHASE_DIVISION_MODE.SINGLE]: 'Todos jogam juntos, sem subdivisão.',
-  [PHASE_DIVISION_MODE.GROUP_COUNT]: 'Você define quantos grupos; os atletas são repartidos de forma equilibrada (diferença máxima de 1 entre grupos).',
-  [PHASE_DIVISION_MODE.MAX_PER_GROUP]: 'Você define o teto de atletas por grupo; o sistema cria o menor número de grupos equilibrados que respeita o teto.',
-};
+  [PHASE_DIVISION_MODE.GROUP_COUNT]: `Você define quantos grupos; ${unit === 'equipes' ? 'as equipes são repartidas' : 'os atletas são repartidos'} de forma equilibrada (diferença máxima de 1 entre grupos).`,
+  [PHASE_DIVISION_MODE.MAX_PER_GROUP]: `Você define o teto de ${unit} por grupo; o sistema cria o menor número de grupos equilibrados que respeita o teto.`,
+});
 const QUALIFIER_HELP = {
   [PHASE_QUALIFIER_MODE.OVERALL]: 'Passam os N melhores classificados do grupo, sem distinção de gênero.',
   [PHASE_QUALIFIER_MODE.BY_GENDER]: 'Passam o(s) melhor(es) de cada gênero (M e F). Exige o gênero informado em cada inscrição.',
@@ -144,7 +148,8 @@ function phaseIssues(phase, index, phases, format) {
  * a divisão em grupos, a classificação para a próxima fase e como alimenta a
  * fase seguinte. Cada opção traz uma explicação e avisos do que falta preencher.
  */
-export default function PhasesEditor({ phases, format, onChange }) {
+export default function PhasesEditor({ phases, format, onChange, unit = 'atletas' }) {
+  const DIVISION_HELP = divisionHelp(unit);
   const stageOptions = Object.fromEntries(
     availableStageTypes(format, true).map((k) => [k, TOURNAMENT_STAGE_TYPE_LABELS[k]]),
   );
@@ -306,7 +311,7 @@ export default function PhasesEditor({ phases, format, onChange }) {
                 )}
                 {grouped && phase.division_mode === PHASE_DIVISION_MODE.MAX_PER_GROUP && (
                   <div>
-                    <Label className="text-xs">Máx. de atletas por grupo</Label>
+                    <Label className="text-xs">Máx. de {unit} por grupo</Label>
                     <Input type="number" min={2} value={phase.max_per_group} onChange={(e) => update(index, { max_per_group: e.target.value })} className="h-9" />
                   </div>
                 )}

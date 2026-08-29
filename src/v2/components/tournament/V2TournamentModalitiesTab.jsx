@@ -349,7 +349,12 @@ export default function V2TournamentModalitiesTab({ tournament, isAdmin }) {
             <h3 className="font-bold text-ink flex items-center gap-2"><Layers className="h-4 w-4" /> Formato da Competição</h3>
           </div>
           {multiPhaseEnabled ? (
-            <PhasesEditor format={form.format} phases={form.phases} onChange={(phases) => set('phases', phases)} />
+            <PhasesEditor
+              format={form.format}
+              phases={form.phases}
+              onChange={(phases) => set('phases', phases)}
+              unit={form.team_enabled ? 'equipes' : 'atletas'}
+            />
           ) : (
             <div className="space-y-6">
               <div className="grid gap-4 sm:grid-cols-3">

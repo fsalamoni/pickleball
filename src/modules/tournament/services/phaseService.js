@@ -72,6 +72,17 @@ function genderBucketOf(reg, modality) {
 
 /** Converte uma inscrição confirmada em um entrant da 1ª fase. */
 function registrationToEntrant(reg, modality) {
+  // Inscrição-EQUIPE: o participante é a equipe inteira. Não há nível/gênero
+  // de jogador para equilibrar — o rótulo é o nome da equipe.
+  if (modality?.team_config || reg.kind === 'team') {
+    return {
+      id: reg.id,
+      members: [reg.id],
+      label: reg.team_name || reg.label || reg.id,
+      gender: null,
+      strength: -1,
+    };
+  }
   const strength = combinedStrength({
     level: reg.player_a_level || null,
     partner_level: modality.format === MODALITY_FORMAT.DOUBLES ? reg.player_b_level || null : null,
@@ -189,8 +200,9 @@ export async function movePhaseEntrantBetweenGroups(params, actor) {
  * @param {Array<{ name: string, entrants: object[] }>} groups
  * @returns {string[]} problemas encontrados (vazio = ok)
  */
-function phaseDrawIssues(phase, groups) {
+function phaseDrawIssues(phase, groups, { isTeam = false } = {}) {
   const issues = [];
+  const unidade = isTeam ? 'equipe(s)' : 'atleta(s)';
   groups.forEach((g) => {
     const n = (g.entrants || []).length;
     const name = g.name || 'único';
@@ -206,7 +218,7 @@ function phaseDrawIssues(phase, groups) {
     } else if (phase.type === TOURNAMENT_STAGE_TYPE.MEXICANO) {
       if (n < 4) issues.push(`o grupo "${name}" ficaria com ${n} atleta(s), e o Mexicano exige ao menos 4`);
     } else if (n < 2) {
-      issues.push(`o grupo "${name}" ficaria com ${n} atleta(s), e são necessários ao menos 2`);
+      issues.push(`o grupo "${name}" ficaria com ${n} ${unidade}, e são necessários ao menos 2`);
     }
   });
   return issues;
@@ -296,6 +308,13 @@ export async function runPhaseDraw(params, actor) {
   const phase = phases[stageIndex];
   if (!phase) throw new Error('Fase não encontrada na modalidade.');
 
+  const isTeam = Boolean(modality.team_config);
+  if (isTeam && (phase.type === TOURNAMENT_STAGE_TYPE.AMERICANO || phase.type === TOURNAMENT_STAGE_TYPE.MEXICANO)) {
+    throw new Error(
+      'Americano e Mexicano são rotações de duplas entre atletas e não valem para modalidades de equipes. '
+      + 'Escolha Pontos corridos, Fase de grupos, Chaves, Dupla eliminação ou Sistema suíço.',
+    );
+  }
   const compat = stageFormatCompatibility(modality.format, phase.type);
   if (!compat.compatible) throw new Error(compat.reason);
 
@@ -326,7 +345,7 @@ export async function runPhaseDraw(params, actor) {
   }
 
   // Confere se cada grupo comporta o formato escolhido (mensagem clara).
-  const drawIssues = phaseDrawIssues(phase, groups);
+  const drawIssues = phaseDrawIssues(phase, groups, { isTeam });
   if (drawIssues.length > 0) {
     const label = TOURNAMENT_STAGE_TYPE_LABELS[phase.type] || phase.type;
     throw new Error(
@@ -363,7 +382,12 @@ export async function runPhaseDraw(params, actor) {
     stageIndex,
     { ...draw, groups: undefined },
     actor,
-    { schedulingConfig: modality, fallbackDate: tournament?.starts_at || null, slotOffset },
+    {
+      schedulingConfig: modality,
+      fallbackDate: tournament?.starts_at || null,
+      slotOffset,
+      teamConfrontation: isTeam,
+    },
   );
 
   // Persiste os grupos só quando há subdivisão real (mais de 1 grupo).
@@ -460,7 +484,9 @@ export async function advanceToNextPhase(params, actor) {
     return {
       index: i,
       name: g.name,
-      ranked: rankEntrantsInGroup(entrants, groupMatches, scoringConfig),
+      ranked: rankEntrantsInGroup(entrants, groupMatches, scoringConfig, {
+        teamConfig: modality.team_config || null,
+      }),
     };
   });
 
@@ -474,15 +500,15 @@ export async function advanceToNextPhase(params, actor) {
 
   const nextLabel = TOURNAMENT_STAGE_TYPE_LABELS[nextPhase.type] || nextPhase.type;
   if (!nextEntrants || nextEntrants.length === 0) {
-    throw new Error(
-      'Nenhum atleta se classificou para a próxima fase. Revise o critério de classificação — '
-      + 'em especial "por gênero", que exige o gênero informado em cada inscrição.',
-    );
+    throw new Error(modality.team_config
+      ? 'Nenhuma equipe se classificou para a próxima fase. Revise quantas equipes cada grupo classifica.'
+      : 'Nenhum atleta se classificou para a próxima fase. Revise o critério de classificação — '
+        + 'em especial "por gênero", que exige o gênero informado em cada inscrição.');
   }
 
   // Antes de gerar, confere se cada grupo da próxima fase comporta o formato
   // escolhido (ex.: Americano precisa de ≥ 4 atletas por grupo). Mensagem clara.
-  const issues = phaseDrawIssues(nextPhase, nextGroups);
+  const issues = phaseDrawIssues(nextPhase, nextGroups, { isTeam: Boolean(modality.team_config) });
   if (issues.length > 0) {
     throw new Error(
       `Não é possível gerar a próxima fase (${nextLabel}): ${issues[0]}. `

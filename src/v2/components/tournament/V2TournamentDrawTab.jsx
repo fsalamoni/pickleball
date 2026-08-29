@@ -37,6 +37,7 @@ import {
   MATCH_STATUS,
 } from '@/modules/tournament/domain/constants';
 import { stageSupportsAdvance } from '@/modules/tournament/domain/progression';
+import { buildRosterSlots } from '@/modules/tournament/domain/teamFormat';
 import MultiPhaseDrawBlock from '@/modules/tournament/components/MultiPhaseDrawBlock';
 
 function formatMatchTime(iso) {
@@ -91,6 +92,11 @@ function ModalityDrawBlock({ tournament, modality, isAdmin }) {
   const clearPlaceholdersMutation = useClearPlaceholders(modality.id);
   const placeholderOn = true;
   const lifecycleOn = true;
+  // Modalidade de EQUIPES: o participante do sorteio é a equipe. Não existem
+  // "vagas fictícias de atleta" nem substituição de jogador por aqui — o
+  // elenco é editado na inscrição da equipe.
+  const isTeam = Boolean(modality.team_config);
+  const teamRosterSize = isTeam ? buildRosterSlots(modality.team_config).length : 0;
   const locked = lifecycleOn && Boolean(tournament.results_locked);
   const { data: matches = [] } = useMatches(modality.id, 0);
   const { data: registrations = [] } = useRegistrations(modality.id);
@@ -108,6 +114,15 @@ function ModalityDrawBlock({ tournament, modality, isAdmin }) {
     return map;
   }, [registrations]);
 
+  // Equipes com elenco menor que o exigido: o sorteio funciona, mas a escalação
+  // dos confrontos vai faltar gente — avisamos antes.
+  const incompleteTeams = useMemo(
+    () => (isTeam
+      ? registrations.filter((r) => r.kind === 'team' && (r.members || []).length < teamRosterSize)
+      : []),
+    [isTeam, registrations, teamRosterSize],
+  );
+
   const activeRegistrations = useMemo(
     () =>
       registrations.filter(
@@ -124,7 +139,7 @@ function ModalityDrawBlock({ tournament, modality, isAdmin }) {
   const placeholderCount = registrations.filter((r) => r.is_placeholder).length;
   const realConfirmedCount = activeRegistrations.filter((r) => !r.is_placeholder).length;
   const missingSlots = neededPlaceholderCount(realConfirmedCount, maxEntries);
-  const showPlaceholderPanel = placeholderOn && isAdmin && hasFiniteMax && !locked
+  const showPlaceholderPanel = placeholderOn && isAdmin && hasFiniteMax && !locked && !isTeam
     && (missingSlots > 0 || placeholderCount > 0);
 
   async function fillPlaceholders() {
@@ -284,8 +299,29 @@ function ModalityDrawBlock({ tournament, modality, isAdmin }) {
       defaultOpen={false}
       persistId={`sorteio:${modality.id}`}
       title={modality.name}
-      subtitle={`Fase: ${TOURNAMENT_STAGE_TYPE_LABELS[modality.stages?.[0]?.type] || ''} · ${matches.length > 0 ? `${matches.length} jogos gerados` : 'Ainda não sorteado'}`}
+      subtitle={`Fase: ${TOURNAMENT_STAGE_TYPE_LABELS[modality.stages?.[0]?.type] || ''} · ${matches.length > 0
+        ? `${matches.length} ${isTeam ? 'confrontos gerados' : 'jogos gerados'}`
+        : 'Ainda não sorteado'}`}
     >
+      {isTeam && (
+        <div className="mb-2 space-y-1 rounded-2xl border border-acid/30 bg-acid/5 p-3 text-xs text-ink">
+          <div className="flex flex-wrap items-center gap-2">
+            <V2Badge tone="acid">Equipes</V2Badge>
+            <span>
+              {activeRegistrations.length} equipe(s) confirmada(s) — o sorteio monta{' '}
+              {TOURNAMENT_STAGE_TYPE_LABELS[modality.stages?.[0]?.type] || 'a fase'} com as equipes como
+              participantes; cada jogo é um confronto decidido pelas etapas.
+            </span>
+          </div>
+          {incompleteTeams.length > 0 && (
+            <p className="font-semibold text-amber-700">
+              Atenção: {incompleteTeams.length} equipe(s) com elenco incompleto
+              ({incompleteTeams.map((t) => t.team_name || t.label).join(', ')}) — dá para sortear,
+              mas complete os elencos antes de escalar os confrontos.
+            </p>
+          )}
+        </div>
+      )}
         <div className="mb-1 flex flex-wrap justify-end">
           {isAdmin && (
             <div className="flex gap-2 flex-wrap">
@@ -327,7 +363,7 @@ function ModalityDrawBlock({ tournament, modality, isAdmin }) {
                   variant="ghost"
                   onClick={() => setGroupsEditorOpen(true)}
                   disabled={running}
-                  title="Mover jogadores entre os grupos sorteados"
+                  title="Mover participantes entre os grupos sorteados"
                 >
                   <Users className="w-4 h-4 mr-1" /> Editar grupos
                 </V2Button>
@@ -440,7 +476,7 @@ function ModalityDrawBlock({ tournament, modality, isAdmin }) {
                         ids={m.side_a_ids}
                         rawSide={m.side_a}
                         labelById={labelById}
-                        isAdmin={isAdmin}
+                        isAdmin={isAdmin && !isTeam}
                         onSubstitute={(regId) => setSubstitution({ match: m, registrationId: regId })}
                       />
                     </td>
@@ -449,7 +485,7 @@ function ModalityDrawBlock({ tournament, modality, isAdmin }) {
                         ids={m.side_b_ids}
                         rawSide={m.side_b}
                         labelById={labelById}
-                        isAdmin={isAdmin}
+                        isAdmin={isAdmin && !isTeam}
                         onSubstitute={(regId) => setSubstitution({ match: m, registrationId: regId })}
                       />
                     </td>
@@ -469,8 +505,10 @@ function ModalityDrawBlock({ tournament, modality, isAdmin }) {
             <DialogTitle>Sortear &quot;{stageName}&quot;</DialogTitle>
             <DialogDescription>
               {matches.length > 0
-                ? 'Os jogos atuais desta fase serão apagados e novos jogos serão gerados.'
-                : 'Serão gerados os jogos desta fase a partir das inscrições confirmadas.'}
+                ? `Os ${isTeam ? 'confrontos' : 'jogos'} atuais desta fase serão apagados e novos serão gerados.`
+                : isTeam
+                  ? `Serão gerados os confrontos desta fase com as ${activeRegistrations.length} equipe(s) confirmada(s), no formato definido na modalidade.`
+                  : 'Serão gerados os jogos desta fase a partir das inscrições confirmadas.'}
             </DialogDescription>
           </DialogHeader>
           <DialogFooter>

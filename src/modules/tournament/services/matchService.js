@@ -39,7 +39,13 @@ const COL = 'tournament_matches';
  * @param {number} stageIndex
  * @param {object} draw saída de generateDraw
  * @param {object} actor
- * @param {{ schedulingConfig?: object, fallbackDate?: string|Date|null }} [scheduleOptions]
+ * @param {{
+ *   schedulingConfig?: object, fallbackDate?: string|Date|null, slotOffset?: number,
+ *   teamConfrontation?: boolean,
+ * }} [scheduleOptions]
+ *   `teamConfrontation`: a modalidade é de EQUIPES — cada jogo nasce marcado
+ *   como confronto (com `etapas` vazias), para que a UI e o motor de
+ *   classificação já o tratem como tal antes de qualquer resultado.
  * @returns {Promise<{ scheduleWarnings: string[] }>}
  */
 export async function persistMatches(tournamentId, modalityId, stageIndex, draw, actor, scheduleOptions = {}) {
@@ -49,9 +55,22 @@ export async function persistMatches(tournamentId, modalityId, stageIndex, draw,
   existing.forEach((m) => batch.delete(doc(db, COL, m.id)));
 
   // 1) Monta os payloads (com ids estáveis) antes de agendar.
+  const isTeam = Boolean(scheduleOptions.teamConfrontation);
   const payloads = draw.matches.map((m, idx) => {
     const id = doc(collection(db, COL)).id;
     return {
+      // Confronto de equipes: marcado desde o sorteio (aditivo — jogos comuns
+      // não ganham nenhum campo novo).
+      ...(isTeam
+        ? {
+            team_confrontation: true,
+            etapas: [],
+            etapa_wins_a: 0,
+            etapa_wins_b: 0,
+            points_a: 0,
+            points_b: 0,
+          }
+        : {}),
       id,
       tournament_id: tournamentId,
       modality_id: modalityId,
@@ -196,8 +215,20 @@ export async function advanceStage(tournamentId, modalityId, stageIndex, modalit
     throw new Error('Conclua todos os jogos da rodada atual antes de avançar.');
   }
 
-  // Monta os payloads dos novos jogos (ids estáveis).
+  // Monta os payloads dos novos jogos (ids estáveis). Numa modalidade de
+  // EQUIPES, as novas rodadas também nascem marcadas como confronto.
+  const isTeam = Boolean(modality?.team_config);
   const payloads = result.matches.map((m, idx) => ({
+    ...(isTeam
+      ? {
+          team_confrontation: true,
+          etapas: [],
+          etapa_wins_a: 0,
+          etapa_wins_b: 0,
+          points_a: 0,
+          points_b: 0,
+        }
+      : {}),
     id: doc(collection(db, COL)).id,
     tournament_id: tournamentId,
     modality_id: modalityId,

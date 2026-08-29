@@ -15,7 +15,7 @@
  *    Para fins de pontuação no torneio, só o placar final do game importa.
  */
 
-import { RULESET, TARGET_SCORE } from './constants.js';
+import { RULESET, TARGET_SCORE, MATCH_STATUS } from './constants.js';
 
 /** Configuração padrão de pontuação do torneio. */
 export const DEFAULT_SCORING_CONFIG = Object.freeze({
@@ -160,6 +160,24 @@ export function getGameWinner(game, config) {
  */
 export function getMatchResult(match, config) {
   const cfg = normalizeScoringConfig(config);
+  // CONFRONTO DE EQUIPES: o jogo não tem games próprios — ele é decidido pelas
+  // ETAPAS (sub-jogos), já apuradas e gravadas por `recordConfrontation`. Para
+  // o resto do motor (classificação, progressão de fase, chave), o confronto se
+  // comporta como um jogo cujos "sets" são as etapas vencidas.
+  if (match?.team_confrontation && match?.walkover !== 'a' && match?.walkover !== 'b') {
+    const setsA = Number(match.etapa_wins_a) || 0;
+    const setsB = Number(match.etapa_wins_b) || 0;
+    const winner = match.winner_side === 'a' || match.winner_side === 'b' ? match.winner_side : null;
+    return {
+      winner,
+      sets_a: setsA,
+      sets_b: setsB,
+      points_diff: (Number(match.points_a) || 0) - (Number(match.points_b) || 0),
+      finished: winner != null && match.status === MATCH_STATUS.FINISHED,
+      walkover: false,
+      game_results: [],
+    };
+  }
   if (match?.walkover === 'a' || match?.walkover === 'b') {
     return {
       winner: match.walkover,

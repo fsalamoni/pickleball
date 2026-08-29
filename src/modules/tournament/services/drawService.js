@@ -102,8 +102,18 @@ export async function runDraw(params, actor) {
     throw new Error('Torneio bloqueado: desbloqueie as alterações para sortear.');
   }
 
+  // Modalidade de EQUIPES: o participante do sorteio é a EQUIPE (uma inscrição
+  // com elenco). O motor de sorteio é o mesmo — só o que entra nele muda.
+  const isTeam = Boolean(modality.team_config);
+
   // A estrutura escolhida precisa ser compatível com o formato de inscrição
   // (ex.: Americano exige inscrição Simples). Falha cedo com mensagem clara.
+  if (isTeam && (stage.type === TOURNAMENT_STAGE_TYPE.AMERICANO || stage.type === TOURNAMENT_STAGE_TYPE.MEXICANO)) {
+    throw new Error(
+      'Americano e Mexicano são rotações de duplas entre atletas e não valem para modalidades de equipes. '
+      + 'Escolha Pontos corridos, Fase de grupos, Chaves, Dupla eliminação ou Sistema suíço.',
+    );
+  }
   const compat = stageFormatCompatibility(modality.format, stage.type);
   if (!compat.compatible) throw new Error(compat.reason);
 
@@ -113,7 +123,11 @@ export async function runDraw(params, actor) {
   const confirmed = registrations.filter(
     (r) => r.status === REGISTRATION_STATUS.CONFIRMED || r.status === REGISTRATION_STATUS.CHECKED_IN,
   );
-  if (confirmed.length < 2) throw new Error('São necessários ao menos 2 inscritos confirmados.');
+  if (confirmed.length < 2) {
+    throw new Error(isTeam
+      ? 'São necessárias ao menos 2 equipes inscritas para sortear.'
+      : 'São necessários ao menos 2 inscritos confirmados.');
+  }
 
   // Define a ordem dos participantes:
   //  1) ordem manual explícita, se fornecida;
@@ -131,6 +145,10 @@ export async function runDraw(params, actor) {
     participants = participantOrder;
   } else if (hasManualSeeds) {
     participants = byCreation.map((r) => r.id);
+  } else if (isTeam) {
+    // Equipes não têm nível/gênero de jogador para equilibrar: o sorteio é
+    // aleatório (com a semente), salvo cabeças-de-chave definidas pelo admin.
+    participants = shuffle(byCreation.map((r) => r.id), seededRng(providedSeed || modalityId));
   } else {
     const meta = buildMeta(byCreation, modality);
     const ordered = balancedParticipantOrder(meta);
@@ -189,6 +207,7 @@ export async function runDraw(params, actor) {
     {
       schedulingConfig: modality,
       fallbackDate: tournament?.starts_at || null,
+      teamConfrontation: isTeam,
     },
   );
 
@@ -259,6 +278,7 @@ export async function redrawGroupMatchesKeepingGroups(params, actor) {
   const { scheduleWarnings } = await persistMatches(tournamentId, modalityId, stageIndex, draw, actor, {
     schedulingConfig: modality,
     fallbackDate: tournament?.starts_at || null,
+    teamConfrontation: Boolean(modality.team_config),
   });
 
   return { matches: draw.matches.length, groups: groups.length, scheduleWarnings: scheduleWarnings || [] };
@@ -308,6 +328,7 @@ export async function moveParticipantBetweenGroups(params, actor) {
   const { scheduleWarnings } = await persistMatches(tournamentId, modalityId, stageIndex, draw, actor, {
     schedulingConfig: modality,
     fallbackDate: tournament?.starts_at || null,
+    teamConfrontation: Boolean(modality.team_config),
   });
 
   await createAuditLog({

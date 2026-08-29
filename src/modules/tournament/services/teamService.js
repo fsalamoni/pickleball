@@ -23,7 +23,8 @@ import { createAuditLog } from '@/core/services/auditService';
 import { REGISTRATION_STATUS, MATCH_STATUS } from '../domain/constants.js';
 import {
   validateTeamRoster, validateConfrontationLineup, computeConfrontationResult, buildTeamRanking,
-  buildConfrontationRankingMirror, validateTeamAgainstExisting,
+  buildConfrontationRankingMirror, validateTeamAgainstExisting, buildTeamGroupTables,
+  matchToConfrontation, isTeamConfrontation,
 } from '../domain/teamFormat.js';
 
 const REG_COL = 'tournament_registrations';
@@ -156,6 +157,9 @@ export async function recordConfrontation(matchId, {
     etapas,
     etapa_wins_a: result.etapaWins.a,
     etapa_wins_b: result.etapaWins.b,
+    // Games (sets) somados das etapas — leitura rápida para a UI/relatórios.
+    sets_a: result.sets.a,
+    sets_b: result.sets.b,
     points_a: result.points.a,
     points_b: result.points.b,
     updated_at: serverTimestamp(),
@@ -173,7 +177,7 @@ export async function recordConfrontation(matchId, {
   // (`club_event_games`, a mesma base do ELO e das duplas). Idempotente: grava
   // as válidas e remove as que deixaram de valer.
   const mirror = buildConfrontationRankingMirror({
-    matchId, tournamentId, modalityId, eventTitle, etapas, validUids,
+    matchId, tournamentId, modalityId, eventTitle, etapas, validUids, config,
   });
   const nowIso = new Date().toISOString();
 
@@ -219,16 +223,24 @@ export async function getMatch(id) {
  */
 export function buildTeamStandingsFromMatches({ matches = [], teamRegistrations = [], config = {} } = {}) {
   const teamIds = teamRegistrations.map((t) => t.id);
-  const confrontations = matches
-    .filter((m) => Array.isArray(m.side_a_ids) && m.side_a_ids.length && Array.isArray(m.side_b_ids) && m.side_b_ids.length)
-    .map((m) => ({
-      team_a_id: m.side_a_ids[0],
-      team_b_id: m.side_b_ids[0],
-      etapas: Array.isArray(m.etapas) ? m.etapas : [],
-    }));
+  const confrontations = matches.filter(isTeamConfrontation).map(matchToConfrontation);
   const nameById = new Map(teamRegistrations.map((t) => [t.id, t.team_name || t.label || 'Equipe']));
   return buildTeamRanking(confrontations, teamIds, config).map((row) => ({
     ...row,
     team_name: nameById.get(row.team_id) || 'Equipe',
   }));
+}
+
+/**
+ * Tabelas de classificação POR GRUPO de uma fase (a "tabela do grupo"). Quando
+ * a fase não tem grupos, devolve uma tabela única. Derivado — não escreve nada.
+ *
+ * @param {object} args
+ * @param {Array} args.matches            jogos da fase (confrontos)
+ * @param {Array} args.teamRegistrations  inscrições-equipe
+ * @param {object} args.config            team_config
+ * @returns {Array<{ name: string|null, rows: Array<object> }>}
+ */
+export function buildTeamGroupStandings({ matches = [], teamRegistrations = [], config = {} } = {}) {
+  return buildTeamGroupTables({ matches, teamRegistrations, config });
 }
