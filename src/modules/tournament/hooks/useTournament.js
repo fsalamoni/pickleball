@@ -60,6 +60,7 @@ import {
   reShuffleRemainingMatches,
   rescheduleMatches,
   advanceStage,
+  clearStaleSingleGroupMarkers,
 } from '../services/matchService';
 import {
   runDraw,
@@ -805,6 +806,25 @@ export function useReShuffleRemainingMatches(modalityId) {
     onSuccess: () => {
       qc.invalidateQueries({ queryKey: ['matches', modalityId] });
       qc.invalidateQueries({ queryKey: ['all-matches', modalityId] });
+    },
+  });
+}
+
+/**
+ * Limpa marcadores de grupo obsoletos numa fase de grupo único (correção de
+ * dados de sorteios antigos). Recebe o documento da modalidade (para ler as
+ * fases) e invalida jogos e ranking ao concluir.
+ */
+export function useClearStaleSingleGroupMarkers(modalityId) {
+  const { user } = useAuth();
+  const qc = useQueryClient();
+  return useMutation({
+    mutationFn: (modality) => clearStaleSingleGroupMarkers(modalityId, modality, user),
+    onSuccess: () => {
+      qc.invalidateQueries({ queryKey: ['matches', modalityId] });
+      qc.invalidateQueries({ queryKey: ['all-matches', modalityId] });
+      qc.invalidateQueries({ queryKey: ['ranking', modalityId] });
+      qc.invalidateQueries({ queryKey: ['ranking-structured', modalityId] });
     },
   });
 }

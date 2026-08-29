@@ -25,6 +25,7 @@ import { assignSchedule } from '../domain/scheduling.js';
 import { computeStageAdvance, stageSupportsAdvance } from '../domain/progression.js';
 import { recommendedSwissRounds } from '../domain/swiss.js';
 import { recommendedMexicanoRounds } from '../domain/mexicano.js';
+import { matchesWithStaleSingleGroup } from '../domain/phases.js';
 
 const COL = 'tournament_matches';
 
@@ -573,4 +574,36 @@ export async function substitutePlayer(matchId, { oldRegistrationId, newRegistra
     actor,
     details: { match_id: matchId, old_registration_id: oldRegistrationId, new_registration_id: newRegistrationId },
   });
+}
+
+/**
+ * Corrige dados de sorteios antigos: remove o marcador de grupo (`m.group`) dos
+ * jogos de uma fase definida como GRUPO ÚNICO (`division_mode: 'single'`). Não
+ * altera confrontos, escalações nem resultados — só limpa o rótulo de grupo para
+ * alinhar os dados ao que a modalidade define (a exibição já colapsa grupo único,
+ * mas o dado limpo evita "Editar grupos" e a coluna de grupo indevidos).
+ *
+ * Idempotente: sem marcadores obsoletos, não escreve nada. Serve tanto para
+ * modalidades de equipes quanto individuais.
+ *
+ * @param {string} modalityId
+ * @param {object} modality documento da modalidade (usa `stages`)
+ * @param {object} actor
+ * @returns {Promise<{ cleared: number }>}
+ */
+export async function clearStaleSingleGroupMarkers(modalityId, modality, actor) {
+  const matches = await listAllMatchesForModality(modalityId);
+  const ids = matchesWithStaleSingleGroup(matches, modality?.stages || []);
+  if (ids.length === 0) return { cleared: 0 };
+
+  const batch = writeBatch(db);
+  ids.forEach((id) => batch.update(doc(db, COL, id), { group: null, updated_at: serverTimestamp() }));
+  await batch.commit();
+
+  await createAuditLog({
+    action: 'tournament_group_markers_cleared',
+    actor,
+    details: { modality_id: modalityId, cleared: ids.length },
+  });
+  return { cleared: ids.length };
 }

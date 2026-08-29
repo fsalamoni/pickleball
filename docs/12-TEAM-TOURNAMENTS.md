@@ -311,7 +311,8 @@ modalidade é a vitrine do atleta.
 ### Ajustes de exibição e ranking (#... — grupo único, placar por etapa, rodízio)
 
 Três correções que alinham a exibição pública e o ranking da plataforma ao que
-foi **definido na modalidade**:
+foi **definido na modalidade** (e uma rotina de manutenção, D, para dados
+antigos):
 
 **A. "Grupo único" exibe UM grupo — segue a modalidade.** Quando a fase é
 definida como grupo único (`division_mode: 'single'`), a **classificação** —
@@ -319,7 +320,10 @@ tanto no ranking do torneio (`computeModalityRankingStructured` →
 `V2RankingBlock`) quanto na aba Classificação da página da modalidade
 (`TeamStandingsTable` → `buildTeamGroupStandings` → `buildTeamGroupTables`) —
 mostra **uma única tabela**, combinando todos os confrontos, mesmo que um
-sorteio antigo tenha gravado grupos ou marcado `m.group`. O colapso só ocorre
+sorteio antigo tenha gravado grupos ou marcado `m.group`. A aba **Confrontos**
+(`buildConfrontationStructure` → `TeamModalityView`) também colapsa: em grupo
+único os confrontos aparecem agrupados por **rodada** (uma seção só), não por
+grupo. O colapso só ocorre
 quando a fase **declara explicitamente** `division_mode: 'single'` (o
 `PhasesEditor` sempre grava o modo); uma fase de grupos legada e mínima
 (`{ type: 'groups' }`, sem o campo) **mantém** os grupos sorteados — não se
@@ -351,6 +355,33 @@ o rodízio poderia chegar com 1–2 jogadores por lado. Ver
 (`tournament_matches` com `team_confrontation`) são ignorados pelo
 `ratingService` justamente porque já entram por etapa em `club_event_games`.
 
+**D. Rotina de limpeza de marcadores de grupo (grupo único).** A exibição já
+colapsa grupo único (ponto A), mas dados de sorteios antigos podem ter deixado
+`m.group` gravado nos jogos de uma fase que hoje é grupo único. Isso não muda a
+classificação (que colapsa), mas polui a origem e reativa botões indevidos
+("Editar grupos", coluna de grupo). Há uma rotina **idempotente** e **aditiva**
+que remove só o rótulo de grupo — sem tocar em confrontos, escalações ou
+resultados:
+
+- **Domínio (puro):** `matchesWithStaleSingleGroup(matches, stages)` retorna os
+  IDs dos jogos com `m.group` numa fase `division_mode: 'single'` (usa o modo
+  **declarado**, respeitando o `stage_index` de cada jogo; fases legadas sem o
+  campo são ignoradas). Em `domain/phases.js`.
+- **Serviço (I/O):** `clearStaleSingleGroupMarkers(modalityId, modality, actor)`
+  (`services/matchService.js`) lê **todos** os jogos da modalidade, zera o
+  `group` em lote e registra auditoria `tournament_group_markers_cleared`.
+  Retorna `{ cleared: n }` e não escreve nada quando não há o que corrigir.
+- **Hook:** `useClearStaleSingleGroupMarkers(modalityId)`
+  (`hooks/useTournament.js`).
+- **UI (admin):** na aba **Sorteio** (`V2TournamentDrawTab`), quando há
+  marcadores obsoletos, aparece o botão **"Corrigir grupos (N)"**; nessa
+  situação os botões de grupo ("Editar grupos", "Re-sortear mantendo grupos")
+  ficam ocultos, pois não fazem sentido em grupo único.
+
+Observação: a rotina não remove os metadados de `tournament_groups` de fases de
+grupo único — a exibição já os ignora (o ranking colapsa antes de lê-los). Se um
+dia quiser removê-los também, é um passo separado e opcional.
+
 ---
 
 ## 6. Decisões confirmadas
@@ -373,8 +404,14 @@ o rodízio poderia chegar com 1–2 jogadores por lado. Ver
   `V2MatchesBlock.jsx`
 - Estrutura/tabelas/chave: `TeamModalityView.jsx`, `TeamStandingsTable.jsx`,
   `V2BracketTree.jsx`
+- Aba Confrontos (estrutura, colapso de grupo único): `buildConfrontationStructure`
+  em `domain/teamFormat.js` → `TeamModalityView.jsx`
 - Classificação do torneio / grupo único: `services/rankingService.js`
   (`computeModalityRankingStructured`)
+- Limpeza de marcadores de grupo (grupo único): `matchesWithStaleSingleGroup`
+  (`domain/phases.js`) + `clearStaleSingleGroupMarkers` (`services/matchService.js`)
+  + `useClearStaleSingleGroupMarkers` (`hooks/useTournament.js`) + botão
+  "Corrigir grupos" em `V2TournamentDrawTab.jsx`
 - Espelho no ranking individual (duplas/simples): `buildConfrontationRankingMirror`
   em `domain/teamFormat.js`, gravado por `services/teamService.js`
 - Sorteio: `services/drawService.js`, `services/phaseService.js`

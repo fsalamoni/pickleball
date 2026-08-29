@@ -5,6 +5,7 @@ import {
   validatePhases,
   supportsGroups,
   plannedGroupCount,
+  matchesWithStaleSingleGroup,
 } from './phases.js';
 import {
   MODALITY_FORMAT,
@@ -104,5 +105,47 @@ describe('plannedGroupCount', () => {
       max_per_group: 5,
     });
     expect(plannedGroupCount(p, 19)).toBe(4);
+  });
+});
+
+describe('matchesWithStaleSingleGroup', () => {
+  const single = { type: 'groups', division_mode: PHASE_DIVISION_MODE.SINGLE };
+
+  it('lista os jogos com m.group numa fase de grupo único', () => {
+    const matches = [
+      { id: 'm1', stage_index: 0, group: 'Grupo A' },
+      { id: 'm2', stage_index: 0, group: 'Grupo B' },
+      { id: 'm3', stage_index: 0, group: null },
+    ];
+    expect(matchesWithStaleSingleGroup(matches, [single])).toEqual(['m1', 'm2']);
+  });
+
+  it('não toca em fases de grupos reais (nº de grupos)', () => {
+    const matches = [{ id: 'm1', stage_index: 0, group: 'Grupo A' }];
+    const stages = [{ type: 'groups', division_mode: PHASE_DIVISION_MODE.GROUP_COUNT }];
+    expect(matchesWithStaleSingleGroup(matches, stages)).toEqual([]);
+  });
+
+  it('não toca numa fase de grupos legada sem division_mode', () => {
+    const matches = [{ id: 'm1', stage_index: 0, group: 'Grupo A' }];
+    expect(matchesWithStaleSingleGroup(matches, [{ type: 'groups' }])).toEqual([]);
+  });
+
+  it('respeita o stage_index de cada jogo', () => {
+    const matches = [
+      { id: 'm1', stage_index: 0, group: 'Grupo A' }, // fase de grupos reais
+      { id: 'm2', stage_index: 1, group: 'Grupo A' }, // fase de grupo único
+    ];
+    const stages = [
+      { type: 'groups', division_mode: PHASE_DIVISION_MODE.GROUP_COUNT },
+      { type: 'groups', division_mode: PHASE_DIVISION_MODE.SINGLE },
+    ];
+    expect(matchesWithStaleSingleGroup(matches, stages)).toEqual(['m2']);
+  });
+
+  it('sem marcadores obsoletos, devolve lista vazia (idempotente)', () => {
+    const matches = [{ id: 'm1', stage_index: 0, group: null }];
+    expect(matchesWithStaleSingleGroup(matches, [single])).toEqual([]);
+    expect(matchesWithStaleSingleGroup([], [single])).toEqual([]);
   });
 });

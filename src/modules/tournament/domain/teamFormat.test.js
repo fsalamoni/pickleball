@@ -746,6 +746,29 @@ describe('buildConfrontationStructure', () => {
     const struct = buildConfrontationStructure(matches);
     expect(struct[0].sections.map((s) => s.name)).toEqual(['Rodada 1', 'Rodada 2']);
   });
+
+  it('em GRUPO ÚNICO (division_mode: single), ignora m.group e usa rodadas', () => {
+    // Regressão: mesmo com o sorteio antigo marcando Grupo A/B, a fase definida
+    // como grupo único deve exibir os confrontos numa sequência só (por rodada).
+    const matches = [
+      { id: '1', stage_index: 0, stage_type: 'groups', group: 'Grupo A', round: 1, position: 1, side_a_ids: ['t1'], side_b_ids: ['t2'] },
+      { id: '2', stage_index: 0, stage_type: 'groups', group: 'Grupo B', round: 2, position: 1, side_a_ids: ['t3'], side_b_ids: ['t4'] },
+    ];
+    const struct = buildConfrontationStructure(matches, [{ type: 'groups', division_mode: 'single' }]);
+    expect(struct).toHaveLength(1);
+    expect(struct[0].sections.every((s) => s.kind === 'round')).toBe(true);
+    expect(struct[0].sections.map((s) => s.name)).toEqual(['Rodada 1', 'Rodada 2']);
+    expect(struct[0].sections.some((s) => String(s.name).includes('Grupo'))).toBe(false);
+  });
+
+  it('fase de grupos LEGADA sem division_mode mantém os grupos sorteados', () => {
+    const matches = [
+      { id: '1', stage_index: 0, stage_type: 'groups', group: 'Grupo A', round: 1, position: 1, side_a_ids: ['t1'], side_b_ids: ['t2'] },
+      { id: '2', stage_index: 0, stage_type: 'groups', group: 'Grupo B', round: 1, position: 1, side_a_ids: ['t3'], side_b_ids: ['t4'] },
+    ];
+    const struct = buildConfrontationStructure(matches, [{ type: 'groups' }]);
+    expect(struct[0].sections.map((s) => s.name)).toEqual(['Grupo A', 'Grupo B']);
+  });
 });
 
 describe('buildTeamGroupTables', () => {

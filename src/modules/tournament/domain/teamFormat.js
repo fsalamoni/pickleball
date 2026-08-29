@@ -19,6 +19,7 @@
 
 import {
   GENDER_CATEGORY, COMPETITION_GENDER, TARGET_SCORE, TOURNAMENT_STAGE_TYPE,
+  PHASE_DIVISION_MODE,
 } from './constants.js';
 
 /** Gênero da equipe (composição do elenco). Reaproveita os valores de categoria. */
@@ -1247,8 +1248,15 @@ export function matchToConfrontation(match) {
  *
  * Puro: recebe os jogos já lidos e devolve a árvore para a UI.
  *
+ * Quando a fase é definida como GRUPO ÚNICO (`division_mode: 'single'` na
+ * modalidade), os confrontos aparecem numa só sequência por rodada — sem
+ * dividir em Grupo A/B —, mesmo que um sorteio antigo tenha marcado `m.group`.
+ * Segue o que a modalidade define, igual à classificação. Só colapsa com o modo
+ * declarado explicitamente; uma fase de grupos legada sem o campo mantém os
+ * grupos sorteados.
+ *
  * @param {Array<object>} matches
- * @param {Array<object>} [stages] fases da modalidade (para rótulos)
+ * @param {Array<object>} [stages] fases da modalidade (rótulos e modo de divisão)
  * @returns {Array<{
  *   stageIndex: number, stageType: string, isBracket: boolean,
  *   sections: Array<{ key: string, kind: 'group'|'round', name: string, matches: object[] }>,
@@ -1265,7 +1273,11 @@ export function buildConfrontationStructure(matches = [], stages = []) {
   return [...byStage.keys()].sort((a, b) => a - b).map((stageIndex) => {
     const list = byStage.get(stageIndex);
     const stageType = list[0]?.stage_type || stages?.[stageIndex]?.type || null;
-    const groups = [...new Set(list.map((m) => m.group).filter(Boolean))]
+    // Grupo único definido na modalidade: ignora os marcadores de grupo do
+    // sorteio e exibe os confrontos por rodada (uma sequência só).
+    const singleGroupIntended =
+      stages?.[stageIndex]?.division_mode === PHASE_DIVISION_MODE.SINGLE;
+    const groups = singleGroupIntended ? [] : [...new Set(list.map((m) => m.group).filter(Boolean))]
       .sort((a, b) => String(a).localeCompare(String(b), 'pt-BR'));
 
     let sections;

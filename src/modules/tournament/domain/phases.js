@@ -197,3 +197,29 @@ export function plannedGroupCount(phase, total) {
   }
   return Math.max(1, Math.min(total || 1, phase.group_count));
 }
+
+/**
+ * IDs dos jogos que ainda carregam um marcador de grupo (`m.group`) numa fase
+ * definida como GRUPO ÚNICO (`division_mode: 'single'`). São resquícios de um
+ * sorteio antigo, feito quando a fase tinha vários grupos (ou com um
+ * `group_count` obsoleto): devem ser limpos para alinhar os dados ao que a
+ * modalidade define.
+ *
+ * Usa o modo DECLARADO explicitamente (`stages[i].division_mode === 'single'`),
+ * não o inferido — uma fase de grupos legada sem o campo mantém seus grupos.
+ * Puro e idempotente: sem marcadores obsoletos, devolve lista vazia.
+ *
+ * @param {Array<object>} matches jogos (com `id`, `group`, `stage_index`)
+ * @param {Array<object>} stages  fases da modalidade
+ * @returns {string[]} ids dos jogos cujo `group` deve ser removido
+ */
+export function matchesWithStaleSingleGroup(matches = [], stages = []) {
+  return (Array.isArray(matches) ? matches : [])
+    .filter((m) => {
+      if (!m?.group) return false;
+      const si = Number(m?.stage_index ?? 0);
+      return stages?.[si]?.division_mode === PHASE_DIVISION_MODE.SINGLE;
+    })
+    .map((m) => m.id)
+    .filter(Boolean);
+}
