@@ -32,6 +32,7 @@ import {
   filterPartnerCandidates,
   publicProfileToPartnerFields,
 } from '@/modules/tournament/domain/partnerInvite';
+import TeamRegistrationDialog from '@/v2/components/tournament/TeamRegistrationDialog';
 
 const GENDER_OPTIONS = [
   { value: COMPETITION_GENDER.MALE, label: 'Masculino' },
@@ -186,6 +187,22 @@ export default function ModalityRegistrationDialog({
   ]);
 
   if (!modality) return null;
+
+  // Modalidade de EQUIPES: a inscrição é nome da equipe + elenco completo
+  // (as vagas definidas na modalidade) — o formulário de simples/dupla não se
+  // aplica. Delega ao modal próprio, mantendo um único ponto de entrada para
+  // todos os lugares que abrem "Inscrever-se".
+  if (modality.team_config) {
+    return (
+      <TeamRegistrationDialog
+        tournament={tournament}
+        modality={modality}
+        open={open}
+        onClose={onClose}
+      />
+    );
+  }
+
   const blocked = !isAdmin && eligibility.errors.length > 0;
   const pixReady = paymentOn
     && !isAdmin

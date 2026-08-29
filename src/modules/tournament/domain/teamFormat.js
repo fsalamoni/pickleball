@@ -627,3 +627,222 @@ export function buildConfrontationRankingMirror({
 
   return { toWrite, toRemove };
 }
+
+/* -------------------------------------------------------------------------
+ * INSCRIÇÃO DE EQUIPE — vagas (slots) do elenco
+ *
+ * O formulário de inscrição não pede "uma lista livre de atletas": ele mostra
+ * exatamente as VAGAS que a modalidade define (quantidade e composição de
+ * gênero). Estas funções derivam essas vagas da `team_config` e fazem a ponte
+ * entre "vagas preenchidas" (UI) e "members[]" (banco).
+ * ------------------------------------------------------------------------- */
+
+/**
+ * Vagas do elenco, na ordem em que o formulário as apresenta.
+ *
+ * - Equipe masculina/feminina: `team_size` vagas do gênero da equipe.
+ * - Equipe mista: `male_slots` vagas masculinas seguidas de `female_slots`
+ *   femininas (a composição definida na modalidade).
+ *
+ * @param {object} config  saída de normalizeTeamConfig().value
+ * @returns {Array<{ key: string, index: number, gender: 'male'|'female', label: string, short: string }>}
+ */
+export function buildRosterSlots(config = {}) {
+  const size = clampInt(config.team_size, TEAM_LIMITS.MIN_TEAM_SIZE, TEAM_LIMITS.MAX_TEAM_SIZE, 0);
+  if (!size) return [];
+
+  const gender = config.gender;
+  let genders;
+  if (gender === TEAM_GENDER.MIXED) {
+    const males = Number(config.male_slots) || 0;
+    const females = Number(config.female_slots) || Math.max(0, size - males);
+    genders = [
+      ...Array.from({ length: males }, () => COMPETITION_GENDER.MALE),
+      ...Array.from({ length: females }, () => COMPETITION_GENDER.FEMALE),
+    ].slice(0, size);
+  } else {
+    const g = gender === TEAM_GENDER.FEMALE ? COMPETITION_GENDER.FEMALE : COMPETITION_GENDER.MALE;
+    genders = Array.from({ length: size }, () => g);
+  }
+
+  let male = 0;
+  let female = 0;
+  return genders.map((g, index) => {
+    const isMale = g === COMPETITION_GENDER.MALE;
+    const n = isMale ? (male += 1) : (female += 1);
+    const noun = isMale ? 'Atleta masculino' : 'Atleta feminina';
+    return {
+      key: `slot_${index + 1}`,
+      index,
+      gender: g,
+      // Em equipes de um só gênero não faz sentido repetir o gênero em cada vaga.
+      label: gender === TEAM_GENDER.MIXED ? `${noun} ${n}` : `Atleta ${index + 1}`,
+      short: gender === TEAM_GENDER.MIXED ? `${isMale ? 'M' : 'F'}${n}` : `${index + 1}`,
+    };
+  });
+}
+
+/**
+ * Distribui um elenco já gravado (`members[]`) nas vagas da modalidade, para
+ * o formulário de EDIÇÃO. Cada vaga recebe o primeiro atleta compatível com o
+ * seu gênero; atletas sem gênero declarado preenchem vagas que sobraram.
+ * O que não couber volta em `extras` (acontece quando a modalidade muda de
+ * composição depois da inscrição) — nunca some silenciosamente.
+ *
+ * @param {Array} members
+ * @param {object} config
+ * @returns {{ filled: Array<object|null>, extras: Array<object> }}
+ */
+export function assignMembersToSlots(members = [], config = {}) {
+  const slots = buildRosterSlots(config);
+  const pool = (Array.isArray(members) ? members : []).filter(Boolean);
+  const used = new Set();
+  const filled = slots.map((slot) => {
+    const exact = pool.findIndex((m, i) => !used.has(i) && m.gender === slot.gender);
+    const idx = exact >= 0 ? exact : pool.findIndex((m, i) => !used.has(i) && !m.gender);
+    if (idx < 0) return null;
+    used.add(idx);
+    return { ...pool[idx], gender: slot.gender };
+  });
+  const extras = pool.filter((_, i) => !used.has(i));
+  return { filled, extras };
+}
+
+/**
+ * Converte as vagas preenchidas no formulário em `members[]` para gravação.
+ * O gênero vem SEMPRE da vaga (a composição é a definida na modalidade) e
+ * vagas vazias/sem nome são descartadas.
+ *
+ * @param {Array<object|null>} slotValues  alinhado a buildRosterSlots(config)
+ * @param {object} config
+ * @returns {Array<{user_id: string|null, name: string, gender: string, photo_url: string|null, level: string|null}>}
+ */
+export function membersFromSlots(slotValues = [], config = {}) {
+  const slots = buildRosterSlots(config);
+  return slots
+    .map((slot, i) => {
+      const value = slotValues[i];
+      const name = trimmed(value?.name);
+      if (!value || !name) return null;
+      return {
+        user_id: value.user_id || null,
+        name,
+        gender: slot.gender,
+        photo_url: value.photo_url || null,
+        level: value.level || null,
+      };
+    })
+    .filter(Boolean);
+}
+
+/**
+ * Resumo do preenchimento do elenco, para o rótulo de progresso do formulário.
+ * @returns {{ required: number, filled: number, missing: number, missingMale: number, missingFemale: number, complete: boolean }}
+ */
+export function rosterProgress(slotValues = [], config = {}) {
+  const slots = buildRosterSlots(config);
+  let filled = 0;
+  let missingMale = 0;
+  let missingFemale = 0;
+  slots.forEach((slot, i) => {
+    if (trimmed(slotValues[i]?.name)) {
+      filled += 1;
+    } else if (slot.gender === COMPETITION_GENDER.FEMALE) {
+      missingFemale += 1;
+    } else {
+      missingMale += 1;
+    }
+  });
+  return {
+    required: slots.length,
+    filled,
+    missing: slots.length - filled,
+    missingMale,
+    missingFemale,
+    complete: slots.length > 0 && filled === slots.length,
+  };
+}
+
+/** Normaliza um nome de equipe para comparação (sem acento, caixa baixa). */
+function normalizeTeamName(value) {
+  return String(value ?? '')
+    .normalize('NFD')
+    .replace(/[\u0300-\u036f]/g, '')
+    .replace(/\s+/g, ' ')
+    .trim()
+    .toLowerCase();
+}
+
+/**
+ * Valida a inscrição de uma equipe CONTRA as equipes já inscritas na mesma
+ * modalidade: nome não pode repetir e nenhum atleta com conta pode estar em
+ * duas equipes. `currentTeamId` isenta a própria equipe (edição).
+ *
+ * @param {object} args
+ * @param {string} args.teamName
+ * @param {Array} args.members
+ * @param {Array} args.existingTeams   inscrições-equipe da modalidade
+ * @param {string|null} [args.currentTeamId]
+ * @returns {{ valid: boolean, errors: string[] }}
+ */
+export function validateTeamAgainstExisting({
+  teamName = '', members = [], existingTeams = [], currentTeamId = null,
+} = {}) {
+  const errors = [];
+  const others = (Array.isArray(existingTeams) ? existingTeams : [])
+    .filter((t) => t && t.id !== currentTeamId);
+
+  const name = normalizeTeamName(teamName);
+  if (name && others.some((t) => normalizeTeamName(t.team_name || t.label) === name)) {
+    errors.push('Já existe uma equipe com esse nome nesta modalidade.');
+  }
+
+  const takenBy = new Map();
+  others.forEach((t) => {
+    (t.member_uids || (t.members || []).map((m) => m?.user_id) || []).filter(Boolean).forEach((uid) => {
+      if (!takenBy.has(uid)) takenBy.set(uid, t.team_name || t.label || 'outra equipe');
+    });
+  });
+  (Array.isArray(members) ? members : []).forEach((m) => {
+    if (m?.user_id && takenBy.has(m.user_id)) {
+      errors.push(`${m.name || 'Atleta'} já está inscrito(a) na equipe "${takenBy.get(m.user_id)}".`);
+    }
+  });
+
+  return { valid: errors.length === 0, errors };
+}
+
+/**
+ * Atletas (uids) já comprometidos com outras equipes da modalidade — o
+ * formulário os remove da busca para não oferecer quem não pode ser escolhido.
+ *
+ * @param {Array} existingTeams
+ * @param {string|null} [currentTeamId]
+ * @returns {string[]}
+ */
+export function uidsInOtherTeams(existingTeams = [], currentTeamId = null) {
+  return (Array.isArray(existingTeams) ? existingTeams : [])
+    .filter((t) => t && t.id !== currentTeamId)
+    .flatMap((t) => (t.member_uids && t.member_uids.length
+      ? t.member_uids
+      : (t.members || []).map((m) => m?.user_id)))
+    .filter(Boolean);
+}
+
+/**
+ * O usuário participa desta inscrição? Cobre os três formatos existentes:
+ * individual (`user_id`), dupla (`player_a/b_user_id`) e EQUIPE (`member_uids`
+ * — todo o elenco, não só quem inscreveu).
+ *
+ * @param {object} registration
+ * @param {string|null} uid
+ * @returns {boolean}
+ */
+export function registrationIncludesUid(registration, uid) {
+  if (!registration || !uid) return false;
+  return registration.user_id === uid
+    || registration.player_a_user_id === uid
+    || registration.player_b_user_id === uid
+    || (Array.isArray(registration.member_uids) && registration.member_uids.includes(uid))
+    || (Array.isArray(registration.members) && registration.members.some((m) => m?.user_id === uid));
+}

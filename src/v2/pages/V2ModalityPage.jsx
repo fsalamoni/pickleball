@@ -17,6 +17,7 @@ import { AvatarGroup } from '@/components/ui/user-avatar';
 import { V2Badge, V2Button, V2Skeleton, V2Surface } from '@/v2/ui/primitives';
 import { cn } from '@/core/lib/utils';
 import TeamModalityView from '@/v2/components/tournament/TeamModalityView';
+import { registrationIncludesUid } from '@/modules/tournament/domain/teamFormat';
 
 function competitionLabel(modality) {
   const stages = Array.isArray(modality.stages) ? modality.stages : [];
@@ -24,10 +25,13 @@ function competitionLabel(modality) {
   return TOURNAMENT_STAGE_TYPE_LABELS[stages[0]?.type] || 'Formato competitivo definido';
 }
 
-function registerLabelFor({ alreadyRegistered, canRegister, slotsFull, isAdmin }) {
-  if (alreadyRegistered) return 'Você já está inscrito';
+function registerLabelFor({ alreadyRegistered, canRegister, slotsFull, isAdmin, isTeam }) {
+  // O organizador inscreve quantas equipes precisar — estar numa delas não o trava.
+  if (isTeam && isAdmin && canRegister) return 'Nova equipe';
+  if (alreadyRegistered) return isTeam ? 'Sua equipe está inscrita' : 'Você já está inscrito';
   if (!canRegister) return 'Torneio privado: exige código';
   if (slotsFull && !isAdmin) return 'Modalidade lotada';
+  if (isTeam) return 'Inscrever equipe';
   return isAdmin ? 'Inscrever jogador' : 'Inscrever-se';
 }
 
@@ -71,8 +75,8 @@ export default function V2ModalityPage() {
   const hasPrivateAccess = typeof window !== 'undefined' && Boolean(sessionStorage.getItem(`tournament_access_${tournament.id}`));
   const isPublic = (tournament.visibility || TOURNAMENT_VISIBILITY.PRIVATE) === TOURNAMENT_VISIBILITY.PUBLIC;
   const canRegister = !!isAdmin || isPublic || hasPrivateAccess;
-  const alreadyRegistered = registrations.some((r) => r.user_id === user?.uid || r.player_a_user_id === user?.uid || r.player_b_user_id === user?.uid);
-  const registerLabel = registerLabelFor({ alreadyRegistered, canRegister, slotsFull, isAdmin: !!isAdmin });
+  const alreadyRegistered = registrations.some((r) => registrationIncludesUid(r, user?.uid));
+  const registerLabel = registerLabelFor({ alreadyRegistered, canRegister, slotsFull, isAdmin: !!isAdmin, isTeam });
 
   const badges = [
     isTeam ? 'Equipes' : MODALITY_FORMAT_LABELS[modality.format],
@@ -131,17 +135,17 @@ export default function V2ModalityPage() {
           </div>
 
           <div className="mt-6 flex flex-wrap gap-2">
-            {!isTeam && (
-              <V2Button onClick={() => setRegisterOpen(true)} disabled={alreadyRegistered || !canRegister || (slotsFull && !isAdmin)}>
-                <Plus className="h-4 w-4" /> {registerLabel}
-              </V2Button>
-            )}
+            <V2Button onClick={() => setRegisterOpen(true)} disabled={(alreadyRegistered && !(isTeam && isAdmin)) || !canRegister || (slotsFull && !isAdmin)}>
+              <Plus className="h-4 w-4" /> {registerLabel}
+            </V2Button>
             <V2Button asChild variant="ghost" className="border-white/20 bg-white/10 text-white hover:border-white/40">
               <Link to={`/torneios/${tournamentId}/jogos`}>Ver jogos do torneio</Link>
             </V2Button>
           </div>
         </div>
       </div>
+
+      <ModalityRegistrationDialog modality={modality} tournament={tournament} isAdmin={!!isAdmin} open={registerOpen} onClose={() => setRegisterOpen(false)} />
 
       {isTeam ? (
         <div className="mt-6">
@@ -196,7 +200,6 @@ export default function V2ModalityPage() {
         {tab === 'fotos' && <V2ModalityGallery tournamentId={tournament.id} modalityId={modality.id} canManage={!!isAdmin} />}
       </div>
 
-      <ModalityRegistrationDialog modality={modality} tournament={tournament} isAdmin={!!isAdmin} open={registerOpen} onClose={() => setRegisterOpen(false)} />
         </>
       )}
     </div>
