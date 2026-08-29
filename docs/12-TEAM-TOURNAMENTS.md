@@ -381,6 +381,17 @@ confrontos, escalações ou resultados:
   **nunca** nascer inconsistente, `runDraw` (`services/drawService.js`) chama a
   rotina **silenciosamente** logo após persistir, quando a fase sorteada é
   `division_mode: 'single'`.
+- **Automático ao salvar as fases:** ao editar uma modalidade e salvar uma fase
+  como grupo único, `V2TournamentModalitiesTab.handleSave` também dispara a
+  rotina (via hook) logo após a atualização — cobrindo o caso de uma fase que
+  **já foi sorteada como grupos** e depois foi trocada para grupo único. A porta
+  (gate) é o helper puro `hasSingleGroupStage(stages)` (`domain/phases.js`), que
+  só é verdadeiro para uma fase de **formato com grupos** declarada
+  `division_mode: 'single'` (chaves de mata-mata nunca geram resíduo). Só roda ao
+  **editar** (uma modalidade nova não tem sorteio); é **no-op** quando não há
+  resíduo e mostra um toast **apenas** quando algo foi de fato corrigido. Uma
+  falha na limpeza **não** desfaz o salvamento (o botão "Corrigir grupos"
+  continua como reserva).
 - **Hook:** `useClearStaleSingleGroupMarkers(modalityId)`
   (`hooks/useTournament.js`) — invalida jogos, grupos (`stage-groups`,
   `phase-groups`) e ranking.
@@ -390,11 +401,9 @@ confrontos, escalações ou resultados:
   ("Editar grupos", "Re-sortear mantendo grupos") ficam ocultos, pois não fazem
   sentido em grupo único.
 
-Observação: a auto-limpeza ao **salvar** a fase como grupo único no
-`PhasesEditor` foi deliberadamente **não** implementada — a limpeza já é
-garantida no sorteio e pelo botão manual, e antes do sorteio não há nada a
-limpar (a exibição já colapsa). Acoplar salvar-config à mutação de jogos
-cruzaria camadas sem ganho.
+Assim, o resíduo de grupo único é corrigido em **três** momentos, de forma
+idempotente e aditiva: ao **salvar** a fase como grupo único (editando), ao
+**sortear** uma fase single, e sob demanda pelo **botão** "Corrigir grupos".
 
 ---
 
@@ -422,12 +431,15 @@ cruzaria camadas sem ganho.
   em `domain/teamFormat.js` → `TeamModalityView.jsx`
 - Classificação do torneio / grupo único: `services/rankingService.js`
   (`computeModalityRankingStructured`)
-- Limpeza de grupo único (marcadores + metadados): `matchesWithStaleSingleGroup`
-  e `groupDocsInSingleGroupStages` (`domain/phases.js`) +
-  `clearStaleSingleGroupMarkers` (`services/matchService.js`, também disparado
-  por `runDraw` em `services/drawService.js`) +
-  `useClearStaleSingleGroupMarkers` (`hooks/useTournament.js`) + botão
-  "Corrigir grupos" (com confirmação) em `V2TournamentDrawTab.jsx`
+- Limpeza de grupo único (marcadores + metadados): `matchesWithStaleSingleGroup`,
+  `groupDocsInSingleGroupStages` e `hasSingleGroupStage` (`domain/phases.js`) +
+  `clearStaleSingleGroupMarkers` (`services/matchService.js`) +
+  `useClearStaleSingleGroupMarkers` (`hooks/useTournament.js`). Disparada em três
+  pontos: pelo botão "Corrigir grupos" (com confirmação) em
+  `V2TournamentDrawTab.jsx`, automaticamente no sorteio (`runDraw` em
+  `services/drawService.js`) e ao salvar as fases (`handleSave` em
+  `V2TournamentModalitiesTab.jsx`, com teste de runtime em
+  `V2TournamentModalitiesTab.runtime.test.jsx`)
 - Espelho no ranking individual (duplas/simples): `buildConfrontationRankingMirror`
   em `domain/teamFormat.js`, gravado por `services/teamService.js`
   (`recordConfrontation`); teste de integração em `services/teamService.test.js`
