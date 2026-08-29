@@ -23,7 +23,7 @@ import { createAuditLog } from '@/core/services/auditService';
 import { REGISTRATION_STATUS, MATCH_STATUS } from '../domain/constants.js';
 import {
   validateTeamRoster, validateConfrontationLineup, computeConfrontationResult, buildTeamRanking,
-  buildConfrontationRankingMirror,
+  buildConfrontationRankingMirror, validateTeamAgainstExisting,
 } from '../domain/teamFormat.js';
 
 const REG_COL = 'tournament_registrations';
@@ -57,8 +57,13 @@ export async function registerTeam({ tournament, modality, input, actor } = {}) 
   const check = validateTeamRoster(members, modality.team_config);
   if (!check.valid) throw new Error(check.errors[0] || 'Elenco inválido.');
 
-  const id = doc(collection(db, REG_COL)).id;
   const teamName = String(input?.team_name || '').trim().slice(0, 80) || 'Equipe';
+  // Nome único na modalidade e nenhum atleta com conta em duas equipes.
+  const existing = await listTeamRegistrations(modality.id);
+  const clash = validateTeamAgainstExisting({ teamName, members, existingTeams: existing });
+  if (!clash.valid) throw new Error(clash.errors[0]);
+
+  const id = doc(collection(db, REG_COL)).id;
   const payload = {
     id,
     tournament_id: modality.tournament_id || tournament?.id || null,
@@ -93,6 +98,14 @@ export async function updateTeamRoster(regId, { team_name, members }, modality, 
   const normalized = (members || []).map(normalizeMember);
   const check = validateTeamRoster(normalized, modality.team_config);
   if (!check.valid) throw new Error(check.errors[0] || 'Elenco inválido.');
+  const existing = await listTeamRegistrations(modality.id);
+  const clash = validateTeamAgainstExisting({
+    teamName: team_name != null ? String(team_name) : '',
+    members: normalized,
+    existingTeams: existing,
+    currentTeamId: regId,
+  });
+  if (!clash.valid) throw new Error(clash.errors[0]);
   const updates = {
     members: normalized,
     member_uids: normalized.map((m) => m.user_id).filter(Boolean),

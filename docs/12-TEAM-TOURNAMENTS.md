@@ -1,11 +1,11 @@
 # 12 — Torneios por Equipes (formato "Equipes")
 
-> Flag: `team_tournaments` (default **OFF**). Enquanto desligada, nada aparece e
-> nada muda nos torneios existentes. Feature **aditiva**: novas coleções/campos,
-> sem alterar o schema nem o comportamento atual.
+> A antiga flag `team_tournaments` **virou código** (como as demais 137): o
+> formato de equipes está sempre disponível e é ativado por modalidade, ao ligar
+> "Modalidade por equipes" na criação/edição da modalidade (`team_config`).
+> Continua **aditivo**: modalidades sem `team_config` seguem exatamente como antes.
 
-Status: **Fases 1–5 entregues** atrás da flag (OFF). Falta apenas ligar a flag
-para validar em produção. Ver §5 para os pontos de integração.
+Status: **Fases 1–5 entregues e ligadas**. Ver §5 para os pontos de integração.
 
 ---
 
@@ -56,7 +56,7 @@ Em chaves/mata-mata, o confronto é decidido da mesma forma; avança o vencedor.
 
 ## 3. Motor de domínio (Fase 1 — entregue)
 
-`src/modules/tournament/domain/teamFormat.js` (+ `teamFormat.test.js`, 19 testes),
+`src/modules/tournament/domain/teamFormat.js` (+ `teamFormat.test.js`, 39 testes),
 100% puro (sem Firebase/React):
 
 - Constantes: `TEAM_GENDER`, `TEAM_ETAPA_TYPE`, `TEAM_WIN_RULE`,
@@ -64,6 +64,18 @@ Em chaves/mata-mata, o confronto é decidido da mesma forma; avança o vencedor.
 - `normalizeTeamConfig(input)` — valida tamanho/gênero/etapas/regra e devolve a
   config normalizada (`male_slots`/`female_slots`, `win_target`, etc.).
 - `validateTeamRoster(members, config)` — elenco bate com tamanho e composição.
+- **Vagas do elenco (inscrição)**: `buildRosterSlots(config)` deriva as VAGAS que
+  o formulário mostra (quantidade + gênero de cada uma, na composição da
+  modalidade); `assignMembersToSlots(members, config)` recoloca um elenco já
+  gravado nas vagas (para edição, devolvendo em `extras` quem não cabe mais);
+  `membersFromSlots(values, config)` volta para `members[]` já com o gênero da
+  vaga; `rosterProgress(values, config)` resume o que falta preencher.
+- `validateTeamAgainstExisting({ teamName, members, existingTeams, currentTeamId })`
+  — nome de equipe único na modalidade e nenhum atleta com conta em duas equipes;
+  `uidsInOtherTeams(teams, currentTeamId)` alimenta a exclusão na busca.
+- `registrationIncludesUid(registration, uid)` — o usuário participa da
+  inscrição? Cobre individual (`user_id`), dupla (`player_a/b_user_id`) e
+  **equipe** (`member_uids`/`members[]`).
 - `validateConfrontationLineup(lineup, config, rosterA, rosterB, genderById)` —
   gênero por etapa, pertencimento ao elenco, mistas sem repetição.
 - `etapaWinner` / `etapaDecided` / `computeConfrontationResult` — apura o
@@ -109,16 +121,18 @@ confirmar no PR.
   `components/tournament/TeamConfrontationPanel.jsx` (escala cada etapa com
   seletores por gênero + placares, apura ao vivo e salva) e
   `TeamStandingsTable.jsx` (classificação).
-- **Fase 5 — Visão pública (atleta)** ✅ `TeamRegistrationForm.jsx` (inscrição do
-  elenco) e `TeamModalityView.jsx` (abas Equipes/Confrontos/Classificação),
-  montado em `V2ModalityPage` conforme `isAdmin` — edição para admin, leitura
-  para o público, independentes.
+- **Fase 5 — Visão pública (atleta)** ✅ `TeamRegistrationDialog.jsx` (MODAL de
+  inscrição) + `TeamRegistrationForm.jsx` (corpo do formulário: nome da equipe e
+  as vagas do elenco) e `TeamModalityView.jsx` (abas
+  Equipes/Confrontos/Classificação), montado em `V2ModalityPage` conforme
+  `isAdmin` — edição para admin, leitura para o público, independentes.
 
 **Integração**: `V2ModalityPage` troca o conteúdo padrão pela `TeamModalityView`
-quando `modality.team_config` (flag on); `V2OverviewBlock` aponta o CTA da
-modalidade de equipes para a página da modalidade (aba Equipes). O **pareamento**
-dos confrontos (pontos corridos/grupos/chaves) usa o **sorteio existente**
-(equipes como participantes) — nada de novo no motor de fases.
+quando `modality.team_config`; o CTA "Inscrever equipe" existe tanto no card do
+torneio (`V2OverviewBlock`, ao lado de "Ver equipes") quanto no herói da página
+da modalidade e na aba Equipes. O **pareamento** dos confrontos (pontos
+corridos/grupos/chaves) usa o **sorteio existente** (equipes como participantes)
+— nada de novo no motor de fases.
 
 ### Evoluções entregues (#111)
 
@@ -143,6 +157,48 @@ dos confrontos (pontos corridos/grupos/chaves) usa o **sorteio existente**
 
 ---
 
+### Modal de inscrição de equipes (nome + elenco por vagas)
+
+A inscrição de equipe é um **modal** (`TeamRegistrationDialog`), com **um ponto
+de entrada único**: `ModalityRegistrationDialog` — usado pelo card do torneio,
+pela aba de inscrições, pelo painel do organizador e pela página da modalidade —
+delega para ele sempre que a modalidade tem `team_config`. Antes, esses caminhos
+abriam o formulário de simples/dupla (Jogador A/B), que não se aplica a equipes.
+
+O que o modal faz:
+
+- Mostra, no topo, **o que a modalidade define**: composição (masculina/feminina/
+  mista), tamanho do elenco, `xM + yF` quando mista, nº de etapas e regra de
+  vitória.
+- **Nome da equipe** (obrigatório, até 80 caracteres) — é o rótulo nos confrontos
+  e na classificação.
+- **Uma vaga por atleta do elenco**, exatamente as de `buildRosterSlots(config)`:
+  em equipe mista as vagas já vêm rotuladas ("Atleta masculino 1", "Atleta
+  feminina 2"), então a composição sai correta por construção — o gênero do
+  membro vem da vaga, não de um seletor solto.
+- Cada vaga é preenchida por **atleta do diretório** (busca por nome/cidade,
+  vinculando `user_id`) ou por **convidado** avulso (só o nome). A busca oculta
+  quem já está no elenco, quem está em **outra equipe da modalidade** e quem não
+  serve ao gênero da vaga. Atalho "Sou eu" ocupa a 1ª vaga compatível.
+- **Salvar só com o elenco completo**; conflitos (nome repetido, atleta em duas
+  equipes) aparecem antes e são revalidados no serviço (`registerTeam` e
+  `updateTeamRoster`), não só na UI.
+- Na **edição**, o elenco gravado é redistribuído nas vagas atuais; se a
+  modalidade mudou de composição, quem não cabe mais é listado num aviso em vez
+  de sumir em silêncio.
+
+Testes: `teamFormat.test.js` cobre as vagas/validações (domínio) e
+`TeamRegistrationForm.runtime.test.jsx` monta o formulário de verdade (React DOM
+em jsdom, Firebase mockado) — vagas rotuladas, salvar travado até o elenco
+completo, payload gravado com o gênero da vaga, edição e exclusão da busca.
+
+Efeito colateral saudável: como `registrationIncludesUid` passou a reconhecer
+`member_uids`, **todo atleta do elenco** (não só quem inscreveu) aparece como
+inscrito no card da modalidade, na página da modalidade e na aba de inscrições —
+que agora também lista os nomes/avatares dos membros da equipe.
+
+---
+
 ## 6. Decisões confirmadas
 
 - **Desempate #2 (etapas)** = **saldo simples** (vitórias − derrotas de etapas).
@@ -153,5 +209,6 @@ dos confrontos (pontos corridos/grupos/chaves) usa o **sorteio existente**
 ## 7. Onde achar
 
 - Motor: `src/modules/tournament/domain/teamFormat.js`
-- Flag: `src/core/featureFlags.js` (`TEAM_TOURNAMENTS`)
+- Modal de inscrição: `src/v2/components/tournament/TeamRegistrationDialog.jsx`
+  (+ `TeamRegistrationForm.jsx`, corpo do formulário)
 - Este doc: `docs/12-TEAM-TOURNAMENTS.md`

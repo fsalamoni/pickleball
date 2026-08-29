@@ -5,6 +5,8 @@ import {
   etapaWinner, etapaDecided, computeConfrontationResult,
   buildTeamStandings, buildTeamRanking, headToHeadWinner,
   buildConfrontationRankingMirror, etapaMirrorId,
+  buildRosterSlots, assignMembersToSlots, membersFromSlots, rosterProgress,
+  validateTeamAgainstExisting, uidsInOtherTeams, registrationIncludesUid,
 } from './teamFormat.js';
 
 const M = 'male';
@@ -287,5 +289,175 @@ describe('buildTeamStandings / rankTeamStandings', () => {
     ];
     const h2h = headToHeadWinner(confrontations, 'A', 'B', cfg);
     expect(h2h).toBe('A');
+  });
+});
+
+describe('buildRosterSlots', () => {
+  it('equipe mista: vagas masculinas e femininas conforme a modalidade', () => {
+    const slots = buildRosterSlots(exampleConfig());
+    expect(slots).toHaveLength(4);
+    expect(slots.map((s) => s.gender)).toEqual([M, M, F, F]);
+    expect(slots.map((s) => s.label)).toEqual([
+      'Atleta masculino 1', 'Atleta masculino 2', 'Atleta feminina 1', 'Atleta feminina 2',
+    ]);
+  });
+
+  it('equipe de gênero único: todas as vagas do mesmo gênero, sem rótulo de gênero', () => {
+    const cfg = normalizeTeamConfig({
+      team_size: 3, gender: TEAM_GENDER.MALE, etapas: [{ type: TEAM_ETAPA_TYPE.MENS_DOUBLES }],
+    }).value;
+    const slots = buildRosterSlots(cfg);
+    expect(slots).toHaveLength(3);
+    expect(slots.every((s) => s.gender === M)).toBe(true);
+    expect(slots[2].label).toBe('Atleta 3');
+  });
+
+  it('sem configuração não gera vagas', () => {
+    expect(buildRosterSlots({})).toEqual([]);
+  });
+});
+
+describe('assignMembersToSlots', () => {
+  it('coloca cada atleta na vaga do seu gênero, mesmo fora de ordem', () => {
+    const cfg = exampleConfig();
+    const members = [
+      { user_id: 'f1', name: 'Ana', gender: F },
+      { user_id: 'm1', name: 'Bruno', gender: M },
+      { user_id: 'f2', name: 'Carla', gender: F },
+      { user_id: 'm2', name: 'Diego', gender: M },
+    ];
+    const { filled, extras } = assignMembersToSlots(members, cfg);
+    expect(filled.map((m) => m?.name)).toEqual(['Bruno', 'Diego', 'Ana', 'Carla']);
+    expect(extras).toEqual([]);
+  });
+
+  it('devolve em extras quem não cabe na composição atual', () => {
+    const cfg = exampleConfig(); // 2M + 2F
+    const members = [
+      { user_id: 'm1', name: 'Bruno', gender: M },
+      { user_id: 'm2', name: 'Diego', gender: M },
+      { user_id: 'm3', name: 'Elias', gender: M },
+    ];
+    const { filled, extras } = assignMembersToSlots(members, cfg);
+    // O terceiro homem não ocupa vaga feminina — sobra para o usuário decidir.
+    expect(filled.map((m) => m?.name ?? null)).toEqual(['Bruno', 'Diego', null, null]);
+    expect(extras.map((m) => m.name)).toEqual(['Elias']);
+  });
+
+  it('atleta sem gênero declarado ocupa a primeira vaga livre', () => {
+    const cfg = exampleConfig();
+    const { filled } = assignMembersToSlots([{ name: 'Sem gênero' }], cfg);
+    expect(filled[0]).toMatchObject({ name: 'Sem gênero', gender: M });
+  });
+
+  it('elenco vazio devolve todas as vagas livres', () => {
+    expect(assignMembersToSlots([], exampleConfig()).filled).toEqual([null, null, null, null]);
+  });
+});
+
+describe('membersFromSlots', () => {
+  it('grava o gênero da vaga e descarta vagas vazias', () => {
+    const cfg = exampleConfig();
+    const values = [
+      { user_id: 'm1', name: ' Bruno ', gender: F, photo_url: 'p.jpg', level: '3.0' },
+      null,
+      { user_id: null, name: 'Ana' },
+      { name: '   ' },
+    ];
+    expect(membersFromSlots(values, cfg)).toEqual([
+      { user_id: 'm1', name: 'Bruno', gender: M, photo_url: 'p.jpg', level: '3.0' },
+      { user_id: null, name: 'Ana', gender: F, photo_url: null, level: null },
+    ]);
+  });
+
+  it('o elenco completo passa na validação da modalidade', () => {
+    const cfg = exampleConfig();
+    const values = [
+      { user_id: 'm1', name: 'Bruno' }, { user_id: 'm2', name: 'Diego' },
+      { user_id: 'f1', name: 'Ana' }, { user_id: 'f2', name: 'Carla' },
+    ];
+    expect(validateTeamRoster(membersFromSlots(values, cfg), cfg).valid).toBe(true);
+  });
+});
+
+describe('rosterProgress', () => {
+  it('conta o que falta por gênero', () => {
+    const cfg = exampleConfig();
+    const p = rosterProgress([{ name: 'Bruno' }, null, { name: 'Ana' }, null], cfg);
+    expect(p).toMatchObject({
+      required: 4, filled: 2, missing: 2, missingMale: 1, missingFemale: 1, complete: false,
+    });
+  });
+
+  it('completo quando todas as vagas têm nome', () => {
+    const cfg = exampleConfig();
+    const p = rosterProgress([{ name: 'A' }, { name: 'B' }, { name: 'C' }, { name: 'D' }], cfg);
+    expect(p.complete).toBe(true);
+    expect(p.missing).toBe(0);
+  });
+});
+
+describe('validateTeamAgainstExisting', () => {
+  const existing = [
+    { id: 't1', team_name: 'Águia Dourada', member_uids: ['u1', 'u2'] },
+    { id: 't2', team_name: 'Furacão', members: [{ user_id: 'u3' }] },
+  ];
+
+  it('recusa nome repetido (ignorando acento e caixa)', () => {
+    const r = validateTeamAgainstExisting({ teamName: 'aguia dourada', members: [], existingTeams: existing });
+    expect(r.valid).toBe(false);
+    expect(r.errors[0]).toMatch(/mesmo nome|esse nome/i);
+  });
+
+  it('recusa atleta que já está em outra equipe', () => {
+    const r = validateTeamAgainstExisting({
+      teamName: 'Nova', members: [{ user_id: 'u3', name: 'Carla' }], existingTeams: existing,
+    });
+    expect(r.valid).toBe(false);
+    expect(r.errors[0]).toContain('Carla');
+    expect(r.errors[0]).toContain('Furacão');
+  });
+
+  it('na edição, a própria equipe não conflita consigo mesma', () => {
+    const r = validateTeamAgainstExisting({
+      teamName: 'Águia Dourada',
+      members: [{ user_id: 'u1', name: 'Bruno' }],
+      existingTeams: existing,
+      currentTeamId: 't1',
+    });
+    expect(r.valid).toBe(true);
+  });
+
+  it('convidados sem conta nunca conflitam', () => {
+    const r = validateTeamAgainstExisting({
+      teamName: 'Nova', members: [{ user_id: null, name: 'Visitante' }], existingTeams: existing,
+    });
+    expect(r.valid).toBe(true);
+  });
+});
+
+describe('uidsInOtherTeams', () => {
+  it('junta os uids das demais equipes (por member_uids ou members)', () => {
+    const teams = [
+      { id: 't1', member_uids: ['u1', 'u2'] },
+      { id: 't2', members: [{ user_id: 'u3' }, { user_id: null }] },
+    ];
+    expect(uidsInOtherTeams(teams).sort()).toEqual(['u1', 'u2', 'u3']);
+    expect(uidsInOtherTeams(teams, 't1')).toEqual(['u3']);
+  });
+});
+
+describe('registrationIncludesUid', () => {
+  it('reconhece individual, dupla e elenco de equipe', () => {
+    expect(registrationIncludesUid({ user_id: 'u1' }, 'u1')).toBe(true);
+    expect(registrationIncludesUid({ player_b_user_id: 'u2' }, 'u2')).toBe(true);
+    expect(registrationIncludesUid({ member_uids: ['u3', 'u4'] }, 'u4')).toBe(true);
+    expect(registrationIncludesUid({ members: [{ user_id: 'u5' }] }, 'u5')).toBe(true);
+  });
+
+  it('falso sem uid, sem inscrição ou quando não participa', () => {
+    expect(registrationIncludesUid(null, 'u1')).toBe(false);
+    expect(registrationIncludesUid({ user_id: 'u1' }, null)).toBe(false);
+    expect(registrationIncludesUid({ member_uids: ['u1'] }, 'u9')).toBe(false);
   });
 });

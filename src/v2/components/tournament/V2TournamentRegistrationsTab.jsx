@@ -46,6 +46,7 @@ import {
 import { useAuth } from '@/core/lib/FirebaseAuthContext';
 import { useAthletes } from '@/modules/athletes/hooks/useAthletes';
 import ModalityRegistrationDialog from '@/modules/tournament/components/ModalityRegistrationDialog';
+import { registrationIncludesUid } from '@/modules/tournament/domain/teamFormat';
 import PixPaymentDialog from '@/modules/tournament/components/PixPaymentDialog';
 import { tournamentHasPixConfig } from '@/modules/tournament/domain/payment';
 import { partnerInviteBadge } from '@/modules/tournament/domain/partnerInvite';
@@ -150,11 +151,7 @@ function ModalityRegistrationsBlock({ tournament, modality, registrations, isAdm
   const occupied = countOccupiedRegistrations(registrations);
   const hasPrivateAccess = typeof window !== 'undefined' && Boolean(sessionStorage.getItem(`tournament_access_${tournament.id}`));
   const isPublic = (tournament.visibility || TOURNAMENT_VISIBILITY.PRIVATE) === TOURNAMENT_VISIBILITY.PUBLIC;
-  const alreadyRegistered = registrations.some((r) => (
-    r.user_id === currentUserId ||
-    r.player_a_user_id === currentUserId ||
-    r.player_b_user_id === currentUserId
-  ));
+  const alreadyRegistered = registrations.some((r) => registrationIncludesUid(r, currentUserId));
   const canJoin = isAdmin || isPublic || hasPrivateAccess || alreadyRegistered;
   const slotsFull = isRegistrationCapacityReached(occupied, modality.max_entries);
 
@@ -205,15 +202,19 @@ function ModalityRegistrationsBlock({ tournament, modality, registrations, isAdm
                       <div className="flex items-center gap-2">
                         <AvatarGroup
                           size="sm"
-                          people={[
-                            { name: r.player_a_name, photoUrl: r.player_a_photo },
-                            ...(r.player_b_name ? [{ name: r.player_b_name, photoUrl: r.player_b_photo }] : []),
-                          ]}
+                          people={r.kind === 'team'
+                            ? (r.members || []).map((m) => ({ name: m.name, photoUrl: m.photo_url }))
+                            : [
+                              { name: r.player_a_name, photoUrl: r.player_a_photo },
+                              ...(r.player_b_name ? [{ name: r.player_b_name, photoUrl: r.player_b_photo }] : []),
+                            ]}
                         />
                         <div className="min-w-0">
                           <div>{r.label || `${r.player_a_name}${r.player_b_name ? ' / ' + r.player_b_name : ''}`}</div>
                           <div className="text-xs text-gray-500">
-                            {[r.player_a_email, r.player_b_email].filter(Boolean).join(' / ')}
+                            {r.kind === 'team'
+                              ? (r.members || []).map((m) => m.name).join(', ')
+                              : [r.player_a_email, r.player_b_email].filter(Boolean).join(' / ')}
                             {r.is_provisional ? ` · ${REGISTRATION_PROVISIONAL_LABEL.toLowerCase()}` : ''}
                           </div>
                           {(() => {

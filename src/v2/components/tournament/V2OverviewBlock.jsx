@@ -40,6 +40,7 @@ import {
   partnerInviteBadge,
 } from '@/modules/tournament/domain/partnerInvite';
 import { canSelfCheckIn, hasCheckedIn } from '@/modules/tournament/domain/checkin';
+import { registrationIncludesUid } from '@/modules/tournament/domain/teamFormat';
 import { useRespondPartnerInvite, useSelfCheckIn } from '@/modules/tournament/hooks/useTournament';
 import { toast } from 'sonner';
 import { V2Badge, V2Button, V2Surface } from '@/v2/ui/primitives';
@@ -255,8 +256,7 @@ function ModalityCard({ modality, confirmed, tournament, currentUserId, allRegis
     typeof window !== 'undefined' && Boolean(sessionStorage.getItem(`tournament_access_${tournament.id}`));
   const isPublic = (tournament.visibility || TOURNAMENT_VISIBILITY.PRIVATE) === TOURNAMENT_VISIBILITY.PUBLIC;
   const alreadyRegistered = allRegistrations.some(
-    (r) => r.modality_id === modality.id
-      && (r.user_id === currentUserId || r.player_a_user_id === currentUserId || r.player_b_user_id === currentUserId),
+    (r) => r.modality_id === modality.id && registrationIncludesUid(r, currentUserId),
   );
   const canRegister = isAdmin || isPublic || hasPrivateAccess;
   const modalityRegs = allRegistrations.filter((r) => r.modality_id === modality.id);
@@ -453,10 +453,23 @@ function ModalityCard({ modality, confirmed, tournament, currentUserId, allRegis
               <V2Badge tone="green">Check-in feito</V2Badge>
             )}
             {isTeam ? (
-              /* Equipes: a inscrição/gestão fica na página da modalidade. */
-              <V2Button asChild size="sm">
-                <Link to={modalityHref}><Users className="h-4 w-4" /> Ver equipes</Link>
-              </V2Button>
+              /* Equipes: inscreve pelo modal de equipes; a gestão do elenco e
+                 os confrontos ficam na página da modalidade. */
+              <>
+                <V2Button asChild size="sm" variant="ghost">
+                  <Link to={modalityHref}><Users className="h-4 w-4" /> Ver equipes</Link>
+                </V2Button>
+                {alreadyRegistered && !isAdmin ? (
+                  <V2Badge tone="green">Sua equipe está inscrita</V2Badge>
+                ) : canRegister ? (
+                  <V2Button size="sm" onClick={onRegister} disabled={slotsFull && !isAdmin}>
+                    <Plus className="h-4 w-4" />
+                    {slotsFull && !isAdmin ? 'Modalidade lotada' : isAdmin ? 'Nova equipe' : 'Inscrever equipe'}
+                  </V2Button>
+                ) : (
+                  <V2Badge tone="neutral">Privado: exige código</V2Badge>
+                )}
+              </>
             ) : alreadyRegistered ? (
               <V2Badge tone="green">Inscrito</V2Badge>
             ) : canRegister ? (

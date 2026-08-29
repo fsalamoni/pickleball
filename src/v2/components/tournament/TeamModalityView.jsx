@@ -17,7 +17,7 @@ import { useAuth } from '@/core/lib/FirebaseAuthContext';
 import { useAllModalityMatches } from '@/modules/tournament/hooks/useTournament';
 import { useTeamRegistrations } from '@/modules/tournament/hooks/useTeams';
 import { TEAM_GENDER_LABELS } from '@/modules/tournament/domain/teamFormat';
-import TeamRegistrationForm from './TeamRegistrationForm';
+import TeamRegistrationDialog from './TeamRegistrationDialog';
 import TeamConfrontationPanel from './TeamConfrontationPanel';
 import TeamStandingsTable from './TeamStandingsTable';
 
@@ -104,40 +104,31 @@ export default function TeamModalityView({ tournament, modality, isAdmin }) {
       {/* EQUIPES */}
       {tab === 'equipes' && (
         <div className="space-y-3">
-          {(showForm || (isAdmin && teams.length === 0)) ? (
-            <TeamRegistrationForm
-              tournament={tournament}
-              modality={modality}
-              editingTeam={editingTeam}
-              onDone={closeForm}
-            />
-          ) : (
-            <div className="flex flex-wrap items-center justify-between gap-2">
-              <p className="text-sm text-gray-500">
-                {isAdmin ? 'Gerencie as equipes inscritas.' : 'Inscreva sua equipe e veja as demais.'}
-              </p>
-              {/* Atleta sem equipe pode inscrever; com equipe, edita a sua. */}
-              {!isAdmin && !myTeam && (
-                <V2Button size="sm" onClick={() => { setEditingTeam(null); setShowForm(true); }}>
-                  <Plus className="h-4 w-4" /> Inscrever equipe
-                </V2Button>
-              )}
-              {!isAdmin && myTeam && (
-                <V2Button size="sm" variant="ghost" onClick={() => { setEditingTeam(myTeam); setShowForm(true); }}>
-                  Editar minha equipe
-                </V2Button>
-              )}
-              {isAdmin && (
-                <V2Button size="sm" onClick={() => { setEditingTeam(null); setShowForm(true); }}>
-                  <Plus className="h-4 w-4" /> Nova equipe
-                </V2Button>
-              )}
-            </div>
-          )}
+          <div className="flex flex-wrap items-center justify-between gap-2">
+            <p className="text-sm text-gray-500">
+              {isAdmin ? 'Gerencie as equipes inscritas.' : 'Inscreva sua equipe e veja as demais.'}
+            </p>
+            {/* Atleta sem equipe pode inscrever; com equipe, edita a sua. */}
+            {!isAdmin && !myTeam && (
+              <V2Button size="sm" onClick={() => { setEditingTeam(null); setShowForm(true); }}>
+                <Plus className="h-4 w-4" /> Inscrever equipe
+              </V2Button>
+            )}
+            {!isAdmin && myTeam && (
+              <V2Button size="sm" variant="ghost" onClick={() => { setEditingTeam(myTeam); setShowForm(true); }}>
+                Editar minha equipe
+              </V2Button>
+            )}
+            {isAdmin && (
+              <V2Button size="sm" onClick={() => { setEditingTeam(null); setShowForm(true); }}>
+                <Plus className="h-4 w-4" /> Nova equipe
+              </V2Button>
+            )}
+          </div>
 
           {loadingTeams ? (
             <V2Skeleton className="h-24 rounded-4xl" />
-          ) : teams.length === 0 && !showForm ? (
+          ) : teams.length === 0 ? (
             <V2Surface>
               <V2EmptyState icon={Users} title="Nenhuma equipe inscrita" description="As equipes inscritas aparecem aqui." />
             </V2Surface>
@@ -188,6 +179,14 @@ export default function TeamModalityView({ tournament, modality, isAdmin }) {
       {tab === 'classificacao' && (
         <TeamStandingsTable matches={matches} teamRegistrations={teams} config={config} />
       )}
+
+      <TeamRegistrationDialog
+        open={showForm}
+        tournament={tournament}
+        modality={modality}
+        editingTeam={editingTeam}
+        onClose={closeForm}
+      />
     </div>
   );
 }
