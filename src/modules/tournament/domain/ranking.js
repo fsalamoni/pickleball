@@ -65,8 +65,14 @@ export function buildStandings(matches, participantIds, scoringConfig) {
     const idsB = getSideIds(m, 'b');
     if (idsA.length === 0 || idsB.length === 0) return;
 
-    const gamesForA = (m.games || []).reduce((s, g) => s + (Number(g?.a) || 0), 0);
-    const gamesForB = (m.games || []).reduce((s, g) => s + (Number(g?.b) || 0), 0);
+    // Pontos a favor/contra: a soma dos games do jogo — ou, num CONFRONTO DE
+    // EQUIPES, a soma dos pontos de todas as etapas (gravada no confronto).
+    const gamesForA = m.team_confrontation
+      ? Number(m.points_a) || 0
+      : (m.games || []).reduce((s, g) => s + (Number(g?.a) || 0), 0);
+    const gamesForB = m.team_confrontation
+      ? Number(m.points_b) || 0
+      : (m.games || []).reduce((s, g) => s + (Number(g?.b) || 0), 0);
 
     idsA.forEach((id) => {
       let s = stats.get(id);

@@ -28,7 +28,7 @@ function RankStat({ label, value, strong, tone }) {
   );
 }
 
-function GroupRanking({ group, showName }) {
+function GroupRanking({ group, showName, isTeam = false }) {
   return (
     <div>
       {showName && group.name && <div className="mb-1 text-xs font-bold text-ink">{group.name}</div>}
@@ -51,11 +51,11 @@ function GroupRanking({ group, showName }) {
           <thead className="bg-paper text-gray-500">
             <tr className="text-left">
               <th className="px-3 py-2 font-semibold">Pos.</th>
-              <th className="px-3 py-2 font-semibold">Participante</th>
+              <th className="px-3 py-2 font-semibold">{isTeam ? 'Equipe' : 'Participante'}</th>
               <th className="px-3 py-2 text-center font-semibold">PJ</th>
               <th className="px-3 py-2 text-center font-semibold" title="Vitórias">V</th>
               <th className="px-3 py-2 text-center font-semibold">D</th>
-              <th className="px-3 py-2 text-center font-semibold">Sets</th>
+              <th className="px-3 py-2 text-center font-semibold">{isTeam ? 'Etapas' : 'Sets'}</th>
               <th className="px-3 py-2 text-center font-semibold">PF</th>
               <th className="px-3 py-2 text-center font-semibold">PC</th>
               <th className="px-3 py-2 text-center font-semibold">Saldo</th>
@@ -104,7 +104,7 @@ function GroupRanking({ group, showName }) {
                 <RankStat label="PJ" value={r.played} />
                 <RankStat label="V" value={r.wins} strong />
                 <RankStat label="D" value={r.losses} />
-                <RankStat label="Sets" value={`${r.sets_won}–${r.sets_lost}`} />
+                <RankStat label={isTeam ? 'Etapas' : 'Sets'} value={`${r.sets_won}–${r.sets_lost}`} />
                 <RankStat label="PF" value={r.points_for} />
                 <RankStat label="PC" value={r.points_against} />
                 <RankStat label="Saldo" value={balance > 0 ? `+${balance}` : balance} tone={balance > 0 ? 'text-green-600' : balance < 0 ? 'text-red-500' : 'text-gray-700'} />
@@ -119,6 +119,9 @@ function GroupRanking({ group, showName }) {
 
 export function V2ModalityRanking({ modality }) {
   const { data, isLoading } = useModalityRankingStructured(modality.id);
+  // Modalidade de EQUIPES: quem classifica é a equipe e o "set" é a ETAPA
+  // vencida dentro do confronto.
+  const isTeam = Boolean(modality.team_config);
   const phases = (data?.phases || []).filter((p) => p.played && p.groups.length > 0);
   const showPhaseHeaders = phases.length > 1;
   const subtitle = isLoading ? 'Carregando…' : phases.length === 0 ? 'Aguardando resultados' : showPhaseHeaders ? `${phases.length} fases com resultados` : 'Classificação';
@@ -135,7 +138,12 @@ export function V2ModalityRanking({ modality }) {
             const body = (
               <div className="space-y-2">
                 {phase.groups.map((group, gi) => (
-                  <GroupRanking key={group.name || gi} group={group} showName={phase.groups.length > 1 || Boolean(group.name)} />
+                  <GroupRanking
+                    key={group.name || gi}
+                    group={group}
+                    showName={phase.groups.length > 1 || Boolean(group.name)}
+                    isTeam={isTeam}
+                  />
                 ))}
               </div>
             );

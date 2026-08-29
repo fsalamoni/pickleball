@@ -93,6 +93,9 @@ export default function MultiPhaseDrawBlock({ tournament, modality, isAdmin }) {
 }
 
 function PhaseSection({ tournament, modality, phase, stageIndex, isFirst, isLast, isAdmin, labelById, activeRegistrations }) {
+  // Modalidade de EQUIPES: o participante é a equipe — não há substituição de
+  // jogador por aqui (o elenco é editado na inscrição da equipe).
+  const isTeam = Boolean(modality.team_config);
   const { data: matches = [] } = useMatches(modality.id, stageIndex);
   const { data: groups = [] } = usePhaseGroups(modality.id, stageIndex);
   const runPhaseDraw = useRunPhaseDraw();
@@ -177,7 +180,7 @@ function PhaseSection({ tournament, modality, phase, stageIndex, isFirst, isLast
           variant="outline"
           onClick={() => setGroupsEditorOpen(true)}
           disabled={running}
-          title="Mover jogadores entre os grupos sorteados desta fase"
+          title="Mover participantes entre os grupos sorteados desta fase"
         >
           <Users className="w-4 h-4 mr-1" /> Editar grupos
         </Button>
@@ -277,7 +280,7 @@ function PhaseSection({ tournament, modality, phase, stageIndex, isFirst, isLast
                         ids={m.side_a_ids}
                         rawSide={m.side_a}
                         labelById={labelById}
-                        isAdmin={isAdmin}
+                        isAdmin={isAdmin && !isTeam}
                         onSubstitute={(regId) => setSubstitution({ match: m, registrationId: regId })}
                       />
                     </td>
@@ -286,7 +289,7 @@ function PhaseSection({ tournament, modality, phase, stageIndex, isFirst, isLast
                         ids={m.side_b_ids}
                         rawSide={m.side_b}
                         labelById={labelById}
-                        isAdmin={isAdmin}
+                        isAdmin={isAdmin && !isTeam}
                         onSubstitute={(regId) => setSubstitution({ match: m, registrationId: regId })}
                       />
                     </td>

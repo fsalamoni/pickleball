@@ -49,13 +49,7 @@ export async function computeModalityRanking(modalityId, stageIndex) {
   return ranking.map((r) => {
     const reg = regById.get(r.participant_id);
     const label = reg?.label || (reg ? `${reg.player_a_name}${reg.player_b_name ? ' / ' + reg.player_b_name : ''}` : r.participant_id);
-    const players = reg
-      ? [
-          { name: reg.player_a_name, photoUrl: reg.player_a_photo || null },
-          ...(reg.player_b_name ? [{ name: reg.player_b_name, photoUrl: reg.player_b_photo || null }] : []),
-        ]
-      : [];
-    return { ...r, label, players };
+    return { ...r, label, players: registrationPeople(reg) };
   });
 }
 
@@ -78,6 +72,21 @@ async function readPhaseGroups(modalityId, stageIndex) {
   }
 }
 
+/**
+ * Atletas de uma inscrição, para os avatares: os dois jogadores de uma dupla —
+ * ou TODO o elenco, quando a inscrição é uma equipe.
+ */
+function registrationPeople(reg) {
+  if (!reg) return [];
+  if (reg.kind === 'team') {
+    return (reg.members || []).map((m) => ({ name: m.name, photoUrl: m.photo_url || null }));
+  }
+  return [
+    { name: reg.player_a_name, photoUrl: reg.player_a_photo || null },
+    ...(reg.player_b_name ? [{ name: reg.player_b_name, photoUrl: reg.player_b_photo || null }] : []),
+  ];
+}
+
 /** Monta rótulo e fotos de um entrant a partir das inscrições dos seus membros. */
 function describeEntrant(entrant, regById) {
   const members = entrant.members || [entrant.id];
@@ -89,9 +98,8 @@ function describeEntrant(entrant, regById) {
       names.push(entrant.label || mid);
       return;
     }
-    names.push(reg.label || reg.player_a_name || mid);
-    players.push({ name: reg.player_a_name, photoUrl: reg.player_a_photo || null });
-    if (reg.player_b_name) players.push({ name: reg.player_b_name, photoUrl: reg.player_b_photo || null });
+    names.push(reg.team_name || reg.label || reg.player_a_name || mid);
+    registrationPeople(reg).forEach((p) => players.push(p));
   });
   return { label: names.join(' + '), players };
 }
@@ -132,6 +140,9 @@ export async function computeModalityRankingStructured(modalityId) {
   const phases = normalizePhases(modality.stages);
   const registrations = await listRegistrations(modalityId);
   const regById = new Map(registrations.map((r) => [r.id, r]));
+  // Modalidade de equipes: a classificação de cada grupo usa os critérios do
+  // formato de equipes (confrontos → etapas → pontos → confronto direto).
+  const rankOptions = { teamConfig: modality.team_config || null };
 
   // Fonte única de jogos (igual à aba "Jogos"): lê tudo por modality_id e
   // separa por fase no cliente. Evita depender de igualdade estrita de
@@ -177,7 +188,7 @@ export async function computeModalityRankingStructured(modalityId) {
         const memberSet = new Set(entrants.flatMap((e) => e.members || [e.id]));
         const groupMatches = matches.filter((m) =>
           (m.group ? m.group === g.name : (m.side_a_ids || []).some((id) => memberSet.has(id))));
-        const ranked = rankEntrantsInGroup(entrants, groupMatches, phaseScoring);
+        const ranked = rankEntrantsInGroup(entrants, groupMatches, phaseScoring, rankOptions);
         return { name: g.name, rows: ranked.map((r) => rowFromRanked(r, regById)) };
       });
     } else {
@@ -194,7 +205,7 @@ export async function computeModalityRankingStructured(modalityId) {
           (m.side_b_ids || []).forEach((id) => ids.add(id));
         });
         const entrants = [...ids].map((id) => ({ id, members: [id] }));
-        const ranked = rankEntrantsInGroup(entrants, groupMatches, phaseScoring);
+        const ranked = rankEntrantsInGroup(entrants, groupMatches, phaseScoring, rankOptions);
         return ranked.map((r) => rowFromRanked(r, regById));
       };
       const groupNames = [...new Set(matches.map((m) => m.group).filter(Boolean))]

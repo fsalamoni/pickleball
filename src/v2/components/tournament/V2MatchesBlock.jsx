@@ -1,4 +1,5 @@
 import React, { useMemo, useState } from 'react';
+import { Link } from 'react-router-dom';
 import { Trophy, Swords, Pencil, Play, X, Undo2, Minus, Plus, Monitor } from 'lucide-react';
 import { toast } from 'sonner';
 import { UserAvatar } from '@/components/ui/user-avatar';
@@ -70,7 +71,20 @@ function MatchSide({ people = [], fallback, win }) {
   );
 }
 
-function MatchesTable({ matches, labelById, peopleById, canEdit = false, modalityId, scoringConfig }) {
+/** Placar exibido de um jogo: games — ou ETAPAS, num confronto de equipes. */
+function scoreCell(m) {
+  if (m.team_confrontation) {
+    const total = (Array.isArray(m.etapas) ? m.etapas : []).length;
+    if (!total) return '—';
+    return `${Number(m.etapa_wins_a) || 0}–${Number(m.etapa_wins_b) || 0} etapas`;
+  }
+  if ((m.games || []).length === 0) return '—';
+  return m.games.map((g, i) => <span key={i} className="mr-2">{g.a}-{g.b}</span>);
+}
+
+function MatchesTable({
+  matches, labelById, peopleById, canEdit = false, modalityId, scoringConfig, teamHref = null,
+}) {
   const hasGroups = matches.some((m) => m.group);
   const hasSchedule = matches.some((m) => m.court || m.scheduled_at);
   const [editMatch, setEditMatch] = useState(null);
@@ -125,14 +139,18 @@ function MatchesTable({ matches, labelById, peopleById, canEdit = false, modalit
                   <td className="px-3 py-2 align-middle"><MatchSide people={sideAPeople} fallback={sideA} win={winA} /></td>
                   <td className="px-3 py-2 text-center align-middle text-xs font-medium text-gray-400">vs</td>
                   <td className="px-3 py-2 align-middle"><MatchSide people={sideBPeople} fallback={sideB} win={winB} /></td>
-                  <td className="px-3 py-2 tabular-nums text-ink">
-                    {(m.games || []).length === 0 ? '—' : m.games.map((g, i) => <span key={i} className="mr-2">{g.a}-{g.b}</span>)}
-                  </td>
+                  <td className="px-3 py-2 tabular-nums text-ink">{scoreCell(m)}</td>
                   <td className="px-3 py-2"><V2Badge tone={statusTone(m.status)}>{MATCH_STATUS_LABELS[m.status] || m.status}</V2Badge></td>
                   {canEdit && (
                     <td className="px-3 py-2 text-right">
                       {isBye ? (
                         <span className="text-xs text-gray-400">—</span>
+                      ) : teamHref ? (
+                        /* Confronto de EQUIPES: o resultado é lançado etapa a
+                           etapa, na página da modalidade. */
+                        <V2Button size="sm" variant="ghost" asChild>
+                          <Link to={teamHref}><Pencil className="mr-1 h-3.5 w-3.5" /> Lançar etapas</Link>
+                        </V2Button>
                       ) : (
                         <div className="inline-flex items-center gap-1">
                           {m.status === MATCH_STATUS.SCHEDULED && (
@@ -189,17 +207,28 @@ function MatchesTable({ matches, labelById, peopleById, canEdit = false, modalit
               <div className="space-y-1.5">
                 <div className="flex items-center justify-between gap-3">
                   <MatchSide people={sideAPeople} fallback={sideA} win={winA} />
-                  {hasScore && <span className="shrink-0 tabular-nums text-sm font-semibold text-ink">{m.games.map((g) => g.a).join('  ')}</span>}
+                  {m.team_confrontation ? (
+                    <span className="shrink-0 tabular-nums text-sm font-semibold text-ink">{Number(m.etapa_wins_a) || 0}</span>
+                  ) : hasScore && <span className="shrink-0 tabular-nums text-sm font-semibold text-ink">{m.games.map((g) => g.a).join('  ')}</span>}
                 </div>
                 <div className="flex items-center gap-2 text-[10px] font-semibold uppercase tracking-wider text-gray-300">
                   <span className="h-px flex-1 bg-gray-100" />vs<span className="h-px flex-1 bg-gray-100" />
                 </div>
                 <div className="flex items-center justify-between gap-3">
                   <MatchSide people={sideBPeople} fallback={sideB} win={winB} />
-                  {hasScore && <span className="shrink-0 tabular-nums text-sm font-semibold text-ink">{m.games.map((g) => g.b).join('  ')}</span>}
+                  {m.team_confrontation ? (
+                    <span className="shrink-0 tabular-nums text-sm font-semibold text-ink">{Number(m.etapa_wins_b) || 0}</span>
+                  ) : hasScore && <span className="shrink-0 tabular-nums text-sm font-semibold text-ink">{m.games.map((g) => g.b).join('  ')}</span>}
                 </div>
               </div>
-              {canEdit && !isBye && (
+              {canEdit && !isBye && teamHref && (
+                <div className="mt-2 flex justify-end">
+                  <V2Button size="sm" variant="ghost" asChild>
+                    <Link to={teamHref}><Pencil className="mr-1 h-3.5 w-3.5" /> Lançar etapas</Link>
+                  </V2Button>
+                </div>
+              )}
+              {canEdit && !isBye && !teamHref && (
                 <div className="mt-2 flex flex-wrap justify-end gap-1">
                   {m.status === MATCH_STATUS.SCHEDULED && (
                     <V2Button size="sm" variant="ghost" onClick={() => markInProgress.mutate(m.id)} disabled={markInProgress.isPending}>
@@ -515,12 +544,20 @@ export function V2ModalityMatches({ tournament, modality, isAdmin = false }) {
   }, [registrations]);
   const peopleById = useMemo(() => {
     const map = new Map();
-    registrations.forEach((r) => map.set(r.id, [
-      { name: r.player_a_name, photoUrl: r.player_a_photo },
-      ...(r.player_b_name ? [{ name: r.player_b_name, photoUrl: r.player_b_photo }] : []),
-    ]));
+    registrations.forEach((r) => map.set(r.id, r.kind === 'team'
+      ? (r.members || []).map((m) => ({ name: m.name, photoUrl: m.photo_url || null }))
+      : [
+        { name: r.player_a_name, photoUrl: r.player_a_photo },
+        ...(r.player_b_name ? [{ name: r.player_b_name, photoUrl: r.player_b_photo }] : []),
+      ]));
     return map;
   }, [registrations]);
+
+  // Modalidade de EQUIPES: o resultado é lançado etapa a etapa, no confronto —
+  // a tabela leva o admin para a página da modalidade em vez do modal de games.
+  const teamHref = modality.team_config
+    ? `/torneios/${tournament.id}/modalidades/${modality.id}`
+    : null;
 
   const phases = useMemo(() => normalizePhases(modality.stages), [modality.stages]);
   const byStage = useMemo(() => {
@@ -571,6 +608,7 @@ export function V2ModalityMatches({ tournament, modality, isAdmin = false }) {
                   canEdit={canEdit}
                   modalityId={modality.id}
                   scoringConfig={phaseScoring}
+                  teamHref={teamHref}
                 />
               );
             }
@@ -595,6 +633,7 @@ export function V2ModalityMatches({ tournament, modality, isAdmin = false }) {
                   canEdit={canEdit}
                   modalityId={modality.id}
                   scoringConfig={phaseScoring}
+                  teamHref={teamHref}
                 />
               </V2Collapsible>
             );

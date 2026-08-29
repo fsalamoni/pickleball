@@ -25,6 +25,7 @@ import {
   TOURNAMENT_STAGE_TYPE,
 } from './constants.js';
 import { supportsGroups, BRACKET_FORMATS } from './phases.js';
+import { buildTeamRanking, matchToConfrontation, isTeamConfrontation } from './teamFormat.js';
 
 /** Formatos de ROTAÇÃO de parceiros (jogam com duplas montadas por rodada). */
 const ROTATION_FORMATS = new Set([
@@ -54,7 +55,13 @@ function compareStats(x, y) {
  * @returns {Array<object>} entrants em ordem de classificação (1º primeiro),
  *   cada um anotado com `{ stats, rank }`.
  */
-export function rankEntrantsInGroup(entrants, matches, scoringConfig) {
+export function rankEntrantsInGroup(entrants, matches, scoringConfig, options = {}) {
+  // Modalidade de EQUIPES: a classificação segue os critérios do formato de
+  // equipes (vitórias de confronto → saldo de etapas → saldo de pontos →
+  // confronto direto), e não os critérios de jogo individual.
+  if (options.teamConfig) {
+    return rankTeamEntrantsInGroup(entrants, matches, options.teamConfig);
+  }
   const memberIds = entrants.flatMap((e) => e.members || []);
   const standings = buildStandings(matches, memberIds, scoringConfig);
   const byId = new Map(standings.map((s) => [String(s.participant_id), s]));
@@ -95,6 +102,40 @@ export function rankEntrantsInGroup(entrants, matches, scoringConfig) {
   });
 
   return withStats.map((w, i) => ({ ...w.entrant, stats: w.stats, rank: i + 1 }));
+}
+
+/**
+ * Classificação de um grupo de EQUIPES: usa o ranking de equipes e devolve os
+ * entrants na mesma forma (`stats` + `rank`) que o resto do motor de fases
+ * espera — `wins` = confrontos vencidos, `sets` = etapas, `points` = pontos das
+ * etapas. Assim a progressão entre fases funciona sem nenhum caso especial.
+ */
+function rankTeamEntrantsInGroup(entrants, matches, teamConfig) {
+  const confrontations = (matches || []).filter(isTeamConfrontation).map(matchToConfrontation);
+  const teamIdOf = (e) => (e.members && e.members[0]) || e.id;
+  const ranking = buildTeamRanking(confrontations, entrants.map(teamIdOf), teamConfig);
+  const byId = new Map(ranking.map((r) => [String(r.team_id), r]));
+
+  return entrants
+    .map((e, index) => {
+      const r = byId.get(String(teamIdOf(e)));
+      return {
+        entrant: e,
+        index,
+        position: r ? r.position : entrants.length + index + 1,
+        stats: {
+          wins: r ? r.confrontation_wins : 0,
+          losses: r ? r.confrontation_losses : 0,
+          played: r ? r.confrontations_played : 0,
+          sets_won: r ? r.etapa_wins : 0,
+          sets_lost: r ? r.etapa_losses : 0,
+          points_for: r ? r.points_for : 0,
+          points_against: r ? r.points_against : 0,
+        },
+      };
+    })
+    .sort((a, b) => a.position - b.position || a.index - b.index)
+    .map((w, i) => ({ ...w.entrant, stats: w.stats, rank: i + 1 }));
 }
 
 function genderBucket(entrant) {

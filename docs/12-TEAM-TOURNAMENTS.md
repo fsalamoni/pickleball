@@ -42,6 +42,14 @@ ganhar 3 etapas. Registram-se vitórias e placares de cada etapa.
   a cada X pontos (independe de quem pontua) — a ordem é a escalação.
 - **Vitória do confronto**: "todas as etapas" (maioria) ou "melhor de X"
   (primeira a atingir o alvo; não precisa jogar as demais).
+- **Placar de cada etapa**: cada etapa é um jogo de verdade — decidido em
+  **game único** ou em **melhor de 3/5 games**, com **11/15/21 pontos** por
+  game. O padrão é da modalidade e **cada etapa pode sobrescrever** (ex.: duplas
+  em melhor de 3 e o simples em game único).
+- **Estrutura da competição**: o sorteio usa o formato definido na modalidade —
+  **grupo único** (pontos corridos), **grupos** ou **chave** (mata-mata / dupla
+  eliminação / suíço) — com as EQUIPES como participantes. Cada jogo da fase é
+  um confronto.
 
 ### Classificação (pontos corridos) e desempate
 1. **Vitórias de confronto** (equipe × equipe) — cada confronto vale 1, não
@@ -56,7 +64,7 @@ Em chaves/mata-mata, o confronto é decidido da mesma forma; avança o vencedor.
 
 ## 3. Motor de domínio (Fase 1 — entregue)
 
-`src/modules/tournament/domain/teamFormat.js` (+ `teamFormat.test.js`, 39 testes),
+`src/modules/tournament/domain/teamFormat.js` (+ `teamFormat.test.js`, 69 testes),
 100% puro (sem Firebase/React):
 
 - Constantes: `TEAM_GENDER`, `TEAM_ETAPA_TYPE`, `TEAM_WIN_RULE`,
@@ -76,8 +84,24 @@ Em chaves/mata-mata, o confronto é decidido da mesma forma; avança o vencedor.
 - `registrationIncludesUid(registration, uid)` — o usuário participa da
   inscrição? Cobre individual (`user_id`), dupla (`player_a/b_user_id`) e
   **equipe** (`member_uids`/`members[]`).
+- **Placar por etapa**: `resolveEtapaScoring(config, etapa)` (games e pontos
+  efetivos, com herança do padrão da modalidade), `etapaGames(etapa)` (lê
+  `games[]` e também o formato antigo `score_a`/`score_b`),
+  `computeEtapaResult(etapa, config)` (sets, pontos, vencedor, decidido) e
+  `etapaScoreIssues` (avisos de game fora da regra, sem travar o lançamento).
+- **Escalação**: `etapaLineupSlots(spec, config, rosterSize)` — as vagas de cada
+  etapa por lado (2 masculinas, 2 femininas, 1M+1F na mista, 1 no simples, ou a
+  ORDEM do rodízio); `suggestSideLineup(config, roster)` — escalação sugerida
+  que respeita gênero, distribui minutos e não repete atleta entre as mistas;
+  `buildEtapaDrafts(config, match)` / `etapasToPayload(drafts, config)` — a
+  ponte entre o formulário e o que é gravado.
+- **Estrutura**: `buildConfrontationStructure(matches, stages)` — organiza os
+  confrontos por fase e, dentro dela, por grupo ou rodada (nomeando Final,
+  Semifinais, Quartas…); `buildTeamGroupTables({ matches, teamRegistrations,
+  config })` — a tabela de classificação de CADA grupo.
 - `validateConfrontationLineup(lineup, config, rosterA, rosterB, genderById)` —
-  gênero por etapa, pertencimento ao elenco, mistas sem repetição.
+  gênero por etapa, pertencimento ao elenco, mistas sem repetição, ordem do
+  rodízio; etapas ainda intocadas não são erro (lançamento parcial).
 - `etapaWinner` / `etapaDecided` / `computeConfrontationResult` — apura o
   confronto (regra "todas"/"melhor de X"), etapas vencidas e pontos.
 - `buildTeamStandings` / `rankTeamStandings` / `buildTeamRanking` /
@@ -95,8 +119,14 @@ Em chaves/mata-mata, o confronto é decidido da mesma forma; avança o vencedor.
   **uma** inscrição (representa vários atletas).
 - Confrontos = **jogos** da fase (reuso de `tournament_matches`): `side_a_ids` /
   `side_b_ids` guardam o **id da inscrição-equipe**; campos aditivos
-  `team_confrontation: true` e `etapas: [{ id, type, side_a:[uid], side_b:[uid],
-  score_a, score_b }]` (escalação + placares). Nada muda para jogos não-equipe.
+  `team_confrontation: true` (gravado já no SORTEIO) e
+  `etapas: [{ id, type, side_a:[uid], side_b:[uid], games:[{a,b}], score_a,
+  score_b, sets_a, sets_b, winner_side }]` (escalação + placares), mais os
+  agregados `etapa_wins_a/b`, `sets_a/b` e `points_a/b`. `score_a`/`score_b`
+  seguem preenchidos (soma dos games) para quem lê o confronto sem conhecer
+  games. Nada muda para jogos não-equipe.
+- `team_config` ganhou `sets_per_etapa` (1/3/5) e `target_score` (11/15/21), e
+  cada etapa aceita `sets_per_match`/`target_score` opcionais (null = herda).
 
 Sem novas coleções obrigatórias; tudo cabe como campo aditivo. As regras do
 Firestore para `tournament_modalities`/`tournament_registrations`/
@@ -191,11 +221,69 @@ Testes: `teamFormat.test.js` cobre as vagas/validações (domínio) e
 `TeamRegistrationForm.runtime.test.jsx` monta o formulário de verdade (React DOM
 em jsdom, Firebase mockado) — vagas rotuladas, salvar travado até o elenco
 completo, payload gravado com o gênero da vaga, edição e exclusão da busca.
+`TeamConfrontationPanel.runtime.test.jsx` e `TeamModalityView.runtime.test.jsx`
+cobrem o lançamento (escalação por gênero, games, apuração, payload, visão
+pública) e a estrutura (grupos, chave, tabelas).
 
 Efeito colateral saudável: como `registrationIncludesUid` passou a reconhecer
 `member_uids`, **todo atleta do elenco** (não só quem inscreveu) aparece como
 inscrito no card da modalidade, na página da modalidade e na aba de inscrições —
 que agora também lista os nomes/avatares dos membros da equipe.
+
+---
+
+### Sorteio, estrutura e resultados por etapa
+
+Esta onda fechou o ciclo completo da modalidade de equipes — do sorteio ao
+resultado —, **reaproveitando o motor existente** em vez de duplicá-lo.
+
+**1. Sorteio no formato da modalidade.** `runDraw` (fase única) e `runPhaseDraw`
+(multi-fase) tratam a inscrição-equipe como participante: montam **grupo único**,
+**grupos** ou **chave** exatamente como nos torneios comuns. O que muda para
+equipes:
+- Americano e Mexicano são recusados com mensagem própria (são rotações de
+  duplas entre atletas, não entre equipes);
+- não há equilíbrio por nível/gênero de jogador — o sorteio é aleatório com
+  semente, salvo cabeças-de-chave definidas pelo admin;
+- todo jogo nasce com `team_confrontation: true` (também nas rodadas geradas por
+  `advanceStage` e nos re-sorteios que mantêm grupos);
+- as "vagas fictícias (Atleta N)" e a substituição de jogador ficam ocultas — o
+  elenco se edita na inscrição da equipe.
+
+**2. O confronto conta como jogo para todo o motor.** `getMatchResult`
+(scoring.js) reconhece `team_confrontation` e devolve o resultado a partir do
+que o confronto gravou: vencedor (`winner_side`), "sets" = **etapas vencidas** e
+saldo = **pontos das etapas**; `buildStandings` (ranking.js) usa `points_a/b`
+como pontos a favor/contra. Com isso, classificação, **progressão entre fases**,
+chave e ranking estruturado funcionam sem caso especial. A classificação de
+grupo usa os critérios de equipes (`rankEntrantsInGroup` com `teamConfig`):
+vitórias de confronto → saldo de etapas → saldo de pontos → confronto direto.
+
+**3. Tabelas e chave.** `TeamModalityView` mostra, por fase: os confrontos
+agrupados como foram sorteados (Grupo A/B…, ou Semifinais/Final) e, na
+classificação, **uma tabela por grupo** (`TeamStandingsTable`) ou a **árvore do
+mata-mata** (`V2BracketTree`, que exibe etapas vencidas como placar). O ranking
+do torneio (`V2RankingBlock`) troca "Participante/Sets" por "Equipe/Etapas".
+
+**4. Resultado etapa a etapa.** `TeamConfrontationPanel` lança cada etapa:
+- **escalação** com uma vaga por posição, e cada vaga só oferece quem serve a
+  ela (2 masculinos, 2 femininas, 1M+1F na mista); no simples em rodízio, a
+  **ordem de entrada** (1º, 2º, …) com o lembrete "troca a cada X pontos";
+- **placar por games**: um campo por game (1, 3 ou 5, conforme a etapa), com a
+  regra da etapa exibida ("11 pontos · melhor de 3") e aviso quando o game não
+  fecha (abaixo do alvo ou sem vantagem de 2);
+- **apuração ao vivo**: etapas vencidas, games e pontos somados, vencedor do
+  confronto (ou "empate em etapas") antes mesmo de salvar;
+- **escalação sugerida** com um clique, e **lançamento parcial** (salvar o que
+  já foi jogado e voltar depois);
+- **visão pública** idêntica em conteúdo, sem edição.
+- Ao salvar, cada etapa decidida continua espelhada no **ranking individual**
+  (`club_event_games`) com os games reais.
+
+**5. Onde o organizador faz cada coisa.** Sorteio na aba **Chaves** do torneio
+(com o resumo "N equipes confirmadas" e o formato da fase); resultado na página
+da modalidade → aba **Confrontos** — a aba Jogos do torneio mostra o placar em
+etapas e leva para lá pelo botão "Lançar etapas".
 
 ---
 
@@ -211,4 +299,10 @@ que agora também lista os nomes/avatares dos membros da equipe.
 - Motor: `src/modules/tournament/domain/teamFormat.js`
 - Modal de inscrição: `src/v2/components/tournament/TeamRegistrationDialog.jsx`
   (+ `TeamRegistrationForm.jsx`, corpo do formulário)
+- Confronto (escalação + placar por etapa): `TeamConfrontationPanel.jsx`
+- Estrutura/tabelas/chave: `TeamModalityView.jsx`, `TeamStandingsTable.jsx`,
+  `V2BracketTree.jsx`
+- Sorteio: `services/drawService.js`, `services/phaseService.js`
+- Ponte com o motor genérico: `domain/scoring.js`, `domain/ranking.js`,
+  `domain/phaseProgression.js`
 - Este doc: `docs/12-TEAM-TOURNAMENTS.md`

@@ -17,7 +17,9 @@
  * equipes com os critérios de desempate pedidos. Nada aqui escreve no banco.
  */
 
-import { GENDER_CATEGORY, COMPETITION_GENDER } from './constants.js';
+import {
+  GENDER_CATEGORY, COMPETITION_GENDER, TARGET_SCORE, TOURNAMENT_STAGE_TYPE,
+} from './constants.js';
 
 /** Gênero da equipe (composição do elenco). Reaproveita os valores de categoria. */
 export const TEAM_GENDER = Object.freeze({
@@ -78,6 +80,31 @@ export const TEAM_LIMITS = Object.freeze({
   MIN_ROTATION_POINTS: 1,
   MAX_ROTATION_POINTS: 99,
 });
+
+/**
+ * Quantos GAMES (sets) decidem UMA etapa. 1 = jogo único; 3/5 = melhor de.
+ * Definido na criação da modalidade (padrão da modalidade) e, opcionalmente,
+ * por etapa (ex.: as duplas em melhor de 3 e o simples em jogo único).
+ */
+export const TEAM_SETS_OPTIONS = Object.freeze([1, 3, 5]);
+
+/** Pontuação alvo de cada game de uma etapa. */
+export const TEAM_TARGET_SCORE_OPTIONS = Object.freeze([
+  TARGET_SCORE.ELEVEN, TARGET_SCORE.FIFTEEN, TARGET_SCORE.TWENTY_ONE,
+]);
+
+export const TEAM_SETS_LABELS = Object.freeze({
+  1: 'Game único',
+  3: 'Melhor de 3 games',
+  5: 'Melhor de 5 games',
+});
+
+/** Rótulo curto da regra de placar de uma etapa (ex.: "11 pts · melhor de 3"). */
+export function formatEtapaScoringLabel(scoring) {
+  const sets = Number(scoring?.sets_per_match) || 1;
+  const target = Number(scoring?.target_score) || TARGET_SCORE.ELEVEN;
+  return sets === 1 ? `${target} pontos · game único` : `${target} pontos · melhor de ${sets}`;
+}
 
 const ETAPA_TYPES = new Set(Object.values(TEAM_ETAPA_TYPE));
 
@@ -152,6 +179,14 @@ export function normalizeTeamConfig(input = {}) {
     femaleSlots = teamSize - maleSlots;
   }
 
+  // Placar PADRÃO das etapas (cada etapa pode sobrescrever).
+  const setsPerEtapa = TEAM_SETS_OPTIONS.includes(Number(input.sets_per_etapa))
+    ? Number(input.sets_per_etapa)
+    : 1;
+  const targetScore = TEAM_TARGET_SCORE_OPTIONS.includes(Number(input.target_score))
+    ? Number(input.target_score)
+    : TARGET_SCORE.ELEVEN;
+
   // Etapas (sub-jogos do confronto).
   const rawEtapas = Array.isArray(input.etapas) ? input.etapas : [];
   const etapas = rawEtapas
@@ -206,20 +241,62 @@ export function normalizeTeamConfig(input = {}) {
     win_target: winTarget,
     singles_mode: singlesMode,
     singles_rotation_points: singlesRotationPoints,
+    // Placar padrão de cada etapa (games e pontos por game).
+    sets_per_etapa: setsPerEtapa,
+    target_score: targetScore,
   };
 
   return { valid: Object.keys(errors).length === 0, errors, value };
 }
 
-/** Normaliza a especificação de UMA etapa (na configuração da modalidade). */
+/**
+ * Normaliza a especificação de UMA etapa (na configuração da modalidade).
+ * `sets_per_match` e `target_score` são OPCIONAIS: `null` significa "usa o
+ * padrão da modalidade" — assim o admin define uma vez e só sobrescreve onde
+ * quiser (ex.: simples em game único, duplas em melhor de 3).
+ */
 function normalizeEtapaSpec(e, index) {
   const type = ETAPA_TYPES.has(e?.type) ? e.type : null;
   if (!type) return null;
+  const sets = TEAM_SETS_OPTIONS.includes(Number(e?.sets_per_match)) ? Number(e.sets_per_match) : null;
+  const target = TEAM_TARGET_SCORE_OPTIONS.includes(Number(e?.target_score)) ? Number(e.target_score) : null;
   return {
     id: trimmed(e?.id) || `etapa_${index + 1}`,
     type,
     label: trimmed(e?.label).slice(0, 60) || TEAM_ETAPA_TYPE_LABELS[type],
+    sets_per_match: sets,
+    target_score: target,
   };
+}
+
+/**
+ * Regra de placar EFETIVA de uma etapa: o override da etapa quando houver,
+ * senão o padrão da modalidade, senão o padrão da plataforma (11 pts, game
+ * único). Aceita a etapa pela spec (config) ou pelo id/índice.
+ *
+ * @param {object} config  team_config normalizada
+ * @param {object|string|number} etapaOrId  spec da etapa, id, ou índice
+ * @returns {{ sets_per_match: number, target_score: number, win_by_two: boolean, max_score_cap: null }}
+ */
+export function resolveEtapaScoring(config = {}, etapaOrId = null) {
+  const specs = Array.isArray(config.etapas) ? config.etapas : [];
+  let spec = null;
+  if (etapaOrId && typeof etapaOrId === 'object') {
+    spec = specs.find((s) => s.id === etapaOrId.id) || etapaOrId;
+  } else if (typeof etapaOrId === 'number') {
+    spec = specs[etapaOrId] || null;
+  } else if (typeof etapaOrId === 'string') {
+    spec = specs.find((s) => s.id === etapaOrId) || null;
+  }
+  const fallbackSets = TEAM_SETS_OPTIONS.includes(Number(config.sets_per_etapa))
+    ? Number(config.sets_per_etapa) : 1;
+  const fallbackTarget = TEAM_TARGET_SCORE_OPTIONS.includes(Number(config.target_score))
+    ? Number(config.target_score) : TARGET_SCORE.ELEVEN;
+  const sets = TEAM_SETS_OPTIONS.includes(Number(spec?.sets_per_match))
+    ? Number(spec.sets_per_match) : fallbackSets;
+  const target = TEAM_TARGET_SCORE_OPTIONS.includes(Number(spec?.target_score))
+    ? Number(spec.target_score) : fallbackTarget;
+  return { sets_per_match: sets, target_score: target, win_by_two: true, max_score_cap: null };
 }
 
 /**
@@ -285,6 +362,10 @@ export function validateConfrontationLineup(lineup = [], config = {}, rosterAIds
     const a = (etapa?.side_a || []).filter(Boolean);
     const b = (etapa?.side_b || []).filter(Boolean);
 
+    // Etapa ainda intocada (sem escalação e sem placar) não é erro: o confronto
+    // pode ser lançado aos poucos, etapa a etapa.
+    if (a.length === 0 && b.length === 0 && etapaGames(etapa).length === 0) return;
+
     // Pertencimento ao elenco.
     if (a.some((id) => !rosterA.has(id))) errors.push(`${label}: jogador do lado A fora do elenco.`);
     if (b.some((id) => !rosterB.has(id))) errors.push(`${label}: jogador do lado B fora do elenco.`);
@@ -295,13 +376,14 @@ export function validateConfrontationLineup(lineup = [], config = {}, rosterAIds
     }
 
     if (type === TEAM_ETAPA_TYPE.SINGLES) {
-      // Um jogador (modo single) ou uma ordem (rodízio) — exige ao menos 1.
+      // Um jogador (modo single) ou uma ORDEM de rodízio (todos jogam,
+      // trocando a cada X pontos) — nesta a ordem precisa de ao menos 2.
       if (config.singles_mode === TEAM_SINGLES_MODE.SINGLE) {
         if (a.length !== 1) errors.push(`${label}: escale 1 jogador no lado A.`);
         if (b.length !== 1) errors.push(`${label}: escale 1 jogador no lado B.`);
       } else {
-        if (a.length < 1) errors.push(`${label}: defina a ordem do lado A.`);
-        if (b.length < 1) errors.push(`${label}: defina a ordem do lado B.`);
+        if (a.length < 2) errors.push(`${label}: defina a ordem do rodízio do lado A (ao menos 2 atletas).`);
+        if (b.length < 2) errors.push(`${label}: defina a ordem do rodízio do lado B (ao menos 2 atletas).`);
       }
       return;
     }
@@ -335,15 +417,131 @@ export function validateConfrontationLineup(lineup = [], config = {}, rosterAIds
   return { valid: errors.length === 0, errors };
 }
 
-/** Uma etapa está decidida? (ambos os placares e sem empate) */
-export function etapaDecided(etapa) {
-  return !!etapa && etapa.score_a != null && etapa.score_b != null && Number(etapa.score_a) !== Number(etapa.score_b);
+/* -------------------------------------------------------------------------
+ * RESULTADO DE UMA ETAPA — games (sets) ou game único
+ *
+ * Uma etapa é um jogo de verdade: pode ser decidida num único game ou em
+ * "melhor de 3/5", conforme a modalidade define (padrão + override por etapa).
+ * O lançamento guarda `games: [{ a, b }, …]`. O formato antigo (um único par
+ * `score_a`/`score_b`) continua sendo lido como um game só — nada quebra.
+ * ------------------------------------------------------------------------- */
+
+/**
+ * Placar de um lado: `null`, `undefined` e `''` significam "não lançado"
+ * (nunca zero — senão um game em branco viria como 0×0 e contaria).
+ */
+function scoreNum(value) {
+  if (value === null || value === undefined || value === '') return NaN;
+  const n = Number(value);
+  return Number.isFinite(n) ? n : NaN;
+}
+
+/** Um game é válido para contagem? (dois placares lançados e sem empate) */
+function gameCounts(game) {
+  return Number.isFinite(game?.a) && Number.isFinite(game?.b) && game.a !== game.b;
+}
+
+/**
+ * Games de uma etapa, normalizados. Lê `games[]` e, na sua ausência, o par
+ * legado `score_a`/`score_b`. Games em branco (sem os dois placares) são
+ * descartados — só entram na conta os efetivamente disputados.
+ *
+ * @param {object} etapa
+ * @returns {Array<{ a: number, b: number }>}
+ */
+export function etapaGames(etapa) {
+  const raw = Array.isArray(etapa?.games) ? etapa.games : null;
+  const list = raw && raw.length
+    ? raw
+    : (etapa?.score_a != null || etapa?.score_b != null
+      ? [{ a: etapa.score_a, b: etapa.score_b }]
+      : []);
+  return list
+    .map((g) => ({ a: scoreNum(g?.a), b: scoreNum(g?.b) }))
+    .filter((g) => Number.isFinite(g.a) && Number.isFinite(g.b));
+}
+
+/**
+ * Apura UMA etapa conforme a regra de placar dela.
+ *
+ * - game único: vence quem fizer mais pontos no game;
+ * - melhor de N: vence quem primeiro ganhar ceil(N/2) games.
+ *
+ * `points_a`/`points_b` somam os pontos de TODOS os games (base do saldo de
+ * pontos na classificação de equipes).
+ *
+ * @param {object} etapa   { games?, score_a?, score_b? }
+ * @param {object} [config] team_config (para resolver a regra da etapa)
+ * @returns {{
+ *   games: Array<{a:number,b:number}>, sets_a: number, sets_b: number,
+ *   points_a: number, points_b: number, winner: ('a'|'b'|null), decided: boolean,
+ *   sets_needed: number, scoring: object,
+ * }}
+ */
+export function computeEtapaResult(etapa, config = {}) {
+  const scoring = resolveEtapaScoring(config, etapa?.id != null ? etapa : null);
+  const games = etapaGames(etapa);
+  const setsNeeded = Math.ceil(scoring.sets_per_match / 2);
+
+  let setsA = 0;
+  let setsB = 0;
+  let pointsA = 0;
+  let pointsB = 0;
+  games.forEach((g) => {
+    pointsA += g.a;
+    pointsB += g.b;
+    if (!gameCounts(g)) return;
+    if (g.a > g.b) setsA += 1;
+    else setsB += 1;
+  });
+
+  const decided = setsA >= setsNeeded || setsB >= setsNeeded;
+  const winner = decided ? (setsA > setsB ? 'a' : 'b') : null;
+
+  return {
+    games,
+    sets_a: setsA,
+    sets_b: setsB,
+    points_a: pointsA,
+    points_b: pointsB,
+    winner,
+    decided,
+    sets_needed: setsNeeded,
+    scoring,
+  };
+}
+
+/** Uma etapa está decidida? (games suficientes vencidos pela regra da etapa) */
+export function etapaDecided(etapa, config = {}) {
+  return computeEtapaResult(etapa, config).decided;
 }
 
 /** Vencedor de uma etapa: 'a' | 'b' | null. */
-export function etapaWinner(etapa) {
-  if (!etapaDecided(etapa)) return null;
-  return Number(etapa.score_a) > Number(etapa.score_b) ? 'a' : 'b';
+export function etapaWinner(etapa, config = {}) {
+  return computeEtapaResult(etapa, config).winner;
+}
+
+/**
+ * Problemas de placar de UMA etapa, para avisar o admin sem travar o
+ * lançamento (placar de "quem chegou primeiro" às vezes foge da regra).
+ * @returns {string[]}
+ */
+export function etapaScoreIssues(etapa, config = {}) {
+  const res = computeEtapaResult(etapa, config);
+  const { target_score: target } = res.scoring;
+  const issues = [];
+  res.games.forEach((g, i) => {
+    const rotulo = res.games.length > 1 ? `Game ${i + 1}: ` : '';
+    if (g.a === g.b) {
+      issues.push(`${rotulo}empate não decide um game.`);
+      return;
+    }
+    const hi = Math.max(g.a, g.b);
+    const lo = Math.min(g.a, g.b);
+    if (hi < target) issues.push(`${rotulo}nenhum lado chegou a ${target} pontos.`);
+    else if (hi - lo < 2) issues.push(`${rotulo}é preciso vencer por 2 pontos de vantagem.`);
+  });
+  return issues;
 }
 
 /**
@@ -363,15 +561,21 @@ export function computeConfrontationResult(confrontation = {}, config = {}) {
   const etapas = Array.isArray(confrontation.etapas) ? confrontation.etapas : [];
   const etapaWins = { a: 0, b: 0 };
   const points = { a: 0, b: 0 };
+  const sets = { a: 0, b: 0 };
   let decidedCount = 0;
+  const etapaResults = [];
 
   etapas.forEach((e) => {
-    points.a += Number(e?.score_a) || 0;
-    points.b += Number(e?.score_b) || 0;
-    const w = etapaWinner(e);
-    if (w) {
+    const res = computeEtapaResult(e, config);
+    etapaResults.push(res);
+    // Pontos somam todos os games da etapa (base do saldo de pontos).
+    points.a += res.points_a;
+    points.b += res.points_b;
+    sets.a += res.sets_a;
+    sets.b += res.sets_b;
+    if (res.winner) {
       decidedCount += 1;
-      etapaWins[w] += 1;
+      etapaWins[res.winner] += 1;
     }
   });
 
@@ -403,6 +607,8 @@ export function computeConfrontationResult(confrontation = {}, config = {}) {
     winner,
     etapaWins,
     points,
+    sets,
+    etapaResults,
     etapasDecided: decidedCount,
     etapasTotal: total,
     target,
@@ -571,7 +777,7 @@ export function etapaMirrorId(matchId, etapaKey) {
  * @returns {{ toWrite: Array<{id:string, payload:object}>, toRemove: string[] }}
  */
 export function buildConfrontationRankingMirror({
-  matchId, tournamentId, modalityId, eventTitle = '', etapas = [], validUids = [],
+  matchId, tournamentId, modalityId, eventTitle = '', etapas = [], validUids = [], config = {},
 } = {}) {
   const valid = validUids instanceof Set ? validUids : new Set(validUids || []);
   const toWrite = [];
@@ -585,7 +791,8 @@ export function buildConfrontationRankingMirror({
     const a = rawA.filter((u) => valid.has(u));
     const b = rawB.filter((u) => valid.has(u));
 
-    const decided = etapaDecided(etapa);
+    const res = computeEtapaResult(etapa, config);
+    const decided = res.decided;
     const sizeOk = a.length === b.length && (a.length === 1 || a.length === 2);
     const allReal = a.length === rawA.length && b.length === rawB.length;
     const noOverlap = !a.some((u) => b.includes(u));
@@ -594,9 +801,9 @@ export function buildConfrontationRankingMirror({
       toRemove.push(id);
       return;
     }
-    const winner = etapaWinner(etapa);
-    const scoreA = Number(etapa.score_a) || 0;
-    const scoreB = Number(etapa.score_b) || 0;
+    const winner = res.winner;
+    const scoreA = res.points_a;
+    const scoreB = res.points_b;
     toWrite.push({
       id,
       payload: {
@@ -617,8 +824,9 @@ export function buildConfrontationRankingMirror({
         side_b_ids: b,
         score_a: scoreA,
         score_b: scoreB,
-        sets_a: scoreA,
-        sets_b: scoreB,
+        sets_a: res.sets_a,
+        sets_b: res.sets_b,
+        games: res.games.map((g) => ({ a: g.a, b: g.b })),
         winner_side: winner,
         status: 'finished',
       },
@@ -845,4 +1053,310 @@ export function registrationIncludesUid(registration, uid) {
     || registration.player_b_user_id === uid
     || (Array.isArray(registration.member_uids) && registration.member_uids.includes(uid))
     || (Array.isArray(registration.members) && registration.members.some((m) => m?.user_id === uid));
+}
+
+/* -------------------------------------------------------------------------
+ * ESCALAÇÃO DO CONFRONTO — quem joga cada etapa
+ *
+ * A modalidade define QUAIS etapas existem e o que cada uma exige (2 homens,
+ * 2 mulheres, 1+1, ou simples). Estas funções derivam as VAGAS de escalação de
+ * cada etapa (por lado) e sugerem uma escalação válida a partir do elenco —
+ * o admin ajusta o que quiser em cima disso.
+ * ------------------------------------------------------------------------- */
+
+/**
+ * Vagas de escalação de UMA etapa, por lado (na ordem em que a UI as mostra).
+ *
+ * - dupla masculina: 2 vagas masculinas;
+ * - dupla feminina: 2 vagas femininas;
+ * - dupla mista: vaga 1 masculina, vaga 2 feminina;
+ * - simples (1 jogador): 1 vaga livre;
+ * - simples (rodízio): uma vaga por atleta do elenco, rotuladas pela ORDEM
+ *   de entrada (1º, 2º, …) — é a ordem do rodízio por pontos.
+ *
+ * @param {object} spec        etapa da config ({ type })
+ * @param {object} config      team_config normalizada
+ * @param {number} [rosterSize] tamanho do elenco (para o rodízio)
+ * @returns {Array<{ index: number, gender: ('male'|'female'|null), label: string }>}
+ */
+export function etapaLineupSlots(spec, config = {}, rosterSize = 0) {
+  const type = spec?.type;
+  if (type === TEAM_ETAPA_TYPE.SINGLES) {
+    if (config.singles_mode === TEAM_SINGLES_MODE.ROTATING) {
+      const n = Math.max(2, Number(rosterSize) || Number(config.team_size) || 2);
+      return Array.from({ length: n }, (_, i) => ({
+        index: i, gender: null, label: `${i + 1}º a jogar`,
+      }));
+    }
+    return [{ index: 0, gender: null, label: 'Atleta' }];
+  }
+  if (type === TEAM_ETAPA_TYPE.MIXED_DOUBLES) {
+    return [
+      { index: 0, gender: COMPETITION_GENDER.MALE, label: 'Masculino' },
+      { index: 1, gender: COMPETITION_GENDER.FEMALE, label: 'Feminina' },
+    ];
+  }
+  const needs = etapaGenderNeeds(type);
+  const gender = needs && needs.female > 0 ? COMPETITION_GENDER.FEMALE : COMPETITION_GENDER.MALE;
+  return [
+    { index: 0, gender, label: 'Atleta 1' },
+    { index: 1, gender, label: 'Atleta 2' },
+  ];
+}
+
+/**
+ * Sugere uma escalação válida para UM lado, etapa a etapa, a partir do elenco.
+ *
+ * Distribui o rodízio de forma justa: entre os atletas elegíveis para a vaga,
+ * escolhe primeiro quem tem menos etapas escaladas até ali (e, no desempate, a
+ * ordem do elenco). Nas duplas MISTAS, respeita a regra de não repetir o mesmo
+ * atleta entre as mistas do mesmo lado.
+ *
+ * @param {object} config  team_config normalizada
+ * @param {Array<{ id: string, gender?: string }>} roster elenco do lado
+ * @returns {Array<string[]>} um array de ids por etapa (na ordem das etapas)
+ */
+export function suggestSideLineup(config = {}, roster = []) {
+  const specs = Array.isArray(config.etapas) ? config.etapas : [];
+  const players = (Array.isArray(roster) ? roster : []).filter((p) => p && p.id);
+  const load = new Map(players.map((p) => [p.id, 0]));
+  const mixedUsed = new Set();
+
+  return specs.map((spec) => {
+    const slots = etapaLineupSlots(spec, config, players.length);
+    const chosen = [];
+    // Rodízio do simples: a ordem é o próprio elenco (todos jogam).
+    if (spec.type === TEAM_ETAPA_TYPE.SINGLES && config.singles_mode === TEAM_SINGLES_MODE.ROTATING) {
+      return players.map((p) => p.id);
+    }
+    slots.forEach((slot) => {
+      const candidates = players.filter((p) => {
+        if (chosen.includes(p.id)) return false;
+        if (slot.gender && p.gender && p.gender !== slot.gender) return false;
+        if (slot.gender && !p.gender) return false;
+        if (spec.type === TEAM_ETAPA_TYPE.MIXED_DOUBLES && mixedUsed.has(p.id)) return false;
+        return true;
+      });
+      if (candidates.length === 0) return;
+      candidates.sort((x, y) => (load.get(x.id) || 0) - (load.get(y.id) || 0));
+      const pick = candidates[0];
+      chosen.push(pick.id);
+      load.set(pick.id, (load.get(pick.id) || 0) + 1);
+      if (spec.type === TEAM_ETAPA_TYPE.MIXED_DOUBLES) mixedUsed.add(pick.id);
+    });
+    return chosen;
+  });
+}
+
+/**
+ * Etapas "em branco" de um confronto, prontas para o lançamento: uma por etapa
+ * da modalidade, já com o número certo de games (1 para game único, N para
+ * melhor de N) e a escalação que já estiver salva.
+ *
+ * @param {object} config  team_config normalizada
+ * @param {object} [match] confronto salvo (para reaproveitar etapas gravadas)
+ * @returns {Array<object>}
+ */
+export function buildEtapaDrafts(config = {}, match = null) {
+  const saved = Array.isArray(match?.etapas) ? match.etapas : [];
+  return (config.etapas || []).map((spec, i) => {
+    const prev = saved.find((e) => e?.id === spec.id) || saved[i] || {};
+    const scoring = resolveEtapaScoring(config, spec);
+    const savedGames = etapaGames(prev);
+    const games = Array.from({ length: scoring.sets_per_match }, (_, gi) => ({
+      a: savedGames[gi] ? savedGames[gi].a : '',
+      b: savedGames[gi] ? savedGames[gi].b : '',
+    }));
+    return {
+      id: spec.id,
+      type: spec.type,
+      label: spec.label || TEAM_ETAPA_TYPE_LABELS[spec.type],
+      scoring,
+      side_a: Array.isArray(prev.side_a) ? prev.side_a.filter(Boolean) : [],
+      side_b: Array.isArray(prev.side_b) ? prev.side_b.filter(Boolean) : [],
+      games,
+    };
+  });
+}
+
+/**
+ * Converte as etapas do formulário no payload de gravação: descarta games em
+ * branco e mantém `score_a`/`score_b` agregados (compat com o que já existe e
+ * com quem lê o confronto sem conhecer games).
+ *
+ * @param {Array<object>} drafts
+ * @param {object} config
+ * @returns {Array<object>}
+ */
+export function etapasToPayload(drafts = [], config = {}) {
+  return (Array.isArray(drafts) ? drafts : []).map((e) => {
+    const res = computeEtapaResult(e, config);
+    return {
+      id: e.id,
+      type: e.type,
+      side_a: (e.side_a || []).filter(Boolean),
+      side_b: (e.side_b || []).filter(Boolean),
+      games: res.games.map((g) => ({ a: g.a, b: g.b })),
+      // Agregados (compat + leitura rápida): pontos somados dos games.
+      score_a: res.games.length ? res.points_a : null,
+      score_b: res.games.length ? res.points_b : null,
+      sets_a: res.sets_a,
+      sets_b: res.sets_b,
+      winner_side: res.winner,
+    };
+  });
+}
+
+/* -------------------------------------------------------------------------
+ * ESTRUTURA DA COMPETIÇÃO — confrontos, grupos e chaves
+ * ------------------------------------------------------------------------- */
+
+/** Um jogo persistido é um CONFRONTO de equipes com os dois lados definidos? */
+export function isTeamConfrontation(match) {
+  return Boolean(match)
+    && Array.isArray(match.side_a_ids) && match.side_a_ids.length > 0
+    && Array.isArray(match.side_b_ids) && match.side_b_ids.length > 0;
+}
+
+/** Converte um jogo persistido no confronto que o domínio entende. */
+export function matchToConfrontation(match) {
+  return {
+    match_id: match?.id || null,
+    team_a_id: match?.side_a_ids?.[0] || null,
+    team_b_id: match?.side_b_ids?.[0] || null,
+    etapas: Array.isArray(match?.etapas) ? match.etapas : [],
+  };
+}
+
+/**
+ * Organiza os confrontos de uma modalidade de equipes na ESTRUTURA da
+ * competição: uma seção por fase e, dentro dela, por grupo (pontos corridos /
+ * grupos) ou por rodada/chave (mata-mata, dupla eliminação, suíço).
+ *
+ * Puro: recebe os jogos já lidos e devolve a árvore para a UI.
+ *
+ * @param {Array<object>} matches
+ * @param {Array<object>} [stages] fases da modalidade (para rótulos)
+ * @returns {Array<{
+ *   stageIndex: number, stageType: string, isBracket: boolean,
+ *   sections: Array<{ key: string, kind: 'group'|'round', name: string, matches: object[] }>,
+ * }>}
+ */
+export function buildConfrontationStructure(matches = [], stages = []) {
+  const byStage = new Map();
+  (Array.isArray(matches) ? matches : []).forEach((m) => {
+    const si = Number(m?.stage_index ?? 0);
+    if (!byStage.has(si)) byStage.set(si, []);
+    byStage.get(si).push(m);
+  });
+
+  return [...byStage.keys()].sort((a, b) => a - b).map((stageIndex) => {
+    const list = byStage.get(stageIndex);
+    const stageType = list[0]?.stage_type || stages?.[stageIndex]?.type || null;
+    const groups = [...new Set(list.map((m) => m.group).filter(Boolean))]
+      .sort((a, b) => String(a).localeCompare(String(b), 'pt-BR'));
+
+    let sections;
+    if (groups.length > 0) {
+      sections = groups.map((name) => ({
+        key: `g:${name}`,
+        kind: 'group',
+        name,
+        matches: sortConfrontations(list.filter((m) => m.group === name)),
+      }));
+      const semGrupo = list.filter((m) => !m.group);
+      if (semGrupo.length > 0) {
+        sections.push({ key: 'g:sem', kind: 'group', name: 'Sem grupo', matches: sortConfrontations(semGrupo) });
+      }
+    } else {
+      const rounds = [...new Set(list.map((m) => `${m.bracket || ''}|${m.round || 1}`))];
+      sections = rounds
+        .map((key) => {
+          const [bracket, round] = key.split('|');
+          const sec = list.filter((m) => (m.bracket || '') === bracket && String(m.round || 1) === round);
+          return {
+            key: `r:${key}`,
+            kind: 'round',
+            bracket: bracket || null,
+            round: Number(round),
+            name: confrontationRoundLabel({ bracket: bracket || null, round: Number(round) }, list),
+            matches: sortConfrontations(sec),
+          };
+        })
+        .sort((x, y) => (x.bracket || '').localeCompare(y.bracket || '') || x.round - y.round);
+    }
+
+    return {
+      stageIndex,
+      stageType,
+      // Chave (mata-mata) é o que se desenha em árvore; pontos corridos também
+      // tem rodadas, mas classifica por tabela.
+      isBracket: BRACKET_STAGE_TYPES.has(stageType),
+      sections,
+    };
+  });
+}
+
+/** Formatos eliminatórios: a "classificação" é a própria árvore da chave. */
+const BRACKET_STAGE_TYPES = new Set([
+  TOURNAMENT_STAGE_TYPE.KNOCKOUT,
+  TOURNAMENT_STAGE_TYPE.DOUBLE_KNOCKOUT,
+]);
+
+function sortConfrontations(list) {
+  return list.slice().sort((a, b) => (a.round || 1) - (b.round || 1) || (a.position || 0) - (b.position || 0));
+}
+
+/**
+ * Rótulo de uma rodada de confrontos. Em mata-mata simples nomeia as fases
+ * finais (Final, Semifinal, Quartas…) contando a partir da última rodada.
+ */
+export function confrontationRoundLabel(ref, allMatches = []) {
+  const bracket = ref?.bracket || null;
+  const round = Number(ref?.round) || 1;
+  if (bracket === 'gf') return round === 2 ? 'Grande final (reset)' : 'Grande final';
+  if (bracket === 'wb') return `Chave dos vencedores — rodada ${round}`;
+  if (bracket === 'lb') return `Repescagem — rodada ${round}`;
+  const rounds = (allMatches || []).map((m) => Number(m.round) || 1);
+  const last = rounds.length ? Math.max(...rounds) : round;
+  const fromEnd = last - round;
+  const named = ['Final', 'Semifinais', 'Quartas de final', 'Oitavas de final'];
+  const isBracketLike = (allMatches || []).some((m) => BRACKET_STAGE_TYPES.has(m.stage_type));
+  if (isBracketLike && fromEnd < named.length) return named[fromEnd];
+  return `Rodada ${round}`;
+}
+
+/**
+ * Classificação de equipes POR GRUPO (a tabela do grupo). Quando não há grupos,
+ * devolve uma única tabela ("Classificação geral") — é o caso de pontos
+ * corridos em grupo único, exatamente como o formato pede.
+ *
+ * @param {object} args
+ * @param {Array<object>} args.matches            confrontos (jogos) da fase
+ * @param {Array<object>} args.teamRegistrations  inscrições-equipe
+ * @param {object} args.config                    team_config
+ * @returns {Array<{ name: string|null, rows: Array<object> }>}
+ */
+export function buildTeamGroupTables({ matches = [], teamRegistrations = [], config = {} } = {}) {
+  const nameById = new Map(teamRegistrations.map((t) => [t.id, t.team_name || t.label || 'Equipe']));
+  const playable = (Array.isArray(matches) ? matches : []).filter(isTeamConfrontation);
+  const groups = [...new Set(playable.map((m) => m.group).filter(Boolean))]
+    .sort((a, b) => String(a).localeCompare(String(b), 'pt-BR'));
+
+  const tableFor = (name, list) => {
+    const confrontations = list.map(matchToConfrontation);
+    const ids = [...new Set(confrontations.flatMap((c) => [c.team_a_id, c.team_b_id]).filter(Boolean))];
+    const rows = buildTeamRanking(confrontations, ids, config).map((row) => ({
+      ...row,
+      team_name: nameById.get(row.team_id) || 'Equipe',
+    }));
+    return { name, rows };
+  };
+
+  if (groups.length === 0) {
+    // Sem grupos: só faz sentido classificar quando o formato é "todos contra
+    // todos" — em chave, a classificação é a própria árvore.
+    return [tableFor(null, playable)];
+  }
+  return groups.map((name) => tableFor(name, playable.filter((m) => m.group === name)));
 }

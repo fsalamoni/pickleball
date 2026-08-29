@@ -11,6 +11,8 @@ import { cn } from '@/core/lib/utils';
 import { buildBracketColumns } from '@/modules/tournament/domain/bracketLayout';
 
 function sideScore(m, side) {
+  // Confronto de EQUIPES: o placar do jogo é o número de ETAPAS vencidas.
+  if (m.team_confrontation) return Number(side === 'a' ? m.etapa_wins_a : m.etapa_wins_b) || 0;
   const games = Array.isArray(m.games) ? m.games : [];
   return games.reduce((s, g) => s + (Number(g[side]) || 0), 0);
 }

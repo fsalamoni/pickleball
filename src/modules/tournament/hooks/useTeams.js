@@ -54,6 +54,10 @@ export function useRecordConfrontation(modalityId) {
     onSuccess: () => {
       qc.invalidateQueries({ queryKey: ['all-matches', modalityId] });
       qc.invalidateQueries({ queryKey: ['matches', modalityId] });
+      // A classificação (tabela do grupo / ranking) deriva dos confrontos.
+      qc.invalidateQueries({ queryKey: ['ranking', modalityId] });
+      qc.invalidateQueries({ queryKey: ['ranking-structured', modalityId] });
+      qc.invalidateQueries({ queryKey: ['matches-tournament'] });
     },
   });
 }

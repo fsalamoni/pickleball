@@ -7,6 +7,10 @@ import {
   buildConfrontationRankingMirror, etapaMirrorId,
   buildRosterSlots, assignMembersToSlots, membersFromSlots, rosterProgress,
   validateTeamAgainstExisting, uidsInOtherTeams, registrationIncludesUid,
+  resolveEtapaScoring, computeEtapaResult, etapaScoreIssues, etapaLineupSlots,
+  suggestSideLineup, buildEtapaDrafts, etapasToPayload,
+  buildConfrontationStructure, buildTeamGroupTables, matchToConfrontation,
+  isTeamConfrontation,
 } from './teamFormat.js';
 
 const M = 'male';
@@ -459,5 +463,346 @@ describe('registrationIncludesUid', () => {
     expect(registrationIncludesUid(null, 'u1')).toBe(false);
     expect(registrationIncludesUid({ user_id: 'u1' }, null)).toBe(false);
     expect(registrationIncludesUid({ member_uids: ['u1'] }, 'u9')).toBe(false);
+  });
+});
+
+/* ------------------ placar por etapa: games (sets) ou único ---------------- */
+
+describe('resolveEtapaScoring', () => {
+  it('usa o padrão da modalidade e aceita override por etapa', () => {
+    const cfg = normalizeTeamConfig({
+      team_size: 4, gender: TEAM_GENDER.MIXED, sets_per_etapa: 3, target_score: 15,
+      etapas: [
+        { type: TEAM_ETAPA_TYPE.MENS_DOUBLES },
+        { type: TEAM_ETAPA_TYPE.SINGLES, sets_per_match: 1, target_score: 21 },
+      ],
+    }).value;
+    expect(resolveEtapaScoring(cfg, cfg.etapas[0])).toMatchObject({ sets_per_match: 3, target_score: 15 });
+    expect(resolveEtapaScoring(cfg, cfg.etapas[1])).toMatchObject({ sets_per_match: 1, target_score: 21 });
+    // Por id e por índice também resolvem.
+    expect(resolveEtapaScoring(cfg, 'etapa_2').sets_per_match).toBe(1);
+    expect(resolveEtapaScoring(cfg, 0).sets_per_match).toBe(3);
+  });
+
+  it('valores inválidos caem no padrão da plataforma (11 pontos, game único)', () => {
+    const cfg = normalizeTeamConfig({
+      team_size: 2, gender: TEAM_GENDER.MALE, sets_per_etapa: 4, target_score: 13,
+      etapas: [{ type: TEAM_ETAPA_TYPE.MENS_DOUBLES }],
+    }).value;
+    expect(cfg.sets_per_etapa).toBe(1);
+    expect(cfg.target_score).toBe(11);
+    expect(resolveEtapaScoring(cfg, cfg.etapas[0])).toMatchObject({ sets_per_match: 1, target_score: 11 });
+  });
+});
+
+describe('computeEtapaResult', () => {
+  const single = normalizeTeamConfig({
+    team_size: 2, gender: TEAM_GENDER.MALE, etapas: [{ type: TEAM_ETAPA_TYPE.MENS_DOUBLES }],
+  }).value;
+  const bestOf3 = normalizeTeamConfig({
+    team_size: 2, gender: TEAM_GENDER.MALE, sets_per_etapa: 3,
+    etapas: [{ type: TEAM_ETAPA_TYPE.MENS_DOUBLES }],
+  }).value;
+
+  it('game único: vence quem fez mais pontos', () => {
+    const r = computeEtapaResult({ id: 'etapa_1', games: [{ a: 11, b: 7 }] }, single);
+    expect(r).toMatchObject({ winner: 'a', decided: true, sets_a: 1, sets_b: 0, points_a: 11, points_b: 7 });
+  });
+
+  it('melhor de 3: decide em 2 games e soma os pontos de todos', () => {
+    const parcial = computeEtapaResult({ id: 'etapa_1', games: [{ a: 11, b: 7 }] }, bestOf3);
+    expect(parcial.decided).toBe(false);
+    const r = computeEtapaResult({ id: 'etapa_1', games: [{ a: 11, b: 7 }, { a: 5, b: 11 }, { a: 11, b: 9 }] }, bestOf3);
+    expect(r).toMatchObject({ winner: 'a', decided: true, sets_a: 2, sets_b: 1 });
+    expect(r.points_a).toBe(27);
+    expect(r.points_b).toBe(27);
+  });
+
+  it('games em branco não contam', () => {
+    const r = computeEtapaResult({ id: 'etapa_1', games: [{ a: 11, b: 7 }, { a: '', b: '' }] }, bestOf3);
+    expect(r.games).toHaveLength(1);
+    expect(r.decided).toBe(false);
+  });
+
+  it('lê o formato antigo (score_a/score_b) como um game só', () => {
+    const r = computeEtapaResult({ id: 'etapa_1', score_a: 11, score_b: 9 }, single);
+    expect(r).toMatchObject({ winner: 'a', decided: true, points_a: 11, points_b: 9 });
+  });
+});
+
+describe('etapaScoreIssues', () => {
+  const cfg = normalizeTeamConfig({
+    team_size: 2, gender: TEAM_GENDER.MALE, target_score: 11,
+    etapas: [{ type: TEAM_ETAPA_TYPE.MENS_DOUBLES }],
+  }).value;
+
+  it('aponta game abaixo do alvo e sem vantagem de 2', () => {
+    expect(etapaScoreIssues({ id: 'etapa_1', games: [{ a: 9, b: 7 }] }, cfg)[0]).toMatch(/11 pontos/);
+    expect(etapaScoreIssues({ id: 'etapa_1', games: [{ a: 11, b: 10 }] }, cfg)[0]).toMatch(/2 pontos/);
+    expect(etapaScoreIssues({ id: 'etapa_1', games: [{ a: 11, b: 9 }] }, cfg)).toEqual([]);
+  });
+});
+
+describe('computeConfrontationResult com games', () => {
+  it('conta etapas por sets e soma os pontos de todos os games', () => {
+    const cfg = normalizeTeamConfig({
+      team_size: 4, gender: TEAM_GENDER.MIXED, sets_per_etapa: 3,
+      win_rule: TEAM_WIN_RULE.ALL,
+      etapas: [{ type: TEAM_ETAPA_TYPE.MENS_DOUBLES }, { type: TEAM_ETAPA_TYPE.WOMENS_DOUBLES }],
+    }).value;
+    const res = computeConfrontationResult({
+      etapas: [
+        { id: 'etapa_1', games: [{ a: 11, b: 5 }, { a: 11, b: 8 }] },
+        { id: 'etapa_2', games: [{ a: 6, b: 11 }, { a: 9, b: 11 }] },
+      ],
+    }, cfg);
+    expect(res.etapaWins).toEqual({ a: 1, b: 1 });
+    expect(res.sets).toEqual({ a: 2, b: 2 });
+    expect(res.points).toEqual({ a: 37, b: 35 });
+    expect(res.decided).toBe(true);
+    expect(res.winner).toBeNull(); // 1–1 em etapas
+  });
+});
+
+/* -------------------------- escalação do confronto ------------------------ */
+
+describe('etapaLineupSlots', () => {
+  const cfg = exampleConfig();
+
+  it('dupla mista tem uma vaga masculina e uma feminina, nessa ordem', () => {
+    const slots = etapaLineupSlots({ type: TEAM_ETAPA_TYPE.MIXED_DOUBLES }, cfg);
+    expect(slots.map((s) => s.gender)).toEqual([M, F]);
+  });
+
+  it('duplas masculina e feminina têm duas vagas do mesmo gênero', () => {
+    expect(etapaLineupSlots({ type: TEAM_ETAPA_TYPE.MENS_DOUBLES }, cfg).map((s) => s.gender)).toEqual([M, M]);
+    expect(etapaLineupSlots({ type: TEAM_ETAPA_TYPE.WOMENS_DOUBLES }, cfg).map((s) => s.gender)).toEqual([F, F]);
+  });
+
+  it('simples: 1 vaga livre; no rodízio, uma vaga por atleta na ordem de entrada', () => {
+    expect(etapaLineupSlots({ type: TEAM_ETAPA_TYPE.SINGLES }, cfg)).toHaveLength(1);
+    const rot = { ...cfg, singles_mode: TEAM_SINGLES_MODE.ROTATING };
+    const slots = etapaLineupSlots({ type: TEAM_ETAPA_TYPE.SINGLES }, rot, 4);
+    expect(slots).toHaveLength(4);
+    expect(slots[0].label).toBe('1º a jogar');
+    expect(slots[3].label).toBe('4º a jogar');
+  });
+});
+
+describe('suggestSideLineup', () => {
+  const roster = [
+    { id: 'm1', gender: M }, { id: 'm2', gender: M },
+    { id: 'f1', gender: F }, { id: 'f2', gender: F },
+  ];
+
+  it('monta uma escalação válida para todas as etapas do exemplo', () => {
+    const cfg = exampleConfig(); // masc, fem, mista, mista, simples
+    const lineup = suggestSideLineup(cfg, roster);
+    expect(lineup[0]).toEqual(['m1', 'm2']);
+    expect(lineup[1]).toEqual(['f1', 'f2']);
+    // Mistas não repetem jogador entre si (do mesmo lado).
+    const mistas = [...lineup[2], ...lineup[3]];
+    expect(new Set(mistas).size).toBe(mistas.length);
+    expect(lineup[4]).toHaveLength(1);
+  });
+
+  it('a escalação sugerida passa na validação de escalação', () => {
+    const cfg = exampleConfig();
+    const lineup = suggestSideLineup(cfg, roster);
+    const etapas = cfg.etapas.map((spec, i) => ({
+      type: spec.type, side_a: lineup[i], side_b: lineup[i],
+    }));
+    const genderById = new Map(roster.map((p) => [p.id, p.gender]));
+    const ids = roster.map((p) => p.id);
+    const v = validateConfrontationLineup(etapas, cfg, ids, ids, genderById);
+    expect(v.valid).toBe(true);
+  });
+
+  it('no rodízio do simples, a ordem é o elenco inteiro', () => {
+    const cfg = { ...exampleConfig(), singles_mode: TEAM_SINGLES_MODE.ROTATING };
+    const lineup = suggestSideLineup(cfg, roster);
+    expect(lineup[4]).toEqual(['m1', 'm2', 'f1', 'f2']);
+  });
+});
+
+describe('buildEtapaDrafts / etapasToPayload', () => {
+  const cfg = normalizeTeamConfig({
+    team_size: 2, gender: TEAM_GENDER.MALE, sets_per_etapa: 3,
+    etapas: [{ type: TEAM_ETAPA_TYPE.MENS_DOUBLES }, { type: TEAM_ETAPA_TYPE.SINGLES, sets_per_match: 1 }],
+  }).value;
+
+  it('cria um rascunho por etapa com o nº de games da regra dela', () => {
+    const drafts = buildEtapaDrafts(cfg);
+    expect(drafts).toHaveLength(2);
+    expect(drafts[0].games).toHaveLength(3);
+    expect(drafts[1].games).toHaveLength(1);
+    expect(drafts[0].scoring).toMatchObject({ sets_per_match: 3, target_score: 11 });
+  });
+
+  it('reaproveita escalação e placares já salvos', () => {
+    const match = {
+      etapas: [{ id: 'etapa_1', side_a: ['x'], side_b: ['y'], games: [{ a: 11, b: 5 }] }],
+    };
+    const drafts = buildEtapaDrafts(cfg, match);
+    expect(drafts[0].side_a).toEqual(['x']);
+    expect(drafts[0].games[0]).toEqual({ a: 11, b: 5 });
+    expect(drafts[0].games[1]).toEqual({ a: '', b: '' });
+  });
+
+  it('o payload descarta games em branco e agrega pontos/sets/vencedor', () => {
+    const drafts = buildEtapaDrafts(cfg);
+    drafts[0].games = [{ a: 11, b: 5 }, { a: 11, b: 7 }, { a: '', b: '' }];
+    drafts[0].side_a = ['m1', 'm2'];
+    const payload = etapasToPayload(drafts, cfg);
+    expect(payload[0]).toMatchObject({
+      id: 'etapa_1', sets_a: 2, sets_b: 0, score_a: 22, score_b: 12, winner_side: 'a',
+    });
+    expect(payload[0].games).toEqual([{ a: 11, b: 5 }, { a: 11, b: 7 }]);
+    expect(payload[1]).toMatchObject({ score_a: null, score_b: null, winner_side: null });
+  });
+});
+
+/* ------------------ estrutura: grupos, rodadas e tabelas ------------------ */
+
+describe('buildConfrontationStructure', () => {
+  it('separa por fase e por grupo quando há grupos', () => {
+    const matches = [
+      { id: '1', stage_index: 0, stage_type: 'groups', group: 'Grupo A', round: 1, position: 1, side_a_ids: ['t1'], side_b_ids: ['t2'] },
+      { id: '2', stage_index: 0, stage_type: 'groups', group: 'Grupo B', round: 1, position: 1, side_a_ids: ['t3'], side_b_ids: ['t4'] },
+      { id: '3', stage_index: 1, stage_type: 'knockout', round: 1, position: 1, side_a_ids: ['t1'], side_b_ids: ['t3'] },
+    ];
+    const struct = buildConfrontationStructure(matches);
+    expect(struct).toHaveLength(2);
+    expect(struct[0].sections.map((s) => s.name)).toEqual(['Grupo A', 'Grupo B']);
+    expect(struct[0].isBracket).toBe(false);
+    expect(struct[1].isBracket).toBe(true);
+    expect(struct[1].sections[0].name).toBe('Final');
+  });
+
+  it('em chave, nomeia as rodadas finais de trás para frente', () => {
+    const mk = (round, position) => ({
+      id: `${round}-${position}`, stage_index: 0, stage_type: 'knockout', round, position,
+      side_a_ids: ['a'], side_b_ids: ['b'],
+    });
+    const struct = buildConfrontationStructure([mk(1, 1), mk(1, 2), mk(2, 1)]);
+    expect(struct[0].sections.map((s) => s.name)).toEqual(['Semifinais', 'Final']);
+  });
+
+  it('sem grupo e sem chave, usa "Rodada N"', () => {
+    const matches = [
+      { id: '1', stage_index: 0, stage_type: 'round_robin', round: 1, position: 1, side_a_ids: ['a'], side_b_ids: ['b'] },
+      { id: '2', stage_index: 0, stage_type: 'round_robin', round: 2, position: 1, side_a_ids: ['a'], side_b_ids: ['c'] },
+    ];
+    const struct = buildConfrontationStructure(matches);
+    expect(struct[0].sections.map((s) => s.name)).toEqual(['Rodada 1', 'Rodada 2']);
+  });
+});
+
+describe('buildTeamGroupTables', () => {
+  const cfg = normalizeTeamConfig({
+    team_size: 2, gender: TEAM_GENDER.MALE, win_rule: TEAM_WIN_RULE.ALL,
+    etapas: [{ type: TEAM_ETAPA_TYPE.MENS_DOUBLES }],
+  }).value;
+  const teams = [
+    { id: 't1', team_name: 'Alfa' }, { id: 't2', team_name: 'Beta' },
+    { id: 't3', team_name: 'Gama' }, { id: 't4', team_name: 'Delta' },
+  ];
+  const win = (a, b, group) => ({
+    id: `${a}${b}`, group, side_a_ids: [a], side_b_ids: [b],
+    etapas: [{ id: 'etapa_1', games: [{ a: 11, b: 4 }] }],
+  });
+
+  it('uma tabela por grupo, com o nome da equipe e a posição', () => {
+    const tables = buildTeamGroupTables({
+      matches: [win('t1', 't2', 'Grupo A'), win('t3', 't4', 'Grupo B')],
+      teamRegistrations: teams,
+      config: cfg,
+    });
+    expect(tables.map((t) => t.name)).toEqual(['Grupo A', 'Grupo B']);
+    expect(tables[0].rows[0]).toMatchObject({ position: 1, team_name: 'Alfa', confrontation_wins: 1 });
+    expect(tables[0].rows[1]).toMatchObject({ position: 2, team_name: 'Beta', confrontation_losses: 1 });
+    expect(tables[1].rows.map((r) => r.team_name)).toEqual(['Gama', 'Delta']);
+  });
+
+  it('sem grupos, devolve uma tabela única (grupo único / pontos corridos)', () => {
+    const tables = buildTeamGroupTables({
+      matches: [win('t1', 't2', null), win('t1', 't3', null)],
+      teamRegistrations: teams,
+      config: cfg,
+    });
+    expect(tables).toHaveLength(1);
+    expect(tables[0].name).toBeNull();
+    expect(tables[0].rows[0]).toMatchObject({ team_name: 'Alfa', confrontation_wins: 2 });
+  });
+});
+
+describe('matchToConfrontation / isTeamConfrontation', () => {
+  it('reconhece um jogo com os dois lados e extrai as equipes', () => {
+    const m = { id: 'm1', side_a_ids: ['t1'], side_b_ids: ['t2'], etapas: [{ id: 'e' }] };
+    expect(isTeamConfrontation(m)).toBe(true);
+    expect(matchToConfrontation(m)).toMatchObject({ match_id: 'm1', team_a_id: 't1', team_b_id: 't2' });
+  });
+
+  it('bye (um lado só) não é confronto', () => {
+    expect(isTeamConfrontation({ side_a_ids: ['t1'], side_b_ids: [] })).toBe(false);
+  });
+});
+
+describe('validateConfrontationLineup — lançamento parcial', () => {
+  const cfg = exampleConfig();
+  const rosterA = ['a1', 'a2', 'a3', 'a4'];
+  const rosterB = ['b1', 'b2', 'b3', 'b4'];
+  const genders = new Map([
+    ['a1', M], ['a2', M], ['a3', F], ['a4', F],
+    ['b1', M], ['b2', M], ['b3', F], ['b4', F],
+  ]);
+
+  it('etapa ainda intocada (sem escalação e sem placar) não é erro', () => {
+    const parcial = [
+      { id: 'etapa_1', type: 'mens_doubles', side_a: ['a1', 'a2'], side_b: ['b1', 'b2'], games: [{ a: 11, b: 5 }] },
+      { id: 'etapa_2', type: 'womens_doubles', side_a: [], side_b: [], games: [] },
+    ];
+    expect(validateConfrontationLineup(parcial, cfg, rosterA, rosterB, genders).valid).toBe(true);
+  });
+
+  it('mas etapa com placar e sem escalação continua sendo apontada', () => {
+    const bad = [
+      { id: 'etapa_1', type: 'mens_doubles', side_a: [], side_b: [], games: [{ a: 11, b: 5 }] },
+    ];
+    const r = validateConfrontationLineup(bad, cfg, rosterA, rosterB, genders);
+    expect(r.valid).toBe(false);
+    expect(r.errors.join(' ')).toMatch(/precisa de 2 jogador/);
+  });
+
+  it('rodízio do simples exige ordem com ao menos 2 atletas', () => {
+    const rot = { ...cfg, singles_mode: TEAM_SINGLES_MODE.ROTATING };
+    const bad = [{ id: 'e', type: 'singles', side_a: ['a1'], side_b: ['b1'] }];
+    const r = validateConfrontationLineup(bad, rot, rosterA, rosterB, genders);
+    expect(r.valid).toBe(false);
+    expect(r.errors.join(' ')).toMatch(/rodízio/);
+    const ok = [{ id: 'e', type: 'singles', side_a: ['a1', 'a2'], side_b: ['b1', 'b2'] }];
+    expect(validateConfrontationLineup(ok, rot, rosterA, rosterB, genders).valid).toBe(true);
+  });
+});
+
+describe('buildConfrontationStructure — chave vs pontos corridos', () => {
+  const mk = (stageType, round, position) => ({
+    id: `${stageType}-${round}-${position}`, stage_index: 0, stage_type: stageType,
+    round, position, side_a_ids: ['a'], side_b_ids: ['b'],
+  });
+
+  it('pontos corridos tem rodadas, mas NÃO é chave (classifica por tabela)', () => {
+    const struct = buildConfrontationStructure([mk('round_robin', 1, 1), mk('round_robin', 2, 1)]);
+    expect(struct[0].isBracket).toBe(false);
+  });
+
+  it('mata-mata e dupla eliminação são chave', () => {
+    expect(buildConfrontationStructure([mk('knockout', 1, 1)])[0].isBracket).toBe(true);
+    expect(buildConfrontationStructure([mk('double_knockout', 1, 1)])[0].isBracket).toBe(true);
+  });
+
+  it('fase de grupos não é chave', () => {
+    const m = { ...mk('groups', 1, 1), group: 'Grupo A' };
+    expect(buildConfrontationStructure([m])[0].isBracket).toBe(false);
   });
 });
