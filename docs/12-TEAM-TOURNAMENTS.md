@@ -308,7 +308,7 @@ uma inscrição-equipe abre o modal de equipe, não o de jogador A/B); sorteio n
 aba **Sorteio**; escalação e resultado na aba **Resultados**. A página da
 modalidade é a vitrine do atleta.
 
-### Ajustes de exibição e ranking (#... — grupo único, placar por etapa, rodízio)
+### Ajustes de exibição e ranking — grupo único, placar por etapa, rodízio
 
 Três correções que alinham a exibição pública e o ranking da plataforma ao que
 foi **definido na modalidade** (e uma rotina de manutenção, D, para dados
