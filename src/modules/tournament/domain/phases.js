@@ -248,3 +248,24 @@ export function groupDocsInSingleGroupStages(groupDocs = [], stages = []) {
     .map((g) => g?.id)
     .filter(Boolean);
 }
+
+/**
+ * A modalidade tem ao menos uma fase de GRUPO ÚNICO num formato que comporta
+ * grupos (`division_mode: 'single'` numa fase de pontos corridos, americano ou
+ * grupos)? Serve de porta (gate) para disparar a limpeza de resíduos de grupo
+ * único ao SALVAR as fases: só faz sentido corrigir marcadores/docs de grupo em
+ * formatos que se dividem em grupos — chaves (mata-mata) nunca geram esses
+ * resíduos.
+ *
+ * Usa o modo DECLARADO explicitamente (`division_mode === 'single'`), não o
+ * inferido, coerente com `matchesWithStaleSingleGroup` e
+ * `groupDocsInSingleGroupStages`. Puro e idempotente.
+ *
+ * @param {Array<object>} stages fases da modalidade
+ * @returns {boolean}
+ */
+export function hasSingleGroupStage(stages = []) {
+  return (Array.isArray(stages) ? stages : []).some(
+    (s) => supportsGroups(s?.type) && s?.division_mode === PHASE_DIVISION_MODE.SINGLE,
+  );
+}

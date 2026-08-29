@@ -7,6 +7,7 @@ import {
   useCreateModality,
   useDeleteModality,
   useUpdateModality,
+  useClearStaleSingleGroupMarkers,
 } from '@/modules/tournament/hooks/useTournament';
 import {
   MODALITY_FORMAT,
@@ -31,7 +32,7 @@ import {
   MAX_COURT_COUNT,
   computeWindowSlots,
 } from '@/modules/tournament/domain/scheduling';
-import { normalizePhases, validatePhases, defaultPhase } from '@/modules/tournament/domain/phases';
+import { normalizePhases, validatePhases, defaultPhase, hasSingleGroupStage } from '@/modules/tournament/domain/phases';
 import { formatScoringSummary } from '@/modules/tournament/domain/scoring';
 import StageExplanation from '@/modules/tournament/components/StageExplanation';
 import PhasesEditor from '@/modules/tournament/components/PhasesEditor';
@@ -101,6 +102,10 @@ export default function V2TournamentModalitiesTab({ tournament, isAdmin }) {
   const [editingModality, setEditingModality] = useState(null);
   const [form, setForm] = useState(emptyForm);
   const [deleteTarget, setDeleteTarget] = useState(null);
+  // Auto-correção de grupo único: reaproveita a rotina idempotente que remove
+  // marcadores `m.group` e docs de grupo órfãos de fases grupo único. Vinculada
+  // à modalidade em edição (a limpeza só roda ao salvar uma edição).
+  const clearGroupsMutation = useClearStaleSingleGroupMarkers(editingModality?.id);
   const isEditing = Boolean(editingModality);
   const saving = createMutation.isPending || updateMutation.isPending;
 
@@ -245,6 +250,27 @@ export default function V2TournamentModalitiesTab({ tournament, isAdmin }) {
       if (isEditing) {
         await updateMutation.mutateAsync({ id: editingModality.id, updates: payload });
         toast.success('Modalidade atualizada.');
+        // Auto-correção (opção "a"): se alguma fase salva é GRUPO ÚNICO, remove
+        // resíduos de sorteios antigos (marcadores `m.group` + docs de grupo
+        // órfãos) para o dado nunca ficar inconsistente. A rotina é idempotente
+        // e no-op quando não há nada a limpar; uma falha aqui não desfaz o
+        // salvamento (há o botão "Corrigir grupos" na aba Sorteio como reserva).
+        if (hasSingleGroupStage(stages)) {
+          try {
+            const { cleared, groupsRemoved } = await clearGroupsMutation.mutateAsync({
+              ...editingModality,
+              ...payload,
+            });
+            const partes = [];
+            if (cleared > 0) partes.push(`${cleared} confronto(s) alinhado(s) ao grupo único`);
+            if (groupsRemoved > 0) partes.push(`${groupsRemoved} grupo(s) órfão(s) removido(s)`);
+            if (partes.length > 0) {
+              toast.success(`Grupos corrigidos automaticamente: ${partes.join(' e ')}.`);
+            }
+          } catch {
+            toast.message('Modalidade salva. Não foi possível corrigir os grupos agora — use "Corrigir grupos" na aba Sorteio.');
+          }
+        }
       } else {
         await createMutation.mutateAsync(payload);
         toast.success('Modalidade criada.');

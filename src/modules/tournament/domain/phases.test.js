@@ -7,6 +7,7 @@ import {
   plannedGroupCount,
   matchesWithStaleSingleGroup,
   groupDocsInSingleGroupStages,
+  hasSingleGroupStage,
 } from './phases.js';
 import {
   MODALITY_FORMAT,
@@ -188,5 +189,40 @@ describe('groupDocsInSingleGroupStages', () => {
   it('sem docs ou sem id, devolve lista vazia (idempotente)', () => {
     expect(groupDocsInSingleGroupStages([], [single])).toEqual([]);
     expect(groupDocsInSingleGroupStages([{ stage_index: 0 }], [single])).toEqual([]);
+  });
+});
+
+describe('hasSingleGroupStage', () => {
+  it('é verdadeiro para uma fase de grupo único num formato com grupos', () => {
+    const stages = [{ type: 'round_robin', division_mode: PHASE_DIVISION_MODE.SINGLE }];
+    expect(hasSingleGroupStage(stages)).toBe(true);
+  });
+
+  it('é verdadeiro quando ao menos uma das fases é grupo único', () => {
+    const stages = [
+      { type: 'groups', division_mode: PHASE_DIVISION_MODE.GROUP_COUNT },
+      { type: 'round_robin', division_mode: PHASE_DIVISION_MODE.SINGLE },
+    ];
+    expect(hasSingleGroupStage(stages)).toBe(true);
+  });
+
+  it('é falso para uma fase de grupos reais (nº de grupos ou máx. por grupo)', () => {
+    expect(hasSingleGroupStage([{ type: 'groups', division_mode: PHASE_DIVISION_MODE.GROUP_COUNT }])).toBe(false);
+    expect(hasSingleGroupStage([{ type: 'groups', division_mode: PHASE_DIVISION_MODE.MAX_PER_GROUP }])).toBe(false);
+  });
+
+  it('é falso para fase de grupos legada sem division_mode (não presume grupo único)', () => {
+    expect(hasSingleGroupStage([{ type: 'groups' }])).toBe(false);
+  });
+
+  it('é falso para formatos de chave (mata-mata) mesmo com division_mode single', () => {
+    // Chaves nunca geram resíduo de grupo — não devem disparar a limpeza.
+    expect(hasSingleGroupStage([{ type: 'knockout', division_mode: PHASE_DIVISION_MODE.SINGLE }])).toBe(false);
+  });
+
+  it('é falso para lista vazia ou entrada inválida (idempotente)', () => {
+    expect(hasSingleGroupStage([])).toBe(false);
+    expect(hasSingleGroupStage(undefined)).toBe(false);
+    expect(hasSingleGroupStage(null)).toBe(false);
   });
 });
