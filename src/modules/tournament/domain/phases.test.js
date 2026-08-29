@@ -6,6 +6,7 @@ import {
   supportsGroups,
   plannedGroupCount,
   matchesWithStaleSingleGroup,
+  groupDocsInSingleGroupStages,
 } from './phases.js';
 import {
   MODALITY_FORMAT,
@@ -147,5 +148,45 @@ describe('matchesWithStaleSingleGroup', () => {
     const matches = [{ id: 'm1', stage_index: 0, group: null }];
     expect(matchesWithStaleSingleGroup(matches, [single])).toEqual([]);
     expect(matchesWithStaleSingleGroup([], [single])).toEqual([]);
+  });
+});
+
+describe('groupDocsInSingleGroupStages', () => {
+  const single = { type: 'groups', division_mode: PHASE_DIVISION_MODE.SINGLE };
+
+  it('lista os docs de grupo numa fase de grupo único', () => {
+    const docs = [
+      { id: 'g1', stage_index: 0, name: 'Grupo A' },
+      { id: 'g2', stage_index: 0, name: 'Grupo B' },
+    ];
+    expect(groupDocsInSingleGroupStages(docs, [single])).toEqual(['g1', 'g2']);
+  });
+
+  it('não toca em docs de fases de grupos reais (nº de grupos)', () => {
+    const docs = [{ id: 'g1', stage_index: 0, name: 'Grupo A' }];
+    const stages = [{ type: 'groups', division_mode: PHASE_DIVISION_MODE.GROUP_COUNT }];
+    expect(groupDocsInSingleGroupStages(docs, stages)).toEqual([]);
+  });
+
+  it('não toca em docs de fase de grupos legada sem division_mode', () => {
+    const docs = [{ id: 'g1', stage_index: 0, name: 'Grupo A' }];
+    expect(groupDocsInSingleGroupStages(docs, [{ type: 'groups' }])).toEqual([]);
+  });
+
+  it('respeita o stage_index de cada doc', () => {
+    const docs = [
+      { id: 'g1', stage_index: 0, name: 'Grupo A' }, // fase de grupos reais
+      { id: 'g2', stage_index: 1, name: 'Grupo A' }, // fase de grupo único
+    ];
+    const stages = [
+      { type: 'groups', division_mode: PHASE_DIVISION_MODE.GROUP_COUNT },
+      { type: 'groups', division_mode: PHASE_DIVISION_MODE.SINGLE },
+    ];
+    expect(groupDocsInSingleGroupStages(docs, stages)).toEqual(['g2']);
+  });
+
+  it('sem docs ou sem id, devolve lista vazia (idempotente)', () => {
+    expect(groupDocsInSingleGroupStages([], [single])).toEqual([]);
+    expect(groupDocsInSingleGroupStages([{ stage_index: 0 }], [single])).toEqual([]);
   });
 });

@@ -223,3 +223,28 @@ export function matchesWithStaleSingleGroup(matches = [], stages = []) {
     .map((m) => m.id)
     .filter(Boolean);
 }
+
+/**
+ * IDs dos documentos de grupo (`tournament_groups`) que sobraram de um sorteio
+ * numa fase definida como GRUPO ÚNICO (`division_mode: 'single'`). Como o motor
+ * de sorteio sempre nomeia ao menos um grupo ("Grupo A"), até uma fase de grupo
+ * único grava 1 doc de grupo; a exibição já o ignora (o ranking colapsa antes de
+ * lê-lo), mas o dado limpo evita metadados órfãos.
+ *
+ * Usa o modo DECLARADO explicitamente (`stages[i].division_mode === 'single'`),
+ * não o inferido — uma fase de grupos legada sem o campo mantém seus grupos.
+ * Puro e idempotente: sem docs em fase de grupo único, devolve lista vazia.
+ *
+ * @param {Array<object>} groupDocs docs de grupo (com `id` e `stage_index`)
+ * @param {Array<object>} stages    fases da modalidade
+ * @returns {string[]} ids dos docs de grupo que devem ser apagados
+ */
+export function groupDocsInSingleGroupStages(groupDocs = [], stages = []) {
+  return (Array.isArray(groupDocs) ? groupDocs : [])
+    .filter((g) => {
+      const si = Number(g?.stage_index ?? 0);
+      return stages?.[si]?.division_mode === PHASE_DIVISION_MODE.SINGLE;
+    })
+    .map((g) => g?.id)
+    .filter(Boolean);
+}

@@ -811,9 +811,9 @@ export function useReShuffleRemainingMatches(modalityId) {
 }
 
 /**
- * Limpa marcadores de grupo obsoletos numa fase de grupo único (correção de
- * dados de sorteios antigos). Recebe o documento da modalidade (para ler as
- * fases) e invalida jogos e ranking ao concluir.
+ * Limpa marcadores de grupo obsoletos e apaga os metadados de grupo órfãos numa
+ * fase de grupo único (correção de dados de sorteios antigos). Recebe o documento
+ * da modalidade (para ler as fases) e invalida jogos, grupos e ranking ao concluir.
  */
 export function useClearStaleSingleGroupMarkers(modalityId) {
   const { user } = useAuth();
@@ -823,6 +823,8 @@ export function useClearStaleSingleGroupMarkers(modalityId) {
     onSuccess: () => {
       qc.invalidateQueries({ queryKey: ['matches', modalityId] });
       qc.invalidateQueries({ queryKey: ['all-matches', modalityId] });
+      qc.invalidateQueries({ queryKey: ['stage-groups', modalityId] });
+      qc.invalidateQueries({ queryKey: ['phase-groups', modalityId] });
       qc.invalidateQueries({ queryKey: ['ranking', modalityId] });
       qc.invalidateQueries({ queryKey: ['ranking-structured', modalityId] });
     },

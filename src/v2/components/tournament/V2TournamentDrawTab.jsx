@@ -107,6 +107,7 @@ function ModalityDrawBlock({ tournament, modality, isAdmin }) {
   const [confirmOpen, setConfirmOpen] = useState(false);
   const [reshuffleConfirmOpen, setReshuffleConfirmOpen] = useState(false);
   const [keepGroupsConfirmOpen, setKeepGroupsConfirmOpen] = useState(false);
+  const [clearGroupsConfirmOpen, setClearGroupsConfirmOpen] = useState(false);
   const [groupsEditorOpen, setGroupsEditorOpen] = useState(false);
   const [error, setError] = useState(null);
   const [substitution, setSubstitution] = useState(null);
@@ -296,14 +297,21 @@ function ModalityDrawBlock({ tournament, modality, isAdmin }) {
   async function performClearGroups() {
     setRunning(true);
     try {
-      const { cleared } = await clearGroupsMutation.mutateAsync(modality);
-      toast.success(cleared > 0
-        ? `Grupos corrigidos: ${cleared} confronto(s) agora seguem o grupo único.`
-        : 'Nada a corrigir — os confrontos já seguem o grupo único.');
+      const { cleared, groupsRemoved } = await clearGroupsMutation.mutateAsync(modality);
+      const total = (cleared || 0) + (groupsRemoved || 0);
+      if (total === 0) {
+        toast.success('Nada a corrigir — os confrontos já seguem o grupo único.');
+      } else {
+        const partes = [];
+        if (cleared > 0) partes.push(`${cleared} confronto(s) agora seguem o grupo único`);
+        if (groupsRemoved > 0) partes.push(`${groupsRemoved} grupo(s) órfão(s) removido(s)`);
+        toast.success(`Grupos corrigidos: ${partes.join(' e ')}.`);
+      }
     } catch (err) {
       toast.error(err?.message || 'Falha ao corrigir os grupos.');
     } finally {
       setRunning(false);
+      setClearGroupsConfirmOpen(false);
     }
   }
 
@@ -384,7 +392,7 @@ function ModalityDrawBlock({ tournament, modality, isAdmin }) {
                 <V2Button
                   size="sm"
                   variant="ghost"
-                  onClick={performClearGroups}
+                  onClick={() => setClearGroupsConfirmOpen(true)}
                   disabled={running}
                   title="Esta fase é grupo único, mas há confrontos marcados com grupo (sorteio antigo). Corrige os dados para seguir a definição da modalidade, sem alterar os confrontos."
                 >
@@ -596,6 +604,20 @@ function ModalityDrawBlock({ tournament, modality, isAdmin }) {
           </DialogFooter>
         </DialogContent>
       </Dialog>
+
+      <ConfirmDialog
+        open={clearGroupsConfirmOpen}
+        onOpenChange={(o) => !running && setClearGroupsConfirmOpen(o)}
+        title="Corrigir grupos desta fase?"
+        description={
+          'Esta fase é grupo único. A correção remove o rótulo de grupo dos confrontos '
+          + 'e apaga os metadados de grupo órfãos (sorteio antigo), sem alterar os '
+          + 'confrontos, as escalações nem os resultados já lançados.'
+        }
+        confirmLabel="Corrigir grupos"
+        loading={running}
+        onConfirm={performClearGroups}
+      />
 
       {groupsEditorOpen && (
         <GroupsEditorDialog
