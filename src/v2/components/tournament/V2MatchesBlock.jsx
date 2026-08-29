@@ -1,6 +1,5 @@
 import React, { useMemo, useState } from 'react';
-import { Link } from 'react-router-dom';
-import { Trophy, Swords, Pencil, Play, X, Undo2, Minus, Plus, Monitor } from 'lucide-react';
+import { Trophy, Swords, Pencil, Play, X, Undo2, Minus, Plus, Monitor, Users } from 'lucide-react';
 import { toast } from 'sonner';
 import { UserAvatar } from '@/components/ui/user-avatar';
 import {
@@ -33,6 +32,9 @@ import V2Collapsible from './V2Collapsible';
 import { cn } from '@/core/lib/utils';
 import V2BracketTree from '@/v2/components/tournament/V2BracketTree';
 import { buildBracketColumns } from '@/modules/tournament/domain/bracketLayout';
+import { confrontationSnapshot } from '@/modules/tournament/domain/teamFormat';
+import { useTeamRegistrations } from '@/modules/tournament/hooks/useTeams';
+import { TeamLineupDialog, TeamResultDialog } from './TeamConfrontationDialogs';
 
 function formatMatchTime(iso) {
   if (!iso) return '—';
@@ -83,12 +85,16 @@ function scoreCell(m) {
 }
 
 function MatchesTable({
-  matches, labelById, peopleById, canEdit = false, modalityId, scoringConfig, teamHref = null,
+  matches, labelById, peopleById, canEdit = false, modalityId, scoringConfig, team = null,
 }) {
   const hasGroups = matches.some((m) => m.group);
   const hasSchedule = matches.some((m) => m.court || m.scheduled_at);
   const [editMatch, setEditMatch] = useState(null);
   const [courtsideMatch, setCourtsideMatch] = useState(null);
+  // Confrontos de equipe: dois momentos distintos — escalar (iniciar a partida)
+  // e lançar o placar das etapas.
+  const [lineupMatch, setLineupMatch] = useState(null);
+  const [resultMatch, setResultMatch] = useState(null);
   const markInProgress = useMarkMatchInProgress(modalityId);
   const revertInProgress = useRevertMatchToScheduled(modalityId);
   const courtsideOn = true;
@@ -145,12 +151,13 @@ function MatchesTable({
                     <td className="px-3 py-2 text-right">
                       {isBye ? (
                         <span className="text-xs text-gray-400">—</span>
-                      ) : teamHref ? (
-                        /* Confronto de EQUIPES: o resultado é lançado etapa a
-                           etapa, na página da modalidade. */
-                        <V2Button size="sm" variant="ghost" asChild>
-                          <Link to={teamHref}><Pencil className="mr-1 h-3.5 w-3.5" /> Lançar etapas</Link>
-                        </V2Button>
+                      ) : team ? (
+                        <TeamMatchActions
+                          match={m}
+                          team={team}
+                          onLineup={() => setLineupMatch(m)}
+                          onResult={() => setResultMatch(m)}
+                        />
                       ) : (
                         <div className="inline-flex items-center gap-1">
                           {m.status === MATCH_STATUS.SCHEDULED && (
@@ -221,14 +228,17 @@ function MatchesTable({
                   ) : hasScore && <span className="shrink-0 tabular-nums text-sm font-semibold text-ink">{m.games.map((g) => g.b).join('  ')}</span>}
                 </div>
               </div>
-              {canEdit && !isBye && teamHref && (
-                <div className="mt-2 flex justify-end">
-                  <V2Button size="sm" variant="ghost" asChild>
-                    <Link to={teamHref}><Pencil className="mr-1 h-3.5 w-3.5" /> Lançar etapas</Link>
-                  </V2Button>
+              {canEdit && !isBye && team && (
+                <div className="mt-2 flex flex-wrap justify-end gap-1">
+                  <TeamMatchActions
+                    match={m}
+                    team={team}
+                    onLineup={() => setLineupMatch(m)}
+                    onResult={() => setResultMatch(m)}
+                  />
                 </div>
               )}
-              {canEdit && !isBye && !teamHref && (
+              {canEdit && !isBye && !team && (
                 <div className="mt-2 flex flex-wrap justify-end gap-1">
                   {m.status === MATCH_STATUS.SCHEDULED && (
                     <V2Button size="sm" variant="ghost" onClick={() => markInProgress.mutate(m.id)} disabled={markInProgress.isPending}>
@@ -276,7 +286,59 @@ function MatchesTable({
           onClose={() => setCourtsideMatch(null)}
         />
       )}
+
+      {/* Confrontos de equipe: escalação e resultado, cada um no seu momento. */}
+      {team && lineupMatch && (
+        <TeamLineupDialog
+          open
+          modality={team.modality}
+          match={lineupMatch}
+          teamA={team.teamById.get(lineupMatch.side_a_ids?.[0])}
+          teamB={team.teamById.get(lineupMatch.side_b_ids?.[0])}
+          onClose={() => setLineupMatch(null)}
+        />
+      )}
+      {team && resultMatch && (
+        <TeamResultDialog
+          open
+          modality={team.modality}
+          match={resultMatch}
+          teamA={team.teamById.get(resultMatch.side_a_ids?.[0])}
+          teamB={team.teamById.get(resultMatch.side_b_ids?.[0])}
+          onClose={() => setResultMatch(null)}
+          onEditLineup={() => { setResultMatch(null); setLineupMatch(resultMatch); }}
+        />
+      )}
     </>
+  );
+}
+
+/**
+ * Ações do organizador num confronto de equipes, na ordem do jogo:
+ * **Iniciar partida** (escalar quem joga cada etapa) e, depois,
+ * **Lançar resultado** (os games de cada etapa).
+ */
+function TeamMatchActions({ match, team, onLineup, onResult }) {
+  const teamA = team.teamById.get(match.side_a_ids?.[0]);
+  const teamB = team.teamById.get(match.side_b_ids?.[0]);
+  if (!teamA || !teamB) {
+    return <span className="text-xs text-gray-400">Aguarda definição das equipes</span>;
+  }
+  const snap = confrontationSnapshot(match, team.modality.team_config, {
+    rosterASize: (teamA.members || []).length,
+    rosterBSize: (teamB.members || []).length,
+  });
+  return (
+    <div className="inline-flex flex-wrap items-center justify-end gap-1">
+      <V2Button size="sm" variant="ghost" onClick={onLineup}>
+        <Users className="mr-1 h-3.5 w-3.5" />
+        {snap.lineup.iniciada ? 'Editar escalação' : 'Iniciar partida'}
+      </V2Button>
+      <V2Button size="sm" variant="ghost" onClick={onResult}>
+        <Pencil className="mr-1 h-3.5 w-3.5" />
+        {snap.result.etapasDecided > 0 ? 'Editar resultado' : 'Lançar resultado'}
+      </V2Button>
+    </div>
   );
 }
 
@@ -533,6 +595,9 @@ function CourtsideScoreDialog({ match, modalityId, scoringConfig, labelById, onC
 export function V2ModalityMatches({ tournament, modality, isAdmin = false }) {
   const { data: matches = [] } = useAllModalityMatches(modality.id);
   const { data: registrations = [] } = useRegistrations(modality.id);
+  const { data: teamRegistrations = [] } = useTeamRegistrations(
+    modality.team_config ? modality.id : null,
+  );
   const lifecycleOn = true;
   const locked = lifecycleOn && Boolean(tournament.results_locked);
   const canEdit = Boolean(isAdmin) && !locked;
@@ -554,9 +619,10 @@ export function V2ModalityMatches({ tournament, modality, isAdmin = false }) {
   }, [registrations]);
 
   // Modalidade de EQUIPES: o resultado é lançado etapa a etapa, no confronto —
-  // a tabela leva o admin para a página da modalidade em vez do modal de games.
-  const teamHref = modality.team_config
-    ? `/torneios/${tournament.id}/modalidades/${modality.id}`
+  // a tabela abre os diálogos de escalação e de placar (nunca o modal de games,
+  // que não se aplica a um confronto).
+  const team = modality.team_config
+    ? { modality, teamById: new Map(teamRegistrations.map((t) => [t.id, t])) }
     : null;
 
   const phases = useMemo(() => normalizePhases(modality.stages), [modality.stages]);
@@ -575,7 +641,12 @@ export function V2ModalityMatches({ tournament, modality, isAdmin = false }) {
   const subtitle = matches.length === 0 ? 'Nenhum jogo gerado ainda' : `${doneCount}/${matches.length} jogos concluídos`;
 
   const bracketTreeOn = true;
-  const hasBracket = useMemo(() => buildBracketColumns(matches).columns.length > 0, [matches]);
+  // A mesma visão em colunas serve para dois casos diferentes: as FASES FINAIS
+  // de uma chave (Semifinal, Final…) e as RODADAS de um grupo. O rótulo do
+  // botão segue o que as colunas realmente são.
+  const columnsView = useMemo(() => buildBracketColumns(matches), [matches]);
+  const hasBracket = columnsView.columns.length > 0;
+  const treeLabel = columnsView.kind === 'bracket' ? 'Chave (árvore)' : 'Rodadas';
   const [treeView, setTreeView] = useState(false);
   const showTree = bracketTreeOn && hasBracket && treeView;
 
@@ -586,7 +657,7 @@ export function V2ModalityMatches({ tournament, modality, isAdmin = false }) {
           <button type="button" onClick={() => setTreeView(false)}
             className={cn('rounded-full px-3 py-1 text-xs font-bold', !treeView ? 'bg-ink text-white' : 'text-gray-500')}>Lista</button>
           <button type="button" onClick={() => setTreeView(true)}
-            className={cn('rounded-full px-3 py-1 text-xs font-bold', treeView ? 'bg-ink text-white' : 'text-gray-500')}>Chave (árvore)</button>
+            className={cn('rounded-full px-3 py-1 text-xs font-bold', treeView ? 'bg-ink text-white' : 'text-gray-500')}>{treeLabel}</button>
         </div>
       )}
       {matches.length === 0 ? (
@@ -608,7 +679,7 @@ export function V2ModalityMatches({ tournament, modality, isAdmin = false }) {
                   canEdit={canEdit}
                   modalityId={modality.id}
                   scoringConfig={phaseScoring}
-                  teamHref={teamHref}
+                  team={team}
                 />
               );
             }
@@ -633,7 +704,7 @@ export function V2ModalityMatches({ tournament, modality, isAdmin = false }) {
                   canEdit={canEdit}
                   modalityId={modality.id}
                   scoringConfig={phaseScoring}
-                  teamHref={teamHref}
+                  team={team}
                 />
               </V2Collapsible>
             );

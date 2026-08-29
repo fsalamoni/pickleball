@@ -8,6 +8,7 @@
 
 import React from 'react';
 import { createRoot } from 'react-dom/client';
+import { MemoryRouter } from 'react-router-dom';
 import { describe, it, expect, beforeEach, afterEach, vi } from 'vitest';
 import {
   TEAM_GENDER, TEAM_ETAPA_TYPE, TEAM_WIN_RULE, normalizeTeamConfig,
@@ -88,7 +89,9 @@ function mount(props = {}) {
   root = createRoot(container);
   React.act(() => {
     root.render(
-      <TeamModalityView tournament={{ id: 't1' }} modality={modality} isAdmin={false} {...props} />,
+      <MemoryRouter>
+        <TeamModalityView tournament={{ id: 't1' }} modality={modality} isAdmin={false} {...props} />
+      </MemoryRouter>,
     );
   });
 }
@@ -118,11 +121,41 @@ describe('TeamModalityView (runtime)', () => {
     expect(text).toContain('1. Dupla masculina · 11 pontos · game único');
   });
 
-  it('sem sorteio, orienta o organizador a sortear', () => {
+  it('sem sorteio, orienta o organizador a sortear no painel', () => {
     mount({ isAdmin: true });
     clickTab('Confrontos');
     expect(container.textContent).toContain('Confrontos ainda não sorteados');
-    expect(container.textContent).toContain('formato definido nesta modalidade');
+    expect(container.textContent).toContain('painel do organizador');
+  });
+
+  it('é somente leitura — nem o admin edita resultados por aqui', () => {
+    matches = [playedMatch({ id: 'm1', a: 't1', b: 't2', group: 'Grupo A' })];
+    mount({ isAdmin: true });
+    clickTab('Confrontos');
+    // Abre o confronto para ver as etapas.
+    const card = [...container.querySelectorAll('button')].find((b) => (b.textContent || '').includes('Alfa'));
+    React.act(() => { card.click(); });
+
+    expect(container.textContent).toContain('Dupla masculina');
+    // Nenhum campo editável: nem escalação, nem placar, nem salvar.
+    expect(container.querySelectorAll('select')).toHaveLength(0);
+    expect(container.querySelectorAll('input')).toHaveLength(0);
+    expect([...container.querySelectorAll('button')].some((b) => /Salvar|Escalação sugerida/.test(b.textContent))).toBe(false);
+  });
+
+  it('o admin recebe o atalho para o painel do organizador', () => {
+    mount({ isAdmin: true });
+    expect(container.textContent).toContain('visão do atleta');
+    const link = [...container.querySelectorAll('a')].find((a) => a.getAttribute('href') === '/torneios/t1/gerenciar');
+    expect(link).toBeTruthy();
+  });
+
+  it('o atleta não vê o aviso de organizador nem botão de gestão de equipes', () => {
+    mount({ isAdmin: false });
+    expect(container.textContent).not.toContain('painel do organizador');
+    expect([...container.querySelectorAll('button')].some((b) => b.textContent.includes('Nova equipe'))).toBe(false);
+    // Mas pode inscrever a sua equipe.
+    expect([...container.querySelectorAll('button')].some((b) => b.textContent.includes('Inscrever equipe'))).toBe(true);
   });
 
   it('com grupos, separa os confrontos por grupo', () => {

@@ -1,5 +1,7 @@
 import { describe, it, expect } from 'vitest';
-import { isWinnersBracketMatch, roundLabel, buildBracketColumns } from './bracketLayout.js';
+import {
+  isWinnersBracketMatch, roundLabel, buildBracketColumns, isKnockoutSet,
+} from './bracketLayout.js';
 
 describe('isWinnersBracketMatch', () => {
   it('aceita jogo de mata-mata (round, sem grupo)', () => {
@@ -43,5 +45,45 @@ describe('buildBracketColumns', () => {
 
   it('vazio quando não há mata-mata', () => {
     expect(buildBracketColumns([{ round: 1, group: 'A' }]).columns).toHaveLength(0);
+  });
+});
+
+describe('isKnockoutSet', () => {
+  it('mata-mata e dupla eliminação são chave', () => {
+    expect(isKnockoutSet([{ stage_type: 'knockout', round: 1 }])).toBe(true);
+    expect(isKnockoutSet([{ stage_type: 'double_knockout', round: 1 }])).toBe(true);
+    expect(isKnockoutSet([{ bracket: 'lb', round: 1 }])).toBe(true);
+  });
+
+  it('grupo único e suíço são rodadas, não chave', () => {
+    expect(isKnockoutSet([{ stage_type: 'round_robin', round: 1 }])).toBe(false);
+    expect(isKnockoutSet([{ stage_type: 'swiss', round: 1 }])).toBe(false);
+  });
+
+  it('sem o tipo da fase, mantém o comportamento clássico de chave', () => {
+    expect(isKnockoutSet([{ round: 1 }])).toBe(true);
+    expect(isKnockoutSet([])).toBe(true);
+  });
+});
+
+describe('buildBracketColumns — rodadas x fases finais', () => {
+  const mk = (stageType, round, position) => ({
+    id: `${round}-${position}`, stage_type: stageType, round, position,
+  });
+
+  it('grupo único (pontos corridos): as colunas são RODADAS', () => {
+    const { columns, kind } = buildBracketColumns([
+      mk('round_robin', 1, 1), mk('round_robin', 2, 1), mk('round_robin', 3, 1),
+    ]);
+    expect(kind).toBe('rounds');
+    expect(columns.map((c) => c.label)).toEqual(['Rodada 1', 'Rodada 2', 'Rodada 3']);
+  });
+
+  it('mata-mata: as colunas são as fases finais', () => {
+    const { columns, kind } = buildBracketColumns([
+      mk('knockout', 1, 1), mk('knockout', 1, 2), mk('knockout', 2, 1),
+    ]);
+    expect(kind).toBe('bracket');
+    expect(columns.map((c) => c.label)).toEqual(['Semifinal', 'Final']);
   });
 });

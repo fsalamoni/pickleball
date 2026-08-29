@@ -64,7 +64,7 @@ Em chaves/mata-mata, o confronto é decidido da mesma forma; avança o vencedor.
 
 ## 3. Motor de domínio (Fase 1 — entregue)
 
-`src/modules/tournament/domain/teamFormat.js` (+ `teamFormat.test.js`, 69 testes),
+`src/modules/tournament/domain/teamFormat.js` (+ `teamFormat.test.js`, 75 testes),
 100% puro (sem Firebase/React):
 
 - Constantes: `TEAM_GENDER`, `TEAM_ETAPA_TYPE`, `TEAM_WIN_RULE`,
@@ -221,9 +221,10 @@ Testes: `teamFormat.test.js` cobre as vagas/validações (domínio) e
 `TeamRegistrationForm.runtime.test.jsx` monta o formulário de verdade (React DOM
 em jsdom, Firebase mockado) — vagas rotuladas, salvar travado até o elenco
 completo, payload gravado com o gênero da vaga, edição e exclusão da busca.
-`TeamConfrontationPanel.runtime.test.jsx` e `TeamModalityView.runtime.test.jsx`
-cobrem o lançamento (escalação por gênero, games, apuração, payload, visão
-pública) e a estrutura (grupos, chave, tabelas).
+`TeamConfrontationDialogs.runtime.test.jsx`, `TeamConfrontationCard.runtime.test.jsx`
+e `TeamModalityView.runtime.test.jsx` cobrem os dois momentos do admin
+(escalação por gênero/ordem e games por etapa, com o payload salvo), o cartão
+público (mostra tudo, não edita nada) e a estrutura (grupos, chave, tabelas).
 
 Efeito colateral saudável: como `registrationIncludesUid` passou a reconhecer
 `member_uids`, **todo atleta do elenco** (não só quem inscreveu) aparece como
@@ -265,25 +266,47 @@ classificação, **uma tabela por grupo** (`TeamStandingsTable`) ou a **árvore 
 mata-mata** (`V2BracketTree`, que exibe etapas vencidas como placar). O ranking
 do torneio (`V2RankingBlock`) troca "Participante/Sets" por "Equipe/Etapas".
 
-**4. Resultado etapa a etapa.** `TeamConfrontationPanel` lança cada etapa:
-- **escalação** com uma vaga por posição, e cada vaga só oferece quem serve a
-  ela (2 masculinos, 2 femininas, 1M+1F na mista); no simples em rodízio, a
-  **ordem de entrada** (1º, 2º, …) com o lembrete "troca a cada X pontos";
-- **placar por games**: um campo por game (1, 3 ou 5, conforme a etapa), com a
-  regra da etapa exibida ("11 pontos · melhor de 3") e aviso quando o game não
-  fecha (abaixo do alvo ou sem vantagem de 2);
-- **apuração ao vivo**: etapas vencidas, games e pontos somados, vencedor do
-  confronto (ou "empate em etapas") antes mesmo de salvar;
-- **escalação sugerida** com um clique, e **lançamento parcial** (salvar o que
-  já foi jogado e voltar depois);
-- **visão pública** idêntica em conteúdo, sem edição.
+**4. Duas visões separadas, com vocabulário próprio.** O confronto tem partes
+distintas e a UI trata cada uma pelo nome: o **CONFRONTO** é equipe × equipe (o
+"jogo" da fase); ele se divide em **ETAPAS** (as partidas: dupla masculina,
+feminina, mista, simples); e cada etapa é disputada em **GAMES** (sets).
+
+- **Visão pública** (página da modalidade): `TeamConfrontationCard` —
+  confronto por confronto, cada um **ampliável** para ver etapa a etapa quem
+  jogou, os games e quem venceu. **Zero campos editáveis**, inclusive para o
+  admin do torneio, que recebe ali um atalho para o painel. A aba Equipes
+  segue sendo do atleta (inscreve/edita a SUA equipe).
+- **Visão admin** (painel → aba **Resultados**): cada confronto tem os dois
+  momentos do jogo, na ordem em que acontecem na quadra —
+  1. **Iniciar partida** (`TeamLineupDialog`): a ESCALAÇÃO de cada etapa, com
+     uma vaga por posição e cada vaga oferecendo só quem serve a ela (2
+     masculinos, 2 femininas, 1M+1F na mista); no simples em rodízio, a
+     **ordem de entrada** (1º, 2º, …) com o lembrete "troca a cada X pontos".
+     Tem **escalação sugerida** e vira "Editar escalação" depois de salva.
+  2. **Lançar resultado** (`TeamResultDialog`): os **GAMES** de cada etapa (1,
+     3 ou 5 campos, conforme a regra da etapa), com a escalação em leitura,
+     apuração ao vivo (etapas, games, pontos, vencedor ou empate), aviso
+     quando o game não fecha a regra e **lançamento parcial**.
+
+  `confrontationLineupStatus` / `confrontationSnapshot` (domínio) dizem em que
+  ponto o confronto está — é o que decide o rótulo do botão e o aviso de
+  "ainda não escalado".
 - Ao salvar, cada etapa decidida continua espelhada no **ranking individual**
   (`club_event_games`) com os games reais.
 
-**5. Onde o organizador faz cada coisa.** Sorteio na aba **Chaves** do torneio
-(com o resumo "N equipes confirmadas" e o formato da fase); resultado na página
-da modalidade → aba **Confrontos** — a aba Jogos do torneio mostra o placar em
-etapas e leva para lá pelo botão "Lançar etapas".
+**5. Rodadas x fases finais.** A mesma visão em colunas serve a dois casos
+diferentes, e `buildBracketColumns` agora distingue pelo TIPO da fase: numa
+**chave** as colunas são as fases finais (Oitavas → Final); num **grupo único /
+pontos corridos** são **rodadas** ("Rodada 1", "Rodada 2"…) — chamar de "Final"
+a última rodada de um grupo seria mentira, já que quem termina em 1º é decidido
+pela tabela. O botão da aba Resultados acompanha: "Chave (árvore)" ou
+"Rodadas".
+
+**6. Onde o organizador faz cada coisa.** Modalidade e formato na aba
+**Modalidades**; inscrição/edição de equipes na aba **Inscrições** (o lápis de
+uma inscrição-equipe abre o modal de equipe, não o de jogador A/B); sorteio na
+aba **Sorteio**; escalação e resultado na aba **Resultados**. A página da
+modalidade é a vitrine do atleta.
 
 ---
 
@@ -299,7 +322,10 @@ etapas e leva para lá pelo botão "Lançar etapas".
 - Motor: `src/modules/tournament/domain/teamFormat.js`
 - Modal de inscrição: `src/v2/components/tournament/TeamRegistrationDialog.jsx`
   (+ `TeamRegistrationForm.jsx`, corpo do formulário)
-- Confronto (escalação + placar por etapa): `TeamConfrontationPanel.jsx`
+- Confronto na visão pública (leitura): `TeamConfrontationCard.jsx`
+- Confronto na visão admin (escalação e placar): `TeamConfrontationDialogs.jsx`
+  (`TeamLineupDialog` + `TeamResultDialog`), abertos pela aba Resultados
+  (`V2MatchesBlock.jsx`)
 - Estrutura/tabelas/chave: `TeamModalityView.jsx`, `TeamStandingsTable.jsx`,
   `V2BracketTree.jsx`
 - Sorteio: `services/drawService.js`, `services/phaseService.js`

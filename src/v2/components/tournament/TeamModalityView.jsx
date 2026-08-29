@@ -1,18 +1,23 @@
 /**
- * Visão completa de uma modalidade de EQUIPES.
+ * Visão PÚBLICA de uma modalidade de EQUIPES (a página da modalidade).
  *
- * Compõe, em abas independentes: EQUIPES (inscrição/elenco), CONFRONTOS
- * (a estrutura sorteada — grupo único, grupos ou chave — com o lançamento das
- * etapas de cada confronto) e CLASSIFICAÇÃO (a tabela de cada grupo e a árvore
- * do mata-mata). Recebe `isAdmin` e alterna entre edição (admin) e leitura
- * (público) — as duas visões são independentes por design.
+ * Compõe, em abas independentes: EQUIPES (o atleta inscreve e edita a SUA
+ * equipe), CONFRONTOS (a estrutura sorteada — grupo único, grupos ou chave —
+ * confronto por confronto, cada um ampliável para ver as etapas) e
+ * CLASSIFICAÇÃO (a tabela de cada grupo e a árvore do mata-mata).
+ *
+ * Aqui NADA de resultado é editável — nem para o admin do torneio. Escalar as
+ * partidas e lançar os placares é operação do organizador, no painel de
+ * administração (aba Resultados), separada da visão do atleta por design. O
+ * admin que abre esta página vê um atalho para lá.
  *
  * Substitui o conteúdo padrão da modalidade quando `modality.team_config`
  * existe; modalidades comuns seguem inalteradas.
  */
 
 import React, { useMemo, useState } from 'react';
-import { Users, Swords, Trophy, Plus, ListTree } from 'lucide-react';
+import { Link } from 'react-router-dom';
+import { Users, Swords, Trophy, Plus, ListTree, ShieldCheck } from 'lucide-react';
 import { cn } from '@/core/lib/utils';
 import {
   V2Badge, V2Button, V2EmptyState, V2Skeleton, V2Surface,
@@ -27,7 +32,7 @@ import {
 } from '@/modules/tournament/domain/teamFormat';
 import { TOURNAMENT_STAGE_TYPE_LABELS } from '@/modules/tournament/domain/constants';
 import TeamRegistrationDialog from './TeamRegistrationDialog';
-import TeamConfrontationPanel from './TeamConfrontationPanel';
+import TeamConfrontationCard from './TeamConfrontationCard';
 import TeamStandingsTable from './TeamStandingsTable';
 import V2BracketTree from './V2BracketTree';
 
@@ -57,7 +62,7 @@ function TeamCard({ team, config, canEdit, onEdit }) {
 }
 
 /** Uma seção da estrutura: um grupo, ou uma rodada da chave. */
-function StructureSection({ section, modality, teamById, isAdmin }) {
+function StructureSection({ section, modality, teamById }) {
   return (
     <div className="space-y-2">
       <div className="flex items-center gap-2">
@@ -66,13 +71,12 @@ function StructureSection({ section, modality, teamById, isAdmin }) {
       </div>
       <div className="space-y-2">
         {section.matches.map((m) => (
-          <TeamConfrontationPanel
+          <TeamConfrontationCard
             key={m.id}
             modality={modality}
             match={m}
             teamA={teamById.get(m.side_a_ids?.[0])}
             teamB={teamById.get(m.side_b_ids?.[0])}
-            isAdmin={isAdmin}
           />
         ))}
       </div>
@@ -142,6 +146,19 @@ export default function TeamModalityView({ tournament, modality, isAdmin }) {
         </div>
       </V2Surface>
 
+      {isAdmin && (
+        <div className="flex flex-wrap items-center justify-between gap-2 rounded-3xl border border-amber-200 bg-amber-50 p-3 text-xs text-amber-900">
+          <span className="inline-flex items-center gap-1.5">
+            <ShieldCheck className="h-4 w-4 shrink-0" />
+            Esta é a visão do atleta: os confrontos aqui são só para consulta. Escalar as
+            partidas e lançar os resultados é no painel do organizador.
+          </span>
+          <V2Button size="sm" variant="secondary" asChild>
+            <Link to={`/torneios/${tournament?.id}/gerenciar`}>Abrir painel do organizador</Link>
+          </V2Button>
+        </div>
+      )}
+
       <div className="inline-flex flex-wrap gap-1.5 rounded-full border border-gray-100 bg-paper-pure p-1.5">
         {tabs.map((t) => {
           const Icon = t.icon;
@@ -164,9 +181,11 @@ export default function TeamModalityView({ tournament, modality, isAdmin }) {
         <div className="space-y-3">
           <div className="flex flex-wrap items-center justify-between gap-2">
             <p className="text-sm text-gray-500">
-              {isAdmin ? 'Gerencie as equipes inscritas.' : 'Inscreva sua equipe e veja as demais.'}
+              {isAdmin
+                ? 'Equipes inscritas nesta modalidade. Para incluir ou editar equipes, use a aba Inscrições do painel.'
+                : 'Inscreva sua equipe e veja as demais.'}
             </p>
-            {/* Atleta sem equipe pode inscrever; com equipe, edita a sua. */}
+            {/* Só o atleta age aqui: inscreve a sua equipe ou edita o elenco dela. */}
             {!isAdmin && !myTeam && (
               <V2Button size="sm" onClick={() => { setEditingTeam(null); setShowForm(true); }}>
                 <Plus className="h-4 w-4" /> Inscrever equipe
@@ -175,11 +194,6 @@ export default function TeamModalityView({ tournament, modality, isAdmin }) {
             {!isAdmin && myTeam && (
               <V2Button size="sm" variant="ghost" onClick={() => { setEditingTeam(myTeam); setShowForm(true); }}>
                 Editar minha equipe
-              </V2Button>
-            )}
-            {isAdmin && (
-              <V2Button size="sm" onClick={() => { setEditingTeam(null); setShowForm(true); }}>
-                <Plus className="h-4 w-4" /> Nova equipe
               </V2Button>
             )}
           </div>
@@ -197,7 +211,7 @@ export default function TeamModalityView({ tournament, modality, isAdmin }) {
                   key={t.id}
                   team={t}
                   config={config}
-                  canEdit={isAdmin || t.id === myTeam?.id}
+                  canEdit={!isAdmin && t.id === myTeam?.id}
                   onEdit={(team) => { setEditingTeam(team); setShowForm(true); }}
                 />
               ))}
@@ -216,7 +230,7 @@ export default function TeamModalityView({ tournament, modality, isAdmin }) {
               icon={Swords}
               title="Confrontos ainda não sorteados"
               description={isAdmin
-                ? 'Faça o sorteio na aba Chaves do torneio: as equipes entram no formato definido nesta modalidade (grupo único, grupos ou chave).'
+                ? 'Faça o sorteio na aba Sorteio do painel do organizador: as equipes entram no formato definido nesta modalidade (grupo único, grupos ou chave).'
                 : 'Aguarde o organizador sortear os confrontos.'}
             />
           </V2Surface>
@@ -236,7 +250,6 @@ export default function TeamModalityView({ tournament, modality, isAdmin }) {
                     section={section}
                     modality={modality}
                     teamById={teamById}
-                    isAdmin={isAdmin}
                   />
                 ))}
               </div>
