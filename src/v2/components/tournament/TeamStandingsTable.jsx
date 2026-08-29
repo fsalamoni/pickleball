@@ -68,11 +68,11 @@ function GroupTable({ name, rows }) {
   );
 }
 
-export default function TeamStandingsTable({ matches = [], teamRegistrations = [], config = {} }) {
+export default function TeamStandingsTable({ matches = [], teamRegistrations = [], config = {}, singleGroup = false }) {
   const tables = useMemo(
-    () => buildTeamGroupStandings({ matches, teamRegistrations, config })
+    () => buildTeamGroupStandings({ matches, teamRegistrations, config, singleGroup })
       .filter((t) => t.rows.length > 0),
-    [matches, teamRegistrations, config],
+    [matches, teamRegistrations, config, singleGroup],
   );
 
   if (tables.length === 0) {

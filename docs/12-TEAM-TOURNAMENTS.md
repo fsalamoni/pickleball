@@ -308,6 +308,49 @@ uma inscrição-equipe abre o modal de equipe, não o de jogador A/B); sorteio n
 aba **Sorteio**; escalação e resultado na aba **Resultados**. A página da
 modalidade é a vitrine do atleta.
 
+### Ajustes de exibição e ranking (#... — grupo único, placar por etapa, rodízio)
+
+Três correções que alinham a exibição pública e o ranking da plataforma ao que
+foi **definido na modalidade**:
+
+**A. "Grupo único" exibe UM grupo — segue a modalidade.** Quando a fase é
+definida como grupo único (`division_mode: 'single'`), a **classificação** —
+tanto no ranking do torneio (`computeModalityRankingStructured` →
+`V2RankingBlock`) quanto na aba Classificação da página da modalidade
+(`TeamStandingsTable` → `buildTeamGroupStandings` → `buildTeamGroupTables`) —
+mostra **uma única tabela**, combinando todos os confrontos, mesmo que um
+sorteio antigo tenha gravado grupos ou marcado `m.group`. O colapso só ocorre
+quando a fase **declara explicitamente** `division_mode: 'single'` (o
+`PhasesEditor` sempre grava o modo); uma fase de grupos legada e mínima
+(`{ type: 'groups' }`, sem o campo) **mantém** os grupos sorteados — não se
+presume grupo único por omissão. Na origem, o **sorteio** também passou a
+honrar o modo: `runDraw` usa `plannedGroupCount(normalizePhase(stage), n)` em
+vez do `group_count` cru, então "grupo único" gera 1 grupo mesmo com um
+`group_count > 1` antigo ainda gravado.
+
+**B. Placar público mostra TODAS as etapas, com os pontos de cada game.** Na
+aba **Jogos** (visão do público), o placar de um confronto de equipes exibe uma
+**linha por etapa** (dupla masculina, feminina, mista, simples…) com os games de
+cada uma e, ao final, o agregado "X–Y etapas" — não apenas o total de etapas
+vencidas. Componente `TeamConfrontationScore` (`V2MatchesBlock.jsx`), alimentado
+por `buildEtapaDrafts(config, match)` + `computeEtapaResult`; aparece no desktop
+(coluna de placar) e no card mobile. Sem a config da modalidade, cai no resumo
+agregado.
+
+**C. Ranking da plataforma: duplas sempre; simples só com responsável único.**
+Cada etapa decidida é espelhada por jogador em `club_event_games` (a base do
+ranking individual/ELO), como se fosse um jogo autônomo — **duplas contra
+duplas**, **não** equipe contra equipe. Regra do simples: só entra no ranking
+quando há **um único responsável** pela equipe
+(`config.singles_mode === 'single_player'`). No **rodízio por pontos**
+(`rotating_points`), o simples é dividido entre todos os atletas e **não** é
+espelhado — segue contando apenas para a equipe. A exclusão do rodízio usa o
+**modo configurado** (não só o tamanho do lado), cobrindo elencos pequenos onde
+o rodízio poderia chegar com 1–2 jogadores por lado. Ver
+`buildConfrontationRankingMirror` (`teamFormat.js`); os confrontos crus
+(`tournament_matches` com `team_confrontation`) são ignorados pelo
+`ratingService` justamente porque já entram por etapa em `club_event_games`.
+
 ---
 
 ## 6. Decisões confirmadas
@@ -326,8 +369,14 @@ modalidade é a vitrine do atleta.
 - Confronto na visão admin (escalação e placar): `TeamConfrontationDialogs.jsx`
   (`TeamLineupDialog` + `TeamResultDialog`), abertos pela aba Resultados
   (`V2MatchesBlock.jsx`)
+- Placar público por etapa (aba Jogos): `TeamConfrontationScore` em
+  `V2MatchesBlock.jsx`
 - Estrutura/tabelas/chave: `TeamModalityView.jsx`, `TeamStandingsTable.jsx`,
   `V2BracketTree.jsx`
+- Classificação do torneio / grupo único: `services/rankingService.js`
+  (`computeModalityRankingStructured`)
+- Espelho no ranking individual (duplas/simples): `buildConfrontationRankingMirror`
+  em `domain/teamFormat.js`, gravado por `services/teamService.js`
 - Sorteio: `services/drawService.js`, `services/phaseService.js`
 - Ponte com o motor genérico: `domain/scoring.js`, `domain/ranking.js`,
   `domain/phaseProgression.js`

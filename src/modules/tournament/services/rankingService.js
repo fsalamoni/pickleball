@@ -13,7 +13,7 @@ import { resolveStageScoringConfig } from '../domain/scoring.js';
 import { buildRanking } from '../domain/ranking.js';
 import { normalizePhase, normalizePhases, supportsGroups } from '../domain/phases.js';
 import { rankEntrantsInGroup } from '../domain/phaseProgression.js';
-import { TOURNAMENT_STAGE_TYPE_LABELS } from '../domain/constants.js';
+import { TOURNAMENT_STAGE_TYPE_LABELS, PHASE_DIVISION_MODE } from '../domain/constants.js';
 
 /**
  * Calcula o ranking de uma modalidade considerando todas as fases já jogadas
@@ -179,8 +179,34 @@ export async function computeModalityRankingStructured(modalityId) {
     }
     const storedGroups = await readPhaseGroups(modalityId, i);
 
+    // Linhas de uma tabela a partir de um conjunto de jogos (participantes
+    // deduzidos dos lados dos jogos). Usado em ambos os ramos abaixo.
+    const buildGroupRows = (groupMatches) => {
+      const ids = new Set();
+      groupMatches.forEach((m) => {
+        (m.side_a_ids || []).forEach((id) => ids.add(id));
+        (m.side_b_ids || []).forEach((id) => ids.add(id));
+      });
+      const entrants = [...ids].map((id) => ({ id, members: [id] }));
+      const ranked = rankEntrantsInGroup(entrants, groupMatches, phaseScoring, rankOptions);
+      return ranked.map((r) => rowFromRanked(r, regById));
+    };
+
+    // "Grupo único" definido na modalidade: uma só tabela, combinando TODOS os
+    // jogos da fase — mesmo que um sorteio antigo tenha gravado grupos ou
+    // marcado `m.group`. A classificação deve seguir o que foi definido na
+    // modalidade (ver problema: grupo único não pode exibir vários grupos).
+    // Só colapsa quando a fase DECLARA explicitamente `division_mode: 'single'`
+    // (o PhasesEditor sempre grava o modo). Uma fase de grupos antiga sem esse
+    // campo (`{ type: 'groups' }`) mantém os grupos sorteados — não presume
+    // grupo único por omissão.
+    const singleGroupIntended =
+      modality.stages?.[i]?.division_mode === PHASE_DIVISION_MODE.SINGLE;
+
     let groups;
-    if (storedGroups.length > 0) {
+    if (singleGroupIntended) {
+      groups = [{ name: null, rows: buildGroupRows(matches) }];
+    } else if (storedGroups.length > 0) {
       groups = storedGroups.map((g) => {
         const entrants = Array.isArray(g.entrants) && g.entrants.length
           ? g.entrants
@@ -198,16 +224,6 @@ export async function computeModalityRankingStructured(modalityId) {
       // mesmo que os metadados de grupo não tenham sido lidos/gravados. Só cai no
       // "grupo único" quando os jogos não têm grupo algum (pontos corridos,
       // chaves, americana etc.).
-      const buildGroupRows = (groupMatches) => {
-        const ids = new Set();
-        groupMatches.forEach((m) => {
-          (m.side_a_ids || []).forEach((id) => ids.add(id));
-          (m.side_b_ids || []).forEach((id) => ids.add(id));
-        });
-        const entrants = [...ids].map((id) => ({ id, members: [id] }));
-        const ranked = rankEntrantsInGroup(entrants, groupMatches, phaseScoring, rankOptions);
-        return ranked.map((r) => rowFromRanked(r, regById));
-      };
       const groupNames = [...new Set(matches.map((m) => m.group).filter(Boolean))]
         .sort((a, b) => String(a).localeCompare(String(b), 'pt-BR'));
       if (groupNames.length > 0) {

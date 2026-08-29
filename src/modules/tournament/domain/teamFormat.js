@@ -764,8 +764,14 @@ export function etapaMirrorId(matchId, etapaKey) {
  * o que gravar e o que remover (etapas que deixaram de ser válidas/decididas).
  *
  * Só espelha etapas em que TODOS os jogadores dos dois lados têm conta
- * (uid ∈ `validUids`) e os lados têm o mesmo tamanho (1 ou 2). O simples em
- * RODÍZIO (vários por lado) não é espelhado — segue contando só para a equipe.
+ * (uid ∈ `validUids`) e os lados têm o mesmo tamanho (1 ou 2). As DUPLAS
+ * (2×2) sempre entram, valendo como duplas autônomas para cada jogador.
+ * O SIMPLES só entra quando há um único responsável por equipe
+ * (`config.singles_mode === 'single_player'`): no RODÍZIO por pontos
+ * (`rotating_points`) o simples é dividido entre todos os atletas e NÃO
+ * é espelhado — segue contando apenas para a equipe. A exclusão do rodízio
+ * usa o modo configurado (não apenas o tamanho do lado), cobrindo elencos
+ * pequenos onde o rodízio poderia ter 1–2 jogadores.
  *
  * @param {object} args
  * @param {string} args.matchId
@@ -774,6 +780,7 @@ export function etapaMirrorId(matchId, etapaKey) {
  * @param {string} [args.eventTitle]
  * @param {Array} args.etapas       [{ id, type, side_a:[uid], side_b:[uid], score_a, score_b }]
  * @param {Set<string>|string[]} args.validUids  uids com conta (elenco das duas equipes)
+ * @param {object} [args.config]    team_config (resolve regra da etapa e modo do simples)
  * @returns {{ toWrite: Array<{id:string, payload:object}>, toRemove: string[] }}
  */
 export function buildConfrontationRankingMirror({
@@ -782,6 +789,9 @@ export function buildConfrontationRankingMirror({
   const valid = validUids instanceof Set ? validUids : new Set(validUids || []);
   const toWrite = [];
   const toRemove = [];
+  // Simples em rodízio: o ponto é dividido entre todo o elenco, então nenhuma
+  // etapa de simples desse confronto conta para o ranking individual.
+  const rotatingSingles = config?.singles_mode === TEAM_SINGLES_MODE.ROTATING;
 
   (etapas || []).forEach((etapa, i) => {
     const key = etapa?.id || `etapa_${i + 1}`;
@@ -796,8 +806,10 @@ export function buildConfrontationRankingMirror({
     const sizeOk = a.length === b.length && (a.length === 1 || a.length === 2);
     const allReal = a.length === rawA.length && b.length === rawB.length;
     const noOverlap = !a.some((u) => b.includes(u));
+    // Simples com responsável único conta; simples em rodízio, não.
+    const isRotatingSinglesEtapa = etapa?.type === TEAM_ETAPA_TYPE.SINGLES && rotatingSingles;
 
-    if (!decided || !sizeOk || !allReal || !noOverlap) {
+    if (!decided || !sizeOk || !allReal || !noOverlap || isRotatingSinglesEtapa) {
       toRemove.push(id);
       return;
     }
@@ -1335,9 +1347,12 @@ export function confrontationRoundLabel(ref, allMatches = []) {
  * @param {Array<object>} args.matches            confrontos (jogos) da fase
  * @param {Array<object>} args.teamRegistrations  inscrições-equipe
  * @param {object} args.config                    team_config
+ * @param {boolean} [args.singleGroup]            quando a fase é "grupo único"
+ *   na modalidade: força UMA tabela combinando todos os confrontos, mesmo que um
+ *   sorteio antigo tenha marcado `m.group` (deve seguir o que a modalidade define).
  * @returns {Array<{ name: string|null, rows: Array<object> }>}
  */
-export function buildTeamGroupTables({ matches = [], teamRegistrations = [], config = {} } = {}) {
+export function buildTeamGroupTables({ matches = [], teamRegistrations = [], config = {}, singleGroup = false } = {}) {
   const nameById = new Map(teamRegistrations.map((t) => [t.id, t.team_name || t.label || 'Equipe']));
   const playable = (Array.isArray(matches) ? matches : []).filter(isTeamConfrontation);
   const groups = [...new Set(playable.map((m) => m.group).filter(Boolean))]
@@ -1353,9 +1368,10 @@ export function buildTeamGroupTables({ matches = [], teamRegistrations = [], con
     return { name, rows };
   };
 
-  if (groups.length === 0) {
-    // Sem grupos: só faz sentido classificar quando o formato é "todos contra
-    // todos" — em chave, a classificação é a própria árvore.
+  if (singleGroup || groups.length === 0) {
+    // Grupo único (por definição da modalidade) ou formato sem grupos: uma só
+    // tabela combinando todos os confrontos. Em chave, a classificação é a
+    // própria árvore.
     return [tableFor(null, playable)];
   }
   return groups.map((name) => tableFor(name, playable.filter((m) => m.group === name)));

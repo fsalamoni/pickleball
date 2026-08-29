@@ -9,6 +9,7 @@ import { db } from '@/core/config/firebase';
 import { createAuditLog } from '@/core/services/auditService';
 import { generateDraw, buildGroupMatches, shuffle, seededRng } from '../domain/draw.js';
 import { stageFormatCompatibility } from '../domain/formatExplain.js';
+import { normalizePhase, plannedGroupCount } from '../domain/phases.js';
 import { balancedParticipantOrder, levelRank } from '../domain/seeding.js';
 import { listRegistrations } from './registrationService.js';
 import { persistMatches } from './matchService.js';
@@ -190,7 +191,10 @@ export async function runDraw(params, actor) {
     format: modality.format,
     stageType: stage.type,
     participants,
-    groupCount: stage.group_count || 1,
+    // Nº de grupos honra o MODO DE DIVISÃO da fase (grupo único, nº de grupos
+    // ou máximo por grupo) — não o `group_count` cru. Assim "grupo único"
+    // gera 1 grupo mesmo que um `group_count` antigo tenha ficado gravado.
+    groupCount: plannedGroupCount(normalizePhase(stage), participants.length),
     seedCount,
     seed,
     groupStrategy,

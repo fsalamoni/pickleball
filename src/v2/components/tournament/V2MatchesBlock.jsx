@@ -32,7 +32,7 @@ import V2Collapsible from './V2Collapsible';
 import { cn } from '@/core/lib/utils';
 import V2BracketTree from '@/v2/components/tournament/V2BracketTree';
 import { buildBracketColumns } from '@/modules/tournament/domain/bracketLayout';
-import { confrontationSnapshot } from '@/modules/tournament/domain/teamFormat';
+import { confrontationSnapshot, buildEtapaDrafts, computeEtapaResult } from '@/modules/tournament/domain/teamFormat';
 import { useTeamRegistrations } from '@/modules/tournament/hooks/useTeams';
 import { TeamLineupDialog, TeamResultDialog } from './TeamConfrontationDialogs';
 
@@ -84,11 +84,70 @@ function scoreCell(m) {
   return m.games.map((g, i) => <span key={i} className="mr-2">{g.a}-{g.b}</span>);
 }
 
+/**
+ * Placar COMPLETO de um confronto de equipes para o público: uma linha por
+ * ETAPA (dupla masculina, feminina, mista, simples…) com os pontos de cada game
+ * e, ao final, o agregado "X–Y etapas". Segue o pedido de exibir o resultado
+ * completo, etapa a etapa — não só o total de etapas vencidas.
+ *
+ * Sem a config da modalidade (`config`), cai no resumo agregado (`scoreCell`).
+ *
+ * Exportado para teste de runtime (recebe só `match` + `config`, sem hooks).
+ */
+export function TeamConfrontationScore({ match, config }) {
+  const rows = useMemo(() => {
+    if (!config) return [];
+    return buildEtapaDrafts(config, match).map((etapa) => ({
+      etapa,
+      res: computeEtapaResult(etapa, config),
+    }));
+  }, [config, match]);
+
+  if (!config || rows.length === 0) return scoreCell(match);
+
+  const anyPlayed = rows.some(({ res }) => res.games.length > 0);
+  if (!anyPlayed) return <span className="text-gray-400">—</span>;
+
+  const winsA = rows.reduce((n, { res }) => n + (res.winner === 'a' ? 1 : 0), 0);
+  const winsB = rows.reduce((n, { res }) => n + (res.winner === 'b' ? 1 : 0), 0);
+
+  return (
+    <div className="space-y-1">
+      <div className="space-y-0.5">
+        {rows.map(({ etapa, res }) => (
+          <div key={etapa.id} className="flex items-baseline gap-2">
+            <span className="w-28 shrink-0 truncate text-[10px] font-medium uppercase tracking-wide text-gray-400" title={etapa.label}>
+              {etapa.label}
+            </span>
+            {res.games.length > 0 ? (
+              <span className="tabular-nums">
+                {res.games.map((g, i) => (
+                  <span key={i} className="mr-1.5">
+                    <span className={cn(g.a > g.b ? 'font-bold text-ink' : 'text-gray-500')}>{g.a}</span>
+                    <span className="text-gray-300">-</span>
+                    <span className={cn(g.b > g.a ? 'font-bold text-ink' : 'text-gray-500')}>{g.b}</span>
+                  </span>
+                ))}
+              </span>
+            ) : (
+              <span className="text-gray-300">—</span>
+            )}
+          </div>
+        ))}
+      </div>
+      <div className="text-[11px] font-bold text-ink">{winsA}–{winsB} etapas</div>
+    </div>
+  );
+}
+
 function MatchesTable({
   matches, labelById, peopleById, canEdit = false, modalityId, scoringConfig, team = null,
 }) {
   const hasGroups = matches.some((m) => m.group);
   const hasSchedule = matches.some((m) => m.court || m.scheduled_at);
+  // Config da modalidade de equipes (quando for o caso): habilita o placar
+  // completo por etapa no público.
+  const teamConfig = team?.modality?.team_config || null;
   const [editMatch, setEditMatch] = useState(null);
   const [courtsideMatch, setCourtsideMatch] = useState(null);
   // Confrontos de equipe: dois momentos distintos — escalar (iniciar a partida)
@@ -145,7 +204,11 @@ function MatchesTable({
                   <td className="px-3 py-2 align-middle"><MatchSide people={sideAPeople} fallback={sideA} win={winA} /></td>
                   <td className="px-3 py-2 text-center align-middle text-xs font-medium text-gray-400">vs</td>
                   <td className="px-3 py-2 align-middle"><MatchSide people={sideBPeople} fallback={sideB} win={winB} /></td>
-                  <td className="px-3 py-2 tabular-nums text-ink">{scoreCell(m)}</td>
+                  <td className="px-3 py-2 tabular-nums text-ink">
+                    {m.team_confrontation && teamConfig
+                      ? <TeamConfrontationScore match={m} config={teamConfig} />
+                      : scoreCell(m)}
+                  </td>
                   <td className="px-3 py-2"><V2Badge tone={statusTone(m.status)}>{MATCH_STATUS_LABELS[m.status] || m.status}</V2Badge></td>
                   {canEdit && (
                     <td className="px-3 py-2 text-right">
@@ -228,6 +291,11 @@ function MatchesTable({
                   ) : hasScore && <span className="shrink-0 tabular-nums text-sm font-semibold text-ink">{m.games.map((g) => g.b).join('  ')}</span>}
                 </div>
               </div>
+              {m.team_confrontation && teamConfig && (
+                <div className="mt-2 rounded-xl border border-gray-100 bg-paper/60 px-3 py-2 text-xs">
+                  <TeamConfrontationScore match={m} config={teamConfig} />
+                </div>
+              )}
               {canEdit && !isBye && team && (
                 <div className="mt-2 flex flex-wrap justify-end gap-1">
                   <TeamMatchActions

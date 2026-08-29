@@ -283,6 +283,56 @@ describe('buildTeamStandings / rankTeamStandings', () => {
     expect(toRemove).toEqual([etapaMirrorId('m1', 'e3'), etapaMirrorId('m1', 'e4')]);
   });
 
+  it('simples com responsável único (single_player) é espelhado', () => {
+    const config = normalizeTeamConfig({
+      team_size: 2, gender: TEAM_GENDER.MALE, singles_mode: TEAM_SINGLES_MODE.SINGLE,
+      etapas: [{ type: TEAM_ETAPA_TYPE.SINGLES }],
+    }).value;
+    const etapas = [
+      { id: 's1', type: TEAM_ETAPA_TYPE.SINGLES, side_a: ['u1'], side_b: ['u3'], score_a: 11, score_b: 6 },
+    ];
+    const { toWrite, toRemove } = buildConfrontationRankingMirror({
+      matchId: 'm1', tournamentId: 't1', modalityId: 'mod1', etapas, validUids: ['u1', 'u3'], config,
+    });
+    expect(toWrite).toHaveLength(1);
+    expect(toWrite[0].payload.kind).toBe('singles');
+    expect(toRemove).toEqual([]);
+  });
+
+  it('simples em rodízio por pontos (rotating_points) NÃO é espelhado — nem com lados de 1', () => {
+    const config = normalizeTeamConfig({
+      team_size: 2, gender: TEAM_GENDER.MALE, singles_mode: TEAM_SINGLES_MODE.ROTATING,
+      etapas: [{ type: TEAM_ETAPA_TYPE.SINGLES }],
+    }).value;
+    // Mesmo que a etapa de simples tenha chegado com apenas 1 jogador por lado
+    // (elenco pequeno), o rodízio exclui o simples do ranking individual.
+    const etapas = [
+      { id: 's1', type: TEAM_ETAPA_TYPE.SINGLES, side_a: ['u1'], side_b: ['u3'], score_a: 11, score_b: 6 },
+    ];
+    const { toWrite, toRemove } = buildConfrontationRankingMirror({
+      matchId: 'm1', tournamentId: 't1', modalityId: 'mod1', etapas, validUids: ['u1', 'u3'], config,
+    });
+    expect(toWrite).toEqual([]);
+    expect(toRemove).toEqual([etapaMirrorId('m1', 's1')]);
+  });
+
+  it('no rodízio, as DUPLAS seguem espelhadas — só o simples é excluído', () => {
+    const config = normalizeTeamConfig({
+      team_size: 2, gender: TEAM_GENDER.MALE, singles_mode: TEAM_SINGLES_MODE.ROTATING,
+      etapas: [{ type: TEAM_ETAPA_TYPE.MENS_DOUBLES }, { type: TEAM_ETAPA_TYPE.SINGLES }],
+    }).value;
+    const etapas = [
+      { id: 'd1', type: TEAM_ETAPA_TYPE.MENS_DOUBLES, side_a: ['u1', 'u2'], side_b: ['u3', 'u4'], score_a: 11, score_b: 8 },
+      { id: 's1', type: TEAM_ETAPA_TYPE.SINGLES, side_a: ['u1', 'u2'], side_b: ['u3', 'u4'], score_a: 11, score_b: 6 },
+    ];
+    const { toWrite, toRemove } = buildConfrontationRankingMirror({
+      matchId: 'm1', tournamentId: 't1', modalityId: 'mod1', etapas, validUids: ['u1', 'u2', 'u3', 'u4'], config,
+    });
+    expect(toWrite.map((w) => w.id)).toEqual([etapaMirrorId('m1', 'd1')]);
+    expect(toWrite[0].payload.kind).toBe('doubles');
+    expect(toRemove).toEqual([etapaMirrorId('m1', 's1')]);
+  });
+
   it('confronto direto desempata quando tudo o mais é igual', () => {
     // Dois times idênticos nos números, mas um venceu o confronto direto.
     const confrontations = [
@@ -732,6 +782,20 @@ describe('buildTeamGroupTables', () => {
     });
     expect(tables).toHaveLength(1);
     expect(tables[0].name).toBeNull();
+    expect(tables[0].rows[0]).toMatchObject({ team_name: 'Alfa', confrontation_wins: 2 });
+  });
+
+  it('singleGroup=true funde uma tabela só, ainda que os jogos tragam m.group', () => {
+    const tables = buildTeamGroupTables({
+      matches: [win('t1', 't2', 'Grupo A'), win('t3', 't4', 'Grupo B'), win('t1', 't3', 'Grupo A')],
+      teamRegistrations: teams,
+      config: cfg,
+      singleGroup: true,
+    });
+    expect(tables).toHaveLength(1);
+    expect(tables[0].name).toBeNull();
+    // Todas as equipes numa única classificação; t1 (2 vitórias) na frente.
+    expect(tables[0].rows.map((r) => r.team_name)).toContain('Gama');
     expect(tables[0].rows[0]).toMatchObject({ team_name: 'Alfa', confrontation_wins: 2 });
   });
 });

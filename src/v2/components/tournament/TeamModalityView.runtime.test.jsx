@@ -194,6 +194,25 @@ describe('TeamModalityView (runtime)', () => {
     expect(linhasA[1]).toContain('Beta');
   });
 
+  it('classificação em GRUPO ÚNICO: uma tabela só, ainda que o sorteio tenha marcado grupos', () => {
+    // Regressão do problema: modalidade definida como "grupo único"
+    // (division_mode: 'single') não pode exibir vários grupos na classificação,
+    // mesmo que um sorteio antigo tenha gravado `m.group`.
+    matches = [
+      playedMatch({ id: 'm1', a: 't1', b: 't2', group: 'Grupo A' }),
+      playedMatch({ id: 'm2', a: 't3', b: 't4', group: 'Grupo B' }),
+    ];
+    mount({ modality: { ...modality, stages: [{ type: 'groups', division_mode: 'single' }] } });
+    clickTab('Classificação');
+    const tabelas = [...container.querySelectorAll('table')];
+    expect(tabelas).toHaveLength(1);
+    const text = container.textContent;
+    expect(text).not.toContain('Grupo A');
+    expect(text).not.toContain('Grupo B');
+    // Todas as quatro equipes numa única tabela.
+    ['Alfa', 'Beta', 'Gama', 'Delta'].forEach((n) => expect(text).toContain(n));
+  });
+
   it('em chave, nomeia as rodadas e mostra a árvore na classificação', () => {
     matches = [
       playedMatch({ id: 's1', a: 't1', b: 't2', round: 1, position: 1, stageType: 'knockout' }),
