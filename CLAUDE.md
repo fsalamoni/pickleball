@@ -12,7 +12,7 @@
 
 - **O que é**: PWA para pickleball amador BR — torneios, clubes, arenas, professores, comunidade.
 - **Stack**: React 18 + Vite, Tailwind + shadcn/ui, Firebase (Firestore db `pickleball`), React Query, Vitest, Playwright.
-- **Estado**: 21 módulos, 72 V2 pages, 103 coleções Firestore (+push_tokens), **102 índices compostos**, **5 feature flags** (137 ativas viraram código; `dupr_official_sync` + 4 de engajamento default OFF: `action_home`, `smart_matchmaking`, `post_game_flow`, `push_notifications`), **1724 testes verdes**. Legado V1 removido (`src/modules/*/pages`, `ProfileCompletionModal`, `FeatureFlagGuard`).
+- **Estado**: 21 módulos, 72 V2 pages, 103 coleções Firestore (+push_tokens), **102 índices compostos**, **6 feature flags** (137 ativas viraram código; `dupr_official_sync`, `dupr_match_export` + 4 de engajamento default OFF: `action_home`, `smart_matchmaking`, `post_game_flow`, `push_notifications`), **1800 testes verdes**. Legado V1 removido (`src/modules/*/pages`, `ProfileCompletionModal`, `FeatureFlagGuard`).
 - **Live**: https://picklerush.web.app (Firebase site `picklerush`; `pickletour` é redirect-only).
 - **Deploy**: push em `main` → GitHub Actions → Firebase Hosting + Rules + Cloud Function.
 - **Repositório**: https://github.com/fsalamoni/pickleball
@@ -359,14 +359,14 @@ chore(deps): bump firebase to 12.x
 
 | Métrica | Valor | Delta do início do agente |
 |---|---|---|
-| **Testes Vitest** | 1724 passing (+68 equipes: inscrição, sorteio, etapas, visões) | +1039 (era 408) |
+| **Testes Vitest** | 1800 passing (+30 exportação DUPR; +68 equipes) | +1392 (era 408) |
 | **Lint errors** | 0 | era 30+ |
 | **Módulos** | 21 (+games, +legal) | +4 (coaches, circuits, games, legal) |
 | **V2 pages** | 72 (+V2Legal, V2LegalDocument, V2GameDays) | +48 |
 | **V2 components (src/v2/components/)** | +4 pastas (coach, arenas, games, legal, performance) | — |
 | **Coleções Firestore** | 102 (+legal_consents, +game_days) | +63 |
 | **Índices compostos Firestore** | 4 (Wave C.6.1) | +4 |
-| **Feature flags** | 5 (`dupr_official_sync` + 4 de engajamento default OFF) | −126 |
+| **Feature flags** | 6 (`dupr_official_sync`, `dupr_match_export` + 4 de engajamento default OFF) | −125 |
 | **Cloud Functions** | 8 (sem mudança) | +8 |
 | **PRs mergeados** | 57 totais (Sprints 0-31) | — |
 | **Origin/main** | `b54d81f` (PR #94) | — |
@@ -409,7 +409,7 @@ PLATAFORMA   PickleRush (picklerush.web.app)
 STACK        React+Vite, Tailwind+shadcn, Firebase (db 'pickleball'), React Query, Vitest
 MODELO       19 módulos em src/modules/X/{domain,services,hooks,pages,components}/
 UI ATIVA     src/v2/ (67 pages, 2-level nav, dark ink/acid/paper)
-FEATURES     5 flags (dupr_official_sync + action_home/smart_matchmaking/post_game_flow/push_notifications, default OFF)
+FEATURES     6 flags (dupr_official_sync + dupr_match_export + action_home/smart_matchmaking/post_game_flow/push_notifications, default OFF)
 SCHEMA       94 coleções top-level em firestore.rules
 TESTES       1350 vitest (domain obrigatório)
 DEPLOY       push main → GitHub Actions → firebase hosting (sites picklerush+pickletour)

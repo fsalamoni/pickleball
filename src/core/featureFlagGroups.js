@@ -40,7 +40,7 @@ export const FLAG_GROUPS = Object.freeze([
   {
     id: 'athlete',
     label: 'Atleta, rating e social',
-    keys: [FEATURE_FLAG.DUPR_OFFICIAL_SYNC],
+    keys: [FEATURE_FLAG.DUPR_OFFICIAL_SYNC, FEATURE_FLAG.DUPR_MATCH_EXPORT],
   },
 ]);
 
