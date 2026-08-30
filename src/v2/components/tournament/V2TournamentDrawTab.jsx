@@ -13,7 +13,7 @@ import {
   DialogDescription,
 } from '@/components/ui/dialog';
 import { ConfirmDialog } from '@/components/ui/confirm-dialog';
-import { Shuffle, AlertTriangle, Pencil, ListRestart, CalendarClock, ChevronsRight, Users, Lock } from 'lucide-react';
+import { Shuffle, AlertTriangle, Pencil, ListRestart, CalendarClock, ChevronsRight, Users, Lock, Wrench } from 'lucide-react';
 import { toast } from 'sonner';
 import {
   useModalities,
@@ -29,8 +29,10 @@ import {
   useMoveParticipantBetweenGroups,
   useEnsurePlaceholders,
   useClearPlaceholders,
+  useClearStaleSingleGroupMarkers,
 } from '@/modules/tournament/hooks/useTournament';
 import { neededPlaceholderCount } from '@/modules/tournament/domain/placeholders';
+import { matchesWithStaleSingleGroup } from '@/modules/tournament/domain/phases';
 import {
   TOURNAMENT_STAGE_TYPE_LABELS,
   REGISTRATION_STATUS,
@@ -90,6 +92,7 @@ function ModalityDrawBlock({ tournament, modality, isAdmin }) {
   const redrawKeepGroupsMutation = useRedrawGroupMatchesKeepingGroups();
   const ensurePlaceholdersMutation = useEnsurePlaceholders(modality.id);
   const clearPlaceholdersMutation = useClearPlaceholders(modality.id);
+  const clearGroupsMutation = useClearStaleSingleGroupMarkers(modality.id);
   const placeholderOn = true;
   const lifecycleOn = true;
   // Modalidade de EQUIPES: o participante do sorteio é a equipe. Não existem
@@ -104,6 +107,7 @@ function ModalityDrawBlock({ tournament, modality, isAdmin }) {
   const [confirmOpen, setConfirmOpen] = useState(false);
   const [reshuffleConfirmOpen, setReshuffleConfirmOpen] = useState(false);
   const [keepGroupsConfirmOpen, setKeepGroupsConfirmOpen] = useState(false);
+  const [clearGroupsConfirmOpen, setClearGroupsConfirmOpen] = useState(false);
   const [groupsEditorOpen, setGroupsEditorOpen] = useState(false);
   const [error, setError] = useState(null);
   const [substitution, setSubstitution] = useState(null);
@@ -290,9 +294,36 @@ function ModalityDrawBlock({ tournament, modality, isAdmin }) {
     }
   }
 
+  async function performClearGroups() {
+    setRunning(true);
+    try {
+      const { cleared, groupsRemoved } = await clearGroupsMutation.mutateAsync(modality);
+      const total = (cleared || 0) + (groupsRemoved || 0);
+      if (total === 0) {
+        toast.success('Nada a corrigir — os confrontos já seguem o grupo único.');
+      } else {
+        const partes = [];
+        if (cleared > 0) partes.push(`${cleared} confronto(s) agora seguem o grupo único`);
+        if (groupsRemoved > 0) partes.push(`${groupsRemoved} grupo(s) órfão(s) removido(s)`);
+        toast.success(`Grupos corrigidos: ${partes.join(' e ')}.`);
+      }
+    } catch (err) {
+      toast.error(err?.message || 'Falha ao corrigir os grupos.');
+    } finally {
+      setRunning(false);
+      setClearGroupsConfirmOpen(false);
+    }
+  }
+
   const stageName = modality.stages?.[0]?.name || 'fase 1';
   const hasGroups = matches.some((m) => m.group);
   const hasSchedule = matches.some((m) => m.court || m.scheduled_at);
+  // Marcadores de grupo resquício de sorteios antigos numa fase de grupo único
+  // (o dado precisa ser corrigido para seguir a definição da modalidade).
+  const staleGroupIds = useMemo(
+    () => matchesWithStaleSingleGroup(matches, modality.stages || []),
+    [matches, modality.stages],
+  );
 
   return (
     <V2Collapsible
@@ -357,7 +388,18 @@ function ModalityDrawBlock({ tournament, modality, isAdmin }) {
                   <ListRestart className="w-4 h-4 mr-1" /> Resortear restantes ({pendingCount})
                 </V2Button>
               )}
-              {hasGroups && (
+              {staleGroupIds.length > 0 && (
+                <V2Button
+                  size="sm"
+                  variant="ghost"
+                  onClick={() => setClearGroupsConfirmOpen(true)}
+                  disabled={running}
+                  title="Esta fase é grupo único, mas há confrontos marcados com grupo (sorteio antigo). Corrige os dados para seguir a definição da modalidade, sem alterar os confrontos."
+                >
+                  <Wrench className="w-4 h-4 mr-1" /> Corrigir grupos ({staleGroupIds.length})
+                </V2Button>
+              )}
+              {hasGroups && staleGroupIds.length === 0 && (
                 <V2Button
                   size="sm"
                   variant="ghost"
@@ -368,7 +410,7 @@ function ModalityDrawBlock({ tournament, modality, isAdmin }) {
                   <Users className="w-4 h-4 mr-1" /> Editar grupos
                 </V2Button>
               )}
-              {hasGroups && (
+              {hasGroups && staleGroupIds.length === 0 && (
                 <V2Button
                   size="sm"
                   variant="ghost"
@@ -562,6 +604,20 @@ function ModalityDrawBlock({ tournament, modality, isAdmin }) {
           </DialogFooter>
         </DialogContent>
       </Dialog>
+
+      <ConfirmDialog
+        open={clearGroupsConfirmOpen}
+        onOpenChange={(o) => !running && setClearGroupsConfirmOpen(o)}
+        title="Corrigir grupos desta fase?"
+        description={
+          'Esta fase é grupo único. A correção remove o rótulo de grupo dos confrontos '
+          + 'e apaga os metadados de grupo órfãos (sorteio antigo), sem alterar os '
+          + 'confrontos, as escalações nem os resultados já lançados.'
+        }
+        confirmLabel="Corrigir grupos"
+        loading={running}
+        onConfirm={performClearGroups}
+      />
 
       {groupsEditorOpen && (
         <GroupsEditorDialog

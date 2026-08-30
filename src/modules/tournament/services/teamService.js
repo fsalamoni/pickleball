@@ -239,8 +239,10 @@ export function buildTeamStandingsFromMatches({ matches = [], teamRegistrations 
  * @param {Array} args.matches            jogos da fase (confrontos)
  * @param {Array} args.teamRegistrations  inscrições-equipe
  * @param {object} args.config            team_config
+ * @param {boolean} [args.singleGroup]    fase "grupo único" na modalidade →
+ *   força uma tabela única (segue o que a modalidade define, ignora `m.group`).
  * @returns {Array<{ name: string|null, rows: Array<object> }>}
  */
-export function buildTeamGroupStandings({ matches = [], teamRegistrations = [], config = {} } = {}) {
-  return buildTeamGroupTables({ matches, teamRegistrations, config });
+export function buildTeamGroupStandings({ matches = [], teamRegistrations = [], config = {}, singleGroup = false } = {}) {
+  return buildTeamGroupTables({ matches, teamRegistrations, config, singleGroup });
 }

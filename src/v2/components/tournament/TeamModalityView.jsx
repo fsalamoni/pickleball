@@ -30,7 +30,7 @@ import {
   buildRosterSlots, formatEtapaScoringLabel, resolveEtapaScoring,
   registrationIncludesUid, isTeamConfrontation,
 } from '@/modules/tournament/domain/teamFormat';
-import { TOURNAMENT_STAGE_TYPE_LABELS } from '@/modules/tournament/domain/constants';
+import { TOURNAMENT_STAGE_TYPE_LABELS, PHASE_DIVISION_MODE } from '@/modules/tournament/domain/constants';
 import TeamRegistrationDialog from './TeamRegistrationDialog';
 import TeamConfrontationCard from './TeamConfrontationCard';
 import TeamStandingsTable from './TeamStandingsTable';
@@ -291,6 +291,10 @@ export default function TeamModalityView({ tournament, modality, isAdmin }) {
                       matches={stageMatches}
                       teamRegistrations={teams}
                       config={config}
+                      singleGroup={
+                        modality.stages?.[stage.stageIndex]?.division_mode
+                          === PHASE_DIVISION_MODE.SINGLE
+                      }
                     />
                   )}
                 </div>

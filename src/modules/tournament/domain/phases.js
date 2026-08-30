@@ -197,3 +197,75 @@ export function plannedGroupCount(phase, total) {
   }
   return Math.max(1, Math.min(total || 1, phase.group_count));
 }
+
+/**
+ * IDs dos jogos que ainda carregam um marcador de grupo (`m.group`) numa fase
+ * definida como GRUPO ÚNICO (`division_mode: 'single'`). São resquícios de um
+ * sorteio antigo, feito quando a fase tinha vários grupos (ou com um
+ * `group_count` obsoleto): devem ser limpos para alinhar os dados ao que a
+ * modalidade define.
+ *
+ * Usa o modo DECLARADO explicitamente (`stages[i].division_mode === 'single'`),
+ * não o inferido — uma fase de grupos legada sem o campo mantém seus grupos.
+ * Puro e idempotente: sem marcadores obsoletos, devolve lista vazia.
+ *
+ * @param {Array<object>} matches jogos (com `id`, `group`, `stage_index`)
+ * @param {Array<object>} stages  fases da modalidade
+ * @returns {string[]} ids dos jogos cujo `group` deve ser removido
+ */
+export function matchesWithStaleSingleGroup(matches = [], stages = []) {
+  return (Array.isArray(matches) ? matches : [])
+    .filter((m) => {
+      if (!m?.group) return false;
+      const si = Number(m?.stage_index ?? 0);
+      return stages?.[si]?.division_mode === PHASE_DIVISION_MODE.SINGLE;
+    })
+    .map((m) => m.id)
+    .filter(Boolean);
+}
+
+/**
+ * IDs dos documentos de grupo (`tournament_groups`) que sobraram de um sorteio
+ * numa fase definida como GRUPO ÚNICO (`division_mode: 'single'`). Como o motor
+ * de sorteio sempre nomeia ao menos um grupo ("Grupo A"), até uma fase de grupo
+ * único grava 1 doc de grupo; a exibição já o ignora (o ranking colapsa antes de
+ * lê-lo), mas o dado limpo evita metadados órfãos.
+ *
+ * Usa o modo DECLARADO explicitamente (`stages[i].division_mode === 'single'`),
+ * não o inferido — uma fase de grupos legada sem o campo mantém seus grupos.
+ * Puro e idempotente: sem docs em fase de grupo único, devolve lista vazia.
+ *
+ * @param {Array<object>} groupDocs docs de grupo (com `id` e `stage_index`)
+ * @param {Array<object>} stages    fases da modalidade
+ * @returns {string[]} ids dos docs de grupo que devem ser apagados
+ */
+export function groupDocsInSingleGroupStages(groupDocs = [], stages = []) {
+  return (Array.isArray(groupDocs) ? groupDocs : [])
+    .filter((g) => {
+      const si = Number(g?.stage_index ?? 0);
+      return stages?.[si]?.division_mode === PHASE_DIVISION_MODE.SINGLE;
+    })
+    .map((g) => g?.id)
+    .filter(Boolean);
+}
+
+/**
+ * A modalidade tem ao menos uma fase de GRUPO ÚNICO num formato que comporta
+ * grupos (`division_mode: 'single'` numa fase de pontos corridos, americano ou
+ * grupos)? Serve de porta (gate) para disparar a limpeza de resíduos de grupo
+ * único ao SALVAR as fases: só faz sentido corrigir marcadores/docs de grupo em
+ * formatos que se dividem em grupos — chaves (mata-mata) nunca geram esses
+ * resíduos.
+ *
+ * Usa o modo DECLARADO explicitamente (`division_mode === 'single'`), não o
+ * inferido, coerente com `matchesWithStaleSingleGroup` e
+ * `groupDocsInSingleGroupStages`. Puro e idempotente.
+ *
+ * @param {Array<object>} stages fases da modalidade
+ * @returns {boolean}
+ */
+export function hasSingleGroupStage(stages = []) {
+  return (Array.isArray(stages) ? stages : []).some(
+    (s) => supportsGroups(s?.type) && s?.division_mode === PHASE_DIVISION_MODE.SINGLE,
+  );
+}

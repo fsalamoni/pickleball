@@ -308,6 +308,103 @@ uma inscrição-equipe abre o modal de equipe, não o de jogador A/B); sorteio n
 aba **Sorteio**; escalação e resultado na aba **Resultados**. A página da
 modalidade é a vitrine do atleta.
 
+### Ajustes de exibição e ranking — grupo único, placar por etapa, rodízio
+
+Três correções que alinham a exibição pública e o ranking da plataforma ao que
+foi **definido na modalidade** (e uma rotina de manutenção, D, para dados
+antigos):
+
+**A. "Grupo único" exibe UM grupo — segue a modalidade.** Quando a fase é
+definida como grupo único (`division_mode: 'single'`), a **classificação** —
+tanto no ranking do torneio (`computeModalityRankingStructured` →
+`V2RankingBlock`) quanto na aba Classificação da página da modalidade
+(`TeamStandingsTable` → `buildTeamGroupStandings` → `buildTeamGroupTables`) —
+mostra **uma única tabela**, combinando todos os confrontos, mesmo que um
+sorteio antigo tenha gravado grupos ou marcado `m.group`. A aba **Confrontos**
+(`buildConfrontationStructure` → `TeamModalityView`) também colapsa: em grupo
+único os confrontos aparecem agrupados por **rodada** (uma seção só), não por
+grupo. O colapso só ocorre
+quando a fase **declara explicitamente** `division_mode: 'single'` (o
+`PhasesEditor` sempre grava o modo); uma fase de grupos legada e mínima
+(`{ type: 'groups' }`, sem o campo) **mantém** os grupos sorteados — não se
+presume grupo único por omissão. Na origem, o **sorteio** também passou a
+honrar o modo: `runDraw` usa `plannedGroupCount(normalizePhase(stage), n)` em
+vez do `group_count` cru, então "grupo único" gera 1 grupo mesmo com um
+`group_count > 1` antigo ainda gravado.
+
+**B. Placar público mostra TODAS as etapas, com os pontos de cada game.** Na
+aba **Jogos** (visão do público), o placar de um confronto de equipes exibe uma
+**linha por etapa** (dupla masculina, feminina, mista, simples…) com os games de
+cada uma e, ao final, o agregado "X–Y etapas" — não apenas o total de etapas
+vencidas. Componente `TeamConfrontationScore` (`V2MatchesBlock.jsx`), alimentado
+por `buildEtapaDrafts(config, match)` + `computeEtapaResult`; aparece no desktop
+(coluna de placar) e no card mobile. Sem a config da modalidade, cai no resumo
+agregado.
+
+**C. Ranking da plataforma: duplas sempre; simples só com responsável único.**
+Cada etapa decidida é espelhada por jogador em `club_event_games` (a base do
+ranking individual/ELO), como se fosse um jogo autônomo — **duplas contra
+duplas**, **não** equipe contra equipe. Regra do simples: só entra no ranking
+quando há **um único responsável** pela equipe
+(`config.singles_mode === 'single_player'`). No **rodízio por pontos**
+(`rotating_points`), o simples é dividido entre todos os atletas e **não** é
+espelhado — segue contando apenas para a equipe. A exclusão do rodízio usa o
+**modo configurado** (não só o tamanho do lado), cobrindo elencos pequenos onde
+o rodízio poderia chegar com 1–2 jogadores por lado. Ver
+`buildConfrontationRankingMirror` (`teamFormat.js`); os confrontos crus
+(`tournament_matches` com `team_confrontation`) são ignorados pelo
+`ratingService` justamente porque já entram por etapa em `club_event_games`.
+
+**D. Rotina de limpeza de grupo único (marcadores + metadados).** A exibição já
+colapsa grupo único (ponto A), mas dados de sorteios antigos podem ter deixado
+`m.group` gravado nos jogos e documentos órfãos em `tournament_groups` de uma
+fase que hoje é grupo único. Isso não muda a classificação (que colapsa), mas
+polui a origem e reativa botões indevidos ("Editar grupos", coluna de grupo). Há
+uma rotina **idempotente** e **aditiva** que limpa esses resíduos — sem tocar em
+confrontos, escalações ou resultados:
+
+- **Domínio (puro):** `matchesWithStaleSingleGroup(matches, stages)` retorna os
+  IDs dos jogos com `m.group` numa fase `division_mode: 'single'`; e
+  `groupDocsInSingleGroupStages(groupDocs, stages)` retorna os IDs dos docs de
+  `tournament_groups` dessas fases. Ambos usam o modo **declarado**, respeitando
+  o `stage_index` (fases legadas sem o campo são ignoradas). Em
+  `domain/phases.js`.
+- **Serviço (I/O):** `clearStaleSingleGroupMarkers(modalityId, modality, actor)`
+  (`services/matchService.js`) lê **todos** os jogos e **todos** os docs de grupo
+  da modalidade, zera o `group` dos jogos e apaga os docs de grupo órfãos das
+  fases single — tudo **no mesmo lote**. Registra auditoria
+  `tournament_group_markers_cleared` (quando limpou jogos) e/ou
+  `tournament_group_metadata_cleared` (quando apagou docs). Retorna
+  `{ cleared, groupsRemoved }` e não escreve nada quando não há o que corrigir.
+- **Automático no sorteio:** o motor sempre nomeia ao menos um grupo ("Grupo A"),
+  então até um sorteio de grupo único gravaria `m.group` + 1 doc. Para o dado
+  **nunca** nascer inconsistente, `runDraw` (`services/drawService.js`) chama a
+  rotina **silenciosamente** logo após persistir, quando a fase sorteada é
+  `division_mode: 'single'`.
+- **Automático ao salvar as fases:** ao editar uma modalidade e salvar uma fase
+  como grupo único, `V2TournamentModalitiesTab.handleSave` também dispara a
+  rotina (via hook) logo após a atualização — cobrindo o caso de uma fase que
+  **já foi sorteada como grupos** e depois foi trocada para grupo único. A porta
+  (gate) é o helper puro `hasSingleGroupStage(stages)` (`domain/phases.js`), que
+  só é verdadeiro para uma fase de **formato com grupos** declarada
+  `division_mode: 'single'` (chaves de mata-mata nunca geram resíduo). Só roda ao
+  **editar** (uma modalidade nova não tem sorteio); é **no-op** quando não há
+  resíduo e mostra um toast **apenas** quando algo foi de fato corrigido. Uma
+  falha na limpeza **não** desfaz o salvamento (o botão "Corrigir grupos"
+  continua como reserva).
+- **Hook:** `useClearStaleSingleGroupMarkers(modalityId)`
+  (`hooks/useTournament.js`) — invalida jogos, grupos (`stage-groups`,
+  `phase-groups`) e ranking.
+- **UI (admin):** na aba **Sorteio** (`V2TournamentDrawTab`), quando há
+  marcadores obsoletos, aparece o botão **"Corrigir grupos (N)"** com um diálogo
+  de **confirmação** antes de aplicar; nessa situação os botões de grupo
+  ("Editar grupos", "Re-sortear mantendo grupos") ficam ocultos, pois não fazem
+  sentido em grupo único.
+
+Assim, o resíduo de grupo único é corrigido em **três** momentos, de forma
+idempotente e aditiva: ao **salvar** a fase como grupo único (editando), ao
+**sortear** uma fase single, e sob demanda pelo **botão** "Corrigir grupos".
+
 ---
 
 ## 6. Decisões confirmadas
@@ -326,8 +423,26 @@ modalidade é a vitrine do atleta.
 - Confronto na visão admin (escalação e placar): `TeamConfrontationDialogs.jsx`
   (`TeamLineupDialog` + `TeamResultDialog`), abertos pela aba Resultados
   (`V2MatchesBlock.jsx`)
+- Placar público por etapa (aba Jogos): `TeamConfrontationScore` em
+  `V2MatchesBlock.jsx`
 - Estrutura/tabelas/chave: `TeamModalityView.jsx`, `TeamStandingsTable.jsx`,
   `V2BracketTree.jsx`
+- Aba Confrontos (estrutura, colapso de grupo único): `buildConfrontationStructure`
+  em `domain/teamFormat.js` → `TeamModalityView.jsx`
+- Classificação do torneio / grupo único: `services/rankingService.js`
+  (`computeModalityRankingStructured`)
+- Limpeza de grupo único (marcadores + metadados): `matchesWithStaleSingleGroup`,
+  `groupDocsInSingleGroupStages` e `hasSingleGroupStage` (`domain/phases.js`) +
+  `clearStaleSingleGroupMarkers` (`services/matchService.js`) +
+  `useClearStaleSingleGroupMarkers` (`hooks/useTournament.js`). Disparada em três
+  pontos: pelo botão "Corrigir grupos" (com confirmação) em
+  `V2TournamentDrawTab.jsx`, automaticamente no sorteio (`runDraw` em
+  `services/drawService.js`) e ao salvar as fases (`handleSave` em
+  `V2TournamentModalitiesTab.jsx`, com teste de runtime em
+  `V2TournamentModalitiesTab.runtime.test.jsx`)
+- Espelho no ranking individual (duplas/simples): `buildConfrontationRankingMirror`
+  em `domain/teamFormat.js`, gravado por `services/teamService.js`
+  (`recordConfrontation`); teste de integração em `services/teamService.test.js`
 - Sorteio: `services/drawService.js`, `services/phaseService.js`
 - Ponte com o motor genérico: `domain/scoring.js`, `domain/ranking.js`,
   `domain/phaseProgression.js`

@@ -194,6 +194,53 @@ describe('TeamModalityView (runtime)', () => {
     expect(linhasA[1]).toContain('Beta');
   });
 
+  it('classificação em GRUPO ÚNICO: uma tabela só, ainda que o sorteio tenha marcado grupos', () => {
+    // Regressão do problema: modalidade definida como "grupo único"
+    // (division_mode: 'single') não pode exibir vários grupos na classificação,
+    // mesmo que um sorteio antigo tenha gravado `m.group`.
+    matches = [
+      playedMatch({ id: 'm1', a: 't1', b: 't2', group: 'Grupo A' }),
+      playedMatch({ id: 'm2', a: 't3', b: 't4', group: 'Grupo B' }),
+    ];
+    mount({ modality: { ...modality, stages: [{ type: 'groups', division_mode: 'single' }] } });
+    clickTab('Classificação');
+    const tabelas = [...container.querySelectorAll('table')];
+    expect(tabelas).toHaveLength(1);
+    const text = container.textContent;
+    expect(text).not.toContain('Grupo A');
+    expect(text).not.toContain('Grupo B');
+    // Todas as quatro equipes numa única tabela.
+    ['Alfa', 'Beta', 'Gama', 'Delta'].forEach((n) => expect(text).toContain(n));
+  });
+
+  it('CONFRONTOS em GRUPO ÚNICO: uma sequência por rodada, sem seções de grupo', () => {
+    // Regressão (aba Confrontos): a fase grupo único não pode dividir os jogos
+    // em Grupo A/B — segue o que a modalidade define, igual à classificação.
+    matches = [
+      playedMatch({ id: 'm1', a: 't1', b: 't2', group: 'Grupo A', round: 1 }),
+      playedMatch({ id: 'm2', a: 't3', b: 't4', group: 'Grupo B', round: 2 }),
+    ];
+    mount({ modality: { ...modality, stages: [{ type: 'groups', division_mode: 'single' }] } });
+    clickTab('Confrontos');
+    const text = container.textContent;
+    expect(text).not.toContain('Grupo A');
+    expect(text).not.toContain('Grupo B');
+    expect(text).toContain('Rodada 1');
+    expect(text).toContain('Rodada 2');
+  });
+
+  it('CONFRONTOS numa fase de grupos legada (sem division_mode) mantém Grupo A/B', () => {
+    matches = [
+      playedMatch({ id: 'm1', a: 't1', b: 't2', group: 'Grupo A' }),
+      playedMatch({ id: 'm2', a: 't3', b: 't4', group: 'Grupo B' }),
+    ];
+    mount({ modality: { ...modality, stages: [{ type: 'groups' }] } });
+    clickTab('Confrontos');
+    const text = container.textContent;
+    expect(text).toContain('Grupo A');
+    expect(text).toContain('Grupo B');
+  });
+
   it('em chave, nomeia as rodadas e mostra a árvore na classificação', () => {
     matches = [
       playedMatch({ id: 's1', a: 't1', b: 't2', round: 1, position: 1, stageType: 'knockout' }),

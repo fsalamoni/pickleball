@@ -60,6 +60,7 @@ import {
   reShuffleRemainingMatches,
   rescheduleMatches,
   advanceStage,
+  clearStaleSingleGroupMarkers,
 } from '../services/matchService';
 import {
   runDraw,
@@ -597,6 +598,8 @@ export function useRunDraw() {
       qc.invalidateQueries({ queryKey: ['matches', params.modalityId] });
       qc.invalidateQueries({ queryKey: ['all-matches', params.modalityId] });
       qc.invalidateQueries({ queryKey: ['matches-tournament', params.tournamentId] });
+      qc.invalidateQueries({ queryKey: ['stage-groups', params.modalityId] });
+      qc.invalidateQueries({ queryKey: ['phase-groups', params.modalityId] });
       qc.invalidateQueries({ queryKey: ['ranking', params.modalityId] });
       qc.invalidateQueries({ queryKey: ['ranking-structured', params.modalityId] });
     },
@@ -805,6 +808,27 @@ export function useReShuffleRemainingMatches(modalityId) {
     onSuccess: () => {
       qc.invalidateQueries({ queryKey: ['matches', modalityId] });
       qc.invalidateQueries({ queryKey: ['all-matches', modalityId] });
+    },
+  });
+}
+
+/**
+ * Limpa marcadores de grupo obsoletos e apaga os metadados de grupo órfãos numa
+ * fase de grupo único (correção de dados de sorteios antigos). Recebe o documento
+ * da modalidade (para ler as fases) e invalida jogos, grupos e ranking ao concluir.
+ */
+export function useClearStaleSingleGroupMarkers(modalityId) {
+  const { user } = useAuth();
+  const qc = useQueryClient();
+  return useMutation({
+    mutationFn: (modality) => clearStaleSingleGroupMarkers(modalityId, modality, user),
+    onSuccess: () => {
+      qc.invalidateQueries({ queryKey: ['matches', modalityId] });
+      qc.invalidateQueries({ queryKey: ['all-matches', modalityId] });
+      qc.invalidateQueries({ queryKey: ['stage-groups', modalityId] });
+      qc.invalidateQueries({ queryKey: ['phase-groups', modalityId] });
+      qc.invalidateQueries({ queryKey: ['ranking', modalityId] });
+      qc.invalidateQueries({ queryKey: ['ranking-structured', modalityId] });
     },
   });
 }

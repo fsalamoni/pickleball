@@ -44,6 +44,8 @@ export const AUDIT_ACTION_LABELS = {
   platform_delete_tournament: 'Torneio excluído (admin)',
   platform_feature_flag_changed: 'Feature flag alterada (admin)',
   tournament_groups_set: 'Grupos da fase definidos',
+  tournament_group_markers_cleared: 'Marcadores de grupo corrigidos (grupo único)',
+  tournament_group_metadata_cleared: 'Metadados de grupo removidos (grupo único)',
   tournament_phase_advanced: 'Fase avançada (classificados)',
 };
 

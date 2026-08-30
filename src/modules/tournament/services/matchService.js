@@ -25,8 +25,10 @@ import { assignSchedule } from '../domain/scheduling.js';
 import { computeStageAdvance, stageSupportsAdvance } from '../domain/progression.js';
 import { recommendedSwissRounds } from '../domain/swiss.js';
 import { recommendedMexicanoRounds } from '../domain/mexicano.js';
+import { matchesWithStaleSingleGroup, groupDocsInSingleGroupStages } from '../domain/phases.js';
 
 const COL = 'tournament_matches';
+const GROUPS_COL = 'tournament_groups';
 
 /**
  * Persiste os jogos gerados por um sorteio. Quando uma configuração de
@@ -573,4 +575,64 @@ export async function substitutePlayer(matchId, { oldRegistrationId, newRegistra
     actor,
     details: { match_id: matchId, old_registration_id: oldRegistrationId, new_registration_id: newRegistrationId },
   });
+}
+
+/**
+ * Corrige dados de sorteios antigos numa fase definida como GRUPO ÚNICO
+ * (`division_mode: 'single'`):
+ *  1. remove o marcador de grupo (`m.group`) dos jogos da fase; e
+ *  2. apaga os documentos de grupo órfãos (`tournament_groups`) da fase — o
+ *     motor de sorteio sempre nomeia ao menos um grupo ("Grupo A"), então até
+ *     uma fase de grupo único grava 1 doc; a exibição já o ignora, mas o dado
+ *     limpo evita metadados órfãos.
+ *
+ * Não altera confrontos, escalações nem resultados — só limpa o rótulo de grupo
+ * e os metadados para alinhar os dados ao que a modalidade define (a exibição já
+ * colapsa grupo único, mas o dado limpo evita "Editar grupos" e a coluna de
+ * grupo indevidos).
+ *
+ * Idempotente: sem marcadores obsoletos nem docs de grupo em fase única, não
+ * escreve nada. Serve tanto para modalidades de equipes quanto individuais.
+ *
+ * @param {string} modalityId
+ * @param {object} modality documento da modalidade (usa `stages`)
+ * @param {object} actor
+ * @returns {Promise<{ cleared: number, groupsRemoved: number }>}
+ */
+export async function clearStaleSingleGroupMarkers(modalityId, modality, actor) {
+  const stages = modality?.stages || [];
+
+  const matches = await listAllMatchesForModality(modalityId);
+  const matchIds = matchesWithStaleSingleGroup(matches, stages);
+
+  const groupsSnap = await getDocs(
+    query(collection(db, GROUPS_COL), where('modality_id', '==', modalityId)),
+  );
+  const groupDocs = groupsSnap.docs.map((d) => ({ id: d.id, stage_index: d.data()?.stage_index }));
+  const groupIds = groupDocsInSingleGroupStages(groupDocs, stages);
+
+  if (matchIds.length === 0 && groupIds.length === 0) {
+    return { cleared: 0, groupsRemoved: 0 };
+  }
+
+  const batch = writeBatch(db);
+  matchIds.forEach((id) => batch.update(doc(db, COL, id), { group: null, updated_at: serverTimestamp() }));
+  groupIds.forEach((id) => batch.delete(doc(db, GROUPS_COL, id)));
+  await batch.commit();
+
+  if (matchIds.length > 0) {
+    await createAuditLog({
+      action: 'tournament_group_markers_cleared',
+      actor,
+      details: { modality_id: modalityId, cleared: matchIds.length },
+    });
+  }
+  if (groupIds.length > 0) {
+    await createAuditLog({
+      action: 'tournament_group_metadata_cleared',
+      actor,
+      details: { modality_id: modalityId, groups_removed: groupIds.length },
+    });
+  }
+  return { cleared: matchIds.length, groupsRemoved: groupIds.length };
 }
