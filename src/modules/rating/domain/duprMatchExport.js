@@ -235,10 +235,18 @@ export function normalizeExportMatches({
     if (aUids.length === 0 || bUids.length === 0) return;
     if (aUids.length !== bUids.length || aUids.length > 2) return;
 
+    // Fonte espelhada guarda o placar em `games[]` (confronto de equipes) ou
+    // no par `score_a`/`score_b` (jogo único). Sintetizamos o jogo único, mas
+    // descartamos partidas sem placar (0×0 de W.O./não disputado), igual ao
+    // caminho de torneio (`games.length === 0` → ignora).
     const explicitGames = cleanGames(m.games);
-    const games = explicitGames.length
-      ? explicitGames
-      : [{ a: Math.trunc(Number(m.score_a) || 0), b: Math.trunc(Number(m.score_b) || 0) }];
+    let games = explicitGames;
+    if (!games.length) {
+      const scoreA = Math.trunc(Number(m.score_a) || 0);
+      const scoreB = Math.trunc(Number(m.score_b) || 0);
+      games = scoreA === 0 && scoreB === 0 ? [] : [{ a: scoreA, b: scoreB }];
+    }
+    if (games.length === 0) return;
 
     const source = mapClubEventSource(m.source);
     let eventName = m.event_title || '';

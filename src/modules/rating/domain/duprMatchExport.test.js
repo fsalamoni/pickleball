@@ -222,6 +222,31 @@ describe('normalizeExportMatches', () => {
     });
     expect(out).toHaveLength(0);
   });
+
+  it('exclui club_event_games 0×0 sem games (W.O./não disputado) mesmo com vencedor', () => {
+    const out = normalizeExportMatches({
+      clubEventMatches: [{
+        id: 'cegwo', source: 'club_event_game', event_id: 'ev1',
+        side_a_ids: ['u1'], side_b_ids: ['u3'], winner_side: 'a',
+        score_a: 0, score_b: 0,
+      }],
+      clubEventById,
+    });
+    expect(out).toHaveLength(0);
+  });
+
+  it('mantém jogo 11×0 (placar legítimo com um lado zerado)', () => {
+    const out = normalizeExportMatches({
+      clubEventMatches: [{
+        id: 'ceg110', source: 'club_event_game', event_id: 'ev1',
+        side_a_ids: ['u1'], side_b_ids: ['u3'], winner_side: 'a',
+        score_a: 11, score_b: 0,
+      }],
+      clubEventById,
+    });
+    expect(out).toHaveLength(1);
+    expect(out[0].games).toEqual([{ a: 11, b: 0 }]);
+  });
 });
 
 /* -------------------------------------------------------------------------
