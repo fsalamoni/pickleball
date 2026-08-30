@@ -52,6 +52,14 @@ export async function loadDuprExportData() {
 
   // 2) Referências: inscrições, perfis (espelho + fonte de verdade), torneios,
   //    dias de jogo, eventos, clubes.
+  //    Leitura de coleção inteira (mesmo padrão dos 6 reads abaixo): operação
+  //    admin-only, sob demanda e cacheada (React Query, staleTime 60s). O
+  //    `users` tem a MESMA cardinalidade do `athlete_profiles` já lido aqui, e
+  //    os participantes das partidas são justamente usuários ativos — logo um
+  //    `documentId() in` fragmentado (limite de 30/consulta) não reduziria os
+  //    reads de forma relevante e só adicionaria complexidade. Se algum dia a
+  //    base crescer a ponto de exigir paginação, o redesenho vale para TODAS as
+  //    coleções deste carregador, não só para `users`.
   const [regsSnap, profilesSnap, usersSnap, tournamentsSnap, gameDaysSnap, clubEventsSnap, clubsSnap] = await Promise.all([
     getDocs(collection(db, 'tournament_registrations')),
     getDocs(collection(db, 'athlete_profiles')),
