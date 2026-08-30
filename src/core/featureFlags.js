@@ -21,6 +21,16 @@ export const FEATURE_FLAG = Object.freeze({
   DUPR_OFFICIAL_SYNC: 'dupr_official_sync',
 
   /**
+   * Exportação de partidas para o DUPR (admin da plataforma): uma seção no
+   * painel admin que extrai o histórico de partidas disputadas (torneios +
+   * dias de jogo/eventos espelhados no ranking), com filtros por data, torneio,
+   * clube, dia de jogo, evento, atleta e tipo, e gera um CSV no formato de
+   * upload de clubes do DUPR (27 colunas). Aditivo e somente leitura —
+   * desligada, a seção não existe e nada muda.
+   */
+  DUPR_MATCH_EXPORT: 'dupr_match_export',
+
+  /**
    * Home orientada a ação: a tela inicial ganha um bloco "O que fazer agora"
    * (próximo jogo, convites de dupla pendentes, torneios perto de você) e uma
    * faixa de evolução (streak, XP/nível, próxima conquista e metas). Aditivo —
@@ -93,6 +103,15 @@ export const FEATURE_FLAG_META = Object.freeze({
       'Reservado para a integração OFICIAL com o DUPR (puxar rating por ID e '
       + 'enviar partidas). Exige acesso de parceiro/clube DUPR e backend com '
       + 'credenciais. Sem efeito enquanto a integração não for implementada.',
+  },
+  [FEATURE_FLAG.DUPR_MATCH_EXPORT]: {
+    label: 'DUPR · Exportação de partidas (CSV)',
+    description:
+      'Adiciona ao painel admin uma seção para extrair o histórico de partidas '
+      + 'disputadas (torneios + dias de jogo/eventos espelhados no ranking), com '
+      + 'filtros por data, torneio, clube, dia de jogo, evento, atleta e tipo, e '
+      + 'gerar um CSV no formato de upload de clubes do DUPR. Somente leitura — '
+      + 'desligada, a seção não existe.',
   },
   [FEATURE_FLAG.ACTION_HOME]: {
     label: 'Home orientada a ação',

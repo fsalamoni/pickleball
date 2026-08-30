@@ -67,7 +67,7 @@ import {
 import { ConfirmDialog } from '@/components/ui/confirm-dialog';
 import { ImageUpload } from '@/components/ui/image-upload';
 import { useNavigate, useSearchParams } from 'react-router-dom';
-import { UserCog, Wrench, Settings } from 'lucide-react';
+import { UserCog, Wrench, Settings, FileDown } from 'lucide-react';
 import ProfilesTab from './V2AdminProfiles.jsx';
 import {
   FLAG_GROUPS, FLAG_GROUP_OTHER, FLAG_GROUP_ARENA_V3, bucketAllFlags,
@@ -93,6 +93,7 @@ import {
 } from '@/modules/admin/services/adminService';
 import { listArenas } from '@/modules/arenas/services/arenaService';
 import AdminCatalogTab from '@/v2/components/admin/AdminCatalogTab';
+import AdminDuprExportTab from '@/v2/components/admin/AdminDuprExportTab';
 import {
   useAffiliateLinks,
   useCreateAffiliateLink,
@@ -146,7 +147,19 @@ const SECTIONS = Object.freeze([
   ] },
 ]);
 
-const ALL_TABS = SECTIONS.flatMap((s) => s.tabs);
+/**
+ * Injeta a aba "Exportar DUPR" na seção Governança quando a flag
+ * `dupr_match_export` está ligada. Mantém `SECTIONS` intacto (base) e devolve
+ * uma cópia aditiva — nada muda quando a flag está desligada.
+ */
+function buildSections(duprExportOn) {
+  if (!duprExportOn) return SECTIONS;
+  return SECTIONS.map((section) => (
+    section.id === 'governance'
+      ? { ...section, tabs: [...section.tabs, { id: 'dupr', label: 'Exportar DUPR', icon: FileDown }] }
+      : section
+  ));
+}
 
 const DEFAULT_BRANDING = Object.freeze({
   platform_name: 'PickleRush',
@@ -169,12 +182,17 @@ const DEFAULT_CONTENT = Object.freeze({
 export default function V2AdminConsole() {
   const { isPlatformAdmin } = useAuth();
   const enabled = true;
+  const duprExportOn = useFeatureFlag(FEATURE_FLAG.DUPR_MATCH_EXPORT);
   const [searchParams, setSearchParams] = useSearchParams();
   const navigate = useNavigate();
 
-  // Tab ativa vem de ?tab= (deep link). Default: overview. Validada contra ALL_TABS.
+  // Seções/abas dinâmicas: a aba de exportação DUPR só existe com a flag on.
+  const sections = useMemo(() => buildSections(duprExportOn), [duprExportOn]);
+  const allTabs = useMemo(() => sections.flatMap((s) => s.tabs), [sections]);
+
+  // Tab ativa vem de ?tab= (deep link). Default: overview. Validada contra allTabs.
   const tabFromUrl = searchParams.get('tab');
-  const tab = ALL_TABS.some((t) => t.id === tabFromUrl) ? tabFromUrl : 'overview';
+  const tab = allTabs.some((t) => t.id === tabFromUrl) ? tabFromUrl : 'overview';
   const setTab = (id) => {
     const next = new URLSearchParams(searchParams);
     next.set('tab', id);
@@ -184,7 +202,7 @@ export default function V2AdminConsole() {
   if (!isPlatformAdmin) return <Navigate to="/" replace />;
   if (!enabled) return <Navigate to="/admin/metricas" replace />;
 
-  const activeSection = SECTIONS.find((s) => s.tabs.some((t) => t.id === tab)) || SECTIONS[0];
+  const activeSection = sections.find((s) => s.tabs.some((t) => t.id === tab)) || sections[0];
 
   return (
     <div className="mx-auto max-w-[1200px]">
@@ -202,7 +220,7 @@ export default function V2AdminConsole() {
         }
       />
 
-      <ConsoleTabs tab={tab} setTab={setTab} activeSection={activeSection} />
+      <ConsoleTabs tab={tab} setTab={setTab} activeSection={activeSection} sections={sections} />
 
       <div className="mt-6">
         {tab === 'overview'   && <OverviewTab />}
@@ -216,6 +234,7 @@ export default function V2AdminConsole() {
         {tab === 'content'    && <ContentTab />}
         {tab === 'audit'      && <AuditTab />}
         {tab === 'tools'      && <ToolsTab navigate={navigate} />}
+        {tab === 'dupr'       && duprExportOn && <AdminDuprExportTab />}
       </div>
     </div>
   );
@@ -223,13 +242,13 @@ export default function V2AdminConsole() {
 
 /* ----------------------------- Tabs nav -------------------------------- */
 
-function ConsoleTabs({ tab, setTab, activeSection }) {
+function ConsoleTabs({ tab, setTab, activeSection, sections = SECTIONS }) {
   return (
     <div className="sticky top-2 z-20 -mx-4 mb-2 space-y-2 bg-paper-pure/80 px-4 py-2 backdrop-blur sm:top-3">
       {/* Nível 1: seções amplas */}
       <div className="overflow-x-auto">
         <div className="inline-flex gap-1.5 rounded-full border border-gray-100 bg-paper-pure p-1.5 shadow-sm">
-          {SECTIONS.map((section) => {
+          {sections.map((section) => {
             const Icon = section.icon;
             const active = section.id === activeSection.id;
             return (
