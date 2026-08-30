@@ -27,6 +27,10 @@ Perfil privado/operacional do usuário autenticado.
   Pickleball Rating). String trimada, opcional. Espelhado em
   `athlete_profiles/{uid}.dupr_id` via `buildAthletePublicProfile`.
   Backward-compat: users sem o campo continuam funcionando.
+  A exportação DUPR (`loadDuprExportData` + `buildExportProfileIndex`)
+  lê o `dupr_id` daqui como **fonte de verdade**, com precedência
+  sobre o espelho — assim uma carga manual direto no `users` (sem
+  re-sync do espelho) já entra no CSV.
 - **`quadrant`** (PR #91, Sprint 28): lado da quadra.
   Valores: `'any' | 'left' | 'right'`. Default `'any'`. Espelhado
   em `athlete_profiles/{uid}.quadrant` (ajuda parcerias).

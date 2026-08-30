@@ -3,7 +3,8 @@
  *
  * SOMENTE LEITURA. Carrega as mesmas fontes canônicas de jogos decididos do
  * ranking da plataforma (`tournament_matches` + `club_event_games`) mais os
- * mapas de referência (inscrições, perfis, torneios, dias de jogo, eventos,
+ * mapas de referência (inscrições, perfis — fonte de verdade `users` +
+ * espelho público `athlete_profiles` —, torneios, dias de jogo, eventos,
  * clubes) e delega TODA a lógica ao domínio puro `duprMatchExport`.
  *
  * Não grava nada em nenhuma coleção de partidas — apenas registra uma linha de
@@ -15,14 +16,9 @@ import { db } from '@/core/config/firebase';
 import { logger } from '@/core/lib/logger';
 import { createAuditLog } from '@/core/services/auditService';
 import { MATCH_STATUS } from '@/modules/tournament/domain/constants';
-import { normalizeExportMatches } from '../domain/duprMatchExport.js';
+import { normalizeExportMatches, buildExportProfileIndex } from '../domain/duprMatchExport.js';
 
 const FINISHED_STATUSES = [MATCH_STATUS.FINISHED, MATCH_STATUS.WALKOVER];
-
-/** Nome de exibição preferido do atleta (mesma convenção do ranking). */
-function displayName(profile) {
-  return profile.platform_name || profile.full_name || 'Atleta';
-}
 
 /**
  * Carrega todos os dados necessários para a exportação e devolve as partidas já
@@ -54,10 +50,12 @@ export async function loadDuprExportData() {
   const tournamentMatches = tournamentMatchesSnap.docs.map((d) => ({ id: d.id, ...d.data() }));
   const clubEventMatches = clubEventGamesSnap.docs.map((d) => ({ id: d.id, ...d.data() }));
 
-  // 2) Referências: inscrições, perfis, torneios, dias de jogo, eventos, clubes.
-  const [regsSnap, profilesSnap, tournamentsSnap, gameDaysSnap, clubEventsSnap, clubsSnap] = await Promise.all([
+  // 2) Referências: inscrições, perfis (espelho + fonte de verdade), torneios,
+  //    dias de jogo, eventos, clubes.
+  const [regsSnap, profilesSnap, usersSnap, tournamentsSnap, gameDaysSnap, clubEventsSnap, clubsSnap] = await Promise.all([
     getDocs(collection(db, 'tournament_registrations')),
     getDocs(collection(db, 'athlete_profiles')),
+    getDocs(collection(db, 'users')),
     getDocs(collection(db, 'tournaments')),
     getDocs(collection(db, 'game_days')),
     getDocs(collection(db, 'club_events')),
@@ -70,17 +68,12 @@ export async function loadDuprExportData() {
   const clubEventById = new Map(clubEventsSnap.docs.map((d) => [d.id, { id: d.id, ...d.data() }]));
   const clubById = new Map(clubsSnap.docs.map((d) => [d.id, { id: d.id, ...d.data() }]));
 
-  // Projeção enxuta dos perfis: só o que o CSV/filtros precisam.
-  const profileById = new Map(profilesSnap.docs.map((d) => {
-    const p = d.data();
-    return [d.id, {
-      uid: d.id,
-      name: displayName(p),
-      dupr_id: (p.dupr_id || '').toString().trim(),
-      city: p.city || '',
-      state: p.state || '',
-    }];
-  }));
+  // Índice de perfis do CSV: a FONTE DE VERDADE (`users`) tem PRECEDÊNCIA sobre
+  // o ESPELHO público (`athlete_profiles`). Assim, um `dupr_id` carregado
+  // manualmente no `users` (sem re-sync do espelho) já entra na exportação.
+  const usersById = new Map(usersSnap.docs.map((d) => [d.id, d.data()]));
+  const profilesRawById = new Map(profilesSnap.docs.map((d) => [d.id, d.data()]));
+  const profileById = buildExportProfileIndex(usersById, profilesRawById);
 
   const matches = normalizeExportMatches({
     tournamentMatches,
