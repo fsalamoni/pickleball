@@ -15,6 +15,9 @@ concurrency:
 jobs:
   deploy:
     runs-on: ubuntu-latest
+    # Rede de segurança contra travamento (CLI do Firebase/rede). Um deploy
+    # normal termina bem antes disso; 30min evita run preso por horas.
+    timeout-minutes: 30
     env:
       FIREBASE_PROJECT_ID: ${{ secrets.VITE_FIREBASE_PROJECT_ID }}
       FIRESTORE_DATABASE_ID: pickleball
