@@ -22,8 +22,9 @@ export default function V2AdminProfiles({ embedded = false }) {
   const [uid, setUid] = useState('');
   const [busy, setBusy] = useState(false);
   // Re-sincronização em lote do diretório (espelho ← users).
-  const [resyncBusy, setResyncBusy] = useState(false);
+  const [resyncMode, setResyncMode] = useState(null); // null | 'dry-run' | 'apply'
   const [resyncResult, setResyncResult] = useState(null);
+  const resyncBusy = resyncMode !== null;
   // Moderação de atletas (flag athlete_moderation): busca + ocultar/reexibir.
   const [athleteSearch, setAthleteSearch] = useState('');
   const [togglingUid, setTogglingUid] = useState(null);
@@ -73,7 +74,7 @@ export default function V2AdminProfiles({ embedded = false }) {
   }
 
   async function runResync(dryRun) {
-    setResyncBusy(true);
+    setResyncMode(dryRun ? 'dry-run' : 'apply');
     try {
       const res = await resyncAllAthleteProfilesFromUsers(user, { dryRun });
       if (!res.ok) {
@@ -90,7 +91,7 @@ export default function V2AdminProfiles({ embedded = false }) {
     } catch (err) {
       toast.error(err.message || 'Falha na re-sincronização.');
     } finally {
-      setResyncBusy(false);
+      setResyncMode(null);
     }
   }
 
@@ -300,11 +301,11 @@ export default function V2AdminProfiles({ embedded = false }) {
         <div className="mt-5 flex flex-wrap items-center gap-3">
           <V2Button variant="secondary" onClick={() => runResync(true)} disabled={resyncBusy}>
             <AlertTriangle className="h-4 w-4" />
-            {resyncBusy ? 'Processando…' : 'Simular (dry-run)'}
+            {resyncMode === 'dry-run' ? 'Processando…' : 'Simular (dry-run)'}
           </V2Button>
           <V2Button onClick={() => runResync(false)} disabled={resyncBusy}>
             <RefreshCw className="h-4 w-4" />
-            {resyncBusy ? 'Re-sincronizando…' : 'Re-sincronizar agora'}
+            {resyncMode === 'apply' ? 'Re-sincronizando…' : 'Re-sincronizar agora'}
           </V2Button>
         </div>
 
