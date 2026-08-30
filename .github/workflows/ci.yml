@@ -35,7 +35,7 @@ jobs:
         timeout-minutes: 8
 
       - name: Lint
-        run: npm run lint || true
+        run: npm run lint
 
       - name: Test (Vitest)
         run: npm test
