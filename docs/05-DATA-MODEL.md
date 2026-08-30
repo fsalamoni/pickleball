@@ -31,16 +31,19 @@ Perfil privado/operacional do usuário autenticado.
   lê o `dupr_id` daqui como **fonte de verdade**, com precedência
   sobre o espelho — assim uma carga manual direto no `users` (sem
   re-sync do espelho) já entra no CSV.
-- **`quadrant`** (PR #91, Sprint 28): lado da quadra.
-  Valores: `'any' | 'left' | 'right'`. Default `'any'`. Espelhado
-  em `athlete_profiles/{uid}.quadrant` (ajuda parcerias).
+- **`court_side`** (PR #91, Sprint 28): lado da quadra preferido.
+  Valores: `'any' | 'left' | 'right'` (rótulos: Qualquer lado / Esquerda /
+  Direita). Espelhado em `athlete_profiles/{uid}.court_side` via
+  `buildAthletePublicProfile` (ajuda parcerias e o smart matchmaking).
+  ⚠️ O campo se chama **`court_side`** no código (não `quadrant`); ao carregar
+  "lado da quadra" manualmente no `users`, use `court_side`.
 - **`interests`** (PR #91, Sprint 28): array de strings
   multi-seleção de funcionalidades (ver
   `athletes/domain/profileMeta.js`). Default `[]`. Drive do
   painel personalizado.
 - **`profile_completeness`** (PR #91, Sprint 28): **calculado em
   tempo real** (não armazenado). Score 0-1 com base em
-  campos-chave + `interests.length >= 1` + `quadrant !== 'any'`.
+  campos-chave + `interests.length >= 1` + `court_side` preenchido.
 - Criado/atualizado pelo `FirebaseAuthContext`.
 
 ### `athlete_profiles/{uid}`
@@ -51,10 +54,19 @@ Perfil **público** do diretório de atletas (espelho controlado de `users`).
 - **`dupr_id`** (PR #90, Sprint 27): espelho de `users/{uid}.dupr_id`
   (null quando vazio). Visível no diretório, perfil público,
   inscrições de torneio e meu perfil.
-- **`quadrant`** (PR #91, Sprint 28): espelho de `users/{uid}.quadrant`.
+- **`court_side`** (PR #91, Sprint 28): espelho de `users/{uid}.court_side`.
 - **`interests`** (PR #91, Sprint 28): espelho de `users/{uid}.interests`
   (array).
-- Sincronizado por `athleteService.syncAthleteProfile`.
+- Sincronizado por `athleteService.syncAthleteProfile` (login, salvar perfil,
+  entrar em clube, inscrição). **Edições feitas direto no `users` (ex.: importação
+  manual de `dupr_id`/gênero/lado da quadra) NÃO disparam o sync** e deixam o
+  espelho desatualizado. Duas ferramentas de admin corrigem isso, ambas
+  read-from-`users`/write-to-mirror com `merge` (preservam `hidden`/`restored_*`):
+  - `restoreAthleteProfileFromUserDoc(uid, actor)` — um atleta por vez.
+  - `resyncAllAthleteProfilesFromUsers(actor, { dryRun })` — **em lote**, só para
+    espelhos existentes (nunca cria entradas novas); domínio puro
+    `buildAthleteProfilesResyncPlan`; auditoria `athlete_profiles_resynced`.
+    UI: `/admin/console` → Perfis → "Re-sincronizar diretório (em lote)".
 
 ### `legal_consents/{uid}_{docKey}` (PR #86 + #94)
 Registro auditável de aceites legais (LGPD).

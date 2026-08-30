@@ -1,9 +1,9 @@
 import React, { useMemo, useState } from 'react';
 import { Navigate } from 'react-router-dom';
-import { ArrowRight, RotateCcw, ShieldCheck, UserCog, Wand2, AlertTriangle, CheckCircle2, Eye, EyeOff, Search } from 'lucide-react';
+import { ArrowRight, RotateCcw, RefreshCw, ShieldCheck, UserCog, Wand2, AlertTriangle, CheckCircle2, Eye, EyeOff, Search } from 'lucide-react';
 import { toast } from 'sonner';
 import { useAuth } from '@/core/lib/FirebaseAuthContext';
-import { restoreAthleteProfileFromUserDoc, listAllAthleteProfiles, setAthleteHidden } from '@/modules/athletes/services/athleteService';
+import { restoreAthleteProfileFromUserDoc, resyncAllAthleteProfilesFromUsers, listAllAthleteProfiles, setAthleteHidden } from '@/modules/athletes/services/athleteService';
 import { migrateProvisionalData } from '@/modules/tournament/services/registrationService';
 import { useRecomputeRatings } from '@/modules/rating/hooks/useRating';
 import {
@@ -21,6 +21,9 @@ export default function V2AdminProfiles({ embedded = false }) {
   const [error, setError] = useState(null);
   const [uid, setUid] = useState('');
   const [busy, setBusy] = useState(false);
+  // Re-sincronização em lote do diretório (espelho ← users).
+  const [resyncBusy, setResyncBusy] = useState(false);
+  const [resyncResult, setResyncResult] = useState(null);
   // Moderação de atletas (flag athlete_moderation): busca + ocultar/reexibir.
   const [athleteSearch, setAthleteSearch] = useState('');
   const [togglingUid, setTogglingUid] = useState(null);
@@ -66,6 +69,28 @@ export default function V2AdminProfiles({ embedded = false }) {
       toast.error(err.message);
     } finally {
       setBusy(false);
+    }
+  }
+
+  async function runResync(dryRun) {
+    setResyncBusy(true);
+    try {
+      const res = await resyncAllAthleteProfilesFromUsers(user, { dryRun });
+      if (!res.ok) {
+        toast.error(res.reason || 'Falha na re-sincronização.');
+        return;
+      }
+      setResyncResult({ ...res, mode: dryRun ? 'dry-run' : 'apply' });
+      if (dryRun) {
+        toast.success(`Simulação: ${res.summary.eligible} espelho(s) seriam atualizados.`);
+      } else {
+        toast.success(`${res.written} espelho(s) re-sincronizado(s) a partir do users/{uid}.`);
+        void load();
+      }
+    } catch (err) {
+      toast.error(err.message || 'Falha na re-sincronização.');
+    } finally {
+      setResyncBusy(false);
     }
   }
 
@@ -247,6 +272,67 @@ export default function V2AdminProfiles({ embedded = false }) {
         {error && (
           <div className="mt-4 rounded-[1.25rem] border border-red-200 bg-red-50 p-3 text-sm text-red-800">
             {error}
+          </div>
+        )}
+      </V2Surface>
+
+      <V2Surface className="mb-6 p-6 sm:p-7">
+        <div className="flex items-start gap-3">
+          <div className="flex h-10 w-10 items-center justify-center rounded-2xl bg-ink text-acid">
+            <RefreshCw className="h-4.5 w-4.5" />
+          </div>
+          <div className="flex-1">
+            <h2 className="font-display text-xl font-bold text-ink">Re-sincronizar diretório (em lote)</h2>
+            <p className="mt-1 text-sm leading-6 text-gray-500">
+              Propaga para o espelho público
+              <code className="mx-1 rounded bg-paper px-1.5 py-0.5 text-xs">athlete_profiles/{'{uid}'}</code>
+              os dados inseridos manualmente no
+              <code className="mx-1 rounded bg-paper px-1.5 py-0.5 text-xs">users/{'{uid}'}</code>
+              (ex.: <strong>ID DUPR</strong>, gênero, gênero de jogo e lado da quadra) que ainda
+              não passaram pelo <code className="mx-1 rounded bg-paper px-1.5 py-0.5 text-xs">syncAthleteProfile</code>.
+              Atualiza <strong>apenas espelhos que já existem</strong> (nunca cria entradas novas
+              no diretório) e preserva flags de moderação. A operação fica no
+              <code className="mx-1 rounded bg-paper px-1.5 py-0.5 text-xs">audit_logs</code>.
+            </p>
+          </div>
+        </div>
+
+        <div className="mt-5 flex flex-wrap items-center gap-3">
+          <V2Button variant="secondary" onClick={() => runResync(true)} disabled={resyncBusy}>
+            <AlertTriangle className="h-4 w-4" />
+            {resyncBusy ? 'Processando…' : 'Simular (dry-run)'}
+          </V2Button>
+          <V2Button onClick={() => runResync(false)} disabled={resyncBusy}>
+            <RefreshCw className="h-4 w-4" />
+            {resyncBusy ? 'Re-sincronizando…' : 'Re-sincronizar agora'}
+          </V2Button>
+        </div>
+
+        {resyncResult && (
+          <div className="mt-5 rounded-[1.25rem] border border-gray-200 bg-gray-50 p-4 text-sm">
+            <div className="font-bold text-ink">
+              {resyncResult.mode === 'dry-run' ? 'Simulação' : 'Resultado'} — diretório de atletas
+            </div>
+            <div className="mt-2 grid gap-2 sm:grid-cols-3">
+              <div><span className="text-gray-500">Usuários:</span> {resyncResult.scanned}</div>
+              <div><span className="text-gray-500">Espelhos existentes:</span> {resyncResult.mirrors}</div>
+              <div>
+                <span className="text-gray-500">{resyncResult.mode === 'dry-run' ? 'A atualizar:' : 'Atualizados:'}</span>{' '}
+                {resyncResult.mode === 'dry-run' ? resyncResult.summary.eligible : resyncResult.written}
+              </div>
+            </div>
+            <div className="mt-2 grid gap-2 text-xs text-gray-500 sm:grid-cols-4">
+              <div>Com DUPR: <span className="font-semibold text-ink">{resyncResult.summary.withDupr}</span></div>
+              <div>Com gênero: <span className="font-semibold text-ink">{resyncResult.summary.withGender}</span></div>
+              <div>Com gênero de jogo: <span className="font-semibold text-ink">{resyncResult.summary.withCompetitionGender}</span></div>
+              <div>Com lado da quadra: <span className="font-semibold text-ink">{resyncResult.summary.withCourtSide}</span></div>
+            </div>
+            {resyncResult.mode === 'dry-run' && (
+              <div className="mt-3 flex items-center gap-1.5 text-amber-800">
+                <ArrowRight className="h-3.5 w-3.5" />
+                Simulação: nenhum dado foi gravado. Clique em “Re-sincronizar agora” para aplicar.
+              </div>
+            )}
           </div>
         )}
       </V2Surface>
