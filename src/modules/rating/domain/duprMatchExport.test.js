@@ -5,6 +5,7 @@ import {
   DUPR_SCORE_TYPE,
   DUPR_EXPORT_SOURCE,
   formatDuprDate,
+  buildExportProfileIndex,
   normalizeExportMatches,
   filterExportMatches,
   buildDuprRow,
@@ -468,5 +469,123 @@ describe('duprCsvFilename', () => {
   it('inclui o intervalo de datas quando informado', () => {
     expect(duprCsvFilename({ dateFrom: '2025-01-01', dateTo: '2025-01-31' })).toBe('dupr-partidas-20250101-20250131.csv');
     expect(duprCsvFilename({})).toBe('dupr-partidas.csv');
+  });
+});
+
+/* -------------------------------------------------------------------------
+ * buildExportProfileIndex — precedência users (fonte de verdade) > espelho
+ * ------------------------------------------------------------------------- */
+
+describe('buildExportProfileIndex', () => {
+  it('usa o dupr_id do users quando o espelho athlete_profiles não tem (bug relatado)', () => {
+    // Cenário do problema: admin inseriu o dupr_id direto no `users`, mas o
+    // espelho `athlete_profiles` (que a exportação lia antes) ficou sem ele.
+    const users = new Map([['u1', { platform_name: 'Jane Doe', dupr_id: 'AB12C3' }]]);
+    const profiles = new Map([['u1', { platform_name: 'Jane Doe' }]]); // sem dupr_id
+    const index = buildExportProfileIndex(users, profiles);
+    expect(index.get('u1')).toEqual({
+      uid: 'u1', name: 'Jane Doe', dupr_id: 'AB12C3', city: '', state: '',
+    });
+  });
+
+  it('cai no dupr_id do espelho quando o users não tem', () => {
+    const users = new Map([['u1', { platform_name: 'Jane Doe' }]]);
+    const profiles = new Map([['u1', { platform_name: 'Jane Doe', dupr_id: 'DE45F6' }]]);
+    expect(buildExportProfileIndex(users, profiles).get('u1').dupr_id).toBe('DE45F6');
+  });
+
+  it('dá precedência ao users quando ambos têm dupr_id', () => {
+    const users = new Map([['u1', { dupr_id: 'FROM-USERS' }]]);
+    const profiles = new Map([['u1', { dupr_id: 'FROM-MIRROR' }]]);
+    expect(buildExportProfileIndex(users, profiles).get('u1').dupr_id).toBe('FROM-USERS');
+  });
+
+  it('inclui atleta presente só no users (sem espelho ainda)', () => {
+    const users = new Map([['uNovo', { platform_name: 'Novo Atleta', dupr_id: 'XY99Z9' }]]);
+    const index = buildExportProfileIndex(users, new Map());
+    expect(index.has('uNovo')).toBe(true);
+    expect(index.get('uNovo').dupr_id).toBe('XY99Z9');
+    expect(index.get('uNovo').name).toBe('Novo Atleta');
+  });
+
+  it('inclui atleta presente só no espelho (sem doc em users)', () => {
+    const profiles = new Map([['uEspelho', { platform_name: 'Só Espelho', dupr_id: 'MN33O3' }]]);
+    const index = buildExportProfileIndex(new Map(), profiles);
+    expect(index.get('uEspelho').dupr_id).toBe('MN33O3');
+    expect(index.get('uEspelho').name).toBe('Só Espelho');
+  });
+
+  it('faz trim do dupr_id e ignora valores em branco/nulos', () => {
+    const users = new Map([
+      ['u1', { dupr_id: '  PAD12  ' }],
+      ['u2', { dupr_id: '   ' }], // só espaços → cai no espelho
+      ['u3', { dupr_id: null }], // nulo → cai no espelho
+    ]);
+    const profiles = new Map([
+      ['u2', { dupr_id: 'MIRROR2' }],
+      ['u3', { dupr_id: 'MIRROR3' }],
+    ]);
+    const index = buildExportProfileIndex(users, profiles);
+    expect(index.get('u1').dupr_id).toBe('PAD12');
+    expect(index.get('u2').dupr_id).toBe('MIRROR2');
+    expect(index.get('u3').dupr_id).toBe('MIRROR3');
+  });
+
+  it('resolve o nome na ordem users.platform_name → users.full_name → espelho → "Atleta"', () => {
+    const index = buildExportProfileIndex(
+      new Map([
+        ['uA', { platform_name: 'Apelido', full_name: 'Nome Completo' }],
+        ['uB', { full_name: 'Só Completo' }],
+        ['uC', {}],
+      ]),
+      new Map([
+        ['uC', { platform_name: 'Nome do Espelho' }],
+        ['uD', { full_name: 'Espelho D' }],
+      ]),
+    );
+    expect(index.get('uA').name).toBe('Apelido');
+    expect(index.get('uB').name).toBe('Só Completo');
+    expect(index.get('uC').name).toBe('Nome do Espelho');
+    expect(index.get('uD').name).toBe('Espelho D');
+  });
+
+  it('devolve "Atleta" quando nenhum nome está disponível', () => {
+    const index = buildExportProfileIndex(new Map([['uX', { dupr_id: 'Z1' }]]), new Map());
+    expect(index.get('uX').name).toBe('Atleta');
+  });
+
+  it('aceita objetos simples { [uid]: data } além de Map', () => {
+    const index = buildExportProfileIndex(
+      { u1: { dupr_id: 'OBJ1' } },
+      { u1: { dupr_id: 'MIR1' }, u2: { dupr_id: 'MIR2' } },
+    );
+    expect(index.get('u1').dupr_id).toBe('OBJ1');
+    expect(index.get('u2').dupr_id).toBe('MIR2');
+  });
+
+  it('é tolerante a argumentos ausentes/nulos', () => {
+    expect(buildExportProfileIndex().size).toBe(0);
+    expect(buildExportProfileIndex(null, undefined).size).toBe(0);
+  });
+
+  it('a saída alimenta buildDuprRow marcando a partida como pronta', () => {
+    // Integração leve: o índice montado a partir do users deixa a linha "pronta".
+    const profileIndex = buildExportProfileIndex(
+      new Map([
+        ['u1', { platform_name: 'Jane', dupr_id: 'AB12C3' }],
+        ['u2', { platform_name: 'Alex', dupr_id: 'DE45F6' }],
+      ]),
+      new Map(), // espelho vazio (não sincronizado)
+    );
+    const match = {
+      match_type: DUPR_MATCH_TYPE.SINGLES,
+      event_name: 'Torneio', date: '2025-01-10', location: '',
+      side_a_uids: ['u1'], side_b_uids: ['u2'], games: [{ a: 11, b: 7 }], at: 1,
+    };
+    const built = buildDuprRow(match, profileIndex);
+    expect(built.ready).toBe(true);
+    expect(built.missing).toEqual([]);
+    expect(built.row.playerA1DuprId).toBe('AB12C3');
+    expect(built.row.playerB1DuprId).toBe('DE45F6');
   });
 });

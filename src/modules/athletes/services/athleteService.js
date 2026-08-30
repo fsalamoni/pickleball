@@ -15,6 +15,7 @@ import {
   getDocs,
   setDoc,
   deleteDoc,
+  writeBatch,
   query,
   where,
   serverTimestamp,
@@ -24,6 +25,7 @@ import { logger } from '@/core/lib/logger';
 import { createAuditLog } from '@/core/services/auditService';
 import { ATHLETE_DIRECTORY_COLLECTION } from '../domain/constants.js';
 import { buildAthletePublicProfile, filterEmptyStringFields } from '../domain/publicProfile.js';
+import { groupClubsByUser, buildAthleteProfilesResyncPlan } from '../domain/directoryResync.js';
 
 const CLUB_MEMBERS_COLLECTION = 'club_members';
 
@@ -123,6 +125,83 @@ export async function restoreAthleteProfileFromUserDoc(uid, actor) {
     logger.warn('Audit log não pôde ser gravado em restoreAthleteProfileFromUserDoc:', err);
   }
   return { ok: true, uid, fieldsWritten: Object.keys(payload).length };
+}
+
+/**
+ * Re-sincroniza EM LOTE o espelho público `athlete_profiles/{uid}` a partir da
+ * fonte de verdade `users/{uid}`. Serve para propagar dados inseridos
+ * manualmente no `users` (ex.: `dupr_id`, `gender`, `competition_gender`,
+ * `court_side`) que não passaram por `syncAthleteProfile` e, por isso, não
+ * apareciam no diretório.
+ *
+ * Segurança/robustez:
+ * - Só atualiza espelhos que JÁ EXISTEM (interseção `users` ∩ `athlete_profiles`),
+ *   então nunca cria entradas novas no diretório.
+ * - Escreve com `{ merge: true }`, preservando campos fora da projeção pública
+ *   (ex.: `hidden`, `hidden_at`, `restored_at`, `restored_by`).
+ * - `filterEmptyStringFields` evita sobrescrever valores válidos (ex.: foto) com
+ *   string vazia — mesma proteção do `syncAthleteProfile`.
+ * - `dryRun` apenas conta o que seria feito, sem escrever nada.
+ * - Um único `audit_log` de resumo (não um por atleta).
+ *
+ * Permissão: apenas `platform_admin` (rule de `athlete_profiles/{uid}` já
+ * inclui `isPlatformAdmin()`).
+ *
+ * @param {object} actor
+ * @param {{ dryRun?: boolean }} [options]
+ * @returns {Promise<{ ok: true, dryRun: boolean, scanned: number, mirrors: number, written: number, summary: object } | { ok: false, reason: string }>}
+ */
+export async function resyncAllAthleteProfilesFromUsers(actor, options = {}) {
+  if (!db) return { ok: false, reason: 'Firestore indisponível.' };
+  if (!actor?.uid) return { ok: false, reason: 'Usuário não autenticado.' };
+  const dryRun = options.dryRun === true;
+
+  // Leituras de coleção (fonte de verdade, espelhos existentes e vínculos de
+  // clube). Uma leitura de `club_members` substitui N consultas por usuário.
+  const [usersSnap, mirrorsSnap, membersSnap] = await Promise.all([
+    getDocs(collection(db, 'users')),
+    getDocs(collection(db, ATHLETE_DIRECTORY_COLLECTION)),
+    getDocs(collection(db, CLUB_MEMBERS_COLLECTION)),
+  ]);
+
+  const users = usersSnap.docs.map((d) => ({ uid: d.id, ...d.data() }));
+  const mirrorIds = new Set(mirrorsSnap.docs.map((d) => d.id));
+  const clubsByUser = groupClubsByUser(membersSnap.docs.map((d) => d.data()));
+
+  const { writes, summary } = buildAthleteProfilesResyncPlan({ users, mirrorIds, clubsByUser });
+
+  if (dryRun) {
+    return { ok: true, dryRun: true, scanned: users.length, mirrors: mirrorIds.size, written: 0, summary };
+  }
+
+  // Escrita em lotes (writeBatch aceita até 500 ops; usamos 400 por segurança).
+  const CHUNK = 400;
+  let written = 0;
+  for (let i = 0; i < writes.length; i += CHUNK) {
+    const slice = writes.slice(i, i + CHUNK);
+    const batch = writeBatch(db);
+    for (const { uid, payload } of slice) {
+      batch.set(
+        doc(db, ATHLETE_DIRECTORY_COLLECTION, uid),
+        { ...payload, updated_at: serverTimestamp() },
+        { merge: true },
+      );
+    }
+    await batch.commit();
+    written += slice.length;
+  }
+
+  try {
+    await createAuditLog({
+      action: 'athlete_profiles_resynced',
+      actor,
+      details: { scanned: users.length, mirrors: mirrorIds.size, written, ...summary },
+    });
+  } catch (err) {
+    logger.warn('Audit log não pôde ser gravado em resyncAllAthleteProfilesFromUsers:', err);
+  }
+
+  return { ok: true, dryRun: false, scanned: users.length, mirrors: mirrorIds.size, written, summary };
 }
 
 /** Lista atletas visíveis no diretório (somente quem optou por aparecer). */

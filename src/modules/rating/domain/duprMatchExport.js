@@ -347,6 +347,63 @@ export function filterExportMatches(matches = [], filters = {}) {
   });
 }
 
+/* --------------------------- índice de perfis ----------------------------- */
+
+/** Primeiro valor não-vazio (após `trim`) de uma lista; senão, string vazia. */
+function firstNonEmpty(...values) {
+  for (const v of values) {
+    const s = v === null || v === undefined ? '' : String(v).trim();
+    if (s) return s;
+  }
+  return '';
+}
+
+/** Converte um `Map` ou objeto simples em `Map`; `null`/`undefined` vira `Map` vazio. */
+function toEntryMap(source) {
+  if (source instanceof Map) return source;
+  if (source && typeof source === 'object') return new Map(Object.entries(source));
+  return new Map();
+}
+
+/**
+ * Constrói o índice de perfis (uid → `{ uid, name, dupr_id, city, state }`) que
+ * preenche os jogadores nas linhas do CSV do DUPR.
+ *
+ * Precedência: a FONTE DE VERDADE operacional (`users/{uid}`) tem prioridade
+ * sobre o ESPELHO público (`athlete_profiles/{uid}`). Assim, um `dupr_id`
+ * inserido/corrigido direto no `users` (ex.: carga manual pelo admin no banco)
+ * é usado na exportação MESMO que o espelho ainda não tenha sido
+ * ressincronizado por `syncAthleteProfile`. Para cada campo, vale o primeiro
+ * valor não-vazio na ordem `users` → `athlete_profiles`.
+ *
+ * A UNIÃO das chaves é considerada: um atleta presente só no `users` (sem
+ * espelho) também entra no índice. Aceita `Map<uid,data>` ou objeto simples
+ * `{ [uid]: data }` em ambos os argumentos. Sem I/O.
+ *
+ * @param {Map<string,object>|Object<string,object>} [usersById]    dados crus de `users`
+ * @param {Map<string,object>|Object<string,object>} [profilesById] dados crus de `athlete_profiles`
+ * @returns {Map<string,{uid:string,name:string,dupr_id:string,city:string,state:string}>}
+ */
+export function buildExportProfileIndex(usersById, profilesById) {
+  const users = toEntryMap(usersById);
+  const profiles = toEntryMap(profilesById);
+  const uids = new Set([...users.keys(), ...profiles.keys()]);
+
+  const index = new Map();
+  uids.forEach((uid) => {
+    const u = users.get(uid) || {};
+    const p = profiles.get(uid) || {};
+    index.set(uid, {
+      uid,
+      name: firstNonEmpty(u.platform_name, u.full_name, p.platform_name, p.full_name) || 'Atleta',
+      dupr_id: firstNonEmpty(u.dupr_id, p.dupr_id),
+      city: firstNonEmpty(u.city, p.city),
+      state: firstNonEmpty(u.state, p.state),
+    });
+  });
+  return index;
+}
+
 /* ------------------------------ linhas do DUPR ---------------------------- */
 
 function playerFields(uid, profileById) {
