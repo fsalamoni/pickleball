@@ -12,7 +12,7 @@
 
 - **O que é**: PWA para pickleball amador BR — torneios, clubes, arenas, professores, comunidade.
 - **Stack**: React 18 + Vite, Tailwind + shadcn/ui, Firebase (Firestore db `pickleball`), React Query, Vitest, Playwright.
-- **Estado**: 21 módulos, 72 V2 pages, 103 coleções Firestore (+push_tokens), **102 índices compostos**, **6 feature flags** (137 ativas viraram código; `dupr_official_sync`, `dupr_match_export` + 4 de engajamento default OFF: `action_home`, `smart_matchmaking`, `post_game_flow`, `push_notifications`), **1800 testes verdes**. Legado V1 removido (`src/modules/*/pages`, `ProfileCompletionModal`, `FeatureFlagGuard`).
+- **Estado**: 20 módulos (rating virou oficial com domain/services/hooks/components), 71 V2 pages, 103 coleções Firestore (+push_tokens, +player_skill_ratings), **102 índices compostos**, **14 feature flags default OFF** (137 ativas viraram código em produção), **1800 testes verdes**, **9 Cloud Functions**. Ondas recentes: **DUPR-style rating** (escala 2.0-8.0, motor placar + confiabilidade), **engajamento** (action_home, smart_matchmaking, post_game_flow, push_notifications), **tournament equipes** (sortear → jogar → ranking), **arena mercado** (catálogo + gestão), **game day Play** (open play, visões separadas, sorteio aditivo). Legado V1 removido.
 - **Live**: https://picklerush.web.app (Firebase site `picklerush`; `pickletour` é redirect-only).
 - **Deploy**: push em `main` → GitHub Actions → Firebase Hosting + Rules + Cloud Function.
 - **Repositório**: https://github.com/fsalamoni/pickleball
@@ -324,52 +324,69 @@ chore(deps): bump firebase to 12.x
 
 ---
 
-## 10. Métricas atuais (snapshot 2026-07-31, 01:00 GMT-3)
+## 10. Métricas atuais (snapshot 2026-08-31, 11:05 GMT-3)
 
-> Última atualização: 2026-07-31, 01:00 GMT-3, após 4 PRs novos
-> mergeados em main (#91, #92, #93, #94) — Sprints 28 a 31:
+> Última atualização: 2026-08-31, 11:05 GMT-3, após **41 PRs
+> novos** mergeados em main (#95 a #135) — Sprints 32 a 50+.
+> Detalhes em `docs/08-ARENA-ROADMAP.md` (Seções 34-50) e
+> memory topic `picklerush-sync-2026-08.md`.
 >
-> - **#91 (Sprint 28)**: Perfil completo. Campo "Lado da quadra"
->   (qualquer/esquerda/direita) + nova seção "Meus interesses na
->   plataforma" (multi-seleção de funcionalidades: organizar
->   torneios, dar aulas, gerir arena, etc.). Cadastro completo
->   obrigatório. Painel personalizado por papel. Espelhado em
->   `athlete_profiles` via `profileMeta`.
-> - **#92 (Sprint 29)**: Onboarding — passo de nível com escolha
->   da lista (USAP) com explicação clara, além de "Fazer o teste
->   de nivelamento". Reusa `LEVEL_TABLE`/`LEVEL_OPTIONS`. Opção
->   "Concluir sem informar nível" permanece (nivelamento opcional).
-> - **#93 (Sprint 30)**: Nav — unificar "Termos e Documentos"
->   (era link em Perfil) e mover "Meu desempenho" para Perfil
->   (era standalone). Limpa hubs duplicados.
-> - **#94 (Sprint 31)**: Onboarding — destravar 1º acesso
->   (cadastro mínimo viável sem travar) + "Política de Uso" na
->   central de documentos (vínculo entre o que o user aceitou
->   no onboarding e a central legal).
+> **Destaques por onda**:
 >
-> Resumo das últimas 12 sprints:
-> - **Wave C.6 (Sprint 20)**: `sideToUids` resolve `p.id → user_id`.
-> - **Wave C.6.1 (Sprint 21)**: índices compostos.
-> - **#85-#88 (Sprints 22-25)**: 2 novos módulos (`games`, `legal`).
-> - **#89 (Sprint 26)**: editar dia de jogo.
-> - **#90 (Sprint 27)**: ID DUPR no perfil.
-> - **#91-#94 (Sprints 28-31)**: perfil completo (lado + interesses),
->   onboarding (nível + destravar), nav (unificar termos, mover
->   desempenho).
+> - **Onda G — DUPR / Rating estilo DUPR** (#128-#133, Sprints 38-43):
+>   ranking próprio estilo DUPR (escala 2.0-8.0) em aba separada,
+>   motor baseado em placar + confiabilidade, evolução por jogo,
+>   redesign visual (#133). Flag `skill_rating_dupr` (default OFF).
+>   ELO existente permanece intacto.
+> - **Onda H — Engajamento (4 flags)** (#134, Sprints 44+):
+>   `action_home` (Home orientada a ação), `smart_matchmaking`
+>   (score 0-100 em Encontrar jogadores), `post_game_flow`
+>   (Jogar de novo + Ver minha evolução), `push_notifications`
+>   (PWA push com FCM + SW dedicado).
+> - **Onda I — Torneio por equipes** (#105-#112, Sprints 32-37):
+>   modalidade Equipes (sortear, jogar, ver ranking, etapas),
+>   resultados espelhados em `club_event_games` com
+>   `source='team_confrontation'`. Flag `team_tournaments`.
+> - **Onda J — Arena Mercado** (#95-#100, Sprints 32-36):
+>   catálogo padrão de produtos, mercado unificado, vendas
+>   só do que está/esteve em estoque, gestão de catálogo.
+> - **Onda K — Game Day Play** (#101-#109): formato Play
+>   (open play) com organizador/participante separados,
+>   sorteio aditivo, ranking do dia, visões separadas.
+> - **Onda L — Admin + Moderation** (#110, #120): moderação
+>   de atletas (ocultar contas falsas/teste), DUPR match CSV
+>   export, bulk re-sync do diretório.
+> - **Onda M — Coach** (#133-#135): descoberta aprimorada
+>   (filtros + ordenação), alunos ligados à evolução, semente
+>   de rating por nível validado.
+> - **Onda N — Arena Ops** (#136+): painel "Como foi sua
+>   semana" (arena_ops_kpis), preço dinâmico, checkout unificado,
+>   CRM de membros (4 flags).
+> - **Onda O — Refactor** (lotes 1-2): conversão de flags em
+>   código (lotes 1 e 2) + enxugar catálogo para a única
+>   flag remanescente. **137 feature flags viraram código**
+>   (default ON em produção). Apenas 6 flags novas default OFF.
+> - **Onda P — Tournament UX** (#113-#125): console de gestão
+>   dedicado, "Meus torneios" no Perfil, inscrições/sorteio
+>   colapsáveis, cards que iniciam fechados, fase de grupos
+>   com múltiplos grupos, gêneros respeitados, visão pública
+>   + impressão de grupos.
+> - **Onda Q — V1 Legacy Cleanup** (`0f824b0`): remoção de
+>   páginas V1 mortas em `src/modules/*/pages`.
 
 | Métrica | Valor | Delta do início do agente |
 |---|---|---|
 | **Testes Vitest** | 1800 passing (+30 exportação DUPR; +68 equipes) | +1392 (era 408) |
 | **Lint errors** | 0 | era 30+ |
-| **Módulos** | 21 (+games, +legal) | +4 (coaches, circuits, games, legal) |
-| **V2 pages** | 72 (+V2Legal, V2LegalDocument, V2GameDays) | +48 |
-| **V2 components (src/v2/components/)** | +4 pastas (coach, arenas, games, legal, performance) | — |
-| **Coleções Firestore** | 102 (+legal_consents, +game_days) | +63 |
-| **Índices compostos Firestore** | 4 (Wave C.6.1) | +4 |
-| **Feature flags** | 6 (`dupr_official_sync`, `dupr_match_export` + 4 de engajamento default OFF) | −125 |
-| **Cloud Functions** | 8 (sem mudança) | +8 |
-| **PRs mergeados** | 57 totais (Sprints 0-31) | — |
-| **Origin/main** | `b54d81f` (PR #94) | — |
+| **Módulos** | 20 (`games` e `legal` saíram como `src/modules/` mas continuam como pastas oficiais — **rating virou módulo oficial** com domain/services/hooks/components) | +4 (coaches, circuits, games, legal) |
+| **V2 pages** | 71 (V2TournamentAdmin + V2MyTournamentsAdmin) | +47 |
+| **V2 components (src/v2/components/)** | **16 pastas** (+home, +rating, +settings, +tournament cresceu muito, +admin) | — |
+| **Coleções Firestore** | **103** (+push_tokens, +skill_rating_history, +player_skill_ratings, +audit_logs, +tournament_*) | +64 |
+| **Índices compostos Firestore** | 102 (28 collectionGroup) | +98 |
+| **Feature flags ativas** | **14 default OFF** (137 viraram código) | −117 |
+| **Cloud Functions** | **9** (+ `pushOnNotificationCreate`) | +9 |
+| **PRs mergeados** | **96 totais** (Sprints 0-50+) | — |
+| **Origin/main** | `106bd55` (PR #110) | — |
 | **Bundle deployed** | (deploy em curso) | — |
 | **Live URL** | https://picklerush.web.app | — |
 

@@ -574,6 +574,43 @@ Rascunho de wizard de criação em etapas. Limpo ao publicar.
 - `internal_ranking_config` (opcional) — para `club_internal_ranking` (Onda 8).
 - `invite_link` (opcional) — token de convite compartilhável (Onda 8b).
 
+## Rating estilo DUPR (Onda G — Sprints 38-43)
+
+### `player_skill_ratings/{userId_format}` (NOVO Onda G)
+Rating estilo DUPR (escala 2.000-8.000), **independente** do
+ELO. Flag `skill_rating_dupr` (default OFF). Coleção
+**separada** do `player_ratings` (ELO).
+- `user_id`, `format` (`'singles' | 'doubles'`).
+- `rating: number` (2.0-8.0).
+- `games_played: number`.
+- `reliability: number` (0-1) — cresce com jogos.
+- `provisional: bool` — true enquanto reliability < threshold.
+- `seed_level: number` — USAP usado como semente (ex: 2.5 → 2.500).
+- `updated_at: timestamp`.
+- **Regras**: leitura pública; escrita só `isPlatformAdmin()` ou
+  Cloud Function com service account.
+- **Motor** (`duprScale.js`, testado): baseado no placar
+  (não só resultado), K de ~0.30 (novato) a ~0.05 (maduro),
+  ignora W.O. Replay determinístico.
+- **NÃO oficial**: rotulado claramente como aproximação,
+  não usa algoritmo proprietário do DUPR.
+
+### `skill_rating_history/{id}` (NOVO Onda G)
+Evolução do rating DUPR ao longo do tempo (mesmo formato
+do `rating_history` ELO).
+- `user_id`, `format`, `rating`, `delta`, `opponent_id`,
+  `match_id`, `created_at`.
+- **Espelhado** do `player_skill_ratings` a cada
+  `recomputeDuprRatings`.
+- **Regras**: leitura pública; escrita admin.
+
+### Coleção: `audit_logs/{id}` (NOVO PR #120)
+Registro de ações admin (moderação, etc.).
+- `actor_id`, `action` (`'athlete_hide' | 'athlete_unhide' | ...`),
+  `target_id`, `payload`, `created_at`.
+- **Regras**: leitura só `isPlatformAdmin()`; escrita
+  via service account.
+
 ## Cross-cutting (transversal)
 
 ### `users/{uid}.notification_prefs: object` (Onda 9b)
@@ -585,6 +622,35 @@ LGPD: request de export de dados (`{requested_at, status}`).
 
 ### `user_data_exports/{id}` (Onda 9)
 Histórico de exports gerados. `user_id`, `data_url`, `expires_at`.
+
+### `push_tokens/{uid}` (NOVO Onda H — `push_notifications`)
+Tokens FCM por usuário. Cada user gerencia os próprios.
+- `token: string` (FCM token).
+- `created_at`, `updated_at`, `platform`, `user_agent`.
+- **Regras**: cada user lê/escreve **só os próprios**
+  (`request.auth.uid == uid`). Cloud Function
+  `pushOnNotificationCreate` lê para enviar push.
+- **Limpeza**: tokens inválidos são removidos pela CF.
+
+### `tournament_team_registrations/{id}` (NOVO Onda I — `team_tournaments`)
+Inscrição de equipe em torneio.
+- `tournament_id`, `modality_id`, `team_name`,
+  `captain_id`, `created_at`.
+- `lineup: array` (referência a `tournament_team_lineups`).
+
+### `tournament_team_lineups/{id}` (NOVO Onda I)
+Elenco de uma equipe.
+- `team_id`, `athlete_ids[]` (com `user_id`, `gender`),
+  `created_at`, `updated_at`.
+
+### `tournament_team_confrontations/{id}` (NOVO Onda I)
+Confronto equipe × equipe.
+- `tournament_id`, `modality_id`, `phase_id`, `round`,
+  `team_a_id`, `team_b_id`, `winner_team_id`, `score_a`,
+  `score_b`, `status`, `stages[]` (cada etapa decidida).
+- Cada `stage` espelha em `club_event_games` com
+  `kind=singles/doubles` e `source='team_confrontation'`
+  (entra no ELO + DUPR individual).
 
 ## Coleções Arena V3 (sempre atrás de sub-flags `ARENA_MODULE_*`)
 

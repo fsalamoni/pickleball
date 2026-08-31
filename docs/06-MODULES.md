@@ -494,6 +494,16 @@ com flags agrupadas por assunto (`core` / `nav` / `athlete` / `tournaments`
 - **Navegação**: em "Jogar" a aba "Meus jogos" passou a ser sub-aba de "Meu
   desempenho" (abas "Estatística" + "Meus jogos"); no lugar dela entra "Dia de
   jogo".
+- **Formato Play (open play)** (NOVO Onda F, PRs #101-#104): fila
+  de espera + substituição + próximo da fila. Visões separadas
+  organizador/participante (`AthletePlayOrganizer.jsx` +
+  `AthletePlayParticipant.jsx`). Sorteio aditivo (não destrutivo)
+  + ranking do dia.
+- **Play — polimento** (PRs #105-#109): sorteio Americano ciente
+  do histórico, `pickSwapReplacement` (substituído não volta à
+  mesma partida), `normalizeStatsFormat` (formato do jogo, não
+  da inscrição — americano = duplas), parceiro na rotação
+  do Americano.
 
 ## legal/ — documentos legais e consentimento
 
@@ -537,17 +547,45 @@ Curvas de progressão, níveis e metas.
 - **hooks**, **domain** e **services** próprios; sem página dedicada (reusado
   por `performance/` e `profile/`).
 
-## rating/ — ranking nacional
+## rating/ — ranking nacional + DUPR + matchmaking
 
-Ranking nacional, ranking de duplas (Onda 3), head-to-head, busca de
-jogadores.
+Ranking nacional, ranking de duplas (Onda 3), head-to-head, matchmaking,
+**ranking estilo DUPR** (escala 2.0-8.0, Onda G Sprints 38-43).
 
-- **V2 (ativo)**: `V2Ranking`, `V2DoublesRanking` (Onda 3), `V2FindPlayers`.
-- **V1 (legado)**: `NationalRanking`, `FindPlayers`.
-- **domain (puro, testado)**: `headToHead`, `doublesRanking` (Onda 3).
-- Materialização no client + gatilho Cloud Function
-  `recomputeRankingOnTournamentChange` para manter o ranking nacional
-  atualizado quando torneios públicos terminam/reabrem.
+- **V2 (ativo)**: `V2Ranking` (com aba "Nivel 2.0-8.0" gated por
+  `skill_rating_dupr`), `V2DoublesRanking`, `V2FindPlayers`
+  (com score de matchmaking gated por `smart_matchmaking`).
+- **Componentes de rating (NOVO)**: `V2DuprRankingView`,
+  `V2DuprEvolution`, `V2DuprRatingBadge`, `HeadToHeadCard`,
+  `RatingSparkline` (em `v2/components/rating/`).
+- **domain (puro, testado)**:
+  - `headToHead` (legacy).
+  - `doublesRanking` (Onda 3).
+  - `matchmaking` (NOVO Onda H) — score 0-100 com
+    proximidade de rating, complementaridade de lado,
+    cidade, interesses.
+  - **`elo`** (testado) — ELO original (intacto).
+  - **`duprScale`** (NOVO Onda G) — escala 2.0-8.0 com
+    confiabilidade, baseado no placar, simples/duplas
+    separados, replay determinístico.
+  - **`gameLog`** (NOVO Onda G) — normalizador compartilhado
+    de jogos (espelha fonte do ELO, sem tocá-lo).
+  - **`coachSeed`** (NOVO Onda M) — semente de rating por
+    nível validado.
+  - **`ratingSignature`** (NOVO) — assinatura de rating
+    (replay determinístico).
+  - **`duprMatchExport`** (NOVO) — gera CSV para DUPR
+    (exclui `0×0`, resolve `dupr_id` de `users`).
+- **services**: `ratingService`, `headToHeadService`,
+  `duprRatingService`, `duprOfficial` (stub sem rede),
+  `duprExportService`.
+- **hooks**: `useRating`, `useHeadToHead`, `useDuprRating`,
+  `useDuprExport`.
+- **Materialização no client + Cloud Function
+  `recomputeRankingOnTournamentChange`**.
+- **Coleções (NOVAS)**: `player_skill_ratings/{userId_format}`
+  (rating DUPR), `skill_rating_history/{id}` (evolução).
+- **ELO intacto**: nada do ELO foi tocado. Tudo aditivo.
 
 ## sharing/ — compartilhamento e certificados
 
@@ -599,9 +637,87 @@ Página `/configuracoes` (V2Settings) com:
 - Tema (placeholder)
 - Conta (dados pessoais, nível)
 - **LGPD data export** (Onda 9) — gera JSON com tudo do user
+- **Push Notifications** (NOVO Onda H) — opt-in/opt-out
+  via `V2PushCard`. Gated por `push_notifications`.
 
 - `services/dataExportService` (gera arquivo em `user_data_exports/`)
+- `core/services/pushService.js` (NOVO Onda H) — opt-in,
+  opt-out, no-op gracioso sem VAPID.
 - `domain/dataExport` (formato do export)
+
+## home/ — Home orientada a ação (NOVO Onda H)
+
+Substitui a home neutra por uma home **orientada a ação** gated
+por `action_home` (default OFF). Componentes:
+
+- `v2/components/home/V2ActionHome.jsx` (NOVO) — bloco "O que
+  fazer agora" (próximo jogo, pendências, torneios abertos
+  perto da sua cidade) + faixa "Sua evolução" (streak,
+  nível/XP, próxima conquista, metas).
+- **Reuso**: `progression/`, `achievements/`, `performance/`.
+- **Sem query nova**: tudo via dedupe do React Query.
+- **Desligada, home segue exatamente como está**.
+
+## arenas/ — Mercado (NOVO Onda J)
+
+Sistema de mercado da arena (PDV V2) — 6 PRs (#95-#100).
+Componentes:
+- `v2/components/arenas/V2ArenaMercadoTab.jsx` (NOVO)
+- `v2/components/arenas/V2ArenaCatalogBrowser.jsx` (NOVO)
+- `v2/components/arenas/V2ArenaFinanceTab.jsx` (NOVO)
+- `v2/components/arenas/V2ArenaGestaoTab.jsx` (NOVO)
+- `v2/components/arenas/ProductTypeahead.jsx` (NOVO)
+- `v2/components/admin/AdminCatalogTab.jsx` (NOVO)
+- **Painel "Como foi minha semana"** (gated
+  `arena_ops_kpis`, Onda N) — KPIs + heatmap de horários.
+
+Domínio (NOVO):
+- `arenas/domain/catalogSeed.js` — seed do catálogo padrão.
+- `arenas/domain/productCatalog.js` (testado) — CRUD catálogo.
+- `arenas/domain/marketReports.js` (testado) — relatórios
+  financeiros.
+- `arenas/domain/dynamic_pricing.js` (NOVO, testado) — preço
+  dinâmico.
+- `arenas/domain/arena_week.js` (NOVO, testado) — KPIs
+  semanais + heatmap.
+
+Coleções (NOVAS): `arena_products`, `arena_sales`,
+`arena_marketplace_catalog` (seed).
+
+## tournament/ — Torneio + Equipes (NOVO Onda I)
+
+Torneio cresceu **muito** com a Onda I (formato Equipes).
+Componentes novos:
+- `v2/components/tournament/TeamConfrontationCard.jsx` (NOVO)
+- `v2/components/tournament/TeamConfrontationDialogs.jsx` (NOVO)
+- `v2/components/tournament/TeamModalityConfig.jsx` (NOVO)
+- `v2/components/tournament/TeamModalityView.jsx` (NOVO)
+- `v2/components/tournament/TeamRegistrationDialog.jsx` (NOVO)
+- `v2/components/tournament/TeamRegistrationForm.jsx` (NOVO)
+- `v2/components/tournament/TeamStandingsTable.jsx` (NOVO)
+- `v2/components/tournament/V2TournamentAdminPanel.jsx` (NOVO)
+- `v2/components/tournament/V2TournamentOpsTab.jsx` (NOVO)
+- `v2/components/tournament/V2TournamentRegistrationsTab.jsx` (NOVO)
+- `v2/components/tournament/V2TournamentDrawTab.jsx` (NOVO)
+- `v2/components/tournament/V2TournamentModalitiesTab.jsx` (NOVO)
+- `v2/components/tournament/V2MatchesBlock.jsx` (NOVO)
+- `v2/components/tournament/V2Collapsible.jsx` (NOVO)
+- `v2/components/tournament/PartnerInviteNotificationAction.jsx` (NOVO)
+
+Páginas novas:
+- `v2/pages/V2TournamentAdmin.jsx` (NOVO) — console dedicado.
+- `v2/pages/V2MyTournamentsAdmin.jsx` (NOVO) — aba no Perfil.
+
+Coleções novas:
+- `tournament_team_registrations/{id}`
+- `tournament_team_lineups/{id}`
+- `tournament_team_confrontations/{id}`
+
+Flags:
+- `team_tournaments` (default OFF) — formato equipes.
+- `tournament_admin_console` (default OFF) — console dedicado.
+- `partner_invite_quick_confirm` (default OFF) — confirmar
+  dupla direto na notificação.
 
 ---
 

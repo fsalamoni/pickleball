@@ -209,14 +209,32 @@ Firestore. Share com QR Code + WhatsApp + download PNG.
 
 ## 6. Modelo de dados (Firestore, database `pickleball`)
 
-**102 coleções top-level** (39 antes do Arena V3, +63 com as Ondas 1-10
-+ Wave B + Wave C + PRs #85-#88).
+**103 coleções top-level** (39 antes do Arena V3, +64 com as Ondas 1-10
++ Wave B + Wave C + PRs #85-#88 + Ondas G/H/I/J/L/M).
 - **PR #85 (2026-07-29)**: +1 coleção `game_days/{id}` (dia de jogo do
   atleta, com subcoleções `participants`/`games`).
 - **PR #86 (2026-07-29)**: +1 coleção `legal_consents/{uid_docKey}`
   (consentimento versionado de documentos jurídicos, LGPD).
 - **PR #94 (2026-07-30)**: cada aceite no onboarding vira
   doc nesta coleção (auditável; bump de versão reabre aceite).
+- **PRs #128-#133 (Onda G, Sprints 38-43)**: +2 coleções
+  `player_skill_ratings/{userId_format}` (rating estilo DUPR,
+  escala 2.0-8.0) + `skill_rating_history/{id}` (evolução
+  por jogo). Independente do ELO (`player_ratings`/`rating_history`).
+  Lê de `tournament_matches` + `club_event_games`
+  (espelha fonte do ELO).
+- **PR #120 (Onda L)**: +1 coleção `audit_logs/{id}` (moderação
+  de atletas — `hidden: true` em `users/{uid}` +
+  `athlete_profiles/{uid}`, reversível, auditado).
+- **PR #134 (Onda H — `push_notifications`)**: +1 coleção
+  `push_tokens/{uid}` (token FCM por usuário, gerenciado
+  pelo próprio user).
+- **PRs #110-#112 (Onda I — `team_tournaments`)**: +3 coleções
+  `tournament_team_registrations/{id}`,
+  `tournament_team_lineups/{id}`,
+  `tournament_team_confrontations/{id}`. Etapas dos confrontos
+  espelham em `club_event_games` com
+  `source='team_confrontation'`.
 - **Wave C.3 (2026-07-28)**: +4 coleções `club_internal_ratings`/
   `_ext`/`_doubles`/`_doubles_ext` (ranking interno do clube materializado).
 - **Wave C (2026-07-27)**: +1 coleção `club_event_games/{eventId_dateId_gameId}`
@@ -308,14 +326,37 @@ componentes ou services.
 
 ## 9. Feature flags (catálogo)
 
-`src/core/featureFlags.js` define 125 flags (FEATURE_FLAG). Defaults no
-Firestore em `platform_settings/feature_flags/{key}`. Migration em
-`migrateLegacyFlags` (sempre bump `FLAGS_MIGRATION_VERSION`). Padrão de
-uso:
+`src/core/featureFlags.js` define **14 flags ativas** (FEATURE_FLAG).
+Defaults no Firestore em `platform_settings/feature_flags/{key}`.
+Migration em `migrateLegacyFlags` (sempre bump
+`FLAGS_MIGRATION_VERSION`).
+
+**Catálogo enxuto** (Onda O — Sprints 47-48): 137 flags ativas
+viraram código (lotes 1 e 2 de `convertFlagsToCode`). Apenas
+14 flags default OFF sobreviveram. `FeatureFlagGuard` removido
+(guards explícitos no código de cada feature).
+
+**14 flags ativas (default OFF)**:
+- `dupr_official_sync` — integração oficial DUPR (fase 2,
+  stub em `duprOfficial.js`).
+- `dupr_match_export` — export CSV de partidas para DUPR.
+- `action_home` — Home orientada a ação.
+- `smart_matchmaking` — score 0-100 em Encontrar jogadores.
+- `post_game_flow` — fluxo pós-jogo enxuto.
+- `push_notifications` — PWA push com FCM.
+- `arena_ops_kpis` — "Como foi minha semana" (arena).
+- `arena_unified_checkout` — checkout unificado.
+- `arena_dynamic_pricing` — preço dinâmico.
+- `arena_member_crm` — CRM de membros.
+- `coach_public_discovery` — descoberta aprimorada.
+- `coach_booking_pay` — booking pay.
+- `coach_student_progress` — alunos ligados à evolução.
+- `coach_level_rating_seed` — semente por nível validado.
+
+Padrão de uso:
 
 ```jsx
 // src/v2/pages/V2Arenas.jsx
-import FeatureFlagGuard from '@/v2/components/FeatureFlagGuard';
 import { FEATURE_FLAG } from '@/core/featureFlags';
 
 export default function V2Arenas() {

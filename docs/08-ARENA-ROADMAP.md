@@ -2453,3 +2453,642 @@ Reorganização da navegação:
    onboarding vira doc em `legal_consents`. Auditável.
 3. **D-POLITICA-USO-COM-VERSIONAMENTO (PR #94)**: a Política
    de Privacidade (LGPD) tem versão. Bump reabre aceite.
+
+---
+
+## 34. Sprint 32 — PR #95-#100: Arena Mercado (2026-08-31)
+
+> Atualizado em **2026-08-31, 11:05 GMT-3** (origin/main @ `106bd55`).
+> 6 PRs (#95-#100) do sistema de **Mercado** da arena:
+> catálogo de produtos + vendas + relatórios financeiros.
+
+### Visão geral
+
+Sistema de mercado da arena (PDV V2):
+- **Catálogo padrão** de produtos (default: água, isotônico,
+  barras, grip, bolas, raquetes; **ampliado** com RS + saudáveis).
+- **Adicionar em lote** produtos do catálogo ao mercado da arena.
+- **Catálogo sempre disponível** para gestão no painel admin
+  da plataforma.
+- **Mercado unificado** num só espaço; vendas só do que está
+  ou esteve em estoque (não permite vender sem estoque).
+- **Entrada ágil** no estoque, **saída só do estoque**
+  (baixa ao vender), **relatórios financeiros**.
+
+### Coleções
+
+- `arena_products` — produtos no mercado da arena
+- `arena_sales` — vendas registradas
+- `arena_marketplace_catalog` (NOVO) — catálogo padrão
+  replicado em cada arena via `catalogSeed.js`
+
+### Domínio (testado)
+
+- `arenas/domain/catalogSeed.js` (NOVO) — seed do catálogo
+  padrão.
+- `arenas/domain/productCatalog.js` (NOVO, testado) — CRUD
+  do catálogo.
+- `arenas/domain/marketReports.js` (NOVO, testado) — relatórios
+  financeiros (receita, lucro, mais vendidos).
+
+### UI
+
+- `v2/components/arenas/V2ArenaMercadoTab.jsx` (NOVO) — aba de
+  mercado na arena.
+- `v2/components/arenas/V2ArenaCatalogBrowser.jsx` (NOVO) —
+  browser de catálogo (admin da plataforma).
+- `v2/components/arenas/V2ArenaFinanceTab.jsx` (NOVO) — aba
+  de relatórios financeiros.
+- `v2/components/arenas/V2ArenaGestaoTab.jsx` (NOVO) — gestão
+  do mercado.
+- `v2/components/arenas/ProductTypeahead.jsx` (NOVO) — typeahead
+  para buscar produto do catálogo.
+- `v2/components/admin/AdminCatalogTab.jsx` (NOVO) — aba de
+  catálogo no admin da plataforma.
+
+### Decisões D- (PRs #95-#100)
+
+1. **D-MERCADO-SEMPRE-EM-ESTOQUE (PR #100)**: venda só do que
+   está/esteve em estoque. Não permite "vender sem estoque".
+2. **D-CATALOGO-DEFAULT-POR-ARENA (PR #95)**: seed automática
+   do catálogo padrão ao criar arena.
+3. **D-MERCADO-UNIFICADO-UM-ESPACO (PR #100)**: um único
+   mercado, não múltiplos.
+4. **D-RELATORIOS-REAIS-NAO-ESTIMADOS (PR #99)**: relatórios
+   baseados em vendas reais, não estimativas.
+
+---
+
+## 35. Sprint 33 — PR #101-#104: Game Day Play (open play) (2026-08-31)
+
+> Atualizado em **2026-08-31, 11:05 GMT-3**.
+> 4 PRs (#101-#104) do formato **Play (open play)** do Game Day.
+
+### Visão geral
+
+Formato **Play** (open play) é o novo "jogar sem compromisso de
+torneio" do Game Day. Diferente do dia de jogo tradicional
+(que tem sorteio + rodadas + placar), o Play é fila de espera
++ substituição + próximo da fila.
+
+- **Sorteio aditivo** (#101): "Sortear jogos" **adiciona** novos
+  jogos sem apagar os já com resultado. Pergunta se deve manter
+  ou substituir os sem resultado.
+- **Ranking do dia** (#101): nova seção com o ranking acumulado
+  da rodada de jogos do dia.
+- **Formato Play** (#102): fila de espera + próximo da fila +
+  substituir ausente. Padrões de criação.
+- **Tabela de quadras** (#103): visualização em tabela com
+  previsão de próximos jogos.
+- **Visões separadas** (#104): organizador (gestão completa)
+  vs participante (só fila + próximos jogos).
+
+### Componentes novos
+
+- `v2/components/games/AthletePlayOrganizer.jsx` (NOVO) — visão
+  do organizador do Play.
+- `v2/components/games/AthletePlayParticipant.jsx` (NOVO) —
+  visão do participante.
+- `v2/components/games/CreateGameDayDialog.jsx` — agora com
+  opção "Play".
+
+### Decisões D- (PRs #101-#104)
+
+1. **D-SORTEIO-ADITIVO-NAO-DESTRUTIVO (PR #101)**: sortear não
+   apaga o que já tem resultado. Pergunta sobre sem resultado.
+2. **D-PLAY-FILA-E-SUBSTITUICAO (PR #102)**: Play é fila +
+   substituição, não sorteio clássico.
+3. **D-VISOES-SEPARADAS-ORG-PARTICIPANTE (PR #104)**: a página
+   do dia de jogo tem 2 visões distintas por papel.
+4. **D-PLAY-MANTEM-HISTORICO (PR #105)**: sorteio Americano
+   ciente do que já aconteceu no dia.
+
+---
+
+## 36. Sprint 34 — PR #105-#109: Game Day Play — polimento (2026-08-31)
+
+> Atualizado em **2026-08-31, 11:05 GMT-3**.
+> 5 PRs (#105-#109) de polimento do Game Day Play e
+> Performance.
+
+### PRs
+
+- **#105**: sorteio Americano ciente do histórico do dia
+  (não repete confrontos que já aconteceram).
+- **#106**: confirmar convite de dupla direto na notificação
+  (flag `partner_invite_quick_confirm`).
+- **#107**: `normalizeStatsFormat` + `resolveEntryFormat` —
+  formato do jogo (não da inscrição). Americano/avulso =
+  duplas. Dupla no histórico.
+- **#108**: americano (inscrição individual) conta como duplas
+  + parceiro na rotação.
+- **#109**: `pickSwapReplacement` (domínio puro) — substituído
+  não volta à mesma partida em novas trocas.
+
+### Domínio (NOVO)
+
+- `games/domain/gamePlay.js` (NOVO, testado) — lógica de
+  substituição no Play.
+- `clubs/domain/gameDayDrawMerge.js` (NOVO, testado) — merge
+  de sorteios aditivos.
+- `clubs/domain/gameDayLeaderboard.js` (NOVO, testado) —
+  leaderboard do dia.
+
+### Componente (NOVO)
+
+- `v2/components/tournament/PartnerInviteNotificationAction.jsx`
+  (NOVO) — ação "Confirmar/Recusar" no sino.
+- `clubs/components/GameDayLeaderboard.jsx` (NOVO).
+
+### Decisões D- (PRs #105-#109)
+
+1. **D-FORMATO-DO-JOGO-NAO-INSCRICAO (PR #107)**: americano/
+   avulso = duplas (não singles) por causa da rotação 2×2.
+2. **D-PARCEIRO-NA-ROTACAO (PR #108)**: o parceiro muda a cada
+   rodada no Americano — registra corretamente no histórico.
+3. **D-SWAP-EXCLUI-JA-SUBSTITUIDOS (PR #109)**: substituto
+   nunca volta para o mesmo jogo (excluído de `swappedOutIds`).
+
+---
+
+## 37. Sprint 35 — PR #110-#112: Tournament Teams (formato equipes) (2026-08-31)
+
+> Atualizado em **2026-08-31, 11:05 GMT-3**.
+> 3 PRs (#110-#112) do **formato de torneio por equipes**.
+
+### Visão geral
+
+Nova modalidade: **torneio por equipes** (atrás da flag
+`team_tournaments`, default OFF).
+
+- **#110 (Sprint 35a)**: formato de torneio por equipes —
+  inscrição de equipes + sorteio + resultado.
+- **#111 (Sprint 35b)**: elenco por atletas cadastrados (com
+  user_id/gênero) + etapas no ranking individual + ranking
+  de equipes. Resultados das etapas espelhados em
+  `club_event_games` com `kind=singles/doubles` e
+  `source='team_confrontation'`.
+- **#112 (Sprint 35c)**: "Equipes" vira opção no **seletor
+  de formato** (Simples / Duplas / Equipes) unificado. Usa
+  internamente a base de duplas (fases de confronto, sem
+  americana) + `team_config`. Não altera `MODALITY_FORMAT`.
+
+### Coleções
+
+- `tournament_team_registrations/{id}` (NOVO)
+- `tournament_team_lineups/{id}` (NOVO) — elenco por equipe
+- `tournament_team_confrontations/{id}` (NOVO) — confrontos
+  equipe × equipe
+
+### Decisões D- (PRs #110-#112)
+
+1. **D-EQUIPES-REUSA-BASE-DUPLAS (PR #112)**: sem reinventar
+   a base de duplas. Fase de confronto, sem americana.
+2. **D-ETAPAS-CONTAM-NO-RANKING-INDIVIDUAL (PR #111)**: cada
+   etapa decidida é espelhada no ELO/DUPR como jogo de dupla
+   ou simples (conforme formato), com `source='team_confrontation'`.
+3. **D-CONFRONTO-IGNORA-RANKING-AGREGADO (PR #111)**: o
+   confronto agregado (equipe × equipe) é ignorado pelo
+   motor de rating (só etapas individuais contam).
+4. **D-EQUIPES-NO-SELETOR-FORMATO (PR #112)**: "Equipes" entra
+   no seletor **junto** com Simples/Duplas (unificado), não
+   como caixa separada.
+
+---
+
+## 38. Sprint 36 — PR #107 + #110-#112: Tournament Teams — visão e sorteio (2026-08-31)
+
+> Atualizado em **2026-08-31, 11:05 GMT-3**.
+
+### PRs
+
+- **#106 (Sprint 36)**: equipes — sorteio no formato da
+  modalidade, tabelas/chave e resultado por etapa. `runDraw`
+  e `runPhaseDraw` tratam inscrição-equipe como participante
+  (grupo único, grupos ou chave). Americano/Mexicano são
+  **recusados com mensagem própria** para equipes.
+- **#107 (Sprint 36)**: equipes — **separa visão pública**
+  (leitura) da operação do admin. `TeamConfrontationCard`
+  mostra confronto por confronto, ampliável para etapa a
+  etapa. Nenhum campo editável na visão pública (nem para
+  o admin).
+
+### Componentes novos (Tournament Teams)
+
+- `v2/components/tournament/TeamConfrontationCard.jsx` (NOVO)
+- `v2/components/tournament/TeamConfrontationCard.runtime.test.jsx`
+- `v2/components/tournament/TeamConfrontationDialogs.jsx` (NOVO)
+- `v2/components/tournament/TeamConfrontationDialogs.runtime.test.jsx`
+- `v2/components/tournament/TeamModalityConfig.jsx` (NOVO)
+- `v2/components/tournament/TeamModalityView.jsx` (NOVO)
+- `v2/components/tournament/TeamModalityView.runtime.test.jsx`
+- `v2/components/tournament/TeamRegistrationDialog.jsx` (NOVO)
+- `v2/components/tournament/TeamRegistrationForm.jsx` (NOVO)
+- `v2/components/tournament/TeamRegistrationForm.runtime.test.jsx`
+- `v2/components/tournament/TeamStandingsTable.jsx` (NOVO)
+
+### Decisões D- (PRs #106-#107)
+
+1. **D-EQUIPES-SEM-AMERICANO (PR #106)**: Americano/Mexicano
+   são **recusados** com mensagem própria em torneios por
+   equipes.
+2. **D-EQUIPES-VISAO-PUBLICA-SOMENTE-LEITURA (PR #107)**: a
+   página da modalidade (visão do atleta) **nunca** permite
+   editar. Toda a operação é no admin.
+3. **D-EQUIPES-CONFRONTO-E-ETAPA (PR #107)**: vocabulário
+   explícito — **confronto** (equipe × equipe) se divide em
+   **etapas** (as partidas) e cada etapa é disputada em
+   **games**.
+
+---
+
+## 39. Sprint 37 — PR #113-#116: Tournament Admin Console (2026-08-31)
+
+> Atualizado em **2026-08-31, 11:05 GMT-3**.
+> 4 PRs (#113-#116) do **console de gestão dedicado** do torneio
+> e UX de torneio.
+
+### PRs
+
+- **#113 (Sprint 37a)**: console de gestão em página dedicada
+  (`/torneios/:id/gerenciar` → `V2TournamentAdmin`) atrás da
+  flag `tournament_admin_console`. Aba "Meus torneios" no
+  Perfil (`/perfil/torneios` → `V2MyTournamentsAdmin`).
+- **#114 (Sprint 37b)**: seções de Inscrições e Sorteio
+  colapsáveis (por modalidade).
+- **#115 (Sprint 37c)**: Meus torneios lista apenas torneios
+  que gerencio (usa `tournament_admins`, não `useMyTournaments`).
+- **#116 (Sprint 37d)**: cards colapsáveis iniciam fechados
+  e lembram o último estado por visualizador (localStorage
+  via `V2Collapsible.persistId`).
+
+### Componente novo
+
+- `v2/pages/V2TournamentAdmin.jsx` (NOVO) — console dedicado.
+- `v2/pages/V2MyTournamentsAdmin.jsx` (NOVO) — aba no Perfil.
+- `v2/components/tournament/V2TournamentAdminPanel.jsx` (NOVO)
+- `v2/components/tournament/V2TournamentOpsTab.jsx` (NOVO)
+- `v2/components/tournament/V2TournamentRegistrationsTab.jsx` (NOVO)
+- `v2/components/tournament/V2TournamentDrawTab.jsx` (NOVO)
+- `v2/components/tournament/V2TournamentModalitiesTab.jsx` (NOVO)
+- `v2/components/tournament/V2TournamentModalitiesTab.runtime.test.jsx`
+- `v2/components/tournament/V2MatchesBlock.jsx` (NOVO)
+- `v2/components/tournament/V2MatchesBlock.runtime.test.jsx`
+- `v2/components/tournament/V2Collapsible.jsx` (NOVO)
+
+### Decisões D- (PRs #113-#116)
+
+1. **D-ADMIN-CONSOLE-PAGINA-DEDICADA (PR #113)**: gestão não
+   fica mais na página pública — é página dedicada.
+2. **D-MEUS-TORNEIOS-SO-GERENCIO (PR #115)**: aba "Meus
+   torneios" usa `tournament_admins` (owner/admin), não
+   `useMyTournaments` (que inclui participação como atleta).
+3. **D-CARDS-COLAPSAVEIS-PERSISTIDOS (PR #116)**: cards
+   iniciam fechados, último estado por visualizador via
+   localStorage (`persistId`).
+
+---
+
+## 40. Sprint 38 — PR #117-#125: Tournament UX + rules (2026-08-31)
+
+> Atualizado em **2026-08-31, 11:05 GMT-3**.
+> PRs #117, #118, #119, #120, #121, #123, #125, #127.
+
+### PRs
+
+- **#117 (Sprint 38a)**: fase de grupos forma **múltiplos
+  grupos** com tabela própria por grupo.
+- **#118 (Sprint 38b)**: grupos aparecem na **visão pública
+  do atleta, impressão e telão**.
+- **#119 (Sprint 38c)**: inscrição respeita o **gênero** da
+  modalidade (lista e envio).
+- **#120 (Sprint 38d)**: admin — **moderação de atletas**
+  (ocultar contas falsas/teste, flag `athlete_moderation`).
+- **#121 (Sprint 38e)**: padroniza largura das colunas das
+  tabelas de grupo.
+- **#123 (Sprint 38f)**: lançamento de resultado, **desfazer
+  início**, check-in, vagas ilimitadas.
+- **#125 (Sprint 38g)**: visão pública + impressão dos
+  grupos com conjunto completo de colunas.
+- **#127 (Sprint 38h)**: rules — sorteio da fase de grupos
+  tem leitura pública + escrita null-safe.
+
+### Decisões D- (PRs #117-#127)
+
+1. **D-MULTIPLOS-GRUPOS-TABELA-PROPRIA (PR #117)**: fase de
+   grupos suporta múltiplos grupos, cada um com sua tabela.
+2. **D-GRUPOS-PUBLICOS-PARA-TODOS (PR #118)**: grupos visíveis
+   para quem não é admin (atleta, telão, impressão).
+3. **D-INSCRICAO-RESPEITA-GENERO (PR #119)**: se a modalidade
+   é masculina, não aceita inscrição feminina (e vice-versa).
+4. **D-MODERACAO-NAO-APAGA (PR #120)**: ocultar é `hidden=true`
+   em `users/{uid}` e `athlete_profiles/{uid}` (reversível,
+   auditado em `audit_logs`).
+5. **D-LARGURA-COLUNAS-PADRONIZADA (PR #121)**: tabelas de
+   grupo têm largura uniforme (visual consistente).
+6. **D-DESFAZER-INICIO (PR #123)**: o organizador pode
+   desfazer "início do torneio" (volta estado).
+7. **D-VAGAS-ILIMITADAS (PR #123)**: 0 ou null = sem limite.
+8. **D-TOURNAMENT-GROUPS-PUBLICA-LEITURA (PR #127)**: regra
+   Firestore permite leitura pública (para telão/impressão).
+
+---
+
+## 41. Sprint 39 — PR #128-#133: Rating estilo DUPR (escala 2.0-8.0) (2026-08-31)
+
+> Atualizado em **2026-08-31, 11:05 GMT-3**.
+> 6 PRs (#128-#133) do **motor de rating estilo DUPR**.
+
+### Visão geral
+
+Novo **ranking próprio, INDEPENDENTE do ELO**, na mesma escala
+do DUPR (2.000-8.000), exibido em **aba apartada** na página
+de Ranking, atrás da flag `skill_rating_dupr` (default OFF).
+NÃO usa o algoritmo oficial do DUPR (proprietário) — é uma
+**aproximação** na mesma escala.
+
+### Componentes
+
+- `v2/components/rating/V2DuprRankingView.jsx` (NOVO) — aba
+  do ranking estilo DUPR.
+- `v2/components/rating/V2DuprEvolution.jsx` (NOVO) — gráfico
+  de evolução por jogo.
+- `v2/components/rating/V2DuprRatingBadge.jsx` (NOVO) — badge
+  de rating atual.
+
+### Domínio (NOVO, testado)
+
+- `rating/domain/duprScale.js` (NOVO, +testes) — escala 2.0-8.0,
+  simples/duplas separados, K maior na fase provisória, peso
+  leve de margem de vitória, semente por rating DUPR do perfil
+  e/ou nível USAP (2.5 → 2.500), replay determinístico.
+- `rating/domain/elo.js` (testado) — ELO original (intacto).
+- `rating/domain/gameLog.js` (NOVO, testado) — normalizador
+  compartilhado (espelha fonte de jogos do ELO, sem tocar).
+- `rating/domain/coachSeed.js` (NOVO, +testes) — seed por
+  nível validado.
+- `rating/domain/ratingSignature.js` (NOVO) — assinatura de
+  rating (replay).
+- `rating/domain/duprMatchExport.js` (NOVO, +testes) — gera
+  CSV para DUPR match export.
+
+### Services + Hooks (NOVO)
+
+- `rating/services/duprRatingService.js`
+- `rating/services/duprOfficial.js` (stub sem rede — fase 2)
+- `rating/services/duprExportService.js`
+- `rating/hooks/useDuprRating.js`
+- `rating/hooks/useDuprExport.js`
+
+### Coleções (NOVAS)
+
+- `player_skill_ratings/{userId_format}` — `user_id`, `format`,
+  `rating`, `games_played`, `reliability`, `provisional`.
+- `skill_rating_history/{id}` — mudanças no rating ao longo
+  do tempo (espelhado para `rating_history` ELO).
+- `audit_logs/{id}` — ações de moderação (PR #120).
+
+### PRs individuais
+
+- **#128 (Sprint 39a)**: ranking estilo DUPR (escala 2.0-8.0)
+  em aba própria.
+- **#129 (Sprint 39b)**: referencia o Nivel 2.0-8.0 em todos
+  os locais de ranking/rating.
+- **#130 (Sprint 39c)**: motor baseado no **placar** (não só
+  resultado) + **confiabilidade** (0-100%, cresce com jogos).
+  K de ~0.30 novato a ~0.05 maduro. Ignora W.O. Derrota
+  apertada contra adversário mais forte pode subir o rating.
+- **#131 (Sprint 39d)**: evolução do Nivel 2.0-8.0 no perfil
+  do atleta (formato "Evolução do rating" — separada Duplas
+  e Simples).
+- **#132 (Sprint 39e)**: fix — evolução vira **trajetória por
+  jogo** (não por agrupamento).
+- **#133 (Sprint 39f)**: refactor visual — Nivel 2.0-8.0 sem
+  ambiguidade, design consistente, gráficos mais claros.
+
+### Decisões D- (PRs #128-#133)
+
+1. **D-DUPR-NAO-OFICIAL-EXPLICITO (PR #128)**: rotulado
+   claramente como NÃO oficial. Não usa o algoritmo
+   proprietário do DUPR — aproximação na mesma escala.
+2. **D-DUPR-ABA-APARTADA (PR #128)**: ranking DUPR é em aba
+   separada do ELO. Não substitui.
+3. **D-DUPR-MOTOR-BASEADO-PLACAR (PR #130)**: placar importa
+   (margem de vitória leve + vitória-real).
+4. **D-DUPR-CONFIABILIDADE-PROGRESSIVA (PR #130)**: K de 0.30
+   (novato) a 0.05 (maduro). Ignora W.O.
+5. **D-DUPR-SIMPLES-E-DUPLAS-SEPARADOS (PR #128)**: rating
+   simples ≠ rating duplas. Coleções separadas.
+6. **D-DUPR-SEMENTE-POR-NIVEL-USAP (PR #128)**: 2.5 USAP
+   → 2.500 no DUPR. Semente estável.
+7. **D-ELO-INTACTO (PR #128)**: nada do ELO existente foi
+   tocado. Tudo aditivo.
+8. **D-DUPR-OFFICIAL-FASE-2 (PR #128)**: `duprOfficial.js`
+   é stub sem rede. Flag `dupr_official_sync` (default OFF)
+   reservada para integração oficial futura.
+
+---
+
+## 42. Sprint 40 — PR #134: Engajamento (4 flags) (2026-08-31)
+
+> Atualizado em **2026-08-31, 11:05 GMT-3**.
+> 4 PRs de melhorias de engajamento (1 PR com tudo).
+
+### 4 flags default OFF
+
+1. **`action_home`** (#134): **Home orientada a ação**.
+   Bloco "O que fazer agora" (próximo jogo, pendências,
+   torneios abertos perto da sua cidade) + faixa "Sua
+   evolução" (streak, nível/XP, próxima conquista, metas).
+   Tudo reusando `progression/`, `achievements/`,
+   `performance/` — sem query nova (só dedupe React Query).
+
+2. **`smart_matchmaking`** (#134): **matchmaking inteligente**.
+   Score 0-100 cruzando: proximidade de rating,
+   complementaridade de lado (duplas), mesma cidade,
+   interesses em comum. Em "Encontrar jogadores": selo de %
+   + chips de motivo. `useAthletes(enabled)` só busca
+   diretório no modo inteligente.
+
+3. **`post_game_flow`** (#134): **fluxo pós-jogo enxuto**.
+   Faixa em "Meus jogos" › Histórico: "Jogar de novo"
+   (→ encontrar jogadores) + "Ver minha evolução" (→
+   ranking). Aderente ao modelo atual (sem uid do
+   adversário — sem revanche peer-to-peer).
+
+4. **`push_notifications`** (#134): **notificações push PWA**.
+   `pushService.js` (opt-in, opt-out, no-op gracioso sem
+   VAPID). SW dedicado `/firebase-cloud-messaging-push-scope`
+   (não colide com `sw.js` do PWA). Cloud Function
+   `pushOnNotificationCreate` espelha notificações in-app
+   → push. Limpa tokens inválidos.
+
+### Domínio (NOVO)
+
+- `matchmaking` (NOVO domínio puro, +9 testes) — score
+  de compatibilidade.
+
+### Cloud Function (NOVO)
+
+- `pushOnNotificationCreate` — espelha notificação in-app
+  → push dos tokens do usuário. Retorna cedo sem tokens.
+  Nunca lança. Limpa tokens inválidos.
+
+### Coleções (NOVAS)
+
+- `push_tokens/{uid}` — token FCM por usuário (cada um
+  gerencia os próprios, regra aditiva).
+
+### Componentes (NOVOS)
+
+- `v2/components/home/V2ActionHome.jsx` (NOVO) — Home
+  orientada a ação.
+- `v2/components/settings/V2PushCard.jsx` (NOVO) — opt-in
+  de push nas Configurações.
+
+### Decisões D- (PRs #134)
+
+1. **D-ENGAGEMENT-FLAGS-OFF-POR-DEFAULT (PR #134)**: 4 flags
+   novas todas default OFF. Inerte em produção.
+2. **D-PUSH-GRACioso-SEM-VAPID (PR #134)**: sem VAPID/
+   sem suporte/sem permissão, vira no-op silencioso. Não
+   quebra.
+3. **D-PUSH-SW-DEDICADO (PR #134)**: FCM SW em escopo
+   próprio (`/firebase-cloud-messaging-push-scope`) para
+   não colidir com `sw.js` do PWA.
+4. **D-PUSH-CF-NUNCA-LANCA (PR #134)**: Cloud Function
+   tolera ausência de tokens. Retorna cedo. Limpa
+   inválidos.
+5. **D-SMART-MATCHMAKING-MOTIVOS-LEGIVEIS (PR #134)**:
+   cada candidato mostra os **motivos** do score
+   ("rating próximo", "mesma cidade", "lado
+   complementar"). Não é caixa-preta.
+6. **D-POST-GAME-SEM-REVANCHE-PTP (PR #134)**: peer-to-peer
+   revanche exigiria modelo novo. Mantido fora do escopo
+   (só atalhos gerais).
+
+---
+
+## 43. Sprint 41 — PR #135: Arena preço dinâmico + arena ops (2026-08-31)
+
+> Atualizado em **2026-08-31, 11:05 GMT-3**.
+
+### PRs
+
+- **#135 (Sprint 41a)**: `arena_dynamic_pricing` — domínio
+  puro `dynamic_pricing.js` (7 testes): `applyDynamicPricing`
+  (desconto em horário de baixa / sobretaxa em pico; pico
+  tem precedência), `normalizeDynamicConfig`,
+  `dynamicPricingLabel`. Reusa `timeToMinutes` de `pricing.js`.
+- **#136 (Sprint 41b)**: `arena_ops_kpis` — painel
+  "Como foi sua semana" (`V2ArenaWeekPanel`). KPIs
+  (`weekSummary`): receita, reservas, horas ocupadas,
+  no-show + taxa. `bookingsHeatmap` (grade dia×hora).
+  `bookingsInRange`. Reusa `arena_metrics`,
+  `court_schedule`, `calendar`.
+
+### Decisões D- (PRs #135-#136)
+
+1. **D-PRECO-DINAMICO-PICO-PRECEDE (PR #135)**: pico tem
+   precedência sobre baixa (não acumula).
+2. **D-PRECO-DINAMICO-NAO-APLICADO-AINDA (PR #135)**: o
+   domínio existe, mas a aplicação em `resolveArenaPrice`
+   + config no editor de preços fica para a próxima sprint
+   (arena opta).
+3. **D-ARENA-OPS-WEEK-PANEL-NO-TOPO (PR #136)**: KPIs no
+   topo da Central da arena (gated). Avaliação média +
+   mapa de calor de horários.
+
+---
+
+## 44. Sprint 42 — PR #137: Coach — alunos + descoberta (2026-08-31)
+
+> Atualizado em **2026-08-31, 11:05 GMT-3**.
+
+### PRs
+
+- **#137 (Sprint 42a)**: `coach_student_progress` — o
+  roster do professor mostra **rating/posição do aluno**
+  no ranking nacional, ao lado do nível validado e das
+  aulas concluídas. Reusa `useNationalRanking` (cache).
+- **#138 (Sprint 42b)**: `coach_level_rating_seed` — seed
+  de rating por nível validado (`coachSeed.js`, 4 testes):
+  `seedFromValidatedLevelId` + `pickRatingSeed`. Nível
+  validado tem prioridade.
+- **#139 (Sprint 42c)**: `coach_public_discovery` — diretório
+  de professores ganha **filtros de preço** (R$/h até),
+  "só aceitando alunos" e **ordenação** (relevância /
+  menor / maior preço). Client-side sobre a lista já
+  buscada. Descoberta é o gargalo nº 1 do professor.
+
+### Decisões D- (PRs #137-#139)
+
+1. **D-COACH-STUDENT-PROGRESS-REUSA-CACHE (PR #137)**:
+   reusa `useNationalRanking` — sem query nova.
+2. **D-COACH-LEVEL-RATING-SEED-PRIORIDADE-VALIDADO (PR #138)**:
+   nível validado (via teste) tem prioridade sobre
+   declaração manual.
+3. **D-COACH-DISCOVERY-CLIENT-SIDE (PR #139)**: filtros
+   client-side sobre o que já foi buscado (sem refetch).
+
+---
+
+## 45. Sprint 43 — PR #120 + Refactor Waves (2026-08-31)
+
+> Atualizado em **2026-08-31, 11:05 GMT-3**.
+
+### PRs
+
+- **#120 (Sprint 43a)**: admin — moderação de atletas
+  (já descrito em §40).
+- **Onda O — Refactor (lotes 1-2)**: conversão de flags
+  em código (lotes 1 e 2) + enxugar catálogo para a
+  única flag remanescente. **137 feature flags ativas
+  viraram código** (default ON em produção).
+  - `12f6243` — lote 1 (hooks + componentes)
+  - `033ae39` — lote 2 (páginas/componentes)
+  - `bca36d8` — V2Layout + Arena V3 + guards; remove
+    `ProfileCompletionModal` V1.
+  - `9cb24b6` — enxugar catálogo.
+  - `0f824b0` — remover páginas V1 mortas em
+    `src/modules/*/pages`.
+
+### Decisões D- (Onda O)
+
+1. **D-FLAGS-EM-CODIGO-POR-DEFAULT (lotes 1-2)**: o que
+   estava maduro e estável virou código (sem flag). 137
+   flags desnecessárias removidas.
+2. **D-V1-LEGACY-REMOVIDO (Onda O)**: `src/modules/*/pages`
+   (V1) morto. `ProfileCompletionModal` V1 removido.
+3. **D-FEATUREFLAGGUARD-REMOVIDO (Onda O)**: o guard genérico
+   não era mais necessário (só 14 flags ativas, todas com
+   gates explícitos no código).
+
+---
+
+## 46. Sprint 44 — PRs #110, #108-#110: DUPR export + bulk re-sync (2026-08-31)
+
+> Atualizado em **2026-08-31, 11:05 GMT-3**.
+
+### PRs
+
+- **PRs #108-#110**: sistema de exportação de partidas para
+  DUPR (CSV).
+  - `dupr_match_export` (flag, default OFF).
+  - Resolve `dupr_id` do `users/{uid}` (source of truth), não
+    do espelho `athlete_profiles` (PR review).
+  - Exclui jogos sem placar (`0×0`) — 2 testes.
+  - Bulk re-sync do diretório (source of truth `users`).
+  - Per-button busy label (review feedback).
+
+### Decisões D- (PRs #108-#110)
+
+1. **D-DUPR-ID-SOURCE-OF-TRUTH-USERS (PRs #108-#110)**:
+   `dupr_id` resolvido de `users/{uid}`, não de
+   `athlete_profiles/{uid}` (espelho pode estar
+   desatualizado).
+2. **D-DUPR-EXPORT-EXCLUI-ZEROS (PRs #108-#110)**: jogos
+   `0×0` não entram no CSV.
+3. **D-ATHLETES-RESYNC-EM-MASSA (PRs #108-#110)**: bulk
+   re-sync (botão no admin) garante consistência
+   `users → athlete_profiles` em massa.
