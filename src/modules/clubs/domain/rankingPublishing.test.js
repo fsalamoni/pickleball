@@ -9,6 +9,10 @@ import {
   winnerSideOf,
   inferKind,
   resolveSideUids,
+  normalizeParticipantName,
+  buildParticipantResolver,
+  resolveSlotUid,
+  resolveSideUidsFromParticipants,
   buildPublishableMatch,
   buildPublishableMatches,
   summarizeResult,
@@ -86,6 +90,53 @@ describe('resolveSideUids', () => {
   });
 });
 
+describe('normalizeParticipantName', () => {
+  it('apara, minúsculas e colapsa espaços', () => {
+    expect(normalizeParticipantName('  João   Silva ')).toBe('joão silva');
+    expect(normalizeParticipantName(null)).toBe('');
+  });
+});
+
+describe('buildParticipantResolver / resolveSlotUid', () => {
+  const parts = [
+    { id: 'p1', name: 'Ana', user_id: 'u1' },
+    { id: 'p2', name: 'Bia', user_id: 'u2' },
+    { id: 'pg', name: 'Convidado' }, // guest sem user_id
+    { id: 'j1', name: 'João', user_id: 'u3' },
+    { id: 'j2', name: 'João', user_id: 'u4' }, // homônimo => nome ambíguo
+  ];
+  const resolver = buildParticipantResolver(parts);
+
+  it('resolve pelo id do documento (comportamento atual)', () => {
+    expect(resolveSlotUid({ id: 'p1' }, resolver)).toBe('u1');
+  });
+  it('resolve pelo user_id embutido no slot', () => {
+    expect(resolveSlotUid({ id: 'inexistente', user_id: 'u2' }, resolver)).toBe('u2');
+  });
+  it('honra user_id embutido de atleta REMOVIDO do dia (não exige estar na lista atual)', () => {
+    // Atleta que jogou e depois saiu da lista: uid não está em nenhum índice,
+    // mas a partida real deve continuar contando (comportamento legado).
+    expect(resolveSlotUid({ id: 'OLD', name: 'Removido', user_id: 'u_removido' }, resolver)).toBe('u_removido');
+  });
+  it('resolve por NOME único quando o id ficou obsoleto', () => {
+    expect(resolveSlotUid({ id: 'OLD_p1', name: 'Ana' }, resolver)).toBe('u1');
+  });
+  it('resolve quando o próprio id do slot já é um user_id', () => {
+    expect(resolveSlotUid({ id: 'u2' }, resolver)).toBe('u2');
+  });
+  it('não resolve convidado sem conta (retorna null)', () => {
+    expect(resolveSlotUid({ id: 'OLD_pg', name: 'Convidado' }, resolver)).toBeNull();
+    expect(resolveSlotUid({ id: 'pg' }, resolver)).toBeNull();
+  });
+  it('não adivinha nome AMBÍGUO (dois participantes com conta e mesmo nome)', () => {
+    expect(resolveSlotUid({ id: 'OLD', name: 'João' }, resolver)).toBeNull();
+  });
+  it('resolveSideUidsFromParticipants descarta slots sem uid', () => {
+    const side = [{ id: 'OLD_p1', name: 'Ana' }, { id: 'x', name: 'Convidado' }];
+    expect(resolveSideUidsFromParticipants(side, resolver)).toEqual(['u1']);
+  });
+});
+
 describe('buildPublishableMatch', () => {
   it('constrói o payload espelhado para um jogo de duplas decidido', () => {
     const r = buildPublishableMatch({
@@ -122,6 +173,23 @@ describe('buildPublishableMatch', () => {
       participants: PARTS, publishedBy: 'u_pub',
     });
     expect(r).toBeNull();
+  });
+
+  it('recupera jogo com id de participante OBSOLETO via NOME único', () => {
+    // Participantes readicionados ganham novos ids de documento; o jogo antigo
+    // guarda o id obsoleto e (dados legados) sem user_id embutido. A resolução
+    // por nome único do dia recupera os user_ids corretos.
+    const stale = game({
+      side_a: [{ id: 'OLD_a', name: 'Ana' }, { id: 'OLD_b', name: 'Beto' }],
+      side_b: [{ id: 'OLD_c', name: 'Caio' }, { id: 'OLD_d', name: 'Duda' }],
+    });
+    const r = buildPublishableMatch({
+      event: EVENT, dateId: DATE_ID, clubId: CLUB_ID,
+      gameId: 'g1', game: stale, participants: PARTS, publishedBy: 'u_pub',
+    });
+    expect(r).not.toBeNull();
+    expect(r.payload.side_a_ids).toEqual(['u_ana', 'u_beto']);
+    expect(r.payload.side_b_ids).toEqual(['u_caio', 'u_duda']);
   });
 
   it('retorna null para jogo com placar null', () => {

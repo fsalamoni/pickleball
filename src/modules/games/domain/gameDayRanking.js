@@ -19,7 +19,8 @@
  */
 
 import {
-  isGameDecided, winnerSideOf, inferKind, resolveSideUids,
+  isGameDecided, winnerSideOf, inferKind,
+  buildParticipantResolver, resolveSideUidsFromParticipants,
 } from '@/modules/clubs/domain/rankingPublishing.js';
 
 /** Fonte da publicação (auditoria). */
@@ -80,9 +81,9 @@ export function buildGameDayMatch({ gameDay, gameId, game, participants, clubIds
   if (!gameDay?.id || !gameId) return null;
   if (!isGameDecided(game)) return null;
 
-  const byId = new Map((participants || []).map((p) => [p.id, p]));
-  const sideAUids = resolveSideUids((game.side_a || []).map((p) => byId.get(p.id) || p));
-  const sideBUids = resolveSideUids((game.side_b || []).map((p) => byId.get(p.id) || p));
+  const resolver = buildParticipantResolver(participants);
+  const sideAUids = resolveSideUidsFromParticipants(game.side_a, resolver);
+  const sideBUids = resolveSideUidsFromParticipants(game.side_b, resolver);
 
   const aLen = (game.side_a || []).length;
   const bLen = (game.side_b || []).length;
