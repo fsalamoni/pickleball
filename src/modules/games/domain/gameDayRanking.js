@@ -21,7 +21,14 @@
 import {
   isGameDecided, winnerSideOf, inferKind,
   buildParticipantResolver, resolveSideUidsFromParticipants,
+  sealParticipantUidIntoGames,
 } from '@/modules/clubs/domain/rankingPublishing.js';
+
+/**
+ * Re-exporta o selador de uid compartilhado para que o serviço do dia de jogo
+ * do atleta importe do seu próprio domínio (mantém a fronteira de módulo).
+ */
+export { sealParticipantUidIntoGames };
 
 /** Fonte da publicação (auditoria). */
 export const GAME_DAY_RANKING_SOURCE = 'athlete_game_day';
