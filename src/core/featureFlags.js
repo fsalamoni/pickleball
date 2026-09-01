@@ -93,6 +93,25 @@ export const FEATURE_FLAG = Object.freeze({
    * (elo professor↔atleta↔ranking). Aditivo — desligada, a semente segue a
    * lógica atual (rating DUPR informado / nivelamento). */
   COACH_LEVEL_RATING_SEED: 'coach_level_rating_seed',
+
+  /**
+   * GAMIFICATION V2 — master flag.
+   *
+   * Habilita o sistema novo de progressão (tiers com nome, skill trees,
+   * XP multi-fonte, caps, missões, achievements V2 com 5 famílias,
+   * streak com proteção). É a porta de entrada para todas as features
+   * do roadmap `docs/GAMIFICATION/00-ROADMAP.md`.
+   *
+   * **Comportamento desligado**: NADA muda. XP/nível/achievements V1
+   * continuam funcionando exatamente como antes.
+   *
+   * **Comportamento ligado**: novos componentes de UI aparecem gated
+   * por sub-flags. O cálculo de XP total V2 convive com V1 via
+   * `computeXpCompatV1` (mesma numeração).
+   *
+   * Aditivo. Default OFF.
+   */
+  GAMIFICATION_V2: 'gamification_v2',
 });
 
 /** Metadados de exibição para o painel de flags (admin master). */
@@ -190,6 +209,15 @@ export const FEATURE_FLAG_META = Object.freeze({
     description:
       'O nível validado pelo professor vira semente do rating (elo professor↔'
       + 'atleta↔ranking). Desligada, a semente segue a lógica atual.',
+  },
+  [FEATURE_FLAG.GAMIFICATION_V2]: {
+    label: 'Gamificação V2 (master)',
+    description:
+      'Liga o sistema novo de progressão: tiers com nome (Calouro→Imortal), '
+      + '5 skill trees paralelas, XP multi-fonte com caps anti-farm, conquistas '
+      + 'V2 com 5 famílias e 5 raridades, missões, streak com grace day e '
+      + 'modo férias, kudos universais, referral program. '
+      + 'Desligada, NADA muda — XP/nível/achievements V1 seguem intactos.',
   },
 });
 
