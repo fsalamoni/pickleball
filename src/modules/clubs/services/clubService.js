@@ -996,10 +996,28 @@ function sanitizeGameSide(side) {
     }));
 }
 
+/**
+ * Dispara (best-effort, SEM bloquear a mutação) a sincronização do espelho de
+ * ranking de um dia de jogo (date_id) após alteração de jogos, caso o dia já
+ * esteja publicado. Assim, partidas AVULSAS lançadas depois da publicação
+ * inicial entram no ranking/rating/DUPR sem exigir republicação manual.
+ *
+ * Importa o serviço de publicação sob demanda para evitar ciclo de import.
+ * As partidas de origem (que o organizador vê) já foram gravadas de forma
+ * síncrona; o espelho é atualizado em segundo plano. Erros só são logados.
+ */
+function autoSyncEventDateRanking(eventId, dateId, user) {
+  if (!eventId || !dateId) return;
+  import('./rankingPublishingService.js')
+    .then(({ syncEventDateRankingIfPublished }) => syncEventDateRankingIfPublished(eventId, dateId, user))
+    .catch((err) => logger.error('Auto-sincronização do ranking do dia de jogo (clube) falhou:', err));
+}
+
 export async function addEventGame(eventId, data, user) {
   if (!user?.uid) throw new Error('Usuário não autenticado.');
   const ref = doc(collection(db, COL.events, eventId, COL.eventGames));
   await setDoc(ref, buildGamePayload(ref.id, eventId, data, user));
+  autoSyncEventDateRanking(eventId, data.date_id || null, user);
   return ref.id;
 }
 
@@ -1024,7 +1042,7 @@ function buildGamePayload(id, eventId, data, user) {
   };
 }
 
-export async function updateEventGame(eventId, gameId, updates) {
+export async function updateEventGame(eventId, gameId, updates, user) {
   const sanitized = {};
   if (updates.side_a !== undefined) sanitized.side_a = sanitizeGameSide(updates.side_a);
   if (updates.side_b !== undefined) sanitized.side_b = sanitizeGameSide(updates.side_b);
@@ -1034,10 +1052,32 @@ export async function updateEventGame(eventId, gameId, updates) {
   if (updates.score_b !== undefined) sanitized.score_b = Number.isFinite(updates.score_b) ? updates.score_b : null;
   if (updates.order !== undefined) sanitized.order = updates.order;
   await updateDoc(doc(db, COL.events, eventId, COL.eventGames, gameId), { ...sanitized, updated_at: serverTimestamp() });
+  // Resolve o date_id para sincronizar o dia correto (best-effort). Prefere o
+  // date_id informado pelo chamador (a UI já o tem em mãos) e só relê o doc
+  // como fallback. `date_id` não é persistido aqui — serve só para o sync.
+  try {
+    let dateId = updates.date_id || null;
+    if (!dateId) {
+      const snap = await getDoc(doc(db, COL.events, eventId, COL.eventGames, gameId));
+      dateId = snap.exists() ? (snap.data().date_id || null) : null;
+    }
+    autoSyncEventDateRanking(eventId, dateId, user);
+  } catch (err) {
+    logger.error('updateEventGame: leitura do date_id para sincronização falhou:', err);
+  }
 }
 
-export async function deleteEventGame(eventId, gameId) {
+export async function deleteEventGame(eventId, gameId, user) {
+  // Lê o date_id ANTES de apagar, para sincronizar o dia correto (best-effort).
+  let dateId = null;
+  try {
+    const snap = await getDoc(doc(db, COL.events, eventId, COL.eventGames, gameId));
+    if (snap.exists()) dateId = snap.data().date_id || null;
+  } catch (err) {
+    logger.error('deleteEventGame: leitura do date_id para sincronização falhou:', err);
+  }
   await deleteDoc(doc(db, COL.events, eventId, COL.eventGames, gameId));
+  autoSyncEventDateRanking(eventId, dateId, user);
 }
 
 /**
@@ -1055,6 +1095,7 @@ export async function replaceEventGames(eventId, games, user, dateId = null) {
     ops.push({ type: 'set', ref, data: buildGamePayload(ref.id, eventId, { ...g, date_id: dateId, order: i }, user) });
   });
   await commitInChunks(ops);
+  autoSyncEventDateRanking(eventId, dateId, user);
 }
 
 /**
@@ -1080,14 +1121,16 @@ export async function appendEventGames(eventId, { removeIds = [], games = [], or
     ops.push({ type: 'set', ref, data: buildGamePayload(ref.id, eventId, { ...g, date_id: dateId, order: g.order ?? base + i }, user) });
   });
   if (ops.length > 0) await commitInChunks(ops);
+  autoSyncEventDateRanking(eventId, dateId, user);
 }
 
-export async function clearEventGames(eventId, dateId = null) {
+export async function clearEventGames(eventId, dateId = null, user) {
   const snap = await getDocs(collection(db, COL.events, eventId, COL.eventGames));
   const ops = snap.docs
     .filter((d) => (d.data().date_id || null) === (dateId || null))
     .map((d) => ({ type: 'delete', ref: d.ref }));
   if (ops.length > 0) await commitInChunks(ops);
+  autoSyncEventDateRanking(eventId, dateId, user);
 }
 
 /**

@@ -49,6 +49,13 @@ export const AUDIT_ACTION_LABELS = {
   tournament_group_metadata_cleared: 'Metadados de grupo removidos (grupo único)',
   tournament_phase_advanced: 'Fase avançada (classificados)',
   dupr_matches_exported: 'Partidas exportadas para o DUPR (admin)',
+  dupr_matches_submitted: 'Partidas marcadas como lançadas no DUPR (admin)',
+  club_event_date_published_to_ranking: 'Dia de jogo publicado no ranking',
+  club_event_date_unpublished_from_ranking: 'Dia de jogo removido do ranking',
+  club_event_date_ranking_synced: 'Dia de jogo sincronizado no ranking (partidas avulsas)',
+  game_day_published_to_ranking: 'Dia de jogo (atleta) publicado no ranking',
+  game_day_unpublished_from_ranking: 'Dia de jogo (atleta) removido do ranking',
+  game_day_ranking_synced: 'Dia de jogo (atleta) sincronizado no ranking (partidas avulsas)',
 };
 
 export async function createAuditLog({

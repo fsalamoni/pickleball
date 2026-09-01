@@ -472,6 +472,9 @@ export function buildDuprRow(match, profileById, opts = {}) {
   }
 
   return {
+    // `id` estável da partida (doc de `tournament_matches`/`club_event_games`):
+    // chave do registro de exportação (`dupr_export_log`) e da conferência DUPR.
+    id: match.id,
     row,
     ready: missing.length === 0,
     missing,

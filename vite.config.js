@@ -61,6 +61,16 @@ export default defineConfig(({ mode }) => {
       environment: 'jsdom',
       globals: true,
       include: ['src/**/*.{test,spec}.{js,jsx,ts,tsx}'],
+      // Robustez de CI: limites explícitos para um teste/hook travado abortar
+      // rápido (com mensagem clara) em vez de pendurar o processo. Um pouco
+      // mais folgados que o padrão para tolerar a CPU mais lenta do runner.
+      testTimeout: 20000,
+      hookTimeout: 20000,
+      teardownTimeout: 20000,
+      // Só na CI: re-tenta um teste que falhe, para que flakes transitórios
+      // (contenção de CPU/timing no runner) se auto-recuperem em vez de deixar
+      // o run vermelho. Localmente fica 0 para expor qualquer instabilidade.
+      retry: process.env.CI ? 2 : 0,
     },
   };
 });

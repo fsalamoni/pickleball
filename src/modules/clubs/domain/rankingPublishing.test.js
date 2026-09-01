@@ -211,6 +211,30 @@ describe('buildPublishableMatch', () => {
     expect(r.payload.side_a_ids).toEqual(['u_ana']);
     expect(r.payload.side_b_ids).toEqual(['u_caio']);
   });
+
+  it('espelha uma partida AVULSA (round null) com user_id embutido mesmo sem lookup de participante', () => {
+    // Regressão Wave C.6: partidas avulsas carregam o user_id no próprio lado.
+    // Assim o espelhamento funciona mesmo que a resolução por participante
+    // falhe (ex.: participante removido, lista vazia na hora de publicar).
+    const r = buildPublishableMatch({
+      event: EVENT, dateId: DATE_ID, clubId: CLUB_ID,
+      gameId: 'gAvulsa',
+      game: {
+        id: 'gAvulsa',
+        round: null, // avulsa (não é rodada sorteada)
+        side_a: [{ id: 'pa1', name: 'Ana', user_id: 'u_ana' }, { id: 'pa2', name: 'Beto', user_id: 'u_beto' }],
+        side_b: [{ id: 'pa3', name: 'Caio', user_id: 'u_caio' }, { id: 'pa4', name: 'Duda', user_id: 'u_duda' }],
+        score_a: 11, score_b: 5,
+      },
+      participants: [], // lookup por participante FALHA de propósito
+      publishedBy: 'u_pub',
+    });
+    expect(r).not.toBeNull();
+    expect(r.id).toBe('ev1_date1_gAvulsa');
+    expect(r.payload.side_a_ids).toEqual(['u_ana', 'u_beto']);
+    expect(r.payload.side_b_ids).toEqual(['u_caio', 'u_duda']);
+    expect(r.payload.winner_side).toBe('a');
+  });
 });
 
 describe('buildPublishableMatches', () => {

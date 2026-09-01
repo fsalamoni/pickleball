@@ -150,13 +150,15 @@ export function useAddGameDayGame(gdId) {
 }
 
 export function useUpdateGameDayGame(gdId) {
+  const { user } = useAuth();
   const invalidate = useGamesInvalidate(gdId);
-  return useMutation({ mutationFn: ({ gameId, updates }) => updateGameDayGame(gdId, gameId, updates), onSuccess: invalidate });
+  return useMutation({ mutationFn: ({ gameId, updates }) => updateGameDayGame(gdId, gameId, updates, user), onSuccess: invalidate });
 }
 
 export function useDeleteGameDayGame(gdId) {
+  const { user } = useAuth();
   const invalidate = useGamesInvalidate(gdId);
-  return useMutation({ mutationFn: (gameId) => deleteGameDayGame(gdId, gameId), onSuccess: invalidate });
+  return useMutation({ mutationFn: (gameId) => deleteGameDayGame(gdId, gameId, user), onSuccess: invalidate });
 }
 
 export function useReplaceGameDayGames(gdId) {

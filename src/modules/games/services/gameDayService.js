@@ -323,17 +323,20 @@ export async function addGameDayGame(gdId, game, actor) {
     created_at: serverTimestamp(),
     updated_at: serverTimestamp(),
   });
+  autoSyncGameDayRanking(gdId, actor);
   return gid;
 }
 
-export async function updateGameDayGame(gdId, gid, updates) {
+export async function updateGameDayGame(gdId, gid, updates, actor) {
   if (!gdId || !gid) return;
   await updateDoc(doc(db, COL, gdId, SUB_GAMES, gid), { ...updates, updated_at: serverTimestamp() });
+  autoSyncGameDayRanking(gdId, actor);
 }
 
-export async function deleteGameDayGame(gdId, gid) {
+export async function deleteGameDayGame(gdId, gid, actor) {
   if (!gdId || !gid) return;
   await deleteDoc(doc(db, COL, gdId, SUB_GAMES, gid));
+  autoSyncGameDayRanking(gdId, actor);
 }
 
 /** Substitui todos os jogos do dia (usado no sorteio). */
@@ -360,6 +363,7 @@ export async function replaceGameDayGames(gdId, games, actor) {
   });
   await batch.commit();
   await createAuditLog({ action: 'game_day_games_drawn', actor, details: { game_day_id: gdId, count: games.length } });
+  autoSyncGameDayRanking(gdId, actor);
 }
 
 /**
@@ -400,6 +404,7 @@ export async function appendGameDayGames(gdId, { removeIds = [], games = [], ord
     actor,
     details: { game_day_id: gdId, added: games.length, removed: removeIds.length, mode: 'append' },
   });
+  autoSyncGameDayRanking(gdId, actor);
 }
 
 export async function clearGameDayGames(gdId, actor) {
@@ -409,6 +414,7 @@ export async function clearGameDayGames(gdId, actor) {
   current.docs.forEach((d) => batch.delete(d.ref));
   await batch.commit();
   await createAuditLog({ action: 'game_day_games_cleared', actor, details: { game_day_id: gdId } });
+  autoSyncGameDayRanking(gdId, actor);
 }
 
 /* ---------------------------- Play (open play) --------------------------- */
@@ -699,12 +705,14 @@ async function loadClubIdsByUid(uids) {
 }
 
 /**
- * Publica os resultados decididos do dia de jogo no ranking geral (e no ranking
- * de um clube quando todos os atletas de uma partida são do mesmo clube).
- * Idempotente.
+ * Núcleo compartilhado do espelhamento de um dia de jogo do atleta em
+ * `club_event_games`. Lê ids publicados/jogos/participantes, calcula o diff
+ * idempotente via `buildGameDayRankingMatches` (domínio puro) e aplica o
+ * batch. NÃO mexe no estado de publicação nem dispara recálculo.
+ *
+ * @returns {Promise<{ result: object, changed: boolean }>}
  */
-export async function publishGameDayToRanking(gameDay, actor) {
-  if (!gameDay?.id) throw new Error('Dia de jogo inválido.');
+async function applyGameDayMirror(gameDay, actor) {
   const [publishedIds, games, participants] = await Promise.all([
     listRankingIds(gameDay.id),
     listGameDayGames(gameDay.id),
@@ -716,12 +724,34 @@ export async function publishGameDayToRanking(gameDay, actor) {
     gameDay, participants, games, clubIdsByUid, publishedIds, publishedBy: actor?.uid || null,
   });
 
-  if (result.toWrite.length > 0 || result.toRemove.length > 0) {
+  const changed = result.toWrite.length > 0 || result.toRemove.length > 0;
+  if (changed) {
     const batch = writeBatch(db);
     result.toWrite.forEach((w) => batch.set(doc(db, COL_RANKING, w.id), w.payload));
     result.toRemove.forEach((id) => batch.delete(doc(db, COL_RANKING, id)));
     await batch.commit();
   }
+  return { result, changed };
+}
+
+/** Recálculo best-effort do rating nacional (força ignorar o throttle). */
+async function recomputeNationalRating(actor, contextMsg) {
+  try {
+    const { maybeAutoRecomputeRatings } = await import('@/modules/rating/services/ratingService');
+    await maybeAutoRecomputeRatings(actor, { force: true });
+  } catch (err) {
+    logger.error(contextMsg, err);
+  }
+}
+
+/**
+ * Publica os resultados decididos do dia de jogo no ranking geral (e no ranking
+ * de um clube quando todos os atletas de uma partida são do mesmo clube).
+ * Idempotente.
+ */
+export async function publishGameDayToRanking(gameDay, actor) {
+  if (!gameDay?.id) throw new Error('Dia de jogo inválido.');
+  const { result } = await applyGameDayMirror(gameDay, actor);
 
   await updateDoc(doc(db, COL, gameDay.id), {
     publish_to_ranking: true,
@@ -731,12 +761,7 @@ export async function publishGameDayToRanking(gameDay, actor) {
     updated_at: serverTimestamp(),
   });
 
-  try {
-    const { maybeAutoRecomputeRatings } = await import('@/modules/rating/services/ratingService');
-    await maybeAutoRecomputeRatings(actor, { force: true });
-  } catch (err) {
-    logger.error('Recálculo automático do rating após publicação (game day) falhou:', err);
-  }
+  await recomputeNationalRating(actor, 'Recálculo automático do rating após publicação (game day) falhou:');
 
   await createAuditLog({
     action: 'game_day_published_to_ranking',
@@ -744,6 +769,71 @@ export async function publishGameDayToRanking(gameDay, actor) {
     details: { game_day_id: gameDay.id, ...result.summary },
   });
   return result.summary;
+}
+
+/**
+ * Sincroniza (best-effort) o espelhamento do dia de jogo QUANDO ele já foi
+ * publicado no ranking. Chamada após alterações de jogos (inclusão/edição/
+ * exclusão — inclusive AVULSAS lançadas depois da publicação inicial), para
+ * que essas partidas entrem no ranking/rating/DUPR sem exigir republicação
+ * manual.
+ *
+ * Guardas:
+ *  - Só age se o dia estiver com `publish_to_ranking: true`.
+ *  - Não altera o interruptor de publicação; apenas atualiza o espelho.
+ *  - No-op silencioso se o dia não foi publicado ou se nada mudou.
+ *
+ * @param {string} gameDayId
+ * @param {object} actor
+ * @returns {Promise<{ synced: boolean, reason?: string }>}
+ */
+export async function syncGameDayRankingIfPublished(gameDayId, actor) {
+  if (!db || !gameDayId) return { synced: false, reason: 'invalid' };
+
+  let gameDay = null;
+  try {
+    const snap = await getDoc(doc(db, COL, gameDayId));
+    gameDay = snap?.exists() ? { id: snap.id, ...snap.data() } : null;
+  } catch (err) {
+    logger.error('syncGameDayRankingIfPublished: leitura do dia falhou:', err);
+    return { synced: false, reason: 'read-failed' };
+  }
+  if (!gameDay) return { synced: false, reason: 'no-game-day' };
+  if (!gameDay.publish_to_ranking) return { synced: false, reason: 'not-published' };
+
+  const { result, changed } = await applyGameDayMirror(gameDay, actor);
+  if (!changed) return { synced: false, reason: 'up-to-date' };
+
+  await updateDoc(doc(db, COL, gameDayId), {
+    ranking_synced_at: serverTimestamp(),
+    updated_at: serverTimestamp(),
+  });
+
+  await recomputeNationalRating(actor, 'Recálculo automático do rating após sincronização (game day) falhou:');
+
+  await createAuditLog({
+    action: 'game_day_ranking_synced',
+    actor,
+    details: { game_day_id: gameDayId, ...result.summary },
+  });
+  return { synced: true, ...result.summary };
+}
+
+/**
+ * Dispara (best-effort, SEM bloquear a mutação) a sincronização do espelho de
+ * ranking após uma alteração de jogos, caso o dia já esteja publicado. Erros
+ * apenas são logados — nunca interrompem a operação principal do organizador.
+ * As partidas de origem (que o organizador vê) já foram gravadas de forma
+ * síncrona; o espelho alimenta ranking/rating/DUPR e pode ser atualizado em
+ * segundo plano.
+ *
+ * @param {string} gameDayId
+ * @param {object} actor
+ */
+function autoSyncGameDayRanking(gameDayId, actor) {
+  syncGameDayRankingIfPublished(gameDayId, actor).catch((err) =>
+    logger.error('Auto-sincronização do ranking (game day) falhou:', err),
+  );
 }
 
 /** Remove os resultados espelhados deste dia de jogo do ranking. */
@@ -756,12 +846,7 @@ export async function unpublishGameDayFromRanking(gameDay, actor) {
     published_count: 0,
     updated_at: serverTimestamp(),
   });
-  try {
-    const { maybeAutoRecomputeRatings } = await import('@/modules/rating/services/ratingService');
-    await maybeAutoRecomputeRatings(actor, { force: true });
-  } catch (err) {
-    logger.error('Recálculo automático do rating após despublicação (game day) falhou:', err);
-  }
+  await recomputeNationalRating(actor, 'Recálculo automático do rating após despublicação (game day) falhou:');
   await createAuditLog({ action: 'game_day_unpublished_from_ranking', actor, details: { game_day_id: gameDay.id, removed } });
   return { removed };
 }

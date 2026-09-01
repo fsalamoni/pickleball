@@ -658,17 +658,19 @@ export function useAddEventGame(eventId) {
 }
 
 export function useUpdateEventGame(eventId) {
+  const { user } = useAuth();
   const qc = useQueryClient();
   return useMutation({
-    mutationFn: ({ gameId, updates }) => updateEventGame(eventId, gameId, updates),
+    mutationFn: ({ gameId, updates }) => updateEventGame(eventId, gameId, updates, user),
     onSuccess: () => qc.invalidateQueries({ queryKey: ['event-games', eventId] }),
   });
 }
 
 export function useDeleteEventGame(eventId) {
+  const { user } = useAuth();
   const qc = useQueryClient();
   return useMutation({
-    mutationFn: (gameId) => deleteEventGame(eventId, gameId),
+    mutationFn: (gameId) => deleteEventGame(eventId, gameId, user),
     onSuccess: () => qc.invalidateQueries({ queryKey: ['event-games', eventId] }),
   });
 }
@@ -692,9 +694,10 @@ export function useAppendEventGames(eventId) {
 }
 
 export function useClearEventGames(eventId) {
+  const { user } = useAuth();
   const qc = useQueryClient();
   return useMutation({
-    mutationFn: (dateId = null) => clearEventGames(eventId, dateId),
+    mutationFn: (dateId = null) => clearEventGames(eventId, dateId, user),
     onSuccess: () => qc.invalidateQueries({ queryKey: ['event-games', eventId] }),
   });
 }

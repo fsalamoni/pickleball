@@ -85,6 +85,24 @@ describe('buildGameDayMatch', () => {
     const res = buildGameDayMatch({ gameDay, gameId: 'g1', game: doublesGame('g1', 11, 7), participants, clubIdsByUid: clubs });
     expect(res.payload.club_id).toBeNull();
   });
+
+  it('espelha partida AVULSA (round null) com user_id embutido mesmo sem lookup de participante', () => {
+    // Regressão Wave C.6: partidas avulsas do dia de jogo do atleta carregam o
+    // user_id no próprio lado, então o espelhamento funciona mesmo que a lista
+    // de participantes esteja vazia na hora de sincronizar.
+    const g = {
+      id: 'gAvulsa',
+      round: null,
+      side_a: [{ id: 'p1', name: 'Ana', user_id: 'u1' }, { id: 'p2', name: 'Bia', user_id: 'u2' }],
+      side_b: [{ id: 'p3', name: 'Caio', user_id: 'u3' }, { id: 'p4', name: 'Duda', user_id: 'u4' }],
+      score_a: 11, score_b: 4,
+    };
+    const res = buildGameDayMatch({ gameDay, gameId: 'gAvulsa', game: g, participants: [], clubIdsByUid: {}, publishedBy: 'owner' });
+    expect(res).not.toBeNull();
+    expect(res.payload.side_a_ids).toEqual(['u1', 'u2']);
+    expect(res.payload.side_b_ids).toEqual(['u3', 'u4']);
+    expect(res.payload.winner_side).toBe('a');
+  });
 });
 
 describe('buildGameDayRankingMatches', () => {
