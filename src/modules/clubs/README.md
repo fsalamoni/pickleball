@@ -66,6 +66,14 @@ import { useClubPublicPage } from '@/modules/clubs/hooks/useClubPublicPage';
 - **Apenas jogos decididos** entram no ranking (placar numérico com
   vencedor). Jogos sem placar ou com placar empatado são pulados.
 - **Apenas atletas com `user_id` válido** (não guests) entram.
+- **Resolução robusta do `user_id` do slot** — cada slot é resolvido por
+  `buildParticipantResolver`/`resolveSlotUid` na ordem: id do documento →
+  `user_id` embutido no slot → NOME único do dia (recupera id de participante
+  OBSOLETO após remoção + readição) → o próprio `slot.id` quando já é um
+  `user_id`. Nomes ambíguos não são adivinhados e guests seguem de fora. Antes,
+  a resolução só usava o id do documento, então jogos com id obsoleto sumiam do
+  espelho (apareciam no ranking do dia mas não no rating/ranking/DUPR). A
+  mudança é aditiva — slots que já resolviam retornam o MESMO uid.
 - **Singles (1×1) e doubles (2×2)** suportados; outros tamanhos pulados.
 - **Rodadas sorteadas e partidas avulsas contam igualmente** — não há filtro
   por `round`; a distinção "Partidas avulsas" × "Rodada N" é só rótulo.

@@ -103,6 +103,107 @@ describe('buildGameDayMatch', () => {
     expect(res.payload.side_b_ids).toEqual(['u3', 'u4']);
     expect(res.payload.winner_side).toBe('a');
   });
+
+  // Regressão do bug relatado: nos dias de jogo, partidas cujo id de participante
+  // gravado no slot ficou OBSOLETO (participante removido e readicionado ganha um
+  // novo id de documento) e SEM `user_id` embutido eram puladas do espelho —
+  // apareciam no ranking do dia (que chaveia por id do slot) mas somiam do rating/
+  // ranking/DUPR. A resolução agora recupera pelo NOME único do dia.
+  it('recupera jogo com id de participante OBSOLETO via NOME único (sorteada ou avulsa)', () => {
+    const g = {
+      id: 'gStale',
+      // ids não batem com nenhum participante atual; SEM user_id embutido.
+      side_a: [{ id: 'OLD_p1', name: 'Ana' }, { id: 'OLD_p2', name: 'Bia' }],
+      side_b: [{ id: 'OLD_p3', name: 'Caio' }, { id: 'OLD_p4', name: 'Duda' }],
+      score_a: 11, score_b: 6,
+    };
+    const res = buildGameDayMatch({ gameDay, gameId: 'gStale', game: g, participants, clubIdsByUid: {}, publishedBy: 'owner' });
+    expect(res).not.toBeNull();
+    expect(res.payload.side_a_ids).toEqual(['u1', 'u2']);
+    expect(res.payload.side_b_ids).toEqual(['u3', 'u4']);
+    expect(res.payload.winner_side).toBe('a');
+  });
+
+  it('recupera jogo cujo slot.id JÁ é um user_id de participante (chaveado por uid)', () => {
+    const g = {
+      id: 'gUid',
+      side_a: [{ id: 'u1' }, { id: 'u2' }],
+      side_b: [{ id: 'u3' }, { id: 'u4' }],
+      score_a: 9, score_b: 11,
+    };
+    const res = buildGameDayMatch({ gameDay, gameId: 'gUid', game: g, participants, clubIdsByUid: {}, publishedBy: 'owner' });
+    expect(res).not.toBeNull();
+    expect(res.payload.side_a_ids).toEqual(['u1', 'u2']);
+    expect(res.payload.side_b_ids).toEqual(['u3', 'u4']);
+    expect(res.payload.winner_side).toBe('b');
+  });
+
+  it('mantém convidado sem conta FORA mesmo com id obsoleto e nome casando', () => {
+    // O nome do convidado casa com o participante guest (pg), que não tem
+    // user_id — logo o slot segue sem uid e o jogo inteiro é pulado.
+    const g = {
+      id: 'gGuest',
+      side_a: [{ id: 'OLD_p1', name: 'Ana' }, { id: 'x', name: 'Convidado' }],
+      side_b: [{ id: 'OLD_p3', name: 'Caio' }, { id: 'OLD_p4', name: 'Duda' }],
+      score_a: 11, score_b: 4,
+    };
+    expect(buildGameDayMatch({ gameDay, gameId: 'gGuest', game: g, participants, clubIdsByUid: {} })).toBeNull();
+  });
+
+  it('NÃO adivinha quando o nome é ambíguo (dois participantes com conta e mesmo nome)', () => {
+    const homonimos = [
+      { id: 'j1', name: 'João', user_id: 'u1' },
+      { id: 'j2', name: 'João', user_id: 'u2' },
+      { id: 'p3', name: 'Caio', user_id: 'u3' },
+      { id: 'p4', name: 'Duda', user_id: 'u4' },
+    ];
+    const g = {
+      id: 'gAmb',
+      // slot "João" com id obsoleto: nome ambíguo => não resolve => jogo pulado.
+      side_a: [{ id: 'OLD', name: 'João' }, { id: 'p3' }],
+      side_b: [{ id: 'p4' }, { id: 'j2', name: 'João' }],
+      score_a: 11, score_b: 5,
+    };
+    expect(buildGameDayMatch({ gameDay, gameId: 'gAmb', game: g, participants: homonimos, clubIdsByUid: {} })).toBeNull();
+  });
+});
+
+// Cenário integral do usuário: 13 decididos (9 sorteadas + 4 avulsas). As avulsas
+// referenciam participantes readicionados (ids obsoletos) sem user_id embutido.
+// Antes da correção, só as 9 sorteadas espelhavam (9/13); agora todas as 13 entram.
+describe('buildGameDayRankingMatches — 9 sorteadas + 4 avulsas com id obsoleto', () => {
+  const participants = [
+    { id: 'p1', name: 'Ana', user_id: 'u1' },
+    { id: 'p2', name: 'Bia', user_id: 'u2' },
+    { id: 'p3', name: 'Caio', user_id: 'u3' },
+    { id: 'p4', name: 'Duda', user_id: 'u4' },
+  ];
+  const sorteada = (id) => ({
+    id,
+    round: 1,
+    side_a: [{ id: 'p1', name: 'Ana', user_id: 'u1' }, { id: 'p2', name: 'Bia', user_id: 'u2' }],
+    side_b: [{ id: 'p3', name: 'Caio', user_id: 'u3' }, { id: 'p4', name: 'Duda', user_id: 'u4' }],
+    score_a: 11, score_b: 5,
+  });
+  const avulsaObsoleta = (id) => ({
+    id,
+    round: null,
+    // ids obsoletos + SEM user_id embutido (dados legados) → recuperados por nome.
+    side_a: [{ id: `OLD_${id}_a1`, name: 'Ana' }, { id: `OLD_${id}_a2`, name: 'Caio' }],
+    side_b: [{ id: `OLD_${id}_b1`, name: 'Bia' }, { id: `OLD_${id}_b2`, name: 'Duda' }],
+    score_a: 7, score_b: 11,
+  });
+
+  it('espelha as 13 partidas (nenhuma pulada)', () => {
+    const games = [
+      ...Array.from({ length: 9 }, (_, i) => sorteada(`gS${i}`)),
+      ...Array.from({ length: 4 }, (_, i) => avulsaObsoleta(`gA${i}`)),
+    ];
+    const res = buildGameDayRankingMatches({ gameDay, participants, games, clubIdsByUid: {}, publishedIds: [] });
+    expect(res.summary.published).toBe(13);
+    expect(res.summary.skipped).toBe(0);
+    expect(res.toWrite).toHaveLength(13);
+  });
 });
 
 describe('buildGameDayRankingMatches', () => {

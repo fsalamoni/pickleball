@@ -61,6 +61,95 @@ export function resolveSideUids(side) {
 }
 
 /**
+ * Normaliza um nome para casamento tolerante (trim + minúsculas + espaços
+ * colapsados). Dentro de um dia de jogo os nomes são únicos, então servem como
+ * chave de RECUPERAÇÃO quando o id do participante ficou obsoleto (participante
+ * removido e readicionado ganha um novo id de documento).
+ *
+ * @param {string} name
+ * @returns {string}
+ */
+export function normalizeParticipantName(name) {
+  return String(name || '').trim().toLowerCase().replace(/\s+/g, ' ');
+}
+
+/**
+ * Constrói um índice de participantes por MÚLTIPLAS chaves (id do documento,
+ * `user_id` e nome normalizado) para resolver o `user_id` de um slot de partida
+ * de forma robusta — inclusive quando o id gravado no slot ficou obsoleto.
+ *
+ * O índice por nome só considera nomes NÃO ambíguos (um único participante COM
+ * conta), evitando atribuir um jogo ao atleta errado quando dois participantes
+ * compartilham o mesmo nome.
+ *
+ * @param {Array<{id?:string,user_id?:string,name?:string}>} participants
+ * @returns {{ byId: Map, byUid: Map, byName: Map }}
+ */
+export function buildParticipantResolver(participants) {
+  const byId = new Map();
+  const byUid = new Map();
+  const nameCounts = new Map();
+  const nameFirst = new Map();
+  (participants || []).forEach((p) => {
+    if (!p) return;
+    if (p.id != null) byId.set(String(p.id), p);
+    if (p.user_id) {
+      byUid.set(String(p.user_id), p);
+      const nk = normalizeParticipantName(p.name);
+      if (nk) {
+        nameCounts.set(nk, (nameCounts.get(nk) || 0) + 1);
+        if (!nameFirst.has(nk)) nameFirst.set(nk, p);
+      }
+    }
+  });
+  const byName = new Map();
+  nameFirst.forEach((p, nk) => { if (nameCounts.get(nk) === 1) byName.set(nk, p); });
+  return { byId, byUid, byName };
+}
+
+/**
+ * Resolve o `user_id` de UM slot de partida usando, em ordem:
+ *  1. participante casado pelo id do documento (sorteio + avulsa recém-criada);
+ *  2. `user_id` embutido no próprio slot (partidas avulsas — Wave C.6 — e
+ *     jogos sorteados novos que passam a embutir o uid);
+ *  3. participante casado pelo NOME único do dia (recupera id de participante
+ *     obsoleto após remoção + readição);
+ *  4. o próprio id do slot quando ele já é um `user_id` de participante
+ *     (organizadores que chaveiam por `user_id`).
+ *
+ * Retorna `null` se nada resolver — convidados sem conta seguem de fora.
+ *
+ * @param {{id?:string,user_id?:string,name?:string}} slot
+ * @param {{ byId: Map, byUid: Map, byName: Map }} resolver
+ * @returns {string|null}
+ */
+export function resolveSlotUid(slot, resolver) {
+  if (!slot || !resolver) return null;
+  const { byId, byUid, byName } = resolver;
+  const byDocId = slot.id != null ? byId.get(String(slot.id)) : null;
+  if (byDocId?.user_id) return byDocId.user_id;
+  if (slot.user_id) return slot.user_id;
+  const byNm = byName.get(normalizeParticipantName(slot.name));
+  if (byNm?.user_id) return byNm.user_id;
+  if (slot.id != null && byUid.has(String(slot.id))) return String(slot.id);
+  return null;
+}
+
+/**
+ * Resolve os `user_id`s de um lado inteiro a partir da lista de participantes,
+ * descartando slots sem uid (convidados). Substitui o antigo
+ * `resolveSideUids(side.map((p) => byId.get(p.id) || p))`, recuperando também
+ * jogos cujo id de participante ficou obsoleto.
+ *
+ * @param {Array} side
+ * @param {{ byId: Map, byUid: Map, byName: Map }} resolver
+ * @returns {string[]}
+ */
+export function resolveSideUidsFromParticipants(side, resolver) {
+  return (side || []).map((slot) => resolveSlotUid(slot, resolver)).filter(Boolean);
+}
+
+/**
  * Tenta construir o documento espelhado de um jogo de dia de jogo para o
  * ranking nacional. Retorna `null` se o jogo não pode ser publicado.
  *
@@ -78,9 +167,9 @@ export function buildPublishableMatch({ event, dateId, clubId, gameId, game, par
   if (!event?.id || !dateId || !clubId || !gameId) return null;
   if (!isGameDecided(game)) return null;
 
-  const byId = new Map((participants || []).map((p) => [p.id, p]));
-  const sideAUids = resolveSideUids(game.side_a?.map((p) => byId.get(p.id) || p));
-  const sideBUids = resolveSideUids(game.side_b?.map((p) => byId.get(p.id) || p));
+  const resolver = buildParticipantResolver(participants);
+  const sideAUids = resolveSideUidsFromParticipants(game.side_a, resolver);
+  const sideBUids = resolveSideUidsFromParticipants(game.side_b, resolver);
 
   // Exige lado A e B com a MESMA quantidade de jogadores; e a contagem
   // precisa ser 1 (singles) ou 2 (doubles). Sem isso, o jogo é pulado.

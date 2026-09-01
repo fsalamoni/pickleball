@@ -105,6 +105,23 @@ sorteada entram no espelho pelas MESMAS regras (`buildGameDayMatch` só exige jo
 decidido, lados iguais e `user_id` válido — convidados sem conta são ignorados).
 A diferença "Partidas avulsas" × "Rodada N" é apenas rótulo de exibição.
 
+**Resolução ROBUSTA do `user_id` de cada slot.** Para espelhar, todo slot do jogo
+precisa resolver para um `user_id`. Antes, a resolução usava só o id do
+documento do participante (`byId.get(slot.id)`); quando um participante era
+removido e readicionado ele ganhava um NOVO id de documento, então jogos antigos
+(sorteados ou avulsos legados sem `user_id` embutido) referenciavam um id
+OBSOLETO, não resolviam e o jogo inteiro sumia do espelho — aparecia no ranking
+do dia (que chaveia por id do slot) mas não no rating/ranking/DUPR (o sintoma
+"13 disputadas · 9 espelhadas"). Agora `buildParticipantResolver` +
+`resolveSlotUid` (em `clubs/domain/rankingPublishing.js`) resolvem em ordem:
+(1) participante pelo id do documento; (2) `user_id` embutido no slot;
+(3) participante pelo NOME único do dia (recupera id obsoleto); (4) o próprio
+`slot.id` quando ele já é um `user_id`. Nomes AMBÍGUOS (dois participantes com
+conta e mesmo nome) não são adivinhados, e convidados sem conta seguem de fora.
+A mudança é aditiva: slots que já resolviam retornam o MESMO uid. Além disso, os
+organizadores passaram a EMBUTIR `user_id` também nos jogos sorteados
+(`drawnSlot`), tornando cada jogo autossuficiente para o espelho.
+
 **Propagação de edições (idempotente).** `buildGameDayRankingMatches` recebe
 opcionalmente `publishedById` (id → documento já espelhado). Com ele, jogos JÁ
 publicados são REAVALIADOS via `mirrorDecisionChanged` (compara placar, vencedor,

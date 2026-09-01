@@ -241,12 +241,20 @@ function GamesSection({ gameDay, participants, isOwner }) {
     return map;
   }, [participants]);
 
+  // Cada slot do jogo SORTEADO embute o `user_id` real do participante (igual
+  // às partidas avulsas — Wave C.6), tornando o jogo autossuficiente para o
+  // espelhamento no ranking mesmo que o id do participante mude depois.
+  const drawnSlot = (id) => {
+    const p = participantById.get(id);
+    return { id, name: p?.name || 'Jogador', user_id: p?.user_id || null };
+  };
+
   const toPayload = (g) => ({
     round: g.round,
     court: g.court ?? null,
     kind: 'doubles',
-    side_a: g.side_a.map((id) => ({ id, name: participantById.get(id)?.name || 'Jogador' })),
-    side_b: g.side_b.map((id) => ({ id, name: participantById.get(id)?.name || 'Jogador' })),
+    side_a: g.side_a.map(drawnSlot),
+    side_b: g.side_b.map(drawnSlot),
   });
 
   const openDraw = () => {
