@@ -553,7 +553,14 @@ function ManualGameDialog({ open, onClose, gdId, participants }) {
     return map;
   }, [participants]);
 
-  const buildSide = (ids) => ids.slice(0, slots).filter(Boolean).map((id) => ({ id, name: pById.get(id)?.name || 'Jogador' }));
+  // Wave C.6: embute o user_id real do participante no próprio lado da partida
+  // avulsa (igual aos jogos sorteados), tornando-a autossuficiente para ser
+  // espelhada no ranking mesmo que a resolução por participante falhe depois.
+  const buildSide = (ids) =>
+    ids
+      .slice(0, slots)
+      .filter(Boolean)
+      .map((id) => ({ id, name: pById.get(id)?.name || 'Jogador', user_id: pById.get(id)?.user_id || null }));
 
   const handleSave = async () => {
     const a = buildSide(sideA);

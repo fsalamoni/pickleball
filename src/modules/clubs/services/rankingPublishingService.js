@@ -91,6 +91,53 @@ async function patchEventDate(eventId, dateId, patch) {
 }
 
 /**
+ * Núcleo compartilhado do espelhamento de um dia de jogo em
+ * `club_event_games`. Lê `publishedIds`/jogos/participantes, calcula o
+ * diff idempotente via `buildPublishableMatches` (domínio puro) e aplica o
+ * batch (grava novos + remove fantasmas). NÃO mexe no estado de publicação
+ * do dia nem dispara recálculo — isso é responsabilidade de quem chama.
+ *
+ * @returns {Promise<{ result: object, changed: boolean }>}
+ */
+async function applyEventDateMirror(event, dateId, clubId, actor) {
+  const [publishedIds, games, participants] = await Promise.all([
+    listPublishedIdsForDate(event.id, dateId),
+    listGamesForDate(event.id, dateId),
+    listParticipantsForDate(event.id, dateId),
+  ]);
+
+  const result = buildPublishableMatches({
+    event,
+    dateId,
+    clubId,
+    publishedBy: actor?.uid || null,
+    participants,
+    games,
+    publishedIds,
+  });
+
+  const changed = result.toWrite.length > 0 || result.toRemove.length > 0;
+  if (changed) {
+    const batch = writeBatch(db);
+    result.toWrite.forEach((w) => batch.set(doc(db, COL.clubEventGames, w.id), w.payload));
+    result.toRemove.forEach((id) => batch.delete(doc(db, COL.clubEventGames, id)));
+    await batch.commit();
+  }
+
+  return { result, changed };
+}
+
+/** Recálculo best-effort do rating nacional (força ignorar o throttle). */
+async function recomputeNationalRating(actor, contextMsg) {
+  try {
+    const { maybeAutoRecomputeRatings } = await import('@/modules/rating/services/ratingService');
+    await maybeAutoRecomputeRatings(actor, { force: true });
+  } catch (err) {
+    logger.error(contextMsg, err);
+  }
+}
+
+/**
  * Publica os resultados decididos de um dia de jogo no ranking nacional.
  * Idempotente: re-rodar não duplica jogos já espelhados.
  *
@@ -108,28 +155,7 @@ export async function publishEventDateToRanking(event, dateId, clubId, actor) {
     throw new Error('O evento não pertence ao clube informado.');
   }
 
-  const [publishedIds, games, participants] = await Promise.all([
-    listPublishedIdsForDate(event.id, dateId),
-    listGamesForDate(event.id, dateId),
-    listParticipantsForDate(event.id, dateId),
-  ]);
-
-  const result = buildPublishableMatches({
-    event,
-    dateId,
-    clubId,
-    publishedBy: actor?.uid || null,
-    participants,
-    games,
-    publishedIds,
-  });
-
-  const batch = writeBatch(db);
-  result.toWrite.forEach((w) => batch.set(doc(db, COL.clubEventGames, w.id), w.payload));
-  result.toRemove.forEach((id) => batch.delete(doc(db, COL.clubEventGames, id)));
-  if (result.toWrite.length > 0 || result.toRemove.length > 0) {
-    await batch.commit();
-  }
+  const { result } = await applyEventDateMirror(event, dateId, clubId, actor);
 
   // Marca o dia de jogo como publicado (idempotente).
   await patchEventDate(event.id, dateId, {
@@ -142,12 +168,7 @@ export async function publishEventDateToRanking(event, dateId, clubId, actor) {
   });
 
   // Recálculo best-effort do ranking nacional.
-  try {
-    const { maybeAutoRecomputeRatings } = await import('@/modules/rating/services/ratingService');
-    await maybeAutoRecomputeRatings(actor, { force: true });
-  } catch (err) {
-    logger.error('Recálculo automático do rating após publicação falhou:', err);
-  }
+  await recomputeNationalRating(actor, 'Recálculo automático do rating após publicação falhou:');
 
   await createAuditLog({
     action: 'club_event_date_published_to_ranking',
@@ -161,6 +182,77 @@ export async function publishEventDateToRanking(event, dateId, clubId, actor) {
   });
 
   return summarizeResult(result.summary);
+}
+
+/**
+ * Sincroniza (best-effort) o espelhamento de um dia de jogo QUANDO ele já foi
+ * publicado no ranking. Chamada após alterações de jogos (inclusão/edição/
+ * exclusão de partidas — inclusive AVULSAS lançadas depois da publicação
+ * inicial), para que essas partidas entrem no ranking/rating/DUPR sem exigir
+ * que o organizador clique em "Publicar" de novo.
+ *
+ * Guardas:
+ *  - Só age se o dia de jogo estiver com `publish_to_ranking: true`.
+ *  - Não altera o interruptor de publicação; apenas atualiza o espelho.
+ *  - No-op silencioso (retorna `synced: false`) se o dia não foi publicado,
+ *    se faltam dados ou se nada mudou.
+ *
+ * @param {string} eventId
+ * @param {string} dateId
+ * @param {object} actor
+ * @returns {Promise<{ synced: boolean, reason?: string }>}
+ */
+export async function syncEventDateRankingIfPublished(eventId, dateId, actor) {
+  if (!db || !eventId || !dateId) return { synced: false, reason: 'invalid' };
+
+  // Guarda 1: o dia precisa estar publicado.
+  let dateData = null;
+  try {
+    const snap = await getDoc(doc(db, COL.events, eventId, COL.eventDates, dateId));
+    dateData = snap?.exists() ? snap.data() : null;
+  } catch (err) {
+    logger.error('syncEventDateRankingIfPublished: leitura do dia falhou:', err);
+    return { synced: false, reason: 'read-failed' };
+  }
+  if (!dateData?.publish_to_ranking) return { synced: false, reason: 'not-published' };
+
+  // Carrega o evento (título, clube) para montar o espelho.
+  let event = null;
+  try {
+    const snap = await getDoc(doc(db, COL.events, eventId));
+    event = snap?.exists() ? { id: snap.id, ...snap.data() } : null;
+  } catch (err) {
+    logger.error('syncEventDateRankingIfPublished: leitura do evento falhou:', err);
+    return { synced: false, reason: 'read-failed' };
+  }
+  if (!event) return { synced: false, reason: 'no-event' };
+  const clubId = event.club_id || null;
+  if (!clubId) return { synced: false, reason: 'no-club' };
+
+  const { result, changed } = await applyEventDateMirror(event, dateId, clubId, actor);
+  if (!changed) return { synced: false, reason: 'up-to-date' };
+
+  // Atualiza o carimbo da última sincronização (sem tocar no interruptor).
+  await patchEventDate(eventId, dateId, {
+    last_publish_summary: result.summary,
+    ranking_synced_at: serverTimestamp(),
+  });
+
+  // Recálculo best-effort do ranking nacional para refletir as novas partidas.
+  await recomputeNationalRating(actor, 'Recálculo automático do rating após sincronização falhou:');
+
+  await createAuditLog({
+    action: 'club_event_date_ranking_synced',
+    actor,
+    details: {
+      event_id: eventId,
+      date_id: dateId,
+      club_id: clubId,
+      ...result.summary,
+    },
+  });
+
+  return { synced: true, ...summarizeResult(result.summary) };
 }
 
 /**
@@ -188,12 +280,7 @@ export async function unpublishEventDateFromRanking(event, dateId, actor) {
     published_count: 0,
   });
 
-  try {
-    const { maybeAutoRecomputeRatings } = await import('@/modules/rating/services/ratingService');
-    await maybeAutoRecomputeRatings(actor, { force: true });
-  } catch (err) {
-    logger.error('Recálculo automático do rating após despublicação falhou:', err);
-  }
+  await recomputeNationalRating(actor, 'Recálculo automático do rating após despublicação falhou:');
 
   await createAuditLog({
     action: 'club_event_date_unpublished_from_ranking',
