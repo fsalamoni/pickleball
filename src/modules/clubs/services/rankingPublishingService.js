@@ -68,6 +68,27 @@ async function listPublishedIdsForDate(eventId, dateId) {
   }
 }
 
+/**
+ * Lê os documentos já espelhados do dia (id → dados). Serve para propagar
+ * edições de placar de jogos JÁ publicados (o domínio compara o resultado
+ * gravado com o recém-calculado e só regrava o que mudou).
+ */
+async function listPublishedDocsForDate(eventId, dateId) {
+  try {
+    const snap = await getDocs(
+      query(
+        collection(db, COL.clubEventGames),
+        where('event_id', '==', eventId),
+        where('date_id', '==', dateId),
+      ),
+    );
+    return snap.docs.map((d) => ({ id: d.id, data: d.data() }));
+  } catch (err) {
+    logger.error('listPublishedDocsForDate falhou:', err);
+    return [];
+  }
+}
+
 async function listGamesForDate(eventId, dateId) {
   const snap = await getDocs(collection(db, COL.events, eventId, COL.eventGames));
   return snap.docs
@@ -100,11 +121,14 @@ async function patchEventDate(eventId, dateId, patch) {
  * @returns {Promise<{ result: object, changed: boolean }>}
  */
 async function applyEventDateMirror(event, dateId, clubId, actor) {
-  const [publishedIds, games, participants] = await Promise.all([
-    listPublishedIdsForDate(event.id, dateId),
+  const [publishedDocs, games, participants] = await Promise.all([
+    listPublishedDocsForDate(event.id, dateId),
     listGamesForDate(event.id, dateId),
     listParticipantsForDate(event.id, dateId),
   ]);
+
+  const publishedIds = publishedDocs.map((d) => d.id);
+  const publishedById = new Map(publishedDocs.map((d) => [d.id, d.data]));
 
   const result = buildPublishableMatches({
     event,
@@ -114,6 +138,7 @@ async function applyEventDateMirror(event, dateId, clubId, actor) {
     participants,
     games,
     publishedIds,
+    publishedById,
   });
 
   const changed = result.toWrite.length > 0 || result.toRemove.length > 0;

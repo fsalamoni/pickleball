@@ -131,7 +131,15 @@ describe('syncEventDateRankingIfPublished', () => {
     };
     h.getDocs.mockImplementation((arg) => {
       const path = arg?.path || arg?.c?.path || [];
-      if (path[0] === 'club_event_games') return snap([{ id: `${EVENT_ID}_${DATE_ID}_g1` }]);
+      // Documento já espelhado carrega o payload COMPLETO (como em produção), para
+      // que a detecção de edição (mirrorDecisionChanged) veja "nada mudou".
+      if (path[0] === 'club_event_games') {
+        return snap([{
+          id: `${EVENT_ID}_${DATE_ID}_g1`,
+          score_a: 11, score_b: 3, winner_side: 'a', kind: 'doubles', club_id: 'club1',
+          side_a_ids: ['u_ana', 'u_beto'], side_b_ids: ['u_caio', 'u_duda'],
+        }]);
+      }
       if (path.includes('games')) return snap([g]);
       if (path.includes('participants')) return snap([]);
       return snap([]);
@@ -143,5 +151,49 @@ describe('syncEventDateRankingIfPublished', () => {
     expect(h.batchSet).not.toHaveBeenCalled();
     expect(h.createAuditLog).not.toHaveBeenCalled();
     expect(h.maybeAutoRecomputeRatings).not.toHaveBeenCalled();
+  });
+
+  it('re-espelha um jogo JÁ publicado quando o placar é corrigido', async () => {
+    h.getDoc.mockImplementation((ref) => {
+      if (ref.sub === 'dates') return { exists: () => true, data: () => ({ publish_to_ranking: true }) };
+      return { exists: () => true, id: EVENT_ID, data: () => ({ club_id: 'club1', title: 'Dia' }) };
+    });
+    // Jogo atual com placar CORRIGIDO (3x11 → vencedor B).
+    const g = {
+      id: 'g1', event_id: EVENT_ID, date_id: DATE_ID, kind: 'doubles',
+      side_a: [{ id: 'pa1', user_id: 'u_ana' }, { id: 'pa2', user_id: 'u_beto' }],
+      side_b: [{ id: 'pa3', user_id: 'u_caio' }, { id: 'pa4', user_id: 'u_duda' }],
+      score_a: 3, score_b: 11,
+    };
+    h.getDocs.mockImplementation((arg) => {
+      const path = arg?.path || arg?.c?.path || [];
+      // Espelho antigo tinha o placar ANTERIOR (11x3 → vencedor A).
+      if (path[0] === 'club_event_games') {
+        return snap([{
+          id: `${EVENT_ID}_${DATE_ID}_g1`,
+          score_a: 11, score_b: 3, winner_side: 'a', kind: 'doubles', club_id: 'club1',
+          side_a_ids: ['u_ana', 'u_beto'], side_b_ids: ['u_caio', 'u_duda'],
+          created_at: '2020-01-01T00:00:00.000Z',
+        }]);
+      }
+      if (path.includes('games')) return snap([g]);
+      if (path.includes('participants')) return snap([]);
+      return snap([]);
+    });
+
+    const res = await syncEventDateRankingIfPublished(EVENT_ID, DATE_ID, ACTOR);
+
+    expect(res.synced).toBe(true);
+    expect(writtenIds()).toEqual([`${EVENT_ID}_${DATE_ID}_g1`]);
+    const payload = h.batchSet.mock.calls[0][1];
+    expect(payload.winner_side).toBe('b');
+    expect(payload.score_a).toBe(3);
+    expect(payload.score_b).toBe(11);
+    // created_at do documento original é preservado ao regravar a correção.
+    expect(payload.created_at).toBe('2020-01-01T00:00:00.000Z');
+    expect(h.maybeAutoRecomputeRatings).toHaveBeenCalledWith(ACTOR, { force: true });
+    expect(h.createAuditLog).toHaveBeenCalledWith(
+      expect.objectContaining({ action: 'club_event_date_ranking_synced' }),
+    );
   });
 });

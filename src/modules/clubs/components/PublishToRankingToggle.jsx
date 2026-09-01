@@ -161,8 +161,9 @@ export default function PublishToRankingToggle({ event, clubId, dateId, canManag
               <p className="mt-2 rounded border border-amber-200 bg-amber-50/50 p-2 text-[11px] leading-5 text-amber-900">
                 <strong>Apenas jogos com resultados lançados</strong> entram no ranking.
                 Jogos sem placar (ou com placares empatados) são ignorados.
+                Rodadas sorteadas e partidas avulsas contam igualmente.
                 Para cada lado do jogo, todos os jogadores precisam ter conta na plataforma
-                (convidados avulsos não contam). O lançamento é idempotente:
+                (convidados sem conta não contam). O lançamento é idempotente:
                 pode ser refeito sem duplicar.
               </p>
             )}

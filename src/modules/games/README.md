@@ -99,6 +99,22 @@ os atletas da partida, ou `null`). Assim consomem os resultados sem alteração:
 - **Ranking interno dos clubes** (`functions/clubRanking.js`, quando `club_id`).
 Domínio puro em `domain/gameDayRanking.js`.
 
+**Rodadas sorteadas × partidas avulsas — mesmo tratamento.** Não há filtro por
+`round` em nenhum consumidor: uma partida manual (`round: null`) e uma rodada
+sorteada entram no espelho pelas MESMAS regras (`buildGameDayMatch` só exige jogo
+decidido, lados iguais e `user_id` válido — convidados sem conta são ignorados).
+A diferença "Partidas avulsas" × "Rodada N" é apenas rótulo de exibição.
+
+**Propagação de edições (idempotente).** `buildGameDayRankingMatches` recebe
+opcionalmente `publishedById` (id → documento já espelhado). Com ele, jogos JÁ
+publicados são REAVALIADOS via `mirrorDecisionChanged` (compara placar, vencedor,
+lados, modalidade e clube): se o resultado mudou, o espelho é regravado
+(preservando `created_at`); se deixou de ser decidido, é removido; se nada mudou,
+conta como `already_published`. Sem `publishedById`, mantém o comportamento legado
+(já publicado = pula). `applyGameDayMirror` lê os docs completos
+(`listRankingDocs`) para habilitar essa propagação — assim uma correção de placar
+de qualquer partida (sorteada ou avulsa) reflete em ranking/rating/exportação.
+
 ### Meu desempenho (sempre, independente do ranking)
 `getMyGameDayGames(uid)` + `useMyGameDayGames` reúnem TODOS os jogos de dia de
 jogo do atleta (decididos) — do espelho publicado (`club_event_games` por

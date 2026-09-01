@@ -1,7 +1,7 @@
 import { describe, it, expect } from 'vitest';
 import {
   resolveMatchClubId, buildGameDayMatch, buildGameDayRankingMatches,
-  gameDayRankingId, GAME_DAY_RANKING_SOURCE,
+  gameDayRankingId, GAME_DAY_RANKING_SOURCE, mirrorDecisionChanged,
 } from './gameDayRanking.js';
 
 const gameDay = { id: 'gd1', title: 'Sábado' };
@@ -126,5 +126,107 @@ describe('buildGameDayRankingMatches', () => {
     const res = buildGameDayRankingMatches({ gameDay, participants, games, clubIdsByUid: {}, publishedIds });
     expect(res.toRemove).toEqual([gameDayRankingId('gd1', 'gDeleted')]);
     expect(res.summary.removed).toBe(1);
+  });
+});
+
+describe('mirrorDecisionChanged', () => {
+  const base = {
+    score_a: 11, score_b: 5, winner_side: 'a', kind: 'doubles', club_id: 'cX',
+    side_a_ids: ['u1', 'u2'], side_b_ids: ['u3', 'u4'],
+  };
+  it('false quando nada relevante mudou', () => {
+    expect(mirrorDecisionChanged({ ...base, created_at: 'x' }, { ...base })).toBe(false);
+  });
+  it('true quando o placar muda', () => {
+    expect(mirrorDecisionChanged(base, { ...base, score_a: 9, winner_side: 'b' })).toBe(true);
+  });
+  it('true quando os lados mudam', () => {
+    expect(mirrorDecisionChanged(base, { ...base, side_a_ids: ['u1', 'u9'] })).toBe(true);
+  });
+  it('true quando não há base gravada', () => {
+    expect(mirrorDecisionChanged(null, base)).toBe(true);
+  });
+});
+
+// Parte A: propagação de edições em jogos JÁ espelhados quando o serviço fornece
+// `publishedById` (id → documento gravado). Cobre correções de placar tanto em
+// rodadas sorteadas quanto em partidas avulsas — o usuário exige que TODAS sejam
+// consideradas em tudo, inclusive após edição.
+describe('buildGameDayRankingMatches — propagação de edições (publishedById)', () => {
+  const clubs = { u1: ['cX'], u2: ['cX'], u3: ['cX'], u4: ['cX'] };
+
+  function mirrorOf(game) {
+    const res = buildGameDayMatch({ gameDay, gameId: game.id, game, participants, clubIdsByUid: clubs, publishedBy: 'owner' });
+    return res ? [res.id, res.payload] : null;
+  }
+
+  it('regrava um jogo já publicado quando o placar é corrigido', () => {
+    const original = doublesGame('g1', 11, 5); // A vence
+    const [id, storedPayload] = mirrorOf(original);
+    const edited = doublesGame('g1', 5, 11);    // corrigido: B vence
+    const res = buildGameDayRankingMatches({
+      gameDay, participants, games: [edited], clubIdsByUid: clubs,
+      publishedIds: [id], publishedById: new Map([[id, storedPayload]]), publishedBy: 'owner',
+    });
+    expect(res.summary.updated).toBe(1);
+    expect(res.summary.already_published).toBe(0);
+    expect(res.toWrite).toHaveLength(1);
+    expect(res.toWrite[0].payload.winner_side).toBe('b');
+    expect(res.toWrite[0].payload.score_a).toBe(5);
+    expect(res.toWrite[0].payload.score_b).toBe(11);
+    // created_at preservado do documento original.
+    expect(res.toWrite[0].payload.created_at).toBe(storedPayload.created_at);
+  });
+
+  it('não regrava quando o jogo já publicado não mudou', () => {
+    const g = doublesGame('g1', 11, 5);
+    const [id, storedPayload] = mirrorOf(g);
+    const res = buildGameDayRankingMatches({
+      gameDay, participants, games: [g], clubIdsByUid: clubs,
+      publishedIds: [id], publishedById: new Map([[id, storedPayload]]), publishedBy: 'owner',
+    });
+    expect(res.summary.updated).toBe(0);
+    expect(res.summary.already_published).toBe(1);
+    expect(res.toWrite).toHaveLength(0);
+  });
+
+  it('remove do espelho um jogo publicado que deixou de ser decidido (virou empate)', () => {
+    const original = doublesGame('g1', 11, 5);
+    const [id, storedPayload] = mirrorOf(original);
+    const tie = doublesGame('g1', 7, 7);
+    const res = buildGameDayRankingMatches({
+      gameDay, participants, games: [tie], clubIdsByUid: clubs,
+      publishedIds: [id], publishedById: new Map([[id, storedPayload]]), publishedBy: 'owner',
+    });
+    expect(res.toRemove).toEqual([id]);
+    expect(res.toWrite).toHaveLength(0);
+  });
+
+  it('cenário do usuário: dia publicado com rodada sorteada + avulsa; placar da avulsa corrigido propaga', () => {
+    // Rodada sorteada (round 1) + avulsa (round null) já publicadas.
+    const rodada = { ...doublesGame('gR', 11, 4), round: 1 };
+    const avulsa = {
+      id: 'gAvulsa', round: null,
+      side_a: [{ id: 'p1', name: 'Ana', user_id: 'u1' }, { id: 'p2', name: 'Bia', user_id: 'u2' }],
+      side_b: [{ id: 'p3', name: 'Caio', user_id: 'u3' }, { id: 'p4', name: 'Duda', user_id: 'u4' }],
+      score_a: 11, score_b: 6,
+    };
+    const [idR, payloadR] = mirrorOf(rodada);
+    const [idA, payloadA] = mirrorOf(avulsa);
+    const publishedById = new Map([[idR, payloadR], [idA, payloadA]]);
+
+    // Organizador corrige o placar SÓ da avulsa (11x6 -> 6x11).
+    const avulsaEdit = { ...avulsa, score_a: 6, score_b: 11 };
+    const res = buildGameDayRankingMatches({
+      gameDay, participants, games: [rodada, avulsaEdit], clubIdsByUid: clubs,
+      publishedIds: [idR, idA], publishedById, publishedBy: 'owner',
+    });
+    // A rodada não mudou; a avulsa foi regravada com o novo vencedor.
+    expect(res.summary.updated).toBe(1);
+    expect(res.summary.already_published).toBe(1);
+    const written = res.toWrite.find((w) => w.id === idA);
+    expect(written).toBeTruthy();
+    expect(written.payload.winner_side).toBe('b');
+    expect(res.toWrite.some((w) => w.id === idR)).toBe(false);
   });
 });

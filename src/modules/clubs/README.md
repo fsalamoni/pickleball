@@ -67,8 +67,16 @@ import { useClubPublicPage } from '@/modules/clubs/hooks/useClubPublicPage';
   vencedor). Jogos sem placar ou com placar empatado são pulados.
 - **Apenas atletas com `user_id` válido** (não guests) entram.
 - **Singles (1×1) e doubles (2×2)** suportados; outros tamanhos pulados.
+- **Rodadas sorteadas e partidas avulsas contam igualmente** — não há filtro
+  por `round`; a distinção "Partidas avulsas" × "Rodada N" é só rótulo.
 - **Idempotente** — re-rodar a publicação não duplica; "Republicar" é
   seguro e re-sincroniza a partir do estado atual.
+- **Propaga edições** — `buildPublishableMatches` recebe opcionalmente
+  `publishedById` (id → doc já espelhado). Com ele, um jogo já publicado
+  cujo placar/vencedor/lado foi corrigido é REGRAVADO (via
+  `mirrorDecisionChanged`, preservando `created_at`); um jogo que deixou de
+  ser decidido é removido. `applyEventDateMirror` lê os docs completos
+  (`listPublishedDocsForDate`) para habilitar isso.
 - **Auto-cleanup** — `clearGameDayData` (chamado ao excluir o dia de
   jogo) também remove os espelhamentos no ranking.
 

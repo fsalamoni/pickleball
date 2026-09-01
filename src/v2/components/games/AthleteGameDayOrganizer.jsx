@@ -387,6 +387,10 @@ function GamesSection({ gameDay, participants, isOwner }) {
           />
         ) : (
           <div className="space-y-4">
+            <p className="rounded-lg bg-green-50 px-3 py-2 text-xs text-green-800">
+              Rodadas sorteadas e partidas avulsas são tratadas do mesmo jeito: todas contam
+              igualmente no ranking, no rating e no desenvolvimento quando você publica o dia no ranking.
+            </p>
             {byRound.map(([key, list]) => (
               <div key={key}>
                 <div className="mb-2 text-xs font-semibold uppercase tracking-wide text-gray-500">
@@ -651,7 +655,7 @@ function RankingSection({ gameDay, participants }) {
   const handlePublish = async () => {
     try {
       const summary = await publish.mutateAsync(gameDay);
-      toast.success(`Publicado no ranking: ${summary.published} jogo(s). Convidados avulsos são ignorados.`);
+      toast.success(`Publicado no ranking: ${summary.published} jogo(s). Convidados sem conta na plataforma são ignorados.`);
     } catch (err) {
       toast.error(err.message || 'Não foi possível publicar.');
     }
@@ -675,9 +679,10 @@ function RankingSection({ gameDay, participants }) {
           {isPublished && <V2Badge tone="green">Publicado</V2Badge>}
         </div>
         <p className="text-sm text-gray-500">
-          Publique os resultados decididos no ranking geral da plataforma. Partidas em que todos os
-          atletas são do mesmo clube também entram no ranking desse clube. Convidados avulsos (fora da
-          plataforma) são ignorados.
+          Publique os resultados decididos no ranking geral da plataforma — tanto as rodadas
+          sorteadas quanto as partidas avulsas contam igualmente. Partidas em que todos os
+          atletas são do mesmo clube também entram no ranking desse clube. Apenas convidados
+          sem conta na plataforma são ignorados.
         </p>
         <p className="text-xs text-gray-400">
           {decidedCount} jogo(s) decidido(s){publishedCount > 0 ? ` · ${publishedCount} espelhado(s) no ranking` : ''}.
