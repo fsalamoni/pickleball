@@ -113,6 +113,11 @@ describe('buildParticipantResolver / resolveSlotUid', () => {
   it('resolve pelo user_id embutido no slot', () => {
     expect(resolveSlotUid({ id: 'inexistente', user_id: 'u2' }, resolver)).toBe('u2');
   });
+  it('honra user_id embutido de atleta REMOVIDO do dia (não exige estar na lista atual)', () => {
+    // Atleta que jogou e depois saiu da lista: uid não está em nenhum índice,
+    // mas a partida real deve continuar contando (comportamento legado).
+    expect(resolveSlotUid({ id: 'OLD', name: 'Removido', user_id: 'u_removido' }, resolver)).toBe('u_removido');
+  });
   it('resolve por NOME único quando o id ficou obsoleto', () => {
     expect(resolveSlotUid({ id: 'OLD_p1', name: 'Ana' }, resolver)).toBe('u1');
   });

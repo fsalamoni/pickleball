@@ -128,6 +128,13 @@ export function resolveSlotUid(slot, resolver) {
   const { byId, byUid, byName } = resolver;
   const byDocId = slot.id != null ? byId.get(String(slot.id)) : null;
   if (byDocId?.user_id) return byDocId.user_id;
+  // Confia no `user_id` embutido no slot SEM exigir que ele ainda esteja na
+  // lista atual de participantes: preserva o comportamento legado (a resolução
+  // antiga caía no slot cru quando o id não casava) e garante que uma partida
+  // real de um atleta REMOVIDO do dia depois do jogo continue contando. Os
+  // organizadores só embutem `user_id` de participante com conta (guests ficam
+  // com `null`), então a exclusão de convidados é mantida pela checagem de
+  // veracidade abaixo.
   if (slot.user_id) return slot.user_id;
   const byNm = byName.get(normalizeParticipantName(slot.name));
   if (byNm?.user_id) return byNm.user_id;
