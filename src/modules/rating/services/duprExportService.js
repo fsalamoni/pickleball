@@ -11,14 +11,21 @@
  * auditoria quando o admin baixa o CSV (`recordDuprExportAudit`).
  */
 
-import { collection, getDocs, query, where } from 'firebase/firestore';
+import { collection, doc, getDocs, query, serverTimestamp, where, writeBatch } from 'firebase/firestore';
 import { db } from '@/core/config/firebase';
 import { logger } from '@/core/lib/logger';
 import { createAuditLog } from '@/core/services/auditService';
 import { MATCH_STATUS } from '@/modules/tournament/domain/constants';
 import { normalizeExportMatches, buildExportProfileIndex } from '../domain/duprMatchExport.js';
+import { EXPORT_STATUS, buildLedgerUpserts } from '../domain/duprReconcile.js';
 
 const FINISHED_STATUSES = [MATCH_STATUS.FINISHED, MATCH_STATUS.WALKOVER];
+
+/** Coleção do registro de exportação DUPR (ledger por partida). */
+const DUPR_LOG_COL = 'dupr_export_log';
+
+/** Máximo de escritas por lote do Firestore. */
+const BATCH_LIMIT = 400;
 
 /**
  * Carrega todos os dados necessários para a exportação e devolve as partidas já
@@ -124,4 +131,65 @@ export async function recordDuprExportAudit(actor, summary = {}) {
   } catch (err) {
     logger.warn('[duprExport] falha ao registrar auditoria da exportação', err);
   }
+}
+
+/**
+ * Carrega o LEDGER de exportação DUPR (`dupr_export_log`): mapa por id de
+ * partida com a situação já registrada (`exported`/`submitted`) e os carimbos.
+ * Somente leitura; devolve `Map` vazio quando não há Firestore.
+ *
+ * @returns {Promise<Map<string, object>>}
+ */
+export async function loadDuprLedger() {
+  if (!db) return new Map();
+  const snap = await getDocs(collection(db, DUPR_LOG_COL));
+  return new Map(snap.docs.map((d) => [d.id, { match_id: d.id, ...d.data() }]));
+}
+
+/**
+ * Registra no ledger uma ação sobre um conjunto de partidas: `exported` (quando
+ * entram num CSV baixado) ou `submitted` (quando o admin confirma o lançamento
+ * manual no DUPR). Aditivo e idempotente — usa `set(..., {merge:true})` com id
+ * determinístico (id da partida) e mantém a situação MONOTÔNICA (o domínio não
+ * rebaixa `submitted`). Best-effort: falhas não quebram o download.
+ *
+ * @param {object} actor  admin (uid/email/displayName)
+ * @param {Array<object>} entries  entries de exportação (com `.id` e `.row`)
+ * @param {object} [opts]
+ * @param {string} [opts.status=EXPORT_STATUS.EXPORTED]
+ * @param {Map|object} [opts.ledgerByKey]  ledger atual (evita rebaixar situação)
+ * @returns {Promise<{ written: number }>}
+ */
+export async function recordDuprLedger(actor, entries = [], opts = {}) {
+  const { status = EXPORT_STATUS.EXPORTED, ledgerByKey } = opts;
+  if (!db) return { written: 0 };
+
+  const upserts = buildLedgerUpserts(entries, { status, at: Date.now(), ledgerByKey });
+  if (upserts.length === 0) return { written: 0 };
+
+  // Grava em lotes (limite do Firestore) para suportar exportações grandes.
+  for (let i = 0; i < upserts.length; i += BATCH_LIMIT) {
+    const slice = upserts.slice(i, i + BATCH_LIMIT);
+    const batch = writeBatch(db);
+    slice.forEach(({ id, data }) => {
+      batch.set(
+        doc(db, DUPR_LOG_COL, id),
+        { ...data, updated_at: serverTimestamp() },
+        { merge: true },
+      );
+    });
+    await batch.commit();
+  }
+
+  try {
+    await createAuditLog({
+      action: status === EXPORT_STATUS.SUBMITTED ? 'dupr_matches_submitted' : 'dupr_matches_exported',
+      actor,
+      details: { count: upserts.length, status },
+    });
+  } catch (err) {
+    logger.warn('[duprExport] falha ao auditar registro do ledger', err);
+  }
+
+  return { written: upserts.length };
 }

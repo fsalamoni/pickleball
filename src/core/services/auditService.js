@@ -49,6 +49,7 @@ export const AUDIT_ACTION_LABELS = {
   tournament_group_metadata_cleared: 'Metadados de grupo removidos (grupo único)',
   tournament_phase_advanced: 'Fase avançada (classificados)',
   dupr_matches_exported: 'Partidas exportadas para o DUPR (admin)',
+  dupr_matches_submitted: 'Partidas marcadas como lançadas no DUPR (admin)',
 };
 
 export async function createAuditLog({

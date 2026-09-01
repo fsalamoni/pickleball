@@ -1519,5 +1519,13 @@ service cloud.firestore {
       );
     }
 
+    // ---- Registro de exportação DUPR (flags dupr_match_export / dupr_official_sync) ----
+    // Ledger por partida (id = id da partida) com a situação perante o DUPR
+    // (exported/submitted) e os carimbos de data. Governança sensível: apenas o
+    // platform_admin lê e escreve. Aditivo — sem a feature, a coleção nem existe.
+    match /dupr_export_log/{matchId} {
+      allow read, write: if isPlatformAdmin();
+    }
+
   }
 }
