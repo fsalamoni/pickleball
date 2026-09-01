@@ -285,6 +285,8 @@ export async function removeGameDayParticipant(gdId, pid, actor) {
   // dele ANTES de apagá-lo, para que suas partidas decididas sigam contando
   // mesmo depois de ele sair do dia — o jogo passa a se basear na uid, não na
   // relação atual de participantes. Convidados avulsos (sem uid) são ignorados.
+  // Um dia de jogo de atleta é sempre de data única (GAME_DAY_DATE_ID) e os
+  // nomes são únicos no dia, então selar por todos os jogos do dia é seguro.
   try {
     const pSnap = await getDoc(doc(db, COL, gdId, SUB_PARTICIPANTS, pid));
     const participant = pSnap.exists() ? { id: pSnap.id, ...pSnap.data() } : null;
