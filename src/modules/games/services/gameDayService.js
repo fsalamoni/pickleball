@@ -690,6 +690,21 @@ async function listRankingIds(gdId) {
   }
 }
 
+/**
+ * Lê os documentos já espelhados do dia (id → dados). Serve para propagar
+ * edições de placar de jogos JÁ publicados (o domínio compara o resultado
+ * gravado com o recém-calculado e só regrava o que mudou).
+ */
+async function listRankingDocs(gdId) {
+  try {
+    const snap = await getDocs(query(collection(db, COL_RANKING), where('event_id', '==', gdId)));
+    return snap.docs.map((d) => ({ id: d.id, data: d.data() }));
+  } catch (err) {
+    logger.error('listRankingDocs (game day) falhou:', err);
+    return [];
+  }
+}
+
 /** Carrega uid → club_ids[] a partir dos perfis (para o clube por partida). */
 async function loadClubIdsByUid(uids) {
   const map = new Map();
@@ -713,15 +728,18 @@ async function loadClubIdsByUid(uids) {
  * @returns {Promise<{ result: object, changed: boolean }>}
  */
 async function applyGameDayMirror(gameDay, actor) {
-  const [publishedIds, games, participants] = await Promise.all([
-    listRankingIds(gameDay.id),
+  const [publishedDocs, games, participants] = await Promise.all([
+    listRankingDocs(gameDay.id),
     listGameDayGames(gameDay.id),
     listGameDayParticipants(gameDay.id),
   ]);
   const clubIdsByUid = await loadClubIdsByUid(participants.map((p) => p.user_id));
 
+  const publishedIds = publishedDocs.map((d) => d.id);
+  const publishedById = new Map(publishedDocs.map((d) => [d.id, d.data]));
+
   const result = buildGameDayRankingMatches({
-    gameDay, participants, games, clubIdsByUid, publishedIds, publishedBy: actor?.uid || null,
+    gameDay, participants, games, clubIdsByUid, publishedIds, publishedById, publishedBy: actor?.uid || null,
   });
 
   const changed = result.toWrite.length > 0 || result.toRemove.length > 0;

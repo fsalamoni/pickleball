@@ -103,4 +103,43 @@ describe('syncGameDayRankingIfPublished', () => {
       expect.objectContaining({ action: 'game_day_ranking_synced' }),
     );
   });
+
+  it('re-espelha um jogo JÁ publicado quando o placar é corrigido', async () => {
+    h.getDoc.mockResolvedValue({ exists: () => true, id: GD_ID, data: () => ({ title: 'Sábado', publish_to_ranking: true }) });
+
+    // Jogo atual com placar CORRIGIDO (7x11 → vencedor B).
+    const g = {
+      id: 'g1', round: 1, kind: 'doubles',
+      side_a: [{ id: 'p1', name: 'Ana', user_id: 'u1' }, { id: 'p2', name: 'Bia', user_id: 'u2' }],
+      side_b: [{ id: 'p3', name: 'Caio', user_id: 'u3' }, { id: 'p4', name: 'Duda', user_id: 'u4' }],
+      score_a: 7, score_b: 11,
+    };
+    h.getDocs.mockImplementation((arg) => {
+      const path = arg?.path || arg?.c?.path || [];
+      // Espelho antigo tinha o placar ANTERIOR (11x7 → vencedor A).
+      if (path[0] === 'club_event_games') {
+        return snap([{
+          id: `gd_${GD_ID}_g1`,
+          score_a: 11, score_b: 7, winner_side: 'a', kind: 'doubles', club_id: null,
+          side_a_ids: ['u1', 'u2'], side_b_ids: ['u3', 'u4'],
+          created_at: '2020-01-01T00:00:00.000Z',
+        }]);
+      }
+      if (path.includes('games')) return snap([g]);
+      if (path.includes('participants')) return snap([]);
+      return snap([]);
+    });
+
+    const res = await syncGameDayRankingIfPublished(GD_ID, ACTOR);
+
+    expect(res.synced).toBe(true);
+    expect(writtenIds()).toEqual([`gd_${GD_ID}_g1`]);
+    const payload = h.batchSet.mock.calls[0][1];
+    expect(payload.winner_side).toBe('b');
+    expect(payload.score_a).toBe(7);
+    expect(payload.score_b).toBe(11);
+    // created_at do documento original é preservado ao regravar a correção.
+    expect(payload.created_at).toBe('2020-01-01T00:00:00.000Z');
+    expect(h.maybeAutoRecomputeRatings).toHaveBeenCalledWith(ACTOR, { force: true });
+  });
 });

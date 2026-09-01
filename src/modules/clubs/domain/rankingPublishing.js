@@ -128,11 +128,49 @@ export function buildPublishableMatch({ event, dateId, clubId, gameId, game, par
 }
 
 /**
+ * Campos do espelho que definem o RESULTADO de uma partida. Se qualquer um deles
+ * muda, o documento em `club_event_games` precisa ser regravado para que ranking,
+ * rating, desenvolvimento e exportação reflitam a correção.
+ */
+const MIRROR_DECISION_KEYS = ['score_a', 'score_b', 'winner_side', 'kind', 'club_id'];
+
+/**
+ * Compara o documento já espelhado (`stored`) com o payload recém-calculado
+ * (`fresh`) e diz se o RESULTADO mudou. Permite propagar edições de placar de
+ * jogos já publicados sem regravar o que não mudou (mantém a idempotência).
+ *
+ * @param {object|null|undefined} stored
+ * @param {object} fresh
+ * @returns {boolean}
+ */
+export function mirrorDecisionChanged(stored, fresh) {
+  if (!stored || !fresh) return true;
+  for (const k of MIRROR_DECISION_KEYS) {
+    if (String(stored[k] ?? '') !== String(fresh[k] ?? '')) return true;
+  }
+  if ((stored.side_a_ids || []).join('+') !== (fresh.side_a_ids || []).join('+')) return true;
+  if ((stored.side_b_ids || []).join('+') !== (fresh.side_b_ids || []).join('+')) return true;
+  return false;
+}
+
+/** Normaliza `publishedById` (Map ou objeto simples) para um Map, ou null. */
+function toStoredMap(publishedById) {
+  if (!publishedById) return null;
+  if (publishedById instanceof Map) return publishedById;
+  return new Map(Object.entries(publishedById));
+}
+
+/**
  * Processa uma lista de jogos e devolve três coleções:
- *  - `toWrite`: documentos a serem criados (id + payload) em `club_event_games`
- *  - `toRemove`: ids a serem removidos (somente se o jogo não existe mais
- *    no dia de jogo)
+ *  - `toWrite`: documentos a serem criados/atualizados (id + payload)
+ *  - `toRemove`: ids a serem removidos (jogo sumiu do dia OU deixou de ser decidido)
  *  - `summary`: contadores por tipo de resultado
+ *
+ * Quando `publishedById` (id → documento já espelhado) é fornecido, jogos JÁ
+ * publicados são REAVALIADOS: se o resultado mudou (correção de placar, troca de
+ * lados, etc.) o espelho é regravado; se o jogo deixou de ser decidido ele é
+ * removido. Sem `publishedById`, mantém o comportamento legado (idempotência por
+ * id: já publicado = pula).
  *
  * @param {object} args
  * @param {object} args.event
@@ -142,10 +180,11 @@ export function buildPublishableMatch({ event, dateId, clubId, gameId, game, par
  * @param {Array}  args.participants  - participantes do dia
  * @param {Array}  args.games         - jogos do dia (`score_a`/`score_b` opcionais)
  * @param {string[]=} args.publishedIds - ids já em `club_event_games` (idempotência)
+ * @param {Map|Object=} args.publishedById - id → payload já espelhado (habilita propagação de edições)
  * @returns {{
  *   toWrite: Array<{id: string, payload: object}>,
  *   toRemove: string[],
- *   summary: { published: number, skipped: number, already_published: number, removed: number }
+ *   summary: { published: number, updated: number, skipped: number, already_published: number, removed: number }
  * }}
  */
 export function buildPublishableMatches({
@@ -156,21 +195,22 @@ export function buildPublishableMatches({
   participants,
   games,
   publishedIds = [],
+  publishedById = null,
 }) {
   const publishedSet = new Set(publishedIds);
+  const storedById = toStoredMap(publishedById);
   const currentGameIds = new Set();
   const toWrite = [];
+  const staleRemovals = [];
   let published = 0;
+  let updated = 0;
   let skipped = 0;
   let already = 0;
 
   (games || []).forEach((g) => {
     if (!g?.id) return;
-    currentGameIds.add(`${event.id}_${dateId}_${g.id}`);
-    if (publishedSet.has(`${event.id}_${dateId}_${g.id}`)) {
-      already += 1;
-      return;
-    }
+    const id = `${event.id}_${dateId}_${g.id}`;
+    currentGameIds.add(id);
     const result = buildPublishableMatch({
       event,
       dateId,
@@ -180,6 +220,19 @@ export function buildPublishableMatches({
       participants,
       publishedBy,
     });
+
+    if (publishedSet.has(id)) {
+      // Modo legado (sem base de comparação): já publicado = idempotente.
+      if (!storedById) { already += 1; return; }
+      // Deixou de ser publicável (empate/indefinido/convidado): remove do espelho.
+      if (!result) { staleRemovals.push(id); return; }
+      const stored = storedById.get(id) || null;
+      if (!mirrorDecisionChanged(stored, result.payload)) { already += 1; return; }
+      // Preserva o created_at original ao regravar uma edição.
+      if (stored?.created_at) result.payload.created_at = stored.created_at;
+      toWrite.push(result); updated += 1; return;
+    }
+
     if (result) {
       toWrite.push(result);
       published += 1;
@@ -188,14 +241,16 @@ export function buildPublishableMatches({
     }
   });
 
-  // Jogos que estavam publicados mas sumiram do dia de jogo (foram
-  // removidos pelo organizador): remove do ranking para evitar fantasmas.
-  const toRemove = publishedIds.filter((id) => !currentGameIds.has(id));
+  // Jogos que estavam publicados mas sumiram do dia de jogo (foram removidos
+  // pelo organizador) ou que deixaram de ser decididos: remove para evitar
+  // fantasmas / resultados desatualizados no ranking.
+  const ghostRemovals = publishedIds.filter((id) => !currentGameIds.has(id));
+  const toRemove = [...ghostRemovals, ...staleRemovals];
 
   return {
     toWrite,
     toRemove,
-    summary: { published, skipped, already_published: already, removed: toRemove.length },
+    summary: { published, updated, skipped, already_published: already, removed: toRemove.length },
   };
 }
 

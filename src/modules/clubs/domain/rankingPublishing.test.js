@@ -12,6 +12,7 @@ import {
   buildPublishableMatch,
   buildPublishableMatches,
   summarizeResult,
+  mirrorDecisionChanged,
 } from './rankingPublishing.js';
 import { GAME_DAY_RANKING_RESULT, GAME_DAY_RANKING_SOURCE } from './constants.js';
 
@@ -254,7 +255,7 @@ describe('buildPublishableMatches', () => {
     expect(result.toWrite.map((w) => w.id)).toEqual(['ev1_date1_g1']);
     expect(result.toRemove).toEqual(['ev1_date1_g5']);
     expect(result.summary).toEqual({
-      published: 1, skipped: 2, already_published: 1, removed: 1,
+      published: 1, updated: 0, skipped: 2, already_published: 1, removed: 1,
     });
   });
 
@@ -265,7 +266,72 @@ describe('buildPublishableMatches', () => {
     });
     expect(r.toWrite).toEqual([]);
     expect(r.toRemove).toEqual([]);
-    expect(r.summary).toEqual({ published: 0, skipped: 0, already_published: 0, removed: 0 });
+    expect(r.summary).toEqual({ published: 0, updated: 0, skipped: 0, already_published: 0, removed: 0 });
+  });
+});
+
+// Parte A: propagação de edições em jogos JÁ espelhados quando o serviço fornece
+// `publishedById` (id → documento gravado). Mesma semântica do dia de jogo do
+// atleta — mantém clube e atleta simétricos.
+describe('mirrorDecisionChanged', () => {
+  const base = {
+    score_a: 11, score_b: 9, winner_side: 'a', kind: 'doubles', club_id: 'club1',
+    side_a_ids: ['u_ana', 'u_beto'], side_b_ids: ['u_caio', 'u_duda'],
+  };
+  it('false quando nada relevante mudou', () => {
+    expect(mirrorDecisionChanged({ ...base, created_at: 'x' }, { ...base })).toBe(false);
+  });
+  it('true quando o placar/vencedor muda', () => {
+    expect(mirrorDecisionChanged(base, { ...base, score_a: 8, winner_side: 'b' })).toBe(true);
+  });
+  it('true quando não há base gravada', () => {
+    expect(mirrorDecisionChanged(null, base)).toBe(true);
+  });
+});
+
+describe('buildPublishableMatches — propagação de edições (publishedById)', () => {
+  function mirrorOf(g) {
+    const res = buildPublishableMatch({
+      event: EVENT, dateId: DATE_ID, clubId: CLUB_ID, gameId: g.id, game: g, participants: PARTS, publishedBy: 'u_pub',
+    });
+    return res ? [res.id, res.payload] : null;
+  }
+
+  it('regrava um jogo já publicado quando o placar é corrigido', () => {
+    const [id, stored] = mirrorOf(game({ id: 'g1', score_a: 11, score_b: 9 }));
+    const res = buildPublishableMatches({
+      event: EVENT, dateId: DATE_ID, clubId: CLUB_ID, publishedBy: 'u_pub', participants: PARTS,
+      games: [game({ id: 'g1', score_a: 8, score_b: 11 })],
+      publishedIds: [id], publishedById: new Map([[id, stored]]),
+    });
+    expect(res.summary.updated).toBe(1);
+    expect(res.summary.already_published).toBe(0);
+    expect(res.toWrite).toHaveLength(1);
+    expect(res.toWrite[0].payload.winner_side).toBe('b');
+    expect(res.toWrite[0].payload.created_at).toBe(stored.created_at);
+  });
+
+  it('não regrava quando o jogo já publicado não mudou', () => {
+    const [id, stored] = mirrorOf(game({ id: 'g1', score_a: 11, score_b: 9 }));
+    const res = buildPublishableMatches({
+      event: EVENT, dateId: DATE_ID, clubId: CLUB_ID, publishedBy: 'u_pub', participants: PARTS,
+      games: [game({ id: 'g1', score_a: 11, score_b: 9 })],
+      publishedIds: [id], publishedById: new Map([[id, stored]]),
+    });
+    expect(res.summary.updated).toBe(0);
+    expect(res.summary.already_published).toBe(1);
+    expect(res.toWrite).toHaveLength(0);
+  });
+
+  it('remove do espelho um jogo publicado que virou empate', () => {
+    const [id, stored] = mirrorOf(game({ id: 'g1', score_a: 11, score_b: 9 }));
+    const res = buildPublishableMatches({
+      event: EVENT, dateId: DATE_ID, clubId: CLUB_ID, publishedBy: 'u_pub', participants: PARTS,
+      games: [game({ id: 'g1', score_a: 7, score_b: 7 })],
+      publishedIds: [id], publishedById: new Map([[id, stored]]),
+    });
+    expect(res.toRemove).toEqual([id]);
+    expect(res.toWrite).toHaveLength(0);
   });
 });
 
