@@ -212,6 +212,29 @@ describe('normalizeExportMatches', () => {
     });
   });
 
+  it('exporta partida AVULSA de dia de jogo (mirror sem/juntando round) igual a uma rodada', () => {
+    // Regressão: o espelho `club_event_games` não carrega `round`; a exportação
+    // é agnóstica a rodada. Uma partida avulsa (round null na origem) espelhada
+    // é exportada exatamente como uma rodada.
+    const out = normalizeExportMatches({
+      clubEventMatches: [{
+        id: 'cegAvulsa', source: 'club_event_game', event_id: 'ev1', club_id: 'c1',
+        round: null, // ainda que um round vaze no doc, é ignorado
+        side_a_ids: ['u1', 'u2'], side_b_ids: ['u3', 'u4'], kind: 'doubles',
+        score_a: 11, score_b: 6, winner_side: 'a',
+      }],
+      clubEventById, clubById,
+    });
+    expect(out).toHaveLength(1);
+    expect(out[0]).toMatchObject({
+      source: DUPR_EXPORT_SOURCE.CLUB_EVENT,
+      match_type: 'D',
+      side_a_uids: ['u1', 'u2'],
+      side_b_uids: ['u3', 'u4'],
+      event_id: 'ev1',
+    });
+  });
+
   it('exclui club_event_games sem vencedor definido', () => {
     const out = normalizeExportMatches({
       clubEventMatches: [{
