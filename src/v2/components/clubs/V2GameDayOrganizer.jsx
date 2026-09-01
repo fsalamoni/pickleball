@@ -524,7 +524,7 @@ function GameRow({ eventId, game }) {
     const score_a = a === '' ? null : Number(a);
     const score_b = b === '' ? null : Number(b);
     if (score_a === game.score_a && score_b === game.score_b) return;
-    updateGame.mutate({ gameId: game.id, updates: { score_a, score_b } });
+    updateGame.mutate({ gameId: game.id, updates: { score_a, score_b, date_id: game.date_id || null } });
   };
 
   const sideNames = (side) => (side || []).map((p) => p.name).join(' / ') || '—';

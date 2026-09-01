@@ -1052,10 +1052,16 @@ export async function updateEventGame(eventId, gameId, updates, user) {
   if (updates.score_b !== undefined) sanitized.score_b = Number.isFinite(updates.score_b) ? updates.score_b : null;
   if (updates.order !== undefined) sanitized.order = updates.order;
   await updateDoc(doc(db, COL.events, eventId, COL.eventGames, gameId), { ...sanitized, updated_at: serverTimestamp() });
-  // Resolve o date_id do jogo para sincronizar o dia correto (best-effort).
+  // Resolve o date_id para sincronizar o dia correto (best-effort). Prefere o
+  // date_id informado pelo chamador (a UI já o tem em mãos) e só relê o doc
+  // como fallback. `date_id` não é persistido aqui — serve só para o sync.
   try {
-    const snap = await getDoc(doc(db, COL.events, eventId, COL.eventGames, gameId));
-    autoSyncEventDateRanking(eventId, snap.exists() ? (snap.data().date_id || null) : null, user);
+    let dateId = updates.date_id || null;
+    if (!dateId) {
+      const snap = await getDoc(doc(db, COL.events, eventId, COL.eventGames, gameId));
+      dateId = snap.exists() ? (snap.data().date_id || null) : null;
+    }
+    autoSyncEventDateRanking(eventId, dateId, user);
   } catch (err) {
     logger.error('updateEventGame: leitura do date_id para sincronização falhou:', err);
   }

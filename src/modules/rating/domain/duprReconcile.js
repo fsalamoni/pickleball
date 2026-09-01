@@ -46,7 +46,7 @@ export const EXPORT_STATUS_RANK = Object.freeze({
   [EXPORT_STATUS.CONFIRMED]: 3,
 });
 
-/** Tom do badge (primites V2Badge) por situação. */
+/** Tom do badge (primitivas V2Badge) por situação. */
 export const EXPORT_STATUS_TONE = Object.freeze({
   [EXPORT_STATUS.PENDING]: 'neutral',
   [EXPORT_STATUS.EXPORTED]: 'blue',
