@@ -178,11 +178,19 @@ export default function AdminDuprExportTab() {
     [entries, ledgerByKey, duprIndex],
   );
 
-  const situations = useMemo(() => summarizeSituations(view), [view]);
+  // "Somente partidas prontas": quando ligado, a pré-visualização (e os
+  // contadores de situação) mostram apenas as partidas exportáveis — as com
+  // algum jogador sem ID DUPR ficam de fora, espelhando o que vai para o CSV.
+  const readyFilteredView = useMemo(
+    () => (readyOnly ? view.filter((e) => e.ready) : view),
+    [view, readyOnly],
+  );
+
+  const situations = useMemo(() => summarizeSituations(readyFilteredView), [readyFilteredView]);
 
   const viewBySituation = useMemo(
-    () => filterBySituation(view, situationFilter),
-    [view, situationFilter],
+    () => filterBySituation(readyFilteredView, situationFilter),
+    [readyFilteredView, situationFilter],
   );
 
   const sorted = useMemo(
@@ -472,7 +480,7 @@ export default function AdminDuprExportTab() {
             checked={readyOnly}
             onChange={setReadyOnly}
             label="Somente partidas prontas"
-            hint="Exclui do CSV as partidas com algum jogador sem ID DUPR."
+            hint="Mostra na tabela e exporta apenas as partidas com todos os jogadores com ID DUPR."
           />
           <V2Toggle
             id="dupr-external-id"
@@ -564,7 +572,7 @@ export default function AdminDuprExportTab() {
       </div>
 
       {/* Pré-visualização paginada + ordenável */}
-      {view.length === 0 ? (
+      {readyFilteredView.length === 0 ? (
         <V2EmptyState
           icon={Trophy}
           title="Nenhuma partida encontrada"

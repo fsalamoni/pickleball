@@ -157,6 +157,73 @@ export function resolveSideUidsFromParticipants(side, resolver) {
 }
 
 /**
+ * Verifica se um slot de partida PERTENCE a um participante (por identidade),
+ * ignorando um `user_id` porventura já embutido. Usado para "selar" a uid nas
+ * partidas ANTES de o participante ser removido do dia de jogo.
+ *
+ * Casamento (qualquer um basta):
+ *  - id do slot == id do documento do participante (caso comum);
+ *  - id do slot == `user_id` do participante (organizadores que chaveiam pela
+ *    uid — o slot ficaria irresolúvel após a remoção, então também selamos);
+ *  - nome normalizado igual (nomes são ÚNICOS por dia de jogo — recupera o id
+ *    de participante obsoleto de quem foi removido e readicionado).
+ *
+ * @param {{id?:string,user_id?:string,name?:string}} slot
+ * @param {{id?:string,user_id?:string,name?:string}} participant
+ * @returns {boolean}
+ */
+export function slotBelongsToParticipant(slot, participant) {
+  if (!slot || !participant) return false;
+  const pid = participant.id != null ? String(participant.id) : null;
+  const uid = participant.user_id ? String(participant.user_id) : null;
+  const sid = slot.id != null ? String(slot.id) : null;
+  if (pid && sid && sid === pid) return true;
+  if (uid && sid && sid === uid) return true;
+  const pname = normalizeParticipantName(participant.name);
+  if (pname && normalizeParticipantName(slot.name) === pname) return true;
+  return false;
+}
+
+/**
+ * "Sela" (embute) o `user_id` de um participante COM conta na plataforma em
+ * todos os slots de partida que o referenciam mas ainda não têm `user_id`.
+ *
+ * É a peça central da correção: o registro do jogo passa a se basear na uid do
+ * usuário — e não apenas na relação (volátil) de participantes do dia. Assim,
+ * mesmo que o atleta saia do dia de jogo depois de ter jogado, suas partidas
+ * DECIDIDAS continuam sendo atribuídas a ele para todos os fins
+ * (ranking/rating/DUPR). Convidados avulsos (sem `user_id`) são ignorados.
+ *
+ * Pura e imutável: NÃO altera os objetos de entrada. Nunca sobrescreve um
+ * `user_id` já presente (idempotente). Retorna só os jogos que precisam de
+ * atualização, com os lados já reescritos.
+ *
+ * @param {Array<{id?:string,side_a?:Array,side_b?:Array}>} games
+ * @param {{id?:string,user_id?:string,name?:string}} participant
+ * @returns {Array<{ id:string, side_a:Array, side_b:Array }>}
+ */
+export function sealParticipantUidIntoGames(games, participant) {
+  const uid = participant?.user_id ? String(participant.user_id) : null;
+  if (!uid) return [];
+  const patches = [];
+  (games || []).forEach((game) => {
+    if (!game?.id) return;
+    let changed = false;
+    const sealSide = (side) => (Array.isArray(side) ? side : []).map((slot) => {
+      if (slot && !slot.user_id && slotBelongsToParticipant(slot, participant)) {
+        changed = true;
+        return { ...slot, user_id: uid };
+      }
+      return slot;
+    });
+    const side_a = sealSide(game.side_a);
+    const side_b = sealSide(game.side_b);
+    if (changed) patches.push({ id: game.id, side_a, side_b });
+  });
+  return patches;
+}
+
+/**
  * Tenta construir o documento espelhado de um jogo de dia de jogo para o
  * ranking nacional. Retorna `null` se o jogo não pode ser publicado.
  *

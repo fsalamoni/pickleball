@@ -41,6 +41,7 @@ import {
   JOIN_REQUEST_STATUS,
   MEMBER_INVITE_STATUS,
 } from '../domain/constants.js';
+import { sealParticipantUidIntoGames } from '../domain/rankingPublishing.js';
 
 const COL = CLUB_COLLECTIONS;
 
@@ -953,6 +954,32 @@ export async function addEventParticipant(eventId, data, user) {
 }
 
 export async function removeEventParticipant(eventId, participantId) {
+  if (!eventId || !participantId) return;
+  // Sela o `user_id` do participante (se for atleta da plataforma) nas partidas
+  // DELE do mesmo dia (date_id) ANTES de apagá-lo, para que suas partidas
+  // decididas sigam contando mesmo depois de ele sair do dia de jogo. O jogo
+  // passa a se basear na uid, não na relação atual de participantes.
+  try {
+    const pSnap = await getDoc(doc(db, COL.events, eventId, COL.eventParticipants, participantId));
+    const participant = pSnap.exists() ? { id: pSnap.id, ...pSnap.data() } : null;
+    if (participant?.user_id) {
+      const dateId = participant.date_id || null;
+      const games = (await listEventGames(eventId))
+        .filter((g) => (g.date_id || null) === dateId);
+      const patches = sealParticipantUidIntoGames(games, participant);
+      if (patches.length) {
+        const batch = writeBatch(db);
+        patches.forEach((p) => batch.update(doc(db, COL.events, eventId, COL.eventGames, p.id), {
+          side_a: p.side_a,
+          side_b: p.side_b,
+          updated_at: serverTimestamp(),
+        }));
+        await batch.commit();
+      }
+    }
+  } catch (err) {
+    logger.error('removeEventParticipant: selagem de uid nas partidas falhou:', err);
+  }
   await deleteDoc(doc(db, COL.events, eventId, COL.eventParticipants, participantId));
 }
 

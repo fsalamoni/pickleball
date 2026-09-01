@@ -17,6 +17,8 @@ import {
   buildPublishableMatches,
   summarizeResult,
   mirrorDecisionChanged,
+  slotBelongsToParticipant,
+  sealParticipantUidIntoGames,
 } from './rankingPublishing.js';
 import { GAME_DAY_RANKING_RESULT, GAME_DAY_RANKING_SOURCE } from './constants.js';
 
@@ -410,5 +412,116 @@ describe('summarizeResult', () => {
     expect(out[GAME_DAY_RANKING_RESULT.SKIPPED]).toBe(1);
     expect(out[GAME_DAY_RANKING_RESULT.ALREADY_PUBLISHED]).toBe(2);
     expect(out.removed).toBe(4);
+  });
+});
+
+describe('slotBelongsToParticipant', () => {
+  const participant = { id: 'pa1', name: 'Ana', user_id: 'u_ana' };
+
+  it('casa pelo id do documento', () => {
+    expect(slotBelongsToParticipant({ id: 'pa1', name: 'Qualquer' }, participant)).toBe(true);
+  });
+
+  it('casa pelo nome único quando o id do slot ficou obsoleto', () => {
+    expect(slotBelongsToParticipant({ id: 'pa_velho', name: 'ANA' }, participant)).toBe(true);
+  });
+
+  it('casa quando o slot é chaveado pela própria uid', () => {
+    expect(slotBelongsToParticipant({ id: 'u_ana', name: '' }, participant)).toBe(true);
+  });
+
+  it('não casa quando id e nome divergem', () => {
+    expect(slotBelongsToParticipant({ id: 'pa9', name: 'Beto' }, participant)).toBe(false);
+  });
+
+  it('é robusto a entradas nulas', () => {
+    expect(slotBelongsToParticipant(null, participant)).toBe(false);
+    expect(slotBelongsToParticipant({ id: 'pa1' }, null)).toBe(false);
+  });
+});
+
+describe('sealParticipantUidIntoGames', () => {
+  const participant = { id: 'pa1', name: 'Ana', user_id: 'u_ana' };
+
+  it('sela a uid no slot que referencia o participante pelo id', () => {
+    const games = [{
+      id: 'g1',
+      side_a: [{ id: 'pa1', name: 'Ana' }, { id: 'pa2', name: 'Beto', user_id: 'u_beto' }],
+      side_b: [{ id: 'pa3', name: 'Caio', user_id: 'u_caio' }],
+    }];
+    const patches = sealParticipantUidIntoGames(games, participant);
+    expect(patches).toHaveLength(1);
+    expect(patches[0].id).toBe('g1');
+    expect(patches[0].side_a[0]).toEqual({ id: 'pa1', name: 'Ana', user_id: 'u_ana' });
+    // Não mexe nos slots já identificados.
+    expect(patches[0].side_a[1].user_id).toBe('u_beto');
+  });
+
+  it('recupera pelo nome único quando o id do slot ficou obsoleto (removido e readicionado)', () => {
+    const games = [{
+      id: 'g1',
+      side_a: [{ id: 'pa_velho', name: 'Ana' }],
+      side_b: [{ id: 'pa3', name: 'Caio', user_id: 'u_caio' }],
+    }];
+    const patches = sealParticipantUidIntoGames(games, participant);
+    expect(patches).toHaveLength(1);
+    expect(patches[0].side_a[0].user_id).toBe('u_ana');
+  });
+
+  it('não retorna patch quando nada muda (jogos sem o participante)', () => {
+    const games = [{
+      id: 'g1',
+      side_a: [{ id: 'pa2', name: 'Beto', user_id: 'u_beto' }],
+      side_b: [{ id: 'pa3', name: 'Caio', user_id: 'u_caio' }],
+    }];
+    expect(sealParticipantUidIntoGames(games, participant)).toHaveLength(0);
+  });
+
+  it('nunca sobrescreve um user_id já presente (idempotente)', () => {
+    const games = [{
+      id: 'g1',
+      side_a: [{ id: 'pa1', name: 'Ana', user_id: 'u_outro' }],
+      side_b: [{ id: 'pa3', name: 'Caio', user_id: 'u_caio' }],
+    }];
+    expect(sealParticipantUidIntoGames(games, participant)).toHaveLength(0);
+  });
+
+  it('ignora participante sem conta (convidado avulso)', () => {
+    const guest = { id: 'pa1', name: 'Visitante', user_id: null };
+    const games = [{ id: 'g1', side_a: [{ id: 'pa1', name: 'Visitante' }], side_b: [] }];
+    expect(sealParticipantUidIntoGames(games, guest)).toHaveLength(0);
+  });
+
+  it('não muta os jogos de entrada', () => {
+    const games = [{
+      id: 'g1',
+      side_a: [{ id: 'pa1', name: 'Ana' }],
+      side_b: [{ id: 'pa3', name: 'Caio', user_id: 'u_caio' }],
+    }];
+    const snapshot = JSON.parse(JSON.stringify(games));
+    sealParticipantUidIntoGames(games, participant);
+    expect(games).toEqual(snapshot);
+  });
+
+  it('é robusto a listas vazias/nulas', () => {
+    expect(sealParticipantUidIntoGames(null, participant)).toEqual([]);
+    expect(sealParticipantUidIntoGames([], participant)).toEqual([]);
+    expect(sealParticipantUidIntoGames([{ id: 'g1' }], participant)).toEqual([]);
+  });
+
+  it('sela um jogo cujo slot já resolve pelo mirror após a remoção do participante', () => {
+    // Cenário do bug: participante presente resolvia via lista; após remoção,
+    // o jogo legado (sem user_id embutido) ficaria irresolúvel. Depois da
+    // selagem, o resolver encontra o user_id embutido mesmo sem participante.
+    const games = [{
+      id: 'g1',
+      side_a: [{ id: 'pa1', name: 'Ana' }],
+      side_b: [{ id: 'pa2', name: 'Beto', user_id: 'u_beto' }],
+    }];
+    const [patch] = sealParticipantUidIntoGames(games, participant);
+    const sealedGame = { ...games[0], side_a: patch.side_a, side_b: patch.side_b };
+    // Sem o participante na lista (removido), o resolver ainda resolve via slot.
+    const resolver = buildParticipantResolver([{ id: 'pa2', name: 'Beto', user_id: 'u_beto' }]);
+    expect(resolveSideUidsFromParticipants(sealedGame.side_a, resolver)).toEqual(['u_ana']);
   });
 });

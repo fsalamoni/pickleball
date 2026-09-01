@@ -26,6 +26,7 @@ import {
 } from '../domain/gameDay.js';
 import {
   buildGameDayRankingMatches, gameDayRankingId, GAME_DAY_DATE_ID,
+  sealParticipantUidIntoGames,
 } from '../domain/gameDayRanking.js';
 import {
   computePlayOrder, buildPlayNextMatch, assignPlayTeams,
@@ -280,6 +281,31 @@ export async function addGameDayParticipant(gdId, entry, actor) {
 /** Remove um participante e recalcula os membros do dia de jogo. */
 export async function removeGameDayParticipant(gdId, pid, actor) {
   if (!gdId || !pid) return;
+  // Sela o `user_id` do participante (se for atleta da plataforma) nos jogos
+  // dele ANTES de apagá-lo, para que suas partidas decididas sigam contando
+  // mesmo depois de ele sair do dia — o jogo passa a se basear na uid, não na
+  // relação atual de participantes. Convidados avulsos (sem uid) são ignorados.
+  // Um dia de jogo de atleta é sempre de data única (GAME_DAY_DATE_ID) e os
+  // nomes são únicos no dia, então selar por todos os jogos do dia é seguro.
+  try {
+    const pSnap = await getDoc(doc(db, COL, gdId, SUB_PARTICIPANTS, pid));
+    const participant = pSnap.exists() ? { id: pSnap.id, ...pSnap.data() } : null;
+    if (participant?.user_id) {
+      const games = await listGameDayGames(gdId);
+      const patches = sealParticipantUidIntoGames(games, participant);
+      if (patches.length) {
+        const batch = writeBatch(db);
+        patches.forEach((p) => batch.update(doc(db, COL, gdId, SUB_GAMES, p.id), {
+          side_a: p.side_a,
+          side_b: p.side_b,
+          updated_at: serverTimestamp(),
+        }));
+        await batch.commit();
+      }
+    }
+  } catch (err) {
+    logger.error('removeGameDayParticipant: selagem de uid nas partidas falhou:', err);
+  }
   await deleteDoc(doc(db, COL, gdId, SUB_PARTICIPANTS, pid));
   await recomputeGameDayMembers(gdId);
   await createAuditLog({ action: 'game_day_participant_removed', actor, details: { game_day_id: gdId, participant_id: pid } });
