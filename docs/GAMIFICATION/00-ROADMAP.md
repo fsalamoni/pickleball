@@ -67,17 +67,17 @@ Para garantir que **NADA** quebra em main durante o desenvolvimento, seguimos
 
 | Sprint | Escopo | Flag | Commit | Status |
 |---|---|---|---|---|
-| **S0.1** | `progressionV2.js` (multi-fonte + XP_CAPS) | (sem UI) | `feat(gamification): domain progressionV2` | ⏳ |
-| **S0.2** | `tiers.js` + `skillTrees.js` | (sem UI) | `feat(gamification): domain tiers + skill trees` | ⏳ |
-| **S0.3** | `streakProtection.js` (grace + freeze) | (sem UI) | `feat(gamification): domain streak protection` | ⏳ |
-| **S0.4** | `xpLedger.js` (computeXpEvent, computação por evento) | (sem UI) | `feat(gamification): domain xp ledger` | ⏳ |
-| **S0.5** | `featureFlags.js` add `GAMIFICATION_V2` master | master OFF | `feat(gamification): master flag` | ⏳ |
+| **S0.1** | `progressionV2.js` (multi-fonte + XP_CAPS) | (sem UI) | `feat(gamification): domain progressionV2` | ✅ |
+| **S0.2** | `tiers.js` + `skillTrees.js` | (sem UI) | `feat(gamification): domain tiers + skill trees` | ✅ |
+| **S0.3** | `streakProtection.js` (grace + freeze) | (sem UI) | `feat(gamification): domain streak protection` | ✅ |
+| **S0.4** | `xpLedger.js` (computeXpEvent, computação por evento) | (sem UI) | `feat(gamification): domain xp ledger` | ✅ |
+| **S0.5** | `featureFlags.js` add `GAMIFICATION_V2` master | master OFF | `feat(gamification): master flag` | ✅ |
 
 ### Fase 1 — Achievements V2 (catálogo)
 
 | Sprint | Escopo | Flag | Status |
 |---|---|---|---|
-| **S1.1** | `achievementsV2.js` (5 famílias, 5 raridades, ~80 conquistas) | (sob master) | ⏳ |
+| **S1.1** | `achievementsV2.js` (5 famílias, 5 raridades, 83 conquistas) | (sob master) | ✅ |
 | **S1.2** | `AchievementCardV2.jsx` (componente presentational) | (sob master) | ⏳ |
 | **S1.3** | `AchievementUnlockToast.jsx` (animação) | (sob master) | ⏳ |
 | **S1.4** | `V2Achievements.jsx` página pública `/conquistas` | `ACHIEVEMENTS_V2` OFF | ⏳ |
@@ -221,7 +221,22 @@ chore(gamification): <sprint> — <descrição>
 
 | Data | Sprint | Mudança | Commit |
 |---|---|---|---|
-| 2026-09-01 | setup | Worktree criado, baseline validado, roadmap escrito | — |
+| 2026-09-01 | setup | Worktree criado, baseline validado (1922 tests), roadmap escrito | — |
+| 2026-09-01 | S0.1 | `progressionV2.js` + 33 testes | `7320f66` |
+| 2026-09-01 | S0.2 | `tiers.js` + `skillTrees.js` + 41 testes | (próximo) |
+| 2026-09-01 | S0.3 | `streakProtection.js` + 23 testes (com bug fix) | (próximo) |
+| 2026-09-01 | S0.4+S0.5 | `xpLedger.js` + master flag + 23 testes | (próximo) |
+| 2026-09-01 | S1.1 | `achievementsV2.js` (83 conquistas) + 29 testes | (próximo) |
+| 2026-09-01 | validate | Build green, lint clean, 2071/2071 tests (zero regressão) | — |
+
+**Métricas acumuladas (S0.1 → S1.1)**:
+- 6 novos arquivos de domínio (todos `*.js`)
+- 6 novos arquivos de teste (todos `*.test.js`)
+- 149 testes novos (todos passing)
+- 0 regressão
+- 0 alteração em arquivos V1
+- Master flag `GAMIFICATION_V2` adicionada (default OFF)
+- Bundle size: inalterado (nenhum UI novo ainda)
 
 ---
 
