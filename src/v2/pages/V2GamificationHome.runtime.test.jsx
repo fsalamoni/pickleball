@@ -78,6 +78,10 @@ vi.mock('@/modules/progression/hooks/useStreakMetaV2', () => ({
     isMutating: false,
   }),
 }));
+vi.mock('@/modules/progression/hooks/useUserSeasonRanking', () => ({
+  useUserCurrentSeason: () => ({ season: null, seasonId: '2026-09', isLoading: false }),
+  useSeasonTop: () => ({ data: [] }),
+}));
 
 import V2GamificationHome from './V2GamificationHome.jsx';
 

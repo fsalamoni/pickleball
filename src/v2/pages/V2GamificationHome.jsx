@@ -32,6 +32,7 @@ import SkillTreeBars from '@/modules/progression/components/SkillTreeBars';
 import MissionList from '@/modules/progression/components/MissionList';
 import MissionCompleteToast from '@/modules/progression/components/MissionCompleteToast';
 import StreakShieldBadge from '@/modules/progression/components/StreakShieldBadge';
+import SeasonBanner from '@/modules/progression/components/SeasonBanner';
 import AchievementCardV2 from '@/modules/achievements/components/AchievementCardV2';
 import {
   V2Badge,
@@ -195,6 +196,8 @@ function V2GamificationHomeOn() {
           </V2Badge>
         }
       />
+
+      <SeasonBanner className="mb-6" />
 
       {/* Header: tier + nível + streak + progresso de tier */}
       <V2Surface className="mb-6">
