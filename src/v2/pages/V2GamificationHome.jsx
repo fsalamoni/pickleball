@@ -14,6 +14,7 @@ import { useUserAchievementsV2 } from '@/modules/achievements/hooks/useUserAchie
 import { useUserProgressionV2 } from '@/modules/progression/hooks/useUserProgressionV2';
 import { useUserMissionsV2 } from '@/modules/progression/hooks/useUserMissionsV2';
 import { useSyncProgressionV2 } from '@/modules/progression/hooks/useSyncProgressionV2';
+import { useStreakMetaV2 } from '@/modules/progression/hooks/useStreakMetaV2';
 import { computeXpV2, levelFromXpV2, XP_WEIGHTS_V2 } from '@/modules/progression/domain/progressionV2';
 import { tierFromXp, tierProgress } from '@/modules/progression/domain/tiers';
 import { buildSkillTrees } from '@/modules/progression/domain/skillTrees';
@@ -28,6 +29,7 @@ import { useGamificationTracker } from '@/modules/progression/hooks/useGamificat
 import TierBadge from '@/modules/progression/components/TierBadge';
 import SkillTreeBars from '@/modules/progression/components/SkillTreeBars';
 import MissionList from '@/modules/progression/components/MissionList';
+import StreakShieldBadge from '@/modules/progression/components/StreakShieldBadge';
 import AchievementCardV2 from '@/modules/achievements/components/AchievementCardV2';
 import {
   V2Badge,
@@ -98,6 +100,7 @@ function V2GamificationHomeOn() {
     claimBonus: doClaimBonus,
     isClaiming,
   } = useUserMissionsV2(user?.uid, progression?.tier || 'Calouro', !!user);
+  const streakMeta = useStreakMetaV2(user?.uid, !!user);
 
   // ===== XP/tier/skills =====
   // Prioriza dados persistidos; fallback pra cálculo do V1
@@ -230,6 +233,13 @@ function V2GamificationHomeOn() {
       </V2Surface>
 
       {/* Missões diárias */}
+      <div className="mb-3">
+        <StreakShieldBadge
+          meta={streakMeta.meta}
+          onUseFreeze={streakMeta.useFreeze}
+          onToggleVacation={streakMeta.meta?.vacationMode ? streakMeta.disableVacation : streakMeta.enableVacation}
+        />
+      </div>
       <V2Surface className="mb-6">
         <MissionList
           missions={dailyMissions.map((m) => ({

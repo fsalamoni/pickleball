@@ -67,6 +67,17 @@ vi.mock('@/modules/progression/hooks/useUserMissionsV2', () => ({
 vi.mock('@/modules/achievements/hooks/useUserAchievementsV2', () => ({
   useUserAchievementsV2: () => ({ unlocked: [], unlockedIds: new Set(), isLoading: false, unlock: () => {}, markNotified: () => {}, incrementShare: () => {} }),
 }));
+vi.mock('@/modules/progression/hooks/useStreakMetaV2', () => ({
+  useStreakMetaV2: () => ({
+    meta: { graceDaysRemaining: 2, freezesAvailable: 2, vacationMode: false, comebackBonus: 0, lastPlayAt: null },
+    isLoading: false,
+    enableVacation: () => {},
+    disableVacation: () => {},
+    useFreeze: () => {},
+    addFreeze: () => {},
+    isMutating: false,
+  }),
+}));
 
 import V2GamificationHome from './V2GamificationHome.jsx';
 
@@ -180,6 +191,12 @@ describe('V2GamificationHome · flag ON', () => {
     await render();
     const trees = container.querySelectorAll('[data-tree]');
     expect(trees.length).toBe(5);
+  });
+
+  it('mostra StreakShieldBadge com grace + freezes (vindos do mock)', async () => {
+    await render();
+    expect(container.querySelector('[data-testid="streak-grace"]')).toBeTruthy();
+    expect(container.querySelector('[data-testid="streak-freeze"]')).toBeTruthy();
   });
 
   it('Flávio NÃO tem rating 1100+ (locked)', async () => {
