@@ -8,7 +8,12 @@ import {
   listSeasonTop,
   watchSeasonRanking,
 } from '@/modules/progression/services/seasonRankingService';
-import { currentSeasonId } from '@/modules/progression/domain/seasons';
+import { getSeason } from '@/modules/progression/domain/seasons';
+
+function currentSeasonId() {
+  const s = getSeason();
+  return `${s.year}-${String(s.month).padStart(2, '0')}`;
+}
 
 const KEY_CURRENT = (uid) => ['user-season-current', uid];
 const KEY_TOP = (seasonId) => ['season-top', seasonId];
