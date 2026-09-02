@@ -1527,5 +1527,75 @@ service cloud.firestore {
       allow read, write: if isPlatformAdmin();
     }
 
+    // ---- GAMIFICATION V2 (flag GAMIFICATION_V2) --------------------------------
+    // Coleções materializadas adicionadas pela feature de gamificação V2.
+    // Cada doc é identificado por uid (ou uid_outroId pra logs/eventos).
+    // Leitura: o próprio user (uid bate com request.auth.uid) + platform_admin
+    // Escrita: o próprio user (pode upsert o próprio doc) + platform_admin
+    // PADRÃO ADITIVO: collections que ainda não existem em produção simplesmente
+    // não têm requests. As regras existem pra quando a feature for ativada.
+
+    // user_progression_v2/{uid} — snapshot materializado de XP/tier/level/skilltrees
+    match /user_progression_v2/{uid} {
+      allow read: if isAuthed() && (request.auth.uid == uid || isPlatformAdmin());
+      allow create: if isAuthed() && (request.auth.uid == uid || isPlatformAdmin())
+        && request.resource.data.uid == uid
+        && request.resource.data.schemaVersion == 1
+        && request.resource.data.xpTotal is int
+        && request.resource.data.xpTotal >= 0
+        && request.resource.data.tier in [
+          'Calouro', 'Aprendiz', 'Jogador', 'Competidor', 'Veterano',
+          'Craque', 'Mestre', 'Lendário', 'Imortal'
+        ];
+      allow update: if isAuthed() && (request.auth.uid == uid || isPlatformAdmin())
+        && request.resource.data.uid == resource.data.uid
+        && request.resource.data.schemaVersion == resource.data.schemaVersion;
+      allow delete: if isPlatformAdmin();
+    }
+
+    // user_missions/{uid}_{date} — missões geradas (docId = uid + "_" + YYYY-MM-DD)
+    match /user_missions/{missionId} {
+      allow read: if isAuthed() && (
+        resource == null || request.auth.uid == resource.data.uid || isPlatformAdmin()
+      );
+      allow create: if isAuthed() && request.resource.data.uid == request.auth.uid
+        && request.resource.data.scope in ['daily', 'weekly', 'monthly']
+        && request.resource.data.missions is list;
+      allow update: if isAuthed() && resource.data.uid == request.auth.uid
+        && request.resource.data.uid == request.auth.uid
+        && request.resource.data.scope == resource.data.scope;
+      allow delete: if isPlatformAdmin();
+    }
+
+    // user_achievements_v2/{uid}_{achId} — conquistas desbloqueadas
+    match /user_achievements_v2/{achId} {
+      allow read: if isAuthed() && (
+        resource == null || request.auth.uid == resource.data.uid || isPlatformAdmin()
+      );
+      allow create: if isAuthed() && request.resource.data.uid == request.auth.uid
+        && request.resource.data.progress is number
+        && request.resource.data.progress >= 0
+        && request.resource.data.progress <= 1;
+      allow update: if isAuthed() && resource.data.uid == request.auth.uid
+        && request.resource.data.uid == request.auth.uid
+        // só pode incrementar shareCount/notified (não regredir progresso)
+        && request.resource.data.progress == resource.data.progress;
+      allow delete: if isPlatformAdmin();
+    }
+
+    // user_streak_meta/{uid} — grace + freeze + vacation + comeback
+    match /user_streak_meta/{uid} {
+      allow read: if isAuthed() && (request.auth.uid == uid || isPlatformAdmin());
+      allow create, update: if isAuthed() && (request.auth.uid == uid || isPlatformAdmin())
+        && request.resource.data.uid == uid
+        && request.resource.data.graceDaysRemaining is int
+        && request.resource.data.graceDaysRemaining >= 0
+        && request.resource.data.graceDaysRemaining <= 3
+        && request.resource.data.freezesAvailable is int
+        && request.resource.data.freezesAvailable >= 0
+        && request.resource.data.freezesAvailable <= 3;
+      allow delete: if isPlatformAdmin();
+    }
+
   }
 }
