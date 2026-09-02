@@ -21,6 +21,7 @@ const V2Partners = lazy(() => import('@/v2/pages/V2Partners'));
 const V2Clubs = lazy(() => import('@/v2/pages/V2Clubs'));
 const V2ClubDetail = lazy(() => import('@/v2/pages/V2ClubDetail'));
 const V2Performance = lazy(() => import('@/v2/pages/V2Performance'));
+const V2Achievements = lazy(() => import('@/v2/pages/V2Achievements'));
 const V2Bookings = lazy(() => import('@/v2/pages/V2Bookings'));
 const V2Profile = lazy(() => import('@/v2/pages/V2Profile'));
 const V2Chat = lazy(() => import('@/v2/pages/V2Chat'));
@@ -180,6 +181,7 @@ export default function V2App() {
 
           {/* Você */}
           <Route path="meu-desempenho" element={<V2Performance />} />
+          <Route path="conquistas" element={<V2Achievements />} />
           <Route path="perfil" element={<V2Profile />} />
           <Route path="perfil/torneios" element={<V2MyTournamentsAdmin />} />
           <Route path="perfil/editar" element={<V2ProfileEdit />} />
