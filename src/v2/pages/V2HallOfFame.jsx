@@ -94,7 +94,7 @@ function HallOfFameOn() {
           <h2 className="mb-3 flex items-center gap-2 font-display text-lg font-bold text-ink">
             <TrendingUp className="h-5 w-5" /> Ranking
           </h2>
-          <ol className="divide-y divide-gray-100" data-testid="hall-of-fame-list">
+          <ol className="divide-y divide-gray-100" data-testid="hall-of-fame-list" aria-label="Top 50 do Hall da Fama">
             {rest.map((p, i) => (
               <li
                 key={p.uid}

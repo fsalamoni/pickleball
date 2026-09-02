@@ -64,6 +64,11 @@ export default function SkillTreeBars({
             data-tree={item.key}
             data-tree-level={item.level}
             data-tree-xp={item.xp}
+            role="progressbar"
+            aria-valuenow={item.level}
+            aria-valuemin={0}
+            aria-valuemax={10}
+            aria-label={`${item.name} — nível ${item.level}`}
             className="space-y-1"
           >
             <div className="flex items-center justify-between text-xs">

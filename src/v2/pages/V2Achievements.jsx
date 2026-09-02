@@ -177,11 +177,14 @@ function V2AchievementsOn({ user }) {
       <V2Surface className="mb-6 space-y-4">
         <div>
           <p className="mb-2 text-[11px] font-semibold uppercase tracking-wide text-gray-400">Família</p>
-          <div className="flex flex-wrap gap-1.5">
+          <div className="flex flex-wrap gap-1.5" role="tablist" aria-label="Filtrar por família">
             {FAMILY_TABS.map((t) => (
               <button
                 key={t.key}
                 type="button"
+                role="tab"
+                aria-selected={family === t.key}
+                aria-label={`Filtrar por ${t.label}`}
                 onClick={() => setFamily(t.key)}
                 className={cn(
                   'rounded-full px-4 py-1.5 text-xs font-bold transition-colors',
