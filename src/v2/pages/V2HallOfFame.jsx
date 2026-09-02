@@ -11,7 +11,6 @@ import {
   V2Skeleton,
   V2Surface,
 } from '@/v2/ui/primitives';
-import { TIER_ORDER } from '@/modules/progression/domain/tiers';
 
 /**
  * V2HallOfFame — página pública com o top 50 por XP.
