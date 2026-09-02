@@ -20,7 +20,13 @@ import {
   validateSeasonRanking,
   SEASON_RANKING_VERSION,
 } from '@/modules/progression/domain/gamificationV2Schema2';
-import { monthlySeasonRange, currentSeasonId } from '@/modules/progression/domain/seasons';
+import { monthlySeasonRange, getSeason } from '@/modules/progression/domain/seasons';
+
+/** currentSeasonId = YYYY-MM do mês corrente */
+export function currentSeasonId() {
+  const s = getSeason();
+  return `${s.year}-${String(s.month).padStart(2, '0')}`;
+}
 
 function db() { return getFirestore(); }
 
