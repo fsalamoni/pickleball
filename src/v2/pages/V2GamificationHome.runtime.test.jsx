@@ -44,6 +44,30 @@ vi.mock('@/modules/progression/hooks/useGamificationTracker', () => ({
   useGamificationTracker: () => ({ track: () => {}, enabled: false, GAMIFICATION_EVENT: {} }),
 }));
 
+vi.mock('@/modules/progression/hooks/useUserProgressionV2', () => ({
+  useUserProgressionV2: () => ({ progression: null, isLoading: false, error: null, refresh: () => {} }),
+}));
+vi.mock('@/modules/progression/hooks/useSyncProgressionV2', () => ({
+  useSyncProgressionV2: () => ({ progression: null }),
+}));
+vi.mock('@/modules/progression/hooks/useUserMissionsV2', () => ({
+  useUserMissionsV2: () => ({
+    missions: [
+      { id: 'm1', title: 'Jogue 1 partida', description: 'Jogue 1 partida', metric: 'game_played', target: 1, current: 0, xp: 30, bonus: 15, bonusClaimed: false, seed: 1 },
+      { id: 'm2', title: 'Dê 2 kudos', description: 'Dê 2 kudos', metric: 'kudos_given', target: 2, current: 1, xp: 20, bonus: 10, bonusClaimed: false, seed: 2 },
+      { id: 'm3', title: 'Conclua 1 torneio', description: 'Conclua 1 torneio', metric: 'tournament_completed', target: 1, current: 0, xp: 50, bonus: 20, bonusClaimed: false, seed: 3 },
+    ],
+    doc: { bonusClaimed: false, completedAt: null },
+    isLoading: false,
+    progressMission: () => {},
+    claimBonus: () => {},
+    isClaiming: false,
+  }),
+}));
+vi.mock('@/modules/achievements/hooks/useUserAchievementsV2', () => ({
+  useUserAchievementsV2: () => ({ unlocked: [], unlockedIds: new Set(), isLoading: false, unlock: () => {}, markNotified: () => {}, incrementShare: () => {} }),
+}));
+
 import V2GamificationHome from './V2GamificationHome.jsx';
 
 let container = null;

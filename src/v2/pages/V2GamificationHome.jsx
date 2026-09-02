@@ -1,4 +1,4 @@
-import React, { useMemo, useState } from 'react';
+import React, { useMemo, useState, useEffect } from 'react';
 import { Link } from 'react-router-dom';
 import {
   Award, Gift, Sparkles, Target, TrendingUp, Zap, ChevronRight,
@@ -10,11 +10,15 @@ import { usePlayerStats } from '@/modules/performance/hooks/usePlayerStats';
 import { useRatingHistory, useNationalRanking } from '@/modules/rating/hooks/useRating';
 import { usePlayerMatchDates } from '@/modules/progression/hooks/useProgression';
 import { useAchievementsV2 } from '@/modules/achievements/hooks/useAchievementsV2';
+import { useUserAchievementsV2 } from '@/modules/achievements/hooks/useUserAchievementsV2';
+import { useUserProgressionV2 } from '@/modules/progression/hooks/useUserProgressionV2';
+import { useUserMissionsV2 } from '@/modules/progression/hooks/useUserMissionsV2';
+import { useSyncProgressionV2 } from '@/modules/progression/hooks/useSyncProgressionV2';
 import { computeXpV2, levelFromXpV2, XP_WEIGHTS_V2 } from '@/modules/progression/domain/progressionV2';
 import { tierFromXp, tierProgress } from '@/modules/progression/domain/tiers';
 import { buildSkillTrees } from '@/modules/progression/domain/skillTrees';
 import { computeProtectedStreak } from '@/modules/progression/domain/streakProtection';
-import { generateMissions, MISSION_BONUS_XP } from '@/modules/progression/domain/missions';
+import { MISSION_BONUS_XP } from '@/modules/progression/domain/missions';
 import {
   generateReferralCode,
   buildReferralUrl,
@@ -33,7 +37,6 @@ import {
   V2Skeleton,
   V2Surface,
 } from '@/v2/ui/primitives';
-import { cn } from '@/core/lib/utils';
 
 /**
  * V2GamificationHome — hub unificado de gamificação.
@@ -78,14 +81,26 @@ export default function V2GamificationHome() {
 function V2GamificationHomeOn() {
   const { user } = useAuth();
   const { stats, isLoading: statsLoading } = usePlayerStats();
-  const { data: ratingHistory = [] } = useRatingHistory(user?.uid, true);
   const { data: matchDates = [] } = usePlayerMatchDates(user?.uid, true);
-  const { data: ranking = [] } = useNationalRanking();
   const { result: achievements } = useAchievementsV2();
   const { track, enabled: telemetryOn } = useGamificationTracker();
-  const [missionsClaimed, setMissionsClaimed] = useState(false);
 
-  // XP total + tier + skill trees (mesma lógica de V2Achievements / ProgressionCardV2)
+  // ===== Persistência V2 (Firestore) =====
+  // Sincroniza stats V1 → doc materializado V2 (cria/atualiza se preciso)
+  useSyncProgressionV2(user?.uid, stats, !!user);
+  const { progression } = useUserProgressionV2(user?.uid, !!user);
+  const { unlocked: unlockedFromDb } = useUserAchievementsV2(user?.uid, !!user);
+  const {
+    missions: dailyMissions,
+    doc: missionsDoc,
+    isLoading: missionsLoading,
+    progressMission: doProgress,
+    claimBonus: doClaimBonus,
+    isClaiming,
+  } = useUserMissionsV2(user?.uid, progression?.tier || 'Calouro', !!user);
+
+  // ===== XP/tier/skills =====
+  // Prioriza dados persistidos; fallback pra cálculo do V1
   const xpBySource = useMemo(() => ({
     tournament_attended: stats?.tournaments || 0,
     tournament_podium: stats?.podiums || 0,
@@ -94,9 +109,12 @@ function V2GamificationHomeOn() {
     game_won: stats?.wins || 0,
   }), [stats]);
 
-  const xpTotal = useMemo(() => computeXpV2(xpBySource).xpTotal, [xpBySource]);
-  const level = useMemo(() => levelFromXpV2(xpTotal), [xpTotal]);
-  const trees = useMemo(() => buildSkillTrees(xpBySource, XP_WEIGHTS_V2).trees, [xpBySource]);
+  const xpTotal = progression?.xpTotal ?? computeXpV2(xpBySource).xpTotal;
+  const level = useMemo(
+    () => (progression ? { level: progression.level, xpIntoLevel: 0, xpForNext: 500 } : levelFromXpV2(xpTotal)),
+    [progression, xpTotal],
+  );
+  const trees = progression?.skillTrees ?? buildSkillTrees(xpBySource, XP_WEIGHTS_V2).trees;
   const streak = useMemo(
     () => computeProtectedStreak(matchDates, { now: new Date() }),
     [matchDates],
@@ -104,34 +122,19 @@ function V2GamificationHomeOn() {
   const currentTier = useMemo(() => tierFromXp(xpTotal), [xpTotal]);
   const tierProg = useMemo(() => tierProgress(xpTotal), [xpTotal]);
 
-  // Referral
+  // ===== Referral =====
   const code = useMemo(() => generateReferralCode(), []);
   const origin = typeof window !== 'undefined' ? window.location.origin : '';
   const referralUrl = useMemo(() => buildReferralUrl(origin, code), [origin, code]);
 
-  // Missões diárias (geradas com seed determinístico baseado no dia)
-  const dailyMissions = useMemo(() => {
-    const seed = new Date().setHours(0, 0, 0, 0) + 100;
-    const m = generateMissions({
-      uid: user?.uid || '',
-      scope: 'daily',
-      currentTier: currentTier.name,
-      seed,
-    });
-    // adiciona current progress fictício (1 jogo, 1 kudos) só pra demo
-    return m.map((mission) => {
-      if (mission.metric === 'game_played') return { ...mission, current: 1 };
-      if (mission.metric === 'kudos_given') return { ...mission, current: 2 };
-      return mission;
-    });
-  }, [user?.uid, currentTier.name]);
-
+  // ===== Handlers =====
   function handleProgress(mission, delta) {
     if (telemetryOn) track('gamification_mission_progress', { mission_id: mission.id, delta });
+    doProgress({ missionId: mission.id, delta });
   }
   function handleClaimBonus(scope) {
     if (telemetryOn) track('gamification_mission_bonus_claimed', { scope, xp: MISSION_BONUS_XP[scope] });
-    setMissionsClaimed(true);
+    doClaimBonus();
   }
   function handleShareReferral() {
     if (telemetryOn) track('gamification_referral_shared', { code });
@@ -203,7 +206,7 @@ function V2GamificationHomeOn() {
             </div>
             <div>
               <p className="text-2xl font-bold text-ink tabular-nums">
-                {achievements.unlockedCount}<span className="text-sm text-gray-400">/{achievements.total}</span>
+                {progression?.achievementsUnlocked ?? achievements.unlockedCount}<span className="text-sm text-gray-400">/{progression?.achievementsTotal ?? achievements.total}</span>
               </p>
               <p className="text-xs text-gray-500">conquistas</p>
             </div>
@@ -229,9 +232,15 @@ function V2GamificationHomeOn() {
       {/* Missões diárias */}
       <V2Surface className="mb-6">
         <MissionList
-          missions={dailyMissions}
+          missions={dailyMissions.map((m) => ({
+            ...m,
+            done: (m.current || 0) >= (m.target || 1),
+            xpReward: m.xp,
+            description: m.description || m.title,
+          }))}
           scope="daily"
-          bonusClaimed={missionsClaimed}
+          bonusClaimed={missionsDoc?.bonusClaimed || false}
+          isClaiming={isClaiming}
           onProgress={handleProgress}
           onClaimBonus={handleClaimBonus}
         />
