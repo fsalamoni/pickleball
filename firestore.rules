@@ -1597,5 +1597,137 @@ service cloud.firestore {
       allow delete: if isPlatformAdmin();
     }
 
+    // ---- Gamificação V2 · sub-sistemas (Fase 16) -------------------------
+    // Mesma política: owner + platform_admin. Validação de shapes via schemaVersion.
+
+    // user_referral_codes/{uid} — código + métricas de referral do referrer
+    match /user_referral_codes/{uid} {
+      allow read: if isAuthed() && (request.auth.uid == uid || isPlatformAdmin());
+      allow create, update: if isAuthed() && (request.auth.uid == uid || isPlatformAdmin())
+        && request.resource.data.uid == uid
+        && request.resource.data.schemaVersion == 2
+        && request.resource.data.code is string
+        && request.resource.data.monthlyCount is int
+        && request.resource.data.monthlyCount >= 0
+        && request.resource.data.monthlyCount <= 50;
+      allow delete: if isPlatformAdmin();
+    }
+
+    // user_referrals/{refereeUid} — quem indicou esse user
+    match /user_referrals/{refereeUid} {
+      allow read: if isAuthed() && (
+        resource == null
+        || request.auth.uid == resource.data.refereeUid
+        || request.auth.uid == resource.data.referrerUid
+        || isPlatformAdmin()
+      );
+      allow create, update: if isAuthed() && isPlatformAdmin()
+        || (isAuthed() && request.auth.uid == resource.data.referrerUid
+            && request.resource.data.refereeUid == resource.data.refereeUid
+            && request.resource.data.referrerUid == resource.data.referrerUid);
+      allow delete: if isPlatformAdmin();
+    }
+
+    // user_kudos/{kudoId} — kudos dados (kudos são públicos entre os 2 envolvidos)
+    match /user_kudos/{kudoId} {
+      allow read: if isAuthed() && (
+        resource == null
+        || request.auth.uid == resource.data.fromUid
+        || request.auth.uid == resource.data.toUid
+        || isPlatformAdmin()
+      );
+      // só pode criar se você é o fromUid
+      allow create: if isAuthed() && request.resource.data.fromUid == request.auth.uid
+        && request.resource.data.toUid != request.auth.uid
+        && request.resource.data.fromUid is string
+        && request.resource.data.type is string;
+      // não pode editar nem deletar (kudo é imutável)
+      allow update, delete: if isPlatformAdmin();
+    }
+
+    // user_kudos_index/{uid} — contadores diários e totais
+    match /user_kudos_index/{uid} {
+      allow read: if isAuthed() && (request.auth.uid == uid || isPlatformAdmin());
+      allow create, update: if isAuthed() && (request.auth.uid == uid || isPlatformAdmin())
+        && request.resource.data.uid == uid
+        && request.resource.data.schemaVersion == 2
+        && request.resource.data.receivedToday is int
+        && request.resource.data.receivedToday >= 0
+        && request.resource.data.receivedToday <= 100
+        && request.resource.data.givenToday is int
+        && request.resource.data.givenToday >= 0
+        && request.resource.data.givenToday <= 50;
+      allow delete: if isPlatformAdmin();
+    }
+
+    // user_rivals/{pairKey} — par de rivais
+    match /user_rivals/{pairKey} {
+      allow read: if isAuthed() && (
+        resource == null
+        || request.auth.uid == resource.data.userA
+        || request.auth.uid == resource.data.userB
+        || isPlatformAdmin()
+      );
+      allow create, update: if isAuthed() && (
+        request.auth.uid == resource.data.userA
+        || request.auth.uid == resource.data.userB
+        || isPlatformAdmin()
+      );
+      allow delete: if isPlatformAdmin();
+    }
+
+    // crews/{crewId} — crew público/privado
+    match /crews/{crewId} {
+      allow read: if isAuthed() && (resource == null || resource.data.isPublic == true || isPlatformAdmin());
+      allow create: if isAuthed() && request.resource.data.createdBy == request.auth.uid
+        && request.resource.data.schemaVersion == 2
+        && request.resource.data.membersCount is int
+        && request.resource.data.membersCount >= 1
+        && request.resource.data.membersCount <= 50;
+      allow update: if isAuthed() && (request.auth.uid == resource.data.createdBy || isPlatformAdmin());
+      allow delete: if isAuthed() && (request.auth.uid == resource.data.createdBy || isPlatformAdmin());
+    }
+
+    // crew_members/{crewId}_{uid} — membros de crew
+    match /crew_members/{memberId} {
+      allow read: if isAuthed() && (
+        resource == null
+        || request.auth.uid == resource.data.uid
+        || isPlatformAdmin()
+      );
+      allow create: if isAuthed() && request.resource.data.uid == request.auth.uid
+        && request.resource.data.role in ['owner', 'captain', 'member'];
+      allow update, delete: if isAuthed() && (request.auth.uid == resource.data.uid || isPlatformAdmin());
+    }
+
+    // mentorships/{pairKey} — mentoria
+    match /mentorships/{pairKey} {
+      allow read: if isAuthed() && (
+        resource == null
+        || request.auth.uid == resource.data.mentorUid
+        || request.auth.uid == resource.data.apprenticeUid
+        || isPlatformAdmin()
+      );
+      allow create, update: if isAuthed() && (
+        request.auth.uid == resource.data.mentorUid
+        || request.auth.uid == resource.data.apprenticeUid
+        || isPlatformAdmin()
+      )
+        && request.resource.data.schemaVersion == 2
+        && request.resource.data.status in ['active', 'paused', 'completed', 'cancelled'];
+      allow delete: if isPlatformAdmin();
+    }
+
+    // season_rankings/{seasonId}_{uid} — XP sazonal
+    match /season_rankings/{rid} {
+      allow read: if isAuthed() && (
+        resource == null
+        || request.auth.uid == resource.data.uid
+        || isPlatformAdmin()
+      );
+      // escrita só admin (atualizado por Cloud Function sazonal — Fase futura)
+      allow create, update, delete: if isPlatformAdmin();
+    }
+
   }
 }
