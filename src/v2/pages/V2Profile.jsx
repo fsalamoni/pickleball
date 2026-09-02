@@ -1,10 +1,17 @@
 import React, { useMemo } from 'react';
 import { Link } from 'react-router-dom';
-import { Award, Hash, MapPin, Medal, Pencil, User } from 'lucide-react';
+import { Award, Hash, MapPin, Medal, Pencil, User, Sparkles } from 'lucide-react';
 import { useAuth } from '@/core/lib/FirebaseAuthContext';
 import { useNationalRanking } from '@/modules/rating/hooks/useRating';
+import { useFeatureFlag } from '@/core/lib/FeatureFlagsContext';
+import { FEATURE_FLAG } from '@/core/featureFlags';
+import { usePlayerStats } from '@/modules/performance/hooks/usePlayerStats';
+import { usePlayerMatchDates } from '@/modules/progression/hooks/useProgression';
+import { useSyncProgressionV2 } from '@/modules/progression/hooks/useSyncProgressionV2';
+import { useUserProgressionV2 } from '@/modules/progression/hooks/useUserProgressionV2';
+import ProgressionCardV2 from '@/modules/progression/components/ProgressionCardV2';
 import { genderLabel } from '@/modules/athletes/domain/constants';
-import { V2Avatar, V2Button } from '@/v2/ui/primitives';
+import { V2Avatar, V2Badge, V2Button } from '@/v2/ui/primitives';
 import V2DuprRatingBadge from '@/v2/components/rating/V2DuprRatingBadge';
 
 function memberSince(profile) {
@@ -17,6 +24,13 @@ function memberSince(profile) {
 export default function V2Profile() {
   const { user, userProfile } = useAuth();
   const { data: ranking = [] } = useNationalRanking();
+  const gamificationOn = useFeatureFlag(FEATURE_FLAG.GAMIFICATION_V2);
+
+  // Hooks de gamificação (gated, mas sempre declarados pra manter ordem dos Hooks)
+  const { stats } = usePlayerStats();
+  const { data: matchDates = [] } = usePlayerMatchDates(user?.uid, true);
+  useSyncProgressionV2(user?.uid, stats, gamificationOn && !!user);
+  const { progression } = useUserProgressionV2(user?.uid, gamificationOn && !!user);
 
   const me = useMemo(
     () => ranking.find((p) => p.id === user?.uid || p.uid === user?.uid) || null,
@@ -104,6 +118,28 @@ export default function V2Profile() {
         Edite seus dados, nivelamento e privacidade no editor de perfil.{' '}
         <Link to="/perfil/editar" className="font-bold text-ink underline">Abrir editor de perfil</Link>
       </div>
+
+      {gamificationOn && (
+        <div className="mt-8" data-testid="profile-progression-v2">
+          <div className="mb-3 flex items-center gap-2">
+            <Sparkles className="h-4 w-4 text-amber-500" />
+            <h2 className="font-display text-lg font-bold text-ink">Sua progressão</h2>
+            <V2Badge tone="amber">V2</V2Badge>
+          </div>
+          <ProgressionCardV2
+            summary={stats}
+            matchDates={matchDates}
+          />
+          <div className="mt-3 text-center text-sm">
+            <Link
+              to="/gamification"
+              className="inline-flex items-center gap-1 font-bold text-ink hover:underline"
+            >
+              Ver missões e mais conquistas →
+            </Link>
+          </div>
+        </div>
+      )}
     </div>
   );
 }
