@@ -24,6 +24,7 @@ const V2Performance = lazy(() => import('@/v2/pages/V2Performance'));
 const V2Achievements = lazy(() => import('@/v2/pages/V2Achievements'));
 const V2GamificationHome = lazy(() => import('@/v2/pages/V2GamificationHome'));
 const V2HallOfFame = lazy(() => import('@/v2/pages/V2HallOfFame'));
+const V2PublicAchievements = lazy(() => import('@/v2/pages/V2PublicAchievements'));
 const V2Bookings = lazy(() => import('@/v2/pages/V2Bookings'));
 const V2Profile = lazy(() => import('@/v2/pages/V2Profile'));
 const V2Chat = lazy(() => import('@/v2/pages/V2Chat'));
@@ -184,6 +185,7 @@ export default function V2App() {
           {/* Você */}
           <Route path="meu-desempenho" element={<V2Performance />} />
           <Route path="conquistas" element={<V2Achievements />} />
+          <Route path="conquistas/:uid" element={<V2PublicAchievements />} />
           <Route path="gamification" element={<V2GamificationHome />} />
           <Route path="hall-da-fama" element={<V2HallOfFame />} />
           <Route path="perfil" element={<V2Profile />} />
