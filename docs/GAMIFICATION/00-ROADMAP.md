@@ -240,23 +240,23 @@ chore(gamification): <sprint> — <descrição>
 | 2026-09-01 | S9.1 | `gamificationEvents.js` (29 eventos + tracker) + 13 testes | `2557f5c` |
 | 2026-09-01 | validate | Build green, lint clean, 2269/2269 tests (zero regressão) | — |
 
-## 📊 Métricas finais (S0.1 → S9.2 + V2GamificationHome)
+## 📊 Métricas finais (S0.1 → S15 completo)
 
 | Item | Antes | Depois | Delta |
 |---|---|---|---|
-| **Testes Vitest** | 1922 | **2288** | **+366** |
-| **Test files** | 143 | **167** | +24 |
+| **Testes Vitest** | 1922 | **2369** | **+447** |
+| **Test files** | 143 | **177** | +34 |
 | **Lint errors** | 0 | 0 | — |
-| **Build time** | ~30s | 31.4s | — |
-| **Commits atômicos** | 0 | **20** | +20 |
-| **Domínios novos** | 0 | 12 | +12 |
-| **Componentes novos** | 0 | 8 | +8 |
-| **Hooks novos** | 0 | 2 | +2 |
-| **Páginas V2 novas** | 0 | 2 (`/conquistas` + `/gamification`) | +2 |
-| **Rotas novas** | 0 | 2 | +2 |
+| **Build time** | ~30s | 31.7s | — |
+| **Commits atômicos** | 0 | **27** | +27 |
+| **Domínios novos** | 0 | 14 | +14 |
+| **Componentes novos** | 0 | 9 | +9 |
+| **Hooks novos** | 0 | 6 | +6 |
+| **Páginas V2 novas** | 0 | 3 (`/conquistas`, `/gamification`, `/hall-da-fama`) | +3 |
+| **Rotas novas** | 0 | 3 | +3 |
 | **Feature flags novas** | 0 | 1 master (`GAMIFICATION_V2`) | +1 |
-| **Coleções Firestore novas** | 0 | 0 (zero!) | — |
-| **Regras Firestore alteradas** | 0 | 0 (zero!) | — |
+| **Coleções Firestore novas** | 0 | **4** (user_progression_v2, user_missions, user_achievements_v2, user_streak_meta) | +4 |
+| **Regras Firestore alteradas** | 0 | **+4 match blocks aditivos** | +4 |
 | **`users/{uid}` writes** | 0 | 0 (zero!) | — |
 | **Arquivos V1 alterados** | 0 | 0 (zero!) | — |
 
