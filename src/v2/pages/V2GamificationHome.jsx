@@ -15,6 +15,7 @@ import { useUserProgressionV2 } from '@/modules/progression/hooks/useUserProgres
 import { useUserMissionsV2 } from '@/modules/progression/hooks/useUserMissionsV2';
 import { useSyncProgressionV2 } from '@/modules/progression/hooks/useSyncProgressionV2';
 import { useStreakMetaV2 } from '@/modules/progression/hooks/useStreakMetaV2';
+import { useCelebrationListener } from '@/modules/progression/hooks/useCelebrationListener';
 import { computeXpV2, levelFromXpV2, XP_WEIGHTS_V2 } from '@/modules/progression/domain/progressionV2';
 import { tierFromXp, tierProgress } from '@/modules/progression/domain/tiers';
 import { buildSkillTrees } from '@/modules/progression/domain/skillTrees';
@@ -29,6 +30,7 @@ import { useGamificationTracker } from '@/modules/progression/hooks/useGamificat
 import TierBadge from '@/modules/progression/components/TierBadge';
 import SkillTreeBars from '@/modules/progression/components/SkillTreeBars';
 import MissionList from '@/modules/progression/components/MissionList';
+import MissionCompleteToast from '@/modules/progression/components/MissionCompleteToast';
 import StreakShieldBadge from '@/modules/progression/components/StreakShieldBadge';
 import AchievementCardV2 from '@/modules/achievements/components/AchievementCardV2';
 import {
@@ -101,6 +103,20 @@ function V2GamificationHomeOn() {
     isClaiming,
   } = useUserMissionsV2(user?.uid, progression?.tier || 'Calouro', !!user);
   const streakMeta = useStreakMetaV2(user?.uid, !!user);
+
+  // Celebration listener — dispara toasts quando missões/achievements desbloqueiam
+  const [celebratedMission, setCelebratedMission] = React.useState(null);
+  useCelebrationListener({
+    missions: dailyMissions,
+    unlockedAchievements: unlockedFromDb,
+    onMissionCompleted: (m) => {
+      setCelebratedMission(m);
+      if (telemetryOn) track('gamification_mission_completed', { mission_id: m.id, xp: m.xp });
+    },
+    onAchievementUnlocked: (a) => {
+      if (telemetryOn) track('gamification_achievement_unlocked', { achievement_id: a.achievementId, family: a.family, rarity: a.rarity });
+    },
+  });
 
   // ===== XP/tier/skills =====
   // Prioriza dados persistidos; fallback pra cálculo do V1
@@ -326,6 +342,12 @@ function V2GamificationHomeOn() {
           Telemetria de gamificação ativa · eventos emitidos pra Firebase Analytics
         </p>
       )}
+
+      {/* Celebration toast (missões recém-completadas) */}
+      <MissionCompleteToast
+        mission={celebratedMission}
+        onClose={() => setCelebratedMission(null)}
+      />
     </div>
   );
 }
