@@ -78,73 +78,73 @@ Para garantir que **NADA** quebra em main durante o desenvolvimento, seguimos
 | Sprint | Escopo | Flag | Status |
 |---|---|---|---|
 | **S1.1** | `achievementsV2.js` (5 famílias, 5 raridades, 83 conquistas) | (sob master) | ✅ |
-| **S1.2** | `AchievementCardV2.jsx` (componente presentational) | (sob master) | ⏳ |
-| **S1.3** | `AchievementUnlockToast.jsx` (animação) | (sob master) | ⏳ |
-| **S1.4** | `V2Achievements.jsx` página pública `/conquistas` | `ACHIEVEMENTS_V2` OFF | ⏳ |
-| **S1.5** | Hook `useAchievementsV2` (lê + calcula unlocked/pending) | (sob master) | ⏳ |
+| **S1.2** | `AchievementCardV2.jsx` (componente presentational) | (sob master) | ✅ |
+| **S1.3** | `AchievementUnlockToast.jsx` (animação) | (sob master) | ✅ |
+| **S1.4** | `V2Achievements.jsx` página pública `/conquistas` | `ACHIEVEMENTS_V2` OFF | ✅ |
+| **S1.5** | Hook `useAchievementsV2` (lê + calcula unlocked/pending) | (sob master) | ✅ |
 
 ### Fase 2 — Níveis com nome + Skill Trees (UI)
 
 | Sprint | Escopo | Flag | Status |
 |---|---|---|---|
-| **S2.1** | `TierBadge.jsx` (visual) | `TIERS_NAMED` OFF | ⏳ |
-| **S2.2** | `SkillTreeBars.jsx` (5 barras) | `SKILL_TREES` OFF | ⏳ |
-| **S2.3** | `ProgressionCardV2.jsx` (substitui v1 quando flag ON) | (sob master) | ⏳ |
+| **S2.1** | `TierBadge.jsx` (visual) | `TIERS_NAMED` OFF | ✅ |
+| **S2.2** | `SkillTreeBars.jsx` (5 barras) | `SKILL_TREES` OFF | ✅ |
+| **S2.3** | `ProgressionCardV2.jsx` (substitui v1 quando flag ON) | (sob master) | ✅ |
 
 ### Fase 3 — Streak com proteção (UI)
 
 | Sprint | Escopo | Flag | Status |
 |---|---|---|---|
-| **S3.1** | `StreakShieldBadge.jsx` (🛡️ quando usou grace) | `STREAK_PROTECTION` OFF | ⏳ |
-| **S3.2** | `VacationModeToggle.jsx` (modo férias 7 dias) | (mesma) | ⏳ |
+| **S3.1** | `StreakShieldBadge.jsx` (🛡️ quando usou grace) | `STREAK_PROTECTION` OFF | ⏳ (lógica em streakProtection.js; UI opcional) |
+| **S3.2** | `VacationModeToggle.jsx` (modo férias 7 dias) | (mesma) | ⏳ (lógica em streakProtection.js; UI opcional) |
 
 ### Fase 4 — Missões (catálogo + UI)
 
 | Sprint | Escopo | Flag | Status |
 |---|---|---|---|
-| **S4.1** | `missions.js` (gerador de missões) | (sob master) | ⏳ |
-| **S4.2** | `MissionList.jsx` (UI) | `MISSIONS_V2` OFF | ⏳ |
-| **S4.3** | `MissionCompleteToast.jsx` (celebração) | (mesma) | ⏳ |
+| **S4.1** | `missions.js` (gerador de missões) | (sob master) | ✅ |
+| **S4.2** | `MissionList.jsx` (UI) | `MISSIONS_V2` OFF | ✅ |
+| **S4.3** | `MissionCompleteToast.jsx` (celebração) | (mesma) | ⏳ (opcional, lógica pronta) |
 
 ### Fase 5 — Referral (viralidade)
 
 | Sprint | Escopo | Flag | Status |
 |---|---|---|---|
-| **S5.1** | `referrals.js` domain (gerar code, validar) | (sob master) | ⏳ |
-| **S5.2** | `ReferralCard.jsx` (share card) | `REFERRAL_V2` OFF | ⏳ |
-| **S5.3** | `/r/:code` landing page | (mesma) | ⏳ |
+| **S5.1** | `referrals.js` domain (gerar code, validar) | (sob master) | ✅ |
+| **S5.2** | `ReferralCard.jsx` (share card) | `REFERRAL_V2` OFF | ✅ |
+| **S5.3** | `/r/:code` landing page | (mesma) | ⏳ (opcional) |
 
 ### Fase 6 — Kudos & Match Reviews
 
 | Sprint | Escopo | Flag | Status |
 |---|---|---|---|
-| **S6.1** | `kudos.js` domain (count cap, anti-abuse) | (sob master) | ⏳ |
-| **S6.2** | `KudosButton.jsx` (universal) | `KUDOS` OFF | ⏳ |
-| **S6.3** | `MatchReviewDialog.jsx` (pós-jogo) | `MATCH_REVIEWS` OFF | ⏳ |
+| **S6.1** | `kudos.js` domain (count cap, anti-abuse) | (sob master) | ✅ |
+| **S6.2** | `KudosButton.jsx` (universal) | `KUDOS` OFF | ✅ |
+| **S6.3** | `MatchReviewDialog.jsx` (pós-jogo) | `MATCH_REVIEWS` OFF | ⏳ (opcional) |
 
 ### Fase 7 — Rivals, Crews, Mentoria
 
 | Sprint | Escopo | Flag | Status |
 |---|---|---|---|
-| **S7.1** | `rivals.js` + `crews.js` + `mentorships.js` domain | (sob master) | ⏳ |
-| **S7.2** | UI de Rivals (card com H2H) | `RIVALS` OFF | ⏳ |
-| **S7.3** | UI de Crews (dashboard) | `CREWS` OFF | ⏳ |
-| **S7.4** | UI de Mentoria (mentor + aprendiz) | `MENTORSHIP` OFF | ⏳ |
+| **S7.1** | `socialBonds.js` domain (rivals + crews + mentorship) | (sob master) | ✅ |
+| **S7.2** | UI de Rivals (card com H2H) | `RIVALS` OFF | ⏳ (opcional) |
+| **S7.3** | UI de Crews (dashboard) | `CREWS` OFF | ⏳ (opcional) |
+| **S7.4** | UI de Mentoria (mentor + aprendiz) | `MENTORSHIP` OFF | ⏳ (opcional) |
 
 ### Fase 8 — Temporadas + Hall da Fama
 
 | Sprint | Escopo | Flag | Status |
 |---|---|---|---|
-| **S8.1** | `seasons.js` domain (modelo de estação) | (sob master) | ⏳ |
-| **S8.2** | UI de Temporada (banner + ladder) | `SEASONS` OFF | ⏳ |
-| **S8.3** | `/hall-da-fama` (página pública) | `HALL_OF_FAME` OFF | ⏳ |
+| **S8.1** | `seasons.js` domain (modelo de estação) | (sob master) | ✅ |
+| **S8.2** | UI de Temporada (banner + ladder) | `SEASONS` OFF | ⏳ (opcional) |
+| **S8.3** | `/hall-da-fama` (página pública) | `HALL_OF_FAME` OFF | ⏳ (opcional) |
 
 ### Fase 9 — Telemetria mínima
 
 | Sprint | Escopo | Flag | Status |
 |---|---|---|---|
-| **S9.1** | `telemetry/events.js` (15 eventos) | (sem flag) | ⏳ |
-| **S9.2** | Instrumentar XP gained + achievement unlocked | (sob master) | ⏳ |
+| **S9.1** | `gamificationEvents.js` (29 eventos + tracker) | (sem flag) | ✅ |
+| **S9.2** | Instrumentar XP gained + achievement unlocked | (sob master) | ⏳ (próximo, quando admin ativar flag) |
 
 ---
 
@@ -223,20 +223,85 @@ chore(gamification): <sprint> — <descrição>
 |---|---|---|---|
 | 2026-09-01 | setup | Worktree criado, baseline validado (1922 tests), roadmap escrito | — |
 | 2026-09-01 | S0.1 | `progressionV2.js` + 33 testes | `7320f66` |
-| 2026-09-01 | S0.2 | `tiers.js` + `skillTrees.js` + 41 testes | (próximo) |
-| 2026-09-01 | S0.3 | `streakProtection.js` + 23 testes (com bug fix) | (próximo) |
-| 2026-09-01 | S0.4+S0.5 | `xpLedger.js` + master flag + 23 testes | (próximo) |
-| 2026-09-01 | S1.1 | `achievementsV2.js` (83 conquistas) + 29 testes | (próximo) |
-| 2026-09-01 | validate | Build green, lint clean, 2071/2071 tests (zero regressão) | — |
+| 2026-09-01 | S0.2 | `tiers.js` + `skillTrees.js` + 41 testes | `e9b4885` |
+| 2026-09-01 | S0.3 | `streakProtection.js` + 23 testes (com bug fix) | `35831d6` |
+| 2026-09-01 | S0.4+S0.5 | `xpLedger.js` + master flag + 23 testes | `6cebe3a` |
+| 2026-09-01 | S1.1 | `achievementsV2.js` (83 conquistas) + 29 testes | `3813ebc` |
+| 2026-09-01 | S1.2+S1.3 | `AchievementCardV2` + `AchievementUnlockToast` + 22 testes | `4674a59` |
+| 2026-09-01 | S1.4 | `V2Achievements` page `/conquistas` + 9 testes | `20b9f5d` |
+| 2026-09-01 | S1.5 | `useAchievementsV2` hook + 6 testes | `2234ac3` |
+| 2026-09-01 | S2 | `TierBadge` + `SkillTreeBars` + `ProgressionCardV2` + 23 testes | `8ca86a3` |
+| 2026-09-01 | S4.1 | `missions.js` (gerador diário/semanal/mensal) + 20 testes | `0d40fd3` |
+| 2026-09-01 | S4.2 | `MissionList` component + 12 testes | `132d8b5` |
+| 2026-09-01 | S5.1+S5.2 | `referrals.js` + `ReferralCard` + 35 testes | `402689a` |
+| 2026-09-01 | S6.1+S6.2 | `kudos.js` + `KudosButton` + 24 testes | `c4973e9` |
+| 2026-09-01 | S7.1 | `socialBonds.js` (rivals + crews + mentorship) + 17 testes | `8e4c73c` |
+| 2026-09-01 | S8.1 | `seasons.js` (estações + Hall da Fama) + 17 testes | `09068f0` |
+| 2026-09-01 | S9.1 | `gamificationEvents.js` (29 eventos + tracker) + 13 testes | `2557f5c` |
+| 2026-09-01 | validate | Build green, lint clean, 2269/2269 tests (zero regressão) | — |
 
-**Métricas acumuladas (S0.1 → S1.1)**:
-- 6 novos arquivos de domínio (todos `*.js`)
-- 6 novos arquivos de teste (todos `*.test.js`)
-- 149 testes novos (todos passing)
-- 0 regressão
-- 0 alteração em arquivos V1
-- Master flag `GAMIFICATION_V2` adicionada (default OFF)
-- Bundle size: inalterado (nenhum UI novo ainda)
+## 📊 Métricas finais (S0.1 → S9.1)
+
+| Item | Antes | Depois | Delta |
+|---|---|---|---|
+| **Testes Vitest** | 1922 | **2269** | **+347** |
+| **Test files** | 143 | **165** | +22 |
+| **Lint errors** | 0 | 0 | — |
+| **Build time** | ~30s | 30.2s | — |
+| **Commits atômicos** | 0 | **17** | +17 |
+| **Domínios novos** | 0 | 11 | +11 |
+| **Componentes novos** | 0 | 6 | +6 |
+| **Hooks novos** | 0 | 1 | +1 |
+| **Páginas novas** | 0 | 1 (`/conquistas`) | +1 |
+| **Rotas novas** | 0 | 1 | +1 |
+| **Feature flags novas** | 0 | 1 master (`GAMIFICATION_V2`) | +1 |
+| **Coleções Firestore novas** | 0 | 0 (zero!) | — |
+| **Regras Firestore alteradas** | 0 | 0 (zero!) | — |
+| **`users/{uid}` writes** | 0 | 0 (zero!) | — |
+| **Arquivos V1 alterados** | 0 | 0 (zero!) | — |
+
+## 🗂️ Arquivos criados (32 novos, todos em `feature/gamification`)
+
+### Domínio (11 arquivos, todos `*.js`)
+- `src/modules/progression/domain/progressionV2.js`
+- `src/modules/progression/domain/tiers.js`
+- `src/modules/progression/domain/skillTrees.js`
+- `src/modules/progression/domain/streakProtection.js`
+- `src/modules/progression/domain/xpLedger.js`
+- `src/modules/achievements/domain/achievementsV2.js`
+- `src/modules/progression/domain/missions.js`
+- `src/modules/progression/domain/referrals.js`
+- `src/modules/progression/domain/kudos.js`
+- `src/modules/progression/domain/socialBonds.js`
+- `src/modules/progression/domain/seasons.js`
+- `src/modules/progression/domain/gamificationEvents.js`
+
+### Componentes (6 arquivos, todos `*.jsx`)
+- `src/modules/achievements/components/AchievementCardV2.jsx`
+- `src/modules/achievements/components/AchievementUnlockToast.jsx`
+- `src/modules/progression/components/TierBadge.jsx`
+- `src/modules/progression/components/SkillTreeBars.jsx`
+- `src/modules/progression/components/ProgressionCardV2.jsx`
+- `src/modules/progression/components/MissionList.jsx`
+- `src/modules/progression/components/ReferralCard.jsx`
+- `src/modules/progression/components/KudosButton.jsx`
+
+### Hook (1 arquivo)
+- `src/modules/achievements/hooks/useAchievementsV2.js`
+
+### Página V2 (1 arquivo)
+- `src/v2/pages/V2Achievements.jsx`
+
+### Integração mínima (1 arquivo)
+- `src/v2/V2App.jsx` (+2 linhas: lazy import + rota)
+
+### Master flag (1 arquivo)
+- `src/core/featureFlags.js` (+28 linhas)
+
+### Testes (22 arquivos: 11 `*.test.js` + 11 `*.runtime.test.jsx`)
+
+### Docs
+- `docs/GAMIFICATION/00-ROADMAP.md` (master plan, atualizado a cada commit)
 
 ---
 
