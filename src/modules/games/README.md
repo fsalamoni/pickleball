@@ -82,8 +82,10 @@ seguem com sua lógica própria.
 
 #### Quadras disponíveis (fila justa)
 O sorteio do **Americano** aceita o nº de **quadras simultâneas** disponíveis
-(`courts`, informado no diálogo "Sortear"). Sem ele, o motor abre uma quadra por
-grupo de 4 — comportamento histórico, inalterado.
+(`courts`, informado no diálogo "Sortear"). O campo é **livre** (1..12,
+independente do nº de atletas) e pode ficar **em branco** = automático (uma
+quadra por grupo de 4), que é o comportamento histórico, inalterado. Se o valor
+passar do que o nº de atletas comporta, o motor limita sozinho (`normalizeDrawCourts`).
 
 Com ele, cada rodada tem no máximo `courts` jogos. Ex.: **12 atletas em 2
 quadras** → 8 jogam e 4 aguardam; na rodada seguinte esses 4 entram junto com 4
@@ -97,6 +99,20 @@ que o nº de atletas permitiria, sugere mais rodadas para preservar a média de
 jogos por pessoa. Sem o parâmetro, devolve exatamente o valor de antes.
 Domínio: `normalizeDrawCourts` + `generateGameDayGames({ courts })` em
 `clubs/domain/gameDayDraw.js`.
+
+#### Re-sorteio não repete as duplas substituídas
+`buildDrawHistory(keptGames, ids, { formationGames })` separa duas coisas que
+antes andavam juntas:
+
+- **participação** (jogos disputados / rodadas presentes) → vem só dos jogos
+  **mantidos**, porque os substituídos não aconteceram;
+- **memória de formações** (duplas e adversários) → vem de `formationGames`,
+  normalmente **todos** os jogos do dia, inclusive os que estão sendo trocados.
+
+Sem isso, re-sortear substituindo os jogos sem resultado podia devolver
+exatamente as mesmas duplas que o organizador quis trocar. Os três organizadores
+passam `formationGames` com a grade atual. Sem a opção, o comportamento é o de
+antes.
 
 ### Ranking do dia (classificação interna)
 Entre "Jogos" e "Resultados no ranking", o organizador mostra o **Ranking do

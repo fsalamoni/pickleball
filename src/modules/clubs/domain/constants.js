@@ -181,6 +181,9 @@ export const GAME_DAY_LIMITS = Object.freeze({
   MAX_PARTICIPANTS: 64,
   MAX_ROUNDS: 30,
   MESSAGE_MAX: 4000,
+  // Teto do campo "quadras disponíveis" do sorteio (o motor ainda limita pelo
+  // nº de atletas: não há como abrir mais jogos do que grupos de 4).
+  MAX_COURTS: 12,
 });
 
 /**

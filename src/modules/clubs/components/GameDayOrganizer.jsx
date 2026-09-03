@@ -288,16 +288,19 @@ function GamesSection({ eventId, dateId, participants }) {
   const appendGames = useAppendEventGames(eventId);
   const clearGames = useClearEventGames(eventId);
   const [rounds, setRounds] = useState(0);
-  // Quadras simultâneas disponíveis (0 = automático: uma por grupo de 4).
-  const [courts, setCourts] = useState(0);
+  // Quadras simultâneas disponíveis, como TEXTO livre (vazio = automático).
+  const [courtsText, setCourtsText] = useState('');
   const [drawOpen, setDrawOpen] = useState(false);
   const [replaceUnscored, setReplaceUnscored] = useState(false);
   const [manualOpen, setManualOpen] = useState(false);
   const [confirmClear, setConfirmClear] = useState(false);
   const [drawing, setDrawing] = useState(false);
 
+  // Limite FÍSICO de jogos simultâneos (não limita o que se pode digitar).
   const maxCourts = Math.max(1, Math.floor(participants.length / 4));
-  const effectiveCourts = courts || null;
+  const typedCourts = Math.floor(Number(courtsText));
+  const courtsValue = Number.isFinite(typedCourts) && typedCourts > 0 ? typedCourts : null;
+  const effectiveCourts = courtsValue;
   const effectiveRounds = rounds || suggestRounds(participants.length, effectiveCourts) || 3;
   const canDraw = participants.length >= 4;
 
@@ -329,7 +332,9 @@ function GamesSection({ eventId, dateId, participants }) {
       // já ocorridos (jogos mantidos) para variar as formações, e equilibra a
       // PARTICIPAÇÃO por rodada presente (quem seguiu no dia e jogou menos entra
       // primeiro, sem forçar quem entrou tarde ao mesmo total dos veteranos).
-      const history = buildDrawHistory(plan.keptGames, ids);
+      // `formationGames`: TODOS os jogos do dia (inclusive os substituídos)
+      // para não repetir as duplas/confrontos que acabaram de sair.
+      const history = buildDrawHistory(plan.keptGames, ids, { formationGames: games });
       const raw = generateGameDayGames(ids, {
         rounds: effectiveRounds, seed, history, courts: effectiveCourts,
       });
@@ -483,13 +488,19 @@ function GamesSection({ eventId, dateId, participants }) {
                 id="courts"
                 type="number"
                 min={1}
-                max={maxCourts}
-                value={courts || maxCourts}
-                onChange={(e) => setCourts(Math.max(1, Math.min(maxCourts, Number(e.target.value) || 0)))}
+                max={GAME_DAY_LIMITS.MAX_COURTS}
+                placeholder={`${maxCourts} (todas)`}
+                value={courtsText}
+                onChange={(e) => setCourtsText(e.target.value)}
+                onBlur={() => setCourtsText((t) => {
+                  const n = Math.floor(Number(t));
+                  if (!Number.isFinite(n) || n < 1) return '';
+                  return String(Math.min(GAME_DAY_LIMITS.MAX_COURTS, n));
+                })}
               />
               <p className="text-xs text-gray-500">
-                Com {participants.length} participantes e {courts ? Math.min(maxCourts, courts) : maxCourts} jogo(s) por rodada.
-                {courts > 0 && courts < maxCourts
+                Com {participants.length} participantes e {courtsValue ? Math.min(maxCourts, courtsValue) : maxCourts} jogo(s) por rodada.
+                {courtsValue != null && courtsValue < maxCourts
                   ? ' Quem fica de fora entra na rodada seguinte — os jogos seguem distribuídos por igual.'
                   : ''}
               </p>

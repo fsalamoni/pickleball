@@ -100,10 +100,15 @@ function sideIds(side) {
  *
  * @param {Array} keptGames  jogos mantidos (`side_a`/`side_b` = `[{id}]` ou `[id]`)
  * @param {string[]} currentIds  ids dos participantes que entram no novo sorteio
+ * @param {{ formationGames?: Array }} [options]
+ *   `formationGames`: jogos considerados para EVITAR repetir duplas/adversários
+ *   — normalmente TODOS os jogos do dia, inclusive os que serão substituídos.
+ *   A participação (jogos/rodadas) continua vindo só de `keptGames`. Ausente,
+ *   usa os próprios `keptGames` (comportamento anterior).
  * @returns {{ partner: Map<string,number>, opp: Map<string,number>,
  *             played: Map<string,number>, present: Map<string,number> }}
  */
-export function buildDrawHistory(keptGames = [], currentIds = []) {
+export function buildDrawHistory(keptGames = [], currentIds = [], options = {}) {
   const current = new Set((currentIds || []).filter(Boolean));
   const partner = new Map();
   const opp = new Map();
@@ -113,11 +118,19 @@ export function buildDrawHistory(keptGames = [], currentIds = []) {
 
   const bump = (map, key) => map.set(key, (map.get(key) || 0) + 1);
 
-  (keptGames || []).forEach((g) => {
+  // MEMÓRIA DE FORMAÇÕES (duplas/adversários) × PARTICIPAÇÃO (jogos/rodadas).
+  // São coisas diferentes: ao RE-SORTEAR substituindo os jogos sem resultado,
+  // aqueles jogos não aconteceram (não contam participação), mas as duplas que
+  // eles formaram devem ser EVITADAS — senão o novo sorteio repete exatamente
+  // as parcerias que o organizador quis trocar. Por isso `formationGames`
+  // (default: os próprios mantidos) alimenta parcerias/adversários, enquanto
+  // `keptGames` alimenta jogos disputados e rodadas presentes.
+  const { formationGames = null } = options;
+  const pairSource = Array.isArray(formationGames) ? formationGames : keptGames;
+
+  (pairSource || []).forEach((g) => {
     const a = sideIds(g?.side_a);
     const b = sideIds(g?.side_b);
-    const r = Number.isFinite(g?.round) ? g.round : null;
-    if (r != null) roundSet.add(r);
 
     // Parcerias (duplas) — pares dentro de cada lado.
     [a, b].forEach((side) => {
@@ -131,6 +144,13 @@ export function buildDrawHistory(keptGames = [], currentIds = []) {
     a.forEach((x) => b.forEach((y) => {
       if (current.has(x) && current.has(y)) bump(opp, pairKey(x, y));
     }));
+  });
+
+  (keptGames || []).forEach((g) => {
+    const a = sideIds(g?.side_a);
+    const b = sideIds(g?.side_b);
+    const r = Number.isFinite(g?.round) ? g.round : null;
+    if (r != null) roundSet.add(r);
 
     // Partidas disputadas e rodada de entrada (só participantes atuais).
     [...a, ...b].forEach((id) => {

@@ -252,3 +252,57 @@ describe('gameDayDraw — quadras disponíveis (fila justa)', () => {
     expect(normalizeDrawCourts(null, 3)).toBe(3);
   });
 });
+
+describe('gameDayDraw — memória de formações no re-sorteio', () => {
+  const ids = ['a', 'b', 'c', 'd', 'e', 'f', 'g', 'h'];
+  const mk = (round, sa, sb) => ({
+    round, side_a: sa.map((id) => ({ id })), side_b: sb.map((id) => ({ id })),
+  });
+
+  it('formationGames lembra as duplas mesmo com os jogos substituídos', () => {
+    const anteriores = [mk(1, ['a', 'b'], ['c', 'd']), mk(1, ['e', 'f'], ['g', 'h'])];
+    const hist = buildDrawHistory([], ids, { formationGames: anteriores });
+    expect(hist.partner.get(key('a', 'b'))).toBe(1);
+    expect(hist.partner.get(key('e', 'f'))).toBe(1);
+    expect(hist.opp.get(key('a', 'c'))).toBe(1);
+    // Os jogos foram substituídos: não contam participação.
+    expect(hist.played.size).toBe(0);
+  });
+
+  it('participação vem só dos mantidos; formações vêm de todos', () => {
+    const mantido = mk(1, ['a', 'b'], ['c', 'd']);
+    const substituido = mk(2, ['e', 'f'], ['g', 'h']);
+    const hist = buildDrawHistory([mantido], ids, { formationGames: [mantido, substituido] });
+    expect(hist.played.get('a')).toBe(1);
+    expect(hist.played.get('e')).toBeUndefined(); // não jogou de fato
+    expect(hist.partner.get(key('e', 'f'))).toBe(1); // mas a dupla é lembrada
+  });
+
+  it('sem options, o comportamento é idêntico ao anterior', () => {
+    const g = [mk(1, ['a', 'b'], ['c', 'd'])];
+    const antes = buildDrawHistory(g, ids);
+    const comDefault = buildDrawHistory(g, ids, {});
+    expect([...comDefault.partner.entries()]).toEqual([...antes.partner.entries()]);
+    expect([...comDefault.opp.entries()]).toEqual([...antes.opp.entries()]);
+    expect([...comDefault.played.entries()]).toEqual([...antes.played.entries()]);
+  });
+
+  it('o novo sorteio não repete as duplas que foram substituídas', () => {
+    const ids12 = Array.from({ length: 12 }, (_, i) => `p${i + 1}`);
+    const primeiro = generateGameDayGames(ids12, { rounds: 2, seed: 'r1', courts: 2 });
+    const comoJogos = primeiro.map((g) => ({
+      round: g.round,
+      side_a: g.side_a.map((id) => ({ id })),
+      side_b: g.side_b.map((id) => ({ id })),
+    }));
+    const hist = buildDrawHistory([], ids12, { formationGames: comoJogos });
+    const novo = generateGameDayGames(ids12, { rounds: 2, seed: 'r2', courts: 2, history: hist });
+
+    const antes = new Set();
+    primeiro.forEach((g) => { antes.add(key(...g.side_a)); antes.add(key(...g.side_b)); });
+    novo.forEach((g) => {
+      expect(antes.has(key(...g.side_a))).toBe(false);
+      expect(antes.has(key(...g.side_b))).toBe(false);
+    });
+  });
+});

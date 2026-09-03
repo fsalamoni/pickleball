@@ -34,7 +34,7 @@ import {
 } from '@/modules/clubs/hooks/useClubs';
 import { useAthletes } from '@/modules/athletes/hooks/useAthletes';
 import { PARTICIPANT_SOURCE, INVITE_STATUS, GAME_DAY_LIMITS } from '@/modules/clubs/domain/constants';
-import { generateGameDayGames, suggestRounds } from '@/modules/clubs/domain/gameDayDraw';
+import { generateGameDayGames, suggestRounds, buildDrawHistory } from '@/modules/clubs/domain/gameDayDraw';
 import {
   GAME_DAY_FORMAT, GAME_DAY_FORMAT_LABELS, DRAW_FORMATS,
   generateMexicanoSchedule, kingOfCourtFirstRound, kingOfCourtNextRound,
@@ -270,8 +270,8 @@ function GamesSection({ eventId, dateId, participants }) {
   const clearGames = useClearEventGames(eventId);
   const formatsOn = true;
   const [rounds, setRounds] = useState(0);
-  // Quadras simultâneas disponíveis (0 = automático: uma por grupo de 4).
-  const [courts, setCourts] = useState(0);
+  // Quadras simultâneas disponíveis, como TEXTO livre (vazio = automático).
+  const [courtsText, setCourtsText] = useState('');
   const [format, setFormat] = useState(GAME_DAY_FORMAT.AMERICANO);
   const [drawOpen, setDrawOpen] = useState(false);
   const [manualOpen, setManualOpen] = useState(false);
@@ -283,8 +283,11 @@ function GamesSection({ eventId, dateId, participants }) {
   const isKingOfCourt = formatsOn && format === GAME_DAY_FORMAT.KING_OF_COURT;
   // Quadras só se aplicam ao Americano (o motor que monta rodadas completas).
   const isAmericano = !formatsOn || format === GAME_DAY_FORMAT.AMERICANO;
+  // Limite FÍSICO de jogos simultâneos (não limita o que se pode digitar).
   const maxCourts = Math.max(1, Math.floor(participants.length / 4));
-  const effectiveCourts = isAmericano ? (courts || null) : null;
+  const typedCourts = Math.floor(Number(courtsText));
+  const courtsValue = Number.isFinite(typedCourts) && typedCourts > 0 ? typedCourts : null;
+  const effectiveCourts = isAmericano ? courtsValue : null;
   const effectiveRounds = rounds || suggestRounds(participants.length, effectiveCourts) || 3;
 
   const participantById = useMemo(() => {
@@ -320,7 +323,14 @@ function GamesSection({ eventId, dateId, participants }) {
       } else if (formatsOn && format === GAME_DAY_FORMAT.KING_OF_COURT) {
         raw = kingOfCourtFirstRound(ids, { seed }); // só a 1ª rodada; as próximas por resultado
       } else {
-        raw = generateGameDayGames(ids, { rounds: effectiveRounds, seed, courts: effectiveCourts });
+        // Este organizador SUBSTITUI os jogos do dia. Ainda assim, o novo
+        // sorteio evita repetir as duplas/confrontos que estavam na grade
+        // anterior (`formationGames`); a participação parte do zero, porque
+        // os jogos substituídos deixam de existir.
+        const history = buildDrawHistory([], ids, { formationGames: games });
+        raw = generateGameDayGames(ids, {
+          rounds: effectiveRounds, seed, courts: effectiveCourts, history,
+        });
       }
       const payload = raw.map(toPayload);
       await replaceGames.mutateAsync({ games: payload, dateId });
@@ -493,7 +503,7 @@ function GamesSection({ eventId, dateId, participants }) {
                   />
                   <p className="text-xs text-gray-500">
                     Com {participants.length} participantes e{' '}
-                    {isAmericano && courts > 0 ? Math.min(maxCourts, courts) : maxCourts} jogo(s) por rodada.
+                    {isAmericano && courtsValue ? Math.min(maxCourts, courtsValue) : maxCourts} jogo(s) por rodada.
                   </p>
                 </div>
               )}
@@ -504,13 +514,22 @@ function GamesSection({ eventId, dateId, participants }) {
                     id="courts"
                     type="number"
                     min={1}
-                    max={maxCourts}
-                    value={courts || maxCourts}
-                    onChange={(e) => setCourts(Math.max(1, Math.min(maxCourts, Number(e.target.value) || 0)))}
+                    max={GAME_DAY_LIMITS.MAX_COURTS}
+                    placeholder={`${maxCourts} (todas)`}
+                    value={courtsText}
+                    onChange={(e) => setCourtsText(e.target.value)}
+                    onBlur={() => setCourtsText((t) => {
+                      const n = Math.floor(Number(t));
+                      if (!Number.isFinite(n) || n < 1) return '';
+                      return String(Math.min(GAME_DAY_LIMITS.MAX_COURTS, n));
+                    })}
                   />
                   <p className="text-xs text-gray-500">
-                    Com menos quadras do que jogos possíveis, quem fica de fora entra na rodada
-                    seguinte — a distribuição de jogos segue equilibrada.
+                    {courtsValue == null
+                      ? `Em branco usa todas as quadras possíveis (${maxCourts} com ${participants.length} participantes).`
+                      : courtsValue >= maxCourts
+                        ? `Com ${participants.length} participantes cabem no máximo ${maxCourts} jogo(s) ao mesmo tempo.`
+                        : `${courtsValue * 4} em quadra e ${participants.length - courtsValue * 4} aguardando por rodada — quem fica de fora entra na seguinte.`}
                   </p>
                 </div>
               )}
