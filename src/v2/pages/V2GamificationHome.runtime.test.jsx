@@ -58,8 +58,8 @@ vi.mock('@/modules/progression/hooks/useUserMissionsV2', () => ({
       { id: 'm3', title: 'Conclua 1 torneio', description: 'Conclua 1 torneio', metric: 'tournament_completed', target: 1, current: 0, xp: 50, bonus: 20, bonusClaimed: false, seed: 3 },
     ],
     doc: { bonusClaimed: false, completedAt: null },
+    metrics: { game_played: 0, kudos_given: 1 },
     isLoading: false,
-    progressMission: () => {},
     claimBonus: () => {},
     isClaiming: false,
   }),
@@ -78,6 +78,18 @@ vi.mock('@/modules/progression/hooks/useStreakMetaV2', () => ({
     isMutating: false,
   }),
 }));
+vi.mock('@/modules/achievements/hooks/useSyncAchievementsV2', () => ({
+  useSyncAchievementsV2: () => {},
+}));
+
+vi.mock('@/modules/progression/hooks/useKudoActions', () => ({
+  useKudoActions: () => ({
+    index: { givenToday: 0, receivedToday: 0, lastKudoDay: '2026-09-03' },
+    received: [], given: [], isLoading: false,
+    give: () => {}, isGiving: false, giveError: null,
+  }),
+}));
+
 vi.mock('@/modules/progression/hooks/useUserReferralCode', () => ({
   // código PERSISTIDO do usuário (antes a página gerava um aleatório no render)
   useUserReferralCode: () => ({

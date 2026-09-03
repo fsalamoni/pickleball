@@ -27,7 +27,7 @@ vi.mock('firebase/firestore', () => ({
 import {
   getMissionsForDate,
   getOrCreateDailyMissions,
-  progressMission,
+  syncMissionProgress,
   claimDailyBonus,
 } from './missionService';
 
@@ -70,28 +70,49 @@ describe('missionService', () => {
     expect(mockSetDoc).not.toHaveBeenCalled();
   });
 
-  it('progressMission atualiza current e não estoura target', async () => {
-    const dateKey = new Date('2026-09-02T12:00:00Z').toISOString().slice(0, 10);
+  it('syncMissionProgress aplica a atividade real e não estoura o alvo', async () => {
+    const dateKey = '2026-09-02';
     mockDocData[`user_missions/u1_${dateKey}`] = {
       uid: 'u1', date: dateKey, scope: 'daily',
       missions: [
-        { id: 'm1', title: 't', description: 't', metric: 'm', target: 3, current: 1, xp: 30, bonus: 15, bonusClaimed: false, seed: 1 },
+        { id: 'm1', title: 't', description: 't', metric: 'game_played', target: 3, current: 1, xp: 30, bonus: 15, bonusClaimed: false, seed: 1 },
       ],
       bonusClaimed: false, completedAt: null, createdAt: 1, updatedAt: 1,
     };
-    const updated = await progressMission('u1', 'm1', 5, new Date('2026-09-02T12:00:00Z'));
-    expect(updated.missions[0].current).toBe(3); // cap
+    const updated = await syncMissionProgress('u1', { game_played: 9 }, new Date('2026-09-02T12:00:00Z'));
+    expect(updated.missions[0].current).toBe(3); // grampeado no alvo
     expect(updated.completedAt).toBeTruthy();
   });
 
-  it('progressMission retorna null se missão não existe', async () => {
-    const dateKey = new Date('2026-09-02T12:00:00Z').toISOString().slice(0, 10);
+  it('syncMissionProgress NÃO grava quando nada mudou', async () => {
+    const dateKey = '2026-09-02';
     mockDocData[`user_missions/u1_${dateKey}`] = {
       uid: 'u1', date: dateKey, scope: 'daily',
-      missions: [{ id: 'other', title: 't', description: 't', metric: 'm', target: 1, current: 0, xp: 30, bonus: 15, bonusClaimed: false, seed: 1 }],
+      missions: [
+        { id: 'm1', title: 't', description: 't', metric: 'game_played', target: 3, current: 2, xp: 30, bonus: 15, bonusClaimed: false, seed: 1 },
+      ],
       bonusClaimed: false, completedAt: null, createdAt: 1, updatedAt: 1,
     };
-    const res = await progressMission('u1', 'm-inexistente', 1, new Date('2026-09-02T12:00:00Z'));
+    mockSetDoc.mockClear();
+    await syncMissionProgress('u1', { game_played: 2 }, new Date('2026-09-02T12:00:00Z'));
+    expect(mockSetDoc).not.toHaveBeenCalled();
+  });
+
+  it('syncMissionProgress nunca regride uma missão já concluída', async () => {
+    const dateKey = '2026-09-02';
+    mockDocData[`user_missions/u1_${dateKey}`] = {
+      uid: 'u1', date: dateKey, scope: 'daily',
+      missions: [
+        { id: 'm1', title: 't', description: 't', metric: 'game_played', target: 2, current: 2, xp: 30, bonus: 15, bonusClaimed: false, seed: 1 },
+      ],
+      bonusClaimed: false, completedAt: 999, createdAt: 1, updatedAt: 1,
+    };
+    const res = await syncMissionProgress('u1', { game_played: 0 }, new Date('2026-09-02T12:00:00Z'));
+    expect(res.missions[0].current).toBe(2);
+  });
+
+  it('syncMissionProgress retorna null se não há doc do dia', async () => {
+    const res = await syncMissionProgress('u1', { game_played: 3 }, new Date('2026-09-02T12:00:00Z'));
     expect(res).toBeNull();
   });
 

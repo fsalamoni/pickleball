@@ -19,6 +19,8 @@
  */
 
 
+import { isMeasurableMetric } from './missionMetrics.js';
+
 const DAY_MS = 24 * 60 * 60 * 1000;
 
 /**
@@ -237,7 +239,11 @@ export function generateMissions({ uid, scope, currentTier = null, now = new Dat
     // daily → id começa com 'daily_'
     // weekly → id começa com 'weekly_'
     // monthly → id começa com 'monthly_'
-    return t.id.startsWith(`${scope}_`);
+    if (!t.id.startsWith(`${scope}_`)) return false;
+    // E, principalmente: só entra missão cuja métrica a plataforma sabe
+    // MEDIR. Missão de métrica não medível ficaria parada em 0 para sempre
+    // (ou dependeria do usuário marcar sozinho, que era o furo antigo).
+    return isMeasurableMetric(t.metric, scope);
   });
 
   const date = new Date(now);

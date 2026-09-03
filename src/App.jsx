@@ -11,6 +11,7 @@ import { recordPageView } from '@/core/services/observabilityService';
 // nela desde a consolidação da V2 como base única.
 const Landing = lazy(() => import('@/v2/pages/V2Landing'));
 const Login = lazy(() => import('@/v2/pages/V2Login'));
+const ReferralLanding = lazy(() => import('@/v2/pages/V2ReferralLanding'));
 const PublicTournament = lazy(() => import('@/pages/PublicTournament'));
 const PrintTournament = lazy(() => import('@/pages/PrintTournament'));
 const Telao = lazy(() => import('@/pages/Telao'));
@@ -117,6 +118,9 @@ export default function App() {
               <Route path="/torneios/:tournamentId/imprimir" element={<PrintTournament />} />
               <Route path="/torneios/:tournamentId/telao" element={<Telao />} />
               <Route path="/c/:clubId" element={<PublicClub />} />
+              {/* Destino do link de convite (`buildReferralUrl` gera /r/CODIGO).
+                  Pública: quem chega por aqui ainda não tem conta. */}
+              <Route path="/r/:code" element={<ReferralLanding />} />
 
               {/* Redirects de compatibilidade com URLs legadas (V1) */}
               <Route path="/inicio" element={<Navigate to="/" replace />} />

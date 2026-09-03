@@ -59,25 +59,28 @@ describe('MissionList', () => {
     expect(doneItem.className).toMatch(/bg-green/);
   });
 
-  it('botão de progress chama onProgress com (mission, 1)', async () => {
-    const onProgress = vi.fn();
-    await render({ missions: sampleMissions, scope: 'daily', onProgress });
-    const firstItem = container.querySelector('[data-mission-id="m1"]');
-    const btn = firstItem.querySelector('button');
-    btn.click();
-    expect(onProgress).toHaveBeenCalledWith(
-      expect.objectContaining({ id: 'm1' }),
-      1,
-    );
+  it('NÃO oferece botão de marcar progresso', async () => {
+    await render({ missions: sampleMissions, scope: 'daily' });
+    // Missão avança pela atividade real do atleta. O botão "+1" que existia
+    // aqui deixava concluir "Jogue 3 partidas" sem entrar em quadra.
+    const item = container.querySelector('[data-mission-id="m1"]');
+    expect(item.querySelector('button')).toBeNull();
   });
 
-  it('botão done NÃO chama onProgress (disabled)', async () => {
-    const onProgress = vi.fn();
-    await render({ missions: sampleMissions, scope: 'daily', onProgress });
-    const doneItem = container.querySelector('[data-mission-id="m3"]');
-    const btn = doneItem.querySelector('button');
-    btn.click();
-    expect(onProgress).not.toHaveBeenCalled();
+  it('o único botão da lista é o de resgatar bônus', async () => {
+    const todasFeitas = sampleMissions.map((m) => ({ ...m, current: m.target, done: true }));
+    await render({ missions: todasFeitas, scope: 'daily', onClaimBonus: () => {} });
+    const botoes = [...container.querySelectorAll('button')];
+    expect(botoes).toHaveLength(1);
+    expect(botoes[0].textContent.toLowerCase()).toContain('resgatar');
+  });
+
+  it('a barra de progresso é acessível', async () => {
+    await render({ missions: sampleMissions, scope: 'daily' });
+    const barra = container.querySelector('[data-mission-id="m1"] [role="progressbar"]');
+    expect(barra).toBeTruthy();
+    expect(barra.getAttribute('aria-valuenow')).toBe('0');
+    expect(barra.getAttribute('aria-valuemax')).toBe('1');
   });
 
   it('mostra barra de progresso X/Y', async () => {

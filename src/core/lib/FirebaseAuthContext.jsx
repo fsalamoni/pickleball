@@ -65,6 +65,33 @@ function mapAuthError(error, fallback = 'Não foi possível entrar. Tente novame
   }
 }
 
+/**
+ * Credita a indicação pendente no primeiro login de uma conta nova.
+ *
+ * Isolado e silencioso de propósito: import dinâmico (não pesa o bundle do
+ * login) e qualquer erro é engolido — indicação é bônus, jamais caminho
+ * crítico de autenticação. Sem código pendente (feature desligada, ou
+ * cadastro direto), não faz absolutamente nada.
+ *
+ * @param {string} uid
+ */
+function creditPendingReferral(uid) {
+  (async () => {
+    try {
+      const { readPendingReferral, clearPendingReferral } =
+        await import('@/modules/progression/domain/referralCapture');
+      const code = readPendingReferral();
+      if (!code) return;
+      const { claimReferralForNewUser } =
+        await import('@/modules/progression/services/referralService');
+      await claimReferralForNewUser({ refereeUid: uid, code });
+      clearPendingReferral();
+    } catch (err) {
+      logger.warn('[referral] não foi possível creditar a indicação', err);
+    }
+  })();
+}
+
 export const AuthProvider = ({ children }) => {
   const [user, setUser] = useState(null);
   const [userProfile, setUserProfile] = useState(null);
@@ -150,6 +177,12 @@ export const AuthProvider = ({ children }) => {
             await claimProvisionalRegistrationsForUser(firebaseUser, newProfile, { aliasEmails: newProfile.claim_alias_emails });
             setUserProfile(newProfile);
             syncAthleteProfile(firebaseUser, newProfile);
+            // Conta nova: se veio de um link de convite (/r/CODIGO), credita a
+            // indicação. Best-effort e sem await — como o sync do diretório
+            // acima, NUNCA pode atrasar ou derrubar a entrada de quem acabou
+            // de criar a conta. Sem código pendente (feature desligada, ou
+            // cadastro direto), não faz absolutamente nada.
+            creditPendingReferral(firebaseUser.uid);
             logger.info('New user profile created:', firebaseUser.uid);
           }
         } else {

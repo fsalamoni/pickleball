@@ -7,10 +7,12 @@ import { useAuth } from '@/core/lib/FirebaseAuthContext';
 import { useFeatureFlag } from '@/core/lib/FeatureFlagsContext';
 import { FEATURE_FLAG } from '@/core/featureFlags';
 import { usePlayerStats } from '@/modules/performance/hooks/usePlayerStats';
+import { useKudoActions } from '@/modules/progression/hooks/useKudoActions';
 import { usePlayerMatchDates } from '@/modules/progression/hooks/useProgression';
 import { useAchievementsV2 } from '@/modules/achievements/hooks/useAchievementsV2';
 import { ACHIEVEMENTS_V2 } from '@/modules/achievements/domain/achievementsV2';
 import { useUserAchievementsV2 } from '@/modules/achievements/hooks/useUserAchievementsV2';
+import { useSyncAchievementsV2 } from '@/modules/achievements/hooks/useSyncAchievementsV2';
 import { useUserProgressionV2 } from '@/modules/progression/hooks/useUserProgressionV2';
 import { useUserMissionsV2 } from '@/modules/progression/hooks/useUserMissionsV2';
 import { useSyncProgressionV2 } from '@/modules/progression/hooks/useSyncProgressionV2';
@@ -83,7 +85,7 @@ export default function V2GamificationHome() {
 
 function V2GamificationHomeOn() {
   const { user } = useAuth();
-  const { stats, isLoading: statsLoading } = usePlayerStats();
+  const { stats, history, gameDayGames, isLoading: statsLoading } = usePlayerStats();
   const { data: matchDates = [] } = usePlayerMatchDates(user?.uid, true);
   const { result: achievements } = useAchievementsV2();
   const { track, enabled: telemetryOn } = useGamificationTracker();
@@ -92,14 +94,55 @@ function V2GamificationHomeOn() {
   // Sincroniza stats V1 → doc materializado V2 (cria/atualiza se preciso)
   useSyncProgressionV2(user?.uid, stats, !!user);
   const { progression } = useUserProgressionV2(user?.uid, !!user);
-  const { unlocked: unlockedFromDb } = useUserAchievementsV2(user?.uid, !!user);
+  const { unlocked: unlockedFromDb, unlockedIds: persistedIds } = useUserAchievementsV2(user?.uid, !!user);
+
+  // Registra em `user_achievements_v2` o que o cálculo diz que o atleta já
+  // ganhou. Sem isso o cálculo nunca virava registro: perfil público e Hall
+  // da Fama mostravam 0 para todo mundo e o toast jamais disparava.
+  useSyncAchievementsV2(user?.uid, achievements?.unlocked, persistedIds, !!user);
+  const { index: kudoIndex } = useKudoActions(user?.uid, !!user);
+  // O código de convite tem de ser o PERSISTIDO do usuário. Antes a página
+  // chamava `generateReferralCode()` no render: o atleta via um código
+  // aleatório diferente a cada carregamento, que não pertencia a ninguém e
+  // nunca era gravado — ou seja, nenhuma indicação jamais seria creditada.
+  const { code: referralCode } = useUserReferralCode(user?.uid, !!user);
+
+  // Fontes de ATIVIDADE REAL que alimentam o progresso das missões. Nenhuma
+  // vem de clique do usuário — missão não é auto-declaração.
+  const tournamentDates = useMemo(
+    () => (history || [])
+      .map((g) => {
+        const bruto = g?.tournament?.starts_at;
+        const ms = bruto ? new Date(bruto).getTime() : NaN;
+        return Number.isFinite(ms) ? ms : null;
+      })
+      .filter((ms) => ms !== null),
+    [history],
+  );
+  const gameDayDates = useMemo(
+    () => (gameDayGames || [])
+      .map((g) => {
+        const bruto = g?.played_at || g?.created_at || g?.date;
+        const ms = bruto?.toMillis ? bruto.toMillis() : new Date(bruto).getTime();
+        return Number.isFinite(ms) ? ms : null;
+      })
+      .filter((ms) => ms !== null),
+    [gameDayGames],
+  );
+
   const {
     missions: dailyMissions,
     doc: missionsDoc,
-    progressMission: doProgress,
     claimBonus: doClaimBonus,
     isClaiming,
-  } = useUserMissionsV2(user?.uid, progression?.tier || 'Calouro', !!user);
+  } = useUserMissionsV2(
+    user?.uid,
+    progression?.tier || 'Calouro',
+    !!user,
+    {
+      matchDates, gameDayDates, tournamentDates, kudoIndex, referralCode,
+    },
+  );
   const streakMeta = useStreakMetaV2(user?.uid, !!user);
 
   // Celebration listener — dispara toasts quando missões/achievements desbloqueiam
@@ -145,18 +188,9 @@ function V2GamificationHomeOn() {
   const tierProg = useMemo(() => tierProgress(xpTotal), [xpTotal]);
 
   // ===== Referral =====
-  // O código de convite tem de ser o PERSISTIDO do usuário. Antes a página
-  // chamava `generateReferralCode()` no render: o atleta via um código
-  // aleatório diferente a cada carregamento, que não pertencia a ninguém e
-  // nunca era gravado — ou seja, nenhuma indicação jamais seria creditada.
-  const { code: referralCode } = useUserReferralCode(user?.uid, !!user);
   const origin = typeof window !== 'undefined' ? window.location.origin : '';
 
   // ===== Handlers =====
-  function handleProgress(mission, delta) {
-    if (telemetryOn) track('gamification_mission_progress', { mission_id: mission.id, delta });
-    doProgress({ missionId: mission.id, delta });
-  }
   function handleClaimBonus(scope) {
     if (telemetryOn) track('gamification_mission_bonus_claimed', { scope, xp: MISSION_BONUS_XP[scope] });
     doClaimBonus();
@@ -275,7 +309,6 @@ function V2GamificationHomeOn() {
           scope="daily"
           bonusClaimed={missionsDoc?.bonusClaimed || false}
           isClaiming={isClaiming}
-          onProgress={handleProgress}
           onClaimBonus={handleClaimBonus}
         />
       </V2Surface>

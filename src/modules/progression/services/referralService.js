@@ -10,6 +10,7 @@ import {
   collection,
   query,
   where,
+  limit as fsLimit,
   getDocs,
   serverTimestamp,
   runTransaction,
@@ -169,6 +170,46 @@ export async function getReferralForReferee(refereeUid) {
   const snap = await getDoc(ref);
   if (!snap.exists()) return null;
   return parseDoc(snap.data(), validateUserReferral);
+}
+
+/**
+ * Descobre de quem é um código de convite.
+ *
+ * @param {string} code
+ * @returns {Promise<{uid: string, code: string}|null>}
+ */
+export async function findReferrerByCode(code) {
+  const c = String(code || '').trim().toUpperCase();
+  if (!c) return null;
+  const q = query(
+    collection(db(), 'user_referral_codes'),
+    where('code', '==', c),
+    fsLimit(1),
+  );
+  const snap = await getDocs(q);
+  const d = snap.docs[0];
+  if (!d) return null;
+  const data = d.data();
+  return { uid: data.uid || d.id, code: c };
+}
+
+/**
+ * Credita a indicação no cadastro do novo atleta.
+ *
+ * Best-effort de propósito: é chamado no primeiro login e NUNCA pode
+ * atrapalhar a entrada de quem está criando a conta. Qualquer falha
+ * (código inexistente, indicação já registrada, permissão) devolve null.
+ *
+ * @param {{ refereeUid: string, code: string }} args
+ * @returns {Promise<object|null>}
+ */
+export async function claimReferralForNewUser({ refereeUid, code }) {
+  if (!refereeUid || !code) return null;
+  const referrer = await findReferrerByCode(code);
+  if (!referrer) return null;
+  // ninguém indica a si mesmo
+  if (referrer.uid === refereeUid) return null;
+  return recordReferralSignup({ refereeUid, referrerUid: referrer.uid, code: referrer.code });
 }
 
 export async function listReferralsByReferrer(referrerUid) {

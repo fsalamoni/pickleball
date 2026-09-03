@@ -24,14 +24,20 @@ describe('missions · generateMissions', () => {
     });
   });
 
-  it('gera 5 missões semanais', () => {
+  // O gerador pede 5 semanais e 10 mensais, mas só entrega missão cuja
+  // métrica a plataforma consegue MEDIR (ver `missionMetrics.js`). Hoje isso
+  // limita o pool; conforme outros módulos exponham seus contadores, as
+  // missões voltam sozinhas ao sorteio e estes números sobem.
+  it('gera missões semanais dentro do teto pedido', () => {
     const m = generateMissions({ uid: 'u1', scope: 'weekly' });
-    expect(m).toHaveLength(5);
+    expect(m.length).toBeGreaterThan(0);
+    expect(m.length).toBeLessThanOrEqual(5);
   });
 
-  it('gera 10 missões mensais', () => {
+  it('gera missões mensais dentro do teto pedido', () => {
     const m = generateMissions({ uid: 'u1', scope: 'monthly' });
-    expect(m).toHaveLength(10);
+    expect(m.length).toBeGreaterThan(0);
+    expect(m.length).toBeLessThanOrEqual(10);
   });
 
   it('IDs são únicos (uid + scope + date + templateId)', () => {

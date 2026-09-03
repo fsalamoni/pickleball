@@ -54,6 +54,36 @@ Curvas de progressão, níveis, metas e (desde a Onda R) todo o sistema de
    registrar indicação mexe no código do indicador — as regras permitem
    apenas +1 por vez, nos campos daquele fluxo.
 
+7. **Missão NÃO é auto-declaração.** O progresso vem de `missionMetrics.js`,
+   derivado da atividade real (datas de partida, torneios, contadores de
+   kudos e indicação). Existia um botão "+1" na lista de missões que deixava
+   qualquer um concluir "Jogue 3 partidas" sem entrar em quadra — e receber o
+   XP. `MissionList` é somente leitura.
+
+8. **Só existe missão para métrica mensurável.** `isMeasurableMetric(metric,
+   scope)` filtra o sorteio. Isso reduz o pool hoje (4 mensais em vez de 10);
+   conforme outros módulos exponham seus contadores, some a métrica em
+   `MEASURABLE_MISSION_METRICS` e as missões voltam sozinhas.
+
+9. **Progresso de missão nunca regride.** Se um resultado é corrigido depois,
+   a missão concluída continua concluída — tirar do usuário algo que ele já
+   viu conquistado é pior que a imprecisão.
+
+## Fluxo da indicação (referral)
+
+1. O atleta vê o próprio código em `/gamification` (`ReferralCard`), lido de
+   `user_referral_codes/{uid}` — **nunca gerado no render**.
+2. Compartilha `/r/CODIGO` (`buildReferralUrl`).
+3. O convidado abre `V2ReferralLanding`, que guarda o código em
+   `localStorage` (`referralCapture.js`) — ele precisa sobreviver ao desvio
+   pelo login social.
+4. No **primeiro** login da conta nova, `FirebaseAuthContext` chama
+   `creditPendingReferral` → `claimReferralForNewUser`, que resolve o dono do
+   código e grava `user_referrals/{refereeUid}`, creditando +1 no indicador.
+
+Tudo best-effort: falha de indicação nunca atrapalha a criação da conta.
+Com a flag OFF, o passo 3 não guarda nada, então o passo 4 é no-op.
+
 ## Regras do Firestore
 Testadas de verdade contra o emulador em
 `tests/rules/gamification.rules.emulator.mjs` (51 asserções). Não roda no

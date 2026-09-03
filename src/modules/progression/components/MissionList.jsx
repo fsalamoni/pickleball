@@ -9,13 +9,15 @@ import {
 /**
  * MissionList — lista de missões (diárias / semanais / mensais).
  *
- * Presentational puro. Quem chama passa as missões já geradas e os
- * callbacks `onProgress` e `onClaimBonus`.
+ * Presentational puro e SOMENTE LEITURA do progresso.
+ *
+ * Não existe botão de "marcar progresso": missão avança pela atividade real
+ * do atleta (`missionMetrics`). O botão que existia aqui deixava qualquer um
+ * concluir "Jogue 3 partidas" sem entrar em quadra.
  *
  * @param {{
  *   missions: Array<object>,
  *   scope: 'daily'|'weekly'|'monthly',
- *   onProgress?: (mission, delta) => void,
  *   onClaimBonus?: (scope) => void,
  *   bonusClaimed?: boolean,
  *   className?: string,
@@ -24,7 +26,6 @@ import {
 export default function MissionList({
   missions = [],
   scope = 'daily',
-  onProgress,
   onClaimBonus,
   bonusClaimed = false,
   className,
@@ -80,29 +81,31 @@ export default function MissionList({
                   : 'border-gray-100 bg-paper-pure',
               )}
             >
-              <button
-                type="button"
-                onClick={() => !m.done && onProgress?.(m, 1)}
-                disabled={m.done}
-                aria-label={m.done ? 'Missão completa' : 'Marcar progresso'}
+              <span
+                aria-hidden="true"
                 className={cn(
-                  'flex h-7 w-7 shrink-0 items-center justify-center rounded-full transition-colors',
-                  m.done
-                    ? 'bg-green-500 text-white'
-                    : 'border-2 border-gray-300 text-transparent hover:border-amber-400',
+                  'flex h-7 w-7 shrink-0 items-center justify-center rounded-full',
+                  m.done ? 'bg-green-500 text-white' : 'border-2 border-gray-300 text-transparent',
                 )}
               >
                 {m.done ? <Check className="h-4 w-4" /> : <Circle className="h-4 w-4" />}
-              </button>
+              </span>
               <div className="min-w-0 flex-1">
                 <p className={cn('text-sm font-semibold', m.done ? 'text-gray-500 line-through' : 'text-ink')}>
                   {m.description}
                 </p>
                 <div className="mt-1 flex items-center gap-2">
-                  <div className="h-1.5 flex-1 overflow-hidden rounded-full bg-gray-200">
+                  <div
+                    role="progressbar"
+                    aria-valuenow={m.current}
+                    aria-valuemin={0}
+                    aria-valuemax={m.target}
+                    aria-label={`${m.description}: ${m.current} de ${m.target}`}
+                    className="h-1.5 flex-1 overflow-hidden rounded-full bg-gray-200"
+                  >
                     <div
-                      className="h-full rounded-full bg-amber-400"
-                      style={{ width: `${Math.min(100, Math.round((m.current / m.target) * 100))}%` }}
+                      className="h-full rounded-full bg-amber-400 transition-all"
+                      style={{ width: `${Math.min(100, Math.round((m.current / Math.max(1, m.target)) * 100))}%` }}
                     />
                   </div>
                   <span className="text-[11px] tabular-nums text-gray-500">

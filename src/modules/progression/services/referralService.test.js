@@ -1,6 +1,7 @@
 import { describe, it, expect, beforeEach, vi } from 'vitest';
 
 const mockDocData = {};
+let mockQueryDocs = [];
 const mockGetDoc = vi.fn(async (ref) => ({
   exists: () => mockDocData[ref._path] !== undefined,
   data: () => mockDocData[ref._path],
@@ -43,7 +44,8 @@ vi.mock('firebase/firestore', () => ({
   collection: (db, name) => ({ _name: name }),
   query: (...args) => ({ _q: args }),
   where: (...args) => ({ _w: args }),
-  getDocs: () => ({ docs: [] }),
+  limit: (n) => ({ _limit: n }),
+  getDocs: async () => ({ docs: mockQueryDocs.map((d) => ({ id: d.__id || 'x', data: () => d })) }),
   serverTimestamp: () => ({ _isServerTimestamp: true }),
   runTransaction: (...args) => mockRunTransaction(...args),
 }));
@@ -53,6 +55,8 @@ import {
   recordReferralSignup,
   recordReferralActivation,
   getReferralForReferee,
+  findReferrerByCode,
+  claimReferralForNewUser,
 } from './referralService';
 import { generateReferralCode } from '@/modules/progression/domain/referrals';
 
@@ -136,5 +140,51 @@ describe('referralService', () => {
   it('getReferralForReferee retorna null se não existe', async () => {
     const res = await getReferralForReferee('u-novo');
     expect(res).toBeNull();
+  });
+});
+
+describe('referralService · crédito no cadastro (link /r/CODIGO)', () => {
+  beforeEach(() => {
+    Object.keys(mockDocData).forEach((k) => delete mockDocData[k]);
+    mockQueryDocs = [];
+    mockSetDoc.mockClear();
+  });
+
+  it('findReferrerByCode acha o dono do código', async () => {
+    mockQueryDocs = [{ __id: 'dono', uid: 'dono', code: 'AB2CD3EF' }];
+    const r = await findReferrerByCode('ab2cd3ef');
+    expect(r).toEqual({ uid: 'dono', code: 'AB2CD3EF' });
+  });
+
+  it('findReferrerByCode devolve null para código inexistente', async () => {
+    mockQueryDocs = [];
+    expect(await findReferrerByCode('ZZZZZZZZ')).toBeNull();
+  });
+
+  it('findReferrerByCode devolve null sem código', async () => {
+    expect(await findReferrerByCode('')).toBeNull();
+  });
+
+  it('claimReferralForNewUser registra o vínculo do novato', async () => {
+    mockQueryDocs = [{ __id: 'dono', uid: 'dono', code: 'AB2CD3EF' }];
+    const r = await claimReferralForNewUser({ refereeUid: 'novato', code: 'AB2CD3EF' });
+    expect(r).toBeTruthy();
+    expect(r.referrerUid).toBe('dono');
+    expect(r.refereeUid).toBe('novato');
+  });
+
+  it('ninguém se autoindica com o próprio código', async () => {
+    mockQueryDocs = [{ __id: 'dono', uid: 'dono', code: 'AB2CD3EF' }];
+    expect(await claimReferralForNewUser({ refereeUid: 'dono', code: 'AB2CD3EF' })).toBeNull();
+  });
+
+  it('código inválido não credita ninguém', async () => {
+    mockQueryDocs = [];
+    expect(await claimReferralForNewUser({ refereeUid: 'novato', code: 'ZZZZZZZZ' })).toBeNull();
+  });
+
+  it('sem uid ou sem código, não faz nada', async () => {
+    expect(await claimReferralForNewUser({ refereeUid: null, code: 'AB2CD3EF' })).toBeNull();
+    expect(await claimReferralForNewUser({ refereeUid: 'novato', code: '' })).toBeNull();
   });
 });

@@ -2,7 +2,8 @@
  * missionService — Firestore adapter para user_missions/{uid}_{date}
  *
  * - getOrCreateDailyMissions: garante que existe um doc pro dia
- * - progressMission: atualiza current + valida
+ * - syncMissionProgress: aplica a atividade REAL do atleta (nunca um "+1"
+ *   informado pela UI)
  * - claimBonus: marca bonusClaimed
  */
 import {
@@ -20,6 +21,7 @@ import {
 import { UserMissionSchema, missionDocPath } from '@/modules/progression/domain/progressionV2Schema';
 import { generateMissions, MISSION_BONUS_XP } from '@/modules/progression/domain/missions';
 import { missionDateKey, missionDaySeed } from '@/modules/progression/domain/missionDay';
+import { applyRealProgress } from '@/modules/progression/domain/missionMetrics';
 
 function db() {
   return getFirestore();
@@ -73,21 +75,33 @@ export async function getOrCreateDailyMissions(uid, currentTier, now = new Date(
   return payload;
 }
 
-/** Atualiza current de uma missão. Se completar, marca completedAt. */
-export async function progressMission(uid, missionId, delta, now = new Date()) {
-  if (!uid || !missionId) return null;
+/**
+ * Sincroniza o documento do dia com a ATIVIDADE REAL do atleta.
+ *
+ * Substitui o antigo `progressMission(uid, missionId, delta)`, em que a UI
+ * mandava "+1" a cada clique do próprio usuário — ou seja, dava para concluir
+ * "Jogue 3 partidas" sem jogar nenhuma, e ainda receber o XP.
+ *
+ * Aqui quem manda são os contadores medidos (`computeMissionMetrics`). Se
+ * nada mudou, não grava — evita escrita a cada render.
+ *
+ * @param {string} uid
+ * @param {Record<string, number>} metricas saída de `computeMissionMetrics`
+ * @param {Date} [now]
+ * @returns {Promise<object|null>} documento atualizado (ou o atual, se nada mudou)
+ */
+export async function syncMissionProgress(uid, metricas, now = new Date()) {
+  if (!uid || !metricas) return null;
   const dateKey = missionDateKey(now);
   const ref = doc(db(), missionDocPath(uid, dateKey));
   const existing = await getDoc(ref);
   if (!existing.exists()) return null;
   const data = parseMissionDoc(existing.data());
-  const idx = data.missions.findIndex((m) => m.id === missionId);
-  if (idx < 0) return null;
-  const mission = data.missions[idx];
-  const newCurrent = Math.min(mission.current + delta, mission.target);
-  const updatedMission = { ...mission, current: newCurrent };
-  const updatedMissions = [...data.missions];
-  updatedMissions[idx] = updatedMission;
+  if (!Array.isArray(data.missions)) return null;
+
+  const { missions: updatedMissions, changed } = applyRealProgress(data.missions, metricas);
+  if (!changed) return data;
+
   const allDone = updatedMissions.every((m) => m.current >= m.target);
   const updated = {
     ...data,

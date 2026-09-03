@@ -5,7 +5,7 @@
  * Combina com useAchievementsV2 (que calcula o total e combina com rating).
  */
 import { useQuery, useQueryClient, useMutation } from '@tanstack/react-query';
-import { useEffect } from 'react';
+import { useEffect, useMemo } from 'react';
 import {
   listUserAchievementsV2,
   unlockAchievementV2,
@@ -51,9 +51,16 @@ export function useUserAchievementsV2(uid, enabled = true) {
     onSuccess: () => qc.invalidateQueries({ queryKey: KEY(uid) }),
   });
 
+  // Memoizado: sem isso o Set nasce novo a cada render e qualquer efeito que
+  // dependa dele (ex.: o sync de conquistas) re-dispara sem parar.
+  const unlockedIds = useMemo(
+    () => new Set((query.data || []).map((a) => a.achievementId)),
+    [query.data],
+  );
+
   return {
     unlocked: query.data || [],
-    unlockedIds: new Set((query.data || []).map((a) => a.achievementId)),
+    unlockedIds,
     isLoading: query.isLoading,
     error: query.error,
     unlock: unlockMut.mutate,
