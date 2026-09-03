@@ -19,13 +19,23 @@ import {
 
 function db() { return getFirestore(); }
 
+/**
+ * Teto de freezes DISPONÍVEIS ao mesmo tempo. Espelhado em `firestore.rules`.
+ * `freezesUsed` é um contador vitalício e NÃO tem teto: quem repõe o freeze e
+ * usa de novo passa de 3, e limitar esse campo travava o save do usuário fiel.
+ */
+export const MAX_FREEZES = 3;
+
+/** Teto de dias de tolerância por ciclo. Espelhado em `firestore.rules`. */
+export const MAX_GRACE_DAYS = 3;
+
 export function makeEmptyStreakMeta(uid) {
   return {
     uid,
     schemaVersion: STREAK_META_VERSION,
     lastPlayAt: null,
-    graceDaysRemaining: 3,
-    freezesAvailable: 3,
+    graceDaysRemaining: MAX_GRACE_DAYS,
+    freezesAvailable: MAX_FREEZES,
     freezesUsed: 0,
     vacationMode: false,
     vacationStartedAt: null,
@@ -113,10 +123,10 @@ export async function consumeFreeze(uid) {
 /** Compra +1 freeze (custando XP, regra fora desse service). */
 export async function addFreeze(uid) {
   const meta = await getOrCreateStreakMeta(uid);
-  if (meta.freezesAvailable >= 3) return meta;
+  if (meta.freezesAvailable >= MAX_FREEZES) return meta;
   const updated = {
     ...meta,
-    freezesAvailable: Math.min(3, meta.freezesAvailable + 1),
+    freezesAvailable: Math.min(MAX_FREEZES, meta.freezesAvailable + 1),
     updatedAt: Date.now(),
   };
   return setStreakMeta(uid, updated);

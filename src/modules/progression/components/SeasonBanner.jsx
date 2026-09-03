@@ -4,12 +4,12 @@ import { useUserCurrentSeason, useSeasonTop } from '@/modules/progression/hooks/
 import { useFeatureFlag } from '@/core/lib/FeatureFlagsContext';
 import { FEATURE_FLAG } from '@/core/featureFlags';
 import { useAuth } from '@/core/lib/FirebaseAuthContext';
-import { currentSeasonId, MONTHLY_SEASON_PRIZES } from '@/modules/progression/domain/seasons';
+import { MONTHLY_SEASON_PRIZES } from '@/modules/progression/domain/seasons';
 
 /**
  * SeasonBanner — banner da season atual.
  * Mostra:
- *  - Nome da season corrente (YYYY-MM)
+ *  - Mês da temporada corrente (ex.: "setembro de 2026")
  *  - Sua posição se estiver no top
  *  - Prêmios disponíveis
  *
@@ -31,11 +31,11 @@ export default function SeasonBanner({ className }) {
       className={`flex flex-wrap items-center gap-3 rounded-3xl border border-purple-200 bg-gradient-to-r from-purple-50 to-amber-50 p-4 ${className || ''}`}
     >
       <div className="flex h-10 w-10 flex-shrink-0 items-center justify-center rounded-2xl bg-purple-200 text-purple-800">
-        <Trophy className="h-5 w-5" />
+        <Trophy className="h-5 w-5" aria-hidden="true" />
       </div>
       <div className="flex-1">
         <p className="flex items-center gap-1 text-xs font-bold uppercase tracking-wide text-purple-700">
-          <Sparkles className="h-3 w-3" /> Season {seasonId}
+          <Sparkles className="h-3 w-3" aria-hidden="true" /> Temporada
         </p>
         <p className="mt-0.5 text-sm font-bold text-ink capitalize">{currentMonth}</p>
         {season && (
@@ -48,7 +48,7 @@ export default function SeasonBanner({ className }) {
 
       <div className="flex flex-col items-end gap-1">
         <p className="flex items-center gap-1 text-[10px] font-bold uppercase tracking-wide text-gray-500">
-          <Calendar className="h-3 w-3" /> Top 3
+          <Calendar className="h-3 w-3" aria-hidden="true" /> Top 3
         </p>
         {top.slice(0, 3).map((t) => (
           <p key={t.uid} className="text-xs text-gray-700">

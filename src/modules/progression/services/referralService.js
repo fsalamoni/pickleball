@@ -20,11 +20,17 @@ import {
   validateUserReferralCode,
   validateUserReferral,
   REFERRAL_CODE_VERSION,
-  REFERRAL_VERSION,
 } from '@/modules/progression/domain/gamificationV2Schema2';
 import { generateReferralCode } from '@/modules/progression/domain/referrals';
+import { platformMonthKey } from '@/modules/progression/domain/missionDay';
 
 function db() { return getFirestore(); }
+
+/**
+ * Teto mensal de indicações por referrer (anti-farm). Espelhado em
+ * `firestore.rules` (match /user_referral_codes → monthlyCount <= 50).
+ */
+export const REFERRAL_MONTHLY_CAP = 50;
 
 function parseDoc(data, validator) {
   const parsed = {
@@ -46,7 +52,7 @@ export async function getOrCreateReferralCode(uid) {
   }
   const code = generateReferralCode();
   const now = Date.now();
-  const monthKey = new Date().toISOString().slice(0, 7);
+  const monthKey = platformMonthKey();
   const payload = {
     uid, schemaVersion: REFERRAL_CODE_VERSION,
     code, createdAt: now,
@@ -79,13 +85,17 @@ export function watchReferralCode(uid, onChange, onError) {
 export async function recordReferralSignup({ refereeUid, referrerUid, code }) {
   if (!refereeUid || !referrerUid) return null;
   const now = Date.now();
-  const monthKey = new Date().toISOString().slice(0, 7);
+  const monthKey = platformMonthKey();
   const referralRef = doc(db(), referralPath(refereeUid));
   const codeRef = doc(db(), referralCodePath(referrerUid));
 
   return runTransaction(db(), async (tx) => {
-    // verifica se já existe
-    const existing = await tx.get(referralRef);
+    // ATENÇÃO: o Firestore exige TODAS as leituras antes de QUALQUER escrita
+    // dentro da transação. Ler o código do referrer depois do `tx.set` abaixo
+    // fazia a transação estourar sempre ("transactions require all reads to be
+    // executed before all writes"), derrubando o fluxo inteiro de indicação.
+    const [existing, codeDoc] = [await tx.get(referralRef), await tx.get(codeRef)];
+
     if (existing.exists()) {
       return parseDoc(existing.data(), validateUserReferral);
     }
@@ -98,25 +108,27 @@ export async function recordReferralSignup({ refereeUid, referrerUid, code }) {
     };
     const refValidation = validateUserReferral(refPayload);
     if (!refValidation.success) throw new Error('referral schema inválido');
-    tx.set(referralRef, { ...refValidation.data, serverSignedUpAt: serverTimestamp() });
 
-    // atualiza o code do referrer
-    const codeDoc = await tx.get(codeRef);
+    // atualiza o code do referrer (só depois de todas as leituras)
+    let codeUpdate = null;
     if (codeDoc.exists()) {
       const data = parseDoc(codeDoc.data(), validateUserReferralCode);
       if (data) {
         const newMonthly = data.monthKey === monthKey ? data.monthlyCount + 1 : 1;
-        if (newMonthly > 50) {
-          throw new Error('anti-farm: referrer atingiu cap mensal de 50');
+        if (newMonthly > REFERRAL_MONTHLY_CAP) {
+          throw new Error(`anti-farm: referrer atingiu cap mensal de ${REFERRAL_MONTHLY_CAP}`);
         }
-        tx.update(codeRef, {
+        codeUpdate = {
           totalSignups: data.totalSignups + 1,
           monthlyCount: newMonthly,
           monthKey,
           updatedAt: now,
-        });
+        };
       }
     }
+
+    tx.set(referralRef, { ...refValidation.data, serverSignedUpAt: serverTimestamp() });
+    if (codeUpdate) tx.update(codeRef, codeUpdate);
     return refValidation.data;
   });
 }

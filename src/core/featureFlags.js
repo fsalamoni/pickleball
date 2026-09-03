@@ -105,9 +105,12 @@ export const FEATURE_FLAG = Object.freeze({
    * **Comportamento desligado**: NADA muda. XP/nível/achievements V1
    * continuam funcionando exatamente como antes.
    *
-   * **Comportamento ligado**: novos componentes de UI aparecem gated
-   * por sub-flags. O cálculo de XP total V2 convive com V1 via
-   * `computeXpCompatV1` (mesma numeração).
+   * **Comportamento ligado**: as rotas `/gamification`, `/conquistas`,
+   * `/conquistas/:uid` e `/hall-da-fama` saem do empty state, e o bloco
+   * "Sua progressão" aparece no `/perfil`. O cálculo de XP total V2 convive
+   * com V1 via `computeXpCompatV1` (mesma numeração).
+   *
+   * Não há sub-flags: esta é a única chave da gamificação V2.
    *
    * Aditivo. Default OFF.
    */
@@ -214,10 +217,10 @@ export const FEATURE_FLAG_META = Object.freeze({
     label: 'Gamificação V2 (master)',
     description:
       'Liga o sistema novo de progressão: tiers com nome (Calouro→Imortal), '
-      + '5 skill trees paralelas, XP multi-fonte com caps anti-farm, conquistas '
-      + 'V2 com 5 famílias e 5 raridades, missões, streak com grace day e '
-      + 'modo férias, kudos universais, referral program. '
-      + 'Desligada, NADA muda — XP/nível/achievements V1 seguem intactos.',
+      + '5 trilhas paralelas de XP, XP multi-fonte com limites anti-farm, '
+      + 'conquistas V2 (5 famílias e 5 raridades), missões diárias, sequência '
+      + 'com dias de folga e modo férias, kudos e programa de indicação. '
+      + 'Desligada, NADA muda — XP/nível/conquistas V1 seguem intactos.',
   },
 });
 

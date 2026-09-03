@@ -52,15 +52,22 @@ export function useCelebrationListener({
   const seen = useRef({ missions: new Set(), achievements: new Set() });
   const initialized = useRef(false);
 
-  // Inicializa seen com o que já tem (não dispara toasts retroativos)
+  // Semeia `seen` com o que o usuário JÁ tinha, para não celebrar o passado.
+  //
+  // Isso precisa acontecer na primeira leva de dados REAL, não na montagem:
+  // no primeiro render as listas ainda estão vazias (Firestore carregando), e
+  // marcar "inicializado" ali fazia o efeito seguinte tratar todas as missões
+  // já completas e todas as conquistas antigas como novidade — o usuário
+  // levava uma saraivada de toasts retroativos a cada abertura da página.
   useEffect(() => {
     if (initialized.current) return;
+    if (missions.length === 0 && unlockedAchievements.length === 0) return;
     missions.forEach((m) => {
       if ((m.current || 0) >= (m.target || 1)) seen.current.missions.add(m.id);
     });
     unlockedAchievements.forEach((a) => seen.current.achievements.add(a.achievementId));
     initialized.current = true;
-  }, []); // mount only
+  }, [missions, unlockedAchievements]);
 
   // detecta diffs
   useEffect(() => {

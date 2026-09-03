@@ -19,14 +19,10 @@ import {
 } from 'firebase/firestore';
 import { UserMissionSchema, missionDocPath } from '@/modules/progression/domain/progressionV2Schema';
 import { generateMissions, MISSION_BONUS_XP } from '@/modules/progression/domain/missions';
-import { tierFromXp } from '@/modules/progression/domain/tiers';
+import { missionDateKey, missionDaySeed } from '@/modules/progression/domain/missionDay';
 
 function db() {
   return getFirestore();
-}
-
-function missionDateKey(date) {
-  return date.toISOString().slice(0, 10);
 }
 
 /** Lê missões de um dia (ou null). */
@@ -49,8 +45,8 @@ export async function getOrCreateDailyMissions(uid, currentTier, now = new Date(
     const parsed = parseMissionDoc(existing.data());
     return UserMissionSchema.safeParse(parsed).success ? parsed : null;
   }
-  // gera com seed determinístico do dia
-  const seed = now.setHours(0, 0, 0, 0) + 100;
+  // seed determinístico do dia (não muta a Date recebida)
+  const seed = missionDaySeed(now);
   const generated = generateMissions({ uid, scope: 'daily', currentTier, seed });
   const payload = {
     uid,

@@ -22,7 +22,6 @@ import {
 } from '@/modules/progression/hooks/useProgression';
 import { computeProtectedStreak } from '@/modules/progression/domain/streakProtection';
 import AchievementCardV2 from '@/modules/achievements/components/AchievementCardV2';
-import AchievementUnlockToast from '@/modules/achievements/components/AchievementUnlockToast';
 import {
   V2Badge,
   V2Button,

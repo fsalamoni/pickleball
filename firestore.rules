@@ -1529,31 +1529,62 @@ service cloud.firestore {
 
     // ---- GAMIFICATION V2 (flag GAMIFICATION_V2) --------------------------------
     // Coleções materializadas adicionadas pela feature de gamificação V2.
-    // Cada doc é identificado por uid (ou uid_outroId pra logs/eventos).
-    // Leitura: o próprio user (uid bate com request.auth.uid) + platform_admin
-    // Escrita: o próprio user (pode upsert o próprio doc) + platform_admin
-    // PADRÃO ADITIVO: collections que ainda não existem em produção simplesmente
-    // não têm requests. As regras existem pra quando a feature for ativada.
+    //
+    // POLÍTICA GERAL
+    //  - Dono escreve o próprio doc; platform_admin escreve qualquer um.
+    //  - Onde a feature exige escrita cruzada (dar kudo mexe no índice de quem
+    //    recebe; entrar numa crew mexe no contador da crew), a permissão é
+    //    ESTREITA: só os campos daquele fluxo, com delta controlado.
+    //  - Perfis/rankings públicos são legíveis por qualquer autenticado — sem
+    //    isso o Hall da Fama e /conquistas/:uid ficariam vazios para todo mundo.
+    //
+    // CUIDADO AO CRIAR: em `create`, `resource` é null. Toda condição precisa
+    // olhar `request.resource.data` — usar `resource.data` num create derruba a
+    // regra inteira e nega a escrita (foi exatamente o bug de rivals/mentorias).
+    //
+    // ADITIVO: coleções que ainda não existem em produção não têm requests.
+    // As regras existem para quando a flag for ativada.
+
+    // Vocabulário de tiers — espelha `TIER_NAMES` em
+    // src/modules/progression/domain/tiers.js. Ao mexer lá, mexa aqui.
+    function gamificationTierNames() {
+      return [
+        'Calouro', 'Aprendiz', 'Jogador', 'Regular', 'Veterano',
+        'Expert', 'Elite', 'Lenda', 'Imortal'
+      ];
+    }
+
+    // Campos que um doc de progressão pode ter (nada além disso é aceito).
+    function progressionV2FieldsOk() {
+      return request.resource.data.xpTotal is int
+        && request.resource.data.xpTotal >= 0
+        && request.resource.data.level is int
+        && request.resource.data.level >= 1
+        && request.resource.data.level <= 200
+        && request.resource.data.tier in gamificationTierNames()
+        && request.resource.data.skillTrees is list
+        && request.resource.data.skillTrees.size() == 5;
+    }
 
     // user_progression_v2/{uid} — snapshot materializado de XP/tier/level/skilltrees
+    // Leitura pública (autenticada): alimenta Hall da Fama e perfil público de
+    // conquistas. Só carrega números de progresso — nada sensível.
     match /user_progression_v2/{uid} {
-      allow read: if isAuthed() && (request.auth.uid == uid || isPlatformAdmin());
-      allow create: if isAuthed() && (request.auth.uid == uid || isPlatformAdmin())
+      allow read: if isAuthed();
+      allow create: if isOwner(uid)
         && request.resource.data.uid == uid
         && request.resource.data.schemaVersion == 1
-        && request.resource.data.xpTotal is int
-        && request.resource.data.xpTotal >= 0
-        && request.resource.data.tier in [
-          'Calouro', 'Aprendiz', 'Jogador', 'Competidor', 'Veterano',
-          'Craque', 'Mestre', 'Lendário', 'Imortal'
-        ];
-      allow update: if isAuthed() && (request.auth.uid == uid || isPlatformAdmin())
+        && progressionV2FieldsOk();
+      allow update: if (isOwner(uid) || isPlatformAdmin())
         && request.resource.data.uid == resource.data.uid
-        && request.resource.data.schemaVersion == resource.data.schemaVersion;
+        && request.resource.data.schemaVersion == resource.data.schemaVersion
+        && progressionV2FieldsOk();
+      allow create, update: if isPlatformAdmin();
       allow delete: if isPlatformAdmin();
     }
 
     // user_missions/{uid}_{date} — missões geradas (docId = uid + "_" + YYYY-MM-DD)
+    // Privado: só o dono e o admin.
     match /user_missions/{missionId} {
       allow read: if isAuthed() && (
         resource == null || request.auth.uid == resource.data.uid || isPlatformAdmin()
@@ -1568,22 +1599,26 @@ service cloud.firestore {
     }
 
     // user_achievements_v2/{uid}_{achId} — conquistas desbloqueadas
+    // Leitura pública (autenticada): é o conteúdo de /conquistas/:uid.
     match /user_achievements_v2/{achId} {
-      allow read: if isAuthed() && (
-        resource == null || request.auth.uid == resource.data.uid || isPlatformAdmin()
-      );
+      allow read: if isAuthed();
       allow create: if isAuthed() && request.resource.data.uid == request.auth.uid
         && request.resource.data.progress is number
         && request.resource.data.progress >= 0
         && request.resource.data.progress <= 1;
+      // progresso pode avançar (0.3 → 0.6) mas NUNCA regredir; o resto do doc
+      // (shareCount, notified) é livre para o dono.
       allow update: if isAuthed() && resource.data.uid == request.auth.uid
         && request.resource.data.uid == request.auth.uid
-        // só pode incrementar shareCount/notified (não regredir progresso)
-        && request.resource.data.progress == resource.data.progress;
+        && request.resource.data.achievementId == resource.data.achievementId
+        && request.resource.data.progress is number
+        && request.resource.data.progress >= resource.data.progress
+        && request.resource.data.progress <= 1;
       allow delete: if isPlatformAdmin();
     }
 
     // user_streak_meta/{uid} — grace + freeze + vacation + comeback
+    // Privado. freezesUsed é acumulativo (sem teto) — só nunca pode regredir.
     match /user_streak_meta/{uid} {
       allow read: if isAuthed() && (request.auth.uid == uid || isPlatformAdmin());
       allow create, update: if isAuthed() && (request.auth.uid == uid || isPlatformAdmin())
@@ -1593,23 +1628,48 @@ service cloud.firestore {
         && request.resource.data.graceDaysRemaining <= 3
         && request.resource.data.freezesAvailable is int
         && request.resource.data.freezesAvailable >= 0
-        && request.resource.data.freezesAvailable <= 3;
+        && request.resource.data.freezesAvailable <= 3
+        && request.resource.data.freezesUsed is int
+        && request.resource.data.freezesUsed >= 0;
       allow delete: if isPlatformAdmin();
     }
 
     // ---- Gamificação V2 · sub-sistemas (Fase 16) -------------------------
-    // Mesma política: owner + platform_admin. Validação de shapes via schemaVersion.
 
     // user_referral_codes/{uid} — código + métricas de referral do referrer
+    // O dono cria/edita. O referee (outra pessoa) só pode incrementar os
+    // contadores do referrer ao usar o código — e apenas de 1 em 1.
+    function referralCodeShapeOk() {
+      return request.resource.data.uid == resource.data.uid
+        && request.resource.data.schemaVersion == 2
+        && request.resource.data.code == resource.data.code
+        && request.resource.data.monthlyCount is int
+        && request.resource.data.monthlyCount >= 0
+        && request.resource.data.monthlyCount <= 50;
+    }
     match /user_referral_codes/{uid} {
-      allow read: if isAuthed() && (request.auth.uid == uid || isPlatformAdmin());
-      allow create, update: if isAuthed() && (request.auth.uid == uid || isPlatformAdmin())
+      allow read: if isAuthed();
+      allow create: if isAuthed() && (request.auth.uid == uid || isPlatformAdmin())
         && request.resource.data.uid == uid
         && request.resource.data.schemaVersion == 2
         && request.resource.data.code is string
         && request.resource.data.monthlyCount is int
         && request.resource.data.monthlyCount >= 0
         && request.resource.data.monthlyCount <= 50;
+      allow update: if isAuthed() && (request.auth.uid == uid || isPlatformAdmin())
+        && request.resource.data.uid == uid
+        && request.resource.data.schemaVersion == 2
+        && request.resource.data.monthlyCount is int
+        && request.resource.data.monthlyCount >= 0
+        && request.resource.data.monthlyCount <= 50;
+      // crédito de indicação vindo de terceiro: só sobe contadores, +1 por vez
+      allow update: if isAuthed() && request.auth.uid != uid
+        && referralCodeShapeOk()
+        && request.resource.data.totalSignups >= resource.data.totalSignups
+        && request.resource.data.totalSignups <= resource.data.totalSignups + 1
+        && request.resource.data.totalActivated >= resource.data.totalActivated
+        && request.resource.data.totalActivated <= resource.data.totalActivated + 1
+        && request.resource.data.totalXpEarned >= resource.data.totalXpEarned;
       allow delete: if isPlatformAdmin();
     }
 
@@ -1621,14 +1681,24 @@ service cloud.firestore {
         || request.auth.uid == resource.data.referrerUid
         || isPlatformAdmin()
       );
-      allow create, update: if isAuthed() && isPlatformAdmin()
-        || (isAuthed() && request.auth.uid == resource.data.referrerUid
-            && request.resource.data.refereeUid == resource.data.refereeUid
-            && request.resource.data.referrerUid == resource.data.referrerUid);
+      // criado pelo próprio indicado (docId = uid dele) ou pelo admin
+      allow create: if isAuthed()
+        && request.resource.data.refereeUid == refereeUid
+        && request.resource.data.referrerUid != refereeUid
+        && (request.auth.uid == refereeUid || isPlatformAdmin());
+      // os dois lados podem atualizar, sem trocar quem é quem
+      allow update: if isAuthed()
+        && request.resource.data.refereeUid == resource.data.refereeUid
+        && request.resource.data.referrerUid == resource.data.referrerUid
+        && (
+          request.auth.uid == resource.data.refereeUid
+          || request.auth.uid == resource.data.referrerUid
+          || isPlatformAdmin()
+        );
       allow delete: if isPlatformAdmin();
     }
 
-    // user_kudos/{kudoId} — kudos dados (kudos são públicos entre os 2 envolvidos)
+    // user_kudos/{kudoId} — kudos dados (visíveis para os 2 envolvidos)
     match /user_kudos/{kudoId} {
       allow read: if isAuthed() && (
         resource == null
@@ -1639,17 +1709,17 @@ service cloud.firestore {
       // só pode criar se você é o fromUid
       allow create: if isAuthed() && request.resource.data.fromUid == request.auth.uid
         && request.resource.data.toUid != request.auth.uid
-        && request.resource.data.fromUid is string
+        && request.resource.data.toUid is string
         && request.resource.data.type is string;
       // não pode editar nem deletar (kudo é imutável)
       allow update, delete: if isPlatformAdmin();
     }
 
     // user_kudos_index/{uid} — contadores diários e totais
-    match /user_kudos_index/{uid} {
-      allow read: if isAuthed() && (request.auth.uid == uid || isPlatformAdmin());
-      allow create, update: if isAuthed() && (request.auth.uid == uid || isPlatformAdmin())
-        && request.resource.data.uid == uid
+    // Quem dá o kudo precisa incrementar o índice de quem recebe: liberado,
+    // mas só os contadores de recebimento e só +1 por vez.
+    function kudoIndexShapeOk(uid) {
+      return request.resource.data.uid == uid
         && request.resource.data.schemaVersion == 2
         && request.resource.data.receivedToday is int
         && request.resource.data.receivedToday >= 0
@@ -1657,10 +1727,28 @@ service cloud.firestore {
         && request.resource.data.givenToday is int
         && request.resource.data.givenToday >= 0
         && request.resource.data.givenToday <= 50;
+    }
+    match /user_kudos_index/{uid} {
+      allow read: if isAuthed() && (request.auth.uid == uid || isPlatformAdmin());
+      allow create: if isAuthed() && kudoIndexShapeOk(uid)
+        && (
+          request.auth.uid == uid
+          || isPlatformAdmin()
+          // criação do índice de quem recebe o primeiro kudo
+          || (request.resource.data.receivedCount == 1 && request.resource.data.givenCount == 0)
+        );
+      allow update: if isAuthed() && kudoIndexShapeOk(uid)
+        && (request.auth.uid == uid || isPlatformAdmin());
+      // terceiro creditando um kudo recebido: só sobe recebidos, +1, e não
+      // mexe nos contadores de quem deu
+      allow update: if isAuthed() && request.auth.uid != uid
+        && kudoIndexShapeOk(uid)
+        && request.resource.data.receivedCount == resource.data.receivedCount + 1
+        && request.resource.data.givenCount == resource.data.givenCount;
       allow delete: if isPlatformAdmin();
     }
 
-    // user_rivals/{pairKey} — par de rivais
+    // user_rivals/{pairKey} — par de rivais (os dois lados escrevem)
     match /user_rivals/{pairKey} {
       allow read: if isAuthed() && (
         resource == null
@@ -1668,39 +1756,75 @@ service cloud.firestore {
         || request.auth.uid == resource.data.userB
         || isPlatformAdmin()
       );
-      allow create, update: if isAuthed() && (
-        request.auth.uid == resource.data.userA
-        || request.auth.uid == resource.data.userB
-        || isPlatformAdmin()
-      );
+      allow create: if isAuthed()
+        && request.resource.data.pairKey == pairKey
+        && request.resource.data.userA != request.resource.data.userB
+        && (
+          request.auth.uid == request.resource.data.userA
+          || request.auth.uid == request.resource.data.userB
+          || isPlatformAdmin()
+        );
+      allow update: if isAuthed()
+        && request.resource.data.userA == resource.data.userA
+        && request.resource.data.userB == resource.data.userB
+        && (
+          request.auth.uid == resource.data.userA
+          || request.auth.uid == resource.data.userB
+          || isPlatformAdmin()
+        );
       allow delete: if isPlatformAdmin();
     }
 
-    // crews/{crewId} — crew público/privado
+    // crews/{crewId} — crew pública ou privada
+    // Privada continua legível pelos membros (senão o próprio membro não vê
+    // a crew em que está).
+    function isCrewMember(crewId) {
+      return isAuthed()
+        && exists(/databases/$(database)/documents/crew_members/$(crewId + '_' + request.auth.uid));
+    }
     match /crews/{crewId} {
-      allow read: if isAuthed() && (resource == null || resource.data.isPublic == true || isPlatformAdmin());
+      allow read: if isAuthed() && (
+        resource == null
+        || resource.data.isPublic == true
+        || request.auth.uid == resource.data.createdBy
+        || isCrewMember(crewId)
+        || isPlatformAdmin()
+      );
       allow create: if isAuthed() && request.resource.data.createdBy == request.auth.uid
+        && request.resource.data.crewId == crewId
         && request.resource.data.schemaVersion == 2
         && request.resource.data.membersCount is int
         && request.resource.data.membersCount >= 1
         && request.resource.data.membersCount <= 50;
-      allow update: if isAuthed() && (request.auth.uid == resource.data.createdBy || isPlatformAdmin());
+      allow update: if isAuthed()
+        && request.resource.data.createdBy == resource.data.createdBy
+        && (request.auth.uid == resource.data.createdBy || isPlatformAdmin());
+      // entrar/sair mexe só no contador, de 1 em 1, dentro do limite
+      allow update: if isAuthed()
+        && request.resource.data.createdBy == resource.data.createdBy
+        && request.resource.data.name == resource.data.name
+        && request.resource.data.isPublic == resource.data.isPublic
+        && request.resource.data.membersCount is int
+        && request.resource.data.membersCount >= 1
+        && request.resource.data.membersCount <= 50
+        && (
+          request.resource.data.membersCount == resource.data.membersCount + 1
+          || request.resource.data.membersCount == resource.data.membersCount - 1
+        );
       allow delete: if isAuthed() && (request.auth.uid == resource.data.createdBy || isPlatformAdmin());
     }
 
     // crew_members/{crewId}_{uid} — membros de crew
+    // Membro da crew enxerga os colegas (senão a lista de membros vem vazia).
     match /crew_members/{memberId} {
-      allow read: if isAuthed() && (
-        resource == null
-        || request.auth.uid == resource.data.uid
-        || isPlatformAdmin()
-      );
+      allow read: if isAuthed();
       allow create: if isAuthed() && request.resource.data.uid == request.auth.uid
+        && memberId == request.resource.data.crewId + '_' + request.auth.uid
         && request.resource.data.role in ['owner', 'captain', 'member'];
       allow update, delete: if isAuthed() && (request.auth.uid == resource.data.uid || isPlatformAdmin());
     }
 
-    // mentorships/{pairKey} — mentoria
+    // mentorships/{pairKey} — mentoria (os dois lados escrevem)
     match /mentorships/{pairKey} {
       allow read: if isAuthed() && (
         resource == null
@@ -1708,26 +1832,35 @@ service cloud.firestore {
         || request.auth.uid == resource.data.apprenticeUid
         || isPlatformAdmin()
       );
-      allow create, update: if isAuthed() && (
-        request.auth.uid == resource.data.mentorUid
-        || request.auth.uid == resource.data.apprenticeUid
-        || isPlatformAdmin()
-      )
+      allow create: if isAuthed()
+        && request.resource.data.pairKey == pairKey
         && request.resource.data.schemaVersion == 2
-        && request.resource.data.status in ['active', 'paused', 'completed', 'cancelled'];
+        && request.resource.data.mentorUid != request.resource.data.apprenticeUid
+        && request.resource.data.status in ['active', 'paused', 'completed', 'cancelled']
+        && (
+          request.auth.uid == request.resource.data.mentorUid
+          || request.auth.uid == request.resource.data.apprenticeUid
+          || isPlatformAdmin()
+        );
+      allow update: if isAuthed()
+        && request.resource.data.schemaVersion == 2
+        && request.resource.data.mentorUid == resource.data.mentorUid
+        && request.resource.data.apprenticeUid == resource.data.apprenticeUid
+        && request.resource.data.status in ['active', 'paused', 'completed', 'cancelled']
+        && (
+          request.auth.uid == resource.data.mentorUid
+          || request.auth.uid == resource.data.apprenticeUid
+          || isPlatformAdmin()
+        );
       allow delete: if isPlatformAdmin();
     }
 
     // season_rankings/{seasonId}_{uid} — XP sazonal
+    // Leitura aberta (autenticada): é um placar público.
+    // Escrita só admin / Cloud Function sazonal — o cliente não decide posição.
     match /season_rankings/{rid} {
-      allow read: if isAuthed() && (
-        resource == null
-        || request.auth.uid == resource.data.uid
-        || isPlatformAdmin()
-      );
-      // escrita só admin (atualizado por Cloud Function sazonal — Fase futura)
+      allow read: if isAuthed();
       allow create, update, delete: if isPlatformAdmin();
     }
-
   }
 }

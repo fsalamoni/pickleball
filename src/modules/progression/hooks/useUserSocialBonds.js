@@ -4,8 +4,6 @@
 import { useQuery, useQueryClient, useMutation } from '@tanstack/react-query';
 import {
   listRivalsFor,
-  getOrCreateRivalry,
-  recordRivalGame,
   listCrewsForMember,
   listCrews,
   createCrew,

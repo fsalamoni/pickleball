@@ -29,9 +29,6 @@
  * Aditivo. Sem breaking change (V1 `achievements.js` continua existindo).
  */
 
-import { computeXpV2, levelFromXpV2 } from '../../progression/domain/progressionV2.js';
-import { computeProtectedStreak } from '../../progression/domain/streakProtection.js';
-
 // ────────────────────────────────────────────────────────────────────────────
 // 1. CONSTANTES
 // ────────────────────────────────────────────────────────────────────────────
@@ -310,7 +307,6 @@ export const ACHIEVEMENTS_V2 = Object.freeze([
     'Dobrador de níveis', 'Subiu de USAP 2.0 → 3.0.',
     (u) => {
       const cur = u?.leveling?.level || u?.leveling_level || null;
-      const validations = u?.validations || [];
       if (!cur) return false;
       // se atingiu 3.0 em algum momento (validado ou autorrelatado)
       if (cur === 'intermediario' || cur === '3.0' || cur === '3.5' || cur === 'avancado' || cur === '4.0' || cur === 'pro' || cur === '4.5' || cur === 'open' || cur === '5.0+') {

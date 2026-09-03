@@ -16,12 +16,21 @@ import {
   limit,
   getDocs,
 } from 'firebase/firestore';
+import { TIER_NAMES } from '@/modules/progression/domain/tiers';
+import { ACHIEVEMENTS_V2 } from '@/modules/achievements/domain/achievementsV2';
 
 function db() { return getFirestore(); }
 
 const PUBLIC_MIN_TIER = 'Jogador'; // tier mínimo pra aparecer
 
 export const HALL_OF_FAME_LIMIT = 50;
+
+/**
+ * O Firestore aceita no máximo 10 valores num filtro `in`. Com 9 tiers
+ * cabe folgado hoje; se a tabela crescer, o filtro precisa virar um campo
+ * numérico (`tierRank >= N`) em vez de `in`.
+ */
+const MAX_IN_VALUES = 10;
 
 /**
  * Retorna top N do Hall da Fama.
@@ -31,9 +40,10 @@ export const HALL_OF_FAME_LIMIT = 50;
  * @returns {Promise<Array<{uid, xpTotal, tier, level, achievementsUnlocked, achievementsTotal}>>}
  */
 export async function fetchHallOfFame({ limit: lim = HALL_OF_FAME_LIMIT, tierMin = PUBLIC_MIN_TIER } = {}) {
-  const tierOrder = ['Calouro', 'Aprendiz', 'Jogador', 'Competidor', 'Veterano', 'Craque', 'Mestre', 'Lendário', 'Imortal'];
-  const tierIdx = tierOrder.indexOf(tierMin);
-  const validTiers = tierOrder.slice(tierIdx);
+  // TIER_NAMES é a fonte única (domínio). A lista escrita à mão que existia
+  // aqui divergia dos tiers reais e o filtro não casava com ninguém.
+  const tierIdx = TIER_NAMES.indexOf(tierMin);
+  const validTiers = TIER_NAMES.slice(tierIdx >= 0 ? tierIdx : 0).slice(0, MAX_IN_VALUES);
 
   // firestore: in + orderBy por xpTotal desc
   // necessário índice composto: tier IN, xpTotal DESC
@@ -52,7 +62,7 @@ export async function fetchHallOfFame({ limit: lim = HALL_OF_FAME_LIMIT, tierMin
       tier: data.tier || 'Calouro',
       level: data.level || 1,
       achievementsUnlocked: data.achievementsUnlocked || 0,
-      achievementsTotal: data.achievementsTotal || 83,
+      achievementsTotal: data.achievementsTotal || ACHIEVEMENTS_V2.length,
     };
   });
 }

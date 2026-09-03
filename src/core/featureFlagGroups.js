@@ -42,6 +42,11 @@ export const FLAG_GROUPS = Object.freeze([
     label: 'Atleta, rating e social',
     keys: [FEATURE_FLAG.DUPR_OFFICIAL_SYNC, FEATURE_FLAG.DUPR_MATCH_EXPORT],
   },
+  {
+    id: 'gamification',
+    label: 'Gamificação V2',
+    keys: [FEATURE_FLAG.GAMIFICATION_V2],
+  },
 ]);
 
 export const FLAG_GROUP_OTHER = Object.freeze({ id: 'other', label: 'Outras' });

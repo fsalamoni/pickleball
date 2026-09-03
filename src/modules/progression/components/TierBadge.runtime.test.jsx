@@ -5,7 +5,7 @@ import { describe, it, expect, beforeEach, afterEach, vi } from 'vitest';
 vi.mock('sonner', () => ({ toast: { success: vi.fn(), error: vi.fn() } }));
 
 import TierBadge from './TierBadge.jsx';
-import { TIERS, tierFromXp } from '../domain/tiers.js';
+import { TIERS } from '../domain/tiers.js';
 
 let container = null;
 let root = null;

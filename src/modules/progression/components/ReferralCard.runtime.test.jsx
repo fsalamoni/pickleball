@@ -28,11 +28,20 @@ function render(props) {
 }
 
 describe('ReferralCard', () => {
-  it('renderiza com código gerado quando não passado', async () => {
+  it('sem código persistido, mostra placeholder e não inventa um código', async () => {
     await render({ origin: 'https://picklerush.web.app' });
-    const code = container.querySelector('[data-testid="referral-code"]');
-    expect(code).toBeTruthy();
-    expect(code.textContent.replace(/\s/g, '')).toHaveLength(8);
+    // nada de código aleatório: um código gerado no render não pertence a
+    // ninguém e nenhuma indicação feita com ele seria creditada
+    expect(container.querySelector('[data-testid="referral-code"]')).toBeNull();
+    expect(container.querySelector('[data-testid="referral-code-loading"]')).toBeTruthy();
+    expect(container.querySelector('[data-testid="referral-url"]')).toBeNull();
+  });
+
+  it('sem código, copiar e compartilhar ficam desabilitados', async () => {
+    await render({ origin: 'https://picklerush.web.app' });
+    const botoes = [...container.querySelectorAll('button')];
+    expect(botoes.length).toBeGreaterThan(0);
+    expect(botoes.every((b) => b.disabled)).toBe(true);
   });
 
   it('renderiza com código passado', async () => {
@@ -66,9 +75,9 @@ describe('ReferralCard', () => {
     expect(container.textContent).toContain('1 ativo');
   });
 
-  it('mostra 3 recompensas (signup, 5+ jogos, 1 torneio)', async () => {
+  it('mostra 3 recompensas (cadastro, 5+ jogos, 1 torneio)', async () => {
     await render({ code: 'ABC23456', origin: 'https://x.com' });
-    expect(container.textContent).toContain('Signup');
+    expect(container.textContent).toContain('Cadastro');
     expect(container.textContent).toContain('5+ jogos');
     expect(container.textContent).toContain('1 torneio');
     // +50, +200, +500

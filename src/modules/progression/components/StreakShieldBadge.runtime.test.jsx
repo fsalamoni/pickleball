@@ -35,22 +35,22 @@ describe('StreakShieldBadge', () => {
     expect(container.textContent).toContain('Carregando proteção');
   });
 
-  it('mostra grace days', async () => {
+  it('mostra dias de folga', async () => {
     const meta = { graceDaysRemaining: 2, freezesAvailable: 0, vacationMode: false, comebackBonus: 0 };
     await render(<StreakShieldBadge meta={meta} />);
-    expect(container.textContent).toContain('2 grace');
+    expect(container.textContent).toContain('2 dias de folga');
   });
 
-  it('mostra freezes (singular e plural)', async () => {
+  it('mostra congelamento no singular', async () => {
     const meta = { graceDaysRemaining: 0, freezesAvailable: 1, vacationMode: false, comebackBonus: 0 };
     await render(<StreakShieldBadge meta={meta} />);
-    expect(container.textContent).toContain('1 freeze');
+    expect(container.textContent).toContain('1 congelamento');
   });
 
-  it('mostra freezes (plural)', async () => {
+  it('mostra congelamentos no plural', async () => {
     const meta = { graceDaysRemaining: 0, freezesAvailable: 3, vacationMode: false, comebackBonus: 0 };
     await render(<StreakShieldBadge meta={meta} />);
-    expect(container.textContent).toContain('3 freezes');
+    expect(container.textContent).toContain('3 congelamentos');
   });
 
   it('mostra vacation mode', async () => {
@@ -59,10 +59,10 @@ describe('StreakShieldBadge', () => {
     expect(container.textContent).toContain('Férias ativas');
   });
 
-  it('mostra comeback bonus', async () => {
+  it('mostra bônus de retorno', async () => {
     const meta = { graceDaysRemaining: 0, freezesAvailable: 0, vacationMode: false, comebackBonus: 200 };
     await render(<StreakShieldBadge meta={meta} />);
-    expect(container.textContent).toContain('+200 comeback');
+    expect(container.textContent).toContain('+200 XP de retorno');
   });
 
   it('mostra estado vazio se nada ativo', async () => {

@@ -56,6 +56,13 @@ export const AUDIT_ACTION_LABELS = {
   game_day_published_to_ranking: 'Dia de jogo (atleta) publicado no ranking',
   game_day_unpublished_from_ranking: 'Dia de jogo (atleta) removido do ranking',
   game_day_ranking_synced: 'Dia de jogo (atleta) sincronizado no ranking (partidas avulsas)',
+  // Gamificação V2 — só ações que MEXEM EM OUTRO usuário ou distribuem
+  // benefício. Ganho de XP/missão diária é ruído: acontece o tempo todo e não
+  // tem valor de auditoria.
+  gamification_kudo_given: 'Kudo enviado a outro atleta',
+  gamification_referral_registered: 'Indicação registrada (novo atleta via convite)',
+  gamification_crew_created: 'Crew criada',
+  gamification_mentorship_started: 'Mentoria iniciada',
 };
 
 export async function createAuditLog({

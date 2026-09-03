@@ -67,10 +67,10 @@ export default defineConfig(({ mode }) => {
       testTimeout: 20000,
       hookTimeout: 20000,
       teardownTimeout: 20000,
-      // Só na CI: re-tenta um teste que falhe, para que flakes transitórios
-      // (contenção de CPU/timing no runner) se auto-recuperem em vez de deixar
-      // o run vermelho. Localmente fica 0 para expor qualquer instabilidade.
-      retry: process.env.CI ? 2 : 0,
+      // Uma re-tentativa na CI absorve contenção real de CPU do runner. Duas
+      // já começam a esconder teste genuinamente instável — que é bug, não
+      // ruído. Localmente fica 0 para expor qualquer instabilidade na hora.
+      retry: process.env.CI ? 1 : 0,
     },
   };
 });

@@ -1,9 +1,9 @@
 import React, { useMemo } from 'react';
-import { Flame, Shield, ShieldCheck, Snowflake, Sparkles, Zap } from 'lucide-react';
+import { Flame, Shield, ShieldCheck, Snowflake, Sparkles } from 'lucide-react';
 import { Card, CardContent } from '@/components/ui/card';
 import { cn } from '@/core/lib/utils';
 import { computeXpV2, XP_WEIGHTS_V2, levelFromXpV2 } from '../domain/progressionV2.js';
-import { tierFromXp, tierProgress } from '../domain/tiers.js';
+import { tierProgress } from '../domain/tiers.js';
 import { buildSkillTrees } from '../domain/skillTrees.js';
 import { computeProtectedStreak } from '../domain/streakProtection.js';
 import TierBadge from './TierBadge.jsx';
@@ -66,8 +66,7 @@ export default function ProgressionCardV2({
     [matchDates, streakMeta],
   );
 
-  // Tier atual + próximo
-  const currentTier = useMemo(() => tierFromXp(xpTotal), [xpTotal]);
+  // Tier atual + próximo (tierProgress já devolve o tier corrente em `.current`)
   const tierProg = useMemo(() => tierProgress(xpTotal), [xpTotal]);
 
   return (
@@ -148,7 +147,7 @@ function StreakIndicator({ info }) {
         <span className="tabular-nums font-semibold">{weeks} sem.</span>
       </div>
       {usedGrace && (
-        <span title="Você usou o grace day deste mês" className="inline-flex items-center gap-0.5 text-[10px] font-bold text-blue-600">
+        <span title="Você usou o dia de folga deste mês" className="inline-flex items-center gap-0.5 text-[10px] font-bold text-blue-600">
           <Shield className="h-3 w-3" /> grace
         </span>
       )}

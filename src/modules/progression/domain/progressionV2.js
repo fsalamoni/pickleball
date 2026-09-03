@@ -364,6 +364,20 @@ export function computeXpV2(xpBySource = {}, options = {}) {
  * @param {number} xp
  * @returns {{ level: number, xp: number, xpIntoLevel: number, xpForNext: number, progress: number }}
  */
+/**
+ * Teto de sanidade do nível PERSISTIDO (não da curva).
+ *
+ * A curva de `levelFromXpV2` é idêntica à V1 e continua sem teto — mexer nela
+ * quebraria a compatibilidade numérica que é a regra de ouro deste módulo.
+ * Este número existe só para o schema/regra recusarem valores absurdos: o
+ * nível 200 exige ~10 milhões de XP, muito além de qualquer conta real.
+ *
+ * O bug que ele resolve era o oposto: o schema aceitava no máximo nível 20,
+ * que a curva ultrapassa com 105.000 XP — e a partir daí a progressão do
+ * usuário simplesmente parava de salvar.
+ */
+export const MAX_LEVEL_V2 = 200;
+
 export function levelFromXpV2(xp) {
   const total = Math.max(0, Math.floor(Number(xp) || 0));
   let level = 1;

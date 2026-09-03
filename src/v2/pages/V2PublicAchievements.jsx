@@ -2,6 +2,7 @@ import React, { useMemo } from 'react';
 import { Link, useParams } from 'react-router-dom';
 import { Award, ChevronLeft, Gift, MessageCircle, Sparkles } from 'lucide-react';
 import { useAuth } from '@/core/lib/FirebaseAuthContext';
+import { useAthlete } from '@/modules/athletes/hooks/useAthletes';
 import { useFeatureFlag } from '@/core/lib/FeatureFlagsContext';
 import { FEATURE_FLAG } from '@/core/featureFlags';
 import { useUserProgressionV2 } from '@/modules/progression/hooks/useUserProgressionV2';
@@ -13,7 +14,9 @@ import { ACHIEVEMENT_FAMILY_META, ACHIEVEMENT_RARITY_META, ACHIEVEMENTS_V2 } fro
 import TierBadge from '@/modules/progression/components/TierBadge';
 import KudosButton from '@/modules/progression/components/KudosButton';
 import {
+  V2Avatar,
   V2Badge,
+  V2Button,
   V2EmptyState,
   V2PageIntro,
   V2Skeleton,
@@ -24,8 +27,8 @@ import {
  * V2PublicAchievements — /conquistas/:uid
  *
  * Perfil público de achievements de outro user. Mostra:
- *  - Tier + nome
- *  - Total de conquistas unlocked (X/83)
+ *  - Nome + avatar do atleta
+ *  - Tier + total de conquistas desbloqueadas
  *  - Grid com todas as conquistas (unlocked + locked)
  *  - Botão de dar kudos
  *  - Gated por GAMIFICATION_V2
@@ -52,6 +55,9 @@ export default function V2PublicAchievements() {
 function V2PublicAchievementsOn() {
   const { uid } = useParams();
   const { user: me } = useAuth();
+  // O perfil é público: identifique o atleta pelo NOME, como no resto do app.
+  // Antes a página estampava o uid cru como se fosse a identidade da pessoa.
+  const { data: athlete } = useAthlete(uid);
   const { progression } = useUserProgressionV2(uid, !!uid);
   const { unlocked, unlockedIds, isLoading } = useUserAchievementsV2(uid, !!uid);
   const kudos = useKudoActions(me?.uid, !!me);
@@ -65,6 +71,7 @@ function V2PublicAchievementsOn() {
 
   const allAchievements = useMemo(() => [...ACHIEVEMENTS_V2], []);
   const isOwnProfile = me?.uid === uid;
+  const athleteName = athlete?.platform_name || 'Atleta';
 
   if (isLoading) {
     return (
@@ -79,7 +86,7 @@ function V2PublicAchievementsOn() {
     <div className="mx-auto max-w-[1100px]">
       <V2PageIntro
         title="Conquistas"
-        subtitle={isOwnProfile ? 'Seu perfil público' : `Perfil público de UID ${uid?.slice(0, 8)}…`}
+        subtitle={isOwnProfile ? 'Seu perfil público de conquistas' : `Conquistas de ${athleteName}`}
         action={
           <Link to="/conquistas" className="inline-flex items-center gap-1 text-sm font-bold text-ink hover:underline">
             <ChevronLeft className="h-4 w-4" /> Voltar
@@ -90,9 +97,16 @@ function V2PublicAchievementsOn() {
       {/* Header do perfil */}
       <V2Surface className="mb-6">
         <div className="flex flex-wrap items-center gap-4">
-          <div className="flex-1">
-            <p className="text-xs font-bold uppercase tracking-wide text-gray-500">UID</p>
-            <p className="mt-0.5 font-mono text-sm text-ink">{uid}</p>
+          <div className="flex min-w-0 flex-1 items-center gap-3">
+            <V2Avatar name={athleteName} photoUrl={athlete?.photo_url} size="lg" />
+            <div className="min-w-0">
+              <p className="truncate font-display text-lg font-bold text-ink">{athleteName}</p>
+              {!isOwnProfile && (
+                <V2Button asChild variant="ghost" size="sm" className="mt-0.5 -ml-2">
+                  <Link to={`/atleta/${uid}`}>Ver perfil completo</Link>
+                </V2Button>
+              )}
+            </div>
           </div>
           <div className="flex items-center gap-2">
             <TierBadge xp={progression?.xpTotal || 0} size="sm" />
@@ -100,7 +114,7 @@ function V2PublicAchievementsOn() {
               <Sparkles className="h-3.5 w-3.5" /> {progression?.xpTotal?.toLocaleString('pt-BR') || 0} XP
             </V2Badge>
             <V2Badge tone="green">
-              <Award className="h-3.5 w-3.5" /> {unlocked.length}/{progression?.achievementsTotal || 83}
+              <Award className="h-3.5 w-3.5" /> {unlocked.length}/{progression?.achievementsTotal || ACHIEVEMENTS_V2.length}
             </V2Badge>
             {meRank && (
               <V2Badge tone="blue">

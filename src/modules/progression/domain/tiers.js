@@ -139,6 +139,20 @@ export const TIERS = Object.freeze([
 ]);
 
 /**
+ * Nomes oficiais dos tiers, na ordem de progressão.
+ *
+ * FONTE ÚNICA DE VERDADE: o schema persistido (`progressionV2Schema`), as
+ * regras do Firestore e o Hall da Fama derivam desta lista. Não redigite os
+ * nomes em outro lugar — a divergência entre esta tabela e cópias manuais já
+ * impediu qualquer usuário acima de 12.000 XP de salvar sua progressão.
+ *
+ * Ao mexer aqui, atualize também `firestore.rules` (match /user_progression_v2).
+ *
+ * @type {readonly string[]}
+ */
+export const TIER_NAMES = Object.freeze(TIERS.map((t) => t.name));
+
+/**
  * Retorna o tier atual do usuário baseado no XP cumulativo.
  *
  * @param {number} xp — XP total

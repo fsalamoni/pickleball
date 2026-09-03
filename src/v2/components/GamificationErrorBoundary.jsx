@@ -1,5 +1,6 @@
 import React from 'react';
 import { AlertTriangle, RefreshCw } from 'lucide-react';
+import { logger } from '@/core/lib/logger';
 
 /**
  * GamificationErrorBoundary — captura erros em componentes V2 de gamificação.
@@ -18,8 +19,7 @@ export default class GamificationErrorBoundary extends React.Component {
   }
 
   componentDidCatch(error, info) {
-    // eslint-disable-next-line no-console
-    console.error('[GamificationErrorBoundary] erro capturado:', error, info);
+    logger.error('[GamificationErrorBoundary] erro capturado:', error, info);
   }
 
   handleReset = () => {
@@ -46,7 +46,10 @@ export default class GamificationErrorBoundary extends React.Component {
               <p className="mt-1 text-sm text-red-700">
                 A seção de gamificação encontrou um erro inesperado. O resto da plataforma continua funcionando.
               </p>
-              {this.state.error?.message && (
+              {/* Detalhe técnico só em desenvolvimento — em produção a
+                  mensagem crua do erro não ajuda o atleta e pode vazar
+                  informação interna. */}
+              {import.meta.env.DEV && this.state.error?.message && (
                 <pre className="mt-2 overflow-x-auto rounded-2xl bg-red-100 p-2 text-xs text-red-900">
                   {this.state.error.message}
                 </pre>

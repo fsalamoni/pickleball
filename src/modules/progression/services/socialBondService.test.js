@@ -113,7 +113,7 @@ describe('socialBondService · crews', () => {
 
   it('joinCrew rejeita duplicado', async () => {
     const crew = await createCrew({ createdBy: 'u1', name: 'Smash' });
-    const r1 = await joinCrew({ crewId: crew.crewId, uid: 'u2' });
+    await joinCrew({ crewId: crew.crewId, uid: 'u2' });
     const r2 = await joinCrew({ crewId: crew.crewId, uid: 'u2' });
     expect(r2.role).toBe('member');
     expect(mockDocData[`crews/${crew.crewId}`].membersCount).toBe(2);

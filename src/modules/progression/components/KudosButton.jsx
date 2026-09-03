@@ -1,7 +1,6 @@
 import React, { useMemo, useState } from 'react';
 import { ThumbsUp } from 'lucide-react';
 import { cn } from '@/core/lib/utils';
-import { KUDOS_TARGET_TYPE } from '../domain/kudos.js';
 
 /**
  * KudosButton — botão universal de "👏 dado".

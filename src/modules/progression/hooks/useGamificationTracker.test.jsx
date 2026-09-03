@@ -40,7 +40,7 @@ afterEach(() => {
   container = null;
 });
 
-function TestHarness({ dispatcher, onResult }) {
+function TestHarness({ dispatcher }) {
   const r = useGamificationTracker({ track: dispatcher });
   lastResult = r;
   return <div data-testid="harness" data-enabled={String(r.enabled)} />;

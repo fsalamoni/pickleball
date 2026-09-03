@@ -1,7 +1,5 @@
 import { describe, it, expect } from 'vitest';
 import {
-  PROGRESSION_V2_SCHEMA_VERSION,
-  ProgressionV2Schema,
   makeEmptyProgressionV2,
   validateProgressionV2,
   UserMissionSchema,
@@ -53,8 +51,13 @@ describe('progressionV2Schema', () => {
     expect(empty.xpTotal).toBe(0);
     expect(empty.level).toBe(1);
     expect(empty.skillTrees).toHaveLength(5);
+    // as trilhas do snapshot são as MESMAS do domínio (`SKILL_TREE_KEYS`) e
+    // começam no nível 1, como `buildSkillTrees` — antes o schema esperava
+    // outras cinco trilhas, num nível 0 que o domínio nunca produz
+    expect(empty.skillTrees.map((t) => t.tree))
+      .toEqual(['tournament', 'social', 'arena', 'coach', 'club']);
     empty.skillTrees.forEach((t) => {
-      expect(t.level).toBe(0);
+      expect(t.level).toBe(1);
       expect(t.xp).toBe(0);
     });
   });
@@ -109,14 +112,14 @@ describe('progressionV2Schema · missões', () => {
 describe('progressionV2Schema · achievements', () => {
   it('achievement comum', () => {
     const ok = {
-      uid: 'u1', achievementId: 'first_blood', family: 'match',
+      uid: 'u1', achievementId: 'first_blood', family: 'career',
       rarity: 'common', unlockedAt: Date.now(), progress: 1, shareCount: 0, notified: false,
     };
     expect(UserAchievementV2Schema.safeParse(ok).success).toBe(true);
   });
   it('progress fora de [0,1] falha', () => {
     const bad = {
-      uid: 'u1', achievementId: 'x', family: 'match', rarity: 'common',
+      uid: 'u1', achievementId: 'x', family: 'career', rarity: 'common',
       unlockedAt: 1, progress: 1.5, shareCount: 0, notified: false,
     };
     expect(UserAchievementV2Schema.safeParse(bad).success).toBe(false);

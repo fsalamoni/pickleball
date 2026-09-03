@@ -31,13 +31,6 @@ const DAY_MS = 24 * 60 * 60 * 1000;
  */
 
 /**
- * Converte ms em "semana ISO" (epoch/7d), igual ao V1.
- */
-function weekKey(ms) {
-  return Math.floor(ms / WEEK_MS);
-}
-
-/**
  * Converte ms em "YYYY-MM" (mês civil) no fuso BRT (UTC-3).
  */
 function monthKeyBR(ms) {
@@ -74,7 +67,6 @@ export function computeProtectedStreak(datesMillis, options = {}) {
     meta = null,
     now = new Date(),
     graceDaysPerMonth = 1,
-    freezeMs = 7 * DAY_MS,
   } = options;
 
   const nowMs = now.getTime();

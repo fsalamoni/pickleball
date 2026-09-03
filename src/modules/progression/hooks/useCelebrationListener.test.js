@@ -1,4 +1,4 @@
-import { describe, it, expect, vi } from 'vitest';
+import { describe, it, expect } from 'vitest';
 import { computeCelebrationDiff } from './useCelebrationListener';
 
 describe('computeCelebrationDiff (puro)', () => {
@@ -51,5 +51,31 @@ describe('computeCelebrationDiff (puro)', () => {
     const missions = [{ id: 'm1', title: 'A', current: 5, target: 1, xp: 10, bonus: 0 }];
     const out = computeCelebrationDiff(seen, missions, []);
     expect(out.newlyCompleted).toHaveLength(1);
+  });
+});
+
+describe('computeCelebrationDiff — não celebra o passado', () => {
+  it('não repete uma missão que já foi vista', () => {
+    const seen = { missions: new Set(), achievements: new Set() };
+    const missions = [{ id: 'm1', current: 3, target: 3, title: 'Jogue 3' }];
+    expect(computeCelebrationDiff(seen, missions, []).newlyCompleted).toHaveLength(1);
+    // segunda passada com o mesmo estado: nada novo
+    expect(computeCelebrationDiff(seen, missions, []).newlyCompleted).toHaveLength(0);
+  });
+
+  it('não celebra conquista já vista', () => {
+    const seen = { missions: new Set(), achievements: new Set() };
+    const unlocked = [{ achievementId: 'a1' }];
+    expect(computeCelebrationDiff(seen, [], unlocked).newlyUnlocked).toHaveLength(1);
+    expect(computeCelebrationDiff(seen, [], unlocked).newlyUnlocked).toHaveLength(0);
+  });
+
+  it('missão incompleta não conta como completada', () => {
+    const seen = { missions: new Set(), achievements: new Set() };
+    const missions = [{ id: 'm1', current: 1, target: 3 }];
+    expect(computeCelebrationDiff(seen, missions, []).newlyCompleted).toHaveLength(0);
+    // ao completar depois, aí sim celebra
+    expect(computeCelebrationDiff(seen, [{ id: 'm1', current: 3, target: 3 }], []).newlyCompleted)
+      .toHaveLength(1);
   });
 });

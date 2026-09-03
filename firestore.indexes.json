@@ -225,6 +225,30 @@
         { "fieldPath": "club_id", "order": "ASCENDING" },
         { "fieldPath": "wins", "order": "DESCENDING" }
       ]
+    },
+    {
+      "collectionGroup": "user_progression_v2",
+      "queryScope": "COLLECTION",
+      "fields": [
+        { "fieldPath": "tier", "order": "ASCENDING" },
+        { "fieldPath": "xpTotal", "order": "DESCENDING" }
+      ]
+    },
+    {
+      "collectionGroup": "season_rankings",
+      "queryScope": "COLLECTION",
+      "fields": [
+        { "fieldPath": "seasonId", "order": "ASCENDING" },
+        { "fieldPath": "xp", "order": "DESCENDING" }
+      ]
+    },
+    {
+      "collectionGroup": "season_rankings",
+      "queryScope": "COLLECTION",
+      "fields": [
+        { "fieldPath": "uid", "order": "ASCENDING" },
+        { "fieldPath": "xp", "order": "DESCENDING" }
+      ]
     }
   ],
   "fieldOverrides": []

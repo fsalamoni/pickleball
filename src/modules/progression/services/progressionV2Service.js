@@ -17,6 +17,7 @@ import {
   validateProgressionV2,
   PROGRESSION_V2_SCHEMA_VERSION,
 } from '@/modules/progression/domain/progressionV2Schema';
+import { logger } from '@/core/lib/logger';
 
 function db() {
   return getFirestore();
@@ -36,8 +37,7 @@ export async function getUserProgressionV2(uid) {
   };
   const validation = validateProgressionV2(parsed);
   if (!validation.success) {
-    // eslint-disable-next-line no-console
-    console.warn('[progressionV2Service] schema inválido', uid, validation.error);
+    logger.warn('[progressionV2Service] schema inválido', uid, validation.error);
     return null;
   }
   return validation.data;

@@ -652,6 +652,101 @@ Confronto equipe × equipe.
   `kind=singles/doubles` e `source='team_confrontation'`
   (entra no ELO + DUPR individual).
 
+## Gamificação V2 (flag `gamification_v2`, default OFF)
+
+> 13 coleções materializadas. Com a flag desligada nenhuma delas recebe
+> request — o schema V1 (`users/{uid}` XP/nível/conquistas) segue intacto.
+>
+> **Vocabulário**: os nomes de tier e as 5 trilhas vêm do DOMÍNIO
+> (`src/modules/progression/domain/tiers.js` e `skillTrees.js`). O schema
+> Zod e o `firestore.rules` derivam dessa fonte — o teste
+> `gamificationRulesSync.test.js` quebra a CI se um lado divergir do outro.
+
+### `user_progression_v2/{uid}` (Onda R)
+Snapshot materializado da progressão. Recalculado no cliente a partir dos
+stats V1 (`useSyncProgressionV2`).
+- `uid`, `schemaVersion: 1`, `xpTotal: int`, `level: int`.
+- `tier: string` — um de `Calouro, Aprendiz, Jogador, Regular, Veterano,
+  Expert, Elite, Lenda, Imortal`.
+- `skillTrees: array(5)` — `{ tree, level, xp }`, com `tree` em
+  `tournament | social | arena | coach | club`.
+- `achievementsUnlocked`, `achievementsTotal`, `source`, `createdAt`,
+  `updatedAt`.
+- **Regras**: escrita só do dono (ou admin); **leitura por qualquer
+  autenticado** — é o que alimenta o Hall da Fama e o perfil público de
+  conquistas. Só carrega números de progresso.
+- **Índice**: `tier ASC, xpTotal DESC` (Hall da Fama).
+
+### `user_missions/{uid}_{YYYY-MM-DD}` (Onda R)
+Missões do dia. O dia é o dia de **Brasília** (`missionDay.js`), não UTC.
+- `uid`, `date`, `scope: daily|weekly|monthly`, `missions[]`,
+  `bonusClaimed`, `completedAt`, `createdAt`, `updatedAt`.
+- **Regras**: privado — só o dono e o admin.
+
+### `user_achievements_v2/{uid}_{achId}` (Onda R)
+Conquista desbloqueada.
+- `uid`, `achievementId`, `family` (`career | social | discovery |
+  seasonal | community`), `rarity` (`common → legendary`), `unlockedAt`,
+  `progress: 0..1`, `shareCount`, `notified`.
+- **Regras**: escrita só do dono; `progress` pode avançar mas **nunca
+  regredir**. Leitura por qualquer autenticado (perfil `/conquistas/:uid`).
+
+### `user_streak_meta/{uid}` (Onda R)
+Proteção da sequência.
+- `uid`, `schemaVersion: 1`, `lastPlayAt`, `graceDaysRemaining: 0..3`,
+  `freezesAvailable: 0..3`, `freezesUsed: int` (**acumulativo, sem teto**),
+  `vacationMode`, `vacationStartedAt`, `comebackBonus`, `updatedAt`.
+- **Regras**: privado — só o dono e o admin.
+
+### `user_referral_codes/{uid}` · `user_referrals/{refereeUid}` (Onda R)
+Programa de indicação.
+- Código: `uid`, `schemaVersion: 2`, `code` (8 chars, sem `0/O/1/I/L`),
+  `totalSignups`, `totalActivated`, `totalTournaments`, `totalXpEarned`,
+  `monthlyCount ≤ 50` (anti-farm), `monthKey` (mês de **Brasília**).
+- Vínculo: `refereeUid`, `referrerUid`, `code`, `signedUpAt`,
+  `activatedAt`, `tournamentAt`, `xpPaidOut`.
+- **Regras**: o vínculo é criado pelo próprio indicado. O indicado pode
+  creditar o código do indicador, mas **só +1 por vez** e sem trocar o
+  código — é a única escrita cruzada permitida.
+
+### `user_kudos/{kudoId}` · `user_kudos_index/{uid}` (Onda R)
+Kudos (👏) entre atletas.
+- Kudo: `kudoId`, `fromUid`, `toUid`, `type`, `scope`, `message` (≤280),
+  `contextId`, `createdAt`, `expiresAt`. **Imutável** após criado.
+- Índice: `uid`, `schemaVersion: 2`, `receivedCount`, `givenCount`,
+  `receivedToday ≤ 100`, `givenToday ≤ 50`, `lastKudoDay` (dia de
+  **Brasília**).
+- **Regras**: só o `fromUid` cria o kudo, e nunca para si mesmo. Quem dá
+  pode incrementar o índice de quem recebe em **+1**, sem tocar nos
+  contadores de "dados" do outro.
+- **Auditoria**: `gamification_kudo_given` em `audit_logs`.
+
+### `user_rivals/{pairKey}` · `crews/{crewId}` · `crew_members/{crewId}_{uid}` · `mentorships/{pairKey}` (Onda R)
+Vínculos sociais. **Sem UI ainda** — domínio, service e regras prontos.
+- Rivais: `pairKey` (uids ordenados), `userA/B`, `gamesA/B`, `winsA/B`,
+  `lastGameAt`. Os dois lados escrevem, sem trocar quem é quem.
+- Crew: `crewId`, `schemaVersion: 2`, `name` (≤40), `isPublic`,
+  `createdBy`, `membersCount: 1..50`, `totalXp`, `totalWins`.
+  Crew privada continua legível por seus membros.
+  Entrar/sair mexe **só** no `membersCount`, de 1 em 1.
+- Membro: `crewId`, `uid`, `role: owner|captain|member`, `joinedAt`,
+  `contributionXp`. Cada um cria a própria adesão.
+- Mentoria: `pairKey`, `schemaVersion: 2`, `mentorUid`, `apprenticeUid`,
+  `status: active|paused|completed|cancelled`, `lessonsCompleted`.
+
+### `season_rankings/{seasonId}_{uid}` (Onda R)
+Ranking mensal. `seasonId` = `YYYY-MM` no fuso de Brasília.
+- `seasonId`, `uid`, `schemaVersion: 2`, `xp`, `tier`, `position`,
+  `deltaPosition`, `prizeXp`, `updatedAt`.
+- **Regras**: leitura por qualquer autenticado (é placar público);
+  **escrita só de platform_admin** — posição no ranking não pode ser
+  decidida pelo cliente. O cálculo é trabalho de Cloud Function / admin.
+- **Índices**: `seasonId ASC, xp DESC` e `uid ASC, xp DESC`.
+
+### `dupr_export_log/{matchId}` (Onda G — `dupr_match_export`)
+Situação de cada partida perante o DUPR (`exported`/`submitted`) e
+carimbos de data. **Governança sensível: só platform_admin lê e escreve.**
+
 ## Coleções Arena V3 (sempre atrás de sub-flags `ARENA_MODULE_*`)
 
 > 35+ coleções criadas pelos módulos Arena V3 (PDV, members, leagues,

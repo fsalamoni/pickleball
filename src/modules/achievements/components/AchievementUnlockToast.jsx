@@ -46,6 +46,9 @@ export default function AchievementUnlockToast({
     // pequeno delay pra animação de entrada
     const t1 = setTimeout(() => setVisible(true), 30);
     return () => clearTimeout(t1);
+    // Só o id importa: reanimar a cada nova conquista, não a cada re-render
+    // que recria o objeto.
+    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [achievement?.id]);
 
   useEffect(() => {

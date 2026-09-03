@@ -20,12 +20,18 @@ import {
   validateSeasonRanking,
   SEASON_RANKING_VERSION,
 } from '@/modules/progression/domain/gamificationV2Schema2';
-import { monthlySeasonRange, getSeason } from '@/modules/progression/domain/seasons';
+import { monthlySeasonRange } from '@/modules/progression/domain/seasons';
+import { platformMonthKey } from '@/modules/progression/domain/missionDay';
 
-/** currentSeasonId = YYYY-MM do mês corrente */
+/**
+ * Id da temporada corrente: 'YYYY-MM' no fuso da plataforma.
+ *
+ * Era montado a partir de `getSeason()`, que NÃO devolve `month` — o
+ * resultado era literalmente `'2026-undefined'`, e todo o ranking sazonal
+ * (leitura, escrita e consulta) apontava para essa chave inexistente.
+ */
 export function currentSeasonId() {
-  const s = getSeason();
-  return `${s.year}-${String(s.month).padStart(2, '0')}`;
+  return platformMonthKey();
 }
 
 function db() { return getFirestore(); }
@@ -38,6 +44,15 @@ function parseDoc(data) {
   return validateSeasonRanking(parsed).success ? parsed : null;
 }
 
+/**
+ * Grava a linha do ranking sazonal.
+ *
+ * ATENÇÃO: `firestore.rules` só permite escrita em `season_rankings` para
+ * platform_admin (a posição no ranking não pode ser decidida pelo cliente —
+ * senão qualquer um se declara #1). Chamar isto como usuário comum resulta em
+ * permission-denied, e é assim que deve ser: o cálculo sazonal é trabalho de
+ * Cloud Function / painel admin.
+ */
 export async function upsertSeasonRanking({ seasonId, uid, xp, tier, position, deltaPosition, prizeXp }) {
   if (!seasonId || !uid) return null;
   const now = Date.now();
@@ -85,7 +100,7 @@ export async function listUserSeasons(uid) {
     orderBy('xp', 'desc'),
   );
   const snap = await getDocs(q);
-  return snap.docs.map((d) => parseDoc(snap.data())).filter(Boolean);
+  return snap.docs.map((d) => parseDoc(d.data())).filter(Boolean);
 }
 
 export function watchSeasonRanking(seasonId, uid, onChange, onError) {
@@ -100,7 +115,12 @@ export function watchSeasonRanking(seasonId, uid, onChange, onError) {
   );
 }
 
-/** Calcula mês corrente. */
+/**
+ * Janela (início/fim em ms) do mês corrente.
+ * `monthlySeasonRange` recebe (year, month) — passar um `Date` fazia a função
+ * produzir datas inválidas.
+ */
 export function getCurrentSeason() {
-  return monthlySeasonRange(new Date());
+  const now = new Date();
+  return monthlySeasonRange(now.getFullYear(), now.getMonth());
 }

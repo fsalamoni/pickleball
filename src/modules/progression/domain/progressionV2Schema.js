@@ -8,12 +8,27 @@
  * Schema versionado: incrementa quando shape muda.
  */
 import { z } from 'zod';
+import { TIER_NAMES } from './tiers.js';
+import { SKILL_TREE_KEYS, MAX_TREE_LEVEL, toSkillTreeSnapshots } from './skillTrees.js';
+import { MAX_LEVEL_V2 } from './progressionV2.js';
+import {
+  ACHIEVEMENTS_V2,
+  ACHIEVEMENT_FAMILY,
+  ACHIEVEMENT_RARITY,
+} from '@/modules/achievements/domain/achievementsV2.js';
 
 export const PROGRESSION_V2_SCHEMA_VERSION = 1;
 
+/**
+ * O vocabulário de tiers e de trilhas vem do DOMÍNIO (`tiers.js` /
+ * `skillTrees.js`) — nunca duplicado aqui. Duplicar já custou um bug em que
+ * o schema recusava metade dos tiers reais e nenhum snapshot conseguia ser
+ * gravado. Se um tier/trilha novo entrar no domínio, o schema acompanha
+ * sozinho (e as regras do Firestore precisam ser atualizadas junto).
+ */
 export const SkillTreeSnapshotSchema = z.object({
-  tree: z.enum(['tournament', 'match', 'social', 'mentorship', 'consistency']),
-  level: z.number().int().min(0).max(10),
+  tree: z.enum(SKILL_TREE_KEYS),
+  level: z.number().int().min(1).max(MAX_TREE_LEVEL),
   xp: z.number().int().min(0),
 });
 
@@ -21,12 +36,9 @@ export const ProgressionV2Schema = z.object({
   uid: z.string().min(1).max(128),
   schemaVersion: z.literal(PROGRESSION_V2_SCHEMA_VERSION),
   xpTotal: z.number().int().min(0),
-  level: z.number().int().min(1).max(20),
-  tier: z.enum([
-    'Calouro', 'Aprendiz', 'Jogador', 'Competidor', 'Veterano',
-    'Craque', 'Mestre', 'Lendário', 'Imortal',
-  ]),
-  skillTrees: z.array(SkillTreeSnapshotSchema).length(5),
+  level: z.number().int().min(1).max(MAX_LEVEL_V2),
+  tier: z.enum(TIER_NAMES),
+  skillTrees: z.array(SkillTreeSnapshotSchema).length(SKILL_TREE_KEYS.length),
   // contadores (espelham achievementsV2 pra evitar join)
   achievementsUnlocked: z.number().int().min(0),
   achievementsTotal: z.number().int().min(0),
@@ -48,15 +60,9 @@ export function makeEmptyProgressionV2(uid) {
     xpTotal: 0,
     level: 1,
     tier: 'Calouro',
-    skillTrees: [
-      { tree: 'tournament', level: 0, xp: 0 },
-      { tree: 'match', level: 0, xp: 0 },
-      { tree: 'social', level: 0, xp: 0 },
-      { tree: 'mentorship', level: 0, xp: 0 },
-      { tree: 'consistency', level: 0, xp: 0 },
-    ],
+    skillTrees: toSkillTreeSnapshots({}),
     achievementsUnlocked: 0,
-    achievementsTotal: 83,
+    achievementsTotal: ACHIEVEMENTS_V2.length,
     source: 'seed',
     updatedAt: now,
     createdAt: now,
@@ -99,8 +105,8 @@ export const ACHIEVEMENT_DOC_VERSION = 1;
 export const UserAchievementV2Schema = z.object({
   uid: z.string(),
   achievementId: z.string(),
-  family: z.enum(['tournament', 'match', 'social', 'mentorship', 'consistency']),
-  rarity: z.enum(['common', 'uncommon', 'rare', 'epic', 'legendary']),
+  family: z.enum(Object.values(ACHIEVEMENT_FAMILY)),
+  rarity: z.enum(Object.values(ACHIEVEMENT_RARITY)),
   unlockedAt: z.number().int().min(0),
   progress: z.number().min(0).max(1),
   shareCount: z.number().int().min(0).default(0),
@@ -118,7 +124,7 @@ export const UserStreakMetaSchema = z.object({
   lastPlayAt: z.number().int().min(0).nullable(),
   graceDaysRemaining: z.number().int().min(0).max(3),
   freezesAvailable: z.number().int().min(0).max(3),
-  freezesUsed: z.number().int().min(0).max(3),
+  freezesUsed: z.number().int().min(0),
   vacationMode: z.boolean(),
   vacationStartedAt: z.number().int().min(0).nullable(),
   comebackBonus: z.number().int().min(0).max(500),

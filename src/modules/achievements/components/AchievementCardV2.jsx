@@ -3,7 +3,6 @@ import { Lock, Sparkles, Share2 } from 'lucide-react';
 import { cn } from '@/core/lib/utils';
 import { V2Badge } from '@/v2/ui/primitives';
 import {
-  ACHIEVEMENT_RARITY,
   ACHIEVEMENT_RARITY_META,
   ACHIEVEMENT_FAMILY_META,
 } from '../domain/achievementsV2.js';

@@ -1,11 +1,9 @@
 import React, { useMemo, useState } from 'react';
 import { Copy, Check, MessageCircle, Share2 } from 'lucide-react';
-import { cn } from '@/core/lib/utils';
 import { V2Badge, V2Button, V2Surface } from '@/v2/ui/primitives';
 import {
   buildReferralUrl,
   buildReferralShareText,
-  generateReferralCode,
   REFERRAL_REWARDS,
 } from '../domain/referrals.js';
 
@@ -14,7 +12,7 @@ import {
  *
  * @param {{
  *   user?: { uid: string, platform_name?: string },
- *   code?: string,           // código do user (se já tem); senão, gera
+ *   code?: string,           // código PERSISTIDO do user (via useUserReferralCode)
  *   origin?: string,         // ex.: window.location.origin
  *   referralsCount?: number, // quantos referrals ativos
  *   onCopy?: (code) => void,
@@ -31,9 +29,14 @@ export default function ReferralCard({
   onShare,
   className,
 }) {
-  // Se não tem código, gera um (em produção, virá do Firestore).
-  const finalCode = useMemo(() => code || generateReferralCode(), [code]);
-  const url = useMemo(() => buildReferralUrl(origin, finalCode), [origin, finalCode]);
+  // Sem código persistido ainda (Firestore carregando), o card mostra
+  // placeholder em vez de inventar um código: um código gerado no render não
+  // pertence a ninguém e nenhuma indicação feita com ele seria creditada.
+  const finalCode = code || null;
+  const url = useMemo(
+    () => (finalCode ? buildReferralUrl(origin, finalCode) : ''),
+    [origin, finalCode],
+  );
   const text = useMemo(
     () => buildReferralShareText(finalCode, url, { userName: user?.platform_name }),
     [finalCode, url, user?.platform_name],
@@ -49,7 +52,7 @@ export default function ReferralCard({
         ta.value = url;
         document.body.appendChild(ta);
         ta.select();
-        try { document.execCommand('copy'); } catch (e) { /* ignore */ }
+        try { document.execCommand('copy'); } catch { /* navegador sem execCommand */ }
         document.body.removeChild(ta);
       }
     } else {
@@ -87,18 +90,25 @@ export default function ReferralCard({
         )}
       </div>
 
-      {/* Code display */}
+      {/* Código */}
       <div className="mt-4 flex items-center gap-2 rounded-2xl border border-dashed border-gray-300 bg-paper p-3">
-        <span data-testid="referral-code" className="flex-1 font-mono text-2xl font-bold tracking-widest text-ink">
-          {finalCode.slice(0, 4)} {finalCode.slice(4)}
-        </span>
+        {finalCode ? (
+          <span data-testid="referral-code" className="flex-1 font-mono text-2xl font-bold tracking-widest text-ink">
+            {finalCode.slice(0, 4)} {finalCode.slice(4)}
+          </span>
+        ) : (
+          <span data-testid="referral-code-loading" className="flex-1 font-mono text-2xl font-bold tracking-widest text-gray-300">
+            •••• ••••
+          </span>
+        )}
         <button
           type="button"
           onClick={handleCopy}
+          disabled={!finalCode}
           aria-label="Copiar código de convite"
-          className="flex h-9 w-9 items-center justify-center rounded-full bg-paper-pure text-gray-600 transition-colors hover:bg-gray-100 hover:text-ink"
+          className="flex h-9 w-9 items-center justify-center rounded-full bg-paper-pure text-gray-600 transition-colors hover:bg-gray-100 hover:text-ink disabled:cursor-not-allowed disabled:opacity-40"
         >
-          {copied ? <Check className="h-4 w-4 text-green-600" /> : <Copy className="h-4 w-4" />}
+          {copied ? <Check className="h-4 w-4 text-green-600" aria-hidden="true" /> : <Copy className="h-4 w-4" aria-hidden="true" />}
         </button>
       </div>
 
@@ -111,8 +121,8 @@ export default function ReferralCard({
 
       {/* Botão principal */}
       <div className="mt-4">
-        <V2Button onClick={handleShare} className="w-full">
-          <MessageCircle className="h-4 w-4" /> Compartilhar convite
+        <V2Button onClick={handleShare} disabled={!finalCode} className="w-full">
+          <MessageCircle className="h-4 w-4" aria-hidden="true" /> Compartilhar convite
         </V2Button>
       </div>
 
@@ -122,7 +132,7 @@ export default function ReferralCard({
           <div key={i} className="rounded-2xl bg-paper p-2 text-center">
             <p className="text-base font-bold text-amber-600 tabular-nums">+{r.referrerXp}</p>
             <p className="mt-0.5 text-[10px] text-gray-500">
-              {i === 0 && 'Signup'}
+              {i === 0 && 'Cadastro'}
               {i === 1 && '5+ jogos'}
               {i === 2 && '1 torneio'}
             </p>

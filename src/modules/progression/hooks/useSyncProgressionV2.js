@@ -14,7 +14,8 @@ import { setUserProgressionV2 } from '@/modules/progression/services/progression
 import { makeEmptyProgressionV2 } from '@/modules/progression/domain/progressionV2Schema';
 import { computeXpV2, levelFromXpV2, XP_WEIGHTS_V2 } from '@/modules/progression/domain/progressionV2';
 import { tierFromXp } from '@/modules/progression/domain/tiers';
-import { buildSkillTrees } from '@/modules/progression/domain/skillTrees';
+import { buildSkillTrees, toSkillTreeSnapshots } from '@/modules/progression/domain/skillTrees';
+import { logger } from '@/core/lib/logger';
 
 const PROGRESSION_V2_KEY = (uid) => ['user-progression-v2', uid];
 
@@ -41,6 +42,7 @@ export function useSyncProgressionV2(uid, stats, enabled = true) {
         const levelInfo = levelFromXpV2(xpTotal);
         const tier = tierFromXp(xpTotal);
         const { trees } = buildSkillTrees(xpBySource, XP_WEIGHTS_V2);
+        const skillTrees = toSkillTreeSnapshots(trees);
         const now = Date.now();
         // se já tem doc e tá atualizado, não sobrescreve
         if (progression && progression.xpTotal === xpTotal) {
@@ -53,7 +55,7 @@ export function useSyncProgressionV2(uid, stats, enabled = true) {
             xpTotal,
             level: levelInfo.level,
             tier: tier.name,
-            skillTrees: trees,
+            skillTrees,
             source: 'recomputed',
             updatedAt: now,
           }
@@ -62,7 +64,7 @@ export function useSyncProgressionV2(uid, stats, enabled = true) {
             xpTotal,
             level: levelInfo.level,
             tier: tier.name,
-            skillTrees: trees,
+            skillTrees,
             source: 'seed',
             updatedAt: now,
             createdAt: now,
@@ -71,8 +73,7 @@ export function useSyncProgressionV2(uid, stats, enabled = true) {
         qc.setQueryData(PROGRESSION_V2_KEY(uid), next);
         syncedRef.current = true;
       } catch (err) {
-        // eslint-disable-next-line no-console
-        console.warn('[useSyncProgressionV2] falha ao sincronizar', err);
+        logger.warn('[useSyncProgressionV2] falha ao sincronizar', err);
       }
     })();
   }, [uid, stats, enabled, progression, qc]);

@@ -78,6 +78,14 @@ vi.mock('@/modules/progression/hooks/useStreakMetaV2', () => ({
     isMutating: false,
   }),
 }));
+vi.mock('@/modules/progression/hooks/useUserReferralCode', () => ({
+  // código PERSISTIDO do usuário (antes a página gerava um aleatório no render)
+  useUserReferralCode: () => ({
+    code: { uid: 'u1', code: 'AB2CD3EF', totalSignups: 4 },
+    isLoading: false,
+  }),
+}));
+
 vi.mock('@/modules/progression/hooks/useUserSeasonRanking', () => ({
   useUserCurrentSeason: () => ({ season: null, seasonId: '2026-09', isLoading: false }),
   useSeasonTop: () => ({ data: [] }),
@@ -135,7 +143,7 @@ describe('V2GamificationHome · flag ON', () => {
   it('renderiza título + subtítulo', async () => {
     await render();
     expect(container.textContent).toContain('Gamificação');
-    expect(container.textContent).toContain('Missões, conquistas, skill trees');
+    expect(container.textContent).toContain('Missões, conquistas, trilhas de XP');
   });
 
   it('header mostra tier Aprendiz (Flavio XP 3020)', async () => {
@@ -177,11 +185,12 @@ describe('V2GamificationHome · flag ON', () => {
     expect(link.getAttribute('href')).toBe('/conquistas');
   });
 
-  it('mostra card de referral com código', async () => {
+  it('mostra o código de convite PERSISTIDO do usuário', async () => {
     await render();
-    const code = container.querySelector('[data-testid="home-referral-code"]');
+    const code = container.querySelector('[data-testid="referral-code"]');
     expect(code).toBeTruthy();
-    expect(code.textContent.replace(/\s/g, '')).toHaveLength(8);
+    // tem de ser o código gravado, não um aleatório gerado no render
+    expect(code.textContent.replace(/\s/g, '')).toBe('AB2CD3EF');
   });
 
   it('mostra 3 recompensas do referral', async () => {

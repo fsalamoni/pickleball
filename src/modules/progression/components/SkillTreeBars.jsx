@@ -2,8 +2,9 @@ import React, { useMemo } from 'react';
 import { cn } from '@/core/lib/utils';
 import {
   buildSkillTrees,
+  fromSkillTreeSnapshots,
   listSkillTrees,
-  SKILL_TREE_META,
+  MAX_TREE_LEVEL,
 } from '../domain/skillTrees.js';
 import { XP_WEIGHTS_V2 } from '../domain/progressionV2.js';
 
@@ -21,9 +22,15 @@ const TREE_COLORS = {
 /**
  * SkillTreeBars — visualização das 5 trilhas paralelas de XP.
  *
+ * `trees` aceita os DOIS formatos: o mapa do domínio
+ * (`buildSkillTrees().trees`) e a lista persistida em
+ * `user_progression_v2.skillTrees`. `fromSkillTreeSnapshots` normaliza —
+ * sem isso, a lista vinda do Firestore era indexada por nome e todas as
+ * trilhas apareciam zeradas.
+ *
  * @param {{
  *   xpBySource?: object,   // mapa fonte → count (opcional)
- *   trees?: object,        // alternativa: trees já calculadas
+ *   trees?: object|Array,  // alternativa: trees já calculadas (mapa ou lista)
  *   compact?: boolean,     // se true, esconde o XP e mostra só barra+nível
  *   className?: string,
  * }} props
@@ -35,15 +42,9 @@ export default function SkillTreeBars({
   className,
 }) {
   const computed = useMemo(() => {
-    if (trees) return trees;
+    if (trees) return fromSkillTreeSnapshots(trees);
     if (xpBySource) return buildSkillTrees(xpBySource, XP_WEIGHTS_V2).trees;
-    return {
-      tournament: { xp: 0, level: 1 },
-      social: { xp: 0, level: 1 },
-      arena: { xp: 0, level: 1 },
-      coach: { xp: 0, level: 1 },
-      club: { xp: 0, level: 1 },
-    };
+    return fromSkillTreeSnapshots(null);
   }, [xpBySource, trees]);
 
   const items = useMemo(() => listSkillTrees(computed), [computed]);
@@ -67,7 +68,7 @@ export default function SkillTreeBars({
             role="progressbar"
             aria-valuenow={item.level}
             aria-valuemin={0}
-            aria-valuemax={10}
+            aria-valuemax={MAX_TREE_LEVEL}
             aria-label={`${item.name} — nível ${item.level}`}
             className="space-y-1"
           >

@@ -4,12 +4,13 @@
 import { useQuery, useQueryClient, useMutation } from '@tanstack/react-query';
 import { useEffect } from 'react';
 import {
-  giveKudo,
+  giveKudoAudited,
   getKudoIndex,
   listKudosReceivedBy,
   listKudosGivenBy,
   watchKudoIndex,
 } from '@/modules/progression/services/kudoService';
+import { useAuth } from '@/core/lib/FirebaseAuthContext';
 
 const INDEX_KEY = (uid) => ['user-kudo-index', uid];
 const RECEIVED_KEY = (uid) => ['user-kudos-received', uid];
@@ -17,6 +18,7 @@ const GIVEN_KEY = (uid) => ['user-kudos-given', uid];
 
 export function useKudoActions(uid, enabled = true) {
   const qc = useQueryClient();
+  const { user } = useAuth();
 
   const index = useQuery({
     queryKey: INDEX_KEY(uid),
@@ -47,7 +49,9 @@ export function useKudoActions(uid, enabled = true) {
 
   const giveMut = useMutation({
     mutationFn: async ({ toUid, type, scope, message, contextId }) => {
-      const res = await giveKudo({ fromUid: uid, toUid, type, scope, message, contextId });
+      const res = await giveKudoAudited({
+        actor: user?.uid ? user : { uid }, toUid, type, scope, message, contextId,
+      });
       qc.invalidateQueries({ queryKey: INDEX_KEY(uid) });
       qc.invalidateQueries({ queryKey: RECEIVED_KEY(toUid) });
       qc.invalidateQueries({ queryKey: GIVEN_KEY(uid) });

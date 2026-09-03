@@ -11,8 +11,6 @@ import {
   watchDailyMissions,
   getMissionsForDate,
 } from '@/modules/progression/services/missionService';
-import { tierFromXp } from '@/modules/progression/domain/tiers';
-import { computeXpV2 } from '@/modules/progression/domain/progressionV2';
 
 const KEY = (uid) => ['user-missions-daily', uid];
 

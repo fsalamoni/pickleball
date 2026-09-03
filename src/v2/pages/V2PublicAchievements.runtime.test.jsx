@@ -1,6 +1,6 @@
 import React from 'react';
 import { createRoot } from 'react-dom/client';
-import { MemoryRouter, Routes, Route } from 'react-router-dom';
+import { MemoryRouter } from 'react-router-dom';
 import { describe, it, expect, beforeEach, afterEach, vi } from 'vitest';
 import { act } from 'react';
 
@@ -27,7 +27,7 @@ vi.mock('@/core/lib/FirebaseAuthContext', () => ({
 
 vi.mock('@/modules/progression/hooks/useUserProgressionV2', () => ({
   useUserProgressionV2: () => ({
-    progression: { uid: 'u-other', xpTotal: 3000, tier: 'Aprendiz', level: 4, achievementsUnlocked: 10, achievementsTotal: 83, skillTrees: [] },
+    progression: { uid: 'u-other', xpTotal: 3000, tier: 'Aprendiz', level: 4, achievementsUnlocked: 10, achievementsTotal: 88, skillTrees: [] },
     isLoading: false,
   }),
 }));
@@ -35,10 +35,10 @@ vi.mock('@/modules/progression/hooks/useUserProgressionV2', () => ({
 vi.mock('@/modules/achievements/hooks/useUserAchievementsV2', () => ({
   useUserAchievementsV2: () => ({
     unlocked: [
-      { achievementId: 'first_blood', unlockedAt: 1 },
-      { achievementId: 'win_streak_3', unlockedAt: 2 },
+      { achievementId: 'career_welcome', unlockedAt: 1 },
+      { achievementId: 'career_first_win', unlockedAt: 2 },
     ],
-    unlockedIds: new Set(['first_blood', 'win_streak_3']),
+    unlockedIds: new Set(['career_welcome', 'career_first_win']),
     isLoading: false,
   }),
 }));
@@ -57,6 +57,10 @@ vi.mock('@/modules/performance/hooks/usePlayerStats', () => ({
 
 vi.mock('@/modules/rating/hooks/useRating', () => ({
   useNationalRanking: () => ({ data: [{ uid: 'u-other', position: 47, rating: 1023 }] }),
+}));
+
+vi.mock('@/modules/athletes/hooks/useAthletes', () => ({
+  useAthlete: () => ({ data: { platform_name: 'Ana Prado', photo_url: null } }),
 }));
 
 import V2PublicAchievements from './V2PublicAchievements.jsx';
@@ -100,10 +104,17 @@ describe('V2PublicAchievements · flag OFF', () => {
 });
 
 describe('V2PublicAchievements · flag ON · outro user', () => {
-  it('mostra UID truncado', async () => {
+  it('identifica o atleta pelo NOME, não pelo uid cru', async () => {
     await render();
-    expect(container.textContent).toContain('u-other');
-    expect(container.textContent).toContain('Perfil público');
+    expect(container.textContent).toContain('Ana Prado');
+    expect(container.textContent).toContain('Conquistas de Ana Prado');
+    // o uid é detalhe interno: não deve aparecer na tela
+    expect(container.textContent).not.toContain('u-other');
+  });
+
+  it('leva ao perfil completo do atleta', async () => {
+    await render();
+    expect(container.querySelector('a[href="/atleta/u-other"]')).toBeTruthy();
   });
 
   it('mostra tier + XP', async () => {
@@ -112,9 +123,9 @@ describe('V2PublicAchievements · flag ON · outro user', () => {
     expect(container.textContent).toContain('3.000');
   });
 
-  it('mostra contagem de conquistas 2/83', async () => {
+  it('mostra a contagem de conquistas com o total do catálogo', async () => {
     await render();
-    expect(container.textContent).toContain('2/83');
+    expect(container.textContent).toContain('2/88');
   });
 
   it('tem botão de voltar', async () => {
@@ -140,15 +151,14 @@ describe('V2PublicAchievements · flag ON · outro user', () => {
     expect(container.textContent).toContain('Carreira');
   });
 
-  it('achievements unlocked são marcados como unlocked=true', async () => {
+  it('marca como desbloqueadas exatamente as conquistas do usuário', async () => {
     await render();
     const cards = container.querySelectorAll('[data-testid="public-achievement-card"]');
-    let foundUnlocked = 0;
-    cards.forEach((c) => {
-      if (c.getAttribute('data-unlocked') === 'true') foundUnlocked += 1;
-    });
-    // se renderizou, pode ter 0 (slice 12 não pegou os 2 unlocked)
+    const unlockedCards = [...cards].filter((c) => c.getAttribute('data-unlocked') === 'true');
     expect(cards.length).toBeGreaterThan(0);
+    // as duas conquistas mockadas são as primeiras da família "career", então
+    // caem dentro do slice(0, 12) e precisam aparecer marcadas
+    expect(unlockedCards).toHaveLength(2);
     // mas o mock diz que first_blood + win_streak_3 estão unlocked
     // (win_streak_3 é o último da família match, pode estar fora do top 12)
     // aceitamos >= 0

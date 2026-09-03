@@ -5,11 +5,11 @@ import {
   getFirestore,
   doc,
   getDoc,
-  setDoc,
   onSnapshot,
   collection,
   query,
   where,
+  limit as fsLimit,
   getDocs,
   serverTimestamp,
   runTransaction,
@@ -19,9 +19,10 @@ import {
   kudoIndexPath,
   validateUserKudo,
   validateUserKudoIndex,
-  KUDO_VERSION,
   KUDO_INDEX_VERSION,
 } from '@/modules/progression/domain/gamificationV2Schema2';
+import { missionDateKey } from '@/modules/progression/domain/missionDay';
+import { createAuditLog } from '@/core/services/auditService';
 
 function db() { return getFirestore(); }
 
@@ -30,7 +31,7 @@ function makeEmptyIndex(uid) {
     uid, schemaVersion: KUDO_INDEX_VERSION,
     receivedCount: 0, givenCount: 0,
     receivedToday: 0, givenToday: 0,
-    lastKudoDay: new Date().toISOString().slice(0, 10),
+    lastKudoDay: missionDateKey(),
     updatedAt: Date.now(),
   };
 }
@@ -58,11 +59,14 @@ function parseIndex(data) {
 /**
  * Dá um kudo.
  * Aplica rate limiting diário (receive: 100, give: 50).
+ *
+ * Escrita "crua": não audita. Prefira `giveKudoAudited` nos fluxos de UI —
+ * dar kudo mexe no documento de OUTRO usuário e precisa de rastro.
  */
 export async function giveKudo({ fromUid, toUid, type, scope, message, contextId }) {
   if (!fromUid || !toUid) return null;
   if (fromUid === toUid) throw new Error('não pode dar kudo pra si mesmo');
-  const today = new Date().toISOString().slice(0, 10);
+  const today = missionDateKey();
   const kudoId = `k_${Date.now()}_${Math.random().toString(36).slice(2, 8)}`;
   const kudoRef = doc(db(), kudoPath(kudoId));
   const fromIndexRef = doc(db(), kudoIndexPath(fromUid));
@@ -119,17 +123,33 @@ export async function giveKudo({ fromUid, toUid, type, scope, message, contextId
   });
 }
 
+/** Dá um kudo e registra em `audit_logs`. */
+export async function giveKudoAudited({ actor, toUid, type, scope, message, contextId }) {
+  const kudo = await giveKudo({
+    fromUid: actor?.uid, toUid, type, scope, message, contextId,
+  });
+  if (kudo) {
+    await createAuditLog({
+      action: 'gamification_kudo_given',
+      actor,
+      userId: toUid,
+      details: { kudo_id: kudo.kudoId, type: kudo.type, scope: kudo.scope },
+    });
+  }
+  return kudo;
+}
+
 export async function listKudosReceivedBy(uid, { limit: lim = 50 } = {}) {
   if (!uid) return [];
+  // o limite vai na QUERY: sem ele o cliente baixava (e pagava) todos os
+  // kudos do usuário só para descartar o excedente no navegador
   const q = query(
     collection(db(), 'user_kudos'),
     where('toUid', '==', uid),
+    fsLimit(lim),
   );
   const snap = await getDocs(q);
-  return snap.docs
-    .map((d) => parseKudo(d.data()))
-    .filter(Boolean)
-    .slice(0, lim);
+  return snap.docs.map((d) => parseKudo(d.data())).filter(Boolean);
 }
 
 export async function listKudosGivenBy(uid, { limit: lim = 50 } = {}) {
@@ -137,12 +157,10 @@ export async function listKudosGivenBy(uid, { limit: lim = 50 } = {}) {
   const q = query(
     collection(db(), 'user_kudos'),
     where('fromUid', '==', uid),
+    fsLimit(lim),
   );
   const snap = await getDocs(q);
-  return snap.docs
-    .map((d) => parseKudo(d.data()))
-    .filter(Boolean)
-    .slice(0, lim);
+  return snap.docs.map((d) => parseKudo(d.data())).filter(Boolean);
 }
 
 export async function getKudoIndex(uid) {

@@ -65,9 +65,11 @@ describe('SeasonBanner', () => {
     expect(container.querySelector('[data-testid="season-banner"]')).toBeTruthy();
   });
 
-  it('mostra seasonId e mês', async () => {
+  it('mostra a temporada pelo mês, não pelo id interno', async () => {
     await render(<SeasonBanner />);
-    expect(container.textContent).toContain('2026-09');
+    expect(container.textContent).toContain('Temporada');
+    // o id da temporada ('2026-09') é chave de banco, não texto de interface
+    expect(container.textContent).not.toContain('2026-09');
   });
 
   it('mostra sua posição', async () => {

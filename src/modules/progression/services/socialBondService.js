@@ -25,13 +25,14 @@ import {
   validateCrew,
   validateCrewMember,
   validateMentorship,
-  RIVAL_VERSION,
   CREW_VERSION,
-  CREW_MEMBER_VERSION,
   MENTORSHIP_VERSION,
 } from '@/modules/progression/domain/gamificationV2Schema2';
 
 function db() { return getFirestore(); }
+
+/** Teto de membros por crew. Espelhado em `firestore.rules` (crews). */
+export const CREW_MAX_MEMBERS = 50;
 
 function parseRival(data) {
   const parsed = {
@@ -177,13 +178,13 @@ export async function joinCrew({ crewId, uid }) {
   const memberRef = doc(db(), crewMemberPath(crewId, uid));
   const now = Date.now();
   return runTransaction(db(), async (tx) => {
-    const crewDoc = await tx.get(crewRef);
+    // leituras primeiro (regra das transações do Firestore)
+    const [crewDoc, memberDoc] = [await tx.get(crewRef), await tx.get(memberRef)];
     if (!crewDoc.exists()) throw new Error('crew não existe');
     const crew = parseCrew(crewDoc.data());
     if (!crew) throw new Error('crew inválido');
-    const memberDoc = await tx.get(memberRef);
     if (memberDoc.exists()) return parseCrewMember(memberDoc.data());
-    if (crew.membersCount >= 50) throw new Error('crew lotada (50 membros)');
+    if (crew.membersCount >= CREW_MAX_MEMBERS) throw new Error(`crew lotada (${CREW_MAX_MEMBERS} membros)`);
     const memberPayload = {
       crewId, uid, role: 'member',
       joinedAt: now, contributionXp: 0, updatedAt: now,
@@ -202,13 +203,15 @@ export async function leaveCrew({ crewId, uid }) {
   const memberRef = doc(db(), crewMemberPath(crewId, uid));
   const now = Date.now();
   return runTransaction(db(), async (tx) => {
-    const memberDoc = await tx.get(memberRef);
+    // Todas as leituras ANTES de qualquer escrita — o Firestore recusa a
+    // transação inteira se um `tx.get` vier depois de um `tx.delete/set`.
+    const [memberDoc, crewDoc] = [await tx.get(memberRef), await tx.get(crewRef)];
     if (!memberDoc.exists()) return null;
     const member = parseCrewMember(memberDoc.data());
     if (!member) return null;
     if (member.role === 'owner') throw new Error('owner não pode sair; transfira a posse antes');
+
     tx.delete(memberRef);
-    const crewDoc = await tx.get(crewRef);
     if (crewDoc.exists()) {
       const crew = parseCrew(crewDoc.data());
       if (crew && crew.membersCount > 1) {

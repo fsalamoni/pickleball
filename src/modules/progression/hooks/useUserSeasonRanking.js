@@ -4,16 +4,11 @@
 import { useQuery, useQueryClient } from '@tanstack/react-query';
 import { useEffect } from 'react';
 import {
+  currentSeasonId,
   getCurrentSeasonRanking,
   listSeasonTop,
   watchSeasonRanking,
 } from '@/modules/progression/services/seasonRankingService';
-import { getSeason } from '@/modules/progression/domain/seasons';
-
-function currentSeasonId() {
-  const s = getSeason();
-  return `${s.year}-${String(s.month).padStart(2, '0')}`;
-}
 
 const KEY_CURRENT = (uid) => ['user-season-current', uid];
 const KEY_TOP = (seasonId) => ['season-top', seasonId];

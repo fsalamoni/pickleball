@@ -1,15 +1,15 @@
-import React, { useMemo, useState, useEffect } from 'react';
+import React, { useMemo } from 'react';
 import { Link } from 'react-router-dom';
 import {
-  Award, Gift, Sparkles, Target, TrendingUp, Zap, ChevronRight,
+  Award, Sparkles, Target, TrendingUp, Zap, ChevronRight,
 } from 'lucide-react';
 import { useAuth } from '@/core/lib/FirebaseAuthContext';
 import { useFeatureFlag } from '@/core/lib/FeatureFlagsContext';
 import { FEATURE_FLAG } from '@/core/featureFlags';
 import { usePlayerStats } from '@/modules/performance/hooks/usePlayerStats';
-import { useRatingHistory, useNationalRanking } from '@/modules/rating/hooks/useRating';
 import { usePlayerMatchDates } from '@/modules/progression/hooks/useProgression';
 import { useAchievementsV2 } from '@/modules/achievements/hooks/useAchievementsV2';
+import { ACHIEVEMENTS_V2 } from '@/modules/achievements/domain/achievementsV2';
 import { useUserAchievementsV2 } from '@/modules/achievements/hooks/useUserAchievementsV2';
 import { useUserProgressionV2 } from '@/modules/progression/hooks/useUserProgressionV2';
 import { useUserMissionsV2 } from '@/modules/progression/hooks/useUserMissionsV2';
@@ -17,23 +17,21 @@ import { useSyncProgressionV2 } from '@/modules/progression/hooks/useSyncProgres
 import { useStreakMetaV2 } from '@/modules/progression/hooks/useStreakMetaV2';
 import { useCelebrationListener } from '@/modules/progression/hooks/useCelebrationListener';
 import { computeXpV2, levelFromXpV2, XP_WEIGHTS_V2 } from '@/modules/progression/domain/progressionV2';
-import { tierFromXp, tierProgress } from '@/modules/progression/domain/tiers';
+import { tierProgress } from '@/modules/progression/domain/tiers';
 import { buildSkillTrees } from '@/modules/progression/domain/skillTrees';
 import { computeProtectedStreak } from '@/modules/progression/domain/streakProtection';
 import { MISSION_BONUS_XP } from '@/modules/progression/domain/missions';
-import {
-  generateReferralCode,
-  buildReferralUrl,
-  REFERRAL_REWARDS,
-} from '@/modules/progression/domain/referrals';
+import { useUserReferralCode } from '@/modules/progression/hooks/useUserReferralCode';
 import { useGamificationTracker } from '@/modules/progression/hooks/useGamificationTracker';
 import TierBadge from '@/modules/progression/components/TierBadge';
 import SkillTreeBars from '@/modules/progression/components/SkillTreeBars';
 import MissionList from '@/modules/progression/components/MissionList';
+import ReferralCard from '@/modules/progression/components/ReferralCard';
 import MissionCompleteToast from '@/modules/progression/components/MissionCompleteToast';
 import StreakShieldBadge from '@/modules/progression/components/StreakShieldBadge';
 import SeasonBanner from '@/modules/progression/components/SeasonBanner';
 import AchievementCardV2 from '@/modules/achievements/components/AchievementCardV2';
+import AchievementUnlockToast from '@/modules/achievements/components/AchievementUnlockToast';
 import {
   V2Badge,
   V2Button,
@@ -63,7 +61,7 @@ export default function V2GamificationHome() {
       <div className="mx-auto max-w-[1000px]">
         <V2PageIntro
           title="Gamificação"
-          subtitle="Veja missões, conquistas, skill trees e referrals em um só lugar."
+          subtitle="Veja missões, conquistas, trilhas de XP e convites em um só lugar."
         />
         <V2Surface>
           <V2EmptyState
@@ -98,7 +96,6 @@ function V2GamificationHomeOn() {
   const {
     missions: dailyMissions,
     doc: missionsDoc,
-    isLoading: missionsLoading,
     progressMission: doProgress,
     claimBonus: doClaimBonus,
     isClaiming,
@@ -107,6 +104,7 @@ function V2GamificationHomeOn() {
 
   // Celebration listener — dispara toasts quando missões/achievements desbloqueiam
   const [celebratedMission, setCelebratedMission] = React.useState(null);
+  const [celebratedAchievement, setCelebratedAchievement] = React.useState(null);
   useCelebrationListener({
     missions: dailyMissions,
     unlockedAchievements: unlockedFromDb,
@@ -115,6 +113,11 @@ function V2GamificationHomeOn() {
       if (telemetryOn) track('gamification_mission_completed', { mission_id: m.id, xp: m.xp });
     },
     onAchievementUnlocked: (a) => {
+      // O toast de conquista existia mas nunca era renderizado — o unlock
+      // acontecia em silêncio. Aqui ele finalmente aparece.
+      setCelebratedAchievement(
+        ACHIEVEMENTS_V2.find((def) => def.id === a.achievementId) || null,
+      );
       if (telemetryOn) track('gamification_achievement_unlocked', { achievement_id: a.achievementId, family: a.family, rarity: a.rarity });
     },
   });
@@ -139,13 +142,15 @@ function V2GamificationHomeOn() {
     () => computeProtectedStreak(matchDates, { now: new Date() }),
     [matchDates],
   );
-  const currentTier = useMemo(() => tierFromXp(xpTotal), [xpTotal]);
   const tierProg = useMemo(() => tierProgress(xpTotal), [xpTotal]);
 
   // ===== Referral =====
-  const code = useMemo(() => generateReferralCode(), []);
+  // O código de convite tem de ser o PERSISTIDO do usuário. Antes a página
+  // chamava `generateReferralCode()` no render: o atleta via um código
+  // aleatório diferente a cada carregamento, que não pertencia a ninguém e
+  // nunca era gravado — ou seja, nenhuma indicação jamais seria creditada.
+  const { code: referralCode } = useUserReferralCode(user?.uid, !!user);
   const origin = typeof window !== 'undefined' ? window.location.origin : '';
-  const referralUrl = useMemo(() => buildReferralUrl(origin, code), [origin, code]);
 
   // ===== Handlers =====
   function handleProgress(mission, delta) {
@@ -157,7 +162,7 @@ function V2GamificationHomeOn() {
     doClaimBonus();
   }
   function handleShareReferral() {
-    if (telemetryOn) track('gamification_referral_shared', { code });
+    if (telemetryOn) track('gamification_referral_shared', { code: referralCode?.code });
   }
 
   // Top 4 conquistas: prioriza unlocked recentes, depois "próximas" (locked com tier baixo)
@@ -189,7 +194,7 @@ function V2GamificationHomeOn() {
     <div className="mx-auto max-w-[1100px]">
       <V2PageIntro
         title="Gamificação"
-        subtitle="Missões, conquistas, skill trees e referral. Tudo num só lugar."
+        subtitle="Missões, conquistas, trilhas de XP e convites. Tudo num só lugar."
         action={
           <V2Badge tone="green">
             <Zap className="h-3.5 w-3.5" /> {xpTotal.toLocaleString('pt-BR')} XP
@@ -305,38 +310,14 @@ function V2GamificationHomeOn() {
           <SkillTreeBars trees={trees} compact />
         </V2Surface>
 
-        {/* Referral */}
-        <V2Surface>
-          <h2 className="mb-4 flex items-center gap-2 font-display text-lg font-bold text-ink">
-            <Gift className="h-5 w-5" /> Convide amigos
-          </h2>
-          <p className="text-sm text-gray-600">
-            Cada amigo que entra pelo seu código rende XP para vocês dois.
-          </p>
-          <div className="mt-3 flex items-center gap-2 rounded-2xl border border-dashed border-gray-300 bg-paper p-3">
-            <span data-testid="home-referral-code" className="flex-1 text-center font-mono text-2xl font-bold tracking-widest text-ink">
-              {code.slice(0, 4)} {code.slice(4)}
-            </span>
-          </div>
-          {referralUrl && (
-            <p className="mt-2 break-all rounded-2xl bg-paper p-2 text-xs text-gray-500">
-              {referralUrl}
-            </p>
-          )}
-          <div className="mt-3 grid grid-cols-3 gap-2 border-t border-gray-100 pt-3">
-            {Object.values(REFERRAL_REWARDS).map((r, i) => (
-              <div key={i} className="rounded-2xl bg-paper p-2 text-center">
-                <p className="text-base font-bold text-amber-600 tabular-nums">+{r.referrerXp}</p>
-                <p className="mt-0.5 text-[10px] text-gray-500">
-                  {i === 0 ? 'Signup' : i === 1 ? '5+ jogos' : '1 torneio'}
-                </p>
-              </div>
-            ))}
-          </div>
-          <V2Button onClick={handleShareReferral} className="mt-4 w-full">
-            Compartilhar convite
-          </V2Button>
-        </V2Surface>
+        {/* Convite */}
+        <ReferralCard
+          user={{ uid: user?.uid, platform_name: user?.displayName }}
+          code={referralCode?.code || null}
+          origin={origin}
+          referralsCount={referralCode?.totalSignups || 0}
+          onShare={handleShareReferral}
+        />
       </div>
 
       {/* Info de telemetria (dev) */}
@@ -346,11 +327,17 @@ function V2GamificationHomeOn() {
         </p>
       )}
 
-      {/* Celebration toast (missões recém-completadas) */}
+      {/* Toasts de celebração (missão completada / conquista desbloqueada) */}
       <MissionCompleteToast
         mission={celebratedMission}
         onClose={() => setCelebratedMission(null)}
       />
+      {celebratedAchievement && (
+        <AchievementUnlockToast
+          achievement={celebratedAchievement}
+          onClose={() => setCelebratedAchievement(null)}
+        />
+      )}
     </div>
   );
 }

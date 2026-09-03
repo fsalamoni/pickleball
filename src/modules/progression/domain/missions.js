@@ -18,10 +18,8 @@
  *     `done = true` e `xpReward` é creditado.
  */
 
-import { XP_WEIGHTS_V2 } from './progressionV2.js';
 
 const DAY_MS = 24 * 60 * 60 * 1000;
-const WEEK_MS = 7 * DAY_MS;
 
 /**
  * Catálogo de missões "template" (não pré-feitas).
