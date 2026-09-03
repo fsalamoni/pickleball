@@ -80,6 +80,24 @@ Sem histórico (1º sorteio) o comportamento é idêntico ao anterior — determ
 por seed preservado. Só o Americano usa o histórico; Mexicano/Rei da Quadra
 seguem com sua lógica própria.
 
+#### Quadras disponíveis (fila justa)
+O sorteio do **Americano** aceita o nº de **quadras simultâneas** disponíveis
+(`courts`, informado no diálogo "Sortear"). Sem ele, o motor abre uma quadra por
+grupo de 4 — comportamento histórico, inalterado.
+
+Com ele, cada rodada tem no máximo `courts` jogos. Ex.: **12 atletas em 2
+quadras** → 8 jogam e 4 aguardam; na rodada seguinte esses 4 entram junto com 4
+dos que jogaram, formando as duas próximas quadras. A escolha de quem entra
+continua sendo **"quem menos jogou primeiro"** (desempate: quem mais descansou),
+então a fila circula e a **distribuição de jogos segue equilibrada** ao longo do
+dia (diferença máxima de 1 jogo entre atletas).
+
+`suggestRounds(n, courts)` também considera a fila: quando as quadras reduzem o
+que o nº de atletas permitiria, sugere mais rodadas para preservar a média de
+jogos por pessoa. Sem o parâmetro, devolve exatamente o valor de antes.
+Domínio: `normalizeDrawCourts` + `generateGameDayGames({ courts })` em
+`clubs/domain/gameDayDraw.js`.
+
 ### Ranking do dia (classificação interna)
 Entre "Jogos" e "Resultados no ranking", o organizador mostra o **Ranking do
 dia**: cada participante com jogos, vitórias, derrotas, saldo de pontos e pontos

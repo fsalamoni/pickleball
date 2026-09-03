@@ -288,13 +288,17 @@ function GamesSection({ eventId, dateId, participants }) {
   const appendGames = useAppendEventGames(eventId);
   const clearGames = useClearEventGames(eventId);
   const [rounds, setRounds] = useState(0);
+  // Quadras simultâneas disponíveis (0 = automático: uma por grupo de 4).
+  const [courts, setCourts] = useState(0);
   const [drawOpen, setDrawOpen] = useState(false);
   const [replaceUnscored, setReplaceUnscored] = useState(false);
   const [manualOpen, setManualOpen] = useState(false);
   const [confirmClear, setConfirmClear] = useState(false);
   const [drawing, setDrawing] = useState(false);
 
-  const effectiveRounds = rounds || suggestRounds(participants.length) || 3;
+  const maxCourts = Math.max(1, Math.floor(participants.length / 4));
+  const effectiveCourts = courts || null;
+  const effectiveRounds = rounds || suggestRounds(participants.length, effectiveCourts) || 3;
   const canDraw = participants.length >= 4;
 
   const { scored: scoredGames, unscored: unscoredGames } = useMemo(
@@ -326,7 +330,9 @@ function GamesSection({ eventId, dateId, participants }) {
       // PARTICIPAÇÃO por rodada presente (quem seguiu no dia e jogou menos entra
       // primeiro, sem forçar quem entrou tarde ao mesmo total dos veteranos).
       const history = buildDrawHistory(plan.keptGames, ids);
-      const raw = generateGameDayGames(ids, { rounds: effectiveRounds, seed, history });
+      const raw = generateGameDayGames(ids, {
+        rounds: effectiveRounds, seed, history, courts: effectiveCourts,
+      });
       // Wave C.6: também salva o `user_id` real (se o participante for um
       // atleta da plataforma) para que o Cloud Function de ranking possa
       // agregar estatísticas por uid (em vez de por doc_id de participant).
@@ -472,8 +478,20 @@ function GamesSection({ eventId, dateId, participants }) {
                 value={rounds || effectiveRounds}
                 onChange={(e) => setRounds(Math.max(1, Math.min(GAME_DAY_LIMITS.MAX_ROUNDS, Number(e.target.value) || 0)))}
               />
+              <Label htmlFor="courts">Quadras disponíveis</Label>
+              <Input
+                id="courts"
+                type="number"
+                min={1}
+                max={maxCourts}
+                value={courts || maxCourts}
+                onChange={(e) => setCourts(Math.max(1, Math.min(maxCourts, Number(e.target.value) || 0)))}
+              />
               <p className="text-xs text-gray-500">
-                Com {participants.length} participantes e {Math.floor(participants.length / 4)} jogo(s) por rodada.
+                Com {participants.length} participantes e {courts ? Math.min(maxCourts, courts) : maxCourts} jogo(s) por rodada.
+                {courts > 0 && courts < maxCourts
+                  ? ' Quem fica de fora entra na rodada seguinte — os jogos seguem distribuídos por igual.'
+                  : ''}
               </p>
             </div>
             <DialogFooter>

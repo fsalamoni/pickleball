@@ -46,6 +46,28 @@ function shuffle(list, rng) {
 
 const pairKey = (a, b) => (a < b ? `${a}|${b}` : `${b}|${a}`);
 
+/** Teto de rodadas sugeridas quando há fila (menos quadras que grupos de 4). */
+const MAX_SUGGESTED_ROUNDS = 30;
+
+/**
+ * Normaliza o nº de QUADRAS SIMULTÂNEAS de um sorteio.
+ *
+ * O limite físico é `maxByPlayers` (= ⌊n/4⌋): não há como abrir mais jogos
+ * simultâneos do que grupos de 4 disponíveis. Valor ausente/inválido significa
+ * "automático" → usa o máximo, que é exatamente o comportamento histórico
+ * (todos jogam em todas as rodadas quando n é múltiplo de 4).
+ *
+ * @param {number|null|undefined} value  quadras informadas pelo organizador
+ * @param {number} maxByPlayers  ⌊n/4⌋
+ * @returns {number} quadras efetivas (>= 1)
+ */
+export function normalizeDrawCourts(value, maxByPlayers) {
+  const cap = Math.max(1, Math.floor(maxByPlayers) || 1);
+  const n = Math.floor(Number(value));
+  if (!Number.isFinite(n) || n < 1) return cap;
+  return Math.min(cap, n);
+}
+
 /**
  * Normaliza um lado (side_a/side_b) para uma lista de ids de participante.
  * Aceita tanto o shape do Firestore (`[{ id, name }]`) quanto ids "crus"
@@ -251,11 +273,18 @@ function buildRound(playing, partnerCount, oppCount, rng) {
  * Gera os jogos do dia em `rounds` rodadas, equilibrando a participação.
  *
  * @param {string[]} playerIds  ids/identificadores únicos dos participantes
- * @param {{ rounds?: number, seed?: string, history?: object }} [options]
+ * @param {{ rounds?: number, seed?: string, history?: object, courts?: number }} [options]
  *   `history` (opcional): saída de {@link buildDrawHistory} com as duplas e
  *   adversários já ocorridos e o nº de partidas/rodadas presentes por atleta,
  *   para um sorteio ADITIVO ciente do que já aconteceu no dia (evita repetir
  *   parcerias/confrontos e equilibra a participação por taxa).
+ *
+ *   `courts` (opcional): QUADRAS SIMULTÂNEAS disponíveis. Sem ele, o motor abre
+ *   uma quadra por grupo de 4 (comportamento histórico). Com ele, cada rodada
+ *   tem no máximo `courts` jogos — ex.: 12 atletas em 2 quadras → 8 jogam e 4
+ *   aguardam, e na rodada seguinte esses 4 entram junto com 4 dos que jogaram.
+ *   A escolha de quem joga continua sendo "quem menos jogou primeiro", então a
+ *   distribuição de jogos permanece equilibrada ao longo do dia.
  * @returns {Array<{ round: number, side_a: [string, string], side_b: [string, string] }>}
  *   Jogos de duplas. Os ids retornados são os mesmos recebidos em `playerIds`.
  */
@@ -265,7 +294,11 @@ export function generateGameDayGames(playerIds, options = {}) {
   if (n < 4) {
     throw new Error('O sorteio do dia de jogo exige no mínimo 4 participantes.');
   }
-  const { seed = 'gameday', rounds = suggestRounds(n), history = null } = options;
+  const { seed = 'gameday', history = null, courts: courtsOption = null } = options;
+  // Quadras SIMULTÂNEAS disponíveis. Ausente = automático (uma quadra por grupo
+  // de 4), que é exatamente o comportamento histórico.
+  const courts = normalizeDrawCourts(courtsOption, Math.floor(n / 4));
+  const rounds = options.rounds === undefined ? suggestRounds(n, courtsOption) : options.rounds;
   const totalRounds = Math.max(1, Math.min(60, Math.floor(rounds)));
   const rng = seededRng(seed);
 
@@ -286,7 +319,10 @@ export function generateGameDayGames(playerIds, options = {}) {
     seedFromHistory(history, ids, idToIndex, gamesPlayed, partnerCount, oppCount);
   }
 
-  const courts = Math.floor(n / 4);
+  // Jogadores em quadra por rodada. Quando as quadras limitam (ex.: 12 atletas
+  // em 2 quadras → 8 jogam, 4 aguardam), o rodízio abaixo escolhe SEMPRE quem
+  // menos jogou (desempate: quem mais descansou), então a fila circula e a
+  // distribuição de jogos segue equilibrada ao longo do dia.
   const playPerRound = courts * 4;
   const out = [];
 
@@ -333,8 +369,18 @@ export function generateGameDayGames(playerIds, options = {}) {
  * vezes — algo próximo de "cada jogador participa de N−1 jogos" do Americano,
  * limitado para não gerar uma grade gigante.
  */
-export function suggestRounds(n) {
+export function suggestRounds(n, courts = null) {
   if (n < 4) return 0;
   // Um valor prático: o suficiente para uma boa rotação sem exagero.
-  return Math.max(3, Math.min(12, n - 1));
+  const base = Math.max(3, Math.min(12, n - 1));
+  // Sem informar quadras, devolve exatamente o valor histórico.
+  if (courts == null) return base;
+  const maxByPlayers = Math.floor(n / 4);
+  const effective = normalizeDrawCourts(courts, maxByPlayers);
+  // Só escala quando as quadras REDUZEM o que o nº de atletas permitiria.
+  if (effective >= maxByPlayers) return base;
+  // Com fila, cada rodada entrega menos jogos por atleta; aumentar as rodadas
+  // preserva a MÉDIA de jogos por pessoa que o dia teria sem fila.
+  const playPerRound = effective * 4;
+  return Math.max(base, Math.min(MAX_SUGGESTED_ROUNDS, Math.ceil((base * n) / playPerRound)));
 }

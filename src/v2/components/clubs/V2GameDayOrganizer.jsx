@@ -270,6 +270,8 @@ function GamesSection({ eventId, dateId, participants }) {
   const clearGames = useClearEventGames(eventId);
   const formatsOn = true;
   const [rounds, setRounds] = useState(0);
+  // Quadras simultâneas disponíveis (0 = automático: uma por grupo de 4).
+  const [courts, setCourts] = useState(0);
   const [format, setFormat] = useState(GAME_DAY_FORMAT.AMERICANO);
   const [drawOpen, setDrawOpen] = useState(false);
   const [manualOpen, setManualOpen] = useState(false);
@@ -277,9 +279,13 @@ function GamesSection({ eventId, dateId, participants }) {
   const [drawing, setDrawing] = useState(false);
   const [addingRound, setAddingRound] = useState(false);
 
-  const effectiveRounds = rounds || suggestRounds(participants.length) || 3;
   const canDraw = participants.length >= 4;
   const isKingOfCourt = formatsOn && format === GAME_DAY_FORMAT.KING_OF_COURT;
+  // Quadras só se aplicam ao Americano (o motor que monta rodadas completas).
+  const isAmericano = !formatsOn || format === GAME_DAY_FORMAT.AMERICANO;
+  const maxCourts = Math.max(1, Math.floor(participants.length / 4));
+  const effectiveCourts = isAmericano ? (courts || null) : null;
+  const effectiveRounds = rounds || suggestRounds(participants.length, effectiveCourts) || 3;
 
   const participantById = useMemo(() => {
     const map = new Map();
@@ -314,7 +320,7 @@ function GamesSection({ eventId, dateId, participants }) {
       } else if (formatsOn && format === GAME_DAY_FORMAT.KING_OF_COURT) {
         raw = kingOfCourtFirstRound(ids, { seed }); // só a 1ª rodada; as próximas por resultado
       } else {
-        raw = generateGameDayGames(ids, { rounds: effectiveRounds, seed });
+        raw = generateGameDayGames(ids, { rounds: effectiveRounds, seed, courts: effectiveCourts });
       }
       const payload = raw.map(toPayload);
       await replaceGames.mutateAsync({ games: payload, dateId });
@@ -486,7 +492,25 @@ function GamesSection({ eventId, dateId, participants }) {
                     onChange={(e) => setRounds(Math.max(1, Math.min(GAME_DAY_LIMITS.MAX_ROUNDS, Number(e.target.value) || 0)))}
                   />
                   <p className="text-xs text-gray-500">
-                    Com {participants.length} participantes e {Math.floor(participants.length / 4)} jogo(s) por rodada.
+                    Com {participants.length} participantes e{' '}
+                    {isAmericano && courts > 0 ? Math.min(maxCourts, courts) : maxCourts} jogo(s) por rodada.
+                  </p>
+                </div>
+              )}
+              {isAmericano && canDraw && (
+                <div className="space-y-2">
+                  <Label htmlFor="courts">Quadras disponíveis</Label>
+                  <Input
+                    id="courts"
+                    type="number"
+                    min={1}
+                    max={maxCourts}
+                    value={courts || maxCourts}
+                    onChange={(e) => setCourts(Math.max(1, Math.min(maxCourts, Number(e.target.value) || 0)))}
+                  />
+                  <p className="text-xs text-gray-500">
+                    Com menos quadras do que jogos possíveis, quem fica de fora entra na rodada
+                    seguinte — a distribuição de jogos segue equilibrada.
                   </p>
                 </div>
               )}

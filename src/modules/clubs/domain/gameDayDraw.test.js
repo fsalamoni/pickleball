@@ -1,5 +1,7 @@
 import { describe, it, expect } from 'vitest';
-import { generateGameDayGames, suggestRounds, buildDrawHistory } from './gameDayDraw.js';
+import {
+  generateGameDayGames, suggestRounds, buildDrawHistory, normalizeDrawCourts,
+} from './gameDayDraw.js';
 
 const key = (a, b) => (a < b ? `${a}|${b}` : `${b}|${a}`);
 
@@ -165,5 +167,88 @@ describe('gameDayDraw — sorteio ciente do histórico (aditivo)', () => {
     // p4 está na média (taxa 0,5), não abaixo: não deve monopolizar as quadras
     // para "alcançar" o total dos veteranos. Recebe participação equilibrada.
     expect(played.get('p4') || 0).toBeLessThan(rounds);
+  });
+});
+
+describe('gameDayDraw — quadras disponíveis (fila justa)', () => {
+  const ids12 = Array.from({ length: 12 }, (_, i) => `p${i + 1}`);
+  const inRound = (games, r) => games.filter((g) => g.round === r);
+  const playersOf = (games, r) => inRound(games, r).flatMap((g) => [...g.side_a, ...g.side_b]);
+
+  it('sem informar quadras, mantém o comportamento histórico (todos jogam)', () => {
+    const games = generateGameDayGames(ids12, { rounds: 4, seed: 'x' });
+    for (let r = 1; r <= 4; r += 1) {
+      expect(inRound(games, r)).toHaveLength(3); // 12/4 = 3 quadras
+      expect(new Set(playersOf(games, r)).size).toBe(12);
+    }
+  });
+
+  it('informar o máximo de quadras não altera o sorteio', () => {
+    const auto = generateGameDayGames(ids12, { rounds: 4, seed: 'x' });
+    const max = generateGameDayGames(ids12, { rounds: 4, seed: 'x', courts: 3 });
+    expect(max).toEqual(auto);
+  });
+
+  it('12 atletas em 2 quadras: 2 jogos por rodada, 8 em quadra e 4 aguardando', () => {
+    const games = generateGameDayGames(ids12, { rounds: 6, seed: 'q2', courts: 2 });
+    for (let r = 1; r <= 6; r += 1) {
+      expect(inRound(games, r)).toHaveLength(2);
+      const emQuadra = playersOf(games, r);
+      expect(emQuadra).toHaveLength(8);
+      expect(new Set(emQuadra).size).toBe(8); // ninguém joga 2x na mesma rodada
+    }
+  });
+
+  it('quem ficou de fora entra na rodada seguinte, com 4 dos que jogaram', () => {
+    const games = generateGameDayGames(ids12, { rounds: 2, seed: 'fila', courts: 2 });
+    const r1 = new Set(playersOf(games, 1));
+    const foraR1 = ids12.filter((id) => !r1.has(id));
+    expect(foraR1).toHaveLength(4);
+
+    const r2 = new Set(playersOf(games, 2));
+    foraR1.forEach((id) => expect(r2.has(id)).toBe(true)); // todos os 4 entram
+    expect([...r2].filter((id) => r1.has(id))).toHaveLength(4); // + 4 dos 8
+  });
+
+  it('mantém a distribuição de jogos equilibrada ao longo do dia', () => {
+    const games = generateGameDayGames(ids12, { rounds: 9, seed: 'eq', courts: 2 });
+    const { played } = counts(games);
+    const totais = ids12.map((id) => played.get(id) || 0);
+    expect(Math.max(...totais) - Math.min(...totais)).toBeLessThanOrEqual(1);
+  });
+
+  it('quadras acima do possível são limitadas pelo nº de atletas', () => {
+    const games = generateGameDayGames(ids12, { rounds: 2, seed: 'cap', courts: 10 });
+    expect(inRound(games, 1)).toHaveLength(3);
+  });
+
+  it('valores inválidos de quadras caem no automático', () => {
+    const base = generateGameDayGames(ids12, { rounds: 3, seed: 'inv' });
+    [0, -2, null, undefined, 'x', NaN].forEach((v) => {
+      expect(generateGameDayGames(ids12, { rounds: 3, seed: 'inv', courts: v })).toEqual(base);
+    });
+  });
+
+  it('funciona com N não múltiplo de 4 (13 atletas em 2 quadras)', () => {
+    const ids13 = Array.from({ length: 13 }, (_, i) => `q${i + 1}`);
+    const games = generateGameDayGames(ids13, { rounds: 8, seed: 'n13', courts: 2 });
+    for (let r = 1; r <= 8; r += 1) expect(inRound(games, r)).toHaveLength(2);
+    const { played } = counts(games);
+    const totais = ids13.map((id) => played.get(id) || 0);
+    expect(Math.max(...totais) - Math.min(...totais)).toBeLessThanOrEqual(1);
+  });
+
+  it('suggestRounds: sem quadras mantém o histórico; com fila, escala', () => {
+    expect(suggestRounds(12)).toBe(11);
+    expect(suggestRounds(12, 3)).toBe(11); // 3 quadras: sem redução
+    expect(suggestRounds(12, 2)).toBeGreaterThan(11); // fila → mais rodadas
+    expect(suggestRounds(12, 2)).toBeLessThanOrEqual(30);
+  });
+
+  it('normalizeDrawCourts respeita o teto de grupos de 4', () => {
+    expect(normalizeDrawCourts(2, 3)).toBe(2);
+    expect(normalizeDrawCourts(9, 3)).toBe(3);
+    expect(normalizeDrawCourts(0, 3)).toBe(3);
+    expect(normalizeDrawCourts(null, 3)).toBe(3);
   });
 });

@@ -218,6 +218,8 @@ function GamesSection({ gameDay, participants, isOwner }) {
   const clearGames = useClearGameDayGames(gameDay.id);
   const formatsOn = true;
   const [rounds, setRounds] = useState(0);
+  // Quadras simultâneas disponíveis (0 = automático: uma por grupo de 4).
+  const [courts, setCourts] = useState(0);
   const [format, setFormat] = useState(gameDay.format || GAME_DAY_FORMAT.AMERICANO);
   const [drawOpen, setDrawOpen] = useState(false);
   const [replaceUnscored, setReplaceUnscored] = useState(false);
@@ -231,9 +233,13 @@ function GamesSection({ gameDay, participants, isOwner }) {
     [games],
   );
 
-  const effectiveRounds = rounds || suggestRounds(participants.length) || 3;
   const canDraw = participants.length >= 4;
   const isKingOfCourt = formatsOn && format === GAME_DAY_FORMAT.KING_OF_COURT;
+  // Quadras só se aplicam ao Americano (o motor que monta rodadas completas).
+  const isAmericano = !formatsOn || format === GAME_DAY_FORMAT.AMERICANO;
+  const maxCourts = Math.max(1, Math.floor(participants.length / 4));
+  const effectiveCourts = isAmericano ? (courts || null) : null;
+  const effectiveRounds = rounds || suggestRounds(participants.length, effectiveCourts) || 3;
 
   const participantById = useMemo(() => {
     const map = new Map();
@@ -281,7 +287,9 @@ function GamesSection({ gameDay, participants, isOwner }) {
         // e equilibra a PARTICIPAÇÃO por rodada presente (quem seguiu no dia e
         // jogou menos entra primeiro, sem forçar quem entrou tarde ao mesmo total).
         const history = buildDrawHistory(plan.keptGames, ids);
-        raw = generateGameDayGames(ids, { rounds: effectiveRounds, seed, history });
+        raw = generateGameDayGames(ids, {
+          rounds: effectiveRounds, seed, history, courts: effectiveCourts,
+        });
       }
       const payload = offsetRounds(raw, plan.roundBase).map(toPayload);
       await appendGames.mutateAsync({ removeIds: plan.removeIds, games: payload, orderBase: plan.orderBase });
@@ -467,6 +475,24 @@ function GamesSection({ gameDay, participants, isOwner }) {
                     value={rounds || effectiveRounds}
                     onChange={(e) => setRounds(Math.max(1, Math.min(GAME_DAY_LIMITS.MAX_ROUNDS, Number(e.target.value) || 0)))}
                   />
+                </div>
+              )}
+              {isAmericano && canDraw && (
+                <div className="space-y-2">
+                  <Label htmlFor="courts">Quadras disponíveis</Label>
+                  <Input
+                    id="courts"
+                    type="number"
+                    min={1}
+                    max={maxCourts}
+                    value={courts || maxCourts}
+                    onChange={(e) => setCourts(Math.max(1, Math.min(maxCourts, Number(e.target.value) || 0)))}
+                  />
+                  <p className="text-xs text-gray-500">
+                    {maxCourts > 1
+                      ? `Com ${participants.length} atletas cabem até ${maxCourts} jogos ao mesmo tempo. Se você tiver menos quadras, quem fica de fora entra na rodada seguinte — os jogos continuam distribuídos por igual.`
+                      : 'Com este número de atletas, apenas um jogo acontece por vez.'}
+                  </p>
                 </div>
               )}
             </div>
