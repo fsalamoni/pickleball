@@ -168,7 +168,7 @@ navegação nova.
 | `/chat` `/novidades` | autenticado (V2) | mensagens + feed |
 | `/ranking` `/ranking/duplas` `/encontrar-jogadores` `/procura-jogo` `/parceiros` | autenticado (V2) | rating (simples+duplas) + jogos + parceiros |
 | `/meu-desempenho` | autenticado (V2) | performance |
-| `/gamification` `/conquistas` `/conquistas/:uid` `/hall-da-fama` | autenticado (V2) | Gamificação V2 — **gated por `gamification_v2`** (flag OFF ⇒ empty state). Cada rota isolada em `GamificationErrorBoundary` |
+| `/gamification` `/conquistas` `/conquistas/:uid` `/hall-da-fama` `/vinculos` | autenticado (V2) | Gamificação V2 — **gated por `gamification_v2`** (flag OFF ⇒ empty state). Cada rota isolada em `GamificationErrorBoundary`. `/vinculos` = rivais (derivados do H2H), crews e mentorias |
 | `/admin/torneios` `/admin/metricas` `/admin/parceiros` `/admin/console` | platform_admin (V2) | painel + console (flags, migrations) |
 | `/admin/owner-debug` `/admin/owner-restore` `/admin/profiles` | platform_admin (V2) | admin tools |
 

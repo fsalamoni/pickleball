@@ -551,8 +551,13 @@ Curvas de progressão, níveis, metas e todo o sistema de **Gamificação V2**
   de XP, missões diárias, proteção de sequência (dias de folga,
   congelamentos, férias), kudos, indicações, rivais/crews/mentorias e
   ranking mensal.
-- **Páginas V2**: `/gamification` (hub), `/hall-da-fama`. Bloco "Sua
-  progressão" no `/perfil` via `ProfileProgressionSection`.
+- **Páginas V2**: `/gamification` (hub), `/hall-da-fama`, `/vinculos`
+  (rivais, crews, mentorias). Bloco "Sua progressão" no `/perfil` via
+  `ProfileProgressionSection`.
+- **XP**: atividade + bônus de conquista registrada + XP de missão concluída
+  (`domain/xpTotal.js`), tudo derivado — recalcular não infla.
+- **Ranking sazonal**: Cloud Function `recomputeSeasonRankingDaily` (03h BRT)
+  ranqueia por XP DA TEMPORADA (`xpTotal - baselineXp`), não por XP de vida.
 - **13 coleções** novas — detalhe em `docs/05-DATA-MODEL.md` § Gamificação V2.
 - **Vocabulário com fonte única**: `tiers.js` e `skillTrees.js` mandam; o
   schema Zod e o `firestore.rules` derivam. Guardado na CI por

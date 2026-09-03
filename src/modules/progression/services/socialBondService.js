@@ -10,6 +10,7 @@ import {
   collection,
   query,
   where,
+  limit as fsLimit,
   getDocs,
   serverTimestamp,
   runTransaction,
@@ -241,12 +242,15 @@ export async function listCrewMembers(crewId) {
 }
 
 export async function listCrews({ isPublic = true, limit: lim = 30 } = {}) {
+  // O limite vai na QUERY: baixar todas as crews públicas do país para
+  // mostrar 30 é conta que só cresce.
   const q = query(
     collection(db(), 'crews'),
     where('isPublic', '==', isPublic),
+    fsLimit(lim),
   );
   const snap = await getDocs(q);
-  return snap.docs.map((d) => parseCrew(d.data())).filter(Boolean).slice(0, lim);
+  return snap.docs.map((d) => parseCrew(d.data())).filter(Boolean);
 }
 
 export async function listCrewsForMember(uid) {

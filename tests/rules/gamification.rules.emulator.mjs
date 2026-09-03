@@ -170,6 +170,18 @@ await t('CREW: bob NÃO pode pular membersCount para 40', () =>
   assertFails(updateDoc(doc(bob, 'crews', 'c1'), { membersCount: 40 })));
 await t('CREW: bob lista os membros da crew', () =>
   assertSucceeds(getDocs(query(collection(bob, 'crew_members'), where('crewId', '==', 'c1')))));
+await t('CREW: bob SAI da crew (apaga a própria adesão)', async () => {
+  const { deleteDoc } = await import('firebase/firestore');
+  await assertSucceeds(deleteDoc(doc(bob, 'crew_members', 'c1_bob')));
+});
+await t('CREW: bob decrementa membersCount ao sair', () =>
+  assertSucceeds(updateDoc(doc(bob, 'crews', 'c1'), { membersCount: 1, updatedAt: 3 })));
+await t('CREW: ninguém apaga a adesão de outra pessoa', async () => {
+  const carol = env.authenticatedContext('carol').firestore();
+  const { deleteDoc } = await import('firebase/firestore');
+  await assertFails(deleteDoc(doc(carol, 'crew_members', 'c1_alice')));
+});
+
 await t('CREW privada: membro consegue ler', async () => {
   await env.withSecurityRulesDisabled(async (ctx) => {
     await setDoc(doc(ctx.firestore(), 'crews', 'c2'), crew('c2', { isPublic: false }));

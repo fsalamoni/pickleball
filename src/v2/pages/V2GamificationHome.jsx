@@ -1,7 +1,7 @@
 import React, { useMemo } from 'react';
 import { Link } from 'react-router-dom';
 import {
-  Award, Sparkles, Target, TrendingUp, Zap, ChevronRight,
+  Award, Sparkles, Target, TrendingUp, Trophy, Users, Zap, ChevronRight,
 } from 'lucide-react';
 import { useAuth } from '@/core/lib/FirebaseAuthContext';
 import { useFeatureFlag } from '@/core/lib/FeatureFlagsContext';
@@ -353,6 +353,38 @@ function V2GamificationHomeOn() {
           referralsCount={referralCode?.totalSignups || 0}
           onShare={handleShareReferral}
         />
+      </div>
+
+      {/* Atalhos para as outras seções da gamificação */}
+      <div className="mt-6 grid grid-cols-1 gap-3 sm:grid-cols-2">
+        <Link
+          to="/vinculos"
+          data-testid="link-vinculos"
+          className="flex items-center gap-3 rounded-3xl border border-gray-100 bg-paper-pure p-4 transition-colors hover:border-gray-200 hover:bg-paper"
+        >
+          <div className="flex h-10 w-10 shrink-0 items-center justify-center rounded-2xl bg-purple-100 text-purple-700">
+            <Users className="h-5 w-5" aria-hidden="true" />
+          </div>
+          <div className="min-w-0 flex-1">
+            <p className="text-sm font-bold text-ink">Vínculos</p>
+            <p className="text-xs text-gray-500">Rivais, crews e mentorias</p>
+          </div>
+          <ChevronRight className="h-4 w-4 shrink-0 text-gray-400" aria-hidden="true" />
+        </Link>
+        <Link
+          to="/hall-da-fama"
+          data-testid="link-hall-da-fama"
+          className="flex items-center gap-3 rounded-3xl border border-gray-100 bg-paper-pure p-4 transition-colors hover:border-gray-200 hover:bg-paper"
+        >
+          <div className="flex h-10 w-10 shrink-0 items-center justify-center rounded-2xl bg-amber-100 text-amber-700">
+            <Trophy className="h-5 w-5" aria-hidden="true" />
+          </div>
+          <div className="min-w-0 flex-1">
+            <p className="text-sm font-bold text-ink">Hall da Fama</p>
+            <p className="text-xs text-gray-500">Os maiores da plataforma</p>
+          </div>
+          <ChevronRight className="h-4 w-4 shrink-0 text-gray-400" aria-hidden="true" />
+        </Link>
       </div>
 
       {/* Info de telemetria (dev) */}

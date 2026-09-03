@@ -19,7 +19,8 @@ Curvas de progressão, níveis, metas e (desde a Onda R) todo o sistema de
   `useGamificationTracker`
 - **Components**: `TierBadge`, `SkillTreeBars`, `ProgressionCardV2`,
   `MissionList`, `MissionCompleteToast`, `StreakShieldBadge`,
-  `KudosButton`, `ReferralCard`, `SeasonBanner`
+  `KudosButton`, `ReferralCard`, `SeasonBanner`, `RivalsList`,
+  `CrewsPanel`, `MentorshipsPanel`
 
 ## Feature flag
 - `GAMIFICATION_V2` (`gamification_v2`) — master, **default OFF**.
@@ -68,6 +69,31 @@ Curvas de progressão, níveis, metas e (desde a Onda R) todo o sistema de
 9. **Progresso de missão nunca regride.** Se um resultado é corrigido depois,
    a missão concluída continua concluída — tirar do usuário algo que ele já
    viu conquistado é pior que a imprecisão.
+
+## De onde vem o XP
+
+`xpTotal` = **atividade** + **bônus das conquistas registradas** + **XP das
+missões concluídas** (`domain/xpTotal.js`).
+
+Nenhuma parcela é um contador que a UI incrementa: cada uma é derivada de um
+fato que existe uma vez só (estatística real, documento de conquista
+idempotente, documento de missão do dia). Por isso recalcular do zero sempre
+dá o mesmo número — e por isso não há como farmar. Há teste de idempotência.
+
+Antes disso o XP vinha só das cinco estatísticas de torneio: os 42.100 XP em
+bônus do catálogo de conquistas e todo o XP de missão eram decorativos.
+
+## Vínculos sociais (`/vinculos`)
+
+- **Rivais** são DERIVADOS de `useHeadToHead` (confrontos reais). A coleção
+  `user_rivals` existe no backend mas nada a preenche — derivar do histórico
+  dá dado verdadeiro desde o primeiro jogo e sem nada para sincronizar.
+- **Crews** e **mentorias** usam as coleções próprias (`crews`,
+  `crew_members`, `mentorships`), com as escritas cruzadas estreitas descritas
+  acima.
+- Iniciar mentoria não tem botão: é convite entre duas pessoas e o fluxo de
+  convite ainda não existe. Um botão unilateral criaria vínculo sem o outro
+  lado aceitar.
 
 ## Fluxo da indicação (referral)
 
