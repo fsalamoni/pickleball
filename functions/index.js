@@ -27,6 +27,7 @@ const { setGlobalOptions } = require('firebase-functions/v2');
 const logger = require('firebase-functions/logger');
 const { recomputeAllRatings, isEligible } = require('./ranking');
 const { recomputeClubInternalRankings } = require('./clubRanking');
+const { recomputeSeasonRanking } = require('./seasonRanking');
 
 if (!getApps().length) initializeApp();
 
@@ -654,5 +655,37 @@ exports.recomputeAllClubsMonthly = onSchedule(
     }
     logger.info('recomputeAllClubsMonthly: concluído.', { ok, failed, total: clubsSnap.size });
     return { ok, failed, total: clubsSnap.size };
+  },
+);
+
+/**
+ * Ranking sazonal da gamificação V2 (flag `gamification_v2`).
+ *
+ * Diário às 03h de Brasília: a temporada fica viva durante o mês em vez de
+ * só existir no fechamento — o atleta precisa ver a posição mudar enquanto
+ * ainda dá tempo de reagir.
+ *
+ * As regras do Firestore proíbem o cliente de escrever em `season_rankings`
+ * (posição não se decide no navegador), então esta função é a única fonte.
+ * É idempotente: recalcula tudo do zero a cada execução.
+ */
+exports.recomputeSeasonRankingDaily = onSchedule(
+  {
+    schedule: '0 3 * * *',
+    timeZone: 'America/Sao_Paulo',
+    region: REGION,
+    timeoutSeconds: 300,
+    memory: '512MiB',
+  },
+  async () => {
+    try {
+      const res = await recomputeSeasonRanking({ logger });
+      return res;
+    } catch (err) {
+      logger.error('recomputeSeasonRankingDaily falhou:', err);
+      // Não relança: é ranking, não pode virar alerta de incidente. A próxima
+      // execução recalcula tudo do zero de qualquer forma.
+      return { ranked: 0, error: String(err && err.message) };
+    }
   },
 );

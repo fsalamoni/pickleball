@@ -227,6 +227,14 @@
       ]
     },
     {
+      "collectionGroup": "user_missions",
+      "queryScope": "COLLECTION",
+      "fields": [
+        { "fieldPath": "uid", "order": "ASCENDING" },
+        { "fieldPath": "date", "order": "DESCENDING" }
+      ]
+    },
+    {
       "collectionGroup": "user_progression_v2",
       "queryScope": "COLLECTION",
       "fields": [

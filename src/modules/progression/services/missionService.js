@@ -15,6 +15,8 @@ import {
   collection,
   query,
   where,
+  orderBy,
+  limit as fsLimit,
   getDocs,
   serverTimestamp,
 } from 'firebase/firestore';
@@ -126,20 +128,28 @@ export async function claimDailyBonus(uid, now = new Date()) {
   return updated;
 }
 
-/** Listar missões do usuário num range (pra histórico). */
-export async function listUserMissions(uid, limit = 30) {
+/**
+ * Documentos de missão do atleta, do mais recente para o mais antigo.
+ *
+ * O limite vai na QUERY (índice composto `uid ASC, date DESC`): antes a
+ * função baixava TODOS os dias de missão do usuário para descartar o
+ * excedente no navegador — a conta cresce um documento por dia, para sempre.
+ *
+ * @param {string} uid
+ * @param {number} [max] quantos dias trazer
+ */
+export async function listUserMissions(uid, max = 30) {
   if (!uid) return [];
-  // firestore não permite query por uid+date sem composite index — busca por prefixo
-  // caminho é user_missions/{uid}_{date}, então usamos collection + filter
   const q = query(
     collection(db(), 'user_missions'),
     where('uid', '==', uid),
+    orderBy('date', 'desc'),
+    fsLimit(max),
   );
   const snap = await getDocs(q);
   return snap.docs
     .map((d) => parseMissionDoc(d.data()))
-    .filter((d) => UserMissionSchema.safeParse(d).success)
-    .slice(0, limit);
+    .filter((d) => UserMissionSchema.safeParse(d).success);
 }
 
 /** Subscribe em tempo real. */

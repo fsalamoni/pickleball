@@ -4,6 +4,7 @@ import { Sparkles } from 'lucide-react';
 import { usePlayerStats } from '@/modules/performance/hooks/usePlayerStats';
 import { usePlayerMatchDates } from '@/modules/progression/hooks/useProgression';
 import { useSyncProgressionV2 } from '@/modules/progression/hooks/useSyncProgressionV2';
+import { useUserAchievementsV2 } from '@/modules/achievements/hooks/useUserAchievementsV2';
 import ProgressionCardV2 from '@/modules/progression/components/ProgressionCardV2';
 import { V2Badge } from '@/v2/ui/primitives';
 
@@ -21,7 +22,8 @@ import { V2Badge } from '@/v2/ui/primitives';
 export default function ProfileProgressionSection({ uid }) {
   const { stats } = usePlayerStats();
   const { data: matchDates = [] } = usePlayerMatchDates(uid, !!uid);
-  useSyncProgressionV2(uid, stats, !!uid);
+  const { unlockedIds } = useUserAchievementsV2(uid, !!uid);
+  useSyncProgressionV2(uid, stats, !!uid, unlockedIds);
 
   return (
     <section className="mt-8" data-testid="profile-progression-v2">

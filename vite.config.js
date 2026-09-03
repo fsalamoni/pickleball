@@ -60,7 +60,13 @@ export default defineConfig(({ mode }) => {
     test: {
       environment: 'jsdom',
       globals: true,
-      include: ['src/**/*.{test,spec}.{js,jsx,ts,tsx}'],
+      // `functions/` entra porque as Cloud Functions escrevem no banco — a
+      // lógica pura delas (ex.: montagem do ranking sazonal) merece o mesmo
+      // rigor do resto. Só os arquivos de teste; o deploy segue intocado.
+      include: [
+        'src/**/*.{test,spec}.{js,jsx,ts,tsx}',
+        'functions/**/*.{test,spec}.js',
+      ],
       // Robustez de CI: limites explícitos para um teste/hook travado abortar
       // rápido (com mensagem clara) em vez de pendurar o processo. Um pouco
       // mais folgados que o padrão para tolerar a CPU mais lenta do runner.

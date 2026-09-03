@@ -92,9 +92,11 @@ function V2GamificationHomeOn() {
 
   // ===== Persistência V2 (Firestore) =====
   // Sincroniza stats V1 → doc materializado V2 (cria/atualiza se preciso)
-  useSyncProgressionV2(user?.uid, stats, !!user);
-  const { progression } = useUserProgressionV2(user?.uid, !!user);
   const { unlocked: unlockedFromDb, unlockedIds: persistedIds } = useUserAchievementsV2(user?.uid, !!user);
+  // O XP agora soma atividade + bônus das conquistas registradas + missões
+  // concluídas, então o sync precisa dos ids persistidos.
+  useSyncProgressionV2(user?.uid, stats, !!user, persistedIds);
+  const { progression } = useUserProgressionV2(user?.uid, !!user);
 
   // Registra em `user_achievements_v2` o que o cálculo diz que o atleta já
   // ganhou. Sem isso o cálculo nunca virava registro: perfil público e Hall

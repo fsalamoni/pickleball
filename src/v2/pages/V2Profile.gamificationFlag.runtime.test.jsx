@@ -26,6 +26,8 @@ const syncSpy = vi.fn(() => ({ progression: null }));
 vi.mock('@/modules/performance/hooks/usePlayerStats', () => ({ usePlayerStats: (...a) => statsSpy(...a) }));
 vi.mock('@/modules/progression/hooks/useProgression', () => ({ usePlayerMatchDates: (...a) => matchDatesSpy(...a) }));
 vi.mock('@/modules/progression/hooks/useSyncProgressionV2', () => ({ useSyncProgressionV2: (...a) => syncSpy(...a) }));
+const achievementsSpy = vi.fn(() => ({ unlocked: [], unlockedIds: new Set() }));
+vi.mock('@/modules/achievements/hooks/useUserAchievementsV2', () => ({ useUserAchievementsV2: (...a) => achievementsSpy(...a) }));
 
 import V2Profile from '@/v2/pages/V2Profile.jsx';
 
@@ -34,7 +36,7 @@ beforeEach(() => {
   container = document.createElement('div');
   document.body.appendChild(container);
   root = createRoot(container);
-  statsSpy.mockClear(); matchDatesSpy.mockClear(); syncSpy.mockClear();
+  statsSpy.mockClear(); matchDatesSpy.mockClear(); syncSpy.mockClear(); achievementsSpy.mockClear();
 });
 afterEach(() => { act(() => root.unmount()); container.remove(); });
 
@@ -57,6 +59,7 @@ describe('V2Profile · flag GAMIFICATION_V2 OFF', () => {
     expect(statsSpy).not.toHaveBeenCalled();
     expect(matchDatesSpy).not.toHaveBeenCalled();
     expect(syncSpy).not.toHaveBeenCalled();
+    expect(achievementsSpy).not.toHaveBeenCalled();
   });
 
   it('o perfil em si continua funcionando', async () => {

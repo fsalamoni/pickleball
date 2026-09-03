@@ -1,82 +1,129 @@
 /**
- * useSyncProgressionV2 — sincroniza stats V1 → doc materializado V2.
+ * useSyncProgressionV2 — mantém `user_progression_v2/{uid}` em dia.
  *
- * Roda em background: ao montar, lê o doc V2 e, se estiver desatualizado ou
- * ausente, recalcula do V1 e grava.
+ * Recalcula do zero e grava quando o resultado muda. Como todo o XP é
+ * DERIVADO (atividade + conquistas registradas + missões concluídas), o
+ * recálculo é idempotente: rodar duas vezes dá o mesmo número.
  *
- * Garante que `useUserProgressionV2` sempre tem dados frescos sem o caller
- * precisar orquestrar.
+ * Também sincroniza as conquistas: `achievementsUnlocked` no snapshot é o que
+ * o Hall da Fama exibe, e ficava eternamente em 0.
  */
-import { useEffect, useRef } from 'react';
-import { useQueryClient } from '@tanstack/react-query';
+import { useEffect, useMemo, useRef } from 'react';
+import { useQuery, useQueryClient } from '@tanstack/react-query';
 import { useUserProgressionV2 } from './useUserProgressionV2';
 import { setUserProgressionV2 } from '@/modules/progression/services/progressionV2Service';
+import { listUserMissions } from '@/modules/progression/services/missionService';
 import { makeEmptyProgressionV2 } from '@/modules/progression/domain/progressionV2Schema';
-import { computeXpV2, levelFromXpV2, XP_WEIGHTS_V2 } from '@/modules/progression/domain/progressionV2';
+import { levelFromXpV2, XP_WEIGHTS_V2 } from '@/modules/progression/domain/progressionV2';
+import { computeTotalXpV2 } from '@/modules/progression/domain/xpTotal';
 import { tierFromXp } from '@/modules/progression/domain/tiers';
 import { buildSkillTrees, toSkillTreeSnapshots } from '@/modules/progression/domain/skillTrees';
+import { ACHIEVEMENTS_V2 } from '@/modules/achievements/domain/achievementsV2';
 import { logger } from '@/core/lib/logger';
 
 const PROGRESSION_V2_KEY = (uid) => ['user-progression-v2', uid];
+const MISSION_HISTORY_KEY = (uid) => ['user-missions-history', uid];
 
-export function useSyncProgressionV2(uid, stats, enabled = true) {
+/** Quantos dias de missão entram na conta do XP. */
+const DIAS_DE_MISSAO = 120;
+
+/**
+ * @param {string} uid
+ * @param {object} stats saída de `usePlayerStats`
+ * @param {boolean} enabled
+ * @param {Set<string>|Iterable<string>} [unlockedAchievementIds] ids já
+ *        registrados em `user_achievements_v2`
+ */
+export function useSyncProgressionV2(uid, stats, enabled = true, unlockedAchievementIds = null) {
   const qc = useQueryClient();
   const { progression } = useUserProgressionV2(uid, enabled);
-  const syncedRef = useRef(false);
+  const ultimoGravado = useRef('');
+
+  // Histórico de missões: entra na soma de XP. Consulta limitada e com cache
+  // longo — é histórico, não muda a toda hora.
+  const { data: missionDocs = [] } = useQuery({
+    queryKey: MISSION_HISTORY_KEY(uid),
+    queryFn: () => listUserMissions(uid, DIAS_DE_MISSAO),
+    enabled: !!uid && enabled,
+    staleTime: 5 * 60_000,
+  });
+
+  const calculado = useMemo(() => {
+    if (!stats) return null;
+    const statsSources = {
+      tournament_attended: stats.tournaments || 0,
+      tournament_podium: stats.podiums || 0,
+      tournament_title: stats.titles || 0,
+      game_played: stats.played || 0,
+      game_won: stats.wins || 0,
+    };
+    const { xpTotal, breakdown } = computeTotalXpV2({
+      statsSources,
+      unlockedAchievementIds,
+      missionDocs,
+    });
+    const { trees } = buildSkillTrees(statsSources, XP_WEIGHTS_V2);
+    return {
+      xpTotal,
+      breakdown,
+      level: levelFromXpV2(xpTotal).level,
+      tier: tierFromXp(xpTotal).name,
+      skillTrees: toSkillTreeSnapshots(trees),
+      achievementsUnlocked: unlockedAchievementIds
+        ? [...new Set(unlockedAchievementIds)].length
+        : (progression?.achievementsUnlocked || 0),
+    };
+  }, [stats, unlockedAchievementIds, missionDocs, progression?.achievementsUnlocked]);
 
   useEffect(() => {
-    if (!uid || !enabled) return;
-    if (syncedRef.current) return;
-    if (!stats) return; // sem stats ainda
-    // recálculo é assíncrono; não bloqueia a UI
+    if (!uid || !enabled || !calculado) return;
+
+    // Grava só quando o resultado muda de fato. A assinatura evita reescrever
+    // o mesmo documento a cada render (e a cada centavo de escrita).
+    const assinatura = [
+      uid, calculado.xpTotal, calculado.level, calculado.tier,
+      calculado.achievementsUnlocked,
+    ].join('|');
+    if (ultimoGravado.current === assinatura) return;
+
+    const semMudanca = progression
+      && progression.xpTotal === calculado.xpTotal
+      && progression.level === calculado.level
+      && progression.tier === calculado.tier
+      && progression.achievementsUnlocked === calculado.achievementsUnlocked;
+    if (semMudanca) {
+      ultimoGravado.current = assinatura;
+      return;
+    }
+
+    ultimoGravado.current = assinatura;
     (async () => {
       try {
-        const xpBySource = {
-          tournament_attended: stats.tournaments || 0,
-          tournament_podium: stats.podiums || 0,
-          tournament_title: stats.titles || 0,
-          game_played: stats.played || 0,
-          game_won: stats.wins || 0,
-        };
-        const { xpTotal } = computeXpV2(xpBySource);
-        const levelInfo = levelFromXpV2(xpTotal);
-        const tier = tierFromXp(xpTotal);
-        const { trees } = buildSkillTrees(xpBySource, XP_WEIGHTS_V2);
-        const skillTrees = toSkillTreeSnapshots(trees);
         const now = Date.now();
-        // se já tem doc e tá atualizado, não sobrescreve
-        if (progression && progression.xpTotal === xpTotal) {
-          syncedRef.current = true;
-          return;
-        }
-        const next = progression
-          ? {
-            ...progression,
-            xpTotal,
-            level: levelInfo.level,
-            tier: tier.name,
-            skillTrees,
-            source: 'recomputed',
-            updatedAt: now,
-          }
-          : {
-            ...makeEmptyProgressionV2(uid),
-            xpTotal,
-            level: levelInfo.level,
-            tier: tier.name,
-            skillTrees,
-            source: 'seed',
-            updatedAt: now,
-            createdAt: now,
-          };
+        const base = progression || makeEmptyProgressionV2(uid);
+        const next = {
+          ...base,
+          uid,
+          xpTotal: calculado.xpTotal,
+          level: calculado.level,
+          tier: calculado.tier,
+          skillTrees: calculado.skillTrees,
+          achievementsUnlocked: calculado.achievementsUnlocked,
+          achievementsTotal: ACHIEVEMENTS_V2.length,
+          source: progression ? 'recomputed' : 'seed',
+          updatedAt: now,
+          createdAt: base.createdAt || now,
+        };
         await setUserProgressionV2(uid, next);
         qc.setQueryData(PROGRESSION_V2_KEY(uid), next);
-        syncedRef.current = true;
       } catch (err) {
+        // Reabre para nova tentativa: uma falha de rede não pode congelar a
+        // progressão do atleta até ele recarregar a página.
+        ultimoGravado.current = '';
         logger.warn('[useSyncProgressionV2] falha ao sincronizar', err);
       }
     })();
-  }, [uid, stats, enabled, progression, qc]);
+  }, [uid, enabled, calculado, progression, qc]);
 
-  return { progression };
+  return { progression, breakdown: calculado?.breakdown || null };
 }

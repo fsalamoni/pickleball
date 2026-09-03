@@ -168,10 +168,21 @@ export const mentorshipPath = (pairKey) => `mentorships/${pairKey}`;
 
 export const SEASON_RANKING_VERSION = 2;
 export const SeasonRankingSchema = z.object({
-  seasonId: z.string(), // '2026-q3', '2026-q4'
+  seasonId: z.string(), // 'YYYY-MM' (temporada mensal)
   uid: z.string(),
   schemaVersion: z.literal(SEASON_RANKING_VERSION),
+  /**
+   * XP ganho DENTRO da temporada — não o XP de vida inteira. Ranquear por XP
+   * acumulado transformaria a temporada numa cópia do Hall da Fama, onde
+   * ninguém novo jamais aparece.
+   */
   xp: z.number().int().min(0),
+  /**
+   * XP total do atleta quando a temporada começou para ele. É o que permite
+   * calcular o XP da temporada (`xpTotal - baselineXp`) sem manter um livro
+   * de eventos. Opcional para compatibilidade com linhas antigas.
+   */
+  baselineXp: z.number().int().min(0).optional(),
   tier: z.string(),
   position: z.number().int().min(1),
   deltaPosition: z.number().int(), // pode ser negativo
