@@ -218,6 +218,9 @@ function GamesSection({ gameDay, participants, isOwner }) {
   const clearGames = useClearGameDayGames(gameDay.id);
   const formatsOn = true;
   const [rounds, setRounds] = useState(0);
+  // Quadras simultâneas disponíveis, como TEXTO livre (vazio = automático).
+  // Guardar texto evita o input "pular" enquanto se digita.
+  const [courtsText, setCourtsText] = useState('');
   const [format, setFormat] = useState(gameDay.format || GAME_DAY_FORMAT.AMERICANO);
   const [drawOpen, setDrawOpen] = useState(false);
   const [replaceUnscored, setReplaceUnscored] = useState(false);
@@ -231,9 +234,17 @@ function GamesSection({ gameDay, participants, isOwner }) {
     [games],
   );
 
-  const effectiveRounds = rounds || suggestRounds(participants.length) || 3;
   const canDraw = participants.length >= 4;
   const isKingOfCourt = formatsOn && format === GAME_DAY_FORMAT.KING_OF_COURT;
+  // Quadras só se aplicam ao Americano (o motor que monta rodadas completas).
+  const isAmericano = !formatsOn || format === GAME_DAY_FORMAT.AMERICANO;
+  // Limite FÍSICO de jogos simultâneos que o nº de atletas comporta. Não limita
+  // o que o organizador pode digitar — só informa e é aplicado no motor.
+  const maxCourts = Math.max(1, Math.floor(participants.length / 4));
+  const typedCourts = Math.floor(Number(courtsText));
+  const courtsValue = Number.isFinite(typedCourts) && typedCourts > 0 ? typedCourts : null;
+  const effectiveCourts = isAmericano ? courtsValue : null;
+  const effectiveRounds = rounds || suggestRounds(participants.length, effectiveCourts) || 3;
 
   const participantById = useMemo(() => {
     const map = new Map();
@@ -280,8 +291,13 @@ function GamesSection({ gameDay, participants, isOwner }) {
         // ADVERSÁRIOS já ocorridos (nos jogos mantidos) para variar as formações,
         // e equilibra a PARTICIPAÇÃO por rodada presente (quem seguiu no dia e
         // jogou menos entra primeiro, sem forçar quem entrou tarde ao mesmo total).
-        const history = buildDrawHistory(plan.keptGames, ids);
-        raw = generateGameDayGames(ids, { rounds: effectiveRounds, seed, history });
+        // `formationGames`: TODOS os jogos do dia (inclusive os que serão
+        // substituídos) para não repetir as duplas/confrontos que acabaram de
+        // sair. A participação continua vindo só dos jogos mantidos.
+        const history = buildDrawHistory(plan.keptGames, ids, { formationGames: games });
+        raw = generateGameDayGames(ids, {
+          rounds: effectiveRounds, seed, history, courts: effectiveCourts,
+        });
       }
       const payload = offsetRounds(raw, plan.roundBase).map(toPayload);
       await appendGames.mutateAsync({ removeIds: plan.removeIds, games: payload, orderBase: plan.orderBase });
@@ -467,6 +483,32 @@ function GamesSection({ gameDay, participants, isOwner }) {
                     value={rounds || effectiveRounds}
                     onChange={(e) => setRounds(Math.max(1, Math.min(GAME_DAY_LIMITS.MAX_ROUNDS, Number(e.target.value) || 0)))}
                   />
+                </div>
+              )}
+              {isAmericano && canDraw && (
+                <div className="space-y-2">
+                  <Label htmlFor="courts">Quadras disponíveis</Label>
+                  <Input
+                    id="courts"
+                    type="number"
+                    min={1}
+                    max={GAME_DAY_LIMITS.MAX_COURTS}
+                    placeholder={`${maxCourts} (todas)`}
+                    value={courtsText}
+                    onChange={(e) => setCourtsText(e.target.value)}
+                    onBlur={() => setCourtsText((t) => {
+                      const n = Math.floor(Number(t));
+                      if (!Number.isFinite(n) || n < 1) return '';
+                      return String(Math.min(GAME_DAY_LIMITS.MAX_COURTS, n));
+                    })}
+                  />
+                  <p className="text-xs text-gray-500">
+                    {courtsValue == null
+                      ? `Em branco usa todas as quadras possíveis (${maxCourts} com ${participants.length} atletas).`
+                      : courtsValue >= maxCourts
+                        ? `Com ${participants.length} atletas cabem no máximo ${maxCourts} jogo(s) ao mesmo tempo.`
+                        : `${courtsValue * 4} em quadra e ${participants.length - courtsValue * 4} aguardando por rodada — quem fica de fora entra na seguinte, com os jogos distribuídos por igual.`}
+                  </p>
                 </div>
               )}
             </div>

@@ -288,13 +288,20 @@ function GamesSection({ eventId, dateId, participants }) {
   const appendGames = useAppendEventGames(eventId);
   const clearGames = useClearEventGames(eventId);
   const [rounds, setRounds] = useState(0);
+  // Quadras simultâneas disponíveis, como TEXTO livre (vazio = automático).
+  const [courtsText, setCourtsText] = useState('');
   const [drawOpen, setDrawOpen] = useState(false);
   const [replaceUnscored, setReplaceUnscored] = useState(false);
   const [manualOpen, setManualOpen] = useState(false);
   const [confirmClear, setConfirmClear] = useState(false);
   const [drawing, setDrawing] = useState(false);
 
-  const effectiveRounds = rounds || suggestRounds(participants.length) || 3;
+  // Limite FÍSICO de jogos simultâneos (não limita o que se pode digitar).
+  const maxCourts = Math.max(1, Math.floor(participants.length / 4));
+  const typedCourts = Math.floor(Number(courtsText));
+  const courtsValue = Number.isFinite(typedCourts) && typedCourts > 0 ? typedCourts : null;
+  const effectiveCourts = courtsValue;
+  const effectiveRounds = rounds || suggestRounds(participants.length, effectiveCourts) || 3;
   const canDraw = participants.length >= 4;
 
   const { scored: scoredGames, unscored: unscoredGames } = useMemo(
@@ -325,8 +332,12 @@ function GamesSection({ eventId, dateId, participants }) {
       // já ocorridos (jogos mantidos) para variar as formações, e equilibra a
       // PARTICIPAÇÃO por rodada presente (quem seguiu no dia e jogou menos entra
       // primeiro, sem forçar quem entrou tarde ao mesmo total dos veteranos).
-      const history = buildDrawHistory(plan.keptGames, ids);
-      const raw = generateGameDayGames(ids, { rounds: effectiveRounds, seed, history });
+      // `formationGames`: TODOS os jogos do dia (inclusive os substituídos)
+      // para não repetir as duplas/confrontos que acabaram de sair.
+      const history = buildDrawHistory(plan.keptGames, ids, { formationGames: games });
+      const raw = generateGameDayGames(ids, {
+        rounds: effectiveRounds, seed, history, courts: effectiveCourts,
+      });
       // Wave C.6: também salva o `user_id` real (se o participante for um
       // atleta da plataforma) para que o Cloud Function de ranking possa
       // agregar estatísticas por uid (em vez de por doc_id de participant).
@@ -472,8 +483,26 @@ function GamesSection({ eventId, dateId, participants }) {
                 value={rounds || effectiveRounds}
                 onChange={(e) => setRounds(Math.max(1, Math.min(GAME_DAY_LIMITS.MAX_ROUNDS, Number(e.target.value) || 0)))}
               />
+              <Label htmlFor="courts">Quadras disponíveis</Label>
+              <Input
+                id="courts"
+                type="number"
+                min={1}
+                max={GAME_DAY_LIMITS.MAX_COURTS}
+                placeholder={`${maxCourts} (todas)`}
+                value={courtsText}
+                onChange={(e) => setCourtsText(e.target.value)}
+                onBlur={() => setCourtsText((t) => {
+                  const n = Math.floor(Number(t));
+                  if (!Number.isFinite(n) || n < 1) return '';
+                  return String(Math.min(GAME_DAY_LIMITS.MAX_COURTS, n));
+                })}
+              />
               <p className="text-xs text-gray-500">
-                Com {participants.length} participantes e {Math.floor(participants.length / 4)} jogo(s) por rodada.
+                Com {participants.length} participantes e {courtsValue ? Math.min(maxCourts, courtsValue) : maxCourts} jogo(s) por rodada.
+                {courtsValue != null && courtsValue < maxCourts
+                  ? ' Quem fica de fora entra na rodada seguinte — os jogos seguem distribuídos por igual.'
+                  : ''}
               </p>
             </div>
             <DialogFooter>
