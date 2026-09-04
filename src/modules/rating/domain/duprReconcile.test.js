@@ -13,7 +13,11 @@ import {
   summarizeSituations,
   filterBySituation,
   buildLedgerUpserts,
+  buildQueueUpserts,
   latestExportInfo,
+  isQueueEligible,
+  buildExportQueue,
+  summarizeQueue,
 } from './duprReconcile.js';
 
 /* -------------------------------------------------------------------------
@@ -195,7 +199,9 @@ describe('summarizeSituations / filterBySituation', () => {
   ];
 
   it('conta por situação', () => {
-    expect(summarizeSituations(view)).toEqual({ total: 4, pending: 1, exported: 1, submitted: 0, confirmed: 2 });
+    expect(summarizeSituations(view)).toEqual({
+      total: 4, pending: 1, exported: 1, submitted: 0, confirmed: 2, excluded: 0,
+    });
   });
 
   it('filtra por situação', () => {
@@ -236,11 +242,132 @@ describe('latestExportInfo', () => {
       ['c', { status: 'exported', exported_at: 200 }],
     ]);
     expect(latestExportInfo(ledger)).toEqual({
-      lastActivityAt: 300, exportedCount: 2, submittedCount: 1, total: 3,
+      lastActivityAt: 300, exportedCount: 2, submittedCount: 1, excludedCount: 0, total: 3,
     });
   });
 
   it('aceita objeto simples e vazio', () => {
-    expect(latestExportInfo({})).toEqual({ lastActivityAt: 0, exportedCount: 0, submittedCount: 0, total: 0 });
+    expect(latestExportInfo({})).toEqual({
+      lastActivityAt: 0, exportedCount: 0, submittedCount: 0, excludedCount: 0, total: 0,
+    });
+  });
+});
+
+/* -------------------------------------------------------------------------
+ * "Não lançar no DUPR" (excluded) + LISTA DE EXPORTAÇÃO automática.
+ * ------------------------------------------------------------------------- */
+
+describe('situação "não lançar no DUPR"', () => {
+  it('classifica como excluded a partida marcada pelo admin', () => {
+    const ledgerByKey = new Map([['m1', { status: 'excluded', excluded_at: 7 }]]);
+    expect(classifyEntry(makeEntry(), { ledgerByKey }).status).toBe(EXPORT_STATUS.EXCLUDED);
+  });
+
+  it('a conferência com o DUPR não sobrepõe a decisão de não lançar', () => {
+    const ledgerByKey = new Map([['m1', { status: 'excluded' }]]);
+    const duprIndex = buildDuprIndex([{ identifier: 'pr_m1' }]);
+    expect(classifyEntry(makeEntry(), { ledgerByKey, duprIndex }).status).toBe(EXPORT_STATUS.EXCLUDED);
+  });
+
+  it('é a situação de maior precedência (nenhuma ação automática rebaixa)', () => {
+    expect(EXPORT_STATUS_RANK[EXPORT_STATUS.EXCLUDED])
+      .toBeGreaterThan(EXPORT_STATUS_RANK[EXPORT_STATUS.CONFIRMED]);
+    const ledgerByKey = new Map([['m1', { status: 'excluded' }]]);
+    const ups = buildLedgerUpserts([makeEntry()], { status: EXPORT_STATUS.EXPORTED, at: 9, ledgerByKey });
+    expect(ups[0].data.status).toBe('excluded');
+  });
+});
+
+describe('lista de exportação (fila automática)', () => {
+  const pending = { ...makeEntry(), situation: { status: EXPORT_STATUS.PENDING } };
+
+  it('entra sozinha quando a partida está pronta e pendente', () => {
+    expect(isQueueEligible(pending)).toBe(true);
+  });
+
+  it('fica de fora quando falta ID DUPR de algum jogador', () => {
+    expect(isQueueEligible({ ...pending, ready: false })).toBe(false);
+  });
+
+  it('fica de fora quando já saiu de pendente', () => {
+    [EXPORT_STATUS.EXPORTED, EXPORT_STATUS.SUBMITTED, EXPORT_STATUS.CONFIRMED, EXPORT_STATUS.EXCLUDED]
+      .forEach((status) => {
+        expect(isQueueEligible({ ...pending, situation: { status } })).toBe(false);
+      });
+  });
+
+  it('fica de fora quando o admin a retirou da lista — sem mudar a situação', () => {
+    const removed = { ...pending, situation: { status: EXPORT_STATUS.PENDING, queueRemoved: true } };
+    expect(isQueueEligible(removed)).toBe(false);
+    expect(removed.situation.status).toBe(EXPORT_STATUS.PENDING);
+  });
+
+  it('buildExportQueue preserva a ordem e só leva as aptas', () => {
+    const view = [
+      { ...pending, id: 'a' },
+      { ...pending, id: 'b', ready: false },
+      { ...pending, id: 'c' },
+      { ...pending, id: 'd', situation: { status: EXPORT_STATUS.SUBMITTED } },
+    ];
+    expect(buildExportQueue(view).map((e) => e.id)).toEqual(['a', 'c']);
+  });
+
+  it('summarizeQueue explica quem ficou de fora estando pendente', () => {
+    const view = [
+      { ...pending, id: 'a' },
+      { ...pending, id: 'b', ready: false },
+      { ...pending, id: 'c', situation: { status: EXPORT_STATUS.PENDING, queueRemoved: true } },
+      { ...pending, id: 'd', situation: { status: EXPORT_STATUS.EXPORTED } },
+    ];
+    expect(summarizeQueue(view)).toEqual({ queued: 1, pendingIncomplete: 1, removed: 1 });
+  });
+});
+
+describe('buildLedgerUpserts com ação manual (force)', () => {
+  it('rebaixa para pendente e devolve a partida à lista de exportação', () => {
+    const ledgerByKey = new Map([['m1', { status: 'submitted', queue_removed: true }]]);
+    const ups = buildLedgerUpserts([makeEntry()], {
+      status: EXPORT_STATUS.PENDING, at: 42, ledgerByKey, force: true,
+    });
+    expect(ups[0].data).toMatchObject({
+      status: 'pending',
+      exported_at: null,
+      submitted_at: null,
+      excluded_at: null,
+      queue_removed: false,
+    });
+  });
+
+  it('sem force, mantém a regra monotônica', () => {
+    const ledgerByKey = new Map([['m1', { status: 'submitted' }]]);
+    const ups = buildLedgerUpserts([makeEntry()], { status: EXPORT_STATUS.PENDING, ledgerByKey });
+    expect(ups[0].data.status).toBe('submitted');
+  });
+
+  it('carimba excluded_at ao marcar "não lançar"', () => {
+    const ups = buildLedgerUpserts([makeEntry()], {
+      status: EXPORT_STATUS.EXCLUDED, at: 77, force: true,
+    });
+    expect(ups[0].data).toMatchObject({ status: 'excluded', excluded_at: 77 });
+  });
+});
+
+describe('buildQueueUpserts', () => {
+  it('mexe só na lista, nunca na situação DUPR', () => {
+    const ups = buildQueueUpserts([makeEntry()], { removed: true, at: 5 });
+    expect(ups).toHaveLength(1);
+    expect(ups[0].data).toMatchObject({
+      match_id: 'm1', queue_removed: true, queue_removed_at: 5, identifier: 'pr_m1',
+    });
+    expect(ups[0].data.status).toBeUndefined();
+  });
+
+  it('devolver à lista limpa o carimbo de remoção', () => {
+    const ups = buildQueueUpserts([makeEntry()], { removed: false, at: 5 });
+    expect(ups[0].data).toMatchObject({ queue_removed: false, queue_removed_at: null });
+  });
+
+  it('ignora entries sem id', () => {
+    expect(buildQueueUpserts([{ row: {} }], { removed: true })).toEqual([]);
   });
 });

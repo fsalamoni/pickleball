@@ -341,7 +341,10 @@ viraram código (lotes 1 e 2 de `convertFlagsToCode`). Apenas
 **14 flags ativas (default OFF)**:
 - `dupr_official_sync` — integração oficial DUPR (fase 2,
   stub em `duprOfficial.js`).
-- `dupr_match_export` — export CSV de partidas para DUPR.
+- `dupr_match_export` — governança DUPR no admin: busca filtrável de
+  partidas + lista de exportação automática (pendentes e prontas) que
+  alimenta o CSV, com seleção em massa de situação e ledger
+  `dupr_export_log`.
 - `action_home` — Home orientada a ação.
 - `smart_matchmaking` — score 0-100 em Encontrar jogadores.
 - `post_game_flow` — fluxo pós-jogo enxuto.

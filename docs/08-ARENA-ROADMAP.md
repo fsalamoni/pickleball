@@ -3092,3 +3092,54 @@ NÃO usa o algoritmo oficial do DUPR (proprietário) — é uma
 3. **D-ATHLETES-RESYNC-EM-MASSA (PRs #108-#110)**: bulk
    re-sync (botão no admin) garante consistência
    `users → athlete_profiles` em massa.
+
+---
+
+## 47. Sprint 45 — Governança DUPR: lista de exportação + seleção (2026-09-04)
+
+### Problema
+
+O botão "Baixar CSV do DUPR" levava **todas** as partidas aptas do
+recorte. Faltava ao admin escolher **exatamente** o que vai no arquivo
+e corrigir a situação de partidas específicas.
+
+### Entrega
+
+- **Segunda tabela — "Aptas a exportar para lançar no DUPR"**, abaixo
+  da tabela de busca. Montada **automaticamente**: partida PRONTA
+  (todos com `dupr_id`) + situação `pending` + não retirada à mão.
+- **Botão "Baixar CSV do DUPR" realocado** para essa lista; o CSV leva
+  exatamente as partidas dela — os filtros da busca não influenciam o
+  arquivo.
+- **Seleção com checkbox nas duas tabelas** (todas ou algumas), com
+  ações em massa: tornar *pendente*, *exportada*, *lançada no DUPR*,
+  *não lançar no DUPR*.
+- **"Excluir da lista"** (na lista de exportação) e **"Devolver à
+  lista"** (na busca): mexem só em `queue_removed`, sem tocar na
+  situação DUPR da partida.
+- **A seleção sobrevive à troca de filtros** — quem sai da vista
+  continua marcado, e a barra de ações diz quantas estão fora do
+  recorte.
+- Nova situação `excluded` ("Não lançar no DUPR"), de maior
+  precedência: nenhuma ação automática a rebaixa.
+
+### Decisões D- (Sprint 45)
+
+1. **D-DUPR-FILA-AUTOMATICA**: a lista de exportação não é uma
+   coleção nova nem uma marcação manual — é derivada
+   (`pronta + pending + !queue_removed`). Partida nova entra sozinha,
+   sem nenhuma ação do admin.
+2. **D-DUPR-EXCLUIR-DA-LISTA-≠-NAO-LANCAR**: tirar da lista é "não
+   lançar **agora**" (`queue_removed`, situação intacta); "não lançar
+   no DUPR" é `status: excluded`, decisão permanente e reversível
+   só por ação manual.
+3. **D-DUPR-SELECAO-SOBREVIVE-AO-FILTRO**: a seleção é um `Set` de
+   ids na página (domínio `duprSelection`), nunca um campo das
+   linhas — por isso filtrar não desmarca nada.
+4. **D-DUPR-FORCE-SO-EM-ACAO-MANUAL**: o registro automático do
+   download continua monotônico (não rebaixa); só a ação explícita do
+   admin (`force`) pode devolver uma partida para `pending`.
+5. **D-DUPR-ADITIVO-NO-LEDGER**: `queue_removed`/`queue_removed_at`/
+   `excluded_at` são campos NOVOS e OPCIONAIS em `dupr_export_log` —
+   sem migração, sem mudança em `firestore.rules` (a coleção já é
+   `platform_admin` para leitura e escrita).

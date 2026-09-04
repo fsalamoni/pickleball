@@ -1,8 +1,9 @@
 /**
- * Teste de RUNTIME da aba "Exportar DUPR" — foca no que foi adicionado:
- * PAGINAÇÃO (20/50/100), navegação entre páginas e a coluna "Situação DUPR"
- * derivada do ledger de exportação. A lógica pura (ordenação/paginação/
- * conferência) é testada à parte; aqui garantimos a fiação na UI.
+ * Teste de RUNTIME da aba "Exportar DUPR" — PAGINAÇÃO (20/50/100), navegação
+ * entre páginas e a coluna "Situação DUPR" derivada do ledger de exportação,
+ * tudo na TABELA DE BUSCA (a de cima, que obedece aos filtros). A lógica pura
+ * (ordenação/paginação/conferência) é testada à parte; aqui garantimos a
+ * fiação na UI.
  *
  * Estratégia: mockamos só a CAMADA DE DADOS (hooks + o domínio de montagem de
  * partidas `duprMatchExport`) e a flag; a paginação (`duprExportView`) e a
@@ -54,6 +55,7 @@ vi.mock('@/modules/rating/hooks/useDuprExport', () => ({
   useDuprLedger: () => ({ data: LEDGER }),
   useRecordDuprExport: () => ({ mutate: vi.fn() }),
   useRecordDuprLedger: () => ({ mutate: vi.fn(), isPending: false }),
+  useUpdateDuprQueue: () => ({ mutate: vi.fn(), isPending: false }),
 }));
 
 vi.mock('@/modules/rating/domain/duprMatchExport', () => ({
@@ -85,8 +87,19 @@ function mount() {
   });
 }
 
-function clickButtonByText(text) {
-  const btn = [...container.querySelectorAll('button')].find((b) => b.textContent.includes(text));
+/** Tabela 0 = busca (filtros); tabela 1 = lista de exportação. */
+function rowsOf(tableIndex) {
+  const table = container.querySelectorAll('table')[tableIndex];
+  return table ? table.querySelectorAll('tbody tr') : [];
+}
+
+/** Card (V2Surface) que envolve a tabela pedida — para ler só o texto dela. */
+function tableCard(tableIndex) {
+  return container.querySelectorAll('table')[tableIndex].closest('div.overflow-hidden');
+}
+
+function clickButtonByText(text, scope = container) {
+  const btn = [...scope.querySelectorAll('button')].find((b) => b.textContent.includes(text));
   if (!btn) throw new Error(`Botão "${text}" não encontrado`);
   React.act(() => {
     btn.dispatchEvent(new MouseEvent('click', { bubbles: true }));
@@ -107,32 +120,43 @@ describe('AdminDuprExportTab (runtime)', () => {
   it('pagina em 20 por padrão e navega entre as páginas', () => {
     mount();
     // Página 1: 20 linhas + rótulo de intervalo.
-    expect(container.querySelectorAll('tbody tr')).toHaveLength(20);
-    expect(container.textContent).toContain('Mostrando 1–20 de 25');
-    expect(container.textContent).toContain('Página');
+    expect(rowsOf(0)).toHaveLength(20);
+    expect(tableCard(0).textContent).toContain('Mostrando 1–20 de 25');
+    expect(tableCard(0).textContent).toContain('Página');
 
     // Avança para a página 2 → 5 linhas restantes.
-    clickButtonByText('Próxima');
-    expect(container.querySelectorAll('tbody tr')).toHaveLength(5);
-    expect(container.textContent).toContain('Mostrando 21–25 de 25');
+    clickButtonByText('Próxima', tableCard(0));
+    expect(rowsOf(0)).toHaveLength(5);
+    expect(tableCard(0).textContent).toContain('Mostrando 21–25 de 25');
   });
 
   it('permite escolher 50 por página (mostra todas as 25 sem paginador)', () => {
     mount();
-    const select = container.querySelector('#dupr-page-size');
+    const select = container.querySelector('#dupr-filtered-page-size');
     React.act(() => {
       select.value = '50';
       select.dispatchEvent(new Event('change', { bubbles: true }));
     });
-    expect(container.querySelectorAll('tbody tr')).toHaveLength(25);
+    expect(rowsOf(0)).toHaveLength(25);
     // Sem botão "Próxima" quando cabe tudo numa página.
-    const hasNext = [...container.querySelectorAll('button')].some((b) => b.textContent.includes('Próxima'));
+    const hasNext = [...tableCard(0).querySelectorAll('button')].some((b) => b.textContent.includes('Próxima'));
     expect(hasNext).toBe(false);
   });
 
   it('mostra a situação "Exportada" para a partida registrada no ledger', () => {
     mount();
     // m24 é a mais recente (ordenação padrão data desc) → está na página 1.
-    expect(container.textContent).toContain('Exportada');
+    expect(tableCard(0).textContent).toContain('Exportada');
+  });
+
+  it('monta a lista de exportação só com as pendentes (m24 já exportada fica fora)', () => {
+    mount();
+    // 25 partidas prontas, 1 já exportada → 24 aptas; página 1 mostra 20.
+    expect(tableCard(1).textContent).toContain('Mostrando 1–20 de 24');
+    expect(rowsOf(1)).toHaveLength(20);
+    // O botão de download vive na seção da lista e conta o total dela.
+    const download = [...container.querySelectorAll('button')]
+      .find((b) => b.textContent.includes('Baixar CSV do DUPR'));
+    expect(download.textContent).toContain('(24)');
   });
 });
