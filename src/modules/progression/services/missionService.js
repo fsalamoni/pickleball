@@ -63,8 +63,11 @@ export async function getOrCreateDailyMissions(uid, currentTier, now = new Date(
       metric: m.metric,
       target: m.target,
       current: 0,
-      xp: m.xp,
-      bonus: m.bonus || MISSION_BONUS_XP.daily,
+      // o domínio chama de `xpReward`; o documento guarda `xp`. Ler o nome
+      // errado gravava `undefined`, o Firestore recusava o documento inteiro
+      // e NENHUMA missão chegava a existir — em silêncio.
+      xp: m.xpReward,
+      bonus: MISSION_BONUS_XP.daily,
       bonusClaimed: false,
       seed,
     })),
@@ -73,6 +76,15 @@ export async function getOrCreateDailyMissions(uid, currentTier, now = new Date(
     createdAt: Date.now(),
     updatedAt: Date.now(),
   };
+
+  // Validar ANTES de gravar: o Firestore rejeita `undefined` e o erro sai
+  // como falha genérica de escrita, longe da causa. Aqui a mensagem aponta o
+  // campo, e o teste quebra em vez de a produção emudecer.
+  const validacao = UserMissionSchema.safeParse(payload);
+  if (!validacao.success) {
+    throw new Error(`missões do dia com shape inválido: ${validacao.error.message}`);
+  }
+
   await setDoc(ref, { ...payload, serverCreatedAt: serverTimestamp() });
   return payload;
 }

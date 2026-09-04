@@ -20,6 +20,7 @@
 
 
 import { isMeasurableMetric } from './missionMetrics.js';
+import { missionDateKey } from './missionDay.js';
 
 const DAY_MS = 24 * 60 * 60 * 1000;
 
@@ -161,6 +162,57 @@ function pickTemplates({ count, pool, tier = null, seed = Date.now(), excludeIds
  * }} options
  * @returns {Array<object>} missões instanciadas
  */
+/**
+ * Rótulo humano da missão, em pt-BR.
+ *
+ * Os templates guardam só a métrica e o alvo — não o texto. Sem isto,
+ * `description` saía `undefined`, o Firestore recusava o documento inteiro
+ * ("Unsupported field value: undefined") e NENHUMA missão era criada.
+ *
+ * @param {{ metric: string, target: number }} t
+ * @returns {{ title: string, description: string }}
+ */
+export function missionLabel({ metric, target = 1 } = {}) {
+  const n = Math.max(1, Number(target) || 1);
+  const plural = n > 1;
+  const textos = {
+    game_played: {
+      title: plural ? `Jogue ${n} partidas` : 'Jogue 1 partida',
+      description: plural
+        ? `Dispute ${n} partidas — de torneio ou de dia de jogo.`
+        : 'Dispute uma partida — de torneio ou de dia de jogo.',
+    },
+    game_day_attended: {
+      title: plural ? `Participe de ${n} dias de jogo` : 'Participe de um dia de jogo',
+      description: plural
+        ? `Entre em quadra em ${n} dias de jogo.`
+        : 'Entre em quadra num dia de jogo.',
+    },
+    tournament_attended: {
+      title: plural ? `Dispute ${n} torneios` : 'Dispute um torneio',
+      description: plural
+        ? `Participe de ${n} torneios.`
+        : 'Participe de um torneio.',
+    },
+    kudos_given: {
+      title: plural ? `Dê ${n} kudos` : 'Dê 1 kudo',
+      description: plural
+        ? `Reconheça ${n} atletas com um 👏.`
+        : 'Reconheça um atleta com um 👏.',
+    },
+    referral_signed_up: {
+      title: plural ? `Convide ${n} amigos` : 'Convide um amigo',
+      description: plural
+        ? `${n} amigos entram na plataforma pelo seu convite.`
+        : 'Um amigo entra na plataforma pelo seu convite.',
+    },
+  };
+  return textos[metric] || {
+    title: `Complete ${n}`,
+    description: `Chegue a ${n} nesta missão.`,
+  };
+}
+
 function instantiateMissions(templates, options = {}) {
   const {
     date = new Date(),
@@ -170,10 +222,13 @@ function instantiateMissions(templates, options = {}) {
     scope = 'daily',
   } = options;
 
-  return templates.map((t, i) => ({
-    id: `${uid}_${scope}_${date.toISOString().slice(0, 10)}_${t.id}`,
+  return templates.map((t, i) => {
+    const { title, description } = missionLabel(t);
+    return {
+    id: `${uid}_${scope}_${missionDateKey(date)}_${t.id}`,
     templateId: t.id,
-    description: t.description,
+    title,
+    description,
     metric: t.metric,
     target: t.target,
     current: 0,
@@ -183,7 +238,8 @@ function instantiateMissions(templates, options = {}) {
     expiresAt: endOfDayMs || (date.getTime() + DAY_MS),
     startedAt: startOfDayMs || date.getTime(),
     order: i,
-  }));
+    };
+  });
 }
 
 /**

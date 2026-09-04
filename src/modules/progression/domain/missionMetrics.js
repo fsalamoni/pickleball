@@ -31,7 +31,7 @@ import { missionDateKey, platformMonthKey } from './missionDay.js';
 export const MEASURABLE_MISSION_METRICS = Object.freeze({
   game_played: {
     scopes: ['daily', 'weekly', 'monthly'],
-    fonte: 'datas das partidas do atleta (H2H)',
+    fonte: 'partidas de torneio (H2H) + jogos de dia de jogo',
   },
   game_day_attended: {
     scopes: ['daily', 'weekly', 'monthly'],
@@ -117,8 +117,13 @@ function contarNaJanela(datas, dentro) {
 export function computeMissionMetrics(sources = {}, { scope = 'daily', now = new Date() } = {}) {
   const dentro = inScopeWindow(scope, now);
 
+  // "Partida jogada" soma torneio E dia de jogo — é o mesmo critério de
+  // `foldGameDayGamesIntoStats`, que já conta os dois em `stats.played`.
+  // Contar só torneio deixaria a missão diária inalcançável para quem joga
+  // apenas dia de jogo, que é a maioria.
   const metricas = {
-    game_played: contarNaJanela(sources.matchDates, dentro),
+    game_played: contarNaJanela(sources.matchDates, dentro)
+      + contarNaJanela(sources.gameDayDates, dentro),
     game_day_attended: contarNaJanela(sources.gameDayDates, dentro),
     tournament_attended: contarNaJanela(sources.tournamentDates, dentro),
     kudos_given: 0,
@@ -165,4 +170,31 @@ export function applyRealProgress(missions = [], metricas = {}) {
     return { ...m, current: proximo };
   });
   return { missions: out, changed };
+}
+
+/**
+ * Extrai as datas de atividade a partir das estruturas REAIS do app.
+ *
+ * Existe para que o formato dos dados fique num lugar só, testado contra o
+ * shape verdadeiro. A versão anterior adivinhava os campos na página
+ * (`played_at || created_at || date` para dia de jogo — nenhum deles existe),
+ * e o resultado era uma lista vazia: a missão nunca saía de zero e nada
+ * acusava o erro.
+ *
+ * Ambas as fontes já entregam milissegundos:
+ *  - `usePlayerStats().history[].startsAtMillis` (participação em torneio)
+ *  - `usePlayerStats().gameDayGames[].at` (jogo de dia de jogo)
+ *
+ * @param {{ history?: Array<object>, gameDayGames?: Array<object> }} stats
+ * @returns {{ tournamentDates: number[], gameDayDates: number[] }}
+ */
+export function extractActivityDates({ history, gameDayGames } = {}) {
+  const validos = (lista, campo) => (Array.isArray(lista) ? lista : [])
+    .map((item) => Number(item?.[campo]))
+    .filter((ms) => Number.isFinite(ms) && ms > 0);
+
+  return {
+    tournamentDates: validos(history, 'startsAtMillis'),
+    gameDayDates: validos(gameDayGames, 'at'),
+  };
 }

@@ -11,6 +11,7 @@ import {
   missionWindow,
   summarizeMissions,
   MISSION_BONUS_XP,
+  missionLabel,
 } from './missions.js';
 
 describe('missions · generateMissions', () => {
@@ -161,5 +162,57 @@ describe('missions · helpers', () => {
     expect(MISSION_BONUS_XP.daily).toBe(50);
     expect(MISSION_BONUS_XP.weekly).toBe(250);
     expect(MISSION_BONUS_XP.monthly).toBe(1000);
+  });
+});
+
+describe('missionLabel · texto pt-BR da missão', () => {
+  it('usa singular e plural corretos', () => {
+    expect(missionLabel({ metric: 'game_played', target: 1 }).title).toBe('Jogue 1 partida');
+    expect(missionLabel({ metric: 'game_played', target: 3 }).title).toBe('Jogue 3 partidas');
+  });
+
+  it('cobre todas as métricas que o gerador pode sortear', () => {
+    for (const metric of ['game_played', 'game_day_attended', 'tournament_attended', 'kudos_given', 'referral_signed_up']) {
+      const l = missionLabel({ metric, target: 2 });
+      expect(typeof l.title).toBe('string');
+      expect(l.title.length).toBeGreaterThan(0);
+      expect(typeof l.description).toBe('string');
+      expect(l.description.length).toBeGreaterThan(0);
+    }
+  });
+
+  it('métrica desconhecida ainda devolve texto (nunca undefined)', () => {
+    const l = missionLabel({ metric: 'nao_existe', target: 5 });
+    expect(typeof l.title).toBe('string');
+    expect(typeof l.description).toBe('string');
+  });
+
+  it('entrada vazia não quebra', () => {
+    expect(typeof missionLabel().title).toBe('string');
+  });
+});
+
+describe('generateMissions · nenhum campo pode sair undefined', () => {
+  // Este teste existe porque o gerador entregava `xpReward` (e nada de
+  // title/description) enquanto o documento esperava `xp`: o Firestore recusa
+  // `undefined` e NENHUMA missão era criada — sem erro visível em lugar nenhum.
+  it.each(['daily', 'weekly', 'monthly'])('escopo %s tem todos os campos preenchidos', (scope) => {
+    const missoes = generateMissions({ uid: 'u1', scope, currentTier: 'Calouro' });
+    expect(missoes.length).toBeGreaterThan(0);
+    for (const m of missoes) {
+      for (const campo of ['id', 'title', 'description', 'metric', 'target', 'xpReward', 'scope']) {
+        expect(m[campo], `missão "${m.templateId}" sem "${campo}"`).toBeDefined();
+      }
+      expect(Number.isFinite(m.xpReward)).toBe(true);
+    }
+  });
+
+  it('o id do dia usa o fuso de Brasília', () => {
+    const missoes = generateMissions({
+      uid: 'u1', scope: 'daily', currentTier: 'Calouro',
+      // 2026-09-04T00:30Z = 03/09 21:30 em Brasília
+      now: new Date('2026-09-04T00:30:00Z'),
+    });
+    expect(missoes[0].id).toContain('2026-09-03');
   });
 });

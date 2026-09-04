@@ -19,6 +19,7 @@ import { useSyncProgressionV2 } from '@/modules/progression/hooks/useSyncProgres
 import { useStreakMetaV2 } from '@/modules/progression/hooks/useStreakMetaV2';
 import { useCelebrationListener } from '@/modules/progression/hooks/useCelebrationListener';
 import { computeXpV2, levelFromXpV2, XP_WEIGHTS_V2 } from '@/modules/progression/domain/progressionV2';
+import { extractActivityDates } from '@/modules/progression/domain/missionMetrics';
 import { tierProgress } from '@/modules/progression/domain/tiers';
 import { buildSkillTrees } from '@/modules/progression/domain/skillTrees';
 import { computeProtectedStreak } from '@/modules/progression/domain/streakProtection';
@@ -110,26 +111,12 @@ function V2GamificationHomeOn() {
   const { code: referralCode } = useUserReferralCode(user?.uid, !!user);
 
   // Fontes de ATIVIDADE REAL que alimentam o progresso das missões. Nenhuma
-  // vem de clique do usuário — missão não é auto-declaração.
-  const tournamentDates = useMemo(
-    () => (history || [])
-      .map((g) => {
-        const bruto = g?.tournament?.starts_at;
-        const ms = bruto ? new Date(bruto).getTime() : NaN;
-        return Number.isFinite(ms) ? ms : null;
-      })
-      .filter((ms) => ms !== null),
-    [history],
-  );
-  const gameDayDates = useMemo(
-    () => (gameDayGames || [])
-      .map((g) => {
-        const bruto = g?.played_at || g?.created_at || g?.date;
-        const ms = bruto?.toMillis ? bruto.toMillis() : new Date(bruto).getTime();
-        return Number.isFinite(ms) ? ms : null;
-      })
-      .filter((ms) => ms !== null),
-    [gameDayGames],
+  // vem de clique do usuário — missão não é auto-declaração. A extração das
+  // datas mora no domínio (`extractActivityDates`), testada contra o formato
+  // real: adivinhar os nomes dos campos aqui já deixou missão parada em zero.
+  const { tournamentDates, gameDayDates } = useMemo(
+    () => extractActivityDates({ history, gameDayGames }),
+    [history, gameDayGames],
   );
 
   const {

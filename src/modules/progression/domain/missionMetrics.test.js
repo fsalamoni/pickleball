@@ -5,6 +5,7 @@ import {
   inScopeWindow,
   computeMissionMetrics,
   applyRealProgress,
+  extractActivityDates,
 } from './missionMetrics.js';
 import { generateMissions } from './missions.js';
 
@@ -152,5 +153,98 @@ describe('applyRealProgress', () => {
     const { missions, changed } = applyRealProgress([missao({ metric: 'chat_message' })], { game_played: 5 });
     expect(missions[0].current).toBe(0);
     expect(changed).toBe(false);
+  });
+});
+
+describe('extractActivityDates · travado no formato REAL do app', () => {
+  it('lê a data do torneio de `startsAtMillis`', () => {
+    const r = extractActivityDates({
+      history: [{ tournamentId: 't1', startsAtMillis: 1000 }, { tournamentId: 't2', startsAtMillis: 2000 }],
+    });
+    expect(r.tournamentDates).toEqual([1000, 2000]);
+  });
+
+  it('lê a data do dia de jogo de `at`', () => {
+    const r = extractActivityDates({ gameDayGames: [{ id: 'g1', at: 5000 }, { id: 'g2', at: 6000 }] });
+    expect(r.gameDayDates).toEqual([5000, 6000]);
+  });
+
+  it('descarta datas ausentes ou zeradas em vez de virar NaN', () => {
+    const r = extractActivityDates({
+      history: [{ startsAtMillis: 0 }, { startsAtMillis: null }, { startsAtMillis: 1000 }],
+      gameDayGames: [{ at: 0 }, {}, { at: 7000 }],
+    });
+    expect(r.tournamentDates).toEqual([1000]);
+    expect(r.gameDayDates).toEqual([7000]);
+  });
+
+  it('entrada ausente devolve listas vazias, nunca undefined', () => {
+    expect(extractActivityDates()).toEqual({ tournamentDates: [], gameDayDates: [] });
+    expect(extractActivityDates({})).toEqual({ tournamentDates: [], gameDayDates: [] });
+  });
+});
+
+describe('contrato com os produtores reais dos dados', () => {
+  it('`sourceGameToMyGame` produz o campo `at` que a extração espera', async () => {
+    const { sourceGameToMyGame } = await import('@/modules/games/domain/myGames.js');
+    const partById = new Map([
+      ['p1', { user_id: 'eu' }], ['p2', { user_id: 'parceiro' }],
+      ['p3', { user_id: 'adv1' }], ['p4', { user_id: 'adv2' }],
+    ]);
+    const jogo = sourceGameToMyGame('eu', 'gd1', 'Sábado', {
+      id: 'j1', kind: 'doubles', score_a: 11, score_b: 7,
+      side_a: [{ id: 'p1', name: 'Eu' }, { id: 'p2', name: 'Parceiro' }],
+      side_b: [{ id: 'p3', name: 'Adv 1' }, { id: 'p4', name: 'Adv 2' }],
+      updated_at: new Date('2026-09-03T15:00:00Z'),
+    }, partById);
+
+    expect(jogo).toBeTruthy();
+    // se este campo mudar de nome, a extração para de ver os jogos — e a
+    // missão de dia de jogo fica presa em 0 sem nenhum erro aparecer
+    expect(jogo).toHaveProperty('at');
+    expect(extractActivityDates({ gameDayGames: [jogo] }).gameDayDates).toHaveLength(1);
+  });
+
+  it('`buildParticipationHistory` produz o campo `startsAtMillis` que a extração espera', async () => {
+    const { buildParticipationHistory } = await import('@/modules/tournament/domain/participation.js');
+    const grupos = buildParticipationHistory(
+      [{ id: 'r1', tournament_id: 't1', modality_id: 'm1', created_at: new Date('2026-09-01T12:00:00Z') }],
+      {
+        userId: 'eu',
+        tournamentById: new Map([['t1', { id: 't1', name: 'Copa', starts_at: '2026-09-02T12:00:00Z' }]]),
+        modalityById: new Map([['m1', { id: 'm1' }]]),
+        rankingByModality: new Map([['m1', []]]),
+      },
+    );
+    expect(grupos[0]).toHaveProperty('startsAtMillis');
+    expect(extractActivityDates({ history: grupos }).tournamentDates).toHaveLength(1);
+  });
+});
+
+describe('game_played soma torneio E dia de jogo', () => {
+  it('conta as duas fontes juntas', () => {
+    const m = computeMissionMetrics({
+      matchDates: [hojeMs('12')],
+      gameDayDates: [hojeMs('14'), hojeMs('16')],
+    }, { scope: 'daily', now: AGORA });
+    // mesmo critério de `foldGameDayGamesIntoStats`: partida é partida
+    expect(m.game_played).toBe(3);
+  });
+
+  it('quem só joga dia de jogo consegue completar a missão diária', () => {
+    const m = computeMissionMetrics(
+      { gameDayDates: [hojeMs('10')] },
+      { scope: 'daily', now: AGORA },
+    );
+    expect(m.game_played).toBe(1);
+  });
+
+  it('dia de jogo continua contando separado na própria métrica', () => {
+    const m = computeMissionMetrics({
+      matchDates: [hojeMs('12')],
+      gameDayDates: [hojeMs('14')],
+    }, { scope: 'daily', now: AGORA });
+    expect(m.game_day_attended).toBe(1);
+    expect(m.game_played).toBe(2);
   });
 });
