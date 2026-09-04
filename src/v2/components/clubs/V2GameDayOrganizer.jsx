@@ -35,6 +35,7 @@ import {
 import { useAthletes } from '@/modules/athletes/hooks/useAthletes';
 import { PARTICIPANT_SOURCE, INVITE_STATUS, GAME_DAY_LIMITS } from '@/modules/clubs/domain/constants';
 import { generateGameDayGames, suggestRounds, buildDrawHistory } from '@/modules/clubs/domain/gameDayDraw';
+import { fetchUnifiedLevelsByParticipant } from '@/modules/rating/services/unifiedLevelService';
 import {
   GAME_DAY_FORMAT, GAME_DAY_FORMAT_LABELS, DRAW_FORMATS,
   generateMexicanoSchedule, kingOfCourtFirstRound, kingOfCourtNextRound,
@@ -317,11 +318,20 @@ function GamesSection({ eventId, dateId, participants }) {
     try {
       const ids = participants.map((p) => p.id);
       const seed = `gd-${Date.now()}`;
+      // Níveis na régua unificada (DUPR informado → rating 2.0–8.0 da
+      // plataforma → ELO → nível indicado). Best-effort: se a leitura falhar,
+      // o sorteio acontece do mesmo jeito, só sem equilibrar nível.
+      let levels = null;
+      try {
+        levels = await fetchUnifiedLevelsByParticipant(participants);
+      } catch {
+        levels = null;
+      }
       let raw;
       if (formatsOn && format === GAME_DAY_FORMAT.MEXICANO) {
-        raw = generateMexicanoSchedule(ids, { rounds: effectiveRounds, seed });
+        raw = generateMexicanoSchedule(ids, { rounds: effectiveRounds, seed, levels });
       } else if (formatsOn && format === GAME_DAY_FORMAT.KING_OF_COURT) {
-        raw = kingOfCourtFirstRound(ids, { seed }); // só a 1ª rodada; as próximas por resultado
+        raw = kingOfCourtFirstRound(ids, { seed, levels }); // só a 1ª rodada; as próximas por resultado
       } else {
         // Este organizador SUBSTITUI os jogos do dia. Ainda assim, o novo
         // sorteio evita repetir as duplas/confrontos que estavam na grade
@@ -329,7 +339,7 @@ function GamesSection({ eventId, dateId, participants }) {
         // os jogos substituídos deixam de existir.
         const history = buildDrawHistory([], ids, { formationGames: games });
         raw = generateGameDayGames(ids, {
-          rounds: effectiveRounds, seed, courts: effectiveCourts, history,
+          rounds: effectiveRounds, seed, courts: effectiveCourts, history, levels,
         });
       }
       const payload = raw.map(toPayload);

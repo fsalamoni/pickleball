@@ -64,6 +64,15 @@
 | [`11-REFERENCE/glossary.md`](./11-REFERENCE/glossary.md) | Glossário de termos (CBPE, USAP, Onda X, etc). |
 | [`11-REFERENCE/faq.md`](./11-REFERENCE/faq.md) | Perguntas frequentes: "como faço Y?", "onde está X?". |
 
+## 5.1 Docs temáticos
+
+| Doc | Conteúdo |
+|---|---|
+| [`12-TEAM-TOURNAMENTS.md`](./12-TEAM-TOURNAMENTS.md) | Torneio por equipes (modalidade, etapas, confrontos). |
+| [`13-NIVEL-UNIFICADO.md`](./13-NIVEL-UNIFICADO.md) | ⭐ A régua 2.0–8.0 usada por **todos os sorteios** (DUPR → rating → ELO → nível declarado). |
+| [`PUSH-ATIVACAO.md`](./PUSH-ATIVACAO.md) | Ativação do push (PWA + FCM). |
+| [`GAMIFICATION/README.md`](./GAMIFICATION/README.md) | ⭐ Porta de entrada da gamificação: estado atual, estudo × implementado, como retomar. |
+
 ## 6. Estrutura completa dos docs
 
 ```
@@ -89,10 +98,23 @@ docs/
 │   ├── 26-ARENA-V3-COMPLETE-REFERENCE.md
 │   └── ... sprints ...
 │
-└── 11-REFERENCE/                     # cheatsheet, FAQ, glossário
-    ├── cheatsheet.md
-    ├── glossary.md
-    └── faq.md
+├── 11-REFERENCE/                     # cheatsheet, FAQ, glossário
+│   ├── cheatsheet.md
+│   ├── glossary.md
+│   └── faq.md
+│
+├── 12-TEAM-TOURNAMENTS.md            # torneio por equipes
+├── 13-NIVEL-UNIFICADO.md             # ⭐ régua de nível dos sorteios
+├── PUSH-ATIVACAO.md                  # ativação do push
+│
+└── GAMIFICATION/                     # ⭐ gamificação (pasta exclusiva)
+    ├── README.md                     # ⭐ COMECE POR AQUI
+    ├── 01-ESTADO-ATUAL.md            # o que existe hoje
+    ├── 02-ESTUDO-VS-IMPLEMENTADO.md  # estudo × código × buracos
+    ├── 03-COMO-RETOMAR.md            # passo a passo operacional
+    ├── 00-ROADMAP.md                 # histórico de fases/sprints
+    ├── CHANGELOG.md                  # o que mudou em cada onda
+    └── 90-ESTUDO-ORIGINAL.md         # o estudo integral (consulta)
 ```
 
 ## 7. Estrutura de docs por módulo (em `src/modules/X/README.md`)

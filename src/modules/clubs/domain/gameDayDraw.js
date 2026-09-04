@@ -13,6 +13,11 @@
  *  - Equilibra a PARTICIPAÇÃO: em cada rodada quem menos jogou entra em quadra,
  *    e quem mais jogou descansa (quando N não é múltiplo de 4). O descanso
  *    circula de forma justa.
+ *  - Equilibra o NÍVEL (quando conhecido, via `levels`): prefere quadras com
+ *    atletas de força parecida e, dentro de cada quadra, a formação de duplas
+ *    que deixa os dois lados mais próximos. É um critério TERCIÁRIO: pesa
+ *    menos que repetir parceria e menos que repetir adversário, então nunca
+ *    troca um jogo inédito por um jogo repetido só para equilibrar nível.
  *
  * Determinístico dada a seed (reprodutível ao re-sortear com a mesma seed).
  */
@@ -219,15 +224,45 @@ function seedFromHistory(history, ids, idToIndex, gamesPlayed, partnerCount, opp
 }
 
 /**
+ * Ordena por nível com um ruído pequeno, para as tentativas variarem entre si
+ * sem perder o agrupamento por força.
+ *
+ * Quem não tem nível conhecido recebe a MEDIANA do grupo: assim ele cai no
+ * meio da tabela em vez de ser empurrado sistematicamente para uma das pontas
+ * (o que aconteceria se tratássemos "sem nível" como 0 ou como o máximo).
+ */
+function orderByLevelWithJitter(playing, levelOf, rng) {
+  const conhecidos = playing.map(levelOf).filter((v) => v != null).sort((a, b) => a - b);
+  const mediana = conhecidos.length === 0
+    ? 0
+    : (conhecidos.length % 2
+      ? conhecidos[(conhecidos.length - 1) / 2]
+      : (conhecidos[conhecidos.length / 2 - 1] + conhecidos[conhecidos.length / 2]) / 2);
+  // O ruído é ~0.25 de ponto: suficiente para trocar vizinhos de posição,
+  // pequeno demais para misturar um 3.0 com um 5.0.
+  return playing
+    .map((p) => {
+      const v = levelOf(p);
+      return { p, key: (v == null ? mediana : v) + (rng() - 0.5) * 0.5 };
+    })
+    .sort((a, b) => a.key - b.key)
+    .map((e) => e.p);
+}
+
+/**
  * Escolhe a melhor das 3 formações de duplas para um grupo de 4 jogadores,
  * minimizando repetições de parceria (peso maior) e de adversários.
  *
  * @returns {{ side_a: [number, number], side_b: [number, number], cost: number }}
  */
-function bestPairingOfFour(group, partnerCount, oppCount, rng) {
+function bestPairingOfFour(group, partnerCount, oppCount, rng, levelOf = null) {
   const [a, b, c, d] = group;
   const W_PARTNER = 10; // repetir dupla é pior que repetir adversário
   const W_OPP = 3;
+  // Peso do desequilíbrio de nível. Calibrado para ficar SEMPRE abaixo de uma
+  // repetição de parceria (10): um desnível de 1.0 ponto custa 2, de 3.0
+  // pontos custa 6 — nunca compensa repetir uma dupla para equilibrar.
+  const W_LEVEL = 2;
   const partnerCost = (x, y) => (partnerCount.get(pairKey(x, y)) || 0);
   const oppCost = (p, q) =>
     (oppCount.get(pairKey(p[0], q[0])) || 0) +
@@ -240,11 +275,24 @@ function bestPairingOfFour(group, partnerCount, oppCount, rng) {
     { side_a: [a, c], side_b: [b, d] },
     { side_a: [a, d], side_b: [b, c] },
   ];
+  // Desequilíbrio entre os dois lados, na régua unificada (0 quando não se
+  // conhece o nível de todos os quatro — aí este critério simplesmente não opina).
+  const levelCost = (p, q) => {
+    if (!levelOf) return 0;
+    const va = [levelOf(p[0]), levelOf(p[1])];
+    const vb = [levelOf(q[0]), levelOf(q[1])];
+    if (va.some((v) => v == null) || vb.some((v) => v == null)) return 0;
+    const mediaA = (va[0] + va[1]) / 2;
+    const mediaB = (vb[0] + vb[1]) / 2;
+    return Math.abs(mediaA - mediaB);
+  };
+
   let best = null;
   for (const opt of options) {
     const cost =
       W_PARTNER * (partnerCost(opt.side_a[0], opt.side_a[1]) + partnerCost(opt.side_b[0], opt.side_b[1])) +
       W_OPP * oppCost(opt.side_a, opt.side_b) +
+      W_LEVEL * levelCost(opt.side_a, opt.side_b) +
       rng() * 0.001; // desempate determinístico
     if (!best || cost < best.cost) best = { ...opt, cost };
   }
@@ -259,12 +307,34 @@ function bestPairingOfFour(group, partnerCount, oppCount, rng) {
  * @param {number[]} playing  índices dos jogadores que jogam nesta rodada
  * @returns {{ games: Array<{side_a:[number,number], side_b:[number,number]}>, cost: number }}
  */
-function buildRound(playing, partnerCount, oppCount, rng) {
+function buildRound(playing, partnerCount, oppCount, rng, levelOf = null) {
   const courts = Math.floor(playing.length / 4);
+  // Amplitude de nível dentro de uma quadra: quanto menor, mais parelho o jogo.
+  const W_COURT_SPREAD = 3;
+  // TETO: o custo de nível de uma quadra nunca alcança o de uma parceria
+  // repetida (W_PARTNER = 10 em `bestPairingOfFour`). Assim a garantia "nunca
+  // troco uma dupla inédita por equilíbrio de nível" vale por construção, e
+  // não por calibragem feliz dos pesos.
+  const MAX_COURT_SPREAD_COST = 9;
+  const courtSpread = (group) => {
+    if (!levelOf) return 0;
+    const vals = group.map(levelOf).filter((v) => v != null);
+    if (vals.length < 2) return 0;
+    const amplitude = Math.max(...vals) - Math.min(...vals);
+    return Math.min(W_COURT_SPREAD * amplitude, MAX_COURT_SPREAD_COST);
+  };
+
   let best = null;
   const attempts = 24;
   for (let t = 0; t < attempts; t += 1) {
-    const order = shuffle(playing, rng);
+    // Metade das tentativas parte de uma ordem AGRUPADA POR NÍVEL (com um
+    // empurrãozinho aleatório, para variar entre tentativas): assim os quatro
+    // de uma quadra tendem a ter força parecida. A outra metade continua sendo
+    // embaralhamento puro, que é o que garante variedade de parcerias ao longo
+    // do dia. O custo abaixo decide qual tentativa vence.
+    const order = (levelOf && t % 2 === 0)
+      ? orderByLevelWithJitter(playing, levelOf, rng)
+      : shuffle(playing, rng);
     // Clones locais para acumular o efeito dentro da própria rodada.
     const localP = new Map(partnerCount);
     const localO = new Map(oppCount);
@@ -272,9 +342,9 @@ function buildRound(playing, partnerCount, oppCount, rng) {
     let totalCost = 0;
     for (let g = 0; g < courts; g += 1) {
       const group = order.slice(g * 4, g * 4 + 4);
-      const pick = bestPairingOfFour(group, localP, localO, rng);
+      const pick = bestPairingOfFour(group, localP, localO, rng, levelOf);
       games.push({ side_a: pick.side_a, side_b: pick.side_b });
-      totalCost += pick.cost;
+      totalCost += pick.cost + courtSpread(group);
       // Atualiza os clones para refletir a escolha na mesma rodada.
       localP.set(pairKey(pick.side_a[0], pick.side_a[1]), (localP.get(pairKey(pick.side_a[0], pick.side_a[1])) || 0) + 1);
       localP.set(pairKey(pick.side_b[0], pick.side_b[1]), (localP.get(pairKey(pick.side_b[0], pick.side_b[1])) || 0) + 1);
@@ -299,6 +369,11 @@ function buildRound(playing, partnerCount, oppCount, rng) {
  *   para um sorteio ADITIVO ciente do que já aconteceu no dia (evita repetir
  *   parcerias/confrontos e equilibra a participação por taxa).
  *
+ *   `levels` (opcional): mapa `id → nível na régua unificada 2.0–8.0`
+ *   (`rating/domain/unifiedLevel.js`). Com ele, o sorteio prefere quadras
+ *   parelhas e duplas equilibradas. SEM ele, o comportamento é exatamente o
+ *   histórico — nenhum sorteio existente muda por causa desta opção.
+ *
  *   `courts` (opcional): QUADRAS SIMULTÂNEAS disponíveis. Sem ele, o motor abre
  *   uma quadra por grupo de 4 (comportamento histórico). Com ele, cada rodada
  *   tem no máximo `courts` jogos — ex.: 12 atletas em 2 quadras → 8 jogam e 4
@@ -314,7 +389,9 @@ export function generateGameDayGames(playerIds, options = {}) {
   if (n < 4) {
     throw new Error('O sorteio do dia de jogo exige no mínimo 4 participantes.');
   }
-  const { seed = 'gameday', history = null, courts: courtsOption = null } = options;
+  const {
+    seed = 'gameday', history = null, courts: courtsOption = null, levels = null,
+  } = options;
   // Quadras SIMULTÂNEAS disponíveis. Ausente = automático (uma quadra por grupo
   // de 4), que é exatamente o comportamento histórico.
   const courts = normalizeDrawCourts(courtsOption, Math.floor(n / 4));
@@ -327,6 +404,22 @@ export function generateGameDayGames(playerIds, options = {}) {
     Array.from({ length: n }, (_, i) => i),
     rng,
   );
+  // Nível por ÍNDICE interno (o motor trabalha com 0..n-1, não com ids).
+  // Ausente ou vazio ⇒ `levelOf` é null e nada muda em relação ao histórico.
+  let levelOf = null;
+  if (levels && typeof levels === 'object') {
+    const porIndice = ids.map((id) => {
+      const bruto = levels[id];
+      // `Number(null)` e `Number('')` são 0 — que é finito. Sem esta guarda,
+      // "sem nível" viraria o piso da régua e o atleta entraria no sorteio
+      // como o mais fraco de todos.
+      if (bruto == null || bruto === '') return null;
+      const v = Number(bruto);
+      return Number.isFinite(v) ? v : null;
+    });
+    if (porIndice.some((v) => v != null)) levelOf = (i) => porIndice[i];
+  }
+
   const gamesPlayed = new Array(n).fill(0);
   const restCount = new Array(n).fill(0);
   const partnerCount = new Map();
@@ -361,7 +454,7 @@ export function generateGameDayGames(playerIds, options = {}) {
       restCount[p] += 1;
     });
 
-    const { games } = buildRound(playing, partnerCount, oppCount, rng);
+    const { games } = buildRound(playing, partnerCount, oppCount, rng, levelOf);
     games.forEach((gm) => {
       // Persiste o efeito nos contadores globais.
       partnerCount.set(pairKey(gm.side_a[0], gm.side_a[1]), (partnerCount.get(pairKey(gm.side_a[0], gm.side_a[1])) || 0) + 1);

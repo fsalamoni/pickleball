@@ -7,6 +7,9 @@
 import { collection, getDocs, query, where } from 'firebase/firestore';
 import { db } from '@/core/config/firebase';
 import { createAuditLog } from '@/core/services/auditService';
+import { logger } from '@/core/lib/logger';
+import { fetchUnifiedLevelValues } from '@/modules/rating/services/unifiedLevelService';
+import { declaredLevelToUnified } from '@/modules/rating/domain/unifiedLevel';
 import { generateDraw, buildGroupMatches, shuffle, seededRng } from '../domain/draw.js';
 import { stageFormatCompatibility } from '../domain/formatExplain.js';
 import { normalizePhase, plannedGroupCount } from '../domain/phases.js';
@@ -44,14 +47,59 @@ function deriveGender(reg, modality) {
 }
 
 /**
+ * Níveis dos inscritos na régua unificada, indexados por uid.
+ *
+ * Best-effort de propósito: qualquer falha de leitura devolve `null` e o
+ * sorteio volta a usar o nível declarado — nunca impede um sorteio de
+ * acontecer. Inscrições avulsas (sem conta) não têm uid e simplesmente ficam
+ * sem nível na régua, caindo no caminho histórico.
+ *
+ * @param {Array<object>} registrations
+ * @param {object} modality
+ * @returns {Promise<Record<string, number>|null>}
+ */
+async function loadUnifiedLevels(registrations, modality) {
+  try {
+    const isDoubles = modality?.format === MODALITY_FORMAT.DOUBLES;
+    const uids = [];
+    registrations.forEach((r) => {
+      if (r.player_a_user_id) uids.push(r.player_a_user_id);
+      if (isDoubles && r.player_b_user_id) uids.push(r.player_b_user_id);
+    });
+    if (uids.length === 0) return null;
+    // Todo sorteio de torneio forma confrontos; o rating de duplas é o que
+    // descreve a força nesse contexto (simples só em modalidade individual).
+    const side = isDoubles ? 'doubles' : 'singles';
+    return await fetchUnifiedLevelValues(uids, { side });
+  } catch (err) {
+    logger.warn('[drawService] níveis unificados indisponíveis; usando o nível declarado', err);
+    return null;
+  }
+}
+
+/**
  * Monta os metadados (nível e gênero) de cada inscrição confirmada, para o
  * equilíbrio do sorteio.
  */
-function buildMeta(registrations, modality) {
+function buildMeta(registrations, modality, unifiedByUid = null) {
+  // Nível na régua unificada. A 4ª prioridade (nível declarado) entra AQUI,
+  // convertida para a MESMA régua — sem isso, um inscrito avulso (sem conta,
+  // logo sem rating) perderia o nível que declarou e cairia para o fim da
+  // ordenação como "desconhecido", mesmo tendo declarado ser avançado.
+  const nivelDe = (uid, declarado) => {
+    const v = uid && unifiedByUid ? unifiedByUid[uid] : null;
+    if (Number.isFinite(v)) return v;
+    return declaredLevelToUnified(declarado);
+  };
+  const isDoubles = modality.format === MODALITY_FORMAT.DOUBLES;
   return registrations.map((reg) => ({
     id: reg.id,
+    // nível declarado (caminho histórico, ainda usado quando não há conta)
     level: reg.player_a_level || null,
-    partner_level: modality.format === MODALITY_FORMAT.DOUBLES ? reg.player_b_level || null : null,
+    partner_level: isDoubles ? reg.player_b_level || null : null,
+    // nível na RÉGUA UNIFICADA (DUPR → plataforma → ELO → declarado)
+    level_value: nivelDe(reg.player_a_user_id, reg.player_a_level),
+    partner_level_value: isDoubles ? nivelDe(reg.player_b_user_id, reg.player_b_level) : null,
     gender: deriveGender(reg, modality),
   }));
 }
@@ -66,15 +114,28 @@ function buildMeta(registrations, modality) {
  * @param {object} modality
  * @returns {Record<string, { gender: 0|1|null, level: number|null }>}
  */
-function buildAmericanoPlayerMeta(registrations, modality) {
+function buildAmericanoPlayerMeta(registrations, modality, unifiedByUid = null) {
   const meta = {};
+  // Se algum inscrito tem nível na régua unificada, ela vale para TODOS —
+  // misturar índice 0..7 com 2.0–8.0 na mesma comparação inverteria a ordem
+  // de força (qualquer 2.0 pareceria mais forte que um índice 7).
+  const usaUnificada = Boolean(unifiedByUid)
+    && registrations.some((r) => Number.isFinite(unifiedByUid[r.player_a_user_id]));
   registrations.forEach((reg) => {
     const g = deriveGender(reg, modality);
     let gender = null;
     if (g === COMPETITION_GENDER.MALE) gender = 1;
     else if (g === COMPETITION_GENDER.FEMALE) gender = 0;
-    const rank = levelRank(reg.player_a_level);
-    meta[reg.id] = { gender, level: rank >= 0 ? rank : null };
+    let level = null;
+    if (usaUnificada) {
+      const v = unifiedByUid[reg.player_a_user_id];
+      // quem não tem rating entra pelo nível declarado, NA MESMA RÉGUA
+      level = Number.isFinite(v) ? v : declaredLevelToUnified(reg.player_a_level);
+    } else {
+      const rank = levelRank(reg.player_a_level);
+      level = rank >= 0 ? rank : null;
+    }
+    meta[reg.id] = { gender, level };
   });
   return meta;
 }
@@ -143,6 +204,8 @@ export async function runDraw(params, actor) {
 
   let participants;
   let balanced = false;
+  // Níveis na régua unificada, lidos no máximo UMA vez por sorteio.
+  let unifiedByUid = null;
   if (participantOrder && participantOrder.length > 0) {
     participants = participantOrder;
   } else if (hasManualSeeds) {
@@ -152,7 +215,11 @@ export async function runDraw(params, actor) {
     // aleatório (com a semente), salvo cabeças-de-chave definidas pelo admin.
     participants = shuffle(byCreation.map((r) => r.id), seededRng(providedSeed || modalityId));
   } else {
-    const meta = buildMeta(byCreation, modality);
+    // Níveis na régua unificada (DUPR informado → rating 2.0–8.0 da plataforma
+    // → ELO → nível indicado). Best-effort: se a leitura falhar, `buildMeta`
+    // cai no nível declarado e o sorteio segue exatamente como antes.
+    unifiedByUid = await loadUnifiedLevels(byCreation, modality);
+    const meta = buildMeta(byCreation, modality, unifiedByUid);
     const ordered = balancedParticipantOrder(meta);
     if (ordered) {
       participants = ordered;
@@ -185,7 +252,12 @@ export async function runDraw(params, actor) {
   // por jogador para a preferência secundária (mesmo gênero/nível se enfrentam).
   const playerMeta =
     stage.type === TOURNAMENT_STAGE_TYPE.AMERICANO
-      ? buildAmericanoPlayerMeta(byCreation, modality)
+      ? buildAmericanoPlayerMeta(
+        byCreation, modality,
+        // Reaproveita a leitura já feita acima; só busca se o caminho aleatório
+        // pulou o `buildMeta` (uma leitura por sorteio, nunca duas).
+        unifiedByUid ?? (unifiedByUid = await loadUnifiedLevels(byCreation, modality)),
+      )
       : null;
 
   const draw = generateDraw({

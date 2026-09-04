@@ -51,10 +51,36 @@ export function genderBucket(meta) {
 /**
  * Força combinada de uma inscrição (para duplas, média dos dois níveis quando
  * ambos conhecidos; senão o que houver). Retorna -1 quando nada é conhecido.
- * @param {{ level?: string|null, partner_level?: string|null }} meta
+ *
+ * Aceita DUAS formas de nível, nesta ordem:
+ *
+ *  1. `level_value` / `partner_level_value` — número na RÉGUA UNIFICADA
+ *     (2.0–8.0, ver `rating/domain/unifiedLevel.js`). É o caminho preferido:
+ *     considera DUPR informado, rating da plataforma e ELO, não só o nível
+ *     que o atleta declarou.
+ *  2. `level` / `partner_level` — código do nível na tabela de nivelamento,
+ *     convertido para o índice 0..7. Caminho histórico, mantido para quem
+ *     ainda não tem as fontes ricas (inscrição avulsa sem conta, por exemplo).
+ *
+ * As duas formas NÃO se misturam numa mesma comparação: se qualquer
+ * participante tiver `level_value`, a ordenação inteira usa a régua unificada
+ * (quem não tiver fica sem nível conhecido). Misturar índice 0..7 com 2.0–8.0
+ * seria comparar réguas diferentes — exatamente o erro que este módulo evita.
+ *
+ * @param {{ level?: string|null, partner_level?: string|null,
+ *           level_value?: number|null, partner_level_value?: number|null }} meta
+ * @param {{ useUnified?: boolean }} [options]
  * @returns {number}
  */
-export function combinedStrength(meta) {
+export function combinedStrength(meta, options = {}) {
+  if (options.useUnified) {
+    const vals = [meta?.level_value, meta?.partner_level_value]
+      .filter((v) => v != null && v !== '')
+      .map(Number)
+      .filter((v) => Number.isFinite(v));
+    if (vals.length === 0) return -1;
+    return vals.reduce((s, v) => s + v, 0) / vals.length;
+  }
   const a = levelRank(meta?.level);
   const b = levelRank(meta?.partner_level);
   const known = [a, b].filter((r) => r >= 0);
@@ -63,12 +89,27 @@ export function combinedStrength(meta) {
 }
 
 /**
+ * Alguma inscrição traz nível na régua unificada? Decide qual régua a
+ * ordenação inteira vai usar.
+ * @param {Array<object>} metas
+ */
+export function hasUnifiedLevels(metas = []) {
+  return metas.some((m) => {
+    const v = [m?.level_value, m?.partner_level_value]
+      .filter((x) => x != null && x !== '')
+      .map(Number)
+      .filter((x) => Number.isFinite(x));
+    return v.length > 0;
+  });
+}
+
+/**
  * Indica se há informação de nível suficiente para valer a pena ordenar por
  * força (pelo menos dois participantes com nível conhecido).
  * @param {Array<object>} metas
  */
-export function hasUsefulLevels(metas = []) {
-  return metas.filter((m) => combinedStrength(m) >= 0).length >= 2;
+export function hasUsefulLevels(metas = [], options = {}) {
+  return metas.filter((m) => combinedStrength(m, options) >= 0).length >= 2;
 }
 
 /**
@@ -78,9 +119,9 @@ export function hasUsefulLevels(metas = []) {
  * @param {Array<{ id: string }>} metas
  * @returns {Array<object>} mesma forma de entrada, reordenada
  */
-export function orderByStrengthDesc(metas = []) {
+export function orderByStrengthDesc(metas = [], options = {}) {
   return metas
-    .map((m, index) => ({ m, index, strength: combinedStrength(m) }))
+    .map((m, index) => ({ m, index, strength: combinedStrength(m, options) }))
     .sort((x, y) => {
       const ax = x.strength < 0 ? -Infinity : x.strength;
       const ay = y.strength < 0 ? -Infinity : y.strength;
@@ -104,16 +145,23 @@ export function orderByStrengthDesc(metas = []) {
  * inscritos, a preferência de gênero é sempre "dentro do possível": inscrições
  * sem gênero definido não são penalizadas, apenas ordenadas por nível.
  *
- * @param {Array<{ id: string, level?: string|null, partner_level?: string|null, gender?: string|null }>} metas
+ * A régua é escolhida automaticamente: se QUALQUER inscrição trouxer nível na
+ * régua unificada (`level_value`), ela vale para todos; senão usa-se o índice
+ * do nível declarado, como sempre foi.
+ *
+ * @param {Array<{ id: string, level?: string|null, partner_level?: string|null,
+ *                 level_value?: number|null, partner_level_value?: number|null,
+ *                 gender?: string|null }>} metas
  * @param {{ clusterByGender?: boolean }} [options]
  * @returns {string[]|null} ids ordenados, ou null se não houver dado útil
  */
 export function balancedParticipantOrder(metas = [], options = {}) {
   const { clusterByGender = true } = options;
-  if (!hasUsefulLevels(metas)) return null;
+  const strengthOpts = { useUnified: hasUnifiedLevels(metas) };
+  if (!hasUsefulLevels(metas, strengthOpts)) return null;
 
   if (!clusterByGender) {
-    return orderByStrengthDesc(metas).map((m) => m.id);
+    return orderByStrengthDesc(metas, strengthOpts).map((m) => m.id);
   }
 
   const buckets = { male: [], female: [], unknown: [] };
@@ -123,11 +171,11 @@ export function balancedParticipantOrder(metas = [], options = {}) {
   const knownGendered = buckets.male.length + buckets.female.length;
   const order =
     knownGendered === 0
-      ? orderByStrengthDesc(metas)
+      ? orderByStrengthDesc(metas, strengthOpts)
       : [
-          ...orderByStrengthDesc(buckets.male),
-          ...orderByStrengthDesc(buckets.female),
-          ...orderByStrengthDesc(buckets.unknown),
+          ...orderByStrengthDesc(buckets.male, strengthOpts),
+          ...orderByStrengthDesc(buckets.female, strengthOpts),
+          ...orderByStrengthDesc(buckets.unknown, strengthOpts),
         ];
 
   return order.map((m) => m.id);

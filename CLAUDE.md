@@ -98,10 +98,18 @@ Estes princípios vieram de bugs reais que custaram horas pra arrumar. São ineg
 │   │   ├── 00-INDEX.md
 │   │   ├── 26-ARENA-V3-COMPLETE-REFERENCE.md  ⭐ status atual
 │   │   └── ... sprints 1-10 ...
-│   └── 11-REFERENCE/               📖 cheatsheet, glossário, FAQ
-│       ├── cheatsheet.md
-│       ├── glossary.md
-│       └── faq.md
+│   ├── 11-REFERENCE/               📖 cheatsheet, glossário, FAQ
+│   │   ├── cheatsheet.md
+│   │   ├── glossary.md
+│   │   └── faq.md
+│   ├── 12-TEAM-TOURNAMENTS.md      🏆 torneio por equipes
+│   ├── 13-NIVEL-UNIFICADO.md       📏 ⭐ régua 2.0–8.0 de TODOS os sorteios
+│   └── GAMIFICATION/               🎮 pasta exclusiva da gamificação
+│       ├── README.md               ⭐ comece por aqui ao retomar
+│       ├── 01-ESTADO-ATUAL.md
+│       ├── 02-ESTUDO-VS-IMPLEMENTADO.md
+│       ├── 03-COMO-RETOMAR.md
+│       └── 90-ESTUDO-ORIGINAL.md
 │
 ├── src/
 │   ├── App.jsx                     # roteamento
@@ -159,6 +167,8 @@ Estes princípios vieram de bugs reais que custaram horas pra arrumar. São ineg
 **"Onde está o CLOUD FUNCTION X?"** → `functions/index.js`
 **"Onde está o TESTE X?"** → `*.test.js` ao lado do arquivo; `*.runtime.test.jsx` em `src/v2/pages/` para componentes críticos
 **"Onde está a FEATURE que não existe mas devia?"** → `docs/09-UX-ANALYSIS/15-backlog-remanescente.md`
+**"Qual NÍVEL o sorteio usa?"** → `docs/13-NIVEL-UNIFICADO.md` (régua 2.0–8.0: DUPR → rating da plataforma → ELO → nível declarado) · código em `src/modules/rating/domain/unifiedLevel.js`
+**"Onde está a GAMIFICAÇÃO?"** → `docs/GAMIFICATION/README.md` (flag `gamification_v2`, default OFF)
 
 **Para encontrar QUALQUER arquivo rápido:**
 ```bash
@@ -191,6 +201,8 @@ grep -rn "path=\"/arenas" src/v2/V2App.jsx
 | Investigar bug "feature X não funciona" | `docs/11-REFERENCE/cheatsheet.md` § "Diagnóstico" | (1) bundle deployed, (2) build, (3) tests, (4) Playwright, (5) feature flag, (6) firestore rule |
 | Ver o que ainda falta fazer | `docs/09-UX-ANALYSIS/15-backlog-remanescente.md` | Lista consolidada, com status ✅/🟡/⏳ |
 | Ver status atual do Arena V3 | `docs/10-ARENA-V3/26-ARENA-V3-COMPLETE-REFERENCE.md` | Métricas, sprint, gotchas |
+| Equilibrar duplas/jogos por nível | `docs/13-NIVEL-UNIFICADO.md` | `fetchUnifiedLevelsByParticipant(participants)` → passe `levels` ao motor de sorteio. NUNCA compare escalas diferentes na mesma conta |
+| Retomar a gamificação | `docs/GAMIFICATION/README.md` | Leia README → 01 → 02 → 03 antes de tocar em código |
 
 ---
 
@@ -333,6 +345,16 @@ chore(deps): bump firebase to 12.x
 >
 > **Destaques por onda**:
 >
+> - **Onda R — Nível unificado nos sorteios** (2026-09-04): uma régua só
+>   (2.0–8.0, a do DUPR) para TODOS os sorteios, alimentada por
+>   DUPR informado → rating 2.0–8.0 da plataforma → ELO → nível declarado
+>   (convertido para a mesma escala). Aplicada em dia de jogo
+>   (Americano, Mexicano, Rei da Quadra e Play) e no seeding de torneios.
+>   Leitura pura: **zero impacto no banco** (nenhuma coleção, campo, índice
+>   ou regra novos). Ver `docs/13-NIVEL-UNIFICADO.md`.
+> - **Gamificação V2** (#115): em produção atrás de `gamification_v2`
+>   (default OFF). Documentação exclusiva em `docs/GAMIFICATION/`.
+>
 > - **Onda G — DUPR / Rating estilo DUPR** (#128-#133, Sprints 38-43):
 >   ranking próprio estilo DUPR (escala 2.0-8.0) em aba separada,
 >   motor baseado em placar + confiabilidade, evolução por jogo,
@@ -376,12 +398,12 @@ chore(deps): bump firebase to 12.x
 
 | Métrica | Valor | Delta do início do agente |
 |---|---|---|
-| **Testes Vitest** | 2683 passing (+71 da governança DUPR: fila de exportação + seleção) | +2275 (era 408) |
+| **Testes Vitest** | **2752 passing** (204 arquivos; +68 do nível unificado) | +2344 (era 408) |
 | **Lint errors** | 0 | era 30+ |
 | **Módulos** | 20 (`games` e `legal` saíram como `src/modules/` mas continuam como pastas oficiais — **rating virou módulo oficial** com domain/services/hooks/components) | +4 (coaches, circuits, games, legal) |
 | **V2 pages** | 77 (+V2GamificationHome, V2Achievements, V2PublicAchievements, V2HallOfFame, V2SocialBonds, V2ReferralLanding) | +53 |
 | **V2 components (src/v2/components/)** | **16 pastas** (+home, +rating, +settings, +tournament cresceu muito, +admin) | — |
-| **Coleções Firestore** | **113 top-level em `firestore.rules`** (as 13 da gamificação V2 agora documentadas em `05-DATA-MODEL.md`) | +74 |
+| **Coleções Firestore** | **121 top-level em `firestore.rules`** (as 13 da gamificação V2 documentadas em `05-DATA-MODEL.md`) | +82 |
 | **Índices compostos Firestore** | **32 em `firestore.indexes.json`** (+4 da gamificação V2) | +28 |
 | **Feature flags ativas** | **15 default OFF** (+`gamification_v2`; 137 viraram código) | −116 |
 | **Cloud Functions** | **10** (+ `recomputeSeasonRankingDaily`) | +10 |
