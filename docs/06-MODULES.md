@@ -540,12 +540,29 @@ Estatísticas e histórico individual do atleta.
 - Coleções: `player_ratings`, `rating_history`, `player_goals`, `follows`.
 - Ganchos com o módulo `rating/` (ranking nacional, head-to-head).
 
-## progression/ — progressão do atleta
+## progression/ — progressão do atleta + Gamificação V2
 
-Curvas de progressão, níveis e metas.
+Curvas de progressão, níveis, metas e todo o sistema de **Gamificação V2**
+(Onda R), atrás da flag `gamification_v2` (default OFF).
 
-- **hooks**, **domain** e **services** próprios; sem página dedicada (reusado
-  por `performance/` e `profile/`).
+- **V1**: hooks/domain/services próprios, sem página dedicada (reusado por
+  `performance/` e `profile/`). Nada disso muda com a flag desligada.
+- **V2 (gated)**: tiers com nome (Calouro → Imortal), 5 trilhas paralelas
+  de XP, missões diárias, proteção de sequência (dias de folga,
+  congelamentos, férias), kudos, indicações, rivais/crews/mentorias e
+  ranking mensal.
+- **Páginas V2**: `/gamification` (hub), `/hall-da-fama`, `/vinculos`
+  (rivais, crews, mentorias). Bloco "Sua progressão" no `/perfil` via
+  `ProfileProgressionSection`.
+- **XP**: atividade + bônus de conquista registrada + XP de missão concluída
+  (`domain/xpTotal.js`), tudo derivado — recalcular não infla.
+- **Ranking sazonal**: Cloud Function `recomputeSeasonRankingDaily` (03h BRT)
+  ranqueia por XP DA TEMPORADA (`xpTotal - baselineXp`), não por XP de vida.
+- **13 coleções** novas — detalhe em `docs/05-DATA-MODEL.md` § Gamificação V2.
+- **Vocabulário com fonte única**: `tiers.js` e `skillTrees.js` mandam; o
+  schema Zod e o `firestore.rules` derivam. Guardado na CI por
+  `domain/gamificationRulesSync.test.js`.
+- Detalhes e armadilhas: `src/modules/progression/README.md`.
 
 ## rating/ — ranking nacional + DUPR + matchmaking
 
@@ -607,10 +624,17 @@ Feed da comunidade, follows de atletas, metas pessoais.
 
 ## achievements/ — conquistas
 
-Conquistas e medalhas (gamificação expandida na Onda 9b).
+Conquistas e medalhas. V1 (20 conquistas, sempre ativa) e **V2**
+(catálogo de 5 famílias × 5 raridades), atrás de `gamification_v2`.
 
-- Hooks e domain próprios; sem página dedicada no momento. Integração
-  com `performance/`, `profile/` e `social/`.
+- **V1**: hooks e domain próprios, integrados a `performance/`, `profile/`
+  e `social/`. Continuam intactos com a flag desligada.
+- **V2 (gated)**: páginas `/conquistas` e `/conquistas/:uid` (perfil
+  público de outro atleta, com botão de kudos). Coleção
+  `user_achievements_v2`.
+- O total de conquistas vem sempre de `ACHIEVEMENTS_V2.length` — nunca de
+  um número escrito à mão.
+- Detalhes: `src/modules/achievements/README.md`.
 
 ## circuits/ — circuitos (séries de torneios)
 

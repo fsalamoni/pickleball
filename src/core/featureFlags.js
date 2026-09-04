@@ -93,6 +93,28 @@ export const FEATURE_FLAG = Object.freeze({
    * (elo professor↔atleta↔ranking). Aditivo — desligada, a semente segue a
    * lógica atual (rating DUPR informado / nivelamento). */
   COACH_LEVEL_RATING_SEED: 'coach_level_rating_seed',
+
+  /**
+   * GAMIFICATION V2 — master flag.
+   *
+   * Habilita o sistema novo de progressão (tiers com nome, skill trees,
+   * XP multi-fonte, caps, missões, achievements V2 com 5 famílias,
+   * streak com proteção). É a porta de entrada para todas as features
+   * do roadmap `docs/GAMIFICATION/00-ROADMAP.md`.
+   *
+   * **Comportamento desligado**: NADA muda. XP/nível/achievements V1
+   * continuam funcionando exatamente como antes.
+   *
+   * **Comportamento ligado**: as rotas `/gamification`, `/conquistas`,
+   * `/conquistas/:uid` e `/hall-da-fama` saem do empty state, e o bloco
+   * "Sua progressão" aparece no `/perfil`. O cálculo de XP total V2 convive
+   * com V1 via `computeXpCompatV1` (mesma numeração).
+   *
+   * Não há sub-flags: esta é a única chave da gamificação V2.
+   *
+   * Aditivo. Default OFF.
+   */
+  GAMIFICATION_V2: 'gamification_v2',
 });
 
 /** Metadados de exibição para o painel de flags (admin master). */
@@ -190,6 +212,15 @@ export const FEATURE_FLAG_META = Object.freeze({
     description:
       'O nível validado pelo professor vira semente do rating (elo professor↔'
       + 'atleta↔ranking). Desligada, a semente segue a lógica atual.',
+  },
+  [FEATURE_FLAG.GAMIFICATION_V2]: {
+    label: 'Gamificação V2 (master)',
+    description:
+      'Liga o sistema novo de progressão: tiers com nome (Calouro→Imortal), '
+      + '5 trilhas paralelas de XP, XP multi-fonte com limites anti-farm, '
+      + 'conquistas V2 (5 famílias e 5 raridades), missões diárias, sequência '
+      + 'com dias de folga e modo férias, kudos e programa de indicação. '
+      + 'Desligada, NADA muda — XP/nível/conquistas V1 seguem intactos.',
   },
 });
 

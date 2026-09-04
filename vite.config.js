@@ -60,17 +60,23 @@ export default defineConfig(({ mode }) => {
     test: {
       environment: 'jsdom',
       globals: true,
-      include: ['src/**/*.{test,spec}.{js,jsx,ts,tsx}'],
+      // `functions/` entra porque as Cloud Functions escrevem no banco — a
+      // lógica pura delas (ex.: montagem do ranking sazonal) merece o mesmo
+      // rigor do resto. Só os arquivos de teste; o deploy segue intocado.
+      include: [
+        'src/**/*.{test,spec}.{js,jsx,ts,tsx}',
+        'functions/**/*.{test,spec}.js',
+      ],
       // Robustez de CI: limites explícitos para um teste/hook travado abortar
       // rápido (com mensagem clara) em vez de pendurar o processo. Um pouco
       // mais folgados que o padrão para tolerar a CPU mais lenta do runner.
       testTimeout: 20000,
       hookTimeout: 20000,
       teardownTimeout: 20000,
-      // Só na CI: re-tenta um teste que falhe, para que flakes transitórios
-      // (contenção de CPU/timing no runner) se auto-recuperem em vez de deixar
-      // o run vermelho. Localmente fica 0 para expor qualquer instabilidade.
-      retry: process.env.CI ? 2 : 0,
+      // Uma re-tentativa na CI absorve contenção real de CPU do runner. Duas
+      // já começam a esconder teste genuinamente instável — que é bug, não
+      // ruído. Localmente fica 0 para expor qualquer instabilidade na hora.
+      retry: process.env.CI ? 1 : 0,
     },
   };
 });

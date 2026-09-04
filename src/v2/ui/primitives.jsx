@@ -196,6 +196,8 @@ const BADGE_TONES = {
   blue: 'bg-blue-50 text-blue-600 border border-blue-100',
   amber: 'bg-amber-50 text-amber-700 border border-amber-100',
   red: 'bg-red-50 text-red-500 border border-red-100',
+  cyan: 'bg-cyan-50 text-cyan-700 border border-cyan-100',
+  purple: 'bg-purple-50 text-purple-700 border border-purple-100',
 };
 
 export function V2Badge({ tone = 'neutral', className, children, ...props }) {

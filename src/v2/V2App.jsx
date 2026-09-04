@@ -2,6 +2,7 @@ import React, { Suspense, lazy } from 'react';
 import { Navigate, Route, Routes } from 'react-router-dom';
 import { useAuth } from '@/core/lib/FirebaseAuthContext';
 import V2Layout from '@/v2/components/V2Layout';
+import GamificationErrorBoundary from '@/v2/components/GamificationErrorBoundary';
 
 // Páginas nativas v2 (design Athleisure Premium).
 const V2Dashboard = lazy(() => import('@/v2/pages/V2Dashboard'));
@@ -21,6 +22,11 @@ const V2Partners = lazy(() => import('@/v2/pages/V2Partners'));
 const V2Clubs = lazy(() => import('@/v2/pages/V2Clubs'));
 const V2ClubDetail = lazy(() => import('@/v2/pages/V2ClubDetail'));
 const V2Performance = lazy(() => import('@/v2/pages/V2Performance'));
+const V2Achievements = lazy(() => import('@/v2/pages/V2Achievements'));
+const V2GamificationHome = lazy(() => import('@/v2/pages/V2GamificationHome'));
+const V2HallOfFame = lazy(() => import('@/v2/pages/V2HallOfFame'));
+const V2PublicAchievements = lazy(() => import('@/v2/pages/V2PublicAchievements'));
+const V2SocialBonds = lazy(() => import('@/v2/pages/V2SocialBonds'));
 const V2Bookings = lazy(() => import('@/v2/pages/V2Bookings'));
 const V2Profile = lazy(() => import('@/v2/pages/V2Profile'));
 const V2Chat = lazy(() => import('@/v2/pages/V2Chat'));
@@ -81,6 +87,14 @@ const V2Leveling = lazy(() => import('@/v2/pages/V2Leveling'));
 const V2History = lazy(() => import('@/v2/pages/V2History'));
 const V2Conduct = lazy(() => import('@/v2/pages/V2Conduct'));
 const V2Privacy = lazy(() => import('@/v2/pages/V2Privacy'));
+
+/**
+ * Isola uma rota de gamificação: um erro dentro dela vira o fallback amigável
+ * do boundary em vez de derrubar a árvore inteira do app.
+ */
+function Gamified({ children }) {
+  return <GamificationErrorBoundary>{children}</GamificationErrorBoundary>;
+}
 
 function V2Spinner({ full = true }) {
   return (
@@ -180,6 +194,13 @@ export default function V2App() {
 
           {/* Você */}
           <Route path="meu-desempenho" element={<V2Performance />} />
+          {/* Gamificação V2 — cada rota isolada num ErrorBoundary: se a
+              seção quebrar, o resto da plataforma continua de pé. */}
+          <Route path="conquistas" element={<Gamified><V2Achievements /></Gamified>} />
+          <Route path="conquistas/:uid" element={<Gamified><V2PublicAchievements /></Gamified>} />
+          <Route path="gamification" element={<Gamified><V2GamificationHome /></Gamified>} />
+          <Route path="hall-da-fama" element={<Gamified><V2HallOfFame /></Gamified>} />
+          <Route path="vinculos" element={<Gamified><V2SocialBonds /></Gamified>} />
           <Route path="perfil" element={<V2Profile />} />
           <Route path="perfil/torneios" element={<V2MyTournamentsAdmin />} />
           <Route path="perfil/editar" element={<V2ProfileEdit />} />

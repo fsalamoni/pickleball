@@ -376,15 +376,15 @@ chore(deps): bump firebase to 12.x
 
 | Métrica | Valor | Delta do início do agente |
 |---|---|---|
-| **Testes Vitest** | 1800 passing (+30 exportação DUPR; +68 equipes) | +1392 (era 408) |
+| **Testes Vitest** | 2612 passing (+812 na branch de gamificação) | +2204 (era 408) |
 | **Lint errors** | 0 | era 30+ |
 | **Módulos** | 20 (`games` e `legal` saíram como `src/modules/` mas continuam como pastas oficiais — **rating virou módulo oficial** com domain/services/hooks/components) | +4 (coaches, circuits, games, legal) |
-| **V2 pages** | 71 (V2TournamentAdmin + V2MyTournamentsAdmin) | +47 |
+| **V2 pages** | 77 (+V2GamificationHome, V2Achievements, V2PublicAchievements, V2HallOfFame, V2SocialBonds, V2ReferralLanding) | +53 |
 | **V2 components (src/v2/components/)** | **16 pastas** (+home, +rating, +settings, +tournament cresceu muito, +admin) | — |
-| **Coleções Firestore** | **103** (+push_tokens, +skill_rating_history, +player_skill_ratings, +audit_logs, +tournament_*) | +64 |
-| **Índices compostos Firestore** | 102 (28 collectionGroup) | +98 |
-| **Feature flags ativas** | **14 default OFF** (137 viraram código) | −117 |
-| **Cloud Functions** | **9** (+ `pushOnNotificationCreate`) | +9 |
+| **Coleções Firestore** | **113 top-level em `firestore.rules`** (as 13 da gamificação V2 agora documentadas em `05-DATA-MODEL.md`) | +74 |
+| **Índices compostos Firestore** | **32 em `firestore.indexes.json`** (+4 da gamificação V2) | +28 |
+| **Feature flags ativas** | **15 default OFF** (+`gamification_v2`; 137 viraram código) | −116 |
+| **Cloud Functions** | **10** (+ `recomputeSeasonRankingDaily`) | +10 |
 | **PRs mergeados** | **96 totais** (Sprints 0-50+) | — |
 | **Origin/main** | `106bd55` (PR #110) | — |
 | **Bundle deployed** | (deploy em curso) | — |

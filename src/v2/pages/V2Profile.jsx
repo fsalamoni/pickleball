@@ -3,6 +3,9 @@ import { Link } from 'react-router-dom';
 import { Award, Hash, MapPin, Medal, Pencil, User } from 'lucide-react';
 import { useAuth } from '@/core/lib/FirebaseAuthContext';
 import { useNationalRanking } from '@/modules/rating/hooks/useRating';
+import { useFeatureFlag } from '@/core/lib/FeatureFlagsContext';
+import { FEATURE_FLAG } from '@/core/featureFlags';
+import ProfileProgressionSection from '@/v2/components/profile/ProfileProgressionSection';
 import { genderLabel } from '@/modules/athletes/domain/constants';
 import { V2Avatar, V2Button } from '@/v2/ui/primitives';
 import V2DuprRatingBadge from '@/v2/components/rating/V2DuprRatingBadge';
@@ -17,6 +20,7 @@ function memberSince(profile) {
 export default function V2Profile() {
   const { user, userProfile } = useAuth();
   const { data: ranking = [] } = useNationalRanking();
+  const gamificationOn = useFeatureFlag(FEATURE_FLAG.GAMIFICATION_V2);
 
   const me = useMemo(
     () => ranking.find((p) => p.id === user?.uid || p.uid === user?.uid) || null,
@@ -104,6 +108,8 @@ export default function V2Profile() {
         Edite seus dados, nivelamento e privacidade no editor de perfil.{' '}
         <Link to="/perfil/editar" className="font-bold text-ink underline">Abrir editor de perfil</Link>
       </div>
+
+      {gamificationOn && user && <ProfileProgressionSection uid={user.uid} />}
     </div>
   );
 }
