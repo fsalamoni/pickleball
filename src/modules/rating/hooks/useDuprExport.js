@@ -13,6 +13,7 @@ import {
   recordDuprExportAudit,
   loadDuprLedger,
   recordDuprLedger,
+  updateDuprExportQueue,
 } from '../services/duprExportService.js';
 import { EXPORT_STATUS } from '../domain/duprReconcile.js';
 
@@ -55,16 +56,39 @@ export function useDuprLedger(enabled = true) {
 
 /**
  * Registra no ledger uma ação sobre partidas (`exported` ao baixar o CSV,
- * `submitted` ao confirmar o lançamento no DUPR). Invalida o cache do ledger.
+ * `submitted`/`pending`/`excluded` quando o admin muda a situação na tabela).
+ * Passe `force: true` nas ações manuais — só elas podem rebaixar a situação.
+ * Invalida o cache do ledger.
  */
 export function useRecordDuprLedger() {
   const { user } = useAuth();
   const queryClient = useQueryClient();
   return useMutation({
-    mutationFn: ({ entries, status = EXPORT_STATUS.EXPORTED, ledgerByKey }) => recordDuprLedger(
+    mutationFn: ({
+      entries, status = EXPORT_STATUS.EXPORTED, ledgerByKey, force = false,
+    }) => recordDuprLedger(
       { uid: user?.uid, email: user?.email, displayName: user?.displayName },
       entries,
-      { status, ledgerByKey },
+      { status, ledgerByKey, force },
+    ),
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ['dupr-export-ledger'] });
+    },
+  });
+}
+
+/**
+ * Tira (ou devolve) partidas da LISTA DE EXPORTAÇÃO, sem mexer na situação
+ * DUPR delas. Invalida o cache do ledger para a lista se refazer na hora.
+ */
+export function useUpdateDuprQueue() {
+  const { user } = useAuth();
+  const queryClient = useQueryClient();
+  return useMutation({
+    mutationFn: ({ entries, removed = true }) => updateDuprExportQueue(
+      { uid: user?.uid, email: user?.email, displayName: user?.displayName },
+      entries,
+      { removed },
     ),
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ['dupr-export-ledger'] });

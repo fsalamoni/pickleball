@@ -744,8 +744,27 @@ Ranking mensal. `seasonId` = `YYYY-MM` no fuso de Brasília.
 - **Índices**: `seasonId ASC, xp DESC` e `uid ASC, xp DESC`.
 
 ### `dupr_export_log/{matchId}` (Onda G — `dupr_match_export`)
-Situação de cada partida perante o DUPR (`exported`/`submitted`) e
-carimbos de data. **Governança sensível: só platform_admin lê e escreve.**
+Situação de cada partida perante o DUPR e presença dela na **lista de
+exportação**. Id do doc = id da partida (`tournament_matches` ou
+`club_event_games`), o que torna a escrita idempotente.
+**Governança sensível: só platform_admin lê e escreve.**
+
+- `match_id`, `source`, `match_type`, `event_name`, `match_date` — cópia
+  leve para leitura do ledger sem recarregar a partida.
+- `fingerprint`, `identifier` (`pr_<matchId>`) — chaves de conferência
+  com o histórico do DUPR (antiduplicação).
+- `status`: `pending` | `exported` | `submitted` | `excluded`
+  (`confirmed` NÃO é gravado — é derivado da conferência com o DUPR).
+  `excluded` = "não lançar no DUPR", decisão explícita do admin, é a
+  situação de maior precedência e nenhuma ação automática a rebaixa.
+- `exported_at`, `submitted_at`, `excluded_at` — carimbos da atividade.
+- `queue_removed` (bool) + `queue_removed_at` — ADITIVOS: tiram a
+  partida da lista de exportação **sem** mexer no `status` (é "não
+  lançar agora", não "nunca lançar"). Ausentes = na lista.
+
+**Lista de exportação (automática)**: a partida entra sozinha quando
+está PRONTA (todos os jogadores com `dupr_id`), com `status` `pending`
+e sem `queue_removed`. É exatamente esse conjunto que vira o CSV.
 
 ## Coleções Arena V3 (sempre atrás de sub-flags `ARENA_MODULE_*`)
 

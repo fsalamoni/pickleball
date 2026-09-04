@@ -376,7 +376,7 @@ chore(deps): bump firebase to 12.x
 
 | Métrica | Valor | Delta do início do agente |
 |---|---|---|
-| **Testes Vitest** | 2612 passing (+812 na branch de gamificação) | +2204 (era 408) |
+| **Testes Vitest** | 2683 passing (+71 da governança DUPR: fila de exportação + seleção) | +2275 (era 408) |
 | **Lint errors** | 0 | era 30+ |
 | **Módulos** | 20 (`games` e `legal` saíram como `src/modules/` mas continuam como pastas oficiais — **rating virou módulo oficial** com domain/services/hooks/components) | +4 (coaches, circuits, games, legal) |
 | **V2 pages** | 77 (+V2GamificationHome, V2Achievements, V2PublicAchievements, V2HallOfFame, V2SocialBonds, V2ReferralLanding) | +53 |

@@ -18,8 +18,17 @@
  *     jogadores + placar por game) e/ou pelo `identifier` externo. As casadas
  *     viram `confirmed` (já estão no DUPR); o resto segue `pending`.
  *
- * Precedência da situação (maior vence): confirmed > submitted > exported >
- * pending. Assim o admin sempre vê o estado mais "avançado" conhecido.
+ * Precedência da situação (maior vence): excluded > confirmed > submitted >
+ * exported > pending. Assim o admin sempre vê o estado mais "avançado"
+ * conhecido, e a decisão explícita "não lançar" (excluded) nunca é rebaixada
+ * por uma ação automática.
+ *
+ * FILA DE EXPORTAÇÃO (`buildExportQueue`): além da situação, o ledger guarda
+ * `queue_removed` — o admin pode TIRAR uma partida da lista de exportação do
+ * momento SEM mudar a situação dela (continua `pending`, só não entra no CSV
+ * agora). A fila é montada automaticamente: toda partida PRONTA (todos os
+ * jogadores com ID DUPR) e ainda PENDENTE entra nela sozinha; sai quando muda
+ * de situação ou quando o admin a remove explicitamente.
  */
 
 /** Situação de uma partida perante o DUPR. */
@@ -28,6 +37,8 @@ export const EXPORT_STATUS = Object.freeze({
   EXPORTED: 'exported',
   SUBMITTED: 'submitted',
   CONFIRMED: 'confirmed',
+  /** Decisão explícita do admin: esta partida NUNCA deve ir para o DUPR. */
+  EXCLUDED: 'excluded',
 });
 
 /** Rótulos pt-BR curtos (para badges/filtros). */
@@ -36,6 +47,7 @@ export const EXPORT_STATUS_LABELS = Object.freeze({
   [EXPORT_STATUS.EXPORTED]: 'Exportada',
   [EXPORT_STATUS.SUBMITTED]: 'Lançada no DUPR',
   [EXPORT_STATUS.CONFIRMED]: 'Confirmada no DUPR',
+  [EXPORT_STATUS.EXCLUDED]: 'Não lançar no DUPR',
 });
 
 /** Ordem/precedência das situações (maior = mais avançada). */
@@ -44,6 +56,9 @@ export const EXPORT_STATUS_RANK = Object.freeze({
   [EXPORT_STATUS.EXPORTED]: 1,
   [EXPORT_STATUS.SUBMITTED]: 2,
   [EXPORT_STATUS.CONFIRMED]: 3,
+  // "Não lançar" é uma decisão FINAL do admin: nenhuma ação automática
+  // (ex.: registrar um download como `exported`) pode rebaixá-la.
+  [EXPORT_STATUS.EXCLUDED]: 4,
 });
 
 /** Tom do badge (primitivas V2Badge) por situação. */
@@ -52,7 +67,16 @@ export const EXPORT_STATUS_TONE = Object.freeze({
   [EXPORT_STATUS.EXPORTED]: 'blue',
   [EXPORT_STATUS.SUBMITTED]: 'amber',
   [EXPORT_STATUS.CONFIRMED]: 'green',
+  [EXPORT_STATUS.EXCLUDED]: 'red',
 });
+
+/** Situações que o admin pode aplicar manualmente (na ordem exibida na UI). */
+export const ADMIN_ASSIGNABLE_STATUSES = Object.freeze([
+  EXPORT_STATUS.PENDING,
+  EXPORT_STATUS.EXPORTED,
+  EXPORT_STATUS.SUBMITTED,
+  EXPORT_STATUS.EXCLUDED,
+]);
 
 /* --------------------------------- helpers -------------------------------- */
 
@@ -272,7 +296,7 @@ function toMillis(value) {
  * @param {Map|object} [ctx.ledgerByKey]  registro local por id de partida
  * @param {object} [ctx.duprIndex]        índice de `buildDuprIndex` (opcional)
  * @returns {{status:string, rank:number, exportedAt:number, submittedAt:number,
- *   confirmed:boolean, fingerprint:string}}
+ *   confirmed:boolean, fingerprint:string, queueRemoved:boolean}}
  */
 export function classifyEntry(entry, { ledgerByKey, duprIndex } = {}) {
   const ledger = mapGet(ledgerByKey, entry?.id) || null;
@@ -285,9 +309,12 @@ export function classifyEntry(entry, { ledgerByKey, duprIndex } = {}) {
   ));
 
   let status = EXPORT_STATUS.PENDING;
-  if (ledger?.status === EXPORT_STATUS.SUBMITTED) status = EXPORT_STATUS.SUBMITTED;
+  if (ledger?.status === EXPORT_STATUS.EXCLUDED) status = EXPORT_STATUS.EXCLUDED;
+  else if (ledger?.status === EXPORT_STATUS.SUBMITTED) status = EXPORT_STATUS.SUBMITTED;
   else if (ledger?.status === EXPORT_STATUS.EXPORTED || ledger?.exported_at) status = EXPORT_STATUS.EXPORTED;
-  if (confirmed) status = EXPORT_STATUS.CONFIRMED;
+  // A conferência com o DUPR confirma o que JÁ está lá — mas nunca sobrepõe a
+  // decisão explícita do admin de não lançar aquela partida.
+  if (confirmed && status !== EXPORT_STATUS.EXCLUDED) status = EXPORT_STATUS.CONFIRMED;
 
   return {
     status,
@@ -296,6 +323,7 @@ export function classifyEntry(entry, { ledgerByKey, duprIndex } = {}) {
     submittedAt: toMillis(ledger?.submitted_at),
     confirmed,
     fingerprint,
+    queueRemoved: ledger?.queue_removed === true,
   };
 }
 
@@ -318,6 +346,7 @@ export function summarizeSituations(view = []) {
     exported: 0,
     submitted: 0,
     confirmed: 0,
+    excluded: 0,
   };
   view.forEach((e) => {
     const s = e?.situation?.status || EXPORT_STATUS.PENDING;
@@ -332,6 +361,61 @@ export function filterBySituation(view = [], situation = '') {
   return view.filter((e) => (e?.situation?.status || EXPORT_STATUS.PENDING) === situation);
 }
 
+/* --------------------------- fila de exportação --------------------------- */
+
+/**
+ * Uma partida é "apta a ser exportada para lançar no DUPR" quando:
+ *  1. está PRONTA (todos os jogadores com ID DUPR — sem isso o DUPR recusa);
+ *  2. está PENDENTE (ainda não foi exportada, lançada, confirmada nem marcada
+ *     como "não lançar"); e
+ *  3. não foi removida da lista pelo admin (`queue_removed` no ledger).
+ *
+ * A regra é automática: partida nova entra na fila sozinha, sem nenhuma ação.
+ *
+ * @param {object} entry  entry já classificada (com `.situation`)
+ * @returns {boolean}
+ */
+export function isQueueEligible(entry) {
+  if (!entry?.ready) return false;
+  const situation = entry.situation || {};
+  if (situation.queueRemoved) return false;
+  return (situation.status || EXPORT_STATUS.PENDING) === EXPORT_STATUS.PENDING;
+}
+
+/**
+ * Monta a LISTA DE EXPORTAÇÃO a partir da view classificada (ordem preservada).
+ * É exatamente o conjunto que o botão "Baixar CSV do DUPR" leva para o arquivo.
+ *
+ * @param {Array<object>} view  saída de `buildReconciliationView`
+ * @returns {Array<object>}
+ */
+export function buildExportQueue(view = []) {
+  return view.filter(isQueueEligible);
+}
+
+/**
+ * Diagnóstico da fila para a UI: quantas partidas estão na lista e quantas
+ * ficaram DE FORA mesmo estando pendentes (sem ID DUPR ou removidas à mão) —
+ * assim nada some silenciosamente da vista do admin.
+ *
+ * @param {Array<object>} view  saída de `buildReconciliationView`
+ * @returns {{queued:number, pendingIncomplete:number, removed:number}}
+ */
+export function summarizeQueue(view = []) {
+  let queued = 0;
+  let pendingIncomplete = 0;
+  let removed = 0;
+  view.forEach((e) => {
+    const situation = e?.situation || {};
+    const status = situation.status || EXPORT_STATUS.PENDING;
+    if (status !== EXPORT_STATUS.PENDING) return;
+    if (!e?.ready) { pendingIncomplete += 1; return; }
+    if (situation.queueRemoved) { removed += 1; return; }
+    queued += 1;
+  });
+  return { queued, pendingIncomplete, removed };
+}
+
 /* ------------------------------ ledger (upserts) -------------------------- */
 
 /**
@@ -340,21 +424,32 @@ export function filterBySituation(view = [], situation = '') {
  * `{ id, data }` — o serviço faz o `set(..., { merge:true })` e acrescenta os
  * carimbos de servidor.
  *
+ * Quando `force` é `true` (AÇÃO EXPLÍCITA DO ADMIN na tabela), a situação
+ * pedida vale sempre — inclusive rebaixando (ex.: devolver para `pending`).
+ * Sem `force` (registro automático do download), a regra monotônica protege as
+ * situações mais avançadas.
+ *
  * @param {Array<object>} entries  entries de exportação (com `.id` e `.row`)
  * @param {object} opts
- * @param {string} opts.status  EXPORT_STATUS.EXPORTED | EXPORT_STATUS.SUBMITTED
+ * @param {string} opts.status  uma das EXPORT_STATUS
  * @param {number} [opts.at=Date.now()]  instante da ação (ms)
  * @param {Map|object} [opts.ledgerByKey]  ledger atual (para não rebaixar)
+ * @param {boolean} [opts.force=false]  ação manual do admin (permite rebaixar)
  * @returns {Array<{id:string, data:object}>}
  */
-export function buildLedgerUpserts(entries = [], { status, at = Date.now(), ledgerByKey } = {}) {
+export function buildLedgerUpserts(
+  entries = [],
+  {
+    status, at = Date.now(), ledgerByKey, force = false,
+  } = {},
+) {
   const nextRank = EXPORT_STATUS_RANK[status] ?? 0;
   const upserts = [];
   entries.forEach((entry) => {
     if (!entry?.id) return;
     const prev = mapGet(ledgerByKey, entry.id) || null;
     const prevRank = EXPORT_STATUS_RANK[prev?.status] ?? 0;
-    const finalStatus = nextRank >= prevRank ? status : prev.status;
+    const finalStatus = (force || nextRank >= prevRank) ? status : prev.status;
 
     const data = {
       match_id: entry.id,
@@ -366,10 +461,55 @@ export function buildLedgerUpserts(entries = [], { status, at = Date.now(), ledg
       identifier: deterministicIdentifier(entry.id),
       status: finalStatus,
     };
+    // Carimba a ATIVIDADE realizada (mesmo quando a situação final não muda,
+    // por ser mais avançada) — o painel de controle mostra a última atividade.
     if (status === EXPORT_STATUS.EXPORTED) data.exported_at = at;
     if (status === EXPORT_STATUS.SUBMITTED) data.submitted_at = at;
+    if (status === EXPORT_STATUS.EXCLUDED) data.excluded_at = at;
+    // Voltar para "pendente" é um recomeço: a partida volta para a lista de
+    // exportação e os carimbos antigos deixam de valer como situação.
+    if (force && finalStatus === EXPORT_STATUS.PENDING) {
+      data.exported_at = null;
+      data.submitted_at = null;
+      data.excluded_at = null;
+      data.queue_removed = false;
+      data.queue_removed_at = null;
+    }
 
     upserts.push({ id: entry.id, data });
+  });
+  return upserts;
+}
+
+/**
+ * Monta os upserts de PRESENÇA NA LISTA DE EXPORTAÇÃO. Mexe SÓ na fila
+ * (`queue_removed`) — a situação DUPR da partida fica intacta, porque tirar da
+ * lista significa "não vou lançar agora", e não "nunca lançar".
+ *
+ * @param {Array<object>} entries  entries de exportação (com `.id` e `.row`)
+ * @param {object} opts
+ * @param {boolean} opts.removed  `true` remove da lista; `false` devolve
+ * @param {number} [opts.at=Date.now()]  instante da ação (ms)
+ * @returns {Array<{id:string, data:object}>}
+ */
+export function buildQueueUpserts(entries = [], { removed, at = Date.now() } = {}) {
+  const upserts = [];
+  entries.forEach((entry) => {
+    if (!entry?.id) return;
+    upserts.push({
+      id: entry.id,
+      data: {
+        match_id: entry.id,
+        source: entry.source || null,
+        match_type: entry.match_type || null,
+        event_name: entry.row?.event || '',
+        match_date: entry.row?.date || '',
+        fingerprint: entryFingerprint(entry),
+        identifier: deterministicIdentifier(entry.id),
+        queue_removed: !!removed,
+        queue_removed_at: removed ? at : null,
+      },
+    });
   });
   return upserts;
 }
@@ -385,12 +525,19 @@ export function latestExportInfo(ledgerByKey) {
   let lastActivityAt = 0;
   let exportedCount = 0;
   let submittedCount = 0;
+  let excludedCount = 0;
   values.forEach((v) => {
     const exp = toMillis(v?.exported_at);
     const sub = toMillis(v?.submitted_at);
-    lastActivityAt = Math.max(lastActivityAt, exp, sub);
-    if (v?.status === EXPORT_STATUS.SUBMITTED || sub) submittedCount += 1;
+    const exc = toMillis(v?.excluded_at);
+    lastActivityAt = Math.max(lastActivityAt, exp, sub, exc);
+    // A situação vale mais que o carimbo: uma partida marcada como "não
+    // lançar" continua nessa conta mesmo tendo sido exportada um dia.
+    if (v?.status === EXPORT_STATUS.EXCLUDED) excludedCount += 1;
+    else if (v?.status === EXPORT_STATUS.SUBMITTED || sub) submittedCount += 1;
     else if (v?.status === EXPORT_STATUS.EXPORTED || exp) exportedCount += 1;
   });
-  return { lastActivityAt, exportedCount, submittedCount, total: values.length };
+  return {
+    lastActivityAt, exportedCount, submittedCount, excludedCount, total: values.length,
+  };
 }
