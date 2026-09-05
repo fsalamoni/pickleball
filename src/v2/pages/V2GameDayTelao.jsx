@@ -24,22 +24,47 @@
  * Play não existem "últimos resultados" nem ranking do dia: mostrá-los seria
  * exibir traços numa tela que a sala inteira está olhando.
  *
- * Somente leitura: nenhum botão altera nada do dia de jogo.
+ * ## Organizar do próprio telão (só o Play, só para quem organiza)
+ *
+ * Num Play, quem organiza fica de pé ao lado da quadra com o telão aberto — ter
+ * de voltar para a outra tela a cada partida encerrada não faz sentido. Por
+ * isso, para o CRIADOR do dia de jogo, o telão traz as mesmas ações da tela
+ * normal: criar a próxima partida, criar jogo numa quadra livre, cancelar,
+ * substituir quem faltou (clicando no nome), pausar/retomar a participação e
+ * vincular ou desfazer dupla fixa.
+ *
+ * Para todo mundo que não é o criador, o telão continua sendo só leitura — é
+ * uma tela pública, e ninguém que passa na frente dela pode mexer no dia de
+ * jogo. As ações usam exatamente os mesmos hooks da tela normal; nada de regra
+ * de negócio nova mora aqui.
  */
 
-import React, { useEffect, useMemo, useState } from 'react';
+import React, { useCallback, useEffect, useMemo, useState } from 'react';
 import { Link, useParams } from 'react-router-dom';
-import { useQuery } from '@tanstack/react-query';
+import { useQuery, useQueryClient } from '@tanstack/react-query';
+import { toast } from 'sonner';
 import {
   Radio, Clock, Trophy, ListOrdered, CheckCircle2, ArrowLeft, Maximize2, Minimize2, Users,
+  PlayCircle, Check, Pause, Link2, Unlink,
 } from 'lucide-react';
 
+import { ConfirmDialog } from '@/components/ui/confirm-dialog';
+import {
+  Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription, DialogFooter,
+} from '@/components/ui/dialog';
+import { V2Button } from '@/v2/ui/primitives';
+import { useAuth } from '@/core/lib/FirebaseAuthContext';
 import { getGameDay, listGameDayParticipants, listGameDayGames } from '@/modules/games/services/gameDayService';
-import { gameDayWhenText } from '@/modules/games/domain/gameDay';
+import { gameDayWhenText, isGameDayOwner } from '@/modules/games/domain/gameDay';
 import { buildGameDayBoard, sideNames, scoreText, winnerSide } from '@/modules/games/domain/gameDayBoard';
 import {
-  computePlayOrder, forecastPlayMatches, PLAY_STATUS, PLAY_SLOTS,
+  computePlayOrder, forecastPlayByCourt, PLAY_STATUS, PLAY_SLOTS, PLAY_GAME_STATUS,
 } from '@/modules/games/domain/gamePlay';
+import {
+  useCreateNextPlayGame, useFinishPlayGame, useCancelPlayGame, useNoShowSwapPlayGame,
+  useSetPlayParticipantSkip, useSetPlayParticipantPartner,
+} from '@/modules/games/hooks/useGameDays';
+import { SkipDialog, PartnerDialog } from '@/v2/components/games/AthletePlayOrganizer';
 import { computeGameDayLeaderboard } from '@/modules/clubs/domain/gameDayLeaderboard';
 import { GAME_DAY_FORMAT_LABELS } from '@/modules/clubs/domain/gameDayFormats';
 
@@ -94,7 +119,7 @@ function useTelaCheia() {
  * empilhados sem separação viram uma lista indistinguível, e quem olha de longe
  * não descobre quem joga contra quem.
  */
-function Lado({ side, vencedor, variante = 'empilhado' }) {
+function Lado({ side, vencedor, variante = 'empilhado', onJogador = null }) {
   const nomes = sideNames(side);
   const cor = vencedor ? 'text-acid' : 'text-white';
 
@@ -107,6 +132,27 @@ function Lado({ side, vencedor, variante = 'empilhado' }) {
     return (
       <div className={`truncate text-lg font-semibold leading-snug ${cor}`}>
         {nomes.join(' · ')}
+      </div>
+    );
+  }
+
+  // Com `onJogador`, cada nome vira botão: é assim que se substitui quem faltou,
+  // igual à tela normal do Play (lá o clique é na célula da tabela).
+  const jogadores = (side || []).filter((p) => p && typeof p === 'object' && p.name);
+  if (onJogador && jogadores.length === nomes.length) {
+    return (
+      <div className={`text-2xl font-bold leading-tight xl:text-3xl ${cor}`}>
+        {jogadores.map((p) => (
+          <button
+            key={p.id || p.name}
+            type="button"
+            onClick={() => onJogador(p)}
+            title={`Substituir ${p.name} (ausente)`}
+            className="block max-w-full truncate rounded-lg px-1 text-left transition-colors hover:bg-white/10 hover:text-acid"
+          >
+            {p.name}
+          </button>
+        ))}
       </div>
     );
   }
@@ -147,7 +193,7 @@ function Vazio({ children }) {
  *   `score_a` vir nulo — um dado ruim virando "0 × 0" numa tela que a sala
  *   inteira está olhando seria pior do que um erro discreto.
  */
-function CardEmQuadra({ jogo, comPlacar = true }) {
+function CardEmQuadra({ jogo, comPlacar = true, onJogador = null, acoes = null }) {
   const venc = comPlacar ? winnerSide(jogo) : null;
   const placar = comPlacar ? scoreText(jogo) : null;
   return (
@@ -158,13 +204,52 @@ function CardEmQuadra({ jogo, comPlacar = true }) {
         </span>
         {placar && <span className="font-display text-3xl font-black text-acid">{placar}</span>}
       </div>
-      <Lado side={jogo.side_a} vencedor={venc === 'a'} />
+      <Lado side={jogo.side_a} vencedor={venc === 'a'} onJogador={onJogador} />
       <div className="my-2 flex items-center gap-3">
         <span className="h-px flex-1 bg-white/10" />
         <span className="text-sm font-bold text-white/30">VS</span>
         <span className="h-px flex-1 bg-white/10" />
       </div>
-      <Lado side={jogo.side_b} vencedor={venc === 'b'} />
+      <Lado side={jogo.side_b} vencedor={venc === 'b'} onJogador={onJogador} />
+      {acoes && <div className="mt-4 flex flex-wrap gap-2">{acoes}</div>}
+    </div>
+  );
+}
+
+/** Botão do telão: escuro, e grande o bastante para o dedo numa TV/tablet. */
+function BotaoTelao({ tone = 'ghost', onClick, disabled, title, children }) {
+  const tons = {
+    acid: 'bg-acid text-ink hover:bg-acid/90 disabled:bg-white/10 disabled:text-white/30',
+    ghost: 'border border-white/20 text-white/70 hover:border-white/40 hover:text-white disabled:opacity-30',
+    danger: 'border border-red-400/30 text-red-300/80 hover:border-red-400/60 hover:text-red-200 disabled:opacity-30',
+  };
+  return (
+    <button
+      type="button"
+      onClick={onClick}
+      disabled={disabled}
+      title={title}
+      className={`inline-flex items-center gap-1.5 rounded-full px-4 py-2 text-sm font-bold transition-colors disabled:cursor-not-allowed ${tons[tone]}`}
+    >
+      {children}
+    </button>
+  );
+}
+
+/**
+ * Quadra sem jogo. No telão do Play ela não some da tela: quem organiza precisa
+ * ver que há quadra vaga — e poder criar o jogo dali mesmo.
+ */
+function CardQuadraLivre({ court, acoes = null }) {
+  return (
+    <div className="flex flex-col justify-center rounded-3xl border border-dashed border-white/15 bg-white/[0.02] p-5 landscape:lg:min-h-[14rem] portrait:lg:min-h-[16rem] xl:p-6">
+      <div className="mb-3">
+        <span className="rounded-full bg-white/10 px-3 py-1 text-sm font-black text-white/50">
+          QUADRA {court}
+        </span>
+      </div>
+      <p className="text-2xl font-bold text-white/30 xl:text-3xl">Livre</p>
+      {acoes && <div className="mt-4 flex flex-wrap gap-2">{acoes}</div>}
     </div>
   );
 }
@@ -225,7 +310,7 @@ const POR_JOGO = 4;
  * item da lista: os nomes de quem está jogando já estão, em letra grande, nos
  * cards de quadra ao lado — repeti-los aqui só empurraria a fila para baixo.
  */
-function OrdemDeParticipacao({ view }) {
+function OrdemDeParticipacao({ view, onAtleta = null }) {
   const { order, inCourt, unavailable } = view;
   const total = order.length + inCourt.length + unavailable.length;
   if (total === 0) return <Vazio>Ninguém na ordem ainda.</Vazio>;
@@ -241,20 +326,30 @@ function OrdemDeParticipacao({ view }) {
           Ninguém aguardando no momento.
         </p>
       )}
-      {order.map((p, i) => (
-        <div
-          key={p.id}
-          className={`flex items-center gap-3 rounded-2xl border px-4 py-2.5 ${
-            i < proximos ? 'border-acid/40 bg-acid/10' : 'border-white/10 bg-white/5'
-          }`}
-        >
-          <span className={`w-8 shrink-0 text-center font-display text-xl font-black ${i < proximos ? 'text-acid' : 'text-white/40'}`}>
-            {p.orderNo}
-          </span>
-          <span className="min-w-0 flex-1 truncate text-lg font-semibold text-white">{p.name}</span>
-          {i < proximos && <span className="shrink-0 text-xs font-bold uppercase text-acid">entra a seguir</span>}
-        </div>
-      ))}
+      {order.map((p, i) => {
+        const classe = `flex w-full items-center gap-3 rounded-2xl border px-4 py-2.5 text-left ${
+          i < proximos ? 'border-acid/40 bg-acid/10' : 'border-white/10 bg-white/5'
+        } ${onAtleta ? 'transition-colors hover:border-white/40' : ''}`;
+        const corpo = (
+          <>
+            <span className={`w-8 shrink-0 text-center font-display text-xl font-black ${i < proximos ? 'text-acid' : 'text-white/40'}`}>
+              {p.orderNo}
+            </span>
+            <span className="flex min-w-0 flex-1 items-center gap-2">
+              <span className="truncate text-lg font-semibold text-white">{p.name}</span>
+              {p.partner_id && <Link2 aria-hidden="true" className="h-4 w-4 shrink-0 text-blue-300" />}
+            </span>
+            {i < proximos && <span className="shrink-0 text-xs font-bold uppercase text-acid">entra a seguir</span>}
+          </>
+        );
+        return onAtleta
+          ? (
+            <button key={p.id} type="button" onClick={() => onAtleta(p)} className={classe} title={`Ações de ${p.name}`}>
+              {corpo}
+            </button>
+          )
+          : <div key={p.id} className={classe}>{corpo}</div>;
+      })}
 
       {inCourt.length > 0 && (
         <p className="pt-1 text-sm leading-relaxed text-white/40">
@@ -262,27 +357,42 @@ function OrdemDeParticipacao({ view }) {
           {inCourt.map((p) => p.name).join(', ')}
         </p>
       )}
+      {/* Pausados viram botão quando quem organiza está no telão: é dali que se
+          traz alguém de volta para a fila. */}
       {unavailable.length > 0 && (
-        <p className="text-sm leading-relaxed text-amber-300/50">
-          <span className="font-bold uppercase">Pausado: </span>
-          {unavailable.map((p) => p.name).join(', ')}
-        </p>
+        <div className="flex flex-wrap items-baseline gap-x-2 gap-y-1 text-sm text-amber-300/50">
+          <span className="font-bold uppercase">Pausado:</span>
+          {unavailable.map((p) => (onAtleta ? (
+            <button
+              key={p.id}
+              type="button"
+              onClick={() => onAtleta(p)}
+              className="rounded-md px-1 underline decoration-dotted underline-offset-2 transition-colors hover:bg-white/10 hover:text-amber-200"
+            >
+              {p.name}
+            </button>
+          ) : <span key={p.id}>{p.name}</span>))}
+        </div>
       )}
     </div>
   );
 }
 
 /**
- * Previsão das próximas partidas do Play.
+ * Próxima partida DE CADA QUADRA.
  *
  * O Play cria um jogo por vez, então "próximos jogos" aqui não são partidas
- * gravadas: é quem a fila indica que entra em seguida, em blocos de quatro.
- * As DUPLAS não são decididas agora — só na hora de criar o jogo, equilibrando
- * nível e sexo —, e por isso a tela diz isso com todas as letras: prometer uma
- * dupla que pode mudar seria pior do que não mostrar nada.
+ * gravadas: é quem a fila indica que entra em cada quadra, calculado em
+ * `forecastPlayByCourt` na mesma ordem que `createNextPlayGame` usaria — as
+ * quadras livres primeiro, as ocupadas quando liberarem.
+ *
+ * As DUPLAS não são decididas agora: só na hora de criar o jogo, equilibrando
+ * nível e sexo. A tela diz isso com todas as letras — prometer uma dupla que
+ * pode mudar seria pior do que não mostrar nada.
  */
-function ProximasPartidasPlay({ blocos, disponiveis }) {
-  if (blocos.length === 0) {
+function ProximaPorQuadra({ entradas, disponiveis, acoesPorQuadra = null }) {
+  const comGente = entradas.filter((e) => e.players.length > 0);
+  if (comGente.length === 0) {
     return (
       <Vazio>
         {disponiveis === 0
@@ -292,39 +402,53 @@ function ProximasPartidasPlay({ blocos, disponiveis }) {
     );
   }
   return (
-    <div className="space-y-2">
+    <div className="space-y-3">
       <p className="text-sm text-white/40">
-        Quem entra a seguir, pela ordem da fila. As duplas são formadas na hora de criar o jogo.
+        Quem entra em cada quadra, pela ordem da fila. As duplas são formadas na hora de criar o jogo.
       </p>
-      {blocos.map((bloco, i) => {
-        // Uma leva INCOMPLETA não é uma "próxima partida": ela ainda depende de
-        // alguém sair da quadra. Anunciá-la como partida seria prometer o que
-        // não está formado — então ela perde o destaque e diz o que falta.
-        const destaque = i === 0 && bloco.full;
+      {/* Mesma grade dos cards de quadra logo acima: cada previsão fica na
+          mesma coluna da quadra a que se refere. */}
+      <div className="grid gap-2 [grid-template-columns:repeat(auto-fit,minmax(min(100%,420px),1fr))] landscape:[grid-template-columns:repeat(auto-fit,minmax(min(100%,320px),1fr))]">
+      {entradas.map((e) => {
+        const acoes = acoesPorQuadra ? acoesPorQuadra(e) : null;
+        const destaque = e.free && e.full;
         return (
           <div
-            // O índice é a chave certa aqui: a previsão é uma lista posicional
-            // que se recalcula inteira a cada atualização — não há identidade a
-            // preservar entre renders.
-            key={i}
+            key={e.court}
             className={`rounded-2xl border px-4 py-3 ${
               destaque ? 'border-acid/40 bg-acid/10' : 'border-white/10 bg-white/5'
             }`}
           >
-            <div className={`mb-1 text-xs font-bold uppercase tracking-wide ${destaque ? 'text-acid' : 'text-white/40'}`}>
-              {!bloco.full ? 'Aguardando jogadores' : (i === 0 ? 'Próxima partida' : `${i + 1}ª próxima`)}
+            <div className="mb-1 flex items-center gap-2">
+              <span className={`rounded-full px-2.5 py-0.5 text-xs font-black ${
+                destaque ? 'bg-acid text-ink' : 'bg-white/10 text-white/50'
+              }`}
+              >
+                QUADRA {e.court}
+              </span>
+              <span className={`text-xs font-bold uppercase tracking-wide ${destaque ? 'text-acid' : 'text-white/40'}`}>
+                {e.free ? 'livre agora' : 'quando liberar'}
+              </span>
             </div>
-            <div className="text-lg font-semibold leading-snug text-white">
-              {bloco.players.map((p) => p.name).join(' · ')}
-            </div>
-            {bloco.waiting > 0 && (
-              <div className="mt-1 text-sm text-amber-300/70">
-                faltam {bloco.waiting} — a próxima partida sai quando uma quadra liberar
+
+            {e.players.length === 0 ? (
+              <div className="text-lg font-semibold text-white/30">A fila acaba antes desta quadra</div>
+            ) : (
+              <div className="text-lg font-semibold leading-snug text-white">
+                {e.players.map((p) => p.name).join(' · ')}
               </div>
             )}
+
+            {e.waiting > 0 && (
+              <div className="mt-1 text-sm text-amber-300/70">
+                faltam {e.waiting} — a partida sai quando houver {PLAY_SLOTS} na fila
+              </div>
+            )}
+            {acoes && <div className="mt-2 flex flex-wrap gap-2">{acoes}</div>}
           </div>
         );
       })}
+      </div>
     </div>
   );
 }
@@ -379,6 +503,35 @@ export default function V2GameDayTelao() {
   const { gameDayId } = useParams();
   const hora = useRelogio();
   const telaCheia = useTelaCheia();
+  const { user } = useAuth();
+  const qc = useQueryClient();
+
+  // Ações do Play, exatamente os mesmos hooks da tela normal.
+  const criarProximo = useCreateNextPlayGame(gameDayId);
+  const encerrarPartida = useFinishPlayGame(gameDayId);
+  const cancelarJogo = useCancelPlayGame(gameDayId);
+  const substituirAusente = useNoShowSwapPlayGame(gameDayId);
+  const definirPausa = useSetPlayParticipantSkip(gameDayId);
+  const definirDupla = useSetPlayParticipantPartner(gameDayId);
+
+  // Diálogos.
+  const [alvoSubstituir, setAlvoSubstituir] = useState(null); // { gid, player }
+  const [alvoCancelar, setAlvoCancelar] = useState(null); // gid
+  const [alvoEncerrar, setAlvoEncerrar] = useState(null); // gid
+  const [atletaAberto, setAtletaAberto] = useState(null); // participante
+  const [pausaPara, setPausaPara] = useState(null);
+  const [duplaPara, setDuplaPara] = useState(null);
+  const [ocupado, setOcupado] = useState(false);
+
+  /**
+   * O telão tem consultas PRÓPRIAS (`gameday-telao`), então os hooks de mutação
+   * — que invalidam as chaves `game-days` da tela normal — não o atualizariam.
+   * Sem isto, uma ação tomada aqui só apareceria no refetch de 15 s.
+   */
+  const recarregar = useCallback(
+    () => qc.invalidateQueries({ queryKey: ['gameday-telao', gameDayId] }),
+    [qc, gameDayId],
+  );
 
   // Consultas próprias do painel (e não os hooks compartilhados) porque só aqui
   // faz sentido buscar de novo a cada 15 s: ligar isso nos hooks gerais poria
@@ -418,12 +571,66 @@ export default function V2GameDayTelao() {
     ? playView.all.filter((p) => p.status === PLAY_STATUS.AVAILABLE).length
     : 0;
 
-  // Previsão de quem entra a seguir no Play, uma leva por quadra livre.
-  const proximasPlay = useMemo(() => {
-    if (!playView) return [];
-    const quadras = Math.max(1, Number(gameDay?.play_courts) || 1);
-    return forecastPlayMatches(playView.order, { courts: quadras });
-  }, [playView, gameDay?.play_courts]);
+  const quadras = Math.max(1, Number(gameDay?.play_courts) || 1);
+
+  // A próxima partida DE CADA QUADRA, na mesma ordem em que
+  // `createNextPlayGame` criaria os jogos.
+  const proximasPlay = useMemo(
+    () => (playView ? forecastPlayByCourt(playView.order, { courts: quadras, games }) : []),
+    [playView, quadras, games],
+  );
+
+  // Uma linha por quadra existente: o jogo aberto dela, ou `null` se está livre.
+  const quadrasDoPlay = useMemo(() => {
+    if (!board.isPlay) return [];
+    const porQuadra = new Map();
+    games
+      .filter((g) => g.status !== PLAY_GAME_STATUS.FINISHED && g.court != null)
+      .forEach((g) => porQuadra.set(Number(g.court), g));
+    return Array.from({ length: quadras }, (_, i) => i + 1)
+      .map((court) => ({ court, jogo: porQuadra.get(court) || null }));
+  }, [board.isPlay, games, quadras]);
+
+  // Só o CRIADOR organiza pelo telão. Para todo o resto ele é só leitura — é
+  // uma tela pública, e quem passa na frente dela não pode mexer no dia de jogo.
+  const podeGerir = board.isPlay && isGameDayOwner(gameDay, user?.uid);
+
+  const executar = useCallback(async (acao, sucesso) => {
+    setOcupado(true);
+    try {
+      const res = await acao();
+      toast.success(typeof sucesso === 'function' ? sucesso(res) : sucesso);
+      await recarregar();
+    } catch (err) {
+      toast.error(err?.message || 'Não foi possível concluir a ação.');
+    } finally {
+      setOcupado(false);
+    }
+  }, [recarregar]);
+
+  const criarJogoNaQuadra = (court) => executar(
+    () => criarProximo.mutateAsync({ court }),
+    (res) => `Jogo criado na quadra ${res?.court ?? court}.`,
+  );
+  const encerrarECriarProxima = (gid) => executar(
+    () => encerrarPartida.mutateAsync(gid),
+    (res) => (res?.next
+      ? `Partida encerrada. Próxima criada na quadra ${res.next.court}.`
+      : 'Partida encerrada. Sem 4 disponíveis na ordem — a quadra ficou livre.'),
+  );
+  const cancelar = (gid) => executar(() => cancelarJogo.mutateAsync(gid), 'Jogo cancelado.');
+  const trocarAusente = (gid, absentId, nome) => executar(
+    () => substituirAusente.mutateAsync({ gid, absentId }),
+    `${nome} saiu da partida e entrou o próximo da ordem.`,
+  );
+  const pausar = (pid, count) => executar(
+    () => definirPausa.mutateAsync({ pid, count }),
+    count > 0 ? `Pausado por ${count} partida(s).` : 'De volta à fila.',
+  );
+  const vincular = (pid, partnerId) => executar(
+    () => definirDupla.mutateAsync({ pid, partnerId }),
+    partnerId ? 'Dupla fixa formada.' : 'Dupla desfeita.',
+  );
 
   if (isLoading) {
     return (
@@ -453,16 +660,6 @@ export default function V2GameDayTelao() {
   // ranking), os cards de quadra CRESCEM para preencher a altura em paisagem.
   // Num telão, meia tela vazia é desperdício: o que está em quadra é
   // justamente o que precisa ser lido de longe.
-  // A coluna larga tem duas linhas: as quadras em cima e, embaixo, o bloco que
-  // faz sentido para o formato — a previsão da fila no Play, o ranking na
-  // grade (que só existe onde há placar, e só depois do primeiro resultado).
-  const temSegundaLinha = board.isPlay
-    ? (proximasPlay.length > 0 || disponiveis > 0)
-    : ranking.length > 0;
-
-  // Sem esse segundo bloco, as quadras crescem para preencher a altura em
-  // paisagem: num telão, meia tela vazia é desperdício.
-  const esticarQuadras = !temSegundaLinha && board.live.length > 0;
 
   return (
     <div className="flex min-h-[100dvh] flex-col bg-ink text-white">
@@ -516,80 +713,121 @@ export default function V2GameDayTelao() {
         </header>
 
         {/* GRADE PRINCIPAL — o layout segue a ORIENTAÇÃO da tela, não só a
-            largura. Em PAISAGEM com espaço (TV, notebook) são duas colunas: as
-            quadras ocupam a área nobre e a fila/histórico acompanham à direita.
-            Em RETRATO (tablet de pé, TV girada, celular) tudo empilha na ordem
-            em que está no HTML, que é a ordem de urgência.
+            largura. Em PAISAGEM com espaço (TV, notebook) são duas colunas; em
+            RETRATO (tablet de pé, TV girada, celular) tudo empilha na ordem em
+            que está no HTML.
+
+            A ordem do HTML é a ordem de urgência, e é a mesma nos dois formatos:
+            o que está em quadra, quem vem a seguir, e só então a fila / o
+            histórico. Em paisagem a grade recoloca cada bloco: a coluna larga
+            fica com "em quadra" e "próximos jogos"; a estreita, com a ordem de
+            participação (Play) ou o ranking e os resultados (grade).
 
             Usar `landscape:` em vez de só um breakpoint importa: um iPad Pro de
             pé tem 1024px de largura e cairia na regra de duas colunas por
-            engano, espremendo tudo.
-
-            Os DOIS formatos têm a mesma estrutura de duas linhas na coluna
-            larga — o que muda é o conteúdo da segunda linha (próximos jogos no
-            Play, ranking do dia na grade). Sem esse segundo bloco, no Play
-            sobrava meia tela em branco. */}
-        <div className={`grid gap-6 landscape:lg:grid-cols-3 ${esticarQuadras ? 'landscape:lg:flex-1' : ''}`}>
-          {/* Em quadra agora */}
+            engano, espremendo tudo numa tela alta. */}
+        <div className="grid gap-6 landscape:lg:grid-cols-3">
+          {/* 1. Em quadra agora */}
           <Bloco
             icon={Radio}
             titulo="Em quadra agora"
+            // A contagem é de partidas ACONTECENDO, não de quadras: no Play a
+            // grade mostra também as quadras livres, e dizer "(3)" com uma
+            // vazia seria mentira.
             contagem={board.live.length}
-            className={`landscape:lg:col-span-2 landscape:lg:col-start-1 landscape:lg:row-start-1 ${
-              esticarQuadras ? 'landscape:lg:flex landscape:lg:flex-col' : ''
-            }`}
-            corpoClassName={esticarQuadras ? 'landscape:lg:flex-1' : ''}
+            className="landscape:lg:col-span-2 landscape:lg:col-start-1 landscape:lg:row-start-1"
           >
-            {board.live.length === 0 ? (
+            {/* `auto-fit` com o mínimo limitado por `min(100%, …)`: sem esse
+                `min`, numa tela estreita a trilha ficaria maior que o contêiner
+                e a página rolaria de lado. Em retrato o mínimo é maior, para os
+                cards ficarem grandes e legíveis de longe. */}
+            {board.isPlay ? (
+              <div className="grid gap-4 [grid-template-columns:repeat(auto-fit,minmax(min(100%,420px),1fr))] landscape:[grid-template-columns:repeat(auto-fit,minmax(min(100%,320px),1fr))]">
+                {quadrasDoPlay.map(({ court, jogo }) => (jogo ? (
+                  <CardEmQuadra
+                    key={court}
+                    jogo={jogo}
+                    comPlacar={false}
+                    onJogador={podeGerir ? (pl) => setAlvoSubstituir({ gid: jogo.id, player: pl }) : null}
+                    acoes={podeGerir && (
+                      <>
+                        <BotaoTelao tone="acid" onClick={() => setAlvoEncerrar(jogo.id)} disabled={ocupado}>
+                          <Check className="h-4 w-4" /> Criar próxima partida
+                        </BotaoTelao>
+                        <BotaoTelao tone="danger" onClick={() => setAlvoCancelar(jogo.id)} disabled={ocupado}>
+                          Cancelar
+                        </BotaoTelao>
+                      </>
+                    )}
+                  />
+                ) : (
+                  <CardQuadraLivre
+                    key={court}
+                    court={court}
+                    acoes={podeGerir && (
+                      <BotaoTelao
+                        tone="acid"
+                        onClick={() => criarJogoNaQuadra(court)}
+                        disabled={ocupado || disponiveis < PLAY_SLOTS}
+                        title={disponiveis < PLAY_SLOTS ? `Mínimo de ${PLAY_SLOTS} disponíveis na fila` : undefined}
+                      >
+                        <PlayCircle className="h-4 w-4" /> Criar jogo
+                      </BotaoTelao>
+                    )}
+                  />
+                )))}
+              </div>
+            ) : board.live.length === 0 ? (
               <Vazio>
                 {board.totals.total === 0
-                  ? (board.isPlay
-                    ? 'Nenhuma partida em quadra ainda.'
-                    : 'Os jogos ainda não foram sorteados.')
+                  ? 'Os jogos ainda não foram sorteados.'
                   : 'Nenhum jogo em andamento no momento.'}
               </Vazio>
             ) : (
-              // `auto-fit` com o mínimo limitado por `min(100%, …)`: sem esse
-              // `min`, numa tela estreita a trilha ficaria maior que o
-              // contêiner e a página rolaria de lado. Em retrato o mínimo é
-              // maior, para os cards ficarem grandes e legíveis de longe.
-              <div className={`grid gap-4 [grid-template-columns:repeat(auto-fit,minmax(min(100%,420px),1fr))] landscape:[grid-template-columns:repeat(auto-fit,minmax(min(100%,320px),1fr))] ${
-                esticarQuadras ? 'landscape:lg:h-full landscape:lg:auto-rows-fr' : ''
-              }`}
-              >
-                {board.live.map((jogo) => (
-                  <CardEmQuadra key={jogo.id} jogo={jogo} comPlacar={!board.isPlay} />
-                ))}
+              <div className="grid gap-4 [grid-template-columns:repeat(auto-fit,minmax(min(100%,420px),1fr))] landscape:[grid-template-columns:repeat(auto-fit,minmax(min(100%,320px),1fr))]">
+                {board.live.map((jogo) => <CardEmQuadra key={jogo.id} jogo={jogo} />)}
               </div>
             )}
           </Bloco>
 
-          {/* Coluna de apoio. Fica DEPOIS das quadras no HTML e ANTES da segunda
-              linha: em retrato tudo empilha nessa ordem e quem está esperando vê
-              primeiro a sua posição, não a tabela de classificação. */}
-          <aside
-            className={`space-y-8 landscape:lg:col-start-3 landscape:lg:row-start-1 ${
-              temSegundaLinha ? 'landscape:lg:row-span-2' : ''
-            }`}
+          {/* 2. Próximos jogos — logo abaixo das quadras, nas duas orientações. */}
+          <Bloco
+            icon={Clock}
+            titulo="Próximos jogos"
+            contagem={board.isPlay ? null : board.upcoming.length}
+            className="landscape:lg:col-span-2 landscape:lg:col-start-1 landscape:lg:row-start-2"
           >
             {board.isPlay ? (
+              <ProximaPorQuadra entradas={proximasPlay} disponiveis={disponiveis} />
+            ) : board.upcoming.length === 0 ? (
+              <Vazio>Sem jogos programados adiante.</Vazio>
+            ) : (
+              <div className="grid gap-2 [grid-template-columns:repeat(auto-fit,minmax(min(100%,320px),1fr))]">
+                {board.upcoming.map((jogo) => <LinhaJogo key={jogo.id} jogo={jogo} mostrarRodada />)}
+              </div>
+            )}
+          </Bloco>
+
+          {/* 3. Coluna estreita: a fila (Play) ou ranking + resultados (grade). */}
+          <aside className="space-y-8 landscape:lg:col-start-3 landscape:lg:row-span-2 landscape:lg:row-start-1">
+            {board.isPlay ? (
               <Bloco icon={ListOrdered} titulo="Ordem de participação">
-                {playView ? <OrdemDeParticipacao view={playView} /> : null}
+                {playView
+                  ? (
+                    <OrdemDeParticipacao
+                      view={playView}
+                      onAtleta={podeGerir ? setAtletaAberto : null}
+                    />
+                  )
+                  : null}
               </Bloco>
             ) : (
               <>
-                <Bloco icon={Clock} titulo="Próximos jogos" contagem={board.upcoming.length}>
-                  {board.upcoming.length === 0 ? (
-                    <Vazio>Sem jogos programados adiante.</Vazio>
-                  ) : (
-                    <div className="space-y-2">
-                      {board.upcoming.map((jogo) => (
-                        <LinhaJogo key={jogo.id} jogo={jogo} mostrarRodada />
-                      ))}
-                    </div>
-                  )}
-                </Bloco>
-
+                {ranking.length > 0 && (
+                  <Bloco icon={Trophy} titulo="Ranking do dia">
+                    <RankingDoDia linhas={ranking} />
+                  </Bloco>
+                )}
                 <Bloco icon={CheckCircle2} titulo="Últimos resultados" contagem={board.totals.decided}>
                   {board.recent.length === 0 ? (
                     <Vazio>Nenhum resultado ainda.</Vazio>
@@ -602,28 +840,119 @@ export default function V2GameDayTelao() {
               </>
             )}
           </aside>
-
-          {/* Segunda linha da coluna larga.
-              Play: quem entra a seguir (a previsão da fila).
-              Grade: o ranking do dia — que só existe onde há placar. */}
-          {temSegundaLinha && (
-            <Bloco
-              icon={board.isPlay ? Clock : Trophy}
-              titulo={board.isPlay ? 'Próximos jogos' : 'Ranking do dia'}
-              contagem={board.isPlay ? (proximasPlay.length || null) : null}
-              className="landscape:lg:col-span-2 landscape:lg:col-start-1 landscape:lg:row-start-2"
-            >
-              {board.isPlay
-                ? <ProximasPartidasPlay blocos={proximasPlay} disponiveis={disponiveis} />
-                : <RankingDoDia linhas={ranking} />}
-            </Bloco>
-          )}
         </div>
 
         <footer className="mt-8 border-t border-white/10 pt-4 text-center text-sm text-white/30">
-          Esta tela se atualiza sozinha. Deixe-a aberta durante o dia de jogo.
+          {podeGerir
+            ? 'Você organiza este Play: clique num nome em quadra para substituir, ou num atleta da ordem para pausar e vincular dupla.'
+            : 'Esta tela se atualiza sozinha. Deixe-a aberta durante o dia de jogo.'}
         </footer>
       </div>
+
+      {/* Diálogos de organização (só existem para quem organiza). Reaproveitam
+          os MESMOS componentes da tela normal, para as duas telas nunca
+          divergirem no texto nem nas opções. */}
+      {podeGerir && (
+        <>
+          <ConfirmDialog
+            open={!!alvoEncerrar}
+            onOpenChange={(v) => !v && setAlvoEncerrar(null)}
+            title="Criar a próxima partida?"
+            description="A partida atual é encerrada e a próxima entra automaticamente nesta quadra (se houver 4 disponíveis na ordem)."
+            confirmLabel="Criar próxima"
+            onConfirm={() => { const g = alvoEncerrar; setAlvoEncerrar(null); if (g) encerrarECriarProxima(g); }}
+          />
+          <ConfirmDialog
+            open={!!alvoCancelar}
+            onOpenChange={(v) => !v && setAlvoCancelar(null)}
+            destructive
+            title="Cancelar jogo?"
+            description="O jogo será removido e os jogadores voltam para a fila. Nenhum próximo jogo é criado."
+            confirmLabel="Cancelar jogo"
+            onConfirm={() => { const g = alvoCancelar; setAlvoCancelar(null); if (g) cancelar(g); }}
+          />
+          <ConfirmDialog
+            open={!!alvoSubstituir}
+            onOpenChange={(v) => !v && setAlvoSubstituir(null)}
+            title="Marcar como ausente?"
+            description={alvoSubstituir
+              ? `${alvoSubstituir.player.name} sai deste jogo e entra o próximo da ordem de participação. Os dois trocam de lugar.`
+              : ''}
+            confirmLabel="Substituir"
+            onConfirm={() => {
+              const alvo = alvoSubstituir;
+              setAlvoSubstituir(null);
+              if (alvo) trocarAusente(alvo.gid, alvo.player.id, alvo.player.name);
+            }}
+          />
+
+          <AcoesDoAtleta
+            atleta={atletaAberto}
+            onClose={() => setAtletaAberto(null)}
+            onPausar={() => { setPausaPara(atletaAberto); setAtletaAberto(null); }}
+            onVoltar={() => { const a = atletaAberto; setAtletaAberto(null); if (a) pausar(a.id, 0); }}
+            onDupla={() => { setDuplaPara(atletaAberto); setAtletaAberto(null); }}
+            onDesfazerDupla={() => { const a = atletaAberto; setAtletaAberto(null); if (a) vincular(a.id, null); }}
+          />
+          <SkipDialog
+            participant={pausaPara}
+            onClose={() => setPausaPara(null)}
+            onConfirm={(count) => { const a = pausaPara; setPausaPara(null); if (a) pausar(a.id, count); }}
+          />
+          <PartnerDialog
+            participant={duplaPara}
+            participants={participants}
+            view={playView || { order: [], inCourt: [], unavailable: [], all: [] }}
+            onClose={() => setDuplaPara(null)}
+            onConfirm={(partnerId) => { const a = duplaPara; setDuplaPara(null); if (a) vincular(a.id, partnerId); }}
+          />
+        </>
+      )}
     </div>
+  );
+}
+
+/**
+ * Menu de ações de um atleta da fila — o equivalente, no telão, aos botões que
+ * ficam na linha do participante na tela normal.
+ */
+function AcoesDoAtleta({ atleta, onClose, onPausar, onVoltar, onDupla, onDesfazerDupla }) {
+  const pausado = (Number(atleta?.skip_remaining) || 0) > 0;
+  return (
+    <Dialog open={!!atleta} onOpenChange={(v) => !v && onClose()}>
+      <DialogContent className="max-h-[90dvh] overflow-y-auto">
+        <DialogHeader>
+          <DialogTitle>{atleta?.name}</DialogTitle>
+          <DialogDescription>
+            {pausado
+              ? `Pausado pelas próximas ${Number(atleta?.skip_remaining) || 0} partida(s).`
+              : 'Na ordem de participação.'}
+          </DialogDescription>
+        </DialogHeader>
+        <div className="flex flex-col gap-2">
+          {pausado ? (
+            <V2Button onClick={onVoltar}>
+              <PlayCircle className="mr-1.5 h-4 w-4" /> Voltar a jogar
+            </V2Button>
+          ) : (
+            <V2Button variant="secondary" onClick={onPausar}>
+              <Pause className="mr-1.5 h-4 w-4" /> Ficar indisponível por X jogos
+            </V2Button>
+          )}
+          {atleta?.partner_id ? (
+            <V2Button variant="ghost" onClick={onDesfazerDupla}>
+              <Unlink className="mr-1.5 h-4 w-4" /> Desfazer dupla
+            </V2Button>
+          ) : (
+            <V2Button variant="ghost" onClick={onDupla}>
+              <Link2 className="mr-1.5 h-4 w-4" /> Vincular dupla
+            </V2Button>
+          )}
+        </div>
+        <DialogFooter>
+          <V2Button variant="ghost" onClick={onClose}>Fechar</V2Button>
+        </DialogFooter>
+      </DialogContent>
+    </Dialog>
   );
 }
