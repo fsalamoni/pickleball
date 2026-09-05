@@ -8,12 +8,21 @@
  * Rota: `/dia-de-jogo/:gameDayId/telao` (fora do V2Layout — sem menu, sem
  * cabeçalho da plataforma: a tela inteira é conteúdo).
  *
- * O que mostra, em ordem de importância para quem está jogando:
- *   1. o que está EM QUADRA agora, por quadra;
- *   2. quem entra a seguir — os próximos jogos (grade) ou a ordem de
- *      participação (Play);
- *   3. o ranking do dia, quando já houver resultado;
- *   4. os últimos resultados.
+ * O painel muda conforme o formato, porque os dois modelos de dia de jogo
+ * guardam coisas diferentes:
+ *
+ * | bloco                  | Americano / Mexicano / Rei da Quadra | Play |
+ * |------------------------|--------------------------------------|------|
+ * | Em quadra agora        | sim                                  | sim  |
+ * | Próximos jogos         | as rodadas seguintes já sorteadas    | a previsão de quem entra, pela fila |
+ * | Ordem de participação  | —                                    | sim  |
+ * | Ranking do dia         | sim                                  | —    |
+ * | Últimos resultados     | sim                                  | —    |
+ *
+ * **O Play não tem placar.** `finishPlayGame` apenas marca o jogo como
+ * concluído e devolve os quatro à fila — nenhum resultado é gravado. Logo, no
+ * Play não existem "últimos resultados" nem ranking do dia: mostrá-los seria
+ * exibir traços numa tela que a sala inteira está olhando.
  *
  * Somente leitura: nenhum botão altera nada do dia de jogo.
  */
@@ -28,7 +37,9 @@ import {
 import { getGameDay, listGameDayParticipants, listGameDayGames } from '@/modules/games/services/gameDayService';
 import { gameDayWhenText } from '@/modules/games/domain/gameDay';
 import { buildGameDayBoard, sideNames, scoreText, winnerSide } from '@/modules/games/domain/gameDayBoard';
-import { computePlayOrder, PLAY_STATUS } from '@/modules/games/domain/gamePlay';
+import {
+  computePlayOrder, forecastPlayMatches, PLAY_STATUS, PLAY_SLOTS,
+} from '@/modules/games/domain/gamePlay';
 import { computeGameDayLeaderboard } from '@/modules/clubs/domain/gameDayLeaderboard';
 import { GAME_DAY_FORMAT_LABELS } from '@/modules/clubs/domain/gameDayFormats';
 
@@ -107,7 +118,7 @@ function Lado({ side, vencedor, variante = 'empilhado' }) {
   );
 }
 
-function Bloco({ icon: Icon, titulo, contagem, children, className = '' }) {
+function Bloco({ icon: Icon, titulo, contagem, children, className = '', corpoClassName = '' }) {
   return (
     <section className={className}>
       <h2 className="mb-3 flex items-center gap-2 text-lg font-bold uppercase tracking-wide text-white/60">
@@ -115,7 +126,7 @@ function Bloco({ icon: Icon, titulo, contagem, children, className = '' }) {
         {titulo}
         {contagem != null && <span className="text-white/30">({contagem})</span>}
       </h2>
-      {children}
+      <div className={corpoClassName}>{children}</div>
     </section>
   );
 }
@@ -130,11 +141,17 @@ function Vazio({ children }) {
 
 /* ------------------------------ jogo em quadra ---------------------------- */
 
-function CardEmQuadra({ jogo }) {
-  const venc = winnerSide(jogo);
-  const placar = scoreText(jogo);
+/**
+ * @param {boolean} [props.comPlacar=true] O Play NÃO tem placar: `finishPlayGame`
+ *   só marca o jogo como concluído. A trava é explícita em vez de confiar em
+ *   `score_a` vir nulo — um dado ruim virando "0 × 0" numa tela que a sala
+ *   inteira está olhando seria pior do que um erro discreto.
+ */
+function CardEmQuadra({ jogo, comPlacar = true }) {
+  const venc = comPlacar ? winnerSide(jogo) : null;
+  const placar = comPlacar ? scoreText(jogo) : null;
   return (
-    <div className="rounded-3xl border border-acid/30 bg-white/5 p-5 xl:p-6">
+    <div className="flex flex-col justify-center rounded-3xl border border-acid/30 bg-white/5 p-5 landscape:lg:min-h-[14rem] landscape:lg:max-h-[24rem] portrait:lg:min-h-[16rem] xl:p-6">
       <div className="mb-3 flex items-center justify-between">
         <span className="rounded-full bg-acid px-3 py-1 text-sm font-black text-ink">
           {jogo.court != null ? `QUADRA ${jogo.court}` : 'EM JOGO'}
@@ -255,6 +272,63 @@ function OrdemDeParticipacao({ view }) {
   );
 }
 
+/**
+ * Previsão das próximas partidas do Play.
+ *
+ * O Play cria um jogo por vez, então "próximos jogos" aqui não são partidas
+ * gravadas: é quem a fila indica que entra em seguida, em blocos de quatro.
+ * As DUPLAS não são decididas agora — só na hora de criar o jogo, equilibrando
+ * nível e sexo —, e por isso a tela diz isso com todas as letras: prometer uma
+ * dupla que pode mudar seria pior do que não mostrar nada.
+ */
+function ProximasPartidasPlay({ blocos, disponiveis }) {
+  if (blocos.length === 0) {
+    return (
+      <Vazio>
+        {disponiveis === 0
+          ? 'Ninguém aguardando no momento.'
+          : `Faltam jogadores para a próxima partida (${disponiveis} na fila, mínimo ${PLAY_SLOTS}).`}
+      </Vazio>
+    );
+  }
+  return (
+    <div className="space-y-2">
+      <p className="text-sm text-white/40">
+        Quem entra a seguir, pela ordem da fila. As duplas são formadas na hora de criar o jogo.
+      </p>
+      {blocos.map((bloco, i) => {
+        // Uma leva INCOMPLETA não é uma "próxima partida": ela ainda depende de
+        // alguém sair da quadra. Anunciá-la como partida seria prometer o que
+        // não está formado — então ela perde o destaque e diz o que falta.
+        const destaque = i === 0 && bloco.full;
+        return (
+          <div
+            // O índice é a chave certa aqui: a previsão é uma lista posicional
+            // que se recalcula inteira a cada atualização — não há identidade a
+            // preservar entre renders.
+            key={i}
+            className={`rounded-2xl border px-4 py-3 ${
+              destaque ? 'border-acid/40 bg-acid/10' : 'border-white/10 bg-white/5'
+            }`}
+          >
+            <div className={`mb-1 text-xs font-bold uppercase tracking-wide ${destaque ? 'text-acid' : 'text-white/40'}`}>
+              {!bloco.full ? 'Aguardando jogadores' : (i === 0 ? 'Próxima partida' : `${i + 1}ª próxima`)}
+            </div>
+            <div className="text-lg font-semibold leading-snug text-white">
+              {bloco.players.map((p) => p.name).join(' · ')}
+            </div>
+            {bloco.waiting > 0 && (
+              <div className="mt-1 text-sm text-amber-300/70">
+                faltam {bloco.waiting} — a próxima partida sai quando uma quadra liberar
+              </div>
+            )}
+          </div>
+        );
+      })}
+    </div>
+  );
+}
+
 /** Quantas posições cabem confortavelmente num telão sem virar planilha. */
 const RANKING_VISIVEL = 10;
 
@@ -331,14 +405,25 @@ export default function V2GameDayTelao() {
     () => (board.isPlay ? computePlayOrder({ participants, games }) : null),
     [board.isPlay, participants, games],
   );
+  // Ranking do dia só existe onde há placar. O Play não grava resultado, então
+  // nem calculamos: a lista viria vazia de qualquer jeito.
   const ranking = useMemo(
-    () => computeGameDayLeaderboard(participants, games).filter((l) => l.games > 0),
-    [participants, games],
+    () => (board.isPlay
+      ? []
+      : computeGameDayLeaderboard(participants, games).filter((l) => l.games > 0)),
+    [board.isPlay, participants, games],
   );
 
   const disponiveis = playView
     ? playView.all.filter((p) => p.status === PLAY_STATUS.AVAILABLE).length
     : 0;
+
+  // Previsão de quem entra a seguir no Play, uma leva por quadra livre.
+  const proximasPlay = useMemo(() => {
+    if (!playView) return [];
+    const quadras = Math.max(1, Number(gameDay?.play_courts) || 1);
+    return forecastPlayMatches(playView.order, { courts: quadras });
+  }, [playView, gameDay?.play_courts]);
 
   if (isLoading) {
     return (
@@ -364,9 +449,24 @@ export default function V2GameDayTelao() {
 
   const rotuloFormato = GAME_DAY_FORMAT_LABELS[gameDay.format] || 'Americano';
 
+  // Quando nada mais ocupa a coluna larga (Play, ou grade que ainda não tem
+  // ranking), os cards de quadra CRESCEM para preencher a altura em paisagem.
+  // Num telão, meia tela vazia é desperdício: o que está em quadra é
+  // justamente o que precisa ser lido de longe.
+  // A coluna larga tem duas linhas: as quadras em cima e, embaixo, o bloco que
+  // faz sentido para o formato — a previsão da fila no Play, o ranking na
+  // grade (que só existe onde há placar, e só depois do primeiro resultado).
+  const temSegundaLinha = board.isPlay
+    ? (proximasPlay.length > 0 || disponiveis > 0)
+    : ranking.length > 0;
+
+  // Sem esse segundo bloco, as quadras crescem para preencher a altura em
+  // paisagem: num telão, meia tela vazia é desperdício.
+  const esticarQuadras = !temSegundaLinha && board.live.length > 0;
+
   return (
-    <div className="min-h-[100dvh] bg-ink text-white">
-      <div className="mx-auto max-w-[1800px] px-5 py-5 sm:px-8 sm:py-6">
+    <div className="flex min-h-[100dvh] flex-col bg-ink text-white">
+      <div className="mx-auto flex w-full max-w-[1800px] flex-1 flex-col px-5 py-5 sm:px-8 sm:py-6">
         {/* Cabeçalho */}
         <header className="mb-6 flex flex-wrap items-end justify-between gap-4 border-b border-white/10 pb-4">
           <div className="min-w-0">
@@ -388,7 +488,9 @@ export default function V2GameDayTelao() {
               <div className="flex items-center justify-end gap-1.5 text-xs text-white/40">
                 <Users aria-hidden="true" className="h-3.5 w-3.5" />
                 {participants.length} participante(s)
-                {board.isPlay && ` · ${disponiveis} na fila`}
+                {board.isPlay
+                  ? ` · ${disponiveis} na fila · ${board.recent.length} jogo(s) concluído(s)`
+                  : ''}
               </div>
             </div>
             {telaCheia.suportada && (
@@ -413,67 +515,107 @@ export default function V2GameDayTelao() {
           </div>
         </header>
 
-        <div className="grid gap-6 xl:grid-cols-3">
+        {/* GRADE PRINCIPAL — o layout segue a ORIENTAÇÃO da tela, não só a
+            largura. Em PAISAGEM com espaço (TV, notebook) são duas colunas: as
+            quadras ocupam a área nobre e a fila/histórico acompanham à direita.
+            Em RETRATO (tablet de pé, TV girada, celular) tudo empilha na ordem
+            em que está no HTML, que é a ordem de urgência.
+
+            Usar `landscape:` em vez de só um breakpoint importa: um iPad Pro de
+            pé tem 1024px de largura e cairia na regra de duas colunas por
+            engano, espremendo tudo.
+
+            Os DOIS formatos têm a mesma estrutura de duas linhas na coluna
+            larga — o que muda é o conteúdo da segunda linha (próximos jogos no
+            Play, ranking do dia na grade). Sem esse segundo bloco, no Play
+            sobrava meia tela em branco. */}
+        <div className={`grid gap-6 landscape:lg:grid-cols-3 ${esticarQuadras ? 'landscape:lg:flex-1' : ''}`}>
           {/* Em quadra agora */}
           <Bloco
             icon={Radio}
             titulo="Em quadra agora"
             contagem={board.live.length}
-            className="xl:col-span-2 xl:col-start-1 xl:row-start-1"
+            className={`landscape:lg:col-span-2 landscape:lg:col-start-1 landscape:lg:row-start-1 ${
+              esticarQuadras ? 'landscape:lg:flex landscape:lg:flex-col' : ''
+            }`}
+            corpoClassName={esticarQuadras ? 'landscape:lg:flex-1' : ''}
           >
             {board.live.length === 0 ? (
               <Vazio>
                 {board.totals.total === 0
-                  ? 'Os jogos ainda não foram sorteados.'
+                  ? (board.isPlay
+                    ? 'Nenhuma partida em quadra ainda.'
+                    : 'Os jogos ainda não foram sorteados.')
                   : 'Nenhum jogo em andamento no momento.'}
               </Vazio>
             ) : (
-              <div className="grid gap-4 [grid-template-columns:repeat(auto-fit,minmax(320px,1fr))]">
-                {board.live.map((jogo) => <CardEmQuadra key={jogo.id} jogo={jogo} />)}
+              // `auto-fit` com o mínimo limitado por `min(100%, …)`: sem esse
+              // `min`, numa tela estreita a trilha ficaria maior que o
+              // contêiner e a página rolaria de lado. Em retrato o mínimo é
+              // maior, para os cards ficarem grandes e legíveis de longe.
+              <div className={`grid gap-4 [grid-template-columns:repeat(auto-fit,minmax(min(100%,420px),1fr))] landscape:[grid-template-columns:repeat(auto-fit,minmax(min(100%,320px),1fr))] ${
+                esticarQuadras ? 'landscape:lg:h-full landscape:lg:auto-rows-fr' : ''
+              }`}
+              >
+                {board.live.map((jogo) => (
+                  <CardEmQuadra key={jogo.id} jogo={jogo} comPlacar={!board.isPlay} />
+                ))}
               </div>
             )}
-
           </Bloco>
 
-          {/* Quem vem a seguir + últimos resultados.
-              Fica DEPOIS do bloco de quadras no HTML e ANTES do ranking: numa
-              tela estreita tudo empilha nessa ordem, e quem está na fila vê
-              primeiro a sua posição, não a tabela de classificação. No desktop
-              a grade recoloca cada bloco no seu lugar. */}
-          <aside className="space-y-8 xl:col-start-3 xl:row-span-2 xl:row-start-1">
+          {/* Coluna de apoio. Fica DEPOIS das quadras no HTML e ANTES da segunda
+              linha: em retrato tudo empilha nessa ordem e quem está esperando vê
+              primeiro a sua posição, não a tabela de classificação. */}
+          <aside
+            className={`space-y-8 landscape:lg:col-start-3 landscape:lg:row-start-1 ${
+              temSegundaLinha ? 'landscape:lg:row-span-2' : ''
+            }`}
+          >
             {board.isPlay ? (
               <Bloco icon={ListOrdered} titulo="Ordem de participação">
                 {playView ? <OrdemDeParticipacao view={playView} /> : null}
               </Bloco>
             ) : (
-              <Bloco icon={Clock} titulo="Próximos jogos" contagem={board.upcoming.length}>
-                {board.upcoming.length === 0 ? (
-                  <Vazio>Sem jogos programados adiante.</Vazio>
-                ) : (
-                  <div className="space-y-2">
-                    {board.upcoming.map((jogo) => (
-                      <LinhaJogo key={jogo.id} jogo={jogo} mostrarRodada />
-                    ))}
-                  </div>
-                )}
-              </Bloco>
-            )}
+              <>
+                <Bloco icon={Clock} titulo="Próximos jogos" contagem={board.upcoming.length}>
+                  {board.upcoming.length === 0 ? (
+                    <Vazio>Sem jogos programados adiante.</Vazio>
+                  ) : (
+                    <div className="space-y-2">
+                      {board.upcoming.map((jogo) => (
+                        <LinhaJogo key={jogo.id} jogo={jogo} mostrarRodada />
+                      ))}
+                    </div>
+                  )}
+                </Bloco>
 
-            <Bloco icon={CheckCircle2} titulo="Últimos resultados" contagem={board.totals.decided}>
-              {board.recent.length === 0 ? (
-                <Vazio>Nenhum resultado ainda.</Vazio>
-              ) : (
-                <div className="space-y-2">
-                  {board.recent.map((jogo) => <LinhaResultado key={jogo.id} jogo={jogo} />)}
-                </div>
-              )}
-            </Bloco>
+                <Bloco icon={CheckCircle2} titulo="Últimos resultados" contagem={board.totals.decided}>
+                  {board.recent.length === 0 ? (
+                    <Vazio>Nenhum resultado ainda.</Vazio>
+                  ) : (
+                    <div className="space-y-2">
+                      {board.recent.map((jogo) => <LinhaResultado key={jogo.id} jogo={jogo} />)}
+                    </div>
+                  )}
+                </Bloco>
+              </>
+            )}
           </aside>
 
-          {/* Ranking do dia: tabela, então acompanha a coluna larga no desktop. */}
-          {ranking.length > 0 && (
-            <Bloco icon={Trophy} titulo="Ranking do dia" className="xl:col-span-2 xl:col-start-1 xl:row-start-2">
-              <RankingDoDia linhas={ranking} />
+          {/* Segunda linha da coluna larga.
+              Play: quem entra a seguir (a previsão da fila).
+              Grade: o ranking do dia — que só existe onde há placar. */}
+          {temSegundaLinha && (
+            <Bloco
+              icon={board.isPlay ? Clock : Trophy}
+              titulo={board.isPlay ? 'Próximos jogos' : 'Ranking do dia'}
+              contagem={board.isPlay ? (proximasPlay.length || null) : null}
+              className="landscape:lg:col-span-2 landscape:lg:col-start-1 landscape:lg:row-start-2"
+            >
+              {board.isPlay
+                ? <ProximasPartidasPlay blocos={proximasPlay} disponiveis={disponiveis} />
+                : <RankingDoDia linhas={ranking} />}
             </Bloco>
           )}
         </div>

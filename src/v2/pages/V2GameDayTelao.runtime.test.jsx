@@ -119,7 +119,8 @@ describe('telão — formato Play', () => {
     dados.participants = [
       participante('a', 'Ana'), participante('b', 'Bia'),
       participante('c', 'Caio'), participante('d', 'Davi'),
-      participante('e', 'Elis'),
+      participante('e', 'Elis Prado'), participante('f', 'Fábio Reis'),
+      participante('g', 'Gabi Martins'), participante('h', 'Hugo Teixeira'),
     ];
     dados.games = [{
       id: 'g1', court: 1, order: 1, status: 'open', round: null,
@@ -129,18 +130,49 @@ describe('telão — formato Play', () => {
     }];
   });
 
-  it('troca "próximos jogos" pela ordem de participação', async () => {
+  it('mostra próximos jogos E ordem de participação', async () => {
     await render();
     const txt = container.textContent;
+    expect(txt).toContain('Próximos jogos');
     expect(txt).toContain('Ordem de participação');
-    expect(txt).not.toContain('Próximos jogos');
+  });
+
+  it('NÃO mostra resultados nem ranking — o Play não grava placar', async () => {
+    await render();
+    const txt = container.textContent;
+    expect(txt).not.toContain('Últimos resultados');
+    expect(txt).not.toContain('Ranking do dia');
+  });
+
+  it('os próximos jogos vêm da fila e avisam que a dupla ainda não está definida', async () => {
+    await render();
+    const txt = container.textContent;
+    expect(txt).toContain('Próxima partida');
+    // Elis, Fábio, Gabi e Hugo estão livres → formam a próxima leva.
+    expect(txt).toContain('Elis Prado · Fábio Reis · Gabi Martins · Hugo Teixeira');
+    expect(txt).toContain('As duplas são formadas na hora de criar o jogo.');
+  });
+
+  it('com menos de 4 na fila, não anuncia uma partida que não está formada', async () => {
+    dados.participants = dados.participants.slice(0, 6); // 4 em quadra + 2 livres
+    await render();
+    const txt = container.textContent;
+    expect(txt).toContain('Aguardando jogadores');
+    expect(txt).toContain('faltam 2');
+    expect(txt).not.toContain('Próxima partida');
+  });
+
+  it('sem ninguém na fila, avisa em vez de mostrar bloco vazio', async () => {
+    dados.participants = dados.participants.slice(0, 4); // os 4 estão em quadra
+    await render();
+    expect(container.textContent).toContain('Ninguém aguardando no momento.');
   });
 
   it('mostra quem está em quadra e quem está na fila', async () => {
     await render();
     const txt = container.textContent;
     expect(txt).toContain('QUADRA 1');
-    expect(txt).toContain('Elis');            // na fila
+    expect(txt).toContain('Elis Prado');      // na fila
     expect(txt).toContain('Em quadra:');      // resumo de quem está jogando
   });
 });
