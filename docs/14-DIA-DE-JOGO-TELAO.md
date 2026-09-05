@@ -82,8 +82,8 @@ participantes ou um dia público; sem login não há o que mostrar.
 
 | Bloco | Americano · Mexicano · Rei da Quadra | Play |
 |---|---|---|
-| **Em quadra agora** | sim, um card grande por quadra | sim |
-| **Próximos jogos** | as rodadas seguintes já sorteadas | a previsão de quem entra, pela fila |
+| **Em quadra agora** | um card por partida em andamento | um card por QUADRA, inclusive as livres |
+| **Próximos jogos** | as rodadas seguintes já sorteadas | a próxima partida DE CADA QUADRA |
 | **Ordem de participação** | — | sim, com as 4 primeiras marcadas "entra a seguir" |
 | **Ranking do dia** | as 10 primeiras posições | — |
 | **Últimos resultados** | uma linha por dupla, com o seu placar | — |
@@ -94,37 +94,71 @@ participantes ou um dia público; sem login não há o que mostrar.
 > mostrá-los seria exibir traços numa tela que a sala inteira está olhando.
 > O card de quadra recebe `comPlacar={false}` no Play, uma trava explícita em
 > vez de confiar em `score_a` vir nulo.
+>
+> É pela mesma razão que o botão da tela normal deixou de se chamar "Jogo
+> concluído" e passou a "**Criar próxima partida**": o que ele faz é encerrar a
+> partida atual e já criar a próxima naquela quadra. O rótulo diz o resultado da
+> ação, não o passo intermediário.
 
-**Próximos jogos no Play** vêm de `forecastPlayMatches`: são as próximas levas
-de quatro, pela ordem da fila. A tela diz com todas as letras que **as duplas
-são formadas só na hora de criar o jogo** — prometer uma dupla que ainda vai
-mudar seria pior do que não mostrar nada. Uma leva incompleta não é anunciada
-como "próxima partida": vira "aguardando jogadores", com quantos faltam.
+**Próximos jogos no Play** vêm de `forecastPlayByCourt`: uma entrada para
+**cada quadra existente**, dizendo quem entra ali. A amarração leva↔quadra
+segue exatamente a ordem em que `createNextPlayGame` criaria os jogos —
+quadras LIVRES primeiro (da menor para a maior, que é o que
+`nextFreePlayCourt` escolhe) e depois as ocupadas, que só recebem gente quando
+a partida atual terminar. A lista aparece na mesma grade dos cards de quadra,
+então cada previsão fica na coluna da sua quadra.
 
-Somente leitura: nenhum botão do telão altera o dia de jogo.
+A tela diz com todas as letras que **as duplas são formadas só na hora de criar
+o jogo** — prometer uma dupla que ainda vai mudar seria pior do que não mostrar
+nada. E quando a fila não completa quatro, aparece quantos faltam em vez de uma
+partida anunciada.
+
+### 2.2.1 Organizar pelo próprio telão (só o Play, só quem organiza)
+
+Num Play, quem organiza fica de pé ao lado da quadra com o telão aberto — voltar
+à outra tela a cada partida encerrada não faz sentido. Por isso, **para o criador
+do dia de jogo**, o telão traz as mesmas ações da tela normal:
+
+| Ação | Onde, no telão |
+|---|---|
+| Criar a próxima partida | botão no card da quadra ocupada |
+| Criar jogo | botão no card da quadra livre |
+| Cancelar jogo | botão no card da quadra ocupada |
+| Substituir quem faltou | clicar no NOME do atleta em quadra |
+| Pausar / voltar a jogar | clicar no atleta na ordem de participação |
+| Vincular / desfazer dupla | idem |
+
+As ações usam **exatamente os mesmos hooks** da tela normal e reaproveitam os
+mesmos diálogos (`SkipDialog`, `PartnerDialog`, exportados de
+`AthletePlayOrganizer`), para as duas telas nunca divergirem no texto nem nas
+opções. Nenhuma regra de negócio nova mora no telão.
+
+> **Para todo mundo que não é o criador, o telão continua sendo só leitura.** É
+> uma tela pública: ninguém que passa na frente dela pode mexer no dia de jogo.
+
+Um detalhe que o código explica: o telão tem consultas próprias
+(`['gameday-telao', …]`), então os hooks de mutação — que invalidam as chaves
+`['game-days', …]` da tela normal — não o atualizariam. Sem invalidar também as
+chaves do telão, uma ação tomada ali só apareceria no refetch de 15 s.
 
 ### 2.3 Retrato e paisagem
 
 O layout segue a **orientação** da tela, não só a largura:
 
-- **Paisagem** com espaço (TV, notebook): duas colunas. A coluna larga leva as
-  quadras em cima e, embaixo, o bloco da vez — próximos jogos no Play, ranking
-  do dia na grade. A coluna estreita leva a fila (Play) ou próximos jogos +
-  últimos resultados (grade).
+- **Paisagem** com espaço (TV, notebook): duas colunas. A coluna larga leva
+  **em quadra agora** e, logo abaixo, **próximos jogos**. A estreita leva a
+  **ordem de participação** (Play) ou o ranking + os últimos resultados (grade).
 - **Retrato** (tablet de pé, TV girada, celular): tudo empilha na ordem do HTML,
-  que é a ordem de urgência — o que está em quadra, quem entra depois, e só
-  então classificação e histórico.
+  que é a ordem de urgência — **em quadra agora → próximos jogos → ordem de
+  participação** (ou ranking/histórico, na grade).
 
 Usar `landscape:` em vez de só um breakpoint importa: **um iPad Pro de pé tem
 1024px de largura** e cairia na regra de duas colunas por engano, espremendo
 tudo numa tela alta.
 
-Os dois formatos têm a **mesma estrutura de duas linhas** na coluna larga. Foi
-uma correção: sem um segundo bloco, o Play deixava metade da tela em branco.
-Quando nem esse segundo bloco existe (grade recém-sorteada, ainda sem
-resultado), os cards de quadra crescem para preencher a altura — com teto de
-`24rem`, senão duas quadras numa TV de 1080px virariam caixas de 800px com
-quatro nomes perdidos no meio.
+Os dois formatos têm a **mesma estrutura**: duas linhas na coluna larga (em
+quadra + próximos jogos) e a coluna estreita ao lado. Foi uma correção: sem um
+segundo bloco, o Play deixava metade da tela em branco.
 
 ### 2.4 Detalhes de layout que vieram de conferência visual
 
@@ -194,5 +228,7 @@ src/v2/components/games/gameDaySections.js    # ids ESTÁVEIS das seções
 src/modules/games/domain/gameDayBoard.js      # live / upcoming / recent (puro)
 src/modules/games/domain/gameDayBoard.test.js # 25 testes
 src/v2/pages/V2GameDayTelao.jsx               # a página do telão
-src/v2/pages/V2GameDayTelao.runtime.test.jsx  # 13 testes de runtime
+src/v2/pages/V2GameDayTelao.runtime.test.jsx  # 21 testes de runtime
+src/modules/games/domain/gamePlay.js          # forecastPlayByCourt
+src/modules/games/domain/gamePlayForecastCourt.test.js  # 9 testes
 ```

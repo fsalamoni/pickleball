@@ -355,9 +355,12 @@ chore(deps): bump firebase to 12.x
 >   `/dia-de-jogo/:id/telao` abre um painel em tela cheia para a segunda tela,
 >   adaptado a retrato e paisagem e atualizando sozinho a cada 15 s. O conteúdo
 >   MUDA com o formato: na grade vão ranking do dia e últimos resultados; no
->   Play vão a previsão da fila e a ordem de participação — **o Play não grava
->   placar**, então ali não existem resultados nem ranking. Zero impacto no
->   banco.
+>   Play vão a próxima partida DE CADA QUADRA e a ordem de participação — **o
+>   Play não grava placar**, então ali não existem resultados nem ranking. No
+>   Play, quem ORGANIZA também conduz o dia pelo próprio telão (criar próxima
+>   partida, criar jogo em quadra livre, cancelar, substituir clicando no nome,
+>   pausar, vincular dupla); para todos os outros segue só leitura. Zero
+>   impacto no banco.
 >   Ver `docs/14-DIA-DE-JOGO-TELAO.md`.
 >
 > - **Onda R — Nível unificado nos sorteios** (2026-09-04): uma régua só
@@ -413,7 +416,7 @@ chore(deps): bump firebase to 12.x
 
 | Métrica | Valor | Delta do início do agente |
 |---|---|---|
-| **Testes Vitest** | **2812 passing** (208 arquivos) | +2404 (era 408) |
+| **Testes Vitest** | **2829 passing** (209 arquivos) | +2421 (era 408) |
 | **Lint errors** | 0 | era 30+ |
 | **Módulos** | 20 (`games` e `legal` saíram como `src/modules/` mas continuam como pastas oficiais — **rating virou módulo oficial** com domain/services/hooks/components) | +4 (coaches, circuits, games, legal) |
 | **V2 pages** | 78 (+V2GameDayTelao — telão do dia de jogo, rota fora do V2Layout) | +54 |

@@ -352,6 +352,53 @@ export function assignPlayTeams(four, { rng = Math.random } = {}) {
   };
 }
 
+/**
+ * Previsão da próxima partida DE CADA QUADRA.
+ *
+ * Diferente de `forecastPlayMatches`, que devolve levas soltas, aqui cada leva
+ * é AMARRADA a uma quadra — é o que o telão precisa mostrar: "na quadra 1 entram
+ * fulano e sicrano; na quadra 2, quando liberar, entram beltrano e outro".
+ *
+ * A amarração segue exatamente a ordem em que os jogos seriam criados por
+ * `createNextPlayGame`: quadras LIVRES primeiro (da menor para a maior, que é o
+ * que `nextFreePlayCourt` escolhe) e depois as ocupadas, também em ordem — essas
+ * só recebem gente quando a partida atual terminar.
+ *
+ * O retorno vem ordenado por NÚMERO DE QUADRA (Quadra 1, 2, 3…), que é como a
+ * tela lê, não na ordem de criação.
+ *
+ * @param {Array} availableOrdered disponíveis, em ordem de espera
+ * @param {{ courts?: number, games?: Array, slots?: number }} [opts]
+ * @returns {Array<{ court:number, free:boolean, players:Array, waiting:number, full:boolean }>}
+ *   Uma entrada por quadra existente. `players` vazio = a fila acabou antes de
+ *   chegar nesta quadra.
+ */
+export function forecastPlayByCourt(availableOrdered, { courts = 1, games = [], slots = PLAY_SLOTS } = {}) {
+  const total = Math.max(1, Math.floor(courts) || 1);
+  const livres = freePlayCourts({ courts: total, games });
+  const livresSet = new Set(livres);
+  const ocupadas = [];
+  for (let c = 1; c <= total; c += 1) if (!livresSet.has(c)) ocupadas.push(c);
+
+  // A ordem de criação é a que importa para saber QUEM vai para QUAL quadra.
+  const ordemDeCriacao = [...livres, ...ocupadas];
+  const blocos = forecastPlayMatches(availableOrdered, { courts: total, slots });
+
+  const porQuadra = new Map();
+  ordemDeCriacao.forEach((court, i) => {
+    const bloco = blocos[i];
+    porQuadra.set(court, {
+      court,
+      free: livresSet.has(court),
+      players: bloco ? bloco.players : [],
+      waiting: bloco ? bloco.waiting : 0,
+      full: bloco ? bloco.full : false,
+    });
+  });
+
+  return Array.from({ length: total }, (_, i) => i + 1).map((court) => porQuadra.get(court));
+}
+
 /* --------------------------------- quadras --------------------------------- */
 
 /** Números das quadras (1..courts) que estão SEM jogo aberto. */

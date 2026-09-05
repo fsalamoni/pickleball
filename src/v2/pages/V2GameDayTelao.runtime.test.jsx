@@ -14,11 +14,33 @@ import { QueryClient, QueryClientProvider } from '@tanstack/react-query';
 import { describe, it, expect, beforeEach, afterEach, vi } from 'vitest';
 
 const dados = { gameDay: null, participants: [], games: [] };
+const auth = { user: { uid: 'espectador' } };
+
+vi.mock('sonner', () => ({ toast: { success: vi.fn(), error: vi.fn() } }));
+vi.mock('@/core/lib/FirebaseAuthContext', () => ({ useAuth: () => auth }));
 
 vi.mock('@/modules/games/services/gameDayService', () => ({
   getGameDay: vi.fn(async () => dados.gameDay),
   listGameDayParticipants: vi.fn(async () => dados.participants),
   listGameDayGames: vi.fn(async () => dados.games),
+}));
+
+/** As mutações do Play — espionadas para provar quem pode disparar o quê. */
+const mutacoes = {
+  criarProximo: vi.fn(async () => ({ court: 1 })),
+  encerrar: vi.fn(async () => ({ next: { court: 1 } })),
+  cancelar: vi.fn(async () => ({})),
+  substituir: vi.fn(async () => ({})),
+  pausar: vi.fn(async () => ({})),
+  dupla: vi.fn(async () => ({})),
+};
+vi.mock('@/modules/games/hooks/useGameDays', () => ({
+  useCreateNextPlayGame: () => ({ mutateAsync: (...a) => mutacoes.criarProximo(...a) }),
+  useFinishPlayGame: () => ({ mutateAsync: (...a) => mutacoes.encerrar(...a) }),
+  useCancelPlayGame: () => ({ mutateAsync: (...a) => mutacoes.cancelar(...a) }),
+  useNoShowSwapPlayGame: () => ({ mutateAsync: (...a) => mutacoes.substituir(...a) }),
+  useSetPlayParticipantSkip: () => ({ mutateAsync: (...a) => mutacoes.pausar(...a) }),
+  useSetPlayParticipantPartner: () => ({ mutateAsync: (...a) => mutacoes.dupla(...a) }),
 }));
 
 const { default: V2GameDayTelao } = await import('./V2GameDayTelao.jsx');
@@ -36,6 +58,8 @@ const jogoGrade = (id, round, court, a = null, b = null) => ({
 
 beforeEach(() => {
   dados.gameDay = null; dados.participants = []; dados.games = [];
+  auth.user = { uid: 'espectador' };
+  Object.values(mutacoes).forEach((m) => m.mockClear());
   qc = new QueryClient({ defaultOptions: { queries: { retry: false, gcTime: 0 } } });
   container = document.createElement('div');
   document.body.appendChild(container);
@@ -48,6 +72,8 @@ afterEach(() => {
   qc.clear();
   vi.clearAllMocks();
 });
+
+const click = (el) => act(() => { el.dispatchEvent(new MouseEvent('click', { bubbles: true })); });
 
 async function render() {
   await act(async () => {
@@ -144,28 +170,121 @@ describe('telão — formato Play', () => {
     expect(txt).not.toContain('Ranking do dia');
   });
 
-  it('os próximos jogos vêm da fila e avisam que a dupla ainda não está definida', async () => {
+  it('mostra a próxima partida DE CADA QUADRA, e a fila vai para a que está livre', async () => {
     await render();
     const txt = container.textContent;
-    expect(txt).toContain('Próxima partida');
-    // Elis, Fábio, Gabi e Hugo estão livres → formam a próxima leva.
+    // Quadra 1 está ocupada; a 2 está livre → os 4 da fila vão para a 2.
+    expect(txt).toContain('livre agora');
     expect(txt).toContain('Elis Prado · Fábio Reis · Gabi Martins · Hugo Teixeira');
+    // A quadra ocupada aparece assim mesmo, dizendo que só recebe ao liberar.
+    expect(txt).toContain('quando liberar');
     expect(txt).toContain('As duplas são formadas na hora de criar o jogo.');
   });
 
-  it('com menos de 4 na fila, não anuncia uma partida que não está formada', async () => {
+  it('a quadra livre aparece como card, não some da tela', async () => {
+    await render();
+    expect(container.textContent).toContain('QUADRA 2');
+    expect(container.textContent).toContain('Livre');
+  });
+
+  it('com menos de 4 na fila, diz quantos faltam em vez de anunciar a partida', async () => {
     dados.participants = dados.participants.slice(0, 6); // 4 em quadra + 2 livres
     await render();
     const txt = container.textContent;
-    expect(txt).toContain('Aguardando jogadores');
+    expect(txt).toContain('Elis Prado · Fábio Reis');
     expect(txt).toContain('faltam 2');
-    expect(txt).not.toContain('Próxima partida');
   });
 
   it('sem ninguém na fila, avisa em vez de mostrar bloco vazio', async () => {
     dados.participants = dados.participants.slice(0, 4); // os 4 estão em quadra
     await render();
     expect(container.textContent).toContain('Ninguém aguardando no momento.');
+  });
+});
+
+describe('telão do Play — organizar pela própria tela', () => {
+  beforeEach(() => {
+    dados.gameDay = { id: 'gd1', title: 'Play de sábado', format: 'play', play_courts: 2, created_by: 'dono' };
+    dados.participants = [
+      participante('a', 'Ana'), participante('b', 'Bia'),
+      participante('c', 'Caio'), participante('d', 'Davi'),
+      participante('e', 'Elis Prado'), participante('f', 'Fábio Reis'),
+      participante('g', 'Gabi Martins'), participante('h', 'Hugo Teixeira'),
+    ];
+    dados.games = [{
+      id: 'g1', court: 1, order: 1, status: 'open', round: null,
+      side_a: [{ id: 'a', name: 'Ana' }, { id: 'b', name: 'Bia' }],
+      side_b: [{ id: 'c', name: 'Caio' }, { id: 'd', name: 'Davi' }],
+      score_a: null, score_b: null,
+    }];
+  });
+
+  const botaoPorTexto = (texto) => [...container.querySelectorAll('button')]
+    .find((b) => b.textContent.trim() === texto);
+
+  it('quem NÃO organiza vê a tela sem nenhuma ação', async () => {
+    auth.user = { uid: 'espectador' };
+    await render();
+    expect(botaoPorTexto('Criar próxima partida')).toBeUndefined();
+    expect(botaoPorTexto('Criar jogo')).toBeUndefined();
+    expect(botaoPorTexto('Cancelar')).toBeUndefined();
+    expect(container.textContent).toContain('Esta tela se atualiza sozinha');
+  });
+
+  it('quem organiza vê as ações de cada quadra', async () => {
+    auth.user = { uid: 'dono' };
+    await render();
+    expect(botaoPorTexto('Criar próxima partida')).toBeTruthy();
+    expect(botaoPorTexto('Criar jogo')).toBeTruthy();   // quadra 2 está livre
+    expect(botaoPorTexto('Cancelar')).toBeTruthy();
+    expect(container.textContent).toContain('Você organiza este Play');
+  });
+
+  it('criar jogo numa quadra livre chama a mutação com aquela quadra', async () => {
+    auth.user = { uid: 'dono' };
+    await render();
+    click(botaoPorTexto('Criar jogo'));
+    await act(async () => { await Promise.resolve(); });
+    expect(mutacoes.criarProximo).toHaveBeenCalledWith({ court: 2 });
+  });
+
+  it('criar a próxima partida pede confirmação antes de encerrar', async () => {
+    auth.user = { uid: 'dono' };
+    await render();
+    click(botaoPorTexto('Criar próxima partida'));
+    await act(async () => { await Promise.resolve(); });
+    expect(mutacoes.encerrar).not.toHaveBeenCalled();
+    expect(document.body.textContent).toContain('Criar a próxima partida?');
+  });
+
+  it('o nome de quem está em quadra é clicável para substituir', async () => {
+    auth.user = { uid: 'dono' };
+    await render();
+    const nome = [...container.querySelectorAll('button')].find((b) => b.textContent.trim() === 'Ana');
+    expect(nome).toBeTruthy();
+    click(nome);
+    await act(async () => { await Promise.resolve(); });
+    expect(document.body.textContent).toContain('Marcar como ausente?');
+  });
+
+  it('para quem não organiza, o nome em quadra NÃO é clicável', async () => {
+    auth.user = { uid: 'espectador' };
+    await render();
+    const nome = [...container.querySelectorAll('button')].find((b) => b.textContent.trim() === 'Ana');
+    expect(nome).toBeUndefined();
+  });
+
+  it('clicar num atleta da fila abre as ações de pausa e dupla', async () => {
+    auth.user = { uid: 'dono' };
+    await render();
+    const linha = [...container.querySelectorAll('button')]
+      .find((b) => b.textContent.includes('Elis Prado') && b.textContent.includes('entra a seguir'));
+    expect(linha).toBeTruthy();
+    click(linha);
+    await act(async () => { await Promise.resolve(); });
+    const txt = document.body.textContent;
+    expect(txt).toContain('Ficar indisponível por X jogos');
+    expect(txt).toContain('Vincular dupla');
   });
 
   it('mostra quem está em quadra e quem está na fila', async () => {

@@ -459,8 +459,8 @@ export function PlayCourtsSection({ gameDay, participants, games, view, canManag
   const handleFinish = async (gid) => {
     try {
       const res = await finishGame.mutateAsync(gid);
-      if (res?.next) toast.success(`Jogo concluído. Próximo criado na quadra ${res.next.court}.`);
-      else toast.success('Jogo concluído. Sem jogadores suficientes para o próximo — a quadra ficou livre.');
+      if (res?.next) toast.success(`Partida encerrada. Próxima criada na quadra ${res.next.court}.`);
+      else toast.success('Partida encerrada. Sem 4 disponíveis na ordem — a quadra ficou livre.');
     } catch (err) {
       toast.error(err.message || 'Não foi possível concluir o jogo.');
     }
@@ -548,9 +548,9 @@ export function PlayCourtsSection({ gameDay, participants, games, view, canManag
       <ConfirmDialog
         open={!!finishTarget}
         onOpenChange={(v) => !v && setFinishTarget(null)}
-        title="Concluir jogo?"
-        description="O jogo será finalizado e o próximo entra automaticamente nesta quadra (se houver 4 disponíveis na ordem)."
-        confirmLabel="Concluir"
+        title="Criar a próxima partida?"
+        description="A partida atual é encerrada e a próxima entra automaticamente nesta quadra (se houver 4 disponíveis na ordem)."
+        confirmLabel="Criar próxima"
         onConfirm={() => { const g = finishTarget; setFinishTarget(null); if (g) handleFinish(g); }}
       />
       <ConfirmDialog
@@ -628,8 +628,11 @@ function CourtRow({ court, game, canManage, canCreate, onCreate, onFinish, onCan
         {game ? (
           canManage && (
             <div className="flex flex-wrap justify-end gap-1.5">
+              {/* O que este botão FAZ é encerrar a partida atual e já criar a
+                  próxima nesta quadra. O rótulo diz o resultado da ação, não o
+                  passo intermediário — é o que quem organiza está buscando. */}
               <V2Button size="sm" onClick={onFinish}>
-                <Check className="mr-1 h-3.5 w-3.5" /> Jogo concluído
+                <Check className="mr-1 h-3.5 w-3.5" /> Criar próxima partida
               </V2Button>
               <V2Button size="sm" variant="ghost" className="text-red-500 hover:text-red-600" onClick={onCancel}>
                 Cancelar
