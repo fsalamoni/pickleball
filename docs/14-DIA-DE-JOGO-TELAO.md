@@ -78,21 +78,55 @@ plataforma, a tela inteira é conteúdo. Fica sob `ProtectedRoute` porque as
 regras do Firestore só liberam a leitura de um dia de jogo para o dono, os
 participantes ou um dia público; sem login não há o que mostrar.
 
-### 2.2 O que mostra
+### 2.2 O que mostra — e por que muda com o formato
 
-Em ordem de importância para quem está na quadra:
+| Bloco | Americano · Mexicano · Rei da Quadra | Play |
+|---|---|---|
+| **Em quadra agora** | sim, um card grande por quadra | sim |
+| **Próximos jogos** | as rodadas seguintes já sorteadas | a previsão de quem entra, pela fila |
+| **Ordem de participação** | — | sim, com as 4 primeiras marcadas "entra a seguir" |
+| **Ranking do dia** | as 10 primeiras posições | — |
+| **Últimos resultados** | uma linha por dupla, com o seu placar | — |
 
-1. **Em quadra agora** — um card grande por quadra, nomes em tipografia
-   grande, legível de longe;
-2. **Quem vem a seguir** — próximos jogos (formatos de grade) ou **ordem de
-   participação** (Play), com as quatro primeiras posições destacadas como
-   "entra a seguir";
-3. **Ranking do dia** — as 10 primeiras posições, quando já há resultado;
-4. **Últimos resultados** — uma linha por dupla, cada uma com o seu placar.
+> **O Play não tem placar.** `finishPlayGame` apenas marca o jogo como
+> concluído e devolve os quatro à fila — nenhum resultado é gravado em lugar
+> nenhum. Logo, no Play não existem "últimos resultados" nem ranking do dia:
+> mostrá-los seria exibir traços numa tela que a sala inteira está olhando.
+> O card de quadra recebe `comPlacar={false}` no Play, uma trava explícita em
+> vez de confiar em `score_a` vir nulo.
+
+**Próximos jogos no Play** vêm de `forecastPlayMatches`: são as próximas levas
+de quatro, pela ordem da fila. A tela diz com todas as letras que **as duplas
+são formadas só na hora de criar o jogo** — prometer uma dupla que ainda vai
+mudar seria pior do que não mostrar nada. Uma leva incompleta não é anunciada
+como "próxima partida": vira "aguardando jogadores", com quantos faltam.
 
 Somente leitura: nenhum botão do telão altera o dia de jogo.
 
-### 2.3 Detalhes de layout que vieram de conferência visual
+### 2.3 Retrato e paisagem
+
+O layout segue a **orientação** da tela, não só a largura:
+
+- **Paisagem** com espaço (TV, notebook): duas colunas. A coluna larga leva as
+  quadras em cima e, embaixo, o bloco da vez — próximos jogos no Play, ranking
+  do dia na grade. A coluna estreita leva a fila (Play) ou próximos jogos +
+  últimos resultados (grade).
+- **Retrato** (tablet de pé, TV girada, celular): tudo empilha na ordem do HTML,
+  que é a ordem de urgência — o que está em quadra, quem entra depois, e só
+  então classificação e histórico.
+
+Usar `landscape:` em vez de só um breakpoint importa: **um iPad Pro de pé tem
+1024px de largura** e cairia na regra de duas colunas por engano, espremendo
+tudo numa tela alta.
+
+Os dois formatos têm a **mesma estrutura de duas linhas** na coluna larga. Foi
+uma correção: sem um segundo bloco, o Play deixava metade da tela em branco.
+Quando nem esse segundo bloco existe (grade recém-sorteada, ainda sem
+resultado), os cards de quadra crescem para preencher a altura — com teto de
+`24rem`, senão duas quadras numa TV de 1080px virariam caixas de 800px com
+quatro nomes perdidos no meio.
+
+### 2.4 Detalhes de layout que vieram de conferência visual
 
 - **Nas listas compactas, a dupla vai numa linha só**, unida por "·". Quatro
   nomes empilhados sem separação viram uma lista indistinguível e quem olha de
@@ -105,13 +139,13 @@ Somente leitura: nenhum botão do telão altera o dia de jogo.
 - **No Play, quem está em quadra e quem está pausado aparecem resumidos numa
   linha**, não como itens da lista: os nomes de quem joga já estão em letra
   grande nos cards ao lado.
-- **Em tela estreita, a ordem de participação vem antes do ranking.** Quem está
-  na fila quer saber a sua posição, não a classificação. No desktop a grade
-  recoloca cada bloco no seu lugar.
+- **Em tela estreita, a fila vem antes do ranking.** Quem está esperando quer
+  saber a sua posição, não a classificação. Em paisagem a grade recoloca cada
+  bloco no seu lugar.
 - **"Entra a seguir" só aparece quando há 4 ou mais na fila** — com 3, ninguém
   entra.
 
-### 2.4 Atualização automática
+### 2.5 Atualização automática
 
 A página tem consultas próprias (`useQuery` + `refetchInterval` de 15 s) em vez
 de usar os hooks compartilhados de dia de jogo. É de propósito: ligar
@@ -121,7 +155,7 @@ laço.
 Há também um botão de **tela cheia** do navegador, escondido quando a API não
 existe (iOS Safari, por exemplo).
 
-### 2.5 Impacto no banco de dados
+### 2.6 Impacto no banco de dados
 
 **Nenhum.** Nenhuma coleção, campo, índice ou regra novos; nenhuma escrita. O
 telão lê exatamente o que o organizador já lê, com as mesmas regras.
@@ -160,5 +194,5 @@ src/v2/components/games/gameDaySections.js    # ids ESTÁVEIS das seções
 src/modules/games/domain/gameDayBoard.js      # live / upcoming / recent (puro)
 src/modules/games/domain/gameDayBoard.test.js # 25 testes
 src/v2/pages/V2GameDayTelao.jsx               # a página do telão
-src/v2/pages/V2GameDayTelao.runtime.test.jsx  # 9 testes de runtime
+src/v2/pages/V2GameDayTelao.runtime.test.jsx  # 13 testes de runtime
 ```

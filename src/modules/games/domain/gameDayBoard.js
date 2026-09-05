@@ -20,6 +20,11 @@
  * futuros gravados — a fila de quem entra é a ordem de participação, calculada
  * em `gamePlay.js` e exibida à parte no painel.
  *
+ * ATENÇÃO ao `recent` no Play: **o Play não grava placar**. `finishPlayGame`
+ * apenas marca o jogo como concluído e devolve os quatro à fila. Ali `recent`
+ * significa "partidas já encerradas", não "resultados" — quem consome deve
+ * tratá-lo como contagem/histórico, nunca exibi-lo como placar.
+ *
  * Estas funções não sabem qual é o formato: elas olham os dados. Um jogo com
  * `status` é tratado como Play; sem `status`, como grade. Assim o painel
  * funciona igual num dia de jogo do atleta e num dia de jogo de clube, que
