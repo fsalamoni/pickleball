@@ -32,6 +32,7 @@ import {
   computePlayOrder, buildPlayNextMatch, assignPlayTeams,
   nextFreePlayCourt, pickSwapReplacement, PLAY_GAME_STATUS, PLAY_SLOTS,
 } from '../domain/gamePlay.js';
+import { fetchUnifiedLevelsByParticipant } from '@/modules/rating/services/unifiedLevelService';
 import { mirrorGameToMyGame, sourceGameToMyGame, gameDayMirrorId } from '../domain/myGames.js';
 
 const COL = 'game_days';
@@ -515,7 +516,17 @@ export async function createNextPlayGame(gdId, actor, { court = null } = {}) {
   if (!ids) throw new Error('Não há jogadores disponíveis suficientes (mínimo 4) para criar o próximo jogo.');
 
   const byId = new Map(participants.map((p) => [p.id, p]));
-  const four = ids.map((id) => byId.get(id)).filter(Boolean);
+  // Nível na régua unificada (DUPR informado → rating 2.0–8.0 da plataforma →
+  // ELO → nível do formulário). Só em memória: nada é gravado no participante.
+  // Best-effort — sem os níveis, o `playLevelValue` volta ao nível do
+  // formulário e a formação de duplas acontece do mesmo jeito.
+  const nivelPorParticipante = await fetchUnifiedLevelsByParticipant(participants).catch(() => ({}));
+  const four = ids
+    .map((id) => byId.get(id))
+    .filter(Boolean)
+    .map((p) => (Number.isFinite(nivelPorParticipante[p.id])
+      ? { ...p, level_value: nivelPorParticipante[p.id] }
+      : p));
   const { side_a, side_b } = assignPlayTeams(four);
 
   const batch = writeBatch(db);

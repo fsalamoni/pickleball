@@ -24,6 +24,8 @@
  *  - `available`  — na ordem de participação, apto a entrar em quadra.
  */
 
+import { declaredLevelToUnified } from '@/modules/rating/domain/unifiedLevel.js';
+
 export const PLAY_STATUS = Object.freeze({
   AVAILABLE: 'available',
   IN_COURT: 'in_court',
@@ -43,11 +45,32 @@ export const PLAY_DEFAULT_LEVEL = 3.0;
 
 /* ------------------------------ utilidades ------------------------------ */
 
-/** Extrai um nível numérico de um participante (aceita número ou string USAP). */
+/**
+ * Nível numérico de um participante do Play, sempre na régua unificada
+ * (2.0–8.0). A ordem de prioridade é a mesma do resto da plataforma:
+ *
+ *   1. `level_value` — nível já resolvido pelo `unifiedLevel` (DUPR informado →
+ *      rating 2.0–8.0 da plataforma → ELO → nível indicado). Quem organiza o
+ *      Play preenche esse campo em memória antes de formar as duplas.
+ *   2. `play_level` numérico — já vem em escala numérica; respeitado como está.
+ *   3. `play_level` como ID de nível do formulário (`intermediario`, `avancado`,
+ *      …) convertido para a MESMA régua. Antes disso, o código só sabia extrair
+ *      dígitos da string: `intermediario` e `avancado` caíam os dois no padrão
+ *      3.0 (ou seja, o equilíbrio por nível não existia de fato), e
+ *      `iniciante_1` virava 1.0 — um número de outra escala.
+ *   4. `play_level` como texto com número (ex.: "3.0 – 3.5") — comportamento
+ *      antigo, mantido para não quebrar dados já gravados.
+ *   5. Padrão `PLAY_DEFAULT_LEVEL` para convidado avulso sem nenhum dado.
+ */
 export function playLevelValue(participant) {
+  const resolvido = participant?.level_value;
+  if (typeof resolvido === 'number' && Number.isFinite(resolvido)) return resolvido;
+
   const raw = participant?.play_level;
   if (typeof raw === 'number' && Number.isFinite(raw)) return raw;
   if (typeof raw === 'string') {
+    const doFormulario = declaredLevelToUnified(raw);
+    if (Number.isFinite(doFormulario)) return doFormulario;
     const m = raw.match(/\d+(?:[.,]\d+)?/);
     if (m) {
       const n = parseFloat(m[0].replace(',', '.'));

@@ -37,6 +37,7 @@ import { useAuth } from '@/core/lib/FirebaseAuthContext';
 import { useAthletes } from '@/modules/athletes/hooks/useAthletes';
 import { PARTICIPANT_SOURCE, INVITE_STATUS, GAME_DAY_LIMITS } from '@/modules/clubs/domain/constants';
 import { generateGameDayGames, suggestRounds, buildDrawHistory } from '@/modules/clubs/domain/gameDayDraw';
+import { fetchUnifiedLevelsByParticipant } from '@/modules/rating/services/unifiedLevelService';
 import { planAdditiveDraw, offsetRounds, splitGamesByResult } from '@/modules/clubs/domain/gameDayDrawMerge';
 import GameDayLeaderboard from '@/modules/clubs/components/GameDayLeaderboard';
 import PublishToRankingToggle from '@/modules/clubs/components/PublishToRankingToggle';
@@ -335,8 +336,17 @@ function GamesSection({ eventId, dateId, participants }) {
       // `formationGames`: TODOS os jogos do dia (inclusive os substituídos)
       // para não repetir as duplas/confrontos que acabaram de sair.
       const history = buildDrawHistory(plan.keptGames, ids, { formationGames: games });
+      // Níveis na régua unificada (DUPR informado → rating 2.0–8.0 da
+      // plataforma → ELO → nível indicado). Best-effort: se a leitura falhar,
+      // o sorteio acontece do mesmo jeito, só sem equilibrar nível.
+      let levels = null;
+      try {
+        levels = await fetchUnifiedLevelsByParticipant(participants);
+      } catch {
+        levels = null;
+      }
       const raw = generateGameDayGames(ids, {
-        rounds: effectiveRounds, seed, history, courts: effectiveCourts,
+        rounds: effectiveRounds, seed, history, courts: effectiveCourts, levels,
       });
       // Wave C.6: também salva o `user_id` real (se o participante for um
       // atleta da plataforma) para que o Cloud Function de ranking possa

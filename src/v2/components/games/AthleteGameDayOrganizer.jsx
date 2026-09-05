@@ -17,6 +17,7 @@ import { V2Surface, V2Button, V2Badge } from '@/v2/ui/primitives';
 import { useAuth } from '@/core/lib/FirebaseAuthContext';
 import { useAthletes } from '@/modules/athletes/hooks/useAthletes';
 import { generateGameDayGames, suggestRounds, buildDrawHistory } from '@/modules/clubs/domain/gameDayDraw';
+import { fetchUnifiedLevelsByParticipant } from '@/modules/rating/services/unifiedLevelService';
 import { planAdditiveDraw, offsetRounds, splitGamesByResult } from '@/modules/clubs/domain/gameDayDrawMerge';
 import {
   GAME_DAY_FORMAT, GAME_DAY_FORMAT_LABELS, DRAW_FORMATS,
@@ -281,11 +282,20 @@ function GamesSection({ gameDay, participants, isOwner }) {
       // Sorteio ADITIVO: mantém os jogos com resultado, opcionalmente substitui
       // os sem resultado, e numera as novas rodadas após as já existentes.
       const plan = planAdditiveDraw({ existingGames: games, replaceUnscored });
+      // Níveis na régua unificada (DUPR informado → rating 2.0–8.0 da
+      // plataforma → ELO → nível indicado). Best-effort: se a leitura falhar,
+      // o sorteio acontece do mesmo jeito, só sem equilibrar nível.
+      let levels = null;
+      try {
+        levels = await fetchUnifiedLevelsByParticipant(participants);
+      } catch {
+        levels = null;
+      }
       let raw;
       if (formatsOn && format === GAME_DAY_FORMAT.MEXICANO) {
-        raw = generateMexicanoSchedule(ids, { rounds: effectiveRounds, seed });
+        raw = generateMexicanoSchedule(ids, { rounds: effectiveRounds, seed, levels });
       } else if (formatsOn && format === GAME_DAY_FORMAT.KING_OF_COURT) {
-        raw = kingOfCourtFirstRound(ids, { seed });
+        raw = kingOfCourtFirstRound(ids, { seed, levels });
       } else {
         // Americano ciente do histórico do dia: leva em conta as DUPLAS e os
         // ADVERSÁRIOS já ocorridos (nos jogos mantidos) para variar as formações,
@@ -296,7 +306,7 @@ function GamesSection({ gameDay, participants, isOwner }) {
         // sair. A participação continua vindo só dos jogos mantidos.
         const history = buildDrawHistory(plan.keptGames, ids, { formationGames: games });
         raw = generateGameDayGames(ids, {
-          rounds: effectiveRounds, seed, history, courts: effectiveCourts,
+          rounds: effectiveRounds, seed, history, courts: effectiveCourts, levels,
         });
       }
       const payload = offsetRounds(raw, plan.roundBase).map(toPayload);

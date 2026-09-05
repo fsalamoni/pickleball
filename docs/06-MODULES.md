@@ -593,9 +593,18 @@ Ranking nacional, ranking de duplas (Onda 3), head-to-head, matchmaking,
     (replay determinístico).
   - **`duprMatchExport`** (NOVO) — gera CSV para DUPR
     (exclui `0×0`, resolve `dupr_id` de `users`).
+  - **`unifiedLevel`** (NOVO Onda R) ⭐ — a régua 2.0-8.0
+    usada por **todos os sorteios da plataforma**. Equipara
+    as quatro fontes de nível e define a prioridade: DUPR
+    informado → rating 2.0-8.0 da plataforma → ELO → nível
+    declarado (convertido para a mesma escala). Ver
+    `docs/13-NIVEL-UNIFICADO.md`.
 - **services**: `ratingService`, `headToHeadService`,
   `duprRatingService`, `duprOfficial` (stub sem rede),
-  `duprExportService`.
+  `duprExportService`,
+  **`unifiedLevelService`** (NOVO Onda R — leitura pura de
+  `athlete_profiles` + `player_skill_ratings` + `player_ratings`
+  por id de documento; nunca escreve, nunca lança).
 - **hooks**: `useRating`, `useHeadToHead`, `useDuprRating`,
   `useDuprExport`.
 - **Materialização no client + Cloud Function

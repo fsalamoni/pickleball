@@ -81,6 +81,53 @@ function rotate(arr, k) {
   return arr.slice(kk).concat(arr.slice(0, kk));
 }
 
+/* ------------------------- níveis (régua unificada) ------------------------- */
+
+/**
+ * Adapta o mapa `{ id: nível }` para uma função de leitura, ou devolve `null`
+ * quando não há nenhum nível conhecido — nesse caso os formatos se comportam
+ * exatamente como antes.
+ *
+ * Guarda importante: `Number(null)` é `0`, que é finito. Sem o teste explícito
+ * de nulo, "sem nível" viraria o piso da régua e o atleta seria tratado como o
+ * mais fraco de todos.
+ */
+function levelReader(levels) {
+  if (!levels || typeof levels !== 'object') return null;
+  const valores = Object.values(levels);
+  const algum = valores.some((v) => v != null && v !== '' && Number.isFinite(Number(v)));
+  if (!algum) return null;
+  return (id) => {
+    const v = levels[id];
+    if (v == null || v === '') return NaN;
+    const n = Number(v);
+    return Number.isFinite(n) ? n : NaN;
+  };
+}
+
+/**
+ * Ordena ids do mais forte para o mais fraco na régua unificada (2.0–8.0).
+ *
+ * Quem não tem nível conhecido entra pela MEDIANA do grupo: nem favorecido nem
+ * penalizado. Empates preservam a ordem de entrada (que veio do sorteio), então
+ * a aleatoriedade continua sendo o critério de desempate.
+ */
+function sortDescByLevel(ids, levelOf) {
+  const conhecidos = ids
+    .map((id) => levelOf(id))
+    .filter((v) => Number.isFinite(v))
+    .sort((a, b) => a - b);
+  if (conhecidos.length === 0) return ids.slice();
+  const mediana = conhecidos[Math.floor(conhecidos.length / 2)];
+  return ids
+    .map((id, i) => {
+      const v = levelOf(id);
+      return { id, i, v: Number.isFinite(v) ? v : mediana };
+    })
+    .sort((a, b) => (b.v - a.v) || (a.i - b.i))
+    .map((x) => x.id);
+}
+
 /* ------------------------------ Mexicano ------------------------------ */
 
 /**
@@ -89,7 +136,12 @@ function rotate(arr, k) {
  * para variar parcerias/adversários e quem descansa.
  *
  * @param {string[]} playerIds
- * @param {{ rounds?: number, seed?: string }} [options]
+ * @param {{ rounds?: number, seed?: string, levels?: Record<string, number>|null }} [options]
+ *   `levels` mapeia id → nível na régua unificada (2.0–8.0). Quando informado,
+ *   o 1&4 vs 2&3 clássico do Mexicano passa a valer de verdade: os quatro da
+ *   quadra são ordenados por nível, então a dupla do mais forte leva o mais
+ *   fraco. Quem entra na quadra, quem descansa e a rotação entre rodadas NÃO
+ *   mudam — só o recorte da dupla dentro do grupo de quatro.
  * @returns {Array<{ round, side_a:[string,string], side_b:[string,string] }>}
  */
 export function generateMexicanoSchedule(playerIds, options = {}) {
@@ -99,6 +151,7 @@ export function generateMexicanoSchedule(playerIds, options = {}) {
   const { seed = 'mexicano', rounds = 5 } = options;
   const totalRounds = Math.max(1, Math.min(60, Math.floor(rounds)));
   const rng = seededRng(seed);
+  const levelOf = levelReader(options.levels);
   const base = shuffle(ids, rng);
   const courts = Math.floor(n / 4);
   const playPerRound = courts * 4;
@@ -109,7 +162,9 @@ export function generateMexicanoSchedule(playerIds, options = {}) {
     const order = rotate(base, r * 1);
     const playing = order.slice(0, playPerRound);
     for (let c = 0; c < courts; c += 1) {
-      const four = playing.slice(c * 4, c * 4 + 4);
+      const four = levelOf
+        ? sortDescByLevel(playing.slice(c * 4, c * 4 + 4), levelOf)
+        : playing.slice(c * 4, c * 4 + 4);
       out.push({
         round: r + 1,
         court: c + 1,
@@ -126,6 +181,16 @@ export function generateMexicanoSchedule(playerIds, options = {}) {
 /**
  * Rodada 1 do Rei da Quadra: distribui os jogadores nas quadras (4 por quadra),
  * quadra 1 = "quadra do rei". Pareia como duplas [0,1] vs [2,3].
+ *
+ * Com `levels` (régua unificada 2.0–8.0) a rodada 1 já sai escalonada: quem
+ * joga continua sendo decidido pelo sorteio (ninguém fica de fora por ser mais
+ * fraco), mas os que jogam são distribuídos por nível — quadra 1 com os mais
+ * fortes, como manda o formato — e dentro de cada quadra a dupla do mais forte
+ * leva o mais fraco. Da rodada 2 em diante nada muda: o formato é movido pelo
+ * RESULTADO (`kingOfCourtNextRound`), e é assim que deve continuar.
+ *
+ * @param {string[]} playerIds
+ * @param {{ seed?: string, levels?: Record<string, number>|null }} [options]
  */
 export function kingOfCourtFirstRound(playerIds, options = {}) {
   const ids = (playerIds || []).filter(Boolean);
@@ -133,16 +198,20 @@ export function kingOfCourtFirstRound(playerIds, options = {}) {
   if (n < 4) throw new Error('O Rei da Quadra exige no mínimo 4 participantes.');
   const { seed = 'king' } = options;
   const rng = seededRng(seed);
+  const levelOf = levelReader(options.levels);
   const courts = Math.floor(n / 4);
-  const playing = shuffle(ids, rng).slice(0, courts * 4);
+  // Sorteia PRIMEIRO quem joga (o corte é aleatório, não por nível) e só depois
+  // ordena os escolhidos — assim o nível nunca decide quem fica de fora.
+  const sorteados = shuffle(ids, rng).slice(0, courts * 4);
+  const playing = levelOf ? sortDescByLevel(sorteados, levelOf) : sorteados;
   const out = [];
   for (let c = 0; c < courts; c += 1) {
     const four = playing.slice(c * 4, c * 4 + 4);
     out.push({
       round: 1,
       court: c + 1,
-      side_a: [four[0], four[1]],
-      side_b: [four[2], four[3]],
+      side_a: levelOf ? [four[0], four[3]] : [four[0], four[1]],
+      side_b: levelOf ? [four[1], four[2]] : [four[2], four[3]],
     });
   }
   return out;

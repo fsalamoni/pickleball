@@ -89,3 +89,43 @@ Precedência das situações: `excluded` > `confirmed` > `submitted` >
 rebaixar uma situação; o registro automático do download nunca rebaixa.
 Nenhuma partida é alterada — as únicas escritas são no ledger
 `dupr_export_log` e em `audit_logs`.
+
+---
+
+## Nível unificado nos sorteios (2026-09-04)
+
+`domain/unifiedLevel.js` + `services/unifiedLevelService.js` equiparam as quatro
+descrições de força do atleta numa régua só — a do DUPR, **2.0 – 8.0** — e
+definem a prioridade usada por **todos os sorteios da plataforma**:
+
+1. **DUPR informado** no perfil (`athlete_profiles.dupr_rating`);
+2. **rating 2.0–8.0 da plataforma** (`player_skill_ratings`), se houver jogos;
+3. **ELO do ranking nacional** (`player_ratings`), se houver jogos;
+4. **nível declarado no formulário**, convertido para a mesma régua.
+
+As fontes 2 e 3 são ignoradas com zero jogos: ali o valor guardado é só a
+semente, que veio do nível declarado de qualquer jeito.
+
+A conversão ELO → 2.0–8.0 usa âncoras derivadas da própria semente da plataforma
+(`seedFromLevelOrdinal` × `LEVEL_TABLE`), o que dá uma propriedade testável:
+**um atleta que nunca jogou converte de volta exatamente para o nível que
+declarou.**
+
+**Leitura pura, sem impacto no banco**: nenhuma coleção nova, nenhum campo novo,
+nenhum índice novo (as três coleções são lidas por id de documento), nenhuma
+regra alterada, nenhuma escrita.
+
+### Como usar
+
+```js
+import { fetchUnifiedLevelsByParticipant } from '@/modules/rating/services/unifiedLevelService';
+
+let levels = null;
+try {
+  levels = await fetchUnifiedLevelsByParticipant(participants);
+} catch {
+  levels = null; // best-effort: o sorteio acontece mesmo sem os níveis
+}
+```
+
+Detalhes, garantias e efeito medido: **`docs/13-NIVEL-UNIFICADO.md`**.
