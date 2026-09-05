@@ -11,6 +11,7 @@ import React, { useMemo, useState } from 'react';
 import { Navigate, useNavigate, useParams, Link } from 'react-router-dom';
 import {
   Plus, CalendarClock, Users, Globe, Lock, ChevronLeft, Trash2, ExternalLink, History, Pencil,
+  MonitorPlay,
 } from 'lucide-react';
 import { toast } from 'sonner';
 import { useAuth } from '@/core/lib/FirebaseAuthContext';
@@ -197,16 +198,28 @@ function GameDayDetail({ gameDayId }) {
             {gameDayWhenText(gameDay) && <p className="mt-1 text-sm text-gray-500">{gameDayWhenText(gameDay)}</p>}
             {gameDay.notes && <p className="mt-2 text-sm text-gray-600">{gameDay.notes}</p>}
           </div>
-          {isOwner && (
-            <div className="flex shrink-0 flex-wrap gap-2">
-              <V2Button variant="ghost" size="sm" onClick={() => setEditOpen(true)}>
-                <Pencil className="mr-1.5 h-4 w-4" /> Editar
-              </V2Button>
-              <V2Button variant="ghost" size="sm" className="text-red-500 hover:text-red-600" onClick={() => setConfirmDelete(true)}>
-                <Trash2 className="mr-1.5 h-4 w-4" /> Arquivar
-              </V2Button>
-            </div>
-          )}
+          <div className="flex shrink-0 flex-wrap gap-2">
+            {/* Telão: abre em outra aba de propósito — o uso é numa SEGUNDA
+                tela (TV, tablet na beira da quadra), com esta aqui seguindo
+                aberta para o organizador continuar lançando os resultados. */}
+            <V2Button
+              variant="secondary"
+              size="sm"
+              onClick={() => window.open(`/dia-de-jogo/${gameDay.id}/telao`, '_blank', 'noopener')}
+            >
+              <MonitorPlay className="mr-1.5 h-4 w-4" /> Abrir telão
+            </V2Button>
+            {isOwner && (
+              <>
+                <V2Button variant="ghost" size="sm" onClick={() => setEditOpen(true)}>
+                  <Pencil className="mr-1.5 h-4 w-4" /> Editar
+                </V2Button>
+                <V2Button variant="ghost" size="sm" className="text-red-500 hover:text-red-600" onClick={() => setConfirmDelete(true)}>
+                  <Trash2 className="mr-1.5 h-4 w-4" /> Arquivar
+                </V2Button>
+              </>
+            )}
+          </div>
         </div>
         {isPublicGameDay(gameDay) && isOwner && (
           <p className="mt-3 flex items-center gap-1.5 text-xs text-gray-400">

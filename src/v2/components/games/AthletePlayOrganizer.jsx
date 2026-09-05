@@ -14,7 +14,9 @@ import { ConfirmDialog } from '@/components/ui/confirm-dialog';
 import {
   Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription, DialogFooter,
 } from '@/components/ui/dialog';
-import { V2Surface, V2Button, V2Badge } from '@/v2/ui/primitives';
+import { V2Button, V2Badge } from '@/v2/ui/primitives';
+import V2CollapsibleCard from '@/v2/ui/V2CollapsibleCard';
+import { GAME_DAY_SECTION } from '@/v2/components/games/gameDaySections';
 import { useAuth } from '@/core/lib/FirebaseAuthContext';
 import { useAthletes } from '@/modules/athletes/hooks/useAthletes';
 import { genderLabel } from '@/modules/athletes/domain/constants';
@@ -160,20 +162,21 @@ function PlayParticipantsSection({ gameDay, participants, view, isLoading, isOwn
   };
 
   return (
-    <V2Surface>
-      <div className="space-y-4 p-4">
-        <div className="flex items-center justify-between gap-3">
-          <div className="flex items-center gap-2">
-            <Users className="h-5 w-5 text-green-600" />
-            <h3 className="text-base font-semibold text-ink">Participantes ({participants.length})</h3>
-          </div>
-          {canManage && (
-            <V2Button size="sm" variant="ghost" onClick={() => setPickerOpen(true)} disabled={atLimit}>
-              <UserPlus className="mr-1.5 h-4 w-4" /> Inserir atletas
-            </V2Button>
-          )}
-        </div>
-
+    <V2CollapsibleCard
+      icon={Users}
+      title="Participantes"
+      count={participants.length}
+      sectionId={GAME_DAY_SECTION.PLAY_PARTICIPANTS}
+      summary={participants.length === 0
+        ? 'Nenhum participante ainda'
+        : `${view.order.length} na fila · ${view.inCourt.length} em quadra · ${view.unavailable.length} pausado(s)`}
+      actions={canManage && (
+        <V2Button size="sm" variant="ghost" onClick={() => setPickerOpen(true)} disabled={atLimit}>
+          <UserPlus className="mr-1.5 h-4 w-4" /> Inserir atletas
+        </V2Button>
+      )}
+    >
+      <div className="space-y-4">
         {isLoading ? (
           <Skeleton className="h-20 rounded-lg" />
         ) : participants.length === 0 ? (
@@ -267,7 +270,7 @@ function PlayParticipantsSection({ gameDay, participants, view, isLoading, isOwn
         onClose={() => setPartnerFor(null)}
         onConfirm={(partnerId) => { setPartner.mutate({ pid: partnerFor.id, partnerId }); setPartnerFor(null); }}
       />
-    </V2Surface>
+    </V2CollapsibleCard>
   );
 }
 
@@ -464,25 +467,26 @@ export function PlayCourtsSection({ gameDay, participants, games, view, canManag
   };
 
   return (
-    <V2Surface>
-      <div className="space-y-4 p-4">
-        <div className="flex flex-wrap items-center justify-between gap-3">
-          <div className="flex items-center gap-2">
-            <LayoutGrid className="h-5 w-5 text-green-600" />
-            <h3 className="text-base font-semibold text-ink">Quadras e jogos ({courts})</h3>
-          </div>
-          {canManage && (
-            <div className="flex flex-wrap gap-2">
-              <V2Button size="sm" variant="ghost" onClick={() => setManualOpen(true)} disabled={participants.length < 4}>
-                <Plus className="mr-1.5 h-4 w-4" /> Criação manual
-              </V2Button>
-              <V2Button size="sm" onClick={() => handleCreateNext()} disabled={!canCreateNext || busy}>
-                <PlayCircle className="mr-1.5 h-4 w-4" /> {busy ? 'Criando…' : 'Criar próximo jogo'}
-              </V2Button>
-            </div>
-          )}
-        </div>
-
+    <V2CollapsibleCard
+      icon={LayoutGrid}
+      title="Quadras e jogos"
+      count={courts}
+      sectionId={GAME_DAY_SECTION.PLAY_COURTS}
+      summary={openGames.length === 0
+        ? `${courts} quadra(s) livre(s)`
+        : `${openGames.length} em quadra · ${finishedGames.length} concluído(s)`}
+      actions={canManage && (
+        <>
+          <V2Button size="sm" variant="ghost" onClick={() => setManualOpen(true)} disabled={participants.length < 4}>
+            <Plus className="mr-1.5 h-4 w-4" /> Criação manual
+          </V2Button>
+          <V2Button size="sm" onClick={() => handleCreateNext()} disabled={!canCreateNext || busy}>
+            <PlayCircle className="mr-1.5 h-4 w-4" /> {busy ? 'Criando…' : 'Criar próximo jogo'}
+          </V2Button>
+        </>
+      )}
+    >
+      <div className="space-y-4">
         {canManage && participants.length < 4 && (
           <p className="text-xs text-gray-500">Insira ao menos 4 participantes para começar a criar jogos.</p>
         )}
@@ -566,7 +570,7 @@ export function PlayCourtsSection({ gameDay, participants, games, view, canManag
         confirmLabel="Substituir"
         onConfirm={() => { const t = absentTarget; setAbsentTarget(null); if (t) noShow.mutate({ gid: t.gid, absentId: t.player.id }); }}
       />
-    </V2Surface>
+    </V2CollapsibleCard>
   );
 }
 
@@ -818,12 +822,16 @@ export function PlayOrderSection({ view }) {
   const total = order.length + inCourt.length + unavailable.length;
 
   return (
-    <V2Surface>
-      <div className="space-y-3 p-4">
-        <div className="flex items-center gap-2">
-          <ListOrdered className="h-5 w-5 text-green-600" />
-          <h3 className="text-base font-semibold text-ink">Ordem de participação</h3>
-        </div>
+    <V2CollapsibleCard
+      icon={ListOrdered}
+      title="Ordem de participação"
+      count={total || null}
+      sectionId={GAME_DAY_SECTION.PLAY_ORDER}
+      summary={total === 0
+        ? 'Ninguém na ordem ainda'
+        : `${order.length} aguardando · ${inCourt.length} em quadra · ${unavailable.length} pausado(s)`}
+    >
+      <div className="space-y-3">
         <p className="text-xs text-gray-500">
           Atualizada em tempo real. Só quem está disponível recebe número na ordem; quem está em quadra ou
           pausado aparece sem número.
@@ -845,7 +853,7 @@ export function PlayOrderSection({ view }) {
           </div>
         )}
       </div>
-    </V2Surface>
+    </V2CollapsibleCard>
   );
 }
 
