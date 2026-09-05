@@ -70,6 +70,7 @@
 |---|---|
 | [`12-TEAM-TOURNAMENTS.md`](./12-TEAM-TOURNAMENTS.md) | Torneio por equipes (modalidade, etapas, confrontos). |
 | [`13-NIVEL-UNIFICADO.md`](./13-NIVEL-UNIFICADO.md) | ⭐ A régua 2.0–8.0 usada por **todos os sorteios** (DUPR → rating → ELO → nível declarado). |
+| [`14-DIA-DE-JOGO-TELAO.md`](./14-DIA-DE-JOGO-TELAO.md) | Seções colapsáveis (preferência por usuário) + telão do dia de jogo. |
 | [`PUSH-ATIVACAO.md`](./PUSH-ATIVACAO.md) | Ativação do push (PWA + FCM). |
 | [`GAMIFICATION/README.md`](./GAMIFICATION/README.md) | ⭐ Porta de entrada da gamificação: estado atual, estudo × implementado, como retomar. |
 
@@ -105,6 +106,7 @@ docs/
 │
 ├── 12-TEAM-TOURNAMENTS.md            # torneio por equipes
 ├── 13-NIVEL-UNIFICADO.md             # ⭐ régua de nível dos sorteios
+├── 14-DIA-DE-JOGO-TELAO.md           # colapsáveis + telão do dia de jogo
 ├── PUSH-ATIVACAO.md                  # ativação do push
 │
 └── GAMIFICATION/                     # ⭐ gamificação (pasta exclusiva)

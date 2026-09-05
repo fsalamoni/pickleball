@@ -104,6 +104,7 @@ Estes princípios vieram de bugs reais que custaram horas pra arrumar. São ineg
 │   │   └── faq.md
 │   ├── 12-TEAM-TOURNAMENTS.md      🏆 torneio por equipes
 │   ├── 13-NIVEL-UNIFICADO.md       📏 ⭐ régua 2.0–8.0 de TODOS os sorteios
+│   ├── 14-DIA-DE-JOGO-TELAO.md     📺 colapsáveis + telão do dia de jogo
 │   └── GAMIFICATION/               🎮 pasta exclusiva da gamificação
 │       ├── README.md               ⭐ comece por aqui ao retomar
 │       ├── 01-ESTADO-ATUAL.md
@@ -169,6 +170,8 @@ Estes princípios vieram de bugs reais que custaram horas pra arrumar. São ineg
 **"Onde está a FEATURE que não existe mas devia?"** → `docs/09-UX-ANALYSIS/15-backlog-remanescente.md`
 **"Qual NÍVEL o sorteio usa?"** → `docs/13-NIVEL-UNIFICADO.md` (régua 2.0–8.0: DUPR → rating da plataforma → ELO → nível declarado) · código em `src/modules/rating/domain/unifiedLevel.js`
 **"Onde está a GAMIFICAÇÃO?"** → `docs/GAMIFICATION/README.md` (flag `gamification_v2`, default OFF)
+**"Onde está o TELÃO do dia de jogo?"** → `src/v2/pages/V2GameDayTelao.jsx` · rota `/dia-de-jogo/:id/telao` (em `src/App.jsx`, fora do V2Layout) · doc em `docs/14-DIA-DE-JOGO-TELAO.md`
+**"Como faço uma seção colapsável que LEMBRA por usuário?"** → `src/v2/ui/V2CollapsibleCard.jsx` + id estável em `src/v2/components/games/gameDaySections.js`
 
 **Para encontrar QUALQUER arquivo rápido:**
 ```bash
@@ -203,6 +206,7 @@ grep -rn "path=\"/arenas" src/v2/V2App.jsx
 | Ver status atual do Arena V3 | `docs/10-ARENA-V3/26-ARENA-V3-COMPLETE-REFERENCE.md` | Métricas, sprint, gotchas |
 | Equilibrar duplas/jogos por nível | `docs/13-NIVEL-UNIFICADO.md` | `fetchUnifiedLevelsByParticipant(participants)` → passe `levels` ao motor de sorteio. NUNCA compare escalas diferentes na mesma conta |
 | Retomar a gamificação | `docs/GAMIFICATION/README.md` | Leia README → 01 → 02 → 03 antes de tocar em código |
+| Tornar uma seção colapsável | `docs/14-DIA-DE-JOGO-TELAO.md` §1 | `<V2CollapsibleCard sectionId="..." summary="...">`; id ESTÁVEL (mudar apaga a preferência de todo mundo) e ações SEMPRE em `actions`, nunca dentro do corpo do cabeçalho |
 
 ---
 
@@ -345,6 +349,14 @@ chore(deps): bump firebase to 12.x
 >
 > **Destaques por onda**:
 >
+> - **Onda S — Dia de jogo: colapsáveis + telão** (2026-09-05): toda seção do
+>   dia de jogo (os quatro formatos + o dia de jogo do clube) recolhe e LEMBRA
+>   por usuário (`v2:collapse:<uid>:<secao>`, só no navegador); e a rota
+>   `/dia-de-jogo/:id/telao` abre um painel em tela cheia para a segunda tela
+>   (em quadra agora, próximos/ordem de participação, ranking do dia, últimos
+>   resultados), atualizando sozinha a cada 15 s. Zero impacto no banco.
+>   Ver `docs/14-DIA-DE-JOGO-TELAO.md`.
+>
 > - **Onda R — Nível unificado nos sorteios** (2026-09-04): uma régua só
 >   (2.0–8.0, a do DUPR) para TODOS os sorteios, alimentada por
 >   DUPR informado → rating 2.0–8.0 da plataforma → ELO → nível declarado
@@ -398,10 +410,10 @@ chore(deps): bump firebase to 12.x
 
 | Métrica | Valor | Delta do início do agente |
 |---|---|---|
-| **Testes Vitest** | **2752 passing** (204 arquivos; +68 do nível unificado) | +2344 (era 408) |
+| **Testes Vitest** | **2808 passing** (208 arquivos) | +2400 (era 408) |
 | **Lint errors** | 0 | era 30+ |
 | **Módulos** | 20 (`games` e `legal` saíram como `src/modules/` mas continuam como pastas oficiais — **rating virou módulo oficial** com domain/services/hooks/components) | +4 (coaches, circuits, games, legal) |
-| **V2 pages** | 77 (+V2GamificationHome, V2Achievements, V2PublicAchievements, V2HallOfFame, V2SocialBonds, V2ReferralLanding) | +53 |
+| **V2 pages** | 78 (+V2GameDayTelao — telão do dia de jogo, rota fora do V2Layout) | +54 |
 | **V2 components (src/v2/components/)** | **16 pastas** (+home, +rating, +settings, +tournament cresceu muito, +admin) | — |
 | **Coleções Firestore** | **121 top-level em `firestore.rules`** (as 13 da gamificação V2 documentadas em `05-DATA-MODEL.md`) | +82 |
 | **Índices compostos Firestore** | **32 em `firestore.indexes.json`** (+4 da gamificação V2) | +28 |

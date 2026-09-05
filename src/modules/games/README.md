@@ -188,3 +188,21 @@ exibir **minha dupla vs dupla adversária**.
 ## Onde achar mais
 - `docs/06-MODULES.md` § games
 - `docs/05-DATA-MODEL.md`
+
+
+---
+
+## Telão do dia de jogo (2026-09-05)
+
+`domain/gameDayBoard.js` (puro, testado) separa os jogos do dia em
+`live` / `upcoming` / `recent`, servindo tanto os formatos de GRADE (a rodada
+corrente é a primeira com jogo sem placar) quanto o PLAY (o que separa é o
+`status`). As funções não recebem o formato: um jogo com `status` é Play, sem
+`status` é grade — por isso o mesmo painel serve ao dia de jogo do atleta e ao
+do clube.
+
+A página é `v2/pages/V2GameDayTelao.jsx`, na rota `/dia-de-jogo/:id/telao`
+(declarada em `src/App.jsx`, **fora do V2Layout**). Somente leitura, sem
+impacto no banco.
+
+Detalhes: `docs/14-DIA-DE-JOGO-TELAO.md`.

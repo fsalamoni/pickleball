@@ -1,7 +1,7 @@
 import React, { useMemo, useState } from 'react';
 import { toast } from 'sonner';
 import {
-  Plus, Trash2, Shuffle, UserPlus, Users, Swords, ListChecks, Trophy,
+  Plus, Trash2, Shuffle, UserPlus, Users, Swords, ListChecks, Trophy, BarChart3,
 } from 'lucide-react';
 
 import { Input } from '@/components/ui/input';
@@ -13,7 +13,9 @@ import { ConfirmDialog } from '@/components/ui/confirm-dialog';
 import {
   Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription, DialogFooter,
 } from '@/components/ui/dialog';
-import { V2Surface, V2Button, V2Badge } from '@/v2/ui/primitives';
+import { V2Button, V2Badge } from '@/v2/ui/primitives';
+import V2CollapsibleCard from '@/v2/ui/V2CollapsibleCard';
+import { GAME_DAY_SECTION } from '@/v2/components/games/gameDaySections';
 import { useAuth } from '@/core/lib/FirebaseAuthContext';
 import { useAthletes } from '@/modules/athletes/hooks/useAthletes';
 import { generateGameDayGames, suggestRounds, buildDrawHistory } from '@/modules/clubs/domain/gameDayDraw';
@@ -113,20 +115,19 @@ function ParticipantsSection({ gameDay, participants, isLoading, isOwner }) {
   const atLimit = participants.length >= GAME_DAY_LIMITS.MAX_PARTICIPANTS;
 
   return (
-    <V2Surface>
-      <div className="space-y-4 p-4">
-        <div className="flex items-center justify-between gap-3">
-          <div className="flex items-center gap-2">
-            <Users className="h-5 w-5 text-green-600" />
-            <h3 className="text-base font-semibold text-ink">Participantes ({participants.length})</h3>
-          </div>
-          {isOwner && (
-            <V2Button size="sm" variant="ghost" onClick={() => setPickerOpen(true)} disabled={atLimit}>
-              <UserPlus className="mr-1.5 h-4 w-4" /> Inserir atletas
-            </V2Button>
-          )}
-        </div>
-
+    <V2CollapsibleCard
+      icon={Users}
+      title="Participantes"
+      count={participants.length}
+      sectionId={GAME_DAY_SECTION.PARTICIPANTS}
+      summary={participants.length === 0 ? 'Nenhum participante ainda' : `${participants.length} no dia de jogo`}
+      actions={isOwner && (
+        <V2Button size="sm" variant="ghost" onClick={() => setPickerOpen(true)} disabled={atLimit}>
+          <UserPlus className="mr-1.5 h-4 w-4" /> Inserir atletas
+        </V2Button>
+      )}
+    >
+      <div className="space-y-4">
         {isLoading ? (
           <Skeleton className="h-20 rounded-lg" />
         ) : participants.length === 0 ? (
@@ -170,7 +171,7 @@ function ParticipantsSection({ gameDay, participants, isLoading, isOwner }) {
       </div>
 
       <AddAthletesDialog open={pickerOpen} onClose={() => setPickerOpen(false)} pool={platformPool} onAdd={handleAdd} />
-    </V2Surface>
+    </V2CollapsibleCard>
   );
 }
 
@@ -375,36 +376,39 @@ function GamesSection({ gameDay, participants, isOwner }) {
     });
   }, [games]);
 
-  return (
-    <V2Surface>
-      <div className="space-y-4 p-4">
-        <div className="flex flex-wrap items-center justify-between gap-3">
-          <div className="flex items-center gap-2">
-            <Swords className="h-5 w-5 text-green-600" />
-            <h3 className="text-base font-semibold text-ink">Jogos ({games.length})</h3>
-          </div>
-          {isOwner && (
-            <div className="flex flex-wrap gap-2">
-              <V2Button size="sm" variant="ghost" onClick={() => setManualOpen(true)} disabled={participants.length < 2}>
-                <Plus className="mr-1.5 h-4 w-4" /> Inserir partida
-              </V2Button>
-              <V2Button size="sm" onClick={openDraw} disabled={!canDraw}>
-                <Shuffle className="mr-1.5 h-4 w-4" /> Sortear jogos
-              </V2Button>
-              {isKingOfCourt && games.length > 0 && (
-                <V2Button size="sm" variant="secondary" onClick={handleAddKingRound} disabled={!canAddKingRound || addingRound}>
-                  <Plus className="mr-1.5 h-4 w-4" /> {addingRound ? 'Gerando…' : 'Próxima rodada'}
-                </V2Button>
-              )}
-              {games.length > 0 && (
-                <V2Button size="sm" variant="ghost" className="text-red-500 hover:text-red-600" onClick={() => setConfirmClear(true)}>
-                  <Trash2 className="mr-1.5 h-4 w-4" /> Limpar
-                </V2Button>
-              )}
-            </div>
-          )}
-        </div>
+  const resumoJogos = games.length === 0
+    ? 'Nenhum jogo sorteado ainda'
+    : `${scoredGames.length} com resultado · ${unscoredGames.length} a jogar`;
 
+  return (
+    <V2CollapsibleCard
+      icon={Swords}
+      title="Jogos"
+      count={games.length}
+      sectionId={GAME_DAY_SECTION.GAMES}
+      summary={resumoJogos}
+      actions={isOwner && (
+        <>
+          <V2Button size="sm" variant="ghost" onClick={() => setManualOpen(true)} disabled={participants.length < 2}>
+            <Plus className="mr-1.5 h-4 w-4" /> Inserir partida
+          </V2Button>
+          <V2Button size="sm" onClick={openDraw} disabled={!canDraw}>
+            <Shuffle className="mr-1.5 h-4 w-4" /> Sortear jogos
+          </V2Button>
+          {isKingOfCourt && games.length > 0 && (
+            <V2Button size="sm" variant="secondary" onClick={handleAddKingRound} disabled={!canAddKingRound || addingRound}>
+              <Plus className="mr-1.5 h-4 w-4" /> {addingRound ? 'Gerando…' : 'Próxima rodada'}
+            </V2Button>
+          )}
+          {games.length > 0 && (
+            <V2Button size="sm" variant="ghost" className="text-red-500 hover:text-red-600" onClick={() => setConfirmClear(true)}>
+              <Trash2 className="mr-1.5 h-4 w-4" /> Limpar
+            </V2Button>
+          )}
+        </>
+      )}
+    >
+      <div className="space-y-4">
         {isOwner && !canDraw && (
           <p className="text-xs text-gray-500">
             Insira ao menos 4 participantes para sortear jogos de duplas. Para partidas individuais avulsas, bastam 2.
@@ -542,7 +546,7 @@ function GamesSection({ gameDay, participants, isOwner }) {
           onConfirm={handleClear}
         />
       </div>
-    </V2Surface>
+    </V2CollapsibleCard>
   );
 }
 
@@ -692,12 +696,16 @@ function ManualGameDialog({ open, onClose, gdId, participants }) {
 
 function DailyRankingSection({ gameDay, participants }) {
   const { data: games = [] } = useGameDayGames(gameDay.id);
+  const decididos = games.filter((g) => g.score_a != null && g.score_b != null).length;
   return (
-    <V2Surface>
-      <div className="p-4">
-        <GameDayLeaderboard participants={participants} games={games} />
-      </div>
-    </V2Surface>
+    <V2CollapsibleCard
+      icon={BarChart3}
+      title="Ranking do dia"
+      sectionId={GAME_DAY_SECTION.DAILY_RANKING}
+      summary={decididos === 0 ? 'Ainda sem resultados' : `${decididos} jogo(s) computado(s)`}
+    >
+      <GameDayLeaderboard participants={participants} games={games} />
+    </V2CollapsibleCard>
   );
 }
 
@@ -731,13 +739,16 @@ function RankingSection({ gameDay, participants }) {
   };
 
   return (
-    <V2Surface>
-      <div className="space-y-3 p-4">
-        <div className="flex items-center gap-2">
-          <Trophy className="h-5 w-5 text-green-600" />
-          <h3 className="text-base font-semibold text-ink">Resultados no ranking</h3>
-          {isPublished && <V2Badge tone="green">Publicado</V2Badge>}
-        </div>
+    <V2CollapsibleCard
+      icon={Trophy}
+      title="Resultados no ranking"
+      sectionId={GAME_DAY_SECTION.PLATFORM_RANKING}
+      summary={isPublished
+        ? `Publicado · ${publishedCount} jogo(s) no ranking`
+        : `${decidedCount} jogo(s) decidido(s), ainda não publicados`}
+      actions={isPublished ? <V2Badge tone="green">Publicado</V2Badge> : null}
+    >
+      <div className="space-y-3">
         <p className="text-sm text-gray-500">
           Publique os resultados decididos no ranking geral da plataforma — tanto as rodadas
           sorteadas quanto as partidas avulsas contam igualmente. Partidas em que todos os
@@ -758,6 +769,6 @@ function RankingSection({ gameDay, participants }) {
           )}
         </div>
       </div>
-    </V2Surface>
+    </V2CollapsibleCard>
   );
 }

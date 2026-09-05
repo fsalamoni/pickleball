@@ -4,7 +4,9 @@ import {
   PlayCircle, Pause, Link2, Unlink, LogOut, UserCheck,
 } from 'lucide-react';
 
-import { V2Surface, V2Button } from '@/v2/ui/primitives';
+import { V2Button } from '@/v2/ui/primitives';
+import V2CollapsibleCard from '@/v2/ui/V2CollapsibleCard';
+import { GAME_DAY_SECTION } from '@/v2/components/games/gameDaySections';
 import { ConfirmDialog } from '@/components/ui/confirm-dialog';
 import { useAuth } from '@/core/lib/FirebaseAuthContext';
 import { computePlayOrder, PLAY_STATUS } from '@/modules/games/domain/gamePlay';
@@ -91,13 +93,13 @@ function MyParticipationCard({ gameDay, participants, view, me }) {
   };
 
   return (
-    <V2Surface>
-      <div className="space-y-4 p-4">
-        <div className="flex items-center gap-2">
-          <UserCheck className="h-5 w-5 text-green-600" />
-          <h3 className="text-base font-semibold text-ink">Minha participação</h3>
-        </div>
-
+    <V2CollapsibleCard
+      icon={UserCheck}
+      title="Minha participação"
+      sectionId={GAME_DAY_SECTION.PLAY_ME}
+      summary={!me ? 'Você ainda não entrou neste Play' : statusText()}
+    >
+      <div className="space-y-4">
         {!me ? (
           <div className="space-y-3">
             <p className="text-sm text-gray-600">
@@ -171,6 +173,6 @@ function MyParticipationCard({ gameDay, participants, view, me }) {
         loading={removeSelf.isPending}
         onConfirm={handleLeave}
       />
-    </V2Surface>
+    </V2CollapsibleCard>
   );
 }

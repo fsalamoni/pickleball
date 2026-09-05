@@ -1,11 +1,10 @@
 import React, { useMemo, useState } from 'react';
 import { toast } from 'sonner';
-import { Plus, Trash2, Shuffle, UserPlus, Users, Swords, ListChecks } from 'lucide-react';
+import { Plus, Trash2, Shuffle, UserPlus, Users, Swords, ListChecks, BarChart3 } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { Badge } from '@/components/ui/badge';
-import { Card, CardContent } from '@/components/ui/card';
 import { Skeleton } from '@/components/ui/skeleton';
 import { EmptyState } from '@/components/ui/empty-state';
 import { UserAvatar } from '@/components/ui/user-avatar';
@@ -40,6 +39,8 @@ import { generateGameDayGames, suggestRounds, buildDrawHistory } from '@/modules
 import { fetchUnifiedLevelsByParticipant } from '@/modules/rating/services/unifiedLevelService';
 import { planAdditiveDraw, offsetRounds, splitGamesByResult } from '@/modules/clubs/domain/gameDayDrawMerge';
 import GameDayLeaderboard from '@/modules/clubs/components/GameDayLeaderboard';
+import V2CollapsibleCard from '@/v2/ui/V2CollapsibleCard';
+import { GAME_DAY_SECTION } from '@/v2/components/games/gameDaySections';
 import PublishToRankingToggle from '@/modules/clubs/components/PublishToRankingToggle';
 
 const SOURCE_LABEL = {
@@ -165,18 +166,19 @@ function ParticipantsSection({ eventId, clubId, dateId, participants, isLoading 
   const atLimit = participants.length >= GAME_DAY_LIMITS.MAX_PARTICIPANTS;
 
   return (
-    <Card className="rounded-xl">
-      <CardContent className="space-y-4 p-4">
-        <div className="flex items-center justify-between gap-3">
-          <div className="flex items-center gap-2">
-            <Users className="h-5 w-5 text-green-600" />
-            <h3 className="text-base font-semibold text-ink">Participantes ({participants.length})</h3>
-          </div>
-          <Button size="sm" variant="outline" onClick={() => setPickerOpen(true)} disabled={atLimit}>
-            <UserPlus className="mr-1.5 h-4 w-4" /> Inserir atletas
-          </Button>
-        </div>
-
+    <V2CollapsibleCard
+      icon={Users}
+      title="Participantes"
+      count={participants.length}
+      sectionId={GAME_DAY_SECTION.CLUB_PARTICIPANTS}
+      summary={participants.length === 0 ? 'Nenhum participante ainda' : `${participants.length} neste dia`}
+      actions={(
+        <Button size="sm" variant="outline" onClick={() => setPickerOpen(true)} disabled={atLimit}>
+          <UserPlus className="mr-1.5 h-4 w-4" /> Inserir atletas
+        </Button>
+      )}
+    >
+      <div className="space-y-4">
         {isLoading ? (
           <Skeleton className="h-20 rounded-lg" />
         ) : participants.length === 0 ? (
@@ -210,7 +212,7 @@ function ParticipantsSection({ eventId, clubId, dateId, participants, isLoading 
           </Button>
         </form>
         {atLimit && <p className="text-xs text-amber-600">Limite de {GAME_DAY_LIMITS.MAX_PARTICIPANTS} participantes atingido.</p>}
-      </CardContent>
+      </div>
 
       <AddAthletesDialog
         open={pickerOpen}
@@ -219,7 +221,7 @@ function ParticipantsSection({ eventId, clubId, dateId, participants, isLoading 
         platformPool={platformPool}
         onAdd={handleAdd}
       />
-    </Card>
+    </V2CollapsibleCard>
   );
 }
 
@@ -402,28 +404,31 @@ function GamesSection({ eventId, dateId, participants }) {
   }, [games]);
 
   return (
-    <Card className="rounded-xl">
-      <CardContent className="space-y-4 p-4">
-        <div className="flex flex-wrap items-center justify-between gap-3">
-          <div className="flex items-center gap-2">
-            <Swords className="h-5 w-5 text-green-600" />
-            <h3 className="text-base font-semibold text-ink">Jogos ({games.length})</h3>
-          </div>
-          <div className="flex flex-wrap gap-2">
-            <Button size="sm" variant="outline" onClick={() => setManualOpen(true)} disabled={participants.length < 2}>
-              <Plus className="mr-1.5 h-4 w-4" /> Inserir partida
+    <V2CollapsibleCard
+      icon={Swords}
+      title="Jogos"
+      count={games.length}
+      sectionId={GAME_DAY_SECTION.CLUB_GAMES}
+      summary={games.length === 0
+        ? 'Nenhum jogo sorteado ainda'
+        : `${scoredGames.length} com resultado · ${unscoredGames.length} a jogar`}
+      actions={(
+        <>
+          <Button size="sm" variant="outline" onClick={() => setManualOpen(true)} disabled={participants.length < 2}>
+            <Plus className="mr-1.5 h-4 w-4" /> Inserir partida
+          </Button>
+          <Button size="sm" onClick={openDraw} disabled={!canDraw}>
+            <Shuffle className="mr-1.5 h-4 w-4" /> Sortear jogos
+          </Button>
+          {games.length > 0 && (
+            <Button size="sm" variant="ghost" className="text-red-500 hover:text-red-600" onClick={() => setConfirmClear(true)}>
+              <Trash2 className="mr-1.5 h-4 w-4" /> Limpar
             </Button>
-            <Button size="sm" onClick={openDraw} disabled={!canDraw}>
-              <Shuffle className="mr-1.5 h-4 w-4" /> Sortear jogos
-            </Button>
-            {games.length > 0 && (
-              <Button size="sm" variant="ghost" className="text-red-500 hover:text-red-600" onClick={() => setConfirmClear(true)}>
-                <Trash2 className="mr-1.5 h-4 w-4" /> Limpar
-              </Button>
-            )}
-          </div>
-        </div>
-
+          )}
+        </>
+      )}
+    >
+      <div className="space-y-4">
         {!canDraw && (
           <p className="text-xs text-gray-500">
             Insira ao menos 4 participantes para sortear jogos de duplas. Para partidas individuais avulsas, bastam 2.
@@ -540,8 +545,8 @@ function GamesSection({ eventId, dateId, participants }) {
           loading={clearGames.isPending}
           onConfirm={handleClear}
         />
-      </CardContent>
-    </Card>
+      </div>
+    </V2CollapsibleCard>
   );
 }
 
@@ -553,12 +558,16 @@ function DailyRankingSection({ eventId, dateId, participants }) {
     () => allGames.filter((g) => (g.date_id || null) === (dateId || null)),
     [allGames, dateId],
   );
+  const decididos = games.filter((g) => g.score_a != null && g.score_b != null).length;
   return (
-    <Card className="rounded-xl">
-      <CardContent className="p-4">
-        <GameDayLeaderboard participants={participants} games={games} />
-      </CardContent>
-    </Card>
+    <V2CollapsibleCard
+      icon={BarChart3}
+      title="Ranking do dia"
+      sectionId={GAME_DAY_SECTION.CLUB_DAILY_RANKING}
+      summary={decididos === 0 ? 'Ainda sem resultados' : `${decididos} jogo(s) computado(s)`}
+    >
+      <GameDayLeaderboard participants={participants} games={games} />
+    </V2CollapsibleCard>
   );
 }
 

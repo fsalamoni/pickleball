@@ -15,6 +15,7 @@ const ReferralLanding = lazy(() => import('@/v2/pages/V2ReferralLanding'));
 const PublicTournament = lazy(() => import('@/pages/PublicTournament'));
 const PrintTournament = lazy(() => import('@/pages/PrintTournament'));
 const Telao = lazy(() => import('@/pages/Telao'));
+const GameDayTelao = lazy(() => import('@/v2/pages/V2GameDayTelao'));
 const PublicClub = lazy(() => import('@/pages/PublicClub'));
 
 // App principal (V2 / "Athleisure Premium"). Chunk isolado.
@@ -117,6 +118,14 @@ export default function App() {
               <Route path="/p/:tournamentId" element={<PublicTournament />} />
               <Route path="/torneios/:tournamentId/imprimir" element={<PrintTournament />} />
               <Route path="/torneios/:tournamentId/telao" element={<Telao />} />
+              {/* Telão do dia de jogo: página inteira, FORA do V2Layout (sem
+                  menu nem cabeçalho — a tela toda é conteúdo). Exige login
+                  porque as regras do Firestore só liberam a leitura de um dia
+                  de jogo para o dono, os participantes ou um dia público. */}
+              <Route
+                path="/dia-de-jogo/:gameDayId/telao"
+                element={<ProtectedRoute><GameDayTelao /></ProtectedRoute>}
+              />
               <Route path="/c/:clubId" element={<PublicClub />} />
               {/* Destino do link de convite (`buildReferralUrl` gera /r/CODIGO).
                   Pública: quem chega por aqui ainda não tem conta. */}
