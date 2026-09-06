@@ -301,7 +301,7 @@ chore(gamification): <sprint> — <descrição>
 ### Testes (22 arquivos: 11 `*.test.js` + 11 `*.runtime.test.jsx`)
 
 ### Docs
-- `docs/GAMIFICATION/00-ROADMAP.md` (master plan, atualizado a cada commit)
+- `docs/FUTURO/GAMIFICACAO/00-ROADMAP.md` (master plan, atualizado a cada commit)
 
 ---
 

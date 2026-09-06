@@ -119,4 +119,4 @@ tem o comando.
 ## Onde achar mais
 - `docs/06-MODULES.md` § progression
 - `docs/05-DATA-MODEL.md` § Gamificação V2 (13 coleções)
-- `docs/GAMIFICATION/00-ROADMAP.md`
+- `docs/FUTURO/GAMIFICACAO/00-ROADMAP.md`

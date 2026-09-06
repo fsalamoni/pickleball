@@ -71,6 +71,9 @@
 | [`12-TEAM-TOURNAMENTS.md`](./12-TEAM-TOURNAMENTS.md) | Torneio por equipes (modalidade, etapas, confrontos). |
 | [`13-NIVEL-UNIFICADO.md`](./13-NIVEL-UNIFICADO.md) | ⭐ A régua 2.0–8.0 usada por **todos os sorteios** (DUPR → rating → ELO → nível declarado). |
 | [`14-DIA-DE-JOGO-TELAO.md`](./14-DIA-DE-JOGO-TELAO.md) | Seções colapsáveis (preferência por usuário) + telão do dia de jogo. |
+| [`15-DIA-DE-JOGO-PERMISSOES.md`](./15-DIA-DE-JOGO-PERMISSOES.md) | Quem pode organizar o dia de jogo (modo de gestão + admins nomeados). |
+| [`20-SEGURANCA-E-PRIVACIDADE/00-INDEX.md`](./20-SEGURANCA-E-PRIVACIDADE/00-INDEX.md) | 🔴 ⭐ **PRIORIDADE MÁXIMA** — Auditoria (31 achados, **2 críticos abertos**), LGPD, documentos legais, direito de imagem, console de suporte do admin, plano em 12 PRs. |
+| [`FUTURO/00-INDEX.md`](./FUTURO/00-INDEX.md) | 📐 **PLANEJADO, NADA NO CÓDIGO** — Gamificação, Mercado (marketplace aberto), Feed (rede social) e Moderação. |
 | [`PUSH-ATIVACAO.md`](./PUSH-ATIVACAO.md) | Ativação do push (PWA + FCM). |
 | [`GAMIFICATION/README.md`](./GAMIFICATION/README.md) | ⭐ Porta de entrada da gamificação: estado atual, estudo × implementado, como retomar. |
 
@@ -107,16 +110,27 @@ docs/
 ├── 12-TEAM-TOURNAMENTS.md            # torneio por equipes
 ├── 13-NIVEL-UNIFICADO.md             # ⭐ régua de nível dos sorteios
 ├── 14-DIA-DE-JOGO-TELAO.md           # colapsáveis + telão do dia de jogo
+├── 15-DIA-DE-JOGO-PERMISSOES.md      # quem organiza o dia de jogo
+│
+├── 20-SEGURANCA-E-PRIVACIDADE/       # 🔴 ⭐ PRIORIDADE — segurança, LGPD, legal
+│   ├── 00-INDEX.md                   # ⭐ COMECE POR AQUI (achados críticos)
+│   ├── 01-AUDITORIA-ACHADOS.md       # 31 achados, 2 CRÍTICOS abertos
+│   ├── 05-ADMIN-SUPORTE.md           # ⭐ console de suporte do admin
+│   ├── 13-PLANO-DE-DESENVOLVIMENTO.md# 12 PRs priorizados por risco
+│   ├── ... 02 a 14 ...
+│   └── patches/                      # correções PRONTAS para aplicar
+│
+├── FUTURO/                           # 📐 desenhado, NADA no código
+│   ├── 00-INDEX.md                   # ⭐ as 4 funcionalidades futuras
+│   ├── GAMIFICACAO/                  # progressão V2 (flag existe, OFF)
+│   ├── MERCADO/                      # marketplace aberto (15 docs)
+│   ├── FEED/                         # rede social (14 docs)
+│   ├── CONFIANCA-E-MODERACAO/        # moderação compartilhada (6 docs)
+│   └── PLANO-MESTRE-MERCADO-FEED.md
+│
 ├── PUSH-ATIVACAO.md                  # ativação do push
 │
-└── GAMIFICATION/                     # ⭐ gamificação (pasta exclusiva)
-    ├── README.md                     # ⭐ COMECE POR AQUI
-    ├── 01-ESTADO-ATUAL.md            # o que existe hoje
-    ├── 02-ESTUDO-VS-IMPLEMENTADO.md  # estudo × código × buracos
-    ├── 03-COMO-RETOMAR.md            # passo a passo operacional
-    ├── 00-ROADMAP.md                 # histórico de fases/sprints
-    ├── CHANGELOG.md                  # o que mudou em cada onda
-    └── 90-ESTUDO-ORIGINAL.md         # o estudo integral (consulta)
+(a gamificação passou para docs/FUTURO/GAMIFICACAO/)
 ```
 
 ## 7. Estrutura de docs por módulo (em `src/modules/X/README.md`)

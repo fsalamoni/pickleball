@@ -63,7 +63,8 @@ Estes princípios vieram de bugs reais que custaram horas pra arrumar. São ineg
 7. **Sem TypeScript, mas com JSDoc.** Typedefs em `core/domain/types.js`. `npm run typecheck` antes de commit.
 8. **Sem `console.log` em services.** Use `core/lib/logger`.
 9. **pt-BR em tudo.** UI, comentários, mensagens, audit_logs. Sem inglês solto.
-10. **Backward-compat SEMPRE.** Aditividade: nova coleção? Regra nova no `firestore.rules` sem mexer nas existentes. Nova flag? Default OFF. Schema change? Campo novo opcional. Migração de dados → `migrateLegacyFlags` com bump de `FLAGS_MIGRATION_VERSION`.
+10. **Dado pessoal: a regra é a única defesa.** Nesta arquitetura o cliente fala direto com o banco — validação no navegador é conveniência, não controle. Nunca coloque e-mail, telefone, endereço ou data de nascimento em coleção de leitura ampla; nunca deixe o usuário escrever campo que define permissão; preferência de privacidade tem que valer no SERVIDOR. Ver `docs/20-SEGURANCA-E-PRIVACIDADE/`.
+11. **Backward-compat SEMPRE.** Aditividade: nova coleção? Regra nova no `firestore.rules` sem mexer nas existentes. Nova flag? Default OFF. Schema change? Campo novo opcional. Migração de dados → `migrateLegacyFlags` com bump de `FLAGS_MIGRATION_VERSION`.
 
 **Se uma tarefa pedir para violar qualquer um desses, PARE e pergunte.**
 
@@ -106,12 +107,20 @@ Estes princípios vieram de bugs reais que custaram horas pra arrumar. São ineg
 │   ├── 13-NIVEL-UNIFICADO.md       📏 ⭐ régua 2.0–8.0 de TODOS os sorteios
 │   ├── 14-DIA-DE-JOGO-TELAO.md     📺 colapsáveis + telão do dia de jogo
 │   ├── 15-DIA-DE-JOGO-PERMISSOES.md 🔐 quem pode organizar o dia de jogo
-│   └── GAMIFICATION/               🎮 pasta exclusiva da gamificação
-│       ├── README.md               ⭐ comece por aqui ao retomar
-│       ├── 01-ESTADO-ATUAL.md
-│       ├── 02-ESTUDO-VS-IMPLEMENTADO.md
-│       ├── 03-COMO-RETOMAR.md
-│       └── 90-ESTUDO-ORIGINAL.md
+│   ├── 20-SEGURANCA-E-PRIVACIDADE/ 🔴 ⭐ PRIORIDADE MÁXIMA — segurança, LGPD,
+│   │   ├── 00-INDEX.md                documentos legais, imagem, admin
+│   │   ├── 01-AUDITORIA-ACHADOS.md    ⚠ 31 achados, 2 CRÍTICOS ABERTOS
+│   │   ├── 05-ADMIN-SUPORTE.md        console de suporte do admin
+│   │   ├── 13-PLANO-DE-DESENVOLVIMENTO.md  12 PRs por risco
+│   │   └── patches/                   correções PRONTAS (não aplicadas)
+│   │
+│   └── FUTURO/                     📐 desenhado, NADA no código
+│       ├── 00-INDEX.md             ⭐ as 4 funcionalidades futuras
+│       ├── GAMIFICACAO/            🎮 progressão V2 (flag existe, OFF)
+│       ├── MERCADO/                🛒 marketplace aberto (15 docs)
+│       ├── FEED/                   📣 rede social / Instagram (14 docs)
+│       ├── CONFIANCA-E-MODERACAO/  🛡️ moderação compartilhada (6 docs)
+│       └── PLANO-MESTRE-MERCADO-FEED.md 🗺️ cronograma das 3 ondas
 │
 ├── src/
 │   ├── App.jsx                     # roteamento
@@ -170,10 +179,14 @@ Estes princípios vieram de bugs reais que custaram horas pra arrumar. São ineg
 **"Onde está o TESTE X?"** → `*.test.js` ao lado do arquivo; `*.runtime.test.jsx` em `src/v2/pages/` para componentes críticos
 **"Onde está a FEATURE que não existe mas devia?"** → `docs/09-UX-ANALYSIS/15-backlog-remanescente.md`
 **"Qual NÍVEL o sorteio usa?"** → `docs/13-NIVEL-UNIFICADO.md` (régua 2.0–8.0: DUPR → rating da plataforma → ELO → nível declarado) · código em `src/modules/rating/domain/unifiedLevel.js`
-**"Onde está a GAMIFICAÇÃO?"** → `docs/GAMIFICATION/README.md` (flag `gamification_v2`, default OFF)
+**"Onde está a GAMIFICAÇÃO?"** → `docs/FUTURO/GAMIFICACAO/README.md` (flag `gamification_v2`, default OFF)
 **"Onde está o TELÃO do dia de jogo?"** → `src/v2/pages/V2GameDayTelao.jsx` · rota `/dia-de-jogo/:id/telao` (em `src/App.jsx`, fora do V2Layout) · doc em `docs/14-DIA-DE-JOGO-TELAO.md`
 **"Quem pode sortear/substituir/criar partida num dia de jogo?"** → `docs/15-DIA-DE-JOGO-PERMISSOES.md` · código em `src/modules/games/domain/gameDayRoles.js` (fonte única)
 **"Como faço uma seção colapsável que LEMBRA por usuário?"** → `src/v2/ui/V2CollapsibleCard.jsx` + id estável em `src/v2/components/games/gameDaySections.js`
+**"Onde está SEGURANÇA / LGPD / documentos legais / dados de usuário?"** → ⭐ `docs/20-SEGURANCA-E-PRIVACIDADE/00-INDEX.md` — **leia antes de tocar em qualquer coisa que envolva dado pessoal**. Há **2 achados CRÍTICOS abertos** em `01-AUDITORIA-ACHADOS.md`, com correção pronta em `patches/`
+**"Como o admin acessa dado de usuário para dar suporte?"** → `docs/20-SEGURANCA-E-PRIVACIDADE/05-ADMIN-SUPORTE.md` (📐 ainda não implementado)
+**"Onde está o MERCADO (marketplace) / o FEED (rede social) / a GAMIFICAÇÃO?"** → 📐 **ainda não existem** — só o desenho, em `docs/FUTURO/00-INDEX.md`. Pastas dos módulos já estruturadas (só README) em `src/modules/{marketplace,feed,moderation}/`
+**"Cuidado: 'mercado' já significa outra coisa!"** → `arena_products`/`catalog_products` são o **PDV/loja da arena** (módulo `arenas/`). O marketplace novo usa **só** o prefixo `market_`. Ver `docs/FUTURO/MERCADO/00-INDEX.md` § Colisão de nomes
 
 **Para encontrar QUALQUER arquivo rápido:**
 ```bash
@@ -207,7 +220,7 @@ grep -rn "path=\"/arenas" src/v2/V2App.jsx
 | Ver o que ainda falta fazer | `docs/09-UX-ANALYSIS/15-backlog-remanescente.md` | Lista consolidada, com status ✅/🟡/⏳ |
 | Ver status atual do Arena V3 | `docs/10-ARENA-V3/26-ARENA-V3-COMPLETE-REFERENCE.md` | Métricas, sprint, gotchas |
 | Equilibrar duplas/jogos por nível | `docs/13-NIVEL-UNIFICADO.md` | `fetchUnifiedLevelsByParticipant(participants)` → passe `levels` ao motor de sorteio. NUNCA compare escalas diferentes na mesma conta |
-| Retomar a gamificação | `docs/GAMIFICATION/README.md` | Leia README → 01 → 02 → 03 antes de tocar em código |
+| Retomar a gamificação | `docs/FUTURO/GAMIFICACAO/README.md` | Leia README → 01 → 02 → 03 antes de tocar em código |
 | Mostrar/esconder um comando de dia de jogo | `docs/15-DIA-DE-JOGO-PERMISSOES.md` | `canManageGameDay(gd, uid, { participants })` para operar partidas; `canConfigureGameDay(gd, uid)` para configurar. Comando sem atribuição **não é renderizado** (nunca só desabilitado) |
 | Tornar uma seção colapsável | `docs/14-DIA-DE-JOGO-TELAO.md` §1 | `<V2CollapsibleCard sectionId="..." summary="...">`; id ESTÁVEL (mudar apaga a preferência de todo mundo) e ações SEMPRE em `actions`, nunca dentro do corpo do cabeçalho |
 
@@ -387,7 +400,7 @@ chore(deps): bump firebase to 12.x
 >   Leitura pura: **zero impacto no banco** (nenhuma coleção, campo, índice
 >   ou regra novos). Ver `docs/13-NIVEL-UNIFICADO.md`.
 > - **Gamificação V2** (#115): em produção atrás de `gamification_v2`
->   (default OFF). Documentação exclusiva em `docs/GAMIFICATION/`.
+>   (default OFF). Documentação exclusiva em `docs/FUTURO/GAMIFICACAO/`.
 >
 > - **Onda G — DUPR / Rating estilo DUPR** (#128-#133, Sprints 38-43):
 >   ranking próprio estilo DUPR (escala 2.0-8.0) em aba separada,

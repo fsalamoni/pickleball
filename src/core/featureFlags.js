@@ -100,7 +100,7 @@ export const FEATURE_FLAG = Object.freeze({
    * Habilita o sistema novo de progressão (tiers com nome, skill trees,
    * XP multi-fonte, caps, missões, achievements V2 com 5 famílias,
    * streak com proteção). É a porta de entrada para todas as features
-   * do roadmap `docs/GAMIFICATION/00-ROADMAP.md`.
+   * do roadmap `docs/FUTURO/GAMIFICACAO/00-ROADMAP.md`.
    *
    * **Comportamento desligado**: NADA muda. XP/nível/achievements V1
    * continuam funcionando exatamente como antes.
