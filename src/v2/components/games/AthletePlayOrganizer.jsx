@@ -17,11 +17,13 @@ import {
 import { V2Button, V2Badge } from '@/v2/ui/primitives';
 import V2CollapsibleCard from '@/v2/ui/V2CollapsibleCard';
 import { GAME_DAY_SECTION } from '@/v2/components/games/gameDaySections';
+import GameDayAdminsCard from '@/v2/components/games/GameDayAdminsCard';
+import { canManageGameDay, isGameDayCreator } from '@/modules/games/domain/gameDayRoles';
 import { useAuth } from '@/core/lib/FirebaseAuthContext';
 import { useAthletes } from '@/modules/athletes/hooks/useAthletes';
 import { genderLabel } from '@/modules/athletes/domain/constants';
 import {
-  GAME_DAY_LIMITS, GD_PARTICIPANT_SOURCE, GD_PARTICIPANT_SOURCE_LABELS, isGameDayOwner,
+  GAME_DAY_LIMITS, GD_PARTICIPANT_SOURCE, GD_PARTICIPANT_SOURCE_LABELS,
 } from '@/modules/games/domain/gameDay';
 import {
   computePlayOrder, freePlayCourts, forecastPlayMatches, PLAY_STATUS, PLAY_GAME_STATUS,
@@ -43,24 +45,27 @@ import {
  */
 export default function AthletePlayOrganizer({ gameDay }) {
   const { user } = useAuth();
-  const isOwner = isGameDayOwner(gameDay, user?.uid);
   const { data: participants = [], isLoading } = useGameDayParticipants(gameDay.id);
   const { data: games = [] } = useGameDayGames(gameDay.id);
 
-  // Visão do ORGANIZADOR (criador): gestão completa. Só é renderizada para o
-  // criador (ver V2GameDays); demais participantes usam AthletePlayParticipant.
-  const canManage = isOwner;
+  // Visão do ORGANIZADOR: gestão completa. É renderizada para quem PODE
+  // gerenciar (ver V2GameDays) — o criador, quem ele nomeou, ou qualquer
+  // participante se o dia estiver aberto. Os demais usam
+  // AthletePlayParticipant, que só cuida da própria participação.
+  const canManage = canManageGameDay(gameDay, user?.uid, { participants });
+  const ehCriador = isGameDayCreator(gameDay, user?.uid);
 
   const view = useMemo(() => computePlayOrder({ participants, games }), [participants, games]);
 
   return (
     <div className="space-y-5">
+      {ehCriador && <GameDayAdminsCard gameDay={gameDay} participants={participants} />}
       <PlayParticipantsSection
         gameDay={gameDay}
         participants={participants}
         view={view}
         isLoading={isLoading}
-        isOwner={isOwner}
+        isOwner={canManage}
         canManage={canManage}
         me={user}
       />

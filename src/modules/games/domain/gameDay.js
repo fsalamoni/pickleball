@@ -15,6 +15,7 @@
  */
 
 import { GAME_DAY_FORMAT } from '@/modules/clubs/domain/gameDayFormats.js';
+import { GAME_DAY_MANAGE_MODE } from './gameDayRoles.js';
 
 /** Visibilidade do dia de jogo. */
 export const GAME_DAY_VISIBILITY = Object.freeze({
@@ -89,6 +90,11 @@ export function normalizeGameDayInput(input = {}) {
       ? input.format
       : GAME_DAY_FORMAT.AMERICANO,
     play_courts: normalizePlayCourts(input.play_courts),
+    // Quem conduz as partidas e a lista de participantes. Aditivo e com padrão
+    // RESTRITO: um dia de jogo sem o campo é do criador, como sempre foi.
+    manage_mode: input.manage_mode === GAME_DAY_MANAGE_MODE.PARTICIPANTS
+      ? GAME_DAY_MANAGE_MODE.PARTICIPANTS
+      : GAME_DAY_MANAGE_MODE.OWNER_ONLY,
   };
 
   const errors = {};

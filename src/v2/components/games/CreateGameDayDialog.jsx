@@ -9,6 +9,10 @@ import { V2Button } from '@/v2/ui/primitives';
 import { cn } from '@/core/lib/utils';
 import { GAME_DAY_VISIBILITY, GAME_DAY_VISIBILITY_LABELS, normalizePlayCourts } from '@/modules/games/domain/gameDay';
 import {
+  GAME_DAY_MANAGE_MODE, GAME_DAY_MANAGE_MODE_LABELS, GAME_DAY_MANAGE_MODE_HINTS,
+  gameDayManageMode,
+} from '@/modules/games/domain/gameDayRoles';
+import {
   GAME_DAY_FORMAT, GAME_DAY_FORMAT_LABELS, DRAW_FORMATS, isPlayFormat,
 } from '@/modules/clubs/domain/gameDayFormats';
 import { useCreateGameDay, useUpdateGameDay } from '@/modules/games/hooks/useGameDays';
@@ -18,6 +22,7 @@ const EMPTY_FORM = {
   title: '', visibility: GAME_DAY_VISIBILITY.PRIVATE, date: '', time: '',
   location: '', city: '', state: '', notes: '', format: GAME_DAY_FORMAT.AMERICANO,
   play_courts: 1,
+  manage_mode: GAME_DAY_MANAGE_MODE.OWNER_ONLY,
 };
 
 function formFromGameDay(gd) {
@@ -33,6 +38,7 @@ function formFromGameDay(gd) {
     notes: gd.notes || '',
     format: gd.format || GAME_DAY_FORMAT.AMERICANO,
     play_courts: normalizePlayCourts(gd.play_courts),
+    manage_mode: gameDayManageMode(gd),
   };
 }
 
@@ -132,6 +138,34 @@ export default function CreateGameDayDialog({ open, onOpenChange, onCreated, gam
                 Mudar para público publica um convite em &quot;Procura-se jogo&quot;; mudar para privado remove esse convite.
               </p>
             )}
+          </div>
+
+          {/* Quem conduz o dia. Nasce RESTRITO — é o comportamento que a
+              plataforma sempre teve, e abrir tem de ser uma escolha. */}
+          <div>
+            <Label className="text-xs">Quem pode organizar as partidas</Label>
+            <div className="mt-1 grid gap-2">
+              {Object.values(GAME_DAY_MANAGE_MODE).map((m) => (
+                <button
+                  key={m}
+                  type="button"
+                  onClick={() => set('manage_mode', m)}
+                  aria-pressed={form.manage_mode === m}
+                  className={cn(
+                    'rounded-xl border px-3 py-2 text-left transition-colors',
+                    form.manage_mode === m ? 'border-ink bg-ink text-white' : 'border-gray-200 hover:bg-paper',
+                  )}
+                >
+                  <span className="block text-sm font-semibold">{GAME_DAY_MANAGE_MODE_LABELS[m]}</span>
+                  <span className={cn('mt-0.5 block text-[11px]', form.manage_mode === m ? 'text-white/70' : 'text-gray-500')}>
+                    {GAME_DAY_MANAGE_MODE_HINTS[m]}
+                  </span>
+                </button>
+              ))}
+            </div>
+            <p className="mt-1 text-[11px] text-gray-500">
+              Editar o dia de jogo, arquivar, publicar no ranking e nomear organizadores continuam só com você.
+            </p>
           </div>
 
           <div className="grid grid-cols-2 gap-3">

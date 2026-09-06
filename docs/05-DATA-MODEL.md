@@ -479,6 +479,22 @@ Dia de jogo criado por um atleta (primo do dia de jogo dos clubes, sem clube don
 - `open_game_id` — convite público vinculado em `open_games` (`kind='game_day'`)
 - `publish_to_ranking`, `published_count`, `published_at`, `published_by`
 - `status: 'active'|'archived'`, `created_at_ms`
+- `manage_mode: 'owner_only'|'participants'` (**opcional, aditivo**) — quem pode
+  operar as partidas (sortear, criar próxima partida, substituir jogador, marcar
+  indisponível, vincular dupla, incluir/excluir participante). **Ausente, nulo ou
+  desconhecido ⇒ `owner_only`**, então todo dia de jogo já existente continua
+  exatamente como estava.
+- `admin_uids[]` (**opcional, aditivo**) — uids que o criador nomeou como admin
+  do dia de jogo. Quem entra aqui também entra em `member_uids` (para enxergar o
+  dia de jogo se ele for privado). Sair de admin **não** remove de `member_uids`.
+
+O criador continua sendo o único que edita, arquiva, muda `manage_mode`,
+nomeia/remove admin e publica no ranking da plataforma — isso NÃO é delegável
+(`club_event_games` exige `isGameDayOwnerOf`). Regras de campo em
+`firestore.rules` impedem que um admin altere `admin_uids`, `manage_mode`,
+`created_by`, `title`, `status` ou `publish_to_ranking`: a atualização feita por
+quem não é o criador só passa se mexer em `member_uids`, `invited_uids` e
+`updated_at`. Lógica pura em `src/modules/games/domain/gameDayRoles.js`.
 
 Subcoleções:
 - `game_days/{id}/participants/{pid}` — `user_id?`, `name`, `photo_url?`,
@@ -488,7 +504,9 @@ Subcoleções:
 
 Regras: read pelo dono/membros (ou qualquer um se público); escrita plena do
 dono; um atleta se auto-inclui como membro/participante ao "Participar" de um
-dia de jogo público.
+dia de jogo público. As subcoleções `participants` e `games` aceitam também
+escrita de quem `canManageGameDayOf(gdId)` — o criador, os `admin_uids` e, quando
+`manage_mode == 'participants'`, qualquer uid em `member_uids`.
 
 ### `legal_consents/{uid_docKey}` (flag `legal_center` — id determinístico)
 Registro do aceite de um documento legal por um usuário. 1 doc por usuário ×

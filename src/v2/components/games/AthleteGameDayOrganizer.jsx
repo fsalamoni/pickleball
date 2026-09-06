@@ -16,6 +16,8 @@ import {
 import { V2Button, V2Badge } from '@/v2/ui/primitives';
 import V2CollapsibleCard from '@/v2/ui/V2CollapsibleCard';
 import { GAME_DAY_SECTION } from '@/v2/components/games/gameDaySections';
+import GameDayAdminsCard from '@/v2/components/games/GameDayAdminsCard';
+import { canManageGameDay, isGameDayCreator } from '@/modules/games/domain/gameDayRoles';
 import { useAuth } from '@/core/lib/FirebaseAuthContext';
 import { useAthletes } from '@/modules/athletes/hooks/useAthletes';
 import { generateGameDayGames, suggestRounds, buildDrawHistory } from '@/modules/clubs/domain/gameDayDraw';
@@ -27,7 +29,7 @@ import {
 } from '@/modules/clubs/domain/gameDayFormats';
 import GameDayLeaderboard from '@/modules/clubs/components/GameDayLeaderboard';
 import {
-  GAME_DAY_LIMITS, GD_PARTICIPANT_SOURCE, GD_PARTICIPANT_SOURCE_LABELS, isGameDayOwner,
+  GAME_DAY_LIMITS, GD_PARTICIPANT_SOURCE, GD_PARTICIPANT_SOURCE_LABELS,
 } from '@/modules/games/domain/gameDay';
 import {
   useGameDayParticipants, useAddGameDayParticipant, useRemoveGameDayParticipant,
@@ -43,15 +45,23 @@ import {
  */
 export default function AthleteGameDayOrganizer({ gameDay }) {
   const { user } = useAuth();
-  const isOwner = isGameDayOwner(gameDay, user?.uid);
   const { data: participants = [], isLoading } = useGameDayParticipants(gameDay.id);
+
+  // Conduzir as partidas e a lista de participantes: o criador, quem ele
+  // nomeou, e — se ele abriu o dia — qualquer participante inscrito.
+  const podeGerenciar = canManageGameDay(gameDay, user?.uid, { participants });
+  // Publicar no ranking da plataforma continua SÓ do criador: a regra de
+  // `club_event_games` amarra o espelho a ele, então abrir aqui só produziria
+  // um botão que falha.
+  const ehCriador = isGameDayCreator(gameDay, user?.uid);
 
   return (
     <div className="space-y-5">
-      <ParticipantsSection gameDay={gameDay} participants={participants} isLoading={isLoading} isOwner={isOwner} />
-      <GamesSection gameDay={gameDay} participants={participants} isOwner={isOwner} />
+      {ehCriador && <GameDayAdminsCard gameDay={gameDay} participants={participants} />}
+      <ParticipantsSection gameDay={gameDay} participants={participants} isLoading={isLoading} isOwner={podeGerenciar} />
+      <GamesSection gameDay={gameDay} participants={participants} isOwner={podeGerenciar} />
       <DailyRankingSection gameDay={gameDay} participants={participants} />
-      {isOwner && <RankingSection gameDay={gameDay} participants={participants} />}
+      {ehCriador && <RankingSection gameDay={gameDay} participants={participants} />}
     </div>
   );
 }

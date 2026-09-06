@@ -15,6 +15,7 @@ export const GAME_DAY_SECTION = Object.freeze({
   GAMES: 'gameday:games',
   DAILY_RANKING: 'gameday:daily-ranking',
   PLATFORM_RANKING: 'gameday:platform-ranking',
+  ADMINS: 'gameday:admins',
 
   /* Dia de jogo do atleta — formato Play (open play) */
   PLAY_PARTICIPANTS: 'gameday:play:participants',

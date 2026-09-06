@@ -55,7 +55,8 @@ import {
 import { V2Button } from '@/v2/ui/primitives';
 import { useAuth } from '@/core/lib/FirebaseAuthContext';
 import { getGameDay, listGameDayParticipants, listGameDayGames } from '@/modules/games/services/gameDayService';
-import { gameDayWhenText, isGameDayOwner } from '@/modules/games/domain/gameDay';
+import { gameDayWhenText } from '@/modules/games/domain/gameDay';
+import { canManageGameDay } from '@/modules/games/domain/gameDayRoles';
 import { buildGameDayBoard, sideNames, scoreText, winnerSide } from '@/modules/games/domain/gameDayBoard';
 import {
   computePlayOrder, forecastPlayByCourt, PLAY_STATUS, PLAY_SLOTS, PLAY_GAME_STATUS,
@@ -591,9 +592,11 @@ export default function V2GameDayTelao() {
       .map((court) => ({ court, jogo: porQuadra.get(court) || null }));
   }, [board.isPlay, games, quadras]);
 
-  // Só o CRIADOR organiza pelo telão. Para todo o resto ele é só leitura — é
-  // uma tela pública, e quem passa na frente dela não pode mexer no dia de jogo.
-  const podeGerir = board.isPlay && isGameDayOwner(gameDay, user?.uid);
+  // Quem organiza pelo telão é quem organiza o dia: o criador, quem ele nomeou,
+  // ou qualquer participante se ele abriu a gestão. Para todo o resto o telão é
+  // só leitura — é uma tela pública, e quem passa na frente dela não pode mexer
+  // no dia de jogo.
+  const podeGerir = board.isPlay && canManageGameDay(gameDay, user?.uid, { participants });
 
   const executar = useCallback(async (acao, sucesso) => {
     setOcupado(true);

@@ -55,6 +55,7 @@ import {
   listKudosGivenBy,
   getKudoIndex,
 } from './kudoService';
+import { missionDateKey } from '../domain/missionDay';
 
 describe('kudoService', () => {
   beforeEach(() => {
@@ -85,7 +86,11 @@ describe('kudoService', () => {
     mockDocData['user_kudos_index/u1'] = {
       uid: 'u1', schemaVersion: 2,
       receivedCount: 0, givenCount: 100, givenToday: 50, receivedToday: 0,
-      lastKudoDay: new Date().toISOString().slice(0, 10), updatedAt: 1,
+      // A chave do dia vem do FUSO DA PLATAFORMA, não de UTC: montá-la com
+      // `toISOString()` fazia o teste falhar todo dia entre 00h e 03h UTC, que
+      // ainda é "ontem" em São Paulo — os contadores pareciam de outro dia e o
+      // limite não disparava.
+      lastKudoDay: missionDateKey(), updatedAt: 1,
     };
     await expect(giveKudo({ fromUid: 'u1', toUid: 'u2', type: 'sportsmanship' }))
       .rejects.toThrow('50 kudos dados');
@@ -95,7 +100,11 @@ describe('kudoService', () => {
     mockDocData['user_kudos_index/u2'] = {
       uid: 'u2', schemaVersion: 2,
       receivedCount: 100, givenCount: 0, givenToday: 0, receivedToday: 100,
-      lastKudoDay: new Date().toISOString().slice(0, 10), updatedAt: 1,
+      // A chave do dia vem do FUSO DA PLATAFORMA, não de UTC: montá-la com
+      // `toISOString()` fazia o teste falhar todo dia entre 00h e 03h UTC, que
+      // ainda é "ontem" em São Paulo — os contadores pareciam de outro dia e o
+      // limite não disparava.
+      lastKudoDay: missionDateKey(), updatedAt: 1,
     };
     await expect(giveKudo({ fromUid: 'u1', toUid: 'u2', type: 'sportsmanship' }))
       .rejects.toThrow('100 kudos recebidos');
