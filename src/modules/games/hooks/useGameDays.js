@@ -13,6 +13,7 @@ import {
   getGameDayRankingMeta, getMyGameDayGames,
   createNextPlayGame, createManualPlayGame, finishPlayGame, cancelPlayGame,
   noShowSwapPlayGame, setPlayParticipantSkip, setPlayParticipantPartner,
+  addGameDayAdmin, removeGameDayAdmin, setGameDayManageMode,
 } from '../services/gameDayService.js';
 
 /* ------------------------------ Dias de jogo ---------------------------- */
@@ -91,6 +92,48 @@ export function useJoinPublicGameDay() {
       qc.invalidateQueries({ queryKey: ['game-days'] });
       qc.invalidateQueries({ queryKey: ['open-games'] });
     },
+  });
+}
+
+/* ---------------------------- Administradores --------------------------- */
+
+/**
+ * Nomear/remover administrador e trocar o modo de gestão mudam o DOC do dia de
+ * jogo, então invalidam o detalhe e as listas — e também o telão, que tem
+ * consultas próprias e não veria a mudança até o próximo refetch.
+ */
+function useGameDayAdminInvalidate(gdId) {
+  const qc = useQueryClient();
+  return () => {
+    qc.invalidateQueries({ queryKey: ['game-days'] });
+    qc.invalidateQueries({ queryKey: ['gameday-telao', gdId] });
+  };
+}
+
+export function useAddGameDayAdmin(gdId) {
+  const { user } = useAuth();
+  const invalidate = useGameDayAdminInvalidate(gdId);
+  return useMutation({
+    mutationFn: (uid) => addGameDayAdmin(gdId, uid, user),
+    onSuccess: invalidate,
+  });
+}
+
+export function useRemoveGameDayAdmin(gdId) {
+  const { user } = useAuth();
+  const invalidate = useGameDayAdminInvalidate(gdId);
+  return useMutation({
+    mutationFn: (uid) => removeGameDayAdmin(gdId, uid, user),
+    onSuccess: invalidate,
+  });
+}
+
+export function useSetGameDayManageMode(gdId) {
+  const { user } = useAuth();
+  const invalidate = useGameDayAdminInvalidate(gdId);
+  return useMutation({
+    mutationFn: (mode) => setGameDayManageMode(gdId, mode, user),
+    onSuccess: invalidate,
   });
 }
 

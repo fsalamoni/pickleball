@@ -71,6 +71,36 @@ service cloud.firestore {
         && gameDayData(gdId).format == 'play'
         && (request.auth.uid in gameDayData(gdId).member_uids);
     }
+    // ADMINISTRADOR do dia de jogo: o criador, ou alguém que ele nomeou em
+    // `admin_uids` (campo aditivo — ausente significa "só o criador").
+    function isGameDayAdminOf(gdId) {
+      return isAuthed() && gameDayExists(gdId) && (
+        gameDayData(gdId).created_by == request.auth.uid
+        || (
+          'admin_uids' in gameDayData(gdId)
+          && gameDayData(gdId).admin_uids is list
+          && (request.auth.uid in gameDayData(gdId).admin_uids)
+        )
+      );
+    }
+    // O criador abriu a gestão para quem está inscrito? Campo aditivo: sem ele,
+    // ou com qualquer outro valor, o dia de jogo segue restrito ao criador —
+    // nenhum dia de jogo já existente muda de comportamento.
+    function gameDayOpenToParticipants(gdId) {
+      return gameDayExists(gdId)
+        && 'manage_mode' in gameDayData(gdId)
+        && gameDayData(gdId).manage_mode == 'participants';
+    }
+    // Quem pode GERENCIAR as partidas e os participantes: administradores
+    // sempre; qualquer membro quando o criador abriu a gestão. Configurar o dia
+    // (editar, arquivar, mudar o modo, nomear admin) continua só do criador.
+    function canManageGameDayOf(gdId) {
+      return isGameDayAdminOf(gdId)
+        || (
+          isAuthed() && gameDayOpenToParticipants(gdId)
+          && (request.auth.uid in gameDayData(gdId).member_uids)
+        );
+    }
     // Quem pode ver um dia de jogo: dono, membro, ou qualquer um se público.
     function canAccessGameDay(gdId) {
       return isAuthed() && gameDayExists(gdId) && (
@@ -350,6 +380,15 @@ service cloud.firestore {
           && request.resource.data.created_by == resource.data.created_by
           && (request.auth.uid in request.resource.data.member_uids)
         )
+        // Quem gerencia (admin nomeado, ou participante num dia aberto) mexe na
+        // LISTA DE MEMBROS ao inserir/remover participante — e SÓ nela. A trava
+        // por campo é o que impede alguém de, por tabela, virar dono, se
+        // autonomear administrador ou reabrir a gestão do dia.
+        || (
+          canManageGameDayOf(gdId)
+          && request.resource.data.diff(resource.data).affectedKeys()
+              .hasOnly(['member_uids', 'invited_uids', 'updated_at'])
+        )
       );
       allow delete: if isAuthed()
         && (resource.data.created_by == request.auth.uid || isPlatformAdmin());
@@ -360,23 +399,32 @@ service cloud.firestore {
         // quando o dia de jogo é público (participar).
         allow create: if isAuthed() && (
           isGameDayOwnerOf(gdId)
+          || canManageGameDayOf(gdId)
           || (gameDayIsPublic(gdId) && request.resource.data.user_id == request.auth.uid)
         );
         // O criador atualiza qualquer participante; no Play, qualquer membro
-        // também pode (controle de participação e substituição de ausentes).
-        allow update: if isGameDayOwnerOf(gdId) || isPlayGameDayMember(gdId);
-        // O criador remove qualquer um; o atleta pode remover a própria entrada.
+        // também pode (controle de participação e substituição de ausentes);
+        // e quem gerencia o dia, em qualquer formato.
+        allow update: if isGameDayOwnerOf(gdId)
+          || canManageGameDayOf(gdId)
+          || isPlayGameDayMember(gdId);
+        // O criador remove qualquer um; quem gerencia também; e o atleta pode
+        // sempre remover a própria entrada.
         allow delete: if isAuthed() && (
           isGameDayOwnerOf(gdId)
+          || canManageGameDayOf(gdId)
           || resource.data.user_id == request.auth.uid
         );
       }
 
       match /games/{gid} {
         allow read: if canAccessGameDay(gdId);
-        // O criador gerencia os jogos; no Play, qualquer membro também pode
-        // (concluir jogo, criar o próximo, cancelar, trocar ausentes).
-        allow create, update, delete: if isGameDayOwnerOf(gdId) || isPlayGameDayMember(gdId);
+        // O criador gerencia os jogos; quem ele autorizou também (admin nomeado
+        // ou participante, num dia aberto); e no Play qualquer membro, como já
+        // era antes de existir o modo de gestão.
+        allow create, update, delete: if isGameDayOwnerOf(gdId)
+          || canManageGameDayOf(gdId)
+          || isPlayGameDayMember(gdId);
       }
     }
 

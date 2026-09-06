@@ -105,6 +105,7 @@ Estes princípios vieram de bugs reais que custaram horas pra arrumar. São ineg
 │   ├── 12-TEAM-TOURNAMENTS.md      🏆 torneio por equipes
 │   ├── 13-NIVEL-UNIFICADO.md       📏 ⭐ régua 2.0–8.0 de TODOS os sorteios
 │   ├── 14-DIA-DE-JOGO-TELAO.md     📺 colapsáveis + telão do dia de jogo
+│   ├── 15-DIA-DE-JOGO-PERMISSOES.md 🔐 quem pode organizar o dia de jogo
 │   └── GAMIFICATION/               🎮 pasta exclusiva da gamificação
 │       ├── README.md               ⭐ comece por aqui ao retomar
 │       ├── 01-ESTADO-ATUAL.md
@@ -171,6 +172,7 @@ Estes princípios vieram de bugs reais que custaram horas pra arrumar. São ineg
 **"Qual NÍVEL o sorteio usa?"** → `docs/13-NIVEL-UNIFICADO.md` (régua 2.0–8.0: DUPR → rating da plataforma → ELO → nível declarado) · código em `src/modules/rating/domain/unifiedLevel.js`
 **"Onde está a GAMIFICAÇÃO?"** → `docs/GAMIFICATION/README.md` (flag `gamification_v2`, default OFF)
 **"Onde está o TELÃO do dia de jogo?"** → `src/v2/pages/V2GameDayTelao.jsx` · rota `/dia-de-jogo/:id/telao` (em `src/App.jsx`, fora do V2Layout) · doc em `docs/14-DIA-DE-JOGO-TELAO.md`
+**"Quem pode sortear/substituir/criar partida num dia de jogo?"** → `docs/15-DIA-DE-JOGO-PERMISSOES.md` · código em `src/modules/games/domain/gameDayRoles.js` (fonte única)
 **"Como faço uma seção colapsável que LEMBRA por usuário?"** → `src/v2/ui/V2CollapsibleCard.jsx` + id estável em `src/v2/components/games/gameDaySections.js`
 
 **Para encontrar QUALQUER arquivo rápido:**
@@ -206,6 +208,7 @@ grep -rn "path=\"/arenas" src/v2/V2App.jsx
 | Ver status atual do Arena V3 | `docs/10-ARENA-V3/26-ARENA-V3-COMPLETE-REFERENCE.md` | Métricas, sprint, gotchas |
 | Equilibrar duplas/jogos por nível | `docs/13-NIVEL-UNIFICADO.md` | `fetchUnifiedLevelsByParticipant(participants)` → passe `levels` ao motor de sorteio. NUNCA compare escalas diferentes na mesma conta |
 | Retomar a gamificação | `docs/GAMIFICATION/README.md` | Leia README → 01 → 02 → 03 antes de tocar em código |
+| Mostrar/esconder um comando de dia de jogo | `docs/15-DIA-DE-JOGO-PERMISSOES.md` | `canManageGameDay(gd, uid, { participants })` para operar partidas; `canConfigureGameDay(gd, uid)` para configurar. Comando sem atribuição **não é renderizado** (nunca só desabilitado) |
 | Tornar uma seção colapsável | `docs/14-DIA-DE-JOGO-TELAO.md` §1 | `<V2CollapsibleCard sectionId="..." summary="...">`; id ESTÁVEL (mudar apaga a preferência de todo mundo) e ações SEMPRE em `actions`, nunca dentro do corpo do cabeçalho |
 
 ---
@@ -349,6 +352,19 @@ chore(deps): bump firebase to 12.x
 >
 > **Destaques por onda**:
 >
+> - **Onda T — Dia de jogo: quem organiza** (2026-09-06): o criador escolhe, na
+>   criação e na edição, se **só ele e quem ele autorizar** operam as partidas
+>   (sortear, criar próxima, substituir, indisponível, vincular dupla,
+>   incluir/excluir participante) ou se isso fica **aberto a qualquer inscrito**;
+>   e ganha um card **Organização** para nomear outros usuários da plataforma
+>   como admin do dia de jogo. Comando sem atribuição **não aparece** (não é só
+>   desabilitado). Configurar (editar, arquivar, mudar o modo, nomear admin,
+>   publicar no ranking) continua exclusivo do criador — publicar exige
+>   `isGameDayOwnerOf` em `club_event_games` e não afrouxamos essa regra.
+>   Dois campos opcionais (`manage_mode`, `admin_uids`); **ausentes ⇒
+>   comportamento antigo**, sem migração. Regras aditivas, provadas por 24
+>   asserções no emulador. Ver `docs/15-DIA-DE-JOGO-PERMISSOES.md`.
+>
 > - **Onda S — Dia de jogo: colapsáveis + telão** (2026-09-05): toda seção do
 >   dia de jogo (os quatro formatos + o dia de jogo do clube) recolhe e LEMBRA
 >   por usuário (`v2:collapse:<uid>:<secao>`, só no navegador); e a rota
@@ -416,7 +432,7 @@ chore(deps): bump firebase to 12.x
 
 | Métrica | Valor | Delta do início do agente |
 |---|---|---|
-| **Testes Vitest** | **2829 passing** (209 arquivos) | +2421 (era 408) |
+| **Testes Vitest** | **2867 passing** (211 arquivos) | +2459 (era 408) |
 | **Lint errors** | 0 | era 30+ |
 | **Módulos** | 20 (`games` e `legal` saíram como `src/modules/` mas continuam como pastas oficiais — **rating virou módulo oficial** com domain/services/hooks/components) | +4 (coaches, circuits, games, legal) |
 | **V2 pages** | 78 (+V2GameDayTelao — telão do dia de jogo, rota fora do V2Layout) | +54 |

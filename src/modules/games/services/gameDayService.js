@@ -14,7 +14,7 @@
 
 import {
   collection, doc, getDoc, getDocs, setDoc, updateDoc, deleteDoc,
-  query, where, serverTimestamp, writeBatch, arrayUnion,
+  query, where, serverTimestamp, writeBatch, arrayUnion, arrayRemove,
 } from 'firebase/firestore';
 import { db } from '@/core/config/firebase';
 import { logger } from '@/core/lib/logger';
@@ -24,6 +24,7 @@ import {
   normalizeGameDayInput, computeMemberUids, GAME_DAY_STATUS,
   GD_PARTICIPANT_SOURCE, isPublicGameDay,
 } from '../domain/gameDay.js';
+import { GAME_DAY_MANAGE_MODE } from '../domain/gameDayRoles.js';
 import {
   buildGameDayRankingMatches, gameDayRankingId, GAME_DAY_DATE_ID,
   sealParticipantUidIntoGames,
@@ -64,6 +65,9 @@ export async function createGameDay(input, actor, profile) {
     creator_photo: creatorPhoto,
     member_uids: [actor.uid],
     invited_uids: [],
+    // Administradores NOMEADOS. O criador não entra aqui: ele é administrador
+    // por ser o criador, e assim não há como se remover por acidente.
+    admin_uids: [],
     status: GAME_DAY_STATUS.ACTIVE,
     publish_to_ranking: false,
     published_count: 0,
@@ -118,7 +122,7 @@ export async function updateGameDay(id, patch, actor) {
   // Normaliza sobre os valores atuais + patch, mantendo só os campos presentes.
   const { value } = normalizeGameDayInput({ ...current, ...patch });
   const editable = {};
-  ['title', 'visibility', 'date', 'time', 'location', 'city', 'state', 'notes', 'format', 'play_courts']
+  ['title', 'visibility', 'date', 'time', 'location', 'city', 'state', 'notes', 'format', 'play_courts', 'manage_mode']
     .forEach((k) => { if (k in patch) editable[k] = value[k]; });
   await updateDoc(doc(db, COL, id), { ...editable, updated_at: serverTimestamp() });
 
@@ -322,6 +326,68 @@ async function recomputeGameDayMembers(gdId) {
     participants,
   });
   await updateDoc(doc(db, COL, gdId), { member_uids, updated_at: serverTimestamp() });
+}
+
+/* ---------------------------- Administradores ---------------------------- */
+
+/**
+ * Nomeia um administrador do dia de jogo.
+ *
+ * Só o CRIADOR faz isso — as regras do Firestore reforçam, porque a escrita
+ * mexe em `admin_uids`, campo que só o dono pode tocar.
+ *
+ * O administrador também vira MEMBRO do dia de jogo: sem isso ele não teria
+ * nem acesso de leitura ao que passou a poder gerenciar.
+ */
+export async function addGameDayAdmin(gdId, uid, actor) {
+  if (!gdId || !uid) throw new Error('Dados inválidos.');
+  const gd = await getGameDay(gdId);
+  if (!gd) throw new Error('Dia de jogo não encontrado.');
+  if (gd.created_by === uid) return; // o criador já é administrador
+  await updateDoc(doc(db, COL, gdId), {
+    admin_uids: arrayUnion(uid),
+    member_uids: arrayUnion(uid),
+    updated_at: serverTimestamp(),
+  });
+  notifyUsers([uid], {
+    title: 'Você virou organizador de um dia de jogo',
+    message: `Agora você pode conduzir as partidas de "${gd.title}".`,
+    type: NOTIFICATION_TYPE.GENERIC,
+    link: `/dia-de-jogo/${gdId}`,
+    actor: actor?.uid ? { uid: actor.uid } : undefined,
+  });
+  await createAuditLog({
+    action: 'game_day_admin_added', actor, details: { game_day_id: gdId, uid },
+  });
+}
+
+/**
+ * Remove um administrador nomeado.
+ *
+ * `member_uids` NÃO é mexido: quem deixa de administrar continua participando
+ * do dia de jogo — tirar o acesso junto seria uma surpresa desagradável.
+ */
+export async function removeGameDayAdmin(gdId, uid, actor) {
+  if (!gdId || !uid) throw new Error('Dados inválidos.');
+  await updateDoc(doc(db, COL, gdId), {
+    admin_uids: arrayRemove(uid),
+    updated_at: serverTimestamp(),
+  });
+  await createAuditLog({
+    action: 'game_day_admin_removed', actor, details: { game_day_id: gdId, uid },
+  });
+}
+
+/** Troca o modo de gestão do dia de jogo (só o criador). */
+export async function setGameDayManageMode(gdId, mode, actor) {
+  if (!gdId) throw new Error('Dia de jogo inválido.');
+  const valor = mode === GAME_DAY_MANAGE_MODE.PARTICIPANTS
+    ? GAME_DAY_MANAGE_MODE.PARTICIPANTS
+    : GAME_DAY_MANAGE_MODE.OWNER_ONLY;
+  await updateDoc(doc(db, COL, gdId), { manage_mode: valor, updated_at: serverTimestamp() });
+  await createAuditLog({
+    action: 'game_day_manage_mode_changed', actor, details: { game_day_id: gdId, manage_mode: valor },
+  });
 }
 
 /* --------------------------------- Jogos --------------------------------- */

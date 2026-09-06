@@ -116,8 +116,9 @@ partida anunciada.
 ### 2.2.1 Organizar pelo próprio telão (só o Play, só quem organiza)
 
 Num Play, quem organiza fica de pé ao lado da quadra com o telão aberto — voltar
-à outra tela a cada partida encerrada não faz sentido. Por isso, **para o criador
-do dia de jogo**, o telão traz as mesmas ações da tela normal:
+à outra tela a cada partida encerrada não faz sentido. Por isso, **para quem tem
+atribuição de organizar** (`canManageGameDay` — ver `docs/15-DIA-DE-JOGO-PERMISSOES.md`),
+o telão traz as mesmas ações da tela normal:
 
 | Ação | Onde, no telão |
 |---|---|
@@ -133,8 +134,10 @@ mesmos diálogos (`SkipDialog`, `PartnerDialog`, exportados de
 `AthletePlayOrganizer`), para as duas telas nunca divergirem no texto nem nas
 opções. Nenhuma regra de negócio nova mora no telão.
 
-> **Para todo mundo que não é o criador, o telão continua sendo só leitura.** É
-> uma tela pública: ninguém que passa na frente dela pode mexer no dia de jogo.
+> **Para quem não tem atribuição, o telão continua sendo só leitura.** É uma
+> tela pública: ninguém que passa na frente dela pode mexer no dia de jogo. Quem
+> tem atribuição é decidido pelo mesmo `canManageGameDay` da tela normal, então
+> as duas telas nunca discordam.
 
 Um detalhe que o código explica: o telão tem consultas próprias
 (`['gameday-telao', …]`), então os hooks de mutação — que invalidam as chaves

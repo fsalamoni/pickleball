@@ -206,3 +206,35 @@ A página é `v2/pages/V2GameDayTelao.jsx`, na rota `/dia-de-jogo/:id/telao`
 impacto no banco.
 
 Detalhes: `docs/14-DIA-DE-JOGO-TELAO.md`.
+
+---
+
+## Quem organiza o dia de jogo (2026-09-06)
+
+`domain/gameDayRoles.js` (puro, 25 testes) responde a três perguntas, e é a
+ÚNICA fonte de verdade sobre permissão de dia de jogo:
+
+| Função | Responde |
+|---|---|
+| `canConfigureGameDay(gd, uid)` | Pode editar, arquivar, mudar o modo, nomear admin e publicar no ranking? → **só o criador** |
+| `canManageGameDay(gd, uid, { participants })` | Pode operar as partidas (sortear, criar próxima, substituir, indisponível, vincular dupla, incluir/excluir participante)? |
+| `isGameDayAdmin(gd, uid)` | É o criador ou está em `admin_uids`? |
+
+Dois modos, guardados em `game_days/{id}.manage_mode`:
+
+- `owner_only` (**default, inclusive quando o campo não existe**) — só o criador
+  e quem ele nomeou.
+- `participants` — qualquer uid inscrito (`participants` ou `member_uids`).
+
+Nomear admin é aditivo: entra em `admin_uids` **e** em `member_uids` (para ver o
+dia de jogo privado); remover tira só de `admin_uids`, a inscrição fica.
+
+**Por que publicar no ranking não é delegável:** `club_event_games` exige
+`isGameDayOwnerOf(event_id)` nas regras. Abrir esse botão para um admin só
+produziria um botão que falha no Firestore — então ele continua do criador.
+
+**Regra de ouro da UI:** comando que o usuário não pode acionar não é renderizado
+(nem desabilitado). Coberto por `v2/components/games/gameDayPermissions.runtime.test.jsx`
+(13 testes) e pelas regras reais em `tests/rules/gameDayRoles.rules.emulator.mjs`
+(24 asserções no emulador), que provam também que um admin não consegue se
+auto-promover, mudar o modo, virar dono, renomear, arquivar ou publicar.

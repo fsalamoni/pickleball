@@ -25,11 +25,12 @@ import AthletePlayOrganizer from '@/v2/components/games/AthletePlayOrganizer';
 import AthletePlayParticipant from '@/v2/components/games/AthletePlayParticipant';
 import { isPlayFormat } from '@/modules/clubs/domain/gameDayFormats';
 import {
-  useMyGameDays, useGameDay, useDeleteGameDay,
+  useMyGameDays, useGameDay, useDeleteGameDay, useGameDayParticipants,
 } from '@/modules/games/hooks/useGameDays';
 import {
-  isPublicGameDay, isGameDayOwner, gameDayWhenText,
+  isPublicGameDay, gameDayWhenText,
 } from '@/modules/games/domain/gameDay';
+import { canManageGameDay, isGameDayCreator } from '@/modules/games/domain/gameDayRoles';
 
 export default function V2GameDays() {
   const enabled = true;
@@ -146,6 +147,9 @@ function GameDayDetail({ gameDayId }) {
   const navigate = useNavigate();
   const { user } = useAuth();
   const { data: gameDay, isLoading } = useGameDay(gameDayId);
+  // A lista de participantes decide se quem está olhando gerencia num dia
+  // ABERTO — sem ela, cairíamos em `member_uids`, que inclui convidados.
+  const { data: participants = [] } = useGameDayParticipants(gameDayId);
   const del = useDeleteGameDay();
   const [confirmDelete, setConfirmDelete] = useState(false);
   const [editOpen, setEditOpen] = useState(false);
@@ -168,7 +172,11 @@ function GameDayDetail({ gameDayId }) {
     );
   }
 
-  const isOwner = isGameDayOwner(gameDay, user?.uid);
+  // Configurar (editar, arquivar) é só do criador. Conduzir as partidas segue o
+  // modo de gestão do dia — por isso a visão de organizador do Play não é mais
+  // "é o criador?", e sim "pode gerenciar?".
+  const ehCriador = isGameDayCreator(gameDay, user?.uid);
+  const podeGerenciar = canManageGameDay(gameDay, user?.uid, { participants });
 
   const handleDelete = async () => {
     try {
@@ -209,7 +217,7 @@ function GameDayDetail({ gameDayId }) {
             >
               <MonitorPlay className="mr-1.5 h-4 w-4" /> Abrir telão
             </V2Button>
-            {isOwner && (
+            {ehCriador && (
               <>
                 <V2Button variant="ghost" size="sm" onClick={() => setEditOpen(true)}>
                   <Pencil className="mr-1.5 h-4 w-4" /> Editar
@@ -221,7 +229,7 @@ function GameDayDetail({ gameDayId }) {
             )}
           </div>
         </div>
-        {isPublicGameDay(gameDay) && isOwner && (
+        {isPublicGameDay(gameDay) && ehCriador && (
           <p className="mt-3 flex items-center gap-1.5 text-xs text-gray-400">
             <ExternalLink className="h-3.5 w-3.5" /> Este dia de jogo aparece como convite em &quot;Procura-se jogo&quot;.
           </p>
@@ -229,12 +237,12 @@ function GameDayDetail({ gameDayId }) {
       </V2Surface>
 
       {isPlayFormat(gameDay.format)
-        ? (isOwner
+        ? (podeGerenciar
           ? <AthletePlayOrganizer gameDay={gameDay} />
           : <AthletePlayParticipant gameDay={gameDay} />)
         : <AthleteGameDayOrganizer gameDay={gameDay} />}
 
-      {isOwner && (
+      {ehCriador && (
         <CreateGameDayDialog open={editOpen} onOpenChange={setEditOpen} gameDay={gameDay} />
       )}
 
