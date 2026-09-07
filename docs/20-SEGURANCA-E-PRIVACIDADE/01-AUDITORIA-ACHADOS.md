@@ -11,7 +11,7 @@
 
 | Severidade | Qtd. | Prazo recomendado |
 |---|---|---|
-| 🔴 P0 | 2 | **imediato** |
+| 🔴 P0 | 2 | **imediato** — 1 ✅ corrigido, 1 em andamento |
 | 🟠 P1 | 8 | 2 semanas |
 | 🟡 P2 | 13 | 90 dias |
 | 🟢 P3 | 8 | backlog |
@@ -22,6 +22,27 @@
 # 🔴 P0 — CRÍTICO
 
 ## P0-01 · Escalação de privilégio: qualquer usuário vira `platform_admin`
+
+> ### ✅ CORRIGIDO — 2026-09-07 · PR S1 (`fix/seguranca-privesc-users`)
+> `firestore.rules` § `match /users/{userId}`: o dono do documento não pode
+> mais escrever `role`, `can_create_pools` nem `hidden*`. O bootstrap do dono
+> da plataforma passou a depender do **e-mail do token de autenticação**
+> (`isPlatformOwnerEmail()`), que não é dado gravável.
+>
+> **Prova**: `tests/rules/users.rules.test.js` — 34 asserções no emulador.
+> Rodada contra as regras ANTIGAS, a suíte acusa **9 falhas** (a exploração
+> é reproduzida); contra as novas, passa inteira, incluindo 25 asserções que
+> exercitam cada caminho real de escrita em `users/` mapeado no código
+> (login comum e do dono, cadastro, `updateUserProfile`, onboarding,
+> nivelamento, privacidade, `mirrorCoachToUser`, `setAthleteHidden`,
+> `V2AdminOwnerRestore`).
+>
+> Roda no CI a cada PR (job `firestore-rules`), o que impede a regressão.
+>
+> **Pendente (não bloqueia)**: migrar para custom claims — etapa 2 do
+> `patches/P0-01`, planejada no PR S5. Enquanto isso, `isPlatformOwnerEmail()`
+> depende do e-mail do token; endurecer com `email_verified` foi deixado para
+> o S5 para não arriscar o acesso do dono agora.
 
 **Evidência**
 
@@ -155,6 +176,15 @@ organizadores de torneio da plataforma.
 resolver o e-mail sob demanda, só para quem pode.
 
 ## P1-02 · E-mail vira nome público quando o perfil está incompleto
+
+> ### ✅ CORRIGIDO — 2026-09-07 · PR S1b
+> Nova função pura `src/core/lib/displayName.js` (`publicDisplayName`), com o
+> mesmo critério que o diretório de atletas já aplicava: o último recurso é a
+> parte ANTES do `@`, nunca o endereço completo. Aplicada nos 5 pontos que
+> publicavam o e-mail como nome — `registrationService.js` (`officialPlayerData`
+> e `player_a_name`) e `tournamentService.js` (`creator_name` e os dois
+> `user_name` de `tournament_admins`). 14 testes novos, incluindo asserções de
+> que a saída jamais contém `@`.
 `registrationService.js:62` e `:114`, `tournamentService.js:85,97,339`:
 ```js
 profile.platform_name || profile.full_name || user?.displayName || user?.email || ''

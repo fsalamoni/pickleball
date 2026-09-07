@@ -14,6 +14,7 @@
     "test": "vitest run",
     "test:watch": "vitest",
     "test:coverage": "vitest run --coverage",
+    "test:rules": "npx --yes firebase-tools@13 emulators:exec --only firestore --project demo-picklerush \"vitest run --config vitest.rules.config.js\"",
     "typecheck": "tsc -p ./jsconfig.json --noEmit"
   },
   "dependencies": {
@@ -55,6 +56,7 @@
   },
   "devDependencies": {
     "@eslint/js": "^9.19.0",
+    "@firebase/rules-unit-testing": "^5.0.2",
     "@playwright/test": "^1.59.1",
     "@types/node": "^22.13.5",
     "@types/react": "^18.2.66",

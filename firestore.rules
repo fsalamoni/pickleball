@@ -688,14 +688,46 @@ service cloud.firestore {
     // ---- Users -----------------------------------------------------------
     match /users/{userId} {
       allow read: if isOwner(userId) || isPlatformAdmin();
-      allow create: if isOwner(userId);
-      // O dono edita o próprio doc. O platform_admin pode alterar SOMENTE os
-      // campos de moderação (ocultar/reexibir atleta — flag athlete_moderation),
-      // sem tocar em nenhum outro dado do usuário.
-      allow update: if isOwner(userId)
+
+      // ⚠️ SEGURANÇA — CAMPOS DE PODER (`role`, `can_create_pools`) e de
+      // MODERAÇÃO (`hidden*`) NUNCA podem ser escritos pelo próprio usuário.
+      // `isPlatformAdmin()` é decidido lendo `users/{uid}.role`; se o dono do
+      // documento pudesse escrever esse campo, qualquer conta se promoveria a
+      // platform_admin e leria/apagaria a base inteira. O dono da plataforma é
+      // reconhecido pelo e-mail do TOKEN de autenticação (não por dado
+      // gravável), o que preserva o bootstrap do admin em FirebaseAuthContext
+      // e a restauração em V2AdminOwnerRestore.
+
+      // Criação no primeiro login: nasce sempre como usuário comum.
+      allow create: if isOwner(userId) && (
+        isPlatformOwnerEmail()
+        || (
+          request.resource.data.get('role', 'user') == 'user'
+          && request.resource.data.get('can_create_pools', false) == false
+          && !request.resource.data.keys().hasAny(['hidden', 'hidden_at', 'hidden_by'])
+        )
+      );
+
+      // Atualização:
+      //  1) o dono edita o próprio perfil, SEM tocar em poder nem moderação;
+      //  2) o dono da plataforma (e-mail do token) faz bootstrap/restauração;
+      //  3) o platform_admin altera SOMENTE os campos de ocultar/reexibir
+      //     atleta (moderação), sem tocar em nenhum outro dado do usuário.
+      allow update: if
+        (
+          isOwner(userId)
+          && request.resource.data.get('role', 'user')
+               == resource.data.get('role', 'user')
+          && request.resource.data.get('can_create_pools', false)
+               == resource.data.get('can_create_pools', false)
+          && !request.resource.data.diff(resource.data).affectedKeys()
+                .hasAny(['hidden', 'hidden_at', 'hidden_by'])
+        )
+        || (isOwner(userId) && isPlatformOwnerEmail())
         || (isPlatformAdmin()
             && request.resource.data.diff(resource.data).affectedKeys()
                  .hasOnly(['hidden', 'hidden_at', 'hidden_by', 'updated_at']));
+
       allow delete: if isPlatformAdmin();
     }
 

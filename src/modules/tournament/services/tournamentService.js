@@ -27,6 +27,7 @@ import {
 } from 'firebase/firestore';
 import { db } from '@/core/config/firebase';
 import { logger } from '@/core/lib/logger';
+import { publicDisplayName } from '@/core/lib/displayName';
 import { createAuditLog } from '@/core/services/auditService';
 import { notifyUsers, NOTIFICATION_TYPE } from '@/core/services/notificationService';
 import { listAthletes } from '@/modules/athletes/services/athleteService';
@@ -82,7 +83,10 @@ export async function createTournament(creator, data) {
     registration_deadline: data.registration_deadline || null,
     status: TOURNAMENT_STATUS.DRAFT,
     creator_uid: creator.uid,
-    creator_name: creator.displayName || creator.email || '',
+    // P1-02: `tournaments` é de leitura PÚBLICA — nunca publicar o e-mail.
+    creator_name: publicDisplayName({
+      displayName: creator.displayName, email: creator.email, fallback: 'Organizador',
+    }),
     // Sprint 4 ARE-14: arena vinculada (opcional)
     arena_id: data.arena_id || null,
     created_at: serverTimestamp(),
@@ -94,7 +98,9 @@ export async function createTournament(creator, data) {
     tournament_id: id,
     user_id: creator.uid,
     user_email: creator.email || '',
-    user_name: creator.displayName || creator.email || '',
+    user_name: publicDisplayName({
+      displayName: creator.displayName, email: creator.email, fallback: 'Organizador',
+    }),
     role: TOURNAMENT_ADMIN_ROLE.OWNER,
     created_at: serverTimestamp(),
   });
@@ -336,7 +342,9 @@ export async function addTournamentAdmin(tournamentId, targetUser, actor) {
     tournament_id: tournamentId,
     user_id: targetUser.uid,
     user_email: targetUser.email || '',
-    user_name: targetUser.displayName || targetUser.email || '',
+    user_name: publicDisplayName({
+      displayName: targetUser.displayName, email: targetUser.email, fallback: 'Organizador',
+    }),
     role: TOURNAMENT_ADMIN_ROLE.ADMIN,
     created_at: serverTimestamp(),
   });

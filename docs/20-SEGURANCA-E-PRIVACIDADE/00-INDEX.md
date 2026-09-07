@@ -19,7 +19,7 @@ pronta em `patches/`.
 
 | # | Achado | Impacto |
 |---|---|---|
-| **P0-01** | Qualquer usuário autenticado pode se tornar `platform_admin` escrevendo no próprio documento `users/{uid}` | Tomada total da plataforma: leitura de todos os dados pessoais, exclusão de usuários, alteração de rankings |
+| ~~**P0-01**~~ ✅ | ~~Qualquer usuário autenticado pode se tornar `platform_admin` escrevendo no próprio documento `users/{uid}`~~ | **CORRIGIDO em 2026-09-07** (PR S1). 34 asserções no emulador, rodando no CI. |
 | **P0-02** | `tournament_registrations` é `allow read: if true` e guarda `player_a_email`, `player_b_email` e `competition_gender` | E-mail e gênero de **todos os inscritos em torneios** legíveis por qualquer pessoa na internet, **sem login** |
 
 Ambos são corrigíveis com alteração **aditiva e pequena** no
@@ -59,6 +59,7 @@ de os itens P0 e P1 deste estudo estarem fechados.
 | `13-PLANO-DE-DESENVOLVIMENTO.md` | ⭐ O plano em 12 PRs, priorizado por risco, com critérios de aceite | planejar a execução |
 | `14-RUNBOOK-E-GOVERNANCA.md` | Operação contínua: checklists, revisões periódicas, o que fazer todo mês | manter no ar |
 | `patches/` | ⭐ Correções **prontas para aplicar**, uma por achado crítico/alto | corrigir agora |
+| `15-RUNBOOK-S0-CONSOLE.md` | ⭐ **Para o dono executar** — PITR, backup, teste de restauração, alertas, MFA. Console do Firebase, ~30 min. **Desbloqueia o P0-02.** | proteger a base agora |
 
 ## Princípios que guiaram este estudo
 

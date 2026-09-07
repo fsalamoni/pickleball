@@ -22,6 +22,7 @@ import {
 } from 'firebase/firestore';
 import { db } from '@/core/config/firebase';
 import { logger } from '@/core/lib/logger';
+import { publicDisplayName } from '@/core/lib/displayName';
 import { createAuditLog } from '@/core/services/auditService';
 import {
   REGISTRATION_STATUS,
@@ -59,7 +60,14 @@ function buildRegistrationLabel(reg, format) {
 }
 
 function officialPlayerData(user, profile = {}) {
-  const name = profile.platform_name || profile.full_name || user?.displayName || user?.email || '';
+  // P1-02: nunca cair no e-mail completo — a inscrição vai para uma coleção
+  // de leitura PÚBLICA. Ver core/lib/displayName.js.
+  const name = publicDisplayName({
+    platformName: profile.platform_name,
+    fullName: profile.full_name,
+    displayName: user?.displayName,
+    email: user?.email || profile.email,
+  });
   return {
     user_id: user?.uid || null,
     name,
@@ -113,7 +121,10 @@ export async function createRegistration(input, actor) {
     ),
     user_id: playerAUserId,
     player_a_user_id: playerAUserId,
-    player_a_name: player_a?.name?.trim() || actor?.displayName || actor?.email || '',
+    player_a_name: String(player_a?.name || '').trim() || publicDisplayName({
+      displayName: actor?.displayName,
+      email: actor?.email,
+    }),
     player_a_email: playerAEmail,
     player_a_email_lc: playerAEmail,
     player_a_level: player_a?.level || null,
