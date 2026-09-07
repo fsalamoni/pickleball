@@ -12,9 +12,9 @@
 | Severidade | Qtd. | Prazo recomendado |
 |---|---|---|
 | 🔴 P0 | 2 | **imediato** — 1 ✅ corrigido, 1 em andamento |
-| 🟠 P1 | 8 | 2 semanas |
+| 🟠 P1 | 8 | 2 semanas — 3 ✅ corrigidos, 1 🟡 mitigado |
 | 🟡 P2 | 13 | 90 dias |
-| 🟢 P3 | 8 | backlog |
+| 🟢 P3 | 8 | backlog — 1 ✅ corrigido |
 | **Total** | **31** | |
 
 ---
@@ -207,6 +207,32 @@ usuários, custo de leitura inflado por abuso.
 primeiro em modo *monitoring* por 2 semanas, depois *enforce*.
 
 ## P1-04 · Nenhum cabeçalho de segurança no hosting
+
+> ### ✅ CORRIGIDO (parcial, por segurança) — 2026-09-07 · PR S3
+> Adicionados em `firebase.json` (site `picklerush`), verificados no emulador
+> de hosting: `X-Content-Type-Options: nosniff`, `Referrer-Policy:
+> strict-origin-when-cross-origin` (impede vazar o código de convite de
+> `/r/:code` para terceiros), `Permissions-Policy` e
+> `X-Permitted-Cross-Domain-Policies: none`. CSP publicada em
+> **`Report-Only`**, que por definição não bloqueia nada.
+>
+> **Três cabeçalhos foram DELIBERADAMENTE omitidos**, cada um por uma razão
+> verificada — não por esquecimento:
+> - **`Strict-Transport-Security`**: o Firebase Hosting **já envia**
+>   `max-age=31556926; includeSubDomains; preload` (conferido com `curl` na
+>   produção). Escrever o nosso só poderia enfraquecer.
+> - **`Cross-Origin-Opener-Policy`**: o login usa `signInWithPopup`
+>   (Google e Apple, `FirebaseAuthContext.jsx:227,232`). `same-origin`
+>   quebraria o ingresso na plataforma.
+> - **`X-Frame-Options`**: o mesmo site de hosting também atende
+>   `<projeto>.firebaseapp.com`, onde vivem os caminhos reservados
+>   `/__/auth/*` do Firebase Auth. Um `DENY` com `source: "**"` alcançaria
+>   esses caminhos e arrisca o login. O `frame-ancestors 'none'` foi para a
+>   CSP em modo relatório justamente para medir isso sem risco.
+>
+> **Próximo passo**: ler os relatórios da CSP por ~2 semanas, ajustar as
+> origens e só então promover a bloqueante — e reavaliar o `X-Frame-Options`
+> com escopo que não alcance `/__/`.
 `firebase.json` → o array `headers` só tem `Cache-Control`. Faltam:
 `Content-Security-Policy`, `X-Frame-Options`/`frame-ancestors`,
 `X-Content-Type-Options`, `Referrer-Policy`, `Permissions-Policy`,
@@ -217,6 +243,32 @@ token de convite na URL.
 **Correção**: `patches/P1-04-cabecalhos-de-seguranca.md`.
 
 ## P1-05 · Storage: qualquer autenticado lê os arquivos de qualquer usuário
+
+> ### 🟡 MITIGADO (caminho privado, verificado) — 2026-09-07 · PR S3
+> `storage.rules` ganhou `uploads/{uid}/private/**`, onde só o dono lê, grava
+> e apaga. Nada escreve nesse caminho hoje, então **nenhum arquivo existente
+> muda de comportamento** — é o destino de todo upload sensível novo
+> (comprovante, documento, anexo de suporte).
+>
+> ⚠️ **Lição registrada — a primeira versão deste bloco NÃO protegia nada.**
+> Em regras do Firebase, quando vários `match` alcançam o mesmo caminho, o
+> acesso é concedido se **qualquer um** permitir. O bloco genérico
+> `uploads/{uid}/{allPaths=**}` continuava liberando `private/`. O emulador
+> mostrou: *"Expected request to fail, but it succeeded"*. Foi preciso o
+> genérico **excluir `private` explicitamente**. Um bloco restritivo sozinho é
+> decorativo — e regra decorativa é pior que regra ausente, porque cria
+> confiança falsa.
+>
+> **Prova**: `tests/rules/storage.rules.test.js` — 17 asserções, metade delas
+> dedicadas ao que **não pode ter mudado**: foto de perfil e anexo de chat
+> continuam legíveis por outros, ninguém grava em pasta alheia, subpasta funda
+> segue legível, arquivo solto sem pasta segue legível, anônimo não lê nada e
+> caminho fora de `uploads/` segue bloqueado.
+>
+> **Limite honesto**: a URL do `getDownloadURL()` carrega um token, e quem tem
+> a URL acessa o arquivo mesmo com a regra restritiva. Isto protege contra
+> ENUMERAÇÃO de caminho, não contra o vazamento da URL. O fechamento completo
+> exige signed URLs de curta duração — item do PR S9.
 `storage.rules`:
 ```javascript
 match /uploads/{uid}/{allPaths=**} {
@@ -248,6 +300,20 @@ plataforma**, com a credibilidade da interface oficial.
 migrar a criação para Cloud Function (Admin SDK) e fechar a escrita direta.
 
 ## P1-07 · Trilha de auditoria forjável
+
+> ### ✅ CORRIGIDO — 2026-09-07 · PR S3
+> `allow create` em `audit_logs` passou a exigir
+> `request.resource.data.actor_id == request.auth.uid`.
+>
+> Verificado antes de aplicar: `auditService.createAuditLog` grava
+> `actor_id: actor.uid` (`auditService.js:91`), retorna cedo quando não há
+> ator (`:81`) e é **best-effort** (try/catch, `:104`) — nenhum fluxo quebra
+> se uma escrita for recusada. Também foi conferido que **todos** os pontos de
+> chamada passam o usuário atual como ator.
+>
+> **Prova**: `tests/rules/auditlogs.rules.test.js` — 13 asserções. Contra a
+> regra antiga, 4 falham (a falsificação é reproduzida). Cobre também a
+> imutabilidade, que já existia: ninguém edita nem apaga, nem o admin.
 `firestore.rules:857-860`:
 ```javascript
 match /audit_logs/{lid} {
@@ -333,6 +399,29 @@ marketing, aparecer no diretório, compartilhamento com arenas/professores.
 LGPD art. 8º, §4º: o consentimento deve ser para finalidades **determinadas**.
 
 ## P2-10 · Direito de imagem não tratado
+
+> ### 🟡 PARCIALMENTE ENDEREÇADO — 2026-09-07 · PR S3b
+> O vazamento **técnico** foi fechado: todo upload de imagem passa agora por
+> `core/lib/imageMetadata.js`, que remove **EXIF, XMP e IPTC** — onde vive a
+> coordenada GPS de foto de celular. Isso importava porque
+> `tournament_photos` é `allow read: if true` (público, sem login) e a foto de
+> perfil aparece no diretório: era localização residencial publicada junto com
+> a foto, inclusive de menores.
+>
+> **A remoção não recodifica a imagem.** Os segmentos JPEG são percorridos e
+> os de metadado descartados byte a byte; JFIF, perfil de cor ICC, tabelas,
+> quadro e todo o dado após o SOS ficam idênticos — a qualidade original é
+> preservada, como o `storageService` sempre prometeu. Diante de qualquer
+> estrutura inesperada a função devolve o arquivo original: nunca corrompe e
+> nunca bloqueia um upload.
+>
+> **Prova**: 22 testes, incluindo preservação do ICC (removê-lo mudaria as
+> cores), preservação byte a byte do dado codificado, e o caso de arquivo
+> truncado/inválido.
+>
+> **Continua aberto** o lado jurídico: documento `uso-de-imagem` com escopos,
+> canal de pedido de remoção de foto, e a revisão do
+> `tournament_photos: if true`. Ver `08-CONSENTIMENTO-E-IMAGEM.md` §2.
 A plataforma já hospeda `tournament_photos` (leitura pública, `if true`) e
 `photo_url` de perfil. Não há autorização de uso de imagem, nem caminho
 para pedir remoção. Com o Feed, isso vira central.
@@ -357,8 +446,20 @@ publicar. Facilita conta descartável, spam e a exploração do P1-06.
 
 # 🟢 P3 — BAIXO / MELHORIA
 
-- **P3-01** · Sem varredura automática de dependências (Dependabot ou
-  `npm audit` no CI).
+- **P3-01** · ✅ **CORRIGIDO em 2026-09-07 (PR S3)** — `.github/dependabot.yml`
+  (npm da raiz, npm de `functions/`, actions do GitHub), semanal, agrupado,
+  com teto de PRs e **ignorando `major`** (exige changelog e teste manual; num
+  caso é o `firebase`, núcleo da aplicação). Mais um job `dependencias` no CI,
+  **informativo** (`continue-on-error`), separando o que chega ao usuário
+  (`--omit=dev`) do ferramental de build.
+  **Estado analisado**: 22 achados (1 crítico, 10 altos). O crítico é
+  `websocket-driver`, que vem por `firebase → @firebase/database →
+  faye-websocket` — o polyfill de **Node**; o navegador usa WebSocket nativo,
+  então não chega ao bundle. `@grpc/grpc-js` e `protobufjs` são os caminhos
+  Node do mesmo SDK; `postcss` e `nanoid` são build. Nenhum é explorável num
+  SPA de navegador. Por isso o job **não bloqueia**: travar o CI hoje pararia
+  o trabalho sem reduzir risco real. Resolver de verdade passa por atualizar o
+  `firebase`, que merece PR próprio e teste manual.
 - **P3-02** · Sem SAST/secret scanning no pipeline (o `gitleaks` ou o
   secret scanning do GitHub pegariam um segredo commitado por engano).
 - **P3-03** · `logger.warn`/`logger.error` disparam em produção com

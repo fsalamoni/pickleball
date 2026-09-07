@@ -80,3 +80,28 @@ jobs:
       - name: Test (regras do Firestore no emulador)
         run: npm run test:rules
         timeout-minutes: 10
+
+  # Inventário de vulnerabilidades nas dependências. INFORMATIVO — não
+  # bloqueia o merge de propósito: hoje os achados são transitivos do lado
+  # NODE do SDK Firebase (faye-websocket, grpc-js, protobufjs) e do
+  # ferramental de build (postcss, nanoid), que não chegam ao bundle servido
+  # ao navegador. Transformar em bloqueante exige antes resolver esses casos,
+  # o que passa por atualizar o `firebase` — mudança de núcleo, que merece PR
+  # próprio. Ver docs/20-SEGURANCA-E-PRIVACIDADE/10-SEGURANCA-TECNICA.md §11.
+  dependencias:
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    continue-on-error: true
+    steps:
+      - uses: actions/checkout@v5
+      - uses: actions/setup-node@v5
+        with:
+          node-version: '24'
+          cache: 'npm'
+      - name: Install dependencies
+        run: npm ci
+        timeout-minutes: 8
+      - name: Vulnerabilidades que chegam ao usuário (produção)
+        run: npm audit --omit=dev || true
+      - name: Vulnerabilidades no ferramental (desenvolvimento)
+        run: npm audit || true

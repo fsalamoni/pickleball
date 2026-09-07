@@ -1,0 +1,44 @@
+# Atualização de dependências por PR revisável.
+#
+# Conservador de propósito: semanal, agrupado e com teto de PRs abertos, para
+# não virar enxurrada. As atualizações MAIOR (major) ficam de fora — elas
+# exigem leitura de changelog e teste manual, e uma delas (firebase) é o
+# núcleo da aplicação. Ver docs/20-SEGURANCA-E-PRIVACIDADE/10-SEGURANCA-TECNICA.md
+version: 2
+updates:
+  - package-ecosystem: npm
+    directory: "/"
+    schedule:
+      interval: weekly
+      day: monday
+    open-pull-requests-limit: 5
+    labels: ["dependencias", "seguranca"]
+    groups:
+      producao-patch-minor:
+        dependency-type: production
+        update-types: ["minor", "patch"]
+      desenvolvimento:
+        dependency-type: development
+        update-types: ["minor", "patch"]
+    ignore:
+      # Major fica para revisão manual — inclui o firebase, que é o núcleo.
+      - dependency-name: "*"
+        update-types: ["version-update:semver-major"]
+
+  - package-ecosystem: npm
+    directory: "/functions"
+    schedule:
+      interval: weekly
+      day: monday
+    open-pull-requests-limit: 3
+    labels: ["dependencias", "seguranca", "functions"]
+    ignore:
+      - dependency-name: "*"
+        update-types: ["version-update:semver-major"]
+
+  - package-ecosystem: github-actions
+    directory: "/"
+    schedule:
+      interval: monthly
+    open-pull-requests-limit: 3
+    labels: ["dependencias", "ci"]

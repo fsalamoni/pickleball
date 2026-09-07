@@ -6,12 +6,18 @@
  *    segurança possam restringir a escrita ao próprio usuário autenticado.
  *  - As imagens são enviadas sem reprocessamento (preservando a qualidade
  *    original); apenas validamos tipo e tamanho.
+ *  - Antes de subir, os METADADOS sensíveis (EXIF/XMP/IPTC) são removidos.
+ *    Foto de celular carrega coordenada GPS, e a plataforma publica imagens
+ *    em coleções abertas. A remoção é feita segmento a segmento, SEM
+ *    recodificar — os dados de imagem seguem idênticos. Ver
+ *    `core/lib/imageMetadata.js`.
  *  - Retorna a URL pública de download (com token) usada nas <img> e nos docs.
  */
 
 import { ref, uploadBytesResumable, getDownloadURL, deleteObject } from 'firebase/storage';
 import { storage } from '@/core/config/firebase';
 import { logger } from '@/core/lib/logger';
+import { stripImageMetadata } from '@/core/lib/imageMetadata';
 
 export const MAX_IMAGE_BYTES = 15 * 1024 * 1024; // 15 MB
 export const ACCEPTED_IMAGE_ATTR = 'image/*';
@@ -62,32 +68,42 @@ export function uploadImage(file, { uid, folder = 'misc', onProgress } = {}) {
     }
 
     const path = `uploads/${uid}/${folder}/${Date.now()}-${sanitizeName(file.name)}`;
-    const task = uploadBytesResumable(ref(storage, path), file, {
-      contentType: file.type,
-      cacheControl: 'public, max-age=31536000, immutable',
-    });
+    // Remove EXIF/XMP/IPTC (GPS!) sem recodificar. Em qualquer imprevisto a
+    // função devolve o arquivo original — nunca bloqueia o upload.
+    stripImageMetadata(file).then((safeFile) => {
+      const task = uploadBytesResumable(ref(storage, path), safeFile, {
+        contentType: file.type,
+        cacheControl: 'public, max-age=31536000, immutable',
+      });
 
-    task.on(
-      'state_changed',
-      (snap) => {
-        if (onProgress && snap.totalBytes) {
-          onProgress(Math.round((snap.bytesTransferred / snap.totalBytes) * 100));
-        }
-      },
-      (error) => {
-        logger.error('Falha no upload de imagem:', error);
-        reject(new Error('Não foi possível enviar a imagem. Tente novamente.'));
-      },
-      async () => {
-        try {
-          const url = await getDownloadURL(task.snapshot.ref);
-          resolve({ url, path, name: file.name, size: file.size, contentType: file.type });
-        } catch (error) {
-          logger.error('Falha ao obter URL da imagem:', error);
-          reject(new Error('Imagem enviada, mas não foi possível obter o link.'));
-        }
-      },
-    );
+      task.on(
+        'state_changed',
+        (snap) => {
+          if (onProgress && snap.totalBytes) {
+            onProgress(Math.round((snap.bytesTransferred / snap.totalBytes) * 100));
+          }
+        },
+        (error) => {
+          logger.error('Falha no upload de imagem:', error);
+          reject(new Error('Não foi possível enviar a imagem. Tente novamente.'));
+        },
+        async () => {
+          try {
+            const url = await getDownloadURL(task.snapshot.ref);
+            resolve({
+              url,
+              path,
+              name: file.name,
+              size: safeFile?.size ?? file.size,
+              contentType: file.type,
+            });
+          } catch (error) {
+            logger.error('Falha ao obter URL da imagem:', error);
+            reject(new Error('Imagem enviada, mas não foi possível obter o link.'));
+          }
+        },
+      );
+    });
   });
 }
 
@@ -182,39 +198,43 @@ export function uploadAttachment(file, { uid, folder = 'attachments', onProgress
     }
 
     const path = `uploads/${uid}/${folder}/${Date.now()}-${sanitizeName(file.name)}`;
-    const task = uploadBytesResumable(ref(storage, path), file, {
-      contentType: file.type || 'application/octet-stream',
-      cacheControl: 'public, max-age=31536000, immutable',
-    });
+    // Anexo de imagem também passa pela remoção de metadados. Arquivos que não
+    // são JPEG voltam intactos da função.
+    stripImageMetadata(file).then((safeFile) => {
+      const task = uploadBytesResumable(ref(storage, path), safeFile, {
+        contentType: file.type || 'application/octet-stream',
+        cacheControl: 'public, max-age=31536000, immutable',
+      });
 
-    task.on(
-      'state_changed',
-      (snap) => {
-        if (onProgress && snap.totalBytes) {
-          onProgress(Math.round((snap.bytesTransferred / snap.totalBytes) * 100));
-        }
-      },
-      (error) => {
-        logger.error('Falha no upload de anexo:', error);
-        reject(new Error('Não foi possível enviar o arquivo. Tente novamente.'));
-      },
-      async () => {
-        try {
-          const url = await getDownloadURL(task.snapshot.ref);
-          resolve({
-            url,
-            path,
-            name: file.name,
-            size: file.size,
-            content_type: file.type || 'application/octet-stream',
-            kind: isImageContentType(file.type) ? 'image' : 'file',
-          });
-        } catch (error) {
-          logger.error('Falha ao obter URL do anexo:', error);
-          reject(new Error('Arquivo enviado, mas não foi possível obter o link.'));
-        }
-      },
-    );
+      task.on(
+        'state_changed',
+        (snap) => {
+          if (onProgress && snap.totalBytes) {
+            onProgress(Math.round((snap.bytesTransferred / snap.totalBytes) * 100));
+          }
+        },
+        (error) => {
+          logger.error('Falha no upload de anexo:', error);
+          reject(new Error('Não foi possível enviar o arquivo. Tente novamente.'));
+        },
+        async () => {
+          try {
+            const url = await getDownloadURL(task.snapshot.ref);
+            resolve({
+              url,
+              path,
+              name: file.name,
+              size: safeFile?.size ?? file.size,
+              content_type: file.type || 'application/octet-stream',
+              kind: isImageContentType(file.type) ? 'image' : 'file',
+            });
+          } catch (error) {
+            logger.error('Falha ao obter URL do anexo:', error);
+            reject(new Error('Arquivo enviado, mas não foi possível obter o link.'));
+          }
+        },
+      );
+    });
   });
 }
 

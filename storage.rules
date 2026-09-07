@@ -12,7 +12,40 @@ service firebase.storage {
     function isAuthed() { return request.auth != null; }
     function sizeOk() { return request.resource.size < 25 * 1024 * 1024; }
 
-    match /uploads/{uid}/{allPaths=**} {
+    // ⚠️ SEMÂNTICA DAS REGRAS: quando vários `match` alcançam o mesmo caminho,
+    // o acesso é concedido se QUALQUER um permitir. Por isso o bloco genérico
+    // abaixo precisa EXCLUIR explicitamente a pasta `private` — um bloco
+    // restritivo sozinho não teria efeito nenhum. Verificado no emulador.
+
+    // Arquivos SENSÍVEIS: comprovantes, documentos, anexos de suporte.
+    // Só o dono lê, grava e apaga. ADITIVO — nada grava aqui hoje, então
+    // nenhum arquivo existente muda de comportamento. É o destino de todo
+    // upload sensível novo. Achado P1-05.
+    //
+    // Limite honesto: a URL de download do Firebase carrega um token e quem
+    // tiver a URL acessa o arquivo mesmo assim. Isto protege contra
+    // ENUMERAÇÃO de caminho, não contra o vazamento da própria URL — para
+    // isso é preciso signed URL de curta duração (ver 10-SEGURANCA-TECNICA).
+    match /uploads/{uid}/private/{allPaths=**} {
+      allow read: if isAuthed() && request.auth.uid == uid;
+      allow write: if isAuthed() && request.auth.uid == uid && sizeOk();
+      allow delete: if isAuthed() && request.auth.uid == uid;
+    }
+
+    // Conteúdo exibido a outras pessoas (foto de perfil, foto de torneio,
+    // anexo de chat, logo de arena). Comportamento INALTERADO, exceto por não
+    // alcançar mais a pasta `private`.
+    match /uploads/{uid}/{folder}/{allPaths=**} {
+      allow read: if isAuthed() && folder != 'private';
+      allow write: if isAuthed() && request.auth.uid == uid && sizeOk()
+        && folder != 'private';
+      allow delete: if isAuthed() && request.auth.uid == uid && folder != 'private';
+    }
+
+    // Compatibilidade: arquivo solto direto em `uploads/{uid}/arquivo`, sem
+    // pasta. O código atual sempre usa uma pasta, mas arquivos antigos podem
+    // existir nesse formato e não podem perder acesso.
+    match /uploads/{uid}/{fileName} {
       allow read: if isAuthed();
       allow write: if isAuthed() && request.auth.uid == uid && sizeOk();
       allow delete: if isAuthed() && request.auth.uid == uid;

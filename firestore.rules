@@ -888,7 +888,14 @@ service cloud.firestore {
     // ---- Audit logs (read by platform admin only) ------------------------
     match /audit_logs/{lid} {
       allow read: if isPlatformAdmin();
-      allow create: if isAuthed();
+      // ⚠️ INTEGRIDADE — o ator registrado tem de ser quem está escrevendo.
+      // Sem isso a trilha pode ser atribuída a terceiros, e ela é justamente
+      // a prova em caso de incidente. `auditService.createAuditLog` já grava
+      // `actor_id: actor.uid` e retorna cedo quando não há ator, e é
+      // best-effort (try/catch) — nenhum fluxo quebra se uma escrita for
+      // recusada. Achado P1-07.
+      allow create: if isAuthed()
+        && request.resource.data.actor_id == request.auth.uid;
       allow update, delete: if false;
     }
 

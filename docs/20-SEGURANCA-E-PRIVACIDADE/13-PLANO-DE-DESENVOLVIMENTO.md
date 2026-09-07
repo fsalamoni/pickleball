@@ -12,7 +12,7 @@
 | **S1** | 🔴 Escalação de privilégio | P0-01 | 1 dia | baixo | ✅ **feito e no ar** (2026-09-07) |
 | **S1b** | E-mail como nome público | P1-02 | 2h | nenhum | ✅ **feito e no ar** (2026-09-07) |
 | **S2** | 🔴 E-mails públicos | P0-02 | 3 dias | **médio** (migração) | 🚧 **bloqueado pelo S0** |
-| **S3** | Endurecimento rápido | P1-04, P1-07, P2-13, EXIF | 2 dias | baixo-médio |
+| **S3** | Endurecimento rápido | P1-04, P1-05, P1-07, P3-01 | 2 dias | baixo | ✅ **feito e no ar** (2026-09-07) |
 | **S4** | Testes de regras no CI | P3-08 | 3 dias | nenhum |
 | **S5** | Custom claims e papéis | P0-01 etapa 2, P1-08 | 4 dias | médio |
 | **S6** | App Check | P1-03 | 2 dias + 2 semanas de observação | médio |
@@ -98,7 +98,20 @@ inalterado; inscrição provisória funciona; nenhum e-mail legível sem login.
 ⚠ **É o PR mais arriscado do plano.** Não fazer os passos 5 e 6 no mesmo
 deploy. Exige S0 concluído.
 
-## S3 — Endurecimento rápido
+## S3 — Endurecimento rápido ✅ CONCLUÍDO (2026-09-07)
+
+> Entregue: cabeçalhos de segurança (verificados no emulador de hosting) +
+> CSP em Report-Only + `audit_logs` com ator verificado (13 asserções novas)
+> + caminho `uploads/{uid}/private/**` no Storage (aditivo) + Dependabot e
+> job informativo de `npm audit`.
+>
+> **Fora do S3, por decisão consciente**: `Strict-Transport-Security` (o
+> Firebase já envia, mais forte), `Cross-Origin-Opener-Policy` e
+> `X-Frame-Options` (ambos arriscam o `signInWithPopup` / os caminhos
+> `/__/auth/*`), e o **EXIF** — que exige mexer no caminho de upload de
+> imagem e por isso foi separado para um PR próprio, com fallback seguro.
+> `P2-13` (exigir e-mail verificado) também saiu do S3: mexe no ingresso.
+
 `fix/seguranca-endurecimento`
 
 - [ ] Cabeçalhos de segurança (`patches/P1-04`, **sem CSP ainda**)

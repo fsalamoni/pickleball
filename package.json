@@ -14,7 +14,7 @@
     "test": "vitest run",
     "test:watch": "vitest",
     "test:coverage": "vitest run --coverage",
-    "test:rules": "npx --yes firebase-tools@13 emulators:exec --only firestore --project demo-picklerush \"vitest run --config vitest.rules.config.js\"",
+    "test:rules": "npx --yes firebase-tools@13 emulators:exec --only firestore,storage --project demo-picklerush \"vitest run --config vitest.rules.config.js\"",
     "typecheck": "tsc -p ./jsconfig.json --noEmit"
   },
   "dependencies": {
