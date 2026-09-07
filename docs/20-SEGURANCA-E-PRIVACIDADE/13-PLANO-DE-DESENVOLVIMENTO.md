@@ -6,11 +6,12 @@
 
 ## Visão geral
 
-| PR | Nome | Fecha | Esforço | Risco de quebrar |
-|---|---|---|---|---|
-| **S0** | Rede de proteção | P2-03, P3-05 | 4h | nenhum |
-| **S1** | 🔴 Escalação de privilégio | P0-01 | 1 dia | baixo |
-| **S2** | 🔴 E-mails públicos | P0-02 | 3 dias | **médio** (migração) |
+| PR | Nome | Fecha | Esforço | Risco de quebrar | Estado |
+|---|---|---|---|---|---|
+| **S0** | Rede de proteção | P2-03, P3-05 | 4h | nenhum | ⏳ **com o dono** — `15-RUNBOOK-S0-CONSOLE.md` |
+| **S1** | 🔴 Escalação de privilégio | P0-01 | 1 dia | baixo | ✅ **feito e no ar** (2026-09-07) |
+| **S1b** | E-mail como nome público | P1-02 | 2h | nenhum | ✅ **feito e no ar** (2026-09-07) |
+| **S2** | 🔴 E-mails públicos | P0-02 | 3 dias | **médio** (migração) | 🚧 **bloqueado pelo S0** |
 | **S3** | Endurecimento rápido | P1-04, P1-07, P2-13, EXIF | 2 dias | baixo-médio |
 | **S4** | Testes de regras no CI | P3-08 | 3 dias | nenhum |
 | **S5** | Custom claims e papéis | P0-01 etapa 2, P1-08 | 4 dias | médio |
@@ -25,6 +26,10 @@
 ---
 
 ## S0 — Rede de proteção (fazer HOJE, antes de tudo)
+
+> ⏳ **PENDENTE — depende de acesso ao console do Firebase.**
+> Passo a passo executável, com os comandos `gcloud` prontos, em
+> **`15-RUNBOOK-S0-CONSOLE.md`**. Concluir isto **desbloqueia o S2**.
 
 **Nada de código.** Só console do Firebase. 4 horas.
 
@@ -44,7 +49,13 @@
 Sem backup testado, qualquer erro é permanente. Isto não tem risco nenhum e
 transforma erro irreversível em erro recuperável.
 
-## S1 — 🔴 Escalação de privilégio
+## S1 — 🔴 Escalação de privilégio ✅ CONCLUÍDO (2026-09-07)
+
+> Em produção. `firestore.rules` § `/users/{userId}` + 34 asserções no
+> emulador (`tests/rules/users.rules.test.js`) + job de CI `firestore-rules`.
+> A suíte acusa 9 falhas contra as regras antigas — prova de que pega a
+> exploração. Pendente: etapa 2 (custom claims), planejada no S5.
+
 `fix/seguranca-privesc-users` · `patches/P0-01` etapa 1
 
 - [ ] Verificar admins existentes (etapa 1b)
@@ -57,7 +68,19 @@ transforma erro irreversível em erro recuperável.
 **Aceite**: usuário comum não consegue escrever `role` no próprio doc;
 todos os fluxos de login e edição de perfil continuam funcionando.
 
-## S2 — 🔴 E-mails públicos
+## S2 — 🔴 E-mails públicos 🚧 BLOQUEADO PELO S0
+
+> **Não iniciado, de propósito.** O passo de migração apaga campos de
+> documentos existentes e, sem PITR/backup testado, é irreversível.
+> Alcance medido: **9 arquivos, ~60 referências**, incluindo o CSV que
+> organizadores usam para contatar participantes e o fluxo de inscrição
+> provisória (`claimProvisionalRegistrationsForUser`, que consulta a
+> coleção por e-mail no login de todo usuário).
+>
+> ⚠️ Fechar a leitura pública **não é alternativa**: `/p/:id`, `/imprimir`
+> e `/telao` são páginas legítimas sem login que leem essa coleção.
+> O e-mail tem de sair de dentro do documento — não a leitura de cima dele.
+
 `fix/seguranca-inscricoes-pii` · `patches/P0-02`
 
 - [ ] **Mitigação imediata**: parar de gravar e-mail no doc público
