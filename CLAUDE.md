@@ -182,6 +182,7 @@ Estes princípios vieram de bugs reais que custaram horas pra arrumar. São ineg
 **"Onde está a GAMIFICAÇÃO?"** → `docs/FUTURO/GAMIFICACAO/README.md` (flag `gamification_v2`, default OFF)
 **"Onde está o TELÃO do dia de jogo?"** → `src/v2/pages/V2GameDayTelao.jsx` · rota `/dia-de-jogo/:id/telao` (em `src/App.jsx`, fora do V2Layout) · doc em `docs/14-DIA-DE-JOGO-TELAO.md`
 **"Quem pode sortear/substituir/criar partida num dia de jogo?"** → `docs/15-DIA-DE-JOGO-PERMISSOES.md` · código em `src/modules/games/domain/gameDayRoles.js` (fonte única)
+**"Por que as partidas do Play saem sempre com as mesmas pessoas?"** → era a fila em blocos de 4; resolvido pelo rodízio equilibrado atrás da flag `play_smart_rotation` (padrão OFF) · `docs/16-DIA-DE-JOGO-RODIZIO.md` · código em `src/modules/games/domain/playRotation.js`
 **"Como faço uma seção colapsável que LEMBRA por usuário?"** → `src/v2/ui/V2CollapsibleCard.jsx` + id estável em `src/v2/components/games/gameDaySections.js`
 **"Onde está SEGURANÇA / LGPD / documentos legais / dados de usuário?"** → ⭐ `docs/20-SEGURANCA-E-PRIVACIDADE/00-INDEX.md` — **leia antes de tocar em qualquer coisa que envolva dado pessoal**. Há **2 achados CRÍTICOS abertos** em `01-AUDITORIA-ACHADOS.md`, com correção pronta em `patches/`
 **"Como o admin acessa dado de usuário para dar suporte?"** → `docs/20-SEGURANCA-E-PRIVACIDADE/05-ADMIN-SUPORTE.md` (📐 ainda não implementado)

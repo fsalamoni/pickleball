@@ -292,11 +292,18 @@ function isMixedPair(a, b) {
  *    junta um mais forte com um mais fraco em cada dupla).
  * Respeita a DUPLA FIXA (partner_id mútuo): os parceiros ficam no mesmo lado.
  *
+ * Variação de parceria (opcional, aditiva): quando `partnerRepeatCount` é
+ * informado, duplas que JÁ jogaram juntas recebem penalidade — é o que evita
+ * repetir os mesmos pares rodada após rodada. Sem esse parâmetro o custo é
+ * exatamente o de antes, e o comportamento não muda em nada. Recebemos uma
+ * função (e não o histórico) para manter este módulo sem dependências.
+ *
  * @param {Array} four  4 participantes
- * @param {{ rng?: () => number }} [opts]
+ * @param {{ rng?: () => number,
+ *           partnerRepeatCount?: (idA: string, idB: string) => number }} [opts]
  * @returns {{ side_a: [string,string], side_b: [string,string] }}
  */
-export function assignPlayTeams(four, { rng = Math.random } = {}) {
+export function assignPlayTeams(four, { rng = Math.random, partnerRepeatCount = null } = {}) {
   const players = (four || []).slice(0, PLAY_SLOTS);
   if (players.length !== PLAY_SLOTS) {
     return { side_a: [], side_b: [] };
@@ -304,6 +311,10 @@ export function assignPlayTeams(four, { rng = Math.random } = {}) {
 
   const W_MIXED = 100;
   const W_LEVEL = 1;
+  // Abaixo de W_MIXED de propósito: a dupla mista continua tendo prioridade.
+  // Acima de W_LEVEL para que repetir parceria pese mais que uma diferença
+  // pequena de nível — que é justamente a queixa de "sempre os mesmos".
+  const W_PARTNER_REPEAT = 6;
   const splits = [
     [[0, 1], [2, 3]],
     [[0, 2], [1, 3]],
@@ -330,7 +341,12 @@ export function assignPlayTeams(four, { rng = Math.random } = {}) {
     const levelDiff = Math.abs(sumA - sumB);
     const mixedPenalty = (isMixedPair(players[teamA[0]], players[teamA[1]]) ? 0 : 1)
       + (isMixedPair(players[teamB[0]], players[teamB[1]]) ? 0 : 1);
-    return W_MIXED * mixedPenalty + W_LEVEL * levelDiff + rng() * 0.001;
+    const repeticao = partnerRepeatCount
+      ? (partnerRepeatCount(players[teamA[0]].id, players[teamA[1]].id)
+        + partnerRepeatCount(players[teamB[0]].id, players[teamB[1]].id))
+      : 0;
+    return W_MIXED * mixedPenalty + W_LEVEL * levelDiff
+      + W_PARTNER_REPEAT * repeticao + rng() * 0.001;
   };
 
   let candidates = splits;

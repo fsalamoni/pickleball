@@ -62,6 +62,11 @@ import {
   computePlayOrder, forecastPlayByCourt, PLAY_STATUS, PLAY_SLOTS, PLAY_GAME_STATUS,
 } from '@/modules/games/domain/gamePlay';
 import {
+  buildPlayHistory, forecastPlayByCourtBalanced,
+} from '@/modules/games/domain/playRotation.js';
+import { FEATURE_FLAG } from '@/core/featureFlags';
+import { useFeatureFlag } from '@/core/lib/FeatureFlagsContext';
+import {
   useCreateNextPlayGame, useFinishPlayGame, useCancelPlayGame, useNoShowSwapPlayGame,
   useSetPlayParticipantSkip, useSetPlayParticipantPartner,
 } from '@/modules/games/hooks/useGameDays';
@@ -576,10 +581,18 @@ export default function V2GameDayTelao() {
 
   // A próxima partida DE CADA QUADRA, na mesma ordem em que
   // `createNextPlayGame` criaria os jogos.
-  const proximasPlay = useMemo(
-    () => (playView ? forecastPlayByCourt(playView.order, { courts: quadras, games }) : []),
-    [playView, quadras, games],
-  );
+  // Rodízio equilibrado (flag `play_smart_rotation`): a PREVISÃO tem de usar a
+  // mesma regra da CRIAÇÃO, senão o telão mostra um time e entra outro.
+  const rodizioEquilibrado = useFeatureFlag(FEATURE_FLAG.PLAY_SMART_ROTATION);
+  const proximasPlay = useMemo(() => {
+    if (!playView) return [];
+    if (!rodizioEquilibrado) {
+      return forecastPlayByCourt(playView.order, { courts: quadras, games });
+    }
+    return forecastPlayByCourtBalanced(playView.order, {
+      courts: quadras, games, history: buildPlayHistory(games),
+    });
+  }, [playView, quadras, games, rodizioEquilibrado]);
 
   // Uma linha por quadra existente: o jogo aberto dela, ou `null` se está livre.
   const quadrasDoPlay = useMemo(() => {

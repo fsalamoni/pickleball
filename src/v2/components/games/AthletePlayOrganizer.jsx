@@ -29,6 +29,11 @@ import {
   computePlayOrder, freePlayCourts, forecastPlayMatches, PLAY_STATUS, PLAY_GAME_STATUS,
 } from '@/modules/games/domain/gamePlay';
 import {
+  buildPlayHistory, forecastPlayMatchesBalanced,
+} from '@/modules/games/domain/playRotation.js';
+import { FEATURE_FLAG } from '@/core/featureFlags';
+import { useFeatureFlag } from '@/core/lib/FeatureFlagsContext';
+import {
   useGameDayParticipants, useAddGameDayParticipant, useRemoveGameDayParticipant,
   useGameDayGames, useCreateNextPlayGame, useCreateManualPlayGame,
   useFinishPlayGame, useCancelPlayGame, useNoShowSwapPlayGame,
@@ -441,9 +446,14 @@ export function PlayCourtsSection({ gameDay, participants, games, view, canManag
   const free = freePlayCourts({ courts, games });
   const availableCount = view.order.length;
   const canCreateNext = free.length > 0 && availableCount >= 4;
+  // Rodízio equilibrado (flag `play_smart_rotation`): a previsão do painel usa
+  // a mesma regra da criação, para não anunciar um grupo e entrar outro.
+  const rodizioEquilibrado = useFeatureFlag(FEATURE_FLAG.PLAY_SMART_ROTATION);
   const forecast = useMemo(
-    () => forecastPlayMatches(view.order, { courts }),
-    [view.order, courts],
+    () => (rodizioEquilibrado
+      ? forecastPlayMatchesBalanced(view.order, { courts, history: buildPlayHistory(games) })
+      : forecastPlayMatches(view.order, { courts })),
+    [view.order, courts, games, rodizioEquilibrado],
   );
 
   const courtRows = useMemo(

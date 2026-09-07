@@ -47,6 +47,11 @@ export const FLAG_GROUPS = Object.freeze([
     label: 'Gamificação V2',
     keys: [FEATURE_FLAG.GAMIFICATION_V2],
   },
+  {
+    id: 'game_day',
+    label: 'Dia de jogo',
+    keys: [FEATURE_FLAG.PLAY_SMART_ROTATION],
+  },
 ]);
 
 export const FLAG_GROUP_OTHER = Object.freeze({ id: 'other', label: 'Outras' });

@@ -33,6 +33,11 @@ import {
   computePlayOrder, buildPlayNextMatch, assignPlayTeams,
   nextFreePlayCourt, pickSwapReplacement, PLAY_GAME_STATUS, PLAY_SLOTS,
 } from '../domain/gamePlay.js';
+import {
+  buildPlayHistory, buildPlayNextMatchBalanced, makePartnerRepeatCounter,
+} from '../domain/playRotation.js';
+import { FEATURE_FLAG } from '@/core/featureFlags';
+import { getPlatformSettings } from '@/core/services/platformSettingsService';
 import { fetchUnifiedLevelsByParticipant } from '@/modules/rating/services/unifiedLevelService';
 import { mirrorGameToMyGame, sourceGameToMyGame, gameDayMirrorId } from '../domain/myGames.js';
 
@@ -578,7 +583,21 @@ export async function createNextPlayGame(gdId, actor, { court = null } = {}) {
   if (targetCourt == null) throw new Error('Todas as quadras já estão em jogo.');
 
   const { order } = computePlayOrder({ participants, games });
-  const ids = buildPlayNextMatch(order, { slots: PLAY_SLOTS });
+
+  // RODÍZIO EQUILIBRADO (flag `play_smart_rotation`, padrão DESLIGADA).
+  // Ligada, varia os grupos e as duplas sem furar a ordem de participação —
+  // o primeiro elegível da fila entra sempre. Desligada, o caminho é
+  // exatamente o de antes. A leitura da flag é best-effort: qualquer falha
+  // devolve os padrões (tudo desligado) e a criação segue como hoje.
+  const flags = await getPlatformSettings()
+    .then((cfg) => cfg?.feature_flags || {})
+    .catch(() => ({}));
+  const rodizioEquilibrado = flags[FEATURE_FLAG.PLAY_SMART_ROTATION] === true;
+  const historico = rodizioEquilibrado ? buildPlayHistory(games) : null;
+
+  const ids = rodizioEquilibrado
+    ? buildPlayNextMatchBalanced(order, { slots: PLAY_SLOTS, history: historico })
+    : buildPlayNextMatch(order, { slots: PLAY_SLOTS });
   if (!ids) throw new Error('Não há jogadores disponíveis suficientes (mínimo 4) para criar o próximo jogo.');
 
   const byId = new Map(participants.map((p) => [p.id, p]));
@@ -593,7 +612,9 @@ export async function createNextPlayGame(gdId, actor, { court = null } = {}) {
     .map((p) => (Number.isFinite(nivelPorParticipante[p.id])
       ? { ...p, level_value: nivelPorParticipante[p.id] }
       : p));
-  const { side_a, side_b } = assignPlayTeams(four);
+  const { side_a, side_b } = assignPlayTeams(four, {
+    partnerRepeatCount: makePartnerRepeatCounter(historico),
+  });
 
   const batch = writeBatch(db);
   const gid = writePlayGame(batch, gdId, {

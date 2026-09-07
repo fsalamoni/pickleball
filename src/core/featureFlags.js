@@ -115,10 +115,42 @@ export const FEATURE_FLAG = Object.freeze({
    * Aditivo. Default OFF.
    */
   GAMIFICATION_V2: 'gamification_v2',
+
+  /**
+   * Dia de jogo (Play): RODÍZIO EQUILIBRADO na criação das partidas.
+   *
+   * Problema que resolve: hoje a próxima partida pega rigidamente os 4
+   * primeiros da fila. Como as partidas terminam mais ou menos na ordem em
+   * que começaram, a fila se reforma em blocos de 4 e os MESMOS quartetos
+   * voltam a jogar juntos rodada após rodada — em 12 jogadores e 2 quadras,
+   * medimos apenas 3 quartetos distintos em 41 partidas, um deles repetido
+   * 14 vezes.
+   *
+   * Ligada, a escolha passa a olhar uma janela curta (4 vagas + 4 seguintes)
+   * e prefere a combinação que menos repete encontros já ocorridos, pagando
+   * um custo por descer na fila. As duplas dentro do quarteto também variam.
+   *
+   * Garantias: o primeiro elegível da fila entra SEMPRE; ninguém é chamado de
+   * fora da janela; duplas fixas continuam juntas; a maior espera entre duas
+   * partidas de um jogador cresce no máximo 1 jogo. Se não houver combinação
+   * válida, cai de volta no comportamento atual.
+   *
+   * Aditiva e sem impacto no banco: o histórico é derivado das partidas já
+   * carregadas. Desligada, NADA muda. Ver `games/domain/playRotation.js`.
+   */
+  PLAY_SMART_ROTATION: 'play_smart_rotation',
 });
 
 /** Metadados de exibição para o painel de flags (admin master). */
 export const FEATURE_FLAG_META = Object.freeze({
+  [FEATURE_FLAG.PLAY_SMART_ROTATION]: {
+    label: 'Dia de jogo (Play) — rodízio equilibrado',
+    description:
+      'Varia os grupos e as duplas na criação das partidas do Play, sem furar '
+      + 'a ordem de participação: o primeiro da fila entra sempre e a escolha '
+      + 'fica dentro de uma janela curta. Evita que os mesmos quartetos se '
+      + 'repitam rodada após rodada. Desligada, nada muda.',
+  },
   [FEATURE_FLAG.DUPR_OFFICIAL_SYNC]: {
     label: 'DUPR oficial (fase 2 — reservado)',
     description:
