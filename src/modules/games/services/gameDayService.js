@@ -31,7 +31,8 @@ import {
 } from '../domain/gameDayRanking.js';
 import {
   computePlayOrder, buildPlayNextMatch, assignPlayTeams,
-  nextFreePlayCourt, pickSwapReplacement, PLAY_GAME_STATUS, PLAY_SLOTS,
+  nextFreePlayCourt, pickSwapReplacement, isEligibleSwapReplacement,
+  PLAY_GAME_STATUS, PLAY_SLOTS,
 } from '../domain/gamePlay.js';
 import {
   buildPlayHistory, buildPlayNextMatchBalanced, makePartnerRepeatCounter,
@@ -708,11 +709,25 @@ export async function cancelPlayGame(gdId, gid, actor) {
 }
 
 /**
- * Marca um jogador como AUSENTE num jogo aberto: ele é substituído pelo próximo
- * da ordem de participação, e os dois TROCAM de lugar (o ausente assume a
- * posição do substituto na fila).
+ * Tira um jogador de um jogo aberto e coloca outro no lugar. Os dois TROCAM de
+ * posição: quem sai assume o lugar do substituto na ordem de participação.
+ *
+ * Duas formas de uso, decididas por quem organiza na tela:
+ *  - SEM `replacementId` → indisponível para esta partida: entra automaticamente
+ *    o próximo elegível da ordem (comportamento histórico, inalterado);
+ *  - COM `replacementId` → substituição escolhida: entra exatamente quem foi
+ *    indicado, desde que esteja disponível e elegível.
+ *
+ * A elegibilidade é reconferida AQUI mesmo quando a tela já filtrou: a tela é
+ * conveniência, o serviço é que decide.
+ *
+ * @param {string} gdId
+ * @param {string} gid
+ * @param {string} absentId          quem sai da partida
+ * @param {object} actor
+ * @param {{ replacementId?: string|null }} [opts]
  */
-export async function noShowSwapPlayGame(gdId, gid, absentId, actor) {
+export async function noShowSwapPlayGame(gdId, gid, absentId, actor, opts = {}) {
   const [participants, games] = await Promise.all([
     listGameDayParticipants(gdId), listGameDayGames(gdId),
   ]);
@@ -726,7 +741,17 @@ export async function noShowSwapPlayGame(gdId, gid, absentId, actor) {
   const swappedOutIds = Array.isArray(game.swapped_out_ids) ? game.swapped_out_ids.filter(Boolean) : [];
 
   const { order } = computePlayOrder({ participants, games });
-  const repl = pickSwapReplacement(order, { inGameIds, swappedOutIds });
+  const escolhido = opts?.replacementId || null;
+  let repl;
+  if (escolhido) {
+    if (escolhido === absentId) throw new Error('Escolha outro jogador para entrar.');
+    if (!isEligibleSwapReplacement(order, escolhido, { inGameIds, swappedOutIds })) {
+      throw new Error('Esse jogador não está disponível para entrar nesta partida.');
+    }
+    repl = order.find((p) => p.id === escolhido);
+  } else {
+    repl = pickSwapReplacement(order, { inGameIds, swappedOutIds });
+  }
   if (!repl) throw new Error('Não há substituto disponível na ordem de participação.');
 
   const swapSide = (side) => (side || []).map((p) => (p.id === absentId
@@ -751,7 +776,11 @@ export async function noShowSwapPlayGame(gdId, gid, absentId, actor) {
   await batch.commit();
   await createAuditLog({
     action: 'game_day_play_no_show', actor,
-    details: { game_day_id: gdId, game_id: gid, absent_id: absentId, replaced_by: repl.id },
+    details: {
+      game_day_id: gdId, game_id: gid, absent_id: absentId, replaced_by: repl.id,
+      // 'auto' = entrou o próximo da ordem; 'manual' = quem organiza escolheu.
+      mode: escolhido ? 'manual' : 'auto',
+    },
   });
   return { replacedBy: repl.id };
 }

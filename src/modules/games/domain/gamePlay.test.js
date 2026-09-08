@@ -3,6 +3,7 @@ import {
   PLAY_STATUS, PLAY_GAME_STATUS,
   playLevelValue, inCourtIdsFromGames, playParticipantStatus,
   computePlayOrder, buildPlayNextMatch, nextAvailableExcluding, pickSwapReplacement,
+  eligibleSwapReplacements, isEligibleSwapReplacement,
   assignPlayTeams, freePlayCourts, nextFreePlayCourt, forecastPlayMatches,
 } from './gamePlay.js';
 
@@ -163,6 +164,50 @@ describe('buildPlayNextMatch', () => {
     expect(pickSwapReplacement(order, { inGameIds: ['b'], swappedOutIds: ['a'] }).id).toBe('c');
     // Sem ninguém elegível → null (não recoloca um já-substituído).
     expect(pickSwapReplacement(order, { inGameIds: ['c'], swappedOutIds: ['a', 'b', 'd'] })).toBeNull();
+  });
+
+  it('eligibleSwapReplacements devolve TODOS os elegíveis, na ordem de participação', () => {
+    const order = ['a', 'b', 'c', 'd', 'e'].map((id, i) => P(id, { wait: i }));
+    // 'a' está em quadra; 'b' já saiu desta partida antes. Sobram c, d, e.
+    const elegiveis = eligibleSwapReplacements(order, { inGameIds: ['a'], swappedOutIds: ['b'] });
+    expect(elegiveis.map((p) => p.id)).toEqual(['c', 'd', 'e']);
+    // Sem contexto, todo mundo é elegível — e a ordem recebida é preservada.
+    expect(eligibleSwapReplacements(order, {}).map((p) => p.id)).toEqual(['a', 'b', 'c', 'd', 'e']);
+    // Lista vazia/ausente não quebra.
+    expect(eligibleSwapReplacements([], { inGameIds: ['a'] })).toEqual([]);
+    expect(eligibleSwapReplacements(null)).toEqual([]);
+  });
+
+  it('⭐ pickSwapReplacement é SEMPRE o primeiro de eligibleSwapReplacements', () => {
+    // Esta é a garantia que impede a tela e o serviço de discordarem: escolher
+    // "o próximo da ordem" na lista oferecida tem de dar exatamente o mesmo
+    // jogador que a substituição automática escolheria sozinha.
+    const ids = ['a', 'b', 'c', 'd', 'e', 'f'];
+    const order = ids.map((id, i) => P(id, { wait: i }));
+    let combinacoes = 0;
+    for (let mascaraJogo = 0; mascaraJogo < 64; mascaraJogo += 1) {
+      for (let mascaraFora = 0; mascaraFora < 64; mascaraFora += 1) {
+        const inGameIds = ids.filter((_, i) => mascaraJogo & (1 << i));
+        const swappedOutIds = ids.filter((_, i) => mascaraFora & (1 << i));
+        const ctx = { inGameIds, swappedOutIds };
+        const auto = pickSwapReplacement(order, ctx);
+        const lista = eligibleSwapReplacements(order, ctx);
+        expect(auto ? auto.id : null).toBe(lista.length ? lista[0].id : null);
+        combinacoes += 1;
+      }
+    }
+    expect(combinacoes).toBe(4096);
+  });
+
+  it('isEligibleSwapReplacement recusa quem está em quadra, quem já saiu e id vazio', () => {
+    const order = ['a', 'b', 'c'].map((id, i) => P(id, { wait: i }));
+    const ctx = { inGameIds: ['a'], swappedOutIds: ['b'] };
+    expect(isEligibleSwapReplacement(order, 'c', ctx)).toBe(true);
+    expect(isEligibleSwapReplacement(order, 'a', ctx)).toBe(false); // está em quadra
+    expect(isEligibleSwapReplacement(order, 'b', ctx)).toBe(false); // já saiu desta partida
+    expect(isEligibleSwapReplacement(order, 'zzz', ctx)).toBe(false); // nem está na fila
+    expect(isEligibleSwapReplacement(order, '', ctx)).toBe(false);
+    expect(isEligibleSwapReplacement(order, null, ctx)).toBe(false);
   });
 });
 

@@ -183,6 +183,7 @@ Estes princípios vieram de bugs reais que custaram horas pra arrumar. São ineg
 **"Onde está o TELÃO do dia de jogo?"** → `src/v2/pages/V2GameDayTelao.jsx` · rota `/dia-de-jogo/:id/telao` (em `src/App.jsx`, fora do V2Layout) · doc em `docs/14-DIA-DE-JOGO-TELAO.md`
 **"Quem pode sortear/substituir/criar partida num dia de jogo?"** → `docs/15-DIA-DE-JOGO-PERMISSOES.md` · código em `src/modules/games/domain/gameDayRoles.js` (fonte única)
 **"Por que as partidas do Play saem sempre com as mesmas pessoas?"** → era a fila em blocos de 4; resolvido pelo rodízio equilibrado atrás da flag `play_smart_rotation` (padrão OFF) · `docs/16-DIA-DE-JOGO-RODIZIO.md` · código em `src/modules/games/domain/playRotation.js`
+**"Cliquei no jogador em quadra: quero escolher entre deixá-lo de fora e trocá-lo por alguém"** → é o que acontece — o clique abre `CourtPlayerDialog` (exportado de `AthletePlayOrganizer.jsx`), com as duas opções; a lista de quem pode entrar vem de `eligibleSwapReplacements` e é reconferida no serviço. Vale no painel E no telão. Ver `docs/14-DIA-DE-JOGO-TELAO.md`
 **"A previsão de próxima partida mostra gente diferente de quem entra. Por quê?"** → era isso mesmo, e foi corrigido: previsão, previsão por quadra e ordem de participação derivam todas de `simulatePlaySequence` (fonte única). A previsão de quadra **ocupada** é condicional (depende de quem termina primeiro). Ver `docs/16-DIA-DE-JOGO-RODIZIO.md` §4b
 **"Como faço uma seção colapsável que LEMBRA por usuário?"** → `src/v2/ui/V2CollapsibleCard.jsx` + id estável em `src/v2/components/games/gameDaySections.js`
 **"Onde está SEGURANÇA / LGPD / documentos legais / dados de usuário?"** → ⭐ `docs/20-SEGURANCA-E-PRIVACIDADE/00-INDEX.md` — **leia antes de tocar em qualquer coisa que envolva dado pessoal**. Há **2 achados CRÍTICOS abertos** em `01-AUDITORIA-ACHADOS.md`, com correção pronta em `patches/`
@@ -389,7 +390,8 @@ chore(deps): bump firebase to 12.x
 >   Play vão a próxima partida DE CADA QUADRA e a ordem de participação — **o
 >   Play não grava placar**, então ali não existem resultados nem ranking. No
 >   Play, quem ORGANIZA também conduz o dia pelo próprio telão (criar próxima
->   partida, criar jogo em quadra livre, cancelar, substituir clicando no nome,
+>   partida, criar jogo em quadra livre, cancelar, deixar indisponível ou
+>   substituir clicando no nome,
 >   pausar, vincular dupla); para todos os outros segue só leitura. Zero
 >   impacto no banco.
 >   Ver `docs/14-DIA-DE-JOGO-TELAO.md`.
@@ -447,7 +449,7 @@ chore(deps): bump firebase to 12.x
 
 | Métrica | Valor | Delta do início do agente |
 |---|---|---|
-| **Testes Vitest** | **2944 passing** (214 arquivos) | +2459 (era 408) |
+| **Testes Vitest** | **2956 passing** (215 arquivos) | +2459 (era 408) |
 | **Lint errors** | 0 | era 30+ |
 | **Módulos** | 20 (`games` e `legal` saíram como `src/modules/` mas continuam como pastas oficiais — **rating virou módulo oficial** com domain/services/hooks/components) | +4 (coaches, circuits, games, legal) |
 | **V2 pages** | 78 (+V2GameDayTelao — telão do dia de jogo, rota fora do V2Layout) | +54 |

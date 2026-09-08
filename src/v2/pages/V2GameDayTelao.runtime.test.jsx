@@ -221,6 +221,9 @@ describe('telão do Play — organizar pela própria tela', () => {
 
   const botaoPorTexto = (texto) => [...container.querySelectorAll('button')]
     .find((b) => b.textContent.trim() === texto);
+  // Diálogos renderizam em portal, fora do `container`: procure no documento.
+  const botaoDoDialogo = (trecho) => [...document.body.querySelectorAll('button')]
+    .find((b) => b.textContent.includes(trecho));
 
   it('quem NÃO organiza vê a tela sem nenhuma ação', async () => {
     auth.user = { uid: 'espectador' };
@@ -257,14 +260,64 @@ describe('telão do Play — organizar pela própria tela', () => {
     expect(document.body.textContent).toContain('Criar a próxima partida?');
   });
 
-  it('o nome de quem está em quadra é clicável para substituir', async () => {
+  it('⭐ clicar no nome em quadra OFERECE ESCOLHA — não executa nada direto', async () => {
     auth.user = { uid: 'dono' };
     await render();
     const nome = [...container.querySelectorAll('button')].find((b) => b.textContent.trim() === 'Ana');
     expect(nome).toBeTruthy();
     click(nome);
     await act(async () => { await Promise.resolve(); });
-    expect(document.body.textContent).toContain('Marcar como ausente?');
+    // O clique abre as DUAS opções...
+    expect(document.body.textContent).toContain('Indisponível para esta partida');
+    expect(document.body.textContent).toContain('Substituir por outro jogador');
+    // ...e, principalmente, NÃO substituiu ninguém ainda.
+    expect(mutacoes.substituir).not.toHaveBeenCalled();
+  });
+
+  it('⭐ "indisponível para esta partida" traz o próximo da ordem (sem escolher)', async () => {
+    auth.user = { uid: 'dono' };
+    await render();
+    click([...container.querySelectorAll('button')].find((b) => b.textContent.trim() === 'Ana'));
+    await act(async () => { await Promise.resolve(); });
+    // A opção já ANUNCIA quem entra, para não haver surpresa.
+    expect(document.body.textContent).toContain('Elis Prado');
+    click(botaoDoDialogo('Indisponível para esta partida'));
+    await act(async () => { await Promise.resolve(); });
+    expect(mutacoes.substituir).toHaveBeenCalledWith(
+      expect.objectContaining({ absentId: 'a', replacementId: null }),
+    );
+  });
+
+  it('⭐ "substituir por outro" deixa ESCOLHER quem entra, na ordem de participação', async () => {
+    auth.user = { uid: 'dono' };
+    await render();
+    click([...container.querySelectorAll('button')].find((b) => b.textContent.trim() === 'Ana'));
+    await act(async () => { await Promise.resolve(); });
+    click(botaoDoDialogo('Substituir por outro jogador'));
+    await act(async () => { await Promise.resolve(); });
+    // Ainda não gravou nada: escolher a opção só abre a lista.
+    expect(mutacoes.substituir).not.toHaveBeenCalled();
+    // A lista traz os disponíveis, numerados pela ordem de participação.
+    const texto = document.body.textContent;
+    ['Elis Prado', 'Fábio Reis', 'Gabi Martins', 'Hugo Teixeira'].forEach((n) => {
+      expect(texto).toContain(n);
+    });
+    // Escolhe o TERCEIRO da fila — de propósito, para provar que entra quem foi
+    // escolhido e não o primeiro.
+    // A linha mais interna que tem o nome E o botão de entrada é a dele.
+    const linhas = [...document.body.querySelectorAll('div')].filter((d) => (
+      d.textContent.includes('Gabi Martins')
+      && [...d.querySelectorAll('button')].some((b) => b.textContent.includes('Entra'))
+    ));
+    expect(linhas.length).toBeGreaterThan(0);
+    const entrar = [...linhas[linhas.length - 1].querySelectorAll('button')]
+      .find((b) => b.textContent.includes('Entra'));
+    expect(entrar).toBeTruthy();
+    click(entrar);
+    await act(async () => { await Promise.resolve(); });
+    expect(mutacoes.substituir).toHaveBeenCalledWith(
+      expect.objectContaining({ absentId: 'a', replacementId: 'g' }),
+    );
   });
 
   it('para quem não organiza, o nome em quadra NÃO é clicável', async () => {

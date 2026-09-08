@@ -125,14 +125,30 @@ o telão traz as mesmas ações da tela normal:
 | Criar a próxima partida | botão no card da quadra ocupada |
 | Criar jogo | botão no card da quadra livre |
 | Cancelar jogo | botão no card da quadra ocupada |
-| Substituir quem faltou | clicar no NOME do atleta em quadra |
+| Indisponível nesta partida **ou** substituir | clicar no NOME do atleta em quadra → escolha |
 | Pausar / voltar a jogar | clicar no atleta na ordem de participação |
 | Vincular / desfazer dupla | idem |
 
 As ações usam **exatamente os mesmos hooks** da tela normal e reaproveitam os
-mesmos diálogos (`SkipDialog`, `PartnerDialog`, exportados de
-`AthletePlayOrganizer`), para as duas telas nunca divergirem no texto nem nas
+mesmos diálogos (`SkipDialog`, `PartnerDialog`, `CourtPlayerDialog`, exportados
+de `AthletePlayOrganizer`), para as duas telas nunca divergirem no texto nem nas
 opções. Nenhuma regra de negócio nova mora no telão.
+
+### Clique no nome de quem está em quadra
+
+Esse clique **não executa nada sozinho**. Antes ele disparava direto a
+substituição automática, o que resolvia uma intenção só e adivinhava a outra.
+Agora abre uma escolha (`CourtPlayerDialog`):
+
+| Opção | O que faz |
+|---|---|
+| **Indisponível para esta partida** | o jogador sai e entra **o próximo da ordem** — o diálogo já mostra o nome de quem entra, para não haver surpresa |
+| **Substituir por outro jogador** | abre os **disponíveis na ordem de participação**, numerados, e entra **quem for escolhido** |
+
+Nos dois casos os dois **trocam de posição na fila**: quem sai assume o lugar de
+quem entrou. Quem já está naquela partida, e quem já foi substituído para fora
+dela, não aparece como opção. Sem ninguém disponível, o diálogo **avisa** em vez
+de oferecer uma ação que falharia.
 
 > **Para quem não tem atribuição, o telão continua sendo só leitura.** É uma
 > tela pública: ninguém que passa na frente dela pode mexer no dia de jogo. Quem

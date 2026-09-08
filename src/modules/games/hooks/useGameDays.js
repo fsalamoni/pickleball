@@ -274,7 +274,11 @@ export function useNoShowSwapPlayGame(gdId) {
   const { user } = useAuth();
   const invalidate = usePlayInvalidate(gdId);
   return useMutation({
-    mutationFn: ({ gid, absentId }) => noShowSwapPlayGame(gdId, gid, absentId, user),
+    // `replacementId` opcional: ausente dele, entra o próximo da ordem
+    // (comportamento histórico); presente, entra quem foi escolhido.
+    mutationFn: ({ gid, absentId, replacementId = null }) => (
+      noShowSwapPlayGame(gdId, gid, absentId, user, { replacementId })
+    ),
     onSuccess: invalidate,
   });
 }

@@ -2,7 +2,7 @@ import React, { useMemo, useState } from 'react';
 import { toast } from 'sonner';
 import {
   Plus, Trash2, Users, UserPlus, UserX, Pause, PlayCircle, Link2, Unlink,
-  ListOrdered, LayoutGrid, Check, Swords,
+  ListOrdered, LayoutGrid, Check, Swords, ArrowRightLeft, MoreHorizontal,
 } from 'lucide-react';
 
 import { Input } from '@/components/ui/input';
@@ -27,6 +27,7 @@ import {
 } from '@/modules/games/domain/gameDay';
 import {
   computePlayOrder, freePlayCourts, forecastPlayMatches, PLAY_STATUS, PLAY_GAME_STATUS,
+  eligibleSwapReplacements,
 } from '@/modules/games/domain/gamePlay';
 import {
   buildPlayHistory, forecastPlayMatchesBalanced, applyPlayEntryOrder,
@@ -45,7 +46,8 @@ import {
  * Sem sorteio de grade e sem resultados: os jogos são criados por ordem de
  * chegada/espera, quadra a quadra; ao concluir um jogo, o próximo entra
  * automaticamente na quadra liberada. Inclui controle de participação
- * (pausar X partidas, dupla fixa), substituição de ausentes e a
+ * (pausar X partidas, dupla fixa), saída/substituição de quem está em quadra
+ * (o clique no nome ABRE A ESCOLHA, não executa nada direto) e a
  * "Ordem de participação" sempre atualizada.
  */
 export default function AthletePlayOrganizer({ gameDay }) {
@@ -369,6 +371,141 @@ export function SkipDialog({ participant, onClose, onConfirm }) {
   );
 }
 
+/**
+ * Clique num jogador que está EM QUADRA. Antes esse clique já executava a
+ * substituição automática; agora ele ABRE UMA ESCOLHA, porque as duas intenções
+ * são diferentes e só quem organiza sabe qual é a da vez:
+ *
+ *  1. "Indisponível para esta partida" → sai e entra o PRÓXIMO da ordem
+ *     (é o comportamento antigo, preservado — mesmo caminho no serviço);
+ *  2. "Substituir por outro jogador"   → sai e entra QUEM FOR ESCOLHIDO,
+ *     dentre os disponíveis na ordem de participação.
+ *
+ * Nos dois casos os dois trocam de posição na fila: quem sai assume o lugar de
+ * quem entrou. A lista de elegíveis vem do domínio (`eligibleSwapReplacements`),
+ * a MESMA regra que o serviço reconfere antes de gravar.
+ *
+ * @param {{ gid: string, player: object, game: object }|null} target
+ * @param {Array} order  disponíveis, na ordem de participação (view.order)
+ */
+export function CourtPlayerDialog({ target, order, onClose, onConfirm }) {
+  const [step, setStep] = useState('escolha'); // 'escolha' | 'lista'
+  const [search, setSearch] = useState('');
+
+  // Ao abrir (ou trocar de jogador) sempre volta para a escolha inicial: nunca
+  // reaproveita a lista de um alvo anterior.
+  React.useEffect(() => { setStep('escolha'); setSearch(''); }, [target?.gid, target?.player?.id]);
+
+  const game = target?.game;
+  const elegiveis = useMemo(() => {
+    if (!target) return [];
+    const inGameIds = [...(game?.side_a || []), ...(game?.side_b || [])]
+      .map((p) => (typeof p === 'string' ? p : p?.id)).filter(Boolean);
+    const swappedOutIds = Array.isArray(game?.swapped_out_ids)
+      ? game.swapped_out_ids.filter(Boolean) : [];
+    return eligibleSwapReplacements(order || [], { inGameIds, swappedOutIds });
+  }, [target, game, order]);
+
+  if (!target) return null;
+
+  const nome = target.player?.name || 'Jogador';
+  const proximo = elegiveis[0] || null;
+  const semSubstituto = elegiveis.length === 0;
+  const q = search.trim().toLowerCase();
+  const filtrados = q
+    ? elegiveis.filter((p) => (p.name || '').toLowerCase().includes(q))
+    : elegiveis;
+
+  const confirmar = (replacementId) => {
+    onConfirm({ gid: target.gid, absentId: target.player.id, replacementId });
+  };
+
+  return (
+    <Dialog open onOpenChange={(v) => !v && onClose()}>
+      <DialogContent className="max-h-[90dvh] max-w-lg overflow-y-auto">
+        <DialogHeader>
+          <DialogTitle>{nome}</DialogTitle>
+          <DialogDescription>
+            {step === 'escolha'
+              ? 'O que você quer fazer com este jogador nesta partida?'
+              : `Escolha quem entra no lugar de ${nome}. Os dois trocam de posição na fila.`}
+          </DialogDescription>
+        </DialogHeader>
+
+        {semSubstituto ? (
+          <p className="rounded-lg bg-amber-50 px-3 py-2 text-sm text-amber-700">
+            Não há ninguém disponível na ordem de participação para entrar no lugar dele agora.
+          </p>
+        ) : step === 'escolha' ? (
+          <div className="flex flex-col gap-2">
+            <button
+              type="button"
+              onClick={() => confirmar(null)}
+              className="flex items-start gap-3 rounded-xl border border-gray-200 p-3 text-left transition-colors hover:border-ink hover:bg-gray-50"
+            >
+              <UserX className="mt-0.5 h-5 w-5 shrink-0 text-gray-400" />
+              <span className="min-w-0">
+                <span className="block text-sm font-semibold text-ink">Indisponível para esta partida</span>
+                <span className="block text-[12px] leading-snug text-gray-500">
+                  {nome} sai e entra automaticamente o próximo da ordem
+                  {proximo ? <> — <strong className="font-semibold text-ink">{proximo.name}</strong></> : null}.
+                </span>
+              </span>
+            </button>
+
+            <button
+              type="button"
+              onClick={() => setStep('lista')}
+              className="flex items-start gap-3 rounded-xl border border-gray-200 p-3 text-left transition-colors hover:border-ink hover:bg-gray-50"
+            >
+              <ArrowRightLeft className="mt-0.5 h-5 w-5 shrink-0 text-gray-400" />
+              <span className="min-w-0">
+                <span className="block text-sm font-semibold text-ink">Substituir por outro jogador</span>
+                <span className="block text-[12px] leading-snug text-gray-500">
+                  Você escolhe quem entra, entre os {elegiveis.length} disponíveis na ordem de participação.
+                </span>
+              </span>
+            </button>
+          </div>
+        ) : (
+          <>
+            {elegiveis.length > 6 && (
+              <Input value={search} onChange={(e) => setSearch(e.target.value)} placeholder="Buscar por nome…" />
+            )}
+            <div className="max-h-[50vh] space-y-1.5 overflow-y-auto">
+              {filtrados.length === 0 ? (
+                <p className="py-6 text-center text-sm text-gray-400">Nenhum jogador encontrado.</p>
+              ) : filtrados.map((p) => (
+                <div key={p.id} className="flex items-center justify-between gap-2 rounded-lg border border-gray-100 p-2">
+                  <div className="flex min-w-0 items-center gap-2">
+                    {p.orderNo ? (
+                      <span className="w-6 shrink-0 text-center text-[11px] font-bold text-gray-400 tabular-nums">
+                        #{p.orderNo}
+                      </span>
+                    ) : <span className="w-6 shrink-0" />}
+                    <UserAvatar name={p.name} photoUrl={p.photo_url} size="sm" />
+                    <span className="truncate text-sm font-medium text-ink">{p.name}</span>
+                  </div>
+                  <V2Button size="sm" variant="ghost" onClick={() => confirmar(p.id)}>
+                    <ArrowRightLeft className="mr-1 h-3.5 w-3.5" /> Entra
+                  </V2Button>
+                </div>
+              ))}
+            </div>
+          </>
+        )}
+
+        <DialogFooter>
+          {step === 'lista' && !semSubstituto && (
+            <V2Button variant="ghost" onClick={() => setStep('escolha')}>Voltar</V2Button>
+          )}
+          <V2Button variant="ghost" onClick={onClose}>Fechar</V2Button>
+        </DialogFooter>
+      </DialogContent>
+    </Dialog>
+  );
+}
+
 export function PartnerDialog({ participant, participants, view, onClose, onConfirm }) {
   const open = !!participant;
   const [search, setSearch] = useState('');
@@ -438,7 +575,7 @@ export function PlayCourtsSection({ gameDay, participants, games, view, canManag
   // Diálogos elevados (mantêm a tabela limpa e sem nós dentro de <tr>).
   const [finishTarget, setFinishTarget] = useState(null); // gid
   const [cancelTarget, setCancelTarget] = useState(null); // gid
-  const [absentTarget, setAbsentTarget] = useState(null); // { gid, player }
+  const [absentTarget, setAbsentTarget] = useState(null); // { gid, player, game }
 
   const courts = Math.max(1, Number(gameDay.play_courts) || 1);
   const openGames = useMemo(
@@ -552,7 +689,7 @@ export function PlayCourtsSection({ gameDay, participants, games, view, canManag
                   onCreate={() => handleCreateNext(court)}
                   onFinish={() => setFinishTarget(game.id)}
                   onCancel={() => setCancelTarget(game.id)}
-                  onPlayer={(player) => setAbsentTarget({ gid: game.id, player })}
+                  onPlayer={(player) => setAbsentTarget({ gid: game.id, player, game })}
                 />
               ))}
             </tbody>
@@ -593,19 +730,23 @@ export function PlayCourtsSection({ gameDay, participants, games, view, canManag
         confirmLabel="Cancelar jogo"
         onConfirm={() => { const g = cancelTarget; setCancelTarget(null); if (g) cancelGame.mutate(g); }}
       />
-      <ConfirmDialog
-        open={!!absentTarget}
-        onOpenChange={(v) => !v && setAbsentTarget(null)}
-        title="Marcar como ausente?"
-        description={absentTarget ? `${absentTarget.player.name} sai deste jogo e entra o próximo da ordem de participação. Os dois trocam de lugar.` : ''}
-        confirmLabel="Substituir"
-        onConfirm={() => { const t = absentTarget; setAbsentTarget(null); if (t) noShow.mutate({ gid: t.gid, absentId: t.player.id }); }}
+      {/* Clicar num jogador em quadra NÃO executa mais nada direto: abre a
+          escolha entre deixá-lo indisponível para esta partida (entra o próximo
+          da ordem) e substituí-lo por alguém escolhido na fila. */}
+      <CourtPlayerDialog
+        target={absentTarget}
+        order={view.order}
+        onClose={() => setAbsentTarget(null)}
+        onConfirm={({ gid, absentId, replacementId }) => {
+          setAbsentTarget(null);
+          noShow.mutate({ gid, absentId, replacementId });
+        }}
       />
     </V2CollapsibleCard>
   );
 }
 
-/** Célula de um lado da partida: jogadores clicáveis (para substituir ausentes). */
+/** Célula de um lado da partida: cada jogador abre as opções da partida. */
 function SideCell({ side, align, canManage, onPlayer }) {
   const players = (side || []).filter(Boolean);
   if (players.length === 0) return <span className="text-gray-300">—</span>;
@@ -616,12 +757,12 @@ function SideCell({ side, align, canManage, onPlayer }) {
           key={pl.id}
           type="button"
           onClick={() => onPlayer(pl)}
-          title={`Substituir ${pl.name} (marcar ausente → entra o próximo da ordem)`}
-          className="group inline-flex max-w-[160px] items-center gap-1.5 rounded-full px-1 py-0.5 text-left transition-colors hover:bg-red-50"
+          title={`Opções para ${pl.name}: indisponível para esta partida ou substituir por outro jogador`}
+          className="group inline-flex max-w-[160px] items-center gap-1.5 rounded-full px-1 py-0.5 text-left transition-colors hover:bg-gray-100"
         >
           <UserAvatar name={pl.name} photoUrl={pl.photo_url} size="xs" />
-          <span className="truncate font-medium text-ink group-hover:text-red-600">{pl.name}</span>
-          <UserX className="h-3 w-3 shrink-0 text-gray-300 group-hover:text-red-500" />
+          <span className="truncate font-medium text-ink">{pl.name}</span>
+          <MoreHorizontal className="h-3 w-3 shrink-0 text-gray-300 group-hover:text-ink" />
         </button>
       ) : (
         <span key={pl.id} className="inline-flex max-w-[160px] items-center gap-1.5">

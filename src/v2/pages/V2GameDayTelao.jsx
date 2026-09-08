@@ -30,7 +30,9 @@
  * de voltar para a outra tela a cada partida encerrada não faz sentido. Por
  * isso, para o CRIADOR do dia de jogo, o telão traz as mesmas ações da tela
  * normal: criar a próxima partida, criar jogo numa quadra livre, cancelar,
- * substituir quem faltou (clicando no nome), pausar/retomar a participação e
+ * tirar alguém da partida clicando no nome — escolhendo entre deixá-lo
+ * indisponível para aquela partida (entra o próximo da ordem) e substituí-lo
+ * por um jogador escolhido na fila —, pausar/retomar a participação e
  * vincular ou desfazer dupla fixa.
  *
  * Para todo mundo que não é o criador, o telão continua sendo só leitura — é
@@ -70,7 +72,7 @@ import {
   useCreateNextPlayGame, useFinishPlayGame, useCancelPlayGame, useNoShowSwapPlayGame,
   useSetPlayParticipantSkip, useSetPlayParticipantPartner,
 } from '@/modules/games/hooks/useGameDays';
-import { SkipDialog, PartnerDialog } from '@/v2/components/games/AthletePlayOrganizer';
+import { SkipDialog, PartnerDialog, CourtPlayerDialog } from '@/v2/components/games/AthletePlayOrganizer';
 import { computeGameDayLeaderboard } from '@/modules/clubs/domain/gameDayLeaderboard';
 import { GAME_DAY_FORMAT_LABELS } from '@/modules/clubs/domain/gameDayFormats';
 
@@ -142,8 +144,8 @@ function Lado({ side, vencedor, variante = 'empilhado', onJogador = null }) {
     );
   }
 
-  // Com `onJogador`, cada nome vira botão: é assim que se substitui quem faltou,
-  // igual à tela normal do Play (lá o clique é na célula da tabela).
+  // Com `onJogador`, cada nome vira botão: abre as opções da partida (deixar
+  // indisponível ou substituir), igual à tela normal do Play.
   const jogadores = (side || []).filter((p) => p && typeof p === 'object' && p.name);
   if (onJogador && jogadores.length === nomes.length) {
     return (
@@ -153,7 +155,7 @@ function Lado({ side, vencedor, variante = 'empilhado', onJogador = null }) {
             key={p.id || p.name}
             type="button"
             onClick={() => onJogador(p)}
-            title={`Substituir ${p.name} (ausente)`}
+            title={`Opções para ${p.name}: indisponível para esta partida ou substituir`}
             className="block max-w-full truncate rounded-lg px-1 text-left transition-colors hover:bg-white/10 hover:text-acid"
           >
             {p.name}
@@ -521,7 +523,7 @@ export default function V2GameDayTelao() {
   const definirDupla = useSetPlayParticipantPartner(gameDayId);
 
   // Diálogos.
-  const [alvoSubstituir, setAlvoSubstituir] = useState(null); // { gid, player }
+  const [alvoSubstituir, setAlvoSubstituir] = useState(null); // { gid, player, game }
   const [alvoCancelar, setAlvoCancelar] = useState(null); // gid
   const [alvoEncerrar, setAlvoEncerrar] = useState(null); // gid
   const [atletaAberto, setAtletaAberto] = useState(null); // participante
@@ -647,9 +649,13 @@ export default function V2GameDayTelao() {
       : 'Partida encerrada. Sem 4 disponíveis na ordem — a quadra ficou livre.'),
   );
   const cancelar = (gid) => executar(() => cancelarJogo.mutateAsync(gid), 'Jogo cancelado.');
-  const trocarAusente = (gid, absentId, nome) => executar(
-    () => substituirAusente.mutateAsync({ gid, absentId }),
-    `${nome} saiu da partida e entrou o próximo da ordem.`,
+  // `replacementId` nulo = entra o próximo da ordem; preenchido = entra quem
+  // quem organiza escolheu. Os dois caminhos são a mesma troca no serviço.
+  const trocarAusente = (gid, absentId, nome, replacementId = null, nomeEntrando = '') => executar(
+    () => substituirAusente.mutateAsync({ gid, absentId, replacementId }),
+    replacementId
+      ? `${nome} saiu da partida e ${nomeEntrando || 'o substituto escolhido'} entrou.`
+      : `${nome} saiu da partida e entrou o próximo da ordem.`,
   );
   const pausar = (pid, count) => executar(
     () => definirPausa.mutateAsync({ pid, count }),
@@ -776,7 +782,7 @@ export default function V2GameDayTelao() {
                     key={court}
                     jogo={jogo}
                     comPlacar={false}
-                    onJogador={podeGerir ? (pl) => setAlvoSubstituir({ gid: jogo.id, player: pl }) : null}
+                    onJogador={podeGerir ? (pl) => setAlvoSubstituir({ gid: jogo.id, player: pl, game: jogo }) : null}
                     acoes={podeGerir && (
                       <>
                         <BotaoTelao tone="acid" onClick={() => setAlvoEncerrar(jogo.id)} disabled={ocupado}>
@@ -872,7 +878,7 @@ export default function V2GameDayTelao() {
 
         <footer className="mt-8 border-t border-white/10 pt-4 text-center text-sm text-white/30">
           {podeGerir
-            ? 'Você organiza este Play: clique num nome em quadra para substituir, ou num atleta da ordem para pausar e vincular dupla.'
+            ? 'Você organiza este Play: clique num nome em quadra para deixá-lo indisponível ou substituí-lo, ou num atleta da ordem para pausar e vincular dupla.'
             : 'Esta tela se atualiza sozinha. Deixe-a aberta durante o dia de jogo.'}
         </footer>
       </div>
@@ -899,18 +905,20 @@ export default function V2GameDayTelao() {
             confirmLabel="Cancelar jogo"
             onConfirm={() => { const g = alvoCancelar; setAlvoCancelar(null); if (g) cancelar(g); }}
           />
-          <ConfirmDialog
-            open={!!alvoSubstituir}
-            onOpenChange={(v) => !v && setAlvoSubstituir(null)}
-            title="Marcar como ausente?"
-            description={alvoSubstituir
-              ? `${alvoSubstituir.player.name} sai deste jogo e entra o próximo da ordem de participação. Os dois trocam de lugar.`
-              : ''}
-            confirmLabel="Substituir"
-            onConfirm={() => {
+          {/* Clicar num nome em quadra abre a ESCOLHA (indisponível para esta
+              partida × substituir por alguém da fila). É o mesmo componente do
+              painel: as duas telas oferecem exatamente as mesmas opções. */}
+          <CourtPlayerDialog
+            target={alvoSubstituir}
+            order={playView ? playView.order : []}
+            onClose={() => setAlvoSubstituir(null)}
+            onConfirm={({ gid, absentId, replacementId }) => {
               const alvo = alvoSubstituir;
               setAlvoSubstituir(null);
-              if (alvo) trocarAusente(alvo.gid, alvo.player.id, alvo.player.name);
+              const entrando = replacementId && playView
+                ? playView.order.find((p) => p.id === replacementId)
+                : null;
+              trocarAusente(gid, absentId, alvo?.player?.name || 'O jogador', replacementId, entrando?.name || '');
             }}
           />
 

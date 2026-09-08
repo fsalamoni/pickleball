@@ -41,10 +41,16 @@ Participantes têm campos aditivos `play_status` (derivado), `available_since`,
 `available_tie`, `skip_remaining` (pausar X partidas), `partner_id` (dupla fixa),
 `play_level`, `play_gender`. Serviço: `createNextPlayGame`, `createManualPlayGame`,
 `finishPlayGame` (auto-cria o próximo), `cancelPlayGame`, `noShowSwapPlayGame`
-(substitui ausente pelo próximo da ordem, trocando de lugar; grava o ausente em
-`games/{gid}.swapped_out_ids` para que, em novas substituições NA MESMA partida,
-um jogador já substituído NÃO retorne ao jogo de onde saiu — via
-`pickSwapReplacement`), `setPlayParticipantSkip`,
+(tira um jogador da partida e coloca outro, trocando os dois de lugar na fila;
+grava quem saiu em `games/{gid}.swapped_out_ids` para que, em novas
+substituições NA MESMA partida, um jogador já substituído NÃO retorne ao jogo de
+onde saiu). Quem entra depende do 5º argumento opcional: **sem**
+`{ replacementId }` entra o próximo elegível da ordem (`pickSwapReplacement`);
+**com** ele entra exatamente o escolhido, desde que
+`isEligibleSwapReplacement` confirme — a validação roda no SERVIÇO, nunca só na
+tela. `eligibleSwapReplacements` devolve a lista inteira de elegíveis e é o que
+a interface oferece; por construção (e por teste) o primeiro item dela é sempre
+o que `pickSwapReplacement` escolheria sozinho. Também: `setPlayParticipantSkip`,
 `setPlayParticipantPartner`. UI dedicada em `v2/components/games/AthletePlayOrganizer.jsx`
 (seções Participantes, Quadras e jogos, e "Ordem de participação"). No Play NÃO há
 ranking do dia nem publicação no ranking. Regras: `game_days` com `format == 'play'`

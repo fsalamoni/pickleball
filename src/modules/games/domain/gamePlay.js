@@ -244,6 +244,39 @@ export function pickSwapReplacement(availableOrdered, { inGameIds = [], swappedO
 }
 
 /**
+ * TODOS os substitutos elegíveis de um jogo aberto (Play), na ORDEM DE
+ * PARTICIPAÇÃO. Mesmos critérios de `pickSwapReplacement`, só que devolvendo a
+ * lista inteira em vez do primeiro — é o que a tela precisa para deixar quem
+ * organiza ESCOLHER o substituto, em vez de aceitar sempre o próximo da fila.
+ *
+ * `pickSwapReplacement(lista, ctx)` é, por construção, o primeiro item daqui.
+ * Isso é verificado por teste: as duas funções nunca podem divergir.
+ *
+ * @param {Array} availableOrdered  disponíveis, em ordem de participação
+ * @param {{ inGameIds?: string[], swappedOutIds?: string[] }} [ctx]
+ * @returns {Array} elegíveis, na mesma ordem recebida
+ */
+export function eligibleSwapReplacements(availableOrdered, { inGameIds = [], swappedOutIds = [] } = {}) {
+  const exclude = new Set([...inGameIds, ...swappedOutIds]);
+  return (availableOrdered || []).filter((p) => p && !exclude.has(p.id));
+}
+
+/**
+ * O jogador escolhido pode entrar no lugar do que sai?
+ * Usado tanto pela tela (para não oferecer opção inválida) quanto pelo serviço
+ * (que NUNCA confia na tela — a validação vale de novo antes de gravar).
+ *
+ * @param {Array} availableOrdered  disponíveis, em ordem de participação
+ * @param {string} replacementId
+ * @param {{ inGameIds?: string[], swappedOutIds?: string[] }} [ctx]
+ * @returns {boolean}
+ */
+export function isEligibleSwapReplacement(availableOrdered, replacementId, ctx = {}) {
+  if (!replacementId) return false;
+  return eligibleSwapReplacements(availableOrdered, ctx).some((p) => p.id === replacementId);
+}
+
+/**
  * PREVISÃO dos próximos participantes a entrar em quadra, em blocos de até
  * `slots` (um por quadra), a partir da ORDEM DE PARTICIPAÇÃO atual (disponíveis).
  * Não organiza duplas — apenas lista quem entra. Preenche blocos até completar
