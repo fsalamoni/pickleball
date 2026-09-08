@@ -65,6 +65,57 @@ Em 42 partidas com 20 jogadores, **42 quartetos distintos**: nenhum se repete.
 - **Sem combinação válida, cai de volta** em `buildPlayNextMatch`: nunca deixa
   de criar uma partida que hoje seria criada.
 
+## 4b. Previsão e ordem de participação (correção de 08/09/2026)
+
+Depois do primeiro dia de jogo com o rodízio ligado, apareceu um problema
+real: **a previsão e a ordem de participação mostravam pessoas diferentes das
+que entravam em quadra**. Eram duas causas distintas, ambas reproduzidas em
+teste antes da correção.
+
+### Causa 1 — a fila numerada mentia
+A "ordem de participação" era numerada por **tempo de espera** (`#1 #2 #3 #4`),
+mas com o rodízio quem entra pode ser `#1 #3 #5 #7`. Quem olhava a lista
+esperava os quatro primeiros e via outros entrarem.
+
+**Correção**: a fila passou a ser numerada pela **ordem real de entrada**.
+`#1 #2 #3 #4` são exatamente os quatro da próxima partida. Implementado em
+`buildPlayEntryOrder` / `applyPlayEntryOrder` — ponto único que reescreve o
+`orderNo`, então o crachá "#N · aguardando" do painel e o destaque
+"entra a seguir" do telão passaram a ficar certos sem tocar em cada
+renderização.
+
+### Causa 2 — a previsão de quadra ocupada era fantasia
+A previsão listava um bloco por quadra a partir de quem está disponível
+**agora**, como se os quatro que estão jogando nunca voltassem para a fila.
+Mas voltam: ao terminar, retornam ao fim da fila e disputam as vagas
+seguintes. Resultado medido em 16 jogadores / 3 quadras com 2 ocupadas:
+
+| Quadra | Antes | Realidade | Depois |
+|---|---|---|---|
+| Q3 (livre) | `p13,p15,p1,p3` | `p13,p15,p1,p3` | ✓ igual |
+| Q1 (ocupada) | `p14,p16,p2,p4` ✗ | `p14,p16,p2,p5` | ✓ igual |
+| Q2 (ocupada) | **vazio** ✗ | `p4,p6,p7,p9` | ✓ igual |
+
+**Correção**: `simulatePlaySequence` — uma simulação única que devolve os
+jogadores de cada quadra ocupada ao fim da fila e escolhe de novo, na ordem
+em que as partidas devem terminar (as livres primeiro; depois as ocupadas, da
+que começou há mais tempo para a mais recente).
+
+**Fonte única**: a previsão por quadra, a previsão em blocos e a ordem de
+participação agora derivam todas de `simulatePlaySequence`. Não há como
+divergirem entre si.
+
+### Limites honestos
+- A previsão das quadras **ocupadas** é **condicional** (`conditional: true`
+  no bloco): depende de qual partida terminar primeiro, e isso não dá para
+  saber sem o placar. A hipótese usada é "termina primeiro quem começou
+  primeiro" — a mais razoável disponível.
+- O split em duplas dos jogos **hipotéticos** da simulação usa
+  `assignPlayTeams` sem o nível unificado (que só o serviço busca, de forma
+  assíncrona). Isso influencia apenas a contagem de parceria de quem sai e
+  volta dentro da mesma simulação — raro e de efeito pequeno. **Quem entra na
+  próxima partida não é afetado.**
+
 ## 5. Impacto: nenhum no banco
 
 O histórico de encontros é **derivado das partidas já carregadas em memória**

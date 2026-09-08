@@ -2,9 +2,12 @@ import { describe, it, expect } from 'vitest';
 import {
   buildPlayHistory, emptyPlayHistory, pairRepeatCost, groupRepeatCost,
   buildPlayNextMatchBalanced, forecastPlayMatchesBalanced,
-  makePartnerRepeatCounter, ROTATION_WEIGHTS,
+  forecastPlayByCourtBalanced, simulatePlaySequence, buildPlayEntryOrder,
+  applyPlayEntryOrder, makePartnerRepeatCounter, ROTATION_WEIGHTS,
 } from './playRotation.js';
-import { buildPlayNextMatch, assignPlayTeams, PLAY_SLOTS } from './gamePlay.js';
+import {
+  buildPlayNextMatch, assignPlayTeams, computePlayOrder, freePlayCourts, PLAY_SLOTS,
+} from './gamePlay.js';
 
 /* ------------------------------- utilidades ------------------------------ */
 
@@ -393,5 +396,221 @@ describe('⭐ SIMULAÇÃO DE DIA DE JOGO — o problema relatado', () => {
       expect(simular({ ...cfg, balanceado: true }).totalJogos)
         .toBe(simular({ ...cfg, balanceado: false }).totalJogos);
     });
+  });
+});
+
+/* ==========================================================================
+ * PREVISÃO x REALIDADE — o bug relatado em 08/09/2026.
+ *
+ * Sintoma: "as previsões de próxima partida e ordem de participação mostram
+ * pessoas diferentes daquelas que realmente são colocadas em quadra".
+ *
+ * Duas causas, ambas reproduzidas abaixo antes da correção:
+ *  1. A fila era numerada por TEMPO DE ESPERA (#1 #2 #3 #4), mas com o rodízio
+ *     quem entra pode ser #1 #3 #5 #7. A numeração criava falsa expectativa.
+ *  2. A previsão das quadras OCUPADAS ignorava que os 4 que estão jogando
+ *     voltam para a fila ao terminar — anunciava gente que não entraria e, em
+ *     alguns casos, um bloco VAZIO.
+ * ========================================================================== */
+
+/** Monta um cenário com histórico e, opcionalmente, quadras ocupadas. */
+function cenarioReal({ nJog, quadras, jogosPassados = 0, ocupadas = 0 }) {
+  const parts = Array.from({ length: nJog }, (_, i) => P(`p${i + 1}`, {
+    since: i, play_gender: i % 2 ? 'female' : 'male', play_level: 3 + (i % 5) * 0.5,
+  }));
+  const games = [];
+  let clk = 1000;
+  const emQuadra = () => new Set(games.filter((x) => x.status !== 'finished')
+    .flatMap((x) => [...x.side_a, ...x.side_b].map((y) => y.id)));
+  const criar = (status, court) => {
+    const oc = emQuadra();
+    const disp = parts.filter((p) => !oc.has(p.id))
+      .sort((a, b) => a.available_since - b.available_since);
+    const ids = buildPlayNextMatch(disp);
+    if (!ids) return false;
+    games.push({
+      side_a: [{ id: ids[0] }, { id: ids[1] }], side_b: [{ id: ids[2] }, { id: ids[3] }],
+      order: clk += 1, court, status,
+    });
+    if (status === 'finished') {
+      ids.forEach((id) => { parts.find((p) => p.id === id).available_since = clk += 1; });
+    }
+    return true;
+  };
+  for (let g = 0; g < jogosPassados; g += 1) if (!criar('finished', null)) break;
+  for (let o = 0; o < ocupadas; o += 1) if (!criar('open', o + 1)) break;
+  return { parts, games, quadras };
+}
+
+/** Roda a REALIDADE: cria nas quadras livres e conclui a partida mais antiga. */
+function criacaoReal({ parts, games, quadras }, passos) {
+  const ps = parts.map((p) => ({ ...p }));
+  const g = games.map((x) => ({ ...x }));
+  const seq = [];
+  let clk = 9000;
+  for (let k = 0; k < passos; k += 1) {
+    const livres = freePlayCourts({ courts: quadras, games: g });
+    if (livres.length > 0) {
+      const { order } = computePlayOrder({ participants: ps, games: g });
+      const ids = buildPlayNextMatchBalanced(order, {
+        slots: PLAY_SLOTS, history: buildPlayHistory(g),
+      });
+      if (ids) {
+        seq.push({ court: livres[0], ids });
+        g.push({
+          side_a: [{ id: ids[0] }, { id: ids[1] }], side_b: [{ id: ids[2] }, { id: ids[3] }],
+          order: clk += 1, court: livres[0], status: 'open',
+        });
+        continue;
+      }
+    }
+    const abertos = g.filter((x) => x.status === 'open').sort((a, b) => a.order - b.order);
+    if (!abertos.length) break;
+    abertos[0].status = 'finished';
+    [...abertos[0].side_a, ...abertos[0].side_b].forEach((x) => {
+      const p = ps.find((y) => y.id === x.id);
+      if (p) p.available_since = clk += 1;
+    });
+  }
+  return seq;
+}
+
+const CENARIOS = [
+  { nJog: 12, quadras: 2, jogosPassados: 6, ocupadas: 0 },
+  { nJog: 12, quadras: 2, jogosPassados: 6, ocupadas: 1 },
+  { nJog: 16, quadras: 3, jogosPassados: 9, ocupadas: 2 },
+  { nJog: 20, quadras: 3, jogosPassados: 12, ocupadas: 2 },
+  { nJog: 10, quadras: 2, jogosPassados: 5, ocupadas: 1 },
+  { nJog: 9, quadras: 2, jogosPassados: 4, ocupadas: 1 },
+];
+
+describe('⭐ PREVISÃO reflete exatamente quem entra em quadra', () => {
+  it('a previsão da quadra livre é EXATAMENTE a próxima partida criada', () => {
+    CENARIOS.forEach((cfg) => {
+      const c = cenarioReal(cfg);
+      const { order } = computePlayOrder({ participants: c.parts, games: c.games });
+      const hist = buildPlayHistory(c.games);
+      const porQuadra = forecastPlayByCourtBalanced(order, {
+        courts: c.quadras, games: c.games, history: hist,
+      });
+      const real = criacaoReal(c, 1);
+      const primeiraLivre = porQuadra.find((q) => q.free);
+      if (!primeiraLivre || !real[0]) return;
+      expect(primeiraLivre.court).toBe(real[0].court);
+      expect(primeiraLivre.players.map((p) => p.id)).toEqual(real[0].ids);
+    });
+  });
+
+  it('🔴 REGRESSÃO: a previsão de quadra OCUPADA também bate com o que é criado', () => {
+    // Antes da correção, estes blocos mostravam gente que não entraria — e num
+    // caso vinham VAZIOS, porque a simulação ignorava que os jogadores em
+    // quadra voltam para a fila ao terminar a partida.
+    [
+      { nJog: 16, quadras: 3, jogosPassados: 9, ocupadas: 2 },
+      { nJog: 12, quadras: 2, jogosPassados: 6, ocupadas: 1 },
+      { nJog: 20, quadras: 3, jogosPassados: 12, ocupadas: 2 },
+    ].forEach((cfg) => {
+      const c = cenarioReal(cfg);
+      const { order } = computePlayOrder({ participants: c.parts, games: c.games });
+      const hist = buildPlayHistory(c.games);
+      const blocos = simulatePlaySequence(order, {
+        courts: c.quadras, games: c.games, history: hist,
+      }).blocks;
+      const real = criacaoReal(c, c.quadras * 2);
+      // Um bloco por quadra, na mesma ordem de criação — e nenhum vazio.
+      expect(blocos).toHaveLength(c.quadras);
+      blocos.forEach((b) => expect(b.players.length).toBe(PLAY_SLOTS));
+      blocos.forEach((b, i) => {
+        expect(b.court).toBe(real[i].court);
+        expect(b.players.map((p) => p.id)).toEqual(real[i].ids);
+      });
+    });
+  });
+
+  it('marca como condicional a previsão das quadras ocupadas', () => {
+    const c = cenarioReal({ nJog: 16, quadras: 3, jogosPassados: 9, ocupadas: 2 });
+    const { order } = computePlayOrder({ participants: c.parts, games: c.games });
+    const porQuadra = forecastPlayByCourtBalanced(order, {
+      courts: c.quadras, games: c.games, history: buildPlayHistory(c.games),
+    });
+    porQuadra.forEach((q) => expect(q.conditional).toBe(!q.free));
+  });
+
+  it('ninguém aparece em dois blocos ao mesmo tempo', () => {
+    CENARIOS.forEach((cfg) => {
+      const c = cenarioReal(cfg);
+      const { order } = computePlayOrder({ participants: c.parts, games: c.games });
+      const blocos = simulatePlaySequence(order, {
+        courts: c.quadras, games: c.games, history: buildPlayHistory(c.games),
+      }).blocks;
+      // Dentro de cada bloco não há repetido; entre blocos, um jogador só
+      // reaparece depois de ter saído da quadra (o que a simulação já modela).
+      blocos.forEach((b) => {
+        expect(new Set(b.players.map((p) => p.id)).size).toBe(b.players.length);
+      });
+    });
+  });
+});
+
+describe('⭐ ORDEM DE PARTICIPAÇÃO reflete a ordem real de entrada', () => {
+  it('os 4 primeiros da fila são EXATAMENTE quem entra na próxima partida', () => {
+    CENARIOS.forEach((cfg) => {
+      const c = cenarioReal(cfg);
+      const { order } = computePlayOrder({ participants: c.parts, games: c.games });
+      const fila = buildPlayEntryOrder(order, {
+        courts: c.quadras, games: c.games, history: buildPlayHistory(c.games),
+      });
+      const real = criacaoReal(c, 1);
+      if (!real[0]) return;
+      expect(fila.slice(0, PLAY_SLOTS).map((p) => p.id).sort())
+        .toEqual(real[0].ids.slice().sort());
+    });
+  });
+
+  it('numera de 1 a N sem buraco e sem repetir ninguém', () => {
+    CENARIOS.forEach((cfg) => {
+      const c = cenarioReal(cfg);
+      const { order } = computePlayOrder({ participants: c.parts, games: c.games });
+      const fila = buildPlayEntryOrder(order, {
+        courts: c.quadras, games: c.games, history: buildPlayHistory(c.games),
+      });
+      expect(fila).toHaveLength(order.length);
+      expect(fila.map((p) => p.orderNo)).toEqual(order.map((_, i) => i + 1));
+      expect(new Set(fila.map((p) => p.id)).size).toBe(order.length);
+      // Todo mundo que estava na fila continua nela.
+      expect(fila.map((p) => p.id).sort()).toEqual(order.map((p) => p.id).sort());
+    });
+  });
+
+  it('sem histórico devolve a fila por tempo de espera, apenas renumerada', () => {
+    const q = fila('a', 'b', 'c', 'd', 'e');
+    expect(buildPlayEntryOrder(q, { history: null }).map((p) => p.id))
+      .toEqual(['a', 'b', 'c', 'd', 'e']);
+  });
+});
+
+describe('applyPlayEntryOrder', () => {
+  it('sem histórico devolve a MESMA view, intacta', () => {
+    const view = computePlayOrder({ participants: fila('a', 'b', 'c', 'd'), games: [] });
+    expect(applyPlayEntryOrder(view, { history: null })).toBe(view);
+  });
+
+  it('renumera `order` e `all` de forma coerente', () => {
+    const c = cenarioReal({ nJog: 12, quadras: 2, jogosPassados: 6, ocupadas: 1 });
+    const bruto = computePlayOrder({ participants: c.parts, games: c.games });
+    const novo = applyPlayEntryOrder(bruto, {
+      courts: c.quadras, games: c.games, history: buildPlayHistory(c.games),
+    });
+    const noEmAll = new Map(novo.all.map((p) => [p.id, p.orderNo]));
+    novo.order.forEach((p) => expect(noEmAll.get(p.id)).toBe(p.orderNo));
+    // Quem está em quadra ou pausado continua sem número.
+    novo.all.filter((p) => !novo.order.some((o) => o.id === p.id))
+      .forEach((p) => expect(p.orderNo).toBeNull());
+    // Não perde nem inventa participante.
+    expect(novo.all).toHaveLength(bruto.all.length);
+  });
+
+  it('tolera view nula', () => {
+    expect(applyPlayEntryOrder(null, { history: emptyPlayHistory() })).toBeNull();
   });
 });

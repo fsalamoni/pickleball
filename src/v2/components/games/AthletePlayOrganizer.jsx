@@ -29,7 +29,7 @@ import {
   computePlayOrder, freePlayCourts, forecastPlayMatches, PLAY_STATUS, PLAY_GAME_STATUS,
 } from '@/modules/games/domain/gamePlay';
 import {
-  buildPlayHistory, forecastPlayMatchesBalanced,
+  buildPlayHistory, forecastPlayMatchesBalanced, applyPlayEntryOrder,
 } from '@/modules/games/domain/playRotation.js';
 import { FEATURE_FLAG } from '@/core/featureFlags';
 import { useFeatureFlag } from '@/core/lib/FeatureFlagsContext';
@@ -60,7 +60,19 @@ export default function AthletePlayOrganizer({ gameDay }) {
   const canManage = canManageGameDay(gameDay, user?.uid, { participants });
   const ehCriador = isGameDayCreator(gameDay, user?.uid);
 
-  const view = useMemo(() => computePlayOrder({ participants, games }), [participants, games]);
+  // A ordem de participação exibida tem de ser a ordem REAL de entrada em
+  // quadra. Com o rodízio equilibrado, os primeiros da fila por tempo de
+  // espera nem sempre são os quatro que entram — mostrar "#1 #2 #3 #4" e
+  // colocar outros em quadra cria falsa expectativa.
+  const rodizioEquilibrado = useFeatureFlag(FEATURE_FLAG.PLAY_SMART_ROTATION);
+  const courtsDoDia = Math.max(1, Number(gameDay?.play_courts) || 1);
+  const view = useMemo(() => {
+    const bruto = computePlayOrder({ participants, games });
+    if (!rodizioEquilibrado) return bruto;
+    return applyPlayEntryOrder(bruto, {
+      courts: courtsDoDia, games, history: buildPlayHistory(games),
+    });
+  }, [participants, games, rodizioEquilibrado, courtsDoDia]);
 
   return (
     <div className="space-y-5">
@@ -447,11 +459,15 @@ export function PlayCourtsSection({ gameDay, participants, games, view, canManag
   const availableCount = view.order.length;
   const canCreateNext = free.length > 0 && availableCount >= 4;
   // Rodízio equilibrado (flag `play_smart_rotation`): a previsão do painel usa
-  // a mesma regra da criação, para não anunciar um grupo e entrar outro.
+  // a mesma simulação da criação, para não anunciar um grupo e entrar outro.
+  // `games` é obrigatório: é dele que sai quais quadras estão ocupadas e quem
+  // volta para a fila quando cada partida terminar.
   const rodizioEquilibrado = useFeatureFlag(FEATURE_FLAG.PLAY_SMART_ROTATION);
   const forecast = useMemo(
     () => (rodizioEquilibrado
-      ? forecastPlayMatchesBalanced(view.order, { courts, history: buildPlayHistory(games) })
+      ? forecastPlayMatchesBalanced(view.order, {
+        courts, games, history: buildPlayHistory(games),
+      })
       : forecastPlayMatches(view.order, { courts })),
     [view.order, courts, games, rodizioEquilibrado],
   );

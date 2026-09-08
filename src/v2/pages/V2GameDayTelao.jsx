@@ -62,7 +62,7 @@ import {
   computePlayOrder, forecastPlayByCourt, PLAY_STATUS, PLAY_SLOTS, PLAY_GAME_STATUS,
 } from '@/modules/games/domain/gamePlay';
 import {
-  buildPlayHistory, forecastPlayByCourtBalanced,
+  buildPlayHistory, forecastPlayByCourtBalanced, applyPlayEntryOrder,
 } from '@/modules/games/domain/playRotation.js';
 import { FEATURE_FLAG } from '@/core/featureFlags';
 import { useFeatureFlag } from '@/core/lib/FeatureFlagsContext';
@@ -560,9 +560,24 @@ export default function V2GameDayTelao() {
   });
 
   const board = useMemo(() => buildGameDayBoard(games), [games]);
+  // Rodízio equilibrado (flag `play_smart_rotation`). Declarado ANTES de
+  // `playView` de propósito: o useMemo dele lê esta constante durante a
+  // renderização — declarar depois dá ReferenceError (zona morta temporal).
+  const rodizioEquilibrado = useFeatureFlag(FEATURE_FLAG.PLAY_SMART_ROTATION);
+
   const playView = useMemo(
-    () => (board.isPlay ? computePlayOrder({ participants, games }) : null),
-    [board.isPlay, participants, games],
+    () => {
+      if (!board.isPlay) return null;
+      const bruto = computePlayOrder({ participants, games });
+      if (!rodizioEquilibrado) return bruto;
+      // A ordem exibida no telão passa a ser a ordem REAL de entrada — é ela
+      // que alimenta a numeração e o destaque "entra a seguir".
+      const courtsDoDia = Math.max(1, Number(gameDay?.play_courts) || 1);
+      return applyPlayEntryOrder(bruto, {
+        courts: courtsDoDia, games, history: buildPlayHistory(games),
+      });
+    },
+    [board.isPlay, participants, games, rodizioEquilibrado, gameDay?.play_courts],
   );
   // Ranking do dia só existe onde há placar. O Play não grava resultado, então
   // nem calculamos: a lista viria vazia de qualquer jeito.
@@ -581,9 +596,6 @@ export default function V2GameDayTelao() {
 
   // A próxima partida DE CADA QUADRA, na mesma ordem em que
   // `createNextPlayGame` criaria os jogos.
-  // Rodízio equilibrado (flag `play_smart_rotation`): a PREVISÃO tem de usar a
-  // mesma regra da CRIAÇÃO, senão o telão mostra um time e entra outro.
-  const rodizioEquilibrado = useFeatureFlag(FEATURE_FLAG.PLAY_SMART_ROTATION);
   const proximasPlay = useMemo(() => {
     if (!playView) return [];
     if (!rodizioEquilibrado) {
