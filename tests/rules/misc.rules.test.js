@@ -122,7 +122,7 @@ describe('notifications — P1-06: o que continua funcionando', () => {
       'club_join_request', 'club_join_approved', 'club_join_rejected', 'club_invite',
       'club_invite_accepted', 'club_event_published', 'tournament_open',
       'tournament_announcement', 'partner_invite', 'partner_response',
-      'profile_reminder', 'leveling_reminder', 'generic',
+      'profile_reminder', 'leveling_reminder', 'profile_admin_edit', 'generic',
     ];
     for (const type of tipos) {
       // eslint-disable-next-line no-await-in-loop

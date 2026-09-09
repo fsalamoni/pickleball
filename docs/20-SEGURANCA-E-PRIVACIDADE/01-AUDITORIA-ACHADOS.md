@@ -167,6 +167,29 @@ e-mail estar no mesmo documento do quadro.
 # 🟠 P1 — ALTO
 
 ## P1-01 · E-mail de organizadores exposto a qualquer usuário logado
+
+> ### ✅ CORRIGIDO — 2026-09-09
+> **O achado era mais amplo do que este texto descrevia.** Além de
+> `tournament_admins`, o mesmo padrão estava em **`club_members`** — também
+> `allow read: if isAuthed()`, também guardando `user_email`, e o e-mail era
+> renderizado na lista de membros **sem nenhum gate de admin**. Na prática:
+> qualquer conta logada tinha um diretório de contatos de todos os clubes.
+>
+> **Correção**: o e-mail saiu dos dois documentos (escrita e exibição). Onde a
+> leitura JÁ é restrita — `club_join_requests` e `club_member_invites`, ambos
+> limitados ao próprio usuário, ao admin do clube e ao admin da plataforma —
+> o campo **permanece**, porque ali é legítimo: é como o admin do clube fala
+> com quem pediu para entrar.
+>
+> Quem precisa contatar alguém tem o chat; o admin da plataforma tem a aba
+> **Cadastros**, restrita e auditada.
+>
+> **Cauda legada**: os documentos que já existem ainda carregam o campo. Nada
+> o exibe mais, mas ele só some do banco na migração — que, como a do P0-02,
+> espera o backup testado (S0).
+>
+> 4 testes de regressão leem o código-fonte dos serviços para impedir que o
+> campo volte numa refatoração distraída.
 `firestore.rules:790` → `match /tournament_admins/{docId}` com
 `allow read: if isAuthed();`, e
 `src/modules/tournament/services/tournamentService.js:96,338` gravam
@@ -342,6 +365,37 @@ administrativo + sessão administrativa curta. Ver `05-ADMIN-SUPORTE.md`.
 # 🟡 P2 — MÉDIO
 
 ## P2-01 · Preferência de privacidade não aplicada no servidor
+
+> ### ⚠️ ANALISADO, NÃO CORRIGIDO — 2026-09-09 · a correção óbvia QUEBRA o ranking
+>
+> A correção que salta aos olhos é endurecer a regra:
+> ```javascript
+> allow read: if isAuthed() && (resource.data.directory_listed == true
+>                               || isOwner(uid) || isPlatformAdmin());
+> ```
+> **Não faça isso sem ler o parágrafo seguinte.**
+>
+> Quatro serviços leem a coleção INTEIRA, sem filtro:
+> `ratingService.js:119` e `:371` (ranking nacional), `duprRatingService.js:77`
+> e `duprExportService.js:81`. Numa consulta, a regra é avaliada por documento
+> e a query precisa ser **provadamente** restrita — então uma consulta sem
+> `where('directory_listed','==',true)` passa a ser **negada por inteiro**.
+> Resultado: o ranking para de carregar para todo mundo.
+>
+> E filtrar essas consultas também é errado: `directory_listed` significa
+> *"não me liste no diretório de atletas"*, **não** *"não me inclua no
+> ranking"*. São coisas diferentes; tratar como a mesma tira do ranking quem
+> nunca pediu isso.
+>
+> **O que de fato vaza hoje**: nome, cidade, nível e idade de quem saiu do
+> diretório. **Não** vaza contato — `buildAthletePublicProfile` já só espelha
+> telefone, e-mail e endereço com opt-in explícito, e converte a data de
+> nascimento em `age`.
+>
+> **Caminho correto (a decidir)**: ou o espelho deixa de existir para quem
+> optou por sair — e o ranking passa a ler de `users` —, ou o ranking ganha
+> uma coleção própria com só o que precisa. As duas são mudanças
+> arquiteturais, não um ajuste de regra.
 `athlete_profiles` tem `directory_listed`, mas a regra é
 `allow read: if isAuthed()` (`firestore.rules:866-867`) e o filtro
 `where('directory_listed','==',true)` só existe em `listAthletes()`, no

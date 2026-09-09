@@ -535,8 +535,10 @@ export default function TournamentAdminTab({ tournament }) {
               {admins.map((a) => (
                 <li key={a.user_id} className="flex items-center justify-between gap-3 rounded-[1.25rem] border border-gray-100 bg-white/75 px-4 py-3">
                   <div className="min-w-0">
-                    <div className="truncate font-medium text-ink">{a.user_name || a.user_email}</div>
-                    <div className="mt-1 text-xs text-gray-500">{a.user_email}</div>
+                    {/* P1-01: `tournament_admins` é lido por qualquer conta
+                        logada; o e-mail do organizador saiu do documento e da
+                        tela. O nome identifica quem administra. */}
+                    <div className="truncate font-medium text-ink">{a.user_name || 'Organizador'}</div>
                   </div>
                   <div className="flex items-center gap-2">
                     <Badge variant="secondary" className="shadow-none">

@@ -37,6 +37,9 @@ export const NOTIFICATION_TYPE = Object.freeze({
   PARTNER_RESPONSE: 'partner_response',
   PROFILE_REMINDER: 'profile_reminder',
   LEVELING_REMINDER: 'leveling_reminder',
+  // O admin corrigiu o cadastro do titular. Transparência é exigência da LGPD:
+  // a pessoa tem de saber quando alguém mexe no dado dela.
+  PROFILE_ADMIN_EDIT: 'profile_admin_edit',
   GENERIC: 'generic',
 });
 

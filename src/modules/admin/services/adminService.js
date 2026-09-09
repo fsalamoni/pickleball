@@ -2,6 +2,7 @@ import { collection, getDocs, getDoc, deleteDoc, doc, orderBy, query, where, ser
 import { db } from '@/core/config/firebase';
 import { createAuditLog } from '@/core/services/auditService';
 import { logger } from '@/core/lib/logger';
+import { createNotification, NOTIFICATION_TYPE } from '@/core/services/notificationService';
 import { buildRevokePayload } from '../domain/accessRoster.js';
 import {
   sanitizeAdminUserPatch, diffAdminUserPatch, validateAdminEdit,
@@ -186,6 +187,20 @@ export async function updateUserRecordAsAdmin(uid, patch, actor, meta = {}) {
       })),
       ignored_fields: ignored,
     },
+  });
+
+  // AVISA O TITULAR. Transparência é exigência da LGPD: a pessoa tem de saber
+  // quando alguém mexeu no cadastro dela, e quais campos. Best-effort — o
+  // `createNotification` já é defensivo e nunca derruba o fluxo principal.
+  // (Ele também não notifica quando o admin edita o PRÓPRIO cadastro.)
+  await createNotification({
+    userId: uid,
+    type: NOTIFICATION_TYPE.PROFILE_ADMIN_EDIT,
+    title: 'Seu cadastro foi corrigido',
+    message: `A administração ajustou: ${changes.map((c) => c.label).join(', ')}.`
+      + ' Confira no seu perfil e avise se algo não estiver certo.',
+    link: '/perfil/editar',
+    actor,
   });
 
   // Espelha no diretório público. Best-effort: a correção já foi gravada, e

@@ -97,7 +97,9 @@ export async function createTournament(creator, data) {
   batch.set(doc(db, COL.admins, adminDocId(id, creator.uid)), {
     tournament_id: id,
     user_id: creator.uid,
-    user_email: creator.email || '',
+    // P1-01: `tournament_admins` é `allow read: if isAuthed()`. O e-mail do
+    // organizador não pode morar num documento que a plataforma inteira lê.
+
     user_name: publicDisplayName({
       displayName: creator.displayName, email: creator.email, fallback: 'Organizador',
     }),
@@ -341,7 +343,8 @@ export async function addTournamentAdmin(tournamentId, targetUser, actor) {
   await setDoc(doc(db, COL.admins, adminDocId(tournamentId, targetUser.uid)), {
     tournament_id: tournamentId,
     user_id: targetUser.uid,
-    user_email: targetUser.email || '',
+    // P1-01: idem — sem e-mail no documento de leitura ampla.
+
     user_name: publicDisplayName({
       displayName: targetUser.displayName, email: targetUser.email, fallback: 'Organizador',
     }),

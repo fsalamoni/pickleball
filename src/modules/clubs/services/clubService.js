@@ -87,7 +87,10 @@ function memberPayload(clubId, user, profile, role) {
     club_id: clubId,
     user_id: user.uid,
     user_name: profile?.platform_name || profile?.full_name || user.displayName || user.email || 'Atleta',
-    user_email: user.email || '',
+    // P1-01: `club_members` é `allow read: if isAuthed()` — QUALQUER conta da
+    // plataforma lê a lista de membros de QUALQUER clube. O e-mail não pode
+    // morar aqui. Quem precisa contatar um membro tem o chat, e o admin da
+    // plataforma tem a aba Cadastros (restrita e auditada).
     photo_url: profile?.photo_url || user.photoURL || '',
     role,
     joined_at: serverTimestamp(),
@@ -376,7 +379,8 @@ export async function approveJoinRequest(request, actor) {
     club_id: request.club_id,
     user_id: request.user_id,
     user_name: request.user_name || 'Atleta',
-    user_email: request.user_email || '',
+    // P1-01: o pedido de entrada tem leitura restrita e pode guardar o e-mail;
+    // o documento de MEMBRO não pode. Não copiar daqui para lá.
     photo_url: request.photo_url || '',
     role: CLUB_ROLE.MEMBER,
     joined_at: serverTimestamp(),

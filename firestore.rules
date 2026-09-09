@@ -1047,7 +1047,7 @@ service cloud.firestore {
         'club_join_rejected', 'club_invite', 'club_invite_accepted',
         'club_event_published', 'tournament_open', 'tournament_announcement',
         'partner_invite', 'partner_response', 'profile_reminder',
-        'leveling_reminder', 'generic',
+        'leveling_reminder', 'profile_admin_edit', 'generic',
       ];
     }
     function isInternalLink(l) {

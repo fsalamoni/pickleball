@@ -1,6 +1,6 @@
 import React, { useState } from 'react';
 import { toast } from 'sonner';
-import { Mail, MoreVertical, Shield, ShieldCheck, UserMinus, Users } from 'lucide-react';
+import { MoreVertical, Shield, ShieldCheck, UserMinus, Users } from 'lucide-react';
 import {
   DropdownMenu,
   DropdownMenuContent,
@@ -66,11 +66,10 @@ export default function V2ClubMembers({ clubId, isAdmin }) {
                 <span className="truncate font-bold text-ink">{member.user_name}</span>
                 {isSelf && <span className="text-xs text-gray-400">(você)</span>}
               </div>
-              {member.user_email && (
-                <div className="mt-0.5 inline-flex items-center gap-1 text-xs text-gray-500">
-                  <Mail className="h-3 w-3" /> {member.user_email}
-                </div>
-              )}
+              {/* P1-01: o e-mail saiu daqui. `club_members` é lido por
+                  qualquer conta da plataforma, então exibi-lo — mesmo vindo de
+                  documento legado que ainda o contém — mantinha o vazamento
+                  visível. Para falar com um membro, use o chat. */}
             </div>
             <V2Badge tone={member.role === CLUB_ROLE.ADMIN ? 'amber' : 'neutral'}>
               {CLUB_ROLE_LABELS[member.role] || member.role}

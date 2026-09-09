@@ -18,7 +18,7 @@
 | **S6** | App Check | P1-03 | 2 dias + 2 semanas de observação | médio |
 | **S7** | 🛟 Console de suporte | o pedido do dono | 8 dias | baixo (aditivo) | 🟡 **parcial (2026-09-09)** — a ESCRITA (corrigir cadastro) está no ar; quebra-vidro, mascaramento e log de leitura seguem desenhados. Ver `18-CADASTROS-ADMIN.md` |
 | **S8** | Direitos do titular | P2-04, P2-05, P2-06 | 5 dias | baixo |
-| **S9** | Privacidade no servidor | P1-01, P1-02, P1-05, P1-06, P2-01, P2-02 | 4 dias | médio |
+| **S9** | Privacidade no servidor | P1-01, P1-02, P1-05, P1-06, P2-01, P2-02 | 4 dias | médio | 🟡 **parcial (2026-09-09)** — P1-01 corrigido (mais amplo do que o achado dizia: `club_members` também); P1-02, P1-05 e P1-06 já fechados; **P2-01 analisado e NÃO corrigido de propósito** — a correção óbvia derruba o ranking, ver `01-AUDITORIA-ACHADOS.md` |
 | **S10** | Consentimento, imagem e menores | P2-09, P2-10, P2-11 | 5 dias + ⚖️ | baixo |
 | **S11** | Retenção e ciclo de vida | P2-07, P2-08 | 4 dias | **alto** (exclui dados) |
 | **S12** | Governança contínua | P3-01, P3-02, P3-04 | 2 dias | nenhum |

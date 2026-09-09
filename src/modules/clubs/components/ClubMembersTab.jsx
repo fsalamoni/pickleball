@@ -1,6 +1,6 @@
 import React, { useState } from 'react';
 import { toast } from 'sonner';
-import { Mail, MoreVertical, Phone, Shield, ShieldCheck, UserMinus } from 'lucide-react';
+import { MoreVertical, Phone, Shield, ShieldCheck, UserMinus } from 'lucide-react';
 import { Card, CardContent } from '@/components/ui/card';
 import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
@@ -84,11 +84,7 @@ export default function ClubMembersTab({ clubId, isAdmin }) {
                   <span className="truncate font-medium text-ink">{member.user_name}</span>
                   {isSelf && <span className="text-xs text-gray-400">(você)</span>}
                 </div>
-                <div className="mt-0.5 flex flex-wrap items-center gap-x-3 gap-y-0.5 text-xs text-gray-500">
-                  {member.user_email && (
-                    <span className="inline-flex items-center gap-1"><Mail className="h-3 w-3" /> {member.user_email}</span>
-                  )}
-                </div>
+                {/* P1-01: a linha de contato saiu daqui — ver V2ClubMembers.jsx. */}
               </div>
               <Badge variant={member.role === CLUB_ROLE.ADMIN ? 'warning' : 'secondary'} className="shrink-0 rounded-full">
                 {CLUB_ROLE_LABELS[member.role] || member.role}
