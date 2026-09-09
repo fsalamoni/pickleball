@@ -19,6 +19,7 @@ import { Plus, Check, X, Trash2, ArrowUp, Pencil, UserCheck, Undo2, Download } f
 import {
   useModalities,
   useRegistrationsByTournament,
+  useRegistrationContacts,
   useConfirmRegistrationPayment,
   usePromoteFromWaitlist,
   useCancelRegistration,
@@ -51,11 +52,16 @@ import TeamRegistrationDialog from '@/v2/components/tournament/TeamRegistrationD
 import PixPaymentDialog from '@/modules/tournament/components/PixPaymentDialog';
 import { tournamentHasPixConfig } from '@/modules/tournament/domain/payment';
 import { partnerInviteBadge } from '@/modules/tournament/domain/partnerInvite';
+import { resolveRegistrationContact } from '@/modules/tournament/domain/registrationContact';
 
 export default function TournamentRegistrationsTab({ tournament, isAdmin }) {
   const { user } = useAuth();
   const { data: modalities = [] } = useModalities(tournament.id);
   const { data: registrations = [] } = useRegistrationsByTournament(tournament.id);
+  // P0-02: o e-mail não está mais no documento público da inscrição. Quem
+  // organiza continua vendo — a subcoleção privada é lida só aqui, e só por
+  // quem tem direito. Espectador não busca nada.
+  const { data: contacts } = useRegistrationContacts(registrations, isAdmin);
   const csvOn = true;
   const [openModalityId, setOpenModalityId] = useState(null);
   const openModality = modalities.find((m) => m.id === openModalityId) || null;
@@ -64,6 +70,7 @@ export default function TournamentRegistrationsTab({ tournament, isAdmin }) {
     const content = buildRegistrationsCsv(registrations, {
       modalities,
       statusLabels: REGISTRATION_STATUS_LABELS,
+      contacts,
     });
     try {
       const blob = new Blob([content], { type: 'text/csv;charset=utf-8' });
@@ -98,6 +105,7 @@ export default function TournamentRegistrationsTab({ tournament, isAdmin }) {
       ) : (
         modalities.map((modality) => (
           <ModalityRegistrationsBlock
+            contacts={contacts}
             key={modality.id}
             modality={modality}
             registrations={registrations.filter((r) => r.modality_id === modality.id)}
@@ -120,7 +128,7 @@ export default function TournamentRegistrationsTab({ tournament, isAdmin }) {
   );
 }
 
-function ModalityRegistrationsBlock({ tournament, modality, registrations, isAdmin, currentUserId, onJoin }) {
+function ModalityRegistrationsBlock({ tournament, modality, registrations, isAdmin, currentUserId, onJoin, contacts }) {
   const { data: allAthletes = [] } = useAthletes();
   const duprByUid = React.useMemo(() => {
     const m = new Map();
@@ -215,7 +223,10 @@ function ModalityRegistrationsBlock({ tournament, modality, registrations, isAdm
                           <div className="text-xs text-gray-500">
                             {r.kind === 'team'
                               ? (r.members || []).map((m) => m.name).join(', ')
-                              : [r.player_a_email, r.player_b_email].filter(Boolean).join(' / ')}
+                              : (() => {
+                                const c = resolveRegistrationContact(r, contacts?.get?.(r.id) || null);
+                                return [c.player_a_email, c.player_b_email].filter(Boolean).join(' / ');
+                              })()}
                             {r.is_provisional ? ` · ${REGISTRATION_PROVISIONAL_LABEL.toLowerCase()}` : ''}
                           </div>
                           {(() => {
@@ -309,6 +320,7 @@ function ModalityRegistrationsBlock({ tournament, modality, registrations, isAdm
         <RegistrationEditDialog
           registration={editTarget}
           modality={modality}
+          contact={contacts?.get?.(editTarget.id) || null}
           onClose={() => setEditTarget(null)}
         />
       )}
@@ -368,18 +380,21 @@ function PlayerFields({ prefix, value, onChange }) {
   );
 }
 
-function RegistrationEditDialog({ registration, modality, onClose }) {
+function RegistrationEditDialog({ registration, modality, onClose, contact = null }) {
   const editMutation = useEditRegistration(modality.id);
   const isDoubles = modality.format === MODALITY_FORMAT.DOUBLES;
+  // P0-02: o e-mail vem da subcoleção privada; `resolve` cai no campo público
+  // enquanto existirem inscrições legadas.
+  const contato = resolveRegistrationContact(registration, contact);
   const [playerA, setPlayerA] = useState({
     name: registration.player_a_name || '',
-    email: registration.player_a_email || '',
+    email: contato.player_a_email || '',
     level: registration.player_a_level || '',
     competition_gender: registration.player_a_competition_gender || '',
   });
   const [playerB, setPlayerB] = useState({
     name: registration.player_b_name || '',
-    email: registration.player_b_email || '',
+    email: contato.player_b_email || '',
     level: registration.player_b_level || '',
     competition_gender: registration.player_b_competition_gender || '',
   });

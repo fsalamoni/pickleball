@@ -48,6 +48,7 @@ import {
   ensurePlaceholderRegistrations,
   clearPlaceholderRegistrations,
 } from '../services/registrationService';
+import { fetchRegistrationContacts } from '../services/registrationContactService.js';
 import {
   listMatches,
   listMatchesByTournament,
@@ -337,6 +338,26 @@ export function useRegistrations(modalityId) {
     queryKey: ['registrations', modalityId],
     queryFn: () => listRegistrations(modalityId),
     enabled: !!modalityId,
+  });
+}
+
+/**
+ * P0-02 — contato (e-mail) das inscrições, buscado da subcoleção privada.
+ *
+ * NÃO usar em tela pública: o quadro do torneio não mostra e-mail, e cada
+ * inscrição custa uma leitura. É para a aba do organizador e a exportação.
+ * Devolve um Map id → contato; inscrição legada cai no campo público sozinha.
+ *
+ * @param {Array} registrations
+ * @param {boolean} enabled  só busca quem tem direito de ver (organizador)
+ */
+export function useRegistrationContacts(registrations, enabled = true) {
+  const ids = (registrations || []).map((r) => r?.id).filter(Boolean);
+  return useQuery({
+    queryKey: ['registration-contacts', ids.join(',')],
+    queryFn: () => fetchRegistrationContacts(registrations),
+    enabled: Boolean(enabled) && ids.length > 0,
+    staleTime: 60_000,
   });
 }
 

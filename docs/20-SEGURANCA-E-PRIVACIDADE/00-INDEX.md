@@ -13,17 +13,23 @@
 
 ## ⚠️ LEIA ISTO PRIMEIRO — achados críticos abertos
 
-A auditoria encontrou **2 vulnerabilidades CRÍTICAS** ativas em produção
-hoje. Elas estão detalhadas em `01-AUDITORIA-ACHADOS.md` e com correção
-pronta em `patches/`.
+A auditoria encontrou 2 vulnerabilidades CRÍTICAS. **As duas já foram
+tratadas** — mas o P0-02 só se fecha por completo depois de a migração
+apagar os campos antigos, o que exige backup testado (S0). Detalhe em
+`01-AUDITORIA-ACHADOS.md`.
+
+> 🔴 **Há um achado ABERTO que não é de código**: quatro contas com
+> `platform_admin` em produção. Ver `16-ACHADO-ADMINS-EXTRAS.md` —
+> **só o dono resolve, pelo console**.
 
 | # | Achado | Impacto |
 |---|---|---|
 | ~~**P0-01**~~ ✅ | ~~Qualquer usuário autenticado pode se tornar `platform_admin` escrevendo no próprio documento `users/{uid}`~~ | **CORRIGIDO em 2026-09-07** (PR S1). 34 asserções no emulador, rodando no CI. |
-| **P0-02** | `tournament_registrations` é `allow read: if true` e guarda `player_a_email`, `player_b_email` e `competition_gender` | E-mail e gênero de **todos os inscritos em torneios** legíveis por qualquer pessoa na internet, **sem login** |
+| ~~**P0-02**~~ 🟡 | ~~`tournament_registrations` guarda `player_a_email`/`player_b_email` numa coleção de leitura pública~~ | **CONTIDO em 2026-09-09**: nenhuma inscrição NOVA grava e-mail no documento público (vai para `{rid}/private/contact`). Os documentos ANTIGOS ainda expõem, até a migração — que exige S0. 29 asserções no emulador. |
 
-Ambos são corrigíveis com alteração **aditiva e pequena** no
-`firestore.rules`. Ver `patches/P0-01-*.md` e `patches/P0-02-*.md`.
+O que falta do P0-02 é **apagar** os campos dos documentos existentes —
+passo destrutivo e irreversível, por isso preso ao S0 (backup testado).
+Ver `patches/P0-02-*.md` §Parte 3.
 
 ---
 
@@ -59,7 +65,8 @@ de os itens P0 e P1 deste estudo estarem fechados.
 | `13-PLANO-DE-DESENVOLVIMENTO.md` | ⭐ O plano em 12 PRs, priorizado por risco, com critérios de aceite | planejar a execução |
 | `14-RUNBOOK-E-GOVERNANCA.md` | Operação contínua: checklists, revisões periódicas, o que fazer todo mês | manter no ar |
 | `patches/` | ⭐ Correções **prontas para aplicar**, uma por achado crítico/alto | corrigir agora |
-| `15-RUNBOOK-S0-CONSOLE.md` | ⭐ **Para o dono executar** — PITR, backup, teste de restauração, alertas, MFA. Console do Firebase, ~30 min. **Desbloqueia o P0-02.** | proteger a base agora |
+| `15-RUNBOOK-S0-CONSOLE.md` | ⭐ **Para o dono executar** — PITR, backup, teste de restauração, alertas, MFA. Console do Firebase, ~30 min. **Desbloqueia o passo final do P0-02.** | proteger a base agora |
+| `16-ACHADO-ADMINS-EXTRAS.md` | 🔴 **ABERTO** — quatro contas `platform_admin` em produção; `hidden: true` não tira o poder | decidir e rebaixar |
 
 ## Princípios que guiaram este estudo
 

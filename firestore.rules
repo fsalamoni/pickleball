@@ -171,6 +171,51 @@ service cloud.firestore {
         && exists(/databases/$(database)/documents/club_forum_threads/$(tid))
         && (isClubAdmin(forumThreadClubId(tid)) || isPlatformAdmin());
     }
+    // ---- P0-02: o contato do inscrito sai do documento público -----------
+    // `tournament_registrations` é lido SEM login (quadro do torneio,
+    // /imprimir, /telao) e isso é intencional. Por isso o e-mail não pode
+    // morar nele: mora em `{rid}/private/contact`, e a prova de que alguém
+    // é o dono de uma inscrição provisória mora em `provisional_claims`.
+    function registrationExists(rid) {
+      return exists(/databases/$(database)/documents/tournament_registrations/$(rid));
+    }
+    function registrationData(rid) {
+      return get(/databases/$(database)/documents/tournament_registrations/$(rid)).data;
+    }
+    // Titular do dado: quem se inscreveu, a dupla, ou quem criou a inscrição.
+    function isRegistrationParty(rid) {
+      return isAuthed() && registrationExists(rid) && (
+        registrationData(rid).get('player_a_user_id', '') == request.auth.uid
+        || registrationData(rid).get('player_b_user_id', '') == request.auth.uid
+        || registrationData(rid).get('created_by', '') == request.auth.uid
+      );
+    }
+    function isRegistrationOrganizer(rid) {
+      return isAuthed() && registrationExists(rid)
+        && isTournamentAdmin(registrationData(rid).get('tournament_id', ''));
+    }
+    // E-mail do TOKEN, minúsculo. Nunca campo gravável. Provedor sem e-mail
+    // (telefone, anônimo) devolve '' — e '' não casa com nada, porque
+    // `hasTokenEmail()` é exigido em toda regra que usa isto.
+    function tokenEmailLc() {
+      return request.auth.token.get('email', '').lower();
+    }
+    function hasTokenEmail() {
+      return isAuthed() && tokenEmailLc() != '';
+    }
+    // Id determinístico: dá para conferir dentro da regra, sem hash.
+    function claimIdFor(rid, slot) { return rid + '_' + slot; }
+    // A pessoa é a dona da inscrição provisória daquele slot?
+    function isProvisionalClaimOwner(rid, slot) {
+      return hasTokenEmail()
+        && exists(/databases/$(database)/documents/provisional_claims/$(claimIdFor(rid, slot)))
+        && get(/databases/$(database)/documents/provisional_claims/$(claimIdFor(rid, slot)))
+             .data.get('email_lc', '') == tokenEmailLc();
+    }
+
+    // Prova LEGADA: o e-mail ainda está no documento público (inscrições
+    // anteriores ao P0-02). Continua valendo enquanto esses documentos
+    // existirem — é o que impede a correção de quebrar quem já se inscreveu.
     function isPlayerARegistrationEmailOwner() {
       return isAuthed()
         && request.auth.token.email is string
@@ -185,8 +230,20 @@ service cloud.firestore {
         && request.resource.data.player_b_email_lc == request.auth.token.email.lower()
         && request.resource.data.player_b_user_id == request.auth.uid;
     }
-    function isRegistrationEmailOwnerUpdate() {
-      return (isPlayerARegistrationEmailOwner()
+    // Prova NOVA: o e-mail não está mais no documento público, então quem
+    // reivindica se identifica por `provisional_claims/{rid}_a|b`. Exige, do
+    // mesmo jeito, que o resultado da escrita vincule a inscrição a QUEM está
+    // reivindicando — ninguém vincula inscrição no nome de outra pessoa.
+    function isPlayerAProvisionalOwner(rid) {
+      return isProvisionalClaimOwner(rid, 'a')
+        && request.resource.data.player_a_user_id == request.auth.uid;
+    }
+    function isPlayerBProvisionalOwner(rid) {
+      return isProvisionalClaimOwner(rid, 'b')
+        && request.resource.data.player_b_user_id == request.auth.uid;
+    }
+    function isRegistrationEmailOwnerUpdate(rid) {
+      return ((isPlayerARegistrationEmailOwner() || isPlayerAProvisionalOwner(rid))
           && request.resource.data.diff(resource.data).affectedKeys().hasOnly([
             'user_id',
             'player_a_user_id',
@@ -202,7 +259,7 @@ service cloud.firestore {
             'claimed_at',
             'updated_at',
           ]))
-        || (isPlayerBRegistrationEmailOwner()
+        || ((isPlayerBRegistrationEmailOwner() || isPlayerBProvisionalOwner(rid))
           && request.resource.data.diff(resource.data).affectedKeys().hasOnly([
             'player_b_user_id',
             'player_b_name',
@@ -803,7 +860,7 @@ service cloud.firestore {
       allow update: if isPlatformAdmin()
         || isTournamentAdmin(resource.data.tournament_id)
         || (isAuthed() && resource.data.created_by == request.auth.uid)
-        || isRegistrationEmailOwnerUpdate()
+        || isRegistrationEmailOwnerUpdate(rid)
         // Convite de dupla (flag partner_invites): o convidado responde ao
         // convite alterando SOMENTE os campos do convite.
         || (isAuthed()
@@ -814,6 +871,49 @@ service cloud.firestore {
             'updated_at',
           ]));
       allow delete: if isPlatformAdmin() || isTournamentAdmin(resource.data.tournament_id);
+
+      // ---- P0-02 · contato do inscrito (NÃO público) ----------------------
+      // O e-mail do inscrito vive AQUI, não no documento acima. Quem lê:
+      // o titular, a dupla, quem criou a inscrição, o organizador do torneio
+      // e o admin da plataforma. Nunca alguém sem login.
+      match /private/{docId} {
+        allow read: if isPlatformAdmin()
+          || isRegistrationOrganizer(rid)
+          || isRegistrationParty(rid);
+        allow write: if isPlatformAdmin()
+          || isRegistrationOrganizer(rid)
+          || isRegistrationParty(rid);
+      }
+    }
+
+    // ---- P0-02 · prova de inscrição provisória ----------------------------
+    // Quando o organizador inscreve alguém que ainda não tem conta, o e-mail
+    // não pode ficar no documento público. Esta coleção é o índice que
+    // permite à pessoa ACHAR a própria inscrição ao criar a conta — e só a
+    // dela: a leitura exige que o e-mail do TOKEN case com `email_lc`, então
+    // a consulta obrigatoriamente é `where('email_lc','==', <o meu>)`.
+    // Não há varredura possível da base.
+    // Id determinístico `{rid}_a` / `{rid}_b` para que a regra de
+    // `tournament_registrations` possa conferir a posse sem hash.
+    match /provisional_claims/{claimId} {
+      allow read: if isPlatformAdmin()
+        || (hasTokenEmail() && resource.data.get('email_lc', '') == tokenEmailLc());
+      // Cria/ajusta quem pode mexer na inscrição de origem.
+      allow create: if isPlatformAdmin()
+        || isRegistrationOrganizer(request.resource.data.get('registration_id', ''))
+        || isRegistrationParty(request.resource.data.get('registration_id', ''));
+      allow update: if isPlatformAdmin()
+        || isRegistrationOrganizer(resource.data.get('registration_id', ''))
+        || isRegistrationParty(resource.data.get('registration_id', ''))
+        // O titular apenas MARCA como reivindicada — não reescreve o e-mail
+        // nem aponta a entrada para outra inscrição.
+        || (hasTokenEmail()
+            && resource.data.get('email_lc', '') == tokenEmailLc()
+            && request.resource.data.diff(resource.data).affectedKeys()
+                 .hasOnly(['claimed', 'claimed_by', 'claimed_at', 'updated_at'])
+            && request.resource.data.get('claimed_by', '') == request.auth.uid);
+      allow delete: if isPlatformAdmin()
+        || isRegistrationOrganizer(resource.data.get('registration_id', ''));
     }
 
     match /tournament_announcements/{aid} {
@@ -879,9 +979,57 @@ service cloud.firestore {
     }
 
     // ---- Notifications ---------------------------------------------------
+    // ---- P1-06 · notificações -------------------------------------------
+    // O sino tem a credibilidade da interface oficial. `allow create: if
+    // isAuthed()` deixava qualquer conta escrever nele com texto e LINK
+    // arbitrários — phishing com a cara do produto. O link é o que fazia o
+    // estrago: agora só rota interna passa.
+    //
+    // HONESTIDADE SOBRE O QUE ISTO **NÃO** RESOLVE: continua sendo possível
+    // escrever uma notificação de texto no sino de outra pessoa. Fechar isso
+    // exigiria provar, na regra, a relação entre quem escreve e quem recebe —
+    // e são 48 pontos de chamada legítimos (convite de dupla, mensagem, tópico
+    // de fórum, inscrição em clube), sem uma relação única e barata de provar.
+    // Também não exigimos `actor_id == uid`: em vários fluxos legítimos o ator
+    // NÃO é quem está logado (o admin do torneio age em nome do criador). Ver
+    // `docs/20-SEGURANCA-E-PRIVACIDADE/01-AUDITORIA-ACHADOS.md` § P1-06.
+    function isKnownNotificationType(t) {
+      return t in [
+        'chat_message', 'chat_invite', 'forum_reply', 'forum_mention',
+        'event_invite', 'club_join_request', 'club_join_approved',
+        'club_join_rejected', 'club_invite', 'club_invite_accepted',
+        'club_event_published', 'tournament_open', 'tournament_announcement',
+        'partner_invite', 'partner_response', 'profile_reminder',
+        'leveling_reminder', 'generic',
+      ];
+    }
+    function isInternalLink(l) {
+      // Só caminho interno da própria aplicação. Sem http(s):, sem
+      // javascript:, e — o caso que o teste pegou — sem '//' no início: uma
+      // URL relativa a protocolo (`//site-falso.com`) começa com '/' e o
+      // navegador a trata como OUTRO DOMÍNIO. Por isso o primeiro caractere
+      // depois da barra não pode ser outra barra.
+      return l == null || (
+        l is string && l.size() <= 600
+        && l.matches('^/([A-Za-z0-9_?=&%.:-][A-Za-z0-9/_?=&%.:-]*)?$')
+      );
+    }
     match /notifications/{nid} {
       allow read, update: if isAuthed() && resource.data.user_id == request.auth.uid;
-      allow create: if isAuthed();
+      allow create: if isAuthed()
+        && request.resource.data.user_id is string
+        && request.resource.data.user_id.size() > 0
+        && isKnownNotificationType(request.resource.data.get('type', 'generic'))
+        // FOLGA PROPOSITAL: o serviço corta em 140/300, mas ele conta em
+        // unidades UTF-16 do JavaScript e a regra conta caracteres. Com emoji
+        // os dois números divergem, e uma notificação legítima seria recusada
+        // em silêncio. O limite aqui existe para barrar payload gigante, não
+        // para repetir a validação do cliente — então vai com margem.
+        && request.resource.data.get('title', '').size() <= 300
+        && request.resource.data.get('message', '').size() <= 600
+        && isInternalLink(request.resource.data.get('link', null))
+        // Nasce sempre não lida — ninguém cria já marcada para escapar do sino.
+        && request.resource.data.get('read', false) == false;
       allow delete: if isPlatformAdmin();
     }
 

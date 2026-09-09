@@ -5,6 +5,7 @@
  * (para o Excel pt-BR reconhecer UTF-8) e separador `;` (padrão brasileiro).
  * Sem I/O — o download é responsabilidade da UI.
  */
+import { resolveRegistrationContact } from './registrationContact.js';
 
 const BOM = String.fromCharCode(0xFEFF);
 const SEP = ';';
@@ -35,20 +36,26 @@ const HEADERS = [
  * @param {Array} [opts.modalities] para mapear modality_id → nome
  * @param {Record<string,string>} [opts.statusLabels]
  * @param {Record<string,string>} [opts.paymentLabels]
+ * @param {Map<string,object>} [opts.contacts] P0-02 — contato por id da
+ *   inscrição, vindo da subcoleção privada. Ausente, cai no campo público
+ *   (inscrições legadas), então o CSV do organizador nunca fica sem e-mail.
  * @returns {string} CSV (com BOM)
  */
 export function buildRegistrationsCsv(registrations = [], opts = {}) {
-  const { modalities = [], statusLabels = {}, paymentLabels = {} } = opts;
+  const {
+    modalities = [], statusLabels = {}, paymentLabels = {}, contacts = null,
+  } = opts;
   const modalityName = new Map(modalities.map((m) => [m.id, m.name]));
+  const contatoDe = (r) => resolveRegistrationContact(r, contacts?.get?.(r.id) || null);
 
   const rows = (registrations || []).map((r) => csvRow([
     modalityName.get(r.modality_id) || r.modality_name || '',
     r.label || `${r.player_a_name || ''}${r.player_b_name ? ` / ${r.player_b_name}` : ''}`,
     r.player_a_name || '',
-    r.player_a_email || '',
+    contatoDe(r).player_a_email || '',
     r.player_a_level || '',
     r.player_b_name || '',
-    r.player_b_email || '',
+    contatoDe(r).player_b_email || '',
     r.player_b_level || '',
     statusLabels[r.status] || r.status || '',
     r.is_provisional ? 'Sim' : '',

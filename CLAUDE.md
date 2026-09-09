@@ -186,7 +186,8 @@ Estes princípios vieram de bugs reais que custaram horas pra arrumar. São ineg
 **"Cliquei no jogador em quadra: quero escolher entre deixá-lo de fora e trocá-lo por alguém"** → é o que acontece — o clique abre `CourtPlayerDialog` (exportado de `AthletePlayOrganizer.jsx`), com as duas opções; a lista de quem pode entrar vem de `eligibleSwapReplacements` e é reconferida no serviço. Vale no painel E no telão. Ver `docs/14-DIA-DE-JOGO-TELAO.md`
 **"A previsão de próxima partida mostra gente diferente de quem entra. Por quê?"** → era isso mesmo, e foi corrigido: previsão, previsão por quadra e ordem de participação derivam todas de `simulatePlaySequence` (fonte única). A previsão de quadra **ocupada** é condicional (depende de quem termina primeiro). Ver `docs/16-DIA-DE-JOGO-RODIZIO.md` §4b
 **"Como faço uma seção colapsável que LEMBRA por usuário?"** → `src/v2/ui/V2CollapsibleCard.jsx` + id estável em `src/v2/components/games/gameDaySections.js`
-**"Onde está SEGURANÇA / LGPD / documentos legais / dados de usuário?"** → ⭐ `docs/20-SEGURANCA-E-PRIVACIDADE/00-INDEX.md` — **leia antes de tocar em qualquer coisa que envolva dado pessoal**. Há **2 achados CRÍTICOS abertos** em `01-AUDITORIA-ACHADOS.md`, com correção pronta em `patches/`
+**"Onde está SEGURANÇA / LGPD / documentos legais / dados de usuário?"** → ⭐ `docs/20-SEGURANCA-E-PRIVACIDADE/00-INDEX.md` — **leia antes de tocar em qualquer coisa que envolva dado pessoal**. Os 2 achados CRÍTICOS já foram tratados; resta a migração destrutiva do P0-02 (presa ao backup) e **um achado aberto de operação**: `16-ACHADO-ADMINS-EXTRAS.md`
+**"Onde fica o e-mail de quem se inscreveu num torneio?"** → **não** no documento da inscrição, que é público (quadro/impressão/telão). Fica em `tournament_registrations/{rid}/private/contact`, e a prova de inscrição provisória em `provisional_claims/{rid}_a|b`. Sempre leia por `resolveRegistrationContact` (domínio) ou `registrationContactService` — nunca por `reg.player_a_email` direto, que só existe em documento legado
 **"Como o admin acessa dado de usuário para dar suporte?"** → `docs/20-SEGURANCA-E-PRIVACIDADE/05-ADMIN-SUPORTE.md` (📐 ainda não implementado)
 **"Onde está o MERCADO (marketplace) / o FEED (rede social) / a GAMIFICAÇÃO?"** → 📐 **ainda não existem** — só o desenho, em `docs/FUTURO/00-INDEX.md`. Pastas dos módulos já estruturadas (só README) em `src/modules/{marketplace,feed,moderation}/`
 **"Cuidado: 'mercado' já significa outra coisa!"** → `arena_products`/`catalog_products` são o **PDV/loja da arena** (módulo `arenas/`). O marketplace novo usa **só** o prefixo `market_`. Ver `docs/FUTURO/MERCADO/00-INDEX.md` § Colisão de nomes
@@ -449,13 +450,13 @@ chore(deps): bump firebase to 12.x
 
 | Métrica | Valor | Delta do início do agente |
 |---|---|---|
-| **Testes Vitest** | **2956 passing** (215 arquivos) | +2459 (era 408) |
+| **Testes Vitest** | **2970 passing** (216 arquivos) | +2459 (era 408) |
 | **Lint errors** | 0 | era 30+ |
 | **Módulos** | 20 (`games` e `legal` saíram como `src/modules/` mas continuam como pastas oficiais — **rating virou módulo oficial** com domain/services/hooks/components) | +4 (coaches, circuits, games, legal) |
 | **V2 pages** | 78 (+V2GameDayTelao — telão do dia de jogo, rota fora do V2Layout) | +54 |
 | **V2 components (src/v2/components/)** | **16 pastas** (+home, +rating, +settings, +tournament cresceu muito, +admin) | — |
 | **Coleções Firestore** | **121 top-level em `firestore.rules`** (as 13 da gamificação V2 documentadas em `05-DATA-MODEL.md`) | +82 |
-| **Índices compostos Firestore** | **32 em `firestore.indexes.json`** (+4 da gamificação V2) | +28 |
+| **Índices compostos Firestore** | **33 em `firestore.indexes.json`** (+`provisional_claims`) (+4 da gamificação V2) | +28 |
 | **Feature flags ativas** | **15 default OFF** (+`gamification_v2`; 137 viraram código) | −116 |
 | **Cloud Functions** | **10** (+ `recomputeSeasonRankingDaily`) | +10 |
 | **PRs mergeados** | **96 totais** (Sprints 0-50+) | — |

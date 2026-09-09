@@ -107,16 +107,15 @@ export function duplicatedRegistrationFields(reg = {}) {
     user_id: reg.user_id || reg.player_a_user_id || null,
     player_a_user_id: reg.player_a_user_id || null,
     player_a_name: reg.player_a_name || '',
-    player_a_email: reg.player_a_email || '',
-    player_a_email_lc: reg.player_a_email_lc || reg.player_a_email || '',
+    // P0-02: e-mail NÃO é copiado para o documento público do destino — isso
+    // recriaria o vazamento a cada duplicação de torneio. O contato é copiado
+    // para a subcoleção privada por `tournamentDuplicationService`.
     player_a_level: reg.player_a_level || null,
     player_a_competition_gender: reg.player_a_competition_gender || null,
     player_a_photo: reg.player_a_photo || null,
     player_a_provisional: Boolean(reg.player_a_provisional),
     player_b_user_id: reg.player_b_user_id || null,
     player_b_name: reg.player_b_name || '',
-    player_b_email: reg.player_b_email || '',
-    player_b_email_lc: reg.player_b_email_lc || reg.player_b_email || '',
     player_b_level: reg.player_b_level || null,
     player_b_competition_gender: reg.player_b_competition_gender || null,
     player_b_photo: reg.player_b_photo || null,

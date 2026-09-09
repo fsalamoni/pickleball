@@ -113,9 +113,26 @@ describe('duplicatedRegistrationFields', () => {
     expect(out.seed).toBeNull();
     expect(out.status).toBe(REGISTRATION_STATUS.CONFIRMED);
     expect(out.player_a_user_id).toBe('u1');
-    expect(out.player_a_email_lc).toBe('ANA@x.com'); // usa o lc informado ou o email cru
     expect(out.player_b_name).toBe('Bia');
     expect(out.is_provisional).toBe(true);
+  });
+
+  it('⭐ P0-02: o e-mail NÃO é copiado para o documento público do destino', () => {
+    // Copiar o e-mail aqui recriaria, a cada duplicação de torneio, o
+    // vazamento que a correção fechou. O contato é copiado pela subcoleção
+    // privada, em `tournamentDuplicationService`.
+    const out = duplicatedRegistrationFields({
+      format: 'doubles',
+      player_a_name: 'Ana', player_a_email: 'ana@x.com', player_a_email_lc: 'ana@x.com',
+      player_b_name: 'Bia', player_b_email: 'bia@x.com', player_b_email_lc: 'bia@x.com',
+    });
+    expect(out).not.toHaveProperty('player_a_email');
+    expect(out).not.toHaveProperty('player_a_email_lc');
+    expect(out).not.toHaveProperty('player_b_email');
+    expect(out).not.toHaveProperty('player_b_email_lc');
+    // O que o quadro precisa continua vindo junto.
+    expect(out.player_a_name).toBe('Ana');
+    expect(out.player_b_name).toBe('Bia');
   });
 });
 

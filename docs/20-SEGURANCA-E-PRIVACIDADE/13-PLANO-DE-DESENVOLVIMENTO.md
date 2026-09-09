@@ -8,12 +8,12 @@
 
 | PR | Nome | Fecha | Esforço | Risco de quebrar | Estado |
 |---|---|---|---|---|---|
-| **S0** | Rede de proteção | P2-03, P3-05 | 4h | nenhum | ⏳ **com o dono** — `15-RUNBOOK-S0-CONSOLE.md` |
+| **S0** | Rede de proteção | P2-03, P3-05 | 4h | nenhum | 🟡 **parcial** — o dono executou o que dava; **backup agendado segue ⊖ nos 3 bancos**. Ver `16-ACHADO-ADMINS-EXTRAS.md` |
 | **S1** | 🔴 Escalação de privilégio | P0-01 | 1 dia | baixo | ✅ **feito e no ar** (2026-09-07) |
 | **S1b** | E-mail como nome público | P1-02 | 2h | nenhum | ✅ **feito e no ar** (2026-09-07) |
-| **S2** | 🔴 E-mails públicos | P0-02 | 3 dias | **médio** (migração) | 🚧 **bloqueado pelo S0** |
+| **S2** | 🔴 E-mails públicos | P0-02 | 3 dias | **médio** (migração) | 🟡 **contido (2026-09-09)** — passos 1-5 feitos; falta só apagar os campos antigos, que exige S0 |
 | **S3** | Endurecimento rápido | P1-04, P1-05, P1-07, P3-01 | 2 dias | baixo | ✅ **feito e no ar** (2026-09-07) |
-| **S4** | Testes de regras no CI | P3-08 | 3 dias | nenhum |
+| **S4** | Testes de regras no CI | P3-08, P1-06 | 3 dias | nenhum | ✅ **feito e no ar** (2026-09-09) — 125 asserções |
 | **S5** | Custom claims e papéis | P0-01 etapa 2, P1-08 | 4 dias | médio |
 | **S6** | App Check | P1-03 | 2 dias + 2 semanas de observação | médio |
 | **S7** | 🛟 Console de suporte | o pedido do dono | 8 dias | baixo (aditivo) |
@@ -68,7 +68,22 @@ transforma erro irreversível em erro recuperável.
 **Aceite**: usuário comum não consegue escrever `role` no próprio doc;
 todos os fluxos de login e edição de perfil continuam funcionando.
 
-## S2 — 🔴 E-mails públicos 🚧 BLOQUEADO PELO S0
+## S2 — 🔴 E-mails públicos 🟡 CONTIDO (2026-09-09)
+
+> **Feito**: nenhuma inscrição NOVA grava e-mail no documento público. O
+> contato passou a viver em `tournament_registrations/{rid}/private/contact`,
+> e a prova de inscrição provisória em `provisional_claims/{rid}_a|b`.
+> Criação, edição, duplicação de torneio, *claim* no login, aba do
+> organizador, exportação CSV e as ferramentas de admin já leem do lugar novo,
+> **com fallback** para o campo público enquanto existirem documentos antigos.
+> 29 asserções no emulador; uma delas prova que o *claim* das inscrições
+> LEGADAS continua funcionando.
+>
+> **Falta**: apagar os campos `player_a_email`/`player_b_email`/`_lc` dos
+> documentos que já existem. É irreversível e continua **preso ao S0**.
+> Enquanto isso, o vazamento **parou de crescer** mas não foi eliminado.
+
+### Histórico do bloqueio
 
 > **Não iniciado, de propósito.** O passo de migração apaga campos de
 > documentos existentes e, sem PITR/backup testado, é irreversível.
@@ -124,13 +139,18 @@ deploy. Exige S0 concluído.
 **Aceite**: login Google funciona (COOP), upload funciona, foto sai sem
 GPS, nenhuma violação de CSP legítima no relatório.
 
-## S4 — Testes de regras no CI
-`test/regras-firestore`
+## S4 — Testes de regras no CI ✅ CONCLUÍDO (2026-09-09)
 
-- [ ] Emulador no CI (`ci.yml`)
-- [ ] Suíte cobrindo: `users`, `tournament_registrations`, `audit_logs`,
+- [x] Emulador no CI (`ci.yml`, job `firestore-rules`)
+- [x] Suíte cobrindo: `users`, `tournament_registrations`, `audit_logs`,
       `notifications`, `athlete_profiles`, `conversations`, Storage
-- [ ] Falha o CI se qualquer asserção quebrar
+      (+ `game_days` e gamificação, que já tinham cobertura)
+- [x] Falha o CI se qualquer asserção quebrar
+
+**125 asserções.** Fechou junto o **P1-06** (notificação forjada): o sino
+agora só aceita tipo conhecido, título/mensagem dentro do limite, e **link
+interno** — o teste pegou que `//site-falso.com` passava pela primeira versão
+da regra, porque começa com `/` e o navegador o trata como outro domínio.
 
 **Por que aqui**: é o que **impede a volta** do P0-01. Sem isto, a
 correção do S1 dura até a próxima refatoração distraída.

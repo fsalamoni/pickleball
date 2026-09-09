@@ -30,6 +30,11 @@ import {
   TOURNAMENT_VISIBILITY,
 } from '../domain/constants.js';
 import { countOccupiedRegistrations, isRegistrationCapacityReached } from '../domain/capacity.js';
+import {
+  saveRegistrationContact, findProvisionalClaims, fetchRegistrationsForClaims,
+  markClaimsClaimed,
+} from './registrationContactService.js';
+import { hasLegacyPublicEmail } from '../domain/registrationContact.js';
 import { buildPlaceholderRegistrationFields, neededPlaceholderCount } from '../domain/placeholders.js';
 import {
   buildOfficialPlayer,
@@ -125,16 +130,15 @@ export async function createRegistration(input, actor) {
       displayName: actor?.displayName,
       email: actor?.email,
     }),
-    player_a_email: playerAEmail,
-    player_a_email_lc: playerAEmail,
+    // P0-02: `player_a_email`/`player_b_email` NÃO entram mais aqui. Este
+    // documento é lido sem login (quadro, impressão, telão). O contato vai
+    // para `{id}/private/contact`, logo abaixo.
     player_a_level: player_a?.level || null,
     player_a_competition_gender: player_a?.competition_gender || null,
     player_a_photo: player_a?.photo_url || null,
     player_a_provisional: Boolean(playerAEmail && !playerAUserId),
     player_b_user_id: playerBUserId,
     player_b_name: player_b?.name?.trim() || '',
-    player_b_email: playerBEmail,
-    player_b_email_lc: playerBEmail,
     player_b_level: player_b?.level || null,
     player_b_competition_gender: player_b?.competition_gender || null,
     player_b_photo: player_b?.photo_url || null,
@@ -156,6 +160,20 @@ export async function createRegistration(input, actor) {
   }
 
   await setDoc(doc(db, COL, id), payload);
+  // O contato vai para a subcoleção privada DEPOIS do pai existir — a regra
+  // do Firestore consulta o documento-pai para decidir quem pode escrever.
+  // Se isto falhar, a inscrição já está criada e visível; o organizador pode
+  // reeditar para informar o e-mail. Preferimos isso a perder a inscrição.
+  try {
+    await saveRegistrationContact({
+      registrationId: id,
+      tournamentId: tournament_id,
+      modalityId: modality_id,
+      playerAEmail, playerAUserId, playerBEmail, playerBUserId,
+    });
+  } catch (e) {
+    logger.error('falha ao gravar o contato da inscrição', { id, erro: e?.code || e?.message });
+  }
   await createAuditLog({
     action: 'registration_created',
     actor,
@@ -272,6 +290,39 @@ export async function claimProvisionalRegistrationsForUser(user, profile = {}, o
     };
   });
 
+  // P0-02 · SEGUNDA FONTE. As inscrições criadas depois da correção não têm
+  // e-mail no documento público, então as consultas acima não as encontram.
+  // Elas são achadas por `provisional_claims`, que a regra só deixa a pessoa
+  // ler para o PRÓPRIO e-mail. As duas fontes convivem: a de cima acha o
+  // legado, esta acha o novo, e a deduplicação por id impede aplicar duas
+  // vezes o mesmo documento.
+  let provasUsadas = [];
+  try {
+    const provas = await findProvisionalClaims(allEmails);
+    if (provas.length > 0) {
+      const encontrados = await fetchRegistrationsForClaims(provas);
+      const porId = new Map(encontrados.map((r) => [r.id, r]));
+      provas.forEach((prova) => {
+        const alvo = porId.get(prova.registration_id);
+        if (!alvo) return;
+        const em = normalizeEmail(prova.email_lc);
+        if (!byEmail[em]) return;
+        const lado = prova.slot === 'b' ? 'b' : 'a';
+        // Mesma forma de um snapshot do Firestore, para o restante do fluxo
+        // não precisar saber de onde o documento veio.
+        const adaptado = { id: alvo.id, ref: alvo.ref, data: () => alvo.data };
+        if (byEmail[em][lado].some((d) => d.id === alvo.id)) return;
+        byEmail[em][lado].push(adaptado);
+        provasUsadas.push(prova);
+      });
+    }
+  } catch (e) {
+    // A correção não pode derrubar o login. Sem a segunda fonte, o claim
+    // continua funcionando exatamente como antes, para o legado.
+    logger.error('falha ao consultar as provas de inscrição provisória', { erro: e?.code || e?.message });
+    provasUsadas = [];
+  }
+
   const player = officialPlayerData(user, profile);
   const updatesById = new Map();
 
@@ -283,8 +334,13 @@ export async function claimProvisionalRegistrationsForUser(user, profile = {}, o
       updates.data.player_a_user_id = user.uid;
       updates.data.user_id = user.uid;
       updates.data.player_a_name = player.name;
-      updates.data.player_a_email = player.email;
-      updates.data.player_a_email_lc = em;
+      // P0-02: só reescreve o e-mail em documento LEGADO (que já o expõe).
+      // Em documento novo, escrever isso recriaria o vazamento que a
+      // correção acabou de fechar.
+      if (hasLegacyPublicEmail(reg)) {
+        updates.data.player_a_email = player.email;
+        updates.data.player_a_email_lc = em;
+      }
       updates.data.player_a_level = player.level;
       // Não apaga o gênero já informado (ex.: admin inseriu) se o perfil não tiver.
       updates.data.player_a_competition_gender = player.competition_gender || reg.player_a_competition_gender || null;
@@ -297,8 +353,10 @@ export async function claimProvisionalRegistrationsForUser(user, profile = {}, o
       const updates = updatesById.get(docSnap.id) || { ref: docSnap.ref, data: { ...reg } };
       updates.data.player_b_user_id = user.uid;
       updates.data.player_b_name = player.name;
-      updates.data.player_b_email = player.email;
-      updates.data.player_b_email_lc = em;
+      if (hasLegacyPublicEmail(reg)) {
+        updates.data.player_b_email = player.email;
+        updates.data.player_b_email_lc = em;
+      }
       updates.data.player_b_level = player.level;
       updates.data.player_b_competition_gender = player.competition_gender || reg.player_b_competition_gender || null;
       updates.data.player_b_photo = player.photo_url;
@@ -344,6 +402,7 @@ export async function claimProvisionalRegistrationsForUser(user, profile = {}, o
     });
     await batch.commit();
   }
+  await markClaimsClaimed(provasUsadas, user.uid);
   await createAuditLog({
     action: 'provisional_registrations_claimed',
     actor: user,
@@ -426,6 +485,21 @@ export async function migrateProvisionalData(options = {}, actor) {
       matched.push({ id: d.id, ref: d.ref, data: d.data() });
     });
   });
+  // P0-02 · as inscrições criadas depois da correção não têm e-mail no
+  // documento público; as consultas acima não as alcançam. O admin as encontra
+  // por `provisional_claims`. Sem isto a ferramenta diria "nada encontrado"
+  // para uma inscrição que existe — pior do que não existir.
+  try {
+    const provas = await findProvisionalClaims(aliasEmails);
+    const extras = await fetchRegistrationsForClaims(provas);
+    extras.forEach((r) => {
+      if (seen.has(r.id)) return;
+      seen.add(r.id);
+      matched.push(r);
+    });
+  } catch (e) {
+    logger.error('falha ao consultar provas na migração por e-mail', { erro: e?.code || e?.message });
+  }
 
   // 3) Calcula o diff puro para cada registration.
   const diffs = [];
@@ -617,23 +691,35 @@ export async function updateRegistration(id, updates, actor) {
 export async function updateRegistrationDetails(id, input, actor) {
   const { format, player_a = {}, player_b = null } = input;
   const aEmail = normalizeEmail(player_a.email);
+  // P0-02: e-mail NÃO volta para o documento público. Vai para a subcoleção
+  // privada, junto com a prova de reivindicação se o slot for provisório.
   const updates = {
     player_a_name: String(player_a.name || '').trim(),
-    player_a_email: aEmail,
-    player_a_email_lc: aEmail,
     player_a_level: player_a.level || null,
     player_a_competition_gender: player_a.competition_gender || null,
   };
+  let bEmail = '';
   if (format === MODALITY_FORMAT.DOUBLES) {
-    const bEmail = normalizeEmail(player_b?.email);
+    bEmail = normalizeEmail(player_b?.email);
     updates.player_b_name = String(player_b?.name || '').trim();
-    updates.player_b_email = bEmail;
-    updates.player_b_email_lc = bEmail;
     updates.player_b_level = player_b?.level || null;
     updates.player_b_competition_gender = player_b?.competition_gender || null;
   }
   updates.label = buildRegistrationLabel(updates, format);
   await updateDoc(doc(db, COL, id), { ...updates, updated_at: serverTimestamp() });
+  const atual = await getDoc(doc(db, COL, id));
+  const dados = atual.exists() ? atual.data() : {};
+  try {
+    await saveRegistrationContact({
+      registrationId: id,
+      tournamentId: dados.tournament_id || null,
+      modalityId: dados.modality_id || null,
+      playerAEmail: aEmail, playerAUserId: dados.player_a_user_id || null,
+      playerBEmail: bEmail, playerBUserId: dados.player_b_user_id || null,
+    });
+  } catch (e) {
+    logger.error('falha ao gravar o contato ao editar a inscrição', { id, erro: e?.code || e?.message });
+  }
   await createAuditLog({ action: 'registration_edited', actor, details: { registration_id: id } });
 }
 

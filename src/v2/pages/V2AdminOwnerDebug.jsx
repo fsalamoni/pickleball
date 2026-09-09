@@ -181,11 +181,19 @@ export default function V2AdminOwnerDebug() {
               where('player_b_email_lc', '==', email), limit(50)),
           ),
         ]);
+        // P0-02: as inscrições novas não têm e-mail no documento público —
+        // aparecem por `provisional_claims`. Sem esta seção o diagnóstico
+        // diria "nenhuma inscrição" para quem tem inscrição.
+        const claimsSnap = await getDocs(query(
+          collection(db, 'provisional_claims'), where('email_lc', '==', email), limit(50),
+        )).catch(() => ({ size: 0, docs: [] }));
         out.sections.tournament_registrations_by_email = {
           count_player_a: aSnap.size,
           count_player_b: bSnap.size,
+          count_provisional_claims: claimsSnap.size,
           docs_player_a: aSnap.docs.map((d) => ({ id: d.id, ...d.data() })),
           docs_player_b: bSnap.docs.map((d) => ({ id: d.id, ...d.data() })),
+          docs_provisional_claims: (claimsSnap.docs || []).map((d) => ({ id: d.id, ...d.data() })),
         };
       } catch (err) {
         out.sections.tournament_registrations_by_email = { error: err.message, code: err.code };

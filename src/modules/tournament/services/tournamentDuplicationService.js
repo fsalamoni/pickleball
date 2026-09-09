@@ -23,7 +23,11 @@ import {
   writeBatch,
 } from 'firebase/firestore';
 import { db } from '@/core/config/firebase';
+import {
+  fetchRegistrationContact, saveRegistrationContact,
+} from './registrationContactService.js';
 import { createAuditLog } from '@/core/services/auditService';
+import { logger } from '@/core/lib/logger';
 import { createTournament } from './tournamentService.js';
 import { createModality } from './modalityService.js';
 import {
@@ -64,6 +68,7 @@ export async function duplicateTournament(actor, params) {
   let modalityCount = 0;
   const registrationWrites = [];
 
+  const contactCopies = [];
   for (const entry of modalities) {
     if (!entry?.modality) continue;
     const newModalityId = await createModality(
@@ -77,6 +82,11 @@ export async function duplicateTournament(actor, params) {
       const regs = copyableRegistrations(entry.registrations || []);
       for (const reg of regs) {
         const newId = doc(collection(db, REGISTRATIONS_COL)).id;
+        // P0-02: guarda a origem para copiar o CONTATO (que não vive mais no
+        // documento público) para a subcoleção privada do destino.
+        contactCopies.push({
+          origem: reg, novoId: newId, tournamentId, modalityId: newModalityId,
+        });
         registrationWrites.push({
           ref: doc(db, REGISTRATIONS_COL, newId),
           payload: {
@@ -102,6 +112,31 @@ export async function duplicateTournament(actor, params) {
     });
     await batch.commit();
     registrationCount += Math.min(SAFE_BATCH_WRITE_SIZE, registrationWrites.length - i);
+  }
+
+  // 3b) P0-02 · o contato acompanha a inscrição, mas pela subcoleção privada.
+  // Best-effort: uma cópia de torneio que dá certo e perde um e-mail é melhor
+  // do que uma que falha inteira. O que falhar aparece no log.
+  for (const c of contactCopies) {
+    try {
+      // eslint-disable-next-line no-await-in-loop
+      const contato = await fetchRegistrationContact(c.origem);
+      if (!contato.player_a_email && !contato.player_b_email) continue;
+      // eslint-disable-next-line no-await-in-loop
+      await saveRegistrationContact({
+        registrationId: c.novoId,
+        tournamentId: c.tournamentId,
+        modalityId: c.modalityId,
+        playerAEmail: contato.player_a_email,
+        playerAUserId: c.origem.player_a_user_id || null,
+        playerBEmail: contato.player_b_email,
+        playerBUserId: c.origem.player_b_user_id || null,
+      });
+    } catch (e) {
+      logger.error('falha ao copiar o contato na duplicação', {
+        origem: c.origem?.id, destino: c.novoId, erro: e?.code || e?.message,
+      });
+    }
   }
 
   await createAuditLog({

@@ -4,258 +4,470 @@
       "collectionGroup": "tournaments",
       "queryScope": "COLLECTION",
       "fields": [
-        { "fieldPath": "creator_uid", "order": "ASCENDING" },
-        { "fieldPath": "created_at", "order": "DESCENDING" }
+        {
+          "fieldPath": "creator_uid",
+          "order": "ASCENDING"
+        },
+        {
+          "fieldPath": "created_at",
+          "order": "DESCENDING"
+        }
       ]
     },
     {
       "collectionGroup": "tournament_admins",
       "queryScope": "COLLECTION",
       "fields": [
-        { "fieldPath": "user_id", "order": "ASCENDING" },
-        { "fieldPath": "created_at", "order": "DESCENDING" }
+        {
+          "fieldPath": "user_id",
+          "order": "ASCENDING"
+        },
+        {
+          "fieldPath": "created_at",
+          "order": "DESCENDING"
+        }
       ]
     },
     {
       "collectionGroup": "tournament_registrations",
       "queryScope": "COLLECTION",
       "fields": [
-        { "fieldPath": "tournament_id", "order": "ASCENDING" },
-        { "fieldPath": "created_at", "order": "ASCENDING" }
+        {
+          "fieldPath": "tournament_id",
+          "order": "ASCENDING"
+        },
+        {
+          "fieldPath": "created_at",
+          "order": "ASCENDING"
+        }
       ]
     },
     {
       "collectionGroup": "tournament_registrations",
       "queryScope": "COLLECTION",
       "fields": [
-        { "fieldPath": "modality_id", "order": "ASCENDING" },
-        { "fieldPath": "created_at", "order": "ASCENDING" }
+        {
+          "fieldPath": "modality_id",
+          "order": "ASCENDING"
+        },
+        {
+          "fieldPath": "created_at",
+          "order": "ASCENDING"
+        }
       ]
     },
     {
       "collectionGroup": "tournament_registrations",
       "queryScope": "COLLECTION",
       "fields": [
-        { "fieldPath": "user_id", "order": "ASCENDING" },
-        { "fieldPath": "created_at", "order": "DESCENDING" }
+        {
+          "fieldPath": "user_id",
+          "order": "ASCENDING"
+        },
+        {
+          "fieldPath": "created_at",
+          "order": "DESCENDING"
+        }
       ]
     },
     {
       "collectionGroup": "tournament_registrations",
       "queryScope": "COLLECTION",
       "fields": [
-        { "fieldPath": "player_a_user_id", "order": "ASCENDING" },
-        { "fieldPath": "created_at", "order": "DESCENDING" }
+        {
+          "fieldPath": "player_a_user_id",
+          "order": "ASCENDING"
+        },
+        {
+          "fieldPath": "created_at",
+          "order": "DESCENDING"
+        }
       ]
     },
     {
       "collectionGroup": "tournament_registrations",
       "queryScope": "COLLECTION",
       "fields": [
-        { "fieldPath": "player_b_user_id", "order": "ASCENDING" },
-        { "fieldPath": "created_at", "order": "DESCENDING" }
+        {
+          "fieldPath": "player_b_user_id",
+          "order": "ASCENDING"
+        },
+        {
+          "fieldPath": "created_at",
+          "order": "DESCENDING"
+        }
       ]
     },
     {
       "collectionGroup": "tournament_registrations",
       "queryScope": "COLLECTION",
       "fields": [
-        { "fieldPath": "player_a_email_lc", "order": "ASCENDING" },
-        { "fieldPath": "created_at", "order": "DESCENDING" }
+        {
+          "fieldPath": "player_a_email_lc",
+          "order": "ASCENDING"
+        },
+        {
+          "fieldPath": "created_at",
+          "order": "DESCENDING"
+        }
       ]
     },
     {
       "collectionGroup": "tournament_registrations",
       "queryScope": "COLLECTION",
       "fields": [
-        { "fieldPath": "player_b_email_lc", "order": "ASCENDING" },
-        { "fieldPath": "created_at", "order": "DESCENDING" }
+        {
+          "fieldPath": "player_b_email_lc",
+          "order": "ASCENDING"
+        },
+        {
+          "fieldPath": "created_at",
+          "order": "DESCENDING"
+        }
       ]
     },
     {
       "collectionGroup": "tournament_matches",
       "queryScope": "COLLECTION",
       "fields": [
-        { "fieldPath": "modality_id", "order": "ASCENDING" },
-        { "fieldPath": "stage_index", "order": "ASCENDING" },
-        { "fieldPath": "round", "order": "ASCENDING" },
-        { "fieldPath": "position", "order": "ASCENDING" }
+        {
+          "fieldPath": "modality_id",
+          "order": "ASCENDING"
+        },
+        {
+          "fieldPath": "stage_index",
+          "order": "ASCENDING"
+        },
+        {
+          "fieldPath": "round",
+          "order": "ASCENDING"
+        },
+        {
+          "fieldPath": "position",
+          "order": "ASCENDING"
+        }
       ]
     },
     {
       "collectionGroup": "tournament_modalities",
       "queryScope": "COLLECTION",
       "fields": [
-        { "fieldPath": "tournament_id", "order": "ASCENDING" },
-        { "fieldPath": "created_at", "order": "ASCENDING" }
+        {
+          "fieldPath": "tournament_id",
+          "order": "ASCENDING"
+        },
+        {
+          "fieldPath": "created_at",
+          "order": "ASCENDING"
+        }
       ]
     },
     {
       "collectionGroup": "tournament_courts",
       "queryScope": "COLLECTION",
       "fields": [
-        { "fieldPath": "tournament_id", "order": "ASCENDING" },
-        { "fieldPath": "order", "order": "ASCENDING" }
+        {
+          "fieldPath": "tournament_id",
+          "order": "ASCENDING"
+        },
+        {
+          "fieldPath": "order",
+          "order": "ASCENDING"
+        }
       ]
     },
     {
       "collectionGroup": "club_events",
       "queryScope": "COLLECTION",
       "fields": [
-        { "fieldPath": "club_id", "order": "ASCENDING" },
-        { "fieldPath": "visibility", "order": "ASCENDING" }
+        {
+          "fieldPath": "club_id",
+          "order": "ASCENDING"
+        },
+        {
+          "fieldPath": "visibility",
+          "order": "ASCENDING"
+        }
       ]
     },
     {
       "collectionGroup": "arena_open_slots",
       "queryScope": "COLLECTION",
       "fields": [
-        { "fieldPath": "arena_id", "order": "ASCENDING" },
-        { "fieldPath": "starts_at", "order": "ASCENDING" }
+        {
+          "fieldPath": "arena_id",
+          "order": "ASCENDING"
+        },
+        {
+          "fieldPath": "starts_at",
+          "order": "ASCENDING"
+        }
       ]
     },
     {
       "collectionGroup": "arena_waitlist",
       "queryScope": "COLLECTION",
       "fields": [
-        { "fieldPath": "arena_id", "order": "ASCENDING" },
-        { "fieldPath": "created_at", "order": "DESCENDING" }
+        {
+          "fieldPath": "arena_id",
+          "order": "ASCENDING"
+        },
+        {
+          "fieldPath": "created_at",
+          "order": "DESCENDING"
+        }
       ]
     },
     {
       "collectionGroup": "arena_members",
       "queryScope": "COLLECTION",
       "fields": [
-        { "fieldPath": "arena_id", "order": "ASCENDING" },
-        { "fieldPath": "tier", "order": "ASCENDING" }
+        {
+          "fieldPath": "arena_id",
+          "order": "ASCENDING"
+        },
+        {
+          "fieldPath": "tier",
+          "order": "ASCENDING"
+        }
       ]
     },
     {
       "collectionGroup": "arena_packages",
       "queryScope": "COLLECTION",
       "fields": [
-        { "fieldPath": "arena_id", "order": "ASCENDING" },
-        { "fieldPath": "active", "order": "ASCENDING" }
+        {
+          "fieldPath": "arena_id",
+          "order": "ASCENDING"
+        },
+        {
+          "fieldPath": "active",
+          "order": "ASCENDING"
+        }
       ]
     },
     {
       "collectionGroup": "arena_sales",
       "queryScope": "COLLECTION",
       "fields": [
-        { "fieldPath": "arena_id", "order": "ASCENDING" },
-        { "fieldPath": "created_at", "order": "DESCENDING" }
+        {
+          "fieldPath": "arena_id",
+          "order": "ASCENDING"
+        },
+        {
+          "fieldPath": "created_at",
+          "order": "DESCENDING"
+        }
       ]
     },
     {
       "collectionGroup": "arena_classes",
       "queryScope": "COLLECTION",
       "fields": [
-        { "fieldPath": "arena_id", "order": "ASCENDING" },
-        { "fieldPath": "starts_at", "order": "ASCENDING" }
+        {
+          "fieldPath": "arena_id",
+          "order": "ASCENDING"
+        },
+        {
+          "fieldPath": "starts_at",
+          "order": "ASCENDING"
+        }
       ]
     },
     {
       "collectionGroup": "arena_internal_tournaments",
       "queryScope": "COLLECTION",
       "fields": [
-        { "fieldPath": "arena_id", "order": "ASCENDING" },
-        { "fieldPath": "date", "order": "ASCENDING" }
+        {
+          "fieldPath": "arena_id",
+          "order": "ASCENDING"
+        },
+        {
+          "fieldPath": "date",
+          "order": "ASCENDING"
+        }
       ]
     },
     {
       "collectionGroup": "arena_coupons",
       "queryScope": "COLLECTION",
       "fields": [
-        { "fieldPath": "arena_id", "order": "ASCENDING" },
-        { "fieldPath": "active", "order": "ASCENDING" }
+        {
+          "fieldPath": "arena_id",
+          "order": "ASCENDING"
+        },
+        {
+          "fieldPath": "active",
+          "order": "ASCENDING"
+        }
       ]
     },
     {
       "collectionGroup": "arena_campaigns",
       "queryScope": "COLLECTION",
       "fields": [
-        { "fieldPath": "arena_id", "order": "ASCENDING" },
-        { "fieldPath": "created_at", "order": "DESCENDING" }
+        {
+          "fieldPath": "arena_id",
+          "order": "ASCENDING"
+        },
+        {
+          "fieldPath": "created_at",
+          "order": "DESCENDING"
+        }
       ]
     },
     {
       "collectionGroup": "arena_maintenance_orders",
       "queryScope": "COLLECTION",
       "fields": [
-        { "fieldPath": "arena_id", "order": "ASCENDING" },
-        { "fieldPath": "created_at", "order": "DESCENDING" }
+        {
+          "fieldPath": "arena_id",
+          "order": "ASCENDING"
+        },
+        {
+          "fieldPath": "created_at",
+          "order": "DESCENDING"
+        }
       ]
     },
     {
       "collectionGroup": "arena_devices",
       "queryScope": "COLLECTION",
       "fields": [
-        { "fieldPath": "arena_id", "order": "ASCENDING" },
-        { "fieldPath": "name", "order": "ASCENDING" }
+        {
+          "fieldPath": "arena_id",
+          "order": "ASCENDING"
+        },
+        {
+          "fieldPath": "name",
+          "order": "ASCENDING"
+        }
       ]
     },
     {
       "collectionGroup": "club_internal_ratings",
       "queryScope": "COLLECTION",
       "fields": [
-        { "fieldPath": "club_id", "order": "ASCENDING" },
-        { "fieldPath": "wins", "order": "DESCENDING" }
+        {
+          "fieldPath": "club_id",
+          "order": "ASCENDING"
+        },
+        {
+          "fieldPath": "wins",
+          "order": "DESCENDING"
+        }
       ]
     },
     {
       "collectionGroup": "club_internal_ratings_ext",
       "queryScope": "COLLECTION",
       "fields": [
-        { "fieldPath": "club_id", "order": "ASCENDING" },
-        { "fieldPath": "wins", "order": "DESCENDING" }
+        {
+          "fieldPath": "club_id",
+          "order": "ASCENDING"
+        },
+        {
+          "fieldPath": "wins",
+          "order": "DESCENDING"
+        }
       ]
     },
     {
       "collectionGroup": "club_internal_doubles_ratings",
       "queryScope": "COLLECTION",
       "fields": [
-        { "fieldPath": "club_id", "order": "ASCENDING" },
-        { "fieldPath": "wins", "order": "DESCENDING" }
+        {
+          "fieldPath": "club_id",
+          "order": "ASCENDING"
+        },
+        {
+          "fieldPath": "wins",
+          "order": "DESCENDING"
+        }
       ]
     },
     {
       "collectionGroup": "club_internal_doubles_ratings_ext",
       "queryScope": "COLLECTION",
       "fields": [
-        { "fieldPath": "club_id", "order": "ASCENDING" },
-        { "fieldPath": "wins", "order": "DESCENDING" }
+        {
+          "fieldPath": "club_id",
+          "order": "ASCENDING"
+        },
+        {
+          "fieldPath": "wins",
+          "order": "DESCENDING"
+        }
       ]
     },
     {
       "collectionGroup": "user_missions",
       "queryScope": "COLLECTION",
       "fields": [
-        { "fieldPath": "uid", "order": "ASCENDING" },
-        { "fieldPath": "date", "order": "DESCENDING" }
+        {
+          "fieldPath": "uid",
+          "order": "ASCENDING"
+        },
+        {
+          "fieldPath": "date",
+          "order": "DESCENDING"
+        }
       ]
     },
     {
       "collectionGroup": "user_progression_v2",
       "queryScope": "COLLECTION",
       "fields": [
-        { "fieldPath": "tier", "order": "ASCENDING" },
-        { "fieldPath": "xpTotal", "order": "DESCENDING" }
+        {
+          "fieldPath": "tier",
+          "order": "ASCENDING"
+        },
+        {
+          "fieldPath": "xpTotal",
+          "order": "DESCENDING"
+        }
       ]
     },
     {
       "collectionGroup": "season_rankings",
       "queryScope": "COLLECTION",
       "fields": [
-        { "fieldPath": "seasonId", "order": "ASCENDING" },
-        { "fieldPath": "xp", "order": "DESCENDING" }
+        {
+          "fieldPath": "seasonId",
+          "order": "ASCENDING"
+        },
+        {
+          "fieldPath": "xp",
+          "order": "DESCENDING"
+        }
       ]
     },
     {
       "collectionGroup": "season_rankings",
       "queryScope": "COLLECTION",
       "fields": [
-        { "fieldPath": "uid", "order": "ASCENDING" },
-        { "fieldPath": "xp", "order": "DESCENDING" }
+        {
+          "fieldPath": "uid",
+          "order": "ASCENDING"
+        },
+        {
+          "fieldPath": "xp",
+          "order": "DESCENDING"
+        }
+      ]
+    },
+    {
+      "collectionGroup": "provisional_claims",
+      "queryScope": "COLLECTION",
+      "fields": [
+        {
+          "fieldPath": "email_lc",
+          "order": "ASCENDING"
+        },
+        {
+          "fieldPath": "claimed",
+          "order": "ASCENDING"
+        }
       ]
     }
   ],

@@ -92,3 +92,25 @@ import { useTournamentWizard } from '@/modules/tournament/hooks/useTournamentWiz
 - `docs/01-AI-CONTEXT.md` §5 (rotas)
 - `docs/09-UX-ANALYSIS/05-organizador-criacao-gestao.md` (ORG-*)
 - `docs/09-UX-ANALYSIS/06-organizador-dia-de-jogo.md` (DIA-*)
+
+## Contato do inscrito (P0-02)
+
+`tournament_registrations` é **lido sem login** — o quadro do torneio, a
+impressão de grupos e o telão dependem disso. Por isso o e-mail **não mora no
+documento**:
+
+| Onde | O quê | Quem lê |
+|---|---|---|
+| `tournament_registrations/{rid}` | nome, nível, status, seed | qualquer um, sem login |
+| `tournament_registrations/{rid}/private/contact` | e-mail dos dois jogadores | titular, dupla, quem criou, organizador, admin |
+| `provisional_claims/{rid}_a\|b` | prova de inscrição provisória | só o dono do e-mail (pelo TOKEN) |
+
+**Nunca leia `reg.player_a_email` direto** — esse campo só existe em inscrição
+legada. Use `resolveRegistrationContact(reg, contact)` (domínio puro) ou
+`registrationContactService` (I/O). Enquanto houver documento antigo, os dois
+caem no campo público sozinhos.
+
+O *claim* do login procura em **duas fontes**: a consulta antiga por
+`player_a_email_lc` (legado) e `provisional_claims` (novo). A regra do
+Firestore aceita as duas provas de posse, então a correção não derrubou quem
+já estava inscrito.
