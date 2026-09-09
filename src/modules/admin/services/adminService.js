@@ -1,7 +1,13 @@
-import { collection, getDocs, deleteDoc, doc, orderBy, query, where, serverTimestamp, updateDoc } from 'firebase/firestore';
+import { collection, getDocs, getDoc, deleteDoc, doc, orderBy, query, where, serverTimestamp, updateDoc, Timestamp } from 'firebase/firestore';
 import { db } from '@/core/config/firebase';
 import { createAuditLog } from '@/core/services/auditService';
+import { logger } from '@/core/lib/logger';
 import { buildRevokePayload } from '../domain/accessRoster.js';
+import {
+  sanitizeAdminUserPatch, diffAdminUserPatch, validateAdminEdit,
+} from '../domain/adminUserEdit.js';
+import { birthDateToBrtDate } from '@/core/lib/profileValidation';
+import { restoreAthleteProfileFromUserDoc } from '@/modules/athletes/services/athleteService';
 import { archiveTournament as serviceArchive, unarchiveTournament as serviceUnarchive } from '@/modules/tournament/services/tournamentService';
 
 export async function listAllTournaments() {
@@ -115,4 +121,83 @@ export async function revokeAccountPowers(uid, actor, meta = {}) {
     },
   });
   return { uid, previousRole: payload.role_previous };
+}
+
+/**
+ * CORRIGE / COMPLEMENTA o cadastro de um usuário, como admin.
+ *
+ * O que o admin pode tocar é uma lista FECHADA
+ * (`domain/adminUserEdit.js` → `ADMIN_EDITABLE_FIELDS`), espelhada na regra do
+ * Firestore. Campo fora dela é descartado aqui antes de gravar — se fosse
+ * enviado, a regra recusaria a escrita INTEIRA e a correção legítima se
+ * perderia junto.
+ *
+ * Três exigências, porque isto é edição de dado de OUTRA pessoa:
+ *  1. motivo obrigatório (fica na auditoria);
+ *  2. o audit_log guarda o ANTES e o DEPOIS de cada campo — "o admin editou o
+ *     cadastro" não diz nada a quem for investigar depois;
+ *  3. o espelho público (`athlete_profiles`) é re-sincronizado, senão a
+ *     correção não aparece no diretório e alguém a refaz na semana seguinte.
+ *
+ * @param {string} uid
+ * @param {object} patch   campos a corrigir (os não permitidos são ignorados)
+ * @param {object} actor
+ * @param {{ reason?: string }} [meta]
+ * @returns {Promise<{ changes: Array, ignored: string[] }>}
+ */
+export async function updateUserRecordAsAdmin(uid, patch, actor, meta = {}) {
+  if (!uid) throw new Error('Informe o usuário.');
+  if (!actor?.uid) throw new Error('Usuário não autenticado.');
+
+  const antesSnap = await getDoc(doc(db, 'users', uid));
+  if (!antesSnap.exists()) throw new Error('Cadastro não encontrado.');
+  const antes = antesSnap.data();
+
+  const { patch: limpo, ignored } = sanitizeAdminUserPatch(patch);
+  const changes = diffAdminUserPatch(antes, limpo);
+  const validacao = validateAdminEdit({ changes, reason: meta.reason });
+  if (!validacao.isValid) {
+    throw new Error(validacao.errors.reason || validacao.errors.changes);
+  }
+
+  const payload = { ...limpo, updated_at: serverTimestamp() };
+  // `birth_date_at` acompanha `birth_date` — é o campo que as consultas por
+  // idade usam. Deixar os dois fora de sincronia já causou bug antes.
+  if (Object.prototype.hasOwnProperty.call(limpo, 'birth_date')) {
+    const d = limpo.birth_date ? birthDateToBrtDate(limpo.birth_date) : null;
+    payload.birth_date_at = d && !Number.isNaN(d.getTime()) ? Timestamp.fromDate(d) : null;
+  }
+  payload.admin_edited_at = serverTimestamp();
+  payload.admin_edited_by = actor.uid;
+
+  await updateDoc(doc(db, 'users', uid), payload);
+
+  await createAuditLog({
+    action: 'admin_user_record_edited',
+    actor,
+    details: {
+      target_uid: uid,
+      reason: String(meta.reason || '').slice(0, 300),
+      // Antes/depois campo a campo — é isto que torna a auditoria útil.
+      changes: changes.map((c) => ({
+        field: c.field,
+        from: c.from === null || c.from === undefined ? '' : String(c.from).slice(0, 120),
+        to: c.to === null || c.to === undefined ? '' : String(c.to).slice(0, 120),
+      })),
+      ignored_fields: ignored,
+    },
+  });
+
+  // Espelha no diretório público. Best-effort: a correção já foi gravada, e
+  // uma falha aqui só deixa o espelho velho — recuperável pelo botão de
+  // re-sincronizar que já existe.
+  try {
+    await restoreAthleteProfileFromUserDoc(uid, actor);
+  } catch (e) {
+    logger.error('cadastro corrigido, mas o espelho público não atualizou', {
+      uid, erro: e?.code || e?.message,
+    });
+  }
+
+  return { changes, ignored };
 }

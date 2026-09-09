@@ -16,7 +16,7 @@
 | **S4** | Testes de regras no CI | P3-08, P1-06 | 3 dias | nenhum | ✅ **feito e no ar** (2026-09-09) — 125 asserções |
 | **S5** | Custom claims e papéis | P0-01 etapa 2, P1-08 | 4 dias | médio |
 | **S6** | App Check | P1-03 | 2 dias + 2 semanas de observação | médio |
-| **S7** | 🛟 Console de suporte | o pedido do dono | 8 dias | baixo (aditivo) |
+| **S7** | 🛟 Console de suporte | o pedido do dono | 8 dias | baixo (aditivo) | 🟡 **parcial (2026-09-09)** — a ESCRITA (corrigir cadastro) está no ar; quebra-vidro, mascaramento e log de leitura seguem desenhados. Ver `18-CADASTROS-ADMIN.md` |
 | **S8** | Direitos do titular | P2-04, P2-05, P2-06 | 5 dias | baixo |
 | **S9** | Privacidade no servidor | P1-01, P1-02, P1-05, P1-06, P2-01, P2-02 | 4 dias | médio |
 | **S10** | Consentimento, imagem e menores | P2-09, P2-10, P2-11 | 5 dias + ⚖️ | baixo |

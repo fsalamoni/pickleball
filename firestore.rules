@@ -784,6 +784,29 @@ service cloud.firestore {
         || (isPlatformAdmin()
             && request.resource.data.diff(resource.data).affectedKeys()
                  .hasOnly(['hidden', 'hidden_at', 'hidden_by', 'updated_at']))
+        // CORREÇÃO DE CADASTRO pelo admin (aba Cadastros).
+        //
+        // O admin corrige dado ERRADO ou preenche o que FALTA. Lista fechada,
+        // espelhada em `src/modules/admin/domain/adminUserEdit.js`. Três grupos
+        // ficam de fora de propósito, e o `hasOnly` é o que garante isso:
+        //
+        //  · PODER (`role`, `can_create_pools`) — é o que a correção do P0-01
+        //    fechou. Revogar tem caminho próprio; conceder é só pelo console.
+        //  · PRIVACIDADE (`email_public`, `phone_public`, `address_public`,
+        //    `directory_listed`) — é escolha do TITULAR. Admin corrigir um dado
+        //    é uma coisa; decidir quem o vê é outra, e não é dele.
+        //  · `email` — identidade de login, mora no Firebase Authentication.
+        //
+        // Uma escrita que misture campo permitido com proibido é recusada
+        // INTEIRA (hasOnly), não parcialmente aplicada.
+        || (isPlatformAdmin()
+            && request.resource.data.diff(resource.data).affectedKeys().hasOnly([
+              'platform_name', 'full_name', 'birth_date', 'birth_date_at',
+              'phone', 'gender', 'city', 'state', 'address',
+              'pickleball_experience', 'competition_gender', 'court_side',
+              'leveling_level', 'dupr_id', 'dupr_rating', 'photo_url',
+              'updated_at', 'admin_edited_at', 'admin_edited_by',
+            ]))
         // REVOGAÇÃO DE PODER — assimétrica de propósito.
         //
         // O dono da plataforma (e-mail do TOKEN, não dado gravável) pode

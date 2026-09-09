@@ -238,8 +238,13 @@ describe('users/{uid} — moderação pelo admin (setAthleteHidden)', () => {
       { hidden: false, hidden_at: null, hidden_by: null,
         updated_at: serverTimestamp() }, { merge: true }));
   });
-  it('29. 🔴 admin NÃO altera o telefone de um usuário', async () => {
-    await assertFails(setDoc(doc(asAdmin(), 'users', USER_UID),
+  it('29. o admin ALTERA o telefone — mudança deliberada, ver §42-50', async () => {
+    // Este teste afirmava o contrário até 2026-09-09. O dono pediu
+    // explicitamente a capacidade de "editar, complementar, corrigir e ajustar
+    // os cadastros dos usuários", e ela foi construída com lista fechada de
+    // campos. O que o admin continua NÃO podendo está nos testes 44 a 46:
+    // poder, privacidade do titular e e-mail de login.
+    await assertSucceeds(setDoc(doc(asAdmin(), 'users', USER_UID),
       { phone: '11888888888', updated_at: serverTimestamp() }, { merge: true }));
   });
   it('30. 🔴 admin NÃO promove outro usuário a platform_admin', async () => {
@@ -333,5 +338,76 @@ describe('users/{uid} — REVOGAÇÃO de poder (assimétrica: só remove)', () =
     await assertSucceeds(setDoc(doc(asOwner(), 'users', OWNER_UID),
       { role: 'platform_admin', can_create_pools: true, updated_at: serverTimestamp() },
       { merge: true }));
+  });
+});
+
+describe('users/{uid} — CORREÇÃO DE CADASTRO pelo admin', () => {
+  // O admin precisa corrigir dado errado e preencher o que falta. A lista de
+  // campos é fechada; metade destes testes prova o que ele NÃO consegue.
+
+  const correcao = (over = {}) => ({
+    city: 'Canoas', state: 'RS', phone: '51999999999',
+    admin_edited_at: serverTimestamp(), admin_edited_by: ADMIN_UID,
+    updated_at: serverTimestamp(), ...over,
+  });
+
+  it('42. ⭐ o admin corrige os dados de cadastro de outro usuário', async () => {
+    await assertSucceeds(setDoc(doc(asAdmin(), 'users', USER_UID), correcao(), { merge: true }));
+  });
+
+  it('43. ⭐ o admin preenche o que FALTA (nome, nascimento, experiência)', async () => {
+    await assertSucceeds(setDoc(doc(asAdmin(), 'users', USER_UID), {
+      platform_name: 'Ana Silva', full_name: 'Ana Maria Silva',
+      birth_date: '1990-01-01', pickleball_experience: '1-2 anos',
+      admin_edited_at: serverTimestamp(), admin_edited_by: ADMIN_UID,
+      updated_at: serverTimestamp(),
+    }, { merge: true }));
+  });
+
+  it('44. 🔴 a correção NÃO é brecha para promover — nem misturada com dado válido', async () => {
+    await assertFails(setDoc(doc(asAdmin(), 'users', USER_UID),
+      { ...correcao(), role: 'platform_admin' }, { merge: true }));
+    await assertFails(setDoc(doc(asAdmin(), 'users', USER_UID),
+      { ...correcao(), can_create_pools: true }, { merge: true }));
+  });
+
+  it('45. 🔴 o admin NÃO mexe nas preferências de PRIVACIDADE do titular', async () => {
+    // Corrigir um dado é uma coisa; decidir quem o vê é do titular.
+    // Atenção: o valor tem de ser o OPOSTO do semeado. Setar um booleano para
+    // o mesmo valor não conta como alteração (`affectedKeys` não o inclui) e a
+    // escrita cairia só nos campos permitidos, passando por engano.
+    const inverso = {
+      email_public: true, phone_public: true, address_public: true,
+      directory_listed: false,
+    };
+    for (const [campo, valor] of Object.entries(inverso)) {
+      // eslint-disable-next-line no-await-in-loop
+      await assertFails(setDoc(doc(asAdmin(), 'users', USER_UID),
+        { ...correcao(), [campo]: valor }, { merge: true }));
+    }
+  });
+
+  it('46. 🔴 o admin NÃO troca o e-mail (identidade de login)', async () => {
+    await assertFails(setDoc(doc(asAdmin(), 'users', USER_UID),
+      { ...correcao(), email: 'outro@x.com' }, { merge: true }));
+  });
+
+  it('47. 🔴 usuário comum NÃO corrige o cadastro de outro', async () => {
+    await assertFails(setDoc(doc(asUser(), 'users', OTHER_UID), correcao(), { merge: true }));
+  });
+
+  it('48. 🔴 anônimo não corrige nada', async () => {
+    await assertFails(setDoc(doc(asAnon(), 'users', USER_UID), correcao(), { merge: true }));
+  });
+
+  it('49. o dono continua editando o PRÓPRIO perfil normalmente', async () => {
+    // A regra nova não pode ter atrapalhado o caminho de todo dia.
+    await assertSucceeds(setDoc(doc(asUser(), 'users', USER_UID),
+      { city: 'Canoas', phone: '51988888888', updated_at: serverTimestamp() }, { merge: true }));
+  });
+
+  it('50. o titular continua mandando na PRÓPRIA privacidade', async () => {
+    await assertSucceeds(setDoc(doc(asUser(), 'users', USER_UID),
+      { email_public: true, directory_listed: false, updated_at: serverTimestamp() }, { merge: true }));
   });
 });

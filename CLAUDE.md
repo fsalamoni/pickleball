@@ -189,7 +189,8 @@ Estes princípios vieram de bugs reais que custaram horas pra arrumar. São ineg
 **"Onde está SEGURANÇA / LGPD / documentos legais / dados de usuário?"** → ⭐ `docs/20-SEGURANCA-E-PRIVACIDADE/00-INDEX.md` — **leia antes de tocar em qualquer coisa que envolva dado pessoal**. Os 2 achados CRÍTICOS já foram tratados; resta a migração destrutiva do P0-02 (presa ao backup) e **um achado aberto de operação**: `16-ACHADO-ADMINS-EXTRAS.md`
 **"Onde fica o e-mail de quem se inscreveu num torneio?"** → **não** no documento da inscrição, que é público (quadro/impressão/telão). Fica em `tournament_registrations/{rid}/private/contact`, e a prova de inscrição provisória em `provisional_claims/{rid}_a|b`. Sempre leia por `resolveRegistrationContact` (domínio) ou `registrationContactService` — nunca por `reg.player_a_email` direto, que só existe em documento legado
 **"Quem tem poder de admin na plataforma? Como tiro o poder de alguém?"** → **Painel admin → Governança → Acessos** (`src/v2/components/admin/AdminAccessTab.jsx`, domínio em `src/modules/admin/domain/accessRoster.js`). A revogação é **assimétrica**: remove poder, NUNCA concede — promover é só pelo console, de propósito. `hidden: true` **não** remove poder. Ver `docs/20-SEGURANCA-E-PRIVACIDADE/17-ACESSOS-E-PODERES.md`
-**"Como o admin acessa dado de usuário para dar suporte?"** → `docs/20-SEGURANCA-E-PRIVACIDADE/05-ADMIN-SUPORTE.md` (📐 ainda não implementado)
+**"Como corrijo/completo o cadastro de um usuário?"** → **Painel admin → Comunidade → Cadastros** (`src/v2/components/admin/AdminUserRecordsTab.jsx`, domínio em `src/modules/admin/domain/adminUserEdit.js`). Lista FECHADA de campos: o admin corrige dado errado, mas **não** mexe em poder, **não** altera a privacidade do titular e **não** troca o e-mail de login. Motivo obrigatório + auditoria com antes/depois. Ver `docs/20-SEGURANCA-E-PRIVACIDADE/18-CADASTROS-ADMIN.md`
+**"Como o admin acessa dado de usuário para dar suporte?"** → `docs/20-SEGURANCA-E-PRIVACIDADE/05-ADMIN-SUPORTE.md` (🟡 escrita implementada; quebra-vidro e log de leitura ainda não)
 **"Onde está o MERCADO (marketplace) / o FEED (rede social) / a GAMIFICAÇÃO?"** → 📐 **ainda não existem** — só o desenho, em `docs/FUTURO/00-INDEX.md`. Pastas dos módulos já estruturadas (só README) em `src/modules/{marketplace,feed,moderation}/`
 **"Cuidado: 'mercado' já significa outra coisa!"** → `arena_products`/`catalog_products` são o **PDV/loja da arena** (módulo `arenas/`). O marketplace novo usa **só** o prefixo `market_`. Ver `docs/FUTURO/MERCADO/00-INDEX.md` § Colisão de nomes
 
@@ -451,7 +452,7 @@ chore(deps): bump firebase to 12.x
 
 | Métrica | Valor | Delta do início do agente |
 |---|---|---|
-| **Testes Vitest** | **3001 passing** (218 arquivos) | +2459 (era 408) |
+| **Testes Vitest** | **3035 passing** (220 arquivos) | +2459 (era 408) |
 | **Lint errors** | 0 | era 30+ |
 | **Módulos** | 20 (`games` e `legal` saíram como `src/modules/` mas continuam como pastas oficiais — **rating virou módulo oficial** com domain/services/hooks/components) | +4 (coaches, circuits, games, legal) |
 | **V2 pages** | 78 (+V2GameDayTelao — telão do dia de jogo, rota fora do V2Layout) | +54 |

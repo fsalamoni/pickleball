@@ -5,7 +5,15 @@
 > auxiliar os usuários que precisarem de ajuda, então construa uma aba
 > específica para isso, me dando acesso total, com segurança extrema."*
 >
-> Este documento é a especificação completa dessa aba. **Nada implementado.**
+> Este documento é a especificação completa dessa aba.
+>
+> **Estado (2026-09-09): parcialmente implementado.** A parte de ESCRITA — o
+> admin corrigir e complementar o cadastro, com lista fechada de campos, motivo
+> obrigatório e auditoria com antes/depois — está no ar em
+> **Comunidade → Cadastros** (`18-CADASTROS-ADMIN.md`). O restante desta
+> especificação (quebra-vidro, mascaramento, log de revelação, notificação ao
+> titular, detecção de abuso, leitura via Cloud Function) segue **desenhado e
+> não implementado**.
 
 ---
 

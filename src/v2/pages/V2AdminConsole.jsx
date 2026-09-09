@@ -95,6 +95,7 @@ import {
 import { listArenas } from '@/modules/arenas/services/arenaService';
 import AdminCatalogTab from '@/v2/components/admin/AdminCatalogTab';
 import AdminAccessTab from '@/v2/components/admin/AdminAccessTab';
+import AdminUserRecordsTab from '@/v2/components/admin/AdminUserRecordsTab';
 import AdminDuprExportTab from '@/v2/components/admin/AdminDuprExportTab';
 import {
   useAffiliateLinks,
@@ -129,6 +130,7 @@ const SECTIONS = Object.freeze([
   ] },
   { id: 'community', label: 'Comunidade', icon: Users, tabs: [
     { id: 'tournaments', label: 'Torneios', icon: Trophy },
+    { id: 'records', label: 'Cadastros', icon: UserCog },
     { id: 'profiles', label: 'Perfis', icon: UserCog },
     { id: 'partners', label: 'Parceiros', icon: Handshake },
   ] },
@@ -231,6 +233,7 @@ export default function V2AdminConsole() {
         {tab === 'partners'   && <PartnersTab />}
         {tab === 'arenas'     && <ArenasTab />}
         {tab === 'catalog'    && <AdminCatalogTab />}
+        {tab === 'records'    && <AdminUserRecordsTab />}
         {tab === 'profiles'   && <ProfilesTab embedded />}
         {tab === 'flags'      && <FlagsTab />}
         {tab === 'branding'   && <BrandingTab />}

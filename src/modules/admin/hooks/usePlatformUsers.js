@@ -1,5 +1,7 @@
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
-import { listAllPlatformUsers, revokeAccountPowers } from '../services/adminService';
+import {
+  listAllPlatformUsers, revokeAccountPowers, updateUserRecordAsAdmin,
+} from '../services/adminService';
 import { useAuth } from '@/core/lib/FirebaseAuthContext';
 
 /**
@@ -31,6 +33,19 @@ export function useRevokeAccountPowers() {
     mutationFn: ({ uid, previousRole, reason }) => (
       revokeAccountPowers(uid, user, { previousRole, reason })
     ),
+    onSuccess: () => queryClient.invalidateQueries({ queryKey: ['platform-users-all'] }),
+  });
+}
+
+/**
+ * Corrige/complementa o cadastro de um usuário. Só admin — a regra do
+ * Firestore recusa qualquer outro autor.
+ */
+export function useUpdateUserRecordAsAdmin() {
+  const { user } = useAuth();
+  const queryClient = useQueryClient();
+  return useMutation({
+    mutationFn: ({ uid, patch, reason }) => updateUserRecordAsAdmin(uid, patch, user, { reason }),
     onSuccess: () => queryClient.invalidateQueries({ queryKey: ['platform-users-all'] }),
   });
 }

@@ -68,6 +68,7 @@ de os itens P0 e P1 deste estudo estarem fechados.
 | `patches/` | ⭐ Correções **prontas para aplicar**, uma por achado crítico/alto | corrigir agora |
 | `15-RUNBOOK-S0-CONSOLE.md` | ⭐ **Para o dono executar** — PITR, backup, teste de restauração, alertas, MFA. Console do Firebase, ~30 min. **Desbloqueia o passo final do P0-02.** | proteger a base agora |
 | `16-ACHADO-ADMINS-EXTRAS.md` | 🟡 quatro contas `platform_admin` em produção; confirmado pelo dono como sobra de ajuste antigo. **Revogável pela aba Acessos** | rebaixar as três |
+| `18-CADASTROS-ADMIN.md` | ⭐ A aba **Comunidade → Cadastros**: corrigir e complementar cadastro de usuário, com lista fechada de campos, motivo obrigatório e auditoria com diff | corrigir dado de usuário |
 | `17-ACESSOS-E-PODERES.md` | ⭐ A aba **Governança → Acessos**: quem tem poder, revogação (só remove, nunca concede) e a avaliação das ferramentas antigas | gerir acessos |
 
 ## Princípios que guiaram este estudo
