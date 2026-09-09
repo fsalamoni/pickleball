@@ -54,6 +54,7 @@ import {
   ShoppingBasket,
   Check,
   X,
+  KeyRound,
 } from 'lucide-react';
 import { toast } from 'sonner';
 import {
@@ -93,6 +94,7 @@ import {
 } from '@/modules/admin/services/adminService';
 import { listArenas } from '@/modules/arenas/services/arenaService';
 import AdminCatalogTab from '@/v2/components/admin/AdminCatalogTab';
+import AdminAccessTab from '@/v2/components/admin/AdminAccessTab';
 import AdminDuprExportTab from '@/v2/components/admin/AdminDuprExportTab';
 import {
   useAffiliateLinks,
@@ -142,6 +144,7 @@ const SECTIONS = Object.freeze([
     { id: 'content', label: 'Conteúdo', icon: TextIcon },
   ] },
   { id: 'governance', label: 'Governança', icon: ListChecks, tabs: [
+    { id: 'access', label: 'Acessos', icon: KeyRound },
     { id: 'audit', label: 'Auditoria', icon: ListChecks },
     { id: 'tools', label: 'Avançado', icon: Wrench },
   ] },
@@ -232,6 +235,7 @@ export default function V2AdminConsole() {
         {tab === 'flags'      && <FlagsTab />}
         {tab === 'branding'   && <BrandingTab />}
         {tab === 'content'    && <ContentTab />}
+        {tab === 'access'     && <AdminAccessTab />}
         {tab === 'audit'      && <AuditTab />}
         {tab === 'tools'      && <ToolsTab navigate={navigate} />}
         {tab === 'dupr'       && duprExportOn && <AdminDuprExportTab />}

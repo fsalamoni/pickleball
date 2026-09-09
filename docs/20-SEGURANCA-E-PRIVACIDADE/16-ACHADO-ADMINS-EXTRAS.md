@@ -56,7 +56,28 @@ por 34 asserções no emulador, rodando no CI.
 acima — **não é possível rebaixá-las pela aplicação**. Nenhuma tela do
 PickleRush consegue fazer isso, de propósito.
 
-## O que fazer (só o dono pode)
+## ✅ Confirmado pelo dono (2026-09-09)
+
+> "O único UID que deve ser o platform_admin é o `Kx7CC0NVgogh8cCF4wIRmpOvo7r2`.
+> Os outros foram criados em algum momento que estávamos fazendo algum ajuste.
+> Na época eu cheguei a perder minha condição de admin, inclusive."
+
+Isso resolve a ambiguidade a favor da hipótese (a): são sobras de um ajuste em
+que o `role` do dono foi corrompido — o mesmo episódio que originou
+`/admin/owner-restore`. **Não é incidente.** Continua sendo poder indevido, e
+tem de sair.
+
+## ✅ Agora dá para resolver PELA PLATAFORMA
+
+**Painel admin → Governança → Acessos.** A aba lista as quatro contas, marca as
+três como inesperadas, avisa que estar oculto não removeu o poder, e oferece
+**Revogar poder** em cada uma (confirmação digitada + motivo + auditoria).
+
+Ver `17-ACESSOS-E-PODERES.md`. O passo a passo de console abaixo continua
+válido como alternativa, e é o único caminho para o que a aplicação
+deliberadamente não faz.
+
+## O que fazer (caminho de console — alternativa)
 
 ### 1. Decidir o que são
 Cruze com a auditoria antes de mexer:
@@ -88,14 +109,14 @@ admin.auth().revokeRefreshTokens('<uid>')
 ### 4. Conferir de novo
 A consulta `role == platform_admin` tem de devolver **um** documento.
 
-## Recomendação de produto (posso implementar)
+## Recomendação de produto — ✅ FEITA (2026-09-09)
 
-Duas coisas fariam este achado ser impossível de passar despercebido:
+As duas coisas que fariam este achado ser impossível de passar despercebido
+foram implementadas:
 
-1. **Uma lista de admins visível no ambiente admin** — hoje só dá para saber
-   quem é `platform_admin` consultando o banco. Deveria estar na tela.
-2. **Ocultar um atleta deveria avisar quando ele é admin** — ou recusar, ou
-   dizer em voz alta que ocultar não remove privilégio.
+1. ✅ **Lista de admins visível no ambiente admin** — aba Acessos, com alerta
+   em vermelho quando há conta inesperada.
+2. ✅ **A moderação avisa** — a tela de perfis passou a dizer, em destaque, que
+   ocultar não remove poder, apontando para a aba Acessos.
 
-Nenhuma das duas foi feita: são mudança de produto, e o achado precisa da sua
-decisão antes.
+Ver `17-ACESSOS-E-PODERES.md`.

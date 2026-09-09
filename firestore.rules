@@ -783,7 +783,31 @@ service cloud.firestore {
         || (isOwner(userId) && isPlatformOwnerEmail())
         || (isPlatformAdmin()
             && request.resource.data.diff(resource.data).affectedKeys()
-                 .hasOnly(['hidden', 'hidden_at', 'hidden_by', 'updated_at']));
+                 .hasOnly(['hidden', 'hidden_at', 'hidden_by', 'updated_at']))
+        // REVOGAÇÃO DE PODER — assimétrica de propósito.
+        //
+        // O dono da plataforma (e-mail do TOKEN, não dado gravável) pode
+        // REMOVER o poder de outra conta pela própria aplicação. Nunca
+        // CONCEDER: o resultado da escrita tem de ser obrigatoriamente
+        // `role: 'user'` e `can_create_pools: false`. Não existe caminho, em
+        // regra nenhuma, para promover alguém a platform_admin pelo cliente —
+        // promover continua sendo só pelo console, de propósito.
+        //
+        // Por que abrir isto: sem ele, tirar o poder de uma conta indevida só
+        // acontece no console do Firebase, onde a ação NÃO gera `audit_logs`.
+        // Aqui gera. E como a permissão só reduz privilégio, uma conta de dono
+        // comprometida não ganha nada que já não pudesse fazer.
+        //
+        // `request.auth.uid != userId` impede o dono de se auto-rebaixar sem
+        // querer por este caminho (para isso existe o fluxo de restauração).
+        || (isPlatformOwnerEmail()
+            && request.auth.uid != userId
+            && request.resource.data.role == 'user'
+            && request.resource.data.get('can_create_pools', false) == false
+            && request.resource.data.diff(resource.data).affectedKeys().hasOnly([
+              'role', 'can_create_pools', 'updated_at',
+              'role_revoked_at', 'role_revoked_by', 'role_previous',
+            ]));
 
       allow delete: if isPlatformAdmin();
     }

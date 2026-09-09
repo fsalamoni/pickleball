@@ -18,9 +18,10 @@ tratadas** — mas o P0-02 só se fecha por completo depois de a migração
 apagar os campos antigos, o que exige backup testado (S0). Detalhe em
 `01-AUDITORIA-ACHADOS.md`.
 
-> 🔴 **Há um achado ABERTO que não é de código**: quatro contas com
-> `platform_admin` em produção. Ver `16-ACHADO-ADMINS-EXTRAS.md` —
-> **só o dono resolve, pelo console**.
+> 🟡 **Há três contas com `platform_admin` a revogar** em produção (sobra de um
+> ajuste antigo, confirmado pelo dono). Agora dá para resolver pela própria
+> plataforma: **Painel admin → Governança → Acessos**. Ver
+> `16-ACHADO-ADMINS-EXTRAS.md` e `17-ACESSOS-E-PODERES.md`.
 
 | # | Achado | Impacto |
 |---|---|---|
@@ -66,7 +67,8 @@ de os itens P0 e P1 deste estudo estarem fechados.
 | `14-RUNBOOK-E-GOVERNANCA.md` | Operação contínua: checklists, revisões periódicas, o que fazer todo mês | manter no ar |
 | `patches/` | ⭐ Correções **prontas para aplicar**, uma por achado crítico/alto | corrigir agora |
 | `15-RUNBOOK-S0-CONSOLE.md` | ⭐ **Para o dono executar** — PITR, backup, teste de restauração, alertas, MFA. Console do Firebase, ~30 min. **Desbloqueia o passo final do P0-02.** | proteger a base agora |
-| `16-ACHADO-ADMINS-EXTRAS.md` | 🔴 **ABERTO** — quatro contas `platform_admin` em produção; `hidden: true` não tira o poder | decidir e rebaixar |
+| `16-ACHADO-ADMINS-EXTRAS.md` | 🟡 quatro contas `platform_admin` em produção; confirmado pelo dono como sobra de ajuste antigo. **Revogável pela aba Acessos** | rebaixar as três |
+| `17-ACESSOS-E-PODERES.md` | ⭐ A aba **Governança → Acessos**: quem tem poder, revogação (só remove, nunca concede) e a avaliação das ferramentas antigas | gerir acessos |
 
 ## Princípios que guiaram este estudo
 

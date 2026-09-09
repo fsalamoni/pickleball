@@ -264,3 +264,74 @@ describe('users/{uid} — exclusão', () => {
     await assertSucceeds(deleteDoc(doc(asAdmin(), 'users', USER_UID)));
   });
 });
+
+describe('users/{uid} — REVOGAÇÃO de poder (assimétrica: só remove)', () => {
+  // Contexto: ADMIN_UID é um platform_admin que NÃO é o dono. É exatamente a
+  // situação encontrada em produção — contas com `role: platform_admin` que
+  // sobraram de um ajuste antigo, e que a regra do P0-01 impedia de rebaixar
+  // pela aplicação. Este bloco prova que o dono passa a conseguir revogar, e
+  // que ninguém consegue o contrário.
+
+  const revogacao = () => ({
+    role: 'user',
+    can_create_pools: false,
+    role_previous: 'platform_admin',
+    role_revoked_at: serverTimestamp(),
+    role_revoked_by: OWNER_UID,
+    updated_at: serverTimestamp(),
+  });
+
+  it('35. ⭐ o DONO revoga o admin de outra conta', async () => {
+    await assertSucceeds(setDoc(doc(asOwner(), 'users', ADMIN_UID), revogacao(), { merge: true }));
+  });
+
+  it('36. 🔴 a revogação NÃO serve para PROMOVER — nem para o dono', async () => {
+    // O ponto central da assimetria: o caminho só aceita chegar em 'user'.
+    await assertFails(setDoc(doc(asOwner(), 'users', USER_UID),
+      { role: 'platform_admin', updated_at: serverTimestamp() }, { merge: true }));
+    await assertFails(setDoc(doc(asOwner(), 'users', USER_UID),
+      { role: 'user', can_create_pools: true, updated_at: serverTimestamp() }, { merge: true }));
+  });
+
+  it('37. 🔴 um platform_admin que NÃO é o dono não revoga ninguém', async () => {
+    await assertFails(setDoc(doc(asAdmin(), 'users', OWNER_UID), revogacao(), { merge: true }));
+    await assertFails(setDoc(doc(asAdmin(), 'users', USER_UID), revogacao(), { merge: true }));
+  });
+
+  it('38. 🔴 usuário comum não revoga ninguém', async () => {
+    await assertFails(setDoc(doc(asUser(), 'users', ADMIN_UID), revogacao(), { merge: true }));
+  });
+
+  it('39. 🔴 a revogação não é brecha para editar OUTROS campos', async () => {
+    await assertFails(setDoc(doc(asOwner(), 'users', ADMIN_UID),
+      { ...revogacao(), phone: '11999999999' }, { merge: true }));
+    await assertFails(setDoc(doc(asOwner(), 'users', ADMIN_UID),
+      { ...revogacao(), email: 'trocado@x.com' }, { merge: true }));
+  });
+
+  it('40. o dono PODE escrever o próprio documento — e isso é proposital', async () => {
+    // Anotação honesta: a regra nova traz `request.auth.uid != userId`, mas
+    // isso NÃO impede o auto-rebaixamento, porque o branch anterior
+    // (`isOwner(userId) && isPlatformOwnerEmail()`) já libera o dono a
+    // escrever o próprio documento — regras do Firebase são OR, e um bloco
+    // restritivo ao lado de um permissivo não restringe nada.
+    //
+    // Isso é a ESCOTILHA DE EMERGÊNCIA e tem de continuar existindo: foi por
+    // ela que o dono recuperou o acesso da última vez. Sem ela, um role
+    // corrompido tranca o dono para fora da própria plataforma.
+    //
+    // Logo, impedir o clique errado na PRÓPRIA linha é responsabilidade da
+    // INTERFACE (o botão não é renderizado para si mesmo), coberta em
+    // `accessRoster.test.js`. E o estrago seria reversível de qualquer forma:
+    // veja o teste 41.
+    await assertSucceeds(setDoc(doc(asOwner(), 'users', OWNER_UID), revogacao(), { merge: true }));
+  });
+
+  it('41. o dono continua restaurando o PRÓPRIO admin (escotilha de emergência)', async () => {
+    // Não pode ter sido quebrado pela regra nova: é como ele voltou da última
+    // vez em que perdeu o acesso.
+    await assertSucceeds(setDoc(doc(asOwner(), 'users', OWNER_UID),
+      { role: 'platform_admin', can_create_pools: true, updated_at: serverTimestamp() },
+      { merge: true }));
+  });
+});
