@@ -21,20 +21,44 @@
  * ganha — e o teste `adminUserEdit.test.js` existe para elas não divergirem.
  */
 
+import { ATHLETE_GENDER_LABELS } from '@/modules/athletes/domain/constants';
+import { COURT_SIDE_OPTIONS } from '@/modules/athletes/domain/profileMeta';
+import {
+  PICKLEBALL_EXPERIENCE_LABELS, COMPETITION_GENDER_LABELS,
+} from '@/modules/tournament/domain/constants';
+import { LEVEL_OPTIONS, getLevelByCode } from '@/modules/leveling/data/levels';
+
+/** `{ valor: rótulo }` vira `[{ value, label }]`, o formato do formulário. */
+const deRotulos = (labels) => Object.entries(labels).map(([value, label]) => ({ value, label }));
+
+/**
+ * As listas de seleção são AS MESMAS do cadastro normal, importadas da fonte —
+ * nunca recopiadas. Se o admin pudesse digitar texto livre onde o resto do
+ * sistema espera um código (`male`, `right`, `1-2-anos`), ele gravaria um valor
+ * que nenhuma tela entende e que nenhum sorteio consegue usar.
+ */
+export const FIELD_OPTIONS = Object.freeze({
+  gender: deRotulos(ATHLETE_GENDER_LABELS),
+  competition_gender: deRotulos(COMPETITION_GENDER_LABELS),
+  pickleball_experience: deRotulos(PICKLEBALL_EXPERIENCE_LABELS),
+  court_side: COURT_SIDE_OPTIONS.map(({ value, label }) => ({ value, label })),
+  leveling_level: LEVEL_OPTIONS.map(({ code, label }) => ({ value: code, label })),
+});
+
 /** Campos que o admin PODE corrigir, com rótulo e tipo para montar o formulário. */
 export const ADMIN_EDITABLE_FIELDS = Object.freeze([
   { key: 'platform_name', label: 'Nome de exibição', type: 'text', group: 'identidade', required: true },
   { key: 'full_name', label: 'Nome completo', type: 'text', group: 'identidade' },
   { key: 'birth_date', label: 'Data de nascimento', type: 'date', group: 'identidade', required: true },
   { key: 'phone', label: 'Telefone', type: 'text', group: 'identidade', required: true },
-  { key: 'gender', label: 'Gênero', type: 'text', group: 'identidade' },
+  { key: 'gender', label: 'Gênero', type: 'select', group: 'identidade' },
   { key: 'city', label: 'Cidade', type: 'text', group: 'local' },
   { key: 'state', label: 'Estado (UF)', type: 'text', group: 'local', maxLength: 2 },
   { key: 'address', label: 'Endereço', type: 'text', group: 'local' },
-  { key: 'pickleball_experience', label: 'Experiência no pickleball', type: 'text', group: 'jogo', required: true },
-  { key: 'competition_gender', label: 'Categoria competitiva', type: 'text', group: 'jogo' },
-  { key: 'court_side', label: 'Lado na quadra', type: 'text', group: 'jogo' },
-  { key: 'leveling_level', label: 'Nível declarado', type: 'text', group: 'jogo' },
+  { key: 'pickleball_experience', label: 'Experiência no pickleball', type: 'select', group: 'jogo', required: true },
+  { key: 'competition_gender', label: 'Categoria competitiva', type: 'select', group: 'jogo' },
+  { key: 'court_side', label: 'Lado na quadra', type: 'select', group: 'jogo' },
+  { key: 'leveling_level', label: 'Nível declarado', type: 'select', group: 'jogo' },
   { key: 'dupr_id', label: 'DUPR ID', type: 'text', group: 'jogo' },
   { key: 'dupr_rating', label: 'DUPR rating', type: 'number', group: 'jogo' },
   { key: 'photo_url', label: 'URL da foto', type: 'text', group: 'jogo' },
@@ -66,6 +90,42 @@ export const ADMIN_FORBIDDEN_FIELDS = Object.freeze({
 const OBRIGATORIOS = ADMIN_EDITABLE_FIELDS.filter((f) => f.required);
 
 const texto = (v) => String(v ?? '').trim();
+
+/** As opções de um campo, ou `null` se ele for de texto livre. */
+export function fieldOptions(key) {
+  return FIELD_OPTIONS[key] || null;
+}
+
+/** O valor pertence à lista do campo? Vazio conta como válido (é "não informado"). */
+export function isValidOptionValue(key, value) {
+  const opcoes = fieldOptions(key);
+  if (!opcoes) return true;
+  const v = texto(value);
+  if (v === '') return true;
+  return opcoes.some((o) => o.value === v);
+}
+
+/**
+ * Campos IRMÃOS que precisam acompanhar uma mudança, senão o cadastro fica
+ * internamente inconsistente.
+ *
+ * O caso real: o formulário normal, ao salvar o nível, grava QUATRO campos —
+ * `leveling_level` (o código), `level` (o texto que as telas exibem),
+ * `leveling_method` e `leveling_manual_level`. Gravar só o código deixaria o
+ * texto exibido apontando para o nível ANTIGO, inclusive no espelho público.
+ * É a mesma armadilha de `birth_date` / `birth_date_at`.
+ */
+export function derivedFieldsFor(key, value) {
+  if (key !== 'leveling_level') return {};
+  const codigo = texto(value);
+  if (!codigo) return { level: '', leveling_manual_level: '' };
+  const nivel = getLevelByCode(codigo);
+  return {
+    level: nivel ? `${nivel.name} (USAP ${nivel.usap})` : codigo,
+    leveling_method: 'manual',
+    leveling_manual_level: codigo,
+  };
+}
 
 /**
  * Número ou AUSÊNCIA — nunca zero por acidente.
@@ -99,7 +159,12 @@ export function sanitizeAdminUserPatch(patch = {}) {
     let s = texto(v);
     if (campo.maxLength) s = s.slice(0, campo.maxLength);
     if (k === 'state') s = s.toUpperCase();
+    // Campo de lista só aceita valor DA lista. Um valor fora dela é
+    // DESCARTADO, não zerado: se o documento já tem um valor legado inválido,
+    // apagá-lo em silêncio ao abrir a tela seria pior do que deixá-lo.
+    if (campo.type === 'select' && !isValidOptionValue(k, s)) { ignorados.push(k); return; }
     limpo[k] = s;
+    Object.assign(limpo, derivedFieldsFor(k, s));
   });
   return { patch: limpo, ignored: ignorados };
 }

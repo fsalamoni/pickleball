@@ -24,6 +24,7 @@ vi.mock('@/modules/admin/hooks/usePlatformUsers', () => ({
 }));
 
 const { default: AdminUserRecordsTab } = await import('./AdminUserRecordsTab.jsx');
+const { fieldOptions } = await import('@/modules/admin/domain/adminUserEdit');
 
 const COMPLETO = {
   uid: 'u_completo', email: 'completa@x.com', platform_name: 'Completa',
@@ -164,5 +165,90 @@ describe('aba Cadastros — editar', () => {
     const btn = [...d.querySelectorAll('button')]
       .find((b) => b.textContent.includes('Salvar'));
     expect(btn.disabled).toBe(true);
+  });
+});
+
+describe('aba Cadastros — listas de seleção', () => {
+  const abrirEditor = async () => {
+    await render();
+    const b = [...container.querySelectorAll('button')]
+      .find((x) => x.textContent.includes('Editar cadastro'));
+    await click(b);
+    return document.querySelector('[role="dialog"]');
+  };
+  const campoSelect = (d, rotulo) => [...d.querySelectorAll('label')]
+    .find((l) => l.textContent.includes(rotulo))?.querySelector('select');
+
+  it('⭐ os campos com lista viram SELECT, não texto livre', async () => {
+    const d = await abrirEditor();
+    ['Gênero', 'Experiência no pickleball', 'Categoria competitiva',
+      'Lado na quadra', 'Nível declarado'].forEach((rotulo) => {
+      expect(campoSelect(d, rotulo), rotulo).toBeTruthy();
+    });
+  });
+
+  it('os campos sem lista continuam texto livre', async () => {
+    const d = await abrirEditor();
+    ['Cidade', 'Telefone', 'Estado (UF)'].forEach((rotulo) => {
+      expect(campoSelect(d, rotulo), rotulo).toBeFalsy();
+    });
+  });
+
+  it('⭐ as opções são as MESMAS do cadastro normal', async () => {
+    const d = await abrirEditor();
+    const sel = campoSelect(d, 'Gênero');
+    const valores = [...sel.querySelectorAll('option')].map((o) => o.value);
+    // Primeira é sempre "não informado" (string vazia).
+    expect(valores[0]).toBe('');
+    expect(valores.slice(1)).toEqual(fieldOptions('gender').map((o) => o.value));
+  });
+
+  it('⭐ escolher salva o CÓDIGO, não o rótulo', async () => {
+    const d = await abrirEditor();
+    const sel = campoSelect(d, 'Gênero');
+    const codigo = fieldOptions('gender')[0].value;
+    await act(async () => {
+      const setter = Object.getOwnPropertyDescriptor(
+        window.HTMLSelectElement.prototype, 'value',
+      ).set;
+      setter.call(sel, codigo);
+      sel.dispatchEvent(new Event('change', { bubbles: true }));
+    });
+    const motivo = [...d.querySelectorAll('label')]
+      .find((l) => l.textContent.includes('Motivo da correção')).querySelector('input');
+    await digitar(motivo, 'preenchendo o que faltava');
+    await click([...d.querySelectorAll('button')].find((b) => b.textContent.includes('Salvar')));
+    expect(salvar).toHaveBeenCalledTimes(1);
+    expect(salvar.mock.calls[0][0].patch.gender).toBe(codigo);
+  });
+
+  it('⭐ valor legado FORA da lista aparece e é sinalizado, em vez de sumir', async () => {
+    dados.users = [{ ...INCOMPLETO, gender: 'masculino' }]; // rótulo antigo, não código
+    const d = await abrirEditor();
+    expect(d.textContent).toContain('valor antigo, fora da lista');
+    expect(d.textContent).toContain('Escolha um da lista para corrigir');
+    const sel = campoSelect(d, 'Gênero');
+    expect([...sel.querySelectorAll('option')].map((o) => o.value)).toContain('masculino');
+  });
+
+  it('⭐ mudar o nível leva junto o texto exibido (os campos irmãos)', async () => {
+    const d = await abrirEditor();
+    const sel = campoSelect(d, 'Nível declarado');
+    const codigo = fieldOptions('leveling_level')[1].value;
+    await act(async () => {
+      const setter = Object.getOwnPropertyDescriptor(
+        window.HTMLSelectElement.prototype, 'value',
+      ).set;
+      setter.call(sel, codigo);
+      sel.dispatchEvent(new Event('change', { bubbles: true }));
+    });
+    const motivo = [...d.querySelectorAll('label')]
+      .find((l) => l.textContent.includes('Motivo da correção')).querySelector('input');
+    await digitar(motivo, 'nivel informado pelo atleta');
+    await click([...d.querySelectorAll('button')].find((b) => b.textContent.includes('Salvar')));
+    const patch = salvar.mock.calls[0][0].patch;
+    expect(patch.leveling_level).toBe(codigo);
+    expect(patch.level).toMatch(/USAP/);
+    expect(patch.leveling_method).toBe('manual');
   });
 });

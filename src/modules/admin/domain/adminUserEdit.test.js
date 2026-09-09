@@ -2,8 +2,14 @@ import { describe, it, expect } from 'vitest';
 import {
   ADMIN_EDITABLE_FIELDS, ADMIN_FORBIDDEN_FIELDS, sanitizeAdminUserPatch,
   diffAdminUserPatch, missingUserFields, isUserRecordComplete, userRecordStatus,
-  validateAdminEdit,
+  validateAdminEdit, fieldOptions, isValidOptionValue, derivedFieldsFor,
 } from './adminUserEdit.js';
+import { ATHLETE_GENDER_LABELS } from '@/modules/athletes/domain/constants';
+import { COURT_SIDE_OPTIONS } from '@/modules/athletes/domain/profileMeta';
+import {
+  PICKLEBALL_EXPERIENCE_LABELS, COMPETITION_GENDER_LABELS,
+} from '@/modules/tournament/domain/constants';
+import { LEVEL_OPTIONS } from '@/modules/leveling/data/levels';
 
 const completo = {
   platform_name: 'Ana', full_name: 'Ana Silva', birth_date: '1990-01-01',
@@ -171,5 +177,95 @@ describe('validateAdminEdit — motivo é obrigatório', () => {
 
   it('com alteração e motivo, passa', () => {
     expect(validateAdminEdit({ changes: mudanca, reason: 'a pedido do atleta' }).isValid).toBe(true);
+  });
+});
+
+describe('listas de seleção — as MESMAS do cadastro normal', () => {
+  it('⭐ as opções vêm da fonte, não de uma cópia', () => {
+    // Se alguém recopiar uma lista aqui, ela vai divergir da do cadastro normal
+    // na primeira vez que a original mudar. Este teste compara com a fonte.
+    expect(fieldOptions('gender').map((o) => o.value))
+      .toEqual(Object.keys(ATHLETE_GENDER_LABELS));
+    expect(fieldOptions('competition_gender').map((o) => o.value))
+      .toEqual(Object.keys(COMPETITION_GENDER_LABELS));
+    expect(fieldOptions('pickleball_experience').map((o) => o.value))
+      .toEqual(Object.keys(PICKLEBALL_EXPERIENCE_LABELS));
+    expect(fieldOptions('court_side').map((o) => o.value))
+      .toEqual(COURT_SIDE_OPTIONS.map((o) => o.value));
+    expect(fieldOptions('leveling_level').map((o) => o.value))
+      .toEqual(LEVEL_OPTIONS.map((o) => o.code));
+  });
+
+  it('campo de texto livre não tem lista', () => {
+    expect(fieldOptions('city')).toBeNull();
+    expect(fieldOptions('phone')).toBeNull();
+    // O cadastro normal também usa texto livre para UF — não inventamos lista.
+    expect(fieldOptions('state')).toBeNull();
+  });
+
+  it('todo campo marcado como `select` TEM lista, e vice-versa', () => {
+    ADMIN_EDITABLE_FIELDS.forEach((f) => {
+      expect(Boolean(fieldOptions(f.key))).toBe(f.type === 'select');
+    });
+  });
+
+  it('isValidOptionValue aceita vazio e recusa valor inventado', () => {
+    const generoValido = Object.keys(ATHLETE_GENDER_LABELS)[0];
+    expect(isValidOptionValue('gender', generoValido)).toBe(true);
+    expect(isValidOptionValue('gender', '')).toBe(true);        // não informado
+    expect(isValidOptionValue('gender', 'masculino')).toBe(false); // rótulo, não código
+    expect(isValidOptionValue('city', 'qualquer coisa')).toBe(true); // texto livre
+  });
+
+  it('⭐ valor fora da lista é DESCARTADO, nunca gravado', () => {
+    const { patch, ignored } = sanitizeAdminUserPatch({
+      gender: 'masculino', city: 'Canoas',
+    });
+    expect(patch).not.toHaveProperty('gender');
+    expect(ignored).toContain('gender');
+    expect(patch.city).toBe('Canoas'); // o resto da correção segue valendo
+  });
+
+  it('⭐ descartar NÃO é zerar — o valor legado do banco fica onde está', () => {
+    // Zerar em silêncio ao abrir a tela seria pior do que deixar o valor ruim:
+    // o admin perderia a informação sem perceber.
+    const { patch } = sanitizeAdminUserPatch({ gender: 'valor_antigo_invalido' });
+    expect(patch).toEqual({});
+  });
+
+  it('valor válido da lista passa normalmente', () => {
+    const valido = COURT_SIDE_OPTIONS[1].value;
+    expect(sanitizeAdminUserPatch({ court_side: valido }).patch.court_side).toBe(valido);
+  });
+});
+
+describe('derivedFieldsFor — os irmãos do nível', () => {
+  it('⭐ mudar o nível grava os QUATRO campos, como o cadastro normal', () => {
+    // O formulário do usuário grava `leveling_level` + `level` (o texto que as
+    // telas exibem) + `leveling_method` + `leveling_manual_level`. Gravar só o
+    // código deixaria o texto exibido apontando para o nível ANTIGO.
+    const codigo = LEVEL_OPTIONS[2].code;
+    const d = derivedFieldsFor('leveling_level', codigo);
+    expect(d.leveling_manual_level).toBe(codigo);
+    expect(d.leveling_method).toBe('manual');
+    expect(d.level).toMatch(/USAP/);
+  });
+
+  it('⭐ o sanitize já inclui os irmãos — quem grava não precisa lembrar', () => {
+    const codigo = LEVEL_OPTIONS[0].code;
+    const { patch } = sanitizeAdminUserPatch({ leveling_level: codigo });
+    expect(patch.leveling_level).toBe(codigo);
+    expect(patch.level).toMatch(/USAP/);
+    expect(patch.leveling_method).toBe('manual');
+  });
+
+  it('limpar o nível limpa o texto exibido junto', () => {
+    const d = derivedFieldsFor('leveling_level', '');
+    expect(d.level).toBe('');
+    expect(d.leveling_manual_level).toBe('');
+  });
+
+  it('nenhum outro campo tem irmãos', () => {
+    expect(derivedFieldsFor('city', 'Canoas')).toEqual({});
   });
 });

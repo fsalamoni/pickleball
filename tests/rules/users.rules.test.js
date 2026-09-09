@@ -392,6 +392,20 @@ describe('users/{uid} — CORREÇÃO DE CADASTRO pelo admin', () => {
       { ...correcao(), email: 'outro@x.com' }, { merge: true }));
   });
 
+  it('46b. ⭐ o admin grava o NÍVEL com os campos irmãos, num write só', async () => {
+    // O cadastro normal grava quatro campos ao salvar o nível. Se a regra não
+    // aceitasse os irmãos, a escrita inteira seria recusada (hasOnly) e a
+    // correção do nível simplesmente não funcionaria.
+    await assertSucceeds(setDoc(doc(asAdmin(), 'users', USER_UID), {
+      leveling_level: '3.5',
+      level: 'Intermediário (USAP 3.5)',
+      leveling_method: 'manual',
+      leveling_manual_level: '3.5',
+      admin_edited_at: serverTimestamp(), admin_edited_by: ADMIN_UID,
+      updated_at: serverTimestamp(),
+    }, { merge: true }));
+  });
+
   it('47. 🔴 usuário comum NÃO corrige o cadastro de outro', async () => {
     await assertFails(setDoc(doc(asUser(), 'users', OTHER_UID), correcao(), { merge: true }));
   });

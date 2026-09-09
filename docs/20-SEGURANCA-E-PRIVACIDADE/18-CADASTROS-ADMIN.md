@@ -23,6 +23,45 @@
 6. **Re-sincroniza o espelho público** (`athlete_profiles`) — sem isso a
    correção não aparece no diretório e alguém a refaz na semana seguinte.
 
+## As listas são as MESMAS do cadastro normal
+
+Onde o cadastro do usuário tem lista de seleção, a tela do admin tem a **mesma
+lista** — importada da fonte, nunca recopiada:
+
+| Campo | Fonte da lista |
+|---|---|
+| Gênero | `ATHLETE_GENDER_LABELS` (`athletes/domain/constants`) |
+| Categoria competitiva | `COMPETITION_GENDER_LABELS` (`tournament/domain/constants`) |
+| Experiência no pickleball | `PICKLEBALL_EXPERIENCE_LABELS` (idem) |
+| Lado na quadra | `COURT_SIDE_OPTIONS` (`athletes/domain/profileMeta`) |
+| Nível declarado | `LEVEL_OPTIONS` (`leveling/data/levels`) |
+
+Cidade, endereço, telefone e **UF** seguem texto livre — porque no cadastro
+normal também são. Não inventamos uma lista que a plataforma não tem.
+
+**Por que importa**: o resto do sistema lê esses campos por CÓDIGO (`male`,
+`right`, `1-2-anos`). Texto livre ali gravaria um valor que nenhuma tela
+entende e que nenhum sorteio consegue usar. Um teste compara as opções da tela
+com a fonte, campo a campo — se alguém recopiar uma lista, ele quebra.
+
+**Valor legado fora da lista**: aparece no seletor, marcado como
+*"valor antigo, fora da lista"*, com um aviso pedindo para escolher um válido.
+Ele **não é apagado em silêncio** — sumir com a informação sem o admin ver
+seria pior do que mantê-la. E um valor fora da lista nunca é GRAVADO: o
+`sanitize` o descarta e registra em `ignored_fields` na auditoria.
+
+## Campos irmãos: o nível grava quatro, não um
+
+O formulário do usuário, ao salvar o nível, grava `leveling_level` (o código),
+`level` (o texto que as telas exibem), `leveling_method` e
+`leveling_manual_level`. Gravar só o código deixaria o texto exibido apontando
+para o nível **antigo** — inclusive no espelho público.
+
+É a mesma armadilha de `birth_date` / `birth_date_at`, e a solução é a mesma:
+`derivedFieldsFor` monta os irmãos no domínio, o `sanitize` já os inclui, e a
+regra do Firestore aceita os quatro juntos (uma escrita que trouxesse só parte
+seria recusada inteira pelo `hasOnly`).
+
 ## O limite: corrigir o dado ≠ decidir quem o vê
 
 A lista de campos editáveis é **fechada** e está em três lugares que não podem
@@ -92,7 +131,7 @@ enquanto a leitura direta existir, qualquer registro no cliente é contornável.
 
 ## Cobertura
 
-- 25 testes de domínio (`adminUserEdit.test.js`)
-- 10 de runtime (`AdminUserRecordsTab.runtime.test.jsx`)
-- 9 asserções no emulador (`users.rules.test.js` §42-50), metade dedicada ao
+- 35 testes de domínio (`adminUserEdit.test.js`)
+- 16 de runtime (`AdminUserRecordsTab.runtime.test.jsx`)
+- 10 asserções no emulador (`users.rules.test.js` §42-50), metade dedicada ao
   que o admin **não** consegue

@@ -805,6 +805,10 @@ service cloud.firestore {
               'phone', 'gender', 'city', 'state', 'address',
               'pickleball_experience', 'competition_gender', 'court_side',
               'leveling_level', 'dupr_id', 'dupr_rating', 'photo_url',
+              // Irmãos do nível: o formulário normal grava os quatro juntos.
+              // Gravar só o código deixaria o texto exibido apontando para o
+              // nível antigo — inclusive no espelho público.
+              'level', 'leveling_method', 'leveling_manual_level',
               'updated_at', 'admin_edited_at', 'admin_edited_by',
             ]))
         // REVOGAÇÃO DE PODER — assimétrica de propósito.

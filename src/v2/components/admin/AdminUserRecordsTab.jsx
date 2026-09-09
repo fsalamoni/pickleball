@@ -2,7 +2,9 @@ import React, { useMemo, useState } from 'react';
 import { UserCog, Search, AlertCircle, CheckCircle2, Pencil, ArrowRight } from 'lucide-react';
 import { toast } from 'sonner';
 
-import { V2Surface, V2Button, V2Badge, V2Skeleton, V2Input, V2FilterChip } from '@/v2/ui/primitives';
+import {
+  V2Surface, V2Button, V2Badge, V2Skeleton, V2Input, V2Select, V2FilterChip,
+} from '@/v2/ui/primitives';
 import {
   Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription, DialogFooter,
 } from '@/components/ui/dialog';
@@ -13,6 +15,7 @@ import {
 import {
   ADMIN_EDITABLE_FIELDS, ADMIN_FORBIDDEN_FIELDS, userRecordStatus,
   diffAdminUserPatch, sanitizeAdminUserPatch, validateAdminEdit,
+  fieldOptions, isValidOptionValue,
 } from '@/modules/admin/domain/adminUserEdit';
 
 const GRUPOS = [
@@ -219,13 +222,7 @@ function RecordEditDialog({ user, onClose }) {
                         </span>
                       )}
                     </span>
-                    <V2Input
-                      className="mt-1"
-                      type={f.type === 'date' ? 'date' : f.type === 'number' ? 'number' : 'text'}
-                      value={form[f.key] ?? ''}
-                      maxLength={f.maxLength}
-                      onChange={(e) => set(f.key, e.target.value)}
-                    />
+                    <CampoDeEdicao field={f} value={form[f.key] ?? ''} onChange={(v) => set(f.key, v)} />
                   </label>
                 ))}
               </div>
@@ -279,6 +276,48 @@ function RecordEditDialog({ user, onClose }) {
         </DialogFooter>
       </DialogContent>
     </Dialog>
+  );
+}
+
+/**
+ * Um campo do formulário do admin. Onde o cadastro normal tem LISTA, aqui tem a
+ * MESMA lista — importada da fonte, nunca recopiada. Texto livre num campo que
+ * o resto do sistema lê por código (`male`, `right`, `1-2-anos`) gravaria um
+ * valor que nenhuma tela entende e que nenhum sorteio consegue usar.
+ */
+function CampoDeEdicao({ field: f, value, onChange }) {
+  const opcoes = fieldOptions(f.key);
+
+  if (!opcoes) {
+    return (
+      <V2Input
+        className="mt-1"
+        type={f.type === 'date' ? 'date' : f.type === 'number' ? 'number' : 'text'}
+        value={value}
+        maxLength={f.maxLength}
+        onChange={(e) => onChange(e.target.value)}
+      />
+    );
+  }
+
+  // Valor que já está no banco mas não pertence à lista (cadastro antigo, ou
+  // digitado à mão em algum momento). Mostrar em vez de sumir com ele: o admin
+  // precisa VER o que está lá para decidir se troca.
+  const foraDaLista = value !== '' && !isValidOptionValue(f.key, value);
+
+  return (
+    <>
+      <V2Select className="mt-1" value={value} onChange={(e) => onChange(e.target.value)}>
+        <option value="">— não informado —</option>
+        {opcoes.map((o) => <option key={o.value} value={o.value}>{o.label}</option>)}
+        {foraDaLista && <option value={value}>{value} (valor antigo, fora da lista)</option>}
+      </V2Select>
+      {foraDaLista && (
+        <span className="mt-1 block text-[10px] font-normal text-amber-700">
+          O valor gravado não está na lista atual. Escolha um da lista para corrigir.
+        </span>
+      )}
+    </>
   );
 }
 
