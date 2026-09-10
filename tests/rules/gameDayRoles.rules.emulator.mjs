@@ -12,7 +12,10 @@
  *  2. o administrador nomeado gerencia;
  *  3. o modo ABERTO deixa o participante gerenciar;
  *  4. e — o mais importante — ninguém consegue, por tabela, virar dono, se
- *     autonomear administrador ou reabrir a gestão do dia.
+ *     autonomear administrador ou reabrir a gestão do dia;
+ *  5. o AMERICANO APRIMORADO (`americano_live`) entrou sem tocar em regra
+ *     nenhuma: vale para ele exatamente o mesmo que já valia para a grade,
+ *     e ele NÃO herda o atalho colaborativo do Play.
  */
 import { readFileSync } from 'node:fs';
 import { initializeTestEnvironment, assertSucceeds, assertFails } from '@firebase/rules-unit-testing';
@@ -42,11 +45,12 @@ async function t(nome, fn) {
 }
 
 /** Semeia um dia de jogo com o modo e os admins pedidos. */
-async function semear(id, { manage_mode, admin_uids } = {}) {
+async function semear(id, opcoes = {}) {
+  const { manage_mode, admin_uids } = opcoes;
   await env.withSecurityRulesDisabled(async (ctx) => {
     const db = ctx.firestore();
     const payload = {
-      id, created_by: DONO, title: 'Dia', format: 'americano',
+      id, created_by: DONO, title: 'Dia', format: opcoes.format || 'americano',
       visibility: 'private', status: 'active',
       member_uids: [DONO, ADMIN, JOGA], invited_uids: [],
     };
@@ -154,6 +158,39 @@ await t('o CRIADOR nomeia administrador e muda o modo', async () => {
   await assertSucceeds(updateDoc(dia(DONO, 'trava'), { admin_uids: [ADMIN, JOGA] }));
   await assertSucceeds(updateDoc(dia(DONO, 'trava'), { manage_mode: 'owner_only' }));
 });
+
+/* ------- 5. Americano aprimorado: nem regra nova, nem atalho do Play ------- */
+
+/*
+ * Este formato grava PLACAR e alimenta o ranking do dia. Se ele herdasse o
+ * atalho do Play (`isPlayGameDayMember`, confinado a `format == 'play'`),
+ * qualquer inscrito poderia reescrever um resultado. Não herda — e é isto que
+ * as três asserções abaixo prendem. O corolário é o que interessa: a
+ * funcionalidade nasceu SEM UMA LINHA nova em `firestore.rules`.
+ */
+await semear('aovivo', { format: 'americano_live' });
+
+await t('americano aprimorado: o criador lança o resultado', () =>
+  assertSucceeds(updateDoc(jogo(DONO, 'aovivo', 'g1'), { score_a: 11, score_b: 7 })));
+
+await t('⭐ americano aprimorado: participante comum NÃO lança resultado (não é Play)', () =>
+  assertFails(updateDoc(jogo(JOGA, 'aovivo', 'g1'), { score_a: 11, score_b: 7 })));
+
+await t('⭐ americano aprimorado: participante comum NÃO mexe na fila (não é Play)', () =>
+  assertFails(updateDoc(parte(JOGA, 'aovivo', 'p-joga'), { skip_remaining: 3 })));
+
+await semear('aovivo-admin', { format: 'americano_live', admin_uids: [ADMIN] });
+
+await t('americano aprimorado: o admin nomeado lança o resultado', () =>
+  assertSucceeds(updateDoc(jogo(ADMIN, 'aovivo-admin', 'g1'), { score_a: 11, score_b: 7 })));
+
+await semear('aovivo-aberto', { format: 'americano_live', manage_mode: 'participants' });
+
+await t('americano aprimorado: com a gestão ABERTA, o participante lança o resultado', () =>
+  assertSucceeds(updateDoc(jogo(JOGA, 'aovivo-aberto', 'g1'), { score_a: 11, score_b: 7 })));
+
+await t('americano aprimorado: quem está fora não entra nem com a gestão aberta', () =>
+  assertFails(updateDoc(jogo(FORA, 'aovivo-aberto', 'g1'), { score_a: 11 })));
 
 /* ------------------------------- relatório -------------------------------- */
 

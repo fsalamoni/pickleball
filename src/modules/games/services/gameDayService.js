@@ -41,6 +41,10 @@ import { FEATURE_FLAG } from '@/core/featureFlags';
 import { getPlatformSettings } from '@/core/services/platformSettingsService';
 import { fetchUnifiedLevelsByParticipant } from '@/modules/rating/services/unifiedLevelService';
 import { mirrorGameToMyGame, sourceGameToMyGame, gameDayMirrorId } from '../domain/myGames.js';
+import {
+  drawNextAmericanoLiveMatch, americanoLiveInCourtIds,
+} from '../domain/americanoLive.js';
+import { GAME_DAY_FORMAT } from '@/modules/clubs/domain/gameDayFormats.js';
 
 const COL = 'game_days';
 const COL_OPEN = 'open_games';
@@ -532,14 +536,14 @@ function playSideEntries(ids, byId) {
 }
 
 /** Grava (no batch) um jogo aberto do Play numa quadra e devolve o id. */
-function writePlayGame(batch, gdId, { court, side_a, side_b, order }) {
+function writePlayGame(batch, gdId, { court, side_a, side_b, order, format = 'play' }) {
   const gid = doc(collection(db, COL, gdId, SUB_GAMES)).id;
   batch.set(doc(db, COL, gdId, SUB_GAMES, gid), {
     id: gid,
     round: null,
     court: court ?? null,
     kind: 'doubles',
-    format: 'play',
+    format,
     status: PLAY_GAME_STATUS.OPEN,
     side_a: side_a || [],
     side_b: side_b || [],
@@ -1114,3 +1118,188 @@ export async function getMyGameDayGames(uid) {
 }
 
 export { gameDayRankingId, GAME_DAY_DATE_ID };
+
+
+/* ===================== AMERICANO APRIMORADO (americano_live) ================
+ *
+ * Mesmo modelo de participante e de quadra do Play — por isso reaproveita
+ * `computePlayOrder`, `writePlayGame`, `applySkipDecrement`,
+ * `setPlayParticipantSkip`, `setPlayParticipantPartner`, `cancelPlayGame` e
+ * `noShowSwapPlayGame` sem nenhuma duplicação.
+ *
+ * O que muda: QUEM joga com quem é decidido pelo motor do Americano
+ * (`americanoLive.drawNextAmericanoLiveMatch`), e a partida termina com
+ * PLACAR — o que a faz entrar no ranking do dia e, se o dia estiver publicado,
+ * no ranking/rating da plataforma e no DUPR.
+ * ========================================================================= */
+
+/** Cria a PRÓXIMA partida do Americano aprimorado numa quadra. */
+export async function createNextAmericanoLiveGame(gdId, actor, { court = null } = {}) {
+  const gd = await getGameDay(gdId);
+  if (!gd) throw new Error('Dia de jogo não encontrado.');
+  const [participants, games] = await Promise.all([
+    listGameDayParticipants(gdId), listGameDayGames(gdId),
+  ]);
+  const targetCourt = court ?? nextFreePlayCourt({ courts: gd.play_courts || 1, games });
+  if (targetCourt == null) throw new Error('Todas as quadras já estão em jogo.');
+
+  const { order } = computePlayOrder({ participants, games });
+
+  // Nível na régua unificada, só em memória (nada é gravado no participante).
+  // Best-effort: sem ele o sorteio acontece igual, apenas sem o critério
+  // terciário de equilíbrio de força.
+  const niveis = await fetchUnifiedLevelsByParticipant(participants).catch(() => ({}));
+
+  const escolha = drawNextAmericanoLiveMatch(order, { games, levels: niveis });
+  if (!escolha) {
+    throw new Error('Não há jogadores disponíveis suficientes (mínimo 4) para criar a próxima partida.');
+  }
+
+  const byId = new Map(participants.map((p) => [p.id, p]));
+  const batch = writeBatch(db);
+  const gid = writePlayGame(batch, gdId, {
+    court: targetCourt,
+    side_a: playSideEntries(escolha.side_a, byId),
+    side_b: playSideEntries(escolha.side_b, byId),
+    order: Date.now(),
+    format: GAME_DAY_FORMAT.AMERICANO_LIVE,
+  });
+  const escolhidos = new Set(escolha.ids);
+  applySkipDecrement(batch, gdId, participants.filter((p) => !escolhidos.has(p.id)));
+  await batch.commit();
+  await createAuditLog({
+    action: 'game_day_americano_live_created', actor,
+    details: { game_day_id: gdId, court: targetCourt, game_id: gid },
+  });
+  return { gameId: gid, court: targetCourt };
+}
+
+/**
+ * LANÇA O RESULTADO de uma partida do Americano aprimorado.
+ *
+ * Diferente do Play (`finishPlayGame`, que já cria o próximo jogo sozinho),
+ * aqui a partida apenas é CONCLUÍDA com placar e os quatro voltam ao fim da
+ * fila. Criar a próxima é um segundo clique, deliberado — é o fluxo que o
+ * organizador pediu: lançar o resultado, ver que foi salvo, e só então decidir
+ * gerar a próxima.
+ *
+ * Se o dia já foi publicado no ranking, o espelho é sincronizado na hora, para
+ * a partida entrar no rating e no DUPR sem exigir republicação manual.
+ */
+export async function submitAmericanoLiveResult(gdId, gid, { scoreA, scoreB } = {}, actor) {
+  const a = Number(scoreA);
+  const b = Number(scoreB);
+  if (!Number.isFinite(a) || !Number.isFinite(b) || a < 0 || b < 0) {
+    throw new Error('Informe os dois placares.');
+  }
+  const [participants, games] = await Promise.all([
+    listGameDayParticipants(gdId), listGameDayGames(gdId),
+  ]);
+  const game = games.find((g) => g.id === gid);
+  if (!game) throw new Error('Partida não encontrada.');
+
+  const now = Date.now();
+  const playerIds = [...(game.side_a || []), ...(game.side_b || [])]
+    .map((p) => (typeof p === 'string' ? p : p?.id)).filter(Boolean);
+  const partById = new Map(participants.map((p) => [p.id, p]));
+
+  const batch = writeBatch(db);
+  batch.update(doc(db, COL, gdId, SUB_GAMES, gid), {
+    score_a: a, score_b: b,
+    status: PLAY_GAME_STATUS.FINISHED,
+    finished_at: serverTimestamp(),
+    updated_at: serverTimestamp(),
+  });
+  // Os quatro voltam ao FIM da fila — é o que mantém a rotação girando.
+  playerIds.forEach((pid) => {
+    if (!partById.has(pid)) return;
+    batch.update(doc(db, COL, gdId, SUB_PARTICIPANTS, pid), {
+      available_since: now, available_tie: Math.random(), updated_at: serverTimestamp(),
+    });
+  });
+  await batch.commit();
+
+  await createAuditLog({
+    action: 'game_day_americano_live_result', actor,
+    details: { game_day_id: gdId, game_id: gid, score_a: a, score_b: b },
+  });
+  // Best-effort: o resultado já está gravado; uma falha aqui só adia o espelho.
+  await syncGameDayRankingIfPublished(gdId, actor).catch(() => null);
+  return { gameId: gid, court: game.court ?? null };
+}
+
+/** Criação MANUAL de uma partida do Americano aprimorado (com placar opcional). */
+export async function createManualAmericanoLiveGame(
+  gdId, { court = null, sideAIds = [], sideBIds = [], scoreA = null, scoreB = null }, actor,
+) {
+  const participants = await listGameDayParticipants(gdId);
+  const byId = new Map(participants.map((p) => [p.id, p]));
+  const ids = [...sideAIds, ...sideBIds].filter(Boolean);
+  if (ids.length !== PLAY_SLOTS) throw new Error('Escolha exatamente 4 jogadores.');
+  if (new Set(ids).size !== ids.length) throw new Error('Há jogadores repetidos.');
+
+  const temPlacar = scoreA != null && scoreB != null;
+
+  // REGRA DO FORMATO: ninguém em duas quadras ao mesmo tempo.
+  //
+  // Vale para a partida que VAI PARA A QUADRA (a que nasce sem placar). Uma
+  // partida lançada JÁ COM resultado registra algo que aconteceu antes e não
+  // ocupa quadra nenhuma — bloqueá-la impediria o organizador de recuperar um
+  // jogo que esqueceu de lançar.
+  //
+  // A conferência é feita AQUI, e não só na tela: a tela é conveniência, o
+  // serviço é que decide.
+  if (!temPlacar) {
+    const games = await listGameDayGames(gdId);
+    const emQuadra = americanoLiveInCourtIds(games);
+    const conflito = ids.filter((id) => emQuadra.has(id));
+    if (conflito.length > 0) {
+      const nomes = conflito.map((id) => byId.get(id)?.name || id).join(', ');
+      throw new Error(`Já está em quadra: ${nomes}. Encerre a partida antes.`);
+    }
+    if (court != null) {
+      const ocupada = games.some((g) => g?.status !== PLAY_GAME_STATUS.FINISHED
+        && g?.court != null && Number(g.court) === Number(court));
+      if (ocupada) throw new Error(`A quadra ${court} já tem uma partida em andamento.`);
+    }
+  }
+
+  const batch = writeBatch(db);
+  const gid = writePlayGame(batch, gdId, {
+    court,
+    side_a: playSideEntries(sideAIds, byId),
+    side_b: playSideEntries(sideBIds, byId),
+    order: Date.now(),
+    format: GAME_DAY_FORMAT.AMERICANO_LIVE,
+  });
+  if (temPlacar) {
+    batch.update(doc(db, COL, gdId, SUB_GAMES, gid), {
+      score_a: Number(scoreA), score_b: Number(scoreB),
+      status: PLAY_GAME_STATUS.FINISHED, finished_at: serverTimestamp(),
+    });
+  }
+  await batch.commit();
+  await createAuditLog({
+    action: 'game_day_americano_live_manual', actor,
+    details: { game_day_id: gdId, game_id: gid, court, with_score: temPlacar },
+  });
+  if (temPlacar) await syncGameDayRankingIfPublished(gdId, actor).catch(() => null);
+  return { gameId: gid };
+}
+
+/** Corrige o PLACAR de uma partida já concluída (e re-sincroniza o espelho). */
+export async function updateAmericanoLiveResult(gdId, gid, { scoreA, scoreB }, actor) {
+  const a = Number(scoreA);
+  const b = Number(scoreB);
+  if (!Number.isFinite(a) || !Number.isFinite(b) || a < 0 || b < 0) {
+    throw new Error('Informe os dois placares.');
+  }
+  await updateDoc(doc(db, COL, gdId, SUB_GAMES, gid), {
+    score_a: a, score_b: b, updated_at: serverTimestamp(),
+  });
+  await createAuditLog({
+    action: 'game_day_americano_live_result_edited', actor,
+    details: { game_day_id: gdId, game_id: gid, score_a: a, score_b: b },
+  });
+  await syncGameDayRankingIfPublished(gdId, actor).catch(() => null);
+}

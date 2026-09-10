@@ -21,6 +21,16 @@ export const GAME_DAY_FORMAT = Object.freeze({
   // sem sorteio de grade e sem resultados. Domínio próprio em
   // `modules/games/domain/gamePlay.js` (não usa o motor de sorteio acima).
   PLAY: 'play',
+  // Americano aprimorado — mescla dos dois modelos acima:
+  //  · a ORGANIZAÇÃO é a do Play (quadra a quadra, um jogo por vez, com fila de
+  //    participação, pausa e dupla fixa);
+  //  · o SORTEIO é o do Americano (`gameDayDraw`), então vale tudo o que ele já
+  //    equilibra: duplas inéditas, adversários inéditos, participação e nível;
+  //  · o RESULTADO é o do Americano — cada partida grava placar, entra no
+  //    ranking do dia e pode ser publicada no ranking/rating e no DUPR.
+  //
+  // NÃO entra em `DRAW_FORMATS`: ele não sorteia grade de rodadas.
+  AMERICANO_LIVE: 'americano_live',
 });
 
 export const GAME_DAY_FORMAT_LABELS = Object.freeze({
@@ -28,6 +38,7 @@ export const GAME_DAY_FORMAT_LABELS = Object.freeze({
   [GAME_DAY_FORMAT.MEXICANO]: 'Mexicano',
   [GAME_DAY_FORMAT.KING_OF_COURT]: 'Rei da Quadra',
   [GAME_DAY_FORMAT.PLAY]: 'Play (jogo aberto por ordem de chegada)',
+  [GAME_DAY_FORMAT.AMERICANO_LIVE]: 'Americano aprimorado (partida a partida, com placar)',
 });
 
 /**
@@ -44,6 +55,29 @@ export const DRAW_FORMATS = Object.freeze([
 /** É o formato Play (open play)? */
 export function isPlayFormat(format) {
   return format === GAME_DAY_FORMAT.PLAY;
+}
+
+/** É o Americano aprimorado (partida a partida, com placar)? */
+export function isAmericanoLiveFormat(format) {
+  return format === GAME_DAY_FORMAT.AMERICANO_LIVE;
+}
+
+/**
+ * Formatos organizados QUADRA A QUADRA — um jogo por vez, com fila de
+ * participação, pausa e dupla fixa, em vez de grade de rodadas.
+ *
+ * Serve para o que os dois têm em comum: o número de quadras é configurado na
+ * criação, a lista de participantes usa o modelo do Play, e nenhum dos dois
+ * aparece no seletor de sorteio de grade. O que os separa — placar, ranking do
+ * dia e publicação — fica em `isAmericanoLiveFormat`.
+ */
+export function isCourtByCourtFormat(format) {
+  return isPlayFormat(format) || isAmericanoLiveFormat(format);
+}
+
+/** O formato grava PLACAR? O Play não; o Americano aprimorado sim. */
+export function formatHasScores(format) {
+  return !isPlayFormat(format);
 }
 
 /* --------------------------- utilidades RNG --------------------------- */

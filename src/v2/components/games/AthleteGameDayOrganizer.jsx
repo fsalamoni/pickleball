@@ -704,7 +704,12 @@ function ManualGameDialog({ open, onClose, gdId, participants }) {
 
 /* ----------------------------- Ranking do dia ---------------------------- */
 
-function DailyRankingSection({ gameDay, participants }) {
+/**
+ * Exportadas para o AMERICANO APRIMORADO reaproveitá-las tal como estão: as
+ * duas trabalham sobre `score_a`/`score_b` e não sabem nada de rodadas, então
+ * servem igual num formato sorteado partida a partida.
+ */
+export function DailyRankingSection({ gameDay, participants }) {
   const { data: games = [] } = useGameDayGames(gameDay.id);
   const decididos = games.filter((g) => g.score_a != null && g.score_b != null).length;
   return (
@@ -721,7 +726,7 @@ function DailyRankingSection({ gameDay, participants }) {
 
 /* -------------------------------- Ranking -------------------------------- */
 
-function RankingSection({ gameDay, participants }) {
+export function RankingSection({ gameDay, participants }) {
   const { data: meta } = useGameDayRankingMeta(gameDay.id);
   const { data: games = [] } = useGameDayGames(gameDay.id);
   const publish = usePublishGameDayRanking();

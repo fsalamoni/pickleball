@@ -23,6 +23,13 @@ export const GAME_DAY_SECTION = Object.freeze({
   PLAY_ORDER: 'gameday:play:order',
   PLAY_ME: 'gameday:play:me',
 
+  /* Dia de jogo do atleta — AMERICANO APRIMORADO (partida a partida, com placar) */
+  AL_PARTICIPANTS: 'gameday:al:participants',
+  AL_COURTS: 'gameday:al:courts',
+  AL_ORDER: 'gameday:al:order',
+  AL_COMPLETED: 'gameday:al:completed',
+  AL_PROGRESS: 'gameday:al:progress',
+
   /* Dia de jogo do clube (data de evento) */
   CLUB_PARTICIPANTS: 'club-gameday:participants',
   CLUB_GAMES: 'club-gameday:games',

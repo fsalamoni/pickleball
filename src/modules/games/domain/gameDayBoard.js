@@ -25,11 +25,20 @@
  * significa "partidas já encerradas", não "resultados" — quem consome deve
  * tratá-lo como contagem/histórico, nunca exibi-lo como placar.
  *
- * Estas funções não sabem qual é o formato: elas olham os dados. Um jogo com
- * `status` é tratado como Play; sem `status`, como grade. Assim o painel
- * funciona igual num dia de jogo do atleta e num dia de jogo de clube, que
- * gravam jogos no mesmo formato.
+ * O AMERICANO APRIMORADO (`americano_live`) é o terceiro caso: agrupa como o
+ * Play (um jogo por vez, `status` gravado) mas GRAVA PLACAR, como a grade.
+ * Por isso `buildGameDayBoard` aceita o `format`: sem ele, o agrupamento
+ * continua sendo inferido pelos dados (comportamento histórico, preservado),
+ * mas quem sabe o formato informa e recebe de volta `hasScores` — a diferença
+ * entre "partidas encerradas" e "resultados", que decide se a tela pode
+ * mostrar placar e ranking.
+ *
+ * Estas funções não precisam do formato para agrupar: elas olham os dados. Um
+ * jogo com `status` é tratado quadra a quadra; sem `status`, como grade. Assim
+ * o painel funciona igual num dia de jogo do atleta e num dia de jogo de
+ * clube, que gravam jogos no mesmo formato.
  */
+import { isCourtByCourtFormat, formatHasScores } from '@/modules/clubs/domain/gameDayFormats.js';
 
 /** Um jogo está decidido quando os DOIS placares foram preenchidos. */
 export function isDecided(game) {
@@ -115,20 +124,29 @@ export function currentRoundOf(games = []) {
  * Separa os jogos do dia nos três grupos do painel.
  *
  * @param {Array} games jogos do dia (formato gravado em `game_days/{id}/games`)
- * @param {{ recentLimit?: number, upcomingLimit?: number }} [options]
+ * @param {{ recentLimit?: number, upcomingLimit?: number, format?: string|null }} [options]
+ *   `format` é OPCIONAL e só refina: informado, ele (e não os dados) decide se
+ *   o dia é quadra a quadra e se há placar. Omitido, tudo se comporta como
+ *   antes.
  * @returns {{
  *   live: Array, upcoming: Array, recent: Array,
- *   currentRound: number|null, isPlay: boolean,
+ *   currentRound: number|null, isPlay: boolean, isCourtByCourt: boolean,
+ *   hasScores: boolean, format: string|null,
  *   totals: { total: number, decided: number, pending: number }
  * }}
  */
 export function buildGameDayBoard(games = [], options = {}) {
-  const { recentLimit = 8, upcomingLimit = 8 } = options;
+  const { recentLimit = 8, upcomingLimit = 8, format = null } = options;
   const lista = (games || []).filter(Boolean);
 
-  // Um único jogo com `status` já caracteriza o Play: nos formatos de grade
-  // o campo simplesmente não é gravado.
-  const isPlay = lista.some((g) => g.status != null);
+  // Um único jogo com `status` já caracteriza o agrupamento quadra a quadra:
+  // nos formatos de grade o campo simplesmente não é gravado. Quando o formato
+  // é informado, ele tem a palavra final — é a fonte, não um palpite.
+  const isPlay = format ? isCourtByCourtFormat(format) : lista.some((g) => g.status != null);
+  // Onde há placar existe resultado e ranking; onde não há, `recent` significa
+  // apenas "partidas encerradas". Sem `format`, mantemos a leitura antiga
+  // (quadra a quadra = Play = sem placar).
+  const hasScores = format ? formatHasScores(format) : !isPlay;
 
   const totals = {
     total: lista.length,
@@ -150,6 +168,9 @@ export function buildGameDayBoard(games = [], options = {}) {
       recent: concluidos,
       currentRound: null,
       isPlay: true,
+      isCourtByCourt: true,
+      hasScores,
+      format,
       totals,
     };
   }
@@ -171,5 +192,8 @@ export function buildGameDayBoard(games = [], options = {}) {
 
   const recent = lista.filter(isDecided).sort(byMostRecent).slice(0, recentLimit);
 
-  return { live, upcoming, recent, currentRound, isPlay: false, totals };
+  return {
+    live, upcoming, recent, currentRound,
+    isPlay: false, isCourtByCourt: false, hasScores, format, totals,
+  };
 }

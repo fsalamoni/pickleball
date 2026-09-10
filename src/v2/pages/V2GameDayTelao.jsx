@@ -47,14 +47,14 @@ import { useQuery, useQueryClient } from '@tanstack/react-query';
 import { toast } from 'sonner';
 import {
   Radio, Clock, Trophy, ListOrdered, CheckCircle2, ArrowLeft, Maximize2, Minimize2, Users,
-  PlayCircle, Check, Pause, Link2, Unlink,
+  PlayCircle, Check, Pause, Link2, Unlink, Swords,
 } from 'lucide-react';
 
 import { ConfirmDialog } from '@/components/ui/confirm-dialog';
 import {
   Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription, DialogFooter,
 } from '@/components/ui/dialog';
-import { V2Button } from '@/v2/ui/primitives';
+import { V2Button, V2Input } from '@/v2/ui/primitives';
 import { useAuth } from '@/core/lib/FirebaseAuthContext';
 import { getGameDay, listGameDayParticipants, listGameDayGames } from '@/modules/games/services/gameDayService';
 import { gameDayWhenText } from '@/modules/games/domain/gameDay';
@@ -71,13 +71,24 @@ import { useFeatureFlag } from '@/core/lib/FeatureFlagsContext';
 import {
   useCreateNextPlayGame, useFinishPlayGame, useCancelPlayGame, useNoShowSwapPlayGame,
   useSetPlayParticipantSkip, useSetPlayParticipantPartner,
+  useCreateNextAmericanoLiveGame, useSubmitAmericanoLiveResult,
 } from '@/modules/games/hooks/useGameDays';
 import { SkipDialog, PartnerDialog, CourtPlayerDialog } from '@/v2/components/games/AthletePlayOrganizer';
 import { computeGameDayLeaderboard } from '@/modules/clubs/domain/gameDayLeaderboard';
-import { GAME_DAY_FORMAT_LABELS } from '@/modules/clubs/domain/gameDayFormats';
+import {
+  GAME_DAY_FORMAT_LABELS, isAmericanoLiveFormat,
+} from '@/modules/clubs/domain/gameDayFormats';
+import { forecastAmericanoLiveMatches } from '@/modules/games/domain/americanoLive';
 
 /** De quanto em quanto tempo o painel se atualiza sozinho. */
 const REFRESH_MS = 15_000;
+
+/**
+ * Quantas partidas concluídas o telão do Americano aprimorado mostra. É um
+ * telão, não um relatório: passar disso vira rolagem, e o histórico completo
+ * está no painel do dia de jogo. O que passar aparece como contagem.
+ */
+const RECENTES_AO_VIVO = 12;
 
 /* -------------------------------- helpers -------------------------------- */
 
@@ -461,6 +472,78 @@ function ProximaPorQuadra({ entradas, disponiveis, acoesPorQuadra = null }) {
   );
 }
 
+/**
+ * PREVISÃO do Americano aprimorado. Difere da previsão do Play num ponto que
+ * muda o texto da tela: aqui as DUPLAS já estão decididas. O sorteio deste
+ * formato escolhe os quatro E o pareamento na mesma conta (equilíbrio de
+ * nível, quem ainda não jogou com quem, quem ainda não jogou contra quem), e
+ * é exatamente esse pareamento que sai se nada mudar até a hora de criar.
+ *
+ * "Se nada mudar" é a ressalva honesta: alguém que pausa, entra, sai ou vincula
+ * dupla refaz a conta. E a previsão de quadra OCUPADA continua condicional —
+ * depende de qual partida termina primeiro, o que não dá para saber.
+ */
+function ProximaAoVivo({ entradas, disponiveis, acoesPorQuadra = null }) {
+  if (entradas.length === 0) {
+    return (
+      <Vazio>
+        {disponiveis === 0
+          ? 'Ninguém aguardando no momento.'
+          : `Faltam jogadores para a próxima partida (${disponiveis} na fila, mínimo ${PLAY_SLOTS}).`}
+      </Vazio>
+    );
+  }
+  return (
+    <div className="space-y-3">
+      <p className="text-sm text-white/40">
+        As duplas abaixo são as que o sorteio formaria agora. Quem entra, pausa ou
+        vincula dupla refaz a conta.
+      </p>
+      {/* Mesma grade dos cards de quadra logo acima: cada previsão fica na
+          mesma coluna da quadra a que se refere. */}
+      <div className="grid gap-2 [grid-template-columns:repeat(auto-fit,minmax(min(100%,420px),1fr))] landscape:[grid-template-columns:repeat(auto-fit,minmax(min(100%,320px),1fr))]">
+        {entradas.map((e) => {
+          const nomeDe = (id) => e.players.find((p) => p.id === id)?.name || id;
+          const acoes = acoesPorQuadra ? acoesPorQuadra(e) : null;
+          const destaque = !e.conditional;
+          return (
+            <div
+              key={`${e.court}-${e.conditional ? 'c' : 'l'}`}
+              className={`rounded-2xl border px-4 py-3 ${
+                destaque ? 'border-acid/40 bg-acid/10' : 'border-white/10 bg-white/5'
+              }`}
+            >
+              <div className="mb-1.5 flex items-center gap-2">
+                <span className={`rounded-full px-2.5 py-0.5 text-xs font-black ${
+                  destaque ? 'bg-acid text-ink' : 'bg-white/10 text-white/50'
+                }`}
+                >
+                  QUADRA {e.court}
+                </span>
+                <span className={`text-xs font-bold uppercase tracking-wide ${destaque ? 'text-acid' : 'text-white/40'}`}>
+                  {destaque ? 'livre agora' : 'quando liberar'}
+                </span>
+              </div>
+              <div className="truncate text-lg font-semibold leading-snug text-white">
+                {(e.side_a || []).map(nomeDe).join(' · ')}
+              </div>
+              <div className="my-1 flex items-center gap-2">
+                <span className="h-px flex-1 bg-white/10" />
+                <span className="text-[11px] font-bold text-white/30">VS</span>
+                <span className="h-px flex-1 bg-white/10" />
+              </div>
+              <div className="truncate text-lg font-semibold leading-snug text-white">
+                {(e.side_b || []).map(nomeDe).join(' · ')}
+              </div>
+              {acoes && <div className="mt-2 flex flex-wrap gap-2">{acoes}</div>}
+            </div>
+          );
+        })}
+      </div>
+    </div>
+  );
+}
+
 /** Quantas posições cabem confortavelmente num telão sem virar planilha. */
 const RANKING_VISIVEL = 10;
 
@@ -521,6 +604,11 @@ export default function V2GameDayTelao() {
   const substituirAusente = useNoShowSwapPlayGame(gameDayId);
   const definirPausa = useSetPlayParticipantSkip(gameDayId);
   const definirDupla = useSetPlayParticipantPartner(gameDayId);
+  // Americano aprimorado: os MESMOS serviços da tela normal. O telão nunca tem
+  // caminho próprio de escrita — se as duas telas divergissem, a regra passaria
+  // a depender de por onde o organizador clicou.
+  const criarProximoAoVivo = useCreateNextAmericanoLiveGame(gameDayId);
+  const lancarResultado = useSubmitAmericanoLiveResult(gameDayId);
 
   // Diálogos.
   const [alvoSubstituir, setAlvoSubstituir] = useState(null); // { gid, player, game }
@@ -529,6 +617,7 @@ export default function V2GameDayTelao() {
   const [atletaAberto, setAtletaAberto] = useState(null); // participante
   const [pausaPara, setPausaPara] = useState(null);
   const [duplaPara, setDuplaPara] = useState(null);
+  const [alvoResultado, setAlvoResultado] = useState(null); // { gid, court, game }
   const [ocupado, setOcupado] = useState(false);
 
   /**
@@ -561,7 +650,19 @@ export default function V2GameDayTelao() {
     ...comum,
   });
 
-  const board = useMemo(() => buildGameDayBoard(games), [games]);
+  // O FORMATO é informado de propósito: o Americano aprimorado grava `status`
+  // como o Play e placar como a grade, e só olhando os dados o painel o
+  // confundiria com o Play — escondendo resultado e ranking.
+  const board = useMemo(
+    () => buildGameDayBoard(games, {
+      format: gameDay?.format,
+      // No Americano aprimorado as partidas concluídas ocupam a coluna larga e
+      // são o registro do dia: cabem mais do que na coluna estreita da grade.
+      recentLimit: isAmericanoLiveFormat(gameDay?.format) ? RECENTES_AO_VIVO : undefined,
+    }),
+    [games, gameDay?.format],
+  );
+  const ehAoVivo = isAmericanoLiveFormat(gameDay?.format);
   // Rodízio equilibrado (flag `play_smart_rotation`). Declarado ANTES de
   // `playView` de propósito: o useMemo dele lê esta constante durante a
   // renderização — declarar depois dá ReferenceError (zona morta temporal).
@@ -582,12 +683,13 @@ export default function V2GameDayTelao() {
     [board.isPlay, participants, games, rodizioEquilibrado, gameDay?.play_courts],
   );
   // Ranking do dia só existe onde há placar. O Play não grava resultado, então
-  // nem calculamos: a lista viria vazia de qualquer jeito.
+  // nem calculamos: a lista viria vazia de qualquer jeito. O Americano
+  // aprimorado grava — e por isso tem ranking, mesmo sendo quadra a quadra.
   const ranking = useMemo(
-    () => (board.isPlay
-      ? []
-      : computeGameDayLeaderboard(participants, games).filter((l) => l.games > 0)),
-    [board.isPlay, participants, games],
+    () => (board.hasScores
+      ? computeGameDayLeaderboard(participants, games).filter((l) => l.games > 0)
+      : []),
+    [board.hasScores, participants, games],
   );
 
   const disponiveis = playView
@@ -607,6 +709,15 @@ export default function V2GameDayTelao() {
       courts: quadras, games, history: buildPlayHistory(games),
     });
   }, [playView, quadras, games, rodizioEquilibrado]);
+
+  // Previsão do Americano aprimorado: já com as duplas, porque neste formato o
+  // sorteio decide os quatro E o pareamento na mesma conta.
+  const previsaoAoVivo = useMemo(
+    () => (ehAoVivo && playView
+      ? forecastAmericanoLiveMatches(playView.order, { courts: quadras, games, participants })
+      : []),
+    [ehAoVivo, playView, quadras, games, participants],
+  );
 
   // Uma linha por quadra existente: o jogo aberto dela, ou `null` se está livre.
   const quadrasDoPlay = useMemo(() => {
@@ -660,6 +771,14 @@ export default function V2GameDayTelao() {
   const pausar = (pid, count) => executar(
     () => definirPausa.mutateAsync({ pid, count }),
     count > 0 ? `Pausado por ${count} partida(s).` : 'De volta à fila.',
+  );
+  const gerarAoVivo = (court) => executar(
+    () => criarProximoAoVivo.mutateAsync({ court }),
+    (res) => `Partida sorteada na quadra ${res?.court ?? court}.`,
+  );
+  const salvarResultado = ({ gid, court, scoreA, scoreB }) => executar(
+    () => lancarResultado.mutateAsync({ gid, scoreA, scoreB }),
+    `Resultado salvo. A quadra ${court} está livre para a próxima partida.`,
   );
   const vincular = (pid, partnerId) => executar(
     () => definirDupla.mutateAsync({ pid, partnerId }),
@@ -719,8 +838,8 @@ export default function V2GameDayTelao() {
               <div className="flex items-center justify-end gap-1.5 text-xs text-white/40">
                 <Users aria-hidden="true" className="h-3.5 w-3.5" />
                 {participants.length} participante(s)
-                {board.isPlay
-                  ? ` · ${disponiveis} na fila · ${board.recent.length} jogo(s) concluído(s)`
+                {board.isCourtByCourt
+                  ? ` · ${disponiveis} na fila · ${board.recent.length} ${ehAoVivo ? 'partida(s)' : 'jogo(s)'} concluída(s)`
                   : ''}
               </div>
             </div>
@@ -780,14 +899,31 @@ export default function V2GameDayTelao() {
                 {quadrasDoPlay.map(({ court, jogo }) => (jogo ? (
                   <CardEmQuadra
                     key={court}
+                    // A partida em andamento nunca mostra placar: no Play ele
+                    // não existe, e no Americano aprimorado ele só nasce quando
+                    // o organizador lança o resultado.
                     jogo={jogo}
                     comPlacar={false}
                     onJogador={podeGerir ? (pl) => setAlvoSubstituir({ gid: jogo.id, player: pl, game: jogo }) : null}
                     acoes={podeGerir && (
                       <>
-                        <BotaoTelao tone="acid" onClick={() => setAlvoEncerrar(jogo.id)} disabled={ocupado}>
-                          <Check className="h-4 w-4" /> Criar próxima partida
-                        </BotaoTelao>
+                        {/* A diferença de fluxo entre os dois formatos vive
+                            aqui: no Play um clique encerra E já chama a
+                            próxima; no Americano aprimorado o resultado entra
+                            primeiro, e só então a quadra oferece o sorteio. */}
+                        {ehAoVivo ? (
+                          <BotaoTelao
+                            tone="acid"
+                            onClick={() => setAlvoResultado({ gid: jogo.id, court, game: jogo })}
+                            disabled={ocupado}
+                          >
+                            <Check className="h-4 w-4" /> Lançar resultado
+                          </BotaoTelao>
+                        ) : (
+                          <BotaoTelao tone="acid" onClick={() => setAlvoEncerrar(jogo.id)} disabled={ocupado}>
+                            <Check className="h-4 w-4" /> Criar próxima partida
+                          </BotaoTelao>
+                        )}
                         <BotaoTelao tone="danger" onClick={() => setAlvoCancelar(jogo.id)} disabled={ocupado}>
                           Cancelar
                         </BotaoTelao>
@@ -801,11 +937,12 @@ export default function V2GameDayTelao() {
                     acoes={podeGerir && (
                       <BotaoTelao
                         tone="acid"
-                        onClick={() => criarJogoNaQuadra(court)}
+                        onClick={() => (ehAoVivo ? gerarAoVivo(court) : criarJogoNaQuadra(court))}
                         disabled={ocupado || disponiveis < PLAY_SLOTS}
                         title={disponiveis < PLAY_SLOTS ? `Mínimo de ${PLAY_SLOTS} disponíveis na fila` : undefined}
                       >
-                        <PlayCircle className="h-4 w-4" /> Criar jogo
+                        <PlayCircle className="h-4 w-4" />
+                        {ehAoVivo ? 'Gerar próxima partida' : 'Criar jogo'}
                       </BotaoTelao>
                     )}
                   />
@@ -831,7 +968,9 @@ export default function V2GameDayTelao() {
             contagem={board.isPlay ? null : board.upcoming.length}
             className="landscape:lg:col-span-2 landscape:lg:col-start-1 landscape:lg:row-start-2"
           >
-            {board.isPlay ? (
+            {ehAoVivo ? (
+              <ProximaAoVivo entradas={previsaoAoVivo} disponiveis={disponiveis} />
+            ) : board.isPlay ? (
               <ProximaPorQuadra entradas={proximasPlay} disponiveis={disponiveis} />
             ) : board.upcoming.length === 0 ? (
               <Vazio>Sem jogos programados adiante.</Vazio>
@@ -842,9 +981,22 @@ export default function V2GameDayTelao() {
             )}
           </Bloco>
 
-          {/* 3. Coluna estreita: a fila (Play) ou ranking + resultados (grade). */}
-          <aside className="space-y-8 landscape:lg:col-start-3 landscape:lg:row-span-2 landscape:lg:row-start-1">
-            {board.isPlay ? (
+          {/* 3. Coluna estreita: a fila (Play), ranking + fila (Americano
+              aprimorado) ou ranking + resultados (grade). No Americano
+              aprimorado o ranking vem ANTES da fila de propósito: ele é o que
+              a sala inteira olha, e a fila já não é a única resposta para
+              "quando eu jogo". */}
+          <aside
+            className={`space-y-8 landscape:lg:col-start-3 landscape:lg:row-start-1 ${
+              ehAoVivo ? 'landscape:lg:row-span-3' : 'landscape:lg:row-span-2'
+            }`}
+          >
+            {ehAoVivo && ranking.length > 0 && (
+              <Bloco icon={Trophy} titulo="Ranking do dia">
+                <RankingDoDia linhas={ranking} />
+              </Bloco>
+            )}
+            {board.isCourtByCourt ? (
               <Bloco icon={ListOrdered} titulo="Ordem de participação">
                 {playView
                   ? (
@@ -874,12 +1026,43 @@ export default function V2GameDayTelao() {
               </>
             )}
           </aside>
+
+          {/* 4. Só no Americano aprimorado: as partidas JÁ DISPUTADAS, com
+              placar, ocupando a coluna larga. É o registro em ordem que dá
+              nome ao formato — no Play ele não existe (não há placar) e na
+              grade os resultados já estão na coluna estreita. */}
+          {ehAoVivo && (
+            <Bloco
+              icon={Swords}
+              titulo="Partidas concluídas"
+              contagem={board.totals.decided}
+              className="landscape:lg:col-span-2 landscape:lg:col-start-1 landscape:lg:row-start-3"
+            >
+              {board.recent.length === 0 ? (
+                <Vazio>Nenhuma partida concluída ainda.</Vazio>
+              ) : (
+                <>
+                  <div className="grid gap-2 [grid-template-columns:repeat(auto-fit,minmax(min(100%,420px),1fr))] landscape:[grid-template-columns:repeat(auto-fit,minmax(min(100%,320px),1fr))]">
+                    {board.recent.map((jogo) => <LinhaResultado key={jogo.id} jogo={jogo} />)}
+                  </div>
+                  {board.totals.decided > board.recent.length && (
+                    <p className="mt-2 text-center text-sm text-white/30">
+                      + {board.totals.decided - board.recent.length} partida(s) anteriores —
+                      o histórico completo fica no painel do dia de jogo.
+                    </p>
+                  )}
+                </>
+              )}
+            </Bloco>
+          )}
         </div>
 
         <footer className="mt-8 border-t border-white/10 pt-4 text-center text-sm text-white/30">
-          {podeGerir
-            ? 'Você organiza este Play: clique num nome em quadra para deixá-lo indisponível ou substituí-lo, ou num atleta da ordem para pausar e vincular dupla.'
-            : 'Esta tela se atualiza sozinha. Deixe-a aberta durante o dia de jogo.'}
+          {!podeGerir
+            ? 'Esta tela se atualiza sozinha. Deixe-a aberta durante o dia de jogo.'
+            : ehAoVivo
+              ? 'Você organiza este dia de jogo: lance o resultado da quadra para liberá-la, depois gere a próxima partida. Clique num nome em quadra para deixá-lo indisponível ou substituí-lo, ou num atleta da ordem para pausar e vincular dupla.'
+              : 'Você organiza este Play: clique num nome em quadra para deixá-lo indisponível ou substituí-lo, ou num atleta da ordem para pausar e vincular dupla.'}
         </footer>
       </div>
 
@@ -922,6 +1105,20 @@ export default function V2GameDayTelao() {
             }}
           />
 
+          {/* Americano aprimorado: o placar entra aqui, no mesmo passo em que
+              a partida é encerrada. Só depois disso a quadra oferece o sorteio
+              da próxima — os dois passos são deliberados. */}
+          <ResultadoDialog
+            alvo={alvoResultado}
+            ocupado={ocupado}
+            onClose={() => setAlvoResultado(null)}
+            onConfirm={({ scoreA, scoreB }) => {
+              const alvo = alvoResultado;
+              setAlvoResultado(null);
+              if (alvo) salvarResultado({ gid: alvo.gid, court: alvo.court, scoreA, scoreB });
+            }}
+          />
+
           <AcoesDoAtleta
             atleta={atletaAberto}
             onClose={() => setAtletaAberto(null)}
@@ -945,6 +1142,79 @@ export default function V2GameDayTelao() {
         </>
       )}
     </div>
+  );
+}
+
+/**
+ * Lançamento de resultado no telão (Americano aprimorado).
+ *
+ * Os nomes das duas duplas aparecem em cima de cada campo: num telão, quem
+ * digita costuma estar longe da quadra, e trocar o lado A pelo B falseia o
+ * ranking do dia inteiro. Por isso também não há valor pré-preenchido —
+ * um "0" herdado que ninguém percebeu seria pior do que um campo vazio.
+ */
+function ResultadoDialog({ alvo, ocupado, onClose, onConfirm }) {
+  const [a, setA] = useState('');
+  const [b, setB] = useState('');
+
+  // Cada partida começa com os campos limpos: o estado do diálogo anterior
+  // nunca pode vazar para o próximo lançamento.
+  useEffect(() => { setA(''); setB(''); }, [alvo?.gid]);
+
+  const valido = a !== '' && b !== ''
+    && Number.isFinite(Number(a)) && Number.isFinite(Number(b))
+    && Number(a) >= 0 && Number(b) >= 0;
+
+  return (
+    <Dialog open={!!alvo} onOpenChange={(v) => !v && onClose()}>
+      <DialogContent className="max-h-[90dvh] overflow-y-auto">
+        <DialogHeader>
+          <DialogTitle>Lançar resultado — quadra {alvo?.court}</DialogTitle>
+          <DialogDescription>
+            A partida vai para as concluídas com este placar e os quatro voltam
+            ao fim da ordem de participação. A quadra fica livre para a próxima.
+          </DialogDescription>
+        </DialogHeader>
+
+        <div className="flex flex-wrap items-end justify-center gap-4">
+          <label className="flex-1 text-xs font-semibold text-gray-500">
+            <span className="mb-1 block truncate">
+              {sideNames(alvo?.game?.side_a).join(' · ') || 'Lado A'}
+            </span>
+            <V2Input
+              className="text-center text-lg"
+              inputMode="numeric"
+              value={a}
+              onChange={(e) => setA(e.target.value)}
+              placeholder="0"
+            />
+          </label>
+          <span className="pb-2 text-xs font-bold text-gray-400">VS</span>
+          <label className="flex-1 text-xs font-semibold text-gray-500">
+            <span className="mb-1 block truncate">
+              {sideNames(alvo?.game?.side_b).join(' · ') || 'Lado B'}
+            </span>
+            <V2Input
+              className="text-center text-lg"
+              inputMode="numeric"
+              value={b}
+              onChange={(e) => setB(e.target.value)}
+              placeholder="0"
+            />
+          </label>
+        </div>
+
+        <DialogFooter>
+          <V2Button variant="ghost" onClick={onClose}>Cancelar</V2Button>
+          <V2Button
+            onClick={() => onConfirm({ scoreA: Number(a), scoreB: Number(b) })}
+            disabled={!valido || ocupado}
+          >
+            <Check className="mr-1.5 h-4 w-4" /> Salvar resultado
+          </V2Button>
+        </DialogFooter>
+      </DialogContent>
+    </Dialog>
   );
 }
 

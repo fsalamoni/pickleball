@@ -13,6 +13,8 @@ import {
   getGameDayRankingMeta, getMyGameDayGames,
   createNextPlayGame, createManualPlayGame, finishPlayGame, cancelPlayGame,
   noShowSwapPlayGame, setPlayParticipantSkip, setPlayParticipantPartner,
+  createNextAmericanoLiveGame, submitAmericanoLiveResult, updateAmericanoLiveResult,
+  createManualAmericanoLiveGame,
   addGameDayAdmin, removeGameDayAdmin, setGameDayManageMode,
 } from '../services/gameDayService.js';
 
@@ -232,6 +234,48 @@ function usePlayInvalidate(gdId) {
     qc.invalidateQueries({ queryKey: ['game-days', gdId, 'games'] });
     qc.invalidateQueries({ queryKey: ['game-days', gdId, 'participants'] });
   };
+}
+
+/* ---------------- Americano aprimorado (americano_live) ------------------ */
+
+export function useCreateNextAmericanoLiveGame(gdId) {
+  const { user } = useAuth();
+  const invalidate = usePlayInvalidate(gdId);
+  return useMutation({
+    mutationFn: (opts = {}) => createNextAmericanoLiveGame(gdId, user, opts),
+    onSuccess: invalidate,
+  });
+}
+
+export function useSubmitAmericanoLiveResult(gdId) {
+  const { user } = useAuth();
+  const invalidate = usePlayInvalidate(gdId);
+  return useMutation({
+    mutationFn: ({ gid, scoreA, scoreB }) => (
+      submitAmericanoLiveResult(gdId, gid, { scoreA, scoreB }, user)
+    ),
+    onSuccess: invalidate,
+  });
+}
+
+export function useUpdateAmericanoLiveResult(gdId) {
+  const { user } = useAuth();
+  const invalidate = usePlayInvalidate(gdId);
+  return useMutation({
+    mutationFn: ({ gid, scoreA, scoreB }) => (
+      updateAmericanoLiveResult(gdId, gid, { scoreA, scoreB }, user)
+    ),
+    onSuccess: invalidate,
+  });
+}
+
+export function useCreateManualAmericanoLiveGame(gdId) {
+  const { user } = useAuth();
+  const invalidate = usePlayInvalidate(gdId);
+  return useMutation({
+    mutationFn: (data) => createManualAmericanoLiveGame(gdId, data, user),
+    onSuccess: invalidate,
+  });
 }
 
 export function useCreateNextPlayGame(gdId) {

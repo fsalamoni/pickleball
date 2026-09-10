@@ -80,13 +80,20 @@ participantes ou um dia público; sem login não há o que mostrar.
 
 ### 2.2 O que mostra — e por que muda com o formato
 
-| Bloco | Americano · Mexicano · Rei da Quadra | Play |
-|---|---|---|
-| **Em quadra agora** | um card por partida em andamento | um card por QUADRA, inclusive as livres |
-| **Próximos jogos** | as rodadas seguintes já sorteadas | a próxima partida DE CADA QUADRA |
-| **Ordem de participação** | — | sim, com as 4 primeiras marcadas "entra a seguir" |
-| **Ranking do dia** | as 10 primeiras posições | — |
-| **Últimos resultados** | uma linha por dupla, com o seu placar | — |
+| Bloco | Americano · Mexicano · Rei da Quadra | Play | Americano aprimorado |
+|---|---|---|---|
+| **Em quadra agora** | um card por partida em andamento | um card por QUADRA, inclusive as livres | um card por QUADRA, inclusive as livres |
+| **Próximos jogos** | as rodadas seguintes já sorteadas | a próxima partida DE CADA QUADRA | a próxima partida DE CADA QUADRA, **com as duplas** |
+| **Ordem de participação** | — | sim, com as 4 primeiras marcadas "entra a seguir" | sim |
+| **Ranking do dia** | as 10 primeiras posições | — | as 10 primeiras posições |
+| **Últimos resultados** | uma linha por dupla, com o seu placar | — | bloco próprio, **Partidas concluídas**, na coluna larga |
+
+> **O Americano aprimorado (`americano_live`) é o terceiro arranjo.** Ele grava
+> `status` como o Play E placar como a grade, então o painel precisa saber o
+> FORMATO para não o confundir com o Play (e esconder resultado e ranking).
+> Por isso `buildGameDayBoard` aceita `format`; sem ele, a inferência antiga
+> continua valendo bit a bit. Detalhes em
+> [`17-DIA-DE-JOGO-AMERICANO-APRIMORADO.md`](./17-DIA-DE-JOGO-AMERICANO-APRIMORADO.md) §7.
 
 > **O Play não tem placar.** `finishPlayGame` apenas marca o jogo como
 > concluído e devolve os quatro à fila — nenhum resultado é gravado em lugar
@@ -113,7 +120,7 @@ o jogo** — prometer uma dupla que ainda vai mudar seria pior do que não mostr
 nada. E quando a fila não completa quatro, aparece quantos faltam em vez de uma
 partida anunciada.
 
-### 2.2.1 Organizar pelo próprio telão (só o Play, só quem organiza)
+### 2.2.1 Organizar pelo próprio telão (quadra a quadra, só quem organiza)
 
 Num Play, quem organiza fica de pé ao lado da quadra com o telão aberto — voltar
 à outra tela a cada partida encerrada não faz sentido. Por isso, **para quem tem
@@ -227,11 +234,17 @@ Dois modelos de dia de jogo, um painel só:
   (com tudo decidido, é a última rodada: o dia acabou, mas não some da tela);
 - o **Play** cria um jogo por vez — o que separa é o **status**
   (`open`/`finished`), e não existem jogos futuros gravados: quem entra sai da
-  ordem de participação.
+  ordem de participação;
+- o **Americano aprimorado** agrupa como o Play e **grava placar** como a
+  grade — é o caso em que só olhar os dados não basta.
 
-As funções não recebem o formato: elas olham os dados. Um jogo com `status` é
-Play; sem `status`, é grade. Por isso o mesmo painel serve ao dia de jogo do
-atleta e ao do clube, que gravam jogos no mesmo formato.
+Para AGRUPAR, as funções não precisam do formato: elas olham os dados. Um jogo
+com `status` é quadra a quadra; sem `status`, é grade. Por isso o mesmo painel
+serve ao dia de jogo do atleta e ao do clube, que gravam jogos no mesmo formato.
+
+Para saber se há PLACAR, aí sim o formato é informado (`buildGameDayBoard(games,
+{ format })`), devolvendo `hasScores` e `isCourtByCourt`. O parâmetro é
+**opcional**: omitido, tudo se comporta exatamente como antes.
 
 ---
 
@@ -245,9 +258,10 @@ src/v2/ui/V2CollapsibleCard.runtime.test.jsx  # 10 testes de runtime
 src/v2/components/games/gameDaySections.js    # ids ESTÁVEIS das seções
 
 src/modules/games/domain/gameDayBoard.js      # live / upcoming / recent (puro)
-src/modules/games/domain/gameDayBoard.test.js # 25 testes
+src/modules/games/domain/gameDayBoard.test.js # 30 testes
 src/v2/pages/V2GameDayTelao.jsx               # a página do telão
-src/v2/pages/V2GameDayTelao.runtime.test.jsx  # 21 testes de runtime
+src/v2/pages/V2GameDayTelao.runtime.test.jsx  # 35 testes de runtime
 src/modules/games/domain/gamePlay.js          # forecastPlayByCourt
 src/modules/games/domain/gamePlayForecastCourt.test.js  # 9 testes
+src/modules/games/domain/americanoLive.js     # sorteio/previsão do americano_live
 ```

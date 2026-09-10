@@ -139,10 +139,36 @@ export const FEATURE_FLAG = Object.freeze({
    * carregadas. Desligada, NADA muda. Ver `games/domain/playRotation.js`.
    */
   PLAY_SMART_ROTATION: 'play_smart_rotation',
+
+  /**
+   * Dia de jogo — AMERICANO APRIMORADO.
+   *
+   * Formato novo (`americano_live`) que mescla os dois modelos existentes: a
+   * organização quadra a quadra do Play com o sorteio e o placar do Americano.
+   * As partidas são sorteadas UMA A UMA, com os participantes disponíveis
+   * naquele momento, usando o motor do Americano — então valem as regras de
+   * duplas inéditas, adversários inéditos, equilíbrio de participação e de
+   * nível. Cada partida grava resultado, alimenta o ranking do dia e pode ir
+   * para o ranking/rating da plataforma e para o DUPR.
+   *
+   * Aditiva: cria um formato NOVO. Nenhum dia de jogo existente muda de
+   * comportamento, porque nenhum deles tem esse formato gravado. Desligada, a
+   * opção nem aparece na criação.
+   */
+  GAMEDAY_AMERICANO_LIVE: 'gameday_americano_live',
 });
 
 /** Metadados de exibição para o painel de flags (admin master). */
 export const FEATURE_FLAG_META = Object.freeze({
+  [FEATURE_FLAG.GAMEDAY_AMERICANO_LIVE]: {
+    label: 'Dia de jogo — Americano aprimorado',
+    description:
+      'Formato novo que junta a organização do Play (quadra a quadra, um jogo '
+      + 'por vez, com fila e pausa) ao sorteio e ao placar do Americano. As '
+      + 'partidas saem uma a uma, sempre com quem está disponível no momento, '
+      + 'e cada uma grava resultado, entra no ranking do dia e pode ir para o '
+      + 'ranking da plataforma e o DUPR. Desligada, a opção nem aparece.',
+  },
   [FEATURE_FLAG.PLAY_SMART_ROTATION]: {
     label: 'Dia de jogo (Play) — rodízio equilibrado',
     description:

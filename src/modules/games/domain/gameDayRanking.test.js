@@ -331,3 +331,56 @@ describe('buildGameDayRankingMatches — propagação de edições (publishedByI
     expect(res.toWrite.some((w) => w.id === idR)).toBe(false);
   });
 });
+
+/* ---------------------------------------------------------------------------
+ * AMERICANO APRIMORADO no ranking/rating/DUPR
+ *
+ * O formato grava a partida com a FORMA do Play (`status`, `format`, sem
+ * `round`) e o CONTEÚDO do Americano (placar). O espelhamento em
+ * `club_event_games` é o que leva a partida ao ranking geral, ao rating e à
+ * exportação para o DUPR — e ele precisa aceitar essa forma sem nenhum ajuste,
+ * porque foi assim que a funcionalidade nasceu: sem tocar no espelhamento.
+ * ------------------------------------------------------------------------- */
+describe('espelhamento do Americano aprimorado', () => {
+  const partidaAoVivo = (id, scoreA, scoreB) => ({
+    id,
+    round: null,                 // não há rodada neste formato
+    court: 1,
+    status: 'finished',          // forma do Play
+    format: 'americano_live',
+    side_a: [{ id: 'p1' }, { id: 'p2' }],
+    side_b: [{ id: 'p3' }, { id: 'p4' }],
+    score_a: scoreA,
+    score_b: scoreB,
+  });
+
+  it('⭐ uma partida concluída COM placar entra no espelho como qualquer outra', () => {
+    const res = buildGameDayMatch({
+      gameDay, gameId: 'al1', game: partidaAoVivo('al1', 11, 7),
+      participants, clubIdsByUid: {}, publishedBy: 'dono',
+    });
+    expect(res).not.toBeNull();
+    expect(res.payload.side_a_ids).toEqual(['u1', 'u2']);
+    expect(res.payload.side_b_ids).toEqual(['u3', 'u4']);
+    expect(res.payload.score_a).toBe(11);
+    expect(res.payload.winner_side).toBe('a');
+    expect(res.payload.kind).toBe('doubles');
+  });
+
+  it('a partida ainda EM QUADRA (sem placar) não vai para o ranking', () => {
+    const emQuadra = { ...partidaAoVivo('al2', null, null), status: 'open' };
+    expect(buildGameDayMatch({
+      gameDay, gameId: 'al2', game: emQuadra, participants, clubIdsByUid: {},
+    })).toBeNull();
+  });
+
+  it('o espelho ignora `round` e `format`: só o placar decide', () => {
+    const comRodada = { ...partidaAoVivo('al3', 11, 9), round: 3, format: 'americano' };
+    const semRodada = partidaAoVivo('al3', 11, 9);
+    const a = buildGameDayMatch({ gameDay, gameId: 'al3', game: comRodada, participants, clubIdsByUid: {} });
+    const b = buildGameDayMatch({ gameDay, gameId: 'al3', game: semRodada, participants, clubIdsByUid: {} });
+    expect(a.payload.side_a_ids).toEqual(b.payload.side_a_ids);
+    expect(a.payload.score_a).toBe(b.payload.score_a);
+    expect(a.payload.winner_side).toBe(b.payload.winner_side);
+  });
+});

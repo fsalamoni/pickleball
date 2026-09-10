@@ -110,7 +110,7 @@ export function statusBadge(p) {
   return <V2Badge tone="green">#{p.orderNo} · aguardando</V2Badge>;
 }
 
-function PlayParticipantsSection({ gameDay, participants, view, isLoading, isOwner, canManage, me }) {
+export function PlayParticipantsSection({ gameDay, participants, view, isLoading, isOwner, canManage, me }) {
   const addParticipant = useAddGameDayParticipant(gameDay.id);
   const removeParticipant = useRemoveGameDayParticipant(gameDay.id);
   const setSkip = useSetPlayParticipantSkip(gameDay.id);

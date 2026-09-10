@@ -183,7 +183,8 @@ describe('entradas degeneradas', () => {
     const b = buildGameDayBoard([]);
     expect(b).toEqual({
       live: [], upcoming: [], recent: [],
-      currentRound: null, isPlay: false,
+      currentRound: null, isPlay: false, isCourtByCourt: false,
+      hasScores: true, format: null,
       totals: { total: 0, decided: 0, pending: 0 },
     });
   });
@@ -191,5 +192,64 @@ describe('entradas degeneradas', () => {
   it('aceita undefined e nulos na lista', () => {
     expect(() => buildGameDayBoard(undefined)).not.toThrow();
     expect(buildGameDayBoard([null, undefined]).totals.total).toBe(0);
+  });
+});
+
+/* ---------------------------------------------------------------------------
+ * O formato como fonte da verdade (opcional)
+ *
+ * O AMERICANO APRIMORADO grava `status` como o Play E placar como a grade.
+ * Só olhando os dados, o painel o confundiria com o Play e esconderia placar
+ * e ranking. Informar o `format` desfaz o empate — e omiti-lo tem de continuar
+ * se comportando EXATAMENTE como antes, porque é assim que todo o resto chama.
+ * ------------------------------------------------------------------------- */
+describe('buildGameDayBoard com formato informado', () => {
+  const aoVivo = (order, a = null, b = null) => ({
+    id: `al${order}`,
+    court: 1, order,
+    status: a == null ? 'open' : 'finished',
+    score_a: a, score_b: b,
+    side_a: [{ id: 'p1', name: 'Ana' }, { id: 'p2', name: 'Bia' }],
+    side_b: [{ id: 'p3', name: 'Caio' }, { id: 'p4', name: 'Davi' }],
+  });
+
+  it('americano aprimorado agrupa quadra a quadra E tem placar', () => {
+    const b = buildGameDayBoard([aoVivo(1, 11, 7), aoVivo(2)], { format: 'americano_live' });
+    expect(b.isCourtByCourt).toBe(true);
+    expect(b.hasScores).toBe(true);
+    expect(b.live.map((g) => g.id)).toEqual(['al2']);
+    expect(b.recent.map((g) => g.id)).toEqual(['al1']);
+    expect(b.totals.decided).toBe(1);
+  });
+
+  it('play informado agrupa quadra a quadra e NÃO tem placar', () => {
+    const b = buildGameDayBoard([aoVivo(1, 11, 7), aoVivo(2)], { format: 'play' });
+    expect(b.isCourtByCourt).toBe(true);
+    expect(b.hasScores).toBe(false);
+  });
+
+  it('grade informada continua sendo grade, mesmo com placar', () => {
+    const b = buildGameDayBoard([jogo(1, 1, 1, 11, 7)], { format: 'americano' });
+    expect(b.isCourtByCourt).toBe(false);
+    expect(b.hasScores).toBe(true);
+    expect(b.currentRound).toBe(1);
+  });
+
+  it('sem formato, o resultado é bit a bit o de antes (Play inferido)', () => {
+    const jogos = [aoVivo(1, 11, 7), aoVivo(2)];
+    const semFormato = buildGameDayBoard(jogos);
+    expect(semFormato.isPlay).toBe(true);
+    expect(semFormato.hasScores).toBe(false);
+    expect(semFormato.live.map((g) => g.id)).toEqual(['al2']);
+    expect(semFormato.recent.map((g) => g.id)).toEqual(['al1']);
+  });
+
+  it('formato desconhecido não é tratado como quadra a quadra', () => {
+    // `isCourtByCourtFormat` responde `false` a qualquer coisa que não seja um
+    // dos dois formatos conhecidos — inclusive `undefined` vindo de um dia de
+    // jogo antigo, que cai no caminho da inferência por não ser informado.
+    const b = buildGameDayBoard([jogo(1, 1, 1)], { format: 'mexicano' });
+    expect(b.isCourtByCourt).toBe(false);
+    expect(b.hasScores).toBe(true);
   });
 });

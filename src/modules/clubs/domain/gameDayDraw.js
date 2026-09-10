@@ -360,6 +360,36 @@ function buildRound(playing, partnerCount, oppCount, rng, levelOf = null) {
 }
 
 /**
+ * Escolhe a melhor formação de duplas para um grupo de 4 — a MESMA lógica que
+ * o sorteio do Americano usa por dentro, exposta para quem seleciona os quatro
+ * por outro critério.
+ *
+ * É o que o **Americano aprimorado** (`games/domain/americanoLive.js`) precisa:
+ * lá QUEM entra vem da fila de participação do Play, mas COMO as duplas se
+ * formam tem de continuar sendo decisão deste motor — senão o formato novo
+ * teria uma segunda regra de pareamento, que divergiria desta na primeira vez
+ * que uma das duas mudasse.
+ *
+ * @param {string[]} group  exatamente 4 ids
+ * @param {{ history?: object, levels?: object, rng?: function }} [opts]
+ *   `history`: saída de {@link buildDrawHistory} (duplas e adversários já
+ *   ocorridos). `levels`: mapa `id → nível na régua unificada 2.0–8.0`.
+ * @returns {{ side_a: [string,string], side_b: [string,string], cost: number }}
+ *   `cost` é comparável entre grupos: quanto menor, menos repetição.
+ */
+export function pairFourBalanced(group, opts = {}) {
+  const ids = (group || []).filter(Boolean);
+  if (ids.length !== 4) throw new Error('O pareamento exige exatamente 4 jogadores.');
+  const { history = null, levels = null, rng = Math.random } = opts;
+  const partnerCount = history?.partner instanceof Map ? history.partner : new Map();
+  const oppCount = history?.opp instanceof Map ? history.opp : new Map();
+  const levelOf = levels
+    ? (id) => (Number.isFinite(Number(levels[id])) ? Number(levels[id]) : null)
+    : null;
+  return bestPairingOfFour(ids, partnerCount, oppCount, rng, levelOf);
+}
+
+/**
  * Gera os jogos do dia em `rounds` rodadas, equilibrando a participação.
  *
  * @param {string[]} playerIds  ids/identificadores únicos dos participantes

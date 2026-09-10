@@ -22,8 +22,9 @@ import { ConfirmDialog } from '@/components/ui/confirm-dialog';
 import CreateGameDayDialog from '@/v2/components/games/CreateGameDayDialog';
 import AthleteGameDayOrganizer from '@/v2/components/games/AthleteGameDayOrganizer';
 import AthletePlayOrganizer from '@/v2/components/games/AthletePlayOrganizer';
+import AthleteAmericanoLiveOrganizer from '@/v2/components/games/AthleteAmericanoLiveOrganizer';
 import AthletePlayParticipant from '@/v2/components/games/AthletePlayParticipant';
-import { isPlayFormat } from '@/modules/clubs/domain/gameDayFormats';
+import { isPlayFormat, isAmericanoLiveFormat } from '@/modules/clubs/domain/gameDayFormats';
 import {
   useMyGameDays, useGameDay, useDeleteGameDay, useGameDayParticipants,
 } from '@/modules/games/hooks/useGameDays';
@@ -236,11 +237,18 @@ function GameDayDetail({ gameDayId }) {
         )}
       </V2Surface>
 
-      {isPlayFormat(gameDay.format)
-        ? (podeGerenciar
-          ? <AthletePlayOrganizer gameDay={gameDay} />
-          : <AthletePlayParticipant gameDay={gameDay} />)
-        : <AthleteGameDayOrganizer gameDay={gameDay} />}
+      {/* Três visões, escolhidas pelo FORMATO gravado no dia de jogo:
+          · Americano aprimorado → organização quadra a quadra COM placar;
+          · Play                 → quadra a quadra sem placar (organizador ou
+            participante, conforme a permissão);
+          · demais (grade)       → o organizador clássico, inalterado. */}
+      {isAmericanoLiveFormat(gameDay.format)
+        ? <AthleteAmericanoLiveOrganizer gameDay={gameDay} />
+        : isPlayFormat(gameDay.format)
+          ? (podeGerenciar
+            ? <AthletePlayOrganizer gameDay={gameDay} />
+            : <AthletePlayParticipant gameDay={gameDay} />)
+          : <AthleteGameDayOrganizer gameDay={gameDay} />}
 
       {ehCriador && (
         <CreateGameDayDialog open={editOpen} onOpenChange={setEditOpen} gameDay={gameDay} />

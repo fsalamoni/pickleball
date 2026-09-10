@@ -56,6 +56,34 @@ o que `pickSwapReplacement` escolheria sozinho. Também: `setPlayParticipantSkip
 ranking do dia nem publicação no ranking. Regras: `game_days` com `format == 'play'`
 permitem que qualquer MEMBRO opere a fila (aditivo em `firestore.rules`).
 
+### Formato "Americano aprimorado" (`americano_live`) — flag `gameday_americano_live`
+O Americano organizado como o Play: as partidas nascem **uma a uma, quadra por
+quadra**, mas **com placar**, ranking do dia e publicação no ranking da
+plataforma. Domínio puro em `domain/americanoLive.js` (com testes):
+- `drawNextAmericanoLiveMatch` — o primeiro da fila SEMPRE entra (baseline do
+  Play); os outros três saem de uma janela dos 8 primeiros, pareados pelo motor
+  do Americano (`pairFourBalanced`), com a posição na fila somada ao custo;
+- `forecastAmericanoLiveMatches` — previsão por quadra, já **com as duplas**;
+  quadra ocupada vem `conditional: true`. O parâmetro `participants` serve só
+  para nomear quem volta da quadra (não está na fila);
+- `americanoLiveProgress` / `suggestAmericanoLiveTotal` — a bússola do dia
+  (`ceil(n(n-1)/4)` partidas para todos com todos, contra todos duas vezes).
+
+Serviço: `createNextAmericanoLiveGame`, `submitAmericanoLiveResult`,
+`updateAmericanoLiveResult`, `createManualAmericanoLiveGame`. UI em
+`v2/components/games/AthleteAmericanoLiveOrganizer.jsx`, que **compõe** as
+seções do Play e as do Americano em vez de reimplementá-las.
+
+O fluxo é de DOIS passos: **"Lançar resultado"** grava o placar e libera a
+quadra; só então aparece **"Gerar próxima partida"**. Há teste preso nisso.
+
+Banco: nenhuma coleção, índice ou regra nova — só um valor novo em
+`game_days.format`. Este formato **não** herda o atalho colaborativo do Play
+(`isPlayGameDayMember`, confinado a `format == 'play'`): quem opera é o criador,
+quem ele nomeou, ou qualquer inscrito se ele abriu a gestão.
+
+Detalhes: `docs/17-DIA-DE-JOGO-AMERICANO-APRIMORADO.md`.
+
 ### Sorteio aditivo de jogos
 "Sortear jogos" é **aditivo**: gera novos jogos com a lista ATUAL de
 participantes e os ADICIONA aos existentes, sem apagar os que já têm resultado
@@ -202,14 +230,17 @@ exibir **minha dupla vs dupla adversária**.
 
 `domain/gameDayBoard.js` (puro, testado) separa os jogos do dia em
 `live` / `upcoming` / `recent`, servindo tanto os formatos de GRADE (a rodada
-corrente é a primeira com jogo sem placar) quanto o PLAY (o que separa é o
-`status`). As funções não recebem o formato: um jogo com `status` é Play, sem
-`status` é grade — por isso o mesmo painel serve ao dia de jogo do atleta e ao
-do clube.
+corrente é a primeira com jogo sem placar) quanto os de QUADRA A QUADRA (o que
+separa é o `status`). Para AGRUPAR, as funções não precisam do formato: um jogo
+com `status` é quadra a quadra, sem `status` é grade — por isso o mesmo painel
+serve ao dia de jogo do atleta e ao do clube. Para saber se há PLACAR, aí sim
+recebem `format` (opcional): é o que distingue o Play, que não grava resultado,
+do Americano aprimorado, que grava. Omitido, o comportamento é o antigo.
 
 A página é `v2/pages/V2GameDayTelao.jsx`, na rota `/dia-de-jogo/:id/telao`
-(declarada em `src/App.jsx`, **fora do V2Layout**). Somente leitura, sem
-impacto no banco.
+(declarada em `src/App.jsx`, **fora do V2Layout**). Leitura para todos; quem
+ORGANIZA um dia quadra a quadra também conduz o dia por ali. Sem impacto no
+banco.
 
 Detalhes: `docs/14-DIA-DE-JOGO-TELAO.md`.
 

@@ -3,8 +3,8 @@
  *
  * O telão fica horas aberto numa TV, sem ninguém olhando o console — se
  * quebrar, quebra na cara de todo mundo. Estes testes montam a página de
- * verdade nos quatro cenários que ela precisa aguentar: grade, Play, dia vazio
- * e dia inexistente.
+ * verdade nos cenários que ela precisa aguentar: grade, Play, Americano
+ * aprimorado, dia vazio e dia inexistente.
  */
 import React from 'react';
 import { createRoot } from 'react-dom/client';
@@ -33,6 +33,8 @@ const mutacoes = {
   substituir: vi.fn(async () => ({})),
   pausar: vi.fn(async () => ({})),
   dupla: vi.fn(async () => ({})),
+  gerarAoVivo: vi.fn(async () => ({ court: 2 })),
+  lancarResultado: vi.fn(async () => ({})),
 };
 vi.mock('@/modules/games/hooks/useGameDays', () => ({
   useCreateNextPlayGame: () => ({ mutateAsync: (...a) => mutacoes.criarProximo(...a) }),
@@ -41,6 +43,8 @@ vi.mock('@/modules/games/hooks/useGameDays', () => ({
   useNoShowSwapPlayGame: () => ({ mutateAsync: (...a) => mutacoes.substituir(...a) }),
   useSetPlayParticipantSkip: () => ({ mutateAsync: (...a) => mutacoes.pausar(...a) }),
   useSetPlayParticipantPartner: () => ({ mutateAsync: (...a) => mutacoes.dupla(...a) }),
+  useCreateNextAmericanoLiveGame: () => ({ mutateAsync: (...a) => mutacoes.gerarAoVivo(...a) }),
+  useSubmitAmericanoLiveResult: () => ({ mutateAsync: (...a) => mutacoes.lancarResultado(...a) }),
 }));
 
 const { default: V2GameDayTelao } = await import('./V2GameDayTelao.jsx');
@@ -346,6 +350,200 @@ describe('telão do Play — organizar pela própria tela', () => {
     expect(txt).toContain('QUADRA 1');
     expect(txt).toContain('Elis Prado');      // na fila
     expect(txt).toContain('Em quadra:');      // resumo de quem está jogando
+  });
+});
+
+/* ---------------------------------------------------------------------------
+ * AMERICANO APRIMORADO
+ *
+ * O terceiro caso do telão, e o mais fácil de errar: os jogos gravam `status`
+ * como o Play E placar como a grade. Se o painel o confundir com o Play,
+ * esconde resultado e ranking; se o confundir com a grade, some com a fila e
+ * com as quadras. Estes testes prendem os dois lados.
+ *
+ * E prendem o fluxo de DOIS PASSOS que dá nome ao formato: lançar o resultado
+ * NÃO cria a próxima partida — a quadra fica livre e só então oferece o
+ * sorteio. Um clique só, como no Play, seria outra coisa.
+ * ------------------------------------------------------------------------- */
+describe('telão — Americano aprimorado', () => {
+  const oitoParticipantes = () => [
+    participante('a', 'Ana'), participante('b', 'Bia'),
+    participante('c', 'Caio'), participante('d', 'Davi'),
+    participante('e', 'Elis Prado'), participante('f', 'Fábio Reis'),
+    participante('g', 'Gabi Martins'), participante('h', 'Hugo Teixeira'),
+  ];
+
+  beforeEach(() => {
+    dados.gameDay = {
+      id: 'gd1', title: 'Americano de terça', format: 'americano_live',
+      play_courts: 2, created_by: 'dono',
+    };
+    dados.participants = oitoParticipantes();
+    dados.games = [
+      {
+        id: 'g1', court: 1, order: 1, status: 'finished', created_at_ms: 1,
+        side_a: [{ id: 'e', name: 'Elis Prado' }, { id: 'f', name: 'Fábio Reis' }],
+        side_b: [{ id: 'g', name: 'Gabi Martins' }, { id: 'h', name: 'Hugo Teixeira' }],
+        score_a: 11, score_b: 7,
+      },
+      {
+        id: 'g2', court: 1, order: 2, status: 'open', created_at_ms: 2,
+        side_a: [{ id: 'a', name: 'Ana' }, { id: 'b', name: 'Bia' }],
+        side_b: [{ id: 'c', name: 'Caio' }, { id: 'd', name: 'Davi' }],
+        score_a: null, score_b: null,
+      },
+    ];
+  });
+
+  const botaoPorTexto = (texto) => [...container.querySelectorAll('button')]
+    .find((b) => b.textContent.trim() === texto);
+  const dialogo = () => document.body.querySelector('[role="dialog"]');
+  const botaoDoDialogo = (trecho) => [...(dialogo()?.querySelectorAll('button') || [])]
+    .find((b) => b.textContent.includes(trecho));
+  // V2Input é controlado pelo React: mexer em `.value` direto não dispara o
+  // onChange. É preciso passar pelo setter nativo antes de emitir o evento.
+  const digitar = (input, valor) => act(() => {
+    const setter = Object.getOwnPropertyDescriptor(window.HTMLInputElement.prototype, 'value').set;
+    setter.call(input, valor);
+    input.dispatchEvent(new Event('input', { bubbles: true }));
+  });
+
+  it('mostra o rótulo do formato e TODOS os blocos: quadra, previsão, fila, concluídas e ranking', async () => {
+    await render();
+    const txt = container.textContent;
+    expect(txt).toContain('Americano aprimorado');
+    expect(txt).toContain('Em quadra agora');
+    expect(txt).toContain('Próximos jogos');
+    expect(txt).toContain('Ordem de participação'); // herança do Play
+    expect(txt).toContain('Partidas concluídas');   // herança do Americano
+    expect(txt).toContain('Ranking do dia');        // herança do Americano
+  });
+
+  it('a partida concluída aparece COM placar — este formato grava resultado', async () => {
+    await render();
+    const txt = container.textContent;
+    expect(txt).toContain('11');
+    expect(txt).toContain('7');
+    expect(txt).toContain('Elis Prado · Fábio Reis');
+  });
+
+  it('a partida EM ANDAMENTO não mostra placar nenhum', async () => {
+    await render();
+    // O card da quadra 1 traz os quatro nomes, mas nada de "0 × 0" nem "11 × 7":
+    // o placar só nasce quando o organizador lança o resultado.
+    const txt = container.textContent;
+    expect(txt).toContain('QUADRA 1');
+    expect(txt).not.toContain('×');
+  });
+
+  it('a previsão traz as DUPLAS já formadas, e diz que podem mudar', async () => {
+    await render();
+    const txt = container.textContent;
+    expect(txt).toContain('As duplas abaixo são as que o sorteio formaria agora.');
+    expect(txt).toContain('livre agora');   // quadra 2
+    expect(txt).toContain('quando liberar'); // quadra 1, ocupada
+    // Os quatro da fila entram na quadra livre — o pareamento é sorteado, então
+    // provamos QUEM entra, não de que lado.
+    ['Elis Prado', 'Fábio Reis', 'Gabi Martins', 'Hugo Teixeira']
+      .forEach((n) => expect(txt).toContain(n));
+    // A previsão CONDICIONAL é a de quem volta da quadra 1 — e precisa sair
+    // com NOME. Quem está jogando não está na fila, e já saiu id cru por isso.
+    expect(txt).toContain('Ana');
+    expect(txt).not.toMatch(/·\s*a\s*·/); // nada de "a · b · c · d"
+  });
+
+  it('quem NÃO organiza vê a tela inteira, sem nenhuma ação', async () => {
+    auth.user = { uid: 'espectador' };
+    await render();
+    expect(botaoPorTexto('Lançar resultado')).toBeUndefined();
+    expect(botaoPorTexto('Gerar próxima partida')).toBeUndefined();
+    expect(botaoPorTexto('Cancelar')).toBeUndefined();
+    expect(container.textContent).toContain('Esta tela se atualiza sozinha');
+  });
+
+  it('quem organiza vê "Lançar resultado" na quadra ocupada e "Gerar próxima partida" na livre', async () => {
+    auth.user = { uid: 'dono' };
+    await render();
+    expect(botaoPorTexto('Lançar resultado')).toBeTruthy();
+    expect(botaoPorTexto('Gerar próxima partida')).toBeTruthy();
+    // O botão do Play — que encerra E cria de uma vez — NÃO existe aqui.
+    expect(botaoPorTexto('Criar próxima partida')).toBeUndefined();
+    expect(botaoPorTexto('Criar jogo')).toBeUndefined();
+    expect(container.textContent).toContain('lance o resultado da quadra para liberá-la');
+  });
+
+  it('gerar próxima partida chama o sorteio DO FORMATO, com a quadra livre', async () => {
+    auth.user = { uid: 'dono' };
+    await render();
+    click(botaoPorTexto('Gerar próxima partida'));
+    await act(async () => { await Promise.resolve(); });
+    expect(mutacoes.gerarAoVivo).toHaveBeenCalledWith({ court: 2 });
+    // Nunca o sorteio do Play: os dois formatos têm motores diferentes.
+    expect(mutacoes.criarProximo).not.toHaveBeenCalled();
+  });
+
+  it('⭐ "Lançar resultado" ABRE o placar — não salva nada direto', async () => {
+    auth.user = { uid: 'dono' };
+    await render();
+    click(botaoPorTexto('Lançar resultado'));
+    await act(async () => { await Promise.resolve(); });
+    expect(mutacoes.lancarResultado).not.toHaveBeenCalled();
+    expect(document.body.textContent).toContain('Lançar resultado — quadra 1');
+    // O diálogo identifica cada lado pelos nomes: trocar A por B falsearia o
+    // ranking do dia inteiro.
+    expect(dialogo().textContent).toContain('Ana · Bia');
+    expect(dialogo().textContent).toContain('Caio · Davi');
+  });
+
+  it('sem os dois placares, salvar fica travado', async () => {
+    auth.user = { uid: 'dono' };
+    await render();
+    click(botaoPorTexto('Lançar resultado'));
+    await act(async () => { await Promise.resolve(); });
+    expect(botaoDoDialogo('Salvar resultado').disabled).toBe(true);
+
+    const [campoA] = dialogo().querySelectorAll('input');
+    digitar(campoA, '11');
+    expect(botaoDoDialogo('Salvar resultado').disabled).toBe(true); // falta o B
+  });
+
+  it('com os dois placares, salvar manda o resultado da partida certa', async () => {
+    auth.user = { uid: 'dono' };
+    await render();
+    click(botaoPorTexto('Lançar resultado'));
+    await act(async () => { await Promise.resolve(); });
+
+    const [campoA, campoB] = dialogo().querySelectorAll('input');
+    digitar(campoA, '11');
+    digitar(campoB, '9');
+    click(botaoDoDialogo('Salvar resultado'));
+    await act(async () => { await Promise.resolve(); });
+
+    expect(mutacoes.lancarResultado).toHaveBeenCalledWith({ gid: 'g2', scoreA: 11, scoreB: 9 });
+    // Dois passos: lançar o resultado NÃO cria a próxima partida.
+    expect(mutacoes.gerarAoVivo).not.toHaveBeenCalled();
+  });
+
+  it('clicar num nome em quadra oferece a mesma escolha do Play', async () => {
+    auth.user = { uid: 'dono' };
+    await render();
+    const nome = [...container.querySelectorAll('button')].find((b) => b.textContent.trim() === 'Ana');
+    expect(nome).toBeTruthy();
+    click(nome);
+    await act(async () => { await Promise.resolve(); });
+    expect(mutacoes.substituir).not.toHaveBeenCalled();
+    expect(document.body.textContent).toContain('Ana');
+  });
+
+  it('sem partida nenhuma, a tela se monta com as duas quadras livres', async () => {
+    dados.games = [];
+    auth.user = { uid: 'dono' };
+    await render();
+    const txt = container.textContent;
+    expect(txt).toContain('QUADRA 1');
+    expect(txt).toContain('QUADRA 2');
+    expect(txt).toContain('Nenhuma partida concluída ainda.');
+    expect(txt).not.toContain('Ranking do dia'); // ninguém jogou ainda
   });
 });
 
