@@ -102,3 +102,51 @@ export function computeDoublesRanking(matches = [], opts = {}) {
     // ordena (um campo só, sem índice composto).
     .map((r, i) => ({ ...r, position: i + 1 }));
 }
+
+/* ---------------------------------------------------------------------------
+ * AMOSTRA MÍNIMA — o recorte que cada pessoa escolhe para a SUA visualização
+ * ------------------------------------------------------------------------- */
+
+/**
+ * Mínimos de jogos oferecidos na tela. `1` significa "todas as duplas".
+ *
+ * A lista é fechada de propósito: um campo numérico livre convidaria a
+ * `?min=999` (tabela vazia sem explicação) e faria a preferência salva de
+ * ontem virar um valor que a tela de hoje não sabe desenhar.
+ */
+export const DOUBLES_MIN_GAMES_OPTIONS = Object.freeze([1, 3, 5, 10, 20]);
+
+/** Padrão: todas as duplas entram. É o comportamento que sempre existiu. */
+export const DEFAULT_DOUBLES_MIN_GAMES = 1;
+
+/**
+ * Recorta o ranking pelas duplas com pelo menos `minGames` jogos e
+ * **RENUMERA** as posições dentro do recorte.
+ *
+ * ## Por que renumerar
+ *
+ * A amostra mínima não é uma busca: ela redefine QUEM disputa o ranking. Quem
+ * pede "só duplas com 10+ jogos" quer saber quem é a primeira ENTRE ELAS — ver
+ * "#37" no topo da própria tela pareceria defeito. A ordem relativa não muda
+ * em nada; só a numeração acompanha o recorte.
+ *
+ * A posição no ranking geral não se perde: vai em `overall_position`, para a
+ * tela poder mostrá-la quando houver recorte ativo. Esconder essa informação
+ * seria trocar um mal-entendido por outro.
+ *
+ * É a diferença entre este filtro e a BUSCA por nome: buscar é "encontre esta
+ * dupla no ranking", e ali a posição geral é justamente a resposta.
+ *
+ * @param {Array<object>} rows linhas já classificadas (com `position` e `games`)
+ * @param {number} minGames mínimo de jogos; `1` ou menos devolve tudo
+ * @returns {Array<object>} com `position` recortada e `overall_position` original
+ */
+export function filterByMinGames(rows, minGames) {
+  const lista = Array.isArray(rows) ? rows : [];
+  const min = Math.max(1, Math.trunc(Number(minGames)) || 1);
+  const comOriginal = lista.map((r) => ({ ...r, overall_position: r.position }));
+  if (min <= 1) return comOriginal;
+  return comOriginal
+    .filter((r) => (Number(r.games) || 0) >= min)
+    .map((r, i) => ({ ...r, position: i + 1 }));
+}

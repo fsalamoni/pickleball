@@ -32,8 +32,9 @@ A ordem é:
 
 > **Consequência a conhecer**: o aproveitamento vem primeiro, então uma dupla
 > com 1 jogo e 1 vitória (100%) fica à frente de uma com 50 jogos e 45 vitórias
-> (90%). É a regra pedida. Quem quiser exigir amostra mínima usa o `minGames`
-> de `computeDoublesRanking` — ele filtra quem entra, sem mexer na ordem.
+> (90%). É a regra pedida — e é por isso que a página oferece a **amostra
+> mínima** (§6.1), para cada pessoa escolher a partir de quantos jogos uma dupla
+> entra na SUA visualização.
 
 Um quinto critério existe só para a ordenação ser **estável** (a chave da
 parceria). Sem ele, duas duplas idênticas em tudo trocariam de posição entre um
@@ -139,6 +140,51 @@ A paginação em si é domínio puro e compartilhado:
 `src/core/domain/pagination.js` (e a tabela de exportação DUPR passou a usá-la
 em vez da cópia que tinha).
 
+### 6.1 Amostra mínima (preferência de cada usuário)
+
+Um seletor — **Todas / 3+ / 5+ / 10+ / 20+ jogos** — define a partir de quantos
+jogos uma parceria entra na visualização. Serve à consequência do §2: com
+aproveitamento como primeiro critério, quem jogou uma vez e venceu lidera.
+
+**O recorte RENUMERA.** A amostra mínima não é uma busca: ela redefine QUEM
+disputa o ranking. Quem pede "só duplas com 10+ jogos" quer saber quem é a
+primeira entre elas — ver "#37" no topo da própria tela pareceria defeito. A
+ordem relativa não muda em nada; só a numeração acompanha o recorte, e a
+posição no ranking geral continua visível ao lado de cada linha
+(`overall_position`).
+
+É a diferença entre este filtro e a **busca por nome**, que preserva a posição
+geral: buscar é "encontre esta dupla no ranking", e ali a posição geral é
+justamente a resposta.
+
+**A escolha fica salva, por usuário, no navegador** —
+`v2:view:<uid>:ranking:duplas:min-jogos`, via `core/lib/viewPreference.js`,
+irmã de `collapsePreference.js`. Volta sozinha na próxima visita e sobrevive à
+navegação por páginas e à busca. **Nada disso toca o banco**: é conveniência de
+interface, não dado do produto, e não vale uma leitura por abertura de tela nem
+uma escrita por clique.
+
+Precedências, nesta ordem:
+
+1. `?min=` na URL, quando traz um dos valores oferecidos — é o que faz um link
+   compartilhado mostrar a mesma coisa para quem abre;
+2. a preferência salva desta pessoa;
+3. o padrão (todas as duplas).
+
+Abrir o link de outra pessoa **não** reescreve a sua escolha: só mexer no
+seletor grava. E voltar para "Todas" **apaga** a preferência em vez de gravar
+`1`, para quem nunca escolheu e quem voltou ao padrão ficarem no mesmo estado.
+
+Dois detalhes que custaram teste para acertar:
+
+- a escolha vive em estado de React semeado da preferência, **não** numa
+  leitura memoizada do storage: lendo o storage, "voltar para Todas" só faria
+  efeito ao recarregar a página;
+- ao espionar o `localStorage` em teste, espione `Storage.prototype`. No jsdom
+  ele é um Proxy, e `vi.spyOn(window.localStorage, 'setItem')` não troca o
+  método — grava uma chave chamada `"setItem"`, e o teste passa sem exercitar
+  nada.
+
 ## 7. Banco de dados
 
 **Uma coleção nova**, `doubles_rankings/{pair_key}`:
@@ -180,4 +226,8 @@ uma correção em massa. O caminho do admin no cliente passou a materializar
 4. **Não acrescente gatilho de ranking sem filtro de campo.** `mudouResultado`
    existe para que mexer em quadra ou horário não recalcule a plataforma.
 5. **Não reordene no navegador.** A `position` é a do servidor; reordenar na
-   tela faria a numeração discordar da classificação oficial.
+   tela faria a numeração discordar da classificação oficial. Recortar por
+   amostra mínima e renumerar DENTRO do recorte é outra coisa — não muda a
+   ordem relativa, e guarda a posição geral em `overall_position`.
+6. **Não mude o id da preferência** (`ranking:duplas:min-jogos`). Ele é
+   contrato: mudar apaga, de uma vez, a escolha salva de todo mundo.

@@ -1,5 +1,8 @@
 import { describe, it, expect } from 'vitest';
-import { pairKey, computeDoublesRanking, compareDoublesRows } from './doublesRanking.js';
+import {
+  pairKey, computeDoublesRanking, compareDoublesRows,
+  filterByMinGames, DOUBLES_MIN_GAMES_OPTIONS, DEFAULT_DOUBLES_MIN_GAMES,
+} from './doublesRanking.js';
 
 describe('pairKey', () => {
   it('é estável independente da ordem', () => {
@@ -121,5 +124,93 @@ describe('compareDoublesRows — a ordem dos critérios', () => {
     ]);
     expect(rk[0].pair_key).toBe(pairKey('a', 'b'));
     expect(rk[0].wins).toBe(1);
+  });
+});
+
+/* ---------------------------------------------------------------------------
+ * AMOSTRA MÍNIMA
+ *
+ * O recorte que cada pessoa escolhe para a sua visualização. O que estes
+ * testes protegem: recortar NÃO pode reordenar nada, a numeração acompanha o
+ * recorte (senão o topo da tela mostraria "#37"), e a posição no ranking geral
+ * continua disponível.
+ * ------------------------------------------------------------------------- */
+describe('filterByMinGames', () => {
+  /** Ranking já classificado, como vem do banco. */
+  const ranking = [
+    { pair_key: 'a', position: 1, games: 1, wins: 1 },
+    { pair_key: 'b', position: 2, games: 12, wins: 10 },
+    { pair_key: 'c', position: 3, games: 4, wins: 3 },
+    { pair_key: 'd', position: 4, games: 30, wins: 20 },
+    { pair_key: 'e', position: 5, games: 2, wins: 1 },
+  ];
+
+  it('mínimo 1 (padrão) devolve todas, com a posição intacta', () => {
+    const r = filterByMinGames(ranking, DEFAULT_DOUBLES_MIN_GAMES);
+    expect(r).toHaveLength(5);
+    expect(r.map((x) => x.position)).toEqual([1, 2, 3, 4, 5]);
+  });
+
+  it('⭐ recorta quem não alcança o mínimo', () => {
+    const r = filterByMinGames(ranking, 5);
+    expect(r.map((x) => x.pair_key)).toEqual(['b', 'd']);
+  });
+
+  it('⭐ RENUMERA dentro do recorte (o topo é 1º, não #37)', () => {
+    const r = filterByMinGames(ranking, 5);
+    expect(r.map((x) => x.position)).toEqual([1, 2]);
+  });
+
+  it('⭐ a posição no ranking GERAL não se perde', () => {
+    const r = filterByMinGames(ranking, 5);
+    expect(r.map((x) => x.overall_position)).toEqual([2, 4]);
+  });
+
+  it('⭐ recortar NÃO reordena: a ordem relativa é a mesma', () => {
+    const todas = filterByMinGames(ranking, 1).map((x) => x.pair_key);
+    const recorte = filterByMinGames(ranking, 3).map((x) => x.pair_key);
+    // O recorte é uma subsequência da lista completa, na mesma ordem.
+    expect(recorte).toEqual(todas.filter((k) => recorte.includes(k)));
+  });
+
+  it('mínimo alto demais devolve lista vazia (sem quebrar)', () => {
+    expect(filterByMinGames(ranking, 999)).toEqual([]);
+  });
+
+  it('o limite é inclusivo: "5+" inclui quem tem exatamente 5', () => {
+    const r = filterByMinGames([{ pair_key: 'x', position: 1, games: 5 }], 5);
+    expect(r).toHaveLength(1);
+  });
+
+  it('não muta a lista recebida', () => {
+    const original = ranking.map((r) => ({ ...r }));
+    filterByMinGames(ranking, 10);
+    expect(ranking).toEqual(original);
+  });
+
+  it('entradas inválidas caem no "todas", em vez de esvaziar a tela', () => {
+    [null, undefined, NaN, 'abc', 0, -5].forEach((min) => {
+      expect(filterByMinGames(ranking, min)).toHaveLength(5);
+    });
+    expect(filterByMinGames(null, 5)).toEqual([]);
+    expect(filterByMinGames(undefined, 1)).toEqual([]);
+  });
+
+  it('linha sem `games` conta como zero (não entra em nenhum recorte)', () => {
+    const r = filterByMinGames([{ pair_key: 'x', position: 1 }], 3);
+    expect(r).toEqual([]);
+  });
+});
+
+describe('DOUBLES_MIN_GAMES_OPTIONS', () => {
+  it('começa em 1 ("todas") e cresce', () => {
+    expect(DOUBLES_MIN_GAMES_OPTIONS[0]).toBe(1);
+    expect(DEFAULT_DOUBLES_MIN_GAMES).toBe(1);
+    const crescente = [...DOUBLES_MIN_GAMES_OPTIONS].sort((a, b) => a - b);
+    expect([...DOUBLES_MIN_GAMES_OPTIONS]).toEqual(crescente);
+  });
+
+  it('é congelada (a lista não muda em runtime por engano)', () => {
+    expect(Object.isFrozen(DOUBLES_MIN_GAMES_OPTIONS)).toBe(true);
   });
 });

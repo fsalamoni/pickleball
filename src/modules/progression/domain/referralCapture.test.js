@@ -27,11 +27,16 @@ describe('capturePendingReferral', () => {
   });
 
   it('não explode se o localStorage estiver bloqueado', () => {
-    vi.spyOn(window.localStorage, 'setItem').mockImplementation(() => {
+    // Espionar `Storage.prototype`, e NÃO `window.localStorage`: no jsdom o
+    // storage é um Proxy, e mexer na instância só grava uma chave chamada
+    // "setItem" — o teste passava sem nunca bloquear nada.
+    const spy = vi.spyOn(Storage.prototype, 'setItem').mockImplementation(() => {
       throw new Error('QuotaExceeded');
     });
     // o link ainda abre: só a indicação se perde
     expect(capturePendingReferral(VALIDO)).toBe(VALIDO);
+    expect(spy).toHaveBeenCalled();
+    spy.mockRestore();
   });
 });
 
