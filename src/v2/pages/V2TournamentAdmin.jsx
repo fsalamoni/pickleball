@@ -16,6 +16,8 @@ import { ArrowLeft, Eye, ShieldCheck } from 'lucide-react';
 import { useTournament, useIsTournamentAdmin } from '@/modules/tournament/hooks/useTournament';
 import { TOURNAMENT_STATUS_LABELS } from '@/modules/tournament/domain/constants';
 import V2TournamentAdminPanel from '@/v2/components/tournament/V2TournamentAdminPanel';
+import V2TutorialLauncher from '@/v2/components/tutorial/V2TutorialLauncher';
+import { TUTORIAL_ID } from '@/modules/help/domain/tutorials';
 import { V2Badge, V2Button, V2Skeleton } from '@/v2/ui/primitives';
 
 export default function V2TournamentAdmin() {
@@ -49,10 +51,13 @@ export default function V2TournamentAdmin() {
           </div>
           <h1 className="mt-0.5 truncate font-display text-xl font-bold text-ink">{tournament.name}</h1>
         </div>
-        <div className="flex items-center gap-2">
+        <div className="flex flex-wrap items-center gap-2">
           {tournament.status && (
             <V2Badge tone="neutral">{TOURNAMENT_STATUS_LABELS[tournament.status] || tournament.status}</V2Badge>
           )}
+          {/* O tutorial abre sozinho na primeira vez que alguém entra na gestão
+              de um torneio, e fica aqui para rever quando quiser. */}
+          <V2TutorialLauncher tutorialId={TUTORIAL_ID.TOURNAMENT} />
           <V2Button asChild size="sm" variant="ghost">
             <Link to={`/torneios/${tournamentId}`}><Eye className="h-4 w-4" /> Ver página pública</Link>
           </V2Button>

@@ -6,6 +6,8 @@ import {
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { V2Button } from '@/v2/ui/primitives';
+import V2TutorialLauncher from '@/v2/components/tutorial/V2TutorialLauncher';
+import { tutorialIdForGameDayFormat } from '@/modules/help/domain/tutorials';
 import { cn } from '@/core/lib/utils';
 import { GAME_DAY_VISIBILITY, GAME_DAY_VISIBILITY_LABELS, normalizePlayCourts } from '@/modules/games/domain/gameDay';
 import {
@@ -240,6 +242,19 @@ export default function CreateGameDayDialog({ open, onOpenChange, onCreated, gam
                   Cada partida tem <strong>placar</strong>, entra no ranking do dia e pode ir para o ranking da
                   plataforma e o DUPR. Quem chega, sai ou pausa no meio do dia não bagunça nada.
                 </p>
+              )}
+              {/* Tutorial do formato SELECIONADO, ainda na hora de escolher.
+                  Sem ele, os tutoriais só existiriam depois de o dia estar
+                  criado — tarde demais para ajudar na decisão.
+                  `autoOpen` desligado: aqui é consulta, não boas-vindas. */}
+              {tutorialIdForGameDayFormat(form.format) && (
+                <div className="mt-2">
+                  <V2TutorialLauncher
+                    tutorialId={tutorialIdForGameDayFormat(form.format)}
+                    label="Como funciona este formato"
+                    autoOpen={false}
+                  />
+                </div>
               )}
             </div>
           )}

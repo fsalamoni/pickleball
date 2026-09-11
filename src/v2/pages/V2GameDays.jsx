@@ -20,6 +20,8 @@ import {
 } from '@/v2/ui/primitives';
 import { ConfirmDialog } from '@/components/ui/confirm-dialog';
 import CreateGameDayDialog from '@/v2/components/games/CreateGameDayDialog';
+import V2TutorialLauncher from '@/v2/components/tutorial/V2TutorialLauncher';
+import { tutorialIdForGameDayFormat } from '@/modules/help/domain/tutorials';
 import AthleteGameDayOrganizer from '@/v2/components/games/AthleteGameDayOrganizer';
 import AthletePlayOrganizer from '@/v2/components/games/AthletePlayOrganizer';
 import AthleteAmericanoLiveOrganizer from '@/v2/components/games/AthleteAmericanoLiveOrganizer';
@@ -208,6 +210,18 @@ function GameDayDetail({ gameDayId }) {
             {gameDay.notes && <p className="mt-2 text-sm text-gray-600">{gameDay.notes}</p>}
           </div>
           <div className="flex shrink-0 flex-wrap gap-2">
+            {/* O tutorial acompanha o FORMATO do dia: quem abre um Play recebe
+                o do Play, quem abre um Americano aprimorado recebe o dele. As
+                telas são diferentes; um tutorial genérico não ajudaria.
+
+                Só INTERROMPE quem vai organizar. O conteúdo é sobre conduzir o
+                dia (criar partidas, substituir, lançar resultado); para quem
+                entrou só para ver quando joga, isso é modal no caminho. O
+                botão, esse, fica para todo mundo — quem quiser ler, lê. */}
+            <V2TutorialLauncher
+              tutorialId={tutorialIdForGameDayFormat(gameDay.format)}
+              autoOpen={podeGerenciar}
+            />
             {/* Telão: abre em outra aba de propósito — o uso é numa SEGUNDA
                 tela (TV, tablet na beira da quadra), com esta aqui seguindo
                 aberta para o organizador continuar lançando os resultados. */}

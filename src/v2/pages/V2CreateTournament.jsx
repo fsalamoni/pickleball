@@ -16,6 +16,8 @@ import {
   V2Button, V2Field, V2Input, V2SectionHeader, V2Select, V2Surface, V2Textarea,
 } from '@/v2/ui/primitives';
 import { useRoleConsent } from '@/v2/components/legal/useRoleConsent';
+import V2TutorialLauncher from '@/v2/components/tutorial/V2TutorialLauncher';
+import { TUTORIAL_ID } from '@/modules/help/domain/tutorials';
 import { cn } from '@/core/lib/utils';
 
 const VISIBILITY_OPTIONS = [
@@ -101,6 +103,19 @@ export default function V2CreateTournament() {
             <span className="rounded-full border border-white/10 bg-white/10 px-3 py-1 text-xs font-bold uppercase tracking-wider text-acid">Novo torneio</span>
             <h1 className="mt-4 font-display text-3xl font-bold text-white sm:text-4xl">Monte um torneio com cara de evento real.</h1>
             <p className="mt-3 max-w-xl text-sm leading-7 text-gray-300">Configure identidade, acesso, regras e calendário. A prévia abaixo atualiza enquanto você preenche.</p>
+
+            {/* O tutorial completo (criação → modalidades → inscrições →
+                sorteio → resultados) já aqui, para quem nunca montou um
+                torneio. `autoOpen` desligado: quem chegou nesta tela veio
+                fazer, não ler — mas a porta fica visível.
+                Compartilha a mesma marca de "já vi" com o console de gestão. */}
+            <div className="mt-5">
+              <V2TutorialLauncher
+                tutorialId={TUTORIAL_ID.TOURNAMENT}
+                label="Como funciona um torneio"
+                autoOpen={false}
+              />
+            </div>
 
             <div className="mt-6 rounded-3xl border border-white/10 bg-white/5 p-5 backdrop-blur-lg">
               <div className="text-[11px] font-bold uppercase tracking-widest text-acid">Prévia do evento</div>

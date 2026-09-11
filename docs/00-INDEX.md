@@ -75,6 +75,7 @@
 | [`16-DIA-DE-JOGO-RODIZIO.md`](./16-DIA-DE-JOGO-RODIZIO.md) | Rodízio equilibrado do Play: por que a fila em blocos de 4 repetia as duplas, e como previsão e ordem passaram a ser a mesma conta. |
 | [`17-DIA-DE-JOGO-AMERICANO-APRIMORADO.md`](./17-DIA-DE-JOGO-AMERICANO-APRIMORADO.md) | ⭐ Formato `americano_live`: o Americano organizado como o Play (partida a partida, com placar). Sorteio, previsão, telão, permissões, banco. |
 | [`18-RANKINGS.md`](./18-RANKINGS.md) | ⭐ Quando e como ranking e rating são atualizados: gatilhos no servidor a cada resultado publicado, coalescência, a classificação de duplas e a paridade cliente × servidor dos motores. |
+| [`19-TUTORIAIS.md`](./19-TUTORIAIS.md) | ⭐ Tutoriais em tela (torneio e os três formatos de dia de jogo): onde aparecem, como se dispensa e se revê, e por que nada disso toca o banco. |
 | [`20-SEGURANCA-E-PRIVACIDADE/00-INDEX.md`](./20-SEGURANCA-E-PRIVACIDADE/00-INDEX.md) | 🔴 ⭐ **PRIORIDADE MÁXIMA** — Auditoria (31 achados, **2 críticos abertos**), LGPD, documentos legais, direito de imagem, console de suporte do admin, plano em 12 PRs. |
 | [`FUTURO/00-INDEX.md`](./FUTURO/00-INDEX.md) | 📐 **PLANEJADO, NADA NO CÓDIGO** — Gamificação, Mercado (marketplace aberto), Feed (rede social) e Moderação. |
 | [`PUSH-ATIVACAO.md`](./PUSH-ATIVACAO.md) | Ativação do push (PWA + FCM). |
@@ -117,6 +118,7 @@ docs/
 ├── 16-DIA-DE-JOGO-RODIZIO.md         # rodízio equilibrado do Play
 ├── 17-DIA-DE-JOGO-AMERICANO-APRIMORADO.md  # ⭐ formato americano_live
 ├── 18-RANKINGS.md                    # ⭐ rankings/rating: quando atualizam
+├── 19-TUTORIAIS.md                   # ⭐ tutoriais em tela (torneio + dia de jogo)
 │
 ├── 20-SEGURANCA-E-PRIVACIDADE/       # 🔴 ⭐ PRIORIDADE — segurança, LGPD, legal
 │   ├── 00-INDEX.md                   # ⭐ COMECE POR AQUI (achados críticos)

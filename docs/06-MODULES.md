@@ -505,6 +505,24 @@ com flags agrupadas por assunto (`core` / `nav` / `athlete` / `tournaments`
   da inscrição — americano = duplas), parceiro na rotação
   do Americano.
 
+## help/ — tutoriais e ajuda em tela
+
+Conteúdo dos tutoriais que a plataforma mostra DENTRO das próprias ferramentas.
+Só domínio puro (`domain/tutorials.js`): quatro tutoriais — torneio, dia de jogo
+Play, Americano e Americano aprimorado —, cada um com passos de título, corpo e
+dica.
+
+A interface é `src/v2/components/tutorial/V2TutorialLauncher.jsx`: uma linha na
+tela (`<V2TutorialLauncher tutorialId={...} />`) e ele cuida de abrir na
+primeira vez, deixar DISPENSAR e manter o botão para REVER quando quiser.
+
+Quem já viu o quê fica no `localStorage` por usuário
+(`v2:view:<uid>:tutorial:<id>`, via `core/lib/viewPreference.js`) — **nada no
+Firestore**.
+
+Os ids dos tutoriais são contrato: renomear um faz o tutorial reaparecer para
+toda a base. Detalhes em `src/modules/help/README.md` e `docs/19-TUTORIAIS.md`.
+
 ## legal/ — documentos legais e consentimento
 
 - **Flag**: `legal_center`. **V2**: `V2Legal` (central `/legal`),
