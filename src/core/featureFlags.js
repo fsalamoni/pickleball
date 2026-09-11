@@ -156,10 +156,32 @@ export const FEATURE_FLAG = Object.freeze({
    * opção nem aparece na criação.
    */
   GAMEDAY_AMERICANO_LIVE: 'gameday_americano_live',
+
+  /**
+   * CENTRAL DE AJUDA — a página `/ajuda`.
+   *
+   * Um manual completo da plataforma, separado por tipo de usuário (atleta,
+   * arena, professor), mais o que é comum a todos (começar, conta e
+   * privacidade). Só leitura: nenhuma consulta, nenhuma escrita, nenhuma
+   * coleção. O conteúdo é estático, vem do domínio e é carregado sob demanda.
+   *
+   * Aditiva: uma rota nova e um link na navegação. Desligada, a rota redireciona
+   * para a Home e o link não existe — nada muda para ninguém.
+   */
+  HELP_CENTER: 'help_center',
 });
 
 /** Metadados de exibição para o painel de flags (admin master). */
 export const FEATURE_FLAG_META = Object.freeze({
+  [FEATURE_FLAG.HELP_CENTER]: {
+    label: 'Central de ajuda',
+    description:
+      'Publica a página /ajuda: um manual completo da plataforma, com partes '
+      + 'separadas para atleta, arena e professor, além do que vale para todos '
+      + '(primeiros passos, conta e privacidade). Ganha um link na navegação, '
+      + 'em todas as telas. Só leitura — não consulta nem grava nada. '
+      + 'Desligada, a página não existe e o link não aparece.',
+  },
   [FEATURE_FLAG.GAMEDAY_AMERICANO_LIVE]: {
     label: 'Dia de jogo — Americano aprimorado',
     description:

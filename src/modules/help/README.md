@@ -3,16 +3,27 @@
 Módulo pequeno e de propósito único: guardar o **conteúdo dos tutoriais** que a
 plataforma mostra dentro das próprias ferramentas.
 
+Duas coisas, complementares:
+
+| | Tutoriais em tela | Central de ajuda |
+|---|---|---|
+| Onde | dentro da ferramenta | página própria, `/ajuda` |
+| Quando | na primeira vez, sozinho | quando a pessoa procura |
+| Escopo | uma ferramenta, passo a passo | a plataforma inteira, por persona |
+
 ## O que tem aqui
 
 ```
 help/
 └── domain/
-    ├── tutorials.js       # o conteúdo (puro, sem I/O, sem React)
-    └── tutorials.test.js  # rede de proteção do conteúdo
+    ├── tutorials.js          # tutoriais em tela (torneio, dia de jogo)
+    ├── tutorials.test.js
+    ├── helpCenter.js         # a central de ajuda: 33 artigos em 5 partes
+    └── helpCenter.test.js
 ```
 
-A interface vive em `src/v2/components/tutorial/V2TutorialLauncher.jsx`.
+As interfaces vivem em `src/v2/components/tutorial/V2TutorialLauncher.jsx`
+(tutoriais) e `src/v2/pages/V2Help.jsx` (central, flag `help_center`).
 
 ## Tutoriais existentes
 
@@ -72,3 +83,25 @@ Rever continua a um clique, sempre.
    "Como funciona" some justamente para quem abriu o formato novo.
 4. **Regra de negócio não mora aqui.** Estes textos explicam o que a tela faz;
    quem decide o que ela faz é o domínio de cada módulo.
+
+## Central de ajuda (`helpCenter.js`)
+
+Cinco partes — **Começar aqui**, **Atleta**, **Arena**, **Professor**, **Conta e
+privacidade** —, 33 artigos, cada um feito de blocos tipados (`p`, `steps`,
+`list`, `tip`, `warn`, `link`). Conteúdo é dado, não JSX: dá para testar,
+buscar e endereçar sem depender da tela.
+
+`searchHelp(termo)` procura no corpo dos artigos, ignora acento e caixa, e
+vários termos ESTREITAM o resultado (E, não OU).
+
+Os ids são **endereço**: `/ajuda?s=arena&a=gerir-reservas` abre direto no
+artigo. Renomear um id quebra links que já circulam.
+
+Dois testes guardam o que mais importa:
+
+1. **todo link interno aponta para uma rota que existe** — o teste lê
+   `V2App.jsx` e confere;
+2. **a ajuda não documenta o que está atrás de flag desligada** (hoje, a
+   gamificação). Ao ligar a flag, escreva os artigos **e remova o teste**.
+
+Detalhes: `docs/21-CENTRAL-DE-AJUDA.md`.

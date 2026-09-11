@@ -35,6 +35,7 @@ import {
   ChevronsRight,
   Eye,
   ShieldCheck,
+  LifeBuoy,
 } from 'lucide-react';
 import { useAuth } from '@/core/lib/FirebaseAuthContext';
 import { useAutoRecomputeRatings } from '@/modules/rating/hooks/useRating';
@@ -54,6 +55,8 @@ import {
 import { cn } from '@/core/lib/utils';
 import { V2Avatar } from '@/v2/ui/primitives';
 import V2OnboardingWizard from '@/v2/components/onboarding/V2OnboardingWizard';
+import { FEATURE_FLAG } from '@/core/featureFlags';
+import { useFeatureFlag } from '@/core/lib/FeatureFlagsContext';
 import LegalConsentGate from '@/v2/components/legal/LegalConsentGate';
 import { useMyConsents } from '@/modules/legal/hooks/useConsents';
 import { pendingGateConsents } from '@/modules/legal/domain/consent';
@@ -448,6 +451,7 @@ function MobileBottomNav({ pathname }) {
 
 function UserMenu({ displayName, displayPhoto, levelLabel, onLogout }) {
   const navigate = useNavigate();
+  const helpCenterOn = useFeatureFlag(FEATURE_FLAG.HELP_CENTER);
   return (
     <DropdownMenu>
       <DropdownMenuTrigger asChild>
@@ -470,6 +474,14 @@ function UserMenu({ displayName, displayPhoto, levelLabel, onLogout }) {
         <DropdownMenuItem className="cursor-pointer" onClick={() => navigate('/perfil/editar')}>
           <Pencil className="mr-2 h-4 w-4" /> Editar perfil
         </DropdownMenuItem>
+        {/* Terceiro ponto de acesso à ajuda (além da barra lateral e da gaveta
+            do celular): é aqui que a pessoa procura quando não sabe nem por
+            onde começar a procurar. */}
+        {helpCenterOn && (
+          <DropdownMenuItem className="cursor-pointer" onClick={() => navigate('/ajuda')}>
+            <LifeBuoy className="mr-2 h-4 w-4" /> Central de ajuda
+          </DropdownMenuItem>
+        )}
         <DropdownMenuSeparator />
         <DropdownMenuItem className="cursor-pointer text-red-600 focus:text-red-600" onClick={onLogout}>
           <LogOut className="mr-2 h-4 w-4" /> Sair
@@ -555,6 +567,7 @@ export default function V2Layout({ children }) {
   const bottomNavOn = true;
   const navHubsOn = true;
   const legalCenterOn = true;
+  const helpCenterOn = useFeatureFlag(FEATURE_FLAG.HELP_CENTER);
   // Local único de "Termos e Documentos" no rodapé da navegação: central legal
   // completa quando a flag está ligada; página de política como fallback.
   const legalDocsPath = legalCenterOn ? '/legal' : '/politica-uso';
@@ -654,6 +667,26 @@ export default function V2Layout({ children }) {
               <HubItem key={hub.id} hub={hub} active={activeHub?.id === hub.id} collapsed={collapsed} />
             ))}
           </nav>
+          {/* Central de ajuda — no rodapé da barra, junto dos documentos e
+              acima do botão de recolher. Fica FORA dos hubs de propósito: ajuda
+              não é um tema da plataforma, é o que se procura quando se está
+              perdido em qualquer um deles. Por isso aparece em toda tela. */}
+          {helpCenterOn && (
+            <Link
+              to="/ajuda"
+              title={collapsed ? 'Central de ajuda' : undefined}
+              aria-label={collapsed ? 'Central de ajuda' : undefined}
+              className={cn(
+                'btn-press group mx-3 mb-2 flex items-center rounded-2xl py-2.5 text-sm font-medium transition-colors',
+                collapsed ? 'justify-center px-0' : 'px-3.5',
+                isActive(location.pathname, { to: '/ajuda' }) ? 'bg-ink text-white' : 'text-gray-500 hover:bg-gray-50 hover:text-ink',
+              )}
+            >
+              <LifeBuoy className={cn('h-4 w-4 shrink-0', isActive(location.pathname, { to: '/ajuda' }) ? 'text-acid' : 'text-gray-400 group-hover:text-acid')} />
+              {!collapsed && <span className="ml-3">Central de ajuda</span>}
+            </Link>
+          )}
+
           {/* Termos e Documentos — separada da navegação, no rodapé da barra.
               Reúne todos os termos, contratos, documentos e políticas de uso. */}
           <Link
@@ -881,6 +914,15 @@ export default function V2Layout({ children }) {
             ))
           )}
           <div className="mt-8 space-y-1 border-t border-white/10 pt-6">
+            {helpCenterOn && (
+              <Link
+                to="/ajuda"
+                onClick={closeMobile}
+                className="flex items-center gap-3 rounded-2xl px-4 py-3 text-lg font-display font-semibold text-white transition-colors hover:text-acid"
+              >
+                <LifeBuoy className="h-5 w-5" /> Central de ajuda
+              </Link>
+            )}
             <Link
               to={legalDocsPath}
               onClick={closeMobile}

@@ -111,6 +111,7 @@ Estes princípios vieram de bugs reais que custaram horas pra arrumar. São ineg
 │   ├── 17-DIA-DE-JOGO-AMERICANO-APRIMORADO.md ⭐ formato americano_live
 │   ├── 18-RANKINGS.md              🏆 quando ranking e rating atualizam
 │   ├── 19-TUTORIAIS.md             🎓 tutoriais em tela (torneio + dia de jogo)
+│   ├── 21-CENTRAL-DE-AJUDA.md      🆘 a página /ajuda, por tipo de usuário
 │   ├── 20-SEGURANCA-E-PRIVACIDADE/ 🔴 ⭐ PRIORIDADE MÁXIMA — segurança, LGPD,
 │   │   ├── 00-INDEX.md                documentos legais, imagem, admin
 │   │   ├── 01-AUDITORIA-ACHADOS.md    ⚠ 31 achados, 2 CRÍTICOS ABERTOS
@@ -194,6 +195,8 @@ Estes princípios vieram de bugs reais que custaram horas pra arrumar. São ineg
 **"Quando o ranking/rating atualiza depois de publicar um resultado?"** → **na hora**. Gatilhos do Firestore (`functions/index.js`) recalculam os TRÊS rankings de partida — ELO/nacional, rating 2.0–8.0 e duplas — a cada escrita em `club_event_games`, `tournament_matches` ou mudança de elegibilidade de torneio. Roda no SERVIDOR porque a regra só deixa o admin escrever ranking, e quem publica quase nunca é o admin (antes a tentativa do cliente era recusada em silêncio). Rajadas são coalescidas por um lease em `platform_settings/ranking_worker`. Ver `docs/18-RANKINGS.md`
 **"Como o ranking de DUPLAS é classificado?"** → aproveitamento → mais vitórias → menos derrotas → saldo de pontos. A regra vive em `compareDoublesRows` (`src/modules/rating/domain/doublesRanking.js`), a classificação é gravada em `doubles_rankings` pelo servidor (campo `position`) e a tela **não reordena** — só filtra e pagina (20/50/100, estado na URL)
 **"Quero um piso de jogos para a dupla entrar no ranking"** → é a **amostra mínima** (Todas / 3+ / 5+ / 10+ / 20+), escolhida por CADA usuário e salva no navegador (`v2:view:<uid>:ranking:duplas:min-jogos`, via `src/core/lib/viewPreference.js` — **nada no banco**). O recorte RENUMERA dentro dele (a posição geral vai junto, em `overall_position`); a busca por nome, não. Ver `docs/18-RANKINGS.md` §6.1
+**"Onde está o MANUAL da plataforma?"** → `/ajuda` (flag `help_center`, default OFF): 33 artigos em 5 partes — Começar aqui, **Atleta**, **Arena**, **Professor**, Conta e privacidade. Conteúdo em `src/modules/help/domain/helpCenter.js`, página em `src/v2/pages/V2Help.jsx`. Acesso em três pontos de TODA tela (barra lateral, menu do usuário, gaveta do celular), fora dos hubs de propósito. Link direto por `?s=<seção>&a=<artigo>`. **Nada no banco** — nem localStorage. Ver `docs/21-CENTRAL-DE-AJUDA.md`
+**"Vou escrever ajuda sobre uma funcionalidade"** → confira antes se ela está LIGADA. A gamificação (`/conquistas`, `/hall-da-fama`, `/vinculos`) está atrás de `gamification_v2`, que é OFF — documentá-la manda a pessoa para uma porta que não abre. Há teste travando isso em `helpCenter.test.js`; e outro que confere cada link da ajuda contra as rotas reais de `V2App.jsx`
 **"Quero um tutorial explicando esta ferramenta"** → já existem quatro (torneio, dia de jogo Play, Americano e Americano aprimorado). Conteúdo em `src/modules/help/domain/tutorials.js`; para colocar numa tela é UMA linha: `<V2TutorialLauncher tutorialId={...} />` (ou `tutorialIdForGameDayFormat(gameDay.format)` num dia de jogo). Ele abre sozinho na primeira vez, deixa dispensar e mantém o botão para rever. A memória é `localStorage` por usuário — **nada no banco**. Ver `docs/19-TUTORIAIS.md`
 **"Mexi numa tela de torneio ou dia de jogo"** → passe pelo tutorial dela (`src/modules/help/domain/tutorials.js`). Um tutorial que ensina um botão que não existe mais é PIOR que nenhum: quem segue passo a passo conclui que está fazendo algo errado
 **"Preciso guardar uma preferência de tela por usuário"** → `src/core/lib/viewPreference.js` (valores) ou `collapsePreference.js` (booleanos). Sempre com o uid na chave — `localStorage` é por NAVEGADOR, e num tablet de clube uma pessoa herdaria a preferência da outra. E ao testar, espione `Storage.prototype`: no jsdom, `vi.spyOn(window.localStorage, …)` não troca o método, grava uma chave com aquele nome e o teste passa sem exercitar nada
@@ -386,6 +389,21 @@ chore(deps): bump firebase to 12.x
 >
 > **Destaques por onda**:
 >
+> - **Onda Y — Central de ajuda** (2026-09-11): a página `/ajuda` (flag
+>   `help_center`, default OFF) — o manual da plataforma dentro dela, dividido
+>   por TIPO DE USUÁRIO: Começar aqui, **Atleta**, **Arena**, **Professor**,
+>   Conta e privacidade. 33 artigos feitos de blocos tipados (parágrafo, passo
+>   a passo, lista, dica, atenção, atalho), com busca que procura no CORPO dos
+>   textos, ignora acento e em que vários termos estreitam o resultado.
+>   Acesso em TRÊS pontos de toda tela (barra lateral, menu do usuário, gaveta
+>   do celular), fora dos hubs de propósito: ajuda não é um tema da plataforma,
+>   é o que se procura quando se está perdido em qualquer um deles. Estado na
+>   URL (`?s=&a=&q=`) permite mandar alguém direto ao artigo. Dois testes
+>   guardam o essencial: **todo link interno aponta para rota que existe**
+>   (lendo `V2App.jsx`) e **a ajuda não documenta o que está atrás de flag
+>   desligada** (a gamificação). **Zero banco** — nem localStorage.
+>   Ver `docs/21-CENTRAL-DE-AJUDA.md`.
+>
 > - **Onda X — Tutoriais em tela** (2026-09-11): quatro tutoriais completos
 >   dentro das próprias ferramentas — **torneio** (criar → modalidades →
 >   inscrições → sorteio → resultados → encerramento/ranking → página pública e
@@ -520,14 +538,14 @@ chore(deps): bump firebase to 12.x
 
 | Métrica | Valor | Delta do início do agente |
 |---|---|---|
-| **Testes Vitest** | **3283 passing** (230 arquivos) | +2875 (era 408) |
+| **Testes Vitest** | **3390 passing** (232 arquivos) | +2982 (era 408) |
 | **Lint errors** | 0 | era 30+ |
 | **Módulos** | 21 (+`help` — conteúdo dos tutoriais em tela) (`games` e `legal` saíram como `src/modules/` mas continuam como pastas oficiais — **rating virou módulo oficial** com domain/services/hooks/components) | +4 (coaches, circuits, games, legal) |
-| **V2 pages** | 78 (+V2GameDayTelao — telão do dia de jogo, rota fora do V2Layout) | +54 |
+| **V2 pages** | 79 (+V2GameDayTelao — telão, fora do V2Layout; +V2Help — central de ajuda) | +55 |
 | **V2 components (src/v2/components/)** | **16 pastas** (+home, +rating, +settings, +tournament cresceu muito, +admin) | — |
 | **Coleções Firestore** | **122 top-level em `firestore.rules`** (+`doubles_rankings`) (as 13 da gamificação V2 documentadas em `05-DATA-MODEL.md`) | +82 |
 | **Índices compostos Firestore** | **33 em `firestore.indexes.json`** (+`provisional_claims`) (+4 da gamificação V2) | +28 |
-| **Feature flags ativas** | **17 default OFF** (+`play_smart_rotation`, +`gameday_americano_live`; 137 viraram código) | −114 |
+| **Feature flags ativas** | **18 default OFF** (+`play_smart_rotation`, +`gameday_americano_live`, +`help_center`; 137 viraram código) | −113 |
 | **Cloud Functions** | **12** (+ `recomputeRankingOnTournamentMatch`, + `recomputeRankingOnClubEventGame`) | +12 |
 | **PRs mergeados** | **96 totais** (Sprints 0-50+) | — |
 | **Origin/main** | `106bd55` (PR #110) | — |

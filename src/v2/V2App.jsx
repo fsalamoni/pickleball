@@ -74,6 +74,7 @@ const V2ArenaAdvanced = lazy(() => import('@/v2/pages/V2ArenaAdvanced'));
 const V2EventDetail = lazy(() => import('@/v2/pages/V2EventDetail'));
 const V2NotFound = lazy(() => import('@/v2/pages/V2NotFound'));
 const V2DoublesRanking = lazy(() => import('@/v2/pages/V2DoublesRanking'));
+const V2Help = lazy(() => import('@/v2/pages/V2Help'));
 const V2MyGames = lazy(() => import('@/v2/pages/V2MyGames'));
 const V2GameDays = lazy(() => import('@/v2/pages/V2GameDays'));
 const V2Legal = lazy(() => import('@/v2/pages/V2Legal'));
@@ -207,6 +208,7 @@ export default function V2App() {
           <Route path="configuracoes" element={<V2Settings />} />
 
           {/* Conteúdo do esporte */}
+          <Route path="ajuda" element={<V2Help />} />
           <Route path="regras" element={<V2Rules />} />
           <Route path="nivelamento" element={<V2Leveling />} />
           <Route path="historia" element={<V2History />} />
