@@ -6,13 +6,24 @@
  * montadas por `buildDuprEntries` (cada uma com `.row`, `.at`, `.match_type`,
  * `.ready` e, opcionalmente, `.situation`/`.situationRank` da conferência) e
  * devolve listas ordenadas/paginadas para a UI. Determinístico e testável.
+ *
+ * A PAGINAÇÃO em si não mora mais aqui: foi para `core/domain/pagination.js`
+ * quando o ranking de duplas passou a precisar da mesma coisa. Os nomes antigos
+ * continuam exportados daqui (é por eles que a tabela do DUPR importa) e são
+ * exatamente os de lá — reexportação, não cópia.
  */
 
+import {
+  PAGE_SIZES, DEFAULT_PAGE_SIZE, normalizePageSize, paginate,
+} from '@/core/domain/pagination.js';
+
 /** Tamanhos de página oferecidos ao admin (partidas por página). */
-export const DUPR_PAGE_SIZES = Object.freeze([20, 50, 100]);
+export const DUPR_PAGE_SIZES = PAGE_SIZES;
 
 /** Página inicial padrão. */
-export const DEFAULT_DUPR_PAGE_SIZE = 20;
+export const DEFAULT_DUPR_PAGE_SIZE = DEFAULT_PAGE_SIZE;
+
+export { normalizePageSize, paginate };
 
 /** Colunas ordenáveis da tabela. */
 export const DUPR_SORT_KEY = Object.freeze({
@@ -24,12 +35,6 @@ export const DUPR_SORT_KEY = Object.freeze({
 
 /** Sentidos de ordenação. */
 export const DUPR_SORT_DIR = Object.freeze({ ASC: 'asc', DESC: 'desc' });
-
-/** Garante um tamanho de página válido (um dos oferecidos), senão o padrão. */
-export function normalizePageSize(size) {
-  const n = Math.trunc(Number(size));
-  return DUPR_PAGE_SIZES.includes(n) ? n : DEFAULT_DUPR_PAGE_SIZE;
-}
 
 /**
  * Rank da situação DUPR para ordenação (pendente → confirmada). Usa o
@@ -83,30 +88,3 @@ export function sortDuprEntries(entries = [], key = DUPR_SORT_KEY.DATE, dir = DU
   return decorated.map((d) => d.e);
 }
 
-/**
- * Recorta uma lista na página pedida, com metadados de navegação. `page` é
- * 1-based e é sempre normalizada para o intervalo válido `[1, pageCount]`.
- *
- * @param {Array<object>} items
- * @param {number} [page=1]
- * @param {number} [pageSize=DEFAULT_DUPR_PAGE_SIZE]
- * @returns {{ pageItems: Array<object>, page: number, pageCount: number,
- *   pageSize: number, total: number, from: number, to: number }}
- */
-export function paginate(items = [], page = 1, pageSize = DEFAULT_DUPR_PAGE_SIZE) {
-  const size = normalizePageSize(pageSize);
-  const total = items.length;
-  const pageCount = Math.max(1, Math.ceil(total / size));
-  const current = Math.min(Math.max(1, Math.trunc(Number(page)) || 1), pageCount);
-  const start = (current - 1) * size;
-  const pageItems = items.slice(start, start + size);
-  return {
-    pageItems,
-    page: current,
-    pageCount,
-    pageSize: size,
-    total,
-    from: total === 0 ? 0 : start + 1,
-    to: Math.min(start + size, total),
-  };
-}

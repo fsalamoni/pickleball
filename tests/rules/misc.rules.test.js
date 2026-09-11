@@ -57,6 +57,13 @@ beforeEach(async () => {
     await setDoc(doc(db, 'conversations', 'c1', 'messages', 'm1'), {
       sender_id: OUTRO, text: 'oi',
     });
+    await setDoc(doc(db, 'doubles_rankings', 'eu_uid__outro_uid'), {
+      pair_key: 'eu_uid__outro_uid',
+      player_ids: [EU, OUTRO],
+      players: [{ uid: EU, name: 'Eu', photo: '' }, { uid: OUTRO, name: 'Outro', photo: '' }],
+      games: 4, wins: 3, losses: 1, win_rate: 0.75,
+      points_for: 80, points_against: 60, points_balance: 20, position: 1,
+    });
   });
 });
 
@@ -246,5 +253,63 @@ describe('conversations', () => {
   it('32. ⭐ só o autor edita/apaga a própria mensagem', async () => {
     await assertFails(deleteDoc(doc(como(EU), 'conversations', 'c1', 'messages', 'm1')));
     await assertSucceeds(deleteDoc(doc(como(OUTRO), 'conversations', 'c1', 'messages', 'm1')));
+  });
+});
+
+/* ---------------------------------------------------------------------------
+ * doubles_rankings — o ranking de duplas MATERIALIZADO
+ *
+ * Mesma política de `player_ratings`: é o placar oficial de todo mundo, então
+ * leitura é pública (a página /ranking/duplas é aberta) e escrita é só do
+ * admin. Na prática quem escreve é a Cloud Function de recálculo, que roda com
+ * privilégio de servidor e não passa por estas regras — o que estes testes
+ * prendem é que NINGUÉM MAIS escreva: uma dupla que edita a própria linha
+ * escolhe a própria colocação.
+ * ------------------------------------------------------------------------- */
+describe('doubles_rankings — ranking de duplas materializado', () => {
+  const linha = (over = {}) => ({
+    pair_key: 'x__y',
+    player_ids: ['x', 'y'],
+    players: [{ uid: 'x', name: 'X', photo: '' }, { uid: 'y', name: 'Y', photo: '' }],
+    games: 1, wins: 1, losses: 0, win_rate: 1,
+    points_for: 11, points_against: 5, points_balance: 6, position: 1,
+    ...over,
+  });
+
+  it('33. qualquer um lê (a página do ranking é pública)', async () => {
+    await assertSucceeds(getDoc(doc(como(EU), 'doubles_rankings', 'eu_uid__outro_uid')));
+  });
+
+  it('34. ⭐ anônimo também lê — é ranking público, como o individual', async () => {
+    await assertSucceeds(getDoc(doc(anon(), 'doubles_rankings', 'eu_uid__outro_uid')));
+  });
+
+  it('35. ⭐ atleta NÃO escreve a própria linha (não escolhe a colocação)', async () => {
+    await assertFails(setDoc(doc(como(EU), 'doubles_rankings', 'eu_uid__outro_uid'), linha()));
+  });
+
+  it('36. ⭐ atleta NÃO edita a posição de ninguém', async () => {
+    await assertFails(updateDoc(doc(como(EU), 'doubles_rankings', 'eu_uid__outro_uid'), { position: 1 }));
+    await assertFails(updateDoc(doc(como(OUTRO), 'doubles_rankings', 'eu_uid__outro_uid'), { wins: 999 }));
+  });
+
+  it('37. ⭐ atleta NÃO apaga a linha de uma dupla rival', async () => {
+    await assertFails(deleteDoc(doc(como(OUTRO), 'doubles_rankings', 'eu_uid__outro_uid')));
+  });
+
+  it('38. ⭐ anônimo não escreve nada', async () => {
+    await assertFails(setDoc(doc(anon(), 'doubles_rankings', 'x__y'), linha()));
+  });
+
+  it('39. o admin escreve (é o recálculo)', async () => {
+    await assertSucceeds(setDoc(doc(como(ADMIN_UID), 'doubles_rankings', 'x__y'), linha()));
+  });
+
+  it('40. o admin apaga (parceria que saiu do ranking)', async () => {
+    await assertSucceeds(deleteDoc(doc(como(ADMIN_UID), 'doubles_rankings', 'eu_uid__outro_uid')));
+  });
+
+  it('41. a listagem do ranking inteiro funciona sem login', async () => {
+    await assertSucceeds(getDocs(collection(anon(), 'doubles_rankings')));
   });
 });

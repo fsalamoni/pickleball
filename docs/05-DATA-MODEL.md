@@ -594,6 +594,35 @@ Rascunho de wizard de criação em etapas. Limpo ao publicar.
 
 ## Rating estilo DUPR (Onda G — Sprints 38-43)
 
+### `doubles_rankings/{pair_key}` (NOVO — ranking de duplas materializado)
+
+Uma linha por **parceria** (os dois atletas que jogaram juntos do mesmo lado),
+já classificada. `pair_key` são os dois uids ordenados e unidos por `__`, o que
+torna a chave estável independentemente de quem foi lado A ou B.
+
+```js
+{
+  pair_key: 'uidA__uidB',
+  player_ids: ['uidA', 'uidB'],
+  players: [{ uid, name, photo }, ...],   // desnormalizado: a página não busca perfil
+  games, wins, losses,
+  win_rate,                                // vitórias ÷ jogos (o critério principal)
+  points_for, points_against, points_balance,
+  position,                                // a classificação, calculada no servidor
+  updated_at
+}
+```
+
+- **Classificação**: aproveitamento → vitórias → derrotas → saldo de pontos.
+- **Escrita**: Cloud Function de recálculo (e o botão do admin). Regra:
+  `allow read: if true; allow write: if isPlatformAdmin();` — mesma política de
+  `player_ratings`, porque é o placar oficial de todo mundo.
+- **Leitura**: a página `/ranking/duplas` lê a coleção inteira ordenada por
+  `position` (campo único, **sem índice composto**) e pagina no cliente.
+- **Atualização**: a cada resultado publicado, junto com `player_ratings` e
+  `player_skill_ratings`. Ver `docs/18-RANKINGS.md`.
+- **Migração**: nenhuma — a coleção nasce no primeiro recálculo.
+
 ### `player_skill_ratings/{userId_format}` (NOVO Onda G)
 Rating estilo DUPR (escala 2.000-8.000), **independente** do
 ELO. Flag `skill_rating_dupr` (default OFF). Coleção

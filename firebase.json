@@ -16,7 +16,9 @@
       "ignore": [
         "node_modules",
         ".git",
-        "*.local"
+        "*.local",
+        "**/*.test.js",
+        "**/*.test.mjs"
       ]
     }
   ],

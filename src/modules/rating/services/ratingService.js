@@ -30,6 +30,8 @@ import { toMillis } from '@/modules/tournament/domain/participation';
 import { eligibleTournamentIdsForRanking } from '@/modules/tournament/domain/rankingEligibility';
 import { LEVEL_TABLE } from '@/modules/leveling/data/levels';
 import { computeRatings, seedFromLevelOrdinal } from '../domain/elo.js';
+import { computeDoublesRanking } from '../domain/doublesRanking.js';
+import { DOUBLES_RANKING_COLLECTION } from './doublesRankingService.js';
 import { computeRatingSignature } from '../domain/ratingSignature.js';
 
 const SETTINGS_COLLECTION = 'platform_settings';
@@ -244,6 +246,58 @@ export async function recomputeAllRatings(actor, options = {}) {
     await batch.commit();
   }
 
+  // RANKING DE DUPLAS — materializado na mesma passada, dos MESMOS jogos.
+  //
+  // Quem recalcula o ranking espera que "o ranking" fique todo consistente. Se
+  // o botão do admin atualizasse só o ELO, a página de duplas continuaria
+  // mostrando a classificação anterior sem nenhum sinal de que está velha.
+  //
+  // No dia a dia quem escreve esta coleção é a Cloud Function, a cada resultado
+  // publicado (`functions/platformRankings.js`); os dois caminhos usam a mesma
+  // regra de classificação, com teste de paridade entre eles.
+  const duplas = computeDoublesRanking(engineMatches, { minGames: 1 });
+  const duplasRows = duplas.map((r) => ({
+    pair_key: r.pair_key,
+    player_ids: r.player_ids,
+    players: r.player_ids.map((playerUid) => {
+      const perfil = profileById.get(playerUid) || {};
+      return {
+        uid: playerUid,
+        name: perfil.platform_name || perfil.full_name || 'Atleta',
+        photo: perfil.photo_url || '',
+      };
+    }),
+    games: r.games,
+    wins: r.wins,
+    losses: r.losses,
+    win_rate: r.win_rate,
+    points_for: r.points_for,
+    points_against: r.points_against,
+    points_balance: r.points_balance,
+    position: r.position,
+  }));
+
+  const existingDoublesSnap = await getDocs(collection(db, DOUBLES_RANKING_COLLECTION));
+  for (let i = 0; i < duplasRows.length; i += SAFE_BATCH_WRITE_SIZE) {
+    const batch = writeBatch(db);
+    duplasRows.slice(i, i + SAFE_BATCH_WRITE_SIZE).forEach((row) => {
+      batch.set(doc(db, DOUBLES_RANKING_COLLECTION, row.pair_key), {
+        ...row, updated_at: serverTimestamp(),
+      });
+    });
+    await batch.commit();
+  }
+  // Parcerias que deixaram de existir (jogo apagado, resultado anulado) não
+  // podem ficar na tabela com a classificação antiga.
+  const paresVivos = new Set(duplasRows.map((r) => r.pair_key));
+  const paresMortos = existingDoublesSnap.docs.map((d) => d.id).filter((id) => !paresVivos.has(id));
+  for (let i = 0; i < paresMortos.length; i += SAFE_BATCH_WRITE_SIZE) {
+    const batch = writeBatch(db);
+    paresMortos.slice(i, i + SAFE_BATCH_WRITE_SIZE)
+      .forEach((id) => batch.delete(doc(db, DOUBLES_RANKING_COLLECTION, id)));
+    await batch.commit();
+  }
+
   // Marca o estado do recálculo (assinatura das entradas + timestamp) para o
   // recálculo automático detectar staleness sem reprocessar tudo.
   if (onlyPublicClosed) {
@@ -266,6 +320,8 @@ export async function recomputeAllRatings(actor, options = {}) {
       matches_used: engineMatches.length,
       matches_total: finishedMatches.length,
       club_event_matches_total: clubEventMatches.length,
+      doubles_pairs: duplasRows.length,
+      doubles_stale_removed: paresMortos.length,
       stale_removed: staleIds.length,
       auto: Boolean(onlyPublicClosed && options.auto),
     },
@@ -276,6 +332,7 @@ export async function recomputeAllRatings(actor, options = {}) {
     matchesUsed: engineMatches.length,
     matchesTotal: finishedMatches.length,
     clubEventMatchesTotal: clubEventMatches.length,
+    doublesPairs: duplasRows.length,
     staleRemoved: staleIds.length,
   };
 }

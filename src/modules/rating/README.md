@@ -129,3 +129,25 @@ try {
 ```
 
 Detalhes, garantias e efeito medido: **`docs/13-NIVEL-UNIFICADO.md`**.
+
+---
+
+## Atualização automática dos rankings (2026-09-11)
+
+**Todo resultado publicado atualiza os três rankings na hora**: ELO/nacional
+(`player_ratings`), rating estilo DUPR (`player_skill_ratings`) e duplas
+(`doubles_rankings`). Quem faz isso são gatilhos do Firestore em
+`functions/index.js`, e não o navegador — materializar ranking é escrita que só
+o admin pode fazer, e quem publica um dia de jogo quase nunca é o admin (antes,
+a tentativa do cliente era recusada pela regra e morria num `catch`).
+
+- Recálculo: `functions/platformRankings.js` (uma leitura, três rankings).
+- Rajadas são coalescidas por um lease em `platform_settings/ranking_worker`.
+- **Ranking de duplas** classifica por **aproveitamento → vitórias → derrotas →
+  saldo**; a regra é `compareDoublesRows` em `domain/doublesRanking.js`, e a
+  `position` gravada no banco é a que a tela mostra (a página não reordena).
+- Os motores existem duas vezes (cliente e Functions, que é publicado isolado).
+  `functions/engines/parity.test.js` prova que são idênticos sobre 400
+  partidas — **mexeu num lado, mexa no outro**.
+
+Detalhes: `docs/18-RANKINGS.md`.

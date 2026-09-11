@@ -303,6 +303,15 @@ service cloud.firestore {
       allow read: if true;
       allow write: if isPlatformAdmin();
     }
+    // Ranking de DUPLAS materializado (uma linha por parceria, id = pair_key).
+    // Mesma política de player_ratings: leitura pública (a página /ranking/duplas
+    // é aberta) e escrita só do admin — na prática quem escreve é a Cloud
+    // Function de recálculo, que roda com privilégio de servidor. Nenhum dado
+    // pessoal além do que o ranking já expõe: nome público e foto.
+    match /doubles_rankings/{pairKey} {
+      allow read: if true;
+      allow write: if isPlatformAdmin();
+    }
 
     // ---- Wave C.3 — Ranking interno do clube (materializado) ----
     // Cada clube tem 4 coleções materializadas pelo Cloud Function

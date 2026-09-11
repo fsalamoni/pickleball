@@ -255,4 +255,22 @@ async function recomputeAllRatings(db) {
   return { players: rows.length, matchesUsed: engineMatches.length };
 }
 
-module.exports = { recomputeAllRatings, isEligible, getFirestore };
+module.exports = {
+  recomputeAllRatings,
+  isEligible,
+  getFirestore,
+  // Peças PURAS, exportadas para o teste de paridade cliente × servidor
+  // (`functions/engines/parity.test.js`) e para quem materializa os rankings.
+  // Nada aqui faz I/O.
+  computeRatings,
+  seedFromLevelOrdinal,
+  resolveSideUids,
+  toMillis,
+  computeSignature,
+  LEVEL_IDS,
+  FINISHED_STATUSES,
+  RATINGS_COLLECTION,
+  HISTORY_COLLECTION,
+  HISTORY_MAX_POINTS,
+  SAFE_BATCH_WRITE_SIZE,
+};

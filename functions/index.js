@@ -25,7 +25,11 @@ const { onDocumentWritten, onDocumentCreated } = require('firebase-functions/v2/
 const { onSchedule } = require('firebase-functions/v2/scheduler');
 const { setGlobalOptions } = require('firebase-functions/v2');
 const logger = require('firebase-functions/logger');
-const { recomputeAllRatings, isEligible } = require('./ranking');
+const { isEligible } = require('./ranking');
+const {
+  requestRankingRecompute, mudouResultado,
+  CAMPOS_PARTIDA_TORNEIO, CAMPOS_JOGO_EVENTO,
+} = require('./platformRankings');
 const { recomputeClubInternalRankings } = require('./clubRanking');
 const { recomputeSeasonRanking } = require('./seasonRanking');
 
@@ -37,35 +41,74 @@ const REGION = 'southamerica-east1';
 setGlobalOptions({ region: REGION, maxInstances: 3 });
 
 // =====================================================================
-// RANKING (existente — mantido intacto)
+// RANKINGS DA PLATAFORMA
+//
+// TODO resultado publicado atualiza, NA HORA, os três rankings que dependem
+// de partida: ELO/nacional, rating estilo DUPR (2.0–8.0) e ranking de duplas.
+//
+// Por que no servidor: materializar ranking é escrita em coleção que só o
+// admin da plataforma pode escrever. Quem publica um dia de jogo quase nunca
+// é o admin — a tentativa do cliente era recusada e morria num `catch`. Aqui
+// roda com privilégio de servidor e funciona para qualquer pessoa.
+//
+// As rajadas (publicar um dia de jogo grava dezenas de partidas de uma vez)
+// são coalescidas dentro de `requestRankingRecompute`: a primeira escrita
+// recalcula, as demais marcam "pendente", e uma passada final fecha a conta.
 // =====================================================================
 
-exports.recomputeRankingOnTournamentChange = onDocumentWritten(
-  {
-    document: 'tournaments/{tournamentId}',
-    database: DATABASE_ID,
-    region: REGION,
-    timeoutSeconds: 300,
-    memory: '512MiB',
-  },
-  async (event) => {
-    const before = event.data && event.data.before && event.data.before.exists ? event.data.before.data() : null;
-    const after = event.data && event.data.after && event.data.after.exists ? event.data.after.data() : null;
-    // Só recalcula quando a elegibilidade para o ranking muda (encerrar, reabrir,
-    // arquivar, tornar público/privado, excluir) — ignora edições irrelevantes.
-    if (!isEligible(before) && !isEligible(after)) return;
+/** Opções comuns dos gatilhos de ranking. */
+const GATILHO_RANKING = {
+  database: DATABASE_ID,
+  region: REGION,
+  timeoutSeconds: 540,
+  memory: '512MiB',
+};
 
-    const db = getFirestore(getApp(), DATABASE_ID);
-    try {
-      const res = await recomputeAllRatings(db);
-      logger.info('Ranking recalculado (gatilho de torneio).', {
-        tournamentId: event.params.tournamentId,
-        players: res.players,
-        matchesUsed: res.matchesUsed,
-      });
-    } catch (err) {
-      logger.error('Falha ao recalcular o ranking no servidor.', err);
-    }
+const antes = (event) => (event.data && event.data.before && event.data.before.exists
+  ? event.data.before.data() : null);
+const depois = (event) => (event.data && event.data.after && event.data.after.exists
+  ? event.data.after.data() : null);
+
+/** Dispara o recálculo sem deixar o erro virar alerta de incidente. */
+async function pedirRecalculo(motivo, contexto) {
+  const db = getFirestore(getApp(), DATABASE_ID);
+  try {
+    const res = await requestRankingRecompute(db, motivo, { logger });
+    if (!res.ran) logger.debug('Ranking: pedido coalescido.', { motivo, ...contexto });
+    return res;
+  } catch (err) {
+    logger.error('Falha ao recalcular os rankings no servidor.', { motivo, ...contexto, err });
+    return { ran: false, reason: 'error' };
+  }
+}
+
+// (1) Torneio mudou de elegibilidade (encerrar, reabrir, arquivar, publicar).
+exports.recomputeRankingOnTournamentChange = onDocumentWritten(
+  { ...GATILHO_RANKING, document: 'tournaments/{tournamentId}' },
+  async (event) => {
+    // Só recalcula quando a elegibilidade para o ranking muda — ignora
+    // edições irrelevantes (nome, descrição, banner...).
+    if (!isEligible(antes(event)) && !isEligible(depois(event))) return;
+    await pedirRecalculo('tournament-change', { tournamentId: event.params.tournamentId });
+  },
+);
+
+// (2) Resultado de partida de TORNEIO.
+exports.recomputeRankingOnTournamentMatch = onDocumentWritten(
+  { ...GATILHO_RANKING, document: 'tournament_matches/{matchId}' },
+  async (event) => {
+    if (!mudouResultado(antes(event), depois(event), CAMPOS_PARTIDA_TORNEIO)) return;
+    await pedirRecalculo('tournament-match', { matchId: event.params.matchId });
+  },
+);
+
+// (3) Resultado PUBLICADO de dia de jogo / evento de clube. É por aqui que
+//     passa a publicação do dia de jogo (o espelho em `club_event_games`).
+exports.recomputeRankingOnClubEventGame = onDocumentWritten(
+  { ...GATILHO_RANKING, document: 'club_event_games/{gameId}' },
+  async (event) => {
+    if (!mudouResultado(antes(event), depois(event), CAMPOS_JOGO_EVENTO)) return;
+    await pedirRecalculo('club-event-game', { gameId: event.params.gameId });
   },
 );
 

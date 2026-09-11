@@ -109,6 +109,7 @@ Estes princípios vieram de bugs reais que custaram horas pra arrumar. São ineg
 │   ├── 15-DIA-DE-JOGO-PERMISSOES.md 🔐 quem pode organizar o dia de jogo
 │   ├── 16-DIA-DE-JOGO-RODIZIO.md   🔁 rodízio equilibrado do Play
 │   ├── 17-DIA-DE-JOGO-AMERICANO-APRIMORADO.md ⭐ formato americano_live
+│   ├── 18-RANKINGS.md              🏆 quando ranking e rating atualizam
 │   ├── 20-SEGURANCA-E-PRIVACIDADE/ 🔴 ⭐ PRIORIDADE MÁXIMA — segurança, LGPD,
 │   │   ├── 00-INDEX.md                documentos legais, imagem, admin
 │   │   ├── 01-AUDITORIA-ACHADOS.md    ⚠ 31 achados, 2 CRÍTICOS ABERTOS
@@ -188,6 +189,9 @@ Estes princípios vieram de bugs reais que custaram horas pra arrumar. São ineg
 **"Cliquei no jogador em quadra: quero escolher entre deixá-lo de fora e trocá-lo por alguém"** → é o que acontece — o clique abre `CourtPlayerDialog` (exportado de `AthletePlayOrganizer.jsx`), com as duas opções; a lista de quem pode entrar vem de `eligibleSwapReplacements` e é reconferida no serviço. Vale no painel E no telão. Ver `docs/14-DIA-DE-JOGO-TELAO.md`
 **"Quero um Americano em que as partidas saiam UMA A UMA, quadra por quadra, mas COM placar"** → é o **Americano aprimorado** (`americano_live`), atrás da flag `gameday_americano_live` (default OFF). Organização do Play (fila, pausa, dupla fixa, entra/sai a qualquer hora) + placar, ranking do dia e publicação no ranking/rating/DUPR do Americano. O fluxo é de DOIS passos: **"Lançar resultado"** libera a quadra, e só então aparece **"Gerar próxima partida"** — não junte os dois. Código em `src/modules/games/domain/americanoLive.js` e `src/v2/components/games/AthleteAmericanoLiveOrganizer.jsx`; doc em `docs/17-DIA-DE-JOGO-AMERICANO-APRIMORADO.md`
 **"O telão mudou com o formato novo?"** → sim, ganhou um terceiro arranjo (quadras + previsão com duplas + partidas concluídas com placar + ranking do dia). `buildGameDayBoard` agora aceita `format` (OPCIONAL): informado, ele decide `isCourtByCourt`/`hasScores`; omitido, a inferência antiga vale bit a bit. Ver `docs/14-DIA-DE-JOGO-TELAO.md` §2.2
+**"Quando o ranking/rating atualiza depois de publicar um resultado?"** → **na hora**. Gatilhos do Firestore (`functions/index.js`) recalculam os TRÊS rankings de partida — ELO/nacional, rating 2.0–8.0 e duplas — a cada escrita em `club_event_games`, `tournament_matches` ou mudança de elegibilidade de torneio. Roda no SERVIDOR porque a regra só deixa o admin escrever ranking, e quem publica quase nunca é o admin (antes a tentativa do cliente era recusada em silêncio). Rajadas são coalescidas por um lease em `platform_settings/ranking_worker`. Ver `docs/18-RANKINGS.md`
+**"Como o ranking de DUPLAS é classificado?"** → aproveitamento → mais vitórias → menos derrotas → saldo de pontos. A regra vive em `compareDoublesRows` (`src/modules/rating/domain/doublesRanking.js`), a classificação é gravada em `doubles_rankings` pelo servidor (campo `position`) e a tela **não reordena** — só filtra e pagina (20/50/100, estado na URL)
+**"Posso mexer no motor de rating?"** → só nos DOIS lados. Os motores existem em `src/modules/rating/domain/` (cliente) e `functions/engines/` (servidor, porque o pacote de Functions é publicado isolado). `functions/engines/parity.test.js` roda as duas implementações sobre as mesmas 400 partidas e exige resultado idêntico — mexer num lado só quebra o teste, de propósito
 **"A previsão de próxima partida mostra gente diferente de quem entra. Por quê?"** → era isso mesmo, e foi corrigido: previsão, previsão por quadra e ordem de participação derivam todas de `simulatePlaySequence` (fonte única). A previsão de quadra **ocupada** é condicional (depende de quem termina primeiro). Ver `docs/16-DIA-DE-JOGO-RODIZIO.md` §4b
 **"Como faço uma seção colapsável que LEMBRA por usuário?"** → `src/v2/ui/V2CollapsibleCard.jsx` + id estável em `src/v2/components/games/gameDaySections.js`
 **"Onde está SEGURANÇA / LGPD / documentos legais / dados de usuário?"** → ⭐ `docs/20-SEGURANCA-E-PRIVACIDADE/00-INDEX.md` — **leia antes de tocar em qualquer coisa que envolva dado pessoal**. Os 2 achados CRÍTICOS já foram tratados; resta a migração destrutiva do P0-02 (presa ao backup) e **um achado aberto de operação**: `16-ACHADO-ADMINS-EXTRAS.md`
@@ -376,6 +380,25 @@ chore(deps): bump firebase to 12.x
 >
 > **Destaques por onda**:
 >
+> - **Onda W — Rankings atualizados na publicação** (2026-09-11): todo resultado
+>   publicado passa a atualizar, NA HORA, os três rankings de partida — ELO/
+>   nacional, rating estilo DUPR (2.0–8.0) e duplas. São gatilhos do Firestore
+>   (`club_event_games`, `tournament_matches`, elegibilidade de torneio) que
+>   rodam no SERVIDOR: materializar ranking é escrita que só o admin pode fazer,
+>   e quem publica um dia de jogo quase nunca é o admin — a tentativa do cliente
+>   era recusada pela regra e morria num `catch`. Rajadas (publicar um dia
+>   grava dezenas de partidas) são coalescidas por um lease, custando duas
+>   passadas. **Bug corrigido junto**: o recálculo de servidor que já existia
+>   lia só `tournament_matches` e ignorava `club_event_games`, então toda vez
+>   que rodava apagava do ranking nacional os resultados de dia de jogo.
+>   O ranking de **duplas** passou a ser materializado em `doubles_rankings`
+>   (coleção nova, leitura pública, escrita só do admin; zero índice, zero
+>   migração) e classificado por **aproveitamento → vitórias → derrotas →
+>   saldo**; a página ganhou paginação 20/50/100 com estado na URL e deixou de
+>   ler quatro coleções inteiras a cada abertura. Os motores duplicados
+>   (cliente × Functions) ganharam **teste de paridade** sobre 400 partidas.
+>   Ver `docs/18-RANKINGS.md`.
+>
 > - **Onda V — Dia de jogo: Americano aprimorado** (2026-09-10): formato NOVO
 >   (`americano_live`, flag `gameday_americano_live`, default OFF) que junta a
 >   organização do Play — quadra a quadra, fila de participação, pausa, dupla
@@ -475,15 +498,15 @@ chore(deps): bump firebase to 12.x
 
 | Métrica | Valor | Delta do início do agente |
 |---|---|---|
-| **Testes Vitest** | **3113 passing** (223 arquivos) | +2705 (era 408) |
+| **Testes Vitest** | **3189 passing** (227 arquivos) | +2781 (era 408) |
 | **Lint errors** | 0 | era 30+ |
 | **Módulos** | 20 (`games` e `legal` saíram como `src/modules/` mas continuam como pastas oficiais — **rating virou módulo oficial** com domain/services/hooks/components) | +4 (coaches, circuits, games, legal) |
 | **V2 pages** | 78 (+V2GameDayTelao — telão do dia de jogo, rota fora do V2Layout) | +54 |
 | **V2 components (src/v2/components/)** | **16 pastas** (+home, +rating, +settings, +tournament cresceu muito, +admin) | — |
-| **Coleções Firestore** | **121 top-level em `firestore.rules`** (as 13 da gamificação V2 documentadas em `05-DATA-MODEL.md`) | +82 |
+| **Coleções Firestore** | **122 top-level em `firestore.rules`** (+`doubles_rankings`) (as 13 da gamificação V2 documentadas em `05-DATA-MODEL.md`) | +82 |
 | **Índices compostos Firestore** | **33 em `firestore.indexes.json`** (+`provisional_claims`) (+4 da gamificação V2) | +28 |
 | **Feature flags ativas** | **17 default OFF** (+`play_smart_rotation`, +`gameday_americano_live`; 137 viraram código) | −114 |
-| **Cloud Functions** | **10** (+ `recomputeSeasonRankingDaily`) | +10 |
+| **Cloud Functions** | **12** (+ `recomputeRankingOnTournamentMatch`, + `recomputeRankingOnClubEventGame`) | +12 |
 | **PRs mergeados** | **96 totais** (Sprints 0-50+) | — |
 | **Origin/main** | `106bd55` (PR #110) | — |
 | **Bundle deployed** | (deploy em curso) | — |
