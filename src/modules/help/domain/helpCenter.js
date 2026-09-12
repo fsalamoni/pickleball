@@ -678,3 +678,284 @@ export function searchHelp(termo, opts = {}) {
     return termos.every((t) => alvo.includes(t));
   });
 }
+
+/* ===================================================== AJUDA CONTEXTUAL == */
+
+/**
+ * De onde a pessoa VEIO → o que provavelmente ela quer saber.
+ *
+ * É a diferença entre uma central de ajuda útil e uma inútil. Sem isto, quem
+ * travou na tela de sorteio precisa: achar o link de ajuda, adivinhar que o
+ * assunto é "Atleta", e caçar o artigo no meio de dez. Quatro passos de
+ * atrito no exato momento em que a pessoa já está irritada.
+ *
+ * O padrão aceita um asterisco como UM segmento de rota: o molde
+ * "/torneios/(asterisco)/gerenciar" casa com "/torneios/abc123/gerenciar".
+ * A ordem importa: vence o primeiro que casar, então o específico vem antes
+ * do genérico.
+ */
+export const HELP_ROUTE_HINTS = Object.freeze([
+  // --- torneio (do mais específico ao mais genérico) -----------------------
+  { pattern: '/torneios/criar', label: 'criar um torneio',
+    refs: [[HELP_SECTION.ATHLETE, 'organizar-torneio'], [HELP_SECTION.START, 'nivelamento']] },
+  { pattern: '/torneios/*/gerenciar', label: 'gerenciar o torneio',
+    refs: [[HELP_SECTION.ATHLETE, 'organizar-torneio'], [HELP_SECTION.ATHLETE, 'durante-torneio']] },
+  { pattern: '/torneios/*/modalidades/*', label: 'a modalidade',
+    refs: [[HELP_SECTION.ATHLETE, 'organizar-torneio'], [HELP_SECTION.ATHLETE, 'inscrever-torneio']] },
+  { pattern: '/torneios/guia', label: 'os formatos de chave',
+    refs: [[HELP_SECTION.ATHLETE, 'organizar-torneio']] },
+  { pattern: '/torneios/*', label: 'este torneio',
+    refs: [[HELP_SECTION.ATHLETE, 'inscrever-torneio'], [HELP_SECTION.ATHLETE, 'durante-torneio']] },
+  { pattern: '/torneios', label: 'torneios',
+    refs: [[HELP_SECTION.ATHLETE, 'inscrever-torneio'], [HELP_SECTION.ATHLETE, 'organizar-torneio']] },
+  { pattern: '/circuits', label: 'circuitos',
+    refs: [[HELP_SECTION.ATHLETE, 'circuitos']] },
+  { pattern: '/meus-jogos', label: 'seus jogos',
+    refs: [[HELP_SECTION.ATHLETE, 'ranking-evolucao'], [HELP_SECTION.ATHLETE, 'achar-jogo']] },
+
+  // --- dia de jogo ---------------------------------------------------------
+  { pattern: '/clubes/*/eventos/*', label: 'este dia de jogo do clube',
+    refs: [[HELP_SECTION.ATHLETE, 'dia-de-jogo'], [HELP_SECTION.ATHLETE, 'organizar-dia-de-jogo'], [HELP_SECTION.ATHLETE, 'comunidade']] },
+  { pattern: '/dia-de-jogo/*', label: 'este dia de jogo',
+    refs: [[HELP_SECTION.ATHLETE, 'dia-de-jogo'], [HELP_SECTION.ATHLETE, 'organizar-dia-de-jogo']] },
+  { pattern: '/dia-de-jogo', label: 'dia de jogo',
+    refs: [[HELP_SECTION.ATHLETE, 'organizar-dia-de-jogo'], [HELP_SECTION.ATHLETE, 'dia-de-jogo']] },
+  { pattern: '/procura-jogo', label: 'procura-se jogo',
+    refs: [[HELP_SECTION.ATHLETE, 'achar-jogo']] },
+  { pattern: '/encontrar-jogadores', label: 'encontrar jogadores',
+    refs: [[HELP_SECTION.ATHLETE, 'achar-jogo']] },
+
+  // --- ranking e evolução --------------------------------------------------
+  { pattern: '/ranking/duplas', label: 'o ranking de duplas',
+    refs: [[HELP_SECTION.ATHLETE, 'ranking-evolucao'], [HELP_SECTION.START, 'nivelamento']] },
+  { pattern: '/ranking', label: 'o ranking',
+    refs: [[HELP_SECTION.ATHLETE, 'ranking-evolucao'], [HELP_SECTION.START, 'nivelamento']] },
+  { pattern: '/meu-desempenho', label: 'seu desempenho',
+    refs: [[HELP_SECTION.ATHLETE, 'ranking-evolucao']] },
+  { pattern: '/nivelamento', label: 'o nivelamento',
+    refs: [[HELP_SECTION.START, 'nivelamento']] },
+
+  // --- arena ---------------------------------------------------------------
+  { pattern: '/arenas/criar', label: 'criar uma arena',
+    refs: [[HELP_SECTION.ARENA, 'criar-arena']] },
+  { pattern: '/arenas/*/onboarding', label: 'configurar a arena',
+    refs: [[HELP_SECTION.ARENA, 'criar-arena'], [HELP_SECTION.ARENA, 'precos-regras']] },
+  { pattern: '/arenas/*/gerir/pdv', label: 'o PDV',
+    refs: [[HELP_SECTION.ARENA, 'loja-pdv']] },
+  { pattern: '/arenas/*/gerir/modulos', label: 'os módulos da arena',
+    refs: [[HELP_SECTION.ARENA, 'modulos-arena']] },
+  { pattern: '/arenas/*/gerir/professores', label: 'professores parceiros',
+    refs: [[HELP_SECTION.ARENA, 'equipe'], [HELP_SECTION.COACH, 'parcerias']] },
+  { pattern: '/arenas/*/gerir', label: 'gerenciar a arena',
+    refs: [[HELP_SECTION.ARENA, 'gerir-reservas'], [HELP_SECTION.ARENA, 'precos-regras'], [HELP_SECTION.ARENA, 'desempenho-arena']] },
+  { pattern: '/minhas-reservas', label: 'suas reservas',
+    refs: [[HELP_SECTION.ATHLETE, 'reservas-aulas']] },
+  { pattern: '/arenas', label: 'arenas',
+    refs: [[HELP_SECTION.ATHLETE, 'reservas-aulas'], [HELP_SECTION.ARENA, 'criar-arena']] },
+
+  // --- professor -----------------------------------------------------------
+  { pattern: '/aulas', label: 'o painel do professor',
+    refs: [[HELP_SECTION.COACH, 'agenda-professor'], [HELP_SECTION.COACH, 'alunos'], [HELP_SECTION.COACH, 'pacotes-clinicas']] },
+  { pattern: '/minhas-aulas', label: 'suas aulas',
+    refs: [[HELP_SECTION.ATHLETE, 'reservas-aulas']] },
+  { pattern: '/coaches/*', label: 'este professor',
+    refs: [[HELP_SECTION.ATHLETE, 'reservas-aulas']] },
+  { pattern: '/coaches', label: 'professores',
+    refs: [[HELP_SECTION.ATHLETE, 'reservas-aulas'], [HELP_SECTION.COACH, 'virar-professor']] },
+
+  // --- comunidade e conta --------------------------------------------------
+  { pattern: '/clubes/*', label: 'este clube',
+    refs: [[HELP_SECTION.ATHLETE, 'comunidade']] },
+  { pattern: '/clubes', label: 'clubes',
+    refs: [[HELP_SECTION.ATHLETE, 'comunidade']] },
+  { pattern: '/novidades', label: 'as novidades da comunidade',
+    refs: [[HELP_SECTION.ATHLETE, 'comunidade']] },
+  { pattern: '/parceiros', label: 'os parceiros',
+    refs: [[HELP_SECTION.ACCOUNT, 'parceiros']] },
+  { pattern: '/buscar', label: 'a busca',
+    refs: [[HELP_SECTION.START, 'buscar'], [HELP_SECTION.START, 'navegar']] },
+  { pattern: '/regras', label: 'as regras do jogo',
+    refs: [[HELP_SECTION.START, 'aprender-o-esporte']] },
+  { pattern: '/conduta', label: 'o código de conduta',
+    refs: [[HELP_SECTION.START, 'aprender-o-esporte'], [HELP_SECTION.ACCOUNT, 'documentos']] },
+  { pattern: '/historia', label: 'a história do pickleball',
+    refs: [[HELP_SECTION.START, 'aprender-o-esporte'], [HELP_SECTION.START, 'o-que-e']] },
+  { pattern: '/chat', label: 'mensagens',
+    refs: [[HELP_SECTION.ATHLETE, 'comunidade']] },
+  { pattern: '/atletas', label: 'o diretório de atletas',
+    refs: [[HELP_SECTION.ACCOUNT, 'privacidade']] },
+  { pattern: '/perfil/editar', label: 'editar seu perfil',
+    refs: [[HELP_SECTION.START, 'primeiros-passos'], [HELP_SECTION.ACCOUNT, 'privacidade'], [HELP_SECTION.COACH, 'virar-professor']] },
+  { pattern: '/perfil', label: 'seu perfil',
+    refs: [[HELP_SECTION.START, 'primeiros-passos'], [HELP_SECTION.ACCOUNT, 'privacidade']] },
+  { pattern: '/configuracoes', label: 'configurações',
+    refs: [[HELP_SECTION.ACCOUNT, 'notificacoes'], [HELP_SECTION.ACCOUNT, 'privacidade']] },
+  { pattern: '/legal', label: 'os documentos',
+    refs: [[HELP_SECTION.ACCOUNT, 'documentos']] },
+]);
+
+/** O padrão casa com o caminho? `*` vale por UM segmento. */
+function casaRota(pattern, pathname) {
+  const p = String(pathname || '').split('?')[0].replace(/\/+$/, '') || '/';
+  const alvo = p.split('/').filter(Boolean);
+  const molde = pattern.split('/').filter(Boolean);
+  if (molde.length > alvo.length) return false;
+  return molde.every((seg, i) => seg === '*' || seg === alvo[i]);
+}
+
+/**
+ * Artigos sugeridos para quem chegou de uma determinada tela.
+ *
+ * @param {string} pathname caminho de onde a pessoa veio
+ * @returns {{ label: string, articles: Array<object> }|null} `null` quando a
+ *   rota não tem pista — a tela então não mostra o bloco, em vez de mostrar
+ *   uma sugestão qualquer. Sugestão errada é pior que nenhuma: ensina a
+ *   pessoa a ignorar o bloco.
+ */
+export function helpForRoute(pathname) {
+  if (!pathname) return null;
+  const pista = HELP_ROUTE_HINTS.find((r) => casaRota(r.pattern, pathname));
+  if (!pista) return null;
+
+  const artigos = pista.refs
+    .map(([s, a]) => {
+      const artigo = getHelpArticle(s, a);
+      if (!artigo) return null;
+      const secao = getHelpSection(s);
+      return { ...artigo, sectionId: s, sectionLabel: secao.label };
+    })
+    .filter(Boolean);
+
+  return artigos.length > 0 ? { label: pista.label, articles: artigos } : null;
+}
+
+/* ============================================================ PERGUNTAS == */
+
+/**
+ * As perguntas que mais aparecem, na linguagem de quem pergunta.
+ *
+ * Ficam na tela inicial da central porque a maioria das dúvidas é a mesma —
+ * e porque "buscar" pressupõe saber o nome da coisa. Quem não sabe o nome
+ * precisa reconhecer a pergunta.
+ */
+export const HELP_FAQ = Object.freeze([
+  { q: 'Como me inscrevo num torneio?', section: HELP_SECTION.ATHLETE, article: 'inscrever-torneio' },
+  { q: 'Como organizo um dia de jogo?', section: HELP_SECTION.ATHLETE, article: 'organizar-dia-de-jogo' },
+  { q: 'Como funciona a fila do Play?', section: HELP_SECTION.ATHLETE, article: 'dia-de-jogo' },
+  { q: 'Por que meu ranking não mudou?', section: HELP_SECTION.ATHLETE, article: 'ranking-evolucao' },
+  { q: 'Qual a diferença entre nível, rating e ranking?', section: HELP_SECTION.START, article: 'nivelamento' },
+  { q: 'Quem vê meu telefone e meu e-mail?', section: HELP_SECTION.ACCOUNT, article: 'privacidade' },
+  { q: 'Como publico minha arena?', section: HELP_SECTION.ARENA, article: 'criar-arena' },
+  { q: 'Como apareço como professor?', section: HELP_SECTION.COACH, article: 'virar-professor' },
+]);
+
+/** As perguntas frequentes já resolvidas em artigos (ignora ref quebrada). */
+export function faqArticles() {
+  return HELP_FAQ
+    .map((f) => {
+      const artigo = getHelpArticle(f.section, f.article);
+      if (!artigo) return null;
+      return { ...artigo, question: f.q, sectionId: f.section, sectionLabel: getHelpSection(f.section).label };
+    })
+    .filter(Boolean);
+}
+
+/**
+ * Quebra um texto nos trechos que casam com os termos buscados, para a tela
+ * poder destacá-los. Devolve pedaços `{ text, match }` em ordem.
+ *
+ * Existe porque um resultado de busca sem destaque obriga a pessoa a reler o
+ * artigo inteiro procurando por que ele apareceu.
+ */
+export function highlightParts(texto, termo) {
+  const original = String(texto || '');
+  const termos = normalizeForSearch(termo).split(/\s+/).filter(Boolean);
+  if (termos.length === 0 || !original) return [{ text: original, match: false }];
+
+  // Compara na versão normalizada mas RECORTA no original: é o que preserva
+  // acento e maiúscula no texto mostrado.
+  const normalizado = normalizeForSearch(original);
+  const marcas = new Array(original.length).fill(false);
+  termos.forEach((t) => {
+    let de = normalizado.indexOf(t);
+    while (de !== -1) {
+      for (let i = de; i < de + t.length && i < marcas.length; i += 1) marcas[i] = true;
+      de = normalizado.indexOf(t, de + t.length);
+    }
+  });
+
+  const partes = [];
+  let inicio = 0;
+  for (let i = 1; i <= original.length; i += 1) {
+    if (i === original.length || marcas[i] !== marcas[inicio]) {
+      partes.push({ text: original.slice(inicio, i), match: marcas[inicio] });
+      inicio = i;
+    }
+  }
+  return partes;
+}
+
+/**
+ * Um pedaço do CORPO do artigo em volta do primeiro termo encontrado.
+ *
+ * A busca procura no texto inteiro, então um artigo pode aparecer por causa de
+ * uma frase no meio dele. Sem mostrar essa frase, o resultado parece
+ * arbitrário — a pessoa abre, não acha, e desconfia da busca.
+ *
+ * @returns {string|null} `null` quando o casamento foi só no título/resumo,
+ *   que a tela já mostra.
+ */
+export function searchSnippet(artigo, termo, janela = 150) {
+  const termos = normalizeForSearch(termo).split(/\s+/).filter(Boolean);
+  if (termos.length === 0 || !artigo) return null;
+
+  const corpo = (artigo.blocks || []).flatMap((b) => {
+    if (b.type === 'steps' || b.type === 'list') return b.items;
+    if (b.type === 'link') return [];
+    return [b.text];
+  }).filter(Boolean);
+
+  for (const texto of corpo) {
+    const alvo = normalizeForSearch(texto);
+    const pos = termos.map((t) => alvo.indexOf(t)).filter((i) => i >= 0);
+    if (pos.length === 0) continue;
+
+    const centro = Math.min(...pos);
+    if (texto.length <= janela) return texto;
+    const de = Math.max(0, centro - Math.floor(janela / 3));
+    const ate = Math.min(texto.length, de + janela);
+    return `${de > 0 ? '…' : ''}${texto.slice(de, ate).trim()}${ate < texto.length ? '…' : ''}`;
+  }
+  return null;
+}
+
+/**
+ * O artigo seguinte DENTRO da mesma seção, ou o primeiro da próxima.
+ *
+ * Quem termina de ler raramente terminou de aprender. Sem isso, o fim do
+ * artigo é um beco: só resta rolar de volta e procurar de novo.
+ *
+ * @returns {object|null} `null` no último artigo da última seção.
+ */
+export function nextHelpArticle(sectionId, articleId) {
+  const todos = allHelpArticles();
+  const i = todos.findIndex((a) => a.sectionId === sectionId && a.id === articleId);
+  if (i < 0 || i + 1 >= todos.length) return null;
+  return todos[i + 1];
+}
+
+/**
+ * O endereço da central A PARTIR de uma tela.
+ *
+ * É o que faz o link de ajuda de qualquer canto chegar já sabendo do que se
+ * trata. Sem isto, quem clica em "ajuda" na tela de sorteio cai numa página
+ * genérica e recomeça a procura do zero.
+ *
+ * @param {string} pathname caminho atual (`location.pathname`)
+ * @returns {string} `/ajuda` quando não há de onde vir (ou já se está nela)
+ */
+export function helpLinkFor(pathname) {
+  const p = String(pathname || '');
+  if (!p.startsWith('/') || p === '/ajuda' || p.startsWith('/ajuda/')) return '/ajuda';
+  return `/ajuda?de=${encodeURIComponent(p)}`;
+}

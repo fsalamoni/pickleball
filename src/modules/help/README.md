@@ -97,11 +97,38 @@ vários termos ESTREITAM o resultado (E, não OU).
 Os ids são **endereço**: `/ajuda?s=arena&a=gerir-reservas` abre direto no
 artigo. Renomear um id quebra links que já circulam.
 
-Dois testes guardam o que mais importa:
+### A ajuda sabe de onde a pessoa veio
+
+O link de ajuda de qualquer tela leva a rota atual junto —
+`helpLinkFor(location.pathname)` monta `/ajuda?de=<rota>` — e a central abre
+com os artigos daquele assunto no topo. O mapa é `HELP_ROUTE_HINTS`, lido por
+`helpForRoute(pathname)`; `*` vale por UM segmento, e **vence o primeiro molde
+que casar**, então o específico tem de vir antes do genérico (há teste).
+
+Rota sem pista devolve `null` e a tela não mostra bloco nenhum: **sugestão
+errada é pior que nenhuma** — ensina a pessoa a ignorar o bloco.
+
+**Criou ou removeu uma tela? Passe por `HELP_ROUTE_HINTS`.** O teste pega a
+pista órfã; a pista que FALTA ninguém vê.
+
+### O resto do que o domínio oferece à tela
+
+| Função | Para quê |
+|---|---|
+| `HELP_FAQ` / `faqArticles()` | as dúvidas comuns, escritas como pergunta |
+| `highlightParts(texto, termo)` | destaque do termo, sem perder acento |
+| `searchSnippet(artigo, termo)` | o trecho do corpo onde o termo apareceu |
+| `nextHelpArticle(s, a)` | o próximo artigo, atravessando seções |
+
+Testes que guardam o que mais importa:
 
 1. **todo link interno aponta para uma rota que existe** — o teste lê
    `V2App.jsx` e confere;
 2. **a ajuda não documenta o que está atrás de flag desligada** (hoje, a
-   gamificação). Ao ligar a flag, escreva os artigos **e remova o teste**.
+   gamificação). Ao ligar a flag, escreva os artigos **e remova o teste**;
+3. **toda rota de origem existe**, **toda pista e toda pergunta apontam para
+   artigo que existe**, e **o específico vem antes do genérico**;
+4. **`highlightParts` nunca perde nem inventa caractere** — remontar os pedaços
+   devolve o texto original.
 
 Detalhes: `docs/21-CENTRAL-DE-AJUDA.md`.

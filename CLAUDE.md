@@ -195,7 +195,9 @@ Estes princípios vieram de bugs reais que custaram horas pra arrumar. São ineg
 **"Quando o ranking/rating atualiza depois de publicar um resultado?"** → **na hora**. Gatilhos do Firestore (`functions/index.js`) recalculam os TRÊS rankings de partida — ELO/nacional, rating 2.0–8.0 e duplas — a cada escrita em `club_event_games`, `tournament_matches` ou mudança de elegibilidade de torneio. Roda no SERVIDOR porque a regra só deixa o admin escrever ranking, e quem publica quase nunca é o admin (antes a tentativa do cliente era recusada em silêncio). Rajadas são coalescidas por um lease em `platform_settings/ranking_worker`. Ver `docs/18-RANKINGS.md`
 **"Como o ranking de DUPLAS é classificado?"** → aproveitamento → mais vitórias → menos derrotas → saldo de pontos. A regra vive em `compareDoublesRows` (`src/modules/rating/domain/doublesRanking.js`), a classificação é gravada em `doubles_rankings` pelo servidor (campo `position`) e a tela **não reordena** — só filtra e pagina (20/50/100, estado na URL)
 **"Quero um piso de jogos para a dupla entrar no ranking"** → é a **amostra mínima** (Todas / 3+ / 5+ / 10+ / 20+), escolhida por CADA usuário e salva no navegador (`v2:view:<uid>:ranking:duplas:min-jogos`, via `src/core/lib/viewPreference.js` — **nada no banco**). O recorte RENUMERA dentro dele (a posição geral vai junto, em `overall_position`); a busca por nome, não. Ver `docs/18-RANKINGS.md` §6.1
-**"Onde está o MANUAL da plataforma?"** → `/ajuda` (flag `help_center`, default OFF): 33 artigos em 5 partes — Começar aqui, **Atleta**, **Arena**, **Professor**, Conta e privacidade. Conteúdo em `src/modules/help/domain/helpCenter.js`, página em `src/v2/pages/V2Help.jsx`. Acesso em três pontos de TODA tela (barra lateral, menu do usuário, gaveta do celular), fora dos hubs de propósito. Link direto por `?s=<seção>&a=<artigo>`. **Nada no banco** — nem localStorage. Ver `docs/21-CENTRAL-DE-AJUDA.md`
+**"Onde está o MANUAL da plataforma?"** → `/ajuda` (flag `help_center`, default OFF): 33 artigos em 5 partes — Começar aqui, **Atleta**, **Arena**, **Professor**, Conta e privacidade. Conteúdo em `src/modules/help/domain/helpCenter.js`, página em `src/v2/pages/V2Help.jsx`. Acesso em três pontos de TODA tela (barra lateral, menu do usuário, gaveta do celular), fora dos hubs de propósito. Link direto por `?s=<seção>&a=<artigo>`. **Nada no Firestore** (só a parte preferida, no localStorage por usuário). Ver `docs/21-CENTRAL-DE-AJUDA.md`
+**"Vou colocar um link de ajuda numa tela"** → use `helpLinkFor(location.pathname)` (de `modules/help/domain/helpCenter`), nunca `'/ajuda'` cru. Ele monta `/ajuda?de=<rota>` e a central abre com **"Ajuda para esta tela"** no topo — os artigos daquele assunto, sem a pessoa ter de adivinhar a persona nem varrer a lista. O mapa rota → artigos é `HELP_ROUTE_HINTS`; `*` vale por UM segmento e **vence o primeiro molde que casa**, então o específico vem antes do genérico (teste trava a ordem). Rota sem pista ⇒ bloco nenhum, de propósito: sugestão errada ensina a ignorar o bloco
+**"Criei/removi uma tela. O que a ajuda precisa saber?"** → duas coisas: os artigos que citam a tela (`{ type: 'link', to }` — há teste lendo `V2App.jsx`) e a PISTA de rota em `HELP_ROUTE_HINTS`. O teste pega a pista órfã; a pista que FALTA ninguém vê
 **"Vou escrever ajuda sobre uma funcionalidade"** → confira antes se ela está LIGADA. A gamificação (`/conquistas`, `/hall-da-fama`, `/vinculos`) está atrás de `gamification_v2`, que é OFF — documentá-la manda a pessoa para uma porta que não abre. Há teste travando isso em `helpCenter.test.js`; e outro que confere cada link da ajuda contra as rotas reais de `V2App.jsx`
 **"Quero um tutorial explicando esta ferramenta"** → já existem quatro (torneio, dia de jogo Play, Americano e Americano aprimorado). Conteúdo em `src/modules/help/domain/tutorials.js`; para colocar numa tela é UMA linha: `<V2TutorialLauncher tutorialId={...} />` (ou `tutorialIdForGameDayFormat(gameDay.format)` num dia de jogo). Ele abre sozinho na primeira vez, deixa dispensar e mantém o botão para rever. A memória é `localStorage` por usuário — **nada no banco**. Ver `docs/19-TUTORIAIS.md`
 **"Mexi numa tela de torneio ou dia de jogo"** → passe pelo tutorial dela (`src/modules/help/domain/tutorials.js`). Um tutorial que ensina um botão que não existe mais é PIOR que nenhum: quem segue passo a passo conclui que está fazendo algo errado
@@ -389,6 +391,27 @@ chore(deps): bump firebase to 12.x
 >
 > **Destaques por onda**:
 >
+> - **Onda Z — Ajuda no momento em que dói** (2026-09-12): a central de ajuda
+>   deixou de ser um manual bem escrito para virar uma tela que **responde
+>   rápido**. Ninguém abre a ajuda por lazer: abre travado, no meio de outra
+>   coisa, já irritado — e a primeira versão cobrava quatro passos ali (achar o
+>   link, adivinhar a persona, varrer dez artigos, abrir). Agora: **o link de
+>   ajuda de TODA tela leva a rota junto** (`helpLinkFor` → `?de=`) e a central
+>   abre com "Ajuda para esta tela"; a tela inicial começa por **perguntas**
+>   ("Como me inscrevo num torneio?"), porque buscar pressupõe saber o nome da
+>   coisa e quem está perdido não sabe; **cartões de identificação** ("Eu
+>   jogo", "Tenho uma arena", "Dou aulas") no lugar de abas abstratas, com a
+>   escolha **lembrada por usuário**; a busca **destaca** o termo e mostra o
+>   **trecho do corpo** onde ele apareceu, ganhou atalho `/`, `Esc`/X para
+>   limpar, e **"nada encontrado" virou sugestão, não parede**; e todo artigo
+>   aberto termina com **Próximo**, **Copiar link** e **Topo** — sem becos.
+>   Os testes novos travam o contrato entre quem gera o link e quem o lê, a
+>   existência de cada rota de origem, a ordem específico-antes-de-genérico das
+>   pistas (o genérico engoliria o específico) e que o destaque nunca perde nem
+>   inventa caractere. **Zero Firestore** — a única memória é a parte
+>   preferida, no `localStorage` por usuário. Ver `docs/21-CENTRAL-DE-AJUDA.md`
+>   §2.
+>
 > - **Onda Y — Central de ajuda** (2026-09-11): a página `/ajuda` (flag
 >   `help_center`, default OFF) — o manual da plataforma dentro dela, dividido
 >   por TIPO DE USUÁRIO: Começar aqui, **Atleta**, **Arena**, **Professor**,
@@ -538,7 +561,7 @@ chore(deps): bump firebase to 12.x
 
 | Métrica | Valor | Delta do início do agente |
 |---|---|---|
-| **Testes Vitest** | **3390 passing** (232 arquivos) | +2982 (era 408) |
+| **Testes Vitest** | **3448 passing** (232 arquivos) | +3040 (era 408) |
 | **Lint errors** | 0 | era 30+ |
 | **Módulos** | 21 (+`help` — conteúdo dos tutoriais em tela) (`games` e `legal` saíram como `src/modules/` mas continuam como pastas oficiais — **rating virou módulo oficial** com domain/services/hooks/components) | +4 (coaches, circuits, games, legal) |
 | **V2 pages** | 79 (+V2GameDayTelao — telão, fora do V2Layout; +V2Help — central de ajuda) | +55 |

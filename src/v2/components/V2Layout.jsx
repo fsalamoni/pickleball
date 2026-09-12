@@ -57,6 +57,7 @@ import { V2Avatar } from '@/v2/ui/primitives';
 import V2OnboardingWizard from '@/v2/components/onboarding/V2OnboardingWizard';
 import { FEATURE_FLAG } from '@/core/featureFlags';
 import { useFeatureFlag } from '@/core/lib/FeatureFlagsContext';
+import { helpLinkFor } from '@/modules/help/domain/helpCenter';
 import LegalConsentGate from '@/v2/components/legal/LegalConsentGate';
 import { useMyConsents } from '@/modules/legal/hooks/useConsents';
 import { pendingGateConsents } from '@/modules/legal/domain/consent';
@@ -451,6 +452,7 @@ function MobileBottomNav({ pathname }) {
 
 function UserMenu({ displayName, displayPhoto, levelLabel, onLogout }) {
   const navigate = useNavigate();
+  const location = useLocation();
   const helpCenterOn = useFeatureFlag(FEATURE_FLAG.HELP_CENTER);
   return (
     <DropdownMenu>
@@ -478,7 +480,7 @@ function UserMenu({ displayName, displayPhoto, levelLabel, onLogout }) {
             do celular): é aqui que a pessoa procura quando não sabe nem por
             onde começar a procurar. */}
         {helpCenterOn && (
-          <DropdownMenuItem className="cursor-pointer" onClick={() => navigate('/ajuda')}>
+          <DropdownMenuItem className="cursor-pointer" onClick={() => navigate(helpLinkFor(location.pathname))}>
             <LifeBuoy className="mr-2 h-4 w-4" /> Central de ajuda
           </DropdownMenuItem>
         )}
@@ -673,7 +675,7 @@ export default function V2Layout({ children }) {
               perdido em qualquer um deles. Por isso aparece em toda tela. */}
           {helpCenterOn && (
             <Link
-              to="/ajuda"
+              to={helpLinkFor(location.pathname)}
               title={collapsed ? 'Central de ajuda' : undefined}
               aria-label={collapsed ? 'Central de ajuda' : undefined}
               className={cn(
@@ -916,7 +918,7 @@ export default function V2Layout({ children }) {
           <div className="mt-8 space-y-1 border-t border-white/10 pt-6">
             {helpCenterOn && (
               <Link
-                to="/ajuda"
+                to={helpLinkFor(location.pathname)}
                 onClick={closeMobile}
                 className="flex items-center gap-3 rounded-2xl px-4 py-3 text-lg font-display font-semibold text-white transition-colors hover:text-acid"
               >
