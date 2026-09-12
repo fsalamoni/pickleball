@@ -220,6 +220,34 @@ nunca vira alarme.
 | clicável | tudo | **só o que está livre** |
 | efeito do clique | seleciona célula | **escolhe a quadra** e o horário |
 
+## Reservar: o fluxo (2026-09-12)
+
+```
+calendário (o DIA) → grade (QUADRA e HORÁRIOS) → confirmar → pedido
+```
+
+⚠️ **`BookingRequestDialog` tem DOIS modos.** Com `selection` (vindo do
+calendário) ele **confirma** — mostra a escolha agrupada por quadra e pergunta
+só o que falta. Sem `selection` (botão "Solicitar reserva" da página da arena)
+ele é o formulário completo de sempre. Há teste travando os dois; ao mexer num,
+confira o outro.
+
+⚠️ **Para pedir várias quadras/horários, use `createBookingsForSelection`**, não
+`createBooking`: este grava uma reserva por quadra mas com os MESMOS horários
+para todas, então "Quadra 1 às 19h e Quadra 2 às 20h" não cabe nele. A tradução
+está em `domain/bookingSelection.js`:
+
+| função | para quê |
+|---|---|
+| `toggleSelectionCell` | liga/desliga uma célula (quadra + dia + faixa) |
+| `groupSelectionByCourt` | junta quadras com os MESMOS horários; separa o resto |
+| `expandSelectionWeeks` | recorrência: repete a escolha inteira, +7 dias |
+| `describableRecurrence` | o metadado `recurrence` **só quando é verdade** |
+| `summarizeSelection` | o resumo que a tela mostra antes de confirmar |
+
+`court_id: null` numa célula é legítimo: significa **"tanto faz a quadra"**, e a
+arena atribui uma livre. Nunca se mistura com quadra escolhida no agrupamento.
+
 ## Onde achar mais
 
 - `docs/06-MODULES.md` § arenas

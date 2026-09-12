@@ -124,7 +124,73 @@ aparentemente vazios que na verdade estavam tomados.
 **Correção**: o calendário da arena (Reservas → Calendário) marca o dia com o
 horário do dia de jogo, pinta a célula e conta os dias de jogo no resumo do mês.
 
-## 6. O que foi conferido e está certo
+## 6. O fluxo de reserva: duas telas, nenhuma pergunta repetida
+
+**O problema.** Reservar eram duas telas, e a segunda **re-perguntava tudo o
+que a primeira já tinha respondido**. A pessoa escolhia o dia no calendário e
+os horários na grade; então abria um formulário pedindo **de novo** data,
+horário, modo de quadra (*qualquer / específicas / todas*) e tipo (*avulso /
+recorrente*) — num vocabulário diferente, e com as duas respostas podendo se
+contradizer. Era o ponto em que reservar ficava confuso e difícil.
+
+**E uma limitação escondida.** `createBooking` grava uma reserva por quadra,
+mas **todas compartilham a mesma lista de horários**. Então "Quadra 1 às 19h e
+Quadra 2 às 20h" não cabia num pedido: ou virava duas chamadas (com o risco de
+a segunda falhar depois de a primeira já existir), ou obrigava a pedir o mesmo
+horário em todas as quadras. Não era limitação de banco — era uma conta que
+faltava.
+
+### O fluxo hoje
+
+```
+calendário (o DIA) → grade (QUADRA e HORÁRIOS) → confirmar
+(avulsa ou recorrente, observações, convidados) → pedido enviado
+```
+
+A segunda tela **confirma**, não re-pergunta: mostra a escolha agrupada por
+quadra e faz só as perguntas que sobraram. Passa a receber `selection` em vez
+de `preselectedSlots` + modo de quadra + ids.
+
+> O caminho do botão **"Solicitar reserva"** da página da arena (sem seleção
+> prévia) continua com o formulário completo, **idêntico** — lá nada foi
+> escolhido ainda. Há teste travando os dois modos.
+
+### Escolher quantas quadras e horários quiser
+
+A matriz quadra × horário virou o **padrão** quando há mais de uma quadra (é o
+que a pessoa vem fazer: escolher onde e quando). Cada célula liga e desliga
+sozinha — inclusive horários diferentes em quadras diferentes.
+
+A conta que faltava mora em `domain/bookingSelection.js`. A escolha vira uma
+lista de **células** (`{ court_id, date, start, end }`, com `court_id: null`
+significando "tanto faz"), e `groupSelectionByCourt` a traduz para o que o
+serviço grava:
+
+| escolha | grupos | resultado |
+|---|---|---|
+| 1 quadra, 2 horários | 1 | 1 reserva com 2 horários |
+| 2 quadras, os mesmos horários | 1 | 2 reservas (uma por quadra) |
+| 2 quadras, horários diferentes | 2 | 2 reservas, cada uma com o seu |
+| "tanto faz" + quadra escolhida | 2 | nunca se misturam |
+
+`createBookingsForSelection` (serviço) carrega reservas/quadras/janelas **uma
+vez**, valida **todos** os pares quadra × horário **antes de escrever nada** e
+grava num **único lote** com um `booking_group_id` comum. Tudo ou nada: nunca
+sobra meia reserva. O documento gravado tem exatamente a forma de sempre —
+**nenhum campo novo, nenhuma coleção nova**.
+
+Duas linhas de "tanto faz" no mesmo horário não caem na mesma quadra: a
+atribuição automática considera o que o próprio lote já vai ocupar.
+
+### Recorrência: repete o que foi escolhido
+
+"Toda semana, por N semanas" repete **a escolha inteira** (+7, +14… dias), não
+um horário só. O metadado `recurrence` (que tem um `start`/`end` único) só é
+gravado quando é **verdade** — um horário só, numa quadra só. Com vários, fica
+`null`, e a verdade completa vai na lista de horários, que é o que as telas já
+leem. Inventar um `start` ali seria mentir num campo que alguém vai exibir.
+
+## 7. O que foi conferido e está certo
 
 Vale registrar para a próxima auditoria não refazer o caminho:
 
@@ -135,9 +201,12 @@ Vale registrar para a próxima auditoria não refazer o caminho:
 - o dia de jogo fecha a quadra por `arena_unavailabilities`, então o conflito
   de reserva já o respeita sem código novo.
 
-## 7. Onde mexer
+## 8. Onde mexer
 
 ```
+src/modules/arenas/domain/bookingSelection.js # a escolha como dado (+33)
+src/modules/arenas/services/bookingService.js # createBookingsForSelection
+src/modules/arenas/components/BookingRequestDialog.jsx  # modo confirmação (+12)
 src/modules/arenas/domain/slot_status.js      # slotEndTime (+12 asserções)
 src/modules/arenas/domain/court_schedule.js   # courtScheduleStatus (+10)
 src/v2/components/arenas/CourtTimePicker.jsx  # a matriz do atleta (+14 testes)

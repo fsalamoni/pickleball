@@ -17,9 +17,10 @@
  *    ocupado; quem ocupou é assunto de quem ocupou;
  *  · **só o que está livre é clicável**, e clicar já ESCOLHE a quadra — o que
  *    tira a pergunta "afinal, em qual quadra eu caí?" do fim do fluxo;
- *  · **uma reserva, uma quadra.** Escolher um horário em outra quadra recomeça
- *    a seleção, avisando. Misturar quadras numa reserva só produziria um
- *    pedido que a arena não teria como atender inteiro.
+ *  · **quantas quadras e horários a pessoa quiser**, no mesmo dia. Cada célula
+ *    liga e desliga sozinha. Quem quer a quadra 1 às 19h e a quadra 2 às 20h
+ *    marca as duas — o domínio (`bookingSelection`) junta o que dá para juntar
+ *    e o serviço grava tudo num lote só.
  */
 
 import React, { useMemo } from 'react';
@@ -97,10 +98,8 @@ export default function CourtTimePicker({
     return mapa;
   }, [horarios, quadras, date, bookings, unavailabilities, janelasDe]);
 
-  // A quadra já escolhida nesta seleção (uma reserva, uma quadra).
-  const quadraEscolhida = selectedSlots.find((s) => s.courtId)?.courtId || null;
   const estaSelecionado = (time, courtId) => selectedSlots
-    .some((s) => s.start === time && s.courtId === courtId);
+    .some((s) => s.start === time && (s.courtId || null) === courtId);
 
   if (quadras.length === 0 || horarios.length === 0) return null;
 
@@ -134,10 +133,6 @@ export default function CourtTimePicker({
                   const cor = SLOT_STATUS_COLORS[celula.status] || SLOT_STATUS_COLORS.closed;
                   const livre = isSlotSelectable(celula.status);
                   const marcado = estaSelecionado(time, court.id);
-                  // Uma quadra diferente da já escolhida ainda é clicável: o
-                  // clique recomeça a seleção ali. Fica apagada para deixar
-                  // claro qual quadra está valendo agora.
-                  const deOutraQuadra = !!quadraEscolhida && quadraEscolhida !== court.id;
                   return (
                     <td key={court.id} className="p-0.5">
                       <button
@@ -151,7 +146,6 @@ export default function CourtTimePicker({
                           cor.bg, cor.border, cor.text,
                           livre && 'cursor-pointer hover:ring-2 hover:ring-ink/20',
                           !livre && 'cursor-not-allowed opacity-70',
-                          livre && deOutraQuadra && !marcado && 'opacity-45',
                           marcado && 'ring-2 ring-green-600 ring-offset-1',
                         )}
                       >
@@ -166,8 +160,8 @@ export default function CourtTimePicker({
         </table>
       </div>
       <p className="text-[11px] leading-5 text-gray-500">
-        Toque num horário <strong>livre</strong> na quadra em que quer jogar. Uma reserva vale para
-        uma quadra só — escolher em outra recomeça a seleção.
+        Toque nos horários <strong>livres</strong> que quiser — pode marcar
+        <strong> mais de uma quadra</strong> e mais de um horário no mesmo dia.
       </p>
     </div>
   );

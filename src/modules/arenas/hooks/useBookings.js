@@ -4,6 +4,7 @@ import {
   listMyBookings,
   listArenaBookings,
   createBooking,
+  createBookingsForSelection,
   createManualBooking,
   updateBookingStatus,
   proposeBookingPrice,
@@ -38,6 +39,22 @@ export function useCreateBooking() {
   const qc = useQueryClient();
   return useMutation({
     mutationFn: ({ arena, input }) => createBooking(arena, user, userProfile, input),
+    onSuccess: (_d, { arena }) => {
+      qc.invalidateQueries({ queryKey: ['my-bookings'] });
+      qc.invalidateQueries({ queryKey: ['arena-bookings', arena.id] });
+    },
+  });
+}
+
+/**
+ * Cria as reservas de uma SELEÇÃO de calendário — várias quadras e horários
+ * num pedido só, num lote atômico. Ver `createBookingsForSelection`.
+ */
+export function useCreateBookingsForSelection() {
+  const { user, userProfile } = useAuth();
+  const qc = useQueryClient();
+  return useMutation({
+    mutationFn: ({ arena, input }) => createBookingsForSelection(arena, user, userProfile, input),
     onSuccess: (_d, { arena }) => {
       qc.invalidateQueries({ queryKey: ['my-bookings'] });
       qc.invalidateQueries({ queryKey: ['arena-bookings', arena.id] });

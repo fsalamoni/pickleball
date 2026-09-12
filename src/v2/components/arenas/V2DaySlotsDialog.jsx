@@ -1,24 +1,36 @@
 /**
- * V2DaySlotsDialog — Modal com slots + detalhes do dia selecionado.
+ * V2DaySlotsDialog — o dia aberto: é aqui que se reserva.
  *
- * Aberto quando o user clica num dia do V2BookingCalendar (mensal).
- * Mostra 3 seções:
- *  1. Resumo do dia (badges com contagens)
- *  2. Reservas existentes no dia (PENDING/CONFIRMED) — com nome do
- *     solicitante, horário, quadra e status
- *  3. Indisponibilidades admin (com motivo)
- *  4. Grade de slots clicáveis (apenas AVAILABLE é selecionável)
+ * Aberto ao clicar num dia do calendário mensal (`V2BookingCalendar`).
  *
- * Quando user clica em "Solicitar reserva", passa os slots selecionados
- * para o BookingRequestDialog, que já tem seleção de quadra no formulário.
+ * ## O fluxo, em duas telas e nenhuma pergunta repetida
  *
- * REGRA DE NEGÓCIO: slots com status REQUESTED, NEGOTIATING, CONFIRMED
- * NÃO são clicáveis (isSlotSelectable retorna true só pra AVAILABLE).
- * Quando admin marca indisponibilidade, o slot também fica não-clicável.
+ *   calendário (o DIA) → esta tela (QUADRA e HORÁRIOS) → confirmar
+ *   (avulsa ou recorrente, observações, convidados) → pedido enviado
  *
- * IMPORTANTE: PENDING/REQUESTED aparece no calendário como "solicitação
- * em andamento" (amber). CONFIRMED aparece como "reservado" (vermelho).
- * Ambos bloqueiam o slot para novos pedidos.
+ * Antes eram as mesmas duas telas, mas a segunda **re-perguntava tudo**: data,
+ * horário, "qualquer/específicas/todas", "avulso/recorrente". Quem já tinha
+ * escolhido escolhia de novo, num vocabulário diferente — e as duas respostas
+ * podiam se contradizer. Hoje a segunda tela CONFIRMA o que esta produziu.
+ *
+ * ## Duas leituras do mesmo dia
+ *
+ *  · **Por quadra** (padrão com mais de uma quadra) — a matriz quadra ×
+ *    horário. Cada célula liga e desliga sozinha, então dá para pedir
+ *    **quantas quadras e horários quiser**, inclusive horários diferentes em
+ *    quadras diferentes;
+ *  · **Por horário** — a lista agregada, para quem não se importa com qual
+ *    quadra sai ("tanto faz": a arena atribui uma livre).
+ *
+ * A ordem da tela segue a intenção: resumo → **grade** → reservas do dia →
+ * indisponibilidades. Quem abriu veio reservar; o resto é contexto.
+ *
+ * ## Regra de negócio
+ *
+ * Só `AVAILABLE` é selecionável (`isSlotSelectable`). REQUESTED, NEGOTIATING e
+ * CONFIRMED bloqueiam o horário, e indisponibilidade da arena também — mas
+ * todos continuam VISÍVEIS, porque ver a forma do dia é meio caminho para
+ * escolher outro.
  */
 
 import React, { useEffect, useMemo, useState } from 'react';
@@ -55,6 +67,7 @@ import { useBookingPrice } from '@/modules/arenas/hooks/useBookingPrice';
 import { V2Button, V2Badge, V2EmptyState, V2Skeleton } from '@/v2/ui/primitives';
 import BookingRequestDialog from '@/modules/arenas/components/BookingRequestDialog';
 import CourtTimePicker from './CourtTimePicker';
+import { sortSelection, summarizeSelection } from '@/modules/arenas/domain/bookingSelection';
 import { arenaGameDayTimeRange } from '@/modules/games/domain/arenaGameDay';
 
 const STEP = 60;
@@ -120,10 +133,12 @@ export default function V2DaySlotsDialog({
 
   const [courtId, setCourtId] = useState(initialCourtId || '');
   const [selectedSlots, setSelectedSlots] = useState([]);
-  // Duas leituras do mesmo dia: 'horario' (lista agregada, a de sempre) e
-  // 'quadra' (matriz quadra × horário). A matriz só faz sentido com mais de
-  // uma quadra E sem filtro de quadra — com filtro ela vira uma coluna só.
-  const [visao, setVisao] = useState('horario');
+  // Duas leituras do mesmo dia: 'quadra' (matriz quadra × horário) e 'horario'
+  // (lista agregada, "tanto faz a quadra"). A MATRIZ é o padrão quando há mais
+  // de uma quadra, porque é o que a pessoa vem fazer: escolher onde e quando.
+  // A lista agregada continua a um clique, para quem não se importa com qual
+  // quadra sai.
+  const [visao, setVisao] = useState('quadra');
   const [bookingOpen, setBookingOpen] = useState(false);
   // Cancelamento das próprias reservas (seleção múltipla) + convite.
   const [selectedCancel, setSelectedCancel] = useState([]); // booking ids
@@ -243,31 +258,38 @@ export default function V2DaySlotsDialog({
 
   const quadrasAtivas = useMemo(() => courts.filter((c) => c.is_active !== false), [courts]);
   const podeVerPorQuadra = !courtId && quadrasAtivas.length > 1;
-  // Filtrou uma quadra? A matriz perde o sentido — volta para a lista.
-  useEffect(() => { if (!podeVerPorQuadra) setVisao('horario'); }, [podeVerPorQuadra]);
+  // Filtrou uma quadra (ou só há uma)? A matriz vira uma coluna só — volta
+  // para a lista. Voltando a "todas", a matriz volta a ser o padrão.
+  useEffect(() => { setVisao(podeVerPorQuadra ? 'quadra' : 'horario'); }, [podeVerPorQuadra]);
 
   /**
-   * Escolher na matriz é escolher QUADRA e HORÁRIO de uma vez.
-   *
-   * Uma reserva vale para uma quadra só: pedir 19h na quadra 1 e 20h na quadra
-   * 2 produziria um pedido que a arena não teria como atender inteiro. Então
-   * escolher noutra quadra recomeça a seleção — dito em voz alta, nunca em
-   * silêncio.
+   * Escolher na matriz é escolher QUADRA e HORÁRIO de uma vez — e quantas
+   * quadras e horários a pessoa quiser. Cada célula liga e desliga sozinha.
    */
   function pickCourtSlot(cid, time, end) {
     setSelectedSlots((prev) => {
-      const deOutraQuadra = prev.length > 0 && prev[0].courtId !== cid;
-      if (deOutraQuadra) {
-        const anterior = quadrasAtivas.find((c) => c.id === prev[0].courtId)?.name || 'outra quadra';
-        toast.info(`Seleção reiniciada: você tinha escolhido a ${anterior}.`);
-        return [{ date, start: time, end: end || slotEndTime(time, { date }), courtId: cid }];
-      }
       const existe = prev.some((x) => x.start === time && x.courtId === cid);
       if (existe) return prev.filter((x) => !(x.start === time && x.courtId === cid));
       return [...prev, { date, start: time, end: end || slotEndTime(time, { date }), courtId: cid }]
-        .sort((a, b) => a.start.localeCompare(b.start));
+        .sort((a, b) => a.start.localeCompare(b.start) || String(a.courtId).localeCompare(String(b.courtId)));
     });
   }
+
+  /** A seleção no formato do domínio: célula = quadra + dia + faixa. */
+  const selecaoDeCelulas = useMemo(
+    () => sortSelection(selectedSlots.map((x) => ({
+      court_id: x.courtId || null, date: x.date, start: x.start, end: x.end,
+    }))),
+    [selectedSlots],
+  );
+  const nomePorQuadra = useMemo(
+    () => new Map(courts.map((c) => [c.id, c.name])),
+    [courts],
+  );
+  const resumo = useMemo(
+    () => summarizeSelection(selecaoDeCelulas, nomePorQuadra),
+    [selecaoDeCelulas, nomePorQuadra],
+  );
 
   /** Só os status que existem na tela — a legenda não inventa cores. */
   const statusPresentes = useMemo(() => {
@@ -279,9 +301,14 @@ export default function V2DaySlotsDialog({
     return ordem.filter((k) => presentes.has(k));
   }, [slotsWithStatus]);
 
-  // A quadra escolhida na matriz manda no preço — senão o total sairia da
-  // tabela "qualquer quadra" enquanto a pessoa vê a quadra 2 marcada.
-  const quadraDoPreco = courtId || selectedSlots[0]?.courtId || null;
+  // Preço: a tabela pode variar por quadra, e a seleção pode ter várias. Sem
+  // uma quadra única, o preço sai da primeira escolhida — e o rodapé diz que é
+  // estimativa, em vez de fingir precisão que não tem.
+  const quadrasDaSelecao = useMemo(
+    () => Array.from(new Set(selectedSlots.map((x) => x.courtId || null))),
+    [selectedSlots],
+  );
+  const quadraDoPreco = courtId || quadrasDaSelecao.find(Boolean) || null;
   const price = useBookingPrice(arena, quadraDoPreco, selectedSlots);
 
   // Resumo do dia
@@ -787,24 +814,33 @@ export default function V2DaySlotsDialog({
                       Limpar
                     </button>
                   </div>
-                  <div className="mt-1 text-xs text-gray-500">
-                    {selectedSlots.map((s) => s.start).join(' · ')} · {price.durationMinutes}min
-                    {quadraDoPreco && (
-                      <> · <strong className="text-ink">{courts.find((c) => c.id === quadraDoPreco)?.name || 'Quadra'}</strong></>
-                    )}
-                  </div>
+                  {/* O resumo diz QUADRA e HORÁRIOS, agrupado — é o que a
+                      pessoa precisa reler antes de confirmar, e é a resposta
+                      que faltava à pergunta "afinal eu pedi o quê?". */}
+                  <ul className="mt-1 space-y-0.5 text-xs text-gray-600">
+                    {resumo.porQuadra.map((q) => (
+                      <li key={q.court_id || 'qualquer'}>
+                        <strong className="text-ink">{q.nome}</strong>
+                        {' · '}
+                        {q.slots.map((sl) => `${sl.start}–${sl.end}`).join(', ')}
+                      </li>
+                    ))}
+                  </ul>
                   <div className="mt-1 text-base font-bold text-green-700">
-                    Total: {formatPrice(price.total)}
+                    {quadrasDaSelecao.length > 1 ? 'A partir de ' : 'Total: '}{formatPrice(price.total)}
+                    <span className="ml-1 text-xs font-normal text-gray-500">
+                      · {Math.round(resumo.minutos / 60 * 10) / 10}h no total
+                    </span>
                   </div>
                 </div>
                 <V2Button onClick={handleConfirm}>
-                  Solicitar reserva
+                  Continuar
                 </V2Button>
               </div>
             ) : (
               <p className="text-center text-xs text-gray-400">
                 {hasAvailable
-                  ? 'Selecione um ou mais horários disponíveis para reservar.'
+                  ? 'Toque nos horários que quiser — pode ser mais de uma quadra e mais de um horário.'
                   : 'Sem horários disponíveis para selecionar neste dia.'}
               </p>
             )}
@@ -815,13 +851,11 @@ export default function V2DaySlotsDialog({
       {bookingOpen && (
         <BookingRequestDialog
           arena={arena}
-          // A quadra vem do filtro do topo OU da célula escolhida na matriz.
-          // Sem isto, escolher "Quadra 2 às 19h" abria o pedido em "qualquer
-          // quadra" e a escolha se perdia no último passo.
-          court={quadraDoPreco ? courts.find((c) => c.id === quadraDoPreco) : null}
-          preselectedSlots={selectedSlots}
-          initialMode={quadraDoPreco ? 'specific' : (courts.length > 1 ? 'all' : 'any')}
-          initialCourtIds={quadraDoPreco ? [quadraDoPreco] : []}
+          // A escolha inteira vai adiante como SELEÇÃO. O passo seguinte não
+          // re-pergunta data, horário nem quadra: ele confirma o que já foi
+          // escolhido e pergunta só o que falta (avulsa ou recorrente,
+          // observações, convidados, pagamento).
+          selection={selecaoDeCelulas}
           onClose={() => {
             setBookingOpen(false);
             clearSelection();

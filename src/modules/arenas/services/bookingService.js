@@ -243,6 +243,229 @@ export async function createBooking(arena, user, profile, input) {
 }
 
 /**
+ * Cria as reservas de uma SELEÇÃO de calendário — quantas quadras e horários a
+ * pessoa quiser, num pedido só.
+ *
+ * ## Por que não dava para usar `createBooking`
+ *
+ * `createBooking` grava uma reserva por quadra, e **todas compartilham a mesma
+ * lista de horários**. Então "Quadra 1 às 19h e Quadra 2 às 20h" não cabia numa
+ * chamada: ou virava duas chamadas (com o risco de a segunda falhar depois de a
+ * primeira já ter sido criada), ou obrigava a pessoa a pedir o mesmo horário em
+ * todas as quadras. Não era limitação de banco — era uma conta que faltava.
+ *
+ * Aqui os grupos vêm prontos do domínio (`groupSelectionByCourt`), e esta
+ * função faz o que `createBooking` faz, para todos eles de uma vez:
+ *
+ *  1. carrega reservas, quadras e janelas UMA vez;
+ *  2. valida **todos** os pares (quadra × horários) antes de escrever nada —
+ *     tudo ou nada, para nunca sobrar meia reserva;
+ *  3. grava num único lote, com um `booking_group_id` comum quando há mais de
+ *     um documento.
+ *
+ * O documento gravado tem exatamente a mesma forma de sempre: nenhum campo
+ * novo, nenhuma coleção nova.
+ *
+ * @param {object} arena
+ * @param {object} user
+ * @param {object} profile
+ * @param {{
+ *   groups: Array<{ courtIds: Array<string|null>, slots: Array }>,
+ *   kind?: string, recurrence?: object|null, notes?: string,
+ *   proposed_price?: number|null, invitees?: Array,
+ *   is_instant?: boolean, payment_method?: string|null,
+ * }} input
+ * @returns {Promise<Array<string>>} ids criados
+ */
+export async function createBookingsForSelection(arena, user, profile, input) {
+  if (!user?.uid) throw new Error('Usuário não autenticado.');
+  const grupos = Array.isArray(input.groups) ? input.groups : [];
+  if (grupos.length === 0) throw new Error('Selecione ao menos um horário.');
+
+  const existingBookings = await listArenaBookings(arena.id);
+  const courts = await listArenaCourts(arena.id).catch(() => []);
+  const allSchedules = await listArenaCourtSchedules(arena.id).catch(() => []);
+  const actives = activeCourts(courts);
+  const activeIdSet = new Set(actives.map((c) => c.id));
+  const nomeDe = (id) => actives.find((c) => c.id === id)?.name || 'quadra';
+
+  // ── 1. Resolver as quadras de cada grupo ────────────────────────────────
+  // "Qualquer quadra" (courtIds: [null]) vira uma quadra concreta aqui, e as
+  // já escolhidas nos grupos anteriores saem da disputa: duas linhas de
+  // "tanto faz" não podem cair na mesma quadra no mesmo horário.
+  const resolvidos = [];
+  const ocupadasNesteLote = [];
+  for (const grupo of grupos) {
+    const slots = (grupo.slots || [])
+      .map((sl) => ({ date: str(sl.date), start: str(sl.start), end: str(sl.end) }))
+      .filter((sl) => isValidSlot(sl));
+    if (slots.length === 0) throw new Error('Selecione ao menos um horário válido.');
+
+    const explicitas = (grupo.courtIds || [])
+      .map((c) => (c == null ? null : str(c)))
+      .filter((c) => c === null || activeIdSet.has(c));
+
+    if (explicitas.length === 0) throw new Error('Quadra inválida na seleção.');
+
+    if (explicitas[0] === null) {
+      if (actives.length === 0) {
+        resolvidos.push({ courtIds: [null], slots });
+      } else {
+        // Reservas que este mesmo lote já vai criar entram na conta do que
+        // está ocupado — senão a atribuição automática escolheria a mesma
+        // quadra duas vezes.
+        const jaNoLote = ocupadasNesteLote.map((r, i) => ({
+          id: `__lote_${i}`, status: BOOKING_STATUS.CONFIRMED,
+          court_id: r.court_id, slots: r.slots,
+        }));
+        const auto = pickAvailableCourtForSlots(
+          courts, slots, [...existingBookings, ...jaNoLote], allSchedules,
+        );
+        if (!auto) {
+          throw new Error(`Nenhuma quadra livre em ${slots[0].date} ${slots[0].start}. Escolha outro horário ou uma quadra específica.`);
+        }
+        resolvidos.push({ courtIds: [auto], slots });
+        ocupadasNesteLote.push({ court_id: auto, slots });
+      }
+    } else {
+      const busy = unavailableCourtsForSlots(explicitas, slots, existingBookings, allSchedules);
+      if (busy.length > 0) {
+        const nomes = busy.map(nomeDe).join(', ');
+        throw new Error(`Não está livre no horário escolhido: ${nomes}. Ajuste o horário ou tire da seleção.`);
+      }
+      resolvidos.push({ courtIds: explicitas, slots });
+      explicitas.forEach((cid) => ocupadasNesteLote.push({ court_id: cid, slots }));
+    }
+  }
+
+  // ── 2. Validar TUDO antes de escrever (tudo ou nada) ────────────────────
+  for (const { courtIds, slots } of resolvidos) {
+    for (const cid of courtIds) {
+      const courtSchedules = cid
+        ? allSchedules.filter((sc) => !sc.court_id || sc.court_id === cid)
+        : allSchedules;
+      const candidatos = slots.map((sl) => ({ ...sl, court_id: cid }));
+      const conflito = checkBookingConflict(candidatos, existingBookings);
+      if (conflito.hasConflict) {
+        throw new Error(`Já existe reserva ativa em ${conflito.conflicts[0].candidate.date} ${conflito.conflicts[0].candidate.start} na ${nomeDe(cid)}. Escolha outro horário.`);
+      }
+      for (const sl of slots) {
+        const v = validateBookingRequest({
+          date: sl.date, start_time: sl.start, end_time: sl.end,
+          court_id: cid, existingBookings, court_schedules: courtSchedules,
+        });
+        if (!v.ok) throw new Error(v.message);
+      }
+    }
+  }
+
+  // ── 3. Escrever tudo num lote só ────────────────────────────────────────
+  const totalDocs = resolvidos.reduce((a, g) => a + g.courtIds.length, 0);
+  const kind = input.kind === BOOKING_KIND.RECURRING ? BOOKING_KIND.RECURRING : BOOKING_KIND.SINGLE;
+  const athleteName = displayName(user, profile);
+
+  // Convite de participantes: só faz sentido ao reservar UMA quadra.
+  const rawInvitees = Array.isArray(input.invitees) ? input.invitees.filter((i) => i && i.athlete_id) : [];
+  const attachInvites = rawInvitees.length > 0 && totalDocs === 1;
+  const participants = attachInvites
+    ? buildParticipants(
+      { athlete_id: user.uid, name: athleteName, photo: profile?.photo_url || user.photoURL || '' },
+      rawInvitees,
+    )
+    : null;
+
+  const isInstant = input.is_instant === true && totalDocs === 1;
+  if (isInstant) {
+    const { courtIds, slots } = resolvidos[0];
+    const cid = courtIds[0];
+    const courtSchedules = cid
+      ? allSchedules.filter((sc) => !sc.court_id || sc.court_id === cid)
+      : allSchedules;
+    const instant = canBeInstantBooking(
+      {
+        date: slots[0].date, start_time: slots[0].start, end_time: slots[0].end,
+        court_id: cid, proposed_price: input.proposed_price, payment_method: input.payment_method,
+      },
+      arena, existingBookings, courtSchedules,
+    );
+    if (!instant.ok) throw new Error(instant.message);
+  }
+
+  const initialStatus = getInitialBookingStatus(isInstant);
+  const groupId = totalDocs > 1 ? doc(collection(db, COL.bookings)).id : null;
+  const batch = writeBatch(db);
+  const createdIds = [];
+  const nowMs = Date.now();
+
+  resolvidos.forEach(({ courtIds, slots }) => {
+    courtIds.forEach((cid) => {
+      const id = doc(collection(db, COL.bookings)).id;
+      batch.set(doc(db, COL.bookings, id), {
+        id,
+        arena_id: arena.id,
+        arena_name: str(arena.name),
+        court_id: cid,
+        booking_group_id: groupId,
+        athlete_id: user.uid,
+        athlete_name: athleteName,
+        athlete_photo: profile?.photo_url || user.photoURL || '',
+        kind,
+        slots,
+        recurrence: kind === BOOKING_KIND.RECURRING && input.recurrence ? input.recurrence : null,
+        notes: str(input.notes).slice(0, 600),
+        status: initialStatus,
+        is_instant: isInstant,
+        shared: attachInvites,
+        participants: participants || [],
+        participant_ids: participants ? ownerIds(participants) : [],
+        invited_ids: participants ? invitedIds(participants) : [],
+        payment_method: str(input.payment_method) || null,
+        proposed_price: num(input.proposed_price),
+        agreed_price: null,
+        payment_status: PAYMENT_STATUS.NONE,
+        created_by: user.uid,
+        created_at: serverTimestamp(),
+        created_at_ms: nowMs,
+        updated_at: serverTimestamp(),
+      });
+      createdIds.push(id);
+    });
+  });
+  await batch.commit();
+
+  const primeiro = resolvidos[0].slots[0];
+  const managerIds = await listArenaManagerIds(arena.id).catch(() => []);
+  notifyUsers(managerIds, {
+    title: `Nova solicitação de reserva em "${str(arena.name).slice(0, 50)}"`,
+    message: `${athleteName} solicitou ${primeiro.date} ${primeiro.start}${totalDocs > 1 ? ` e mais ${totalDocs - 1} reserva(s)` : ''}. Toque para responder.`,
+    type: NOTIFICATION_TYPE.GENERIC,
+    link: `/arenas/${arena.id}/gerir`,
+    actor: { uid: user.uid, displayName: athleteName },
+  });
+  if (attachInvites) {
+    const inviteeIds = invitedIds(participants);
+    if (inviteeIds.length > 0) {
+      notifyUsers(inviteeIds, {
+        title: 'Convite para dividir uma quadra',
+        message: `${athleteName} convidou você para ${primeiro.date} ${primeiro.start}–${primeiro.end} em ${str(arena.name).slice(0, 40)}.`,
+        type: NOTIFICATION_TYPE.GENERIC,
+        link: '/minhas-reservas',
+        actor: { uid: user.uid, displayName: athleteName },
+      });
+    }
+  }
+  await createAuditLog({
+    action: 'arena_booking_requested',
+    actor: user,
+    details: {
+      arena_id: arena.id, booking_ids: createdIds, group_id: groupId,
+      kind, groups: resolvidos.length, docs: totalDocs,
+    },
+  });
+  return createdIds;
+}
+
+/**
  * Cria uma reserva MANUAL feita pelo admin/gestor da arena (ex.: cliente que
  * ligou ou apareceu no balcão). Diferente de `createBooking`:
  *  - nasce já CONFIRMED (o admin está confirmando na hora);

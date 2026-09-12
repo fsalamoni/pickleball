@@ -26,17 +26,42 @@ import { normalizeTime } from '../domain/court_schedule.js';
 import { canBeInstantBooking, arenaSupportsInstant, INSTANT_BOOKING_LABELS } from '../domain/instant_booking.js';
 import { PAYMENT_METHOD } from '../domain/pdv.js';
 import AthleteMultiPicker from '@/modules/athletes/components/AthleteMultiPicker';
+import {
+  RECURRENCE_MAX_WEEKS, expandSelectionWeeks, groupSelectionByCourt,
+  summarizeSelection, describableRecurrence, sortSelection,
+} from '../domain/bookingSelection.js';
+import { useCreateBookingsForSelection } from '../hooks/useBookings.js';
 
 function slotLabel(slot) {
   return `${slot.date} · ${slot.start}–${slot.end}`;
 }
 
-export default function BookingRequestDialog({ arena, open, onOpenChange, court: initialCourt, preselectedSlots = [], initialMode, initialCourtIds = [], onClose }) {
+/**
+ * Diálogo de reserva. Tem DOIS modos, e a diferença importa:
+ *
+ *  · **formulário** (sem `selection`) — o caminho do botão "Solicitar reserva"
+ *    na página da arena: pergunta tudo, porque nada foi escolhido ainda;
+ *  · **confirmação** (com `selection`) — o caminho do CALENDÁRIO. A pessoa já
+ *    escolheu dia, quadra(s) e horário(s) na grade; aqui ela CONFERE o que
+ *    escolheu e responde só o que falta: repete toda semana?, observações,
+ *    convidados, pagamento.
+ *
+ * O modo de confirmação existe porque o fluxo antigo re-perguntava tudo — data,
+ * horário, "qualquer/específicas/todas", "avulso/recorrente" — depois de a
+ * pessoa já ter respondido no calendário, num vocabulário diferente. Era o
+ * ponto em que a reserva ficava confusa e difícil.
+ *
+ * @param {Array<{court_id,date,start,end}>} [selection] células escolhidas no
+ *   calendário. `court_id: null` = "tanto faz a quadra".
+ */
+export default function BookingRequestDialog({ arena, open, onOpenChange, court: initialCourt, preselectedSlots = [], initialMode, initialCourtIds = [], selection = null, onClose }) {
+  const modoSelecao = Array.isArray(selection) && selection.length > 0;
   // Compat: se open prop não for passado, usar onClose como fallback
   const _open = open !== undefined ? open : true;
   const _onOpenChange = onOpenChange || onClose || (() => {});
   const { user } = useAuth();
   const createBooking = useCreateBooking();
+  const createFromSelection = useCreateBookingsForSelection();
   const { data: existingBookings = [] } = useArenaBookings(arena.id);
   const { data: courts = [] } = useArenaCourts(arena.id);
   const { data: allSchedules = [] } = useArenaCourtSchedules(arena.id);
@@ -58,6 +83,8 @@ export default function BookingRequestDialog({ arena, open, onOpenChange, court:
   const [isInstant, setIsInstant] = useState(false);
   const [paymentMethod, setPaymentMethod] = useState(PAYMENT_METHOD.PIX);
   const [invitees, setInvitees] = useState([]);
+  // Modo confirmação: "só neste dia" (1) ou "toda semana" (N).
+  const [semanas, setSemanas] = useState(1);
 
   // Arena permite instant?
   const supportsInstant = arenaSupportsInstant(arena);
@@ -78,7 +105,35 @@ export default function BookingRequestDialog({ arena, open, onOpenChange, court:
     [allSchedules],
   );
 
+  /* ---- modo CONFIRMAÇÃO: tudo sai da seleção ---------------------------- */
+  const celulasEscolhidas = useMemo(
+    () => (modoSelecao ? expandSelectionWeeks(sortSelection(selection), semanas) : []),
+    [modoSelecao, selection, semanas],
+  );
+  const gruposDaSelecao = useMemo(
+    () => groupSelectionByCourt(celulasEscolhidas),
+    [celulasEscolhidas],
+  );
+  const totalReservas = useMemo(
+    () => gruposDaSelecao.reduce((a, g) => a + g.courtIds.length, 0),
+    [gruposDaSelecao],
+  );
+  const nomePorQuadra = useMemo(() => new Map(courts.map((c) => [c.id, c.name])), [courts]);
+  const resumoSelecao = useMemo(
+    () => summarizeSelection(celulasEscolhidas, nomePorQuadra),
+    [celulasEscolhidas, nomePorQuadra],
+  );
+
   const candidateSlots = useMemo(() => {
+    if (modoSelecao) {
+      const vistos = new Set();
+      return sortSlots(celulasEscolhidas.filter((c) => {
+        const k = `${c.date}|${c.start}|${c.end}`;
+        if (vistos.has(k)) return false;
+        vistos.add(k);
+        return true;
+      }).map((c) => ({ date: c.date, start: c.start, end: c.end })));
+    }
     if (kind === 'multi' || (multiSlots && multiSlots.length > 0)) {
       return sortSlots(multiSlots);
     }
@@ -93,18 +148,21 @@ export default function BookingRequestDialog({ arena, open, onOpenChange, court:
       weeks: recurring.weeks,
       fromDate: recurring.fromDate,
     }));
-  }, [kind, single, recurring, multiSlots]);
+  }, [modoSelecao, celulasEscolhidas, kind, single, recurring, multiSlots]);
 
   // Quadras-alvo efetivas conforme o modo escolhido:
   //  - 'all'      → todas as quadras LIVRES nos horários (reserva as disponíveis);
   //  - 'specific' → as escolhidas que existem/estão ativas;
   //  - 'any'      → [] (a arena atribui automaticamente uma quadra livre).
   const effectiveCourtIds = useMemo(() => {
+    if (modoSelecao) {
+      return Array.from(new Set(celulasEscolhidas.map((c) => c.court_id).filter(Boolean)));
+    }
     if (activeCourts.length === 0) return [];
     if (courtMode === 'all') return availableCourtsForSlots(activeCourts, candidateSlots, existingBookings, allSchedules);
     if (courtMode === 'specific') return selectedCourtIds.filter((id) => activeCourts.some((c) => c.id === id));
     return [];
-  }, [courtMode, selectedCourtIds, activeCourts, candidateSlots, existingBookings, allSchedules]);
+  }, [modoSelecao, celulasEscolhidas, courtMode, selectedCourtIds, activeCourts, candidateSlots, existingBookings, allSchedules]);
   const isMultiCourt = effectiveCourtIds.length > 1;
   // Quantas quadras existem e quantas estão livres (para o resumo do modo 'all').
   const allFreeCount = useMemo(() => {
@@ -121,6 +179,9 @@ export default function BookingRequestDialog({ arena, open, onOpenChange, court:
   // tratado por hasConflict (atribuição automática). Com quadras escolhidas,
   // valida CADA uma (todas precisam estar dentro da janela e livres).
   const singleValidation = useMemo(() => {
+    // No modo confirmação a escolha veio da grade, que já só oferece horário
+    // livre — e o serviço revalida tudo antes de gravar.
+    if (modoSelecao) return { ok: true };
     if (kind !== BOOKING_KIND.SINGLE) return { ok: true };
     if (!single.date || !normalizeTime(single.start) || !normalizeTime(single.end)) {
       return { ok: false, reason: 'incomplete', message: 'Preencha data e horários.' };
@@ -137,7 +198,7 @@ export default function BookingRequestDialog({ arena, open, onOpenChange, court:
       }
     }
     return { ok: true };
-  }, [kind, single, effectiveCourtIds, schedulesForCourt, existingBookings, activeCourts]);
+  }, [modoSelecao, kind, single, effectiveCourtIds, schedulesForCourt, existingBookings, activeCourts]);
 
   // Disponibilidade do dia (apenas SINGLE com data e UMA quadra escolhida)
   const dayAvailability = useMemo(() => {
@@ -151,12 +212,20 @@ export default function BookingRequestDialog({ arena, open, onOpenChange, court:
   }, [kind, single.date, effectiveCourtIds, schedulesForCourt, existingBookings]);
 
   const estimate = useMemo(() => {
+    if (modoSelecao) {
+      const primeira = celulasEscolhidas[0];
+      if (!primeira) return null;
+      return resolveArenaPrice(arena, {
+        date: primeira.date, weekday: weekdayOf(primeira.date),
+        time: primeira.start, clientId: user?.uid,
+      });
+    }
     if (kind === BOOKING_KIND.SINGLE) {
       if (!single.date) return null;
       return resolveArenaPrice(arena, { date: single.date, weekday: weekdayOf(single.date), time: single.start, clientId: user?.uid });
     }
     return resolveArenaPrice(arena, { weekday: Number(recurring.weekday), time: recurring.start, clientId: user?.uid });
-  }, [kind, single, recurring, arena, user?.uid]);
+  }, [modoSelecao, celulasEscolhidas, kind, single, recurring, arena, user?.uid]);
 
   const confirmedBookings = useMemo(
     () => existingBookings.filter((booking) => booking.status === BOOKING_STATUS.CONFIRMED),
@@ -185,7 +254,39 @@ export default function BookingRequestDialog({ arena, open, onOpenChange, court:
     return !pickAvailableCourtForSlots(activeCourts, candidateSlots, existingBookings, allSchedules);
   }, [candidateSlots, effectiveCourtIds, existingBookings, activeCourts, allSchedules]);
 
+  /** Modo confirmação: um pedido só, com tudo o que foi escolhido. */
+  async function enviarSelecao() {
+    const podeConvidar = totalReservas === 1;
+    const instantaneaOk = isInstant && totalReservas === 1 && semanas === 1;
+    try {
+      await createFromSelection.mutateAsync({
+        arena,
+        input: {
+          groups: gruposDaSelecao,
+          kind: semanas > 1 ? BOOKING_KIND.RECURRING : BOOKING_KIND.SINGLE,
+          recurrence: describableRecurrence(sortSelection(selection), semanas),
+          notes,
+          proposed_price: estimate?.price ?? null,
+          invitees: podeConvidar ? invitees : [],
+          is_instant: instantaneaOk,
+          payment_method: instantaneaOk ? paymentMethod : null,
+        },
+      });
+      toast.success(
+        instantaneaOk
+          ? 'Reserva confirmada! Compareça no horário marcado.'
+          : totalReservas > 1
+            ? `Solicitação enviada — ${totalReservas} reservas. A arena vai responder em breve.`
+            : 'Solicitação enviada! A arena vai responder em breve.',
+      );
+      _onOpenChange(false);
+    } catch (err) {
+      toast.error(err?.message || 'Não foi possível solicitar a reserva.');
+    }
+  }
+
   async function handleSubmit() {
+    if (modoSelecao) return enviarSelecao();
     try {
       if (kind === BOOKING_KIND.SINGLE && !singleValidation.ok) {
         toast.error(singleValidation.message);
@@ -259,11 +360,86 @@ export default function BookingRequestDialog({ arena, open, onOpenChange, court:
     <Dialog open={_open} onOpenChange={_onOpenChange}>
       <DialogContent className="max-w-lg">
         <DialogHeader>
-          <DialogTitle>Reservar em {arena.name}</DialogTitle>
-          <DialogDescription>Escolha um horário avulso ou recorrente. A arena confirma o valor.</DialogDescription>
+          <DialogTitle>{modoSelecao ? 'Confirmar reserva' : `Reservar em ${arena.name}`}</DialogTitle>
+          <DialogDescription>
+            {modoSelecao
+              ? 'Confira o que você escolheu e diga se repete toda semana. A arena confirma o valor.'
+              : 'Escolha um horário avulso ou recorrente. A arena confirma o valor.'}
+          </DialogDescription>
         </DialogHeader>
 
         <div className="space-y-4">
+          {/* CONFIRMAÇÃO: o que foi escolhido, sem re-perguntar nada. */}
+          {modoSelecao && (
+            <div className="rounded-2xl border border-gray-200 bg-paper p-3.5">
+              <p className="text-[10px] font-bold uppercase tracking-widest text-gray-500">Sua escolha</p>
+              <ul className="mt-2 space-y-1.5">
+                {resumoSelecao.porQuadra.map((q) => (
+                  <li key={q.court_id || 'qualquer'} className="text-sm text-ink">
+                    <strong>{q.nome}</strong>
+                    <span className="text-gray-600">
+                      {' · '}
+                      {Array.from(new Set(q.slots.map((sl) => `${sl.start}–${sl.end}`))).join(', ')}
+                    </span>
+                  </li>
+                ))}
+              </ul>
+              <p className="mt-2 text-xs text-gray-500">
+                {resumoSelecao.datas.length === 1
+                  ? resumoSelecao.datas[0]
+                  : `${resumoSelecao.datas.length} datas: ${resumoSelecao.datas[0]} até ${resumoSelecao.datas[resumoSelecao.datas.length - 1]}`}
+                {' · '}
+                {Math.round((resumoSelecao.minutos / 60) * 10) / 10}h no total
+                {totalReservas > 1 && ` · ${totalReservas} reservas`}
+              </p>
+            </div>
+          )}
+
+          {/* CONFIRMAÇÃO: a única pergunta que sobra sobre "quando". */}
+          {modoSelecao && (
+            <div className="space-y-2">
+              <Label className="text-xs">Repete?</Label>
+              <div className="flex gap-2">
+                {[
+                  { v: 1, label: 'Só neste dia' },
+                  { v: 4, label: 'Toda semana' },
+                ].map(({ v, label }) => {
+                  const ativo = v === 1 ? semanas === 1 : semanas > 1;
+                  return (
+                    <button
+                      key={label}
+                      type="button"
+                      onClick={() => setSemanas(v)}
+                      className={cn(
+                        'flex-1 rounded-md border px-3 py-2 text-sm font-medium transition-colors',
+                        ativo ? 'border-ink bg-ink text-white' : 'border-gray-200 text-gray-500 hover:bg-paper',
+                      )}
+                    >
+                      {label}
+                    </button>
+                  );
+                })}
+              </div>
+              {semanas > 1 && (
+                <div className="flex flex-wrap items-end gap-2">
+                  <div>
+                    <Label className="text-xs">Por quantas semanas</Label>
+                    <Input
+                      type="number" min="2" max={RECURRENCE_MAX_WEEKS} inputMode="numeric"
+                      value={semanas}
+                      onChange={(e) => setSemanas(Math.max(2, Math.min(RECURRENCE_MAX_WEEKS, Number(e.target.value) || 2)))}
+                      className="mt-1 w-28"
+                    />
+                  </div>
+                  <p className="pb-2 text-[11px] text-gray-500">
+                    O mesmo horário, toda semana, a partir deste dia.
+                  </p>
+                </div>
+              )}
+            </div>
+          )}
+
+          {!modoSelecao && (
           <div className="flex gap-2">
             {[
               { k: BOOKING_KIND.SINGLE, label: 'Avulso' },
@@ -282,8 +458,11 @@ export default function BookingRequestDialog({ arena, open, onOpenChange, court:
               </button>
             ))}
           </div>
+          )}
 
-          {kind === BOOKING_KIND.SINGLE && supportsInstant && !isMultiCourt && (
+          {(modoSelecao
+            ? supportsInstant && totalReservas === 1 && semanas === 1
+            : kind === BOOKING_KIND.SINGLE && supportsInstant && !isMultiCourt) && (
             <div className="space-y-2">
               <Label className="text-xs">{INSTANT_BOOKING_LABELS.TITLE}</Label>
               <div className="grid grid-cols-1 gap-2 sm:grid-cols-2">
@@ -339,7 +518,7 @@ export default function BookingRequestDialog({ arena, open, onOpenChange, court:
             </div>
           )}
 
-          {activeCourts.length > 0 && (
+          {!modoSelecao && activeCourts.length > 0 && (
             <div className="space-y-2">
               <Label className="text-xs">Quadras</Label>
               <div className="flex flex-wrap gap-2">
@@ -402,7 +581,7 @@ export default function BookingRequestDialog({ arena, open, onOpenChange, court:
             </div>
           )}
 
-          {kind === BOOKING_KIND.SINGLE ? (
+          {modoSelecao ? null : kind === BOOKING_KIND.SINGLE ? (
             <div className="space-y-2">
               <div className="grid grid-cols-3 gap-2">
                 <div className="col-span-3 sm:col-span-1">
@@ -450,7 +629,9 @@ export default function BookingRequestDialog({ arena, open, onOpenChange, court:
             </div>
           )}
 
-          {!isMultiCourt && kind === BOOKING_KIND.SINGLE && (
+          {(modoSelecao
+            ? totalReservas === 1
+            : !isMultiCourt && kind === BOOKING_KIND.SINGLE) && (
             <div>
               <Label className="text-xs">Convidar participantes (opcional)</Label>
               <div className="mt-1">
@@ -548,16 +729,28 @@ export default function BookingRequestDialog({ arena, open, onOpenChange, court:
           {estimate && (
             <div className="rounded-lg bg-acid/10 p-3 text-sm text-ink">
               Estimativa: <strong>{formatPrice(estimate.price)}</strong>
-              <span className="text-ink/70"> · {estimate.label} (por horário; a arena confirma o valor final)</span>
+              <span className="text-ink/70">
+                {' · '}{estimate.label} (por horário; a arena confirma o valor final)
+                {modoSelecao && celulasEscolhidas.length > 1
+                  && ` · você escolheu ${celulasEscolhidas.length} horários`}
+              </span>
             </div>
           )}
         </div>
 
         <DialogFooter>
           <Button variant="outline" onClick={() => onOpenChange(false)}>Cancelar</Button>
-          <Button onClick={handleSubmit} disabled={createBooking.isPending || hasConflict || candidateSlots.length === 0 || (kind === BOOKING_KIND.SINGLE && !singleValidation.ok) || (courtMode !== 'any' && activeCourts.length > 0 && effectiveCourtIds.length === 0)}>
-            {createBooking.isPending ? 'Enviando…' : (isMultiCourt ? `Solicitar ${effectiveCourtIds.length} reservas` : 'Solicitar reserva')}
-          </Button>
+          {modoSelecao ? (
+            <Button onClick={handleSubmit} disabled={createFromSelection.isPending || celulasEscolhidas.length === 0}>
+              {createFromSelection.isPending
+                ? 'Enviando…'
+                : totalReservas > 1 ? `Solicitar ${totalReservas} reservas` : 'Solicitar reserva'}
+            </Button>
+          ) : (
+            <Button onClick={handleSubmit} disabled={createBooking.isPending || hasConflict || candidateSlots.length === 0 || (kind === BOOKING_KIND.SINGLE && !singleValidation.ok) || (courtMode !== 'any' && activeCourts.length > 0 && effectiveCourtIds.length === 0)}>
+              {createBooking.isPending ? 'Enviando…' : (isMultiCourt ? `Solicitar ${effectiveCourtIds.length} reservas` : 'Solicitar reserva')}
+            </Button>
+          )}
         </DialogFooter>
       </DialogContent>
     </Dialog>

@@ -198,6 +198,8 @@ Estes princípios vieram de bugs reais que custaram horas pra arrumar. São ineg
 **"Como o ranking de DUPLAS é classificado?"** → aproveitamento → mais vitórias → menos derrotas → saldo de pontos. A regra vive em `compareDoublesRows` (`src/modules/rating/domain/doublesRanking.js`), a classificação é gravada em `doubles_rankings` pelo servidor (campo `position`) e a tela **não reordena** — só filtra e pagina (20/50/100, estado na URL)
 **"Quero um piso de jogos para a dupla entrar no ranking"** → é a **amostra mínima** (Todas / 3+ / 5+ / 10+ / 20+), escolhida por CADA usuário e salva no navegador (`v2:view:<uid>:ranking:duplas:min-jogos`, via `src/core/lib/viewPreference.js` — **nada no banco**). O recorte RENUMERA dentro dele (a posição geral vai junto, em `overall_position`); a busca por nome, não. Ver `docs/18-RANKINGS.md` §6.1
 **"Vou calcular o FIM de um slot de horário"** → `slotEndTime(time, { date, schedules })` (`modules/arenas/domain/slot_status.js`). **NUNCA** derive do "próximo horário da lista": numa arena com horário partido (manhã e noite) a grade tem buracos, e isso gerava reserva de NOVE HORAS — bug real, corrigido. `hora + 1` cego também não serve: passa do fechamento numa janela que acaba às 21:30. Ver `docs/23-ARENA-CALENDARIO-E-RESERVA.md` §1
+**"Como o atleta reserva uma quadra?"** → **calendário (o DIA) → grade (QUADRA e HORÁRIOS) → confirmar (avulsa ou recorrente, observações, convidados)**. A segunda tela CONFIRMA, não re-pergunta: `BookingRequestDialog` recebe `selection` e mostra a escolha agrupada por quadra. Sem `selection` (botão "Solicitar reserva" da página da arena) ele segue sendo o formulário completo de antes — há teste travando os dois modos. Ver `docs/23-ARENA-CALENDARIO-E-RESERVA.md` §6
+**"Quero pedir mais de uma quadra e mais de um horário no mesmo dia"** → pode. A escolha é uma lista de CÉLULAS (`{ court_id, date, start, end }`, com `court_id: null` = "tanto faz") em `modules/arenas/domain/bookingSelection.js`; `groupSelectionByCourt` junta as quadras com os MESMOS horários e separa as que não têm, e `createBookingsForSelection` valida TODOS os pares antes de escrever e grava num lote só (tudo ou nada, com `booking_group_id` comum). **Nenhum campo novo no documento.** Não use `createBooking` para isso: ele grava uma reserva por quadra com os MESMOS horários para todas
 **"O atleta quer ver quais QUADRAS estão livres num horário"** → é a matriz `CourtTimePicker` (seletor **Por horário / Por quadra** no diálogo do dia). Antes ele via só "2/3 quadras livres", sem saber quais. A do atleta NÃO é a do admin (`CourtDayGrid`): não mostra nome de quem reservou, só o que está livre é clicável, e clicar ESCOLHE a quadra — que agora chega ao pedido de reserva e ao preço. **Uma reserva, uma quadra**
 **"Cadastrei a quadra e ninguém consegue reservar"** → quadra **sem janela de horário** é invisível: fora do calendário, fora da reserva, fora do dia de jogo. Isso hoje é avisado em três alturas (linha da quadra, topo da aba Quadras, painel de prontidão na Central da arena). Domínio: `courtScheduleStatus` / `courtsWithoutSchedule` em `court_schedule.js`. Janela **sem `court_id` vale para a arena inteira**; quadra inativa nunca vira alarme. Ver `docs/23-ARENA-CALENDARIO-E-RESERVA.md` §4
 **"A arena quer criar o PRÓPRIO dia de jogo, marcado no calendário"** → é o **dia de jogo da arena** (flag `arena_game_day`, default OFF). **Nenhuma coleção nova**: é o mesmo `game_days`, com campos aditivos (`arena_id`, `arena_slots`, `signup_mode`, `capacity`). Ausente `arena_id`, nada muda — o dia de jogo do atleta segue idêntico. Fechar a quadra no calendário também não é código novo: grava `arena_unavailabilities` com `source: 'game_day'`, e conflito de reserva, status de slot e calendário mensal já respeitam. Domínio em `src/modules/games/domain/arenaGameDay.js`; arena em `/arenas/:id/gerir/dia-de-jogo`, atleta na página da arena + `/dia-de-jogo/:id` de sempre. Ver `docs/22-DIA-DE-JOGO-DA-ARENA.md`
@@ -398,6 +400,26 @@ chore(deps): bump firebase to 12.x
 > memory topic `picklerush-sync-2026-08.md`.
 >
 > **Destaques por onda**:
+>
+> - **Onda AC — A reserva em duas telas, sem repetir pergunta** (2026-09-12):
+>   reservar eram duas telas, e a segunda **re-perguntava tudo o que a primeira
+>   já tinha respondido** — data, horário, "qualquer/específicas/todas",
+>   "avulso/recorrente" —, num vocabulário diferente e com as respostas podendo
+>   se contradizer. Agora: **calendário (o DIA) → grade (QUADRA e HORÁRIOS) →
+>   confirmar**. A segunda tela mostra a escolha agrupada por quadra e faz só
+>   as perguntas que sobraram. **E uma limitação escondida caiu**: o serviço
+>   gravava uma reserva por quadra, mas todas com os MESMOS horários — então
+>   "Quadra 1 às 19h e Quadra 2 às 20h" não cabia num pedido. A escolha virou
+>   uma lista de CÉLULAS (`bookingSelection.js`), `groupSelectionByCourt` a
+>   traduz para os pedidos certos e `createBookingsForSelection` valida todos
+>   os pares antes de escrever e grava num lote só — tudo ou nada, com
+>   `booking_group_id` comum. A matriz quadra × horário virou o padrão com mais
+>   de uma quadra, e "toda semana" repete a escolha INTEIRA (o metadado
+>   `recurrence` só é gravado quando é verdade — um horário só; com vários,
+>   fica `null` em vez de mentir num campo que alguém exibe). O formulário
+>   completo do botão "Solicitar reserva" da página da arena segue idêntico,
+>   com teste travando os dois modos. **Zero banco**: nenhum campo novo,
+>   coleção, índice, regra ou função. Ver `docs/23-ARENA-CALENDARIO-E-RESERVA.md` §6.
 >
 > - **Onda AB — Arena: calendário, reserva e prontidão** (2026-09-12):
 >   auditoria de ponta a ponta da arena, dos dois lados do balcão. **Dois bugs
@@ -613,7 +635,7 @@ chore(deps): bump firebase to 12.x
 
 | Métrica | Valor | Delta do início do agente |
 |---|---|---|
-| **Testes Vitest** | **3598 passing** (237 arquivos) | +3190 (era 408) |
+| **Testes Vitest** | **3644 passing** (239 arquivos) | +3236 (era 408) |
 | **Lint errors** | 0 | era 30+ |
 | **Módulos** | 21 (+`help` — conteúdo dos tutoriais em tela) (`games` e `legal` saíram como `src/modules/` mas continuam como pastas oficiais — **rating virou módulo oficial** com domain/services/hooks/components) | +4 (coaches, circuits, games, legal) |
 | **V2 pages** | 79 (+V2GameDayTelao — telão, fora do V2Layout; +V2Help — central de ajuda) | +55 |

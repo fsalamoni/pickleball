@@ -177,17 +177,31 @@ describe('escolher quadra e horário', () => {
     expect(marcada.textContent).toContain('escolhido');
   });
 
-  it('⭐ com uma quadra já escolhida, a outra fica apagada — mas clicável', async () => {
+  it('⭐ dá para escolher em MAIS DE UMA quadra no mesmo dia', async () => {
+    // Era a limitação do fluxo antigo: escolher noutra quadra reiniciava tudo.
     await render({ selectedSlots: [{ date: DATA, start: '18:00', end: '19:00', courtId: 'c1' }] });
     const outra = celula('18:00', 1);
     expect(outra.disabled).toBe(false);
-    expect(outra.className).toContain('opacity-45');
-    // A da quadra escolhida não fica apagada.
-    expect(celula('19:00', 0).className).not.toContain('opacity-45');
+    expect(outra.className).not.toContain('opacity-45');
+
+    await act(async () => { outra.dispatchEvent(new MouseEvent('click', { bubbles: true })); });
+    expect(onPick.mock.calls[0][0]).toBe('c2');
   });
 
-  it('explica a regra de uma quadra por reserva', async () => {
+  it('⭐ marca as duas quadras ao mesmo tempo, sem apagar nenhuma', async () => {
+    await render({
+      selectedSlots: [
+        { date: DATA, start: '18:00', end: '19:00', courtId: 'c1' },
+        { date: DATA, start: '20:00', end: '21:00', courtId: 'c2' },
+      ],
+    });
+    expect(celula('18:00', 0).getAttribute('aria-pressed')).toBe('true');
+    expect(celula('20:00', 1).getAttribute('aria-pressed')).toBe('true');
+    expect(celula('19:00', 0).getAttribute('aria-pressed')).toBe('false');
+  });
+
+  it('convida a escolher mais de uma quadra e mais de um horário', async () => {
     await render();
-    expect(container.textContent).toContain('uma quadra só');
+    expect(container.textContent).toContain('mais de uma quadra');
   });
 });
