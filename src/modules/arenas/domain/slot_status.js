@@ -158,6 +158,58 @@ export function generateTimeSlots(startTime, endTime, stepMinutes = 60) {
   return slots;
 }
 
+/**
+ * O FIM de um slot que começa em `time`.
+ *
+ * Parece trivial e não é — duas contas erradas já saíram daqui:
+ *
+ *  1. **o "próximo horário da lista"**. A tela do atleta calculava o fim
+ *     pegando o próximo item da grade. Numa arena com horário PARTIDO
+ *     (08:00–10:00 e 18:00–22:00) a grade é `08, 09, 18, 19, 20, 21`, e o
+ *     slot das 09:00 terminava às **18:00**: uma reserva de nove horas. Bug
+ *     real, em produção, na conta que vira preço e ocupa a quadra;
+ *  2. **`hora + 1` cego**. Numa janela que fecha às 21:30, a grade termina em
+ *     21:00 e o slot ia até 22:00 — meia hora ALÉM do fechamento da arena.
+ *
+ * A conta certa é: uma passada do passo, **limitada pelo fim da janela** que
+ * cobre aquele horário. Sem janela informada, vale o passo puro.
+ *
+ * @param {string} time 'HH:MM' de início
+ * @param {{ date?: string, schedules?: Array, stepMinutes?: number }} [opts]
+ *   `schedules` já filtrados por quadra por quem chama; `date` decide o dia da
+ *   semana. Omitidos, a função devolve `time + stepMinutes`.
+ * @returns {string|null} 'HH:MM', ou `null` se o horário não fizer sentido
+ */
+export function slotEndTime(time, { date = null, schedules = [], stepMinutes = 60 } = {}) {
+  const start = timeToMinutes(time);
+  if (start == null) return null;
+
+  let fim = start + Math.max(1, Number(stepMinutes) || 60);
+
+  const weekday = date ? weekdayOf(date) : null;
+  const cobrindo = (schedules || []).filter((s) => {
+    if (s?.is_active === false) return false;
+    if (weekday != null && !(Array.isArray(s?.weekdays) && s.weekdays.includes(weekday))) return false;
+    const si = timeToMinutes(s?.start_time);
+    const sf = timeToMinutes(s?.end_time);
+    return si != null && sf != null && start >= si && start < sf;
+  });
+  if (cobrindo.length > 0) {
+    // Janelas sobrepostas: vale a que vai mais longe — é até lá que a arena
+    // está aberta naquele horário.
+    const maiorFim = Math.max(...cobrindo.map((s) => timeToMinutes(s.end_time)));
+    fim = Math.min(fim, maiorFim);
+  }
+
+  // Nunca passa da meia-noite: '24:00' não é hora válida em lugar nenhum do
+  // resto do sistema (`timeToMinutes` recusa), e uma reserva que "vira o dia"
+  // não tem representação aqui.
+  fim = Math.min(fim, 23 * 60 + 59);
+  if (fim <= start) return null;
+
+  return `${String(Math.floor(fim / 60)).padStart(2, '0')}:${String(fim % 60).padStart(2, '0')}`;
+}
+
 /** Indica se o slot pode ser selecionado (público) para nova reserva. */
 export function isSlotSelectable(status) {
   return status === SLOT_STATUS.AVAILABLE;

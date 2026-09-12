@@ -193,6 +193,33 @@ a tela oferecesse o botão. Agora são três regras.
 
 Detalhes: `docs/22-DIA-DE-JOGO-DA-ARENA.md`.
 
+## Calendário e reserva: o que já foi auditado (2026-09-12)
+
+Uma varredura de ponta a ponta achou **dois bugs de reserva** e um problema
+operacional sério. Está tudo em `docs/23-ARENA-CALENDARIO-E-RESERVA.md`; o que
+você precisa saber antes de tocar em horário:
+
+⚠️ **O fim de um slot é `slotEndTime(time, { date, schedules })`** — domínio, em
+`slot_status.js`. **Nunca** derive do "próximo horário da lista": numa arena com
+horário PARTIDO (manhã e noite) a grade tem buracos, e isso gerava reserva de
+nove horas. `hora + 1` cego também não serve: passa do fechamento numa janela
+que acaba às 21:30.
+
+⚠️ **Quadra sem janela de horário é INVISÍVEL** — fora do calendário, da reserva
+e do dia de jogo. `courtScheduleStatus` / `courtsWithoutSchedule`
+(`court_schedule.js`) respondem isso, e o aviso aparece em três alturas: na
+linha da quadra, no topo da aba Quadras e no painel de prontidão da Central da
+arena. Uma janela **sem `court_id` vale para a arena inteira**; quadra inativa
+nunca vira alarme.
+
+**As duas matrizes quadra × horário não são a mesma**, e não devem virar:
+
+| | `CourtDayGrid` (admin) | `CourtTimePicker` (atleta) |
+|---|---|---|
+| nome de quem reservou | mostra | **não** |
+| clicável | tudo | **só o que está livre** |
+| efeito do clique | seleciona célula | **escolhe a quadra** e o horário |
+
 ## Onde achar mais
 
 - `docs/06-MODULES.md` § arenas

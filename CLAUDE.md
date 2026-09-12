@@ -113,6 +113,7 @@ Estes princípios vieram de bugs reais que custaram horas pra arrumar. São ineg
 │   ├── 19-TUTORIAIS.md             🎓 tutoriais em tela (torneio + dia de jogo)
 │   ├── 21-CENTRAL-DE-AJUDA.md      🆘 a página /ajuda, por tipo de usuário
 │   ├── 22-DIA-DE-JOGO-DA-ARENA.md  🏟️ a arena cria dia de jogo no calendário
+│   ├── 23-ARENA-CALENDARIO-E-RESERVA.md 🗓️ auditoria: calendário, reserva, prontidão
 │   ├── 20-SEGURANCA-E-PRIVACIDADE/ 🔴 ⭐ PRIORIDADE MÁXIMA — segurança, LGPD,
 │   │   ├── 00-INDEX.md                documentos legais, imagem, admin
 │   │   ├── 01-AUDITORIA-ACHADOS.md    ⚠ 31 achados, 2 CRÍTICOS ABERTOS
@@ -196,6 +197,9 @@ Estes princípios vieram de bugs reais que custaram horas pra arrumar. São ineg
 **"Quando o ranking/rating atualiza depois de publicar um resultado?"** → **na hora**. Gatilhos do Firestore (`functions/index.js`) recalculam os TRÊS rankings de partida — ELO/nacional, rating 2.0–8.0 e duplas — a cada escrita em `club_event_games`, `tournament_matches` ou mudança de elegibilidade de torneio. Roda no SERVIDOR porque a regra só deixa o admin escrever ranking, e quem publica quase nunca é o admin (antes a tentativa do cliente era recusada em silêncio). Rajadas são coalescidas por um lease em `platform_settings/ranking_worker`. Ver `docs/18-RANKINGS.md`
 **"Como o ranking de DUPLAS é classificado?"** → aproveitamento → mais vitórias → menos derrotas → saldo de pontos. A regra vive em `compareDoublesRows` (`src/modules/rating/domain/doublesRanking.js`), a classificação é gravada em `doubles_rankings` pelo servidor (campo `position`) e a tela **não reordena** — só filtra e pagina (20/50/100, estado na URL)
 **"Quero um piso de jogos para a dupla entrar no ranking"** → é a **amostra mínima** (Todas / 3+ / 5+ / 10+ / 20+), escolhida por CADA usuário e salva no navegador (`v2:view:<uid>:ranking:duplas:min-jogos`, via `src/core/lib/viewPreference.js` — **nada no banco**). O recorte RENUMERA dentro dele (a posição geral vai junto, em `overall_position`); a busca por nome, não. Ver `docs/18-RANKINGS.md` §6.1
+**"Vou calcular o FIM de um slot de horário"** → `slotEndTime(time, { date, schedules })` (`modules/arenas/domain/slot_status.js`). **NUNCA** derive do "próximo horário da lista": numa arena com horário partido (manhã e noite) a grade tem buracos, e isso gerava reserva de NOVE HORAS — bug real, corrigido. `hora + 1` cego também não serve: passa do fechamento numa janela que acaba às 21:30. Ver `docs/23-ARENA-CALENDARIO-E-RESERVA.md` §1
+**"O atleta quer ver quais QUADRAS estão livres num horário"** → é a matriz `CourtTimePicker` (seletor **Por horário / Por quadra** no diálogo do dia). Antes ele via só "2/3 quadras livres", sem saber quais. A do atleta NÃO é a do admin (`CourtDayGrid`): não mostra nome de quem reservou, só o que está livre é clicável, e clicar ESCOLHE a quadra — que agora chega ao pedido de reserva e ao preço. **Uma reserva, uma quadra**
+**"Cadastrei a quadra e ninguém consegue reservar"** → quadra **sem janela de horário** é invisível: fora do calendário, fora da reserva, fora do dia de jogo. Isso hoje é avisado em três alturas (linha da quadra, topo da aba Quadras, painel de prontidão na Central da arena). Domínio: `courtScheduleStatus` / `courtsWithoutSchedule` em `court_schedule.js`. Janela **sem `court_id` vale para a arena inteira**; quadra inativa nunca vira alarme. Ver `docs/23-ARENA-CALENDARIO-E-RESERVA.md` §4
 **"A arena quer criar o PRÓPRIO dia de jogo, marcado no calendário"** → é o **dia de jogo da arena** (flag `arena_game_day`, default OFF). **Nenhuma coleção nova**: é o mesmo `game_days`, com campos aditivos (`arena_id`, `arena_slots`, `signup_mode`, `capacity`). Ausente `arena_id`, nada muda — o dia de jogo do atleta segue idêntico. Fechar a quadra no calendário também não é código novo: grava `arena_unavailabilities` com `source: 'game_day'`, e conflito de reserva, status de slot e calendário mensal já respeitam. Domínio em `src/modules/games/domain/arenaGameDay.js`; arena em `/arenas/:id/gerir/dia-de-jogo`, atleta na página da arena + `/dia-de-jogo/:id` de sempre. Ver `docs/22-DIA-DE-JOGO-DA-ARENA.md`
 **"Quem pode sortear/lançar/editar num dia de jogo?"** → pergunte ao hook `useGameDayRoles(gameDay, participants)` (`podeGerenciar` / `podeConfigurar`), nunca chame `canManageGameDay` direto numa tela. Ele soma os TRÊS caminhos: criador, administrador nomeado e **gestor da ARENA** (só em dia de jogo com `arena_id`). Não custa consulta — `useMyManagedArenas` já vem do `V2Layout`
 **"Dois dias de jogo na mesma quadra e no mesmo dia?"** → pode, em horários diferentes. `findGameDayOverlaps` confere, e **encostar não é sobrepor** (18h–20h e 20h–22h convivem). A mesma conferência roda contra as reservas por `checkBookingConflict`
@@ -395,6 +399,28 @@ chore(deps): bump firebase to 12.x
 >
 > **Destaques por onda**:
 >
+> - **Onda AB — Arena: calendário, reserva e prontidão** (2026-09-12):
+>   auditoria de ponta a ponta da arena, dos dois lados do balcão. **Dois bugs
+>   reais**: (1) o fim de um slot era "o próximo horário da grade" — numa arena
+>   com horário PARTIDO (manhã e noite) a grade tem buracos, e clicar nas 09:00
+>   pedia reserva **das 09:00 às 18:00**, nove horas, com preço e ocupação
+>   correspondentes; (2) `hora + 1` cego passava meia hora além do fechamento
+>   numa janela que acaba às 21:30. A conta virou domínio testado
+>   (`slotEndTime`). **A quadra invisível**: quadra sem janela de horário não
+>   entra no calendário, não aceita reserva, não entra em dia de jogo — e nada
+>   dizia isso ao dono, que só descobria quando alguém reclamava; agora é
+>   avisado em três alturas, e o atleta também deixou de ver um mês cinza sem
+>   explicação. **A pergunta sem resposta**: "2 de 3 quadras livres" não dizia
+>   QUAIS; o atleta ganhou a matriz quadra × horário (`CourtTimePicker`), em
+>   que clicar ESCOLHE a quadra — escolha que agora chega ao pedido e ao preço,
+>   em vez de se perder no último passo. E o diálogo do dia deixou de pedir
+>   rolagem por reservas alheias antes de mostrar os horários: a grade vem
+>   primeiro, "sem horário livre" virou aviso acima dela em vez de parede no
+>   lugar dela, e as legendas mostram só as cores que estão na tela. O
+>   calendário da ARENA passou a mostrar os dias de jogo que ela mesma marcou.
+>   **Zero banco** — nenhuma regra, coleção, índice ou função tocada.
+>   Ver `docs/23-ARENA-CALENDARIO-E-RESERVA.md`.
+>
 > - **Onda AA — Dia de jogo da arena** (2026-09-12): a arena passa a criar o
 >   próprio dia de jogo, **marcado no calendário** — o que FECHA a data e as
 >   quadras escolhidas para reserva. Horário do dia todo ou por quadra; mais de
@@ -587,7 +613,7 @@ chore(deps): bump firebase to 12.x
 
 | Métrica | Valor | Delta do início do agente |
 |---|---|---|
-| **Testes Vitest** | **3563 passing** (236 arquivos) | +3154 (era 408) |
+| **Testes Vitest** | **3598 passing** (237 arquivos) | +3190 (era 408) |
 | **Lint errors** | 0 | era 30+ |
 | **Módulos** | 21 (+`help` — conteúdo dos tutoriais em tela) (`games` e `legal` saíram como `src/modules/` mas continuam como pastas oficiais — **rating virou módulo oficial** com domain/services/hooks/components) | +4 (coaches, circuits, games, legal) |
 | **V2 pages** | 79 (+V2GameDayTelao — telão, fora do V2Layout; +V2Help — central de ajuda) | +55 |

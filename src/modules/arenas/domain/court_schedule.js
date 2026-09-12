@@ -207,3 +207,46 @@ export const SCHEDULE = Object.freeze({
   WEEKDAY_LABELS_PT,
   WEEKDAY_SHORT_PT,
 });
+
+/* ============================ a quadra está mesmo aberta? ================= */
+
+/**
+ * As janelas que valem para UMA quadra.
+ *
+ * Uma janela sem `court_id` vale para a arena inteira — é assim que o resto do
+ * sistema (status de slot, calendário, conflito de reserva) já lê.
+ */
+export function schedulesForCourt(schedules = [], courtId) {
+  return (schedules || []).filter((s) => s && (!s.court_id || s.court_id === courtId));
+}
+
+/**
+ * Uma quadra sem janela ATIVA é invisível: não aparece no calendário, não
+ * aceita reserva, não entra em dia de jogo. E, até aqui, nada dizia isso ao
+ * dono da arena — ele cadastrava a quadra, ela sumia da página pública e a
+ * única forma de descobrir era alguém reclamar.
+ *
+ * @returns {{ bookable: boolean, summary: string, count: number }}
+ */
+export function courtScheduleStatus(schedules = [], courtId) {
+  const doCourt = activeSchedules(schedulesForCourt(schedules, courtId))
+    // Uma janela sem dia da semana nunca acontece — não conta como aberta.
+    .filter((s) => Array.isArray(s.weekdays) && s.weekdays.length > 0);
+  return {
+    bookable: doCourt.length > 0,
+    summary: summarizeSchedules(doCourt),
+    count: doCourt.length,
+  };
+}
+
+/**
+ * As quadras ATIVAS que ninguém consegue reservar por falta de horário.
+ *
+ * Quadra inativa fica de fora de propósito: a arena a desligou, e avisar sobre
+ * ela seria alarme falso — o tipo de aviso que ensina a ignorar os avisos.
+ */
+export function courtsWithoutSchedule(courts = [], schedules = []) {
+  return (courts || [])
+    .filter((c) => c && c.is_active !== false)
+    .filter((c) => !courtScheduleStatus(schedules, c.id).bookable);
+}

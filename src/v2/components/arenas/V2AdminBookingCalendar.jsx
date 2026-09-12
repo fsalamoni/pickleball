@@ -32,7 +32,7 @@ import { groupWaitlistBySlot } from '@/modules/arenas/domain/booking_waitlist';
 import { useAddBookingResponsibles, useRemoveBookingResponsible } from '@/modules/arenas/hooks/useSharedBookings';
 import { participantStatusLabel } from '@/modules/arenas/domain/shared_booking';
 import AthleteMultiPicker from '@/modules/athletes/components/AthleteMultiPicker';
-import { getSlotStatus, generateTimeSlots, isSlotClickable, SLOT_STATUS_COLORS, SLOT_STATUS_LABELS, SLOT_STATUS } from '@/modules/arenas/domain/slot_status';
+import { getSlotStatus, generateTimeSlots, isSlotClickable, slotEndTime, SLOT_STATUS_COLORS, SLOT_STATUS_LABELS, SLOT_STATUS } from '@/modules/arenas/domain/slot_status';
 import { weekdayOf } from '@/modules/arenas/domain/booking';
 import { BOOKING_STATUS } from '@/modules/arenas/domain/constants';
 import {
@@ -143,9 +143,11 @@ export default function V2AdminBookingCalendar({ arenaId, embedded = false }) {
     setManualForm({ client_name: '', price: '', paid: false });
   }
 
-  function slotEndTime(time) {
-    return `${String(parseInt(time.split(':')[0], 10) + 1).padStart(2, '0')}:00`;
-  }
+  // O fim de um slot é conta do domínio: `hora + 1` cego passava do
+  // fechamento numa janela que acaba na meia hora (21:30) e virava o dia
+  // numa que acaba às 23:00.
+  const fimDoSlot = (time) => slotEndTime(time, { date, schedules: filtered.schedules })
+    || `${String(parseInt(time.split(':')[0], 10) + 1).padStart(2, '0')}:00`;
 
   async function handleCreateManual() {
     if (!selectedSlot || !arena) return;
@@ -160,7 +162,7 @@ export default function V2AdminBookingCalendar({ arenaId, embedded = false }) {
           court_id: courtId,
           date,
           start: selectedSlot.time,
-          end: slotEndTime(selectedSlot.time),
+          end: fimDoSlot(selectedSlot.time),
           client_name: manualForm.client_name,
           agreed_price: manualForm.price,
           paid: manualForm.paid,
@@ -523,7 +525,7 @@ export default function V2AdminBookingCalendar({ arenaId, embedded = false }) {
                         Já está pago
                       </label>
                       <p className="text-xs text-gray-400">
-                        {date} · {selectedSlot.time}–{slotEndTime(selectedSlot.time)} · a reserva já entra como confirmada.
+                        {date} · {selectedSlot.time}–{fimDoSlot(selectedSlot.time)} · a reserva já entra como confirmada.
                       </p>
                       <V2Button size="sm" onClick={handleCreateManual} disabled={createManual.isPending || !manualForm.client_name.trim()}>
                         <CheckCircle className="h-3.5 w-3.5" />

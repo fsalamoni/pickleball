@@ -77,6 +77,7 @@
 | [`18-RANKINGS.md`](./18-RANKINGS.md) | ⭐ Quando e como ranking e rating são atualizados: gatilhos no servidor a cada resultado publicado, coalescência, a classificação de duplas e a paridade cliente × servidor dos motores. |
 | [`19-TUTORIAIS.md`](./19-TUTORIAIS.md) | ⭐ Tutoriais em tela (torneio e os três formatos de dia de jogo): onde aparecem, como se dispensa e se revê, e por que nada disso toca o banco. |
 | [`21-CENTRAL-DE-AJUDA.md`](./21-CENTRAL-DE-AJUDA.md) | ⭐ A página `/ajuda` (flag `help_center`): manual da plataforma por tipo de usuário (atleta, arena, professor), busca, links diretos e por que nada disso toca o banco. |
+| [`23-ARENA-CALENDARIO-E-RESERVA.md`](./23-ARENA-CALENDARIO-E-RESERVA.md) | ⭐ Auditoria da arena: o bug da reserva de nove horas, a quadra invisível, a matriz quadra × horário do atleta e o painel de prontidão. Registra **o que estava errado e por quê**. |
 | [`22-DIA-DE-JOGO-DA-ARENA.md`](./22-DIA-DE-JOGO-DA-ARENA.md) | ⭐ A arena cria o próprio dia de jogo, marcado no calendário (flag `arena_game_day`): quadras e horários fechados para reserva, inscrição no dia ou por quadra, limites, quem conduz — e por que **não existe coleção nova**. |
 | [`20-SEGURANCA-E-PRIVACIDADE/00-INDEX.md`](./20-SEGURANCA-E-PRIVACIDADE/00-INDEX.md) | 🔴 ⭐ **PRIORIDADE MÁXIMA** — Auditoria (31 achados, **2 críticos abertos**), LGPD, documentos legais, direito de imagem, console de suporte do admin, plano em 12 PRs. |
 | [`FUTURO/00-INDEX.md`](./FUTURO/00-INDEX.md) | 📐 **PLANEJADO, NADA NO CÓDIGO** — Gamificação, Mercado (marketplace aberto), Feed (rede social) e Moderação. |
@@ -123,6 +124,7 @@ docs/
 ├── 19-TUTORIAIS.md                   # ⭐ tutoriais em tela (torneio + dia de jogo)
 ├── 21-CENTRAL-DE-AJUDA.md            # ⭐ a página /ajuda, por tipo de usuário
 ├── 22-DIA-DE-JOGO-DA-ARENA.md        # ⭐ a arena cria dia de jogo no calendário
+├── 23-ARENA-CALENDARIO-E-RESERVA.md  # ⭐ auditoria: calendário, reserva, prontidão
 │
 ├── 20-SEGURANCA-E-PRIVACIDADE/       # 🔴 ⭐ PRIORIDADE — segurança, LGPD, legal
 │   ├── 00-INDEX.md                   # ⭐ COMECE POR AQUI (achados críticos)

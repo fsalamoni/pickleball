@@ -54,6 +54,7 @@ import {
   SLOT_STATUS_LABELS,
 } from '@/modules/arenas/domain/slot_status';
 import { aggregateDayStatus, buildMonthGrid } from '@/modules/arenas/domain/calendar_aggregate';
+import { courtsWithoutSchedule } from '@/modules/arenas/domain/court_schedule';
 import { V2Button, V2Skeleton } from '@/v2/ui/primitives';
 import V2DaySlotsDialog from './V2DaySlotsDialog';
 import { FEATURE_FLAG } from '@/core/featureFlags';
@@ -73,6 +74,16 @@ function isSameMonth(dateStr, yearMonth) {
   return dateStr.startsWith(yearMonth + '-');
 }
 
+/** A legenda possível, na ordem em que faz sentido ler. */
+const LEGENDA = [
+  { status: 'available', cor: 'bg-green-500', texto: 'Tem horário livre' },
+  { status: 'pending', cor: 'bg-amber-500', texto: 'Reservas pendentes' },
+  { status: 'confirmed', cor: 'bg-red-500', texto: 'Reservado' },
+  { status: 'completed', cor: 'bg-green-400', texto: 'Concluído' },
+  { status: 'unavailable', cor: 'bg-orange-500', texto: 'Indisponível (admin)' },
+  { status: 'closed', cor: 'bg-gray-300', texto: 'Fechado (sem horário)' },
+];
+
 function isPast(dateStr) {
   const today = new Date().toISOString().slice(0, 10);
   return dateStr < today;
@@ -82,8 +93,9 @@ export default function V2BookingCalendar({ arenaId, arena: arenaProp }) {
   const { isAuthenticated } = useAuth();
   const { data: arenaData } = useArena(arenaId);
   const arena = arenaProp || arenaData;
-  const { data: courts = [] } = useArenaCourts(arenaId);
-  const { data: schedules = [] } = useArenaCourtSchedules(arenaId);
+  const { data: courts = [], isLoading: loadingCourts } = useArenaCourts(arenaId);
+  const { data: schedules = [], isLoading: loadingSchedules } = useArenaCourtSchedules(arenaId);
+  const loadingEstrutura = loadingCourts || loadingSchedules;
   const { data: bookings = [] } = useArenaBookings(arenaId);
   const { data: unavailabilities = [] } = useArenaUnavailabilities(arenaId);
   // Dias de jogo da arena (flag `arena_game_day`). Eles JÁ bloqueiam os slots
@@ -148,6 +160,17 @@ export default function V2BookingCalendar({ arenaId, arena: arenaProp }) {
     return map;
   }, [arenaGameDays, gameDayOn, courtId]);
 
+  /** Os status que este mês realmente tem (só dias do mês, e não os passados). */
+  const coresDoMes = useMemo(() => {
+    const set = new Set();
+    grid.forEach((date) => {
+      if (!isSameMonth(date, yearMonth) || isPast(date)) return;
+      const meta = dayStatusMap.get(date);
+      if (meta?.dayStatus) set.add(meta.dayStatus);
+    });
+    return set;
+  }, [grid, yearMonth, dayStatusMap]);
+
   function handleDayClick(date) {
     if (!isAuthenticated) {
       toast.error('Faça login para reservar.');
@@ -157,6 +180,14 @@ export default function V2BookingCalendar({ arenaId, arena: arenaProp }) {
     if (!meta || meta.isAllClosed) return; // dia fechado
     setSelectedDate(date);
   }
+
+  // Arena sem NENHUMA quadra com horário publicado: o calendário inteiro sai
+  // cinza, e um mês de cinza sem explicação parece defeito da plataforma. Dizer
+  // o que está acontecendo é mais honesto — e poupa a pessoa de navegar mês a
+  // mês procurando um dia aberto que não existe.
+  const semHorarioPublicado = !loadingEstrutura
+    && activeCourts.length > 0
+    && courtsWithoutSchedule(activeCourts, schedules).length === activeCourts.length;
 
   if (!arena) return <V2Skeleton lines={4} />;
 
@@ -189,28 +220,15 @@ export default function V2BookingCalendar({ arenaId, arena: arenaProp }) {
         )}
       </div>
 
-      {/* Legenda */}
+      {/* Legenda: só as cores que ESTE mês tem. Uma legenda que descreve
+          estados inexistentes ensina a pessoa a não olhar para ela. */}
       <div className="flex flex-wrap gap-2 text-xs">
-        <div className="flex items-center gap-1">
-          <span className="h-3 w-3 rounded-full bg-green-500" />
-          <span className="text-gray-600">Tem horário livre</span>
-        </div>
-        <div className="flex items-center gap-1">
-          <span className="h-3 w-3 rounded-full bg-amber-500" />
-          <span className="text-gray-600">Reservas pendentes</span>
-        </div>
-        <div className="flex items-center gap-1">
-          <span className="h-3 w-3 rounded-full bg-red-500" />
-          <span className="text-gray-600">Reservado</span>
-        </div>
-        <div className="flex items-center gap-1">
-          <span className="h-3 w-3 rounded-full bg-orange-500" />
-          <span className="text-gray-600">Indisponível (admin)</span>
-        </div>
-        <div className="flex items-center gap-1">
-          <span className="h-3 w-3 rounded-full bg-gray-300" />
-          <span className="text-gray-600">Fechado (sem horário)</span>
-        </div>
+        {LEGENDA.filter(({ status }) => coresDoMes.has(status)).map(({ status, cor, texto }) => (
+          <div key={status} className="flex items-center gap-1">
+            <span className={cn('h-3 w-3 rounded-full', cor)} />
+            <span className="text-gray-600">{texto}</span>
+          </div>
+        ))}
         {gameDayOn && arenaGameDays.length > 0 && (
           <div className="flex items-center gap-1">
             <span className="h-3 w-3 rounded-full bg-acid" />
@@ -218,6 +236,22 @@ export default function V2BookingCalendar({ arenaId, arena: arenaProp }) {
           </div>
         )}
       </div>
+
+      {activeCourts.length === 0 && !loadingEstrutura && (
+        <div className="rounded-2xl border border-gray-200 bg-paper p-4 text-sm text-gray-600">
+          <p className="font-bold text-ink">Esta arena ainda não cadastrou quadras.</p>
+          <p className="mt-0.5 text-xs">Assim que ela cadastrar, os horários aparecem aqui para reserva.</p>
+        </div>
+      )}
+      {semHorarioPublicado && (
+        <div className="rounded-2xl border border-amber-200 bg-amber-50 p-4 text-sm text-amber-800">
+          <p className="font-bold">Esta arena ainda não publicou os horários de funcionamento.</p>
+          <p className="mt-0.5 text-xs">
+            Enquanto isso, nenhum dia fica disponível para reserva. Fale com a arena pelo contato
+            abaixo, ou volte depois.
+          </p>
+        </div>
+      )}
 
       {/* Grade do mês */}
       <div className="overflow-hidden rounded-3xl border border-gray-100 bg-paper">

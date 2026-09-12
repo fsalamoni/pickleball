@@ -15,6 +15,9 @@ import {
   sortSchedules,
   groupSchedulesByWeekday,
   getSchedulesForWeekday,
+  schedulesForCourt,
+  courtScheduleStatus,
+  courtsWithoutSchedule,
   activeSchedules,
   summarizeSchedules,
   SCHEDULE,
@@ -258,5 +261,73 @@ describe('SCHEDULE constants', () => {
   it('WEEKDAY_LABELS_PT e WEEKDAY_SHORT_PT são pt-BR', () => {
     expect(SCHEDULE.WEEKDAY_LABELS_PT[0]).toBe('Domingo');
     expect(SCHEDULE.WEEKDAY_SHORT_PT[1]).toBe('Seg');
+  });
+});
+
+/* =================================== quadra sem horário é quadra invisível === */
+
+describe('courtScheduleStatus e courtsWithoutSchedule', () => {
+  const janela = (over = {}) => ({
+    id: 's1', court_id: 'c1', weekdays: [1, 2, 3, 4, 5],
+    start_time: '18:00', end_time: '22:00', is_active: true, ...over,
+  });
+
+  it('quadra com janela própria é reservável e se descreve', () => {
+    const r = courtScheduleStatus([janela()], 'c1');
+    expect(r.bookable).toBe(true);
+    expect(r.count).toBe(1);
+    expect(r.summary).toContain('18:00');
+  });
+
+  it('⭐ janela SEM court_id vale para toda a arena', () => {
+    const geral = [janela({ id: 'g', court_id: null })];
+    expect(courtScheduleStatus(geral, 'c1').bookable).toBe(true);
+    expect(courtScheduleStatus(geral, 'c9').bookable).toBe(true);
+  });
+
+  it('janela de OUTRA quadra não conta', () => {
+    expect(courtScheduleStatus([janela({ court_id: 'c2' })], 'c1').bookable).toBe(false);
+  });
+
+  it('janela desativada não conta', () => {
+    expect(courtScheduleStatus([janela({ is_active: false })], 'c1').bookable).toBe(false);
+  });
+
+  it('⭐ janela sem dia da semana não conta (nunca acontece)', () => {
+    expect(courtScheduleStatus([janela({ weekdays: [] })], 'c1').bookable).toBe(false);
+    expect(courtScheduleStatus([janela({ weekdays: null })], 'c1').bookable).toBe(false);
+  });
+
+  it('sem janela nenhuma, não é reservável e o resumo é vazio', () => {
+    const r = courtScheduleStatus([], 'c1');
+    expect(r.bookable).toBe(false);
+    expect(r.summary).toBe('');
+    expect(r.count).toBe(0);
+  });
+
+  it('⭐ aponta as quadras ATIVAS que ninguém consegue reservar', () => {
+    const courts = [
+      { id: 'c1', name: 'Quadra 1' },
+      { id: 'c2', name: 'Quadra 2' },
+      { id: 'c3', name: 'Quadra 3', is_active: false },
+    ];
+    const orfas = courtsWithoutSchedule(courts, [janela({ court_id: 'c1' })]);
+    expect(orfas.map((c) => c.id)).toEqual(['c2']);
+  });
+
+  it('quadra INATIVA nunca vira alarme (a arena a desligou de propósito)', () => {
+    const courts = [{ id: 'c9', name: 'Reforma', is_active: false }];
+    expect(courtsWithoutSchedule(courts, [])).toEqual([]);
+  });
+
+  it('com janela geral, ninguém fica órfã', () => {
+    const courts = [{ id: 'c1' }, { id: 'c2' }];
+    expect(courtsWithoutSchedule(courts, [janela({ court_id: null })])).toEqual([]);
+  });
+
+  it('aguenta entradas nulas', () => {
+    expect(courtsWithoutSchedule(null, null)).toEqual([]);
+    expect(courtScheduleStatus(null, null).bookable).toBe(false);
+    expect(schedulesForCourt(null, 'c1')).toEqual([]);
   });
 });

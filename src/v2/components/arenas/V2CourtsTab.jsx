@@ -18,13 +18,15 @@
  * tipicamente 2-6 quadras — botões são mais acessíveis e mais leves.
  */
 
-import React, { useState } from 'react';
+import React, { useMemo, useState } from 'react';
 import { toast } from 'sonner';
-import { ChevronDown, ChevronUp, Clock, Pencil, Plus, Trash2 } from 'lucide-react';
+import { AlertTriangle, ChevronDown, ChevronUp, Clock, Pencil, Plus, Trash2 } from 'lucide-react';
 import { cn } from '@/core/lib/utils';
 import { normalizeCourtInput, COURT, nextSortOrder, sortCourts } from '@/modules/arenas/domain/court';
+import { courtScheduleStatus, courtsWithoutSchedule } from '@/modules/arenas/domain/court_schedule';
 import {
-  useArenaCourts, useCreateCourt, useUpdateCourt, useDeleteCourt, useReorderCourts, useNormalizeCourtOrder,
+  useArenaCourts, useArenaCourtSchedules, useCreateCourt, useUpdateCourt, useDeleteCourt,
+  useReorderCourts, useNormalizeCourtOrder,
 } from '@/modules/arenas/hooks/useArenas';
 import { ConfirmDialog } from '@/components/ui/confirm-dialog';
 import V2CourtSchedulesModal from '@/v2/components/arenas/V2CourtSchedulesModal';
@@ -109,6 +111,13 @@ function CourtForm({ initial = {}, onCancel, onSubmit, busy }) {
 
 export default function V2CourtsTab({ arena }) {
   const { data: courts = [], isLoading } = useArenaCourts(arena.id);
+  // Sem janela de horário, a quadra é INVISÍVEL: não entra no calendário, não
+  // aceita reserva, não entra em dia de jogo. Até aqui nada dizia isso ao dono
+  // — ele cadastrava a quadra, ela sumia da página pública, e a única forma de
+  // descobrir era alguém reclamar.
+  const { data: schedules = [] } = useArenaCourtSchedules(arena.id);
+  const semHorario = useMemo(() => courtsWithoutSchedule(courts, schedules), [courts, schedules]);
+  const horarioDe = (court) => courtScheduleStatus(schedules, court.id);
   const createCourt = useCreateCourt(arena.id);
   const updateCourt = useUpdateCourt(arena.id);
   const deleteCourt = useDeleteCourt(arena.id);
@@ -214,6 +223,25 @@ export default function V2CourtsTab({ arena }) {
         />
       )}
 
+      {semHorario.length > 0 && (
+        <div className="flex items-start gap-2.5 rounded-2xl border border-amber-200 bg-amber-50 p-3.5">
+          <AlertTriangle aria-hidden="true" className="mt-0.5 h-4 w-4 shrink-0 text-amber-600" />
+          <div className="text-sm text-amber-800">
+            <p className="font-bold">
+              {semHorario.length === 1
+                ? '1 quadra sem horário de funcionamento'
+                : `${semHorario.length} quadras sem horário de funcionamento`}
+            </p>
+            <p className="mt-0.5 text-xs leading-5">
+              {semHorario.map((c) => c.name).join(', ')} — sem horário definido,
+              {' '}<strong>ninguém consegue reservar</strong> e a quadra não aparece no calendário
+              da arena nem no dia de jogo. Abra o relógio (🕐) na linha da quadra e defina os dias
+              e horários em que ela funciona.
+            </p>
+          </div>
+        </div>
+      )}
+
       {isLoading ? (
         <p className="text-sm text-gray-500">Carregando quadras…</p>
       ) : courts.length === 0 && !adding ? (
@@ -263,6 +291,22 @@ export default function V2CourtsTab({ arena }) {
                     {c.surface_type && <span>· {COURT.SURFACE_LABELS[c.surface_type]}</span>}
                     <span>· ordem {c.sort_order ?? 0}</span>
                     {c.notes && <span className="truncate italic">· {c.notes}</span>}
+                  </div>
+                  {/* O horário é o que faz a quadra existir para o atleta.
+                      Mostrado na própria linha, não escondido atrás do modal. */}
+                  <div className="mt-1 flex flex-wrap items-center gap-1.5 text-xs">
+                    <Clock aria-hidden="true" className="h-3 w-3 shrink-0 text-gray-400" />
+                    {horarioDe(c).bookable ? (
+                      <span className="text-gray-600">{horarioDe(c).summary}</span>
+                    ) : (
+                      <button
+                        type="button"
+                        onClick={() => setSchedulesCourt(c)}
+                        className="font-bold text-amber-700 underline underline-offset-2 hover:text-amber-800"
+                      >
+                        {inactive ? 'Sem horário definido' : 'Sem horário — defina para aceitar reservas'}
+                      </button>
+                    )}
                   </div>
                 </div>
                 <div className="flex items-center gap-1">

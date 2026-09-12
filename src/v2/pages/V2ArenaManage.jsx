@@ -3,7 +3,7 @@ import { Link, Navigate, useLocation, useParams } from 'react-router-dom';
 import { toast } from 'sonner';
 import { collection, getDocs, query, where } from 'firebase/firestore';
 import {
-  ArrowLeft, Building2, Settings, Trash2, UserPlus, Users,
+  AlertTriangle, ArrowLeft, Building2, Settings, Trash2, UserPlus, Users,
   BarChart3, CalendarClock, CalendarDays, CalendarRange, Wallet, ClipboardList,
   Package, LayoutGrid, DollarSign, Image, Info, Star, GraduationCap,
 } from 'lucide-react';
@@ -33,7 +33,9 @@ import { ARENA_MANAGER_ROLE, BOOKING_STATUS } from '@/modules/arenas/domain/cons
 import {
   useArena, useMyManagedArenas, useUpdateArena, useSetArenaPhotos, useDeleteArena,
   useArenaManagers, useAddManager, useRemoveManager,
+  useArenaCourts, useArenaCourtSchedules,
 } from '@/modules/arenas/hooks/useArenas';
+import { courtsWithoutSchedule } from '@/modules/arenas/domain/court_schedule';
 import { useArenaBookings } from '@/modules/arenas/hooks/useBookings';
 import { buildArenaClients, arenaCrmSummary } from '@/modules/arenas/domain/arena_crm';
 import { formatPrice } from '@/modules/arenas/domain/pricing';
@@ -106,6 +108,66 @@ function buildArenaSections({ coachResidentOn, linkedClubsOn, crmOn, opsKpisOn }
       ],
     },
   ];
+}
+
+/**
+ * O que falta para a arena receber reserva.
+ *
+ * Só aparece quando há o que resolver — um painel verde de "está tudo certo"
+ * ocuparia espaço permanente para dizer nada. Cada item leva ao lugar de
+ * resolver, porque avisar sem oferecer o caminho é metade do favor.
+ */
+function ArenaProntidao({ arena, onIrParaQuadras }) {
+  const { data: courts = [] } = useArenaCourts(arena.id);
+  const { data: schedules = [] } = useArenaCourtSchedules(arena.id);
+
+  const ativas = courts.filter((c) => c.is_active !== false);
+  const semHorario = courtsWithoutSchedule(courts, schedules);
+
+  const pendencias = [];
+  if (ativas.length === 0) {
+    pendencias.push({
+      texto: courts.length === 0
+        ? 'Nenhuma quadra cadastrada. Sem quadra, a arena não aparece para reserva.'
+        : 'Todas as quadras estão inativas. Sem quadra ativa, ninguém consegue reservar.',
+      acao: 'Cadastrar quadra',
+    });
+  } else if (semHorario.length > 0) {
+    pendencias.push({
+      texto: `${semHorario.map((c) => c.name).join(', ')} sem horário de funcionamento — ninguém consegue reservar ${semHorario.length === 1 ? 'essa quadra' : 'essas quadras'}.`,
+      acao: 'Definir horários',
+    });
+  }
+
+  if (pendencias.length === 0) return null;
+
+  return (
+    <div className="mt-5 rounded-3xl border border-amber-200 bg-amber-50 p-4">
+      <div className="flex items-start gap-3">
+        <AlertTriangle aria-hidden="true" className="mt-0.5 h-5 w-5 shrink-0 text-amber-600" />
+        <div className="min-w-0">
+          <h2 className="font-display text-base font-bold text-amber-900">
+            Falta isto para a arena receber reservas
+          </h2>
+          <ul className="mt-1.5 space-y-2">
+            {pendencias.map((p) => (
+              <li key={p.acao} className="text-sm leading-6 text-amber-800">
+                {p.texto}
+                {' '}
+                <button
+                  type="button"
+                  onClick={onIrParaQuadras}
+                  className="font-bold underline underline-offset-2 hover:text-amber-900"
+                >
+                  {p.acao}
+                </button>
+              </li>
+            ))}
+          </ul>
+        </div>
+      </div>
+    </div>
+  );
 }
 
 export default function V2ArenaManage() {
@@ -242,6 +304,12 @@ function V2ArenaManageContent({ arenaId, user, isPlatformAdmin, arena, managed, 
           )}
         </div>
       </div>
+
+      {/* Prontidão da arena: o que impede a arena de RECEBER RESERVA hoje.
+          Fica no topo, antes das abas, porque o dono não vai procurar por um
+          problema que ele não sabe que tem — ele só descobriria quando alguém
+          reclamasse de não conseguir reservar. */}
+      <ArenaProntidao arena={arena} onIrParaQuadras={() => selectTab('estrutura', 'quadras')} />
 
       <div className="mt-6 space-y-3">
         {/* Nível 1: seções principais (temas) */}

@@ -27,6 +27,10 @@ import {
 } from '@/modules/arenas/domain/calendar';
 import { useArenaBookings } from '@/modules/arenas/hooks/useBookings';
 import { useArenaCourts } from '@/modules/arenas/hooks/useArenas';
+import { FEATURE_FLAG } from '@/core/featureFlags';
+import { useFeatureFlag } from '@/core/lib/FeatureFlagsContext';
+import { useArenaGameDays } from '@/modules/games/hooks/useArenaGameDays';
+import { arenaGameDayTimeRange } from '@/modules/games/domain/arenaGameDay';
 import { V2Badge, V2Button, V2Surface } from '@/v2/ui/primitives';
 import { cn } from '@/core/lib/utils';
 
@@ -69,6 +73,23 @@ export default function V2ArenaCalendar({ arena }) {
 
   const { data: bookings = [], isLoading } = useArenaBookings(arena.id);
   const { data: courts = [] } = useArenaCourts(arena.id);
+  // O dia de jogo da própria arena OCUPA quadra e fecha horário. Ele aparecia
+  // no calendário do atleta e não aqui — a arena via um mês de reservas sem o
+  // que ela mesma marcou, e um dia "vazio" que na verdade estava tomado.
+  const gameDayOn = useFeatureFlag(FEATURE_FLAG.ARENA_GAME_DAY);
+  const { data: arenaGameDays = [] } = useArenaGameDays(gameDayOn ? arena.id : null);
+
+  const gameDaysByDate = useMemo(() => {
+    const mapa = new Map();
+    if (!gameDayOn) return mapa;
+    arenaGameDays.forEach((g) => {
+      if (!g.date) return;
+      const slots = Array.isArray(g.arena_slots) ? g.arena_slots : [];
+      if (courtFilter && !slots.some((x) => x.court_id === courtFilter)) return;
+      mapa.set(g.date, [...(mapa.get(g.date) || []), g]);
+    });
+    return mapa;
+  }, [arenaGameDays, gameDayOn, courtFilter]);
 
   const byDate = useMemo(() => {
     return groupBookingsByDate(bookings, { courtId: courtFilter || undefined });
@@ -106,6 +127,13 @@ export default function V2ArenaCalendar({ arena }) {
   }
   function goToday() { setCursor(nowYearMonth()); }
 
+  // Quantos dias de jogo da arena caem no mês à vista — entra no resumo do
+  // topo junto das reservas, porque ocupa quadra do mesmo jeito.
+  const gameDaysNoMes = useMemo(() => {
+    const prefixo = `${cursor.year}-${String(cursor.month).padStart(2, '0')}`;
+    return [...gameDaysByDate.keys()].filter((d) => d.startsWith(prefixo)).length;
+  }, [gameDaysByDate, cursor]);
+
   const dayBookings = dayModal ? (byDate[dayModal] || []) : [];
   const rangeInfo = useMemo(() => monthRangeISO(cursor.year, cursor.month), [cursor]);
 
@@ -128,6 +156,11 @@ export default function V2ArenaCalendar({ arena }) {
           <V2Badge tone="blue">{stats.total} reservas</V2Badge>
           <V2Badge tone="green">{stats.confirmed} confirmadas</V2Badge>
           <V2Badge tone="amber">{stats.requested} pendentes</V2Badge>
+          {gameDaysNoMes > 0 && (
+            <V2Badge tone="acid">
+              {gameDaysNoMes} {gameDaysNoMes === 1 ? 'dia de jogo' : 'dias de jogo'}
+            </V2Badge>
+          )}
           {courts.length > 0 && (
             <select
               value={courtFilter}
@@ -156,8 +189,10 @@ export default function V2ArenaCalendar({ arena }) {
             <div className="mt-1 grid grid-cols-7 gap-1">
               {grid.flat().map((cell) => {
                 const slots = byDate[cell.date] || [];
+                const diasDeJogo = gameDaysByDate.get(cell.date) || [];
                 const visible = slots.slice(0, 2);
                 const extra = slots.length - visible.length;
+                const temConteudo = slots.length > 0 || diasDeJogo.length > 0;
                 return (
                   <button
                     key={cell.date}
@@ -168,8 +203,9 @@ export default function V2ArenaCalendar({ arena }) {
                       cell.inMonth ? 'border-gray-100 bg-white' : 'border-transparent bg-gray-50/50',
                       cell.isToday && 'ring-2 ring-acid',
                       slots.length > 0 && 'hover:border-ink hover:bg-gray-50',
+                      diasDeJogo.length > 0 && 'border-acid/50 bg-acid/5',
                     )}
-                    disabled={slots.length === 0}
+                    disabled={!temConteudo}
                   >
                     <div className={cn(
                       'text-[10px] font-bold',
@@ -179,6 +215,18 @@ export default function V2ArenaCalendar({ arena }) {
                       {cell.day}
                     </div>
                     <div className="mt-1 space-y-0.5">
+                      {diasDeJogo.map((g) => {
+                        const faixa = arenaGameDayTimeRange(g);
+                        return (
+                          <div
+                            key={g.id}
+                            className="truncate rounded bg-acid px-1 py-0.5 text-[9px] font-bold text-ink"
+                            title={`Dia de jogo: ${g.title}${faixa ? ` (${faixa.start}–${faixa.end})` : ''}`}
+                          >
+                            {faixa ? faixa.start : 'Dia de jogo'}
+                          </div>
+                        );
+                      })}
                       {visible.map((s, i) => (
                         <div
                           key={`${s.booking_id}_${s.start}_${i}`}

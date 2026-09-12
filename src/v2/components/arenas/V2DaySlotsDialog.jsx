@@ -21,7 +21,7 @@
  * Ambos bloqueiam o slot para novos pedidos.
  */
 
-import React, { useMemo, useState } from 'react';
+import React, { useEffect, useMemo, useState } from 'react';
 import { toast } from 'sonner';
 import {
   Calendar, X, ShoppingCart, Loader2, Users, Ban, Check, Clock, AlertCircle, MapPin,
@@ -43,6 +43,7 @@ import {
   getSlotStatus,
   generateTimeSlots,
   isSlotSelectable,
+  slotEndTime,
   SLOT_STATUS_COLORS,
   SLOT_STATUS_LABELS,
   SLOT_STATUS,
@@ -53,6 +54,7 @@ import { formatPrice } from '@/modules/arenas/domain/pricing';
 import { useBookingPrice } from '@/modules/arenas/hooks/useBookingPrice';
 import { V2Button, V2Badge, V2EmptyState, V2Skeleton } from '@/v2/ui/primitives';
 import BookingRequestDialog from '@/modules/arenas/components/BookingRequestDialog';
+import CourtTimePicker from './CourtTimePicker';
 import { arenaGameDayTimeRange } from '@/modules/games/domain/arenaGameDay';
 
 const STEP = 60;
@@ -118,6 +120,10 @@ export default function V2DaySlotsDialog({
 
   const [courtId, setCourtId] = useState(initialCourtId || '');
   const [selectedSlots, setSelectedSlots] = useState([]);
+  // Duas leituras do mesmo dia: 'horario' (lista agregada, a de sempre) e
+  // 'quadra' (matriz quadra × horário). A matriz só faz sentido com mais de
+  // uma quadra E sem filtro de quadra — com filtro ela vira uma coluna só.
+  const [visao, setVisao] = useState('horario');
   const [bookingOpen, setBookingOpen] = useState(false);
   // Cancelamento das próprias reservas (seleção múltipla) + convite.
   const [selectedCancel, setSelectedCancel] = useState([]); // booking ids
@@ -181,7 +187,7 @@ export default function V2DaySlotsDialog({
     const activeCourtList = courts.filter((c) => c.is_active !== false);
 
     return times.map((time) => {
-      const slot = { date, start: time, end: `${String(parseInt(time.split(':')[0]) + 1).padStart(2, '0')}:00` };
+      const slot = { date, start: time, end: slotEndTime(time, { date, schedules: filteredSchedules }) };
       const result = getSlotStatus({
         date, time,
         courtId: courtId || null,
@@ -226,11 +232,57 @@ export default function V2DaySlotsDialog({
         }
       }
 
-      return { time, status, booking, unavailability, freeCourts, totalCourts, schedule: result.schedule };
+      // `end` viaja junto: é ele que a seleção usa, e quem o calculou aqui
+      // tinha as janelas da quadra em mãos.
+      return { time, end: slot.end, status, booking, unavailability, freeCourts, totalCourts, schedule: result.schedule };
     });
-  }, [loadingSchedules, loadingBookings, loadingUnav, weekday, date, courtId, schedules, activeBookingsOfDay, unavailabilitiesOfDay]);
+    // `courts` entra nas dependências: a contagem "N de M quadras livres" sai
+    // dela, e sem isso o número congelava no que estivesse carregado no
+    // primeiro render.
+  }, [loadingSchedules, loadingBookings, loadingUnav, weekday, date, courtId, schedules, courts, activeBookingsOfDay, unavailabilitiesOfDay]);
 
-  const price = useBookingPrice(arena, courtId || null, selectedSlots);
+  const quadrasAtivas = useMemo(() => courts.filter((c) => c.is_active !== false), [courts]);
+  const podeVerPorQuadra = !courtId && quadrasAtivas.length > 1;
+  // Filtrou uma quadra? A matriz perde o sentido — volta para a lista.
+  useEffect(() => { if (!podeVerPorQuadra) setVisao('horario'); }, [podeVerPorQuadra]);
+
+  /**
+   * Escolher na matriz é escolher QUADRA e HORÁRIO de uma vez.
+   *
+   * Uma reserva vale para uma quadra só: pedir 19h na quadra 1 e 20h na quadra
+   * 2 produziria um pedido que a arena não teria como atender inteiro. Então
+   * escolher noutra quadra recomeça a seleção — dito em voz alta, nunca em
+   * silêncio.
+   */
+  function pickCourtSlot(cid, time, end) {
+    setSelectedSlots((prev) => {
+      const deOutraQuadra = prev.length > 0 && prev[0].courtId !== cid;
+      if (deOutraQuadra) {
+        const anterior = quadrasAtivas.find((c) => c.id === prev[0].courtId)?.name || 'outra quadra';
+        toast.info(`Seleção reiniciada: você tinha escolhido a ${anterior}.`);
+        return [{ date, start: time, end: end || slotEndTime(time, { date }), courtId: cid }];
+      }
+      const existe = prev.some((x) => x.start === time && x.courtId === cid);
+      if (existe) return prev.filter((x) => !(x.start === time && x.courtId === cid));
+      return [...prev, { date, start: time, end: end || slotEndTime(time, { date }), courtId: cid }]
+        .sort((a, b) => a.start.localeCompare(b.start));
+    });
+  }
+
+  /** Só os status que existem na tela — a legenda não inventa cores. */
+  const statusPresentes = useMemo(() => {
+    const ordem = [
+      SLOT_STATUS.AVAILABLE, SLOT_STATUS.PENDING, SLOT_STATUS.CONFIRMED,
+      SLOT_STATUS.COMPLETED, SLOT_STATUS.UNAVAILABLE, SLOT_STATUS.CLOSED,
+    ];
+    const presentes = new Set(slotsWithStatus.map((x) => x.status));
+    return ordem.filter((k) => presentes.has(k));
+  }, [slotsWithStatus]);
+
+  // A quadra escolhida na matriz manda no preço — senão o total sairia da
+  // tabela "qualquer quadra" enquanto a pessoa vê a quadra 2 marcada.
+  const quadraDoPreco = courtId || selectedSlots[0]?.courtId || null;
+  const price = useBookingPrice(arena, quadraDoPreco, selectedSlots);
 
   // Resumo do dia
   const summary = useMemo(() => {
@@ -251,9 +303,10 @@ export default function V2DaySlotsDialog({
     setSelectedSlots((prev) => {
       const exists = prev.find((s) => s.start === time);
       if (exists) return prev.filter((s) => s.start !== time);
-      const idx = slotsWithStatus.findIndex((s) => s.time === time);
-      const next = slotsWithStatus[idx + 1];
-      const end = next?.time || `${String(parseInt(time.split(':')[0]) + 1).padStart(2, '0')}:00`;
+      // O fim NÃO é "o próximo horário da grade": numa arena com horário
+      // partido (manhã e noite) isso virava uma reserva de nove horas. Quem
+      // sabe onde a janela fecha é o domínio.
+      const end = slot.end || slotEndTime(time, { date });
       return [...prev, { date, start: time, end, courtId: courtId || null }].sort((a, b) => a.start.localeCompare(b.start));
     });
   }
@@ -415,6 +468,150 @@ export default function V2DaySlotsDialog({
                   </div>
                 </div>
 
+                {/* Grade de slots — PRIMEIRA coisa depois do resumo. Quem abre
+                    este diálogo veio reservar; a lista de reservas dos outros e
+                    as indisponibilidades vêm depois, como contexto. */}
+                <div className="p-4">
+                  {noSchedule ? (
+                    <V2EmptyState
+                      icon={Calendar}
+                      title="Arena fechada neste dia"
+                      description={
+                        courtId
+                          ? 'Esta arena não definiu horários abertos para esta quadra neste dia da semana.'
+                          : 'A arena não definiu horários abertos para este dia da semana. Tente outro dia ou outra quadra.'
+                      }
+                    />
+                  ) : (
+                    <>
+                      {/* Nada livre? Isso é um AVISO acima da grade, não uma
+                          parede no lugar dela: ver a forma do dia (o que está
+                          reservado, o que está bloqueado) é meio caminho para
+                          escolher outro dia com consciência. */}
+                      {!hasAvailable && (
+                        <div className="mb-3 rounded-2xl border border-amber-200 bg-amber-50 p-3 text-sm text-amber-800">
+                          <p className="font-bold">Sem horários livres neste dia.</p>
+                          <p className="mt-0.5 text-xs">
+                            Está tudo reservado, em negociação ou bloqueado pela arena. Veja abaixo
+                            como o dia está, e tente outro dia — ou outra quadra no filtro acima.
+                          </p>
+                        </div>
+                      )}
+
+                      {/* Duas leituras do mesmo dia. "Por horário" responde
+                          QUANDO; "Por quadra" responde ONDE — e essa segunda
+                          pergunta não tinha resposta antes: o atleta via "2/3
+                          quadras livres" sem saber quais. */}
+                      {podeVerPorQuadra && (
+                        <div className="mb-3 inline-flex rounded-full border border-gray-200 bg-paper p-1">
+                          {[['horario', 'Por horário'], ['quadra', 'Por quadra']].map(([v, label]) => (
+                            <button
+                              key={v}
+                              type="button"
+                              onClick={() => setVisao(v)}
+                              aria-pressed={visao === v}
+                              className={cn(
+                                'rounded-full px-3.5 py-1.5 text-xs font-bold transition-colors',
+                                visao === v ? 'bg-ink text-white' : 'text-gray-500 hover:text-ink',
+                              )}
+                            >
+                              {label}
+                            </button>
+                          ))}
+                        </div>
+                      )}
+
+                      {/* Legenda: SÓ o que está na tela. Mostrar "Concluído" e
+                          "Fechado" num dia que não tem nem um nem outro é
+                          ruído que ensina a ignorar a legenda. */}
+                      <div className="mb-3 flex flex-wrap gap-2 text-[10px]">
+                        {statusPresentes.map((k) => {
+                          const c = SLOT_STATUS_COLORS[k];
+                          return (
+                            <div key={k} className="flex items-center gap-1">
+                              <span className={cn('h-2.5 w-2.5 rounded-full', c.dot)} />
+                              <span className="text-gray-600">{SLOT_STATUS_LABELS[k]}</span>
+                            </div>
+                          );
+                        })}
+                      </div>
+                      {visao === 'quadra' ? (
+                        <CourtTimePicker
+                          date={date}
+                          courts={quadrasAtivas}
+                          schedules={schedules}
+                          bookings={activeBookingsOfDay.map((b) => ({ ...b, slots: b._slots }))}
+                          unavailabilities={unavailabilitiesOfDay}
+                          selectedSlots={selectedSlots}
+                          onPick={pickCourtSlot}
+                        />
+                      ) : (
+                      <div className="grid grid-cols-2 gap-2 sm:grid-cols-3 md:grid-cols-4">
+                        {slotsWithStatus.map(({ time, status, booking, unavailability, freeCourts, totalCourts }) => {
+                          const c = SLOT_STATUS_COLORS[status];
+                          const isSelected = selectedSlots.some((s) => s.start === time);
+                          const canSelect = isSlotSelectable(status);
+                          const showCourts = freeCourts != null && status === SLOT_STATUS.AVAILABLE;
+                          const tooltip = (() => {
+                            if (status === SLOT_STATUS.UNAVAILABLE) {
+                              const reason = unavailability?.notes || 'Indisponível';
+                              return `${time} · Indisponível: ${reason}`;
+                            }
+                            if (status === SLOT_STATUS.PENDING) {
+                              return `${time} · Solicitação: ${booking?.athlete_name || 'outro atleta'}`;
+                            }
+                            if (status === SLOT_STATUS.CONFIRMED) {
+                              return `${time} · Reservado: ${booking?.athlete_name || 'outro atleta'}`;
+                            }
+                            if (status === SLOT_STATUS.COMPLETED) {
+                              return `${time} · Concluído`;
+                            }
+                            if (status === SLOT_STATUS.CLOSED) {
+                              return `${time} · Fechado (sem horário)`;
+                            }
+                            if (showCourts) {
+                              return `${time} · ${freeCourts} de ${totalCourts} quadra(s) livre(s)`;
+                            }
+                            return `${time} · ${SLOT_STATUS_LABELS[status]}`;
+                          })();
+                          return (
+                            <button
+                              key={time}
+                              type="button"
+                              disabled={!canSelect}
+                              onClick={() => toggleSlot(time)}
+                              title={tooltip}
+                              className={cn(
+                                'flex flex-col items-center justify-center rounded-2xl border-2 p-3 transition-all',
+                                c.bg, c.border,
+                                isSelected && 'ring-2 ring-green-500 ring-offset-1',
+                                canSelect ? 'hover:scale-[1.03] cursor-pointer' : 'cursor-not-allowed opacity-70',
+                              )}
+                            >
+                              <div className={cn('font-display text-base font-bold', c.text)}>{time}</div>
+                              <div className={cn('text-[10px] uppercase tracking-widest', c.text)}>
+                                {SLOT_STATUS_LABELS[status]}
+                              </div>
+                              {(status === SLOT_STATUS.PENDING || status === SLOT_STATUS.CONFIRMED) && booking?.athlete_name && (
+                                <div className="mt-1 truncate text-[9px] italic text-gray-600">
+                                  {booking.athlete_name}
+                                </div>
+                              )}
+                              {showCourts && !isSelected && (
+                                <div className="mt-1 text-[9px] font-semibold text-green-700">
+                                  {freeCourts}/{totalCourts} quadra{totalCourts === 1 ? '' : 's'}
+                                </div>
+                              )}
+                              {isSelected && <div className="mt-1 flex items-center gap-1 text-[10px] font-bold text-green-700"><Check className="h-3 w-3" /> Selecionado</div>}
+                            </button>
+                          );
+                        })}
+                      </div>
+                      )}
+                    </>
+                  )}
+                </div>
+
                 {/* Reservas existentes */}
                 {activeBookingsOfDay.length > 0 && (
                   <div className="border-b border-gray-100 p-4">
@@ -572,102 +769,6 @@ export default function V2DaySlotsDialog({
                     </ul>
                   </div>
                 )}
-
-                {/* Grade de slots */}
-                <div className="p-4">
-                  {noSchedule ? (
-                    <V2EmptyState
-                      icon={Calendar}
-                      title="Arena fechada neste dia"
-                      description={
-                        courtId
-                          ? 'Esta arena não definiu horários abertos para esta quadra neste dia da semana.'
-                          : 'A arena não definiu horários abertos para este dia da semana. Tente outro dia ou outra quadra.'
-                      }
-                    />
-                  ) : !hasAvailable ? (
-                    <div className="rounded-2xl border border-amber-200 bg-amber-50 p-4 text-sm text-amber-800">
-                      <p className="font-bold">Sem horários disponíveis neste dia.</p>
-                      <p className="mt-1 text-xs">Todos os horários estão reservados, com solicitação em andamento ou marcados como indisponíveis pelo admin. Tente outro dia ou outra quadra.</p>
-                    </div>
-                  ) : (
-                    <>
-                      {/* Legenda compacta */}
-                      <div className="mb-3 flex flex-wrap gap-2 text-[10px]">
-                        {Object.entries(SLOT_STATUS_LABELS).map(([k, v]) => {
-                          const c = SLOT_STATUS_COLORS[k];
-                          return (
-                            <div key={k} className="flex items-center gap-1">
-                              <span className={cn('h-2.5 w-2.5 rounded-full', c.dot)} />
-                              <span className="text-gray-600">{v}</span>
-                            </div>
-                          );
-                        })}
-                      </div>
-                      <div className="grid grid-cols-2 gap-2 sm:grid-cols-3 md:grid-cols-4">
-                        {slotsWithStatus.map(({ time, status, booking, unavailability, freeCourts, totalCourts }) => {
-                          const c = SLOT_STATUS_COLORS[status];
-                          const isSelected = selectedSlots.some((s) => s.start === time);
-                          const canSelect = isSlotSelectable(status);
-                          const showCourts = freeCourts != null && status === SLOT_STATUS.AVAILABLE;
-                          const tooltip = (() => {
-                            if (status === SLOT_STATUS.UNAVAILABLE) {
-                              const reason = unavailability?.notes || 'Indisponível';
-                              return `${time} · Indisponível: ${reason}`;
-                            }
-                            if (status === SLOT_STATUS.PENDING) {
-                              return `${time} · Solicitação: ${booking?.athlete_name || 'outro atleta'}`;
-                            }
-                            if (status === SLOT_STATUS.CONFIRMED) {
-                              return `${time} · Reservado: ${booking?.athlete_name || 'outro atleta'}`;
-                            }
-                            if (status === SLOT_STATUS.COMPLETED) {
-                              return `${time} · Concluído`;
-                            }
-                            if (status === SLOT_STATUS.CLOSED) {
-                              return `${time} · Fechado (sem horário)`;
-                            }
-                            if (showCourts) {
-                              return `${time} · ${freeCourts} de ${totalCourts} quadra(s) livre(s)`;
-                            }
-                            return `${time} · ${SLOT_STATUS_LABELS[status]}`;
-                          })();
-                          return (
-                            <button
-                              key={time}
-                              type="button"
-                              disabled={!canSelect}
-                              onClick={() => toggleSlot(time)}
-                              title={tooltip}
-                              className={cn(
-                                'flex flex-col items-center justify-center rounded-2xl border-2 p-3 transition-all',
-                                c.bg, c.border,
-                                isSelected && 'ring-2 ring-green-500 ring-offset-1',
-                                canSelect ? 'hover:scale-[1.03] cursor-pointer' : 'cursor-not-allowed opacity-70',
-                              )}
-                            >
-                              <div className={cn('font-display text-base font-bold', c.text)}>{time}</div>
-                              <div className={cn('text-[10px] uppercase tracking-widest', c.text)}>
-                                {SLOT_STATUS_LABELS[status]}
-                              </div>
-                              {(status === SLOT_STATUS.PENDING || status === SLOT_STATUS.CONFIRMED) && booking?.athlete_name && (
-                                <div className="mt-1 truncate text-[9px] italic text-gray-600">
-                                  {booking.athlete_name}
-                                </div>
-                              )}
-                              {showCourts && !isSelected && (
-                                <div className="mt-1 text-[9px] font-semibold text-green-700">
-                                  {freeCourts}/{totalCourts} quadra{totalCourts === 1 ? '' : 's'}
-                                </div>
-                              )}
-                              {isSelected && <div className="mt-1 flex items-center gap-1 text-[10px] font-bold text-green-700"><Check className="h-3 w-3" /> Selecionado</div>}
-                            </button>
-                          );
-                        })}
-                      </div>
-                    </>
-                  )}
-                </div>
               </>
             )}
           </div>
@@ -688,6 +789,9 @@ export default function V2DaySlotsDialog({
                   </div>
                   <div className="mt-1 text-xs text-gray-500">
                     {selectedSlots.map((s) => s.start).join(' · ')} · {price.durationMinutes}min
+                    {quadraDoPreco && (
+                      <> · <strong className="text-ink">{courts.find((c) => c.id === quadraDoPreco)?.name || 'Quadra'}</strong></>
+                    )}
                   </div>
                   <div className="mt-1 text-base font-bold text-green-700">
                     Total: {formatPrice(price.total)}
@@ -711,10 +815,13 @@ export default function V2DaySlotsDialog({
       {bookingOpen && (
         <BookingRequestDialog
           arena={arena}
-          court={courtId ? courts.find((c) => c.id === courtId) : null}
+          // A quadra vem do filtro do topo OU da célula escolhida na matriz.
+          // Sem isto, escolher "Quadra 2 às 19h" abria o pedido em "qualquer
+          // quadra" e a escolha se perdia no último passo.
+          court={quadraDoPreco ? courts.find((c) => c.id === quadraDoPreco) : null}
           preselectedSlots={selectedSlots}
-          initialMode={courtId ? 'specific' : (courts.length > 1 ? 'all' : 'any')}
-          initialCourtIds={courtId ? [courtId] : []}
+          initialMode={quadraDoPreco ? 'specific' : (courts.length > 1 ? 'all' : 'any')}
+          initialCourtIds={quadraDoPreco ? [quadraDoPreco] : []}
           onClose={() => {
             setBookingOpen(false);
             clearSelection();

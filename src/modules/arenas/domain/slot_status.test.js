@@ -6,7 +6,7 @@
 import { describe, it, expect } from 'vitest';
 import {
   getSlotStatus, generateTimeSlots, isSlotSelectable, isSlotClickable,
-  summarizeSlotStatuses, SLOT_STATUS,
+  summarizeSlotStatuses, SLOT_STATUS, slotEndTime,
 } from './slot_status.js';
 import { BOOKING_STATUS } from './constants.js';
 
@@ -165,5 +165,76 @@ describe('summarizeSlotStatuses', () => {
     const s = summarizeSlotStatuses([]);
     expect(s.available).toBe(0);
     expect(s.closed).toBe(0);
+  });
+});
+
+/* ============================================================ slotEndTime === */
+
+describe('slotEndTime — o fim de um slot', () => {
+  // Horário PARTIDO: manhã e noite. É onde o bug morava.
+  const partido = [
+    { is_active: true, weekdays: [0, 1, 2, 3, 4, 5, 6], start_time: '08:00', end_time: '10:00' },
+    { is_active: true, weekdays: [0, 1, 2, 3, 4, 5, 6], start_time: '18:00', end_time: '22:00' },
+  ];
+  const data = '2026-10-02';
+
+  it('uma hora, no caso normal', () => {
+    expect(slotEndTime('19:00', { date: data, schedules: partido })).toBe('20:00');
+  });
+
+  it('⭐ NÃO pula para a próxima janela (era reserva de nove horas)', () => {
+    // A grade do dia é 08,09,18,19,20,21. O slot das 09:00 termina às 10:00 —
+    // não às 18:00, que é onde a próxima janela começa.
+    expect(slotEndTime('09:00', { date: data, schedules: partido })).toBe('10:00');
+  });
+
+  it('⭐ NÃO passa do fechamento quando a janela acaba na meia hora', () => {
+    const meia = [{ is_active: true, weekdays: [5], start_time: '18:00', end_time: '21:30' }];
+    expect(slotEndTime('21:00', { date: '2026-10-02', schedules: meia })).toBe('21:30');
+    expect(slotEndTime('20:00', { date: '2026-10-02', schedules: meia })).toBe('21:00');
+  });
+
+  it('janelas sobrepostas: vale a que vai mais longe', () => {
+    const sobrepostas = [
+      { is_active: true, weekdays: [5], start_time: '18:00', end_time: '19:00' },
+      { is_active: true, weekdays: [5], start_time: '18:00', end_time: '22:00' },
+    ];
+    expect(slotEndTime('18:00', { date: '2026-10-02', schedules: sobrepostas })).toBe('19:00');
+  });
+
+  it('ignora janela de outro dia da semana', () => {
+    const soSegunda = [{ is_active: true, weekdays: [1], start_time: '08:00', end_time: '09:30' }];
+    // 2026-10-02 é sexta: a janela não vale, então sobra o passo puro.
+    expect(slotEndTime('08:00', { date: '2026-10-02', schedules: soSegunda })).toBe('09:00');
+  });
+
+  it('ignora janela desativada', () => {
+    const off = [{ is_active: false, weekdays: [5], start_time: '18:00', end_time: '18:30' }];
+    expect(slotEndTime('18:00', { date: '2026-10-02', schedules: off })).toBe('19:00');
+  });
+
+  it('sem janela nenhuma, é o passo puro', () => {
+    expect(slotEndTime('19:00')).toBe('20:00');
+    expect(slotEndTime('19:00', { schedules: [] })).toBe('20:00');
+  });
+
+  it('respeita um passo diferente', () => {
+    expect(slotEndTime('19:00', { stepMinutes: 30 })).toBe('19:30');
+    expect(slotEndTime('19:00', { stepMinutes: 90 })).toBe('20:30');
+  });
+
+  it('⭐ não vira o dia', () => {
+    expect(slotEndTime('23:00')).toBe('23:59');
+    expect(slotEndTime('23:30')).toBe('23:59');
+  });
+
+  it('horário inválido devolve null em vez de inventar', () => {
+    [null, undefined, '', 'abc', '99:99'].forEach((t) => expect(slotEndTime(t)).toBeNull());
+  });
+
+  it('nunca devolve fim antes ou igual ao início', () => {
+    expect(slotEndTime('23:59')).toBeNull();
+    const janelaJaFechada = [{ is_active: true, weekdays: [5], start_time: '18:00', end_time: '18:00' }];
+    expect(slotEndTime('18:00', { date: '2026-10-02', schedules: janelaJaFechada })).toBe('19:00');
   });
 });
