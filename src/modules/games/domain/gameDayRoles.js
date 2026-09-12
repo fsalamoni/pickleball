@@ -26,7 +26,32 @@
  * `admin_uids` é aditivo e opcional. O criador nunca precisa estar na lista:
  * ele é administrador por ser o criador, e por isso não há como se remover por
  * acidente.
+ *
+ * ## Dia de jogo de ARENA
+ *
+ * Um dia de jogo com `arena_id` pertence à arena, não à pessoa que clicou em
+ * criar. Quem gerencia a arena administra o dia — inclusive quem virou gestor
+ * DEPOIS de o dia ser criado, e mesmo que quem criou tenha saído da equipe.
+ * Isso entra por uma opção explícita (`arenaManager`), calculada por quem
+ * chama, porque este arquivo é puro e não consulta nada.
+ *
+ * A opção **só vale num dia de jogo de arena**: gerenciar uma arena qualquer
+ * não dá poder sobre o rachão de ninguém. A conferência está aqui dentro, não
+ * só em quem chama — é barata e evita que um `true` distraído vire permissão.
+ * A regra do Firestore repete a mesma ideia com `isArenaManager(arena_id)`,
+ * que é a barreira de verdade; isto aqui decide o que a TELA mostra.
  */
+
+/**
+ * O dia de jogo pertence a uma arena?
+ *
+ * Repetido aqui (em vez de importado de `arenaGameDay.js`) de propósito: aquele
+ * arquivo já importa deste, e uma ida e volta entre os dois por três linhas
+ * não paga o ciclo de import.
+ */
+function ehDeArena(gameDay) {
+  return typeof gameDay?.arena_id === 'string' && gameDay.arena_id.length > 0;
+}
 
 /** Modos de gestão de um dia de jogo. */
 export const GAME_DAY_MANAGE_MODE = Object.freeze({
@@ -82,10 +107,19 @@ export function isGameDayCreator(gameDay, uid) {
   return !!uid && !!gameDay && gameDay.created_by === uid;
 }
 
-/** É administrador: o criador, ou alguém que ele nomeou. */
-export function isGameDayAdmin(gameDay, uid) {
+/**
+ * É administrador: o criador, alguém que ele nomeou, ou — num dia de jogo de
+ * ARENA — quem gerencia a arena.
+ *
+ * @param {object} gameDay
+ * @param {string} uid
+ * @param {{ arenaManager?: boolean }} [options] `arenaManager` é ignorado em
+ *   dia de jogo que não seja de arena.
+ */
+export function isGameDayAdmin(gameDay, uid, { arenaManager = false } = {}) {
   if (!uid || !gameDay) return false;
   if (isGameDayCreator(gameDay, uid)) return true;
+  if (arenaManager === true && ehDeArena(gameDay)) return true;
   return gameDayAdminUids(gameDay).includes(uid);
 }
 
@@ -112,10 +146,15 @@ export function isGameDayParticipant(gameDay, uid, participants = null) {
 
 /**
  * Pode CONFIGURAR o dia de jogo (editar, arquivar, definir o modo de gestão,
- * nomear administradores, publicar no ranking)? Só o criador.
+ * nomear administradores, publicar no ranking)?
+ *
+ * Só o criador — e, num dia de jogo de ARENA, quem gerencia a arena. A arena é
+ * a dona do evento: amarrar a configuração a uma pessoa deixaria o dia de jogo
+ * órfão quando ela saísse da equipe.
  */
-export function canConfigureGameDay(gameDay, uid) {
-  return isGameDayCreator(gameDay, uid);
+export function canConfigureGameDay(gameDay, uid, { arenaManager = false } = {}) {
+  if (isGameDayCreator(gameDay, uid)) return true;
+  return arenaManager === true && ehDeArena(gameDay) && !!uid;
 }
 
 /**
@@ -123,11 +162,11 @@ export function canConfigureGameDay(gameDay, uid) {
  *
  * @param {object} gameDay
  * @param {string} uid
- * @param {{ participants?: Array|null }} [options]
+ * @param {{ participants?: Array|null, arenaManager?: boolean }} [options]
  */
-export function canManageGameDay(gameDay, uid, { participants = null } = {}) {
+export function canManageGameDay(gameDay, uid, { participants = null, arenaManager = false } = {}) {
   if (!uid || !gameDay) return false;
-  if (isGameDayAdmin(gameDay, uid)) return true;
+  if (isGameDayAdmin(gameDay, uid, { arenaManager })) return true;
   if (!isGameDayOpenToParticipants(gameDay)) return false;
   return isGameDayParticipant(gameDay, uid, participants);
 }
@@ -141,6 +180,9 @@ export function canManageGameDay(gameDay, uid, { participants = null } = {}) {
  * @returns {Array<{ uid: string, criador: boolean, nome: string|null, foto: string|null }>}
  */
 export function gameDayAdminList(gameDay, perfilPorUid = null) {
+  // Os gestores da arena não entram nesta lista de propósito: eles administram
+  // por serem da arena, e mostrá-los aqui daria a entender que dá para
+  // removê-los pelo dia de jogo — o que tiraria o poder deles sobre a arena.
   const enriquecer = (uid, criador) => {
     const p = perfilPorUid ? perfilPorUid.get(uid) : null;
     return {

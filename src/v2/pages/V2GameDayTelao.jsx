@@ -55,10 +55,9 @@ import {
   Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription, DialogFooter,
 } from '@/components/ui/dialog';
 import { V2Button, V2Input } from '@/v2/ui/primitives';
-import { useAuth } from '@/core/lib/FirebaseAuthContext';
 import { getGameDay, listGameDayParticipants, listGameDayGames } from '@/modules/games/services/gameDayService';
 import { gameDayWhenText } from '@/modules/games/domain/gameDay';
-import { canManageGameDay } from '@/modules/games/domain/gameDayRoles';
+import { useGameDayRoles } from '@/modules/games/hooks/useGameDayRoles';
 import { buildGameDayBoard, sideNames, scoreText, winnerSide } from '@/modules/games/domain/gameDayBoard';
 import {
   computePlayOrder, forecastPlayByCourt, PLAY_STATUS, PLAY_SLOTS, PLAY_GAME_STATUS,
@@ -594,7 +593,6 @@ export default function V2GameDayTelao() {
   const { gameDayId } = useParams();
   const hora = useRelogio();
   const telaCheia = useTelaCheia();
-  const { user } = useAuth();
   const qc = useQueryClient();
 
   // Ações do Play, exatamente os mesmos hooks da tela normal.
@@ -734,7 +732,10 @@ export default function V2GameDayTelao() {
   // ou qualquer participante se ele abriu a gestão. Para todo o resto o telão é
   // só leitura — é uma tela pública, e quem passa na frente dela não pode mexer
   // no dia de jogo.
-  const podeGerir = board.isPlay && canManageGameDay(gameDay, user?.uid, { participants });
+  // (num dia de jogo de ARENA isso inclui quem gerencia a arena — o telão
+  // costuma ficar justamente no balcão dela.)
+  const { podeGerenciar } = useGameDayRoles(gameDay, participants);
+  const podeGerir = board.isPlay && podeGerenciar;
 
   const executar = useCallback(async (acao, sucesso) => {
     setOcupado(true);

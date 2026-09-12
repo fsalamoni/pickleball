@@ -13,8 +13,13 @@ import { act } from 'react';
 import { describe, it, expect, beforeEach, afterEach, vi } from 'vitest';
 
 const auth = { user: { uid: 'dono' }, userProfile: {} };
+const arenasGeridas = [];
 vi.mock('sonner', () => ({ toast: { success: vi.fn(), error: vi.fn() } }));
 vi.mock('@/core/lib/FirebaseAuthContext', () => ({ useAuth: () => auth }));
+// `useGameDayRoles` pergunta quais arenas esta pessoa gerencia (é o que dá
+// poder num dia de jogo de ARENA). Aqui ela não gerencia nenhuma — é o caso
+// que estes testes cobrem, o dia de jogo do atleta.
+vi.mock('@/modules/arenas/hooks/useArenas', () => ({ useMyManagedArenas: () => ({ data: arenasGeridas }) }));
 
 const dados = { participants: [], games: [] };
 const semMutacao = { mutate: vi.fn(), mutateAsync: vi.fn(async () => ({})), isPending: false };

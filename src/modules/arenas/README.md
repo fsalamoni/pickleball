@@ -168,6 +168,31 @@ import { useArenaCancellation } from '@/modules/arenas/hooks/useArenaCancellatio
   Gestão"** no painel da arena (`V2ArenaManage`).
 - **Coleção**: `catalog_products` (ver `docs/05-DATA-MODEL.md`).
 
+## Dia de jogo da arena (flag `arena_game_day`, 2026-09-12)
+
+A arena marca o próprio dia de jogo no calendário; as quadras e horários
+escolhidos **ficam fechados para reserva**. O código mora no módulo `games/`
+(é o mesmo `game_days`, com campos aditivos), mas ele encosta aqui em três
+lugares — vale saber antes de mexer:
+
+1. **`arena_unavailabilities`** ganha documentos com `source: 'game_day'` e
+   `game_day_id`. É assim que a quadra fecha: nada foi ensinado a
+   `checkBookingConflict`, `getSlotStatus` nem ao calendário mensal, que já
+   respeitavam indisponibilidade. **Não apague esses documentos à mão** —
+   quem cuida deles é `syncArenaGameDayBlocks`;
+2. **`V2BookingCalendar`** marca o dia com um selo e **`V2DaySlotsDialog`**
+   abre com o nome e o horário do dia de jogo. Sem isso, quem clicasse veria
+   "indisponível" e concluiria que a arena fechou sem razão;
+3. **`V2ArenaDetail`** ganhou a seção "Dias de jogo", acima do calendário — é
+   por ali que o atleta marca presença.
+
+⚠️ **Bug de regra corrigido junto**: `arena_unavailabilities` tinha uma regra só
+para create/update/delete olhando `request.resource.data.arena_id`, que **não
+existe num delete** — nenhum gestor conseguia apagar o próprio bloqueio, embora
+a tela oferecesse o botão. Agora são três regras.
+
+Detalhes: `docs/22-DIA-DE-JOGO-DA-ARENA.md`.
+
 ## Onde achar mais
 
 - `docs/06-MODULES.md` § arenas

@@ -169,6 +169,23 @@ export const FEATURE_FLAG = Object.freeze({
    * para a Home e o link não existe — nada muda para ninguém.
    */
   HELP_CENTER: 'help_center',
+
+  /**
+   * DIA DE JOGO DA ARENA — a arena cria o seu próprio dia de jogo.
+   *
+   * A arena marca o dia de jogo no calendário (o que FECHA a data e as quadras
+   * escolhidas para reserva), define horário do dia todo ou por quadra, limite
+   * de atletas por dia ou por quadra (ou nenhum), e se só a equipe da arena
+   * conduz as partidas ou se os inscritos também. O atleta marca presença pela
+   * página e pelo calendário da arena.
+   *
+   * Aditiva por construção: é o MESMO `game_days` que já existe, com campos
+   * novos e opcionais (`arena_id`, `arena_slots`, `signup_mode`, `capacity`).
+   * Um dia de jogo sem `arena_id` não é tocado por nada disso. Desligada, a
+   * aba não aparece na arena, a seção some da página pública e a rota
+   * redireciona — nada muda para ninguém.
+   */
+  ARENA_GAME_DAY: 'arena_game_day',
 });
 
 /** Metadados de exibição para o painel de flags (admin master). */
@@ -181,6 +198,17 @@ export const FEATURE_FLAG_META = Object.freeze({
       + '(primeiros passos, conta e privacidade). Ganha um link na navegação, '
       + 'em todas as telas. Só leitura — não consulta nem grava nada. '
       + 'Desligada, a página não existe e o link não aparece.',
+  },
+  [FEATURE_FLAG.ARENA_GAME_DAY]: {
+    label: 'Dia de jogo da arena',
+    description:
+      'Deixa a arena criar os próprios dias de jogo, marcados no calendário: '
+      + 'escolher data, quadras e horários (do dia todo ou de cada quadra), '
+      + 'fechar essas quadras para reserva, definir limite de atletas por dia '
+      + 'ou por quadra (ou nenhum) e decidir se só a equipe da arena conduz as '
+      + 'partidas. Os atletas marcam presença pela página e pelo calendário da '
+      + 'arena, e o dia de jogo abre no mesmo organizador de sempre. '
+      + 'Desligada, a aba, a seção e a rota não existem.',
   },
   [FEATURE_FLAG.GAMEDAY_AMERICANO_LIVE]: {
     label: 'Dia de jogo — Americano aprimorado',

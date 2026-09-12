@@ -11,10 +11,9 @@ import React, { useMemo, useState } from 'react';
 import { Navigate, useNavigate, useParams, Link } from 'react-router-dom';
 import {
   Plus, CalendarClock, Users, Globe, Lock, ChevronLeft, Trash2, ExternalLink, History, Pencil,
-  MonitorPlay,
+  MonitorPlay, Building2,
 } from 'lucide-react';
 import { toast } from 'sonner';
-import { useAuth } from '@/core/lib/FirebaseAuthContext';
 import {
   V2Badge, V2Button, V2CollapsibleSection, V2EmptyState, V2PageIntro, V2Skeleton, V2Surface,
 } from '@/v2/ui/primitives';
@@ -33,7 +32,8 @@ import {
 import {
   isPublicGameDay, gameDayWhenText,
 } from '@/modules/games/domain/gameDay';
-import { canManageGameDay, isGameDayCreator } from '@/modules/games/domain/gameDayRoles';
+import { useGameDayRoles } from '@/modules/games/hooks/useGameDayRoles';
+import { isArenaGameDay, arenaGameDayWhenText } from '@/modules/games/domain/arenaGameDay';
 
 export default function V2GameDays() {
   const enabled = true;
@@ -59,11 +59,20 @@ function GameDayCard({ g, onOpen, muted }) {
     >
       <div className="flex items-start justify-between gap-2">
         <h3 className="font-display text-lg font-bold text-ink">{g.title}</h3>
-        {isPublicGameDay(g)
-          ? <V2Badge tone="blue"><Globe className="mr-1 h-3 w-3" /> Público</V2Badge>
-          : <V2Badge tone="neutral"><Lock className="mr-1 h-3 w-3" /> Privado</V2Badge>}
+        {isArenaGameDay(g)
+          ? <V2Badge tone="acid"><Building2 className="mr-1 h-3 w-3" /> Da arena</V2Badge>
+          : isPublicGameDay(g)
+            ? <V2Badge tone="blue"><Globe className="mr-1 h-3 w-3" /> Público</V2Badge>
+            : <V2Badge tone="neutral"><Lock className="mr-1 h-3 w-3" /> Privado</V2Badge>}
       </div>
-      {gameDayWhenText(g) && <p className="mt-2 text-sm text-gray-500">{gameDayWhenText(g)}</p>}
+      {isArenaGameDay(g)
+        ? <p className="mt-2 text-sm text-gray-500">{arenaGameDayWhenText(g)}</p>
+        : (gameDayWhenText(g) && <p className="mt-2 text-sm text-gray-500">{gameDayWhenText(g)}</p>)}
+      {isArenaGameDay(g) && g.arena_name && (
+        <p className="mt-1 flex items-center gap-1 text-xs font-semibold text-gray-500">
+          <Building2 className="h-3.5 w-3.5" /> {g.arena_name}
+        </p>
+      )}
       <div className="mt-auto flex flex-wrap items-center gap-2 pt-4 text-xs text-gray-500">
         <span className="flex items-center gap-1"><Users className="h-3.5 w-3.5" /> {(g.member_uids || []).length} atleta(s)</span>
         {g.publish_to_ranking && <V2Badge tone="green">No ranking</V2Badge>}
@@ -148,11 +157,15 @@ function GameDayList() {
 
 function GameDayDetail({ gameDayId }) {
   const navigate = useNavigate();
-  const { user } = useAuth();
   const { data: gameDay, isLoading } = useGameDay(gameDayId);
   // A lista de participantes decide se quem está olhando gerencia num dia
   // ABERTO — sem ela, cairíamos em `member_uids`, que inclui convidados.
   const { data: participants = [] } = useGameDayParticipants(gameDayId);
+  // Configurar (editar, arquivar) é do criador — e, num dia de jogo de ARENA,
+  // de quem gerencia a arena. Conduzir as partidas segue o modo de gestão do
+  // dia; por isso a visão de organizador do Play não é "é o criador?", e sim
+  // "pode gerenciar?". Antes dos early returns: hook não pode ser condicional.
+  const { podeConfigurar, podeGerenciar } = useGameDayRoles(gameDay, participants);
   const del = useDeleteGameDay();
   const [confirmDelete, setConfirmDelete] = useState(false);
   const [editOpen, setEditOpen] = useState(false);
@@ -175,11 +188,10 @@ function GameDayDetail({ gameDayId }) {
     );
   }
 
-  // Configurar (editar, arquivar) é só do criador. Conduzir as partidas segue o
-  // modo de gestão do dia — por isso a visão de organizador do Play não é mais
-  // "é o criador?", e sim "pode gerenciar?".
-  const ehCriador = isGameDayCreator(gameDay, user?.uid);
-  const podeGerenciar = canManageGameDay(gameDay, user?.uid, { participants });
+  const daArena = isArenaGameDay(gameDay);
+  // Editar e arquivar um dia de jogo de ARENA é no ambiente da arena, onde
+  // estão as quadras, os horários e as vagas. Aqui só se joga.
+  const ehCriador = podeConfigurar && !daArena;
 
   const handleDelete = async () => {
     try {
@@ -202,11 +214,15 @@ function GameDayDetail({ gameDayId }) {
           <div className="min-w-0">
             <div className="flex flex-wrap items-center gap-2">
               <h1 className="font-display text-2xl font-bold text-ink">{gameDay.title}</h1>
-              {isPublicGameDay(gameDay)
-                ? <V2Badge tone="blue"><Globe className="mr-1 h-3 w-3" /> Público</V2Badge>
-                : <V2Badge tone="neutral"><Lock className="mr-1 h-3 w-3" /> Privado</V2Badge>}
+              {daArena
+                ? <V2Badge tone="acid"><Building2 className="mr-1 h-3 w-3" /> Da arena</V2Badge>
+                : isPublicGameDay(gameDay)
+                  ? <V2Badge tone="blue"><Globe className="mr-1 h-3 w-3" /> Público</V2Badge>
+                  : <V2Badge tone="neutral"><Lock className="mr-1 h-3 w-3" /> Privado</V2Badge>}
             </div>
-            {gameDayWhenText(gameDay) && <p className="mt-1 text-sm text-gray-500">{gameDayWhenText(gameDay)}</p>}
+            <p className="mt-1 text-sm text-gray-500">
+              {daArena ? arenaGameDayWhenText(gameDay) : gameDayWhenText(gameDay)}
+            </p>
             {gameDay.notes && <p className="mt-2 text-sm text-gray-600">{gameDay.notes}</p>}
           </div>
           <div className="flex shrink-0 flex-wrap gap-2">
@@ -232,6 +248,13 @@ function GameDayDetail({ gameDayId }) {
             >
               <MonitorPlay className="mr-1.5 h-4 w-4" /> Abrir telão
             </V2Button>
+            {daArena && podeConfigurar && (
+              <V2Button asChild variant="ghost" size="sm">
+                <Link to={`/arenas/${gameDay.arena_id}/gerir/dia-de-jogo/${gameDay.id}`}>
+                  <Building2 className="mr-1.5 h-4 w-4" /> Gerir na arena
+                </Link>
+              </V2Button>
+            )}
             {ehCriador && (
               <>
                 <V2Button variant="ghost" size="sm" onClick={() => setEditOpen(true)}>
@@ -244,7 +267,13 @@ function GameDayDetail({ gameDayId }) {
             )}
           </div>
         </div>
-        {isPublicGameDay(gameDay) && ehCriador && (
+        {daArena && gameDay.arena_name && (
+          <p className="mt-3 flex items-center gap-1.5 text-xs text-gray-500">
+            <Building2 className="h-3.5 w-3.5" />
+            Organizado por <Link to={`/arenas/${gameDay.arena_id}`} className="font-semibold text-ink underline">{gameDay.arena_name}</Link>
+          </p>
+        )}
+        {isPublicGameDay(gameDay) && ehCriador && !daArena && (
           <p className="mt-3 flex items-center gap-1.5 text-xs text-gray-400">
             <ExternalLink className="h-3.5 w-3.5" /> Este dia de jogo aparece como convite em &quot;Procura-se jogo&quot;.
           </p>

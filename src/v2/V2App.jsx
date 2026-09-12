@@ -59,6 +59,7 @@ const V2ModalityPage = lazy(() => import('@/v2/pages/V2ModalityPage'));
 const V2ArenaManage = lazy(() => import('@/v2/pages/V2ArenaManage'));
 const V2ArenaOnboarding = lazy(() => import('@/v2/pages/V2ArenaOnboarding'));
 const V2ArenaModules = lazy(() => import('@/v2/pages/V2ArenaModules'));
+const V2ArenaGameDays = lazy(() => import('@/v2/pages/V2ArenaGameDays'));
 const V2ArenaOpenMatch = lazy(() => import('@/v2/pages/V2ArenaOpenMatch'));
 const V2ArenaAdminOpenMatch = lazy(() => import('@/v2/pages/V2ArenaAdminOpenMatch'));
 const V2ArenaMatchmaking = lazy(() => import('@/v2/pages/V2ArenaMatchmaking'));
@@ -136,6 +137,11 @@ export default function V2App() {
           <Route path="arenas/:arenaId/gerir" element={<V2ArenaManage />} />
           <Route path="arenas/:arenaId/onboarding" element={<V2ArenaOnboarding />} />
           <Route path="arenas/:arenaId/gerir/modulos" element={<V2ArenaModules />} />
+          {/* Dia de jogo da arena (flag `arena_game_day`): a lista e a condução
+              de um dia. Rota própria, no ambiente da ARENA — o ambiente do
+              atleta segue sendo `/dia-de-jogo/:id`, com o mesmo miolo. */}
+          <Route path="arenas/:arenaId/gerir/dia-de-jogo" element={<V2ArenaGameDays />} />
+          <Route path="arenas/:arenaId/gerir/dia-de-jogo/:gameDayId" element={<V2ArenaGameDays />} />
           <Route path="arenas/:arenaId/gerir/open-match" element={<V2ArenaAdminOpenMatch />} />
           <Route path="arenas/:arenaId/open-match" element={<V2ArenaOpenMatch />} />
           <Route path="arenas/:arenaId/matchmaking" element={<V2ArenaMatchmaking />} />

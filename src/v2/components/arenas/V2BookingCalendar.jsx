@@ -56,6 +56,10 @@ import {
 import { aggregateDayStatus, buildMonthGrid } from '@/modules/arenas/domain/calendar_aggregate';
 import { V2Button, V2Skeleton } from '@/v2/ui/primitives';
 import V2DaySlotsDialog from './V2DaySlotsDialog';
+import { FEATURE_FLAG } from '@/core/featureFlags';
+import { useFeatureFlag } from '@/core/lib/FeatureFlagsContext';
+import { useArenaGameDays } from '@/modules/games/hooks/useArenaGameDays';
+import { arenaGameDayTimeRange } from '@/modules/games/domain/arenaGameDay';
 
 const WEEKDAY_LABELS_PT = ['Dom', 'Seg', 'Ter', 'Qua', 'Qui', 'Sex', 'Sáb'];
 
@@ -82,6 +86,11 @@ export default function V2BookingCalendar({ arenaId, arena: arenaProp }) {
   const { data: schedules = [] } = useArenaCourtSchedules(arenaId);
   const { data: bookings = [] } = useArenaBookings(arenaId);
   const { data: unavailabilities = [] } = useArenaUnavailabilities(arenaId);
+  // Dias de jogo da arena (flag `arena_game_day`). Eles JÁ bloqueiam os slots
+  // por `arena_unavailabilities` — o que falta é DIZER que o motivo é um dia
+  // de jogo, em vez de deixar a pessoa achar que a arena fechou sem razão.
+  const gameDayOn = useFeatureFlag(FEATURE_FLAG.ARENA_GAME_DAY);
+  const { data: arenaGameDays = [] } = useArenaGameDays(gameDayOn ? arenaId : null);
 
   const today = new Date().toISOString().slice(0, 10);
   const [yearMonth, setYearMonth] = useState(today.slice(0, 7));
@@ -125,6 +134,19 @@ export default function V2BookingCalendar({ arenaId, arena: arenaProp }) {
     }
     return map;
   }, [grid, courtId, filteredSchedules, filteredBookings, filteredUnavailabilities]);
+
+  // data → dias de jogo daquela data (respeitando o filtro de quadra).
+  const gameDaysByDate = useMemo(() => {
+    const map = new Map();
+    if (!gameDayOn) return map;
+    arenaGameDays.forEach((g) => {
+      if (!g.date) return;
+      const slots = Array.isArray(g.arena_slots) ? g.arena_slots : [];
+      if (courtId !== 'all' && !slots.some((s) => s.court_id === courtId)) return;
+      map.set(g.date, [...(map.get(g.date) || []), g]);
+    });
+    return map;
+  }, [arenaGameDays, gameDayOn, courtId]);
 
   function handleDayClick(date) {
     if (!isAuthenticated) {
@@ -189,6 +211,12 @@ export default function V2BookingCalendar({ arenaId, arena: arenaProp }) {
           <span className="h-3 w-3 rounded-full bg-gray-300" />
           <span className="text-gray-600">Fechado (sem horário)</span>
         </div>
+        {gameDayOn && arenaGameDays.length > 0 && (
+          <div className="flex items-center gap-1">
+            <span className="h-3 w-3 rounded-full bg-acid" />
+            <span className="text-gray-600">Dia de jogo da arena</span>
+          </div>
+        )}
       </div>
 
       {/* Grade do mês */}
@@ -205,6 +233,7 @@ export default function V2BookingCalendar({ arenaId, arena: arenaProp }) {
         <div className="grid grid-cols-7">
           {grid.map((date) => {
             const meta = dayStatusMap.get(date);
+            const diasDeJogo = gameDaysByDate.get(date) || [];
             const inMonth = isSameMonth(date, yearMonth);
             const past = isPast(date);
             const isToday = date === today;
@@ -226,6 +255,10 @@ export default function V2BookingCalendar({ arenaId, arena: arenaProp }) {
               if (pendingCount) parts.push(`${pendingCount} em andamento`);
               if (confirmedCount) parts.push(`${confirmedCount} reservado`);
               if (meta.count?.unavailable) parts.push(`${meta.count.unavailable} indisponível`);
+              diasDeJogo.forEach((g) => {
+                const faixa = arenaGameDayTimeRange(g);
+                parts.push(`Dia de jogo: ${g.title}${faixa ? ` (${faixa.start}–${faixa.end})` : ''}`);
+              });
               return parts.join(' · ');
             })();
 
@@ -278,6 +311,11 @@ export default function V2BookingCalendar({ arenaId, arena: arenaProp }) {
                     )}
                   </div>
                 )}
+                {inMonth && !past && diasDeJogo.length > 0 && (
+                  <span className="truncate rounded-full bg-acid px-1.5 py-0.5 text-[9px] font-bold leading-none text-ink">
+                    Dia de jogo
+                  </span>
+                )}
                 {inMonth && past && (
                   <span className="text-[9px] text-gray-300">passou</span>
                 )}
@@ -301,6 +339,7 @@ export default function V2BookingCalendar({ arenaId, arena: arenaProp }) {
           date={selectedDate}
           courtId={courtId === 'all' ? null : courtId}
           courts={activeCourts}
+          gameDays={gameDaysByDate.get(selectedDate) || []}
           onClose={() => setSelectedDate(null)}
         />
       )}

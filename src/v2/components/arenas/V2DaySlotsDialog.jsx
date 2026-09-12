@@ -53,6 +53,7 @@ import { formatPrice } from '@/modules/arenas/domain/pricing';
 import { useBookingPrice } from '@/modules/arenas/hooks/useBookingPrice';
 import { V2Button, V2Badge, V2EmptyState, V2Skeleton } from '@/v2/ui/primitives';
 import BookingRequestDialog from '@/modules/arenas/components/BookingRequestDialog';
+import { arenaGameDayTimeRange } from '@/modules/games/domain/arenaGameDay';
 
 const STEP = 60;
 
@@ -102,7 +103,12 @@ function expandBookingSlots(booking) {
   return [];
 }
 
-export default function V2DaySlotsDialog({ arena, arenaId, date, courtId: initialCourtId, courts = [], onClose }) {
+export default function V2DaySlotsDialog({
+  arena, arenaId, date, courtId: initialCourtId, courts = [], onClose,
+  // Dias de jogo da arena NESTA data (flag `arena_game_day`). Sem eles — que é
+  // o padrão — a tela é exatamente a de antes.
+  gameDays = [],
+}) {
   const { isAuthenticated, user } = useAuth();
   const { data: schedules = [], isLoading: loadingSchedules } = useArenaCourtSchedules(arenaId);
   const { data: bookings = [], isLoading: loadingBookings } = useArenaBookings(arenaId);
@@ -334,6 +340,27 @@ export default function V2DaySlotsDialog({ arena, arenaId, date, courtId: initia
               <X className="h-4 w-4" />
             </button>
           </div>
+
+          {/* Há dia de jogo neste dia? Diz isso ANTES dos horários: sem este
+              aviso, quem clica num dia tomado por um dia de jogo vê só
+              "indisponível" e conclui que a arena fechou sem motivo. */}
+          {gameDays.length > 0 && (
+            <div className="border-b border-acid/40 bg-acid/10 p-4">
+              <p className="text-[10px] font-bold uppercase tracking-widest text-ink/60">Dia de jogo na arena</p>
+              <ul className="mt-1.5 space-y-1">
+                {gameDays.map((g) => (
+                  <li key={g.id} className="text-sm text-ink">
+                    <strong>{g.title}</strong>
+                    <span className="text-gray-600"> · {(arenaGameDayTimeRange(g) ? `${arenaGameDayTimeRange(g).start}–${arenaGameDayTimeRange(g).end}` : '')}</span>
+                  </li>
+                ))}
+              </ul>
+              <p className="mt-1.5 text-xs text-gray-600">
+                As quadras usadas ficam fechadas para reserva neste horário. Para jogar, marque
+                presença em <strong>Dias de jogo</strong>, na página da arena.
+              </p>
+            </div>
+          )}
 
           {/* Filtro de quadra */}
           {courts.length > 1 && (

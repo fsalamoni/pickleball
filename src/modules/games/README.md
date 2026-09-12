@@ -219,6 +219,34 @@ como individual uma dupla com convidado avulso. Cada jogo normalizado carrega
 também `partner` (parceiro da minha dupla) além de `opponent`, para o histórico
 exibir **minha dupla vs dupla adversária**.
 
+## Dia de jogo da ARENA (flag `arena_game_day`, 2026-09-12)
+
+A arena cria o próprio dia de jogo, marcado no calendário — e as quadras
+escolhidas **ficam fechadas para reserva**. **Nenhuma coleção nova**: é este
+mesmo `game_days`, com campos aditivos (`arena_id`, `arena_slots`,
+`signup_mode`, `capacity`). **Ausente `arena_id`, nada aqui vale** — o dia de
+jogo do atleta segue idêntico, e há teste travando isso.
+
+O que vem de graça por ser o mesmo documento: participantes, sorteio, fila do
+Play, placar do Americano aprimorado, ranking do dia, telão, publicação no
+ranking e os tutoriais. **O ambiente do atleta não precisou de nada novo.**
+
+O que é só da arena vive em `domain/arenaGameDay.js`:
+
+| Função | Para quê |
+|---|---|
+| `normalizeArenaGameDayInput` | valida quadras, horários e limites |
+| `findGameDayOverlaps` | dois dias na mesma quadra só em horários diferentes |
+| `unavailabilityPayloadsFor` | os bloqueios que fecham o calendário |
+| `arenaGameDayVacancies` | vagas no dia e por quadra |
+| `canSignUpToArenaGameDay` | pode entrar? e, se não, **por quê** |
+
+⚠️ **Numa tela, pergunte ao hook `useGameDayRoles(gameDay, participants)`**, não
+a `canManageGameDay` direto: ele soma criador + admin nomeado + **gestor da
+arena**, e é um lugar só para as cinco telas que precisam disso.
+
+Detalhes e as correções de regra que vieram junto: `docs/22-DIA-DE-JOGO-DA-ARENA.md`.
+
 ## Onde achar mais
 - `docs/06-MODULES.md` § games
 - `docs/05-DATA-MODEL.md`

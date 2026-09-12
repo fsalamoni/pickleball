@@ -71,8 +71,20 @@ service cloud.firestore {
         && gameDayData(gdId).format == 'play'
         && (request.auth.uid in gameDayData(gdId).member_uids);
     }
-    // ADMINISTRADOR do dia de jogo: o criador, ou alguém que ele nomeou em
-    // `admin_uids` (campo aditivo — ausente significa "só o criador").
+    // DIA DE JOGO DA ARENA: o documento tem `arena_id` e pertence à arena, não
+    // a quem clicou em criar. Quem gerencia a arena administra o dia —
+    // inclusive quem virou gestor depois, e mesmo que o criador tenha saído da
+    // equipe. Campo ADITIVO: sem `arena_id`, esta função é sempre falsa e
+    // nenhum dia de jogo já existente muda de comportamento.
+    function isArenaGameDayManagerOf(gdId) {
+      return isAuthed() && gameDayExists(gdId)
+        && 'arena_id' in gameDayData(gdId)
+        && gameDayData(gdId).arena_id is string
+        && exists(/databases/$(database)/documents/arena_managers/$(gameDayData(gdId).arena_id + '_' + request.auth.uid));
+    }
+    // ADMINISTRADOR do dia de jogo: o criador, alguém que ele nomeou em
+    // `admin_uids` (campo aditivo — ausente significa "só o criador"), ou quem
+    // gerencia a arena dona, quando o dia é de arena.
     function isGameDayAdminOf(gdId) {
       return isAuthed() && gameDayExists(gdId) && (
         gameDayData(gdId).created_by == request.auth.uid
@@ -81,6 +93,7 @@ service cloud.firestore {
           && gameDayData(gdId).admin_uids is list
           && (request.auth.uid in gameDayData(gdId).admin_uids)
         )
+        || isArenaGameDayManagerOf(gdId)
       );
     }
     // O criador abriu a gestão para quem está inscrito? Campo aditivo: sem ele,
@@ -441,10 +454,41 @@ service cloud.firestore {
       allow update: if isAuthed() && (
         resource.data.created_by == request.auth.uid
         || isPlatformAdmin()
+        // Dia de jogo de ARENA: quem gerencia a arena configura o dia todo
+        // (título, data, quadras, horários, limites, modo de gestão). A arena
+        // é a dona do evento — amarrá-lo a uma pessoa deixaria o dia órfão
+        // quando ela saísse da equipe.
+        || isArenaGameDayManagerOf(gdId)
+        // ENTRAR num dia de jogo público. A condição é EXATA: a lista nova
+        // tem de ser a antiga MAIS quem está pedindo. Antes bastava "eu estou
+        // na lista nova", o que deixava qualquer membro reescrever a lista e
+        // remover os outros de tabela. Os fluxos legítimos que acrescentam
+        // TERCEIROS (o dono inserindo, o administrador inserindo) passam pelas
+        // outras condições deste mesmo `allow update`, então nada que
+        // funcionava deixa de funcionar.
         || (
           resource.data.visibility == 'public'
           && request.resource.data.created_by == resource.data.created_by
-          && (request.auth.uid in request.resource.data.member_uids)
+          && request.resource.data.diff(resource.data).affectedKeys()
+              .hasOnly(['member_uids', 'invited_uids', 'updated_at', 'open_game_id'])
+          && request.resource.data.member_uids.toSet()
+              == resource.data.member_uids.toSet().union([request.auth.uid].toSet())
+        )
+        // ...e o caminho de VOLTA, que faltava: sair de um dia de jogo
+        // público. Ao remover o participante, o serviço recalcula
+        // `member_uids` — e a lista nova, naturalmente, não tem mais quem
+        // saiu, o que reprovava na condição acima. Resultado: a inscrição
+        // era removida e a associação ficava, com erro na tela.
+        // A condição é EXATA: a lista nova tem de ser a antiga menos quem
+        // está pedindo. Assim ninguém aproveita a brecha para esvaziar a
+        // lista dos outros.
+        || (
+          resource.data.visibility == 'public'
+          && request.resource.data.created_by == resource.data.created_by
+          && request.resource.data.diff(resource.data).affectedKeys()
+              .hasOnly(['member_uids', 'updated_at'])
+          && request.resource.data.member_uids.toSet()
+              == resource.data.member_uids.toSet().difference([request.auth.uid].toSet())
         )
         // Quem gerencia (admin nomeado, ou participante num dia aberto) mexe na
         // LISTA DE MEMBROS ao inserir/remover participante — e SÓ nela. A trava
@@ -456,8 +500,11 @@ service cloud.firestore {
               .hasOnly(['member_uids', 'invited_uids', 'updated_at'])
         )
       );
-      allow delete: if isAuthed()
-        && (resource.data.created_by == request.auth.uid || isPlatformAdmin());
+      allow delete: if isAuthed() && (
+        resource.data.created_by == request.auth.uid
+        || isArenaGameDayManagerOf(gdId)
+        || isPlatformAdmin()
+      );
 
       match /participants/{pid} {
         allow read: if canAccessGameDay(gdId);
@@ -1302,6 +1349,12 @@ service cloud.firestore {
       allow create: if isAuthed() && (
         isPlatformAdmin()
         || isGameDayOwnerOf(request.resource.data.event_id)
+        // Dia de jogo de ARENA: quem gerencia a arena publica os resultados.
+        // Sem isto, só quem clicou em "criar" conseguiria — e um dia de jogo
+        // da arena ficaria sem poder entrar no ranking assim que essa pessoa
+        // saísse da equipe. Falsa para qualquer evento que não seja um dia de
+        // jogo com `arena_id` (a função confere as duas coisas).
+        || isArenaGameDayManagerOf(request.resource.data.event_id)
         || isClubEventCreator(request.resource.data.event_id)
         || isClubAdmin(request.resource.data.club_id)
         // Espelho de CONFRONTO DE EQUIPES: o admin do torneio grava os
@@ -1323,6 +1376,7 @@ service cloud.firestore {
       allow update: if isAuthed() && (
         isPlatformAdmin()
         || isGameDayOwnerOf(request.resource.data.event_id)
+        || isArenaGameDayManagerOf(request.resource.data.event_id)
         || isClubEventCreator(request.resource.data.event_id)
         || isClubAdmin(request.resource.data.club_id)
         || (request.resource.data.source == 'team_confrontation'
@@ -1335,6 +1389,7 @@ service cloud.firestore {
       allow delete: if isAuthed() && (
         isPlatformAdmin()
         || isGameDayOwnerOf(resource.data.event_id)
+        || isArenaGameDayManagerOf(resource.data.event_id)
         || isClubEventCreator(resource.data.event_id)
         || isClubAdmin(resource.data.club_id)
         || (resource.data.source == 'team_confrontation'
@@ -1569,11 +1624,27 @@ service cloud.firestore {
 
 
     // ---- Sprint 5: Unavailabilities (admin marca slots como indisponíveis) ----
+    // CORREÇÃO: a regra antiga era uma só para create/update/delete e olhava
+    // `request.resource.data.arena_id` — que NÃO EXISTE num delete. Na prática,
+    // nenhum gestor de arena conseguia apagar o próprio bloqueio (só o admin da
+    // plataforma), embora a tela oferecesse o botão. Separada em três, cada uma
+    // olhando o documento que de fato existe naquela operação. É ALARGAMENTO na
+    // direção pretendida: ninguém perde acesso, e o gestor segue preso à sua
+    // arena. O `update` confere as DUAS pontas para que um bloqueio não possa
+    // ser mudado de arena.
     match /arena_unavailabilities/{unavId} {
       allow read: if true;
-      allow create, update, delete: if isAuthed() && (
-        isPlatformAdmin() ||
-        exists(/databases/$(database)/documents/arena_managers/$(request.resource.data.arena_id + '_' + request.auth.uid))
+      allow create: if isAuthed() && (
+        isPlatformAdmin() || isArenaManager(request.resource.data.arena_id)
+      );
+      allow update: if isAuthed() && (
+        isPlatformAdmin() || (
+          isArenaManager(resource.data.arena_id)
+          && isArenaManager(request.resource.data.arena_id)
+        )
+      );
+      allow delete: if isAuthed() && (
+        isPlatformAdmin() || isArenaManager(resource.data.arena_id)
       );
     }
 

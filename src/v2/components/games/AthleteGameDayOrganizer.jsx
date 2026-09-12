@@ -17,8 +17,7 @@ import { V2Button, V2Badge } from '@/v2/ui/primitives';
 import V2CollapsibleCard from '@/v2/ui/V2CollapsibleCard';
 import { GAME_DAY_SECTION } from '@/v2/components/games/gameDaySections';
 import GameDayAdminsCard from '@/v2/components/games/GameDayAdminsCard';
-import { canManageGameDay, isGameDayCreator } from '@/modules/games/domain/gameDayRoles';
-import { useAuth } from '@/core/lib/FirebaseAuthContext';
+import { useGameDayRoles } from '@/modules/games/hooks/useGameDayRoles';
 import { useAthletes } from '@/modules/athletes/hooks/useAthletes';
 import { generateGameDayGames, suggestRounds, buildDrawHistory } from '@/modules/clubs/domain/gameDayDraw';
 import { fetchUnifiedLevelsByParticipant } from '@/modules/rating/services/unifiedLevelService';
@@ -44,16 +43,14 @@ import {
  * de jogo dos clubes, adaptado ao dia de jogo do atleta (sem clube dono).
  */
 export default function AthleteGameDayOrganizer({ gameDay }) {
-  const { user } = useAuth();
   const { data: participants = [], isLoading } = useGameDayParticipants(gameDay.id);
 
-  // Conduzir as partidas e a lista de participantes: o criador, quem ele
-  // nomeou, e — se ele abriu o dia — qualquer participante inscrito.
-  const podeGerenciar = canManageGameDay(gameDay, user?.uid, { participants });
+  // Quem pode o quê vem de um lugar só: o hook soma criador, administrador
+  // nomeado, gestor da ARENA (dia de jogo de arena) e o modo de gestão.
+  const { podeGerenciar: podeGerenciar, podeConfigurar: ehCriador } = useGameDayRoles(gameDay, participants);
   // Publicar no ranking da plataforma continua SÓ do criador: a regra de
   // `club_event_games` amarra o espelho a ele, então abrir aqui só produziria
   // um botão que falha.
-  const ehCriador = isGameDayCreator(gameDay, user?.uid);
 
   return (
     <div className="space-y-5">

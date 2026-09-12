@@ -33,8 +33,13 @@ const mutacoes = {
 const vazio = { mutate: vi.fn(), mutateAsync: vi.fn(async () => ({})), isPending: false };
 const comMutacao = (fn) => ({ ...vazio, mutate: fn, mutateAsync: fn, isPending: false });
 
+const arenasGeridas = [];
 vi.mock('sonner', () => ({ toast: { success: vi.fn(), error: vi.fn() } }));
 vi.mock('@/core/lib/FirebaseAuthContext', () => ({ useAuth: () => auth }));
+// `useGameDayRoles` pergunta quais arenas esta pessoa gerencia (é o que dá
+// poder num dia de jogo de ARENA). Aqui ela não gerencia nenhuma — é o caso
+// que estes testes cobrem, o dia de jogo do atleta.
+vi.mock('@/modules/arenas/hooks/useArenas', () => ({ useMyManagedArenas: () => ({ data: arenasGeridas }) }));
 vi.mock('@/core/lib/FeatureFlagsContext', () => ({ useFeatureFlag: () => false }));
 vi.mock('@/modules/athletes/hooks/useAthletes', () => ({ useAthletes: () => ({ data: [] }) }));
 vi.mock('@/modules/games/hooks/useGameDays', () => ({

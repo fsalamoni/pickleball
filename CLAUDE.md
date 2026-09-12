@@ -112,6 +112,7 @@ Estes princípios vieram de bugs reais que custaram horas pra arrumar. São ineg
 │   ├── 18-RANKINGS.md              🏆 quando ranking e rating atualizam
 │   ├── 19-TUTORIAIS.md             🎓 tutoriais em tela (torneio + dia de jogo)
 │   ├── 21-CENTRAL-DE-AJUDA.md      🆘 a página /ajuda, por tipo de usuário
+│   ├── 22-DIA-DE-JOGO-DA-ARENA.md  🏟️ a arena cria dia de jogo no calendário
 │   ├── 20-SEGURANCA-E-PRIVACIDADE/ 🔴 ⭐ PRIORIDADE MÁXIMA — segurança, LGPD,
 │   │   ├── 00-INDEX.md                documentos legais, imagem, admin
 │   │   ├── 01-AUDITORIA-ACHADOS.md    ⚠ 31 achados, 2 CRÍTICOS ABERTOS
@@ -195,6 +196,9 @@ Estes princípios vieram de bugs reais que custaram horas pra arrumar. São ineg
 **"Quando o ranking/rating atualiza depois de publicar um resultado?"** → **na hora**. Gatilhos do Firestore (`functions/index.js`) recalculam os TRÊS rankings de partida — ELO/nacional, rating 2.0–8.0 e duplas — a cada escrita em `club_event_games`, `tournament_matches` ou mudança de elegibilidade de torneio. Roda no SERVIDOR porque a regra só deixa o admin escrever ranking, e quem publica quase nunca é o admin (antes a tentativa do cliente era recusada em silêncio). Rajadas são coalescidas por um lease em `platform_settings/ranking_worker`. Ver `docs/18-RANKINGS.md`
 **"Como o ranking de DUPLAS é classificado?"** → aproveitamento → mais vitórias → menos derrotas → saldo de pontos. A regra vive em `compareDoublesRows` (`src/modules/rating/domain/doublesRanking.js`), a classificação é gravada em `doubles_rankings` pelo servidor (campo `position`) e a tela **não reordena** — só filtra e pagina (20/50/100, estado na URL)
 **"Quero um piso de jogos para a dupla entrar no ranking"** → é a **amostra mínima** (Todas / 3+ / 5+ / 10+ / 20+), escolhida por CADA usuário e salva no navegador (`v2:view:<uid>:ranking:duplas:min-jogos`, via `src/core/lib/viewPreference.js` — **nada no banco**). O recorte RENUMERA dentro dele (a posição geral vai junto, em `overall_position`); a busca por nome, não. Ver `docs/18-RANKINGS.md` §6.1
+**"A arena quer criar o PRÓPRIO dia de jogo, marcado no calendário"** → é o **dia de jogo da arena** (flag `arena_game_day`, default OFF). **Nenhuma coleção nova**: é o mesmo `game_days`, com campos aditivos (`arena_id`, `arena_slots`, `signup_mode`, `capacity`). Ausente `arena_id`, nada muda — o dia de jogo do atleta segue idêntico. Fechar a quadra no calendário também não é código novo: grava `arena_unavailabilities` com `source: 'game_day'`, e conflito de reserva, status de slot e calendário mensal já respeitam. Domínio em `src/modules/games/domain/arenaGameDay.js`; arena em `/arenas/:id/gerir/dia-de-jogo`, atleta na página da arena + `/dia-de-jogo/:id` de sempre. Ver `docs/22-DIA-DE-JOGO-DA-ARENA.md`
+**"Quem pode sortear/lançar/editar num dia de jogo?"** → pergunte ao hook `useGameDayRoles(gameDay, participants)` (`podeGerenciar` / `podeConfigurar`), nunca chame `canManageGameDay` direto numa tela. Ele soma os TRÊS caminhos: criador, administrador nomeado e **gestor da ARENA** (só em dia de jogo com `arena_id`). Não custa consulta — `useMyManagedArenas` já vem do `V2Layout`
+**"Dois dias de jogo na mesma quadra e no mesmo dia?"** → pode, em horários diferentes. `findGameDayOverlaps` confere, e **encostar não é sobrepor** (18h–20h e 20h–22h convivem). A mesma conferência roda contra as reservas por `checkBookingConflict`
 **"Onde está o MANUAL da plataforma?"** → `/ajuda` (flag `help_center`, default OFF): 33 artigos em 5 partes — Começar aqui, **Atleta**, **Arena**, **Professor**, Conta e privacidade. Conteúdo em `src/modules/help/domain/helpCenter.js`, página em `src/v2/pages/V2Help.jsx`. Acesso em três pontos de TODA tela (barra lateral, menu do usuário, gaveta do celular), fora dos hubs de propósito. Link direto por `?s=<seção>&a=<artigo>`. **Nada no Firestore** (só a parte preferida, no localStorage por usuário). Ver `docs/21-CENTRAL-DE-AJUDA.md`
 **"Vou colocar um link de ajuda numa tela"** → use `helpLinkFor(location.pathname)`, importado de **`modules/help/domain/helpLink`** (NUNCA de `helpCenter`: aquele arquivo carrega os 33 artigos, e importá-lo de uma tela comum joga o manual inteiro no chunk que todo mundo baixa — 216 kB contra 184 kB, medido; há teste travando isso). Nunca `'/ajuda'` cru. Ele monta `/ajuda?de=<rota>` e a central abre com **"Ajuda para esta tela"** no topo — os artigos daquele assunto, sem a pessoa ter de adivinhar a persona nem varrer a lista. O mapa rota → artigos é `HELP_ROUTE_HINTS`; `*` vale por UM segmento e **vence o primeiro molde que casa**, então o específico vem antes do genérico (teste trava a ordem). Rota sem pista ⇒ bloco nenhum, de propósito: sugestão errada ensina a ignorar o bloco
 **"Criei/removi uma tela. O que a ajuda precisa saber?"** → duas coisas: os artigos que citam a tela (`{ type: 'link', to }` — há teste lendo `V2App.jsx`) e a PISTA de rota em `HELP_ROUTE_HINTS`. O teste pega a pista órfã; a pista que FALTA ninguém vê
@@ -391,6 +395,28 @@ chore(deps): bump firebase to 12.x
 >
 > **Destaques por onda**:
 >
+> - **Onda AA — Dia de jogo da arena** (2026-09-12): a arena passa a criar o
+>   próprio dia de jogo, **marcado no calendário** — o que FECHA a data e as
+>   quadras escolhidas para reserva. Horário do dia todo ou por quadra; mais de
+>   um dia de jogo na mesma quadra no mesmo dia, desde que em horários
+>   diferentes; limite de atletas no dia, por quadra, ou nenhum; e a escolha de
+>   se só a equipe da arena conduz as partidas ou se os inscritos também. O
+>   atleta marca presença pela página e pelo calendário da arena.
+>   **Nenhuma coleção nova**: é o mesmo `game_days` com campos aditivos
+>   (`arena_id`, `arena_slots`, `signup_mode`, `capacity`) — ausente `arena_id`,
+>   nada muda. O corolário é o que importa: **o ambiente do atleta não precisou
+>   de nada novo** (sorteio, Play, Americano aprimorado, ranking do dia, telão,
+>   tutoriais). Fechar a quadra também não é código novo: grava
+>   `arena_unavailabilities` com `source: 'game_day'`, e conflito de reserva,
+>   status de slot e calendário mensal já respeitam. **Três bugs de regra
+>   encontrados e corrigidos no caminho**: (1) nenhum gestor de arena conseguia
+>   APAGAR o próprio bloqueio de calendário (a regra olhava
+>   `request.resource.data` num delete); (2) SAIR de um dia de jogo público era
+>   recusado, porque o recálculo de membros tira quem saiu da lista; (3) ENTRAR
+>   era permissivo demais — bastava "eu estou na lista nova", o que deixava
+>   qualquer membro remover os outros. **57 asserções no emulador** (30 já
+>   existiam). Ver `docs/22-DIA-DE-JOGO-DA-ARENA.md`.
+>
 > - **Onda Z — Ajuda no momento em que dói** (2026-09-12): a central de ajuda
 >   deixou de ser um manual bem escrito para virar uma tela que **responde
 >   rápido**. Ninguém abre a ajuda por lazer: abre travado, no meio de outra
@@ -561,14 +587,14 @@ chore(deps): bump firebase to 12.x
 
 | Métrica | Valor | Delta do início do agente |
 |---|---|---|
-| **Testes Vitest** | **3454 passing** (233 arquivos) | +3046 (era 408) |
+| **Testes Vitest** | **3563 passing** (236 arquivos) | +3154 (era 408) |
 | **Lint errors** | 0 | era 30+ |
 | **Módulos** | 21 (+`help` — conteúdo dos tutoriais em tela) (`games` e `legal` saíram como `src/modules/` mas continuam como pastas oficiais — **rating virou módulo oficial** com domain/services/hooks/components) | +4 (coaches, circuits, games, legal) |
 | **V2 pages** | 79 (+V2GameDayTelao — telão, fora do V2Layout; +V2Help — central de ajuda) | +55 |
 | **V2 components (src/v2/components/)** | **16 pastas** (+home, +rating, +settings, +tournament cresceu muito, +admin) | — |
 | **Coleções Firestore** | **122 top-level em `firestore.rules`** (+`doubles_rankings`) (as 13 da gamificação V2 documentadas em `05-DATA-MODEL.md`) | +82 |
 | **Índices compostos Firestore** | **33 em `firestore.indexes.json`** (+`provisional_claims`) (+4 da gamificação V2) | +28 |
-| **Feature flags ativas** | **18 default OFF** (+`play_smart_rotation`, +`gameday_americano_live`, +`help_center`; 137 viraram código) | −113 |
+| **Feature flags ativas** | **19 default OFF** (+`play_smart_rotation`, +`gameday_americano_live`, +`help_center`, +`arena_game_day`; 137 viraram código) | −113 |
 | **Cloud Functions** | **12** (+ `recomputeRankingOnTournamentMatch`, + `recomputeRankingOnClubEventGame`) | +12 |
 | **PRs mergeados** | **96 totais** (Sprints 0-50+) | — |
 | **Origin/main** | `106bd55` (PR #110) | — |

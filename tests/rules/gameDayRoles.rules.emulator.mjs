@@ -192,6 +192,151 @@ await t('americano aprimorado: com a gestão ABERTA, o participante lança o res
 await t('americano aprimorado: quem está fora não entra nem com a gestão aberta', () =>
   assertFails(updateDoc(jogo(FORA, 'aovivo-aberto', 'g1'), { score_a: 11 })));
 
+/* ---------------- 6. DIA DE JOGO DA ARENA: quem manda é a arena ------------ */
+
+/*
+ * Um dia de jogo com `arena_id` pertence à ARENA. O que estas asserções
+ * prendem:
+ *  a) quem gerencia a arena administra o dia, mesmo sem tê-lo criado e mesmo
+ *     estando fora da lista de participantes;
+ *  b) gerenciar UMA arena não dá poder no dia de jogo de OUTRA — nem no
+ *     rachão de um atleta qualquer;
+ *  c) o atleta se inscreve sozinho (o dia é público) e sai sozinho, mas não
+ *     vira dono nem se autonomeia administrador por tabela;
+ *  d) o gestor da arena consegue APAGAR o bloqueio de calendário do dia de
+ *     jogo — que era justamente o que a regra antiga impedia.
+ */
+const GESTOR = 'gestor-arena';
+const GESTOR2 = 'gestor-outra-arena';
+const ATLETA = 'atleta-livre';
+
+await env.withSecurityRulesDisabled(async (ctx) => {
+  const db = ctx.firestore();
+  await setDoc(doc(db, 'arenas', 'arena1'), { id: 'arena1', name: 'Arena 1', owner_id: GESTOR });
+  await setDoc(doc(db, 'arena_managers', `arena1_${GESTOR}`), { arena_id: 'arena1', user_id: GESTOR, role: 'owner' });
+  await setDoc(doc(db, 'arenas', 'arena2'), { id: 'arena2', name: 'Arena 2', owner_id: GESTOR2 });
+  await setDoc(doc(db, 'arena_managers', `arena2_${GESTOR2}`), { arena_id: 'arena2', user_id: GESTOR2, role: 'owner' });
+  // O dia de jogo da arena 1 — criado por DONO, que nem é gestor.
+  await setDoc(doc(db, 'game_days', 'gd-arena'), {
+    id: 'gd-arena', arena_id: 'arena1', created_by: DONO, title: 'Sexta na Arena',
+    visibility: 'public', status: 'active', format: 'americano',
+    member_uids: [DONO], invited_uids: [], admin_uids: [],
+    signup_mode: 'day', capacity: null,
+    arena_slots: [{ court_id: 'c1', court_name: 'Quadra 1', start_time: '18:00', end_time: '22:00', capacity: null }],
+  });
+  await setDoc(doc(db, 'game_days', 'gd-arena', 'games', 'g1'), { id: 'g1', round: 1, side_a: [], side_b: [] });
+  await setDoc(doc(db, 'arena_unavailabilities', 'blk1'), {
+    arena_id: 'arena1', court_id: 'c1', date: '2026-10-02',
+    start_time: '18:00', end_time: '22:00', source: 'game_day', game_day_id: 'gd-arena',
+  });
+});
+
+await t('⭐ arena: o gestor da arena EDITA o dia de jogo que não criou', () =>
+  assertSucceeds(updateDoc(dia(GESTOR, 'gd-arena'), { title: 'Sexta na Arena (nova)' })));
+
+await t('⭐ arena: o gestor da arena conduz as partidas', () =>
+  assertSucceeds(updateDoc(jogo(GESTOR, 'gd-arena', 'g1'), { score_a: 11, score_b: 9 })));
+
+await t('⭐ arena: o gestor da arena arquiva o dia', () =>
+  assertSucceeds(updateDoc(dia(GESTOR, 'gd-arena'), { status: 'archived' })));
+
+await t('⭐ arena: gestor de OUTRA arena não edita este dia de jogo', () =>
+  assertFails(updateDoc(dia(GESTOR2, 'gd-arena'), { title: 'invadido' })));
+
+await t('⭐ arena: gestor de OUTRA arena não conduz as partidas', () =>
+  assertFails(updateDoc(jogo(GESTOR2, 'gd-arena', 'g1'), { score_a: 1 })));
+
+await t('⭐ arena: gerenciar arena NÃO dá poder no dia de jogo de um atleta', () =>
+  assertFails(updateDoc(dia(GESTOR, 'restrito'), { title: 'invadido' })));
+
+await t('arena: atleta qualquer não edita o dia de jogo da arena', () =>
+  assertFails(updateDoc(dia(ATLETA, 'gd-arena'), { title: 'invadido' })));
+
+await t('arena: atleta qualquer não conduz as partidas', () =>
+  assertFails(updateDoc(jogo(ATLETA, 'gd-arena', 'g1'), { score_a: 1 })));
+
+await t('arena: o dia de jogo é público, então o atleta ENXERGA', () =>
+  assertSucceeds(getDoc(dia(ATLETA, 'gd-arena'))));
+
+await t('⭐ arena: o atleta marca a própria presença', () =>
+  assertSucceeds(setDoc(parte(ATLETA, 'gd-arena', `p-${ATLETA}`), {
+    id: `p-${ATLETA}`, user_id: ATLETA, name: 'Atleta', arena_court_id: 'c1',
+  })));
+
+await t('⭐ arena: o atleta NÃO inscreve outra pessoa', () =>
+  assertFails(setDoc(parte(ATLETA, 'gd-arena', 'p-terceiro'), {
+    id: 'p-terceiro', user_id: 'terceiro', name: 'Terceiro',
+  })));
+
+await t('arena: o atleta desmarca a própria presença', () =>
+  assertSucceeds(deleteDoc(parte(ATLETA, 'gd-arena', `p-${ATLETA}`))));
+
+await t('⭐ arena: o atleta não vira dono do dia de jogo', () =>
+  assertFails(updateDoc(dia(ATLETA, 'gd-arena'), { created_by: ATLETA, member_uids: [ATLETA] })));
+
+await t('⭐ arena: o atleta não se autonomeia administrador', () =>
+  assertFails(updateDoc(dia(ATLETA, 'gd-arena'), { admin_uids: [ATLETA] })));
+
+await t('⭐ arena: marcar presença também ENTRA na lista de membros', () =>
+  assertSucceeds(updateDoc(dia(ATLETA, 'gd-arena'), {
+    member_uids: [DONO, ATLETA],
+  })));
+
+await t('⭐ arena: sair devolve a lista SEM mim (era recusado antes)', () =>
+  assertSucceeds(updateDoc(dia(ATLETA, 'gd-arena'), { member_uids: [DONO] })));
+
+await env.withSecurityRulesDisabled(async (ctx) => {
+  await updateDoc(doc(ctx.firestore(), 'game_days', 'gd-arena'), {
+    member_uids: [DONO, ATLETA, 'terceiro'],
+  });
+});
+
+await t('⭐ arena: sair NÃO é brecha para esvaziar a lista dos outros', () =>
+  assertFails(updateDoc(dia(ATLETA, 'gd-arena'), { member_uids: [] })));
+
+await t('⭐ arena: ninguém remove OUTRA pessoa pela lista de membros', () =>
+  assertFails(updateDoc(dia(ATLETA, 'gd-arena'), { member_uids: [DONO, ATLETA] })));
+
+await t('⭐ arena: entrar de novo é inofensivo (idempotente)', () =>
+  assertSucceeds(updateDoc(dia(ATLETA, 'gd-arena'), { member_uids: [DONO, ATLETA, 'terceiro'] })));
+
+await t('⭐ arena: ninguém INSERE terceiro pela lista de membros', () =>
+  assertFails(updateDoc(dia(ATLETA, 'gd-arena'), { member_uids: [DONO, ATLETA, 'terceiro', 'penetra'] })));
+
+await t('⭐ arena: sair não vem junto com outra mudança escondida', () =>
+  assertFails(updateDoc(dia(ATLETA, 'gd-arena'), {
+    member_uids: [DONO, 'terceiro'], title: 'renomeado de tabela',
+  })));
+
+await t('⭐ bloqueio de calendário: o gestor da arena APAGA o dele (a regra antiga impedia)', () =>
+  assertSucceeds(deleteDoc(doc(como(GESTOR), 'arena_unavailabilities', 'blk1'))));
+
+await env.withSecurityRulesDisabled(async (ctx) => {
+  await setDoc(doc(ctx.firestore(), 'arena_unavailabilities', 'blk2'), {
+    arena_id: 'arena1', court_id: 'c1', date: '2026-10-09',
+    start_time: '18:00', end_time: '22:00', source: 'game_day', game_day_id: 'gd-arena',
+  });
+});
+
+await t('⭐ bloqueio de calendário: gestor de OUTRA arena não apaga', () =>
+  assertFails(deleteDoc(doc(como(GESTOR2), 'arena_unavailabilities', 'blk2'))));
+
+await t('bloqueio de calendário: atleta qualquer não apaga', () =>
+  assertFails(deleteDoc(doc(como(ATLETA), 'arena_unavailabilities', 'blk2'))));
+
+await t('bloqueio de calendário: o gestor cria o da sua arena', () =>
+  assertSucceeds(setDoc(doc(como(GESTOR), 'arena_unavailabilities', 'blk3'), {
+    arena_id: 'arena1', court_id: 'c1', date: '2026-10-16', start_time: '08:00', end_time: '10:00',
+  })));
+
+await t('⭐ bloqueio de calendário: ninguém cria bloqueio na arena dos outros', () =>
+  assertFails(setDoc(doc(como(GESTOR2), 'arena_unavailabilities', 'blk4'), {
+    arena_id: 'arena1', court_id: 'c1', date: '2026-10-16', start_time: '08:00', end_time: '10:00',
+  })));
+
+await t('⭐ bloqueio de calendário: não dá para mudar um bloqueio de arena', () =>
+  assertFails(updateDoc(doc(como(GESTOR), 'arena_unavailabilities', 'blk2'), { arena_id: 'arena2' })));
+
 /* ------------------------------- relatório -------------------------------- */
 
 await env.cleanup();

@@ -23,6 +23,7 @@ import { useCanArenaUseModule } from '@/modules/arenas/hooks/useArenaV3';
 import { useArenaTournaments } from '@/modules/tournament/hooks/useTournament';
 import { useArenaCoaches } from '@/modules/coaches/hooks/useCoaches';
 import V2BookingCalendar from '@/v2/components/arenas/V2BookingCalendar';
+import ArenaGameDaysSection from '@/v2/components/arenas/ArenaGameDaysSection';
 import { isPixConfigured, PIX_KEY_TYPE_LABELS } from '@/modules/arenas/domain/pix_payment';
 import { groupRulesByCategory } from '@/modules/arenas/domain/arena_rules';
 import { V2Badge, V2Button, V2EmptyState, V2Skeleton, V2Surface } from '@/v2/ui/primitives';
@@ -189,6 +190,12 @@ function V2ArenaDetailContent({ arenaId, user, arena, managed, bookings, isLoadi
           {arena.description && <p className="mt-6 whitespace-pre-line text-sm leading-7 text-gray-500">{arena.description}</p>}
         </div>
       </div>
+
+      {/* Dia de jogo da arena vem ANTES do calendário de reservas: quem chega
+          na página e encontra uma rodada marcada para o dia seguinte tem uma
+          decisão mais simples (marcar presença) do que escolher horário e
+          pedir uma quadra. Some sozinha quando não há nada marcado. */}
+      <ArenaGameDaysSection arenaId={arenaId} />
 
       {/* Reservar é a ação principal do visitante: o calendário interativo
           vem logo após o hero, antes de regras/contato. */}

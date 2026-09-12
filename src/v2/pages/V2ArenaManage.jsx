@@ -157,6 +157,10 @@ function V2ArenaManageContent({ arenaId, user, isPlatformAdmin, arena, managed, 
   const linkedClubsOn = true;
   const crmOn = true;
   const opsKpisOn = useFeatureFlag(FEATURE_FLAG.ARENA_OPS_KPIS);
+  // Dia de jogo da arena: rota própria (como Módulos e Open Match), por isso
+  // entra como atalho no topo e não como aba — aba que navega para fora quebra
+  // a promessa das outras.
+  const gameDayOn = useFeatureFlag(FEATURE_FLAG.ARENA_GAME_DAY);
   // Lembra a última sub-aba visitada em cada seção principal.
   const [sectionMemory, setSectionMemory] = useState({});
 
@@ -229,6 +233,13 @@ function V2ArenaManageContent({ arenaId, user, isPlatformAdmin, arena, managed, 
           <V2Button asChild variant="secondary" size="sm">
             <Link to={`/arenas/${arena.id}/gerir/membros`}>Membros</Link>
           </V2Button>
+          {gameDayOn && (
+            <V2Button asChild variant="secondary" size="sm">
+              <Link to={`/arenas/${arena.id}/gerir/dia-de-jogo`}>
+                <CalendarClock className="h-4 w-4" /> Dia de jogo
+              </Link>
+            </V2Button>
+          )}
         </div>
       </div>
 

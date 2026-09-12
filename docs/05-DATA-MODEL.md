@@ -488,9 +488,34 @@ Dia de jogo criado por um atleta (primo do dia de jogo dos clubes, sem clube don
   do dia de jogo. Quem entra aqui também entra em `member_uids` (para enxergar o
   dia de jogo se ele for privado). Sair de admin **não** remove de `member_uids`.
 
+#### Campos do DIA DE JOGO DA ARENA (**opcionais, aditivos** — flag `arena_game_day`)
+
+Presentes só quando a arena é a dona. **Ausente `arena_id`, nada disso vale** e o
+dia de jogo é exatamente o do atleta, como sempre foi.
+- `arena_id` — a arena dona; `arena_name`, `arena_city`, `arena_state`
+  (desnormalizados, para cartões)
+- `arena_slots[]` — `{ court_id, court_name, start_time, end_time, capacity }`.
+  As quadras e horários reservados. Horário igual em todos ⇒ "dia todo";
+  diferentes ⇒ "por quadra". Duas faixas na mesma quadra podem coexistir desde
+  que não se sobreponham (encostar não é sobrepor)
+- `signup_mode: 'day'|'court'` — onde o atleta se inscreve
+- `capacity` — teto do dia (`null` = sem limite). No modo `'court'` o teto vive
+  em cada slot e este fica `null`
+- em `participants/{pid}`: `arena_court_id` (**opcional**) — a quadra escolhida
+
+Dia de jogo de arena é sempre `visibility: 'public'` — é assim que o atleta o
+enxerga na página da arena, e é o que faz a listagem por `arena_id` passar pela
+regra de leitura.
+
+**Fechar a quadra no calendário não usa coleção nova**: grava
+`arena_unavailabilities` com `source: 'game_day'` e `game_day_id`. Conflito de
+reserva, status de slot e calendário mensal já respeitavam indisponibilidade.
+Arquivar apaga esses bloqueios. Ver `docs/22-DIA-DE-JOGO-DA-ARENA.md`.
+
 O criador continua sendo o único que edita, arquiva, muda `manage_mode`,
-nomeia/remove admin e publica no ranking da plataforma — isso NÃO é delegável
-(`club_event_games` exige `isGameDayOwnerOf`). Regras de campo em
+nomeia/remove admin e publica no ranking da plataforma — **salvo no dia de jogo
+de ARENA**, em que quem gerencia a arena faz tudo isso (a arena é a dona do
+evento; amarrá-lo a uma pessoa o deixaria órfão quando ela saísse da equipe). Regras de campo em
 `firestore.rules` impedem que um admin altere `admin_uids`, `manage_mode`,
 `created_by`, `title`, `status` ou `publish_to_ranking`: a atualização feita por
 quem não é o criador só passa se mexer em `member_uids`, `invited_uids` e

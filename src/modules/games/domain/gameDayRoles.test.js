@@ -170,3 +170,75 @@ describe('gameDayAdminList', () => {
     expect(gameDayAdminList(null)).toEqual([]);
   });
 });
+
+/* ================================================ dia de jogo de ARENA === */
+
+describe('dia de jogo de arena — quem gerencia a arena administra o dia', () => {
+  const daArena = {
+    id: 'gd-arena',
+    arena_id: 'a1',
+    created_by: 'gestor1',
+    member_uids: ['gestor1', 'atleta1'],
+    manage_mode: GAME_DAY_MANAGE_MODE.OWNER_ONLY,
+  };
+  const doAtleta = {
+    id: 'gd-atleta',
+    created_by: 'dono',
+    member_uids: ['dono', 'atleta1'],
+    manage_mode: GAME_DAY_MANAGE_MODE.OWNER_ONLY,
+  };
+
+  it('⭐ gestor da arena administra mesmo sem ter criado', () => {
+    expect(isGameDayAdmin(daArena, 'gestor2')).toBe(false);
+    expect(isGameDayAdmin(daArena, 'gestor2', { arenaManager: true })).toBe(true);
+  });
+
+  it('⭐ gestor da arena gerencia e configura', () => {
+    expect(canManageGameDay(daArena, 'gestor2', { arenaManager: true })).toBe(true);
+    expect(canConfigureGameDay(daArena, 'gestor2', { arenaManager: true })).toBe(true);
+  });
+
+  it('⭐ gerenciar UMA arena não dá poder no rachão de ninguém', () => {
+    // A trava está aqui dentro, não só em quem chama: um `true` distraído
+    // não pode virar permissão sobre um dia de jogo de atleta.
+    expect(isGameDayAdmin(doAtleta, 'gestor2', { arenaManager: true })).toBe(false);
+    expect(canManageGameDay(doAtleta, 'gestor2', { arenaManager: true })).toBe(false);
+    expect(canConfigureGameDay(doAtleta, 'gestor2', { arenaManager: true })).toBe(false);
+  });
+
+  it('sem a opção, nada muda para ninguém (comportamento antigo)', () => {
+    expect(canManageGameDay(daArena, 'gestor2')).toBe(false);
+    expect(canConfigureGameDay(daArena, 'gestor2')).toBe(false);
+    expect(canManageGameDay(daArena, 'gestor1')).toBe(true);
+  });
+
+  it('só `true` conta — valor solto não vira permissão', () => {
+    [1, 'sim', {}, [], 'true'].forEach((v) => {
+      expect(isGameDayAdmin(daArena, 'gestor2', { arenaManager: v })).toBe(false);
+    });
+  });
+
+  it('sem uid, nem gestor de arena passa', () => {
+    expect(isGameDayAdmin(daArena, null, { arenaManager: true })).toBe(false);
+    expect(canConfigureGameDay(daArena, null, { arenaManager: true })).toBe(false);
+    expect(canManageGameDay(daArena, '', { arenaManager: true })).toBe(false);
+  });
+
+  it('no modo aberto, o atleta inscrito gerencia — como nos outros dias', () => {
+    const aberto = { ...daArena, manage_mode: GAME_DAY_MANAGE_MODE.PARTICIPANTS };
+    const parts = [{ user_id: 'atleta1' }];
+    expect(canManageGameDay(aberto, 'atleta1', { participants: parts })).toBe(true);
+    // ...mas CONFIGURAR segue fora do alcance dele.
+    expect(canConfigureGameDay(aberto, 'atleta1')).toBe(false);
+  });
+
+  it('no modo restrito, o atleta inscrito não gerencia', () => {
+    expect(canManageGameDay(daArena, 'atleta1', { participants: [{ user_id: 'atleta1' }] })).toBe(false);
+  });
+
+  it('a lista de administradores NÃO inclui os gestores da arena', () => {
+    // Mostrá-los sugeriria que dá para removê-los pelo dia de jogo — o que
+    // tiraria o poder deles sobre a arena inteira.
+    expect(gameDayAdminList(daArena).map((a) => a.uid)).toEqual(['gestor1']);
+  });
+});

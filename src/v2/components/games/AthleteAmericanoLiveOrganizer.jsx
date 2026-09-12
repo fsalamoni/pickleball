@@ -20,7 +20,7 @@ import {
 import {
   DailyRankingSection, RankingSection,
 } from '@/v2/components/games/AthleteGameDayOrganizer';
-import { canManageGameDay, isGameDayCreator } from '@/modules/games/domain/gameDayRoles';
+import { useGameDayRoles } from '@/modules/games/hooks/useGameDayRoles';
 import { useAuth } from '@/core/lib/FirebaseAuthContext';
 import {
   useGameDayParticipants, useGameDayGames, useDeleteGameDayGame,
@@ -53,8 +53,9 @@ export default function AthleteAmericanoLiveOrganizer({ gameDay }) {
   const { data: participants = [], isLoading } = useGameDayParticipants(gameDay.id);
   const { data: games = [] } = useGameDayGames(gameDay.id);
 
-  const canManage = canManageGameDay(gameDay, user?.uid, { participants });
-  const ehCriador = isGameDayCreator(gameDay, user?.uid);
+  // Quem pode o quê vem de um lugar só: o hook soma criador, administrador
+  // nomeado, gestor da ARENA (dia de jogo de arena) e o modo de gestão.
+  const { podeGerenciar: canManage, podeConfigurar: ehCriador } = useGameDayRoles(gameDay, participants);
   const view = useMemo(() => americanoLiveView({ participants, games }), [participants, games]);
 
   return (

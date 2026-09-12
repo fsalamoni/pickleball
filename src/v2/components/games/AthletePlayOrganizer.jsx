@@ -18,7 +18,7 @@ import { V2Button, V2Badge } from '@/v2/ui/primitives';
 import V2CollapsibleCard from '@/v2/ui/V2CollapsibleCard';
 import { GAME_DAY_SECTION } from '@/v2/components/games/gameDaySections';
 import GameDayAdminsCard from '@/v2/components/games/GameDayAdminsCard';
-import { canManageGameDay, isGameDayCreator } from '@/modules/games/domain/gameDayRoles';
+import { useGameDayRoles } from '@/modules/games/hooks/useGameDayRoles';
 import { useAuth } from '@/core/lib/FirebaseAuthContext';
 import { useAthletes } from '@/modules/athletes/hooks/useAthletes';
 import { genderLabel } from '@/modules/athletes/domain/constants';
@@ -59,8 +59,9 @@ export default function AthletePlayOrganizer({ gameDay }) {
   // gerenciar (ver V2GameDays) — o criador, quem ele nomeou, ou qualquer
   // participante se o dia estiver aberto. Os demais usam
   // AthletePlayParticipant, que só cuida da própria participação.
-  const canManage = canManageGameDay(gameDay, user?.uid, { participants });
-  const ehCriador = isGameDayCreator(gameDay, user?.uid);
+  // Quem pode o quê vem de um lugar só: o hook soma criador, administrador
+  // nomeado, gestor da ARENA (dia de jogo de arena) e o modo de gestão.
+  const { podeGerenciar: canManage, podeConfigurar: ehCriador } = useGameDayRoles(gameDay, participants);
 
   // A ordem de participação exibida tem de ser a ordem REAL de entrada em
   // quadra. Com o rodízio equilibrado, os primeiros da fila por tempo de

@@ -140,6 +140,14 @@ export async function updateGameDay(id, patch, actor) {
   const merged = { ...current, ...editable, id };
   const creatorName = current.creator_name || displayName(actor);
   const creatorPhoto = current.creator_photo || actor?.photoURL || null;
+  // Dia de jogo de ARENA é público para o atleta ENXERGAR na página da arena,
+  // não para virar anúncio em "Procura-se jogo" — o canal dele é o calendário
+  // da arena. Sem esta guarda, qualquer edição criaria um convite que a arena
+  // nunca pediu. (Ele tem serviço próprio: `arenaGameDayService`.)
+  if (current.arena_id) {
+    await createAuditLog({ action: 'game_day_updated', actor, details: { game_day_id: id } });
+    return;
+  }
   if (isPublicGameDay(merged)) {
     if (current.open_game_id) {
       // Atualiza o convite existente (data/descrição/local).
@@ -274,6 +282,9 @@ export async function addGameDayParticipant(gdId, entry, actor) {
     available_tie: Math.random(),
     skip_remaining: 0,
     partner_id: null,
+    // Quadra escolhida no dia de jogo de ARENA com inscrição por quadra.
+    // Aditivo e inerte em todos os outros casos: `null` quando não se aplica.
+    arena_court_id: entry.arena_court_id ?? null,
   });
   if (entry.user_id) {
     const patch = { member_uids: arrayUnion(entry.user_id), updated_at: serverTimestamp() };
