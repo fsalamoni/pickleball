@@ -945,17 +945,14 @@ export function nextHelpArticle(sectionId, articleId) {
 }
 
 /**
- * O endereço da central A PARTIR de uma tela.
+ * O endereço da central A PARTIR de uma tela — reexportado de `helpLink.js`.
  *
  * É o que faz o link de ajuda de qualquer canto chegar já sabendo do que se
  * trata. Sem isto, quem clica em "ajuda" na tela de sorteio cai numa página
  * genérica e recomeça a procura do zero.
  *
- * @param {string} pathname caminho atual (`location.pathname`)
- * @returns {string} `/ajuda` quando não há de onde vir (ou já se está nela)
+ * Mora noutro arquivo porque quem o chama é o LAYOUT, presente em toda tela:
+ * importá-lo daqui arrastaria os 33 artigos para o chunk que todo mundo baixa.
+ * Quem monta um link deve importar de `helpLink.js`.
  */
-export function helpLinkFor(pathname) {
-  const p = String(pathname || '');
-  if (!p.startsWith('/') || p === '/ajuda' || p.startsWith('/ajuda/')) return '/ajuda';
-  return `/ajuda?de=${encodeURIComponent(p)}`;
-}
+export { helpLinkFor } from './helpLink.js';

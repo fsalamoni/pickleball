@@ -57,7 +57,9 @@ import { V2Avatar } from '@/v2/ui/primitives';
 import V2OnboardingWizard from '@/v2/components/onboarding/V2OnboardingWizard';
 import { FEATURE_FLAG } from '@/core/featureFlags';
 import { useFeatureFlag } from '@/core/lib/FeatureFlagsContext';
-import { helpLinkFor } from '@/modules/help/domain/helpCenter';
+// De `helpLink` e não de `helpCenter`: o layout está em toda tela, e importar
+// do arquivo do conteúdo traria os 33 artigos da ajuda no chunk de todo mundo.
+import { helpLinkFor } from '@/modules/help/domain/helpLink';
 import LegalConsentGate from '@/v2/components/legal/LegalConsentGate';
 import { useMyConsents } from '@/modules/legal/hooks/useConsents';
 import { pendingGateConsents } from '@/modules/legal/domain/consent';

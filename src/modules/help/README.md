@@ -111,6 +111,11 @@ errada é pior que nenhuma** — ensina a pessoa a ignorar o bloco.
 **Criou ou removeu uma tela? Passe por `HELP_ROUTE_HINTS`.** O teste pega a
 pista órfã; a pista que FALTA ninguém vê.
 
+⚠️ **Importe `helpLinkFor` de `helpLink.js`, nunca de `helpCenter.js`.** Quem
+monta esse link está numa tela comum, e `helpCenter.js` carrega 33 artigos de
+texto: importar de lá joga o manual inteiro no chunk que todo mundo baixa
+(216 kB contra 184 kB, medido). Há teste conferindo.
+
 ### O resto do que o domínio oferece à tela
 
 | Função | Para quê |

@@ -124,11 +124,21 @@ um deles.
 ## 4. Arquitetura
 
 ```
+src/modules/help/domain/helpLink.js         # só `helpLinkFor` — de propósito
+src/modules/help/domain/helpLink.test.js    # 6 asserções (2 guardam o peso)
 src/modules/help/domain/helpCenter.js       # conteúdo + pistas + busca (puro)
 src/modules/help/domain/helpCenter.test.js  # 121 asserções
 src/v2/pages/V2Help.jsx                     # a página
 src/v2/pages/V2Help.runtime.test.jsx        # 44 testes de runtime
 ```
+
+**Por que `helpLinkFor` mora sozinho.** Quem o chama é o LAYOUT, presente em
+toda tela; `helpCenter.js` carrega 33 artigos de texto. Importar do arquivo do
+conteúdo arrasta o manual inteiro para o chunk que todo mundo baixa — medido:
+**216 kB contra 184 kB** (63 kB contra 52 kB comprimidos) por uma função de
+três linhas. Rollup não consegue descartar o conteúdo: são objetos montados por
+chamadas de função, que ele não prova sem efeito. Há teste conferindo que o
+layout importa de `helpLink` e que `helpLink` não importa nada.
 
 O que o domínio exporta, além do conteúdo:
 
@@ -176,7 +186,9 @@ Três testes que valem mais que os outros:
    casa com `/torneios/x/gerenciar`, então, se viesse primeiro, a pista
    específica nunca seria alcançada. O teste confere todos os pares.
 5. **⭐ `helpLinkFor` e `helpForRoute` fecham o contrato**: o que um escreve o
-   outro lê. Se um dos dois mudar de forma, quebra na hora.
+   outro lê. Se um dos dois mudar de forma, quebra na hora. E **o layout
+   importa de `helpLink`, não de `helpCenter`** — se isso inverter, o chunk de
+   toda tela volta a carregar os 33 artigos (§4).
 6. **⭐ `highlightParts` nunca perde nem inventa caractere** — remontar os
    pedaços devolve o texto original, com acento e caixa.
 7. **Estrutura**: todo artigo tem título, resumo, corpo e palavras-chave; ids
