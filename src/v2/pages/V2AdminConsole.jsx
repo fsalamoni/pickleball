@@ -43,6 +43,7 @@ import {
   Palette,
   Pencil,
   Plus,
+  Puzzle,
   Search,
   Settings as SettingsIcon,
   Stethoscope,
@@ -97,6 +98,7 @@ import AdminCatalogTab from '@/v2/components/admin/AdminCatalogTab';
 import AdminAccessTab from '@/v2/components/admin/AdminAccessTab';
 import AdminUserRecordsTab from '@/v2/components/admin/AdminUserRecordsTab';
 import AdminDuprExportTab from '@/v2/components/admin/AdminDuprExportTab';
+import AdminArenaModulesTab from '@/v2/components/admin/AdminArenaModulesTab';
 import {
   useAffiliateLinks,
   useCreateAffiliateLink,
@@ -157,13 +159,26 @@ const SECTIONS = Object.freeze([
  * `dupr_match_export` está ligada. Mantém `SECTIONS` intacto (base) e devolve
  * uma cópia aditiva — nada muda quando a flag está desligada.
  */
-function buildSections(duprExportOn) {
-  if (!duprExportOn) return SECTIONS;
-  return SECTIONS.map((section) => (
-    section.id === 'governance'
-      ? { ...section, tabs: [...section.tabs, { id: 'dupr', label: 'Exportar DUPR', icon: FileDown }] }
-      : section
-  ));
+function buildSections(duprExportOn, arenaModulesOn) {
+  let out = SECTIONS;
+  if (duprExportOn) {
+    out = out.map((section) => (
+      section.id === 'governance'
+        ? { ...section, tabs: [...section.tabs, { id: 'dupr', label: 'Exportar DUPR', icon: FileDown }] }
+        : section
+    ));
+  }
+  // A aba onde o admin LIBERA os módulos adicionais às arenas. Mora em
+  // Funcionalidades porque é ali que se decide o que existe na plataforma —
+  // e some junto com a chave-mestra, para não sobrar porta sem sala.
+  if (arenaModulesOn) {
+    out = out.map((section) => (
+      section.id === 'features'
+        ? { ...section, tabs: [...section.tabs, { id: 'arena-modules', label: 'Módulos de arena', icon: Puzzle }] }
+        : section
+    ));
+  }
+  return out;
 }
 
 const DEFAULT_BRANDING = Object.freeze({
@@ -188,11 +203,15 @@ export default function V2AdminConsole() {
   const { isPlatformAdmin } = useAuth();
   const enabled = true;
   const duprExportOn = useFeatureFlag(FEATURE_FLAG.DUPR_MATCH_EXPORT);
+  const arenaModulesOn = useFeatureFlag(FEATURE_FLAG.ARENA_MODULES);
   const [searchParams, setSearchParams] = useSearchParams();
   const navigate = useNavigate();
 
   // Seções/abas dinâmicas: a aba de exportação DUPR só existe com a flag on.
-  const sections = useMemo(() => buildSections(duprExportOn), [duprExportOn]);
+  const sections = useMemo(
+    () => buildSections(duprExportOn, arenaModulesOn),
+    [duprExportOn, arenaModulesOn],
+  );
   const allTabs = useMemo(() => sections.flatMap((s) => s.tabs), [sections]);
 
   // Tab ativa vem de ?tab= (deep link). Default: overview. Validada contra allTabs.
@@ -242,6 +261,7 @@ export default function V2AdminConsole() {
         {tab === 'audit'      && <AuditTab />}
         {tab === 'tools'      && <ToolsTab navigate={navigate} />}
         {tab === 'dupr'       && duprExportOn && <AdminDuprExportTab />}
+        {tab === 'arena-modules' && arenaModulesOn && <AdminArenaModulesTab />}
       </div>
     </div>
   );

@@ -23,6 +23,10 @@ export const arenaKeys = Object.freeze({
   reservas: (id) => ['arena-bookings', id],
   /** Bloqueios do admin. O recorte de datas faz parte da chave. */
   bloqueios: (id, from, to) => ['arena-unavailabilities', id, from, to],
+  /** Módulos que ESTA arena ligou (camada 2). */
+  modulos: (id) => ['arena-module-states', id],
+  /** Módulos que a PLATAFORMA liberou (camada 1). Global, sem arena. */
+  modulosPlataforma: () => ['platform-arena-modules'],
 });
 
 /**

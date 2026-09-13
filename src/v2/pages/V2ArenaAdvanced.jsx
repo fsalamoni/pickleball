@@ -179,7 +179,7 @@ export default function V2ArenaAdvanced() {
   const { data: arena, isLoading: arenaLoading } = useArena(arenaId);
   const { data: managed = [] } = useMyManagedArenas();
   const [tab, setTab] = useState('iot');
-  const canIot = useCanArenaUseModule(arenaId, 'iot_devices');
+  const canIot = useCanArenaUseModule(arenaId, 'iot');
   const canMulti = useCanArenaUseModule(arenaId, 'multi_unit');
   const canWhite = useCanArenaUseModule(arenaId, 'white_label');
   const canAi = useCanArenaUseModule(arenaId, 'ai_forecast');

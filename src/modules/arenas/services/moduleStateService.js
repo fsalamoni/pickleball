@@ -15,6 +15,7 @@ import {
   setDoc,
   query,
   where,
+  writeBatch,
   serverTimestamp,
 } from 'firebase/firestore';
 import { db } from '@/core/config/firebase';
@@ -73,6 +74,63 @@ export async function setArenaModuleState(arenaId, moduleId, enabled, config = {
     });
   }
   logger.info('arena_module_state_set', { arenaId, moduleId, enabled });
+}
+
+/**
+ * Liga/desliga VÁRIOS módulos de uma arena numa escrita só.
+ *
+ * Existe por causa da cascata: ligar a carteira liga membros junto, e desligar
+ * membros derruba carteira, pacotes e mensalidade. Fazer isso em N escritas
+ * deixaria a arena num estado inconsistente se a terceira falhasse — e a tela
+ * mostraria metade ligada. Aqui é lote: tudo ou nada.
+ *
+ * @param {string} arenaId
+ * @param {Array<{ moduleId: string, enabled: boolean, config?: Object }>} entries
+ * @param {Object|null} actor
+ * @param {{ reason?: string }} [meta] — por que a mudança aconteceu (auditoria)
+ */
+export async function setArenaModuleStates(arenaId, entries = [], actor = null, meta = {}) {
+  if (!arenaId) throw new Error('arenaId é obrigatório.');
+  const valid = entries.filter((e) => e?.moduleId && isValidModuleId(e.moduleId));
+  if (valid.length === 0) return;
+
+  // Lê o que já existe para preservar created_at e a config de quem não muda.
+  const existing = await Promise.all(
+    valid.map((e) => getDoc(doc(db, COL, moduleStateDocId(arenaId, e.moduleId)))),
+  );
+
+  const batch = writeBatch(db);
+  valid.forEach((entry, i) => {
+    const id = moduleStateDocId(arenaId, entry.moduleId);
+    const prev = existing[i];
+    const enabled = Boolean(entry.enabled);
+    batch.set(doc(db, COL, id), {
+      id,
+      arena_id: arenaId,
+      module_id: entry.moduleId,
+      enabled,
+      config: entry.config || (prev.exists() ? prev.data().config : null) || {},
+      enabled_at: enabled ? serverTimestamp() : null,
+      enabled_by: enabled ? (actor?.uid || null) : null,
+      disabled_at: enabled ? null : serverTimestamp(),
+      disabled_by: enabled ? null : (actor?.uid || null),
+      created_at: prev.exists() ? prev.data().created_at : serverTimestamp(),
+      updated_at: serverTimestamp(),
+    });
+  });
+  await batch.commit();
+
+  await createAuditLog({
+    action: 'arena_modules_changed',
+    actor,
+    details: {
+      arena_id: arenaId,
+      enabled: valid.filter((e) => e.enabled).map((e) => e.moduleId),
+      disabled: valid.filter((e) => !e.enabled).map((e) => e.moduleId),
+      reason: meta.reason || null,
+    },
+  });
+  logger.info('arena_module_states_set', { arenaId, count: valid.length });
 }
 
 /**

@@ -379,3 +379,20 @@ antes de ordenar devolve N quaisquer.
 - `docs/10-ARENA-V3/10-MODULES-CATALOG.md` — 51+ módulos
 - `docs/09-UX-ANALYSIS/07-arena.md` — auditoria UX
 - `docs/09-UX-ANALYSIS/13-arena-refino.md` — refino entregue
+
+## Módulos adicionais da arena (três camadas)
+
+Funcionalidades extras que **a plataforma libera** e **cada arena ativa para
+si**. Ver `docs/24-MODULOS-DE-ARENA/00-INDEX.md`.
+
+| Arquivo | Papel |
+|---|---|
+| `domain/modules.js` | ids (contrato de banco) + metadados de exibição |
+| `domain/moduleCatalog.js` | detalhamento: público, benefício, status, dependências, rotas, configuração |
+| `domain/moduleAccess.js` | o gate puro: `resolveArenaModule`, `buildArenaModuleAccess`, cascata |
+| `services/platformModulesService.js` | camada 1 — `platform_settings/arena_modules` |
+| `services/moduleStateService.js` | camada 2 — `arena_module_states` (com escrita em lote) |
+| `hooks/useArenaModules.js` | o ÚNICO ponto de consumo |
+
+Regras: o **id nunca muda**; **uma consulta por arena**, nunca uma por módulo;
+módulo desligado **não é renderizado desabilitado**, simplesmente não existe.

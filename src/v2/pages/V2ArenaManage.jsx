@@ -3,9 +3,10 @@ import { Link, Navigate, useLocation, useParams } from 'react-router-dom';
 import { toast } from 'sonner';
 import { collection, getDocs, query, where } from 'firebase/firestore';
 import {
-  AlertTriangle, ArrowLeft, Building2, Settings, Trash2, UserPlus, Users,
+  AlertTriangle, ArrowLeft, Building2, Trash2, UserPlus, Users,
   BarChart3, CalendarClock, CalendarDays, CalendarRange, Wallet, ClipboardList,
   Package, LayoutGrid, DollarSign, Image, Info, Star, GraduationCap,
+  Puzzle, SlidersHorizontal,
 } from 'lucide-react';
 /**
  * As abas chegam SOB DEMANDA.
@@ -26,6 +27,7 @@ const V2ArenaPaymentTab = lazy(() => import('@/v2/components/arenas/V2ArenaPayme
 const V2ArenaRulesTab = lazy(() => import('@/v2/components/arenas/V2ArenaRulesTab'));
 const V2ArenaMercadoTab = lazy(() => import('@/v2/components/arenas/V2ArenaMercadoTab'));
 const V2ArenaWeekPanel = lazy(() => import('@/v2/components/arenas/V2ArenaWeekPanel'));
+const ArenaModulesPanel = lazy(() => import('@/v2/components/arenas/ArenaModulesPanel'));
 import { useFeatureFlag } from '@/core/lib/FeatureFlagsContext';
 import { FEATURE_FLAG } from '@/core/featureFlags';
 import { db } from '@/core/config/firebase';
@@ -57,7 +59,7 @@ import { cn } from '@/core/lib/utils';
 // início ao fim: identidade → estrutura/preços → reservas → comercial →
 // resultados → equipe/parceiros. Cada seção agrupa sub-abas por tema.
 // `coachResidentOn` injeta a aba de professores parceiros na seção de equipe.
-function buildArenaSections({ coachResidentOn, linkedClubsOn, crmOn, opsKpisOn }) {
+function buildArenaSections({ coachResidentOn, linkedClubsOn, crmOn, opsKpisOn, arenaModulesOn }) {
   return [
     {
       id: 'perfil',
@@ -118,6 +120,17 @@ function buildArenaSections({ coachResidentOn, linkedClubsOn, crmOn, opsKpisOn }
         ...(linkedClubsOn ? [{ value: 'clubes', label: 'Clubes', icon: Users }] : []),
       ],
     },
+    // Configurações fecha o ciclo: o que a arena LIGA para si. Vem por último
+    // de propósito — é a seção em que se escolhe o que existe, e escolher só
+    // faz sentido depois de conhecer o resto.
+    ...(arenaModulesOn ? [{
+      id: 'configuracoes',
+      label: 'Configurações',
+      icon: SlidersHorizontal,
+      tabs: [
+        { value: 'modulos', label: 'Módulos', icon: Puzzle },
+      ],
+    }] : []),
   ];
 }
 
@@ -234,6 +247,10 @@ function V2ArenaManageContent({ arenaId, user, isPlatformAdmin, arena, managed, 
   // entra como atalho no topo e não como aba — aba que navega para fora quebra
   // a promessa das outras.
   const gameDayOn = useFeatureFlag(FEATURE_FLAG.ARENA_GAME_DAY);
+  // Módulos adicionais: a seção Configurações só existe com a chave-mestra
+  // ligada. Desligada, não há o que configurar — e aba vazia é pior que aba
+  // nenhuma.
+  const arenaModulesOn = useFeatureFlag(FEATURE_FLAG.ARENA_MODULES);
   // Lembra a última sub-aba visitada em cada seção principal.
   const [sectionMemory, setSectionMemory] = useState({});
 
@@ -258,7 +275,9 @@ function V2ArenaManageContent({ arenaId, user, isPlatformAdmin, arena, managed, 
   // com suas sub-abas. Ordem = ciclo de vida da arena, do início ao fim:
   // identidade → estrutura/preços → reservas (operação) → dinheiro →
   // resultados → equipe.
-  const sections = buildArenaSections({ coachResidentOn, linkedClubsOn, crmOn, opsKpisOn });
+  const sections = buildArenaSections({
+    coachResidentOn, linkedClubsOn, crmOn, opsKpisOn, arenaModulesOn,
+  });
   const activeSectionId = sections.find((s) => s.tabs.some((t) => t.value === tab))?.id
     || sections[0].id;
   const activeSection = sections.find((s) => s.id === activeSectionId) || sections[0];
@@ -297,15 +316,11 @@ function V2ArenaManageContent({ arenaId, user, isPlatformAdmin, arena, managed, 
         <h1 className="mt-4 font-display text-3xl font-bold text-white sm:text-4xl">{arena.name}</h1>
         <p className="mt-3 max-w-2xl text-sm leading-7 text-gray-300">Gerencie reservas, preços, fotos, admins e informações públicas no mesmo fluxo operacional.</p>
         <div className="mt-5 flex flex-wrap gap-2">
-          <V2Button asChild variant="secondary" size="sm">
-            <Link to={`/arenas/${arena.id}/gerir/modulos`}><Settings className="h-4 w-4" /> Módulos V3</Link>
-          </V2Button>
-          <V2Button asChild variant="secondary" size="sm">
-            <Link to={`/arenas/${arena.id}/gerir/open-match`}>Open Match</Link>
-          </V2Button>
-          <V2Button asChild variant="secondary" size="sm">
-            <Link to={`/arenas/${arena.id}/gerir/membros`}>Membros</Link>
-          </V2Button>
+          {arenaModulesOn && (
+            <V2Button variant="secondary" size="sm" onClick={() => selectTab('configuracoes', 'modulos')}>
+              <Puzzle className="h-4 w-4" /> Módulos adicionais
+            </V2Button>
+          )}
           {gameDayOn && (
             <V2Button asChild variant="secondary" size="sm">
               <Link to={`/arenas/${arena.id}/gerir/dia-de-jogo`}>
@@ -384,6 +399,9 @@ function V2ArenaManageContent({ arenaId, user, isPlatformAdmin, arena, managed, 
         {tab === 'professores' && coachResidentOn && <ArenaCoachesManager arena={arena} />}
         {tab === 'clubes' && linkedClubsOn && <LinkedClubsSection ownerType="arena" ownerId={arena.id} canManage title="Clubes da arena" />}
         {tab === 'retornos' && <V2ArenaReviews arena={arena} canModerate />}
+        {tab === 'modulos' && arenaModulesOn && (
+          <ArenaModulesPanel arenaId={arena.id} canManage={canManage} />
+        )}
         </Suspense>
       </div>
     </div>
