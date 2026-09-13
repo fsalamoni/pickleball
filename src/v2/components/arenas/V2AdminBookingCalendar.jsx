@@ -35,9 +35,8 @@ import AthleteMultiPicker from '@/modules/athletes/components/AthleteMultiPicker
 import { getSlotStatus, generateTimeSlots, isSlotClickable, slotEndTime, SLOT_STATUS_COLORS, SLOT_STATUS_LABELS, SLOT_STATUS } from '@/modules/arenas/domain/slot_status';
 import { weekdayOf } from '@/modules/arenas/domain/booking';
 import { useArenaGameDays } from '@/modules/games/hooks/useArenaGameDays';
-import { mergeGameDayBlocks } from '@/modules/games/domain/arenaGameDay';
-import { mergeOpenSlotBlocks } from '@/modules/arenas/domain/openMatch';
-import { useArenaOpenSlots } from '@/modules/arenas/hooks/useArenaV3';
+import { mergeArenaBlocks } from '@/modules/arenas/domain/arenaBlocks';
+import { useArenaOpenSlots, useArenaClasses } from '@/modules/arenas/hooks/useArenaV3';
 import { formatDateShortBR } from '@/modules/arenas/domain/calendar';
 import { BOOKING_STATUS, BOOKING_STATUS_LABELS } from '@/modules/arenas/domain/constants';
 import { bookingPriceInfo } from '@/modules/arenas/domain/pricing';
@@ -80,12 +79,18 @@ export default function V2AdminBookingCalendar({ arenaId, embedded = false }) {
   // E as vagas abertas (open match), pelo mesmo motivo: a vaga publicada
   // OCUPA a quadra. Aqui nem cópia existe — o bloqueio é sempre derivado.
   const { data: vagasAbertas = [] } = useArenaOpenSlots(arenaId);
+  // E as AULAS: uma aula marcada às 19h na Quadra 1 é a Quadra 1 comprometida
+  // às 19h. `mergeArenaBlocks` compõe as quatro fontes num lugar só — fonte
+  // nova entra lá e chega a todos os calendários de uma vez.
+  const { data: aulas = [] } = useArenaClasses(arenaId);
   const unavailabilities = useMemo(
-    () => mergeOpenSlotBlocks(
-      mergeGameDayBlocks(unavailabilitiesRaw, diasDeJogoDaArena),
+    () => mergeArenaBlocks({
+      gravados: unavailabilitiesRaw,
+      diasDeJogo: diasDeJogoDaArena,
       vagasAbertas,
-    ),
-    [unavailabilitiesRaw, diasDeJogoDaArena, vagasAbertas],
+      aulas,
+    }),
+    [unavailabilitiesRaw, diasDeJogoDaArena, vagasAbertas, aulas],
   );
   const addUnav = useAddArenaUnavailability(arenaId);
   const removeUnav = useDeleteArenaUnavailability(arenaId);

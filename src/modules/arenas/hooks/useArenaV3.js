@@ -584,14 +584,23 @@ export function useConfirmPayment() {
 /* -------------------- Classes (sprint 4) -------------------- */
 
 import {
-  listArenaCoaches, createArenaCoach, deleteArenaCoach,
+  listArenaCoaches, createArenaCoach, deleteArenaCoach, updateArenaCoach,
   listArenaClasses, createArenaClass, bookClass,
+  updateArenaClass, cancelArenaClass, deleteArenaClass, completeArenaClass,
+  listClassBookings, listMyClassBookings, cancelClassBooking, setClassBookingPaid,
+  listCoachProfiles, listCoachClasses,
 } from '../services/classesService.js';
 
-export function useArenaCoaches(arenaId) {
+/**
+ * Os professores da arena.
+ *
+ * `onlyActive: false` é o que a tela de GESTÃO precisa: sem isso o professor
+ * desativado some da lista e a arena não consegue mais reativá-lo.
+ */
+export function useArenaCoaches(arenaId, { onlyActive = true } = {}) {
   return useQuery({
-    queryKey: ['arena-coaches', arenaId],
-    queryFn: () => listArenaCoaches(arenaId),
+    queryKey: ['arena-coaches', arenaId, onlyActive],
+    queryFn: () => listArenaCoaches(arenaId, { onlyActive }),
     enabled: !!arenaId,
     staleTime: 60_000,
   });
@@ -620,19 +629,143 @@ export function useCreateClass() {
   const qc = useQueryClient();
   return useMutation({
     mutationFn: ({ arenaId, input }) => createArenaClass(arenaId, input, user),
-    onSuccess: (_d, { arenaId }) => qc.invalidateQueries({ queryKey: ['arena-classes', arenaId] }),
+    // A aula OCUPA a quadra: invalidar só a lista de aulas deixaria o
+    // calendário oferecendo o horário que acabou de ser tomado.
+    onSuccess: (_d, { arenaId }) => invalidarAulas(qc, arenaId),
   });
 }
 
+/**
+ * Matricula na aula.
+ *
+ * A comissão vem da CONFIGURAÇÃO do módulo `classes_marketplace`, não de um
+ * número no código — o serviço gravava 50% fixo, ignorando o que a arena
+ * configurou.
+ */
 export function useBookClass() {
   const { user, userProfile } = useAuth();
   const qc = useQueryClient();
   return useMutation({
-    mutationFn: (classId) => bookClass(classId, user, userProfile),
-    onSuccess: (_d, classId) => {
-      qc.invalidateQueries({ queryKey: ['arena-classes'] });
-      qc.invalidateQueries({ queryKey: ['class', classId] });
-    },
+    mutationFn: ({ classId, commissionPct, partner }) => (
+      bookClass(classId, user, userProfile, { commissionPct, partner })
+    ),
+    onSuccess: (_d, { arenaId }) => invalidarAulas(qc, arenaId),
+  });
+}
+
+/* ------------- Aulas: o que faltava (matrícula, edição, professor) ------- */
+
+/** Tudo o que muda quando uma aula ou uma matrícula muda. */
+function invalidarAulas(qc, arenaId) {
+  qc.invalidateQueries({ queryKey: ['arena-classes', arenaId] });
+  qc.invalidateQueries({ queryKey: ['arena-class-bookings'] });
+  qc.invalidateQueries({ queryKey: ['coach-classes'] });
+  // A aula OCUPA a quadra: sem isto o calendário segue oferecendo o horário.
+  qc.invalidateQueries({ queryKey: arenaKeys.bloqueiosDaArena(arenaId) });
+}
+
+export function useUpdateArenaClass() {
+  const { user } = useAuth();
+  const qc = useQueryClient();
+  return useMutation({
+    mutationFn: ({ classId, input }) => updateArenaClass(classId, input, user),
+    onSuccess: (_d, { arenaId }) => invalidarAulas(qc, arenaId),
+  });
+}
+
+export function useCancelArenaClass() {
+  const { user } = useAuth();
+  const qc = useQueryClient();
+  return useMutation({
+    mutationFn: ({ classId, motivo }) => cancelArenaClass(classId, motivo, user),
+    onSuccess: (_d, { arenaId }) => invalidarAulas(qc, arenaId),
+  });
+}
+
+export function useDeleteArenaClass() {
+  const { user } = useAuth();
+  const qc = useQueryClient();
+  return useMutation({
+    mutationFn: ({ classId }) => deleteArenaClass(classId, user),
+    onSuccess: (_d, { arenaId }) => invalidarAulas(qc, arenaId),
+  });
+}
+
+export function useCompleteArenaClass() {
+  const { user } = useAuth();
+  const qc = useQueryClient();
+  return useMutation({
+    mutationFn: ({ classId }) => completeArenaClass(classId, user),
+    onSuccess: (_d, { arenaId }) => invalidarAulas(qc, arenaId),
+  });
+}
+
+export function useUpdateArenaCoach() {
+  const { user } = useAuth();
+  const qc = useQueryClient();
+  return useMutation({
+    mutationFn: ({ coachId, input }) => updateArenaCoach(coachId, input, user),
+    onSuccess: (_d, { arenaId }) => qc.invalidateQueries({ queryKey: ['arena-coaches', arenaId] }),
+  });
+}
+
+/** As matrículas de uma aula (quem a arena e o professor veem). */
+export function useClassBookings(classId) {
+  return useQuery({
+    queryKey: ['arena-class-bookings', classId],
+    queryFn: () => listClassBookings(classId),
+    enabled: !!classId,
+    staleTime: 30_000,
+  });
+}
+
+/** As MINHAS aulas nesta arena. */
+export function useMyClassBookings(arenaId) {
+  const { user } = useAuth();
+  return useQuery({
+    queryKey: ['arena-class-bookings', 'minhas', arenaId, user?.uid],
+    queryFn: () => listMyClassBookings(arenaId, user?.uid),
+    enabled: !!arenaId && !!user?.uid,
+    staleTime: 30_000,
+  });
+}
+
+export function useCancelClassBooking() {
+  const { user } = useAuth();
+  const qc = useQueryClient();
+  return useMutation({
+    mutationFn: ({ bookingId }) => cancelClassBooking(bookingId, user),
+    onSuccess: (_d, { arenaId }) => invalidarAulas(qc, arenaId),
+  });
+}
+
+export function useSetClassBookingPaid() {
+  const { user } = useAuth();
+  const qc = useQueryClient();
+  return useMutation({
+    mutationFn: ({ bookingId, paid }) => setClassBookingPaid(bookingId, paid, user),
+    onSuccess: () => qc.invalidateQueries({ queryKey: ['arena-class-bookings'] }),
+  });
+}
+
+/** Sou professor cadastrado em alguma arena? Em quais? */
+export function useMyCoachProfiles() {
+  const { user } = useAuth();
+  return useQuery({
+    queryKey: ['my-coach-profiles', user?.uid],
+    queryFn: () => listCoachProfiles(user?.uid),
+    enabled: !!user?.uid,
+    staleTime: 5 * 60_000,
+  });
+}
+
+/** A agenda de UM professor numa arena, incluindo as aulas passadas. */
+export function useCoachClasses(arenaId, coachId) {
+  return useQuery({
+    queryKey: ['coach-classes', arenaId, coachId],
+    queryFn: () => listCoachClasses(arenaId, coachId),
+    enabled: !!arenaId && !!coachId,
+    staleTime: 30_000,
   });
 }
 

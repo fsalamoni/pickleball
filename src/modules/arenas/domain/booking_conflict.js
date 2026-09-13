@@ -165,6 +165,9 @@ export function unavailabilityConflictMessage(conflicts = []) {
   if (c.reason === 'game_day') {
     return `Este horário (${quando}) está reservado para um dia de jogo da arena${c.notes ? ` — ${c.notes}` : ''}. Escolha outro horário ou marque presença no dia de jogo.`;
   }
+  if (c.reason === 'class') {
+    return `Este horário (${quando}) está com uma aula marcada${c.notes ? ` — ${c.notes}` : ''}. Escolha outro horário, ou matricule-se na aula.`;
+  }
   if (c.reason === 'maintenance') {
     // O MOTIVO da manutenção nunca chega aqui: o bloqueio público não carrega
     // o texto da ordem. "Manutenção" já diz o que a pessoa precisa saber, e

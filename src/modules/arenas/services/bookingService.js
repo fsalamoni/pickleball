@@ -39,11 +39,8 @@ import {
 } from '../domain/court_assignment.js';
 import { buildParticipants, ownerIds, invitedIds } from '../domain/shared_booking.js';
 import { totalBookingPrice } from '../domain/pricing.js';
-import { listArenaCourtSchedules, listArenaCourts, listArenaUnavailabilities } from './arenaService.js';
-import { listArenaGameDays } from '@/modules/games/services/arenaGameDayService.js';
-import { mergeGameDayBlocks } from '@/modules/games/domain/arenaGameDay.js';
-import { mergeOpenSlotBlocks } from '../domain/openMatch.js';
-import { listArenaOpenSlots } from './openMatchService.js';
+import { listArenaCourtSchedules, listArenaCourts } from './arenaService.js';
+import { arenaOccupancy } from './arenaOccupancy.js';
 import { memberBookingPrice, planPackageConsumption, pointsForBooking } from '../domain/memberBenefit.js';
 import { getMemberContext, consumeMemberBenefit } from './membersService.js';
 import { validateCouponCode, registrarUsoDeCupom } from './marketingService.js';
@@ -172,28 +169,24 @@ async function contabilizarCupom(booking, actor) {
 /**
  * Os horários que a arena FECHOU — e que nenhuma reserva pode ocupar.
  *
- * TRÊS fontes, de propósito: os bloqueios gravados (`arena_unavailabilities`,
- * onde entram tanto os que a arena marcou à mão quanto a cópia que o dia de
- * jogo grava), os dias de jogo em si e as VAGAS ABERTAS (open match). A cópia
- * é conveniência; a fonte é o dia de jogo. Se a cópia falhou por qualquer
- * motivo, quem confere aqui ainda acerta — e é aqui que a conferência importa,
- * porque o formulário completo de reserva não passa pelo calendário.
+ * QUATRO fontes, de propósito: os bloqueios gravados (`arena_unavailabilities`,
+ * onde entram os que a arena marcou à mão, a cópia que o dia de jogo grava e a
+ * que a ordem de manutenção grava) e três derivadas — os dias de jogo em si,
+ * as VAGAS ABERTAS e as AULAS. A cópia é conveniência; a fonte é a entidade. Se
+ * a cópia falhou por qualquer motivo, quem confere aqui ainda acerta — e é aqui
+ * que a conferência importa, porque o formulário completo de reserva não passa
+ * pelo calendário.
  *
- * A vaga aberta entrou pelo mesmo motivo: uma vaga publicada às 19h na Quadra
- * 1 é a Quadra 1 comprometida às 19h. Sem isto, a arena vende o mesmo horário
- * duas vezes e o atleta chega para encontrar um jogo aberto na quadra dele.
+ * A vaga aberta e a aula entraram pelo mesmo motivo: uma vaga publicada às 19h
+ * na Quadra 1, ou uma aula marcada às 19h na Quadra 1, é a Quadra 1
+ * comprometida às 19h. Sem isto, a arena vende o mesmo horário duas vezes e o
+ * atleta chega para encontrar outra coisa na quadra dele.
  *
- * Nenhuma das três leituras pode derrubar a reserva por si: falha de leitura
- * volta lista vazia, e o pedido segue o caminho antigo.
+ * Nenhuma das leituras pode derrubar a reserva por si: falha de leitura volta
+ * lista vazia, e o pedido segue o caminho antigo.
  */
 async function bloqueiosDaArena(arenaId) {
-  if (!arenaId) return [];
-  const [gravados, diasDeJogo, vagasAbertas] = await Promise.all([
-    listArenaUnavailabilities(arenaId).catch(() => []),
-    listArenaGameDays(arenaId).catch(() => []),
-    listArenaOpenSlots(arenaId, { limit: 500 }).catch(() => []),
-  ]);
-  return mergeOpenSlotBlocks(mergeGameDayBlocks(gravados, diasDeJogo), vagasAbertas);
+  return arenaOccupancy(arenaId);
 }
 
 /** Recusa o pedido quando ele cai em cima de um bloqueio, dizendo qual. */
