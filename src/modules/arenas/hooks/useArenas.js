@@ -2,7 +2,6 @@ import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import { useAuth } from '@/core/lib/FirebaseAuthContext';
 import {
   listArenas,
-  getArena,
   listMyManagedArenas,
   listArenaManagers,
   listMyFavoriteArenas,
@@ -18,7 +17,6 @@ import {
   deleteArena,
   addArenaManager,
   removeArenaManager,
-  listArenaCourts,
   createArenaCourt,
   updateArenaCourt,
   deleteArenaCourt,
@@ -26,11 +24,9 @@ import {
   normalizeArenaCourtsOrder,
   respondToArenaReview,
   deleteArenaReviewResponse,
-  listArenaCourtSchedules,
   listCourtSchedules,
   addArenaUnavailability,
   deleteArenaUnavailability,
-  listArenaUnavailabilities,
   createInventoryProduct,
   listInventoryProducts,
   updateInventoryProduct,
@@ -43,15 +39,35 @@ import {
   updateCourtSchedule,
   deleteCourtSchedule,
 } from '../services/arenaService.js';
-import { sortCourts } from '../domain/court.js';
+import { arenaKeys } from './arenaKeys.js';
+import { arenaQueries } from './arenaQueries.js';
 import { sortSchedules, groupSchedulesByWeekday } from '../domain/court_schedule.js';
 
 export function useArenas() {
-  return useQuery({ queryKey: ['arenas'], queryFn: listArenas, staleTime: 30_000 });
+  return useQuery({ queryKey: arenaKeys.lista(), queryFn: listArenas, staleTime: 30_000 });
 }
 
+/**
+ * Uma arena.
+ *
+ * Quem chega pela lista NÃO espera uma segunda ida ao banco para ver nome,
+ * foto e endereço: `listArenas` já trouxe o documento inteiro, então a página
+ * abre pintada e revalida por baixo. `initialDataUpdatedAt` informa a IDADE
+ * dessa cópia — sem ele o React Query a trataria como recém-buscada e adiaria
+ * a revalidação, e uma arena editada há pouco apareceria velha.
+ */
 export function useArena(id) {
-  return useQuery({ queryKey: ['arena', id], queryFn: () => getArena(id), enabled: !!id });
+  const qc = useQueryClient();
+  return useQuery({
+    ...arenaQueries.arena(id),
+    enabled: !!id,
+    initialData: () => {
+      if (!id) return undefined;
+      const lista = qc.getQueryData(arenaKeys.lista());
+      return Array.isArray(lista) ? lista.find((a) => a?.id === id) : undefined;
+    },
+    initialDataUpdatedAt: () => qc.getQueryState(arenaKeys.lista())?.dataUpdatedAt,
+  });
 }
 
 export function useMyManagedArenas() {
@@ -192,12 +208,7 @@ export function useRemoveManager() {
  * vazia se arenaId ausente ou ainda carregando.
  */
 export function useArenaCourts(arenaId) {
-  return useQuery({
-    queryKey: ['arena-courts', arenaId],
-    queryFn: async () => sortCourts(await listArenaCourts(arenaId)),
-    enabled: !!arenaId,
-    staleTime: 30_000,
-  });
+  return useQuery({ ...arenaQueries.quadras(arenaId), enabled: !!arenaId });
 }
 
 function useCourtMutation(arenaId) {
@@ -277,12 +288,7 @@ export function useDeleteReviewResponse() {
  * Útil pra render agregado (calendário semanal).
  */
 export function useArenaCourtSchedules(arenaId) {
-  return useQuery({
-    queryKey: ['arena-court-schedules', arenaId],
-    queryFn: async () => sortSchedules(await listArenaCourtSchedules(arenaId)),
-    enabled: !!arenaId,
-    staleTime: 60_000,
-  });
+  return useQuery({ ...arenaQueries.janelas(arenaId), enabled: !!arenaId });
 }
 
 /**
@@ -341,11 +347,7 @@ export function useDeleteSchedule(courtId) {
 /* ---------------- Unavailabilities (Sprint 5) --------------------- */
 
 export function useArenaUnavailabilities(arenaId, { from, to } = {}) {
-  return useQuery({
-    queryKey: ['arena-unavailabilities', arenaId, from, to],
-    queryFn: () => listArenaUnavailabilities(arenaId, { from, to }),
-    enabled: !!arenaId,
-  });
+  return useQuery({ ...arenaQueries.bloqueios(arenaId, from, to), enabled: !!arenaId });
 }
 
 export function useAddArenaUnavailability(arenaId) {

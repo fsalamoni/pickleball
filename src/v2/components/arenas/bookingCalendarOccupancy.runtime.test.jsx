@@ -31,6 +31,8 @@ const estado = {
   schedules: [],
   bookings: [],
   unavailabilities: [],
+  carregando: false,
+  erro: false,
 };
 
 vi.mock('sonner', () => ({ toast: { success: vi.fn(), error: vi.fn() } }));
@@ -42,10 +44,14 @@ vi.mock('@/modules/arenas/hooks/useArenas', () => ({
   useArena: () => ({ data: { id: 'a1', name: 'Arena Teste' } }),
   useArenaCourts: () => ({ data: estado.courts, isLoading: false }),
   useArenaCourtSchedules: () => ({ data: estado.schedules, isLoading: false }),
-  useArenaUnavailabilities: () => ({ data: estado.unavailabilities }),
+  useArenaUnavailabilities: () => ({
+    data: estado.unavailabilities, isPending: estado.carregando, isError: estado.erro, refetch: () => {},
+  }),
 }));
 vi.mock('@/modules/arenas/hooks/useBookings', () => ({
-  useArenaBookings: () => ({ data: estado.bookings }),
+  useArenaBookings: () => ({
+    data: estado.bookings, isPending: estado.carregando, isError: estado.erro, refetch: () => {},
+  }),
 }));
 vi.mock('@/modules/games/hooks/useArenaGameDays', () => ({
   useArenaGameDays: () => ({ data: [] }),
@@ -75,6 +81,8 @@ beforeEach(() => {
   estado.schedules = [janela([4])]; // só quintas
   estado.bookings = [];
   estado.unavailabilities = [];
+  estado.carregando = false;
+  estado.erro = false;
   container = document.createElement('div');
   document.body.appendChild(container);
   root = createRoot(container);
@@ -217,5 +225,64 @@ describe('⭐ o resumo do mês', () => {
     await render();
     expect(container.textContent).toContain('ainda não publicou os horários');
     expect(container.textContent).not.toContain('dias com horário livre');
+  });
+});
+
+/* ========================================================== carregando === */
+
+describe('⭐ enquanto a ocupação não chegou, a tela não afirma nada', () => {
+  it('não diz "livres" nem "Lotado" com as reservas ainda em voo', async () => {
+    estado.carregando = true;
+    await render();
+    // O mês inteiro PARECERIA livre: as reservas ainda não chegaram.
+    expect(container.textContent).not.toContain('livres');
+    expect(container.textContent).not.toContain('Lotado');
+    expect(container.textContent).toContain('Carregando a ocupação');
+  });
+
+  it('a barra vira um marcador neutro, e o aria-label diz que está carregando', async () => {
+    estado.carregando = true;
+    await render();
+    const cel = celula(QUI_1);
+    expect(cel.getAttribute('aria-label')).toContain('carregando a ocupação');
+    expect(cel.querySelector('.animate-pulse')).toBeTruthy();
+  });
+
+  it('o dia continua clicável — a grade do dia tem a informação de verdade', async () => {
+    estado.carregando = true;
+    await render();
+    expect(celula(QUI_1).disabled).toBe(false);
+  });
+});
+
+/* ================================================================ erro === */
+
+describe('⭐ quando a consulta FALHA', () => {
+  it('a tela diz que falhou e oferece tentar de novo', async () => {
+    estado.erro = true;
+    await render();
+    expect(container.textContent).toContain('Não foi possível carregar a ocupação');
+    expect(botaoQueContem('Tentar de novo')).toBeTruthy();
+  });
+
+  it('não afirma ocupação nenhuma — falha não é "está livre"', async () => {
+    estado.erro = true;
+    await render();
+    expect(container.textContent).not.toContain('livres');
+    expect(container.textContent).not.toContain('Lotado');
+    expect(celula(QUI_1).getAttribute('aria-label')).toContain('ocupação indisponível');
+  });
+
+  it('os dias seguem clicáveis: a grade do dia ainda pode carregar', async () => {
+    estado.erro = true;
+    await render();
+    expect(celula(QUI_1).disabled).toBe(false);
+  });
+
+  it('e não oferece "próximo dia livre", que seria um palpite', async () => {
+    estado.erro = true;
+    estado.bookings = [QUI_1, QUI_2].flatMap((d) => ['q1', 'q2', 'q3'].map((q) => reserva(q, d)));
+    await render();
+    expect(botaoQueContem('Próximo dia livre')).toBeUndefined();
   });
 });

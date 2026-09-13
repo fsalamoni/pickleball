@@ -269,7 +269,87 @@ tudo ali é contado e dito em horários (`2 horários com solicitação em
 andamento`), e com mais de uma quadra o verde diz `com quadra livre`, que é o
 que ele mede.
 
-## 11. Onde mexer
+## 11. A arena demorava a abrir (e o que estava em fila)
+
+Abrir uma arena era uma **fila de esperas**, e nenhuma delas dependia da
+anterior:
+
+```
+baixar o pacote da tela → montar → pedir a arena → pedir quadras → janelas
+→ reservas → bloqueios
+```
+
+A primeira consulta só NASCIA quando o código chegava. Cinco correções, todas
+sem tocar em banco:
+
+**1. Pré-busca por intenção.** Quando o dedo ou o mouse encosta no cartão de
+uma arena, a decisão já está quase tomada — e esse instante é de graça. As
+consultas saem enquanto o pacote da tela ainda baixa (`useArenaPrefetch` →
+`arenaPrefetch.js`, carregado por import dinâmico para não engordar a lista).
+
+**2. A arena já vem da lista.** `listArenas` traz o documento inteiro; não
+havia motivo para uma segunda ida ao banco só para pintar nome, foto e
+endereço. `useArena` semeia do cache da lista com `initialDataUpdatedAt` — a
+IDADE da cópia vai junto, senão o React Query a trataria como recém-buscada e
+adiaria a revalidação.
+
+**3. 🐞 O N+1 que rodava em TODA tela.** `listMyManagedArenas` buscava os
+documentos das arenas **em fila** (`for` com `await` dentro). O menu pergunta
+isso em toda tela: quem gere cinco arenas esperava cinco viagens em série
+antes da primeira pintura. Agora em paralelo — o custo é o da arena mais
+lenta, não a soma de todas.
+
+**4. As abas da Central chegam sob demanda.** Quinze abas importadas de uma
+vez faziam da Central a maior tela do aplicativo. Quem abre vai a UMA aba, e
+pagava o download de todas. Com `lazy` + um `<Suspense>` em volta **só da área
+das abas** (nunca da página: trocar de aba não pode apagar o cabeçalho):
+**170 kB → 37 kB**.
+
+**5. O diálogo do dia baixa depois da pintura.** Ele é metade do peso da
+página da arena e não aparece antes de um clique. Virou `lazy` com
+**aquecimento**: assim que o navegador fica ocioso, o pedaço vem sozinho — o
+clique continua instantâneo. Página do atleta: **80 kB → 60 kB**.
+
+E mais duas, de custo:
+
+- as chaves de cache viraram fonte única (`arenaKeys.js`). Chave escrita duas
+  vezes é chave que um dia diverge, e quando diverge o sintoma não é erro: é a
+  tela buscando de novo o que já estava em cache, em silêncio, para sempre.
+  Há teste lendo o código-fonte e proibindo a chave literal;
+- as reservas da arena (a coleção INTEIRA, porque a data mora dentro de
+  `slots` e não dá para recortar no servidor) recarregavam a cada 30 s em toda
+  aba aberta. Agora 60 s **e recarga ao voltar para a aba** — que é o instante
+  em que a pessoa de fato olha.
+
+## 12. Falha não é "está livre", e "carregando" não é "está livre"
+
+O calendário desenhava o mês ANTES de as reservas chegarem — e um mês sem
+reservas parece um mês inteiro livre. Pior: se a consulta FALHAVA, a lista
+vinha vazia e a tela dizia que a arena não tinha horário nenhum; na lista de
+arenas, dizia "Nenhuma arena encontrada. Cadastre uma arena", como se a
+plataforma estivesse vazia.
+
+Agora ocupação só é AFIRMADA com dado na mão. Enquanto carrega, a barra é um
+marcador neutro e o rótulo some; se falhou, a tela diz que falhou, explica o
+que ainda vale (os horários de funcionamento) e oferece **Tentar de novo**. O
+"próximo dia livre" também some: sem ocupação, ele seria um palpite.
+
+## 13. Datas como gente lê
+
+`2026-07-23 · 19:00–20:00` era o que aparecia na reserva do atleta, na da
+arena, no resumo do pedido, no bloqueio do calendário e no dia de jogo. No
+Brasil ninguém lê data assim — o mês vem antes do dia, e a pessoa precisa
+traduzir de cabeça bem no momento em que confere se a reserva é a que ela
+queria.
+
+`formatSlotLabel` / `formatDateShortBR` (em `domain/calendar.js`) devolvem
+`Qui, 23/07 · 19:00–20:00`, **com o ano quando ele não é o corrente** — "23/07"
+numa reserva de 2027 é uma armadilha. Montados a partir das constantes do
+próprio módulo, não de `toLocaleDateString`: mesma entrada, mesmo texto,
+independente da configuração da máquina. No painel da arena, o status das
+reservas também deixou de sair cru do banco (`requested: 3`).
+
+## 14. Onde mexer
 
 ```
 src/modules/arenas/domain/bookingSelection.js # a escolha como dado (+33)
@@ -284,6 +364,14 @@ src/modules/arenas/domain/calendar_aggregate.js# conta por quadra, índices (+20
 src/modules/arenas/domain/pricing.js           # totalBookingPrice (+14)
 src/v2/components/arenas/V2BookingRow.jsx      # valor total, com duração
 src/v2/components/arenas/V2AdminBookingCalendar.jsx # idem, no slot da arena
+src/modules/arenas/hooks/arenaKeys.js          # chaves de cache (+8 testes)
+src/modules/arenas/hooks/arenaQueries.js       # chave + busca no mesmo lugar
+src/modules/arenas/hooks/arenaPrefetch.js      # pré-busca por intenção (+6)
+src/modules/arenas/hooks/useArenaPrefetch.js   # o gatilho (import dinâmico)
+src/modules/arenas/services/arenaService.js    # fim do N+1 das arenas geridas
+src/modules/arenas/domain/calendar.js          # datas em pt-BR (+9 testes)
+src/v2/pages/V2ArenaManage.jsx                 # abas sob demanda (170→37 kB)
+src/v2/pages/V2Arenas.jsx                      # pré-busca + estado de erro
 src/v2/components/arenas/V2ArenaCalendar.jsx  # dia de jogo no mês da arena
 src/v2/components/arenas/V2CourtsTab.jsx      # horário na linha + aviso
 src/v2/pages/V2ArenaManage.jsx                # painel de prontidão
@@ -293,3 +381,17 @@ src/v2/pages/V2ArenaManage.jsx                # painel de prontidão
 configuração foi tocada em nenhuma destas rodadas — só leitura do que já
 existia. O preço corrigido é gravado no campo que **já** existia
 (`proposed_price`), com o valor certo; nenhum dado histórico foi reescrito.
+
+### O que NÃO foi feito, e por quê
+
+- **Recortar as reservas por data no servidor.** Seria a maior economia
+  possível (hoje a arena baixa a própria história inteira a cada abertura),
+  mas a data mora dentro de `slots`, que é um vetor de mapas — Firestore não
+  filtra por isso. Os caminhos seriam criar um campo escalar de data (escrita
+  em documento existente: as antigas ficariam de fora do filtro e sumiriam da
+  tela) ou um índice composto novo. Os dois mexem no banco. Ficou de fora de
+  propósito; o que dava para fazer sem tocar em dado foi feito.
+- **Tornar a baixa de estoque do PDV atômica.** `registerSale` decrementa
+  produto a produto, em sequência: se a segunda escrita falhar, a primeira
+  já baixou. É um achado real, de caminho de ESCRITA — merece uma rodada
+  própria, com teste, e não de carona numa de leitura.

@@ -62,6 +62,72 @@ export function todayISO() {
   return formatDateISO(new Date());
 }
 
+/* ------------------------------------------------------------------ *
+ * Datas COMO GENTE LÊ
+ *
+ * `2026-07-23 · 19:00–20:00` era o que aparecia na reserva do atleta, na do
+ * arena, no resumo do pedido e no bloqueio do calendário. Ninguém no Brasil
+ * lê data assim: o mês vem antes do dia, e a pessoa precisa parar para
+ * traduzir — bem no momento em que confere se a reserva é a que ela queria.
+ *
+ * Montado a partir das constantes daqui, e não de `toLocaleDateString`, para
+ * a saída não depender da configuração de idioma da máquina nem dos dados de
+ * localização do Node: mesma entrada, mesmo texto, sempre.
+ * ------------------------------------------------------------------ */
+
+/** 'YYYY-MM-DD' → '23/07'. Vazio se a data não fizer sentido. */
+export function formatDayMonth(value) {
+  const d = parseDate(value);
+  if (!d) return '';
+  return `${String(d.getDate()).padStart(2, '0')}/${String(d.getMonth() + 1).padStart(2, '0')}`;
+}
+
+/** 'YYYY-MM-DD' → '23/07/2026'. */
+export function formatDateBR(value) {
+  const d = parseDate(value);
+  if (!d) return '';
+  return `${formatDayMonth(value)}/${d.getFullYear()}`;
+}
+
+/**
+ * 'YYYY-MM-DD' → 'Qui, 23/07' — e com o ANO quando ele não é o corrente,
+ * porque "23/07" numa reserva de 2027 é uma armadilha.
+ *
+ * @param {string} value
+ * @param {{ hoje?: string }} [opts] `hoje` existe para o teste não depender
+ *   do relógio; em produção vale a data de hoje.
+ */
+export function formatDateShortBR(value, { hoje = todayISO() } = {}) {
+  const d = parseDate(value);
+  if (!d) return '';
+  const dia = WEEKDAY_HEADERS_PT[d.getDay()];
+  const mesmoAno = String(hoje || '').slice(0, 4) === String(d.getFullYear());
+  return `${dia}, ${mesmoAno ? formatDayMonth(value) : formatDateBR(value)}`;
+}
+
+/** 'YYYY-MM-DD' → 'Quinta-feira, 23 de julho de 2026'. */
+export function formatDateLongBR(value) {
+  const d = parseDate(value);
+  if (!d) return '';
+  const dias = ['Domingo', 'Segunda-feira', 'Terça-feira', 'Quarta-feira', 'Quinta-feira', 'Sexta-feira', 'Sábado'];
+  return `${dias[d.getDay()]}, ${d.getDate()} de ${MONTH_LABELS_PT[d.getMonth()].toLowerCase()} de ${d.getFullYear()}`;
+}
+
+/**
+ * Um horário de reserva por extenso: 'Qui, 23/07 · 19:00–20:00'.
+ *
+ * É a etiqueta que aparece na linha da reserva dos dois lados do balcão —
+ * mesma função, mesmo texto, para a pessoa e a arena estarem falando do
+ * mesmo horário.
+ */
+export function formatSlotLabel(slot, { hoje = todayISO() } = {}) {
+  if (!slot?.date) return '';
+  const dia = formatDateShortBR(slot.date, { hoje });
+  if (!dia) return '';
+  if (!slot.start || !slot.end) return dia;
+  return `${dia} · ${slot.start}–${slot.end}`;
+}
+
 /** Compara 2 'YYYY-MM-DD'. Retorna -1, 0, 1. */
 export function compareDateISO(a, b) {
   if (a === b) return 0;

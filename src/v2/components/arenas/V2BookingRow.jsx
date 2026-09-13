@@ -10,6 +10,7 @@ import {
   WEEKDAY_LABELS,
 } from '@/modules/arenas/domain/constants';
 import { bookingSlots } from '@/modules/arenas/domain/booking';
+import { formatSlotLabel } from '@/modules/arenas/domain/calendar';
 import { bookingPriceInfo } from '@/modules/arenas/domain/pricing';
 import { brtDateTime } from '@/modules/tournament/domain/ics';
 import AddToCalendarButton from '@/modules/tournament/components/AddToCalendarButton';
@@ -45,7 +46,7 @@ function SlotSummary({ booking }) {
   return (
     <span className="inline-flex items-center gap-1">
       <CalendarClock className="h-3.5 w-3.5" />
-      {s ? `${s.date} · ${s.start}–${s.end}` : '—'}
+      {s ? formatSlotLabel(s) : '—'}
     </span>
   );
 }

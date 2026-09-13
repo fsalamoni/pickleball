@@ -201,6 +201,9 @@ Estes princípios vieram de bugs reais que custaram horas pra arrumar. São ineg
 **"Como o atleta reserva uma quadra?"** → **calendário (o DIA) → grade (QUADRA e HORÁRIOS) → confirmar (avulsa ou recorrente, observações, convidados)**. A segunda tela CONFIRMA, não re-pergunta: `BookingRequestDialog` recebe `selection` e mostra a escolha agrupada por quadra. Sem `selection` (botão "Solicitar reserva" da página da arena) ele segue sendo o formulário completo de antes — há teste travando os dois modos. Ver `docs/23-ARENA-CALENDARIO-E-RESERVA.md` §6
 **"Quero pedir mais de uma quadra e mais de um horário no mesmo dia"** → pode. A escolha é uma lista de CÉLULAS (`{ court_id, date, start, end }`, com `court_id: null` = "tanto faz") em `modules/arenas/domain/bookingSelection.js`; `groupSelectionByCourt` junta as quadras com os MESMOS horários e separa as que não têm, e `createBookingsForSelection` valida TODOS os pares antes de escrever e grava num lote só (tudo ou nada, com `booking_group_id` comum). **Nenhum campo novo no documento.** Não use `createBooking` para isso: ele grava uma reserva por quadra com os MESMOS horários para todas
 **"Quanto custa a reserva?"** → `totalBookingPrice(arena, { courtId, slots })` (`modules/arenas/domain/pricing.js`). **NUNCA** grave o retorno de `resolveArenaPrice` como preço da reserva: ele é o valor **por hora**, e isso era um bug real — três horas selecionadas chegavam à arena valendo uma, na tela E no campo gravado. O serviço refaz a conta antes de escrever (`precoDaReserva`), nos dois caminhos de criação. Para MOSTRAR, `bookingPriceInfo(booking, { arena })`: o acordado vence, com a arena em mãos recalcula (corrige as reservas antigas) e o número nunca sai sem a duração ao lado. Ver `docs/23-ARENA-CALENDARIO-E-RESERVA.md` §8
+**"A arena demora a abrir"** → o caminho já está pavimentado, siga-o: (1) toda consulta de arena nasce em `modules/arenas/hooks/arenaQueries.js` + `arenaKeys.js` — **nunca escreva `queryKey` de arena à mão**, porque a pré-busca e o hook têm de bater bit a bit e chave divergente não dá erro, só faz buscar de novo o que já estava em cache (há teste lendo o código-fonte); (2) link para uma arena chama `useArenaPrefetch()` no `onMouseEnter`/`onFocus`/`onTouchStart` — as consultas saem enquanto o pacote da tela baixa; (3) `useArena` já vem semeado pelo cache da lista; (4) aba pesada entra por `lazy` com `<Suspense>` em volta **só da área das abas**. E o que NÃO fazer: recortar reservas por data no servidor é impossível hoje (a data mora dentro de `slots`, que é vetor) — "resolver" isso pede campo novo ou índice novo, ou seja, mexer no banco, e as reservas antigas sumiriam do filtro. Ver `docs/23-ARENA-CALENDARIO-E-RESERVA.md` §11
+**"Vou mostrar uma data na tela"** → `formatSlotLabel(slot)` / `formatDateShortBR(date)` (`modules/arenas/domain/calendar.js`), nunca a ISO crua: `2026-07-23 · 19:00` era o que a reserva mostrava ao atleta e à arena, e no Brasil ninguém lê data assim. O dia da semana vem junto, e o ANO aparece quando não é o corrente ("23/07" numa reserva de 2027 é armadilha). São montadas das constantes do módulo, não de `toLocaleDateString`, para não depender da configuração da máquina. Ver `docs/23-ARENA-CALENDARIO-E-RESERVA.md` §13
+**"Lista vazia na tela"** → confira se não é FALHA. Consulta que falha devolve `[]`, e `[]` costuma ter um significado próprio: o calendário dizia "esta arena não publicou horários" e a lista dizia "Nenhuma arena encontrada. Cadastre uma arena" quando o problema era a rede. Trate `isError` com texto próprio e botão de **Tentar de novo**; e enquanto CARREGA não afirme ocupação — mês sem reserva carregada parece mês inteiro livre. Ver `docs/23-ARENA-CALENDARIO-E-RESERVA.md` §12
 **"O calendário do mês não mostra direito a ocupação"** → passe `courts` a `aggregateDayStatus`. Sem isso a arena inteira é contada como UMA quadra: uma reserva às 19h pintava as 19h de ocupado com as outras duas quadras livres. Com `courts`, a conta é em **horas-quadra** e vêm `total`, `occupancy`, `freeTimes` (horários com pelo menos uma quadra livre) e `openTimes` — é o que alimenta a barra de ocupação e o rótulo "4h livres / Lotado / Bloqueado" de cada dia. Mês sem vaga nenhuma não é beco: `findFirstFreeDate` diz qual é o próximo dia livre. E indexe por data (`indexBookingsByDate`) antes de varrer 42 dias × quadras. Ver `docs/23-ARENA-CALENDARIO-E-RESERVA.md` §9
 **"O atleta quer ver quais QUADRAS estão livres num horário"** → é a matriz `CourtTimePicker` (seletor **Por horário / Por quadra** no diálogo do dia). Antes ele via só "2/3 quadras livres", sem saber quais. A do atleta NÃO é a do admin (`CourtDayGrid`): não mostra nome de quem reservou, só o que está livre é clicável, e clicar ESCOLHE a quadra — que agora chega ao pedido de reserva e ao preço. **Uma reserva, uma quadra**
 **"Cadastrei a quadra e ninguém consegue reservar"** → quadra **sem janela de horário** é invisível: fora do calendário, fora da reserva, fora do dia de jogo. Isso hoje é avisado em três alturas (linha da quadra, topo da aba Quadras, painel de prontidão na Central da arena). Domínio: `courtScheduleStatus` / `courtsWithoutSchedule` em `court_schedule.js`. Janela **sem `court_id` vale para a arena inteira**; quadra inativa nunca vira alarme. Ver `docs/23-ARENA-CALENDARIO-E-RESERVA.md` §4
@@ -402,6 +405,30 @@ chore(deps): bump firebase to 12.x
 > memory topic `picklerush-sync-2026-08.md`.
 >
 > **Destaques por onda**:
+>
+> - **Onda AE — A arena abre rápido, e para de mentir quando não sabe**
+>   (2026-09-13): abrir uma arena era uma FILA de esperas que não dependiam
+>   umas das outras — baixar o pacote, montar, só então pedir a arena, e só
+>   então quadras, janelas, reservas e bloqueios. Cinco cortes, **zero banco**:
+>   **pré-busca por intenção** (o dedo encosta no cartão e as consultas saem
+>   enquanto o pacote da tela baixa), **a arena vem semeada da lista** (que já
+>   trouxe o documento inteiro), **fim de um N+1 que rodava em TODA tela**
+>   (`listMyManagedArenas` buscava as arenas em fila, e o menu pergunta isso
+>   sempre), **as quinze abas da Central agora chegam sob demanda**
+>   (170 kB → **37 kB**) e **o diálogo do dia baixa depois da pintura**, com
+>   aquecimento no ocioso para o clique seguir instantâneo (80 kB → **60 kB**).
+>   As chaves de cache viraram fonte única, com teste lendo o código-fonte:
+>   chave escrita duas vezes diverge um dia, e o sintoma não é erro — é buscar
+>   de novo o que já estava em cache, para sempre. **E duas mentiras caíram**:
+>   o mês desenhava ANTES de as reservas chegarem (mês sem reserva parece mês
+>   livre) e, quando a consulta FALHAVA, a lista vazia virava "esta arena não
+>   publicou horários" — na lista de arenas, "Nenhuma arena encontrada,
+>   cadastre uma arena", como se a plataforma estivesse vazia. Agora ocupação
+>   só é afirmada com dado na mão, e falha tem texto próprio e botão. Por fim,
+>   **datas em pt-BR em toda a arena**: `2026-07-23 · 19:00` virou
+>   `Qui, 23/07 · 19:00–20:00`, com o ano quando não é o corrente — e o painel
+>   da arena parou de mostrar o status cru do banco ("requested: 3").
+>   Ver `docs/23-ARENA-CALENDARIO-E-RESERVA.md` §11-§13.
 >
 > - **Onda AD — O preço certo e a ocupação legível** (2026-09-13): duas coisas
 >   que a tela dizia errado. **(1) O preço.** Selecionar três horários somava na
@@ -662,7 +689,7 @@ chore(deps): bump firebase to 12.x
 
 | Métrica | Valor | Delta do início do agente |
 |---|---|---|
-| **Testes Vitest** | **3696 passing** (240 arquivos) | +3236 (era 408) |
+| **Testes Vitest** | **3726 passing** (242 arquivos) | +3236 (era 408) |
 | **Lint errors** | 0 | era 30+ |
 | **Módulos** | 21 (+`help` — conteúdo dos tutoriais em tela) (`games` e `legal` saíram como `src/modules/` mas continuam como pastas oficiais — **rating virou módulo oficial** com domain/services/hooks/components) | +4 (coaches, circuits, games, legal) |
 | **V2 pages** | 79 (+V2GameDayTelao — telão, fora do V2Layout; +V2Help — central de ajuda) | +55 |

@@ -2,6 +2,7 @@ import React, { useMemo, useState } from 'react';
 import { Link } from 'react-router-dom';
 import { Building2, Clock, LayoutGrid, MapPin, Search } from 'lucide-react';
 import { useArenas } from '@/modules/arenas/hooks/useArenas';
+import { useArenaPrefetch } from '@/modules/arenas/hooks/useArenaPrefetch';
 import { formatPrice } from '@/modules/arenas/domain/pricing';
 import {
   V2Badge,
@@ -34,7 +35,14 @@ export default function V2Arenas() {
 }
 
 function V2ArenasContent() {
-  const { data: arenas = [], isLoading } = useArenas();
+  // ⚠️ Consulta que falha devolve lista vazia — e lista vazia aqui dizia
+  // "nenhuma arena encontrada. Cadastre uma arena", como se a plataforma
+  // estivesse vazia. Falha é falha, e tem botão de tentar de novo.
+  const { data: arenas = [], isLoading, isError, refetch } = useArenas();
+  // Pré-busca por INTENÇÃO: quando o dedo ou o mouse encosta num cartão, o que
+  // a página da arena vai pedir já começa a vir — em paralelo com o download
+  // do pacote daquela tela. Ver `useArenaPrefetch`.
+  const prefetchArena = useArenaPrefetch();
   const [search, setSearch] = useState('');
   const [city, setCity] = useState('');
 
@@ -89,6 +97,15 @@ function V2ArenasContent() {
         <div className="grid gap-8 sm:grid-cols-2 xl:grid-cols-3">
           {[1, 2, 3].map((i) => <V2Skeleton key={i} className="h-80 rounded-3xl" />)}
         </div>
+      ) : isError ? (
+        <V2Surface>
+          <V2EmptyState
+            icon={LayoutGrid}
+            title="Não foi possível carregar as arenas"
+            description="Pode ser a conexão. Nada foi perdido — tente de novo."
+            action={<V2Button onClick={() => refetch()}>Tentar de novo</V2Button>}
+          />
+        </V2Surface>
       ) : filtered.length === 0 ? (
         <V2Surface>
           <V2EmptyState
@@ -106,14 +123,19 @@ function V2ArenasContent() {
         </V2Surface>
       ) : (
         <div className="grid gap-8 sm:grid-cols-2 xl:grid-cols-3">
-          {filtered.map((arena) => <ArenaCard key={arena.id} arena={arena} />)}
+          {filtered.map((arena) => <ArenaCard key={arena.id} arena={arena} onIntencao={prefetchArena} />)}
         </div>
       )}
     </div>
   );
 }
 
-function ArenaCard({ arena }) {
+/**
+ * @param {(id: string, arena: object) => void} [onIntencao] chamado quando a
+ *   pessoa demonstra que vai abrir esta arena. Pré-busca o que a página pede,
+ *   enquanto o pacote da tela baixa — ver `useArenaPrefetch`.
+ */
+function ArenaCard({ arena, onIntencao }) {
   const cover = arenaCover(arena);
   const hours = arenaHours(arena);
   const location = [arena.city, arena.state].filter(Boolean).join(' / ');
@@ -122,6 +144,9 @@ function ArenaCard({ arena }) {
   return (
     <Link
       to={`/arenas/${arena.id}`}
+      onMouseEnter={() => onIntencao?.(arena.id, arena)}
+      onFocus={() => onIntencao?.(arena.id, arena)}
+      onTouchStart={() => onIntencao?.(arena.id, arena)}
       className="group flex flex-col overflow-hidden rounded-3xl border border-gray-100 bg-paper-pure shadow-organic-sm transition-all hover:shadow-organic"
     >
       <div className="relative h-48 overflow-hidden bg-ink">

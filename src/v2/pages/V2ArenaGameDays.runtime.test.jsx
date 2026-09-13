@@ -143,7 +143,10 @@ describe('a lista da arena', () => {
   it('mostra o dia de jogo com data, horário e quadras', async () => {
     await render();
     expect(container.textContent).toContain('Sexta de Americano');
-    expect(container.textContent).toContain('2099-10-02');
+    // ⭐ Data em pt-BR, nunca a ISO crua (2099 não é o ano corrente, então
+    // o ano aparece).
+    expect(container.textContent).toContain('02/10/2099');
+    expect(container.textContent).not.toContain('2099-10-02');
     expect(container.textContent).toContain('18:00–22:00');
   });
 

@@ -18,6 +18,7 @@ import { useAuth } from '@/core/lib/FirebaseAuthContext';
 import { BOOKING_KIND, BOOKING_STATUS, WEEKDAY_LABELS } from '../domain/constants.js';
 import { resolveArenaPrice, formatPrice, totalBookingPrice, priceWithDurationText } from '../domain/pricing.js';
 import { bookingSlots, expandRecurring, isValidSlot, sortSlots, weekdayOf } from '../domain/booking.js';
+import { formatSlotLabel } from '../domain/calendar.js';
 import { pickAvailableCourtForSlots, unavailableCourtsForSlots, availableCourtsForSlots } from '../domain/court_assignment.js';
 import { useArenaBookings, useCreateBooking } from '../hooks/useBookings.js';
 import { useArenaCourts, useArenaCourtSchedules } from '../hooks/useArenas.js';
@@ -33,7 +34,7 @@ import {
 import { useCreateBookingsForSelection } from '../hooks/useBookings.js';
 
 function slotLabel(slot) {
-  return `${slot.date} · ${slot.start}–${slot.end}`;
+  return formatSlotLabel(slot);
 }
 
 /**

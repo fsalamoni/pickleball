@@ -73,7 +73,9 @@ describe('visibilidade e acesso', () => {
 describe('gameDayWhenText', () => {
   it('monta data/hora/local', () => {
     const t = gameDayWhenText({ date: '2026-08-01', time: '19:00', location: 'Arena X', city: 'São Paulo', state: 'SP' });
-    expect(t).toContain('2026-08-01');
+    // ⭐ Data em pt-BR, nunca a ISO crua.
+    expect(t).toContain('01/08');
+    expect(t).not.toContain('2026-08-01');
     expect(t).toContain('19:00');
     expect(t).toContain('Arena X');
     expect(t).toContain('São Paulo/SP');

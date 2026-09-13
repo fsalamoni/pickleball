@@ -46,7 +46,7 @@
  * useArenaUnavailabilities).
  */
 
-import React, { useMemo, useState } from 'react';
+import React, { Suspense, lazy, useEffect, useMemo, useState } from 'react';
 import { Link } from 'react-router-dom';
 import { toast } from 'sonner';
 import { ChevronLeft, ChevronRight, Calendar } from 'lucide-react';
@@ -72,7 +72,13 @@ import {
 } from '@/modules/arenas/domain/calendar_aggregate';
 import { courtsWithoutSchedule } from '@/modules/arenas/domain/court_schedule';
 import { V2Button, V2Skeleton } from '@/v2/ui/primitives';
-import V2DaySlotsDialog from './V2DaySlotsDialog';
+/**
+ * O diálogo do dia (com a matriz de quadras e o pedido de reserva dentro) é
+ * metade do peso desta tela e NÃO aparece antes de um clique. Ele passa a
+ * baixar sozinho, depois que a página pintou — quando o clique vem, o código
+ * já está aqui. Primeira pintura mais leve sem clique mais lento.
+ */
+const V2DaySlotsDialog = lazy(() => import('./V2DaySlotsDialog'));
 import { FEATURE_FLAG } from '@/core/featureFlags';
 import { useFeatureFlag } from '@/core/lib/FeatureFlagsContext';
 import { useArenaGameDays } from '@/modules/games/hooks/useArenaGameDays';
@@ -128,16 +134,48 @@ export default function V2BookingCalendar({ arenaId, arena: arenaProp }) {
   const { isAuthenticated } = useAuth();
   const { data: arenaData } = useArena(arenaId);
   const arena = arenaProp || arenaData;
-  const { data: courts = [], isLoading: loadingCourts } = useArenaCourts(arenaId);
-  const { data: schedules = [], isLoading: loadingSchedules } = useArenaCourtSchedules(arenaId);
+  const { data: courts = [], isLoading: loadingCourts, isError: erroQuadras, refetch: recarregarQuadras } = useArenaCourts(arenaId);
+  const {
+    data: schedules = [], isLoading: loadingSchedules, isError: erroJanelas, refetch: recarregarJanelas,
+  } = useArenaCourtSchedules(arenaId);
   const loadingEstrutura = loadingCourts || loadingSchedules;
-  const { data: bookings = [] } = useArenaBookings(arenaId);
-  const { data: unavailabilities = [] } = useArenaUnavailabilities(arenaId);
+  // ⚠️ Consulta que FALHA devolve lista vazia, e lista vazia aqui tem um
+  // significado: "a arena não cadastrou nada". A tela dizia que a arena estava
+  // fechada quando o problema era a rede. Falha é falha, e tem botão.
+  const falhouEstrutura = erroQuadras || erroJanelas;
+  // ⚠️ Enquanto reservas e bloqueios não chegam, o mês inteiro PARECERIA
+  // livre — a tela afirmaria "4h livres" num dia lotado e a pessoa clicaria
+  // para descobrir o contrário. Ocupação só é afirmada com dado na mão.
+  const {
+    data: bookings = [], isPending: carregandoReservas, isError: erroReservas, refetch: recarregarReservas,
+  } = useArenaBookings(arenaId);
+  const {
+    data: unavailabilities = [], isPending: carregandoBloqueios, isError: erroBloqueios, refetch: recarregarBloqueios,
+  } = useArenaUnavailabilities(arenaId);
+  const carregandoOcupacao = carregandoReservas || carregandoBloqueios;
+  // A ocupação falhou, mas a estrutura veio: dá para mostrar o mês e os
+  // horários da arena — só não dá para AFIRMAR o que está livre.
+  const falhouOcupacao = erroReservas || erroBloqueios;
+  /** Carregando ou falhou dá no mesmo para a tela: não se afirma ocupação. */
+  const ocupacaoDesconhecida = carregandoOcupacao || falhouOcupacao;
   // Dias de jogo da arena (flag `arena_game_day`). Eles JÁ bloqueiam os slots
   // por `arena_unavailabilities` — o que falta é DIZER que o motivo é um dia
   // de jogo, em vez de deixar a pessoa achar que a arena fechou sem razão.
   const gameDayOn = useFeatureFlag(FEATURE_FLAG.ARENA_GAME_DAY);
   const { data: arenaGameDays = [] } = useArenaGameDays(gameDayOn ? arenaId : null);
+
+  // Aquecimento do diálogo do dia: assim que o navegador fica ocioso (ou logo
+  // depois, onde não há `requestIdleCallback`), o pedaço de código dele vem.
+  useEffect(() => {
+    let cancelado = false;
+    const puxar = () => { if (!cancelado) import('./V2DaySlotsDialog').catch(() => {}); };
+    const ocioso = typeof window !== 'undefined' && typeof window.requestIdleCallback === 'function';
+    const id = ocioso ? window.requestIdleCallback(puxar) : setTimeout(puxar, 1500);
+    return () => {
+      cancelado = true;
+      if (ocioso) window.cancelIdleCallback?.(id); else clearTimeout(id);
+    };
+  }, []);
 
   const today = new Date().toISOString().slice(0, 10);
   const [yearMonth, setYearMonth] = useState(today.slice(0, 7));
@@ -237,7 +275,7 @@ export default function V2BookingCalendar({ arenaId, arena: arenaProp }) {
   // sem saber se procura por mais um mês ou por seis. Só calculamos quando o
   // beco acontece — e a busca começa no mês que ela está vendo, não hoje.
   const proximoLivre = useMemo(() => {
-    if (resumoDoMes.comVaga > 0 || schedules.length === 0) return null;
+    if (resumoDoMes.comVaga > 0 || schedules.length === 0 || ocupacaoDesconhecida) return null;
     const inicio = yearMonth > today.slice(0, 7) ? `${yearMonth}-01` : today;
     return findFirstFreeDate({
       from: inicio,
@@ -249,7 +287,7 @@ export default function V2BookingCalendar({ arenaId, arena: arenaProp }) {
       unavailabilities: filteredUnavailabilities,
     });
   }, [
-    resumoDoMes.comVaga, schedules.length, yearMonth, today, courtId, activeCourts,
+    resumoDoMes.comVaga, schedules.length, ocupacaoDesconhecida, yearMonth, today, courtId, activeCourts,
     filteredSchedules, filteredBookings, filteredUnavailabilities,
   ]);
 
@@ -268,6 +306,7 @@ export default function V2BookingCalendar({ arenaId, arena: arenaProp }) {
   // o que está acontecendo é mais honesto — e poupa a pessoa de navegar mês a
   // mês procurando um dia aberto que não existe.
   const semHorarioPublicado = !loadingEstrutura
+    && !falhouEstrutura
     && activeCourts.length > 0
     && courtsWithoutSchedule(activeCourts, schedules).length === activeCourts.length;
 
@@ -325,7 +364,11 @@ export default function V2BookingCalendar({ arenaId, arena: arenaProp }) {
           para onde ir em vez de clicar "próximo mês" no escuro. */}
       {!loadingEstrutura && activeCourts.length > 0 && !semHorarioPublicado && (
         <div className="flex flex-wrap items-center gap-x-3 gap-y-1.5 rounded-2xl border border-gray-100 bg-gray-50 px-3 py-2 text-xs">
-          {resumoDoMes.comVaga > 0 ? (
+          {carregandoOcupacao ? (
+            <span className="text-gray-500">Carregando a ocupação do mês…</span>
+          ) : falhouOcupacao ? (
+            <span className="text-gray-500">Abra um dia para ver os horários — a ocupação do mês não pôde ser calculada.</span>
+          ) : resumoDoMes.comVaga > 0 ? (
             <span className="text-gray-700">
               <strong className="text-ink">{resumoDoMes.comVaga}</strong>
               {resumoDoMes.comVaga === 1 ? ' dia com horário livre' : ' dias com horário livre'}
@@ -344,16 +387,40 @@ export default function V2BookingCalendar({ arenaId, arena: arenaProp }) {
               Próximo dia livre: {labelDoDia(proximoLivre)}
             </V2Button>
           )}
-          {resumoDoMes.abertos > 0 && (
+          {resumoDoMes.abertos > 0 && !ocupacaoDesconhecida && (
             <span className="text-gray-500">A barra de cada dia mostra a ocupação — verde é o que está livre.</span>
           )}
         </div>
       )}
 
-      {activeCourts.length === 0 && !loadingEstrutura && (
+      {activeCourts.length === 0 && !loadingEstrutura && !falhouEstrutura && (
         <div className="rounded-2xl border border-gray-200 bg-paper p-4 text-sm text-gray-600">
           <p className="font-bold text-ink">Esta arena ainda não cadastrou quadras.</p>
           <p className="mt-0.5 text-xs">Assim que ela cadastrar, os horários aparecem aqui para reserva.</p>
+        </div>
+      )}
+      {falhouEstrutura && (
+        <div className="flex flex-wrap items-center gap-3 rounded-2xl border border-red-200 bg-red-50 p-4 text-sm text-red-800">
+          <div className="min-w-0">
+            <p className="font-bold">Não foi possível carregar os horários desta arena.</p>
+            <p className="mt-0.5 text-xs">Pode ser a conexão. Os dias abaixo não refletem a agenda real.</p>
+          </div>
+          <V2Button size="sm" variant="secondary" onClick={() => { recarregarQuadras(); recarregarJanelas(); }}>
+            Tentar de novo
+          </V2Button>
+        </div>
+      )}
+      {!falhouEstrutura && falhouOcupacao && (
+        <div className="flex flex-wrap items-center gap-3 rounded-2xl border border-amber-200 bg-amber-50 p-4 text-sm text-amber-900">
+          <div className="min-w-0">
+            <p className="font-bold">Não foi possível carregar a ocupação dos dias.</p>
+            <p className="mt-0.5 text-xs">
+              Os horários de funcionamento aparecem abaixo, mas o que já está reservado pode não estar refletido.
+            </p>
+          </div>
+          <V2Button size="sm" variant="secondary" onClick={() => { recarregarReservas(); recarregarBloqueios(); }}>
+            Tentar de novo
+          </V2Button>
         </div>
       )}
       {semHorarioPublicado && (
@@ -410,6 +477,8 @@ export default function V2BookingCalendar({ arenaId, arena: arenaProp }) {
               const dia = labelDoDia(date);
               if (past) return `${dia} · já passou`;
               if (closed) return `${dia} · sem horários abertos`;
+              if (carregandoOcupacao) return `${dia} · carregando a ocupação`;
+              if (falhouOcupacao) return `${dia} · ocupação indisponível agora`;
               const parts = [dia];
               parts.push(livres > 0
                 ? `${livres} ${livres === 1 ? 'horário' : 'horários'} com quadra livre`
@@ -447,18 +516,25 @@ export default function V2BookingCalendar({ arenaId, arena: arenaProp }) {
                   )}>
                     {Number(date.slice(-2))}
                   </span>
-                  {inMonth && !past && !closed && (
+                  {inMonth && !past && !closed && !ocupacaoDesconhecida && (
                     <span className={cn('h-2 w-2 rounded-full', c.dot)} aria-label={SLOT_STATUS_LABELS[meta.dayStatus]} />
                   )}
                 </div>
                 {inMonth && !past && totalHoras > 0 && (
-                  <div className="flex h-1.5 w-full overflow-hidden rounded-full bg-gray-100" aria-hidden="true">
-                    {faixas.map((f) => (
-                      <span key={f.key} className={cn('h-full', f.cls)} style={{ width: `${(f.n / totalHoras) * 100}%` }} />
-                    ))}
-                  </div>
+                  ocupacaoDesconhecida ? (
+                    <div
+                      className={cn('h-1.5 w-full rounded-full bg-gray-200', carregandoOcupacao && 'animate-pulse')}
+                      aria-hidden="true"
+                    />
+                  ) : (
+                    <div className="flex h-1.5 w-full overflow-hidden rounded-full bg-gray-100" aria-hidden="true">
+                      {faixas.map((f) => (
+                        <span key={f.key} className={cn('h-full', f.cls)} style={{ width: `${(f.n / totalHoras) * 100}%` }} />
+                      ))}
+                    </div>
+                  )
                 )}
-                {inMonth && !past && rotulo && (
+                {inMonth && !past && !ocupacaoDesconhecida && rotulo && (
                   <span className={cn('text-[9px] font-bold leading-none', rotulo.cls)}>{rotulo.texto}</span>
                 )}
                 {inMonth && !past && diasDeJogo.length > 0 && (
@@ -483,6 +559,7 @@ export default function V2BookingCalendar({ arenaId, arena: arenaProp }) {
 
       {/* Dialog de slots do dia selecionado */}
       {selectedDate && (
+        <Suspense fallback={null}>
         <V2DaySlotsDialog
           arena={arena}
           arenaId={arenaId}
@@ -492,6 +569,7 @@ export default function V2BookingCalendar({ arenaId, arena: arenaProp }) {
           gameDays={gameDaysByDate.get(selectedDate) || []}
           onClose={() => setSelectedDate(null)}
         />
+        </Suspense>
       )}
     </div>
   );

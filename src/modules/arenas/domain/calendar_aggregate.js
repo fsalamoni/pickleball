@@ -37,6 +37,9 @@
 import { getSlotStatus, SLOT_STATUS } from './slot_status.js';
 import { generateTimeSlots } from './slot_status.js';
 import { weekdayOf } from './booking.js';
+// A soma de dias já existe em `calendar.js` (local, sem escorregar de fuso).
+// Uma segunda cópia seria uma segunda chance de errar a virada do mês.
+import { addDaysISO } from './calendar.js';
 
 const STEP = 60; // min — 1 hora
 
@@ -187,17 +190,6 @@ function aggregateDayStatus({
   };
 }
 
-/** Soma um número de dias a uma data 'YYYY-MM-DD' sem escorregar de fuso. */
-function addDays(dateISO, dias) {
-  const [y, m, d] = String(dateISO).split('-').map(Number);
-  if (!y || !m || !d) return null;
-  const base = new Date(y, m - 1, d, 12, 0, 0);
-  base.setDate(base.getDate() + dias);
-  const mm = String(base.getMonth() + 1).padStart(2, '0');
-  const dd = String(base.getDate()).padStart(2, '0');
-  return `${base.getFullYear()}-${mm}-${dd}`;
-}
-
 /**
  * Indexa as reservas por DATA.
  *
@@ -254,7 +246,7 @@ function findFirstFreeDate({
   const limite = Math.max(0, Math.min(Number(days) || 0, 400));
 
   for (let i = 0; i <= limite; i++) {
-    const date = addDays(from, i);
+    const date = addDaysISO(from, i);
     if (!date) return null;
     const r = aggregateDayStatus({
       date,

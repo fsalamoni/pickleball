@@ -284,6 +284,51 @@ grade faz 42 dias × quadras consultas e cada uma varria a lista inteira da
 arena. `findFirstFreeDate` responde "e quando, então?" quando o mês inteiro
 está cheio — sem ele a tela é um beco com um botão de "próximo mês".
 
+## Desempenho: como a arena abre rápido (2026-09-13)
+
+⚠️ **Toda consulta de arena nasce em `arenaQueries.js` / `arenaKeys.js`.** Não
+escreva `queryKey: ['arena-courts', id]` à mão: a PRÉ-BUSCA e o hook precisam
+concordar bit a bit, e chave divergente não dá erro — faz a tela buscar de novo
+o que já estava em cache, em silêncio, para sempre. Há teste lendo o
+código-fonte e reprovando a chave literal (invalidar pode; DEFINIR não).
+
+| peça | para quê |
+|---|---|
+| `arenaKeys.js` | as chaves, e só elas |
+| `arenaQueries.js` | chave + função de busca (o formato guardado sai daqui: quadras e janelas vêm ORDENADAS) |
+| `arenaPrefetch.js` | busca tudo o que a página vai pedir; semeia a arena que o cartão já tem, nunca por cima de dado guardado, e falha em silêncio |
+| `useArenaPrefetch.js` | o gatilho — chame no `onMouseEnter`/`onFocus`/`onTouchStart` de qualquer link para uma arena |
+
+Regras que valem a pena não desfazer:
+
+- **`listMyManagedArenas` busca em PARALELO.** Roda em toda tela (o menu
+  pergunta quais arenas você gere); em fila, quem gere cinco esperava cinco
+  viagens antes da primeira pintura.
+- **As abas da Central são `lazy`**, com `<Suspense>` em volta só da ÁREA das
+  abas — nunca da página, ou trocar de aba apaga o cabeçalho. 170 kB → 37 kB.
+- **O diálogo do dia é `lazy` COM aquecimento** (`requestIdleCallback`): baixa
+  sozinho depois da pintura, então o clique continua instantâneo.
+- **`useArenaBookings` traz a coleção INTEIRA da arena.** Não há como recortar
+  por data no servidor (a data mora dentro de `slots`, que é vetor). Antes de
+  "otimizar" com um campo novo ou um índice: isso mexe no banco, e as reservas
+  antigas não teriam o campo — sumiriam da tela.
+
+## Nunca mostre data ISO (2026-09-13)
+
+⚠️ `2026-07-23 · 19:00` era o que a reserva mostrava ao atleta E à arena.
+Use `domain/calendar.js`:
+
+| função | saída |
+|---|---|
+| `formatSlotLabel(slot)` | `Qui, 23/07 · 19:00–20:00` |
+| `formatDateShortBR(d)` | `Qui, 23/07` — **com o ano** quando não é o corrente |
+| `formatDateBR(d)` / `formatDayMonth(d)` | `23/07/2026` / `23/07` |
+| `formatDateLongBR(d)` | `Quinta-feira, 23 de julho de 2026` |
+
+São montadas a partir das constantes do módulo, não de `toLocaleDateString`:
+mesma entrada, mesmo texto, sem depender da configuração da máquina. Entrada
+inválida vira string vazia — nunca `Invalid Date`.
+
 ## Onde achar mais
 
 - `docs/06-MODULES.md` § arenas

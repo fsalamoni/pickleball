@@ -15,6 +15,7 @@
  */
 
 import { GAME_DAY_FORMAT } from '@/modules/clubs/domain/gameDayFormats.js';
+import { formatDateShortBR } from '@/modules/arenas/domain/calendar.js';
 import { GAME_DAY_MANAGE_MODE } from './gameDayRoles.js';
 
 /** Visibilidade do dia de jogo. */
@@ -147,7 +148,7 @@ export function canViewGameDay(gameDay, uid) {
 export function gameDayWhenText(gameDay) {
   if (!gameDay) return '';
   const parts = [];
-  if (gameDay.date) parts.push(gameDay.date);
+  if (gameDay.date) parts.push(formatDateShortBR(gameDay.date));
   if (gameDay.time) parts.push(gameDay.time);
   const when = parts.join(' · ');
   const place = [gameDay.location, [gameDay.city, gameDay.state].filter(Boolean).join('/')].filter(Boolean).join(' — ');

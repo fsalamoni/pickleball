@@ -26,6 +26,7 @@
 import React, { useMemo } from 'react';
 import { cn } from '@/core/lib/utils';
 import { weekdayOf } from '@/modules/arenas/domain/booking';
+import { formatDateLongBR } from '@/modules/arenas/domain/calendar';
 import {
   getSlotStatus, generateTimeSlots, isSlotSelectable, slotEndTime,
   SLOT_STATUS, SLOT_STATUS_COLORS, SLOT_STATUS_LABELS,
@@ -108,7 +109,7 @@ export default function CourtTimePicker({
       <div className="overflow-x-auto rounded-2xl border border-gray-100">
         <table className="w-full border-collapse text-center text-xs">
           <caption className="sr-only">
-            Horários disponíveis por quadra em {date}. Escolha um horário livre na quadra em que quer jogar.
+            Horários disponíveis por quadra em {formatDateLongBR(date)}. Escolha um horário livre na quadra em que quer jogar.
           </caption>
           <thead>
             <tr className="bg-paper">

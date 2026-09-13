@@ -14,6 +14,7 @@ import {
   transferBooking,
   setBookingNoShow,
 } from '../services/bookingService.js';
+import { arenaKeys } from './arenaKeys.js';
 
 export function useMyBookings() {
   const { user } = useAuth();
@@ -25,12 +26,34 @@ export function useMyBookings() {
   });
 }
 
+/**
+ * As reservas da arena — as opções da consulta, sozinhas, para a PRÉ-BUSCA
+ * poder usar exatamente a mesma coisa que o hook.
+ */
+export function arenaBookingsQuery(arenaId) {
+  return {
+    queryKey: arenaKeys.reservas(arenaId),
+    queryFn: () => listArenaBookings(arenaId),
+  };
+}
+
+/**
+ * Reservas da arena.
+ *
+ * ⚠️ Isto busca a coleção INTEIRA da arena (não há como recortar por data no
+ * servidor: a data mora dentro de `slots`, que é um vetor). Então o custo
+ * cresce com a história da arena, e recarregar de 30 em 30 segundos, em toda
+ * aba aberta, era caro sem ser mais fresco onde importa. Agora: um minuto de
+ * intervalo, e **recarga ao voltar para a aba** — que é o instante em que a
+ * pessoa realmente olha. `staleTime` continua valendo, então voltar para a aba
+ * duas vezes em dois minutos não busca duas vezes.
+ */
 export function useArenaBookings(arenaId) {
   return useQuery({
-    queryKey: ['arena-bookings', arenaId],
-    queryFn: () => listArenaBookings(arenaId),
+    ...arenaBookingsQuery(arenaId),
     enabled: !!arenaId,
-    refetchInterval: 30_000,
+    refetchInterval: 60_000,
+    refetchOnWindowFocus: true,
   });
 }
 

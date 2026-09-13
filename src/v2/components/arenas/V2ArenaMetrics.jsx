@@ -29,6 +29,7 @@ import { useArenaReviews } from '@/modules/arenas/hooks/useArenas';
 import { useArenaCourtSchedules, useArenaCourts, useInventoryEntries, useInventoryExits } from '@/modules/arenas/hooks/useArenas';
 import { V2Badge, V2Button, V2Surface } from '@/v2/ui/primitives';
 import { formatPrice } from '@/modules/arenas/domain/pricing';
+import { BOOKING_STATUS_LABELS } from '@/modules/arenas/domain/constants';
 
 function Stat({ label, value, sub, tone = 'default', icon: Icon }) {
   const toneColors = {
@@ -231,7 +232,9 @@ export default function V2ArenaMetrics({ arena }) {
         <div className="mt-3 flex flex-wrap gap-2">
           {Object.entries(metrics.bookings.by_status).map(([status, count]) => (
             <V2Badge key={status} tone={count > 0 ? 'blue' : 'neutral'}>
-              {status}: {count}
+              {/* O status vinha CRU do banco ("requested: 3"). O painel é da
+                  arena, não do console. */}
+              {BOOKING_STATUS_LABELS[status] || status}: {count}
             </V2Badge>
           ))}
           {Object.keys(metrics.bookings.by_status).length === 0 && (

@@ -55,6 +55,7 @@
  */
 
 import { timeToMinutes } from '@/modules/arenas/domain/pricing.js';
+import { formatDateShortBR } from '@/modules/arenas/domain/calendar.js';
 import { GAME_DAY_FORMAT } from '@/modules/clubs/domain/gameDayFormats.js';
 import { GAME_DAY_MANAGE_MODE } from './gameDayRoles.js';
 
@@ -133,7 +134,9 @@ export function arenaGameDayWhenText(gameDay) {
   const faixa = arenaGameDayTimeRange(gameDay);
   const quadras = arenaGameDaySlots(gameDay).length;
   const partes = [];
-  if (gameDay?.date) partes.push(gameDay.date);
+  // A data por extenso: `2026-10-02` obriga a pessoa a traduzir mês e dia
+  // de cabeça, e este texto aparece em cinco telas.
+  if (gameDay?.date) partes.push(formatDateShortBR(gameDay.date));
   if (faixa) partes.push(`${faixa.start}–${faixa.end}`);
   if (quadras > 0) partes.push(`${quadras} ${quadras === 1 ? 'quadra' : 'quadras'}`);
   return partes.join(' · ');

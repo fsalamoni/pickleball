@@ -34,6 +34,7 @@ import { participantStatusLabel } from '@/modules/arenas/domain/shared_booking';
 import AthleteMultiPicker from '@/modules/athletes/components/AthleteMultiPicker';
 import { getSlotStatus, generateTimeSlots, isSlotClickable, slotEndTime, SLOT_STATUS_COLORS, SLOT_STATUS_LABELS, SLOT_STATUS } from '@/modules/arenas/domain/slot_status';
 import { weekdayOf } from '@/modules/arenas/domain/booking';
+import { formatDateShortBR } from '@/modules/arenas/domain/calendar';
 import { BOOKING_STATUS, BOOKING_STATUS_LABELS } from '@/modules/arenas/domain/constants';
 import { bookingPriceInfo } from '@/modules/arenas/domain/pricing';
 import {
@@ -533,7 +534,7 @@ export default function V2AdminBookingCalendar({ arenaId, embedded = false }) {
                         Já está pago
                       </label>
                       <p className="text-xs text-gray-400">
-                        {date} · {selectedSlot.time}–{fimDoSlot(selectedSlot.time)} · a reserva já entra como confirmada.
+                        {formatDateShortBR(date)} · {selectedSlot.time}–{fimDoSlot(selectedSlot.time)} · a reserva já entra como confirmada.
                       </p>
                       <V2Button size="sm" onClick={handleCreateManual} disabled={createManual.isPending || !manualForm.client_name.trim()}>
                         <CheckCircle className="h-3.5 w-3.5" />
@@ -727,7 +728,7 @@ function ArenaWaitlistPanel({ arenaId }) {
       <div className="mt-3 space-y-3">
         {groups.map((g) => (
           <div key={g.key} className="rounded-2xl border border-gray-100 bg-paper p-3">
-            <div className="text-sm font-bold text-ink">{g.date} · {g.start}–{g.end}</div>
+            <div className="text-sm font-bold text-ink">{formatDateShortBR(g.date)} · {g.start}–{g.end}</div>
             <div className="mt-2 flex flex-wrap gap-2">
               {g.entries.map((e) => (
                 <span key={e.id} className="inline-flex items-center gap-1.5 rounded-full border border-gray-200 bg-paper-pure px-2.5 py-1 text-xs text-ink">

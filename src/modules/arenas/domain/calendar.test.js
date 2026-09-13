@@ -5,6 +5,7 @@
 
 import { describe, it, expect } from 'vitest';
 import {
+  formatDayMonth, formatDateBR, formatDateShortBR, formatDateLongBR, formatSlotLabel,
   formatDateISO, parseDate, weekdayOf, compareDateISO,
   addDaysISO, addMonths, getWeekdayHeaders, getMonthLabel,
   buildMonthGrid, expandBookingSlots, groupBookingsByDate,
@@ -179,5 +180,56 @@ describe('dateRangeISO / monthRangeISO', () => {
   it('monthRangeISO retorna 42 dias pra qualquer mês', () => {
     const r = monthRangeISO(2026, 8);
     expect(r.dates).toHaveLength(42);
+  });
+});
+
+describe('datas como gente lê', () => {
+  it('formatDayMonth vira dia/mês', () => {
+    expect(formatDayMonth('2026-07-23')).toBe('23/07');
+    expect(formatDayMonth('2026-01-05')).toBe('05/01');
+  });
+
+  it('formatDateBR leva o ano', () => {
+    expect(formatDateBR('2026-07-23')).toBe('23/07/2026');
+  });
+
+  it('⭐ formatDateShortBR nomeia o dia da semana e esconde o ano corrente', () => {
+    expect(formatDateShortBR('2026-07-23', { hoje: '2026-09-13' })).toBe('Qui, 23/07');
+  });
+
+  it('⭐ mas mostra o ano quando ele é outro — "23/07" em 2027 é armadilha', () => {
+    expect(formatDateShortBR('2027-07-23', { hoje: '2026-09-13' })).toBe('Sex, 23/07/2027');
+    expect(formatDateShortBR('2025-07-23', { hoje: '2026-09-13' })).toBe('Qua, 23/07/2025');
+  });
+
+  it('formatDateLongBR escreve por extenso', () => {
+    expect(formatDateLongBR('2026-07-23')).toBe('Quinta-feira, 23 de julho de 2026');
+    expect(formatDateLongBR('2026-03-01')).toBe('Domingo, 1 de março de 2026');
+  });
+
+  it('formatSlotLabel junta dia e faixa', () => {
+    expect(formatSlotLabel({ date: '2026-07-23', start: '19:00', end: '20:00' }, { hoje: '2026-09-13' }))
+      .toBe('Qui, 23/07 · 19:00–20:00');
+  });
+
+  it('sem horário, só o dia — nunca "undefined–undefined"', () => {
+    expect(formatSlotLabel({ date: '2026-07-23' }, { hoje: '2026-09-13' })).toBe('Qui, 23/07');
+  });
+
+  it('entrada sem sentido vira string vazia, nunca "Invalid Date"', () => {
+    ['', null, undefined, 'ontem', '2026-13-01', '2026-02-30'].forEach((v) => {
+      expect(formatDayMonth(v)).toBe('');
+      expect(formatDateBR(v)).toBe('');
+      expect(formatDateShortBR(v, { hoje: '2026-09-13' })).toBe('');
+      expect(formatDateLongBR(v)).toBe('');
+      expect(formatSlotLabel({ date: v }, { hoje: '2026-09-13' })).toBe('');
+    });
+    expect(formatSlotLabel(null)).toBe('');
+    expect(formatSlotLabel({})).toBe('');
+  });
+
+  it('não escorrega de fuso na virada do mês (é data local, não UTC)', () => {
+    expect(formatDayMonth('2026-01-01')).toBe('01/01');
+    expect(formatDayMonth('2026-12-31')).toBe('31/12');
   });
 });

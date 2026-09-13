@@ -1,4 +1,4 @@
-import React, { useEffect, useMemo, useState } from 'react';
+import React, { Suspense, lazy, useEffect, useMemo, useState } from 'react';
 import { Link, Navigate, useLocation, useParams } from 'react-router-dom';
 import { toast } from 'sonner';
 import { collection, getDocs, query, where } from 'firebase/firestore';
@@ -7,14 +7,25 @@ import {
   BarChart3, CalendarClock, CalendarDays, CalendarRange, Wallet, ClipboardList,
   Package, LayoutGrid, DollarSign, Image, Info, Star, GraduationCap,
 } from 'lucide-react';
-import V2CourtsTab from '@/v2/components/arenas/V2CourtsTab';
-import V2ArenaCalendar from '@/v2/components/arenas/V2ArenaCalendar';
-import V2ArenaMetrics from '@/v2/components/arenas/V2ArenaMetrics';
-import V2AdminBookingCalendar from '@/v2/components/arenas/V2AdminBookingCalendar';
-import V2ArenaPaymentTab from '@/v2/components/arenas/V2ArenaPaymentTab';
-import V2ArenaRulesTab from '@/v2/components/arenas/V2ArenaRulesTab';
-import V2ArenaMercadoTab from '@/v2/components/arenas/V2ArenaMercadoTab';
-import V2ArenaWeekPanel from '@/v2/components/arenas/V2ArenaWeekPanel';
+/**
+ * As abas chegam SOB DEMANDA.
+ *
+ * A Central da arena tem quinze abas, e importá-las todas de uma vez fazia
+ * desta a maior tela do aplicativo (170 kB). Quem abre a Central quase sempre
+ * vai a UMA aba — normalmente "Reservas", que abre por padrão — e pagava o
+ * download do calendário administrativo, do mercado, das métricas e do resto
+ * antes de ver qualquer coisa. Agora cada aba baixa quando é aberta, com um
+ * esqueleto no lugar (o `<Suspense>` fica em volta da área das abas, nunca da
+ * página inteira: trocar de aba não pode apagar o cabeçalho).
+ */
+const V2CourtsTab = lazy(() => import('@/v2/components/arenas/V2CourtsTab'));
+const V2ArenaCalendar = lazy(() => import('@/v2/components/arenas/V2ArenaCalendar'));
+const V2ArenaMetrics = lazy(() => import('@/v2/components/arenas/V2ArenaMetrics'));
+const V2AdminBookingCalendar = lazy(() => import('@/v2/components/arenas/V2AdminBookingCalendar'));
+const V2ArenaPaymentTab = lazy(() => import('@/v2/components/arenas/V2ArenaPaymentTab'));
+const V2ArenaRulesTab = lazy(() => import('@/v2/components/arenas/V2ArenaRulesTab'));
+const V2ArenaMercadoTab = lazy(() => import('@/v2/components/arenas/V2ArenaMercadoTab'));
+const V2ArenaWeekPanel = lazy(() => import('@/v2/components/arenas/V2ArenaWeekPanel'));
 import { useFeatureFlag } from '@/core/lib/FeatureFlagsContext';
 import { FEATURE_FLAG } from '@/core/featureFlags';
 import { db } from '@/core/config/firebase';
@@ -23,10 +34,10 @@ import { ImageUpload } from '@/components/ui/image-upload';
 import { PhotoLightbox } from '@/components/ui/photo-lightbox';
 import ConfirmDialog from '@/components/ConfirmDialog';
 import { V2ProfileFields, V2PricingEditor } from '@/v2/components/arenas/V2ArenaEditors';
-import V2ArenaReviews from '@/v2/components/arenas/V2ArenaReviews';
-import { ArenaCoachesManager } from '@/v2/pages/V2ArenaCoaches';
+const V2ArenaReviews = lazy(() => import('@/v2/components/arenas/V2ArenaReviews'));
+const ArenaCoachesManager = lazy(() => import('@/v2/pages/V2ArenaCoaches').then((m) => ({ default: m.ArenaCoachesManager })));
 import BookingParticipantsPanel from '@/modules/arenas/components/BookingParticipantsPanel';
-import LinkedClubsSection from '@/modules/clubs/components/LinkedClubsSection';
+const LinkedClubsSection = lazy(() => import('@/modules/clubs/components/LinkedClubsSection'));
 import V2BookingRow from '@/v2/components/arenas/V2BookingRow';
 import { sortBookings } from '@/modules/arenas/domain/booking';
 import { ARENA_MANAGER_ROLE, BOOKING_STATUS } from '@/modules/arenas/domain/constants';
@@ -351,7 +362,11 @@ function V2ArenaManageContent({ arenaId, user, isPlatformAdmin, arena, managed, 
         )}
       </div>
 
+      {/* O esqueleto de carregamento cobre SÓ a área das abas: o cabeçalho da
+          arena e a própria barra de abas continuam na tela enquanto a aba
+          nova baixa, então trocar de aba nunca pisca a página inteira. */}
       <div className="mt-6">
+        <Suspense fallback={<V2Skeleton lines={6} />}>
         {tab === 'semana' && opsKpisOn && <V2ArenaWeekPanel arenaId={arena.id} />}
         {tab === 'metricas' && <V2ArenaMetrics arena={arena} />}
         {tab === 'reservas' && <BookingsTab arena={arena} />}
@@ -369,6 +384,7 @@ function V2ArenaManageContent({ arenaId, user, isPlatformAdmin, arena, managed, 
         {tab === 'professores' && coachResidentOn && <ArenaCoachesManager arena={arena} />}
         {tab === 'clubes' && linkedClubsOn && <LinkedClubsSection ownerType="arena" ownerId={arena.id} canManage title="Clubes da arena" />}
         {tab === 'retornos' && <V2ArenaReviews arena={arena} canModerate />}
+        </Suspense>
       </div>
     </div>
   );

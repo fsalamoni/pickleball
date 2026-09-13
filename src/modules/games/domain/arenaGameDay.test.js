@@ -96,7 +96,11 @@ describe('leituras do dia de arena', () => {
 
   it('o resumo diz data, faixa e quantas quadras', () => {
     const texto = arenaGameDayWhenText(diaDaArena());
-    expect(texto).toContain('2026-10-02');
+    // ⭐ Data como gente lê. Nunca a ISO crua: este texto aparece em cinco
+    // telas, e "2026-10-02" obriga a pessoa a traduzir mês e dia de cabeça.
+    // (Sem o ano quando é o corrente — por isso a asserção é pelo dia/mês.)
+    expect(texto).toContain('02/10');
+    expect(texto).not.toContain('2026-10-02');
     expect(texto).toContain('18:00–22:00');
     expect(texto).toContain('2 quadras');
   });

@@ -115,15 +115,24 @@ export async function listArenas() {
   return snap.docs.map((d) => ({ id: d.id, ...d.data() }));
 }
 
+/**
+ * As arenas que este usuário administra.
+ *
+ * ⚠️ As buscas dos documentos vão em PARALELO, de propósito. Isto aqui roda em
+ * TODA tela do app (o `V2Layout` pergunta quem você gere para decidir menus e
+ * permissões), e o laço sequencial que existia antes somava uma ida ao banco
+ * por arena — quem gere cinco esperava cinco viagens em fila antes de a
+ * primeira tela pintar. Em paralelo, o custo é o da arena mais lenta.
+ */
 export async function listMyManagedArenas(userId) {
   if (!db || !userId) return [];
   const snap = await getDocs(query(collection(db, COL.managers), where('user_id', '==', userId)));
-  const arenas = [];
-  for (const m of snap.docs.map((d) => d.data())) {
+  const vinculos = snap.docs.map((d) => d.data()).filter((m) => m?.arena_id);
+  const arenas = await Promise.all(vinculos.map(async (m) => {
     const arena = await getArena(m.arena_id);
-    if (arena) arenas.push({ ...arena, my_role: m.role });
-  }
-  return arenas;
+    return arena ? { ...arena, my_role: m.role } : null;
+  }));
+  return arenas.filter(Boolean);
 }
 
 export async function updateArena(id, updates, actor) {

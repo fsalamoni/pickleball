@@ -12,6 +12,7 @@ import {
   PAYMENT_STATUS_LABELS,
 } from '@/modules/arenas/domain/constants';
 import { bookingSlots } from '@/modules/arenas/domain/booking';
+import { formatSlotLabel } from '@/modules/arenas/domain/calendar';
 import { formatPrice } from '@/modules/arenas/domain/pricing';
 import {
   V2Badge,
@@ -41,7 +42,7 @@ function whenLabel(booking) {
     return `${slots.length} horário(s) recorrentes`;
   }
   const s = slots[0];
-  return s ? `${s.date} · ${s.start}–${s.end}` : 'Horário a combinar';
+  return s ? formatSlotLabel(s) : 'Horário a combinar';
 }
 
 export default function V2Bookings() {

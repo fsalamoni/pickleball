@@ -119,7 +119,10 @@ describe('a flag manda', () => {
 describe('o que a tela conta sobre o dia', () => {
   it('mostra data, horário e as quadras', async () => {
     await render();
-    expect(container.textContent).toContain('2099-10-02');
+    // ⭐ Data em pt-BR, nunca a ISO crua (2099 não é o ano corrente, então
+    // o ano aparece).
+    expect(container.textContent).toContain('02/10/2099');
+    expect(container.textContent).not.toContain('2099-10-02');
     expect(container.textContent).toContain('18:00–22:00');
     expect(container.textContent).toContain('Quadra c1');
   });
