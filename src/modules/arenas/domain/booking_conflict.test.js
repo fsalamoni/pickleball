@@ -7,6 +7,8 @@
 import { describe, it, expect } from 'vitest';
 import {
   checkBookingConflict,
+  checkUnavailabilityConflict,
+  unavailabilityConflictMessage,
   checkScheduleAlignment,
   validateBookingRequest,
   getCourtAvailabilityForDate,
@@ -317,5 +319,75 @@ describe('getCourtAvailabilityForDate', () => {
       { start: '11:00', end: '14:00', duration_min: 180 },
       { start: '16:00', end: '22:00', duration_min: 360 },
     ]);
+  });
+});
+
+describe('⭐ checkUnavailabilityConflict — o horário que a arena FECHOU', () => {
+  const bloqueio = (over = {}) => ({
+    id: 'u1', arena_id: 'a1', court_id: 'c1', date: '2026-09-18',
+    start_time: '18:00', end_time: '22:00', ...over,
+  });
+  const pedido = (over = {}) => ({ date: '2026-09-18', start: '19:00', end: '20:00', court_id: 'c1', ...over });
+
+  it('recusa o pedido que cai dentro do bloqueio', () => {
+    const r = checkUnavailabilityConflict([pedido()], [bloqueio()]);
+    expect(r.hasConflict).toBe(true);
+    expect(r.conflicts[0].candidate.start).toBe('19:00');
+  });
+
+  it('⭐ encostar NÃO é sobrepor: 17–18h e 22–23h convivem com 18–22h', () => {
+    expect(checkUnavailabilityConflict([pedido({ start: '17:00', end: '18:00' })], [bloqueio()]).hasConflict).toBe(false);
+    expect(checkUnavailabilityConflict([pedido({ start: '22:00', end: '23:00' })], [bloqueio()]).hasConflict).toBe(false);
+  });
+
+  it('pega sobreposição parcial nas duas pontas', () => {
+    expect(checkUnavailabilityConflict([pedido({ start: '17:00', end: '19:00' })], [bloqueio()]).hasConflict).toBe(true);
+    expect(checkUnavailabilityConflict([pedido({ start: '21:00', end: '23:00' })], [bloqueio()]).hasConflict).toBe(true);
+  });
+
+  it('outra quadra não é afetada', () => {
+    expect(checkUnavailabilityConflict([pedido({ court_id: 'c2' })], [bloqueio()]).hasConflict).toBe(false);
+  });
+
+  it('⭐ bloqueio SEM quadra fecha a arena inteira', () => {
+    const r = checkUnavailabilityConflict([pedido({ court_id: 'c9' })], [bloqueio({ court_id: null })]);
+    expect(r.hasConflict).toBe(true);
+  });
+
+  it('⭐ pedido sem quadra definida colide com qualquer bloqueio do dia', () => {
+    // "Tanto faz a quadra": a quadra que ele receber pode ser justamente a
+    // bloqueada, então o pedido não pode passar.
+    const r = checkUnavailabilityConflict([pedido({ court_id: null })], [bloqueio()]);
+    expect(r.hasConflict).toBe(true);
+  });
+
+  it('outro dia não é afetado', () => {
+    expect(checkUnavailabilityConflict([pedido({ date: '2026-09-19' })], [bloqueio()]).hasConflict).toBe(false);
+  });
+
+  it('entradas inválidas não travam nem inventam conflito', () => {
+    expect(checkUnavailabilityConflict().hasConflict).toBe(false);
+    expect(checkUnavailabilityConflict([pedido()], null).hasConflict).toBe(false);
+    expect(checkUnavailabilityConflict([{ date: '2026-09-18' }], [bloqueio()]).hasConflict).toBe(false);
+    expect(checkUnavailabilityConflict([pedido()], [bloqueio({ start_time: 'xx' })]).hasConflict).toBe(false);
+    expect(checkUnavailabilityConflict([pedido({ start: '20:00', end: '19:00' })], [bloqueio()]).hasConflict).toBe(false);
+  });
+
+  it('⭐ a mensagem diz o MOTIVO, e dia de jogo tem saída própria', () => {
+    const diaDeJogo = checkUnavailabilityConflict(
+      [pedido()], [bloqueio({ game_day_id: 'gd1', source: 'game_day', notes: 'Dia de jogo: Play de sexta' })],
+    );
+    const msg = unavailabilityConflictMessage(diaDeJogo.conflicts);
+    expect(msg).toContain('dia de jogo');
+    expect(msg).toContain('Play de sexta');
+    expect(msg).toContain('marque presença');
+
+    const manual = checkUnavailabilityConflict([pedido()], [bloqueio({ notes: 'Manutenção' })]);
+    const msg2 = unavailabilityConflictMessage(manual.conflicts);
+    expect(msg2).toContain('bloqueou');
+    expect(msg2).toContain('Manutenção');
+
+    expect(unavailabilityConflictMessage([])).toBeNull();
+    expect(unavailabilityConflictMessage()).toBeNull();
   });
 });

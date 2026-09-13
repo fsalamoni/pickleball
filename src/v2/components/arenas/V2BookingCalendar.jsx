@@ -82,7 +82,7 @@ const V2DaySlotsDialog = lazy(() => import('./V2DaySlotsDialog'));
 import { FEATURE_FLAG } from '@/core/featureFlags';
 import { useFeatureFlag } from '@/core/lib/FeatureFlagsContext';
 import { useArenaGameDays } from '@/modules/games/hooks/useArenaGameDays';
-import { arenaGameDayTimeRange } from '@/modules/games/domain/arenaGameDay';
+import { arenaGameDayTimeRange, mergeGameDayBlocks } from '@/modules/games/domain/arenaGameDay';
 
 const WEEKDAY_LABELS_PT = ['Dom', 'Seg', 'Ter', 'Qua', 'Qui', 'Sex', 'Sáb'];
 
@@ -161,8 +161,12 @@ export default function V2BookingCalendar({ arenaId, arena: arenaProp }) {
   // Dias de jogo da arena (flag `arena_game_day`). Eles JÁ bloqueiam os slots
   // por `arena_unavailabilities` — o que falta é DIZER que o motivo é um dia
   // de jogo, em vez de deixar a pessoa achar que a arena fechou sem razão.
+  // ⚠️ A flag decide o que se MOSTRA sobre dia de jogo (o selo no dia, a
+  // legenda), nunca se a quadra está ocupada. Um dia de jogo marcado ocupa a
+  // quadra exista flag ou não — condicionar o BLOQUEIO a uma flag é oferecer
+  // para reserva uma quadra que já tem gente marcada nela.
   const gameDayOn = useFeatureFlag(FEATURE_FLAG.ARENA_GAME_DAY);
-  const { data: arenaGameDays = [] } = useArenaGameDays(gameDayOn ? arenaId : null);
+  const { data: arenaGameDays = [] } = useArenaGameDays(arenaId);
 
   // Aquecimento do diálogo do dia: assim que o navegador fica ocioso (ou logo
   // depois, onde não há `requestIdleCallback`), o pedaço de código dele vem.
@@ -200,10 +204,23 @@ export default function V2BookingCalendar({ arenaId, arena: arenaProp }) {
     return active.filter((b) => !b.court_id || b.court_id === courtId);
   }, [bookings, courtId]);
 
+  /**
+   * Os bloqueios gravados MAIS os que os dias de jogo implicam.
+   *
+   * ⚠️ Marcar um dia de jogo grava uma cópia em `arena_unavailabilities`, e era
+   * só essa cópia que o mês olhava — se ela não chegou, o calendário mostrava
+   * como livre uma quadra que está com um dia de jogo em cima. O dia de jogo é
+   * a FONTE; a cópia é conveniência. Ver `mergeGameDayBlocks`.
+   */
+  const comDiasDeJogo = useMemo(
+    () => mergeGameDayBlocks(unavailabilities, arenaGameDays),
+    [unavailabilities, arenaGameDays],
+  );
+
   const filteredUnavailabilities = useMemo(() => {
-    if (courtId === 'all') return unavailabilities;
-    return unavailabilities.filter((u) => !u.court_id || u.court_id === courtId);
-  }, [unavailabilities, courtId]);
+    if (courtId === 'all') return comDiasDeJogo;
+    return comDiasDeJogo.filter((u) => !u.court_id || u.court_id === courtId);
+  }, [comDiasDeJogo, courtId]);
 
   // Reservas e bloqueios indexados por DATA. A grade faz 42 dias × quadras
   // consultas de status; sem o índice, cada uma varre a lista inteira da
@@ -236,7 +253,6 @@ export default function V2BookingCalendar({ arenaId, arena: arenaProp }) {
   // data → dias de jogo daquela data (respeitando o filtro de quadra).
   const gameDaysByDate = useMemo(() => {
     const map = new Map();
-    if (!gameDayOn) return map;
     arenaGameDays.forEach((g) => {
       if (!g.date) return;
       const slots = Array.isArray(g.arena_slots) ? g.arena_slots : [];
@@ -244,7 +260,7 @@ export default function V2BookingCalendar({ arenaId, arena: arenaProp }) {
       map.set(g.date, [...(map.get(g.date) || []), g]);
     });
     return map;
-  }, [arenaGameDays, gameDayOn, courtId]);
+  }, [arenaGameDays, courtId]);
 
   /** Os status que este mês realmente tem (só dias do mês, e não os passados). */
   const coresDoMes = useMemo(() => {
@@ -537,7 +553,7 @@ export default function V2BookingCalendar({ arenaId, arena: arenaProp }) {
                 {inMonth && !past && !ocupacaoDesconhecida && rotulo && (
                   <span className={cn('text-[9px] font-bold leading-none', rotulo.cls)}>{rotulo.texto}</span>
                 )}
-                {inMonth && !past && diasDeJogo.length > 0 && (
+                {inMonth && !past && gameDayOn && diasDeJogo.length > 0 && (
                   <span className="truncate rounded-full bg-acid px-1.5 py-0.5 text-[9px] font-bold leading-none text-ink">
                     Dia de jogo
                   </span>

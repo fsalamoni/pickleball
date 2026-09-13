@@ -172,3 +172,64 @@ existiam.
    documentar o que não abre manda a pessoa para uma porta fechada. Ao ligar a
    flag: escrever os artigos da seção **Arena** e a pista de rota em
    `HELP_ROUTE_HINTS`.
+
+## 🐞 O dia de jogo que não fechava a quadra (2026-09-13)
+
+**O sintoma.** Um dia de jogo marcado das 18h às 22h nas três quadras, e o
+calendário da arena oferecendo 18h, 19h, 20h e 21h como **livres** nas três.
+O aviso aparecia ("as quadras usadas ficam fechadas para reserva neste
+horário") e a grade dizia o contrário — o pior dos dois mundos.
+
+**A causa de fundo.** Marcar um dia de jogo GRAVA uma cópia em
+`arena_unavailabilities` (`source: 'game_day'`), e era **só essa cópia** que o
+calendário olhava. Cópia é ótima para compatibilidade — conflito de reserva,
+status de slot e calendário mensal passaram a respeitar o dia de jogo sem uma
+linha de código nova — e péssima como ÚNICA verdade: se a gravação não chegou,
+nada no sistema sabe do dia de jogo, e ninguém percebe até alguém aparecer na
+arena com uma reserva inútil.
+
+**A correção, em três alturas.**
+
+1. **O dia de jogo é a FONTE.** `gameDayBlocks` / `mergeGameDayBlocks`
+   (domínio, testados) derivam os bloqueios do próprio dia de jogo, no mesmo
+   formato de `arena_unavailabilities`. O calendário mensal, a grade do dia e a
+   matriz quadra × horário passam a somar os gravados **com** os derivados,
+   sem duplicar o que já existe. Se a cópia falhar, a tela ainda acerta.
+2. **O pedido de reserva confere.** O serviço só olhava outras RESERVAS —
+   nunca os bloqueios. O calendário escondia o horário fechado, mas o
+   formulário completo ("Solicitar reserva", em que a pessoa digita data e
+   hora) não passa pelo calendário: dava para pedir exatamente a quadra
+   fechada. Agora `checkUnavailabilityConflict` recusa, **dizendo o motivo** —
+   e, quando é dia de jogo, apontando a saída ("marque presença").
+   Vale nos três caminhos: reserva simples, seleção múltipla e a reserva
+   manual que a própria arena lança.
+3. **A flag não decide ocupação.** O calendário só carregava os dias de jogo
+   com `arena_game_day` ligada. Um dia de jogo existe ou não existe; condicionar
+   o BLOQUEIO a uma flag é oferecer para reserva uma quadra que já tem gente
+   marcada nela. A flag voltou a gatear só o que se MOSTRA (o selo no dia, a
+   legenda).
+
+**Cuidado que veio junto.** O bloqueio derivado não tem documento no banco, e
+a tela da arena tinha um botão "Remover indisponibilidade" que apagaria o nada
+— com a agravante de que apagar a cópia GRAVADA abriria a quadra com o dia de
+jogo ainda marcado nela. Agora a arena vê "Dia de jogo da arena", a explicação
+e um caminho para o dia de jogo; apagar à mão, só o que ela marcou à mão.
+
+## Uma tela, uma lista (2026-09-13)
+
+A página do dia de jogo da arena mostrava **o mesmo card "Organização" duas
+vezes** (a página renderizava o seu, e o organizador — o mesmo miolo do
+ambiente do atleta — renderizava outro) e **duas listas das mesmas pessoas**:
+"Inscritos", em cima, que só sabia remover, e "Participantes", embaixo e
+recolhido, que é onde moram formar dupla, pausar e excluir. Quem chegava
+parava na primeira e concluía que a plataforma não fazia o resto.
+
+- o card de organização sai **só do organizador**, para quem
+  `useGameDayRoles` diz que pode configurar — o que já inclui o gestor da
+  arena, então ninguém perdeu acesso;
+- "Inscritos" virou **"Vagas"**: números, limite por dia ou por quadra, quem
+  está em cada quadra no modo por quadra (informação da arena que não existe
+  em nenhum outro lugar) e uma linha dizendo onde estão as ações;
+- e `20/18 inscrito(s)` — que acontece de verdade, porque a arena pode
+  INSERIR atletas pela lista de participantes sem passar pelo limite — passou
+  a dizer `2 acima do limite` em vez de deixar a conta estranha no ar.

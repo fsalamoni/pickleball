@@ -107,6 +107,68 @@ export function checkBookingConflict(candidateSlots = [], existingBookings = [])
 }
 
 /**
+ * Verifica conflito de slots candidatos contra os BLOQUEIOS da arena.
+ *
+ * ## Por que isto faltava
+ *
+ * O serviço de reserva só olhava outras RESERVAS. O calendário escondia os
+ * horários bloqueados, mas o formulário completo ("Solicitar reserva", em que
+ * a pessoa digita data e hora) não passa pelo calendário — dava para pedir
+ * exatamente a quadra que a arena fechou, ou a que está com um dia de jogo
+ * marcado. O pedido entrava, a arena recusava depois, e os dois perdiam tempo.
+ *
+ * Bloqueio **sem `court_id` vale para a arena inteira** — mesma regra que o
+ * status de slot já usa; um candidato sem quadra definida também colide com
+ * qualquer bloqueio do dia, porque a quadra que ele receber pode ser essa.
+ *
+ * @param {Array} candidateSlots [{date, start, end, court_id?}, ...]
+ * @param {Array} unavailabilities documentos de `arena_unavailabilities`
+ *   (ou os derivados de dia de jogo — o formato é o mesmo)
+ * @returns {{ hasConflict: boolean, conflicts: Array }}
+ */
+export function checkUnavailabilityConflict(candidateSlots = [], unavailabilities = []) {
+  const bloqueios = Array.isArray(unavailabilities) ? unavailabilities : [];
+  const conflicts = [];
+  for (const c of candidateSlots || []) {
+    if (!c?.date || !c?.start || !c?.end) continue;
+    const ini = timeToMinutes(c.start);
+    const fim = timeToMinutes(c.end);
+    if (ini == null || fim == null || fim <= ini) continue;
+    for (const u of bloqueios) {
+      if (u?.date !== c.date) continue;
+      if (c.court_id && u?.court_id && u.court_id !== c.court_id) continue;
+      const bi = timeToMinutes(u?.start_time);
+      const bf = timeToMinutes(u?.end_time);
+      if (bi == null || bf == null || bf <= bi) continue;
+      // Encostar não é sobrepor: 18h–20h convive com 20h–22h.
+      if (ini < bf && bi < fim) {
+        conflicts.push({
+          candidate: c,
+          unavailability: u,
+          reason: u?.game_day_id ? 'game_day' : (u?.source || 'unavailability'),
+          notes: u?.notes || null,
+        });
+      }
+    }
+  }
+  return { hasConflict: conflicts.length > 0, conflicts };
+}
+
+/**
+ * A frase que explica por que o horário não pode ser pedido.
+ * Dizer "indisponível" e parar é o que faz a pessoa tentar de novo igual.
+ */
+export function unavailabilityConflictMessage(conflicts = []) {
+  const c = (conflicts || [])[0];
+  if (!c) return null;
+  const quando = `${c.candidate.date} ${c.candidate.start}–${c.candidate.end}`;
+  if (c.reason === 'game_day') {
+    return `Este horário (${quando}) está reservado para um dia de jogo da arena${c.notes ? ` — ${c.notes}` : ''}. Escolha outro horário ou marque presença no dia de jogo.`;
+  }
+  return `A arena bloqueou este horário (${quando})${c.notes ? ` — ${c.notes}` : ''}. Escolha outro horário.`;
+}
+
+/**
  * Verifica se um slot está dentro de alguma janela de schedule ativa
  * da quadra naquele weekday. Retorna { aligned: bool, matching: [] }.
  *

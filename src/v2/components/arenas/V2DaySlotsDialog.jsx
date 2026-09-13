@@ -67,7 +67,7 @@ import { V2Button, V2Badge, V2EmptyState, V2Skeleton } from '@/v2/ui/primitives'
 import BookingRequestDialog from '@/modules/arenas/components/BookingRequestDialog';
 import CourtTimePicker from './CourtTimePicker';
 import { sortSelection, summarizeSelection } from '@/modules/arenas/domain/bookingSelection';
-import { arenaGameDayTimeRange } from '@/modules/games/domain/arenaGameDay';
+import { arenaGameDayTimeRange, mergeGameDayBlocks } from '@/modules/games/domain/arenaGameDay';
 
 const STEP = 60;
 
@@ -161,13 +161,22 @@ export default function V2DaySlotsDialog({
       .filter((b) => !courtId || !b.court_id || b.court_id === courtId);
   }, [bookings, date, courtId]);
 
-  // Indisponibilidades admin do dia
+  /**
+   * Os horários fechados NESTE dia.
+   *
+   * ⚠️ Sai dos bloqueios gravados MAIS os que o dia de jogo implica. Marcar um
+   * dia de jogo grava uma cópia em `arena_unavailabilities`, e era só essa
+   * cópia que a grade olhava — se ela não chegou (regra, rede, dia de jogo
+   * criado antes de a cópia existir), a grade oferecia para reserva a quadra
+   * que está com um dia de jogo em cima. O dia de jogo é a fonte; a cópia é
+   * conveniência. `mergeGameDayBlocks` não duplica o que já foi gravado.
+   */
   const unavailabilitiesOfDay = useMemo(() => {
-    if (!unavailabilities) return [];
-    return unavailabilities
+    const todos = mergeGameDayBlocks(unavailabilities || [], gameDays || []);
+    return todos
       .filter((u) => u.date === date)
       .filter((u) => !courtId || !u.court_id || u.court_id === courtId);
-  }, [unavailabilities, date, courtId]);
+  }, [unavailabilities, gameDays, date, courtId]);
 
   // Slots do dia (1h cada, dentro dos schedules)
   const slotsWithStatus = useMemo(() => {

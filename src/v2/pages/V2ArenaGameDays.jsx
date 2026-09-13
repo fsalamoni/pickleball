@@ -25,7 +25,7 @@ import { Link, Navigate, useNavigate, useParams } from 'react-router-dom';
 import { toast } from 'sonner';
 import {
   ArrowLeft, CalendarClock, CalendarPlus, ChevronLeft, History, LayoutGrid,
-  MonitorPlay, Pencil, Trash2, Users, UserMinus, Info,
+  MonitorPlay, Pencil, Trash2, Users, Info,
 } from 'lucide-react';
 import { useAuth } from '@/core/lib/FirebaseAuthContext';
 import { FEATURE_FLAG } from '@/core/featureFlags';
@@ -36,7 +36,7 @@ import {
 import { ConfirmDialog } from '@/components/ui/confirm-dialog';
 import { useArena, useMyManagedArenas } from '@/modules/arenas/hooks/useArenas';
 import {
-  useArenaGameDays, useArchiveArenaGameDay, useLeaveArenaGameDay,
+  useArenaGameDays, useArchiveArenaGameDay,
 } from '@/modules/games/hooks/useArenaGameDays';
 import { useGameDay, useGameDayParticipants } from '@/modules/games/hooks/useGameDays';
 import { useGameDayRoles } from '@/modules/games/hooks/useGameDayRoles';
@@ -47,7 +47,6 @@ import {
 import { GAME_DAY_FORMAT_LABELS, isPlayFormat, isAmericanoLiveFormat } from '@/modules/clubs/domain/gameDayFormats';
 import { isGameDayOpenToParticipants } from '@/modules/games/domain/gameDayRoles';
 import ArenaGameDayDialog from '@/v2/components/games/ArenaGameDayDialog';
-import GameDayAdminsCard from '@/v2/components/games/GameDayAdminsCard';
 import AthleteGameDayOrganizer from '@/v2/components/games/AthleteGameDayOrganizer';
 import AthletePlayOrganizer from '@/v2/components/games/AthletePlayOrganizer';
 import AthleteAmericanoLiveOrganizer from '@/v2/components/games/AthleteAmericanoLiveOrganizer';
@@ -60,16 +59,25 @@ function hojeISO() {
 }
 
 /** Texto curto de vagas — o número que a arena mais olha. */
+/**
+ * "20/18 inscrito(s)" é um número que faz a pessoa parar e reler: são 20 numa
+ * lista de 18. Acontece de verdade — a arena pode INSERIR atletas pela lista
+ * de participantes, e isso não passa pelo limite de inscrição. Então o texto
+ * diz o que está acontecendo em vez de deixar a conta estranha no ar.
+ */
 function textoDeVagas(vagas) {
+  const acima = (usados, limite) => (limite != null && usados > limite
+    ? ` · ${usados - limite} acima do limite`
+    : '');
   if (vagas.mode === ARENA_SIGNUP_MODE.COURT) {
     const total = vagas.byCourt.reduce((a, c) => a + c.used, 0);
     const temLimite = vagas.byCourt.some((c) => c.limit != null);
     if (!temLimite) return `${total} inscrito(s)`;
     const limite = vagas.byCourt.reduce((a, c) => a + (c.limit || 0), 0);
-    return `${total}/${limite} por quadra`;
+    return `${total}/${limite} por quadra${acima(total, limite)}`;
   }
   if (vagas.limit == null) return `${vagas.used} inscrito(s) · sem limite`;
-  return `${vagas.used}/${vagas.limit} inscrito(s)`;
+  return `${vagas.used}/${vagas.limit} inscrito(s)${acima(vagas.used, vagas.limit)}`;
 }
 
 export default function V2ArenaGameDays() {
@@ -202,19 +210,38 @@ function ListaDaArena({ arena }) {
 
 /* -------------------------------------------------------------- detalhe -- */
 
-/** A lista de inscritos, com a quadra de cada um quando a inscrição é por quadra. */
-function Inscritos({ gameDay, participants }) {
-  const remover = useLeaveArenaGameDay();
+/**
+ * O painel de VAGAS do dia de jogo — o que é da arena.
+ *
+ * ⚠️ Aqui NÃO mora uma lista de gente. Morava, e era o problema: a mesma lista
+ * aparecia duas vezes na tela, e a de cima — esta — só sabia remover, enquanto
+ * a de baixo ("Participantes") é a que forma dupla, pausa e exclui. Quem
+ * chegava parava na primeira e concluía que a plataforma não fazia o resto.
+ * Uma lista, num lugar só; aqui ficam as VAGAS, que é a pergunta da arena
+ * ("cabe mais gente?") e não é respondida em nenhum outro lugar.
+ */
+function Vagas({ gameDay, participants }) {
   const vagas = arenaGameDayVacancies(gameDay, participants);
   const porQuadra = arenaSignupMode(gameDay) === ARENA_SIGNUP_MODE.COURT;
-  const [confirmar, setConfirmar] = useState(null);
-  const nomeDaQuadra = (id) => arenaGameDaySlots(gameDay).find((s) => s.court_id === id)?.court_name || 'sem quadra';
+
+  /** Quem se inscreveu em cada quadra (só faz sentido no modo por quadra). */
+  const nomesPorQuadra = useMemo(() => {
+    const mapa = new Map();
+    if (!porQuadra) return mapa;
+    participants.forEach((p) => {
+      const k = p.arena_court_id || 'sem';
+      mapa.set(k, [...(mapa.get(k) || []), p.name || 'Atleta']);
+    });
+    return mapa;
+  }, [participants, porQuadra]);
+
+  const semQuadra = nomesPorQuadra.get('sem') || [];
 
   return (
     <V2Surface className="mb-5">
       <div className="flex flex-wrap items-start justify-between gap-3">
         <div>
-          <h2 className="font-display text-lg font-bold text-ink">Inscritos</h2>
+          <h2 className="font-display text-lg font-bold text-ink">Vagas</h2>
           <p className="mt-0.5 text-sm text-gray-500">{textoDeVagas(vagas)}</p>
         </div>
         {vagas.full && <V2Badge tone="amber">Lotado</V2Badge>}
@@ -222,62 +249,40 @@ function Inscritos({ gameDay, participants }) {
 
       {porQuadra && (
         <ul className="mt-3 grid gap-2 sm:grid-cols-2">
-          {vagas.byCourt.map((c) => (
-            <li key={c.court_id} className="rounded-2xl border border-gray-100 bg-paper px-3.5 py-2.5">
-              <p className="text-sm font-semibold text-ink">{c.court_name || 'Quadra'}</p>
-              <p className="text-xs text-gray-500">
-                {c.start_time}–{c.end_time} · {c.limit == null ? `${c.used} inscrito(s), sem limite` : `${c.used}/${c.limit}`}
-              </p>
-            </li>
-          ))}
+          {vagas.byCourt.map((c) => {
+            const nomes = nomesPorQuadra.get(c.court_id) || [];
+            return (
+              <li key={c.court_id} className="rounded-2xl border border-gray-100 bg-paper px-3.5 py-2.5">
+                <p className="text-sm font-semibold text-ink">{c.court_name || 'Quadra'}</p>
+                <p className="text-xs text-gray-500">
+                  {c.start_time}–{c.end_time} · {c.limit == null ? `${c.used} inscrito(s), sem limite` : `${c.used}/${c.limit}`}
+                </p>
+                {nomes.length > 0 && (
+                  <p className="mt-1.5 text-xs leading-5 text-gray-600">{nomes.join(' · ')}</p>
+                )}
+              </li>
+            );
+          })}
         </ul>
       )}
 
-      {participants.length === 0 ? (
-        <p className="mt-3 text-sm text-gray-500">
-          Ninguém marcou presença ainda. O dia de jogo já aparece na página e no calendário da arena.
+      {porQuadra && semQuadra.length > 0 && (
+        <p className="mt-2 text-xs text-amber-700">
+          Sem quadra escolhida: {semQuadra.join(' · ')}. Eles jogam, mas não contam no limite de nenhuma quadra.
         </p>
-      ) : (
-        <ul className="mt-3 divide-y divide-gray-100">
-          {participants.map((p) => (
-            <li key={p.id} className="flex items-center justify-between gap-3 py-2.5">
-              <div className="min-w-0">
-                <p className="truncate text-sm font-semibold text-ink">{p.name}</p>
-                {porQuadra && <p className="text-xs text-gray-500">{nomeDaQuadra(p.arena_court_id)}</p>}
-              </div>
-              {p.user_id && (
-                <V2Button variant="ghost" size="sm" className="text-red-500 hover:text-red-600"
-                  onClick={() => setConfirmar(p)}
-                >
-                  <UserMinus className="h-3.5 w-3.5" /> Remover
-                </V2Button>
-              )}
-            </li>
-          ))}
-        </ul>
       )}
 
-      <ConfirmDialog
-        open={!!confirmar}
-        onOpenChange={(v) => !v && setConfirmar(null)}
-        destructive
-        title="Remover do dia de jogo?"
-        description={`${confirmar?.name || 'O atleta'} sai da lista e deixa de ver este dia de jogo. As partidas já disputadas continuam contando.`}
-        confirmLabel="Remover"
-        loading={remover.isPending}
-        onConfirm={async () => {
-          try {
-            await remover.mutateAsync({
-              gameDayId: gameDay.id, uid: confirmar.user_id, arenaId: gameDay.arena_id,
-            });
-            toast.success('Atleta removido.');
-          } catch (err) {
-            toast.error(err?.message || 'Não foi possível remover.');
-          } finally {
-            setConfirmar(null);
-          }
-        }}
-      />
+      <p className="mt-3 flex items-start gap-2 text-xs leading-5 text-gray-500">
+        <Info aria-hidden="true" className="mt-0.5 h-3.5 w-3.5 shrink-0 text-gray-400" />
+        {participants.length === 0 ? (
+          <span>Ninguém marcou presença ainda. O dia de jogo já aparece na página e no calendário da arena.</span>
+        ) : (
+          <span>
+            Os {participants.length} inscritos — com <strong>formar dupla</strong>, <strong>pausar</strong> e{' '}
+            <strong>remover</strong> — estão em <strong>Participantes</strong>, logo abaixo.
+          </span>
+        )}
+      </p>
     </V2Surface>
   );
 }
@@ -371,10 +376,12 @@ function DetalheDaArena({ arena, gameDayId }) {
         </p>
       </V2Surface>
 
-      <Inscritos gameDay={gameDay} participants={participants} />
+      <Vagas gameDay={gameDay} participants={participants} />
 
-      {podeConfigurar && <div className="mb-5"><GameDayAdminsCard gameDay={gameDay} participants={participants} /></div>}
-
+      {/* ⚠️ O card "Organização" NÃO sai daqui. O organizador abaixo já o
+          renderiza para quem `useGameDayRoles` diz que pode CONFIGURAR — o que
+          inclui o gestor da arena. Renderizar aqui também fazia a tela mostrar
+          o MESMO card duas vezes, um debaixo do outro. */}
       {/* O MIOLO é o mesmo do ambiente do atleta — de propósito. */}
       {podeGerenciar ? (
         isAmericanoLiveFormat(gameDay.format)

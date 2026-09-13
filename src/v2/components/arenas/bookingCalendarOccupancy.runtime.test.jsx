@@ -33,6 +33,7 @@ const estado = {
   unavailabilities: [],
   carregando: false,
   erro: false,
+  diasDeJogo: [],
 };
 
 vi.mock('sonner', () => ({ toast: { success: vi.fn(), error: vi.fn() } }));
@@ -54,7 +55,7 @@ vi.mock('@/modules/arenas/hooks/useBookings', () => ({
   }),
 }));
 vi.mock('@/modules/games/hooks/useArenaGameDays', () => ({
-  useArenaGameDays: () => ({ data: [] }),
+  useArenaGameDays: () => ({ data: estado.diasDeJogo }),
 }));
 vi.mock('./V2DaySlotsDialog', () => ({ default: () => null }));
 
@@ -83,6 +84,7 @@ beforeEach(() => {
   estado.unavailabilities = [];
   estado.carregando = false;
   estado.erro = false;
+  estado.diasDeJogo = [];
   container = document.createElement('div');
   document.body.appendChild(container);
   root = createRoot(container);
@@ -284,5 +286,61 @@ describe('⭐ quando a consulta FALHA', () => {
     estado.bookings = [QUI_1, QUI_2].flatMap((d) => ['q1', 'q2', 'q3'].map((q) => reserva(q, d)));
     await render();
     expect(botaoQueContem('Próximo dia livre')).toBeUndefined();
+  });
+});
+
+/* ======================================================== dia de jogo === */
+
+describe('⭐ dia de jogo da arena FECHA a quadra no calendário', () => {
+  const diaDeJogo = (over = {}) => ({
+    id: 'gd1', arena_id: 'a1', title: 'Play de sexta', date: QUI_1, status: 'active',
+    arena_slots: ['q1', 'q2', 'q3'].map((id) => ({
+      court_id: id, court_name: `Quadra ${id}`, start_time: '18:00', end_time: '22:00',
+    })),
+    ...over,
+  });
+
+  it('⭐ bloqueia mesmo SEM a cópia gravada em arena_unavailabilities', () => {
+    // Era o bug: o calendário só olhava a cópia. Se ela não chegou, a quadra
+    // aparecia livre com um dia de jogo marcado em cima.
+    estado.diasDeJogo = [diaDeJogo()];
+    return render().then(() => {
+      const cel = celula(QUI_1);
+      expect(cel.textContent).toContain('Bloqueado');
+      expect(cel.textContent).not.toContain('livres');
+    });
+  });
+
+  it('só o dia e as quadras do dia de jogo — a quinta seguinte segue livre', async () => {
+    estado.diasDeJogo = [diaDeJogo()];
+    await render();
+    expect(celula(QUI_2).textContent).toContain('4h livres');
+  });
+
+  it('uma quadra só: as outras duas continuam livres', async () => {
+    estado.diasDeJogo = [diaDeJogo({
+      arena_slots: [{ court_id: 'q1', court_name: 'Quadra 1', start_time: '18:00', end_time: '22:00' }],
+    })];
+    await render();
+    expect(celula(QUI_1).textContent).toContain('4h livres');
+    expect(celula(QUI_1).getAttribute('aria-label')).toContain('33% ocupado');
+  });
+
+  it('dia de jogo ARQUIVADO libera a quadra', async () => {
+    estado.diasDeJogo = [diaDeJogo({ status: 'archived' })];
+    await render();
+    expect(celula(QUI_1).textContent).toContain('4h livres');
+  });
+
+  it('a cópia gravada não é contada duas vezes', async () => {
+    estado.diasDeJogo = [diaDeJogo()];
+    estado.unavailabilities = ['q1', 'q2', 'q3'].map((id, i) => ({
+      id: `u${i}`, arena_id: 'a1', court_id: id, date: QUI_1,
+      start_time: '18:00', end_time: '22:00', source: 'game_day', game_day_id: 'gd1',
+    }));
+    await render();
+    const cel = celula(QUI_1);
+    expect(cel.textContent).toContain('Bloqueado');
+    expect(cel.getAttribute('aria-label')).toContain('100% ocupado');
   });
 });

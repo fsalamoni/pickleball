@@ -329,6 +329,32 @@ São montadas a partir das constantes do módulo, não de `toLocaleDateString`:
 mesma entrada, mesmo texto, sem depender da configuração da máquina. Entrada
 inválida vira string vazia — nunca `Invalid Date`.
 
+## Bloqueio de horário: quem pode reservar o quê (2026-09-13)
+
+⚠️ **Conferir outras RESERVAS não basta.** O serviço ignorava os bloqueios da
+arena, e o formulário completo de reserva (data e hora digitadas) não passa
+pelo calendário — dava para pedir exatamente a quadra fechada, ou a que está
+com um dia de jogo em cima.
+
+| função | onde |
+|---|---|
+| `checkUnavailabilityConflict(slots, bloqueios)` | `domain/booking_conflict.js` |
+| `unavailabilityConflictMessage(conflicts)` | idem — diz o MOTIVO, e dia de jogo tem saída própria |
+| `mergeGameDayBlocks(gravados, diasDeJogo)` | `modules/games/domain/arenaGameDay.js` |
+
+Regras que valem a pena não desfazer:
+
+- **O dia de jogo é a FONTE do bloqueio; a cópia em `arena_unavailabilities` é
+  conveniência.** Some a cópia e o sistema inteiro deixava de saber. Some o
+  merge e o problema volta.
+- **Use o merge para calcular STATUS, nunca para LISTAR bloqueios numa tela de
+  gestão**: o derivado não tem documento, e um botão de apagar apontaria para
+  o nada — pior, apagar a cópia GRAVADA abre a quadra com o dia de jogo ainda
+  marcado nela.
+- **Bloqueio não depende de feature flag.** A flag gateia o que se mostra.
+- **Encostar não é sobrepor** (18h–20h convive com 20h–22h), e bloqueio sem
+  `court_id` fecha a arena inteira — mesma regra do status de slot.
+
 ## Onde achar mais
 
 - `docs/06-MODULES.md` § arenas

@@ -34,6 +34,8 @@ import { participantStatusLabel } from '@/modules/arenas/domain/shared_booking';
 import AthleteMultiPicker from '@/modules/athletes/components/AthleteMultiPicker';
 import { getSlotStatus, generateTimeSlots, isSlotClickable, slotEndTime, SLOT_STATUS_COLORS, SLOT_STATUS_LABELS, SLOT_STATUS } from '@/modules/arenas/domain/slot_status';
 import { weekdayOf } from '@/modules/arenas/domain/booking';
+import { useArenaGameDays } from '@/modules/games/hooks/useArenaGameDays';
+import { mergeGameDayBlocks } from '@/modules/games/domain/arenaGameDay';
 import { formatDateShortBR } from '@/modules/arenas/domain/calendar';
 import { BOOKING_STATUS, BOOKING_STATUS_LABELS } from '@/modules/arenas/domain/constants';
 import { bookingPriceInfo } from '@/modules/arenas/domain/pricing';
@@ -65,7 +67,18 @@ export default function V2AdminBookingCalendar({ arenaId, embedded = false }) {
   const { data: courts = [] } = useArenaCourts(arenaId);
   const { data: schedules = [] } = useArenaCourtSchedules(arenaId);
   const { data: bookings = [] } = useArenaBookings(arenaId);
-  const { data: unavailabilities = [] } = useArenaUnavailabilities(arenaId);
+  const { data: unavailabilitiesRaw = [] } = useArenaUnavailabilities(arenaId);
+  // Os dias de jogo da própria arena ocupam quadra. A cópia deles em
+  // `arena_unavailabilities` é conveniência — a FONTE é o dia de jogo, e é por
+  // ela que a arena enxerga o próprio calendário, mesmo que a cópia falte.
+  // (Só para calcular STATUS: a lista de bloqueios que a arena GERENCIA, mais
+  // abaixo, segue mostrando apenas documentos reais, com botão de apagar que
+  // aponta para algo que existe.)
+  const { data: diasDeJogoDaArena = [] } = useArenaGameDays(arenaId);
+  const unavailabilities = useMemo(
+    () => mergeGameDayBlocks(unavailabilitiesRaw, diasDeJogoDaArena),
+    [unavailabilitiesRaw, diasDeJogoDaArena],
+  );
   const addUnav = useAddArenaUnavailability(arenaId);
   const removeUnav = useDeleteArenaUnavailability(arenaId);
   const updateStatus = useUpdateBookingStatus();
@@ -198,6 +211,13 @@ export default function V2AdminBookingCalendar({ arenaId, embedded = false }) {
 
   async function handleRemoveUnavailability() {
     if (!selectedSlot?.unavailability) return;
+    // Bloqueio de dia de jogo não se apaga por aqui: o derivado nem documento
+    // tem, e apagar a cópia gravada abriria a quadra com o dia de jogo ainda
+    // marcado nela. A saída é o próprio dia de jogo.
+    if (selectedSlot.unavailability.game_day_id) {
+      toast.error('Este horário está tomado por um dia de jogo. Edite ou arquive o dia de jogo para liberar a quadra.');
+      return;
+    }
     try {
       await removeUnav.mutateAsync(selectedSlot.unavailability.id);
       toast.success('Indisponibilidade removida.');
@@ -463,16 +483,36 @@ export default function V2AdminBookingCalendar({ arenaId, embedded = false }) {
             </div>
           )}
 
-          {/* Indisponibilidade existente */}
+          {/* Bloqueio existente. ⚠️ Dois tipos, com saídas DIFERENTES: o que a
+              arena marcou à mão (apaga aqui) e o que vem de um DIA DE JOGO
+              (some quando o dia de jogo é editado ou arquivado). Apagar o
+              bloqueio de um dia de jogo abriria a quadra para reserva com o
+              dia de jogo ainda marcado nela — e um dos bloqueios nem documento
+              tem, porque é derivado do próprio dia de jogo. */}
           {selectedSlot.unavailability && (
             <div className="mt-3 space-y-2">
               <div className="rounded-2xl border border-orange-200 bg-orange-50 p-3">
-                <p className="text-xs font-bold uppercase text-orange-700">Indisponibilidade</p>
+                <p className="text-xs font-bold uppercase text-orange-700">
+                  {selectedSlot.unavailability.game_day_id ? 'Dia de jogo da arena' : 'Indisponibilidade'}
+                </p>
                 {selectedSlot.unavailability.notes && <p className="mt-1 text-sm text-orange-900">{selectedSlot.unavailability.notes}</p>}
+                {selectedSlot.unavailability.game_day_id && (
+                  <p className="mt-1 text-xs text-orange-800">
+                    A quadra está tomada por um dia de jogo. Para liberar este horário, edite ou arquive o dia de jogo.
+                  </p>
+                )}
               </div>
-              <V2Button size="sm" variant="ghost" onClick={handleRemoveUnavailability}>
-                <Trash2 className="h-3.5 w-3.5 text-red-500" /> Remover indisponibilidade
-              </V2Button>
+              {selectedSlot.unavailability.game_day_id ? (
+                <V2Button asChild size="sm" variant="secondary">
+                  <Link to={`/arenas/${arenaId}/gerir/dia-de-jogo/${selectedSlot.unavailability.game_day_id}`}>
+                    Ver o dia de jogo
+                  </Link>
+                </V2Button>
+              ) : (
+                <V2Button size="sm" variant="ghost" onClick={handleRemoveUnavailability}>
+                  <Trash2 className="h-3.5 w-3.5 text-red-500" /> Remover indisponibilidade
+                </V2Button>
+              )}
             </div>
           )}
 

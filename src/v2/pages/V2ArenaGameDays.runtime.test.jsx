@@ -45,6 +45,8 @@ vi.mock('@/modules/games/hooks/useGameDays', () => ({
 vi.mock('@/v2/components/games/AthleteGameDayOrganizer', () => ({ default: () => <div>ORGANIZADOR</div> }));
 vi.mock('@/v2/components/games/AthletePlayOrganizer', () => ({ default: () => <div>ORGANIZADOR PLAY</div> }));
 vi.mock('@/v2/components/games/AthleteAmericanoLiveOrganizer', () => ({ default: () => <div>ORGANIZADOR AO VIVO</div> }));
+// O card de organização vem DO ORGANIZADOR, não da página — por isso o dublê
+// do organizador é quem o representa aqui.
 vi.mock('@/v2/components/games/GameDayAdminsCard', () => ({ default: () => <div>ADMINS</div> }));
 vi.mock('@/v2/components/tutorial/V2TutorialLauncher', () => ({ default: () => null }));
 
@@ -237,5 +239,45 @@ describe('conduzir um dia de jogo pela arena', () => {
   it('sem inscritos, diz que o dia já está visível para os atletas', async () => {
     await render('/arenas/a1/gerir/dia-de-jogo/gd1');
     expect(container.textContent).toContain('Ninguém marcou presença ainda');
+  });
+});
+
+/* ================================================== sem duplicidade === */
+
+describe('⭐ a tela não repete a mesma coisa duas vezes', () => {
+  it('o card "Organização" aparece UMA vez só (vem do organizador)', async () => {
+    await render(`/arenas/a1/gerir/dia-de-jogo/gd1`);
+    // A página renderizava o seu próprio GameDayAdminsCard E o organizador
+    // renderizava outro: dois cards idênticos, um debaixo do outro.
+    const vezes = container.textContent.split('ADMINS').length - 1;
+    expect(vezes).toBeLessThanOrEqual(1);
+  });
+
+  it('⭐ a lista de gente não é repetida: o painel da arena é de VAGAS', async () => {
+    estado.participantes = [{ id: 'p1', user_id: 'u1', name: 'Ana' }, { id: 'p2', user_id: 'u2', name: 'Bia' }];
+    await render(`/arenas/a1/gerir/dia-de-jogo/gd1`);
+    expect(container.textContent).toContain('Vagas');
+    // Sem lista de nomes aqui: ela é uma só, e fica em "Participantes".
+    expect(container.textContent).not.toContain('Ana');
+    // E a tela DIZ onde estão as ações, em vez de oferecer uma lista pobre.
+    expect(container.textContent).toContain('Participantes');
+    expect(container.textContent).toContain('formar dupla');
+  });
+
+it('mais inscritos que o limite é DITO, não deixado como conta estranha', async () => {
+    estado.gameDay = { ...estado.gameDay, capacity: 18 };
+    estado.participantes = Array.from({ length: 20 }, (_, i) => ({ id: `p${i}`, user_id: `u${i}`, name: `A${i}` }));
+    await render(`/arenas/a1/gerir/dia-de-jogo/gd1`);
+    expect(container.textContent).toContain('20/18');
+    expect(container.textContent).toContain('2 acima do limite');
+  });
+
+    it('no modo POR QUADRA, as vagas mostram quem está em cada quadra', async () => {
+    estado.gameDay = { ...estado.gameDay, signup_mode: 'court' };
+    estado.participantes = [{ id: 'p1', user_id: 'u1', name: 'Ana', arena_court_id: 'c1' }];
+    await render(`/arenas/a1/gerir/dia-de-jogo/gd1`);
+    // Aqui a lista POR QUADRA é informação da arena que não existe em
+    // nenhum outro lugar — e é resumo, não uma segunda lista de ações.
+    expect(container.textContent).toContain('Ana');
   });
 });

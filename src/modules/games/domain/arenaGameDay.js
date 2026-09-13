@@ -226,6 +226,51 @@ export function unavailabilityPayloadsFor(gameDay) {
     }));
 }
 
+/**
+ * Os bloqueios de calendário que ESTES dias de jogo implicam — DERIVADOS.
+ *
+ * ## Por que derivar se já existe a cópia no banco
+ *
+ * Marcar um dia de jogo grava `arena_unavailabilities` com `source:
+ * 'game_day'` (é o que faz o resto do sistema respeitar sem código novo). Essa
+ * cópia é ótima para compatibilidade e péssima como ÚNICA verdade: se a
+ * gravação falhar — regra, rede, um dia de jogo criado antes da cópia existir —
+ * o calendário volta a oferecer para reserva uma quadra que está ocupada, e
+ * ninguém percebe até alguém aparecer na arena com uma reserva inútil.
+ *
+ * O dia de jogo é a fonte; a cópia é conveniência. Aqui as telas montam a
+ * verdade a partir da fonte.
+ *
+ * @param {Array<object>} gameDays
+ * @returns {Array<object>} no MESMO formato de `arena_unavailabilities`
+ */
+export function gameDayBlocks(gameDays = []) {
+  if (!Array.isArray(gameDays)) return [];
+  return gameDays
+    .filter((g) => g?.status !== 'archived')
+    .flatMap((g) => unavailabilityPayloadsFor(g)
+      .map((p, i) => ({ ...p, id: `dia-de-jogo:${g.id}:${i}`, derivado: true })));
+}
+
+/** A identidade de um bloqueio, para não contar o mesmo horário duas vezes. */
+function chaveDoBloqueio(b) {
+  return [b?.game_day_id, b?.court_id, b?.date, b?.start_time, b?.end_time].join('|');
+}
+
+/**
+ * Os bloqueios GRAVADOS mais os que faltaram ser gravados.
+ *
+ * Use ao calcular STATUS de horário (calendário, grade do dia, conflito de
+ * reserva). **Não** use para LISTAR bloqueios numa tela de gestão: o derivado
+ * não tem documento no banco, e um botão de apagar apontaria para o nada.
+ */
+export function mergeGameDayBlocks(unavailabilities = [], gameDays = []) {
+  const gravados = Array.isArray(unavailabilities) ? unavailabilities : [];
+  const jaGravado = new Set(gravados.filter((u) => u?.game_day_id).map(chaveDoBloqueio));
+  const faltando = gameDayBlocks(gameDays).filter((b) => !jaGravado.has(chaveDoBloqueio(b)));
+  return faltando.length === 0 ? gravados : [...gravados, ...faltando];
+}
+
 /* -------------------------------------------------------------- vagas -- */
 
 /** Teto inteiro e positivo, ou `null` (sem limite). */

@@ -15,6 +15,7 @@ import {
   ARENA_SIGNUP_MODE, ARENA_SIGNUP_MODE_LABELS,
   isArenaGameDay, arenaGameDaySlots, arenaSignupMode, arenaGameDayCourtIds,
   arenaGameDayTimeRange, arenaGameDaySingleWindow, arenaGameDayWhenText,
+  gameDayBlocks, mergeGameDayBlocks,
   timeRangesOverlap, findGameDayOverlaps, slotsAsBookingCandidates,
   unavailabilityPayloadsFor, normalizeCapacity, arenaGameDayVacancies,
   isSignedUp, canSignUpToArenaGameDay, normalizeArenaGameDayInput,
@@ -546,5 +547,65 @@ describe('⭐ a edição não mexe na visibilidade', () => {
     });
     ['created_by', 'member_uids', 'admin_uids', 'arena_id', 'status', 'publish_to_ranking']
       .forEach((k) => expect(k in value, k).toBe(false));
+  });
+});
+
+describe('⭐ bloqueio de calendário derivado do dia de jogo', () => {
+  const dia = (over = {}) => ({
+    id: 'gd1', arena_id: 'a1', title: 'Play de sexta', date: '2026-09-18',
+    arena_slots: [
+      { court_id: 'c1', court_name: 'Quadra 1', start_time: '18:00', end_time: '22:00' },
+      { court_id: 'c2', court_name: 'Quadra 2', start_time: '18:00', end_time: '22:00' },
+    ],
+    ...over,
+  });
+
+  it('vira um bloqueio por quadra, no formato de arena_unavailabilities', () => {
+    const blocos = gameDayBlocks([dia()]);
+    expect(blocos).toHaveLength(2);
+    expect(blocos[0]).toMatchObject({
+      arena_id: 'a1', court_id: 'c1', date: '2026-09-18',
+      start_time: '18:00', end_time: '22:00', source: 'game_day', game_day_id: 'gd1',
+    });
+    expect(blocos[0].id).toBeTruthy();
+  });
+
+  it('dia de jogo ARQUIVADO não bloqueia nada', () => {
+    expect(gameDayBlocks([dia({ status: 'archived' })])).toEqual([]);
+  });
+
+  it('aguenta lista vazia, nula e dia sem quadras', () => {
+    expect(gameDayBlocks()).toEqual([]);
+    expect(gameDayBlocks(null)).toEqual([]);
+    expect(gameDayBlocks([dia({ arena_slots: [] })])).toEqual([]);
+  });
+
+  it('⭐ o merge acrescenta o que faltou ser gravado', () => {
+    const juntos = mergeGameDayBlocks([], [dia()]);
+    expect(juntos).toHaveLength(2);
+    expect(juntos.every((b) => b.derivado)).toBe(true);
+  });
+
+  it('⭐ e NÃO duplica o que já está gravado', () => {
+    const gravado = {
+      id: 'u1', arena_id: 'a1', court_id: 'c1', date: '2026-09-18',
+      start_time: '18:00', end_time: '22:00', source: 'game_day', game_day_id: 'gd1',
+    };
+    const juntos = mergeGameDayBlocks([gravado], [dia()]);
+    expect(juntos).toHaveLength(2);
+    expect(juntos[0]).toBe(gravado);
+    expect(juntos[1].court_id).toBe('c2');
+  });
+
+  it('nunca mexe nos bloqueios que a arena criou à mão', () => {
+    const manual = { id: 'u9', arena_id: 'a1', court_id: 'c1', date: '2026-09-18', start_time: '08:00', end_time: '09:00' };
+    const juntos = mergeGameDayBlocks([manual], []);
+    expect(juntos).toEqual([manual]);
+  });
+
+  it('sem dia de jogo, devolve a lista gravada tal como veio', () => {
+    const gravados = [{ id: 'u1' }];
+    expect(mergeGameDayBlocks(gravados, [])).toBe(gravados);
+    expect(mergeGameDayBlocks(gravados)).toBe(gravados);
   });
 });

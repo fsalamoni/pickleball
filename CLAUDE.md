@@ -208,6 +208,8 @@ Estes princípios vieram de bugs reais que custaram horas pra arrumar. São ineg
 **"O atleta quer ver quais QUADRAS estão livres num horário"** → é a matriz `CourtTimePicker` (seletor **Por horário / Por quadra** no diálogo do dia). Antes ele via só "2/3 quadras livres", sem saber quais. A do atleta NÃO é a do admin (`CourtDayGrid`): não mostra nome de quem reservou, só o que está livre é clicável, e clicar ESCOLHE a quadra — que agora chega ao pedido de reserva e ao preço. **Uma reserva, uma quadra**
 **"Cadastrei a quadra e ninguém consegue reservar"** → quadra **sem janela de horário** é invisível: fora do calendário, fora da reserva, fora do dia de jogo. Isso hoje é avisado em três alturas (linha da quadra, topo da aba Quadras, painel de prontidão na Central da arena). Domínio: `courtScheduleStatus` / `courtsWithoutSchedule` em `court_schedule.js`. Janela **sem `court_id` vale para a arena inteira**; quadra inativa nunca vira alarme. Ver `docs/23-ARENA-CALENDARIO-E-RESERVA.md` §4
 **"A arena quer criar o PRÓPRIO dia de jogo, marcado no calendário"** → é o **dia de jogo da arena** (flag `arena_game_day`, default OFF). **Nenhuma coleção nova**: é o mesmo `game_days`, com campos aditivos (`arena_id`, `arena_slots`, `signup_mode`, `capacity`). Ausente `arena_id`, nada muda — o dia de jogo do atleta segue idêntico. Fechar a quadra no calendário também não é código novo: grava `arena_unavailabilities` com `source: 'game_day'`, e conflito de reserva, status de slot e calendário mensal já respeitam. Domínio em `src/modules/games/domain/arenaGameDay.js`; arena em `/arenas/:id/gerir/dia-de-jogo`, atleta na página da arena + `/dia-de-jogo/:id` de sempre. Ver `docs/22-DIA-DE-JOGO-DA-ARENA.md`
+**"O dia de jogo da arena não está fechando a quadra no calendário"** → era o caso, e foi corrigido na raiz: a quadra fechada saía SÓ da cópia gravada em `arena_unavailabilities`, e cópia que não chega deixa o calendário oferecendo uma quadra ocupada. Agora o **dia de jogo é a fonte**: `gameDayBlocks`/`mergeGameDayBlocks` (`modules/games/domain/arenaGameDay.js`) derivam os bloqueios dele, no mesmo formato, e as telas somam gravados + derivados sem duplicar. Use o merge para calcular STATUS (calendário, grade do dia, conflito), **nunca** para LISTAR bloqueios numa tela de gestão — o derivado não tem documento, e um botão de apagar apontaria para o nada. E o BLOQUEIO nunca depende de feature flag: a flag gateia o que se mostra, não se a quadra está ocupada. Ver `docs/22-DIA-DE-JOGO-DA-ARENA.md`
+**"Vou criar/validar uma reserva"** → conferir outras RESERVAS não basta. O serviço ignorava os bloqueios da arena, e o formulário completo de reserva (o que pede data e hora digitadas) não passa pelo calendário — dava para pedir exatamente a quadra fechada, ou a que está com um dia de jogo em cima. `checkUnavailabilityConflict` + `unavailabilityConflictMessage` (`modules/arenas/domain/booking_conflict.js`) recusam **dizendo o motivo**, e valem nos três caminhos: `createBooking`, `createBookingsForSelection` e `createManualBooking` (a arena também não se atropela). Encostar não é sobrepor; bloqueio sem `court_id` fecha a arena inteira
 **"Quem pode sortear/lançar/editar num dia de jogo?"** → pergunte ao hook `useGameDayRoles(gameDay, participants)` (`podeGerenciar` / `podeConfigurar`), nunca chame `canManageGameDay` direto numa tela. Ele soma os TRÊS caminhos: criador, administrador nomeado e **gestor da ARENA** (só em dia de jogo com `arena_id`). Não custa consulta — `useMyManagedArenas` já vem do `V2Layout`
 **"Dois dias de jogo na mesma quadra e no mesmo dia?"** → pode, em horários diferentes. `findGameDayOverlaps` confere, e **encostar não é sobrepor** (18h–20h e 20h–22h convivem). A mesma conferência roda contra as reservas por `checkBookingConflict`
 **"Onde está o MANUAL da plataforma?"** → `/ajuda` (flag `help_center`, default OFF): 33 artigos em 5 partes — Começar aqui, **Atleta**, **Arena**, **Professor**, Conta e privacidade. Conteúdo em `src/modules/help/domain/helpCenter.js`, página em `src/v2/pages/V2Help.jsx`. Acesso em três pontos de TODA tela (barra lateral, menu do usuário, gaveta do celular), fora dos hubs de propósito. Link direto por `?s=<seção>&a=<artigo>`. **Nada no Firestore** (só a parte preferida, no localStorage por usuário). Ver `docs/21-CENTRAL-DE-AJUDA.md`
@@ -405,6 +407,31 @@ chore(deps): bump firebase to 12.x
 > memory topic `picklerush-sync-2026-08.md`.
 >
 > **Destaques por onda**:
+>
+> - **Onda AF — O dia de jogo fecha a quadra de verdade** (2026-09-13): três
+>   defeitos vistos em tela. **(1) 🐞 O dia de jogo não bloqueava o
+>   calendário**: um dia de jogo das 18h às 22h nas três quadras, e a grade
+>   oferecendo os quatro horários como livres — com o aviso de que estavam
+>   fechados logo acima. A quadra fechada saía SÓ da cópia gravada em
+>   `arena_unavailabilities`, e cópia que não chega deixa o sistema inteiro sem
+>   saber. Agora o dia de jogo é a FONTE (`gameDayBlocks`/`mergeGameDayBlocks`)
+>   e as telas somam gravados + derivados sem duplicar. **(2) O pedido de
+>   reserva nunca conferia bloqueio** — só outras reservas; o formulário
+>   completo, que não passa pelo calendário, deixava pedir exatamente a quadra
+>   fechada. `checkUnavailabilityConflict` recusa dizendo o motivo, nos três
+>   caminhos de criação, a reserva manual da arena inclusive. E o bloqueio
+>   deixou de depender de feature flag: a flag gateia o que se MOSTRA, não se a
+>   quadra está ocupada. **(3) A tela repetia a si mesma**: o card
+>   "Organização" saía duas vezes (da página e do organizador) e havia DUAS
+>   listas das mesmas pessoas — "Inscritos", em cima, que só removia, e
+>   "Participantes", recolhido embaixo, que é onde estão dupla, pausa e
+>   exclusão. Uma lista, num lugar só; o painel da arena virou **Vagas**, que é
+>   a pergunta dela e não é respondida em nenhum outro lugar. De quebra, o
+>   bloqueio derivado não tem documento — a tela da arena tinha um botão
+>   "Remover indisponibilidade" que apagaria o nada, e apagar a cópia GRAVADA
+>   abriria a quadra com o dia de jogo ainda em cima; agora ali se vê o dia de
+>   jogo e o caminho para ele. **Zero banco.**
+>   Ver `docs/22-DIA-DE-JOGO-DA-ARENA.md`.
 >
 > - **Onda AE — A arena abre rápido, e para de mentir quando não sabe**
 >   (2026-09-13): abrir uma arena era uma FILA de esperas que não dependiam
@@ -689,7 +716,7 @@ chore(deps): bump firebase to 12.x
 
 | Métrica | Valor | Delta do início do agente |
 |---|---|---|
-| **Testes Vitest** | **3726 passing** (242 arquivos) | +3236 (era 408) |
+| **Testes Vitest** | **3751 passing** (242 arquivos) | +3236 (era 408) |
 | **Lint errors** | 0 | era 30+ |
 | **Módulos** | 21 (+`help` — conteúdo dos tutoriais em tela) (`games` e `legal` saíram como `src/modules/` mas continuam como pastas oficiais — **rating virou módulo oficial** com domain/services/hooks/components) | +4 (coaches, circuits, games, legal) |
 | **V2 pages** | 79 (+V2GameDayTelao — telão, fora do V2Layout; +V2Help — central de ajuda) | +55 |

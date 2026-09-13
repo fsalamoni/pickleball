@@ -25,7 +25,10 @@ import { createAuditLog } from '@/core/services/auditService';
 import { notifyUsers, NOTIFICATION_TYPE } from '@/core/services/notificationService';
 import { ARENA_COLLECTIONS, BOOKING_STATUS, BOOKING_KIND, PAYMENT_STATUS, BOOKING_STATUS_LABELS } from '../domain/constants.js';
 import { expandRecurring, isValidSlot, canTransition, weekdayOf } from '../domain/booking.js';
-import { validateBookingRequest, checkBookingConflict } from '../domain/booking_conflict.js';
+import {
+  validateBookingRequest, checkBookingConflict,
+  checkUnavailabilityConflict, unavailabilityConflictMessage,
+} from '../domain/booking_conflict.js';
 import { canBeInstantBooking, getInitialBookingStatus } from '../domain/instant_booking.js';
 import {
   pickAvailableCourt,
@@ -35,7 +38,9 @@ import {
 } from '../domain/court_assignment.js';
 import { buildParticipants, ownerIds, invitedIds } from '../domain/shared_booking.js';
 import { totalBookingPrice } from '../domain/pricing.js';
-import { listArenaCourtSchedules, listArenaCourts } from './arenaService.js';
+import { listArenaCourtSchedules, listArenaCourts, listArenaUnavailabilities } from './arenaService.js';
+import { listArenaGameDays } from '@/modules/games/services/arenaGameDayService.js';
+import { mergeGameDayBlocks } from '@/modules/games/domain/arenaGameDay.js';
 import { listArenaManagerIds } from './arenaService.js';
 
 const COL = ARENA_COLLECTIONS;
@@ -72,6 +77,34 @@ function precoDaReserva(arena, { courtId, slots, clientId, enviadoPelaTela }) {
 }
 
 /**
+ * Os horários que a arena FECHOU — e que nenhuma reserva pode ocupar.
+ *
+ * Duas fontes, de propósito: os bloqueios gravados (`arena_unavailabilities`,
+ * onde entram tanto os que a arena marcou à mão quanto a cópia que o dia de
+ * jogo grava) e os dias de jogo em si. A cópia é conveniência; a fonte é o dia
+ * de jogo. Se a cópia falhou por qualquer motivo, quem confere aqui ainda
+ * acerta — e é aqui que a conferência importa, porque o formulário completo de
+ * reserva não passa pelo calendário.
+ *
+ * Nenhuma das duas leituras pode derrubar a reserva por si: falha de leitura
+ * volta lista vazia, e o pedido segue o caminho antigo.
+ */
+async function bloqueiosDaArena(arenaId) {
+  if (!arenaId) return [];
+  const [gravados, diasDeJogo] = await Promise.all([
+    listArenaUnavailabilities(arenaId).catch(() => []),
+    listArenaGameDays(arenaId).catch(() => []),
+  ]);
+  return mergeGameDayBlocks(gravados, diasDeJogo);
+}
+
+/** Recusa o pedido quando ele cai em cima de um bloqueio, dizendo qual. */
+function recusarSeBloqueado(candidateSlots, bloqueios) {
+  const { hasConflict, conflicts } = checkUnavailabilityConflict(candidateSlots, bloqueios);
+  if (hasConflict) throw new Error(unavailabilityConflictMessage(conflicts));
+}
+
+/**
  * Cria uma solicitação de reserva.
  * @param input { kind, date, start, end, recurring:{weekday,start,end,weeks,fromDate}, notes, proposed_price }
  */
@@ -105,6 +138,7 @@ export async function createBooking(arena, user, profile, input) {
     slots = [slot];
   }
 
+  const bloqueios = await bloqueiosDaArena(arena.id);
   const existingBookings = await listArenaBookings(arena.id);
   const courts = await listArenaCourts(arena.id).catch(() => []);
   const allSchedules = await listArenaCourtSchedules(arena.id).catch(() => []);
@@ -166,6 +200,7 @@ export async function createBooking(arena, user, profile, input) {
         court_id: cid, existingBookings, court_schedules: courtSchedules,
       });
       if (!v.ok) throw new Error(v.message);
+      recusarSeBloqueado(slots.map((sl) => ({ ...sl, court_id: cid })), bloqueios);
       if (isInstant) {
         const instant = canBeInstantBooking(
           { date: slots[0].date, start_time: slots[0].start, end_time: slots[0].end, court_id: cid, proposed_price: input.proposed_price, payment_method: input.payment_method },
@@ -179,6 +214,7 @@ export async function createBooking(arena, user, profile, input) {
       if (conflict.hasConflict) {
         throw new Error('Já existe uma reserva ativa em um dos horários para esta quadra. Escolha outro período.');
       }
+      recusarSeBloqueado(candidateSlots, bloqueios);
     }
   }
 
@@ -308,6 +344,7 @@ export async function createBookingsForSelection(arena, user, profile, input) {
   const existingBookings = await listArenaBookings(arena.id);
   const courts = await listArenaCourts(arena.id).catch(() => []);
   const allSchedules = await listArenaCourtSchedules(arena.id).catch(() => []);
+  const bloqueios = await bloqueiosDaArena(arena.id);
   const actives = activeCourts(courts);
   const activeIdSet = new Set(actives.map((c) => c.id));
   const nomeDe = (id) => actives.find((c) => c.id === id)?.name || 'quadra';
@@ -372,6 +409,9 @@ export async function createBookingsForSelection(arena, user, profile, input) {
       if (conflito.hasConflict) {
         throw new Error(`Já existe reserva ativa em ${conflito.conflicts[0].candidate.date} ${conflito.conflicts[0].candidate.start} na ${nomeDe(cid)}. Escolha outro horário.`);
       }
+      // Horário que a arena fechou (bloqueio à mão ou dia de jogo) não vira
+      // pedido: recusar aqui poupa a pessoa de esperar por uma recusa.
+      recusarSeBloqueado(candidatos, bloqueios);
       for (const sl of slots) {
         const v = validateBookingRequest({
           date: sl.date, start_time: sl.start, end_time: sl.end,
@@ -541,6 +581,13 @@ export async function createManualBooking(arena, actor, input) {
     court_schedules: courtSchedules,
   });
   if (!v.ok) throw new Error(v.message);
+  // A arena também não se atropela: escrever uma reserva em cima do próprio
+  // bloqueio (ou do próprio dia de jogo) vira bagunça no dia. A mensagem diz
+  // o motivo, e desfazer está a dois cliques — é dela o bloqueio.
+  recusarSeBloqueado(
+    [{ ...slot, court_id: courtId }],
+    await bloqueiosDaArena(arena.id),
+  );
 
   const agreedPrice = num(input.agreed_price);
   const id = doc(collection(db, COL.bookings)).id;
