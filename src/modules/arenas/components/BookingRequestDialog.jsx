@@ -18,6 +18,7 @@ import { useAuth } from '@/core/lib/FirebaseAuthContext';
 import { BOOKING_KIND, BOOKING_STATUS, WEEKDAY_LABELS } from '../domain/constants.js';
 import { resolveArenaPrice, formatPrice, totalBookingPrice, priceWithDurationText } from '../domain/pricing.js';
 import { memberBookingPrice } from '../domain/memberBenefit.js';
+import { validateCouponCode } from '../services/marketingService.js';
 import { useArenaMember, useArenaWallet } from '../hooks/useArenaV3.js';
 import { useArenaModules } from '../hooks/useArenaModules.js';
 import { ARENA_MODULE_ID } from '../domain/modules.js';
@@ -165,8 +166,37 @@ export default function BookingRequestDialog({ arena, open, onOpenChange, court:
   const { isOn } = useArenaModules(arena?.id);
   const { data: membro } = useArenaMember(arena?.id, user?.uid);
   const { data: carteira } = useArenaWallet(arena?.id, user?.uid);
+  /**
+   * O cupom digitado pela pessoa.
+   *
+   * Conferido contra o banco, com o valor da conta em mãos — porque um cupom
+   * pode ter mínimo. A recusa vem com o MOTIVO ("venceu", "vale a partir de
+   * R$ 100"): "cupom inválido" não ensina o que fazer a seguir.
+   */
+  const [cupomDigitado, setCupomDigitado] = useState('');
+  const [cupom, setCupom] = useState(null);
+  const [cupomErro, setCupomErro] = useState('');
+  const [conferindoCupom, setConferindoCupom] = useState(false);
+
+  const conferirCupom = async () => {
+    const base = totalDaSelecao?.total || 0;
+    setConferindoCupom(true);
+    setCupomErro('');
+    try {
+      const r = await validateCouponCode(arena?.id, cupomDigitado, {
+        userId: user?.uid, amount: base,
+      });
+      if (r.error) { setCupom(null); setCupomErro(r.error); }
+      else setCupom(r.coupon);
+    } finally {
+      setConferindoCupom(false);
+    }
+  };
+
   const beneficioDeMembro = useMemo(() => {
-    if (!isOn(ARENA_MODULE_ID.MEMBERS) || !membro || !modoSelecao) return null;
+    const temCupom = Boolean(cupom);
+    if (!modoSelecao) return null;
+    if (!temCupom && (!isOn(ARENA_MODULE_ID.MEMBERS) || !membro)) return null;
     let base = 0;
     const linhas = new Map();
     let totalComBeneficio = 0;
@@ -177,6 +207,7 @@ export default function BookingRequestDialog({ arena, open, onOpenChange, court:
           tiers: arena?.member_tiers,
           packages: Array.isArray(carteira?.packages) ? carteira.packages : [],
           wallet: carteira,
+          coupon: cupom,
           usePackage: isOn(ARENA_MODULE_ID.MEMBERS_PACKAGES),
           useWallet: isOn(ARENA_MODULE_ID.MEMBERS_WALLET),
         });
@@ -194,7 +225,7 @@ export default function BookingRequestDialog({ arena, open, onOpenChange, court:
       total: Math.round(totalComBeneficio * 100) / 100,
       linhas: [...linhas.entries()].map(([label, value]) => ({ label, value })),
     };
-  }, [isOn, membro, carteira, modoSelecao, gruposDaSelecao, arena, user?.uid]);
+  }, [isOn, membro, carteira, cupom, modoSelecao, gruposDaSelecao, arena, user?.uid]);
 
   const resumoSelecao = useMemo(
     () => summarizeSelection(celulasEscolhidas, nomePorQuadra),
@@ -820,10 +851,39 @@ export default function BookingRequestDialog({ arena, open, onOpenChange, court:
                   {' · a arena confirma o valor final'}
                 </p>
 
+                {isOn(ARENA_MODULE_ID.MARKETING_COUPONS) && (
+                  <div className="mt-3 border-t border-ink/10 pt-2.5">
+                    <label htmlFor="cupom" className="text-xs font-bold uppercase tracking-wider text-ink/60">
+                      Tem um cupom?
+                    </label>
+                    <div className="mt-1 flex gap-2">
+                      <input
+                        id="cupom"
+                        value={cupomDigitado}
+                        onChange={(e) => { setCupomDigitado(e.target.value); setCupom(null); setCupomErro(''); }}
+                        placeholder="CÓDIGO"
+                        maxLength={30}
+                        className="h-9 min-w-0 flex-1 rounded-xl border border-ink/15 bg-paper-pure px-3 text-sm uppercase"
+                      />
+                      <Button
+                        type="button" size="sm" variant="outline"
+                        disabled={conferindoCupom || !cupomDigitado.trim()}
+                        onClick={conferirCupom}
+                      >
+                        {conferindoCupom ? 'Conferindo…' : 'Aplicar'}
+                      </Button>
+                    </div>
+                    {cupomErro && <p className="mt-1 text-xs text-red-700">{cupomErro}</p>}
+                    {cupom && !cupomErro && (
+                      <p className="mt-1 text-xs font-bold text-green-700">Cupom aplicado.</p>
+                    )}
+                  </div>
+                )}
+
                 {beneficioDeMembro && (
                   <div className="mt-3 border-t border-ink/10 pt-2.5">
                     <p className="text-xs font-bold uppercase tracking-wider text-ink/60">
-                      Você é membro daqui
+                      O seu preço
                     </p>
                     <ul className="mt-1 space-y-0.5">
                       {beneficioDeMembro.linhas.map((l) => (

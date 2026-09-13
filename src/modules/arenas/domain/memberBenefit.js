@@ -18,10 +18,13 @@
  *   2. **horas do pacote** — abatem HORAS, não reais: consumir 1h de um pacote
  *      tira o valor daquela hora, não um percentual;
  *   3. **desconto do nível** — percentual sobre o que sobrou;
- *   4. **saldo da carteira** — abate reais, até zerar.
+ *   4. **cupom** — sobre o que sobrou depois do nível;
+ *   5. **saldo da carteira** — abate reais, até zerar.
  *
  * Pacote antes de desconto de propósito: a hora do pacote já foi paga, e
- * aplicar percentual sobre ela seria dar desconto duas vezes.
+ * aplicar percentual sobre ela seria dar desconto duas vezes. E o cupom vem
+ * depois do nível pela mesma razão conservadora: o membro não acumula dois
+ * percentuais cheios, e a arena consegue prever o pior caso de uma promoção.
  *
  * ## O que este arquivo NÃO faz
  *
@@ -31,6 +34,7 @@
  */
 
 import { DEFAULT_TIERS, MEMBER_STATUS, computeTier } from './members.js';
+import { couponDiscount, couponLabel } from './marketing.js';
 import { totalBookingPrice } from './pricing.js';
 
 /** Arredonda em centavos, sem a sujeira do ponto flutuante. */
@@ -140,6 +144,7 @@ export function slotsHours(slots = []) {
  *   tiers?: Array<object>,
  *   packages?: Array<object>,
  *   wallet?: object|null,
+ *   coupon?: object|null,
  *   useWallet?: boolean,
  *   usePackage?: boolean,
  *   now?: number,
@@ -148,6 +153,7 @@ export function slotsHours(slots = []) {
  *   table: number, total: number, hours: number,
  *   packageHours: number, packageValue: number,
  *   discountPct: number, discountValue: number,
+ *   couponValue: number, couponCode: string|null,
  *   walletValue: number, tier: object|null,
  *   lines: Array<{ label: string, value: number }>,
  * }}
@@ -155,6 +161,7 @@ export function slotsHours(slots = []) {
 export function memberBookingPrice(arena, selecao = {}, contexto = {}) {
   const {
     member = null, tiers = DEFAULT_TIERS, packages = [], wallet = null,
+    coupon = null,
     useWallet = true, usePackage = true, now = Date.now(),
   } = contexto;
 
@@ -190,15 +197,25 @@ export function memberBookingPrice(arena, selecao = {}, contexto = {}) {
 
   const aposDesconto = Math.max(0, centavos(aposPacote - valorDesconto));
 
-  // 3. Carteira: abate reais, até zerar.
+  // 3. Cupom — vale para QUALQUER pessoa, membro ou não. É promoção da arena,
+  //    não benefício de membro; condicioná-lo a ser membro esvaziaria o uso
+  //    mais comum (trazer gente nova).
+  const valorCupom = coupon ? couponDiscount(aposDesconto, coupon) : 0;
+  if (valorCupom > 0) {
+    lines.push({ label: couponLabel(coupon) || 'Cupom', value: -valorCupom });
+  }
+
+  const aposCupom = Math.max(0, centavos(aposDesconto - valorCupom));
+
+  // 4. Carteira: abate reais, até zerar.
   let valorCarteira = 0;
-  if (ativo && useWallet && aposDesconto > 0) {
+  if (ativo && useWallet && aposCupom > 0) {
     const saldo = Math.max(0, Number(wallet?.balance) || 0);
-    valorCarteira = centavos(Math.min(saldo, aposDesconto));
+    valorCarteira = centavos(Math.min(saldo, aposCupom));
     if (valorCarteira > 0) lines.push({ label: 'Saldo em carteira', value: -valorCarteira });
   }
 
-  const total = Math.max(0, centavos(aposDesconto - valorCarteira));
+  const total = Math.max(0, centavos(aposCupom - valorCarteira));
 
   return {
     table: centavos(tabela),
@@ -208,6 +225,8 @@ export function memberBookingPrice(arena, selecao = {}, contexto = {}) {
     packageValue: valorPacote,
     discountPct,
     discountValue: valorDesconto,
+    couponValue: valorCupom,
+    couponCode: valorCupom > 0 ? (coupon?.code || null) : null,
     walletValue: valorCarteira,
     tier,
     lines,

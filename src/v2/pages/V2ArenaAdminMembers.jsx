@@ -30,12 +30,14 @@ import { useAthletes } from '@/modules/athletes/hooks/useAthletes';
 import {
   useArenaMembers, useArenaPackages, useCreatePackage, useDeletePackage,
   useAddArenaMember, useRemoveArenaMember, useAddPointsToMember, useCreditWallet,
+  useRedeemMemberPoints,
   useArenaSubscriptions, useSetMemberSubscription, useSetSubscriptionMonthPaid,
   useCancelMemberSubscription,
 } from '@/modules/arenas/hooks/useArenaV3';
 import { useArenaModules } from '@/modules/arenas/hooks/useArenaModules';
 import { ARENA_MODULE_ID } from '@/modules/arenas/domain/modules';
 import { computeTier } from '@/modules/arenas/domain/members';
+import { DEFAULT_POINTS_PER_REAL, redeemPoints } from '@/modules/arenas/domain/marketing';
 import { formatPrice } from '@/modules/arenas/domain/pricing';
 import {
   SUBSCRIPTION_STATUS, amountDue, monthKey, subscriptionState, todayISO,
@@ -256,6 +258,69 @@ function AjusteDoMembro({ arenaId, member, temCarteira, onClose }) {
 }
 
 /**
+ * Trocar pontos por crédito — o balcão do programa de fidelidade.
+ *
+ * Fica do lado da ARENA porque a regra do Firestore só deixa o gestor escrever
+ * pontos e carteira. Na tela do atleta o resgate aparece como valor, com o
+ * caminho: pedir aqui.
+ *
+ * O campo já vem preenchido com o resgate MÁXIMO possível — que é o que a
+ * pessoa quase sempre pede — e o rótulo mostra em reais quanto sai, antes de
+ * confirmar. Sobra de pontos fica com o atleta, nunca é arredondada para fora.
+ */
+function ResgateDePontos({ arenaId, member, onClose }) {
+  const resgatar = useRedeemMemberPoints();
+  const disponiveis = Math.max(0, Number(member?.points) || 0);
+  const maximo = redeemPoints(disponiveis, { available: disponiveis });
+  const [pontos, setPontos] = useState(() => String(maximo.points || ''));
+
+  const previa = redeemPoints(Number(pontos), { available: disponiveis });
+
+  const aplicar = async (e) => {
+    e.preventDefault();
+    if (previa.error) { toast.error(previa.error); return; }
+    try {
+      const { points, credit } = await resgatar.mutateAsync({
+        arenaId, userId: member.user_id, points: previa.points,
+      });
+      toast.success(`${points} pontos trocados por ${formatPrice(credit)} em carteira.`);
+      onClose();
+    } catch (err) {
+      toast.error(err?.message || 'Não foi possível resgatar.');
+    }
+  };
+
+  return (
+    <form onSubmit={aplicar} className="mt-3 rounded-2xl border border-gray-100 bg-paper-pure p-3">
+      <p className="mb-2 text-xs text-gray-500">
+        {disponiveis} pontos disponíveis · {DEFAULT_POINTS_PER_REAL} pontos = R$ 1,00
+      </p>
+      <div className="flex flex-wrap items-end gap-3">
+        <V2Field label="Pontos a trocar" htmlFor={`resg-${member.id}`} className="flex-1 min-w-[140px]">
+          <V2Input id={`resg-${member.id}`} type="number" min="0" step="1"
+            value={pontos} onChange={(e) => setPontos(e.target.value)} />
+        </V2Field>
+        <p className="pb-2 font-display text-lg font-bold text-ink">
+          {previa.error ? '—' : formatPrice(previa.credit)}
+        </p>
+      </div>
+      {previa.error && <p className="mt-1 text-xs text-amber-700">{previa.error}</p>}
+      {!previa.error && previa.points < Number(pontos) && (
+        <p className="mt-1 text-xs text-gray-500">
+          Sobram {Number(pontos) - previa.points} pontos com o atleta — o resgate é sempre em reais inteiros.
+        </p>
+      )}
+      <div className="mt-3 flex justify-end gap-2">
+        <V2Button type="button" variant="ghost" size="sm" onClick={onClose}>Cancelar</V2Button>
+        <V2Button type="submit" size="sm" disabled={resgatar.isPending || !!previa.error}>
+          {resgatar.isPending ? 'Resgatando…' : 'Resgatar'}
+        </V2Button>
+      </div>
+    </form>
+  );
+}
+
+/**
  * A mensalidade de um membro, na visão da arena.
  *
  * O botão que importa é um só: **"recebi o mês"**. O resto (valor, dia,
@@ -390,9 +455,14 @@ function MensalidadeDoMembro({ arenaId, member, sub }) {
   );
 }
 
-function LinhaDoMembro({ arenaId, member, temCarteira, temMensalidade, sub, onRemover }) {
+function LinhaDoMembro({
+  arenaId, member, temCarteira, temMensalidade, temPontos, sub, onRemover,
+}) {
   const [ajustando, setAjustando] = useState(false);
+  const [resgatando, setResgatando] = useState(false);
   const tier = computeTier(Number(member.points) || 0);
+  const podeResgatar = temPontos && temCarteira
+    && redeemPoints(Number(member.points) || 0, { available: Number(member.points) || 0 }).credit > 0;
 
   return (
     <div className="rounded-2xl border border-gray-100 bg-paper p-3">
@@ -409,6 +479,11 @@ function LinhaDoMembro({ arenaId, member, temCarteira, temMensalidade, sub, onRe
         <V2Button variant="ghost" size="sm" onClick={() => setAjustando((v) => !v)}>
           Ajustar
         </V2Button>
+        {podeResgatar && (
+          <V2Button variant="ghost" size="sm" onClick={() => setResgatando((v) => !v)}>
+            Resgatar pontos
+          </V2Button>
+        )}
         <ConfirmDialog
           title="Remover este membro?"
           description="A pessoa deixa de ter os benefícios. Pacotes já comprados e saldo em carteira NÃO são apagados."
@@ -428,6 +503,9 @@ function LinhaDoMembro({ arenaId, member, temCarteira, temMensalidade, sub, onRe
           arenaId={arenaId} member={member} temCarteira={temCarteira}
           onClose={() => setAjustando(false)}
         />
+      )}
+      {resgatando && (
+        <ResgateDePontos arenaId={arenaId} member={member} onClose={() => setResgatando(false)} />
       )}
       {temMensalidade && (
         <MensalidadeDoMembro arenaId={arenaId} member={member} sub={sub} />
@@ -456,6 +534,7 @@ export default function V2ArenaAdminMembers() {
   const temPacotes = isOn(ARENA_MODULE_ID.MEMBERS_PACKAGES);
   const temCarteira = isOn(ARENA_MODULE_ID.MEMBERS_WALLET);
   const temMensalidade = isOn(ARENA_MODULE_ID.MEMBERS_SUBSCRIPTION);
+  const temPontos = isOn(ARENA_MODULE_ID.MARKETING_LOYALTY);
   const jaSaoMembros = useMemo(
     () => new Set(members.map((m) => m.user_id).filter(Boolean)),
     [members],
@@ -618,6 +697,7 @@ export default function V2ArenaAdminMembers() {
                 member={m}
                 temCarteira={temCarteira}
                 temMensalidade={temMensalidade}
+                temPontos={temPontos}
                 sub={mensalidadePorUid.get(m.user_id) || null}
                 onRemover={(alvo) => remover.mutateAsync({ arenaId: arena.id, userId: alvo.user_id })
                   .then(() => toast.success('Membro removido.'))

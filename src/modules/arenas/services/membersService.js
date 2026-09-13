@@ -27,6 +27,7 @@ import {
 import {
   SUBSCRIPTION_STATUS, normalizeSubscriptionInput, todayISO,
 } from '../domain/subscription.js';
+import { redeemPoints, DEFAULT_POINTS_PER_REAL } from '../domain/marketing.js';
 
 const COL_MEMBERS = 'arena_members';
 const COL_PACKAGES = 'arena_packages';
@@ -534,4 +535,54 @@ export async function cancelMemberSubscription(arenaId, userId, actor) {
     actor,
     details: { arena_id: arenaId, user_id: userId },
   });
+}
+
+/* ------------------------ Resgate de pontos -------------------------- */
+
+/**
+ * Troca pontos do membro por crédito na carteira.
+ *
+ * **Quem executa é a ARENA**, não o atleta — e isso não é uma escolha de
+ * produto, é o que a regra do Firestore permite: `arena_members` e
+ * `arena_wallets` só aceitam escrita do gestor da arena. Deixar o botão na
+ * tela do atleta produziria um "permissão negada" que ele não tem como
+ * resolver. Na tela dele o resgate aparece como VALOR ("seus 420 pontos valem
+ * R$ 21,00"), com o caminho: pedir na recepção.
+ *
+ * A conta é do domínio (`redeemPoints`), que arredonda para baixo em reais
+ * inteiros e devolve o resto ao atleta em vez de sumir com ele.
+ *
+ * @param {string} arenaId
+ * @param {string} userId
+ * @param {number} points quantos pontos trocar
+ * @param {{ pointsPerReal?: number }} [opts]
+ * @param {object|null} [actor]
+ * @returns {Promise<{ points: number, credit: number }>}
+ */
+export async function redeemMemberPoints(arenaId, userId, points, opts = {}, actor = null) {
+  if (!arenaId || !userId) throw new Error('Arena e atleta são obrigatórios.');
+  const membro = await getArenaMember(arenaId, userId);
+  if (!membro) throw new Error('Esta pessoa não é membro da arena.');
+
+  const taxa = Number(opts.pointsPerReal) || DEFAULT_POINTS_PER_REAL;
+  const { points: gastos, credit, error } = redeemPoints(points, {
+    available: Number(membro.points) || 0,
+    pointsPerReal: taxa,
+  });
+  if (error) throw new Error(error);
+
+  // Debita os pontos ANTES de creditar: se a carteira falhar, o atleta fica
+  // com pontos a menos e crédito nenhum — reclamável e corrigível. Na ordem
+  // inversa ele ficaria com o crédito E os pontos, o que a arena não descobre.
+  await updateDoc(doc(db, COL_MEMBERS, memberId(arenaId, userId)), {
+    points: increment(-gastos),
+    updated_at: serverTimestamp(),
+  });
+  await creditWallet(arenaId, userId, credit, `resgate de ${gastos} pontos`, actor);
+  await createAuditLog({
+    action: 'arena_points_redeemed',
+    actor,
+    details: { arena_id: arenaId, user_id: userId, points: gastos, credit },
+  });
+  return { points: gastos, credit };
 }

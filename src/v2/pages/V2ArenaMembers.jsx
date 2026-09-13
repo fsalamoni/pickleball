@@ -21,18 +21,19 @@ import React, { useMemo } from 'react';
 import { Link, Navigate, useParams } from 'react-router-dom';
 import { toast } from 'sonner';
 import {
-  AlertTriangle, ArrowLeft, CalendarClock, Check, Clock, Gift, Package,
-  Sparkles, Trophy, Wallet,
+  AlertTriangle, ArrowLeft, CalendarClock, Check, Clock, Copy, Gift, Package,
+  Share2, Sparkles, Star, Trophy, Wallet,
 } from 'lucide-react';
 import { useAuth } from '@/core/lib/FirebaseAuthContext';
 import { useArena } from '@/modules/arenas/hooks/useArenas';
 import {
   useArenaPackages, usePurchasePackage, useArenaWallet, useArenaMember,
-  useMemberSubscription,
+  useMemberSubscription, useMyReferralCode,
 } from '@/modules/arenas/hooks/useArenaV3';
 import { useArenaModules } from '@/modules/arenas/hooks/useArenaModules';
 import { ARENA_MODULE_ID } from '@/modules/arenas/domain/modules';
 import { tierProgress, usableHours } from '@/modules/arenas/domain/memberBenefit';
+import { DEFAULT_POINTS_PER_REAL, redeemPoints } from '@/modules/arenas/domain/marketing';
 import {
   SUBSCRIPTION_STATUS, amountDue, subscriptionState,
 } from '@/modules/arenas/domain/subscription';
@@ -109,6 +110,121 @@ function MeuNivel({ member }) {
         Você ganha pontos a cada reserva concluída — pelo valor e pelas horas jogadas.
         Usar pacote também pontua.
       </p>
+    </V2Surface>
+  );
+}
+
+/* --------------------------- 1b. o que valem meus pontos ------------------- */
+
+/**
+ * Pontos que não viram nada são um número decorativo.
+ *
+ * Aqui eles viram VALOR ("seus 420 pontos valem R$ 21,00"), com o caminho para
+ * usá-los. O botão de resgate NÃO fica aqui de propósito: a regra do Firestore
+ * só deixa o gestor escrever pontos e carteira, então um botão nesta tela daria
+ * "permissão negada" — um erro que o atleta não tem como resolver. O resgate é
+ * pedido na recepção e registrado pela arena, como um vale.
+ */
+function MeusPontos({ member }) {
+  const pontos = Math.max(0, Number(member?.points) || 0);
+  const { credit, error } = redeemPoints(pontos, {
+    available: pontos,
+    pointsPerReal: DEFAULT_POINTS_PER_REAL,
+  });
+  const falta = Math.max(0, DEFAULT_POINTS_PER_REAL - pontos);
+
+  return (
+    <V2Surface>
+      <div className="flex flex-wrap items-center justify-between gap-3">
+        <div className="flex items-start gap-2">
+          <Star className="mt-0.5 h-5 w-5 shrink-0 text-acid" />
+          <div>
+            <h2 className="font-display text-base font-bold text-ink">Seus pontos valem crédito</h2>
+            <p className="mt-0.5 text-sm text-gray-500">
+              A cada {DEFAULT_POINTS_PER_REAL} pontos você troca por R$ 1,00 na sua carteira desta arena.
+            </p>
+          </div>
+        </div>
+        <div className="text-right">
+          <p className="font-display text-2xl font-bold text-ink">{formatPrice(credit)}</p>
+          <p className="text-xs text-gray-500">{pontos} pontos</p>
+        </div>
+      </div>
+      <p className="mt-3 rounded-2xl bg-paper p-3 text-xs leading-5 text-gray-500">
+        {error && falta > 0
+          ? `Faltam ${falta} pontos para o primeiro resgate.`
+          : 'Para resgatar, peça na recepção da arena — o crédito entra na sua carteira na hora.'}
+      </p>
+    </V2Surface>
+  );
+}
+
+/* ---------------------------- 1c. indique e ganhe -------------------------- */
+
+/**
+ * O código de indicação do atleta nesta arena.
+ *
+ * Criado na primeira vez que a tela abre (`getOrCreateReferralCode`), com o
+ * documento pertencendo ao INDICADOR — que é exatamente o que a regra permite
+ * escrever. Quem foi indicado não escreve nada: o resgate é registrado pela
+ * arena, que é quem pode creditar carteira nos dois lados.
+ */
+function MinhaIndicacao({ arenaId, arenaName }) {
+  const { data: indicacao, isLoading } = useMyReferralCode(arenaId);
+  const codigo = indicacao?.code;
+
+  if (isLoading) return <V2Skeleton className="h-28 rounded-4xl" />;
+  if (!codigo) return null;
+
+  const copiar = async () => {
+    try {
+      await navigator.clipboard.writeText(codigo);
+      toast.success('Código copiado.');
+    } catch {
+      toast.error('Não foi possível copiar. Anote: ' + codigo);
+    }
+  };
+
+  const compartilhar = async () => {
+    const texto = `Jogo na ${arenaName} — use meu código ${codigo} na primeira reserva e nós dois ganhamos crédito.`;
+    try {
+      if (navigator.share) await navigator.share({ text: texto });
+      else {
+        await navigator.clipboard.writeText(texto);
+        toast.success('Convite copiado.');
+      }
+    } catch {
+      /* o usuário cancelou o compartilhamento — não é erro */
+    }
+  };
+
+  return (
+    <V2Surface>
+      <div className="flex items-start gap-2">
+        <Gift className="mt-0.5 h-5 w-5 shrink-0 text-ink" />
+        <div className="min-w-0 flex-1">
+          <h2 className="font-display text-base font-bold text-ink">Indique e ganhe</h2>
+          <p className="mt-0.5 text-sm text-gray-500">
+            Quem chegar dizendo o seu código ganha crédito — e você também.
+          </p>
+          <div className="mt-3 flex flex-wrap items-center gap-2">
+            <span className="rounded-2xl border border-dashed border-gray-300 bg-paper px-4 py-2 font-display text-lg font-bold tracking-widest text-ink">
+              {codigo}
+            </span>
+            <V2Button size="sm" variant="ghost" onClick={copiar}>
+              <Copy className="mr-1.5 h-4 w-4" /> Copiar
+            </V2Button>
+            <V2Button size="sm" variant="ghost" onClick={compartilhar}>
+              <Share2 className="mr-1.5 h-4 w-4" /> Convidar
+            </V2Button>
+          </div>
+          {Number(indicacao.redeemed_count) > 0 && (
+            <p className="mt-2 text-xs text-gray-500">
+              {indicacao.redeemed_count} {Number(indicacao.redeemed_count) === 1 ? 'pessoa já usou' : 'pessoas já usaram'} o seu código.
+            </p>
+          )}
+        </div>
+      </div>
     </V2Surface>
   );
 }
@@ -289,6 +405,8 @@ export default function V2ArenaMembers() {
   const temPacotes = isOn(ARENA_MODULE_ID.MEMBERS_PACKAGES);
   const temCarteira = isOn(ARENA_MODULE_ID.MEMBERS_WALLET);
   const temMensalidade = isOn(ARENA_MODULE_ID.MEMBERS_SUBSCRIPTION);
+  const temPontos = isOn(ARENA_MODULE_ID.MARKETING_LOYALTY);
+  const temIndicacao = isOn(ARENA_MODULE_ID.MARKETING_REFERRAL);
 
   if (isLoading || modulosLoading) {
     return <V2Skeleton className="mx-auto h-96 max-w-[820px] rounded-4xl" />;
@@ -340,9 +458,14 @@ export default function V2ArenaMembers() {
             </V2Surface>
           )}
 
+          {temPontos && member && <MeusPontos member={member} />}
           {temMensalidade && <MinhaMensalidade sub={mensalidade} />}
           {temPacotes && <MeusPacotes packages={meusPacotes} />}
           {temCarteira && <MinhaCarteira wallet={wallet} />}
+
+          {temIndicacao && member && (
+            <MinhaIndicacao arenaId={arena.id} arenaName={arena.name} />
+          )}
 
           {temPacotes && (
             <V2Surface>
@@ -376,7 +499,8 @@ export default function V2ArenaMembers() {
             </V2Surface>
           )}
 
-          {!temPacotes && !temCarteira && !temNiveis && !temMensalidade && (
+          {!temPacotes && !temCarteira && !temNiveis && !temMensalidade
+            && !temPontos && !temIndicacao && (
             <V2Surface>
               <V2EmptyState
                 icon={Wallet}

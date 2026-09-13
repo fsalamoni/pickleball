@@ -46,6 +46,7 @@ import { mergeOpenSlotBlocks } from '../domain/openMatch.js';
 import { listArenaOpenSlots } from './openMatchService.js';
 import { memberBookingPrice, planPackageConsumption, pointsForBooking } from '../domain/memberBenefit.js';
 import { getMemberContext, consumeMemberBenefit } from './membersService.js';
+import { validateCouponCode, registrarUsoDeCupom } from './marketingService.js';
 import { listArenaManagerIds } from './arenaService.js';
 
 const COL = ARENA_COLLECTIONS;
@@ -100,10 +101,12 @@ function precoDaReserva(arena, { courtId, slots, clientId, enviadoPelaTela }) {
  */
 function precoComBeneficio(arena, { courtId, slots, clientId, enviadoPelaTela }, ctx) {
   const tabela = precoDaReserva(arena, { courtId, slots, clientId, enviadoPelaTela });
-  if (!ctx?.member) return { price: tabela, benefit: null };
+  // Sem membro E sem cupom não há o que abater — o preço é o de tabela.
+  if (!ctx?.member && !ctx?.coupon) return { price: tabela, benefit: null };
 
   const r = memberBookingPrice(arena, { courtId, slots, clientId }, {
     member: ctx.member, tiers: ctx.tiers, packages: ctx.packages, wallet: ctx.wallet,
+    coupon: ctx.coupon,
   });
   // Sem preço de tabela (arena "sob consulta") não há o que abater.
   if (r.table <= 0) return { price: tabela, benefit: null };
@@ -119,6 +122,9 @@ function precoComBeneficio(arena, { courtId, slots, clientId, enviadoPelaTela },
       package_hours: r.packageHours,
       package_value: r.packageValue,
       package_plan: planPackageConsumption(ctx.packages, r.packageHours),
+      coupon_code: r.couponCode,
+      coupon_id: r.couponValue > 0 ? (ctx.coupon?.id || null) : null,
+      coupon_value: r.couponValue,
       wallet_value: r.walletValue,
       applied_at: null,
     },
@@ -129,9 +135,38 @@ function precoComBeneficio(arena, { courtId, slots, clientId, enviadoPelaTela },
  * O contexto de membro desta pessoa nesta arena. Nunca derruba a reserva:
  * qualquer falha devolve o neutro e o preço sai o de tabela.
  */
-async function contextoDeMembro(arenaId, uid) {
+async function contextoDeMembro(arenaId, uid, couponCode) {
   if (!arenaId || !uid) return null;
-  return getMemberContext(arenaId, uid).catch(() => null);
+  const [ctx, cupom] = await Promise.all([
+    getMemberContext(arenaId, uid).catch(() => null),
+    // O cupom é RECONFERIDO aqui, contra o banco: o que veio da tela é um
+    // palpite. Conferir só no navegador deixaria qualquer pessoa gravar um
+    // desconto que a arena não criou.
+    couponCode
+      ? validateCouponCode(arenaId, couponCode, { userId: uid }).then((r) => r.coupon && !r.error ? r.coupon : null).catch(() => null)
+      : Promise.resolve(null),
+  ]);
+  return { ...(ctx || { member: null, tiers: undefined, packages: [], wallet: null }), coupon: cupom };
+}
+
+/**
+ * O cupom é contabilizado quando a arena CONFIRMA — nunca no pedido.
+ * Só o gestor pode escrever em `arena_coupons`, e é ele quem confirma.
+ */
+async function contabilizarCupom(booking, actor) {
+  const id = booking?.member_benefit?.coupon_id;
+  if (!id || !booking?.athlete_id) return;
+  await registrarUsoDeCupom(id, booking.athlete_id);
+  await createAuditLog({
+    action: 'arena_coupon_used',
+    actor,
+    details: {
+      arena_id: booking.arena_id,
+      coupon_id: id,
+      code: booking.member_benefit?.coupon_code || null,
+      booking_id: booking.id,
+    },
+  });
 }
 
 /**
@@ -302,7 +337,7 @@ export async function createBooking(arena, user, profile, input) {
   const createdIds = [];
   const nowMs = Date.now();
   // Uma leitura só do contexto de membro, para todas as quadras do pedido.
-  const ctxMembro = await contextoDeMembro(arena.id, user.uid);
+  const ctxMembro = await contextoDeMembro(arena.id, user.uid, input.coupon_code);
   for (const cid of targetCourtIds) {
     const id = doc(collection(db, COL.bookings)).id;
     const { price: precoTotal, benefit } = precoComBeneficio(arena, {
@@ -527,7 +562,7 @@ export async function createBookingsForSelection(arena, user, profile, input) {
   const batch = writeBatch(db);
   const createdIds = [];
   const nowMs = Date.now();
-  const ctxMembro = await contextoDeMembro(arena.id, user.uid);
+  const ctxMembro = await contextoDeMembro(arena.id, user.uid, input.coupon_code);
 
   resolvidos.forEach(({ courtIds, slots }) => {
     courtIds.forEach((cid) => {
@@ -797,6 +832,8 @@ async function aplicarBeneficioNaConfirmacao(booking, agreedPrice, actor) {
     const fim = Number(b[1]) * 60 + Number(b[2]);
     return acc + (fim > ini ? (fim - ini) / 60 : 0);
   }, 0);
+
+  await contabilizarCupom(booking, actor).catch(() => {});
 
   await consumeMemberBenefit(arenaId, uid, {
     packagePlan: beneficio?.package_plan || [],

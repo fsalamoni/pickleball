@@ -293,3 +293,57 @@ describe('planPackageConsumption', () => {
     expect(plano).toEqual([{ id: 'p1', hours: 2 }]);
   });
 });
+
+describe('⭐ cupom na conta', () => {
+  const cupom = (over = {}) => ({
+    code: 'VERAO10', type: 'percent', value: 10, active: true, ...over,
+  });
+
+  it('desconta sobre o valor da tabela quando não há membro', () => {
+    const r = memberBookingPrice(ARENA, DUAS_HORAS, { coupon: cupom() });
+    expect(r.couponValue).toBe(20);
+    expect(r.total).toBe(180);
+  });
+
+  it('⭐ vale para quem NÃO é membro — é promoção da arena, não benefício', () => {
+    const r = memberBookingPrice(ARENA, DUAS_HORAS, { member: null, coupon: cupom() });
+    expect(r.couponValue).toBeGreaterThan(0);
+  });
+
+  it('⭐ vem DEPOIS do desconto de nível, não sobre a tabela', () => {
+    const r = memberBookingPrice(ARENA, DUAS_HORAS, {
+      member: membro({ points: 600 }), // 10%
+      coupon: cupom(),                 // 10%
+    });
+    // 200 − 20 (nível) = 180; 10% de 180 = 18; total 162.
+    // Se o cupom fosse sobre a tabela: 200 − 20 − 20 = 160.
+    expect(r.discountValue).toBe(20);
+    expect(r.couponValue).toBe(18);
+    expect(r.total).toBe(162);
+  });
+
+  it('cupom de valor fixo maior que a conta não deixa negativo', () => {
+    const r = memberBookingPrice(ARENA, DUAS_HORAS, {
+      coupon: cupom({ type: 'fixed', value: 999 }),
+    });
+    expect(r.total).toBe(0);
+  });
+
+  it('a carteira abate DEPOIS do cupom', () => {
+    const r = memberBookingPrice(ARENA, DUAS_HORAS, {
+      member: membro(), coupon: cupom(), wallet: { balance: 1000 },
+    });
+    expect(r.couponValue).toBe(20);
+    expect(r.walletValue).toBe(180);
+    expect(r.total).toBe(0);
+  });
+
+  it('o código do cupom vai no resultado, para gravar na reserva', () => {
+    const r = memberBookingPrice(ARENA, DUAS_HORAS, { coupon: cupom() });
+    expect(r.couponCode).toBe('VERAO10');
+  });
+
+  it('sem cupom, o campo fica nulo (e não "sem cupom")', () => {
+    expect(memberBookingPrice(ARENA, DUAS_HORAS, {}).couponCode).toBeNull();
+  });
+});

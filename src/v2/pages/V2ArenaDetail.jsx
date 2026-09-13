@@ -19,11 +19,12 @@ import { BOOKING_STATUS, WEEKDAY_SHORT } from '@/modules/arenas/domain/constants
 import { bookingSlots, sortSlots } from '@/modules/arenas/domain/booking';
 import { useArena, useMyManagedArenas, useArenaCourts } from '@/modules/arenas/hooks/useArenas';
 import { useArenaBookings } from '@/modules/arenas/hooks/useBookings';
-import { useCanArenaUseModule } from '@/modules/arenas/hooks/useArenaV3';
 import { useArenaTournaments } from '@/modules/tournament/hooks/useTournament';
 import { useArenaCoaches } from '@/modules/coaches/hooks/useCoaches';
 import V2BookingCalendar from '@/v2/components/arenas/V2BookingCalendar';
 import ArenaGameDaysSection from '@/v2/components/arenas/ArenaGameDaysSection';
+import ArenaNpsAsk from '@/v2/components/arenas/ArenaNpsAsk';
+import ArenaModuleShortcuts from '@/v2/components/arenas/ArenaModuleShortcuts';
 import { isPixConfigured, PIX_KEY_TYPE_LABELS } from '@/modules/arenas/domain/pix_payment';
 import { groupRulesByCategory } from '@/modules/arenas/domain/arena_rules';
 import { V2Badge, V2Button, V2EmptyState, V2Skeleton, V2Surface } from '@/v2/ui/primitives';
@@ -38,37 +39,6 @@ function formatSlotDate(iso) {
   return m ? `${m[3]}/${m[2]}` : iso;
 }
 
-function ArenaModuleLinks({ arenaId }) {
-  const canOpenMatch = useCanArenaUseModule(arenaId, 'matchmaking_open_match');
-  const canMatchmaking = useCanArenaUseModule(arenaId, 'matchmaking_partner_finder');
-  const canMembers = useCanArenaUseModule(arenaId, 'members');
-  if (!canOpenMatch && !canMatchmaking && !canMembers) return null;
-  return (
-    <>
-      {canOpenMatch && (
-        <V2Button asChild variant="secondary" size="sm">
-          <Link to={`/arenas/${arenaId}/open-match`}>
-            <Trophy className="h-4 w-4" /> Jogos abertos
-          </Link>
-        </V2Button>
-      )}
-      {canMatchmaking && (
-        <V2Button asChild variant="secondary" size="sm">
-          <Link to={`/arenas/${arenaId}/matchmaking`}>
-            <Users className="h-4 w-4" /> Encontrar parceiro
-          </Link>
-        </V2Button>
-      )}
-      {canMembers && (
-        <V2Button asChild variant="secondary" size="sm">
-          <Link to={`/arenas/${arenaId}/membros`}>
-            <Trophy className="h-4 w-4" /> Membros
-          </Link>
-        </V2Button>
-      )}
-    </>
-  );
-}
 
 function ContactRow({ icon: Icon, href, label }) {
   if (!href) return null;
@@ -184,11 +154,21 @@ function V2ArenaDetailContent({ arenaId, user, arena, managed, bookings, isLoadi
             {canManage && (
               <V2Button asChild variant="ghost" size="sm"><Link to={`/arenas/${arena.id}/gerir`}><Settings className="h-4 w-4" /> Gerir</Link></V2Button>
             )}
-            <ArenaModuleLinks arenaId={arena.id} />
+            {/* As telas públicas dos módulos que esta arena ligou (jogos
+                abertos, encontrar parceiro, membros…). A lista vem do catálogo. */}
+            <ArenaModuleShortcuts arenaId={arena.id} audience="public" />
           </div>
 
           {arena.description && <p className="mt-6 whitespace-pre-line text-sm leading-7 text-gray-500">{arena.description}</p>}
         </div>
+      </div>
+
+      {/* "Como foi?" vem logo depois do cabeçalho, e só para quem jogou aqui
+          nos últimos 30 dias e não respondeu nos últimos 90 — o componente
+          decide sozinho e não renderiza nada quando não é a hora. Mais abaixo
+          ninguém veria; mais acima competiria com a ação principal da tela. */}
+      <div className="mt-6 empty:mt-0">
+        <ArenaNpsAsk arenaId={arenaId} arenaName={arena.name} />
       </div>
 
       {/* Dia de jogo da arena vem ANTES do calendário de reservas: quem chega
