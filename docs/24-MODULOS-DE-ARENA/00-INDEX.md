@@ -114,7 +114,7 @@ Um módulo pode estar pronto no código e não liberado; liberado e não ativado
 |---|---|---|
 | 0 | Chassi (3 camadas, catálogo, gate, correção das regras) | ✅ |
 | 1 | Matchmaking (vagas abertas, parceiro, fila de espera) | ✅ `01-MATCHMAKING.md` |
-| 2 | Membros (níveis, pacotes, mensalidade, carteira) | ⏳ |
+| 2 | Membros (níveis, pacotes, mensalidade, carteira) | ✅ `02-MEMBROS.md` |
 | 3 | Marketing e fidelidade (cupom, pontos, indicação, NPS, campanha) | ⏳ |
 | 4 | Operações (checklist, manutenção, estoque, equipe) | ⏳ |
 | 5 | Aulas e torneios internos | ⏳ |

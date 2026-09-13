@@ -17,6 +17,10 @@ import { PlatformNotice } from '@/components/ui/platform-page';
 import { useAuth } from '@/core/lib/FirebaseAuthContext';
 import { BOOKING_KIND, BOOKING_STATUS, WEEKDAY_LABELS } from '../domain/constants.js';
 import { resolveArenaPrice, formatPrice, totalBookingPrice, priceWithDurationText } from '../domain/pricing.js';
+import { memberBookingPrice } from '../domain/memberBenefit.js';
+import { useArenaMember, useArenaWallet } from '../hooks/useArenaV3.js';
+import { useArenaModules } from '../hooks/useArenaModules.js';
+import { ARENA_MODULE_ID } from '../domain/modules.js';
 import { bookingSlots, expandRecurring, isValidSlot, sortSlots, weekdayOf } from '../domain/booking.js';
 import { formatSlotLabel } from '../domain/calendar.js';
 import { pickAvailableCourtForSlots, unavailableCourtsForSlots, availableCourtsForSlots } from '../domain/court_assignment.js';
@@ -148,6 +152,50 @@ export default function BookingRequestDialog({ arena, open, onOpenChange, court:
       taxas: Array.from(taxas),
     };
   }, [modoSelecao, gruposDaSelecao, arena, user?.uid]);
+  /**
+   * O preço PARA ESTE MEMBRO — o número que ele vai pagar de verdade.
+   *
+   * Mostrar só a tabela e cobrar outro valor (ou o contrário) é a forma mais
+   * rápida de o benefício virar reclamação. Aqui a tela ESTIMA com a mesma
+   * conta que o serviço vai refazer antes de gravar.
+   *
+   * Só aparece quando há algo a mostrar: sem membro, sem pacote e sem saldo,
+   * o bloco não existe e a tela é exatamente a de antes.
+   */
+  const { isOn } = useArenaModules(arena?.id);
+  const { data: membro } = useArenaMember(arena?.id, user?.uid);
+  const { data: carteira } = useArenaWallet(arena?.id, user?.uid);
+  const beneficioDeMembro = useMemo(() => {
+    if (!isOn(ARENA_MODULE_ID.MEMBERS) || !membro || !modoSelecao) return null;
+    let base = 0;
+    const linhas = new Map();
+    let totalComBeneficio = 0;
+    gruposDaSelecao.forEach(({ courtIds, slots }) => {
+      courtIds.forEach((cid) => {
+        const r = memberBookingPrice(arena, { courtId: cid, slots, clientId: user?.uid }, {
+          member: membro,
+          tiers: arena?.member_tiers,
+          packages: Array.isArray(carteira?.packages) ? carteira.packages : [],
+          wallet: carteira,
+          usePackage: isOn(ARENA_MODULE_ID.MEMBERS_PACKAGES),
+          useWallet: isOn(ARENA_MODULE_ID.MEMBERS_WALLET),
+        });
+        base += r.table;
+        totalComBeneficio += r.total;
+        r.lines.slice(1).forEach((l) => {
+          linhas.set(l.label, (linhas.get(l.label) || 0) + l.value);
+        });
+      });
+    });
+    const desconto = Math.round((base - totalComBeneficio) * 100) / 100;
+    if (desconto <= 0) return null;
+    return {
+      base: Math.round(base * 100) / 100,
+      total: Math.round(totalComBeneficio * 100) / 100,
+      linhas: [...linhas.entries()].map(([label, value]) => ({ label, value })),
+    };
+  }, [isOn, membro, carteira, modoSelecao, gruposDaSelecao, arena, user?.uid]);
+
   const resumoSelecao = useMemo(
     () => summarizeSelection(celulasEscolhidas, nomePorQuadra),
     [celulasEscolhidas, nomePorQuadra],
@@ -771,6 +819,31 @@ export default function BookingRequestDialog({ arena, open, onOpenChange, court:
                   {totalReservas > 1 && ` · ${totalReservas} reservas`}
                   {' · a arena confirma o valor final'}
                 </p>
+
+                {beneficioDeMembro && (
+                  <div className="mt-3 border-t border-ink/10 pt-2.5">
+                    <p className="text-xs font-bold uppercase tracking-wider text-ink/60">
+                      Você é membro daqui
+                    </p>
+                    <ul className="mt-1 space-y-0.5">
+                      {beneficioDeMembro.linhas.map((l) => (
+                        <li key={l.label} className="flex justify-between gap-3 text-xs text-ink/80">
+                          <span>{l.label}</span>
+                          <span>{formatPrice(l.value)}</span>
+                        </li>
+                      ))}
+                    </ul>
+                    <div className="mt-1.5 flex items-baseline justify-between gap-2">
+                      <span className="text-sm font-bold">Você paga</span>
+                      <strong className="font-display text-lg">
+                        {formatPrice(beneficioDeMembro.total)}
+                      </strong>
+                    </div>
+                    <p className="mt-0.5 text-[11px] leading-4 text-ink/60">
+                      Horas de pacote e saldo só são descontados quando a arena confirmar.
+                    </p>
+                  </div>
+                )}
               </div>
             )
           ) : estimate && (

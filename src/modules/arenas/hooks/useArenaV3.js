@@ -312,6 +312,8 @@ import {
   listArenaMembers, getArenaMember, addArenaMember, removeArenaMember,
   addPointsToMember, listArenaPackages, createArenaPackage, updateArenaPackage,
   deleteArenaPackage, purchasePackage, getArenaWallet, creditWallet, applyCashback,
+  listArenaSubscriptions, getMemberSubscription, setMemberSubscription,
+  setSubscriptionMonthPaid, cancelMemberSubscription,
 } from '../services/membersService.js';
 
 export function useArenaMembers(arenaId) {
@@ -354,10 +356,17 @@ export function useRemoveArenaMember() {
   });
 }
 
-export function useArenaPackages(arenaId) {
+/**
+ * O catálogo de pacotes da arena.
+ *
+ * `onlyActive` faz parte da CHAVE: a vitrine do atleta vê só os ativos e a
+ * gestão vê todos, e as duas listas não podem se sobrepor no cache — senão a
+ * arena abre a gestão e vê a lista do atleta (ou pior, o contrário).
+ */
+export function useArenaPackages(arenaId, { onlyActive = true } = {}) {
   return useQuery({
-    queryKey: ['arena-packages', arenaId],
-    queryFn: () => listArenaPackages(arenaId),
+    queryKey: ['arena-packages', arenaId, onlyActive],
+    queryFn: () => listArenaPackages(arenaId, { onlyActive }),
     enabled: !!arenaId,
     staleTime: 60_000,
   });
@@ -391,6 +400,90 @@ export function usePurchasePackage() {
       qc.invalidateQueries({ queryKey: ['arena-wallet', arenaId, user?.uid] });
       qc.invalidateQueries({ queryKey: ['arena-member', arenaId, user?.uid] });
     },
+  });
+}
+
+/**
+ * Ajusta os pontos de um membro (a arena corrige ou premia à mão).
+ * Invalida a relação inteira: nível, pacotes e carteira andam juntos.
+ */
+export function useAddPointsToMember() {
+  const { user } = useAuth();
+  const qc = useQueryClient();
+  return useMutation({
+    mutationFn: ({ arenaId, userId, points }) => addPointsToMember(arenaId, userId, points, user),
+    onSuccess: (_d, { arenaId, userId }) => invalidarMembro(qc, arenaId, userId),
+  });
+}
+
+/** Credita saldo na carteira do membro (cortesia, estorno, prêmio). */
+export function useCreditWallet() {
+  const { user } = useAuth();
+  const qc = useQueryClient();
+  return useMutation({
+    mutationFn: ({ arenaId, userId, amount, source }) => creditWallet(arenaId, userId, amount, source, user),
+    onSuccess: (_d, { arenaId, userId }) => invalidarMembro(qc, arenaId, userId),
+  });
+}
+
+/** Tudo o que muda quando a relação de um membro muda. */
+function invalidarMembro(qc, arenaId, userId) {
+  qc.invalidateQueries({ queryKey: ['arena-members', arenaId] });
+  qc.invalidateQueries({ queryKey: ['arena-member', arenaId, userId] });
+  qc.invalidateQueries({ queryKey: ['arena-wallet', arenaId, userId] });
+}
+
+/* ----------------------------- Mensalidade ---------------------------- */
+
+/** Todas as mensalidades da arena (visão da gestão). */
+export function useArenaSubscriptions(arenaId) {
+  return useQuery({
+    queryKey: ['arena-subscriptions', arenaId],
+    queryFn: () => listArenaSubscriptions(arenaId),
+    enabled: !!arenaId,
+    staleTime: 60_000,
+  });
+}
+
+/** A MINHA mensalidade nesta arena. */
+export function useMemberSubscription(arenaId, userId) {
+  return useQuery({
+    queryKey: ['arena-subscription', arenaId, userId],
+    queryFn: () => getMemberSubscription(arenaId, userId),
+    enabled: !!arenaId && !!userId,
+    staleTime: 60_000,
+  });
+}
+
+function invalidarMensalidade(qc, arenaId, userId) {
+  qc.invalidateQueries({ queryKey: ['arena-subscriptions', arenaId] });
+  qc.invalidateQueries({ queryKey: ['arena-subscription', arenaId, userId] });
+}
+
+export function useSetMemberSubscription() {
+  const { user } = useAuth();
+  const qc = useQueryClient();
+  return useMutation({
+    mutationFn: ({ arenaId, userId, input }) => setMemberSubscription(arenaId, userId, input, user),
+    onSuccess: (_d, { arenaId, userId }) => invalidarMensalidade(qc, arenaId, userId),
+  });
+}
+
+export function useSetSubscriptionMonthPaid() {
+  const { user } = useAuth();
+  const qc = useQueryClient();
+  return useMutation({
+    mutationFn: ({ arenaId, userId, month, paid }) => setSubscriptionMonthPaid(arenaId, userId, month, paid, user),
+    onSuccess: (_d, { arenaId, userId }) => invalidarMensalidade(qc, arenaId, userId),
+  });
+}
+
+export function useCancelMemberSubscription() {
+  const { user } = useAuth();
+  const qc = useQueryClient();
+  return useMutation({
+    mutationFn: ({ arenaId, userId }) => cancelMemberSubscription(arenaId, userId, user),
+    onSuccess: (_d, { arenaId, userId }) => invalidarMensalidade(qc, arenaId, userId),
   });
 }
 

@@ -43,6 +43,14 @@ vi.mock('../hooks/useArenas.js', () => ({
   useArenaCourtSchedules: () => ({ data: schedules }),
 }));
 vi.mock('@/modules/athletes/components/AthleteMultiPicker', () => ({ default: () => <div>CONVIDADOS</div> }));
+// Módulo de membros desligado: o diálogo deve ficar EXATAMENTE como era.
+vi.mock('../hooks/useArenaModules.js', () => ({
+  useArenaModules: () => ({ isOn: () => false, isLoading: false }),
+}));
+vi.mock('../hooks/useArenaV3.js', () => ({
+  useArenaMember: () => ({ data: null }),
+  useArenaWallet: () => ({ data: null }),
+}));
 
 const { default: BookingRequestDialog } = await import('./BookingRequestDialog.jsx');
 
