@@ -165,6 +165,12 @@ export function unavailabilityConflictMessage(conflicts = []) {
   if (c.reason === 'game_day') {
     return `Este horário (${quando}) está reservado para um dia de jogo da arena${c.notes ? ` — ${c.notes}` : ''}. Escolha outro horário ou marque presença no dia de jogo.`;
   }
+  if (c.reason === 'maintenance') {
+    // O MOTIVO da manutenção nunca chega aqui: o bloqueio público não carrega
+    // o texto da ordem. "Manutenção" já diz o que a pessoa precisa saber, e
+    // dizer que é temporário evita que ela desista da arena.
+    return `A quadra está em manutenção neste horário (${quando}). É temporário — escolha outro horário ou outro dia.`;
+  }
   return `A arena bloqueou este horário (${quando})${c.notes ? ` — ${c.notes}` : ''}. Escolha outro horário.`;
 }
 

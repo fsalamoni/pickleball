@@ -391,3 +391,34 @@ describe('⭐ checkUnavailabilityConflict — o horário que a arena FECHOU', ()
     expect(unavailabilityConflictMessage()).toBeNull();
   });
 });
+
+describe('⭐ manutenção: a recusa diz que é temporário', () => {
+  it('a mensagem separa manutenção de bloqueio genérico', () => {
+    const conflitos = checkUnavailabilityConflict(
+      [{ date: '2026-09-20', start: '19:00', end: '20:00', court_id: 'q1' }],
+      [{
+        arena_id: 'a1', court_id: 'q1', date: '2026-09-20',
+        start_time: '08:00', end_time: '22:00',
+        source: 'maintenance', maintenance_id: 'o1', notes: 'Manutenção programada',
+      }],
+    );
+    expect(conflitos.hasConflict).toBe(true);
+    const msg = unavailabilityConflictMessage(conflitos.conflicts);
+    expect(msg).toMatch(/manutenção/i);
+    expect(msg).toMatch(/temporário/i);
+  });
+
+  it('⭐ o motivo da ordem nunca aparece para o atleta', () => {
+    // O bloqueio público não carrega o texto da ordem — é o que impede
+    // "trocar a fechadura do vestiário feminino" de virar aviso na tela.
+    const conflitos = checkUnavailabilityConflict(
+      [{ date: '2026-09-20', start: '19:00', end: '20:00', court_id: 'q1' }],
+      [{
+        arena_id: 'a1', court_id: 'q1', date: '2026-09-20',
+        start_time: '08:00', end_time: '22:00',
+        source: 'maintenance', notes: 'Manutenção programada',
+      }],
+    );
+    expect(unavailabilityConflictMessage(conflitos.conflicts)).not.toMatch(/fechadura/i);
+  });
+});
