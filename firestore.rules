@@ -777,7 +777,14 @@ service cloud.firestore {
         || isArenaManager(resource.data.arena_id)
         || isPlatformAdmin()
       );
-      allow create: if isAuthed();
+      // Antes: `if isAuthed()` — qualquer conta forjava venda em QUALQUER
+      // arena, com qualquer valor. Agora a venda é do próprio comprador ou de
+      // quem opera a arena.
+      allow create: if isAuthed() && (
+        request.resource.data.buyer_id == request.auth.uid
+        || isArenaManager(request.resource.data.arena_id)
+        || isPlatformAdmin()
+      );
       allow update, delete: if isAuthed() && (
         isArenaManager(resource.data.arena_id) || isPlatformAdmin()
       );
@@ -789,7 +796,12 @@ service cloud.firestore {
         || isArenaManager(resource.data.arena_id)
         || isPlatformAdmin()
       );
-      allow create: if isAuthed();
+      // Idem `arena_sales`: o pagamento é de quem paga, ou da arena.
+      allow create: if isAuthed() && (
+        request.resource.data.payer_id == request.auth.uid
+        || isArenaManager(request.resource.data.arena_id)
+        || isPlatformAdmin()
+      );
       allow update: if isAuthed() && (
         resource.data.payer_id == request.auth.uid
         || isArenaManager(resource.data.arena_id)
@@ -1495,8 +1507,10 @@ service cloud.firestore {
         request.resource.data.user_a == request.auth.uid ||
         request.resource.data.user_b == request.auth.uid
       );
+      // `resource.data` (o que ESTÁ gravado), nunca `request.resource.data`:
+      // em `delete` não existe request.resource, e a regra recusava sempre.
       allow update, delete: if isAuthed() && (
-        isArenaManager(request.resource.data.arena_id) ||
+        isArenaManager(resource.data.arena_id) ||
         resource.data.user_a == request.auth.uid ||
         resource.data.user_b == request.auth.uid
       );
@@ -1505,12 +1519,16 @@ service cloud.firestore {
     // Sprint 4: Aulas, instrutores e reservas de aulas
     match /arena_coaches/{coachId} {
       allow read: if isAuthed();
-      allow create, update, delete: if isArenaManager(request.resource.data.arena_id) || isPlatformAdmin();
+      allow create: if isArenaManager(request.resource.data.arena_id) || isPlatformAdmin();
+      allow update: if isArenaManager(resource.data.arena_id) || isPlatformAdmin();
+      allow delete: if isArenaManager(resource.data.arena_id) || isPlatformAdmin();
     }
 
     match /arena_classes/{classId} {
       allow read: if isAuthed();
-      allow create, update, delete: if isArenaManager(request.resource.data.arena_id) || isPlatformAdmin();
+      allow create: if isArenaManager(request.resource.data.arena_id) || isPlatformAdmin();
+      allow update: if isArenaManager(resource.data.arena_id) || isPlatformAdmin();
+      allow delete: if isArenaManager(resource.data.arena_id) || isPlatformAdmin();
     }
 
     match /arena_class_bookings/{bookingId} {
@@ -1520,35 +1538,54 @@ service cloud.firestore {
         isPlatformAdmin()
       );
       allow create: if isAuthed() && request.resource.data.user_id == request.auth.uid;
-      allow update, delete: if isAuthed() && resource.data.user_id == request.auth.uid;
+      // A arena também cancela/remarca: era só do aluno, e a arena ficava sem
+      // como desfazer uma aula na própria agenda.
+      allow update, delete: if isAuthed() && (
+        resource.data.user_id == request.auth.uid
+        || isArenaManager(resource.data.arena_id)
+        || isPlatformAdmin()
+      );
     }
 
     // Sprint 5: Torneios internos e ladder
     match /arena_internal_tournaments/{tournamentId} {
       allow read: if isAuthed();
-      allow create, update: if isArenaManager(request.resource.data.arena_id) || isPlatformAdmin();
+      allow create: if isArenaManager(request.resource.data.arena_id) || isPlatformAdmin();
+      allow update: if isArenaManager(resource.data.arena_id) || isPlatformAdmin();
       allow delete: if isArenaManager(resource.data.arena_id) || isPlatformAdmin();
     }
 
     match /arena_ladders/{ladderId} {
       allow read: if isAuthed();
-      allow write: if isArenaManager(request.resource.data.arena_id) || isPlatformAdmin();
+      allow create: if isArenaManager(request.resource.data.arena_id) || isPlatformAdmin();
+      allow update, delete: if isArenaManager(resource.data.arena_id) || isPlatformAdmin();
     }
 
     // Sprint 6: Marketing (cupons, campanhas, NPS, referral)
     match /arena_coupons/{couponId} {
       allow read: if isAuthed();
-      allow create, update, delete: if isArenaManager(request.resource.data.arena_id) || isPlatformAdmin();
+      allow create: if isArenaManager(request.resource.data.arena_id) || isPlatformAdmin();
+      allow update: if isArenaManager(resource.data.arena_id) || isPlatformAdmin();
+      allow delete: if isArenaManager(resource.data.arena_id) || isPlatformAdmin();
     }
 
     match /arena_campaigns/{campaignId} {
       allow read: if isAuthed();
-      allow create, update, delete: if isArenaManager(request.resource.data.arena_id) || isPlatformAdmin();
+      allow create: if isArenaManager(request.resource.data.arena_id) || isPlatformAdmin();
+      allow update: if isArenaManager(resource.data.arena_id) || isPlatformAdmin();
+      allow delete: if isArenaManager(resource.data.arena_id) || isPlatformAdmin();
     }
 
+    // A leitura olhava `request.resource.data`, que em leitura é NULO: a arena
+    // nunca conseguiu ler o próprio NPS. O respondente também vê o que enviou.
     match /arena_nps_responses/{responseId} {
-      allow read: if isArenaManager(request.resource.data.arena_id) || isPlatformAdmin();
+      allow read: if isAuthed() && (
+        resource.data.user_id == request.auth.uid
+        || isArenaManager(resource.data.arena_id)
+        || isPlatformAdmin()
+      );
       allow create: if isAuthed() && request.resource.data.user_id == request.auth.uid;
+      allow update, delete: if isPlatformAdmin();
     }
 
     match /arena_referrals/{referralId} {
@@ -1557,25 +1594,38 @@ service cloud.firestore {
         resource.data.referred_id == request.auth.uid ||
         isPlatformAdmin()
       );
-      allow create: if isAuthed();
-      allow update, delete: if isAuthed() && resource.data.referrer_id == request.auth.uid;
+      // Só se pode indicar EM NOME PRÓPRIO. Antes bastava estar logado, e dava
+      // para criar indicação apontando outra pessoa como indicadora.
+      allow create: if isAuthed()
+        && request.resource.data.referrer_id == request.auth.uid;
+      allow update, delete: if isAuthed() && (
+        resource.data.referrer_id == request.auth.uid
+        || isArenaManager(resource.data.arena_id)
+        || isPlatformAdmin()
+      );
     }
 
     // Sprint 7: Operações (checklists, manutenção)
     match /arena_checklists/{checklistId} {
       allow read: if isAuthed();
-      allow create, update, delete: if isArenaManager(request.resource.data.arena_id) || isPlatformAdmin();
+      allow create: if isArenaManager(request.resource.data.arena_id) || isPlatformAdmin();
+      allow update: if isArenaManager(resource.data.arena_id) || isPlatformAdmin();
+      allow delete: if isArenaManager(resource.data.arena_id) || isPlatformAdmin();
     }
 
     match /arena_maintenance_orders/{orderId} {
-      allow read: if isArenaManager(request.resource.data.arena_id) || isPlatformAdmin();
-      allow create, update, delete: if isArenaManager(request.resource.data.arena_id) || isPlatformAdmin();
+      allow read: if isArenaManager(resource.data.arena_id) || isPlatformAdmin();
+      allow create: if isArenaManager(request.resource.data.arena_id) || isPlatformAdmin();
+      allow update: if isArenaManager(resource.data.arena_id) || isPlatformAdmin();
+      allow delete: if isArenaManager(resource.data.arena_id) || isPlatformAdmin();
     }
 
     // Sprints 8-11: IoT, Multi-unit (network)
     match /arena_devices/{deviceId} {
       allow read: if isAuthed();
-      allow create, update, delete: if isArenaManager(request.resource.data.arena_id) || isPlatformAdmin();
+      allow create: if isArenaManager(request.resource.data.arena_id) || isPlatformAdmin();
+      allow update: if isArenaManager(resource.data.arena_id) || isPlatformAdmin();
+      allow delete: if isArenaManager(resource.data.arena_id) || isPlatformAdmin();
     }
 
     match /arena_networks/{networkId} {
@@ -1822,31 +1872,39 @@ service cloud.firestore {
 
 
     // ---- Sprint 5: Inventory / Mercado ----
+    // O `delete` destas três olhava `request.resource.data.arena_id`, que num
+    // delete é NULO: na prática, nenhum gestor conseguia remover produto,
+    // entrada ou saída do estoque. Mesma família de defeito já corrigida em
+    // `arena_unavailabilities`.
     match /arena_inventory_products/{productId} {
       allow read: if isAuthed();
-      allow create, update, delete: if isAuthed() && (
-        isPlatformAdmin() ||
-        exists(/databases/$(database)/documents/arena_managers/$(request.resource.data.arena_id + '_' + request.auth.uid))
+      allow create: if isAuthed() && (
+        isPlatformAdmin() || isArenaManager(request.resource.data.arena_id)
+      );
+      allow update, delete: if isAuthed() && (
+        isPlatformAdmin() || isArenaManager(resource.data.arena_id)
       );
     }
     match /arena_inventory_entries/{entryId} {
       allow read: if isAuthed() && (
-        isPlatformAdmin() ||
-        exists(/databases/$(database)/documents/arena_managers/$(resource.data.arena_id + '_' + request.auth.uid))
+        isPlatformAdmin() || isArenaManager(resource.data.arena_id)
       );
-      allow create, update, delete: if isAuthed() && (
-        isPlatformAdmin() ||
-        exists(/databases/$(database)/documents/arena_managers/$(request.resource.data.arena_id + '_' + request.auth.uid))
+      allow create: if isAuthed() && (
+        isPlatformAdmin() || isArenaManager(request.resource.data.arena_id)
+      );
+      allow update, delete: if isAuthed() && (
+        isPlatformAdmin() || isArenaManager(resource.data.arena_id)
       );
     }
     match /arena_inventory_exits/{exitId} {
       allow read: if isAuthed() && (
-        isPlatformAdmin() ||
-        exists(/databases/$(database)/documents/arena_managers/$(resource.data.arena_id + '_' + request.auth.uid))
+        isPlatformAdmin() || isArenaManager(resource.data.arena_id)
       );
-      allow create, update, delete: if isAuthed() && (
-        isPlatformAdmin() ||
-        exists(/databases/$(database)/documents/arena_managers/$(request.resource.data.arena_id + '_' + request.auth.uid))
+      allow create: if isAuthed() && (
+        isPlatformAdmin() || isArenaManager(request.resource.data.arena_id)
+      );
+      allow update, delete: if isAuthed() && (
+        isPlatformAdmin() || isArenaManager(resource.data.arena_id)
       );
     }
 

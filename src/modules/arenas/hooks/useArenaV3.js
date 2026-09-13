@@ -9,10 +9,9 @@
  * - useUpdateArenaSettings — mutation
  */
 
-import { useMemo } from 'react';
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import { useAuth } from '@/core/lib/FirebaseAuthContext';
-import { canArenaUseModule, indexModuleStates } from '../domain/modules.js';
+import { useArenaModuleOn } from './useArenaModules.js';
 import {
   getOrCreateArenaSettings,
   getArenaSettings,
@@ -21,7 +20,6 @@ import {
 import {
   setArenaModuleState,
   toggleArenaModule,
-  listArenaModuleStates,
   getArenaModuleState,
 } from '../services/moduleStateService.js';
 import {
@@ -70,14 +68,11 @@ export function useUpdateArenaSettings() {
 
 /* ------------------------- Module States --------------------------- */
 
-export function useArenaModuleStates(arenaId) {
-  return useQuery({
-    queryKey: ['arena-module-states', arenaId],
-    queryFn: () => listArenaModuleStates(arenaId),
-    enabled: !!arenaId,
-    staleTime: 30_000,
-  });
-}
+// A consulta dos estados por arena tem UMA definição só, em `useArenaModules`.
+// Duas definições com a mesma chave é o caminho conhecido para o cache deixar
+// de se encontrar: a chave diverge um dia e o sintoma não é erro, é buscar de
+// novo o que já estava em mãos. Aqui só reexportamos.
+export { useArenaModuleStates } from './useArenaModules.js';
 
 export function useArenaModuleState(arenaId, moduleId) {
   return useQuery({
@@ -89,22 +84,18 @@ export function useArenaModuleState(arenaId, moduleId) {
 }
 
 /**
- * Hook gate: retorna true se a arena pode usar o módulo.
- * Combina: flag global + sub-flag + arena state.
+ * Hook gate: a arena pode usar este módulo?
+ *
+ * Delega para `useArenaModules`, que resolve as TRÊS camadas de uma vez
+ * (chave-mestra → liberação da plataforma → opt-in da arena, mais família e
+ * dependências). Fica aqui só como atalho para as telas antigas — quem for
+ * escrever tela nova use `useArenaModules` direto, ou `<ArenaModuleGuard>`.
+ *
+ * Custa as mesmas duas consultas de sempre: o React Query compartilha o cache
+ * entre todas as chamadas da mesma arena.
  */
 export function useCanArenaUseModule(arenaId, moduleId) {
-  // Camada de flag da plataforma dos módulos de arena convertida em código:
-  // o gate depende apenas do opt-in por arena (moduleState.enabled). Mantém
-  // o comportamento atual exatamente (o mapa vazio deixa canArenaUseModule
-  // decidir pelo estado do módulo na arena).
-  const platformFlags = {};
-  const { data: states = [] } = useArenaModuleStates(arenaId);
-  const indexed = useMemo(() => indexModuleStates(states), [states]);
-  return canArenaUseModule({
-    platformFlags: platformFlags || {},
-    moduleState: indexed[moduleId] || null,
-    moduleId,
-  });
+  return useArenaModuleOn(arenaId, moduleId);
 }
 
 /* --------------------------- Mutations ----------------------------- */

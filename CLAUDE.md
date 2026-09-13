@@ -213,6 +213,11 @@ Estes princípios vieram de bugs reais que custaram horas pra arrumar. São ineg
 **"Vou criar/validar uma reserva"** → conferir outras RESERVAS não basta. O serviço ignorava os bloqueios da arena, e o formulário completo de reserva (o que pede data e hora digitadas) não passa pelo calendário — dava para pedir exatamente a quadra fechada, ou a que está com um dia de jogo em cima. `checkUnavailabilityConflict` + `unavailabilityConflictMessage` (`modules/arenas/domain/booking_conflict.js`) recusam **dizendo o motivo**, e valem nos três caminhos: `createBooking`, `createBookingsForSelection` e `createManualBooking` (a arena também não se atropela). Encostar não é sobrepor; bloqueio sem `court_id` fecha a arena inteira
 **"Quem pode sortear/lançar/editar num dia de jogo?"** → pergunte ao hook `useGameDayRoles(gameDay, participants)` (`podeGerenciar` / `podeConfigurar`), nunca chame `canManageGameDay` direto numa tela. Ele soma os TRÊS caminhos: criador, administrador nomeado e **gestor da ARENA** (só em dia de jogo com `arena_id`). Não custa consulta — `useMyManagedArenas` já vem do `V2Layout`
 **"Dois dias de jogo na mesma quadra e no mesmo dia?"** → pode, em horários diferentes. `findGameDayOverlaps` confere, e **encostar não é sobrepor** (18h–20h e 20h–22h convivem). A mesma conferência roda contra as reservas por `checkBookingConflict`
+**"Onde estão os MÓDULOS ADICIONAIS da arena?"** → ⭐ `docs/24-MODULOS-DE-ARENA/00-INDEX.md`. São **três camadas diferentes**, e confundi-las é o erro clássico: (1) a PLATAFORMA libera o módulo às arenas em **Painel admin → Funcionalidades → Módulos de arena** (documento único `platform_settings/arena_modules`, regra que já existia); (2) a ARENA ativa para si em **Gestão → Configurações → Módulos** (`arena_module_states`, que já existia); (3) atleta/professor/equipe passam a ver. Chave-mestra: a flag `arena_modules` (default OFF) — desligada, NADA disso existe. Catálogo em `modules.js` + `moduleCatalog.js`, gate em `moduleAccess.js`
+**"Vou gatear uma tela por módulo de arena"** → `useArenaModules(arenaId)` (um hook, DUAS consultas, responde pelos 50 módulos em memória) ou `<ArenaModuleGuard arenaId module={...}>`. **NUNCA** um hook por módulo dentro de um `map`. Módulo desligado não é erro: a seção some, a rota redireciona — nunca renderize desabilitado
+**"Vou criar um módulo de arena novo"** → id em `ARENA_MODULE_ID` (**o id é contrato de banco**, está gravado em `arena_module_states.module_id` — nunca renomeie), metadados em `ARENA_MODULE_META`, detalhamento em `ARENA_MODULE_DETAIL` (público, benefício por persona, `status`, `requires`, rotas, `config`). Nasce `planned`, que **não é liberável**. Há teste de integridade do catálogo
+**"Por que não faço uma feature flag por módulo de arena?"** → porque são 50, e `FEATURE_FLAG` é liga/desliga de CÓDIGO. Cinquenta linhas ali estourariam a contagem "X ativas de Y" e misturariam dois conceitos. A liberação por módulo tem modo (`opt_in`/`forced`) e observação, e mora no documento da camada 1
+**"Uma regra do Firestore recusa `delete` sem motivo aparente"** → confira se a condição olha `request.resource.data`: num **delete** ele NÃO EXISTE, e a regra é sempre falsa. Já foi corrigido em `arena_unavailabilities` (Onda AA) e, em 2026-09-13, em mais **onze** coleções de arena, onde ninguém conseguia apagar professor, aula, cupom, campanha, checklist, dispositivo, ladder nem item de estoque. O mesmo vale para `read` — a arena nunca conseguiu ler o próprio NPS nem as próprias ordens de manutenção
 **"Onde está o MANUAL da plataforma?"** → `/ajuda` (flag `help_center`, default OFF): 33 artigos em 5 partes — Começar aqui, **Atleta**, **Arena**, **Professor**, Conta e privacidade. Conteúdo em `src/modules/help/domain/helpCenter.js`, página em `src/v2/pages/V2Help.jsx`. Acesso em três pontos de TODA tela (barra lateral, menu do usuário, gaveta do celular), fora dos hubs de propósito. Link direto por `?s=<seção>&a=<artigo>`. **Nada no Firestore** (só a parte preferida, no localStorage por usuário). Ver `docs/21-CENTRAL-DE-AJUDA.md`
 **"Vou colocar um link de ajuda numa tela"** → use `helpLinkFor(location.pathname)`, importado de **`modules/help/domain/helpLink`** (NUNCA de `helpCenter`: aquele arquivo carrega os 33 artigos, e importá-lo de uma tela comum joga o manual inteiro no chunk que todo mundo baixa — 216 kB contra 184 kB, medido; há teste travando isso). Nunca `'/ajuda'` cru. Ele monta `/ajuda?de=<rota>` e a central abre com **"Ajuda para esta tela"** no topo — os artigos daquele assunto, sem a pessoa ter de adivinhar a persona nem varrer a lista. O mapa rota → artigos é `HELP_ROUTE_HINTS`; `*` vale por UM segmento e **vence o primeiro molde que casa**, então o específico vem antes do genérico (teste trava a ordem). Rota sem pista ⇒ bloco nenhum, de propósito: sugestão errada ensina a ignorar o bloco
 **"Criei/removi uma tela. O que a ajuda precisa saber?"** → duas coisas: os artigos que citam a tela (`{ type: 'link', to }` — há teste lendo `V2App.jsx`) e a PISTA de rota em `HELP_ROUTE_HINTS`. O teste pega a pista órfã; a pista que FALTA ninguém vê
@@ -408,6 +413,33 @@ chore(deps): bump firebase to 12.x
 > memory topic `picklerush-sync-2026-08.md`.
 >
 > **Destaques por onda**:
+>
+> - **Onda AG — Módulos adicionais da arena: o chassi** (2026-09-13): a Arena V3
+>   existia no código desde julho e **não funcionava para ninguém** — a "Onda O"
+>   removeu as 51 flags `arena_module_*` de `FEATURE_FLAG`, e como
+>   `normalizeFeatureFlags` só devolve chave conhecida, `canArenaUseModule`
+>   começava com `if (!platformFlags.arena_modules) return false` e **todo
+>   módulo resolvia para desligado, sempre**. A aba "Arena V3" do painel admin
+>   não renderizava nada (itera `FEATURE_FLAG`, que não tinha mais nenhuma), e a
+>   tela de módulos da arena tinha o mapa de flags **escrito na mão como objeto
+>   vazio** — toda linha dizia "a plataforma ainda não ativou". Agora são
+>   **três camadas explícitas**: a plataforma LIBERA (Funcionalidades → Módulos
+>   de arena), a arena ATIVA (Configurações → Módulos), o usuário VÊ. Catálogo
+>   de **50 módulos** com público, benefício por persona, dependências, rotas e
+>   configuração; gate puro que devolve o MOTIVO (a tela precisa dizer por que,
+>   e o motivo é outro para o admin e para a arena); cascata avisada antes de
+>   gravar (ligar a carteira liga membros junto; desligar membros derruba
+>   carteira, pacotes e mensalidade — com a lista na tela) e gravada em LOTE.
+>   **Zero coleção nova, zero regra nova, zero índice**: a camada da plataforma
+>   é um documento em `platform_settings`, que já tinha regra. De quebra, **doze
+>   regras quebradas** foram corrigidas — `delete` e `read` condicionados a
+>   `request.resource.data`, que não existe nessas operações (ninguém apagava
+>   professor, aula, cupom, campanha, checklist, dispositivo, ladder ou item de
+>   estoque; a arena nunca leu o próprio NPS) — e três brechas fechadas
+>   (`arena_sales`, `arena_payments` e `arena_referrals` aceitavam
+>   `create: if isAuthed()`, então qualquer conta forjava venda em qualquer
+>   arena e indicação em nome de outra pessoa). 43 asserções novas no emulador.
+>   Ver `docs/24-MODULOS-DE-ARENA/00-INDEX.md`.
 >
 > - **Onda AF — O dia de jogo fecha a quadra de verdade** (2026-09-13): três
 >   defeitos vistos em tela. **(1) 🐞 O dia de jogo não bloqueava o
@@ -717,14 +749,14 @@ chore(deps): bump firebase to 12.x
 
 | Métrica | Valor | Delta do início do agente |
 |---|---|---|
-| **Testes Vitest** | **3754 passing** (243 arquivos) | +3236 (era 408) |
+| **Testes Vitest** | **3839 passing** (247 arquivos) + 198 asserções de regras no emulador | +3306 (era 408) |
 | **Lint errors** | 0 | era 30+ |
 | **Módulos** | 21 (+`help` — conteúdo dos tutoriais em tela) (`games` e `legal` saíram como `src/modules/` mas continuam como pastas oficiais — **rating virou módulo oficial** com domain/services/hooks/components) | +4 (coaches, circuits, games, legal) |
 | **V2 pages** | 79 (+V2GameDayTelao — telão, fora do V2Layout; +V2Help — central de ajuda) | +55 |
 | **V2 components (src/v2/components/)** | **16 pastas** (+home, +rating, +settings, +tournament cresceu muito, +admin) | — |
 | **Coleções Firestore** | **122 top-level em `firestore.rules`** (+`doubles_rankings`) (as 13 da gamificação V2 documentadas em `05-DATA-MODEL.md`) | +82 |
 | **Índices compostos Firestore** | **33 em `firestore.indexes.json`** (+`provisional_claims`) (+4 da gamificação V2) | +28 |
-| **Feature flags ativas** | **19 default OFF** (+`play_smart_rotation`, +`gameday_americano_live`, +`help_center`, +`arena_game_day`; 137 viraram código) | −113 |
+| **Feature flags ativas** | **20 default OFF** (+`arena_modules` — a chave-mestra dos módulos adicionais de arena; 137 viraram código) | −112 |
 | **Cloud Functions** | **12** (+ `recomputeRankingOnTournamentMatch`, + `recomputeRankingOnClubEventGame`) | +12 |
 | **PRs mergeados** | **96 totais** (Sprints 0-50+) | — |
 | **Origin/main** | `106bd55` (PR #110) | — |

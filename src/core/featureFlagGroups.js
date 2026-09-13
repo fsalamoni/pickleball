@@ -25,6 +25,7 @@ export const FLAG_GROUPS = Object.freeze([
     id: 'arena_new',
     label: 'Arena — operação e receita',
     keys: [
+      FEATURE_FLAG.ARENA_MODULES,
       FEATURE_FLAG.ARENA_OPS_KPIS, FEATURE_FLAG.ARENA_UNIFIED_CHECKOUT,
       FEATURE_FLAG.ARENA_DYNAMIC_PRICING, FEATURE_FLAG.ARENA_MEMBER_CRM,
     ],

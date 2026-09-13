@@ -1,5 +1,18 @@
 # Arena V3 — Índice da Documentação
 
+> ## ⚠ LEIA ANTES: o status desta pasta está DESATUALIZADO
+>
+> Estes documentos descrevem o **desenho original** (que segue válido) e
+> afirmam um estado de entrega — *"100% deployado em produção"* — que **não
+> correspondia ao código**. Levantamento de 2026-09-13: as flags que o gate
+> exigia haviam sido removidas na "Onda O", e **nenhum módulo estava acessível
+> a ninguém**; as telas eram maquetes; e doze regras do Firestore estavam
+> quebradas.
+>
+> O mecanismo foi refeito e ligado. A referência viva passa a ser
+> **`docs/24-MODULOS-DE-ARENA/00-INDEX.md`** — comece por lá. Esta pasta fica
+> como histórico do desenho e das sprints.
+
 > Implementação de 1000+ sugestões para a seção de **Gestão de Arenas** do PickleRush, organizada em sprints progressivas.
 
 ## Arquitetura em camadas

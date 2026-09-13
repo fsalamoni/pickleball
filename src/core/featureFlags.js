@@ -186,10 +186,41 @@ export const FEATURE_FLAG = Object.freeze({
    * redireciona — nada muda para ninguém.
    */
   ARENA_GAME_DAY: 'arena_game_day',
+
+  /**
+   * MÓDULOS ADICIONAIS DA ARENA — a chave-mestra.
+   *
+   * Liga o mecanismo de três camadas dos módulos extras de arena:
+   * (1) o admin da plataforma LIBERA cada módulo às arenas, em
+   * Funcionalidades → Módulos de arena; (2) cada arena ATIVA para si o que foi
+   * liberado, em Gestão → Configurações → Módulos; (3) atleta, professor e
+   * equipe passam a ver a funcionalidade.
+   *
+   * Esta flag é a chave geral. Desligada, NADA disso existe: a aba do admin
+   * não aparece, a aba da arena não aparece, e todo módulo resolve para
+   * desligado — mesmo os que já estiverem liberados e ativados no banco.
+   * É o botão de pânico, e é por isso que ele mora aqui e não no documento de
+   * liberação.
+   *
+   * A liberação módulo a módulo NÃO é flag: são 45 módulos de produto, com
+   * modo de liberação e observação, guardados em
+   * `platform_settings/arena_modules`. Ver `docs/24-MODULOS-DE-ARENA/`.
+   */
+  ARENA_MODULES: 'arena_modules',
 });
 
 /** Metadados de exibição para o painel de flags (admin master). */
 export const FEATURE_FLAG_META = Object.freeze({
+  [FEATURE_FLAG.ARENA_MODULES]: {
+    label: 'Módulos adicionais da arena (chave geral)',
+    description:
+      'Liga o mecanismo dos módulos extras de arena. Com ela ativa, aparece a '
+      + 'aba "Módulos de arena" aqui em Funcionalidades, onde você libera cada '
+      + 'módulo às arenas — e cada arena passa a ter, em Configurações, a '
+      + 'escolha de ativar para si o que foi liberado. Desligada, nada disso '
+      + 'existe para ninguém: nem a aba daqui, nem a da arena, nem os módulos '
+      + 'que já estiverem ativados.',
+  },
   [FEATURE_FLAG.HELP_CENTER]: {
     label: 'Central de ajuda',
     description:
