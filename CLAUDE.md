@@ -218,6 +218,9 @@ Estes princípios vieram de bugs reais que custaram horas pra arrumar. São ineg
 **"Vou criar um módulo de arena novo"** → id em `ARENA_MODULE_ID` (**o id é contrato de banco**, está gravado em `arena_module_states.module_id` — nunca renomeie), metadados em `ARENA_MODULE_META`, detalhamento em `ARENA_MODULE_DETAIL` (público, benefício por persona, `status`, `requires`, rotas, `config`). Nasce `planned`, que **não é liberável**. Há teste de integridade do catálogo
 **"Por que não faço uma feature flag por módulo de arena?"** → porque são 50, e `FEATURE_FLAG` é liga/desliga de CÓDIGO. Cinquenta linhas ali estourariam a contagem "X ativas de Y" e misturariam dois conceitos. A liberação por módulo tem modo (`opt_in`/`forced`) e observação, e mora no documento da camada 1
 **"Uma regra do Firestore recusa `delete` sem motivo aparente"** → confira se a condição olha `request.resource.data`: num **delete** ele NÃO EXISTE, e a regra é sempre falsa. Já foi corrigido em `arena_unavailabilities` (Onda AA) e, em 2026-09-13, em mais **onze** coleções de arena, onde ninguém conseguia apagar professor, aula, cupom, campanha, checklist, dispositivo, ladder nem item de estoque. O mesmo vale para `read` — a arena nunca conseguiu ler o próprio NPS nem as próprias ordens de manutenção
+**"Vou mexer em jogo aberto / fila de espera / buscar parceiro"** → `docs/24-MODULOS-DE-ARENA/01-MATCHMAKING.md`. Três coisas que NÃO podem regredir: (1) a vaga com `court_id` **OCUPA a quadra** (`openSlotBlocks`/`mergeOpenSlotBlocks`, mesmo desenho do dia de jogo — e o bloqueio nunca depende de flag); (2) o nível é a régua única 2.0–8.0 dos DOIS lados, e **nível desconhecido não barra ninguém**; (3) quem sai de um jogo LOTADO chama o próximo da fila, e a Cloud Function `advanceOpenSlotWaitlist` expira o prazo vencido e chama o seguinte
+**"Preciso do nível de alguém numa tela"** → `useMyUnifiedLevel()` (o meu) ou `useUnifiedLevels(uids)` (um lote, UMA consulta). **Nunca** `profile.level` nem `leveling_level`: são código de faixa, não número na régua — comparar contra 2.0–8.0 não filtra, filtra errado (era o defeito do "buscar parceiro" e da peneira do jogo aberto)
+**"Escrevi uma consulta e a lista vem vazia"** → antes de investigar a tela, rode `npx vitest run src/core/guards/indicesCompostos.test.js`. Ele varre `where` + `orderBy` sem índice **nos dois estilos** de montagem (dentro de `query(...)` e por vetor de constraints) e ignora comentários. Cinco consultas estavam mortas desde que foram escritas — vagas de jogo aberto (duas), catálogo de professores da arena, agenda de aulas e torneios internos
 **"Onde está o MANUAL da plataforma?"** → `/ajuda` (flag `help_center`, default OFF): 33 artigos em 5 partes — Começar aqui, **Atleta**, **Arena**, **Professor**, Conta e privacidade. Conteúdo em `src/modules/help/domain/helpCenter.js`, página em `src/v2/pages/V2Help.jsx`. Acesso em três pontos de TODA tela (barra lateral, menu do usuário, gaveta do celular), fora dos hubs de propósito. Link direto por `?s=<seção>&a=<artigo>`. **Nada no Firestore** (só a parte preferida, no localStorage por usuário). Ver `docs/21-CENTRAL-DE-AJUDA.md`
 **"Vou colocar um link de ajuda numa tela"** → use `helpLinkFor(location.pathname)`, importado de **`modules/help/domain/helpLink`** (NUNCA de `helpCenter`: aquele arquivo carrega os 33 artigos, e importá-lo de uma tela comum joga o manual inteiro no chunk que todo mundo baixa — 216 kB contra 184 kB, medido; há teste travando isso). Nunca `'/ajuda'` cru. Ele monta `/ajuda?de=<rota>` e a central abre com **"Ajuda para esta tela"** no topo — os artigos daquele assunto, sem a pessoa ter de adivinhar a persona nem varrer a lista. O mapa rota → artigos é `HELP_ROUTE_HINTS`; `*` vale por UM segmento e **vence o primeiro molde que casa**, então o específico vem antes do genérico (teste trava a ordem). Rota sem pista ⇒ bloco nenhum, de propósito: sugestão errada ensina a ignorar o bloco
 **"Criei/removi uma tela. O que a ajuda precisa saber?"** → duas coisas: os artigos que citam a tela (`{ type: 'link', to }` — há teste lendo `V2App.jsx`) e a PISTA de rota em `HELP_ROUTE_HINTS`. O teste pega a pista órfã; a pista que FALTA ninguém vê
@@ -413,6 +416,35 @@ chore(deps): bump firebase to 12.x
 > memory topic `picklerush-sync-2026-08.md`.
 >
 > **Destaques por onda**:
+>
+> - **Onda AH — Jogo aberto, fila de espera e buscar parceiro** (2026-09-13): o
+>   primeiro módulo de arena entregue de verdade sobre o chassi novo — e quatro
+>   defeitos independentes que o mantinham inútil. **(1) 🐞 A lista de vagas
+>   nunca carregou**: `where('arena_id')` + `orderBy('date')` exige índice
+>   composto e o único índice de `arena_open_slots` é `[arena_id, starts_at]`;
+>   a consulta falhava sempre e o erro virava lista vazia. O guarda de índices
+>   não pegava porque estas consultas montam as condições num VETOR, com o
+>   `orderBy` fora do `query(...)` — o guarda agora varre por função também (e
+>   ignora comentários, que citavam `orderBy` e o faziam acusar a si mesmo).
+>   Com ele, mais **quatro consultas mortas** apareceram: catálogo de
+>   professores da arena, agenda de aulas, torneios internos e a lista global de
+>   vagas. **(2) 🐞 A peneira de nível comparava escalas diferentes** — a vaga
+>   validava 0–7 e comparava contra `profile.level`, que é código de faixa; ou
+>   não filtrava, ou filtrava errado. Agora é a régua única 2.0–8.0 dos dois
+>   lados, e nível desconhecido NÃO barra (a plataforma não inventa nível).
+>   **(3) 🐞 A vaga não ocupava a quadra**: era texto livre, sem `court_id`, e
+>   a arena vendia o mesmo horário duas vezes. Virou `court_id` opcional +
+>   `openSlotBlocks`/`mergeOpenSlotBlocks`, o mesmo desenho do dia de jogo, e
+>   entrou no conflito de reserva e nos três calendários. **(4) 🐞 A fila de
+>   espera nunca chamou ninguém**: `notifyNextInLine` não era invocada de lugar
+>   nenhum, a notificação apontava para `/minha-fila` (rota que nunca existiu) e
+>   o prazo da promoção não era cumprido por ninguém — vaga presa para sempre.
+>   Agora sair de um jogo lotado chama o próximo, a Cloud Function
+>   `advanceOpenSlotWaitlist` expira e avança a cada 10 min, e o atleta tem onde
+>   confirmar. De quebra: datas em pt-BR, "lotado" deixou de dizer "inscrições
+>   encerradas" (era o que escondia a fila) e falha parou de virar lista vazia.
+>   **Zero coleção, zero índice, zero regra**; um campo opcional e uma função
+>   agendada. Ver `docs/24-MODULOS-DE-ARENA/01-MATCHMAKING.md`.
 >
 > - **Onda AG — Módulos adicionais da arena: o chassi** (2026-09-13): a Arena V3
 >   existia no código desde julho e **não funcionava para ninguém** — a "Onda O"
@@ -749,7 +781,7 @@ chore(deps): bump firebase to 12.x
 
 | Métrica | Valor | Delta do início do agente |
 |---|---|---|
-| **Testes Vitest** | **3839 passing** (247 arquivos) + 198 asserções de regras no emulador | +3306 (era 408) |
+| **Testes Vitest** | **3886 passing** (248 arquivos) + 198 asserções de regras no emulador | +3306 (era 408) |
 | **Lint errors** | 0 | era 30+ |
 | **Módulos** | 21 (+`help` — conteúdo dos tutoriais em tela) (`games` e `legal` saíram como `src/modules/` mas continuam como pastas oficiais — **rating virou módulo oficial** com domain/services/hooks/components) | +4 (coaches, circuits, games, legal) |
 | **V2 pages** | 79 (+V2GameDayTelao — telão, fora do V2Layout; +V2Help — central de ajuda) | +55 |
@@ -757,7 +789,7 @@ chore(deps): bump firebase to 12.x
 | **Coleções Firestore** | **122 top-level em `firestore.rules`** (+`doubles_rankings`) (as 13 da gamificação V2 documentadas em `05-DATA-MODEL.md`) | +82 |
 | **Índices compostos Firestore** | **33 em `firestore.indexes.json`** (+`provisional_claims`) (+4 da gamificação V2) | +28 |
 | **Feature flags ativas** | **20 default OFF** (+`arena_modules` — a chave-mestra dos módulos adicionais de arena; 137 viraram código) | −112 |
-| **Cloud Functions** | **12** (+ `recomputeRankingOnTournamentMatch`, + `recomputeRankingOnClubEventGame`) | +12 |
+| **Cloud Functions** | **13** (+ `advanceOpenSlotWaitlist` — expira e avança a fila de espera) | +13 |
 | **PRs mergeados** | **96 totais** (Sprints 0-50+) | — |
 | **Origin/main** | `106bd55` (PR #110) | — |
 | **Bundle deployed** | (deploy em curso) | — |

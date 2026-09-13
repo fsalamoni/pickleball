@@ -4,7 +4,7 @@
 
 import {
   collection, doc, getDoc, getDocs, setDoc, updateDoc, deleteDoc,
-  query, where, orderBy, serverTimestamp, increment, limit,
+  query, where, serverTimestamp, increment,
 } from 'firebase/firestore';
 import { db } from '@/core/config/firebase';
 import { logger } from '@/core/lib/logger';
@@ -25,12 +25,15 @@ function displayName(u, p) {
 
 export async function listArenaCoaches(arenaId, { onlyActive = true, lim = 50 } = {}) {
   if (!db || !arenaId) return [];
-  const c = [where('arena_id', '==', arenaId)];
-  if (onlyActive) c.push(where('active', '==', true));
-  c.push(orderBy('name', 'asc'));
-  c.push(limit(lim));
-  const snap = await getDocs(query(collection(db, COL_COACHES), ...c));
-  return snap.docs.map((d) => ({ id: d.id, ...d.data() }));
+  // `arena_id ==` + `active ==` + `orderBy(name)` exige indice composto, e
+  // `arena_coaches` nao tem nenhum: a consulta falhava sempre e o catalogo de
+  // professores da arena aparecia VAZIO em toda arena, desde que foi escrito.
+  const snap = await getDocs(query(collection(db, COL_COACHES), where('arena_id', '==', arenaId)));
+  return snap.docs
+    .map((d) => ({ id: d.id, ...d.data() }))
+    .filter((x) => !onlyActive || x.active !== false)
+    .sort((a, b) => String(a.name || '').localeCompare(String(b.name || ''), 'pt-BR'))
+    .slice(0, Math.max(1, Number(lim) || 50));
 }
 
 export async function createArenaCoach(arenaId, input, actor) {
@@ -55,15 +58,16 @@ export async function deleteArenaCoach(coachId, actor) {
 
 export async function listArenaClasses(arenaId, { onlyFuture = false, lim = 100 } = {}) {
   if (!db || !arenaId) return [];
-  const c = [where('arena_id', '==', arenaId), where('status', '==', CLASS_STATUS.SCHEDULED)];
-  if (onlyFuture) {
-    const today = new Date().toISOString().slice(0, 10);
-    c.push(where('date', '>=', today));
-  }
-  c.push(orderBy('date', 'asc'));
-  c.push(limit(lim));
-  const snap = await getDocs(query(collection(db, COL_CLASSES), ...c));
-  return snap.docs.map((d) => ({ id: d.id, ...d.data() }));
+  // Idem: tres condicoes e uma ordenacao, sem indice nenhum em
+  // `arena_classes`. A agenda de aulas da arena nunca carregou.
+  const snap = await getDocs(query(collection(db, COL_CLASSES), where('arena_id', '==', arenaId)));
+  const hoje = new Date().toISOString().slice(0, 10);
+  return snap.docs
+    .map((d) => ({ id: d.id, ...d.data() }))
+    .filter((x) => x.status === CLASS_STATUS.SCHEDULED)
+    .filter((x) => !onlyFuture || String(x.date || '') >= hoje)
+    .sort((a, b) => `${a.date || ''}${a.start || ''}`.localeCompare(`${b.date || ''}${b.start || ''}`))
+    .slice(0, Math.max(1, Number(lim) || 100));
 }
 
 export async function createArenaClass(arenaId, input, actor) {

@@ -83,6 +83,8 @@ import { FEATURE_FLAG } from '@/core/featureFlags';
 import { useFeatureFlag } from '@/core/lib/FeatureFlagsContext';
 import { useArenaGameDays } from '@/modules/games/hooks/useArenaGameDays';
 import { arenaGameDayTimeRange, mergeGameDayBlocks } from '@/modules/games/domain/arenaGameDay';
+import { mergeOpenSlotBlocks } from '@/modules/arenas/domain/openMatch';
+import { useArenaOpenSlots } from '@/modules/arenas/hooks/useArenaV3';
 
 const WEEKDAY_LABELS_PT = ['Dom', 'Seg', 'Ter', 'Qua', 'Qui', 'Sex', 'Sáb'];
 
@@ -167,6 +169,7 @@ export default function V2BookingCalendar({ arenaId, arena: arenaProp }) {
   // para reserva uma quadra que já tem gente marcada nela.
   const gameDayOn = useFeatureFlag(FEATURE_FLAG.ARENA_GAME_DAY);
   const { data: arenaGameDays = [] } = useArenaGameDays(arenaId);
+  const { data: vagasAbertas = [] } = useArenaOpenSlots(arenaId);
 
   // Aquecimento do diálogo do dia: assim que o navegador fica ocioso (ou logo
   // depois, onde não há `requestIdleCallback`), o pedaço de código dele vem.
@@ -217,10 +220,23 @@ export default function V2BookingCalendar({ arenaId, arena: arenaProp }) {
     [unavailabilities, arenaGameDays],
   );
 
+  /**
+   * E as VAGAS ABERTAS (open match). Mesma razão dos dias de jogo: uma vaga
+   * publicada às 19h na Quadra 1 é a Quadra 1 comprometida às 19h. Aqui nada é
+   * gravado — o bloqueio é sempre derivado da própria vaga.
+   *
+   * Não depende de feature flag: a flag gateia o que se MOSTRA, não se a
+   * quadra está ocupada.
+   */
+  const comVagasAbertas = useMemo(
+    () => mergeOpenSlotBlocks(comDiasDeJogo, vagasAbertas),
+    [comDiasDeJogo, vagasAbertas],
+  );
+
   const filteredUnavailabilities = useMemo(() => {
-    if (courtId === 'all') return comDiasDeJogo;
-    return comDiasDeJogo.filter((u) => !u.court_id || u.court_id === courtId);
-  }, [comDiasDeJogo, courtId]);
+    if (courtId === 'all') return comVagasAbertas;
+    return comVagasAbertas.filter((u) => !u.court_id || u.court_id === courtId);
+  }, [comVagasAbertas, courtId]);
 
   // Reservas e bloqueios indexados por DATA. A grade faz 42 dias × quadras
   // consultas de status; sem o índice, cada uma varre a lista inteira da
@@ -583,6 +599,7 @@ export default function V2BookingCalendar({ arenaId, arena: arenaProp }) {
           courtId={courtId === 'all' ? null : courtId}
           courts={activeCourts}
           gameDays={gameDaysByDate.get(selectedDate) || []}
+          openSlots={vagasAbertas}
           onClose={() => setSelectedDate(null)}
         />
         </Suspense>

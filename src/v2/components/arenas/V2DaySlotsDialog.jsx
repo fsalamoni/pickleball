@@ -68,6 +68,7 @@ import BookingRequestDialog from '@/modules/arenas/components/BookingRequestDial
 import CourtTimePicker from './CourtTimePicker';
 import { sortSelection, summarizeSelection } from '@/modules/arenas/domain/bookingSelection';
 import { arenaGameDayTimeRange, mergeGameDayBlocks } from '@/modules/games/domain/arenaGameDay';
+import { mergeOpenSlotBlocks } from '@/modules/arenas/domain/openMatch';
 
 const STEP = 60;
 
@@ -122,6 +123,9 @@ export default function V2DaySlotsDialog({
   // Dias de jogo da arena NESTA data (flag `arena_game_day`). Sem eles — que é
   // o padrão — a tela é exatamente a de antes.
   gameDays = [],
+  // Vagas abertas (open match) da arena. Ocupam a quadra igual ao dia de jogo,
+  // e o bloqueio delas é sempre derivado (não há cópia gravada).
+  openSlots = [],
 }) {
   const { isAuthenticated, user } = useAuth();
   const { data: schedules = [], isLoading: loadingSchedules } = useArenaCourtSchedules(arenaId);
@@ -172,11 +176,16 @@ export default function V2DaySlotsDialog({
    * conveniência. `mergeGameDayBlocks` não duplica o que já foi gravado.
    */
   const unavailabilitiesOfDay = useMemo(() => {
-    const todos = mergeGameDayBlocks(unavailabilities || [], gameDays || []);
+    // Dias de jogo E vagas abertas: as duas coisas OCUPAM a quadra, e nenhuma
+    // das duas pode depender de a cópia gravada ter chegado.
+    const todos = mergeOpenSlotBlocks(
+      mergeGameDayBlocks(unavailabilities || [], gameDays || []),
+      openSlots || [],
+    );
     return todos
       .filter((u) => u.date === date)
       .filter((u) => !courtId || !u.court_id || u.court_id === courtId);
-  }, [unavailabilities, gameDays, date, courtId]);
+  }, [unavailabilities, gameDays, openSlots, date, courtId]);
 
   // Slots do dia (1h cada, dentro dos schedules)
   const slotsWithStatus = useMemo(() => {

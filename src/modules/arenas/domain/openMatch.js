@@ -1,9 +1,27 @@
 /**
- * Domínio: Open Match (Arena V3 — sprint 1).
+ * Domínio: Open Match — a arena publica um horário com vagas.
  *
- * Lógica pura para gerenciamento de slots de jogo aberto.
- * Sem I/O, testável.
+ * Lógica pura, sem I/O.
+ *
+ * ## O nível é o da RÉGUA ÚNICA (2.0–8.0)
+ *
+ * A faixa de nível de uma vaga (`min_level`/`max_level`) e o nível do atleta
+ * são sempre a régua canônica da plataforma — a mesma dos sorteios, do rating
+ * e do DUPR. Antes eram validados de 0 a 7 e comparados contra um campo de
+ * perfil que não vive nessa escala: a peneira ou não filtrava nada, ou
+ * filtrava errado. Ver `docs/13-NIVEL-UNIFICADO.md` e
+ * `modules/rating/domain/unifiedLevel.js`.
+ *
+ * ## A vaga aberta OCUPA a quadra
+ *
+ * Uma vaga publicada às 19h na Quadra 1 é a Quadra 1 comprometida às 19h. Se o
+ * calendário não souber disso, a arena vende duas vezes o mesmo horário. Por
+ * isso `openSlotBlocks` deriva os bloqueios das próprias vagas, no mesmo
+ * formato de `arena_unavailabilities` — mesma solução do dia de jogo da arena
+ * (`games/domain/arenaGameDay.js`), pelo mesmo motivo.
  */
+
+import { DUPR_MAX, DUPR_MIN } from '@/modules/rating/domain/duprScale.js';
 
 export const OPEN_SLOT_STATUS = Object.freeze({
   OPEN: 'open',
@@ -94,11 +112,13 @@ export function getSlotFillPct(slot) {
  * Verifica se o usuário pode se inscrever em um slot.
  * @param {Object} slot
  * @param {Object} user - { uid, ... }
- * @param {Object} [userProfile] - { level, city, ... }
+ * @param {{ level?: number|null }} [athlete] — `level` é o nível na RÉGUA
+ *   ÚNICA (2.0–8.0), vindo de `resolveUnifiedLevel`. Sem nível conhecido, a
+ *   peneira NÃO barra: chutar um número seria pior do que deixar entrar.
  * @param {Date|number} [now] - para testabilidade
  * @returns {{ ok: boolean, reason?: string }}
  */
-export function canJoinOpenSlot(slot, user, userProfile, now = Date.now()) {
+export function canJoinOpenSlot(slot, user, athlete, now = Date.now()) {
   if (!slot) return { ok: false, reason: 'Slot não encontrado.' };
   if (!user?.uid) return { ok: false, reason: 'Faça login para se inscrever.' };
 
@@ -122,17 +142,77 @@ export function canJoinOpenSlot(slot, user, userProfile, now = Date.now()) {
     return { ok: false, reason: 'Não há vagas disponíveis.' };
   }
 
-  // Filtro de nível (se arena definiu)
-  if (userProfile && Number.isFinite(userProfile.level)) {
-    if (Number.isFinite(slot.min_level) && userProfile.level < slot.min_level) {
-      return { ok: false, reason: `Nível mínimo: ${slot.min_level}.` };
-    }
-    if (Number.isFinite(slot.max_level) && userProfile.level > slot.max_level) {
-      return { ok: false, reason: `Nível máximo: ${slot.max_level}.` };
-    }
-  }
+  // Peneira de nível, na régua única.
+  const fit = slotLevelFit(slot, athlete?.level);
+  if (!fit.ok) return { ok: false, reason: fit.reason };
 
   return { ok: true };
+}
+
+/* ------------------------------------------------------------------ */
+/*  Nível — sempre na régua única (2.0–8.0)                            */
+/* ------------------------------------------------------------------ */
+
+/** Um número na régua, com uma casa: `3.5`. Fora dela, `null`. */
+function nivelValido(v) {
+  const n = Number(v);
+  return Number.isFinite(n) && n >= DUPR_MIN && n <= DUPR_MAX ? n : null;
+}
+
+/**
+ * O nível do atleta cabe na faixa desta vaga?
+ *
+ * Sem faixa definida, cabe sempre. Sem nível conhecido, **também cabe**: a
+ * plataforma nunca inventa um nível, e barrar quem não tem histórico
+ * afastaria justamente quem mais precisa achar jogo.
+ *
+ * @param {Object} slot
+ * @param {number|null|undefined} level — na régua 2.0–8.0
+ * @returns {{ ok: boolean, reason?: string, known: boolean }}
+ */
+export function slotLevelFit(slot, level) {
+  const min = nivelValido(slot?.min_level);
+  const max = nivelValido(slot?.max_level);
+  if (min == null && max == null) return { ok: true, known: false };
+
+  const n = nivelValido(level);
+  if (n == null) return { ok: true, known: false };
+
+  if (min != null && n < min) {
+    return {
+      ok: false,
+      known: true,
+      reason: `Esta vaga é a partir do nível ${formatLevel(min)} — o seu é ${formatLevel(n)}.`,
+    };
+  }
+  if (max != null && n > max) {
+    return {
+      ok: false,
+      known: true,
+      reason: `Esta vaga vai até o nível ${formatLevel(max)} — o seu é ${formatLevel(n)}.`,
+    };
+  }
+  return { ok: true, known: true };
+}
+
+/** `3.5`, `3.0` — sempre com uma casa, como o DUPR se escreve. */
+export function formatLevel(value) {
+  const n = Number(value);
+  return Number.isFinite(n) ? n.toFixed(1) : '';
+}
+
+/**
+ * A faixa de nível da vaga, em texto: "3.0 a 4.0", "a partir de 3.0",
+ * "até 4.0" ou `null` (aberta a todos os níveis).
+ * @returns {string|null}
+ */
+export function slotLevelRangeLabel(slot) {
+  const min = nivelValido(slot?.min_level);
+  const max = nivelValido(slot?.max_level);
+  if (min != null && max != null) return `${formatLevel(min)} a ${formatLevel(max)}`;
+  if (min != null) return `a partir de ${formatLevel(min)}`;
+  if (max != null) return `até ${formatLevel(max)}`;
+  return null;
 }
 
 /**
@@ -171,11 +251,14 @@ export function normalizeOpenSlotInput(input = {}) {
     errors.format = 'Formato inválido.';
   }
 
+  // A faixa vive na RÉGUA ÚNICA (2.0–8.0), a mesma do atleta. Escalas
+  // diferentes na mesma comparação não filtram nada — filtram errado.
+  const faixa = `${formatLevel(DUPR_MIN)} e ${formatLevel(DUPR_MAX)}`;
   let minLevel = null;
   if (input.min_level !== '' && input.min_level != null) {
     const n = Number(input.min_level);
-    if (!Number.isFinite(n) || n < 0 || n > 7) {
-      errors.min_level = 'Nível mínimo deve ser entre 0 e 7.';
+    if (!Number.isFinite(n) || n < DUPR_MIN || n > DUPR_MAX) {
+      errors.min_level = `Nível mínimo deve ser entre ${faixa}.`;
     } else {
       minLevel = n;
     }
@@ -183,8 +266,8 @@ export function normalizeOpenSlotInput(input = {}) {
   let maxLevel = null;
   if (input.max_level !== '' && input.max_level != null) {
     const n = Number(input.max_level);
-    if (!Number.isFinite(n) || n < 0 || n > 7) {
-      errors.max_level = 'Nível máximo deve ser entre 0 e 7.';
+    if (!Number.isFinite(n) || n < DUPR_MIN || n > DUPR_MAX) {
+      errors.max_level = `Nível máximo deve ser entre ${faixa}.`;
     } else {
       maxLevel = n;
     }
@@ -212,6 +295,9 @@ export function normalizeOpenSlotInput(input = {}) {
     min_level: minLevel,
     max_level: maxLevel,
     price,
+    // `court_id` é ADITIVO e opcional: sem ele a vaga segue existindo como
+    // sempre existiu (texto livre), só não fecha a quadra no calendário.
+    court_id: String(input.court_id ?? '').trim() || null,
     court: String(input.court ?? '').trim().slice(0, 60),
     notes: String(input.notes ?? '').trim().slice(0, 500),
   };
@@ -267,4 +353,125 @@ function slotEndMs(slot) {
     return new Date(Number(y), Number(mo) - 1, Number(d), Number(h), Number(mi)).getTime();
   }
   return slotStartMs(slot);  // fallback
+}
+
+/* ------------------------------------------------------------------ */
+/*  A vaga aberta OCUPA a quadra                                       */
+/* ------------------------------------------------------------------ */
+
+/** Uma vaga ainda vale para ocupar a quadra? Cancelada, não. */
+function vagaOcupaQuadra(slot) {
+  if (!slot) return false;
+  if (slot.status === OPEN_SLOT_STATUS.CANCELLED) return false;
+  return Boolean(slot.court_id && slot.date && slot.start && slot.end);
+}
+
+/**
+ * Os bloqueios de calendário que estas vagas implicam — DERIVADOS.
+ *
+ * Mesmo desenho de `gameDayBlocks` (`games/domain/arenaGameDay.js`), e pelo
+ * mesmo motivo: uma vaga publicada às 19h na Quadra 1 é a Quadra 1
+ * comprometida às 19h. Se só o "open match" souber disso, a arena vende o
+ * mesmo horário duas vezes — o atleta reserva, chega, e encontra um jogo
+ * aberto acontecendo na quadra dele.
+ *
+ * Diferente do dia de jogo, aqui **nada é gravado**: o bloqueio é sempre
+ * calculado na leitura. Não há cópia para faltar.
+ *
+ * Vaga sem `court_id` (o formato antigo, com o nome da quadra em texto livre)
+ * não gera bloqueio — não há como saber QUAL quadra é.
+ *
+ * @param {Array<object>} slots
+ * @returns {Array<object>} no MESMO formato de `arena_unavailabilities`
+ */
+export function openSlotBlocks(slots = []) {
+  if (!Array.isArray(slots)) return [];
+  return slots.filter(vagaOcupaQuadra).map((s) => ({
+    id: `vaga-aberta:${s.id}`,
+    arena_id: s.arena_id,
+    court_id: s.court_id,
+    date: s.date,
+    start_time: s.start,
+    end_time: s.end,
+    source: 'open_match',
+    open_slot_id: s.id,
+    notes: `Jogo aberto${s.format ? ` (${s.format})` : ''}`,
+    derivado: true,
+  }));
+}
+
+/** A identidade de um bloqueio de vaga, para não contar o mesmo duas vezes. */
+function chaveDaVaga(b) {
+  return [b?.open_slot_id, b?.court_id, b?.date, b?.start_time, b?.end_time].join('|');
+}
+
+/**
+ * Os bloqueios que a tela já tem mais os que as vagas abertas implicam.
+ *
+ * Use para calcular STATUS (calendário, grade do dia, conflito de reserva).
+ * **Não** use para LISTAR bloqueios numa tela de gestão: o derivado não tem
+ * documento, e um botão de apagar apontaria para o nada — a lição que o dia de
+ * jogo já ensinou.
+ *
+ * @param {Array<object>} blocks — gravados (e possivelmente já mesclados com
+ *   os do dia de jogo)
+ * @param {Array<object>} slots
+ */
+export function mergeOpenSlotBlocks(blocks = [], slots = []) {
+  const base = Array.isArray(blocks) ? blocks : [];
+  const jaTem = new Set(base.filter((b) => b?.open_slot_id).map(chaveDaVaga));
+  const faltando = openSlotBlocks(slots).filter((b) => !jaTem.has(chaveDaVaga(b)));
+  return faltando.length === 0 ? base : [...base, ...faltando];
+}
+
+/**
+ * A vaga aberta bate com alguma OUTRA coisa já marcada na quadra?
+ *
+ * A arena precisa saber ANTES de publicar — publicar uma vaga em cima de uma
+ * reserva confirmada é criar um conflito que só aparece no dia.
+ *
+ * Encostar não é sobrepor: 18h–20h e 20h–22h convivem.
+ *
+ * @param {{ court_id?: string, date: string, start: string, end: string }} vaga
+ * @param {Array<object>} blocks — bloqueios (já mesclados) da arena
+ * @param {Array<object>} bookedSlots — `{ court_id, date, start, end }` das reservas
+ * @returns {{ hasConflict: boolean, reason: string|null }}
+ */
+export function openSlotConflict(vaga, blocks = [], bookedSlots = []) {
+  if (!vaga?.court_id || !vaga?.date || !vaga?.start || !vaga?.end) {
+    return { hasConflict: false, reason: null };
+  }
+  const ini = timeToMinutes(vaga.start);
+  const fim = timeToMinutes(vaga.end);
+  if (ini == null || fim == null) return { hasConflict: false, reason: null };
+
+  const sobrepoe = (aIni, aFim) => aIni != null && aFim != null && aIni < fim && ini < aFim;
+
+  const bloqueio = (blocks || []).find((b) => (
+    b?.date === vaga.date
+    // Bloqueio sem quadra fecha a arena inteira.
+    && (!b.court_id || b.court_id === vaga.court_id)
+    && sobrepoe(timeToMinutes(b.start_time), timeToMinutes(b.end_time))
+  ));
+  if (bloqueio) {
+    return {
+      hasConflict: true,
+      reason: bloqueio.source === 'game_day'
+        ? 'Já existe um dia de jogo nesta quadra e horário.'
+        : bloqueio.source === 'open_match'
+          ? 'Já existe outro jogo aberto nesta quadra e horário.'
+          : 'Esta quadra está bloqueada neste horário.',
+    };
+  }
+
+  const reserva = (bookedSlots || []).find((b) => (
+    b?.date === vaga.date
+    && b?.court_id === vaga.court_id
+    && sobrepoe(timeToMinutes(b.start), timeToMinutes(b.end))
+  ));
+  if (reserva) {
+    return { hasConflict: true, reason: 'Já existe uma reserva nesta quadra e horário.' };
+  }
+
+  return { hasConflict: false, reason: null };
 }

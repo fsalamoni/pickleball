@@ -1,24 +1,33 @@
 /**
- * V2ArenaMatchmaking — Busca de parceiro/adversário.
+ * V2ArenaMatchmaking — encontrar parceiro nesta arena.
  *
- * Rota: /arenas/:arenaId/matchmaking
+ * Rota: `/arenas/:arenaId/matchmaking`
+ * Módulo: `matchmaking_partner_finder`.
  *
- * Lista atletas com nível compatível, ordenados por score de match.
- * 1-tap para abrir chat.
+ * ## O que estava errado
  *
- * Aditivo — não mexe em nenhuma página existente.
+ * O score de compatibilidade compara NÍVEL, e o nível que chegava aqui era
+ * `userProfile.leveling_level || userProfile.level` — um CÓDIGO de faixa
+ * (texto), não um número. `matchScore` exige `Number.isFinite` nos dois lados,
+ * então a dimensão mais importante do score simplesmente não pontuava: a lista
+ * saía ordenada só por cidade e ruído.
+ *
+ * Agora os dois lados vêm da RÉGUA ÚNICA (2.0–8.0), em UMA consulta para o
+ * lote inteiro de candidatos. E a cidade de referência passou a ser a da
+ * ARENA, não a de quem procura: quem busca parceiro nesta arena quer alguém
+ * que jogue AQUI.
  */
 
 import React, { useState, useMemo } from 'react';
-import { Link, useParams } from 'react-router-dom';
+import { Link, useNavigate, useParams } from 'react-router-dom';
 import { ArrowLeft, MessageCircle, Search, Users } from 'lucide-react';
 import { useAuth } from '@/core/lib/FirebaseAuthContext';
 import { useArena } from '@/modules/arenas/hooks/useArenas';
 import { useAthletes } from '@/modules/athletes/hooks/useAthletes';
-import {
-  useCanArenaUseModule,
-  useArenaSettings,
-} from '@/modules/arenas/hooks/useArenaV3';
+import { useArenaModules } from '@/modules/arenas/hooks/useArenaModules';
+import { ARENA_MODULE_ID } from '@/modules/arenas/domain/modules';
+import { useMyUnifiedLevel, useUnifiedLevels } from '@/modules/rating/hooks/useMyUnifiedLevel';
+import { formatLevel } from '@/modules/arenas/domain/openMatch';
 import {
   topMatches,
   scoreLabel,
@@ -46,7 +55,7 @@ function MatchCard({ candidate, score, arenaId, onChat }) {
             {candidate.platform_name || candidate.full_name || 'Atleta'}
           </h3>
           {Number.isFinite(candidate.level) && (
-            <V2Badge tone="neutral">Nível {candidate.level}</V2Badge>
+            <V2Badge tone="neutral">Nível {formatLevel(candidate.level)}</V2Badge>
           )}
         </div>
         <div className="mt-0.5 flex flex-wrap items-center gap-2 text-xs text-gray-500">
@@ -71,11 +80,13 @@ function MatchCard({ candidate, score, arenaId, onChat }) {
 
 export default function V2ArenaMatchmaking() {
   const { arenaId } = useParams();
-  const { user, userProfile } = useAuth();
+  const navigate = useNavigate();
+  const { user } = useAuth();
   const { data: arena, isLoading: arenaLoading } = useArena(arenaId);
-  const canUseModule = useCanArenaUseModule(arenaId, 'matchmaking_partner_finder');
-  const { data: settingsData } = useArenaSettings(arenaId, { createIfMissing: false });
+  const { isOn, isLoading: modulosLoading } = useArenaModules(arenaId);
+  const canUseModule = isOn(ARENA_MODULE_ID.MATCHMAKING_PARTNER_FINDER);
   const { data: athletes = [], isLoading: athletesLoading } = useAthletes();
+  const { level: meuNivel } = useMyUnifiedLevel();
 
   const [criteriaInput, setCriteriaInput] = useState({
     min_level_diff: 0,
@@ -91,22 +102,31 @@ export default function V2ArenaMatchmaking() {
   );
   const criteria = criteriaValidation.value;
 
-  // Acha matches, excluindo o próprio user
+  // Candidatos: todos menos eu. Cortado antes de buscar nível, para o lote
+  // não crescer sem limite numa plataforma grande.
   const candidates = useMemo(
-    () => athletes.filter((a) => a.uid !== user?.uid),
+    () => athletes.filter((a) => a.uid && a.uid !== user?.uid).slice(0, 120),
     [athletes, user],
   );
 
+  // Os níveis do lote inteiro em UMA consulta.
+  const { levels } = useUnifiedLevels(candidates.map((a) => a.uid));
+
   const matches = useMemo(() => {
-    const userLevel = userProfile?.leveling_level || userProfile?.level;
-    const userForScore = {
+    const eu = {
       uid: user?.uid,
-      level: userLevel,
-      city: userProfile?.city,
-      state: userProfile?.state,
+      level: meuNivel,
+      // A cidade de referência é a da ARENA: quem procura parceiro aqui quer
+      // alguém que jogue aqui, não alguém que more perto de mim.
+      city: arena?.city,
+      state: arena?.state,
     };
-    return topMatches(userForScore, candidates, criteria, 30);
-  }, [user, userProfile, candidates, criteria]);
+    const comNivel = candidates.map((a) => ({
+      ...a,
+      level: Number.isFinite(levels[a.uid]) ? levels[a.uid] : null,
+    }));
+    return topMatches(eu, comNivel, criteria, 30);
+  }, [user?.uid, meuNivel, arena?.city, arena?.state, candidates, levels, criteria]);
 
   // Sem login
   if (!user) {
@@ -123,7 +143,7 @@ export default function V2ArenaMatchmaking() {
     );
   }
 
-  if (arenaLoading) {
+  if (arenaLoading || modulosLoading) {
     return <V2Skeleton className="mx-auto h-96 max-w-[1000px] rounded-4xl" />;
   }
 
@@ -154,8 +174,8 @@ export default function V2ArenaMatchmaking() {
         <V2Surface>
           <V2EmptyState
             icon={Users}
-            title="Matchmaking indisponível nesta arena"
-            description="Esta arena não ativou o recurso de busca de parceiros."
+            title="Busca de parceiro não está ativa nesta arena"
+            description="Esta arena ainda não ativou o recurso. Você pode procurar parceiros em outras arenas."
             action={<V2Button asChild variant="secondary"><Link to="/arenas">Ver outras arenas</Link></V2Button>}
           />
         </V2Surface>
@@ -163,10 +183,9 @@ export default function V2ArenaMatchmaking() {
     );
   }
 
-  const handleChat = (candidate) => {
-    // Por ora: navegar para a página de chat (já existe)
-    window.location.href = `/chat?with=${candidate.uid}`;
-  };
+  // Navegação de aplicação, não recarregamento de página: `window.location`
+  // derrubava o estado inteiro (e o cache) para abrir uma conversa.
+  const handleChat = (candidate) => navigate(`/chat?with=${candidate.uid}`);
 
   return (
     <div className="mx-auto max-w-[1000px]">
@@ -180,10 +199,11 @@ export default function V2ArenaMatchmaking() {
         <div className="flex flex-wrap items-end justify-between gap-3">
           <div>
             <h1 className="font-display text-3xl font-bold tracking-tight text-ink">
-              Matchmaking · {arena.name}
+              Encontrar parceiro · {arena.name}
             </h1>
             <p className="mt-2 font-medium text-gray-500">
-              Encontre parceiros e adversários com nível próximo. Toque para abrir o chat.
+              Atletas com nível próximo do seu
+              {Number.isFinite(meuNivel) ? ` (${formatLevel(meuNivel)})` : ''}. Toque para conversar.
             </p>
           </div>
         </div>

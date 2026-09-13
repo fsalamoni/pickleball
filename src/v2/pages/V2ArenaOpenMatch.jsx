@@ -1,128 +1,144 @@
 /**
- * V2ArenaOpenMatch — Lista de slots de Open Match.
+ * V2ArenaOpenMatch — os jogos abertos de uma arena, na visão do ATLETA.
  *
- * Rota pública: /arenas/:arenaId/open-match
+ * Rota: `/arenas/:arenaId/open-match`
+ * Módulo: `matchmaking_open_match`.
  *
- * Mostra slots abertos pela arena (com vagas). Atleta entra em 1-tap.
- * Se arena não tem o módulo `matchmaking_open_match` habilitado, mostra mensagem.
+ * A pergunta que esta tela responde é uma só: **existe jogo aqui hoje que eu
+ * possa entrar?** Por isso:
  *
- * Aditivo — não mexe em nenhuma página existente.
+ * - a data aparece em português (`Qui, 23/07 · 19:00–21:00`), não a ISO crua;
+ * - o nível é dito nos DOIS lados — a faixa da vaga e o seu — porque "nível
+ *   mínimo 4.0" sozinho não diz se você entra;
+ * - quando lota, a fila é oferecida no mesmo lugar, sem trocar de tela;
+ * - o que você já confirmou fica em cima e marcado, para não entrar duas vezes;
+ * - falha de leitura NÃO vira "nenhum jogo aberto": vira erro com "tentar de
+ *   novo". Lista vazia tem um significado próprio, e mentir aqui faz o atleta
+ *   desistir da arena.
  */
 
-import React, { useState } from 'react';
+import React, { useMemo } from 'react';
 import { Link, Navigate, useParams } from 'react-router-dom';
 import { toast } from 'sonner';
-import { ArrowLeft, Calendar, Clock, MapPin, Users, X, Check } from 'lucide-react';
-import { useAuth } from '@/core/lib/FirebaseAuthContext';
 import {
-  useArena,
-  useMyManagedArenas,
-} from '@/modules/arenas/hooks/useArenas';
+  ArrowLeft, BellRing, Check, Clock, Info, MapPin, Users,
+} from 'lucide-react';
+import { useAuth } from '@/core/lib/FirebaseAuthContext';
+import { useArena } from '@/modules/arenas/hooks/useArenas';
 import {
   useArenaOpenSlots,
   useJoinOpenSlot,
   useLeaveOpenSlot,
-  useUserWaitlistEntry,
   useJoinWaitlist,
-  useSlotWaitlist,
+  useLeaveWaitlist,
+  useAcceptWaitlist,
+  useDeclineWaitlist,
+  useUserWaitlist,
 } from '@/modules/arenas/hooks/useArenaV3';
-import { useCanArenaUseModule } from '@/modules/arenas/hooks/useArenaV3';
+import { useArenaModules } from '@/modules/arenas/hooks/useArenaModules';
+import { ARENA_MODULE_ID } from '@/modules/arenas/domain/modules';
+import { useMyUnifiedLevel } from '@/modules/rating/hooks/useMyUnifiedLevel';
 import {
+  formatLevel,
   getAvailableSpots,
   getSlotFillPct,
+  slotLevelFit,
+  slotLevelRangeLabel,
+  slotStartMs,
 } from '@/modules/arenas/domain/openMatch';
+import { formatSlotLabel, todayISO } from '@/modules/arenas/domain/calendar';
+import { WAITLIST_STATUS } from '@/modules/arenas/domain/waitlist';
 import { V2Badge, V2Button, V2EmptyState, V2Skeleton, V2Surface } from '@/v2/ui/primitives';
 
-function SlotCard({ slot, arenaId, onJoin, onJoinWaitlist, onLeave, isIn, isInWaitlist, waitlistCount }) {
-  const available = getAvailableSpots(slot);
-  const fillPct = getSlotFillPct(slot);
-  const isFull = available <= 0;
-  const isPast = new Date(slot.date) < new Date(new Date().toISOString().slice(0, 10));
+const FORMATO_LABEL = {
+  duplas: 'Duplas', simples: 'Simples', mistas: 'Duplas mistas',
+  open: 'Livre', treino: 'Treino',
+};
+
+function VagaCard({ slot, meuNivel, jaEstou, naFila, onEntrar, onSair, onFila, ocupado }) {
+  const vagas = getAvailableSpots(slot);
+  const pct = getSlotFillPct(slot);
+  const lotado = vagas <= 0;
+  // LOTADO e ENCERRADO são coisas diferentes, e confundi-las escondia a fila:
+  // `isSlotOpenForJoin` responde `false` para os dois, e o cartão dizia
+  // "inscrições encerradas" num jogo que só estava cheio — que é exatamente a
+  // hora de oferecer a fila de espera.
+  const inicio = slotStartMs(slot);
+  const jaComecou = Number.isFinite(inicio) && inicio < Date.now();
+  const faixa = slotLevelRangeLabel(slot);
+  const encaixe = slotLevelFit(slot, meuNivel);
 
   return (
-    <V2Surface className="flex h-full flex-col">
+    <V2Surface className={jaEstou ? 'border-acid/60 bg-acid/[0.05]' : undefined}>
       <div className="flex flex-wrap items-start justify-between gap-2">
-        <div>
-          <h3 className="font-display text-lg font-bold text-ink">
-            {slot.date} · {slot.start}–{slot.end}
-          </h3>
-          {slot.court && (
-            <p className="mt-1 text-sm text-gray-500">
-              <MapPin className="mr-1 inline h-3.5 w-3.5" /> {slot.court}
-            </p>
-          )}
+        <div className="min-w-0">
+          <h3 className="font-display text-lg font-bold text-ink">{formatSlotLabel(slot)}</h3>
+          <p className="mt-1 flex flex-wrap items-center gap-x-3 gap-y-1 text-xs text-gray-500">
+            {slot.court && (
+              <span className="inline-flex items-center gap-1">
+                <MapPin className="h-3.5 w-3.5" /> {slot.court}
+              </span>
+            )}
+            {slot.format && <span>{FORMATO_LABEL[slot.format] || slot.format}</span>}
+            {Number.isFinite(slot.price) && slot.price > 0 && (
+              <span>R$ {Number(slot.price).toFixed(2)} por atleta</span>
+            )}
+          </p>
         </div>
-        <V2Badge tone={isFull ? 'red' : 'green'}>
-          {isFull ? 'Lotado' : `${available} vaga${available === 1 ? '' : 's'}`}
-        </V2Badge>
-      </div>
-
-      <div className="mt-4 flex flex-wrap items-center gap-2 text-xs">
-        {slot.format && <V2Badge tone="neutral">{slot.format}</V2Badge>}
-        {Number.isFinite(slot.min_level) && Number.isFinite(slot.max_level) && (
-          <V2Badge tone="neutral">Nível {slot.min_level}–{slot.max_level}</V2Badge>
-        )}
-        {Number.isFinite(slot.price) && slot.price > 0 && (
-          <V2Badge tone="amber">R$ {slot.price.toFixed(2)}</V2Badge>
-        )}
-        {Number.isFinite(slot.price) && slot.price === 0 && (
-          <V2Badge tone="green">Grátis</V2Badge>
-        )}
-      </div>
-
-      {/* Barra de ocupação */}
-      <div className="mt-4">
-        <div className="flex items-center justify-between text-xs text-gray-500">
-          <span>Ocupação</span>
-          <span className="font-bold text-ink">{fillPct}%</span>
-        </div>
-        <div className="mt-1 h-2 w-full overflow-hidden rounded-full bg-gray-100">
-          <div
-            className={['h-full rounded-full transition-all', isFull ? 'bg-red-400' : 'bg-green-400'].join(' ')}
-            style={{ width: `${fillPct}%` }}
-          />
+        <div className="flex flex-col items-end gap-1">
+          {jaEstou && <V2Badge tone="green"><Check className="h-3 w-3" /> Você está dentro</V2Badge>}
+          <V2Badge tone={lotado ? 'amber' : 'green'}>
+            {lotado ? 'Lotado' : `${vagas} vaga${vagas === 1 ? '' : 's'}`}
+          </V2Badge>
         </div>
       </div>
 
-      {slot.notes && (
-        <p className="mt-4 text-sm text-gray-600">{slot.notes}</p>
+      <div className="mt-3 h-1.5 w-full overflow-hidden rounded-full bg-gray-100">
+        <div
+          className={`h-full rounded-full ${lotado ? 'bg-amber-400' : 'bg-acid'}`}
+          style={{ width: `${pct}%` }}
+        />
+      </div>
+
+      {/* O nível dos DOIS lados: só a faixa não diz se a pessoa entra. */}
+      {faixa && (
+        <p className={`mt-3 flex gap-1.5 rounded-2xl p-2.5 text-xs leading-5 ${
+          encaixe.ok ? 'bg-paper text-gray-600' : 'bg-amber-50 text-amber-800'
+        }`}
+        >
+          <Info className="mt-px h-3.5 w-3.5 shrink-0" />
+          <span>
+            Nível <strong>{faixa}</strong>
+            {Number.isFinite(meuNivel)
+              ? ` · o seu é ${formatLevel(meuNivel)}`
+              : ' · ainda não temos o seu nível, então você pode entrar'}
+            {!encaixe.ok && ' — fora da faixa desta vaga.'}
+          </span>
+        </p>
       )}
 
-      <div className="mt-auto pt-4">
-        {isPast ? (
-          <p className="text-center text-xs text-gray-400">Slot já passou</p>
-        ) : isIn ? (
-          <V2Button
-            variant="danger"
-            size="sm"
-            className="w-full"
-            onClick={() => onLeave(slot.id)}
-          >
-            <X className="mr-1.5 h-4 w-4" /> Sair do slot
+      {slot.notes && <p className="mt-2 text-xs leading-5 text-gray-500">{slot.notes}</p>}
+
+      <div className="mt-4 flex flex-wrap items-center gap-2">
+        {jaEstou ? (
+          <V2Button variant="ghost" size="sm" disabled={ocupado} onClick={() => onSair(slot)}>
+            Sair deste jogo
           </V2Button>
-        ) : isFull ? (
-          isInWaitlist ? (
-            <V2Button variant="secondary" size="sm" className="w-full" disabled>
-              <Check className="mr-1.5 h-4 w-4" /> Você está na fila ({waitlistCount}º)
-            </V2Button>
+        ) : jaComecou ? (
+          <span className="inline-flex items-center gap-1.5 text-xs text-gray-400">
+            <Clock className="h-3.5 w-3.5" /> Inscrições encerradas
+          </span>
+        ) : lotado ? (
+          naFila ? (
+            <V2Badge tone="blue">Você está na fila de espera</V2Badge>
           ) : (
-            <V2Button
-              variant="secondary"
-              size="sm"
-              className="w-full"
-              onClick={() => onJoinWaitlist(slot.id)}
-            >
-              <Users className="mr-1.5 h-4 w-4" /> Entrar na fila de espera
+            <V2Button variant="secondary" size="sm" disabled={ocupado} onClick={() => onFila(slot)}>
+              Entrar na fila de espera
             </V2Button>
           )
         ) : (
-          <V2Button
-            variant="primary"
-            size="sm"
-            className="w-full"
-            onClick={() => onJoin(slot.id)}
-          >
-            Inscrever-se
+          <V2Button size="sm" disabled={ocupado || !encaixe.ok} onClick={() => onEntrar(slot)}>
+            Quero jogar
           </V2Button>
         )}
       </div>
@@ -130,202 +146,207 @@ function SlotCard({ slot, arenaId, onJoin, onJoinWaitlist, onLeave, isIn, isInWa
   );
 }
 
-export default function V2ArenaOpenMatch() {
-  const { arenaId } = useParams();
-  const { user } = useAuth();
-  const { data: arena, isLoading: arenaLoading } = useArena(arenaId);
-  const { data: managed = [] } = useMyManagedArenas();
-  const canUseModule = useCanArenaUseModule(arenaId, 'matchmaking_open_match');
-  const { data: slots = [], isLoading: slotsLoading } = useArenaOpenSlots(arenaId);
-  const join = useJoinOpenSlot();
-  const leave = useLeaveOpenSlot();
-  const joinWl = useJoinWaitlist();
-  const [filter, setFilter] = useState('open');  // 'open' | 'all' | 'full'
-
-  // Auth gate
-  if (!user) {
-    return (
-      <div className="mx-auto max-w-[500px]">
-        <V2Surface>
-          <V2EmptyState
-            title="Faça login"
-            description="Você precisa estar logado para ver vagas abertas."
-            action={<V2Button asChild><Link to="/login">Entrar</Link></V2Button>}
-          />
-        </V2Surface>
-      </div>
-    );
-  }
-
-  if (arenaLoading) {
-    return <V2Skeleton className="mx-auto h-96 max-w-[1200px] rounded-4xl" />;
-  }
-
-  if (!arena) {
-    return (
-      <div className="mx-auto max-w-[700px]">
-        <V2Surface>
-          <V2EmptyState
-            title="Arena não encontrada"
-            action={<Link to="/arenas" className="text-sm font-bold text-ink underline">← Voltar ao diretório</Link>}
-          />
-        </V2Surface>
-      </div>
-    );
-  }
-
-  // Se o módulo não está habilitado, mostrar mensagem
-  if (!canUseModule) {
-    return (
-      <div className="mx-auto max-w-[700px]">
-        <div className="mb-4">
-          <Link
-            to={`/arenas/${arena.id}`}
-            className="inline-flex items-center gap-1.5 text-xs font-bold uppercase tracking-wider text-gray-500 hover:text-ink"
-          >
-            <ArrowLeft className="h-3.5 w-3.5" /> Voltar à arena
-          </Link>
-        </div>
-        <V2Surface>
-          <V2EmptyState
-            icon={Calendar}
-            title="Open Match indisponível nesta arena"
-            description="Esta arena não ativou o recurso de Open Match. Procure outras arenas ou entre em contato com ela."
-            action={<V2Button asChild variant="secondary"><Link to="/arenas">Ver outras arenas</Link></V2Button>}
-          />
-        </V2Surface>
-      </div>
-    );
-  }
-
-  const today = new Date().toISOString().slice(0, 10);
-  const filtered = slots.filter((s) => {
-    if (s.status === 'cancelled') return false;
-    if (filter === 'open' && (s.status === 'full' || s.date < today)) return false;
-    if (filter === 'full' && s.status !== 'full') return false;
-    return s.date >= today || filter === 'all';
-  }).sort((a, b) => `${a.date} ${a.start}`.localeCompare(`${b.date} ${b.start}`));
-
-  const handleJoin = async (slotId) => {
-    try {
-      await join.mutateAsync(slotId);
-      toast.success('Inscrito!');
-    } catch (err) {
-      toast.error(err.message);
-    }
-  };
-
-  const handleLeave = async (slotId) => {
-    try {
-      await leave.mutateAsync(slotId);
-      toast.success('Você saiu do slot');
-    } catch (err) {
-      toast.error(err.message);
-    }
-  };
-
-  const handleJoinWaitlist = async (slotId) => {
-    try {
-      await joinWl.mutateAsync(slotId);
-      toast.success('Você está na fila!');
-    } catch (err) {
-      toast.error(err.message);
-    }
-  };
-
+/**
+ * "Vagou para você" — o outro lado da fila de espera.
+ *
+ * Sem isto a fila era meia funcionalidade: o atleta entrava na fila, recebia
+ * uma notificação com prazo... e não tinha onde aceitar. (Pior: a notificação
+ * apontava para `/minha-fila`, rota que nunca existiu.)
+ */
+function ChamadaDaFila({ entrada, slot, onAceitar, onRecusar, ocupado }) {
   return (
-    <div className="mx-auto max-w-[1200px]">
-      {/* Topo */}
-      <div className="mb-6">
-        <Link
-          to={`/arenas/${arena.id}`}
-          className="mb-3 inline-flex items-center gap-1.5 text-xs font-bold uppercase tracking-wider text-gray-500 hover:text-ink"
-        >
-          <ArrowLeft className="h-3.5 w-3.5" /> Voltar à arena
-        </Link>
-        <div className="flex flex-wrap items-end justify-between gap-3">
-          <div>
-            <h1 className="font-display text-3xl font-bold tracking-tight text-ink">
-              Open Match · {arena.name}
-            </h1>
-            <p className="mt-2 font-medium text-gray-500">
-              Vagas abertas pela arena. Inscreva-se em 1-tap ou entre na fila de espera.
-            </p>
+    <V2Surface className="border-acid bg-acid/10">
+      <div className="flex flex-wrap items-start gap-3">
+        <span className="flex h-10 w-10 shrink-0 items-center justify-center rounded-2xl bg-ink text-acid">
+          <BellRing className="h-5 w-5" />
+        </span>
+        <div className="min-w-0 flex-1">
+          <p className="font-display text-base font-bold text-ink">Vagou um lugar para você</p>
+          <p className="mt-0.5 text-sm text-gray-700">
+            {slot ? formatSlotLabel(slot) : 'Jogo aberto'}
+            {slot?.court ? ` · ${slot.court}` : ''}
+          </p>
+          <p className="mt-1 text-xs text-gray-500">
+            Confirme para garantir a vaga. Se não confirmar, ela passa para o próximo da fila.
+          </p>
+          <div className="mt-3 flex flex-wrap gap-2">
+            <V2Button size="sm" disabled={ocupado} onClick={() => onAceitar(entrada)}>
+              Confirmar minha vaga
+            </V2Button>
+            <V2Button variant="ghost" size="sm" disabled={ocupado} onClick={() => onRecusar(entrada)}>
+              Não vou poder
+            </V2Button>
           </div>
         </div>
       </div>
+    </V2Surface>
+  );
+}
 
-      {/* Filtros */}
-      <div className="mb-6 flex flex-wrap gap-2">
-        {[
-          { v: 'open', label: 'Com vagas' },
-          { v: 'full', label: 'Lotados' },
-          { v: 'all', label: 'Todos' },
-        ].map((f) => (
-          <button
-            key={f.v}
-            type="button"
-            onClick={() => setFilter(f.v)}
-            className={[
-              'rounded-full px-4 py-1.5 text-sm font-bold transition',
-              filter === f.v
-                ? 'bg-ink text-acid'
-                : 'bg-paper-pure text-gray-600 border border-gray-100 hover:border-ink',
-            ].join(' ')}
-          >
-            {f.label}
-          </button>
-        ))}
-      </div>
+export default function V2ArenaOpenMatch() {
+  const { arenaId } = useParams();
+  const { user, isAuthenticated } = useAuth();
+  const { data: arena, isLoading } = useArena(arenaId);
+  const {
+    data: slots = [], isLoading: carregando, isError, refetch,
+  } = useArenaOpenSlots(arenaId);
+  const { isOn, isLoading: carregandoModulos } = useArenaModules(arenaId);
+  const { level: meuNivel } = useMyUnifiedLevel();
+  const { data: minhaFila = [] } = useUserWaitlist();
+  const entrar = useJoinOpenSlot();
+  const sair = useLeaveOpenSlot();
+  const fila = useJoinWaitlist();
+  const sairDaFila = useLeaveWaitlist();
+  const aceitar = useAcceptWaitlist();
+  const recusar = useDeclineWaitlist();
 
-      {slotsLoading ? (
-        <div className="grid gap-6 md:grid-cols-2 lg:grid-cols-3">
-          {[1, 2, 3].map((i) => <V2Skeleton key={i} className="h-72 rounded-4xl" />)}
-        </div>
-      ) : filtered.length === 0 ? (
-        <V2Surface>
-          <V2EmptyState
-            icon={Calendar}
-            title="Nenhum slot no momento"
-            description={filter === 'open' ? 'A arena ainda não publicou vagas abertas. Volte mais tarde!' : 'Não há slots com esse filtro.'}
-          />
+  const hoje = todayISO();
+  const idsNaFila = useMemo(
+    () => new Set(minhaFila.map((f) => f.slot_id).filter(Boolean)),
+    [minhaFila],
+  );
+  // As chamadas em aberto NESTA arena: a fila só vale se houver onde aceitar.
+  const chamadas = useMemo(() => {
+    const porId = new Map(slots.map((s) => [s.id, s]));
+    return minhaFila
+      .filter((f) => f.status === WAITLIST_STATUS.NOTIFIED && porId.has(f.slot_id))
+      .map((f) => ({ entrada: f, slot: porId.get(f.slot_id) }));
+  }, [minhaFila, slots]);
+
+  const { meus, disponiveis } = useMemo(() => {
+    const futuros = slots
+      .filter((s) => String(s.date || '') >= hoje && s.status !== 'cancelled');
+    return {
+      meus: futuros.filter((s) => (s.participants || []).includes(user?.uid)),
+      disponiveis: futuros.filter((s) => !(s.participants || []).includes(user?.uid)),
+    };
+  }, [slots, hoje, user?.uid]);
+
+  if (isLoading || carregandoModulos) {
+    return <V2Skeleton className="mx-auto h-96 max-w-[820px] rounded-4xl" />;
+  }
+  if (!arena) return <Navigate to="/arenas" replace />;
+  if (!isOn(ARENA_MODULE_ID.MATCHMAKING_OPEN_MATCH)) {
+    return <Navigate to={`/arenas/${arena.id}`} replace />;
+  }
+
+  const ocupado = entrar.isPending || sair.isPending || fila.isPending
+    || aceitar.isPending || recusar.isPending || sairDaFila.isPending;
+
+  const aoEntrar = (slot) => entrar.mutateAsync(slot.id)
+    .then(() => toast.success('Pronto! Você está no jogo.'))
+    .catch((e) => toast.error(e?.message || 'Não foi possível entrar.'));
+  const aoSair = (slot) => sair.mutateAsync(slot.id)
+    .then(() => toast.success('Você saiu do jogo. A vaga voltou para a lista.'))
+    .catch((e) => toast.error(e?.message || 'Não foi possível sair.'));
+  const aoEntrarNaFila = (slot) => fila.mutateAsync(slot.id)
+    .then(() => toast.success('Você está na fila. Avisamos assim que vagar.'))
+    .catch((e) => toast.error(e?.message || 'Não foi possível entrar na fila.'));
+  const aoAceitar = ({ slot_id: slotId }) => aceitar.mutateAsync(slotId)
+    .then(() => toast.success('Vaga confirmada. Bom jogo!'))
+    .catch((e) => toast.error(e?.message || 'Não foi possível confirmar.'));
+  const aoRecusar = ({ slot_id: slotId }) => recusar.mutateAsync(slotId)
+    .then(() => toast.success('Tudo bem — a vaga passou para o próximo.'))
+    .catch((e) => toast.error(e?.message || 'Não foi possível recusar.'));
+
+  return (
+    <div className="mx-auto max-w-[820px]">
+      <Link
+        to={`/arenas/${arena.id}`}
+        className="mb-3 inline-flex items-center gap-1.5 text-xs font-bold uppercase tracking-wider text-gray-500 hover:text-ink"
+      >
+        <ArrowLeft className="h-3.5 w-3.5" /> {arena.name}
+      </Link>
+      <h1 className="font-display text-3xl font-bold tracking-tight text-ink">Jogos abertos</h1>
+      <p className="mt-1 text-sm text-gray-500">
+        Horários que a arena abriu para quem quiser entrar. Não precisa levar dupla.
+      </p>
+
+      {!isAuthenticated && (
+        <V2Surface className="mt-4">
+          <p className="text-sm text-gray-600">
+            <Link to="/entrar" className="font-bold text-ink underline">Entre na sua conta</Link>{' '}
+            para se inscrever nos jogos.
+          </p>
         </V2Surface>
-      ) : (
-        <div className="grid gap-6 md:grid-cols-2 lg:grid-cols-3">
-          {filtered.map((slot) => (
-            <SlotWithWaitlist
-              key={slot.id}
+      )}
+
+      {chamadas.length > 0 && (
+        <div className="mt-5 space-y-3">
+          {chamadas.map(({ entrada, slot }) => (
+            <ChamadaDaFila
+              key={entrada.id}
+              entrada={entrada}
               slot={slot}
-              arenaId={arena.id}
-              onJoin={handleJoin}
-              onJoinWaitlist={handleJoinWaitlist}
-              onLeave={handleLeave}
+              ocupado={ocupado}
+              onAceitar={aoAceitar}
+              onRecusar={aoRecusar}
             />
           ))}
         </div>
       )}
+
+      <div className="mt-5 space-y-4">
+        {isError ? (
+          <V2Surface>
+            <p className="text-sm text-red-700">
+              Não foi possível carregar os jogos abertos.{' '}
+              <button type="button" className="font-bold underline" onClick={() => refetch()}>
+                Tentar de novo
+              </button>
+            </p>
+          </V2Surface>
+        ) : carregando ? (
+          <V2Skeleton className="h-56" />
+        ) : (
+          <>
+            {meus.length > 0 && (
+              <div className="space-y-3">
+                <h2 className="text-xs font-bold uppercase tracking-widest text-gray-400">
+                  Você vai jogar
+                </h2>
+                {meus.map((s) => (
+                  <VagaCard
+                    key={s.id} slot={s} meuNivel={meuNivel} jaEstou
+                    naFila={idsNaFila.has(s.id)} ocupado={ocupado}
+                    onEntrar={aoEntrar} onSair={aoSair} onFila={aoEntrarNaFila}
+                  />
+                ))}
+              </div>
+            )}
+
+            {disponiveis.length === 0 && meus.length === 0 ? (
+              <V2Surface>
+                <V2EmptyState
+                  icon={Users}
+                  title="Nenhum jogo aberto agora"
+                  description={`A ${arena.name} ainda não publicou horários com vagas. Volte mais tarde ou reserve uma quadra.`}
+                  action={(
+                    <V2Button asChild variant="secondary">
+                      <Link to={`/arenas/${arena.id}`}>Ver a arena</Link>
+                    </V2Button>
+                  )}
+                />
+              </V2Surface>
+            ) : disponiveis.length > 0 && (
+              <div className="space-y-3">
+                {meus.length > 0 && (
+                  <h2 className="pt-2 text-xs font-bold uppercase tracking-widest text-gray-400">
+                    Outros jogos
+                  </h2>
+                )}
+                {disponiveis.map((s) => (
+                  <VagaCard
+                    key={s.id} slot={s} meuNivel={meuNivel} jaEstou={false}
+                    naFila={idsNaFila.has(s.id)} ocupado={ocupado}
+                    onEntrar={aoEntrar} onSair={aoSair} onFila={aoEntrarNaFila}
+                  />
+                ))}
+              </div>
+            )}
+          </>
+        )}
+      </div>
     </div>
-  );
-}
-
-function SlotWithWaitlist({ slot, arenaId, onJoin, onJoinWaitlist, onLeave }) {
-  const { user } = useAuth();
-  const isIn = (slot.participants || []).includes(user?.uid);
-  const { data: entry } = useUserWaitlistEntry(slot.id);
-  const isInWaitlist = entry && ['waiting', 'notified'].includes(entry.status);
-  const { data: waitlist = [] } = useSlotWaitlist(slot.id);
-  const waitlistCount = waitlist.filter((w) => w.status === 'waiting' || w.status === 'notified').length;
-
-  return (
-    <SlotCard
-      slot={slot}
-      arenaId={arenaId}
-      onJoin={onJoin}
-      onJoinWaitlist={onJoinWaitlist}
-      onLeave={onLeave}
-      isIn={isIn}
-      isInWaitlist={isInWaitlist}
-      waitlistCount={entry?.position || waitlistCount}
-    />
   );
 }

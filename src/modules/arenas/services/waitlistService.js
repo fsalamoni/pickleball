@@ -24,6 +24,7 @@ import { db } from '@/core/config/firebase';
 import { logger } from '@/core/lib/logger';
 import { createAuditLog } from '@/core/services/auditService';
 import { notifyUsers, NOTIFICATION_TYPE } from '@/core/services/notificationService';
+import { formatSlotLabel } from '../domain/calendar.js';
 import {
   canJoinWaitlist,
   getNextInLine,
@@ -165,14 +166,20 @@ export async function notifyNextInLine(slotId, actor) {
     updated_at: serverTimestamp(),
   });
 
-  // Notifica o atleta
+  // Notifica o atleta.
+  //
+  // 🐞 O link apontava para `/minha-fila`, uma rota que NUNCA existiu: quem
+  // era chamado clicava e caía em lugar nenhum — justamente na notificação
+  // com prazo. Agora vai para os jogos abertos da arena, que é onde se aceita.
+  // E a data sai em português: `2026-07-23 19:00` não se lê no Brasil.
   try {
     const slot = await getOpenSlot(slotId);
     notifyUsers([next.athlete_id], {
-      title: `Vaga aberta em "${str(slot?.arena_name || '').slice(0, 50)}"`,
-      message: `Você tem ${DEFAULT_PROMOTION_WINDOW_MINUTES} minutos para aceitar. Slot de ${slot?.date} ${slot?.start}.`,
+      title: `Vagou um lugar em "${str(slot?.arena_name || '').slice(0, 50)}"`,
+      message: `${formatSlotLabel(slot) || 'Jogo aberto'} — você tem `
+        + `${DEFAULT_PROMOTION_WINDOW_MINUTES} minutos para confirmar.`,
       type: NOTIFICATION_TYPE.GENERIC,
-      link: `/minha-fila`,
+      link: slot?.arena_id ? `/arenas/${slot.arena_id}/open-match` : '/arenas',
       actor,
     });
   } catch (err) {
