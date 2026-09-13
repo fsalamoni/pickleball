@@ -34,7 +34,8 @@ import { participantStatusLabel } from '@/modules/arenas/domain/shared_booking';
 import AthleteMultiPicker from '@/modules/athletes/components/AthleteMultiPicker';
 import { getSlotStatus, generateTimeSlots, isSlotClickable, slotEndTime, SLOT_STATUS_COLORS, SLOT_STATUS_LABELS, SLOT_STATUS } from '@/modules/arenas/domain/slot_status';
 import { weekdayOf } from '@/modules/arenas/domain/booking';
-import { BOOKING_STATUS } from '@/modules/arenas/domain/constants';
+import { BOOKING_STATUS, BOOKING_STATUS_LABELS } from '@/modules/arenas/domain/constants';
+import { bookingPriceInfo } from '@/modules/arenas/domain/pricing';
 import {
   V2Badge, V2Button, V2EmptyState, V2Field, V2Input, V2Surface, V2Skeleton, V2Textarea,
 } from '@/v2/ui/primitives';
@@ -236,6 +237,13 @@ export default function V2AdminBookingCalendar({ arenaId, embedded = false }) {
     )
     : { applies: false, late: false };
 
+  // O valor da reserva do slot aberto: TOTAL (recalculado pela tabela da
+  // arena) e com a duração ao lado. O `proposed_price` cru das reservas
+  // antigas é o preço de UMA hora — mostrá-lo sozinho é desinformar.
+  const precoDoSlot = selectedSlot?.booking
+    ? bookingPriceInfo(selectedSlot.booking, { arena })
+    : null;
+
   async function handleConfirmBooking() {
     if (!selectedSlot?.booking) return;
     try {
@@ -390,8 +398,8 @@ export default function V2AdminBookingCalendar({ arenaId, embedded = false }) {
                   <div className="flex-1 min-w-0">
                     <div className="font-bold text-ink">{selectedSlot.booking.athlete_name || 'Atleta'}</div>
                     <div className="text-xs text-gray-500">
-                      Status: {selectedSlot.booking.status}
-                      {selectedSlot.booking.proposed_price != null && ` · R$ ${Number(selectedSlot.booking.proposed_price).toFixed(2)}`}
+                      Status: {BOOKING_STATUS_LABELS[selectedSlot.booking.status] || selectedSlot.booking.status}
+                      {precoDoSlot?.value != null && ` · ${precoDoSlot.text}`}
                     </div>
                   </div>
                 </div>

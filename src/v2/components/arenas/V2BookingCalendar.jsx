@@ -21,6 +21,16 @@
  *  - "Ocupado" amber/vermelho: tem slots mas todos PENDING/CONFIRMED.
  *    Clicável para ver detalhe (sem seleção).
  *
+ * OCUPAÇÃO (o que a bolinha não dizia):
+ *  - a bolinha responde "tem vaga?" e para por aí. Um dia com UM horário
+ *    livre e um dia INTEIRO livre saíam idênticos, e a pessoa tinha de abrir
+ *    um por um para descobrir. Agora cada dia mostra a BARRA de ocupação
+ *    (verde = livre, âmbar = pendente, vermelho = reservado, laranja =
+ *    bloqueado) e quantos horários ainda têm quadra livre;
+ *  - e a conta passou a ser por QUADRA (`courts` no agregador): antes uma
+ *    reserva às 19h numa quadra fazia as 19h contarem como ocupadas na arena
+ *    inteira — com as outras duas quadras livres. Ver `calendar_aggregate.js`.
+ *
  * Regras de negócio (PRD):
  *  - "Apenas aparece como fechado os dias/horários que forem descritos
  *    como fechados pelos admins da arena, ou os dias/horários que não
@@ -53,7 +63,13 @@ import {
   SLOT_STATUS_COLORS,
   SLOT_STATUS_LABELS,
 } from '@/modules/arenas/domain/slot_status';
-import { aggregateDayStatus, buildMonthGrid } from '@/modules/arenas/domain/calendar_aggregate';
+import {
+  aggregateDayStatus,
+  buildMonthGrid,
+  indexBookingsByDate,
+  indexUnavailabilitiesByDate,
+  findFirstFreeDate,
+} from '@/modules/arenas/domain/calendar_aggregate';
 import { courtsWithoutSchedule } from '@/modules/arenas/domain/court_schedule';
 import { V2Button, V2Skeleton } from '@/v2/ui/primitives';
 import V2DaySlotsDialog from './V2DaySlotsDialog';
@@ -83,6 +99,25 @@ const LEGENDA = [
   { status: 'unavailable', cor: 'bg-orange-500', texto: 'Indisponível (admin)' },
   { status: 'closed', cor: 'bg-gray-300', texto: 'Fechado (sem horário)' },
 ];
+
+/** 'sex., 3 de out.' — sem o ano, que já está no cabeçalho do mês. */
+function labelDoDia(dateStr) {
+  const [y, m, d] = String(dateStr).split('-').map(Number);
+  if (!y || !m || !d) return dateStr;
+  return new Date(y, m - 1, d, 12).toLocaleDateString('pt-BR', {
+    weekday: 'short', day: 'numeric', month: 'short',
+  });
+}
+
+/** As faixas da barra de ocupação, na ordem em que se lê o dia. */
+function faixasDeOcupacao(count = {}) {
+  return [
+    { key: 'available', cls: 'bg-green-500', n: count.available || 0 },
+    { key: 'pending', cls: 'bg-amber-400', n: count.pending || 0 },
+    { key: 'confirmed', cls: 'bg-red-400', n: count.confirmed || 0 },
+    { key: 'unavailable', cls: 'bg-orange-400', n: count.unavailable || 0 },
+  ].filter((f) => f.n > 0);
+}
 
 function isPast(dateStr) {
   const today = new Date().toISOString().slice(0, 10);
@@ -132,20 +167,33 @@ export default function V2BookingCalendar({ arenaId, arena: arenaProp }) {
     return unavailabilities.filter((u) => !u.court_id || u.court_id === courtId);
   }, [unavailabilities, courtId]);
 
-  // Para cada dia do mês, calcula status agregado
+  // Reservas e bloqueios indexados por DATA. A grade faz 42 dias × quadras
+  // consultas de status; sem o índice, cada uma varre a lista inteira da
+  // arena. Mesmo resultado, uma fração do custo.
+  const bookingsByDate = useMemo(() => indexBookingsByDate(filteredBookings), [filteredBookings]);
+  const unavByDate = useMemo(
+    () => indexUnavailabilitiesByDate(filteredUnavailabilities),
+    [filteredUnavailabilities],
+  );
+
+  // Para cada dia do mês, calcula status agregado.
+  // Sem filtro de quadra, a conta é por QUADRA (horas-quadra) — é o que
+  // permite dizer "ainda há 2 de 3 quadras livres às 19h" em vez de pintar o
+  // dia inteiro de vermelho por causa de uma reserva.
   const dayStatusMap = useMemo(() => {
     const map = new Map();
     for (const date of grid) {
       map.set(date, aggregateDayStatus({
         date,
         courtId: courtId === 'all' ? null : courtId,
+        courts: courtId === 'all' ? activeCourts : null,
         schedules: filteredSchedules,
-        bookings: filteredBookings,
-        unavailabilities: filteredUnavailabilities,
+        bookings: bookingsByDate.get(date) || [],
+        unavailabilities: unavByDate.get(date) || [],
       }));
     }
     return map;
-  }, [grid, courtId, filteredSchedules, filteredBookings, filteredUnavailabilities]);
+  }, [grid, courtId, activeCourts, filteredSchedules, bookingsByDate, unavByDate]);
 
   // data → dias de jogo daquela data (respeitando o filtro de quadra).
   const gameDaysByDate = useMemo(() => {
@@ -171,6 +219,40 @@ export default function V2BookingCalendar({ arenaId, arena: arenaProp }) {
     return set;
   }, [grid, yearMonth, dayStatusMap]);
 
+  /** Quantos dias deste mês ainda têm vaga — o resumo que evita abrir 30 dias. */
+  const resumoDoMes = useMemo(() => {
+    let comVaga = 0;
+    let abertos = 0;
+    grid.forEach((date) => {
+      if (!isSameMonth(date, yearMonth) || isPast(date)) return;
+      const meta = dayStatusMap.get(date);
+      if (!meta || meta.isAllClosed) return;
+      abertos += 1;
+      if (meta.hasAvailable) comVaga += 1;
+    });
+    return { comVaga, abertos };
+  }, [grid, yearMonth, dayStatusMap]);
+
+  // Mês sem nenhuma vaga é um beco: a pessoa clica "próximo mês" no escuro,
+  // sem saber se procura por mais um mês ou por seis. Só calculamos quando o
+  // beco acontece — e a busca começa no mês que ela está vendo, não hoje.
+  const proximoLivre = useMemo(() => {
+    if (resumoDoMes.comVaga > 0 || schedules.length === 0) return null;
+    const inicio = yearMonth > today.slice(0, 7) ? `${yearMonth}-01` : today;
+    return findFirstFreeDate({
+      from: inicio,
+      days: 180,
+      courtId: courtId === 'all' ? null : courtId,
+      courts: courtId === 'all' ? activeCourts : null,
+      schedules: filteredSchedules,
+      bookings: filteredBookings,
+      unavailabilities: filteredUnavailabilities,
+    });
+  }, [
+    resumoDoMes.comVaga, schedules.length, yearMonth, today, courtId, activeCourts,
+    filteredSchedules, filteredBookings, filteredUnavailabilities,
+  ]);
+
   function handleDayClick(date) {
     if (!isAuthenticated) {
       toast.error('Faça login para reservar.');
@@ -193,6 +275,7 @@ export default function V2BookingCalendar({ arenaId, arena: arenaProp }) {
 
   const [year, month] = yearMonth.split('-').map(Number);
   const monthLabel = new Date(year, month - 1, 1).toLocaleDateString('pt-BR', { month: 'long', year: 'numeric' });
+  const mesLabel = new Date(year, month - 1, 1).toLocaleDateString('pt-BR', { month: 'long' });
 
   return (
     <div className="space-y-3">
@@ -237,6 +320,36 @@ export default function V2BookingCalendar({ arenaId, arena: arenaProp }) {
         )}
       </div>
 
+      {/* Resumo do mês numa linha. Quem procura quadra quer saber "tem vaga?"
+          ANTES de abrir trinta dias um por um — e, quando não tem, quer saber
+          para onde ir em vez de clicar "próximo mês" no escuro. */}
+      {!loadingEstrutura && activeCourts.length > 0 && !semHorarioPublicado && (
+        <div className="flex flex-wrap items-center gap-x-3 gap-y-1.5 rounded-2xl border border-gray-100 bg-gray-50 px-3 py-2 text-xs">
+          {resumoDoMes.comVaga > 0 ? (
+            <span className="text-gray-700">
+              <strong className="text-ink">{resumoDoMes.comVaga}</strong>
+              {resumoDoMes.comVaga === 1 ? ' dia com horário livre' : ' dias com horário livre'}
+              {resumoDoMes.abertos > resumoDoMes.comVaga && ` (de ${resumoDoMes.abertos} abertos)`}
+              {' '}em <span className="capitalize">{mesLabel}</span>.
+            </span>
+          ) : (
+            <span className="font-bold text-ink">
+              {resumoDoMes.abertos > 0
+                ? <>Nenhum horário livre em <span className="capitalize">{mesLabel}</span>.</>
+                : <>Nenhum dia aberto em <span className="capitalize">{mesLabel}</span>.</>}
+            </span>
+          )}
+          {proximoLivre && (
+            <V2Button size="sm" variant="secondary" onClick={() => setYearMonth(proximoLivre.slice(0, 7))}>
+              Próximo dia livre: {labelDoDia(proximoLivre)}
+            </V2Button>
+          )}
+          {resumoDoMes.abertos > 0 && (
+            <span className="text-gray-500">A barra de cada dia mostra a ocupação — verde é o que está livre.</span>
+          )}
+        </div>
+      )}
+
       {activeCourts.length === 0 && !loadingEstrutura && (
         <div className="rounded-2xl border border-gray-200 bg-paper p-4 text-sm text-gray-600">
           <p className="font-bold text-ink">Esta arena ainda não cadastrou quadras.</p>
@@ -274,21 +387,34 @@ export default function V2BookingCalendar({ arenaId, arena: arenaProp }) {
             const c = SLOT_STATUS_COLORS[meta.dayStatus];
             const closed = meta.isAllClosed;
             const clickable = inMonth && !past && !closed;
-            // Badges numéricos: mostra contagem de pendentes e reservados
-            // para dar visibilidade mesmo no overview do mês.
-            const pendingCount = meta.count?.pending || 0;
-            const confirmedCount = meta.count?.confirmed || 0;
-            const totalActive = pendingCount + confirmedCount;
-            // Tooltip explicativo
+            // A OCUPAÇÃO do dia, em vez de dois números soltos. A barra é
+            // proporcional (verde livre / âmbar pendente / vermelho reservado
+            // / laranja bloqueado) e o rótulo diz em quantos horários ainda
+            // existe quadra livre — a pergunta de quem está marcando.
+            const faixas = faixasDeOcupacao(meta.count);
+            const totalHoras = meta.total || 0;
+            const livres = meta.freeTimes || 0;
+            const ocupadoPct = Math.round((meta.occupancy || 0) * 100);
+            const rotulo = (() => {
+              if (livres > 0) return { texto: `${livres}h ${livres === 1 ? 'livre' : 'livres'}`, cls: 'text-green-700' };
+              if ((meta.count?.pending || 0) + (meta.count?.confirmed || 0) > 0) {
+                return { texto: 'Lotado', cls: 'text-red-600' };
+              }
+              if (meta.count?.unavailable) return { texto: 'Bloqueado', cls: 'text-orange-600' };
+              return null;
+            })();
+            // Tooltip (e aria-label): o mesmo que a barra diz, por extenso —
+            // no celular não existe hover, mas o leitor de tela existe.
             const tooltip = (() => {
               if (!inMonth) return '';
-              if (past) return `${date} (passou)`;
-              if (closed && totalActive === 0) return `${date} · Sem horários abertos`;
-              const parts = [`${date}`];
-              if (meta.count?.available) parts.push(`${meta.count.available} livre`);
-              if (pendingCount) parts.push(`${pendingCount} em andamento`);
-              if (confirmedCount) parts.push(`${confirmedCount} reservado`);
-              if (meta.count?.unavailable) parts.push(`${meta.count.unavailable} indisponível`);
+              const dia = labelDoDia(date);
+              if (past) return `${dia} · já passou`;
+              if (closed) return `${dia} · sem horários abertos`;
+              const parts = [dia];
+              parts.push(livres > 0
+                ? `${livres} ${livres === 1 ? 'horário' : 'horários'} com quadra livre`
+                : 'sem horário livre');
+              if (totalHoras > 0) parts.push(`${ocupadoPct}% ocupado`);
               diasDeJogo.forEach((g) => {
                 const faixa = arenaGameDayTimeRange(g);
                 parts.push(`Dia de jogo: ${g.title}${faixa ? ` (${faixa.start}–${faixa.end})` : ''}`);
@@ -325,25 +451,15 @@ export default function V2BookingCalendar({ arenaId, arena: arenaProp }) {
                     <span className={cn('h-2 w-2 rounded-full', c.dot)} aria-label={SLOT_STATUS_LABELS[meta.dayStatus]} />
                   )}
                 </div>
-                {inMonth && !past && totalActive > 0 && (
-                  <div className="flex flex-wrap gap-1">
-                    {pendingCount > 0 && (
-                      <span
-                        className="rounded-full bg-amber-500 px-1.5 py-0.5 text-[9px] font-bold leading-none text-white"
-                        title={`${pendingCount} solicitação(ões) em andamento`}
-                      >
-                        {pendingCount}
-                      </span>
-                    )}
-                    {confirmedCount > 0 && (
-                      <span
-                        className="rounded-full bg-red-500 px-1.5 py-0.5 text-[9px] font-bold leading-none text-white"
-                        title={`${confirmedCount} já reservado(s)`}
-                      >
-                        {confirmedCount}
-                      </span>
-                    )}
+                {inMonth && !past && totalHoras > 0 && (
+                  <div className="flex h-1.5 w-full overflow-hidden rounded-full bg-gray-100" aria-hidden="true">
+                    {faixas.map((f) => (
+                      <span key={f.key} className={cn('h-full', f.cls)} style={{ width: `${(f.n / totalHoras) * 100}%` }} />
+                    ))}
                   </div>
+                )}
+                {inMonth && !past && rotulo && (
+                  <span className={cn('text-[9px] font-bold leading-none', rotulo.cls)}>{rotulo.texto}</span>
                 )}
                 {inMonth && !past && diasDeJogo.length > 0 && (
                   <span className="truncate rounded-full bg-acid px-1.5 py-0.5 text-[9px] font-bold leading-none text-ink">

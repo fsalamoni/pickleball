@@ -511,7 +511,7 @@ function BookingsTab({ arena }) {
   const sharedOn = sharedBookingsOn;
   const renderBooking = (b) => (
     <div key={b.id}>
-      <V2BookingRow booking={b} perspective="arena" />
+      <V2BookingRow booking={b} perspective="arena" arena={arena} />
       {sharedOn && b.shared && <BookingParticipantsPanel booking={b} />}
     </div>
   );

@@ -248,6 +248,42 @@ está em `domain/bookingSelection.js`:
 `court_id: null` numa célula é legítimo: significa **"tanto faz a quadra"**, e a
 arena atribui uma livre. Nunca se mistura com quadra escolhida no agrupamento.
 
+## Preço da reserva: o TOTAL, sempre (2026-09-13)
+
+⚠️ **`resolveArenaPrice` devolve o valor POR HORA.** Gravá-lo como
+`proposed_price` foi um bug real: reserva de três horas chegando à arena
+valendo uma. Quem quer o valor de uma reserva usa o domínio:
+
+| função | devolve |
+|---|---|
+| `totalBookingPrice(arena, { courtId, slots, clientId })` | `{ total, hours, minutes, hourlyRates, breakdown }` — cada horário na SUA faixa |
+| `priceWithDurationText(total, hours, rates)` | `"R$ 240,00 · 3h · R$ 80,00/h"` |
+| `bookingPriceInfo(booking, { arena })` | o que MOSTRAR: acordado vence; com arena, recalcula (corrige o legado); sem ela, o gravado — nunca sem a duração |
+
+O serviço **refaz a conta antes de escrever** (`precoDaReserva` em
+`bookingService.js`), nos dois caminhos: a tela pode estimar, quem grava
+confere. Nenhum campo novo; nenhum dado histórico reescrito.
+
+## Ocupação no calendário mensal (2026-09-13)
+
+⚠️ **`aggregateDayStatus` conta por QUADRA quando recebe `courts`.** Sem isso,
+a arena inteira é contada como uma quadra só e UMA reserva às 19h faz as 19h
+contarem como ocupadas — com as outras quadras livres. Passe as quadras ativas
+sempre que não houver filtro de quadra.
+
+| campo do retorno | o que é |
+|---|---|
+| `count` | horas-quadra por status (o denominador da barra) |
+| `total` | horas-quadra abertas no dia |
+| `occupancy` | fração ocupada, 0 a 1 |
+| `freeTimes` | horários com PELO MENOS uma quadra livre — o que a pessoa procura |
+| `openTimes` | horários abertos, livres ou não |
+
+`indexBookingsByDate` / `indexUnavailabilitiesByDate` existem por custo: a
+grade faz 42 dias × quadras consultas e cada uma varria a lista inteira da
+arena. `findFirstFreeDate` responde "e quando, então?" quando o mês inteiro
+está cheio — sem ele a tela é um beco com um botão de "próximo mês".
+
 ## Onde achar mais
 
 - `docs/06-MODULES.md` § arenas

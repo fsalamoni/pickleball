@@ -157,3 +157,136 @@ export function formatPrice(value) {
   if (n == null) return 'Sob consulta';
   return n.toLocaleString('pt-BR', { style: 'currency', currency: 'BRL' });
 }
+
+/**
+ * O preço TOTAL de uma reserva: a soma de cada horário, na tabela da arena.
+ *
+ * ## O bug que isto corrige
+ *
+ * `resolveArenaPrice` devolve o valor **por hora**. As telas gravavam esse
+ * número como `proposed_price` da reserva — então uma reserva de três horas
+ * chegava à arena valendo **uma**. O erro aparecia de novo na lista de
+ * reservas do dia: várias quadras pendentes, todas com o preço de uma hora.
+ *
+ * Não era erro de exibição: era o número **gravado**. Por isso a conta mora
+ * aqui, no domínio, e o serviço a refaz antes de escrever — a tela pode
+ * estimar, mas quem grava confere.
+ *
+ * Cada horário é cobrado pela sua própria faixa: das 18h às 20h com tabela
+ * diferente às 19h, a soma respeita as duas.
+ *
+ * @param {object} arena
+ * @param {{ courtId?: string|null, slots?: Array<{date,start,end}>, clientId?: string|null }} args
+ * @returns {{ total: number, hours: number, minutes: number, hourlyRates: Array<number>, breakdown: Array }}
+ */
+export function totalBookingPrice(arena, { courtId = null, slots = [], clientId = null } = {}) {
+  const vazio = { total: 0, hours: 0, minutes: 0, hourlyRates: [], breakdown: [] };
+  if (!arena || !Array.isArray(slots) || slots.length === 0) return vazio;
+
+  let total = 0;
+  let minutes = 0;
+  const breakdown = [];
+  const hourlyRates = [];
+
+  slots.forEach((slot) => {
+    const ini = timeToMinutes(slot?.start);
+    const fim = timeToMinutes(slot?.end);
+    if (!slot?.date || ini == null || fim == null || fim <= ini) return;
+    const duracao = fim - ini;
+    const { price, label } = resolveArenaPrice(arena, {
+      date: slot.date, weekday: weekdayOfDate(slot.date), time: slot.start, courtId, clientId,
+    });
+    const hora = Number(price) || 0;
+    const valor = hora * (duracao / 60);
+    minutes += duracao;
+    total += valor;
+    hourlyRates.push(hora);
+    breakdown.push({
+      date: slot.date, start: slot.start, end: slot.end,
+      minutes: duracao, hourlyRate: hora, price: Math.round(valor * 100) / 100, label,
+    });
+  });
+
+  return {
+    total: Math.round(total * 100) / 100,
+    hours: Math.round((minutes / 60) * 100) / 100,
+    minutes,
+    hourlyRates: Array.from(new Set(hourlyRates)),
+    breakdown,
+  };
+}
+
+/**
+ * Dia da semana de 'YYYY-MM-DD' (0 = domingo).
+ *
+ * Repetido aqui (em vez de importado de `booking.js`) porque aquele arquivo já
+ * importa deste: uma ida e volta entre os dois por três linhas não paga o ciclo.
+ */
+function weekdayOfDate(dateISO) {
+  const m = String(dateISO || '').match(/^(\d{4})-(\d{2})-(\d{2})$/);
+  if (!m) return null;
+  return new Date(Number(m[1]), Number(m[2]) - 1, Number(m[3])).getDay();
+}
+
+/**
+ * O texto que tira a ambiguidade de um valor de reserva.
+ *
+ * "R$ 240" sozinho não diz se é a hora ou o total — e foi exatamente essa
+ * dúvida que apareceu na tela. Com a duração ao lado, não sobra pergunta.
+ *
+ * @returns {string} ex.: "R$ 240,00 · 3h (R$ 80,00/h)"
+ */
+export function priceWithDurationText(total, hours, hourlyRates = []) {
+  const partes = [formatPrice(total)];
+  if (hours > 0) partes.push(`${Number.isInteger(hours) ? hours : hours.toFixed(1)}h`);
+  if (hourlyRates.length === 1 && hours !== 1) partes.push(`${formatPrice(hourlyRates[0])}/h`);
+  const [valor, ...resto] = partes;
+  return resto.length > 0 ? `${valor} · ${resto.join(' · ')}` : valor;
+}
+
+/**
+ * O valor a MOSTRAR de uma reserva, sem ambiguidade.
+ *
+ * Três coisas competiam pelo mesmo espaço na tela — o valor por hora, o total
+ * pedido e o valor acordado — e todas apareciam como "R$ X". Esta função diz
+ * qual é qual, e devolve a duração junto, porque um número de dinheiro sem
+ * duração ao lado sempre pode ser lido como "por hora".
+ *
+ * Com a `arena` em mãos, RECALCULA o total pela tabela: é o que corrige as
+ * reservas antigas, gravadas com o valor de uma hora só. Sem ela, mostra o que
+ * está gravado — mas nunca sem a duração ao lado.
+ *
+ * @param {object} booking
+ * @param {{ arena?: object|null }} [ctx]
+ * @returns {{ value: number|null, hours: number, agreed: boolean, recalculado: boolean, text: string }}
+ */
+export function bookingPriceInfo(booking, { arena = null } = {}) {
+  const slots = Array.isArray(booking?.slots) ? booking.slots : [];
+  const minutos = slots.reduce((acc, s) => {
+    const ini = timeToMinutes(s?.start);
+    const fim = timeToMinutes(s?.end);
+    return ini != null && fim != null && fim > ini ? acc + (fim - ini) : acc;
+  }, 0);
+  const hours = Math.round((minutos / 60) * 100) / 100;
+
+  const acordado = num(booking?.agreed_price);
+  if (acordado != null) {
+    return { value: acordado, hours, agreed: true, recalculado: false, text: priceWithDurationText(acordado, hours, []) };
+  }
+
+  if (arena && slots.length > 0) {
+    const r = totalBookingPrice(arena, { courtId: booking?.court_id || null, slots, clientId: booking?.athlete_id || null });
+    if (r.total > 0) {
+      return { value: r.total, hours, agreed: false, recalculado: true, text: priceWithDurationText(r.total, hours, r.hourlyRates) };
+    }
+  }
+
+  const proposto = num(booking?.proposed_price);
+  return {
+    value: proposto,
+    hours,
+    agreed: false,
+    recalculado: false,
+    text: proposto == null ? 'Sob consulta' : priceWithDurationText(proposto, hours, []),
+  };
+}

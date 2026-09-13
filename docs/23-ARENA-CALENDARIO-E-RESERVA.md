@@ -201,7 +201,75 @@ Vale registrar para a próxima auditoria não refazer o caminho:
 - o dia de jogo fecha a quadra por `arena_unavailabilities`, então o conflito
   de reserva já o respeita sem código novo.
 
-## 8. Onde mexer
+## 8. 🐞 O preço de UMA hora gravado como total
+
+Selecionar três horários somava na tela — e a reserva chegava à arena valendo
+**uma hora**. Depois o mesmo número reaparecia na lista do dia: várias quadras
+pendentes, todas com o preço de uma hora.
+
+Não era erro de exibição. `resolveArenaPrice` devolve o valor **por hora**, e
+era esse número que as telas mandavam como `proposed_price`. O que estava
+**gravado** estava errado.
+
+A conta virou domínio:
+
+```js
+totalBookingPrice(arena, { courtId, slots, clientId })
+// → { total, hours, minutes, hourlyRates, breakdown }
+```
+
+Cada horário é cobrado pela **sua** faixa (das 18h às 20h com tabela diferente
+às 19h, a soma respeita as duas), e o serviço a **refaz antes de escrever** —
+a tela pode estimar, quem grava confere. Vale para os dois caminhos:
+`createBooking` e `createBookingsForSelection`, documento a documento.
+
+Para o que já estava gravado, `bookingPriceInfo(booking, { arena })` recalcula
+na leitura: o valor acordado vence sempre; havendo arena em mãos, o total sai
+da tabela; sem ela, sai o gravado — **nunca sem a duração ao lado**, porque
+"R$ 80" sozinho pode ser lido como a hora ou como o total. A linha de reserva
+do atleta busca a arena por conta própria (consulta por id, cacheada e
+compartilhada entre as linhas da mesma arena), para que a MESMA reserva mostre
+o MESMO número dos dois lados do balcão.
+
+## 9. A ocupação que a bolinha não contava
+
+Duas coisas erradas no calendário mensal da página da arena:
+
+**1. Uma reserva lotava a arena inteira.** A agregação do dia tratava a arena
+como se fosse UMA quadra: bastava uma reserva às 19h numa quadra para as 19h
+contarem como ocupadas — com as outras duas livres. Num mês cheio de reservas
+esparsas, a arena aparecia vermelha estando quase vazia.
+
+Agora `aggregateDayStatus` aceita `courts` e conta em **horas-quadra**: cada
+par (quadra, horário) vale um. `freeTimes` diz em quantos HORÁRIOS ainda há ao
+menos uma quadra livre — é a pergunta de quem está marcando — e `occupancy` é
+a fração ocupada. Sem `courts`, o retorno é bit a bit o de antes (há teste).
+
+**2. "Tem vaga" e "está quase vazio" eram a mesma bolinha.** Um dia com um
+horário livre e um dia inteiro livre saíam idênticos, e a pessoa tinha de abrir
+um por um. Cada dia passou a mostrar uma **barra proporcional** (verde livre,
+âmbar pendente, vermelho reservado, laranja bloqueado) e o rótulo `4h livres` —
+ou `Lotado`, ou `Bloqueado`, que **não** é a mesma coisa. Os dois números que
+havia ali antes saíram: eram horas contadas como se fossem reservas.
+
+E o mês ganhou resumo: *"2 dias com horário livre em julho"*. Quando não há
+nenhum, a tela deixa de ser um beco — diz que não há e oferece **o próximo dia
+livre** (`findFirstFreeDate`, até 180 dias), em vez de deixar a pessoa clicando
+"próximo mês" no escuro.
+
+De quebra, as reservas e os bloqueios passaram a ser indexados por data
+(`indexBookingsByDate`). A grade faz 42 dias × quadras consultas de status, e
+cada uma varria a lista inteira da arena; o resultado é o mesmo, o custo não.
+
+## 10. O resumo do dia contava horários e dizia "solicitações"
+
+No diálogo do dia, `2 solicitações em andamento` eram na verdade DOIS
+HORÁRIOS — com várias quadras, um horário ocupado não é uma reserva. Agora
+tudo ali é contado e dito em horários (`2 horários com solicitação em
+andamento`), e com mais de uma quadra o verde diz `com quadra livre`, que é o
+que ele mede.
+
+## 11. Onde mexer
 
 ```
 src/modules/arenas/domain/bookingSelection.js # a escolha como dado (+33)
@@ -211,11 +279,17 @@ src/modules/arenas/domain/slot_status.js      # slotEndTime (+12 asserções)
 src/modules/arenas/domain/court_schedule.js   # courtScheduleStatus (+10)
 src/v2/components/arenas/CourtTimePicker.jsx  # a matriz do atleta (+14 testes)
 src/v2/components/arenas/V2DaySlotsDialog.jsx # ordem, visões, legenda
-src/v2/components/arenas/V2BookingCalendar.jsx# legenda viva, arena sem horário
+src/v2/components/arenas/V2BookingCalendar.jsx# ocupação do mês, próximo dia livre
+src/modules/arenas/domain/calendar_aggregate.js# conta por quadra, índices (+20)
+src/modules/arenas/domain/pricing.js           # totalBookingPrice (+14)
+src/v2/components/arenas/V2BookingRow.jsx      # valor total, com duração
+src/v2/components/arenas/V2AdminBookingCalendar.jsx # idem, no slot da arena
 src/v2/components/arenas/V2ArenaCalendar.jsx  # dia de jogo no mês da arena
 src/v2/components/arenas/V2CourtsTab.jsx      # horário na linha + aviso
 src/v2/pages/V2ArenaManage.jsx                # painel de prontidão
 ```
 
 **Banco de dados: nada.** Nenhuma regra, coleção, índice, Cloud Function ou
-configuração foi tocada nesta rodada — só leitura do que já existia.
+configuração foi tocada em nenhuma destas rodadas — só leitura do que já
+existia. O preço corrigido é gravado no campo que **já** existia
+(`proposed_price`), com o valor certo; nenhum dado histórico foi reescrito.

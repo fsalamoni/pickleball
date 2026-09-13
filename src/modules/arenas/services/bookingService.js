@@ -34,6 +34,7 @@ import {
   unavailableCourtsForSlots,
 } from '../domain/court_assignment.js';
 import { buildParticipants, ownerIds, invitedIds } from '../domain/shared_booking.js';
+import { totalBookingPrice } from '../domain/pricing.js';
 import { listArenaCourtSchedules, listArenaCourts } from './arenaService.js';
 import { listArenaManagerIds } from './arenaService.js';
 
@@ -49,6 +50,25 @@ function num(v) {
   if (v === '' || v == null) return null;
   const n = Number(v);
   return Number.isFinite(n) ? Math.max(0, n) : null;
+}
+
+/**
+ * O preço a GRAVAR numa reserva: a soma de todos os horários DELA.
+ *
+ * Existe porque as telas mandavam `resolveArenaPrice(...).price` — que é o
+ * valor **por hora**. Uma reserva de três horas chegava à arena valendo uma, e
+ * o mesmo número errado reaparecia na lista de reservas do dia. O erro não era
+ * de exibição: era o número gravado.
+ *
+ * Quem grava confere: a tela pode estimar, mas o valor do documento sai daqui,
+ * com a quadra e os horários REAIS daquela reserva. O número enviado pela tela
+ * só vale quando a arena não tem tabela de preço (total zero) — aí é o que
+ * alguém digitou, e não cabe descartar.
+ */
+function precoDaReserva(arena, { courtId, slots, clientId, enviadoPelaTela }) {
+  const { total } = totalBookingPrice(arena, { courtId, slots, clientId });
+  if (total > 0) return Math.round(total * 100) / 100;
+  return num(enviadoPelaTela);
 }
 
 /**
@@ -184,6 +204,9 @@ export async function createBooking(arena, user, profile, input) {
   const nowMs = Date.now();
   for (const cid of targetCourtIds) {
     const id = doc(collection(db, COL.bookings)).id;
+    const precoTotal = precoDaReserva(arena, {
+      courtId: cid, slots, clientId: user.uid, enviadoPelaTela: input.proposed_price,
+    });
     batch.set(doc(db, COL.bookings, id), {
       id,
       arena_id: arena.id,
@@ -205,7 +228,7 @@ export async function createBooking(arena, user, profile, input) {
       participant_ids: participants ? ownerIds(participants) : [],
       invited_ids: participants ? invitedIds(participants) : [],
       payment_method: str(input.payment_method) || null,
-      proposed_price: num(input.proposed_price),
+      proposed_price: precoTotal,
       agreed_price: null,
       payment_status: PAYMENT_STATUS.NONE,
       created_by: user.uid,
@@ -400,6 +423,11 @@ export async function createBookingsForSelection(arena, user, profile, input) {
   resolvidos.forEach(({ courtIds, slots }) => {
     courtIds.forEach((cid) => {
       const id = doc(collection(db, COL.bookings)).id;
+      // Cada documento tem os SEUS horários e a SUA quadra — e a tabela pode
+      // variar entre quadras. O preço sai daí, não de um número único.
+      const precoTotal = precoDaReserva(arena, {
+        courtId: cid, slots, clientId: user.uid, enviadoPelaTela: input.proposed_price,
+      });
       batch.set(doc(db, COL.bookings, id), {
         id,
         arena_id: arena.id,
@@ -420,7 +448,7 @@ export async function createBookingsForSelection(arena, user, profile, input) {
         participant_ids: participants ? ownerIds(participants) : [],
         invited_ids: participants ? invitedIds(participants) : [],
         payment_method: str(input.payment_method) || null,
-        proposed_price: num(input.proposed_price),
+        proposed_price: precoTotal,
         agreed_price: null,
         payment_status: PAYMENT_STATUS.NONE,
         created_by: user.uid,

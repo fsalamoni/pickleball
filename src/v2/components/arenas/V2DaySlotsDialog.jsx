@@ -62,8 +62,7 @@ import {
 } from '@/modules/arenas/domain/slot_status';
 import { weekdayOf } from '@/modules/arenas/domain/booking';
 import { isCourtFreeForSlot } from '@/modules/arenas/domain/court_assignment';
-import { formatPrice } from '@/modules/arenas/domain/pricing';
-import { useBookingPrice } from '@/modules/arenas/hooks/useBookingPrice';
+import { formatPrice, totalBookingPrice, priceWithDurationText, bookingPriceInfo } from '@/modules/arenas/domain/pricing';
 import { V2Button, V2Badge, V2EmptyState, V2Skeleton } from '@/v2/ui/primitives';
 import BookingRequestDialog from '@/modules/arenas/components/BookingRequestDialog';
 import CourtTimePicker from './CourtTimePicker';
@@ -301,15 +300,37 @@ export default function V2DaySlotsDialog({
     return ordem.filter((k) => presentes.has(k));
   }, [slotsWithStatus]);
 
-  // Preço: a tabela pode variar por quadra, e a seleção pode ter várias. Sem
-  // uma quadra única, o preço sai da primeira escolhida — e o rodapé diz que é
-  // estimativa, em vez de fingir precisão que não tem.
   const quadrasDaSelecao = useMemo(
     () => Array.from(new Set(selectedSlots.map((x) => x.courtId || null))),
     [selectedSlots],
   );
-  const quadraDoPreco = courtId || quadrasDaSelecao.find(Boolean) || null;
-  const price = useBookingPrice(arena, quadraDoPreco, selectedSlots);
+
+  /**
+   * O TOTAL, somado QUADRA A QUADRA — cada uma com a sua tabela.
+   *
+   * Antes o preço saía de uma quadra só, aplicada a todos os horários: com
+   * duas quadras de tabelas diferentes, o número estava errado; e o rodapé
+   * dizia "a partir de", que é a forma educada de não responder.
+   */
+  const preco = useMemo(() => {
+    let total = 0;
+    let minutos = 0;
+    const taxas = new Set();
+    quadrasDaSelecao.forEach((cid) => {
+      const slotsDaQuadra = selectedSlots
+        .filter((x) => (x.courtId || null) === cid)
+        .map((x) => ({ date: x.date, start: x.start, end: x.end }));
+      const r = totalBookingPrice(arena, { courtId: cid || courtId || null, slots: slotsDaQuadra });
+      total += r.total;
+      minutos += r.minutes;
+      r.hourlyRates.forEach((t) => taxas.add(t));
+    });
+    return {
+      total: Math.round(total * 100) / 100,
+      horas: Math.round((minutos / 60) * 100) / 100,
+      taxas: Array.from(taxas),
+    };
+  }, [arena, courtId, selectedSlots, quadrasDaSelecao]);
 
   // Resumo do dia
   const summary = useMemo(() => {
@@ -469,27 +490,32 @@ export default function V2DaySlotsDialog({
                 <div className="border-b border-gray-100 bg-paper-pure p-4">
                   <p className="text-[10px] font-bold uppercase tracking-widest text-gray-500">Resumo do dia</p>
                   <div className="mt-2 flex flex-wrap gap-2 text-xs">
+                    {/* Tudo aqui é contado em HORÁRIOS — e é o que o texto diz.
+                        Antes o mesmo número saía como "2 solicitações em
+                        andamento", o que fazia contar reservas; com várias
+                        quadras, um horário ocupado não é uma reserva. */}
                     <V2Badge tone="green">
-                      <Check className="h-3 w-3" /> {summary.available} horário{summary.available === 1 ? '' : 's'} disponível{summary.available === 1 ? '' : 'is'}
+                      <Check className="h-3 w-3" /> {summary.available} {summary.available === 1 ? 'horário' : 'horários'}
+                      {podeVerPorQuadra ? ' com quadra livre' : (summary.available === 1 ? ' disponível' : ' disponíveis')}
                     </V2Badge>
                     {summary.pending > 0 && (
                       <V2Badge tone="amber">
-                        <AlertCircle className="h-3 w-3" /> {summary.pending} solicitação{summary.pending === 1 ? '' : 'es'} em andamento
+                        <AlertCircle className="h-3 w-3" /> {summary.pending} {summary.pending === 1 ? 'horário' : 'horários'} com solicitação em andamento
                       </V2Badge>
                     )}
                     {summary.confirmed > 0 && (
                       <V2Badge tone="red">
-                        <Check className="h-3 w-3" /> {summary.confirmed} já reservado
+                        <Check className="h-3 w-3" /> {summary.confirmed} {summary.confirmed === 1 ? 'horário já reservado' : 'horários já reservados'}
                       </V2Badge>
                     )}
                     {summary.unavailable > 0 && (
                       <V2Badge tone="amber">
-                        <Ban className="h-3 w-3" /> {summary.unavailable} indisponível
+                        <Ban className="h-3 w-3" /> {summary.unavailable} {summary.unavailable === 1 ? 'horário indisponível' : 'horários indisponíveis'}
                       </V2Badge>
                     )}
                     {summary.closed > 0 && (
                       <V2Badge tone="neutral">
-                        <X className="h-3 w-3" /> {summary.closed} fechado (sem horário)
+                        <X className="h-3 w-3" /> {summary.closed} {summary.closed === 1 ? 'horário fechado' : 'horários fechados'} (sem horário de funcionamento)
                       </V2Badge>
                     )}
                   </div>
@@ -717,11 +743,20 @@ export default function V2DaySlotsDialog({
                                   <MapPin className="h-3 w-3" /> {courtName}
                                 </span>
                               </div>
-                              {b.proposed_price != null && (
-                                <div className="mt-1 text-xs font-bold text-green-700">
-                                  {formatPrice(b.proposed_price)}
-                                </div>
-                              )}
+                              {/* O valor com a DURAÇÃO ao lado, recalculado
+                                  pela tabela: era aqui que várias reservas
+                                  pendentes apareciam todas com o preço de uma
+                                  hora, qualquer que fosse o tamanho delas. */}
+                              {(() => {
+                                const info = bookingPriceInfo(b, { arena });
+                                if (info.value == null) return null;
+                                return (
+                                  <div className="mt-1 text-xs font-bold text-green-700">
+                                    {info.text}
+                                    {info.agreed && <span className="ml-1 font-normal text-gray-500">acordado</span>}
+                                  </div>
+                                );
+                              })()}
                               {mine ? (
                                 <>
                                   <div className="mt-2 flex flex-wrap gap-2">
@@ -826,12 +861,14 @@ export default function V2DaySlotsDialog({
                       </li>
                     ))}
                   </ul>
-                  <div className="mt-1 text-base font-bold text-green-700">
-                    {quadrasDaSelecao.length > 1 ? 'A partir de ' : 'Total: '}{formatPrice(price.total)}
-                    <span className="ml-1 text-xs font-normal text-gray-500">
-                      · {Math.round(resumo.minutos / 60 * 10) / 10}h no total
-                    </span>
-                  </div>
+                  {preco.total > 0 && (
+                    <div className="mt-1 text-base font-bold text-green-700">
+                      Total: {formatPrice(preco.total)}
+                      <span className="ml-1 text-xs font-normal text-gray-500">
+                        · {priceWithDurationText(preco.total, preco.horas, preco.taxas).replace(`${formatPrice(preco.total)} · `, '')}
+                      </span>
+                    </div>
+                  )}
                 </div>
                 <V2Button onClick={handleConfirm}>
                   Continuar

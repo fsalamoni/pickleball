@@ -10,7 +10,7 @@ import {
   WEEKDAY_LABELS,
 } from '@/modules/arenas/domain/constants';
 import { bookingSlots } from '@/modules/arenas/domain/booking';
-import { formatPrice } from '@/modules/arenas/domain/pricing';
+import { bookingPriceInfo } from '@/modules/arenas/domain/pricing';
 import { brtDateTime } from '@/modules/tournament/domain/ics';
 import AddToCalendarButton from '@/modules/tournament/components/AddToCalendarButton';
 import {
@@ -18,6 +18,7 @@ import {
   useProposeBookingPrice,
   useSetBookingPayment,
 } from '@/modules/arenas/hooks/useBookings';
+import { useArena } from '@/modules/arenas/hooks/useArenas';
 import BookingEditDialog from '@/modules/arenas/components/BookingEditDialog';
 import { V2Badge, V2Button } from '@/v2/ui/primitives';
 
@@ -49,12 +50,29 @@ function SlotSummary({ booking }) {
   );
 }
 
-export default function V2BookingRow({ booking, perspective }) {
+/**
+ * @param {object} [arena] quando a tela JÁ tem a arena em mãos, ela evita a
+ *   consulta abaixo. O valor é sempre RECALCULADO pela tabela da arena — é o
+ *   que corrige as reservas antigas, gravadas com o preço de UMA hora, e o que
+ *   faz a mesma reserva mostrar o mesmo número na tela do atleta e na da
+ *   arena. Sem arena nenhuma (nem prop nem consulta), mostra o gravado, com a
+ *   duração ao lado para o número não ser lido como "por hora".
+ */
+export default function V2BookingRow({ booking, perspective, arena = null }) {
   const isArena = perspective === 'arena';
   const updateStatus = useUpdateBookingStatus();
   const proposePrice = useProposeBookingPrice();
   const setPayment = useSetBookingPayment();
-  const [price, setPrice] = useState(booking.proposed_price ?? '');
+  // A tela do atleta lista reservas de VÁRIAS arenas e não carrega nenhuma.
+  // A consulta é por id, cacheada pelo React Query e compartilhada entre as
+  // linhas da mesma arena — e só acontece quando a prop não veio.
+  const { data: arenaBuscada } = useArena(arena ? null : booking.arena_id);
+  const precoInfo = bookingPriceInfo(booking, { arena: arena || arenaBuscada || null });
+  // `null` = o admin não mexeu no campo; aí vale o valor calculado (que pode
+  // chegar depois, com a arena). Inicializar o estado com ele congelaria o
+  // número da primeira renderização.
+  const [precoDigitado, setPrecoDigitado] = useState(null);
+  const price = precoDigitado ?? (precoInfo.value ?? '');
   const [editing, setEditing] = useState(false);
   const options = { byManager: isArena };
 
@@ -87,7 +105,7 @@ export default function V2BookingRow({ booking, perspective }) {
   };
 
   const handleConfirm = () => {
-    const agreedPrice = price || booking.proposed_price;
+    const agreedPrice = price || precoInfo.value || booking.proposed_price;
     act(() => updateStatus.mutateAsync({ booking, status: BOOKING_STATUS.CONFIRMED, options: { ...options, agreedPrice } }), 'Reserva confirmada.');
   };
 
@@ -133,11 +151,12 @@ export default function V2BookingRow({ booking, perspective }) {
       </div>
 
       <div className="mt-4 flex flex-wrap items-center gap-3 text-sm text-gray-600">
-        {booking.proposed_price != null && (
-          <span>Proposto: <strong className="text-ink">{formatPrice(booking.proposed_price)}</strong></span>
-        )}
-        {booking.agreed_price != null && (
-          <span className="text-green-700">Acordado: <strong>{formatPrice(booking.agreed_price)}</strong></span>
+        {precoInfo.value != null && (
+          precoInfo.agreed ? (
+            <span className="text-green-700">Acordado: <strong>{precoInfo.text}</strong></span>
+          ) : (
+            <span>Valor estimado: <strong className="text-ink">{precoInfo.text}</strong></span>
+          )
         )}
       </div>
 
@@ -150,7 +169,7 @@ export default function V2BookingRow({ booking, perspective }) {
               min="0"
               step="0.01"
               value={price}
-              onChange={(e) => setPrice(e.target.value)}
+              onChange={(e) => setPrecoDigitado(e.target.value)}
               className="h-10 w-28 rounded-2xl border border-gray-200 bg-paper px-3 text-sm text-ink outline-none placeholder:text-gray-400 focus-visible:ring-4 focus-visible:ring-acid/30"
             />
           </div>

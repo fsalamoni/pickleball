@@ -16,7 +16,7 @@ import { cn } from '@/core/lib/utils';
 import { PlatformNotice } from '@/components/ui/platform-page';
 import { useAuth } from '@/core/lib/FirebaseAuthContext';
 import { BOOKING_KIND, BOOKING_STATUS, WEEKDAY_LABELS } from '../domain/constants.js';
-import { resolveArenaPrice, formatPrice } from '../domain/pricing.js';
+import { resolveArenaPrice, formatPrice, totalBookingPrice, priceWithDurationText } from '../domain/pricing.js';
 import { bookingSlots, expandRecurring, isValidSlot, sortSlots, weekdayOf } from '../domain/booking.js';
 import { pickAvailableCourtForSlots, unavailableCourtsForSlots, availableCourtsForSlots } from '../domain/court_assignment.js';
 import { useArenaBookings, useCreateBooking } from '../hooks/useBookings.js';
@@ -119,6 +119,34 @@ export default function BookingRequestDialog({ arena, open, onOpenChange, court:
     [gruposDaSelecao],
   );
   const nomePorQuadra = useMemo(() => new Map(courts.map((c) => [c.id, c.name])), [courts]);
+
+  /**
+   * O TOTAL — somando quadra a quadra, cada uma com a sua tabela.
+   *
+   * A tela mostrava a estimativa de UMA hora ("Estimativa: R$ 100 · por
+   * horário") mesmo com cinco horários escolhidos. Quem lia entendia que ia
+   * pagar R$ 100. O valor gravado tinha o mesmo defeito, e ele reaparecia na
+   * lista de reservas da arena.
+   */
+  const totalDaSelecao = useMemo(() => {
+    if (!modoSelecao) return null;
+    let total = 0;
+    let minutos = 0;
+    const taxas = new Set();
+    gruposDaSelecao.forEach(({ courtIds, slots }) => {
+      courtIds.forEach((cid) => {
+        const r = totalBookingPrice(arena, { courtId: cid, slots, clientId: user?.uid });
+        total += r.total;
+        minutos += r.minutes;
+        r.hourlyRates.forEach((t) => taxas.add(t));
+      });
+    });
+    return {
+      total: Math.round(total * 100) / 100,
+      horas: Math.round((minutos / 60) * 100) / 100,
+      taxas: Array.from(taxas),
+    };
+  }, [modoSelecao, gruposDaSelecao, arena, user?.uid]);
   const resumoSelecao = useMemo(
     () => summarizeSelection(celulasEscolhidas, nomePorQuadra),
     [celulasEscolhidas, nomePorQuadra],
@@ -266,7 +294,11 @@ export default function BookingRequestDialog({ arena, open, onOpenChange, court:
           kind: semanas > 1 ? BOOKING_KIND.RECURRING : BOOKING_KIND.SINGLE,
           recurrence: describableRecurrence(sortSelection(selection), semanas),
           notes,
-          proposed_price: estimate?.price ?? null,
+          // O serviço recalcula por reserva; isto é o fallback para arena sem
+          // tabela de preço — e, mesmo assim, já vai como TOTAL. Zero não é
+          // preço: arena sem tabela grava `null`, que a tela lê como
+          // "Sob consulta".
+          proposed_price: totalDaSelecao?.total > 0 ? totalDaSelecao.total : null,
           invitees: podeConvidar ? invitees : [],
           is_instant: instantaneaOk,
           payment_method: instantaneaOk ? paymentMethod : null,
@@ -726,14 +758,24 @@ export default function BookingRequestDialog({ arena, open, onOpenChange, court:
             </div>
           )}
 
-          {estimate && (
+          {modoSelecao ? (
+            totalDaSelecao && totalDaSelecao.total > 0 && (
+              <div className="rounded-lg bg-acid/10 p-3 text-sm text-ink">
+                <div className="flex flex-wrap items-baseline justify-between gap-2">
+                  <span className="font-bold">Total estimado</span>
+                  <strong className="font-display text-lg">{formatPrice(totalDaSelecao.total)}</strong>
+                </div>
+                <p className="mt-0.5 text-xs text-ink/70">
+                  {priceWithDurationText(totalDaSelecao.total, totalDaSelecao.horas, totalDaSelecao.taxas)}
+                  {totalReservas > 1 && ` · ${totalReservas} reservas`}
+                  {' · a arena confirma o valor final'}
+                </p>
+              </div>
+            )
+          ) : estimate && (
             <div className="rounded-lg bg-acid/10 p-3 text-sm text-ink">
               Estimativa: <strong>{formatPrice(estimate.price)}</strong>
-              <span className="text-ink/70">
-                {' · '}{estimate.label} (por horário; a arena confirma o valor final)
-                {modoSelecao && celulasEscolhidas.length > 1
-                  && ` · você escolheu ${celulasEscolhidas.length} horários`}
-              </span>
+              <span className="text-ink/70"> · {estimate.label} (por horário; a arena confirma o valor final)</span>
             </div>
           )}
         </div>
