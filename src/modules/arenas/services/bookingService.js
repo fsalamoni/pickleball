@@ -41,6 +41,8 @@ import { totalBookingPrice } from '../domain/pricing.js';
 import { listArenaCourtSchedules, listArenaCourts, listArenaUnavailabilities } from './arenaService.js';
 import { listArenaGameDays } from '@/modules/games/services/arenaGameDayService.js';
 import { mergeGameDayBlocks } from '@/modules/games/domain/arenaGameDay.js';
+import { mergeOpenSlotBlocks } from '../domain/openMatch.js';
+import { listArenaOpenSlots } from './openMatchService.js';
 import { listArenaManagerIds } from './arenaService.js';
 
 const COL = ARENA_COLLECTIONS;
@@ -79,23 +81,28 @@ function precoDaReserva(arena, { courtId, slots, clientId, enviadoPelaTela }) {
 /**
  * Os horários que a arena FECHOU — e que nenhuma reserva pode ocupar.
  *
- * Duas fontes, de propósito: os bloqueios gravados (`arena_unavailabilities`,
+ * TRÊS fontes, de propósito: os bloqueios gravados (`arena_unavailabilities`,
  * onde entram tanto os que a arena marcou à mão quanto a cópia que o dia de
- * jogo grava) e os dias de jogo em si. A cópia é conveniência; a fonte é o dia
- * de jogo. Se a cópia falhou por qualquer motivo, quem confere aqui ainda
- * acerta — e é aqui que a conferência importa, porque o formulário completo de
- * reserva não passa pelo calendário.
+ * jogo grava), os dias de jogo em si e as VAGAS ABERTAS (open match). A cópia
+ * é conveniência; a fonte é o dia de jogo. Se a cópia falhou por qualquer
+ * motivo, quem confere aqui ainda acerta — e é aqui que a conferência importa,
+ * porque o formulário completo de reserva não passa pelo calendário.
  *
- * Nenhuma das duas leituras pode derrubar a reserva por si: falha de leitura
+ * A vaga aberta entrou pelo mesmo motivo: uma vaga publicada às 19h na Quadra
+ * 1 é a Quadra 1 comprometida às 19h. Sem isto, a arena vende o mesmo horário
+ * duas vezes e o atleta chega para encontrar um jogo aberto na quadra dele.
+ *
+ * Nenhuma das três leituras pode derrubar a reserva por si: falha de leitura
  * volta lista vazia, e o pedido segue o caminho antigo.
  */
 async function bloqueiosDaArena(arenaId) {
   if (!arenaId) return [];
-  const [gravados, diasDeJogo] = await Promise.all([
+  const [gravados, diasDeJogo, vagasAbertas] = await Promise.all([
     listArenaUnavailabilities(arenaId).catch(() => []),
     listArenaGameDays(arenaId).catch(() => []),
+    listArenaOpenSlots(arenaId, { limit: 500 }).catch(() => []),
   ]);
-  return mergeGameDayBlocks(gravados, diasDeJogo);
+  return mergeOpenSlotBlocks(mergeGameDayBlocks(gravados, diasDeJogo), vagasAbertas);
 }
 
 /** Recusa o pedido quando ele cai em cima de um bloqueio, dizendo qual. */

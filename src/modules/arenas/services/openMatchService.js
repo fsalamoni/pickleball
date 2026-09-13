@@ -17,7 +17,6 @@ import {
   deleteDoc,
   query,
   where,
-  orderBy,
   serverTimestamp,
   arrayUnion,
   arrayRemove,
@@ -36,8 +35,12 @@ import {
   canJoinOpenSlot,
   getAvailableSpots,
 } from '../domain/openMatch.js';
+import { openSlotConflict, mergeOpenSlotBlocks } from '../domain/openMatch.js';
 import { getNextInLine, WAITLIST_STATUS, compactPositions, computePromotionExpiresAt, DEFAULT_PROMOTION_WINDOW_MINUTES } from '../domain/waitlist.js';
-import { getArena, listArenaManagers } from './arenaService.js';
+import { getArena, listArenaManagers, listArenaUnavailabilities } from './arenaService.js';
+import { listArenaGameDays } from '@/modules/games/services/arenaGameDayService.js';
+import { mergeGameDayBlocks } from '@/modules/games/domain/arenaGameDay.js';
+import { fetchUnifiedLevelValues } from '@/modules/rating/services/unifiedLevelService.js';
 
 const COL = 'arena_open_slots';
 
@@ -47,6 +50,49 @@ function str(v) {
 
 function displayName(user, profile) {
   return profile?.platform_name || profile?.full_name || user?.displayName || user?.email || 'Atleta';
+}
+
+/**
+ * O nível do atleta na RÉGUA ÚNICA (2.0–8.0) — a mesma dos sorteios.
+ *
+ * Antes a peneira comparava `profile.level`, que não vive nessa escala: ou não
+ * filtrava nada, ou filtrava errado. Falha de leitura devolve `null`, e nível
+ * desconhecido nunca barra ninguém.
+ */
+async function nivelDoAtleta(uid) {
+  if (!uid) return null;
+  try {
+    const mapa = await fetchUnifiedLevelValues([uid], { side: 'doubles' });
+    const v = Number(mapa?.[uid]);
+    return Number.isFinite(v) ? v : null;
+  } catch {
+    return null;
+  }
+}
+
+/**
+ * Tudo o que já ocupa as quadras da arena: bloqueios gravados, dias de jogo e
+ * as OUTRAS vagas abertas. É contra isto que uma vaga nova é conferida.
+ *
+ * Nenhuma leitura pode derrubar a publicação por si: falha volta lista vazia e
+ * a vaga segue o caminho antigo.
+ */
+async function ocupacaoDaArena(arenaId, { exceptSlotId } = {}) {
+  const [gravados, diasDeJogo, vagas] = await Promise.all([
+    listArenaUnavailabilities(arenaId).catch(() => []),
+    listArenaGameDays(arenaId).catch(() => []),
+    listArenaOpenSlots(arenaId, { limit: 500 }).catch(() => []),
+  ]);
+  const outras = vagas.filter((v) => v.id !== exceptSlotId);
+  return mergeOpenSlotBlocks(mergeGameDayBlocks(gravados, diasDeJogo), outras);
+}
+
+/** Recusa a vaga quando ela cai em cima de algo já marcado, dizendo o quê. */
+async function recusarSeQuadraOcupada(arenaId, vaga, { exceptSlotId } = {}) {
+  if (!vaga?.court_id) return;
+  const blocos = await ocupacaoDaArena(arenaId, { exceptSlotId });
+  const { hasConflict, reason } = openSlotConflict(vaga, blocos, []);
+  if (hasConflict) throw new Error(reason);
 }
 
 /**
@@ -65,6 +111,10 @@ export async function createOpenSlot(arenaId, input, actor) {
 
   const arena = await getArena(arenaId);
   if (!arena) throw new Error('Arena não encontrada.');
+
+  // Publicar em cima de uma reserva, de um dia de jogo ou de outra vaga é
+  // criar um conflito que só aparece no dia — com gente na porta da arena.
+  await recusarSeQuadraOcupada(arenaId, value);
 
   const id = doc(collection(db, COL)).id;
   const payload = {
@@ -99,6 +149,12 @@ export async function updateOpenSlot(slotId, updates, actor) {
   if (!valid) {
     const firstError = Object.values(errors)[0] || 'Dados inválidos.';
     throw new Error(firstError);
+  }
+  // A mesma conferência da criação — mudar o horário também pode atropelar.
+  // A própria vaga é excluída da conta, senão ela conflitaria consigo mesma.
+  const atual = await getOpenSlot(slotId);
+  if (atual?.arena_id) {
+    await recusarSeQuadraOcupada(atual.arena_id, value, { exceptSlotId: slotId });
   }
   await updateDoc(doc(db, COL, slotId), {
     ...value,
@@ -135,12 +191,23 @@ export async function cancelOpenSlot(slotId, reason, actor) {
  */
 export async function listArenaOpenSlots(arenaId, { status, limit: lim = 50 } = {}) {
   if (!db || !arenaId) return [];
-  const constraints = [where('arena_id', '==', arenaId)];
-  if (status) constraints.push(where('status', '==', status));
-  constraints.push(orderBy('date', 'asc'));
-  constraints.push(limit(lim));
-  const snap = await getDocs(query(collection(db, COL), ...constraints));
-  return snap.docs.map((d) => ({ id: d.id, ...d.data() }));
+  // Igualdade num campo mais ordenacao noutro exige INDICE COMPOSTO, e o unico
+  // indice de `arena_open_slots` e [arena_id, starts_at] — enquanto a consulta
+  // ordenava por `date`. Ela falhava SEMPRE, e como o padrao do projeto e
+  // `const { data = [] } = useX()`, o erro virava lista vazia: a arena nunca
+  // viu as proprias vagas publicadas. Um `where` so, o resto em memoria.
+  const snap = await getDocs(query(collection(db, COL), where('arena_id', '==', arenaId)));
+  return ordenarPorDataHora(snap.docs.map((d) => ({ id: d.id, ...d.data() })))
+    .filter((s) => !status || s.status === status)
+    // O corte vem DEPOIS da ordenacao: antes seriam 50 quaisquer.
+    .slice(0, Math.max(1, Number(lim) || 50));
+}
+
+/** Data + hora, do mais cedo para o mais tarde. Sem data, vai para o fim. */
+function ordenarPorDataHora(lista) {
+  return [...lista].sort((a, b) => (
+    `${a.date || '9999'}${a.start || ''}`.localeCompare(`${b.date || '9999'}${b.start || ''}`)
+  ));
 }
 
 /**
@@ -148,15 +215,18 @@ export async function listArenaOpenSlots(arenaId, { status, limit: lim = 50 } = 
  */
 export async function listOpenSlotsGlobal({ limit: lim = 100, onlyFuture = true } = {}) {
   if (!db) return [];
-  const constraints = [where('status', '==', OPEN_SLOT_STATUS.OPEN)];
-  if (onlyFuture) {
-    const today = new Date().toISOString().slice(0, 10);
-    constraints.push(where('date', '>=', today));
-  }
-  constraints.push(orderBy('date', 'asc'));
-  constraints.push(limit(lim));
-  const snap = await getDocs(query(collection(db, COL), ...constraints));
-  return snap.docs.map((d) => ({ id: d.id, ...d.data() }));
+  // Mesma historia: `status ==` + `date >=` + `orderBy(date)` precisa de
+  // [status, date], que nao existe. Um `where` so (o status, que corta a maior
+  // parte) e o recorte de data em memoria.
+  const snap = await getDocs(query(
+    collection(db, COL),
+    where('status', '==', OPEN_SLOT_STATUS.OPEN),
+    limit(500),
+  ));
+  const hoje = new Date().toISOString().slice(0, 10);
+  return ordenarPorDataHora(snap.docs.map((d) => ({ id: d.id, ...d.data() })))
+    .filter((s) => !onlyFuture || (s.date || '') >= hoje)
+    .slice(0, Math.max(1, Number(lim) || 100));
 }
 
 /**
@@ -180,7 +250,9 @@ export async function joinOpenSlot(slotId, user, profile) {
   const slot = await getOpenSlot(slotId);
   if (!slot) throw new Error('Slot não encontrado.');
 
-  const check = canJoinOpenSlot(slot, user, profile);
+  // A peneira de nível usa a RÉGUA ÚNICA, não o campo do perfil.
+  const level = await nivelDoAtleta(user.uid);
+  const check = canJoinOpenSlot(slot, user, { level });
   if (!check.ok) throw new Error(check.reason);
 
   const ref = doc(db, COL, slotId);
@@ -243,6 +315,26 @@ export async function leaveOpenSlot(slotId, userId) {
     status: newStatus,
     updated_at: serverTimestamp(),
   });
+
+  // 🐞 A fila de espera existia e NUNCA era chamada: alguém saía, a vaga
+  // abria, e quem estava na fila não ficava sabendo — que é a única coisa que
+  // a fila promete. Agora quem sai libera o próximo, na hora.
+  //
+  // Só quando o slot estava LOTADO e passou a ter vaga: sair de um jogo com
+  // lugar sobrando não chama ninguém.
+  if (slot.status === OPEN_SLOT_STATUS.FULL && newStatus === OPEN_SLOT_STATUS.OPEN) {
+    try {
+      // Importado sob demanda: `waitlistService` já importa daqui, e um ciclo
+      // no topo do arquivo é a receita para uma exportação chegar `undefined`
+      // em tempo de carga.
+      const { notifyNextInLine } = await import('./waitlistService.js');
+      await notifyNextInLine(slotId, { uid: userId });
+    } catch (err) {
+      // Chamar a fila é consequência, não pré-requisito: se falhar, quem saiu
+      // saiu do mesmo jeito.
+      logger.info('Falha ao chamar o próximo da fila (não crítico)', { err: err?.code });
+    }
+  }
 
   await createAuditLog({
     action: 'open_slot_left',

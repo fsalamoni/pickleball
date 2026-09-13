@@ -48,14 +48,14 @@ function ArenaModuleLinks({ arenaId }) {
       {canOpenMatch && (
         <V2Button asChild variant="secondary" size="sm">
           <Link to={`/arenas/${arenaId}/open-match`}>
-            <Trophy className="h-4 w-4" /> Open Match
+            <Trophy className="h-4 w-4" /> Jogos abertos
           </Link>
         </V2Button>
       )}
       {canMatchmaking && (
         <V2Button asChild variant="secondary" size="sm">
           <Link to={`/arenas/${arenaId}/matchmaking`}>
-            <Users className="h-4 w-4" /> Matchmaking
+            <Users className="h-4 w-4" /> Encontrar parceiro
           </Link>
         </V2Button>
       )}

@@ -36,6 +36,8 @@ import { getSlotStatus, generateTimeSlots, isSlotClickable, slotEndTime, SLOT_ST
 import { weekdayOf } from '@/modules/arenas/domain/booking';
 import { useArenaGameDays } from '@/modules/games/hooks/useArenaGameDays';
 import { mergeGameDayBlocks } from '@/modules/games/domain/arenaGameDay';
+import { mergeOpenSlotBlocks } from '@/modules/arenas/domain/openMatch';
+import { useArenaOpenSlots } from '@/modules/arenas/hooks/useArenaV3';
 import { formatDateShortBR } from '@/modules/arenas/domain/calendar';
 import { BOOKING_STATUS, BOOKING_STATUS_LABELS } from '@/modules/arenas/domain/constants';
 import { bookingPriceInfo } from '@/modules/arenas/domain/pricing';
@@ -75,9 +77,15 @@ export default function V2AdminBookingCalendar({ arenaId, embedded = false }) {
   // abaixo, segue mostrando apenas documentos reais, com botão de apagar que
   // aponta para algo que existe.)
   const { data: diasDeJogoDaArena = [] } = useArenaGameDays(arenaId);
+  // E as vagas abertas (open match), pelo mesmo motivo: a vaga publicada
+  // OCUPA a quadra. Aqui nem cópia existe — o bloqueio é sempre derivado.
+  const { data: vagasAbertas = [] } = useArenaOpenSlots(arenaId);
   const unavailabilities = useMemo(
-    () => mergeGameDayBlocks(unavailabilitiesRaw, diasDeJogoDaArena),
-    [unavailabilitiesRaw, diasDeJogoDaArena],
+    () => mergeOpenSlotBlocks(
+      mergeGameDayBlocks(unavailabilitiesRaw, diasDeJogoDaArena),
+      vagasAbertas,
+    ),
+    [unavailabilitiesRaw, diasDeJogoDaArena, vagasAbertas],
   );
   const addUnav = useAddArenaUnavailability(arenaId);
   const removeUnav = useDeleteArenaUnavailability(arenaId);

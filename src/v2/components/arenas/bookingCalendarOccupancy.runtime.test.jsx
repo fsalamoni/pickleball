@@ -34,6 +34,7 @@ const estado = {
   carregando: false,
   erro: false,
   diasDeJogo: [],
+  vagasAbertas: [],
 };
 
 vi.mock('sonner', () => ({ toast: { success: vi.fn(), error: vi.fn() } }));
@@ -56,6 +57,9 @@ vi.mock('@/modules/arenas/hooks/useBookings', () => ({
 }));
 vi.mock('@/modules/games/hooks/useArenaGameDays', () => ({
   useArenaGameDays: () => ({ data: estado.diasDeJogo }),
+}));
+vi.mock('@/modules/arenas/hooks/useArenaV3', () => ({
+  useArenaOpenSlots: () => ({ data: estado.vagasAbertas }),
 }));
 vi.mock('./V2DaySlotsDialog', () => ({ default: () => null }));
 
@@ -85,6 +89,7 @@ beforeEach(() => {
   estado.carregando = false;
   estado.erro = false;
   estado.diasDeJogo = [];
+  estado.vagasAbertas = [];
   container = document.createElement('div');
   document.body.appendChild(container);
   root = createRoot(container);
@@ -342,5 +347,47 @@ describe('⭐ dia de jogo da arena FECHA a quadra no calendário', () => {
     const cel = celula(QUI_1);
     expect(cel.textContent).toContain('Bloqueado');
     expect(cel.getAttribute('aria-label')).toContain('100% ocupado');
+  });
+});
+
+/* ================================================================== */
+/*  A VAGA ABERTA (open match) também ocupa a quadra                   */
+/* ================================================================== */
+
+describe('⭐ vaga aberta ocupa a quadra no calendário', () => {
+  const vaga = (over = {}) => ({
+    id: 'v1', arena_id: 'a1', court_id: 'q1', date: QUI_1,
+    start: '18:00', end: '22:00', status: 'open', format: 'duplas', ...over,
+  });
+
+  it('uma quadra só: as outras duas seguem livres', async () => {
+    estado.vagasAbertas = [vaga()];
+    await render();
+    expect(celula(QUI_1).textContent).toContain('4h livres');
+    expect(celula(QUI_1).textContent).not.toContain('Bloqueado');
+  });
+
+  it('as três quadras tomadas: o dia fica bloqueado', async () => {
+    estado.vagasAbertas = ['q1', 'q2', 'q3'].map((c, i) => vaga({ id: `v${i}`, court_id: c }));
+    await render();
+    expect(celula(QUI_1).textContent).toContain('Bloqueado');
+  });
+
+  it('vaga cancelada não ocupa nada', async () => {
+    estado.vagasAbertas = ['q1', 'q2', 'q3'].map((c, i) => vaga({ id: `v${i}`, court_id: c, status: 'cancelled' }));
+    await render();
+    expect(celula(QUI_1).textContent).toContain('livres');
+  });
+
+  it('vaga sem quadra escolhida não ocupa (não dá para saber qual)', async () => {
+    estado.vagasAbertas = [vaga({ court_id: null })];
+    await render();
+    expect(celula(QUI_1).textContent).toContain('4h livres');
+  });
+
+  it('outro dia segue livre', async () => {
+    estado.vagasAbertas = ['q1', 'q2', 'q3'].map((c, i) => vaga({ id: `v${i}`, court_id: c }));
+    await render();
+    expect(celula(QUI_2).textContent).toContain('4h livres');
   });
 });

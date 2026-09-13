@@ -4,7 +4,7 @@
 
 import {
   collection, doc, getDoc, getDocs, setDoc, updateDoc, deleteDoc,
-  query, where, orderBy, serverTimestamp, increment, limit, arrayUnion,
+  query, where, serverTimestamp, increment, limit, arrayUnion,
 } from 'firebase/firestore';
 import { db } from '@/core/config/firebase';
 import { logger } from '@/core/lib/logger';
@@ -23,15 +23,17 @@ function displayName(u, p) {
 
 export async function listArenaTournaments(arenaId, { onlyFuture = false, lim = 50 } = {}) {
   if (!db || !arenaId) return [];
-  const c = [where('arena_id', '==', arenaId)];
-  if (onlyFuture) {
-    const today = new Date().toISOString().slice(0, 10);
-    c.push(where('date', '>=', today));
-  }
-  c.push(orderBy('date', 'asc'));
-  c.push(limit(lim));
-  const snap = await getDocs(query(collection(db, COL_TOURNAMENTS), ...c));
-  return snap.docs.map((d) => ({ id: d.id, ...d.data() }));
+  // `arena_id ==` + `date >=` + `orderBy(date)` sem indice composto:
+  // `arena_internal_tournaments` nao tem nenhum. Os torneios internos da arena
+  // nunca apareceram. Ordenacao e recorte em memoria (a colecao e pequena por
+  // arena), com o corte DEPOIS de ordenar.
+  const snap = await getDocs(query(collection(db, COL_TOURNAMENTS), where('arena_id', '==', arenaId)));
+  const hoje = new Date().toISOString().slice(0, 10);
+  return snap.docs
+    .map((d) => ({ id: d.id, ...d.data() }))
+    .filter((x) => !onlyFuture || String(x.date || '') >= hoje)
+    .sort((a, b) => String(a.date || '').localeCompare(String(b.date || '')))
+    .slice(0, Math.max(1, Number(lim) || 50));
 }
 
 export async function createInternalTournament(arenaId, input, actor) {

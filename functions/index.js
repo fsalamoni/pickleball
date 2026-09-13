@@ -16,6 +16,8 @@
  *  - refreshLadderWeekly (sprint 5): agrega ladder de arenas ativas.
  *  - aggregateNpsDaily (sprint 6): consolida NPS por arena.
  *  - autoCloseChecklists (sprint 7): fecha checklists opening/closing do dia.
+ *  - advanceOpenSlotWaitlist (2026-09-13): expira a promoção vencida da fila
+ *    de espera e chama o próximo — o prazo existia e ninguém o cumpria.
  */
 
 const { initializeApp, getApps, getApp } = require('firebase-admin/app');
@@ -145,6 +147,116 @@ exports.expireStaleNotifications = onSchedule(
       return { archived: snap.size };
     } catch (err) {
       logger.error('expireStaleNotifications: erro.', err);
+      throw err;
+    }
+  },
+);
+
+// =====================================================================
+// FILA DE ESPERA DO JOGO ABERTO — a fila que andava sozinha, e não andava
+// =====================================================================
+//
+// 🐞 O que estava quebrado: a promoção tinha prazo (`notification_expires_at`)
+// e NINGUÉM o cumpria. `expireStaleNotifications` do lado do cliente existia,
+// mas não era chamada de lugar nenhum — e não poderia ser: expirar a promoção
+// de OUTRA pessoa é escrita que o navegador dela não vai fazer. Resultado: se
+// quem foi chamado não respondia, a vaga ficava presa para sempre e o próximo
+// da fila nunca era avisado.
+//
+// Aqui, no servidor, a cada 10 minutos: expira o prazo vencido e chama o
+// próximo — que é a única coisa que a fila de espera promete.
+//
+// Sem índice novo: um `where` de igualdade só, o resto conferido em memória.
+
+const JANELA_PROMOCAO_MIN = 60;
+
+/** O próximo da fila: menor posição entre quem está esperando. */
+function proximoDaFila(entradas) {
+  return entradas
+    .filter((e) => e.status === 'waiting')
+    .sort((a, b) => (Number(a.position) || 0) - (Number(b.position) || 0))[0] || null;
+}
+
+function venceu(entrada, agoraMs) {
+  const t = entrada?.notification_expires_at;
+  const ms = t?.toMillis ? t.toMillis() : Number(t);
+  return Number.isFinite(ms) && ms < agoraMs;
+}
+
+exports.advanceOpenSlotWaitlist = onSchedule(
+  {
+    schedule: 'every 10 minutes',
+    timeZone: 'America/Sao_Paulo',
+    region: REGION,
+  },
+  async () => {
+    const db = getFirestore(getApp(), DATABASE_ID);
+    const agora = Date.now();
+    try {
+      const notificados = await db
+        .collection('arena_waitlist')
+        .where('status', '==', 'notified')
+        .limit(300)
+        .get();
+
+      const vencidas = notificados.docs.filter((d) => venceu(d.data(), agora));
+      if (vencidas.length === 0) return { expired: 0, promoted: 0 };
+
+      // 1. Expira quem não respondeu no prazo.
+      const lote = db.batch();
+      vencidas.forEach((d) => lote.update(d.ref, {
+        status: 'expired',
+        expired_at: Timestamp.now(),
+        updated_at: Timestamp.now(),
+      }));
+      await lote.commit();
+
+      // 2. Chama o próximo de cada vaga afetada — se ainda houver lugar.
+      const slotIds = [...new Set(vencidas.map((d) => d.data()?.slot_id).filter(Boolean))];
+      let promovidos = 0;
+
+      for (const slotId of slotIds) {
+        const slotSnap = await db.collection('arena_open_slots').doc(slotId).get();
+        const slot = slotSnap.exists ? slotSnap.data() : null;
+        if (!slot || slot.status === 'cancelled') continue;
+
+        const ocupadas = Array.isArray(slot.participants) ? slot.participants.length : 0;
+        if (ocupadas >= (Number(slot.total_spots) || 0)) continue;
+
+        const filaSnap = await db
+          .collection('arena_waitlist')
+          .where('slot_id', '==', slotId)
+          .get();
+        const proximo = proximoDaFila(filaSnap.docs.map((d) => ({ id: d.id, ...d.data() })));
+        if (!proximo) continue;
+
+        await db.collection('arena_waitlist').doc(proximo.id).update({
+          status: 'notified',
+          notified_at: Timestamp.now(),
+          notification_expires_at: Timestamp.fromMillis(agora + JANELA_PROMOCAO_MIN * 60_000),
+          updated_at: Timestamp.now(),
+        });
+
+        await db.collection('notifications').add({
+          user_id: proximo.athlete_id,
+          title: `Vagou um lugar em "${String(slot.arena_name || '').slice(0, 50)}"`,
+          message: `${slot.date || ''} ${slot.start || ''} — você tem `
+            + `${JANELA_PROMOCAO_MIN} minutos para confirmar.`,
+          type: 'generic',
+          link: slot.arena_id ? `/arenas/${slot.arena_id}/open-match` : '/arenas',
+          read: false,
+          archived: false,
+          created_at: Timestamp.now(),
+        });
+        promovidos += 1;
+      }
+
+      logger.info('advanceOpenSlotWaitlist: fila avançou.', {
+        expired: vencidas.length, promoted: promovidos,
+      });
+      return { expired: vencidas.length, promoted: promovidos };
+    } catch (err) {
+      logger.error('advanceOpenSlotWaitlist: erro.', err);
       throw err;
     }
   },

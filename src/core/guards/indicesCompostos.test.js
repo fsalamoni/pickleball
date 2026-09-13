@@ -48,6 +48,17 @@ function temIndice(colecao, igualdades, ordenacoes) {
 
 /* -------------------------------------------------------------- código -- */
 
+/**
+ * Apaga COMENTÁRIOS antes de varrer, trocando cada caractere por espaço para
+ * não mexer nas posições (a linha reportada tem de continuar certa).
+ *
+ * Sem isto o guarda acusa a si mesmo: os comentários que EXPLICAM o defeito
+ * citam `orderBy('created_at')`, e o varredor lia a explicação como consulta.
+ */
+function semComentarios(src) {
+  return src.replace(/\/\*[\s\S]*?\*\/|\/\/[^\n]*/g, (m) => m.replace(/[^\n]/g, ' '));
+}
+
 function arquivosDeServico(dir, saida = []) {
   for (const nome of readdirSync(dir)) {
     const caminho = join(dir, nome);
@@ -78,7 +89,7 @@ function resolveColecao(src, expressao) {
 function consultasComOrdenacao() {
   const achados = [];
   for (const arquivo of arquivosDeServico('src/modules')) {
-    const src = readFileSync(arquivo, 'utf8');
+    const src = semComentarios(readFileSync(arquivo, 'utf8'));
     if (!src.includes('orderBy(')) continue;
 
     // Cada `query(` até o fecha-parênteses equilibrado.
@@ -101,6 +112,83 @@ function consultasComOrdenacao() {
       achados.push({
         arquivo,
         linha: src.slice(0, i).split('\n').length,
+        colecao,
+        igualdades,
+        faixas,
+        ordenacoes,
+      });
+    }
+  }
+  return achados;
+}
+
+/* ------------------------------------------------- o outro jeito de montar -- */
+
+/**
+ * Nem toda consulta é escrita `query(collection(...), where(...), orderBy(...))`.
+ * Há um segundo estilo, muito comum aqui:
+ *
+ *     const constraints = [where('arena_id', '==', id)];
+ *     if (status) constraints.push(where('status', '==', status));
+ *     constraints.push(orderBy('date', 'asc'));
+ *     getDocs(query(collection(db, COL), ...constraints));
+ *
+ * Neste estilo o `orderBy` está FORA do `query(...)`, e a varredura acima
+ * passava batido — foi assim que `listArenaOpenSlots` (índice em `starts_at`,
+ * consulta por `date`) sobreviveu ao guarda e ficou devolvendo lista vazia.
+ *
+ * Aqui a varredura é por FUNÇÃO, e só entra a função que monta a consulta
+ * desse jeito (tem `orderBy` fora de qualquer `query(...)`).
+ */
+function corpoDaFuncao(src, inicio) {
+  // Pula a LISTA DE PARÂMETROS antes de procurar a chave do corpo: uma
+  // desestruturação no parâmetro (`{ status, limit = 50 } = {}`) abre uma
+  // chave que não é o corpo, e ler dali faz o varredor achar que a função
+  // está vazia — foi assim que `listArenaOpenSlots` escapou.
+  const abreParen = src.indexOf('(', inicio);
+  if (abreParen === -1) return '';
+  let paren = 0;
+  let fimParen = -1;
+  for (let j = abreParen; j < src.length; j++) {
+    if (src[j] === '(') paren += 1;
+    else if (src[j] === ')') { paren -= 1; if (paren === 0) { fimParen = j; break; } }
+  }
+  if (fimParen === -1) return '';
+  const abre = src.indexOf('{', fimParen);
+  if (abre === -1) return '';
+  let nivel = 0;
+  for (let j = abre; j < src.length; j++) {
+    if (src[j] === '{') nivel += 1;
+    else if (src[j] === '}') { nivel -= 1; if (nivel === 0) return src.slice(abre, j + 1); }
+  }
+  return src.slice(abre);
+}
+
+function consultasMontadasEmVetor() {
+  const achados = [];
+  for (const arquivo of arquivosDeServico('src/modules')) {
+    const src = semComentarios(readFileSync(arquivo, 'utf8'));
+    if (!src.includes('orderBy(')) continue;
+
+    for (const m of src.matchAll(/(?:export\s+)?(?:async\s+)?function\s+(\w+)\s*\(/g)) {
+      const corpo = corpoDaFuncao(src, m.index);
+      if (!corpo.includes('orderBy(') || !corpo.includes('collection(')) continue;
+
+      // Já coberto pela varredura de `query(...)`? Então pula.
+      const dentroDeQuery = /query\([^;]*orderBy\(/s.test(corpo);
+      if (dentroDeQuery) continue;
+
+      const ordenacoes = [...corpo.matchAll(/orderBy\(\s*'([^']+)'/g)].map((x) => x[1]);
+      const igualdades = [...corpo.matchAll(/where\(\s*'([^']+)'\s*,\s*'=='/g)].map((x) => x[1]);
+      const faixas = [...corpo.matchAll(/where\(\s*'([^']+)'\s*,\s*'(?:<|<=|>|>=|!=|in|not-in|array-contains[^']*)'/g)].map((x) => x[1]);
+      if (igualdades.length === 0 && faixas.length === 0) continue;
+
+      const alvo = corpo.match(/collection\(\s*db\s*,\s*([^)]+)\)/);
+      const colecao = alvo ? resolveColecao(src, alvo[1]) : null;
+      achados.push({
+        arquivo,
+        funcao: m[1],
+        linha: src.slice(0, m.index).split('\n').length,
         colecao,
         igualdades,
         faixas,
@@ -138,6 +226,13 @@ describe('🛡️ nenhuma consulta pede índice composto que não existe', () =>
     const semIndice = consultas
       .filter((c) => c.colecao && !temIndice(c.colecao, [...c.igualdades, ...c.faixas], c.ordenacoes))
       .map((c) => `${c.arquivo}:${c.linha} · ${c.colecao} · ==[${c.igualdades}] faixa[${c.faixas}] orderBy[${c.ordenacoes}]`);
+    expect(semIndice).toEqual([]);
+  });
+
+  it('⭐ o mesmo vale para a consulta montada em VETOR de constraints', () => {
+    const semIndice = consultasMontadasEmVetor()
+      .filter((c) => c.colecao && !temIndice(c.colecao, [...c.igualdades, ...c.faixas], c.ordenacoes))
+      .map((c) => `${c.arquivo}:${c.linha} · ${c.funcao} · ${c.colecao} · ==[${c.igualdades}] faixa[${c.faixas}] orderBy[${c.ordenacoes}]`);
     expect(semIndice).toEqual([]);
   });
 

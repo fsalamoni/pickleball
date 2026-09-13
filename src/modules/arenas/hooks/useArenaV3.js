@@ -153,15 +153,24 @@ export function useOpenSlot(slotId) {
   });
 }
 
+/**
+ * Uma vaga que muda mexe em mais coisa do que a lista de vagas: o CALENDÁRIO
+ * deriva bloqueio dela (a vaga ocupa a quadra), e a fila de espera aponta para
+ * ela. Invalidar por prefixo é o que mantém as três telas concordando.
+ */
+function invalidarVagas(qc) {
+  qc.invalidateQueries({ queryKey: ['arena-open-slots'] });
+  qc.invalidateQueries({ queryKey: ['open-slots-global'] });
+  qc.invalidateQueries({ queryKey: ['slot-waitlist'] });
+  qc.invalidateQueries({ queryKey: ['user-waitlist'] });
+}
+
 export function useCreateOpenSlot() {
   const { user } = useAuth();
   const qc = useQueryClient();
   return useMutation({
     mutationFn: ({ arenaId, input }) => createOpenSlot(arenaId, input, user),
-    onSuccess: (_d, { arenaId }) => {
-      qc.invalidateQueries({ queryKey: ['arena-open-slots', arenaId] });
-      qc.invalidateQueries({ queryKey: ['open-slots-global'] });
-    },
+    onSuccess: () => invalidarVagas(qc),
   });
 }
 
@@ -181,9 +190,9 @@ export function useCancelOpenSlot() {
   const qc = useQueryClient();
   return useMutation({
     mutationFn: ({ slotId, reason }) => cancelOpenSlot(slotId, reason, user),
-    onSuccess: (_d, { arenaId }) => {
-      qc.invalidateQueries({ queryKey: ['arena-open-slots', arenaId] });
-    },
+    // Invalida pelo PREFIXO: a arena nem sempre vem nas variáveis, e uma vaga
+    // que muda mexe também no calendário (que deriva bloqueio dela).
+    onSuccess: () => invalidarVagas(qc),
   });
 }
 
@@ -194,8 +203,7 @@ export function useJoinOpenSlot() {
     mutationFn: (slotId) => joinOpenSlot(slotId, user, userProfile),
     onSuccess: (_d, slotId) => {
       qc.invalidateQueries({ queryKey: ['open-slot', slotId] });
-      qc.invalidateQueries({ queryKey: ['open-slots-global'] });
-      qc.invalidateQueries({ queryKey: ['arena-open-slots'] });
+      invalidarVagas(qc);
     },
   });
 }
@@ -207,7 +215,7 @@ export function useLeaveOpenSlot() {
     mutationFn: (slotId) => leaveOpenSlot(slotId, user?.uid),
     onSuccess: (_d, slotId) => {
       qc.invalidateQueries({ queryKey: ['open-slot', slotId] });
-      qc.invalidateQueries({ queryKey: ['open-slots-global'] });
+      invalidarVagas(qc);
     },
   });
 }
@@ -217,10 +225,7 @@ export function useDeleteOpenSlot() {
   const qc = useQueryClient();
   return useMutation({
     mutationFn: (slotId) => deleteOpenSlot(slotId, user),
-    onSuccess: () => {
-      qc.invalidateQueries({ queryKey: ['open-slots-global'] });
-      qc.invalidateQueries({ queryKey: ['arena-open-slots'] });
-    },
+    onSuccess: () => invalidarVagas(qc),
   });
 }
 
@@ -274,8 +279,8 @@ export function useLeaveWaitlist() {
   return useMutation({
     mutationFn: (slotId) => leaveWaitlist(slotId, user?.uid, user),
     onSuccess: (_d, slotId) => {
-      qc.invalidateQueries({ queryKey: ['slot-waitlist', slotId] });
       qc.invalidateQueries({ queryKey: ['user-waitlist-entry', slotId] });
+      invalidarVagas(qc);
     },
   });
 }
@@ -286,8 +291,8 @@ export function useAcceptWaitlist() {
   return useMutation({
     mutationFn: (slotId) => acceptWaitlistPromotion(slotId, user, userProfile),
     onSuccess: (_d, slotId) => {
-      qc.invalidateQueries({ queryKey: ['slot-waitlist', slotId] });
       qc.invalidateQueries({ queryKey: ['open-slot', slotId] });
+      invalidarVagas(qc);
     },
   });
 }
@@ -297,9 +302,7 @@ export function useDeclineWaitlist() {
   const qc = useQueryClient();
   return useMutation({
     mutationFn: (slotId) => declineWaitlistPromotion(slotId, user, user),
-    onSuccess: (_d, slotId) => {
-      qc.invalidateQueries({ queryKey: ['slot-waitlist', slotId] });
-    },
+    onSuccess: () => invalidarVagas(qc),
   });
 }
 
