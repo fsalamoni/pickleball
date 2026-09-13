@@ -17,7 +17,6 @@ import {
   deleteDoc,
   query,
   where,
-  orderBy,
   serverTimestamp,
   writeBatch,
 } from 'firebase/firestore';
@@ -114,8 +113,14 @@ export async function leaveWaitlist(slotId, userId, actor) {
  */
 export async function listSlotWaitlist(slotId) {
   if (!db || !slotId) return [];
-  const snap = await getDocs(query(collection(db, COL), where('slot_id', '==', slotId), orderBy('position', 'asc')));
-  return snap.docs.map((d) => ({ id: d.id, ...d.data() }));
+  // 🐞 Sem `orderBy` no servidor: `slot_id ==` + `orderBy('position')` exige
+  // índice composto, e o único índice de `arena_waitlist` é
+  // [arena_id, created_at]. A consulta falhava SEMPRE — e como quem chamava
+  // tratava erro como lista vazia, a fila de espera simplesmente não existia.
+  const snap = await getDocs(query(collection(db, COL), where('slot_id', '==', slotId)));
+  return snap.docs
+    .map((d) => ({ id: d.id, ...d.data() }))
+    .sort((a, b) => (Number(a.position) || 0) - (Number(b.position) || 0));
 }
 
 /**
@@ -133,8 +138,12 @@ export async function getUserWaitlistEntry(userId, slotId) {
  */
 export async function listUserWaitlist(userId) {
   if (!userId) return [];
-  const snap = await getDocs(query(collection(db, COL), where('athlete_id', '==', userId), orderBy('joined_at', 'desc')));
-  return snap.docs.map((d) => ({ id: d.id, ...d.data() }));
+  // Mesmo motivo de `listSlotWaitlist`: a ordenação vai para a memória.
+  const snap = await getDocs(query(collection(db, COL), where('athlete_id', '==', userId)));
+  return snap.docs
+    .map((d) => ({ id: d.id, ...d.data() }))
+    .sort((a, b) => String(b.joined_at?.seconds ?? b.joined_at ?? '')
+      .localeCompare(String(a.joined_at?.seconds ?? a.joined_at ?? '')));
 }
 
 /**

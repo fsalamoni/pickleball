@@ -355,6 +355,22 @@ Regras que valem a pena não desfazer:
 - **Encostar não é sobrepor** (18h–20h convive com 20h–22h), e bloqueio sem
   `court_id` fecha a arena inteira — mesma regra do status de slot.
 
+## ⚠️ `orderBy` + `where` = índice composto (2026-09-13)
+
+Consulta com filtro de igualdade num campo **e** `orderBy` noutro exige índice
+composto. **Sem ele a consulta FALHA** — e como o padrão é
+`const { data = [] } = useX()`, o erro vira lista vazia e a tela mente em
+silêncio. Cinco consultas do projeto estavam assim, mortas desde que foram
+escritas (bloqueios do calendário, torneios da arena, as duas da fila de
+espera, checklists).
+
+O padrão daqui é **um `where` só, ordenação em memória** (como
+`listArenaGameDays`). Com `limit`, o corte vai junto para a memória — cortar
+antes de ordenar devolve N quaisquer.
+
+`src/core/guards/indicesCompostos.test.js` lê o código e o
+`firestore.indexes.json` e reprova quem reintroduzir a combinação sem índice.
+
 ## Onde achar mais
 
 - `docs/06-MODULES.md` § arenas

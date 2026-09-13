@@ -450,14 +450,23 @@ export async function listPublicTournaments() {
   return snap.docs.map((d) => d.data());
 }
 
-// Sprint 4 ARE-14: lista tournaments vinculados a uma arena
+/**
+ * Os torneios vinculados a uma arena (Sprint 4 ARE-14).
+ *
+ * 🐞 Sem `orderBy` no servidor: `arena_id ==` + `orderBy('starts_at')` exige
+ * índice composto, e o único índice de `tournaments` é
+ * [creator_uid, created_at]. A consulta falhava SEMPRE — a seção "Torneios"
+ * da página da arena vinha vazia em toda arena, desde que foi escrita, sem
+ * erro nenhum na tela. Ordenação em memória.
+ */
 export async function listArenaTournaments(arenaId) {
   if (!arenaId || !db) return [];
   const q = query(
     collection(db, COL.tournaments),
     where('arena_id', '==', arenaId),
-    orderBy('starts_at', 'desc'),
   );
   const snap = await getDocs(q);
-  return snap.docs.map((d) => ({ id: d.id, ...d.data() }));
+  return snap.docs
+    .map((d) => ({ id: d.id, ...d.data() }))
+    .sort((a, b) => String(b.starts_at || '').localeCompare(String(a.starts_at || '')));
 }

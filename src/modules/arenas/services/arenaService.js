@@ -19,7 +19,6 @@ import {
   deleteDoc,
   query,
   where,
-  orderBy,
   serverTimestamp,
   writeBatch,
 } from 'firebase/firestore';
@@ -617,14 +616,32 @@ export async function deleteArenaUnavailability(unavId, actor) {
   });
 }
 
+/**
+ * Os bloqueios de horário de uma arena.
+ *
+ * 🐞 **Um `where` só, e o resto em memória — de propósito.** Esta consulta
+ * pedia `where('arena_id','==',x)` + `orderBy('date')`, e isso exige um ÍNDICE
+ * COMPOSTO que nunca existiu em `firestore.indexes.json`. Resultado: ela
+ * falhava **sempre**, em toda arena, desde que foi escrita — e como quem
+ * chamava fazia `const { data = [] }`, o erro virava lista vazia e ninguém
+ * via. Foi por isso que o dia de jogo parecia não fechar a quadra: o
+ * calendário nunca recebeu bloqueio nenhum.
+ *
+ * O recorte por data e a ordenação passaram para a memória. É o mesmo padrão
+ * de `listArenaGameDays`, e a coleção é pequena por arena. **Não** troque por
+ * um `orderBy`/`where` a mais sem criar o índice junto: o sintoma não é um
+ * erro na tela, é uma tela que mente em silêncio.
+ */
 export async function listArenaUnavailabilities(arenaId, { from, to } = {}) {
   if (!arenaId || !db) return [];
-  const filters = [where('arena_id', '==', arenaId)];
-  if (from) filters.push(where('date', '>=', from));
-  if (to) filters.push(where('date', '<=', to));
-  filters.push(orderBy('date', 'asc'));
-  const snap = await getDocs(query(collection(db, COL.unavailabilities), ...filters));
-  return snap.docs.map((d) => ({ id: d.id, ...d.data() }));
+  const snap = await getDocs(query(
+    collection(db, COL.unavailabilities),
+    where('arena_id', '==', arenaId),
+  ));
+  return snap.docs
+    .map((d) => ({ id: d.id, ...d.data() }))
+    .filter((u) => (!from || String(u.date || '') >= from) && (!to || String(u.date || '') <= to))
+    .sort((a, b) => String(a.date || '').localeCompare(String(b.date || '')));
 }
 
 /* ---------------------- Inventory (Mercado - Sprint 5) ------------ */

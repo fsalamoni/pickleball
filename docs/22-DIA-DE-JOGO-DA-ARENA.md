@@ -233,3 +233,55 @@ parava na primeira e concluía que a plataforma não fazia o resto.
 - e `20/18 inscrito(s)` — que acontece de verdade, porque a arena pode
   INSERIR atletas pela lista de participantes sem passar pelo limite — passou
   a dizer `2 acima do limite` em vez de deixar a conta estranha no ar.
+
+## 🐞 A causa REAL: uma consulta que nunca funcionou (2026-09-13)
+
+A correção anterior — derivar o bloqueio do próprio dia de jogo — estava certa,
+mas tratava o sintoma. A causa era mais simples e mais grave:
+
+```js
+// listArenaUnavailabilities, como estava
+where('arena_id', '==', arenaId)   // + orderBy('date', 'asc')
+```
+
+`where` de igualdade num campo **mais** `orderBy` noutro exige **índice
+composto** no Firestore, e `arena_unavailabilities` **não tem nenhum índice**
+em `firestore.indexes.json`. A consulta falhava **sempre, em toda arena, desde
+que foi escrita** — e como o padrão do projeto é `const { data = [] } =
+useX()`, o erro virava lista vazia. O calendário nunca recebeu um bloqueio
+sequer; o sintoma que apareceu meses depois foi "o dia de jogo não fecha a
+quadra".
+
+Foi o botão **"Tentar de novo"** — criado na onda anterior justamente para que
+falha deixasse de parecer vazio — que tornou o defeito visível.
+
+A correção não toca no banco: **um `where` só, ordenação e recorte de data em
+memória**, que é o padrão já usado em `listArenaGameDays` (a coleção é pequena
+por arena).
+
+### Não era a única
+
+A mesma varredura achou **mais quatro consultas mortas pelo mesmo motivo**,
+todas silenciosas desde que foram escritas:
+
+| consulta | o que estava quebrado |
+|---|---|
+| `listArenaUnavailabilities` | os bloqueios do calendário — **este** |
+| `listArenaTournaments` | "Torneios" da página da arena, vazio em toda arena |
+| `listSlotWaitlist` | a fila de espera de um horário |
+| `listUserWaitlist` | a fila de espera do atleta |
+| `listArenaChecklists` | os checklists de operação da arena |
+
+(`listCircuitTournaments`, fora da arena, tinha o mesmo defeito e foi junto.)
+
+No caso do checklist havia um detalhe a mais: com `limit(50)` no servidor,
+mover a ordenação para a memória sem mover o corte pegaria **50 quaisquer** e
+só então ordenaria. Corte só depois de ordenar.
+
+### O guarda
+
+`src/core/guards/indicesCompostos.test.js` lê o CÓDIGO e o
+`firestore.indexes.json` e reprova toda consulta `where` + `orderBy` sem
+índice que a sirva. Quem precisar de uma tem duas saídas honestas: criar o
+índice (mexe no banco, decisão consciente) ou ordenar em memória. O teste foi
+verificado ao contrário — com o defeito de volta, ele reprova.

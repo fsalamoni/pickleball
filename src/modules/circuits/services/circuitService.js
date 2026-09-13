@@ -157,9 +157,13 @@ export async function removeTournamentFromCircuit(circuitId, tournamentId, actor
 
 export async function listCircuitTournaments(circuitId) {
   if (!circuitId) return [];
-  const q = query(collection(db, CIRCUIT_COLLECTIONS.tournaments), where('circuit_id', '==', circuitId), orderBy('added_at', 'asc'));
+  // 🐞 `circuit_id ==` + `orderBy('added_at')` exige índice composto, e
+  // `circuit_tournaments` não tem nenhum. Ordenação em memória.
+  const q = query(collection(db, CIRCUIT_COLLECTIONS.tournaments), where('circuit_id', '==', circuitId));
   const snap = await getDocs(q);
-  return snap.docs.map((d) => ({ id: d.id, ...d.data() }));
+  return snap.docs
+    .map((d) => ({ id: d.id, ...d.data() }))
+    .sort((a, b) => Number(a.added_at?.seconds || 0) - Number(b.added_at?.seconds || 0));
 }
 
 /* ----------------------------- Results ----------------------------- */

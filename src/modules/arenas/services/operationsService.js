@@ -23,12 +23,16 @@ function str(v) { return String(v ?? '').trim(); }
 
 export async function listArenaChecklists(arenaId, { kind, onlyActive = false, lim = 50 } = {}) {
   if (!db || !arenaId) return [];
-  const c = [where('arena_id', '==', arenaId)];
-  if (kind) c.push(where('kind', '==', kind));
-  c.push(orderBy('created_at', 'desc'));
-  c.push(limit(lim));
-  const snap = await getDocs(query(collection(db, COL_CHECKLISTS), ...c));
-  return snap.docs.map((d) => ({ id: d.id, ...d.data() }));
+  // 🐞 `arena_id ==` + `kind ==` + `orderBy('created_at')` exige índice
+  // composto, e `arena_checklists` não tem nenhum: a consulta falhava sempre.
+  // Filtro, ordenação e corte foram para a memória — e o corte só pode vir
+  // DEPOIS da ordenação, senão os 50 seriam 50 quaisquer.
+  const snap = await getDocs(query(collection(db, COL_CHECKLISTS), where('arena_id', '==', arenaId)));
+  return snap.docs
+    .map((d) => ({ id: d.id, ...d.data() }))
+    .filter((x) => !kind || x.kind === kind)
+    .sort((a, b) => Number(b.created_at?.seconds || 0) - Number(a.created_at?.seconds || 0))
+    .slice(0, Math.max(1, Number(lim) || 50));
 }
 
 export async function createChecklist(arenaId, input, actor) {
