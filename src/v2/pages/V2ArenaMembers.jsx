@@ -1,239 +1,515 @@
 /**
- * V2ArenaMembers — Pacotes + Wallet do atleta na arena.
+ * V2ArenaMembers — a minha relação com ESTA arena.
  *
- * Rota: /arenas/:arenaId/membros
+ * Rota: `/arenas/:arenaId/membros`
+ * Módulos: `members` (+ `members_tiers`, `members_packages`, `members_wallet`).
  *
- * Mostra:
- * - Pacotes disponíveis para compra
- * - Meus pacotes ativos
- * - Meu wallet (saldo, pontos, histórico)
- * - Meu tier
+ * A tela responde três perguntas, nesta ordem — que é a ordem em que elas
+ * importam para quem joga:
  *
- * Gate: arena habilitou `members_packages` ou `members_wallet`.
+ *   1. **O que eu sou aqui?** nível, pontos e quanto falta para o próximo.
+ *   2. **O que eu tenho aqui?** horas de pacote e saldo em carteira, com
+ *      validade — um pacote que vence sem aviso é dinheiro perdido.
+ *   3. **O que isso me dá?** o desconto e as vantagens, escritos. Antes o
+ *      nível era um selo bonito que não dizia para que servia.
  *
- * Aditivo.
+ * Cada bloco é gatilhado pelo SEU módulo: a arena pode ter membros sem
+ * carteira, ou pacotes sem níveis.
  */
 
-import React from 'react';
-import { Link, useParams } from 'react-router-dom';
+import React, { useMemo } from 'react';
+import { Link, Navigate, useParams } from 'react-router-dom';
 import { toast } from 'sonner';
-import { ArrowLeft, Package, Star, Wallet, Trophy, ShoppingCart } from 'lucide-react';
+import {
+  AlertTriangle, ArrowLeft, CalendarClock, Check, Clock, Copy, Gift, Package,
+  Share2, Sparkles, Star, Trophy, Wallet,
+} from 'lucide-react';
 import { useAuth } from '@/core/lib/FirebaseAuthContext';
 import { useArena } from '@/modules/arenas/hooks/useArenas';
 import {
-  useCanArenaUseModule, useArenaPackages, usePurchasePackage,
-  useArenaWallet, useArenaMember,
+  useArenaPackages, usePurchasePackage, useArenaWallet, useArenaMember,
+  useMemberSubscription, useMyReferralCode,
 } from '@/modules/arenas/hooks/useArenaV3';
-import { computeTier, calculateCashbackPct } from '@/modules/arenas/domain/members';
+import { useArenaModules } from '@/modules/arenas/hooks/useArenaModules';
+import { ARENA_MODULE_ID } from '@/modules/arenas/domain/modules';
+import { tierProgress, usableHours } from '@/modules/arenas/domain/memberBenefit';
+import { DEFAULT_POINTS_PER_REAL, redeemPoints } from '@/modules/arenas/domain/marketing';
+import {
+  SUBSCRIPTION_STATUS, amountDue, subscriptionState,
+} from '@/modules/arenas/domain/subscription';
+import { formatPrice } from '@/modules/arenas/domain/pricing';
+import { formatDateShortBR } from '@/modules/arenas/domain/calendar';
 import { V2Badge, V2Button, V2EmptyState, V2Skeleton, V2Surface } from '@/v2/ui/primitives';
 
-function TierBadge({ points }) {
-  const tier = computeTier(points);
-  const colors = {
-    bronze: 'bg-amber-100 text-amber-800 border-amber-200',
-    silver: 'bg-gray-100 text-gray-700 border-gray-200',
-    gold: 'bg-yellow-100 text-yellow-800 border-yellow-200',
-    platinum: 'bg-violet-100 text-violet-800 border-violet-200',
-  };
-  return (
-    <span className={`inline-flex items-center gap-1.5 rounded-full border px-3 py-1 text-xs font-bold ${colors[tier.id] || colors.bronze}`}>
-      <Trophy className="h-3 w-3" /> {tier.name} · {points || 0} pts
-    </span>
-  );
+const TIER_CLASS = {
+  bronze: 'bg-amber-100 text-amber-800 border-amber-200',
+  silver: 'bg-gray-100 text-gray-700 border-gray-200',
+  gold: 'bg-yellow-100 text-yellow-800 border-yellow-200',
+  platinum: 'bg-violet-100 text-violet-800 border-violet-200',
+};
+
+/** `Timestamp | Date | number` → 'YYYY-MM-DD', para as funções de data. */
+function toISO(value) {
+  if (!value) return null;
+  const ms = value?.toMillis ? value.toMillis()
+    : value instanceof Date ? value.getTime()
+      : value?.seconds ? value.seconds * 1000
+        : Number(value);
+  if (!Number.isFinite(ms)) return null;
+  const d = new Date(ms);
+  const p = (n) => String(n).padStart(2, '0');
+  return `${d.getFullYear()}-${p(d.getMonth() + 1)}-${p(d.getDate())}`;
 }
 
-function PackageCard({ pkg, onPurchase, isPurchasing }) {
-  const pricePerHour = pkg.price / pkg.hours;
+/* ------------------------------- 1. quem sou ------------------------------- */
+
+function MeuNivel({ member }) {
+  const { current, next, missing, progress } = tierProgress(member);
+  const pontos = Number(member?.points) || 0;
+
   return (
-    <div className="rounded-2xl border border-gray-100 bg-paper-pure p-5">
-      <div className="flex items-start justify-between gap-2">
+    <V2Surface>
+      <div className="flex flex-wrap items-start justify-between gap-3">
         <div>
-          <h3 className="font-display text-base font-bold text-ink">{pkg.name}</h3>
-          {pkg.description && <p className="mt-1 text-xs text-gray-500">{pkg.description}</p>}
+          <p className="text-xs font-bold uppercase tracking-widest text-gray-400">Seu nível aqui</p>
+          <div className="mt-1.5 flex items-center gap-2">
+            <span className={`inline-flex items-center gap-1.5 rounded-full border px-3 py-1 text-sm font-bold ${TIER_CLASS[current?.id] || TIER_CLASS.bronze}`}>
+              <Trophy className="h-3.5 w-3.5" /> {current?.name || 'Bronze'}
+            </span>
+            <span className="text-sm text-gray-500">{pontos} pontos</span>
+          </div>
         </div>
-        <V2Badge tone="amber">{pkg.hours}h</V2Badge>
+        {Number(current?.discount_pct) > 0 && (
+          <V2Badge tone="green">{current.discount_pct}% de desconto nas reservas</V2Badge>
+        )}
       </div>
-      <div className="mt-4 flex items-end gap-2">
-        <span className="font-display text-2xl font-bold text-ink">R$ {pkg.price.toFixed(2)}</span>
-        <span className="text-xs text-gray-500">R$ {pricePerHour.toFixed(2)}/h</span>
-      </div>
-      <p className="mt-1 text-xs text-gray-500">Válido por {pkg.validity_days} dias</p>
-      <V2Button
-        size="sm" className="mt-4 w-full"
-        onClick={() => onPurchase(pkg)}
-        disabled={isPurchasing}
-      >
-        <ShoppingCart className="mr-1.5 h-4 w-4" /> {isPurchasing ? 'Comprando...' : 'Comprar'}
-      </V2Button>
-    </div>
+
+      {next && (
+        <div className="mt-4">
+          <div className="mb-1.5 flex items-center justify-between text-xs text-gray-500">
+            <span>Faltam <strong className="text-ink">{missing}</strong> pontos para {next.name}</span>
+            <span>{progress}%</span>
+          </div>
+          <div className="h-2 w-full overflow-hidden rounded-full bg-gray-100">
+            <div className="h-full rounded-full bg-acid" style={{ width: `${progress}%` }} />
+          </div>
+        </div>
+      )}
+
+      {(current?.perks || []).length > 0 && (
+        <ul className="mt-4 space-y-1.5">
+          {current.perks.map((p) => (
+            <li key={p} className="flex items-center gap-2 text-sm text-gray-600">
+              <Check className="h-3.5 w-3.5 shrink-0 text-green-600" /> {p}
+            </li>
+          ))}
+        </ul>
+      )}
+
+      <p className="mt-4 rounded-2xl bg-paper p-3 text-xs leading-5 text-gray-500">
+        Você ganha pontos a cada reserva concluída — pelo valor e pelas horas jogadas.
+        Usar pacote também pontua.
+      </p>
+    </V2Surface>
   );
 }
 
-export default function V2ArenaMembers() {
-  const { arenaId } = useParams();
-  const { user } = useAuth();
-  const { data: arena, isLoading: arenaLoading } = useArena(arenaId);
-  const canPackages = useCanArenaUseModule(arenaId, 'members_packages');
-  const canWallet = useCanArenaUseModule(arenaId, 'members_wallet');
-  const canTiers = useCanArenaUseModule(arenaId, 'members_tiers');
-  const { data: packages = [], isLoading: packagesLoading } = useArenaPackages(arenaId);
-  const { data: wallet } = useArenaWallet(arenaId, user?.uid);
-  const { data: member } = useArenaMember(arenaId, user?.uid);
-  const purchase = usePurchasePackage();
+/* --------------------------- 1b. o que valem meus pontos ------------------- */
 
-  if (!user) {
-    return (
-      <div className="mx-auto max-w-[500px]">
-        <V2Surface>
-          <V2EmptyState
-            title="Faça login"
-            description="Você precisa estar logado para acessar esta área."
-            action={<V2Button asChild><Link to="/login">Entrar</Link></V2Button>}
-          />
-        </V2Surface>
-      </div>
-    );
-  }
+/**
+ * Pontos que não viram nada são um número decorativo.
+ *
+ * Aqui eles viram VALOR ("seus 420 pontos valem R$ 21,00"), com o caminho para
+ * usá-los. O botão de resgate NÃO fica aqui de propósito: a regra do Firestore
+ * só deixa o gestor escrever pontos e carteira, então um botão nesta tela daria
+ * "permissão negada" — um erro que o atleta não tem como resolver. O resgate é
+ * pedido na recepção e registrado pela arena, como um vale.
+ */
+function MeusPontos({ member }) {
+  const pontos = Math.max(0, Number(member?.points) || 0);
+  const { credit, error } = redeemPoints(pontos, {
+    available: pontos,
+    pointsPerReal: DEFAULT_POINTS_PER_REAL,
+  });
+  const falta = Math.max(0, DEFAULT_POINTS_PER_REAL - pontos);
 
-  if (arenaLoading) return <V2Skeleton className="mx-auto h-96 max-w-[1100px] rounded-4xl" />;
-  if (!arena) {
-    return (
-      <div className="mx-auto max-w-[700px]">
-        <V2Surface>
-          <V2EmptyState title="Arena não encontrada" action={<Link to="/arenas" className="text-sm font-bold text-ink underline">← Voltar</Link>} />
-        </V2Surface>
-      </div>
-    );
-  }
-
-  if (!canPackages && !canWallet && !canTiers) {
-    return (
-      <div className="mx-auto max-w-[700px]">
-        <div className="mb-4">
-          <Link to={`/arenas/${arena.id}`} className="inline-flex items-center gap-1.5 text-xs font-bold uppercase tracking-wider text-gray-500 hover:text-ink">
-            <ArrowLeft className="h-3.5 w-3.5" /> Voltar
-          </Link>
+  return (
+    <V2Surface>
+      <div className="flex flex-wrap items-center justify-between gap-3">
+        <div className="flex items-start gap-2">
+          <Star className="mt-0.5 h-5 w-5 shrink-0 text-acid" />
+          <div>
+            <h2 className="font-display text-base font-bold text-ink">Seus pontos valem crédito</h2>
+            <p className="mt-0.5 text-sm text-gray-500">
+              A cada {DEFAULT_POINTS_PER_REAL} pontos você troca por R$ 1,00 na sua carteira desta arena.
+            </p>
+          </div>
         </div>
-        <V2Surface>
-          <V2EmptyState
-            icon={Package}
-            title="Programa de membros indisponível"
-            description="Esta arena não ativou o programa de membros."
-          />
-        </V2Surface>
+        <div className="text-right">
+          <p className="font-display text-2xl font-bold text-ink">{formatPrice(credit)}</p>
+          <p className="text-xs text-gray-500">{pontos} pontos</p>
+        </div>
       </div>
-    );
-  }
+      <p className="mt-3 rounded-2xl bg-paper p-3 text-xs leading-5 text-gray-500">
+        {error && falta > 0
+          ? `Faltam ${falta} pontos para o primeiro resgate.`
+          : 'Para resgatar, peça na recepção da arena — o crédito entra na sua carteira na hora.'}
+      </p>
+    </V2Surface>
+  );
+}
 
-  const handlePurchase = async (pkg) => {
+/* ---------------------------- 1c. indique e ganhe -------------------------- */
+
+/**
+ * O código de indicação do atleta nesta arena.
+ *
+ * Criado na primeira vez que a tela abre (`getOrCreateReferralCode`), com o
+ * documento pertencendo ao INDICADOR — que é exatamente o que a regra permite
+ * escrever. Quem foi indicado não escreve nada: o resgate é registrado pela
+ * arena, que é quem pode creditar carteira nos dois lados.
+ */
+function MinhaIndicacao({ arenaId, arenaName }) {
+  const { data: indicacao, isLoading } = useMyReferralCode(arenaId);
+  const codigo = indicacao?.code;
+
+  if (isLoading) return <V2Skeleton className="h-28 rounded-4xl" />;
+  if (!codigo) return null;
+
+  const copiar = async () => {
     try {
-      await purchase.mutateAsync({ arenaId: arena.id, pkgId: pkg.id });
-      toast.success(`${pkg.name} adquirido! Suas ${pkg.hours}h já estão no seu wallet.`);
-    } catch (err) {
-      toast.error(err.message);
+      await navigator.clipboard.writeText(codigo);
+      toast.success('Código copiado.');
+    } catch {
+      toast.error('Não foi possível copiar. Anote: ' + codigo);
+    }
+  };
+
+  const compartilhar = async () => {
+    const texto = `Jogo na ${arenaName} — use meu código ${codigo} na primeira reserva e nós dois ganhamos crédito.`;
+    try {
+      if (navigator.share) await navigator.share({ text: texto });
+      else {
+        await navigator.clipboard.writeText(texto);
+        toast.success('Convite copiado.');
+      }
+    } catch {
+      /* o usuário cancelou o compartilhamento — não é erro */
     }
   };
 
   return (
-    <div className="mx-auto max-w-[1100px]">
-      <div className="mb-6">
-        <Link to={`/arenas/${arena.id}`} className="mb-3 inline-flex items-center gap-1.5 text-xs font-bold uppercase tracking-wider text-gray-500 hover:text-ink">
-          <ArrowLeft className="h-3.5 w-3.5" /> Voltar à arena
-        </Link>
-        <h1 className="font-display text-3xl font-bold tracking-tight text-ink">
-          Membros · {arena.name}
-        </h1>
-        <p className="mt-2 font-medium text-gray-500">
-          Compre pacotes, acumule pontos e suba de tier.
+    <V2Surface>
+      <div className="flex items-start gap-2">
+        <Gift className="mt-0.5 h-5 w-5 shrink-0 text-ink" />
+        <div className="min-w-0 flex-1">
+          <h2 className="font-display text-base font-bold text-ink">Indique e ganhe</h2>
+          <p className="mt-0.5 text-sm text-gray-500">
+            Quem chegar dizendo o seu código ganha crédito — e você também.
+          </p>
+          <div className="mt-3 flex flex-wrap items-center gap-2">
+            <span className="rounded-2xl border border-dashed border-gray-300 bg-paper px-4 py-2 font-display text-lg font-bold tracking-widest text-ink">
+              {codigo}
+            </span>
+            <V2Button size="sm" variant="ghost" onClick={copiar}>
+              <Copy className="mr-1.5 h-4 w-4" /> Copiar
+            </V2Button>
+            <V2Button size="sm" variant="ghost" onClick={compartilhar}>
+              <Share2 className="mr-1.5 h-4 w-4" /> Convidar
+            </V2Button>
+          </div>
+          {Number(indicacao.redeemed_count) > 0 && (
+            <p className="mt-2 text-xs text-gray-500">
+              {indicacao.redeemed_count} {Number(indicacao.redeemed_count) === 1 ? 'pessoa já usou' : 'pessoas já usaram'} o seu código.
+            </p>
+          )}
+        </div>
+      </div>
+    </V2Surface>
+  );
+}
+
+/* ----------------------------- 2. o que eu tenho --------------------------- */
+
+function MeusPacotes({ packages }) {
+  const uteis = useMemo(
+    () => packages
+      .map((p) => ({ ...p, restam: usableHours(p) }))
+      .filter((p) => p.restam > 0)
+      .sort((a, b) => {
+        const va = toISO(a.expires_at) || '9999';
+        const vb = toISO(b.expires_at) || '9999';
+        return va.localeCompare(vb);
+      }),
+    [packages],
+  );
+  const total = uteis.reduce((a, p) => a + p.restam, 0);
+
+  if (uteis.length === 0) return null;
+
+  return (
+    <V2Surface>
+      <div className="mb-3 flex items-center justify-between gap-2">
+        <h2 className="font-display text-base font-bold text-ink">Suas horas</h2>
+        <V2Badge tone="green">{total}h disponíveis</V2Badge>
+      </div>
+      <div className="space-y-2">
+        {uteis.map((p, i) => {
+          const venceEm = toISO(p.expires_at);
+          return (
+            <div key={`${p.pkg_id}-${i}`} className="flex items-center justify-between gap-3 rounded-2xl border border-gray-100 bg-paper p-3">
+              <div className="min-w-0">
+                <p className="text-sm font-bold text-ink">{p.pkg_name || 'Pacote'}</p>
+                <p className="text-xs text-gray-500">
+                  {venceEm
+                    ? <>Vence em {formatDateShortBR(venceEm)}</>
+                    : 'Sem prazo de validade'}
+                  {i === 0 && uteis.length > 1 && ' · é o primeiro a ser usado'}
+                </p>
+              </div>
+              <V2Badge tone="neutral">{p.restam}h</V2Badge>
+            </div>
+          );
+        })}
+      </div>
+      <p className="mt-3 flex gap-1.5 text-xs leading-5 text-gray-500">
+        <Clock className="mt-px h-3.5 w-3.5 shrink-0" />
+        As horas são abatidas quando a arena confirma a reserva — e sempre do
+        pacote que vence primeiro.
+      </p>
+    </V2Surface>
+  );
+}
+
+function MinhaCarteira({ wallet }) {
+  const saldo = Number(wallet?.balance) || 0;
+  const lancamentos = [...(wallet?.transactions || [])].reverse().slice(0, 12);
+
+  return (
+    <V2Surface>
+      <div className="mb-3 flex items-center justify-between gap-2">
+        <h2 className="font-display text-base font-bold text-ink">Sua carteira</h2>
+        <span className="font-display text-2xl font-bold text-ink">{formatPrice(saldo)}</span>
+      </div>
+      {lancamentos.length === 0 ? (
+        <p className="text-sm text-gray-500">
+          Sem lançamentos ainda. O saldo aparece aqui quando a arena credita algo
+          (cashback, estorno ou cortesia).
         </p>
+      ) : (
+        <ul className="divide-y divide-gray-100">
+          {lancamentos.map((t, i) => {
+            const credito = t.type === 'credit' || t.type === 'cashback';
+            const rotulo = t.type === 'package_use'
+              ? `${t.hours}h de pacote`
+              : formatPrice(Number(t.amount) || 0);
+            return (
+              <li key={i} className="flex items-center justify-between gap-3 py-2.5 text-sm">
+                <span className="min-w-0 truncate text-gray-600">{t.source || 'Lançamento'}</span>
+                <span className={credito ? 'font-bold text-green-700' : 'font-bold text-gray-700'}>
+                  {credito ? '+' : '−'} {rotulo}
+                </span>
+              </li>
+            );
+          })}
+        </ul>
+      )}
+    </V2Surface>
+  );
+}
+
+function MinhaMensalidade({ sub }) {
+  const estado = subscriptionState(sub);
+  const devendo = estado.status === SUBSCRIPTION_STATUS.OVERDUE;
+  const encerrada = estado.status === SUBSCRIPTION_STATUS.CANCELLED;
+  const devido = amountDue(sub);
+
+  if (!sub || encerrada) return null;
+
+  return (
+    <V2Surface className={devendo ? 'border-amber-200 bg-amber-50' : undefined}>
+      <div className="flex flex-wrap items-start justify-between gap-3">
+        <div className="min-w-0">
+          <p className="text-xs font-bold uppercase tracking-widest text-gray-400">Sua mensalidade</p>
+          <p className="mt-1 font-display text-base font-bold text-ink">{sub.plan_name}</p>
+          <p className="text-sm text-gray-600">
+            {formatPrice(sub.price)} por mês · vence todo dia {sub.billing_day}
+          </p>
+        </div>
+        <V2Badge tone={devendo ? 'amber' : 'green'}>{estado.label}</V2Badge>
       </div>
 
-      {/* Tier + Wallet */}
-      {(canTiers || canWallet) && (
-        <div className="mb-6 grid gap-4 sm:grid-cols-2">
-          {canTiers && (
-            <V2Surface>
-              <div className="flex items-center gap-3">
-                <div className="flex h-12 w-12 items-center justify-center rounded-2xl bg-amber-100 text-amber-700">
-                  <Trophy className="h-6 w-6" />
-                </div>
-                <div>
-                  <p className="text-xs font-bold uppercase tracking-wider text-gray-500">Seu tier</p>
-                  <TierBadge points={member?.points || 0} />
-                </div>
-              </div>
-              {member && (
-                <p className="mt-3 text-xs text-gray-500">
-                  Membro desde {member.joined_at?.toDate?.()?.toLocaleDateString('pt-BR') || 'recente'}.
-                </p>
-              )}
-            </V2Surface>
-          )}
-          {canWallet && wallet && (
-            <V2Surface>
-              <div className="flex items-center gap-3">
-                <div className="flex h-12 w-12 items-center justify-center rounded-2xl bg-green-100 text-green-700">
-                  <Wallet className="h-6 w-6" />
-                </div>
-                <div>
-                  <p className="text-xs font-bold uppercase tracking-wider text-gray-500">Seu saldo</p>
-                  <p className="font-display text-2xl font-bold text-ink">R$ {(wallet.balance || 0).toFixed(2)}</p>
-                </div>
-              </div>
-              <p className="mt-3 text-xs text-gray-500">
-                Total gasto: R$ {(wallet.total_spent || 0).toFixed(2)} · Cashback: {calculateCashbackPct(wallet.total_spent || 0)}%
+      {devendo ? (
+        <p className="mt-3 flex gap-1.5 text-sm leading-6 text-amber-900">
+          <AlertTriangle className="mt-0.5 h-4 w-4 shrink-0" />
+          <span>
+            {estado.monthsLate === 1
+              ? 'Há 1 mês em aberto'
+              : `Há ${estado.monthsLate} meses em aberto`}
+            {' '}({estado.unpaidMonths.join(', ')}) — <strong>{formatPrice(devido)}</strong>.
+            Combine o pagamento com a arena; ela registra aqui assim que cair.
+          </span>
+        </p>
+      ) : (
+        <p className="mt-3 flex gap-1.5 text-sm text-gray-600">
+          <CalendarClock className="mt-0.5 h-4 w-4 shrink-0" />
+          Tudo em dia. O próximo vencimento é {formatDateShortBR(estado.dueDate)}.
+        </p>
+      )}
+    </V2Surface>
+  );
+}
+
+/* ------------------------------ 3. comprar --------------------------------- */
+
+function PacoteAVenda({ pkg, onComprar, ocupado }) {
+  const porHora = pkg.hours > 0 ? pkg.price / pkg.hours : 0;
+  return (
+    <div className="flex h-full flex-col rounded-2xl border border-gray-100 bg-paper-pure p-5">
+      <div className="flex items-start justify-between gap-2">
+        <div className="min-w-0">
+          <h3 className="font-display text-base font-bold text-ink">{pkg.name}</h3>
+          {pkg.description && <p className="mt-1 text-xs leading-5 text-gray-500">{pkg.description}</p>}
+        </div>
+        <V2Badge tone="amber">{pkg.hours}h</V2Badge>
+      </div>
+      <div className="mt-4 flex items-end gap-2">
+        <span className="font-display text-2xl font-bold text-ink">{formatPrice(pkg.price)}</span>
+        <span className="pb-1 text-xs text-gray-500">{formatPrice(porHora)}/h</span>
+      </div>
+      <p className="mt-1 text-xs text-gray-500">Vale por {pkg.validity_days} dias após a compra</p>
+      <div className="mt-auto pt-4">
+        <V2Button size="sm" className="w-full" disabled={ocupado} onClick={() => onComprar(pkg)}>
+          Quero este pacote
+        </V2Button>
+      </div>
+    </div>
+  );
+}
+
+/* --------------------------------- página ---------------------------------- */
+
+export default function V2ArenaMembers() {
+  const { arenaId } = useParams();
+  const { user, isAuthenticated } = useAuth();
+  const { data: arena, isLoading } = useArena(arenaId);
+  const { isOn, isLoading: modulosLoading } = useArenaModules(arenaId);
+  const { data: member } = useArenaMember(arenaId, user?.uid);
+  const { data: wallet } = useArenaWallet(arenaId, user?.uid);
+  const { data: catalogo = [], isError, refetch } = useArenaPackages(arenaId);
+  const { data: mensalidade } = useMemberSubscription(arenaId, user?.uid);
+  const comprar = usePurchasePackage();
+
+  const temMembros = isOn(ARENA_MODULE_ID.MEMBERS);
+  const temNiveis = isOn(ARENA_MODULE_ID.MEMBERS_TIERS);
+  const temPacotes = isOn(ARENA_MODULE_ID.MEMBERS_PACKAGES);
+  const temCarteira = isOn(ARENA_MODULE_ID.MEMBERS_WALLET);
+  const temMensalidade = isOn(ARENA_MODULE_ID.MEMBERS_SUBSCRIPTION);
+  const temPontos = isOn(ARENA_MODULE_ID.MARKETING_LOYALTY);
+  const temIndicacao = isOn(ARENA_MODULE_ID.MARKETING_REFERRAL);
+
+  if (isLoading || modulosLoading) {
+    return <V2Skeleton className="mx-auto h-96 max-w-[820px] rounded-4xl" />;
+  }
+  if (!arena) return <Navigate to="/arenas" replace />;
+  if (!temMembros) return <Navigate to={`/arenas/${arena.id}`} replace />;
+
+  const aoComprar = (pkg) => comprar.mutateAsync({ arenaId: arena.id, pkgId: pkg.id })
+    .then(() => toast.success('Pacote reservado! Combine o pagamento com a arena.'))
+    .catch((e) => toast.error(e?.message || 'Não foi possível comprar.'));
+
+  const meusPacotes = Array.isArray(wallet?.packages) ? wallet.packages : [];
+
+  return (
+    <div className="mx-auto max-w-[820px]">
+      <Link
+        to={`/arenas/${arena.id}`}
+        className="mb-3 inline-flex items-center gap-1.5 text-xs font-bold uppercase tracking-wider text-gray-500 hover:text-ink"
+      >
+        <ArrowLeft className="h-3.5 w-3.5" /> {arena.name}
+      </Link>
+      <h1 className="font-display text-3xl font-bold tracking-tight text-ink">Você nesta arena</h1>
+      <p className="mt-1 text-sm text-gray-500">
+        Seu nível, suas horas e seu saldo na {arena.name}.
+      </p>
+
+      {!isAuthenticated ? (
+        <V2Surface className="mt-5">
+          <V2EmptyState
+            icon={Sparkles}
+            title="Entre para ver a sua relação com esta arena"
+            description="Nível, pontos, horas de pacote e saldo aparecem depois do login."
+            action={<V2Button asChild><Link to="/entrar">Entrar</Link></V2Button>}
+          />
+        </V2Surface>
+      ) : (
+        <div className="mt-5 space-y-4">
+          {temNiveis && <MeuNivel member={member} />}
+
+          {!member && (
+            <V2Surface className="border-amber-200 bg-amber-50">
+              <p className="flex gap-2 text-sm text-amber-900">
+                <Gift className="mt-0.5 h-4 w-4 shrink-0" />
+                <span>
+                  Você ainda não é membro da {arena.name}. Fale com a arena para entrar —
+                  membros têm desconto, pacotes de horas e prioridade.
+                </span>
               </p>
             </V2Surface>
           )}
-        </div>
-      )}
 
-      {/* Meus pacotes ativos */}
-      {canPackages && wallet?.packages?.length > 0 && (
-        <V2Surface className="mb-6">
-          <h2 className="mb-3 font-display text-lg font-bold text-ink">Meus pacotes ativos</h2>
-          <div className="space-y-2">
-            {wallet.packages.map((p, idx) => {
-              const remaining = (p.total_hours || 0) - (p.used_hours || 0);
-              const expiresAt = p.expires_at?.toDate?.() || new Date(p.expires_at);
-              const daysLeft = Math.max(0, Math.ceil((expiresAt - Date.now()) / 86_400_000));
-              return (
-                <div key={idx} className="flex items-center justify-between rounded-2xl border border-gray-100 bg-paper p-3">
-                  <div>
-                    <p className="font-bold text-ink">{p.pkg_name}</p>
-                    <p className="text-xs text-gray-500">{remaining}h restantes · {daysLeft} dia(s)</p>
-                  </div>
-                  <V2Badge tone={remaining > 0 ? 'green' : 'red'}>
-                    {remaining}h / {p.total_hours}h
-                  </V2Badge>
-                </div>
-              );
-            })}
-          </div>
-        </V2Surface>
-      )}
+          {temPontos && member && <MeusPontos member={member} />}
+          {temMensalidade && <MinhaMensalidade sub={mensalidade} />}
+          {temPacotes && <MeusPacotes packages={meusPacotes} />}
+          {temCarteira && <MinhaCarteira wallet={wallet} />}
 
-      {/* Pacotes disponíveis */}
-      {canPackages && (
-        <V2Surface>
-          <h2 className="mb-4 font-display text-lg font-bold text-ink">Pacotes disponíveis</h2>
-          {packagesLoading ? (
-            <V2Skeleton className="h-40 rounded-2xl" />
-          ) : packages.length === 0 ? (
-            <p className="py-6 text-center text-sm text-gray-500">A arena ainda não publicou pacotes.</p>
-          ) : (
-            <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-3">
-              {packages.map((pkg) => (
-                <PackageCard
-                  key={pkg.id}
-                  pkg={pkg}
-                  onPurchase={handlePurchase}
-                  isPurchasing={purchase.isPending}
-                />
-              ))}
-            </div>
+          {temIndicacao && member && (
+            <MinhaIndicacao arenaId={arena.id} arenaName={arena.name} />
           )}
-        </V2Surface>
+
+          {temPacotes && (
+            <V2Surface>
+              <h2 className="mb-1 font-display text-base font-bold text-ink">Pacotes de horas</h2>
+              <p className="mb-4 text-xs text-gray-500">
+                Comprando adiantado sai mais barato — e as horas são abatidas
+                automaticamente na reserva.
+              </p>
+              {isError ? (
+                <p className="text-sm text-red-700">
+                  Não foi possível carregar os pacotes.{' '}
+                  <button type="button" className="font-bold underline" onClick={() => refetch()}>
+                    Tentar de novo
+                  </button>
+                </p>
+              ) : catalogo.length === 0 ? (
+                <V2EmptyState
+                  icon={Package}
+                  title="Esta arena ainda não vende pacotes"
+                  description="Quando ela publicar, os pacotes aparecem aqui."
+                />
+              ) : (
+                <div className="grid gap-3 sm:grid-cols-2">
+                  {catalogo.map((p) => (
+                    <PacoteAVenda
+                      key={p.id} pkg={p} onComprar={aoComprar} ocupado={comprar.isPending}
+                    />
+                  ))}
+                </div>
+              )}
+            </V2Surface>
+          )}
+
+          {!temPacotes && !temCarteira && !temNiveis && !temMensalidade
+            && !temPontos && !temIndicacao && (
+            <V2Surface>
+              <V2EmptyState
+                icon={Wallet}
+                title="Nada por aqui ainda"
+                description="Esta arena ativou os membros, mas ainda não ligou níveis, pacotes ou carteira."
+              />
+            </V2Surface>
+          )}
+        </div>
       )}
     </div>
   );

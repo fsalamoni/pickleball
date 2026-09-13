@@ -2,6 +2,13 @@ import { describe, it, expect } from 'vitest';
 import {
   classifyNps, calculateNps, normalizeCouponInput, isCouponValid, applyCoupon,
   generateReferralCode, calculateLoyaltyPoints, CAMPAIGN_STATUS, COUPON_TYPE, NPS_SCORE,
+  couponError,
+  couponDiscount,
+  couponLabel,
+  redeemPoints,
+  CAMPAIGN_AUDIENCE,
+  campaignRecipients,
+  shouldAskNps,
 } from './marketing.js';
 
 describe('classifyNps', () => {
@@ -104,5 +111,246 @@ describe('calculateLoyaltyPoints', () => {
   it('0 para inválido', () => {
     expect(calculateLoyaltyPoints(0)).toBe(0);
     expect(calculateLoyaltyPoints(-10)).toBe(0);
+  });
+});
+
+/* ================================================================== */
+/*  ⭐ O cupom precisa CHEGAR ao preço — e recusar dizendo por quê     */
+/* ================================================================== */
+
+describe('couponError — o motivo, não só "inválido"', () => {
+  const cupom = (over = {}) => ({
+    code: 'VERAO10', type: 'percent', value: 10, active: true,
+    used_count: 0, max_uses: null, min_amount: null, once_per_user: true,
+    ...over,
+  });
+
+  it('cupom bom devolve null', () => {
+    expect(couponError(cupom(), { amount: 100 })).toBeNull();
+  });
+
+  it('cupom que não existe', () => {
+    expect(couponError(null)).toMatch(/não encontrado/i);
+  });
+
+  it('cupom desligado', () => {
+    expect(couponError(cupom({ active: false }))).toMatch(/não está mais valendo/i);
+  });
+
+  it('⭐ cupom vencido diz que VENCEU', () => {
+    expect(couponError(cupom({ expires_at: Date.now() - 1000 })))
+      .toMatch(/venceu/i);
+  });
+
+  it('⭐ limite de usos atingido', () => {
+    expect(couponError(cupom({ max_uses: 5, used_count: 5 })))
+      .toMatch(/limite de usos/i);
+  });
+
+  it('⭐ já usado por esta pessoa', () => {
+    expect(couponError(cupom(), { usedByUser: true })).toMatch(/já usou/i);
+  });
+
+  it('livre por pessoa: usar de novo é permitido', () => {
+    expect(couponError(cupom({ once_per_user: false }), { usedByUser: true })).toBeNull();
+  });
+
+  it('⭐ valor mínimo diz QUANTO falta atingir', () => {
+    const msg = couponError(cupom({ min_amount: 100 }), { amount: 80 });
+    expect(msg).toMatch(/100,00/);
+  });
+
+  it('valor mínimo atingido passa', () => {
+    expect(couponError(cupom({ min_amount: 100 }), { amount: 100 })).toBeNull();
+  });
+});
+
+describe('couponDiscount', () => {
+  it('percentual desconta a fração', () => {
+    expect(couponDiscount(200, { type: 'percent', value: 10 })).toBe(20);
+  });
+
+  it('valor fixo desconta o valor', () => {
+    expect(couponDiscount(200, { type: 'fixed', value: 30 })).toBe(30);
+  });
+
+  it('⭐ nunca desconta mais do que a conta — a arena não fica devendo', () => {
+    expect(couponDiscount(30, { type: 'fixed', value: 50 })).toBe(30);
+  });
+
+  it('conta zerada não desconta nada', () => {
+    expect(couponDiscount(0, { type: 'percent', value: 50 })).toBe(0);
+  });
+
+  it('sem cupom, zero', () => {
+    expect(couponDiscount(100, null)).toBe(0);
+  });
+});
+
+describe('couponLabel', () => {
+  it('escreve percentual e valor fixo em português', () => {
+    expect(couponLabel({ code: 'VERAO10', type: 'percent', value: 10 }))
+      .toBe('VERAO10 · 10% de desconto');
+    expect(couponLabel({ code: 'DEZ', type: 'fixed', value: 10 }))
+      .toBe('DEZ · R$ 10,00 de desconto');
+  });
+
+  it('sem código, sem etiqueta', () => {
+    expect(couponLabel(null)).toBe('');
+  });
+});
+
+describe('normalizeCouponInput — o que foi acrescentado', () => {
+  it('⭐ o código ignora caixa e espaço: "verao 10" é VERAO10', () => {
+    expect(normalizeCouponInput({ code: ' verao 10 ', value: 10 }).value.code).toBe('VERAO10');
+  });
+
+  it('guarda valor mínimo e uma-vez-por-pessoa', () => {
+    const r = normalizeCouponInput({ code: 'X', value: 10, min_amount: 50 });
+    expect(r.value.min_amount).toBe(50);
+    expect(r.value.once_per_user).toBe(true);
+  });
+
+  it('mínimo inválido vira null (sem mínimo), não NaN', () => {
+    expect(normalizeCouponInput({ code: 'X', value: 10, min_amount: 'abc' }).value.min_amount).toBeNull();
+  });
+});
+
+/* ================================================================== */
+/*  Fidelidade — trocar pontos por crédito                             */
+/* ================================================================== */
+
+describe('redeemPoints', () => {
+  it('troca em múltiplos exatos da taxa', () => {
+    expect(redeemPoints(100, { available: 500 })).toEqual({ points: 100, credit: 5, error: null });
+  });
+
+  it('⭐ o resto fica com o atleta, não some', () => {
+    // 105 pontos a 20/real = R$ 5, consumindo 100. Os 5 restantes ficam.
+    expect(redeemPoints(105, { available: 500 })).toEqual({ points: 100, credit: 5, error: null });
+  });
+
+  it('não troca mais do que se tem, e diz quanto tem', () => {
+    expect(redeemPoints(500, { available: 100 }).error).toMatch(/100 pontos/);
+  });
+
+  it('respeita o mínimo', () => {
+    expect(redeemPoints(10, { available: 500, minPoints: 100 }).error).toMatch(/mínimo/i);
+  });
+
+  it('taxa customizada da arena', () => {
+    expect(redeemPoints(100, { available: 500, pointsPerReal: 10 }).credit).toBe(10);
+  });
+
+  it('pedido inválido não vira NaN', () => {
+    expect(redeemPoints(0, { available: 500 }).error).toBeTruthy();
+    expect(redeemPoints('x', { available: 500 }).credit).toBe(0);
+  });
+});
+
+/* ================================================================== */
+/*  Campanha — para quem ela vai                                       */
+/* ================================================================== */
+
+describe('campaignRecipients', () => {
+  const AGORA = new Date('2026-09-13T12:00:00').getTime();
+  const DIA = 86_400_000;
+  const iso = (ms) => new Date(ms).toISOString().slice(0, 10);
+  const reserva = (uid, quandoMs) => ({ athlete_id: uid, slots: [{ date: iso(quandoMs) }] });
+
+  const dados = {
+    members: [{ user_id: 'membro1' }, { user_id: 'membro2' }],
+    bookings: [
+      reserva('recente', AGORA - 5 * DIA),
+      reserva('sumido', AGORA - 200 * DIA),
+      reserva('membro1', AGORA - 3 * DIA),
+    ],
+    now: AGORA,
+  };
+
+  it('membros: só quem está no programa', () => {
+    expect(campaignRecipients(CAMPAIGN_AUDIENCE.MEMBERS, dados).sort())
+      .toEqual(['membro1', 'membro2']);
+  });
+
+  it('⭐ sumidos: quem não reserva há mais de 60 dias', () => {
+    expect(campaignRecipients(CAMPAIGN_AUDIENCE.LAPSED, dados)).toEqual(['sumido']);
+  });
+
+  it('frequentes: quem reservou nos últimos 60 dias', () => {
+    expect(campaignRecipients(CAMPAIGN_AUDIENCE.RECENT, dados).sort())
+      .toEqual(['membro1', 'recente']);
+  });
+
+  it('todo mundo: membros + quem já reservou, sem repetir', () => {
+    const todos = campaignRecipients(CAMPAIGN_AUDIENCE.ALL, dados);
+    expect(todos.sort()).toEqual(['membro1', 'membro2', 'recente', 'sumido']);
+    expect(new Set(todos).size).toBe(todos.length);
+  });
+
+  it('⭐ conta a reserva MAIS RECENTE de cada pessoa, não a primeira', () => {
+    const comDuas = {
+      ...dados,
+      bookings: [reserva('x', AGORA - 300 * DIA), reserva('x', AGORA - 2 * DIA)],
+      members: [],
+    };
+    expect(campaignRecipients(CAMPAIGN_AUDIENCE.LAPSED, comDuas)).toEqual([]);
+    expect(campaignRecipients(CAMPAIGN_AUDIENCE.RECENT, comDuas)).toEqual(['x']);
+  });
+
+  it('sem dados, ninguém recebe (e não quebra)', () => {
+    expect(campaignRecipients(CAMPAIGN_AUDIENCE.ALL, {})).toEqual([]);
+    expect(campaignRecipients('inventado', dados).length).toBeGreaterThan(0);
+  });
+
+  it('reserva sem data não conta', () => {
+    const semData = { members: [], bookings: [{ athlete_id: 'y', slots: [] }], now: AGORA };
+    expect(campaignRecipients(CAMPAIGN_AUDIENCE.ALL, semData)).toEqual([]);
+  });
+});
+
+/* ================================================================== */
+/*  NPS — quando perguntar                                             */
+/* ================================================================== */
+
+describe('shouldAskNps', () => {
+  const AGORA = new Date('2026-09-13T12:00:00').getTime();
+  const DIA = 86_400_000;
+  const iso = (ms) => new Date(ms).toISOString().slice(0, 10);
+
+  it('pergunta depois de uma visita recente', () => {
+    expect(shouldAskNps({ lastVisitISO: iso(AGORA - 2 * DIA), now: AGORA })).toBe(true);
+  });
+
+  it('não pergunta a quem nunca veio', () => {
+    expect(shouldAskNps({ lastVisitISO: null, now: AGORA })).toBe(false);
+  });
+
+  it('⭐ não pergunta sobre visita velha — ninguém lembra', () => {
+    expect(shouldAskNps({ lastVisitISO: iso(AGORA - 60 * DIA), now: AGORA })).toBe(false);
+  });
+
+  it('não pergunta sobre visita que ainda não aconteceu', () => {
+    expect(shouldAskNps({ lastVisitISO: iso(AGORA + 5 * DIA), now: AGORA })).toBe(false);
+  });
+
+  it('⭐ não pergunta de novo dentro do período de descanso', () => {
+    expect(shouldAskNps({
+      lastVisitISO: iso(AGORA - 2 * DIA),
+      lastAnswerMs: AGORA - 10 * DIA,
+      now: AGORA,
+    })).toBe(false);
+  });
+
+  it('depois do descanso, volta a perguntar', () => {
+    expect(shouldAskNps({
+      lastVisitISO: iso(AGORA - 2 * DIA),
+      lastAnswerMs: AGORA - 120 * DIA,
+      now: AGORA,
+    })).toBe(true);
+  });
+
+  it('data inválida não quebra', () => {
+    expect(shouldAskNps({ lastVisitISO: 'ontem', now: AGORA })).toBe(false);
   });
 });

@@ -312,6 +312,9 @@ import {
   listArenaMembers, getArenaMember, addArenaMember, removeArenaMember,
   addPointsToMember, listArenaPackages, createArenaPackage, updateArenaPackage,
   deleteArenaPackage, purchasePackage, getArenaWallet, creditWallet, applyCashback,
+  redeemMemberPoints,
+  listArenaSubscriptions, getMemberSubscription, setMemberSubscription,
+  setSubscriptionMonthPaid, cancelMemberSubscription,
 } from '../services/membersService.js';
 
 export function useArenaMembers(arenaId) {
@@ -354,10 +357,17 @@ export function useRemoveArenaMember() {
   });
 }
 
-export function useArenaPackages(arenaId) {
+/**
+ * O catálogo de pacotes da arena.
+ *
+ * `onlyActive` faz parte da CHAVE: a vitrine do atleta vê só os ativos e a
+ * gestão vê todos, e as duas listas não podem se sobrepor no cache — senão a
+ * arena abre a gestão e vê a lista do atleta (ou pior, o contrário).
+ */
+export function useArenaPackages(arenaId, { onlyActive = true } = {}) {
   return useQuery({
-    queryKey: ['arena-packages', arenaId],
-    queryFn: () => listArenaPackages(arenaId),
+    queryKey: ['arena-packages', arenaId, onlyActive],
+    queryFn: () => listArenaPackages(arenaId, { onlyActive }),
     enabled: !!arenaId,
     staleTime: 60_000,
   });
@@ -391,6 +401,107 @@ export function usePurchasePackage() {
       qc.invalidateQueries({ queryKey: ['arena-wallet', arenaId, user?.uid] });
       qc.invalidateQueries({ queryKey: ['arena-member', arenaId, user?.uid] });
     },
+  });
+}
+
+/**
+ * Ajusta os pontos de um membro (a arena corrige ou premia à mão).
+ * Invalida a relação inteira: nível, pacotes e carteira andam juntos.
+ */
+export function useAddPointsToMember() {
+  const { user } = useAuth();
+  const qc = useQueryClient();
+  return useMutation({
+    mutationFn: ({ arenaId, userId, points }) => addPointsToMember(arenaId, userId, points, user),
+    onSuccess: (_d, { arenaId, userId }) => invalidarMembro(qc, arenaId, userId),
+  });
+}
+
+/** Credita saldo na carteira do membro (cortesia, estorno, prêmio). */
+export function useCreditWallet() {
+  const { user } = useAuth();
+  const qc = useQueryClient();
+  return useMutation({
+    mutationFn: ({ arenaId, userId, amount, source }) => creditWallet(arenaId, userId, amount, source, user),
+    onSuccess: (_d, { arenaId, userId }) => invalidarMembro(qc, arenaId, userId),
+  });
+}
+
+/**
+ * Troca pontos do membro por crédito em carteira.
+ *
+ * A ação é da ARENA (a regra do Firestore só deixa o gestor escrever pontos e
+ * carteira). Na tela do atleta o resgate aparece como valor, não como botão.
+ */
+export function useRedeemMemberPoints() {
+  const { user } = useAuth();
+  const qc = useQueryClient();
+  return useMutation({
+    mutationFn: ({ arenaId, userId, points, pointsPerReal }) => (
+      redeemMemberPoints(arenaId, userId, points, { pointsPerReal }, user)
+    ),
+    onSuccess: (_d, { arenaId, userId }) => invalidarMembro(qc, arenaId, userId),
+  });
+}
+
+/** Tudo o que muda quando a relação de um membro muda. */
+function invalidarMembro(qc, arenaId, userId) {
+  qc.invalidateQueries({ queryKey: ['arena-members', arenaId] });
+  qc.invalidateQueries({ queryKey: ['arena-member', arenaId, userId] });
+  qc.invalidateQueries({ queryKey: ['arena-wallet', arenaId, userId] });
+}
+
+/* ----------------------------- Mensalidade ---------------------------- */
+
+/** Todas as mensalidades da arena (visão da gestão). */
+export function useArenaSubscriptions(arenaId) {
+  return useQuery({
+    queryKey: ['arena-subscriptions', arenaId],
+    queryFn: () => listArenaSubscriptions(arenaId),
+    enabled: !!arenaId,
+    staleTime: 60_000,
+  });
+}
+
+/** A MINHA mensalidade nesta arena. */
+export function useMemberSubscription(arenaId, userId) {
+  return useQuery({
+    queryKey: ['arena-subscription', arenaId, userId],
+    queryFn: () => getMemberSubscription(arenaId, userId),
+    enabled: !!arenaId && !!userId,
+    staleTime: 60_000,
+  });
+}
+
+function invalidarMensalidade(qc, arenaId, userId) {
+  qc.invalidateQueries({ queryKey: ['arena-subscriptions', arenaId] });
+  qc.invalidateQueries({ queryKey: ['arena-subscription', arenaId, userId] });
+}
+
+export function useSetMemberSubscription() {
+  const { user } = useAuth();
+  const qc = useQueryClient();
+  return useMutation({
+    mutationFn: ({ arenaId, userId, input }) => setMemberSubscription(arenaId, userId, input, user),
+    onSuccess: (_d, { arenaId, userId }) => invalidarMensalidade(qc, arenaId, userId),
+  });
+}
+
+export function useSetSubscriptionMonthPaid() {
+  const { user } = useAuth();
+  const qc = useQueryClient();
+  return useMutation({
+    mutationFn: ({ arenaId, userId, month, paid }) => setSubscriptionMonthPaid(arenaId, userId, month, paid, user),
+    onSuccess: (_d, { arenaId, userId }) => invalidarMensalidade(qc, arenaId, userId),
+  });
+}
+
+export function useCancelMemberSubscription() {
+  const { user } = useAuth();
+  const qc = useQueryClient();
+  return useMutation({
+    mutationFn: ({ arenaId, userId }) => cancelMemberSubscription(arenaId, userId, user),
+    onSuccess: (_d, { arenaId, userId }) => invalidarMensalidade(qc, arenaId, userId),
   });
 }
 
@@ -569,10 +680,12 @@ export function useArenaLadder(arenaId) {
 /* -------------------- Marketing (sprint 6) -------------------- */
 
 import {
-  listArenaCoupons, createArenaCoupon, useCoupon,
+  listArenaCoupons, createArenaCoupon,
   listArenaCampaigns, createCampaign,
   submitNps, getArenaNpsResponses, getArenaNpsSummary,
   createReferral,
+  sendCampaign, listMyNpsAnswers, getOrCreateReferralCode, redeemReferral,
+  updateArenaCoupon, setCouponActive, deleteArenaCoupon,
 } from '../services/marketingService.js';
 
 export function useArenaCoupons(arenaId) {
@@ -589,6 +702,48 @@ export function useCreateCoupon() {
   const qc = useQueryClient();
   return useMutation({
     mutationFn: ({ arenaId, input }) => createArenaCoupon(arenaId, input, user),
+    onSuccess: (_d, { arenaId }) => qc.invalidateQueries({ queryKey: ['arena-coupons', arenaId] }),
+  });
+}
+
+/**
+ * TODOS os cupons da arena, inclusive os desligados.
+ *
+ * A tela de gestão precisa ver o que está desligado — senão a arena "some" com
+ * o cupom sem querer e não acha mais para religar.
+ */
+export function useArenaCouponsAll(arenaId) {
+  return useQuery({
+    queryKey: ['arena-coupons', arenaId, 'todos'],
+    queryFn: () => listArenaCoupons(arenaId, { onlyActive: false }),
+    enabled: !!arenaId,
+    staleTime: 60_000,
+  });
+}
+
+export function useUpdateCoupon() {
+  const { user } = useAuth();
+  const qc = useQueryClient();
+  return useMutation({
+    mutationFn: ({ couponId, input }) => updateArenaCoupon(couponId, input, user),
+    onSuccess: (_d, { arenaId }) => qc.invalidateQueries({ queryKey: ['arena-coupons', arenaId] }),
+  });
+}
+
+export function useSetCouponActive() {
+  const { user } = useAuth();
+  const qc = useQueryClient();
+  return useMutation({
+    mutationFn: ({ couponId, active }) => setCouponActive(couponId, active, user),
+    onSuccess: (_d, { arenaId }) => qc.invalidateQueries({ queryKey: ['arena-coupons', arenaId] }),
+  });
+}
+
+export function useDeleteCoupon() {
+  const { user } = useAuth();
+  const qc = useQueryClient();
+  return useMutation({
+    mutationFn: ({ couponId }) => deleteArenaCoupon(couponId, user),
     onSuccess: (_d, { arenaId }) => qc.invalidateQueries({ queryKey: ['arena-coupons', arenaId] }),
   });
 }
@@ -628,7 +783,81 @@ export function useSubmitNps() {
   const qc = useQueryClient();
   return useMutation({
     mutationFn: ({ arenaId, score, comment }) => submitNps(arenaId, user?.uid, score, comment),
-    onSuccess: (_d, { arenaId }) => qc.invalidateQueries({ queryKey: ['arena-nps', arenaId] }),
+    onSuccess: (_d, { arenaId }) => {
+      qc.invalidateQueries({ queryKey: ['arena-nps', arenaId] });
+      qc.invalidateQueries({ queryKey: ['arena-nps-mine', arenaId, user?.uid] });
+    },
+  });
+}
+
+/**
+ * As respostas de NPS, uma a uma — com o COMENTÁRIO.
+ *
+ * A nota resumida diz que algo está errado; o comentário diz o quê. Sem esta
+ * lista o painel seria um número sem ação possível.
+ */
+export function useArenaNpsResponses(arenaId) {
+  return useQuery({
+    queryKey: ['arena-nps-responses', arenaId],
+    queryFn: () => getArenaNpsResponses(arenaId),
+    enabled: !!arenaId,
+    staleTime: 60_000,
+  });
+}
+
+/** As MINHAS respostas de NPS nesta arena — para não perguntar de novo. */
+export function useMyNpsAnswers(arenaId) {
+  const { user } = useAuth();
+  return useQuery({
+    queryKey: ['arena-nps-mine', arenaId, user?.uid],
+    queryFn: () => listMyNpsAnswers(arenaId, user?.uid),
+    enabled: !!arenaId && !!user?.uid,
+    staleTime: 5 * 60_000,
+  });
+}
+
+/**
+ * Envia a campanha DE VERDADE (cria a notificação de cada destinatário).
+ * O `useCreateCampaign` antigo continua existindo e só grava o rascunho.
+ */
+export function useSendCampaign() {
+  const { user } = useAuth();
+  const qc = useQueryClient();
+  return useMutation({
+    mutationFn: ({ arenaId, input, recipients }) => sendCampaign(arenaId, input, recipients, user),
+    onSuccess: (_d, { arenaId }) => qc.invalidateQueries({ queryKey: ['arena-campaigns', arenaId] }),
+  });
+}
+
+/** O meu código de indicação nesta arena (cria na primeira vez). */
+export function useMyReferralCode(arenaId) {
+  const { user } = useAuth();
+  return useQuery({
+    queryKey: ['arena-referral', arenaId, user?.uid],
+    queryFn: () => getOrCreateReferralCode(arenaId, user),
+    enabled: !!arenaId && !!user?.uid,
+    staleTime: 10 * 60_000,
+  });
+}
+
+/** A arena registra a indicação e credita os dois lados. */
+export function useRedeemReferral() {
+  const { user } = useAuth();
+  const qc = useQueryClient();
+  return useMutation({
+    mutationFn: async ({ arenaId, code, referredId, referredName, reward }) => {
+      const { referrerId, reward: premio } = await redeemReferral(
+        arenaId, { code, referredId, referredName, reward }, user,
+      );
+      // Os dois lados ganham o mesmo crédito — é o que "indique e ganhe" diz.
+      await creditWallet(arenaId, referrerId, premio, `indicou ${referredName || 'um amigo'}`, user);
+      await creditWallet(arenaId, referredId, premio, 'veio por indicação', user);
+      return { referrerId, reward: premio };
+    },
+    onSuccess: (_d, { arenaId }) => {
+      qc.invalidateQueries({ queryKey: ['arena-wallet', arenaId] });
+      qc.invalidateQueries({ queryKey: ['arena-referral', arenaId] });
+    },
   });
 }
 

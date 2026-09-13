@@ -34,6 +34,7 @@ import { db } from '@/core/config/firebase';
 import { useAuth } from '@/core/lib/FirebaseAuthContext';
 import { ImageUpload } from '@/components/ui/image-upload';
 import { PhotoLightbox } from '@/components/ui/photo-lightbox';
+import ArenaModuleShortcuts from '@/v2/components/arenas/ArenaModuleShortcuts';
 import ConfirmDialog from '@/components/ConfirmDialog';
 import { V2ProfileFields, V2PricingEditor } from '@/v2/components/arenas/V2ArenaEditors';
 const V2ArenaReviews = lazy(() => import('@/v2/components/arenas/V2ArenaReviews'));
@@ -328,6 +329,10 @@ function V2ArenaManageContent({ arenaId, user, isPlatformAdmin, arena, managed, 
               </Link>
             </V2Button>
           )}
+          {/* As telas dos módulos que ESTA arena ligou. Vêm do catálogo, não de
+              uma lista escrita à mão: o console de marketing existia, tinha
+              rota, e nada na plataforma levava até ele. */}
+          <ArenaModuleShortcuts arenaId={arena.id} audience="manage" />
         </div>
       </div>
 

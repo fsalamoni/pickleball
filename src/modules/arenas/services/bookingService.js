@@ -21,6 +21,7 @@ import {
   serverTimestamp,
 } from 'firebase/firestore';
 import { db } from '@/core/config/firebase';
+import { logger } from '@/core/lib/logger';
 import { createAuditLog } from '@/core/services/auditService';
 import { notifyUsers, NOTIFICATION_TYPE } from '@/core/services/notificationService';
 import { ARENA_COLLECTIONS, BOOKING_STATUS, BOOKING_KIND, PAYMENT_STATUS, BOOKING_STATUS_LABELS } from '../domain/constants.js';
@@ -43,6 +44,9 @@ import { listArenaGameDays } from '@/modules/games/services/arenaGameDayService.
 import { mergeGameDayBlocks } from '@/modules/games/domain/arenaGameDay.js';
 import { mergeOpenSlotBlocks } from '../domain/openMatch.js';
 import { listArenaOpenSlots } from './openMatchService.js';
+import { memberBookingPrice, planPackageConsumption, pointsForBooking } from '../domain/memberBenefit.js';
+import { getMemberContext, consumeMemberBenefit } from './membersService.js';
+import { validateCouponCode, registrarUsoDeCupom } from './marketingService.js';
 import { listArenaManagerIds } from './arenaService.js';
 
 const COL = ARENA_COLLECTIONS;
@@ -76,6 +80,93 @@ function precoDaReserva(arena, { courtId, slots, clientId, enviadoPelaTela }) {
   const { total } = totalBookingPrice(arena, { courtId, slots, clientId });
   if (total > 0) return Math.round(total * 100) / 100;
   return num(enviadoPelaTela);
+}
+
+/**
+ * O preço com o benefício do membro — e o REGISTRO de como ele foi formado.
+ *
+ * O benefício existia no papel (nível dá desconto, pacote dá horas, carteira
+ * tem saldo) e **não chegava à reserva**: o valor gravado saía de
+ * `totalBookingPrice`, que não conhece membro. Desconto que não desconta é uma
+ * promessa que a arena descobre quebrada quando o cliente reclama.
+ *
+ * Aqui a tela ESTIMA e o serviço CONFERE — a mesma regra que já vale para o
+ * preço de tabela. E o detalhamento vai gravado junto (`member_benefit`),
+ * porque um valor abaixo da tabela sem explicação vira dúvida dos dois lados
+ * do balcão.
+ *
+ * O que este cálculo NÃO faz é CONSUMIR: horas e saldo só saem na
+ * confirmação. Queimar pacote num pedido que a arena ainda pode recusar seria
+ * cobrar por um jogo que não vai acontecer.
+ */
+function precoComBeneficio(arena, { courtId, slots, clientId, enviadoPelaTela }, ctx) {
+  const tabela = precoDaReserva(arena, { courtId, slots, clientId, enviadoPelaTela });
+  // Sem membro E sem cupom não há o que abater — o preço é o de tabela.
+  if (!ctx?.member && !ctx?.coupon) return { price: tabela, benefit: null };
+
+  const r = memberBookingPrice(arena, { courtId, slots, clientId }, {
+    member: ctx.member, tiers: ctx.tiers, packages: ctx.packages, wallet: ctx.wallet,
+    coupon: ctx.coupon,
+  });
+  // Sem preço de tabela (arena "sob consulta") não há o que abater.
+  if (r.table <= 0) return { price: tabela, benefit: null };
+
+  return {
+    price: r.total,
+    benefit: {
+      table_price: r.table,
+      tier_id: r.tier?.id || null,
+      tier_name: r.tier?.name || null,
+      discount_pct: r.discountPct,
+      discount_value: r.discountValue,
+      package_hours: r.packageHours,
+      package_value: r.packageValue,
+      package_plan: planPackageConsumption(ctx.packages, r.packageHours),
+      coupon_code: r.couponCode,
+      coupon_id: r.couponValue > 0 ? (ctx.coupon?.id || null) : null,
+      coupon_value: r.couponValue,
+      wallet_value: r.walletValue,
+      applied_at: null,
+    },
+  };
+}
+
+/**
+ * O contexto de membro desta pessoa nesta arena. Nunca derruba a reserva:
+ * qualquer falha devolve o neutro e o preço sai o de tabela.
+ */
+async function contextoDeMembro(arenaId, uid, couponCode) {
+  if (!arenaId || !uid) return null;
+  const [ctx, cupom] = await Promise.all([
+    getMemberContext(arenaId, uid).catch(() => null),
+    // O cupom é RECONFERIDO aqui, contra o banco: o que veio da tela é um
+    // palpite. Conferir só no navegador deixaria qualquer pessoa gravar um
+    // desconto que a arena não criou.
+    couponCode
+      ? validateCouponCode(arenaId, couponCode, { userId: uid }).then((r) => r.coupon && !r.error ? r.coupon : null).catch(() => null)
+      : Promise.resolve(null),
+  ]);
+  return { ...(ctx || { member: null, tiers: undefined, packages: [], wallet: null }), coupon: cupom };
+}
+
+/**
+ * O cupom é contabilizado quando a arena CONFIRMA — nunca no pedido.
+ * Só o gestor pode escrever em `arena_coupons`, e é ele quem confirma.
+ */
+async function contabilizarCupom(booking, actor) {
+  const id = booking?.member_benefit?.coupon_id;
+  if (!id || !booking?.athlete_id) return;
+  await registrarUsoDeCupom(id, booking.athlete_id);
+  await createAuditLog({
+    action: 'arena_coupon_used',
+    actor,
+    details: {
+      arena_id: booking.arena_id,
+      coupon_id: id,
+      code: booking.member_benefit?.coupon_code || null,
+      booking_id: booking.id,
+    },
+  });
 }
 
 /**
@@ -245,11 +336,13 @@ export async function createBooking(arena, user, profile, input) {
   const batch = writeBatch(db);
   const createdIds = [];
   const nowMs = Date.now();
+  // Uma leitura só do contexto de membro, para todas as quadras do pedido.
+  const ctxMembro = await contextoDeMembro(arena.id, user.uid, input.coupon_code);
   for (const cid of targetCourtIds) {
     const id = doc(collection(db, COL.bookings)).id;
-    const precoTotal = precoDaReserva(arena, {
+    const { price: precoTotal, benefit } = precoComBeneficio(arena, {
       courtId: cid, slots, clientId: user.uid, enviadoPelaTela: input.proposed_price,
-    });
+    }, ctxMembro);
     batch.set(doc(db, COL.bookings, id), {
       id,
       arena_id: arena.id,
@@ -272,6 +365,9 @@ export async function createBooking(arena, user, profile, input) {
       invited_ids: participants ? invitedIds(participants) : [],
       payment_method: str(input.payment_method) || null,
       proposed_price: precoTotal,
+      // Como o preço foi formado para ESTE membro. Ausente (null) quando não
+      // há benefício — reserva antiga e não-membro seguem idênticas.
+      member_benefit: benefit,
       agreed_price: null,
       payment_status: PAYMENT_STATUS.NONE,
       created_by: user.uid,
@@ -466,15 +562,16 @@ export async function createBookingsForSelection(arena, user, profile, input) {
   const batch = writeBatch(db);
   const createdIds = [];
   const nowMs = Date.now();
+  const ctxMembro = await contextoDeMembro(arena.id, user.uid, input.coupon_code);
 
   resolvidos.forEach(({ courtIds, slots }) => {
     courtIds.forEach((cid) => {
       const id = doc(collection(db, COL.bookings)).id;
       // Cada documento tem os SEUS horários e a SUA quadra — e a tabela pode
       // variar entre quadras. O preço sai daí, não de um número único.
-      const precoTotal = precoDaReserva(arena, {
+      const { price: precoTotal, benefit } = precoComBeneficio(arena, {
         courtId: cid, slots, clientId: user.uid, enviadoPelaTela: input.proposed_price,
-      });
+      }, ctxMembro);
       batch.set(doc(db, COL.bookings, id), {
         id,
         arena_id: arena.id,
@@ -496,6 +593,7 @@ export async function createBookingsForSelection(arena, user, profile, input) {
         invited_ids: participants ? invitedIds(participants) : [],
         payment_method: str(input.payment_method) || null,
         proposed_price: precoTotal,
+        member_benefit: benefit,
         agreed_price: null,
         payment_status: PAYMENT_STATUS.NONE,
         created_by: user.uid,
@@ -675,6 +773,20 @@ export async function updateBookingStatus(booking, nextStatus, actor, { agreedPr
   }
   await updateDoc(doc(db, COL.bookings, booking.id), patch);
 
+  // Só AGORA o benefício é consumido: horas de pacote, saldo da carteira e os
+  // pontos ganhos. No pedido não podia — queimar pacote num pedido que a arena
+  // ainda pode recusar é cobrar por um jogo que não vai acontecer.
+  //
+  // Nunca derruba a confirmação: a reserva já está confirmada, e um erro aqui
+  // é um lançamento a acertar, não um jogo a desmarcar.
+  if (nextStatus === BOOKING_STATUS.CONFIRMED) {
+    await aplicarBeneficioNaConfirmacao(booking, agreedPrice, actor).catch((err) => {
+      logger.warn('Falha ao aplicar benefício de membro na confirmação', {
+        booking_id: booking.id, err: err?.code || err?.message,
+      });
+    });
+  }
+
   const recipient = byManager ? [booking.athlete_id] : (await listArenaManagerIds(booking.arena_id).catch(() => []));
   notifyUsers(recipient, {
     title: `Reserva ${BOOKING_STATUS_LABELS[nextStatus].toLowerCase()} — "${str(booking.arena_name).slice(0, 40)}"`,
@@ -686,6 +798,56 @@ export async function updateBookingStatus(booking, nextStatus, actor, { agreedPr
     actor,
   });
   await createAuditLog({ action: 'arena_booking_status', actor, details: { booking_id: booking.id, status: nextStatus } });
+}
+
+/**
+ * O que a confirmação faz com o benefício do membro.
+ *
+ * Duas coisas, e nesta ordem:
+ *
+ * 1. **consome** o que a reserva prometeu abater (horas de pacote e saldo),
+ *    seguindo o plano gravado em `member_benefit` — o mesmo que o atleta viu.
+ *    Não recalcula: recalcular na confirmação poderia consumir de um pacote
+ *    diferente do que foi mostrado, e o extrato ficaria inexplicável.
+ * 2. **credita os pontos** da visita. Conta o valor pago E as horas — quem
+ *    usou pacote pagou antes e continua vindo; não pontuar puniria o cliente
+ *    mais fiel.
+ *
+ * Marca `member_benefit.applied_at` para deixar rastro do que já foi baixado.
+ */
+async function aplicarBeneficioNaConfirmacao(booking, agreedPrice, actor) {
+  const beneficio = booking?.member_benefit || null;
+  const uid = booking?.athlete_id;
+  const arenaId = booking?.arena_id;
+  if (!uid || !arenaId) return;
+  // Já baixado: confirmar duas vezes não cobra duas vezes.
+  if (beneficio?.applied_at) return;
+
+  const valorPago = num(agreedPrice ?? booking.agreed_price ?? booking.proposed_price) || 0;
+  const horas = (booking.slots || []).reduce((acc, sl) => {
+    const a = String(sl?.start || '').match(/^(\d{1,2}):(\d{2})$/);
+    const b = String(sl?.end || '').match(/^(\d{1,2}):(\d{2})$/);
+    if (!a || !b) return acc;
+    const ini = Number(a[1]) * 60 + Number(a[2]);
+    const fim = Number(b[1]) * 60 + Number(b[2]);
+    return acc + (fim > ini ? (fim - ini) / 60 : 0);
+  }, 0);
+
+  await contabilizarCupom(booking, actor).catch(() => {});
+
+  await consumeMemberBenefit(arenaId, uid, {
+    packagePlan: beneficio?.package_plan || [],
+    walletAmount: beneficio?.wallet_value || 0,
+    points: pointsForBooking({ amount: valorPago, hours: horas }),
+    reference: `reserva ${booking.id}`,
+  }, actor);
+
+  if (beneficio) {
+    await updateDoc(doc(db, COL.bookings, booking.id), {
+      'member_benefit.applied_at': serverTimestamp(),
+      updated_at: serverTimestamp(),
+    }).catch(() => {});
+  }
 }
 
 /** Proposta/contraproposta de valor (mantém a reserva em negociação). */

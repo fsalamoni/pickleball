@@ -221,6 +221,11 @@ Estes princípios vieram de bugs reais que custaram horas pra arrumar. São ineg
 **"Vou mexer em jogo aberto / fila de espera / buscar parceiro"** → `docs/24-MODULOS-DE-ARENA/01-MATCHMAKING.md`. Três coisas que NÃO podem regredir: (1) a vaga com `court_id` **OCUPA a quadra** (`openSlotBlocks`/`mergeOpenSlotBlocks`, mesmo desenho do dia de jogo — e o bloqueio nunca depende de flag); (2) o nível é a régua única 2.0–8.0 dos DOIS lados, e **nível desconhecido não barra ninguém**; (3) quem sai de um jogo LOTADO chama o próximo da fila, e a Cloud Function `advanceOpenSlotWaitlist` expira o prazo vencido e chama o seguinte
 **"Preciso do nível de alguém numa tela"** → `useMyUnifiedLevel()` (o meu) ou `useUnifiedLevels(uids)` (um lote, UMA consulta). **Nunca** `profile.level` nem `leveling_level`: são código de faixa, não número na régua — comparar contra 2.0–8.0 não filtra, filtra errado (era o defeito do "buscar parceiro" e da peneira do jogo aberto)
 **"Escrevi uma consulta e a lista vem vazia"** → antes de investigar a tela, rode `npx vitest run src/core/guards/indicesCompostos.test.js`. Ele varre `where` + `orderBy` sem índice **nos dois estilos** de montagem (dentro de `query(...)` e por vetor de constraints) e ignora comentários. Cinco consultas estavam mortas desde que foram escritas — vagas de jogo aberto (duas), catálogo de professores da arena, agenda de aulas e torneios internos
+**"Vou mexer no preço de uma reserva"** → confira se passa por `memberBookingPrice` (`arenas/domain/memberBenefit.js`). A ordem da conta é **tabela → horas de pacote → desconto do nível → saldo da carteira**, e o pacote vem ANTES do desconto de propósito (a hora do pacote já foi paga; aplicar percentual sobre ela dá desconto duas vezes — há teste travando). A tela ESTIMA, o serviço REFAZ antes de gravar; e horas e saldo só são CONSUMIDOS na **confirmação**, nunca no pedido — queimar pacote num pedido que a arena pode recusar é cobrar por um jogo que não vai acontecer. Ver `docs/24-MODULOS-DE-ARENA/02-MEMBROS.md`
+**"Vou mexer em cupom, campanha, NPS, pontos ou indicação"** → `docs/24-MODULOS-DE-ARENA/03-MARKETING.md`. Sete coisas que NÃO podem regredir: (1) o cupom é **reconferido pelo serviço** contra o banco antes de gravar — conferir só no navegador deixa qualquer pessoa gravar um desconto que a arena não criou; (2) o uso do cupom é contabilizado na **confirmação**, nunca no pedido; (3) a campanha mostra **quantas pessoas** vão receber ANTES de enviar, e não envia para zero; (4) o NPS não é perguntado a quem não veio, nem mais de uma vez a cada 90 dias; (5) resgate de pontos e de indicação são escritas da **ARENA** (a regra só deixa o gestor escrever `arena_members` e `arena_wallets` — botão na tela do atleta dá "permissão negada" que ele não tem como resolver); (6) atalho de módulo vem do **catálogo**, não de lista escrita à mão; (7) o serviço de contabilizar cupom **não** se chama `useCoupon` (o ESLint trata `useX` como hook e derruba o lint de quem o chama)
+**"Criei uma tela nova de módulo de arena. Como alguém chega nela?"** → `<ArenaModuleShortcuts arenaId audience="manage"|"public" />`. Ele lê `manage`/`public` do catálogo e cruza com o que a arena ligou — rota preenchida vira botão sozinho, nos dois lugares (página da arena e Central). **Não escreva o link à mão**: o console de marketing existia, tinha rota, e nada na plataforma levava até ele — módulo ligado, tela inalcançável. Destinos repetidos viram um botão só
+**"A tela precisa saber se um módulo está ligado"** → `useArenaModules(arenaId)` (UM hook, DUAS consultas, responde pelos 50). **Nunca** `useCanArenaUseModule` por módulo, e jamais dentro de um `map`
+**"Onde ficam os níveis de membro de uma arena?"** → `arena_settings.member_tiers` (campo opcional), **não** em `arena_tier_configs`: aquela coleção só o admin da plataforma escreve, e a arena ficaria sem poder configurar os próprios níveis. Ausente, valem os padrões (`DEFAULT_TIERS`)
 **"Onde está o MANUAL da plataforma?"** → `/ajuda` (flag `help_center`, default OFF): 33 artigos em 5 partes — Começar aqui, **Atleta**, **Arena**, **Professor**, Conta e privacidade. Conteúdo em `src/modules/help/domain/helpCenter.js`, página em `src/v2/pages/V2Help.jsx`. Acesso em três pontos de TODA tela (barra lateral, menu do usuário, gaveta do celular), fora dos hubs de propósito. Link direto por `?s=<seção>&a=<artigo>`. **Nada no Firestore** (só a parte preferida, no localStorage por usuário). Ver `docs/21-CENTRAL-DE-AJUDA.md`
 **"Vou colocar um link de ajuda numa tela"** → use `helpLinkFor(location.pathname)`, importado de **`modules/help/domain/helpLink`** (NUNCA de `helpCenter`: aquele arquivo carrega os 33 artigos, e importá-lo de uma tela comum joga o manual inteiro no chunk que todo mundo baixa — 216 kB contra 184 kB, medido; há teste travando isso). Nunca `'/ajuda'` cru. Ele monta `/ajuda?de=<rota>` e a central abre com **"Ajuda para esta tela"** no topo — os artigos daquele assunto, sem a pessoa ter de adivinhar a persona nem varrer a lista. O mapa rota → artigos é `HELP_ROUTE_HINTS`; `*` vale por UM segmento e **vence o primeiro molde que casa**, então o específico vem antes do genérico (teste trava a ordem). Rota sem pista ⇒ bloco nenhum, de propósito: sugestão errada ensina a ignorar o bloco
 **"Criei/removi uma tela. O que a ajuda precisa saber?"** → duas coisas: os artigos que citam a tela (`{ type: 'link', to }` — há teste lendo `V2App.jsx`) e a PISTA de rota em `HELP_ROUTE_HINTS`. O teste pega a pista órfã; a pista que FALTA ninguém vê
@@ -416,6 +421,67 @@ chore(deps): bump firebase to 12.x
 > memory topic `picklerush-sync-2026-08.md`.
 >
 > **Destaques por onda**:
+>
+> - **Onda AJ — Marketing e fidelidade: o cupom desconta, a campanha chega**
+>   (2026-09-13): o terceiro módulo entregue sobre o chassi, e **cinco defeitos
+>   independentes** que o mantinham decorativo. **(1) O cupom não descontava
+>   nada**: havia tela para criar e nenhum lugar para digitar — o desconto
+>   existia no banco e nunca no preço. Agora o atleta digita no pedido, o erro
+>   é específico ("venceu", "vale a partir de R$ 100", "você já usou"), a conta
+>   entra em `memberBookingPrice` entre o nível e a carteira, e o **serviço
+>   reconfere o cupom contra o banco antes de gravar** — conferir só no
+>   navegador deixaria qualquer pessoa gravar um desconto que a arena não
+>   criou. O uso é contabilizado na **confirmação**, e `used_by` é uma LISTA,
+>   que é o que torna "uma vez por pessoa" conferível. **(2) A campanha era um
+>   rascunho**: `createCampaign` gravava o documento e ninguém era notificado —
+>   a arena "enviava" e a comunidade nunca recebia. Agora há quatro públicos
+>   concretos (membros, sumidos, frequentes, todo mundo), cada cartão mostra
+>   **quantas pessoas** vão receber ANTES de enviar, público vazio não envia, e
+>   só reserva concluída conta como "já jogou aqui" (mandar "sentimos sua
+>   falta" a quem nunca veio faz desinstalar o aplicativo). **(3) O NPS não
+>   mostrava o motivo** — e a `read` da regra estava quebrada, então a arena
+>   nem lia o próprio NPS. Agora vê nota, distribuição e **os comentários**; e
+>   a pergunta ao atleta aparece na página da arena só para quem jogou nos
+>   últimos 30 dias e não respondeu nos últimos 90, com a **nota indo embora no
+>   clique** e o comentário depois (pedir texto antes da nota é o motivo de a
+>   maioria dos NPS não ter resposta). **(4) A indicação não tinha resgate**:
+>   agora o atleta vê o próprio código (copiar/convidar) e a arena registra
+>   quem chegou por ele, creditando os dois lados. **(5) 🐞 Nada levava ao
+>   console**: `/gerir/marketing` tinha rota e **nenhum link** na plataforma —
+>   módulo ligado, tela inalcançável. Corrigido na classe, não no caso:
+>   `ArenaModuleShortcuts` monta os atalhos a partir do CATÁLOGO, nos dois
+>   lados do balcão, e módulo novo com rota aparece sozinho. De quebra, os
+>   **pontos passaram a valer alguma coisa** (20 pontos = R$ 1, resgatados pela
+>   arena porque só o gestor escreve carteira; o resto em pontos fica com o
+>   atleta, nunca é arredondado para fora) e o cupom ganhou editar, desligar e
+>   apagar — desligar vem antes de apagar, porque apagar leva junto a contagem
+>   de usos e ninguém responde mais "quanto essa promoção rendeu?".
+>   **Zero coleção, zero índice, zero regra**; quatro campos opcionais.
+>   Ver `docs/24-MODULOS-DE-ARENA/03-MARKETING.md`.
+>
+> - **Onda AI — Membros: o benefício chega ao preço** (2026-09-13): o módulo
+>   sabia calcular nível ("Ouro dá 10%") e vendia pacotes de horas — e **nada
+>   disso chegava à reserva**. O valor gravado saía de `totalBookingPrice`, que
+>   não conhece membro, e o pacote era um saldo que ninguém debitava: um
+>   desconto que não desconta e um pacote que não abate. Agora a conta é
+>   `memberBookingPrice` (tabela → horas de pacote → desconto do nível → saldo
+>   da carteira, nessa ordem, com o pacote antes do desconto para não descontar
+>   duas vezes), a tela mostra o detalhamento linha a linha, o serviço REFAZ a
+>   conta antes de gravar e o consumo acontece só na **confirmação** — queimar
+>   horas num pedido que a arena ainda pode recusar seria cobrar por um jogo que
+>   não vai acontecer. Pontos passam a ser creditados por reserva concluída
+>   (valor + horas: quem usa pacote pagou antes e continua vindo), e o pacote
+>   consumido é sempre **o que vence primeiro**, para ninguém perder saldo por
+>   uma decisão do sistema. **A arena também não conseguia incluir ninguém**: a
+>   tela de gestão só listava, e o estado vazio dizia "conforme atletas
+>   comprarem pacotes, eles aparecem aqui". Agora inclui pelo diretório, ajusta
+>   pontos, credita carteira com motivo (que vai para a auditoria E para o
+>   extrato do atleta) e cuida da mensalidade. E a **mensalidade foi escrita do
+>   zero**: `arena_subscriptions` tinha regra e uma constante, nenhuma função.
+>   Meses pagos são uma LISTA (não um "pago até", que esconderia quem pulou um
+>   mês), e antes do vencimento o mês corrente não conta como atraso.
+>   **Zero coleção, zero índice, zero regra**; dois campos opcionais. Ver
+>   `docs/24-MODULOS-DE-ARENA/02-MEMBROS.md`.
 >
 > - **Onda AH — Jogo aberto, fila de espera e buscar parceiro** (2026-09-13): o
 >   primeiro módulo de arena entregue de verdade sobre o chassi novo — e quatro
@@ -781,7 +847,7 @@ chore(deps): bump firebase to 12.x
 
 | Métrica | Valor | Delta do início do agente |
 |---|---|---|
-| **Testes Vitest** | **3886 passing** (248 arquivos) + 198 asserções de regras no emulador | +3306 (era 408) |
+| **Testes Vitest** | **4044 passing** (254 arquivos) + 198 asserções de regras no emulador | +3636 (era 408) |
 | **Lint errors** | 0 | era 30+ |
 | **Módulos** | 21 (+`help` — conteúdo dos tutoriais em tela) (`games` e `legal` saíram como `src/modules/` mas continuam como pastas oficiais — **rating virou módulo oficial** com domain/services/hooks/components) | +4 (coaches, circuits, games, legal) |
 | **V2 pages** | 79 (+V2GameDayTelao — telão, fora do V2Layout; +V2Help — central de ajuda) | +55 |
