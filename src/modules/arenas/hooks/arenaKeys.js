@@ -23,6 +23,14 @@ export const arenaKeys = Object.freeze({
   reservas: (id) => ['arena-bookings', id],
   /** Bloqueios do admin. O recorte de datas faz parte da chave. */
   bloqueios: (id, from, to) => ['arena-unavailabilities', id, from, to],
+  /**
+   * O PREFIXO de todos os bloqueios de uma arena, para invalidar de uma vez.
+   *
+   * Existe porque cada recorte de datas é uma consulta diferente: quem fecha
+   * uma quadra não sabe quais meses estão em cache, e invalidar só o mês
+   * corrente deixaria os outros mostrando a quadra à venda.
+   */
+  bloqueiosDaArena: (id) => ['arena-unavailabilities', id],
   /** Módulos que ESTA arena ligou (camada 2). */
   modulos: (id) => ['arena-module-states', id],
   /** Módulos que a PLATAFORMA liberou (camada 1). Global, sem arena. */

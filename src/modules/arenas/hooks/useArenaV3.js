@@ -12,6 +12,7 @@
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import { useAuth } from '@/core/lib/FirebaseAuthContext';
 import { useArenaModuleOn } from './useArenaModules.js';
+import { arenaKeys } from './arenaKeys.js';
 import {
   getOrCreateArenaSettings,
   getArenaSettings,
@@ -866,6 +867,9 @@ export function useRedeemReferral() {
 import {
   listArenaChecklists, createChecklist, toggleChecklistItem,
   listArenaMaintenance, createMaintenance, updateMaintenanceStatus,
+  updateChecklist, deleteChecklist, rollChecklistDay,
+  updateMaintenance, deleteMaintenance,
+  getArenaStaff, saveArenaStaff,
 } from '../services/operationsService.js';
 
 export function useArenaChecklists(arenaId, filters = {}) {
@@ -909,7 +913,9 @@ export function useCreateMaintenance() {
   const qc = useQueryClient();
   return useMutation({
     mutationFn: ({ arenaId, input }) => createMaintenance(arenaId, input, user),
-    onSuccess: (_d, { arenaId }) => qc.invalidateQueries({ queryKey: ['arena-maintenance', arenaId] }),
+    // A ordem pode ter FECHADO a quadra: sem invalidar o calendário, a arena
+    // acabou de bloquear um horário e continua vendo-o à venda.
+    onSuccess: (_d, { arenaId }) => invalidarManutencao(qc, arenaId),
   });
 }
 
@@ -918,7 +924,104 @@ export function useUpdateMaintenanceStatus() {
   const qc = useQueryClient();
   return useMutation({
     mutationFn: ({ orderId, status }) => updateMaintenanceStatus(orderId, status, user),
-    onSuccess: () => qc.invalidateQueries({ queryKey: ['arena-maintenance'] }),
+    // Concluir devolve a quadra à venda — o calendário precisa saber.
+    onSuccess: (_d, { arenaId }) => invalidarManutencao(qc, arenaId),
+  });
+}
+
+/**
+ * Começa o dia dos checklists recorrentes.
+ *
+ * A tela chama isto ao abrir. É o que faz o checkmark de ontem parar de valer
+ * hoje — sem esta virada o checklist é uma lista de compras antiga, e a arena
+ * não consegue responder "hoje a abertura foi feita?".
+ *
+ * Idempotente: chamar duas vezes no mesmo dia não apaga o que já foi marcado.
+ */
+export function useRollChecklistDay() {
+  const qc = useQueryClient();
+  return useMutation({
+    mutationFn: async ({ arenaId, checklists, todayISO }) => {
+      const viradas = [];
+      for (const c of checklists || []) {
+        // Em série de propósito: são poucos documentos e o paralelo aqui só
+        // aumentaria a chance de bater no limite de escrita sem ganho nenhum.
+        // eslint-disable-next-line no-await-in-loop
+        if (await rollChecklistDay(c, todayISO)) viradas.push(c.id);
+      }
+      return { arenaId, viradas };
+    },
+    onSuccess: ({ arenaId, viradas }) => {
+      if (viradas.length > 0) qc.invalidateQueries({ queryKey: ['arena-checklists', arenaId] });
+    },
+  });
+}
+
+export function useUpdateChecklist() {
+  const { user } = useAuth();
+  const qc = useQueryClient();
+  return useMutation({
+    mutationFn: ({ checklistId, input }) => updateChecklist(checklistId, input, user),
+    onSuccess: () => qc.invalidateQueries({ queryKey: ['arena-checklists'] }),
+  });
+}
+
+export function useDeleteChecklist() {
+  const { user } = useAuth();
+  const qc = useQueryClient();
+  return useMutation({
+    mutationFn: ({ checklistId }) => deleteChecklist(checklistId, user),
+    onSuccess: () => qc.invalidateQueries({ queryKey: ['arena-checklists'] }),
+  });
+}
+
+/**
+ * Editar e apagar ordem de manutenção **derrubam os bloqueios de calendário
+ * junto** — por isso invalidam também as consultas da agenda: uma quadra que
+ * voltou a ficar livre e continua cinza na tela é a mesma mentira de antes,
+ * ao contrário.
+ */
+function invalidarManutencao(qc, arenaId) {
+  qc.invalidateQueries({ queryKey: ['arena-maintenance'] });
+  qc.invalidateQueries({ queryKey: arenaKeys.bloqueiosDaArena(arenaId) });
+  qc.invalidateQueries({ queryKey: arenaKeys.reservas(arenaId) });
+}
+
+export function useUpdateMaintenance() {
+  const { user } = useAuth();
+  const qc = useQueryClient();
+  return useMutation({
+    mutationFn: ({ orderId, input }) => updateMaintenance(orderId, input, user),
+    onSuccess: (_d, { arenaId }) => invalidarManutencao(qc, arenaId),
+  });
+}
+
+export function useDeleteMaintenance() {
+  const { user } = useAuth();
+  const qc = useQueryClient();
+  return useMutation({
+    mutationFn: ({ orderId }) => deleteMaintenance(orderId, user),
+    onSuccess: (_d, { arenaId }) => invalidarManutencao(qc, arenaId),
+  });
+}
+
+/* --------------------------- Equipe --------------------------- */
+
+export function useArenaStaff(arenaId) {
+  return useQuery({
+    queryKey: ['arena-staff', arenaId],
+    queryFn: () => getArenaStaff(arenaId),
+    enabled: !!arenaId,
+    staleTime: 5 * 60_000,
+  });
+}
+
+export function useSaveArenaStaff() {
+  const { user } = useAuth();
+  const qc = useQueryClient();
+  return useMutation({
+    mutationFn: ({ arenaId, staff }) => saveArenaStaff(arenaId, staff, user),
+    onSuccess: (_d, { arenaId }) => qc.invalidateQueries({ queryKey: ['arena-staff', arenaId] }),
   });
 }
 

@@ -222,6 +222,7 @@ Estes princípios vieram de bugs reais que custaram horas pra arrumar. São ineg
 **"Preciso do nível de alguém numa tela"** → `useMyUnifiedLevel()` (o meu) ou `useUnifiedLevels(uids)` (um lote, UMA consulta). **Nunca** `profile.level` nem `leveling_level`: são código de faixa, não número na régua — comparar contra 2.0–8.0 não filtra, filtra errado (era o defeito do "buscar parceiro" e da peneira do jogo aberto)
 **"Escrevi uma consulta e a lista vem vazia"** → antes de investigar a tela, rode `npx vitest run src/core/guards/indicesCompostos.test.js`. Ele varre `where` + `orderBy` sem índice **nos dois estilos** de montagem (dentro de `query(...)` e por vetor de constraints) e ignora comentários. Cinco consultas estavam mortas desde que foram escritas — vagas de jogo aberto (duas), catálogo de professores da arena, agenda de aulas e torneios internos
 **"Vou mexer no preço de uma reserva"** → confira se passa por `memberBookingPrice` (`arenas/domain/memberBenefit.js`). A ordem da conta é **tabela → horas de pacote → desconto do nível → saldo da carteira**, e o pacote vem ANTES do desconto de propósito (a hora do pacote já foi paga; aplicar percentual sobre ela dá desconto duas vezes — há teste travando). A tela ESTIMA, o serviço REFAZ antes de gravar; e horas e saldo só são CONSUMIDOS na **confirmação**, nunca no pedido — queimar pacote num pedido que a arena pode recusar é cobrar por um jogo que não vai acontecer. Ver `docs/24-MODULOS-DE-ARENA/02-MEMBROS.md`
+**"Vou mexer em checklist, manutenção, estoque ou equipe da arena"** → `docs/24-MODULOS-DE-ARENA/04-OPERACOES.md`. (1) O estado do checklist HOJE sai de `checklistRunState(checklist, hoje)` — ler `checklist.items` direto na tela reintroduz o defeito de o checkmark de ontem aparecer marcado hoje; a virada do dia é feita ao abrir a tela e é **idempotente**. (2) Ordem de manutenção com `blocks_court` **grava** `arena_unavailabilities` (não deriva, ao contrário do dia de jogo — a ordem é privada da arena e o atleta nunca a leria), e **concluir ou cancelar devolve a quadra**; o `sync` só toca documentos com `maintenance_id`. (3) O **motivo** da ordem nunca entra no bloqueio público — ele diz só "Manutenção programada". (4) Marcar "fechar" sem data é ERRO, não bloqueio de zero dias. (5) A equipe (`arena_settings.staff`) **não guarda telefone nem e-mail**. (6) Toda mutação de manutenção invalida o calendário inteiro da arena (`arenaKeys.bloqueiosDaArena`), porque cada recorte de datas é uma consulta diferente
 **"Vou mexer em cupom, campanha, NPS, pontos ou indicação"** → `docs/24-MODULOS-DE-ARENA/03-MARKETING.md`. Sete coisas que NÃO podem regredir: (1) o cupom é **reconferido pelo serviço** contra o banco antes de gravar — conferir só no navegador deixa qualquer pessoa gravar um desconto que a arena não criou; (2) o uso do cupom é contabilizado na **confirmação**, nunca no pedido; (3) a campanha mostra **quantas pessoas** vão receber ANTES de enviar, e não envia para zero; (4) o NPS não é perguntado a quem não veio, nem mais de uma vez a cada 90 dias; (5) resgate de pontos e de indicação são escritas da **ARENA** (a regra só deixa o gestor escrever `arena_members` e `arena_wallets` — botão na tela do atleta dá "permissão negada" que ele não tem como resolver); (6) atalho de módulo vem do **catálogo**, não de lista escrita à mão; (7) o serviço de contabilizar cupom **não** se chama `useCoupon` (o ESLint trata `useX` como hook e derruba o lint de quem o chama)
 **"Criei uma tela nova de módulo de arena. Como alguém chega nela?"** → `<ArenaModuleShortcuts arenaId audience="manage"|"public" />`. Ele lê `manage`/`public` do catálogo e cruza com o que a arena ligou — rota preenchida vira botão sozinho, nos dois lugares (página da arena e Central). **Não escreva o link à mão**: o console de marketing existia, tinha rota, e nada na plataforma levava até ele — módulo ligado, tela inalcançável. Destinos repetidos viram um botão só
 **"A tela precisa saber se um módulo está ligado"** → `useArenaModules(arenaId)` (UM hook, DUAS consultas, responde pelos 50). **Nunca** `useCanArenaUseModule` por módulo, e jamais dentro de um `map`
@@ -421,6 +422,38 @@ chore(deps): bump firebase to 12.x
 > memory topic `picklerush-sync-2026-08.md`.
 >
 > **Destaques por onda**:
+>
+> - **Onda AK — Operações: a rotina que recomeça e a quadra que fecha**
+>   (2026-09-13): quatro módulos `READY` no catálogo, cinco defeitos.
+>   **(1) 🐞 O checklist não era uma ROTINA**: criado uma vez e marcado para
+>   sempre — o fechamento cumprido na segunda continuava "concluído" na terça,
+>   e a arena não tinha como responder a única pergunta que importa de manhã,
+>   *hoje a abertura foi feita?*. Agora cada dia recomeça (virada ao abrir a
+>   tela, idempotente) e o dia anterior vai para um histórico de 30 dias — o
+>   que transforma o checklist numa PROVA ("a abertura de sábado foi cumprida,
+>   8 de 8") em vez de uma lista de compras antiga. Lista marcada como não
+>   recorrente não vira nunca, de propósito. **(2) 🐞 A manutenção não fechava
+>   a quadra**, embora o catálogo prometesse: a ordem não tinha quadra nem
+>   data, era um bilhete — trocar o piso da quadra 2 na quinta não impedia
+>   ninguém de reservar a quadra 2 na quinta. Agora fecha, e **concluir ou
+>   cancelar devolve a quadra à venda** (manutenção que termina e deixa a
+>   quadra fechada é prejuízo silencioso). Aqui a cópia é GRAVADA, e não
+>   derivada como no dia de jogo: a ordem é privada da arena e o atleta nunca a
+>   leria — então o bloqueio público existe e diz só **"Manutenção
+>   programada"**, sem o motivo ("trocar a fechadura do vestiário" não é
+>   assunto de quem vai jogar; há teste garantindo que o título não vaza). E a
+>   recusa da reserva ganhou texto próprio, com o "é temporário" que evita a
+>   pessoa desistir da arena em vez do horário. **(3) 🐞 O alerta de estoque
+>   não chegava a lugar nenhum**: 242 linhas de domínio testado e o aviso de
+>   "acabando" só existia dentro da aba Mercado, que ninguém abre de manhã.
+>   **(4) 🐞 A equipe não existia** — módulo `READY` sem uma linha de código;
+>   agora é `arena_settings.staff`, com nome, função e turno e **sem telefone
+>   nem e-mail** (para dizer quem estava de plantão isso basta). **(5) A tela
+>   não respondia à pergunta do dia**: ganhou um topo **Hoje** com o que está
+>   pendente agora — e que diz "nada pendente" numa linha em vez de encher a
+>   tela de cartões verdes. **Zero coleção, zero índice, zero regra**; campos
+>   opcionais em quatro coleções.
+>   Ver `docs/24-MODULOS-DE-ARENA/04-OPERACOES.md`.
 >
 > - **Onda AJ — Marketing e fidelidade: o cupom desconta, a campanha chega**
 >   (2026-09-13): o terceiro módulo entregue sobre o chassi, e **cinco defeitos
@@ -847,7 +880,7 @@ chore(deps): bump firebase to 12.x
 
 | Métrica | Valor | Delta do início do agente |
 |---|---|---|
-| **Testes Vitest** | **4044 passing** (254 arquivos) + 198 asserções de regras no emulador | +3636 (era 408) |
+| **Testes Vitest** | **4116 passing** (255 arquivos) + 198 asserções de regras no emulador | +3708 (era 408) |
 | **Lint errors** | 0 | era 30+ |
 | **Módulos** | 21 (+`help` — conteúdo dos tutoriais em tela) (`games` e `legal` saíram como `src/modules/` mas continuam como pastas oficiais — **rating virou módulo oficial** com domain/services/hooks/components) | +4 (coaches, circuits, games, legal) |
 | **V2 pages** | 79 (+V2GameDayTelao — telão, fora do V2Layout; +V2Help — central de ajuda) | +55 |
