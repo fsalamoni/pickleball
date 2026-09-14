@@ -36,7 +36,7 @@ import { getSlotStatus, generateTimeSlots, isSlotClickable, slotEndTime, SLOT_ST
 import { weekdayOf } from '@/modules/arenas/domain/booking';
 import { useArenaGameDays } from '@/modules/games/hooks/useArenaGameDays';
 import { mergeArenaBlocks } from '@/modules/arenas/domain/arenaBlocks';
-import { useArenaOpenSlots, useArenaClasses } from '@/modules/arenas/hooks/useArenaV3';
+import { useArenaOpenSlots, useArenaClasses, useArenaTournaments } from '@/modules/arenas/hooks/useArenaV3';
 import { formatDateShortBR } from '@/modules/arenas/domain/calendar';
 import { BOOKING_STATUS, BOOKING_STATUS_LABELS } from '@/modules/arenas/domain/constants';
 import { bookingPriceInfo } from '@/modules/arenas/domain/pricing';
@@ -83,14 +83,16 @@ export default function V2AdminBookingCalendar({ arenaId, embedded = false }) {
   // às 19h. `mergeArenaBlocks` compõe as quatro fontes num lugar só — fonte
   // nova entra lá e chega a todos os calendários de uma vez.
   const { data: aulas = [] } = useArenaClasses(arenaId);
+  const { data: torneios = [] } = useArenaTournaments(arenaId);
   const unavailabilities = useMemo(
     () => mergeArenaBlocks({
       gravados: unavailabilitiesRaw,
       diasDeJogo: diasDeJogoDaArena,
       vagasAbertas,
       aulas,
+      torneios,
     }),
-    [unavailabilitiesRaw, diasDeJogoDaArena, vagasAbertas, aulas],
+    [unavailabilitiesRaw, diasDeJogoDaArena, vagasAbertas, aulas, torneios],
   );
   const addUnav = useAddArenaUnavailability(arenaId);
   const removeUnav = useDeleteArenaUnavailability(arenaId);

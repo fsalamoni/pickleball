@@ -773,6 +773,8 @@ export function useCoachClasses(arenaId, coachId) {
 
 import {
   listArenaTournaments, createInternalTournament, joinTournament, getLadder,
+  leaveTournament, updateInternalTournament, cancelInternalTournament,
+  deleteInternalTournament, startInternalTournament, finishInternalTournament,
 } from '../services/leaguesService.js';
 
 export function useArenaTournaments(arenaId, filters = {}) {
@@ -793,19 +795,103 @@ export function useCreateTournament() {
   });
 }
 
+/**
+ * Tudo o que muda quando um torneio muda.
+ *
+ * O torneio OCUPA a quadra: sem invalidar o calendário, a arena acabaria de
+ * marcar um torneio e continuaria vendo o horário à venda.
+ */
+function invalidarTorneios(qc, arenaId) {
+  qc.invalidateQueries({ queryKey: ['arena-tournaments', arenaId] });
+  qc.invalidateQueries({ queryKey: ['arena-ladder', arenaId] });
+  qc.invalidateQueries({ queryKey: arenaKeys.bloqueiosDaArena(arenaId) });
+  qc.invalidateQueries({ queryKey: arenaKeys.reservas(arenaId) });
+}
+
 export function useJoinTournament() {
   const { user, userProfile } = useAuth();
   const qc = useQueryClient();
   return useMutation({
-    mutationFn: (tid) => joinTournament(tid, user, userProfile),
-    onSuccess: () => qc.invalidateQueries({ queryKey: ['arena-tournaments'] }),
+    mutationFn: ({ tid }) => joinTournament(tid, user, userProfile),
+    onSuccess: (_d, { arenaId }) => invalidarTorneios(qc, arenaId),
   });
 }
 
-export function useArenaLadder(arenaId) {
+/** Sair do torneio — não existia: só dava para entrar. */
+export function useLeaveTournament() {
+  const { user } = useAuth();
+  const qc = useQueryClient();
+  return useMutation({
+    mutationFn: ({ tid }) => leaveTournament(tid, user),
+    onSuccess: (_d, { arenaId }) => invalidarTorneios(qc, arenaId),
+  });
+}
+
+export function useUpdateTournament() {
+  const { user } = useAuth();
+  const qc = useQueryClient();
+  return useMutation({
+    mutationFn: ({ tid, input }) => updateInternalTournament(tid, input, user),
+    onSuccess: (_d, { arenaId }) => invalidarTorneios(qc, arenaId),
+  });
+}
+
+export function useCancelTournament() {
+  const { user } = useAuth();
+  const qc = useQueryClient();
+  return useMutation({
+    mutationFn: ({ tid, motivo }) => cancelInternalTournament(tid, motivo, user),
+    onSuccess: (_d, { arenaId }) => invalidarTorneios(qc, arenaId),
+  });
+}
+
+export function useDeleteTournament() {
+  const { user } = useAuth();
+  const qc = useQueryClient();
+  return useMutation({
+    mutationFn: ({ tid }) => deleteInternalTournament(tid, user),
+    onSuccess: (_d, { arenaId }) => invalidarTorneios(qc, arenaId),
+  });
+}
+
+/**
+ * Começa o torneio: cria o dia de jogo da arena com os inscritos.
+ *
+ * É aqui que o torneio deixa de ser uma lista de nomes — a partir daí tudo o
+ * que a plataforma já sabe fazer (sorteio equilibrado, Americano, placar,
+ * ranking do dia, telão) passa a valer, sem código novo.
+ */
+export function useStartTournament() {
+  const { user } = useAuth();
+  const qc = useQueryClient();
+  return useMutation({
+    mutationFn: ({ tournament, arena, courts }) => (
+      startInternalTournament(tournament, { arena, courts }, user)
+    ),
+    onSuccess: (_d, { arenaId }) => {
+      invalidarTorneios(qc, arenaId);
+      qc.invalidateQueries({ queryKey: ['arena-game-days', arenaId] });
+    },
+  });
+}
+
+/** Encerra o torneio e soma o resultado ao ladder da arena. */
+export function useFinishTournament() {
+  const { user } = useAuth();
+  const qc = useQueryClient();
+  return useMutation({
+    mutationFn: ({ tournament, classificacao, period }) => (
+      finishInternalTournament(tournament, classificacao, { period }, user)
+    ),
+    onSuccess: (_d, { arenaId }) => invalidarTorneios(qc, arenaId),
+  });
+}
+
+/** A classificação acumulada da casa. */
+export function useArenaLadder(arenaId, period = 'geral') {
   return useQuery({
-    queryKey: ['arena-ladder', arenaId],
-    queryFn: () => getLadder(arenaId),
+    queryKey: ['arena-ladder', arenaId, period],
+    queryFn: () => getLadder(arenaId, period),
     enabled: !!arenaId,
     staleTime: 60_000,
   });

@@ -117,7 +117,7 @@ Um módulo pode estar pronto no código e não liberado; liberado e não ativado
 | 2 | Membros (níveis, pacotes, mensalidade, carteira) | ✅ `02-MEMBROS.md` |
 | 3 | Marketing e fidelidade (cupom, pontos, indicação, NPS, campanha) | ✅ `03-MARKETING.md` |
 | 4 | Operações (checklist, manutenção, estoque, equipe) | ✅ `04-OPERACOES.md` |
-| 5 | Aulas e torneios internos | 🟡 aulas ✅ `05-AULAS.md` · torneios ⏳ |
+| 5 | Aulas e torneios internos | ✅ `05-AULAS.md` + `06-TORNEIOS-INTERNOS.md` |
 | 6 | PDV, rede multi-unidade, branding e inteligência | ⏳ |
 
 ## 6. O que a plataforma NÃO consegue entregar sozinha

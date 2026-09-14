@@ -36,6 +36,7 @@ const estado = {
   diasDeJogo: [],
   vagasAbertas: [],
   aulas: [],
+  torneios: [],
 };
 
 vi.mock('sonner', () => ({ toast: { success: vi.fn(), error: vi.fn() } }));
@@ -62,6 +63,7 @@ vi.mock('@/modules/games/hooks/useArenaGameDays', () => ({
 vi.mock('@/modules/arenas/hooks/useArenaV3', () => ({
   useArenaOpenSlots: () => ({ data: estado.vagasAbertas }),
   useArenaClasses: () => ({ data: estado.aulas }),
+  useArenaTournaments: () => ({ data: estado.torneios }),
 }));
 vi.mock('./V2DaySlotsDialog', () => ({ default: () => null }));
 
@@ -93,6 +95,7 @@ beforeEach(() => {
   estado.diasDeJogo = [];
   estado.vagasAbertas = [];
   estado.aulas = [];
+  estado.torneios = [];
   container = document.createElement('div');
   document.body.appendChild(container);
   root = createRoot(container);

@@ -127,6 +127,7 @@ export default function V2DaySlotsDialog({
   // e o bloqueio delas é sempre derivado (não há cópia gravada).
   openSlots = [],
   classes = [],
+  tournaments = [],
 }) {
   const { isAuthenticated, user } = useAuth();
   const { data: schedules = [], isLoading: loadingSchedules } = useArenaCourtSchedules(arenaId);
@@ -184,11 +185,12 @@ export default function V2DaySlotsDialog({
       diasDeJogo: gameDays || [],
       vagasAbertas: openSlots || [],
       aulas: classes || [],
+      torneios: tournaments || [],
     });
     return todos
       .filter((u) => u.date === date)
       .filter((u) => !courtId || !u.court_id || u.court_id === courtId);
-  }, [unavailabilities, gameDays, openSlots, classes, date, courtId]);
+  }, [unavailabilities, gameDays, openSlots, classes, tournaments, date, courtId]);
 
   // Slots do dia (1h cada, dentro dos schedules)
   const slotsWithStatus = useMemo(() => {

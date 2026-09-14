@@ -20,6 +20,7 @@
  *   diasDeJogo,      // game_days da arena          → derivado
  *   vagasAbertas,    // arena_open_slots            → derivado
  *   aulas,           // arena_classes               → derivado
+ *   torneios,        // arena_internal_tournaments  → derivado
  * });
  * ```
  *
@@ -41,6 +42,7 @@
 import { mergeGameDayBlocks } from '@/modules/games/domain/arenaGameDay.js';
 import { mergeOpenSlotBlocks } from './openMatch.js';
 import { mergeClassBlocks } from './classes.js';
+import { mergeTournamentBlocks } from './leagues.js';
 
 /**
  * Os bloqueios gravados mais todos os derivados, sem duplicar.
@@ -54,15 +56,19 @@ import { mergeClassBlocks } from './classes.js';
  *   diasDeJogo?: Array<object>,
  *   vagasAbertas?: Array<object>,
  *   aulas?: Array<object>,
+ *   torneios?: Array<object>,
  * }} fontes
  * @returns {Array<object>} no formato de `arena_unavailabilities`
  */
 export function mergeArenaBlocks({
-  gravados = [], diasDeJogo = [], vagasAbertas = [], aulas = [],
+  gravados = [], diasDeJogo = [], vagasAbertas = [], aulas = [], torneios = [],
 } = {}) {
   const base = Array.isArray(gravados) ? gravados : [];
-  return mergeClassBlocks(
-    mergeOpenSlotBlocks(mergeGameDayBlocks(base, diasDeJogo), vagasAbertas),
-    aulas,
+  return mergeTournamentBlocks(
+    mergeClassBlocks(
+      mergeOpenSlotBlocks(mergeGameDayBlocks(base, diasDeJogo), vagasAbertas),
+      aulas,
+    ),
+    torneios,
   );
 }

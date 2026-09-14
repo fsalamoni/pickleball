@@ -17,6 +17,7 @@ import { listArenaUnavailabilities } from './arenaService.js';
 import { listArenaGameDays } from '@/modules/games/services/arenaGameDayService.js';
 import { listArenaOpenSlots } from './openMatchService.js';
 import { listArenaClasses } from './classesService.js';
+import { listArenaTournaments } from './leaguesService.js';
 import { mergeArenaBlocks } from '../domain/arenaBlocks.js';
 
 /**
@@ -29,16 +30,18 @@ import { mergeArenaBlocks } from '../domain/arenaBlocks.js';
  */
 export async function arenaOccupancy(arenaId, { exceptSlotId, exceptClassId } = {}) {
   if (!arenaId) return [];
-  const [gravados, diasDeJogo, vagas, aulas] = await Promise.all([
+  const [gravados, diasDeJogo, vagas, aulas, torneios] = await Promise.all([
     listArenaUnavailabilities(arenaId).catch(() => []),
     listArenaGameDays(arenaId).catch(() => []),
     listArenaOpenSlots(arenaId, { limit: 500 }).catch(() => []),
     listArenaClasses(arenaId, { lim: 500 }).catch(() => []),
+    listArenaTournaments(arenaId, { lim: 200 }).catch(() => []),
   ]);
   return mergeArenaBlocks({
     gravados,
     diasDeJogo,
     vagasAbertas: exceptSlotId ? vagas.filter((v) => v.id !== exceptSlotId) : vagas,
     aulas: exceptClassId ? aulas.filter((a) => a.id !== exceptClassId) : aulas,
+    torneios,
   });
 }

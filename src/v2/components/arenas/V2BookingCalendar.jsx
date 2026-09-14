@@ -84,7 +84,7 @@ import { useFeatureFlag } from '@/core/lib/FeatureFlagsContext';
 import { useArenaGameDays } from '@/modules/games/hooks/useArenaGameDays';
 import { arenaGameDayTimeRange } from '@/modules/games/domain/arenaGameDay';
 import { mergeArenaBlocks } from '@/modules/arenas/domain/arenaBlocks';
-import { useArenaOpenSlots, useArenaClasses } from '@/modules/arenas/hooks/useArenaV3';
+import { useArenaOpenSlots, useArenaClasses, useArenaTournaments } from '@/modules/arenas/hooks/useArenaV3';
 
 const WEEKDAY_LABELS_PT = ['Dom', 'Seg', 'Ter', 'Qua', 'Qui', 'Sex', 'Sáb'];
 
@@ -174,6 +174,7 @@ export default function V2BookingCalendar({ arenaId, arena: arenaProp }) {
   // Quadra 1 é a Quadra 1 comprometida às 19h. Não depende de feature flag —
   // a flag gateia o que se MOSTRA, não se a quadra está ocupada.
   const { data: aulas = [] } = useArenaClasses(arenaId);
+  const { data: torneios = [] } = useArenaTournaments(arenaId);
 
   // Aquecimento do diálogo do dia: assim que o navegador fica ocioso (ou logo
   // depois, onde não há `requestIdleCallback`), o pedaço de código dele vem.
@@ -233,8 +234,8 @@ export default function V2BookingCalendar({ arenaId, arena: arenaProp }) {
    * quadra está ocupada.
    */
   const comVagasAbertas = useMemo(
-    () => mergeArenaBlocks({ gravados: comDiasDeJogo, vagasAbertas, aulas }),
-    [comDiasDeJogo, vagasAbertas, aulas],
+    () => mergeArenaBlocks({ gravados: comDiasDeJogo, vagasAbertas, aulas, torneios }),
+    [comDiasDeJogo, vagasAbertas, aulas, torneios],
   );
 
   const filteredUnavailabilities = useMemo(() => {
@@ -605,6 +606,7 @@ export default function V2BookingCalendar({ arenaId, arena: arenaProp }) {
           gameDays={gameDaysByDate.get(selectedDate) || []}
           openSlots={vagasAbertas}
           classes={aulas}
+          tournaments={torneios}
           onClose={() => setSelectedDate(null)}
         />
         </Suspense>
