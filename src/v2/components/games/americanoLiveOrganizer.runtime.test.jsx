@@ -29,6 +29,7 @@ const mutacoes = {
   editar: vi.fn(async () => ({})),
   apagar: vi.fn(async () => ({})),
   manual: vi.fn(async () => ({})),
+  gerarRodada: vi.fn(async () => ({ created: [{ court: 1 }, { court: 2 }], courts: [1, 2] })),
 };
 const vazio = { mutate: vi.fn(), mutateAsync: vi.fn(async () => ({})), isPending: false };
 const comMutacao = (fn) => ({ ...vazio, mutate: fn, mutateAsync: fn, isPending: false });
@@ -61,6 +62,7 @@ vi.mock('@/modules/games/hooks/useGameDays', () => ({
   useUnpublishGameDayRanking: () => vazio,
   useDeleteGameDayGame: () => comMutacao(mutacoes.apagar),
   useCreateNextAmericanoLiveGame: () => comMutacao(mutacoes.gerar),
+  useCreateAmericanoLiveRound: () => comMutacao(mutacoes.gerarRodada),
   useSubmitAmericanoLiveResult: () => comMutacao(mutacoes.lancar),
   useUpdateAmericanoLiveResult: () => comMutacao(mutacoes.editar),
   useCreateManualAmericanoLiveGame: () => comMutacao(mutacoes.manual),
@@ -294,5 +296,39 @@ describe('painel do Americano aprimorado — ninguém em duas quadras', () => {
     const opcoes = [...quadra.querySelectorAll('option')].map((o) => o.textContent);
     expect(opcoes).toContain('Quadra 2');
     expect(opcoes).not.toContain('Quadra 1'); // ocupada
+  });
+});
+
+/* ============================================ sortear todas as quadras === */
+
+describe('⭐ sortear TODAS as quadras de uma vez (Americano aprimorado)', () => {
+  it('⭐ com as duas quadras livres e 8 na fila, o botão aparece e funciona', async () => {
+    dados.games = [concluida]; // nenhuma partida em andamento
+    await render();
+    const b = botao('Sortear todas as quadras');
+    expect(b).toBeTruthy();
+    expect(b.disabled).toBe(false);
+    await click(b);
+    expect(mutacoes.gerarRodada).toHaveBeenCalled();
+  });
+
+  it('com uma quadra ocupada, sobra uma livre: fica travado', async () => {
+    // Uma quadra livre não mistura nada — seria o "gerar próxima partida".
+    await render();
+    const b = botao('Sortear todas as quadras');
+    expect(b).toBeTruthy();
+    expect(b.disabled).toBe(true);
+  });
+
+  it('⭐ e a tela EXPLICA o caminho: lançar os resultados antes de sortear', async () => {
+    await render();
+    expect(container.textContent).toContain('misturar os grupos entre as quadras');
+  });
+
+  it('quem não organiza não vê o botão', async () => {
+    dados.games = [concluida];
+    auth.user = { uid: 'visitante' };
+    await render();
+    expect(botao('Sortear todas as quadras')).toBeUndefined();
   });
 });

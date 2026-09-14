@@ -47,7 +47,7 @@ import { useQuery, useQueryClient } from '@tanstack/react-query';
 import { toast } from 'sonner';
 import {
   Radio, Clock, Trophy, ListOrdered, CheckCircle2, ArrowLeft, Maximize2, Minimize2, Users,
-  PlayCircle, Check, Pause, Link2, Unlink, Swords,
+  PlayCircle, Check, Pause, Link2, Unlink, Swords, Shuffle,
 } from 'lucide-react';
 
 import { ConfirmDialog } from '@/components/ui/confirm-dialog';
@@ -60,7 +60,8 @@ import { gameDayWhenText } from '@/modules/games/domain/gameDay';
 import { useGameDayRoles } from '@/modules/games/hooks/useGameDayRoles';
 import { buildGameDayBoard, sideNames, scoreText, winnerSide } from '@/modules/games/domain/gameDayBoard';
 import {
-  computePlayOrder, forecastPlayByCourt, PLAY_STATUS, PLAY_SLOTS, PLAY_GAME_STATUS,
+  computePlayOrder, forecastPlayByCourt, freePlayCourts,
+  PLAY_STATUS, PLAY_SLOTS, PLAY_GAME_STATUS,
 } from '@/modules/games/domain/gamePlay';
 import {
   buildPlayHistory, forecastPlayByCourtBalanced, applyPlayEntryOrder,
@@ -68,9 +69,9 @@ import {
 import { FEATURE_FLAG } from '@/core/featureFlags';
 import { useFeatureFlag } from '@/core/lib/FeatureFlagsContext';
 import {
-  useCreateNextPlayGame, useFinishPlayGame, useCancelPlayGame, useNoShowSwapPlayGame,
+  useCreateNextPlayGame, useCreatePlayRound, useFinishPlayGame, useCancelPlayGame, useNoShowSwapPlayGame,
   useSetPlayParticipantSkip, useSetPlayParticipantPartner,
-  useCreateNextAmericanoLiveGame, useSubmitAmericanoLiveResult,
+  useCreateNextAmericanoLiveGame, useCreateAmericanoLiveRound, useSubmitAmericanoLiveResult,
 } from '@/modules/games/hooks/useGameDays';
 import { SkipDialog, PartnerDialog, CourtPlayerDialog } from '@/v2/components/games/AthletePlayOrganizer';
 import { computeGameDayLeaderboard } from '@/modules/clubs/domain/gameDayLeaderboard';
@@ -182,13 +183,15 @@ function Lado({ side, vencedor, variante = 'empilhado', onJogador = null }) {
   );
 }
 
-function Bloco({ icon: Icon, titulo, contagem, children, className = '', corpoClassName = '' }) {
+/** @param {React.ReactNode} [acoes] botões à direita do título (opcional). */
+function Bloco({ icon: Icon, titulo, contagem, children, className = '', corpoClassName = '', acoes = null }) {
   return (
     <section className={className}>
-      <h2 className="mb-3 flex items-center gap-2 text-lg font-bold uppercase tracking-wide text-white/60">
+      <h2 className="mb-3 flex flex-wrap items-center gap-2 text-lg font-bold uppercase tracking-wide text-white/60">
         <Icon aria-hidden="true" className="h-5 w-5" />
         {titulo}
         {contagem != null && <span className="text-white/30">({contagem})</span>}
+        {acoes && <span className="ml-auto flex flex-wrap gap-2 normal-case tracking-normal">{acoes}</span>}
       </h2>
       <div className={corpoClassName}>{children}</div>
     </section>
@@ -597,6 +600,7 @@ export default function V2GameDayTelao() {
 
   // Ações do Play, exatamente os mesmos hooks da tela normal.
   const criarProximo = useCreateNextPlayGame(gameDayId);
+  const criarRodada = useCreatePlayRound(gameDayId);
   const encerrarPartida = useFinishPlayGame(gameDayId);
   const cancelarJogo = useCancelPlayGame(gameDayId);
   const substituirAusente = useNoShowSwapPlayGame(gameDayId);
@@ -606,12 +610,13 @@ export default function V2GameDayTelao() {
   // caminho próprio de escrita — se as duas telas divergissem, a regra passaria
   // a depender de por onde o organizador clicou.
   const criarProximoAoVivo = useCreateNextAmericanoLiveGame(gameDayId);
+  const criarRodadaAoVivo = useCreateAmericanoLiveRound(gameDayId);
   const lancarResultado = useSubmitAmericanoLiveResult(gameDayId);
 
   // Diálogos.
   const [alvoSubstituir, setAlvoSubstituir] = useState(null); // { gid, player, game }
   const [alvoCancelar, setAlvoCancelar] = useState(null); // gid
-  const [alvoEncerrar, setAlvoEncerrar] = useState(null); // gid
+  const [alvoEncerrar, setAlvoEncerrar] = useState(null); // { gid, court }
   const [atletaAberto, setAtletaAberto] = useState(null); // participante
   const [pausaPara, setPausaPara] = useState(null);
   const [duplaPara, setDuplaPara] = useState(null);
@@ -717,6 +722,18 @@ export default function V2GameDayTelao() {
     [ehAoVivo, playView, quadras, games, participants],
   );
 
+  /**
+   * Dá para sortear a RODADA? Só com pelo menos duas quadras livres e fila
+   * para encher as duas — é aí que os dois grupos estão na mesa e o sorteio
+   * pode misturá-los. Com uma quadra livre, "sortear todas" seria o mesmo que
+   * "criar próximo jogo" com outro nome.
+   */
+  const podeSortearRodada = useMemo(() => {
+    if (!board.isPlay) return false;
+    const livres = freePlayCourts({ courts: quadras, games });
+    return Math.min(livres.length, Math.floor(disponiveis / PLAY_SLOTS)) >= 2;
+  }, [board.isPlay, quadras, games, disponiveis]);
+
   // Uma linha por quadra existente: o jogo aberto dela, ou `null` se está livre.
   const quadrasDoPlay = useMemo(() => {
     if (!board.isPlay) return [];
@@ -755,10 +772,29 @@ export default function V2GameDayTelao() {
     (res) => `Jogo criado na quadra ${res?.court ?? court}.`,
   );
   const encerrarECriarProxima = (gid) => executar(
-    () => encerrarPartida.mutateAsync(gid),
+    () => encerrarPartida.mutateAsync({ gid, createNext: true }),
     (res) => (res?.next
       ? `Partida encerrada. Próxima criada na quadra ${res.next.court}.`
       : 'Partida encerrada. Sem 4 disponíveis na ordem — a quadra ficou livre.'),
+  );
+  /** Encerra SEM sortear: libera a quadra para o sorteio da rodada inteira. */
+  const encerrarSemSortear = (gid) => executar(
+    () => encerrarPartida.mutateAsync({ gid, createNext: false }),
+    'Partida encerrada. A quadra ficou livre para o sorteio da rodada.',
+  );
+  /**
+   * Sorteia as próximas partidas de TODAS as quadras livres de uma vez — é o
+   * que mistura os grupos. Sortear quadra a quadra com o número exato de
+   * jogadores devolve sempre os mesmos quatro para a mesma quadra.
+   */
+  const sortearRodada = () => executar(
+    () => (ehAoVivo ? criarRodadaAoVivo.mutateAsync() : criarRodada.mutateAsync()),
+    (res) => {
+      const n = res?.created?.length || 0;
+      return n === 1
+        ? `Partida sorteada na quadra ${res.courts[0]}.`
+        : `${n} partidas sorteadas (quadras ${res.courts.join(', ')}), com os grupos misturados.`;
+    },
   );
   const cancelar = (gid) => executar(() => cancelarJogo.mutateAsync(gid), 'Jogo cancelado.');
   // `replacementId` nulo = entra o próximo da ordem; preenchido = entra quem
@@ -890,6 +926,14 @@ export default function V2GameDayTelao() {
             // vazia seria mentira.
             contagem={board.live.length}
             className="landscape:lg:col-span-2 landscape:lg:col-start-1 landscape:lg:row-start-1"
+            // Sortear a RODADA inteira: é o que mistura os grupos entre as
+            // quadras. Só aparece onde muda alguma coisa — mais de uma quadra
+            // livre e fila para encher pelo menos duas.
+            acoes={podeGerir && quadras > 1 && podeSortearRodada && (
+              <BotaoTelao tone="acid" onClick={sortearRodada} disabled={ocupado}>
+                <Shuffle className="h-4 w-4" /> Sortear todas as quadras
+              </BotaoTelao>
+            )}
           >
             {/* `auto-fit` com o mínimo limitado por `min(100%, …)`: sem esse
                 `min`, numa tela estreita a trilha ficaria maior que o contêiner
@@ -921,7 +965,7 @@ export default function V2GameDayTelao() {
                             <Check className="h-4 w-4" /> Lançar resultado
                           </BotaoTelao>
                         ) : (
-                          <BotaoTelao tone="acid" onClick={() => setAlvoEncerrar(jogo.id)} disabled={ocupado}>
+                          <BotaoTelao tone="acid" onClick={() => setAlvoEncerrar({ gid: jogo.id, court })} disabled={ocupado}>
                             <Check className="h-4 w-4" /> Criar próxima partida
                           </BotaoTelao>
                         )}
@@ -1072,13 +1116,21 @@ export default function V2GameDayTelao() {
           divergirem no texto nem nas opções. */}
       {podeGerir && (
         <>
+          {/* As duas saídas de encerrar — a diferença entre elas é quem joga
+              com quem no resto da noite. Mesmo texto da tela normal. */}
           <ConfirmDialog
             open={!!alvoEncerrar}
             onOpenChange={(v) => !v && setAlvoEncerrar(null)}
-            title="Criar a próxima partida?"
-            description="A partida atual é encerrada e a próxima entra automaticamente nesta quadra (se houver 4 disponíveis na ordem)."
-            confirmLabel="Criar próxima"
-            onConfirm={() => { const g = alvoEncerrar; setAlvoEncerrar(null); if (g) encerrarECriarProxima(g); }}
+            title={`Encerrar a partida da quadra ${alvoEncerrar?.court ?? ''}?`}
+            description={quadras > 1
+              ? 'Criar a próxima AQUI mantém este grupo nesta quadra. Só encerrar deixa a quadra livre — quando as outras terminarem, "Sortear todas as quadras" mistura todo mundo.'
+              : 'A partida atual é encerrada e a próxima entra automaticamente nesta quadra (se houver 4 disponíveis na ordem).'}
+            confirmLabel="Criar próxima aqui"
+            onConfirm={() => { const g = alvoEncerrar; setAlvoEncerrar(null); if (g) encerrarECriarProxima(g.gid); }}
+            secondaryLabel={quadras > 1 ? 'Só encerrar' : null}
+            onSecondary={quadras > 1
+              ? () => { const g = alvoEncerrar; setAlvoEncerrar(null); if (g) encerrarSemSortear(g.gid); }
+              : null}
           />
           <ConfirmDialog
             open={!!alvoCancelar}

@@ -2,7 +2,7 @@ import React, { useMemo, useState } from 'react';
 import { toast } from 'sonner';
 import {
   Plus, Trash2, Users, UserPlus, UserX, Pause, PlayCircle, Link2, Unlink,
-  ListOrdered, LayoutGrid, Check, Swords, ArrowRightLeft, MoreHorizontal,
+  ListOrdered, LayoutGrid, Check, Swords, ArrowRightLeft, MoreHorizontal, Shuffle,
 } from 'lucide-react';
 
 import { Input } from '@/components/ui/input';
@@ -36,7 +36,7 @@ import { FEATURE_FLAG } from '@/core/featureFlags';
 import { useFeatureFlag } from '@/core/lib/FeatureFlagsContext';
 import {
   useGameDayParticipants, useAddGameDayParticipant, useRemoveGameDayParticipant,
-  useGameDayGames, useCreateNextPlayGame, useCreateManualPlayGame,
+  useGameDayGames, useCreateNextPlayGame, useCreatePlayRound, useCreateManualPlayGame,
   useFinishPlayGame, useCancelPlayGame, useNoShowSwapPlayGame,
   useSetPlayParticipantSkip, useSetPlayParticipantPartner,
 } from '@/modules/games/hooks/useGameDays';
@@ -568,13 +568,14 @@ function formatPlayTime(ms) {
 
 export function PlayCourtsSection({ gameDay, participants, games, view, canManage }) {
   const createNext = useCreateNextPlayGame(gameDay.id);
+  const createRound = useCreatePlayRound(gameDay.id);
   const finishGame = useFinishPlayGame(gameDay.id);
   const cancelGame = useCancelPlayGame(gameDay.id);
   const noShow = useNoShowSwapPlayGame(gameDay.id);
   const [manualOpen, setManualOpen] = useState(false);
   const [busy, setBusy] = useState(false);
   // Diálogos elevados (mantêm a tabela limpa e sem nós dentro de <tr>).
-  const [finishTarget, setFinishTarget] = useState(null); // gid
+  const [finishTarget, setFinishTarget] = useState(null); // { gid, court }
   const [cancelTarget, setCancelTarget] = useState(null); // gid
   const [absentTarget, setAbsentTarget] = useState(null); // { gid, player, game }
 
@@ -596,6 +597,14 @@ export function PlayCourtsSection({ gameDay, participants, games, view, canManag
   const free = freePlayCourts({ courts, games });
   const availableCount = view.order.length;
   const canCreateNext = free.length > 0 && availableCount >= 4;
+  /**
+   * Sortear a RODADA só vale a pena com pelo menos duas quadras livres e gente
+   * para encher as duas — é aí que a fila tem os dois grupos na mesa e o
+   * sorteio pode misturá-los. Com uma quadra livre só, "sortear todas" seria
+   * apenas o "criar próximo jogo" com outro nome.
+   */
+  const quadrasDaRodada = Math.min(free.length, Math.floor(availableCount / 4));
+  const podeSortearRodada = quadrasDaRodada >= 2;
   // Rodízio equilibrado (flag `play_smart_rotation`): a previsão do painel usa
   // a mesma simulação da criação, para não anunciar um grupo e entrar outro.
   // `games` é obrigatório: é dele que sai quais quadras estão ocupadas e quem
@@ -625,14 +634,35 @@ export function PlayCourtsSection({ gameDay, participants, games, view, canManag
     } finally { setBusy(false); }
   };
 
-  const handleFinish = async (gid) => {
+  const handleFinish = async (gid, { createNext = true } = {}) => {
     try {
-      const res = await finishGame.mutateAsync(gid);
+      const res = await finishGame.mutateAsync({ gid, createNext });
       if (res?.next) toast.success(`Partida encerrada. Próxima criada na quadra ${res.next.court}.`);
-      else toast.success('Partida encerrada. Sem 4 disponíveis na ordem — a quadra ficou livre.');
+      else if (createNext) toast.success('Partida encerrada. Sem 4 disponíveis na ordem — a quadra ficou livre.');
+      else toast.success('Partida encerrada. A quadra ficou livre para o sorteio da rodada.');
     } catch (err) {
       toast.error(err.message || 'Não foi possível concluir o jogo.');
     }
+  };
+
+  /**
+   * Sorteia as próximas partidas de TODAS as quadras livres de uma vez.
+   *
+   * É o que quebra o congelamento dos grupos: com 8 jogadores em 2 quadras,
+   * sortear uma quadra por vez devolve sempre os mesmos 4 para a mesma quadra,
+   * porque no instante do sorteio eles são os únicos na fila.
+   */
+  const handleCreateRound = async () => {
+    setBusy(true);
+    try {
+      const res = await createRound.mutateAsync();
+      const n = res?.created?.length || 0;
+      toast.success(n === 1
+        ? `Jogo criado na quadra ${res.courts[0]}.`
+        : `${n} jogos criados (quadras ${res.courts.join(', ')}), com os grupos misturados.`);
+    } catch (err) {
+      toast.error(err.message || 'Não foi possível sortear a rodada.');
+    } finally { setBusy(false); }
   };
 
   return (
@@ -649,6 +679,13 @@ export function PlayCourtsSection({ gameDay, participants, games, view, canManag
           <V2Button size="sm" variant="ghost" onClick={() => setManualOpen(true)} disabled={participants.length < 4}>
             <Plus className="mr-1.5 h-4 w-4" /> Criação manual
           </V2Button>
+          {/* Só aparece onde faz diferença: com uma quadra, "sortear todas" é
+              o mesmo que "criar próximo jogo". */}
+          {courts > 1 && (
+            <V2Button size="sm" variant="secondary" onClick={handleCreateRound} disabled={!podeSortearRodada || busy}>
+              <Shuffle className="mr-1.5 h-4 w-4" /> {busy ? 'Sorteando…' : 'Sortear todas as quadras'}
+            </V2Button>
+          )}
           <V2Button size="sm" onClick={() => handleCreateNext()} disabled={!canCreateNext || busy}>
             <PlayCircle className="mr-1.5 h-4 w-4" /> {busy ? 'Criando…' : 'Criar próximo jogo'}
           </V2Button>
@@ -662,6 +699,18 @@ export function PlayCourtsSection({ gameDay, participants, games, view, canManag
         {canManage && participants.length >= 4 && !canCreateNext && free.length > 0 && (
           <p className="text-xs text-gray-500">
             Aguardando jogadores disponíveis: há {availableCount} na ordem (mínimo 4 para um novo jogo).
+          </p>
+        )}
+        {/* A dica que evita o congelamento dos grupos. Aparece quando há mais
+            de uma quadra e ainda não dá para sortear a rodada — que é
+            exatamente o momento em que a pessoa está prestes a encerrar uma
+            quadra e recolocar os mesmos quatro nela. */}
+        {canManage && courts > 1 && !podeSortearRodada && openGames.length > 0 && (
+          <p className="rounded-xl border border-gray-100 bg-paper px-3 py-2 text-xs leading-5 text-gray-600">
+            <Shuffle aria-hidden="true" className="mr-1 inline h-3.5 w-3.5 text-gray-400" />
+            Para <strong>misturar os grupos entre as quadras</strong>, encerre as partidas sem sortear
+            (a opção aparece ao encerrar) e, com as quadras livres, use <strong>Sortear todas as quadras</strong>.
+            Sorteando uma quadra por vez, os mesmos quatro voltam para ela — são os únicos na fila naquele instante.
           </p>
         )}
 
@@ -688,7 +737,7 @@ export function PlayCourtsSection({ gameDay, participants, games, view, canManag
                   canManage={canManage}
                   canCreate={availableCount >= 4 && !busy}
                   onCreate={() => handleCreateNext(court)}
-                  onFinish={() => setFinishTarget(game.id)}
+                  onFinish={() => setFinishTarget({ gid: game.id, court })}
                   onCancel={() => setCancelTarget(game.id)}
                   onPlayer={(player) => setAbsentTarget({ gid: game.id, player, game })}
                 />
@@ -714,13 +763,21 @@ export function PlayCourtsSection({ gameDay, participants, games, view, canManag
         freeCourts={free}
       />
 
+      {/* Encerrar tem DUAS saídas legítimas, e a diferença entre elas é quem
+          joga com quem no resto da noite. */}
       <ConfirmDialog
         open={!!finishTarget}
         onOpenChange={(v) => !v && setFinishTarget(null)}
-        title="Criar a próxima partida?"
-        description="A partida atual é encerrada e a próxima entra automaticamente nesta quadra (se houver 4 disponíveis na ordem)."
-        confirmLabel="Criar próxima"
-        onConfirm={() => { const g = finishTarget; setFinishTarget(null); if (g) handleFinish(g); }}
+        title={`Encerrar a partida da quadra ${finishTarget?.court ?? ''}?`}
+        description={courts > 1
+          ? 'Criar a próxima AQUI mantém este grupo nesta quadra. Só encerrar deixa a quadra livre — quando as outras terminarem, "Sortear todas as quadras" mistura todo mundo.'
+          : 'A partida atual é encerrada e a próxima entra automaticamente nesta quadra (se houver 4 disponíveis na ordem).'}
+        confirmLabel="Criar próxima aqui"
+        onConfirm={() => { const g = finishTarget; setFinishTarget(null); if (g) handleFinish(g.gid); }}
+        secondaryLabel={courts > 1 ? 'Só encerrar' : null}
+        onSecondary={courts > 1
+          ? () => { const g = finishTarget; setFinishTarget(null); if (g) handleFinish(g.gid, { createNext: false }); }
+          : null}
       />
       <ConfirmDialog
         open={!!cancelTarget}

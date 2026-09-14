@@ -2,7 +2,7 @@ import { describe, it, expect } from 'vitest';
 import {
   drawNextAmericanoLiveMatch, forecastAmericanoLiveMatches, americanoLiveProgress,
   suggestAmericanoLiveTotal, respectsFixedPairs, americanoLiveView, gameIds,
-  AMERICANO_LIVE_WINDOW_EXTRA,
+  AMERICANO_LIVE_WINDOW_EXTRA, drawAmericanoLiveRoundForFreeCourts,
 } from './americanoLive.js';
 
 /** Participante do Play: espera crescente = mais tempo na fila. */
@@ -274,5 +274,56 @@ describe('previsão — nomes de quem volta da quadra', () => {
     });
     expect(com.map((b) => [b.court, b.conditional, b.side_a, b.side_b]))
       .toEqual(sem.map((b) => [b.court, b.conditional, b.side_a, b.side_b]));
+  });
+});
+
+/* =============================================== rodada de todas as quadras */
+
+describe('⭐ drawAmericanoLiveRoundForFreeCourts', () => {
+  it('⭐ 8 na fila e 2 quadras livres: cria as duas, sem repetir ninguém', () => {
+    const r = drawAmericanoLiveRoundForFreeCourts(fila(['a','b','c','d','e','f','g','h']), {
+      courts: 2, games: [], rng,
+    });
+    expect(r).toHaveLength(2);
+    expect(r.map((x) => x.court)).toEqual([1, 2]);
+    const todos = r.flatMap((x) => x.ids);
+    expect(new Set(todos).size).toBe(8);
+  });
+
+  it('as duplas já vêm pareadas pelo motor do Americano', () => {
+    const r = drawAmericanoLiveRoundForFreeCourts(fila(['a','b','c','d','e','f','g','h']), {
+      courts: 2, games: [], rng,
+    });
+    r.forEach((bloco) => {
+      expect(bloco.side_a).toHaveLength(2);
+      expect(bloco.side_b).toHaveLength(2);
+      expect(new Set([...bloco.side_a, ...bloco.side_b])).toEqual(new Set(bloco.ids));
+    });
+  });
+
+  it('⭐ a quadra OCUPADA fica de fora (aquela previsão é condicional)', () => {
+    const emQuadra = jogo(['x','y'], ['z','w'], { status: 'open', court: 1 });
+    const r = drawAmericanoLiveRoundForFreeCourts(fila(['a','b','c','d','e','f','g','h']), {
+      courts: 2, games: [emQuadra], rng,
+    });
+    expect(r).toHaveLength(1);
+    expect(r[0].court).toBe(2);
+  });
+
+  it('⭐ o que sorteia é o que a previsão anuncia (mesma fonte)', () => {
+    const entrada = fila(['a','b','c','d','e','f','g','h']);
+    const opts = { courts: 2, games: [], rng };
+    const previsto = forecastAmericanoLiveMatches(entrada, opts)
+      .filter((b) => !b.conditional)
+      .map((b) => ({ court: b.court, ids: b.players.map((p) => p.id), side_a: b.side_a, side_b: b.side_b }));
+    expect(drawAmericanoLiveRoundForFreeCourts(entrada, opts)).toEqual(previsto);
+  });
+
+  it('fila curta devolve o que dá, sem partida pela metade', () => {
+    const r = drawAmericanoLiveRoundForFreeCourts(fila(['a','b','c','d','e']), { courts: 2, games: [], rng });
+    expect(r).toHaveLength(1);
+    expect(r[0].ids).toHaveLength(4);
+    expect(drawAmericanoLiveRoundForFreeCourts(fila(['a','b','c']), { courts: 2, games: [], rng })).toEqual([]);
+    expect(drawAmericanoLiveRoundForFreeCourts([], { courts: 2, games: [], rng })).toEqual([]);
   });
 });

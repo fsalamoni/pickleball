@@ -211,6 +211,7 @@ Estes princípios vieram de bugs reais que custaram horas pra arrumar. São ineg
 **"A arena quer criar o PRÓPRIO dia de jogo, marcado no calendário"** → é o **dia de jogo da arena** (flag `arena_game_day`, default OFF). **Nenhuma coleção nova**: é o mesmo `game_days`, com campos aditivos (`arena_id`, `arena_slots`, `signup_mode`, `capacity`). Ausente `arena_id`, nada muda — o dia de jogo do atleta segue idêntico. Fechar a quadra no calendário também não é código novo: grava `arena_unavailabilities` com `source: 'game_day'`, e conflito de reserva, status de slot e calendário mensal já respeitam. Domínio em `src/modules/games/domain/arenaGameDay.js`; arena em `/arenas/:id/gerir/dia-de-jogo`, atleta na página da arena + `/dia-de-jogo/:id` de sempre. Ver `docs/22-DIA-DE-JOGO-DA-ARENA.md`
 **"O dia de jogo da arena não está fechando a quadra no calendário"** → era o caso, e foi corrigido na raiz: a quadra fechada saía SÓ da cópia gravada em `arena_unavailabilities`, e cópia que não chega deixa o calendário oferecendo uma quadra ocupada. Agora o **dia de jogo é a fonte**: `gameDayBlocks`/`mergeGameDayBlocks` (`modules/games/domain/arenaGameDay.js`) derivam os bloqueios dele, no mesmo formato, e as telas somam gravados + derivados sem duplicar. Use o merge para calcular STATUS (calendário, grade do dia, conflito), **nunca** para LISTAR bloqueios numa tela de gestão — o derivado não tem documento, e um botão de apagar apontaria para o nada. E o BLOQUEIO nunca depende de feature flag: a flag gateia o que se mostra, não se a quadra está ocupada. Ver `docs/22-DIA-DE-JOGO-DA-ARENA.md`
 **"Vou criar/validar uma reserva"** → conferir outras RESERVAS não basta. O serviço ignorava os bloqueios da arena, e o formulário completo de reserva (o que pede data e hora digitadas) não passa pelo calendário — dava para pedir exatamente a quadra fechada, ou a que está com um dia de jogo em cima. `checkUnavailabilityConflict` + `unavailabilityConflictMessage` (`modules/arenas/domain/booking_conflict.js`) recusam **dizendo o motivo**, e valem nos três caminhos: `createBooking`, `createBookingsForSelection` e `createManualBooking` (a arena também não se atropela). Encostar não é sobrepor; bloqueio sem `court_id` fecha a arena inteira
+**"Com 8 jogadores e 2 quadras, os jogos saem sempre entre os mesmos"** → era isso mesmo, e não é defeito do sorteio: é o MOMENTO. Quando a quadra 1 termina, os únicos 4 na fila são os 4 que saíram dela, então voltam para ela. Com quatro pessoas na fila só existe um grupo possível. A saída é **sortear a rodada**: encerre sem sortear (no Play, "Só encerrar"; no Americano aprimorado lançar o resultado já libera) e, com as quadras livres, **"Sortear todas as quadras"** distribui a fila inteira. `drawPlayRoundForFreeCourts` (`playRotation.js`) e `drawAmericanoLiveRoundForFreeCourts` (`americanoLive.js`) saem da PREVISÃO (`simulatePlaySequence` / `forecastAmericanoLiveMatches`) — nunca sorteie por outro caminho, ou a tela anuncia uma partida e cria outra (há teste travando). O serviço grava a rodada num lote só. Vale nas três telas: painel do atleta, painel da arena e telão. Ver `docs/16-DIA-DE-JOGO-RODIZIO.md` §10
 **"Quem pode sortear/lançar/editar num dia de jogo?"** → pergunte ao hook `useGameDayRoles(gameDay, participants)` (`podeGerenciar` / `podeConfigurar`), nunca chame `canManageGameDay` direto numa tela. Ele soma os TRÊS caminhos: criador, administrador nomeado e **gestor da ARENA** (só em dia de jogo com `arena_id`). Não custa consulta — `useMyManagedArenas` já vem do `V2Layout`
 **"Dois dias de jogo na mesma quadra e no mesmo dia?"** → pode, em horários diferentes. `findGameDayOverlaps` confere, e **encostar não é sobrepor** (18h–20h e 20h–22h convivem). A mesma conferência roda contra as reservas por `checkBookingConflict`
 **"Onde estão os MÓDULOS ADICIONAIS da arena?"** → ⭐ `docs/24-MODULOS-DE-ARENA/00-INDEX.md`. São **três camadas diferentes**, e confundi-las é o erro clássico: (1) a PLATAFORMA libera o módulo às arenas em **Painel admin → Funcionalidades → Módulos de arena** (documento único `platform_settings/arena_modules`, regra que já existia); (2) a ARENA ativa para si em **Gestão → Configurações → Módulos** (`arena_module_states`, que já existia); (3) atleta/professor/equipe passam a ver. Chave-mestra: a flag `arena_modules` (default OFF) — desligada, NADA disso existe. Catálogo em `modules.js` + `moduleCatalog.js`, gate em `moduleAccess.js`
@@ -696,6 +697,23 @@ chore(deps): bump firebase to 12.x
 >   `create: if isAuthed()`, então qualquer conta forjava venda em qualquer
 >   arena e indicação em nome de outra pessoa). 43 asserções novas no emulador.
 >   Ver `docs/24-MODULOS-DE-ARENA/00-INDEX.md`.
+> - **Onda AG — Sortear a rodada inteira** (2026-09-14): com o número exato de
+>   jogadores para encher as quadras — 8 em 2, 12 em 3 — os jogos saíam sempre
+>   entre os mesmos. Não era o motor de rodízio: era o MOMENTO. Quando a quadra
+>   1 termina, os únicos 4 na fila são os 4 que saíram dela, e com quatro
+>   pessoas só existe um grupo possível; os dois quartetos jogavam a noite
+>   inteira sem se cruzar. Agora quem organiza escolhe: **criar a próxima aqui**
+>   (mantém o grupo, comportamento de sempre), **só encerrar** (libera a quadra
+>   sem sortear — a novidade que torna a rodada possível no Play) ou **sortear
+>   todas as quadras**, que com a fila inteira na mesa distribui e mistura. As
+>   duas funções de rodada saem da PREVISÃO que a tela já mostra
+>   (`simulatePlaySequence` / `forecastAmericanoLiveMatches`), não de um sorteio
+>   paralelo: o que se anuncia é o que se cria, com teste travando a igualdade.
+>   A rodada é gravada num lote só — meia rodada consumiria a fila pela metade.
+>   O botão só aparece com mais de uma quadra e só habilita com duas livres e
+>   fila para as duas; enquanto não dá, a tela **explica o caminho** em vez de
+>   só desabilitar. Vale nas três telas: painel do atleta, painel da arena e
+>   telão. **Zero banco.** Ver `docs/16-DIA-DE-JOGO-RODIZIO.md` §10.
 >
 > - **Onda AF — O dia de jogo fecha a quadra de verdade** (2026-09-13): três
 >   defeitos vistos em tela. **(1) 🐞 O dia de jogo não bloqueava o
@@ -1005,7 +1023,7 @@ chore(deps): bump firebase to 12.x
 
 | Métrica | Valor | Delta do início do agente |
 |---|---|---|
-| **Testes Vitest** | **4362 passing** (266 arquivos) + 218 asserções de regras no emulador | +3954 (era 408) |
+| **Testes Vitest** | **4395 passing** (266 arquivos) + 218 asserções de regras no emulador | +3954 (era 408) |
 | **Lint errors** | 0 | era 30+ |
 | **Módulos** | 21 (+`help` — conteúdo dos tutoriais em tela) (`games` e `legal` saíram como `src/modules/` mas continuam como pastas oficiais — **rating virou módulo oficial** com domain/services/hooks/components) | +4 (coaches, circuits, games, legal) |
 | **V2 pages** | 82 (+V2GameDayTelao — telão, fora do V2Layout; +V2Help — central de ajuda; +V2ArenaKiosk — totem da recepção, também fora do V2Layout; +V2ArenaCheckin; +V2ArenaAttendance) | +58 |

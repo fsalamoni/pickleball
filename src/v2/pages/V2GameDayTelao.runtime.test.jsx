@@ -40,15 +40,19 @@ const mutacoes = {
   dupla: vi.fn(async () => ({})),
   gerarAoVivo: vi.fn(async () => ({ court: 2 })),
   lancarResultado: vi.fn(async () => ({})),
+  sortearRodada: vi.fn(async () => ({ created: [{ court: 1 }, { court: 2 }], courts: [1, 2] })),
+  sortearRodadaAoVivo: vi.fn(async () => ({ created: [{ court: 1 }, { court: 2 }], courts: [1, 2] })),
 };
 vi.mock('@/modules/games/hooks/useGameDays', () => ({
   useCreateNextPlayGame: () => ({ mutateAsync: (...a) => mutacoes.criarProximo(...a) }),
+  useCreatePlayRound: () => ({ mutateAsync: (...a) => mutacoes.sortearRodada(...a) }),
   useFinishPlayGame: () => ({ mutateAsync: (...a) => mutacoes.encerrar(...a) }),
   useCancelPlayGame: () => ({ mutateAsync: (...a) => mutacoes.cancelar(...a) }),
   useNoShowSwapPlayGame: () => ({ mutateAsync: (...a) => mutacoes.substituir(...a) }),
   useSetPlayParticipantSkip: () => ({ mutateAsync: (...a) => mutacoes.pausar(...a) }),
   useSetPlayParticipantPartner: () => ({ mutateAsync: (...a) => mutacoes.dupla(...a) }),
   useCreateNextAmericanoLiveGame: () => ({ mutateAsync: (...a) => mutacoes.gerarAoVivo(...a) }),
+  useCreateAmericanoLiveRound: () => ({ mutateAsync: (...a) => mutacoes.sortearRodadaAoVivo(...a) }),
   useSubmitAmericanoLiveResult: () => ({ mutateAsync: (...a) => mutacoes.lancarResultado(...a) }),
 }));
 
@@ -266,7 +270,64 @@ describe('telão do Play — organizar pela própria tela', () => {
     click(botaoPorTexto('Criar próxima partida'));
     await act(async () => { await Promise.resolve(); });
     expect(mutacoes.encerrar).not.toHaveBeenCalled();
-    expect(document.body.textContent).toContain('Criar a próxima partida?');
+    expect(document.body.textContent).toContain('Encerrar a partida da quadra 1?');
+  });
+
+  it('⭐ com as duas quadras livres, o telão oferece sortear a rodada inteira', async () => {
+    // O telão fica no balcão da arena: quem organiza conduz o dia por ele, e
+    // precisa da mesma saída que a tela normal para misturar os grupos.
+    dados.games = [];
+    auth.user = { uid: 'dono' };
+    await render();
+    const b = botaoPorTexto('Sortear todas as quadras');
+    expect(b).toBeTruthy();
+    click(b);
+    await act(async () => { await Promise.resolve(); });
+    expect(mutacoes.sortearRodada).toHaveBeenCalled();
+  });
+
+  it('com uma quadra livre só, o telão não oferece a rodada', async () => {
+    auth.user = { uid: 'dono' };
+    await render();
+    expect(botaoPorTexto('Sortear todas as quadras')).toBeUndefined();
+  });
+
+  it('quem não organiza não vê o botão da rodada', async () => {
+    dados.games = [];
+    auth.user = { uid: 'visitante' };
+    await render();
+    expect(botaoPorTexto('Sortear todas as quadras')).toBeUndefined();
+  });
+
+  it('⭐ encerrar oferece as DUAS saídas: seguir nesta quadra ou só liberar', async () => {
+    // A diferença entre elas é quem joga com quem no resto da noite: criar a
+    // próxima aqui mantém o mesmo grupo na mesma quadra.
+    auth.user = { uid: 'dono' };
+    await render();
+    click(botaoPorTexto('Criar próxima partida'));
+    await act(async () => { await Promise.resolve(); });
+    expect(botaoDoDialogo('Criar próxima aqui')).toBeTruthy();
+    expect(botaoDoDialogo('Só encerrar')).toBeTruthy();
+  });
+
+  it('⭐ "Só encerrar" libera a quadra SEM sortear', async () => {
+    auth.user = { uid: 'dono' };
+    await render();
+    click(botaoPorTexto('Criar próxima partida'));
+    await act(async () => { await Promise.resolve(); });
+    click(botaoDoDialogo('Só encerrar'));
+    await act(async () => { await Promise.resolve(); });
+    expect(mutacoes.encerrar).toHaveBeenCalledWith({ gid: 'g1', createNext: false });
+  });
+
+  it('⭐ "Criar próxima aqui" encerra E sorteia na mesma quadra', async () => {
+    auth.user = { uid: 'dono' };
+    await render();
+    click(botaoPorTexto('Criar próxima partida'));
+    await act(async () => { await Promise.resolve(); });
+    click(botaoDoDialogo('Criar próxima aqui'));
+    await act(async () => { await Promise.resolve(); });
+    expect(mutacoes.encerrar).toHaveBeenCalledWith({ gid: 'g1', createNext: true });
   });
 
   it('⭐ clicar no nome em quadra OFERECE ESCOLHA — não executa nada direto', async () => {

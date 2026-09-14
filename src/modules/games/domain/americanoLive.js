@@ -264,6 +264,29 @@ export function forecastAmericanoLiveMatches(availableOrdered, opts = {}) {
 }
 
 /**
+ * As próximas partidas de TODAS as quadras livres do Americano aprimorado,
+ * sorteadas DE UMA VEZ — mesma ideia (e mesmo motivo) de
+ * `drawPlayRoundForFreeCourts`: com 8 jogadores em 2 quadras, sortear uma
+ * quadra por vez devolve sempre os mesmos 4 para a mesma quadra.
+ *
+ * Sai de `forecastAmericanoLiveMatches`, que é a previsão da tela: o que se
+ * anuncia é o que se cria. As duplas já vêm pareadas pelo motor do Americano.
+ *
+ * @returns {Array<{ court:number, ids:string[], side_a:string[], side_b:string[] }>}
+ *   só as quadras LIVRES (a previsão das ocupadas é condicional).
+ */
+export function drawAmericanoLiveRoundForFreeCourts(availableOrdered, opts = {}) {
+  return forecastAmericanoLiveMatches(availableOrdered, opts)
+    .filter((b) => !b.conditional)
+    .map((b) => ({
+      court: b.court,
+      ids: b.players.map((p) => p.id),
+      side_a: b.side_a,
+      side_b: b.side_b,
+    }));
+}
+
+/**
  * O quanto o dia já andou rumo a "todos com todos, contra todos duas vezes".
  *
  * Serve para a tela dizer algo honesto ao organizador: quantas partidas já

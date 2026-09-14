@@ -15,6 +15,7 @@ import {
   noShowSwapPlayGame, setPlayParticipantSkip, setPlayParticipantPartner,
   createNextAmericanoLiveGame, submitAmericanoLiveResult, updateAmericanoLiveResult,
   createManualAmericanoLiveGame,
+  createPlayRoundForFreeCourts, createAmericanoLiveRoundForFreeCourts,
   addGameDayAdmin, removeGameDayAdmin, setGameDayManageMode,
 } from '../services/gameDayService.js';
 
@@ -296,11 +297,43 @@ export function useCreateManualPlayGame(gdId) {
   });
 }
 
+/**
+ * Conclui a partida da quadra.
+ *
+ * Aceita o id cru (`mutate(gid)`) — como sempre, criando já a próxima partida
+ * NA MESMA quadra — ou `{ gid, createNext: false }`, que só libera a quadra.
+ * Liberar sem sortear é o que permite esperar as outras quadras e então
+ * sortear todas juntas, misturando os grupos.
+ */
 export function useFinishPlayGame(gdId) {
   const { user } = useAuth();
   const invalidate = usePlayInvalidate(gdId);
   return useMutation({
-    mutationFn: (gid) => finishPlayGame(gdId, gid, user),
+    mutationFn: (arg) => {
+      const gid = typeof arg === 'string' ? arg : arg?.gid;
+      const createNext = typeof arg === 'string' ? true : arg?.createNext !== false;
+      return finishPlayGame(gdId, gid, user, { createNext });
+    },
+    onSuccess: invalidate,
+  });
+}
+
+/** Sorteia as próximas partidas de TODAS as quadras livres, de uma vez. */
+export function useCreatePlayRound(gdId) {
+  const { user } = useAuth();
+  const invalidate = usePlayInvalidate(gdId);
+  return useMutation({
+    mutationFn: () => createPlayRoundForFreeCourts(gdId, user),
+    onSuccess: invalidate,
+  });
+}
+
+/** O mesmo para o Americano aprimorado. */
+export function useCreateAmericanoLiveRound(gdId) {
+  const { user } = useAuth();
+  const invalidate = usePlayInvalidate(gdId);
+  return useMutation({
+    mutationFn: () => createAmericanoLiveRoundForFreeCourts(gdId, user),
     onSuccess: invalidate,
   });
 }

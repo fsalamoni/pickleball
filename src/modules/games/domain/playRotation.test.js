@@ -4,6 +4,7 @@ import {
   buildPlayNextMatchBalanced, forecastPlayMatchesBalanced,
   forecastPlayByCourtBalanced, simulatePlaySequence, buildPlayEntryOrder,
   applyPlayEntryOrder, makePartnerRepeatCounter, ROTATION_WEIGHTS,
+  drawPlayRoundForFreeCourts,
 } from './playRotation.js';
 import {
   buildPlayNextMatch, assignPlayTeams, computePlayOrder, freePlayCourts, PLAY_SLOTS,
@@ -612,5 +613,89 @@ describe('applyPlayEntryOrder', () => {
 
   it('tolera view nula', () => {
     expect(applyPlayEntryOrder(null, { history: emptyPlayHistory() })).toBeNull();
+  });
+});
+
+/* =============================================== rodada de todas as quadras */
+
+describe('⭐ drawPlayRoundForFreeCourts — sortear TODAS as quadras de uma vez', () => {
+  it('⭐ com 8 na fila e 2 quadras livres, cria as DUAS partidas', () => {
+    // É o caso que motivou a funcionalidade: número exato de jogadores para
+    // encher as quadras.
+    const r = drawPlayRoundForFreeCourts(fila('a','b','c','d','e','f','g','h'), { courts: 2, games: [] });
+    expect(r).toHaveLength(2);
+    expect(r.map((x) => x.court)).toEqual([1, 2]);
+    expect(r[0].ids).toHaveLength(4);
+    expect(r[1].ids).toHaveLength(4);
+  });
+
+  it('⭐ ninguém entra em duas quadras ao mesmo tempo', () => {
+    const r = drawPlayRoundForFreeCourts(fila('a','b','c','d','e','f','g','h'), { courts: 2, games: [] });
+    const todos = r.flatMap((x) => x.ids);
+    expect(new Set(todos).size).toBe(todos.length);
+    expect(new Set(todos)).toEqual(new Set(['a','b','c','d','e','f','g','h']));
+  });
+
+  it('⭐ os grupos MISTURAM quando a fila é a de quem acabou de jogar junto', () => {
+    // A fila chega assim: os 4 da quadra 1 saíram primeiro (esperam há mais
+    // tempo), os 4 da quadra 2 depois. Com o rodízio equilibrado ligado, os
+    // dois quartetos não podem se repetir inteiros.
+    const historico = buildPlayHistory([jogo('a','b','c','d',1), jogo('e','f','g','h',2)]);
+    const r = drawPlayRoundForFreeCourts(fila('a','b','c','d','e','f','g','h'), {
+      courts: 2, games: [], history: historico,
+    });
+    expect(r).toHaveLength(2);
+    const q1 = new Set(r[0].ids);
+    const repetiuOQuarteto = ['a','b','c','d'].every((id) => q1.has(id))
+      || ['e','f','g','h'].every((id) => q1.has(id));
+    expect(repetiuOQuarteto).toBe(false);
+  });
+
+  it('3 quadras e 12 jogadores: três partidas, todo mundo em quadra', () => {
+    const ids = ['a','b','c','d','e','f','g','h','i','j','k','l'];
+    const r = drawPlayRoundForFreeCourts(fila(...ids), { courts: 3, games: [] });
+    expect(r).toHaveLength(3);
+    expect(new Set(r.flatMap((x) => x.ids)).size).toBe(12);
+  });
+
+  it('só sorteia as quadras LIVRES — a ocupada não recebe jogo', () => {
+    const emQuadra = { court: 1, status: 'open', order: 1, side_a: [{ id: 'x' }, { id: 'y' }], side_b: [{ id: 'z' }, { id: 'w' }] };
+    const r = drawPlayRoundForFreeCourts(fila('a','b','c','d','e','f','g','h'), {
+      courts: 2, games: [emQuadra],
+    });
+    expect(r).toHaveLength(1);
+    expect(r[0].court).toBe(2);
+  });
+
+  it('fila que só dá para uma partida devolve uma, não uma partida pela metade', () => {
+    const r = drawPlayRoundForFreeCourts(fila('a','b','c','d','e'), { courts: 2, games: [] });
+    expect(r).toHaveLength(1);
+    expect(r[0].ids).toHaveLength(4);
+  });
+
+  it('sem gente suficiente nem para uma partida, devolve vazio', () => {
+    expect(drawPlayRoundForFreeCourts(fila('a','b','c'), { courts: 2, games: [] })).toEqual([]);
+    expect(drawPlayRoundForFreeCourts([], { courts: 2, games: [] })).toEqual([]);
+    expect(drawPlayRoundForFreeCourts()).toEqual([]);
+  });
+
+  it('⭐ o que ela sorteia é o que a PREVISÃO anuncia (mesma fonte)', () => {
+    const entrada = fila('a','b','c','d','e','f','g','h');
+    const opts = { courts: 2, games: [] };
+    const previsto = simulatePlaySequence(entrada, opts).blocks
+      .filter((b) => b.free && b.full)
+      .map((b) => ({ court: b.court, ids: b.players.map((p) => p.id) }));
+    expect(drawPlayRoundForFreeCourts(entrada, opts)).toEqual(previsto);
+  });
+
+  it('respeita dupla fixa: quem tem parceiro entra com ele', () => {
+    const entrada = [
+      P('a', { since: 0, partner_id: 'b' }), P('b', { since: 1, partner_id: 'a' }),
+      P('c', { since: 2 }), P('d', { since: 3 }),
+      P('e', { since: 4 }), P('f', { since: 5 }), P('g', { since: 6 }), P('h', { since: 7 }),
+    ];
+    const r = drawPlayRoundForFreeCourts(entrada, { courts: 2, games: [] });
+    const quadraDeA = r.find((x) => x.ids.includes('a'));
+    expect(quadraDeA.ids).toContain('b');
   });
 });

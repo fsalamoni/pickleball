@@ -168,3 +168,69 @@ antigo. Não há migração nem estado a limpar.
 - `consecutive` maior → evita sobretudo repetir com quem acabou de jogar.
 
 Ao mexer, **rode a simulação**: ela mede variedade e justiça de uma vez.
+
+## 10. Sortear TODAS as quadras de uma vez (2026-09-14)
+
+### O problema: não era o sorteio, era o MOMENTO
+
+Com o número exato de jogadores para encher as quadras — **8 em 2 quadras, 12
+em 3** — sortear quadra a quadra **congela os grupos**:
+
+```
+quadra 1: A B C D          quadra 2: E F G H
+         ↓ termina
+fila no instante do sorteio: A B C D   ← os únicos disponíveis
+         ↓
+quadra 1: A B C D   (de novo, contra os mesmos)
+```
+
+Os dois quartetos jogam a noite inteira sem nunca se cruzar. Nenhum motor de
+rodízio resolve isso: no instante do sorteio a fila **tem quatro pessoas**, e
+com quatro pessoas só existe um grupo possível. A variável não é o algoritmo, é
+**quando** se sorteia.
+
+### A saída: a rodada
+
+Quem organiza passou a escolher:
+
+| escolha | o que faz |
+|---|---|
+| **Criar próxima aqui** | encerra e já sorteia NESTA quadra — mantém o grupo, é o comportamento de sempre |
+| **Só encerrar** | encerra e deixa a quadra livre, sem sortear |
+| **Sortear todas as quadras** | com as quadras livres, sorteia a rodada inteira de uma vez — a fila tem todo mundo, e o motor distribui e mistura |
+
+No **Play**, "Só encerrar" é a novidade que torna a rodada possível
+(`finishPlayGame(..., { createNext: false })`). No **Americano aprimorado** a
+espera já era natural: lançar o resultado libera a quadra sem sortear.
+
+As três telas onde o dia de jogo existe têm as mesmas opções: o painel do
+atleta, o painel dentro da arena (que reusa o mesmo miolo) e o **telão**.
+
+### Onde mora a decisão
+
+```
+drawPlayRoundForFreeCourts(order, { courts, games, history })   → playRotation.js
+drawAmericanoLiveRoundForFreeCourts(order, { courts, games })   → americanoLive.js
+```
+
+⚠️ **As duas saem da PREVISÃO, não de um sorteio paralelo.**
+`simulatePlaySequence` e `forecastAmericanoLiveMatches` já sorteavam quadra a
+quadra a partir da mesma fila — é delas que sai o "quem entra em cada quadra"
+que a tela anuncia. Sortear por outro caminho criaria duas verdades, e um dia
+a tela prometeria uma partida e criaria outra. Há teste travando a igualdade.
+
+O serviço grava a rodada inteira **num lote só** (`createPlayRoundForFreeCourts`
+/ `createAmericanoLiveRoundForFreeCourts`): meia rodada — uma quadra criada e a
+outra não — deixaria a fila consumida pela metade e ninguém entenderia o que
+aconteceu.
+
+### Quando o botão aparece
+
+Só com **mais de uma quadra** (com uma, "sortear todas" seria o "criar próximo
+jogo" com outro nome) e habilitado só quando há **duas quadras livres e fila
+para encher as duas** — é aí que os dois grupos estão na mesa. Enquanto não dá,
+a tela **explica o caminho** em vez de só desabilitar: encerre sem sortear,
+espere as outras, sorteie a rodada.
+
+**Zero banco**: nenhuma coleção, campo, índice, regra ou função nova. A rodada
+grava exatamente os mesmos documentos de partida de sempre.

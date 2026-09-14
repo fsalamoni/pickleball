@@ -21,6 +21,7 @@ const mutacoes = {
   criarProximo: vi.fn(),
   encerrar: vi.fn(),
   cancelar: vi.fn(),
+  sortearRodada: vi.fn(async () => ({ created: [{ court: 1 }, { court: 2 }], courts: [1, 2] })),
 };
 const semMutacao = { mutate: vi.fn(), mutateAsync: vi.fn(async () => ({})), isPending: false };
 
@@ -39,6 +40,7 @@ vi.mock('@/modules/games/hooks/useGameDays', () => ({
   useAddGameDayParticipant: () => semMutacao,
   useRemoveGameDayParticipant: () => semMutacao,
   useCreateNextPlayGame: () => ({ ...semMutacao, mutate: mutacoes.criarProximo }),
+  useCreatePlayRound: () => ({ ...semMutacao, mutate: mutacoes.sortearRodada, mutateAsync: mutacoes.sortearRodada }),
   useCreateManualPlayGame: () => semMutacao,
   useFinishPlayGame: () => ({ ...semMutacao, mutate: mutacoes.encerrar, mutateAsync: mutacoes.encerrar }),
   useCancelPlayGame: () => ({ ...semMutacao, mutate: mutacoes.cancelar }),
@@ -86,14 +88,14 @@ const click = (el) => act(() => { el.dispatchEvent(new MouseEvent('click', { bub
 const botao = (trecho) => [...document.body.querySelectorAll('button')]
   .find((b) => b.textContent.includes(trecho));
 
-async function render({ canManage = true } = {}) {
-  const view = computePlayOrder({ participants, games });
+async function render({ canManage = true, jogos = games, quadras = 2 } = {}) {
+  const view = computePlayOrder({ participants, games: jogos });
   await act(async () => {
     root.render(
       <PlayCourtsSection
-        gameDay={{ id: 'gd1', play_courts: 2 }}
+        gameDay={{ id: 'gd1', play_courts: quadras }}
         participants={participants}
-        games={games}
+        games={jogos}
         view={view}
         canManage={canManage}
       />,
@@ -219,5 +221,76 @@ describe('painel do Play — clique no jogador em quadra', () => {
     await render({ canManage: false });
     expect(nomeEmQuadra()).toBeFalsy();
     expect(container.textContent).toContain('Ana');
+  });
+});
+
+/* ============================================ sortear todas as quadras === */
+
+describe('⭐ sortear TODAS as quadras de uma vez', () => {
+  it('⭐ com as duas quadras livres e 8 na fila, o botão aparece e funciona', async () => {
+    // É o caso que motivou a funcionalidade: número exato de jogadores para
+    // encher as quadras. Sorteando uma por vez, os mesmos 4 voltam para a
+    // mesma quadra a noite inteira.
+    await render({ jogos: [] });
+    const b = botao('Sortear todas as quadras');
+    expect(b).toBeTruthy();
+    expect(b.disabled).toBe(false);
+    await click(b);
+    expect(mutacoes.sortearRodada).toHaveBeenCalled();
+  });
+
+  it('⭐ com uma quadra só, o botão nem existe (seria o "criar próximo jogo")', async () => {
+    await render({ jogos: [], quadras: 1 });
+    expect(botao('Sortear todas as quadras')).toBeUndefined();
+  });
+
+  it('com uma quadra ocupada, sobra uma livre: sortear a rodada fica travado', async () => {
+    // Uma quadra livre e 4 na fila não misturam nada — é o mesmo que criar o
+    // próximo jogo. A tela não oferece um caminho que não muda o resultado.
+    await render();
+    const b = botao('Sortear todas as quadras');
+    expect(b).toBeTruthy();
+    expect(b.disabled).toBe(true);
+  });
+
+  it('⭐ e aí a tela EXPLICA como misturar, em vez de só desabilitar', async () => {
+    await render();
+    expect(container.textContent).toContain('misturar os grupos entre as quadras');
+    expect(container.textContent).toContain('Sortear todas as quadras');
+  });
+
+  it('quem não organiza não vê o botão', async () => {
+    await render({ jogos: [], canManage: false });
+    expect(botao('Sortear todas as quadras')).toBeUndefined();
+  });
+});
+
+describe('⭐ encerrar a partida: as duas saídas', () => {
+  it('o diálogo oferece seguir nesta quadra OU só liberar', async () => {
+    await render();
+    await click(botao('Criar próxima partida'));
+    expect(document.body.textContent).toContain('Encerrar a partida da quadra 1?');
+    expect(botao('Criar próxima aqui')).toBeTruthy();
+    expect(botao('Só encerrar')).toBeTruthy();
+  });
+
+  it('⭐ "Só encerrar" libera a quadra SEM sortear', async () => {
+    await render();
+    await click(botao('Criar próxima partida'));
+    await click(botao('Só encerrar'));
+    expect(mutacoes.encerrar).toHaveBeenCalledWith({ gid: 'g1', createNext: false });
+  });
+
+  it('⭐ "Criar próxima aqui" mantém o comportamento de sempre', async () => {
+    await render();
+    await click(botao('Criar próxima partida'));
+    await click(botao('Criar próxima aqui'));
+    expect(mutacoes.encerrar).toHaveBeenCalledWith({ gid: 'g1', createNext: true });
+  });
+
+  it('com uma quadra só, não há segunda saída — não faria diferença', async () => {
+    await render({ quadras: 1 });
+    await click(botao('Criar próxima partida'));
+    expect(botao('Só encerrar')).toBeUndefined();
   });
 });

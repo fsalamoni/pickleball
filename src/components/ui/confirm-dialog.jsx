@@ -24,6 +24,10 @@ import { AlertTriangle } from 'lucide-react';
  *  - destructive: usa estilo destrutivo no botão
  *  - onConfirm: callback ao confirmar
  *  - loading: desabilita o botão enquanto ação executa
+ *  - secondaryLabel / onSecondary: um SEGUNDO caminho, opcional. Existe para a
+ *    pergunta que tem duas respostas legítimas — "encerrar a partida e já
+ *    sortear a próxima nesta quadra" OU "só encerrar, para sortear todas as
+ *    quadras juntas". Sem essas props o diálogo é exatamente o de antes.
  */
 export function ConfirmDialog({
   open,
@@ -35,6 +39,8 @@ export function ConfirmDialog({
   destructive = false,
   onConfirm,
   loading = false,
+  secondaryLabel = null,
+  onSecondary = null,
 }) {
   return (
     <AlertDialog open={open} onOpenChange={onOpenChange}>
@@ -48,6 +54,15 @@ export function ConfirmDialog({
         </AlertDialogHeader>
         <AlertDialogFooter>
           <AlertDialogCancel disabled={loading}>{cancelLabel}</AlertDialogCancel>
+          {secondaryLabel && onSecondary && (
+            <AlertDialogAction
+              disabled={loading}
+              onClick={(e) => { e.preventDefault(); onSecondary(); }}
+              className={cn(buttonVariants({ variant: 'outline' }))}
+            >
+              {secondaryLabel}
+            </AlertDialogAction>
+          )}
           <AlertDialogAction
             disabled={loading}
             onClick={(e) => {

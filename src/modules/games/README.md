@@ -303,3 +303,32 @@ produziria um botão que falha no Firestore — então ele continua do criador.
 (13 testes) e pelas regras reais em `tests/rules/gameDayRoles.rules.emulator.mjs`
 (24 asserções no emulador), que provam também que um admin não consegue se
 auto-promover, mudar o modo, virar dono, renomear, arquivar ou publicar.
+
+## Sortear a rodada: todas as quadras de uma vez (2026-09-14)
+
+⚠️ **Com 8 jogadores em 2 quadras, sortear quadra a quadra congela os grupos.**
+Quando a quadra 1 termina, os únicos 4 na fila são os 4 que saíram dela — e com
+quatro pessoas só existe um grupo possível. Não é o motor de rodízio: é o
+momento do sorteio.
+
+| função | onde | devolve |
+|---|---|---|
+| `drawPlayRoundForFreeCourts(order, { courts, games, history })` | `domain/playRotation.js` | `[{ court, ids }]` |
+| `drawAmericanoLiveRoundForFreeCourts(order, { courts, games, levels })` | `domain/americanoLive.js` | `[{ court, ids, side_a, side_b }]` |
+| `createPlayRoundForFreeCourts(gdId, actor)` | `services/gameDayService.js` | grava a rodada num LOTE só |
+| `createAmericanoLiveRoundForFreeCourts(gdId, actor)` | idem | idem |
+| `finishPlayGame(gdId, gid, actor, { createNext })` | idem | `createNext: false` libera a quadra sem sortear |
+
+Regras que valem a pena não desfazer:
+
+- **As duas funções de rodada saem da PREVISÃO** (`simulatePlaySequence` /
+  `forecastAmericanoLiveMatches`), nunca de um sorteio paralelo. É o que
+  garante que o "quem entra em cada quadra" anunciado na tela seja o que é
+  criado. Há teste travando a igualdade.
+- **Um lote só.** Meia rodada — uma quadra criada e a outra não — consome a
+  fila pela metade e ninguém entende o que aconteceu.
+- **`createNext` continua `true` por padrão.** Nada muda para quem não usa a
+  rodada.
+- O botão só aparece com **mais de uma quadra** e só habilita com **duas
+  livres e fila para as duas**; enquanto não dá, a tela explica o caminho em
+  vez de só desabilitar.

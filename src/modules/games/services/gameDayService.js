@@ -31,11 +31,12 @@ import {
 } from '../domain/gameDayRanking.js';
 import {
   computePlayOrder, buildPlayNextMatch, assignPlayTeams,
-  nextFreePlayCourt, pickSwapReplacement, isEligibleSwapReplacement,
+  nextFreePlayCourt, freePlayCourts, pickSwapReplacement, isEligibleSwapReplacement,
   PLAY_GAME_STATUS, PLAY_SLOTS,
 } from '../domain/gamePlay.js';
 import {
   buildPlayHistory, buildPlayNextMatchBalanced, makePartnerRepeatCounter,
+  drawPlayRoundForFreeCourts,
 } from '../domain/playRotation.js';
 import { FEATURE_FLAG } from '@/core/featureFlags';
 import { getPlatformSettings } from '@/core/services/platformSettingsService';
@@ -43,6 +44,7 @@ import { fetchUnifiedLevelsByParticipant } from '@/modules/rating/services/unifi
 import { mirrorGameToMyGame, sourceGameToMyGame, gameDayMirrorId } from '../domain/myGames.js';
 import {
   drawNextAmericanoLiveMatch, americanoLiveInCourtIds,
+  drawAmericanoLiveRoundForFreeCourts,
 } from '../domain/americanoLive.js';
 import { GAME_DAY_FORMAT } from '@/modules/clubs/domain/gameDayFormats.js';
 
@@ -649,6 +651,93 @@ export async function createNextPlayGame(gdId, actor, { court = null } = {}) {
   return { gameId: gid, court: targetCourt };
 }
 
+/**
+ * Cria as próximas partidas de TODAS as quadras livres, DE UMA VEZ.
+ *
+ * ## Por que existe
+ *
+ * Com o número exato de jogadores para encher as quadras — 8 em 2, 12 em 3 —,
+ * sortear quadra a quadra congela os grupos: quando a quadra 1 termina, os
+ * únicos 4 na fila são os 4 que acabaram de sair dela, e voltam para a mesma
+ * quadra contra os mesmos. Os grupos jogam a noite inteira sem se cruzar.
+ *
+ * Aqui a fila está inteira na mesa, e o mesmo motor de sempre distribui e
+ * mistura. Quem organiza escolhe: sortear só a quadra que vagou (mantendo o
+ * grupo) ou sortear a rodada toda.
+ *
+ * ## Tudo ou nada
+ *
+ * Um lote só. Meia rodada — uma quadra criada e a outra não — deixaria a
+ * pessoa sem saber o que aconteceu e com a fila já consumida pela metade.
+ *
+ * @returns {{ created: Array<{gameId:string, court:number}>, courts:number[] }}
+ */
+export async function createPlayRoundForFreeCourts(gdId, actor) {
+  const gd = await getGameDay(gdId);
+  if (!gd) throw new Error('Dia de jogo não encontrado.');
+  const [participants, games] = await Promise.all([
+    listGameDayParticipants(gdId), listGameDayGames(gdId),
+  ]);
+
+  const totalCourts = Math.max(1, Number(gd.play_courts) || 1);
+  const livres = freePlayCourts({ courts: totalCourts, games });
+  if (livres.length === 0) throw new Error('Todas as quadras já estão em jogo.');
+
+  const { order } = computePlayOrder({ participants, games });
+
+  // Mesma leitura de flag de `createNextPlayGame`: ligada, o rodízio
+  // equilibrado varia grupos e duplas sem furar a ordem; desligada, a escolha
+  // é a de sempre. Best-effort — falha devolve os padrões.
+  const flags = await getPlatformSettings()
+    .then((cfg) => cfg?.feature_flags || {})
+    .catch(() => ({}));
+  const rodizioEquilibrado = flags[FEATURE_FLAG.PLAY_SMART_ROTATION] === true;
+  const historico = rodizioEquilibrado ? buildPlayHistory(games) : null;
+
+  const rodada = drawPlayRoundForFreeCourts(order, {
+    courts: totalCourts, games, slots: PLAY_SLOTS, history: historico,
+  });
+  if (rodada.length === 0) {
+    throw new Error('Não há jogadores disponíveis suficientes (mínimo 4) para criar o próximo jogo.');
+  }
+
+  const byId = new Map(participants.map((p) => [p.id, p]));
+  const nivelPorParticipante = await fetchUnifiedLevelsByParticipant(participants).catch(() => ({}));
+  const contarParceria = makePartnerRepeatCounter(historico);
+
+  const batch = writeBatch(db);
+  const agora = Date.now();
+  const created = [];
+  const escolhidos = new Set();
+
+  rodada.forEach(({ court, ids }, i) => {
+    const quatro = ids
+      .map((id) => byId.get(id))
+      .filter(Boolean)
+      .map((p) => (Number.isFinite(nivelPorParticipante[p.id])
+        ? { ...p, level_value: nivelPorParticipante[p.id] }
+        : p));
+    const { side_a, side_b } = assignPlayTeams(quatro, { partnerRepeatCount: contarParceria });
+    const gid = writePlayGame(batch, gdId, {
+      court,
+      side_a: playSideEntries(side_a, byId),
+      side_b: playSideEntries(side_b, byId),
+      // `order` distinto por quadra mantém a sequência legível na lista.
+      order: agora + i,
+    });
+    created.push({ gameId: gid, court });
+    ids.forEach((id) => escolhidos.add(id));
+  });
+
+  applySkipDecrement(batch, gdId, participants.filter((p) => !escolhidos.has(p.id)));
+  await batch.commit();
+  await createAuditLog({
+    action: 'game_day_play_round_created', actor,
+    details: { game_day_id: gdId, courts: created.map((c) => c.court), games: created.length },
+  });
+  return { created, courts: created.map((c) => c.court) };
+}
+
 /** Criação MANUAL de um jogo do Play (jogadores escolhidos à mão). */
 export async function createManualPlayGame(gdId, { court = null, sideAIds = [], sideBIds = [] }, actor) {
   const participants = await listGameDayParticipants(gdId);
@@ -666,10 +755,17 @@ export async function createManualPlayGame(gdId, { court = null, sideAIds = [], 
 }
 
 /**
- * Conclui um jogo do Play: marca finalizado, devolve os jogadores à fila (mesmo
- * grupo de espera) e cria AUTOMATICAMENTE o próximo jogo na quadra liberada.
+ * Conclui um jogo do Play: marca finalizado e devolve os jogadores à fila.
+ *
+ * @param {{ createNext?: boolean }} [opts] `createNext` (padrão TRUE, que é o
+ *   comportamento de sempre) cria já o próximo jogo NESTA quadra. Passe
+ *   `false` para apenas liberar a quadra — é o que permite esperar as outras
+ *   terminarem e então sortear todas juntas, misturando os grupos. Sem essa
+ *   saída, com 8 jogadores em 2 quadras os mesmos 4 voltavam para a mesma
+ *   quadra a noite inteira, porque eram os únicos na fila no momento do
+ *   sorteio.
  */
-export async function finishPlayGame(gdId, gid, actor) {
+export async function finishPlayGame(gdId, gid, actor, { createNext = true } = {}) {
   const gd = await getGameDay(gdId);
   if (!gd) throw new Error('Dia de jogo não encontrado.');
   const [participants, games] = await Promise.all([
@@ -697,6 +793,7 @@ export async function finishPlayGame(gdId, gid, actor) {
   await createAuditLog({ action: 'game_day_play_game_finished', actor, details: { game_day_id: gdId, game_id: gid } });
 
   // Cria o próximo jogo para a quadra liberada (se houver 4 disponíveis).
+  if (!createNext) return { finished: gid, next: null };
   try {
     const next = await createNextPlayGame(gdId, actor, { court: game.court });
     return { finished: gid, next };
@@ -1183,6 +1280,64 @@ export async function createNextAmericanoLiveGame(gdId, actor, { court = null } 
     details: { game_day_id: gdId, court: targetCourt, game_id: gid },
   });
   return { gameId: gid, court: targetCourt };
+}
+
+/**
+ * Cria as próximas partidas de TODAS as quadras livres do Americano
+ * aprimorado, DE UMA VEZ — mesma razão de `createPlayRoundForFreeCourts`.
+ *
+ * Aqui a espera já é natural: lançar o resultado LIBERA a quadra e não sorteia
+ * nada (o fluxo de dois passos). Então basta lançar os resultados das quadras
+ * e, com todas livres, sortear a rodada inteira.
+ *
+ * @returns {{ created: Array<{gameId:string, court:number}>, courts:number[] }}
+ */
+export async function createAmericanoLiveRoundForFreeCourts(gdId, actor) {
+  const gd = await getGameDay(gdId);
+  if (!gd) throw new Error('Dia de jogo não encontrado.');
+  const [participants, games] = await Promise.all([
+    listGameDayParticipants(gdId), listGameDayGames(gdId),
+  ]);
+
+  const totalCourts = Math.max(1, Number(gd.play_courts) || 1);
+  const livres = freePlayCourts({ courts: totalCourts, games });
+  if (livres.length === 0) throw new Error('Todas as quadras já estão em jogo.');
+
+  const { order } = computePlayOrder({ participants, games });
+  const niveis = await fetchUnifiedLevelsByParticipant(participants).catch(() => ({}));
+
+  const rodada = drawAmericanoLiveRoundForFreeCourts(order, {
+    courts: totalCourts, games, levels: niveis, slots: PLAY_SLOTS,
+  });
+  if (rodada.length === 0) {
+    throw new Error('Não há jogadores disponíveis suficientes (mínimo 4) para criar a próxima partida.');
+  }
+
+  const byId = new Map(participants.map((p) => [p.id, p]));
+  const batch = writeBatch(db);
+  const agora = Date.now();
+  const created = [];
+  const escolhidos = new Set();
+
+  rodada.forEach(({ court, ids, side_a, side_b }, i) => {
+    const gid = writePlayGame(batch, gdId, {
+      court,
+      side_a: playSideEntries(side_a, byId),
+      side_b: playSideEntries(side_b, byId),
+      order: agora + i,
+      format: GAME_DAY_FORMAT.AMERICANO_LIVE,
+    });
+    created.push({ gameId: gid, court });
+    ids.forEach((id) => escolhidos.add(id));
+  });
+
+  applySkipDecrement(batch, gdId, participants.filter((p) => !escolhidos.has(p.id)));
+  await batch.commit();
+  await createAuditLog({
+    action: 'game_day_americano_live_round_created', actor,
+    details: { game_day_id: gdId, courts: created.map((c) => c.court), games: created.length },
+  });
+  return { created, courts: created.map((c) => c.court) };
 }
 
 /**

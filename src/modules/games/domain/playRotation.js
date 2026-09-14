@@ -385,6 +385,48 @@ function concluirOrdem(entryOrder, resto) {
 }
 
 /**
+ * As próximas partidas de TODAS as quadras livres, sorteadas DE UMA VEZ.
+ *
+ * ## O problema que isto resolve
+ *
+ * Com o número exato de jogadores para encher as quadras — 8 em 2 quadras, 12
+ * em 3 —, sortear quadra a quadra **congela os grupos**: quando a quadra 1
+ * termina, os únicos 4 na fila são justamente os 4 que acabaram de sair dela,
+ * então voltam para a mesma quadra, contra os mesmos. Os dois grupos jogam a
+ * noite inteira sem nunca se cruzar. Não é defeito do sorteio: é consequência
+ * de sortear **um** jogo com **uma** fila de quatro.
+ *
+ * A saída não é um algoritmo novo, é o MOMENTO: com todas as quadras livres, a
+ * fila tem os 8, e aí o mesmo motor de sempre distribui e mistura.
+ *
+ * ## Por que em cima de `simulatePlaySequence`
+ *
+ * Porque é ela que a tela usa para PREVER quem entra. Sorteando por aqui, o
+ * que a previsão anuncia é exatamente o que é criado — se fossem dois códigos,
+ * um dia divergiriam, e a tela passaria a prometer uma partida e criar outra.
+ *
+ * @param {Array} availableOrdered fila de disponíveis, em ordem de espera
+ * @param {{ courts?: number, games?: Array, slots?: number, history?: object }} [opts]
+ * @returns {Array<{ court: number, ids: string[] }>} uma entrada por quadra
+ *   LIVRE que deu para completar, na ordem das quadras. Vazio quando não há
+ *   quadra livre ou não dá para formar nem uma partida.
+ */
+export function drawPlayRoundForFreeCourts(availableOrdered, {
+  courts = 1, games = [], slots = PLAY_SLOTS, history = null,
+  windowExtra = ROTATION_WINDOW_EXTRA, weights = ROTATION_WEIGHTS,
+} = {}) {
+  const { blocks } = simulatePlaySequence(availableOrdered, {
+    courts, games, slots, history, windowExtra, weights,
+  });
+  return blocks
+    // `free` exclui as quadras ocupadas (aquelas são previsão CONDICIONAL —
+    // dependem de qual partida termina primeiro, e não se cria jogo nelas).
+    // `full` exclui o bloco parcial de quando a fila não fecha quatro.
+    .filter((b) => b.free && b.full)
+    .map((b) => ({ court: b.court, ids: b.players.map((p) => p.id) }));
+}
+
+/**
  * ORDEM DE PARTICIPAÇÃO na sequência em que os jogadores REALMENTE vão entrar.
  *
  * A fila crua (`computePlayOrder().order`) ordena por tempo de espera — e com

@@ -2,7 +2,7 @@ import React, { useMemo, useState } from 'react';
 import { toast } from 'sonner';
 import {
   LayoutGrid, ListOrdered, Check, PlayCircle, Trash2, Pencil, Trophy,
-  Target, Plus, Swords,
+  Target, Plus, Swords, Shuffle,
 } from 'lucide-react';
 
 import { UserAvatar } from '@/components/ui/user-avatar';
@@ -24,7 +24,7 @@ import { useGameDayRoles } from '@/modules/games/hooks/useGameDayRoles';
 import { useAuth } from '@/core/lib/FirebaseAuthContext';
 import {
   useGameDayParticipants, useGameDayGames, useDeleteGameDayGame,
-  useCreateNextAmericanoLiveGame, useSubmitAmericanoLiveResult,
+  useCreateNextAmericanoLiveGame, useCreateAmericanoLiveRound, useSubmitAmericanoLiveResult,
   useUpdateAmericanoLiveResult, useCreateManualAmericanoLiveGame,
 } from '@/modules/games/hooks/useGameDays';
 import { PLAY_GAME_STATUS, freePlayCourts } from '@/modules/games/domain/gamePlay';
@@ -142,6 +142,7 @@ function Metrica({ rotulo, valor }) {
 
 function CourtsSection({ gameDay, participants, games, view, canManage }) {
   const criar = useCreateNextAmericanoLiveGame(gameDay.id);
+  const criarRodada = useCreateAmericanoLiveRound(gameDay.id);
   const lancar = useSubmitAmericanoLiveResult(gameDay.id);
   const [manualOpen, setManualOpen] = useState(false);
 
@@ -174,6 +175,27 @@ function CourtsSection({ gameDay, participants, games, view, canManage }) {
     }
   };
 
+  /**
+   * Sorteia as próximas partidas de TODAS as quadras livres de uma vez.
+   *
+   * Sortear quadra a quadra com o número exato de jogadores congela os grupos:
+   * os 4 que acabaram de sair são os únicos na fila e voltam para a mesma
+   * quadra. Aqui a fila inteira está na mesa e o motor mistura.
+   */
+  const quadrasDaRodada = Math.min(livres.length, Math.floor(disponiveis / 4));
+  const podeSortearRodada = quadrasDaRodada >= 2;
+  const gerarRodada = async () => {
+    try {
+      const res = await criarRodada.mutateAsync();
+      const n = res?.created?.length || 0;
+      toast.success(n === 1
+        ? `Partida sorteada na quadra ${res.courts[0]}.`
+        : `${n} partidas sorteadas (quadras ${res.courts.join(', ')}), com os grupos misturados.`);
+    } catch (e) {
+      toast.error(e?.message || 'Não foi possível sortear a rodada.');
+    }
+  };
+
   return (
     <V2CollapsibleCard
       icon={LayoutGrid}
@@ -181,12 +203,36 @@ function CourtsSection({ gameDay, participants, games, view, canManage }) {
       sectionId={GAME_DAY_SECTION.AL_COURTS}
       summary={`${abertos.length} em quadra · ${disponiveis} na fila`}
       actions={canManage ? (
-        <V2Button size="sm" variant="ghost" onClick={() => setManualOpen(true)} disabled={participants.length < 4}>
-          <Plus className="mr-1 h-3.5 w-3.5" /> Manual
-        </V2Button>
+        <>
+          <V2Button size="sm" variant="ghost" onClick={() => setManualOpen(true)} disabled={participants.length < 4}>
+            <Plus className="mr-1 h-3.5 w-3.5" /> Manual
+          </V2Button>
+          {/* Com uma quadra só, "sortear todas" é o mesmo que "gerar próxima". */}
+          {courts > 1 && (
+            <V2Button
+              size="sm" variant="secondary"
+              disabled={!podeSortearRodada || criarRodada.isPending}
+              onClick={gerarRodada}
+            >
+              <Shuffle className="mr-1 h-3.5 w-3.5" />
+              {criarRodada.isPending ? 'Sorteando…' : 'Sortear todas as quadras'}
+            </V2Button>
+          )}
+        </>
       ) : null}
     >
       <div className="space-y-3">
+        {/* A dica que evita o congelamento dos grupos: aqui lançar o resultado
+            já LIBERA a quadra sem sortear, então basta lançar os resultados das
+            quadras e sortear a rodada com todo mundo na fila. */}
+        {canManage && courts > 1 && !podeSortearRodada && abertos.length > 0 && (
+          <p className="rounded-xl border border-gray-100 bg-paper px-3 py-2 text-xs leading-5 text-gray-600">
+            <Shuffle aria-hidden="true" className="mr-1 inline h-3.5 w-3.5 text-gray-400" />
+            Para <strong>misturar os grupos entre as quadras</strong>, lance o resultado de todas as partidas
+            antes de sortear: com as quadras livres, <strong>Sortear todas as quadras</strong> distribui a fila
+            inteira. Sorteando uma quadra por vez, os mesmos quatro voltam para ela.
+          </p>
+        )}
         {Array.from({ length: courts }, (_, i) => i + 1).map((court) => (
           <CourtCard
             key={court}
