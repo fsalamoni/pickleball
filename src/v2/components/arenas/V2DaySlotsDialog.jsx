@@ -67,8 +67,8 @@ import { V2Button, V2Badge, V2EmptyState, V2Skeleton } from '@/v2/ui/primitives'
 import BookingRequestDialog from '@/modules/arenas/components/BookingRequestDialog';
 import CourtTimePicker from './CourtTimePicker';
 import { sortSelection, summarizeSelection } from '@/modules/arenas/domain/bookingSelection';
-import { arenaGameDayTimeRange, mergeGameDayBlocks } from '@/modules/games/domain/arenaGameDay';
-import { mergeOpenSlotBlocks } from '@/modules/arenas/domain/openMatch';
+import { arenaGameDayTimeRange } from '@/modules/games/domain/arenaGameDay';
+import { mergeArenaBlocks } from '@/modules/arenas/domain/arenaBlocks';
 
 const STEP = 60;
 
@@ -126,6 +126,8 @@ export default function V2DaySlotsDialog({
   // Vagas abertas (open match) da arena. Ocupam a quadra igual ao dia de jogo,
   // e o bloqueio delas é sempre derivado (não há cópia gravada).
   openSlots = [],
+  classes = [],
+  tournaments = [],
 }) {
   const { isAuthenticated, user } = useAuth();
   const { data: schedules = [], isLoading: loadingSchedules } = useArenaCourtSchedules(arenaId);
@@ -178,14 +180,17 @@ export default function V2DaySlotsDialog({
   const unavailabilitiesOfDay = useMemo(() => {
     // Dias de jogo E vagas abertas: as duas coisas OCUPAM a quadra, e nenhuma
     // das duas pode depender de a cópia gravada ter chegado.
-    const todos = mergeOpenSlotBlocks(
-      mergeGameDayBlocks(unavailabilities || [], gameDays || []),
-      openSlots || [],
-    );
+    const todos = mergeArenaBlocks({
+      gravados: unavailabilities || [],
+      diasDeJogo: gameDays || [],
+      vagasAbertas: openSlots || [],
+      aulas: classes || [],
+      torneios: tournaments || [],
+    });
     return todos
       .filter((u) => u.date === date)
       .filter((u) => !courtId || !u.court_id || u.court_id === courtId);
-  }, [unavailabilities, gameDays, openSlots, date, courtId]);
+  }, [unavailabilities, gameDays, openSlots, classes, tournaments, date, courtId]);
 
   // Slots do dia (1h cada, dentro dos schedules)
   const slotsWithStatus = useMemo(() => {

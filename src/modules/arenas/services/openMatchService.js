@@ -35,11 +35,9 @@ import {
   canJoinOpenSlot,
   getAvailableSpots,
 } from '../domain/openMatch.js';
-import { openSlotConflict, mergeOpenSlotBlocks } from '../domain/openMatch.js';
+import { openSlotConflict } from '../domain/openMatch.js';
 import { getNextInLine, WAITLIST_STATUS, compactPositions, computePromotionExpiresAt, DEFAULT_PROMOTION_WINDOW_MINUTES } from '../domain/waitlist.js';
-import { getArena, listArenaManagers, listArenaUnavailabilities } from './arenaService.js';
-import { listArenaGameDays } from '@/modules/games/services/arenaGameDayService.js';
-import { mergeGameDayBlocks } from '@/modules/games/domain/arenaGameDay.js';
+import { getArena, listArenaManagers } from './arenaService.js';
 import { fetchUnifiedLevelValues } from '@/modules/rating/services/unifiedLevelService.js';
 
 const COL = 'arena_open_slots';
@@ -78,13 +76,10 @@ async function nivelDoAtleta(uid) {
  * a vaga segue o caminho antigo.
  */
 async function ocupacaoDaArena(arenaId, { exceptSlotId } = {}) {
-  const [gravados, diasDeJogo, vagas] = await Promise.all([
-    listArenaUnavailabilities(arenaId).catch(() => []),
-    listArenaGameDays(arenaId).catch(() => []),
-    listArenaOpenSlots(arenaId, { limit: 500 }).catch(() => []),
-  ]);
-  const outras = vagas.filter((v) => v.id !== exceptSlotId);
-  return mergeOpenSlotBlocks(mergeGameDayBlocks(gravados, diasDeJogo), outras);
+  // Importação dinâmica: `arenaOccupancy` lê as vagas abertas deste mesmo
+  // arquivo, e o ciclo estático quebraria o pacote.
+  const { arenaOccupancy } = await import('./arenaOccupancy.js');
+  return arenaOccupancy(arenaId, { exceptSlotId });
 }
 
 /** Recusa a vaga quando ela cai em cima de algo já marcado, dizendo o quê. */
