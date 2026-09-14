@@ -14,6 +14,7 @@ import BookingRequestDialog from '@/modules/arenas/components/BookingRequestDial
 import SharedBookingDialog from '@/modules/arenas/components/SharedBookingDialog';
 import LinkedClubsSection from '@/modules/clubs/components/LinkedClubsSection';
 import { formatArenaAddress, arenaContactLinks } from '@/modules/arenas/domain/arena';
+import { brandingOf } from '@/modules/arenas/domain/whiteLabel';
 import { formatPrice } from '@/modules/arenas/domain/pricing';
 import { BOOKING_STATUS, WEEKDAY_SHORT } from '@/modules/arenas/domain/constants';
 import { bookingSlots, sortSlots } from '@/modules/arenas/domain/booking';
@@ -101,6 +102,7 @@ function V2ArenaDetailContent({ arenaId, user, arena, managed, bookings, isLoadi
   }
 
   const cover = arena.cover_url || arenaPhotoUrl((arena.photos || [])[0]);
+  const marca = brandingOf(arena);
   const links = arenaContactLinks(arena);
   const canManage = arena.owner_id === user?.uid || managed.some((m) => m.id === arena.id);
   const address = formatArenaAddress(arena);
@@ -115,19 +117,36 @@ function V2ArenaDetailContent({ arenaId, user, arena, managed, bookings, isLoadi
         <ArrowLeft className="h-4 w-4" /> Voltar às arenas
       </Link>
 
-      {/* Hero */}
+      {/* Hero — com a MARCA da arena, quando ela tem uma.
+          A cor vem de `arenas.branding` (documento público); antes ela era
+          gravada em `arena_settings`, que só o gestor lê — nunca teria como
+          chegar aqui. O texto por cima é escolhido por CONTRASTE: sem isso uma
+          arena de cor clara ficaria com o próprio nome invisível. */}
       <div className="overflow-hidden rounded-4xl border border-gray-100 bg-paper-pure shadow-organic-sm">
-        <div className="relative h-52 bg-ink">
+        <div className="relative h-52 bg-ink" style={marca.on ? { backgroundColor: marca.color } : undefined}>
           {cover ? (
             <PhotoLightbox src={cover} alt={arena.name} title={arena.name}
               trigger={<img src={cover} alt="" className="h-full w-full cursor-zoom-in object-cover" />} />
           ) : (
-            <div className="flex h-full w-full items-center justify-center text-white/25"><Building2 className="h-14 w-14" /></div>
+            <div className="flex h-full w-full items-center justify-center">
+              {marca.logo
+                ? <img src={marca.logo} alt="" className="max-h-24 max-w-[60%] object-contain" />
+                : <Building2 className="h-14 w-14 text-white/25" />}
+            </div>
           )}
-          <div className="absolute inset-0 bg-gradient-to-t from-ink/70 to-transparent" />
-          <div className="absolute bottom-5 left-6 right-6 text-white">
-            <h1 className="font-display text-3xl font-bold">{arena.name}</h1>
-            {address && <p className="mt-1 flex items-center gap-1.5 text-sm text-white/85"><MapPin className="h-4 w-4" /> {address}</p>}
+          {cover && <div className="absolute inset-0 bg-gradient-to-t from-ink/70 to-transparent" />}
+          <div
+            className="absolute bottom-5 left-6 right-6"
+            style={{ color: cover ? '#FFFFFF' : (marca.on ? marca.ink : '#FFFFFF') }}
+          >
+            <div className="flex items-center gap-3">
+              {marca.logo && cover && (
+                <img src={marca.logo} alt="" className="h-10 w-10 shrink-0 rounded-xl bg-white/90 object-contain p-1" />
+              )}
+              <h1 className="font-display text-3xl font-bold">{arena.name}</h1>
+            </div>
+            {marca.tagline && <p className="mt-0.5 text-sm opacity-85">{marca.tagline}</p>}
+            {address && <p className="mt-1 flex items-center gap-1.5 text-sm opacity-85"><MapPin className="h-4 w-4" /> {address}</p>}
           </div>
         </div>
 

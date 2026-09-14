@@ -1630,12 +1630,59 @@ service cloud.firestore {
 
     match /arena_networks/{networkId} {
       allow read: if isAuthed();
-      allow create, update, delete: if isPlatformAdmin();
+      // 🐞 Era `if isPlatformAdmin()` para tudo — e o módulo "multi-unidade" é
+      // oferecido À ARENA, em Gestão → Configurações → Módulos. A arena
+      // ligava o módulo, abria a tela, clicava em "Criar rede" e recebia
+      // permissão negada: o módulo não tinha como funcionar para ninguém.
+      //
+      // Agora quem toca uma arena cria a PRÓPRIA rede. O dono da rede é quem
+      // a criou, e ele precisa gerir a arena fundadora — sem isso qualquer
+      // conta criaria redes em nome de arenas alheias.
+      allow create: if isAuthed() && (
+        isPlatformAdmin() || (
+          request.resource.data.owner_id == request.auth.uid
+          && isArenaManager(request.resource.data.owner_arena_id)
+        )
+      );
+      // O dono não muda de mãos por edição: quem edita continua sendo o dono.
+      allow update: if isAuthed() && (
+        isPlatformAdmin() || (
+          resource.data.owner_id == request.auth.uid
+          && request.resource.data.owner_id == request.auth.uid
+        )
+      );
+      allow delete: if isAuthed() && (
+        isPlatformAdmin() || resource.data.owner_id == request.auth.uid
+      );
     }
 
     match /arena_network_memberships/{membershipId} {
       allow read: if isAuthed();
-      allow create, update, delete: if isPlatformAdmin();
+      // Duas condições, as duas necessárias: só entra na rede a arena que EU
+      // administro (senão eu colocaria a arena dos outros na minha rede e
+      // passaria a ver os números dela), e só na rede que EU sou dono (senão
+      // eu poluiria a rede alheia com uma unidade que ninguém convidou).
+      //
+      // Rede entre donos diferentes continua sendo caso do admin da
+      // plataforma — é uma decisão comercial, não uma operação de tela.
+      allow create: if isAuthed() && (
+        isPlatformAdmin() || (
+          isArenaManager(request.resource.data.arena_id)
+          && exists(/databases/$(database)/documents/arena_networks/$(request.resource.data.network_id))
+          && get(/databases/$(database)/documents/arena_networks/$(request.resource.data.network_id)).data.owner_id == request.auth.uid
+        )
+      );
+      allow update: if isPlatformAdmin();
+      // Sair da rede é direito de quem administra a unidade, e também do dono
+      // da rede: prender uma arena numa rede seria a pior parte do módulo.
+      allow delete: if isAuthed() && (
+        isPlatformAdmin()
+        || isArenaManager(resource.data.arena_id)
+        || (
+          exists(/databases/$(database)/documents/arena_networks/$(resource.data.network_id))
+          && get(/databases/$(database)/documents/arena_networks/$(resource.data.network_id)).data.owner_id == request.auth.uid
+        )
+      );
     }
 
     // Sprint 2: Configuração de tiers (apenas platform admin)

@@ -224,6 +224,10 @@ Estes princípios vieram de bugs reais que custaram horas pra arrumar. São ineg
 **"Vou mexer no preço de uma reserva"** → confira se passa por `memberBookingPrice` (`arenas/domain/memberBenefit.js`). A ordem da conta é **tabela → horas de pacote → desconto do nível → saldo da carteira**, e o pacote vem ANTES do desconto de propósito (a hora do pacote já foi paga; aplicar percentual sobre ela dá desconto duas vezes — há teste travando). A tela ESTIMA, o serviço REFAZ antes de gravar; e horas e saldo só são CONSUMIDOS na **confirmação**, nunca no pedido — queimar pacote num pedido que a arena pode recusar é cobrar por um jogo que não vai acontecer. Ver `docs/24-MODULOS-DE-ARENA/02-MEMBROS.md`
 **"Vou mexer em aula ou professor da arena"** → `docs/24-MODULOS-DE-ARENA/05-AULAS.md`. (1) A matrícula grava **`user_id`** — é o campo que a REGRA confere, e gravar só `athlete_id` fazia o Firestore recusar TODA matrícula em silêncio, desde que a funcionalidade foi escrita. **O nome do campo que a regra usa é contrato.** (2) Aula com `court_id` **OCUPA a quadra** (derivada, como o dia de jogo — `arena_classes` é legível por todos); cancelada ou já dada devolve. (3) O bloqueio de aula **não carrega nome de aluno** — ele é público. (4) A comissão vem da **configuração** do módulo `classes_marketplace`, não de um número no código (eram 50% fixos contra 20% configurados), e professor **da casa não paga comissão**. (5) O professor é reconhecido pelo **`user_id`** em `arena_coaches`: sem o vínculo ele não vê a própria agenda
 **"Vou mexer em torneio interno da arena"** → `docs/24-MODULOS-DE-ARENA/06-TORNEIOS-INTERNOS.md`. (1) **Começar o torneio CRIA UM DIA DE JOGO da arena** com os inscritos, no formato escolhido — é o que faz o torneio virar jogo sem reescrever sorteio, placar, ranking do dia e telão; o dia de jogo é criado ANTES de o status mudar, para um erro não deixar o torneio "em andamento" sem jogo nenhum. (2) O formato tem de ser um que o dia de jogo saiba conduzir (`americano`, `americano_live`, `mexicano`, `king`, `play`) — `single_elimination` era guardado e nada o executava. (3) Torneio com `court_ids` **ocupa a quadra** (derivado), mas **para de derivar quando tem `game_day_id`**: o dia de jogo já bloqueia, e contar duas vezes mostra dois bloqueios para o mesmo horário. (4) O **ladder** (`arena_ladders`) era lido e nunca escrito — agora `applyTournamentToLadder` acumula, quem participou leva 10 pontos, e o documento tem id determinístico `arenaId_periodo` (leitura por `getDoc`, sem índice). (5) O `roster` guarda **nome e foto**, não só uid: sem isso o sorteio mostraria identificadores
+**"Vou mexer no PDV / venda / dividir a conta"** → `docs/24-MODULOS-DE-ARENA/07-PDV-MARCA-REDE-IA.md`. (1) O estoque baixa na **ENTREGA**, nunca na compra: a regra de `arena_products` só deixa o gestor escrever, então a baixa feita pelo atleta era **recusada** e sobrava uma venda fantasma no banco — e o modelo está certo, reservar o que a arena ainda não entregou conta uma venda que pode não acontecer; a arena **reconfere** antes de baixar, porque entre a compra e a retirada outra pessoa pode levar a última unidade. (2) **Cada pessoa grava o próprio pagamento** (`payer_id == request.auth.uid`): o comprador gravava o de todo mundo, e num `writeBatch` a recusa de um derrubava **todos, o dele inclusive** — a divisão fica em `split_details` e quem entra nela é **avisado**. (3) `created_at_ms` tem de ser GRAVADO — a ordenação do caixa existia e comparava `undefined` com `undefined`; a leitura tem fallback para o `created_at` do servidor, senão o histórico antigo desaba para o fim da lista
+**"Vou mexer na marca (cor, logo) da arena"** → `arenas/{id}.branding` (campo opcional do documento da arena, `allow read: if true`), **nunca** `arena_settings.branding`: aquela coleção só o GESTOR lê, e a cor gravada lá nunca teria como chegar à página pública nem ao telão — era o caso, e nada no projeto lia o campo. **O que é público tem de estar onde o público lê.** O texto por cima da cor é escolhido por CONTRASTE (`readableInk`, luminância da WCAG), senão amarelo-limão apaga o cabeçalho inteiro. Domínio em `arenas/domain/whiteLabel.js`; use `brandingOf(arena)` para exibir
+**"Vou mexer na previsão / preço sugerido da IA da arena"** → `getHistoricalBookings` devolvia `return []` com o comentário "só para satisfazer a interface": a previsão era **sempre zero** e o preço sugerido não tinha histórico. Agora lê reservas **confirmadas e concluídas** (pedido recusado não é demanda). Sem histórico a tela **não inventa** — diz que falta movimento. E o preço é **sugestão**: nada muda de preço sozinho, quem aplica é a arena. ⚠️ `resolveArenaPrice` devolve um **objeto** `{ price, … }` — usar o retorno cru faz `base > 0` ser sempre falso e o bloco some da tela sem erro nenhum
+**"Vou mexer em rede de arenas (multi-unidade)"** → incluir unidade exige as **DUAS** condições: gerir **a unidade** *e* ser **dono da rede**. Só a primeira e eu colocaria a sua unidade na minha rede, passando a ver os números dela no BI; só a segunda e eu poluiria a rede alheia. Criar a rede exige `owner_arena_id` (**é o campo que a regra confere**) e gerir a arena fundadora. `listNetworks()` mostrava **todas as redes da plataforma** para qualquer conta logada — use `listMyNetworks(uid)`. Rede entre donos diferentes continua sendo caso do admin da plataforma
 **"Vou acrescentar algo que OCUPA uma quadra"** → entre em `mergeArenaBlocks` (`arenas/domain/arenaBlocks.js`) e em `arenaOccupancy` (`arenas/services/arenaOccupancy.js`), **não** em cada tela. A cadeia estava repetida em CINCO lugares (dois serviços e três calendários) e a que ficasse para trás não dava erro — dava a quadra vendida duas vezes. Fonte opcional: quem não a carregou passa `undefined` e nada muda. Derivado x gravado: derive quando a coleção for legível pelo atleta (dia de jogo, vaga aberta, aula); **grave** quando não for (ordem de manutenção), e aí a cópia chega dentro de `gravados`
 **"Vou mexer em checklist, manutenção, estoque ou equipe da arena"** → `docs/24-MODULOS-DE-ARENA/04-OPERACOES.md`. (1) O estado do checklist HOJE sai de `checklistRunState(checklist, hoje)` — ler `checklist.items` direto na tela reintroduz o defeito de o checkmark de ontem aparecer marcado hoje; a virada do dia é feita ao abrir a tela e é **idempotente**. (2) Ordem de manutenção com `blocks_court` **grava** `arena_unavailabilities` (não deriva, ao contrário do dia de jogo — a ordem é privada da arena e o atleta nunca a leria), e **concluir ou cancelar devolve a quadra**; o `sync` só toca documentos com `maintenance_id`. (3) O **motivo** da ordem nunca entra no bloqueio público — ele diz só "Manutenção programada". (4) Marcar "fechar" sem data é ERRO, não bloqueio de zero dias. (5) A equipe (`arena_settings.staff`) **não guarda telefone nem e-mail**. (6) Toda mutação de manutenção invalida o calendário inteiro da arena (`arenaKeys.bloqueiosDaArena`), porque cada recorte de datas é uma consulta diferente
 **"Vou mexer em cupom, campanha, NPS, pontos ou indicação"** → `docs/24-MODULOS-DE-ARENA/03-MARKETING.md`. Sete coisas que NÃO podem regredir: (1) o cupom é **reconferido pelo serviço** contra o banco antes de gravar — conferir só no navegador deixa qualquer pessoa gravar um desconto que a arena não criou; (2) o uso do cupom é contabilizado na **confirmação**, nunca no pedido; (3) a campanha mostra **quantas pessoas** vão receber ANTES de enviar, e não envia para zero; (4) o NPS não é perguntado a quem não veio, nem mais de uma vez a cada 90 dias; (5) resgate de pontos e de indicação são escritas da **ARENA** (a regra só deixa o gestor escrever `arena_members` e `arena_wallets` — botão na tela do atleta dá "permissão negada" que ele não tem como resolver); (6) atalho de módulo vem do **catálogo**, não de lista escrita à mão; (7) o serviço de contabilizar cupom **não** se chama `useCoupon` (o ESLint trata `useX` como hook e derruba o lint de quem o chama)
@@ -425,6 +429,41 @@ chore(deps): bump firebase to 12.x
 > memory topic `picklerush-sync-2026-08.md`.
 >
 > **Destaques por onda**:
+>
+> - **Onda AN — PDV, marca, rede e inteligência: o último quarteirão**
+>   (2026-09-14): a onda que fechou os módulos de arena, e **seis defeitos**
+>   independentes. **🐞 O atleta não conseguia comprar**: `createSale` gravava a
+>   venda e em seguida dava baixa em `arena_products`, coleção que a regra só
+>   deixa o gestor escrever — a segunda escrita era recusada e sobrava uma
+>   **venda fantasma** no banco com um erro na tela. A correção não foi
+>   afrouxar a regra: o estoque sai na **entrega**, com reconferência (entre a
+>   compra e a retirada outra pessoa pode levar a última unidade), e cancelar
+>   devolve o que já tinha saído. **🐞 Dividir a conta derrubava o pagamento do
+>   próprio comprador**: ele criava um documento por participante, com
+>   `payer_id` alheio, e como era um lote atômico a recusa de um matava todos.
+>   Agora **cada um grava o seu** e quem entra na divisão é **avisado** — sem o
+>   aviso, "dividir a conta" é o comprador cobrando os amigos por fora, que é
+>   exatamente o que a funcionalidade promete resolver. **🐞 O caixa não
+>   ordenava**: a lista comparava `created_at_ms`, campo que **nunca era
+>   gravado**. **🐞 A marca ia para `arena_settings`**, que só o gestor lê — a
+>   cor e o logo não tinham como chegar à página pública, e de fato **nada no
+>   projeto lia aquele campo**; foram para `arenas/{id}.branding` e agora
+>   pintam o cabeçalho da arena, com o texto escolhido por **contraste**
+>   (luminância da WCAG), que é o que impede o amarelo-limão de apagar o
+>   título. **🐞 A previsão da IA era calculada sobre lista vazia** —
+>   `getHistoricalBookings` era `return []` com o comentário "só para
+>   satisfazer a interface"; agora lê reservas confirmadas e concluídas, e sem
+>   histórico a tela **não inventa**. O preço continua **sugestão**: nada muda
+>   de preço sozinho. **🐞 A rede não podia ser criada** pela arena, embora o
+>   módulo seja oferecido a ela, e `listNetworks()` mostrava **as redes de
+>   todo mundo** para qualquer conta logada. Esta é a **única regra ampliada em
+>   seis ondas**, e continua fechando o caso perigoso: incluir unidade exige
+>   **gerir a unidade** *e* **ser dono da rede** — só a primeira e eu colocaria
+>   a sua unidade na minha rede para ver os números dela; só a segunda e eu
+>   poluiria a rede alheia. **Zero coleção, zero índice**; campos opcionais em
+>   quatro coleções e **14 asserções novas no emulador** (212 no total), metade
+>   provando o que passou a funcionar e metade provando o que continua barrado.
+>   Ver `docs/24-MODULOS-DE-ARENA/07-PDV-MARCA-REDE-IA.md`.
 >
 > - **Onda AM — Torneios internos: o torneio vira jogo** (2026-09-14): cinco
 >   defeitos. **🐞 O torneio não gerava partida nenhuma** — guardava
@@ -935,7 +974,7 @@ chore(deps): bump firebase to 12.x
 
 | Métrica | Valor | Delta do início do agente |
 |---|---|---|
-| **Testes Vitest** | **4220 passing** (258 arquivos) + 198 asserções de regras no emulador | +3812 (era 408) |
+| **Testes Vitest** | **4273 passing** (261 arquivos) + 212 asserções de regras no emulador | +3865 (era 408) |
 | **Lint errors** | 0 | era 30+ |
 | **Módulos** | 21 (+`help` — conteúdo dos tutoriais em tela) (`games` e `legal` saíram como `src/modules/` mas continuam como pastas oficiais — **rating virou módulo oficial** com domain/services/hooks/components) | +4 (coaches, circuits, games, legal) |
 | **V2 pages** | 79 (+V2GameDayTelao — telão, fora do V2Layout; +V2Help — central de ajuda) | +55 |
