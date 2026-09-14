@@ -228,10 +228,12 @@ Estes princípios vieram de bugs reais que custaram horas pra arrumar. São ineg
 **"Vou mexer na marca (cor, logo) da arena"** → `arenas/{id}.branding` (campo opcional do documento da arena, `allow read: if true`), **nunca** `arena_settings.branding`: aquela coleção só o GESTOR lê, e a cor gravada lá nunca teria como chegar à página pública nem ao telão — era o caso, e nada no projeto lia o campo. **O que é público tem de estar onde o público lê.** O texto por cima da cor é escolhido por CONTRASTE (`readableInk`, luminância da WCAG), senão amarelo-limão apaga o cabeçalho inteiro. Domínio em `arenas/domain/whiteLabel.js`; use `brandingOf(arena)` para exibir
 **"Vou mexer na previsão / preço sugerido da IA da arena"** → `getHistoricalBookings` devolvia `return []` com o comentário "só para satisfazer a interface": a previsão era **sempre zero** e o preço sugerido não tinha histórico. Agora lê reservas **confirmadas e concluídas** (pedido recusado não é demanda). Sem histórico a tela **não inventa** — diz que falta movimento. E o preço é **sugestão**: nada muda de preço sozinho, quem aplica é a arena. ⚠️ `resolveArenaPrice` devolve um **objeto** `{ price, … }` — usar o retorno cru faz `base > 0` ser sempre falso e o bloco some da tela sem erro nenhum
 **"Vou mexer em rede de arenas (multi-unidade)"** → incluir unidade exige as **DUAS** condições: gerir **a unidade** *e* ser **dono da rede**. Só a primeira e eu colocaria a sua unidade na minha rede, passando a ver os números dela no BI; só a segunda e eu poluiria a rede alheia. Criar a rede exige `owner_arena_id` (**é o campo que a regra confere**) e gerir a arena fundadora. `listNetworks()` mostrava **todas as redes da plataforma** para qualquer conta logada — use `listMyNetworks(uid)`. Rede entre donos diferentes continua sendo caso do admin da plataforma
+**"Vou mexer em chegada, presença ou no-show da arena"** → `docs/24-MODULOS-DE-ARENA/08-CHEGADA-E-TOTEM.md`. (1) A chegada mora **na própria reserva** (`arena_bookings.checked_in_at`), não numa coleção nova: a regra existente já deixa o titular E o gestor escreverem no documento — **zero regra nova**, com asserção no emulador travando isso (se ela cair, o módulo para em silêncio, com um `permission-denied` genérico que ninguém liga a um check-in). (2) A **falta só é afirmada depois que a janela FECHA** (horário + 30 min): enquanto ela está aberta a pessoa pode estar estacionando, e cobrar multa de quem chegou no horário custa o cliente, não a reserva. (3) A **taxa sai sobre o que já foi DECIDIDO**, não sobre o dia inteiro — dividir pelo total às 9h daria 95% de falta todo dia. (4) O código do totem **gira** (90 s) e morre ao fechar a tela; **só o gestor escreve `arena_devices`**. (5) O totem **não lista nomes** — um cumprimento, primeiro nome, 20 segundos: painel público num corredor com a agenda nominal do dia é exposição que ninguém pediu. (6) Quem chega pelo QR com **um** horário aberto não toca em nada — o caminho curto é a promessa do catálogo
 **"Vou acrescentar algo que OCUPA uma quadra"** → entre em `mergeArenaBlocks` (`arenas/domain/arenaBlocks.js`) e em `arenaOccupancy` (`arenas/services/arenaOccupancy.js`), **não** em cada tela. A cadeia estava repetida em CINCO lugares (dois serviços e três calendários) e a que ficasse para trás não dava erro — dava a quadra vendida duas vezes. Fonte opcional: quem não a carregou passa `undefined` e nada muda. Derivado x gravado: derive quando a coleção for legível pelo atleta (dia de jogo, vaga aberta, aula); **grave** quando não for (ordem de manutenção), e aí a cópia chega dentro de `gravados`
 **"Vou mexer em checklist, manutenção, estoque ou equipe da arena"** → `docs/24-MODULOS-DE-ARENA/04-OPERACOES.md`. (1) O estado do checklist HOJE sai de `checklistRunState(checklist, hoje)` — ler `checklist.items` direto na tela reintroduz o defeito de o checkmark de ontem aparecer marcado hoje; a virada do dia é feita ao abrir a tela e é **idempotente**. (2) Ordem de manutenção com `blocks_court` **grava** `arena_unavailabilities` (não deriva, ao contrário do dia de jogo — a ordem é privada da arena e o atleta nunca a leria), e **concluir ou cancelar devolve a quadra**; o `sync` só toca documentos com `maintenance_id`. (3) O **motivo** da ordem nunca entra no bloqueio público — ele diz só "Manutenção programada". (4) Marcar "fechar" sem data é ERRO, não bloqueio de zero dias. (5) A equipe (`arena_settings.staff`) **não guarda telefone nem e-mail**. (6) Toda mutação de manutenção invalida o calendário inteiro da arena (`arenaKeys.bloqueiosDaArena`), porque cada recorte de datas é uma consulta diferente
 **"Vou mexer em cupom, campanha, NPS, pontos ou indicação"** → `docs/24-MODULOS-DE-ARENA/03-MARKETING.md`. Sete coisas que NÃO podem regredir: (1) o cupom é **reconferido pelo serviço** contra o banco antes de gravar — conferir só no navegador deixa qualquer pessoa gravar um desconto que a arena não criou; (2) o uso do cupom é contabilizado na **confirmação**, nunca no pedido; (3) a campanha mostra **quantas pessoas** vão receber ANTES de enviar, e não envia para zero; (4) o NPS não é perguntado a quem não veio, nem mais de uma vez a cada 90 dias; (5) resgate de pontos e de indicação são escritas da **ARENA** (a regra só deixa o gestor escrever `arena_members` e `arena_wallets` — botão na tela do atleta dá "permissão negada" que ele não tem como resolver); (6) atalho de módulo vem do **catálogo**, não de lista escrita à mão; (7) o serviço de contabilizar cupom **não** se chama `useCoupon` (o ESLint trata `useX` como hook e derruba o lint de quem o chama)
 **"Criei uma tela nova de módulo de arena. Como alguém chega nela?"** → `<ArenaModuleShortcuts arenaId audience="manage"|"public" />`. Ele lê `manage`/`public` do catálogo e cruza com o que a arena ligou — rota preenchida vira botão sozinho, nos dois lugares (página da arena e Central). **Não escreva o link à mão**: o console de marketing existia, tinha rota, e nada na plataforma levava até ele — módulo ligado, tela inalcançável. Destinos repetidos viram um botão só
+**"Mudei/removi uma rota de tela de módulo de arena"** → o CATÁLOGO promete aquele caminho (`manage`/`public`) e `ArenaModuleShortcuts` monta o botão a partir dele — caminho com erro de digitação **não dá erro**, dá um botão bonito que leva a uma tela em branco, no celular do cliente, na frente da recepção. `src/core/guards/rotasDeModulos.test.js` lê `V2App.jsx` e reprova quem quebrar o par (e exige `:arenaId`, que é o nome que `arenaModuleRoute` troca)
 **"A tela precisa saber se um módulo está ligado"** → `useArenaModules(arenaId)` (UM hook, DUAS consultas, responde pelos 50). **Nunca** `useCanArenaUseModule` por módulo, e jamais dentro de um `map`
 **"Onde ficam os níveis de membro de uma arena?"** → `arena_settings.member_tiers` (campo opcional), **não** em `arena_tier_configs`: aquela coleção só o admin da plataforma escreve, e a arena ficaria sem poder configurar os próprios níveis. Ausente, valem os padrões (`DEFAULT_TIERS`)
 **"Onde está o MANUAL da plataforma?"** → `/ajuda` (flag `help_center`, default OFF): 33 artigos em 5 partes — Começar aqui, **Atleta**, **Arena**, **Professor**, Conta e privacidade. Conteúdo em `src/modules/help/domain/helpCenter.js`, página em `src/v2/pages/V2Help.jsx`. Acesso em três pontos de TODA tela (barra lateral, menu do usuário, gaveta do celular), fora dos hubs de propósito. Link direto por `?s=<seção>&a=<artigo>`. **Nada no Firestore** (só a parte preferida, no localStorage por usuário). Ver `docs/21-CENTRAL-DE-AJUDA.md`
@@ -429,6 +431,35 @@ chore(deps): bump firebase to 12.x
 > memory topic `picklerush-sync-2026-08.md`.
 >
 > **Destaques por onda**:
+>
+> - **Onda AO — A chegada: o totem, e a falta que passou a ser medida**
+>   (2026-09-14): o último módulo `BETA` do catálogo era **uma frase e nenhuma
+>   linha de código** — "presença confirmada sem ninguém no balcão, e no-show
+>   medido de verdade". E a promessa incomodava mais do que a ausência, porque
+>   **o número de faltas já existia**: `no_show` alimenta o painel semanal e a
+>   ficha do cliente no CRM, e era preenchido pelo gestor, uma reserva por vez,
+>   de memória, depois do expediente — um número que quase ninguém preenche é
+>   pior que nenhum, porque parece medido. **A decisão que dispensou o banco**:
+>   a tentação era criar `arena_checkins`, mas `arena_bookings` já deixa o
+>   titular e o gestor escreverem no documento, então a chegada é um **campo
+>   aditivo na própria reserva** — zero coleção, zero índice, **zero regra**, e
+>   a presença mora junto do horário a que se refere. Seis asserções novas no
+>   emulador (218) travam o contrato: o titular confirma a própria chegada, o
+>   estranho não confirma a dos outros, a arena confirma e desfaz, e **só o
+>   gestor gira o código do totem**. **O totem** é um tablet na recepção com um
+>   QR e um código de cinco caracteres que **gira a cada 90 s** (fixo na parede
+>   viraria mensagem de grupo — "manda aí que eu confirmo do carro") e morre ao
+>   fechar a tela; sai com a **marca da arena** (Onda AN — é a tela mais vista
+>   pelo cliente, e o único lugar onde o white label aparece de verdade) e
+>   **não lista ninguém**: cumprimenta o último que chegou, primeiro nome, 20
+>   segundos. Quem aponta a câmera **e tem um único horário aberto não toca em
+>   nada** — a promessa ao atleta tem sete palavras, e um botão ali seria
+>   transformar um gesto em dois. **A falta virou medida**: só é afirmada
+>   depois que a janela fecha (+30 min), a taxa sai sobre o que já foi
+>   DECIDIDO (dividir pelo total às 9h daria 95% de falta todo dia) e a arena
+>   marca **em lote**, num toque, sobre exatamente quem o sistema já sabe que
+>   não veio — era o trabalho manual que competia com fechar o caixa, e por
+>   isso nunca era feito. Ver `docs/24-MODULOS-DE-ARENA/08-CHEGADA-E-TOTEM.md`.
 >
 > - **Onda AN — PDV, marca, rede e inteligência: o último quarteirão**
 >   (2026-09-14): a onda que fechou os módulos de arena, e **seis defeitos**
@@ -974,10 +1005,10 @@ chore(deps): bump firebase to 12.x
 
 | Métrica | Valor | Delta do início do agente |
 |---|---|---|
-| **Testes Vitest** | **4273 passing** (261 arquivos) + 212 asserções de regras no emulador | +3865 (era 408) |
+| **Testes Vitest** | **4362 passing** (266 arquivos) + 218 asserções de regras no emulador | +3954 (era 408) |
 | **Lint errors** | 0 | era 30+ |
 | **Módulos** | 21 (+`help` — conteúdo dos tutoriais em tela) (`games` e `legal` saíram como `src/modules/` mas continuam como pastas oficiais — **rating virou módulo oficial** com domain/services/hooks/components) | +4 (coaches, circuits, games, legal) |
-| **V2 pages** | 79 (+V2GameDayTelao — telão, fora do V2Layout; +V2Help — central de ajuda) | +55 |
+| **V2 pages** | 82 (+V2GameDayTelao — telão, fora do V2Layout; +V2Help — central de ajuda; +V2ArenaKiosk — totem da recepção, também fora do V2Layout; +V2ArenaCheckin; +V2ArenaAttendance) | +58 |
 | **V2 components (src/v2/components/)** | **16 pastas** (+home, +rating, +settings, +tournament cresceu muito, +admin) | — |
 | **Coleções Firestore** | **122 top-level em `firestore.rules`** (+`doubles_rankings`) (as 13 da gamificação V2 documentadas em `05-DATA-MODEL.md`) | +82 |
 | **Índices compostos Firestore** | **33 em `firestore.indexes.json`** (+`provisional_claims`) (+4 da gamificação V2) | +28 |

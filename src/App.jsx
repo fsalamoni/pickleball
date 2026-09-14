@@ -16,6 +16,7 @@ const PublicTournament = lazy(() => import('@/pages/PublicTournament'));
 const PrintTournament = lazy(() => import('@/pages/PrintTournament'));
 const Telao = lazy(() => import('@/pages/Telao'));
 const GameDayTelao = lazy(() => import('@/v2/pages/V2GameDayTelao'));
+const ArenaKiosk = lazy(() => import('@/v2/pages/V2ArenaKiosk'));
 const PublicClub = lazy(() => import('@/pages/PublicClub'));
 
 // App principal (V2 / "Athleisure Premium"). Chunk isolado.
@@ -125,6 +126,15 @@ export default function App() {
               <Route
                 path="/dia-de-jogo/:gameDayId/telao"
                 element={<ProtectedRoute><GameDayTelao /></ProtectedRoute>}
+              />
+              {/* Totem de chegada da arena: página inteira, FORA do V2Layout —
+                  é um tablet na recepção, ligado o dia todo, e menu de
+                  plataforma ali só serve para alguém sair da tela sem querer.
+                  Exige login porque o totem escreve o código no equipamento da
+                  arena, e a regra só deixa o gestor escrever. */}
+              <Route
+                path="/arenas/:arenaId/totem"
+                element={<ProtectedRoute><ArenaKiosk /></ProtectedRoute>}
               />
               <Route path="/c/:clubId" element={<PublicClub />} />
               {/* Destino do link de convite (`buildReferralUrl` gera /r/CODIGO).

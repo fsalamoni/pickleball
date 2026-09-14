@@ -25,6 +25,7 @@ import { useArenaCoaches } from '@/modules/coaches/hooks/useCoaches';
 import V2BookingCalendar from '@/v2/components/arenas/V2BookingCalendar';
 import ArenaGameDaysSection from '@/v2/components/arenas/ArenaGameDaysSection';
 import ArenaNpsAsk from '@/v2/components/arenas/ArenaNpsAsk';
+import ArenaCheckinAsk from '@/v2/components/arenas/ArenaCheckinAsk';
 import ArenaModuleShortcuts from '@/v2/components/arenas/ArenaModuleShortcuts';
 import { isPixConfigured, PIX_KEY_TYPE_LABELS } from '@/modules/arenas/domain/pix_payment';
 import { groupRulesByCategory } from '@/modules/arenas/domain/arena_rules';
@@ -186,6 +187,14 @@ function V2ArenaDetailContent({ arenaId, user, arena, managed, bookings, isLoadi
           nos últimos 30 dias e não respondeu nos últimos 90 — o componente
           decide sozinho e não renderiza nada quando não é a hora. Mais abaixo
           ninguém veria; mais acima competiria com a ação principal da tela. */}
+      {/* "Chegou?" vem ANTES do "como foi?": um é sobre o jogo de agora, o
+          outro sobre o da semana passada, e quem está na porta da arena com o
+          horário marcado não deve ter de passar por uma pesquisa antes. Some
+          sozinho fora da janela de chegada. */}
+      <div className="mt-6 empty:mt-0">
+        <ArenaCheckinAsk arenaId={arenaId} />
+      </div>
+
       <div className="mt-6 empty:mt-0">
         <ArenaNpsAsk arenaId={arenaId} arenaName={arena.name} />
       </div>

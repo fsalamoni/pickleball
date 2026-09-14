@@ -524,7 +524,9 @@ export const ARENA_MODULE_DETAIL = Object.freeze({
       [ATHLETE]: 'Chegou, apontou a câmera, entrou.',
     },
     requires: [ARENA_MODULE_ID.IOT],
-    collections: ['arena_devices', 'bookings'],
+    manage: '/arenas/:arenaId/gerir/presenca',
+    public: '/arenas/:arenaId/chegada',
+    collections: ['arena_devices', 'arena_bookings'],
   },
   [ARENA_MODULE_ID.IOT_LIGHTING]: {
     status: EXTERNAL,

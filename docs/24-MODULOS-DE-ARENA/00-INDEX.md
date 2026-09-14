@@ -119,6 +119,7 @@ Um módulo pode estar pronto no código e não liberado; liberado e não ativado
 | 4 | Operações (checklist, manutenção, estoque, equipe) | ✅ `04-OPERACOES.md` |
 | 5 | Aulas e torneios internos | ✅ `05-AULAS.md` + `06-TORNEIOS-INTERNOS.md` |
 | 6 | PDV, rede multi-unidade, branding e inteligência | ✅ `07-PDV-MARCA-REDE-IA.md` |
+| 7 | Chegada: totem de check-in e presença medida | ✅ `08-CHEGADA-E-TOTEM.md` |
 
 ## 6. O que a plataforma NÃO consegue entregar sozinha
 
