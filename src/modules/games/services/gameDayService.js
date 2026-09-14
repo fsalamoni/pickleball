@@ -802,11 +802,25 @@ export async function finishPlayGame(gdId, gid, actor, { createNext = true } = {
   }
 }
 
-/** Cancela (remove) um jogo aberto do Play e devolve os jogadores à fila. */
+/**
+ * Cancela (remove) um jogo ABERTO e devolve os jogadores à fila. Vale para o
+ * Play e para o Americano aprimorado: o que se desfaz é o SORTEIO, não um
+ * resultado.
+ *
+ * Partida com placar NÃO é cancelada por aqui — apagar um resultado é outra
+ * ação, feita na lista de partidas concluídas, e que mexe no ranking do dia.
+ * A guarda existe pela corrida real: entre abrir a confirmação e confirmar,
+ * outra pessoa pode ter lançado o resultado na mesma quadra, e aí "cancelar a
+ * partida" apagaria em silêncio um placar já publicado.
+ */
 export async function cancelPlayGame(gdId, gid, actor) {
   const games = await listGameDayGames(gdId);
   const game = games.find((g) => g.id === gid);
   if (!game) return;
+  const temPlacar = game.score_a != null && game.score_b != null;
+  if (game.status === PLAY_GAME_STATUS.FINISHED || temPlacar) {
+    throw new Error('Esta partida já tem resultado lançado. Para desfazê-la, exclua-a na lista de partidas concluídas.');
+  }
   const now = Date.now();
   const playerIds = [...(game.side_a || []), ...(game.side_b || [])].map((p) => p.id).filter(Boolean);
   const batch = writeBatch(db);

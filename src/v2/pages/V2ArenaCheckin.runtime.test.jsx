@@ -45,10 +45,16 @@ vi.mock('@/modules/arenas/hooks/useCheckin', () => ({
 const { default: V2ArenaCheckin } = await import('./V2ArenaCheckin.jsx');
 
 const p = (n) => String(n).padStart(2, '0');
-const HOJE = (() => {
-  const d = new Date();
-  return `${d.getFullYear()}-${p(d.getMonth() + 1)}-${p(d.getDate())}`;
-})();
+
+// RELÓGIO FIXO ao MEIO-DIA. `slotRelativo` monta a HORA a partir de `Date.now()`
+// e a DATA sempre como "hoje": com o relógio real, rodar a suíte de noite fazia
+// `slotRelativo(+180)` virar 00:18 — uma hora no PASSADO dentro do mesmo dia —,
+// e o horário "daqui a três horas" virava um horário vencido. O teste passava
+// de manhã e reprovava à noite. Ao meio-dia, ±4h nunca cruzam a virada do dia.
+// Só `Date` é falseado: os temporizadores do React continuam reais, senão a
+// renderização não avança.
+const AGORA = new Date(2026, 5, 15, 12, 0, 0); // 15/06/2026, 12:00 (local)
+const HOJE = `${AGORA.getFullYear()}-${p(AGORA.getMonth() + 1)}-${p(AGORA.getDate())}`;
 
 /** Um horário que começa daqui a `emMinutos` (pode ser negativo). */
 function slotRelativo(emMinutos, duracaoMin = 60) {
@@ -69,6 +75,8 @@ const reserva = (over = {}) => ({
 let container, root;
 
 beforeEach(() => {
+  vi.useFakeTimers({ toFake: ['Date'] });
+  vi.setSystemTime(AGORA);
   LIGADOS.clear();
   LIGADOS.add(ARENA_MODULE_ID.IOT_QR_KIOSK);
   chegar.mockClear();
@@ -83,6 +91,7 @@ afterEach(() => {
   act(() => root.unmount());
   container.remove();
   document.body.innerHTML = '';
+  vi.useRealTimers();
 });
 
 async function render(rota = '/arenas/a1/chegada') {

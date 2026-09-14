@@ -69,10 +69,20 @@ plataforma. Domínio puro em `domain/americanoLive.js` (com testes):
 - `americanoLiveProgress` / `suggestAmericanoLiveTotal` — a bússola do dia
   (`ceil(n(n-1)/4)` partidas para todos com todos, contra todos duas vezes).
 
-Serviço: `createNextAmericanoLiveGame`, `submitAmericanoLiveResult`,
-`updateAmericanoLiveResult`, `createManualAmericanoLiveGame`. UI em
+Serviço: `createNextAmericanoLiveGame`, `createAmericanoLiveRoundForFreeCourts`,
+`submitAmericanoLiveResult`, `updateAmericanoLiveResult`,
+`createManualAmericanoLiveGame`; e, reaproveitados do Play, `cancelPlayGame` e
+`noShowSwapPlayGame`. UI em
 `v2/components/games/AthleteAmericanoLiveOrganizer.jsx`, que **compõe** as
 seções do Play e as do Americano em vez de reimplementá-las.
+
+**Corrigir a quadra vale nas DUAS telas** (painel e telão): tocar no nome de
+quem está em quadra abre `CourtPlayerDialog` (deixar de fora × substituir), e
+"Cancelar partida" devolve os quatro à fila sem placar nenhum. 🐞 Antes as duas
+ações só existiam no telão, e desfazer um sorteio no painel exigia lançar um
+resultado que não aconteceu para depois apagá-lo — um placar falso passando
+pelo ranking do dia. `cancelPlayGame` **recusa** partida que já tem placar: essa
+sai pela lista de partidas concluídas, que re-sincroniza o ranking.
 
 O fluxo é de DOIS passos: **"Lançar resultado"** grava o placar e libera a
 quadra; só então aparece **"Gerar próxima partida"**. Há teste preso nisso.
@@ -325,6 +335,16 @@ Regras que valem a pena não desfazer:
   `forecastAmericanoLiveMatches`), nunca de um sorteio paralelo. É o que
   garante que o "quem entra em cada quadra" anunciado na tela seja o que é
   criado. Há teste travando a igualdade.
+- **No Americano aprimorado, a rodada é escolhida como UM TODO**
+  (`bestAmericanoLiveRound`, privada em `domain/americanoLive.js`): os grupos de
+  uma rodada são disjuntos, então o custo da rodada é a soma dos custos dos
+  grupos sobre o mesmo histórico, e dá para otimizar a partição inteira. Sem
+  isso a primeira quadra leva o melhor quarteto e a última herda o que sobrou —
+  com 8 em 2 quadras, o dia inteiro formava **12 das 28 duplas**; com a rodada,
+  **28 de 28**. Com UMA quadra livre o caminho é exatamente o de antes.
+- **A frente da fila não é sacrificada pela variedade.** A rodada é obrigada a
+  incluir o primeiro elegível e os `k·4 − 4` primeiros da fila; sem isso, buscar
+  duplas inéditas no fundo empurra sempre a mesma pessoa para fora.
 - **Um lote só.** Meia rodada — uma quadra criada e a outra não — consome a
   fila pela metade e ninguém entende o que aconteceu.
 - **`createNext` continua `true` por padrão.** Nada muda para quem não usa a

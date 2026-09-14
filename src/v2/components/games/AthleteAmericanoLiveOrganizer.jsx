@@ -2,7 +2,7 @@ import React, { useMemo, useState } from 'react';
 import { toast } from 'sonner';
 import {
   LayoutGrid, ListOrdered, Check, PlayCircle, Trash2, Pencil, Trophy,
-  Target, Plus, Swords, Shuffle,
+  Target, Plus, Swords, Shuffle, MoreHorizontal, XCircle,
 } from 'lucide-react';
 
 import { UserAvatar } from '@/components/ui/user-avatar';
@@ -15,7 +15,7 @@ import V2CollapsibleCard from '@/v2/ui/V2CollapsibleCard';
 import { GAME_DAY_SECTION } from '@/v2/components/games/gameDaySections';
 import GameDayAdminsCard from '@/v2/components/games/GameDayAdminsCard';
 import {
-  PlayParticipantsSection, PlayOrderSection,
+  PlayParticipantsSection, PlayOrderSection, CourtPlayerDialog,
 } from '@/v2/components/games/AthletePlayOrganizer';
 import {
   DailyRankingSection, RankingSection,
@@ -26,6 +26,7 @@ import {
   useGameDayParticipants, useGameDayGames, useDeleteGameDayGame,
   useCreateNextAmericanoLiveGame, useCreateAmericanoLiveRound, useSubmitAmericanoLiveResult,
   useUpdateAmericanoLiveResult, useCreateManualAmericanoLiveGame,
+  useCancelPlayGame, useNoShowSwapPlayGame,
 } from '@/modules/games/hooks/useGameDays';
 import { PLAY_GAME_STATUS, freePlayCourts } from '@/modules/games/domain/gamePlay';
 import {
@@ -112,11 +113,24 @@ function ProgressSection({ participants, games }) {
             <div className="h-full rounded-full bg-acid" style={{ width: `${pct}%` }} />
           </div>
         </div>
-        <div className="grid grid-cols-2 gap-2 text-xs sm:grid-cols-4">
+        {/* Os DOIS alvos do formato americano, lado a lado: todos com todos
+            (duplas) e contra todos duas vezes (confrontos). Mostrar só o
+            primeiro escondia metade do que o sorteio persegue. */}
+        <div className="grid grid-cols-2 gap-2 text-xs sm:grid-cols-3">
           <Metrica rotulo="Participantes" valor={p.participantes} />
-          <Metrica rotulo="Duplas formadas" valor={`${p.duplasFormadas}/${p.duplasPossiveis}`} />
+          <Metrica
+            rotulo="Duplas com todos"
+            valor={`${p.duplasFormadas}/${p.duplasPossiveis}`}
+            detalhe="pares que já jogaram juntos"
+          />
+          <Metrica
+            rotulo="Contra todos 2x"
+            valor={`${p.confrontosCompletos}/${p.confrontosPossiveis}`}
+            detalhe="pares que já se enfrentaram duas vezes"
+          />
           <Metrica rotulo="Menos jogou" valor={`${p.minJogos} jogo(s)`} />
           <Metrica rotulo="Mais jogou" valor={`${p.maxJogos} jogo(s)`} />
+          <Metrica rotulo="Partidas criadas" valor={p.partidasCriadas} />
         </div>
         <p className="text-[11px] leading-5 text-gray-500">
           A previsão de <strong>~{p.partidasPrevistas}</strong> partidas é o número que faria
@@ -129,9 +143,9 @@ function ProgressSection({ participants, games }) {
   );
 }
 
-function Metrica({ rotulo, valor }) {
+function Metrica({ rotulo, valor, detalhe = null }) {
   return (
-    <div className="rounded-xl border border-gray-100 p-2">
+    <div className="rounded-xl border border-gray-100 p-2" title={detalhe || undefined}>
       <div className="text-[10px] uppercase tracking-wide text-gray-400">{rotulo}</div>
       <div className="mt-0.5 font-display text-base font-bold text-ink">{valor}</div>
     </div>
@@ -144,7 +158,15 @@ function CourtsSection({ gameDay, participants, games, view, canManage }) {
   const criar = useCreateNextAmericanoLiveGame(gameDay.id);
   const criarRodada = useCreateAmericanoLiveRound(gameDay.id);
   const lancar = useSubmitAmericanoLiveResult(gameDay.id);
+  // As duas saídas que faltavam nesta tela e já existiam no telão: trocar quem
+  // está em quadra e CANCELAR a partida sorteada. Sem elas, desfazer um
+  // sorteio exigia lançar um placar que não aconteceu e apagá-lo depois — um
+  // resultado falso passando pelo ranking do dia só para corrigir a quadra.
+  const cancelar = useCancelPlayGame(gameDay.id);
+  const substituir = useNoShowSwapPlayGame(gameDay.id);
   const [manualOpen, setManualOpen] = useState(false);
+  const [alvoSubstituir, setAlvoSubstituir] = useState(null); // { gid, player, game }
+  const [alvoCancelar, setAlvoCancelar] = useState(null); // { gid, court }
 
   const courts = Math.max(1, Number(gameDay.play_courts) || 1);
   const abertos = useMemo(
@@ -172,6 +194,26 @@ function CourtsSection({ gameDay, participants, games, view, canManage }) {
       toast.success(`Partida sorteada na quadra ${court}.`);
     } catch (e) {
       toast.error(e?.message || 'Não foi possível sortear.');
+    }
+  };
+
+  const cancelarPartida = async ({ gid, court }) => {
+    try {
+      await cancelar.mutateAsync(gid);
+      toast.success(`Partida cancelada. A quadra ${court} está livre e os jogadores voltaram para a fila.`);
+    } catch (e) {
+      toast.error(e?.message || 'Não foi possível cancelar a partida.');
+    }
+  };
+
+  const trocarJogador = async ({ gid, absentId, replacementId, nome, entrando }) => {
+    try {
+      await substituir.mutateAsync({ gid, absentId, replacementId });
+      toast.success(entrando
+        ? `${entrando} entrou no lugar de ${nome}.`
+        : `${nome} saiu da partida e entrou o próximo da ordem.`);
+    } catch (e) {
+      toast.error(e?.message || 'Não foi possível alterar a partida.');
     }
   };
 
@@ -242,6 +284,14 @@ function CourtsSection({ gameDay, participants, games, view, canManage }) {
             podeGerar={livres.includes(court) && disponiveis >= 4}
             disponiveis={disponiveis}
             onGerar={() => gerar(court)}
+            onJogador={(pl) => {
+              const g = porQuadra.get(court);
+              if (g) setAlvoSubstituir({ gid: g.id, player: pl, game: g });
+            }}
+            onCancelar={() => {
+              const g = porQuadra.get(court);
+              if (g) setAlvoCancelar({ gid: g.id, court });
+            }}
             onLancar={async ({ scoreA, scoreB }) => {
               const g = porQuadra.get(court);
               if (!g) return;
@@ -252,7 +302,7 @@ function CourtsSection({ gameDay, participants, games, view, canManage }) {
                 toast.error(e?.message || 'Não foi possível salvar o resultado.');
               }
             }}
-            pendente={lancar.isPending || criar.isPending}
+            pendente={lancar.isPending || criar.isPending || cancelar.isPending || substituir.isPending}
           />
         ))}
 
@@ -267,11 +317,50 @@ function CourtsSection({ gameDay, participants, games, view, canManage }) {
         games={games}
         livres={livres}
       />
+
+      {/* Clicar num nome em quadra abre a MESMA escolha do Play e do telão:
+          deixar indisponível para esta partida (entra o próximo da ordem) ou
+          escolher quem entra. Um componente só para as três telas — se fossem
+          três, um dia ofereceriam coisas diferentes. */}
+      <CourtPlayerDialog
+        target={alvoSubstituir}
+        order={view.order}
+        onClose={() => setAlvoSubstituir(null)}
+        onConfirm={({ gid, absentId, replacementId }) => {
+          const alvo = alvoSubstituir;
+          setAlvoSubstituir(null);
+          const entrando = replacementId ? view.order.find((p) => p.id === replacementId) : null;
+          trocarJogador({
+            gid,
+            absentId,
+            replacementId,
+            nome: alvo?.player?.name || 'O jogador',
+            entrando: entrando?.name || '',
+          });
+        }}
+      />
+
+      <ConfirmDialog
+        open={!!alvoCancelar}
+        onOpenChange={(v) => !v && setAlvoCancelar(null)}
+        destructive
+        title={alvoCancelar ? `Cancelar a partida da quadra ${alvoCancelar.court}?` : 'Cancelar a partida?'}
+        description="A partida sai da quadra sem placar nenhum e os quatro voltam para a fila. Nada vai para o ranking do dia. Depois disso, a quadra oferece um NOVO sorteio, com outra organização."
+        confirmLabel="Cancelar partida"
+        cancelLabel="Voltar"
+        onConfirm={() => {
+          const alvo = alvoCancelar;
+          setAlvoCancelar(null);
+          if (alvo) cancelarPartida(alvo);
+        }}
+      />
     </V2CollapsibleCard>
   );
 }
 
-function CourtCard({ court, game, canManage, podeGerar, disponiveis, onGerar, onLancar, pendente }) {
+function CourtCard({
+  court, game, canManage, podeGerar, disponiveis, onGerar, onLancar, onJogador, onCancelar, pendente,
+}) {
   const [a, setA] = useState('');
   const [b, setB] = useState('');
   React.useEffect(() => { setA(''); setB(''); }, [game?.id]);
@@ -294,9 +383,9 @@ function CourtCard({ court, game, canManage, podeGerar, disponiveis, onGerar, on
       {game ? (
         <>
           <div className="mt-3 flex flex-wrap items-center justify-center gap-3">
-            <Lado side={game.side_a} align="right" />
+            <Lado side={game.side_a} align="right" onJogador={canManage ? onJogador : null} />
             <span className="text-xs font-bold text-gray-400">VS</span>
-            <Lado side={game.side_b} align="left" />
+            <Lado side={game.side_b} align="left" onJogador={canManage ? onJogador : null} />
           </div>
           {canManage && (
             <div className="mt-3 flex flex-wrap items-end justify-center gap-2">
@@ -329,6 +418,23 @@ function CourtCard({ court, game, canManage, podeGerar, disponiveis, onGerar, on
               </V2Button>
             </div>
           )}
+          {canManage && (
+            <div className="mt-2 flex flex-col items-center gap-1">
+              <V2Button
+                size="sm"
+                variant="ghost"
+                className="text-red-500 hover:text-red-600"
+                disabled={pendente}
+                onClick={onCancelar}
+              >
+                <XCircle className="mr-1 h-3.5 w-3.5" /> Cancelar partida
+              </V2Button>
+              <p className="text-center text-[10px] leading-4 text-gray-400">
+                Toque num nome para deixá-lo de fora ou trocá-lo. Cancelar devolve os quatro
+                à fila, sem placar — e a quadra volta a oferecer um novo sorteio.
+              </p>
+            </div>
+          )}
         </>
       ) : (
         <div className="mt-3 flex flex-col items-center gap-2">
@@ -348,16 +454,33 @@ function CourtCard({ court, game, canManage, podeGerar, disponiveis, onGerar, on
   );
 }
 
-function Lado({ side, align }) {
+/**
+ * Um lado da partida. Com `onJogador`, cada nome vira BOTÃO — é o que abre as
+ * opções da partida para aquele jogador (deixar de fora × substituir). Sem
+ * ele, texto puro: quem não organiza não tem o que tocar.
+ */
+function Lado({ side, align, onJogador = null }) {
   const jogadores = (side || []).filter(Boolean);
   return (
     <div className={`flex flex-col gap-1 ${align === 'right' ? 'items-end' : 'items-start'}`}>
-      {jogadores.map((p) => (
+      {jogadores.map((p) => (onJogador && p?.id ? (
+        <button
+          key={p.id}
+          type="button"
+          onClick={() => onJogador(p)}
+          title={`Opções para ${p.name || 'este jogador'}: indisponível para esta partida ou substituir por outro jogador`}
+          className="group inline-flex max-w-[160px] items-center gap-1.5 rounded-full px-1 py-0.5 text-left transition-colors hover:bg-gray-100"
+        >
+          <UserAvatar name={p.name} photoUrl={p.photo_url} size="xs" />
+          <span className="truncate text-sm font-semibold text-ink">{p.name || p.id}</span>
+          <MoreHorizontal aria-hidden="true" className="h-3 w-3 shrink-0 text-gray-300 group-hover:text-ink" />
+        </button>
+      ) : (
         <span key={p.id || p} className="inline-flex max-w-[150px] items-center gap-1.5">
           <UserAvatar name={p.name} photoUrl={p.photo_url} size="xs" />
           <span className="truncate text-sm font-semibold text-ink">{p.name || p}</span>
         </span>
-      ))}
+      )))}
     </div>
   );
 }

@@ -30,6 +30,8 @@ const mutacoes = {
   apagar: vi.fn(async () => ({})),
   manual: vi.fn(async () => ({})),
   gerarRodada: vi.fn(async () => ({ created: [{ court: 1 }, { court: 2 }], courts: [1, 2] })),
+  cancelar: vi.fn(async () => ({})),
+  substituir: vi.fn(async () => ({})),
 };
 const vazio = { mutate: vi.fn(), mutateAsync: vi.fn(async () => ({})), isPending: false };
 const comMutacao = (fn) => ({ ...vazio, mutate: fn, mutateAsync: fn, isPending: false });
@@ -66,6 +68,8 @@ vi.mock('@/modules/games/hooks/useGameDays', () => ({
   useSubmitAmericanoLiveResult: () => comMutacao(mutacoes.lancar),
   useUpdateAmericanoLiveResult: () => comMutacao(mutacoes.editar),
   useCreateManualAmericanoLiveGame: () => comMutacao(mutacoes.manual),
+  useCancelPlayGame: () => comMutacao(mutacoes.cancelar),
+  useNoShowSwapPlayGame: () => comMutacao(mutacoes.substituir),
 }));
 
 const { default: AthleteAmericanoLiveOrganizer } = await import('./AthleteAmericanoLiveOrganizer.jsx');
@@ -330,5 +334,97 @@ describe('⭐ sortear TODAS as quadras de uma vez (Americano aprimorado)', () =>
     auth.user = { uid: 'visitante' };
     await render();
     expect(botao('Sortear todas as quadras')).toBeUndefined();
+  });
+});
+
+/* ---------------------------------------------------------------------------
+ * AS DUAS SAÍDAS QUE SÓ O TELÃO TINHA
+ *
+ * Substituir quem está em quadra e CANCELAR a partida sorteada existiam no
+ * telão e não aqui. Sem elas, desfazer um sorteio exigia lançar um placar que
+ * não aconteceu e apagá-lo depois — um resultado falso passando pelo ranking
+ * do dia só para liberar a quadra.
+ * ------------------------------------------------------------------------ */
+describe('⭐ substituir quem está em quadra (visão normal)', () => {
+  const nomeEmQuadra = (nome) => [...container.querySelectorAll('button')]
+    .find((b) => (b.getAttribute('title') || '').startsWith(`Opções para ${nome}`));
+
+  it('⭐ o nome de quem está em quadra é clicável e abre as duas opções', async () => {
+    await render();
+    const ana = nomeEmQuadra('Ana');
+    expect(ana).toBeTruthy();
+    click(ana);
+    await act(async () => { await Promise.resolve(); });
+    const txt = document.body.textContent;
+    expect(txt).toContain('Indisponível para esta partida');
+    expect(txt).toContain('Substituir por outro jogador');
+  });
+
+  it('⭐ "indisponível" entra o próximo da ordem (sem escolher ninguém)', async () => {
+    await render();
+    click(nomeEmQuadra('Ana'));
+    await act(async () => { await Promise.resolve(); });
+    click([...document.body.querySelectorAll('button')]
+      .find((b) => b.textContent.includes('Indisponível para esta partida')));
+    await act(async () => { await Promise.resolve(); });
+    expect(mutacoes.substituir).toHaveBeenCalledWith({ gid: 'g2', absentId: 'a', replacementId: null });
+  });
+
+  it('⭐ "substituir" deixa escolher exatamente quem entra', async () => {
+    await render();
+    click(nomeEmQuadra('Caio'));
+    await act(async () => { await Promise.resolve(); });
+    click([...document.body.querySelectorAll('button')]
+      .find((b) => b.textContent.includes('Substituir por outro jogador')));
+    await act(async () => { await Promise.resolve(); });
+    // A lista é a ordem de participação: Elis é a primeira da fila.
+    const entra = [...document.body.querySelectorAll('button')]
+      .filter((b) => b.textContent.trim().startsWith('Entra'));
+    expect(entra.length).toBeGreaterThan(0);
+    click(entra[0]);
+    await act(async () => { await Promise.resolve(); });
+    expect(mutacoes.substituir).toHaveBeenCalledWith({ gid: 'g2', absentId: 'c', replacementId: 'e' });
+  });
+
+  it('quem NÃO organiza vê os nomes, e nenhum deles é botão', async () => {
+    auth.user = { uid: 'visitante' };
+    await render();
+    expect(container.textContent).toContain('Ana');
+    expect(nomeEmQuadra('Ana')).toBeUndefined();
+  });
+});
+
+describe('⭐ cancelar a partida lançada (visão normal)', () => {
+  it('⭐ cancelar PEDE confirmação — um toque não desfaz um sorteio', async () => {
+    await render();
+    const cancelar = botao('Cancelar partida');
+    expect(cancelar).toBeTruthy();
+    click(cancelar);
+    await act(async () => { await Promise.resolve(); });
+    expect(mutacoes.cancelar).not.toHaveBeenCalled();
+    expect(document.body.textContent).toContain('Cancelar a partida da quadra 1?');
+  });
+
+  it('⭐ confirmado, a quadra é liberada SEM placar nenhum', async () => {
+    await render();
+    click(botao('Cancelar partida'));
+    await act(async () => { await Promise.resolve(); });
+    click([...document.body.querySelectorAll('button')]
+      .find((b) => b.textContent.trim() === 'Cancelar partida' && b.closest('[role="alertdialog"]')));
+    await act(async () => { await Promise.resolve(); });
+    expect(mutacoes.cancelar).toHaveBeenCalledWith('g2');
+    expect(mutacoes.lancar).not.toHaveBeenCalled();
+  });
+
+  it('a quadra LIVRE não oferece cancelar (não há o que desfazer)', async () => {
+    dados.games = [concluida]; // nenhuma quadra ocupada
+    await render();
+    expect(botao('Cancelar partida')).toBeUndefined();
+  });
+
+  it('quem NÃO organiza não vê o cancelar', async () => {
+    auth.user = { uid: 'visitante' };
+    await render();
+    expect(botao('Cancelar partida')).toBeUndefined();
   });
 });

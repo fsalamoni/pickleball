@@ -327,3 +327,125 @@ describe('⭐ drawAmericanoLiveRoundForFreeCourts', () => {
     expect(drawAmericanoLiveRoundForFreeCourts([], { courts: 2, games: [], rng })).toEqual([]);
   });
 });
+
+/* ---------------------------------------------------------------------------
+ * A RODADA OLHA A RODADA INTEIRA
+ *
+ * O formato é americano: com elenco estável, todos deveriam formar dupla com
+ * todos e enfrentar todos duas vezes. Sortear quadra a quadra não chega nem
+ * perto disso quando o número de atletas é exatamente o das quadras — a
+ * primeira quadra leva o melhor grupo e a última herda o que sobrou.
+ * ------------------------------------------------------------------------ */
+describe('⭐ a rodada é escolhida como um todo, não quadra a quadra', () => {
+  it('⭐ com 8 e 2 quadras, o grupo que SOBRA também entra na conta', () => {
+    // O caso que o sorteio guloso não enxerga: entre e, f, g e h TODAS as seis
+    // duplas já aconteceram. Escolhendo a quadra 1 primeiro, a|b|c|d é o grupo
+    // mais barato que existe — e a quadra 2 fica obrigada a repetir duas
+    // duplas, custo que nunca entrou na decisão da quadra 1. Olhando a rodada
+    // inteira, os quatro "gastos" se espalham pelas duas quadras e não se
+    // repete nada.
+    const games = [
+      jogo(['e', 'f'], ['g', 'h']), jogo(['e', 'g'], ['f', 'h']), jogo(['e', 'h'], ['f', 'g']),
+    ];
+    const r = drawAmericanoLiveRoundForFreeCourts(
+      fila(['a', 'b', 'c', 'd', 'e', 'f', 'g', 'h']), { courts: 2, games, rng },
+    );
+    expect(r).toHaveLength(2);
+    const duplas = r.flatMap((b) => [
+      [...b.side_a].sort().join('|'), [...b.side_b].sort().join('|'),
+    ]);
+    // Nenhuma das seis duplas já formadas entre e, f, g e h volta.
+    ['e|f', 'e|g', 'e|h', 'f|g', 'f|h', 'g|h'].forEach((d) => {
+      expect(duplas).not.toContain(d);
+    });
+    // Ou seja: os dois quartetos foram misturados, não mantidos.
+    r.forEach((bloco) => {
+      const doFundo = bloco.ids.filter((id) => 'efgh'.includes(id)).length;
+      expect(doFundo).toBe(2);
+    });
+  });
+
+  it('⭐ dia inteiro com elenco estável: TODOS formam dupla com todos', () => {
+    // 8 atletas, 2 quadras. C(8,2) = 28 duplas possíveis; 2 por partida ⇒ 14
+    // partidas cobririam todas. Rodando o dia inteiro pela rodada, a cobertura
+    // tem de ser total. (Quadra a quadra, o mesmo dia formava 12 das 28: os
+    // dois quartetos nunca se cruzavam.)
+    const ids = ['a', 'b', 'c', 'd', 'e', 'f', 'g', 'h'];
+    let relogio = 1000;
+    const estado = new Map(ids.map((id, i) => [id, 1000 + i]));
+    const games = [];
+    for (let rodada = 0; rodada < 8; rodada += 1) {
+      const ordem = ids
+        .map((id) => P(id, { available_since: estado.get(id) }))
+        .sort((x, y) => x.available_since - y.available_since);
+      const r = drawAmericanoLiveRoundForFreeCourts(ordem, { courts: 2, games: [...games], rng });
+      expect(r).toHaveLength(2);
+      r.forEach((b) => {
+        games.push(jogo(b.side_a, b.side_b));
+        b.ids.forEach((id) => { relogio += 1; estado.set(id, relogio); });
+      });
+    }
+    const duplas = new Set(games.flatMap((g) => [
+      g.side_a.map((p) => p.id).sort().join('|'),
+      g.side_b.map((p) => p.id).sort().join('|'),
+    ]));
+    expect(duplas.size).toBe(28);
+
+    // E o alvo do confronto: ninguém fica sem enfrentar alguém.
+    const conf = new Map();
+    games.forEach((g) => {
+      g.side_a.forEach((x) => g.side_b.forEach((y) => {
+        const k = [x.id, y.id].sort().join('|');
+        conf.set(k, (conf.get(k) || 0) + 1);
+      }));
+    });
+    expect(conf.size).toBe(28);
+  });
+
+  it('⭐ ninguém joga duas vezes na mesma rodada', () => {
+    const r = drawAmericanoLiveRoundForFreeCourts(
+      fila(['a', 'b', 'c', 'd', 'e', 'f', 'g', 'h', 'i', 'j', 'k', 'l']),
+      { courts: 3, games: [], rng },
+    );
+    expect(r).toHaveLength(3);
+    const todos = r.flatMap((b) => b.ids);
+    expect(todos).toHaveLength(12);
+    expect(new Set(todos).size).toBe(12);
+  });
+
+  it('⭐ a frente da fila continua jogando: quem espera há mais tempo entra', () => {
+    // 12 na fila, 2 quadras: 8 jogam. Os 4 primeiros da fila são obrigatórios —
+    // sem isso, buscar variedade no fundo da fila deixaria gente de fora duas
+    // rodadas seguidas.
+    const entrada = fila(['a', 'b', 'c', 'd', 'e', 'f', 'g', 'h', 'i', 'j', 'k', 'l']);
+    const r = drawAmericanoLiveRoundForFreeCourts(entrada, { courts: 2, games: [], rng });
+    const escolhidos = new Set(r.flatMap((b) => b.ids));
+    ['a', 'b', 'c', 'd'].forEach((id) => expect(escolhidos.has(id)).toBe(true));
+  });
+
+  it('⭐ dupla fixa continua entrando junta, mesmo na rodada', () => {
+    const entrada = [
+      P('a', { available_since: 1000, partner_id: 'b' }),
+      P('b', { available_since: 1001, partner_id: 'a' }),
+      P('c', { available_since: 1002 }), P('d', { available_since: 1003 }),
+      P('e', { available_since: 1004 }), P('f', { available_since: 1005 }),
+      P('g', { available_since: 1006 }), P('h', { available_since: 1007 }),
+    ];
+    const r = drawAmericanoLiveRoundForFreeCourts(entrada, { courts: 2, games: [], rng });
+    const bloco = r.find((b) => b.ids.includes('a'));
+    expect(bloco.ids).toContain('b');
+    // E juntos DO MESMO LADO — dupla fixa é dupla, não adversário.
+    const lado = bloco.side_a.includes('a') ? bloco.side_a : bloco.side_b;
+    expect(lado).toContain('b');
+  });
+
+  it('com UMA quadra livre, o caminho é o de sempre (partida a partida)', () => {
+    const entrada = fila(['a', 'b', 'c', 'd', 'e', 'f']);
+    const umaQuadra = drawAmericanoLiveRoundForFreeCourts(entrada, { courts: 1, games: [], rng });
+    const sozinha = drawNextAmericanoLiveMatch(entrada, { games: [], rng });
+    expect(umaQuadra).toHaveLength(1);
+    expect(umaQuadra[0].ids).toEqual(sozinha.ids);
+    expect(umaQuadra[0].side_a).toEqual(sozinha.side_a);
+    expect(umaQuadra[0].side_b).toEqual(sozinha.side_b);
+  });
+});

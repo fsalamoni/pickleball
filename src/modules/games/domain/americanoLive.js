@@ -190,6 +190,175 @@ export function drawNextAmericanoLiveMatch(availableOrdered, opts = {}) {
 }
 
 /**
+ * A RODADA INTEIRA de uma vez: a melhor divisão da fila em `k` grupos de 4,
+ * um por quadra livre.
+ *
+ * ## Por que isto existe
+ *
+ * Sortear quadra a quadra é GULOSO: a primeira quadra fica com o melhor grupo
+ * possível e a segunda herda o que sobrou. Com 8 na fila e 2 quadras, escolher
+ * os 4 da quadra 1 já DETERMINA os 4 da quadra 2 — e o custo do grupo que
+ * sobra não entrou em conta nenhuma. Medido em simulação de um dia inteiro
+ * (elenco estável, 8 atletas, 2 quadras, 16 partidas): guloso formava
+ * **12 das 28 duplas possíveis**; a rodada otimizada em conjunto forma 26.
+ *
+ * ## Por que os grupos podem ser avaliados separadamente
+ *
+ * Os grupos de uma rodada são DISJUNTOS: as duplas e os confrontos que a
+ * quadra 1 cria envolvem só gente da quadra 1. Então o custo da rodada é a
+ * soma dos custos dos grupos sobre o MESMO histórico — não há interação para
+ * modelar, e a otimização vira uma partição de custo aditivo.
+ *
+ * ## Como escolhe
+ *
+ * 1. SEMENTE: exatamente o sorteio guloso de hoje (que já respeita duplas
+ *    fixas e o primeiro elegível da fila). Assim a rodada nunca sai pior que
+ *    a de antes.
+ * 2. MELHORIA: trocas de dois em dois — um jogador de um grupo por um de
+ *    outro, ou por alguém que ficou de fora — enquanto baixarem o custo total.
+ *    A busca para quando nenhuma troca melhora.
+ *
+ * Restrições que NENHUMA troca pode violar: duplas fixas em cada grupo, o
+ * primeiro elegível da fila continua jogando, e a FRENTE da fila continua
+ * dentro da rodada — juntas, são o que impede que a busca por variedade
+ * empurre sempre a mesma pessoa para fora.
+ *
+ * @returns {Array<string[]>|null} `k` grupos de ids, ou null se não dá rodada.
+ */
+function bestAmericanoLiveRound(fila, k, opts = {}) {
+  const {
+    games = [], levels = null, rng = Math.random, slots = PLAY_SLOTS,
+    windowExtra = AMERICANO_LIVE_WINDOW_EXTRA,
+    orderWeight = AMERICANO_LIVE_ORDER_WEIGHT,
+  } = opts;
+  if (k < 1 || fila.length < k * slots) return null;
+
+  // Semente: o sorteio de hoje, quadra a quadra.
+  let restante = fila.slice();
+  const jogosHipoteticos = [...(games || [])];
+  const grupos = [];
+  for (let i = 0; i < k; i += 1) {
+    const escolha = drawNextAmericanoLiveMatch(restante, {
+      games: jogosHipoteticos, levels, rng, slots, windowExtra, orderWeight,
+    });
+    if (!escolha) return null;
+    grupos.push(escolha.ids.slice());
+    const dentro = new Set(escolha.ids);
+    restante = restante.filter((p) => !dentro.has(p.id));
+    jogosHipoteticos.push({ side_a: escolha.side_a, side_b: escolha.side_b });
+  }
+  if (k === 1) return grupos;
+
+  // Daqui para baixo, a rodada é avaliada como um todo. O histórico é UM só
+  // (os grupos são disjuntos, então não há efeito de um sobre o outro) e a
+  // posição na fila é a de `fila`, não a da fila que ia encolhendo.
+  const historico = buildDrawHistory(games || [], fila.map((p) => p.id));
+  const posicao = new Map(fila.map((p, i) => [p.id, i]));
+  const primeiroElegivel = (buildPlayNextMatch(fila, { slots }) || [])[0] || null;
+  // Janela: os `k*slots` da frente mais uma folga. Fora dela ninguém entra —
+  // mesma regra do sorteio de uma quadra, só que dimensionada para a rodada.
+  const janela = fila.slice(0, k * slots + Math.max(0, windowExtra)).map((p) => p.id);
+  // FRENTE DA FILA: quem está esperando há mais tempo joga esta rodada, ponto.
+  // Sem isto, trazer alguém do fundo para desfazer uma repetição empurra um
+  // dos primeiros para fora — e repetido ao longo da noite isso vira gente com
+  // partidas a menos que os outros. A rodada tem `k*slots` vagas e a folga de
+  // escolha é `windowExtra`; o resto da frente é obrigatório.
+  //
+  // Filtrado pelo que a SEMENTE já escolheu: se uma dupla fixa deixou alguém
+  // da frente de fora, a restrição não pode travar a busca inteira — ela existe
+  // para não DESFAZER o que o sorteio guloso já garantiu, não para exigir o
+  // impossível.
+  const naSemente = new Set(grupos.flat());
+  const obrigatorios = fila
+    .slice(0, Math.max(0, k * slots - Math.max(0, windowExtra)))
+    .map((p) => p.id)
+    .filter((id) => naSemente.has(id));
+
+  const memo = new Map();
+  const custoGrupo = (grupo) => {
+    const chave = [...grupo].sort().join('|');
+    if (memo.has(chave)) return memo.get(chave);
+    const par = pairFourBalanced(grupo, { history: historico, levels, rng });
+    memo.set(chave, par.cost);
+    return par.cost;
+  };
+  const custoOrdem = (grupo) => grupo.reduce((acc, id) => acc + (posicao.get(id) ?? 0), 0);
+  const custoTotal = (gs) => gs.reduce(
+    (acc, g) => acc + custoGrupo(g) + orderWeight * custoOrdem(g), 0,
+  );
+
+  const valido = (grupo) => respectsFixedPairs(grupo, fila);
+  let atual = grupos.map((g) => g.slice());
+  let melhorCusto = custoTotal(atual);
+
+  // Quem está na janela e ficou de fora da rodada: candidato a entrar numa
+  // troca. É o que permite trazer alguém do fundo da fila quando ele desfaz
+  // uma repetição — e o custo de ordem é quem decide se compensa.
+  const forasDe = (gs) => {
+    const dentro = new Set(gs.flat());
+    return janela.filter((id) => !dentro.has(id));
+  };
+
+  const MAX_PASSOS = 200;
+  for (let passo = 0; passo < MAX_PASSOS; passo += 1) {
+    let melhorTroca = null;
+    const fora = forasDe(atual);
+
+    const avaliar = (i, xi, j, yj) => {
+      const gi = atual[i].slice();
+      const alvo = j == null ? null : atual[j].slice();
+      const x = gi[xi];
+      const y = j == null ? fora[yj] : alvo[yj];
+      gi[xi] = y;
+      if (alvo) alvo[yj] = x;
+      if (!valido(gi) || (alvo && !valido(alvo))) return;
+      const dentro = new Set(atual.flatMap((g, idx) => {
+        if (idx === i) return gi;
+        if (idx === j) return alvo;
+        return g;
+      }));
+      if (primeiroElegivel && !dentro.has(primeiroElegivel)) return;
+      if (obrigatorios.some((id) => !dentro.has(id))) return;
+      const antes = custoGrupo(atual[i]) + orderWeight * custoOrdem(atual[i])
+        + (alvo ? custoGrupo(atual[j]) + orderWeight * custoOrdem(atual[j]) : 0);
+      const depois = custoGrupo(gi) + orderWeight * custoOrdem(gi)
+        + (alvo ? custoGrupo(alvo) + orderWeight * custoOrdem(alvo) : 0);
+      const delta = depois - antes;
+      // A folga de 1e-9 evita ficar trocando para sempre por causa do
+      // desempate aleatório de `pairFourBalanced` (que vale 0,001).
+      if (delta < -1e-9 && (!melhorTroca || delta < melhorTroca.delta)) {
+        melhorTroca = { delta, i, j, gi, alvo };
+      }
+    };
+
+    for (let i = 0; i < atual.length; i += 1) {
+      for (let xi = 0; xi < atual[i].length; xi += 1) {
+        for (let j = i + 1; j < atual.length; j += 1) {
+          for (let yj = 0; yj < atual[j].length; yj += 1) avaliar(i, xi, j, yj);
+        }
+        // `fora` já vem da janela: quem está além dela não entra por troca.
+        for (let yj = 0; yj < fora.length; yj += 1) avaliar(i, xi, null, yj);
+      }
+    }
+
+    if (!melhorTroca) break;
+    const proximo = atual.map((g) => g.slice());
+    proximo[melhorTroca.i] = melhorTroca.gi;
+    if (melhorTroca.alvo) proximo[melhorTroca.j] = melhorTroca.alvo;
+    const custo = custoTotal(proximo);
+    if (custo >= melhorCusto - 1e-9) break;
+    atual = proximo;
+    melhorCusto = custo;
+  }
+
+  // A quadra da frente fica com o grupo de quem está esperando há mais tempo.
+  return atual
+    .map((g) => ({ g, chave: Math.min(...g.map((id) => posicao.get(id) ?? 0)) }))
+    .sort((a, b) => a.chave - b.chave)
+    .map((x) => x.g);
+}
+
+/**
  * PREVISÃO das próximas partidas, uma por quadra livre e depois pelas ocupadas
  * — a mesma ideia da previsão do Play: quem está jogando volta ao fim da fila
  * quando a partida termina, e disputa as vagas seguintes.
@@ -231,6 +400,22 @@ export function forecastAmericanoLiveMatches(availableOrdered, opts = {}) {
   const jogosHipoteticos = [...(games || [])];
   const blocos = [];
 
+  const registrar = (court, conditional, ids) => {
+    const par = pairFourBalanced(ids, {
+      history: buildDrawHistory(jogosHipoteticos, ids), levels, rng,
+    });
+    blocos.push({
+      court,
+      conditional,
+      players: ids.map((id) => porId.get(id) || { id }),
+      side_a: par.side_a,
+      side_b: par.side_b,
+    });
+    const dentro = new Set(ids);
+    fila = fila.filter((p) => !dentro.has(p.id));
+    jogosHipoteticos.push({ side_a: par.side_a, side_b: par.side_b });
+  };
+
   const escolher = (court, conditional) => {
     const escolha = drawNextAmericanoLiveMatch(fila, {
       games: jogosHipoteticos, levels, rng, slots,
@@ -249,9 +434,27 @@ export function forecastAmericanoLiveMatches(availableOrdered, opts = {}) {
     return true;
   };
 
-  for (const court of livres) {
-    if (!escolher(court, false)) return blocos;
+  // AS QUADRAS LIVRES SAEM JUNTAS. Com duas ou mais, escolher uma de cada vez
+  // é guloso: a primeira leva o melhor grupo e a última herda o que sobrou —
+  // e com 8 na fila e 2 quadras a segunda nem tem escolha. `bestAmericanoLiveRound`
+  // olha a rodada inteira. Com uma quadra livre só (ou sem rodada possível), o
+  // caminho continua sendo exatamente o de antes, partida a partida.
+  const quadrasDaRodada = Math.min(livres.length, Math.floor(fila.length / slots));
+  const rodada = quadrasDaRodada >= 2
+    ? bestAmericanoLiveRound(fila, quadrasDaRodada, {
+      games: jogosHipoteticos, levels, rng, slots,
+    })
+    : null;
+  if (rodada) {
+    rodada.forEach((ids, i) => registrar(livres[i], false, ids));
+  } else {
+    for (const court of livres) {
+      if (!escolher(court, false)) return blocos;
+    }
   }
+  // Sobrou quadra livre sem gente para encher? A previsão simplesmente para
+  // ali — meia partida não existe.
+  if (rodada && rodada.length < livres.length) return blocos;
   for (const jogo of abertos) {
     const voltando = gameIds(jogo)
       .map((id) => porId.get(id) || { id, available_since: Number.MAX_SAFE_INTEGER })

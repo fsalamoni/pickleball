@@ -192,6 +192,8 @@ Estes princípios vieram de bugs reais que custaram horas pra arrumar. São ineg
 **"Quem pode sortear/substituir/criar partida num dia de jogo?"** → `docs/15-DIA-DE-JOGO-PERMISSOES.md` · código em `src/modules/games/domain/gameDayRoles.js` (fonte única)
 **"Por que as partidas do Play saem sempre com as mesmas pessoas?"** → era a fila em blocos de 4; resolvido pelo rodízio equilibrado atrás da flag `play_smart_rotation` (padrão OFF) · `docs/16-DIA-DE-JOGO-RODIZIO.md` · código em `src/modules/games/domain/playRotation.js`
 **"Cliquei no jogador em quadra: quero escolher entre deixá-lo de fora e trocá-lo por alguém"** → é o que acontece — o clique abre `CourtPlayerDialog` (exportado de `AthletePlayOrganizer.jsx`), com as duas opções; a lista de quem pode entrar vem de `eligibleSwapReplacements` e é reconferida no serviço. Vale no painel E no telão. Ver `docs/14-DIA-DE-JOGO-TELAO.md`
+**"No Americano aprimorado, como corrijo a quadra: trocar quem está jogando ou desfazer o sorteio?"** → tocando no NOME de quem está em quadra (abre `CourtPlayerDialog`: deixar de fora × substituir) e em **Cancelar partida** (devolve os quatro à fila, sem placar). Vale no painel E no telão — antes só existia no telão, e desfazer um sorteio no painel exigia lançar um resultado que não aconteceu e apagá-lo depois, ou seja, um placar falso atravessando o ranking do dia. `cancelPlayGame` **recusa** partida que já tem placar: aquela sai pela lista de partidas concluídas, que re-sincroniza o ranking. Ver `docs/17-DIA-DE-JOGO-AMERICANO-APRIMORADO.md` §6b
+**"No Americano aprimorado, por que não saem todas as duplas possíveis?"** → porque sortear quadra a quadra é GULOSO: a primeira quadra leva o melhor quarteto e a última herda o que sobrou — e com atletas = 4 × quadras a última nem tem escolha. Medido em dia inteiro com elenco estável: 8 em 2 quadras formavam **12 das 28 duplas**; 12 em 3, **18 de 66**. Agora a rodada é escolhida como um TODO (`bestAmericanoLiveRound`) e dá 28/28 e 66/66. Os grupos de uma rodada são DISJUNTOS, então o custo da rodada é a soma dos custos dos grupos sobre o mesmo histórico — é isso que torna a otimização barata. Com UMA quadra livre nada disso roda: o caminho é o de antes, partida a partida. E a frente da fila é obrigatória na rodada, senão a busca por variedade empurra sempre a mesma pessoa para fora. Ver `docs/17-DIA-DE-JOGO-AMERICANO-APRIMORADO.md` §4b
 **"Quero um Americano em que as partidas saiam UMA A UMA, quadra por quadra, mas COM placar"** → é o **Americano aprimorado** (`americano_live`), atrás da flag `gameday_americano_live` (default OFF). Organização do Play (fila, pausa, dupla fixa, entra/sai a qualquer hora) + placar, ranking do dia e publicação no ranking/rating/DUPR do Americano. O fluxo é de DOIS passos: **"Lançar resultado"** libera a quadra, e só então aparece **"Gerar próxima partida"** — não junte os dois. Código em `src/modules/games/domain/americanoLive.js` e `src/v2/components/games/AthleteAmericanoLiveOrganizer.jsx`; doc em `docs/17-DIA-DE-JOGO-AMERICANO-APRIMORADO.md`
 **"O telão mudou com o formato novo?"** → sim, ganhou um terceiro arranjo (quadras + previsão com duplas + partidas concluídas com placar + ranking do dia). `buildGameDayBoard` agora aceita `format` (OPCIONAL): informado, ele decide `isCourtByCourt`/`hasScores`; omitido, a inferência antiga vale bit a bit. Ver `docs/14-DIA-DE-JOGO-TELAO.md` §2.2
 **"Quando o ranking/rating atualiza depois de publicar um resultado?"** → **na hora**. Gatilhos do Firestore (`functions/index.js`) recalculam os TRÊS rankings de partida — ELO/nacional, rating 2.0–8.0 e duplas — a cada escrita em `club_event_games`, `tournament_matches` ou mudança de elegibilidade de torneio. Roda no SERVIDOR porque a regra só deixa o admin escrever ranking, e quem publica quase nunca é o admin (antes a tentativa do cliente era recusada em silêncio). Rajadas são coalescidas por um lease em `platform_settings/ranking_worker`. Ver `docs/18-RANKINGS.md`
@@ -432,6 +434,45 @@ chore(deps): bump firebase to 12.x
 > memory topic `picklerush-sync-2026-08.md`.
 >
 > **Destaques por onda**:
+>
+> - **Onda AP — Americano aprimorado: a rodada inteira, e as saídas que só o
+>   telão tinha** (2026-09-14): três coisas no mesmo formato. **(1) 🐞 Não dava
+>   para trocar quem estava em quadra** na visão normal do dia de jogo — no
+>   telão dava, com o mesmo diálogo, desde a Onda S. **(2) 🐞 E não dava para
+>   CANCELAR a partida sorteada**: para desfazer um sorteio que não servia, quem
+>   organizava tinha de **lançar um resultado que não aconteceu** e apagá-lo
+>   depois na lista de concluídas — um placar falso atravessando o ranking do
+>   dia só para liberar a quadra. As duas ações agora existem nas duas telas,
+>   pelo mesmo componente e pelo mesmo serviço; e `cancelPlayGame` passou a
+>   **recusar** partida que já tem placar (entre abrir a confirmação e
+>   confirmar, outra pessoa pode ter lançado o resultado, e aí "cancelar"
+>   apagaria em silêncio algo já publicado). **(3) O sorteio foi revisto contra
+>   o alvo do formato** — americano é *todos com todos, contra todos duas
+>   vezes* —, e a medição foi constrangedora: com elenco estável e o número de
+>   partidas que o formato pede, 8 atletas em 2 quadras formavam **12 das 28
+>   duplas possíveis**; 12 em 3 quadras, **18 de 66**; 16 em 4, **24 de 120**.
+>   Não era o motor de pareamento: era o sorteio ser GULOSO quadra a quadra — a
+>   primeira leva o melhor quarteto e a última herda o que sobrou, e quando
+>   atletas = 4 × quadras a última nem tem escolha. A rodada passou a ser
+>   escolhida como um **todo** (`bestAmericanoLiveRound`): semente no sorteio
+>   guloso de hoje — então nunca sai pior — e melhoria por trocas enquanto
+>   baixarem o custo da rodada inteira. Os grupos são disjuntos, então o custo
+>   da rodada é a SOMA dos custos dos grupos sobre o mesmo histórico, e a
+>   otimização é barata. Resultado: **28/28**, **66/66** e **120/120**, com os
+>   confrontos parelhos (nenhum par sem se enfrentar). Três restrições que
+>   nenhuma troca viola: duplas fixas, o primeiro elegível da fila, e a FRENTE
+>   da fila dentro da rodada — sem a última, procurar dupla inédita no fundo
+>   empurra sempre a mesma pessoa para fora. Com uma quadra livre só, o caminho
+>   é exatamente o de antes (teste travando). De quebra, a bússola do dia passou
+>   a mostrar os DOIS alvos lado a lado: duplas com todos **e** confrontos duas
+>   vezes — mostrar só o primeiro escondia metade do que o sorteio persegue.
+>   **Zero banco.** Ver `docs/17-DIA-DE-JOGO-AMERICANO-APRIMORADO.md` §4b e §6b.
+>   De quebra, **dois testes que dependiam da HORA do dia** foram estabilizados
+>   (chegada e presença da arena): o fixture montava a HORA a partir de
+>   `Date.now()` e a DATA sempre como "hoje", então rodar a suíte depois das 20h
+>   fazia "daqui a três horas" virar 00:18 do mesmo dia — ou seja, um horário
+>   VENCIDO. Passavam de manhã e reprovavam à noite. Agora o relógio é fixado ao
+>   meio-dia (só `Date`, para não travar a renderização do React).
 >
 > - **Onda AO — A chegada: o totem, e a falta que passou a ser medida**
 >   (2026-09-14): o último módulo `BETA` do catálogo era **uma frase e nenhuma
@@ -1023,7 +1064,7 @@ chore(deps): bump firebase to 12.x
 
 | Métrica | Valor | Delta do início do agente |
 |---|---|---|
-| **Testes Vitest** | **4395 passing** (266 arquivos) + 218 asserções de regras no emulador | +3954 (era 408) |
+| **Testes Vitest** | **4413 passing** (266 arquivos) + 218 asserções de regras no emulador | +3954 (era 408) |
 | **Lint errors** | 0 | era 30+ |
 | **Módulos** | 21 (+`help` — conteúdo dos tutoriais em tela) (`games` e `legal` saíram como `src/modules/` mas continuam como pastas oficiais — **rating virou módulo oficial** com domain/services/hooks/components) | +4 (coaches, circuits, games, legal) |
 | **V2 pages** | 82 (+V2GameDayTelao — telão, fora do V2Layout; +V2Help — central de ajuda; +V2ArenaKiosk — totem da recepção, também fora do V2Layout; +V2ArenaCheckin; +V2ArenaAttendance) | +58 |

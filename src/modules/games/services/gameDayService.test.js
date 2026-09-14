@@ -9,6 +9,7 @@ const h = vi.hoisted(() => ({
   maybeAutoRecomputeRatings: vi.fn(),
   batchSet: vi.fn(),
   batchDelete: vi.fn(),
+  batchUpdate: vi.fn(),
   batchCommit: vi.fn(),
   updateDoc: vi.fn(),
   getDoc: vi.fn(),
@@ -38,10 +39,12 @@ vi.mock('firebase/firestore', () => ({
   where: vi.fn((field, op, value) => ({ field, op, value })),
   serverTimestamp: vi.fn(() => h.serverTs),
   arrayUnion: vi.fn((...v) => ({ arrayUnion: v })),
-  writeBatch: vi.fn(() => ({ set: h.batchSet, delete: h.batchDelete, commit: h.batchCommit })),
+  writeBatch: vi.fn(() => ({
+    set: h.batchSet, delete: h.batchDelete, update: h.batchUpdate, commit: h.batchCommit,
+  })),
 }));
 
-const { syncGameDayRankingIfPublished } = await import('./gameDayService.js');
+const { syncGameDayRankingIfPublished, cancelPlayGame } = await import('./gameDayService.js');
 
 const GD_ID = 'gd1';
 const ACTOR = { uid: 'owner1' };
@@ -141,5 +144,57 @@ describe('syncGameDayRankingIfPublished', () => {
     // created_at do documento original é preservado ao regravar a correção.
     expect(payload.created_at).toBe('2020-01-01T00:00:00.000Z');
     expect(h.maybeAutoRecomputeRatings).toHaveBeenCalledWith(ACTOR, { force: true });
+  });
+});
+
+/* ---------------------------------------------------------------------------
+ * CANCELAR A PARTIDA SORTEADA
+ *
+ * Cancelar desfaz o SORTEIO — a partida sai da quadra, sem placar, e os quatro
+ * voltam para a fila. Partida que já tem RESULTADO é outra coisa: desfazê-la
+ * mexe no ranking do dia, e por isso sai pela lista de partidas concluídas.
+ * A guarda vale pela corrida real: entre abrir a confirmação e confirmar,
+ * outra pessoa pode ter lançado o placar da mesma quadra.
+ * ------------------------------------------------------------------------ */
+describe('cancelPlayGame', () => {
+  const emQuadra = {
+    id: 'g9', court: 1, order: 3, status: 'open',
+    side_a: [{ id: 'a' }, { id: 'b' }], side_b: [{ id: 'c' }, { id: 'd' }],
+    score_a: null, score_b: null,
+  };
+
+  it('⭐ partida aberta: some da quadra e os quatro voltam para a fila', async () => {
+    h.getDocs.mockResolvedValue(snap([emQuadra]));
+
+    await cancelPlayGame(GD_ID, 'g9', ACTOR);
+
+    expect(h.batchDelete).toHaveBeenCalledTimes(1);
+    expect(h.batchUpdate).toHaveBeenCalledTimes(4); // a, b, c, d
+    expect(h.batchCommit).toHaveBeenCalledTimes(1);
+    expect(h.createAuditLog).toHaveBeenCalledWith(expect.objectContaining({
+      action: 'game_day_play_game_cancelled',
+    }));
+  });
+
+  it('⭐ partida com PLACAR não é cancelada por aqui — nada é apagado', async () => {
+    h.getDocs.mockResolvedValue(snap([{ ...emQuadra, score_a: 11, score_b: 7 }]));
+
+    await expect(cancelPlayGame(GD_ID, 'g9', ACTOR)).rejects.toThrow(/resultado lançado/i);
+    expect(h.batchDelete).not.toHaveBeenCalled();
+    expect(h.batchCommit).not.toHaveBeenCalled();
+  });
+
+  it('⭐ partida já encerrada também não — o caminho é a lista de concluídas', async () => {
+    h.getDocs.mockResolvedValue(snap([{ ...emQuadra, status: 'finished' }]));
+
+    await expect(cancelPlayGame(GD_ID, 'g9', ACTOR)).rejects.toThrow(/partidas concluídas/i);
+    expect(h.batchDelete).not.toHaveBeenCalled();
+  });
+
+  it('jogo que não existe mais: não quebra e não escreve nada', async () => {
+    h.getDocs.mockResolvedValue(snap([]));
+
+    await expect(cancelPlayGame(GD_ID, 'g9', ACTOR)).resolves.toBeUndefined();
+    expect(h.batchCommit).not.toHaveBeenCalled();
   });
 });
