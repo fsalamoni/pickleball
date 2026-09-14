@@ -521,6 +521,7 @@ import {
   listArenaProducts, createArenaProduct, updateArenaProduct, deleteArenaProduct,
   createSale, listArenaSales, listUserSales,
   listArenaPayments, confirmPayment,
+  confirmSale, cancelSale, payMyShare,
 } from '../services/pdvService.js';
 
 export function useArenaProducts(arenaId) {
@@ -556,10 +557,7 @@ export function useCreateSale() {
   return useMutation({
     mutationFn: ({ arenaId, items, paymentMethod, splitWith }) =>
       createSale(arenaId, items, paymentMethod, splitWith, user, userProfile),
-    onSuccess: (_d, { arenaId }) => {
-      qc.invalidateQueries({ queryKey: ['arena-products', arenaId] });
-      qc.invalidateQueries({ queryKey: ['arena-sales', arenaId] });
-    },
+    onSuccess: (_d, { arenaId }) => invalidarLoja(qc, arenaId),
   });
 }
 
@@ -577,8 +575,83 @@ export function useConfirmPayment() {
   const qc = useQueryClient();
   return useMutation({
     mutationFn: ({ paymentId }) => confirmPayment(paymentId, user),
-    onSuccess: () => qc.invalidateQueries({ queryKey: ['arena-payments'] }),
+    onSuccess: (_d, { arenaId }) => invalidarLoja(qc, arenaId),
   });
+}
+
+export function useArenaPayments(arenaId) {
+  return useQuery({
+    queryKey: ['arena-payments', arenaId],
+    queryFn: () => listArenaPayments(arenaId),
+    enabled: !!arenaId,
+    staleTime: 30_000,
+  });
+}
+
+/** As MINHAS compras nesta arena. */
+export function useMySales(arenaId) {
+  const { user } = useAuth();
+  return useQuery({
+    queryKey: ['arena-sales', 'minhas', arenaId, user?.uid],
+    queryFn: async () => {
+      const todas = await listUserSales(user?.uid);
+      return todas.filter((v) => v.arena_id === arenaId);
+    },
+    enabled: !!arenaId && !!user?.uid,
+    staleTime: 30_000,
+  });
+}
+
+/** Atualizar produto (preço, estoque, ativo). */
+export function useUpdateProduct() {
+  const { user } = useAuth();
+  const qc = useQueryClient();
+  return useMutation({
+    mutationFn: ({ prodId, updates }) => updateArenaProduct(prodId, updates, user),
+    onSuccess: (_d, { arenaId }) => invalidarLoja(qc, arenaId),
+  });
+}
+
+/**
+ * A arena ENTREGA a compra — e é aqui que o estoque sai.
+ *
+ * Na compra o estoque não baixa: a regra do Firestore não deixa o atleta
+ * escrever `arena_products`, e reservar o que ainda não foi entregue conta
+ * uma venda que pode não acontecer.
+ */
+export function useConfirmSale() {
+  const { user } = useAuth();
+  const qc = useQueryClient();
+  return useMutation({
+    mutationFn: ({ saleId }) => confirmSale(saleId, user),
+    onSuccess: (_d, { arenaId }) => invalidarLoja(qc, arenaId),
+  });
+}
+
+export function useCancelSale() {
+  const { user } = useAuth();
+  const qc = useQueryClient();
+  return useMutation({
+    mutationFn: ({ saleId, motivo }) => cancelSale(saleId, motivo, user),
+    onSuccess: (_d, { arenaId }) => invalidarLoja(qc, arenaId),
+  });
+}
+
+/** Pago a MINHA parte de uma conta dividida — cada um grava o próprio. */
+export function usePayMyShare() {
+  const { user } = useAuth();
+  const qc = useQueryClient();
+  return useMutation({
+    mutationFn: ({ saleId }) => payMyShare(saleId, user),
+    onSuccess: (_d, { arenaId }) => invalidarLoja(qc, arenaId),
+  });
+}
+
+/** Tudo o que muda quando a loja se mexe. */
+function invalidarLoja(qc, arenaId) {
+  qc.invalidateQueries({ queryKey: ['arena-products', arenaId] });
+  qc.invalidateQueries({ queryKey: ['arena-sales'] });
+  qc.invalidateQueries({ queryKey: ['arena-payments', arenaId] });
 }
 
 /* -------------------- Classes (sprint 4) -------------------- */
@@ -1248,8 +1321,9 @@ export function useSaveArenaStaff() {
 
 import {
   listArenaDevices, createDevice, updateDeviceStatus,
-  listNetworks, createNetwork, addArenaToNetwork,
-  updateBranding, getHistoricalBookings,
+  listMyNetworks, getArenaNetwork, createNetwork, addArenaToNetwork,
+  removeArenaFromNetwork, updateBranding, getLegacyBranding,
+  getHistoricalBookings,
 } from '../services/advancedService.js';
 
 export function useArenaDevices(arenaId) {
@@ -1270,28 +1344,104 @@ export function useCreateDevice() {
   });
 }
 
-export function useNetworks() {
+/**
+ * As MINHAS redes.
+ *
+ * 🐞 `useNetworks()` listava TODAS as redes da plataforma para qualquer conta.
+ * Numa tela de gestão isso mostra o negócio dos outros e não ajuda quem só
+ * quer ver a rede dele.
+ */
+export function useMyNetworks() {
+  const { user } = useAuth();
   return useQuery({
-    queryKey: ['arena-networks'],
-    queryFn: () => listNetworks(),
+    queryKey: ['arena-networks', 'minhas', user?.uid],
+    queryFn: () => listMyNetworks(user?.uid),
+    enabled: !!user?.uid,
     staleTime: 60_000,
   });
+}
+
+/** A rede de que ESTA arena faz parte. */
+export function useArenaNetwork(arenaId) {
+  return useQuery({
+    queryKey: ['arena-network', arenaId],
+    queryFn: () => getArenaNetwork(arenaId),
+    enabled: !!arenaId,
+    staleTime: 60_000,
+  });
+}
+
+function invalidarRede(qc, arenaId) {
+  qc.invalidateQueries({ queryKey: ['arena-networks'] });
+  qc.invalidateQueries({ queryKey: ['arena-network', arenaId] });
 }
 
 export function useCreateNetwork() {
   const { user } = useAuth();
   const qc = useQueryClient();
   return useMutation({
-    mutationFn: (name) => createNetwork(name, user),
-    onSuccess: () => qc.invalidateQueries({ queryKey: ['arena-networks'] }),
+    mutationFn: ({ name, arenaId }) => createNetwork(name, arenaId, user),
+    onSuccess: (_d, { arenaId }) => invalidarRede(qc, arenaId),
   });
 }
 
+export function useAddArenaToNetwork() {
+  const { user } = useAuth();
+  const qc = useQueryClient();
+  return useMutation({
+    mutationFn: ({ networkId, arenaId }) => addArenaToNetwork(networkId, arenaId, user),
+    onSuccess: (_d, { arenaId }) => invalidarRede(qc, arenaId),
+  });
+}
+
+export function useRemoveArenaFromNetwork() {
+  const { user } = useAuth();
+  const qc = useQueryClient();
+  return useMutation({
+    mutationFn: ({ networkId, arenaId }) => removeArenaFromNetwork(networkId, arenaId, user),
+    onSuccess: (_d, { arenaId }) => invalidarRede(qc, arenaId),
+  });
+}
+
+/**
+ * Grava a marca da arena.
+ *
+ * Invalida a ARENA, não `arena_settings`: a marca passou a morar em
+ * `arenas/{id}.branding`, que é o único lugar onde o atleta consegue lê-la.
+ */
 export function useUpdateBranding() {
   const { user } = useAuth();
   const qc = useQueryClient();
   return useMutation({
     mutationFn: ({ arenaId, branding }) => updateBranding(arenaId, branding, user),
-    onSuccess: (_d, { arenaId }) => qc.invalidateQueries({ queryKey: ['arena-settings', arenaId] }),
+    onSuccess: (_d, { arenaId }) => {
+      qc.invalidateQueries({ queryKey: arenaKeys.arena(arenaId) });
+      qc.invalidateQueries({ queryKey: arenaKeys.lista() });
+    },
+  });
+}
+
+/** A marca que ficou no lugar antigo, só para pré-preencher o formulário. */
+export function useLegacyBranding(arenaId) {
+  return useQuery({
+    queryKey: ['arena-branding-legado', arenaId],
+    queryFn: () => getLegacyBranding(arenaId),
+    enabled: !!arenaId,
+    staleTime: Infinity,
+  });
+}
+
+/**
+ * O histórico de movimento da arena, para a previsão.
+ *
+ * 🐞 A função de serviço devolvia `[]` com o comentário "só para satisfazer a
+ * interface": a previsão era calculada sobre lista vazia e dava sempre zero.
+ */
+export function useArenaHistory(arenaId, days = 30) {
+  return useQuery({
+    queryKey: ['arena-history', arenaId, days],
+    queryFn: () => getHistoricalBookings(arenaId, days),
+    enabled: !!arenaId,
+    staleTime: 5 * 60_000,
   });
 }

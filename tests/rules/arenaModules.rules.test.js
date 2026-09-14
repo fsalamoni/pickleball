@@ -33,6 +33,8 @@ const GESTOR = 'gestor_uid';
 const ATLETA = 'atleta_uid';
 const ESTRANHO = 'estranho_uid';
 const ARENA = 'arena_1';
+const ARENA_2 = 'arena_2';
+const REDE = 'rede_1';
 
 let testEnv;
 
@@ -60,6 +62,15 @@ beforeEach(async () => {
     await setDoc(doc(db, 'arenas', ARENA), { name: 'Arena 1', owner_id: GESTOR });
     await setDoc(doc(db, 'arena_managers', `${ARENA}_${GESTOR}`), {
       arena_id: ARENA, user_id: GESTOR,
+    });
+    // Uma SEGUNDA arena, de OUTRO dono — é contra ela que se prova que a rede
+    // não deixa ninguém puxar a unidade alheia para dentro do próprio grupo.
+    await setDoc(doc(db, 'arenas', ARENA_2), { name: 'Arena 2', owner_id: ESTRANHO });
+    await setDoc(doc(db, 'arena_managers', `${ARENA_2}_${ESTRANHO}`), {
+      arena_id: ARENA_2, user_id: ESTRANHO,
+    });
+    await setDoc(doc(db, 'arena_networks', REDE), {
+      id: REDE, name: 'Rede do gestor', owner_id: GESTOR, owner_arena_id: ARENA, arenas: [ARENA],
     });
 
     const daArena = { arena_id: ARENA };
@@ -266,6 +277,113 @@ describe('camada 2 — opt-in da arena', () => {
   it('o gestor apaga o estado do módulo da própria arena', async () => {
     await assertSucceeds(deleteDoc(
       doc(como(GESTOR), 'arena_module_states', `${ARENA}_members`),
+    ));
+  });
+});
+
+
+/* ---------------------------------------------------------------- */
+/*  🐞 Multi-unidade: a arena não conseguia criar a PRÓPRIA rede      */
+/* ---------------------------------------------------------------- */
+
+describe('🐞 rede de unidades: era só do admin da plataforma', () => {
+  it('⭐ o gestor cria a rede da arena dele', async () => {
+    // Antes: `allow create: if isPlatformAdmin()`. O módulo é oferecido à
+    // ARENA, que ligava, abria a tela, clicava e recebia permissão negada.
+    await assertSucceeds(setDoc(doc(como(GESTOR), 'arena_networks', 'nova'), {
+      id: 'nova', name: 'Minha rede', owner_id: GESTOR, owner_arena_id: ARENA, arenas: [ARENA],
+    }));
+  });
+
+  it('⭐ NÃO cria rede em nome de arena que ele não administra', async () => {
+    await assertFails(setDoc(doc(como(GESTOR), 'arena_networks', 'nova'), {
+      id: 'nova', name: 'Rede alheia', owner_id: GESTOR, owner_arena_id: ARENA_2, arenas: [ARENA_2],
+    }));
+  });
+
+  it('⭐ NÃO cria rede se declarar OUTRA pessoa como dona', async () => {
+    await assertFails(setDoc(doc(como(GESTOR), 'arena_networks', 'nova'), {
+      id: 'nova', name: 'Rede', owner_id: ESTRANHO, owner_arena_id: ARENA, arenas: [ARENA],
+    }));
+  });
+
+  it('o dono edita a própria rede', async () => {
+    await assertSucceeds(updateDoc(doc(como(GESTOR), 'arena_networks', REDE), {
+      name: 'Rede renomeada', owner_id: GESTOR,
+    }));
+  });
+
+  it('⭐ editar não transfere a rede para outra pessoa', async () => {
+    await assertFails(updateDoc(doc(como(GESTOR), 'arena_networks', REDE), {
+      owner_id: ESTRANHO,
+    }));
+  });
+
+  it('quem não é dono não edita a rede', async () => {
+    await assertFails(updateDoc(doc(como(ESTRANHO), 'arena_networks', REDE), { name: 'X' }));
+  });
+
+  it('o dono apaga a própria rede; o estranho não', async () => {
+    await assertFails(deleteDoc(doc(como(ESTRANHO), 'arena_networks', REDE)));
+    await assertSucceeds(deleteDoc(doc(como(GESTOR), 'arena_networks', REDE)));
+  });
+
+  it('o admin da plataforma continua podendo tudo', async () => {
+    await assertSucceeds(setDoc(doc(como(ADMIN), 'arena_networks', 'adm'), {
+      id: 'adm', name: 'Rede do admin', owner_id: ADMIN, owner_arena_id: ARENA_2, arenas: [],
+    }));
+  });
+});
+
+describe('🐞 vínculo de unidade: as DUAS condições são necessárias', () => {
+  it('⭐ o dono da rede inclui a arena que ele administra', async () => {
+    await assertSucceeds(setDoc(doc(como(GESTOR), 'arena_network_memberships', `${REDE}_${ARENA}`), {
+      id: `${REDE}_${ARENA}`, network_id: REDE, arena_id: ARENA,
+    }));
+  });
+
+  it('⭐ o dono da rede NÃO puxa a arena dos outros para dentro dela', async () => {
+    // Senão eu colocaria a sua unidade na minha rede e passaria a ver os
+    // números dela no BI consolidado.
+    await assertFails(setDoc(doc(como(GESTOR), 'arena_network_memberships', `${REDE}_${ARENA_2}`), {
+      id: `${REDE}_${ARENA_2}`, network_id: REDE, arena_id: ARENA_2,
+    }));
+  });
+
+  it('⭐ quem administra a arena NÃO a enfia na rede alheia', async () => {
+    // Senão eu poluiria a rede de outra pessoa com uma unidade que ninguém
+    // convidou — e ela apareceria nos números somados dela.
+    await assertFails(setDoc(doc(como(ESTRANHO), 'arena_network_memberships', `${REDE}_${ARENA_2}`), {
+      id: `${REDE}_${ARENA_2}`, network_id: REDE, arena_id: ARENA_2,
+    }));
+  });
+
+  it('rede inexistente não aceita vínculo', async () => {
+    await assertFails(setDoc(doc(como(GESTOR), 'arena_network_memberships', `fantasma_${ARENA}`), {
+      id: `fantasma_${ARENA}`, network_id: 'fantasma', arena_id: ARENA,
+    }));
+  });
+
+  it('⭐ quem administra a unidade pode SAIR da rede', async () => {
+    await testEnv.withSecurityRulesDisabled(async (ctx) => {
+      await setDoc(doc(ctx.firestore(), 'arena_network_memberships', `${REDE}_${ARENA}`), {
+        id: `${REDE}_${ARENA}`, network_id: REDE, arena_id: ARENA,
+      });
+    });
+    // Prender uma arena numa rede seria a pior parte do módulo.
+    await assertSucceeds(deleteDoc(
+      doc(como(GESTOR), 'arena_network_memberships', `${REDE}_${ARENA}`),
+    ));
+  });
+
+  it('um terceiro não tira ninguém da rede', async () => {
+    await testEnv.withSecurityRulesDisabled(async (ctx) => {
+      await setDoc(doc(ctx.firestore(), 'arena_network_memberships', `${REDE}_${ARENA}`), {
+        id: `${REDE}_${ARENA}`, network_id: REDE, arena_id: ARENA,
+      });
+    });
+    await assertFails(deleteDoc(
+      doc(como(ATLETA), 'arena_network_memberships', `${REDE}_${ARENA}`),
     ));
   });
 });
