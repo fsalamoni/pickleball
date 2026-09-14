@@ -71,6 +71,8 @@ const V2ArenaCoaches = lazy(() => import('@/v2/pages/V2ArenaCoaches'));
 const V2ArenaLeagues = lazy(() => import('@/v2/pages/V2ArenaLeagues'));
 const V2ArenaMarketing = lazy(() => import('@/v2/pages/V2ArenaMarketing'));
 const V2ArenaOperations = lazy(() => import('@/v2/pages/V2ArenaOperations'));
+const V2ArenaCheckin = lazy(() => import('@/v2/pages/V2ArenaCheckin'));
+const V2ArenaAttendance = lazy(() => import('@/v2/pages/V2ArenaAttendance'));
 const V2ArenaAdvanced = lazy(() => import('@/v2/pages/V2ArenaAdvanced'));
 const V2EventDetail = lazy(() => import('@/v2/pages/V2EventDetail'));
 const V2NotFound = lazy(() => import('@/v2/pages/V2NotFound'));
@@ -157,6 +159,8 @@ export default function V2App() {
           <Route path="arenas/:arenaId/marketing" element={<V2ArenaMarketing />} />
           <Route path="arenas/:arenaId/gerir/marketing" element={<V2ArenaMarketing />} />
           <Route path="arenas/:arenaId/gerir/operacoes" element={<V2ArenaOperations />} />
+          <Route path="arenas/:arenaId/chegada" element={<V2ArenaCheckin />} />
+          <Route path="arenas/:arenaId/gerir/presenca" element={<V2ArenaAttendance />} />
           <Route path="circuits" element={<V2Circuits />} />
           <Route path="circuits/:circuitId" element={<V2CircuitManage />} />
           <Route path="coaches" element={<V2Coaches />} />

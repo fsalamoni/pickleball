@@ -87,6 +87,11 @@ beforeEach(async () => {
     await setDoc(doc(db, 'arena_inventory_products', 'ip1'), { ...daArena, name: 'Água' });
     await setDoc(doc(db, 'arena_inventory_entries', 'ie1'), { ...daArena, qty: 10 });
     await setDoc(doc(db, 'arena_inventory_exits', 'ix1'), { ...daArena, qty: 2 });
+    // Uma reserva confirmada do ATLETA, para provar de quem é a chegada.
+    await setDoc(doc(db, 'arena_bookings', 'ab1'), {
+      arena_id: ARENA, athlete_id: ATLETA, status: 'confirmed',
+      slots: [{ date: '2026-09-14', start: '19:00', end: '20:00' }],
+    });
     await setDoc(doc(db, 'arena_module_states', `${ARENA}_members`), {
       arena_id: ARENA, module_id: 'members', enabled: true,
     });
@@ -385,5 +390,58 @@ describe('🐞 vínculo de unidade: as DUAS condições são necessárias', () =
     await assertFails(deleteDoc(
       doc(como(ATLETA), 'arena_network_memberships', `${REDE}_${ARENA}`),
     ));
+  });
+});
+
+
+/* ---------------------------------------------------------------- */
+/*  Chegada (módulo `iot_qr_kiosk`) — ZERO regra nova                */
+/* ---------------------------------------------------------------- */
+
+describe('a chegada não precisou de regra nova', () => {
+  const chegada = { checked_in_at: new Date(), checked_in_by: 'athlete' };
+
+  it('⭐ o dono da reserva confirma a PRÓPRIA chegada', async () => {
+    // É isto que dispensa regra nova: `arena_bookings` já deixa o titular
+    // escrever no próprio documento. Se um dia esta asserção cair, o módulo
+    // inteiro para em silêncio — a recusa chega como "permission-denied"
+    // genérico, que ninguém liga a um check-in.
+    await assertSucceeds(updateDoc(doc(como(ATLETA), 'arena_bookings', 'ab1'), chegada));
+  });
+
+  it('⭐ um estranho NÃO confirma a chegada de outra pessoa', async () => {
+    await assertFails(updateDoc(doc(como(ESTRANHO), 'arena_bookings', 'ab1'), chegada));
+  });
+
+  it('⭐ a arena confirma a chegada de quem reservou (e desfaz)', async () => {
+    await assertSucceeds(updateDoc(doc(como(GESTOR), 'arena_bookings', 'ab1'), {
+      checked_in_at: new Date(), checked_in_by: 'arena',
+    }));
+    await assertSucceeds(updateDoc(doc(como(GESTOR), 'arena_bookings', 'ab1'), {
+      checked_in_at: null, checked_in_by: null,
+    }));
+  });
+
+  it('⭐ a arena marca falta; o estranho não', async () => {
+    await assertSucceeds(updateDoc(doc(como(GESTOR), 'arena_bookings', 'ab1'), { no_show: true }));
+    await assertFails(updateDoc(doc(como(ESTRANHO), 'arena_bookings', 'ab1'), { no_show: true }));
+  });
+
+  it('⭐ só o gestor gira o código do totem', async () => {
+    const token = { checkin_token: { code: 'AB2CD', expires_at_ms: 1 }, status: 'online' };
+    await assertSucceeds(updateDoc(doc(como(GESTOR), 'arena_devices', 'd1'), token));
+    // O atleta LÊ o equipamento (a regra é `read: if isAuthed()`), mas não
+    // escreve — senão qualquer conta plantaria um código e confirmaria de casa.
+    await assertFails(updateDoc(doc(como(ATLETA), 'arena_devices', 'd1'), token));
+    await assertFails(updateDoc(doc(como(ESTRANHO), 'arena_devices', 'd1'), token));
+  });
+
+  it('o totem só é criado por quem gere a arena', async () => {
+    await assertSucceeds(setDoc(doc(como(GESTOR), 'arena_devices', 'd2'), {
+      arena_id: ARENA, name: 'Totem 2', kind: 'qr_kiosk',
+    }));
+    await assertFails(setDoc(doc(como(ATLETA), 'arena_devices', 'd3'), {
+      arena_id: ARENA, name: 'Totem pirata', kind: 'qr_kiosk',
+    }));
   });
 });
