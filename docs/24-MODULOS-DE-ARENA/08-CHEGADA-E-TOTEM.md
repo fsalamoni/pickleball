@@ -190,6 +190,12 @@ deve passar por uma pesquisa antes.
 **Catálogo**: o módulo ganhou `manage` e `public` — e com isso o atalho
 aparece sozinho nos dois lados, sem ninguém escrever link.
 
+**Guarda nova** (`src/core/guards/rotasDeModulos.test.js`, +21): toda rota que
+o catálogo promete tem de existir em `V2App.jsx`. O atalho vir do catálogo é o
+desenho certo e tem um flanco — um caminho com erro de digitação **não dá
+erro**, dá um botão bonito que leva a uma tela em branco. Agora reprova em CI,
+para os sete ondas de uma vez.
+
 ---
 
 ## 8. O que NÃO pode regredir
