@@ -18,7 +18,7 @@ import { describe, it, expect, beforeEach, afterEach, vi } from 'vitest';
 import { ARENA_MODULE_ID } from '@/modules/arenas/domain/modules';
 
 const LIGADOS = new Set();
-const estado = { reservas: [] };
+const estado = { reservas: [], participo: [] };
 const chegar = vi.fn(() => Promise.resolve(true));
 
 vi.mock('sonner', () => ({ toast: { success: vi.fn(), error: vi.fn() } }));
@@ -31,6 +31,9 @@ vi.mock('@/modules/arenas/hooks/useArenas', () => ({
 }));
 vi.mock('@/modules/arenas/hooks/useBookings', () => ({
   useMyBookings: () => ({ data: estado.reservas, isLoading: false }),
+}));
+vi.mock('@/modules/arenas/hooks/useSharedBookings', () => ({
+  useMyParticipations: () => ({ data: estado.participo, isLoading: false }),
 }));
 vi.mock('@/modules/arenas/hooks/useArenaModules', () => ({
   useArenaModules: () => ({ isOn: (id) => LIGADOS.has(id), isLoading: false }),
@@ -70,6 +73,7 @@ beforeEach(() => {
   LIGADOS.add(ARENA_MODULE_ID.IOT_QR_KIOSK);
   chegar.mockClear();
   estado.reservas = [];
+  estado.participo = [];
   container = document.createElement('div');
   document.body.appendChild(container);
   root = createRoot(container);
@@ -191,5 +195,28 @@ describe('a janela', () => {
     estado.reservas = [reserva({ checked_in_at: { toMillis: () => Date.now() } })];
     await render();
     expect(container.textContent).toContain('Chegada confirmada');
+  });
+});
+
+/* ======================================================= compartilhada === */
+
+describe('quem só PARTICIPA da reserva', () => {
+  it('⭐ também chega — a consulta do titular sozinha o deixaria de fora', async () => {
+    // `useMyBookings` filtra por `athlete_id`. Quem dividiu a quadra com um
+    // amigo ouviria "você não tem horário aqui hoje" na porta da arena.
+    estado.participo = [reserva({ id: 'compartilhada', athlete_id: 'outro', participant_ids: ['eu'] })];
+    await render('/arenas/a1/chegada?d=dev1&c=AB2CD');
+    expect(chegar).toHaveBeenCalledTimes(1);
+    expect(chegar.mock.calls[0][0].booking.id).toBe('compartilhada');
+  });
+
+  it('a mesma reserva nas duas listas não vira duas', async () => {
+    const b = reserva();
+    estado.reservas = [b];
+    estado.participo = [b];
+    await render();
+    const cartoes = [...container.querySelectorAll('button')]
+      .filter((x) => x.textContent.includes('–'));
+    expect(cartoes).toHaveLength(1);
   });
 });

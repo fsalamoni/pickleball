@@ -22,6 +22,7 @@ import { Link } from 'react-router-dom';
 import { CheckCircle2, Clock, QrCode } from 'lucide-react';
 import { useAuth } from '@/core/lib/FirebaseAuthContext';
 import { useMyBookings } from '@/modules/arenas/hooks/useBookings';
+import { useMyParticipations } from '@/modules/arenas/hooks/useSharedBookings';
 import { useArenaModules } from '@/modules/arenas/hooks/useArenaModules';
 import { ARENA_MODULE_ID } from '@/modules/arenas/domain/modules';
 import { myCheckinBookings, bookingDayWindow, isoDay } from '@/modules/arenas/domain/checkin';
@@ -32,14 +33,18 @@ const hhmm = (min) => `${String(Math.floor(min / 60)).padStart(2, '0')}:${String
 export default function ArenaCheckinAsk({ arenaId }) {
   const { user } = useAuth();
   const { isOn } = useArenaModules(arenaId);
-  const { data: reservas = [], isLoading } = useMyBookings();
+  const { data: minhasReservas = [], isLoading } = useMyBookings();
+  // Quem dividiu a quadra também chega — e `useMyBookings` só conhece o
+  // titular. Ver o comentário em V2ArenaCheckin.
+  const { data: participo = [], isLoading: ptCarregando } = useMyParticipations();
 
-  const minhas = useMemo(
-    () => myCheckinBookings(reservas, user?.uid, arenaId),
-    [reservas, user?.uid, arenaId],
-  );
+  const minhas = useMemo(() => {
+    const porId = new Map();
+    [...minhasReservas, ...participo].forEach((b) => { if (b?.id) porId.set(b.id, b); });
+    return myCheckinBookings([...porId.values()], user?.uid, arenaId);
+  }, [minhasReservas, participo, user?.uid, arenaId]);
 
-  if (!user?.uid || isLoading || !isOn(ARENA_MODULE_ID.IOT_QR_KIOSK)) return null;
+  if (!user?.uid || isLoading || ptCarregando || !isOn(ARENA_MODULE_ID.IOT_QR_KIOSK)) return null;
 
   const aberta = minhas.find((b) => b.checkin.state === 'open');
   const chegou = minhas.find((b) => b.checkin.state === 'checked_in');

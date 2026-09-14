@@ -112,6 +112,14 @@ evita.
 > função de servidor e uma coleção nova. Não vale o preço para um contador de
 > presença.
 
+### Quem dividiu a quadra também chega
+
+`useMyBookings` consulta só `athlete_id` — quem entrou numa reserva
+compartilhada ouviria *"você não tem horário aqui hoje"* na porta da arena. A
+tela soma `useMyParticipations`, que já existia para o outro lado da reserva
+compartilhada: uma consulta a mais, nenhum índice novo, e a mesma reserva nas
+duas listas não vira duas.
+
 ---
 
 ## 4. A falta, medida como se mede

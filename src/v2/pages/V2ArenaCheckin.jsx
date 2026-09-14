@@ -31,6 +31,7 @@ import {
 import { useAuth } from '@/core/lib/FirebaseAuthContext';
 import { useArena } from '@/modules/arenas/hooks/useArenas';
 import { useMyBookings } from '@/modules/arenas/hooks/useBookings';
+import { useMyParticipations } from '@/modules/arenas/hooks/useSharedBookings';
 import { useArenaModules } from '@/modules/arenas/hooks/useArenaModules';
 import { ARENA_MODULE_ID } from '@/modules/arenas/domain/modules';
 import { useCheckInBooking } from '@/modules/arenas/hooks/useCheckin';
@@ -82,7 +83,8 @@ export default function V2ArenaCheckin() {
   const { user } = useAuth();
   const { data: arena, isLoading } = useArena(arenaId);
   const { isOn, isLoading: modulosCarregando } = useArenaModules(arenaId);
-  const { data: reservas = [], isLoading: rvCarregando } = useMyBookings();
+  const { data: minhasReservas = [], isLoading: rvCarregando } = useMyBookings();
+  const { data: participo = [], isLoading: ptCarregando } = useMyParticipations();
   const checkin = useCheckInBooking();
 
   const deviceId = params.get('d') || '';
@@ -93,10 +95,20 @@ export default function V2ArenaCheckin() {
   const [pronto, setPronto] = useState(false);
   const automaticoRef = useRef(false);
 
-  const minhas = useMemo(
-    () => myCheckinBookings(reservas, user?.uid, arenaId),
-    [reservas, user?.uid, arenaId],
-  );
+  /**
+   * As reservas de hoje em que EU chego — as minhas e aquelas em que fui
+   * incluído.
+   *
+   * `useMyBookings` consulta só `athlete_id`, então quem dividiu a quadra com um
+   * amigo não apareceria aqui e ouviria "você não tem horário hoje" na porta da
+   * arena. `useMyParticipations` já existia para o outro lado da reserva
+   * compartilhada; juntar as duas é uma consulta a mais e nenhum índice novo.
+   */
+  const minhas = useMemo(() => {
+    const porId = new Map();
+    [...minhasReservas, ...participo].forEach((b) => { if (b?.id) porId.set(b.id, b); });
+    return myCheckinBookings([...porId.values()], user?.uid, arenaId);
+  }, [minhasReservas, participo, user?.uid, arenaId]);
   const abertas = useMemo(() => minhas.filter((b) => b.checkin.state === 'open'), [minhas]);
   const jaChegou = useMemo(() => minhas.some((b) => b.checkin.state === 'checked_in'), [minhas]);
 
@@ -118,11 +130,11 @@ export default function V2ArenaCheckin() {
   /* --- veio pelo QR e só tem um horário: confirma sozinho ---------------- */
   useEffect(() => {
     if (automaticoRef.current) return;
-    if (!codigoDoQr || rvCarregando || abertas.length !== 1) return;
+    if (!codigoDoQr || rvCarregando || ptCarregando || abertas.length !== 1) return;
     automaticoRef.current = true;
     confirmar(abertas[0], codigoDoQr).catch(() => {});
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [codigoDoQr, rvCarregando, abertas.length]);
+  }, [codigoDoQr, rvCarregando, ptCarregando, abertas.length]);
 
   if (isLoading || modulosCarregando) {
     return <div className="mx-auto max-w-lg px-4 py-10"><V2Skeleton lines={5} /></div>;
@@ -155,7 +167,7 @@ export default function V2ArenaCheckin() {
     );
   }
 
-  const carregandoAutomatico = Boolean(codigoDoQr) && rvCarregando;
+  const carregandoAutomatico = Boolean(codigoDoQr) && (rvCarregando || ptCarregando);
 
   return (
     <div className="mx-auto max-w-lg px-4 py-8">
