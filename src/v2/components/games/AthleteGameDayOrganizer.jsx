@@ -2,6 +2,7 @@ import React, { useMemo, useState } from 'react';
 import { toast } from 'sonner';
 import {
   Plus, Trash2, Shuffle, UserPlus, Users, Swords, ListChecks, Trophy, BarChart3,
+  Link2, Unlink,
 } from 'lucide-react';
 
 import { Input } from '@/components/ui/input';
@@ -17,14 +18,15 @@ import { V2Button, V2Badge } from '@/v2/ui/primitives';
 import V2CollapsibleCard from '@/v2/ui/V2CollapsibleCard';
 import { GAME_DAY_SECTION } from '@/v2/components/games/gameDaySections';
 import GameDayAdminsCard from '@/v2/components/games/GameDayAdminsCard';
+import { PartnerDialog } from '@/v2/components/games/AthletePlayOrganizer';
 import { useGameDayRoles } from '@/modules/games/hooks/useGameDayRoles';
 import { useAthletes } from '@/modules/athletes/hooks/useAthletes';
-import { generateGameDayGames, suggestRounds, buildDrawHistory } from '@/modules/clubs/domain/gameDayDraw';
-import { fetchUnifiedLevelsByParticipant } from '@/modules/rating/services/unifiedLevelService';
-import { planAdditiveDraw, offsetRounds, splitGamesByResult } from '@/modules/clubs/domain/gameDayDrawMerge';
+import { suggestRounds } from '@/modules/clubs/domain/gameDayDraw';
+import { splitGamesByResult } from '@/modules/clubs/domain/gameDayDrawMerge';
+import { buildGameDayDraw } from '@/modules/games/services/gameDayDrawPlanner';
 import {
   GAME_DAY_FORMAT, GAME_DAY_FORMAT_LABELS, DRAW_FORMATS,
-  generateMexicanoSchedule, kingOfCourtFirstRound, kingOfCourtNextRound,
+  kingOfCourtNextRound,
 } from '@/modules/clubs/domain/gameDayFormats';
 import GameDayLeaderboard from '@/modules/clubs/components/GameDayLeaderboard';
 import {
@@ -35,6 +37,7 @@ import {
   useGameDayGames, useAddGameDayGame, useUpdateGameDayGame, useDeleteGameDayGame,
   useAppendGameDayGames, useClearGameDayGames,
   useGameDayRankingMeta, usePublishGameDayRanking, useUnpublishGameDayRanking,
+  useSetPlayParticipantPartner,
 } from '@/modules/games/hooks/useGameDays';
 
 /**
@@ -68,9 +71,14 @@ export default function AthleteGameDayOrganizer({ gameDay }) {
 function ParticipantsSection({ gameDay, participants, isLoading, isOwner }) {
   const addParticipant = useAddGameDayParticipant(gameDay.id);
   const removeParticipant = useRemoveGameDayParticipant(gameDay.id);
+  // DUPLA VINCULADA: o mesmo diálogo e o mesmo serviço do Play. Aqui o efeito
+  // é outro — no sorteio de grade a dupla joga junta em TODAS as rodadas —,
+  // mas a ferramenta e o campo gravado são os mesmos.
+  const setPartner = useSetPlayParticipantPartner(gameDay.id);
   const { data: athletes = [] } = useAthletes();
   const [guestName, setGuestName] = useState('');
   const [pickerOpen, setPickerOpen] = useState(false);
+  const [alvoDupla, setAlvoDupla] = useState(null);
 
   const addedUserIds = useMemo(
     () => new Set(participants.map((p) => p.user_id).filter(Boolean)),
@@ -119,6 +127,21 @@ function ParticipantsSection({ gameDay, participants, isLoading, isOwner }) {
     }
   };
 
+  const porId = useMemo(() => new Map(participants.map((p) => [p.id, p])), [participants]);
+  const parceiroDe = (p) => {
+    const outro = p?.partner_id ? porId.get(p.partner_id) : null;
+    return outro && outro.partner_id === p.id ? outro : null;
+  };
+
+  const definirDupla = async (pid, partnerId) => {
+    try {
+      await setPartner.mutateAsync({ pid, partnerId });
+      toast.success(partnerId ? 'Dupla vinculada. Eles vão jogar sempre juntos.' : 'Dupla desfeita.');
+    } catch (err) {
+      toast.error(err.message || 'Não foi possível vincular a dupla.');
+    }
+  };
+
   const atLimit = participants.length >= GAME_DAY_LIMITS.MAX_PARTICIPANTS;
 
   return (
@@ -148,6 +171,20 @@ function ParticipantsSection({ gameDay, participants, isLoading, isOwner }) {
                 <V2Badge tone="neutral" className="rounded-full px-1.5 py-0 text-[10px] font-normal">
                   {GD_PARTICIPANT_SOURCE_LABELS[p.source] || 'Atleta'}
                 </V2Badge>
+                {parceiroDe(p) && (
+                  <span className="inline-flex items-center gap-1 rounded-full bg-acid/15 px-1.5 py-0 text-[10px] font-semibold text-ink" title={`Dupla fixa com ${parceiroDe(p).name}`}>
+                    <Link2 aria-hidden="true" className="h-3 w-3" /> {parceiroDe(p).name}
+                  </span>
+                )}
+                {isOwner && (
+                  <V2Button
+                    onClick={() => (parceiroDe(p) ? definirDupla(p.id, null) : setAlvoDupla(p))}
+                    className="text-gray-400 transition-colors hover:text-ink"
+                    title={parceiroDe(p) ? 'Desfazer a dupla' : 'Vincular dupla fixa'}
+                  >
+                    {parceiroDe(p) ? <Unlink className="h-3.5 w-3.5" /> : <Link2 className="h-3.5 w-3.5" />}
+                  </V2Button>
+                )}
                 {isOwner && p.source !== GD_PARTICIPANT_SOURCE.OWNER && (
                   <V2Button onClick={() => handleRemove(p.id)} className="text-gray-400 transition-colors hover:text-red-600" title="Remover">
                     <Trash2 className="h-3.5 w-3.5" />
@@ -178,6 +215,21 @@ function ParticipantsSection({ gameDay, participants, isLoading, isOwner }) {
       </div>
 
       <AddAthletesDialog open={pickerOpen} onClose={() => setPickerOpen(false)} pool={platformPool} onAdd={handleAdd} />
+
+      <PartnerDialog
+        participant={alvoDupla}
+        participants={participants}
+        view={null}
+        onClose={() => setAlvoDupla(null)}
+        onConfirm={(partnerId) => {
+          const alvo = alvoDupla;
+          setAlvoDupla(null);
+          if (alvo) definirDupla(alvo.id, partnerId);
+        }}
+        description={alvoDupla
+          ? `${alvoDupla.name} e o parceiro escolhido vão jogar juntos em TODAS as rodadas sorteadas, e nunca um contra o outro. As demais regras do sorteio — parceria inédita, adversário inédito, equilíbrio de nível e participação — continuam valendo para o resto.`
+          : null}
+      />
     </V2CollapsibleCard>
   );
 }
@@ -261,6 +313,7 @@ function GamesSection({ gameDay, participants, isOwner }) {
     return map;
   }, [participants]);
 
+
   // Cada slot do jogo SORTEADO embute o `user_id` real do participante (igual
   // às partidas avulsas — Wave C.6), tornando o jogo autossuficiente para o
   // espelhamento no ranking mesmo que o id do participante mude depois.
@@ -285,44 +338,25 @@ function GamesSection({ gameDay, participants, isOwner }) {
   const handleDraw = async () => {
     setDrawing(true);
     try {
-      const ids = participants.map((p) => p.id);
-      const seed = `gd-${Date.now()}`;
-      // Sorteio ADITIVO: mantém os jogos com resultado, opcionalmente substitui
-      // os sem resultado, e numera as novas rodadas após as já existentes.
-      const plan = planAdditiveDraw({ existingGames: games, replaceUnscored });
-      // Níveis na régua unificada (DUPR informado → rating 2.0–8.0 da
-      // plataforma → ELO → nível indicado). Best-effort: se a leitura falhar,
-      // o sorteio acontece do mesmo jeito, só sem equilibrar nível.
-      let levels = null;
-      try {
-        levels = await fetchUnifiedLevelsByParticipant(participants);
-      } catch {
-        levels = null;
+      // O sorteio inteiro vem de UMA fonte, compartilhada com o painel do
+      // clube: formato, nível unificado, histórico aditivo e duplas
+      // vinculadas. Assim as três telas nunca divergem.
+      const res = await buildGameDayDraw({
+        format, participants, games, replaceUnscored,
+        rounds: effectiveRounds, courts: effectiveCourts,
+      });
+      await appendGames.mutateAsync({
+        removeIds: res.removeIds, games: res.payload, orderBase: res.orderBase,
+      });
+      // Mexicano e Rei da Quadra montam as duplas pela classificação e pelo
+      // resultado — é o que define os dois formatos. A tela AVISA em vez de
+      // ignorar o vínculo em silêncio.
+      if (res.fixedPairsIgnored) {
+        toast.warning(`${res.label} monta as duplas pela classificação de cada rodada — as duplas vinculadas não valem neste formato.`);
       }
-      let raw;
-      if (formatsOn && format === GAME_DAY_FORMAT.MEXICANO) {
-        raw = generateMexicanoSchedule(ids, { rounds: effectiveRounds, seed, levels });
-      } else if (formatsOn && format === GAME_DAY_FORMAT.KING_OF_COURT) {
-        raw = kingOfCourtFirstRound(ids, { seed, levels });
-      } else {
-        // Americano ciente do histórico do dia: leva em conta as DUPLAS e os
-        // ADVERSÁRIOS já ocorridos (nos jogos mantidos) para variar as formações,
-        // e equilibra a PARTICIPAÇÃO por rodada presente (quem seguiu no dia e
-        // jogou menos entra primeiro, sem forçar quem entrou tarde ao mesmo total).
-        // `formationGames`: TODOS os jogos do dia (inclusive os que serão
-        // substituídos) para não repetir as duplas/confrontos que acabaram de
-        // sair. A participação continua vindo só dos jogos mantidos.
-        const history = buildDrawHistory(plan.keptGames, ids, { formationGames: games });
-        raw = generateGameDayGames(ids, {
-          rounds: effectiveRounds, seed, history, courts: effectiveCourts, levels,
-        });
-      }
-      const payload = offsetRounds(raw, plan.roundBase).map(toPayload);
-      await appendGames.mutateAsync({ removeIds: plan.removeIds, games: payload, orderBase: plan.orderBase });
-      const label = formatsOn ? GAME_DAY_FORMAT_LABELS[format] : 'Americano';
       toast.success(isKingOfCourt
-        ? `Rei da Quadra: ${payload.length} jogo(s) adicionado(s).`
-        : `Sorteio (${label}): ${payload.length} jogo(s) adicionado(s).`);
+        ? `Rei da Quadra: ${res.payload.length} jogo(s) adicionado(s).`
+        : `Sorteio (${res.label}): ${res.payload.length} jogo(s) adicionado(s).`);
       setDrawOpen(false);
     } catch (err) {
       toast.error(err.message || 'Não foi possível sortear.');

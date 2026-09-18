@@ -1,6 +1,6 @@
 import React, { useMemo, useState } from 'react';
 import { toast } from 'sonner';
-import { Plus, Trash2, Shuffle, UserPlus, Users, Swords, ListChecks, BarChart3 } from 'lucide-react';
+import { Plus, Trash2, Shuffle, UserPlus, Users, Swords, ListChecks, BarChart3, Link2, Unlink } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
@@ -21,6 +21,7 @@ import {
   useEventParticipants,
   useAddEventParticipant,
   useRemoveEventParticipant,
+  useSetEventParticipantPartner,
   useEventInvites,
   useEventDateRsvps,
   useEventGames,
@@ -35,13 +36,17 @@ import {
 import { useAuth } from '@/core/lib/FirebaseAuthContext';
 import { useAthletes } from '@/modules/athletes/hooks/useAthletes';
 import { PARTICIPANT_SOURCE, INVITE_STATUS, GAME_DAY_LIMITS } from '@/modules/clubs/domain/constants';
-import { generateGameDayGames, suggestRounds, buildDrawHistory } from '@/modules/clubs/domain/gameDayDraw';
-import { fetchUnifiedLevelsByParticipant } from '@/modules/rating/services/unifiedLevelService';
-import { planAdditiveDraw, offsetRounds, splitGamesByResult } from '@/modules/clubs/domain/gameDayDrawMerge';
+import { suggestRounds } from '@/modules/clubs/domain/gameDayDraw';
+import { splitGamesByResult } from '@/modules/clubs/domain/gameDayDrawMerge';
+import { buildGameDayDraw } from '@/modules/games/services/gameDayDrawPlanner';
+import {
+  GAME_DAY_FORMAT, GAME_DAY_FORMAT_LABELS, DRAW_FORMATS,
+} from '@/modules/clubs/domain/gameDayFormats';
 import GameDayLeaderboard from '@/modules/clubs/components/GameDayLeaderboard';
 import V2CollapsibleCard from '@/v2/ui/V2CollapsibleCard';
 import { GAME_DAY_SECTION } from '@/v2/components/games/gameDaySections';
 import PublishToRankingToggle from '@/modules/clubs/components/PublishToRankingToggle';
+import { PartnerDialog } from '@/v2/components/games/AthletePlayOrganizer';
 
 const SOURCE_LABEL = {
   [PARTICIPANT_SOURCE.CONFIRMED]: 'Confirmou no dia',
@@ -91,8 +96,13 @@ export default function GameDayOrganizer({ event, clubId, dateId }) {
 /* ------------------------------ Participants ----------------------------- */
 
 function ParticipantsSection({ eventId, clubId, dateId, participants, isLoading }) {
+  const [alvoDupla, setAlvoDupla] = useState(null);
   const addParticipant = useAddEventParticipant(eventId);
   const removeParticipant = useRemoveEventParticipant(eventId);
+  // DUPLA VINCULADA: o mesmo diálogo do dia de jogo do atleta, sobre o
+  // armazenamento do clube. `partner_id` é campo opcional — quem nunca
+  // vincular dupla segue sem ele.
+  const setPartner = useSetEventParticipantPartner(eventId);
   const { data: invites = [] } = useEventInvites(eventId);
   const { data: dateRsvps = [] } = useEventDateRsvps(eventId);
   const { data: members = [] } = useClubMembers(clubId);
@@ -104,6 +114,20 @@ function ParticipantsSection({ eventId, clubId, dateId, participants, isLoading 
     () => new Set(participants.map((p) => p.user_id).filter(Boolean)),
     [participants],
   );
+
+  const porId = useMemo(() => new Map(participants.map((p) => [p.id, p])), [participants]);
+  const parceiroDe = (p) => {
+    const outro = p?.partner_id ? porId.get(p.partner_id) : null;
+    return outro && outro.partner_id === p.id ? outro : null;
+  };
+  const definirDupla = async (pid, partnerId) => {
+    try {
+      await setPartner.mutateAsync({ pid, partnerId });
+      toast.success(partnerId ? 'Dupla vinculada. Eles vão jogar sempre juntos.' : 'Dupla desfeita.');
+    } catch (err) {
+      toast.error(err.message || 'Não foi possível vincular a dupla.');
+    }
+  };
   const addedNames = useMemo(
     () => new Set(participants.map((p) => (p.name || '').trim().toLowerCase())),
     [participants],
@@ -190,6 +214,18 @@ function ParticipantsSection({ eventId, clubId, dateId, participants, isLoading 
                 <UserAvatar name={p.name} photoUrl={p.photo_url} size="xs" />
                 <span className="font-medium text-ink">{p.name}</span>
                 <Badge variant="secondary" className="rounded-full px-1.5 py-0 text-[10px] font-normal">{SOURCE_LABEL[p.source] || 'Atleta'}</Badge>
+                {parceiroDe(p) && (
+                  <span className="inline-flex items-center gap-1 rounded-full bg-acid/15 px-1.5 py-0 text-[10px] font-semibold text-ink" title={`Dupla fixa com ${parceiroDe(p).name}`}>
+                    <Link2 aria-hidden="true" className="h-3 w-3" /> {parceiroDe(p).name}
+                  </span>
+                )}
+                <button
+                  onClick={() => (parceiroDe(p) ? definirDupla(p.id, null) : setAlvoDupla(p))}
+                  className="text-gray-400 transition-colors hover:text-ink"
+                  title={parceiroDe(p) ? 'Desfazer a dupla' : 'Vincular dupla fixa'}
+                >
+                  {parceiroDe(p) ? <Unlink className="h-3.5 w-3.5" /> : <Link2 className="h-3.5 w-3.5" />}
+                </button>
                 <button onClick={() => handleRemove(p.id)} className="text-gray-400 transition-colors hover:text-red-600" title="Remover">
                   <Trash2 className="h-3.5 w-3.5" />
                 </button>
@@ -213,6 +249,21 @@ function ParticipantsSection({ eventId, clubId, dateId, participants, isLoading 
         </form>
         {atLimit && <p className="text-xs text-amber-600">Limite de {GAME_DAY_LIMITS.MAX_PARTICIPANTS} participantes atingido.</p>}
       </div>
+
+      <PartnerDialog
+        participant={alvoDupla}
+        participants={participants}
+        view={null}
+        onClose={() => setAlvoDupla(null)}
+        onConfirm={(partnerId) => {
+          const alvo = alvoDupla;
+          setAlvoDupla(null);
+          if (alvo) definirDupla(alvo.id, partnerId);
+        }}
+        description={alvoDupla
+          ? `${alvoDupla.name} e o parceiro escolhido vão jogar juntos em TODAS as rodadas sorteadas, e nunca um contra o outro. As demais regras do sorteio — parceria inédita, adversário inédito, equilíbrio de nível e participação — continuam valendo para o resto.`
+          : null}
+      />
 
       <AddAthletesDialog
         open={pickerOpen}
@@ -291,6 +342,11 @@ function GamesSection({ eventId, dateId, participants }) {
   const appendGames = useAppendEventGames(eventId);
   const clearGames = useClearEventGames(eventId);
   const [rounds, setRounds] = useState(0);
+  // FORMATO do sorteio. Esta tela só oferecia Americano enquanto a do atleta
+  // já tinha Mexicano e Rei da Quadra — mesma ferramenta, versões diferentes,
+  // e nada dizia isso a quem organizava pelo clube.
+  const [format, setFormat] = useState(GAME_DAY_FORMAT.AMERICANO);
+  const isAmericano = format === GAME_DAY_FORMAT.AMERICANO;
   // Quadras simultâneas disponíveis, como TEXTO livre (vazio = automático).
   const [courtsText, setCourtsText] = useState('');
   const [drawOpen, setDrawOpen] = useState(false);
@@ -303,7 +359,7 @@ function GamesSection({ eventId, dateId, participants }) {
   const maxCourts = Math.max(1, Math.floor(participants.length / 4));
   const typedCourts = Math.floor(Number(courtsText));
   const courtsValue = Number.isFinite(typedCourts) && typedCourts > 0 ? typedCourts : null;
-  const effectiveCourts = courtsValue;
+  const effectiveCourts = isAmericano ? courtsValue : null;
   const effectiveRounds = rounds || suggestRounds(participants.length, effectiveCourts) || 3;
   const canDraw = participants.length >= 4;
 
@@ -312,11 +368,6 @@ function GamesSection({ eventId, dateId, participants }) {
     [games],
   );
 
-  const participantById = useMemo(() => {
-    const map = new Map();
-    participants.forEach((p) => map.set(p.id, p));
-    return map;
-  }, [participants]);
 
   const openDraw = () => {
     setReplaceUnscored(false); // por padrão, não apaga nada (aditivo)
@@ -326,51 +377,21 @@ function GamesSection({ eventId, dateId, participants }) {
   const handleDraw = async () => {
     setDrawing(true);
     try {
-      const ids = participants.map((p) => p.id);
-      const seed = `gd-${Date.now()}`;
-      // Sorteio ADITIVO: mantém os jogos com resultado, opcionalmente substitui
-      // os sem resultado, e numera as novas rodadas após as já existentes.
-      const plan = planAdditiveDraw({ existingGames: games, replaceUnscored });
-      // Americano ciente do histórico do dia: considera as DUPLAS e ADVERSÁRIOS
-      // já ocorridos (jogos mantidos) para variar as formações, e equilibra a
-      // PARTICIPAÇÃO por rodada presente (quem seguiu no dia e jogou menos entra
-      // primeiro, sem forçar quem entrou tarde ao mesmo total dos veteranos).
-      // `formationGames`: TODOS os jogos do dia (inclusive os substituídos)
-      // para não repetir as duplas/confrontos que acabaram de sair.
-      const history = buildDrawHistory(plan.keptGames, ids, { formationGames: games });
-      // Níveis na régua unificada (DUPR informado → rating 2.0–8.0 da
-      // plataforma → ELO → nível indicado). Best-effort: se a leitura falhar,
-      // o sorteio acontece do mesmo jeito, só sem equilibrar nível.
-      let levels = null;
-      try {
-        levels = await fetchUnifiedLevelsByParticipant(participants);
-      } catch {
-        levels = null;
-      }
-      const raw = generateGameDayGames(ids, {
-        rounds: effectiveRounds, seed, history, courts: effectiveCourts, levels,
+      // MESMA fonte de sorteio do dia de jogo do atleta e do da arena:
+      // formato, nível unificado, histórico aditivo e duplas vinculadas. O
+      // que muda aqui é só ONDE se grava.
+      const res = await buildGameDayDraw({
+        format, participants, games, replaceUnscored,
+        rounds: effectiveRounds, courts: effectiveCourts,
       });
-      // Wave C.6: também salva o `user_id` real (se o participante for um
-      // atleta da plataforma) para que o Cloud Function de ranking possa
-      // agregar estatísticas por uid (em vez de por doc_id de participant).
-      // Mantém `id` (doc_id do event_participant) para retrocompat.
-      const payload = offsetRounds(raw, plan.roundBase).map((g) => ({
-        round: g.round,
-        kind: 'doubles',
-        side_a: g.side_a.map((id) => {
-          const p = participantById.get(id);
-          return { id, name: p?.name || 'Jogador', user_id: p?.user_id || null };
-        }),
-        side_b: g.side_b.map((id) => {
-          const p = participantById.get(id);
-          return { id, name: p?.name || 'Jogador', user_id: p?.user_id || null };
-        }),
-      }));
       await appendGames.mutateAsync({
-        plan: { removeIds: plan.removeIds, games: payload, orderBase: plan.orderBase },
+        plan: { removeIds: res.removeIds, games: res.payload, orderBase: res.orderBase },
         dateId,
       });
-      toast.success(`Sorteio: ${payload.length} jogo(s) adicionado(s).`);
+      if (res.fixedPairsIgnored) {
+        toast.warning(`${res.label} monta as duplas pela classificação de cada rodada — as duplas vinculadas não valem neste formato.`);
+      }
+      toast.success(`Sorteio (${res.label}): ${res.payload.length} jogo(s) adicionado(s).`);
       setDrawOpen(false);
     } catch (err) {
       toast.error(err.message || 'Não foi possível sortear.');
@@ -489,6 +510,19 @@ function GamesSection({ eventId, dateId, participants }) {
                   </label>
                 </div>
               )}
+              <div>
+                <Label htmlFor="gd-club-format">Formato</Label>
+                <select
+                  id="gd-club-format"
+                  value={format}
+                  onChange={(e) => setFormat(e.target.value)}
+                  className="mt-1 w-full rounded-lg border border-gray-200 bg-white px-3 py-2 text-sm text-ink"
+                >
+                  {DRAW_FORMATS.map((f) => (
+                    <option key={f} value={f}>{GAME_DAY_FORMAT_LABELS[f]}</option>
+                  ))}
+                </select>
+              </div>
               <Label htmlFor="rounds">Número de rodadas</Label>
               <Input
                 id="rounds"

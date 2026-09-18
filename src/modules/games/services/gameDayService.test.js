@@ -101,7 +101,10 @@ describe('syncGameDayRankingIfPublished', () => {
     const payload = h.batchSet.mock.calls[0][1];
     expect(payload.side_a_ids).toEqual(['u1', 'u2']);
     expect(payload.side_b_ids).toEqual(['u3', 'u4']);
-    expect(h.maybeAutoRecomputeRatings).toHaveBeenCalledWith(ACTOR, { force: true });
+    // O recálculo NÃO sai daqui: quem dispara é o gatilho do servidor, pela
+    // própria escrita do espelho em `club_event_games`. O cliente tentando
+    // recalcular era escrita recusada pela regra para quem não é admin.
+    expect(h.maybeAutoRecomputeRatings).not.toHaveBeenCalled();
     expect(h.createAuditLog).toHaveBeenCalledWith(
       expect.objectContaining({ action: 'game_day_ranking_synced' }),
     );
@@ -143,7 +146,10 @@ describe('syncGameDayRankingIfPublished', () => {
     expect(payload.score_b).toBe(11);
     // created_at do documento original é preservado ao regravar a correção.
     expect(payload.created_at).toBe('2020-01-01T00:00:00.000Z');
-    expect(h.maybeAutoRecomputeRatings).toHaveBeenCalledWith(ACTOR, { force: true });
+    // O recálculo NÃO sai daqui: quem dispara é o gatilho do servidor, pela
+    // própria escrita do espelho em `club_event_games`. O cliente tentando
+    // recalcular era escrita recusada pela regra para quem não é admin.
+    expect(h.maybeAutoRecomputeRatings).not.toHaveBeenCalled();
   });
 });
 

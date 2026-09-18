@@ -1,11 +1,10 @@
 import React, { useMemo, useState } from 'react';
 import { Navigate } from 'react-router-dom';
-import { ArrowRight, RotateCcw, RefreshCw, ShieldCheck, UserCog, Wand2, AlertTriangle, CheckCircle2, Eye, EyeOff, Search } from 'lucide-react';
+import { ArrowRight, RotateCcw, RefreshCw, ShieldCheck, UserCog, Wand2, AlertTriangle, Eye, EyeOff, Search } from 'lucide-react';
 import { toast } from 'sonner';
 import { useAuth } from '@/core/lib/FirebaseAuthContext';
 import { restoreAthleteProfileFromUserDoc, resyncAllAthleteProfilesFromUsers, listAllAthleteProfiles, setAthleteHidden } from '@/modules/athletes/services/athleteService';
 import { migrateProvisionalData } from '@/modules/tournament/services/registrationService';
-import { useRecomputeRatings } from '@/modules/rating/hooks/useRating';
 import {
   V2Button,
   V2EmptyState,
@@ -35,7 +34,6 @@ export default function V2AdminProfiles({ embedded = false }) {
   const [migNote, setMigNote] = useState('');
   const [migBusy, setMigBusy] = useState(false);
   const [migLastResult, setMigLastResult] = useState(null);
-  const recomputeRatings = useRecomputeRatings();
 
   async function load() {
     try {
@@ -141,14 +139,6 @@ export default function V2AdminProfiles({ embedded = false }) {
     }
   }
 
-  async function handleRecomputeAfterMig() {
-    try {
-      await recomputeRatings.mutateAsync();
-      toast.success('Ranking recalculado.');
-    } catch (err) {
-      toast.error(err.message || 'Falha ao recalcular ranking.');
-    }
-  }
 
   async function handleToggleHidden(profile) {
     const target = profile.id || profile.uid;
@@ -412,16 +402,10 @@ export default function V2AdminProfiles({ embedded = false }) {
             <Wand2 className="h-4 w-4" />
             {migBusy ? 'Migrando…' : 'Executar migração'}
           </V2Button>
-          {migLastResult && migLastResult.mode === 'apply' && migLastResult.claimed > 0 && (
-            <V2Button
-              variant="secondary"
-              onClick={handleRecomputeAfterMig}
-              disabled={recomputeRatings.isPending}
-            >
-              <CheckCircle2 className="h-4 w-4" />
-              {recomputeRatings.isPending ? 'Recalculando…' : 'Recalcular ranking agora'}
-            </V2Button>
-          )}
+          {/* Não há "Recalcular ranking agora": a própria migração reescreve
+              o uid da inscrição, e o gatilho `recomputeRankingOnTournamentRegistration`
+              refaz os rankings na hora. O botão existia porque esse gatilho
+              não existia. */}
         </div>
 
         {migLastResult && (

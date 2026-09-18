@@ -85,8 +85,7 @@ import {
   subscribePlatformSettings,
 } from '@/core/services/platformSettingsService';
 import { db, firebaseDisabledReason, firebaseServicesEnabled } from '@/core/config/firebase';
-import { useRecomputeRatings } from '@/modules/rating/hooks/useRating';
-import ClubRankingBackfillPanel from '@/modules/admin/components/ClubRankingBackfillPanel';
+import RankingAutomatico from '@/modules/admin/components/RankingAutomatico';
 import {
   cancelAndArchiveTournament,
   deleteTournamentCascading,
@@ -402,27 +401,13 @@ function OverviewTab() {
       </div>
 
       <div className="mt-6">
-        <ClubRankingBackfillPanel />
+        <RankingAutomatico />
       </div>
     </div>
   );
 }
 
 function QuickActions() {
-  const ratingOn = true;
-  const { mutateAsync, isPending } = useRecomputeRatings();
-  const [last, setLast] = useState(null);
-
-  async function handleRecompute() {
-    try {
-      const result = await mutateAsync();
-      setLast(result);
-      toast.success(`Ratings recalculados: ${result.players} atleta(s) a partir de ${result.matchesUsed} jogo(s).`);
-    } catch (err) {
-      toast.error(err?.message || 'Não foi possível recalcular os ratings.');
-    }
-  }
-
   return (
     <V2Surface>
       <div className="flex items-center gap-2">
@@ -432,23 +417,8 @@ function QuickActions() {
       <p className="mt-1 text-xs text-gray-500">Operações que normalmente exigiriam várias telas, todas em um clique.</p>
 
       <div className="mt-4 grid gap-3 sm:grid-cols-2">
-        <button
-          type="button"
-          onClick={handleRecompute}
-          disabled={!ratingOn || isPending}
-          className="flex items-start gap-3 rounded-2xl border border-gray-100 bg-paper p-4 text-left transition-colors hover:border-ink disabled:opacity-50"
-        >
-          <Medal className="mt-0.5 h-4 w-4 shrink-0 text-ink" />
-          <div className="min-w-0">
-            <div className="text-sm font-semibold text-ink">
-              {isPending ? 'Recalculando…' : 'Recalcular ratings'}
-            </div>
-            <p className="mt-0.5 text-xs text-gray-500">
-              Atualiza o rating de todos os atletas a partir dos jogos finalizados.
-            </p>
-          </div>
-        </button>
-
+        {/* O "Recalcular ratings" saiu daqui: ranking e rating são atualizados
+            pelo SERVIDOR a cada resultado que entra. Ver `RankingAutomatico`. */}
         <Link
           to="/admin/owner-debug"
           className="flex items-start gap-3 rounded-2xl border border-gray-100 bg-paper p-4 transition-colors hover:border-ink"
@@ -491,11 +461,6 @@ function QuickActions() {
         </a>
       </div>
 
-      {last && (
-        <p className="mt-3 text-xs text-gray-500">
-          Último recálculo: {last.players} atleta(s), {last.matchesUsed} de {last.matchesTotal} jogo(s).
-        </p>
-      )}
     </V2Surface>
   );
 }

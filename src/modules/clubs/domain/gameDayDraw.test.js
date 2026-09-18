@@ -390,3 +390,94 @@ describe('pairFourBalanced — dupla vinculada', () => {
     expect(depois).toEqual(antes);
   });
 });
+
+/* ---------------------------------------------------------------------------
+ * ⭐ DUPLA VINCULADA NO SORTEIO DE GRADE (Americano em rodadas)
+ *
+ * Aqui o vínculo tem de valer em DOIS momentos, não um: os dois têm de cair no
+ * mesmo GRUPO DE 4 (senão vão para quadras diferentes e nenhuma formação os
+ * junta) e, dentro do grupo, no mesmo LADO.
+ * ------------------------------------------------------------------------ */
+describe('⭐ generateGameDayGames — dupla vinculada', () => {
+  const ids = ['a', 'b', 'c', 'd', 'e', 'f', 'g', 'h'];
+  const ladosDe = (g) => [[...g.side_a].sort().join('+'), [...g.side_b].sort().join('+')];
+
+  it('⭐ a dupla joga SEMPRE junta, em todas as rodadas', () => {
+    const games = generateGameDayGames(ids, {
+      rounds: 8, seed: 'vinculo', fixedPairs: [['a', 'b']],
+    });
+    expect(games.length).toBeGreaterThan(0);
+    games.forEach((g) => {
+      const todos = [...g.side_a, ...g.side_b];
+      const temA = todos.includes('a');
+      const temB = todos.includes('b');
+      // Ou os dois estão na partida, ou nenhum dos dois.
+      expect(temA).toBe(temB);
+      if (temA) expect(ladosDe(g)).toContain('a+b');
+    });
+  });
+
+  it('⭐ nunca se enfrentam', () => {
+    const games = generateGameDayGames(ids, {
+      rounds: 10, seed: 'confronto', fixedPairs: [['a', 'b']],
+    });
+    games.forEach((g) => {
+      const adversarios = (g.side_a.includes('a') && g.side_b.includes('b'))
+        || (g.side_b.includes('a') && g.side_a.includes('b'));
+      expect(adversarios).toBe(false);
+    });
+  });
+
+  it('⭐ DUAS duplas vinculadas convivem, inclusive na mesma quadra', () => {
+    const games = generateGameDayGames(ids, {
+      rounds: 8, seed: 'duas', fixedPairs: [['a', 'b'], ['c', 'd']],
+    });
+    games.forEach((g) => {
+      const lados = ladosDe(g);
+      const todos = [...g.side_a, ...g.side_b];
+      if (todos.includes('a')) { expect(todos).toContain('b'); expect(lados).toContain('a+b'); }
+      if (todos.includes('c')) { expect(todos).toContain('d'); expect(lados).toContain('c+d'); }
+    });
+  });
+
+  it('⭐ com FILA (mais gente que quadra), a dupla continua inteira', () => {
+    // 10 atletas em 2 quadras: 8 jogam por rodada, 2 aguardam.
+    const dez = [...ids, 'i', 'j'];
+    const games = generateGameDayGames(dez, {
+      rounds: 10, seed: 'fila', courts: 2, fixedPairs: [['a', 'b']],
+    });
+    games.forEach((g) => {
+      const todos = [...g.side_a, ...g.side_b];
+      expect(todos.includes('a')).toBe(todos.includes('b'));
+      if (todos.includes('a')) expect(ladosDe(g)).toContain('a+b');
+    });
+  });
+
+  it('o resto do sorteio continua variando à volta da dupla', () => {
+    const games = generateGameDayGames(ids, {
+      rounds: 8, seed: 'variedade', fixedPairs: [['a', 'b']],
+    });
+    const outrasDuplas = new Set(games.flatMap(ladosDe).filter((d) => d !== 'a+b'));
+    expect(outrasDuplas.size).toBeGreaterThan(3);
+  });
+
+  it('par com gente de fora, repetido ou encadeado é ignorado sem quebrar', () => {
+    expect(() => generateGameDayGames(ids, {
+      rounds: 2, seed: 'x', fixedPairs: [['a', 'zzz'], ['b', 'b'], ['c', 'd'], ['d', 'e']],
+    })).not.toThrow();
+    const games = generateGameDayGames(ids, {
+      rounds: 6, seed: 'x', fixedPairs: [['a', 'zzz'], ['c', 'd'], ['d', 'e']],
+    });
+    // c|d entrou (primeiro par válido); d|e foi ignorado (d já estava preso).
+    games.forEach((g) => {
+      const todos = [...g.side_a, ...g.side_b];
+      if (todos.includes('c')) expect(ladosDe(g)).toContain('c+d');
+    });
+  });
+
+  it('sem `fixedPairs`, o sorteio é EXATAMENTE o de antes (mesma semente)', () => {
+    const antes = generateGameDayGames(ids, { rounds: 6, seed: 'igual' });
+    const depois = generateGameDayGames(ids, { rounds: 6, seed: 'igual', fixedPairs: [] });
+    expect(depois).toEqual(antes);
+  });
+});

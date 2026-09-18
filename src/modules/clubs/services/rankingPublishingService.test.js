@@ -110,8 +110,10 @@ describe('syncEventDateRankingIfPublished', () => {
     expect(payload.side_a_ids).toEqual(['u_ana', 'u_beto']);
     expect(payload.side_b_ids).toEqual(['u_caio', 'u_duda']);
     expect(payload.club_id).toBe('club1');
-    // Recálculo forçado do rating nacional + auditoria da sincronização.
-    expect(h.maybeAutoRecomputeRatings).toHaveBeenCalledWith(ACTOR, { force: true });
+    // O recálculo NÃO sai daqui: quem dispara é o gatilho do servidor, pela
+    // própria escrita do espelho em `club_event_games`. O cliente tentando
+    // recalcular era escrita recusada pela regra para quem não é admin.
+    expect(h.maybeAutoRecomputeRatings).not.toHaveBeenCalled();
     expect(h.createAuditLog).toHaveBeenCalledWith(
       expect.objectContaining({ action: 'club_event_date_ranking_synced' }),
     );
@@ -191,7 +193,10 @@ describe('syncEventDateRankingIfPublished', () => {
     expect(payload.score_b).toBe(11);
     // created_at do documento original é preservado ao regravar a correção.
     expect(payload.created_at).toBe('2020-01-01T00:00:00.000Z');
-    expect(h.maybeAutoRecomputeRatings).toHaveBeenCalledWith(ACTOR, { force: true });
+    // O recálculo NÃO sai daqui: quem dispara é o gatilho do servidor, pela
+    // própria escrita do espelho em `club_event_games`. O cliente tentando
+    // recalcular era escrita recusada pela regra para quem não é admin.
+    expect(h.maybeAutoRecomputeRatings).not.toHaveBeenCalled();
     expect(h.createAuditLog).toHaveBeenCalledWith(
       expect.objectContaining({ action: 'club_event_date_ranking_synced' }),
     );

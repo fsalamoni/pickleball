@@ -4,14 +4,13 @@ import { toast } from 'sonner';
 import {
   ArrowLeft, Building2, CalendarDays, Hash, Mail, MapPin, MessageSquare,
   MessagesSquare, Phone, Settings, Users, Medal, Share2, User, Users2,
-  Globe2, ListChecks, RefreshCw,
+  Globe2, ListChecks,
 } from 'lucide-react';
 import {
   useClub, useMyMembership, useJoinClub, useLeaveClub, useMyJoinRequest,
   useRequestToJoinClub, useMyClubInvite, useAcceptClubInvite, useDeclineClubInvite,
 } from '@/modules/clubs/hooks/useClubs';
 import { useClubInternalRanking } from '@/modules/clubs/hooks/useClubInternalRanking';
-import { useRecomputeOneClubRanking } from '@/modules/clubs/hooks/useClubRankingAdmin';
 import { CLUB_ROLE, JOIN_REQUEST_STATUS } from '@/modules/clubs/domain/constants';
 import V2ClubMembers from '@/v2/components/clubs/V2ClubMembers';
 import V2ClubEvents from '@/v2/components/clubs/V2ClubEvents';
@@ -252,33 +251,11 @@ function ClubRankingTab({ clubId, isAdmin }) {
   const doublesOn = true;
   const [tab, setTab] = useState('individual'); // 'individual' | 'doubles'
   const [includeExternal, setIncludeExternal] = useState(false);
-  const { data, isLoading, refetch } = useClubInternalRanking(clubId, { includeExternal });
-  const recompute = useRecomputeOneClubRanking();
+  const { data, isLoading } = useClubInternalRanking(clubId, { includeExternal });
 
-  async function handleAdminRecompute() {
-    try {
-      const result = await recompute.mutateAsync(clubId);
-      // Mostra os counts do pipeline para diagnóstico.
-      const c = result?.counts || {};
-      const i = result?.internal || {};
-      const e = result?.ext || {};
-      const msg = `Recalculado: ${c.members || 0} membros, ${c.ownClubGames || 0} jogos do clube, `
-        + `${c.ownClubEventGames || 0} games espelhados. `
-        + `Individual: ${i.individual || 0} (int) / ${e.individual || 0} (ext).`;
-      toast.success(msg, { duration: 8000 });
-      // refetch imediatamente — o Cloud Function acabou de materializar.
-      setTimeout(() => refetch(), 1500);
-    } catch (err) {
-      // Erro 500 do Cloud Function: tenta extrair mensagem útil.
-      const detail = err?.details || err?.message || 'Não foi possível recalcular.';
-      console.error('recomputeOneClubInternalRanking falhou:', err);
-      toast.error(`Falha ao materializar: ${detail}`, { duration: 8000 });
-    }
-  }
 
   if (isLoading) return <V2Skeleton className="h-48 rounded-4xl" />;
 
-  const isEmpty = !data?.individual?.length && !data?.doubles?.length;
 
   return (
     <V2Surface className="overflow-hidden p-0">
@@ -287,18 +264,10 @@ function ClubRankingTab({ clubId, isAdmin }) {
           <div>
             <h3 className="font-display text-lg font-bold text-ink">Ranking interno</h3>
             <p className="text-sm text-gray-500">Casual, a partir dos placares dos dias de jogo. Não afeta o ranking nacional.</p>
-            {isAdmin && isEmpty && (
-              <button
-                type="button"
-                onClick={handleAdminRecompute}
-                disabled={recompute.isPending}
-                className="mt-2 inline-flex items-center gap-1.5 rounded-full border border-amber-200 bg-amber-50 px-3 py-1.5 text-xs font-bold text-amber-900 transition-colors hover:bg-amber-100 disabled:opacity-50"
-                title="Materializa o ranking deste clube a partir dos placares já gravados"
-              >
-                <RefreshCw className={cn('h-3.5 w-3.5', recompute.isPending && 'animate-spin')} />
-                {recompute.isPending ? 'Recalculando…' : 'Materializar ranking agora'}
-              </button>
-            )}
+            {/* Não há "Materializar ranking agora": o ranking interno é
+                refeito pelo servidor a cada placar gravado, a cada publicação
+                e a cada entrada/saída de membro. Vazio aqui significa que
+                ainda não houve resultado — e é isso que o estado vazio diz. */}
           </div>
           <div className="flex flex-wrap items-center gap-2">
             <V2Badge tone="neutral" className="rounded-full">
@@ -359,26 +328,7 @@ function ClubRankingTab({ clubId, isAdmin }) {
       {tab === 'individual' && (
         <IndividualRankingTable
           ranking={data?.individual || []}
-          emptyMessage={
-            isAdmin
-              ? 'O materializado está vazio. Clique em "Materializar ranking agora" para popular a partir dos placares já gravados.'
-              : 'Registre placares nos dias de jogo do clube para montar o ranking interno.'
-          }
-          action={
-            isAdmin
-              ? (
-                <V2Button
-                  size="sm"
-                  variant="ghost"
-                  onClick={handleAdminRecompute}
-                  disabled={recompute.isPending}
-                >
-                  <RefreshCw className={cn('h-4 w-4', recompute.isPending && 'animate-spin')} />
-                  {recompute.isPending ? 'Recalculando…' : 'Materializar ranking agora'}
-                </V2Button>
-              )
-              : null
-          }
+          emptyMessage="Registre placares nos dias de jogo do clube para montar o ranking interno. Ele se atualiza sozinho, a cada resultado."
         />
       )}
       {tab === 'doubles' && doublesOn && (

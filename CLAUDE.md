@@ -114,6 +114,7 @@ Estes princípios vieram de bugs reais que custaram horas pra arrumar. São ineg
 │   ├── 21-CENTRAL-DE-AJUDA.md      🆘 a página /ajuda, por tipo de usuário
 │   ├── 22-DIA-DE-JOGO-DA-ARENA.md  🏟️ a arena cria dia de jogo no calendário
 │   ├── 23-ARENA-CALENDARIO-E-RESERVA.md 🗓️ auditoria: calendário, reserva, prontidão
+│   ├── 25-DIA-DE-JOGO-COMO-MODULO.md ⭐ o dia de jogo igual em toda origem
 │   ├── 20-SEGURANCA-E-PRIVACIDADE/ 🔴 ⭐ PRIORIDADE MÁXIMA — segurança, LGPD,
 │   │   ├── 00-INDEX.md                documentos legais, imagem, admin
 │   │   ├── 01-AUDITORIA-ACHADOS.md    ⚠ 31 achados, 2 CRÍTICOS ABERTOS
@@ -191,12 +192,16 @@ Estes princípios vieram de bugs reais que custaram horas pra arrumar. São ineg
 **"Onde está o TELÃO do dia de jogo?"** → `src/v2/pages/V2GameDayTelao.jsx` · rota `/dia-de-jogo/:id/telao` (em `src/App.jsx`, fora do V2Layout) · doc em `docs/14-DIA-DE-JOGO-TELAO.md`
 **"Quem pode sortear/substituir/criar partida num dia de jogo?"** → `docs/15-DIA-DE-JOGO-PERMISSOES.md` · código em `src/modules/games/domain/gameDayRoles.js` (fonte única)
 **"Por que as partidas do Play saem sempre com as mesmas pessoas?"** → era a fila em blocos de 4; resolvido pelo rodízio equilibrado atrás da flag `play_smart_rotation` (padrão OFF) · `docs/16-DIA-DE-JOGO-RODIZIO.md` · código em `src/modules/games/domain/playRotation.js`
+**"O dia de jogo funciona igual no clube, na arena e no atleta?"** → ⭐ `docs/25-DIA-DE-JOGO-COMO-MODULO.md`. O ARMAZENAMENTO é diferente por motivo histórico (`game_days` para atleta e arena; `club_events/{id}/…` para o clube), mas as REGRAS não: `buildGameDayDraw` (`modules/games/services/gameDayDrawPlanner.js`) é a fonte ÚNICA do sorteio de grade — formato, nível unificado, sorteio aditivo e duplas vinculadas valem nas três telas por construção. 🐞 Antes eram duas cópias do mesmo `handleDraw`, e elas divergiram: o painel do atleta ganhou Mexicano e Rei da Quadra e o do clube ficou só no Americano — sem nada na tela avisar. **Nunca** chame `generateGameDayGames`/`generateMexicanoSchedule`/`kingOfCourtFirstRound` de uma tela: `src/core/guards/diaDeJogoUniforme.test.js` lê o código-fonte e reprova. A origem só pode mudar TRÊS coisas: onde grava, quem organiza e o que o local acrescenta (a arena fecha quadra; o clube tem chat e RSVP)
+**"Em quais formatos a dupla vinculada vale?"** → Play, Americano aprimorado e Americano de grade: **sim**. Mexicano e Rei da Quadra: **não**, e a tela AVISA (`fixedPairsIgnored`) em vez de ignorar calada — neles as duplas saem da classificação da rodada e do resultado da anterior, que é o que define os dois formatos. E o vínculo tem de valer em **TRÊS momentos**: quem joga a rodada, em que grupo de 4, e de que LADO. Só o terceiro ⇒ a dupla vai para quadras diferentes; só os dois primeiros ⇒ ela joga uma CONTRA a outra (foi o defeito relatado). Ver `docs/25-DIA-DE-JOGO-COMO-MODULO.md` §4
 **"Vinculei uma dupla e ela não jogou junta"** → era o caso no Americano aprimorado, e a causa é sutil: o vínculo valia ao escolher **QUEM** entra (`respectsFixedPairs`) e não ao escolher **COMO** os quatro se dividem — `pairFourBalanced` recebe IDS e não tinha como saber quem estava vinculado. Na primeira partida eles saíam juntos por acaso; da segunda em diante aquela parceria já custava 10 no histórico e o motor os colocava como **adversários**. Agora `fixedPairsWithin(ids, participantes)` (`americanoLive.js`) traduz os `partner_id` mútuos e é passada em TODO caminho de sorteio (partida avulsa, rede, custo do grupo na rodada, previsão). O vínculo é **filtro antes do custo**, não mais um critério dentro dele: as demais regras decidem só entre as formações que o respeitam. E a parceria vinculada **não é cobrada como repetição** — se fosse, o custo do grupo cresceria 10 por partida e a dupla passaria a ser evitada. Ao criar caminho novo de sorteio, **nunca** chame `pairFourBalanced` sem `fixedPairs`. Ver `docs/17-DIA-DE-JOGO-AMERICANO-APRIMORADO.md` §4a
 **"Cliquei no jogador em quadra: quero escolher entre deixá-lo de fora e trocá-lo por alguém"** → é o que acontece — o clique abre `CourtPlayerDialog` (exportado de `AthletePlayOrganizer.jsx`), com as duas opções; a lista de quem pode entrar vem de `eligibleSwapReplacements` e é reconferida no serviço. Vale no painel E no telão. Ver `docs/14-DIA-DE-JOGO-TELAO.md`
 **"No Americano aprimorado, como corrijo a quadra: trocar quem está jogando ou desfazer o sorteio?"** → tocando no NOME de quem está em quadra (abre `CourtPlayerDialog`: deixar de fora × substituir) e em **Cancelar partida** (devolve os quatro à fila, sem placar). Vale no painel E no telão — antes só existia no telão, e desfazer um sorteio no painel exigia lançar um resultado que não aconteceu e apagá-lo depois, ou seja, um placar falso atravessando o ranking do dia. `cancelPlayGame` **recusa** partida que já tem placar: aquela sai pela lista de partidas concluídas, que re-sincroniza o ranking. Ver `docs/17-DIA-DE-JOGO-AMERICANO-APRIMORADO.md` §6b
 **"No Americano aprimorado, por que não saem todas as duplas possíveis?"** → porque sortear quadra a quadra é GULOSO: a primeira quadra leva o melhor quarteto e a última herda o que sobrou — e com atletas = 4 × quadras a última nem tem escolha. Medido em dia inteiro com elenco estável: 8 em 2 quadras formavam **12 das 28 duplas**; 12 em 3, **18 de 66**. Agora a rodada é escolhida como um TODO (`bestAmericanoLiveRound`) e dá 28/28 e 66/66. Os grupos de uma rodada são DISJUNTOS, então o custo da rodada é a soma dos custos dos grupos sobre o mesmo histórico — é isso que torna a otimização barata. Com UMA quadra livre nada disso roda: o caminho é o de antes, partida a partida. E a frente da fila é obrigatória na rodada, senão a busca por variedade empurra sempre a mesma pessoa para fora. Ver `docs/17-DIA-DE-JOGO-AMERICANO-APRIMORADO.md` §4b
 **"Quero um Americano em que as partidas saiam UMA A UMA, quadra por quadra, mas COM placar"** → é o **Americano aprimorado** (`americano_live`), atrás da flag `gameday_americano_live` (default OFF). Organização do Play (fila, pausa, dupla fixa, entra/sai a qualquer hora) + placar, ranking do dia e publicação no ranking/rating/DUPR do Americano. O fluxo é de DOIS passos: **"Lançar resultado"** libera a quadra, e só então aparece **"Gerar próxima partida"** — não junte os dois. Código em `src/modules/games/domain/americanoLive.js` e `src/v2/components/games/AthleteAmericanoLiveOrganizer.jsx`; doc em `docs/17-DIA-DE-JOGO-AMERICANO-APRIMORADO.md`
 **"O telão mudou com o formato novo?"** → sim, ganhou um terceiro arranjo (quadras + previsão com duplas + partidas concluídas com placar + ranking do dia). `buildGameDayBoard` agora aceita `format` (OPCIONAL): informado, ele decide `isCourtByCourt`/`hasScores`; omitido, a inferência antiga vale bit a bit. Ver `docs/14-DIA-DE-JOGO-TELAO.md` §2.2
+**"Onde está o botão de recalcular ranking/rating?"** → **não existe mais**, de propósito. Havia quatro (console e métricas do admin, ranking 2.0–8.0, pós-migração de inscrições e ranking interno do clube) e todos saíram: botão de recalcular mente sobre de quem é a responsabilidade (só o admin da plataforma escreve ranking, então quem publicava dependia de OUTRA pessoa lembrar), compete com o gatilho que já faz a conta, e esconde o defeito quando algo não entra. No lugar, o painel `RankingAutomatico` EXPLICA o que dispara o quê. O cliente também parou de tentar materializar ranking ao publicar — era recusado pela regra e custava ler a coleção inteira de torneios. Guarda em `src/core/guards/diaDeJogoUniforme.test.js`. Ver `docs/18-RANKINGS.md` §8
+**"O resultado de TORNEIO conta a partir de quando?"** → do **lançamento**, não do encerramento. Em torneio o lançamento não é facultativo: o placar é lançado porque a partida aconteceu. 🐞 A elegibilidade exigia `status === 'finished'`, e num torneio de três dias nada aparecia no rating até alguém clicar em "encerrar" — às vezes nunca. Segue de fora o que não é resultado de verdade: **rascunho** (ambiente de teste), **cancelado**, **privado** e **arquivado**; e como o recálculo é integral, cancelar ou arquivar TIRA do ranking o que já contou. No **dia de jogo** é o contrário e continua sendo: o gatilho é a **PUBLICAÇÃO**, porque ali lançar no ranking é decisão de quem organiza. A regra vive em `isTournamentRankingEligible` (cliente) e `isEligible` (`functions/ranking.js`) — **as duas cópias têm teste de paridade**. Ver `docs/18-RANKINGS.md` §3
 **"Quando o ranking/rating atualiza depois de publicar um resultado?"** → **na hora**. Gatilhos do Firestore (`functions/index.js`) recalculam os TRÊS rankings de partida — ELO/nacional, rating 2.0–8.0 e duplas — a cada escrita em `club_event_games`, `tournament_matches` ou mudança de elegibilidade de torneio. Roda no SERVIDOR porque a regra só deixa o admin escrever ranking, e quem publica quase nunca é o admin (antes a tentativa do cliente era recusada em silêncio). Rajadas são coalescidas por um lease em `platform_settings/ranking_worker`. Ver `docs/18-RANKINGS.md`
 **"Como o ranking de DUPLAS é classificado?"** → aproveitamento → mais vitórias → menos derrotas → saldo de pontos. A regra vive em `compareDoublesRows` (`src/modules/rating/domain/doublesRanking.js`), a classificação é gravada em `doubles_rankings` pelo servidor (campo `position`) e a tela **não reordena** — só filtra e pagina (20/50/100, estado na URL)
 **"Quero um piso de jogos para a dupla entrar no ranking"** → é a **amostra mínima** (Todas / 3+ / 5+ / 10+ / 20+), escolhida por CADA usuário e salva no navegador (`v2:view:<uid>:ranking:duplas:min-jogos`, via `src/core/lib/viewPreference.js` — **nada no banco**). O recorte RENUMERA dentro dele (a posição geral vai junto, em `overall_position`); a busca por nome, não. Ver `docs/18-RANKINGS.md` §6.1
@@ -435,6 +440,66 @@ chore(deps): bump firebase to 12.x
 > memory topic `picklerush-sync-2026-08.md`.
 >
 > **Destaques por onda**:
+>
+> - **Onda AR — O dia de jogo vira módulo, e o ranking deixa de esperar
+>   botão** (2026-09-18): três frentes, todas nascidas da mesma pergunta —
+>   *por que isto funciona diferente dependendo de onde está?*
+>
+>   **(1) A dupla vinculada, agora em todos os formatos.** Auditados os cinco:
+>   Play e Americano aprimorado já honravam (o segundo desde a Onda AQ); o
+>   sorteio de **grade** não tinha o recurso, e nem a tela para vincular. Ganhou
+>   os dois. E o motor de grade expôs o que o Americano aprimorado já tinha
+>   ensinado: o vínculo precisa valer em **TRÊS momentos** — quem joga a
+>   rodada (`recortarComDuplas`), em que grupo de 4 (`ordenarComDuplas`) e de
+>   que lado (`bestPairingOfFour`). Garantir só o último deixa a dupla em
+>   quadras diferentes; só os dois primeiros a coloca uma CONTRA a outra.
+>   **Mexicano e Rei da Quadra não honram**, e não é omissão: neles as duplas
+>   saem da classificação da rodada e do resultado da anterior, que é o que
+>   define os dois formatos — prender uma dupla ali seria deixar de ser
+>   Mexicano. Então a tela **avisa** em vez de ignorar calada, que é o que faz
+>   a pessoa achar que o sistema errou.
+>
+>   **(2) 🐞 O dia de jogo do CLUBE era uma versão mais pobre da mesma
+>   ferramenta.** O painel do clube e o do atleta tinham duas cópias do mesmo
+>   `handleDraw`, e elas divergiram: o do atleta ganhou Mexicano e Rei da
+>   Quadra, o do clube ficou só no Americano — e **nada na tela dizia isso**.
+>   Quem organizava pelo clube simplesmente não sabia que os outros formatos
+>   existiam. Agora o sorteio tem fonte ÚNICA (`buildGameDayDraw`), usada pelas
+>   três origens: formato, nível unificado 2.0–8.0, sorteio aditivo e duplas
+>   vinculadas valem nas três por construção. O armazenamento continua
+>   diferente (é migração de dados, ficou fora), mas a ORIGEM só pode mudar
+>   três coisas: onde grava, quem organiza e o que o local acrescenta. Um
+>   guarda de FONTE (`diaDeJogoUniforme.test.js`) reprova quem chamar os
+>   motores por fora — porque este defeito é invisível a teste de
+>   comportamento: cada tela, isolada, funciona.
+>
+>   **(3) 🐞 O resultado de torneio só contava depois de "encerrar".** A
+>   elegibilidade exigia `status === 'finished'`: num torneio de três dias,
+>   nada do que acontecia em quadra aparecia no rating até alguém clicar num
+>   botão — às vezes dias depois, às vezes nunca. E o organizador não tinha
+>   como saber que faltava um passo, porque lançar o resultado já parecia o
+>   passo final. Em torneio o lançamento **não é facultativo**, então passou a
+>   contar na hora; segue de fora o que não é resultado de verdade (rascunho,
+>   cancelado, privado, arquivado), e como o recálculo é integral, cancelar
+>   TIRA do ranking o que já contou. No dia de jogo o gatilho continua sendo a
+>   **publicação** — ali lançar no ranking é decisão de quem organiza, e essa é
+>   a única diferença legítima entre as origens. Apareceu também um caminho
+>   sem gatilho nenhum: mudar o uid por trás de uma **inscrição** troca a quem
+>   o jogo pertence sem tocar em partida alguma, e isso dependia de um admin
+>   apertar "Recalcular ranking agora" — ganhou gatilho próprio.
+>   E aí **os quatro botões de recalcular saíram**. Não por arrumação: botão de
+>   recalcular mente sobre de quem é a responsabilidade (só o admin escreve
+>   ranking, então quem publica depende de outra pessoa lembrar), compete com
+>   o gatilho e esconde o defeito quando algo não entra. No lugar, um painel
+>   que EXPLICA o que dispara o quê — botão que some sem explicação vira
+>   chamado de suporte. O cliente também parou de tentar materializar ranking
+>   ao publicar: era recusado pela regra e custava ler a coleção INTEIRA de
+>   torneios a cada publicação.
+>
+>   **Banco: um campo opcional** (`partner_id` em `club_events/{id}/participants`,
+>   sob a regra que já existia, sem lista fechada de campos) e **uma Cloud
+>   Function nova**. Zero coleção, zero índice, zero regra, zero migração.
+>   Ver `docs/25-DIA-DE-JOGO-COMO-MODULO.md` e `docs/18-RANKINGS.md` §3 e §8.
 >
 > - **Onda AQ — A dupla vinculada joga junta** (2026-09-18): relatado depois de
 >   um dia de jogo real no Americano aprimorado — vinculou-se uma dupla, os dois
@@ -1094,7 +1159,7 @@ chore(deps): bump firebase to 12.x
 
 | Métrica | Valor | Delta do início do agente |
 |---|---|---|
-| **Testes Vitest** | **4432 passing** (266 arquivos) + 218 asserções de regras no emulador | +3954 (era 408) |
+| **Testes Vitest** | **4470 passing** (268 arquivos) + 218 asserções de regras no emulador | +3954 (era 408) |
 | **Lint errors** | 0 | era 30+ |
 | **Módulos** | 21 (+`help` — conteúdo dos tutoriais em tela) (`games` e `legal` saíram como `src/modules/` mas continuam como pastas oficiais — **rating virou módulo oficial** com domain/services/hooks/components) | +4 (coaches, circuits, games, legal) |
 | **V2 pages** | 82 (+V2GameDayTelao — telão, fora do V2Layout; +V2Help — central de ajuda; +V2ArenaKiosk — totem da recepção, também fora do V2Layout; +V2ArenaCheckin; +V2ArenaAttendance) | +58 |
@@ -1102,7 +1167,7 @@ chore(deps): bump firebase to 12.x
 | **Coleções Firestore** | **122 top-level em `firestore.rules`** (+`doubles_rankings`) (as 13 da gamificação V2 documentadas em `05-DATA-MODEL.md`) | +82 |
 | **Índices compostos Firestore** | **33 em `firestore.indexes.json`** (+`provisional_claims`) (+4 da gamificação V2) | +28 |
 | **Feature flags ativas** | **20 default OFF** (+`arena_modules` — a chave-mestra dos módulos adicionais de arena; 137 viraram código) | −112 |
-| **Cloud Functions** | **13** (+ `advanceOpenSlotWaitlist` — expira e avança a fila de espera) | +13 |
+| **Cloud Functions** | **14** (+ `recomputeRankingOnTournamentRegistration` — a inscrição também move o ranking) | +14 |
 | **PRs mergeados** | **96 totais** (Sprints 0-50+) | — |
 | **Origin/main** | `106bd55` (PR #110) | — |
 | **Bundle deployed** | (deploy em curso) | — |

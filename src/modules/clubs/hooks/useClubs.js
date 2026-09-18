@@ -57,6 +57,7 @@ import {
   listEventParticipants,
   addEventParticipant,
   removeEventParticipant,
+  setEventParticipantPartner,
   listEventGames,
   addEventGame,
   updateEventGame,
@@ -634,6 +635,15 @@ export function useRemoveEventParticipant(eventId) {
   const qc = useQueryClient();
   return useMutation({
     mutationFn: (participantId) => removeEventParticipant(eventId, participantId),
+    onSuccess: () => qc.invalidateQueries({ queryKey: ['event-participants', eventId] }),
+  });
+}
+
+/** Vincula/desfaz a DUPLA FIXA de um participante do dia de jogo do clube. */
+export function useSetEventParticipantPartner(eventId) {
+  const qc = useQueryClient();
+  return useMutation({
+    mutationFn: ({ pid, partnerId }) => setEventParticipantPartner(eventId, pid, partnerId || null),
     onSuccess: () => qc.invalidateQueries({ queryKey: ['event-participants', eventId] }),
   });
 }

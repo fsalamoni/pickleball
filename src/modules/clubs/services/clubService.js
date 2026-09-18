@@ -957,6 +957,52 @@ export async function addEventParticipant(eventId, data, user) {
   return ref.id;
 }
 
+/**
+ * Define/limpa a DUPLA VINCULADA (mútua) de um participante do dia de jogo do
+ * clube. É a mesma ferramenta do dia de jogo do atleta, sobre o armazenamento
+ * do clube: o vínculo é gravado nos DOIS documentos, porque um `partner_id`
+ * de um lado só não é dupla — é dado pela metade, e prenderia alguém a quem
+ * não o escolheu.
+ *
+ * `partner_id` é campo OPCIONAL: participante que nunca vinculou dupla não tem
+ * o campo, e continua se comportando exatamente como antes.
+ *
+ * @param {string} eventId
+ * @param {string} participantId
+ * @param {string|null} partnerId  null desfaz o vínculo
+ */
+export async function setEventParticipantPartner(eventId, participantId, partnerId) {
+  if (!eventId || !participantId) throw new Error('Participante inválido.');
+  if (partnerId && partnerId === participantId) throw new Error('Escolha outro participante.');
+  const todos = await listEventParticipants(eventId);
+  const porId = new Map(todos.map((p) => [p.id, p]));
+  const eu = porId.get(participantId);
+  if (!eu) throw new Error('Participante não encontrado.');
+
+  const ref = (pid) => doc(db, COL.events, eventId, COL.eventParticipants, pid);
+  const batch = writeBatch(db);
+  // Solta quem estava vinculado aos dois lados antes de amarrar o novo par —
+  // senão sobra um `partner_id` apontando para alguém que já tem outra dupla.
+  const soltar = (p) => {
+    if (p?.partner_id && p.partner_id !== participantId && p.partner_id !== partnerId && porId.has(p.partner_id)) {
+      batch.update(ref(p.partner_id), { partner_id: null });
+    }
+  };
+
+  if (!partnerId) {
+    if (eu.partner_id && porId.has(eu.partner_id)) batch.update(ref(eu.partner_id), { partner_id: null });
+    batch.update(ref(participantId), { partner_id: null });
+  } else {
+    const parceiro = porId.get(partnerId);
+    if (!parceiro) throw new Error('Parceiro não encontrado.');
+    soltar(eu);
+    soltar(parceiro);
+    batch.update(ref(participantId), { partner_id: partnerId });
+    batch.update(ref(partnerId), { partner_id: participantId });
+  }
+  await batch.commit();
+}
+
 export async function removeEventParticipant(eventId, participantId) {
   if (!eventId || !participantId) return;
   // Sela o `user_id` do participante (se for atleta da plataforma) nas partidas

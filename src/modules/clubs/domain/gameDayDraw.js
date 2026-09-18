@@ -334,7 +334,77 @@ function bestPairingOfFour(group, partnerCount, oppCount, rng, levelOf = null, f
  * @param {number[]} playing  índices dos jogadores que jogam nesta rodada
  * @returns {{ games: Array<{side_a:[number,number], side_b:[number,number]}>, cost: number }}
  */
-function buildRound(playing, partnerCount, oppCount, rng, levelOf = null) {
+/**
+ * Quebra a ordem da rodada em BLOCOS, tratando cada dupla vinculada como um
+ * átomo de dois, e remonta os grupos de 4 a partir deles.
+ *
+ * Sem isto, respeitar o vínculo só no pareamento não bastaria: a dupla pode
+ * cair em QUADRAS diferentes na hora de fatiar a ordem em grupos de 4, e aí
+ * não há formação que a mantenha junta. O bloco garante que os dois entram no
+ * mesmo grupo — 2+2, 2+1+1 e 1+1+1+1 sempre fecham quatro.
+ *
+ * Quem sobra sem completar um grupo fica de fora da rodada, exatamente como
+ * antes (o corte é `Math.floor(n/4)` quadras).
+ */
+/**
+ * Recorta os `vagas` primeiros da fila SEM partir uma dupla vinculada ao meio.
+ *
+ * Percorre a ordem de prioridade (quem menos jogou primeiro) e leva cada
+ * pessoa com o parceiro junto. Se a dupla não couber no que resta de vagas,
+ * ela é pulada e os dois esperam — o próximo solo entra no lugar. Assim a
+ * quantidade de vagas é sempre respeitada e ninguém entra sozinho.
+ */
+function recortarComDuplas(ranked, vagas, paresPorIndice) {
+  const escolhidos = [];
+  const dentro = new Set();
+  ranked.forEach((p) => {
+    if (escolhidos.length >= vagas || dentro.has(p)) return;
+    const parceiro = paresPorIndice.get(p);
+    const juntos = parceiro != null && ranked.includes(parceiro);
+    const precisa = juntos ? 2 : 1;
+    if (escolhidos.length + precisa > vagas) return;
+    escolhidos.push(p); dentro.add(p);
+    if (juntos) { escolhidos.push(parceiro); dentro.add(parceiro); }
+  });
+  return escolhidos;
+}
+
+function ordenarComDuplas(order, paresPorIndice) {
+  if (!paresPorIndice || paresPorIndice.size === 0) return order;
+  const usados = new Set();
+  const blocos = [];
+  order.forEach((p) => {
+    if (usados.has(p)) return;
+    const parceiro = paresPorIndice.get(p);
+    if (parceiro != null && !usados.has(parceiro) && order.includes(parceiro)) {
+      usados.add(p); usados.add(parceiro);
+      blocos.push([p, parceiro]);
+    } else {
+      usados.add(p);
+      blocos.push([p]);
+    }
+  });
+
+  // Encaixe por tamanho: um grupo de 4 recebe blocos enquanto couberem. Um
+  // bloco de 2 que não cabe nos lugares restantes espera o próximo grupo.
+  const saida = [];
+  let atual = [];
+  const sobra = [];
+  blocos.forEach((b) => {
+    if (atual.length + b.length <= 4) {
+      atual.push(...b);
+      if (atual.length === 4) { saida.push(...atual); atual = []; }
+    } else {
+      sobra.push(b);
+    }
+  });
+  // Segunda passada: fecha o grupo em aberto com o que sobrou, e o resto vai
+  // para o fim (fora das quadras, como qualquer excedente).
+  sobra.concat(atual.length ? [atual] : []).forEach((b) => saida.push(...b));
+  return saida;
+}
+
+function buildRound(playing, partnerCount, oppCount, rng, levelOf = null, paresPorIndice = null) {
   const courts = Math.floor(playing.length / 4);
   // Amplitude de nível dentro de uma quadra: quanto menor, mais parelho o jogo.
   const W_COURT_SPREAD = 3;
@@ -359,9 +429,11 @@ function buildRound(playing, partnerCount, oppCount, rng, levelOf = null) {
     // de uma quadra tendem a ter força parecida. A outra metade continua sendo
     // embaralhamento puro, que é o que garante variedade de parcerias ao longo
     // do dia. O custo abaixo decide qual tentativa vence.
-    const order = (levelOf && t % 2 === 0)
+    const bruta = (levelOf && t % 2 === 0)
       ? orderByLevelWithJitter(playing, levelOf, rng)
       : shuffle(playing, rng);
+    // A dupla vinculada é um átomo: entra inteira no mesmo grupo de 4.
+    const order = ordenarComDuplas(bruta, paresPorIndice);
     // Clones locais para acumular o efeito dentro da própria rodada.
     const localP = new Map(partnerCount);
     const localO = new Map(oppCount);
@@ -369,7 +441,12 @@ function buildRound(playing, partnerCount, oppCount, rng, levelOf = null) {
     let totalCost = 0;
     for (let g = 0; g < courts; g += 1) {
       const group = order.slice(g * 4, g * 4 + 4);
-      const pick = bestPairingOfFour(group, localP, localO, rng, levelOf);
+      const forcados = paresPorIndice
+        ? group
+          .filter((x) => paresPorIndice.get(x) != null && group.includes(paresPorIndice.get(x)) && x < paresPorIndice.get(x))
+          .map((x) => [x, paresPorIndice.get(x)])
+        : null;
+      const pick = bestPairingOfFour(group, localP, localO, rng, levelOf, forcados);
       games.push({ side_a: pick.side_a, side_b: pick.side_b });
       totalCost += pick.cost + courtSpread(group);
       // Atualiza os clones para refletir a escolha na mesma rodada.
@@ -438,6 +515,11 @@ export function pairFourBalanced(group, opts = {}) {
  *   parelhas e duplas equilibradas. SEM ele, o comportamento é exatamente o
  *   histórico — nenhum sorteio existente muda por causa desta opção.
  *
+ *   `fixedPairs` (opcional): duplas VINCULADAS pelo organizador, como pares de
+ *   ids (`[[a, b], …]`). Elas atravessam os demais critérios: entram no mesmo
+ *   grupo de 4 e saem do mesmo lado, e as outras regras decidem só o que
+ *   sobra. Ausente ⇒ comportamento idêntico ao histórico.
+ *
  *   `courts` (opcional): QUADRAS SIMULTÂNEAS disponíveis. Sem ele, o motor abre
  *   uma quadra por grupo de 4 (comportamento histórico). Com ele, cada rodada
  *   tem no máximo `courts` jogos — ex.: 12 atletas em 2 quadras → 8 jogam e 4
@@ -455,6 +537,7 @@ export function generateGameDayGames(playerIds, options = {}) {
   }
   const {
     seed = 'gameday', history = null, courts: courtsOption = null, levels = null,
+    fixedPairs = null,
   } = options;
   // Quadras SIMULTÂNEAS disponíveis. Ausente = automático (uma quadra por grupo
   // de 4), que é exatamente o comportamento histórico.
@@ -482,6 +565,27 @@ export function generateGameDayGames(playerIds, options = {}) {
       return Number.isFinite(v) ? v : null;
     });
     if (porIndice.some((v) => v != null)) levelOf = (i) => porIndice[i];
+  }
+
+  // DUPLAS VINCULADAS, traduzidas de ids para os índices internos. O vínculo
+  // vale em dois momentos: manter os dois no MESMO grupo de 4 (senão caem em
+  // quadras diferentes e não há formação que os junte) e mantê-los do MESMO
+  // lado. Ausente ⇒ tudo se comporta como antes, bit a bit.
+  let paresPorIndice = null;
+  if (Array.isArray(fixedPairs) && fixedPairs.length) {
+    const indicePorId = new Map(ids.map((id, i) => [id, i]));
+    paresPorIndice = new Map();
+    fixedPairs.forEach((par) => {
+      const a = indicePorId.get(par?.[0]);
+      const b = indicePorId.get(par?.[1]);
+      // Só entra o par completo, de gente que está no sorteio, e sem
+      // encadeamento (alguém já vinculado a outro vence pela primeira vez).
+      if (a == null || b == null || a === b) return;
+      if (paresPorIndice.has(a) || paresPorIndice.has(b)) return;
+      paresPorIndice.set(a, b);
+      paresPorIndice.set(b, a);
+    });
+    if (paresPorIndice.size === 0) paresPorIndice = null;
   }
 
   const gamesPlayed = new Array(n).fill(0);
@@ -512,13 +616,22 @@ export function generateGameDayGames(playerIds, options = {}) {
         if (restCount[x] !== restCount[y]) return restCount[y] - restCount[x];
         return rng() - 0.5;
       });
-    const playing = ranked.slice(0, playPerRound);
-    const resting = ranked.slice(playPerRound);
+    // A DUPLA VINCULADA entra e descansa JUNTA. Cortar a fila em `playPerRound`
+    // sem olhar o vínculo deixava um dos dois em quadra e o outro de fora — e
+    // aí o parceiro jogava a rodada inteira com outra pessoa, que é justamente
+    // o que o vínculo existe para impedir. O corte passa a ser por BLOCOS:
+    // quem tem parceiro leva o parceiro junto; se não couberem os dois, os
+    // dois esperam a próxima rodada.
+    const playing = paresPorIndice
+      ? recortarComDuplas(ranked, playPerRound, paresPorIndice)
+      : ranked.slice(0, playPerRound);
+    const emQuadra = new Set(playing);
+    const resting = ranked.filter((p) => !emQuadra.has(p));
     resting.forEach((p) => {
       restCount[p] += 1;
     });
 
-    const { games } = buildRound(playing, partnerCount, oppCount, rng, levelOf);
+    const { games } = buildRound(playing, partnerCount, oppCount, rng, levelOf, paresPorIndice);
     games.forEach((gm) => {
       // Persiste o efeito nos contadores globais.
       partnerCount.set(pairKey(gm.side_a[0], gm.side_a[1]), (partnerCount.get(pairKey(gm.side_a[0], gm.side_a[1])) || 0) + 1);

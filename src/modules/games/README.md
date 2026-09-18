@@ -321,6 +321,25 @@ produziria um botão que falha no Firestore — então ele continua do criador.
 (24 asserções no emulador), que provam também que um admin não consegue se
 auto-promover, mudar o modo, virar dono, renomear, arquivar ou publicar.
 
+## O sorteio de grade tem UMA fonte (2026-09-18)
+
+`buildGameDayDraw` (`services/gameDayDrawPlanner.js`) é a única função que
+sorteia dia de jogo de grade — usada pelo painel do atleta, pelo da arena e
+pelo do clube. Formato, nível unificado, sorteio aditivo e duplas vinculadas
+valem nas três telas por construção.
+
+🐞 Antes havia duas cópias do mesmo `handleDraw` e elas divergiram: a do atleta
+ganhou Mexicano e Rei da Quadra, a do clube ficou só no Americano — e nada na
+tela avisava. `src/core/guards/diaDeJogoUniforme.test.js` lê o código-fonte e
+reprova quem chamar os motores por fora da fonte única.
+
+**Dupla vinculada vale em três momentos** (quem joga a rodada, em que grupo de
+4, de que lado). Garantir só o último deixa a dupla em quadras diferentes;
+garantir só os dois primeiros a coloca uma CONTRA a outra. Mexicano e Rei da
+Quadra não honram vínculo — as duplas saem da classificação/resultado —, e a
+tela avisa (`fixedPairsIgnored`) em vez de ignorar calada.
+Ver `docs/25-DIA-DE-JOGO-COMO-MODULO.md`.
+
 ## Sortear a rodada: todas as quadras de uma vez (2026-09-14)
 
 ⚠️ **Com 8 jogadores em 2 quadras, sortear quadra a quadra congela os grupos.**

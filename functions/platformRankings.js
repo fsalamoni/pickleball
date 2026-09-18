@@ -542,6 +542,15 @@ const CAMPOS_PARTIDA_TORNEIO = Object.freeze([
   'tournament_id', 'team_confrontation',
 ]);
 
+/**
+ * Campos da INSCRIÇÃO que mudam o ranking: quem é o atleta por trás dela, e o
+ * torneio a que pertence. Pagamento, check-in, categoria e observações não —
+ * a inscrição é escrita muitas vezes por motivos que não movem rating nenhum.
+ */
+const CAMPOS_INSCRICAO = Object.freeze([
+  'player_a_user_id', 'player_b_user_id', 'tournament_id', 'format',
+]);
+
 /** Idem para o espelho de dia de jogo / evento de clube. */
 const CAMPOS_JOGO_EVENTO = Object.freeze([
   'status', 'winner_side', 'score_a', 'score_b', 'side_a_ids', 'side_b_ids',
@@ -581,5 +590,6 @@ module.exports = {
   WORKER_DOC,
   mudouResultado,
   CAMPOS_PARTIDA_TORNEIO,
+  CAMPOS_INSCRICAO,
   CAMPOS_JOGO_EVENTO,
 };

@@ -13,16 +13,17 @@
  *  5. Grava o estado da publicação no próprio dia de jogo:
  *     `publish_to_ranking: true`, `published_at`, `published_by`,
  *     `ranking_published_count`.
- *  6. Aciona o recálculo do rating nacional (best-effort, com throttle).
+ *
+ * O recálculo dos rankings NÃO é feito aqui: a própria escrita do espelho
+ * dispara o gatilho do servidor (`recomputeRankingOnClubEventGame`), que
+ * recalcula ELO/nacional, rating 2.0–8.0 e duplas. Ver o comentário de
+ * `recomputeNationalRating`, logo abaixo, para o porquê.
  *
  * Idempotente: re-executar a publicação não duplica jogos já espelhados.
  *
  * Segurança/robustez:
  *  - Lê `score_a`/`score_b` numéricos; pula jogos não decididos.
  *  - Pula jogos com `user_id` faltando (convidados avulsos).
- *  - O recálculo é best-effort: se falhar, a publicação já foi gravada
- *    e o `maybeAutoRecomputeRatings` será reativado na próxima tentativa
- *    (próxima publicação/admin manual).
  */
 
 import {
@@ -152,15 +153,20 @@ async function applyEventDateMirror(event, dateId, clubId, actor) {
   return { result, changed };
 }
 
-/** Recálculo best-effort do rating nacional (força ignorar o throttle). */
-async function recomputeNationalRating(actor, contextMsg) {
-  try {
-    const { maybeAutoRecomputeRatings } = await import('@/modules/rating/services/ratingService');
-    await maybeAutoRecomputeRatings(actor, { force: true });
-  } catch (err) {
-    logger.error(contextMsg, err);
-  }
-}
+/**
+ * O recálculo dos rankings NÃO acontece mais aqui.
+ *
+ * Quem recalcula é o SERVIDOR, no gatilho de `club_event_games`
+ * (`functions/index.js` → `recomputeRankingOnClubEventGame`), disparado pela
+ * própria escrita do espelho que acabou de ser feita — publicação, edição,
+ * sincronização e despublicação, todas passam por ali.
+ *
+ * Por que a tentativa do cliente saiu: materializar ranking é escrita em
+ * coleção que só o admin da plataforma pode gravar. Para todo mundo mais, a
+ * chamada era recusada pela regra e morria num `catch` — custando, de graça,
+ * a leitura da coleção INTEIRA de torneios a cada publicação. E para o admin
+ * ela ainda concorria com o gatilho, recalculando duas vezes a mesma coisa.
+ */
 
 /**
  * Publica os resultados decididos de um dia de jogo no ranking nacional.
@@ -193,7 +199,6 @@ export async function publishEventDateToRanking(event, dateId, clubId, actor) {
   });
 
   // Recálculo best-effort do ranking nacional.
-  await recomputeNationalRating(actor, 'Recálculo automático do rating após publicação falhou:');
 
   await createAuditLog({
     action: 'club_event_date_published_to_ranking',
@@ -264,7 +269,6 @@ export async function syncEventDateRankingIfPublished(eventId, dateId, actor) {
   });
 
   // Recálculo best-effort do ranking nacional para refletir as novas partidas.
-  await recomputeNationalRating(actor, 'Recálculo automático do rating após sincronização falhou:');
 
   await createAuditLog({
     action: 'club_event_date_ranking_synced',
@@ -305,7 +309,6 @@ export async function unpublishEventDateFromRanking(event, dateId, actor) {
     published_count: 0,
   });
 
-  await recomputeNationalRating(actor, 'Recálculo automático do rating após despublicação falhou:');
 
   await createAuditLog({
     action: 'club_event_date_unpublished_from_ranking',

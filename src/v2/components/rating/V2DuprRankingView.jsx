@@ -1,12 +1,10 @@
 import React, { useMemo, useState } from 'react';
 import { Link } from 'react-router-dom';
-import { Crown, RefreshCw, Search, TrendingUp } from 'lucide-react';
-import { toast } from 'sonner';
+import { Crown, Search, TrendingUp } from 'lucide-react';
 import { useAuth } from '@/core/lib/FirebaseAuthContext';
-import { useDuprRanking, useRecomputeDuprRatings } from '@/modules/rating/hooks/useDuprRating';
+import { useDuprRanking } from '@/modules/rating/hooks/useDuprRating';
 import {
   V2Avatar,
-  V2Button,
   V2Badge,
   V2EmptyState,
   V2PageIntro,
@@ -71,9 +69,8 @@ function DuprExplainer() {
 }
 
 export default function V2DuprRankingView() {
-  const { user, isPlatformAdmin } = useAuth();
+  const { user } = useAuth();
   const { data: rows = [], isLoading } = useDuprRanking();
-  const recompute = useRecomputeDuprRatings();
   const [format, setFormat] = useState('doubles');
   const [search, setSearch] = useState('');
 
@@ -95,26 +92,13 @@ export default function V2DuprRankingView() {
       .map((r, i) => ({ ...r, position: i + 1 }));
   }, [rows, format, search]);
 
-  async function handleRecompute() {
-    try {
-      const res = await recompute.mutateAsync();
-      toast.success(`Ranking recalculado (${res.players} atleta(s)).`);
-    } catch (err) {
-      toast.error(err?.message || 'Falha ao recalcular o ranking.');
-    }
-  }
-
   return (
     <div>
       <V2PageIntro
         title="Nível de habilidade · escala 2.0–8.0"
         subtitle="Ranking próprio no formato DUPR, calculado pelos jogos da plataforma. Não é o rating oficial do DUPR."
-        action={isPlatformAdmin ? (
-          <V2Button variant="secondary" size="sm" onClick={handleRecompute} disabled={recompute.isPending}>
-            <RefreshCw className={cn('h-4 w-4', recompute.isPending && 'animate-spin')} />
-            {recompute.isPending ? 'Recalculando…' : 'Recalcular'}
-          </V2Button>
-        ) : null}
+        /* Não há "Recalcular": o servidor refaz os três rankings a cada
+           resultado que entra, muda ou sai. Ver `RankingAutomatico`. */
       />
 
       <DuprExplainer />

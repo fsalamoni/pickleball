@@ -25,6 +25,7 @@ const dados = { participants: [], games: [] };
 const semMutacao = { mutate: vi.fn(), mutateAsync: vi.fn(async () => ({})), isPending: false };
 
 vi.mock('@/modules/games/hooks/useGameDays', () => ({
+  useSetPlayParticipantPartner: () => semMutacao,
   useGameDayParticipants: () => ({ data: dados.participants, isLoading: false }),
   useGameDayGames: () => ({ data: dados.games, isLoading: false }),
   useAddGameDayParticipant: () => semMutacao,

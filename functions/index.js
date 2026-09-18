@@ -30,7 +30,7 @@ const logger = require('firebase-functions/logger');
 const { isEligible } = require('./ranking');
 const {
   requestRankingRecompute, mudouResultado,
-  CAMPOS_PARTIDA_TORNEIO, CAMPOS_JOGO_EVENTO,
+  CAMPOS_PARTIDA_TORNEIO, CAMPOS_INSCRICAO, CAMPOS_JOGO_EVENTO,
 } = require('./platformRankings');
 const { recomputeClubInternalRankings } = require('./clubRanking');
 const { recomputeSeasonRanking } = require('./seasonRanking');
@@ -101,6 +101,27 @@ exports.recomputeRankingOnTournamentMatch = onDocumentWritten(
   async (event) => {
     if (!mudouResultado(antes(event), depois(event), CAMPOS_PARTIDA_TORNEIO)) return;
     await pedirRecalculo('tournament-match', { matchId: event.params.matchId });
+  },
+);
+
+// (2b) INSCRIÇÃO de torneio: quem é o atleta por trás daquela inscrição.
+//
+//      A partida guarda ids de INSCRIÇÃO, não uids — o ranking só descobre de
+//      quem é o resultado resolvendo a inscrição. Então trocar/preencher o uid
+//      de uma inscrição muda a quem o jogo pertence, sem tocar em partida
+//      nenhuma. É o que acontece na migração de inscrições provisórias: o
+//      atleta reivindica a vaga e todos os jogos dele passam a ser dele.
+//
+//      Sem este gatilho, isso dependia de um admin apertar "Recalcular ranking
+//      agora" — e o botão saiu justamente porque o ranking não pode depender
+//      de alguém lembrar.
+exports.recomputeRankingOnTournamentRegistration = onDocumentWritten(
+  { ...GATILHO_RANKING, document: 'tournament_registrations/{registrationId}' },
+  async (event) => {
+    if (!mudouResultado(antes(event), depois(event), CAMPOS_INSCRICAO)) return;
+    await pedirRecalculo('tournament-registration', {
+      registrationId: event.params.registrationId,
+    });
   },
 );
 

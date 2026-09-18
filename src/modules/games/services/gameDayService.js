@@ -1031,15 +1031,20 @@ async function applyGameDayMirror(gameDay, actor) {
   return { result, changed };
 }
 
-/** Recálculo best-effort do rating nacional (força ignorar o throttle). */
-async function recomputeNationalRating(actor, contextMsg) {
-  try {
-    const { maybeAutoRecomputeRatings } = await import('@/modules/rating/services/ratingService');
-    await maybeAutoRecomputeRatings(actor, { force: true });
-  } catch (err) {
-    logger.error(contextMsg, err);
-  }
-}
+/**
+ * O recálculo dos rankings NÃO acontece mais aqui.
+ *
+ * Quem recalcula é o SERVIDOR, no gatilho de `club_event_games`
+ * (`functions/index.js` → `recomputeRankingOnClubEventGame`), disparado pela
+ * própria escrita do espelho que acabou de ser feita — publicação, edição,
+ * sincronização e despublicação, todas passam por ali.
+ *
+ * Por que a tentativa do cliente saiu: materializar ranking é escrita em
+ * coleção que só o admin da plataforma pode gravar. Para todo mundo mais, a
+ * chamada era recusada pela regra e morria num `catch` — custando, de graça,
+ * a leitura da coleção INTEIRA de torneios a cada publicação. E para o admin
+ * ela ainda concorria com o gatilho, recalculando duas vezes a mesma coisa.
+ */
 
 /**
  * Publica os resultados decididos do dia de jogo no ranking geral (e no ranking
@@ -1058,7 +1063,6 @@ export async function publishGameDayToRanking(gameDay, actor) {
     updated_at: serverTimestamp(),
   });
 
-  await recomputeNationalRating(actor, 'Recálculo automático do rating após publicação (game day) falhou:');
 
   await createAuditLog({
     action: 'game_day_published_to_ranking',
@@ -1106,7 +1110,6 @@ export async function syncGameDayRankingIfPublished(gameDayId, actor) {
     updated_at: serverTimestamp(),
   });
 
-  await recomputeNationalRating(actor, 'Recálculo automático do rating após sincronização (game day) falhou:');
 
   await createAuditLog({
     action: 'game_day_ranking_synced',
@@ -1143,7 +1146,6 @@ export async function unpublishGameDayFromRanking(gameDay, actor) {
     published_count: 0,
     updated_at: serverTimestamp(),
   });
-  await recomputeNationalRating(actor, 'Recálculo automático do rating após despublicação (game day) falhou:');
   await createAuditLog({ action: 'game_day_unpublished_from_ranking', actor, details: { game_day_id: gameDay.id, removed } });
   return { removed };
 }

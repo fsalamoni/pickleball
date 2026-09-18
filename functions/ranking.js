@@ -4,7 +4,7 @@
  * Espelha fielmente a lógica do cliente (src/modules/rating/domain/elo.js +
  * ratingService) para que cliente e servidor produzam EXATAMENTE o mesmo
  * ranking — não há divergência: ambos fazem um replay determinístico de todos
- * os jogos finalizados de torneios públicos e encerrados.
+ * os jogos finalizados de torneios públicos e em andamento ou encerrados.
  *
  * Este módulo é intencionalmente autocontido (sem importar de ../src) porque o
  * pacote de Functions é publicado isolado.
@@ -120,8 +120,31 @@ function toMillis(value) {
   return Number.isNaN(d.getTime()) ? 0 : d.getTime();
 }
 
+/**
+ * Status em que um resultado lançado JÁ conta para o ranking — o complemento
+ * de "rascunho" e "cancelado".
+ *
+ * ⚠️ ESPELHO de `RANKING_ELIGIBLE_STATUSES` em
+ * `src/modules/tournament/domain/rankingEligibility.js`. Os dois lados existem
+ * porque o pacote de Functions é publicado isolado; mudar um só faz o servidor
+ * e a tela discordarem sobre quem está no ranking.
+ */
+const RANKING_ELIGIBLE_STATUSES = ['registrations_open', 'registrations_closed', 'in_progress', 'finished'];
+
+/**
+ * O torneio conta para o ranking?
+ *
+ * Público, não arquivado, fora do rascunho e não cancelado. Ou seja: assim que
+ * um resultado é lançado, ele vale — em torneio o lançamento NÃO é facultativo,
+ * o resultado é lançado porque a partida aconteceu. (No dia de jogo é
+ * diferente: lá o gatilho é a PUBLICAÇÃO, que é uma decisão de quem organiza.)
+ *
+ * Antes exigia `status === 'finished'`, e isso atrasava tudo: num torneio de
+ * três dias nada aparecia no rating até alguém clicar em "encerrar".
+ */
 function isEligible(t) {
-  return Boolean(t) && t.visibility === 'public' && t.status === 'finished' && t.archived !== true;
+  return Boolean(t) && t.visibility === 'public'
+    && RANKING_ELIGIBLE_STATUSES.includes(t.status) && t.archived !== true;
 }
 function computeSignature(tournaments) {
   return (tournaments || [])
@@ -269,6 +292,7 @@ module.exports = {
   computeSignature,
   LEVEL_IDS,
   FINISHED_STATUSES,
+  RANKING_ELIGIBLE_STATUSES,
   RATINGS_COLLECTION,
   HISTORY_COLLECTION,
   HISTORY_MAX_POINTS,

@@ -9,8 +9,7 @@ import { useAuth } from '@/core/lib/FirebaseAuthContext';
 import { useFeatureFlags, useFeatureFlag } from '@/core/lib/FeatureFlagsContext';
 import { FEATURE_FLAG, FEATURE_FLAG_META } from '@/core/featureFlags';
 import { setFeatureFlag } from '@/core/services/platformSettingsService';
-import { useRecomputeRatings } from '@/modules/rating/hooks/useRating';
-import ClubRankingBackfillPanel from '@/modules/admin/components/ClubRankingBackfillPanel';
+import RankingAutomatico from '@/modules/admin/components/RankingAutomatico';
 import { V2Button, V2PageIntro, V2Skeleton, V2StatCard, V2Surface, V2Toggle } from '@/v2/ui/primitives';
 
 export default function V2AdminMetrics() {
@@ -63,44 +62,12 @@ export default function V2AdminMetrics() {
             </div>
           )}
 
-          <div className="mt-6"><RatingsPanel /></div>
-          <div className="mt-6"><ClubRankingBackfillPanel /></div>
+          <div className="mt-6"><RankingAutomatico /></div>
           <div className="mt-6"><FeatureFlagsPanel /></div>
           <div className="mt-6"><AuditLogTable /></div>
         </>
       )}
     </div>
-  );
-}
-
-function RatingsPanel() {
-  const ratingOn = true;
-  const lifecycleOn = true;
-  const { mutateAsync, isPending } = useRecomputeRatings();
-  const [last, setLast] = useState(null);
-  if (!ratingOn) return null;
-
-  async function handleRecompute() {
-    try {
-      const result = await mutateAsync();
-      setLast(result);
-      toast.success(`Ratings recalculados: ${result.players} atleta(s) a partir de ${result.matchesUsed} jogo(s).`);
-    } catch (err) {
-      toast.error(err?.message || 'Não foi possível recalcular os ratings.');
-    }
-  }
-
-  return (
-    <V2Surface>
-      <div className="flex items-center gap-2"><Medal className="h-5 w-5 text-ink" /><h2 className="font-display text-lg font-bold text-ink">Rating ELO + Ranking nacional</h2></div>
-      <p className="mt-2 text-xs text-gray-500">
-        {lifecycleOn
-          ? 'O ranking é recalculado automaticamente conforme os torneios (públicos) são encerrados — não é preciso acionar manualmente. Use o botão abaixo apenas se quiser forçar um recálculo imediato.'
-          : 'Recalcula o rating de todos os atletas a partir dos jogos finalizados e atualiza o ranking nacional público. Faça isso após registrar novos resultados.'}
-      </p>
-      <V2Button className="mt-4" onClick={handleRecompute} disabled={isPending}><Medal className="h-4 w-4" /> {isPending ? 'Recalculando…' : (lifecycleOn ? 'Recalcular agora' : 'Recalcular ratings')}</V2Button>
-      {last && <p className="mt-3 text-xs text-gray-500">Último recálculo: {last.players} atleta(s), {last.matchesUsed} de {last.matchesTotal} jogo(s) finalizados utilizados.</p>}
-    </V2Surface>
   );
 }
 

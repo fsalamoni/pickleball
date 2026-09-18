@@ -37,6 +37,7 @@ vi.mock('@/modules/games/hooks/useArenaGameDays', () => ({
   useUpdateArenaGameDay: () => ({ mutateAsync: vi.fn(), isPending: false }),
 }));
 vi.mock('@/modules/games/hooks/useGameDays', () => ({
+  useSetPlayParticipantPartner: () => ({ mutate: vi.fn(), mutateAsync: vi.fn(async () => ({})), isPending: false }),
   useGameDay: () => ({ data: estado.gameDay, isLoading: false }),
   useGameDayParticipants: () => ({ data: estado.participantes }),
 }));

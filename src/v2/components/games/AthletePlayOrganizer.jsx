@@ -507,7 +507,13 @@ export function CourtPlayerDialog({ target, order, onClose, onConfirm }) {
   );
 }
 
-export function PartnerDialog({ participant, participants, view, onClose, onConfirm }) {
+/**
+ * Vincular dupla. `description` é opcional porque a CONSEQUÊNCIA do vínculo
+ * muda com o formato: no Play e no Americano aprimorado a dupla entra junta na
+ * fila; no sorteio de grade ela joga junta em todas as rodadas. O componente é
+ * um só — parametrizar o texto evita a cópia que um dia divergiria.
+ */
+export function PartnerDialog({ participant, participants, view, onClose, onConfirm, description = null }) {
   const open = !!participant;
   const [search, setSearch] = useState('');
   React.useEffect(() => { if (participant) setSearch(''); }, [participant]);
@@ -525,8 +531,12 @@ export function PartnerDialog({ participant, participants, view, onClose, onConf
         <DialogHeader>
           <DialogTitle>Formar dupla fixa</DialogTitle>
           <DialogDescription>
-            {participant.name} vai entrar SEMPRE junto com o parceiro escolhido, respeitando a ordem de
-            participação. Se a dupla furar a ordem, ela é empurrada para a próxima partida.
+            {description || (
+              <>
+                {participant.name} vai entrar SEMPRE junto com o parceiro escolhido, respeitando a ordem de
+                participação. Se a dupla furar a ordem, ela é empurrada para a próxima partida.
+              </>
+            )}
           </DialogDescription>
         </DialogHeader>
         <Input value={search} onChange={(e) => setSearch(e.target.value)} placeholder="Buscar por nome…" />

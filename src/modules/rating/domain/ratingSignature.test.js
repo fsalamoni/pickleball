@@ -11,13 +11,22 @@ const pubClosed = (id, updated, closed) => ({
 });
 
 describe('computeRatingSignature', () => {
-  it('considera apenas torneios elegíveis (público + encerrado)', () => {
+  it('considera apenas torneios elegíveis (público, fora do rascunho, não cancelado)', () => {
     const sig = computeRatingSignature([
       pubClosed('t1', 1000, 1000),
       { id: 't2', visibility: TOURNAMENT_VISIBILITY.PRIVATE, status: TOURNAMENT_STATUS.FINISHED },
-      { id: 't3', visibility: TOURNAMENT_VISIBILITY.PUBLIC, status: TOURNAMENT_STATUS.IN_PROGRESS },
+      { id: 't4', visibility: TOURNAMENT_VISIBILITY.PUBLIC, status: TOURNAMENT_STATUS.DRAFT },
+      { id: 't5', visibility: TOURNAMENT_VISIBILITY.PUBLIC, status: TOURNAMENT_STATUS.CANCELLED },
     ]);
     expect(sig).toBe('t1:1000:1000');
+  });
+
+  it('⭐ torneio EM ANDAMENTO entra na assinatura — o resultado lançado já conta', () => {
+    const sig = computeRatingSignature([
+      pubClosed('t1', 1000, 1000),
+      { id: 't3', visibility: TOURNAMENT_VISIBILITY.PUBLIC, status: TOURNAMENT_STATUS.IN_PROGRESS },
+    ]);
+    expect(sig).toContain('t3');
   });
 
   it('é estável independente da ordem de entrada', () => {

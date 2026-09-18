@@ -136,6 +136,11 @@ o parceiro **já em quadra** não conta: ali não há dupla esperando.
 A criação **manual** de partida não passa por nada disso, de propósito: ali o
 organizador escolhe cada lado explicitamente.
 
+E os **três momentos** em que o vínculo precisa valer (quem joga, em que grupo
+de 4, de que lado) valem igual no sorteio de GRADE — ver
+`docs/25-DIA-DE-JOGO-COMO-MODULO.md` §4, que é onde a regra está consolidada
+para todos os formatos.
+
 ### Quantas partidas o dia "pede"
 
 `suggestAmericanoLiveTotal(n) = ceil(n(n-1)/4)` — o número que faria todos

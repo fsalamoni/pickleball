@@ -51,11 +51,49 @@ Tudo passa por **gatilhos do Firestore** (`functions/index.js`):
 |---|---|---|
 | `recomputeRankingOnClubEventGame` | escreve em `club_event_games/{id}` | os três |
 | `recomputeRankingOnTournamentMatch` | escreve em `tournament_matches/{id}` | os três |
+| `recomputeRankingOnTournamentRegistration` | muda o uid por trás de uma inscrição | os três |
 | `recomputeRankingOnTournamentChange` | `tournaments/{id}` muda de elegibilidade | os três |
 
 Publicar um dia de jogo grava o espelho em `club_event_games` → o gatilho
 dispara → os três rankings são reescritos. Corrigir um placar, excluir uma
 partida ou despublicar seguem o mesmo caminho.
+
+**Criação, edição e exclusão contam igual**: `mudouResultado` devolve `true`
+quando o documento nasce ou some, e compara campo a campo no meio. Mexer em
+quadra, horário ou observação **não** dispara nada.
+
+### FACULTATIVO × NÃO FACULTATIVO: o que é o gatilho de cada origem
+
+É a única diferença real entre as origens, e ela não é um detalhe técnico:
+
+| Origem | O que faz o resultado contar | Por quê |
+|---|---|---|
+| **Torneio** | o **lançamento** do placar | não é facultativo: o resultado é lançado porque a partida aconteceu |
+| **Dia de jogo / evento de clube** | a **publicação** no ranking | é uma DECISÃO de quem organiza — nem todo dia de jogo é para valer |
+
+> 🐞 **O atraso que isto corrigiu.** A elegibilidade do torneio exigia
+> `status === 'finished'`. Num torneio de três dias, nada do que acontecia em
+> quadra aparecia no rating até alguém clicar em "encerrar" — às vezes dias
+> depois, às vezes nunca. E o organizador não tinha como saber que faltava um
+> passo, porque lançar o resultado já parecia o passo final. Agora conta a
+> partir do momento em que entra na plataforma.
+
+Continua de fora o que não é resultado de verdade: torneio em **rascunho**
+(ambiente de teste), **cancelado** (não aconteceu), **privado** (não alimenta
+ranking público) e **arquivado**. Como o recálculo é sempre integral, cancelar
+ou arquivar **tira** do ranking o que já tinha contado — sem passo nenhum a
+mais. A regra vive em `isTournamentRankingEligible`
+(`tournament/domain/rankingEligibility.js`) e no espelho `isEligible`
+(`functions/ranking.js`), com teste de paridade entre as duas.
+
+### A inscrição também move o ranking
+
+A partida guarda ids de **inscrição**, não uids: o ranking só descobre de quem
+é o resultado resolvendo a inscrição. Então preencher ou trocar o uid de uma
+inscrição — o que a migração de inscrições provisórias faz — muda a quem o jogo
+pertence **sem tocar em partida nenhuma**. Era o único caminho que ainda
+dependia de um admin apertar "Recalcular ranking agora"; hoje tem gatilho
+próprio (`CAMPOS_INSCRICAO`).
 
 ### Por que no servidor, e não no navegador
 
@@ -208,18 +246,41 @@ Dois detalhes que custaram teste para acertar:
 - As demais coleções (`player_ratings`, `player_skill_ratings`, os dois
   históricos) **não mudaram de formato**.
 
-## 8. Os botões manuais do admin continuam
+## 8. Não há mais botão de recalcular
 
-No painel admin seguem existindo "recalcular ranking" (ELO + duplas) e
-"recalcular rating 2.0–8.0". Não são mais necessários no dia a dia — o gatilho
-faz isso sozinho —, mas continuam sendo a saída para reprocessar tudo depois de
-uma correção em massa. O caminho do admin no cliente passou a materializar
-`doubles_rankings` também, para não deixar metade do ranking atualizada.
+Havia quatro, espalhados: "Recalcular ratings" (console e métricas do admin),
+"Recalcular" no ranking 2.0–8.0, "Recalcular ranking agora" depois da migração
+de inscrições e "Materializar ranking agora" no ranking interno do clube.
+**Saíram todos.**
+
+Não foi arrumação de tela. Botão de recalcular tem três problemas:
+
+1. **Mente sobre de quem é a responsabilidade.** Materializar ranking é escrita
+   que só o admin da plataforma pode fazer — então quem publicava um resultado
+   dependia de OUTRA pessoa apertar um botão para o seu jogo aparecer. Na
+   prática o ranking ficava atrasado até alguém lembrar.
+2. **Compete com o servidor.** Os gatilhos já recalculam a cada resultado; o
+   botão só refazia, em duplicado, o que já tinha sido feito.
+3. **Esconde o defeito.** Quando algo não entrava no ranking, o botão
+   "resolvia" e ninguém investigava a causa.
+
+No lugar deles, o painel admin mostra `RankingAutomatico`, que **explica** o que
+dispara o quê — porque um botão que some sem explicação vira chamado de
+suporte. O `src/core/guards/diaDeJogoUniforme.test.js` reprova quem trouxer
+qualquer um deles de volta.
+
+E o cliente **parou de tentar** materializar ranking ao publicar: além de ser
+recusado pela regra para quem não é admin, custava a leitura da coleção INTEIRA
+de torneios a cada publicação.
 
 ## 9. Ao mexer nesta área, cuidado com
 
-1. **Não recalcule ranking no cliente para o usuário comum.** A regra recusa, e
-   o erro é silencioso. Se precisar de um recálculo novo, é gatilho ou `onCall`.
+1. **Não recalcule ranking no cliente, para ninguém.** A regra recusa para quem
+   não é admin, e o erro é silencioso; para o admin, concorre com o gatilho.
+   Recálculo novo é GATILHO — e nunca um botão: botão é alguém para lembrar.
+1b. **Não confunda facultativo com não facultativo.** Em torneio o gatilho é o
+   LANÇAMENTO; no dia de jogo é a PUBLICAÇÃO. Inverter qualquer um dos dois é
+   ou publicar o que ninguém quis publicar, ou atrasar o que já aconteceu.
 2. **Não mexa num motor só.** O teste de paridade quebra — e ele está certo.
 3. **Não largue o lease.** Toda saída de `requestRankingRecompute` tem de soltar
    ou renovar; esquecer trava os recálculos até o TTL (9 min).
