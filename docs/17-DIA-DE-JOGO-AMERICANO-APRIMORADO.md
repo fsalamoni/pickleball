@@ -76,8 +76,8 @@ funde as duas heranças:
    (peso 10), confronto repetido (peso 3) e diferença de nível (peso 2).
 4. **O custo final soma a posição na fila** (`AMERICANO_LIVE_ORDER_WEIGHT`),
    para que "variedade" nunca vire "furar a fila".
-5. **Duplas fixas** valem aqui igual ao Play: parceiro mútuo disponível só entra
-   junto; parceiro indisponível faz os dois aguardarem.
+5. **Duplas vinculadas** valem aqui igual ao Play, e valem em DOIS momentos —
+   ver §4a.
 6. Se nada passar pelos filtros, a rede é a escolha estrita do Play, pareada
    pelo motor do Americano.
 
@@ -85,6 +85,56 @@ O **nível** vem da régua unificada 2.0–8.0 (`docs/13-NIVEL-UNIFICADO.md`), p
 mesmo `fetchUnifiedLevelsByParticipant` dos outros formatos. A leitura é
 best-effort: se falhar, o sorteio acontece sem o critério de nível em vez de
 travar o dia de jogo.
+
+### 4a. A dupla VINCULADA atravessa as outras regras
+
+Vincular uma dupla é uma decisão do organizador sobre **com quem** aquelas duas
+pessoas jogam. Ela não é um critério a mais na conta do sorteio: é um **filtro
+antes dela**. As demais regras — parceria inédita, adversário inédito,
+equilíbrio de nível, ordem da fila — continuam valendo para todo o resto, e
+decidem apenas **entre as formações que respeitam o vínculo**.
+
+O vínculo vale em **dois momentos**, e é aí que estava o defeito:
+
+| Momento | Quem decide | Estado |
+|---|---|---|
+| **QUEM** entra na partida | `respectsFixedPairs` (`americanoLive.js`) | já valia |
+| **COMO** os quatro se dividem em lados | `pairFourBalanced` (`gameDayDraw.js`) | 🐞 **não valia** |
+
+> 🐞 **O defeito que isso corrigiu.** A dupla vinculada era mantida na mesma
+> partida — `respectsFixedPairs` garante isso — e saía **uma contra a outra**.
+> A causa: `pairFourBalanced` recebe **IDS**, não participantes, e não tinha
+> como saber quem estava vinculado a quem. Na PRIMEIRA partida eles saíam
+> juntos por acaso (histórico vazio, formação arbitrária); da segunda em diante
+> aquela parceria já constava no histórico, repeti-la custava 10, e o motor os
+> separava — colocando-os como adversários. Visto em quadra, num dia de jogo
+> real.
+
+A ponte é `fixedPairsWithin(ids, participantes)` (`americanoLive.js`), que
+traduz os `partner_id` mútuos da fila para o formato que o motor entende, e é
+passada em **todos** os caminhos de sorteio: a partida avulsa, a rede do Play,
+o custo de cada grupo na rodada e a previsão da tela. Esquecer um deles faz a
+tela anunciar uma dupla e a quadra receber outra.
+
+Duas consequências que não são óbvias:
+
+- **A parceria vinculada não é cobrada como repetição.** Se fosse, o custo do
+  grupo cresceria 10 a cada partida e a dupla ficaria cara demais para ser
+  escolhida — ela jogaria cada vez menos, até só entrar quando a ordem da fila
+  a forçasse. Repetir aquela parceria é o objetivo, não um defeito.
+- **Vínculo inconsistente não trava a partida.** Se nenhuma formação atender
+  (dado estranho, como três pessoas vinculadas entre si), o motor ignora o
+  vínculo e devolve a melhor formação possível, em vez de não sortear.
+
+E a **substituição** entrou na mesma regra: `eligibleSwapReplacements`
+(`gamePlay.js`) manda para o FIM da lista quem tem dupla **esperando na fila**.
+Ele continua elegível — a substituição nunca fica sem saída —, mas só é chamado
+quando não há mais ninguém: tirá-lo da fila deixaria o parceiro sozinho, ou
+seja, desfaria em silêncio um vínculo que ninguém pediu para desfazer. Quem tem
+o parceiro **já em quadra** não conta: ali não há dupla esperando.
+
+A criação **manual** de partida não passa por nada disso, de propósito: ali o
+organizador escolhe cada lado explicitamente.
 
 ### Quantas partidas o dia "pede"
 
@@ -352,3 +402,8 @@ Há teste de domínio prendendo isso em `gameDayRanking.test.js`.
 8. **Não torne "cancelar a partida" um atalho para apagar resultado.** São
    ações diferentes, com consequências diferentes no ranking — o serviço
    recusa a confusão de propósito.
+9. **Não chame `pairFourBalanced` sem `fixedPairs`.** Ele recebe IDS e não tem
+   como descobrir sozinho quem está vinculado; sem a opção, a dupla vinculada
+   volta a sair uma contra a outra — e o sintoma aparece só na SEGUNDA partida
+   do dia, que é o que o tornou difícil de ver. Use
+   `fixedPairsWithin(ids, participantes)` em todo caminho novo de sorteio.

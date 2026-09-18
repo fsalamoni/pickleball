@@ -63,6 +63,13 @@ plataforma. Domínio puro em `domain/americanoLive.js` (com testes):
 - `drawNextAmericanoLiveMatch` — o primeiro da fila SEMPRE entra (baseline do
   Play); os outros três saem de uma janela dos 8 primeiros, pareados pelo motor
   do Americano (`pairFourBalanced`), com a posição na fila somada ao custo;
+- `fixedPairsWithin(ids, participantes)` — a ponte da DUPLA VINCULADA para o
+  motor, que trabalha com ids e não conhece `partner_id`. 🐞 Sem ela, a dupla
+  era mantida na mesma PARTIDA e saía uma CONTRA a outra: da segunda partida em
+  diante, repetir aquela parceria custava 10 e o motor as separava. Passe
+  `fixedPairs` em **todo** caminho de sorteio (partida avulsa, rede, custo do
+  grupo na rodada e previsão) — o vínculo é FILTRO antes do custo, não mais um
+  critério dentro dele, e a parceria vinculada não é cobrada como repetição;
 - `forecastAmericanoLiveMatches` — previsão por quadra, já **com as duplas**;
   quadra ocupada vem `conditional: true`. O parâmetro `participants` serve só
   para nomear quem volta da quadra (não está na fila);

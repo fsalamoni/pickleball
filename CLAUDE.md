@@ -191,6 +191,7 @@ Estes princípios vieram de bugs reais que custaram horas pra arrumar. São ineg
 **"Onde está o TELÃO do dia de jogo?"** → `src/v2/pages/V2GameDayTelao.jsx` · rota `/dia-de-jogo/:id/telao` (em `src/App.jsx`, fora do V2Layout) · doc em `docs/14-DIA-DE-JOGO-TELAO.md`
 **"Quem pode sortear/substituir/criar partida num dia de jogo?"** → `docs/15-DIA-DE-JOGO-PERMISSOES.md` · código em `src/modules/games/domain/gameDayRoles.js` (fonte única)
 **"Por que as partidas do Play saem sempre com as mesmas pessoas?"** → era a fila em blocos de 4; resolvido pelo rodízio equilibrado atrás da flag `play_smart_rotation` (padrão OFF) · `docs/16-DIA-DE-JOGO-RODIZIO.md` · código em `src/modules/games/domain/playRotation.js`
+**"Vinculei uma dupla e ela não jogou junta"** → era o caso no Americano aprimorado, e a causa é sutil: o vínculo valia ao escolher **QUEM** entra (`respectsFixedPairs`) e não ao escolher **COMO** os quatro se dividem — `pairFourBalanced` recebe IDS e não tinha como saber quem estava vinculado. Na primeira partida eles saíam juntos por acaso; da segunda em diante aquela parceria já custava 10 no histórico e o motor os colocava como **adversários**. Agora `fixedPairsWithin(ids, participantes)` (`americanoLive.js`) traduz os `partner_id` mútuos e é passada em TODO caminho de sorteio (partida avulsa, rede, custo do grupo na rodada, previsão). O vínculo é **filtro antes do custo**, não mais um critério dentro dele: as demais regras decidem só entre as formações que o respeitam. E a parceria vinculada **não é cobrada como repetição** — se fosse, o custo do grupo cresceria 10 por partida e a dupla passaria a ser evitada. Ao criar caminho novo de sorteio, **nunca** chame `pairFourBalanced` sem `fixedPairs`. Ver `docs/17-DIA-DE-JOGO-AMERICANO-APRIMORADO.md` §4a
 **"Cliquei no jogador em quadra: quero escolher entre deixá-lo de fora e trocá-lo por alguém"** → é o que acontece — o clique abre `CourtPlayerDialog` (exportado de `AthletePlayOrganizer.jsx`), com as duas opções; a lista de quem pode entrar vem de `eligibleSwapReplacements` e é reconferida no serviço. Vale no painel E no telão. Ver `docs/14-DIA-DE-JOGO-TELAO.md`
 **"No Americano aprimorado, como corrijo a quadra: trocar quem está jogando ou desfazer o sorteio?"** → tocando no NOME de quem está em quadra (abre `CourtPlayerDialog`: deixar de fora × substituir) e em **Cancelar partida** (devolve os quatro à fila, sem placar). Vale no painel E no telão — antes só existia no telão, e desfazer um sorteio no painel exigia lançar um resultado que não aconteceu e apagá-lo depois, ou seja, um placar falso atravessando o ranking do dia. `cancelPlayGame` **recusa** partida que já tem placar: aquela sai pela lista de partidas concluídas, que re-sincroniza o ranking. Ver `docs/17-DIA-DE-JOGO-AMERICANO-APRIMORADO.md` §6b
 **"No Americano aprimorado, por que não saem todas as duplas possíveis?"** → porque sortear quadra a quadra é GULOSO: a primeira quadra leva o melhor quarteto e a última herda o que sobrou — e com atletas = 4 × quadras a última nem tem escolha. Medido em dia inteiro com elenco estável: 8 em 2 quadras formavam **12 das 28 duplas**; 12 em 3, **18 de 66**. Agora a rodada é escolhida como um TODO (`bestAmericanoLiveRound`) e dá 28/28 e 66/66. Os grupos de uma rodada são DISJUNTOS, então o custo da rodada é a soma dos custos dos grupos sobre o mesmo histórico — é isso que torna a otimização barata. Com UMA quadra livre nada disso roda: o caminho é o de antes, partida a partida. E a frente da fila é obrigatória na rodada, senão a busca por variedade empurra sempre a mesma pessoa para fora. Ver `docs/17-DIA-DE-JOGO-AMERICANO-APRIMORADO.md` §4b
@@ -434,6 +435,35 @@ chore(deps): bump firebase to 12.x
 > memory topic `picklerush-sync-2026-08.md`.
 >
 > **Destaques por onda**:
+>
+> - **Onda AQ — A dupla vinculada joga junta** (2026-09-18): relatado depois de
+>   um dia de jogo real no Americano aprimorado — vinculou-se uma dupla, os dois
+>   foram mantidos nas mesmas partidas e **jogaram um contra o outro**. O
+>   sintoma enganava: parecia que o vínculo estava sendo ignorado, mas ele
+>   valia — só que em **um** dos dois momentos em que precisa valer. Escolher
+>   QUEM entra é `respectsFixedPairs`, e funcionava; escolher **COMO os quatro
+>   se dividem em lados** é `pairFourBalanced`, que recebe **IDS** e não tem
+>   como saber quem está vinculado a quem. Por isso o defeito só aparecia da
+>   **segunda partida em diante**: na primeira o histórico está vazio e a
+>   formação sai arbitrária (às vezes junta, por acaso); depois, repetir aquela
+>   parceria custa 10, e o motor separava a dupla — colocando-a como
+>   adversária. A correção é uma ponte, `fixedPairsWithin`, passada em **todos**
+>   os caminhos de sorteio (partida avulsa, rede do Play, custo de cada grupo na
+>   rodada e previsão da tela — esquecer um faria a tela anunciar uma dupla e a
+>   quadra receber outra). E o vínculo entrou como **filtro ANTES do custo**,
+>   não como mais um critério dentro dele: parceria inédita, adversário inédito,
+>   nível e ordem da fila continuam valendo para todo o resto e decidem só entre
+>   as formações que respeitam o vínculo. Duas consequências não óbvias: a
+>   parceria vinculada **não é cobrada como repetição** (se fosse, o custo do
+>   grupo cresceria 10 por partida e a dupla acabaria evitada — jogando cada vez
+>   menos), e vínculo inconsistente **não trava** a partida. De quebra, a
+>   **substituição** entrou na mesma regra: quem tem dupla ESPERANDO na fila vai
+>   para o fim da lista de substitutos — continua elegível, mas só é chamado
+>   quando não há mais ninguém, porque tirá-lo dali desfaria em silêncio um
+>   vínculo que ninguém pediu para desfazer. Medido em dia inteiro simulado:
+>   **zero** partidas com a dupla como adversária e **zero** com ela entrando
+>   pela metade, com a participação tão equilibrada quanto antes. **Zero banco.**
+>   Ver `docs/17-DIA-DE-JOGO-AMERICANO-APRIMORADO.md` §4a.
 >
 > - **Onda AP — Americano aprimorado: a rodada inteira, e as saídas que só o
 >   telão tinha** (2026-09-14): três coisas no mesmo formato. **(1) 🐞 Não dava
@@ -1064,7 +1094,7 @@ chore(deps): bump firebase to 12.x
 
 | Métrica | Valor | Delta do início do agente |
 |---|---|---|
-| **Testes Vitest** | **4413 passing** (266 arquivos) + 218 asserções de regras no emulador | +3954 (era 408) |
+| **Testes Vitest** | **4432 passing** (266 arquivos) + 218 asserções de regras no emulador | +3954 (era 408) |
 | **Lint errors** | 0 | era 30+ |
 | **Módulos** | 21 (+`help` — conteúdo dos tutoriais em tela) (`games` e `legal` saíram como `src/modules/` mas continuam como pastas oficiais — **rating virou módulo oficial** com domain/services/hooks/components) | +4 (coaches, circuits, games, legal) |
 | **V2 pages** | 82 (+V2GameDayTelao — telão, fora do V2Layout; +V2Help — central de ajuda; +V2ArenaKiosk — totem da recepção, também fora do V2Layout; +V2ArenaCheckin; +V2ArenaAttendance) | +58 |

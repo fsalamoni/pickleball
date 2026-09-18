@@ -253,9 +253,17 @@ function orderByLevelWithJitter(playing, levelOf, rng) {
  * Escolhe a melhor das 3 formações de duplas para um grupo de 4 jogadores,
  * minimizando repetições de parceria (peso maior) e de adversários.
  *
+ * `forcedPairs` (opcional): pares que TÊM de ficar do mesmo lado — a dupla
+ * vinculada pelo organizador. Ela não é um critério a mais na conta: é um
+ * FILTRO antes dela. Repetição de parceria, confronto e nível decidem apenas
+ * entre as formações que respeitam o vínculo, e a parceria forçada não é
+ * cobrada como repetição (repeti-la é o objetivo, não um defeito).
+ *
+ * @param {Array<[*, *]>} [forcedPairs] pares obrigatórios, nos mesmos
+ *   identificadores de `group`. Ausente ⇒ comportamento idêntico ao histórico.
  * @returns {{ side_a: [number, number], side_b: [number, number], cost: number }}
  */
-function bestPairingOfFour(group, partnerCount, oppCount, rng, levelOf = null) {
+function bestPairingOfFour(group, partnerCount, oppCount, rng, levelOf = null, forcedPairs = null) {
   const [a, b, c, d] = group;
   const W_PARTNER = 10; // repetir dupla é pior que repetir adversário
   const W_OPP = 3;
@@ -270,11 +278,25 @@ function bestPairingOfFour(group, partnerCount, oppCount, rng, levelOf = null) {
     (oppCount.get(pairKey(p[1], q[0])) || 0) +
     (oppCount.get(pairKey(p[1], q[1])) || 0);
 
-  const options = [
+  const todasAsFormacoes = [
     { side_a: [a, b], side_b: [c, d] },
     { side_a: [a, c], side_b: [b, d] },
     { side_a: [a, d], side_b: [b, c] },
   ];
+
+  // DUPLA VINCULADA: filtra as formações antes de comparar custo.
+  const vinculados = (forcedPairs || [])
+    .filter((par) => Array.isArray(par) && par.length === 2)
+    .map((par) => pairKey(par[0], par[1]));
+  const vinculada = (x, y) => vinculados.includes(pairKey(x, y));
+  const respeita = (opt) => vinculados.every((chave) => (
+    pairKey(opt.side_a[0], opt.side_a[1]) === chave
+    || pairKey(opt.side_b[0], opt.side_b[1]) === chave
+  ));
+  // Sem formação possível (dado inconsistente, como três pessoas vinculadas
+  // entre si), o vínculo é ignorado em vez de a partida não sair.
+  const permitidas = vinculados.length ? todasAsFormacoes.filter(respeita) : [];
+  const options = permitidas.length ? permitidas : todasAsFormacoes;
   // Desequilíbrio entre os dois lados, na régua unificada (0 quando não se
   // conhece o nível de todos os quatro — aí este critério simplesmente não opina).
   const levelCost = (p, q) => {
@@ -287,10 +309,15 @@ function bestPairingOfFour(group, partnerCount, oppCount, rng, levelOf = null) {
     return Math.abs(mediaA - mediaB);
   };
 
+  // Parceria VINCULADA não conta como repetição: ela se repete de propósito,
+  // e cobrá-la faria o custo do grupo crescer 10 a cada partida — o que
+  // afastaria a dupla de todo mundo na escolha de QUEM joga com quem.
+  const custoParceria = (x, y) => (vinculada(x, y) ? 0 : partnerCost(x, y));
+
   let best = null;
   for (const opt of options) {
     const cost =
-      W_PARTNER * (partnerCost(opt.side_a[0], opt.side_a[1]) + partnerCost(opt.side_b[0], opt.side_b[1])) +
+      W_PARTNER * (custoParceria(opt.side_a[0], opt.side_a[1]) + custoParceria(opt.side_b[0], opt.side_b[1])) +
       W_OPP * oppCost(opt.side_a, opt.side_b) +
       W_LEVEL * levelCost(opt.side_a, opt.side_b) +
       rng() * 0.001; // desempate determinístico
@@ -371,22 +398,29 @@ function buildRound(playing, partnerCount, oppCount, rng, levelOf = null) {
  * que uma das duas mudasse.
  *
  * @param {string[]} group  exatamente 4 ids
- * @param {{ history?: object, levels?: object, rng?: function }} [opts]
+ * @param {{ history?: object, levels?: object, rng?: function,
+ *           fixedPairs?: Array<[string,string]> }} [opts]
  *   `history`: saída de {@link buildDrawHistory} (duplas e adversários já
  *   ocorridos). `levels`: mapa `id → nível na régua unificada 2.0–8.0`.
+ *   `fixedPairs`: duplas VINCULADAS pelo organizador, que têm de sair do mesmo
+ *   lado. Elas atravessam os outros critérios: o motor escolhe apenas entre as
+ *   formações que as respeitam, e não cobra a repetição da parceria. Ausente
+ *   ⇒ comportamento idêntico ao histórico.
  * @returns {{ side_a: [string,string], side_b: [string,string], cost: number }}
  *   `cost` é comparável entre grupos: quanto menor, menos repetição.
  */
 export function pairFourBalanced(group, opts = {}) {
   const ids = (group || []).filter(Boolean);
   if (ids.length !== 4) throw new Error('O pareamento exige exatamente 4 jogadores.');
-  const { history = null, levels = null, rng = Math.random } = opts;
+  const {
+    history = null, levels = null, rng = Math.random, fixedPairs = null,
+  } = opts;
   const partnerCount = history?.partner instanceof Map ? history.partner : new Map();
   const oppCount = history?.opp instanceof Map ? history.opp : new Map();
   const levelOf = levels
     ? (id) => (Number.isFinite(Number(levels[id])) ? Number(levels[id]) : null)
     : null;
-  return bestPairingOfFour(ids, partnerCount, oppCount, rng, levelOf);
+  return bestPairingOfFour(ids, partnerCount, oppCount, rng, levelOf, fixedPairs);
 }
 
 /**

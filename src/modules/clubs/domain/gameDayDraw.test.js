@@ -1,6 +1,7 @@
 import { describe, it, expect } from 'vitest';
 import {
   generateGameDayGames, suggestRounds, buildDrawHistory, normalizeDrawCourts,
+  pairFourBalanced,
 } from './gameDayDraw.js';
 
 const key = (a, b) => (a < b ? `${a}|${b}` : `${b}|${a}`);
@@ -304,5 +305,88 @@ describe('gameDayDraw — memória de formações no re-sorteio', () => {
       expect(antes.has(key(...g.side_a))).toBe(false);
       expect(antes.has(key(...g.side_b))).toBe(false);
     });
+  });
+});
+
+/* ---------------------------------------------------------------------------
+ * DUPLA VINCULADA — o vínculo atravessa os outros critérios
+ *
+ * O motor recebe IDS, não participantes: sem `fixedPairs` ele não tem como
+ * saber quem está vinculado a quem, e separava a dupla assim que ela custava
+ * uma "repetição de parceria". Era o defeito do Americano aprimorado.
+ * ------------------------------------------------------------------------ */
+describe('pairFourBalanced — dupla vinculada', () => {
+  const rng = () => 0.5;
+  const lados = (r) => [[...r.side_a].sort().join('+'), [...r.side_b].sort().join('+')];
+  const historico = (jogos) => buildDrawHistory(jogos, ['a', 'b', 'c', 'd']);
+  const jogo = (x, y) => ({ side_a: x, side_b: y });
+
+  it('⭐ sem o vínculo, repetir a parceria faz o motor SEPARAR os dois (o defeito)', () => {
+    // a|b já jogaram juntos: repetir custa 10, então o motor os divide.
+    const h = historico([jogo(['a', 'b'], ['c', 'd'])]);
+    const r = pairFourBalanced(['a', 'b', 'c', 'd'], { history: h, rng });
+    expect(lados(r)).not.toContain('a+b');
+  });
+
+  it('⭐ com o vínculo, eles saem do MESMO lado — custe o que custar', () => {
+    const h = historico([
+      jogo(['a', 'b'], ['c', 'd']), jogo(['a', 'b'], ['c', 'd']), jogo(['a', 'b'], ['c', 'd']),
+    ]);
+    const r = pairFourBalanced(['a', 'b', 'c', 'd'], {
+      history: h, rng, fixedPairs: [['a', 'b']],
+    });
+    expect(lados(r)).toContain('a+b');
+    expect(lados(r)).toContain('c+d');
+  });
+
+  it('⭐ a parceria vinculada NÃO é cobrada como repetição', () => {
+    // Se fosse, o custo do grupo cresceria 10 por partida e a dupla ficaria
+    // cara demais para ser escolhida — ou seja, jogaria cada vez menos.
+    const semHistorico = pairFourBalanced(['a', 'b', 'c', 'd'], {
+      history: historico([]), rng, fixedPairs: [['a', 'b']],
+    });
+    const comMuito = pairFourBalanced(['a', 'b', 'c', 'd'], {
+      history: historico([jogo(['a', 'b'], ['e', 'f']), jogo(['a', 'b'], ['g', 'h'])]),
+      rng,
+      fixedPairs: [['a', 'b']],
+    });
+    expect(comMuito.cost).toBeCloseTo(semHistorico.cost, 6);
+  });
+
+  it('duas duplas vinculadas no mesmo grupo: a única formação possível', () => {
+    const r = pairFourBalanced(['a', 'b', 'c', 'd'], {
+      history: historico([jogo(['a', 'b'], ['c', 'd'])]), rng,
+      fixedPairs: [['a', 'b'], ['c', 'd']],
+    });
+    expect(lados(r).sort()).toEqual(['a+b', 'c+d']);
+  });
+
+  it('o nível continua opinando ENTRE as formações que respeitam o vínculo', () => {
+    // Com a|b fixos só resta uma formação; sem vínculo, o nível escolhe.
+    const levels = { a: 6, b: 6, c: 3, d: 3 };
+    const livre = pairFourBalanced(['a', 'b', 'c', 'd'], { history: historico([]), levels, rng });
+    expect(lados(livre)).not.toContain('a+b'); // equilibraria os lados
+    const preso = pairFourBalanced(['a', 'b', 'c', 'd'], {
+      history: historico([]), levels, rng, fixedPairs: [['a', 'b']],
+    });
+    expect(lados(preso)).toContain('a+b'); // o vínculo vence
+  });
+
+  it('vínculo inconsistente não impede a partida de sair', () => {
+    // Três pessoas "vinculadas" entre si: nenhuma formação atende. Em vez de
+    // travar, o motor ignora o vínculo e devolve a melhor formação possível.
+    const r = pairFourBalanced(['a', 'b', 'c', 'd'], {
+      history: historico([]), rng, fixedPairs: [['a', 'b'], ['b', 'c']],
+    });
+    expect(r.side_a).toHaveLength(2);
+    expect(r.side_b).toHaveLength(2);
+    expect([...r.side_a, ...r.side_b].sort()).toEqual(['a', 'b', 'c', 'd']);
+  });
+
+  it('sem `fixedPairs`, nada muda (compatibilidade)', () => {
+    const h = historico([jogo(['a', 'c'], ['b', 'd'])]);
+    const antes = pairFourBalanced(['a', 'b', 'c', 'd'], { history: h, rng });
+    const depois = pairFourBalanced(['a', 'b', 'c', 'd'], { history: h, rng, fixedPairs: [] });
+    expect(depois).toEqual(antes);
   });
 });

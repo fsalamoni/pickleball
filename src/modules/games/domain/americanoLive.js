@@ -95,6 +95,38 @@ function parceiroMutuo(p, porId) {
 }
 
 /**
+ * As DUPLAS VINCULADAS presentes num grupo de ids, no formato que
+ * `pairFourBalanced` espera (`[[a, b], …]`).
+ *
+ * Existe porque o motor do Americano recebe IDS, não participantes: ele não
+ * tem como saber quem está vinculado a quem. Sem esta ponte, o vínculo era
+ * respeitado ao escolher QUEM joga (`respectsFixedPairs`) e ignorado ao
+ * decidir os LADOS — a dupla entrava na mesma partida e saía uma contra a
+ * outra, que foi o defeito relatado.
+ *
+ * @param {string[]} ids            os quatro escolhidos
+ * @param {Map|Array} participantes fila ou mapa `id → participante`
+ */
+export function fixedPairsWithin(ids = [], participantes = []) {
+  const porId = participantes instanceof Map
+    ? participantes
+    : new Map((participantes || []).filter(Boolean).map((p) => [p.id, p]));
+  const dentro = new Set(ids);
+  const pares = [];
+  const vistos = new Set();
+  ids.forEach((id) => {
+    if (vistos.has(id)) return;
+    const p = porId.get(id);
+    const parceiro = p ? parceiroMutuo(p, porId) : null;
+    if (!parceiro || !dentro.has(parceiro.id)) return;
+    vistos.add(id);
+    vistos.add(parceiro.id);
+    pares.push([id, parceiro.id]);
+  });
+  return pares;
+}
+
+/**
  * O conjunto de 4 respeita as DUPLAS FIXAS?
  *
  * Duas regras, as mesmas do Play: quem tem parceiro mútuo disponível só entra
@@ -173,7 +205,9 @@ export function drawNextAmericanoLiveMatch(availableOrdered, opts = {}) {
   combinacoes(janela, slots).forEach((grupo) => {
     if (!grupo.includes(primeiro)) return;
     if (!respectsFixedPairs(grupo, fila)) return;
-    const par = pairFourBalanced(grupo, { history: historico, levels, rng });
+    const par = pairFourBalanced(grupo, {
+      history: historico, levels, rng, fixedPairs: fixedPairsWithin(grupo, fila),
+    });
     const custoOrdem = grupo.reduce((acc, id) => acc + (posicao.get(id) ?? 0), 0);
     const custo = par.cost + orderWeight * custoOrdem;
     if (!melhor || custo < melhor.custo) {
@@ -185,7 +219,9 @@ export function drawNextAmericanoLiveMatch(availableOrdered, opts = {}) {
     return { side_a: melhor.side_a, side_b: melhor.side_b, ids: melhor.ids };
   }
   // Rede: a escolha estrita do Play, pareada pelo motor do Americano.
-  const par = pairFourBalanced(estrita, { history: historico, levels, rng });
+  const par = pairFourBalanced(estrita, {
+    history: historico, levels, rng, fixedPairs: fixedPairsWithin(estrita, fila),
+  });
   return { side_a: par.side_a, side_b: par.side_b, ids: estrita };
 }
 
@@ -278,7 +314,9 @@ function bestAmericanoLiveRound(fila, k, opts = {}) {
   const custoGrupo = (grupo) => {
     const chave = [...grupo].sort().join('|');
     if (memo.has(chave)) return memo.get(chave);
-    const par = pairFourBalanced(grupo, { history: historico, levels, rng });
+    const par = pairFourBalanced(grupo, {
+      history: historico, levels, rng, fixedPairs: fixedPairsWithin(grupo, fila),
+    });
     memo.set(chave, par.cost);
     return par.cost;
   };
@@ -403,6 +441,7 @@ export function forecastAmericanoLiveMatches(availableOrdered, opts = {}) {
   const registrar = (court, conditional, ids) => {
     const par = pairFourBalanced(ids, {
       history: buildDrawHistory(jogosHipoteticos, ids), levels, rng,
+      fixedPairs: fixedPairsWithin(ids, porId),
     });
     blocos.push({
       court,

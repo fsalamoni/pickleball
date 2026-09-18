@@ -239,8 +239,8 @@ export function nextAvailableExcluding(availableOrdered, excludeIds = []) {
  * @param {{ inGameIds?: string[], swappedOutIds?: string[] }} [ctx]
  * @returns {object|null}
  */
-export function pickSwapReplacement(availableOrdered, { inGameIds = [], swappedOutIds = [] } = {}) {
-  return nextAvailableExcluding(availableOrdered, [...inGameIds, ...swappedOutIds]);
+export function pickSwapReplacement(availableOrdered, ctx = {}) {
+  return eligibleSwapReplacements(availableOrdered, ctx)[0] || null;
 }
 
 /**
@@ -252,13 +252,32 @@ export function pickSwapReplacement(availableOrdered, { inGameIds = [], swappedO
  * `pickSwapReplacement(lista, ctx)` é, por construção, o primeiro item daqui.
  * Isso é verificado por teste: as duas funções nunca podem divergir.
  *
+ * QUEM TEM DUPLA VINCULADA esperando na fila vai para o FIM da lista. Ele
+ * continua elegível — a substituição nunca fica sem saída —, mas só é chamado
+ * quando não há mais ninguém: tirá-lo da fila deixa o parceiro sozinho, ou
+ * seja, desfaz um vínculo que ninguém pediu para desfazer. É a mesma regra que
+ * `buildPlayNextMatch` já aplica no sorteio ("sempre entram juntos"); aqui era
+ * o único lugar que a ignorava.
+ *
+ * Quem tem parceiro JÁ EM QUADRA não conta como vinculado para este fim: não
+ * há dupla esperando para ser desfeita.
+ *
  * @param {Array} availableOrdered  disponíveis, em ordem de participação
  * @param {{ inGameIds?: string[], swappedOutIds?: string[] }} [ctx]
- * @returns {Array} elegíveis, na mesma ordem recebida
+ * @returns {Array} elegíveis, na ordem de participação, com as duplas por último
  */
 export function eligibleSwapReplacements(availableOrdered, { inGameIds = [], swappedOutIds = [] } = {}) {
   const exclude = new Set([...inGameIds, ...swappedOutIds]);
-  return (availableOrdered || []).filter((p) => p && !exclude.has(p.id));
+  const livres = (availableOrdered || []).filter((p) => p && !exclude.has(p.id));
+  const porId = new Map(livres.map((p) => [p.id, p]));
+  const temDuplaNaFila = (p) => {
+    const parceiro = p?.partner_id ? porId.get(p.partner_id) : null;
+    return !!parceiro && parceiro.partner_id === p.id;
+  };
+  return [
+    ...livres.filter((p) => !temDuplaNaFila(p)),
+    ...livres.filter(temDuplaNaFila),
+  ];
 }
 
 /**

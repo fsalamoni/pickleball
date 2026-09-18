@@ -313,3 +313,51 @@ describe('quadras', () => {
     expect(nextFreePlayCourt({ courts: 1, games: [openGame(1, ['a', 'b', 'c', 'd'])] })).toBeNull();
   });
 });
+
+/* ---------------------------------------------------------------------------
+ * ⭐ SUBSTITUIÇÃO × DUPLA VINCULADA
+ *
+ * Chamar para a quadra alguém que tem dupla ESPERANDO na fila desfaz um
+ * vínculo que ninguém pediu para desfazer — o parceiro fica sozinho e passa a
+ * aguardar indefinidamente. Ele continua elegível (a substituição nunca fica
+ * sem saída), mas só é chamado quando não há mais ninguém.
+ * ------------------------------------------------------------------------ */
+describe('⭐ substituto: quem tem dupla na fila vai por último', () => {
+  const P = (id, extra = {}) => ({
+    id, name: id.toUpperCase(), available_since: 1000, available_tie: 0,
+    skip_remaining: 0, partner_id: null, ...extra,
+  });
+  const fila = (lista) => lista.map((p, i) => ({ ...p, available_since: 1000 + i }));
+
+  it('⭐ o automático NÃO tira ninguém de uma dupla que está esperando', () => {
+    // a e b são dupla vinculada e estão na FRENTE; c e d estão soltos.
+    const order = fila([
+      P('a', { partner_id: 'b' }), P('b', { partner_id: 'a' }), P('c'), P('d'),
+    ]);
+    expect(pickSwapReplacement(order, { inGameIds: ['x'] }).id).toBe('c');
+    expect(eligibleSwapReplacements(order, {}).map((p) => p.id)).toEqual(['c', 'd', 'a', 'b']);
+  });
+
+  it('⭐ mas ele continua ELEGÍVEL: sem mais ninguém, a dupla é chamada', () => {
+    const order = fila([P('a', { partner_id: 'b' }), P('b', { partner_id: 'a' })]);
+    expect(pickSwapReplacement(order, {}).id).toBe('a');
+    expect(eligibleSwapReplacements(order, {}).map((p) => p.id)).toEqual(['a', 'b']);
+  });
+
+  it('parceiro JÁ EM QUADRA não conta: não há dupla esperando para ser desfeita', () => {
+    // b está jogando; a não tem com quem formar dupla na fila.
+    const order = fila([P('a', { partner_id: 'b' }), P('c')]);
+    expect(pickSwapReplacement(order, { inGameIds: ['b'] }).id).toBe('a');
+  });
+
+  it('vínculo não mútuo não segura ninguém', () => {
+    const order = fila([P('a', { partner_id: 'b' }), P('b'), P('c')]);
+    expect(pickSwapReplacement(order, {}).id).toBe('a');
+  });
+
+  it('⭐ pickSwapReplacement continua sendo o PRIMEIRO de eligibleSwapReplacements', () => {
+    const order = fila([P('a', { partner_id: 'b' }), P('b', { partner_id: 'a' }), P('c')]);
+    const ctx = { swappedOutIds: ['c'] };
+    expect(pickSwapReplacement(order, ctx).id).toBe(eligibleSwapReplacements(order, ctx)[0].id);
+  });
+});

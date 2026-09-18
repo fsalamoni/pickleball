@@ -449,3 +449,117 @@ describe('⭐ a rodada é escolhida como um todo, não quadra a quadra', () => {
     expect(umaQuadra[0].side_b).toEqual(sozinha.side_b);
   });
 });
+
+/* ---------------------------------------------------------------------------
+ * ⭐ A DUPLA VINCULADA JOGA JUNTA — SEMPRE
+ *
+ * O defeito relatado em quadra: a dupla vinculada era mantida na mesma
+ * PARTIDA (é o que `respectsFixedPairs` garante) e saía uma CONTRA a outra.
+ * A causa: quem escolhe os lados é `pairFourBalanced`, que recebe IDS e não
+ * sabia quem estava vinculado — e a partir da SEGUNDA partida repetir aquela
+ * parceria custava 10, então o motor os separava.
+ *
+ * O vínculo atravessa as demais regras do sorteio. Elas continuam valendo
+ * para todo o resto.
+ * ------------------------------------------------------------------------ */
+describe('⭐ dupla vinculada no Americano aprimorado', () => {
+  const comDupla = (x, y) => [
+    P('a', { available_since: 1000, partner_id: x === 'a' ? y : null }),
+    P('b', { available_since: 1001, partner_id: y === 'b' ? x : null }),
+    P('c', { available_since: 1002 }), P('d', { available_since: 1003 }),
+    P('e', { available_since: 1004 }), P('f', { available_since: 1005 }),
+    P('g', { available_since: 1006 }), P('h', { available_since: 1007 }),
+  ];
+  const filaAB = () => comDupla('a', 'b');
+  const juntos = (side_a, side_b, x, y) => (
+    (side_a.includes(x) && side_a.includes(y)) || (side_b.includes(x) && side_b.includes(y))
+  );
+
+  it('⭐ mesmo com a parceria JÁ no histórico, a dupla sai do mesmo lado', () => {
+    // Este é exatamente o caso que falhava: na 1ª partida eles saíam juntos
+    // por acaso; da 2ª em diante o motor os colocava como adversários.
+    const games = [jogo(['a', 'b'], ['c', 'd'])];
+    const r = drawNextAmericanoLiveMatch(filaAB(), { games, rng });
+    expect(r.ids).toContain('a');
+    expect(r.ids).toContain('b');
+    expect(juntos(r.side_a, r.side_b, 'a', 'b')).toBe(true);
+  });
+
+  it('⭐ o dia inteiro: a dupla nunca se enfrenta e nunca entra pela metade', () => {
+    const games = [];
+    for (let i = 0; i < 12; i += 1) {
+      const r = drawNextAmericanoLiveMatch(filaAB(), { games, rng });
+      expect(juntos(r.side_a, r.side_b, 'a', 'b')).toBe(true);
+      games.push(jogo(r.side_a, r.side_b));
+    }
+    // E os ADVERSÁRIOS variaram: a regra do americano segue valendo à volta.
+    const adversarios = new Set(games.flatMap((g) => {
+      const a = g.side_a.map((p) => p.id);
+      const lado = a.includes('a') ? g.side_b : g.side_a;
+      return [lado.map((p) => p.id).sort().join('+')];
+    }));
+    expect(adversarios.size).toBeGreaterThan(1);
+  });
+
+  it('⭐ na RODADA de várias quadras, o vínculo vale igual', () => {
+    const games = [jogo(['a', 'b'], ['c', 'd']), jogo(['a', 'b'], ['e', 'f'])];
+    const r = drawAmericanoLiveRoundForFreeCourts(filaAB(), { courts: 2, games, rng });
+    const bloco = r.find((b) => b.ids.includes('a'));
+    expect(bloco.ids).toContain('b');
+    expect(juntos(bloco.side_a, bloco.side_b, 'a', 'b')).toBe(true);
+  });
+
+  it('⭐ a PREVISÃO mostra a mesma dupla que vai ser criada', () => {
+    const entrada = filaAB();
+    const opts = { courts: 2, games: [jogo(['a', 'b'], ['c', 'd'])], rng };
+    const previsto = forecastAmericanoLiveMatches(entrada, opts).find((b) => !b.conditional
+      && b.players.some((p) => p.id === 'a'));
+    expect(juntos(previsto.side_a, previsto.side_b, 'a', 'b')).toBe(true);
+  });
+
+  it('⭐ DUAS duplas vinculadas convivem na mesma partida', () => {
+    const entrada = [
+      P('a', { available_since: 1000, partner_id: 'b' }),
+      P('b', { available_since: 1001, partner_id: 'a' }),
+      P('c', { available_since: 1002, partner_id: 'd' }),
+      P('d', { available_since: 1003, partner_id: 'c' }),
+      P('e', { available_since: 1004 }), P('f', { available_since: 1005 }),
+    ];
+    const r = drawNextAmericanoLiveMatch(entrada, {
+      games: [jogo(['a', 'b'], ['c', 'd'])], rng,
+    });
+    if (r.ids.includes('c')) {
+      expect(juntos(r.side_a, r.side_b, 'c', 'd')).toBe(true);
+    }
+    expect(juntos(r.side_a, r.side_b, 'a', 'b')).toBe(true);
+  });
+
+  it('⭐ a dupla não é PUNIDA por repetir a si mesma: continua jogando tanto quanto', () => {
+    // Se a parceria vinculada contasse como repetição, o custo do grupo
+    // cresceria 10 a cada partida e a dupla passaria a ser evitada.
+    const estado = new Map(filaAB().map((p) => [p.id, { ...p }]));
+    const games = [];
+    const jogosPor = new Map(Array.from(estado.keys()).map((id) => [id, 0]));
+    let relogio = 5000;
+    for (let i = 0; i < 16; i += 1) {
+      const ordem = Array.from(estado.values()).sort((x, y) => x.available_since - y.available_since);
+      const r = drawNextAmericanoLiveMatch(ordem, { games, rng });
+      games.push(jogo(r.side_a, r.side_b));
+      r.ids.forEach((id) => {
+        jogosPor.set(id, jogosPor.get(id) + 1);
+        relogio += 1;
+        estado.get(id).available_since = relogio;
+      });
+    }
+    const v = Array.from(jogosPor.values());
+    expect(Math.max(...v) - Math.min(...v)).toBeLessThanOrEqual(1);
+  });
+
+  it('sem vínculo nenhum, o sorteio é exatamente o de antes', () => {
+    const semDupla = fila(['a', 'b', 'c', 'd', 'e', 'f', 'g', 'h']);
+    const games = [jogo(['a', 'b'], ['c', 'd'])];
+    const r = drawNextAmericanoLiveMatch(semDupla, { games, rng });
+    // a|b já foram dupla: sem vínculo, o motor os separa (comportamento antigo).
+    expect(juntos(r.side_a, r.side_b, 'a', 'b')).toBe(false);
+  });
+});
