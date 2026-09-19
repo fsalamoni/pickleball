@@ -43,6 +43,9 @@ vi.mock('@/core/lib/FirebaseAuthContext', () => ({ useAuth: () => auth }));
 // poder num dia de jogo de ARENA). Aqui ela não gerencia nenhuma — é o caso
 // que estes testes cobrem, o dia de jogo do atleta.
 vi.mock('@/modules/arenas/hooks/useArenas', () => ({ useMyManagedArenas: () => ({ data: arenasGeridas }) }));
+// `useGameDayRoles` também pergunta ao CLUBE (dia de jogo de clube). Aqui não
+// é um, então a associação volta vazia.
+vi.mock('@/modules/clubs/hooks/useClubs', () => ({ useMyMembership: () => ({ data: null }) }));
 vi.mock('@/core/lib/FeatureFlagsContext', () => ({ useFeatureFlag: () => false }));
 vi.mock('@/modules/athletes/hooks/useAthletes', () => ({ useAthletes: () => ({ data: [] }) }));
 vi.mock('@/modules/games/hooks/useGameDays', () => ({

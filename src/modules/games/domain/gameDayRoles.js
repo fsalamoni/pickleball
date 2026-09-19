@@ -40,6 +40,15 @@
  * só em quem chama — é barata e evita que um `true` distraído vire permissão.
  * A regra do Firestore repete a mesma ideia com `isArenaManager(arena_id)`,
  * que é a barreira de verdade; isto aqui decide o que a TELA mostra.
+ *
+ * ## Dia de jogo de CLUBE
+ *
+ * Mesma ideia, mesmo formato: um dia de jogo com `club_id` pertence ao CLUBE.
+ * Quem administra o clube administra o dia — inclusive quem virou
+ * administrador depois, e mesmo que quem agendou a data tenha saído. Entra
+ * pela opção `clubManager`, calculada por quem chama, e só vale em dia de jogo
+ * de clube. A barreira de verdade é `isClubGameDayManagerOf` no
+ * `firestore.rules`.
  */
 
 /**
@@ -51,6 +60,14 @@
  */
 function ehDeArena(gameDay) {
   return typeof gameDay?.arena_id === 'string' && gameDay.arena_id.length > 0;
+}
+
+/**
+ * O dia de jogo pertence a um clube? (mesma razão de estar repetido aqui que
+ * `ehDeArena`: `clubGameDay.js` já importa deste arquivo.)
+ */
+function ehDeClube(gameDay) {
+  return typeof gameDay?.club_id === 'string' && gameDay.club_id.length > 0;
 }
 
 /** Modos de gestão de um dia de jogo. */
@@ -113,13 +130,15 @@ export function isGameDayCreator(gameDay, uid) {
  *
  * @param {object} gameDay
  * @param {string} uid
- * @param {{ arenaManager?: boolean }} [options] `arenaManager` é ignorado em
- *   dia de jogo que não seja de arena.
+ * @param {{ arenaManager?: boolean, clubManager?: boolean }} [options]
+ *   `arenaManager` é ignorado em dia de jogo que não seja de arena;
+ *   `clubManager`, em dia de jogo que não seja de clube.
  */
-export function isGameDayAdmin(gameDay, uid, { arenaManager = false } = {}) {
+export function isGameDayAdmin(gameDay, uid, { arenaManager = false, clubManager = false } = {}) {
   if (!uid || !gameDay) return false;
   if (isGameDayCreator(gameDay, uid)) return true;
   if (arenaManager === true && ehDeArena(gameDay)) return true;
+  if (clubManager === true && ehDeClube(gameDay)) return true;
   return gameDayAdminUids(gameDay).includes(uid);
 }
 
@@ -148,13 +167,16 @@ export function isGameDayParticipant(gameDay, uid, participants = null) {
  * Pode CONFIGURAR o dia de jogo (editar, arquivar, definir o modo de gestão,
  * nomear administradores, publicar no ranking)?
  *
- * Só o criador — e, num dia de jogo de ARENA, quem gerencia a arena. A arena é
- * a dona do evento: amarrar a configuração a uma pessoa deixaria o dia de jogo
- * órfão quando ela saísse da equipe.
+ * Só o criador — e, num dia de jogo de ARENA, quem gerencia a arena; num dia
+ * de jogo de CLUBE, quem administra o clube. A arena e o clube são donos do
+ * evento: amarrar a configuração a uma pessoa deixaria o dia de jogo órfão
+ * quando ela saísse da equipe.
  */
-export function canConfigureGameDay(gameDay, uid, { arenaManager = false } = {}) {
+export function canConfigureGameDay(gameDay, uid, { arenaManager = false, clubManager = false } = {}) {
   if (isGameDayCreator(gameDay, uid)) return true;
-  return arenaManager === true && ehDeArena(gameDay) && !!uid;
+  if (!uid) return false;
+  if (arenaManager === true && ehDeArena(gameDay)) return true;
+  return clubManager === true && ehDeClube(gameDay);
 }
 
 /**
@@ -162,11 +184,11 @@ export function canConfigureGameDay(gameDay, uid, { arenaManager = false } = {})
  *
  * @param {object} gameDay
  * @param {string} uid
- * @param {{ participants?: Array|null, arenaManager?: boolean }} [options]
+ * @param {{ participants?: Array|null, arenaManager?: boolean, clubManager?: boolean }} [options]
  */
-export function canManageGameDay(gameDay, uid, { participants = null, arenaManager = false } = {}) {
+export function canManageGameDay(gameDay, uid, { participants = null, arenaManager = false, clubManager = false } = {}) {
   if (!uid || !gameDay) return false;
-  if (isGameDayAdmin(gameDay, uid, { arenaManager })) return true;
+  if (isGameDayAdmin(gameDay, uid, { arenaManager, clubManager })) return true;
   if (!isGameDayOpenToParticipants(gameDay)) return false;
   return isGameDayParticipant(gameDay, uid, participants);
 }

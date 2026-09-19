@@ -1,7 +1,16 @@
 # `clubs/` — Clubes e comunidade
 
 Clubes com associação por papel, mural, fórum (com enquetes), eventos e
-game-day (com Mexicano + Rei da Quadra), ranking interno, página pública.
+dia de jogo, ranking interno, página pública.
+
+> ⭐ **Onda AS — o dia de jogo do clube virou o MÓDULO único.** Toda data NOVA
+> de evento de clube nasce como um `game_days` (campo `game_day_id` na data),
+> com Play, Americano aprimorado, telão, tutorial e administradores nomeados.
+> O **legado não foi migrado**: data sem `game_day_id` segue no organizador de
+> sempre (`components/GameDayOrganizer.jsx`), lendo e escrevendo nas mesmas
+> subcoleções. A pergunta que separa os dois é `isModularEventDate(date)`, e
+> ela mora num lugar só (`v2/components/clubs/ClubGameDayTab.jsx`).
+> Ver `docs/25-DIA-DE-JOGO-COMO-MODULO.md` §5.
 
 ## Status
 - **Páginas V2**: `V2Clubs`, `V2ClubDetail`, `V2EventDetail`, `V2CreateClub`,
@@ -9,8 +18,10 @@ game-day (com Mexicano + Rei da Quadra), ranking interno, página pública.
 - **Componentes**: `V2ClubAdmin`, `V2ClubEvents`, `V2ClubFeed`,
   `V2ClubForums`, `V2ClubMembers`, `V2EventChat`, `V2EventDatesPanel`,
   `V2EventParticipantsPanel`, `V2ForumPoll`, `V2ForumThreadView`,
-  `V2GameDayOrganizer` (com Mexicano + Rei da Quadra), `V2ClubInternalRanking`
+  `ClubGameDayTab` (módulo × legado), `V2ClubInternalRanking`
   (Onda 8), `V2ClubRecurringEvents` (Onda 8b), `V2ClubInviteLink` (Onda 8b)
+  — `V2GameDayOrganizer` foi **removido** na Onda AS: era uma quinta cópia do
+  mesmo organizador, sem nenhum import no projeto e fora do bundle
 - **Services**: `clubService`, `forumService`
 - **Domain**: `clubRanking`, `forumPoll`, `gameDayDraw`, `mexicano`,
   `reinaQuadra`, `constants`
@@ -24,6 +35,10 @@ game-day (com Mexicano + Rei da Quadra), ranking interno, página pública.
 - `club_member_invites/{clubId_uid}` (id determinista)
 - `club_posts`, `club_forum_threads`, `club_events`, `club_event_rsvps`,
   `event_invites`, `dates`, `date_rsvps`, `poll_votes`, `comments`
+- `club_events/{id}/dates/{id}.game_day_id` — **opcional** (Onda AS). Presente:
+  a data é servida pelo módulo (`game_days/{game_day_id}`). Ausente: legado.
+- `club_events/{id}/participants/{id}.partner_id` — **opcional** (Onda AR):
+  dupla vinculada no sorteio do legado
 
 ## Hooks
 ```js

@@ -58,8 +58,8 @@ que pode se unificar foi unificado**. Pontos pertinentes ainda abertos:
   shimmer, confete no pódio).
 - ⏳ **DS-14** ilustrações de empty state com tom da marca.
 - ⏳ **DS-16** lint rules/codemods proibindo import de primitivos legados em
-  `src/v2` (e QW-13: migrar `V2GameDayOrganizer`, `V2EventDatesPanel`,
-  `V2MatchesBlock`).
+  `src/v2` (e QW-13: migrar `V2EventDatesPanel`, `V2MatchesBlock` —
+  `V2GameDayOrganizer` saiu na Onda AS, era cópia morta).
 - ⏳ **DS-18** reescrever `07-DESIGN-STANDARD.md` (hoje manda `Platform*`/slate).
 
 ## 2. Navegação / arquitetura de informação (doc 02)
@@ -120,6 +120,13 @@ que pode se unificar foi unificado**. Pontos pertinentes ainda abertos:
 
 ## 6. Organizador — dia de jogo (doc 06) — quase tudo pendente
 
+- ✅ **DIA-00** *(Ondas AR e AS)* o dia de jogo virou um MÓDULO único: sorteio
+  (`buildGameDayDraw`) e miolo (`GameDayModule`) com fonte única nas três
+  origens, e a data de evento de clube passou a NASCER como `game_days` — o
+  clube ganhou Play, Americano aprimorado, telão, tutorial e administradores
+  nomeados sem tela nova. O legado do clube não foi migrado (a data sem
+  `game_day_id` segue no organizador de sempre).
+  Ver `docs/25-DIA-DE-JOGO-COMO-MODULO.md`.
 - ⏳ **DIA-01** console "Dia de Jogo" (fila por quadra, chamada, ocupação).
 - ⏳ **DIA-02** placar courtside otimizado (botões gigantes, desfazer, WO
   explícito — QW-18, offline com fila).

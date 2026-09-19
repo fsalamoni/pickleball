@@ -192,7 +192,10 @@ Estes princípios vieram de bugs reais que custaram horas pra arrumar. São ineg
 **"Onde está o TELÃO do dia de jogo?"** → `src/v2/pages/V2GameDayTelao.jsx` · rota `/dia-de-jogo/:id/telao` (em `src/App.jsx`, fora do V2Layout) · doc em `docs/14-DIA-DE-JOGO-TELAO.md`
 **"Quem pode sortear/substituir/criar partida num dia de jogo?"** → `docs/15-DIA-DE-JOGO-PERMISSOES.md` · código em `src/modules/games/domain/gameDayRoles.js` (fonte única)
 **"Por que as partidas do Play saem sempre com as mesmas pessoas?"** → era a fila em blocos de 4; resolvido pelo rodízio equilibrado atrás da flag `play_smart_rotation` (padrão OFF) · `docs/16-DIA-DE-JOGO-RODIZIO.md` · código em `src/modules/games/domain/playRotation.js`
-**"O dia de jogo funciona igual no clube, na arena e no atleta?"** → ⭐ `docs/25-DIA-DE-JOGO-COMO-MODULO.md`. O ARMAZENAMENTO é diferente por motivo histórico (`game_days` para atleta e arena; `club_events/{id}/…` para o clube), mas as REGRAS não: `buildGameDayDraw` (`modules/games/services/gameDayDrawPlanner.js`) é a fonte ÚNICA do sorteio de grade — formato, nível unificado, sorteio aditivo e duplas vinculadas valem nas três telas por construção. 🐞 Antes eram duas cópias do mesmo `handleDraw`, e elas divergiram: o painel do atleta ganhou Mexicano e Rei da Quadra e o do clube ficou só no Americano — sem nada na tela avisar. **Nunca** chame `generateGameDayGames`/`generateMexicanoSchedule`/`kingOfCourtFirstRound` de uma tela: `src/core/guards/diaDeJogoUniforme.test.js` lê o código-fonte e reprova. A origem só pode mudar TRÊS coisas: onde grava, quem organiza e o que o local acrescenta (a arena fecha quadra; o clube tem chat e RSVP)
+**"O dia de jogo funciona igual no clube, na arena e no atleta?"** → ⭐ `docs/25-DIA-DE-JOGO-COMO-MODULO.md`. **Sim, e desde a Onda AS também o ARMAZENAMENTO**: toda data NOVA de evento de clube nasce como um `game_days` (campo `game_day_id` na data), como já era no atleta e na arena. Duas fontes únicas: `buildGameDayDraw` (`modules/games/services/gameDayDrawPlanner.js`) para o SORTEIO de grade e `GameDayModule` (`src/v2/components/games/GameDayModule.jsx`) para o MIOLO (a visão por formato + tutorial + telão). **Nunca** chame `generateGameDayGames`/`generateMexicanoSchedule`/`kingOfCourtFirstRound` nem monte o `? :` dos organizadores numa tela: `src/core/guards/diaDeJogoUniforme.test.js` lê o código-fonte e reprova. 🐞 Antes eram QUATRO cópias do mesmo switch e DUAS do mesmo `handleDraw`, e elas divergiram: o clube ficou sem Play, sem Americano aprimorado e sem telão — sem nada na tela avisar. A origem só pode mudar TRÊS coisas: onde nasce, quem organiza e o que o local acrescenta (a arena fecha quadra; o clube tem chat e RSVP por data)
+**"O dia de jogo do CLUBE mudou. E o que já está publicado?"** → ⭐ **nada foi migrado, e não vai ser.** A pergunta que separa é UMA: `isModularEventDate(date)` — `club_events/{id}/dates/{id}.game_day_id` preenchido ⇒ módulo (`game_days`); ausente ⇒ legado, servido pelo `GameDayOrganizer` de sempre, lendo e escrevendo nas mesmas subcoleções. Quem faz a pergunta é `src/v2/components/clubs/ClubGameDayTab.jsx`, e é o ÚNICO lugar que a faz (guarda de fonte). O legado encolhe sozinho. Ver `docs/25-DIA-DE-JOGO-COMO-MODULO.md` §5
+**"Quem organiza o dia de jogo do clube?"** → quem agendou a data (criador), os administradores NOMEADOS e **quem administra o CLUBE** (`isClubGameDayManagerOf` no `firestore.rules`, guardada por `'club_id' in …`). O dia nasce `manage_mode: 'participants'` de propósito — no evento legado qualquer membro mexia em participantes e jogos, e nascer restrito tiraria da comunidade algo que ela já tinha. O membro do clube LÊ o dia (`isClubGameDayMemberOf`) e **entra e sai sozinho**. Na tela, pergunte sempre a `useGameDayRoles`, que soma arena e clube num lugar só
+**"Onde se edita/arquiva um dia de jogo de clube?"** → na **DATA do evento**, não em `/dia-de-jogo/:id` (que mostra "Gerir no clube"). A data manda em título, horário, local e existência; a aba de jogos manda no FORMATO, e só enquanto não houver partidas — trocar depois não é edição, é perda (o Play não guarda placar; Mexicano e Rei da Quadra derivam as rodadas do que já aconteceu). E **nunca** abra `CreateGameDayDialog` num dia de clube: ele grava a `visibility` junto, e público ali significa legível e auto-inscrevível por qualquer conta
 **"Em quais formatos a dupla vinculada vale?"** → Play, Americano aprimorado e Americano de grade: **sim**. Mexicano e Rei da Quadra: **não**, e a tela AVISA (`fixedPairsIgnored`) em vez de ignorar calada — neles as duplas saem da classificação da rodada e do resultado da anterior, que é o que define os dois formatos. E o vínculo tem de valer em **TRÊS momentos**: quem joga a rodada, em que grupo de 4, e de que LADO. Só o terceiro ⇒ a dupla vai para quadras diferentes; só os dois primeiros ⇒ ela joga uma CONTRA a outra (foi o defeito relatado). Ver `docs/25-DIA-DE-JOGO-COMO-MODULO.md` §4
 **"Vinculei uma dupla e ela não jogou junta"** → era o caso no Americano aprimorado, e a causa é sutil: o vínculo valia ao escolher **QUEM** entra (`respectsFixedPairs`) e não ao escolher **COMO** os quatro se dividem — `pairFourBalanced` recebe IDS e não tinha como saber quem estava vinculado. Na primeira partida eles saíam juntos por acaso; da segunda em diante aquela parceria já custava 10 no histórico e o motor os colocava como **adversários**. Agora `fixedPairsWithin(ids, participantes)` (`americanoLive.js`) traduz os `partner_id` mútuos e é passada em TODO caminho de sorteio (partida avulsa, rede, custo do grupo na rodada, previsão). O vínculo é **filtro antes do custo**, não mais um critério dentro dele: as demais regras decidem só entre as formações que o respeitam. E a parceria vinculada **não é cobrada como repetição** — se fosse, o custo do grupo cresceria 10 por partida e a dupla passaria a ser evitada. Ao criar caminho novo de sorteio, **nunca** chame `pairFourBalanced` sem `fixedPairs`. Ver `docs/17-DIA-DE-JOGO-AMERICANO-APRIMORADO.md` §4a
 **"Cliquei no jogador em quadra: quero escolher entre deixá-lo de fora e trocá-lo por alguém"** → é o que acontece — o clique abre `CourtPlayerDialog` (exportado de `AthletePlayOrganizer.jsx`), com as duas opções; a lista de quem pode entrar vem de `eligibleSwapReplacements` e é reconferida no serviço. Vale no painel E no telão. Ver `docs/14-DIA-DE-JOGO-TELAO.md`
@@ -434,12 +437,64 @@ chore(deps): bump firebase to 12.x
 
 ## 10. Métricas atuais (snapshot 2026-08-31, 11:05 GMT-3)
 
-> Última atualização: 2026-08-31, 11:05 GMT-3, após **41 PRs
+> Última atualização: 2026-09-19 (Onda AS). Antes: 2026-08-31, após **41 PRs
 > novos** mergeados em main (#95 a #135) — Sprints 32 a 50+.
 > Detalhes em `docs/08-ARENA-ROADMAP.md` (Seções 34-50) e
 > memory topic `picklerush-sync-2026-08.md`.
 >
 > **Destaques por onda**:
+>
+> - **Onda AS — O clube entra no módulo, sem tocar no que já foi jogado**
+>   (2026-09-19): a Onda AR unificou o SORTEIO e deixou uma tabela de
+>   honestidade sobre o que ainda era diferente. Esta fecha o resto — **para o
+>   futuro**.
+>
+>   **(1) 🐞 Havia QUATRO cópias do mesmo `? :`.** Não era só o `handleDraw`:
+>   a escolha da VISÃO por formato (Play × Americano aprimorado × grade) e as
+>   ferramentas do dia (tutorial do formato, telão) eram montadas tela a tela —
+>   no atleta, na arena, e em lugar nenhum no clube. Foi assim que o clube
+>   passou meses sem Play, sem Americano aprimorado e sem telão, com o próprio
+>   documento do módulo registrando a dívida. Agora isso é `GameDayModule`, e
+>   as três telas passam por ele; um guarda de FONTE reprova quem montar o
+>   switch por fora, porque o defeito é invisível a teste de comportamento —
+>   cada tela, isolada, funciona.
+>
+>   **(2) A data de evento de clube passou a NASCER como `game_days`.** É o
+>   corolário da Onda AM (o torneio interno cria um dia de jogo em vez de
+>   reescrever sorteio, placar, ranking e telão): sem armazenamento próprio,
+>   não sobra o que unificar. O clube ganhou de graça Play, Americano
+>   aprimorado, telão, tutorial e administradores nomeados — **zero tela
+>   nova**. E ganhou permissão explícita: quem administra o CLUBE administra o
+>   dia (mesmo sem ter agendado a data, e mesmo que quem agendou saia), o
+>   membro LÊ e se inscreve sozinho, e quem não é do clube não vê nada. O dia
+>   nasce com a gestão ABERTA de propósito: no evento legado qualquer membro
+>   mexia em participantes e jogos, e nascer restrito tiraria da comunidade
+>   algo que ela já tinha.
+>
+>   **(3) O legado NÃO foi migrado, e não vai ser.** A pergunta que separa é
+>   uma só — `game_day_id` na data —, e ela mora num lugar só. Data anterior
+>   segue no organizador de sempre, lendo e escrevendo exatamente onde sempre
+>   leu e escreveu; nenhum documento publicado é lido, reescrito ou movido. Um
+>   dia de jogo já jogado costuma já estar no ranking de quem jogou: migrar
+>   seria reescrever histórico, e deixar como está não custa nada porque as
+>   duas casas convivem. O legado encolhe sozinho.
+>
+>   **De quebra, três achados no caminho.** Uma QUINTA cópia do organizador
+>   (`V2GameDayOrganizer.jsx`, 769 linhas) estava no repositório **sem um único
+>   import** e fora do bundle — saiu. O espelho do ranking inferia o `club_id`
+>   pelos atletas mesmo quando o clube dono era conhecido, e é justamente esse
+>   campo que `isClubAdmin(club_id)` confere: sem a correção, só quem agendou a
+>   data publicaria. E a aba de jogos do clube virou `lazy`, o que **reduziu**
+>   a página do evento de clube de 48,6 kB para 31,7 kB — o organizador legado
+>   também saiu do caminho crítico.
+>
+>   **Banco: quatro campos opcionais** (`game_day_id` na data do evento;
+>   `club_id`, `club_name`, `club_event_id` no dia de jogo) e **duas condições
+>   aditivas** no `firestore.rules`, ambas guardadas por `'club_id' in …` —
+>   sem o campo, sempre falsas. Zero coleção, zero índice, zero migração. 85
+>   asserções no emulador (eram 57), metade provando o que passou a funcionar e
+>   metade o que continua barrado.
+>   Ver `docs/25-DIA-DE-JOGO-COMO-MODULO.md` §5.
 >
 > - **Onda AR — O dia de jogo vira módulo, e o ranking deixa de esperar
 >   botão** (2026-09-18): três frentes, todas nascidas da mesma pergunta —
@@ -1159,12 +1214,12 @@ chore(deps): bump firebase to 12.x
 
 | Métrica | Valor | Delta do início do agente |
 |---|---|---|
-| **Testes Vitest** | **4470 passing** (268 arquivos) + 218 asserções de regras no emulador | +3954 (era 408) |
+| **Testes Vitest** | **4527 passing** (270 arquivos) + 218 asserções de regras (Vitest) + 85 do dia de jogo no emulador | +4119 (era 408) |
 | **Lint errors** | 0 | era 30+ |
 | **Módulos** | 21 (+`help` — conteúdo dos tutoriais em tela) (`games` e `legal` saíram como `src/modules/` mas continuam como pastas oficiais — **rating virou módulo oficial** com domain/services/hooks/components) | +4 (coaches, circuits, games, legal) |
 | **V2 pages** | 82 (+V2GameDayTelao — telão, fora do V2Layout; +V2Help — central de ajuda; +V2ArenaKiosk — totem da recepção, também fora do V2Layout; +V2ArenaCheckin; +V2ArenaAttendance) | +58 |
 | **V2 components (src/v2/components/)** | **16 pastas** (+home, +rating, +settings, +tournament cresceu muito, +admin) | — |
-| **Coleções Firestore** | **122 top-level em `firestore.rules`** (+`doubles_rankings`) (as 13 da gamificação V2 documentadas em `05-DATA-MODEL.md`) | +82 |
+| **Coleções Firestore** | **122 top-level em `firestore.rules`** (+`doubles_rankings`) (as 13 da gamificação V2 documentadas em `05-DATA-MODEL.md`) — a Onda AS não criou nenhuma | +82 |
 | **Índices compostos Firestore** | **33 em `firestore.indexes.json`** (+`provisional_claims`) (+4 da gamificação V2) | +28 |
 | **Feature flags ativas** | **20 default OFF** (+`arena_modules` — a chave-mestra dos módulos adicionais de arena; 137 viraram código) | −112 |
 | **Cloud Functions** | **14** (+ `recomputeRankingOnTournamentRegistration` — a inscrição também move o ranking) | +14 |

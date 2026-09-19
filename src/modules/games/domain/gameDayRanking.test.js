@@ -86,6 +86,29 @@ describe('buildGameDayMatch', () => {
     expect(res.payload.club_id).toBeNull();
   });
 
+  it('dia de jogo de CLUBE: o clube dono vence a inferência pelos atletas', () => {
+    // O clube é conhecido — a partida aconteceu no evento DELE. E é o campo
+    // que `isClubAdmin(club_id)` confere na regra de `club_event_games`: sem
+    // ele, só quem agendou a data conseguiria publicar.
+    const doClube = { ...gameDay, club_id: 'clube1' };
+    const clubs = { u1: ['cX'], u2: ['cX'], u3: ['cX'], u4: ['cX'] };
+    const res = buildGameDayMatch({ gameDay: doClube, gameId: 'g1', game: doublesGame('g1', 11, 7), participants, clubIdsByUid: clubs });
+    expect(res.payload.club_id).toBe('clube1');
+  });
+
+  it('dia de jogo de CLUBE: vale mesmo quando os atletas não têm clube em comum', () => {
+    const doClube = { ...gameDay, club_id: 'clube1' };
+    const clubs = { u1: ['cX'], u2: ['cX'], u3: ['cY'], u4: ['cY'] };
+    const res = buildGameDayMatch({ gameDay: doClube, gameId: 'g1', game: doublesGame('g1', 11, 7), participants, clubIdsByUid: clubs });
+    expect(res.payload.club_id).toBe('clube1');
+  });
+
+  it('sem club_id, nada muda — a inferência de sempre', () => {
+    const clubs = { u1: ['cX'], u2: ['cX'], u3: ['cX'], u4: ['cX'] };
+    const res = buildGameDayMatch({ gameDay: { ...gameDay, club_id: null }, gameId: 'g1', game: doublesGame('g1', 11, 7), participants, clubIdsByUid: clubs });
+    expect(res.payload.club_id).toBe('cX');
+  });
+
   it('espelha partida AVULSA (round null) com user_id embutido mesmo sem lookup de participante', () => {
     // Regressão Wave C.6: partidas avulsas do dia de jogo do atleta carregam o
     // user_id no próprio lado, então o espelhamento funciona mesmo que a lista

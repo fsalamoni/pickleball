@@ -78,6 +78,16 @@ quadra, horário ou observação **não** dispara nada.
 > passo, porque lançar o resultado já parecia o passo final. Agora conta a
 > partir do momento em que entra na plataforma.
 
+> **Dia de jogo do CLUBE (Onda AS).** A partir dela, uma data NOVA de evento
+> de clube é um `game_days`, então ela publica pelo mesmo caminho do dia de
+> jogo do atleta e da arena (`publishGameDayToRanking` → `club_event_games` →
+> gatilho). Uma diferença deliberada no espelho: num dia de jogo de clube o
+> `club_id` gravado é o clube **DONO**, não o clube inferido pelos atletas.
+> São duas razões — é o clube certo (a partida aconteceu no evento dele) e é o
+> campo que `isClubAdmin(club_id)` confere na regra de `club_event_games`, sem
+> o qual só quem agendou a data conseguiria publicar. As datas LEGADAS seguem
+> publicando pelo caminho de sempre (`rankingPublishingService`), intocadas.
+
 Continua de fora o que não é resultado de verdade: torneio em **rascunho**
 (ambiente de teste), **cancelado** (não aconteceu), **privado** (não alimenta
 ranking público) e **arquivado**. Como o recálculo é sempre integral, cancelar

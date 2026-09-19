@@ -103,7 +103,13 @@ export function buildGameDayMatch({ gameDay, gameId, game, participants, clubIds
   const winner = winnerSideOf(game);
   const pointsA = Number(game.score_a) || 0;
   const pointsB = Number(game.score_b) || 0;
-  const clubId = resolveMatchClubId(sideAUids, sideBUids, clubIdsByUid);
+  // Dia de jogo de CLUBE: o clube dono é CONHECIDO e vence a inferência pelos
+  // atletas. Duas razões: é o clube certo (a partida aconteceu no evento dele,
+  // não no clube que por acaso todos têm em comum) e é o campo que a regra de
+  // `club_event_games` confere em `isClubAdmin(club_id)` — sem ele, só quem
+  // agendou a data conseguiria publicar. Campo aditivo: um dia de jogo sem
+  // `club_id` segue exatamente como antes.
+  const clubId = gameDay.club_id || resolveMatchClubId(sideAUids, sideBUids, clubIdsByUid);
   const id = gameDayRankingId(gameDay.id, gameId);
 
   return {

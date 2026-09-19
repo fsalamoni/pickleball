@@ -11,7 +11,7 @@ import React, { useMemo, useState } from 'react';
 import { Navigate, useNavigate, useParams, Link } from 'react-router-dom';
 import {
   Plus, CalendarClock, Users, Globe, Lock, ChevronLeft, Trash2, ExternalLink, History, Pencil,
-  MonitorPlay, Building2,
+  Building2,
 } from 'lucide-react';
 import { toast } from 'sonner';
 import {
@@ -19,13 +19,7 @@ import {
 } from '@/v2/ui/primitives';
 import { ConfirmDialog } from '@/components/ui/confirm-dialog';
 import CreateGameDayDialog from '@/v2/components/games/CreateGameDayDialog';
-import V2TutorialLauncher from '@/v2/components/tutorial/V2TutorialLauncher';
-import { tutorialIdForGameDayFormat } from '@/modules/help/domain/tutorials';
-import AthleteGameDayOrganizer from '@/v2/components/games/AthleteGameDayOrganizer';
-import AthletePlayOrganizer from '@/v2/components/games/AthletePlayOrganizer';
-import AthleteAmericanoLiveOrganizer from '@/v2/components/games/AthleteAmericanoLiveOrganizer';
-import AthletePlayParticipant from '@/v2/components/games/AthletePlayParticipant';
-import { isPlayFormat, isAmericanoLiveFormat } from '@/modules/clubs/domain/gameDayFormats';
+import GameDayModule, { GameDayModuleTools } from '@/v2/components/games/GameDayModule';
 import {
   useMyGameDays, useGameDay, useDeleteGameDay, useGameDayParticipants,
 } from '@/modules/games/hooks/useGameDays';
@@ -34,6 +28,7 @@ import {
 } from '@/modules/games/domain/gameDay';
 import { useGameDayRoles } from '@/modules/games/hooks/useGameDayRoles';
 import { isArenaGameDay, arenaGameDayWhenText } from '@/modules/games/domain/arenaGameDay';
+import { isClubGameDay } from '@/modules/games/domain/clubGameDay';
 
 export default function V2GameDays() {
   const enabled = true;
@@ -189,9 +184,13 @@ function GameDayDetail({ gameDayId }) {
   }
 
   const daArena = isArenaGameDay(gameDay);
+  const doClube = isClubGameDay(gameDay);
   // Editar e arquivar um dia de jogo de ARENA é no ambiente da arena, onde
-  // estão as quadras, os horários e as vagas. Aqui só se joga.
-  const ehCriador = podeConfigurar && !daArena;
+  // estão as quadras, os horários e as vagas. No de CLUBE é na DATA do evento,
+  // que é quem manda no título, no horário e na existência dele — arquivar por
+  // aqui deixaria a data do clube apontando para um dia de jogo que sumiu.
+  // Aqui só se joga.
+  const ehCriador = podeConfigurar && !daArena && !doClube;
 
   const handleDelete = async () => {
     try {
@@ -216,9 +215,11 @@ function GameDayDetail({ gameDayId }) {
               <h1 className="font-display text-2xl font-bold text-ink">{gameDay.title}</h1>
               {daArena
                 ? <V2Badge tone="acid"><Building2 className="mr-1 h-3 w-3" /> Da arena</V2Badge>
-                : isPublicGameDay(gameDay)
-                  ? <V2Badge tone="blue"><Globe className="mr-1 h-3 w-3" /> Público</V2Badge>
-                  : <V2Badge tone="neutral"><Lock className="mr-1 h-3 w-3" /> Privado</V2Badge>}
+                : doClube
+                  ? <V2Badge tone="acid"><Users className="mr-1 h-3 w-3" /> {gameDay.club_name || 'Do clube'}</V2Badge>
+                  : isPublicGameDay(gameDay)
+                    ? <V2Badge tone="blue"><Globe className="mr-1 h-3 w-3" /> Público</V2Badge>
+                    : <V2Badge tone="neutral"><Lock className="mr-1 h-3 w-3" /> Privado</V2Badge>}
             </div>
             <p className="mt-1 text-sm text-gray-500">
               {daArena ? arenaGameDayWhenText(gameDay) : gameDayWhenText(gameDay)}
@@ -226,32 +227,20 @@ function GameDayDetail({ gameDayId }) {
             {gameDay.notes && <p className="mt-2 text-sm text-gray-600">{gameDay.notes}</p>}
           </div>
           <div className="flex shrink-0 flex-wrap gap-2">
-            {/* O tutorial acompanha o FORMATO do dia: quem abre um Play recebe
-                o do Play, quem abre um Americano aprimorado recebe o dele. As
-                telas são diferentes; um tutorial genérico não ajudaria.
-
-                Só INTERROMPE quem vai organizar. O conteúdo é sobre conduzir o
-                dia (criar partidas, substituir, lançar resultado); para quem
-                entrou só para ver quando joga, isso é modal no caminho. O
-                botão, esse, fica para todo mundo — quem quiser ler, lê. */}
-            <V2TutorialLauncher
-              tutorialId={tutorialIdForGameDayFormat(gameDay.format)}
-              autoOpen={podeGerenciar}
-            />
-            {/* Telão: abre em outra aba de propósito — o uso é numa SEGUNDA
-                tela (TV, tablet na beira da quadra), com esta aqui seguindo
-                aberta para o organizador continuar lançando os resultados. */}
-            <V2Button
-              variant="secondary"
-              size="sm"
-              onClick={() => window.open(`/dia-de-jogo/${gameDay.id}/telao`, '_blank', 'noopener')}
-            >
-              <MonitorPlay className="mr-1.5 h-4 w-4" /> Abrir telão
-            </V2Button>
+            {/* As ferramentas do dia (tutorial do formato + telão) vêm do
+                MÓDULO: são as mesmas em toda origem. Ver `GameDayModule`. */}
+            <GameDayModuleTools gameDay={gameDay} podeGerenciar={podeGerenciar} />
             {daArena && podeConfigurar && (
               <V2Button asChild variant="ghost" size="sm">
                 <Link to={`/arenas/${gameDay.arena_id}/gerir/dia-de-jogo/${gameDay.id}`}>
                   <Building2 className="mr-1.5 h-4 w-4" /> Gerir na arena
+                </Link>
+              </V2Button>
+            )}
+            {doClube && podeConfigurar && gameDay.club_event_id && (
+              <V2Button asChild variant="ghost" size="sm">
+                <Link to={`/clubes/${gameDay.club_id}/eventos/${gameDay.club_event_id}`}>
+                  <Users className="mr-1.5 h-4 w-4" /> Gerir no clube
                 </Link>
               </V2Button>
             )}
@@ -273,6 +262,13 @@ function GameDayDetail({ gameDayId }) {
             Organizado por <Link to={`/arenas/${gameDay.arena_id}`} className="font-semibold text-ink underline">{gameDay.arena_name}</Link>
           </p>
         )}
+        {doClube && gameDay.club_name && (
+          <p className="mt-3 flex items-center gap-1.5 text-xs text-gray-500">
+            <Users className="h-3.5 w-3.5" />
+            Organizado por{' '}
+            <Link to={`/clubes/${gameDay.club_id}`} className="font-semibold text-ink underline">{gameDay.club_name}</Link>
+          </p>
+        )}
         {isPublicGameDay(gameDay) && ehCriador && !daArena && (
           <p className="mt-3 flex items-center gap-1.5 text-xs text-gray-400">
             <ExternalLink className="h-3.5 w-3.5" /> Este dia de jogo aparece como convite em &quot;Procura-se jogo&quot;.
@@ -280,18 +276,8 @@ function GameDayDetail({ gameDayId }) {
         )}
       </V2Surface>
 
-      {/* Três visões, escolhidas pelo FORMATO gravado no dia de jogo:
-          · Americano aprimorado → organização quadra a quadra COM placar;
-          · Play                 → quadra a quadra sem placar (organizador ou
-            participante, conforme a permissão);
-          · demais (grade)       → o organizador clássico, inalterado. */}
-      {isAmericanoLiveFormat(gameDay.format)
-        ? <AthleteAmericanoLiveOrganizer gameDay={gameDay} />
-        : isPlayFormat(gameDay.format)
-          ? (podeGerenciar
-            ? <AthletePlayOrganizer gameDay={gameDay} />
-            : <AthletePlayParticipant gameDay={gameDay} />)
-          : <AthleteGameDayOrganizer gameDay={gameDay} />}
+      {/* O miolo é do MÓDULO — o mesmo no atleta, na arena e no clube. */}
+      <GameDayModule gameDay={gameDay} podeGerenciar={podeGerenciar} />
 
       {ehCriador && (
         <CreateGameDayDialog open={editOpen} onOpenChange={setEditOpen} gameDay={gameDay} />

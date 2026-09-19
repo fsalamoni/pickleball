@@ -843,6 +843,11 @@ export async function addEventDate(eventId, data, user) {
     date_time: data.date_time || null,
     location: trimmed(data.location),
     note: trimmed(data.note),
+    // ADITIVO (Onda AS): quando preenchido, esta data é servida pelo MÓDULO
+    // único de dia de jogo (`game_days/{game_day_id}`) e não por estas
+    // subcoleções. Ausente ou null — o caso de tudo o que já está publicado —
+    // nada muda: o organizador legado segue lendo e escrevendo aqui.
+    game_day_id: trimmed(data.game_day_id) || null,
     created_by: user.uid,
     created_at_ms: Date.now(),
     created_at: serverTimestamp(),

@@ -512,10 +512,37 @@ regra de leitura.
 reserva, status de slot e calendário mensal já respeitavam indisponibilidade.
 Arquivar apaga esses bloqueios. Ver `docs/22-DIA-DE-JOGO-DA-ARENA.md`.
 
+#### Campos do DIA DE JOGO DO CLUBE (**opcionais, aditivos** — Onda AS)
+
+Presentes só quando um evento de clube é a origem. **Ausente `club_id`, nada
+disso vale.**
+- `club_id` — o clube dono; `club_name` (desnormalizado, para cartões)
+- `club_event_id` — o evento de clube de onde a data saiu (é para onde o botão
+  "Gerir no clube" leva)
+- e, do outro lado, `club_events/{eventId}/dates/{dateId}.game_day_id`
+  (**opcional**) — o ponteiro de volta. **É ele que separa o novo do legado**:
+  data sem `game_day_id` continua servida pelas subcoleções
+  `club_events/{id}/{participants,games}`, exatamente como antes. Nada
+  publicado foi migrado.
+
+Dia de jogo de clube nasce `visibility: 'private'` (público significaria
+publicar convite em "Procura-se jogo" e deixar qualquer conta se inserir — o
+evento de clube nunca funcionou assim) e `manage_mode: 'participants'` (no
+evento legado qualquer membro mexia em participantes e jogos).
+
+Quem lê: os membros do CLUBE, por uma condição aditiva na regra
+(`isClubGameDayMemberOf`, guardada por `'club_id' in …`). Quem administra: os
+administradores do clube (`isClubGameDayManagerOf`). O membro do clube também
+se **auto-inscreve** e sai sozinho — era o que a regra do evento legado já
+permitia. Ver `docs/25-DIA-DE-JOGO-COMO-MODULO.md` §5.
+
 O criador continua sendo o único que edita, arquiva, muda `manage_mode`,
 nomeia/remove admin e publica no ranking da plataforma — **salvo no dia de jogo
-de ARENA**, em que quem gerencia a arena faz tudo isso (a arena é a dona do
-evento; amarrá-lo a uma pessoa o deixaria órfão quando ela saísse da equipe). Regras de campo em
+de ARENA e no de CLUBE**, em que quem gerencia a arena / administra o clube faz tudo isso (a arena e o
+clube são os donos do evento; amarrá-lo a uma pessoa o deixaria órfão quando
+ela saísse da equipe). No dia de jogo de clube, EDITAR e ARQUIVAR são pela
+DATA do evento, não por `/dia-de-jogo/:id`: arquivar de lá deixaria a data
+apontando para um dia de jogo que sumiu. Regras de campo em
 `firestore.rules` impedem que um admin altere `admin_uids`, `manage_mode`,
 `created_by`, `title`, `status` ou `publish_to_ranking`: a atualização feita por
 quem não é o criador só passa se mexer em `member_uids`, `invited_uids` e

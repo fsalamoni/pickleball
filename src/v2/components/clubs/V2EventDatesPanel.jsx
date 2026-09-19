@@ -1,4 +1,4 @@
-import React, { useMemo, useState } from 'react';
+import React, { lazy, Suspense, useMemo, useState } from 'react';
 import { toast } from 'sonner';
 import { CalendarDays, MapPin, Plus, Trash2, Check, X, Pencil, ChevronDown, ChevronRight, Users, Swords } from 'lucide-react';
 
@@ -18,9 +18,24 @@ import {
   useDeleteEventDate,
   useEventDateRsvps,
   useSetEventDateRsvp,
+  useClub,
 } from '@/modules/clubs/hooks/useClubs';
 import { RSVP_STATUS, RSVP_STATUS_LABELS } from '@/modules/clubs/domain/constants';
-import GameDayOrganizer from '@/modules/clubs/components/GameDayOrganizer';
+import {
+  GAME_DAY_FORMAT, GAME_DAY_FORMAT_LABELS, DRAW_FORMATS, isCourtByCourtFormat,
+} from '@/modules/clubs/domain/gameDayFormats';
+import { useFeatureFlag } from '@/core/lib/FeatureFlagsContext';
+import { FEATURE_FLAG } from '@/core/featureFlags';
+import {
+  useCreateEventGameDay, useSyncEventGameDay, useArchiveEventGameDay,
+} from '@/modules/games/hooks/useClubGameDay';
+import { isModularEventDate } from '@/modules/games/domain/clubGameDay';
+
+// A organização de jogos carrega o módulo inteiro (as três visões por formato,
+// o organizador legado, tutorial e telão) — dezenas de kB que só fazem sentido
+// depois de alguém ABRIR a aba. Um evento de clube que não é dia de jogo nunca
+// baixa nada disso.
+const ClubGameDayTab = lazy(() => import('@/v2/components/clubs/ClubGameDayTab'));
 
 function formatDateTime(value) {
   if (!value) return 'Data a definir';
@@ -41,9 +56,28 @@ export default function EventDatesPanel({ event, clubId, showGames = false }) {
   const { data: dates = [], isLoading } = useEventDates(eventId);
   const { data: rsvps = [] } = useEventDateRsvps(eventId);
   const addDate = useAddEventDate(eventId);
+  // O clube também é a ORIGEM de um dia de jogo. Com `showGames`, cada data
+  // nova nasce como um `game_days` — o mesmo módulo do atleta e da arena.
+  const { data: club = null } = useClub(clubId);
+  const createGameDay = useCreateEventGameDay(event, club || { id: clubId });
+  // O Americano aprimorado é o único formato ainda atrás de flag. Desligada, a
+  // opção nem aparece — como na criação do dia de jogo do atleta.
+  const americanoLiveOn = useFeatureFlag(FEATURE_FLAG.GAMEDAY_AMERICANO_LIVE);
+  const formatosOferecidos = useMemo(() => ([
+    ...DRAW_FORMATS,
+    GAME_DAY_FORMAT.PLAY,
+    ...(americanoLiveOn ? [GAME_DAY_FORMAT.AMERICANO_LIVE] : []),
+  ]), [americanoLiveOn]);
   const recurringOn = true;
   const [adding, setAdding] = useState(false);
-  const [form, setForm] = useState({ date_time: '', location: event.location || '', note: '', repeat_weeks: 1 });
+  const [form, setForm] = useState({
+    date_time: '',
+    location: event.location || '',
+    note: '',
+    repeat_weeks: 1,
+    format: GAME_DAY_FORMAT.AMERICANO,
+    play_courts: 1,
+  });
 
   const rsvpsByDate = useMemo(() => {
     const map = new Map();
@@ -68,11 +102,14 @@ export default function EventDatesPanel({ event, clubId, showGames = false }) {
         dt.setDate(dt.getDate() + i * 7);
         // Formato datetime-local (sem timezone) preservado.
         const iso = `${dt.getFullYear()}-${String(dt.getMonth() + 1).padStart(2, '0')}-${String(dt.getDate()).padStart(2, '0')}T${String(dt.getHours()).padStart(2, '0')}:${String(dt.getMinutes()).padStart(2, '0')}`;
+        const payload = { club_id: event.club_id, date_time: iso, location: form.location, note: form.note };
         // eslint-disable-next-line no-await-in-loop
-        await addDate.mutateAsync({ club_id: event.club_id, date_time: iso, location: form.location, note: form.note });
+        await (showGames
+          ? createGameDay.mutateAsync({ ...payload, format: form.format, play_courts: form.play_courts })
+          : addDate.mutateAsync(payload));
       }
       toast.success(weeks > 1 ? `${weeks} ${showGames ? 'dias de jogo' : 'datas'} adicionados.` : `${showGames ? 'Dia de jogo' : 'Data'} adicionado.`);
-      setForm({ date_time: '', location: event.location || '', note: '', repeat_weeks: 1 });
+      setForm((p) => ({ ...p, date_time: '', location: event.location || '', note: '', repeat_weeks: 1 }));
       setAdding(false);
     } catch (err) {
       toast.error(err.message || 'Não foi possível adicionar.');
@@ -111,6 +148,38 @@ export default function EventDatesPanel({ event, clubId, showGames = false }) {
                 <Label htmlFor="new_date_note">Observação</Label>
                 <Input id="new_date_note" value={form.note} onChange={(e) => setForm((p) => ({ ...p, note: e.target.value }))} maxLength={200} placeholder="Ex.: levar bola, quadra 2…" />
               </div>
+              {showGames && (
+                <>
+                  <div className="space-y-1.5">
+                    <Label htmlFor="new_date_format">Formato</Label>
+                    <select
+                      id="new_date_format"
+                      className="h-10 w-full rounded-md border border-gray-200 bg-white px-3 text-sm text-ink"
+                      value={form.format}
+                      onChange={(e) => setForm((p) => ({ ...p, format: e.target.value }))}
+                    >
+                      {formatosOferecidos.map((value) => (
+                        <option key={value} value={value}>{GAME_DAY_FORMAT_LABELS[value]}</option>
+                      ))}
+                    </select>
+                    <p className="text-xs text-gray-500">Dá para mudar na aba de jogos, enquanto não houver partidas.</p>
+                  </div>
+                  {isCourtByCourtFormat(form.format) && (
+                    <div className="space-y-1.5">
+                      <Label htmlFor="new_date_courts">Quadras</Label>
+                      <Input
+                        id="new_date_courts"
+                        type="number"
+                        min={1}
+                        max={12}
+                        value={form.play_courts}
+                        onChange={(e) => setForm((p) => ({ ...p, play_courts: e.target.value }))}
+                      />
+                      <p className="text-xs text-gray-500">Quantas quadras rodam ao mesmo tempo.</p>
+                    </div>
+                  )}
+                </>
+              )}
               {recurringOn && (
                 <div className="space-y-1.5 sm:col-span-2">
                   <Label htmlFor="new_date_repeat">Repetir semanalmente por (semanas)</Label>
@@ -122,7 +191,7 @@ export default function EventDatesPanel({ event, clubId, showGames = false }) {
               )}
               <div className="flex justify-end gap-2 sm:col-span-2">
                 <V2Button type="button" variant="ghost" size="sm" onClick={() => setAdding(false)}>Cancelar</V2Button>
-                <V2Button type="submit" size="sm" disabled={addDate.isPending}>Adicionar</V2Button>
+                <V2Button type="submit" size="sm" disabled={addDate.isPending || createGameDay.isPending}>Adicionar</V2Button>
               </div>
             </form>
           </div>
@@ -162,6 +231,11 @@ function DateCard({ event, clubId, date, rsvps, showGames, term }) {
   const setRsvp = useSetEventDateRsvp(eventId);
   const updateDate = useUpdateEventDate(eventId);
   const deleteDate = useDeleteEventDate(eventId);
+  // Só tocam em data que virou MÓDULO (`game_day_id` preenchido). No legado
+  // ficam inertes — nada é lido nem escrito em `game_days`.
+  const syncGameDay = useSyncEventGameDay(event);
+  const archiveGameDay = useArchiveEventGameDay();
+  const gameDayId = isModularEventDate(date) ? date.game_day_id : null;
   const [open, setOpen] = useState(false);
   const [editing, setEditing] = useState(false);
   const [confirmDelete, setConfirmDelete] = useState(false);
@@ -190,6 +264,12 @@ function DateCard({ event, clubId, date, rsvps, showGames, term }) {
   const handleSave = async () => {
     try {
       await updateDate.mutateAsync({ dateId: date.id, updates: form });
+      // Editar a data aqui e o dia de jogo continuar marcado para o horário
+      // antigo seria a mesma divergência de sempre, agora dentro de um
+      // documento só. O repasse não pode derrubar o salvamento da data.
+      if (gameDayId) {
+        await syncGameDay.mutateAsync({ gameDayId, date: { ...date, ...form } }).catch(() => {});
+      }
       toast.success('Atualizado.');
       setEditing(false);
     } catch (err) {
@@ -199,6 +279,10 @@ function DateCard({ event, clubId, date, rsvps, showGames, term }) {
 
   const handleDelete = async () => {
     try {
+      // Arquiva o dia de jogo ANTES de apagar a data: `deleteGameDay` tira os
+      // resultados do ranking, e apagar a data primeiro deixaria um jogo
+      // publicado contando no rating sem nada apontando para ele.
+      if (gameDayId) await archiveGameDay.mutateAsync(gameDayId);
       await deleteDate.mutateAsync(date.id);
       toast.success(`${term === 'dia de jogo' ? 'Dia de jogo' : 'Data'} removido.`);
       setConfirmDelete(false);
@@ -256,7 +340,11 @@ function DateCard({ event, clubId, date, rsvps, showGames, term }) {
                 />
               </TabsContent>
               <TabsContent value="jogos">
-                <GameDayOrganizer event={event} clubId={clubId} dateId={date.id} />
+                {/* Data nova → o MÓDULO único (`game_days`); data anterior à
+                    Onda AS → o organizador legado, inalterado. */}
+                <Suspense fallback={<Skeleton className="h-64 rounded-xl" />}>
+                  <ClubGameDayTab event={event} clubId={clubId} date={date} rsvps={rsvps} />
+                </Suspense>
               </TabsContent>
             </Tabs>
           ) : (
@@ -285,7 +373,7 @@ function DateCard({ event, clubId, date, rsvps, showGames, term }) {
         description={`O ${term}, suas respostas, participantes e jogos serão removidos.`}
         confirmLabel="Remover"
         destructive
-        loading={deleteDate.isPending}
+        loading={deleteDate.isPending || archiveGameDay.isPending}
         onConfirm={handleDelete}
       />
     </V2Surface>

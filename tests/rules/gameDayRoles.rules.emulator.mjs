@@ -337,6 +337,175 @@ await t('⭐ bloqueio de calendário: ninguém cria bloqueio na arena dos outros
 await t('⭐ bloqueio de calendário: não dá para mudar um bloqueio de arena', () =>
   assertFails(updateDoc(doc(como(GESTOR), 'arena_unavailabilities', 'blk2'), { arena_id: 'arena2' })));
 
+/* ------- 7. DIA DE JOGO DO CLUBE: quem manda é o clube (Onda AS) ----------- */
+
+/*
+ * Um dia de jogo com `club_id` pertence ao CLUBE, como o de arena pertence à
+ * arena. O que estas asserções prendem:
+ *  a) quem ADMINISTRA o clube administra o dia, mesmo sem tê-lo criado e mesmo
+ *     estando fora da lista de participantes — senão o dia ficaria órfão
+ *     quando quem agendou a data saísse do clube;
+ *  b) administrar OUTRO clube não dá poder nenhum aqui, e administrar um clube
+ *     qualquer não dá poder no rachão de um atleta;
+ *  c) o MEMBRO comum do clube LÊ o dia (era o que ele já podia no evento
+ *     legado), mas não conduz as partidas nem configura nada;
+ *  d) quem não é do clube não lê — o dia é `private`, e não vira público por
+ *     ser de clube;
+ *  e) o administrador do clube PUBLICA no ranking, porque a regra de
+ *     `club_event_games` já conferia `isClubAdmin(club_id)` e o espelho passou
+ *     a gravar o clube dono.
+ */
+const CADM = 'admin-do-clube';    // administrador do clube 1
+const CMEMBRO = 'membro-do-clube'; // membro comum do clube 1
+const CADM2 = 'admin-outro-clube'; // administrador do clube 2
+
+await env.withSecurityRulesDisabled(async (ctx) => {
+  const db = ctx.firestore();
+  await setDoc(doc(db, 'clubs', 'clube1'), { id: 'clube1', name: 'Clube 1', created_by: CADM });
+  await setDoc(doc(db, 'club_members', `clube1_${CADM}`), { club_id: 'clube1', user_id: CADM, role: 'admin' });
+  await setDoc(doc(db, 'club_members', `clube1_${CMEMBRO}`), { club_id: 'clube1', user_id: CMEMBRO, role: 'member' });
+  await setDoc(doc(db, 'clubs', 'clube2'), { id: 'clube2', name: 'Clube 2', created_by: CADM2 });
+  await setDoc(doc(db, 'club_members', `clube2_${CADM2}`), { club_id: 'clube2', user_id: CADM2, role: 'admin' });
+  // O dia de jogo do clube 1 — criado por DONO, que nem é do clube.
+  await setDoc(doc(db, 'game_days', 'gd-clube'), {
+    id: 'gd-clube', club_id: 'clube1', club_name: 'Clube 1', club_event_id: 'ev1',
+    created_by: DONO, title: 'Rachão de quinta — 25/09',
+    visibility: 'private', status: 'active', format: 'americano',
+    member_uids: [DONO], invited_uids: [], admin_uids: [], manage_mode: 'participants',
+  });
+  await setDoc(doc(db, 'game_days', 'gd-clube', 'games', 'g1'), { id: 'g1', round: 1, side_a: [], side_b: [] });
+  await setDoc(doc(db, 'game_days', 'gd-clube', 'participants', 'p-membro'), {
+    id: 'p-membro', user_id: CMEMBRO, name: 'Membro',
+  });
+});
+
+await t('⭐ clube: o administrador do clube EDITA o dia de jogo que não criou', () =>
+  assertSucceeds(updateDoc(dia(CADM, 'gd-clube'), { title: 'Rachão de quinta (nova)' })));
+
+await t('⭐ clube: o administrador do clube conduz as partidas', () =>
+  assertSucceeds(updateDoc(jogo(CADM, 'gd-clube', 'g1'), { score_a: 11, score_b: 9 })));
+
+await t('⭐ clube: o administrador do clube insere participante', () =>
+  assertSucceeds(setDoc(parte(CADM, 'gd-clube', 'novo'), { id: 'novo', name: 'X', user_id: null })));
+
+await t('⭐ clube: administrador de OUTRO clube não edita este dia de jogo', () =>
+  assertFails(updateDoc(dia(CADM2, 'gd-clube'), { title: 'invadido' })));
+
+await t('⭐ clube: administrador de OUTRO clube não conduz as partidas', () =>
+  assertFails(updateDoc(jogo(CADM2, 'gd-clube', 'g1'), { score_a: 1 })));
+
+await t('⭐ clube: administrar clube NÃO dá poder no dia de jogo de um atleta', () =>
+  assertFails(updateDoc(dia(CADM, 'restrito'), { title: 'invadido' })));
+
+await t('⭐ clube: o MEMBRO do clube LÊ o dia de jogo (é privado, e ele não é membro do dia)', () =>
+  assertSucceeds(getDoc(dia(CMEMBRO, 'gd-clube'))));
+
+await t('⭐ clube: o MEMBRO do clube lê as partidas', () =>
+  assertSucceeds(getDoc(jogo(CMEMBRO, 'gd-clube', 'g1'))));
+
+await t('⭐ clube: quem NÃO é do clube não lê o dia de jogo', () =>
+  assertFails(getDoc(dia(FORA, 'gd-clube'))));
+
+await t('⭐ clube: quem NÃO é do clube não lê as partidas', () =>
+  assertFails(getDoc(jogo(FORA, 'gd-clube', 'g1'))));
+
+await t('⭐ clube: membro comum NÃO renomeia o dia de jogo', () =>
+  assertFails(updateDoc(dia(CMEMBRO, 'gd-clube'), { title: 'meu agora' })));
+
+await t('⭐ clube: membro comum NÃO se autonomeia administrador', () =>
+  assertFails(updateDoc(dia(CMEMBRO, 'gd-clube'), { admin_uids: [CMEMBRO] })));
+
+await t('⭐ clube: membro comum NÃO vira dono', () =>
+  assertFails(updateDoc(dia(CMEMBRO, 'gd-clube'), { created_by: CMEMBRO })));
+
+await t('⭐ clube: o administrador do clube PUBLICA no ranking', () =>
+  assertSucceeds(setDoc(doc(como(CADM), 'club_event_games', 'gd_gd-clube_g1'), {
+    event_id: 'gd-clube', date_id: '_', club_id: 'clube1', kind: 'doubles',
+    side_a_ids: ['a', 'b'], side_b_ids: ['c', 'd'], score_a: 11, score_b: 7,
+    winner_side: 'a', status: 'finished',
+  })));
+
+await t('⭐ clube: membro comum NÃO publica no ranking', () =>
+  assertFails(setDoc(doc(como(CMEMBRO), 'club_event_games', 'gd_gd-clube_g2'), {
+    event_id: 'gd-clube', date_id: '_', club_id: 'clube1', kind: 'doubles',
+    side_a_ids: ['a', 'b'], side_b_ids: ['c', 'd'], score_a: 11, score_b: 7,
+    winner_side: 'a', status: 'finished',
+  })));
+
+await t('⭐ clube: administrador de OUTRO clube não publica em nome deste', () =>
+  assertFails(setDoc(doc(como(CADM2), 'club_event_games', 'gd_gd-clube_g3'), {
+    event_id: 'gd-clube', date_id: '_', club_id: 'clube1', kind: 'doubles',
+    side_a_ids: ['a', 'b'], side_b_ids: ['c', 'd'], score_a: 11, score_b: 7,
+    winner_side: 'a', status: 'finished',
+  })));
+
+await t('⭐ clube: o MEMBRO marca a própria presença', () =>
+  assertSucceeds(setDoc(parte(CMEMBRO, 'gd-clube', `p-${CMEMBRO}-2`), {
+    id: `p-${CMEMBRO}-2`, user_id: CMEMBRO, name: 'Membro',
+  })));
+
+await t('⭐ clube: o MEMBRO não inscreve TERCEIRO', () =>
+  assertFails(setDoc(parte(CMEMBRO, 'gd-clube', 'p-terceiro'), {
+    id: 'p-terceiro', user_id: 'terceiro', name: 'Terceiro',
+  })));
+
+await t('⭐ clube: quem NÃO é do clube não se inscreve', () =>
+  assertFails(setDoc(parte(FORA, 'gd-clube', `p-${FORA}`), {
+    id: `p-${FORA}`, user_id: FORA, name: 'Fora',
+  })));
+
+/*
+ * Entrar e sair mexendo SÓ na lista de membros. Testado num dia de jogo de
+ * clube com a gestão RESTRITA de propósito: no modo aberto qualquer membro já
+ * gerencia a lista (é o que lhe permite inserir e remover participantes), e aí
+ * as travas abaixo não seriam a condição exercitada. Aqui elas são o único
+ * caminho — que é exatamente a situação do membro que quer entrar sozinho.
+ */
+await env.withSecurityRulesDisabled(async (ctx) => {
+  await setDoc(doc(ctx.firestore(), 'game_days', 'gd-clube-restrito'), {
+    id: 'gd-clube-restrito', club_id: 'clube1', club_event_id: 'ev1',
+    created_by: DONO, title: 'Quinta do clube',
+    visibility: 'private', status: 'active', format: 'americano',
+    member_uids: [DONO, 'terceiro'], invited_uids: [], admin_uids: [],
+    manage_mode: 'owner_only',
+  });
+});
+
+await t('⭐ clube restrito: o MEMBRO entra acrescentando SÓ a si mesmo', () =>
+  assertSucceeds(updateDoc(dia(CMEMBRO, 'gd-clube-restrito'), { member_uids: [DONO, 'terceiro', CMEMBRO] })));
+
+await t('⭐ clube restrito: entrar NÃO é brecha para inserir terceiro', () =>
+  assertFails(updateDoc(dia(CMEMBRO, 'gd-clube-restrito'), { member_uids: [DONO, 'terceiro', CMEMBRO, 'penetra'] })));
+
+await t('⭐ clube restrito: sair devolve a lista SEM mim', () =>
+  assertSucceeds(updateDoc(dia(CMEMBRO, 'gd-clube-restrito'), { member_uids: [DONO, 'terceiro'] })));
+
+await env.withSecurityRulesDisabled(async (ctx) => {
+  await updateDoc(doc(ctx.firestore(), 'game_days', 'gd-clube-restrito'), {
+    member_uids: [DONO, CMEMBRO, 'terceiro'],
+  });
+});
+
+await t('⭐ clube restrito: sair NÃO é brecha para esvaziar a lista dos outros', () =>
+  assertFails(updateDoc(dia(CMEMBRO, 'gd-clube-restrito'), { member_uids: [] })));
+
+await t('⭐ clube restrito: ninguém remove OUTRA pessoa pela lista de membros', () =>
+  assertFails(updateDoc(dia(CMEMBRO, 'gd-clube-restrito'), { member_uids: [DONO, CMEMBRO] })));
+
+await t('⭐ clube restrito: entrar não vem junto com outra mudança escondida', () =>
+  assertFails(updateDoc(dia(CMEMBRO, 'gd-clube-restrito'), {
+    member_uids: [DONO, CMEMBRO, 'terceiro'], title: 'renomeado de tabela',
+  })));
+
+await t('⭐ clube restrito: membro comum NÃO conduz as partidas (a gestão é do criador)', () =>
+  assertFails(updateDoc(dia(CMEMBRO, 'gd-clube-restrito'), { title: 'meu agora' })));
+
+await t('⭐ clube: quem NÃO é do clube não entra na lista de membros', () =>
+  assertFails(updateDoc(dia(FORA, 'gd-clube-restrito'), { member_uids: [DONO, CMEMBRO, 'terceiro', FORA] })));
+
+await t('⭐ clube: o administrador do clube arquiva o dia', () =>
+  assertSucceeds(updateDoc(dia(CADM, 'gd-clube'), { status: 'archived' })));
+
 /* ------------------------------- relatório -------------------------------- */
 
 await env.cleanup();

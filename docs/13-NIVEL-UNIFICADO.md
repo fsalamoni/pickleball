@@ -80,10 +80,11 @@ continuam sendo os mais baixos.
 | **Dia de jogo — Play** | `games/domain/gamePlay.js` | `playLevelValue` passa a resolver na régua unificada |
 | **Torneios** | `tournament/domain/seeding.js` + `services/drawService.js` | o seeding usa o nível unificado quando disponível |
 
-### 3.1 Os três organizadores de dia de jogo
+### 3.1 Os organizadores de dia de jogo
 
-`V2GameDayOrganizer` (clube), `AthleteGameDayOrganizer` (atleta) e
-`GameDayOrganizer` (legado) buscam os níveis com
+`AthleteGameDayOrganizer` (o módulo — atleta, arena e clube) e
+`GameDayOrganizer` (o legado do clube, só nas datas anteriores à Onda AS)
+sorteiam por `buildGameDayDraw`, que busca os níveis com
 `fetchUnifiedLevelsByParticipant(participants)` antes de sortear.
 A leitura é **best-effort**: se falhar, o sorteio acontece do mesmo jeito, só
 sem equilibrar por nível.

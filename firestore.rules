@@ -82,9 +82,30 @@ service cloud.firestore {
         && gameDayData(gdId).arena_id is string
         && exists(/databases/$(database)/documents/arena_managers/$(gameDayData(gdId).arena_id + '_' + request.auth.uid));
     }
+    // DIA DE JOGO DO CLUBE: mesma ideia do de arena. O documento tem `club_id`
+    // e pertence ao CLUBE — quem administra o clube administra o dia, mesmo
+    // que quem agendou a data tenha saído. Campo ADITIVO: sem `club_id`, esta
+    // função é sempre falsa e nenhum dia de jogo já existente muda.
+    function isClubGameDayManagerOf(gdId) {
+      return isAuthed() && gameDayExists(gdId)
+        && 'club_id' in gameDayData(gdId)
+        && gameDayData(gdId).club_id is string
+        && isClubAdmin(gameDayData(gdId).club_id);
+    }
+    // Membro do clube dono do dia de jogo — é quem PODE VER. No evento de
+    // clube legado qualquer membro lia participantes e jogos; o módulo mantém
+    // isso sem abrir o dia para a plataforma inteira (a visibilidade segue
+    // `private`, então ninguém de fora se insere).
+    function isClubGameDayMemberOf(gdId) {
+      return isAuthed() && gameDayExists(gdId)
+        && 'club_id' in gameDayData(gdId)
+        && gameDayData(gdId).club_id is string
+        && isClubMember(gameDayData(gdId).club_id);
+    }
     // ADMINISTRADOR do dia de jogo: o criador, alguém que ele nomeou em
-    // `admin_uids` (campo aditivo — ausente significa "só o criador"), ou quem
-    // gerencia a arena dona, quando o dia é de arena.
+    // `admin_uids` (campo aditivo — ausente significa "só o criador"), quem
+    // gerencia a arena dona (dia de arena) ou quem administra o clube dono
+    // (dia de clube).
     function isGameDayAdminOf(gdId) {
       return isAuthed() && gameDayExists(gdId) && (
         gameDayData(gdId).created_by == request.auth.uid
@@ -94,6 +115,7 @@ service cloud.firestore {
           && (request.auth.uid in gameDayData(gdId).admin_uids)
         )
         || isArenaGameDayManagerOf(gdId)
+        || isClubGameDayManagerOf(gdId)
       );
     }
     // O criador abriu a gestão para quem está inscrito? Campo aditivo: sem ele,
@@ -114,12 +136,14 @@ service cloud.firestore {
           && (request.auth.uid in gameDayData(gdId).member_uids)
         );
     }
-    // Quem pode ver um dia de jogo: dono, membro, ou qualquer um se público.
+    // Quem pode ver um dia de jogo: dono, membro, qualquer um se público — e,
+    // num dia de jogo de CLUBE, quem é do clube.
     function canAccessGameDay(gdId) {
       return isAuthed() && gameDayExists(gdId) && (
         gameDayData(gdId).created_by == request.auth.uid
         || (request.auth.uid in gameDayData(gdId).member_uids)
         || gameDayData(gdId).visibility == 'public'
+        || isClubGameDayMemberOf(gdId)
         || isPlatformAdmin()
       );
     }
@@ -445,6 +469,11 @@ service cloud.firestore {
         resource.data.created_by == request.auth.uid
         || (request.auth.uid in resource.data.member_uids)
         || resource.data.visibility == 'public'
+        // Dia de jogo de CLUBE: quem é do clube vê. Lê `resource.data` (o
+        // próprio documento já carregado) em vez de `isClubGameDayMemberOf`,
+        // que faria um `get` a mais do mesmo documento.
+        || ('club_id' in resource.data && resource.data.club_id is string
+            && isClubMember(resource.data.club_id))
         || isPlatformAdmin()
       );
       allow create: if isAuthed() && request.resource.data.created_by == request.auth.uid;
@@ -459,6 +488,9 @@ service cloud.firestore {
         // é a dona do evento — amarrá-lo a uma pessoa deixaria o dia órfão
         // quando ela saísse da equipe.
         || isArenaGameDayManagerOf(gdId)
+        // Dia de jogo de CLUBE: quem administra o clube configura o dia todo,
+        // pela mesma razão da arena — o dia é do clube, não de quem agendou.
+        || isClubGameDayManagerOf(gdId)
         // ENTRAR num dia de jogo público. A condição é EXATA: a lista nova
         // tem de ser a antiga MAIS quem está pedindo. Antes bastava "eu estou
         // na lista nova", o que deixava qualquer membro reescrever a lista e
@@ -490,6 +522,29 @@ service cloud.firestore {
           && request.resource.data.member_uids.toSet()
               == resource.data.member_uids.toSet().difference([request.auth.uid].toSet())
         )
+        // O MEMBRO DO CLUBE entrando e saindo do dia de jogo do seu clube. É o
+        // mesmo par de condições EXATAS do dia público logo acima, e pela
+        // mesma razão: a lista nova tem de ser a antiga mais (ou menos)
+        // exatamente quem está pedindo, senão "entrar" viraria brecha para
+        // reescrever a lista dos outros.
+        || (
+          'club_id' in resource.data && resource.data.club_id is string
+          && isClubMember(resource.data.club_id)
+          && request.resource.data.created_by == resource.data.created_by
+          && request.resource.data.diff(resource.data).affectedKeys()
+              .hasOnly(['member_uids', 'invited_uids', 'updated_at'])
+          && request.resource.data.member_uids.toSet()
+              == resource.data.member_uids.toSet().union([request.auth.uid].toSet())
+        )
+        || (
+          'club_id' in resource.data && resource.data.club_id is string
+          && isClubMember(resource.data.club_id)
+          && request.resource.data.created_by == resource.data.created_by
+          && request.resource.data.diff(resource.data).affectedKeys()
+              .hasOnly(['member_uids', 'updated_at'])
+          && request.resource.data.member_uids.toSet()
+              == resource.data.member_uids.toSet().difference([request.auth.uid].toSet())
+        )
         // Quem gerencia (admin nomeado, ou participante num dia aberto) mexe na
         // LISTA DE MEMBROS ao inserir/remover participante — e SÓ nela. A trava
         // por campo é o que impede alguém de, por tabela, virar dono, se
@@ -503,6 +558,7 @@ service cloud.firestore {
       allow delete: if isAuthed() && (
         resource.data.created_by == request.auth.uid
         || isArenaGameDayManagerOf(gdId)
+        || isClubGameDayManagerOf(gdId)
         || isPlatformAdmin()
       );
 
@@ -514,6 +570,11 @@ service cloud.firestore {
           isGameDayOwnerOf(gdId)
           || canManageGameDayOf(gdId)
           || (gameDayIsPublic(gdId) && request.resource.data.user_id == request.auth.uid)
+          // Dia de jogo de CLUBE: o membro do clube marca a PRÓPRIA presença.
+          // É o que ele já podia no evento legado (a regra de
+          // `club_events/{id}/participants` libera qualquer membro). Note o
+          // `user_id == uid`: ele entra sozinho, não inscreve terceiros.
+          || (isClubGameDayMemberOf(gdId) && request.resource.data.user_id == request.auth.uid)
         );
         // O criador atualiza qualquer participante; no Play, qualquer membro
         // também pode (controle de participação e substituição de ausentes);

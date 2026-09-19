@@ -25,7 +25,7 @@ import { Link, Navigate, useNavigate, useParams } from 'react-router-dom';
 import { toast } from 'sonner';
 import {
   ArrowLeft, CalendarClock, CalendarPlus, ChevronLeft, History, LayoutGrid,
-  MonitorPlay, Pencil, Trash2, Users, Info,
+  Pencil, Trash2, Users, Info,
 } from 'lucide-react';
 import { useAuth } from '@/core/lib/FirebaseAuthContext';
 import { FEATURE_FLAG } from '@/core/featureFlags';
@@ -44,14 +44,10 @@ import {
   arenaGameDayWhenText, arenaGameDayVacancies, arenaGameDaySlots,
   arenaSignupMode, ARENA_SIGNUP_MODE,
 } from '@/modules/games/domain/arenaGameDay';
-import { GAME_DAY_FORMAT_LABELS, isPlayFormat, isAmericanoLiveFormat } from '@/modules/clubs/domain/gameDayFormats';
+import { GAME_DAY_FORMAT_LABELS } from '@/modules/clubs/domain/gameDayFormats';
 import { isGameDayOpenToParticipants } from '@/modules/games/domain/gameDayRoles';
 import ArenaGameDayDialog from '@/v2/components/games/ArenaGameDayDialog';
-import AthleteGameDayOrganizer from '@/v2/components/games/AthleteGameDayOrganizer';
-import AthletePlayOrganizer from '@/v2/components/games/AthletePlayOrganizer';
-import AthleteAmericanoLiveOrganizer from '@/v2/components/games/AthleteAmericanoLiveOrganizer';
-import V2TutorialLauncher from '@/v2/components/tutorial/V2TutorialLauncher';
-import { tutorialIdForGameDayFormat } from '@/modules/help/domain/tutorials';
+import GameDayModule, { GameDayModuleTools } from '@/v2/components/games/GameDayModule';
 
 function hojeISO() {
   const d = new Date();
@@ -336,12 +332,9 @@ function DetalheDaArena({ arena, gameDayId }) {
             {gameDay.notes && <p className="mt-2 text-sm text-gray-600">{gameDay.notes}</p>}
           </div>
           <div className="flex shrink-0 flex-wrap gap-2">
-            <V2TutorialLauncher tutorialId={tutorialIdForGameDayFormat(gameDay.format)} autoOpen={podeGerenciar} />
-            <V2Button variant="secondary" size="sm"
-              onClick={() => window.open(`/dia-de-jogo/${gameDay.id}/telao`, '_blank', 'noopener')}
-            >
-              <MonitorPlay className="mr-1.5 h-4 w-4" /> Abrir telão
-            </V2Button>
+            {/* Tutorial do formato + telão vêm do MÓDULO: são os mesmos em
+                toda origem (ver `GameDayModule`). */}
+            <GameDayModuleTools gameDay={gameDay} podeGerenciar={podeGerenciar} />
             {podeConfigurar && gameDay.status !== 'archived' && (
               <>
                 <V2Button variant="ghost" size="sm" onClick={() => setEditar(true)}>
@@ -382,13 +375,10 @@ function DetalheDaArena({ arena, gameDayId }) {
           renderiza para quem `useGameDayRoles` diz que pode CONFIGURAR — o que
           inclui o gestor da arena. Renderizar aqui também fazia a tela mostrar
           o MESMO card duas vezes, um debaixo do outro. */}
-      {/* O MIOLO é o mesmo do ambiente do atleta — de propósito. */}
+      {/* O MIOLO é o mesmo do ambiente do atleta — de propósito, e agora por
+          construção: quem escolhe a visão por formato é o MÓDULO. */}
       {podeGerenciar ? (
-        isAmericanoLiveFormat(gameDay.format)
-          ? <AthleteAmericanoLiveOrganizer gameDay={gameDay} />
-          : isPlayFormat(gameDay.format)
-            ? <AthletePlayOrganizer gameDay={gameDay} />
-            : <AthleteGameDayOrganizer gameDay={gameDay} />
+        <GameDayModule gameDay={gameDay} podeGerenciar={podeGerenciar} />
       ) : (
         <V2Surface>
           <V2EmptyState

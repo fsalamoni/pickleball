@@ -17,11 +17,14 @@ usando uma versão mais pobre da mesma ferramenta.
 |---|---|---|
 | **Atleta** | `/dia-de-jogo` | `game_days/{id}` (+ `participants`, `games`) |
 | **Arena** | `/arenas/:id/gerir/dia-de-jogo` | o MESMO `game_days`, com `arena_id` |
-| **Clube** | evento de clube do tipo dia de jogo | `club_events/{id}/{participants,games}` |
+| **Clube (novo)** | data de evento de clube do tipo dia de jogo | o MESMO `game_days`, com `club_id` |
+| **Clube (legado)** | datas criadas ANTES da Onda AS | `club_events/{id}/{participants,games}` |
 
-O armazenamento é diferente por motivo histórico, e mudá-lo seria migração de
-dados. **As regras não têm por que ser diferentes** — e é isso que este
-documento trava.
+A partir da **Onda AS** existe uma casa só para o que é criado: toda data nova
+de evento de clube nasce como um `game_days`. O legado **não foi migrado** e
+não vai ser: a data anterior não tem `game_day_id` e segue servida pelo
+organizador de sempre, lendo e escrevendo exatamente onde sempre leu e
+escreveu. O legado encolhe sozinho, sem que ninguém precise converter nada.
 
 ---
 
@@ -30,9 +33,10 @@ documento trava.
 Três coisas, e todas têm a ver com o local:
 
 1. **Onde se grava.** Cada origem tem o seu serviço e a sua coleção.
-2. **Quem organiza.** No atleta/arena é `useGameDayRoles` (criador,
-   administrador nomeado, gestor da arena); no clube é ser membro/moderador do
-   clube. São modelos de permissão diferentes porque os donos são diferentes.
+2. **Quem organiza.** É sempre `useGameDayRoles`, que soma os caminhos da
+   origem: criador, administrador nomeado, **gestor da ARENA** (dia com
+   `arena_id`) e **administrador do CLUBE** (dia com `club_id`). Os donos são
+   diferentes, os caminhos são diferentes — a pergunta é a mesma.
 3. **O que o local acrescenta.** Só a arena fecha quadra no calendário; só o
    clube tem chat de evento e RSVP por data. Isso é o local, não o dia de jogo.
 
@@ -108,36 +112,122 @@ fosse, o custo do grupo cresceria a cada partida e a dupla acabaria evitada.
 
 ---
 
-## 5. O que ainda é diferente, e o que isso custaria
+## 5. O clube vira módulo (Onda AS)
 
-Honestidade sobre o que NÃO foi unificado nesta onda:
+A Onda AR fechou o SORTEIO; sobrava o resto. O clube não tinha Play, nem
+Americano aprimorado, nem telão, nem tutorial — e a tabela de honestidade da
+versão anterior deste documento já apontava o caminho: *o evento de clube passar
+a CRIAR um `game_days`*. É o que a Onda AS fez, **para o futuro**.
 
-| Recurso | Atleta | Arena | Clube | O que falta |
-|---|---|---|---|---|
-| Sorteio (formatos, nível, aditivo, duplas) | ✅ | ✅ | ✅ | — |
-| Play / Americano aprimorado | ✅ | ✅ | ❌ | o clube só tem grade; trazer os dois exige a fila de participação sobre o armazenamento do clube |
-| Telão (`/dia-de-jogo/:id/telao`) | ✅ | ✅ | ❌ | a rota lê `game_days`; o clube precisaria de um adaptador de origem |
-| Tutorial em tela | ✅ | ✅ | ❌ | uma linha, mas o conteúdo fala em telas que o clube não tem |
-| Administradores nomeados | ✅ | ✅ | n/a | o clube usa o papel do clube, de propósito |
+### 5.1. A pergunta que separa o novo do legado
 
-O caminho natural para fechar o resto é o mesmo que a Onda AM usou no torneio
-interno: **o evento de clube passar a CRIAR um `game_days`** em vez de ter o
-seu próprio armazenamento. Aí não sobra nada para unificar — mas é migração de
-dados de uma funcionalidade em uso, e não cabia numa onda cuja regra era não
-mexer no banco.
+Uma só, e é `isModularEventDate(date)`:
+
+```
+club_events/{eventId}/dates/{dateId}.game_day_id
+  · preenchido → MÓDULO: o dia de jogo é `game_days/{game_day_id}`
+  · ausente    → LEGADO: o organizador de sempre, intocado
+```
+
+`ClubGameDayTab` é quem faz a pergunta, e é o ÚNICO lugar que a faz. O painel
+das datas não escolhe — ele delega. Duas decisões em dois lugares divergem, que
+é o defeito que esta família de ondas vem corrigindo.
+
+### 5.2. O que o clube ganhou de graça
+
+Nada disso precisou de código novo: são as mesmas telas do atleta e da arena.
+
+| Recurso | Antes | Agora |
+|---|---|---|
+| Americano, Mexicano, Rei da Quadra | ✅ | ✅ |
+| **Play** (fila, pausa, entra/sai a qualquer hora) | ❌ | ✅ |
+| **Americano aprimorado** (partida a partida com placar) | ❌ | ✅ |
+| **Telão** (`/dia-de-jogo/:id/telao`) | ❌ | ✅ |
+| **Tutorial em tela** do formato | ❌ | ✅ |
+| **Administradores nomeados** | ❌ | ✅ |
+| Ranking do dia, publicação no ranking/rating/DUPR | ✅ | ✅ |
+| Dupla vinculada | ✅ | ✅ |
+
+### 5.3. O que o LOCAL acrescenta
+
+O clube tem duas coisas que as outras origens não têm, e elas continuam sendo
+do clube:
+
+- **RSVP por data.** A aba de jogos oferece inserir, com um toque, quem
+  confirmou presença naquela data e ainda não está no dia de jogo. Sem esse
+  atalho o módulo seria um retrocesso para quem usa RSVP.
+- **Chat do evento e a lista de membros.** Ficam no evento, como sempre.
+
+E o membro do clube **entra e sai sozinho** do dia de jogo — era o que a regra
+do evento legado já permitia, e sem isso ele dependeria de alguém lembrar de
+importá-lo.
+
+### 5.4. Quem manda no quê
+
+| Campo | Quem manda |
+|---|---|
+| título, data, hora, local, observação | a **DATA do evento** (a aba Participação); o dia de jogo é sincronizado |
+| formato e número de quadras | a aba **Organização de jogos**, enquanto não houver partidas |
+| existência (criar/arquivar) | a **DATA do evento** |
+
+Por isso `/dia-de-jogo/:id` **não** oferece Editar nem Arquivar num dia de jogo
+de clube — oferece "Gerir no clube". É a mesma decisão do dia de jogo de arena,
+e pela mesma razão: arquivar por lá deixaria a data do clube apontando para um
+dia de jogo que sumiu.
+
+Trocar o formato **depois da primeira partida** não é edição, é perda: o Play
+não guarda placar, o Mexicano deriva as rodadas da classificação e o Rei da
+Quadra, do resultado anterior. A tela trava e **explica**, em vez de só
+desabilitar.
+
+### 5.5. Permissões
+
+| Quem | Vê | Conduz as partidas | Configura |
+|---|---|---|---|
+| Quem agendou a data (criador) | ✅ | ✅ | ✅ |
+| **Administrador do clube** | ✅ | ✅ | ✅ |
+| Membro do clube inscrito no dia | ✅ | ✅ (o clube nasce com gestão ABERTA) | ❌ |
+| Membro do clube não inscrito | ✅ | ❌ | ❌ |
+| Quem não é do clube | ❌ | ❌ | ❌ |
+
+O dia de jogo de clube nasce **`manage_mode: 'participants'`** de propósito: no
+evento legado qualquer membro mexia em participantes e jogos, e nascer restrito
+seria tirar da comunidade algo que ela já tinha.
+
+No `firestore.rules`, isso é `isClubGameDayManagerOf` (administrador do clube) e
+`isClubGameDayMemberOf` (leitura e auto-inscrição do membro) — as duas guardadas
+por `'club_id' in gameDayData(gdId)`, então **sem `club_id` são sempre falsas** e
+nenhum dia de jogo já existente muda de comportamento. 85 asserções no emulador
+(`tests/rules/gameDayRoles.rules.emulator.mjs`) provam os dois lados: o que
+passou a funcionar e o que continua barrado.
 
 ---
 
 ## 6. Banco de dados
 
-**Nada de estrutura.** Nenhuma coleção, índice, regra, função ou migração.
+**Zero coleção, zero índice, zero migração.** Só campos opcionais e duas
+condições aditivas na regra.
 
-O único campo novo é `partner_id` em `club_events/{id}/participants` — campo
-**opcional**, escrito só quando alguém vincula uma dupla, na mesma coleção e
-sob a mesma regra que já existia (`allow create, update, delete: if
-isEventClubMember(eventId)`, sem lista fechada de campos). Participante que
-nunca vinculou dupla não tem o campo e se comporta exatamente como antes. É o
-mesmo nome e o mesmo significado que o campo já tinha em `game_days`.
+| Onde | Campo | Quando existe |
+|---|---|---|
+| `club_events/{id}/participants` | `partner_id` | quando alguém vincula uma dupla (Onda AR) |
+| `club_events/{id}/dates/{id}` | `game_day_id` | nas datas criadas a partir da Onda AS |
+| `game_days/{id}` | `club_id`, `club_name`, `club_event_id` | nos dias de jogo de clube |
+
+`club_events/{id}/{participants,dates}` não tem lista fechada de campos na
+regra (`allow create, update, delete: if isEventClubMember(eventId)`), então os
+dois primeiros não exigiram nada. Em `game_days`, as condições novas são
+`isClubGameDayManagerOf` e `isClubGameDayMemberOf`, ambas guardadas por
+`'club_id' in gameDayData(gdId)`.
+
+**Nada já publicado é lido, reescrito ou movido.** Uma data sem `game_day_id`
+continua sendo o legado, com os mesmos documentos nos mesmos lugares.
+
+O espelho do ranking ganhou uma preferência: num dia de jogo de clube,
+`club_id` é o clube DONO, não o clube inferido pelos atletas
+(`buildGameDayMatch`). São duas razões — é o clube certo (a partida aconteceu
+no evento dele) e é o campo que `isClubAdmin(club_id)` confere na regra de
+`club_event_games`, sem o qual só quem agendou a data conseguiria publicar.
 
 ---
 
@@ -151,5 +241,15 @@ mesmo nome e o mesmo significado que o campo já tinha em `game_days`.
 4. **Não unifique o armazenamento sem migração pensada.** As três origens
    gravam em lugares diferentes, e cada uma tem regra própria no
    `firestore.rules`.
-5. **Não presuma que o clube tem o que o atleta tem.** Veja a tabela do §5
-   antes de prometer um recurso na tela do clube.
+5. **Não monte o miolo do dia de jogo por fora.** A escolha da visão por
+   formato e as ferramentas do dia (tutorial, telão) vivem em
+   `GameDayModule` — `V2GameDays`, `V2ArenaGameDays` e `ClubGameDayTab` passam
+   por ele. Há guarda de fonte. Foi assim que o clube ficou sem Play e sem
+   telão por meses: quatro cópias do mesmo `? :`, e uma delas parou no tempo.
+6. **Não converta o legado do clube.** Uma data sem `game_day_id` é um dia de
+   jogo já jogado e, muitas vezes, já publicado no ranking. Migrar é
+   reescrever histórico; deixar como está não custa nada, porque as duas casas
+   convivem pela pergunta do §5.1.
+7. **Não exponha `CreateGameDayDialog` num dia de jogo de clube.** Ele grava a
+   `visibility` junto, e um dia de clube que vira público passa a ser legível
+   (e auto-inscrevível) por qualquer conta da plataforma.

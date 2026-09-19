@@ -61,6 +61,67 @@ describe('⭐ o sorteio do dia de jogo tem UMA fonte', () => {
 });
 
 /* ---------------------------------------------------------------------------
+ * O MIOLO DO DIA DE JOGO TAMBÉM TEM UMA FONTE (Onda AS)
+ *
+ * Sorteio unificado não basta: a escolha da VISÃO por formato (Play, Americano
+ * aprimorado, grade) e as ferramentas do dia (tutorial do formato, telão)
+ * também eram montadas tela a tela. Foi assim que o clube ficou sem Play e sem
+ * telão por meses, sem nada avisando. Agora isso mora em `GameDayModule`, e
+ * quem renderiza um dia de jogo passa por ele.
+ * ------------------------------------------------------------------------ */
+describe('⭐ o miolo do dia de jogo tem UMA fonte', () => {
+  const TELAS = {
+    'atleta (/dia-de-jogo/:id)': 'src/v2/pages/V2GameDays.jsx',
+    'arena (/arenas/:id/gerir/dia-de-jogo/:gdId)': 'src/v2/pages/V2ArenaGameDays.jsx',
+    'clube (data do evento)': 'src/v2/components/clubs/ClubGameDayTab.jsx',
+  };
+
+  Object.entries(TELAS).forEach(([nome, caminho]) => {
+    it(`⭐ ${nome} renderiza o dia de jogo por \`GameDayModule\``, () => {
+      expect(semComentarios(ler(caminho))).toContain('GameDayModule');
+    });
+
+    it(`${nome} NÃO escolhe a visão por conta própria`, () => {
+      const src = semComentarios(ler(caminho));
+      [
+        'AthletePlayOrganizer', 'AthleteAmericanoLiveOrganizer', 'AthletePlayParticipant',
+      ].forEach((visao) => {
+        expect(src, `${caminho} monta ${visao} por fora do módulo`).not.toContain(visao);
+      });
+    });
+  });
+
+  it('⭐ o módulo cobre as três visões e as ferramentas do dia', () => {
+    const src = ler('src/v2/components/games/GameDayModule.jsx');
+    ['AthleteGameDayOrganizer', 'AthletePlayOrganizer', 'AthletePlayParticipant',
+      'AthleteAmericanoLiveOrganizer', 'V2TutorialLauncher', 'telao'].forEach((peca) => {
+      expect(src, `GameDayModule não cobre ${peca}`).toContain(peca);
+    });
+  });
+
+  it('⭐ a data do evento decide módulo × legado num lugar só', () => {
+    // O painel do clube não pode escolher: ele delega a `ClubGameDayTab`, que
+    // é quem conhece a pergunta (`isModularEventDate`). Duas decisões em dois
+    // lugares divergem — foi exatamente o defeito que esta onda corrigiu.
+    const painel = semComentarios(ler('src/v2/components/clubs/V2EventDatesPanel.jsx'));
+    expect(painel).toContain('ClubGameDayTab');
+    expect(painel, 'o painel monta o organizador legado por fora').not.toContain('<GameDayOrganizer');
+
+    const aba = semComentarios(ler('src/v2/components/clubs/ClubGameDayTab.jsx'));
+    expect(aba).toContain('isModularEventDate');
+    expect(aba).toContain('GameDayOrganizer');
+  });
+
+  it('⭐ o legado do clube continua de pé (nada foi migrado)', () => {
+    // Uma data sem `game_day_id` é servida pelo organizador de sempre, lendo e
+    // escrevendo onde sempre leu e escreveu. Se este arquivo sumir, os dias de
+    // jogo já publicados ficam sem tela.
+    const legado = ler('src/modules/clubs/components/GameDayOrganizer.jsx');
+    expect(legado).toContain('buildGameDayDraw');
+  });
+});
+
+/* ---------------------------------------------------------------------------
  * NINGUÉM MANDA RECALCULAR RANKING NA MÃO
  *
  * Os rankings são materializados pelo SERVIDOR a cada resultado. Um botão de

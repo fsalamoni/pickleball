@@ -1,4 +1,11 @@
-# `games/` — Jogos abertos, procura-jogo e dia de jogo do atleta
+# `games/` — Jogos abertos, procura-jogo e o MÓDULO dia de jogo
+
+> ⭐ O dia de jogo é **um módulo só**, criado a partir de três origens: o
+> atleta, a arena (`arena_id`) e o clube (`club_id`, Onda AS). O que a origem
+> muda é onde se cria, quem organiza e o que o local acrescenta — a ferramenta
+> é a mesma, por construção (`v2/components/games/GameDayModule.jsx`, com
+> guarda de fonte em `core/guards/diaDeJogoUniforme.test.js`).
+> Ver `docs/25-DIA-DE-JOGO-COMO-MODULO.md`.
 
 ## Status
 - **Páginas V2**: `V2OpenGames` (Procura-se jogo), `V2GameDays` (Dia de jogo), `V2MyGames` (rota legada → redireciona)
@@ -22,6 +29,18 @@
   `source`: owner/invited/joined/guest).
 - `game_days/{id}/games/{gid}` — jogos sorteados/avulsos (mesmo shape do dia de
   jogo dos clubes: `side_a`/`side_b` = `[{id,name}]`, `score_a`/`score_b`).
+
+### Dia de jogo de ARENA e de CLUBE (campos aditivos no mesmo `game_days`)
+- **Arena**: `arena_id`, `arena_name`, `arena_city`, `arena_state`,
+  `arena_slots[]`, `signup_mode`, `capacity`. Domínio: `domain/arenaGameDay.js`.
+- **Clube** (Onda AS): `club_id`, `club_name`, `club_event_id`. Nasce
+  `visibility: 'private'` e `manage_mode: 'participants'`. Domínio:
+  `domain/clubGameDay.js`; serviço: `services/clubGameDayService.js`; a data do
+  evento aponta de volta por `club_events/{id}/dates/{id}.game_day_id`.
+
+Ausentes os campos, nada muda — é o que mantém intacto tudo o que já existia.
+No `firestore.rules`, `isArenaGameDayManagerOf` e `isClubGameDayManagerOf` são
+guardadas por `'arena_id' in …` / `'club_id' in …` pela mesma razão.
 
 ### Formato "Play" (open play por ordem de chegada) — flag `gameday_play`
 Formato alternativo do dia de jogo do atleta, escolhido na criação. Sessão de

@@ -242,3 +242,61 @@ describe('dia de jogo de arena — quem gerencia a arena administra o dia', () =
     expect(gameDayAdminList(daArena).map((a) => a.uid)).toEqual(['gestor1']);
   });
 });
+
+describe('dia de jogo de CLUBE (Onda AS)', () => {
+  const doClube = {
+    id: 'gd_clube',
+    created_by: 'quem_agendou',
+    club_id: 'clube1',
+    club_event_id: 'ev1',
+    admin_uids: [],
+  };
+  const doAtleta = { id: 'gd2', created_by: 'quem_agendou', admin_uids: [] };
+
+  it('quem administra o CLUBE administra o dia', () => {
+    expect(isGameDayAdmin(doClube, 'admin_do_clube', { clubManager: true })).toBe(true);
+    expect(canManageGameDay(doClube, 'admin_do_clube', { clubManager: true })).toBe(true);
+    expect(canConfigureGameDay(doClube, 'admin_do_clube', { clubManager: true })).toBe(true);
+  });
+
+  it('administrar um clube QUALQUER não dá poder sobre o rachão de ninguém', () => {
+    expect(isGameDayAdmin(doAtleta, 'admin_do_clube', { clubManager: true })).toBe(false);
+    expect(canManageGameDay(doAtleta, 'admin_do_clube', { clubManager: true })).toBe(false);
+    expect(canConfigureGameDay(doAtleta, 'admin_do_clube', { clubManager: true })).toBe(false);
+  });
+
+  it('sem a opção, nada muda (comportamento antigo)', () => {
+    expect(canManageGameDay(doClube, 'admin_do_clube')).toBe(false);
+    expect(canConfigureGameDay(doClube, 'admin_do_clube')).toBe(false);
+  });
+
+  it('só `true` conta — valor solto não vira permissão', () => {
+    [1, 'sim', {}, [], 'true'].forEach((v) => {
+      expect(isGameDayAdmin(doClube, 'admin_do_clube', { clubManager: v })).toBe(false);
+    });
+  });
+
+  it('sem uid, nem administrador de clube passa', () => {
+    expect(isGameDayAdmin(doClube, null, { clubManager: true })).toBe(false);
+    expect(canConfigureGameDay(doClube, null, { clubManager: true })).toBe(false);
+    expect(canManageGameDay(doClube, '', { clubManager: true })).toBe(false);
+  });
+
+  it('quem agendou a data segue sendo criador', () => {
+    expect(canConfigureGameDay(doClube, 'quem_agendou')).toBe(true);
+    expect(canManageGameDay(doClube, 'quem_agendou')).toBe(true);
+  });
+
+  it('o clube nasce ABERTO: o inscrito conduz as partidas, mas não configura', () => {
+    const aberto = { ...doClube, manage_mode: GAME_DAY_MANAGE_MODE.PARTICIPANTS };
+    const parts = [{ user_id: 'membro' }];
+    expect(canManageGameDay(aberto, 'membro', { participants: parts })).toBe(true);
+    expect(canConfigureGameDay(aberto, 'membro')).toBe(false);
+  });
+
+  it('as duas origens não se misturam', () => {
+    const daArenaEClube = { id: 'gd3', created_by: 'x', arena_id: 'a1' };
+    expect(isGameDayAdmin(daArenaEClube, 'alguem', { clubManager: true })).toBe(false);
+    expect(isGameDayAdmin(doClube, 'alguem', { arenaManager: true })).toBe(false);
+  });
+});

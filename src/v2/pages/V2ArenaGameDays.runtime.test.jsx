@@ -29,6 +29,9 @@ vi.mock('@/modules/arenas/hooks/useArenas', () => ({
   useArenaCourts: () => ({ data: [] }),
 }));
 vi.mock('@/modules/arenas/hooks/useBookings', () => ({ useArenaBookings: () => ({ data: [] }) }));
+// `useGameDayRoles` também pergunta ao CLUBE (dia de jogo de clube). Aqui não
+// é um, então a associação volta vazia.
+vi.mock('@/modules/clubs/hooks/useClubs', () => ({ useMyMembership: () => ({ data: null }) }));
 vi.mock('@/modules/games/hooks/useArenaGameDays', () => ({
   useArenaGameDays: () => ({ data: estado.dias, isLoading: false }),
   useArchiveArenaGameDay: () => ({ mutateAsync: vi.fn(), isPending: false }),

@@ -369,9 +369,12 @@ abas; só admin acessa Administração.
   `V2CreateClub`; componentes `V2ClubAdmin`, `V2ClubEvents`, `V2ClubFeed`,
   `V2ClubForums`, `V2ClubMembers`, `V2EventChat`, `V2EventDatesPanel`,
   `V2EventParticipantsPanel`, `V2ForumPoll`, `V2ForumThreadView`,
-  `V2GameDayOrganizer` (com Mexicano + Rei da Quadra), `V2ClubInternalRanking`
+  `ClubGameDayTab` (Onda AS — escolhe entre o MÓDULO único `game_days` e o
+  organizador legado, pela presença de `game_day_id` na data),
+  `V2ClubInternalRanking`
   (Onda 8), `V2ClubPublicPage` (Onda 8b), `V2ClubRecurringEvents` (Onda 8b),
-  `V2ClubInviteLink` (Onda 8b).
+  `V2ClubInviteLink` (Onda 8b). `V2GameDayOrganizer` foi **removido** na Onda
+  AS (cópia morta, sem import e fora do bundle).
 - **V1 (legado)**: `ClubsDirectory`, `CreateClub`, `ClubDetail`, `EventDetail`,
   com `ClubMembersTab`, `ClubFeedTab`, `ClubForumsTab`, `ClubEventsTab`,
   `GameDayOrganizer`, `ClubAdminTab`, `ForumThreadView`, `CreateThreadDialog`,
