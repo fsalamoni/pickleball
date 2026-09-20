@@ -218,8 +218,16 @@ function ParticipantsSection({ gameDay, participants, isLoading, isOwner }) {
                 maxLength={60}
                 disabled={atLimit}
               />
-              <V2Button type="submit" tone="neutral" disabled={!guestName.trim() || atLimit}>
-                <Plus className="h-4 w-4" />
+              {/* Botão só com ícone: sem nome acessível, o leitor de tela
+                  anuncia "botão" e nada mais. */}
+              <V2Button
+                type="submit"
+                tone="neutral"
+                disabled={!guestName.trim() || atLimit}
+                aria-label="Incluir convidado"
+                title="Incluir convidado"
+              >
+                <Plus aria-hidden="true" className="h-4 w-4" />
               </V2Button>
             </form>
             {atLimit && <p className="text-xs text-amber-600">Limite de {GAME_DAY_LIMITS.MAX_PARTICIPANTS} participantes atingido.</p>}

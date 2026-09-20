@@ -222,6 +222,8 @@ Estes princípios vieram de bugs reais que custaram horas pra arrumar. São ineg
 **"No Americano aprimorado, como corrijo a quadra: trocar quem está jogando ou desfazer o sorteio?"** → tocando no NOME de quem está em quadra (abre `CourtPlayerDialog`: deixar de fora × substituir) e em **Cancelar partida** (devolve os quatro à fila, sem placar). Vale no painel E no telão — antes só existia no telão, e desfazer um sorteio no painel exigia lançar um resultado que não aconteceu e apagá-lo depois, ou seja, um placar falso atravessando o ranking do dia. `cancelPlayGame` **recusa** partida que já tem placar: aquela sai pela lista de partidas concluídas, que re-sincroniza o ranking. Ver `docs/17-DIA-DE-JOGO-AMERICANO-APRIMORADO.md` §6b
 **"No Americano aprimorado, por que não saem todas as duplas possíveis?"** → porque sortear quadra a quadra é GULOSO: a primeira quadra leva o melhor quarteto e a última herda o que sobrou — e com atletas = 4 × quadras a última nem tem escolha. Medido em dia inteiro com elenco estável: 8 em 2 quadras formavam **12 das 28 duplas**; 12 em 3, **18 de 66**. Agora a rodada é escolhida como um TODO (`bestAmericanoLiveRound`) e dá 28/28 e 66/66. Os grupos de uma rodada são DISJUNTOS, então o custo da rodada é a soma dos custos dos grupos sobre o mesmo histórico — é isso que torna a otimização barata. Com UMA quadra livre nada disso roda: o caminho é o de antes, partida a partida. E a frente da fila é obrigatória na rodada, senão a busca por variedade empurra sempre a mesma pessoa para fora. Ver `docs/17-DIA-DE-JOGO-AMERICANO-APRIMORADO.md` §4b
 **"Quero um Americano em que as partidas saiam UMA A UMA, quadra por quadra, mas COM placar"** → é o **Americano aprimorado** (`americano_live`), atrás da flag `gameday_americano_live` (default OFF). Organização do Play (fila, pausa, dupla fixa, entra/sai a qualquer hora) + placar, ranking do dia e publicação no ranking/rating/DUPR do Americano. O fluxo é de DOIS passos: **"Lançar resultado"** libera a quadra, e só então aparece **"Gerar próxima partida"** — não junte os dois. Código em `src/modules/games/domain/americanoLive.js` e `src/v2/components/games/AthleteAmericanoLiveOrganizer.jsx`; doc em `docs/17-DIA-DE-JOGO-AMERICANO-APRIMORADO.md`
+**"O telão aguenta a rede cair?"** → agora sim. 🐞 A tela decidia por `isError || !gameDay`, e numa atualização de fundo o React Query **mantém o dado** e só marca `isError`: bastava UMA falha dos ciclos de 15 s para o painel inteiro virar *"Dia de jogo não encontrado — pode ter sido arquivado"*, na TV, na frente de todo mundo, com o estado bom na memória. A decisão saiu para `telaoConnectionState` (`modules/games/domain/telaoConnection.js`): **sem dado** ⇒ tela de erro; **com dado** ⇒ o painel CONTINUA, e depois de 60 s sem atualizar uma faixa diz há quanto tempo — com o pulso "ao vivo" parando de pulsar. A tolerância existe para o aviso não piscar a cada ciclo e virar ruído
+**"A tela do telão apaga sozinha?"** → não mais: `useWakeLock` (`core/lib/useWakeLock.js`). O telão fica HORAS numa TV/tablet e o aparelho apagava em 30 s–2 min, o que exigia alguém cutucando a tela a noite inteira. Duas sutilezas: o bloqueio é **perdido quando a aba sai de vista** e tem de ser RE-PEDIDO ao voltar (senão acende uma vez só), e o navegador **pode recusar** — por isso `suportado` e `ativo` são separados, e o indicador só aparece quando está valendo
 **"O telão mudou com o formato novo?"** → sim, ganhou um terceiro arranjo (quadras + previsão com duplas + partidas concluídas com placar + ranking do dia). `buildGameDayBoard` agora aceita `format` (OPCIONAL): informado, ele decide `isCourtByCourt`/`hasScores`; omitido, a inferência antiga vale bit a bit. Ver `docs/14-DIA-DE-JOGO-TELAO.md` §2.2
 **"Onde está o botão de recalcular ranking/rating?"** → **não existe mais**, de propósito. Havia quatro (console e métricas do admin, ranking 2.0–8.0, pós-migração de inscrições e ranking interno do clube) e todos saíram: botão de recalcular mente sobre de quem é a responsabilidade (só o admin da plataforma escreve ranking, então quem publicava dependia de OUTRA pessoa lembrar), compete com o gatilho que já faz a conta, e esconde o defeito quando algo não entra. No lugar, o painel `RankingAutomatico` EXPLICA o que dispara o quê. O cliente também parou de tentar materializar ranking ao publicar — era recusado pela regra e custava ler a coleção inteira de torneios. Guarda em `src/core/guards/diaDeJogoUniforme.test.js`. Ver `docs/18-RANKINGS.md` §8
 **"O resultado de TORNEIO conta a partir de quando?"** → do **lançamento**, não do encerramento. Em torneio o lançamento não é facultativo: o placar é lançado porque a partida aconteceu. 🐞 A elegibilidade exigia `status === 'finished'`, e num torneio de três dias nada aparecia no rating até alguém clicar em "encerrar" — às vezes nunca. Segue de fora o que não é resultado de verdade: **rascunho** (ambiente de teste), **cancelado**, **privado** e **arquivado**; e como o recálculo é integral, cancelar ou arquivar TIRA do ranking o que já contou. No **dia de jogo** é o contrário e continua sendo: o gatilho é a **PUBLICAÇÃO**, porque ali lançar no ranking é decisão de quem organiza. A regra vive em `isTournamentRankingEligible` (cliente) e `isEligible` (`functions/ranking.js`) — **as duas cópias têm teste de paridade**. Ver `docs/18-RANKINGS.md` §3
@@ -463,6 +465,35 @@ chore(deps): bump firebase to 12.x
 > memory topic `picklerush-sync-2026-08.md`.
 >
 > **Destaques por onda**:
+>
+> - **Onda AX — O telão aguenta o dia** (2026-09-20): a tela mais exposta da
+>   plataforma — horas numa TV na beira da quadra, atualizando sozinha a cada
+>   15 s — era frágil exatamente onde não podia ser.
+>
+>   **(1) 🐞 Uma falha de 15 s apagava o painel inteiro.** A tela decidia por
+>   `isError || !gameDay`, e numa atualização de fundo o React Query **mantém o
+>   dado** e só marca `isError`. Bastava UMA queda de rede — num ginásio, o
+>   tempo todo — para o painel virar *"Dia de jogo não encontrado. Ele pode ter
+>   sido arquivado"*, na frente de todo mundo, com o estado bom na memória. É o
+>   caso mais caro da classe da Onda AV, e o que tem a maior plateia.
+>
+>   **(2) Continuar mostrando não pode virar mentir.** Depois de 60 s sem
+>   atualizar, o telão DIZ há quanto tempo está parado e o pulso "ao vivo" para
+>   de pulsar. A tolerância é de propósito: piscar "desatualizado" a cada ciclo
+>   ensinaria a ignorar o aviso inclusive quando ele importa.
+>
+>   **(3) 🐞 E a tela apagava sozinha.** Não havia `wakeLock` em lugar nenhum
+>   do projeto: um tablet apaga em 30 s–2 min sem toque, então alguém tinha de
+>   cutucar o aparelho a noite inteira — uma funcionalidade inteira inutilizada
+>   por um detalhe do sistema operacional. As duas sutilezas que separam
+>   funcionar de parecer funcionar: o bloqueio é **perdido ao esconder a aba** e
+>   precisa ser re-pedido (senão acende uma vez só), e o navegador **pode
+>   recusar**, então o indicador só aparece quando está valendo.
+>
+>   De quebra, os dois últimos botões só-ícone sem nome acessível do dia de
+>   jogo ganharam rótulo — o leitor de tela anunciava "botão" e nada mais.
+>
+>   **Banco: zero.** Ver `docs/14-DIA-DE-JOGO-TELAO.md`.
 >
 > - **Onda AW — A classe fechada** (2026-09-20): a AV cobriu as sete telas onde
 >   a mentira era mais cara; esta fecha o resto do dia de jogo e do torneio —
@@ -1429,7 +1460,7 @@ chore(deps): bump firebase to 12.x
 
 | Métrica | Valor | Delta do início do agente |
 |---|---|---|
-| **Testes Vitest** | **4845 passing** (284 arquivos) + 218 asserções de regras (Vitest) + 85 do dia de jogo no emulador | +4437 (era 408) |
+| **Testes Vitest** | **4863 passing** (285 arquivos) + 218 asserções de regras (Vitest) + 85 do dia de jogo no emulador | +4455 (era 408) |
 | **Lint errors** | 0 | era 30+ |
 | **Módulos** | 21 (+`help` — conteúdo dos tutoriais em tela) (`games` e `legal` saíram como `src/modules/` mas continuam como pastas oficiais — **rating virou módulo oficial** com domain/services/hooks/components) | +4 (coaches, circuits, games, legal) |
 | **V2 pages** | 82 (+V2GameDayTelao — telão, fora do V2Layout; +V2Help — central de ajuda; +V2ArenaKiosk — totem da recepção, também fora do V2Layout; +V2ArenaCheckin; +V2ArenaAttendance) | +58 |

@@ -47,7 +47,7 @@ import { useQuery, useQueryClient } from '@tanstack/react-query';
 import { toast } from 'sonner';
 import {
   Radio, Clock, Trophy, ListOrdered, CheckCircle2, ArrowLeft, Maximize2, Minimize2, Users,
-  PlayCircle, Check, Pause, Link2, Unlink, Swords, Shuffle,
+  PlayCircle, Check, Pause, Link2, Unlink, Swords, Shuffle, WifiOff, Sun,
 } from 'lucide-react';
 
 import { ConfirmDialog } from '@/components/ui/confirm-dialog';
@@ -79,6 +79,8 @@ import {
   GAME_DAY_FORMAT_LABELS, isAmericanoLiveFormat,
 } from '@/modules/clubs/domain/gameDayFormats';
 import { forecastAmericanoLiveMatches } from '@/modules/games/domain/americanoLive';
+import { telaoConnectionState } from '@/modules/games/domain/telaoConnection';
+import { useWakeLock } from '@/core/lib/useWakeLock';
 
 /** De quanto em quanto tempo o painel se atualiza sozinho. */
 const REFRESH_MS = 15_000;
@@ -98,7 +100,13 @@ function useRelogio() {
     const t = setInterval(() => setAgora(new Date()), 30_000);
     return () => clearInterval(t);
   }, []);
-  return agora.toLocaleTimeString('pt-BR', { hour: '2-digit', minute: '2-digit' });
+  // O INSTANTE vai junto: é ele que mede há quanto tempo o painel não
+  // atualiza. Um relógio só para exibir a hora deixaria o aviso de "sem
+  // conexão" congelado no momento em que a falha começou.
+  return {
+    hora: agora.toLocaleTimeString('pt-BR', { hour: '2-digit', minute: '2-digit' }),
+    ms: agora.getTime(),
+  };
 }
 
 /**
@@ -594,7 +602,7 @@ function RankingDoDia({ linhas }) {
 
 export default function V2GameDayTelao() {
   const { gameDayId } = useParams();
-  const hora = useRelogio();
+  const { hora, ms: agoraMs } = useRelogio();
   const telaCheia = useTelaCheia();
   const qc = useQueryClient();
 
@@ -637,7 +645,9 @@ export default function V2GameDayTelao() {
   // faz sentido buscar de novo a cada 15 s: ligar isso nos hooks gerais poria
   // toda a plataforma a consultar em laço.
   const comum = { enabled: !!gameDayId, refetchInterval: REFRESH_MS, refetchOnWindowFocus: true };
-  const { data: gameDay, isLoading, isError } = useQuery({
+  const {
+    data: gameDay, isLoading, isError, dataUpdatedAt,
+  } = useQuery({
     queryKey: ['gameday-telao', gameDayId, 'dia'],
     queryFn: () => getGameDay(gameDayId),
     ...comum,
@@ -822,6 +832,22 @@ export default function V2GameDayTelao() {
     partnerId ? 'Dupla fixa formada.' : 'Dupla desfeita.',
   );
 
+  // ⚠️ O telão fica HORAS numa TV ou num tablet na beira da quadra, e o
+  // aparelho apaga a tela sozinho em 30 s a 2 min sem toque — o que tornava a
+  // funcionalidade inútil sem alguém cutucando o aparelho a noite inteira.
+  const { suportado: podeManterAcesa, ativo: telaAcesa } = useWakeLock(true);
+
+  // ⚠️ Numa atualização de fundo o React Query MANTÉM o dado e só marca
+  // `isError`. A tela trocava o painel inteiro por "Dia de jogo não
+  // encontrado" a cada falha de 15 s — num ginásio, o tempo todo, na TV, com o
+  // estado bom ainda na memória. Ver `domain/telaoConnection.js`.
+  const conexao = telaoConnectionState({
+    isError,
+    hasData: !!gameDay,
+    dataUpdatedAt,
+    now: agoraMs,
+  });
+
   if (isLoading) {
     return (
       <div className="flex min-h-[100dvh] items-center justify-center bg-ink text-2xl text-white/50">
@@ -830,12 +856,16 @@ export default function V2GameDayTelao() {
     );
   }
 
-  if (isError || !gameDay) {
+  if (!conexao.showBoard) {
     return (
       <div className="flex min-h-[100dvh] flex-col items-center justify-center gap-4 bg-ink px-6 text-center">
-        <p className="text-2xl font-bold text-white">Dia de jogo não encontrado</p>
+        <p className="text-2xl font-bold text-white">
+          {isError ? 'Não foi possível carregar o dia de jogo' : 'Dia de jogo não encontrado'}
+        </p>
         <p className="max-w-md text-lg text-white/50">
-          Ele pode ter sido arquivado, ou esta conta não participa dele.
+          {isError
+            ? 'A conexão falhou. O telão volta sozinho assim que a rede voltar.'
+            : 'Ele pode ter sido arquivado, ou esta conta não participa dele.'}
         </p>
         <Link to="/dia-de-jogo" className="rounded-full bg-acid px-5 py-2.5 font-bold text-ink">
           Voltar aos dias de jogo
@@ -854,11 +884,31 @@ export default function V2GameDayTelao() {
   return (
     <div className="flex min-h-[100dvh] flex-col bg-ink text-white">
       <div className="mx-auto flex w-full max-w-[1800px] flex-1 flex-col px-5 py-5 sm:px-8 sm:py-6">
+        {/* ⚠️ Dado velho apresentado como ao vivo manda alguém para a quadra
+            errada: é pelo telão que as pessoas decidem quando entram. */}
+        {conexao.mode === 'stale' && (
+          <div
+            role="status"
+            className="mb-4 flex items-center justify-center gap-2 rounded-xl border border-amber-400/40 bg-amber-400/10 px-4 py-2 text-center text-lg font-bold text-amber-200"
+          >
+            <WifiOff aria-hidden="true" className="h-5 w-5 shrink-0" />
+            {conexao.label}
+          </div>
+        )}
+
         {/* Cabeçalho */}
         <header className="mb-6 flex flex-wrap items-end justify-between gap-4 border-b border-white/10 pb-4">
           <div className="min-w-0">
-            <div className="mb-1 flex items-center gap-3 text-sm font-bold uppercase tracking-widest text-acid">
-              <Radio aria-hidden="true" className="h-4 w-4 animate-pulse" />
+            <div
+              className={`mb-1 flex items-center gap-3 text-sm font-bold uppercase tracking-widest ${
+                conexao.mode === 'stale' ? 'text-amber-300' : 'text-acid'}`}
+            >
+              {/* ⚠️ O pulso diz "ao vivo". Mantê-lo pulsando com o dado parado
+                  é a própria mentira que esta onda veio tirar da tela. */}
+              <Radio
+                aria-hidden="true"
+                className={`h-4 w-4 ${conexao.mode === 'stale' ? '' : 'animate-pulse'}`}
+              />
               {rotuloFormato}
             </div>
             <h1 className="truncate font-display text-4xl font-black text-white xl:text-5xl">
@@ -873,6 +923,16 @@ export default function V2GameDayTelao() {
             <div className="text-right">
               <div className="font-display text-3xl font-black tabular-nums text-white">{hora}</div>
               <div className="flex items-center justify-end gap-1.5 text-xs text-white/40">
+                {/* A tela acesa é promessa que o navegador pode recusar
+                    (bateria, política do aparelho). Só se anuncia o que está
+                    valendo de fato — prometer e não cumprir faz alguém deixar
+                    o tablet sozinho e voltar para uma tela preta. */}
+                {podeManterAcesa && telaAcesa && (
+                  <span className="inline-flex items-center gap-1" title="A tela não vai apagar enquanto o telão estiver aberto">
+                    <Sun aria-hidden="true" className="h-3.5 w-3.5 text-acid/70" />
+                    <span className="sr-only">Tela mantida acesa</span>
+                  </span>
+                )}
                 <Users aria-hidden="true" className="h-3.5 w-3.5" />
                 {participants.length} participante(s)
                 {board.isCourtByCourt

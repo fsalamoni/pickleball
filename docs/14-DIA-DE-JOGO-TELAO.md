@@ -265,3 +265,64 @@ src/modules/games/domain/gamePlay.js          # forecastPlayByCourt
 src/modules/games/domain/gamePlayForecastCourt.test.js  # 9 testes
 src/modules/games/domain/americanoLive.js     # sorteio/previsão do americano_live
 ```
+
+
+---
+
+## O telão aguenta o dia (Onda AX)
+
+O telão é a tela mais exposta da plataforma: fica **horas** numa TV ou num
+tablet na beira da quadra, se atualiza sozinho a cada 15 s, e é por ela que as
+pessoas decidem quando entram. Três coisas o tornavam frágil exatamente onde
+não podia ser.
+
+### 🐞 1. Uma falha de 15 s apagava o painel inteiro
+
+```js
+if (isError || !gameDay) return <p>Dia de jogo não encontrado…</p>;
+```
+
+Numa atualização de fundo o React Query **mantém o dado** e apenas marca
+`isError`. Então bastava **uma** queda de rede — e num ginásio o wi-fi cai o
+tempo todo — para o painel ser substituído, na TV e na frente de todo mundo,
+por:
+
+> *"Dia de jogo não encontrado. Ele pode ter sido arquivado, ou esta conta não
+> participa dele."*
+
+Com o estado bom ainda na memória.
+
+A decisão saiu para o domínio (`modules/games/domain/telaoConnection.js`), com
+duas regras:
+
+1. **Sem dado nenhum** ⇒ a tela de erro é legítima (e agora diz *"Não foi
+   possível carregar"* quando é conexão, em vez de acusar arquivamento).
+2. **Com dado em mãos** ⇒ o painel **continua**.
+
+### 2. E o telão passou a dizer quando o dado está velho
+
+Continuar mostrando não pode virar mentir. Depois de **60 s** sem atualizar,
+uma faixa diz *"Sem conexão — mostrando o estado de há X minutos"*, e o pulso
+"ao vivo" do cabeçalho **para de pulsar**.
+
+A tolerância existe de propósito: entre duas atualizações normais o dado sempre
+tem alguns segundos, e piscar "desatualizado" a cada ciclo ensinaria todo mundo
+a ignorar o aviso — inclusive quando ele importa.
+
+### 🐞 3. A tela apagava sozinha
+
+Não havia `wakeLock` em lugar nenhum do projeto. Um tablet apaga a tela em 30 s
+a 2 min sem toque: na prática, alguém tinha de ficar cutucando o aparelho a
+noite inteira, ou o telão simplesmente sumia. Uma funcionalidade inteira
+inutilizada por um detalhe do sistema operacional.
+
+`useWakeLock` (`core/lib/useWakeLock.js`) resolve, com duas sutilezas que
+separam funcionar de parecer funcionar:
+
+- **o bloqueio é perdido quando a aba sai de vista** e o navegador não o
+  devolve sozinho — por isso ele é RE-PEDIDO ao voltar; sem isso o telão
+  acende uma vez e apaga para sempre depois da primeira troca de aba;
+- **o navegador pode recusar** (bateria, política do aparelho), então
+  `suportado` e `ativo` são separados: o indicador de "tela acesa" só aparece
+  quando está valendo de fato. Prometer e não cumprir faz alguém deixar o
+  tablet sozinho e voltar para uma tela preta.

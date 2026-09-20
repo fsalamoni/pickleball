@@ -152,3 +152,41 @@ describe('⭐ o dia de jogo não sorteia sobre o que a tela não viu', () => {
     expect(src).toContain('orderBase');
   });
 });
+
+/**
+ * 🐞 O TELÃO É O CASO MAIS CARO DA CLASSE.
+ *
+ * Ele se atualiza sozinho a cada 15 s e fica horas aberto numa TV na beira da
+ * quadra. A tela decidia por `isError || !gameDay` — e numa atualização de
+ * fundo o React Query MANTÉM o dado e só marca `isError`. Bastava uma queda de
+ * rede, que num ginásio acontece o tempo todo, para o painel inteiro virar
+ * "Dia de jogo não encontrado. Ele pode ter sido arquivado", na frente de
+ * todo mundo, com o estado bom ainda na memória.
+ */
+describe('⭐ o telão aguenta o dia', () => {
+  const TELAO = 'src/v2/pages/V2GameDayTelao.jsx';
+
+  it('⭐ a decisão sai do domínio, não de `isError` cru na tela', () => {
+    const src = semComentarios(ler(TELAO));
+    expect(src).toContain('telaoConnectionState');
+    expect(src, 'o telão voltou a apagar o painel numa falha de atualização')
+      .not.toMatch(/if\s*\(\s*isError\s*\|\|\s*!gameDay\s*\)/);
+  });
+
+  it('⭐ com dado em mãos a falha NÃO apaga o painel', async () => {
+    const { telaoConnectionState } = await import('@/modules/games/domain/telaoConnection');
+    expect(telaoConnectionState({ isError: true, hasData: true, dataUpdatedAt: Date.now() }).showBoard)
+      .toBe(true);
+    expect(telaoConnectionState({ isError: true, hasData: false }).showBoard).toBe(false);
+  });
+
+  it('⭐ e a tela não apaga: o telão pede o wake lock', () => {
+    expect(semComentarios(ler(TELAO)), 'o telão voltou a deixar o tablet apagar')
+      .toContain('useWakeLock');
+  });
+
+  it('⭐ o pulso "ao vivo" para de pulsar quando o dado está parado', () => {
+    const src = semComentarios(ler(TELAO));
+    expect(src).toMatch(/conexao\.mode === 'stale'/);
+  });
+});

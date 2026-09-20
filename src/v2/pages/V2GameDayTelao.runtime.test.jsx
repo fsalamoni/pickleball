@@ -634,3 +634,50 @@ describe('telão — casos de borda', () => {
     expect(container.textContent).toContain('A definir');
   });
 });
+
+/**
+ * 🐞 UMA FALHA DE 15 s APAGAVA O TELÃO INTEIRO.
+ *
+ * O painel se atualiza sozinho a cada 15 s, e a tela decidia por
+ * `isError || !gameDay`. Só que numa atualização de fundo o React Query
+ * MANTÉM o dado e apenas marca `isError` — então bastava uma queda de rede,
+ * que num ginásio acontece o tempo todo, para o telão ser substituído, na TV
+ * e na frente de todo mundo, por "Dia de jogo não encontrado. Ele pode ter
+ * sido arquivado". Com o estado bom ainda na memória.
+ */
+describe('🐞 o telão aguenta a rede cair', () => {
+  it('⭐ falha ao ATUALIZAR mantém o painel — o dado bom está em mãos', async () => {
+    dados.gameDay = { id: 'gd1', title: 'Quinta de Americano', format: 'americano' };
+    dados.games = [jogoGrade('g1', 1, 1, 11, 7)];
+    await render();
+    expect(container.textContent).toContain('Quinta de Americano');
+
+    // A rede cai e o telão tenta atualizar.
+    const { getGameDay } = await import('@/modules/games/services/gameDayService');
+    getGameDay.mockRejectedValueOnce(new Error('rede'));
+    await act(async () => { await qc.refetchQueries({ queryKey: ['gameday-telao', 'gd1', 'dia'] }); });
+
+    expect(container.textContent, 'o telão apagou numa falha de atualização')
+      .toContain('Quinta de Americano');
+    expect(container.textContent).not.toContain('pode ter sido arquivado');
+  });
+
+  it('⭐ sem dado nenhum, a falha tem texto próprio — não acusa arquivamento', async () => {
+    const { getGameDay } = await import('@/modules/games/services/gameDayService');
+    getGameDay.mockRejectedValue(new Error('rede'));
+    await render();
+    const txt = container.textContent;
+    expect(txt).toContain('Não foi possível carregar o dia de jogo');
+    expect(txt).not.toContain('pode ter sido arquivado');
+    getGameDay.mockReset();
+    getGameDay.mockImplementation(async () => dados.gameDay);
+  });
+
+  it('ausência REAL continua dizendo que não foi encontrado', async () => {
+    dados.gameDay = null;
+    await render();
+    const txt = container.textContent;
+    expect(txt).toContain('Dia de jogo não encontrado');
+    expect(txt).toContain('pode ter sido arquivado');
+  });
+});
