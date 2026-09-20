@@ -3,6 +3,7 @@ import { Navigate, Route, Routes } from 'react-router-dom';
 import { useAuth } from '@/core/lib/FirebaseAuthContext';
 import V2Layout from '@/v2/components/V2Layout';
 import GamificationErrorBoundary from '@/v2/components/GamificationErrorBoundary';
+import V2RouteBoundary from '@/v2/components/V2RouteBoundary';
 
 // Páginas nativas v2 (design Athleisure Premium).
 const V2Dashboard = lazy(() => import('@/v2/pages/V2Dashboard'));
@@ -100,6 +101,16 @@ function Gamified({ children }) {
   return <GamificationErrorBoundary>{children}</GamificationErrorBoundary>;
 }
 
+/**
+ * Isola uma tela: o erro vira um cartão NO LUGAR DELA, dentro do layout, em
+ * vez de subir até o boundary global — que fica acima do Router, nunca reseta
+ * e substituía o aplicativo inteiro, tirando a barra lateral e a navegação de
+ * quem só queria sair daquela tela. Ver `V2RouteBoundary`.
+ */
+function Isolada({ nome, children }) {
+  return <V2RouteBoundary name={nome}>{children}</V2RouteBoundary>;
+}
+
 function V2Spinner({ full = true }) {
   return (
     <div className={full ? 'v2-root flex h-[100dvh] w-full items-center justify-center bg-paper' : 'flex min-h-[60vh] w-full items-center justify-center'}>
@@ -142,8 +153,8 @@ export default function V2App() {
           {/* Dia de jogo da arena (flag `arena_game_day`): a lista e a condução
               de um dia. Rota própria, no ambiente da ARENA — o ambiente do
               atleta segue sendo `/dia-de-jogo/:id`, com o mesmo miolo. */}
-          <Route path="arenas/:arenaId/gerir/dia-de-jogo" element={<V2ArenaGameDays />} />
-          <Route path="arenas/:arenaId/gerir/dia-de-jogo/:gameDayId" element={<V2ArenaGameDays />} />
+          <Route path="arenas/:arenaId/gerir/dia-de-jogo" element={<Isolada nome="dia-de-jogo-arena"><V2ArenaGameDays /></Isolada>} />
+          <Route path="arenas/:arenaId/gerir/dia-de-jogo/:gameDayId" element={<Isolada nome="dia-de-jogo-arena"><V2ArenaGameDays /></Isolada>} />
           <Route path="arenas/:arenaId/gerir/open-match" element={<V2ArenaAdminOpenMatch />} />
           <Route path="arenas/:arenaId/open-match" element={<V2ArenaOpenMatch />} />
           <Route path="arenas/:arenaId/matchmaking" element={<V2ArenaMatchmaking />} />
@@ -172,15 +183,15 @@ export default function V2App() {
           <Route path="minhas-reservas" element={<V2Bookings />} />
 
           {/* Torneios */}
-          <Route path="torneios" element={<V2Tournaments />} />
+          <Route path="torneios" element={<Isolada nome="torneios"><V2Tournaments /></Isolada>} />
           <Route path="torneios/publicos" element={<Navigate to="/torneios" replace />} />
-          <Route path="torneios/criar" element={<V2CreateTournament />} />
+          <Route path="torneios/criar" element={<Isolada nome="criar-torneio"><V2CreateTournament /></Isolada>} />
           <Route path="torneios/ingressar" element={<V2JoinTournament />} />
-          <Route path="torneios/guia" element={<V2FormatsGuide />} />
-          <Route path="torneios/:tournamentId" element={<V2Tournament />} />
-          <Route path="torneios/:tournamentId/gerenciar" element={<V2TournamentAdmin />} />
-          <Route path="torneios/:tournamentId/modalidades/:modalityId" element={<V2ModalityPage />} />
-          <Route path="torneios/:tournamentId/:tab" element={<V2Tournament />} />
+          <Route path="torneios/guia" element={<Isolada nome="guia-formatos"><V2FormatsGuide /></Isolada>} />
+          <Route path="torneios/:tournamentId" element={<Isolada nome="torneio"><V2Tournament /></Isolada>} />
+          <Route path="torneios/:tournamentId/gerenciar" element={<Isolada nome="gerir-torneio"><V2TournamentAdmin /></Isolada>} />
+          <Route path="torneios/:tournamentId/modalidades/:modalityId" element={<Isolada nome="modalidade"><V2ModalityPage /></Isolada>} />
+          <Route path="torneios/:tournamentId/:tab" element={<Isolada nome="torneio"><V2Tournament /></Isolada>} />
 
           {/* Comunidade */}
           <Route path="atletas" element={<V2Athletes />} />
@@ -189,7 +200,7 @@ export default function V2App() {
           <Route path="clubes" element={<V2Clubs />} />
           <Route path="clubes/criar" element={<V2CreateClub />} />
           <Route path="clubes/:clubId" element={<V2ClubDetail />} />
-          <Route path="clubes/:clubId/eventos/:eventId" element={<V2EventDetail />} />
+          <Route path="clubes/:clubId/eventos/:eventId" element={<Isolada nome="evento-de-clube"><V2EventDetail /></Isolada>} />
           <Route path="novidades" element={<V2Community />} />
           <Route path="chat" element={<V2Chat />} />
 
@@ -197,8 +208,8 @@ export default function V2App() {
           <Route path="ranking" element={<V2Ranking />} />
           <Route path="ranking/duplas" element={<V2DoublesRanking />} />
           <Route path="meus-jogos" element={<V2MyGames />} />
-          <Route path="dia-de-jogo" element={<V2GameDays />} />
-          <Route path="dia-de-jogo/:gameDayId" element={<V2GameDays />} />
+          <Route path="dia-de-jogo" element={<Isolada nome="dia-de-jogo"><V2GameDays /></Isolada>} />
+          <Route path="dia-de-jogo/:gameDayId" element={<Isolada nome="dia-de-jogo"><V2GameDays /></Isolada>} />
           <Route path="encontrar-jogadores" element={<V2FindPlayers />} />
           <Route path="procura-jogo" element={<V2OpenGames />} />
           <Route path="parceiros" element={<V2Partners />} />

@@ -116,6 +116,7 @@ Estes princípios vieram de bugs reais que custaram horas pra arrumar. São ineg
 │   ├── 23-ARENA-CALENDARIO-E-RESERVA.md 🗓️ auditoria: calendário, reserva, prontidão
 │   ├── 25-DIA-DE-JOGO-COMO-MODULO.md ⭐ o dia de jogo igual em toda origem
 │   ├── 27-FALHA-NAO-E-VAZIO.md     ⚠️ ⭐ consulta que falha vira "não existe"
+│   ├── 28-ERRO-NAO-DERRUBA-O-APP.md ⚠️ ⭐ boundary por tela, telão que se recupera
 │   ├── 26-TORNEIO-FORMATOS-E-REGRAS.md ⭐ grupos, classificação, chaves e o
 │   │                                     controle total do admin do torneio
 │   ├── 20-SEGURANCA-E-PRIVACIDADE/ 🔴 ⭐ PRIORIDADE MÁXIMA — segurança, LGPD,
@@ -222,6 +223,10 @@ Estes princípios vieram de bugs reais que custaram horas pra arrumar. São ineg
 **"No Americano aprimorado, como corrijo a quadra: trocar quem está jogando ou desfazer o sorteio?"** → tocando no NOME de quem está em quadra (abre `CourtPlayerDialog`: deixar de fora × substituir) e em **Cancelar partida** (devolve os quatro à fila, sem placar). Vale no painel E no telão — antes só existia no telão, e desfazer um sorteio no painel exigia lançar um resultado que não aconteceu e apagá-lo depois, ou seja, um placar falso atravessando o ranking do dia. `cancelPlayGame` **recusa** partida que já tem placar: aquela sai pela lista de partidas concluídas, que re-sincroniza o ranking. Ver `docs/17-DIA-DE-JOGO-AMERICANO-APRIMORADO.md` §6b
 **"No Americano aprimorado, por que não saem todas as duplas possíveis?"** → porque sortear quadra a quadra é GULOSO: a primeira quadra leva o melhor quarteto e a última herda o que sobrou — e com atletas = 4 × quadras a última nem tem escolha. Medido em dia inteiro com elenco estável: 8 em 2 quadras formavam **12 das 28 duplas**; 12 em 3, **18 de 66**. Agora a rodada é escolhida como um TODO (`bestAmericanoLiveRound`) e dá 28/28 e 66/66. Os grupos de uma rodada são DISJUNTOS, então o custo da rodada é a soma dos custos dos grupos sobre o mesmo histórico — é isso que torna a otimização barata. Com UMA quadra livre nada disso roda: o caminho é o de antes, partida a partida. E a frente da fila é obrigatória na rodada, senão a busca por variedade empurra sempre a mesma pessoa para fora. Ver `docs/17-DIA-DE-JOGO-AMERICANO-APRIMORADO.md` §4b
 **"Quero um Americano em que as partidas saiam UMA A UMA, quadra por quadra, mas COM placar"** → é o **Americano aprimorado** (`americano_live`), atrás da flag `gameday_americano_live` (default OFF). Organização do Play (fila, pausa, dupla fixa, entra/sai a qualquer hora) + placar, ranking do dia e publicação no ranking/rating/DUPR do Americano. O fluxo é de DOIS passos: **"Lançar resultado"** libera a quadra, e só então aparece **"Gerar próxima partida"** — não junte os dois. Código em `src/modules/games/domain/americanoLive.js` e `src/v2/components/games/AthleteAmericanoLiveOrganizer.jsx`; doc em `docs/17-DIA-DE-JOGO-AMERICANO-APRIMORADO.md`
+**"Criei uma tela nova de dia de jogo ou torneio"** → ela entra em `<Isolada>` no `V2App.jsx`. 🐞 O `ErrorBoundary` global fica **acima do Router** e **nunca reseta**: um defeito em UMA tela substituía o aplicativo inteiro por "Algo deu errado" — sem barra lateral, sem navegação, sem volta a não ser recarregar. O mecanismo certo já existia (`GamificationErrorBoundary`) mas só a gamificação o usava, e ela está atrás de flag DESLIGADA — a ferramenta guardada onde não fazia falta, a mesma família do defeito da Onda AU. Guarda em `src/core/guards/telaIsolada.test.js`. Ver `docs/28-ERRO-NAO-DERRUBA-O-APP.md`
+**"Uma tela que fica sozinha (telão, totem) deu erro. E aí?"** → `<V2RouteBoundary unattended>`: sem ninguém para clicar, ela tenta de novo sozinha com espera crescente (3 s, 6 s, 12 s) e **limite** — tentar para sempre sobre um defeito real é um laço que ninguém vê, queimando a bateria do tablet a noite inteira. A política é domínio puro em `core/domain/errorRecovery.js`
+**"Deu erro ao abrir uma tela logo depois de um deploy"** → é a **versão velha**: a aba tem um `index.js` apontando para pedaços de código que já não existem. `isChunkLoadError` reconhece pelas mensagens dos quatro navegadores, e a saída NÃO é "tentar de novo" (o arquivo continua não existindo) — é **Recarregar**, com o texto dizendo que saiu versão nova
+**"Vou testar um error boundary"** → ⚠️ componente que "se cura" na segunda renderização **não serve**: ao capturar um erro o React **re-renderiza uma vez** antes de acionar o fallback, o defeito some nessa tentativa interna e o boundary nunca entra — o teste falha acusando o componente, quando o errado é o teste. Controle a falha **de fora**, por um objeto mutável
 **"O telão aguenta a rede cair?"** → agora sim. 🐞 A tela decidia por `isError || !gameDay`, e numa atualização de fundo o React Query **mantém o dado** e só marca `isError`: bastava UMA falha dos ciclos de 15 s para o painel inteiro virar *"Dia de jogo não encontrado — pode ter sido arquivado"*, na TV, na frente de todo mundo, com o estado bom na memória. A decisão saiu para `telaoConnectionState` (`modules/games/domain/telaoConnection.js`): **sem dado** ⇒ tela de erro; **com dado** ⇒ o painel CONTINUA, e depois de 60 s sem atualizar uma faixa diz há quanto tempo — com o pulso "ao vivo" parando de pulsar. A tolerância existe para o aviso não piscar a cada ciclo e virar ruído
 **"A tela do telão apaga sozinha?"** → não mais: `useWakeLock` (`core/lib/useWakeLock.js`). O telão fica HORAS numa TV/tablet e o aparelho apagava em 30 s–2 min, o que exigia alguém cutucando a tela a noite inteira. Duas sutilezas: o bloqueio é **perdido quando a aba sai de vista** e tem de ser RE-PEDIDO ao voltar (senão acende uma vez só), e o navegador **pode recusar** — por isso `suportado` e `ativo` são separados, e o indicador só aparece quando está valendo
 **"O telão mudou com o formato novo?"** → sim, ganhou um terceiro arranjo (quadras + previsão com duplas + partidas concluídas com placar + ranking do dia). `buildGameDayBoard` agora aceita `format` (OPCIONAL): informado, ele decide `isCourtByCourt`/`hasScores`; omitido, a inferência antiga vale bit a bit. Ver `docs/14-DIA-DE-JOGO-TELAO.md` §2.2
@@ -465,6 +470,37 @@ chore(deps): bump firebase to 12.x
 > memory topic `picklerush-sync-2026-08.md`.
 >
 > **Destaques por onda**:
+>
+> - **Onda AY — Um erro numa tela não derruba o aplicativo** (2026-09-20):
+>   o `ErrorBoundary` global fica **acima do Router** (`main.jsx`) e **nunca
+>   reseta**. Junte as duas coisas: um defeito em UMA tela — uma aba de
+>   torneio, o organizador do dia de jogo, um componente que recebeu um
+>   documento inesperado — substituía o **aplicativo inteiro** por "Algo deu
+>   errado. Recarregue a página". Sem barra lateral, sem navegação, sem voltar.
+>   Quem estava conduzindo um torneio perdia o lugar onde estava porque uma
+>   aba quebrou.
+>
+>   **E o mecanismo certo já existia — no lugar errado.**
+>   `GamificationErrorBoundary` faz exatamente o necessário (isola a rota,
+>   recado amigável, "tentar de novo", resto da plataforma de pé), e era usado
+>   em cinco rotas de gamificação — atrás de uma flag **desligada**. É a mesma
+>   família do defeito da Onda AU: a ferramenta certa, construída e testada,
+>   guardada onde não fazia falta.
+>
+>   **O telão precisava de outra coisa.** Ele fica horas sozinho numa TV, e ali
+>   "clique para tentar de novo" não serve — não há ninguém para clicar. Com
+>   `unattended` ele tenta sozinho, com espera crescente (3 s, 6 s, 12 s) e
+>   **limite**: tentar para sempre sobre um defeito real é um laço que ninguém
+>   vê, queimando bateria a noite inteira.
+>
+>   **De quebra, a versão velha pós-deploy deixou de ser tratada como bug.** A
+>   plataforma publica a cada push e a aba de quem está num torneio fica aberta
+>   o dia todo, apontando para pedaços de código que já não existem.
+>   `isChunkLoadError` reconhece o caso e a tela diz a verdade — *"Uma versão
+>   nova foi publicada"* — com o botão que resolve: **Recarregar**. "Tentar de
+>   novo" ali nunca resolveria.
+>
+>   **Banco: zero.** Ver `docs/28-ERRO-NAO-DERRUBA-O-APP.md`.
 >
 > - **Onda AX — O telão aguenta o dia** (2026-09-20): a tela mais exposta da
 >   plataforma — horas numa TV na beira da quadra, atualizando sozinha a cada
@@ -1460,7 +1496,7 @@ chore(deps): bump firebase to 12.x
 
 | Métrica | Valor | Delta do início do agente |
 |---|---|---|
-| **Testes Vitest** | **4863 passing** (285 arquivos) + 218 asserções de regras (Vitest) + 85 do dia de jogo no emulador | +4455 (era 408) |
+| **Testes Vitest** | **4899 passing** (288 arquivos) + 218 asserções de regras (Vitest) + 85 do dia de jogo no emulador | +4491 (era 408) |
 | **Lint errors** | 0 | era 30+ |
 | **Módulos** | 21 (+`help` — conteúdo dos tutoriais em tela) (`games` e `legal` saíram como `src/modules/` mas continuam como pastas oficiais — **rating virou módulo oficial** com domain/services/hooks/components) | +4 (coaches, circuits, games, legal) |
 | **V2 pages** | 82 (+V2GameDayTelao — telão, fora do V2Layout; +V2Help — central de ajuda; +V2ArenaKiosk — totem da recepção, também fora do V2Layout; +V2ArenaCheckin; +V2ArenaAttendance) | +58 |

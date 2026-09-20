@@ -5,6 +5,7 @@ import { AuthProvider, useAuth } from '@/core/lib/FirebaseAuthContext';
 import { FeatureFlagsProvider } from '@/core/lib/FeatureFlagsContext';
 import { Toaster } from '@/components/ui/sonner';
 import { recordPageView } from '@/core/services/observabilityService';
+import V2RouteBoundary from '@/v2/components/V2RouteBoundary';
 
 // Páginas públicas (sem autenticação) — precisam funcionar fora do app autenticado.
 // V2 é a camada de apresentação oficial e integral; a landing e o login moram
@@ -118,14 +119,29 @@ export default function App() {
               <Route path="/login" element={<Login />} />
               <Route path="/p/:tournamentId" element={<PublicTournament />} />
               <Route path="/torneios/:tournamentId/imprimir" element={<PrintTournament />} />
-              <Route path="/torneios/:tournamentId/telao" element={<Telao />} />
+              <Route
+                path="/torneios/:tournamentId/telao"
+                element={<V2RouteBoundary name="telao-torneio" unattended><Telao /></V2RouteBoundary>}
+              />
               {/* Telão do dia de jogo: página inteira, FORA do V2Layout (sem
                   menu nem cabeçalho — a tela toda é conteúdo). Exige login
                   porque as regras do Firestore só liberam a leitura de um dia
                   de jogo para o dono, os participantes ou um dia público. */}
+              {/* ⚠️ `unattended`: o telão fica HORAS sozinho numa TV. Um
+                  cartão pedindo "recarregue a página" não serve ali — não há
+                  ninguém para clicar. Com o boundary próprio ele tenta de novo
+                  por conta própria, com espera crescente e um limite (tentar
+                  para sempre sobre um defeito real é um laço que ninguém vê).
+                  Ver `core/domain/errorRecovery.js`. */}
               <Route
                 path="/dia-de-jogo/:gameDayId/telao"
-                element={<ProtectedRoute><GameDayTelao /></ProtectedRoute>}
+                element={(
+                  <ProtectedRoute>
+                    <V2RouteBoundary name="telao" unattended>
+                      <GameDayTelao />
+                    </V2RouteBoundary>
+                  </ProtectedRoute>
+                )}
               />
               {/* Totem de chegada da arena: página inteira, FORA do V2Layout —
                   é um tablet na recepção, ligado o dia todo, e menu de
