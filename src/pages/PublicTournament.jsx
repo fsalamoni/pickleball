@@ -23,6 +23,7 @@ import { useDocumentMeta } from '@/core/seo/useDocumentMeta';
 import ShareCardButton from '@/modules/sharing/components/ShareCardButton';
 import CertificateButton from '@/modules/tournament/components/CertificateButton';
 import TournamentGallery from '@/modules/tournament/components/TournamentGallery';
+import { V2ErrorState } from '@/v2/ui/primitives';
 
 function formatPublicMatchTime(iso) {
   if (!iso) return '—';
@@ -63,7 +64,9 @@ export default function PublicTournament() {
     copy(publicUrl, 'Link público copiado!');
   }
 
-  const { data: tournament, isLoading: loadingT } = useQuery({
+  const {
+    data: tournament, isLoading: loadingT, isError: falhouTorneio, refetch: recarregarTorneio,
+  } = useQuery({
     queryKey: ['public', 'tournament', tournamentId],
     queryFn: () => getTournament(tournamentId),
     refetchInterval: 30_000,
@@ -75,7 +78,9 @@ export default function PublicTournament() {
       || (tournament ? `Torneio de pickleball${tournament.city ? ` em ${tournament.city}` : ''}. Acompanhe modalidades, jogos e ranking.` : ''),
     url: publicUrl,
   }, !!tournament);
-  const { data: modalities = [] } = useQuery({
+  const {
+    data: modalities = [], isError: falhouModalidades, refetch: recarregarModalidades,
+  } = useQuery({
     queryKey: ['public', 'modalities', tournamentId],
     queryFn: () => listModalities(tournamentId),
     enabled: !!tournament,
@@ -87,6 +92,22 @@ export default function PublicTournament() {
       <div className="max-w-5xl mx-auto p-4 space-y-4">
         <Skeleton className="h-24" />
         <Skeleton className="h-72" />
+      </div>
+    );
+  }
+
+  // ⚠️ Esta página chega por link compartilhado, a quem muitas vezes não tem
+  // conta: espectador, familiar, jogador a caminho. Dizer "Verifique o link
+  // recebido" quando o que falhou foi a REDE manda essa pessoa cobrar do
+  // organizador um link que está certo — e ela não tem como descobrir sozinha.
+  if (falhouTorneio && !tournament) {
+    return (
+      <div className="v2-root min-h-screen bg-paper font-inter text-ink">
+        <V2ErrorState
+          title="Não foi possível carregar o torneio"
+          description="A conexão falhou no meio do caminho. O link continua valendo."
+          onRetry={() => recarregarTorneio()}
+        />
       </div>
     );
   }
@@ -169,7 +190,16 @@ export default function PublicTournament() {
           </CardContent>
         </Card>
 
-        {modalities.length === 0 && (
+        {falhouModalidades && (
+          <V2ErrorState
+            inline
+            title="As modalidades não carregaram"
+            description="O torneio existe; o que falhou foi a lista."
+            onRetry={() => recarregarModalidades()}
+          />
+        )}
+
+        {!falhouModalidades && modalities.length === 0 && (
           <Card>
             <CardContent className="p-6 text-sm text-gray-500 text-center">
               Nenhuma modalidade publicada ainda.
@@ -281,13 +311,17 @@ function PublicRankingTable({ rows }) {
 }
 
 function PublicModalityBlock({ modality }) {
-  const { data: matches = [] } = useQuery({
+  const {
+    data: matches = [], isError: falhouJogos, refetch: recarregarJogos,
+  } = useQuery({
     queryKey: ['public', 'matches', modality.id, 'all'],
     queryFn: () => listAllMatchesForModality(modality.id),
     refetchInterval: 20_000,
   });
   const multiPhase = matches.some((m) => (m.stage_index ?? 0) > 0);
-  const { data: rankingData } = useQuery({
+  const {
+    data: rankingData, isError: falhouRanking, refetch: recarregarRanking,
+  } = useQuery({
     queryKey: ['public', 'ranking-structured', modality.id],
     queryFn: () => computeModalityRankingStructured(modality.id),
     refetchInterval: 30_000,
@@ -297,7 +331,9 @@ function PublicModalityBlock({ modality }) {
     [rankingData],
   );
   const showRankingPhaseHeaders = rankingPhases.length > 1;
-  const { data: registrations = [] } = useQuery({
+  const {
+    data: registrations = [], isError: falhouInscritos, refetch: recarregarInscritos,
+  } = useQuery({
     queryKey: ['public', 'registrations', modality.id],
     queryFn: () => listRegistrations(modality.id),
     refetchInterval: 60_000,
@@ -336,6 +372,23 @@ function PublicModalityBlock({ modality }) {
       .join(' + ');
   }
 
+  // ⚠️ Três consultas alimentam esta modalidade, e a falha de cada uma tem um
+  // sintoma DIFERENTE e silencioso: sem os jogos, a tela diz "ainda não
+  // publicados"; sem o ranking, a classificação simplesmente some; sem os
+  // inscritos, `renderSide` cai no `id` e o público lê identificadores do
+  // banco no lugar dos nomes. Um aviso só, dizendo o que faltou.
+  const partesQueFalharam = [
+    falhouJogos && 'os jogos',
+    falhouRanking && 'o ranking',
+    falhouInscritos && 'os nomes dos inscritos',
+  ].filter(Boolean);
+
+  function recarregarOqueFalhou() {
+    if (falhouJogos) recarregarJogos();
+    if (falhouRanking) recarregarRanking();
+    if (falhouInscritos) recarregarInscritos();
+  }
+
   return (
     <Card>
       <CardHeader>
@@ -347,6 +400,14 @@ function PublicModalityBlock({ modality }) {
         </CardTitle>
       </CardHeader>
       <CardContent className="space-y-4">
+        {partesQueFalharam.length > 0 && (
+          <V2ErrorState
+            inline
+            title={`Não carregou ${partesQueFalharam.join(' nem ')}`}
+            description="O resto desta modalidade continua na tela."
+            onRetry={recarregarOqueFalhou}
+          />
+        )}
         {rankingPhases.length > 0 && (
           <div className="space-y-3">
             <h4 className="text-sm font-semibold">Ranking</h4>
@@ -489,7 +550,7 @@ function PublicModalityBlock({ modality }) {
             </div>
           </div>
         ) : (
-          <p className="text-sm text-gray-500">Jogos ainda não publicados.</p>
+          !falhouJogos && <p className="text-sm text-gray-500">Jogos ainda não publicados.</p>
         )}
       </CardContent>
     </Card>

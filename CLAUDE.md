@@ -241,6 +241,10 @@ Estes princípios vieram de bugs reais que custaram horas pra arrumar. São ineg
 **"Quanto custa a reserva?"** → `totalBookingPrice(arena, { courtId, slots })` (`modules/arenas/domain/pricing.js`). **NUNCA** grave o retorno de `resolveArenaPrice` como preço da reserva: ele é o valor **por hora**, e isso era um bug real — três horas selecionadas chegavam à arena valendo uma, na tela E no campo gravado. O serviço refaz a conta antes de escrever (`precoDaReserva`), nos dois caminhos de criação. Para MOSTRAR, `bookingPriceInfo(booking, { arena })`: o acordado vence, com a arena em mãos recalcula (corrige as reservas antigas) e o número nunca sai sem a duração ao lado. Ver `docs/23-ARENA-CALENDARIO-E-RESERVA.md` §8
 **"A arena demora a abrir"** → o caminho já está pavimentado, siga-o: (1) toda consulta de arena nasce em `modules/arenas/hooks/arenaQueries.js` + `arenaKeys.js` — **nunca escreva `queryKey` de arena à mão**, porque a pré-busca e o hook têm de bater bit a bit e chave divergente não dá erro, só faz buscar de novo o que já estava em cache (há teste lendo o código-fonte); (2) link para uma arena chama `useArenaPrefetch()` no `onMouseEnter`/`onFocus`/`onTouchStart` — as consultas saem enquanto o pacote da tela baixa; (3) `useArena` já vem semeado pelo cache da lista; (4) aba pesada entra por `lazy` com `<Suspense>` em volta **só da área das abas**. E o que NÃO fazer: recortar reservas por data no servidor é impossível hoje (a data mora dentro de `slots`, que é vetor) — "resolver" isso pede campo novo ou índice novo, ou seja, mexer no banco, e as reservas antigas sumiriam do filtro. Ver `docs/23-ARENA-CALENDARIO-E-RESERVA.md` §11
 **"Vou mostrar uma data na tela"** → `formatSlotLabel(slot)` / `formatDateShortBR(date)` (`modules/arenas/domain/calendar.js`), nunca a ISO crua: `2026-07-23 · 19:00` era o que a reserva mostrava ao atleta e à arena, e no Brasil ninguém lê data assim. O dia da semana vem junto, e o ANO aparece quando não é o corrente ("23/07" numa reserva de 2027 é armadilha). São montadas das constantes do módulo, não de `toLocaleDateString`, para não depender da configuração da máquina. Ver `docs/23-ARENA-CALENDARIO-E-RESERVA.md` §13
+**"Mexi numa tela PÚBLICA de torneio (link compartilhado, impressão, telão)"** → ⭐ elas são V1, roteadas direto em `src/App.jsx`, **fora da árvore do V2** — e foi só por isso que ficaram de fora das ondas AV/AW/AX. São quatro: `/p/:id` (`PublicTournament`), `/torneios/:id/imprimir` (`PrintTournament`), `/torneios/:id/telao` (`Telao`) e `/c/:clubId` (`PublicClub`). Nelas a falha é a mais cara da plataforma porque chega a **quem não tem conta**: `/p/:id` dizia *"Torneio não encontrado. Verifique o link recebido"* (acusando o que a pessoa não pode conferir), `/c/:clubId` transformava queda de rede numa AFIRMAÇÃO sobre a escolha do clube (*"não disponível publicamente"*) e oferecia criar conta como saída, e a impressão ficava em *"Carregando…"* **para sempre**. Ver `docs/27-FALHA-NAO-E-VAZIO.md` §8
+**"Vou mexer na versão para IMPRESSÃO do torneio"** → ⚠️ **o papel sobrevive à tela**: modalidade que não carregou não sai na folha, e a folha vai para a mesa da organização parecendo completa — ninguém desconfia de uma ausência. É o único aviso da plataforma que **precisa ser impresso junto**; `print:hidden` no TEXTO do aviso devolve o defeito (no botão "Tentar de novo" está certo — não se clica no papel). Guarda travando
+**"São quantos telões?"** → **dois**, e eles seguem a MESMA regra: `/dia-de-jogo/:id/telao` (`V2GameDayTelao.jsx`) e `/torneios/:id/telao` (`src/pages/Telao.jsx`). As três peças são compartilhadas — `telaoConnectionState`, `useWakeLock`, `useRelogio` — e o guarda varre os dois numa lista só. `telaoConnectionState` mora em `modules/games/domain/` mas **não é do dia de jogo**: é a política de conexão DO TELÃO. Ver `docs/14-DIA-DE-JOGO-TELAO.md` §5
+**"Vou precisar do relógio num telão"** → `useRelogio` (`core/lib/useRelogio.js`), nunca um `setInterval` local: é o **mesmo instante** que mostra a hora e mede o atraso do painel, e duas cópias com tiques diferentes dariam tolerâncias diferentes para a mesma regra, sem nada na tela denunciando
 **"Vou escrever uma consulta com `orderBy`"** → se houver `where` junto, ela exige **índice composto** — e sem ele **falha**, não devolve menos. Como o padrão do projeto é `const { data = [] } = useX()`, o erro vira lista vazia e a tela mente em silêncio: `listArenaUnavailabilities` estava assim desde que foi escrita (o calendário NUNCA recebeu um bloqueio, e o sintoma que apareceu meses depois foi "o dia de jogo não fecha a quadra"), e com ela `listArenaTournaments`, as duas da fila de espera e a de checklists. O padrão do projeto é **um `where` só, ordenação em memória** (como `listArenaGameDays`); com `limit`, mova o corte junto, senão você corta antes de ordenar. `src/core/guards/indicesCompostos.test.js` reprova quem reintroduzir a combinação sem índice. Ver `docs/22-DIA-DE-JOGO-DA-ARENA.md`
 **"Lista vazia na tela"** → confira se não é FALHA. Consulta que falha devolve `[]`, e `[]` costuma ter um significado próprio: o calendário dizia "esta arena não publicou horários" e a lista dizia "Nenhuma arena encontrada. Cadastre uma arena" quando o problema era a rede. Trate `isError` com texto próprio e botão de **Tentar de novo**; e enquanto CARREGA não afirme ocupação — mês sem reserva carregada parece mês inteiro livre. Ver `docs/23-ARENA-CALENDARIO-E-RESERVA.md` §12
 **"O calendário do mês não mostra direito a ocupação"** → passe `courts` a `aggregateDayStatus`. Sem isso a arena inteira é contada como UMA quadra: uma reserva às 19h pintava as 19h de ocupado com as outras duas quadras livres. Com `courts`, a conta é em **horas-quadra** e vêm `total`, `occupancy`, `freeTimes` (horários com pelo menos uma quadra livre) e `openTimes` — é o que alimenta a barra de ocupação e o rótulo "4h livres / Lotado / Bloqueado" de cada dia. Mês sem vaga nenhuma não é beco: `findFirstFreeDate` diz qual é o próximo dia livre. E indexe por data (`indexBookingsByDate`) antes de varrer 42 dias × quadras. Ver `docs/23-ARENA-CALENDARIO-E-RESERVA.md` §9
@@ -470,6 +474,59 @@ chore(deps): bump firebase to 12.x
 > memory topic `picklerush-sync-2026-08.md`.
 >
 > **Destaques por onda**:
+>
+> - **Onda AZ — As telas públicas do torneio** (2026-09-20): as ondas AV e AW
+>   fecharam a classe "falha não é vazio" **dentro** do aplicativo, e a AX
+>   endureceu o telão. Ficaram de fora **quatro telas** — e não por descuido de
+>   julgamento, mas porque a varredura tinha sido feita por PASTA: elas são V1,
+>   roteadas direto em `src/App.jsx`, fora da árvore do V2. São exatamente as
+>   que chegam a **quem não tem conta**.
+>
+>   **🐞 (1) `/p/:id` culpava o link da pessoa.** A página pública do torneio —
+>   a que se manda por WhatsApp para espectador, familiar e jogador a caminho —
+>   decidia por `if (!tournament)` e dizia *"Torneio não encontrado. **Verifique
+>   o link recebido**"*. Numa falha de rede, a frase acusa justamente o que essa
+>   pessoa não tem como conferir: o desfecho previsível é ela cobrar do
+>   organizador um link que está certo. Mais três consultas por modalidade
+>   tinham o mesmo defeito, cada uma com um sintoma diferente e silencioso —
+>   sem os jogos, *"Jogos ainda não publicados"*; sem o ranking, a
+>   classificação some; **sem os inscritos, `renderSide` cai no `id` e o
+>   público lê identificadores do banco no lugar dos nomes**.
+>
+>   **🐞 (2) `/c/:clubId` era pior.** A falha virava uma AFIRMAÇÃO sobre a
+>   escolha do clube — *"Clube não disponível publicamente"* — e oferecia, como
+>   saída, **criar uma conta**, que não resolveria nada. Uma queda de rede
+>   empurrando alguém para um cadastro inútil.
+>
+>   **🐞 (3) A impressão ficava em "Carregando…" para sempre.** `if
+>   (!tournament) return 'Carregando…'` cobria os três desfechos, e quem ia
+>   imprimir as chaves minutos antes do jogo encarava uma reticência eterna,
+>   sem saber que havia falhado e sem nada em que clicar. **E o caso mais caro
+>   da classe inteira mora aqui: o papel sobrevive à tela.** Modalidade que não
+>   carregou não sai na folha, e a folha vai para a mesa da organização
+>   **parecendo completa** — ninguém desconfia de uma ausência. Por isso este é
+>   o único aviso da plataforma que **precisa ser impresso junto**.
+>
+>   **🐞 (4) O telão do TORNEIO tinha os quatro defeitos da Onda AX.** Mesma
+>   exposição (horas numa TV na beira da quadra, ciclo de 20 s), e `isError`
+>   ignorado por completo: numa falha as três seções afirmavam *"Nenhum jogo em
+>   andamento"*, *"Sem próximos jogos"*, *"Sem resultados ainda"* — com o
+>   torneio rolando. O pulso "ao vivo" era fixo, não havia `wakeLock` e não
+>   havia estado de erro. Ganhou as mesmas peças do telão do dia de jogo.
+>
+>   **De quebra, um relógio só.** Os dois telões tinham cópias de `useRelogio`.
+>   Não é apresentação: é o **mesmo instante** que mostra a hora e mede o
+>   atraso do painel — duas cópias com tiques diferentes dariam tolerâncias
+>   diferentes para a MESMA regra, sem nada na tela denunciando.
+>
+>   **A lição é a da série inteira, pela quarta vez**: a peça certa já existia,
+>   testada e em produção, e não chegou aqui porque a tela mora noutra pasta.
+>   Por isso o guarda passou a varrer os **dois** telões e as **duas** páginas
+>   públicas, em lista, em vez de confiar em quem lembrar.
+>
+>   **Banco: zero.** Nenhuma coleção, campo, índice, regra, função ou migração.
+>   +15 testes de guarda. Ver `docs/27-FALHA-NAO-E-VAZIO.md` §8 e
+>   `docs/14-DIA-DE-JOGO-TELAO.md` §5.
 >
 > - **Onda AY — Um erro numa tela não derruba o aplicativo** (2026-09-20):
 >   o `ErrorBoundary` global fica **acima do Router** (`main.jsx`) e **nunca
@@ -1496,7 +1553,7 @@ chore(deps): bump firebase to 12.x
 
 | Métrica | Valor | Delta do início do agente |
 |---|---|---|
-| **Testes Vitest** | **4899 passing** (288 arquivos) + 218 asserções de regras (Vitest) + 85 do dia de jogo no emulador | +4491 (era 408) |
+| **Testes Vitest** | **4914 passing** (288 arquivos) + 218 asserções de regras (Vitest) + 85 do dia de jogo no emulador | +4491 (era 408) |
 | **Lint errors** | 0 | era 30+ |
 | **Módulos** | 21 (+`help` — conteúdo dos tutoriais em tela) (`games` e `legal` saíram como `src/modules/` mas continuam como pastas oficiais — **rating virou módulo oficial** com domain/services/hooks/components) | +4 (coaches, circuits, games, legal) |
 | **V2 pages** | 82 (+V2GameDayTelao — telão, fora do V2Layout; +V2Help — central de ajuda; +V2ArenaKiosk — totem da recepção, também fora do V2Layout; +V2ArenaCheckin; +V2ArenaAttendance) | +58 |

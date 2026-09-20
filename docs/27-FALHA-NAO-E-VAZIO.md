@@ -198,3 +198,68 @@ AS) e do `TournamentDrawTab` (Onda AU).
 > `tournament/services/courtService.js` e `clubs/hooks/useClubRankingAdmin.js`
 > (descritos/ligados à arquitetura documentada) e `clubs/domain/clubRanking.js`
 > (tem teste próprio e espelha `functions/clubRanking.js`).
+
+---
+
+## 8. As telas PÚBLICAS do torneio (Onda AZ)
+
+As Ondas AV e AW fecharam a classe **dentro do aplicativo**. Ficaram de fora
+quatro telas que nem sequer estão na árvore do V2 — são páginas V1 roteadas
+direto em `src/App.jsx` — e são justamente as que chegam a **quem não tem
+conta**:
+
+| Tela | Rota | O que dizia quando a consulta falhava |
+|---|---|---|
+| Página pública do torneio | `/p/:tournamentId` | *"Torneio não encontrado. **Verifique o link recebido**."* |
+| Versão para impressão | `/torneios/:id/imprimir` | *"Carregando…"* — **para sempre** |
+| Telão do torneio | `/torneios/:id/telao` | quadro vazio, com "Atualiza automaticamente" pulsando |
+| Página pública do clube | `/c/:clubId` | *"Clube não disponível publicamente. Entre na plataforma."* |
+
+### 8.1 Por que estas são as piores da classe
+
+Nas telas de dentro, quem lê a mentira tem conta, contexto e um caminho: fecha,
+abre de novo, fala com o organizador. Aqui não.
+
+**`/p/:id` culpa o link.** Quem recebeu o link não tem como saber que o
+problema foi a rede — a frase acusa exatamente o que essa pessoa não pode
+conferir. O desfecho previsível é ela cobrar do organizador um link que está
+certo, e o organizador reenviar o mesmo link.
+
+**`/c/:clubId` é pior ainda**: transformava uma falha de rede numa **afirmação
+sobre a escolha do clube** ("não disponível publicamente") e oferecia, como
+saída, **criar uma conta** — que não resolveria nada.
+
+**A folha impressa é a mais cara de todas, porque o papel sobrevive à tela.**
+Uma modalidade cuja consulta falhou simplesmente não sai na folha, e a folha vai
+para a mesa da organização **parecendo completa**. Ninguém desconfia de uma
+ausência. Por isso este é o único aviso da plataforma que **precisa ser
+impresso junto** — `print:hidden` no texto do aviso devolveria o defeito (no
+botão "Tentar de novo" está certo: não se clica no papel).
+
+Sem os inscritos, `renderSide` cai no `id`: a folha sairia com **identificadores
+do banco no lugar dos nomes** de quem vai jogar.
+
+### 8.2 O telão do torneio tinha os quatro defeitos da Onda AX
+
+Ele tem a mesma exposição do telão do dia de jogo — horas numa TV na beira da
+quadra — e ficou de fora da AX **só por ser uma tela V1**. Ganhou as mesmas três
+regras: `telaoConnectionState` (falha de ciclo não apaga o painel), aviso de
+atraso com o pulso "ao vivo" parando de pulsar, e `useWakeLock`.
+
+> ⚠️ **A lição é a de sempre nesta série**: a peça certa já existia, testada e
+> em produção — e não chegou aqui porque a tela mora noutra pasta. Por isso o
+> guarda passou a varrer os **dois** telões e as **duas** páginas públicas, em
+> vez de confiar em quem lembrar.
+
+### 8.3 De quebra: um relógio só
+
+Os dois telões tinham cada um a sua cópia de `useRelogio`. Não é detalhe de
+apresentação: é o **mesmo instante** que mostra a hora e mede há quanto tempo o
+painel não atualiza. Duas cópias com tiques diferentes dariam **tolerâncias
+diferentes para a mesma regra**, sem nada na tela denunciando. Virou
+`src/core/lib/useRelogio.js`, com o guarda reprovando quem reintroduzir um
+relógio local num telão.
+
+### 8.4 Impacto no banco
+
+**Zero.** Nenhuma coleção, campo, índice, regra, função ou migração.

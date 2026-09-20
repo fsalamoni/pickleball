@@ -18,7 +18,7 @@ export default function PublicClub() {
   const { clubId } = useParams();
   const publicOn = true;
   const { isAuthenticated } = useAuth();
-  const { data: club, isLoading } = useQuery({
+  const { data: club, isLoading, isError, refetch } = useQuery({
     queryKey: ['public-club', clubId],
     queryFn: () => getClub(clubId),
     enabled: publicOn && !!clubId,
@@ -39,6 +39,27 @@ export default function PublicClub() {
       <div className="mx-auto max-w-[720px] px-4 py-10">
         {isLoading ? (
           <p className="py-20 text-center text-gray-400">Carregando…</p>
+        ) : isError && !club ? (
+          /* ⚠️ Sem esta ramificação, uma falha de rede virava uma AFIRMAÇÃO
+             sobre a escolha do clube — "não disponível publicamente" — e
+             empurrava quem chegou pelo link para criar uma conta que não
+             resolveria nada. O clube pode ser público; quem falhou foi a
+             consulta. */
+          <div className="rounded-4xl border border-gray-100 bg-paper-pure p-8 text-center">
+            <h1 className="font-display text-2xl font-bold text-ink">
+              Não foi possível carregar o clube
+            </h1>
+            <p className="mt-2 text-sm text-gray-500">
+              A conexão falhou no meio do caminho. O link continua valendo.
+            </p>
+            <button
+              type="button"
+              onClick={() => refetch()}
+              className="mt-4 inline-flex rounded-full bg-ink px-6 py-3 text-sm font-bold text-white"
+            >
+              Tentar de novo
+            </button>
+          </div>
         ) : !isPublic ? (
           <div className="rounded-4xl border border-gray-100 bg-paper-pure p-8 text-center">
             <h1 className="font-display text-2xl font-bold text-ink">Clube não disponível publicamente</h1>

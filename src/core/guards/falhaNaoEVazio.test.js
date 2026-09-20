@@ -48,6 +48,9 @@ const TELAS = [
   ['dia de jogo — grade', 'src/v2/components/games/AthleteGameDayOrganizer.jsx'],
   ['dia de jogo — Play', 'src/v2/components/games/AthletePlayOrganizer.jsx'],
   ['dia de jogo — Americano aprimorado', 'src/v2/components/games/AthleteAmericanoLiveOrganizer.jsx'],
+  // Onda AZ — as telas PÚBLICAS do torneio, que chegam a quem não tem conta.
+  ['torneio (página pública)', 'src/pages/PublicTournament.jsx'],
+  ['torneio (versão para impressão)', 'src/pages/PrintTournament.jsx'],
 ];
 
 describe('⭐ toda tela que afirma "não existe" sabe distinguir falha', () => {
@@ -188,5 +191,78 @@ describe('⭐ o telão aguenta o dia', () => {
   it('⭐ o pulso "ao vivo" para de pulsar quando o dado está parado', () => {
     const src = semComentarios(ler(TELAO));
     expect(src).toMatch(/conexao\.mode === 'stale'/);
+  });
+});
+
+/**
+ * ⭐ OS DOIS TELÕES SEGUEM A MESMA REGRA.
+ *
+ * O telão do TORNEIO (`src/pages/Telao.jsx`) tem a mesma exposição do telão do
+ * dia de jogo — horas numa TV, atualizando sozinho — e nasceu com os mesmos
+ * quatro defeitos. Ele ficou de fora da Onda AX só por ser uma tela V1, fora
+ * da árvore do V2: exatamente o tipo de esquecimento que este arquivo existe
+ * para impedir.
+ */
+describe('⭐ os dois telões seguem a mesma regra', () => {
+  const TELOES = [
+    ['dia de jogo', 'src/v2/pages/V2GameDayTelao.jsx'],
+    ['torneio', 'src/pages/Telao.jsx'],
+  ];
+
+  TELOES.forEach(([nome, caminho]) => {
+    it(`⭐ telão do ${nome}: a decisão sai do domínio`, () => {
+      expect(semComentarios(ler(caminho)), `${caminho} voltou a decidir por isError cru`)
+        .toContain('telaoConnectionState');
+    });
+
+    it(`⭐ telão do ${nome}: a tela não apaga`, () => {
+      expect(semComentarios(ler(caminho)), `${caminho} voltou a deixar o aparelho apagar`)
+        .toContain('useWakeLock');
+    });
+
+    it(`⭐ telão do ${nome}: o pulso não mente`, () => {
+      expect(semComentarios(ler(caminho)), `${caminho} pulsa "ao vivo" com o dado parado`)
+        .toMatch(/conexao\.mode === 'stale'/);
+    });
+
+    it(`⭐ telão do ${nome}: o relógio é a peça compartilhada`, () => {
+      const src = semComentarios(ler(caminho));
+      // O MESMO instante mede a hora e o atraso. Duas cópias com tiques
+      // diferentes dariam tolerâncias diferentes para a mesma regra.
+      expect(src, `${caminho} voltou a ter relógio próprio`)
+        .not.toMatch(/function useRelogio/);
+      expect(src).toContain("from '@/core/lib/useRelogio'");
+    });
+  });
+});
+
+/**
+ * ⭐ A FOLHA IMPRESSA DIZ QUANDO ESTÁ INCOMPLETA.
+ *
+ * O papel sobrevive à tela: uma modalidade que não carregou não sai na folha, e
+ * a folha vai para a mesa da organização parecendo completa. O aviso, por isso,
+ * é o único da plataforma que PRECISA ser impresso junto.
+ */
+describe('⭐ a folha impressa não sai incompleta em silêncio', () => {
+  const PRINT = 'src/pages/PrintTournament.jsx';
+
+  it('⭐ o aviso de incompleto existe', () => {
+    expect(semComentarios(ler(PRINT))).toMatch(/INCOMPLETA|Incompleto/);
+  });
+
+  it('⭐ e ele NÃO é escondido na impressão', () => {
+    const src = ler(PRINT);
+    const aviso = src.slice(src.indexOf('Esta folha está INCOMPLETA'));
+    const bloco = aviso.slice(0, aviso.indexOf('</p>'));
+    // `print:hidden` no BOTÃO é correto (não se clica no papel); no texto do
+    // aviso seria devolver o defeito.
+    expect(bloco.split('<button')[0], 'o aviso de folha incompleta some na impressão')
+      .not.toMatch(/print:hidden/);
+  });
+
+  it('⭐ e o "Carregando…" eterno acabou', () => {
+    const src = semComentarios(ler(PRINT));
+    expect(src, 'a tela de impressão voltou a ficar em "Carregando…" para sempre')
+      .toMatch(/if\s*\(\s*isLoading\s*\)/);
   });
 });

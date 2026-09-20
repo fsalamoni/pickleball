@@ -81,6 +81,7 @@ import {
 import { forecastAmericanoLiveMatches } from '@/modules/games/domain/americanoLive';
 import { telaoConnectionState } from '@/modules/games/domain/telaoConnection';
 import { useWakeLock } from '@/core/lib/useWakeLock';
+import { useRelogio } from '@/core/lib/useRelogio';
 
 /** De quanto em quanto tempo o painel se atualiza sozinho. */
 const REFRESH_MS = 15_000;
@@ -93,21 +94,6 @@ const REFRESH_MS = 15_000;
 const RECENTES_AO_VIVO = 12;
 
 /* -------------------------------- helpers -------------------------------- */
-
-function useRelogio() {
-  const [agora, setAgora] = useState(() => new Date());
-  useEffect(() => {
-    const t = setInterval(() => setAgora(new Date()), 30_000);
-    return () => clearInterval(t);
-  }, []);
-  // O INSTANTE vai junto: é ele que mede há quanto tempo o painel não
-  // atualiza. Um relógio só para exibir a hora deixaria o aviso de "sem
-  // conexão" congelado no momento em que a falha começou.
-  return {
-    hora: agora.toLocaleTimeString('pt-BR', { hour: '2-digit', minute: '2-digit' }),
-    ms: agora.getTime(),
-  };
-}
 
 /**
  * Tela cheia do navegador — numa TV, tirar a barra de endereço muda tudo.

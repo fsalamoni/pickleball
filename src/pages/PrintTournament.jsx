@@ -12,14 +12,25 @@ import { MODALITY_FORMAT_LABELS } from '@/modules/tournament/domain/constants';
 /**
  * Versão para impressão (A4) das chaves, grupos e ranking de um torneio.
  * Inspirado em coderobotics e bracketmaker.app.
+ *
+ * ⚠️ Aqui a falha silenciosa é a mais cara da plataforma: **o papel sobrevive à
+ * tela**. Uma modalidade que não carregou simplesmente não sai na folha, e a
+ * folha vai para a mesa da organização parecendo completa — ninguém tem como
+ * desconfiar de uma ausência. Por isso, quando alguma consulta falha, o aviso
+ * é IMPRESSO junto (nunca `print:hidden`): é melhor a folha dizer que está
+ * incompleta do que enganar quem a estiver usando para chamar jogo.
  */
 export default function PrintTournament() {
   const { tournamentId } = useParams();
-  const { data: tournament } = useQuery({
+  const {
+    data: tournament, isLoading, isError: falhouTorneio, refetch: recarregarTorneio,
+  } = useQuery({
     queryKey: ['print', 'tournament', tournamentId],
     queryFn: () => getTournament(tournamentId),
   });
-  const { data: modalities = [] } = useQuery({
+  const {
+    data: modalities = [], isError: falhouModalidades, refetch: recarregarModalidades,
+  } = useQuery({
     queryKey: ['print', 'modalities', tournamentId],
     queryFn: () => listModalities(tournamentId),
     enabled: !!tournament,
@@ -30,8 +41,38 @@ export default function PrintTournament() {
     return () => document.body.classList.remove('print-mode');
   }, []);
 
-  if (!tournament) {
+  if (isLoading) {
     return <p className="p-8 text-sm text-gray-500">Carregando…</p>;
+  }
+
+  // ⚠️ Antes, QUALQUER desfecho sem torneio ficava em "Carregando…" para
+  // sempre: quem ia imprimir as chaves minutos antes do jogo encarava uma
+  // reticência eterna, sem saber que havia falhado e sem nada em que clicar.
+  if (falhouTorneio) {
+    return (
+      <div className="p-8 text-sm">
+        <p className="font-semibold text-ink">Não foi possível carregar o torneio</p>
+        <p className="mt-1 text-gray-500">A conexão falhou. O link continua valendo.</p>
+        <button
+          type="button"
+          onClick={() => recarregarTorneio()}
+          className="mt-3 rounded border px-3 py-1.5 font-semibold hover:bg-paper"
+        >
+          Tentar de novo
+        </button>
+      </div>
+    );
+  }
+
+  if (!tournament) {
+    return (
+      <div className="p-8 text-sm">
+        <p className="font-semibold text-ink">Torneio não encontrado</p>
+        <p className="mt-1 text-gray-500">
+          Confira o link recebido — ele pode apontar para um torneio removido.
+        </p>
+      </div>
+    );
   }
 
   return (
@@ -54,6 +95,20 @@ export default function PrintTournament() {
           <Printer className="w-4 h-4" /> Imprimir
         </button>
       </header>
+
+      {falhouModalidades && (
+        <p className="mb-4 rounded border border-amber-400 bg-amber-50 px-3 py-2 text-xs font-semibold text-amber-900">
+          ⚠ Esta folha está INCOMPLETA: a lista de modalidades não carregou.
+          Recarregue a página antes de usá-la.{' '}
+          <button
+            type="button"
+            onClick={() => recarregarModalidades()}
+            className="print:hidden underline"
+          >
+            Tentar de novo
+          </button>
+        </p>
+      )}
 
       {modalities.map((m) => (
         <PrintModality key={m.id} modality={m} />
@@ -84,12 +139,12 @@ function roundLabel(m) {
 }
 
 function PrintModality({ modality }) {
-  const { data: matches = [] } = useQuery({
+  const { data: matches = [], isError: falhouJogos } = useQuery({
     queryKey: ['print', 'matches', modality.id, 'all'],
     queryFn: () => listAllMatchesForModality(modality.id),
   });
   const multiPhase = matches.some((m) => (m.stage_index ?? 0) > 0);
-  const { data: rankingData } = useQuery({
+  const { data: rankingData, isError: falhouRanking } = useQuery({
     queryKey: ['print', 'ranking-structured', modality.id],
     queryFn: () => computeModalityRankingStructured(modality.id),
   });
@@ -98,7 +153,7 @@ function PrintModality({ modality }) {
     [rankingData],
   );
   const showRankingPhaseHeaders = rankingPhases.length > 1;
-  const { data: registrations = [] } = useQuery({
+  const { data: registrations = [], isError: falhouInscritos } = useQuery({
     queryKey: ['print', 'registrations', modality.id],
     queryFn: () => listRegistrations(modality.id),
   });
@@ -126,6 +181,14 @@ function PrintModality({ modality }) {
   const hasSchedule = matches.some((m) => m.court || m.scheduled_at);
   const hasGroups = matches.some((m) => m.group);
 
+  // Sem os inscritos, `renderSide` cai no `id`: a folha sairia com
+  // identificadores do banco no lugar dos nomes de quem vai jogar.
+  const partesQueFalharam = [
+    falhouJogos && 'os jogos',
+    falhouRanking && 'a classificação',
+    falhouInscritos && 'os nomes dos inscritos',
+  ].filter(Boolean);
+
   return (
     <section className="mb-6 break-inside-avoid print:break-after-page">
       <h2 className="font-semibold text-sm border-b border-ink pb-1 mb-2">
@@ -134,6 +197,12 @@ function PrintModality({ modality }) {
           {MODALITY_FORMAT_LABELS[modality.format] || modality.format}
         </span>
       </h2>
+
+      {partesQueFalharam.length > 0 && (
+        <p className="mb-2 rounded border border-amber-400 bg-amber-50 px-2 py-1 text-[11px] font-semibold text-amber-900">
+          ⚠ Incompleto: não carregou {partesQueFalharam.join(' nem ')}.
+        </p>
+      )}
 
       {rankingPhases.length > 0 && (
         <div className="mb-3 space-y-3">

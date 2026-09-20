@@ -326,3 +326,40 @@ separam funcionar de parecer funcionar:
   `suportado` e `ativo` são separados: o indicador de "tela acesa" só aparece
   quando está valendo de fato. Prometer e não cumprir faz alguém deixar o
   tablet sozinho e voltar para uma tela preta.
+
+---
+
+## 5. São DOIS telões, e eles seguem a mesma regra (Onda AZ)
+
+A plataforma tem dois telões:
+
+| Telão | Rota | Arquivo |
+|---|---|---|
+| Dia de jogo | `/dia-de-jogo/:id/telao` | `src/v2/pages/V2GameDayTelao.jsx` |
+| Torneio | `/torneios/:id/telao` | `src/pages/Telao.jsx` |
+
+A Onda AX endureceu **só o primeiro**. O segundo ficou para trás por um motivo
+que não tem nada a ver com o problema: ele é uma tela V1, roteada direto em
+`src/App.jsx`, fora da árvore do V2 — e a varredura tinha sido feita por pasta.
+
+Ele tinha os mesmos defeitos, com a mesma plateia:
+
+1. **`isError` era ignorado por completo** (`const { data, isLoading }`). Numa
+   falha o quadro sumia e as três seções afirmavam *"Nenhum jogo em andamento"*,
+   *"Sem próximos jogos"*, *"Sem resultados ainda"* — com o torneio rolando.
+2. **O pulso mentia**: `Radio` com `animate-pulse` e o texto "Atualiza
+   automaticamente", fixos, mesmo com o ciclo de 20 s morto havia meia hora.
+3. **Sem `wakeLock`**: a TV apagava sozinha.
+4. **Sem estado de erro**: sem dado nenhum, o título caía para "Torneio" e a
+   tela mostrava um quadro vazio em vez de dizer o que houve.
+
+Os três comportamentos agora saem das **mesmas peças** do telão do dia de jogo
+— `telaoConnectionState`, `useWakeLock`, `useRelogio` —, e o guarda
+(`src/core/guards/falhaNaoEVazio.test.js`) varre **os dois** arquivos numa lista
+só. Telão novo entra nessa lista.
+
+> ⚠️ **`telaoConnectionState` mora em `modules/games/domain/`, mas não é do dia
+> de jogo**: é a política de conexão **do telão**, e serve aos dois. Antes de
+> duplicá-la para o torneio, releia `docs/27-FALHA-NAO-E-VAZIO.md` §8.3 — o
+> risco de cópia aqui é dar tolerâncias diferentes à mesma regra sem nada na
+> tela denunciando.
