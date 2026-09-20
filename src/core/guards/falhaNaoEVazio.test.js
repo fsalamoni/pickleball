@@ -41,6 +41,13 @@ const TELAS = [
   ['modalidade', 'src/v2/pages/V2ModalityPage.jsx'],
   ['sorteio (fase única)', 'src/v2/components/tournament/V2TournamentDrawTab.jsx'],
   ['sorteio (várias fases)', 'src/modules/tournament/components/MultiPhaseDrawBlock.jsx'],
+  // Onda AW — o resto da classe.
+  ['resultados do torneio', 'src/v2/components/tournament/V2MatchesBlock.jsx'],
+  ['operação do torneio', 'src/v2/components/tournament/V2TournamentOpsTab.jsx'],
+  ['convites abertos', 'src/v2/pages/V2OpenGames.jsx'],
+  ['dia de jogo — grade', 'src/v2/components/games/AthleteGameDayOrganizer.jsx'],
+  ['dia de jogo — Play', 'src/v2/components/games/AthletePlayOrganizer.jsx'],
+  ['dia de jogo — Americano aprimorado', 'src/v2/components/games/AthleteAmericanoLiveOrganizer.jsx'],
 ];
 
 describe('⭐ toda tela que afirma "não existe" sabe distinguir falha', () => {
@@ -114,5 +121,34 @@ describe('⭐ o resumo do dia de jogo chega às três origens', () => {
   it('⭐ e o resumo sai do domínio, não de texto solto na tela', () => {
     expect(semComentarios(ler('src/v2/components/games/GameDayRulesCard.jsx')))
       .toContain('describeGameDayRules');
+  });
+});
+
+/**
+ * ⭐ O SORTEIO DO DIA DE JOGO TAMBÉM NÃO AGE SOBRE ESTADO DESCONHECIDO.
+ *
+ * Aqui o estrago é outro, e mais silencioso que no torneio: o `orderBase` do
+ * sorteio sai dos jogos JÁ carregados. Com a consulta falhando ele vale 0, e a
+ * rodada nova nasce com a mesma numeração das que já aconteceram — duas
+ * "rodada 1" no mesmo dia, sem erro nenhum na tela.
+ */
+describe('⭐ o dia de jogo não sorteia sobre o que a tela não viu', () => {
+  const ORGANIZADORES = [
+    'src/v2/components/games/AthleteGameDayOrganizer.jsx',
+    'src/v2/components/games/AthletePlayOrganizer.jsx',
+    'src/v2/components/games/AthleteAmericanoLiveOrganizer.jsx',
+  ];
+
+  ORGANIZADORES.forEach((caminho) => {
+    it(`⭐ ${caminho.split('/').pop()} esconde as ações quando o estado não carregou`, () => {
+      const src = semComentarios(ler(caminho));
+      expect(src, 'as ações voltaram a aparecer sobre estado desconhecido')
+        .toMatch(/!falhouEstado|!falhouJogos/);
+    });
+  });
+
+  it('⭐ e o `orderBase` continua saindo dos jogos carregados (é por isso que a trava existe)', () => {
+    const src = semComentarios(ler('src/modules/games/services/gameDayService.js'));
+    expect(src).toContain('orderBase');
   });
 });

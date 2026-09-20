@@ -112,6 +112,32 @@ terminou **e** não falhou.
 
 ---
 
+## 4b. A classe fechada (Onda AW)
+
+A primeira passada cobriu as sete telas onde a mentira era mais cara. A
+segunda fechou o resto do dia de jogo e do torneio:
+
+| Tela | O que afirmava numa falha |
+|---|---|
+| Resultados do torneio | *"Nenhum jogo gerado ainda"* — na aba de resultados, com os jogos acontecendo |
+| Operação do torneio | *"Nenhuma modalidade cadastrada ainda"* |
+| Convites abertos | *"Nenhum convite aberto"* |
+| Dia de jogo (os três organizadores) | *"Nenhum participante ainda"* — com doze pessoas na quadra |
+
+### 🐞 E o dia de jogo tinha a própria versão do sorteio cego
+
+No torneio, sortear sobre estado desconhecido **apagava** jogos disputados. No
+dia de jogo o estrago é outro, e mais silencioso: o **`orderBase`** do sorteio
+sai dos jogos **já carregados**. Com a consulta falhando ele vale `0`, e a
+rodada nova nasce com a **mesma numeração** das que já aconteceram — duas
+"rodada 1" no mesmo dia, sem erro nenhum na tela.
+
+A regra aplicada é a mesma: **comando sobre estado desconhecido não é
+renderizado**. Nos três organizadores, `canManage` passou a depender de
+`!falhouEstado`, e a seção de jogos esconde as ações quando a lista não chegou.
+
+---
+
 ## 5. Ao mexer nesta área, cuidado com
 
 1. **Não escreva `const { data = [] } = useX()` e conclua algo do vazio.** Se a

@@ -10,7 +10,7 @@ import { ConfirmDialog } from '@/components/ui/confirm-dialog';
 import {
   Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription, DialogFooter,
 } from '@/components/ui/dialog';
-import { V2Button, V2Badge, V2Input, V2Select } from '@/v2/ui/primitives';
+import { V2Button, V2Badge, V2Input, V2Select, V2ErrorState } from '@/v2/ui/primitives';
 import V2CollapsibleCard from '@/v2/ui/V2CollapsibleCard';
 import { GAME_DAY_SECTION } from '@/v2/components/games/gameDaySections';
 import GameDayAdminsCard from '@/v2/components/games/GameDayAdminsCard';
@@ -51,16 +51,35 @@ import {
  */
 export default function AthleteAmericanoLiveOrganizer({ gameDay }) {
   const { user } = useAuth();
-  const { data: participants = [], isLoading } = useGameDayParticipants(gameDay.id);
-  const { data: games = [] } = useGameDayGames(gameDay.id);
+  const {
+    data: participants = [], isLoading, isError: erroParticipantes, refetch: recarregarParticipantes,
+  } = useGameDayParticipants(gameDay.id);
+  const {
+    data: games = [], isError: erroJogos, refetch: recarregarJogos,
+  } = useGameDayGames(gameDay.id);
+  const falhouEstado = erroParticipantes || erroJogos;
+  const recarregarEstado = () => { recarregarParticipantes(); recarregarJogos(); };
 
   // Quem pode o quê vem de um lugar só: o hook soma criador, administrador
   // nomeado, gestor da ARENA (dia de jogo de arena) e o modo de gestão.
-  const { podeGerenciar: canManage, podeConfigurar: ehCriador } = useGameDayRoles(gameDay, participants);
+  const { podeGerenciar, podeConfigurar: ehCriador } = useGameDayRoles(gameDay, participants);
+  // ⚠️ Comando sobre estado DESCONHECIDO não é renderizado.
+  const canManage = podeGerenciar && !falhouEstado;
   const view = useMemo(() => americanoLiveView({ participants, games }), [participants, games]);
 
   return (
     <div className="space-y-5">
+      {/* ⚠️ Consulta que FALHA devolve lista vazia, e aqui vazio quer dizer "o dia
+          está vazio". Pior: o sorteio agiria sobre uma lista que a tela não
+          viu. Ver `docs/27-FALHA-NAO-E-VAZIO.md`. */}
+      {falhouEstado && (
+        <V2ErrorState
+          inline
+          title="Não foi possível carregar o dia de jogo"
+          description="Participantes e partidas não chegaram. As ações ficam fora do ar até a lista voltar, para não agir sobre o que a tela não viu."
+          onRetry={recarregarEstado}
+        />
+      )}
       {ehCriador && <GameDayAdminsCard gameDay={gameDay} participants={participants} />}
       <ProgressSection participants={participants} games={games} />
       <PlayParticipantsSection

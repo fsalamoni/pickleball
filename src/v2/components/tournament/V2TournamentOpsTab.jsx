@@ -1,6 +1,6 @@
 import React, { useMemo } from 'react';
 import { AlertTriangle, CalendarClock, CheckCircle2, Hourglass, ListChecks, Users, Wallet } from 'lucide-react';
-import { V2Surface } from '@/v2/ui/primitives';
+import { V2Surface, V2ErrorState} from '@/v2/ui/primitives';
 import {
   useModalities,
   useRegistrationsByTournament,
@@ -41,7 +41,9 @@ function ProgressBar({ pct }) {
  * jogos, com alertas de pendências.
  */
 export default function V2TournamentOpsTab({ tournament }) {
-  const { data: modalities = [] } = useModalities(tournament.id);
+  const {
+    data: modalities = [], isError: falhouModalidades, refetch: recarregarModalidades,
+  } = useModalities(tournament.id);
   const { data: registrations = [] } = useRegistrationsByTournament(tournament.id);
   const { data: matches = [] } = useMatchesByTournament(tournament.id);
 
@@ -93,7 +95,15 @@ export default function V2TournamentOpsTab({ tournament }) {
       <V2Surface className="p-5 sm:p-6">
         <h4 className="font-display text-lg font-bold text-ink">Por modalidade</h4>
         {ops.perModality.length === 0 ? (
-          <p className="mt-3 text-sm text-gray-500">Nenhuma modalidade cadastrada ainda.</p>
+          falhouModalidades ? (
+            <V2ErrorState
+              inline
+              className="mt-3"
+              title="Não foi possível carregar as modalidades"
+              description="Elas continuam lá — a conexão é que falhou."
+              onRetry={recarregarModalidades}
+            />
+          ) : <p className="mt-3 text-sm text-gray-500">Nenhuma modalidade cadastrada ainda.</p>
         ) : (
           <ul className="mt-4 space-y-4">
             {ops.perModality.map((entry) => (

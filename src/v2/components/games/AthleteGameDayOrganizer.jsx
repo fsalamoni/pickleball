@@ -14,7 +14,7 @@ import { ConfirmDialog } from '@/components/ui/confirm-dialog';
 import {
   Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription, DialogFooter,
 } from '@/components/ui/dialog';
-import { V2Button, V2Badge } from '@/v2/ui/primitives';
+import { V2Button, V2Badge, V2ErrorState} from '@/v2/ui/primitives';
 import V2CollapsibleCard from '@/v2/ui/V2CollapsibleCard';
 import { GAME_DAY_SECTION } from '@/v2/components/games/gameDaySections';
 import GameDayAdminsCard from '@/v2/components/games/GameDayAdminsCard';
@@ -46,17 +46,30 @@ import {
  * de jogo dos clubes, adaptado ao dia de jogo do atleta (sem clube dono).
  */
 export default function AthleteGameDayOrganizer({ gameDay }) {
-  const { data: participants = [], isLoading } = useGameDayParticipants(gameDay.id);
+  const {
+    data: participants = [], isLoading, isError: erroParticipantes, refetch: recarregarParticipantes,
+  } = useGameDayParticipants(gameDay.id);
 
   // Quem pode o quê vem de um lugar só: o hook soma criador, administrador
   // nomeado, gestor da ARENA (dia de jogo de arena) e o modo de gestão.
-  const { podeGerenciar: podeGerenciar, podeConfigurar: ehCriador } = useGameDayRoles(gameDay, participants);
+  const { podeGerenciar, podeConfigurar: ehCriador } = useGameDayRoles(gameDay, participants);
   // Publicar no ranking da plataforma continua SÓ do criador: a regra de
   // `club_event_games` amarra o espelho a ele, então abrir aqui só produziria
   // um botão que falha.
 
   return (
     <div className="space-y-5">
+      {/* ⚠️ Falha devolve lista vazia, e aqui vazio quer dizer "ninguém veio":
+          a tela diria "Nenhum participante ainda" com doze pessoas na quadra.
+          Ver `docs/27-FALHA-NAO-E-VAZIO.md`. */}
+      {erroParticipantes && (
+        <V2ErrorState
+          inline
+          title="Não foi possível carregar os participantes"
+          description="A lista não chegou. Quem está inscrito continua inscrito — tente de novo."
+          onRetry={recarregarParticipantes}
+        />
+      )}
       {ehCriador && <GameDayAdminsCard gameDay={gameDay} participants={participants} />}
       <ParticipantsSection gameDay={gameDay} participants={participants} isLoading={isLoading} isOwner={podeGerenciar} />
       <GamesSection gameDay={gameDay} participants={participants} isOwner={podeGerenciar} />
@@ -273,7 +286,12 @@ function AddAthletesDialog({ open, onClose, pool, onAdd }) {
 /* --------------------------------- Games --------------------------------- */
 
 function GamesSection({ gameDay, participants, isOwner }) {
-  const { data: games = [], isLoading } = useGameDayGames(gameDay.id);
+  // ⚠️ Sem os jogos a tela não sabe o que já existe: o `orderBase` do sorteio
+  // sai daqui, e com a lista ausente ele vale 0 — a numeração das rodadas
+  // recomeçaria por cima das que já aconteceram.
+  const {
+    data: games = [], isLoading, isError: falhouJogos, refetch: recarregarJogos,
+  } = useGameDayGames(gameDay.id);
   const appendGames = useAppendGameDayGames(gameDay.id);
   const addGame = useAddGameDayGame(gameDay.id);
   const clearGames = useClearGameDayGames(gameDay.id);
@@ -428,7 +446,7 @@ function GamesSection({ gameDay, participants, isOwner }) {
       count={games.length}
       sectionId={GAME_DAY_SECTION.GAMES}
       summary={resumoJogos}
-      actions={isOwner && (
+      actions={isOwner && !falhouJogos && (
         <>
           <V2Button size="sm" variant="ghost" onClick={() => setManualOpen(true)} disabled={participants.length < 2}>
             <Plus className="mr-1.5 h-4 w-4" /> Inserir partida
@@ -458,6 +476,13 @@ function GamesSection({ gameDay, participants, isOwner }) {
 
         {isLoading ? (
           <Skeleton className="h-24 rounded-lg" />
+        ) : falhouJogos ? (
+          <V2ErrorState
+            inline
+            title="Não foi possível carregar os jogos"
+            description="O que já foi sorteado continua lá. Até a lista voltar, sortear ficaria por cima do que a tela não viu."
+            onRetry={recarregarJogos}
+          />
         ) : games.length === 0 ? (
           <EmptyState
             icon={ListChecks}

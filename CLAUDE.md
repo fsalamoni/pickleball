@@ -464,6 +464,28 @@ chore(deps): bump firebase to 12.x
 >
 > **Destaques por onda**:
 >
+> - **Onda AW — A classe fechada** (2026-09-20): a AV cobriu as sete telas onde
+>   a mentira era mais cara; esta fecha o resto do dia de jogo e do torneio —
+>   resultados do torneio (*"Nenhum jogo gerado ainda"* na aba de RESULTADOS,
+>   com os jogos acontecendo), operação, convites abertos e os três
+>   organizadores de dia de jogo (*"Nenhum participante ainda"* com doze
+>   pessoas na quadra).
+>
+>   **🐞 E o dia de jogo tinha a própria versão do sorteio cego.** No torneio,
+>   sortear sobre estado desconhecido APAGAVA jogos disputados; aqui o estrago
+>   é mais silencioso: o **`orderBase`** sai dos jogos já carregados, então com
+>   a consulta falhando ele vale 0 e a rodada nova nasce com a **mesma
+>   numeração** das que já aconteceram — duas "rodada 1" no mesmo dia, sem erro
+>   nenhum na tela. Mesma regra da AV: comando sobre estado desconhecido não é
+>   renderizado.
+>
+>   De quebra, um falso positivo que vale registrar: 38 diálogos pareciam sem
+>   proteção de altura (o gotcha do rodapé cortado em paisagem), mas
+>   `DialogContent` e `AlertDialogContent` **já trazem** `max-h-[90dvh]
+>   overflow-y-auto` na base — conferido antes de "corrigir" 38 arquivos à toa.
+>
+>   **Banco: zero.**
+>
 > - **Onda AV — Falha não é lista vazia** (2026-09-20): auditoria do dia de
 >   jogo com a lente da usabilidade, e o achado é uma classe inteira.
 >
@@ -1407,7 +1429,7 @@ chore(deps): bump firebase to 12.x
 
 | Métrica | Valor | Delta do início do agente |
 |---|---|---|
-| **Testes Vitest** | **4829 passing** (284 arquivos) + 218 asserções de regras (Vitest) + 85 do dia de jogo no emulador | +4421 (era 408) |
+| **Testes Vitest** | **4845 passing** (284 arquivos) + 218 asserções de regras (Vitest) + 85 do dia de jogo no emulador | +4437 (era 408) |
 | **Lint errors** | 0 | era 30+ |
 | **Módulos** | 21 (+`help` — conteúdo dos tutoriais em tela) (`games` e `legal` saíram como `src/modules/` mas continuam como pastas oficiais — **rating virou módulo oficial** com domain/services/hooks/components) | +4 (coaches, circuits, games, legal) |
 | **V2 pages** | 82 (+V2GameDayTelao — telão, fora do V2Layout; +V2Help — central de ajuda; +V2ArenaKiosk — totem da recepção, também fora do V2Layout; +V2ArenaCheckin; +V2ArenaAttendance) | +58 |

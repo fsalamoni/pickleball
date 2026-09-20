@@ -17,8 +17,7 @@ import {
   V2EmptyState,
   V2PageIntro,
   V2Skeleton,
-  V2Surface,
-} from '@/v2/ui/primitives';
+  V2Surface, V2ErrorState} from '@/v2/ui/primitives';
 
 function levelLabel(code) {
   if (!code) return null;
@@ -78,7 +77,9 @@ function OpenGameCard({ g, gameDayOn, joining, onJoin, muted }) {
 export default function V2OpenGames() {
   const { user } = useAuth();
   const navigate = useNavigate();
-  const { data: games = [], isLoading } = useOpenGames();
+  const {
+    data: games = [], isLoading, isError: falhouConvites, refetch: recarregarConvites,
+  } = useOpenGames();
   const { data: myGames = [] } = useMyOpenGames();
   const closeGame = useCloseOpenGame();
   const gameDayOn = true;
@@ -149,6 +150,14 @@ export default function V2OpenGames() {
         <div className="grid gap-6 sm:grid-cols-2 xl:grid-cols-3">
           {[1, 2, 3].map((i) => <V2Skeleton key={i} className="h-64 rounded-4xl" />)}
         </div>
+      ) : falhouConvites ? (
+        <V2Surface>
+          <V2ErrorState
+            title="Não foi possível carregar os convites"
+            description="A conexão falhou. Os convites publicados continuam lá — tente de novo."
+            onRetry={recarregarConvites}
+          />
+        </V2Surface>
       ) : upcoming.length === 0 && past.length === 0 ? (
         <V2Surface>
           <V2EmptyState

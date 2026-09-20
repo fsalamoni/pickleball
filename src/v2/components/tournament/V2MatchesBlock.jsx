@@ -27,7 +27,7 @@ import {
 } from '@/modules/tournament/domain/constants';
 import { formatScoringSummary, resolveStageScoringConfig } from '@/modules/tournament/domain/scoring';
 import { normalizePhases } from '@/modules/tournament/domain/phases';
-import { V2Badge, V2Button, V2Surface } from '@/v2/ui/primitives';
+import { V2Badge, V2Button, V2Surface, V2ErrorState} from '@/v2/ui/primitives';
 import V2Collapsible from './V2Collapsible';
 import { cn } from '@/core/lib/utils';
 import V2BracketTree from '@/v2/components/tournament/V2BracketTree';
@@ -661,7 +661,11 @@ function CourtsideScoreDialog({ match, modalityId, scoringConfig, labelById, onC
 }
 
 export function V2ModalityMatches({ tournament, modality, isAdmin = false }) {
-  const { data: matches = [] } = useAllModalityMatches(modality.id);
+  // ⚠️ Falha devolve lista vazia, e aqui vazio afirma "não foi sorteado ainda"
+  // — na ABA DE RESULTADOS, com os jogos acontecendo. Ver docs/27.
+  const {
+    data: matches = [], isError: falhouJogos, refetch: recarregarJogos,
+  } = useAllModalityMatches(modality.id);
   const { data: registrations = [] } = useRegistrations(modality.id);
   const { data: teamRegistrations = [] } = useTeamRegistrations(
     modality.team_config ? modality.id : null,
@@ -706,7 +710,9 @@ export function V2ModalityMatches({ tournament, modality, isAdmin = false }) {
   const showPhaseHeaders = phases.length > 1;
 
   const doneCount = matches.filter((m) => m.status === MATCH_STATUS.FINISHED || m.status === MATCH_STATUS.WALKOVER).length;
-  const subtitle = matches.length === 0 ? 'Nenhum jogo gerado ainda' : `${doneCount}/${matches.length} jogos concluídos`;
+  const subtitle = falhouJogos
+    ? 'Não foi possível carregar os jogos'
+    : (matches.length === 0 ? 'Nenhum jogo gerado ainda' : `${doneCount}/${matches.length} jogos concluídos`);
 
   const bracketTreeOn = true;
   // A mesma visão em colunas serve para dois casos diferentes: as FASES FINAIS
@@ -729,7 +735,14 @@ export function V2ModalityMatches({ tournament, modality, isAdmin = false }) {
         </div>
       )}
       {matches.length === 0 ? (
-        <p className="text-sm text-gray-500">Nenhum jogo gerado ainda.</p>
+        falhouJogos ? (
+          <V2ErrorState
+            inline
+            title="Não foi possível carregar os jogos"
+            description="Eles continuam lá — a conexão é que falhou."
+            onRetry={recarregarJogos}
+          />
+        ) : <p className="text-sm text-gray-500">Nenhum jogo gerado ainda.</p>
       ) : showTree ? (
         <V2BracketTree matches={matches} labelById={labelById} />
       ) : (

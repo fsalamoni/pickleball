@@ -14,7 +14,7 @@ import { ConfirmDialog } from '@/components/ui/confirm-dialog';
 import {
   Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription, DialogFooter,
 } from '@/components/ui/dialog';
-import { V2Button, V2Badge } from '@/v2/ui/primitives';
+import { V2Button, V2Badge, V2ErrorState } from '@/v2/ui/primitives';
 import V2CollapsibleCard from '@/v2/ui/V2CollapsibleCard';
 import { GAME_DAY_SECTION } from '@/v2/components/games/gameDaySections';
 import GameDayAdminsCard from '@/v2/components/games/GameDayAdminsCard';
@@ -52,8 +52,14 @@ import {
  */
 export default function AthletePlayOrganizer({ gameDay }) {
   const { user } = useAuth();
-  const { data: participants = [], isLoading } = useGameDayParticipants(gameDay.id);
-  const { data: games = [] } = useGameDayGames(gameDay.id);
+  const {
+    data: participants = [], isLoading, isError: erroParticipantes, refetch: recarregarParticipantes,
+  } = useGameDayParticipants(gameDay.id);
+  const {
+    data: games = [], isError: erroJogos, refetch: recarregarJogos,
+  } = useGameDayGames(gameDay.id);
+  const falhouEstado = erroParticipantes || erroJogos;
+  const recarregarEstado = () => { recarregarParticipantes(); recarregarJogos(); };
 
   // Visão do ORGANIZADOR: gestão completa. É renderizada para quem PODE
   // gerenciar (ver V2GameDays) — o criador, quem ele nomeou, ou qualquer
@@ -61,7 +67,11 @@ export default function AthletePlayOrganizer({ gameDay }) {
   // AthletePlayParticipant, que só cuida da própria participação.
   // Quem pode o quê vem de um lugar só: o hook soma criador, administrador
   // nomeado, gestor da ARENA (dia de jogo de arena) e o modo de gestão.
-  const { podeGerenciar: canManage, podeConfigurar: ehCriador } = useGameDayRoles(gameDay, participants);
+  const { podeGerenciar, podeConfigurar: ehCriador } = useGameDayRoles(gameDay, participants);
+  // ⚠️ Comando sobre estado DESCONHECIDO não é renderizado — a mesma regra do
+  // dia de jogo para comando sem atribuição. Com a lista incompleta, sortear
+  // ou substituir agiria sobre quem a tela não viu.
+  const canManage = podeGerenciar && !falhouEstado;
 
   // A ordem de participação exibida tem de ser a ordem REAL de entrada em
   // quadra. Com o rodízio equilibrado, os primeiros da fila por tempo de
@@ -79,6 +89,20 @@ export default function AthletePlayOrganizer({ gameDay }) {
 
   return (
     <div className="space-y-5">
+      {/* ⚠️ Consulta que FALHA devolve lista vazia, e aqui vazio quer dizer "o dia
+          está vazio": a tela diria "Nenhum participante ainda" com doze pessoas
+          na quadra. Pior, o sorteio agiria sobre uma lista que ela não conhece —
+          o `orderBase` sai dos jogos carregados, e sem eles a numeração das
+          rodadas recomeça por cima das que já existem.
+          Ver `docs/27-FALHA-NAO-E-VAZIO.md`. */}
+      {falhouEstado && (
+        <V2ErrorState
+          inline
+          title="Não foi possível carregar o dia de jogo"
+          description="Participantes e partidas não chegaram. As ações ficam fora do ar até a lista voltar, para não agir sobre o que a tela não viu."
+          onRetry={recarregarEstado}
+        />
+      )}
       {ehCriador && <GameDayAdminsCard gameDay={gameDay} participants={participants} />}
       <PlayParticipantsSection
         gameDay={gameDay}
