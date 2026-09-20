@@ -4,11 +4,14 @@
  * O ranking é calculado por modalidade, consolidando todos os jogos
  * finalizados (de todas as fases). A classificação é por número de vitórias.
  *
- * Critérios de desempate (em ordem):
+ * Critérios de desempate (em ordem) — os do regulamento (USA Pickleball
+ * 15.B.4), com a fonte única em `tiebreak.js`:
  *   1. Maior número de vitórias
- *   2. Saldo de pontos (pontos a favor − pontos contra)
- *   3. Maior número de pontos a favor
- *   4. Menor número de pontos sofridos
+ *   2. CONFRONTO DIRETO entre os empatados
+ *   3. Saldo de pontos (pontos a favor − pontos contra)
+ *   4. Saldo de pontos NO CONFRONTO DIRETO
+ *   5. Maior número de pontos a favor
+ *   6. Menor número de pontos sofridos
  *
  * Para modalidades em formato Americana (rotação), os créditos de cada jogo
  * são distribuídos individualmente para todos os jogadores das duas duplas
@@ -16,6 +19,7 @@
  */
 
 import { getMatchResult } from './scoring.js';
+import { buildHeadToHead, rankByOfficialCriteria } from './tiebreak.js';
 
 function emptyStats(id) {
   return {
@@ -109,27 +113,49 @@ export function buildStandings(matches, participantIds, scoringConfig) {
 }
 
 /**
- * Ordena standings aplicando os critérios oficiais da plataforma:
- *   1. mais vitórias
- *   2. melhor saldo de pontos (PF − PC)
- *   3. mais pontos a favor (PF)
- *   4. menos pontos sofridos (PC)
+ * Índice de confrontos diretos a partir dos jogos, no formato que
+ * `tiebreak.js` espera. Exportado porque a progressão entre fases precisa do
+ * mesmo índice — e duas construções do mesmo índice divergiriam um dia.
  */
-export function rankStandings(standings) {
-  const cmp = (x, y) => {
-    if (y.wins !== x.wins) return y.wins - x.wins;
-    const xBalance = (x.points_for || 0) - (x.points_against || 0);
-    const yBalance = (y.points_for || 0) - (y.points_against || 0);
-    if (yBalance !== xBalance) return yBalance - xBalance;
-    if ((y.points_for || 0) !== (x.points_for || 0)) return (y.points_for || 0) - (x.points_for || 0);
-    if ((x.points_against || 0) !== (y.points_against || 0)) return (x.points_against || 0) - (y.points_against || 0);
-    return 0;
-  };
-  const sorted = standings.slice().sort(cmp);
+export function headToHeadFromMatches(matches, scoringConfig) {
+  return buildHeadToHead(matches, {
+    sideIds: (m, side) => getSideIds(m, side),
+    result: (m) => {
+      const cfg = typeof scoringConfig === 'function' ? scoringConfig(m) : scoringConfig;
+      const r = getMatchResult(m, cfg);
+      if (!r.finished || !r.winner) return null;
+      const pontos = (lado) => (m.team_confrontation
+        ? Number(m[lado === 'a' ? 'points_a' : 'points_b']) || 0
+        : (m.games || []).reduce((soma, g) => soma + (Number(g?.[lado]) || 0), 0));
+      return { winner: r.winner, pointsA: pontos('a'), pointsB: pontos('b') };
+    },
+  });
+}
+
+/**
+ * Ordena standings aplicando os critérios oficiais.
+ *
+ * `matches` é OPCIONAL: sem eles o confronto direto não pode ser calculado e a
+ * classificação sai exatamente como saía antes (vitórias → saldo → pontos a
+ * favor → pontos sofridos). Com eles, o confronto direto entra no lugar que o
+ * regulamento manda — logo depois das vitórias.
+ *
+ * @param {Array<object>} standings
+ * @param {{ matches?: Array<object>|null, scoringConfig?: any }} [options]
+ */
+export function rankStandings(standings, options = {}) {
+  const headToHead = options.matches
+    ? headToHeadFromMatches(options.matches, options.scoringConfig)
+    : null;
+  const sorted = rankByOfficialCriteria(standings || [], {
+    headToHead,
+    idOf: (r) => String(r?.participant_id ?? r?.id ?? ''),
+  });
   return sorted.map((s, i) => ({ ...s, position: i + 1 }));
 }
 
 export function buildRanking(matches, participantIds, scoringConfig) {
   const standings = buildStandings(matches, participantIds, scoringConfig);
-  return rankStandings(standings);
+  // Os jogos estão em mãos: o confronto direto entra na conta.
+  return rankStandings(standings, { matches, scoringConfig });
 }

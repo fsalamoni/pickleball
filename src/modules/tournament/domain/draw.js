@@ -126,10 +126,10 @@ export function distributeGroups(participantIds, options) {
  * @param {Array<{ name: string, participants: string[] }>} groups
  * @returns {Array<{ group: string, side_a: string, side_b: string, round: number }>}
  */
-export function buildGroupMatches(groups) {
+export function buildGroupMatches(groups, options = {}) {
   const matches = [];
   groups.forEach((g) => {
-    buildRoundRobinMatches(g.participants).forEach((m) => {
+    buildRoundRobinMatches(g.participants, { legs: options.legs }).forEach((m) => {
       matches.push({ group: g.name, side_a: m.side_a, side_b: m.side_b, round: m.round });
     });
   });
@@ -139,31 +139,52 @@ export function buildGroupMatches(groups) {
 /* ----------------------------- Round-robin (pontos corridos) ------------ */
 
 /**
- * Gera jogos para um torneio de pontos corridos (todos contra todos, ida).
- * Algoritmo round-robin "circle method".
+ * Gera jogos de todos-contra-todos pelo método do círculo.
+ *
+ * `legs` é ADITIVO e vale 1 por padrão — com 1, a saída é bit a bit a de
+ * sempre. Com 2 o grupo joga **ida e volta**: a segunda metade repete os
+ * mesmos confrontos com os lados invertidos, numerando as rodadas em
+ * seguida.
+ *
+ * Para que serve: um grupo de 3 dá só 2 jogos por atleta, e quem se inscreve
+ * num torneio não espera ir embora depois de dois jogos. Ida e volta sobe para
+ * 4 — é o que os circuitos fazem com grupo pequeno, e é a única forma de um
+ * número de inscritos que só permite grupos pequenos ainda entregar torneio.
+ *
  * @param {string[]} participantIds
+ * @param {{ legs?: number }} [options]
  * @returns {Array<{ side_a: string, side_b: string, round: number }>}
  */
-export function buildRoundRobinMatches(participantIds) {
+export function buildRoundRobinMatches(participantIds, options = {}) {
   const ps = participantIds.slice();
   if (ps.length % 2 === 1) ps.push('__BYE__');
   const n = ps.length;
   const rounds = n - 1;
   const half = n / 2;
-  const matches = [];
+  const ida = [];
   const ring = ps.slice();
   for (let r = 0; r < rounds; r += 1) {
     for (let i = 0; i < half; i += 1) {
       const a = ring[i];
       const b = ring[n - 1 - i];
       if (a !== '__BYE__' && b !== '__BYE__') {
-        matches.push({ side_a: a, side_b: b, round: r + 1 });
+        ida.push({ side_a: a, side_b: b, round: r + 1 });
       }
     }
     // rotaciona mantendo o primeiro fixo
     ring.splice(1, 0, ring.pop());
   }
-  return matches;
+
+  const legs = Math.max(1, Math.min(2, Math.floor(Number(options.legs)) || 1));
+  if (legs === 1 || ida.length === 0) return ida;
+
+  // Volta: mesmos confrontos, lados trocados, rodadas em seguida.
+  const volta = ida.map((m) => ({
+    side_a: m.side_b,
+    side_b: m.side_a,
+    round: m.round + rounds,
+  }));
+  return [...ida, ...volta];
 }
 
 /* ----------------------------- Mata-mata (chaves) ----------------------- */
@@ -190,69 +211,104 @@ export function nextPowerOfTwo(n) {
  *   slots: Array<string|null>,
  *   matches: Array<{ round: number, position: number, side_a: string|null, side_b: string|null, bye?: boolean }>,
  *   totalRounds: number,
+ *   byes: string[],
  * }}
  */
 export function buildKnockoutBracket(participantIds, options = {}) {
   const { seedCount = 0, seed = 'bracket' } = options;
-  const size = nextPowerOfTwo(participantIds.length);
-  const totalRounds = Math.log2(size);
+  const list = (participantIds || []).filter(Boolean);
+  const size = nextPowerOfTwo(list.length);
+  const totalRounds = size > 1 ? Math.log2(size) : 0;
   const rng = seededRng(seed);
   const slots = new Array(size).fill(null);
 
-  // posições "padrão" de cabeça-de-chave em uma chave de tamanho N:
-  // 1 vs (N), 2 vs (N-1), ... mas para evitar que se cruzem cedo,
-  // adotamos: seed k vai na posição seedSlot(k, size)
-  const seeds = participantIds.slice(0, seedCount);
-  seeds.forEach((p, idx) => {
-    const pos = seedSlot(idx + 1, size);
-    slots[pos] = p;
-  });
-
-  // Demais participantes são sorteados nos slots restantes.
-  const rest = shuffle(participantIds.slice(seedCount), rng);
-  for (let i = 0; i < slots.length && rest.length > 0; i += 1) {
-    if (slots[i] === null) {
-      slots[i] = rest.shift();
-    }
+  if (list.length < 2) {
+    return { slots: list.length ? [list[0]] : [], matches: [], totalRounds: 0, byes: [] };
   }
+
+  // TODO MUNDO entra pela POSIÇÃO CANÔNICA do seu número de cabeça — inclusive
+  // quem não é cabeça declarado. Os cabeças informados ficam com os números
+  // 1..seedCount na ordem recebida; os demais são sorteados e recebem os
+  // números seguintes.
+  //
+  // É isto que faz o BYE cair em quem deve: numa chave de 8 com 5 inscritos,
+  // as posições vazias são as dos números 6, 7 e 8, e cada uma delas é o par
+  // de um número baixo — então os três byes vão para os três primeiros.
+  // É a regra do DUPR ("byes sempre para os cabeças mais altos"), e ela sai de
+  // graça da ordem canônica, sem nenhum caso especial.
+  //
+  // 🐞 Antes os não-cabeças eram despejados nos slots vazios da ESQUERDA para
+  // a DIREITA. Isso amontoava todo mundo na metade de cima e deixava pares
+  // inteiros vazios: uma chave de 16 com 9 inscritos nascia com TRÊS partidas
+  // de ninguém contra ninguém (gravadas como W.O. no banco) e um único bye,
+  // dado a quem calhasse. Agora é impossível por construção: como o tamanho da
+  // chave é a potência de 2 imediatamente acima, sempre há mais da metade das
+  // posições ocupadas, e o par de toda posição vazia é uma posição cheia.
+  const seeds = list.slice(0, Math.max(0, Math.min(seedCount, list.length)));
+  const rest = shuffle(list.slice(seeds.length), rng);
+  const ordered = [...seeds, ...rest];
+  ordered.forEach((p, i) => { slots[seedSlot(i + 1, size)] = p; });
 
   // Gera matches da rodada 1 considerando byes (slot vazio = bye p/ adversário)
   const matches = [];
+  const byes = [];
   for (let i = 0; i < size; i += 2) {
     const a = slots[i];
     const b = slots[i + 1];
+    if (a === null && b === null) continue; // não ocorre; guarda de sanidade
+    const bye = a === null || b === null;
+    if (bye) byes.push(a || b);
     matches.push({
       round: 1,
       position: i / 2 + 1,
       side_a: a,
       side_b: b,
-      bye: a === null || b === null,
+      bye,
     });
   }
-  return { slots, matches, totalRounds };
+  return { slots, matches, totalRounds, byes };
 }
 
 /**
- * Calcula o slot de uma cabeça-de-chave numa chave de tamanho N
- * usando a ordem clássica de torneio (1, N, N/2+1, N/2, ...).
- * Para um seed k em uma chave de tamanho N, retorna o índice 0-based.
+ * Ordem CANÔNICA da chave: `order[slot]` é o número de cabeça que ocupa aquela
+ * posição. Construída pela regra clássica — a cada dobra de tamanho, cada
+ * número `s` vira o par `(s, m+1−s)`:
+ *
+ *   tamanho 2 → [1, 2]
+ *   tamanho 4 → [1, 4, 2, 3]            (1×4 e 2×3)
+ *   tamanho 8 → [1, 8, 4, 5, 2, 7, 3, 6] (1×8, 4×5, 2×7, 3×6)
+ *
+ * É o que garante as duas propriedades que se espera de uma chave: o nº 1
+ * enfrenta o mais fraco na 1ª rodada, e o nº 1 e o nº 2 só podem se encontrar
+ * na FINAL.
+ *
+ * 🐞 A versão anterior refletia a sequência errada (`m−1−p` em vez de
+ * `m+1−s` sobre os NÚMEROS), e produzia 1×5, 3×7, 4×8, 2×6 numa chave de 8:
+ * o nº 1 pegava o nº 5 na estreia e, com chave incompleta, o bye ia para o
+ * nº 4. Ninguém percebia porque a chave "parecia" uma chave.
+ *
+ * @param {number} size potência de 2
+ * @returns {number[]} `order[slot] = número de cabeça` (1-based)
  */
-export function seedSlot(seedNum, size) {
-  // Algoritmo: gera a sequência canônica de posições para seeds 1..N
-  // e retorna a posição correspondente ao seedNum.
-  let positions = [0];
-  let n = 1;
-  while (n < size) {
+export function bracketSeedOrder(size) {
+  let order = [1];
+  while (order.length < size) {
+    const m = order.length * 2;
     const next = [];
-    const m = n * 2;
-    for (let i = 0; i < positions.length; i += 1) {
-      next.push(positions[i]);
-      next.push(m - 1 - positions[i]);
+    for (let i = 0; i < order.length; i += 1) {
+      next.push(order[i]);
+      next.push(m + 1 - order[i]);
     }
-    positions = next;
-    n = m;
+    order = next;
   }
-  return positions[(seedNum - 1) % size];
+  return order;
+}
+
+export function seedSlot(seedNum, size) {
+  const order = bracketSeedOrder(size);
+  const alvo = ((Math.floor(seedNum) - 1 + size) % size) + 1;
+  const idx = order.indexOf(alvo);
+  return idx >= 0 ? idx : 0;
 }
 
 /* ----------------------------- Americana -------------------------------- */
@@ -1004,6 +1060,8 @@ export function generateDraw(input) {
     seed = 'draw',
     groupStrategy = 'shuffle',
     playerMeta = null,
+    // Ida e volta dentro do grupo / dos pontos corridos. Aditivo: 1 por padrão.
+    legs = 1,
   } = input;
 
   if (stageType === 'americano') {
@@ -1027,11 +1085,11 @@ export function generateDraw(input) {
     return { stageType: 'mexicano', matches };
   }
   if (stageType === 'round_robin') {
-    return { stageType, matches: buildRoundRobinMatches(participants) };
+    return { stageType, matches: buildRoundRobinMatches(participants, { legs }) };
   }
   if (stageType === 'groups') {
     const groups = distributeGroups(participants, { groupCount, seedCount, seed, strategy: groupStrategy });
-    return { stageType, groups, matches: buildGroupMatches(groups) };
+    return { stageType, groups, matches: buildGroupMatches(groups, { legs }) };
   }
   if (stageType === 'knockout') {
     const { slots, matches, totalRounds } = buildKnockoutBracket(participants, { seedCount, seed });

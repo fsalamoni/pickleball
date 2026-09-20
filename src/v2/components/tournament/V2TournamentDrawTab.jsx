@@ -30,6 +30,7 @@ import {
   useEnsurePlaceholders,
   useClearPlaceholders,
   useClearStaleSingleGroupMarkers,
+  useUpdateModality,
 } from '@/modules/tournament/hooks/useTournament';
 import { neededPlaceholderCount } from '@/modules/tournament/domain/placeholders';
 import { matchesWithStaleSingleGroup } from '@/modules/tournament/domain/phases';
@@ -41,6 +42,8 @@ import {
 import { stageSupportsAdvance } from '@/modules/tournament/domain/progression';
 import { buildRosterSlots } from '@/modules/tournament/domain/teamFormat';
 import MultiPhaseDrawBlock from '@/modules/tournament/components/MultiPhaseDrawBlock';
+import StageExplanation from '@/modules/tournament/components/StageExplanation';
+import DirectEntryPanel from '@/v2/components/tournament/DirectEntryPanel';
 
 function formatMatchTime(iso) {
   if (!iso) return '—';
@@ -316,6 +319,21 @@ function ModalityDrawBlock({ tournament, modality, isAdmin }) {
   }
 
   const stageName = modality.stages?.[0]?.name || 'fase 1';
+
+  // Salvar as fases a partir desta aba (usado pela entrada direta). Só toca em
+  // `stages`; o resto da modalidade fica como está.
+  const updateModality = useUpdateModality(modality.tournament_id);
+  const [savingStages, setSavingStages] = useState(false);
+  const handleSaveStages = async (stages) => {
+    setSavingStages(true);
+    try {
+      await updateModality.mutateAsync({ id: modality.id, updates: { stages } });
+    } catch (err) {
+      toast.error(err?.message || 'Não foi possível salvar a configuração das fases.');
+    } finally {
+      setSavingStages(false);
+    }
+  };
   const hasGroups = matches.some((m) => m.group);
   const hasSchedule = matches.some((m) => m.court || m.scheduled_at);
   // Marcadores de grupo resquício de sorteios antigos numa fase de grupo único
@@ -353,6 +371,36 @@ function ModalityDrawBlock({ tournament, modality, isAdmin }) {
           )}
         </div>
       )}
+      {/* ENTRADA DIRETA: quem pula fases. Aqui, e não no editor de formato,
+          porque escolher quem entra direto exige ver os NOMES — e no editor o
+          torneio pode nem ter inscrição ainda. */}
+      <DirectEntryPanel
+        modality={modality}
+        registrations={activeRegistrations}
+        isTeam={isTeam}
+        isAdmin={isAdmin}
+        saving={savingStages}
+        onSave={handleSaveStages}
+      />
+
+      {/* O PLANO, com o número REAL de inscritos, antes de clicar em sortear.
+          Quem organiza chega aqui com a pergunta "em quantos grupos eu divido
+          isto?" — e a tela respondia mostrando só o botão. Agora mostra o que
+          o sorteio vai produzir (jogos, jogos por atleta, classificados, se a
+          chave fecha) e as outras divisões possíveis para aquele número. */}
+      {isAdmin && activeRegistrations.length > 0 && stageType && (
+        <div className="mb-3">
+          <StageExplanation
+            stageType={stageType}
+            playerCount={activeRegistrations.length}
+            groupCount={Number(modality.stages?.[0]?.group_count) || 1}
+            seedCount={Number(modality.stages?.[0]?.seed_count) || 0}
+            qualifiersPerGroup={Number(modality.stages?.[0]?.qualifiers_per_group ?? 2)}
+            legs={Number(modality.stages?.[0]?.round_robin_legs) === 2 ? 2 : 1}
+          />
+        </div>
+      )}
+
         <div className="mb-1 flex flex-wrap justify-end">
           {isAdmin && (
             <div className="flex gap-2 flex-wrap">

@@ -215,6 +215,52 @@ export const TOURNAMENT_PRESETS = Object.freeze([
       { type: T.KNOCKOUT, feed_mode: PHASE_FEED_MODE.INHERIT_GROUPS, bracket_seeding: PHASE_BRACKET_SEEDING.ADJACENT },
     ],
   },
+
+  /* --------------------------------------------------------------------- *
+   * MODELOS PARA NÚMERO INCOMUM DE INSCRITOS (Onda AT)
+   *
+   * Nem todo torneio tem número redondo. Estes três resolvem os casos que
+   * mais aparecem e que antes exigiam conta no caderno.
+   * -------------------------------------------------------------------- */
+  {
+    id: 'groups_wildcard',
+    label: 'Grupos + repescagem (fecha a chave)',
+    description: 'Fase de grupos com 2 classificados por grupo e vagas de REPESCAGEM para os melhores terceiros, de modo que a chave saia cheia em vez de meia rodada de byes. Os repescados são comparados por aproveitamento, então grupos de tamanhos diferentes não distorcem a escolha.',
+    formats: BOTH,
+    build: () => [
+      {
+        ...groupsPhase({ groupCount: 3, qualifiers: 2 }),
+        // 3 grupos × 2 = 6 classificados; 2 repescados fecham a chave de 8.
+        wildcard_slots: 2,
+      },
+      { type: T.KNOCKOUT, feed_mode: PHASE_FEED_MODE.POOL_ALL, bracket_seeding: PHASE_BRACKET_SEEDING.STANDARD },
+    ],
+  },
+  {
+    id: 'qualifier_main_draw',
+    label: 'Qualificatória + chave principal (cabeças entram direto)',
+    description: 'Os melhores cabeças PULAM a primeira fase e entram direto na chave principal; os demais disputam a qualificatória pelas vagas restantes. É o modelo dos circuitos grandes. Ajuste na aba Sorteio quantos entram direto.',
+    formats: BOTH,
+    build: () => [
+      groupsPhase({ groupCount: 2, qualifiers: 2 }),
+      {
+        type: T.KNOCKOUT,
+        feed_mode: PHASE_FEED_MODE.POOL_ALL,
+        bracket_seeding: PHASE_BRACKET_SEEDING.STANDARD,
+        direct_entry: { mode: 'seeds', count: 4 },
+      },
+    ],
+  },
+  {
+    id: 'small_groups_double_leg',
+    label: 'Grupos pequenos, ida e volta (poucos inscritos)',
+    description: 'Para quando o número de inscritos só permite grupos de 3: cada confronto acontece duas vezes, então cada atleta faz 4 jogos em vez de 2 — que é o que quem paga inscrição espera. Depois, mata-mata com os 2 melhores de cada grupo.',
+    formats: BOTH,
+    build: () => [
+      { ...groupsPhase({ groupCount: 2, qualifiers: 2 }), round_robin_legs: 2 },
+      { type: T.KNOCKOUT, feed_mode: PHASE_FEED_MODE.POOL_ALL, bracket_seeding: PHASE_BRACKET_SEEDING.STANDARD },
+    ],
+  },
 ]);
 
 /** Modelos aplicáveis a um formato de inscrição. */

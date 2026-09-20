@@ -34,6 +34,8 @@ export default function ModalityInfoContent({ modality, tournament, registration
   const stageType = stages[0]?.type;
   const groupCount = stages[0]?.group_count || 1;
   const seedCount = stages[0]?.seed_count || 0;
+  const qualifiersPerGroup = Number(stages[0]?.qualifiers_per_group ?? 2);
+  const legs = Number(stages[0]?.round_robin_legs) === 2 ? 2 : 1;
   const fee = Number(modality.entry_fee_cents || 0);
 
   return (
@@ -110,11 +112,16 @@ export default function ModalityInfoContent({ modality, tournament, registration
               <Layers className="w-4 h-4 text-green-600" /> Como funciona a competição
             </h4>
             <p>{describeStage(stageType)}</p>
+            {/* Para o atleta a pergunta é "como vai ser": as alternativas de
+                divisão são da tela de quem organiza. */}
             <StageExplanation
               stageType={stageType}
               playerCount={registrationsCount}
               groupCount={groupCount}
               seedCount={seedCount}
+              qualifiersPerGroup={qualifiersPerGroup}
+              legs={legs}
+              showAlternatives={false}
             />
           </section>
         )

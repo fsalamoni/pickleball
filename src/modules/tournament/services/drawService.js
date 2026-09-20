@@ -272,6 +272,8 @@ export async function runDraw(params, actor) {
     seed,
     groupStrategy,
     playerMeta,
+    // Ida e volta dentro do grupo (campo aditivo: ausente ⇒ só ida).
+    legs: normalizePhase(stage).round_robin_legs,
   });
 
   const tournament = await getTournament(tournamentId);

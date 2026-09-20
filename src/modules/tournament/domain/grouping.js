@@ -36,13 +36,59 @@ export function groupLetter(index) {
  * do total de atletas e do modo de divisão escolhido.
  *
  * @param {number} total número de entrants
- * @param {{ mode?: string, groupCount?: number, maxPerGroup?: number }} options
+ * @param {{ mode?: string, groupCount?: number, maxPerGroup?: number, customSizes?: number[] }} options
+ *   `customSizes` manda nos tamanhos exatos (e é ajustado ao total real).
  * @returns {{ groupCount: number, sizes: number[] }}
  *   `sizes[i]` = quantidade de atletas do grupo i (diferença máxima de 1).
  */
 export function computeGroupSizes(total, options = {}) {
   const n = Math.max(0, Math.floor(total) || 0);
   const mode = options.mode || PHASE_DIVISION_MODE.SINGLE;
+
+  // TAMANHOS MANUAIS: o organizador mandou os tamanhos exatos. A plataforma
+  // não discute — só ajusta o total, porque o número de inscritos muda até a
+  // véspera e uma lista gravada semanas antes não pode sortear gente que não
+  // existe (nem deixar ninguém de fora).
+  //
+  // A sobra/falta é distribuída a partir do ÚLTIMO grupo: quem escreveu
+  // "6, 5, 5" quis os seis no primeiro, e é o último que absorve a diferença.
+  const manuais = Array.isArray(options.customSizes)
+    ? options.customSizes.map((v) => Math.max(0, Math.floor(Number(v)) || 0)).filter((v) => v > 0)
+    : [];
+  if (manuais.length > 0 && n > 0) {
+    const ajustados = manuais.slice();
+    let diferenca = n - ajustados.reduce((soma, v) => soma + v, 0);
+    // Sobrando gente: engorda do último para o primeiro.
+    for (let i = ajustados.length - 1; diferenca > 0; i = (i - 1 + ajustados.length) % ajustados.length) {
+      ajustados[i] += 1;
+      diferenca -= 1;
+    }
+    // Faltando gente: enxuga do último para o primeiro, sem zerar ninguém.
+    let guarda = 0;
+    while (diferenca < 0 && guarda < 10000) {
+      guarda += 1;
+      let mexeu = false;
+      for (let i = ajustados.length - 1; i >= 0 && diferenca < 0; i -= 1) {
+        if (ajustados[i] > 1) { ajustados[i] -= 1; diferenca += 1; mexeu = true; }
+      }
+      if (!mexeu) break;
+    }
+    const finais = ajustados.filter((v) => v > 0);
+    // Se o encolhimento produziu grupo de menos de 2, a lista manual não cabe
+    // mais no número de inscritos: cai no equilíbrio automático com o máximo
+    // de grupos que ainda comporta 2 em cada. Melhor um plano viável do que
+    // honrar uma lista que virou impossível.
+    if (finais.some((v) => v < 2)) {
+      const cabem = Math.max(1, Math.min(finais.length, Math.floor(n / 2)));
+      const base = Math.floor(n / cabem);
+      const extra = n % cabem;
+      return {
+        groupCount: cabem,
+        sizes: Array.from({ length: cabem }, (_, i) => base + (i < extra ? 1 : 0)),
+      };
+    }
+    return { groupCount: finais.length, sizes: finais };
+  }
 
   let groupCount;
   if (mode === PHASE_DIVISION_MODE.SINGLE) {

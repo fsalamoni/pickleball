@@ -6,6 +6,7 @@ import {
   buildGroupMatches,
   buildRoundRobinMatches,
   buildKnockoutBracket,
+  bracketSeedOrder,
   nextPowerOfTwo,
   buildAmericanoRotation,
   americanoMatchCount,
@@ -88,10 +89,110 @@ describe('draw engine', () => {
   it('buildKnockoutBracket preenche todos slots e gera matches', () => {
     const { slots, matches, totalRounds } = buildKnockoutBracket(['a', 'b', 'c', 'd', 'e'], { seed: 't', seedCount: 2 });
     expect(slots.length).toBe(8);
+    // 5 inscritos numa chave de 8: 3 byes + 1 partida de verdade = 4 confrontos.
     expect(matches.length).toBe(4);
     expect(totalRounds).toBe(3);
     const flat = slots.filter(Boolean).sort();
     expect(flat).toEqual(['a', 'b', 'c', 'd', 'e']);
+  });
+
+  /* ------------------------------------------------------------------ *
+   * A CHAVE INCOMPLETA — o caso de "menos inscritos do que o ideal".
+   *
+   * Duas propriedades que nenhum teste antigo prendia, e que estavam as
+   * duas quebradas:
+   *   (a) o número de byes é EXATAMENTE `tamanho − inscritos`, e nenhuma
+   *       partida nasce com ninguém dos dois lados (ela virava W.O. no banco);
+   *   (b) o bye vai para os MELHORES cabeças — é a regra do DUPR, e é o que
+   *       recompensa quem foi bem no ranking.
+   * ------------------------------------------------------------------ */
+  describe('⭐ chave incompleta: byes para os cabeças, sem partida fantasma', () => {
+    const chave = (n, opts = {}) => buildKnockoutBracket(
+      Array.from({ length: n }, (_, i) => `s${i + 1}`),
+      { seed: 'fixa', seedCount: n, ...opts },
+    );
+
+    it('⭐ nunca cria partida de ninguém contra ninguém', () => {
+      for (let n = 2; n <= 33; n += 1) {
+        const { matches } = chave(n);
+        const fantasmas = matches.filter((m) => !m.side_a && !m.side_b);
+        expect(fantasmas, `n=${n} gerou ${fantasmas.length} partida(s) vazia(s)`).toHaveLength(0);
+      }
+    });
+
+    it('⭐ o número de byes é exatamente o que falta para encher a chave', () => {
+      for (let n = 2; n <= 33; n += 1) {
+        const { byes } = chave(n);
+        expect(byes.length, `n=${n}`).toBe(nextPowerOfTwo(n) - n);
+      }
+    });
+
+    it('⭐ os byes vão para os primeiros cabeças (regra do DUPR)', () => {
+      // 9 inscritos numa chave de 16 → 7 byes, e eles são os 7 primeiros.
+      const { byes } = chave(9);
+      expect(byes.sort()).toEqual(['s1', 's2', 's3', 's4', 's5', 's6', 's7'].sort());
+      // 5 numa chave de 8 → os 3 primeiros.
+      expect(chave(5).byes.sort()).toEqual(['s1', 's2', 's3'].sort());
+      // 7 numa chave de 8 → só o primeiro.
+      expect(chave(7).byes).toEqual(['s1']);
+    });
+
+    it('cada inscrito aparece uma única vez na chave', () => {
+      for (let n = 2; n <= 20; n += 1) {
+        const { slots } = chave(n);
+        const presentes = slots.filter(Boolean);
+        expect(new Set(presentes).size, `n=${n}`).toBe(n);
+      }
+    });
+
+    it('sem cabeças declarados a chave continua bem formada (sorteio puro)', () => {
+      for (let n = 2; n <= 20; n += 1) {
+        const r = buildKnockoutBracket(
+          Array.from({ length: n }, (_, i) => `p${i + 1}`), { seed: 'z', seedCount: 0 },
+        );
+        expect(r.matches.filter((m) => !m.side_a && !m.side_b), `n=${n}`).toHaveLength(0);
+        expect(r.byes.length, `n=${n}`).toBe(nextPowerOfTwo(n) - n);
+      }
+    });
+
+    it('menos de 2 inscritos não gera chave nenhuma', () => {
+      expect(buildKnockoutBracket([], {}).matches).toEqual([]);
+      expect(buildKnockoutBracket(['x'], {}).matches).toEqual([]);
+    });
+  });
+
+  describe('⭐ ordem canônica da chave', () => {
+    it('é a sequência clássica (cada número vira o par s × m+1−s)', () => {
+      expect(bracketSeedOrder(2)).toEqual([1, 2]);
+      expect(bracketSeedOrder(4)).toEqual([1, 4, 2, 3]);
+      expect(bracketSeedOrder(8)).toEqual([1, 8, 4, 5, 2, 7, 3, 6]);
+    });
+
+    it('⭐ o nº 1 estreia contra o MAIS FRACO da chave', () => {
+      [4, 8, 16, 32].forEach((size) => {
+        const ordem = bracketSeedOrder(size);
+        const slot1 = ordem.indexOf(1);
+        const adversario = ordem[slot1 % 2 === 0 ? slot1 + 1 : slot1 - 1];
+        expect(adversario, `chave de ${size}`).toBe(size);
+      });
+    });
+
+    it('⭐ o nº 1 e o nº 2 só podem se encontrar na FINAL', () => {
+      [4, 8, 16, 32, 64].forEach((size) => {
+        const ordem = bracketSeedOrder(size);
+        const metade = size / 2;
+        expect(ordem.indexOf(1) < metade, `chave de ${size}`)
+          .not.toBe(ordem.indexOf(2) < metade);
+      });
+    });
+
+    it('cada número ocupa exatamente uma posição', () => {
+      [2, 4, 8, 16, 32].forEach((size) => {
+        const ordem = bracketSeedOrder(size);
+        expect(ordem.length).toBe(size);
+        expect(new Set(ordem).size).toBe(size);
+      });
+    });
   });
 
   describe('americano (rotação aberta)', () => {
@@ -435,5 +536,56 @@ describe('draw engine', () => {
     const draw = generateDraw({ format: 'doubles', stageType: 'double_knockout', participants: ['a', 'b', 'c', 'd', 'e'], seed: 'fixed' });
     expect(draw.bracket.size).toBe(8);
     expect(draw.matches.some((m) => m.bye)).toBe(true);
+  });
+});
+
+describe('⭐ ida e volta no grupo (o caso do grupo pequeno)', () => {
+  it('padrão (1 volta) é bit a bit o de sempre', () => {
+    const ida = buildRoundRobinMatches(['a', 'b', 'c']);
+    expect(buildRoundRobinMatches(['a', 'b', 'c'], {})).toEqual(ida);
+    expect(buildRoundRobinMatches(['a', 'b', 'c'], { legs: 1 })).toEqual(ida);
+    expect(ida).toHaveLength(3);
+  });
+
+  it('⭐ grupo de 3: ida dá 2 jogos por atleta; ida e volta dá 4', () => {
+    const jogos = buildRoundRobinMatches(['a', 'b', 'c'], { legs: 2 });
+    expect(jogos).toHaveLength(6);
+    const porAtleta = (id) => jogos.filter((m) => m.side_a === id || m.side_b === id).length;
+    expect(porAtleta('a')).toBe(4);
+    expect(porAtleta('b')).toBe(4);
+    expect(porAtleta('c')).toBe(4);
+  });
+
+  it('⭐ a volta inverte os lados e continua a numeração das rodadas', () => {
+    const jogos = buildRoundRobinMatches(['a', 'b'], { legs: 2 });
+    expect(jogos).toEqual([
+      { side_a: 'a', side_b: 'b', round: 1 },
+      { side_a: 'b', side_b: 'a', round: 2 },
+    ]);
+  });
+
+  it('cada confronto acontece exatamente duas vezes', () => {
+    const ids = ['a', 'b', 'c', 'd', 'e'];
+    const jogos = buildRoundRobinMatches(ids, { legs: 2 });
+    const chave = (m) => [m.side_a, m.side_b].sort().join('|');
+    const contagem = new Map();
+    jogos.forEach((m) => contagem.set(chave(m), (contagem.get(chave(m)) || 0) + 1));
+    expect(contagem.size).toBe(10); // C(5,2)
+    contagem.forEach((v) => expect(v).toBe(2));
+  });
+
+  it('valores fora de 1..2 caem no padrão', () => {
+    expect(buildRoundRobinMatches(['a', 'b'], { legs: 0 })).toHaveLength(1);
+    expect(buildRoundRobinMatches(['a', 'b'], { legs: 9 })).toHaveLength(2);
+    expect(buildRoundRobinMatches(['a', 'b'], { legs: 'x' })).toHaveLength(1);
+  });
+
+  it('buildGroupMatches repassa o ida e volta a cada grupo', () => {
+    const grupos = [
+      { name: 'Grupo A', participants: ['a', 'b', 'c'] },
+      { name: 'Grupo B', participants: ['d', 'e', 'f'] },
+    ];
+    expect(buildGroupMatches(grupos)).toHaveLength(6);
+    expect(buildGroupMatches(grupos, { legs: 2 })).toHaveLength(12);
   });
 });

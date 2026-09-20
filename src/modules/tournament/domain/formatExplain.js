@@ -24,6 +24,7 @@ import {
 import { nextPowerOfTwo, americanoMatchCount } from './draw.js';
 import { recommendedSwissRounds } from './swiss.js';
 import { recommendedMexicanoRounds } from './mexicano.js';
+import { describeGroupPlan, suggestGroupPlans, scoreGroupPlan } from './groupPlan.js';
 
 /* ----------------------------- Utilitários ------------------------------ */
 
@@ -116,43 +117,69 @@ function explainRoundRobin(n) {
   };
 }
 
-function explainGroups(n, groupCount) {
-  const groups = Math.max(1, Math.trunc(groupCount) || 1);
-  const base = Math.floor(n / groups);
-  const remainder = n % groups;
-  const largeGroups = remainder; // grupos com base+1 jogadores
-  const smallGroups = groups - remainder; // grupos com base jogadores
-  const totalMatches =
-    largeGroups * comb2(base + 1) + smallGroups * comb2(base);
-  // rodadas: limitada pelo maior grupo (todos-contra-todos interno)
-  const largestSize = base + (remainder > 0 ? 1 : 0);
-  const rounds = largestSize % 2 === 0 ? Math.max(0, largestSize - 1) : largestSize;
+/** "5, 5, 5 e 4" — a lista de tamanhos como se lê em voz alta. */
+function listarEmPtBR(valores) {
+  const lista = (valores || []).map(String);
+  if (lista.length <= 1) return lista.join('');
+  return `${lista.slice(0, -1).join(', ')} e ${lista[lista.length - 1]}`;
+}
 
-  const balanced = remainder === 0;
-  const sizesLabel = balanced
-    ? `${groups} grupos de ${base} jogadores`
-    : `${largeGroups} grupo(s) de ${base + 1} e ${smallGroups} grupo(s) de ${base} jogadores`;
+/**
+ * Explica a fase de grupos a partir do PLANEJADOR (`groupPlan.js`).
+ *
+ * 🐞 A versão anterior avisava, sempre que os grupos saíam desiguais, que
+ * "para grupos do mesmo tamanho use um número de inscritos múltiplo de N".
+ * Isso não é conselho: quem organiza não escolhe quantas pessoas se
+ * inscrevem. Grupo desigual é o caso NORMAL, e o que ele exige é a regra de
+ * comparação certa (aproveitamento em vez de vitórias absolutas), não um
+ * inscrito a mais. O que falta dizer é outra coisa: quantos jogos cada um vai
+ * fazer, se algum grupo ficou pequeno demais, e o que os classificados
+ * deixam para a fase seguinte.
+ */
+function explainGroups(n, groupCount, opts = {}) {
+  const per = Math.max(0, Math.trunc(opts.qualifiersPerGroup ?? 2));
+  const plano = describeGroupPlan(n, groupCount, {
+    qualifiersPerGroup: per,
+    legs: opts.legs,
+  });
+
+  const tamanhos = plano.uniform
+    ? `${plano.groupCount} ${plano.groupCount === 1 ? 'grupo' : 'grupos'} de ${plano.largest}`
+    : `grupos de ${listarEmPtBR(plano.sizes)}`;
+
+  const porAtleta = plano.matchesPerEntrant.min === plano.matchesPerEntrant.max
+    ? `${plano.matchesPerEntrant.max} jogo(s)`
+    : `${plano.matchesPerEntrant.min} ou ${plano.matchesPerEntrant.max} jogos`;
 
   const lines = [
-    `${n} jogadores divididos em ${sizesLabel}.`,
-    `${totalMatches} jogos na fase de grupos (todos contra todos dentro de cada grupo).`,
-    `Os melhores de cada grupo avançam para a fase seguinte (mata-mata ou classificação).`,
+    `${n} inscritos divididos em ${tamanhos}.`,
+    `${plano.totalMatches} jogos na fase${plano.legs === 2 ? ' (ida e volta dentro do grupo)' : ''}, ${porAtleta} para cada um.`,
   ];
-
-  let status = 'ok';
-  let recommendation;
-  if (base < 2) {
-    // pelo menos um grupo ficaria com 0 ou 1 jogador → sem jogos
-    status = 'warn';
-    recommendation = `Com ${n} jogadores em ${groups} grupos há grupos pequenos demais. Reduza o número de grupos ou aumente os inscritos para ter ao menos 3 jogadores por grupo.`;
-  } else if (!balanced) {
-    status = 'warn';
-    recommendation = `Para grupos do mesmo tamanho use um número de inscritos múltiplo de ${groups} (ex.: ${
-      base * groups
-    } ou ${(base + 1) * groups}).`;
+  if (per > 0) {
+    lines.push(`Passam ${per} por grupo → ${plano.qualifiers} classificados para a fase seguinte.`);
   }
 
-  return { status, totalMatches, rounds, lines, recommendation };
+  // Os avisos do planejador viram linhas e recomendação.
+  const erro = plano.warnings.find((w) => w.level === 'error');
+  const alerta = plano.warnings.find((w) => w.level === 'warn');
+  plano.warnings.filter((w) => w.level === 'info').forEach((w) => lines.push(w.text));
+
+  // Sugestão: a melhor divisão diferente da atual, quando houver.
+  const melhor = suggestGroupPlans(n, { qualifiersPerGroup: per, legs: opts.legs, limit: 3 })
+    .find((p) => p.groupCount !== plano.groupCount && p.score > (plano.blocked ? 0 : scoreGroupPlan(plano)));
+  const sugestao = melhor
+    ? `Com ${melhor.groupCount} grupo(s) sairia ${melhor.sizes.join('+')} — ${melhor.totalMatches} jogos e ${melhor.qualifiers} classificados (chave de ${melhor.bracket.size}${melhor.bracket.byes ? `, ${melhor.bracket.byes} bye(s)` : ' cheia'}).`
+    : undefined;
+
+  const recommendation = [erro?.text, alerta?.text, sugestao].filter(Boolean).join(' ') || undefined;
+
+  return {
+    status: erro ? 'error' : (alerta ? 'warn' : 'ok'),
+    totalMatches: plano.totalMatches,
+    rounds: plano.rounds,
+    lines,
+    recommendation,
+  };
 }
 
 function explainKnockout(n) {
@@ -295,7 +322,7 @@ function explainMexicano(n) {
 
 const STAGE_EXPLAINERS = {
   [TOURNAMENT_STAGE_TYPE.ROUND_ROBIN]: (n) => explainRoundRobin(n),
-  [TOURNAMENT_STAGE_TYPE.GROUPS]: (n, opts) => explainGroups(n, opts.groupCount),
+  [TOURNAMENT_STAGE_TYPE.GROUPS]: (n, opts) => explainGroups(n, opts.groupCount, opts),
   [TOURNAMENT_STAGE_TYPE.KNOCKOUT]: (n) => explainKnockout(n),
   [TOURNAMENT_STAGE_TYPE.DOUBLE_KNOCKOUT]: (n) => explainDoubleKnockout(n),
   [TOURNAMENT_STAGE_TYPE.SWISS]: (n) => explainSwiss(n),
@@ -318,7 +345,10 @@ const STAGE_EXPLAINERS = {
  * @returns {StageExplanation}
  */
 export function explainStage(input) {
-  const { stageType, playerCount, groupCount = 1 } = input || {};
+  const {
+    stageType, playerCount, groupCount = 1,
+    qualifiersPerGroup, legs,
+  } = input || {};
   const label = TOURNAMENT_STAGE_TYPE_LABELS[stageType] || stageType || '—';
   const description = STAGE_DESCRIPTION[stageType] || 'Formato definido pelo organizador.';
   const minPlayers = STAGE_MIN_PLAYERS[stageType] ?? 2;
@@ -358,7 +388,7 @@ export function explainStage(input) {
     };
   }
 
-  const result = explainer(n, { groupCount });
+  const result = explainer(n, { groupCount, qualifiersPerGroup, legs });
   return {
     ...base,
     eligible: true,

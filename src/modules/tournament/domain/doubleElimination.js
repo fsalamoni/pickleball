@@ -35,15 +35,17 @@ export function buildDoubleEliminationBracket(participantIds, options = {}) {
   const rng = seededRng(seed);
 
   // ---- WB slots ----
+  // Mesma regra da chave simples: TODO MUNDO entra pela posição CANÔNICA do
+  // seu número de cabeça, inclusive quem não é cabeça declarado. É isso que
+  // faz o bye cair nos melhores números e torna impossível um par de posições
+  // vazias (ninguém × ninguém). Ver `buildKnockoutBracket`.
+  const lista = (participantIds || []).filter(Boolean);
   const slots = new Array(size).fill(null);
-  const seeds = participantIds.slice(0, seedCount);
-  seeds.forEach((p, idx) => {
+  const seeds = lista.slice(0, Math.max(0, Math.min(seedCount, lista.length)));
+  const rest = shuffle(lista.slice(seeds.length), rng);
+  [...seeds, ...rest].forEach((p, idx) => {
     slots[seedSlot(idx + 1, size)] = p;
   });
-  const rest = shuffle(participantIds.slice(seedCount), rng);
-  for (let i = 0; i < slots.length && rest.length > 0; i += 1) {
-    if (slots[i] === null) slots[i] = rest.shift();
-  }
 
   // ---- WB: gera estrutura vazia rodada a rodada (round 1 preenchido) ----
   const wb = [];

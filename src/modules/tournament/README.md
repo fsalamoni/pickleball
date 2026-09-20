@@ -1,5 +1,15 @@
 # `tournament/` — Núcleo: torneios e modalidades
 
+> ⭐ **Onda AT — formatos, grupos e chaves com qualquer número de inscritos.**
+> Existe um padrão bom (regulamento USA Pickleball + práticas dos circuitos) e
+> **o admin do torneio pode trocar tudo**. Domínios novos:
+> `tiebreak.js` (desempate oficial com confronto direto — fonte ÚNICA),
+> `crossGroup.js` (comparar grupos de tamanhos diferentes por aproveitamento +
+> repescagem), `groupPlan.js` (em quantos grupos dividir N inscritos) e
+> `directEntry.js` (quem pula fases e entra direto mais à frente).
+> Ver `docs/26-TORNEIO-FORMATOS-E-REGRAS.md`.
+
+
 > **Pilar principal da plataforma.** Torneios de ponta a ponta: criação,
 > modalidades, inscrições, sorteio, agendamento por quadra, jogos, ranking
 > ao vivo, admins compartilhados, visão pública, impressão, telão e

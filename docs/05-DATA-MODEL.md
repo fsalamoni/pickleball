@@ -95,8 +95,38 @@ Registro auditável de aceites legais (LGPD).
 ### `tournament_modalities/{id}`
 Modalidade dentro de um torneio: `tournament_id`, formato
 (`single | doubles | americana/whist`), nível (iniciante→elite), categoria
-(gênero/idade), capacidade (até 500), taxa opcional, config de fase
-(pontos corridos, grupos, mata-mata, dupla eliminação, suíço).
+(gênero/idade), capacidade (até 500), taxa opcional, e o array `stages[]` com
+a configuração de cada FASE.
+
+#### `stages[]` — a configuração de cada fase
+
+A regra de `tournament_modalities` **não tem lista fechada de campos**
+(`allow create, update, delete: if isTournamentAdmin(...)`), então cada campo
+novo de fase é puramente aditivo — sem regra, sem índice, sem migração.
+`normalizePhase` (`domain/phases.js`) preenche os padrões na LEITURA, então
+uma modalidade gravada antes de um campo existir se comporta como antes.
+
+Básicos: `type`, `name`, `scoring_override`, `division_mode`, `group_count`,
+`max_per_group`, `seed_count`, `qualifiers_per_group`, `qualifier_mode`,
+`feed_mode`, `merge_size`, `pairing_mode`, `bracket_seeding`, `third_place`.
+
+Configuração avançada do admin do torneio (**todos opcionais**, Onda AT):
+
+| Campo | Padrão | O que faz |
+|---|---|---|
+| `round_robin_legs` | 1 | 2 = ida e volta dentro do grupo (a saída para grupo de 3) |
+| `custom_group_sizes` | `[]` | tamanhos exatos dos grupos, ajustados ao total real |
+| `qualifiers_by_group` | `[]` | classificados grupo a grupo (`[2,2,1]`) |
+| `wildcard_slots` | 0 | vagas de repescagem para fechar a chave |
+| `wildcard_from_position` | 0 | de qual colocação repescar (0 = a seguinte ao corte) |
+| `tiebreak_order` | `[]` | ordem dos critérios de desempate (vazio = a oficial) |
+| `cross_group_method` | `rate` | `rate` \| `absolute` \| `drop_last` |
+| `direct_entry` | `{mode:'none'}` | quem **entra direto** nesta fase, pulando as anteriores |
+
+`direct_entry` é `{ mode: 'none'\|'seeds'\|'manual', count, ids[] }`. Quem entra
+direto na fase 3 não aparece no sorteio nem na classificação das fases 1 e 2 —
+a exclusão acontece na origem (`planPhaseEntries`), não como remendo em cada
+tela. Ver `docs/26-TORNEIO-FORMATOS-E-REGRAS.md`.
 
 ### `tournament_admins/{tournamentId_uid}`
 Admin compartilhado do torneio (não afeta admin da plataforma).

@@ -405,7 +405,15 @@ export default function V2TournamentModalitiesTab({ tournament, isAdmin }) {
                 )}
               </div>
               <div className="rounded-2xl border border-gray-100 bg-paper-pure p-4">
-                <StageExplanation stageType={form.stage_type} playerCount={PREVIEW_PLAYER_COUNT} groupCount={Number(form.group_count) || 1} seedCount={Number(form.seed_count) || 0} previewMode />
+                <StageExplanation
+                  stageType={form.stage_type}
+                  playerCount={PREVIEW_PLAYER_COUNT}
+                  groupCount={Number(form.group_count) || 1}
+                  seedCount={Number(form.seed_count) || 0}
+                  qualifiersPerGroup={Number(form.qualifiers_per_group ?? 2)}
+                  legs={Number(form.round_robin_legs) === 2 ? 2 : 1}
+                  previewMode
+                />
               </div>
             </div>
           )}

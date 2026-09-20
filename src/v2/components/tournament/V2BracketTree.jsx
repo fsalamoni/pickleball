@@ -17,12 +17,13 @@ function sideScore(m, side) {
   return games.reduce((s, g) => s + (Number(g[side]) || 0), 0);
 }
 
-function SideRow({ label, score, won, decided }) {
+function SideRow({ label, score, won, decided, vazio = false }) {
   return (
     <div className={cn('flex items-center justify-between gap-2 px-2.5 py-1.5 text-xs',
-      won ? 'font-bold text-ink' : 'text-gray-600')}>
+      won ? 'font-bold text-ink' : 'text-gray-600',
+      vazio && 'italic text-gray-400')}>
       <span className="truncate">{label || '—'}</span>
-      {decided && <span className="tabular-nums text-gray-500">{score}</span>}
+      {decided && !vazio && <span className="tabular-nums text-gray-500">{score}</span>}
     </div>
   );
 }
@@ -34,7 +35,20 @@ export default function V2BracketTree({ matches = [], labelById }) {
   if (columns.length === 0) {
     return <p className="rounded-2xl border border-gray-100 bg-paper p-4 text-sm text-gray-500">Sem jogos em rodadas para exibir.</p>;
   }
-  const nameOf = (ids, fallback) => (ids || []).map((id) => labelById?.get?.(id) || id).join(' + ') || fallback || 'A definir';
+  const nameOf = (ids, fallback) => (ids || []).map((id) => labelById?.get?.(id) || id).join(' + ') || fallback || '';
+
+  /**
+   * Um lado VAZIO numa chave incompleta não é "a definir": é um BYE — alguém
+   * passou direto porque o número de inscritos não é potência de 2. Mostrar
+   * "A definir" nos dois casos faz parecer que falta sortear um adversário
+   * que nunca vai existir. O bye vai para os melhores cabeças (ver
+   * `buildKnockoutBracket`), então dizer isso também explica POR QUE foi
+   * aquela pessoa.
+   */
+  const ladoVazio = (m) => {
+    const ehBye = m.bye === true || m.status === 'walkover';
+    return ehBye ? 'Passa direto (bye)' : 'A definir';
+  };
 
   return (
     <div className="overflow-x-auto">
@@ -48,13 +62,30 @@ export default function V2BracketTree({ matches = [], labelById }) {
             <div className="flex flex-1 flex-col justify-around gap-3">
               {col.matches.map((m) => {
                 const decided = m.winner_side === 'a' || m.winner_side === 'b';
-                const aLabel = nameOf(m.side_a_ids, m.side_a);
-                const bLabel = nameOf(m.side_b_ids, m.side_b);
+                const aNome = nameOf(m.side_a_ids, m.side_a);
+                const bNome = nameOf(m.side_b_ids, m.side_b);
+                // Um lado só preenchido + bye ⇒ o outro passou direto.
+                const passouDireto = (m.bye === true || m.status === 'walkover')
+                  && (Boolean(aNome) !== Boolean(bNome));
+                const aLabel = aNome || ladoVazio(m);
+                const bLabel = bNome || ladoVazio(m);
                 return (
                   <div key={m.id} className="overflow-hidden rounded-2xl border border-gray-200 bg-paper-pure">
-                    <SideRow label={aLabel} score={sideScore(m, 'a')} won={m.winner_side === 'a'} decided={decided} />
+                    <SideRow
+                      label={aLabel}
+                      score={sideScore(m, 'a')}
+                      won={m.winner_side === 'a' || (passouDireto && Boolean(aNome))}
+                      decided={decided || passouDireto}
+                      vazio={!aNome}
+                    />
                     <div className="h-px bg-gray-100" />
-                    <SideRow label={bLabel} score={sideScore(m, 'b')} won={m.winner_side === 'b'} decided={decided} />
+                    <SideRow
+                      label={bLabel}
+                      score={sideScore(m, 'b')}
+                      won={m.winner_side === 'b' || (passouDireto && Boolean(bNome))}
+                      decided={decided || passouDireto}
+                      vazio={!bNome}
+                    />
                   </div>
                 );
               })}

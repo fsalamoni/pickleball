@@ -23,6 +23,7 @@ import {
   TARGET_SCORE,
 } from '@/modules/tournament/domain/constants';
 import { normalizePhase, normalizePhases, supportsGroups, BRACKET_FORMATS } from '@/modules/tournament/domain/phases';
+import PhaseAdvancedRules from './PhaseAdvancedRules';
 import { describeStage } from '@/modules/tournament/domain/formatExplain';
 import { presetsForFormat, buildPreset } from '@/modules/tournament/domain/tournamentPresets';
 
@@ -107,9 +108,11 @@ function phaseSummary(phase, index, phases) {
     else if (phase.division_mode === PHASE_DIVISION_MODE.MAX_PER_GROUP) parts.push(`até ${phase.max_per_group}/grupo`);
     else parts.push('grupo único');
   }
+  if (Number(phase.round_robin_legs) === 2) parts.push('ida e volta');
   const isLast = index === phases.length - 1;
   if (!isLast) {
     parts.push(`passam ${phase.qualifiers_per_group}/grupo`);
+    if (Number(phase.wildcard_slots) > 0) parts.push(`+${phase.wildcard_slots} repescado(s)`);
     if (phase.pairing_mode === PHASE_PAIRING_MODE.MIXED_BY_GROUP) parts.push('dupla mista');
     else if (phase.pairing_mode === PHASE_PAIRING_MODE.PAIR_TOP_TWO) parts.push('dupla dos 2 melhores');
   }
@@ -136,6 +139,9 @@ function phaseIssues(phase, index, phases, format) {
   if (phase.pairing_mode === PHASE_PAIRING_MODE.MIXED_BY_GROUP
       && phase.qualifier_mode !== PHASE_QUALIFIER_MODE.BY_GENDER) {
     issues.push('Para formar dupla mista por grupo, escolha a classificação “por gênero (M e F)”.');
+  }
+  if (Number(phase.wildcard_slots) > 0 && isLast) {
+    issues.push('A repescagem só faz sentido numa fase que classifica para a próxima — na última fase ela é ignorada.');
   }
   if (!isLast && isRotation(phases[index + 1]?.type) && Number(phase.qualifiers_per_group) < 2) {
     issues.push(`A próxima fase (${TOURNAMENT_STAGE_TYPE_LABELS[phases[index + 1].type]}) exige ao menos 4 atletas por grupo — garanta classificados suficientes (ex.: 2 por grupo em 2 grupos = 4).`);
@@ -316,6 +322,21 @@ export default function PhasesEditor({ phases, format, onChange, unit = 'atletas
                   </div>
                 )}
 
+                {/* IDA E VOLTA: existe para o grupo pequeno. Com 3 atletas, a
+                    ida dá 2 jogos e a ida e volta dá 4 — que é o que quem se
+                    inscreve espera. Só aparece onde há todos-contra-todos. */}
+                {(grouped || phase.type === TOURNAMENT_STAGE_TYPE.ROUND_ROBIN) && (
+                  <MiniSelect
+                    label="Turnos"
+                    value={String(phase.round_robin_legs ?? 1)}
+                    options={{ 1: 'Só ida (cada confronto uma vez)', 2: 'Ida e volta (cada confronto duas vezes)' }}
+                    onChange={(v) => update(index, { round_robin_legs: Number(v) })}
+                    help={String(phase.round_robin_legs) === '2'
+                      ? 'Dobra os jogos: bom para grupo pequeno, em que a ida sozinha deixaria cada um com dois jogos.'
+                      : 'O padrão. Com grupo de 3, considere ida e volta — dois jogos por atleta é pouco para quem se inscreveu.'}
+                  />
+                )}
+
                 {!grouped && isFirst && (
                   <div>
                     <Label className="text-xs">Cabeças-de-chave</Label>
@@ -408,6 +429,25 @@ export default function PhasesEditor({ phases, format, onChange, unit = 'atletas
                     <Label className="text-xs">Classificados por grupo</Label>
                     <Input type="number" min={1} value={phase.qualifiers_per_group} onChange={(e) => update(index, { qualifiers_per_group: e.target.value })} className="h-9" />
                   </div>
+                  <div>
+                    <Label className="text-xs">Repescagem (vagas extras)</Label>
+                    <Input
+                      type="number"
+                      min={0}
+                      value={phase.wildcard_slots ?? 0}
+                      onChange={(e) => update(index, { wildcard_slots: e.target.value })}
+                      className="h-9"
+                    />
+                    <HelpText>
+                      Vagas para os <strong>melhores não classificados</strong> da colocação
+                      seguinte ao corte (os &quot;melhores terceiros&quot;, quando passam 2 por
+                      grupo). Serve para fechar a chave quando os classificados diretos não dão
+                      uma potência de 2 — em vez de um mata-mata cheio de byes. Eles são
+                      comparados por <strong>aproveitamento</strong>, não por número de
+                      vitórias, para que grupos de tamanhos diferentes não distorçam a conta.
+                      0 = sem repescagem.
+                    </HelpText>
+                  </div>
                   <MiniSelect
                     label="Critério"
                     value={phase.qualifier_mode}
@@ -464,6 +504,20 @@ export default function PhasesEditor({ phases, format, onChange, unit = 'atletas
                   </div>
                 </div>
               )}
+
+              {/* CONTROLE TOTAL: tamanhos manuais, classificados por grupo,
+                  ordem dos critérios de desempate, comparação entre grupos e
+                  entrada direta (pular fases). Fechado por padrão — quem só
+                  quer "4 grupos, passam 2" não precisa ver nada disso. */}
+              <PhaseAdvancedRules
+                phase={phase}
+                index={index}
+                isFirst={isFirst}
+                isLast={isLast}
+                grouped={grouped}
+                unit={unit}
+                onChange={(patch) => update(index, patch)}
+              />
 
               {/* Avisos do que falta/está incoerente. */}
               {issues.length > 0 && (

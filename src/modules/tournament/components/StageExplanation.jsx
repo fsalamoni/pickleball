@@ -1,6 +1,8 @@
 import React from 'react';
-import { CheckCircle2, Info, AlertTriangle, XCircle, ListChecks } from 'lucide-react';
+import { CheckCircle2, Info, AlertTriangle, XCircle, ListChecks, Lightbulb } from 'lucide-react';
 import { explainStage } from '@/modules/tournament/domain/formatExplain';
+import { suggestGroupPlans } from '@/modules/tournament/domain/groupPlan';
+import { TOURNAMENT_STAGE_TYPE } from '@/modules/tournament/domain/constants';
 
 const STATUS_STYLES = {
   ok: {
@@ -30,12 +32,20 @@ const STATUS_STYLES = {
  * jogadores: total de jogos, rodadas, byes, jogos por jogador e limitações
  * matemáticas. Usa o domínio puro `explainStage`.
  *
+ * Numa fase de GRUPOS mostra também as outras divisões possíveis para aquele
+ * número de inscritos — porque a pergunta de quem organiza nunca é "está certo
+ * o que eu escolhi?", e sim "em quantos grupos eu divido isto?". Ver
+ * `groupPlan.js`.
+ *
  * @param {{
  *   stageType: string,
  *   playerCount: number,
  *   groupCount?: number,
  *   seedCount?: number,
+ *   qualifiersPerGroup?: number,
+ *   legs?: number,
  *   showStats?: boolean,
+ *   showAlternatives?: boolean,
  * }} props
  */
 export default function StageExplanation({
@@ -43,10 +53,20 @@ export default function StageExplanation({
   playerCount,
   groupCount = 1,
   seedCount = 0,
+  qualifiersPerGroup = 2,
+  legs = 1,
   showStats = true,
+  showAlternatives = true,
 }) {
   if (!stageType) return null;
-  const explanation = explainStage({ stageType, playerCount, groupCount, seedCount });
+  const explanation = explainStage({
+    stageType, playerCount, groupCount, seedCount, qualifiersPerGroup, legs,
+  });
+  const alternativas = (showAlternatives && stageType === TOURNAMENT_STAGE_TYPE.GROUPS)
+    ? suggestGroupPlans(playerCount, { qualifiersPerGroup, legs, limit: 3 })
+      .filter((p) => p.groupCount !== Number(groupCount))
+      .slice(0, 2)
+    : [];
   const style = STATUS_STYLES[explanation.status] || STATUS_STYLES.info;
   const { Icon } = style;
 
@@ -75,6 +95,23 @@ export default function StageExplanation({
           )}
           {explanation.recommendation && (
             <p className="italic opacity-90">{explanation.recommendation}</p>
+          )}
+          {alternativas.length > 0 && (
+            <div className="space-y-1 border-t border-current/15 pt-2">
+              <p className="inline-flex items-center gap-1 font-semibold">
+                <Lightbulb aria-hidden="true" className="h-3 w-3" /> Outras divisões possíveis
+              </p>
+              <ul className="space-y-0.5">
+                {alternativas.map((p) => (
+                  <li key={p.groupCount}>
+                    <strong>{p.groupCount} {p.groupCount === 1 ? 'grupo' : 'grupos'}</strong>
+                    {' '}({p.sizes.join('+')}) · {p.totalMatches} jogos ·{' '}
+                    {p.qualifiers} classificados → chave de {p.bracket.size}
+                    {p.bracket.byes > 0 ? ` com ${p.bracket.byes} bye(s)` : ' cheia'}
+                  </li>
+                ))}
+              </ul>
+            </div>
           )}
         </div>
       </div>

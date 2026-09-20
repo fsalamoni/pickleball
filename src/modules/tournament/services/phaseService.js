@@ -50,6 +50,8 @@ import { listRegistrations } from './registrationService.js';
 import { getModality } from './modalityService.js';
 import { getTournament } from './tournamentService.js';
 import { persistMatches, listMatches, listAllMatchesForModality } from './matchService.js';
+import { planDirectEntries } from '../domain/directEntry.js';
+import { headToHeadFromMatches } from '../domain/ranking.js';
 
 const GROUPS_COL = 'tournament_groups';
 
@@ -233,11 +235,33 @@ function phaseDrawIssues(phase, groups, { isTeam = false } = {}) {
  * @returns {Promise<object[]>}
  */
 export async function getFirstPhaseEntrants(modalityId, modality) {
+  const { first } = await planPhaseEntries(modalityId, modality);
+  return first;
+}
+
+/**
+ * Quem entra em CADA fase, resolvendo a entrada direta.
+ *
+ * Quem foi marcado para entrar direto numa fase à frente **não entra na
+ * primeira** — se entrasse, ele jogaria a fase que a configuração mandou
+ * pular. É a única forma de "pular uma fase" existir de verdade: a exclusão
+ * acontece aqui, na origem, e não como um remendo em cada tela.
+ *
+ * @returns {{ first: object[], byPhase: Map<number, object[]>, warnings: Array }}
+ */
+export async function planPhaseEntries(modalityId, modality) {
   const regs = await listRegistrations(modalityId);
   const active = regs.filter(
     (r) => r.status === REGISTRATION_STATUS.CONFIRMED || r.status === REGISTRATION_STATUS.CHECKED_IN,
   );
-  return active.map((r) => registrationToEntrant(r, modality));
+  const entrants = active.map((r) => registrationToEntrant(r, modality));
+  const phases = normalizePhases(modality?.stages);
+  const plano = planDirectEntries(entrants, phases);
+  return {
+    first: plano.byPhase.get(0) || entrants,
+    byPhase: plano.byPhase,
+    warnings: plano.warnings,
+  };
 }
 
 /* --------------------------- persistência -------------------------------- */
@@ -340,6 +364,8 @@ export async function runPhaseDraw(params, actor) {
       mode: phase.division_mode,
       groupCount: phase.group_count,
       maxPerGroup: phase.max_per_group,
+      // Tamanhos escritos à mão pelo organizador (vazio ⇒ equilíbrio automático).
+      customSizes: phase.custom_group_sizes,
       seed,
     });
   }
@@ -486,16 +512,26 @@ export async function advanceToNextPhase(params, actor) {
       name: g.name,
       ranked: rankEntrantsInGroup(entrants, groupMatches, scoringConfig, {
         teamConfig: modality.team_config || null,
+        // A ordem dos critérios é a que o organizador configurou nesta fase.
+        tiebreakOrder: prevPhase.tiebreak_order,
       }),
+      // O índice de confronto direto do grupo acompanha a classificação: é o
+      // que permite o método "descartar o jogo contra o último" comparar
+      // grupos de tamanhos diferentes sobre o mesmo número de partidas.
+      headToHead: headToHeadFromMatches(groupMatches, scoringConfig),
     };
   });
 
   const seed = providedSeed || `${tournamentId}_${modalityId}_${stageIndex + 1}_${Date.now()}`;
+  // Quem entra DIRETO na próxima fase (pulou as anteriores).
+  const { byPhase: entradasPorFase } = await planPhaseEntries(modalityId, modality);
+  const directEntrants = entradasPorFase.get(stageIndex + 1) || [];
+
   const { groups: nextGroups, entrants: nextEntrants, bracketSeeding } = buildNextPhaseEntrants(
     groupsRanked,
     prevPhase,
     nextPhase,
-    { seed },
+    { seed, directEntrants },
   );
 
   const nextLabel = TOURNAMENT_STAGE_TYPE_LABELS[nextPhase.type] || nextPhase.type;

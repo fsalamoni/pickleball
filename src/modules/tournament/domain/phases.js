@@ -28,6 +28,9 @@ import {
   MAX_PHASES_PER_MODALITY,
 } from './constants.js';
 import { normalizeStageScoringOverride } from './scoring.js';
+import { normalizeDirectEntry } from './directEntry.js';
+import { normalizeTiebreakOrder } from './tiebreak.js';
+import { normalizeCrossGroupMethod } from './crossGroup.js';
 
 /** Formatos que se dividem naturalmente em grupos paralelos. */
 const GROUPED_FORMATS = new Set([
@@ -81,6 +84,45 @@ export function normalizePhase(raw = {}, ctx = {}) {
     ? 2
     : Math.max(0, Math.floor(Number(raw.qualifiers_per_group)) || 0);
 
+  // REPESCAGEM (campo ADITIVO, padrão 0): vagas extras para os melhores da
+  // colocação seguinte ao corte — os "melhores terceiros" quando passam 2 por
+  // grupo. Ausente ou 0 ⇒ comportamento idêntico ao de sempre, e nenhuma fase
+  // já gravada muda.
+  const wildcardSlots = Math.max(0, Math.floor(Number(raw.wildcard_slots)) || 0);
+
+  // IDA E VOLTA dentro do grupo / dos pontos corridos (campo ADITIVO, padrão
+  // 1 = só ida). Existe para o grupo pequeno: com 3 atletas, a ida dá 2 jogos
+  // e a ida e volta dá 4.
+  const legs = Math.max(1, Math.min(2, Math.floor(Number(raw.round_robin_legs)) || 1));
+
+  // TAMANHOS MANUAIS dos grupos (campo ADITIVO, vazio ⇒ equilíbrio automático).
+  // Existe porque nem toda divisão boa é equilibrada: às vezes o organizador
+  // quer 6+5+5 em vez de 6+6+4, ou quer um grupo maior numa quadra coberta.
+  const customSizes = Array.isArray(raw.custom_group_sizes)
+    ? raw.custom_group_sizes
+      .map((v) => Math.max(0, Math.floor(Number(v)) || 0))
+      .filter((v) => v > 0)
+    : [];
+
+  // CLASSIFICADOS POR GRUPO, um a um (campo ADITIVO, vazio ⇒ o mesmo número
+  // para todos). Com grupos de tamanhos diferentes é comum passar 2 do grupo
+  // de 5 e 1 do de 3.
+  const qualifiersByGroup = Array.isArray(raw.qualifiers_by_group)
+    ? raw.qualifiers_by_group.map((v) => Math.max(0, Math.floor(Number(v)) || 0))
+    : [];
+
+  // De que COLOCAÇÃO saem os repescados (0 ⇒ a seguinte ao corte).
+  const wildcardFrom = Math.max(0, Math.floor(Number(raw.wildcard_from_position)) || 0);
+
+  // Critérios de desempate DENTRO do grupo e método de comparação ENTRE grupos.
+  const tiebreakOrder = Array.isArray(raw.tiebreak_order) && raw.tiebreak_order.length > 0
+    ? normalizeTiebreakOrder(raw.tiebreak_order)
+    : [];
+  const crossGroupMethod = normalizeCrossGroupMethod(raw.cross_group_method);
+
+  // Quem entra DIRETO nesta fase, pulando as anteriores.
+  const directEntry = normalizeDirectEntry(raw.direct_entry);
+
   const feedMode = Object.values(PHASE_FEED_MODE).includes(raw.feed_mode)
     ? raw.feed_mode
     : PHASE_FEED_MODE.POOL_ALL;
@@ -101,6 +143,14 @@ export function normalizePhase(raw = {}, ctx = {}) {
     division_mode: divisionMode,
     group_count: groupCount,
     max_per_group: maxPerGroup,
+    wildcard_slots: wildcardSlots,
+    wildcard_from_position: wildcardFrom,
+    round_robin_legs: legs,
+    custom_group_sizes: customSizes,
+    qualifiers_by_group: qualifiersByGroup,
+    tiebreak_order: tiebreakOrder,
+    cross_group_method: crossGroupMethod,
+    direct_entry: directEntry,
     seed_count: Math.max(0, Math.floor(Number(raw.seed_count)) || 0),
     // Classificação para a próxima fase (ignorado na última fase).
     qualifiers_per_group: qualifiersPerGroup,
@@ -165,6 +215,20 @@ export function validatePhases(stages, format) {
     if (p.division_mode === PHASE_DIVISION_MODE.MAX_PER_GROUP && p.max_per_group < 2) {
       errors.push(`${human}: máximo por grupo deve ser ao menos 2.`);
     }
+    const manuais2 = Array.isArray(p.custom_group_sizes) ? p.custom_group_sizes : [];
+    if (manuais2.length > 0 && manuais2.some((v) => v < 2)) {
+      errors.push(`${human}: um grupo escrito à mão ficou com menos de 2 — grupo de 1 não tem jogo.`);
+    }
+    if (Array.isArray(p.qualifiers_by_group) && p.qualifiers_by_group.length > 0) {
+      const gruposPrevistos = manuais2.length || (p.division_mode === PHASE_DIVISION_MODE.GROUP_COUNT ? p.group_count : 0);
+      if (gruposPrevistos > 0 && p.qualifiers_by_group.length !== gruposPrevistos) {
+        errors.push(`${human}: a lista de classificados por grupo tem ${p.qualifiers_by_group.length} número(s) para ${gruposPrevistos} grupo(s).`);
+      }
+    }
+    if (i === 0 && p.direct_entry && p.direct_entry.mode !== 'none') {
+      errors.push(`${human}: entrada direta não faz sentido na 1ª fase — todos já entram nela.`);
+    }
+
     // Toda fase, exceto a última, precisa classificar alguém.
     const isLast = i === phases.length - 1;
     if (!isLast && p.qualifiers_per_group < 1) {
@@ -190,6 +254,12 @@ export function validatePhases(stages, format) {
  */
 export function plannedGroupCount(phase, total) {
   if (!supportsGroups(phase.type)) return 1;
+  // Tamanhos escritos à mão mandam no número de grupos: quem escreveu
+  // "6, 5, 5" pediu três grupos, e o modo de divisão não tem o que discutir.
+  const manuais = Array.isArray(phase.custom_group_sizes) ? phase.custom_group_sizes : [];
+  if (manuais.length > 0) {
+    return Math.max(1, Math.min(Math.max(1, Math.floor(total / 2) || 1), manuais.length));
+  }
   if (phase.division_mode === PHASE_DIVISION_MODE.SINGLE) return 1;
   if (phase.division_mode === PHASE_DIVISION_MODE.MAX_PER_GROUP) {
     const cap = Math.max(1, phase.max_per_group);

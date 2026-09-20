@@ -115,6 +115,8 @@ Estes princípios vieram de bugs reais que custaram horas pra arrumar. São ineg
 │   ├── 22-DIA-DE-JOGO-DA-ARENA.md  🏟️ a arena cria dia de jogo no calendário
 │   ├── 23-ARENA-CALENDARIO-E-RESERVA.md 🗓️ auditoria: calendário, reserva, prontidão
 │   ├── 25-DIA-DE-JOGO-COMO-MODULO.md ⭐ o dia de jogo igual em toda origem
+│   ├── 26-TORNEIO-FORMATOS-E-REGRAS.md ⭐ grupos, classificação, chaves e o
+│   │                                     controle total do admin do torneio
 │   ├── 20-SEGURANCA-E-PRIVACIDADE/ 🔴 ⭐ PRIORIDADE MÁXIMA — segurança, LGPD,
 │   │   ├── 00-INDEX.md                documentos legais, imagem, admin
 │   │   ├── 01-AUDITORIA-ACHADOS.md    ⚠ 31 achados, 2 CRÍTICOS ABERTOS
@@ -196,6 +198,13 @@ Estes princípios vieram de bugs reais que custaram horas pra arrumar. São ineg
 **"O dia de jogo do CLUBE mudou. E o que já está publicado?"** → ⭐ **nada foi migrado, e não vai ser.** A pergunta que separa é UMA: `isModularEventDate(date)` — `club_events/{id}/dates/{id}.game_day_id` preenchido ⇒ módulo (`game_days`); ausente ⇒ legado, servido pelo `GameDayOrganizer` de sempre, lendo e escrevendo nas mesmas subcoleções. Quem faz a pergunta é `src/v2/components/clubs/ClubGameDayTab.jsx`, e é o ÚNICO lugar que a faz (guarda de fonte). O legado encolhe sozinho. Ver `docs/25-DIA-DE-JOGO-COMO-MODULO.md` §5
 **"Quem organiza o dia de jogo do clube?"** → quem agendou a data (criador), os administradores NOMEADOS e **quem administra o CLUBE** (`isClubGameDayManagerOf` no `firestore.rules`, guardada por `'club_id' in …`). O dia nasce `manage_mode: 'participants'` de propósito — no evento legado qualquer membro mexia em participantes e jogos, e nascer restrito tiraria da comunidade algo que ela já tinha. O membro do clube LÊ o dia (`isClubGameDayMemberOf`) e **entra e sai sozinho**. Na tela, pergunte sempre a `useGameDayRoles`, que soma arena e clube num lugar só
 **"Onde se edita/arquiva um dia de jogo de clube?"** → na **DATA do evento**, não em `/dia-de-jogo/:id` (que mostra "Gerir no clube"). A data manda em título, horário, local e existência; a aba de jogos manda no FORMATO, e só enquanto não houver partidas — trocar depois não é edição, é perda (o Play não guarda placar; Mexicano e Rei da Quadra derivam as rodadas do que já aconteceu). E **nunca** abra `CreateGameDayDialog` num dia de clube: ele grava a `visibility` junto, e público ali significa legível e auto-inscrevível por qualquer conta
+**"Como o torneio organiza grupos, classificação e chaves? O que o admin pode mudar?"** → ⭐ `docs/26-TORNEIO-FORMATOS-E-REGRAS.md`. Existe um PADRÃO bom (regulamento USA Pickleball + práticas dos circuitos) e **o admin do torneio pode trocar tudo**, com explicação ao lado de cada controle. Configurável: tamanhos dos grupos à mão, turnos (ida/ida e volta), classificados grupo a grupo, repescagem (quantas vagas e de qual colocação), **ordem dos critérios de desempate** (9 critérios, 4 ordens prontas), **método de comparação entre grupos** (aproveitamento / absoluto / descartar o último) e **entrada direta** (quem pula fases). Todo campo é ADITIVO: em branco, a fase se comporta como antes. Zero coleção, zero índice, zero regra — tudo em `tournament_modalities.stages[]`, que não tem lista fechada de campos
+**"Chegaram 19 inscritos. Em quantos grupos eu divido?"** → o planejador responde: `suggestGroupPlans(19, { qualifiersPerGroup: 2 })` (`domain/groupPlan.js`) devolve as divisões viáveis com jogos, jogos por atleta, classificados e se a chave fecha. A tela de sorteio mostra isso ANTES de clicar, com o número REAL de inscritos. Tamanho bom é **4 ou 5**; grupo de 2 é bloqueado; grupo de 3 pede **ida e volta** (`round_robin_legs: 2`). 🐞 Antes a tela avisava "para grupos do mesmo tamanho use um múltiplo de 4", que é pedir para o inscrito desistir — grupo desigual é o caso NORMAL, e o que ele exige é a regra de comparação certa, não um inscrito a mais
+**"Grupos de tamanhos diferentes: como comparar quem veio de cada um?"** → por **COLOCAÇÃO primeiro** (todos os 1ºs, depois os 2ºs) e, dentro dela, por **APROVEITAMENTO** — vitórias e saldo ÷ partidas jogadas (`domain/crossGroup.js`). 3 vitórias em 3 vale mais que 3 em 4. O admin pode trocar para absoluto ou para "descartar o jogo contra o último de cada grupo" (regra da FIFA). **Nunca** compare vitórias absolutas entre grupos desiguais por conta própria
+**"Faltam/sobram classificados para fechar a chave"** → `bracketFit(n)` diz as duas saídas: quantos **repescar** para encher a chave atual e quantos **tirar** para caber na menor. A repescagem (`wildcard_slots`) pega os melhores da colocação seguinte ao corte — e um 4º NUNCA entra na frente de um 3º, porque a repescagem compara IGUAIS
+**"Como se desempata dentro do grupo?"** → vitórias → **confronto direto** → saldo → saldo no confronto direto → pontos a favor → pontos sofridos (USA Pickleball 15.B.4). Fonte ÚNICA em `domain/tiebreak.js`, usada na classificação do grupo, no ranking da modalidade e na progressão entre fases. 🐞 Antes a regra vivia duplicada em dois arquivos e **nenhuma das duas tinha confronto direto** — a reclamação nº 1 de quadra ("mas eu ganhei dele"). Empate de três+ usa **mini-tabela** entre os empatados, recalculada a cada nível. Quem não se enfrentou: critério PULADO, nunca inventado. A ORDEM é configurável por fase
+**"Quero que alguém entre direto numa fase mais à frente, pulando fases"** → ⭐ é a **entrada direta** (`direct_entry` na fase, `domain/directEntry.js`). Dois modos: os **N melhores cabeças** (modelo de qualificatória — os fortes esperam, os outros disputam as vagas) ou uma **lista a dedo** (campeão defendendo título, convidado). Quem entra direto na fase 3 pula as fases 1 e 2: não entra no sorteio nem na classificação delas. Configura-se na **aba de sorteio**, onde os NOMES existem. Regras: entra uma vez só (vale a fase mais cedo, com aviso), a 1ª fase precisa sobrar com ≥2 (senão é ERRO na tela), e numa próxima fase de grupos os diretos são ESPALHADOS
+**"Chave com número de inscritos que não é potência de 2"** → os byes vão para os **melhores cabeças** (regra do DUPR), e são sempre exatamente `tamanho − inscritos`. 🐞 Antes os não-cabeças eram despejados nos slots da esquerda para a direita: uma chave de 16 com 9 inscritos nascia com **TRÊS partidas de ninguém contra ninguém** (gravadas como W.O.) e um bye dado a quem calhasse; e a ordem canônica estava espelhada (o nº 1 pegava o nº 5 na estreia em vez do nº 8). **Nunca** preencha chave da esquerda para a direita: todo mundo entra pela posição canônica do seu número (`bracketSeedOrder`)
 **"Em quais formatos a dupla vinculada vale?"** → Play, Americano aprimorado e Americano de grade: **sim**. Mexicano e Rei da Quadra: **não**, e a tela AVISA (`fixedPairsIgnored`) em vez de ignorar calada — neles as duplas saem da classificação da rodada e do resultado da anterior, que é o que define os dois formatos. E o vínculo tem de valer em **TRÊS momentos**: quem joga a rodada, em que grupo de 4, e de que LADO. Só o terceiro ⇒ a dupla vai para quadras diferentes; só os dois primeiros ⇒ ela joga uma CONTRA a outra (foi o defeito relatado). Ver `docs/25-DIA-DE-JOGO-COMO-MODULO.md` §4
 **"Vinculei uma dupla e ela não jogou junta"** → era o caso no Americano aprimorado, e a causa é sutil: o vínculo valia ao escolher **QUEM** entra (`respectsFixedPairs`) e não ao escolher **COMO** os quatro se dividem — `pairFourBalanced` recebe IDS e não tinha como saber quem estava vinculado. Na primeira partida eles saíam juntos por acaso; da segunda em diante aquela parceria já custava 10 no histórico e o motor os colocava como **adversários**. Agora `fixedPairsWithin(ids, participantes)` (`americanoLive.js`) traduz os `partner_id` mútuos e é passada em TODO caminho de sorteio (partida avulsa, rede, custo do grupo na rodada, previsão). O vínculo é **filtro antes do custo**, não mais um critério dentro dele: as demais regras decidem só entre as formações que o respeitam. E a parceria vinculada **não é cobrada como repetição** — se fosse, o custo do grupo cresceria 10 por partida e a dupla passaria a ser evitada. Ao criar caminho novo de sorteio, **nunca** chame `pairFourBalanced` sem `fixedPairs`. Ver `docs/17-DIA-DE-JOGO-AMERICANO-APRIMORADO.md` §4a
 **"Cliquei no jogador em quadra: quero escolher entre deixá-lo de fora e trocá-lo por alguém"** → é o que acontece — o clique abre `CourtPlayerDialog` (exportado de `AthletePlayOrganizer.jsx`), com as duas opções; a lista de quem pode entrar vem de `eligibleSwapReplacements` e é reconferida no serviço. Vale no painel E no telão. Ver `docs/14-DIA-DE-JOGO-TELAO.md`
@@ -437,12 +446,78 @@ chore(deps): bump firebase to 12.x
 
 ## 10. Métricas atuais (snapshot 2026-08-31, 11:05 GMT-3)
 
-> Última atualização: 2026-09-19 (Onda AS). Antes: 2026-08-31, após **41 PRs
+> Última atualização: 2026-09-20 (Onda AT). Antes: 2026-08-31, após **41 PRs
 > novos** mergeados em main (#95 a #135) — Sprints 32 a 50+.
 > Detalhes em `docs/08-ARENA-ROADMAP.md` (Seções 34-50) e
 > memory topic `picklerush-sync-2026-08.md`.
 >
 > **Destaques por onda**:
+>
+> - **Onda AT — O torneio com qualquer número de inscritos, e o admin no
+>   comando** (2026-09-20): auditoria do torneio de ponta a ponta, com foco no
+>   que ninguém tinha olhado: **o que acontece quando o número de inscritos não
+>   é o ideal**.
+>
+>   **(1) 🐞 A chave incompleta nascia quebrada.** Dois defeitos no mesmo
+>   lugar. A sequência canônica estava espelhada — numa chave de 8 o nº 1
+>   estreava contra o nº 5, não contra o nº 8. E os não-cabeças eram despejados
+>   nos slots vazios da ESQUERDA para a DIREITA, o que amontoava todo mundo na
+>   metade de cima e deixava pares inteiros vazios: **uma chave de 16 com 9
+>   inscritos nascia com TRÊS partidas de ninguém contra ninguém**, gravadas
+>   como W.O. no banco, e um único bye entregue a quem calhasse. Agora todo
+>   mundo entra pela posição canônica do seu número, o que dá exatamente
+>   `tamanho − inscritos` byes, zero partida fantasma, e os byes nos **melhores
+>   cabeças** — a regra do DUPR, que sai de graça da ordem certa.
+>
+>   **(2) 🐞 O desempate não tinha CONFRONTO DIRETO.** A ordem do regulamento
+>   (USA Pickleball 15.B.4) põe o confronto direto logo depois das vitórias; a
+>   plataforma pulava direto para o saldo. É a reclamação nº 1 de quadra — *"mas
+>   eu ganhei dele"* — e quem organizava não tinha como explicar, porque a tela
+>   mostrava o resultado certo de uma conta errada. Pior: a regra vivia
+>   DUPLICADA em dois arquivos, as duas cópias igualmente erradas. Virou fonte
+>   única, com mini-tabela para empate de três ou mais, recalculada a cada nível
+>   (o empate menor é um empate NOVO).
+>
+>   **(3) Grupos desiguais deixaram de ser tratados como erro.** A tela avisava
+>   *"para grupos do mesmo tamanho use um número de inscritos múltiplo de 4"* —
+>   que é pedir para alguém desistir da inscrição. Grupo desigual é o caso
+>   NORMAL de torneio amador; o que ele exige é a **regra de comparação certa**:
+>   colocação primeiro, e dentro dela **aproveitamento**, não número absoluto
+>   (3 vitórias em 3 vale mais que 3 em 4). No lugar do aviso inútil entrou um
+>   **planejador**: dado o número real de inscritos, mostra as divisões viáveis
+>   com jogos, jogos por atleta, classificados e se a chave fecha — e as
+>   alternativas, na tela de sorteio, antes de clicar.
+>
+>   **(4) O que fazer quando os classificados não fecham a chave.** 10
+>   classificados numa chave de 16 são 6 byes, e metade da primeira rodada não
+>   acontece. Agora a plataforma mostra as duas saídas e implementa a primeira:
+>   **repescagem** dos melhores da colocação seguinte ao corte, comparados entre
+>   IGUAIS (um 4º nunca entra na frente de um 3º).
+>
+>   **(5) ⭐ Tudo passou a ser do ADMIN.** Existe um padrão bom e ele pode ser
+>   trocado inteiro, com explicação ao lado de cada controle: tamanhos dos
+>   grupos à mão, turnos (ida e volta, que é a saída para o grupo de 3),
+>   classificados grupo a grupo, repescagem e de qual colocação, **ordem dos
+>   critérios de desempate** (9 critérios, 4 ordens prontas) e **método de
+>   comparação entre grupos** (aproveitamento / absoluto / descartar o último,
+>   que é a regra da FIFA).
+>
+>   **(6) ⭐ Entrada direta: pular fases.** O pedido mais específico, e o que
+>   não existia de jeito nenhum. Os N melhores cabeças — ou uma lista a dedo —
+>   **pulam as fases anteriores** e entram numa fase à frente como cabeças. É o
+>   modelo de qualificatória (os fortes esperam, os outros disputam as vagas), o
+>   campeão defendendo título, o convidado da organização. Configura-se na aba
+>   de SORTEIO, onde os nomes existem, e a tela mostra o resultado antes do
+>   sorteio: *"2 entram direto na fase 2 (Ana, Bruno), pulando 1 fase; 12
+>   começam na 1ª"*. Com as travas que importam: entra uma vez só, a 1ª fase
+>   precisa sobrar com ao menos 2, e numa próxima fase de grupos os diretos são
+>   espalhados em vez de formarem um grupo da morte por acidente.
+>
+>   **Banco: zero coleção, zero índice, zero regra, zero migração.** Oito campos
+>   opcionais em `tournament_modalities.stages[]`, que não tem lista fechada de
+>   campos. `normalizePhase` preenche os padrões na leitura, então uma
+>   modalidade gravada antes desta onda se comporta exatamente como antes.
+>   Ver `docs/26-TORNEIO-FORMATOS-E-REGRAS.md`.
 >
 > - **Onda AS — O clube entra no módulo, sem tocar no que já foi jogado**
 >   (2026-09-19): a Onda AR unificou o SORTEIO e deixou uma tabela de
@@ -1214,7 +1289,7 @@ chore(deps): bump firebase to 12.x
 
 | Métrica | Valor | Delta do início do agente |
 |---|---|---|
-| **Testes Vitest** | **4527 passing** (270 arquivos) + 218 asserções de regras (Vitest) + 85 do dia de jogo no emulador | +4119 (era 408) |
+| **Testes Vitest** | **4663 passing** (276 arquivos) + 218 asserções de regras (Vitest) + 85 do dia de jogo no emulador | +4255 (era 408) |
 | **Lint errors** | 0 | era 30+ |
 | **Módulos** | 21 (+`help` — conteúdo dos tutoriais em tela) (`games` e `legal` saíram como `src/modules/` mas continuam como pastas oficiais — **rating virou módulo oficial** com domain/services/hooks/components) | +4 (coaches, circuits, games, legal) |
 | **V2 pages** | 82 (+V2GameDayTelao — telão, fora do V2Layout; +V2Help — central de ajuda; +V2ArenaKiosk — totem da recepção, também fora do V2Layout; +V2ArenaCheckin; +V2ArenaAttendance) | +58 |

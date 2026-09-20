@@ -31,6 +31,8 @@ export default function V2ModalityInfoContent({ modality, tournament, registrati
   const stageType = stages[0]?.type;
   const groupCount = stages[0]?.group_count || 1;
   const seedCount = stages[0]?.seed_count || 0;
+  const qualifiersPerGroup = Number(stages[0]?.qualifiers_per_group ?? 2);
+  const legs = Number(stages[0]?.round_robin_legs) === 2 ? 2 : 1;
   const fee = Number(modality.entry_fee_cents || 0);
 
   return (
@@ -98,7 +100,18 @@ export default function V2ModalityInfoContent({ modality, tournament, registrati
               <Layers className="h-4 w-4 text-ink" /> Como funciona a competição
             </h4>
             <p>{describeStage(stageType)}</p>
-            <StageExplanation stageType={stageType} playerCount={registrationsCount} groupCount={groupCount} seedCount={seedCount} />
+            {/* Para o atleta a pergunta é "como vai ser", não "em quantos
+                grupos dividir": as alternativas de divisão são da tela de quem
+                organiza. */}
+            <StageExplanation
+              stageType={stageType}
+              playerCount={registrationsCount}
+              groupCount={groupCount}
+              seedCount={seedCount}
+              qualifiersPerGroup={qualifiersPerGroup}
+              legs={legs}
+              showAlternatives={false}
+            />
           </section>
         )
       )}

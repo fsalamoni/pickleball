@@ -127,6 +127,12 @@ que pode se unificar foi unificado**. Pontos pertinentes ainda abertos:
   nomeados sem tela nova. O legado do clube não foi migrado (a data sem
   `game_day_id` segue no organizador de sempre).
   Ver `docs/25-DIA-DE-JOGO-COMO-MODULO.md`.
+- ✅ **TOR-00** *(Onda AT)* torneio com qualquer número de inscritos: chave
+  incompleta com byes nos cabeças (e sem partidas fantasma), desempate oficial
+  com confronto direto, comparação entre grupos desiguais por aproveitamento,
+  repescagem, planejador de grupos, e **controle total do admin** sobre
+  formato, classificação e entrada direta (pular fases).
+  Ver `docs/26-TORNEIO-FORMATOS-E-REGRAS.md`.
 - ⏳ **DIA-01** console "Dia de Jogo" (fila por quadra, chamada, ocupação).
 - ⏳ **DIA-02** placar courtside otimizado (botões gigantes, desfazer, WO
   explícito — QW-18, offline com fila).

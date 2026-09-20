@@ -14,7 +14,8 @@
  * duplas formadas por classificação). Tudo aqui é puro (sem I/O).
  */
 
-import { buildStandings } from './ranking.js';
+import { buildStandings, headToHeadFromMatches } from './ranking.js';
+import { rankByOfficialCriteria } from './tiebreak.js';
 import { groupLetter, computeGroupSizes, assignBalancedGroups } from './grouping.js';
 import {
   PHASE_QUALIFIER_MODE,
@@ -25,6 +26,8 @@ import {
   TOURNAMENT_STAGE_TYPE,
 } from './constants.js';
 import { supportsGroups, BRACKET_FORMATS } from './phases.js';
+import { selectWildcards, rankAcrossGroups, withoutLastPlaced, CROSS_GROUP_METHOD } from './crossGroup.js';
+import { normalizeDirectEntry, hasDirectEntry } from './directEntry.js';
 import { buildTeamRanking, matchToConfrontation, isTeamConfrontation } from './teamFormat.js';
 
 /** Formatos de ROTAÇÃO de parceiros (jogam com duplas montadas por rodada). */
@@ -33,18 +36,16 @@ const ROTATION_FORMATS = new Set([
   TOURNAMENT_STAGE_TYPE.MEXICANO,
 ]);
 
-/** Comparador oficial de classificação (mesmos critérios de ranking.js). */
-function compareStats(x, y) {
-  if (y.wins !== x.wins) return y.wins - x.wins;
-  const xb = (x.points_for || 0) - (x.points_against || 0);
-  const yb = (y.points_for || 0) - (y.points_against || 0);
-  if (yb !== xb) return yb - xb;
-  if ((y.points_for || 0) !== (x.points_for || 0)) return (y.points_for || 0) - (x.points_for || 0);
-  if ((x.points_against || 0) !== (y.points_against || 0)) {
-    return (x.points_against || 0) - (y.points_against || 0);
-  }
-  return 0;
-}
+/*
+ * O comparador de classificação NÃO mora aqui. Ele é um só, em `tiebreak.js`,
+ * e vale igual na classificação do grupo, no ranking da modalidade e na
+ * progressão entre fases.
+ *
+ * 🐞 Antes eram duas cópias da mesma regra (aqui e em `ranking.js`), e nenhuma
+ * das duas tinha o CONFRONTO DIRETO — o critério que o regulamento coloca
+ * logo depois das vitórias. Duas cópias da mesma regra divergem um dia; duas
+ * cópias ERRADAS da mesma regra já nascem divergindo do regulamento.
+ */
 
 /**
  * Classifica os entrants de um grupo a partir dos jogos do grupo.
@@ -95,13 +96,24 @@ export function rankEntrantsInGroup(entrants, matches, scoringConfig, options = 
     return { entrant: e, stats, index };
   });
 
-  withStats.sort((a, b) => {
-    const c = compareStats(a.stats, b.stats);
-    if (c !== 0) return c;
-    return a.index - b.index; // estável
-  });
+  // Confronto direto: o índice sai dos jogos DO GRUPO, e a chave é o id de
+  // INSCRIÇÃO (o que aparece no jogo). Um entrant pode ter mais de um membro
+  // (dupla formada por classificação), então o confronto do entrant é o
+  // confronto de qualquer um dos seus membros.
+  const headToHead = headToHeadFromMatches(matches, scoringConfig);
+  const ordenados = rankByOfficialCriteria(
+    withStats.map((w) => ({ ...w.stats, __w: w })),
+    {
+      headToHead,
+      // A ORDEM dos critérios é da fase — o organizador monta a dele.
+      order: options.tiebreakOrder || null,
+      // Um entrant com vários membros não tem um id só; usamos o primeiro
+      // membro, que é quem aparece no jogo daquele lado.
+      idOf: (r) => String((r.__w.entrant.members || [])[0] ?? r.__w.entrant.id ?? ''),
+    },
+  );
 
-  return withStats.map((w, i) => ({ ...w.entrant, stats: w.stats, rank: i + 1 }));
+  return ordenados.map((r, i) => ({ ...r.__w.entrant, stats: r.__w.stats, rank: i + 1 }));
 }
 
 /**
@@ -152,8 +164,15 @@ function genderBucket(entrant) {
  * @param {{ qualifier_mode: string, qualifiers_per_group: number }} phase
  * @returns {Array<object>} classificados, na ordem de classificação
  */
-export function selectQualifiers(ranked, phase) {
-  const per = Math.max(0, Math.floor(phase.qualifiers_per_group) || 0);
+export function selectQualifiers(ranked, phase, groupIndex = null) {
+  // Classificados POR GRUPO: com grupos de tamanhos diferentes é comum passar
+  // 2 do grupo de 5 e 1 do de 3. A lista, quando existe, manda no número
+  // daquele grupo; sem ela, vale o mesmo número para todos.
+  const porGrupo = Array.isArray(phase?.qualifiers_by_group) ? phase.qualifiers_by_group : [];
+  const especifico = groupIndex != null && Number.isFinite(Number(porGrupo[groupIndex]))
+    ? Math.max(0, Math.floor(Number(porGrupo[groupIndex])))
+    : null;
+  const per = especifico ?? Math.max(0, Math.floor(phase.qualifiers_per_group) || 0);
   if (per === 0) return [];
   if (phase.qualifier_mode === PHASE_QUALIFIER_MODE.BY_GENDER) {
     const males = ranked.filter((e) => genderBucket(e) === 'male').slice(0, per);
@@ -236,16 +255,40 @@ export function buildNextPhaseEntrants(sourceGroups, prevPhase, nextPhase, optio
     ? PHASE_PAIRING_MODE.NONE
     : prevPhase.pairing_mode;
 
+  // REPESCAGEM: as vagas extras vão para os melhores da colocação seguinte ao
+  // corte, comparados por TAXA (aproveitamento e saldo por partida) — nunca por
+  // número absoluto, que favoreceria quem calhou de estar num grupo maior.
+  // Campo aditivo: sem `wildcard_slots`, nada disto roda.
+  const metodo = prevPhase.cross_group_method || CROSS_GROUP_METHOD.RATE;
+  const repescados = selectWildcards(sourceGroups, {
+    qualifiersPerGroup: prevPhase.qualifiers_per_group,
+    qualifiersByGroup: prevPhase.qualifiers_by_group,
+    fromPosition: prevPhase.wildcard_from_position,
+    slots: prevPhase.wildcard_slots || 0,
+    method: metodo,
+  }).chosen;
+  const repescadosPorGrupo = new Map();
+  repescados.forEach((e) => {
+    const g = e._groupIndex ?? 0;
+    if (!repescadosPorGrupo.has(g)) repescadosPorGrupo.set(g, []);
+    repescadosPorGrupo.get(g).push(e);
+  });
+
   // 1) Classificados (com pairing) por grupo de origem, preservando a ordem.
   const advancersByGroup = sourceGroups.map((g) => {
-    const quals = selectQualifiers(g.ranked, prevPhase);
-    const letter = (g.name || '').replace(/^Grupo\s+/i, '') || groupLetter(g.index || 0);
-    const entrants = applyPairing(quals, effectivePairing, letter).map((e, j) => ({
-      ...e,
-      _groupIndex: g.index || 0,
-      _seedRank: j + 1, // 1º, 2º… classificado do grupo
-    }));
-    return { index: g.index || 0, letter, entrants };
+    const idx = g.index || 0;
+    const quals = selectQualifiers(g.ranked, prevPhase, idx);
+    const extras = repescadosPorGrupo.get(idx) || [];
+    const letter = (g.name || '').replace(/^Grupo\s+/i, '') || groupLetter(idx);
+    const entrants = applyPairing([...quals, ...extras], effectivePairing, letter)
+      .map((e, j) => {
+        const base = { ...e, _groupIndex: idx, _seedRank: j + 1 }; // 1º, 2º… do grupo
+        // Marca só quando é verdade: `undefined` num campo é recusado pelo
+        // Firestore, e estes entrants são gravados em `tournament_groups`.
+        if (extras.includes(e)) base._wildcard = true;
+        return base;
+      });
+    return { index: idx, letter, entrants };
   });
 
   const allAdvancers = advancersByGroup.flatMap((g) => g.entrants);
@@ -254,11 +297,21 @@ export function buildNextPhaseEntrants(sourceGroups, prevPhase, nextPhase, optio
 
   // Ordem da chave: "adjacente" (A×B, C×D) usa a ordem dos grupos; "clássica"
   // espalha por colocação (todos os 1ºs, depois os 2ºs…) para cabeças-de-chave.
+  // Ordem "clássica": primeiro a COLOCAÇÃO (todos os 1ºs, depois os 2ºs…) e,
+  // dentro dela, o MÉRITO — aproveitamento e saldo POR PARTIDA. Antes o
+  // desempate dentro da colocação era a letra do grupo, o que fazia o 1º do
+  // grupo A ser sempre cabeça sobre o 1º do grupo D mesmo tendo ido pior.
+  // Com grupos de tamanhos diferentes, comparar por taxa é a única forma
+  // honesta: 3 vitórias em 3 é mais do que 3 em 4.
+  const paraComparar = (e) => {
+    const base = { ...e, rank: e._seedRank };
+    if (metodo !== CROSS_GROUP_METHOD.DROP_LAST) return base;
+    const grupo = sourceGroups.find((g) => (g.index || 0) === e._groupIndex);
+    return grupo ? withoutLastPlaced(base, grupo) : base;
+  };
   const bracketOrder =
     nextIsBracket && nextPhase.bracket_seeding === PHASE_BRACKET_SEEDING.STANDARD
-      ? allAdvancers
-          .slice()
-          .sort((a, b) => (a._seedRank - b._seedRank) || (a._groupIndex - b._groupIndex))
+      ? rankAcrossGroups(allAdvancers.map(paraComparar), { byPosition: true, method: metodo })
       : allAdvancers;
 
   // 2) Monta os grupos da próxima fase conforme o modo de alimentação.
@@ -303,10 +356,59 @@ export function buildNextPhaseEntrants(sourceGroups, prevPhase, nextPhase, optio
     }
   }
 
+  // ENTRADA DIRETA: quem pulou as fases anteriores entra AQUI, como cabeça —
+  // `_seedRank: 0` o coloca à frente de todos os classificados na ordem da
+  // chave, que é o ponto de ter esperado. Quem chama passa a lista já
+  // resolvida (`options.directEntrants`), porque quem sabe quem está inscrito
+  // é o serviço, não este arquivo puro.
+  const diretos = (options.directEntrants || []).map((e, i) => ({
+    ...e,
+    _groupIndex: -1,
+    _seedRank: 0,
+    _directEntry: true,
+    _directOrder: i,
+  }));
+
+  if (diretos.length > 0) {
+    const comDiretos = [...diretos, ...allAdvancers];
+    const ordemChave = nextIsBracket
+      && nextPhase.bracket_seeding === PHASE_BRACKET_SEEDING.STANDARD
+      ? [...diretos, ...bracketOrder]
+      : comDiretos;
+    return {
+      entrants: comDiretos,
+      groups: nextIsBracket
+        ? [{ name: 'Chave', index: 0, entrants: ordemChave }]
+        : redistribuirComDiretos(groups, diretos, nextPhase, seed),
+      bracketOrder: ordemChave,
+      bracketSeeding: nextPhase.bracket_seeding,
+      directEntrants: diretos,
+    };
+  }
+
   return {
     entrants: allAdvancers,
     groups,
     bracketOrder,
     bracketSeeding: nextPhase.bracket_seeding,
+    directEntrants: [],
   };
+}
+
+/**
+ * Distribui quem entrou direto nos grupos da próxima fase (quando ela é de
+ * grupos, não de chave).
+ *
+ * Um por grupo, começando pelo primeiro: é o que espalha os cabeças em vez de
+ * juntá-los num grupo da morte. Sobrando mais diretos do que grupos, a volta
+ * recomeça — o mesmo efeito de uma serpentina, sem precisar re-sortear o que
+ * já foi decidido pela classificação.
+ */
+function redistribuirComDiretos(groups, diretos, nextPhase, seed) {
+  if (!Array.isArray(groups) || groups.length === 0) {
+    return [{ name: 'Grupo único', index: 0, entrants: diretos }];
+  }
+  const copia = groups.map((g) => ({ ...g, entrants: [...g.entrants] }));
+  diretos.forEach((e, i) => copia[i % copia.length].entrants.push(e));
+  return copia;
 }
