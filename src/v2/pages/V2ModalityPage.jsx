@@ -14,7 +14,7 @@ import { V2ModalityGallery } from '@/v2/components/tournament/V2Gallery';
 import { V2ModalityMatches } from '@/v2/components/tournament/V2MatchesBlock';
 import { V2ModalityRanking } from '@/v2/components/tournament/V2RankingBlock';
 import { AvatarGroup } from '@/components/ui/user-avatar';
-import { V2Badge, V2Button, V2Skeleton, V2Surface } from '@/v2/ui/primitives';
+import { V2Badge, V2Button, V2Skeleton, V2Surface, V2ErrorState} from '@/v2/ui/primitives';
 import { cn } from '@/core/lib/utils';
 import TeamModalityView from '@/v2/components/tournament/TeamModalityView';
 import { registrationIncludesUid } from '@/modules/tournament/domain/teamFormat';
@@ -38,15 +38,35 @@ function registerLabelFor({ alreadyRegistered, canRegister, slotsFull, isAdmin, 
 export default function V2ModalityPage() {
   const { tournamentId, modalityId } = useParams();
   const { user } = useAuth();
-  const { data: tournament, isLoading: loadingT } = useTournament(tournamentId);
+  const {
+    data: tournament, isLoading: loadingT, isError: erroTorneio, refetch: recarregarTorneio,
+  } = useTournament(tournamentId);
   const { data: isAdmin } = useIsTournamentAdmin(tournamentId);
-  const { data: modalities = [], isLoading: loadingM } = useModalities(tournamentId);
+  const {
+    data: modalities = [], isLoading: loadingM, isError: erroModalidades, refetch: recarregarModalidades,
+  } = useModalities(tournamentId);
   const { data: registrations = [] } = useRegistrations(modalityId);
   const [registerOpen, setRegisterOpen] = useState(false);
   const [tab, setTab] = useState('info');
 
   if (loadingT || loadingM) {
     return <div className="mx-auto max-w-[1200px] space-y-6"><V2Skeleton className="h-64 rounded-4xl" /><V2Skeleton className="h-96 rounded-4xl" /></div>;
+  }
+
+  // ⚠️ FALHA não é ausência: a modalidade "não encontrada" por uma queda de
+  // rede manda o atleta concluir que a categoria dele saiu do torneio.
+  if (erroTorneio || erroModalidades) {
+    return (
+      <div className="mx-auto max-w-[700px]">
+        <V2Surface>
+          <V2ErrorState
+            title="Não foi possível carregar a modalidade"
+            description="A conexão falhou no meio do caminho. Ela continua lá — tente de novo."
+            onRetry={() => { recarregarTorneio(); recarregarModalidades(); }}
+          />
+        </V2Surface>
+      </div>
+    );
   }
 
   const modality = modalities.find((m) => m.id === modalityId);

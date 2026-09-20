@@ -14,6 +14,7 @@ const h = vi.hoisted(() => ({
   listRegistrations: vi.fn(),
   persistMatches: vi.fn(),
   clearStale: vi.fn(),
+  assertCanDiscard: vi.fn(),
   createAuditLog: vi.fn(),
 }));
 
@@ -23,6 +24,7 @@ vi.mock('./registrationService.js', () => ({ listRegistrations: h.listRegistrati
 vi.mock('./matchService.js', () => ({
   persistMatches: h.persistMatches,
   clearStaleSingleGroupMarkers: h.clearStale,
+  assertCanDiscardStageMatches: h.assertCanDiscard,
 }));
 vi.mock('@/core/services/auditService', () => ({ createAuditLog: h.createAuditLog }));
 vi.mock('@/core/config/firebase', () => ({ db: {} }));

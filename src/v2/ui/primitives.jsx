@@ -1,6 +1,6 @@
 import React from 'react';
 import { Slot } from '@radix-ui/react-slot';
-import { ChevronDown } from 'lucide-react';
+import { ChevronDown, WifiOff, RefreshCw } from 'lucide-react';
 import { cn } from '@/core/lib/utils';
 
 /**
@@ -306,6 +306,79 @@ export function V2EmptyState({ icon: Icon, title, description, action, className
       <h3 className="font-display text-2xl font-bold text-ink">{title}</h3>
       {description && <p className="mt-3 max-w-lg font-medium leading-7 text-gray-500">{description}</p>}
       {action && <div className="mt-6 flex flex-wrap justify-center gap-3">{action}</div>}
+    </div>
+  );
+}
+
+/**
+ * A CONSULTA FALHOU — e falha não é lista vazia.
+ *
+ * O padrão do projeto é `const { data = [] } = useX()`. Numa falha, `data` vem
+ * indefinido, cai no `[]` e a tela conclui que não existe nada. Aí ela AFIRMA
+ * algo falso, e a afirmação costuma ser pior que o silêncio: "Nenhum dia de
+ * jogo ainda" para quem tem dez, "Dia de jogo não encontrado — pode ter sido
+ * removido ou você não tem acesso" na beira da quadra, "Nenhuma arena
+ * encontrada. Cadastre uma arena" quando o problema era o Wi-Fi do ginásio.
+ *
+ * Quem lê isso não tenta de novo: acredita, e vai criar um duplicado ou ligar
+ * para o suporte.
+ *
+ * Três regras deste componente:
+ *  1. **Nunca diz que o dado não existe.** Diz que não conseguiu carregar.
+ *  2. **Sempre oferece o caminho de volta** (`onRetry`), porque na esmagadora
+ *     maioria das vezes a segunda tentativa funciona.
+ *  3. **Não despeja o erro técnico na cara de ninguém** — `detail` é opcional
+ *     e sai pequeno, para quem vai reportar o problema.
+ *
+ * `inline` serve para uma SEÇÃO que falhou dentro de uma tela que carregou:
+ * ali um bloco de tela inteira roubaria a página de quem só perdeu um pedaço.
+ */
+export function V2ErrorState({
+  title = 'Não foi possível carregar',
+  description = 'A conexão falhou no meio do caminho. Isso quase sempre se resolve tentando de novo.',
+  detail,
+  onRetry,
+  retryLabel = 'Tentar de novo',
+  inline = false,
+  className,
+}) {
+  const botao = onRetry ? (
+    <V2Button variant={inline ? 'ghost' : 'primary'} size="sm" onClick={onRetry}>
+      <RefreshCw className="mr-1.5 h-4 w-4" /> {retryLabel}
+    </V2Button>
+  ) : null;
+
+  if (inline) {
+    return (
+      <div
+        role="alert"
+        className={cn(
+          'flex flex-wrap items-center justify-between gap-2 rounded-md border border-amber-300 bg-amber-50 px-3 py-2 text-xs text-amber-900',
+          className,
+        )}
+      >
+        <span className="inline-flex min-w-0 items-center gap-1.5">
+          <WifiOff className="h-3.5 w-3.5 shrink-0 text-amber-600" />
+          <span className="min-w-0">
+            <span className="font-semibold">{title}.</span>{' '}
+            <span className="opacity-90">{description}</span>
+            {detail && <span className="block opacity-70">{detail}</span>}
+          </span>
+        </span>
+        {botao}
+      </div>
+    );
+  }
+
+  return (
+    <div role="alert" className={cn('flex flex-col items-center px-6 py-14 text-center', className)}>
+      <div className="mb-6 flex h-20 w-20 items-center justify-center rounded-full bg-amber-100 text-amber-700">
+        <WifiOff className="h-9 w-9" />
+      </div>
+      <h3 className="font-display text-2xl font-bold text-ink">{title}</h3>
+      <p className="mt-3 max-w-lg font-medium leading-7 text-gray-500">{description}</p>
+      {detail && <p className="mt-2 max-w-lg text-xs text-gray-400">{detail}</p>}
+      {botao && <div className="mt-6 flex flex-wrap justify-center gap-3">{botao}</div>}
     </div>
   );
 }

@@ -18,7 +18,7 @@ import { V2TournamentOverview } from '@/v2/components/tournament/V2OverviewBlock
 import { V2TournamentMatches } from '@/v2/components/tournament/V2MatchesBlock';
 import { V2TournamentRanking } from '@/v2/components/tournament/V2RankingBlock';
 import { V2TournamentGallery } from '@/v2/components/tournament/V2Gallery';
-import { V2Badge, V2Button, V2EmptyState, V2Skeleton, V2Surface } from '@/v2/ui/primitives';
+import { V2Badge, V2EmptyState, V2ErrorState, V2Skeleton, V2Surface } from '@/v2/ui/primitives';
 import { cn } from '@/core/lib/utils';
 
 function parseDate(value) {
@@ -48,7 +48,7 @@ function formatDateRange(start, end) {
 export default function V2Tournament() {
   const { tournamentId, tab = 'visao-geral' } = useParams();
   const navigate = useNavigate();
-  const { data: tournament, isLoading } = useTournament(tournamentId);
+  const { data: tournament, isLoading, isError, refetch } = useTournament(tournamentId);
   const { data: isAdmin } = useIsTournamentAdmin(tournamentId);
   const { data: modalities = [] } = useModalities(tournamentId);
   const modalityPagesOn = true;
@@ -67,6 +67,22 @@ export default function V2Tournament() {
     );
   }
 
+  // ⚠️ FALHA não é ausência. "Torneio não encontrado — verifique o link" numa
+  // queda de rede manda o organizador conferir um link que está certo e
+  // concluir que apagaram o torneio.
+  if (isError) {
+    return (
+      <div className="mx-auto max-w-[700px]">
+        <V2Surface>
+          <V2ErrorState
+            title="Não foi possível carregar o torneio"
+            description="A conexão falhou no meio do caminho. Ele continua lá — tente de novo."
+            onRetry={refetch}
+          />
+        </V2Surface>
+      </div>
+    );
+  }
   if (!tournament) {
     return (
       <div className="mx-auto max-w-[700px]">

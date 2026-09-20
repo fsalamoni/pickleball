@@ -1,5 +1,5 @@
 import React, { useState, useMemo } from 'react';
-import { V2Surface, V2Button, V2Badge } from '@/v2/ui/primitives';
+import { V2Surface, V2Button, V2Badge, V2ErrorState } from '@/v2/ui/primitives';
 import V2Collapsible from '@/v2/components/tournament/V2Collapsible';
 
 
@@ -104,7 +104,13 @@ function ModalityDrawBlock({ tournament, modality, isAdmin }) {
   const isTeam = Boolean(modality.team_config);
   const teamRosterSize = isTeam ? buildRosterSlots(modality.team_config).length : 0;
   const locked = lifecycleOn && Boolean(tournament.results_locked);
-  const { data: matches = [] } = useMatches(modality.id, 0);
+  // ⚠️ Se esta consulta FALHA, `matches` vem vazio e a tela concluiria que a
+  // fase não foi sorteada: o botão viraria "Sortear", o diálogo diria que vai
+  // GERAR (sem avisar que apaga) e o sorteio apagaria jogos já disputados.
+  // Sobre estado desconhecido não se oferece comando.
+  const {
+    data: matches = [], isError: falhouJogos, refetch: recarregarJogos,
+  } = useMatches(modality.id, 0);
   const { data: registrations = [] } = useRegistrations(modality.id);
   const [running, setRunning] = useState(false);
   const [confirmOpen, setConfirmOpen] = useState(false);
@@ -243,6 +249,9 @@ function ModalityDrawBlock({ tournament, modality, isAdmin }) {
         tournamentId: tournament.id,
         modalityId: modality.id,
         stageIndex: 0,
+        // Só é reconhecimento quando a tela REALMENTE viu os jogos. O serviço
+        // recusa descartar resultado sem isto.
+        replacesKnownMatches: matches.length > 0,
       });
       toast.success('Sorteio realizado!');
       const warns = result?.scheduleWarnings || [];
@@ -401,8 +410,20 @@ function ModalityDrawBlock({ tournament, modality, isAdmin }) {
         </div>
       )}
 
+        {/* ⚠️ Os jogos não carregaram: a tela NÃO sabe se a fase foi sorteada.
+            Oferecer "Sortear" aqui é oferecer apagar o que ela não viu. */}
+        {falhouJogos && (
+          <V2ErrorState
+            inline
+            className="mb-2"
+            title="Não foi possível carregar os jogos desta fase"
+            description="Sem eles não dá para saber se a fase já foi sorteada, então as ações de sorteio ficam fora do ar até a lista voltar."
+            onRetry={recarregarJogos}
+          />
+        )}
+
         <div className="mb-1 flex flex-wrap justify-end">
-          {isAdmin && (
+          {isAdmin && !falhouJogos && (
             <div className="flex gap-2 flex-wrap">
               {canAdvance && (
                 <V2Button

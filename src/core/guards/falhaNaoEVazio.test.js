@@ -1,0 +1,118 @@
+/**
+ * 🐞 FALHA NÃO É LISTA VAZIA.
+ *
+ * O padrão do projeto é `const { data = [] } = useX()`. Numa falha de rede,
+ * `data` vem indefinido, cai no `[]`, e a tela conclui que não existe nada —
+ * e AFIRMA isso. Foi o defeito corrigido na arena na Onda AE ("esta arena não
+ * publicou horários", "Nenhuma arena encontrada. Cadastre uma arena") e que
+ * nunca tinha chegado ao dia de jogo nem ao torneio:
+ *
+ *   · "Nenhum dia de jogo ainda" — para quem tem dez;
+ *   · "Dia de jogo não encontrado. Ele pode ter sido removido ou você não tem
+ *     acesso." — na beira da quadra, minutos antes de começar;
+ *   · "Torneio não encontrado. Verifique o link." — com o link certo;
+ *   · e o pior: a aba de sorteio concluindo que a fase não foi sorteada, o
+ *     botão virando "Sortear" em vez de "Re-sortear", o diálogo dizendo que
+ *     vai GERAR sem mencionar que apaga — e o sorteio apagando jogos já
+ *     DISPUTADOS.
+ *
+ * Quem lê uma afirmação dessas não tenta de novo: acredita.
+ *
+ * Este guarda lê o CÓDIGO-FONTE, no estilo de `indicesCompostos.test.js` e
+ * `diaDeJogoUniforme.test.js`, porque o defeito é invisível a teste de
+ * comportamento: com a consulta funcionando, cada tela está correta.
+ */
+import { describe, it, expect } from 'vitest';
+import { readFileSync } from 'node:fs';
+
+const ler = (p) => readFileSync(p, 'utf8');
+const semComentarios = (src) => src
+  .replace(/\/\*[\s\S]*?\*\//g, '')
+  .split('\n')
+  .filter((l) => !l.trim().startsWith('//') && !l.trim().startsWith('*'))
+  .join('\n');
+
+/** Telas em que a lista vazia AFIRMA algo, e por isso a falha precisa de voz. */
+const TELAS = [
+  ['dia de jogo do atleta', 'src/v2/pages/V2GameDays.jsx'],
+  ['dia de jogo da arena', 'src/v2/pages/V2ArenaGameDays.jsx'],
+  ['dia de jogo do clube', 'src/v2/components/clubs/ClubGameDayTab.jsx'],
+  ['torneio', 'src/v2/pages/V2Tournament.jsx'],
+  ['modalidade', 'src/v2/pages/V2ModalityPage.jsx'],
+  ['sorteio (fase única)', 'src/v2/components/tournament/V2TournamentDrawTab.jsx'],
+  ['sorteio (várias fases)', 'src/modules/tournament/components/MultiPhaseDrawBlock.jsx'],
+];
+
+describe('⭐ toda tela que afirma "não existe" sabe distinguir falha', () => {
+  TELAS.forEach(([nome, caminho]) => {
+    it(`⭐ ${nome} lê isError`, () => {
+      expect(semComentarios(ler(caminho)), `${caminho} voltou a tratar falha como vazio`)
+        .toMatch(/isError/);
+    });
+
+    it(`⭐ ${nome} oferece o caminho de volta`, () => {
+      const src = semComentarios(ler(caminho));
+      expect(src, `${caminho} avisa da falha sem deixar tentar de novo`)
+        .toMatch(/refetch|recarregar|onRetry/i);
+    });
+  });
+});
+
+/**
+ * ⭐ O SORTEIO NÃO É OFERECIDO SOBRE ESTADO DESCONHECIDO.
+ *
+ * Sortear APAGA os jogos da fase. Com a consulta falhando, a tela não sabe se
+ * existe algo para apagar — então o comando não é renderizado, seguindo a
+ * regra do dia de jogo ("comando sem atribuição não é renderizado, nunca só
+ * desabilitado").
+ */
+describe('⭐ o sorteio não apaga o que a tela não viu', () => {
+  const RAMOS = [
+    'src/v2/components/tournament/V2TournamentDrawTab.jsx',
+    'src/modules/tournament/components/MultiPhaseDrawBlock.jsx',
+  ];
+
+  RAMOS.forEach((caminho) => {
+    it(`⭐ ${caminho.split('/').pop()} esconde as ações quando os jogos não carregaram`, () => {
+      expect(semComentarios(ler(caminho)), 'as ações de sorteio voltaram a aparecer sobre estado desconhecido')
+        .toMatch(/!falhouJogos/);
+    });
+
+    it(`⭐ ${caminho.split('/').pop()} só reconhece o descarte quando VIU os jogos`, () => {
+      const src = semComentarios(ler(caminho));
+      expect(src).toMatch(/replacesKnownMatches:\s*matches\.length > 0/);
+    });
+  });
+
+  it('⭐ e o serviço tranca de novo, por baixo da tela', () => {
+    const draw = semComentarios(ler('src/modules/tournament/services/drawService.js'));
+    const phase = semComentarios(ler('src/modules/tournament/services/phaseService.js'));
+    expect(draw).toContain('assertCanDiscardStageMatches');
+    expect(phase).toContain('assertCanDiscardStageMatches');
+  });
+
+  it('⭐ a regra do descarte é DOMÍNIO, não fica dentro do serviço', async () => {
+    const { canDiscardStageMatches } = await import('@/modules/tournament/domain/drawSafety');
+    expect(canDiscardStageMatches([{ status: 'finished' }]).allowed).toBe(false);
+    expect(canDiscardStageMatches([{ status: 'finished' }], { acknowledged: true }).allowed).toBe(true);
+  });
+});
+
+/**
+ * ⭐ O DIA DE JOGO DIZ O QUE ELE É.
+ *
+ * O cabeçalho não mostrava nem o FORMATO — e é ele que decide se há placar,
+ * ranking do dia, publicação e dupla vinculada. O resumo mora no MÓDULO para
+ * chegar às três origens por construção.
+ */
+describe('⭐ o resumo do dia de jogo chega às três origens', () => {
+  it('⭐ o módulo monta o resumo', () => {
+    expect(semComentarios(ler('src/v2/components/games/GameDayModule.jsx')))
+      .toContain('<GameDayRulesCard');
+  });
+
+  it('⭐ e o resumo sai do domínio, não de texto solto na tela', () => {
+    expect(semComentarios(ler('src/v2/components/games/GameDayRulesCard.jsx')))
+      .toContain('describeGameDayRules');
+  });
+});

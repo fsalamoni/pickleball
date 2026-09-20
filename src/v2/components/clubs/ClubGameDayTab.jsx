@@ -20,7 +20,7 @@ import { toast } from 'sonner';
 import { UserPlus, UserMinus, Users, Check, Link as LinkIcon } from 'lucide-react';
 import { Link } from 'react-router-dom';
 
-import { V2Button, V2Surface } from '@/v2/ui/primitives';
+import { V2Button, V2Surface, V2ErrorState } from '@/v2/ui/primitives';
 import { Label } from '@/components/ui/label';
 import { Skeleton } from '@/components/ui/skeleton';
 import GameDayModule, { GameDayModuleTools } from '@/v2/components/games/GameDayModule';
@@ -50,11 +50,27 @@ export default function ClubGameDayTab({ event, clubId, date, rsvps = [] }) {
 }
 
 function ModularGameDay({ gameDayId, rsvps }) {
-  const { data: gameDay, isLoading } = useGameDay(gameDayId);
+  const { data: gameDay, isLoading, isError, refetch } = useGameDay(gameDayId);
   const { data: participants = [] } = useGameDayParticipants(gameDayId);
   const { podeGerenciar, podeConfigurar } = useGameDayRoles(gameDay, participants);
 
   if (isLoading) return <Skeleton className="h-64 rounded-xl" />;
+  // ⚠️ FALHA não é ausência: "pode ter sido arquivado" numa queda de rede
+  // manda o organizador do clube procurar quem apagou o dia de jogo.
+  if (isError) {
+    return (
+      <V2Surface className="rounded-xl">
+        <div className="p-3">
+          <V2ErrorState
+            inline
+            title="Não foi possível carregar o dia de jogo desta data"
+            description="A conexão falhou. Ele continua lá."
+            onRetry={refetch}
+          />
+        </div>
+      </V2Surface>
+    );
+  }
   if (!gameDay) {
     return (
       <V2Surface className="rounded-xl">
@@ -272,7 +288,6 @@ function RsvpImportCard({ gameDayId, rsvps, participants }) {
         // Em série de propósito: cada inserção recalcula `member_uids` no
         // documento do dia de jogo, e um lote paralelo faria as escritas
         // competirem pelo mesmo campo.
-        // eslint-disable-next-line no-await-in-loop
         await addParticipant.mutateAsync({ ...entry, source: GD_PARTICIPANT_SOURCE.INVITED });
         ok += 1;
       } catch (err) {

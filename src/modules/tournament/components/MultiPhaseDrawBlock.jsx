@@ -31,6 +31,7 @@ import {
 import { normalizePhases } from '@/modules/tournament/domain/phases';
 import { stageSupportsAdvance } from '@/modules/tournament/domain/progression';
 import { CollapsibleSection } from '@/components/ui/collapsible-section';
+import { V2ErrorState } from '@/v2/ui/primitives';
 import { useUpdateModality } from '@/modules/tournament/hooks/useTournament';
 import StageExplanation from './StageExplanation';
 import PhaseRulesSummary from './PhaseRulesSummary';
@@ -147,7 +148,12 @@ function PhaseSection({
   // Modalidade de EQUIPES: o participante é a equipe — não há substituição de
   // jogador por aqui (o elenco é editado na inscrição da equipe).
   const isTeam = Boolean(modality.team_config);
-  const { data: matches = [] } = useMatches(modality.id, stageIndex);
+  // ⚠️ Falha devolve lista vazia, e lista vazia aqui significa "não sorteada":
+  // o botão viraria "Sortear grupos e jogos" e o sorteio apagaria os jogos que
+  // a tela não conseguiu ver. Sobre estado desconhecido não se oferece comando.
+  const {
+    data: matches = [], isError: falhouJogos, refetch: recarregarJogos,
+  } = useMatches(modality.id, stageIndex);
   const { data: groups = [] } = usePhaseGroups(modality.id, stageIndex);
   const runPhaseDraw = useRunPhaseDraw();
   const advanceToNext = useAdvanceToNextPhase();
@@ -171,6 +177,8 @@ function PhaseSection({
         tournamentId: tournament.id,
         modalityId: modality.id,
         stageIndex,
+        // Só é reconhecimento quando a tela REALMENTE viu os jogos.
+        replacesKnownMatches: matches.length > 0,
       });
       toast.success(`Fase ${stageIndex + 1} sorteada (${res.groups.length} grupo(s)).`);
       (res.scheduleWarnings || []).length > 0
@@ -217,7 +225,7 @@ function PhaseSection({
     }
   }
 
-  const actions = isAdmin ? (
+  const actions = (isAdmin && !falhouJogos) ? (
     <>
       {isFirst && (
         <Button size="sm" onClick={doDraw} disabled={running}>
@@ -272,6 +280,15 @@ function PhaseSection({
       defaultOpen
     >
       <div className="space-y-3">
+        {falhouJogos && (
+          <V2ErrorState
+            inline
+            title="Não foi possível carregar os jogos desta fase"
+            description="Sem eles não dá para saber se a fase já foi sorteada, então as ações de sorteio ficam fora do ar até a lista voltar."
+            onRetry={recarregarJogos}
+          />
+        )}
+
         {/* O QUE ESTÁ EM VIGOR nesta fase. A configuração mora em Modalidades e
             o sorteio acontece aqui: sem este resumo, quem organiza clica sem
             eco nenhum do que configurou. Ver `domain/phaseRules.js`. */}

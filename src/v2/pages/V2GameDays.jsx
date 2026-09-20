@@ -15,7 +15,8 @@ import {
 } from 'lucide-react';
 import { toast } from 'sonner';
 import {
-  V2Badge, V2Button, V2CollapsibleSection, V2EmptyState, V2PageIntro, V2Skeleton, V2Surface,
+  V2Badge, V2Button, V2CollapsibleSection, V2EmptyState, V2ErrorState, V2PageIntro,
+  V2Skeleton, V2Surface,
 } from '@/v2/ui/primitives';
 import { ConfirmDialog } from '@/components/ui/confirm-dialog';
 import CreateGameDayDialog from '@/v2/components/games/CreateGameDayDialog';
@@ -78,7 +79,10 @@ function GameDayCard({ g, onOpen, muted }) {
 
 function GameDayList() {
   const navigate = useNavigate();
-  const { data: gameDays = [], isLoading } = useMyGameDays();
+  // ⚠️ Consulta que FALHA devolve `undefined`, cai no `[]` e a tela concluiria
+  // que a pessoa não tem dia de jogo nenhum — convidando quem tem dez a criar
+  // um duplicado. Falha é falha, e tem botão.
+  const { data: gameDays = [], isLoading, isError, refetch } = useMyGameDays();
   const [createOpen, setCreateOpen] = useState(false);
   const today = todayISO();
   const open = (id) => navigate(`/dia-de-jogo/${id}`);
@@ -110,6 +114,14 @@ function GameDayList() {
         <div className="grid gap-4 sm:grid-cols-2">
           {[1, 2].map((i) => <V2Skeleton key={i} className="h-40 rounded-4xl" />)}
         </div>
+      ) : isError ? (
+        <V2Surface>
+          <V2ErrorState
+            title="Não foi possível carregar seus dias de jogo"
+            description="A conexão falhou. Os seus dias de jogo continuam lá — isso quase sempre se resolve tentando de novo."
+            onRetry={refetch}
+          />
+        </V2Surface>
       ) : gameDays.length === 0 ? (
         <V2Surface>
           <V2EmptyState
@@ -152,7 +164,7 @@ function GameDayList() {
 
 function GameDayDetail({ gameDayId }) {
   const navigate = useNavigate();
-  const { data: gameDay, isLoading } = useGameDay(gameDayId);
+  const { data: gameDay, isLoading, isError, refetch } = useGameDay(gameDayId);
   // A lista de participantes decide se quem está olhando gerencia num dia
   // ABERTO — sem ela, cairíamos em `member_uids`, que inclui convidados.
   const { data: participants = [] } = useGameDayParticipants(gameDayId);
@@ -167,6 +179,23 @@ function GameDayDetail({ gameDayId }) {
 
   if (isLoading) {
     return <div className="mx-auto max-w-[900px]"><V2Skeleton className="h-64 rounded-4xl" /></div>;
+  }
+  // ⚠️ FALHA não é ausência. Dizer "pode ter sido removido ou você não tem
+  // acesso" quando o que caiu foi a rede é alarmar quem está na beira da
+  // quadra, minutos antes de começar — e a reação natural é criar tudo de
+  // novo. Só se afirma que não existe quando a consulta terminou bem.
+  if (isError) {
+    return (
+      <div className="mx-auto max-w-[900px]">
+        <V2Surface>
+          <V2ErrorState
+            title="Não foi possível carregar este dia de jogo"
+            description="A conexão falhou no meio do caminho. Ele continua lá — tente de novo."
+            onRetry={refetch}
+          />
+        </V2Surface>
+      </div>
+    );
   }
   if (!gameDay) {
     return (

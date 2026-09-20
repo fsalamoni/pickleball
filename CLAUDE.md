@@ -115,6 +115,7 @@ Estes princípios vieram de bugs reais que custaram horas pra arrumar. São ineg
 │   ├── 22-DIA-DE-JOGO-DA-ARENA.md  🏟️ a arena cria dia de jogo no calendário
 │   ├── 23-ARENA-CALENDARIO-E-RESERVA.md 🗓️ auditoria: calendário, reserva, prontidão
 │   ├── 25-DIA-DE-JOGO-COMO-MODULO.md ⭐ o dia de jogo igual em toda origem
+│   ├── 27-FALHA-NAO-E-VAZIO.md     ⚠️ ⭐ consulta que falha vira "não existe"
 │   ├── 26-TORNEIO-FORMATOS-E-REGRAS.md ⭐ grupos, classificação, chaves e o
 │   │                                     controle total do admin do torneio
 │   ├── 20-SEGURANCA-E-PRIVACIDADE/ 🔴 ⭐ PRIORIDADE MÁXIMA — segurança, LGPD,
@@ -199,6 +200,11 @@ Estes princípios vieram de bugs reais que custaram horas pra arrumar. São ineg
 **"Quem organiza o dia de jogo do clube?"** → quem agendou a data (criador), os administradores NOMEADOS e **quem administra o CLUBE** (`isClubGameDayManagerOf` no `firestore.rules`, guardada por `'club_id' in …`). O dia nasce `manage_mode: 'participants'` de propósito — no evento legado qualquer membro mexia em participantes e jogos, e nascer restrito tiraria da comunidade algo que ela já tinha. O membro do clube LÊ o dia (`isClubGameDayMemberOf`) e **entra e sai sozinho**. Na tela, pergunte sempre a `useGameDayRoles`, que soma arena e clube num lugar só
 **"Onde se edita/arquiva um dia de jogo de clube?"** → na **DATA do evento**, não em `/dia-de-jogo/:id` (que mostra "Gerir no clube"). A data manda em título, horário, local e existência; a aba de jogos manda no FORMATO, e só enquanto não houver partidas — trocar depois não é edição, é perda (o Play não guarda placar; Mexicano e Rei da Quadra derivam as rodadas do que já aconteceu). E **nunca** abra `CreateGameDayDialog` num dia de clube: ele grava a `visibility` junto, e público ali significa legível e auto-inscrevível por qualquer conta
 **"Como o torneio organiza grupos, classificação e chaves? O que o admin pode mudar?"** → ⭐ `docs/26-TORNEIO-FORMATOS-E-REGRAS.md`. Existe um PADRÃO bom (regulamento USA Pickleball + práticas dos circuitos) e **o admin do torneio pode trocar tudo**, com explicação ao lado de cada controle. Configurável: tamanhos dos grupos à mão, turnos (ida/ida e volta), classificados grupo a grupo, repescagem (quantas vagas e de qual colocação), **ordem dos critérios de desempate** (9 critérios, 4 ordens prontas), **método de comparação entre grupos** (aproveitamento / absoluto / descartar o último) e **entrada direta** (quem pula fases). Todo campo é ADITIVO: em branco, a fase se comporta como antes. Zero coleção, zero índice, zero regra — tudo em `tournament_modalities.stages[]`, que não tem lista fechada de campos
+**"Vou escrever `const { data = [] } = useX()` numa tela"**  → ⚠️ leia `docs/27-FALHA-NAO-E-VAZIO.md`. Consulta que FALHA devolve indefinido, cai no `[]` e a tela conclui que **não existe nada** — e afirma isso. Medido: **28 de 30** telas de dia de jogo e torneio faziam isso. Dizia *"Nenhum dia de jogo ainda"* para quem tem dez, *"Dia de jogo não encontrado — pode ter sido removido ou você não tem acesso"* na beira da quadra, *"Torneio não encontrado. Verifique o link"* com o link certo. Se a tela vai AFIRMAR algo do vazio, ela precisa de `isError` + `<V2ErrorState onRetry={refetch} />`. Guarda em `src/core/guards/falhaNaoEVazio.test.js`
+**"Vou mostrar um erro de carregamento"** → `<V2ErrorState />` (`src/v2/ui/primitives.jsx`), nunca um bloco escrito à mão — havia SETE cópias. `inline` para uma seção que falhou dentro de uma tela que carregou. E `podeAfirmarVazio(consulta)` (`core/lib/queryState.js`) responde à pergunta que a tela realmente faz
+**"🐞 O sorteio pode apagar jogo já disputado?"** → podia, e por uma queda de rede: `useMatches` falhando ⇒ `matches = []` ⇒ o botão vira **Sortear** (não "Re-sortear"), o diálogo diz que vai GERAR **sem mencionar que apaga**, e `persistMatches` apaga tudo. Agora a tela **não renderiza** comando sobre estado desconhecido, e o serviço tranca de novo por `canDiscardStageMatches` (`domain/drawSafety.js`): descartar jogo COM RESULTADO exige `replacesKnownMatches`, que só é verdadeiro quando a tela VIU os jogos. Jogo sem resultado não é protegido de propósito — confirmação demais treina a pessoa a clicar em "sim" sem ler
+**"O dia de jogo diz qual é o FORMATO dele?"** → agora sim. Não dizia: o cabeçalho tinha título, origem, data e observações, e a LISTA da arena mostrava mais que o detalhe. `describeGameDayRules` (`modules/games/domain/gameDayRules.js`) + `GameDayRulesCard`, montado **dentro do `GameDayModule`** para chegar às três origens por construção
+**"Em quais formatos a dupla vinculada vale?"** (predicado) → `formatHonorsFixedPairs(format)` em `gameDayRules.js`. Mexicano e Rei da Quadra **não** — neles as duplas saem da classificação da rodada, que é o que define os dois formatos
 **"Mexi na aba de SORTEIO do torneio"**  → ela tem **DOIS ramos**, e ferramenta acrescentada num só **não dá erro**: `V2TournamentDrawTab` manda uma fase para o `ModalityDrawBlock` (no próprio arquivo) e várias fases para o `MultiPhaseDrawBlock`. 🐞 A Onda AT montou o planejador de grupos e a **entrada direta** só no primeiro — e `DirectEntryPanel` começa com `if (fases.length < 2) return null`, ou seja, a funcionalidade-título daquela onda foi montada exatamente no ramo onde ela NUNCA renderiza, e faltava no único ramo em que "pular fases" quer dizer algo. Cada tela, isolada, funcionava. `src/core/guards/torneioRegras.test.js` reprova quem montar `StageExplanation`/`DirectEntryPanel` num ramo só
 **"Quem vai passar para a próxima fase?"** → a tela MOSTRA antes do clique (`NextPhasePreview`), e a prévia sai de `previewPhaseAdvance` (`domain/phaseAdvancePreview.js`) — a **mesma** função que o serviço usa para gravar. **Nunca** chame `buildNextPhaseEntrants` por fora dela: é a lição do dia de jogo, em que a previsão anunciava uma partida e o sorteio criava outra. Guarda de fonte travando
 **"Configurei a fase em Modalidades e sorteio em Sorteio — como sei o que está valendo?"** → `describePhaseRules` (`domain/phaseRules.js`) + `PhaseRulesSummary`, na própria fase. Mostra por padrão só o que o organizador MUDOU (repetir o padrão para todo mundo vira paredão que ninguém lê) e **some** com a linha que não se aplica — repescagem não existe na última fase, entrada direta não existe na primeira
@@ -457,6 +463,56 @@ chore(deps): bump firebase to 12.x
 > memory topic `picklerush-sync-2026-08.md`.
 >
 > **Destaques por onda**:
+>
+> - **Onda AV — Falha não é lista vazia** (2026-09-20): auditoria do dia de
+>   jogo com a lente da usabilidade, e o achado é uma classe inteira.
+>
+>   **(1) 🐞 28 de 30 telas tratavam falha de rede como "não existe".** O
+>   padrão do projeto é `const { data = [] } = useX()`; numa falha, `data` vem
+>   indefinido, cai no `[]` e a tela AFIRMA o vazio. Só que vazio quase nunca é
+>   neutro: *"Nenhum dia de jogo ainda"* para quem tem dez, *"Dia de jogo não
+>   encontrado — pode ter sido removido ou você não tem acesso"* na beira da
+>   quadra, *"Torneio não encontrado. Verifique o link"* com o link certo.
+>   Quem lê isso não tenta de novo: acredita, e vai criar um duplicado ou ligar
+>   para o suporte. A mesma classe tinha sido corrigida na ARENA na Onda AE e
+>   nunca chegou ao dia de jogo nem ao torneio.
+>
+>   **(2) 🐞 E o caso grave: o sorteio apagando o que não viu.**
+>   `persistMatches` apaga TODOS os jogos da fase antes de gravar os novos — é
+>   o que faz "re-sortear" funcionar, e a tela avisa disso. Só que o aviso era
+>   decidido por `matches.length`. Com a consulta falhando: o botão vira
+>   **"Sortear"** em vez de "Re-sortear", o cabeçalho diz "nenhum jogo gerado
+>   ainda", o diálogo diz que vai **gerar** e **não menciona que apaga** — e o
+>   organizador confirma. Resultado de torneio destruído por uma queda de rede,
+>   sem ninguém ter como perceber. Fechado nos dois níveis: a tela **não
+>   renderiza** comando sobre estado desconhecido (a regra do dia de jogo:
+>   comando sem atribuição não aparece, nunca só desabilitado), e o serviço
+>   **recusa** descartar jogo COM RESULTADO sem reconhecimento explícito. Jogo
+>   sem resultado segue livre de propósito — confirmação demais treina a pessoa
+>   a clicar em "sim" sem ler, e aí a confirmação que importa passa batida.
+>
+>   **(3) O dia de jogo não dizia o que ele É.** O cabeçalho tinha título,
+>   origem, data e observações — **nem o formato**, que é o que decide se há
+>   placar, ranking do dia, publicação no ranking da plataforma e dupla
+>   vinculada. Pior: a LISTA da arena já mostrava o formato num selo, e a tela
+>   do dia não — a lista dizia mais que o detalhe. Agora há um resumo, e ele
+>   mora dentro do `GameDayModule`, para chegar às três origens **por
+>   construção** — que é o antídoto da doença da Onda AS (o clube meses sem
+>   Play e sem telão porque cada tela montava o próprio miolo).
+>
+>   **(4) Uma peça só para "falhou".** O bloco de erro estava escrito à mão em
+>   SETE lugares e não havia primitivo: agora é `V2ErrorState`, que nunca diz
+>   que o dado não existe, sempre oferece o caminho de volta e não despeja erro
+>   técnico na cara de ninguém.
+>
+>   **(5) Nove componentes V1 de clube removidos**, sem caminho a partir de
+>   `main.jsx`. Entre eles `EventDatesPanel.jsx`, gêmeo obsoleto do
+>   `V2EventDatesPanel` que a Onda AS modificou e que **não conhece
+>   `game_day_id`** — a mesma armadilha do `TournamentDrawTab` (AU) e do
+>   `V2GameDayOrganizer` (AS).
+>
+>   **Banco: zero.** Nenhuma coleção, campo, índice, regra, função ou migração.
+>   +68 testes. Ver `docs/27-FALHA-NAO-E-VAZIO.md`.
 >
 > - **Onda AU — A Onda AT chega onde ela fazia sentido** (2026-09-20):
 >   auditoria do que a onda anterior entregou, e o achado foi constrangedor.
@@ -1351,7 +1407,7 @@ chore(deps): bump firebase to 12.x
 
 | Métrica | Valor | Delta do início do agente |
 |---|---|---|
-| **Testes Vitest** | **4761 passing** (279 arquivos) + 218 asserções de regras (Vitest) + 85 do dia de jogo no emulador | +4353 (era 408) |
+| **Testes Vitest** | **4829 passing** (284 arquivos) + 218 asserções de regras (Vitest) + 85 do dia de jogo no emulador | +4421 (era 408) |
 | **Lint errors** | 0 | era 30+ |
 | **Módulos** | 21 (+`help` — conteúdo dos tutoriais em tela) (`games` e `legal` saíram como `src/modules/` mas continuam como pastas oficiais — **rating virou módulo oficial** com domain/services/hooks/components) | +4 (coaches, circuits, games, legal) |
 | **V2 pages** | 82 (+V2GameDayTelao — telão, fora do V2Layout; +V2Help — central de ajuda; +V2ArenaKiosk — totem da recepção, também fora do V2Layout; +V2ArenaCheckin; +V2ArenaAttendance) | +58 |

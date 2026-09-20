@@ -15,7 +15,7 @@ import { stageFormatCompatibility } from '../domain/formatExplain.js';
 import { normalizePhase, plannedGroupCount } from '../domain/phases.js';
 import { balancedParticipantOrder, levelRank } from '../domain/seeding.js';
 import { listRegistrations } from './registrationService.js';
-import { persistMatches, clearStaleSingleGroupMarkers } from './matchService.js';
+import { persistMatches, clearStaleSingleGroupMarkers, assertCanDiscardStageMatches } from './matchService.js';
 import { getModality } from './modalityService.js';
 import { getTournament } from './tournamentService.js';
 import {
@@ -153,7 +153,10 @@ function buildAmericanoPlayerMeta(registrations, modality, unifiedByUid = null) 
  * @returns {Promise<object>}
  */
 export async function runDraw(params, actor) {
-  const { tournamentId, modalityId, stageIndex, seed: providedSeed, participantOrder } = params;
+  const {
+    tournamentId, modalityId, stageIndex, seed: providedSeed, participantOrder,
+    replacesKnownMatches,
+  } = params;
   const modality = await getModality(modalityId);
   if (!modality) throw new Error('Modalidade não encontrada.');
   if (modality.tournament_id !== tournamentId) throw new Error('Modalidade não pertence ao torneio.');
@@ -164,6 +167,13 @@ export async function runDraw(params, actor) {
   if (lockCheck?.results_locked) {
     throw new Error('Torneio bloqueado: desbloqueie as alterações para sortear.');
   }
+
+  // ⚠️ Sortear APAGA os jogos da fase. Se a tela não sabia que eles existiam
+  // (a consulta falhou e a lista veio vazia), ela avisou que ia "gerar" — e
+  // apagaria resultado já lançado. Ver `assertCanDiscardStageMatches`.
+  await assertCanDiscardStageMatches(modalityId, stageIndex, {
+    acknowledged: replacesKnownMatches === true,
+  });
 
   // Modalidade de EQUIPES: o participante do sorteio é a EQUIPE (uma inscrição
   // com elenco). O motor de sorteio é o mesmo — só o que entra nele muda.

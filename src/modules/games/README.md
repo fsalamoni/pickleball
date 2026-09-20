@@ -397,3 +397,29 @@ Regras que valem a pena não desfazer:
 - O botão só aparece com **mais de uma quadra** e só habilita com **duas
   livres e fila para as duas**; enquanto não dá, a tela explica o caminho em
   vez de só desabilitar.
+
+---
+
+## ⚠️ Falha não é lista vazia (Onda AV)
+
+`const { data = [] } = useGameDay…()` devolve `[]` quando a consulta **falha** —
+e a tela conclui que não existe nada. Nas telas de dia de jogo isso virava
+afirmação: *"Nenhum dia de jogo ainda"* para quem tem dez, *"Dia de jogo não
+encontrado — ele pode ter sido removido ou você não tem acesso"* na beira da
+quadra.
+
+Se a tela vai **afirmar** algo a partir do vazio, ela precisa de `isError` e de
+`<V2ErrorState onRetry={refetch} />`. Guarda de fonte em
+`core/guards/falhaNaoEVazio.test.js`. Ver `docs/27-FALHA-NAO-E-VAZIO.md`.
+
+## ⚠️ O dia de jogo diz o que ele É
+
+`describeGameDayRules` (`domain/gameDayRules.js`) traduz o dia nas linhas que a
+tela mostra — formato, placar, ranking da plataforma, dupla vinculada, quadras,
+vagas, quem conduz, quem enxerga. `GameDayRulesCard` é montado **dentro do
+`GameDayModule`**, e é assim de propósito: as três origens recebem o resumo por
+construção, sem ninguém precisar lembrar de montá-lo em cada tela.
+
+O predicado `formatHonorsFixedPairs(format)` mora aqui: **Mexicano e Rei da
+Quadra não honram dupla vinculada**, e isso não é omissão — neles as duplas
+saem da classificação da rodada, que é o que define os dois formatos.

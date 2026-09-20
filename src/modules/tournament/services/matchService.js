@@ -20,6 +20,7 @@ import {
 import { db } from '@/core/config/firebase';
 import { createAuditLog } from '@/core/services/auditService';
 import { MATCH_STATUS } from '../domain/constants.js';
+import { canDiscardStageMatches } from '../domain/drawSafety.js';
 import { getMatchResult } from '../domain/scoring.js';
 import { assignSchedule } from '../domain/scheduling.js';
 import { computeStageAdvance, stageSupportsAdvance } from '../domain/progression.js';
@@ -310,6 +311,24 @@ function normalizeIds(side) {
   if (!side) return [];
   if (Array.isArray(side)) return side;
   return [String(side)];
+}
+
+/**
+ * ⚠️ O SORTEIO NÃO APAGA O QUE NÃO SABE QUE EXISTE.
+ *
+ * Aqui só há I/O: lê os jogos da fase e entrega a decisão ao domínio
+ * (`domain/drawSafety.js`), que explica o defeito e guarda a regra.
+ *
+ * @param {string} modalityId
+ * @param {number} stageIndex
+ * @param {{ acknowledged?: boolean }} [options] `acknowledged` só é verdadeiro
+ *   quando a TELA sabia que havia jogos e avisou que seriam apagados.
+ */
+export async function assertCanDiscardStageMatches(modalityId, stageIndex, options = {}) {
+  if (options.acknowledged === true) return;
+  const existentes = await listMatches(modalityId, stageIndex);
+  const veredito = canDiscardStageMatches(existentes, options);
+  if (!veredito.allowed) throw new Error(veredito.reason);
 }
 
 export async function listMatches(modalityId, stageIndex) {

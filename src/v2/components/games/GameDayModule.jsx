@@ -34,6 +34,7 @@ import AthletePlayOrganizer from '@/v2/components/games/AthletePlayOrganizer';
 import AthleteAmericanoLiveOrganizer from '@/v2/components/games/AthleteAmericanoLiveOrganizer';
 import AthletePlayParticipant from '@/v2/components/games/AthletePlayParticipant';
 import { isPlayFormat, isAmericanoLiveFormat } from '@/modules/clubs/domain/gameDayFormats';
+import GameDayRulesCard from '@/v2/components/games/GameDayRulesCard';
 
 /**
  * As ferramentas que acompanham o dia de jogo: o tutorial do FORMATO e o
@@ -84,8 +85,7 @@ export function GameDayModuleTools({ gameDay, podeGerenciar = false, showTelao =
  *
  * @param {{ gameDay: object, podeGerenciar?: boolean }} props
  */
-export default function GameDayModule({ gameDay, podeGerenciar = false }) {
-  if (!gameDay?.id) return null;
+function Miolo({ gameDay, podeGerenciar }) {
   if (isAmericanoLiveFormat(gameDay.format)) {
     return <AthleteAmericanoLiveOrganizer gameDay={gameDay} />;
   }
@@ -95,4 +95,16 @@ export default function GameDayModule({ gameDay, podeGerenciar = false }) {
       : <AthletePlayParticipant gameDay={gameDay} />;
   }
   return <AthleteGameDayOrganizer gameDay={gameDay} />;
+}
+
+export default function GameDayModule({ gameDay, podeGerenciar = false }) {
+  if (!gameDay?.id) return null;
+  return (
+    <>
+      {/* O que ESTE dia é — formato, placar, ranking, dupla vinculada. Fica
+          aqui, no módulo, para chegar às TRÊS origens por construção. */}
+      <GameDayRulesCard gameDay={gameDay} podeGerenciar={podeGerenciar} />
+      <Miolo gameDay={gameDay} podeGerenciar={podeGerenciar} />
+    </>
+  );
 }

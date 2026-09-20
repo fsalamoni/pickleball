@@ -31,7 +31,7 @@ import { useAuth } from '@/core/lib/FirebaseAuthContext';
 import { FEATURE_FLAG } from '@/core/featureFlags';
 import { useFeatureFlag } from '@/core/lib/FeatureFlagsContext';
 import {
-  V2Badge, V2Button, V2EmptyState, V2PageIntro, V2Skeleton, V2Surface,
+  V2Badge, V2Button, V2EmptyState, V2ErrorState, V2PageIntro, V2Skeleton, V2Surface,
 } from '@/v2/ui/primitives';
 import { ConfirmDialog } from '@/components/ui/confirm-dialog';
 import { useArena, useMyManagedArenas } from '@/modules/arenas/hooks/useArenas';
@@ -131,7 +131,9 @@ function CartaoDoDia({ gameDay, arenaId, onOpen, apagado }) {
 
 function ListaDaArena({ arena }) {
   const navigate = useNavigate();
-  const { data: dias = [], isLoading } = useArenaGameDays(arena.id);
+  // ⚠️ Falha devolve lista vazia, e aqui lista vazia significa "a arena não
+  // marcou nada" — a tela convidaria a marcar de novo o que já existe.
+  const { data: dias = [], isLoading, isError, refetch } = useArenaGameDays(arena.id);
   const [criarAberto, setCriarAberto] = useState(false);
   const hoje = hojeISO();
 
@@ -165,6 +167,14 @@ function ListaDaArena({ arena }) {
         <div className="grid gap-4 sm:grid-cols-2">
           {[1, 2].map((i) => <V2Skeleton key={i} className="h-40 rounded-4xl" />)}
         </div>
+      ) : isError ? (
+        <V2Surface>
+          <V2ErrorState
+            title="Não foi possível carregar os dias de jogo da arena"
+            description="A conexão falhou. O que já está marcado continua lá — tente de novo."
+            onRetry={refetch}
+          />
+        </V2Surface>
       ) : dias.length === 0 ? (
         <V2Surface>
           <V2EmptyState
@@ -285,7 +295,7 @@ function Vagas({ gameDay, participants }) {
 
 function DetalheDaArena({ arena, gameDayId }) {
   const navigate = useNavigate();
-  const { data: gameDay, isLoading } = useGameDay(gameDayId);
+  const { data: gameDay, isLoading, isError, refetch } = useGameDay(gameDayId);
   const { data: participants = [] } = useGameDayParticipants(gameDayId);
   const { podeGerenciar, podeConfigurar } = useGameDayRoles(gameDay, participants);
   const arquivar = useArchiveArenaGameDay(arena.id);
@@ -294,6 +304,22 @@ function DetalheDaArena({ arena, gameDayId }) {
 
   if (isLoading) {
     return <div className="mx-auto max-w-[1000px]"><V2Skeleton className="h-64 rounded-4xl" /></div>;
+  }
+  // ⚠️ FALHA não é ausência: dizer "foi arquivado, ou pertence a outra arena"
+  // quando o que caiu foi a rede manda a arena procurar um problema que não
+  // existe, com os atletas já na porta.
+  if (isError) {
+    return (
+      <div className="mx-auto max-w-[800px]">
+        <V2Surface>
+          <V2ErrorState
+            title="Não foi possível carregar este dia de jogo"
+            description="A conexão falhou no meio do caminho. Ele continua lá — tente de novo."
+            onRetry={refetch}
+          />
+        </V2Surface>
+      </div>
+    );
   }
   if (!gameDay || gameDay.arena_id !== arena.id) {
     return (

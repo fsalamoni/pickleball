@@ -49,7 +49,9 @@ import { stageFormatCompatibility } from '../domain/formatExplain.js';
 import { listRegistrations } from './registrationService.js';
 import { getModality } from './modalityService.js';
 import { getTournament } from './tournamentService.js';
-import { persistMatches, listMatches, listAllMatchesForModality } from './matchService.js';
+import {
+  persistMatches, listMatches, listAllMatchesForModality, assertCanDiscardStageMatches,
+} from './matchService.js';
 import { planDirectEntries } from '../domain/directEntry.js';
 import { headToHeadFromMatches } from '../domain/ranking.js';
 
@@ -174,6 +176,10 @@ export async function movePhaseEntrantBetweenGroups(params, actor) {
       stageIndex,
       manualGroups: rebuilt,
       entrants: allEntrants,
+      // A tela confirma em diálogo próprio ("Mover participante e refazer os
+      // jogos?") e o serviço acabou de LER os jogos desta fase para
+      // reconstruir os grupos: o estado é conhecido.
+      replacesKnownMatches: true,
     },
     actor,
   );
@@ -287,7 +293,10 @@ async function writePhaseGroups(tournamentId, modalityId, stageIndex, groups) {
  * @param {object} actor
  */
 export async function runPhaseDraw(params, actor) {
-  const { tournamentId, modalityId, stageIndex, seed: providedSeed, manualGroups } = params;
+  const {
+    tournamentId, modalityId, stageIndex, seed: providedSeed, manualGroups,
+    replacesKnownMatches,
+  } = params;
   const modality = await getModality(modalityId);
   if (!modality) throw new Error('Modalidade não encontrada.');
   if (modality.tournament_id !== tournamentId) throw new Error('Modalidade não pertence ao torneio.');
@@ -296,6 +305,14 @@ export async function runPhaseDraw(params, actor) {
   if (lockCheck?.results_locked) {
     throw new Error('Torneio bloqueado: desbloqueie as alterações para sortear.');
   }
+
+  // ⚠️ Sortear APAGA os jogos da fase — ver `assertCanDiscardStageMatches`.
+  // A fase seguinte, gerada por `advanceToNextPhase`, nasce vazia: ali o
+  // reconhecimento vem do próprio avanço, que só roda com a fase anterior
+  // inteira decidida.
+  await assertCanDiscardStageMatches(modalityId, stageIndex, {
+    acknowledged: replacesKnownMatches === true,
+  });
 
   const phases = normalizePhases(modality.stages);
   const phase = phases[stageIndex];
@@ -526,6 +543,10 @@ export async function advanceToNextPhase(params, actor) {
       manualGroups: nextGroups,
       ordered: adjacent,
       seedCount: standardSeedCount,
+      // Comportamento preservado: o avanço de fase já se comportava assim
+      // antes desta trava, e mudá-lo aqui seria uma decisão à parte (ver
+      // docs/27 — avançar duas vezes regrava a fase seguinte).
+      replacesKnownMatches: true,
     },
     actor,
   );
