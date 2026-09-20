@@ -31,6 +31,11 @@ import {
 import { normalizePhases } from '@/modules/tournament/domain/phases';
 import { stageSupportsAdvance } from '@/modules/tournament/domain/progression';
 import { CollapsibleSection } from '@/components/ui/collapsible-section';
+import { useUpdateModality } from '@/modules/tournament/hooks/useTournament';
+import StageExplanation from './StageExplanation';
+import PhaseRulesSummary from './PhaseRulesSummary';
+import NextPhasePreview from './NextPhasePreview';
+import DirectEntryPanel from '@/v2/components/tournament/DirectEntryPanel';
 
 function formatMatchTime(iso) {
   if (!iso) return '—';
@@ -66,6 +71,22 @@ export default function MultiPhaseDrawBlock({ tournament, modality, isAdmin }) {
     [registrations],
   );
 
+  // Salvar a configuração das fases a partir daqui (entrada direta). Só toca em
+  // `stages`; o resto da modalidade fica como está.
+  const isTeam = Boolean(modality.team_config);
+  const updateModality = useUpdateModality(modality.tournament_id);
+  const [savingStages, setSavingStages] = useState(false);
+  const handleSaveStages = async (stages) => {
+    setSavingStages(true);
+    try {
+      await updateModality.mutateAsync({ id: modality.id, updates: { stages } });
+    } catch (err) {
+      toast.error(err?.message || 'Não foi possível salvar a configuração das fases.');
+    } finally {
+      setSavingStages(false);
+    }
+  };
+
   return (
     <CollapsibleSection
       title={modality.name}
@@ -73,6 +94,33 @@ export default function MultiPhaseDrawBlock({ tournament, modality, isAdmin }) {
       defaultOpen
     >
       <div className="space-y-3">
+        {/* ENTRADA DIRETA: quem pula fases. Fica aqui, na aba de sorteio, porque
+            escolher quem entra direto exige ver os NOMES — e é justamente no
+            torneio de VÁRIAS fases que ela faz sentido (pular fase exige fase
+            para pular). Ver `domain/directEntry.js`. */}
+        <DirectEntryPanel
+          modality={modality}
+          registrations={activeRegistrations}
+          isTeam={isTeam}
+          isAdmin={isAdmin}
+          saving={savingStages}
+          onSave={handleSaveStages}
+        />
+
+        {/* O PLANO da 1ª fase, com o número REAL de inscritos, antes de clicar
+            em sortear: jogos, jogos por atleta, classificados, se a chave
+            fecha, e as outras divisões possíveis para aquele número. */}
+        {isAdmin && activeRegistrations.length > 0 && phases[0] && (
+          <StageExplanation
+            stageType={phases[0].type}
+            playerCount={activeRegistrations.length}
+            groupCount={phases[0].custom_group_sizes.length || phases[0].group_count}
+            seedCount={phases[0].seed_count}
+            qualifiersPerGroup={phases[0].qualifiers_per_group}
+            legs={phases[0].round_robin_legs}
+          />
+        )}
+
         {phases.map((phase, index) => (
           <PhaseSection
             key={index}
@@ -92,7 +140,10 @@ export default function MultiPhaseDrawBlock({ tournament, modality, isAdmin }) {
   );
 }
 
-function PhaseSection({ tournament, modality, phase, stageIndex, isFirst, isLast, isAdmin, labelById, activeRegistrations }) {
+function PhaseSection({
+  tournament, modality, phase, stageIndex, isFirst, isLast, isAdmin,
+  labelById, activeRegistrations,
+}) {
   // Modalidade de EQUIPES: o participante é a equipe — não há substituição de
   // jogador por aqui (o elenco é editado na inscrição da equipe).
   const isTeam = Boolean(modality.team_config);
@@ -221,6 +272,29 @@ function PhaseSection({ tournament, modality, phase, stageIndex, isFirst, isLast
       defaultOpen
     >
       <div className="space-y-3">
+        {/* O QUE ESTÁ EM VIGOR nesta fase. A configuração mora em Modalidades e
+            o sorteio acontece aqui: sem este resumo, quem organiza clica sem
+            eco nenhum do que configurou. Ver `domain/phaseRules.js`. */}
+        <PhaseRulesSummary
+          phase={phase}
+          isFirst={isFirst}
+          isLast={isLast}
+          groupCount={groups.length || undefined}
+        />
+
+        {/* QUEM VAI PARA A PRÓXIMA FASE, antes de clicar. Sai da mesma função
+            que o serviço usa para gravar — o que se anuncia é o que acontece. */}
+        {isAdmin && !isLast && matches.length > 0 && (
+          <NextPhasePreview
+            tournament={tournament}
+            modality={modality}
+            stageIndex={stageIndex}
+            matches={matches}
+            groups={groups}
+            registrations={activeRegistrations}
+          />
+        )}
+
         {error && (
           <div className="flex items-start gap-2 rounded border border-red-200 bg-red-50 p-2 text-xs text-red-700">
             <AlertTriangle className="w-4 h-4 mt-0.5 shrink-0" />

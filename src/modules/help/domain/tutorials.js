@@ -71,8 +71,9 @@ const TORNEIO = {
         'Modalidade é cada disputa dentro do torneio — "Dupla Masculina B", "Simples Feminina A", "Mista Open". É nela que ficam as inscrições, os jogos e a classificação.',
         'Para cada uma você define: FORMATO (simples, duplas ou equipes), GÊNERO, FAIXA ETÁRIA, o MODELO DA CHAVE (grupos, eliminatória, todos contra todos, suíço, americano, mexicano…), as quadras disponíveis e o horário de início.',
         'Não existe limite: crie quantas modalidades o seu torneio tiver. Cada uma corre de forma independente das outras.',
+        'Cada FASE tem um bloco "Regras avançadas", e ali praticamente tudo é seu: tamanho de cada grupo à mão, ida e volta, quantos passam em cada grupo, REPESCAGEM (vagas extras para os melhores da colocação seguinte ao corte), a ORDEM dos critérios de desempate e como comparar quem veio de grupos de tamanhos diferentes.',
       ],
-      tip: 'Na dúvida sobre qual modelo de chave usar, abra o Guia de formatos (Torneios → Guia): ele explica cada um e quantos participantes cada um pede.',
+      tip: 'Não mexer em nada é uma escolha legítima: em branco, cada campo vale o padrão do regulamento. Na dúvida sobre o modelo de chave, abra o Guia de formatos (Torneios → Guia).',
     },
     {
       id: 'inscricoes',
@@ -89,8 +90,10 @@ const TORNEIO = {
       title: '4. Sorteio',
       body: [
         'O sorteio monta os confrontos a partir de quem está inscrito, respeitando o modelo de chave da modalidade. Quando há informação de nível, ele equilibra os grupos em vez de sortear às cegas.',
+        'ANTES de clicar, a aba mostra o plano para o número REAL de inscritos: quantos jogos, quantos jogos por atleta, quantos classificados e se a chave fecha — com as outras divisões possíveis ao lado. Número "quebrado" de inscritos é o caso normal, não um erro: grupos de tamanhos diferentes são comparados por aproveitamento.',
+        'É aqui também que se define a ENTRADA DIRETA — quem pula as primeiras fases e entra mais à frente, seja os N melhores cabeças (modelo de qualificatória), seja uma lista escolhida a dedo. A tela mostra os nomes e o que vai acontecer antes de você sortear.',
         'Depois de sortear você não fica preso ao resultado: dá para MOVER um participante de grupo, SUBSTITUIR um jogador que faltou, RESORTEAR apenas os jogos que ainda não aconteceram e RECALCULAR quadras e horários sem mexer nos confrontos.',
-        'Em formatos por rodada, é aqui que você gera a próxima rodada com base nos resultados já lançados.',
+        'Em formatos por rodada, é aqui que você gera a próxima rodada com base nos resultados já lançados. E em torneio de várias fases, "Gerar próxima fase" mostra antes quem passa, quem entra por repescagem e quem entra direto.',
       ],
       tip: 'Corrigir o sorteio nunca apaga resultado já lançado — só os jogos que ainda não foram disputados são refeitos.',
     },
@@ -109,10 +112,10 @@ const TORNEIO = {
       title: '6. Encerramento e ranking',
       body: [
         'Quando o último jogo de todas as modalidades é decidido, o torneio se ENCERRA sozinho — você não precisa fazer nada.',
-        'A partir daí, os resultados de torneios públicos e encerrados entram no ranking e no rating da plataforma, e ficam disponíveis para exportação ao DUPR.',
-        'O ranking é atualizado automaticamente quando os resultados são publicados.',
+        'O ranking NÃO espera o encerramento: num torneio público, cada placar lançado já conta para o ranking e para o rating, na hora. Num torneio de três dias, quem jogou vê a evolução no mesmo dia.',
+        'Não há botão de "recalcular": a conta é disparada pelo próprio lançamento do resultado. Os dados também ficam disponíveis para exportação ao DUPR.',
       ],
-      tip: 'Torneio privado ou ainda em andamento não pontua no ranking geral. É de propósito: o ranking só conta disputa pública e concluída.',
+      tip: 'Torneio em RASCUNHO, PRIVADO, cancelado ou arquivado não pontua. E como a conta é refeita por inteiro, cancelar um torneio TIRA do ranking o que já tinha contado.',
     },
     {
       id: 'acompanhar',

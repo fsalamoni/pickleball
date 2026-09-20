@@ -41,9 +41,9 @@ import {
 import { combinedStrength } from '../domain/seeding.js';
 import { normalizePhases, BRACKET_FORMATS } from '../domain/phases.js';
 import { drawGroups } from '../domain/grouping.js';
-import { americanoMatchCount } from '../domain/draw.js';
 import { buildPhaseDraw } from '../domain/phaseDraw.js';
-import { rankEntrantsInGroup, buildNextPhaseEntrants } from '../domain/phaseProgression.js';
+import { rankEntrantsInGroup } from '../domain/phaseProgression.js';
+import { phaseDrawIssues, previewPhaseAdvance } from '../domain/phaseAdvancePreview.js';
 import { resolveStageScoringConfig } from '../domain/scoring.js';
 import { stageFormatCompatibility } from '../domain/formatExplain.js';
 import { listRegistrations } from './registrationService.js';
@@ -193,37 +193,6 @@ export async function movePhaseEntrantBetweenGroups(params, actor) {
   });
 
   return { moved: true, groups: result.groups.length, matches: result.matches };
-}
-
-/**
- * Verifica se os grupos formados para uma fase podem realmente ser sorteados no
- * formato escolhido, devolvendo mensagens claras e acionáveis quando não.
- * @param {object} phase fase normalizada
- * @param {Array<{ name: string, entrants: object[] }>} groups
- * @returns {string[]} problemas encontrados (vazio = ok)
- */
-function phaseDrawIssues(phase, groups, { isTeam = false } = {}) {
-  const issues = [];
-  const unidade = isTeam ? 'equipe(s)' : 'atleta(s)';
-  groups.forEach((g) => {
-    const n = (g.entrants || []).length;
-    const name = g.name || 'único';
-    if (phase.type === TOURNAMENT_STAGE_TYPE.AMERICANO) {
-      if (n < 4) {
-        issues.push(`o grupo "${name}" ficaria com ${n} atleta(s), e o Americano exige ao menos 4`);
-      } else if (!americanoMatchCount(n).exact) {
-        issues.push(
-          `o grupo "${name}" ficaria com ${n} atletas, número incompatível com o Americano `
-          + '(use 4, 5, 8, 9, 12, 13, 16, 17…)',
-        );
-      }
-    } else if (phase.type === TOURNAMENT_STAGE_TYPE.MEXICANO) {
-      if (n < 4) issues.push(`o grupo "${name}" ficaria com ${n} atleta(s), e o Mexicano exige ao menos 4`);
-    } else if (n < 2) {
-      issues.push(`o grupo "${name}" ficaria com ${n} ${unidade}, e são necessários ao menos 2`);
-    }
-  });
-  return issues;
 }
 
 /* ------------------------- entrants da 1ª fase --------------------------- */
@@ -527,31 +496,19 @@ export async function advanceToNextPhase(params, actor) {
   const { byPhase: entradasPorFase } = await planPhaseEntries(modalityId, modality);
   const directEntrants = entradasPorFase.get(stageIndex + 1) || [];
 
-  const { groups: nextGroups, entrants: nextEntrants, bracketSeeding } = buildNextPhaseEntrants(
-    groupsRanked,
+  // A PRÉVIA que a tela mostra e o AVANÇO que grava saem DAQUI, da mesma
+  // chamada: o que foi anunciado é o que será gravado. Ver
+  // `domain/phaseAdvancePreview.js` e o guarda em `core/guards/torneioRegras`.
+  const preview = previewPhaseAdvance({
+    rankedGroups: groupsRanked,
     prevPhase,
     nextPhase,
-    { seed, directEntrants },
-  );
-
-  const nextLabel = TOURNAMENT_STAGE_TYPE_LABELS[nextPhase.type] || nextPhase.type;
-  if (!nextEntrants || nextEntrants.length === 0) {
-    throw new Error(modality.team_config
-      ? 'Nenhuma equipe se classificou para a próxima fase. Revise quantas equipes cada grupo classifica.'
-      : 'Nenhum atleta se classificou para a próxima fase. Revise o critério de classificação — '
-        + 'em especial "por gênero", que exige o gênero informado em cada inscrição.');
-  }
-
-  // Antes de gerar, confere se cada grupo da próxima fase comporta o formato
-  // escolhido (ex.: Americano precisa de ≥ 4 atletas por grupo). Mensagem clara.
-  const issues = phaseDrawIssues(nextPhase, nextGroups, { isTeam: Boolean(modality.team_config) });
-  if (issues.length > 0) {
-    throw new Error(
-      `Não é possível gerar a próxima fase (${nextLabel}): ${issues[0]}. `
-      + 'Ajuste os classificados por grupo na fase anterior, o número de grupos desta fase '
-      + 'ou escolha outro formato.',
-    );
-  }
+    seed,
+    directEntrants,
+    isTeam: Boolean(modality.team_config),
+  });
+  if (preview.blocked) throw new Error(preview.blocked.message);
+  const { groups: nextGroups, entrants: nextEntrants, bracketSeeding } = preview;
 
   // Em chaves: "cruzado" (adjacente, A×B/C×D) ou "clássico" (cabeças-de-chave
   // espalhadas, com a ordem já preparada por colocação em buildNextPhaseEntrants).

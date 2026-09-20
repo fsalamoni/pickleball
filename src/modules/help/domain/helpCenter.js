@@ -267,9 +267,33 @@ const ATLETA = {
       blocks: [
         p('Qualquer pessoa cria um torneio. O caminho é sempre: criar → modalidades → inscrições → sorteio → resultados. O encerramento é automático quando o último resultado entra.'),
         p('Há um tutorial completo dentro do console de gestão, com os sete passos detalhados — ele abre na primeira vez e fica disponível no botão "Como funciona".'),
+        p('Se o número de inscritos não bateu com o formato ideal — grupos de tamanhos diferentes, chave que não fecha, alguém que precisa entrar mais à frente — veja "Quando o número de inscritos não é o ideal".'),
         link('/torneios/criar', 'Criar um torneio'),
         link('/torneios/guia', 'Guia dos formatos de chave'),
         tip('Não sabe qual modelo de chave usar? O Guia de formatos explica cada um e quantos participantes cada um pede.'),
+      ],
+    },
+    {
+      id: 'inscritos-numero-incomum',
+      title: 'Quando o número de inscritos não é o ideal',
+      summary: 'Grupos de tamanhos diferentes, repescagem, byes e quem entra direto.',
+      keywords: [
+        'inscritos', 'ímpar', 'grupos desiguais', 'repescagem', 'bye',
+        'entrada direta', 'desempate', 'chave incompleta', 'qualificatória',
+      ],
+      blocks: [
+        p('Chegaram 19 inscritos? Isso é o caso NORMAL de torneio amador, não um erro a corrigir. O que um número "quebrado" exige não é um inscrito a mais — é a regra de comparação certa.'),
+        p('Na aba de sorteio, a plataforma mostra as divisões possíveis para o número REAL de inscritos, com quantos jogos cada uma dá, quantos jogos por atleta e se a chave fecha. Grupo de 4 ou 5 costuma ser o melhor tamanho; grupo de 3 pede ida e volta, senão são só 2 jogos para quem viajou até lá.'),
+        list(
+          'GRUPOS DE TAMANHOS DIFERENTES — comparados por COLOCAÇÃO primeiro (todos os 1ºs, depois os 2ºs) e, dentro dela, por APROVEITAMENTO: 3 vitórias em 3 jogos valem mais que 3 em 4.',
+          'REPESCAGEM — se faltam classificados para fechar a chave, ela chama os melhores da colocação seguinte ao corte. Um 4º nunca entra na frente de um 3º: a comparação é sempre entre iguais.',
+          'BYES — numa chave que não é potência de 2, quem passa direto na primeira rodada são os melhores cabeças, e são exatamente as vagas que faltam. Não existe "partida" de ninguém contra ninguém.',
+          'ENTRADA DIRETA — os N melhores cabeças (ou uma lista escolhida a dedo) podem pular as primeiras fases e entrar mais à frente. É o modelo de qualificatória: os favoritos esperam, os demais disputam as vagas.',
+        ),
+        p('O desempate dentro do grupo segue o regulamento: vitórias, CONFRONTO DIRETO, saldo, saldo no confronto direto, pontos a favor e pontos sofridos. Empate de três ou mais é resolvido numa mini-tabela só entre os empatados.'),
+        p('E nada disso é obrigatório: em cada fase, o bloco "Regras avançadas" deixa você trocar a ordem dos critérios, o método de comparação entre grupos, quantos passam em cada grupo e de qual colocação sai a repescagem.'),
+        link('/torneios/guia', 'Guia dos formatos de chave'),
+        tip('Quem organiza não precisa decorar nada disso: cada controle tem a explicação ao lado, e a fase mostra na tela de sorteio quais regras estão em vigor.'),
       ],
     },
     {
@@ -289,7 +313,8 @@ const ATLETA = {
       summary: 'De onde vêm os números e quando eles mudam.',
       keywords: ['ranking', 'rating', 'evolução', 'desempenho', 'duplas', 'dupr'],
       blocks: [
-        p('Os resultados que contam vêm de duas fontes: torneios PÚBLICOS e ENCERRADOS, e dias de jogo cujo organizador publicou os resultados no ranking.'),
+        p('Os resultados que contam vêm de duas fontes, e elas têm gatilhos diferentes: em TORNEIO público, cada placar lançado já conta — não é preciso esperar o torneio encerrar; em DIA DE JOGO, contam quando quem organiza PUBLICA os resultados no ranking.'),
+        p('Fica de fora o que não é resultado de verdade: torneio em rascunho, cancelado, privado ou arquivado. E como a conta é sempre refeita por inteiro, cancelar ou arquivar TIRA do ranking o que já tinha contado.'),
         list(
           'RANKING NACIONAL — a classificação geral, pelo rating ELO.',
           'RATING 2.0–8.0 — no estilo DUPR, baseado no placar e não só em vitória/derrota. Uma derrota apertada contra alguém muito mais forte pode subir o seu rating.',
@@ -699,11 +724,19 @@ export const HELP_ROUTE_HINTS = Object.freeze([
   { pattern: '/torneios/criar', label: 'criar um torneio',
     refs: [[HELP_SECTION.ATHLETE, 'organizar-torneio'], [HELP_SECTION.START, 'nivelamento']] },
   { pattern: '/torneios/*/gerenciar', label: 'gerenciar o torneio',
-    refs: [[HELP_SECTION.ATHLETE, 'organizar-torneio'], [HELP_SECTION.ATHLETE, 'durante-torneio']] },
+    refs: [
+      [HELP_SECTION.ATHLETE, 'organizar-torneio'],
+      [HELP_SECTION.ATHLETE, 'inscritos-numero-incomum'],
+      [HELP_SECTION.ATHLETE, 'durante-torneio'],
+    ] },
   { pattern: '/torneios/*/modalidades/*', label: 'a modalidade',
-    refs: [[HELP_SECTION.ATHLETE, 'organizar-torneio'], [HELP_SECTION.ATHLETE, 'inscrever-torneio']] },
+    refs: [
+      [HELP_SECTION.ATHLETE, 'organizar-torneio'],
+      [HELP_SECTION.ATHLETE, 'inscritos-numero-incomum'],
+      [HELP_SECTION.ATHLETE, 'inscrever-torneio'],
+    ] },
   { pattern: '/torneios/guia', label: 'os formatos de chave',
-    refs: [[HELP_SECTION.ATHLETE, 'organizar-torneio']] },
+    refs: [[HELP_SECTION.ATHLETE, 'organizar-torneio'], [HELP_SECTION.ATHLETE, 'inscritos-numero-incomum']] },
   { pattern: '/torneios/*', label: 'este torneio',
     refs: [[HELP_SECTION.ATHLETE, 'inscrever-torneio'], [HELP_SECTION.ATHLETE, 'durante-torneio']] },
   { pattern: '/torneios', label: 'torneios',

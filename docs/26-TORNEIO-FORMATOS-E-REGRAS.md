@@ -401,3 +401,107 @@ antes desta onda se comporta exatamente como antes.
 6. **Não presuma que quem entra direto jogou as fases anteriores.** Ele não
    aparece no sorteio delas, e a exclusão acontece na origem
    (`planPhaseEntries`), não como remendo em cada tela.
+
+---
+
+## 11. A tela de sorteio: o que está em vigor e o que vai acontecer
+
+> Acrescentado na **Onda AU**, que fechou o buraco deixado pela AT.
+
+### 11.1 🐞 A aba de sorteio tem dois ramos, e o controle novo caiu no errado
+
+`V2TournamentDrawTab` escolhe o ramo por `stages.length`:
+
+| inscritos em… | ramo | arquivo |
+|---|---|---|
+| **uma** fase | `ModalityDrawBlock` | dentro de `V2TournamentDrawTab.jsx` |
+| **várias** fases | `MultiPhaseDrawBlock` | `modules/tournament/components/` |
+
+A Onda AT montou o **planejador de grupos** (`StageExplanation`) e a **entrada
+direta** (`DirectEntryPanel`) só no primeiro. E `DirectEntryPanel` começa com:
+
+```js
+if (fases.length < 2) return null;   // pular fase exige fase para pular
+```
+
+Ou seja: a entrada direta — a funcionalidade-título daquela onda — foi montada
+**exatamente no ramo onde ela nunca renderiza**, e ficou ausente do ramo de
+várias fases, que é o único em que ela significa alguma coisa. Nenhum teste de
+comportamento pegava: cada tela, isolada, funcionava.
+
+É a mesma família do console de marketing da Onda AJ (módulo ligado, tela
+inalcançável) e das quatro cópias do `handleDraw` da Onda AS. A correção é a
+mesma: montar nos dois **e** travar com guarda de fonte
+(`src/core/guards/torneioRegras.test.js`).
+
+### 11.2 As regras da fase aparecem onde se age sobre ela
+
+A configuração mora em **Modalidades**; o sorteio acontece em **Sorteio**. Com
+oito controles novos, chegar no botão sem nenhum eco do que foi configurado é
+convidar o organizador a voltar na outra tela para conferir — ou a sortear sem
+saber.
+
+`describePhaseRules(fase, { isFirst, isLast, groupCount })`
+(`domain/phaseRules.js`) traduz a fase em linhas `{ label, value, help,
+changed }`, e `PhaseRulesSummary` as mostra. Duas decisões:
+
+- **Por padrão só aparece o que o organizador MUDOU.** Repetir o padrão da
+  plataforma para todo mundo vira paredão de texto que ninguém lê. "Ver todas
+  as regras" abre a lista inteira, com o porquê de cada uma.
+- **Linha que não se aplica SOME**, não vira "—": repescagem não existe na
+  última fase, entrada direta não existe na primeira, comparação entre grupos
+  não existe com um grupo só.
+
+### 11.3 "Gerar próxima fase" deixou de ser caixa-preta
+
+É o botão mais irreversível do torneio: classifica os grupos pela ordem de
+desempate configurada, compara quem veio de grupos desiguais, chama os
+repescados, encaixa quem entra direto e sorteia a fase seguinte — tudo de uma
+vez, e antes não dizia nada.
+
+Agora `NextPhasePreview` mostra, antes do clique, **quem passa**, **quem entra
+por repescagem** e **quem entra direto**, nome por nome.
+
+⚠️ **A prévia e o avanço saem da MESMA função.** `previewPhaseAdvance`
+(`domain/phaseAdvancePreview.js`) é chamada pela tela e pelo serviço. É a lição
+do dia de jogo, onde a previsão de quadra e o sorteio divergiram e a tela
+anunciava uma partida enquanto a quadra recebia outra — aqui o estrago seria
+anunciar quem vai à próxima fase de um torneio. Um guarda de fonte reprova
+quem chamar `buildNextPhaseEntrants` por fora.
+
+A prévia também **não afirma o que ainda não sabe**: com jogos por decidir, ela
+diz isso em vez de apresentar um resultado parcial como definitivo.
+
+### 11.4 A cadeia morta do console V1
+
+Dez componentes de torneio (`TournamentAdminPanel` e as cinco abas que ele
+montava, mais `ModalityGallery`, `MyUpcomingMatches`,
+`ParticipationHistoryCard`, `TournamentOverviewTab`, `TournamentRankingTab`)
+estavam no repositório **sem nenhum caminho a partir de `main.jsx`** e fora do
+bundle. Entre eles, `TournamentDrawTab.jsx` — uma segunda cópia da aba de
+sorteio, que importava o mesmo `MultiPhaseDrawBlock`.
+
+Cópia morta de tela viva é armadilha de divergência: é o caso do
+`V2GameDayOrganizer` da Onda AS. Removidas.
+
+> Sobra um órfão conhecido: `services/courtService.js`, inalcançável mas
+> descrito no README do módulo como parte da arquitetura de agendamento. Ficou,
+> de propósito — apagar um serviço que a documentação promete é decisão maior
+> que apagar tela órfã.
+
+### 11.5 🐞 O tutorial ensinava uma regra revogada
+
+A Onda AR mudou o gatilho do ranking de torneio do **encerramento** para o
+**lançamento** do resultado. O tutorial continuou afirmando o contrário, com
+ênfase:
+
+> *"Torneio privado ou ainda em andamento não pontua no ranking geral. É de
+> propósito."*
+
+E a central de ajuda dizia o mesmo ("torneios PÚBLICOS e ENCERRADOS"). Os dois
+foram corrigidos, e um guarda compara o que a ajuda afirma contra
+`RANKING_ELIGIBLE_STATUSES`. Ver `docs/18-RANKINGS.md` §3.
+
+Tutorial errado é pior que tutorial nenhum: quem segue passo a passo conclui
+que está fazendo algo errado — aqui, ia procurar um botão de "encerrar" para
+liberar um ranking que já estava atualizado.

@@ -143,3 +143,117 @@ describe('⭐ toda configuração de fase é ADITIVA', () => {
     Object.entries(DIRECT_ENTRY_MODE_HELP).forEach(([k, v]) => expect(v.length, k).toBeGreaterThan(30));
   });
 });
+
+/**
+ * 🐞 A ABA DE SORTEIO TEM DOIS RAMOS, E ELES DIVERGIRAM.
+ *
+ * `V2TournamentDrawTab` escolhe por `stages.length`: uma fase vai para o
+ * `ModalityDrawBlock` (no próprio arquivo), várias fases vão para o
+ * `MultiPhaseDrawBlock`. A Onda AT montou o planejador de grupos e a entrada
+ * direta SÓ no primeiro — e o `DirectEntryPanel` começa com
+ * `if (fases.length < 2) return null`.
+ *
+ * Ou seja: a entrada direta foi montada exatamente no ramo onde ela não
+ * renderiza, e ficou ausente no ramo de VÁRIAS fases, que é o único em que
+ * "pular fases" quer dizer alguma coisa. Nenhum teste de comportamento pegava
+ * isso, porque cada tela, isolada, funcionava.
+ */
+describe('⭐ os dois ramos da aba de sorteio oferecem as mesmas ferramentas', () => {
+  const UMA_FASE = 'src/v2/components/tournament/V2TournamentDrawTab.jsx';
+  const VARIAS_FASES = 'src/modules/tournament/components/MultiPhaseDrawBlock.jsx';
+
+  ['StageExplanation', 'DirectEntryPanel'].forEach((painel) => {
+    it(`⭐ ${painel} é montado nos DOIS ramos`, () => {
+      expect(semComentarios(ler(UMA_FASE)), `${painel} sumiu do ramo de fase única`)
+        .toContain(`<${painel}`);
+      expect(semComentarios(ler(VARIAS_FASES)), `${painel} não chegou ao ramo de várias fases`)
+        .toContain(`<${painel}`);
+    });
+  });
+
+  it('⭐ o ramo de várias fases mostra as regras em vigor e quem passa', () => {
+    const src = semComentarios(ler(VARIAS_FASES));
+    expect(src).toContain('<PhaseRulesSummary');
+    expect(src).toContain('<NextPhasePreview');
+  });
+
+  it('⭐ a entrada direta só renderiza com mais de uma fase — por isso precisa estar no multi', async () => {
+    const src = semComentarios(ler('src/v2/components/tournament/DirectEntryPanel.jsx'));
+    expect(src).toMatch(/fases\.length < 2\)\s*return null/);
+  });
+});
+
+/**
+ * ⭐ A PRÉVIA DA PRÓXIMA FASE E O AVANÇO SAEM DA MESMA FONTE.
+ *
+ * É a lição do dia de jogo: a previsão de quadra e o sorteio divergiram, e a
+ * tela passou a anunciar uma partida e criar outra. Aqui o risco é pior — o
+ * que se anuncia é quem vai para a próxima fase de um torneio.
+ */
+describe('⭐ a próxima fase é montada num lugar só', () => {
+  const SERVICO = 'src/modules/tournament/services/phaseService.js';
+  const PREVIA = 'src/modules/tournament/components/NextPhasePreview.jsx';
+
+  it('⭐ o serviço monta a próxima fase por `previewPhaseAdvance`', () => {
+    const src = semComentarios(ler(SERVICO));
+    expect(src).toContain('previewPhaseAdvance');
+    expect(src, 'o serviço voltou a chamar o motor por fora da fonte única')
+      .not.toContain('buildNextPhaseEntrants');
+  });
+
+  it('⭐ a prévia da tela chama a MESMA função', () => {
+    expect(semComentarios(ler(PREVIA))).toContain('previewPhaseAdvance');
+  });
+
+  it('⭐ a tradução de inscrição → entrant tem uma fonte', () => {
+    const painel = semComentarios(ler('src/v2/components/tournament/DirectEntryPanel.jsx'));
+    const previa = semComentarios(ler(PREVIA));
+    expect(painel).toContain('registrationEntrant');
+    expect(previa).toContain('registrationEntrant');
+    expect(painel, 'o painel voltou a calcular a força por conta própria')
+      .not.toContain('combinedStrength');
+  });
+});
+
+/**
+ * 🐞 O TUTORIAL ENSINAVA UMA REGRA QUE JÁ TINHA SIDO REVOGADA.
+ *
+ * A Onda AR mudou o gatilho do ranking de torneio do ENCERRAMENTO para o
+ * LANÇAMENTO do resultado — e o tutorial continuou afirmando, com todas as
+ * letras, que "torneio ainda em andamento não pontua no ranking geral. É de
+ * propósito". A ajuda dizia o mesmo ("torneios PÚBLICOS e ENCERRADOS").
+ *
+ * Tutorial errado é pior que tutorial nenhum: quem segue passo a passo conclui
+ * que está fazendo algo errado, e o organizador ia procurar um botão de
+ * "encerrar" para liberar um ranking que já estava atualizado.
+ */
+describe('⭐ o que a ajuda ensina bate com a regra do código', () => {
+  const TUTORIAIS = 'src/modules/help/domain/tutorials.js';
+  const AJUDA = 'src/modules/help/domain/helpCenter.js';
+
+  it('⭐ torneio EM ANDAMENTO pontua — é o que o código faz', async () => {
+    const { RANKING_ELIGIBLE_STATUSES } = await import('@/modules/tournament/domain/rankingEligibility');
+    expect(RANKING_ELIGIBLE_STATUSES).toContain('in_progress');
+  });
+
+  it('⭐ o tutorial não diz que só torneio encerrado pontua', () => {
+    const src = ler(TUTORIAIS);
+    expect(src, 'o tutorial voltou a exigir o encerramento')
+      .not.toMatch(/torneios públicos e encerrados/i);
+    expect(src, 'o tutorial voltou a negar o ranking a torneio em andamento')
+      .not.toMatch(/ainda em andamento não pontua/i);
+  });
+
+  it('⭐ a ajuda não diz que só torneio encerrado pontua', () => {
+    expect(ler(AJUDA), 'a ajuda voltou a exigir o encerramento')
+      .not.toMatch(/torneios PÚBLICOS e ENCERRADOS/);
+  });
+
+  it('⭐ a ajuda cobre o número incomum de inscritos', () => {
+    const src = ler(AJUDA);
+    expect(src).toContain('inscritos-numero-incomum');
+    ['repescagem', 'aproveitamento', 'cabeças'].forEach((termo) => {
+      expect(src.toLowerCase(), `a ajuda não fala de ${termo}`).toContain(termo.toLowerCase());
+    });
+  });
+});

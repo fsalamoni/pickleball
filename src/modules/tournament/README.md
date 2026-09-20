@@ -31,7 +31,26 @@
 - **Domain**: 25+ arquivos puros testados (scoring, draw, progression,
   doubleElimination, swiss, mexicano, reinaQuadra, schedule, ranking,
   capacity, eligibility, participation, formatExplain, whistTables,
-  constants, archiveValidation, bracketLayout)
+  constants, archiveValidation, bracketLayout, tiebreak, crossGroup,
+  groupPlan, directEntry, phaseRules, phaseAdvancePreview,
+  registrationEntrant)
+
+### ⚠️ A aba de sorteio tem DOIS ramos
+
+`V2TournamentDrawTab` escolhe por `stages.length`: **uma** fase vai para o
+`ModalityDrawBlock` (no próprio arquivo) e **várias** fases vão para o
+`MultiPhaseDrawBlock`. Ferramenta acrescentada num ramo só **não dá erro** —
+dá metade dos organizadores sem ela. Foi o que aconteceu com a entrada direta,
+montada justamente no ramo onde ela não renderiza (`fases.length < 2 ⇒ null`).
+`src/core/guards/torneioRegras.test.js` lê o código-fonte e reprova quem montar
+`StageExplanation` ou `DirectEntryPanel` em apenas um dos dois.
+
+### ⚠️ A próxima fase é montada num lugar só
+
+`previewPhaseAdvance` (`domain/phaseAdvancePreview.js`) é chamada **pela tela**
+(para mostrar quem passa antes do clique) e **pelo serviço** (para gravar). O
+que se anuncia é o que acontece. Nunca chame `buildNextPhaseEntrants` direto
+fora dali — há guarda de fonte.
 - **Hooks**: `useTournament`, `useTournamentAnnouncements`,
   `useTournamentPhotos`, `useTournamentOps`, `useTournamentWizard`
 - **Tests**: 200+ (scoring, draw, ranking são os mais densos)

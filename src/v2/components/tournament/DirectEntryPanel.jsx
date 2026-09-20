@@ -23,22 +23,7 @@ import {
   DIRECT_ENTRY_MODE, DIRECT_ENTRY_MODE_LABELS, DIRECT_ENTRY_MODE_HELP,
   planDirectEntries, describeDirectEntries, normalizeDirectEntry,
 } from '@/modules/tournament/domain/directEntry';
-import { combinedStrength } from '@/modules/tournament/domain/seeding';
-
-/** Inscrição → entrant, no mesmo formato que o motor de fases usa. */
-function toEntrant(reg, isTeam) {
-  if (isTeam || reg.kind === 'team') {
-    return { id: reg.id, label: reg.team_name || reg.label || reg.id, strength: -1 };
-  }
-  return {
-    id: reg.id,
-    label: reg.label || reg.player_a_name || reg.id,
-    strength: combinedStrength({
-      level: reg.player_a_level || null,
-      partner_level: reg.player_b_level || null,
-    }),
-  };
-}
+import { registrationToEntrant } from '@/modules/tournament/domain/registrationEntrant';
 
 export default function DirectEntryPanel({
   modality, registrations = [], isTeam = false, isAdmin = false, onSave, saving = false,
@@ -46,12 +31,11 @@ export default function DirectEntryPanel({
   const [aberto, setAberto] = useState(false);
   const fases = useMemo(() => normalizePhases(modality?.stages), [modality?.stages]);
   const entrants = useMemo(
-    () => registrations.map((r) => toEntrant(r, isTeam)),
+    () => registrations.map((r) => registrationToEntrant(r, { isTeam })),
     [registrations, isTeam],
   );
   const plano = useMemo(() => planDirectEntries(entrants, fases), [entrants, fases]);
   const resumo = useMemo(() => describeDirectEntries(plano, fases), [plano, fases]);
-  const porId = useMemo(() => new Map(entrants.map((e) => [e.id, e])), [entrants]);
 
   // Só existe com mais de uma fase: pular fase exige fase para pular.
   if (fases.length < 2) return null;

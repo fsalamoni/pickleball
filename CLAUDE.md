@@ -199,6 +199,11 @@ Estes princípios vieram de bugs reais que custaram horas pra arrumar. São ineg
 **"Quem organiza o dia de jogo do clube?"** → quem agendou a data (criador), os administradores NOMEADOS e **quem administra o CLUBE** (`isClubGameDayManagerOf` no `firestore.rules`, guardada por `'club_id' in …`). O dia nasce `manage_mode: 'participants'` de propósito — no evento legado qualquer membro mexia em participantes e jogos, e nascer restrito tiraria da comunidade algo que ela já tinha. O membro do clube LÊ o dia (`isClubGameDayMemberOf`) e **entra e sai sozinho**. Na tela, pergunte sempre a `useGameDayRoles`, que soma arena e clube num lugar só
 **"Onde se edita/arquiva um dia de jogo de clube?"** → na **DATA do evento**, não em `/dia-de-jogo/:id` (que mostra "Gerir no clube"). A data manda em título, horário, local e existência; a aba de jogos manda no FORMATO, e só enquanto não houver partidas — trocar depois não é edição, é perda (o Play não guarda placar; Mexicano e Rei da Quadra derivam as rodadas do que já aconteceu). E **nunca** abra `CreateGameDayDialog` num dia de clube: ele grava a `visibility` junto, e público ali significa legível e auto-inscrevível por qualquer conta
 **"Como o torneio organiza grupos, classificação e chaves? O que o admin pode mudar?"** → ⭐ `docs/26-TORNEIO-FORMATOS-E-REGRAS.md`. Existe um PADRÃO bom (regulamento USA Pickleball + práticas dos circuitos) e **o admin do torneio pode trocar tudo**, com explicação ao lado de cada controle. Configurável: tamanhos dos grupos à mão, turnos (ida/ida e volta), classificados grupo a grupo, repescagem (quantas vagas e de qual colocação), **ordem dos critérios de desempate** (9 critérios, 4 ordens prontas), **método de comparação entre grupos** (aproveitamento / absoluto / descartar o último) e **entrada direta** (quem pula fases). Todo campo é ADITIVO: em branco, a fase se comporta como antes. Zero coleção, zero índice, zero regra — tudo em `tournament_modalities.stages[]`, que não tem lista fechada de campos
+**"Mexi na aba de SORTEIO do torneio"**  → ela tem **DOIS ramos**, e ferramenta acrescentada num só **não dá erro**: `V2TournamentDrawTab` manda uma fase para o `ModalityDrawBlock` (no próprio arquivo) e várias fases para o `MultiPhaseDrawBlock`. 🐞 A Onda AT montou o planejador de grupos e a **entrada direta** só no primeiro — e `DirectEntryPanel` começa com `if (fases.length < 2) return null`, ou seja, a funcionalidade-título daquela onda foi montada exatamente no ramo onde ela NUNCA renderiza, e faltava no único ramo em que "pular fases" quer dizer algo. Cada tela, isolada, funcionava. `src/core/guards/torneioRegras.test.js` reprova quem montar `StageExplanation`/`DirectEntryPanel` num ramo só
+**"Quem vai passar para a próxima fase?"** → a tela MOSTRA antes do clique (`NextPhasePreview`), e a prévia sai de `previewPhaseAdvance` (`domain/phaseAdvancePreview.js`) — a **mesma** função que o serviço usa para gravar. **Nunca** chame `buildNextPhaseEntrants` por fora dela: é a lição do dia de jogo, em que a previsão anunciava uma partida e o sorteio criava outra. Guarda de fonte travando
+**"Configurei a fase em Modalidades e sorteio em Sorteio — como sei o que está valendo?"** → `describePhaseRules` (`domain/phaseRules.js`) + `PhaseRulesSummary`, na própria fase. Mostra por padrão só o que o organizador MUDOU (repetir o padrão para todo mundo vira paredão que ninguém lê) e **some** com a linha que não se aplica — repescagem não existe na última fase, entrada direta não existe na primeira
+**"Vou traduzir uma inscrição em `entrant` fora do serviço"** → `registrationToEntrant` (`domain/registrationEntrant.js`). Cópia que diverge aqui é silenciosa: o `strength` é o que ordena os cabeças, e uma tela passaria a ordenar diferente da outra sem erro nenhum
+**"O tutorial/a ajuda ainda valem depois que mudei a regra?"** → 🐞 não valiam: a Onda AR trocou o gatilho do ranking de torneio do ENCERRAMENTO para o LANÇAMENTO, e o tutorial seguia afirmando *"torneio ainda em andamento não pontua. É de propósito"*. Há guarda comparando o que a ajuda afirma contra `RANKING_ELIGIBLE_STATUSES`
 **"Chegaram 19 inscritos. Em quantos grupos eu divido?"** → o planejador responde: `suggestGroupPlans(19, { qualifiersPerGroup: 2 })` (`domain/groupPlan.js`) devolve as divisões viáveis com jogos, jogos por atleta, classificados e se a chave fecha. A tela de sorteio mostra isso ANTES de clicar, com o número REAL de inscritos. Tamanho bom é **4 ou 5**; grupo de 2 é bloqueado; grupo de 3 pede **ida e volta** (`round_robin_legs: 2`). 🐞 Antes a tela avisava "para grupos do mesmo tamanho use um múltiplo de 4", que é pedir para o inscrito desistir — grupo desigual é o caso NORMAL, e o que ele exige é a regra de comparação certa, não um inscrito a mais
 **"Grupos de tamanhos diferentes: como comparar quem veio de cada um?"** → por **COLOCAÇÃO primeiro** (todos os 1ºs, depois os 2ºs) e, dentro dela, por **APROVEITAMENTO** — vitórias e saldo ÷ partidas jogadas (`domain/crossGroup.js`). 3 vitórias em 3 vale mais que 3 em 4. O admin pode trocar para absoluto ou para "descartar o jogo contra o último de cada grupo" (regra da FIFA). **Nunca** compare vitórias absolutas entre grupos desiguais por conta própria
 **"Faltam/sobram classificados para fechar a chave"** → `bracketFit(n)` diz as duas saídas: quantos **repescar** para encher a chave atual e quantos **tirar** para caber na menor. A repescagem (`wildcard_slots`) pega os melhores da colocação seguinte ao corte — e um 4º NUNCA entra na frente de um 3º, porque a repescagem compara IGUAIS
@@ -452,6 +457,63 @@ chore(deps): bump firebase to 12.x
 > memory topic `picklerush-sync-2026-08.md`.
 >
 > **Destaques por onda**:
+>
+> - **Onda AU — A Onda AT chega onde ela fazia sentido** (2026-09-20):
+>   auditoria do que a onda anterior entregou, e o achado foi constrangedor.
+>
+>   **(1) 🐞 A ENTRADA DIRETA era inalcançável em produção.** A aba de sorteio
+>   tem dois ramos — `stages.length > 1` manda para o `MultiPhaseDrawBlock`, o
+>   resto fica no `ModalityDrawBlock`. A Onda AT montou o planejador de grupos
+>   e o painel de entrada direta **só no segundo**. E `DirectEntryPanel` começa
+>   com `if (fases.length < 2) return null`: pular fase exige fase para pular.
+>   Ou seja, a funcionalidade-título daquela onda foi montada **exatamente no
+>   ramo onde ela nunca renderiza**, e faltava no único ramo em que ela
+>   significa alguma coisa. Nenhum teste de comportamento pegava — cada tela,
+>   isolada, funcionava. É a família do console de marketing da Onda AJ (módulo
+>   ligado, tela inalcançável) e das quatro cópias do `handleDraw` da AS.
+>   Corrigido nos dois ramos, com **guarda de fonte** travando o par.
+>
+>   **(2) A fase não dizia quais regras estavam em vigor.** A AT deu oito
+>   controles ao admin; eles se configuram em **Modalidades** e o torneio se
+>   sorteia em **Sorteio**. Quem organiza chegava no botão sem eco nenhum do
+>   que tinha configurado — e esse botão faz uma conta invisível. Agora cada
+>   fase mostra o que está valendo, **só o que foi MUDADO** por padrão (repetir
+>   o padrão da plataforma para todo mundo vira paredão que ninguém lê), com
+>   "ver todas as regras" ao lado. Linha que não se aplica **some**, não vira
+>   "—".
+>
+>   **(3) "Gerar próxima fase" era caixa-preta.** O botão mais irreversível do
+>   torneio classificava, comparava grupos desiguais, chamava repescados,
+>   encaixava quem entra direto e sorteava — sem dizer nada antes. Agora a tela
+>   mostra **quem passa, quem entra por repescagem e quem entra direto**, nome
+>   por nome, e avisa quando ainda há jogo por decidir em vez de apresentar um
+>   parcial como definitivo. ⚠️ A prévia e o avanço saem da **mesma função**
+>   (`previewPhaseAdvance`): é a lição do dia de jogo, em que a previsão
+>   anunciava uma partida e o sorteio criava outra — aqui o estrago seria
+>   anunciar quem vai à próxima fase de um torneio.
+>
+>   **(4) 🐞 O tutorial ensinava uma regra revogada.** A Onda AR trocou o
+>   gatilho do ranking de torneio do ENCERRAMENTO para o LANÇAMENTO, e o
+>   tutorial seguia afirmando, com ênfase, *"torneio ainda em andamento não
+>   pontua no ranking geral. É de propósito"* — a central de ajuda dizia o
+>   mesmo. Tutorial errado é pior que tutorial nenhum: o organizador ia
+>   procurar um botão de "encerrar" para liberar um ranking que já estava
+>   atualizado. Corrigidos, com guarda comparando o texto contra
+>   `RANKING_ELIGIBLE_STATUSES`. De quebra, a ajuda ganhou o artigo que faltava
+>   — *"Quando o número de inscritos não é o ideal"* — e o tutorial passou a
+>   ensinar planejador, repescagem, entrada direta e regras avançadas.
+>
+>   **(5) Onze componentes mortos removidos.** `TournamentAdminPanel` e as
+>   cinco abas que ele montava, mais quatro cartões órfãos — sem nenhum caminho
+>   a partir de `main.jsx` e fora do bundle. Entre eles, `TournamentDrawTab.jsx`,
+>   uma **segunda cópia da aba de sorteio** importando o mesmo
+>   `MultiPhaseDrawBlock`: exatamente a armadilha do `V2GameDayOrganizer` da
+>   Onda AS. (Sobra um órfão conhecido, `services/courtService.js`, que ficou
+>   de propósito por estar descrito no README do módulo.)
+>
+>   **Banco: zero.** Nenhuma coleção, campo, índice, regra, função ou migração.
+>   Nenhum dado histórico lido ou reescrito. +46 testes.
+>   Ver `docs/26-TORNEIO-FORMATOS-E-REGRAS.md` §11.
 >
 > - **Onda AT — O torneio com qualquer número de inscritos, e o admin no
 >   comando** (2026-09-20): auditoria do torneio de ponta a ponta, com foco no
@@ -1289,7 +1351,7 @@ chore(deps): bump firebase to 12.x
 
 | Métrica | Valor | Delta do início do agente |
 |---|---|---|
-| **Testes Vitest** | **4663 passing** (276 arquivos) + 218 asserções de regras (Vitest) + 85 do dia de jogo no emulador | +4255 (era 408) |
+| **Testes Vitest** | **4761 passing** (279 arquivos) + 218 asserções de regras (Vitest) + 85 do dia de jogo no emulador | +4353 (era 408) |
 | **Lint errors** | 0 | era 30+ |
 | **Módulos** | 21 (+`help` — conteúdo dos tutoriais em tela) (`games` e `legal` saíram como `src/modules/` mas continuam como pastas oficiais — **rating virou módulo oficial** com domain/services/hooks/components) | +4 (coaches, circuits, games, legal) |
 | **V2 pages** | 82 (+V2GameDayTelao — telão, fora do V2Layout; +V2Help — central de ajuda; +V2ArenaKiosk — totem da recepção, também fora do V2Layout; +V2ArenaCheckin; +V2ArenaAttendance) | +58 |
