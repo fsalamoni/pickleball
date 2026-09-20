@@ -143,3 +143,31 @@ O *claim* do login procura em **duas fontes**: a consulta antiga por
 `player_a_email_lc` (legado) e `provisional_claims` (novo). A regra do
 Firestore aceita as duas provas de posse, então a correção não derrubou quem
 já estava inscrito.
+
+---
+
+## ⚠️ Falha de consulta não é lista vazia
+
+`const { data = [] } = useX()` devolve `[]` quando a consulta **falha**, e a
+tela conclui que não existe nada. No torneio isso virava afirmação em lugares
+caros: *"Nenhum torneio público no momento"* na **lista** (a porta de entrada
+da área), *"Comece criando a primeira modalidade"* na aba de modalidades —
+convidando a criar uma modalidade **duplicada**, com inscrições —, *"Torneio
+não encontrado. Verifique o link recebido"* na página **pública**, que chega a
+quem não tem conta e acusa justamente o que essa pessoa não pode conferir.
+
+Se a tela vai **afirmar** algo a partir do vazio, ela precisa de `isError` e de
+`<V2ErrorState onRetry={refetch} />`.
+
+⚠️ O guarda é uma **varredura** (`core/guards/afirmaVazio.js` +
+`falhaNaoEVazio.test.js`): examina quem EXISTE no escopo, não quem alguém
+lembrou de cadastrar numa lista. A isenção exige **motivo escrito**, e o
+critério é um só — se a frase leva alguém a AGIR (criar de novo, sortear de
+novo, preencher à mão), ela não se isenta.
+
+E o caso mais caro da classe mora na **versão para impressão**: o papel
+sobrevive à tela. Modalidade que não carregou não sai na folha, e a folha vai
+para a mesa da organização parecendo completa. Por isso aquele aviso é o único
+da plataforma que **precisa ser impresso junto**.
+
+Ver `docs/27-FALHA-NAO-E-VAZIO.md`.

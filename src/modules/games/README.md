@@ -412,6 +412,18 @@ Se a tela vai **afirmar** algo a partir do vazio, ela precisa de `isError` e de
 `<V2ErrorState onRetry={refetch} />`. Guarda de fonte em
 `core/guards/falhaNaoEVazio.test.js`. Ver `docs/27-FALHA-NAO-E-VAZIO.md`.
 
+⚠️ O guarda deixou de ser uma **lista** de telas e virou **varredura**
+(`core/guards/afirmaVazio.js`): ele examina quem EXISTE no escopo, não quem
+alguém lembrou de cadastrar. Foi assim que apareceram, depois de três ondas
+"fechando a classe", a lista de torneios, a aba de modalidades e — o mais
+caro — o organizador **legado** do clube
+(`modules/clubs/components/GameDayOrganizer.jsx`), que ainda tinha o defeito
+de sorteio da Onda AW: o `orderBase` sai dos jogos carregados, e com a
+consulta falhando a rodada nova nascia com a numeração das que já
+aconteceram. **Correção de classe feita nos organizadores modulares precisa
+ser feita no legado também** — ele não foi migrado, de propósito, e serve toda
+data de clube anterior à Onda AS.
+
 ## ⚠️ O dia de jogo diz o que ele É
 
 `describeGameDayRules` (`domain/gameDayRules.js`) traduz o dia nas linhas que a
