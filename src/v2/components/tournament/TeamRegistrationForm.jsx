@@ -50,6 +50,7 @@ function fitsSlot(profile, slot) {
 /** Uma vaga do elenco: vazia (busca/convidado) ou preenchida. */
 function RosterSlot({
   slot, value, candidates, isOpen, term, onTerm, onOpen, onClose, onPick, onGuest, onGuestName, onClear,
+  falhouDiretorio = false,
 }) {
   const filled = Boolean(value);
   const isGuest = filled && !value.user_id;
@@ -125,7 +126,14 @@ function RosterSlot({
             />
           </div>
           <div className="max-h-52 divide-y divide-gray-100 overflow-y-auto rounded-2xl border border-gray-100 bg-paper-pure">
-            {candidates.length === 0 ? (
+            {falhouDiretorio ? (
+              /* ⚠️ Sugerir “Convidado” numa falha cria um convidado para quem
+                 JÁ tem conta — e a equipe nasce sem o vínculo com o perfil. */
+              <p className="p-3 text-center text-xs text-amber-700">
+                A lista de atletas não carregou — não dá para saber se essa pessoa já
+                tem conta. Tente de novo antes de incluir como convidado.
+              </p>
+            ) : candidates.length === 0 ? (
               <p className="p-3 text-center text-xs text-gray-500">
                 {term.trim()
                   ? 'Nenhum atleta disponível com esse nome. Use “Convidado” para incluir quem não tem conta.'
@@ -174,7 +182,7 @@ export default function TeamRegistrationForm({
   const saving = registerMutation.isPending || updateMutation.isPending;
   const isEditing = !!editingTeam;
 
-  const { data: directory = [] } = useQuery({ queryKey: ['athletes'], queryFn: listAthletes, staleTime: 60_000 });
+  const { data: directory = [], isError: falhouDiretorio } = useQuery({ queryKey: ['athletes'], queryFn: listAthletes, staleTime: 60_000 });
   const { data: existingTeams = [] } = useTeamRegistrations(modality.id);
 
   // Quem já está em OUTRA equipe da modalidade não aparece na busca.
@@ -345,6 +353,7 @@ export default function TeamRegistrationForm({
               slot={slot}
               value={values[i] || null}
               candidates={openSlot === i ? candidates : []}
+              falhouDiretorio={falhouDiretorio}
               isOpen={openSlot === i}
               term={term}
               onTerm={setTerm}

@@ -14,7 +14,7 @@ import {
   V2EmptyState,
   V2PageIntro,
   V2Skeleton,
-  V2Surface,
+  V2Surface, V2ErrorState,
 } from '@/v2/ui/primitives';
 import { cn } from '@/core/lib/utils';
 
@@ -49,12 +49,20 @@ function formatDateRange(startsAt, endsAt) {
 }
 
 export default function V2Tournaments() {
-  const { data: myTournaments = [], isLoading: loadingMine } = useMyTournaments();
-  const { data: publicTournaments = [], isLoading: loadingPublic } = usePublicTournaments();
+  const {
+    data: myTournaments = [], isLoading: loadingMine, isError: falhouMeus, refetch: recarregarMeus,
+  } = useMyTournaments();
+  const {
+    data: publicTournaments = [], isLoading: loadingPublic, isError: falhouPublicos, refetch: recarregarPublicos,
+  } = usePublicTournaments();
   const [tab, setTab] = useState('public');
 
   const list = tab === 'mine' ? myTournaments : publicTournaments;
   const isLoading = tab === 'mine' ? loadingMine : loadingPublic;
+  // ⚠️ "Você ainda não tem torneios" numa falha de rede faz quem TEM torneios
+  // criar um duplicado — e é a porta de entrada de toda a área.
+  const falhou = tab === 'mine' ? falhouMeus : falhouPublicos;
+  const recarregar = tab === 'mine' ? recarregarMeus : recarregarPublicos;
 
   const sorted = useMemo(
     () => [...list].sort((a, b) => (parseDate(b.starts_at)?.getTime() || 0) - (parseDate(a.starts_at)?.getTime() || 0)),
@@ -78,6 +86,14 @@ export default function V2Tournaments() {
         <div className="grid gap-6 lg:grid-cols-2 xl:grid-cols-3">
           {[1, 2, 3].map((i) => <V2Skeleton key={i} className="h-56 rounded-4xl" />)}
         </div>
+      ) : falhou ? (
+        <V2Surface>
+          <V2ErrorState
+            title="Não foi possível carregar os torneios"
+            description="A conexão falhou no meio do caminho. Nenhum torneio foi perdido."
+            onRetry={() => recarregar()}
+          />
+        </V2Surface>
       ) : sorted.length === 0 ? (
         <V2Surface>
           <V2EmptyState

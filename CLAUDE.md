@@ -241,6 +241,8 @@ Estes princípios vieram de bugs reais que custaram horas pra arrumar. São ineg
 **"Quanto custa a reserva?"** → `totalBookingPrice(arena, { courtId, slots })` (`modules/arenas/domain/pricing.js`). **NUNCA** grave o retorno de `resolveArenaPrice` como preço da reserva: ele é o valor **por hora**, e isso era um bug real — três horas selecionadas chegavam à arena valendo uma, na tela E no campo gravado. O serviço refaz a conta antes de escrever (`precoDaReserva`), nos dois caminhos de criação. Para MOSTRAR, `bookingPriceInfo(booking, { arena })`: o acordado vence, com a arena em mãos recalcula (corrige as reservas antigas) e o número nunca sai sem a duração ao lado. Ver `docs/23-ARENA-CALENDARIO-E-RESERVA.md` §8
 **"A arena demora a abrir"** → o caminho já está pavimentado, siga-o: (1) toda consulta de arena nasce em `modules/arenas/hooks/arenaQueries.js` + `arenaKeys.js` — **nunca escreva `queryKey` de arena à mão**, porque a pré-busca e o hook têm de bater bit a bit e chave divergente não dá erro, só faz buscar de novo o que já estava em cache (há teste lendo o código-fonte); (2) link para uma arena chama `useArenaPrefetch()` no `onMouseEnter`/`onFocus`/`onTouchStart` — as consultas saem enquanto o pacote da tela baixa; (3) `useArena` já vem semeado pelo cache da lista; (4) aba pesada entra por `lazy` com `<Suspense>` em volta **só da área das abas**. E o que NÃO fazer: recortar reservas por data no servidor é impossível hoje (a data mora dentro de `slots`, que é vetor) — "resolver" isso pede campo novo ou índice novo, ou seja, mexer no banco, e as reservas antigas sumiriam do filtro. Ver `docs/23-ARENA-CALENDARIO-E-RESERVA.md` §11
 **"Vou mostrar uma data na tela"** → `formatSlotLabel(slot)` / `formatDateShortBR(date)` (`modules/arenas/domain/calendar.js`), nunca a ISO crua: `2026-07-23 · 19:00` era o que a reserva mostrava ao atleta e à arena, e no Brasil ninguém lê data assim. O dia da semana vem junto, e o ANO aparece quando não é o corrente ("23/07" numa reserva de 2027 é armadilha). São montadas das constantes do módulo, não de `toLocaleDateString`, para não depender da configuração da máquina. Ver `docs/23-ARENA-CALENDARIO-E-RESERVA.md` §13
+**"Criei uma tela de dia de jogo ou torneio que mostra uma lista"**  → ⭐ a **varredura** vai te examinar: `src/core/guards/afirmaVazio.js` + `falhaNaoEVazio.test.js` leem o CÓDIGO de **toda** tela do escopo e reprovam quem AFIRMA que algo não existe sem saber se a consulta falhou. Não há lista para entrar — entra quem existe. A isenção exige **motivo escrito** (hoje são 5: fotos, e texto que chega por `props`), e acrescentar caminho lá é decisão de projeto, não atalho: o critério é se a frase leva alguém a AGIR (criar de novo, sortear de novo, não ir à quadra). 🐞 O guarda ANTES tinha lista à mão — a mesma doença que ele veio tratar —, e por isso três ondas seguidas "fecharam a classe" deixando viva a LISTA de torneios, a aba de modalidades (*"Comece criando a primeira modalidade"*, convidando a duplicar) e o organizador legado do clube. Ver `docs/27-FALHA-NAO-E-VAZIO.md` §9
+**"Vou mexer no organizador LEGADO de dia de jogo do clube"** → `src/modules/clubs/components/GameDayOrganizer.jsx`, servido para **toda data anterior à Onda AS** (as novas nascem em `game_days`). Ele NÃO foi migrado de propósito, então correção de classe feita nos organizadores modulares **precisa ser feita nele também** — foi assim que o defeito de sorteio da Onda AW (o `orderBase` saindo dos jogos carregados) ficou vivo ali por três ondas
 **"Mexi numa tela PÚBLICA de torneio (link compartilhado, impressão, telão)"** → ⭐ elas são V1, roteadas direto em `src/App.jsx`, **fora da árvore do V2** — e foi só por isso que ficaram de fora das ondas AV/AW/AX. São quatro: `/p/:id` (`PublicTournament`), `/torneios/:id/imprimir` (`PrintTournament`), `/torneios/:id/telao` (`Telao`) e `/c/:clubId` (`PublicClub`). Nelas a falha é a mais cara da plataforma porque chega a **quem não tem conta**: `/p/:id` dizia *"Torneio não encontrado. Verifique o link recebido"* (acusando o que a pessoa não pode conferir), `/c/:clubId` transformava queda de rede numa AFIRMAÇÃO sobre a escolha do clube (*"não disponível publicamente"*) e oferecia criar conta como saída, e a impressão ficava em *"Carregando…"* **para sempre**. Ver `docs/27-FALHA-NAO-E-VAZIO.md` §8
 **"Vou mexer na versão para IMPRESSÃO do torneio"** → ⚠️ **o papel sobrevive à tela**: modalidade que não carregou não sai na folha, e a folha vai para a mesa da organização parecendo completa — ninguém desconfia de uma ausência. É o único aviso da plataforma que **precisa ser impresso junto**; `print:hidden` no TEXTO do aviso devolve o defeito (no botão "Tentar de novo" está certo — não se clica no papel). Guarda travando
 **"São quantos telões?"** → **dois**, e eles seguem a MESMA regra: `/dia-de-jogo/:id/telao` (`V2GameDayTelao.jsx`) e `/torneios/:id/telao` (`src/pages/Telao.jsx`). As três peças são compartilhadas — `telaoConnectionState`, `useWakeLock`, `useRelogio` — e o guarda varre os dois numa lista só. `telaoConnectionState` mora em `modules/games/domain/` mas **não é do dia de jogo**: é a política de conexão DO TELÃO. Ver `docs/14-DIA-DE-JOGO-TELAO.md` §5
@@ -474,6 +476,48 @@ chore(deps): bump firebase to 12.x
 > memory topic `picklerush-sync-2026-08.md`.
 >
 > **Destaques por onda**:
+>
+> - **Onda BA — A lista à mão virou varredura** (2026-09-20): a onda que
+>   descobriu que **o guarda tinha a mesma doença que veio tratar**.
+>
+>   As Ondas AV, AW e AZ declararam a classe "falha não é lista vazia" fechada
+>   — três vezes. O guarda que deveria garantir isso tinha uma **lista escrita
+>   à mão** de telas, e lista à mão só sabe o que alguém lembrou de colocar
+>   nela: é exatamente o *"confiar em quem lembrar"* que esta série documenta
+>   em todas as outras páginas. Trocada por uma **varredura automática** do
+>   escopo, apareceram **onze telas ainda vivas**.
+>
+>   **🐞 As duas que mais custam.** A **LISTA de torneios** — a porta de
+>   entrada de toda a área — dizia *"Você ainda não tem torneios"* para quem
+>   tem, e o desfecho é criar um duplicado. A **aba de modalidades** dizia
+>   *"Comece criando a primeira modalidade"*: um convite a criar modalidade
+>   DUPLICADA, com inscrições abertas.
+>
+>   **🐞 E o defeito de sorteio da Onda AW estava vivo no caminho LEGADO.** O
+>   `GameDayOrganizer` do clube serve toda data anterior à Onda AS (não foi
+>   migrado, de propósito), e a AW corrigiu só os três organizadores
+>   modulares. Nele o `orderBase` continuava saindo dos jogos carregados: com
+>   a consulta falhando ele vale 0 e a rodada nova nasce com a **mesma
+>   numeração** das que já aconteceram.
+>
+>   **O resto**: visão de equipes, histórico de participação (*"Você ainda não
+>   participou de nenhum torneio"* — apagar o histórico da pessoa na cara
+>   dela), meus jogos (*"Nenhum jogo agendado"* faz alguém **não ir à
+>   quadra**), o diálogo de dia de jogo da arena (*"cadastre as quadras"* — que
+>   já estão cadastradas), buscar parceiro, e **três buscas de atleta** que
+>   ofereciam *"preencha manualmente"* / *"use Convidado"*, criando inscrição
+>   provisória para quem **já tem conta**.
+>
+>   **A correção estrutural.** `src/core/guards/afirmaVazio.js` varre o
+>   diretório e examina **quem existe no escopo**, não quem foi lembrado. Os
+>   hooks do próprio React ficam de fora do detector (`useMemo` não pode
+>   falhar, e guarda que acusa inocente é guarda que alguém desliga). A
+>   isenção continua possível e passa a exigir **motivo escrito**, conferido
+>   por teste — hoje são cinco, de duas famílias só: fotos e texto que chega
+>   por `props`.
+>
+>   **Banco: zero.** Nenhuma coleção, campo, índice, regra, função ou
+>   migração. +19 testes. Ver `docs/27-FALHA-NAO-E-VAZIO.md` §9.
 >
 > - **Onda AZ — As telas públicas do torneio** (2026-09-20): as ondas AV e AW
 >   fecharam a classe "falha não é vazio" **dentro** do aplicativo, e a AX
@@ -1553,7 +1597,7 @@ chore(deps): bump firebase to 12.x
 
 | Métrica | Valor | Delta do início do agente |
 |---|---|---|
-| **Testes Vitest** | **4914 passing** (288 arquivos) + 218 asserções de regras (Vitest) + 85 do dia de jogo no emulador | +4491 (era 408) |
+| **Testes Vitest** | **4918 passing** (288 arquivos) + 218 asserções de regras (Vitest) + 85 do dia de jogo no emulador | +4491 (era 408) |
 | **Lint errors** | 0 | era 30+ |
 | **Módulos** | 21 (+`help` — conteúdo dos tutoriais em tela) (`games` e `legal` saíram como `src/modules/` mas continuam como pastas oficiais — **rating virou módulo oficial** com domain/services/hooks/components) | +4 (coaches, circuits, games, legal) |
 | **V2 pages** | 82 (+V2GameDayTelao — telão, fora do V2Layout; +V2Help — central de ajuda; +V2ArenaKiosk — totem da recepção, também fora do V2Layout; +V2ArenaCheckin; +V2ArenaAttendance) | +58 |

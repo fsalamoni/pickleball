@@ -263,3 +263,69 @@ relógio local num telão.
 ### 8.4 Impacto no banco
 
 **Zero.** Nenhuma coleção, campo, índice, regra, função ou migração.
+
+---
+
+## 9. A lista à mão virou VARREDURA (Onda BA)
+
+### 9.1 O guarda tinha a mesma doença que veio tratar
+
+As Ondas AV, AW e AZ declararam a classe fechada — três vezes. O guarda que
+deveria garantir isso tinha uma **lista escrita à mão** de telas, e uma lista à
+mão só sabe o que alguém lembrou de colocar nela. É exatamente o
+*"confiar em quem lembrar"* que esta série documenta em todas as outras páginas.
+
+Trocada a lista por uma **varredura automática** do escopo, apareceram, ainda
+vivos:
+
+| Tela | O que dizia numa falha | Por que importa |
+|---|---|---|
+| **Lista de torneios** | *"Nenhum torneio público no momento"* / *"Você ainda não tem torneios"* | é a **porta de entrada** da área; quem TEM torneios cria um duplicado |
+| **Aba de modalidades** | *"Comece criando a primeira modalidade"* | convida a criar **modalidade duplicada**, com inscrições abertas |
+| **Organizador LEGADO do clube** | *"Nenhum participante ainda"*, *"Nenhum jogo sorteado ainda"* | tem o **defeito de sorteio da Onda AW** ainda vivo (ver §9.2) |
+| **Visão de equipes** | *"Nenhuma equipe inscrita"*, *"Confrontos ainda não sorteados"* | equipe já inscrita se inscreve de novo; organizador re-sorteia |
+| **Histórico de participação** | *"Você ainda não participou de nenhum torneio"* | apaga o histórico da pessoa na cara dela |
+| **Meus jogos** | *"Nenhum jogo agendado"* | alguém **não vai à quadra** |
+| **Dia de jogo da arena (diálogo)** | *"Esta arena ainda não tem quadras cadastradas"* | manda cadastrar quadras **que já existem** |
+| **Buscar parceiro (arena)** | *"Arena não encontrada"*, *"Nenhum match encontrado"* | mesma classe |
+| **Buscas de atleta** (3 telas) | *"Nenhum atleta encontrado — preencha manualmente"* | cria **inscrição provisória / convidado** para quem **já tem conta** |
+
+### 9.2 O defeito de sorteio da Onda AW estava vivo no caminho legado
+
+`GameDayOrganizer` (clubes) é o organizador servido para **toda data de evento
+anterior à Onda AS** — ele não foi migrado de propósito (ver
+`docs/25-DIA-DE-JOGO-COMO-MODULO.md` §5). A Onda AW corrigiu os **três**
+organizadores modulares e não tocou neste.
+
+E o defeito é o mesmo: `orderBase` sai dos jogos **já carregados**. Com
+`useEventGames` falhando, `allGames` cai no `[]`, `orderBase` vale 0, e a rodada
+nova nasce com a **mesma numeração** das que já aconteceram — duas "rodada 1" no
+mesmo dia, sem erro nenhum na tela. Agora `canDraw` depende de `!falhouJogos` e
+as ações **não são renderizadas** sobre estado desconhecido.
+
+### 9.3 Como a varredura funciona
+
+`src/core/guards/afirmaVazio.js` (ferramenta de guarda — **não vai para o
+navegador**, só o teste a importa):
+
+- `afirmaVazio(src)` — a tela tem alguma frase que AFIRMA que algo não existe;
+- `temConsulta(src)` — a tela busca algo (os hooks do próprio React ficam de
+  fora: `useMemo` não pode falhar, e guarda que acusa inocente é guarda que
+  alguém desliga);
+- `sabeDistinguirFalha(src)` — existe `isError`, `status === 'error'` ou um
+  estado de erro próprio (`setError`);
+- `varrer(raiz, filtro)` — caminha o diretório; nada de `grep` por baixo.
+
+O teste examina **quem existe no escopo**, não quem foi lembrado. A isenção
+continua possível e passa a exigir **motivo escrito** — e há um teste conferindo
+que todo caminho isento existe e que o motivo não é uma palavra solta.
+
+> ⚠️ **Acrescentar caminho a `ISENTOS` é decisão de projeto, não atalho para o
+> teste passar.** O critério é um só: se a frase leva alguém a AGIR — criar de
+> novo, sortear de novo, não ir à quadra, preencher à mão —, ela não se isenta.
+> Hoje são cinco, todas de duas famílias: **fotos** (vazio não induz nada) e
+> **texto vindo por `props`** (quem consulta é a tela de cima).
+
+### 9.4 Impacto no banco
+
+**Zero.** Nenhuma coleção, campo, índice, regra, função ou migração.

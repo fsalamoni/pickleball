@@ -21,6 +21,7 @@ import { Users, Swords, Trophy, Plus, ListTree, ShieldCheck } from 'lucide-react
 import { cn } from '@/core/lib/utils';
 import {
   V2Badge, V2Button, V2EmptyState, V2Skeleton, V2Surface,
+  V2ErrorState
 } from '@/v2/ui/primitives';
 import { useAuth } from '@/core/lib/FirebaseAuthContext';
 import { useAllModalityMatches } from '@/modules/tournament/hooks/useTournament';
@@ -91,8 +92,12 @@ export default function TeamModalityView({ tournament, modality, isAdmin }) {
   const [showForm, setShowForm] = useState(false);
   const [editingTeam, setEditingTeam] = useState(null);
 
-  const { data: teams = [], isLoading: loadingTeams } = useTeamRegistrations(modality.id);
-  const { data: matches = [], isLoading: loadingMatches } = useAllModalityMatches(modality.id);
+  const {
+    data: teams = [], isLoading: loadingTeams, isError: falhouEquipes, refetch: recarregarEquipes,
+  } = useTeamRegistrations(modality.id);
+  const {
+    data: matches = [], isLoading: loadingMatches, isError: falhouConfrontos, refetch: recarregarConfrontos,
+  } = useAllModalityMatches(modality.id);
 
   const teamById = useMemo(() => new Map(teams.map((t) => [t.id, t])), [teams]);
   const teamNameById = useMemo(
@@ -200,6 +205,16 @@ export default function TeamModalityView({ tournament, modality, isAdmin }) {
 
           {loadingTeams ? (
             <V2Skeleton className="h-24 rounded-4xl" />
+          ) : falhouEquipes ? (
+            /* ⚠️ "Nenhuma equipe inscrita" numa falha faz uma equipe JÁ
+               inscrita se inscrever de novo. */
+            <V2Surface>
+              <V2ErrorState
+                title="As equipes não carregaram"
+                description="Nenhuma inscrição foi perdida — o que falhou foi a consulta."
+                onRetry={() => recarregarEquipes()}
+              />
+            </V2Surface>
           ) : teams.length === 0 ? (
             <V2Surface>
               <V2EmptyState icon={Users} title="Nenhuma equipe inscrita" description="As equipes inscritas aparecem aqui." />
@@ -224,6 +239,16 @@ export default function TeamModalityView({ tournament, modality, isAdmin }) {
       {tab === 'confrontos' && (
         loadingMatches ? (
           <V2Skeleton className="h-40 rounded-4xl" />
+        ) : falhouConfrontos ? (
+          /* ⚠️ "Confrontos ainda não sorteados" numa falha manda o organizador
+             sortear de novo — e o sorteio apaga os confrontos da fase. */
+          <V2Surface>
+            <V2ErrorState
+              title="Os confrontos não carregaram"
+              description="Não dá para saber o que já foi sorteado. Nada foi apagado."
+              onRetry={() => recarregarConfrontos()}
+            />
+          </V2Surface>
         ) : structure.length === 0 ? (
           <V2Surface>
             <V2EmptyState

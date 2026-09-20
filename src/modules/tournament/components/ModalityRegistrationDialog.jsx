@@ -67,13 +67,13 @@ export default function ModalityRegistrationDialog({
   // Seletor de atletas da plataforma: exclusivo do admin da plataforma, atrás
   // da flag, e apenas quando o modal está aberto em modo admin do torneio.
   const canPickAthletes = Boolean(isAdmin && isPlatformAdmin && adminAthleteRegOn);
-  const { data: platformUsers = [] } = useAllPlatformUsers({ enabled: canPickAthletes && open });
+  const { data: platformUsers = [], isError: falhouPlataforma } = useAllPlatformUsers({ enabled: canPickAthletes && open });
   // Convite de dupla (flag partner_invites): atleta comum escolhe o parceiro
   // no diretório público de atletas.
   const canPickPartner = Boolean(
     partnerInvitesOn && !isAdmin && modality?.format === MODALITY_FORMAT.DOUBLES,
   );
-  const { data: directoryAthletes = [] } = useQuery({
+  const { data: directoryAthletes = [], isError: falhouDiretorio } = useQuery({
     queryKey: ['athletes'],
     queryFn: listAthletes,
     enabled: canPickPartner && open,
@@ -386,6 +386,7 @@ export default function ModalityRegistrationDialog({
             <AthletePicker
               label="Escolher atleta cadastrado (Jogador A)"
               users={eligiblePlatformUsers}
+              falhou={falhouPlataforma}
               selectedUserId={form.player_a_user_id}
               onSelect={(u) => selectAthlete('a', u)}
               onClear={() => clearAthlete('a')}
@@ -425,6 +426,7 @@ export default function ModalityRegistrationDialog({
                 <AthletePicker
                   label="Escolher atleta cadastrado (Jogador B)"
                   users={eligiblePlatformUsers}
+                  falhou={falhouPlataforma}
                   selectedUserId={form.player_b_user_id}
                   onSelect={(u) => selectAthlete('b', u)}
                   onClear={() => clearAthlete('b')}
@@ -432,6 +434,7 @@ export default function ModalityRegistrationDialog({
               )}
               {canPickPartner && (
                 <PartnerPicker
+                  falhou={falhouDiretorio}
                   athletes={eligibleDirectoryAthletes}
                   selfUid={user?.uid}
                   existingRegs={existingRegs}
@@ -513,7 +516,7 @@ export default function ModalityRegistrationDialog({
  * plataforma). Lista todos os atletas com filtro por nome; ao escolher, os
  * dados do jogador são preenchidos e a inscrição é vinculada à conta real.
  */
-function AthletePicker({ label, users, selectedUserId, onSelect, onClear }) {
+function AthletePicker({ label, users, selectedUserId, onSelect, onClear, falhou = false }) {
   const [term, setTerm] = useState('');
   const results = useMemo(() => filterPlatformAthletes(users, term), [users, term]);
   const selected = selectedUserId ? users.find((u) => u.uid === selectedUserId) : null;
@@ -552,7 +555,11 @@ function AthletePicker({ label, users, selectedUserId, onSelect, onClear }) {
             />
           </div>
           <div className="max-h-48 overflow-y-auto rounded-md border border-gray-100 divide-y">
-            {users.length === 0 ? (
+            {falhou ? (
+              <div className="p-3 text-xs text-amber-700 text-center">
+                A lista de atletas não carregou. Não dá para saber quem já tem conta.
+              </div>
+            ) : users.length === 0 ? (
               <div className="p-3 text-xs text-gray-500 text-center">Carregando atletas…</div>
             ) : results.length === 0 ? (
               <div className="p-3 text-xs text-gray-500 text-center">Nenhum atleta encontrado.</div>
@@ -590,7 +597,7 @@ function AthletePicker({ label, users, selectedUserId, onSelect, onClear }) {
  * está inscrito na modalidade. Ao escolher, a inscrição fica vinculada à
  * conta real do parceiro e ele recebe um convite para confirmar.
  */
-function PartnerPicker({ athletes, selfUid, existingRegs, selectedUserId, selectedName, selectedPhoto, onSelect, onClear }) {
+function PartnerPicker({ falhou = false, athletes, selfUid, existingRegs, selectedUserId, selectedName, selectedPhoto, onSelect, onClear }) {
   const [term, setTerm] = useState('');
   const excludedUids = useMemo(
     () => existingRegs.flatMap((r) => [r.player_a_user_id, r.player_b_user_id]).filter(Boolean),
@@ -636,7 +643,14 @@ function PartnerPicker({ athletes, selfUid, existingRegs, selectedUserId, select
           </div>
           {term.trim() && (
             <div className="max-h-48 overflow-y-auto rounded-md border border-gray-100 divide-y">
-              {results.length === 0 ? (
+              {falhou ? (
+                /* ⚠️ "Nenhum atleta encontrado → preencha manualmente" numa
+                   falha cria inscrição provisória para quem JÁ tem conta. */
+                <div className="p-3 text-xs text-amber-700 text-center">
+                  A lista de atletas não carregou — não dá para saber se essa pessoa
+                  já tem conta. Tente de novo antes de preencher à mão.
+                </div>
+              ) : results.length === 0 ? (
                 <div className="p-3 text-xs text-gray-500 text-center">
                   Nenhum atleta encontrado. Você pode preencher os dados manualmente abaixo.
                 </div>

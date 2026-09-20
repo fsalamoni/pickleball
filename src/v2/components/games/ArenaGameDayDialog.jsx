@@ -121,7 +121,7 @@ export default function ArenaGameDayDialog({
 }) {
   const arenaId = arena?.id;
   const editando = !!gameDay;
-  const { data: courts = [] } = useArenaCourts(arenaId);
+  const { data: courts = [], isError: falhouQuadras } = useArenaCourts(arenaId);
   const { data: bookings = [] } = useArenaBookings(arenaId);
   const criar = useCreateArenaGameDay(arenaId);
   const atualizar = useUpdateArenaGameDay(arenaId);
@@ -289,7 +289,13 @@ export default function ArenaGameDayDialog({
               <LayoutGrid className="h-4 w-4 text-gray-400" /> Quadras e horários
             </h3>
 
-            {courts.length === 0 ? (
+            {falhouQuadras ? (
+              /* ⚠️ Mandar a arena "cadastrar as quadras" numa falha de rede é
+                 mandá-la cadastrar de novo quadras que já existem. */
+              <p className="mt-2 text-sm text-amber-700">
+                A lista de quadras não carregou. Tente de novo — suas quadras continuam lá.
+              </p>
+            ) : courts.length === 0 ? (
               <p className="mt-2 text-sm text-gray-500">
                 Esta arena ainda não tem quadras cadastradas. Cadastre as quadras em
                 {' '}<strong>Estrutura e preços → Quadras</strong> antes de marcar um dia de jogo.

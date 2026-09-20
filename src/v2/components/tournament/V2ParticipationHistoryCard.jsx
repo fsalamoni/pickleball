@@ -13,7 +13,7 @@ import {
   REGISTRATION_STATUS,
   TOURNAMENT_STATUS,
 } from '@/modules/tournament/domain/constants';
-import { V2Badge, V2Surface } from '@/v2/ui/primitives';
+import { V2Badge, V2Surface, V2ErrorState } from '@/v2/ui/primitives';
 
 function formatDate(value) {
   if (!value) return null;
@@ -124,7 +124,9 @@ function TournamentGroup({ group }) {
 }
 
 export default function V2ParticipationHistoryCard() {
-  const { data: history = [], isLoading } = useMyTournamentHistory();
+  const {
+    data: history = [], isLoading, isError: falhouHistorico, refetch: recarregarHistorico,
+  } = useMyTournamentHistory();
   const totalRegistrations = history.reduce((sum, g) => sum + g.entries.length, 0);
 
   return (
@@ -140,6 +142,16 @@ export default function V2ParticipationHistoryCard() {
       <div className="p-5 sm:p-6">
         {isLoading ? (
           <p className="text-sm text-gray-500">Carregando…</p>
+        ) : falhouHistorico ? (
+          /* ⚠️ Dizer a alguém que ela nunca participou de torneio nenhum,
+             quando o que falhou foi a rede, é apagar o histórico dessa pessoa
+             na cara dela. */
+          <V2ErrorState
+            inline
+            title="O histórico não carregou"
+            description="Sua participação continua registrada."
+            onRetry={() => recarregarHistorico()}
+          />
         ) : history.length === 0 ? (
           <div className="rounded-3xl border border-dashed border-gray-200 bg-paper p-6 text-center">
             <Trophy className="mx-auto mb-2 h-6 w-6 text-gray-400" />

@@ -38,7 +38,7 @@ import StageExplanation from '@/modules/tournament/components/StageExplanation';
 import PhasesEditor from '@/modules/tournament/components/PhasesEditor';
 import TeamModalityConfig, { defaultTeamConfig } from '@/v2/components/tournament/TeamModalityConfig';
 import { normalizeTeamConfig } from '@/modules/tournament/domain/teamFormat';
-import { V2Badge, V2Button, V2EmptyState, V2Surface } from '@/v2/ui/primitives';
+import { V2Badge, V2Button, V2EmptyState, V2Surface, V2ErrorState } from '@/v2/ui/primitives';
 
 const PREVIEW_PLAYER_COUNT = 8;
 
@@ -94,7 +94,9 @@ function buildFormState(modality) {
 export default function V2TournamentModalitiesTab({ tournament, isAdmin }) {
   const multiPhaseEnabled = true;
   const teamsEnabled = true;
-  const { data: modalities = [], isLoading } = useModalities(tournament.id);
+  const {
+    data: modalities = [], isLoading, isError: falhouModalidades, refetch: recarregarModalidades,
+  } = useModalities(tournament.id);
   const createMutation = useCreateModality(tournament.id);
   const updateMutation = useUpdateModality(tournament.id);
   const deleteMutation = useDeleteModality(tournament.id);
@@ -470,6 +472,14 @@ export default function V2TournamentModalitiesTab({ tournament, isAdmin }) {
         <div className="grid gap-4 sm:grid-cols-2">
           {[1, 2].map((i) => <div key={i} className="h-32 animate-pulse rounded-4xl bg-gray-100" />)}
         </div>
+      ) : falhouModalidades ? (
+        /* ⚠️ "Comece criando a primeira modalidade" numa falha convida quem
+           organiza a CRIAR UMA MODALIDADE DUPLICADA, com inscrições abertas. */
+        <V2ErrorState
+          title="As modalidades não carregaram"
+          description="Nenhuma modalidade foi perdida — o que falhou foi a consulta."
+          onRetry={() => recarregarModalidades()}
+        />
       ) : modalities.length === 0 ? (
         <V2EmptyState icon={Layers} title="Nenhuma modalidade" description="Comece criando a primeira modalidade para abrir inscrições." />
       ) : (

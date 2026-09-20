@@ -43,7 +43,7 @@ export default function GameDayAdminsCard({ gameDay, participants = [] }) {
   const setMode = useSetGameDayManageMode(gdId);
   const addAdmin = useAddGameDayAdmin(gdId);
   const removeAdmin = useRemoveGameDayAdmin(gdId);
-  const { data: athletes = [] } = useAthletes();
+  const { data: athletes = [], isError: falhouAtletas } = useAthletes();
   const [pickerOpen, setPickerOpen] = useState(false);
   const [confirmRemove, setConfirmRemove] = useState(null);
 
@@ -199,6 +199,7 @@ export default function GameDayAdminsCard({ gameDay, participants = [] }) {
         open={pickerOpen}
         onClose={() => setPickerOpen(false)}
         candidatos={candidatos}
+        falhou={falhouAtletas}
         onEscolher={nomear}
       />
       <ConfirmDialog
@@ -215,7 +216,7 @@ export default function GameDayAdminsCard({ gameDay, participants = [] }) {
   );
 }
 
-function NomearDialog({ open, onClose, candidatos, onEscolher }) {
+function NomearDialog({ open, onClose, candidatos, onEscolher, falhou = false }) {
   const [busca, setBusca] = useState('');
   const q = busca.trim().toLowerCase();
   const lista = candidatos.filter((p) => !q || p.name.toLowerCase().includes(q));
@@ -233,7 +234,13 @@ function NomearDialog({ open, onClose, candidatos, onEscolher }) {
         <Input value={busca} onChange={(e) => setBusca(e.target.value)} placeholder="Buscar por nome…" />
         <div className="max-h-[50vh] space-y-1.5 overflow-y-auto">
           {lista.length === 0 ? (
-            <p className="py-6 text-center text-sm text-gray-400">Nenhum atleta encontrado.</p>
+            falhou ? (
+              <p className="py-6 text-center text-sm text-amber-700">
+                A lista de atletas não carregou. Tente de novo.
+              </p>
+            ) : (
+              <p className="py-6 text-center text-sm text-gray-400">Nenhum atleta encontrado.</p>
+            )
           ) : lista.map((p) => (
             <div key={p.uid} className="flex items-center justify-between gap-2 rounded-lg border border-gray-100 p-2">
               <div className="flex min-w-0 items-center gap-2">

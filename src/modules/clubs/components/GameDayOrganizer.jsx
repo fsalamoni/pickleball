@@ -44,6 +44,7 @@ import {
 } from '@/modules/clubs/domain/gameDayFormats';
 import GameDayLeaderboard from '@/modules/clubs/components/GameDayLeaderboard';
 import V2CollapsibleCard from '@/v2/ui/V2CollapsibleCard';
+import { V2ErrorState } from '@/v2/ui/primitives';
 import { GAME_DAY_SECTION } from '@/v2/components/games/gameDaySections';
 import PublishToRankingToggle from '@/modules/clubs/components/PublishToRankingToggle';
 import { PartnerDialog } from '@/v2/components/games/AthletePlayOrganizer';
@@ -71,7 +72,9 @@ export default function GameDayOrganizer({ event, clubId, dateId }) {
   const isAdmin = membership?.role === 'admin';
   const canManage = isCreator || isAdmin;
 
-  const { data: allParticipants = [], isLoading } = useEventParticipants(eventId);
+  const {
+    data: allParticipants = [], isLoading, isError: falhouParticipantes, refetch: recarregarParticipantes,
+  } = useEventParticipants(eventId);
   const participants = useMemo(
     () => allParticipants.filter((p) => (p.date_id || null) === (dateId || null)),
     [allParticipants, dateId],
@@ -79,7 +82,15 @@ export default function GameDayOrganizer({ event, clubId, dateId }) {
 
   return (
     <div className="space-y-5">
-      <ParticipantsSection eventId={eventId} clubId={clubId} dateId={dateId} participants={participants} isLoading={isLoading} />
+      <ParticipantsSection
+        eventId={eventId}
+        clubId={clubId}
+        dateId={dateId}
+        participants={participants}
+        isLoading={isLoading}
+        falhou={falhouParticipantes}
+        recarregar={recarregarParticipantes}
+      />
       <GamesSection eventId={eventId} dateId={dateId} participants={participants} />
       <DailyRankingSection eventId={eventId} dateId={dateId} participants={participants} />
       <PublishToRankingToggle
@@ -95,7 +106,7 @@ export default function GameDayOrganizer({ event, clubId, dateId }) {
 
 /* ------------------------------ Participants ----------------------------- */
 
-function ParticipantsSection({ eventId, clubId, dateId, participants, isLoading }) {
+function ParticipantsSection({ eventId, clubId, dateId, participants, isLoading, falhou, recarregar }) {
   const [alvoDupla, setAlvoDupla] = useState(null);
   const addParticipant = useAddEventParticipant(eventId);
   const removeParticipant = useRemoveEventParticipant(eventId);
@@ -195,7 +206,9 @@ function ParticipantsSection({ eventId, clubId, dateId, participants, isLoading 
       title="Participantes"
       count={participants.length}
       sectionId={GAME_DAY_SECTION.CLUB_PARTICIPANTS}
-      summary={participants.length === 0 ? 'Nenhum participante ainda' : `${participants.length} neste dia`}
+      summary={falhou
+        ? 'Não foi possível carregar'
+        : participants.length === 0 ? 'Nenhum participante ainda' : `${participants.length} neste dia`}
       actions={(
         <Button size="sm" variant="outline" onClick={() => setPickerOpen(true)} disabled={atLimit}>
           <UserPlus className="mr-1.5 h-4 w-4" /> Inserir atletas
@@ -205,6 +218,15 @@ function ParticipantsSection({ eventId, clubId, dateId, participants, isLoading 
       <div className="space-y-4">
         {isLoading ? (
           <Skeleton className="h-20 rounded-lg" />
+        ) : falhou ? (
+          /* ⚠️ "Sem participantes" numa falha faz quem organiza inserir de
+             novo gente que JÁ está no dia — duplicando a lista. */
+          <V2ErrorState
+            inline
+            title="A lista de participantes não carregou"
+            description="Ninguém foi removido — o que falhou foi a consulta."
+            onRetry={() => recarregar()}
+          />
         ) : participants.length === 0 ? (
           <EmptyState icon={Users} title="Sem participantes" description="Insira os atletas que vão jogar hoje." />
         ) : (
@@ -334,7 +356,9 @@ function PoolList({ title, people, onAdd, emptyText }) {
 /* --------------------------------- Games --------------------------------- */
 
 function GamesSection({ eventId, dateId, participants }) {
-  const { data: allGames = [], isLoading } = useEventGames(eventId);
+  const {
+    data: allGames = [], isLoading, isError: falhouJogos, refetch: recarregarJogos,
+  } = useEventGames(eventId);
   const games = useMemo(
     () => allGames.filter((g) => (g.date_id || null) === (dateId || null)),
     [allGames, dateId],
@@ -361,7 +385,12 @@ function GamesSection({ eventId, dateId, participants }) {
   const courtsValue = Number.isFinite(typedCourts) && typedCourts > 0 ? typedCourts : null;
   const effectiveCourts = isAmericano ? courtsValue : null;
   const effectiveRounds = rounds || suggestRounds(participants.length, effectiveCourts) || 3;
-  const canDraw = participants.length >= 4;
+  // ⚠️ O MESMO defeito da Onda AW, vivo no caminho LEGADO: o `orderBase` sai
+  // dos jogos já carregados. Com a consulta falhando ele vale 0, e a rodada
+  // nova nasce com a MESMA numeração das que já aconteceram — duas "rodada 1"
+  // no mesmo dia, sem erro nenhum na tela. Comando sobre estado desconhecido
+  // não é renderizado (nunca só desabilitado).
+  const canDraw = participants.length >= 4 && !falhouJogos;
 
   const { scored: scoredGames, unscored: unscoredGames } = useMemo(
     () => splitGamesByResult(games),
@@ -430,10 +459,12 @@ function GamesSection({ eventId, dateId, participants }) {
       title="Jogos"
       count={games.length}
       sectionId={GAME_DAY_SECTION.CLUB_GAMES}
-      summary={games.length === 0
-        ? 'Nenhum jogo sorteado ainda'
-        : `${scoredGames.length} com resultado · ${unscoredGames.length} a jogar`}
-      actions={(
+      summary={falhouJogos
+        ? 'Não foi possível carregar'
+        : games.length === 0
+          ? 'Nenhum jogo sorteado ainda'
+          : `${scoredGames.length} com resultado · ${unscoredGames.length} a jogar`}
+      actions={falhouJogos ? null : (
         <>
           <Button size="sm" variant="outline" onClick={() => setManualOpen(true)} disabled={participants.length < 2}>
             <Plus className="mr-1.5 h-4 w-4" /> Inserir partida
@@ -450,7 +481,7 @@ function GamesSection({ eventId, dateId, participants }) {
       )}
     >
       <div className="space-y-4">
-        {!canDraw && (
+        {!canDraw && !falhouJogos && (
           <p className="text-xs text-gray-500">
             Insira ao menos 4 participantes para sortear jogos de duplas. Para partidas individuais avulsas, bastam 2.
           </p>
@@ -458,6 +489,13 @@ function GamesSection({ eventId, dateId, participants }) {
 
         {isLoading ? (
           <Skeleton className="h-24 rounded-lg" />
+        ) : falhouJogos ? (
+          <V2ErrorState
+            inline
+            title="Os jogos deste dia não carregaram"
+            description="Nada foi apagado. Sortear agora repetiria a numeração das rodadas que já aconteceram."
+            onRetry={() => recarregarJogos()}
+          />
         ) : games.length === 0 ? (
           <EmptyState
             icon={ListChecks}

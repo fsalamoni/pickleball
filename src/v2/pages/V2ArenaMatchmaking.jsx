@@ -34,7 +34,7 @@ import {
   scoreTone,
   normalizeMatchmakingCriteria,
 } from '@/modules/arenas/domain/matchmaking';
-import { V2Badge, V2Button, V2EmptyState, V2Skeleton, V2Surface } from '@/v2/ui/primitives';
+import { V2Badge, V2Button, V2EmptyState, V2Skeleton, V2Surface, V2ErrorState } from '@/v2/ui/primitives';
 
 function MatchCard({ candidate, score, arenaId, onChat }) {
   const tone = scoreTone(score);
@@ -82,10 +82,10 @@ export default function V2ArenaMatchmaking() {
   const { arenaId } = useParams();
   const navigate = useNavigate();
   const { user } = useAuth();
-  const { data: arena, isLoading: arenaLoading } = useArena(arenaId);
+  const { data: arena, isLoading: arenaLoading, isError: falhouArena, refetch: recarregarArena } = useArena(arenaId);
   const { isOn, isLoading: modulosLoading } = useArenaModules(arenaId);
   const canUseModule = isOn(ARENA_MODULE_ID.MATCHMAKING_PARTNER_FINDER);
-  const { data: athletes = [], isLoading: athletesLoading } = useAthletes();
+  const { data: athletes = [], isLoading: athletesLoading, isError: falhouAtletas, refetch: recarregarAtletas } = useAthletes();
   const { level: meuNivel } = useMyUnifiedLevel();
 
   const [criteriaInput, setCriteriaInput] = useState({
@@ -145,6 +145,20 @@ export default function V2ArenaMatchmaking() {
 
   if (arenaLoading || modulosLoading) {
     return <V2Skeleton className="mx-auto h-96 max-w-[1000px] rounded-4xl" />;
+  }
+
+  if (falhouArena && !arena) {
+    return (
+      <div className="mx-auto max-w-[700px]">
+        <V2Surface>
+          <V2ErrorState
+            title="Não foi possível carregar a arena"
+            description="A conexão falhou no meio do caminho."
+            onRetry={() => recarregarArena()}
+          />
+        </V2Surface>
+      </div>
+    );
   }
 
   if (!arena) {
@@ -264,8 +278,13 @@ export default function V2ArenaMatchmaking() {
         <V2Surface>
           <V2EmptyState
             icon={Search}
-            title="Nenhum match encontrado"
-            description="Tente aumentar a diferença máxima de nível ou desmarcar a preferência por cidade."
+            title={falhouAtletas ? 'A lista de atletas não carregou' : 'Nenhum match encontrado'}
+            description={falhouAtletas
+              ? 'Ninguém sumiu — o que falhou foi a consulta. Tente de novo.'
+              : 'Tente aumentar a diferença máxima de nível ou desmarcar a preferência por cidade.'}
+            action={falhouAtletas
+              ? <button type="button" onClick={() => recarregarAtletas()} className="text-sm font-bold text-ink underline">Tentar de novo</button>
+              : undefined}
           />
         </V2Surface>
       ) : (

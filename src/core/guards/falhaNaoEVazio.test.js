@@ -23,7 +23,10 @@
  * comportamento: com a consulta funcionando, cada tela está correta.
  */
 import { describe, it, expect } from 'vitest';
-import { readFileSync } from 'node:fs';
+import { readFileSync, existsSync } from 'node:fs';
+import {
+  varrer, telasQueMentemNoVazio, temConsulta, sabeDistinguirFalha,
+} from './afirmaVazio.js';
 
 const ler = (p) => readFileSync(p, 'utf8');
 const semComentarios = (src) => src
@@ -65,6 +68,90 @@ describe('⭐ toda tela que afirma "não existe" sabe distinguir falha', () => {
       expect(src, `${caminho} avisa da falha sem deixar tentar de novo`)
         .toMatch(/refetch|recarregar|onRetry/i);
     });
+  });
+});
+
+/**
+ * ⭐ A VARREDURA — o que substituiu a lista escrita à mão.
+ *
+ * A lista de `TELAS` acima trava o que JÁ foi corrigido, e continua valendo.
+ * Ela não serve, porém, para o que importa daqui para frente: **um guarda com
+ * lista à mão não sabe o que ninguém lembrou de colocar nele**.
+ *
+ * E não é hipótese. Depois de TRÊS ondas seguidas declarando a classe fechada,
+ * uma varredura automática encontrou, ainda vivos:
+ *
+ * - a LISTA de torneios — *"Nenhum torneio público no momento"*, a porta de
+ *   entrada de toda a área;
+ * - a aba de modalidades — *"Comece criando a primeira modalidade"*, ou seja,
+ *   convidando quem organiza a criar uma modalidade DUPLICADA, com inscrições;
+ * - a visão de equipes, o histórico de participação, os jogos agendados
+ *   (*"Nenhum jogo agendado"* faz alguém não ir à quadra) e o diálogo de dia
+ *   de jogo da arena (*"cadastre as quadras"* — que já estão cadastradas);
+ * - e o organizador LEGADO do clube, com o mesmo defeito de sorteio da Onda AW
+ *   (o `orderBase` sai dos jogos carregados; falhando, a rodada nova nasce com
+ *   a numeração das que já aconteceram).
+ *
+ * Por isso a lista virou VARREDURA: entra no exame quem EXISTE no escopo, não
+ * quem foi lembrado. A exceção continua possível — e passou a exigir um
+ * MOTIVO ESCRITO, conferido por este teste.
+ */
+describe('⭐ a varredura: ninguém no escopo afirma vazio sem tratar falha', () => {
+  /** Dia de jogo e torneio, onde a mentira do vazio custa caro. */
+  const NO_ESCOPO = /(tournament|torneio|gameday|gamedays|game-day|games|clubs\/components\/GameDay|Telao|Modality|Match|Draw|Phase|Public(Tournament|Club)|Print)/i;
+
+  /**
+   * Isenções — cada uma com o MOTIVO. Vazio aqui não induz ação errada, ou a
+   * decisão não é desta tela.
+   *
+   * ⚠️ Acrescentar caminho aqui é decisão de projeto, não atalho para o teste
+   * passar: se a tela AFIRMA algo que leva alguém a agir, ela não se isenta.
+   */
+  const ISENTOS = new Map([
+    ['src/modules/tournament/components/TournamentAdminTab.jsx',
+      'a frase é um toast DEPOIS de uma busca explícita por e-mail, não um estado vazio de tela'],
+    ['src/modules/tournament/components/TournamentGallery.jsx',
+      'fotos: "nenhuma foto ainda" não induz ação nenhuma nem arrisca dado'],
+    ['src/v2/components/tournament/V2Gallery.jsx',
+      'fotos: mesmo caso do TournamentGallery'],
+    ['src/v2/components/tournament/TeamConfrontationDialogs.jsx',
+      'recebe a escalação por props — quem consulta (e trata a falha) é a tela de cima'],
+    ['src/v2/pages/V2JoinTournament.jsx',
+      'toast após o envio de um código: a pessoa acabou de agir e o erro real tem catch próprio'],
+  ]);
+
+  it('⭐ nenhuma tela nova entrou na classe', () => {
+    const arquivos = varrer('src', (c) => (
+      c.endsWith('.jsx')
+      && !/\.test\.jsx$/.test(c)
+      && !/\.runtime\./.test(c)
+      && NO_ESCOPO.test(c)
+    ));
+    expect(arquivos.length, 'a varredura não encontrou arquivo nenhum — o filtro quebrou')
+      .toBeGreaterThan(50);
+
+    const mentem = telasQueMentemNoVazio(arquivos).filter((c) => !ISENTOS.has(c));
+    expect(mentem, `estas telas afirmam que algo não existe sem saber se a consulta FALHOU:\n  ${mentem.join('\n  ')}\n\nCorrija com isError + <V2ErrorState onRetry> (docs/27-FALHA-NAO-E-VAZIO.md), ou justifique em ISENTOS.`)
+      .toEqual([]);
+  });
+
+  it('⭐ toda isenção tem motivo escrito, e nenhuma sobra por acaso', () => {
+    for (const [caminho, motivo] of ISENTOS) {
+      expect(existsSync(caminho), `isenção aponta para arquivo que não existe: ${caminho}`).toBe(true);
+      expect(String(motivo).length, `isenção sem motivo de verdade: ${caminho}`).toBeGreaterThan(30);
+    }
+  });
+
+  it('⭐ o detector não acusa inocente (useMemo não é consulta)', () => {
+    expect(temConsulta('const x = useMemo(() => 1, []);')).toBe(false);
+    expect(temConsulta('const { data } = useQuery({});')).toBe(true);
+    expect(temConsulta('const { data } = useArenaCourts(id);')).toBe(true);
+  });
+
+  it('⭐ e reconhece as duas formas de saber que falhou', () => {
+    expect(sabeDistinguirFalha('const { isError } = useQuery({});')).toBe(true);
+    expect(sabeDistinguirFalha('catch (e) { setError(e.message); }')).toBe(true);
+    expect(sabeDistinguirFalha('const { data = [] } = useQuery({});')).toBe(false);
   });
 });
 

@@ -13,8 +13,7 @@ import { FEATURE_FLAG } from '@/core/featureFlags';
 import { getMyUpcomingMatches, getMyFinishedMatches } from '@/modules/tournament/services/upcomingService';
 import { useMyGameDayGames } from '@/modules/games/hooks/useGameDays';
 import {
-  V2Badge, V2Button, V2EmptyState, V2Skeleton, V2Surface,
-} from '@/v2/ui/primitives';
+  V2Badge, V2Button, V2EmptyState, V2Skeleton, V2Surface, V2ErrorState } from '@/v2/ui/primitives';
 import { cn } from '@/core/lib/utils';
 
 function formatDateTime(ms) {
@@ -68,13 +67,13 @@ export default function MyGamesPanel() {
   const postGameOn = useFeatureFlag(FEATURE_FLAG.POST_GAME_FLOW);
   const [tab, setTab] = useState('proximos');
 
-  const { data: upcoming = [], isLoading: loadingUp } = useQuery({
+  const { data: upcoming = [], isLoading: loadingUp, isError: falhouAgendados, refetch: recarregarAgendados } = useQuery({
     queryKey: ['my-games-upcoming', uid],
     queryFn: () => getMyUpcomingMatches(uid, { limit: 50 }),
     enabled: !!uid,
     staleTime: 30_000,
   });
-  const { data: history = [], isLoading: loadingHist } = useQuery({
+  const { data: history = [], isLoading: loadingHist, isError: falhouHistorico, refetch: recarregarHistorico } = useQuery({
     queryKey: ['my-games-history', uid],
     queryFn: () => getMyFinishedMatches(uid, { limit: 100 }),
     enabled: !!uid,
@@ -147,7 +146,17 @@ export default function MyGamesPanel() {
       {loading ? (
         <V2Skeleton className="h-48 rounded-4xl" />
       ) : isUpcoming ? (
-        upcoming.length === 0 ? (
+        falhouAgendados ? (
+          /* ⚠️ "Nenhum jogo agendado" numa falha faz alguém achar que não
+             precisa ir à quadra hoje. */
+          <V2Surface>
+            <V2ErrorState
+              title="Seus jogos agendados não carregaram"
+              description="Eles continuam marcados — o que falhou foi a consulta."
+              onRetry={() => recarregarAgendados()}
+            />
+          </V2Surface>
+        ) : upcoming.length === 0 ? (
           <V2Surface>
             <V2EmptyState icon={CalendarClock} title="Nenhum jogo agendado"
               description="Quando você tiver jogos marcados nos torneios, eles aparecem aqui."
@@ -173,6 +182,14 @@ export default function MyGamesPanel() {
             ))}
           </div>
         )
+      ) : falhouHistorico ? (
+        <V2Surface>
+          <V2ErrorState
+            title="O histórico não carregou"
+            description="Seus jogos continuam registrados."
+            onRetry={() => recarregarHistorico()}
+          />
+        </V2Surface>
       ) : mergedHistory.length === 0 ? (
         <V2Surface>
           <V2EmptyState icon={History} title="Sem histórico ainda"
