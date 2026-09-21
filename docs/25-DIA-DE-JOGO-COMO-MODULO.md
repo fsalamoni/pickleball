@@ -353,3 +353,87 @@ tutorial, administradores nomeados e as configurações do dia.
 **Zero.** Nenhuma coleção, campo, índice, regra, função ou migração. A conversão
 grava um `game_days` novo e preenche o `game_day_id` que a data já tinha
 previsto desde a Onda AS.
+
+---
+
+## 9. Um cartão só, que ABRE (Onda BC)
+
+A §8 juntou as configurações **entre as origens**. Faltava juntá-las **dentro da
+própria tela** — e ali o estado era pior do que parecia.
+
+### 9.1. 🐞 "Quem organiza as partidas" existia em DOIS cartões
+
+O cartão *Organização* (`GameDayAdminsCard`) já trazia o modo de gestão desde a
+Onda T, montado por cada um dos três organizadores. Ao criar o cartão de
+configurações, o mesmo campo passou a existir também lá — **dois escritores no
+mesmo campo**, um por `useSetGameDayManageMode` e outro por um patch genérico.
+
+> ⚠️ Correção de registro: a §8 afirma que o clube "não tinha nenhum lugar" para
+> dizer quem conduz o dia. Não é exato — ele tinha, dentro de *Organização*. O
+> que o clube realmente não tinha era o **número de quadras nos formatos de
+> grade** e um lugar óbvio para as configurações. A duplicação do modo de gestão
+> foi introduzida pela própria §8 e é corrigida aqui.
+
+### 9.2. E a configuração estava repartida em três lugares
+
+| o que | onde estava |
+|---|---|
+| formato, quadras | cartão *Configurações* |
+| quem organiza, organizadores | cartão *Organização* |
+| nome, data, local, visibilidade | atrás do botão **Editar** → modal |
+
+Três lugares para responder uma pergunta só: *como este dia funciona?*
+
+### 9.3. Agora: `GameDaySettingsCard`, três seções, montado pelo módulo
+
+1. **Como se joga** — formato e quadras
+2. **Quem organiza as partidas** — modo de gestão **e** a lista de organizadores
+   (nomear/remover), que era o cartão *Organização*
+3. **Nome, data e local** — editável **onde esta origem manda**: no atleta,
+   aqui; na arena e no clube, uma linha dizendo onde (com link), porque lá quem
+   manda são as quadras reservadas e a DATA do evento
+
+`GameDayAdminsCard.jsx` **deixou de existir**, e com ele as três montagens
+`{ehCriador && <GameDayAdminsCard …>}` — uma por organizador. O módulo monta o
+cartão **uma vez**; quem pode vê-lo é decidido lá dentro (`podeConfigurar`).
+
+**E é um cartão que ABRE, não um modal.** `CreateGameDayDialog` passou a só
+CRIAR: o botão **Editar** saiu do cabeçalho do dia de jogo do atleta.
+Configurar é parte de organizar o dia, não um desvio para outra tela. **Arquivar
+continua no cabeçalho** — é o único ato que TIRA o dia da tela, e não é
+configuração.
+
+O cartão nasce **recolhido**, com um resumo que conta o essencial
+(*"Americano aprimorado · 2 quadras · Aberto a todos"*): aberto por padrão, ele
+empurraria participantes e quadras para baixo justamente de quem está
+conduzindo o dia.
+
+### 9.4. 🐞 O espaçamento mudava a cada cartão
+
+`GameDayModule` devolvia um **fragmento**. Junte: o cartão de regras carregava
+um `mb-4` próprio, o de configurações não tinha margem nenhuma e o organizador
+trazia o seu `space-y` por dentro — então o intervalo entre cartões mudava a
+cada cartão. E mudava por ORIGEM: o clube envolvia tudo num `space-y` dele por
+fora (somando ao `mb-4`), o atleta não envolvia em nada (o cartão de
+configurações encostava no organizador) e a arena deixava o painel de *Vagas*
+colado no cartão seguinte.
+
+Agora **o container é do módulo** e os cartões não se espaçam sozinhos — um
+ritmo só, nas três telas. `gameDayModule.runtime.test.jsx` renderiza o módulo e
+reprova qualquer filho que volte a carregar margem vertical própria; é
+invisível a teste de comportamento, porque uma tela desalinhada renderiza igual
+a uma alinhada.
+
+### 9.5. A quadra diz o que FAZER
+
+*"Faltam 4 jogador(es) disponível(is)"* está correto e não ajuda: num dia recém
+criado, o que trava a quadra não é a quadra — é não haver ninguém. Quem
+organiza lê aquilo como limite do sistema e vai procurar uma configuração que
+não existe (foi assim que "a quantidade de quadras não libera as quadras"
+chegou como relato). Com o dia vazio, a seção de quadras agora **diz o que
+fazer**, e a mensagem por quadra distingue *"sem atletas no dia ainda"* de
+*"ninguém livre agora"*.
+
+### 9.6. Impacto no banco
+
+**Zero.** Nenhuma coleção, campo, índice, regra, função ou migração.

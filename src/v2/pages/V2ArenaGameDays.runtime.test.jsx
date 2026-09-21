@@ -54,9 +54,9 @@ vi.mock('@/modules/games/hooks/useGameDays', () => ({
 vi.mock('@/v2/components/games/AthleteGameDayOrganizer', () => ({ default: () => <div>ORGANIZADOR</div> }));
 vi.mock('@/v2/components/games/AthletePlayOrganizer', () => ({ default: () => <div>ORGANIZADOR PLAY</div> }));
 vi.mock('@/v2/components/games/AthleteAmericanoLiveOrganizer', () => ({ default: () => <div>ORGANIZADOR AO VIVO</div> }));
-// O card de organização vem DO ORGANIZADOR, não da página — por isso o dublê
-// do organizador é quem o representa aqui.
-vi.mock('@/v2/components/games/GameDayAdminsCard', () => ({ default: () => <div>ADMINS</div> }));
+// As CONFIGURAÇÕES do dia (formato, quadras, quem organiza e os organizadores)
+// vêm do MÓDULO, num cartão só — não da página e não de cada organizador.
+vi.mock('@/v2/components/games/GameDaySettingsCard', () => ({ default: () => <div>CONFIGURACOES</div> }));
 vi.mock('@/v2/components/tutorial/V2TutorialLauncher', () => ({ default: () => null }));
 
 const { default: V2ArenaGameDays } = await import('./V2ArenaGameDays.jsx');
@@ -254,12 +254,14 @@ describe('conduzir um dia de jogo pela arena', () => {
 /* ================================================== sem duplicidade === */
 
 describe('⭐ a tela não repete a mesma coisa duas vezes', () => {
-  it('o card "Organização" aparece UMA vez só (vem do organizador)', async () => {
+  it('⭐ as configurações aparecem UMA vez só (vêm do módulo)', async () => {
     await render(`/arenas/a1/gerir/dia-de-jogo/gd1`);
-    // A página renderizava o seu próprio GameDayAdminsCard E o organizador
-    // renderizava outro: dois cards idênticos, um debaixo do outro.
-    const vezes = container.textContent.split('ADMINS').length - 1;
-    expect(vezes).toBeLessThanOrEqual(1);
+    // Já foram dois cards idênticos um debaixo do outro (a página montava o
+    // seu e o organizador montava outro), e depois dois cards DIFERENTES com o
+    // mesmo campo dentro — "quem organiza" chegou a existir nos dois. Agora é
+    // um, e ele é do módulo.
+    const vezes = container.textContent.split('CONFIGURACOES').length - 1;
+    expect(vezes).toBe(1);
   });
 
   it('⭐ a lista de gente não é repetida: o painel da arena é de VAGAS', async () => {

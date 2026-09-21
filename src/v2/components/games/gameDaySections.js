@@ -19,7 +19,11 @@ export const GAME_DAY_SECTION = Object.freeze({
   GAMES: 'gameday:games',
   DAILY_RANKING: 'gameday:daily-ranking',
   PLATFORM_RANKING: 'gameday:platform-ranking',
-  ADMINS: 'gameday:admins',
+  /* `ADMINS: 'gameday:admins'` foi APOSENTADO: o cartão "Organização" deixou
+     de existir por si e virou uma seção dentro de `SETTINGS`. Manter o id aqui
+     sem ninguém usá-lo é convidar alguém a criar um segundo cartão de
+     organização — que foi exatamente como "quem organiza as partidas" chegou a
+     existir em dois lugares ao mesmo tempo. */
 
   /* Dia de jogo do atleta — formato Play (open play) */
   PLAY_PARTICIPANTS: 'gameday:play:participants',

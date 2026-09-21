@@ -100,8 +100,14 @@ function Miolo({ gameDay, podeGerenciar }) {
 
 export default function GameDayModule({ gameDay, podeGerenciar = false }) {
   if (!gameDay?.id) return null;
+  // ⚠️ O ESPAÇAMENTO é do módulo, não de cada cartão. Antes isto era um
+  // fragmento: o cartão de regras carregava um `mb-4` próprio, o de
+  // configurações não tinha margem nenhuma e o organizador tinha o seu
+  // `space-y` por dentro — então o intervalo entre cartões mudava a cada
+  // cartão E de origem para origem (o clube ainda somava o `space-y` dele por
+  // fora). Um container só, um ritmo só.
   return (
-    <>
+    <div className="space-y-4">
       {/* O que ESTE dia é — formato, placar, ranking, dupla vinculada. Fica
           aqui, no módulo, para chegar às TRÊS origens por construção. */}
       <GameDayRulesCard gameDay={gameDay} podeGerenciar={podeGerenciar} />
@@ -113,6 +119,6 @@ export default function GameDayModule({ gameDay, podeGerenciar = false }) {
           clube. */}
       <GameDaySettingsCard gameDay={gameDay} />
       <Miolo gameDay={gameDay} podeGerenciar={podeGerenciar} />
-    </>
+    </div>
   );
 }

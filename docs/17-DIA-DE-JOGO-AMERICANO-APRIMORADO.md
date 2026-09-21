@@ -254,8 +254,9 @@ O painel não reimplementa nada que já existia — ele **compõe**:
   `SkipDialog`, `PartnerDialog`, `computePlayOrder`, `freePlayCourts`;
 - do Americano: `DailyRankingSection`, `RankingSection` (publicação), o
   espelhamento em `club_event_games`;
-- do dia de jogo em geral: `GameDayAdminsCard`, `canManageGameDay`,
-  `V2CollapsibleCard`.
+- do dia de jogo em geral: `GameDaySettingsCard` (o cartão de configurações,
+  montado pelo MÓDULO — antes era o cartão `GameDayAdminsCard`, montado por
+  cada organizador), `canManageGameDay`, `V2CollapsibleCard`.
 
 Consequência prática: uma correção no diálogo de substituição vale nos três
 formatos de uma vez. Se você for tentado a copiar um componente para "ajustar

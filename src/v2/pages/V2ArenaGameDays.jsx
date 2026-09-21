@@ -339,14 +339,18 @@ function DetalheDaArena({ arena, gameDayId }) {
   const quadras = arenaGameDaySlots(gameDay);
 
   return (
-    <div className="mx-auto max-w-[1000px]">
+    /* ⚠️ Um ritmo só: o container espaça, os filhos não carregam margem
+       própria. Antes o cabeçalho tinha `mb-5`, o painel de Vagas não tinha
+       nada — e encostava no cartão seguinte — e o módulo trazia o seu por
+       dentro. */
+    <div className="mx-auto max-w-[1000px] space-y-4">
       <button type="button" onClick={() => navigate(`/arenas/${arena.id}/gerir/dia-de-jogo`)}
-        className="mb-3 inline-flex items-center gap-1 text-sm text-gray-500 hover:text-ink"
+        className="inline-flex items-center gap-1 text-sm text-gray-500 hover:text-ink"
       >
         <ChevronLeft className="h-4 w-4" /> Dias de jogo da arena
       </button>
 
-      <V2Surface className="mb-5">
+      <V2Surface>
         <div className="flex flex-wrap items-start justify-between gap-3">
           <div className="min-w-0">
             <div className="flex flex-wrap items-center gap-2">

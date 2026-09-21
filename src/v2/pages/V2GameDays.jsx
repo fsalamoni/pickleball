@@ -10,7 +10,7 @@
 import React, { useMemo, useState } from 'react';
 import { Navigate, useNavigate, useParams, Link } from 'react-router-dom';
 import {
-  Plus, CalendarClock, Users, Globe, Lock, ChevronLeft, Trash2, ExternalLink, History, Pencil,
+  Plus, CalendarClock, Users, Globe, Lock, ChevronLeft, Trash2, ExternalLink, History,
   Building2,
 } from 'lucide-react';
 import { toast } from 'sonner';
@@ -175,7 +175,6 @@ function GameDayDetail({ gameDayId }) {
   const { podeConfigurar, podeGerenciar } = useGameDayRoles(gameDay, participants);
   const del = useDeleteGameDay();
   const [confirmDelete, setConfirmDelete] = useState(false);
-  const [editOpen, setEditOpen] = useState(false);
 
   if (isLoading) {
     return <div className="mx-auto max-w-[900px]"><V2Skeleton className="h-64 rounded-4xl" /></div>;
@@ -237,7 +236,9 @@ function GameDayDetail({ gameDayId }) {
         <ChevronLeft className="h-4 w-4" /> Dias de jogo
       </button>
 
-      <V2Surface className="mb-5">
+      {/* `mb-4` = o mesmo intervalo que o módulo usa entre os cartões. Um
+          ritmo só na tela inteira. */}
+      <V2Surface className="mb-4">
         <div className="flex flex-wrap items-start justify-between gap-3">
           <div className="min-w-0">
             <div className="flex flex-wrap items-center gap-2">
@@ -273,15 +274,15 @@ function GameDayDetail({ gameDayId }) {
                 </Link>
               </V2Button>
             )}
+            {/* ⚠️ "Editar" saiu daqui. Nome, data, local, formato, quadras e
+                quem organiza vivem no cartão "Configurações do dia de jogo",
+                que ABRE na própria tela — configurar é parte de organizar o
+                dia, não um desvio para um modal. Arquivar continua aqui:
+                é o único ato que TIRA o dia da tela, e não é configuração. */}
             {ehCriador && (
-              <>
-                <V2Button variant="ghost" size="sm" onClick={() => setEditOpen(true)}>
-                  <Pencil className="mr-1.5 h-4 w-4" /> Editar
-                </V2Button>
-                <V2Button variant="ghost" size="sm" className="text-red-500 hover:text-red-600" onClick={() => setConfirmDelete(true)}>
-                  <Trash2 className="mr-1.5 h-4 w-4" /> Arquivar
-                </V2Button>
-              </>
+              <V2Button variant="ghost" size="sm" className="text-red-500 hover:text-red-600" onClick={() => setConfirmDelete(true)}>
+                <Trash2 className="mr-1.5 h-4 w-4" /> Arquivar
+              </V2Button>
             )}
           </div>
         </div>
@@ -307,10 +308,6 @@ function GameDayDetail({ gameDayId }) {
 
       {/* O miolo é do MÓDULO — o mesmo no atleta, na arena e no clube. */}
       <GameDayModule gameDay={gameDay} podeGerenciar={podeGerenciar} />
-
-      {ehCriador && (
-        <CreateGameDayDialog open={editOpen} onOpenChange={setEditOpen} gameDay={gameDay} />
-      )}
 
       <ConfirmDialog
         open={confirmDelete}

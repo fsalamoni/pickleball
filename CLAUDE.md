@@ -241,7 +241,8 @@ Estes princípios vieram de bugs reais que custaram horas pra arrumar. São ineg
 **"Quanto custa a reserva?"** → `totalBookingPrice(arena, { courtId, slots })` (`modules/arenas/domain/pricing.js`). **NUNCA** grave o retorno de `resolveArenaPrice` como preço da reserva: ele é o valor **por hora**, e isso era um bug real — três horas selecionadas chegavam à arena valendo uma, na tela E no campo gravado. O serviço refaz a conta antes de escrever (`precoDaReserva`), nos dois caminhos de criação. Para MOSTRAR, `bookingPriceInfo(booking, { arena })`: o acordado vence, com a arena em mãos recalcula (corrige as reservas antigas) e o número nunca sai sem a duração ao lado. Ver `docs/23-ARENA-CALENDARIO-E-RESERVA.md` §8
 **"A arena demora a abrir"** → o caminho já está pavimentado, siga-o: (1) toda consulta de arena nasce em `modules/arenas/hooks/arenaQueries.js` + `arenaKeys.js` — **nunca escreva `queryKey` de arena à mão**, porque a pré-busca e o hook têm de bater bit a bit e chave divergente não dá erro, só faz buscar de novo o que já estava em cache (há teste lendo o código-fonte); (2) link para uma arena chama `useArenaPrefetch()` no `onMouseEnter`/`onFocus`/`onTouchStart` — as consultas saem enquanto o pacote da tela baixa; (3) `useArena` já vem semeado pelo cache da lista; (4) aba pesada entra por `lazy` com `<Suspense>` em volta **só da área das abas**. E o que NÃO fazer: recortar reservas por data no servidor é impossível hoje (a data mora dentro de `slots`, que é vetor) — "resolver" isso pede campo novo ou índice novo, ou seja, mexer no banco, e as reservas antigas sumiriam do filtro. Ver `docs/23-ARENA-CALENDARIO-E-RESERVA.md` §11
 **"Vou mostrar uma data na tela"** → `formatSlotLabel(slot)` / `formatDateShortBR(date)` (`modules/arenas/domain/calendar.js`), nunca a ISO crua: `2026-07-23 · 19:00` era o que a reserva mostrava ao atleta e à arena, e no Brasil ninguém lê data assim. O dia da semana vem junto, e o ANO aparece quando não é o corrente ("23/07" numa reserva de 2027 é armadilha). São montadas das constantes do módulo, não de `toLocaleDateString`, para não depender da configuração da máquina. Ver `docs/23-ARENA-CALENDARIO-E-RESERVA.md` §13
-**"Onde se muda o FORMATO, as QUADRAS e QUEM ORGANIZA um dia de jogo?"** → ⭐ num lugar só: `GameDaySettingsCard`, montado **dentro do `GameDayModule`** — então vale igual no atleta, na arena e no clube, por construção. 🐞 Antes cada origem montava a própria configuração e elas divergiram: o dia de jogo do CLUBE não tinha **nenhum** lugar para dizer quem conduz as partidas (nascia aberto e não dava para fechar), e o número de quadras não aparecia nos formatos de GRADE — que é o padrão de uma data de clube. Os diálogos de criação seguem oferecendo os três; na **edição** não, porque dois lugares editando o mesmo campo divergem. Guarda em `src/core/guards/diaDeJogoUniforme.test.js`. Ver `docs/25-DIA-DE-JOGO-COMO-MODULO.md` §8
+**"Onde se configura um dia de jogo?"** → ⭐ num CARTÃO só, `GameDaySettingsCard`, montado **dentro do `GameDayModule`** — vale igual no atleta, na arena e no clube, por construção. Três seções: **Como se joga** (formato, quadras), **Quem organiza as partidas** (modo de gestão + a lista de organizadores, que era o cartão *Organização*) e **Nome, data e local** (editável só onde a ORIGEM manda: no atleta aqui; na arena e no clube, uma linha dizendo onde). Nasce RECOLHIDO, com resumo — aberto por padrão empurraria participantes e quadras para baixo de quem está conduzindo o dia. 🐞 Antes eram TRÊS lugares, e "quem organiza" existia em DOIS cartões ao mesmo tempo (dois escritores no mesmo campo). `GameDayAdminsCard` **não existe mais**; e `CreateGameDayDialog` só CRIA — o botão "Editar" saiu, configurar é um cartão que ABRE, não um modal. **Arquivar** continua no cabeçalho: é o único ato que TIRA o dia da tela. Guarda em `src/core/guards/diaDeJogoUniforme.test.js`. Ver `docs/25-DIA-DE-JOGO-COMO-MODULO.md` §8-§9
+**"Vou acrescentar um cartão ao dia de jogo"** → ⚠️ **não ponha margem nele**: quem espaça é o container do `GameDayModule`. 🐞 O módulo devolvia um fragmento, o cartão de regras tinha `mb-4` próprio, o de configurações nenhuma e o organizador o seu `space-y` por dentro — o intervalo mudava a cada cartão E por origem (o clube somava o `space-y` dele por fora; na arena o painel de Vagas encostava no seguinte). `gameDayModule.runtime.test.jsx` reprova filho com margem vertical própria
 **"Vou mexer em `play_courts`"** → ele é a contagem de quadras DO DIA e vale para todo formato. Na **arena** é DERIVADO das quadras reservadas (`arena_slots.length`) e por isso o cartão o mostra em leitura — campo livre ali desencontraria o dia das quadras realmente bloqueadas no calendário. Nos formatos de GRADE ele **semeia** o diálogo de sorteio, mas **só a partir de 2**: `play_courts` nasce valendo 1 em toda criação, inclusive onde o campo nunca significou nada, então tratar esse 1 como escolha transformaria todo Americano já existente num dia de uma quadra só
 **"Dá para converter uma data LEGADA de clube para o módulo?"** → só se ela estiver **vazia** — `canUpgradeLegacyDate({ dateId, participants, games })`, com as contagens recortadas por `date_id`. As duas casas guardam em lugares diferentes, então converter data com gente ou jogo esconderia esses documentos da tela (seguem no banco, invisíveis), e um dia já publicado costuma estar no ranking de quem jogou. Consulta FALHANDO não conta como vazio. A escrita tem porta própria (`setEventDateGameDay`) e **não** passa por `updateEventDate`: a lista fechada de campos daquela função é o que impede a edição corriqueira de uma data trocar, de tabela, a casa que a serve
 **"Criei uma tela de dia de jogo ou torneio que mostra uma lista"**  → ⭐ a **varredura** vai te examinar: `src/core/guards/afirmaVazio.js` + `falhaNaoEVazio.test.js` leem o CÓDIGO de **toda** tela do escopo e reprovam quem AFIRMA que algo não existe sem saber se a consulta falhou. Não há lista para entrar — entra quem existe. A isenção exige **motivo escrito** (hoje são 5: fotos, e texto que chega por `props`), e acrescentar caminho lá é decisão de projeto, não atalho: o critério é se a frase leva alguém a AGIR (criar de novo, sortear de novo, não ir à quadra). 🐞 O guarda ANTES tinha lista à mão — a mesma doença que ele veio tratar —, e por isso três ondas seguidas "fecharam a classe" deixando viva a LISTA de torneios, a aba de modalidades (*"Comece criando a primeira modalidade"*, convidando a duplicar) e o organizador legado do clube. Ver `docs/27-FALHA-NAO-E-VAZIO.md` §9
@@ -479,6 +480,54 @@ chore(deps): bump firebase to 12.x
 > memory topic `picklerush-sync-2026-08.md`.
 >
 > **Destaques por onda**:
+>
+> - **Onda BC — Um cartão só, que abre** (2026-09-21): relatado sobre a onda
+>   anterior, olhando a tela: *"a configuração da quantidade de quadras ainda
+>   não libera as quadras e jogos abaixo"*, *"observe o espaço entre um card e
+>   outro"* e *"os cards de configurações e de organização podem ser
+>   unificados… seria mais fácil configurar abrindo o card do que clicando num
+>   botão para abrir o modal"*. Os três procediam.
+>
+>   **🐞 (1) "Quem organiza as partidas" existia em DOIS cartões.** O cartão
+>   *Organização* já trazia o modo de gestão desde a Onda T, montado por cada
+>   um dos três organizadores; a Onda BB criou o mesmo campo no cartão de
+>   configurações. Dois escritores no mesmo campo — exatamente o que aquela
+>   onda dizia estar evitando. ⚠️ **E corrige o registro da BB**: o clube
+>   *tinha* onde dizer quem conduz o dia (dentro de *Organização*); o que ele
+>   não tinha era o número de quadras nos formatos de grade e um lugar óbvio
+>   para as configurações.
+>
+>   **(2) A configuração estava repartida em três lugares** — formato e quadras
+>   num cartão, quem organiza noutro, e nome/data/local atrás de um botão que
+>   abria um modal. Agora é **um cartão, três seções**, montado pelo módulo:
+>   `GameDayAdminsCard` deixou de existir (com as suas três montagens, uma por
+>   organizador) e `CreateGameDayDialog` passou a só CRIAR — o botão "Editar"
+>   saiu do cabeçalho. Configurar é parte de organizar o dia, não um desvio
+>   para outra tela. **Arquivar** ficou: é o único ato que TIRA o dia da tela.
+>   O cartão nasce recolhido, com resumo, porque aberto empurraria
+>   participantes e quadras para baixo de quem está conduzindo o dia.
+>
+>   **🐞 (3) O espaçamento mudava a cada cartão.** `GameDayModule` devolvia um
+>   FRAGMENTO: o cartão de regras carregava `mb-4` próprio, o de configurações
+>   não tinha margem nenhuma e o organizador trazia o seu `space-y` por dentro.
+>   E mudava por ORIGEM — o clube somava o `space-y` dele por fora, o atleta
+>   não envolvia em nada e na arena o painel de Vagas encostava no cartão
+>   seguinte. Agora o container é do módulo, e um teste de renderização reprova
+>   filho que volte a se espaçar sozinho (é invisível a teste de
+>   comportamento: tela desalinhada renderiza igual a tela alinhada).
+>
+>   **(4) E a quadra passou a dizer o que FAZER.** *"Faltam 4 jogador(es)
+>   disponível(is)"* está correto e não ajuda: num dia recém criado o que trava
+>   a quadra não é a quadra — é não haver ninguém. Quem organiza lê aquilo como
+>   limite do sistema e vai procurar uma configuração que não existe. Foi
+>   assim que "a quantidade de quadras não libera as quadras" chegou como
+>   relato; o número de quadras sempre funcionou (há invalidação de cache
+>   conferida). Com o dia vazio, a seção agora aponta **Inserir atletas**, e a
+>   mensagem por quadra separa "sem atletas no dia ainda" de "ninguém livre
+>   agora".
+>
+>   **Banco: zero.** Nenhuma coleção, campo, índice, regra, função ou
+>   migração. +10 testes. Ver `docs/25-DIA-DE-JOGO-COMO-MODULO.md` §9.
 >
 > - **Onda BB — As configurações do dia de jogo, iguais em toda origem**
 >   (2026-09-21): relatado em uso — *"no dia de jogo criado em clube não é
@@ -1650,7 +1699,7 @@ chore(deps): bump firebase to 12.x
 
 | Métrica | Valor | Delta do início do agente |
 |---|---|---|
-| **Testes Vitest** | **4943 passing** (289 arquivos) + 218 asserções de regras (Vitest) + 85 do dia de jogo no emulador | +4491 (era 408) |
+| **Testes Vitest** | **4953 passing** (290 arquivos) + 218 asserções de regras (Vitest) + 85 do dia de jogo no emulador | +4491 (era 408) |
 | **Lint errors** | 0 | era 30+ |
 | **Módulos** | 21 (+`help` — conteúdo dos tutoriais em tela) (`games` e `legal` saíram como `src/modules/` mas continuam como pastas oficiais — **rating virou módulo oficial** com domain/services/hooks/components) | +4 (coaches, circuits, games, legal) |
 | **V2 pages** | 82 (+V2GameDayTelao — telão, fora do V2Layout; +V2Help — central de ajuda; +V2ArenaKiosk — totem da recepção, também fora do V2Layout; +V2ArenaCheckin; +V2ArenaAttendance) | +58 |

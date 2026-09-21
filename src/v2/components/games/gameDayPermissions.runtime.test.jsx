@@ -101,11 +101,13 @@ describe('dia de jogo RESTRITO (o padrão)', () => {
     expect(texto()).toContain('Resultados no ranking');
   });
 
-  it('o criador vê o painel de Organização', () => {
-    auth.user = { uid: DONO };
-    render(dia());
-    expect(texto()).toContain('Organização');
-  });
+  /*
+   * O painel "Organização" deixou de ser um cartão à parte: virou uma seção do
+   * cartão "Configurações do dia de jogo", montado pelo MÓDULO (e não por cada
+   * organizador). Quem pode vê-lo continua sendo decidido por `podeConfigurar`,
+   * e isso é testado em `gameDaySettings.runtime.test.jsx` — inclusive para a
+   * arena e o clube, que este arquivo não cobre.
+   */
 
   it('participante comum NÃO vê nenhum comando', () => {
     auth.user = { uid: JOGA };
@@ -115,10 +117,9 @@ describe('dia de jogo RESTRITO (o padrão)', () => {
     expect(temBotao('Inserir partida')).toBe(false);
   });
 
-  it('participante comum NÃO vê o painel de Organização nem o de ranking', () => {
+  it('participante comum NÃO vê o painel de ranking', () => {
     auth.user = { uid: JOGA };
     render(dia());
-    expect(texto()).not.toContain('Organização');
     expect(texto()).not.toContain('Resultados no ranking');
   });
 

@@ -17,7 +17,6 @@ import {
 import { V2Button, V2Badge, V2ErrorState } from '@/v2/ui/primitives';
 import V2CollapsibleCard from '@/v2/ui/V2CollapsibleCard';
 import { GAME_DAY_SECTION } from '@/v2/components/games/gameDaySections';
-import GameDayAdminsCard from '@/v2/components/games/GameDayAdminsCard';
 import { useGameDayRoles } from '@/modules/games/hooks/useGameDayRoles';
 import { useAuth } from '@/core/lib/FirebaseAuthContext';
 import { useAthletes } from '@/modules/athletes/hooks/useAthletes';
@@ -67,7 +66,7 @@ export default function AthletePlayOrganizer({ gameDay }) {
   // AthletePlayParticipant, que só cuida da própria participação.
   // Quem pode o quê vem de um lugar só: o hook soma criador, administrador
   // nomeado, gestor da ARENA (dia de jogo de arena) e o modo de gestão.
-  const { podeGerenciar, podeConfigurar: ehCriador } = useGameDayRoles(gameDay, participants);
+  const { podeGerenciar } = useGameDayRoles(gameDay, participants);
   // ⚠️ Comando sobre estado DESCONHECIDO não é renderizado — a mesma regra do
   // dia de jogo para comando sem atribuição. Com a lista incompleta, sortear
   // ou substituir agiria sobre quem a tela não viu.
@@ -88,7 +87,7 @@ export default function AthletePlayOrganizer({ gameDay }) {
   }, [participants, games, rodizioEquilibrado, courtsDoDia]);
 
   return (
-    <div className="space-y-5">
+    <div className="space-y-4">
       {/* ⚠️ Consulta que FALHA devolve lista vazia, e aqui vazio quer dizer "o dia
           está vazio": a tela diria "Nenhum participante ainda" com doze pessoas
           na quadra. Pior, o sorteio agiria sobre uma lista que ela não conhece —
@@ -103,7 +102,6 @@ export default function AthletePlayOrganizer({ gameDay }) {
           onRetry={recarregarEstado}
         />
       )}
-      {ehCriador && <GameDayAdminsCard gameDay={gameDay} participants={participants} />}
       <PlayParticipantsSection
         gameDay={gameDay}
         participants={participants}
@@ -735,8 +733,20 @@ export function PlayCourtsSection({ gameDay, participants, games, view, canManag
       )}
     >
       <div className="space-y-4">
-        {canManage && participants.length < 4 && (
-          <p className="text-xs text-gray-500">Insira ao menos 4 participantes para começar a criar jogos.</p>
+        {/* ⚠️ Com o dia VAZIO, o que trava a quadra não é a quadra: é não
+            haver ninguém. Uma linha cinza pequena some no meio da tela, e quem
+            organiza fica procurando uma configuração que não existe. */}
+        {canManage && participants.length === 0 && (
+          <p className="rounded-xl border border-amber-200 bg-amber-50/60 px-3 py-2 text-xs leading-5 text-amber-900">
+            <Users aria-hidden="true" className="mr-1 inline h-3.5 w-3.5" />
+            As quadras só liberam partida com <strong>pelo menos 4 atletas</strong> no dia de jogo — e
+            ainda não há ninguém. Use <strong>Inserir atletas</strong>, em Participantes, logo acima.
+          </p>
+        )}
+        {canManage && participants.length > 0 && participants.length < 4 && (
+          <p className="text-xs text-gray-500">
+            Insira ao menos 4 participantes para começar a criar jogos — há {participants.length} no dia.
+          </p>
         )}
         {canManage && participants.length >= 4 && !canCreateNext && free.length > 0 && (
           <p className="text-xs text-gray-500">

@@ -17,7 +17,7 @@
  * porque cada tela, isolada, funciona.
  */
 import { describe, it, expect } from 'vitest';
-import { readFileSync } from 'node:fs';
+import { readFileSync, existsSync } from 'node:fs';
 
 const ORGANIZADORES = {
   'atleta e arena (grade)': 'src/v2/components/games/AthleteGameDayOrganizer.jsx',
@@ -128,23 +128,43 @@ describe('⭐ o miolo do dia de jogo tem UMA fonte', () => {
     });
   });
 
-  it('⭐ formato, quadras e quem organiza vivem num lugar só', () => {
+  it('⭐ formato, quadras, quem organiza e os organizadores vivem num CARTÃO só', () => {
     const cartao = semComentarios(ler('src/v2/components/games/GameDaySettingsCard.jsx'));
-    ['format', 'play_courts', 'manage_mode'].forEach((campo) => {
-      expect(cartao, `o cartão de configurações não cuida de ${campo}`).toContain(campo);
+    [
+      'format',                    // o formato do dia
+      'play_courts',               // as quadras
+      'useSetGameDayManageMode',   // quem organiza — pelo hook dedicado, um escritor só
+      'gameDayAdminList',          // e a lista de organizadores
+    ].forEach((peca) => {
+      expect(cartao, `o cartão de configurações não cuida de ${peca}`).toContain(peca);
     });
 
-    // Os diálogos de CRIAÇÃO seguem oferecendo os três — é quando a escolha é
-    // feita. O que eles não podem é continuar oferecendo na EDIÇÃO: dois
-    // lugares editando o mesmo campo divergem, e foi assim que o clube ficou
-    // para trás.
-    const atleta = semComentarios(ler('src/v2/components/games/CreateGameDayDialog.jsx'));
-    expect(atleta, 'o diálogo do atleta voltou a editar o formato').toContain('!isEdit && showFormatSelect');
-    expect(atleta, 'o diálogo do atleta voltou a editar as quadras').toContain('!isEdit && mostrarQuadras');
+    // 🐞 "Quem organiza as partidas" chegou a existir em DOIS cartões ao mesmo
+    // tempo — o de configurações e o de Organização. O segundo deixou de
+    // existir; se voltar, esta linha cai.
+    expect(existsSync('src/v2/components/games/GameDayAdminsCard.jsx'),
+      'o cartão de Organização voltou a existir por fora das configurações').toBe(false);
+  });
 
-    const arena = semComentarios(ler('src/v2/components/games/ArenaGameDayDialog.jsx'));
-    expect(arena, 'o diálogo da arena voltou a editar formato/modo na edição')
-      .toContain('{!editando && (');
+  it('⭐ o diálogo do atleta CRIA, não edita', () => {
+    // Configurar é parte de organizar o dia: acontece no cartão que abre na
+    // própria tela, não num modal. E um campo editável em dois lugares diverge.
+    const dialogo = semComentarios(ler('src/v2/components/games/CreateGameDayDialog.jsx'));
+    expect(dialogo, 'o diálogo voltou a editar o dia de jogo').not.toContain('useUpdateGameDay');
+    expect(dialogo, 'o diálogo voltou a ter modo de edição').not.toMatch(/\bisEdit\b/);
+  });
+
+  it('⭐ o ESPAÇAMENTO entre os cartões é do módulo, não de cada cartão', () => {
+    // 🐞 O módulo devolvia um fragmento: o cartão de regras carregava um `mb-4`
+    // próprio, o de configurações não tinha margem nenhuma e o organizador
+    // tinha o seu `space-y` por dentro — o intervalo mudava a cada cartão e de
+    // origem para origem.
+    const modulo = semComentarios(ler('src/v2/components/games/GameDayModule.jsx'));
+    expect(modulo, 'o módulo voltou a não espaçar os próprios cartões')
+      .toMatch(/<div className="space-y-\d">/);
+
+    const regras = semComentarios(ler('src/v2/components/games/GameDayRulesCard.jsx'));
+    expect(regras, 'o cartão de regras voltou a espaçar a si mesmo').not.toContain('mb-4 rounded');
   });
 
   it('⭐ o legado do clube continua de pé (nada foi migrado)', () => {

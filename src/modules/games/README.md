@@ -438,10 +438,19 @@ saem da classificação da rodada, que é o que define os dois formatos.
 
 ## ⚠️ As configurações do dia também são do MÓDULO
 
-Formato, **quadras** e **quem organiza as partidas** vivem em
-`v2/components/games/GameDaySettingsCard.jsx`, montado dentro do
-`GameDayModule` — é isso que as faz chegar iguais ao atleta, à arena e ao
-clube. 🐞 Enquanto cada origem montava a própria configuração, o dia de jogo do
+Formato, **quadras**, **quem organiza as partidas**, a lista de
+**organizadores** e — só onde a origem manda neles — **nome, data e local**
+vivem num CARTÃO só, `v2/components/games/GameDaySettingsCard.jsx`, montado
+dentro do `GameDayModule` — é isso que as faz chegar iguais ao atleta, à arena
+e ao clube. 🐞 `GameDayAdminsCard` (o cartão *Organização*) deixou de existir:
+ele trazia o modo de gestão, e o mesmo campo passou a existir nos dois cartões
+ao mesmo tempo. `CreateGameDayDialog` só CRIA — configurar é um cartão que
+ABRE, não um modal; **arquivar** continua no cabeçalho, porque é o único ato
+que tira o dia da tela.
+
+⚠️ **Cartão novo no dia de jogo não leva margem**: quem espaça é o container do
+`GameDayModule`. O módulo já devolveu um fragmento, e o intervalo entre cartões
+mudava a cada cartão e de origem para origem. 🐞 Enquanto cada origem montava a própria configuração, o dia de jogo do
 **clube** ficou sem nenhum lugar para dizer quem conduz o dia, e o número de
 quadras não aparecia nos formatos de GRADE (o padrão de uma data de clube).
 

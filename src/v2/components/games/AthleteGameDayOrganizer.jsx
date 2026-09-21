@@ -17,7 +17,6 @@ import {
 import { V2Button, V2Badge, V2ErrorState} from '@/v2/ui/primitives';
 import V2CollapsibleCard from '@/v2/ui/V2CollapsibleCard';
 import { GAME_DAY_SECTION } from '@/v2/components/games/gameDaySections';
-import GameDayAdminsCard from '@/v2/components/games/GameDayAdminsCard';
 import { PartnerDialog } from '@/v2/components/games/AthletePlayOrganizer';
 import { useGameDayRoles } from '@/modules/games/hooks/useGameDayRoles';
 import { useAthletes } from '@/modules/athletes/hooks/useAthletes';
@@ -58,7 +57,7 @@ export default function AthleteGameDayOrganizer({ gameDay }) {
   // um botão que falha.
 
   return (
-    <div className="space-y-5">
+    <div className="space-y-4">
       {/* ⚠️ Falha devolve lista vazia, e aqui vazio quer dizer "ninguém veio":
           a tela diria "Nenhum participante ainda" com doze pessoas na quadra.
           Ver `docs/27-FALHA-NAO-E-VAZIO.md`. */}
@@ -70,7 +69,6 @@ export default function AthleteGameDayOrganizer({ gameDay }) {
           onRetry={recarregarParticipantes}
         />
       )}
-      {ehCriador && <GameDayAdminsCard gameDay={gameDay} participants={participants} />}
       <ParticipantsSection gameDay={gameDay} participants={participants} isLoading={isLoading} isOwner={podeGerenciar} />
       <GamesSection gameDay={gameDay} participants={participants} isOwner={podeGerenciar} />
       <DailyRankingSection gameDay={gameDay} participants={participants} />

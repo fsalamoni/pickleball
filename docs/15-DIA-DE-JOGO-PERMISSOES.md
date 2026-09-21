@@ -53,8 +53,10 @@ src/modules/games/domain/gameDayRoles.js        ⭐ fonte única da verdade (pur
 src/modules/games/domain/gameDayRoles.test.js      25 testes
 src/modules/games/services/gameDayService.js       addGameDayAdmin / removeGameDayAdmin / setGameDayManageMode
 src/modules/games/hooks/useGameDays.js             os 3 hooks correspondentes
-src/v2/components/games/GameDayAdminsCard.jsx      painel "Organização" (só o criador vê)
-src/v2/components/games/CreateGameDayDialog.jsx    escolha do modo na criação/edição
+src/v2/components/games/GameDaySettingsCard.jsx    seção "Quem organiza as partidas" + organizadores
+                                                   (era o cartão "Organização"; hoje é uma seção do
+                                                    cartão de configurações, montado pelo MÓDULO)
+src/v2/components/games/CreateGameDayDialog.jsx    escolha do modo na CRIAÇÃO (ele não edita)
 firestore.rules                                    isGameDayAdminOf / gameDayOpenToParticipants / canManageGameDayOf
 tests/rules/gameDayRoles.rules.emulator.mjs        24 asserções contra as regras REAIS
 src/v2/components/games/gameDayPermissions.runtime.test.jsx  13 testes de "não renderiza"

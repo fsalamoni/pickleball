@@ -2,7 +2,7 @@ import React, { useMemo, useState } from 'react';
 import { toast } from 'sonner';
 import {
   LayoutGrid, ListOrdered, Check, PlayCircle, Trash2, Pencil, Trophy,
-  Target, Plus, Swords, Shuffle, MoreHorizontal, XCircle,
+  Target, Plus, Swords, Shuffle, MoreHorizontal, XCircle, Users
 } from 'lucide-react';
 
 import { UserAvatar } from '@/components/ui/user-avatar';
@@ -13,7 +13,6 @@ import {
 import { V2Button, V2Badge, V2Input, V2Select, V2ErrorState } from '@/v2/ui/primitives';
 import V2CollapsibleCard from '@/v2/ui/V2CollapsibleCard';
 import { GAME_DAY_SECTION } from '@/v2/components/games/gameDaySections';
-import GameDayAdminsCard from '@/v2/components/games/GameDayAdminsCard';
 import {
   PlayParticipantsSection, PlayOrderSection, CourtPlayerDialog,
 } from '@/v2/components/games/AthletePlayOrganizer';
@@ -68,7 +67,7 @@ export default function AthleteAmericanoLiveOrganizer({ gameDay }) {
   const view = useMemo(() => americanoLiveView({ participants, games }), [participants, games]);
 
   return (
-    <div className="space-y-5">
+    <div className="space-y-4">
       {/* ⚠️ Consulta que FALHA devolve lista vazia, e aqui vazio quer dizer "o dia
           está vazio". Pior: o sorteio agiria sobre uma lista que a tela não
           viu. Ver `docs/27-FALHA-NAO-E-VAZIO.md`. */}
@@ -80,7 +79,6 @@ export default function AthleteAmericanoLiveOrganizer({ gameDay }) {
           onRetry={recarregarEstado}
         />
       )}
-      {ehCriador && <GameDayAdminsCard gameDay={gameDay} participants={participants} />}
       <ProgressSection participants={participants} games={games} />
       <PlayParticipantsSection
         gameDay={gameDay}
@@ -294,6 +292,17 @@ function CourtsSection({ gameDay, participants, games, view, canManage }) {
             inteira. Sorteando uma quadra por vez, os mesmos quatro voltam para ela.
           </p>
         )}
+        {/* ⚠️ O que trava a quadra quase sempre não é a quadra: é não haver
+            ninguém no dia. "Faltam 4 jogadores disponíveis" está correto e não
+            ajuda — parece limite do sistema, e quem organiza fica procurando
+            uma configuração que não existe. Aqui a tela diz o que FAZER. */}
+        {participants.length === 0 && (
+          <p className="rounded-xl border border-amber-200 bg-amber-50/60 px-3 py-2 text-xs leading-5 text-amber-900">
+            <Users aria-hidden="true" className="mr-1 inline h-3.5 w-3.5" />
+            As quadras só liberam partida com <strong>pelo menos 4 atletas</strong> no dia de jogo — e
+            ainda não há ninguém. Use <strong>Inserir atletas</strong>, em Participantes, logo acima.
+          </p>
+        )}
         {Array.from({ length: courts }, (_, i) => i + 1).map((court) => (
           <CourtCard
             key={court}
@@ -302,6 +311,7 @@ function CourtsSection({ gameDay, participants, games, view, canManage }) {
             canManage={canManage}
             podeGerar={livres.includes(court) && disponiveis >= 4}
             disponiveis={disponiveis}
+            semNinguem={participants.length === 0}
             onGerar={() => gerar(court)}
             onJogador={(pl) => {
               const g = porQuadra.get(court);
@@ -379,6 +389,7 @@ function CourtsSection({ gameDay, participants, games, view, canManage }) {
 
 function CourtCard({
   court, game, canManage, podeGerar, disponiveis, onGerar, onLancar, onJogador, onCancelar, pendente,
+  semNinguem = false,
 }) {
   const [a, setA] = useState('');
   const [b, setB] = useState('');
@@ -460,7 +471,9 @@ function CourtCard({
           <p className="text-xs text-gray-500">
             {disponiveis >= 4
               ? 'Pronta para a próxima partida.'
-              : `Faltam ${4 - disponiveis} jogador(es) disponível(is).`}
+              : semNinguem
+                ? 'Sem atletas no dia de jogo ainda.'
+                : `Faltam ${4 - disponiveis} jogador(es) disponível(is).`}
           </p>
           {canManage && (
             <V2Button size="sm" variant="secondary" disabled={!podeGerar || pendente} onClick={onGerar}>
