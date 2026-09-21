@@ -2,6 +2,7 @@ import { describe, it, expect } from 'vitest';
 import {
   isClubGameDay, isModularEventDate, splitEventDateTime, shortDateBR,
   clubGameDayTitle, normalizeClubGameDayInput, CLUB_GAME_DAY_TITLE_MAX,
+  canUpgradeLegacyDate,
 } from './clubGameDay.js';
 import { GAME_DAY_FORMAT } from '@/modules/clubs/domain/gameDayFormats.js';
 import { GAME_DAY_MANAGE_MODE } from './gameDayRoles.js';
@@ -129,5 +130,56 @@ describe('normalizeClubGameDayInput', () => {
     const { value } = normalizeClubGameDayInput({ date_time: '2026-09-25T19:00', location: '   ', note: '' }, { event });
     expect(value.location).toBeNull();
     expect(value.notes).toBeNull();
+  });
+});
+
+/* ------------------------------------------------------------------------- *
+ * ⭐ CONVERTER UMA DATA LEGADA — só quando não há NADA para mover.
+ * ------------------------------------------------------------------------- */
+describe('canUpgradeLegacyDate', () => {
+  it('data vazia pode ser convertida: não existe documento para esconder', () => {
+    const r = canUpgradeLegacyDate({ dateId: 'd1', participants: [], games: [] });
+    expect(r.ok).toBe(true);
+    expect(r.motivo).toBeNull();
+  });
+
+  it('⭐ com PARTIDA na data, recusa — e diz por quê', () => {
+    const r = canUpgradeLegacyDate({
+      dateId: 'd1', participants: [], games: [{ id: 'g1', date_id: 'd1' }],
+    });
+    expect(r.ok).toBe(false);
+    expect(r.motivo).toMatch(/partidas/i);
+    expect(r.jogos).toBe(1);
+  });
+
+  it('⭐ com ATLETA inserido na data, recusa', () => {
+    const r = canUpgradeLegacyDate({
+      dateId: 'd1', participants: [{ id: 'p1', date_id: 'd1' }], games: [],
+    });
+    expect(r.ok).toBe(false);
+    expect(r.motivo).toMatch(/atletas/i);
+    expect(r.participantes).toBe(1);
+  });
+
+  it('⭐ o recorte é por DATA: outra data do mesmo evento não reprova esta', () => {
+    // Um evento semanal tem dezenas de datas no mesmo `club_events/{id}`.
+    const r = canUpgradeLegacyDate({
+      dateId: 'd2',
+      participants: [{ id: 'p1', date_id: 'd1' }],
+      games: [{ id: 'g1', date_id: 'd1' }],
+    });
+    expect(r.ok).toBe(true);
+  });
+
+  it('a data ÚNICA (sem date_id) conta os documentos sem date_id', () => {
+    const r = canUpgradeLegacyDate({
+      dateId: null, participants: [{ id: 'p1' }], games: [],
+    });
+    expect(r.ok).toBe(false);
+  });
+
+  it('lista ausente é tratada como vazia, nunca como erro', () => {
+    expect(canUpgradeLegacyDate({ dateId: 'd1' }).ok).toBe(true);
+    expect(canUpgradeLegacyDate().ok).toBe(true);
   });
 });

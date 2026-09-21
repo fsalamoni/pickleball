@@ -162,7 +162,15 @@ export default function CreateGameDayDialog({ open, onOpenChange, onCreated, gam
           </div>
 
           {/* Quem conduz o dia. Nasce RESTRITO — é o comportamento que a
-              plataforma sempre teve, e abrir tem de ser uma escolha. */}
+              plataforma sempre teve, e abrir tem de ser uma escolha.
+
+              ⚠️ Só na CRIAÇÃO. Depois de criado, isto — junto com formato e
+              quadras — vive no cartão de configurações do próprio dia de jogo
+              (`GameDaySettingsCard`), que é o mesmo no atleta, na arena e no
+              clube. Dois lugares editando o mesmo campo divergem, e foi
+              exatamente assim que o dia de jogo do clube ficou sem "quem
+              organiza". */}
+          {!isEdit && (
           <div>
             <Label className="text-xs">Quem pode organizar as partidas</Label>
             <div className="mt-1 grid gap-2">
@@ -188,6 +196,7 @@ export default function CreateGameDayDialog({ open, onOpenChange, onCreated, gam
               Editar o dia de jogo, arquivar, publicar no ranking e nomear organizadores continuam só com você.
             </p>
           </div>
+          )}
 
           <div className="grid grid-cols-2 gap-3">
             <div>
@@ -216,7 +225,7 @@ export default function CreateGameDayDialog({ open, onOpenChange, onCreated, gam
             </div>
           </div>
 
-          {showFormatSelect && (
+          {!isEdit && showFormatSelect && (
             <div>
               <Label className="text-xs">Formato do dia de jogo</Label>
               <select
@@ -259,7 +268,7 @@ export default function CreateGameDayDialog({ open, onOpenChange, onCreated, gam
             </div>
           )}
 
-          {mostrarQuadras && (
+          {!isEdit && mostrarQuadras && (
             <div className="w-40">
               <Label className="text-xs">Quadras disponíveis</Label>
               <Input
@@ -270,6 +279,14 @@ export default function CreateGameDayDialog({ open, onOpenChange, onCreated, gam
                 onChange={(e) => set('play_courts', normalizePlayCourts(e.target.value))}
               />
             </div>
+          )}
+
+          {isEdit && (
+            <p className="rounded-xl border border-gray-100 bg-paper px-3 py-2 text-[11px] leading-5 text-gray-500">
+              <strong className="text-ink">Formato, quadras e quem organiza as partidas</strong> ficam
+              em &quot;Configurações do dia de jogo&quot;, na própria tela do dia — as mesmas opções valem
+              para o dia de jogo do clube e o da arena.
+            </p>
           )}
 
           <div>

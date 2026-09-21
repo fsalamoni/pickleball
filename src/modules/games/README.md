@@ -435,3 +435,27 @@ construção, sem ninguém precisar lembrar de montá-lo em cada tela.
 O predicado `formatHonorsFixedPairs(format)` mora aqui: **Mexicano e Rei da
 Quadra não honram dupla vinculada**, e isso não é omissão — neles as duplas
 saem da classificação da rodada, que é o que define os dois formatos.
+
+## ⚠️ As configurações do dia também são do MÓDULO
+
+Formato, **quadras** e **quem organiza as partidas** vivem em
+`v2/components/games/GameDaySettingsCard.jsx`, montado dentro do
+`GameDayModule` — é isso que as faz chegar iguais ao atleta, à arena e ao
+clube. 🐞 Enquanto cada origem montava a própria configuração, o dia de jogo do
+**clube** ficou sem nenhum lugar para dizer quem conduz o dia, e o número de
+quadras não aparecia nos formatos de GRADE (o padrão de uma data de clube).
+
+Os diálogos de **criação** seguem oferecendo os três; na **edição**, não — dois
+lugares editando o mesmo campo divergem.
+
+⚠️ `play_courts` na **arena** é DERIVADO das quadras reservadas e por isso é
+mostrado em leitura. Nos formatos de grade ele semeia o diálogo de sorteio, mas
+**só a partir de 2**: o valor 1 é o padrão de criação e é indistinguível de "não
+configurado".
+
+Uma data **legada** de clube só pode ser convertida para o módulo quando está
+**vazia** (`canUpgradeLegacyDate`, recortado por `date_id`) — as duas casas
+guardam em lugares diferentes, e converter data com gente ou jogo esconderia
+documentos que seguem no banco.
+
+Ver `docs/25-DIA-DE-JOGO-COMO-MODULO.md` §8.

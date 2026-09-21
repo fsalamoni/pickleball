@@ -253,3 +253,103 @@ no evento dele) e é o campo que `isClubAdmin(club_id)` confere na regra de
 7. **Não exponha `CreateGameDayDialog` num dia de jogo de clube.** Ele grava a
    `visibility` junto, e um dia de clube que vira público passa a ser legível
    (e auto-inscrevível) por qualquer conta da plataforma.
+
+---
+
+## 8. As CONFIGURAÇÕES também são do módulo (Onda BB)
+
+### 8.1. O defeito: três origens, três configurações
+
+A Onda AS unificou o **miolo** (a visão por formato, o tutorial, o telão) e
+deixou de fora o que vem antes dele: **o que dá para mudar no dia de jogo**.
+Isso continuou sendo montado origem a origem, e as três divergiram — a mesma
+doença, um andar acima:
+
+| | atleta | arena | clube |
+|---|---|---|---|
+| Formato | diálogo | diálogo | cartão próprio, à mão |
+| Quadras | diálogo, **só** Play/Americano aprimorado | derivado das quadras reservadas | cartão próprio, **só** Play/Americano aprimorado |
+| **Quem organiza as partidas** | diálogo | diálogo | **não existia** |
+
+Consequências, medidas em tela:
+
+- **O clube não tinha como dizer quem conduz o dia.** Ele nasce
+  `manage_mode: 'participants'` de propósito (o evento legado era assim), e não
+  havia nenhum lugar para fechar. Um clube que quisesse o sorteio só com a
+  organização simplesmente não podia.
+- **E não achava o número de quadras.** Uma data de clube nasce em
+  **Americano**, que é formato de GRADE — e nos formatos de grade o campo não
+  aparecia em configuração nenhuma, em nenhuma origem. O número existia só como
+  um campo de texto **transitório dentro do diálogo de sorteio**: redigitado a
+  cada sorteio, invisível no resto da tela e nunca gravado.
+
+### 8.2. A correção: `GameDaySettingsCard`, dentro do módulo
+
+As três configurações que **não dependem da origem** — formato, quadras e quem
+organiza — viraram uma peça só, montada **dentro do `GameDayModule`**. Chegam ao
+atleta, à arena e ao clube **por construção**, que é o antídoto desta família de
+defeito: com tudo funcionando, a origem que ficou para trás é indistinguível da
+que está completa.
+
+Quem vê o cartão é decidido por `podeConfigurar`, que já soma criador, gestor da
+arena e **administrador do clube** — então o admin que não agendou a data
+configura o dia, como a regra do Firestore já permitia.
+
+**Uma origem, uma diferença**: na **arena** as quadras são de leitura. Lá elas
+não são um número solto — são as quadras e horários efetivamente **reservados no
+calendário**, que fecham a grade para reserva. Um campo livre ali desencontraria
+a contagem do dia das quadras realmente bloqueadas; o cartão mostra o número e
+aponta onde se muda.
+
+### 8.3. Um campo, um dono
+
+Os diálogos de **criação** seguem oferecendo os três — é quando a escolha é
+feita. O que eles deixaram de oferecer é a **edição**: dois lugares editando o
+mesmo campo divergem, e foi exatamente assim que o clube ficou para trás. O
+diálogo do atleta, na edição, diz onde eles foram parar.
+
+> ⚠️ `src/core/guards/diaDeJogoUniforme.test.js` reprova quem montar
+> `GameDaySettingsCard` por fora do módulo, ou reintroduzir formato/quadras na
+> edição dos diálogos.
+
+### 8.4. As quadras passaram a ser propriedade DO DIA
+
+Nos formatos de grade, o diálogo de sorteio agora é **semeado** por
+`gameDay.play_courts` — o número deixou de ser redigitado a cada sorteio.
+
+> ⚠️ Só a partir de **dois**, e a razão não é estética: `play_courts` nasce
+> valendo 1 em toda criação, inclusive nos formatos de grade, onde o campo nunca
+> significou nada. Tratar esse `1` como escolha transformaria **todo Americano
+> já existente** num dia de uma quadra só — o valor 1 é indistinguível de "não
+> configurado". Quem quiser mesmo uma quadra digita, como sempre.
+
+### 8.5. A porta estreita do legado
+
+A data anterior à Onda AS continua no organizador de sempre, e **nada é
+migrado** — as duas casas guardam em lugares diferentes, e converter uma data
+que já tem gente ou jogo esconderia esses documentos da tela (seguiriam no
+banco, intactos, mas invisíveis), sendo que um dia já publicado costuma estar no
+ranking de quem jogou.
+
+Só que existe um caso em que **não há nada para mover**: a data ainda **vazia**.
+Aí converter não é migrar, é escolher a casa antes de entrar nela — e é o que
+deixa uma data agendada meses atrás receber Play, Americano aprimorado, telão,
+tutorial, administradores nomeados e as configurações do dia.
+
+- A pergunta é domínio puro: `canUpgradeLegacyDate({ dateId, participants, games })`,
+  com as contagens **recortadas por `date_id`** (um evento semanal tem dezenas de
+  datas no mesmo `club_events/{id}`; olhar o evento inteiro reprovaria uma data
+  vazia por causa de outra já jogada).
+- Consulta **falhando** não conta como vazio: estado desconhecido não habilita a
+  conversão.
+- Quando não dá, a tela **diz o motivo** em vez de esconder o botão.
+- A escrita tem porta própria (`setEventDateGameDay`) e **não** passa por
+  `updateEventDate`: a lista fechada de campos daquela função é uma proteção —
+  é ela que garante que a edição corriqueira de uma data nunca troque, de
+  tabela, a casa que serve aquele dia de jogo.
+
+### 8.6. Impacto no banco
+
+**Zero.** Nenhuma coleção, campo, índice, regra, função ou migração. A conversão
+grava um `game_days` novo e preenche o `game_day_id` que a data já tinha
+previsto desde a Onda AS.

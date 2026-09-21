@@ -17,42 +17,134 @@
 
 import React, { useMemo, useState } from 'react';
 import { toast } from 'sonner';
-import { UserPlus, UserMinus, Users, Check, Link as LinkIcon } from 'lucide-react';
+import { UserPlus, UserMinus, Users, Check, Link as LinkIcon, Sparkles } from 'lucide-react';
 import { Link } from 'react-router-dom';
 
 import { V2Button, V2Surface, V2ErrorState } from '@/v2/ui/primitives';
-import { Label } from '@/components/ui/label';
 import { Skeleton } from '@/components/ui/skeleton';
 import GameDayModule, { GameDayModuleTools } from '@/v2/components/games/GameDayModule';
 import GameDayOrganizer from '@/modules/clubs/components/GameDayOrganizer';
-import { isModularEventDate } from '@/modules/games/domain/clubGameDay';
+import { isModularEventDate, canUpgradeLegacyDate } from '@/modules/games/domain/clubGameDay';
+import { useUpgradeEventDate } from '@/modules/games/hooks/useClubGameDay';
+import { useClub, useEventParticipants, useEventGames } from '@/modules/clubs/hooks/useClubs';
+import { GAME_DAY_FORMAT } from '@/modules/clubs/domain/gameDayFormats';
+import { ConfirmDialog } from '@/components/ui/confirm-dialog';
 import { GD_PARTICIPANT_SOURCE } from '@/modules/games/domain/gameDay';
 import {
   useGameDay, useGameDayParticipants, useAddGameDayParticipant,
-  useRemoveGameDayParticipant, useGameDayGames, useUpdateGameDay,
+  useRemoveGameDayParticipant,
 } from '@/modules/games/hooks/useGameDays';
 import { useAuth } from '@/core/lib/FirebaseAuthContext';
 import { useGameDayRoles } from '@/modules/games/hooks/useGameDayRoles';
 import { RSVP_STATUS } from '@/modules/clubs/domain/constants';
-import {
-  GAME_DAY_FORMAT, GAME_DAY_FORMAT_LABELS, DRAW_FORMATS, isCourtByCourtFormat,
-} from '@/modules/clubs/domain/gameDayFormats';
-import { useFeatureFlag } from '@/core/lib/FeatureFlagsContext';
-import { FEATURE_FLAG } from '@/core/featureFlags';
 
 export default function ClubGameDayTab({ event, clubId, date, rsvps = [] }) {
   // Legado: a data anterior à Onda AS não tem `game_day_id` e continua no
   // organizador de antes, sem nada a converter.
   if (!isModularEventDate(date)) {
-    return <GameDayOrganizer event={event} clubId={clubId} dateId={date.id} />;
+    return <LegacyGameDay event={event} clubId={clubId} date={date} />;
   }
   return <ModularGameDay gameDayId={date.game_day_id} rsvps={rsvps} />;
+}
+
+/**
+ * A data LEGADA — o organizador de sempre, mais a porta de saída.
+ *
+ * ## Por que existe uma porta, e por que ela é estreita
+ *
+ * O legado não é migrado: as duas casas guardam em lugares diferentes
+ * (`club_events/{id}/{participants,games}` contra `game_days/{id}/…`), e
+ * converter uma data que JÁ TEM gente ou jogo esconderia esses documentos da
+ * tela — eles seguiriam no banco, intactos, mas ninguém mais os veria. E um
+ * dia de jogo já publicado costuma estar no ranking de quem jogou.
+ *
+ * Só que a data ainda **vazia** não tem nada para mover. Aí converter não é
+ * migrar: é escolher a casa antes de entrar nela. É o que deixa uma data
+ * agendada meses atrás receber Play, Americano aprimorado, telão, tutorial,
+ * administradores nomeados e as configurações do dia.
+ *
+ * Quando não dá, a tela **diz o motivo** em vez de esconder o botão:
+ * organizador que não entende por que a ferramenta dele é diferente da do
+ * vizinho vira chamado de suporte.
+ */
+function LegacyGameDay({ event, clubId, date }) {
+  const { data: club = null } = useClub(clubId);
+  // As duas consultas já estão no cache: o organizador legado abaixo as usa.
+  const { data: participants = [], isError: falhouParticipantes } = useEventParticipants(event.id);
+  const { data: games = [], isError: falhouJogos } = useEventGames(event.id);
+  const converter = useUpgradeEventDate(event, club || { id: clubId });
+  const [confirmar, setConfirmar] = useState(false);
+
+  // ⚠️ FALHA não é "está vazio". Com a consulta caída as duas listas viriam
+  // vazias e a tela ofereceria converter uma data que pode ter um dia inteiro
+  // de jogo dentro. Estado desconhecido não habilita comando.
+  const desconhecido = falhouParticipantes || falhouJogos;
+  const veredito = canUpgradeLegacyDate({ dateId: date.id, participants, games });
+  const podeConverter = veredito.ok && !desconhecido;
+
+  const ativar = async () => {
+    try {
+      await converter.mutateAsync({ date, format: GAME_DAY_FORMAT.AMERICANO, play_courts: 1 });
+      toast.success('Módulo completo ativado nesta data.');
+      setConfirmar(false);
+    } catch (err) {
+      toast.error(err?.message || 'Não foi possível ativar.');
+    }
+  };
+
+  return (
+    <div className="space-y-4">
+      <V2Surface className="rounded-xl border-amber-200">
+        <div className="space-y-2 p-4">
+          <div className="flex items-center gap-2 text-sm font-semibold text-ink">
+            <Sparkles aria-hidden="true" className="h-4 w-4 text-amber-600" />
+            Esta data usa o organizador antigo
+          </div>
+          <p className="text-sm text-gray-600">
+            Ela foi agendada antes do módulo único, então segue com a ferramenta de sempre — e o que
+            já foi jogado aqui continua exatamente onde está. O módulo completo acrescenta{' '}
+            <strong>Play</strong>, <strong>Americano aprimorado</strong>, <strong>telão</strong>,
+            tutorial do formato, administradores nomeados e as configurações do dia (formato,
+            quadras e quem organiza as partidas).
+          </p>
+          {podeConverter ? (
+            <div className="flex flex-wrap items-center gap-2 pt-1">
+              <V2Button size="sm" onClick={() => setConfirmar(true)} disabled={converter.isPending}>
+                <Sparkles className="mr-1.5 h-4 w-4" /> Ativar o módulo completo
+              </V2Button>
+              <span className="text-xs text-gray-500">
+                Esta data ainda está vazia, então nada é movido.
+              </span>
+            </div>
+          ) : (
+            <p className="text-xs text-gray-500">
+              {desconhecido
+                ? 'Não deu para conferir se esta data já tem atletas ou partidas, então a conversão fica indisponível por enquanto.'
+                : `${veredito.motivo} As datas novas já nascem com o módulo completo.`}
+            </p>
+          )}
+        </div>
+      </V2Surface>
+
+      <GameDayOrganizer event={event} clubId={clubId} dateId={date.id} />
+
+      <ConfirmDialog
+        open={confirmar}
+        onOpenChange={setConfirmar}
+        title="Ativar o módulo completo nesta data?"
+        description="A data passa a usar o mesmo dia de jogo do atleta e da arena, com Play, Americano aprimorado, telão e as configurações do dia. Como ela ainda está vazia, nada é movido nem perdido."
+        confirmLabel="Ativar"
+        loading={converter.isPending}
+        onConfirm={ativar}
+      />
+    </div>
+  );
 }
 
 function ModularGameDay({ gameDayId, rsvps }) {
   const { data: gameDay, isLoading, isError, refetch } = useGameDay(gameDayId);
   const { data: participants = [] } = useGameDayParticipants(gameDayId);
-  const { podeGerenciar, podeConfigurar } = useGameDayRoles(gameDay, participants);
+  const { podeGerenciar } = useGameDayRoles(gameDay, participants);
 
   if (isLoading) return <Skeleton className="h-64 rounded-xl" />;
   // ⚠️ FALHA não é ausência: "pode ter sido arquivado" numa queda de rede
@@ -97,10 +189,11 @@ function ModularGameDay({ gameDayId, rsvps }) {
           importá-lo depois de ele ter confirmado presença. */}
       <MyPresenceCard gameDay={gameDay} participants={participants} />
 
-      {/* Corrigir o formato escolhido ao agendar a data. Editar o RESTO (título,
-          horário, local) é na aba Participação, que é quem manda neles — dois
-          lugares editando o mesmo campo divergem. */}
-      {podeConfigurar && <FormatCard gameDay={gameDay} />}
+      {/* Formato, quadras e quem organiza NÃO estão mais aqui: são as
+          configurações DO DIA DE JOGO, e moram no `GameDayModule`
+          (`GameDaySettingsCard`), que é o que faz elas chegarem iguais ao
+          atleta, à arena e ao clube. Editar o RESTO (título, horário, local) é
+          na aba Participação, que é quem manda neles. */}
 
       {/* O que o LOCAL acrescenta: o clube já perguntou quem vem, e essa
           resposta não existe nas outras origens. Trazer a lista para dentro do
@@ -169,94 +262,6 @@ function MyPresenceCard({ gameDay, participants }) {
           <V2Button size="sm" disabled={ocupado} onClick={entrar}>
             <Check className="mr-1.5 h-4 w-4" /> Marcar presença
           </V2Button>
-        )}
-      </div>
-    </V2Surface>
-  );
-}
-
-/**
- * Trocar o formato do dia de jogo — **enquanto não houver partidas**.
- *
- * Depois da primeira partida a troca não é edição, é perda: o Play não guarda
- * placar, o Mexicano deriva as rodadas da classificação e o Rei da Quadra, do
- * resultado anterior. Em vez de apagar o que aconteceu, a tela explica.
- */
-function FormatCard({ gameDay }) {
-  const { data: games = [] } = useGameDayGames(gameDay.id);
-  const update = useUpdateGameDay();
-  const americanoLiveOn = useFeatureFlag(FEATURE_FLAG.GAMEDAY_AMERICANO_LIVE);
-
-  const opcoes = useMemo(() => {
-    const lista = [
-      ...DRAW_FORMATS,
-      GAME_DAY_FORMAT.PLAY,
-      ...(americanoLiveOn ? [GAME_DAY_FORMAT.AMERICANO_LIVE] : []),
-    ];
-    // O formato que o dia JÁ TEM entra na lista mesmo com a flag desligada:
-    // uma flag desligada tira a opção de ESCOLHER, nunca pode deixar o seletor
-    // sem a opção correspondente ao que está gravado.
-    return lista.includes(gameDay.format) ? lista : [gameDay.format, ...lista];
-  }, [americanoLiveOn, gameDay.format]);
-
-  const temPartidas = games.length > 0;
-
-  const trocar = async (format) => {
-    if (format === gameDay.format) return;
-    try {
-      await update.mutateAsync({ id: gameDay.id, patch: { format, play_courts: gameDay.play_courts || 1 } });
-      toast.success('Formato alterado.');
-    } catch (err) {
-      toast.error(err.message || 'Não foi possível alterar o formato.');
-    }
-  };
-
-  const mudarQuadras = async (valor) => {
-    const n = Math.max(1, Math.min(12, Number(valor) || 1));
-    if (n === (gameDay.play_courts || 1)) return;
-    try {
-      await update.mutateAsync({ id: gameDay.id, patch: { play_courts: n } });
-    } catch (err) {
-      toast.error(err.message || 'Não foi possível alterar as quadras.');
-    }
-  };
-
-  return (
-    <V2Surface className="rounded-xl">
-      <div className="grid gap-3 p-4 sm:grid-cols-2">
-        <div className="space-y-1.5">
-          <Label htmlFor={`fmt-${gameDay.id}`}>Formato</Label>
-          <select
-            id={`fmt-${gameDay.id}`}
-            className="h-10 w-full rounded-md border border-gray-200 bg-white px-3 text-sm text-ink disabled:bg-paper disabled:text-gray-400"
-            value={gameDay.format}
-            disabled={temPartidas || update.isPending}
-            onChange={(e) => trocar(e.target.value)}
-          >
-            {opcoes.map((v) => <option key={v} value={v}>{GAME_DAY_FORMAT_LABELS[v] || v}</option>)}
-          </select>
-          {temPartidas && (
-            <p className="text-xs text-gray-500">
-              O dia já tem partidas. Para trocar de formato, apague as partidas primeiro — cada
-              formato deriva as rodadas de um jeito, e a troca perderia o que já aconteceu.
-            </p>
-          )}
-        </div>
-        {isCourtByCourtFormat(gameDay.format) && (
-          <div className="space-y-1.5">
-            <Label htmlFor={`qd-${gameDay.id}`}>Quadras</Label>
-            <input
-              id={`qd-${gameDay.id}`}
-              type="number"
-              min={1}
-              max={12}
-              className="h-10 w-full rounded-md border border-gray-200 bg-white px-3 text-sm text-ink"
-              defaultValue={gameDay.play_courts || 1}
-              disabled={update.isPending}
-              onBlur={(e) => mudarQuadras(e.target.value)}
-            />
-            <p className="text-xs text-gray-500">Quantas quadras rodam ao mesmo tempo.</p>
-          </div>
         )}
       </div>
     </V2Surface>

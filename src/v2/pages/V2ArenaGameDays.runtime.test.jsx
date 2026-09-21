@@ -43,6 +43,11 @@ vi.mock('@/modules/games/hooks/useGameDays', () => ({
   useSetPlayParticipantPartner: () => ({ mutate: vi.fn(), mutateAsync: vi.fn(async () => ({})), isPending: false }),
   useGameDay: () => ({ data: estado.gameDay, isLoading: false }),
   useGameDayParticipants: () => ({ data: estado.participantes }),
+  // O módulo compartilhado passou a trazer as CONFIGURAÇÕES do dia (formato,
+  // quadras, quem organiza) — e esta página renderiza o módulo de verdade, de
+  // propósito, para provar que o miolo chega à arena.
+  useGameDayGames: () => ({ data: [], isError: false }),
+  useUpdateGameDay: () => ({ mutateAsync: vi.fn(async () => ({})), isPending: false }),
 }));
 // Os organizadores são o miolo COMPARTILHADO com o ambiente do atleta e já têm
 // testes próprios; aqui interessa o enquadramento da arena em volta deles.

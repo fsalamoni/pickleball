@@ -112,6 +112,41 @@ describe('⭐ o miolo do dia de jogo tem UMA fonte', () => {
     expect(aba).toContain('GameDayOrganizer');
   });
 
+  it('⭐ as CONFIGURAÇÕES do dia também saem do módulo', () => {
+    // 🐞 Enquanto cada origem montava a própria configuração, o dia de jogo do
+    // CLUBE ficou sem "quem organiza as partidas" (nascia aberto e não dava
+    // para fechar) e sem o número de quadras nos formatos de GRADE — que é o
+    // padrão de uma data de clube. Cada tela, isolada, funcionava.
+    const modulo = semComentarios(ler('src/v2/components/games/GameDayModule.jsx'));
+    expect(modulo, 'o módulo parou de montar as configurações do dia')
+      .toContain('GameDaySettingsCard');
+
+    Object.entries(TELAS).forEach(([nome, caminho]) => {
+      const src = semComentarios(ler(caminho));
+      expect(src, `${caminho} voltou a montar as configurações por fora do módulo`)
+        .not.toContain('GameDaySettingsCard');
+    });
+  });
+
+  it('⭐ formato, quadras e quem organiza vivem num lugar só', () => {
+    const cartao = semComentarios(ler('src/v2/components/games/GameDaySettingsCard.jsx'));
+    ['format', 'play_courts', 'manage_mode'].forEach((campo) => {
+      expect(cartao, `o cartão de configurações não cuida de ${campo}`).toContain(campo);
+    });
+
+    // Os diálogos de CRIAÇÃO seguem oferecendo os três — é quando a escolha é
+    // feita. O que eles não podem é continuar oferecendo na EDIÇÃO: dois
+    // lugares editando o mesmo campo divergem, e foi assim que o clube ficou
+    // para trás.
+    const atleta = semComentarios(ler('src/v2/components/games/CreateGameDayDialog.jsx'));
+    expect(atleta, 'o diálogo do atleta voltou a editar o formato').toContain('!isEdit && showFormatSelect');
+    expect(atleta, 'o diálogo do atleta voltou a editar as quadras').toContain('!isEdit && mostrarQuadras');
+
+    const arena = semComentarios(ler('src/v2/components/games/ArenaGameDayDialog.jsx'));
+    expect(arena, 'o diálogo da arena voltou a editar formato/modo na edição')
+      .toContain('{!editando && (');
+  });
+
   it('⭐ o legado do clube continua de pé (nada foi migrado)', () => {
     // Uma data sem `game_day_id` é servida pelo organizador de sempre, lendo e
     // escrevendo onde sempre leu e escreveu. Se este arquivo sumir, os dias de

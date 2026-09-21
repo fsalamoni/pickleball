@@ -35,6 +35,7 @@ import AthleteAmericanoLiveOrganizer from '@/v2/components/games/AthleteAmerican
 import AthletePlayParticipant from '@/v2/components/games/AthletePlayParticipant';
 import { isPlayFormat, isAmericanoLiveFormat } from '@/modules/clubs/domain/gameDayFormats';
 import GameDayRulesCard from '@/v2/components/games/GameDayRulesCard';
+import GameDaySettingsCard from '@/v2/components/games/GameDaySettingsCard';
 
 /**
  * As ferramentas que acompanham o dia de jogo: o tutorial do FORMATO e o
@@ -104,6 +105,13 @@ export default function GameDayModule({ gameDay, podeGerenciar = false }) {
       {/* O que ESTE dia é — formato, placar, ranking, dupla vinculada. Fica
           aqui, no módulo, para chegar às TRÊS origens por construção. */}
       <GameDayRulesCard gameDay={gameDay} podeGerenciar={podeGerenciar} />
+      {/* E o que dá para MUDAR nele — formato, quadras e quem organiza as
+          partidas. Pela mesma razão: enquanto cada origem montava a própria
+          configuração, o clube ficou sem "quem organiza" e sem as quadras nos
+          formatos de grade. Quem pode ver é decidido lá dentro
+          (`podeConfigurar`), que já soma criador, gestor da arena e admin do
+          clube. */}
+      <GameDaySettingsCard gameDay={gameDay} />
       <Miolo gameDay={gameDay} podeGerenciar={podeGerenciar} />
     </>
   );

@@ -10,6 +10,10 @@
  * de jogo também, e não recolher de novo a cada dia.
  */
 export const GAME_DAY_SECTION = Object.freeze({
+  /* Configurações do dia — IGUAIS em toda origem (atleta, arena e clube),
+     porque o cartão é montado dentro do `GameDayModule`. */
+  SETTINGS: 'gameday:settings',
+
   /* Dia de jogo do atleta — grade (Americano, Mexicano, Rei da Quadra) */
   PARTICIPANTS: 'gameday:participants',
   GAMES: 'gameday:games',

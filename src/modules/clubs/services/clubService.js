@@ -855,6 +855,27 @@ export async function addEventDate(eventId, data, user) {
   return ref.id;
 }
 
+/**
+ * Amarra uma data JÁ EXISTENTE ao módulo de dia de jogo.
+ *
+ * ⚠️ Existe separado de `updateEventDate` de propósito: aquela função tem uma
+ * lista fechada de campos (`date_time`, `location`, `note`), e essa lista é uma
+ * proteção — é ela que garante que a edição corriqueira de uma data nunca
+ * mexa, de tabela, no campo que decide QUAL CASA serve aquele dia de jogo.
+ * Trocar a casa é um ato deliberado, e por isso tem porta própria.
+ *
+ * Quem chama confere antes que a data está VAZIA (`canUpgradeLegacyDate`):
+ * as duas casas guardam em lugares diferentes, então converter uma data com
+ * gente ou jogo esconderia esses documentos da tela.
+ */
+export async function setEventDateGameDay(eventId, dateId, gameDayId) {
+  if (!eventId || !dateId || !gameDayId) throw new Error('Dados insuficientes.');
+  await updateDoc(doc(db, COL.events, eventId, COL.eventDates, dateId), {
+    game_day_id: gameDayId,
+    updated_at: serverTimestamp(),
+  });
+}
+
 export async function updateEventDate(eventId, dateId, updates) {
   const allowed = ['date_time', 'location', 'note'];
   const sanitized = {};

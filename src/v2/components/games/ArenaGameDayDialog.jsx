@@ -269,19 +269,28 @@ export default function ArenaGameDayDialog({
             </div>
           </div>
 
-          <div>
-            <Label htmlFor="agd-formato">Formato</Label>
-            <select
-              id="agd-formato"
-              value={form.format}
-              onChange={(e) => set({ format: e.target.value })}
-              className="mt-1 w-full rounded-2xl border border-gray-200 bg-paper-pure px-4 py-2.5 text-sm text-ink"
-            >
-              {formatos.map((f) => (
-                <option key={f} value={f}>{GAME_DAY_FORMAT_LABELS[f] || f}</option>
-              ))}
-            </select>
-          </div>
+          {/* ⚠️ Formato e "quem conduz" aparecem só na CRIAÇÃO. Depois de
+              criado, eles — junto com as quadras — vivem no cartão de
+              configurações do próprio dia de jogo (`GameDaySettingsCard`), que
+              é o mesmo no atleta, na arena e no clube. Dois lugares editando o
+              mesmo campo divergem. As quadras e os horários RESERVADOS seguem
+              aqui, na edição: são deste diálogo e de mais ninguém, porque é o
+              que fecha a grade do calendário. */}
+          {!editando && (
+            <div>
+              <Label htmlFor="agd-formato">Formato</Label>
+              <select
+                id="agd-formato"
+                value={form.format}
+                onChange={(e) => set({ format: e.target.value })}
+                className="mt-1 w-full rounded-2xl border border-gray-200 bg-paper-pure px-4 py-2.5 text-sm text-ink"
+              >
+                {formatos.map((f) => (
+                  <option key={f} value={f}>{GAME_DAY_FORMAT_LABELS[f] || f}</option>
+                ))}
+              </select>
+            </div>
+          )}
 
           {/* 2 — quadras e horários ------------------------------------------ */}
           <section className="rounded-3xl border border-gray-100 bg-paper p-4">
@@ -424,6 +433,7 @@ export default function ArenaGameDayDialog({
           </section>
 
           {/* 4 — quem conduz --------------------------------------------------- */}
+          {!editando && (
           <section className="rounded-3xl border border-gray-100 bg-paper p-4">
             <h3 className="flex items-center gap-2 font-display text-sm font-bold text-ink">
               <ShieldCheck className="h-4 w-4 text-gray-400" /> Quem conduz o dia de jogo
@@ -443,6 +453,7 @@ export default function ArenaGameDayDialog({
               />
             </div>
           </section>
+          )}
 
           <div>
             <Label htmlFor="agd-obs">Observações (opcional)</Label>

@@ -23,7 +23,22 @@ vi.mock('sonner', () => ({ toast: { success: vi.fn(), error: vi.fn() } }));
 vi.mock('@/core/lib/FirebaseAuthContext', () => ({ useAuth: () => auth }));
 vi.mock('@/modules/arenas/hooks/useArenas', () => ({ useMyManagedArenas: () => ({ data: [] }) }));
 const papel = { role: 'admin' };
-vi.mock('@/modules/clubs/hooks/useClubs', () => ({ useMyMembership: () => ({ data: papel }) }));
+// A data LEGADA também consulta o clube e as listas do evento, para decidir se
+// a conversão para o módulo é segura (só quando a data está VAZIA).
+const legado = { participants: [], games: [], falhou: false };
+vi.mock('@/modules/clubs/hooks/useClubs', () => ({
+  useMyMembership: () => ({ data: papel }),
+  useClub: () => ({ data: { id: 'clube1', name: 'Clube' } }),
+  useEventParticipants: () => ({ data: legado.participants, isError: legado.falhou }),
+  useEventGames: () => ({ data: legado.games, isError: legado.falhou }),
+}));
+const converteu = { chamadas: [] };
+vi.mock('@/modules/games/hooks/useClubGameDay', () => ({
+  useUpgradeEventDate: () => ({
+    mutateAsync: vi.fn(async (args) => { converteu.chamadas.push(args); return { gameDayId: 'novo' }; }),
+    isPending: false,
+  }),
+}));
 
 // As duas casas, trocadas por sentinelas: o que importa aqui é QUAL delas a
 // data escolhe, não o que cada uma desenha por dentro.
@@ -67,6 +82,10 @@ beforeEach(() => {
   estado.participants = [];
   estado.games = [];
   papel.role = 'admin';
+  legado.participants = [];
+  legado.games = [];
+  legado.falhou = false;
+  converteu.chamadas = [];
 });
 
 afterEach(() => {
@@ -111,60 +130,66 @@ describe('⭐ a data do evento escolhe a casa', () => {
   });
 });
 
-describe('⭐ trocar o formato: só enquanto não houver partidas', () => {
-  beforeEach(() => {
-    estado.gameDay = {
-      id: 'gd1', title: 'Rachão', format: 'americano', club_id: 'clube1', created_by: 'u1', play_courts: 1,
-    };
+/*
+ * ⭐ Formato, quadras e "quem organiza" NÃO se testam mais aqui.
+ *
+ * Eles deixaram de ser um cartão escrito à mão nesta aba e viraram as
+ * CONFIGURAÇÕES DO DIA DE JOGO, dentro do `GameDayModule` — que é o que faz
+ * elas chegarem iguais ao atleta, à arena e ao clube. Os mesmos invariantes
+ * (trava com partidas, regra da flag, quem pode configurar) estão em
+ * `src/v2/components/games/gameDaySettings.runtime.test.jsx`, agora valendo
+ * para as três origens em vez de só para o clube.
+ */
+
+describe('⭐ a data legada ganha uma PORTA — estreita de propósito', () => {
+  const dataLegada = { id: 'd1', date_time: '2026-09-25T19:00' };
+  const abrir = () => render(
+    <ClubGameDayTab event={evento} clubId="clube1" date={dataLegada} />,
+  );
+
+  it('⭐ data VAZIA pode ser convertida: não há documento para esconder', () => {
+    const texto = abrir();
+    expect(texto).toContain('Ativar o módulo completo');
+    expect(texto).toContain('ainda está vazia');
+    // E o organizador de sempre continua na tela — nada foi substituído.
+    expect(texto).toContain('ORGANIZADOR LEGADO DO CLUBE');
   });
 
-  const seletor = () => container.querySelector('#fmt-gd1');
-
-  it('⭐ sem partidas, o formato é editável', () => {
-    render(<ClubGameDayTab event={evento} clubId="clube1" date={{ id: 'd2', game_day_id: 'gd1' }} />);
-    expect(seletor()).toBeTruthy();
-    expect(seletor().disabled).toBe(false);
+  it('⭐ com PARTIDA na data, não converte — e diz por quê', () => {
+    legado.games = [{ id: 'g1', date_id: 'd1' }];
+    const texto = abrir();
+    expect(texto).not.toContain('Ativar o módulo completo');
+    expect(texto).toContain('partidas');
+    expect(texto).toContain('ORGANIZADOR LEGADO DO CLUBE');
   });
 
-  it('⭐ com partidas, trava e EXPLICA em vez de só desabilitar', () => {
-    estado.games = [{ id: 'g1', round: 1 }];
-    const texto = render(<ClubGameDayTab event={evento} clubId="clube1" date={{ id: 'd2', game_day_id: 'gd1' }} />);
-    expect(seletor().disabled).toBe(true);
-    expect(texto).toContain('já tem partidas');
+  it('⭐ com ATLETA inserido na data, também não', () => {
+    legado.participants = [{ id: 'p1', date_id: 'd1' }];
+    const texto = abrir();
+    expect(texto).not.toContain('Ativar o módulo completo');
+    expect(texto).toContain('atletas');
   });
 
-  it('⭐ o Americano aprimorado só aparece com a flag ligada', () => {
-    // `useFeatureFlag` está mockado como false neste arquivo.
-    const valores = Array.from(seletorOpcoes());
-    expect(valores).not.toContain('americano_live');
-    expect(valores).toContain('americano');
-    expect(valores).toContain('play');
+  it('⭐ dado de OUTRA data do mesmo evento não bloqueia esta', () => {
+    legado.participants = [{ id: 'p1', date_id: 'outra' }];
+    legado.games = [{ id: 'g1', date_id: 'outra' }];
+    expect(abrir()).toContain('Ativar o módulo completo');
   });
 
-  function seletorOpcoes() {
-    render(<ClubGameDayTab event={evento} clubId="clube1" date={{ id: 'd2', game_day_id: 'gd1' }} />);
-    return Array.from(seletor().querySelectorAll('option')).map((o) => o.value);
-  }
-
-  it('o formato GRAVADO aparece mesmo com a flag desligada (senão o seletor mentiria)', () => {
-    estado.gameDay = { ...estado.gameDay, format: 'americano_live' };
-    render(<ClubGameDayTab event={evento} clubId="clube1" date={{ id: 'd2', game_day_id: 'gd1' }} />);
-    const valores = Array.from(seletor().querySelectorAll('option')).map((o) => o.value);
-    expect(valores).toContain('americano_live');
+  it('⭐ consulta FALHANDO não oferece converter — vazio desconhecido não é vazio', () => {
+    legado.falhou = true;
+    const texto = abrir();
+    expect(texto).not.toContain('Ativar o módulo completo');
+    expect(texto).toContain('Não deu para conferir');
   });
 
-  it('⭐ membro COMUM do clube não troca o formato (nem sendo organizador do dia)', () => {
-    papel.role = 'member';
-    estado.gameDay = { ...estado.gameDay, created_by: 'outra-pessoa', manage_mode: 'participants' };
-    estado.participants = [{ id: 'p1', user_id: 'u1' }];
-    render(<ClubGameDayTab event={evento} clubId="clube1" date={{ id: 'd2', game_day_id: 'gd1' }} />);
-    expect(seletor()).toBeNull();
-  });
-
-  it('⭐ ADMINISTRADOR do clube troca o formato mesmo sem ter agendado a data', () => {
-    estado.gameDay = { ...estado.gameDay, created_by: 'outra-pessoa' };
-    render(<ClubGameDayTab event={evento} clubId="clube1" date={{ id: 'd2', game_day_id: 'gd1' }} />);
-    expect(seletor()).toBeTruthy();
+  it('a data do MÓDULO não mostra a porta (já está do outro lado)', () => {
+    estado.gameDay = { id: 'gd1', title: 'Rachão', format: 'americano', club_id: 'clube1', created_by: 'u1' };
+    const texto = render(
+      <ClubGameDayTab event={evento} clubId="clube1" date={{ id: 'd2', game_day_id: 'gd1' }} />,
+    );
+    expect(texto).not.toContain('Ativar o módulo completo');
+    expect(texto).not.toContain('organizador antigo');
   });
 });
 

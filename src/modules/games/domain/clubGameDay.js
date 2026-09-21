@@ -54,6 +54,59 @@ export function isModularEventDate(date) {
 }
 
 /**
+ * Uma data LEGADA pode ser convertida para o módulo sem perder nada?
+ *
+ * ## A regra, e por que ela é esta
+ *
+ * O legado não é migrado — nem aqui. As duas casas guardam em lugares
+ * diferentes (`club_events/{id}/{participants,games}` contra
+ * `game_days/{id}/…`), então converter uma data que JÁ TEM gente inscrita ou
+ * jogo lançado esconderia esses documentos da tela: eles continuariam no banco,
+ * intactos, mas ninguém mais os veria — e um dia de jogo já publicado costuma
+ * estar no ranking de quem jogou.
+ *
+ * Só que existe um caso em que **não há nada para mover**: a data ainda VAZIA.
+ * Aí a conversão não é migração, é escolher a casa antes de entrar nela — e é o
+ * que deixa uma data agendada há meses receber Play, Americano aprimorado,
+ * telão, tutorial, administradores nomeados e as configurações do dia.
+ *
+ * As contagens são SEMPRE recortadas por `date_id`: um evento semanal tem
+ * dezenas de datas no mesmo `club_events/{id}`, e olhar o evento inteiro
+ * reprovaria uma data vazia por causa de outra que já foi jogada.
+ *
+ * @param {object} args
+ * @param {string} args.dateId
+ * @param {Array<{date_id?: string|null}>} [args.participants] do EVENTO inteiro
+ * @param {Array<{date_id?: string|null}>} [args.games]        do EVENTO inteiro
+ * @returns {{ ok: boolean, motivo: string|null, participantes: number, jogos: number }}
+ */
+export function canUpgradeLegacyDate({ dateId, participants = [], games = [] } = {}) {
+  const daData = (lista) => (Array.isArray(lista) ? lista : [])
+    .filter((x) => (x?.date_id || null) === (dateId || null));
+
+  const participantes = daData(participants).length;
+  const jogos = daData(games).length;
+
+  if (jogos > 0) {
+    return {
+      ok: false,
+      motivo: 'Esta data já tem partidas registradas. Convertê-la esconderia o que já foi jogado.',
+      participantes,
+      jogos,
+    };
+  }
+  if (participantes > 0) {
+    return {
+      ok: false,
+      motivo: 'Esta data já tem atletas inseridos. Convertê-la esconderia a lista de quem está nela.',
+      participantes,
+      jogos,
+    };
+  }
+  return { ok: true, motivo: null, participantes, jogos };
+}
+
+/**
  * Quebra o `date_time` do evento (`datetime-local`, sem fuso) em `date` e
  * `time`, que é como o dia de jogo guarda.
  *

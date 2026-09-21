@@ -307,7 +307,20 @@ function GamesSection({ gameDay, participants, isOwner }) {
   const [rounds, setRounds] = useState(0);
   // Quadras simultâneas disponíveis, como TEXTO livre (vazio = automático).
   // Guardar texto evita o input "pular" enquanto se digita.
-  const [courtsText, setCourtsText] = useState('');
+  //
+  // ⚠️ Semeado pelo que o dia de jogo TEM configurado, para o número deixar de
+  // ser redigitado a cada sorteio e passar a ser uma propriedade do dia — é o
+  // que faz "quantas quadras" existir também no clube e na arena, onde este
+  // diálogo é o mesmo.
+  //
+  // Só a partir de DOIS, e a razão não é estética: `play_courts` nasce valendo
+  // 1 em toda criação, inclusive nos formatos de grade, onde o campo nunca
+  // significou nada. Tratar esse 1 como escolha transformaria todo Americano
+  // já existente num dia de UMA quadra — o valor 1 é indistinguível de "não
+  // configurado". Quem quiser mesmo uma quadra só digita aqui, como sempre.
+  const [courtsText, setCourtsText] = useState(
+    () => (Number(gameDay?.play_courts) >= 2 ? String(Number(gameDay.play_courts)) : ''),
+  );
   const [format, setFormat] = useState(gameDay.format || GAME_DAY_FORMAT.AMERICANO);
   const [drawOpen, setDrawOpen] = useState(false);
   const [replaceUnscored, setReplaceUnscored] = useState(false);
