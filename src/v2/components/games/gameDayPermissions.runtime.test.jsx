@@ -101,6 +101,15 @@ describe('dia de jogo RESTRITO (o padrão)', () => {
     expect(texto()).toContain('Resultados no ranking');
   });
 
+  it('o criador segue vendo os comandos mesmo fora da lista de participantes', () => {
+    auth.user = { uid: DONO };
+    dados.participants = dados.participants.filter((p) => p.user_id !== DONO);
+    render(dia());
+    expect(temBotao('Inserir atletas')).toBe(true);
+    expect(temBotao('Sortear jogos')).toBe(true);
+    expect(temBotao('Inserir partida')).toBe(true);
+  });
+
   /*
    * O painel "Organização" deixou de ser um cartão à parte: virou uma seção do
    * cartão "Configurações do dia de jogo", montado pelo MÓDULO (e não por cada
