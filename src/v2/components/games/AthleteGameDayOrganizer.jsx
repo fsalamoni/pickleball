@@ -196,7 +196,7 @@ function ParticipantsSection({ gameDay, participants, isLoading, isOwner }) {
                     {parceiroDe(p) ? <Unlink className="h-3.5 w-3.5" /> : <Link2 className="h-3.5 w-3.5" />}
                   </V2Button>
                 )}
-                {isOwner && p.source !== GD_PARTICIPANT_SOURCE.OWNER && (
+                {isOwner && (
                   <V2Button onClick={() => handleRemove(p.id)} className="text-gray-400 transition-colors hover:text-red-600" title="Remover">
                     <Trash2 className="h-3.5 w-3.5" />
                   </V2Button>
