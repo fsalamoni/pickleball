@@ -90,14 +90,6 @@ export async function createGameDay(input, actor, profile) {
   };
   await setDoc(doc(db, COL, id), payload);
 
-  // O criador entra como primeiro participante.
-  await addGameDayParticipant(id, {
-    user_id: actor.uid, name: creatorName, photo_url: creatorPhoto,
-    source: GD_PARTICIPANT_SOURCE.OWNER,
-    play_level: profile?.level || profile?.leveling_level || null,
-    play_gender: profile?.gender || null,
-  }, actor);
-
   // Dia de jogo público → publica convite em "Procura-se jogo".
   let openGameId = null;
   if (isPublicGameDay(value)) {
