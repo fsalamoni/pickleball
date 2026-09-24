@@ -10,6 +10,7 @@
 
 import React, { useMemo, useState } from 'react';
 import { Link, Navigate } from 'react-router-dom';
+import { MyTaughtArenaClasses } from '@/v2/components/arenas/classes/MyArenaClasses';
 import { toast } from 'sonner';
 import {
   GraduationCap, Plus, Trash2, Clock, CalendarDays, CalendarOff, Check, X,
@@ -302,8 +303,12 @@ function V2CoachAgendaContent() {
   if (coachLoading) return <div className="mx-auto max-w-[900px] p-4"><V2Skeleton lines={6} /></div>;
 
   if (!coach) {
+    // Professor da ARENA sem perfil de professor da plataforma: a agenda dele
+    // nas arenas vem primeiro — sem isto, ele abria "Minha agenda" e lia que
+    // não é professor, com aulas marcadas.
     return (
-      <div className="mx-auto max-w-[700px] p-4">
+      <div className="mx-auto max-w-[700px] space-y-6 p-4">
+        <MyTaughtArenaClasses />
         <V2Surface>
           <V2EmptyState
             icon={GraduationCap}
@@ -381,6 +386,8 @@ function V2CoachAgendaContent() {
         {tab === 'agenda' && (
           <>
             <AvailabilityEditor coachId={coachId} />
+            {/* As aulas que ele dá na agenda das ARENAS (módulo de aulas). */}
+            <MyTaughtArenaClasses />
             {sharedBookingsOn && <CoachCourtBookingsSection coach={coach} />}
             <V2Surface>
               <h2 className="mb-4 font-display text-lg font-bold text-ink">Próximas aulas</h2>

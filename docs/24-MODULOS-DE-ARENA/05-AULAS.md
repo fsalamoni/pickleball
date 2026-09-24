@@ -4,6 +4,13 @@
 > `classes_marketplace`
 > **Chave-mestra**: flag `arena_modules` (default OFF).
 > **Banco**: zero coleção nova, zero índice novo, zero regra nova.
+>
+> **Atualização 2026-09-24 (Onda BF)**: as aulas passaram a ser PARTE da
+> arena — seção **Aulas** na Central (Agenda · Professores, lista única),
+> "Aulas e professores" na página da arena, aulas em `/minhas-aulas` e `/aulas`.
+> A divisão da matrícula passou a ser decidida pelo serviço, o professor passou
+> a ver os alunos (regra de `arena_class_bookings`) e a aula dada deixou de
+> sumir. Ver `09-INTEGRACAO-NA-ARENA.md` §5.
 
 ---
 

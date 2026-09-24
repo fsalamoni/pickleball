@@ -281,6 +281,9 @@ export const ARENA_MODULE_DETAIL = Object.freeze({
     },
     manage: '/arenas/:arenaId/gerir/aulas',
     public: '/arenas/:arenaId/aulas',
+    // Integrado à arena (2026-09-24): a gestão é a seção Aulas da Central, e
+    // a página da arena tem a seção "Aulas e professores". Sem atalho.
+    native: true,
     collections: ['arena_coaches', 'arena_classes', 'arena_class_bookings'],
   },
   [ARENA_MODULE_ID.CLASSES_CATALOG]: {

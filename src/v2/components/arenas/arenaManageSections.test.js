@@ -5,7 +5,9 @@
  *  1. ⭐ nenhuma aba tem o mesmo valor em duas seções — a seção ativa é
  *     achada pela aba, e um valor repetido tornaria a segunda inalcançável;
  *  2. ⭐ com os módulos desligados, a Central é exatamente a de antes;
- *  3. módulo ligado vira SEÇÃO, logo depois de Reservas.
+ *  3. módulo ligado vira SEÇÃO, logo depois de Reservas;
+ *  4. ⭐ com Aulas ligado, "Professores" sai de Equipe e vira a lista única da
+ *     seção Aulas — com o MESMO valor, para links antigos continuarem valendo.
  */
 import { describe, it, expect } from 'vitest';
 import { buildArenaSections } from './arenaManageSections.js';
@@ -13,7 +15,7 @@ import { buildArenaSections } from './arenaManageSections.js';
 const BASE = {
   coachResidentOn: true, linkedClubsOn: true, crmOn: true, opsKpisOn: true, arenaModulesOn: true,
 };
-const TUDO_LIGADO = { ...BASE, modulos: { membros: true, pacotes: true } };
+const TUDO_LIGADO = { ...BASE, modulos: { membros: true, pacotes: true, aulas: true } };
 
 const valores = (sections) => sections.flatMap((s) => s.tabs.map((t) => t.value));
 
@@ -48,5 +50,24 @@ describe('buildArenaSections', () => {
       expect(s.tabs.length).toBeGreaterThan(0);
       s.tabs.forEach((t) => expect(t.label).toBeTruthy());
     });
+  });
+
+  it('⭐ Aulas: agenda e professores numa seção só, depois de Membros', () => {
+    const secs = buildArenaSections(TUDO_LIGADO);
+    const ids = secs.map((s) => s.id);
+    expect(ids.indexOf('aulas')).toBe(ids.indexOf('membros') + 1);
+    const aulas = secs.find((s) => s.id === 'aulas');
+    expect(aulas.tabs.map((t) => t.value)).toEqual(['aulas', 'professores']);
+  });
+
+  it('⭐ com Aulas ligado, Professores SAI de Equipe (uma lista, num lugar)', () => {
+    const equipe = buildArenaSections(TUDO_LIGADO).find((s) => s.id === 'equipe');
+    expect(equipe.tabs.map((t) => t.value)).not.toContain('professores');
+  });
+
+  it('com Aulas desligado, Professores continua em Equipe, como era', () => {
+    const secs = buildArenaSections({ ...BASE, modulos: { membros: true } });
+    expect(secs.find((s) => s.id === 'aulas')).toBeUndefined();
+    expect(secs.find((s) => s.id === 'equipe').tabs.map((t) => t.value)).toContain('professores');
   });
 });

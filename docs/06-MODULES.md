@@ -87,6 +87,15 @@ PDV, membros, ligas, marketing, IoT, operations, matchmaking.
   `V2ArenaMarketing`, `V2ArenaOperations`, `V2ArenaMatchmaking`,
   `V2ArenaModules`, `V2ArenaOpenMatch`, `V2ArenaAdvanced`, `V2ArenaAdminOpenMatch`,
   `V2ArenaAdminMembers`, `V2ArenaCoaches` (Sistema C).
+  **Integração dos módulos à arena** (2026-09-24,
+  `docs/24-MODULOS-DE-ARENA/09-INTEGRACAO-NA-ARENA.md`): a Central tem abas
+  endereçáveis (`/arenas/:id/gerir?aba=`) e os módulos `members` e `classes`
+  são `native` — viram SEÇÕES da Central (Membros; Aulas → Agenda +
+  Professores) e seções da página pública (Planos e vantagens; Aulas e
+  professores). `/gerir/membros` e `/gerir/aulas` redirecionam para a aba.
+  Componentes de aulas em `src/v2/components/arenas/classes/`
+  (`ArenaClassesPanel`, `ArenaCoachRoster`, `ArenaClassesSection`,
+  `ProfessorForm`, `MyArenaClasses`).
 - **V1 (legado)**: `ArenasDirectory`, `CreateArena`, `ArenaDetail`,
   `ArenaManage`, `MyBookings`.
 - **services**: CRUD de arenas, `arena_bookings` (com `booking_type`,
@@ -143,6 +152,11 @@ de nível.
 - **V2 (ativo)**: `V2Coaches` (diretório), `V2CoachProfile` (público),
   `V2CoachAgenda` (painel: agenda, alunos, pacotes, biblioteca, loja),
   `V2StudentLessons` (aulas do aluno), `V2ArenaCoaches` (Sistema C).
+  Desde 2026-09-24, `/minhas-aulas` mostra também as matrículas nas aulas das
+  ARENAS e `/aulas` as aulas que a pessoa dá nas arenas (mesmo sem perfil de
+  professor da plataforma). Com o módulo `classes` ligado numa arena, os
+  parceiros (Sistema A) e os professores das aulas (`arena_coaches`) viram UMA
+  lista na Central (`mergeCoachRoster`, junção por uid).
 - **services**: `coachService` (perfil), `coachAvailabilityService`
   (janelas), `coachLessonService` (aulas), `coachStudentService` (vínculo),
   `coachPackageService` (pacotes), `coachPackageSaleService` (créditos),

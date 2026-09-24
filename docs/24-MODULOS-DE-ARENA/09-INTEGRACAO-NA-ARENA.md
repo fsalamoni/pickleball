@@ -48,6 +48,12 @@ de aparência:
 | D3 | `useArenaTournaments` e `useArenaCoaches` existem **duas vezes**, com dados diferentes, e a chave de cache do torneio interno é prefixo da do torneio da plataforma | `useArenaV3.js` × `useTournament.js` / `useCoaches.js` |
 | D4 | "Encerrar torneio" (que pontua o ladder) **não tem botão**: `useFinishTournament` não é usado por tela nenhuma | `V2ArenaLeagues.jsx` |
 | D5 | Parceria **pendente** aparece como "Ativo"; e pausar → retomar grava `active` pulando o aceite do professor | `V2ArenaCoaches.jsx`, `coachService.js` |
+| D6 | Aula marcada como **"dada" SUMIA** da agenda (a lista trazia só `scheduled`) — e com ela o botão de registrar o pagamento de quem esteve lá; a aula cancelada também sumia, e o aviso de cancelamento levava o aluno a uma tela sem ela | `classesService.listArenaClasses` |
+| D7 | O **professor não lia os alunos** da própria aula: a regra de `arena_class_bookings` só deixava o aluno e a arena lerem, e o erro virava "ninguém matriculado" com a turma cheia | `firestore.rules`, `V2ArenaClasses.jsx` |
+| D8 | Comissão configurada em **0% virava 20%** (`Number(x) \|\| 20`: zero é falso) | `V2ArenaClasses.jsx` |
+| D9 | O corte da lista de aulas levava as **FUTURAS**: passando de 100 aulas nunca marcadas como dadas, a aula de amanhã deixava de ocupar a quadra no calendário | `classesService.listArenaClasses` |
+| D11 | A **arena também não via os alunos**: a lista filtrava só por `class_id`, e a regra confere a arena — o Firestore recusava a consulta inteira. Cancelar a aula quebrava no meio: a aula ficava cancelada e **ninguém era avisado** | `classesService.listClassBookings`, `cancelArenaClass` |
+| D10 | O aluno podia se **matricular já "pago"**, marcar a própria matrícula como paga e plantar matrícula na lista de outra arena (a regra só conferia `user_id`) | `firestore.rules` |
 
 ---
 
@@ -100,7 +106,7 @@ novo**; consultas com um `where` só e ordenação em memória.
 | PR | Conteúdo | Estado |
 |---|---|---|
 | I-1 | Abas por URL (D1) + seção **Membros** na gestão + membros na página pública + selo no CRM | ✅ §4 |
-| I-2 | Seção **Aulas**, lista única de professores (Sistema A + aulas), D2, D5, aulas no lado do atleta e do professor | ⏳ |
+| I-2 | Seção **Aulas**, lista única de professores (Sistema A + aulas), D2, D5–D11, aulas no lado do atleta e do professor | ✅ §5 |
 | I-3 | Seção **Torneios** (casa + plataforma), D3, D4, torneios na página pública e no lado do atleta | ⏳ |
 | I-4 | Receita de aulas, planos e torneios no painel de métricas | ⏳ |
 
@@ -154,3 +160,119 @@ Duas regras que a navegação depende:
 - O cartão de pacote virou componente compartilhado
   (`PackageForSaleCard`): importá-lo da página de membros traria a página
   inteira para o pacote da página da arena.
+
+---
+
+## 5. I-2 — Aulas e professores dentro da arena (entregue)
+
+### Onde as aulas estão agora
+
+| Lugar | O quê |
+|---|---|
+| Central → **Aulas** → *Agenda* | a agenda inteira: criar, editar, cancelar, marcar como dada, **alunos e pagamento** — inclusive das aulas que já aconteceram |
+| Central → **Aulas** → *Professores* | a lista ÚNICA: parceiros da plataforma + quem dá aula na agenda, um cartão por pessoa |
+| Página da arena → **Aulas e professores** | as 3 próximas aulas com vaga (matrícula ali mesmo), os professores e, para quem dá aula ali, o atalho para a própria agenda |
+| `/arenas/:id/aulas` | a agenda completa — o atleta se matricula, o professor vê as aulas DELE com os alunos |
+| `/minhas-aulas` | **Aulas nas arenas**: as matrículas de todas as arenas, a próxima primeiro |
+| `/aulas` (painel do professor) | **Aulas que você dá nas arenas** — aparece até para quem não tem perfil de professor da plataforma |
+
+- Com Aulas ligado, **"Professores" sai de Equipe** e vem para a seção Aulas.
+  O valor da aba continua `professores`: `?aba=professores` segue levando ao
+  lugar certo. Desligado, Equipe → Professores é a de parceiros, como era.
+- `/arenas/:id/gerir/aulas` continua existindo (notificação antiga aponta
+  para ela) e leva a `?aba=aulas`. O catálogo marca `classes` como `native`:
+  sem botão de atalho nos dois lados.
+
+### A lista única de professores
+
+`mergeCoachRoster` (`arenas/domain/coachRoster.js`) junta os dois cadastros
+pela conta da pessoa (`arena_coaches.user_id` = `coach_arenas.coach_id`). Cada
+cartão diz o que a pessoa é:
+
+- **parceiro da plataforma**, com a parceria (ativa, pausada, aguardando);
+- **dá aula aqui** — *da casa* (não paga comissão) ou *paga comissão*;
+- parceiro com parceria ATIVA que ainda não dá aula: **"Colocar nas aulas"**,
+  um toque (`arenaCoachFromPartner`: nome, foto, valor/hora do perfil,
+  conta vinculada, `partner: true`). Convite pendente não — o professor nem
+  aceitou.
+
+O formulário "Professor das aulas" oferece esses parceiros primeiro. E quem
+é cadastrado sem conta é avisado: sem o vínculo, o professor não vê a própria
+agenda.
+
+Na página pública, `publicCoachRoster` divulga só parceria ATIVA e professor
+das aulas ATIVO; o parceiro leva ao perfil, o professor só das aulas não tem
+perfil para onde levar.
+
+### A divisão do dinheiro sai do banco (D2, D8)
+
+A matrícula não recebe mais comissão nem "é parceiro" da tela. O serviço
+(`bookClass`) lê:
+
+- o cadastro do professor da aula → `partner`;
+- a configuração do módulo `classes_marketplace` →
+  `commissionPctFrom(config)`, **zero inclusive**.
+
+A tela usa as mesmas fontes só para MOSTRAR a divisão.
+
+### O professor vê os alunos (D7) — a única mudança de regra
+
+`arena_class_bookings` ganhou, na **leitura**, o professor da aula:
+`get(arena_coaches/{coach_id}).data.user_id == request.auth.uid`. Ninguém se
+faz professor — o cadastro é da arena, que só a arena escreve. A consulta do
+professor filtra por `coach_id` (`listCoachClassBookings`), que é o que deixa
+o Firestore provar a condição para a lista inteira; por aula (`class_id`) ele
+recusaria. O professor **lê**: pagamento e "tirar da aula" continuam da arena.
+
+Trocar o professor de uma aula leva o novo `coach_id` às matrículas
+(`updateArenaClass`) — senão o novo professor abriria a aula vazia.
+
+### A arena vê os alunos (D11)
+
+A arena lia as matrículas de uma aula com `where('class_id', '==', …)`. A
+regra deixa a arena ler conferindo `resource.data.arena_id` — e o Firestore
+só aceita uma consulta quando consegue provar a regra para TUDO o que ela pode
+devolver: `class_id` não prova nada sobre a arena, e a consulta era recusada
+sempre. Agora é `arena_id` + `class_id` (só igualdades: o Firestore junta os
+índices de campo único, sem índice composto). E cancelar a aula não depende
+mais de conseguir ler os alunos: se a leitura falhar, a aula continua
+cancelada e o erro vai para o log.
+
+**Vale para o projeto todo**: consulta em coleção de leitura restrita tem de
+filtrar pelo campo que a regra confere (`arena_id` para a arena, `user_id`
+para o dono, `coach_id` para o professor). A mesma família apareceu em PDV,
+fila de espera e indicações — tratada à parte.
+
+### A matrícula não decide o que é da arena (D10)
+
+Na mesma regra, **fechando** o que estava aberto:
+
+- criar: `paid` não pode vir `true`, e o `arena_id` tem de ser o da AULA;
+- atualizar (aluno): não mexe em `paid`, `paid_at`, valores, comissão,
+  `arena_id`, `class_id`, `user_id`, `coach_id`;
+- apagar (desmarcar): igual a antes.
+
+Nenhum caminho do aplicativo fazia isso — a regra só não impedia. Quinze
+asserções novas no emulador (233 no total): metade prova o que passou a
+funcionar, metade o que continua ou passou a ser barrado.
+
+### Agenda por quem olha (D6)
+
+`splitClassAgenda` (`arenas/domain/classAgenda.js`):
+
+| Quem | Próximas | Passadas |
+|---|---|---|
+| Arena | todas (as canceladas com o selo) | todas — é onde se registra o pagamento |
+| Professor | as DELE | as DELE |
+| Atleta | as abertas + as suas (a cancelada aparece com o motivo) | só as suas |
+
+`listArenaClasses(arenaId, { includeClosed: true })` é a agenda; sem a opção
+(calendários) continua trazendo só as de pé — só aula de pé ocupa quadra. E o
+corte por limite passou a levar as MAIS ANTIGAS (D9).
+
+### Banco
+
+**Zero coleção, zero índice, zero campo novo.** Uma regra alterada
+(`arena_class_bookings`: leitura do professor + criação/atualização mais
+fechadas), provada no emulador.
+

@@ -27,6 +27,9 @@ import ArenaGameDaysSection from '@/v2/components/arenas/ArenaGameDaysSection';
 import ArenaNpsAsk from '@/v2/components/arenas/ArenaNpsAsk';
 import ArenaCheckinAsk from '@/v2/components/arenas/ArenaCheckinAsk';
 import ArenaMembershipSection from '@/v2/components/arenas/ArenaMembershipSection';
+import ArenaClassesSection from '@/v2/components/arenas/classes/ArenaClassesSection';
+import { useArenaModules } from '@/modules/arenas/hooks/useArenaModules';
+import { ARENA_MODULE_ID } from '@/modules/arenas/domain/modules';
 import { formatDateShortBR } from '@/modules/arenas/domain/calendar';
 import ArenaModuleShortcuts from '@/v2/components/arenas/ArenaModuleShortcuts';
 import { isPixConfigured, PIX_KEY_TYPE_LABELS } from '@/modules/arenas/domain/pix_payment';
@@ -246,7 +249,7 @@ function V2ArenaDetailContent({ arenaId, user, arena, managed, bookings, isLoadi
 
       {/* Torneios + Professores residentes (Sprint 4) */}
       <ArenaTournamentsSection arenaId={arenaId} />
-      <ArenaCoachesSection arenaId={arenaId} />
+      <ArenaTeachingSection arena={arena} />
       {linkedClubsOn && (
         <div className="mt-6">
           <LinkedClubsSection ownerType="arena" ownerId={arenaId} title="Clubes da arena" />
@@ -365,6 +368,27 @@ function ArenaTournamentsSection({ arenaId }) {
       </div>
     </V2Surface>
   );
+}
+
+/**
+ * Professores (e, com o módulo de aulas, as AULAS) na página da arena.
+ *
+ * Com `classes` ligado, a seção "Aulas e professores" substitui a antiga
+ * "Professores parceiros" — os parceiros continuam lá, junto de quem dá aula
+ * na agenda, e as próximas aulas vêm com a matrícula ali mesmo. Desligado, a
+ * página é exatamente a de antes.
+ */
+function ArenaTeachingSection({ arena }) {
+  const { isOn, isLoading } = useArenaModules(arena.id);
+  if (isLoading) return null;
+  if (isOn(ARENA_MODULE_ID.CLASSES)) {
+    return (
+      <div className="mt-6 empty:mt-0">
+        <ArenaClassesSection arena={arena} />
+      </div>
+    );
+  }
+  return <ArenaCoachesSection arenaId={arena.id} />;
 }
 
 function ArenaCoachesSection({ arenaId }) {

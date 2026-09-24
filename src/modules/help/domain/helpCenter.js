@@ -353,6 +353,7 @@ const ATLETA = {
       blocks: [
         p('Em Arenas você encontra quadras por cidade, vê preços e horários, e pede a reserva. A arena responde confirmando ou recusando — você acompanha em "Minhas reservas".'),
         p('Em Aulas você encontra professores, vê o perfil, os pacotes e a agenda, e marca. Suas aulas ficam em "Minhas aulas".'),
+        p('Se a arena tem agenda de aulas, as próximas aparecem na própria página dela, em "Aulas e professores" — dá para se matricular ali mesmo. As matrículas de todas as arenas também ficam em "Minhas aulas".'),
         link('/arenas', 'Procurar quadra'),
         link('/minhas-reservas', 'Minhas reservas'),
         link('/coaches', 'Procurar professor'),
@@ -474,8 +475,8 @@ const ARENA = {
         p('A gestão da arena é modular. Você liga só os módulos que fazem sentido para a sua operação — e a tela fica só com o que você usa.'),
         list(
           'Open match e matchmaking — jogos abertos na sua arena.',
-          'Membros — sua base de alunos/mensalistas.',
-          'Aulas — a agenda de aulas na sua estrutura.',
+          'Membros — sua base de alunos/mensalistas. Ligado, vira a seção MEMBROS da gestão.',
+          'Aulas — a agenda de aulas na sua estrutura. Ligado, vira a seção AULAS da gestão (agenda + professores), e a página da arena ganha "Aulas e professores".',
           'Torneios — torneios sediados por você.',
           'Marketing — divulgação.',
           'Operações — a rotina do dia a dia.',
@@ -519,6 +520,7 @@ const PROFESSOR = {
       keywords: ['agenda', 'calendário', 'aula', 'horário'],
       blocks: [
         p('O painel do professor tem a AGENDA (o que vem a seguir) e o CALENDÁRIO (a visão do período). É por ali que você acompanha e organiza as aulas marcadas.'),
+        p('Dá aula na agenda de uma arena? Quando a arena vincula o cadastro de professor à sua conta, as aulas dela aparecem na sua agenda — e, abrindo a aula, você vê os alunos matriculados.'),
         link('/aulas', 'Minha agenda'),
         warn('Mantenha a agenda fiel à realidade: ela é o que o aluno vê ao tentar marcar.'),
       ],

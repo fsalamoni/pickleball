@@ -41,6 +41,9 @@ import ConfirmDialog from '@/components/ConfirmDialog';
 import { V2ProfileFields, V2PricingEditor } from '@/v2/components/arenas/V2ArenaEditors';
 const V2ArenaReviews = lazy(() => import('@/v2/components/arenas/V2ArenaReviews'));
 const ArenaCoachesManager = lazy(() => import('@/v2/pages/V2ArenaCoaches').then((m) => ({ default: m.ArenaCoachesManager })));
+// Aulas (módulo `classes`): a agenda e a lista ÚNICA de professores.
+const ArenaClassesPanel = lazy(() => import('@/v2/components/arenas/classes/ArenaClassesPanel'));
+const ArenaCoachRoster = lazy(() => import('@/v2/components/arenas/classes/ArenaCoachRoster'));
 import BookingParticipantsPanel from '@/modules/arenas/components/BookingParticipantsPanel';
 const LinkedClubsSection = lazy(() => import('@/modules/clubs/components/LinkedClubsSection'));
 import V2BookingRow from '@/v2/components/arenas/V2BookingRow';
@@ -199,6 +202,7 @@ function V2ArenaManageContent({ arenaId, user, isPlatformAdmin, arena, managed, 
   const modulos = {
     membros: moduloLigado(ARENA_MODULE_ID.MEMBERS),
     pacotes: moduloLigado(ARENA_MODULE_ID.MEMBERS_PACKAGES),
+    aulas: moduloLigado(ARENA_MODULE_ID.CLASSES),
   };
   // Lembra a última sub-aba visitada em cada seção principal.
   const [sectionMemory, setSectionMemory] = useState({});
@@ -361,7 +365,11 @@ function V2ArenaManageContent({ arenaId, user, isPlatformAdmin, arena, managed, 
         {tab === 'fotos' && <div id="arena-manage-fotos"><PhotosTab arena={arena} /></div>}
         {tab === 'info' && <InfoTab arena={arena} />}
         {tab === 'admins' && <ManagersTab arena={arena} />}
-        {tab === 'professores' && coachResidentOn && <ArenaCoachesManager arena={arena} />}
+        {tab === 'aulas' && modulos.aulas && <ArenaClassesPanel arena={arena} podeGerir />}
+        {/* Com Aulas ligado, a lista de professores é a ÚNICA (parceiros +
+            quem dá aula); desligado, é a de parceiros, como sempre foi. */}
+        {tab === 'professores' && modulos.aulas && <ArenaCoachRoster arena={arena} />}
+        {tab === 'professores' && !modulos.aulas && coachResidentOn && <ArenaCoachesManager arena={arena} />}
         {tab === 'clubes' && linkedClubsOn && <LinkedClubsSection ownerType="arena" ownerId={arena.id} canManage title="Clubes da arena" />}
         {tab === 'retornos' && <V2ArenaReviews arena={arena} canModerate />}
         {tab === 'modulos' && arenaModulesOn && (

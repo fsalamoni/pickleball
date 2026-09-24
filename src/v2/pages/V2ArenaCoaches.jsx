@@ -22,13 +22,16 @@ import {
 } from '@/modules/coaches/hooks/useCoaches';
 import ConfirmDialog from '@/components/ConfirmDialog';
 import {
-  V2Badge, V2Button, V2EmptyState, V2Field, V2Input, V2SearchInput,
+  PARTNERSHIP_LABEL, partnershipStatus, partnershipToggle,
+} from '@/modules/arenas/domain/coachRoster';
+import {
+  V2Badge, V2Button, V2EmptyState, V2Field, V2SearchInput,
   V2Skeleton, V2Surface, V2Textarea,
 } from '@/v2/ui/primitives';
 
 /* ----------------------- Adicionar parceiro ----------------------- */
 
-function AddPartner({ arenaId, linkedIds, onDone }) {
+export function AddPartner({ arenaId, linkedIds, onDone }) {
   const { data: coaches = [], isLoading } = useCoaches({ acceptingOnly: false });
   const add = useAddCoachResidency();
   const [q, setQ] = useState('');
@@ -122,9 +125,15 @@ function AddPartner({ arenaId, linkedIds, onDone }) {
 
 /* --------------------------- Card do parceiro --------------------------- */
 
-function PartnerCard({ arenaId, coach }) {
+/**
+ * O cartão do parceiro. `extraBadges` e `children` deixam a lista única de
+ * professores (Central → Aulas → Professores) acrescentar o que a pessoa é
+ * nas AULAS sem duplicar pausa, notas e remoção da parceria.
+ */
+export function PartnerCard({ arenaId, coach, extraBadges = null, children = null }) {
   const residency = coach.residency || {};
-  const isPaused = residency.status === 'paused';
+  const status = partnershipStatus(coach);
+  const isPaused = status === 'paused';
   const update = useUpdateCoachResidency();
   const remove = useRemoveCoachResidency();
   const [editingNotes, setEditingNotes] = useState(false);
@@ -132,7 +141,9 @@ function PartnerCard({ arenaId, coach }) {
 
   const toggle = async () => {
     try {
-      await update.mutateAsync({ coachId: coach.id, arenaId, patch: { status: isPaused ? 'active' : 'paused' } });
+      // Pausar guarda o estado anterior; retomar devolve exatamente ele — um
+      // convite pendente não vira parceria ativa sem o professor aceitar.
+      await update.mutateAsync({ coachId: coach.id, arenaId, patch: partnershipToggle(residency) });
       toast.success(isPaused ? 'Parceria reativada.' : 'Parceria pausada.');
     } catch (err) {
       toast.error(err?.message || 'Não foi possível atualizar.');
@@ -158,7 +169,9 @@ function PartnerCard({ arenaId, coach }) {
           <div>
             <div className="flex flex-wrap items-center gap-2">
               <Link to={`/coaches/${coach.id}`} className="font-bold text-ink hover:underline">{coach.display_name}</Link>
-              {isPaused ? <V2Badge tone="amber">Pausado</V2Badge> : <V2Badge tone="green">Ativo</V2Badge>}
+              {/* 🐞 Um convite ainda não aceito aparecia como "Ativo". */}
+              <V2Badge tone={status === 'active' ? 'green' : 'amber'}>{PARTNERSHIP_LABEL[status]}</V2Badge>
+              {extraBadges}
             </div>
             {coach.modalities?.length > 0 && <p className="text-xs text-gray-500">{coach.modalities.join(' · ')}</p>}
             {coach.regions?.length > 0 && (
@@ -200,6 +213,7 @@ function PartnerCard({ arenaId, coach }) {
           {residency.notes ? `Notas: ${residency.notes}` : '+ Adicionar notas'}
         </button>
       )}
+      {children}
     </div>
   );
 }

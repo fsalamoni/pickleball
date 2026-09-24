@@ -8,7 +8,9 @@
  *  3. ⭐ aba de módulo DESLIGADO cai em Reservas, sem tela em branco;
  *  4. ⭐ com Membros ligado, há seção Membros — e a aba Clientes diz quem é
  *     membro e oferece "Tornar membro" a quem reserva sempre;
- *  5. sem Membros, a aba Clientes é a de antes.
+ *  5. sem Membros, a aba Clientes é a de antes;
+ *  6. ⭐ com Aulas ligado, há seção Aulas (agenda + lista única de
+ *     professores) — e `?aba=professores` leva à lista única.
  */
 import React from 'react';
 import { createRoot } from 'react-dom/client';
@@ -59,6 +61,16 @@ vi.mock('@/v2/pages/V2ArenaAdminMembers', () => ({
 }));
 vi.mock('@/v2/components/arenas/ArenaModulesPanel', () => ({
   default: () => <div>PAINEL MODULOS</div>,
+}));
+vi.mock('@/v2/components/arenas/classes/ArenaClassesPanel', () => ({
+  default: ({ podeGerir }) => <div>AGENDA DE AULAS {podeGerir ? 'gestão' : 'leitura'}</div>,
+}));
+vi.mock('@/v2/components/arenas/classes/ArenaCoachRoster', () => ({
+  default: () => <div>LISTA ÚNICA DE PROFESSORES</div>,
+}));
+vi.mock('@/v2/pages/V2ArenaCoaches', () => ({
+  default: () => null,
+  ArenaCoachesManager: () => <div>SÓ PARCEIROS</div>,
 }));
 
 const { default: V2ArenaManage } = await import('./V2ArenaManage.jsx');
@@ -190,5 +202,33 @@ describe('Membros dentro da Central', () => {
     await render('/arenas/a1/gerir?aba=clientes');
     expect(container.textContent).not.toContain('2026-09-01');
     expect(container.textContent).toContain('01/09');
+  });
+});
+
+describe('⭐ Aulas dentro da Central', () => {
+  it('com o módulo, `?aba=aulas` abre a agenda, com poder de gestão', async () => {
+    LIGADOS.add(ARENA_MODULE_ID.CLASSES);
+    await render('/arenas/a1/gerir?aba=aulas');
+    expect(container.textContent).toContain('AGENDA DE AULAS gestão');
+    expect(botao('Aulas')).toBeTruthy();
+  });
+
+  it('⭐ `?aba=professores` (link antigo) leva à lista ÚNICA', async () => {
+    LIGADOS.add(ARENA_MODULE_ID.CLASSES);
+    await render('/arenas/a1/gerir?aba=professores');
+    expect(container.textContent).toContain('LISTA ÚNICA DE PROFESSORES');
+    expect(container.textContent).not.toContain('SÓ PARCEIROS');
+  });
+
+  it('sem o módulo, Professores é a de parceiros, como era', async () => {
+    await render('/arenas/a1/gerir?aba=professores');
+    expect(container.textContent).toContain('SÓ PARCEIROS');
+    expect(botao('Aulas')).toBeFalsy();
+  });
+
+  it('sem o módulo, `?aba=aulas` cai em Reservas', async () => {
+    await render('/arenas/a1/gerir?aba=aulas');
+    expect(container.textContent).not.toContain('AGENDA DE AULAS');
+    expect(container.textContent).toContain('Nenhuma solicitação de reserva ainda');
   });
 });
