@@ -23,6 +23,7 @@ import { describe, it, expect, beforeEach, afterEach, vi } from 'vitest';
 import { ARENA_MODULE_ID } from '@/modules/arenas/domain/modules';
 
 const LIGADOS = new Set();
+const SESSAO = { logado: true };
 const estado = { gere: false, torneios: [], ladder: [] };
 const comecar = vi.fn(() => Promise.resolve({ gameDayId: 'gd1' }));
 const entrar = vi.fn(() => Promise.resolve());
@@ -30,7 +31,7 @@ const sair = vi.fn(() => Promise.resolve());
 
 vi.mock('sonner', () => ({ toast: { success: vi.fn(), error: vi.fn() } }));
 vi.mock('@/core/lib/FirebaseAuthContext', () => ({
-  useAuth: () => ({ user: { uid: 'eu' }, isPlatformAdmin: false, isAuthenticated: true }),
+  useAuth: () => ({ user: SESSAO.logado ? { uid: 'eu' } : null, isPlatformAdmin: false, isAuthenticated: SESSAO.logado }),
 }));
 vi.mock('@/modules/arenas/hooks/useArenas', () => ({
   useArena: () => ({ data: { id: 'a1', name: 'Arena Teste', owner_id: estado.gere ? 'eu' : 'outro' }, isLoading: false }),
@@ -80,6 +81,7 @@ const torneio = (over = {}) => ({
 let container, root;
 
 beforeEach(() => {
+  SESSAO.logado = true;
   LIGADOS.clear();
   LIGADOS.add(ARENA_MODULE_ID.LEAGUES);
   comecar.mockClear(); entrar.mockClear(); sair.mockClear();
@@ -322,3 +324,13 @@ describe('a classificação da casa', () => {
     expect(container.textContent).not.toContain('Classificação da casa');
   });
 });
+
+describe('sem conta', () => {
+  it('convida a entrar, em vez de mostrar erro (a leitura exige conta)', async () => {
+    SESSAO.logado = false;
+    await render();
+    expect(container.textContent).toContain('Entre para ver os torneios da casa');
+    expect(container.textContent).not.toMatch(/Não foi possível carregar/);
+  });
+});
+
