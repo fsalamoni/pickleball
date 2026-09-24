@@ -1,9 +1,17 @@
 /**
- * V2ArenaAdvanced — as ferramentas avançadas da arena.
+ * V2ArenaAdvanced — as ferramentas "avançadas" da arena.
  *
- * Rota: `/arenas/:arenaId/gerir/avancado`
  * Módulos: `white_label` (+ `branding`), `multi_unit` (+ rede, BI, cross
  * booking), `ai` (+ preço, previsão) e `iot` (+ totem QR).
+ *
+ * ## Dentro da arena (2026-09-24)
+ *
+ * "Avançado" era uma página-gaveta: marca, rede, leitura dos números e
+ * equipamentos empilhados atrás de um botão, sem nada em comum além de terem
+ * chegado por último. Cada um foi para a seção da Central onde se procura por
+ * ele (`ArenaAdvancedPanel`): Marca em Perfil, Rede e Inteligência em
+ * Desempenho, Equipamentos em Operação. A rota antiga leva à primeira que
+ * estiver ligada.
  *
  * ## 🐞 Três defeitos que faziam a tela mentir
  *
@@ -30,14 +38,13 @@
  */
 
 import React, { useMemo, useState } from 'react';
-import { Link, Navigate, useParams } from 'react-router-dom';
+import { Navigate, useParams } from 'react-router-dom';
 import { toast } from 'sonner';
 import {
-  AlertTriangle, ArrowLeft, Check, Cpu, Network, Palette, Plus, Sparkles,
+  AlertTriangle, Check, Cpu, Network, Palette, Plus, Sparkles,
   Trash2, TrendingUp, X,
 } from 'lucide-react';
-import { useAuth } from '@/core/lib/FirebaseAuthContext';
-import { useArena, useMyManagedArenas, useArenaCourts } from '@/modules/arenas/hooks/useArenas';
+import { useMyManagedArenas, useArenaCourts } from '@/modules/arenas/hooks/useArenas';
 import {
   useArenaDevices, useCreateDevice,
   useMyNetworks, useArenaNetwork, useCreateNetwork, useAddArenaToNetwork,
@@ -53,7 +60,7 @@ import { resolveArenaPrice, formatPrice } from '@/modules/arenas/domain/pricing'
 import { formatDateShortBR } from '@/modules/arenas/domain/calendar';
 import ConfirmDialog from '@/components/ConfirmDialog';
 import {
-  V2Badge, V2Button, V2EmptyState, V2Field, V2Input, V2Skeleton, V2Surface,
+  V2Badge, V2Button, V2EmptyState, V2ErrorState, V2Field, V2Input, V2Skeleton, V2Surface,
 } from '@/v2/ui/primitives';
 
 const DEVICE_LABEL = {
@@ -94,7 +101,7 @@ function MarcaSecao({ arena }) {
   };
 
   return (
-    <V2Surface className="mb-6">
+    <V2Surface>
       <div className="mb-4 flex items-center gap-2">
         <Palette className="h-5 w-5 text-ink" />
         <h2 className="font-display text-lg font-bold text-ink">A marca da arena</h2>
@@ -167,7 +174,7 @@ function MarcaSecao({ arena }) {
 
 function RedeSecao({ arena }) {
   const { data: minhasRedes = [] } = useMyNetworks();
-  const { data: rede, isLoading } = useArenaNetwork(arena.id);
+  const { data: rede, isLoading, isError, refetch } = useArenaNetwork(arena.id);
   const { data: minhasArenas = [] } = useMyManagedArenas();
   const criar = useCreateNetwork();
   const incluir = useAddArenaToNetwork();
@@ -182,7 +189,7 @@ function RedeSecao({ arena }) {
   const podemEntrar = minhasArenas.filter((a) => !(rede?.arenas || []).includes(a.id));
 
   return (
-    <V2Surface className="mb-6">
+    <V2Surface>
       <div className="mb-4 flex items-center gap-2">
         <Network className="h-5 w-5 text-ink" />
         <h2 className="font-display text-lg font-bold text-ink">Rede de unidades</h2>
@@ -190,7 +197,12 @@ function RedeSecao({ arena }) {
 
       {isLoading && <V2Skeleton className="h-20 rounded-2xl" />}
 
-      {!isLoading && !rede && (
+      {/* Falha não é "sem rede": o convite a criar uma duplicaria a que existe. */}
+      {isError && (
+        <V2ErrorState inline title="Não foi possível carregar a rede desta arena" onRetry={() => refetch()} />
+      )}
+
+      {!isLoading && !isError && !rede && (
         <>
           <V2EmptyState
             icon={Network}
@@ -295,7 +307,7 @@ function RedeSecao({ arena }) {
 /* ============================================================== 3. IA == */
 
 function InteligenciaSecao({ arena, courts, temPreco, temPrevisao }) {
-  const { data: historico = [], isLoading } = useArenaHistory(arena.id, 30);
+  const { data: historico = [], isLoading, isError, refetch } = useArenaHistory(arena.id, 30);
 
   const serie = historico.map((d) => d.count);
   const previsao = forecastDemand(serie, 7);
@@ -325,7 +337,7 @@ function InteligenciaSecao({ arena, courts, temPreco, temPrevisao }) {
   }));
 
   return (
-    <V2Surface className="mb-6">
+    <V2Surface>
       <div className="mb-4 flex items-center gap-2">
         <Sparkles className="h-5 w-5 text-ink" />
         <h2 className="font-display text-lg font-bold text-ink">Leitura dos seus números</h2>
@@ -333,7 +345,11 @@ function InteligenciaSecao({ arena, courts, temPreco, temPrevisao }) {
 
       {isLoading && <V2Skeleton className="h-24 rounded-2xl" />}
 
-      {!isLoading && historico.length === 0 && (
+      {isError && (
+        <V2ErrorState inline title="Não foi possível ler o histórico de reservas" onRetry={() => refetch()} />
+      )}
+
+      {!isLoading && !isError && historico.length === 0 && (
         <V2EmptyState
           icon={TrendingUp}
           title="Ainda não há histórico para ler"
@@ -341,7 +357,7 @@ function InteligenciaSecao({ arena, courts, temPreco, temPrevisao }) {
         />
       )}
 
-      {!isLoading && historico.length > 0 && (
+      {!isLoading && !isError && historico.length > 0 && (
         <>
           <div className="grid gap-3 sm:grid-cols-3">
             <div className="rounded-2xl border border-gray-100 bg-paper p-3">
@@ -420,7 +436,7 @@ function InteligenciaSecao({ arena, courts, temPreco, temPrevisao }) {
 /* ============================================================= 4. IOT == */
 
 function DispositivosSecao({ arenaId }) {
-  const { data: devices = [] } = useArenaDevices(arenaId);
+  const { data: devices = [], isLoading, isError, refetch } = useArenaDevices(arenaId);
   const criar = useCreateDevice();
   const [aberto, setAberto] = useState(false);
   const [form, setForm] = useState({ name: '', kind: DEVICE_KIND.QR_KIOSK, location: '' });
@@ -484,7 +500,11 @@ function DispositivosSecao({ arenaId }) {
         </form>
       )}
 
-      {devices.length === 0 ? (
+      {isLoading ? (
+        <V2Skeleton className="h-20 rounded-2xl" />
+      ) : isError ? (
+        <V2ErrorState inline title="Não foi possível carregar os equipamentos" onRetry={() => refetch()} />
+      ) : devices.length === 0 ? (
         <V2EmptyState
           icon={Cpu}
           title="Nenhum equipamento cadastrado"
@@ -517,70 +537,47 @@ function DispositivosSecao({ arenaId }) {
   );
 }
 
-/* ========================================================== A PÁGINA === */
+/* ===================================================== NA CENTRAL === */
 
+/**
+ * As ferramentas "avançadas" dentro da Central, cada uma onde se procura:
+ * `marca` em Perfil (é a cara da arena), `rede` e `inteligencia` em
+ * Desempenho (são leituras do negócio) e `equipamentos` em Operação (é o que
+ * existe fisicamente na arena). Quem decide que a aba existe é a Central.
+ */
+export function ArenaAdvancedPanel({ arena, view }) {
+  const { isOn } = useArenaModules(arena.id);
+  const { data: courts = [] } = useArenaCourts(view === 'inteligencia' ? arena.id : null);
+
+  if (view === 'marca') return <MarcaSecao arena={arena} />;
+  if (view === 'rede') return <RedeSecao arena={arena} />;
+  if (view === 'inteligencia') {
+    return (
+      <InteligenciaSecao arena={arena} courts={courts}
+        temPreco={isOn(ARENA_MODULE_ID.AI_PRICING)} temPrevisao={isOn(ARENA_MODULE_ID.AI_FORECAST)} />
+    );
+  }
+  if (view === 'equipamentos') return <DispositivosSecao arenaId={arena.id} />;
+  return null;
+}
+
+/* ========================================================== A ROTA === */
+
+/**
+ * `/arenas/:arenaId/gerir/avancado` e `/arenas/:arenaId/avancado` — as rotas
+ * antigas. A página "Avançado" deixou de existir: cada ferramenta foi para a
+ * seção onde se procura por ela. A rota leva à primeira que estiver ligada
+ * (ou aos módulos, se nenhuma estiver) — avisos e links salvos seguem
+ * funcionando. Quem pode ver a gestão é a Central que decide.
+ */
 export default function V2ArenaAdvanced() {
   const { arenaId } = useParams();
-  const { user, isPlatformAdmin } = useAuth();
-  const { data: arena, isLoading } = useArena(arenaId);
-  const { data: managed = [] } = useMyManagedArenas();
-  const { data: courts = [] } = useArenaCourts(arenaId);
-  const { isOn, isLoading: modulosCarregando } = useArenaModules(arenaId);
-
-  if (isLoading || modulosCarregando) {
-    return <V2Skeleton className="mx-auto h-96 max-w-[1000px] rounded-4xl" />;
-  }
-  if (!arena) return <Navigate to="/arenas" replace />;
-
-  const podeGerir = arena.owner_id === user?.uid
-    || managed.some((m) => m.id === arena.id)
-    || isPlatformAdmin;
-  if (!podeGerir) return <Navigate to={`/arenas/${arenaId}`} replace />;
-
-  const temMarca = isOn(ARENA_MODULE_ID.WHITE_LABEL_BRANDING) || isOn(ARENA_MODULE_ID.WHITE_LABEL);
-  const temRede = isOn(ARENA_MODULE_ID.MULTI_UNIT);
-  const temIA = isOn(ARENA_MODULE_ID.AI);
-  const temPreco = isOn(ARENA_MODULE_ID.AI_PRICING);
-  const temPrevisao = isOn(ARENA_MODULE_ID.AI_FORECAST);
-  const temIoT = isOn(ARENA_MODULE_ID.IOT);
-  const nenhum = !temMarca && !temRede && !temIA && !temIoT;
-
-  return (
-    <div className="mx-auto max-w-[1000px]">
-      <div className="mb-6">
-        <Link to={`/arenas/${arena.id}/gerir`} className="mb-3 inline-flex items-center gap-1.5 text-xs font-bold uppercase tracking-wider text-gray-500 hover:text-ink">
-          <ArrowLeft className="h-3.5 w-3.5" /> Voltar para a gestão
-        </Link>
-        <h1 className="font-display text-3xl font-bold tracking-tight text-ink">Avançado</h1>
-        <p className="mt-2 font-medium text-gray-500">
-          {arena.name} · marca, rede, leitura dos números e equipamentos.
-        </p>
-      </div>
-
-      {nenhum ? (
-        <V2Surface>
-          <V2EmptyState
-            icon={Sparkles}
-            title="Nenhuma ferramenta avançada ativa"
-            description="Ative o que quiser usar em Gestão → Configurações → Módulos. Cada ferramenta liga separadamente."
-            action={(
-              <Link to={`/arenas/${arena.id}/gerir?secao=configuracoes&aba=modulos`} className="text-sm font-bold text-ink underline">
-                Abrir os módulos
-              </Link>
-            )}
-          />
-        </V2Surface>
-      ) : (
-        <>
-          {temMarca && <MarcaSecao arena={arena} />}
-          {temRede && <RedeSecao arena={arena} />}
-          {temIA && (
-            <InteligenciaSecao arena={arena} courts={courts}
-              temPreco={temPreco} temPrevisao={temPrevisao} />
-          )}
-          {temIoT && <DispositivosSecao arenaId={arena.id} />}
-        </>
-      )}
-    </div>
-  );
+  const { isOn, isLoading } = useArenaModules(arenaId);
+  if (isLoading) return <V2Skeleton className="mx-auto h-96 max-w-[1000px] rounded-4xl" />;
+  const aba = isOn(ARENA_MODULE_ID.WHITE_LABEL) ? 'marca'
+    : isOn(ARENA_MODULE_ID.MULTI_UNIT) ? 'rede'
+      : isOn(ARENA_MODULE_ID.AI) ? 'inteligencia'
+        : isOn(ARENA_MODULE_ID.IOT) ? 'equipamentos'
+          : 'modulos';
+  return <Navigate to={`/arenas/${arenaId}/gerir?aba=${aba}`} replace />;
 }

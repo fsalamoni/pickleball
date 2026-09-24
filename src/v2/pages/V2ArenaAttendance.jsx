@@ -1,8 +1,10 @@
 /**
  * V2ArenaAttendance — a presença do dia, do lado da arena.
  *
- * Rota: `/arenas/:arenaId/gerir/presenca`
  * Módulo: `iot_qr_kiosk` (que depende de `iot`).
+ *
+ * Desde 2026-09-24 mora na Central, como a aba **Presença** de Reservas
+ * (`ArenaAttendancePanel`); a rota antiga leva até ela.
  *
  * ## O que não existia
  *
@@ -27,13 +29,9 @@ import React, { useMemo, useState } from 'react';
 import { Link, Navigate, useParams } from 'react-router-dom';
 import { toast } from 'sonner';
 import {
-  ArrowLeft, Check, Clock, Monitor, QrCode, RotateCcw, UserCheck, UserX, Users,
+  Check, Clock, Monitor, QrCode, RotateCcw, UserCheck, UserX, Users,
 } from 'lucide-react';
-import { useAuth } from '@/core/lib/FirebaseAuthContext';
-import { useArena, useMyManagedArenas } from '@/modules/arenas/hooks/useArenas';
 import { useArenaBookings } from '@/modules/arenas/hooks/useBookings';
-import { useArenaModules } from '@/modules/arenas/hooks/useArenaModules';
-import { ARENA_MODULE_ID } from '@/modules/arenas/domain/modules';
 import {
   useConfirmArrival, useUndoArrival, useMarkNoShowBatch,
 } from '@/modules/arenas/hooks/useCheckin';
@@ -41,7 +39,7 @@ import { attendanceOfDay, isoDay, noShowCandidates } from '@/modules/arenas/doma
 import { formatDateShortBR } from '@/modules/arenas/domain/calendar';
 import ConfirmDialog from '@/components/ConfirmDialog';
 import {
-  V2Avatar, V2Badge, V2Button, V2EmptyState, V2Field, V2Input, V2Skeleton,
+  V2Avatar, V2Badge, V2Button, V2EmptyState, V2ErrorState, V2Field, V2Input, V2Skeleton,
   V2StatCard, V2Surface,
 } from '@/v2/ui/primitives';
 
@@ -89,13 +87,12 @@ function LinhaPresenca({ linha, onConfirmar, onDesfazer, ocupado }) {
   );
 }
 
-export default function V2ArenaAttendance() {
-  const { arenaId } = useParams();
-  const { user } = useAuth();
-  const { data: arena, isLoading } = useArena(arenaId);
-  const { data: minhas = [] } = useMyManagedArenas();
-  const { isOn, isLoading: modulosCarregando } = useArenaModules(arenaId);
-  const { data: reservas = [], isLoading: rvCarregando } = useArenaBookings(arenaId);
+/**
+ * A presença dentro da Central da arena — aba **Presença** em Reservas, que é
+ * onde a reserva já mora: a pergunta "quem veio?" é sobre as reservas do dia.
+ */
+export function ArenaAttendancePanel({ arena }) {
+  const { data: reservas = [], isLoading: rvCarregando, isError, refetch } = useArenaBookings(arena.id);
 
   const [dia, setDia] = useState(() => isoDay());
   const confirmar = useConfirmArrival();
@@ -104,19 +101,6 @@ export default function V2ArenaAttendance() {
 
   const resumo = useMemo(() => attendanceOfDay(reservas, dia), [reservas, dia]);
   const pendentes = useMemo(() => noShowCandidates(reservas, dia), [reservas, dia]);
-
-  if (isLoading || modulosCarregando) {
-    return <div className="mx-auto max-w-4xl px-4 py-8"><V2Skeleton lines={6} /></div>;
-  }
-  if (!arena) return <Navigate to="/arenas" replace />;
-
-  const podeGerir = arena.owner_id === user?.uid
-    || (arena.manager_ids || []).includes(user?.uid)
-    || minhas.some((a) => a.id === arena.id);
-
-  if (!podeGerir || !isOn(ARENA_MODULE_ID.IOT_QR_KIOSK)) {
-    return <Navigate to={`/arenas/${arenaId}`} replace />;
-  }
 
   const acao = async (fn, msgOk) => {
     try {
@@ -128,24 +112,19 @@ export default function V2ArenaAttendance() {
   };
 
   return (
-    <div className="mx-auto max-w-4xl px-4 py-8">
-      <div className="mb-6">
-        <Link to={`/arenas/${arena.id}/gerir`} className="mb-3 inline-flex items-center gap-1.5 text-xs font-bold uppercase tracking-wider text-gray-500 hover:text-ink">
-          <ArrowLeft className="h-3.5 w-3.5" /> Voltar para a gestão
-        </Link>
-        <div className="flex flex-wrap items-end justify-between gap-3">
-          <div>
-            <h1 className="font-display text-3xl font-bold tracking-tight text-ink">Presença</h1>
-            <p className="mt-2 font-medium text-gray-500">
-              {arena.name} · quem chegou, quem não veio.
-            </p>
-          </div>
-          <V2Button asChild>
-            <Link to={`/arenas/${arena.id}/totem`} target="_blank" rel="noreferrer">
-              <Monitor className="h-4 w-4" /> Abrir o totem
-            </Link>
-          </V2Button>
+    <div>
+      <div className="mb-4 flex flex-wrap items-end justify-between gap-3">
+        <div>
+          <h2 className="font-display text-xl font-bold tracking-tight text-ink">Presença</h2>
+          <p className="mt-1 text-sm text-gray-500">
+            Quem chegou, quem não veio. A chegada entra sozinha quando o atleta usa o totem.
+          </p>
         </div>
+        <V2Button asChild>
+          <Link to={`/arenas/${arena.id}/totem`} target="_blank" rel="noreferrer">
+            <Monitor className="h-4 w-4" /> Abrir o totem
+          </Link>
+        </V2Button>
       </div>
 
       <V2Surface className="mb-6">
@@ -170,7 +149,13 @@ export default function V2ArenaAttendance() {
         </div>
       </V2Surface>
 
-      {pendentes.length > 0 && (
+      {/* Falha não é "nenhuma reserva": a taxa de falta e a lista do dia
+          seriam números de um dia vazio que não aconteceu. */}
+      {isError && (
+        <V2ErrorState inline className="mb-6" title="Não foi possível carregar as reservas" onRetry={() => refetch()} />
+      )}
+
+      {!isError && pendentes.length > 0 && (
         <V2Surface className="mb-6 border-amber-200 bg-amber-50">
           <div className="flex flex-wrap items-center justify-between gap-3">
             <div>
@@ -204,6 +189,8 @@ export default function V2ArenaAttendance() {
         <h2 className="mb-1 font-display text-lg font-bold text-ink">O dia, horário a horário</h2>
         {rvCarregando ? (
           <V2Skeleton lines={4} />
+        ) : isError ? (
+          <p className="mt-2 text-sm text-gray-500">A lista volta assim que as reservas carregarem.</p>
         ) : resumo.linhas.length === 0 ? (
           <V2EmptyState
             icon={QrCode}
@@ -234,4 +221,14 @@ export default function V2ArenaAttendance() {
       </p>
     </div>
   );
+}
+
+/**
+ * `/arenas/:arenaId/gerir/presenca` — a rota antiga. A presença virou a aba
+ * Presença de Reservas, na Central; a rota fica porque avisos e links salvos
+ * apontam para ela.
+ */
+export default function V2ArenaAttendance() {
+  const { arenaId } = useParams();
+  return <Navigate to={`/arenas/${arenaId}/gerir?aba=presenca`} replace />;
 }

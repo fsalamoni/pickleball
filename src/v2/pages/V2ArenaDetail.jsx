@@ -28,6 +28,7 @@ import ArenaOpenMatchSection from '@/v2/components/arenas/openMatch/ArenaOpenMat
 import ArenaShopSection from '@/v2/components/arenas/shop/ArenaShopSection';
 import ArenaPromosSection from '@/v2/components/arenas/marketing/ArenaPromosSection';
 import ArenaReferralCard from '@/v2/components/arenas/marketing/ArenaReferralCard';
+import ArenaNetworkSection from '@/v2/components/arenas/ArenaNetworkSection';
 import ArenaNpsAsk from '@/v2/components/arenas/ArenaNpsAsk';
 import ArenaCheckinAsk from '@/v2/components/arenas/ArenaCheckinAsk';
 import ArenaMembershipSection from '@/v2/components/arenas/ArenaMembershipSection';
@@ -337,6 +338,10 @@ function V2ArenaDetailContent({ arenaId, user, arena, managed, bookings, isLoadi
       {/* Loja (módulo PDV) — o que eu pedi para retirar aqui e o que a arena
           vende. Some sozinha com o módulo desligado ou sem nada à venda. */}
       <ArenaShopSection arena={arena} />
+
+      {/* Outras unidades da rede (módulo Multi-unidade) — para quem joga aqui
+          saber que existem irmãs. Some sem rede ou sem outra unidade. */}
+      <ArenaNetworkSection arena={arena} />
 
       {(arena.photos || []).length > 0 && (
         <V2Surface className="mt-6">

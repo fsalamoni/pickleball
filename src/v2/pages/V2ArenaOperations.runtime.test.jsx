@@ -1,19 +1,24 @@
 /**
- * O console de operação da arena.
+ * A operação da arena — hoje a seção Operação da Central (e o plantão, em
+ * Equipe e parceiros).
  *
  * O que estes testes protegem:
- *  1. ⭐ quem não gere a arena não entra;
- *  2. ⭐ cada ferramenta depende do SEU módulo;
+ *  1. ⭐ a rota antiga leva à seção da Central (quem pode entrar, a Central
+ *     decide);
+ *  2. ⭐ cada aba só busca o que mostra, e cada ferramenta depende do SEU módulo;
  *  3. ⭐ o checkmark de ONTEM não aparece marcado hoje — era o defeito central;
  *  4. ⭐ o resumo do dia mostra o que está pendente, e some quando não há nada;
  *  5. ⭐ a ordem que fecha a quadra DIZ que fecha, e o motivo não vaza;
  *  6. ⭐ o alerta de estoque chega aqui, não só na aba Mercado;
- *  7. a equipe não pede telefone.
+ *  7. a equipe não pede telefone;
+ *  8. ⭐ FALHA não é vazio: "nada pendente" com a consulta falhando é a pior
+ *     mentira da tela, "nenhuma rotina" convida a duplicar, e "ninguém
+ *     cadastrado" na equipe convidava a salvar uma lista que APAGARIA a equipe.
  */
 import React from 'react';
 import { createRoot } from 'react-dom/client';
 import { act } from 'react';
-import { MemoryRouter, Routes, Route } from 'react-router-dom';
+import { MemoryRouter, Routes, Route, useLocation } from 'react-router-dom';
 import { describe, it, expect, beforeEach, afterEach, vi } from 'vitest';
 
 import { ARENA_MODULE_ID } from '@/modules/arenas/domain/modules';
@@ -21,43 +26,49 @@ import { todayISO } from '@/modules/arenas/domain/subscription';
 
 const LIGADOS = new Set();
 const estado = {
-  gere: true, checklists: [], ordens: [], staff: [],
+  checklists: [], ordens: [], staff: [],
   produtos: [], entradas: [], saidas: [],
+  erro: {},
 };
 const virar = vi.fn();
+const pedidos = { checklists: [], ordens: [], staff: [] };
+
+/** Uma consulta como o React Query devolve — respeitando o `null` (não consulta). */
+const consulta = (arenaId, chave) => {
+  if (!arenaId) return { data: undefined, isLoading: false, isError: false, isSuccess: false, refetch: vi.fn() };
+  if (estado.erro[chave]) return { data: undefined, isLoading: false, isError: true, isSuccess: false, refetch: vi.fn() };
+  return { data: estado[chave], isLoading: false, isError: false, isSuccess: true, refetch: vi.fn() };
+};
 
 vi.mock('sonner', () => ({ toast: { success: vi.fn(), error: vi.fn() } }));
-vi.mock('@/core/lib/FirebaseAuthContext', () => ({
-  useAuth: () => ({ user: { uid: 'eu' }, isPlatformAdmin: false, isAuthenticated: true }),
-}));
 vi.mock('@/modules/arenas/hooks/useArenas', () => ({
-  useArena: () => ({ data: { id: 'a1', name: 'Arena Teste', owner_id: estado.gere ? 'eu' : 'outro' }, isLoading: false }),
-  useMyManagedArenas: () => ({ data: [] }),
-  useArenaCourts: () => ({ data: [{ id: 'q1', name: 'Quadra 1' }, { id: 'q2', name: 'Quadra 2' }] }),
-  useInventoryProducts: () => ({ data: estado.produtos }),
-  useInventoryEntries: () => ({ data: estado.entradas }),
-  useInventoryExits: () => ({ data: estado.saidas }),
+  useArenaCourts: (id) => ({ data: id ? [{ id: 'q1', name: 'Quadra 1' }, { id: 'q2', name: 'Quadra 2' }] : undefined }),
+  useInventoryProducts: (id) => consulta(id, 'produtos'),
+  useInventoryEntries: (id) => consulta(id, 'entradas'),
+  useInventoryExits: (id) => consulta(id, 'saidas'),
 }));
 vi.mock('@/modules/arenas/hooks/useArenaModules', () => ({
   useArenaModules: () => ({ isOn: (id) => LIGADOS.has(id), isLoading: false }),
 }));
 vi.mock('@/modules/arenas/hooks/useArenaV3', () => ({
-  useArenaChecklists: () => ({ data: estado.checklists, isLoading: false }),
+  useArenaChecklists: (id) => { pedidos.checklists.push(id); return consulta(id, 'checklists'); },
   useCreateChecklist: () => ({ mutateAsync: vi.fn(), isPending: false }),
   useToggleChecklistItem: () => ({ mutateAsync: vi.fn(), isPending: false }),
   useUpdateChecklist: () => ({ mutateAsync: vi.fn(), isPending: false }),
   useDeleteChecklist: () => ({ mutateAsync: vi.fn(), isPending: false }),
   useRollChecklistDay: () => ({ mutate: virar, isPending: false }),
-  useArenaMaintenance: () => ({ data: estado.ordens, isLoading: false }),
+  useArenaMaintenance: (id) => { pedidos.ordens.push(id); return consulta(id, 'ordens'); },
   useCreateMaintenance: () => ({ mutateAsync: vi.fn(), isPending: false }),
   useUpdateMaintenanceStatus: () => ({ mutateAsync: vi.fn(), isPending: false }),
   useUpdateMaintenance: () => ({ mutateAsync: vi.fn(), isPending: false }),
   useDeleteMaintenance: () => ({ mutateAsync: vi.fn(), isPending: false }),
-  useArenaStaff: () => ({ data: estado.staff, isLoading: false }),
+  useArenaStaff: (id) => { pedidos.staff.push(id); return consulta(id, 'staff'); },
   useSaveArenaStaff: () => ({ mutateAsync: vi.fn(), isPending: false }),
 }));
 
-const { default: V2ArenaOperations } = await import('./V2ArenaOperations.jsx');
+const { default: V2ArenaOperations, ArenaOperationsPanel } = await import('./V2ArenaOperations.jsx');
+
+const ARENA = { id: 'a1', name: 'Arena Teste' };
 
 const HOJE = todayISO();
 const ONTEM = (() => {
@@ -73,9 +84,11 @@ beforeEach(() => {
   LIGADOS.add(ARENA_MODULE_ID.OPERATIONS);
   virar.mockClear();
   Object.assign(estado, {
-    gere: true, checklists: [], ordens: [], staff: [],
+    checklists: [], ordens: [], staff: [],
     produtos: [], entradas: [], saidas: [],
+    erro: {},
   });
+  Object.values(pedidos).forEach((l) => { l.length = 0; });
   container = document.createElement('div');
   document.body.appendChild(container);
   root = createRoot(container);
@@ -87,46 +100,60 @@ afterEach(() => {
   document.body.innerHTML = '';
 });
 
-async function render() {
+/** Monta a aba `view` da operação, como a Central monta. */
+async function render(view = 'operacao') {
   await act(async () => {
     root.render(
-      <MemoryRouter initialEntries={['/arenas/a1/gerir/operacoes']}>
-        <Routes>
-          <Route path="/arenas/:arenaId/gerir/operacoes" element={<V2ArenaOperations />} />
-          <Route path="/arenas/:arenaId" element={<div>PÁGINA DA ARENA</div>} />
-        </Routes>
+      <MemoryRouter initialEntries={['/arenas/a1/gerir']}>
+        <ArenaOperationsPanel arena={ARENA} view={view} />
       </MemoryRouter>,
     );
   });
 }
 
+function OndeEstou() {
+  const loc = useLocation();
+  return <div data-testid="onde">{loc.pathname + loc.search}</div>;
+}
+
+const hrefDe = (texto) => [...container.querySelectorAll('a')]
+  .find((a) => a.textContent.includes(texto))?.getAttribute('href');
+
 const itens = (...marcados) => marcados.map((c, i) => ({
   title: `Tarefa ${i + 1}`, required: true, order: i, completed: c,
 }));
 
-/* ================================================================ guarda === */
+/* ======================================================== rota e abas === */
 
-describe('quem entra aqui', () => {
-  it('⭐ quem não gere a arena volta para a página dela', async () => {
-    estado.gere = false;
-    await render();
-    expect(container.textContent).toContain('PÁGINA DA ARENA');
-  });
-
-  it('⭐ sem o módulo de operações, a rota não existe', async () => {
-    LIGADOS.clear();
-    await render();
-    expect(container.textContent).toContain('PÁGINA DA ARENA');
-  });
-
-  it('com o módulo ligado, a página abre', async () => {
-    await render();
-    expect(container.textContent).toContain('Operação');
+describe('a rota antiga e as abas', () => {
+  it('⭐ /gerir/operacoes leva à seção Operação da Central', async () => {
+    await act(async () => {
+      root.render(
+        <MemoryRouter initialEntries={['/arenas/a1/gerir/operacoes']}>
+          <Routes>
+            <Route path="/arenas/:arenaId/gerir/operacoes" element={<V2ArenaOperations />} />
+            <Route path="/arenas/:arenaId/gerir" element={<OndeEstou />} />
+          </Routes>
+        </MemoryRouter>,
+      );
+    });
+    expect(container.querySelector('[data-testid="onde"]').textContent).toBe('/arenas/a1/gerir?secao=operacao');
   });
 
   it('nenhuma ferramenta ativa: diz onde ligar', async () => {
     await render();
     expect(container.textContent).toMatch(/Nenhuma ferramenta de operação ativa/i);
+    expect(hrefDe('Abrir os módulos')).toBe('/arenas/a1/gerir?aba=modulos');
+  });
+
+  it('⭐ cada aba só busca o que mostra: Rotinas não consulta manutenção nem equipe', async () => {
+    LIGADOS.add(ARENA_MODULE_ID.OPERATIONS_CHECKLIST);
+    LIGADOS.add(ARENA_MODULE_ID.OPERATIONS_MAINTENANCE);
+    LIGADOS.add(ARENA_MODULE_ID.OPERATIONS_STAFF);
+    await render('checklists');
+    expect(pedidos.checklists).toContain('a1');
+    expect(pedidos.ordens.every((id) => id === null)).toBe(true);
+    expect(pedidos.staff.every((id) => id === null)).toBe(true);
   });
 });
 
@@ -140,7 +167,7 @@ describe('rotinas do dia', () => {
       id: 'c1', title: 'Abertura', kind: 'opening', recurring: true,
       run_date: ONTEM, items: itens(true, true),
     }];
-    await render();
+    await render('checklists');
     // 0 de 2 — e não 2 de 2, que era o que a tela dizia antes.
     expect(container.textContent).toContain('0/2');
   });
@@ -149,7 +176,7 @@ describe('rotinas do dia', () => {
     estado.checklists = [{
       id: 'c1', title: 'Abertura', recurring: true, run_date: ONTEM, items: itens(true),
     }];
-    await render();
+    await render('checklists');
     expect(virar).toHaveBeenCalledTimes(1);
     expect(virar.mock.calls[0][0].todayISO).toBe(HOJE);
   });
@@ -158,7 +185,7 @@ describe('rotinas do dia', () => {
     estado.checklists = [{
       id: 'c1', title: 'Abertura', recurring: true, run_date: HOJE, items: itens(false),
     }];
-    await render();
+    await render('checklists');
     expect(virar).not.toHaveBeenCalled();
   });
 
@@ -166,7 +193,7 @@ describe('rotinas do dia', () => {
     estado.checklists = [{
       id: 'c1', title: 'Abertura', recurring: true, run_date: HOJE, items: itens(true, false),
     }];
-    await render();
+    await render('checklists');
     expect(container.textContent).toContain('1/2');
   });
 
@@ -174,7 +201,7 @@ describe('rotinas do dia', () => {
     estado.checklists = [{
       id: 'c1', title: 'Compras', recurring: false, run_date: ONTEM, items: itens(true, true),
     }];
-    await render();
+    await render('checklists');
     expect(virar).not.toHaveBeenCalled();
     expect(container.textContent).toContain('2/2');
   });
@@ -184,14 +211,31 @@ describe('rotinas do dia', () => {
       id: 'c1', title: 'Fechamento', recurring: true, run_date: HOJE, items: itens(false),
       history: [{ date: '2026-09-10', progress: 100, done: 3, total: 3 }],
     }];
-    await render();
+    await render('checklists');
     expect(container.textContent).toMatch(/Últimos dias/i);
     expect(container.textContent).toContain('100%');
   });
 
   it('sem rotina, convida a criar a primeira', async () => {
-    await render();
+    await render('checklists');
     expect(container.textContent).toMatch(/Nenhuma rotina ainda/i);
+  });
+
+  it('⭐ a virada também acontece ao abrir o resumo de HOJE', async () => {
+    estado.checklists = [{
+      id: 'c1', title: 'Abertura', recurring: true, run_date: ONTEM, items: itens(true),
+    }];
+    await render('operacao');
+    expect(virar).toHaveBeenCalledTimes(1);
+  });
+
+  it('⭐ falha ao carregar NÃO convida a criar a primeira (duplicaria as que existem)', async () => {
+    estado.erro.checklists = true;
+    await render('checklists');
+    expect(container.textContent).toMatch(/Não foi possível carregar as rotinas/i);
+    expect(container.textContent).not.toMatch(/Nenhuma rotina ainda/i);
+    expect(container.textContent).not.toContain('Nova rotina');
+    expect(virar).not.toHaveBeenCalled();
   });
 });
 
@@ -205,7 +249,7 @@ describe('o resumo do dia', () => {
 
   it('⭐ nada pendente: diz isso, em vez de encher a tela de cartões verdes', async () => {
     estado.checklists = [{ id: 'c1', title: 'Abertura', recurring: true, run_date: HOJE, items: itens(true, true) }];
-    await render();
+    await render('operacao');
     expect(container.textContent).toMatch(/Nada pendente/i);
   });
 
@@ -215,11 +259,27 @@ describe('o resumo do dia', () => {
       { id: 'o1', title: 'Rede', status: 'pending', priority: 'urgent' },
       { id: 'o2', title: 'Luz', status: 'done', priority: 'low' },
     ];
-    await render();
+    await render('operacao');
     const texto = container.textContent;
     expect(texto).toMatch(/Rotina/);
     expect(texto).toMatch(/itens pendentes/);
     expect(texto).toMatch(/1 urgente/);
+  });
+
+  it('⭐ cada número leva à aba que resolve', async () => {
+    estado.checklists = [{ id: 'c1', title: 'Abertura', recurring: true, run_date: HOJE, items: itens(false) }];
+    estado.ordens = [{ id: 'o1', title: 'Rede', status: 'pending', priority: 'low' }];
+    await render('operacao');
+    const hrefs = [...container.querySelectorAll('a')].map((a) => a.getAttribute('href'));
+    expect(hrefs).toContain('/arenas/a1/gerir?aba=checklists');
+    expect(hrefs).toContain('/arenas/a1/gerir?aba=manutencao');
+  });
+
+  it('⭐ consulta falhando NÃO vira "nada pendente"', async () => {
+    estado.erro.ordens = true;
+    await render('operacao');
+    expect(container.textContent).toMatch(/Não foi possível carregar a rotina de hoje/i);
+    expect(container.textContent).not.toMatch(/Nada pendente/i);
   });
 });
 
@@ -235,7 +295,7 @@ describe('manutenção', () => {
       starts_on: '2026-10-01', ends_on: '2026-10-03',
       start_time: '08:00', end_time: '18:00',
     }];
-    await render();
+    await render('manutencao');
     const texto = container.textContent;
     expect(texto).toContain('Quadra 2');
     expect(texto).toMatch(/Fecha/);
@@ -244,35 +304,43 @@ describe('manutenção', () => {
 
   it('ordem que não fecha nada também diz isso', async () => {
     estado.ordens = [{ id: 'o1', title: 'Comprar lâmpadas', status: 'pending', priority: 'low' }];
-    await render();
+    await render('manutencao');
     expect(container.textContent).toMatch(/Não tira nada da venda/i);
   });
 
   it('ordem sem quadra vale para a arena inteira', async () => {
     estado.ordens = [{ id: 'o1', title: 'Dedetização', status: 'pending', blocks_court: true, starts_on: '2026-10-01', start_time: '08:00', end_time: '12:00' }];
-    await render();
+    await render('manutencao');
     expect(container.textContent).toContain('Arena inteira');
   });
 
   it('⭐ ordem concluída sai da lista de abertas', async () => {
     estado.ordens = [{ id: 'o1', title: 'Já resolvida', status: 'done' }];
-    await render();
+    await render('manutencao');
     expect(container.textContent).toMatch(/Nenhuma ordem aberta/i);
     expect(container.textContent).toContain('Encerradas (1)');
   });
 
   it('⭐ o aviso explica que o motivo não aparece para o atleta', async () => {
-    await render();
+    await render('manutencao');
     expect(container.textContent).toMatch(/Manutenção programada/);
     expect(container.textContent).toMatch(/não precisa saber/i);
   });
 
-  it('sem o módulo, a seção não existe', async () => {
+  it('sem o módulo, o resumo de hoje nem consulta as ordens', async () => {
     LIGADOS.delete(ARENA_MODULE_ID.OPERATIONS_MAINTENANCE);
     LIGADOS.add(ARENA_MODULE_ID.OPERATIONS_CHECKLIST);
-    estado.ordens = [{ id: 'o1', title: 'Trocar o piso', status: 'pending' }];
-    await render();
-    expect(container.textContent).not.toContain('Trocar o piso');
+    estado.ordens = [{ id: 'o1', title: 'Trocar o piso', status: 'pending', priority: 'urgent' }];
+    await render('operacao');
+    expect(container.textContent).not.toMatch(/urgente/);
+    expect(pedidos.ordens.every((id) => id === null)).toBe(true);
+  });
+
+  it('falha ao carregar não diz "nenhuma ordem aberta"', async () => {
+    estado.erro.ordens = true;
+    await render('manutencao');
+    expect(container.textContent).toMatch(/Não foi possível carregar as ordens/i);
+    expect(container.textContent).not.toMatch(/Nenhuma ordem aberta/i);
   });
 });
 
@@ -285,7 +353,7 @@ describe('estoque', () => {
     estado.produtos = [{ id: 'p1', name: 'Água 500ml', unit: 'un', min_stock: 20, active: true }];
     estado.entradas = [{ product_id: 'p1', quantity: 24, total_cost: 24 }];
     estado.saidas = [{ product_id: 'p1', quantity: 20, total_price: 60 }];
-    await render();
+    await render('operacao');
     expect(container.textContent).toContain('Água 500ml');
     expect(container.textContent).toContain('Acabando');
   });
@@ -294,21 +362,33 @@ describe('estoque', () => {
     estado.produtos = [{ id: 'p1', name: 'Isotônico', unit: 'un', min_stock: 5, active: true }];
     estado.entradas = [{ product_id: 'p1', quantity: 10, total_cost: 50 }];
     estado.saidas = [{ product_id: 'p1', quantity: 10, total_price: 90 }];
-    await render();
+    await render('operacao');
     expect(container.textContent).toContain('Esgotado');
   });
 
   it('estoque saudável não vira alarme', async () => {
     estado.produtos = [{ id: 'p1', name: 'Bola', unit: 'un', min_stock: 2, active: true }];
     estado.entradas = [{ product_id: 'p1', quantity: 50, total_cost: 500 }];
-    await render();
+    await render('operacao');
     expect(container.textContent).toMatch(/Nenhum produto abaixo do mínimo/i);
   });
 
   it('produto inativo não entra no alerta', async () => {
     estado.produtos = [{ id: 'p1', name: 'Descontinuado', min_stock: 10, active: false }];
-    await render();
+    await render('operacao');
     expect(container.textContent).not.toContain('Descontinuado');
+  });
+
+  it('⭐ falha ao conferir o estoque não diz "nenhum produto abaixo do mínimo"', async () => {
+    estado.erro.entradas = true;
+    await render('operacao');
+    expect(container.textContent).toMatch(/Não foi possível conferir o estoque/i);
+    expect(container.textContent).not.toMatch(/Nenhum produto abaixo do mínimo/i);
+  });
+
+  it('"Abrir o mercado" leva à aba Mercado da Central', async () => {
+    await render('operacao');
+    expect(hrefDe('Abrir o mercado')).toBe('/arenas/a1/gerir?aba=mercado');
   });
 });
 
@@ -318,7 +398,7 @@ describe('equipe', () => {
   beforeEach(() => LIGADOS.add(ARENA_MODULE_ID.OPERATIONS_STAFF));
 
   it('sem ninguém, explica para que serve — e que não pede telefone', async () => {
-    await render();
+    await render('plantao');
     expect(container.textContent).toMatch(/Ninguém cadastrado/i);
     expect(container.textContent).toMatch(/não pede telefone nem documento/i);
   });
@@ -328,25 +408,37 @@ describe('equipe', () => {
       { id: 's1', name: 'Ana', role: 'reception', shift: 'morning', active: true },
       { id: 's2', name: 'Beto', role: 'maintenance', shift: 'full', active: true },
     ];
-    await render();
+    await render('plantao');
     expect(container.textContent).toContain('Ana');
     expect(container.textContent).toContain('Recepção');
     expect(container.textContent).toContain('Beto');
     expect(container.textContent).toContain('Manutenção');
   });
 
-  it('⭐ diz quem está de plantão agora', async () => {
+  it('⭐ diz quem está de plantão agora — na aba e no resumo de hoje', async () => {
     estado.staff = [{ id: 's1', name: 'Plantonista', role: 'reception', shift: 'full', active: true }];
-    await render();
+    await render('operacao');
+    expect(container.textContent).toContain('Plantonista');
+    expect(hrefDe('De plantão agora')).toBe('/arenas/a1/gerir?aba=plantao');
+    await render('plantao');
     expect(container.textContent).toMatch(/De plantão agora/i);
     expect(container.textContent).toContain('Plantonista');
   });
 
-  it('sem o módulo, a seção não existe', async () => {
+  it('sem o módulo, o resumo de hoje não mostra o plantão', async () => {
     LIGADOS.delete(ARENA_MODULE_ID.OPERATIONS_STAFF);
     LIGADOS.add(ARENA_MODULE_ID.OPERATIONS_CHECKLIST);
     estado.staff = [{ id: 's1', name: 'Ana', role: 'reception', shift: 'full' }];
-    await render();
+    await render('operacao');
     expect(container.textContent).not.toContain('Ana');
+  });
+
+  it('⭐ falha ao carregar a equipe NÃO oferece cadastrar nem editar (salvar apagaria a equipe)', async () => {
+    estado.erro.staff = true;
+    await render('plantao');
+    expect(container.textContent).toMatch(/Não foi possível carregar a equipe/i);
+    expect(container.textContent).not.toMatch(/Ninguém cadastrado/i);
+    expect(container.textContent).not.toContain('Cadastrar a equipe');
+    expect([...container.querySelectorAll('button')].some((b) => b.textContent.trim() === 'Editar')).toBe(false);
   });
 });

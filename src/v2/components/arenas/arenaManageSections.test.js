@@ -7,7 +7,10 @@
  *  2. ⭐ com os módulos desligados, a Central é exatamente a de antes;
  *  3. módulo ligado vira SEÇÃO, logo depois de Reservas;
  *  4. ⭐ com Aulas ligado, "Professores" sai de Equipe e vira a lista única da
- *     seção Aulas — com o MESMO valor, para links antigos continuarem valendo.
+ *     seção Aulas — com o MESMO valor, para links antigos continuarem valendo;
+ *  5. ⭐ as ferramentas da antiga página "Avançado" e da operação moram onde se
+ *     procura por elas: Marca em Perfil, Presença em Reservas, Operação como
+ *     seção, Rede e Inteligência em Desempenho, Plantão em Equipe.
  */
 import { describe, it, expect } from 'vitest';
 import { buildArenaSections } from './arenaManageSections.js';
@@ -20,6 +23,8 @@ const TUDO_LIGADO = {
   modulos: {
     jogoAberto: true, membros: true, pacotes: true, aulas: true, torneios: true, torneiosPlataforma: true,
     loja: true, marketing: true, cupons: true, campanhas: true, satisfacao: true, indicacoes: true,
+    operacao: true, checklists: true, manutencao: true, plantao: true, equipamentos: true, presenca: true,
+    marca: true, rede: true, inteligencia: true,
   },
 };
 
@@ -125,5 +130,39 @@ describe('buildArenaSections', () => {
   it('nenhum dos dois: a seção não existe', () => {
     expect(buildArenaSections(BASE).find((s) => s.id === 'torneios')).toBeUndefined();
   });
-});
 
+  it('⭐ Operação: seção depois de Pagamentos e loja, com Hoje primeiro', () => {
+    const secs = buildArenaSections(TUDO_LIGADO);
+    const ids = secs.map((s) => s.id);
+    expect(ids.indexOf('operacao')).toBe(ids.indexOf('comercial') + 1);
+    expect(secs.find((s) => s.id === 'operacao').tabs.map((t) => t.value))
+      .toEqual(['operacao', 'checklists', 'manutencao', 'equipamentos']);
+    expect(ids).not.toContain('avancado');
+  });
+
+  it('só os equipamentos ligados: a seção Operação existe, só com eles', () => {
+    const secs = buildArenaSections({ ...BASE, modulos: { equipamentos: true } });
+    expect(secs.find((s) => s.id === 'operacao').tabs.map((t) => t.value)).toEqual(['equipamentos']);
+  });
+
+  it('operação ligada sem ferramenta: só "Hoje", que explica o que ligar', () => {
+    const secs = buildArenaSections({ ...BASE, modulos: { operacao: true } });
+    expect(secs.find((s) => s.id === 'operacao').tabs.map((t) => t.value)).toEqual(['operacao']);
+  });
+
+  it('⭐ Marca em Perfil, Presença em Reservas, Rede e Inteligência em Desempenho, Plantão em Equipe', () => {
+    const secs = buildArenaSections(TUDO_LIGADO);
+    const abas = (id) => secs.find((s) => s.id === id).tabs.map((t) => t.value);
+    expect(abas('perfil')).toEqual(['info', 'fotos', 'marca']);
+    expect(abas('reservas')).toContain('presenca');
+    expect(abas('desempenho')).toEqual(['semana', 'metricas', 'retornos', 'inteligencia', 'rede']);
+    expect(abas('equipe')).toContain('plantao');
+  });
+
+  it('⭐ desligados, nenhuma dessas abas aparece — a Central é a de antes', () => {
+    const v = valores(buildArenaSections(BASE));
+    for (const aba of ['marca', 'presenca', 'operacao', 'checklists', 'manutencao', 'equipamentos', 'plantao', 'rede', 'inteligencia']) {
+      expect(v).not.toContain(aba);
+    }
+  });
+});

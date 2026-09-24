@@ -206,7 +206,7 @@ export default function V2ArenaKiosk() {
           {criar.isPending ? <Loader2 className="h-4 w-4 animate-spin" /> : <QrCode className="h-4 w-4" />}
           Criar o totem desta arena
         </V2Button>
-        <Link to={`/arenas/${arenaId}/gerir/presenca`} className="text-xs text-white/60 underline">
+        <Link to={`/arenas/${arenaId}/gerir?aba=presenca`} className="text-xs text-white/60 underline">
           Voltar para a presença
         </Link>
       </div>
@@ -281,7 +281,7 @@ export default function V2ArenaKiosk() {
             </p>
           ) : (
             <Link
-              to={`/arenas/${arenaId}/gerir/presenca`}
+              to={`/arenas/${arenaId}/gerir?aba=presenca`}
               className="inline-flex items-center gap-1.5 text-xs uppercase tracking-wider opacity-40 transition hover:opacity-80"
             >
               <ArrowLeft className="h-3 w-3" /> Painel de presença

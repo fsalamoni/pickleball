@@ -5,6 +5,13 @@
 > **Chave-mestra**: flag `arena_modules` (default OFF).
 > **Banco**: zero coleção nova, zero índice novo, zero regra nova.
 
+> **Atualização 2026-09-24 — dentro da arena.** A página virou a seção
+> **Operação** da Central (Hoje · Rotinas · Manutenção · Equipamentos) e o
+> plantão foi para Equipe e parceiros. Cada número de "Hoje" leva à aba que
+> resolve, e as seções pararam de tratar falha de leitura como vazio — no
+> plantão, "ninguém cadastrado" com a leitura falhando convidava a salvar uma
+> lista que APAGARIA a equipe. Ver `09-INTEGRACAO-NA-ARENA.md` §11.
+
 ---
 
 ## 1. O que existia e o que não funcionava
