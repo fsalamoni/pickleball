@@ -151,6 +151,22 @@ const DELETE_BY_QUERY = Object.freeze([
   { col: 'arena_members', field: 'user_id', label: 'Associação a arenas (pontos e nível)' },
   { col: 'arena_nps_responses', field: 'user_id', label: 'Respostas de satisfação' },
   { col: 'coach_arenas', field: 'coach_id', label: 'Parcerias de professor com arena' },
+  { col: 'coach_students', field: 'coach_id', label: 'Lista de alunos (como professor)' },
+  { col: 'coach_clinic_signups', field: 'athlete_id', label: 'Inscrições em clínica' },
+  // Notificação de OUTRA pessoa que cita esta conta ("Fulano te convidou…").
+  // É operacional e expira em 90 dias; o texto costuma trazer o nome, então
+  // trocar só `actor_name` não bastaria.
+  { col: 'notifications', field: 'actor_id', label: 'Notificações de outras pessoas que citam a conta' },
+  // A prova de inscrição provisória guarda o e-mail.
+  { col: 'provisional_claims', field: 'claimed_by', label: 'Vínculos de inscrição provisória' },
+  { col: 'club_internal_ratings', field: 'user_id', label: 'Rating interno de clube' },
+  { col: 'club_internal_ratings_ext', field: 'user_id', label: 'Rating interno de clube (detalhe)' },
+  { col: 'user_kudos', field: 'fromUid', label: 'Kudos enviados e recebidos' },
+  { col: 'user_kudos', field: 'toUid', label: 'Kudos enviados e recebidos' },
+  { col: 'user_rivals', field: 'userA', label: 'Rivalidades (gamificação)' },
+  { col: 'user_rivals', field: 'userB', label: 'Rivalidades (gamificação)' },
+  { col: 'mentorships', field: 'mentorUid', label: 'Mentorias (gamificação)' },
+  { col: 'mentorships', field: 'apprenticeUid', label: 'Mentorias (gamificação)' },
 ]);
 
 /* --------------------------------------------- o que IMPEDE a exclusão -- */
@@ -302,15 +318,398 @@ function buildReport(f) {
 
 /* =================================================== leitura e gravação == */
 
+/* ------------------------------------ trocas específicas (puras) ------- */
+
+/** Troca `name`→rótulo e limpa `clear`, quando `data[idField] === uid`. */
+const campos = (idField, name, clear = [], label = REMOVED_ATHLETE) => (d, uid) => (
+  patchFlatFields(d, uid, [{ idField, name, clear }], label)
+);
+
+/**
+ * Inscrição de torneio. Troca nome, foto e e-mail do LADO da pessoa, os
+ * membros de time, e RECALCULA o rótulo "A / B" — é ele que o quadro, a
+ * impressão e o telão mostram, e trocar só o nome deixaria o rótulo com o
+ * nome antigo. O rótulo segue `buildRegistrationLabel` (cliente): dupla é
+ * "A / B", individual é "A", e time usa o nome do time (não mexe).
+ */
+function patchRegistration(reg, uid) {
+  const patch = {};
+  ['player_a', 'player_b'].forEach((p) => {
+    if (reg[`${p}_user_id`] !== uid) return;
+    if (`${p}_name` in reg && reg[`${p}_name`] !== REMOVED_ATHLETE) patch[`${p}_name`] = REMOVED_ATHLETE;
+    [`${p}_photo`, `${p}_email`, `${p}_email_lc`].forEach((f) => {
+      if (f in reg && reg[f] != null && reg[f] !== '') patch[f] = null;
+    });
+  });
+  if (Array.isArray(reg.members)) {
+    const membros = patchArrayItems(reg.members, uid, { idKeys: ['user_id'], name: ['name'], clear: ['photo_url'] });
+    if (membros) patch.members = membros;
+  } else if ((patch.player_a_name || patch.player_b_name) && typeof reg.label === 'string') {
+    const a = patch.player_a_name || reg.player_a_name || '—';
+    const b = patch.player_b_name || reg.player_b_name || '—';
+    const rotulo = reg.label.includes(' / ') ? `${a} / ${b}` : a;
+    if (rotulo !== reg.label) patch.label = rotulo;
+  }
+  const lado = reg.player_a_user_id === uid || reg.player_b_user_id === uid;
+  if (lado && Array.isArray(reg.migrated_from_emails) && reg.migrated_from_emails.length > 0) {
+    patch.migrated_from_emails = [];
+  }
+  return Object.keys(patch).length > 0 ? patch : null;
+}
+
+/**
+ * Os lados de um jogo (dia de jogo ou evento de clube).
+ *
+ * ⚠️ `slot.id` é o id do DOCUMENTO DE PARTICIPANTE, não o uid. A pessoa é
+ * reconhecida por `slot.user_id === uid`, por `slot.id` ser um dos
+ * participantes dela, ou (lados antigos) por `slot.id === uid`. E ao trocar o
+ * nome, o uid é GRAVADO no lado (`user_id`): o ranking resolve a pessoa por
+ * nome único como último recurso, e dois "Atleta removido" no mesmo dia
+ * seriam indistinguíveis — é o que `sealParticipantUidIntoGames` já faz.
+ */
+function patchGameSides(game, uid, participantIds = new Set()) {
+  const dela = (sl) => sl && typeof sl === 'object'
+    && (sl.user_id === uid || sl.id === uid || participantIds.has(sl.id));
+  const lado = (arr) => {
+    if (!Array.isArray(arr)) return null;
+    let mudou = false;
+    const novo = arr.map((sl) => {
+      if (!dela(sl)) return sl;
+      const c = { ...sl };
+      if (c.name !== REMOVED_ATHLETE) { c.name = REMOVED_ATHLETE; mudou = true; }
+      if (c.photo_url) { c.photo_url = null; mudou = true; }
+      if (c.user_id !== uid) { c.user_id = uid; mudou = true; }
+      return c;
+    });
+    return mudou ? novo : null;
+  };
+  const patch = {};
+  const a = lado(game.side_a);
+  const b = lado(game.side_b);
+  if (a) patch.side_a = a;
+  if (b) patch.side_b = b;
+  return Object.keys(patch).length > 0 ? patch : null;
+}
+
+/** Mensagem (conversa ou evento de clube): o CONTEÚDO sai (09 §4). */
+function patchMessage(msg, uid) {
+  if (!msg || msg.sender_id !== uid) return null;
+  const patch = {};
+  if (msg.sender_name !== REMOVED_USER) patch.sender_name = REMOVED_USER;
+  if (msg.sender_photo) patch.sender_photo = null;
+  if (msg.text !== REMOVED_MESSAGE) patch.text = REMOVED_MESSAGE;
+  // Os anexos moram em `uploads/{uid}/chat/…`, que é apagado junto: um anexo
+  // listado apontaria para um arquivo que não existe mais.
+  if (Array.isArray(msg.attachments) && msg.attachments.length > 0) patch.attachments = [];
+  return Object.keys(patch).length > 0 ? patch : null;
+}
+
+/** Conversa: o membro vira "Usuário removido"; a última mensagem também. */
+function patchConversation(conv, uid) {
+  const patch = {};
+  const membros = patchArrayItems(conv.members, uid, {
+    idKeys: ['uid'], name: ['name'], clear: ['photo_url'], label: REMOVED_USER,
+  });
+  if (membros) patch.members = membros;
+  const ult = conv.last_message;
+  if (ult && ult.sender_id === uid && (ult.sender_name !== REMOVED_USER || ult.text !== REMOVED_MESSAGE)) {
+    patch.last_message = { ...ult, sender_name: REMOVED_USER, text: REMOVED_MESSAGE, has_attachments: false };
+  }
+  return Object.keys(patch).length > 0 ? patch : null;
+}
+
+/** Reserva de quadra: titular e participantes (inclusive quem recusou). */
+function patchBooking(b, uid) {
+  const patch = {};
+  if (b.athlete_id === uid) {
+    if ('athlete_name' in b && b.athlete_name !== REMOVED_ATHLETE) patch.athlete_name = REMOVED_ATHLETE;
+    if (b.athlete_photo) patch.athlete_photo = null;
+  }
+  const parts = patchArrayItems(b.participants, uid, { idKeys: ['athlete_id'], name: ['name'], clear: ['photo'] });
+  if (parts) patch.participants = parts;
+  return Object.keys(patch).length > 0 ? patch : null;
+}
+
+/** Torneio interno da arena: elenco e classificação final. */
+function patchInternalTournament(t, uid) {
+  const patch = {};
+  const roster = patchArrayItems(t.roster, uid, { idKeys: ['user_id'], name: ['name'], clear: ['photo_url'] });
+  if (roster) patch.roster = roster;
+  const fin = patchArrayItems(t.final_standings, uid, { idKeys: ['user_id'], name: ['name'] });
+  if (fin) patch.final_standings = fin;
+  return Object.keys(patch).length > 0 ? patch : null;
+}
+
+/** Ranking de duplas / rating de dupla de clube (nomes em vetor paralelo). */
+function patchPairRanking(d, uid) {
+  const patch = {};
+  const players = patchArrayItems(d.players, uid, { idKeys: ['uid'], name: ['name'], clear: ['photo'] });
+  if (players) patch.players = players;
+  const nomes = patchParallelNames(d.player_ids, d.display_names, uid);
+  if (nomes) patch.display_names = nomes;
+  if (Array.isArray(d.player_ids) && Array.isArray(d.photos)) {
+    let mudou = false;
+    const fotos = d.photos.map((f, i) => {
+      if (d.player_ids[i] === uid && f) { mudou = true; return null; }
+      return f;
+    });
+    if (mudou) patch.photos = fotos;
+  }
+  return Object.keys(patch).length > 0 ? patch : null;
+}
+
+/* -------------------------------- coletores com mais de um passo ------- */
+
+const refDe = (doc) => doc.ref;
+
+/**
+ * Dias de jogo. O pai é achado por `member_uids`, `admin_uids` e — o caminho
+ * que pega quem saiu da lista — pelos jogos PUBLICADOS no ranking, que dizem
+ * de que dia de jogo vieram (`club_event_games.event_id`). Participantes são
+ * pseudonimizados NO LUGAR, nunca apagados: é por eles que o ranking resolve
+ * quem jogou.
+ */
+async function coletarDiasDeJogo(db, uid) {
+  const ids = new Set();
+  const doc = new Map();
+  for (const campo of ['member_uids', 'admin_uids']) {
+    // eslint-disable-next-line no-await-in-loop
+    const r = await consultar(db, 'game_days', campo, 'array-contains', uid);
+    r.docs.forEach((d) => { ids.add(d.id); doc.set(d.id, d); });
+  }
+  for (const campo of ['side_a_ids', 'side_b_ids']) {
+    // eslint-disable-next-line no-await-in-loop
+    const r = await consultar(db, 'club_event_games', campo, 'array-contains', uid);
+    r.docs.map((d) => d.data()).filter((g) => g.source === 'athlete_game_day' && g.event_id)
+      .forEach((g) => ids.add(String(g.event_id)));
+  }
+  const itens = [];
+  for (const id of ids) {
+    let pai = doc.get(id);
+    // eslint-disable-next-line no-await-in-loop
+    if (!pai) pai = await db.collection('game_days').doc(id).get();
+    if (!pai.exists) continue;
+    const gd = pai.data();
+    if (gd.created_by === uid && !gd.club_id && !gd.arena_id) {
+      const p = patchFlatFields(gd, uid, [{ idField: 'created_by', name: ['creator_name'], clear: ['creator_photo'] }]);
+      if (p) itens.push({ ref: pai.ref, patch: p });
+    }
+    // eslint-disable-next-line no-await-in-loop
+    const parts = await pai.ref.collection('participants').where('user_id', '==', uid).limit(QUERY_LIMIT).get();
+    const participantIds = new Set(parts.docs.map((d) => d.id));
+    parts.docs.forEach((d) => {
+      const p = patchFlatFields(d.data(), uid, [{ idField: 'user_id', name: ['name'], clear: ['photo_url'] }]);
+      if (p) itens.push({ ref: refDe(d), patch: p });
+    });
+    // eslint-disable-next-line no-await-in-loop
+    const jogos = await pai.ref.collection('games').limit(QUERY_LIMIT).get();
+    jogos.docs.forEach((d) => {
+      const p = patchGameSides(d.data(), uid, participantIds);
+      if (p) itens.push({ ref: refDe(d), patch: p });
+    });
+  }
+  return { itens, deletes: [], truncated: false };
+}
+
+/**
+ * Eventos de clube. Achados por convite, presença e jogos publicados — os
+ * mesmos documentos que a exclusão APAGA depois; por isso a análise inteira
+ * roda antes de qualquer escrita.
+ */
+async function coletarEventosDeClube(db, uid) {
+  const ids = new Set();
+  for (const [col, campo] of [['event_invites', 'user_id'], ['club_event_rsvps', 'user_id'], ['club_events', 'created_by']]) {
+    // eslint-disable-next-line no-await-in-loop
+    const r = await consultar(db, col, campo, '==', uid);
+    r.docs.forEach((d) => ids.add(col === 'club_events' ? d.id : String(d.data().event_id || '')));
+  }
+  for (const campo of ['side_a_ids', 'side_b_ids']) {
+    // eslint-disable-next-line no-await-in-loop
+    const r = await consultar(db, 'club_event_games', campo, 'array-contains', uid);
+    r.docs.map((d) => d.data()).filter((g) => g.source !== 'athlete_game_day' && g.event_id)
+      .forEach((g) => ids.add(String(g.event_id)));
+  }
+  ids.delete('');
+  const itens = [];
+  const deletes = [];
+  for (const id of ids) {
+    const pai = db.collection('club_events').doc(id);
+    // eslint-disable-next-line no-await-in-loop
+    const ev = await pai.get();
+    if (!ev.exists) continue;
+    const pe = patchFlatFields(ev.data(), uid, [{ idField: 'created_by', name: ['created_by_name'] }]);
+    if (pe) itens.push({ ref: pai, patch: pe });
+    // eslint-disable-next-line no-await-in-loop
+    const parts = await pai.collection('participants').where('user_id', '==', uid).limit(QUERY_LIMIT).get();
+    const participantIds = new Set(parts.docs.map((d) => d.id));
+    parts.docs.forEach((d) => {
+      const p = patchFlatFields(d.data(), uid, [{ idField: 'user_id', name: ['name'], clear: ['photo_url'] }]);
+      if (p) itens.push({ ref: refDe(d), patch: p });
+    });
+    // eslint-disable-next-line no-await-in-loop
+    const msgs = await pai.collection('messages').where('sender_id', '==', uid).limit(QUERY_LIMIT).get();
+    msgs.docs.forEach((d) => {
+      const p = patchMessage(d.data(), uid);
+      if (p) itens.push({ ref: refDe(d), patch: p });
+    });
+    // eslint-disable-next-line no-await-in-loop
+    const rsvps = await pai.collection('date_rsvps').where('user_id', '==', uid).limit(QUERY_LIMIT).get();
+    rsvps.docs.forEach((d) => deletes.push(refDe(d)));
+    // eslint-disable-next-line no-await-in-loop
+    const jogos = await pai.collection('games').limit(QUERY_LIMIT).get();
+    jogos.docs.forEach((d) => {
+      const p = patchGameSides(d.data(), uid, participantIds);
+      if (p) itens.push({ ref: refDe(d), patch: p });
+    });
+  }
+  return { itens, deletes, truncated: false };
+}
+
+/**
+ * Inscrições em torneio + o que COPIA o rótulo delas: o contato privado
+ * (e-mail) e os grupos (`tournament_groups.entrants[].label`).
+ */
+async function coletarInscricoes(db, uid) {
+  const r = await consultarUniao(db, 'tournament_registrations', [
+    ['player_a_user_id', '=='], ['player_b_user_id', '=='], ['member_uids', 'array-contains'],
+  ], uid);
+  const itens = [];
+  const rotulos = new Map(); // tournament_id → Map(regId → novo rótulo)
+  for (const d of r.docs) {
+    const reg = d.data();
+    const p = patchRegistration(reg, uid);
+    if (p) itens.push({ ref: d.ref, patch: p });
+    if (p && p.label && reg.tournament_id) {
+      if (!rotulos.has(reg.tournament_id)) rotulos.set(reg.tournament_id, new Map());
+      rotulos.get(reg.tournament_id).set(d.id, p.label);
+    }
+    // contato privado: só os e-mails do lado da pessoa
+    // eslint-disable-next-line no-await-in-loop
+    const priv = await d.ref.collection('private').doc('contact').get();
+    if (priv.exists) {
+      const c = priv.data();
+      const pc = {};
+      ['player_a', 'player_b'].forEach((lado) => {
+        if (reg[`${lado}_user_id`] !== uid) return;
+        [`${lado}_email`, `${lado}_email_lc`].forEach((f) => { if (c[f]) pc[f] = null; });
+      });
+      if (Object.keys(pc).length > 0) itens.push({ ref: priv.ref, patch: pc });
+    }
+  }
+  for (const [tid, porReg] of rotulos) {
+    // eslint-disable-next-line no-await-in-loop
+    const grupos = await db.collection('tournament_groups').where('tournament_id', '==', tid).limit(QUERY_LIMIT).get();
+    grupos.docs.forEach((g) => {
+      const entrants = g.data().entrants;
+      if (!Array.isArray(entrants)) return;
+      let mudou = false;
+      const novo = entrants.map((e) => {
+        if (e && porReg.has(e.id) && e.label !== porReg.get(e.id)) { mudou = true; return { ...e, label: porReg.get(e.id) }; }
+        return e;
+      });
+      if (mudou) itens.push({ ref: g.ref, patch: { entrants: novo } });
+    });
+  }
+  return { itens, deletes: [], truncated: r.truncated };
+}
+
+/** Conversas: o membro, a última mensagem e as mensagens da pessoa. */
+async function coletarConversas(db, uid) {
+  const r = await consultar(db, 'conversations', 'member_ids', 'array-contains', uid);
+  const itens = [];
+  for (const d of r.docs) {
+    const p = patchConversation(d.data(), uid);
+    if (p) itens.push({ ref: d.ref, patch: p });
+    // eslint-disable-next-line no-await-in-loop
+    const msgs = await d.ref.collection('messages').where('sender_id', '==', uid).limit(QUERY_LIMIT).get();
+    msgs.docs.forEach((m) => {
+      const pm = patchMessage(m.data(), uid);
+      if (pm) itens.push({ ref: m.ref, patch: pm });
+    });
+  }
+  return { itens, deletes: [], truncated: r.truncated };
+}
+
+/** Fórum: tópicos e comentários ficam (são do clube); o autor sai; o voto é apagado. */
+async function coletarForum(db, uid) {
+  const r = await consultar(db, 'club_forum_threads', 'participant_ids', 'array-contains', uid);
+  const itens = [];
+  const deletes = [];
+  for (const d of r.docs) {
+    const p = patchFlatFields(d.data(), uid, [{ idField: 'author_id', name: ['author_name'], clear: ['author_photo'] }], REMOVED_USER);
+    if (p) itens.push({ ref: d.ref, patch: p });
+    // eslint-disable-next-line no-await-in-loop
+    const coms = await d.ref.collection('comments').where('author_id', '==', uid).limit(QUERY_LIMIT).get();
+    coms.docs.forEach((c) => {
+      const pc = patchFlatFields(c.data(), uid, [{ idField: 'author_id', name: ['author_name'], clear: ['author_photo'] }], REMOVED_USER);
+      if (pc) itens.push({ ref: c.ref, patch: pc });
+    });
+    // eslint-disable-next-line no-await-in-loop
+    const voto = await d.ref.collection('poll_votes').doc(uid).get();
+    if (voto.exists) deletes.push(voto.ref);
+  }
+  return { itens, deletes, truncated: r.truncated };
+}
+
+/** Ladder: não é consultável por uid; chega-se a ele pelas arenas dos torneios internos. */
+async function coletarLadders(db, uid) {
+  const t = await consultar(db, 'arena_internal_tournaments', 'participants', 'array-contains', uid);
+  const arenas = new Set(t.docs.map((d) => d.data().arena_id).filter(Boolean));
+  const itens = [];
+  for (const arenaId of arenas) {
+    // eslint-disable-next-line no-await-in-loop
+    const l = await db.collection('arena_ladders').where('arena_id', '==', arenaId).limit(QUERY_LIMIT).get();
+    l.docs.forEach((d) => {
+      const novo = patchArrayItems(d.data().rankings, uid, { idKeys: ['user_id'], name: ['name'] });
+      if (novo) itens.push({ ref: d.ref, patch: { rankings: novo } });
+    });
+  }
+  return { itens, deletes: [], truncated: false };
+}
+
 /**
  * O que é PSEUDONIMIZADO (o uid fica, o nome sai) ou RETIDO com o nome
- * minimizado. Cada item: `{ col, wheres:[[campo, op]], bucket, label, patch }`
- * ou, para subcoleções, `{ parent, parentWheres, sub, subWheres?, … }`.
- * `patch(data, uid)` é puro e devolve o que trocar (ou `null`).
+ * minimizado. Cada campo abaixo foi conferido no código que ESCREVE a
+ * coleção. Duas formas:
  *
- * Preenchido abaixo, a partir do formato REAL de cada coleção.
+ * - simples: `{ col, wheres:[[campo, op]], patch(data, uid) }`;
+ * - com passos: `{ collect(db, uid) → { itens, deletes, truncated } }`.
  */
-const PSEUDO_SPECS = [];
+const PSEUDO_SPECS = Object.freeze([
+  // histórico esportivo
+  { label: 'Inscrições em torneio', collect: coletarInscricoes },
+  { label: 'Dias de jogo e partidas', collect: coletarDiasDeJogo },
+  { label: 'Eventos de clube e partidas', collect: coletarEventosDeClube, deleteLabel: 'Presenças em data de evento' },
+  { label: 'Torneios internos de arena', col: 'arena_internal_tournaments', wheres: [['participants', 'array-contains']], patch: patchInternalTournament },
+  { label: 'Ladder de arena', collect: coletarLadders },
+  { label: 'Ranking de duplas', col: 'doubles_rankings', wheres: [['player_ids', 'array-contains']], patch: patchPairRanking },
+  { label: 'Rating de dupla de clube', col: 'club_internal_doubles_ratings', wheres: [['player_ids', 'array-contains']], patch: patchPairRanking },
+  { label: 'Rating de dupla de clube (detalhe)', col: 'club_internal_doubles_ratings_ext', wheres: [['player_ids', 'array-contains']], patch: patchPairRanking },
+  { label: 'Validações de nível (como aluno)', col: 'coach_level_validations', wheres: [['student_id', '==']], patch: campos('student_id', ['student_name']) },
+  { label: 'Validações de nível (como professor)', col: 'coach_level_validations', wheres: [['coach_id', '==']], patch: campos('coach_id', ['coach_name']) },
+  // o que a pessoa organizou (fica, sem o nome)
+  { label: 'Torneios que criou', col: 'tournaments', wheres: [['creator_uid', '==']], patch: campos('creator_uid', ['creator_name']) },
+  { label: 'Avisos de torneio', col: 'tournament_announcements', wheres: [['created_by', '==']], patch: campos('created_by', ['created_by_name']) },
+  { label: 'Jogos abertos que criou', col: 'open_games', wheres: [['created_by', '==']], patch: campos('created_by', ['creator_name'], ['creator_photo']) },
+  { label: 'Clubes que criou', col: 'clubs', wheres: [['created_by', '==']], patch: campos('created_by', ['creator_name']) },
+  { label: 'Circuitos que criou', col: 'circuits', wheres: [['created_by', '==']], patch: campos('created_by', ['created_by_name']) },
+  { label: 'Vagas de jogo aberto que criou', col: 'arena_open_slots', wheres: [['created_by', '==']], patch: campos('created_by', ['created_by_name']) },
+  { label: 'Clínicas que oferece', col: 'coach_clinics', wheres: [['coach_id', '==']], patch: campos('coach_id', ['coach_name']) },
+  // o que é social (fica, com "Usuário removido")
+  { label: 'Conversas e mensagens', collect: coletarConversas },
+  { label: 'Fórum de clube', collect: coletarForum, deleteLabel: 'Votos em enquete de fórum' },
+  { label: 'Publicações em clube', col: 'club_posts', wheres: [['author_id', '==']], patch: campos('author_id', ['author_name'], ['author_photo'], REMOVED_USER) },
+  { label: 'Avaliações de arena', col: 'arena_reviews', wheres: [['user_id', '==']], patch: campos('user_id', ['user_name'], ['user_photo'], REMOVED_USER) },
+  { label: 'Fichas de aluno de professores', col: 'coach_students', wheres: [['student_id', '==']], patch: campos('student_id', ['student_name'], ['student_email']) },
+  // RETIDO: financeiro e operacional do parceiro (09 §4 — 5 anos)
+  { label: 'Reservas de quadra', bucket: 'retained', col: 'arena_bookings', wheres: [['athlete_id', '=='], ['participant_ids', 'array-contains'], ['invited_ids', 'array-contains']], patch: patchBooking },
+  { label: 'Matrículas em aula de arena', bucket: 'retained', col: 'arena_class_bookings', wheres: [['user_id', '==']], patch: campos('user_id', ['athlete_name']) },
+  { label: 'Compras na loja da arena', bucket: 'retained', col: 'arena_sales', wheres: [['buyer_id', '==']], patch: campos('buyer_id', ['buyer_name']) },
+  { label: 'Carteira em arena', bucket: 'retained', col: 'arena_wallets', wheres: [['user_id', '==']], patch: campos('user_id', ['user_name']) },
+  { label: 'Mensalidade em arena', bucket: 'retained', col: 'arena_subscriptions', wheres: [['user_id', '==']], patch: campos('user_id', ['user_name']) },
+  { label: 'Aulas particulares', bucket: 'retained', col: 'coach_lessons', wheres: [['student_id', '==']], patch: campos('student_id', ['student_name'], ['student_email']) },
+  { label: 'Pacotes de aula comprados', bucket: 'retained', col: 'coach_package_sales', wheres: [['student_id', '==']], patch: campos('student_id', ['student_name']) },
+]);
 
 /** Uma consulta de um `where` só, com limite. */
 async function consultar(db, col, field, op, uid) {
@@ -333,6 +732,13 @@ async function consultarUniao(db, col, wheres, uid) {
 
 /** Coleta as trocas de UMA especificação de pseudonimização. */
 async function coletarTrocas(db, uid, spec) {
+  if (typeof spec.collect === 'function') {
+    const r = await spec.collect(db, uid);
+    return {
+      label: spec.label, bucket: spec.bucket || 'pseudonym', itens: r.itens || [],
+      deletes: r.deletes || [], deleteLabel: spec.deleteLabel || spec.label, truncated: Boolean(r.truncated),
+    };
+  }
   const itens = [];
   let truncated = false;
   const aplicar = (d) => {
@@ -358,7 +764,7 @@ async function coletarTrocas(db, uid, spec) {
     truncated = r.truncated;
     r.docs.forEach(aplicar);
   }
-  return { label: spec.label, bucket: spec.bucket || 'pseudonym', itens, truncated };
+  return { label: spec.label, bucket: spec.bucket || 'pseudonym', itens, deletes: [], truncated };
 }
 
 /** A conta de login existe? `null` quando não deu para saber. */
@@ -481,6 +887,7 @@ async function analyzeAccount(ctx, uid, { actorUid = null, hojeISO } = {}) {
   const deletes = somarPorRotulo([
     ...porId.map((x) => ({ label: x.spec.label, count: x.exists ? 1 : 0 })),
     ...porConsulta.map((x) => ({ label: x.spec.label, count: x.refs.length, truncated: x.truncated })),
+    ...trocas.map((t) => ({ label: t.deleteLabel || t.label, count: (t.deletes || []).length })),
     ...(storageFiles > 0 ? [{ label: 'Fotos e arquivos enviados', count: storageFiles }] : []),
   ]);
   const pseudonyms = somarPorRotulo(trocas.filter((t) => t.bucket !== 'retained')
@@ -493,6 +900,26 @@ async function analyzeAccount(ctx, uid, { actorUid = null, hojeISO } = {}) {
     authExists: authExists !== false, storageFiles,
   });
   return { report, plan: { user, authExists, porId, porConsulta, trocas } };
+}
+
+/**
+ * Junta atualizações para o MESMO documento e tira as de documento que também
+ * será apagado. Duas especificações podem achar a mesma reserva (titular e
+ * participante), e um lote com dois `update` no mesmo documento ainda
+ * funcionaria — mas um `update` depois de um `delete` no mesmo lote falha.
+ */
+function consolidarOps(ops) {
+  const apagar = new Map();
+  ops.filter((o) => o.type === 'delete').forEach((o) => apagar.set(o.ref.path, o));
+  const atualizar = new Map();
+  ops.filter((o) => o.type !== 'delete').forEach((o) => {
+    if (apagar.has(o.ref.path)) return;
+    const atual = atualizar.get(o.ref.path);
+    if (atual) Object.assign(atual.data, o.data);
+    else atualizar.set(o.ref.path, { type: 'update', ref: o.ref, data: { ...o.data } });
+  });
+  // Primeiro as trocas, depois as exclusões — na ordem em que foram pedidas.
+  return [...atualizar.values(), ...apagar.values()];
 }
 
 /** Grava operações em lotes de 400 (o limite do Firestore é 500). */
@@ -554,12 +981,13 @@ async function executeAccountDeletion(ctx, uid, { actor, reason, hojeISO, FieldV
   // 3 e 4. um lote só de operações, na ordem certa
   const ops = [];
   plan.trocas.forEach((t) => t.itens.forEach((i) => ops.push({ type: 'update', ref: i.ref, data: i.patch })));
+  plan.trocas.forEach((t) => (t.deletes || []).forEach((ref) => ops.push({ type: 'delete', ref })));
   plan.porConsulta.forEach((x) => {
     x.refs.forEach((ref) => ops.push({ type: 'delete', ref }));
     x.contadores.forEach((c) => ops.push({ type: 'update', ref: c.ref, data: { [c.field]: FieldValue.increment(-1) } }));
   });
   plan.porId.filter((x) => x.exists).forEach((x) => ops.push({ type: 'delete', ref: x.ref }));
-  await gravarEmLotes(db, ops);
+  await gravarEmLotes(db, consolidarOps(ops));
 
   // 5. por último, o cadastro
   if (plan.user) await db.collection('users').doc(uid).delete();
@@ -622,6 +1050,14 @@ module.exports = {
   patchParallelNames,
   buildReport,
   PSEUDO_SPECS,
+  patchRegistration,
+  patchGameSides,
+  patchMessage,
+  patchConversation,
+  patchBooking,
+  patchInternalTournament,
+  patchPairRanking,
+  consolidarOps,
   analyzeAccount,
   executeAccountDeletion,
   hojeEmSaoPaulo,

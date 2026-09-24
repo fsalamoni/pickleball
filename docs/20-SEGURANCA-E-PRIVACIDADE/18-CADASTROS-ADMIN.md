@@ -195,14 +195,39 @@ resolve antes:
   diálogo diz exatamente isso em vez de "internal".
 - **Não é o autoatendimento do titular** ("Excluir minha conta", 7 dias de
   arrependimento, reautenticação) — isso continua em `19-PENDENCIAS.md` §5.
+- **O que a descoberta não alcança** (sem índice de grupo de coleções, que
+  seria mexer no banco): conversa de que a pessoa JÁ SAIU (as mensagens dela
+  ficam lá), participante que RECUSOU convite de reserva, e dia de jogo do
+  qual ela foi removida e que não tem jogo publicado. São casos de borda de
+  conta real; para conta de teste, que é o pedido, não aparecem.
+
+### Armadilhas que o código evita (e os testes travam)
+
+1. **No jogo, `slot.id` é o id do documento de PARTICIPANTE, não o uid.**
+   Tratar `id` como uid trocaria o nome da pessoa errada. E ao trocar o nome,
+   o uid é gravado no lado: o ranking resolve pessoa por nome único como
+   último recurso, e dois "Atleta removido" no mesmo dia ficariam
+   indistinguíveis.
+2. **O rótulo "A / B" é derivado.** Trocar só `player_a_name` deixaria o
+   quadro, a impressão e o telão com o nome antigo — o rótulo é recalculado,
+   e os grupos (`tournament_groups.entrants[].label`), que copiam o rótulo,
+   também.
+3. **A descoberta vem antes de qualquer escrita.** Eventos de clube são
+   achados pela presença e pelo convite, que a própria exclusão APAGA.
+4. **Nome pode ser e-mail.** Vários serviços usam o e-mail quando falta nome;
+   trocar o campo de nome remove também o e-mail que vazou para ele.
+5. **Mensagem perde o conteúdo e os anexos** — o arquivo está em
+   `uploads/{uid}/`, que é apagado junto.
 
 ### Cobertura
 
 - 19 testes do domínio da tela (`accountDeletion.test.js`)
-- 34 do domínio do servidor + **13 da cascata contra um Firestore falso**
+- 34 do domínio do servidor, **13 da cascata** e **27 da pseudonimização com
+  as especificações reais** contra um Firestore falso
   (`functions/accountDeletion*.test.js`): conta impedida não perde nada, a
   conta de login sai antes de qualquer escrita, `users` sai por último, falha
-  no login = nada apagado, reexecução idêntica, auditoria gravada
+  no login = nada apagado, reexecução idêntica, auditoria gravada, e **nenhum
+  documento de outra pessoa é apagado**
 - 10 de tela (`AdminUserRecordsTab.deletion.runtime.test.jsx`)
 
 ## O que esta entrega NÃO é
