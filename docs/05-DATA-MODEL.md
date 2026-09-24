@@ -907,6 +907,12 @@ e sem `queue_removed`. É exatamente esse conjunto que vira o CSV.
 `arena_wallets`, `arena_tier_configs`, `arena_network_memberships`,
 `arena_networks`.
 **Leagues**: `arena_ladders`, `arena_internal_tournaments`, `arena_matches`.
+  - `arena_internal_tournaments` (2026-09-24): além da arena, o **próprio
+    atleta** atualiza o documento para se inscrever ou sair — só a si mesmo em
+    `participants`, só com o torneio `scheduled` e sem `game_day_id`, tocando
+    apenas `participants`/`roster`/`enrolled`/`updated_at`, sem apagar o
+    roster alheio e respeitando `max_participants`. "Meus torneios da casa"
+    consulta `participants array-contains uid` (sem índice composto).
 **Classes** (Sistema C, Aulas da arena): `arena_classes`, `arena_class_bookings`,
 `arena_coaches`.
   - `arena_class_bookings` (2026-09-24): além do aluno e da arena, o

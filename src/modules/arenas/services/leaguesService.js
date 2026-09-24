@@ -51,7 +51,35 @@ export async function listArenaTournaments(arenaId, { onlyFuture = false, lim = 
     .map((d) => ({ id: d.id, ...d.data() }))
     .filter((x) => !onlyFuture || String(x.date || '') >= hoje)
     .sort((a, b) => String(a.date || '').localeCompare(String(b.date || '')))
-    .slice(0, Math.max(1, Number(lim) || 50));
+    // O corte leva os MAIS ANTIGOS: cortar do começo jogava fora os torneios
+    // futuros assim que a arena passasse de 50 — e eles deixavam de ocupar a
+    // quadra no calendário.
+    .slice(-Math.max(1, Number(lim) || 50));
+}
+
+/**
+ * Os torneios da casa em que a pessoa está inscrita, em TODAS as arenas —
+ * para a lista de torneios dela.
+ *
+ * `array-contains` num campo só: sem índice composto. A leitura de
+ * `arena_internal_tournaments` é aberta a quem tem conta.
+ *
+ * @returns {Promise<{ torneios: Array, arenas: Array }>}
+ */
+export async function listMyInternalTournaments(userId) {
+  if (!db || !userId) return { torneios: [], arenas: [] };
+  const snap = await getDocs(query(
+    collection(db, COL_TOURNAMENTS), where('participants', 'array-contains', userId),
+  ));
+  const torneios = snap.docs
+    .map((d) => ({ id: d.id, ...d.data() }))
+    .sort((a, b) => String(b.date || '').localeCompare(String(a.date || '')))
+    .slice(0, 50);
+  const ids = [...new Set(torneios.map((t) => t.arena_id).filter(Boolean))];
+  const arenas = (await Promise.all(ids.map((id) => getDoc(doc(db, 'arenas', id)).catch(() => null))))
+    .filter((d) => d?.exists?.())
+    .map((d) => ({ id: d.id, ...d.data() }));
+  return { torneios, arenas };
 }
 
 /**
@@ -355,7 +383,18 @@ function ladderId(arenaId, period) {
  */
 export async function finishInternalTournament(tournament, classificacao = [], { period = 'geral' } = {}, actor) {
   if (!tournament?.id) throw new Error('Torneio inválido.');
-  const arenaId = tournament.arena_id;
+  // Conferido no BANCO, não no que a tela tem em mãos: encerrar duas vezes
+  // (dois cliques, duas abas) somaria os pontos duas vezes no ladder — e
+  // ninguém confere a acumulação de olho.
+  const atualNoBanco = await torneioPorId(tournament.id);
+  if (!atualNoBanco) throw new Error('Torneio não encontrado.');
+  if (atualNoBanco.status === INTERNAL_TOURNAMENT_STATUS.FINISHED) {
+    throw new Error('Este torneio já foi encerrado.');
+  }
+  if (atualNoBanco.status !== INTERNAL_TOURNAMENT_STATUS.RUNNING) {
+    throw new Error('Só dá para encerrar um torneio que já começou.');
+  }
+  const arenaId = atualNoBanco.arena_id;
 
   const atual = await getLadder(arenaId, period);
   const novo = applyTournamentToLadder(atual, classificacao);
@@ -374,6 +413,29 @@ export async function finishInternalTournament(tournament, classificacao = [], {
     final_standings: classificacao.slice(0, 10),
     updated_at: serverTimestamp(),
   });
+
+  // Quem jogou fica sabendo — e vai ver onde ficou. Sem isto o torneio
+  // terminava em silêncio e o ladder mudava sem ninguém saber por quê.
+  const uids = [...new Set([
+    ...(atualNoBanco.participants || []),
+    ...classificacao.map((c) => c?.user_id),
+  ].filter(Boolean))];
+  if (uids.length > 0) {
+    const campeao = classificacao.find((c) => Number(c?.position) === 1);
+    try {
+      await notifyUsers(uids, {
+        title: 'Torneio encerrado',
+        message: campeao?.name
+          ? `"${atualNoBanco.name}" terminou — campeão: ${campeao.name}. Veja a classificação da casa.`
+          : `"${atualNoBanco.name}" terminou. Veja a classificação da casa.`,
+        type: NOTIFICATION_TYPE.GENERIC,
+        link: `/arenas/${arenaId}/torneios`,
+        actor,
+      });
+    } catch (err) {
+      logger.info('Falha ao avisar o fim do torneio', { err: err?.code });
+    }
+  }
 
   await createAuditLog({
     action: 'arena_internal_tournament_finished', actor,

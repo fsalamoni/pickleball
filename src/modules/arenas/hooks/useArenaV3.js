@@ -895,14 +895,38 @@ import {
   listArenaTournaments, createInternalTournament, joinTournament, getLadder,
   leaveTournament, updateInternalTournament, cancelInternalTournament,
   deleteInternalTournament, startInternalTournament, finishInternalTournament,
+  listMyInternalTournaments,
 } from '../services/leaguesService.js';
 
-export function useArenaTournaments(arenaId, filters = {}) {
+/**
+ * Os torneios DA CASA da arena (`arena_internal_tournaments`).
+ *
+ * Não confundir com `useArenaTournaments` de `tournament/hooks`, que lista os
+ * torneios DA PLATAFORMA sediados na arena — outra coleção.
+ */
+export function useArenaInternalTournaments(arenaId, filters = {}) {
   return useQuery({
-    queryKey: ['arena-tournaments', arenaId, filters],
+    queryKey: arenaKeys.torneiosDaCasa(arenaId, filters),
     queryFn: () => listArenaTournaments(arenaId, filters),
     enabled: !!arenaId,
     staleTime: 30_000,
+  });
+}
+
+/**
+ * @deprecated Nome antigo — colide com `useArenaTournaments` de
+ * `tournament/hooks` (torneios da PLATAFORMA). Use `useArenaInternalTournaments`.
+ */
+export const useArenaTournaments = useArenaInternalTournaments;
+
+/** Os torneios da casa em que EU estou inscrito, em todas as arenas. */
+export function useMyInternalTournaments() {
+  const { user } = useAuth();
+  return useQuery({
+    queryKey: ['my-internal-tournaments', user?.uid],
+    queryFn: () => listMyInternalTournaments(user?.uid),
+    enabled: !!user?.uid,
+    staleTime: 60_000,
   });
 }
 
@@ -911,7 +935,7 @@ export function useCreateTournament() {
   const qc = useQueryClient();
   return useMutation({
     mutationFn: ({ arenaId, input }) => createInternalTournament(arenaId, input, user),
-    onSuccess: (_d, { arenaId }) => qc.invalidateQueries({ queryKey: ['arena-tournaments', arenaId] }),
+    onSuccess: (_d, { arenaId }) => invalidarTorneios(qc, arenaId),
   });
 }
 
@@ -922,8 +946,9 @@ export function useCreateTournament() {
  * marcar um torneio e continuaria vendo o horário à venda.
  */
 function invalidarTorneios(qc, arenaId) {
-  qc.invalidateQueries({ queryKey: ['arena-tournaments', arenaId] });
+  qc.invalidateQueries({ queryKey: arenaKeys.torneiosDaCasaDaArena(arenaId) });
   qc.invalidateQueries({ queryKey: ['arena-ladder', arenaId] });
+  qc.invalidateQueries({ queryKey: ['my-internal-tournaments'] });
   qc.invalidateQueries({ queryKey: arenaKeys.bloqueiosDaArena(arenaId) });
   qc.invalidateQueries({ queryKey: arenaKeys.reservas(arenaId) });
 }
@@ -1010,7 +1035,7 @@ export function useFinishTournament() {
 /** A classificação acumulada da casa. */
 export function useArenaLadder(arenaId, period = 'geral') {
   return useQuery({
-    queryKey: ['arena-ladder', arenaId, period],
+    queryKey: arenaKeys.ladder(arenaId, period),
     queryFn: () => getLadder(arenaId, period),
     enabled: !!arenaId,
     staleTime: 60_000,

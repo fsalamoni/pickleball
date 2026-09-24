@@ -63,7 +63,7 @@ vi.mock('@/modules/games/hooks/useArenaGameDays', () => ({
 vi.mock('@/modules/arenas/hooks/useArenaV3', () => ({
   useArenaOpenSlots: () => ({ data: estado.vagasAbertas }),
   useArenaClasses: () => ({ data: estado.aulas }),
-  useArenaTournaments: () => ({ data: estado.torneios }),
+  useArenaInternalTournaments: () => ({ data: estado.torneios }),
 }));
 vi.mock('./V2DaySlotsDialog', () => ({ default: () => null }));
 

@@ -8,7 +8,11 @@
  *  3. ⭐ depois de começar, a porta é o dia de jogo;
  *  4. ⭐ o atleta consegue SAIR (antes só dava para entrar);
  *  5. ⭐ o ladder aparece e explica como se pontua;
- *  6. quem já está inscrito é mostrado — é o que faz outra pessoa entrar.
+ *  6. quem já está inscrito é mostrado — é o que faz outra pessoa entrar;
+ *  7. ⭐ a gestão mora na Central: o endereço antigo leva à seção Torneios;
+ *  8. 🐞 "Encerrar e pontuar" existe (o serviço existia e nenhuma tela o
+ *     chamava — o ladder nunca recebia ponto);
+ *  9. o torneio encerrado mostra o pódio.
  */
 import React from 'react';
 import { createRoot } from 'react-dom/client';
@@ -37,7 +41,7 @@ vi.mock('@/modules/arenas/hooks/useArenaModules', () => ({
   useArenaModules: () => ({ isOn: (id) => LIGADOS.has(id), isLoading: false }),
 }));
 vi.mock('@/modules/arenas/hooks/useArenaV3', () => ({
-  useArenaTournaments: () => ({ data: estado.torneios, isLoading: false }),
+  useArenaInternalTournaments: () => ({ data: estado.torneios, isLoading: false, isError: false, refetch: vi.fn() }),
   useCreateTournament: () => ({ mutateAsync: vi.fn(), isPending: false }),
   useUpdateTournament: () => ({ mutateAsync: vi.fn(), isPending: false }),
   useCancelTournament: () => ({ mutateAsync: vi.fn(), isPending: false }),
@@ -48,7 +52,17 @@ vi.mock('@/modules/arenas/hooks/useArenaV3', () => ({
   useArenaLadder: () => ({ data: estado.ladder, isLoading: false }),
 }));
 
+vi.mock('@/v2/components/arenas/tournaments/FinishTournamentDialog', () => ({
+  default: ({ torneio }) => <div>DIÁLOGO DE ENCERRAR {torneio.name}</div>,
+}));
+
 const { default: V2ArenaLeagues } = await import('./V2ArenaLeagues.jsx');
+const { useLocation } = await import('react-router-dom');
+
+function SondaDaCentral() {
+  const loc = useLocation();
+  return <div>CENTRAL {loc.search}</div>;
+}
 
 const torneio = (over = {}) => ({
   id: 't1', arena_id: 'a1', name: 'Americano de sábado', date: '2099-10-03',
@@ -88,6 +102,7 @@ async function render(rota = '/arenas/a1/torneios') {
         <Routes>
           <Route path="/arenas/:arenaId/torneios" element={<V2ArenaLeagues />} />
           <Route path="/arenas/:arenaId/gerir/torneios" element={<V2ArenaLeagues />} />
+          <Route path="/arenas/:arenaId/gerir" element={<SondaDaCentral />} />
           <Route path="/arenas/:arenaId" element={<div>PÁGINA DA ARENA</div>} />
           <Route path="/arenas" element={<div>DIRETÓRIO</div>} />
           <Route path="/dia-de-jogo/:id" element={<div>O JOGO</div>} />
@@ -194,7 +209,7 @@ describe('a arena', () => {
 
   it('⭐ "Começar o torneio" cria o dia de jogo com os inscritos', async () => {
     estado.torneios = [torneio()];
-    await render('/arenas/a1/gerir/torneios');
+    await render();
     await clicar('Começar o torneio');
     expect(comecar).toHaveBeenCalledTimes(1);
     const arg = comecar.mock.calls[0][0];
@@ -205,21 +220,21 @@ describe('a arena', () => {
 
   it('⭐ sem inscritos suficientes, não dá para começar — e a tela diz por quê', async () => {
     estado.torneios = [torneio({ roster: [{ user_id: 'u1', name: 'Ana' }], enrolled: 1 })];
-    await render('/arenas/a1/gerir/torneios');
+    await render();
     expect(botao('Começar o torneio')?.disabled).toBe(true);
     expect(container.textContent).toMatch(/Faltam inscritos/i);
   });
 
   it('⭐ sem quadra escolhida, também não — e diz o outro motivo', async () => {
     estado.torneios = [torneio({ court_ids: [] })];
-    await render('/arenas/a1/gerir/torneios');
+    await render();
     expect(botao('Começar o torneio')?.disabled).toBe(true);
     expect(container.textContent).toMatch(/Escolha as quadras e o horário/i);
   });
 
   it('⭐ depois de começar, a porta é o DIA DE JOGO', async () => {
     estado.torneios = [torneio({ status: 'running', game_day_id: 'gd1' })];
-    await render('/arenas/a1/gerir/torneios');
+    await render();
     expect(container.textContent).toContain('Abrir o jogo');
     expect(container.textContent).toContain('Em andamento');
     // Não oferece começar de novo.
@@ -227,16 +242,53 @@ describe('a arena', () => {
   });
 
   it('explica o que "Começar" faz', async () => {
-    await render('/arenas/a1/gerir/torneios');
+    await render();
     expect(container.textContent).toMatch(/cria um dia de jogo da arena/i);
     expect(container.textContent).toMatch(/saem da venda/i);
   });
 
   it('torneio encerrado sai da lista de ativos', async () => {
     estado.torneios = [torneio({ status: 'finished' })];
-    await render('/arenas/a1/gerir/torneios');
+    await render();
     expect(container.textContent).toMatch(/Nenhum torneio marcado/i);
     expect(container.textContent).toContain('Encerrados (1)');
+  });
+
+  it('⭐ o endereço antigo de gestão leva à Central, seção Torneios', async () => {
+    await render('/arenas/a1/gerir/torneios');
+    expect(container.textContent).toContain('CENTRAL ?aba=torneios');
+  });
+
+  it('🐞 torneio em andamento oferece "Encerrar e pontuar" (antes: não havia botão)', async () => {
+    estado.torneios = [torneio({ status: 'running', game_day_id: 'gd1' })];
+    await render();
+    await clicar('Encerrar e pontuar');
+    expect(container.textContent).toContain('DIÁLOGO DE ENCERRAR Americano de sábado');
+  });
+
+  it('o atleta NÃO vê "Encerrar"', async () => {
+    estado.gere = false;
+    estado.torneios = [torneio({ status: 'running', game_day_id: 'gd1' })];
+    await render();
+    expect(botao('Encerrar e pontuar')).toBeFalsy();
+  });
+
+  it('⭐ o torneio encerrado mostra o pódio', async () => {
+    estado.torneios = [torneio({
+      status: 'finished',
+      final_standings: [
+        { user_id: 'u2', name: 'Beto', position: 2 },
+        { user_id: 'u1', name: 'Ana', position: 1 },
+        { user_id: 'u9', name: 'Zé', position: null },
+      ],
+    })];
+    await render();
+    await clicar('Encerrados (1)');
+    const texto = container.textContent;
+    expect(texto).toContain('1º Ana');
+    expect(texto).toContain('2º Beto');
+    expect(texto.indexOf('1º Ana')).toBeLessThan(texto.indexOf('2º Beto'));
+    expect(texto).not.toContain('Zé');
   });
 });
 

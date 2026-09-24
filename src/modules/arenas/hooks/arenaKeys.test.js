@@ -31,6 +31,16 @@ describe('arenaKeys', () => {
       .not.toEqual(arenaKeys.bloqueios('a1', null, '2026-09-01'));
   });
 
+  it('🐞 os torneios da CASA não compartilham prefixo com os da PLATAFORMA', () => {
+    // A chave dos torneios da plataforma sediados na arena é
+    // ['arena-tournaments', id]. A da casa era ['arena-tournaments', id, {}]:
+    // encaixada nela.
+    const casa = arenaKeys.torneiosDaCasa('a1');
+    expect(casa[0]).not.toBe('arena-tournaments');
+    expect(casa.slice(0, 2)).toEqual(arenaKeys.torneiosDaCasaDaArena('a1'));
+    expect(arenaKeys.ladder('a1')).toEqual(['arena-ladder', 'a1', 'geral']);
+  });
+
   it('duas chamadas produzem vetores iguais (o hook e a pré-busca se encontram)', () => {
     expect(arenaKeys.reservas('a1')).toEqual(arenaKeys.reservas('a1'));
     expect(arenaKeys.bloqueios('a1')).toEqual(arenaKeys.bloqueios('a1'));

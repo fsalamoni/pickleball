@@ -31,6 +31,20 @@ export const arenaKeys = Object.freeze({
    * corrente deixaria os outros mostrando a quadra à venda.
    */
   bloqueiosDaArena: (id) => ['arena-unavailabilities', id],
+  /**
+   * Os torneios DA CASA (`arena_internal_tournaments`, módulo `leagues`).
+   *
+   * 🐞 Antes a chave era `['arena-tournaments', id, filtros]` — o PREFIXO da
+   * chave dos torneios DA PLATAFORMA sediados na arena
+   * (`['arena-tournaments', id]`, em `tournament/hooks`). Duas coleções, duas
+   * listas, uma chave encaixada na outra: invalidar uma derrubava a outra, e
+   * qualquer chamada sem filtro passaria a ler uma no cache da outra.
+   */
+  torneiosDaCasa: (id, filtros = {}) => ['arena-internal-tournaments', id, filtros],
+  /** O prefixo de todos os torneios da casa de uma arena (para invalidar). */
+  torneiosDaCasaDaArena: (id) => ['arena-internal-tournaments', id],
+  /** A classificação acumulada (ladder) de um período. */
+  ladder: (id, periodo = 'geral') => ['arena-ladder', id, periodo],
   /** Módulos que ESTA arena ligou (camada 2). */
   modulos: (id) => ['arena-module-states', id],
   /** Módulos que a PLATAFORMA liberou (camada 1). Global, sem arena. */

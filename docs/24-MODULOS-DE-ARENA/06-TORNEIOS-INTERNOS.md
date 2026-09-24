@@ -4,6 +4,12 @@
 > `leagues_open_play` · `leagues_prizing`
 > **Chave-mestra**: flag `arena_modules` (default OFF).
 > **Banco**: zero coleção nova, zero índice novo, zero regra nova.
+>
+> **Atualização 2026-09-24 (Onda BG)**: os torneios passaram a ser PARTE da
+> arena — seção **Torneios** na Central (da casa + da plataforma), "Torneios da
+> casa" na página, inscrições em "Meus torneios". **A inscrição nunca tinha
+> funcionado** (a regra só deixava a arena atualizar o torneio) e **"Encerrar"
+> não tinha botão** — corrigidos. Ver `09-INTEGRACAO-NA-ARENA.md` §6.
 
 ---
 

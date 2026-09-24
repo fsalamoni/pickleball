@@ -52,6 +52,9 @@ de aparência:
 | D7 | O **professor não lia os alunos** da própria aula: a regra de `arena_class_bookings` só deixava o aluno e a arena lerem, e o erro virava "ninguém matriculado" com a turma cheia | `firestore.rules`, `V2ArenaClasses.jsx` |
 | D8 | Comissão configurada em **0% virava 20%** (`Number(x) \|\| 20`: zero é falso) | `V2ArenaClasses.jsx` |
 | D9 | O corte da lista de aulas levava as **FUTURAS**: passando de 100 aulas nunca marcadas como dadas, a aula de amanhã deixava de ocupar a quadra no calendário | `classesService.listArenaClasses` |
+| D12 | O **atleta não conseguia se inscrever** num torneio da casa (nem sair): a inscrição grava no documento do torneio e a regra só deixava a arena atualizá-lo — o botão "Quero jogar" nunca funcionou | `firestore.rules` |
+| D13 | Encerrar o torneio duas vezes (dois cliques, duas abas) **somaria os pontos duas vezes** no ladder | `leaguesService.finishInternalTournament` |
+| D14 | A página da arena mostrava o **status cru** do torneio da plataforma (`registrations_open`) e listava **rascunhos** | `V2ArenaDetail.jsx` |
 | D11 | A **arena também não via os alunos**: a lista filtrava só por `class_id`, e a regra confere a arena — o Firestore recusava a consulta inteira. Cancelar a aula quebrava no meio: a aula ficava cancelada e **ninguém era avisado** | `classesService.listClassBookings`, `cancelArenaClass` |
 | D10 | O aluno podia se **matricular já "pago"**, marcar a própria matrícula como paga e plantar matrícula na lista de outra arena (a regra só conferia `user_id`) | `firestore.rules` |
 
@@ -107,7 +110,7 @@ novo**; consultas com um `where` só e ordenação em memória.
 |---|---|---|
 | I-1 | Abas por URL (D1) + seção **Membros** na gestão + membros na página pública + selo no CRM | ✅ §4 |
 | I-2 | Seção **Aulas**, lista única de professores (Sistema A + aulas), D2, D5–D11, aulas no lado do atleta e do professor | ✅ §5 |
-| I-3 | Seção **Torneios** (casa + plataforma), D3, D4, torneios na página pública e no lado do atleta | ⏳ |
+| I-3 | Seção **Torneios** (casa + plataforma), D3, D4, D12–D14, torneios na página pública e no lado do atleta | ✅ §6 |
 | I-4 | Receita de aulas, planos e torneios no painel de métricas | ⏳ |
 
 ---
@@ -275,4 +278,62 @@ corte por limite passou a levar as MAIS ANTIGAS (D9).
 **Zero coleção, zero índice, zero campo novo.** Uma regra alterada
 (`arena_class_bookings`: leitura do professor + criação/atualização mais
 fechadas), provada no emulador.
+
+---
+
+## 6. I-3 — Torneios dentro da arena (entregue)
+
+### Onde os torneios estão agora
+
+| Lugar | O quê |
+|---|---|
+| Central → **Torneios** → *Da casa* | publicar, editar, cancelar, **Começar** (vira dia de jogo) e **Encerrar e pontuar**; a classificação da casa (ladder) em cima |
+| Central → **Torneios** → *Da plataforma* | os torneios da plataforma sediados na arena, com status em pt-BR, e **"Criar torneio aqui"** (a arena já chega escolhida como sede) |
+| Página da arena → **Torneios da casa** | os próximos com inscrição aberta (a inscrição ali mesmo), o que está rolando (o caminho para o jogo) e o topo da classificação |
+| `/arenas/:id/torneios` | a página completa — o atleta se inscreve e sai |
+| Torneios → **Meus torneios** | os torneios da casa em que a pessoa está inscrita, de todas as arenas |
+
+- A seção Torneios existe se o módulo `leagues` estiver ligado **ou** se
+  houver torneio da plataforma sediado ali (não arquivado) — o segundo caso
+  não depende de módulo: é da arena desde sempre, só não tinha lugar na
+  gestão. Nenhum dos dois: a Central fica como era.
+- `/arenas/:id/gerir/torneios` leva a `?aba=torneios`; `leagues` é `native`.
+
+### O ciclo agora fecha (D4, D12, D13)
+
+publicar → **inscrição** → Começar (dia de jogo) → **Encerrar e pontuar**.
+
+Os dois extremos estavam quebrados, e o ciclo nunca tinha fechado uma vez:
+
+- **Inscrição (D12).** A regra de `arena_internal_tournaments` ganhou o
+  atleta, no desenho do dia de jogo: só entra ou sai **a si mesmo**
+  (`participants` = antes ∪ {eu} / antes ∖ {eu}), só enquanto o torneio está
+  `scheduled` e sem `game_day_id`, sem tocar em nada além de
+  `participants`/`roster`/`enrolled`/`updated_at`, sem apagar o roster dos
+  outros, sem inflar a contagem e respeitando o limite de vagas. Dez
+  asserções novas no emulador.
+- **Encerramento (D4).** "Encerrar e pontuar" abre o diálogo que monta o
+  pódio a partir do **ranking do dia** (`tournamentStandings`, sobre
+  `computeGameDayLeaderboard`); formato sem placar (Play) começa sem pódio e a
+  arena escolhe. Antes de confirmar, a arena vê **quantos pontos cada um
+  leva** (100/70/50/35, presença 10). Convidado sem conta não entra no ladder.
+- **Encerrar duas vezes (D13).** O serviço confere o status **no banco**:
+  já encerrado → recusa; não começou → recusa. E avisa quem jogou, com o
+  campeão.
+- O torneio encerrado mostra o **pódio** no cartão.
+
+### D3 — duas listas, uma chave
+
+`useArenaTournaments` existia em dois lugares, com chaves encaixadas
+(`['arena-tournaments', id]` para os da plataforma, `['arena-tournaments', id,
+filtros]` para os da casa). Os da casa agora são `useArenaInternalTournaments`,
+com chave própria em `arenaKeys.torneiosDaCasa` (há teste de que não
+compartilham prefixo); o nome antigo segue exportado como alias.
+
+### Banco
+
+**Zero coleção, zero índice, zero campo novo.** Uma regra ampliada
+(`arena_internal_tournaments`: a inscrição do próprio atleta), provada no
+emulador — metade das asserções prova o que passou a funcionar, metade o que
+continua barrado.
 

@@ -1,5 +1,5 @@
 import React, { useState } from 'react';
-import { Link, useNavigate } from 'react-router-dom';
+import { Link, useNavigate, useSearchParams } from 'react-router-dom';
 import { toast } from 'sonner';
 import { ArrowLeft, ArrowRight, CalendarDays, Check, FileStack, Globe, Lock, MapPin, ShieldCheck, Trophy } from 'lucide-react';
 import { useAuth } from '@/core/lib/FirebaseAuthContext';
@@ -44,12 +44,15 @@ export default function V2CreateTournament() {
   const wizardOn = true;
   const isPreview = import.meta.env.DEV && !isAuthAvailable;
   const [step, setStep] = useState(0);
-  const [form, setForm] = useState({
+  // `?arena=<id>`: veio da Central da arena ("Criar torneio aqui") — a arena
+  // já chega escolhida como sede.
+  const [params] = useSearchParams();
+  const [form, setForm] = useState(() => ({
     name: '', description: '', city: '', state: '', venue: '',
     visibility: TOURNAMENT_VISIBILITY.PUBLIC, ruleset: RULESET.CBP,
     starts_at: '', ends_at: '', registration_deadline: '',
-    arena_id: '', // Sprint 4 ARE-14: arena vinculada (opcional)
-  });
+    arena_id: params.get('arena') || '', // Sprint 4 ARE-14: arena vinculada (opcional)
+  }));
   const set = (field, value) => setForm((f) => ({ ...f, [field]: value }));
   const roleConsent = useRoleConsent('termos-organizador');
 

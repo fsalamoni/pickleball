@@ -477,7 +477,7 @@ const ARENA = {
           'Open match e matchmaking — jogos abertos na sua arena.',
           'Membros — sua base de alunos/mensalistas. Ligado, vira a seção MEMBROS da gestão.',
           'Aulas — a agenda de aulas na sua estrutura. Ligado, vira a seção AULAS da gestão (agenda + professores), e a página da arena ganha "Aulas e professores".',
-          'Torneios — torneios sediados por você.',
+          'Torneios — torneios da casa. Ligado, vira a seção TORNEIOS da gestão (da casa e da plataforma): publicar, começar (vira dia de jogo) e ENCERRAR, que leva o pódio à classificação da casa.',
           'Marketing — divulgação.',
           'Operações — a rotina do dia a dia.',
         ),
