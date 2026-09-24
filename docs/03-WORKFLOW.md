@@ -583,6 +583,38 @@ Não temos backup automatizado. Firestore tem export manual via Console.
 
 ---
 
+## 9.1 ⚠️ Cloud Functions: o projeto Firebase é COMPARTILHADO
+
+**Incidente de 2026-09-24.** O projeto Firebase deste app também hospeda as
+Cloud Functions de OUTRO aplicativo (em `us-central1`: `api`, `getMe`,
+`listConversas`, `getLLMConfig`, `painCheck`, `weeklySummary`…). Os dois usavam
+o codebase `default`, e o deploy daqui rodava
+`firebase deploy --only functions --force`: a CLI trata toda função do projeto
+que não está no código local como "removida" e a APAGA.
+
+- Entre 22/09 e 24/09, o deploy do OUTRO app apagou **todas** as funções do
+  PickleRush (ranking automático, push, fila de espera, ranking de clube).
+- Em 24/09, o deploy do PickleRush (merge do #136) as recriou — e apagou
+  **~40 funções do outro app**.
+
+**Conserto deste lado**: o passo publica só as funções exportadas em
+`functions/index.js`, **pelo nome** (`--only functions:a,functions:b,…`). Com o
+filtro, a CLI não toca no resto do projeto. Lista vazia não publica nada
+(`--only` vazio voltaria a ser "tudo"). Guarda:
+`src/core/guards/deployFunctions.test.js`.
+
+**O que continua fora do alcance deste repositório**:
+1. **Restaurar o outro app** — é preciso publicá-lo de novo a partir do
+   repositório dele.
+2. **O outro app continua capaz de apagar as funções daqui** enquanto o deploy
+   dele for amplo. Ali, a mesma correção: publicar por nome, ou dar a ele um
+   `codebase` próprio no `firebase.json` (ex.: `"codebase": "outroapp"`) — com
+   codebases distintos, cada deploy só enxerga as próprias funções.
+3. O ideal, a médio prazo, é **um projeto Firebase por aplicativo**.
+
+Depois de qualquer deploy, confira no log do passo *Deploy Cloud Functions*
+que não há linha `Successful delete operation` de função que não é daqui.
+
 ## 10. GitHub Actions secrets
 
 Para o workflow de deploy funcionar, estes secrets DEVEM estar configurados

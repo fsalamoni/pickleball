@@ -189,7 +189,30 @@ jobs:
       - name: Deploy Cloud Functions (non-fatal)
         run: |
           set +e
-          OUT=$(firebase deploy --only functions --project "$FIREBASE_PROJECT_ID" --non-interactive --force 2>&1)
+          # SÓ as funções DESTE repositório, pelo NOME.
+          #
+          # O projeto Firebase é compartilhado com outro aplicativo, e os dois
+          # usavam o codebase "default". `firebase deploy --only functions
+          # --force` trata toda função do projeto que não está no código
+          # daqui como "removida" e a APAGA: em 2026-09-24 este passo apagou
+          # ~40 funções do outro app (us-central1) — e, dias antes, o deploy
+          # do outro app tinha apagado todas as funções do PickleRush.
+          #
+          # Com o filtro por nome, a CLI só cria/atualiza/apaga as funções
+          # listadas; o resto do projeto fica intocado. O `--force` fica
+          # porque, sem ele, o modo não interativo aborta no aviso da política
+          # de limpeza de imagens — e agora ele só vale dentro do filtro.
+          #
+          # A lista sai das exportações de functions/index.js. Lista VAZIA não
+          # publica nada: `--only` vazio voltaria a significar "tudo".
+          # Há teste travando isto: src/core/guards/deployFunctions.test.js
+          FUNCS=$(grep -oE '^exports\.[A-Za-z0-9_]+' functions/index.js | sed 's/^exports\./functions:/' | paste -sd, -)
+          if [ -z "$FUNCS" ]; then
+            echo "::warning title=Nenhuma função listada::A lista de funções saiu vazia; nada foi publicado (de propósito)."
+            exit 0
+          fi
+          echo "Publicando: $FUNCS"
+          OUT=$(firebase deploy --only "$FUNCS" --project "$FIREBASE_PROJECT_ID" --non-interactive --force 2>&1)
           RC=$?
           echo "$OUT"
           if [ $RC -eq 0 ]; then
