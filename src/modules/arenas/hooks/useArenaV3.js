@@ -661,7 +661,8 @@ import {
   listArenaClasses, createArenaClass, bookClass,
   updateArenaClass, cancelArenaClass, deleteArenaClass, completeArenaClass,
   listClassBookings, listMyClassBookings, cancelClassBooking, setClassBookingPaid,
-  listCoachProfiles, listCoachClasses,
+  listCoachProfiles, listCoachClasses, listCoachClassBookings,
+  listMyClassEnrollments, listMyTaughtClasses,
 } from '../services/classesService.js';
 
 /**
@@ -684,7 +685,11 @@ export function useCreateCoach() {
   const qc = useQueryClient();
   return useMutation({
     mutationFn: ({ arenaId, input }) => createArenaCoach(arenaId, input, user),
-    onSuccess: (_d, { arenaId }) => qc.invalidateQueries({ queryKey: ['arena-coaches', arenaId] }),
+    onSuccess: (_d, { arenaId }) => {
+      qc.invalidateQueries({ queryKey: ['arena-coaches', arenaId] });
+      // Cadastro com conta vinculada faz daquela pessoa professora da arena.
+      qc.invalidateQueries({ queryKey: ['my-coach-profiles'] });
+    },
   });
 }
 
@@ -711,17 +716,15 @@ export function useCreateClass() {
 /**
  * Matricula na aula.
  *
- * A comissão vem da CONFIGURAÇÃO do módulo `classes_marketplace`, não de um
- * número no código — o serviço gravava 50% fixo, ignorando o que a arena
- * configurou.
+ * A divisão (comissão e se o professor é parceiro) é decidida pelo SERVIÇO,
+ * com o que está no banco — a tela não manda mais esses números. Ela mandava
+ * `partner: true` fixo, e o professor da casa pagava comissão à própria arena.
  */
 export function useBookClass() {
   const { user, userProfile } = useAuth();
   const qc = useQueryClient();
   return useMutation({
-    mutationFn: ({ classId, commissionPct, partner }) => (
-      bookClass(classId, user, userProfile, { commissionPct, partner })
-    ),
+    mutationFn: ({ classId }) => bookClass(classId, user, userProfile),
     onSuccess: (_d, { arenaId }) => invalidarAulas(qc, arenaId),
   });
 }
@@ -733,6 +736,8 @@ function invalidarAulas(qc, arenaId) {
   qc.invalidateQueries({ queryKey: ['arena-classes', arenaId] });
   qc.invalidateQueries({ queryKey: ['arena-class-bookings'] });
   qc.invalidateQueries({ queryKey: ['coach-classes'] });
+  qc.invalidateQueries({ queryKey: ['my-class-enrollments'] });
+  qc.invalidateQueries({ queryKey: ['my-taught-classes'] });
   // A aula OCUPA a quadra: sem isto o calendário segue oferecendo o horário.
   qc.invalidateQueries({ queryKey: arenaKeys.bloqueiosDaArena(arenaId) });
 }
@@ -782,12 +787,17 @@ export function useUpdateArenaCoach() {
   });
 }
 
-/** As matrículas de uma aula (quem a arena e o professor veem). */
-export function useClassBookings(classId) {
+/**
+ * As matrículas de uma aula — a leitura da ARENA.
+ *
+ * Precisa do `arenaId`: é por ele que a regra deixa a arena ler (ver
+ * `listClassBookings`). O professor usa `useCoachClassBookings`.
+ */
+export function useClassBookings(classId, arenaId) {
   return useQuery({
-    queryKey: ['arena-class-bookings', classId],
-    queryFn: () => listClassBookings(classId),
-    enabled: !!classId,
+    queryKey: ['arena-class-bookings', classId, arenaId],
+    queryFn: () => listClassBookings(classId, arenaId),
+    enabled: !!classId && !!arenaId,
     staleTime: 30_000,
   });
 }
@@ -829,6 +839,43 @@ export function useMyCoachProfiles() {
     queryFn: () => listCoachProfiles(user?.uid),
     enabled: !!user?.uid,
     staleTime: 5 * 60_000,
+  });
+}
+
+/**
+ * As matrículas das aulas de UM professor — é o que o professor consegue ler.
+ *
+ * Não use `useClassBookings` para o professor: aquela consulta filtra por
+ * aula, e a regra só deixa o professor ler filtrando por `coach_id`.
+ */
+export function useCoachClassBookings(coachId) {
+  return useQuery({
+    queryKey: ['arena-class-bookings', 'professor', coachId],
+    queryFn: () => listCoachClassBookings(coachId),
+    enabled: !!coachId,
+    staleTime: 30_000,
+  });
+}
+
+/** As minhas matrículas em aula, em todas as arenas ("Minhas aulas"). */
+export function useMyClassEnrollments() {
+  const { user } = useAuth();
+  return useQuery({
+    queryKey: ['my-class-enrollments', user?.uid],
+    queryFn: () => listMyClassEnrollments(user?.uid),
+    enabled: !!user?.uid,
+    staleTime: 60_000,
+  });
+}
+
+/** As aulas que eu DOU, em todas as arenas (agenda do professor). */
+export function useMyTaughtClasses() {
+  const { user } = useAuth();
+  return useQuery({
+    queryKey: ['my-taught-classes', user?.uid],
+    queryFn: () => listMyTaughtClasses(user?.uid),
+    enabled: !!user?.uid,
+    staleTime: 60_000,
   });
 }
 

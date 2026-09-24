@@ -283,6 +283,10 @@ Estes princípios vieram de bugs reais que custaram horas pra arrumar. São ineg
 **"Vou mexer em cupom, campanha, NPS, pontos ou indicação"** → `docs/24-MODULOS-DE-ARENA/03-MARKETING.md`. Sete coisas que NÃO podem regredir: (1) o cupom é **reconferido pelo serviço** contra o banco antes de gravar — conferir só no navegador deixa qualquer pessoa gravar um desconto que a arena não criou; (2) o uso do cupom é contabilizado na **confirmação**, nunca no pedido; (3) a campanha mostra **quantas pessoas** vão receber ANTES de enviar, e não envia para zero; (4) o NPS não é perguntado a quem não veio, nem mais de uma vez a cada 90 dias; (5) resgate de pontos e de indicação são escritas da **ARENA** (a regra só deixa o gestor escrever `arena_members` e `arena_wallets` — botão na tela do atleta dá "permissão negada" que ele não tem como resolver); (6) atalho de módulo vem do **catálogo**, não de lista escrita à mão; (7) o serviço de contabilizar cupom **não** se chama `useCoupon` (o ESLint trata `useX` como hook e derruba o lint de quem o chama)
 **"Vou mandar alguém para uma aba da Central da arena"** → `/arenas/:id/gerir?aba=<valor>` (ex.: `?aba=membros`, `?aba=modulos`, `?aba=mercado`); `?secao=<id>` abre a primeira aba da seção. A aba mora na URL: clicar grava, recarregar não perde. Antes a Central NÃO lia a URL e todo link "abrir os módulos"/"abrir o mercado" caía em Reservas. Estrutura em `v2/components/arenas/arenaManageSections.js` — **o valor de cada aba é único em toda a Central** (a seção ativa é achada pela aba; há teste). Aba de módulo desligado cai em Reservas, nunca em branco
 **"Os módulos da arena devem parecer parte da arena"** → módulo integrado vira **seção na Central** (ao lado de Reservas) e **seção na página pública**, não botão para fora. Marque `native: true` no catálogo: `ArenaModuleShortcuts` para de gerar atalho, e a rota antiga vira `<Navigate>` para a aba (notificações antigas seguem funcionando). **Membros** já é assim: Central → Membros (Membros · Pacotes), selo + "Tornar membro" em Clientes (`attachMembership`, 3+ reservas confirmadas), e "Planos e vantagens" na página da arena, depois dos Preços. Ver `docs/24-MODULOS-DE-ARENA/09-INTEGRACAO-NA-ARENA.md`
+**"Vou mexer em professor ou aula da arena (Central)"** → com o módulo `classes` ligado, **Aulas** é uma seção da Central (Agenda · Professores) e "Professores" SAI de Equipe — o valor da aba continua `professores`. A lista é ÚNICA: parceiros da plataforma (`coach_arenas`) + professores das aulas (`arena_coaches`), juntados pelo uid em `mergeCoachRoster` (`arenas/domain/coachRoster.js`). **Nunca** crie um terceiro cadastro de professor; para colocar um parceiro nas aulas use `arenaCoachFromPartner` (o valor do perfil está em `hourly_rate`, não `price_per_hour`). Componentes em `v2/components/arenas/classes/`. Ver `docs/24-MODULOS-DE-ARENA/09-INTEGRACAO-NA-ARENA.md` §5
+**"Vou mexer na matrícula em aula de arena"** → a divisão arena × professor é decidida pelo SERVIÇO (`bookClass`) com o `partner` do cadastro do professor e `commissionPctFrom(config)` — **nunca** mande comissão nem "é parceiro" da tela (ela mandava `partner: true` fixo, e o professor da casa pagava comissão). `commissionPctFrom` trata **0% como 0%** (o `|| 20` virava 20%). O PROFESSOR lê as matrículas da aula dele só consultando **por `coach_id`** (`useCoachClassBookings`) — consulta por `class_id` a regra recusa. E a agenda da arena usa `includeClosed: true`: sem isso a aula DADA some, e com ela o botão de registrar o pagamento
+**"Consulta numa coleção de leitura restrita volta vazia (ou dá permission-denied)"** → a consulta tem de filtrar pelo campo que a REGRA confere: o Firestore só aceita a consulta se conseguir provar a regra para TUDO o que ela pode devolver. A arena lê por `arena_id` (a regra faz `isArenaManager(resource.data.arena_id)`), o dono por `user_id`, o professor da aula por `coach_id`. Filtrar só por `class_id`/`slot_id`/`sale_id` é recusado SEMPRE — era o caso da lista de alunos da aula (a arena nunca a viu). Várias igualdades juntas não pedem índice composto
+**"Onde o atleta/professor vê as aulas das arenas?"** → `/minhas-aulas` (`MyArenaEnrollments`: matrículas de todas as arenas) e `/aulas` (`MyTaughtArenaClasses`: aparece até para quem não tem perfil de professor da plataforma). Na página da arena, "Aulas e professores" (`ArenaClassesSection`), no lugar de "Professores parceiros" quando o módulo está ligado
 **"Criei uma tela nova de módulo de arena. Como alguém chega nela?"** → `<ArenaModuleShortcuts arenaId audience="manage"|"public" />`. Ele lê `manage`/`public` do catálogo e cruza com o que a arena ligou — rota preenchida vira botão sozinho, nos dois lugares (página da arena e Central). **Não escreva o link à mão**: o console de marketing existia, tinha rota, e nada na plataforma levava até ele — módulo ligado, tela inalcançável. Destinos repetidos viram um botão só
 **"Mudei/removi uma rota de tela de módulo de arena"** → o CATÁLOGO promete aquele caminho (`manage`/`public`) e `ArenaModuleShortcuts` monta o botão a partir dele — caminho com erro de digitação **não dá erro**, dá um botão bonito que leva a uma tela em branco, no celular do cliente, na frente da recepção. `src/core/guards/rotasDeModulos.test.js` lê `V2App.jsx` e reprova quem quebrar o par (e exige `:arenaId`, que é o nome que `arenaModuleRoute` troca)
 **"A tela precisa saber se um módulo está ligado"** → `useArenaModules(arenaId)` (UM hook, DUAS consultas, responde pelos 50). **Nunca** `useCanArenaUseModule` por módulo, e jamais dentro de um `map`
@@ -483,6 +487,32 @@ chore(deps): bump firebase to 12.x
 > memory topic `picklerush-sync-2026-08.md`.
 >
 > **Destaques por onda**:
+>
+> - **Onda BF — Aulas e professores dentro da arena** (2026-09-24): a
+>   segunda parte do pedido de integração. **Aulas virou seção da Central**
+>   (Agenda · Professores) e a página da arena ganhou **"Aulas e
+>   professores"**, com as próximas aulas e a matrícula ali mesmo. Os DOIS
+>   cadastros de professor — parceiro da plataforma e professor das aulas —
+>   viraram **uma lista**, juntada pela conta da pessoa, com "Colocar nas
+>   aulas" num toque para o parceiro que ainda não dá aula. `/minhas-aulas`
+>   passou a mostrar as matrículas de todas as arenas, e `/aulas` as aulas que
+>   o professor dá nelas. **Cinco defeitos** no caminho: **🐞 o professor
+>   não via os alunos** da própria aula (a regra não deixava, e o erro virava
+>   "ninguém matriculado" com a turma cheia); **🐞 a aula marcada como "dada"
+>   sumia**, e com ela o botão de registrar o pagamento de quem esteve lá;
+>   **🐞 a matrícula gravava `partner: true` fixo** — o professor da casa
+>   pagava comissão à própria arena; **🐞 comissão de 0% virava 20%**; e o
+>   **corte da lista levava as aulas FUTURAS** (passando de cem aulas nunca
+>   marcadas como dadas, a de amanhã deixava de ocupar a quadra). E **🐞 a
+>   ARENA também não via os alunos**: a consulta filtrava só por aula, a
+>   regra confere a arena, e o Firestore recusava tudo — cancelar a aula
+>   quebrava no meio, sem avisar ninguém. A única
+>   regra tocada, `arena_class_bookings`, **abriu** a leitura ao professor da
+>   aula (pelo cadastro que só a arena escreve) e **fechou** o que estava
+>   aberto: o aluno se matriculava já "pago", marcava a própria matrícula como
+>   paga e podia plantá-la na lista de outra arena. Quinze asserções novas no
+>   emulador. **Zero coleção, zero índice, zero campo.** Ver
+>   `docs/24-MODULOS-DE-ARENA/09-INTEGRACAO-NA-ARENA.md` §5.
 >
 > - **Onda BE — Membros dentro da arena** (2026-09-24): *"os módulos da
 >   arena V3 estão um tanto separados do restante da arena… precisamos
@@ -1747,7 +1777,7 @@ chore(deps): bump firebase to 12.x
 
 | Métrica | Valor | Delta do início do agente |
 |---|---|---|
-| **Testes Vitest** | **5089 passing** (300 arquivos) + 218 asserções de regras (Vitest) + 85 do dia de jogo no emulador | +4650 (era 408) |
+| **Testes Vitest** | **5169 passing** (306 arquivos) + 233 asserções de regras (Vitest) + 85 do dia de jogo no emulador | +4650 (era 408) |
 | **Lint errors** | 0 | era 30+ |
 | **Módulos** | 21 (+`help` — conteúdo dos tutoriais em tela) (`games` e `legal` saíram como `src/modules/` mas continuam como pastas oficiais — **rating virou módulo oficial** com domain/services/hooks/components) | +4 (coaches, circuits, games, legal) |
 | **V2 pages** | 82 (+V2GameDayTelao — telão, fora do V2Layout; +V2Help — central de ajuda; +V2ArenaKiosk — totem da recepção, também fora do V2Layout; +V2ArenaCheckin; +V2ArenaAttendance) | +58 |

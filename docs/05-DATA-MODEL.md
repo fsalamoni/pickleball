@@ -909,6 +909,15 @@ e sem `queue_removed`. É exatamente esse conjunto que vira o CSV.
 **Leagues**: `arena_ladders`, `arena_internal_tournaments`, `arena_matches`.
 **Classes** (Sistema C, Aulas da arena): `arena_classes`, `arena_class_bookings`,
 `arena_coaches`.
+  - `arena_class_bookings` (2026-09-24): além do aluno e da arena, o
+    **professor da aula** lê a matrícula — `arena_coaches/{coach_id}.user_id
+    == uid` (consulta por `coach_id`); a arena consulta por `arena_id` +
+    `class_id` (só por `class_id` a regra recusa). O aluno cria só em nome próprio, sem
+    `paid: true` e com o `arena_id` da aula; e não altera pagamento, valores
+    nem a que aula/arena/professor a matrícula pertence. A divisão
+    (`arena_amount`/`coach_amount`/`commission_pct`) é calculada pelo serviço
+    com o `partner` do cadastro do professor e a comissão do módulo
+    `classes_marketplace`. Ver `docs/24-MODULOS-DE-ARENA/09-INTEGRACAO-NA-ARENA.md` §5.
 **Marketing**: `arena_campaigns`, `arena_coupons`, `arena_referrals`,
 `arena_nps_responses`.
 **Operations**: `arena_checklists`, `arena_maintenance_orders`,

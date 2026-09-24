@@ -287,7 +287,17 @@ export async function updateCoachResidency(coachId, arenaId, patch = {}, actor) 
     throw new Error('Sem permissão para editar essa residência.');
   }
   const update = { updated_at: serverTimestamp() };
-  if (patch.status !== undefined) update.status = patch.status === 'paused' ? 'paused' : 'active';
+  // 🐞 Antes, todo status que não fosse "paused" virava "active": um convite
+  // PENDENTE, pausado e retomado, passava a parceria ativa sem o professor
+  // nunca ter aceitado. Agora "pending" é preservado, e a pausa guarda o
+  // estado anterior (`status_before_pause`) — ver `partnershipToggle`.
+  if (patch.status !== undefined) {
+    update.status = ['paused', 'pending'].includes(patch.status) ? patch.status : 'active';
+  }
+  if (patch.status_before_pause !== undefined) {
+    update.status_before_pause = ['active', 'pending'].includes(patch.status_before_pause)
+      ? patch.status_before_pause : null;
+  }
   if (patch.notes !== undefined) update.notes = str(patch.notes).slice(0, 500);
   await updateDoc(doc(db, COACH_COLLECTIONS.residencies, residencyId(coachId, arenaId)), update);
   await createAuditLog({

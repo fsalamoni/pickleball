@@ -1,6 +1,7 @@
 /**
  * V2StudentLessons — "Minhas aulas" do aluno: aulas solicitadas/agendadas
- * com professores. Gated pela flag coach_lessons.
+ * com professores, e as matrículas nas aulas das ARENAS (todas as arenas).
+ * Gated pela flag coach_lessons.
  *
  * Rota: /minhas-aulas
  * Aditivo.
@@ -20,6 +21,7 @@ import {
 import { creditsRemaining, isSaleActive } from '@/modules/coaches/domain/package';
 import { formatPrice } from '@/modules/arenas/domain/pricing';
 import ConfirmDialog from '@/components/ConfirmDialog';
+import { MyArenaEnrollments } from '@/v2/components/arenas/classes/MyArenaClasses';
 import {
   V2Badge, V2EmptyState, V2Skeleton, V2Surface,
 } from '@/v2/ui/primitives';
@@ -119,8 +121,12 @@ function V2StudentLessonsContent() {
 
       <PackageBalance sales={sales} />
 
+      {/* As aulas da agenda das ARENAS (módulo de aulas). Antes só apareciam
+          dentro da página de cada arena. Some sozinho sem matrícula. */}
+      <MyArenaEnrollments />
+
       <V2Surface>
-        <h2 className="mb-4 font-display text-lg font-bold text-ink">Próximas</h2>
+        <h2 className="mb-4 font-display text-lg font-bold text-ink">Próximas com professores</h2>
         {isLoading ? (
           <V2Skeleton lines={3} />
         ) : upcoming.length === 0 ? (

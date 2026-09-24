@@ -65,6 +65,19 @@ export function buildArenaSections({
         ...(modulos.pacotes ? [{ value: 'planos', label: 'Pacotes de horas', icon: Package }] : []),
       ],
     }] : []),
+    // Aulas: a agenda E os professores. Com o módulo ligado, "Professores"
+    // sai de Equipe e vem para cá, virando a lista ÚNICA (parceiros da
+    // plataforma + quem dá aula). O valor da aba continua `professores`:
+    // links antigos (`?aba=professores`) seguem levando ao lugar certo.
+    ...(modulos.aulas ? [{
+      id: 'aulas',
+      label: 'Aulas',
+      icon: GraduationCap,
+      tabs: [
+        { value: 'aulas', label: 'Agenda', icon: CalendarDays },
+        { value: 'professores', label: 'Professores', icon: GraduationCap },
+      ],
+    }] : []),
     {
       id: 'comercial',
       label: 'Pagamentos e loja',
@@ -90,7 +103,7 @@ export function buildArenaSections({
       icon: Users,
       tabs: [
         { value: 'admins', label: 'Admins', icon: Users },
-        ...(coachResidentOn ? [{ value: 'professores', label: 'Professores', icon: GraduationCap }] : []),
+        ...(coachResidentOn && !modulos.aulas ? [{ value: 'professores', label: 'Professores', icon: GraduationCap }] : []),
         ...(linkedClubsOn ? [{ value: 'clubes', label: 'Clubes', icon: Users }] : []),
       ],
     },

@@ -275,3 +275,20 @@ export function classSplit(price, { commissionPct = DEFAULT_ARENA_COMMISSION_PCT
   const arena = Math.round(total * (pct / 100) * 100) / 100;
   return { total, arena, coach: Math.round((total - arena) * 100) / 100, pct };
 }
+
+/**
+ * O percentual de comissão configurado no módulo — **zero inclusive**.
+ *
+ * 🐞 A tela fazia `Number(config.commission_pct) || 20`: a arena que
+ * configurava 0% ("não cobro comissão de ninguém") continuava cobrando 20%,
+ * porque zero é falso em JavaScript. Ausente ou inválido, vale o padrão.
+ *
+ * @param {object} [config]  `config` do módulo `classes_marketplace`
+ * @returns {number}
+ */
+export function commissionPctFrom(config) {
+  const bruto = config?.commission_pct;
+  if (bruto === undefined || bruto === null || bruto === '') return DEFAULT_ARENA_COMMISSION_PCT;
+  const n = Number(bruto);
+  return Number.isFinite(n) ? Math.min(90, Math.max(0, n)) : DEFAULT_ARENA_COMMISSION_PCT;
+}

@@ -26,12 +26,15 @@ import { beforeAll, afterAll, beforeEach, describe, it } from 'vitest';
 import {
   initializeTestEnvironment, assertSucceeds, assertFails,
 } from '@firebase/rules-unit-testing';
-import { doc, getDoc, setDoc, updateDoc, deleteDoc } from 'firebase/firestore';
+import {
+  doc, getDoc, setDoc, updateDoc, deleteDoc, getDocs, collection, query, where,
+} from 'firebase/firestore';
 
 const ADMIN = 'admin_uid';
 const GESTOR = 'gestor_uid';
 const ATLETA = 'atleta_uid';
 const ESTRANHO = 'estranho_uid';
+const PROF = 'prof_uid';
 const ARENA = 'arena_1';
 const ARENA_2 = 'arena_2';
 const REDE = 'rede_1';
@@ -218,6 +221,112 @@ describe('🔒 indique e ganhe', () => {
 /* ---------------------------------------------------------------- */
 /*  🐞 A arena não conseguia cancelar uma aula                       */
 /* ---------------------------------------------------------------- */
+
+/* ---------------------------------------------------------------- */
+/*  Aulas dentro da arena (2026-09-24)                               */
+/* ---------------------------------------------------------------- */
+
+describe('⭐ o PROFESSOR vê os alunos da própria aula', () => {
+  beforeEach(async () => {
+    await testEnv.withSecurityRulesDisabled(async (ctx) => {
+      const db = ctx.firestore();
+      // O cadastro de professor é da ARENA — é ele que diz quem é o professor.
+      await setDoc(doc(db, 'arena_coaches', 'cprof'), { arena_id: ARENA, name: 'Prof', user_id: PROF });
+      await setDoc(doc(db, 'arena_coaches', 'coutro'), { arena_id: ARENA, name: 'Outro', user_id: ESTRANHO });
+      await setDoc(doc(db, 'arena_classes', 'aula1'), { arena_id: ARENA, coach_id: 'cprof', price: 80 });
+      await setDoc(doc(db, 'arena_class_bookings', 'aula1_' + ATLETA), {
+        arena_id: ARENA, class_id: 'aula1', coach_id: 'cprof', user_id: ATLETA, paid: false,
+      });
+    });
+  });
+
+  it('🐞 o professor lê a matrícula da aula dele (antes via "ninguém matriculado")', async () => {
+    await assertSucceeds(getDoc(doc(como(PROF), 'arena_class_bookings', 'aula1_' + ATLETA)));
+  });
+
+  it('o professor LISTA as matrículas filtrando por coach_id', async () => {
+    const q = query(collection(como(PROF), 'arena_class_bookings'), where('coach_id', '==', 'cprof'));
+    await assertSucceeds(getDocs(q));
+  });
+
+  it('outro professor da mesma arena NÃO lê os alunos alheios', async () => {
+    await assertFails(getDoc(doc(como(ESTRANHO), 'arena_class_bookings', 'aula1_' + ATLETA)));
+  });
+
+  it('o professor NÃO marca pagamento (é da arena)', async () => {
+    await assertFails(updateDoc(doc(como(PROF), 'arena_class_bookings', 'aula1_' + ATLETA), { paid: true }));
+  });
+
+  it('🐞 a ARENA lista os alunos da aula filtrando por arena_id + class_id', async () => {
+    const q = query(
+      collection(como(GESTOR), 'arena_class_bookings'),
+      where('arena_id', '==', ARENA), where('class_id', '==', 'aula1'),
+    );
+    await assertSucceeds(getDocs(q));
+  });
+
+  it('só por class_id a regra NÃO consegue provar (era a consulta antiga — a lista vinha vazia)', async () => {
+    const q = query(collection(como(GESTOR), 'arena_class_bookings'), where('class_id', '==', 'aula1'));
+    await assertFails(getDocs(q));
+  });
+
+  it('um estranho não lista os alunos da arena', async () => {
+    const q = query(
+      collection(como(ESTRANHO), 'arena_class_bookings'),
+      where('arena_id', '==', ARENA), where('class_id', '==', 'aula1'),
+    );
+    await assertFails(getDocs(q));
+  });
+
+  it('a arena continua lendo e marcando o pagamento', async () => {
+    await assertSucceeds(getDoc(doc(como(GESTOR), 'arena_class_bookings', 'aula1_' + ATLETA)));
+    await assertSucceeds(updateDoc(doc(como(GESTOR), 'arena_class_bookings', 'aula1_' + ATLETA), { paid: true }));
+  });
+});
+
+describe('🔒 a matrícula do aluno não decide o que é da arena', () => {
+  beforeEach(async () => {
+    await testEnv.withSecurityRulesDisabled(async (ctx) => {
+      const db = ctx.firestore();
+      await setDoc(doc(db, 'arena_classes', 'aula2'), { arena_id: ARENA, price: 80 });
+      await setDoc(doc(db, 'arena_class_bookings', 'aula2_' + ATLETA), {
+        arena_id: ARENA, class_id: 'aula2', user_id: ATLETA, paid: false, amount: 80,
+      });
+    });
+  });
+
+  const matricula = (over = {}) => ({
+    arena_id: ARENA, class_id: 'aula2', user_id: ESTRANHO, paid: false, amount: 80, ...over,
+  });
+
+  it('a matrícula normal continua funcionando', async () => {
+    await assertSucceeds(setDoc(doc(como(ESTRANHO), 'arena_class_bookings', 'aula2_' + ESTRANHO), matricula()));
+  });
+
+  it('não dá para se matricular já PAGO', async () => {
+    await assertFails(setDoc(doc(como(ESTRANHO), 'arena_class_bookings', 'aula2_' + ESTRANHO), matricula({ paid: true })));
+  });
+
+  it('não dá para plantar a matrícula na lista de OUTRA arena', async () => {
+    await assertFails(setDoc(doc(como(ESTRANHO), 'arena_class_bookings', 'aula2_' + ESTRANHO), matricula({ arena_id: ARENA_2 })));
+  });
+
+  it('não dá para se matricular em nome de outra pessoa', async () => {
+    await assertFails(setDoc(doc(como(ESTRANHO), 'arena_class_bookings', 'aula2_x'), matricula({ user_id: ATLETA })));
+  });
+
+  it('o aluno não se marca como PAGO depois', async () => {
+    await assertFails(updateDoc(doc(como(ATLETA), 'arena_class_bookings', 'aula2_' + ATLETA), { paid: true }));
+  });
+
+  it('o aluno não mexe no valor', async () => {
+    await assertFails(updateDoc(doc(como(ATLETA), 'arena_class_bookings', 'aula2_' + ATLETA), { amount: 0 }));
+  });
+
+  it('o aluno continua podendo DESMARCAR a própria aula', async () => {
+    await assertSucceeds(deleteDoc(doc(como(ATLETA), 'arena_class_bookings', 'aula2_' + ATLETA)));
+  });
+});
 
 describe('🐞 reserva de aula', () => {
   it('o aluno cancela a própria aula', async () => {

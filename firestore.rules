@@ -1596,12 +1596,38 @@ service cloud.firestore {
       allow read: if isAuthed() && (
         resource.data.user_id == request.auth.uid ||
         isArenaManager(resource.data.arena_id) ||
-        isPlatformAdmin()
+        isPlatformAdmin() ||
+        // O PROFESSOR da aula lê as matrículas dela (2026-09-24). 🐞 Antes
+        // só o aluno e a arena liam: o professor abria a própria aula e via
+        // "ninguém matriculado" com a turma cheia. Quem é professor é o
+        // cadastro que a ARENA fez (`arena_coaches`, que só a arena escreve)
+        // com a conta da pessoa em `user_id` — ninguém se faz professor.
+        // A consulta do professor filtra por `coach_id`, que é o que deixa o
+        // Firestore provar esta condição para a lista inteira.
+        (resource.data.get('coach_id', null) is string &&
+          get(/databases/$(database)/documents/arena_coaches/$(resource.data.coach_id)).data.get('user_id', null) == request.auth.uid)
       );
-      allow create: if isAuthed() && request.resource.data.user_id == request.auth.uid;
+      // O aluno se matricula em nome próprio, sem se declarar PAGO (2026-09-24)
+      // e na arena DA AULA — sem isto dava para plantar uma matrícula "paga"
+      // na lista de alunos de outra arena.
+      allow create: if isAuthed()
+        && request.resource.data.user_id == request.auth.uid
+        && request.resource.data.get('paid', false) == false
+        && get(/databases/$(database)/documents/arena_classes/$(request.resource.data.class_id)).data.arena_id == request.resource.data.arena_id;
       // A arena também cancela/remarca: era só do aluno, e a arena ficava sem
-      // como desfazer uma aula na própria agenda.
-      allow update, delete: if isAuthed() && (
+      // como desfazer uma aula na própria agenda. O aluno continua podendo
+      // mexer na própria matrícula, MENOS no que é da arena decidir: pagamento,
+      // valores e a que aula/arena/professor ela pertence (2026-09-24).
+      allow update: if isAuthed() && (
+        isArenaManager(resource.data.arena_id)
+        || isPlatformAdmin()
+        || (resource.data.user_id == request.auth.uid
+          && !request.resource.data.diff(resource.data).affectedKeys().hasAny([
+            'paid', 'paid_at', 'amount', 'arena_amount', 'coach_amount',
+            'commission_pct', 'arena_id', 'class_id', 'user_id', 'coach_id'
+          ]))
+      );
+      allow delete: if isAuthed() && (
         resource.data.user_id == request.auth.uid
         || isArenaManager(resource.data.arena_id)
         || isPlatformAdmin()
