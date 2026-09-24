@@ -268,6 +268,17 @@ export async function listMyClassBookings(arenaId, userId) {
 }
 
 /**
+ * Todas as matrículas da ARENA — para as métricas (receita das aulas).
+ *
+ * Por `arena_id`: é o campo que a regra confere para a arena ler.
+ */
+export async function listArenaClassBookings(arenaId) {
+  if (!db || !arenaId) return [];
+  const snap = await getDocs(query(collection(db, COL_BOOKINGS), where('arena_id', '==', arenaId)));
+  return snap.docs.map((d) => ({ id: d.id, ...d.data() }));
+}
+
+/**
  * As matrículas de UM professor (todas as aulas em que ele é o professor).
  *
  * A consulta TEM de filtrar por `coach_id`: a regra deixa o professor ler a

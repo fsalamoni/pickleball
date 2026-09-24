@@ -249,6 +249,16 @@ export async function consumePackage(arenaId, userId, hours, actor) {
 
 /* -------------------------- Wallet -------------------------- */
 
+/**
+ * As carteiras da ARENA — para as métricas (pacotes vendidos no mês).
+ * Por `arena_id`: é o campo que a regra confere para a arena ler.
+ */
+export async function listArenaWallets(arenaId) {
+  if (!db || !arenaId) return [];
+  const snap = await getDocs(query(collection(db, COL_WALLETS), where('arena_id', '==', arenaId)));
+  return snap.docs.map((d) => ({ id: d.id, ...d.data() }));
+}
+
 export async function getArenaWallet(arenaId, userId) {
   if (!arenaId || !userId) return null;
   const snap = await getDoc(doc(db, COL_WALLETS, walletId(arenaId, userId)));
