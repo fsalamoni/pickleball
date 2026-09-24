@@ -19,7 +19,7 @@
  */
 
 import { useMemo } from 'react';
-import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
+import { useQuery, useQueries, useMutation, useQueryClient } from '@tanstack/react-query';
 import { useAuth } from '@/core/lib/FirebaseAuthContext';
 import { useFeatureFlag } from '@/core/lib/FeatureFlagsContext';
 import { FEATURE_FLAG } from '@/core/featureFlags';
@@ -115,6 +115,51 @@ export function useArenaModules(arenaId) {
     arenaStates,
     isLoading: platformQuery.isLoading || statesQuery.isLoading,
     isError: platformQuery.isError || statesQuery.isError,
+  };
+}
+
+/**
+ * Um módulo, em VÁRIAS arenas de uma vez — para listas que atravessam arenas
+ * (os jogos abertos em Procura-se jogo). Cada arena custa a MESMA consulta que
+ * a página dela já faz (mesma chave de cache), e a liberação da plataforma é
+ * uma só.
+ *
+ * Enquanto uma arena ainda carrega, ela responde `false`: é melhor um jogo
+ * aparecer meio segundo depois do que aparecer e sumir.
+ *
+ * @param {string[]} arenaIds
+ * @param {string} moduleId
+ * @returns {{ isOnIn: (arenaId: string) => boolean, isLoading: boolean }}
+ */
+export function useModuleOnInArenas(arenaIds = [], moduleId) {
+  const masterOn = useFeatureFlag(FEATURE_FLAG.ARENA_MODULES);
+  const platformQuery = usePlatformArenaModules();
+  const ids = useMemo(() => [...new Set((arenaIds || []).filter(Boolean))].sort(), [arenaIds]);
+  const results = useQueries({
+    queries: ids.map((id) => ({
+      queryKey: arenaKeys.modulos(id),
+      queryFn: () => listArenaModuleStates(id),
+      staleTime: 60_000,
+    })),
+  });
+  const platformModules = platformQuery.data || normalizePlatformModules(null);
+  const dataKey = results.map((r) => r.dataUpdatedAt).join(',');
+  const porArena = useMemo(() => {
+    const mapa = new Map();
+    ids.forEach((id, i) => {
+      const r = results[i];
+      if (!r?.data) { mapa.set(id, false); return; }
+      const acesso = buildArenaModuleAccess({
+        masterOn, platformModules, arenaStates: indexArenaModuleStates(r.data),
+      });
+      mapa.set(id, acesso.isOn(moduleId));
+    });
+    return mapa;
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [ids, dataKey, masterOn, platformModules, moduleId]);
+  return {
+    isOnIn: (arenaId) => porArena.get(arenaId) === true,
+    isLoading: platformQuery.isLoading || results.some((r) => r.isLoading),
   };
 }
 

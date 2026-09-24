@@ -24,6 +24,7 @@ import {
 } from '@/v2/ui/primitives';
 
 import V2BookingRow from '@/v2/components/arenas/V2BookingRow';
+import MyOpenMatches from '@/v2/components/arenas/openMatch/MyOpenMatches';
 
 const ACTIVE = new Set([BOOKING_STATUS.REQUESTED, BOOKING_STATUS.NEGOTIATING, BOOKING_STATUS.CONFIRMED]);
 
@@ -95,6 +96,10 @@ export default function V2Bookings() {
           </div>
         </div>
       )}
+
+      {/* Jogos abertos (de todas as arenas): a chamada da fila tem prazo, e
+          quem entrou num jogo não deveria ter de lembrar em que arena foi. */}
+      <MyOpenMatches />
 
       {isLoading ? (
         <V2Skeleton className="h-48 rounded-4xl" />

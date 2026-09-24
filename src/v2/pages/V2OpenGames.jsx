@@ -9,6 +9,7 @@ import { OPEN_GAME_FORMAT_LABELS, OPEN_GAME_STATUS, partitionOpenGamesByDate } f
 import { getLevelByCode } from '@/modules/leveling/data/levels';
 import CreateOpenGameDialog from '@/modules/games/components/CreateOpenGameDialog';
 import V2ChatLauncherButton from '@/v2/components/chat/V2ChatLauncherButton';
+import OpenSlotsDiscovery from '@/v2/components/arenas/openMatch/OpenSlotsDiscovery';
 import {
   V2Avatar,
   V2Badge,
@@ -120,6 +121,10 @@ export default function V2OpenGames() {
         subtitle="Publique um convite e encontre parceiros para jogar fora dos torneios."
         action={<V2Button onClick={() => setCreateOpen(true)}><Plus className="h-4 w-4" /> Publicar convite</V2Button>}
       />
+
+      {/* Os jogos com vaga que as ARENAS publicaram — o que quem procura
+          jogo mais quer, e que só existia dentro da página de cada arena. */}
+      <OpenSlotsDiscovery />
 
       {myOpen.length > 0 && (
         <V2Surface className="mb-8">

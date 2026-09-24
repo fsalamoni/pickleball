@@ -185,19 +185,40 @@ const ATLETA = {
     {
       id: 'achar-jogo',
       title: 'Achar com quem e onde jogar',
-      summary: 'Três caminhos diferentes para sair do sofá.',
-      keywords: ['jogar', 'parceiro', 'procura-se jogo', 'encontrar jogadores', 'quadra'],
+      summary: 'Quatro caminhos diferentes para sair do sofá.',
+      keywords: ['jogar', 'parceiro', 'procura-se jogo', 'encontrar jogadores', 'quadra', 'jogo aberto'],
       blocks: [
-        p('A plataforma tem três caminhos, e eles servem a situações diferentes:'),
+        p('A plataforma tem quatro caminhos, e eles servem a situações diferentes:'),
         list(
           'ENCONTRAR JOGADORES — para achar gente do seu nível, perto de você. Bom quando você quer montar um jogo do zero.',
           'PROCURA-SE JOGO — mural de convites abertos. Alguém já marcou algo e está chamando; você pede para entrar.',
+          'JOGOS ABERTOS NAS ARENAS — horário com vaga que uma arena publicou. Você entra direto, sem convite e sem precisar de dupla. Aparecem em "Procura-se jogo" e na página da arena.',
           'DIA DE JOGO — o evento organizado (treino de sábado, open play do clube). Você entra como participante.',
         ),
         link('/encontrar-jogadores', 'Encontrar jogadores'),
         link('/procura-jogo', 'Ver convites abertos'),
         link('/arenas', 'Procurar uma quadra'),
         tip('Quer jogar hoje? Comece por "Procura-se jogo" — é onde já existe jogo marcado precisando de gente.'),
+      ],
+    },
+    {
+      id: 'jogo-aberto-arena',
+      title: 'Entrar num jogo aberto de uma arena',
+      summary: 'Horário com vaga, sem precisar montar o grupo.',
+      keywords: ['jogo aberto', 'open match', 'vaga', 'fila de espera', 'arena', 'parceiro'],
+      blocks: [
+        p('Algumas arenas publicam horários com vagas — o "jogo aberto". Você entra sozinho, e a arena junta quem entrou. Não precisa levar dupla.'),
+        steps(
+          'Na página da arena, veja "Jogos abertos": os que cabem no seu nível vêm primeiro.',
+          'Toque em "Quero jogar". Pronto: você está no jogo, e ele aparece em "Minhas reservas".',
+          'Não vai mais? Toque em "Sair deste jogo" — a vaga volta para quem está esperando.',
+        ),
+        p('O jogo diz a faixa de nível e o seu nível, lado a lado. Fora da faixa, o botão avisa e não deixa entrar. Se a plataforma ainda não sabe o seu nível, você pode entrar.'),
+        p('Jogo lotado vira FILA DE ESPERA: entre na fila e, quando alguém sair, a vaga é oferecida a você — com um prazo para confirmar. A chamada aparece na página da arena e em "Minhas reservas".'),
+        link('/procura-jogo', 'Ver jogos abertos em todas as arenas'),
+        link('/minhas-reservas', 'Meus jogos e filas'),
+        tip('Sem jogo pronto? Na mesma seção da arena há "veja quem joga aqui no seu nível", para combinar um jogo com alguém que frequenta o lugar.'),
+        warn('Chamado da fila e não vai poder? Toque em "Não vou poder": a vaga passa na hora para o próximo, em vez de ficar presa até o prazo acabar.'),
       ],
     },
     {
@@ -474,7 +495,7 @@ const ARENA = {
       blocks: [
         p('A gestão da arena é modular. Você liga só os módulos que fazem sentido para a sua operação — e a tela fica só com o que você usa.'),
         list(
-          'Open match e matchmaking — jogos abertos na sua arena.',
+          'Jogo aberto — vira a seção JOGO ABERTO da gestão: você publica horário com vaga, vê quem vem e quem está na fila. A página da arena ganha "Jogos abertos", com o botão de entrar ali mesmo, e os jogos aparecem também em "Procura-se jogo".',
           'Membros — sua base de alunos/mensalistas. Ligado, vira a seção MEMBROS da gestão.',
           'Aulas — a agenda de aulas na sua estrutura. Ligado, vira a seção AULAS da gestão (agenda + professores), e a página da arena ganha "Aulas e professores".',
           'Torneios — torneios da casa. Ligado, vira a seção TORNEIOS da gestão (da casa e da plataforma): publicar, começar (vira dia de jogo) e ENCERRAR, que leva o pódio à classificação da casa.',
@@ -756,7 +777,7 @@ export const HELP_ROUTE_HINTS = Object.freeze([
   { pattern: '/dia-de-jogo', label: 'dia de jogo',
     refs: [[HELP_SECTION.ATHLETE, 'organizar-dia-de-jogo'], [HELP_SECTION.ATHLETE, 'dia-de-jogo']] },
   { pattern: '/procura-jogo', label: 'procura-se jogo',
-    refs: [[HELP_SECTION.ATHLETE, 'achar-jogo']] },
+    refs: [[HELP_SECTION.ATHLETE, 'achar-jogo'], [HELP_SECTION.ATHLETE, 'jogo-aberto-arena']] },
   { pattern: '/encontrar-jogadores', label: 'encontrar jogadores',
     refs: [[HELP_SECTION.ATHLETE, 'achar-jogo']] },
 
@@ -775,6 +796,10 @@ export const HELP_ROUTE_HINTS = Object.freeze([
     refs: [[HELP_SECTION.ARENA, 'criar-arena']] },
   { pattern: '/arenas/*/onboarding', label: 'configurar a arena',
     refs: [[HELP_SECTION.ARENA, 'criar-arena'], [HELP_SECTION.ARENA, 'precos-regras']] },
+  { pattern: '/arenas/*/open-match', label: 'os jogos abertos desta arena',
+    refs: [[HELP_SECTION.ATHLETE, 'jogo-aberto-arena']] },
+  { pattern: '/arenas/*/matchmaking', label: 'quem joga nesta arena',
+    refs: [[HELP_SECTION.ATHLETE, 'jogo-aberto-arena'], [HELP_SECTION.ATHLETE, 'achar-jogo']] },
   { pattern: '/arenas/*/gerir/pdv', label: 'o PDV',
     refs: [[HELP_SECTION.ARENA, 'loja-pdv']] },
   { pattern: '/arenas/*/gerir/modulos', label: 'os módulos da arena',
@@ -784,7 +809,7 @@ export const HELP_ROUTE_HINTS = Object.freeze([
   { pattern: '/arenas/*/gerir', label: 'gerenciar a arena',
     refs: [[HELP_SECTION.ARENA, 'gerir-reservas'], [HELP_SECTION.ARENA, 'precos-regras'], [HELP_SECTION.ARENA, 'desempenho-arena']] },
   { pattern: '/minhas-reservas', label: 'suas reservas',
-    refs: [[HELP_SECTION.ATHLETE, 'reservas-aulas']] },
+    refs: [[HELP_SECTION.ATHLETE, 'reservas-aulas'], [HELP_SECTION.ATHLETE, 'jogo-aberto-arena']] },
   { pattern: '/arenas', label: 'arenas',
     refs: [[HELP_SECTION.ATHLETE, 'reservas-aulas'], [HELP_SECTION.ARENA, 'criar-arena']] },
 

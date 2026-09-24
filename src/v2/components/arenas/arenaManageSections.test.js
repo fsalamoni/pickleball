@@ -16,7 +16,10 @@ const BASE = {
   coachResidentOn: true, linkedClubsOn: true, crmOn: true, opsKpisOn: true, arenaModulesOn: true,
 };
 const TUDO_LIGADO = {
-  ...BASE, modulos: { membros: true, pacotes: true, aulas: true, torneios: true, torneiosPlataforma: true },
+  ...BASE,
+  modulos: {
+    jogoAberto: true, membros: true, pacotes: true, aulas: true, torneios: true, torneiosPlataforma: true,
+  },
 };
 
 const valores = (sections) => sections.flatMap((s) => s.tabs.map((t) => t.value));
@@ -33,9 +36,19 @@ describe('buildArenaSections', () => {
     expect(valores(buildArenaSections(BASE))).not.toContain('membros');
   });
 
-  it('Membros entra logo depois de Reservas', () => {
+  it('Membros entra logo depois de Reservas (e do Jogo aberto, quando ligado)', () => {
     const ids = buildArenaSections(TUDO_LIGADO).map((s) => s.id);
-    expect(ids.indexOf('membros')).toBe(ids.indexOf('reservas') + 1);
+    expect(ids.indexOf('membros')).toBe(ids.indexOf('jogo-aberto') + 1);
+    const semJogo = buildArenaSections({ ...BASE, modulos: { membros: true } }).map((s) => s.id);
+    expect(semJogo.indexOf('membros')).toBe(semJogo.indexOf('reservas') + 1);
+  });
+
+  it('⭐ Jogo aberto é seção logo depois de Reservas — vende horário de quadra, como a reserva', () => {
+    const secs = buildArenaSections(TUDO_LIGADO);
+    const ids = secs.map((s) => s.id);
+    expect(ids.indexOf('jogo-aberto')).toBe(ids.indexOf('reservas') + 1);
+    expect(secs.find((s) => s.id === 'jogo-aberto').tabs.map((t) => t.value)).toEqual(['jogo-aberto']);
+    expect(valores(buildArenaSections(BASE))).not.toContain('jogo-aberto');
   });
 
   it('Pacotes só com o módulo de pacotes', () => {

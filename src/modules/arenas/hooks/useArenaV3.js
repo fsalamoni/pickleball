@@ -9,7 +9,7 @@
  * - useUpdateArenaSettings — mutation
  */
 
-import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
+import { useQuery, useQueries, useMutation, useQueryClient } from '@tanstack/react-query';
 import { useAuth } from '@/core/lib/FirebaseAuthContext';
 import { useArenaModuleOn } from './useArenaModules.js';
 import { arenaKeys } from './arenaKeys.js';
@@ -33,12 +33,14 @@ import {
   joinOpenSlot,
   leaveOpenSlot,
   deleteOpenSlot,
+  listMyOpenSlots,
 } from '../services/openMatchService.js';
 import {
   joinWaitlist,
   leaveWaitlist,
   listSlotWaitlist,
   listUserWaitlist,
+  listArenaWaitlist,
   getUserWaitlistEntry,
   notifyNextInLine,
   acceptWaitlistPromotion,
@@ -164,6 +166,50 @@ function invalidarVagas(qc) {
   qc.invalidateQueries({ queryKey: ['open-slots-global'] });
   qc.invalidateQueries({ queryKey: ['slot-waitlist'] });
   qc.invalidateQueries({ queryKey: ['user-waitlist'] });
+  qc.invalidateQueries({ queryKey: ['my-open-slots'] });
+  qc.invalidateQueries({ queryKey: ['arena-waitlist'] });
+}
+
+/** Os jogos abertos em que eu estou, de todas as arenas (Minhas reservas). */
+export function useMyOpenSlots() {
+  const { user } = useAuth();
+  return useQuery({
+    queryKey: ['my-open-slots', user?.uid],
+    queryFn: () => listMyOpenSlots(user?.uid),
+    enabled: !!user?.uid,
+    staleTime: 30_000,
+  });
+}
+
+/**
+ * Várias vagas pelo id — as das minhas entradas de fila, que não aparecem em
+ * "meus jogos" (ainda não estou dentro). Mesma chave de `useOpenSlot`: a vaga
+ * que outra tela já buscou não é buscada de novo.
+ * @returns {{ slots: object[], isLoading: boolean }}
+ */
+export function useOpenSlotsByIds(ids = []) {
+  const unicos = [...new Set((ids || []).filter(Boolean))];
+  const results = useQueries({
+    queries: unicos.map((id) => ({
+      queryKey: ['open-slot', id],
+      queryFn: () => getOpenSlot(id),
+      staleTime: 30_000,
+    })),
+  });
+  return {
+    slots: results.map((r) => r.data).filter(Boolean),
+    isLoading: results.some((r) => r.isLoading),
+  };
+}
+
+/** A fila de todas as vagas de uma arena (Central). */
+export function useArenaWaitlist(arenaId, enabled = true) {
+  return useQuery({
+    queryKey: ['arena-waitlist', arenaId],
+    queryFn: () => listArenaWaitlist(arenaId),
+    enabled: !!arenaId && enabled,
+    staleTime: 30_000,
+  });
 }
 
 export function useCreateOpenSlot() {
@@ -267,9 +313,8 @@ export function useJoinWaitlist() {
   return useMutation({
     mutationFn: (slotId) => joinWaitlist(slotId, user, userProfile),
     onSuccess: (_d, slotId) => {
-      qc.invalidateQueries({ queryKey: ['slot-waitlist', slotId] });
       qc.invalidateQueries({ queryKey: ['user-waitlist-entry', slotId] });
-      qc.invalidateQueries({ queryKey: ['user-waitlist'] });
+      invalidarVagas(qc);
     },
   });
 }

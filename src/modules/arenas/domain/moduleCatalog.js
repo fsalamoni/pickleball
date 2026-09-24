@@ -104,6 +104,10 @@ export const ARENA_MODULE_DETAIL = Object.freeze({
     },
     manage: '/arenas/:arenaId/gerir/open-match',
     public: '/arenas/:arenaId/open-match',
+    // Parte da arena: aba "Jogo aberto" na Central e seção "Jogos abertos" na
+    // página pública (entrar ali mesmo). As rotas seguem valendo — a pública é
+    // a lista completa, a de gestão leva à aba —, mas não viram atalho.
+    native: true,
     config: [
       {
         key: 'level_tolerance',
@@ -134,6 +138,9 @@ export const ARENA_MODULE_DETAIL = Object.freeze({
       [ATHLETE]: 'Encontre alguém do seu nível que também joga aqui.',
     },
     public: '/arenas/:arenaId/matchmaking',
+    // A porta fica DENTRO da seção "Jogos abertos" da página da arena ("veja
+    // quem joga aqui no seu nível"), não num botão solto no topo.
+    native: true,
     collections: ['arena_matches'],
   },
   [ARENA_MODULE_ID.MATCHMAKING_WAITLIST]: {

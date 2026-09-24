@@ -205,3 +205,12 @@ O que mudou:
 - **Um prazo só: 60 minutos.** O cliente dizia 5 e o servidor aplicava 60; há
   teste de paridade.
 
+---
+
+## Atualização 2026-09-24 (tarde) — o jogo aberto dentro da arena
+
+O jogo aberto deixou de ser uma página alcançada por botão: é a seção **Jogo
+aberto** da Central (com quem vem e a fila de cada jogo), a seção **Jogos
+abertos** da página da arena (entrar ali mesmo), e aparece em **Minhas
+reservas** e em **Procura-se jogo**. Detalhes e defeitos corrigidos em
+`09-INTEGRACAO-NA-ARENA.md` §8.

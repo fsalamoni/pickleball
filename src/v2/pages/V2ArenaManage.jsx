@@ -26,6 +26,7 @@ const V2ArenaMercadoTab = lazy(() => import('@/v2/components/arenas/V2ArenaMerca
 const V2ArenaWeekPanel = lazy(() => import('@/v2/components/arenas/V2ArenaWeekPanel'));
 const ArenaModulesPanel = lazy(() => import('@/v2/components/arenas/ArenaModulesPanel'));
 // Módulos que viraram parte da Central: o corpo das telas deles entra como aba.
+const ArenaOpenMatchAdminPanel = lazy(() => import('@/v2/components/arenas/openMatch/ArenaOpenMatchAdminPanel'));
 const ArenaMembersPanel = lazy(() => import('@/v2/pages/V2ArenaAdminMembers').then((m) => ({ default: m.ArenaMembersPanel })));
 import { useFeatureFlag } from '@/core/lib/FeatureFlagsContext';
 import { FEATURE_FLAG } from '@/core/featureFlags';
@@ -205,6 +206,7 @@ function V2ArenaManageContent({ arenaId, user, isPlatformAdmin, arena, managed, 
   const { isOn: moduloLigado, isLoading: modulosCarregando } = useArenaModules(arenaId);
   const { data: torneiosDaPlataforma = [], isLoading: torneiosCarregando } = useArenaPlatformTournaments(arenaId);
   const modulos = {
+    jogoAberto: moduloLigado(ARENA_MODULE_ID.MATCHMAKING_OPEN_MATCH),
     membros: moduloLigado(ARENA_MODULE_ID.MEMBERS),
     pacotes: moduloLigado(ARENA_MODULE_ID.MEMBERS_PACKAGES),
     aulas: moduloLigado(ARENA_MODULE_ID.CLASSES),
@@ -359,6 +361,7 @@ function V2ArenaManageContent({ arenaId, user, isPlatformAdmin, arena, managed, 
         <Suspense fallback={<V2Skeleton lines={6} />}>
         {esperandoModulo ? <V2Skeleton lines={6} /> : (
         <>
+        {tab === 'jogo-aberto' && modulos.jogoAberto && <ArenaOpenMatchAdminPanel arena={arena} />}
         {tab === 'membros' && modulos.membros && <ArenaMembersPanel arena={arena} view="membros" />}
         {tab === 'planos' && modulos.pacotes && <ArenaMembersPanel arena={arena} view="planos" />}
         {tab === 'semana' && opsKpisOn && <V2ArenaWeekPanel arenaId={arena.id} />}
