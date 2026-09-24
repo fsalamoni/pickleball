@@ -28,14 +28,20 @@ describe('atalhos dos módulos de arena', () => {
   });
 
   it('o :arenaId é substituído pela arena de verdade', () => {
-    const atalhos = shortcutsFor(ligados(ARENA_MODULE_ID.MATCHMAKING_OPEN_MATCH), 'minha-arena', 'manage');
-    expect(atalhos[0].to).toBe('/arenas/minha-arena/gerir/open-match');
+    const atalhos = shortcutsFor(ligados(ARENA_MODULE_ID.PDV), 'minha-arena', 'manage');
+    expect(atalhos[0].to).toBe('/arenas/minha-arena/gerir/pdv');
     expect(atalhos[0].to).not.toContain(':arenaId');
   });
 
   it('o público do ATLETA é outro: a rota pública, não a de gestão', () => {
-    const atalhos = shortcutsFor(ligados(ARENA_MODULE_ID.MATCHMAKING_OPEN_MATCH), 'a1', 'public');
-    expect(atalhos[0].to).toBe('/arenas/a1/open-match');
+    const atalhos = shortcutsFor(ligados(ARENA_MODULE_ID.PDV), 'a1', 'public');
+    expect(atalhos[0].to).toBe('/arenas/a1/loja');
+  });
+
+  it('⭐ jogo aberto e buscar parceiro viraram parte da arena: sem atalho', () => {
+    const ids = [ARENA_MODULE_ID.MATCHMAKING_OPEN_MATCH, ARENA_MODULE_ID.MATCHMAKING_PARTNER_FINDER];
+    expect(shortcutsFor(ligados(...ids), 'a1', 'manage')).toEqual([]);
+    expect(shortcutsFor(ligados(...ids), 'a1', 'public')).toEqual([]);
   });
 
   it('⭐ módulo INTEGRADO à arena não vira atalho para fora', () => {
@@ -65,8 +71,8 @@ describe('atalhos dos módulos de arena', () => {
   });
 
   it('cada atalho tem rótulo em pt-BR, não o id cru', () => {
-    const atalhos = shortcutsFor(ligados(ARENA_MODULE_ID.MATCHMAKING_OPEN_MATCH), 'a1', 'manage');
-    expect(atalhos[0].label).not.toBe(ARENA_MODULE_ID.MATCHMAKING_OPEN_MATCH);
+    const atalhos = shortcutsFor(ligados(ARENA_MODULE_ID.PDV), 'a1', 'manage');
+    expect(atalhos[0].label).not.toBe(ARENA_MODULE_ID.PDV);
     expect(atalhos[0].label.length).toBeGreaterThan(2);
   });
 });

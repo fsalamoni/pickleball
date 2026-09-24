@@ -10,7 +10,7 @@
 import {
   BarChart3, Building2, CalendarClock, CalendarDays, CalendarRange, ClipboardList,
   Crown, DollarSign, Globe, GraduationCap, Image, Info, LayoutGrid, Package, Puzzle,
-  SlidersHorizontal, Star, Trophy, Users, Wallet,
+  SlidersHorizontal, Star, Swords, Trophy, Users, Wallet,
 } from 'lucide-react';
 
 // Navegação em dois níveis do admin da arena. Ordem = ciclo de vida, do
@@ -56,6 +56,17 @@ export function buildArenaSections({
         ...(crmOn ? [{ value: 'clientes', label: 'Clientes', icon: Users }] : []),
       ],
     },
+    // Jogo aberto: a arena publica horário com vaga e os atletas preenchem.
+    // Vem logo depois de Reservas porque é o mesmo negócio — vender horário
+    // de quadra — e ocupa a quadra como uma reserva.
+    ...(modulos.jogoAberto ? [{
+      id: 'jogo-aberto',
+      label: 'Jogo aberto',
+      icon: Swords,
+      tabs: [
+        { value: 'jogo-aberto', label: 'Jogos publicados', icon: Swords },
+      ],
+    }] : []),
     ...(modulos.membros ? [{
       id: 'membros',
       label: 'Membros',

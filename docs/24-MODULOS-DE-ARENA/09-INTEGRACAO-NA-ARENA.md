@@ -112,6 +112,10 @@ novo**; consultas com um `where` só e ordenação em memória.
 | I-2 | Seção **Aulas**, lista única de professores (Sistema A + aulas), D2, D5–D11, aulas no lado do atleta e do professor | ✅ §5 |
 | I-3 | Seção **Torneios** (casa + plataforma), D3, D4, D12–D14, torneios na página pública e no lado do atleta | ✅ §6 |
 | I-4 | Receita de aulas, planos e torneios no painel de métricas | ✅ §7 |
+| I-5 | **Jogo aberto, buscar parceiro e fila** — seção na Central, seção na página da arena, Minhas reservas e Procura-se jogo | ✅ §8 |
+| I-6 | **Loja do app unificada com o Mercado** — um cadastro de produto só | ⏳ |
+| I-7 | **Marketing** dentro da arena | ⏳ |
+| I-8 | **Operação, presença e avançado** dentro da arena | ⏳ |
 
 ---
 
@@ -367,3 +371,61 @@ somar o que entrou por eles. A regra do que conta mora em `moduleRevenue`
 - As consultas novas (`listArenaClassBookings`, `listArenaWallets`) filtram
   por `arena_id`, o campo que a regra confere para a arena ler.
 
+---
+
+## 8. I-5 — Jogo aberto, buscar parceiro e fila dentro da arena (entregue)
+
+> **Pedido** (2026-09-24): *"Vamos fazer o mesmo tipo de integração para os
+> demais módulos v3 de arena […] tanto no ambiente admin da arena, quanto no
+> ambiente de visualização pública (dos usuários) da arena […] Verifique
+> também todas as demais nuances e integrações."*
+
+### Onde o jogo aberto está agora
+
+| Lugar | O quê |
+|---|---|
+| Central → **Jogo aberto** | publicar, cancelar, excluir — e, **novo**, **quem vem jogar** (nome e foto) e **a fila de cada jogo** (quantos esperam, quem foi chamado) |
+| Página da arena → **Jogos abertos** | a chamada da fila em destaque, os jogos em que estou, até 3 jogos (os do meu nível primeiro) com **"Quero jogar" ali mesmo**, e a porta do buscar parceiro |
+| `/arenas/:id/open-match` | a lista completa (continua) |
+| **Minhas reservas** | os jogos abertos em que estou, **de todas as arenas**; a chamada da fila com "Confirmar minha vaga"; as filas em que espero, com "Sair da fila" |
+| **Procura-se jogo** | **"Jogos abertos nas arenas"**: as vagas publicadas pelas arenas, com entrada direta |
+
+- A seção da Central vem **logo depois de Reservas**: jogo aberto é vender
+  horário de quadra, e ocupa a quadra como uma reserva.
+- A seção da página pública vem **depois do Dia de jogo e antes do calendário**
+  — entrar num jogo pronto é decisão mais simples que montar uma reserva.
+- `/arenas/:id/gerir/open-match` leva a `?aba=jogo-aberto`; `matchmaking_open_match`
+  e `matchmaking_partner_finder` são `native` no catálogo (sem botão de atalho).
+
+### Os defeitos e lacunas do caminho
+
+| # | O que havia | O que ficou |
+|---|---|---|
+| D15 | A arena via "3 de 4" e **não sabia quem eram os três** | cada vaga lista quem vem (diretório de atletas; quem não está nele aparece como "Atleta") |
+| D16 | A arena **não via a fila** de nenhum jogo | quantos esperam, os primeiros nomes e quem foi chamado — **uma consulta para a arena inteira** (`listArenaWaitlist`, por `arena_id`) |
+| D17 | A **chamada da fila** (que tem prazo) só podia ser aceita abrindo a arena certa | aparece também em Minhas reservas, com o nome da arena |
+| D18 | Quem entrou num jogo precisava **lembrar em que arena foi** para ver o horário | Minhas reservas lista os jogos de todas as arenas (`listMyOpenSlots`, `participants array-contains`) |
+| D19 | Os jogos das arenas **não apareciam em Procura-se jogo** — o hook global existia e nenhuma tela o usava | "Jogos abertos nas arenas", só de arenas que mantêm o módulo ligado (`useModuleOnInArenas`, mesmo cache da página da arena) |
+| D20 | O aviso à arena dizia `entrou no slot de 2026-09-24 19:00` e apontava para a tela antiga | `entrou no jogo aberto de Qui, 24/09 · 19:00–21:00`, direto na aba |
+| D21 | Fora da faixa de nível, o botão era "Quero jogar" **apagado, sem dizer por quê** | o botão diz **"Fora da sua faixa"**, e a linha ao lado diz a faixa |
+
+### Uma regra só para "tem vaga"
+
+`arenas/domain/openMatchView.js` (puro, testado) responde o que cada tela pergunta
+— `openMatchSectionModel` (a seção da arena), `myUpcomingOpenSlots` e
+`pendingWaitlistCalls` (Minhas reservas), `openSlotsForDiscovery` (Procura-se
+jogo), `waitlistBySlot` (Central) — e **`slotActionState`** decide o botão
+(entrar / fila / na fila / sair / encerrado / fora da faixa) para o cartão
+grande e para a linha compacta. O cartão, a chamada da fila e as ações
+(`useOpenSlotActions`) viraram peças compartilhadas em
+`v2/components/arenas/openMatch/`: a mesma frase em todas as telas.
+
+Duas regras que vêm de antes e continuam valendo: **LOTADO não é ENCERRADO**
+(lotado oferece a fila) e **nível desconhecido não barra ninguém**.
+
+### Banco
+
+**Zero coleção, zero índice, zero campo, zero regra.** As duas consultas novas
+são de igualdade ou `array-contains` num campo só (índice de campo único) e
+passam pelas regras que já existiam (`arena_open_slots` é pública; a fila é
+legível por quem tem conta desde a Onda BH).

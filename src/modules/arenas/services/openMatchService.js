@@ -36,6 +36,7 @@ import {
   getAvailableSpots,
 } from '../domain/openMatch.js';
 import { openSlotConflict } from '../domain/openMatch.js';
+import { formatSlotLabel } from '../domain/calendar.js';
 import { getNextInLine, WAITLIST_STATUS, compactPositions, computePromotionExpiresAt, DEFAULT_PROMOTION_WINDOW_MINUTES } from '../domain/waitlist.js';
 import { getArena, listArenaManagers } from './arenaService.js';
 import { fetchUnifiedLevelValues } from '@/modules/rating/services/unifiedLevelService.js';
@@ -225,6 +226,19 @@ export async function listOpenSlotsGlobal({ limit: lim = 100, onlyFuture = true 
 }
 
 /**
+ * Os jogos abertos em que a pessoa está, de TODAS as arenas (Minhas reservas).
+ *
+ * `array-contains` num campo só: o Firestore resolve com o índice de campo
+ * único, sem índice composto. A vaga é de leitura pública, então a regra não
+ * pede filtro nenhum além deste.
+ */
+export async function listMyOpenSlots(userId) {
+  if (!db || !userId) return [];
+  const snap = await getDocs(query(collection(db, COL), where('participants', 'array-contains', userId)));
+  return ordenarPorDataHora(snap.docs.map((d) => ({ id: d.id, ...d.data() })));
+}
+
+/**
  * Busca um slot por id.
  */
 export async function getOpenSlot(slotId) {
@@ -269,9 +283,9 @@ export async function joinOpenSlot(slotId, user, profile) {
     const managerIds = await listArenaManagers(slot.arena_id);
     notifyUsers(managerIds, {
       title: `Novo inscrito em "${str(slot.arena_name).slice(0, 50)}"`,
-      message: `${displayName(user, profile)} entrou no slot de ${slot.date} ${slot.start}`,
+      message: `${displayName(user, profile)} entrou no jogo aberto de ${formatSlotLabel(slot)}`,
       type: NOTIFICATION_TYPE.GENERIC,
-      link: `/arenas/${slot.arena_id}/gerir/open-match`,
+      link: `/arenas/${slot.arena_id}/gerir?aba=jogo-aberto`,
       actor: { uid: user.uid, displayName: displayName(user, profile) },
     });
   } catch (err) {

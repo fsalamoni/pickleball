@@ -269,6 +269,7 @@ Estes princípios vieram de bugs reais que custaram horas pra arrumar. São ineg
 **"Vou criar um módulo de arena novo"** → id em `ARENA_MODULE_ID` (**o id é contrato de banco**, está gravado em `arena_module_states.module_id` — nunca renomeie), metadados em `ARENA_MODULE_META`, detalhamento em `ARENA_MODULE_DETAIL` (público, benefício por persona, `status`, `requires`, rotas, `config`). Nasce `planned`, que **não é liberável**. Há teste de integridade do catálogo
 **"Por que não faço uma feature flag por módulo de arena?"** → porque são 50, e `FEATURE_FLAG` é liga/desliga de CÓDIGO. Cinquenta linhas ali estourariam a contagem "X ativas de Y" e misturariam dois conceitos. A liberação por módulo tem modo (`opt_in`/`forced`) e observação, e mora no documento da camada 1
 **"Uma regra do Firestore recusa `delete` sem motivo aparente"** → confira se a condição olha `request.resource.data`: num **delete** ele NÃO EXISTE, e a regra é sempre falsa. Já foi corrigido em `arena_unavailabilities` (Onda AA) e, em 2026-09-13, em mais **onze** coleções de arena, onde ninguém conseguia apagar professor, aula, cupom, campanha, checklist, dispositivo, ladder nem item de estoque. O mesmo vale para `read` — a arena nunca conseguiu ler o próprio NPS nem as próprias ordens de manutenção
+**"Onde o jogo aberto aparece?"** → em QUATRO lugares além da página própria, e todos saem da MESMA regra (`arenas/domain/openMatchView.js`: `openMatchSectionModel`, `slotActionState`, `openSlotsForDiscovery`…) e das MESMAS peças (`v2/components/arenas/openMatch/`): Central → **Jogo aberto** (quem vem e a fila de cada jogo), página da arena → **Jogos abertos** (entrar ali mesmo, chamada da fila em destaque), **Minhas reservas** (jogos e filas de todas as arenas) e **Procura-se jogo** (vagas das arenas com o módulo ligado — `useModuleOnInArenas`). **Nunca** decida "tem vaga"/o botão da vaga numa tela: LOTADO não é ENCERRADO (lotado oferece a fila) e nível desconhecido não barra. Ver `docs/24-MODULOS-DE-ARENA/09-INTEGRACAO-NA-ARENA.md` §8
 **"Vou mexer em jogo aberto / fila de espera / buscar parceiro"** → `docs/24-MODULOS-DE-ARENA/01-MATCHMAKING.md`. Três coisas que NÃO podem regredir: (1) a vaga com `court_id` **OCUPA a quadra** (`openSlotBlocks`/`mergeOpenSlotBlocks`, mesmo desenho do dia de jogo — e o bloqueio nunca depende de flag); (2) o nível é a régua única 2.0–8.0 dos DOIS lados, e **nível desconhecido não barra ninguém**; (3) quem CHAMA o próximo da fila é o **servidor** (`promoverProximo` em `functions/openSlotWaitlist.js`, disparado quando alguém sai da vaga, quando uma chamada é recusada/expira, e pela varredura `advanceOpenSlotWaitlist`) — nunca o navegador, porque é escrita na entrada de OUTRA pessoa; (4) o atleta entra/sai da vaga e responde à própria chamada por regras de "só a si mesmo" (`tests/rules/matchmaking.rules.test.js`) — até 2026-09-24 NADA disso funcionava para o atleta
 **"Preciso do nível de alguém numa tela"** → `useMyUnifiedLevel()` (o meu) ou `useUnifiedLevels(uids)` (um lote, UMA consulta). **Nunca** `profile.level` nem `leveling_level`: são código de faixa, não número na régua — comparar contra 2.0–8.0 não filtra, filtra errado (era o defeito do "buscar parceiro" e da peneira do jogo aberto)
 **"Escrevi uma consulta e a lista vem vazia"** → antes de investigar a tela, rode `npx vitest run src/core/guards/indicesCompostos.test.js`. Ele varre `where` + `orderBy` sem índice **nos dois estilos** de montagem (dentro de `query(...)` e por vetor de constraints) e ignora comentários. Cinco consultas estavam mortas desde que foram escritas — vagas de jogo aberto (duas), catálogo de professores da arena, agenda de aulas e torneios internos
@@ -492,6 +493,19 @@ chore(deps): bump firebase to 12.x
 > memory topic `picklerush-sync-2026-08.md`.
 >
 > **Destaques por onda**:
+>
+> - **Onda BL — Jogo aberto dentro da arena** (2026-09-24, I-5 da integração):
+>   *"vamos fazer o mesmo tipo de integração para os demais módulos v3"*. O
+>   jogo aberto e o buscar parceiro deixaram de ser botões para fora: viraram a
+>   seção **Jogo aberto** da Central e a seção **Jogos abertos** da página da
+>   arena, com "Quero jogar" ali mesmo e a chamada da fila (que tem prazo) em
+>   destaque. E foram além da arena: **Minhas reservas** passou a mostrar os
+>   jogos e as filas de todas as arenas, e **Procura-se jogo** os jogos com
+>   vaga que as arenas publicaram (o hook global existia e nenhuma tela usava).
+>   Na Central a arena passou a ver **quem vem jogar e quem está na fila** —
+>   antes via "3 de 4" sem saber quem eram os três. Uma regra só decide "tem
+>   vaga" e o botão da vaga em todas as telas. **Zero banco.** Ver
+>   `docs/24-MODULOS-DE-ARENA/09-INTEGRACAO-NA-ARENA.md` §8.
 >
 > - **Onda BK — As funções do PickleRush num codebase próprio, com vigilância**
 >   (2026-09-24): *"você não consegue isolar por completo o repositório e o
@@ -1856,7 +1870,7 @@ chore(deps): bump firebase to 12.x
 
 | Métrica | Valor | Delta do início do agente |
 |---|---|---|
-| **Testes Vitest** | **5281 passing** (318 arquivos) + 283 asserções de regras (Vitest) + 85 do dia de jogo no emulador | +4873 (era 408) |
+| **Testes Vitest** | **5322 passing** (320 arquivos) + 283 asserções de regras (Vitest) + 85 do dia de jogo no emulador | +4873 (era 408) |
 | **Lint errors** | 0 | era 30+ |
 | **Módulos** | 21 (+`help` — conteúdo dos tutoriais em tela) (`games` e `legal` saíram como `src/modules/` mas continuam como pastas oficiais — **rating virou módulo oficial** com domain/services/hooks/components) | +4 (coaches, circuits, games, legal) |
 | **V2 pages** | 82 (+V2GameDayTelao — telão, fora do V2Layout; +V2Help — central de ajuda; +V2ArenaKiosk — totem da recepção, também fora do V2Layout; +V2ArenaCheckin; +V2ArenaAttendance) | +58 |

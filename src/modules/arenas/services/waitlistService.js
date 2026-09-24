@@ -129,6 +129,18 @@ export async function listSlotWaitlist(slotId) {
 }
 
 /**
+ * A fila de TODAS as vagas de uma arena, numa consulta (Central da arena).
+ * Uma consulta por vaga multiplicaria as leituras pelo número de jogos.
+ */
+export async function listArenaWaitlist(arenaId) {
+  if (!db || !arenaId) return [];
+  const snap = await getDocs(query(collection(db, COL), where('arena_id', '==', arenaId)));
+  return snap.docs
+    .map((d) => ({ id: d.id, ...d.data() }))
+    .sort((a, b) => (Number(a.position) || 0) - (Number(b.position) || 0));
+}
+
+/**
  * Busca a entrada de um user em um slot.
  */
 export async function getUserWaitlistEntry(userId, slotId) {

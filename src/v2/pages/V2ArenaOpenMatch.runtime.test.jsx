@@ -145,7 +145,10 @@ describe('⭐ o nível é dito dos dois lados', () => {
     estado.nivel = 5;
     estado.slots = [vaga({ min_level: 3, max_level: 4 })];
     await render();
-    expect(botao('Quero jogar')?.disabled).toBe(true);
+    // O botão diz POR QUE não dá (antes era "Quero jogar" apagado, sem motivo
+    // no próprio botão).
+    expect(botao('Quero jogar')).toBeFalsy();
+    expect(botao('Fora da sua faixa')?.disabled).toBe(true);
     expect(container.textContent).toMatch(/fora da faixa/i);
   });
 

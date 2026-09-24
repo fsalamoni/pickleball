@@ -24,6 +24,7 @@ import { useArenaTournaments } from '@/modules/tournament/hooks/useTournament';
 import { useArenaCoaches } from '@/modules/coaches/hooks/useCoaches';
 import V2BookingCalendar from '@/v2/components/arenas/V2BookingCalendar';
 import ArenaGameDaysSection from '@/v2/components/arenas/ArenaGameDaysSection';
+import ArenaOpenMatchSection from '@/v2/components/arenas/openMatch/ArenaOpenMatchSection';
 import ArenaNpsAsk from '@/v2/components/arenas/ArenaNpsAsk';
 import ArenaCheckinAsk from '@/v2/components/arenas/ArenaCheckinAsk';
 import ArenaMembershipSection from '@/v2/components/arenas/ArenaMembershipSection';
@@ -211,6 +212,12 @@ function V2ArenaDetailContent({ arenaId, user, arena, managed, bookings, isLoadi
           decisão mais simples (marcar presença) do que escolher horário e
           pedir uma quadra. Some sozinha quando não há nada marcado. */}
       <ArenaGameDaysSection arenaId={arenaId} />
+
+      {/* Jogos abertos (módulos de matchmaking) — pela mesma razão do dia de
+          jogo: entrar num jogo pronto é uma decisão mais simples do que
+          escolher horário e pedir uma quadra. Some sozinha com os módulos
+          desligados ou sem nada para oferecer. */}
+      <ArenaOpenMatchSection arena={arena} />
 
       {/* Reservar é a ação principal do visitante: o calendário interativo
           vem logo após o hero, antes de regras/contato. */}
