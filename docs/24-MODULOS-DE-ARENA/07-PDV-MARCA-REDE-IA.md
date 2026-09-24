@@ -6,6 +6,12 @@
 > **Chave-mestra**: flag `arena_modules` (default OFF).
 > **Banco**: zero coleção nova, zero índice novo. **Uma regra ampliada** (rede).
 
+> **Atualização 2026-09-24 — a página "Avançado" deixou de existir.** Marca
+> foi para Perfil, Rede e Inteligência para Desempenho e Equipamentos para
+> Operação, na Central; a rota antiga leva à primeira ligada. O atleta passou a
+> ver "Outras unidades da rede" na página da arena. Ver
+> `09-INTEGRACAO-NA-ARENA.md` §11.
+
 > **Atualização 2026-09-24 — a loja virou um canal do Mercado.** O catálogo
 > próprio da loja (`arena_products`) saiu da tela: a vitrine são os produtos do
 > **Mercado** marcados "Vender pelo app", o pedido é precificado pelo banco, a

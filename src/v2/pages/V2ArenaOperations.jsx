@@ -1,9 +1,18 @@
 /**
  * V2ArenaOperations — o dia a dia de quem toca a arena.
  *
- * Rota: `/arenas/:arenaId/gerir/operacoes`
  * Módulos: `operations` (+ `operations_checklist`, `operations_maintenance`,
  * `operations_inventory`, `operations_staff`).
+ *
+ * ## Dentro da arena (2026-09-24)
+ *
+ * Era uma página separada, alcançada por um botão. Virou a seção **Operação**
+ * da Central (`ArenaOperationsPanel`): Hoje · Rotinas · Manutenção — e o
+ * plantão foi para Equipe e parceiros, que é onde se procura quem trabalha na
+ * arena. Cada número do resumo de hoje leva à aba que resolve. E as seções
+ * pararam de tratar falha de leitura como vazio: "nada pendente" com a
+ * consulta falhando era a pior mentira da tela, e "ninguém cadastrado" na
+ * equipe convidava a salvar uma lista que APAGARIA a equipe existente.
  *
  * ## O que a versão anterior não fazia
  *
@@ -39,11 +48,10 @@ import React, { useEffect, useMemo, useRef, useState } from 'react';
 import { Link, Navigate, useParams } from 'react-router-dom';
 import { toast } from 'sonner';
 import {
-  AlertTriangle, ArrowLeft, Boxes, Check, ClipboardCheck, ClipboardList,
+  AlertTriangle, Boxes, Check, ClipboardCheck, ClipboardList,
   Clock, Package, Pencil, Plus, Trash2, Users, Wrench, X,
 } from 'lucide-react';
-import { useAuth } from '@/core/lib/FirebaseAuthContext';
-import { useArena, useMyManagedArenas, useArenaCourts, useInventoryProducts, useInventoryEntries, useInventoryExits } from '@/modules/arenas/hooks/useArenas';
+import { useArenaCourts, useInventoryProducts, useInventoryEntries, useInventoryExits } from '@/modules/arenas/hooks/useArenas';
 import {
   useArenaChecklists, useCreateChecklist, useToggleChecklistItem,
   useUpdateChecklist, useDeleteChecklist, useRollChecklistDay,
@@ -65,7 +73,7 @@ import { formatDateShortBR } from '@/modules/arenas/domain/calendar';
 import { todayISO } from '@/modules/arenas/domain/subscription';
 import ConfirmDialog from '@/components/ConfirmDialog';
 import {
-  V2Badge, V2Button, V2EmptyState, V2Field, V2Input, V2Skeleton, V2Surface,
+  V2Badge, V2Button, V2EmptyState, V2ErrorState, V2Field, V2Input, V2Skeleton, V2Surface,
   V2Textarea,
 } from '@/v2/ui/primitives';
 
@@ -75,33 +83,46 @@ import {
  * O resumo do dia. Só mostra o que está PENDENTE — um painel que diz "tudo
  * certo" em quatro cartões verdes ocupa a tela e não informa nada.
  */
-function ResumoDoDia({ pendencias, ordens, estoqueAlerta, plantao, temChecklist, temManutencao, temEstoque, temEquipe }) {
+function ResumoDoDia({
+  arenaId, pendencias, ordens, estoqueAlerta, plantao, temChecklist, temManutencao, temEstoque, temEquipe,
+  falhou = false, onRetry,
+}) {
   const abertas = ordens.filter(isMaintenanceOpen);
   const urgentes = abertas.filter((o) => o.priority === MAINTENANCE_PRIORITY.URGENT);
   const nada = (!temChecklist || pendencias.total === 0)
     && (!temManutencao || abertas.length === 0)
     && (!temEstoque || estoqueAlerta.length === 0);
+  const aba = (valor) => `/arenas/${arenaId}/gerir?aba=${valor}`;
 
   return (
     <V2Surface className="mb-6">
       <div className="mb-3 flex flex-wrap items-center justify-between gap-2">
         <h2 className="font-display text-lg font-bold text-ink">Hoje</h2>
         {temEquipe && plantao.length > 0 && (
-          <p className="flex items-center gap-1.5 text-xs text-gray-500">
+          <Link to={aba('plantao')} className="flex items-center gap-1.5 text-xs text-gray-500 hover:text-ink">
             <Users className="h-3.5 w-3.5" />
             De plantão agora: <strong className="text-ink">{plantao.map((p) => p.name).join(', ')}</strong>
-          </p>
+          </Link>
         )}
       </div>
 
-      {nada ? (
+      {/* 🐞 Com uma consulta falhando, "nada pendente" seria a pior mentira
+          da tela: quem abre de manhã confia e não confere a rotina. */}
+      {falhou ? (
+        <V2ErrorState
+          inline
+          title="Não foi possível carregar a rotina de hoje"
+          description="Sem isso não dá para dizer o que está pendente. Tente de novo antes de conferir a arena."
+          onRetry={onRetry}
+        />
+      ) : nada ? (
         <p className="flex items-center gap-2 text-sm text-green-700">
           <Check className="h-4 w-4" /> Nada pendente. A rotina do dia está em dia.
         </p>
       ) : (
         <div className="grid gap-3 sm:grid-cols-3">
           {temChecklist && pendencias.total > 0 && (
-            <div className="rounded-2xl border border-amber-200 bg-amber-50 p-3">
+            <Link to={aba('checklists')} className="block rounded-2xl border border-amber-200 bg-amber-50 p-3 hover:border-amber-400">
               <p className="flex items-center gap-1.5 text-xs font-bold uppercase tracking-wider text-amber-800">
                 <ClipboardList className="h-3.5 w-3.5" /> Rotina
               </p>
@@ -110,10 +131,10 @@ function ResumoDoDia({ pendencias, ordens, estoqueAlerta, plantao, temChecklist,
                 {pendencias.total === 1 ? 'item pendente' : 'itens pendentes'} em{' '}
                 {pendencias.pendentes.map((p) => p.title).join(', ')}
               </p>
-            </div>
+            </Link>
           )}
           {temManutencao && abertas.length > 0 && (
-            <div className={`rounded-2xl border p-3 ${urgentes.length > 0 ? 'border-red-200 bg-red-50' : 'border-gray-100 bg-paper'}`}>
+            <Link to={aba('manutencao')} className={`block rounded-2xl border p-3 hover:border-gray-300 ${urgentes.length > 0 ? 'border-red-200 bg-red-50' : 'border-gray-100 bg-paper'}`}>
               <p className="flex items-center gap-1.5 text-xs font-bold uppercase tracking-wider text-gray-500">
                 <Wrench className="h-3.5 w-3.5" /> Manutenção
               </p>
@@ -122,10 +143,10 @@ function ResumoDoDia({ pendencias, ordens, estoqueAlerta, plantao, temChecklist,
                 {abertas.length === 1 ? 'ordem aberta' : 'ordens abertas'}
                 {urgentes.length > 0 && <strong className="text-red-700"> · {urgentes.length} urgente(s)</strong>}
               </p>
-            </div>
+            </Link>
           )}
           {temEstoque && estoqueAlerta.length > 0 && (
-            <div className="rounded-2xl border border-amber-200 bg-amber-50 p-3">
+            <Link to={aba('mercado')} className="block rounded-2xl border border-amber-200 bg-amber-50 p-3 hover:border-amber-400">
               <p className="flex items-center gap-1.5 text-xs font-bold uppercase tracking-wider text-amber-800">
                 <Boxes className="h-3.5 w-3.5" /> Estoque
               </p>
@@ -134,7 +155,7 @@ function ResumoDoDia({ pendencias, ordens, estoqueAlerta, plantao, temChecklist,
                 {estoqueAlerta.slice(0, 3).map((p) => p.name).join(', ')}
                 {estoqueAlerta.length > 3 ? ` e mais ${estoqueAlerta.length - 3}` : ''}
               </p>
-            </div>
+            </Link>
           )}
         </div>
       )}
@@ -315,23 +336,29 @@ function ChecklistCard({ checklist, hoje, onEditar }) {
   );
 }
 
-function ChecklistSecao({ arenaId, checklists, hoje, isLoading }) {
-  const [form, setForm] = useState(null);   // null | 'novo' | checklist
+/**
+ * A virada do dia do checklist acontece ao ABRIR a operação (o resumo de hoje
+ * ou a aba de rotinas): é o momento em que alguém da arena está na frente do
+ * sistema. Uma função agendada faria a mesma coisa e custaria uma Cloud
+ * Function para um problema que a tela resolve. `useRef` porque o efeito
+ * reroda a cada mudança da lista, e virar duas vezes seria gravação à toa (o
+ * serviço é idempotente, mas a escrita não). Com a consulta falhando, a lista
+ * vem vazia e nada vira — que é o certo.
+ */
+function useViradaDoChecklist({ arenaId, checklists, hoje, pronto }) {
   const virar = useRollChecklistDay();
   const jaVirou = useRef(false);
-
-  // A virada do dia acontece ao ABRIR a tela: é o momento em que alguém da
-  // arena está na frente do sistema. Uma função agendada faria a mesma coisa
-  // e custaria uma Cloud Function para um problema que a tela resolve.
-  // `useRef` porque o efeito reroda a cada mudança da lista, e virar duas
-  // vezes seria gravação à toa (o serviço é idempotente, mas a escrita não).
   useEffect(() => {
-    if (isLoading || jaVirou.current) return;
+    if (!pronto || jaVirou.current) return;
     const precisam = checklists.filter((c) => c.recurring !== false && c.run_date !== hoje);
     if (precisam.length === 0) return;
     jaVirou.current = true;
     virar.mutate({ arenaId, checklists: precisam, todayISO: hoje });
-  }, [isLoading, checklists, hoje, arenaId, virar]);
+  }, [pronto, checklists, hoje, arenaId, virar]);
+}
+
+function ChecklistSecao({ arenaId, checklists, hoje, isLoading, isError = false, onRetry }) {
+  const [form, setForm] = useState(null);   // null | 'novo' | checklist
 
   return (
     <V2Surface>
@@ -340,7 +367,7 @@ function ChecklistSecao({ arenaId, checklists, hoje, isLoading }) {
           <ClipboardCheck className="h-5 w-5 text-ink" />
           <h2 className="font-display text-lg font-bold text-ink">Rotinas do dia</h2>
         </div>
-        {!form && (
+        {!form && !isError && (
           <V2Button size="sm" onClick={() => setForm('novo')}>
             <Plus className="mr-1.5 h-4 w-4" /> Nova rotina
           </V2Button>
@@ -353,7 +380,13 @@ function ChecklistSecao({ arenaId, checklists, hoje, isLoading }) {
 
       {isLoading && <V2Skeleton className="h-32 rounded-2xl" />}
 
-      {!isLoading && checklists.length === 0 && !form && (
+      {/* Falha não é "nenhuma rotina": o convite a criar a primeira duplicaria
+          as que já existem. */}
+      {isError && (
+        <V2ErrorState inline title="Não foi possível carregar as rotinas" onRetry={onRetry} />
+      )}
+
+      {!isLoading && !isError && checklists.length === 0 && !form && (
         <V2EmptyState
           icon={ClipboardCheck}
           title="Nenhuma rotina ainda"
@@ -500,7 +533,7 @@ function ManutencaoForm({ arenaId, courts, ordem, onClose }) {
   );
 }
 
-function ManutencaoSecao({ arenaId, courts, ordens, isLoading }) {
+function ManutencaoSecao({ arenaId, courts, ordens, isLoading, isError = false, onRetry }) {
   const mudarStatus = useUpdateMaintenanceStatus();
   const apagar = useDeleteMaintenance();
   const [form, setForm] = useState(null);
@@ -541,7 +574,11 @@ function ManutencaoSecao({ arenaId, courts, ordens, isLoading }) {
 
       {isLoading && <V2Skeleton className="h-24 rounded-2xl" />}
 
-      {!isLoading && lista.length === 0 && !form && (
+      {isError && (
+        <V2ErrorState inline title="Não foi possível carregar as ordens de manutenção" onRetry={onRetry} />
+      )}
+
+      {!isLoading && !isError && lista.length === 0 && !form && (
         <V2EmptyState
           icon={Wrench}
           title={verFechadas ? 'Nenhuma ordem encerrada' : 'Nenhuma ordem aberta'}
@@ -642,7 +679,7 @@ function ManutencaoSecao({ arenaId, courts, ordens, isLoading }) {
 
 /* ======================================================= 4. ESTOQUE ====== */
 
-function EstoqueSecao({ arenaId, alertas }) {
+function EstoqueSecao({ arenaId, alertas, isError = false, onRetry }) {
   return (
     <V2Surface>
       <div className="mb-4 flex flex-wrap items-center justify-between gap-2">
@@ -651,11 +688,13 @@ function EstoqueSecao({ arenaId, alertas }) {
           <h2 className="font-display text-lg font-bold text-ink">Estoque</h2>
         </div>
         <V2Button asChild size="sm" variant="ghost">
-          <Link to={`/arenas/${arenaId}/gerir?secao=operacao&aba=mercado`}>Abrir o mercado</Link>
+          <Link to={`/arenas/${arenaId}/gerir?aba=mercado`}>Abrir o mercado</Link>
         </V2Button>
       </div>
 
-      {alertas.length === 0 ? (
+      {isError ? (
+        <V2ErrorState inline title="Não foi possível conferir o estoque" onRetry={onRetry} />
+      ) : alertas.length === 0 ? (
         <p className="flex items-center gap-2 text-sm text-green-700">
           <Check className="h-4 w-4" /> Nenhum produto abaixo do mínimo nem perto de vencer.
         </p>
@@ -693,7 +732,7 @@ function EstoqueSecao({ arenaId, alertas }) {
 
 const STAFF_NOVO = { name: '', role: STAFF_ROLE.RECEPTION, shift: STAFF_SHIFT.FULL, active: true };
 
-function EquipeSecao({ arenaId, staff, isLoading }) {
+function EquipeSecao({ arenaId, staff, isLoading, isError = false, onRetry }) {
   const salvar = useSaveArenaStaff();
   const [rascunho, setRascunho] = useState(null);   // null = não está editando
 
@@ -725,9 +764,11 @@ function EquipeSecao({ arenaId, staff, isLoading }) {
           <h2 className="font-display text-lg font-bold text-ink">Equipe</h2>
         </div>
         {rascunho === null ? (
-          <V2Button size="sm" variant="ghost" onClick={() => setRascunho(staff.length > 0 ? [...staff] : [{ ...STAFF_NOVO }])}>
-            <Pencil className="mr-1.5 h-4 w-4" /> Editar
-          </V2Button>
+          !isError && !isLoading && (
+            <V2Button size="sm" variant="ghost" onClick={() => setRascunho(staff.length > 0 ? [...staff] : [{ ...STAFF_NOVO }])}>
+              <Pencil className="mr-1.5 h-4 w-4" /> Editar
+            </V2Button>
+          )
         ) : (
           <div className="flex gap-1.5">
             <V2Button size="sm" variant="ghost" onClick={() => setRascunho(null)}>Cancelar</V2Button>
@@ -740,7 +781,12 @@ function EquipeSecao({ arenaId, staff, isLoading }) {
 
       {isLoading && <V2Skeleton className="h-20 rounded-2xl" />}
 
-      {rascunho === null ? (
+      {/* 🐞 A equipe é UMA lista gravada inteira. Com a leitura falhando, a
+          tela dizia "Ninguém cadastrado" e oferecia cadastrar — e salvar
+          regravaria a lista só com a pessoa nova, apagando a equipe. */}
+      {isError ? (
+        <V2ErrorState inline title="Não foi possível carregar a equipe" onRetry={onRetry} />
+      ) : isLoading ? null : rascunho === null ? (
         <>
           {staff.length === 0 ? (
             <V2EmptyState
@@ -814,140 +860,169 @@ function EquipeSecao({ arenaId, staff, isLoading }) {
   );
 }
 
-/* ======================================================== A PÁGINA ====== */
+/* ===================================================== NA CENTRAL ====== */
 
-export default function V2ArenaOperations() {
-  const { arenaId } = useParams();
-  const { user, isPlatformAdmin } = useAuth();
-  const { data: arena, isLoading } = useArena(arenaId);
-  const { data: managed = [] } = useMyManagedArenas();
-  const { isOn, isLoading: modulosCarregando } = useArenaModules(arenaId);
-  const { data: courts = [] } = useArenaCourts(arenaId);
-  const { data: checklists = [], isLoading: clCarregando } = useArenaChecklists(arenaId, { onlyActive: false });
-  const { data: ordens = [], isLoading: mnCarregando } = useArenaMaintenance(arenaId);
-  const { data: staff = [], isLoading: eqCarregando } = useArenaStaff(arenaId);
-  const { data: produtos = [] } = useInventoryProducts(arenaId);
-  const { data: entradas = [] } = useInventoryEntries(arenaId);
-  const { data: saidas = [] } = useInventoryExits(arenaId);
-
-  const hoje = todayISO();
-
-  const pendencias = useMemo(
-    () => checklistsPendingToday(checklists, hoje),
-    [checklists, hoje],
-  );
-
-  // O alerta de estoque é o que a arena precisa ver de manhã. A quantidade
-  // sai de entradas − saídas (não há campo `quantity` no produto), e só entra
-  // na lista o que está acabando, esgotado, vencido ou perto de vencer.
-  const estoqueAlerta = useMemo(() => produtos
-    .filter((p) => p.active !== false)
-    .map((p) => {
-      const { quantity } = calculateStock(p.id, entradas, saidas);
-      return {
-        ...p,
-        quantity,
-        estoque: stockStatus(quantity, p.min_stock),
-        validade: expiryStatus(p.expiry_date, { today: hoje }),
-      };
-    })
-    .filter((p) => p.estoque !== 'ok' || p.validade === 'expired' || p.validade === 'soon')
-    .sort((a, b) => a.quantity - b.quantity),
-  [produtos, entradas, saidas, hoje]);
-
-  const plantao = useMemo(() => staffOnDuty(staff), [staff]);
-
-  if (isLoading || modulosCarregando) {
-    return <V2Skeleton className="mx-auto h-96 max-w-[1100px] rounded-4xl" />;
-  }
-
-  if (!arena) {
-    return (
-      <div className="mx-auto max-w-[700px]">
-        <V2Surface>
-          <V2EmptyState
-            title="Arena não encontrada"
-            action={<Link to="/arenas" className="text-sm font-bold text-ink underline">← Voltar ao diretório</Link>}
-          />
-        </V2Surface>
-      </div>
-    );
-  }
-
-  const podeGerir = arena.owner_id === user?.uid
-    || managed.some((m) => m.id === arena.id)
-    || isPlatformAdmin;
-
-  if (!podeGerir || !isOn(ARENA_MODULE_ID.OPERATIONS)) {
-    return <Navigate to={`/arenas/${arenaId}`} replace />;
-  }
-
+/**
+ * A operação dentro da Central da arena.
+ *
+ * `view` é o valor da aba: `operacao` (Hoje — o resumo do dia e o estoque que
+ * não pode esperar), `checklists`, `manutencao` e `plantao` (que mora em
+ * Equipe e parceiros, porque é onde se procura quem trabalha na arena). Quem
+ * decide que a aba existe é a Central (`buildArenaSections`); aqui cada aba só
+ * busca o que ela mostra.
+ */
+export function ArenaOperationsPanel({ arena, view }) {
+  const arenaId = arena.id;
+  const { isOn } = useArenaModules(arenaId);
   const temChecklist = isOn(ARENA_MODULE_ID.OPERATIONS_CHECKLIST);
   const temManutencao = isOn(ARENA_MODULE_ID.OPERATIONS_MAINTENANCE);
   const temEstoque = isOn(ARENA_MODULE_ID.OPERATIONS_INVENTORY);
   const temEquipe = isOn(ARENA_MODULE_ID.OPERATIONS_STAFF);
-  const nenhum = !temChecklist && !temManutencao && !temEstoque && !temEquipe;
 
-  return (
-    <div className="mx-auto max-w-[1100px]">
-      <div className="mb-6">
-        <Link to={`/arenas/${arena.id}/gerir`} className="mb-3 inline-flex items-center gap-1.5 text-xs font-bold uppercase tracking-wider text-gray-500 hover:text-ink">
-          <ArrowLeft className="h-3.5 w-3.5" /> Voltar para a gestão
-        </Link>
-        <h1 className="font-display text-3xl font-bold tracking-tight text-ink">Operação</h1>
-        <p className="mt-2 font-medium text-gray-500">
-          {arena.name} · rotina, conserto, estoque e equipe.
+  const hoje = view === 'operacao';
+  const precisa = {
+    checklist: temChecklist && (hoje || view === 'checklists'),
+    manutencao: temManutencao && (hoje || view === 'manutencao'),
+    estoque: temEstoque && hoje,
+    equipe: temEquipe && (hoje || view === 'plantao'),
+  };
+
+  const qQuadras = useArenaCourts(precisa.manutencao ? arenaId : null);
+  const qChecklists = useArenaChecklists(precisa.checklist ? arenaId : null, { onlyActive: false });
+  const qOrdens = useArenaMaintenance(precisa.manutencao ? arenaId : null);
+  const qEquipe = useArenaStaff(precisa.equipe ? arenaId : null);
+  const qProdutos = useInventoryProducts(precisa.estoque ? arenaId : null);
+  const qEntradas = useInventoryEntries(precisa.estoque ? arenaId : null);
+  const qSaidas = useInventoryExits(precisa.estoque ? arenaId : null);
+
+  const checklists = qChecklists.data || [];
+  const ordens = qOrdens.data || [];
+  const staff = qEquipe.data || [];
+  const dia = todayISO();
+
+  useViradaDoChecklist({
+    arenaId, checklists, hoje: dia, pronto: precisa.checklist && qChecklists.isSuccess,
+  });
+
+  const pendencias = useMemo(() => checklistsPendingToday(checklists, dia), [checklists, dia]);
+
+  // O alerta de estoque é o que a arena precisa ver de manhã. A quantidade
+  // sai de entradas − saídas (não há campo `quantity` no produto), e só entra
+  // na lista o que está acabando, esgotado, vencido ou perto de vencer.
+  const estoqueAlerta = useMemo(() => (qProdutos.data || [])
+    .filter((p) => p.active !== false)
+    .map((p) => {
+      const { quantity } = calculateStock(p.id, qEntradas.data || [], qSaidas.data || []);
+      return {
+        ...p,
+        quantity,
+        estoque: stockStatus(quantity, p.min_stock),
+        validade: expiryStatus(p.expiry_date, { today: dia }),
+      };
+    })
+    .filter((p) => p.estoque !== 'ok' || p.validade === 'expired' || p.validade === 'soon')
+    .sort((a, b) => a.quantity - b.quantity),
+  [qProdutos.data, qEntradas.data, qSaidas.data, dia]);
+  const estoqueFalhou = qProdutos.isError || qEntradas.isError || qSaidas.isError;
+  const tentarEstoque = () => { qProdutos.refetch(); qEntradas.refetch(); qSaidas.refetch(); };
+
+  const plantao = useMemo(() => staffOnDuty(staff), [staff]);
+
+  if (view === 'checklists') {
+    return (
+      <ChecklistSecao arenaId={arenaId} checklists={checklists} hoje={dia}
+        isLoading={qChecklists.isLoading} isError={qChecklists.isError} onRetry={() => qChecklists.refetch()} />
+    );
+  }
+
+  if (view === 'manutencao') {
+    return (
+      <div className="space-y-4">
+        <ManutencaoSecao arenaId={arenaId} courts={qQuadras.data || []} ordens={ordens}
+          isLoading={qOrdens.isLoading} isError={qOrdens.isError} onRetry={() => qOrdens.refetch()} />
+        <p className="flex items-start gap-2 rounded-2xl bg-paper p-4 text-xs leading-5 text-gray-500">
+          <AlertTriangle className="mt-0.5 h-3.5 w-3.5 shrink-0" />
+          <span>
+            Ordem que <strong className="text-ink">tira a quadra da venda</strong> aparece no
+            calendário como &ldquo;Manutenção programada&rdquo;, sem o motivo — quem vai jogar
+            não precisa saber que a fechadura do vestiário quebrou. Concluir ou cancelar a
+            ordem devolve o horário à venda na hora.
+          </span>
         </p>
       </div>
+    );
+  }
 
-      {nenhum ? (
-        <V2Surface>
-          <V2EmptyState
-            icon={Package}
-            title="Nenhuma ferramenta de operação ativa"
-            description="Ative o que quiser usar em Gestão → Configurações → Módulos. Cada ferramenta liga separadamente."
-            action={(
-              <Link to={`/arenas/${arena.id}/gerir?secao=configuracoes&aba=modulos`} className="text-sm font-bold text-ink underline">
-                Abrir os módulos
-              </Link>
-            )}
-          />
-        </V2Surface>
+  if (view === 'plantao') {
+    return (
+      <EquipeSecao arenaId={arenaId} staff={staff}
+        isLoading={qEquipe.isLoading} isError={qEquipe.isError} onRetry={() => qEquipe.refetch()} />
+    );
+  }
+
+  // Hoje.
+  if (!temChecklist && !temManutencao && !temEstoque && !temEquipe) {
+    return (
+      <V2Surface>
+        <V2EmptyState
+          icon={Package}
+          title="Nenhuma ferramenta de operação ativa"
+          description="Rotinas, manutenção, estoque e plantão ligam separadamente, em Configurações → Módulos. Cada uma ligada aparece aqui."
+          action={(
+            <Link to={`/arenas/${arenaId}/gerir?aba=modulos`} className="text-sm font-bold text-ink underline">
+              Abrir os módulos
+            </Link>
+          )}
+        />
+      </V2Surface>
+    );
+  }
+
+  const resumoFalhou = (precisa.checklist && qChecklists.isError)
+    || (precisa.manutencao && qOrdens.isError)
+    || (precisa.estoque && estoqueFalhou);
+  const resumoCarregando = (precisa.checklist && qChecklists.isLoading)
+    || (precisa.manutencao && qOrdens.isLoading)
+    || (precisa.estoque && (qProdutos.isLoading || qEntradas.isLoading || qSaidas.isLoading));
+
+  return (
+    <div className="space-y-6">
+      {resumoCarregando ? (
+        <V2Skeleton className="h-32 rounded-4xl" />
       ) : (
-        <>
-          <ResumoDoDia
-            pendencias={pendencias}
-            ordens={ordens}
-            estoqueAlerta={estoqueAlerta}
-            plantao={plantao}
-            temChecklist={temChecklist}
-            temManutencao={temManutencao}
-            temEstoque={temEstoque}
-            temEquipe={temEquipe}
-          />
-
-          <div className="space-y-6">
-            {temChecklist && (
-              <ChecklistSecao arenaId={arena.id} checklists={checklists} hoje={hoje} isLoading={clCarregando} />
-            )}
-            {temManutencao && (
-              <ManutencaoSecao arenaId={arena.id} courts={courts} ordens={ordens} isLoading={mnCarregando} />
-            )}
-            {temEstoque && <EstoqueSecao arenaId={arena.id} alertas={estoqueAlerta} />}
-            {temEquipe && <EquipeSecao arenaId={arena.id} staff={staff} isLoading={eqCarregando} />}
-          </div>
-        </>
+        <ResumoDoDia
+          arenaId={arenaId}
+          pendencias={pendencias}
+          ordens={ordens}
+          estoqueAlerta={estoqueAlerta}
+          plantao={plantao}
+          temChecklist={temChecklist}
+          temManutencao={temManutencao}
+          temEstoque={temEstoque}
+          temEquipe={temEquipe}
+          falhou={resumoFalhou}
+          onRetry={() => {
+            if (qChecklists.isError) qChecklists.refetch();
+            if (qOrdens.isError) qOrdens.refetch();
+            if (estoqueFalhou) tentarEstoque();
+          }}
+        />
       )}
-
-      {temManutencao && (
-        <p className="mt-6 flex items-start gap-2 rounded-2xl bg-paper p-4 text-xs leading-5 text-gray-500">
-          <AlertTriangle className="mt-0.5 h-3.5 w-3.5 shrink-0" />
-          Ordem que <strong className="text-ink">tira a quadra da venda</strong> aparece no
-          calendário como &ldquo;Manutenção programada&rdquo;, sem o motivo — quem vai jogar
-          não precisa saber que a fechadura do vestiário quebrou. Concluir ou cancelar a
-          ordem devolve o horário à venda na hora.
-        </p>
+      {temEstoque && !resumoCarregando && (
+        <EstoqueSecao arenaId={arenaId} alertas={estoqueAlerta} isError={estoqueFalhou} onRetry={tentarEstoque} />
       )}
     </div>
   );
+}
+
+/* ========================================================= A ROTA ====== */
+
+/**
+ * `/arenas/:arenaId/gerir/operacoes` — a rota antiga. A operação virou a seção
+ * Operação da Central; a rota fica porque avisos e links salvos apontam para
+ * ela.
+ */
+export default function V2ArenaOperations() {
+  const { arenaId } = useParams();
+  return <Navigate to={`/arenas/${arenaId}/gerir?secao=operacao`} replace />;
 }

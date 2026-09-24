@@ -487,6 +487,9 @@ export const ARENA_MODULE_DETAIL = Object.freeze({
       [ARENA]: 'Abertura, fechamento, conserto e estoque deixam de morar no WhatsApp.',
     },
     manage: '/arenas/:arenaId/gerir/operacoes',
+    // Seção Operação da Central (Hoje · Rotinas · Manutenção) e o plantão em
+    // Equipe e parceiros. A rota antiga leva à seção.
+    native: true,
     collections: ['arena_checklists', 'arena_maintenance_orders'],
   },
   [ARENA_MODULE_ID.OPERATIONS_CHECKLIST]: {
@@ -539,6 +542,8 @@ export const ARENA_MODULE_DETAIL = Object.freeze({
       [ARENA]: 'Totem, luz e sensor no mesmo cadastro, ligados às quadras.',
     },
     manage: '/arenas/:arenaId/gerir/avancado',
+    // Aba Equipamentos da seção Operação.
+    native: true,
     collections: ['arena_devices'],
   },
   [ARENA_MODULE_ID.IOT_QR_KIOSK]: {
@@ -552,6 +557,9 @@ export const ARENA_MODULE_DETAIL = Object.freeze({
     requires: [ARENA_MODULE_ID.IOT],
     manage: '/arenas/:arenaId/gerir/presenca',
     public: '/arenas/:arenaId/chegada',
+    // Aba Presença de Reservas. A chegada do atleta é pelo QR do totem, não
+    // por botão na página da arena.
+    native: true,
     collections: ['arena_devices', 'arena_bookings'],
   },
   [ARENA_MODULE_ID.IOT_LIGHTING]: {
@@ -602,6 +610,8 @@ export const ARENA_MODULE_DETAIL = Object.freeze({
       [ARENA]: 'Uma rede com várias unidades, olhada como um negócio só.',
     },
     manage: '/arenas/:arenaId/gerir/avancado',
+    // Aba Rede de Desempenho.
+    native: true,
     collections: ['arena_networks', 'arena_network_memberships'],
   },
   [ARENA_MODULE_ID.MULTI_UNIT_NETWORK]: {
@@ -646,6 +656,8 @@ export const ARENA_MODULE_DETAIL = Object.freeze({
       [ATHLETE]: 'A página da arena com a identidade dela.',
     },
     manage: '/arenas/:arenaId/gerir/avancado',
+    // Aba Marca de Perfil; a cor e o logo aparecem na página da arena.
+    native: true,
     collections: ['arena_settings'],
   },
   [ARENA_MODULE_ID.WHITE_LABEL_BRANDING]: {
@@ -696,6 +708,8 @@ export const ARENA_MODULE_DETAIL = Object.freeze({
       [ARENA]: 'O sistema olha o seu histórico e sugere preço e previsão.',
     },
     manage: '/arenas/:arenaId/gerir/avancado',
+    // Aba Inteligência de Desempenho.
+    native: true,
     collections: ['bookings', 'arena_settings'],
   },
   [ARENA_MODULE_ID.AI_PRICING]: {

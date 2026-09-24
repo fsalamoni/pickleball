@@ -5,6 +5,12 @@
 > **Banco**: zero coleção, zero índice, **zero regra** — e 6 asserções novas no
 > emulador provando exatamente isso.
 
+> **Atualização 2026-09-24 — dentro da arena.** A presença virou a aba
+> **Presença** de Reservas, na Central (`/gerir/presenca` leva até ela), com
+> "Abrir o totem" ali mesmo. Falha ao carregar as reservas não vira mais
+> "nenhuma reserva" nem taxa de falta de um dia vazio. Ver
+> `09-INTEGRACAO-NA-ARENA.md` §11.
+
 ---
 
 ## 1. 🐞 O módulo era uma frase no catálogo

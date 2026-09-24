@@ -115,7 +115,7 @@ novo**; consultas com um `where` só e ordenação em memória.
 | I-5 | **Jogo aberto, buscar parceiro e fila** — seção na Central, seção na página da arena, Minhas reservas e Procura-se jogo | ✅ §8 |
 | I-6 | **Loja do app unificada com o Mercado** — um cadastro de produto só | ✅ §9 |
 | I-7 | **Marketing** dentro da arena — seção na Central, promoções e indicação na página da arena, e o defeito do documento que ainda não existe | ✅ §10 |
-| I-8 | **Operação, presença e avançado** dentro da arena | ⏳ |
+| I-8 | **Operação, presença e avançado** dentro da arena — seção Operação, Presença em Reservas, Marca em Perfil, Rede e Inteligência em Desempenho, Plantão em Equipe; a página "Avançado" deixa de existir | ✅ §11 |
 
 ---
 
@@ -609,3 +609,66 @@ idempotente — não regrava membro existente nem carteira existente.
 como todo cupom anterior continua). **Uma regra aditiva** em `arena_members`,
 `arena_wallets`, `arena_subscriptions` e `arena_referrals` (`allow get` de
 documento inexistente, ver acima). Nada foi migrado.
+
+---
+
+## 11. I-8 — Operação, presença e avançado dentro da arena (entregue)
+
+Com esta parte, **todo módulo de arena que tem tela está integrado**: nenhum
+vira mais botão para fora da arena.
+
+### Onde cada ferramenta está agora
+
+| Ferramenta | Antes | Agora |
+|---|---|---|
+| Resumo do dia, rotinas, manutenção, alerta de estoque (`operations`) | página `/gerir/operacoes` | seção **Operação** da Central: **Hoje · Rotinas · Manutenção** |
+| Equipamentos (`iot`) | página "Avançado" | Operação → **Equipamentos** |
+| Plantão — quem trabalha na arena (`operations_staff`) | página de operações | Equipe e parceiros → **Plantão** |
+| Presença e faltas (`iot_qr_kiosk`) | página `/gerir/presenca` | Reservas → **Presença** ("Abrir o totem" ali mesmo) |
+| Marca (`white_label`) | página "Avançado" | Perfil → **Marca** |
+| Inteligência (`ai`) | página "Avançado" | Desempenho → **Inteligência** |
+| Rede (`multi_unit`) | página "Avançado" | Desempenho → **Rede** — e, para o atleta, **"Outras unidades da rede"** na página da arena |
+
+- A página **"Avançado" deixou de existir**: era uma gaveta de quatro coisas
+  sem nada em comum além de terem chegado por último. `/gerir/avancado` e
+  `/avancado` levam à primeira dessas ferramentas que estiver ligada (ou aos
+  módulos, se nenhuma estiver).
+- `/gerir/operacoes` → `?secao=operacao`; `/gerir/presenca` → `?aba=presenca`.
+  O totem aponta direto para a aba.
+- "Hoje" existe sempre que o módulo de operação está ligado. Cada número do
+  resumo **leva à aba que resolve** (rotinas, manutenção, mercado, plantão), e
+  cada aba só busca o que mostra — abrir Rotinas não consulta a manutenção nem
+  a equipe.
+- A seção Operação existe também só com os equipamentos ligados.
+- O lado do atleta já tinha "Chegou?" (`ArenaCheckinAsk`) e a marca na página
+  da arena; o que faltava era a **rede**: agora a página mostra as outras
+  unidades, com link. Ela **não** promete que o plano vale nas outras
+  unidades — o benefício cruzado é outro módulo, e a reserva não faz essa conta.
+- `operations`, `iot`, `iot_qr_kiosk`, `multi_unit`, `white_label` e `ai` são
+  `native` no catálogo. `ArenaModuleShortcuts` fica como **rede de segurança**:
+  com o catálogo de hoje ele não mostra nada, e módulo NOVO com rota ganha a
+  porta sozinho em vez de nascer inalcançável. Um teste reprova módulo com
+  tela que não esteja marcado como integrado.
+
+### 🐞 Falha não é vazio — e na equipe, era apagar
+
+As telas levadas para a Central tratavam falha de leitura como lista vazia.
+Na operação, isso é pior que em qualquer outro lugar, porque quem abre de
+manhã confia no que lê e não confere a arena:
+
+| # | O que a tela dizia com a consulta falhando | Consequência |
+|---|---|---|
+| D40 | **"Nada pendente. A rotina do dia está em dia."** | a abertura não é conferida |
+| D41 | 🐞 **"Ninguém cadastrado"** no plantão, com "Cadastrar a equipe" | a equipe é UMA lista gravada inteira: salvar regravaria só a pessoa nova, **apagando a equipe existente** |
+| D42 | "Nenhuma rotina ainda" com "Criar a primeira" | rotina duplicada |
+| D43 | "Esta arena não faz parte de uma rede" com "Criar rede" | rede duplicada |
+| D44 | "Nenhum produto abaixo do mínimo" | a água acaba no sábado |
+| D45 | "Ainda não há histórico para ler", "Nenhum equipamento", "Nenhuma reserva confirmada neste dia" (com taxa de falta de um dia vazio) | números de um dia que não aconteceu |
+
+Agora cada uma mostra `V2ErrorState` com "Tentar de novo", e os comandos que
+dependem de ver o estado (editar a equipe, criar rotina, criar rede, marcar
+faltas) **não aparecem** enquanto a leitura não voltar. Há teste para cada caso.
+
+### Banco
+
+**Zero.** Nenhuma coleção, campo, índice, regra ou função.

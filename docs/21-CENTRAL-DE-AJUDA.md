@@ -21,7 +21,7 @@ garimpar o que não interessa.
 | **Professor** | quem dá aula | 5 |
 | **Conta e privacidade** | todos | 5 |
 
-38 artigos no total.
+40 artigos no total.
 
 ## 2. O momento em que esta tela é usada
 
@@ -133,7 +133,7 @@ src/v2/pages/V2Help.runtime.test.jsx        # 44 testes de runtime
 ```
 
 **Por que `helpLinkFor` mora sozinho.** Quem o chama é o LAYOUT, presente em
-toda tela; `helpCenter.js` carrega 38 artigos de texto. Importar do arquivo do
+toda tela; `helpCenter.js` carrega 40 artigos de texto. Importar do arquivo do
 conteúdo arrasta o manual inteiro para o chunk que todo mundo baixa — medido:
 **216 kB contra 184 kB** (63 kB contra 52 kB comprimidos) por uma função de
 três linhas. Rollup não consegue descartar o conteúdo: são objetos montados por
@@ -188,7 +188,7 @@ Três testes que valem mais que os outros:
 5. **⭐ `helpLinkFor` e `helpForRoute` fecham o contrato**: o que um escreve o
    outro lê. Se um dos dois mudar de forma, quebra na hora. E **o layout
    importa de `helpLink`, não de `helpCenter`** — se isso inverter, o chunk de
-   toda tela volta a carregar os 38 artigos (§4).
+   toda tela volta a carregar os 40 artigos (§4).
 6. **⭐ `highlightParts` nunca perde nem inventa caractere** — remontar os
    pedaços devolve o texto original, com acento e caixa.
 7. **Estrutura**: todo artigo tem título, resumo, corpo e palavras-chave; ids

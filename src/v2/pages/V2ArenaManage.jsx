@@ -30,6 +30,9 @@ const ArenaOpenMatchAdminPanel = lazy(() => import('@/v2/components/arenas/openM
 const ArenaShopOrdersPanel = lazy(() => import('@/v2/components/arenas/shop/ArenaShopOrdersPanel'));
 const ArenaMarketingPanel = lazy(() => import('@/v2/pages/V2ArenaMarketing').then((m) => ({ default: m.ArenaMarketingPanel })));
 const ArenaMembersPanel = lazy(() => import('@/v2/pages/V2ArenaAdminMembers').then((m) => ({ default: m.ArenaMembersPanel })));
+const ArenaOperationsPanel = lazy(() => import('@/v2/pages/V2ArenaOperations').then((m) => ({ default: m.ArenaOperationsPanel })));
+const ArenaAdvancedPanel = lazy(() => import('@/v2/pages/V2ArenaAdvanced').then((m) => ({ default: m.ArenaAdvancedPanel })));
+const ArenaAttendancePanel = lazy(() => import('@/v2/pages/V2ArenaAttendance').then((m) => ({ default: m.ArenaAttendancePanel })));
 import { useFeatureFlag } from '@/core/lib/FeatureFlagsContext';
 import { FEATURE_FLAG } from '@/core/featureFlags';
 import { db } from '@/core/config/firebase';
@@ -220,6 +223,15 @@ function V2ArenaManageContent({ arenaId, user, isPlatformAdmin, arena, managed, 
     campanhas: moduloLigado(ARENA_MODULE_ID.MARKETING) && moduloLigado(ARENA_MODULE_ID.MARKETING_CAMPAIGNS),
     satisfacao: moduloLigado(ARENA_MODULE_ID.MARKETING) && moduloLigado(ARENA_MODULE_ID.MARKETING_NPS),
     indicacoes: moduloLigado(ARENA_MODULE_ID.MARKETING) && moduloLigado(ARENA_MODULE_ID.MARKETING_REFERRAL),
+    operacao: moduloLigado(ARENA_MODULE_ID.OPERATIONS),
+    checklists: moduloLigado(ARENA_MODULE_ID.OPERATIONS) && moduloLigado(ARENA_MODULE_ID.OPERATIONS_CHECKLIST),
+    manutencao: moduloLigado(ARENA_MODULE_ID.OPERATIONS) && moduloLigado(ARENA_MODULE_ID.OPERATIONS_MAINTENANCE),
+    plantao: moduloLigado(ARENA_MODULE_ID.OPERATIONS) && moduloLigado(ARENA_MODULE_ID.OPERATIONS_STAFF),
+    equipamentos: moduloLigado(ARENA_MODULE_ID.IOT),
+    presenca: moduloLigado(ARENA_MODULE_ID.IOT) && moduloLigado(ARENA_MODULE_ID.IOT_QR_KIOSK),
+    marca: moduloLigado(ARENA_MODULE_ID.WHITE_LABEL),
+    rede: moduloLigado(ARENA_MODULE_ID.MULTI_UNIT),
+    inteligencia: moduloLigado(ARENA_MODULE_ID.AI),
     // Torneio da plataforma sediado aqui não depende de módulo: é da arena
     // desde sempre, só não tinha lugar na gestão.
     torneiosPlataforma: torneiosDaPlataforma.some((t) => !t.archived),
@@ -385,6 +397,15 @@ function V2ArenaManageContent({ arenaId, user, isPlatformAdmin, arena, managed, 
         {['cupons', 'campanhas', 'satisfacao', 'indicacoes', 'marketing'].includes(tab) && modulos.marketing && (
           <ArenaMarketingPanel arena={arena} view={tab} />
         )}
+        {['operacao', 'checklists', 'manutencao'].includes(tab) && modulos.operacao && (
+          <ArenaOperationsPanel arena={arena} view={tab} />
+        )}
+        {tab === 'plantao' && modulos.plantao && <ArenaOperationsPanel arena={arena} view="plantao" />}
+        {tab === 'presenca' && modulos.presenca && <ArenaAttendancePanel arena={arena} />}
+        {tab === 'marca' && modulos.marca && <ArenaAdvancedPanel arena={arena} view="marca" />}
+        {tab === 'rede' && modulos.rede && <ArenaAdvancedPanel arena={arena} view="rede" />}
+        {tab === 'inteligencia' && modulos.inteligencia && <ArenaAdvancedPanel arena={arena} view="inteligencia" />}
+        {tab === 'equipamentos' && modulos.equipamentos && <ArenaAdvancedPanel arena={arena} view="equipamentos" />}
         {tab === 'pagamento' && <V2ArenaPaymentTab />}
         {tab === 'regras' && <V2ArenaRulesTab />}
         {tab === 'mercado' && <V2ArenaMercadoTab />}

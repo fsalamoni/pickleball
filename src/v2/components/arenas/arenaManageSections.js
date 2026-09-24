@@ -8,9 +8,10 @@
  * conseguiria abrir a segunda. Há teste travando isso.
  */
 import {
-  BarChart3, Building2, CalendarClock, CalendarDays, CalendarRange, ClipboardList,
-  Crown, DollarSign, Gift, Globe, GraduationCap, Image, Info, LayoutGrid, Megaphone, Package, Puzzle,
-  ShoppingBag, SlidersHorizontal, Smile, Star, Swords, Tag, Trophy, Users, Wallet,
+  BarChart3, Building2, CalendarClock, CalendarDays, CalendarRange, ClipboardCheck, ClipboardList,
+  Clock, Cpu, Crown, DollarSign, Gift, Globe, GraduationCap, Image, Info, LayoutGrid, Megaphone,
+  Network, Package, Palette, Puzzle, ShoppingBag, SlidersHorizontal, Smile, Sparkles, Star, Sun,
+  Swords, Tag, Trophy, UserCheck, Users, Wallet, Wrench,
 } from 'lucide-react';
 
 // Navegação em dois níveis do admin da arena. Ordem = ciclo de vida, do
@@ -33,6 +34,8 @@ export function buildArenaSections({
       tabs: [
         { value: 'info', label: 'Informações', icon: Info },
         { value: 'fotos', label: 'Fotos', icon: Image },
+        // A marca é a cara da arena: mora junto das informações e das fotos.
+        ...(modulos.marca ? [{ value: 'marca', label: 'Marca', icon: Palette }] : []),
       ],
     },
     {
@@ -54,6 +57,8 @@ export function buildArenaSections({
         { value: 'calendario', label: 'Calendário', icon: CalendarDays },
         { value: 'calendario-admin', label: 'Reservas (admin)', icon: CalendarRange },
         ...(crmOn ? [{ value: 'clientes', label: 'Clientes', icon: Users }] : []),
+        // "Quem veio?" é uma pergunta sobre as reservas do dia.
+        ...(modulos.presenca ? [{ value: 'presenca', label: 'Presença', icon: UserCheck }] : []),
       ],
     },
     // Jogo aberto: a arena publica horário com vaga e os atletas preenchem.
@@ -132,6 +137,21 @@ export function buildArenaSections({
         { value: 'mercado', label: 'Mercado', icon: Package },
       ],
     },
+    // Operação: a rotina de quem toca a arena. "Hoje" existe sempre que o
+    // módulo está ligado — é o resumo do dia, e explica o que ligar quando
+    // nenhuma ferramenta está. Os equipamentos (IoT) moram aqui porque são o
+    // que existe fisicamente na arena, e a seção existe mesmo só com eles.
+    ...(modulos.operacao || modulos.equipamentos ? [{
+      id: 'operacao',
+      label: 'Operação',
+      icon: ClipboardCheck,
+      tabs: [
+        ...(modulos.operacao ? [{ value: 'operacao', label: 'Hoje', icon: Sun }] : []),
+        ...(modulos.checklists ? [{ value: 'checklists', label: 'Rotinas', icon: ClipboardList }] : []),
+        ...(modulos.manutencao ? [{ value: 'manutencao', label: 'Manutenção', icon: Wrench }] : []),
+        ...(modulos.equipamentos ? [{ value: 'equipamentos', label: 'Equipamentos', icon: Cpu }] : []),
+      ],
+    }] : []),
     {
       id: 'desempenho',
       label: 'Desempenho',
@@ -140,6 +160,9 @@ export function buildArenaSections({
         ...(opsKpisOn ? [{ value: 'semana', label: 'Semana', icon: CalendarRange }] : []),
         { value: 'metricas', label: 'Métricas', icon: BarChart3 },
         { value: 'retornos', label: 'Retornos', icon: Star },
+        // Leituras do negócio: a rede somada e a leitura automática dos números.
+        ...(modulos.inteligencia ? [{ value: 'inteligencia', label: 'Inteligência', icon: Sparkles }] : []),
+        ...(modulos.rede ? [{ value: 'rede', label: 'Rede', icon: Network }] : []),
       ],
     },
     {
@@ -148,6 +171,9 @@ export function buildArenaSections({
       icon: Users,
       tabs: [
         { value: 'admins', label: 'Admins', icon: Users },
+        // O plantão (módulo de operação): nome, função e turno de quem trabalha
+        // aqui. Mora com a equipe, que é onde se procura quem trabalha na arena.
+        ...(modulos.plantao ? [{ value: 'plantao', label: 'Plantão', icon: Clock }] : []),
         ...(coachResidentOn && !modulos.aulas ? [{ value: 'professores', label: 'Professores', icon: GraduationCap }] : []),
         ...(linkedClubsOn ? [{ value: 'clubes', label: 'Clubes', icon: Users }] : []),
       ],

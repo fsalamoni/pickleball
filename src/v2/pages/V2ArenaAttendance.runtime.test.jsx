@@ -1,44 +1,33 @@
 /**
- * A presença do dia, do lado da arena.
+ * A presença do dia, do lado da arena — hoje a aba Presença de Reservas, na
+ * Central.
  *
  * O que estes testes protegem:
- *  1. ⭐ sem o módulo (ou sem gerir a arena), a rota não existe;
+ *  1. ⭐ a rota antiga leva à aba da Central (quem pode entrar, a Central decide);
  *  2. ⭐ a falta só é afirmada depois que a janela FECHA;
  *  3. ⭐ marcar as faltas do dia é UM toque, sobre quem o sistema já sabe;
  *  4. ⭐ a taxa sai sobre o que foi decidido, não sobre o dia inteiro;
  *  5. a arena confirma e desfaz a chegada de alguém;
- *  6. presença pelo totem é distinguida da confirmada na recepção.
+ *  6. presença pelo totem é distinguida da confirmada na recepção;
+ *  7. ⭐ falha ao carregar as reservas não vira "nenhuma reserva" nem taxa de
+ *     falta de um dia vazio que não aconteceu.
  */
 import React from 'react';
 import { createRoot } from 'react-dom/client';
 import { act } from 'react';
-import { MemoryRouter, Routes, Route } from 'react-router-dom';
+import { MemoryRouter, Routes, Route, useLocation } from 'react-router-dom';
 import { describe, it, expect, beforeEach, afterEach, vi } from 'vitest';
 
-import { ARENA_MODULE_ID } from '@/modules/arenas/domain/modules';
-
-const LIGADOS = new Set();
-const estado = { gere: true, reservas: [] };
+const estado = { reservas: [], erro: false };
 const confirmar = vi.fn(() => Promise.resolve());
 const desfazer = vi.fn(() => Promise.resolve());
 const emLote = vi.fn(() => Promise.resolve(2));
 
 vi.mock('sonner', () => ({ toast: { success: vi.fn(), error: vi.fn() } }));
-vi.mock('@/core/lib/FirebaseAuthContext', () => ({
-  useAuth: () => ({ user: { uid: 'eu' }, isPlatformAdmin: false, isAuthenticated: true }),
-}));
-vi.mock('@/modules/arenas/hooks/useArenas', () => ({
-  useArena: () => ({
-    data: { id: 'a1', name: 'Arena Teste', owner_id: estado.gere ? 'eu' : 'outro' },
-    isLoading: false,
-  }),
-  useMyManagedArenas: () => ({ data: [] }),
-}));
 vi.mock('@/modules/arenas/hooks/useBookings', () => ({
-  useArenaBookings: () => ({ data: estado.reservas, isLoading: false }),
-}));
-vi.mock('@/modules/arenas/hooks/useArenaModules', () => ({
-  useArenaModules: () => ({ isOn: (id) => LIGADOS.has(id), isLoading: false }),
+  useArenaBookings: () => (estado.erro
+    ? { data: undefined, isLoading: false, isError: true, refetch: vi.fn() }
+    : { data: estado.reservas, isLoading: false, isError: false, refetch: vi.fn() }),
 }));
 vi.mock('@/modules/arenas/hooks/useCheckin', () => ({
   useConfirmArrival: () => ({ mutateAsync: confirmar, isPending: false }),
@@ -46,7 +35,7 @@ vi.mock('@/modules/arenas/hooks/useCheckin', () => ({
   useMarkNoShowBatch: () => ({ mutateAsync: emLote, isPending: false }),
 }));
 
-const { default: V2ArenaAttendance } = await import('./V2ArenaAttendance.jsx');
+const { default: V2ArenaAttendance, ArenaAttendancePanel } = await import('./V2ArenaAttendance.jsx');
 
 const p = (n) => String(n).padStart(2, '0');
 
@@ -80,10 +69,8 @@ let container, root;
 beforeEach(() => {
   vi.useFakeTimers({ toFake: ['Date'] });
   vi.setSystemTime(AGORA);
-  LIGADOS.clear();
-  LIGADOS.add(ARENA_MODULE_ID.IOT_QR_KIOSK);
   confirmar.mockClear(); desfazer.mockClear(); emLote.mockClear();
-  Object.assign(estado, { gere: true, reservas: [] });
+  Object.assign(estado, { reservas: [], erro: false });
   container = document.createElement('div');
   document.body.appendChild(container);
   root = createRoot(container);
@@ -96,18 +83,20 @@ afterEach(() => {
   vi.useRealTimers();
 });
 
+/** Monta a aba Presença, como a Central monta. */
 async function render() {
   await act(async () => {
     root.render(
-      <MemoryRouter initialEntries={['/arenas/a1/gerir/presenca']}>
-        <Routes>
-          <Route path="/arenas/:arenaId/gerir/presenca" element={<V2ArenaAttendance />} />
-          <Route path="/arenas/:arenaId" element={<div>PÁGINA DA ARENA</div>} />
-          <Route path="/arenas" element={<div>DIRETÓRIO</div>} />
-        </Routes>
+      <MemoryRouter initialEntries={['/arenas/a1/gerir']}>
+        <ArenaAttendancePanel arena={{ id: 'a1', name: 'Arena Teste' }} />
       </MemoryRouter>,
     );
   });
+}
+
+function OndeEstou() {
+  const loc = useLocation();
+  return <div data-testid="onde">{loc.pathname + loc.search}</div>;
 }
 
 /** Procura no documento inteiro: o diálogo de confirmação sai em portal. */
@@ -117,25 +106,36 @@ async function clicar(texto, escopo = container) {
   await act(async () => { alvo.click(); });
 }
 
-/* ================================================================ guarda === */
+/* ======================================================== rota e aba === */
 
-describe('quem entra aqui', () => {
-  it('⭐ sem o módulo, volta para a arena', async () => {
-    LIGADOS.clear();
-    await render();
-    expect(container.textContent).toContain('PÁGINA DA ARENA');
+describe('a rota antiga e a aba', () => {
+  it('⭐ /gerir/presenca leva à aba Presença da Central', async () => {
+    await act(async () => {
+      root.render(
+        <MemoryRouter initialEntries={['/arenas/a1/gerir/presenca']}>
+          <Routes>
+            <Route path="/arenas/:arenaId/gerir/presenca" element={<V2ArenaAttendance />} />
+            <Route path="/arenas/:arenaId/gerir" element={<OndeEstou />} />
+          </Routes>
+        </MemoryRouter>,
+      );
+    });
+    expect(container.querySelector('[data-testid="onde"]').textContent).toBe('/arenas/a1/gerir?aba=presenca');
   });
 
-  it('⭐ quem não gere a arena, volta para a arena', async () => {
-    estado.gere = false;
-    await render();
-    expect(container.textContent).toContain('PÁGINA DA ARENA');
-  });
-
-  it('com o módulo, o painel abre', async () => {
+  it('a aba abre com o totem à mão', async () => {
     await render();
     expect(container.textContent).toContain('Presença');
-    expect(container.textContent).toContain('Arena Teste');
+    const totem = [...container.querySelectorAll('a')].find((a) => a.textContent.includes('Abrir o totem'));
+    expect(totem?.getAttribute('href')).toBe('/arenas/a1/totem');
+  });
+
+  it('⭐ falha ao carregar as reservas não vira "nenhuma reserva" nem lote de faltas', async () => {
+    estado.erro = true;
+    await render();
+    expect(container.textContent).toMatch(/Não foi possível carregar as reservas/i);
+    expect(container.textContent).not.toMatch(/Nenhuma reserva confirmada neste dia/i);
+    expect(container.textContent).not.toMatch(/como falta/i);
   });
 });
 

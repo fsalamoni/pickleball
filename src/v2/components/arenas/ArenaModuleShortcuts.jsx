@@ -26,7 +26,7 @@
 import React, { useMemo } from 'react';
 import { Link } from 'react-router-dom';
 import { useArenaModules } from '@/modules/arenas/hooks/useArenaModules';
-import { arenaModuleRoute, getArenaModule, listArenaModuleIds } from '@/modules/arenas/domain/moduleCatalog';
+import { getArenaModule, listArenaModuleIds } from '@/modules/arenas/domain/moduleCatalog';
 import { moduleIcon } from '@/v2/components/arenas/moduleIcons';
 import { V2Button } from '@/v2/ui/primitives';
 
@@ -42,19 +42,29 @@ import { V2Button } from '@/v2/ui/primitives';
  * na tela é exatamente o "separado do resto da arena" que a integração
  * desfaz.
  *
+ * Desde 2026-09-24 (I-8) **todo** módulo com tela está integrado à arena, e
+ * o componente não mostra nada com o catálogo de hoje. Ele fica como rede de
+ * segurança: módulo NOVO com rota e sem integração ganha a porta sozinho, em
+ * vez de nascer inalcançável — que foi o defeito que o criou. `ids` e
+ * `getModule` existem para testar essa regra com um catálogo de exemplo.
+ *
  * @param {(id: string) => boolean} isOn
  * @param {string} arenaId
  * @param {'manage'|'public'} audience
+ * @param {{ ids?: string[], getModule?: (id: string) => object|null }} [opcoes]
  * @returns {Array<{ id: string, label: string, icon: string|null, to: string }>}
  */
-export function shortcutsFor(isOn, arenaId, audience = 'manage') {
+export function shortcutsFor(isOn, arenaId, audience = 'manage', {
+  ids = listArenaModuleIds(), getModule = getArenaModule,
+} = {}) {
   const vistos = new Set();
-  return listArenaModuleIds()
+  return ids
     .filter((id) => isOn(id))
     .map((id) => {
-      const mod = getArenaModule(id);
+      const mod = getModule(id);
       if (mod?.native) return null;
-      const to = arenaModuleRoute(id, arenaId, audience);
+      const tpl = mod?.[audience];
+      const to = tpl && arenaId ? tpl.replace(':arenaId', arenaId) : null;
       if (!to || vistos.has(to)) return null;
       vistos.add(to);
       return { id, label: mod?.label || id, icon: mod?.icon || null, to };
