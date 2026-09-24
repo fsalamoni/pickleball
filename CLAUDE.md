@@ -232,6 +232,8 @@ Estes princípios vieram de bugs reais que custaram horas pra arrumar. São ineg
 **"O telão mudou com o formato novo?"** → sim, ganhou um terceiro arranjo (quadras + previsão com duplas + partidas concluídas com placar + ranking do dia). `buildGameDayBoard` agora aceita `format` (OPCIONAL): informado, ele decide `isCourtByCourt`/`hasScores`; omitido, a inferência antiga vale bit a bit. Ver `docs/14-DIA-DE-JOGO-TELAO.md` §2.2
 **"Onde está o botão de recalcular ranking/rating?"** → **não existe mais**, de propósito. Havia quatro (console e métricas do admin, ranking 2.0–8.0, pós-migração de inscrições e ranking interno do clube) e todos saíram: botão de recalcular mente sobre de quem é a responsabilidade (só o admin da plataforma escreve ranking, então quem publicava dependia de OUTRA pessoa lembrar), compete com o gatilho que já faz a conta, e esconde o defeito quando algo não entra. No lugar, o painel `RankingAutomatico` EXPLICA o que dispara o quê. O cliente também parou de tentar materializar ranking ao publicar — era recusado pela regra e custava ler a coleção inteira de torneios. Guarda em `src/core/guards/diaDeJogoUniforme.test.js`. Ver `docs/18-RANKINGS.md` §8
 **"O resultado de TORNEIO conta a partir de quando?"** → do **lançamento**, não do encerramento. Em torneio o lançamento não é facultativo: o placar é lançado porque a partida aconteceu. 🐞 A elegibilidade exigia `status === 'finished'`, e num torneio de três dias nada aparecia no rating até alguém clicar em "encerrar" — às vezes nunca. Segue de fora o que não é resultado de verdade: **rascunho** (ambiente de teste), **cancelado**, **privado** e **arquivado**; e como o recálculo é integral, cancelar ou arquivar TIRA do ranking o que já contou. No **dia de jogo** é o contrário e continua sendo: o gatilho é a **PUBLICAÇÃO**, porque ali lançar no ranking é decisão de quem organiza. A regra vive em `isTournamentRankingEligible` (cliente) e `isEligible` (`functions/ranking.js`) — **as duas cópias têm teste de paridade**. Ver `docs/18-RANKINGS.md` §3
+**"O ranking Nacional/Duplas mostra uma coisa e o 2.0–8.0 outra"** → era o SEGUNDO ESCRITOR: o navegador do admin recalculava ELO e duplas a cada visita (`useAutoRecomputeRatings` no `V2Layout`) e nunca o 2.0–8.0. Com as funções apagadas por outro app do mesmo projeto Firebase, dois rankings andaram e o terceiro parou em 18/09. **Hoje o servidor é o único escritor**: o cliente só LÊ ranking e a regra recusa escrita **até do admin** (`allow write: if false` nas cinco coleções). O painel admin mostra a última passada do servidor. Ver `docs/18-RANKINGS.md` §8.1
+**"Publiquei um resultado com as funções fora do ar. Ele entra no ranking?"** → entra, em até 30 min: `catchUpPlatformRankings` (`functions/rankingCatchUp.js`) compara a IMPRESSÃO da última passada (contagens + hash dos torneios, em `platform_settings/ranking_worker.last_result.fingerprint`) com o banco e recalcula se faltou. Gatilho não tem fila — evento escrito sem função existindo se perde. Em dia, ela não grava nada; e o histórico de ELO só ganha ponto quando o rating MUDA (`proximoHistoricoElo`)
 **"Quando o ranking/rating atualiza depois de publicar um resultado?"** → **na hora**. Gatilhos do Firestore (`functions/index.js`) recalculam os TRÊS rankings de partida — ELO/nacional, rating 2.0–8.0 e duplas — a cada escrita em `club_event_games`, `tournament_matches` ou mudança de elegibilidade de torneio. Roda no SERVIDOR porque a regra só deixa o admin escrever ranking, e quem publica quase nunca é o admin (antes a tentativa do cliente era recusada em silêncio). Rajadas são coalescidas por um lease em `platform_settings/ranking_worker`. Ver `docs/18-RANKINGS.md`
 **"Como o ranking de DUPLAS é classificado?"** → aproveitamento → mais vitórias → menos derrotas → saldo de pontos. A regra vive em `compareDoublesRows` (`src/modules/rating/domain/doublesRanking.js`), a classificação é gravada em `doubles_rankings` pelo servidor (campo `position`) e a tela **não reordena** — só filtra e pagina (20/50/100, estado na URL)
 **"Quero um piso de jogos para a dupla entrar no ranking"** → é a **amostra mínima** (Todas / 3+ / 5+ / 10+ / 20+), escolhida por CADA usuário e salva no navegador (`v2:view:<uid>:ranking:duplas:min-jogos`, via `src/core/lib/viewPreference.js` — **nada no banco**). O recorte RENUMERA dentro dele (a posição geral vai junto, em `overall_position`); a busca por nome, não. Ver `docs/18-RANKINGS.md` §6.1
@@ -490,6 +492,27 @@ chore(deps): bump firebase to 12.x
 > memory topic `picklerush-sync-2026-08.md`.
 >
 > **Destaques por onda**:
+>
+> - **Onda BJ — Um escritor só para o ranking, e a recuperação do gatilho
+>   perdido** (2026-09-24): relatado — *"o rating voltou a calcular, mas os
+>   demais ranking e duplas não estão atualizando automaticamente"*. Medido na
+>   produção pela leitura pública: a última passada do SERVIDOR era de **18/09**;
+>   o dia de jogo publicado em 22/09 caiu na janela em que o deploy de outro
+>   aplicativo do mesmo projeto tinha apagado as funções, e gatilho não tem
+>   fila. O ELO e as duplas "andaram" (22/09 14:54) só porque **o navegador do
+>   admin** os recalculava a cada visita — um segundo escritor que nunca tocava
+>   o 2.0–8.0. Três rankings discordando, sem nada na tela avisar.
+>   **(1) O cliente parou de gravar ranking** (V2Layout, painel do torneio,
+>   hooks e serviços de escrita), com guarda de fonte varrendo `src/`.
+>   **(2) A regra recusa escrita de ranking para todo mundo, inclusive o
+>   admin** — senão uma aba numa versão antiga continuaria gravando.
+>   **(3) Recuperação agendada** (`catchUpPlatformRankings`, 30 min): compara a
+>   impressão da última passada com o banco e recalcula só se faltou; na
+>   primeira execução após o deploy ela recalcula e põe tudo em dia.
+>   **(4) O histórico de ELO só ganha ponto quando o rating muda.**
+>   **(5) O painel admin mostra a última passada do servidor** e o erro
+>   recente. Zero coleção, zero índice; uma função nova; regra ENDURECIDA em
+>   cinco coleções. Ver `docs/18-RANKINGS.md` §3 e §8.1.
 >
 > - **Onda BI — Pacote de horas: o atleta pede, a arena confirma**
 >   (2026-09-24): o botão "Comprar" pacote gravava a carteira pelo atleta e
@@ -1823,7 +1846,7 @@ chore(deps): bump firebase to 12.x
 
 | Métrica | Valor | Delta do início do agente |
 |---|---|---|
-| **Testes Vitest** | **5242 passing** (315 arquivos) + 271 asserções de regras (Vitest) + 85 do dia de jogo no emulador | +4650 (era 408) |
+| **Testes Vitest** | **5281 passing** (318 arquivos) + 283 asserções de regras (Vitest) + 85 do dia de jogo no emulador | +4873 (era 408) |
 | **Lint errors** | 0 | era 30+ |
 | **Módulos** | 21 (+`help` — conteúdo dos tutoriais em tela) (`games` e `legal` saíram como `src/modules/` mas continuam como pastas oficiais — **rating virou módulo oficial** com domain/services/hooks/components) | +4 (coaches, circuits, games, legal) |
 | **V2 pages** | 82 (+V2GameDayTelao — telão, fora do V2Layout; +V2Help — central de ajuda; +V2ArenaKiosk — totem da recepção, também fora do V2Layout; +V2ArenaCheckin; +V2ArenaAttendance) | +58 |
@@ -1831,7 +1854,7 @@ chore(deps): bump firebase to 12.x
 | **Coleções Firestore** | **122 top-level em `firestore.rules`** (+`doubles_rankings`) (as 13 da gamificação V2 documentadas em `05-DATA-MODEL.md`) — a Onda AS não criou nenhuma | +82 |
 | **Índices compostos Firestore** | **33 em `firestore.indexes.json`** (+`provisional_claims`) (+4 da gamificação V2) | +28 |
 | **Feature flags ativas** | **20 default OFF** (+`arena_modules` — a chave-mestra dos módulos adicionais de arena; 137 viraram código) | −112 |
-| **Cloud Functions** | **17** (+ `promoteOpenSlotWaitlistOnSlot` / `OnEntry` — a fila de espera do jogo aberto anda na hora; + `adminDeleteAccounts` — exclusão de cadastro pelo dono, com prévia; + `recomputeRankingOnTournamentRegistration` — a inscrição também move o ranking) | +15 |
+| **Cloud Functions** | **23 exportações** (+ `catchUpPlatformRankings` — recupera o ranking quando um gatilho se perdeu com as funções fora do ar; + `promoteOpenSlotWaitlistOnSlot` / `OnEntry` — a fila de espera do jogo aberto anda na hora; + `adminDeleteAccounts` — exclusão de cadastro pelo dono, com prévia; + `recomputeRankingOnTournamentRegistration` — a inscrição também move o ranking) | +15 |
 | **PRs mergeados** | **96 totais** (Sprints 0-50+) | — |
 | **Origin/main** | `106bd55` (PR #110) | — |
 | **Bundle deployed** | (deploy em curso) | — |

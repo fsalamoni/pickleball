@@ -49,6 +49,7 @@ const {
 } = require('./ranking');
 const { computeDuprRatings, seedFromProfile } = require('./engines/dupr');
 const { computeDoublesRanking } = require('./engines/doubles');
+const { impressaoDosResultados } = require('./rankingCatchUp');
 
 /* --------------------------------------------------------------- constantes */
 
@@ -183,6 +184,25 @@ function perfilResumo(profile) {
   };
 }
 
+/**
+ * Próximo histórico de ELO de um atleta, ou `null` quando não há o que gravar.
+ *
+ * Só ganha ponto quando o rating mudou em relação ao ÚLTIMO ponto: o histórico
+ * é a evolução do atleta, não um registro de quantas vezes o servidor rodou.
+ * Guarda os `ELO_HISTORY_MAX` mais recentes.
+ *
+ * @param {{ points?: Array<{ at: number, rating: number }> }|undefined} anterior
+ * @param {number} rating
+ * @param {number} agoraMs
+ * @returns {Array<{ at: number, rating: number }>|null}
+ */
+function proximoHistoricoElo(anterior, rating, agoraMs) {
+  const pontos = Array.isArray(anterior && anterior.points) ? anterior.points : [];
+  const ultimo = pontos[pontos.length - 1];
+  if (ultimo && ultimo.rating === rating) return null;
+  return [...pontos.slice(-(ELO_HISTORY_MAX - 1)), { at: agoraMs, rating }];
+}
+
 /** Grava um conjunto de documentos em lotes seguros. */
 async function gravarEmLotes(db, colecao, linhas, idDe, tamanho = SAFE_BATCH_WRITE_SIZE) {
   for (let i = 0; i < linhas.length; i += tamanho) {
@@ -290,10 +310,11 @@ async function recomputeAllPlatformRankings(db) {
       batch.set(db.collection(ELO_COLLECTION).doc(row.uid), {
         ...row, updated_at: FieldValue.serverTimestamp(),
       });
-      const prev = eloHistoryByUid.get(row.uid);
-      const points = Array.isArray(prev && prev.points)
-        ? prev.points.slice(-(ELO_HISTORY_MAX - 1)) : [];
-      points.push({ at: snapshotAt, rating: row.rating });
+      // O histórico só ganha ponto quando o rating MUDOU. Antes, toda passada
+      // somava um ponto para todo mundo — e com a recuperação agendada as
+      // passadas sem jogo novo apagariam, 50 pontos depois, a evolução real.
+      const points = proximoHistoricoElo(eloHistoryByUid.get(row.uid), row.rating, snapshotAt);
+      if (!points) return;
       batch.set(db.collection(ELO_HISTORY).doc(row.uid), {
         uid: row.uid, points, updated_at: FieldValue.serverTimestamp(),
       });
@@ -400,6 +421,13 @@ async function recomputeAllPlatformRankings(db) {
   }, { merge: true });
 
   return {
+    // O que esta passada LEU. A recuperação agendada compara com o banco e,
+    // se entrou resultado sem passada (gatilho perdido), recalcula.
+    fingerprint: impressaoDosResultados({
+      partidasTorneio: tournamentMatchesSnap.size,
+      jogosEvento: clubEventGamesSnap.size,
+      assinatura: ratingSignature,
+    }),
     matchesUsed: matches.length,
     eloPlayers: eloRows.length,
     duprPlayers: duprRows.length,
@@ -585,6 +613,7 @@ module.exports = {
   recomputeAllPlatformRankings,
   requestRankingRecompute,
   normalizeMatches,
+  proximoHistoricoElo,
   LEVEL_TABLE,
   DOUBLES_COLLECTION,
   WORKER_DOC,

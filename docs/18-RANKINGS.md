@@ -53,6 +53,34 @@ Tudo passa por **gatilhos do Firestore** (`functions/index.js`):
 | `recomputeRankingOnTournamentMatch` | escreve em `tournament_matches/{id}` | os três |
 | `recomputeRankingOnTournamentRegistration` | muda o uid por trás de uma inscrição | os três |
 | `recomputeRankingOnTournamentChange` | `tournaments/{id}` muda de elegibilidade | os três |
+| `catchUpPlatformRankings` (agendada, 30 min) | entrou resultado **sem** passada correspondente | os três |
+
+### A recuperação agendada: o gatilho que não disparou
+
+Gatilho **não tem fila**: se a função não existe no momento da escrita, o
+evento se perde. 🐞 Foi o que aconteceu em 2026-09-22: o deploy de outro
+aplicativo do mesmo projeto Firebase apagou as funções daqui, e o dia de jogo
+publicado naquela noite (12 partidas) ficou fora do ranking 2.0–8.0. Quando as
+funções voltaram, nada recalculou — nada novo tinha sido escrito.
+
+Cada passada grava uma **impressão** do que leu em
+`platform_settings/ranking_worker.last_result.fingerprint`: quantas partidas de
+torneio decididas, quantos jogos de dia de jogo publicados e o hash da
+assinatura dos torneios elegíveis. A cada 30 min `catchUpPlatformRankings`
+(`functions/rankingCatchUp.js`) lê a impressão ATUAL — duas contagens, uma
+leitura por mil documentos, mais a lista de torneios — e só recalcula quando
+ela difere. Em dia, **não grava nada**. A passada e a recuperação medem pela
+mesma função (`impressaoDosResultados`). Na primeira execução depois do deploy
+não há impressão gravada: ela recalcula uma vez e fica em dia.
+
+Limite honesto: editar o placar de um jogo já publicado não muda contagem nem
+assinatura; se isso acontecer justamente com as funções fora do ar, entra na
+próxima passada.
+
+E o histórico de ELO só ganha ponto quando o rating **muda**
+(`proximoHistoricoElo`): antes, toda passada somava um ponto para todo mundo, e
+passadas sem jogo novo empurrariam a evolução real para fora dos 50 pontos
+guardados.
 
 Publicar um dia de jogo grava o espelho em `club_event_games` → o gatilho
 dispara → os três rankings são reescritos. Corrigir um placar, excluir uma
@@ -249,8 +277,10 @@ Dois detalhes que custaram teste para acertar:
 }
 ```
 
-- **Regra**: leitura pública (a página é aberta, como `/ranking`), escrita só do
-  admin — na prática, a Cloud Function. Provado por 9 asserções no emulador.
+- **Regra**: leitura pública (a página é aberta, como `/ranking`), escrita
+  **recusada para todo mundo, inclusive o admin** — só a Cloud Function (Admin
+  SDK) escreve. Vale para as cinco coleções de ranking desde 2026-09-24 (ver
+  §8). Provado no emulador (`tests/rules/misc.rules.test.js`).
 - **Índice**: nenhum novo. A página ordena por `position`, um campo só.
 - **Migração**: nenhuma. A coleção nasce no primeiro recálculo.
 - As demais coleções (`player_ratings`, `player_skill_ratings`, os dois
@@ -283,11 +313,42 @@ E o cliente **parou de tentar** materializar ranking ao publicar: além de ser
 recusado pela regra para quem não é admin, custava a leitura da coleção INTEIRA
 de torneios a cada publicação.
 
+### 8.1 🐞 O escritor que sobrou: o navegador do admin (2026-09-24)
+
+Os botões saíram, mas ficou um recálculo AUTOMÁTICO no navegador do admin:
+`useAutoRecomputeRatings` no `V2Layout` (a cada visita) e um recálculo forçado
+no painel do torneio ao encerrá-lo. Ele gravava **só o ELO e as duplas** —
+nunca o 2.0–8.0 — por cima do que o servidor tinha gravado.
+
+Com o servidor funcionando, os dois chegavam ao mesmo número e ninguém via.
+Com as funções apagadas (22/09), o navegador do admin atualizou dois rankings e
+o terceiro ficou parado em 18/09. Medido na produção, pela leitura pública:
+
+| Coleção | Última gravação | Quem gravou |
+|---|---|---|
+| `player_ratings`, `rating_history`, `doubles_rankings` | 22/09 14:54 | navegador do admin |
+| `player_skill_ratings`, `skill_rating_history` | 18/09 16:53 | botão (antes de sair) |
+| `platform_settings/ranking_worker.last_run_at` | 18/09 00:26 | servidor |
+
+Três rankings discordando entre si, sem nada na tela avisar. O conserto:
+
+- **O cliente não recalcula mais nada.** Hooks e serviços de escrita saíram
+  (`ratingService` e `duprRatingService` agora só leem); o guarda de fonte varre
+  `src/` inteiro e reprova quem trouxer qualquer um de volta.
+- **A regra recusa escrita de ranking para TODO MUNDO**, inclusive o admin. Sem
+  isso, uma aba aberta numa versão antiga do aplicativo continuaria gravando.
+- **A recuperação agendada** (§3) cobre o que o navegador do admin cobria sem
+  querer — e cobre os três rankings, não dois.
+- **O painel mostra a última passada do servidor** (`RankingAutomatico`, via
+  `describeRankingWorker`), com o motivo e o erro recente, se houver. Um
+  servidor parado passa a ser visível.
+
 ## 9. Ao mexer nesta área, cuidado com
 
-1. **Não recalcule ranking no cliente, para ninguém.** A regra recusa para quem
-   não é admin, e o erro é silencioso; para o admin, concorre com o gatilho.
-   Recálculo novo é GATILHO — e nunca um botão: botão é alguém para lembrar.
+1. **Não recalcule ranking no cliente, para ninguém.** A regra recusa para
+   todo mundo, inclusive o admin (§8.1): dois escritores da mesma coleção
+   discordam em silêncio. Recálculo novo é GATILHO ou recuperação agendada no
+   servidor — e nunca um botão: botão é alguém para lembrar.
 1b. **Não confunda facultativo com não facultativo.** Em torneio o gatilho é o
    LANÇAMENTO; no dia de jogo é a PUBLICAÇÃO. Inverter qualquer um dos dois é
    ou publicar o que ninguém quis publicar, ou atrasar o que já aconteceu.

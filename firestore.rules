@@ -322,32 +322,37 @@ service cloud.firestore {
       allow write: if isPlatformAdmin();
     }
 
-    // ---- Player ratings (ELO + ranking nacional) -------------------------
-    // Ranking materializado por replay dos jogos finalizados. Leitura pública
-    // (a página /ranking é aberta). Escrita só do admin master, via recálculo.
+    // ---- Rankings da plataforma (ELO, 2.0–8.0 e duplas) ------------------
+    // Materializados pelo SERVIDOR, e só por ele: `functions/platformRankings.js`
+    // grava os três na mesma passada, a cada resultado publicado (gatilhos) e
+    // pela recuperação agendada (`catchUpPlatformRankings`). A Cloud Function
+    // usa o Admin SDK e não passa por estas regras — por isso a escrita do
+    // cliente é recusada para TODO MUNDO, inclusive o admin da plataforma.
+    //
+    // 🐞 Por que fechar até para o admin (2026-09-24): o navegador do admin
+    // recalculava o ELO e as duplas a cada visita, mas nunca o 2.0–8.0. Com as
+    // funções apagadas por outro app do mesmo projeto Firebase, dois rankings
+    // andavam e o terceiro não — três rankings discordando entre si. Uma aba
+    // aberta numa versão antiga do aplicativo continuaria fazendo isso; a
+    // regra é o que garante UM escritor só. Ver docs/18-RANKINGS.md §8.
+    //
+    // Leitura pública (as páginas /ranking e /ranking/duplas são abertas).
+    // Nenhum dado pessoal além do que o ranking já expõe: nome público e foto.
     match /player_ratings/{uid} {
       allow read: if true;
-      allow write: if isPlatformAdmin();
+      allow write: if false;
     }
-    // Ranking "estilo DUPR" (escala 2.0–8.0) — materializado, leitura pública,
-    // escrita só do admin (recálculo). Independente de player_ratings.
     match /player_skill_ratings/{uid} {
       allow read: if true;
-      allow write: if isPlatformAdmin();
+      allow write: if false;
     }
-    // Evolução do rating "estilo DUPR" (pontos por recálculo). Igual a rating_history.
     match /skill_rating_history/{uid} {
       allow read: if true;
-      allow write: if isPlatformAdmin();
+      allow write: if false;
     }
-    // Ranking de DUPLAS materializado (uma linha por parceria, id = pair_key).
-    // Mesma política de player_ratings: leitura pública (a página /ranking/duplas
-    // é aberta) e escrita só do admin — na prática quem escreve é a Cloud
-    // Function de recálculo, que roda com privilégio de servidor. Nenhum dado
-    // pessoal além do que o ranking já expõe: nome público e foto.
     match /doubles_rankings/{pairKey} {
       allow read: if true;
-      allow write: if isPlatformAdmin();
+      allow write: if false;
     }
 
     // ---- Wave C.3 — Ranking interno do clube (materializado) ----
@@ -393,10 +398,11 @@ service cloud.firestore {
       );
     }
 
-    // Histórico de rating (snapshots por recálculo). Leitura pública; escrita só admin.
+    // Histórico de rating ELO. Leitura pública; escrita só do SERVIDOR (ver
+    // "Rankings da plataforma", acima).
     match /rating_history/{uid} {
       allow read: if true;
-      allow write: if isPlatformAdmin();
+      allow write: if false;
     }
 
     // Metas pessoais do jogador (id uid_goalId). Apenas o próprio dono.

@@ -5,7 +5,9 @@ Ranking nacional, ranking de duplas (Onda 3), head-to-head, matchmaking.
 ## Status
 - **Páginas V2**: `V2Ranking`, `V2DoublesRanking` (Onda 3), `V2FindPlayers`
 - **Domain**: `headToHead`, `doublesRanking`, `matchmaking` (puros, testados)
-- **Cloud Function**: `recomputeRankingOnTournamentChange` (region SP)
+- **Cloud Functions** (region SP): os gatilhos `recomputeRankingOn*` e a
+  recuperação agendada `catchUpPlatformRankings` — **o servidor é o único
+  escritor** dos rankings; o cliente só lê (ver `docs/18-RANKINGS.md` §8.1)
 - **Tests**: 50+
 
 ## Schema
@@ -23,6 +25,11 @@ Ranking nacional, ranking de duplas (Onda 3), head-to-head, matchmaking.
 - `docs/06-MODULES.md` § rating
 
 ## Wave C (Sprint 15, 2026-07-27) — dias de jogo no ranking
+
+> ⚠️ **Histórico.** O `recomputeAllRatings` do cliente descrito abaixo **não
+> existe mais** (2026-09-24): era um segundo escritor que gravava só ELO e
+> duplas. O cálculo vive em `functions/platformRankings.js`, com as mesmas
+> duas fontes, e a regra recusa escrita de ranking vinda do navegador.
 
 `recomputeAllRatings` agora lê **duas coleções** em paralelo:
 
@@ -132,7 +139,7 @@ Detalhes, garantias e efeito medido: **`docs/13-NIVEL-UNIFICADO.md`**.
 
 ---
 
-## Atualização automática dos rankings (2026-09-11)
+## Atualização automática dos rankings (2026-09-11; revisto em 2026-09-24)
 
 **Todo resultado publicado atualiza os três rankings na hora**: ELO/nacional
 (`player_ratings`), rating estilo DUPR (`player_skill_ratings`) e duplas
@@ -142,6 +149,12 @@ o admin pode fazer, e quem publica um dia de jogo quase nunca é o admin (antes,
 a tentativa do cliente era recusada pela regra e morria num `catch`).
 
 - Recálculo: `functions/platformRankings.js` (uma leitura, três rankings).
+- **Recuperação agendada** (`catchUpPlatformRankings`, a cada 30 min,
+  `functions/rankingCatchUp.js`): se entrou resultado sem passada — gatilho
+  perdido com as funções fora do ar —, recalcula. Em dia, não grava nada.
+- **O cliente não grava ranking**: `ratingService`/`duprRatingService` só leem,
+  e a regra recusa até o admin. O painel admin mostra a última passada do
+  servidor (`describeRankingWorker`, `domain/rankingWorkerStatus.js`).
 - Rajadas são coalescidas por um lease em `platform_settings/ranking_worker`.
 - **Ranking de duplas** classifica por **aproveitamento → vitórias → derrotas →
   saldo**; a regra é `compareDoublesRows` em `domain/doublesRanking.js`, e a

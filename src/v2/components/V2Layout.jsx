@@ -38,7 +38,6 @@ import {
   LifeBuoy,
 } from 'lucide-react';
 import { useAuth } from '@/core/lib/FirebaseAuthContext';
-import { useAutoRecomputeRatings } from '@/modules/rating/hooks/useRating';
 import AuthFunnelTracker from '@/modules/analytics/components/AuthFunnelTracker';
 import PartnerInviteNotificationAction from '@/v2/components/tournament/PartnerInviteNotificationAction';
 import { useMyArenaSummary } from '@/modules/arenas/hooks/useMyArenaSummary';
@@ -559,8 +558,10 @@ function SubnavBar({ hub, pathname, onNavigate }) {
 
 export default function V2Layout({ children }) {
   const { user, userProfile, signOut, isRealPlatformAdmin, viewAsUser, toggleViewAsUser } = useAuth();
-  // Mantém o ranking atualizado automaticamente para o admin da plataforma.
-  useAutoRecomputeRatings();
+  // O ranking NÃO é recalculado aqui: quem materializa os rankings é só o
+  // servidor (functions/platformRankings.js). O recálculo que rodava no
+  // navegador do admin era um segundo escritor das mesmas coleções — ver
+  // docs/18-RANKINGS.md §8.
   const location = useLocation();
   const navigate = useNavigate();
   const { sections, hubs } = useV2Nav();

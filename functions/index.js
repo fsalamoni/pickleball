@@ -32,6 +32,7 @@ const {
   requestRankingRecompute, mudouResultado,
   CAMPOS_PARTIDA_TORNEIO, CAMPOS_INSCRICAO, CAMPOS_JOGO_EVENTO,
 } = require('./platformRankings');
+const { recuperarSeFaltou } = require('./rankingCatchUp');
 const { recomputeClubInternalRankings } = require('./clubRanking');
 const { recomputeSeasonRanking } = require('./seasonRanking');
 
@@ -132,6 +133,36 @@ exports.recomputeRankingOnClubEventGame = onDocumentWritten(
   async (event) => {
     if (!mudouResultado(antes(event), depois(event), CAMPOS_JOGO_EVENTO)) return;
     await pedirRecalculo('club-event-game', { gameId: event.params.gameId });
+  },
+);
+
+// (4) RECUPERAÇÃO: o gatilho que não disparou.
+//
+//     Gatilho não tem fila: resultado escrito enquanto a função não existe
+//     nunca é reprocessado. Em 2026-09-22 o deploy de outro aplicativo do
+//     mesmo projeto Firebase apagou as funções daqui, e o dia de jogo
+//     publicado naquela noite ficou fora do ranking 2.0–8.0 até alguém
+//     perceber. A cada 30 min esta função compara o que a última passada leu
+//     com o que o banco tem hoje (duas contagens + torneios) e só recalcula
+//     quando falta alguma coisa — em dia, ela não grava nada.
+exports.catchUpPlatformRankings = onSchedule(
+  {
+    schedule: 'every 30 minutes',
+    timeZone: 'America/Sao_Paulo',
+    region: REGION,
+    timeoutSeconds: 540,
+    memory: '512MiB',
+  },
+  async () => {
+    const db = getFirestore(getApp(), DATABASE_ID);
+    try {
+      const res = await recuperarSeFaltou(db, { requestRankingRecompute, logger });
+      if (res.ran) logger.info('Ranking: recuperação concluída.', res);
+      return res;
+    } catch (err) {
+      logger.error('Ranking: falha na recuperação agendada.', { err });
+      return { ran: false, reason: 'error' };
+    }
   },
 );
 

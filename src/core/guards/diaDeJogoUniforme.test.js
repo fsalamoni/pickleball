@@ -17,7 +17,7 @@
  * porque cada tela, isolada, funciona.
  */
 import { describe, it, expect } from 'vitest';
-import { readFileSync, existsSync } from 'node:fs';
+import { readFileSync, existsSync, readdirSync } from 'node:fs';
 
 const ORGANIZADORES = {
   'atleta e arena (grade)': 'src/v2/components/games/AthleteGameDayOrganizer.jsx',
@@ -202,6 +202,56 @@ describe('⭐ ranking e rating não dependem de botão', () => {
         expect(src, `${caminho} ainda usa ${hook}`).not.toContain(hook);
       });
     });
+  });
+
+  // 🐞 2026-09-24: o navegador do admin recalculava o ELO e as duplas a cada
+  // visita (V2Layout) e ao encerrar torneio (painel do torneio) — nunca o
+  // 2.0–8.0. Com as funções do servidor apagadas, dois rankings andavam e o
+  // terceiro não. O servidor é o ÚNICO escritor; a regra recusa até o admin.
+  it('⭐ nenhum código do cliente recalcula ranking (o servidor é o único escritor)', () => {
+    const PROIBIDOS = [
+      'recomputeAllRatings', 'maybeAutoRecomputeRatings', 'recomputeDuprRatings',
+      'useAutoRecomputeRatings', 'useMaybeAutoRecomputeRatings',
+      'useRecomputeRatings', 'useRecomputeDuprRatings',
+    ];
+    const arquivos = [];
+    const varrer = (dir) => {
+      readdirSync(dir, { withFileTypes: true }).forEach((e) => {
+        const p = `${dir}/${e.name}`;
+        if (e.isDirectory()) varrer(p);
+        else if (/\.(js|jsx)$/.test(e.name) && !/\.test\.(js|jsx)$/.test(e.name)) arquivos.push(p);
+      });
+    };
+    varrer('src');
+    const achados = [];
+    arquivos.forEach((p) => {
+      const src = semComentarios(ler(p));
+      PROIBIDOS.forEach((nome) => { if (new RegExp(`\\b${nome}\\b`).test(src)) achados.push(`${p}: ${nome}`); });
+    });
+    expect(achados, `recálculo de ranking no cliente:\n${achados.join('\n')}`).toEqual([]);
+  });
+
+  it('⭐ os serviços de ranking do cliente só LEEM', () => {
+    [
+      'src/modules/rating/services/ratingService.js',
+      'src/modules/rating/services/duprRatingService.js',
+      'src/modules/rating/services/doublesRankingService.js',
+    ].forEach((caminho) => {
+      const src = semComentarios(ler(caminho));
+      ['setDoc', 'writeBatch', 'updateDoc', 'deleteDoc', 'addDoc'].forEach((escrita) => {
+        expect(src, `${caminho} escreve (${escrita})`).not.toMatch(new RegExp(`\\b${escrita}\\b`));
+      });
+    });
+  });
+
+  it('⭐ a regra recusa escrita de ranking para todo mundo, inclusive o admin', () => {
+    const regras = ler('firestore.rules');
+    ['player_ratings', 'rating_history', 'player_skill_ratings', 'skill_rating_history', 'doubles_rankings']
+      .forEach((col) => {
+        const bloco = regras.match(new RegExp(`match /${col}/\\{[^}]+\\} \\{([\\s\\S]*?)\\n    \\}`));
+        expect(bloco, `bloco de ${col} não encontrado`).toBeTruthy();
+        expect(bloco[1], `${col} deve ter "allow write: if false"`).toMatch(/allow write: if false;/);
+      });
   });
 
   it('⭐ o cliente não tenta materializar ranking ao publicar (a regra recusaria)', () => {
