@@ -72,8 +72,16 @@ os documentos antigos ainda carregam o campo.
 
 ## 5. Direitos do titular — é obrigação legal, não melhoria
 
-**Nada implementado.** Hoje, se alguém pedir exclusão da conta, não há caminho
-no produto. Achados P2-04, P2-05 e P2-06; especificação em
+**🟡 Primeiro passo feito (2026-09-24): o ADMIN exclui cadastro.**
+*Painel admin → Comunidade → Cadastros → Excluir* (função de servidor
+`adminDeleteAccounts`), seguindo a tabela de `09-DIREITOS-DO-TITULAR.md` §4:
+identidade e conta de login apagadas, histórico esportivo pseudonimizado,
+reservas e pagamentos retidos sem o nome, auditoria retida. Ver
+`18-CADASTROS-ADMIN.md` §Excluir. Isso atende o pedido que chega pelo canal
+do encarregado — o admin executa — mas **não** é o autoatendimento do
+titular: a tela "Excluir minha conta", o prazo de arrependimento de 7 dias e
+a reautenticação continuam por fazer, assim como exportação e canal formal.
+Achados P2-04 (parcial), P2-05 e P2-06; especificação em
 `09-DIREITOS-DO-TITULAR.md`.
 
 Mínimo para sair do zero:

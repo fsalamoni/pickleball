@@ -105,6 +105,131 @@ guardam isso.
 Sem o antes/depois, "o admin editou o cadastro" não diz nada a quem for
 investigar depois.
 
+## Excluir cadastro (2026-09-24)
+
+> *"Quero que tenha a possibilidade de excluir cadastros. Pois há muitos
+> cadastros de exemplo e mock que foram criados e quero poder excluir eles."*
+
+### Onde e como
+
+Cada linha ganhou **Excluir** e uma caixa de seleção; há **Selecionar os que
+aparecem** (até 25) e um filtro **Parecem de teste**. O filtro sugere a partir
+de sinais simples — conta oculta na moderação, e-mail de domínio de exemplo
+(`@example.com`…), nome ou e-mail com "teste", "mock", "demo", "fake" — e
+**mostra em cada linha o que levantou a suspeita**. As palavras são comparadas
+INTEIRAS: "Ernesto" e "Demóstenes" não caem no filtro (há teste).
+
+Excluir tem três momentos, e nenhum pode ser pulado:
+
+1. **Prévia do servidor** — para cada conta: o que será apagado, o que fica no
+   histórico como "Atleta removido", o que fica guardado sem o nome, e o que
+   **impede**. Só lê.
+2. **Confirmação** — motivo (vai para a Auditoria) e digitar `EXCLUIR`. Conta
+   impedida fica de fora sozinha.
+3. **Resultado** — conta a conta.
+
+### Por que no servidor
+
+Conta de teste é **conta de verdade**: todo `users/{uid}` nasce do login. Apagar
+só os documentos faz o cadastro **voltar** no próximo login
+(`FirebaseAuthContext` recria perfil e espelho). Só o Admin SDK apaga a conta
+do Firebase Authentication — e o admin, pelas regras, não alcança tokens de
+push, favoritos, votos, conversas nem as fotos do Storage. A função é
+`adminDeleteAccounts`; o motor, com o desenho inteiro, é
+`functions/accountDeletion.js`.
+
+### O que acontece com cada coisa
+
+Segue a tabela aprovada em `09-DIREITOS-DO-TITULAR.md` §4:
+
+| Destino | O quê |
+|---|---|
+| **Apagado** | `users`, `athlete_profiles`, conta de login, fotos (`uploads/{uid}/`), tokens de push, notificações, favoritos, seguidores, metas, gamificação pessoal, ratings materializados, vínculos (clube, crew, gestão de arena, admin de torneio/circuito), pedidos e convites, filas de espera, associação a arena, respostas de NPS, parcerias de professor |
+| **Pseudonimizado** (uid fica, nome sai) | inscrições e partidas, dias de jogo, conversas, fórum, avaliações — apagar reescreveria resultado e rating de outras pessoas |
+| **Retido, sem o nome** | reservas, vendas, pagamentos, carteira, mensalidade (obrigação do parceiro) |
+| **Retido como está** | `audit_logs` e `legal_consents` — prova de que a exclusão foi feita direito |
+
+### O que IMPEDE (e o que fazer)
+
+A pergunta é *excluir quebra o serviço de outra pessoa?* Se sim, o admin
+resolve antes:
+
+| Impedimento | O que fazer |
+|---|---|
+| dona de arena ou de rede de arenas | transferir ou excluir a arena/rede |
+| única admin de clube | nomear outro admin ou excluir o clube |
+| organiza torneio **vivo** (inscrições abertas/encerradas, em andamento) | encerrar, cancelar ou excluir — rascunho NÃO impede |
+| criou dia de jogo **ativo, futuro e com outras pessoas** | arquivar ou excluir |
+| saldo positivo em carteira de arena | resolver com a arena — o saldo é da pessoa |
+
+### As travas
+
+- **Nunca**: a própria conta, conta com `platform_admin` (tire o poder em
+  *Governança → Acessos* antes) e e-mail de dono — conferido na tela E no
+  servidor. A lista de donos do servidor é cópia da do cliente, com teste
+  exigindo que sejam iguais.
+- **Só o dono executa.** Outro admin vê a prévia e a tela diz por que não há
+  botão. É o mesmo critério da revogação de poderes — e excluir é mais
+  destrutivo que revogar, com o achado de admins extras ainda aberto.
+- **Prévia e execução são a mesma análise**: a execução refaz tudo no
+  servidor e nunca age sobre um plano vindo do navegador.
+- **Limite**: 25 contas por vez, 400 documentos por consulta (acima disso o
+  relatório avisa, e rodar de novo termina).
+- **Ordem que tolera falha**: conta de login PRIMEIRO (sem ela o cadastro não
+  volta); `users/{uid}` POR ÚLTIMO (enquanto existe, o admin ainda vê a conta
+  e pode rodar de novo). Se a conta de login não puder ser apagada, **nada**
+  é apagado. Rodar duas vezes é seguro.
+- Contador de clube/crew só desce se o clube/crew existe — `update` num
+  documento ausente derrubaria o lote.
+- **Auditoria** `admin_account_deleted`: motivo, se a conta de login foi
+  apagada, e o que foi apagado / pseudonimizado / retido, item a item.
+
+### Os limites, ditos na cara
+
+- **Ranking**: enquanto existirem partidas com o uid, o recálculo de ranking
+  recria a linha dessa pessoa, com o nome "Atleta". Se o **torneio inteiro**
+  era de teste, exclua o torneio (Torneios) — as partidas somem e o ranking
+  se corrige sozinho no recálculo seguinte.
+- **Deploy**: a função sai no deploy de Functions do CI, que **não derruba** o
+  deploy do site quando falha. Se a tela estiver no ar e a função não, o
+  diálogo diz exatamente isso em vez de "internal".
+- **Não é o autoatendimento do titular** ("Excluir minha conta", 7 dias de
+  arrependimento, reautenticação) — isso continua em `19-PENDENCIAS.md` §5.
+- **O que a descoberta não alcança** (sem índice de grupo de coleções, que
+  seria mexer no banco): conversa de que a pessoa JÁ SAIU (as mensagens dela
+  ficam lá), participante que RECUSOU convite de reserva, e dia de jogo do
+  qual ela foi removida e que não tem jogo publicado. São casos de borda de
+  conta real; para conta de teste, que é o pedido, não aparecem.
+
+### Armadilhas que o código evita (e os testes travam)
+
+1. **No jogo, `slot.id` é o id do documento de PARTICIPANTE, não o uid.**
+   Tratar `id` como uid trocaria o nome da pessoa errada. E ao trocar o nome,
+   o uid é gravado no lado: o ranking resolve pessoa por nome único como
+   último recurso, e dois "Atleta removido" no mesmo dia ficariam
+   indistinguíveis.
+2. **O rótulo "A / B" é derivado.** Trocar só `player_a_name` deixaria o
+   quadro, a impressão e o telão com o nome antigo — o rótulo é recalculado,
+   e os grupos (`tournament_groups.entrants[].label`), que copiam o rótulo,
+   também.
+3. **A descoberta vem antes de qualquer escrita.** Eventos de clube são
+   achados pela presença e pelo convite, que a própria exclusão APAGA.
+4. **Nome pode ser e-mail.** Vários serviços usam o e-mail quando falta nome;
+   trocar o campo de nome remove também o e-mail que vazou para ele.
+5. **Mensagem perde o conteúdo e os anexos** — o arquivo está em
+   `uploads/{uid}/`, que é apagado junto.
+
+### Cobertura
+
+- 19 testes do domínio da tela (`accountDeletion.test.js`)
+- 34 do domínio do servidor, **13 da cascata** e **27 da pseudonimização com
+  as especificações reais** contra um Firestore falso
+  (`functions/accountDeletion*.test.js`): conta impedida não perde nada, a
+  conta de login sai antes de qualquer escrita, `users` sai por último, falha
+  no login = nada apagado, reexecução idêntica, auditoria gravada, e **nenhum
+  documento de outra pessoa é apagado**
+- 10 de tela (`AdminUserRecordsTab.deletion.runtime.test.jsx`)
+
 ## O que esta entrega NÃO é
 
 A especificação completa do console de suporte (`05-ADMIN-SUPORTE.md`) desenha

@@ -300,6 +300,7 @@ Estes princípios vieram de bugs reais que custaram horas pra arrumar. São ineg
 **"Onde fica o e-mail de quem se inscreveu num torneio?"** → **não** no documento da inscrição, que é público (quadro/impressão/telão). Fica em `tournament_registrations/{rid}/private/contact`, e a prova de inscrição provisória em `provisional_claims/{rid}_a|b`. Sempre leia por `resolveRegistrationContact` (domínio) ou `registrationContactService` — nunca por `reg.player_a_email` direto, que só existe em documento legado
 **"Quem tem poder de admin na plataforma? Como tiro o poder de alguém?"** → **Painel admin → Governança → Acessos** (`src/v2/components/admin/AdminAccessTab.jsx`, domínio em `src/modules/admin/domain/accessRoster.js`). A revogação é **assimétrica**: remove poder, NUNCA concede — promover é só pelo console, de propósito. `hidden: true` **não** remove poder. Ver `docs/20-SEGURANCA-E-PRIVACIDADE/17-ACESSOS-E-PODERES.md`
 **"Como corrijo/completo o cadastro de um usuário?"** → **Painel admin → Comunidade → Cadastros** (`src/v2/components/admin/AdminUserRecordsTab.jsx`, domínio em `src/modules/admin/domain/adminUserEdit.js`). Lista FECHADA de campos: o admin corrige dado errado, mas **não** mexe em poder, **não** altera a privacidade do titular e **não** troca o e-mail de login. Motivo obrigatório + auditoria com antes/depois. As listas de seleção são as MESMAS do cadastro normal (importadas da fonte, nunca recopiadas). Ver `docs/20-SEGURANCA-E-PRIVACIDADE/18-CADASTROS-ADMIN.md`
+**"Como excluo um cadastro (conta de teste, mock)?"** → **Painel admin → Comunidade → Cadastros → Excluir** (ou selecione vários; filtro **Parecem de teste**). Roda na função de servidor `adminDeleteAccounts` (`functions/accountDeletion.js`), porque conta de teste é conta de VERDADE: apagar só os documentos faz o cadastro voltar no próximo login. Prévia do servidor antes, motivo + `EXCLUIR`, 25 por vez, **só o dono executa**. Identidade e login somem; histórico esportivo vira "Atleta removido" (apagar reescreveria resultado e rating de terceiros); reservas e pagamentos ficam sem o nome; auditoria fica. Impede: dona de arena/rede, única admin de clube, torneio vivo, dia de jogo futuro com gente, saldo em carteira. ⚠️ No jogo, `slot.id` é id de PARTICIPANTE, não uid. Ver `docs/20-SEGURANCA-E-PRIVACIDADE/18-CADASTROS-ADMIN.md` §Excluir
 **"Como o admin acessa dado de usuário para dar suporte?"** → `docs/20-SEGURANCA-E-PRIVACIDADE/05-ADMIN-SUPORTE.md` (🟡 escrita implementada; quebra-vidro e log de leitura ainda não)
 **"Onde está o MERCADO (marketplace) / o FEED (rede social) / a GAMIFICAÇÃO?"** → 📐 **ainda não existem** — só o desenho, em `docs/FUTURO/00-INDEX.md`. Pastas dos módulos já estruturadas (só README) em `src/modules/{marketplace,feed,moderation}/`
 **"Cuidado: 'mercado' já significa outra coisa!"** → `arena_products`/`catalog_products` são o **PDV/loja da arena** (módulo `arenas/`). O marketplace novo usa **só** o prefixo `market_`. Ver `docs/FUTURO/MERCADO/00-INDEX.md` § Colisão de nomes
@@ -480,6 +481,32 @@ chore(deps): bump firebase to 12.x
 > memory topic `picklerush-sync-2026-08.md`.
 >
 > **Destaques por onda**:
+>
+> - **Onda BD — Excluir cadastro** (2026-09-24): *"há muitos cadastros de
+>   exemplo e mock que foram criados e quero poder excluí-los"*. A primeira
+>   descoberta decidiu o desenho: **conta de teste é conta de verdade** — todo
+>   `users/{uid}` nasce do login, e apagar só os documentos faz o cadastro
+>   VOLTAR no próximo login. Só o Admin SDK apaga a conta do Firebase
+>   Authentication, e o admin, pelas regras, nem alcança tokens, favoritos,
+>   votos, conversas e fotos. Então a exclusão é uma **função de servidor**
+>   (`adminDeleteAccounts`), seguindo a tabela que já estava aprovada em
+>   `09-DIREITOS-DO-TITULAR.md` §4: identidade e login **apagados**, histórico
+>   esportivo **pseudonimizado** ("Atleta removido" — apagar reescreveria o
+>   resultado e o rating de outras pessoas), reservas e pagamentos **retidos
+>   sem o nome**, auditoria e consentimentos **retidos**. Prévia do servidor
+>   antes de executar (a execução refaz a análise, nunca age sobre plano vindo
+>   do navegador), motivo + `EXCLUIR`, 25 por vez, **só o dono executa**, e a
+>   ordem que tolera falha: login PRIMEIRO, `users` POR ÚLTIMO. Impede quem
+>   quebraria o serviço de outra pessoa (dona de arena, única admin de clube,
+>   torneio vivo, dia de jogo futuro com gente, saldo em carteira). Na tela, o
+>   filtro **Parecem de teste** sugere e MOSTRA o porquê — por palavra
+>   inteira, para "Ernesto" e "Demóstenes" não caírem. **Três armadilhas
+>   evitadas**: no jogo, `slot.id` é id de participante e não uid; o rótulo
+>   "A / B" é derivado e os grupos o copiam; eventos de clube são achados por
+>   presenças que a própria exclusão apaga. A cascata é testada contra um
+>   Firestore falso com as especificações reais — **nenhum documento de outra
+>   pessoa é apagado**. **Zero coleção, zero índice, zero regra**; uma função
+>   nova. Ver `docs/20-SEGURANCA-E-PRIVACIDADE/18-CADASTROS-ADMIN.md`.
 >
 > - **Onda BC — Um cartão só, que abre** (2026-09-21): relatado sobre a onda
 >   anterior, olhando a tela: *"a configuração da quantidade de quadras ainda
@@ -1699,7 +1726,7 @@ chore(deps): bump firebase to 12.x
 
 | Métrica | Valor | Delta do início do agente |
 |---|---|---|
-| **Testes Vitest** | **4953 passing** (290 arquivos) + 218 asserções de regras (Vitest) + 85 do dia de jogo no emulador | +4491 (era 408) |
+| **Testes Vitest** | **5058 passing** (296 arquivos) + 218 asserções de regras (Vitest) + 85 do dia de jogo no emulador | +4650 (era 408) |
 | **Lint errors** | 0 | era 30+ |
 | **Módulos** | 21 (+`help` — conteúdo dos tutoriais em tela) (`games` e `legal` saíram como `src/modules/` mas continuam como pastas oficiais — **rating virou módulo oficial** com domain/services/hooks/components) | +4 (coaches, circuits, games, legal) |
 | **V2 pages** | 82 (+V2GameDayTelao — telão, fora do V2Layout; +V2Help — central de ajuda; +V2ArenaKiosk — totem da recepção, também fora do V2Layout; +V2ArenaCheckin; +V2ArenaAttendance) | +58 |
@@ -1707,7 +1734,7 @@ chore(deps): bump firebase to 12.x
 | **Coleções Firestore** | **122 top-level em `firestore.rules`** (+`doubles_rankings`) (as 13 da gamificação V2 documentadas em `05-DATA-MODEL.md`) — a Onda AS não criou nenhuma | +82 |
 | **Índices compostos Firestore** | **33 em `firestore.indexes.json`** (+`provisional_claims`) (+4 da gamificação V2) | +28 |
 | **Feature flags ativas** | **20 default OFF** (+`arena_modules` — a chave-mestra dos módulos adicionais de arena; 137 viraram código) | −112 |
-| **Cloud Functions** | **14** (+ `recomputeRankingOnTournamentRegistration` — a inscrição também move o ranking) | +14 |
+| **Cloud Functions** | **15** (+ `adminDeleteAccounts` — exclusão de cadastro pelo dono, com prévia; + `recomputeRankingOnTournamentRegistration` — a inscrição também move o ranking) | +15 |
 | **PRs mergeados** | **96 totais** (Sprints 0-50+) | — |
 | **Origin/main** | `106bd55` (PR #110) | — |
 | **Bundle deployed** | (deploy em curso) | — |

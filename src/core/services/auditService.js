@@ -67,6 +67,8 @@ export const AUDIT_ACTION_LABELS = {
   gamification_referral_registered: 'Indicação registrada (novo atleta via convite)',
   gamification_crew_created: 'Crew criada',
   gamification_mentorship_started: 'Mentoria iniciada',
+  // Gravado pelo SERVIDOR (função adminDeleteAccounts), com o mesmo formato.
+  admin_account_deleted: 'Cadastro excluído pelo admin',
 };
 
 export async function createAuditLog({
