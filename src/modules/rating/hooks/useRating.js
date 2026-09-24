@@ -1,12 +1,9 @@
-import { useEffect, useRef } from 'react';
-import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
-import { useAuth } from '@/core/lib/FirebaseAuthContext';
+import { useQuery } from '@tanstack/react-query';
 import {
   listNationalRanking,
-  recomputeAllRatings,
-  maybeAutoRecomputeRatings,
   getRatingHistory,
   listFinishedEngineMatches,
+  getRankingWorkerStatus,
 } from '../services/ratingService.js';
 import { computeDoublesRanking } from '../domain/doublesRanking.js';
 import { listDoublesRanking } from '../services/doublesRankingService.js';
@@ -80,47 +77,15 @@ export function useRatingHistory(uid, enabled = true) {
   });
 }
 
-/** Mutação do admin: recalcula todos os ratings e invalida o ranking. */
-export function useRecomputeRatings() {
-  const { user } = useAuth();
-  const qc = useQueryClient();
-  return useMutation({
-    // Ranking oficial: considera apenas torneios públicos e encerrados.
-    mutationFn: () => recomputeAllRatings(user, { onlyPublicClosed: true }),
-    onSuccess: () => {
-      qc.invalidateQueries({ queryKey: ['national-ranking'] });
-    },
-  });
-}
-
-/** Recálculo automático (só roda quando as entradas mudaram). */
-export function useMaybeAutoRecomputeRatings() {
-  const { user } = useAuth();
-  const qc = useQueryClient();
-  return useMutation({
-    mutationFn: (options) => maybeAutoRecomputeRatings(user, options || {}),
-    onSuccess: (res) => {
-      if (res?.ran) qc.invalidateQueries({ queryKey: ['national-ranking'] });
-    },
-  });
-}
-
 /**
- * Mantém o ranking atualizado automaticamente, sem ação manual: quando o admin
- * da plataforma usa o app, verifica se algum torneio elegível mudou desde o
- * último recálculo e, se sim, recalcula em segundo plano. O recálculo é
- * silencioso e não bloqueia a UI.
+ * Quando o SERVIDOR recalculou os rankings pela última vez (e se falhou).
+ * Para o painel do admin — é o que deixa visível um servidor parado.
  */
-export function useAutoRecomputeRatings() {
-  const { isPlatformAdmin } = useAuth();
-  const auto = useMaybeAutoRecomputeRatings();
-  const ranRef = useRef(false);
-
-  useEffect(() => {
-    if (!isPlatformAdmin) return;
-    if (ranRef.current) return;
-    ranRef.current = true;
-    auto.mutate({});
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [isPlatformAdmin]);
+export function useRankingWorkerStatus(enabled = true) {
+  return useQuery({
+    queryKey: ['ranking-worker-status'],
+    queryFn: getRankingWorkerStatus,
+    enabled,
+    staleTime: 60_000,
+  });
 }

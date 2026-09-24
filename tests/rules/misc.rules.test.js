@@ -301,15 +301,46 @@ describe('doubles_rankings — ranking de duplas materializado', () => {
     await assertFails(setDoc(doc(anon(), 'doubles_rankings', 'x__y'), linha()));
   });
 
-  it('39. o admin escreve (é o recálculo)', async () => {
-    await assertSucceeds(setDoc(doc(como(ADMIN_UID), 'doubles_rankings', 'x__y'), linha()));
+  // Até 2026-09-24 o admin escrevia aqui: era o recálculo que rodava no
+  // navegador dele, um SEGUNDO escritor que gravava ELO e duplas mas nunca o
+  // 2.0–8.0. Hoje quem escreve é só o servidor (Admin SDK, fora das regras).
+  it('39. ⭐ nem o admin escreve — o ranking é do servidor', async () => {
+    await assertFails(setDoc(doc(como(ADMIN_UID), 'doubles_rankings', 'x__y'), linha()));
   });
 
-  it('40. o admin apaga (parceria que saiu do ranking)', async () => {
-    await assertSucceeds(deleteDoc(doc(como(ADMIN_UID), 'doubles_rankings', 'eu_uid__outro_uid')));
+  it('40. ⭐ nem o admin apaga', async () => {
+    await assertFails(deleteDoc(doc(como(ADMIN_UID), 'doubles_rankings', 'eu_uid__outro_uid')));
   });
 
   it('41. a listagem do ranking inteiro funciona sem login', async () => {
     await assertSucceeds(getDocs(collection(anon(), 'doubles_rankings')));
+  });
+});
+
+/* ---------------------------------------------------------------------------
+ * Rankings da plataforma: ELO, histórico, 2.0–8.0 e histórico 2.0–8.0
+ *
+ * UM escritor só: o servidor (`functions/platformRankings.js`). O que estes
+ * testes prendem é que nenhuma conta — nem a do admin da plataforma — grave
+ * ranking pelo navegador. Foi esse segundo escritor (o recálculo automático
+ * do admin) que deixou três rankings discordando entre si em 2026-09-22.
+ * ------------------------------------------------------------------------- */
+describe('rankings materializados — só o servidor escreve', () => {
+  const COLECOES = ['player_ratings', 'rating_history', 'player_skill_ratings', 'skill_rating_history'];
+
+  COLECOES.forEach((col, k) => {
+    it(`${42 + k * 3}. ${col}: qualquer um lê (inclusive sem login)`, async () => {
+      await assertSucceeds(getDoc(doc(anon(), col, EU)));
+      await assertSucceeds(getDocs(collection(anon(), col)));
+    });
+
+    it(`${43 + k * 3}. ⭐ ${col}: o atleta não escreve a própria linha`, async () => {
+      await assertFails(setDoc(doc(como(EU), col, EU), { uid: EU, rating: 9999 }));
+    });
+
+    it(`${44 + k * 3}. ⭐ ${col}: nem o admin escreve ou apaga`, async () => {
+      await assertFails(setDoc(doc(como(ADMIN_UID), col, EU), { uid: EU, rating: 1000 }));
+      await assertFails(deleteDoc(doc(como(ADMIN_UID), col, EU)));
+    });
   });
 });

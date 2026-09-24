@@ -228,3 +228,34 @@ describe('LEVEL_TABLE do servidor', () => {
     });
   });
 });
+
+/* ------------------------------------------------------------ histórico ELO */
+
+describe('proximoHistoricoElo — o histórico é evolução, não contagem de passadas', () => {
+  const { proximoHistoricoElo } = require('../functions/platformRankings.js');
+
+  it('primeiro ponto do atleta entra', () => {
+    expect(proximoHistoricoElo(undefined, 1000, 5)).toEqual([{ at: 5, rating: 1000 }]);
+  });
+
+  it('⭐ rating igual ao último ponto: nada a gravar (passada sem jogo novo)', () => {
+    expect(proximoHistoricoElo({ points: [{ at: 1, rating: 1010 }] }, 1010, 9)).toBeNull();
+  });
+
+  it('rating que mudou ganha ponto no fim', () => {
+    expect(proximoHistoricoElo({ points: [{ at: 1, rating: 1010 }] }, 1024, 9))
+      .toEqual([{ at: 1, rating: 1010 }, { at: 9, rating: 1024 }]);
+  });
+
+  it('guarda só os 50 mais recentes', () => {
+    const pontos = Array.from({ length: 50 }, (_, k) => ({ at: k, rating: 900 + k }));
+    const novo = proximoHistoricoElo({ points: pontos }, 2000, 99);
+    expect(novo).toHaveLength(50);
+    expect(novo[0]).toEqual({ at: 1, rating: 901 });
+    expect(novo[49]).toEqual({ at: 99, rating: 2000 });
+  });
+
+  it('histórico corrompido (sem lista) é tratado como vazio', () => {
+    expect(proximoHistoricoElo({ points: 'x' }, 1000, 3)).toEqual([{ at: 3, rating: 1000 }]);
+  });
+});

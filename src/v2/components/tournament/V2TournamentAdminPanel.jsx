@@ -8,9 +8,7 @@ import { V2TournamentMatches } from '@/v2/components/tournament/V2MatchesBlock';
 import TournamentAdminTab from '@/modules/tournament/components/TournamentAdminTab';
 import { V2Badge } from '@/v2/ui/primitives';
 import { cn } from '@/core/lib/utils';
-import { useAuth } from '@/core/lib/FirebaseAuthContext';
 import { useModalities, useMatchesByTournament, useMaybeAutoCloseTournament } from '@/modules/tournament/hooks/useTournament';
-import { useMaybeAutoRecomputeRatings } from '@/modules/rating/hooks/useRating';
 import { isTournamentComplete } from '@/modules/tournament/domain/tournamentCompletion';
 import { TOURNAMENT_STATUS } from '@/modules/tournament/domain/constants';
 
@@ -20,13 +18,10 @@ import { TOURNAMENT_STATUS } from '@/modules/tournament/domain/constants';
  * flag do ciclo de vida. É idempotente: dispara uma única vez ao concluir.
  */
 function useAutoCloseTournament(tournament) {
-  const { isPlatformAdmin } = useAuth();
   const lifecycleOn = true;
-  const ratingOn = true;
   const { data: modalities = [] } = useModalities(tournament.id);
   const { data: matches = [] } = useMatchesByTournament(tournament.id);
   const autoClose = useMaybeAutoCloseTournament();
-  const autoRecompute = useMaybeAutoRecomputeRatings();
   const triggeredRef = useRef(false);
 
   useEffect(() => {
@@ -38,14 +33,9 @@ function useAutoCloseTournament(tournament) {
     }
     if (triggeredRef.current) return;
     triggeredRef.current = true;
-    autoClose.mutateAsync(tournament.id).then((res) => {
-      // Encerrou agora → atualiza o ranking imediatamente (só o admin da
-      // plataforma consegue gravar; para os demais, o ranking sincroniza no
-      // próximo acesso do admin).
-      if (res?.closed && isPlatformAdmin && ratingOn) {
-        autoRecompute.mutate({ force: true });
-      }
-    }).catch(() => {});
+    // O ranking não é recalculado daqui: encerrar muda o torneio, e o gatilho
+    // do servidor (`recomputeRankingOnTournamentChange`) recalcula sozinho.
+    autoClose.mutateAsync(tournament.id).catch(() => {});
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [lifecycleOn, tournament.status, tournament.results_locked, tournament.id, modalities, matches]);
 }

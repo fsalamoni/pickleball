@@ -696,9 +696,11 @@ torna a chave estável independentemente de quem foi lado A ou B.
 ```
 
 - **Classificação**: aproveitamento → vitórias → derrotas → saldo de pontos.
-- **Escrita**: Cloud Function de recálculo (e o botão do admin). Regra:
-  `allow read: if true; allow write: if isPlatformAdmin();` — mesma política de
-  `player_ratings`, porque é o placar oficial de todo mundo.
+- **Escrita**: SÓ a Cloud Function de recálculo (Admin SDK). Regra:
+  `allow read: if true; allow write: if false;` — desde 2026-09-24 nem o admin
+  escreve pelo navegador (ver `docs/18-RANKINGS.md` §8.1). Mesma política de
+  `player_ratings`, `rating_history`, `player_skill_ratings` e
+  `skill_rating_history`.
 - **Leitura**: a página `/ranking/duplas` lê a coleção inteira ordenada por
   `position` (campo único, **sem índice composto**) e pagina no cliente.
 - **Atualização**: a cada resultado publicado, junto com `player_ratings` e
@@ -716,8 +718,8 @@ ELO. Flag `skill_rating_dupr` (default OFF). Coleção
 - `provisional: bool` — true enquanto reliability < threshold.
 - `seed_level: number` — USAP usado como semente (ex: 2.5 → 2.500).
 - `updated_at: timestamp`.
-- **Regras**: leitura pública; escrita só `isPlatformAdmin()` ou
-  Cloud Function com service account.
+- **Regras**: leitura pública; escrita **só a Cloud Function** (Admin SDK).
+  `allow write: if false` para o cliente, inclusive o admin (2026-09-24).
 - **Motor** (`duprScale.js`, testado): baseado no placar
   (não só resultado), K de ~0.30 (novato) a ~0.05 (maduro),
   ignora W.O. Replay determinístico.
@@ -729,9 +731,10 @@ Evolução do rating DUPR ao longo do tempo (mesmo formato
 do `rating_history` ELO).
 - `user_id`, `format`, `rating`, `delta`, `opponent_id`,
   `match_id`, `created_at`.
-- **Espelhado** do `player_skill_ratings` a cada
-  `recomputeDuprRatings`.
-- **Regras**: leitura pública; escrita admin.
+- **Gravado** pelo servidor na mesma passada de `player_skill_ratings`
+  (`functions/platformRankings.js`).
+- **Regras**: leitura pública; escrita só da Cloud Function (`if false` no
+  cliente).
 
 ### Coleção: `audit_logs/{id}` (NOVO PR #120)
 Registro de ações admin (moderação, etc.).

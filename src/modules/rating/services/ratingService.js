@@ -1,13 +1,18 @@
 /**
- * Serviço de rating ELO (materialização e leitura).
+ * Serviço de rating ELO — SÓ LEITURA.
  *
- * `recomputeAllRatings` faz um replay determinístico de TODOS os jogos
- * finalizados (em ordem cronológica) e grava o resultado em `player_ratings`.
- * É acionado pelo admin master (botão na página de Métricas). A leitura
- * pública (`listNationalRanking`) consome apenas o documento materializado.
+ * Quem materializa `player_ratings`, `rating_history` e `doubles_rankings` é
+ * exclusivamente o servidor (`functions/platformRankings.js`), a cada resultado
+ * publicado e pela recuperação agendada. O cliente NÃO grava ranking — e a
+ * regra do Firestore recusa, inclusive para o admin da plataforma.
  *
- * v1: o cálculo roda no cliente do admin. Um ranking oficial à prova de
- * manipulação exigirá Cloud Functions (evolução fora deste escopo).
+ * 🐞 Até 2026-09-24 havia aqui um `recomputeAllRatings` que rodava no navegador
+ * do admin a cada visita. Ele era um SEGUNDO escritor das mesmas coleções e
+ * gravava só o ELO e as duplas — nunca o rating 2.0–8.0. Enquanto as funções
+ * do servidor estiveram apagadas (o projeto Firebase é compartilhado com outro
+ * aplicativo), o navegador do admin atualizou dois rankings e o terceiro ficou
+ * parado: a plataforma passou a mostrar três rankings discordando entre si, sem
+ * nada na tela avisar. Ver `docs/18-RANKINGS.md` §8.
  */
 
 import {
@@ -15,32 +20,16 @@ import {
   doc,
   getDoc,
   getDocs,
-  setDoc,
   query,
   where,
   orderBy,
-  serverTimestamp,
-  writeBatch,
 } from 'firebase/firestore';
 import { db } from '@/core/config/firebase';
-import { logger } from '@/core/lib/logger';
-import { createAuditLog } from '@/core/services/auditService';
 import { MATCH_STATUS, MODALITY_FORMAT } from '@/modules/tournament/domain/constants';
 import { toMillis } from '@/modules/tournament/domain/participation';
-import { eligibleTournamentIdsForRanking } from '@/modules/tournament/domain/rankingEligibility';
-import { LEVEL_TABLE } from '@/modules/leveling/data/levels';
-import { computeRatings, seedFromLevelOrdinal } from '../domain/elo.js';
-import { computeDoublesRanking } from '../domain/doublesRanking.js';
-import { DOUBLES_RANKING_COLLECTION } from './doublesRankingService.js';
-import { computeRatingSignature } from '../domain/ratingSignature.js';
-
-const SETTINGS_COLLECTION = 'platform_settings';
-const SETTINGS_DOC = 'global';
 
 const RATINGS_COLLECTION = 'player_ratings';
 const HISTORY_COLLECTION = 'rating_history';
-const HISTORY_MAX_POINTS = 50;
-const SAFE_BATCH_WRITE_SIZE = 450;
 const FINISHED_STATUSES = [MATCH_STATUS.FINISHED, MATCH_STATUS.WALKOVER];
 
 /** uids dos jogadores com conta de uma inscrição; `complete` indica se todos têm conta. */
@@ -68,328 +57,23 @@ function resolveSideUids(sideIds, regById) {
   return { uids, complete };
 }
 
-/** Semente de rating de um atleta a partir do seu nível de nivelamento. */
-function seedForProfile(profile) {
-  const idx = LEVEL_TABLE.findIndex((lvl) => lvl.id === profile?.leveling_level);
-  if (idx < 0) return undefined;
-  return seedFromLevelOrdinal(idx, LEVEL_TABLE.length);
-}
-
-/**
- * Recalcula todos os ratings a partir dos jogos finalizados e materializa em
- * `player_ratings`. Retorna um resumo do processamento.
- *
- * @param {object} actor usuário admin (para auditoria)
- * @param {{ onlyPublicClosed?: boolean }} [options]
- *   Quando `onlyPublicClosed` é verdadeiro, considera apenas jogos de torneios
- *   PÚBLICOS e já ENCERRADOS que ainda existem — excluindo automaticamente os
- *   apagados, privados ou em andamento (ranking oficial).
- * @returns {Promise<{ players: number, matchesUsed: number, matchesTotal: number }>}
- */
-export async function recomputeAllRatings(actor, options = {}) {
-  if (!db) return { players: 0, matchesUsed: 0, matchesTotal: 0 };
-  const { onlyPublicClosed = false } = options;
-
-  // 1) Jogos finalizados (status in finished/walkover); ordenação cronológica no cliente.
-  //    Inclui `tournament_matches` (torneios) + `club_event_games` (Wave C:
-  //    resultados de dias de jogo publicados no ranking).
-  const [tournamentMatchesSnap, clubEventGamesSnap] = await Promise.all([
-    getDocs(query(collection(db, 'tournament_matches'), where('status', 'in', FINISHED_STATUSES))),
-    getDocs(query(collection(db, 'club_event_games'), where('status', '==', MATCH_STATUS.FINISHED))),
-  ]);
-  let finishedMatches = tournamentMatchesSnap.docs.map((d) => d.data());
-
-  // Ranking oficial: restringe aos torneios públicos e encerrados existentes.
-  let ratingSignature = null;
-  if (onlyPublicClosed) {
-    const tournamentsSnap = await getDocs(collection(db, 'tournaments'));
-    const tournaments = tournamentsSnap.docs.map((d) => d.data());
-    const eligibleIds = eligibleTournamentIdsForRanking(tournaments);
-    finishedMatches = finishedMatches.filter((m) => eligibleIds.has(m.tournament_id));
-    ratingSignature = computeRatingSignature(tournaments);
-  }
-
-  // Jogos de dia de jogo (Wave C) sempre contam no ranking (não exigem
-  // torneio público/encerrado). O criador do evento do clube opta por
-  // publicar; o serviço `rankingPublishingService` garante que apenas
-  // jogos decididos + com uids válidos sejam espelhados.
-  const clubEventMatches = clubEventGamesSnap.docs.map((d) => d.data());
-
-  // 2) Inscrições (regId → uids) e 3) perfis (uid → dados/semente).
-  const [regsSnap, profilesSnap] = await Promise.all([
-    getDocs(collection(db, 'tournament_registrations')),
-    getDocs(collection(db, 'athlete_profiles')),
-  ]);
-  const regById = new Map(regsSnap.docs.map((d) => [d.id, d.data()]));
-  const profileById = new Map(profilesSnap.docs.map((d) => [d.id, { uid: d.id, ...d.data() }]));
-
-  const seeds = {};
-  profileById.forEach((profile, uid) => {
-    const seed = seedForProfile(profile);
-    if (Number.isFinite(seed)) seeds[uid] = seed;
-  });
-
-  // 4) Normaliza os jogos para o motor (somente jogos com os dois lados completos).
-  const engineMatches = [];
-
-  // 4a) Jogos de torneio (regId → uids via `tournament_registrations`).
-  finishedMatches.forEach((m) => {
-    // Confrontos de EQUIPES não pontuam aqui: cada etapa já é espelhada com os
-    // uids reais em `club_event_games` (tratado em 4b).
-    if (m.team_confrontation) return;
-    if (m.winner_side !== 'a' && m.winner_side !== 'b') return;
-    const a = resolveSideUids(m.side_a_ids, regById);
-    const b = resolveSideUids(m.side_b_ids, regById);
-    if (!a.complete || !b.complete) return;
-    const games = Array.isArray(m.games) ? m.games : [];
-    const pointsA = games.reduce((sum, g) => sum + (Number(g.a) || 0), 0);
-    const pointsB = games.reduce((sum, g) => sum + (Number(g.b) || 0), 0);
-    engineMatches.push({
-      side_a: a.uids,
-      side_b: b.uids,
-      winner: m.winner_side,
-      points_a: pointsA,
-      points_b: pointsB,
-      tournament_id: m.tournament_id || null,
-      at: toMillis(m.result_recorded_at) || toMillis(m.updated_at) || toMillis(m.created_at),
-    });
-  });
-
-  // 4b) Jogos de dia de jogo (Wave C) — uids já são dos próprios atletas
-  // (não passam por `tournament_registrations`).
-  clubEventMatches.forEach((m) => {
-    if (m.winner_side !== 'a' && m.winner_side !== 'b') return;
-    const sideA = Array.isArray(m.side_a_ids) ? m.side_a_ids : [];
-    const sideB = Array.isArray(m.side_b_ids) ? m.side_b_ids : [];
-    if (sideA.length === 0 || sideB.length === 0) return;
-    if (sideA.some((u) => !u) || sideB.some((u) => !u)) return;
-    engineMatches.push({
-      side_a: sideA,
-      side_b: sideB,
-      winner: m.winner_side,
-      points_a: Number(m.score_a) || 0,
-      points_b: Number(m.score_b) || 0,
-      tournament_id: m.tournament_id || null,
-      // Wave C: jogos de dia de jogo identificam-se por `source`.
-      source: m.source || 'club_event_game',
-      event_id: m.event_id || null,
-      club_id: m.club_id || null,
-      at: toMillis(m.result_recorded_at) || toMillis(m.created_at) || Date.now(),
-    });
-  });
-
-  // 5) Calcula e materializa.
-  const ranking = computeRatings(engineMatches, { seeds });
-
-  const rows = ranking.map((p, index) => {
-    const profile = profileById.get(p.player_id) || {};
-    return {
-      uid: p.player_id,
-      rating: p.rating,
-      peak_rating: p.peak_rating,
-      games: p.games,
-      wins: p.wins,
-      losses: p.losses,
-      points_for: p.points_for,
-      points_against: p.points_against,
-      points_balance: p.points_balance,
-      tournaments: p.tournaments,
-      position: index + 1,
-      platform_name: profile.platform_name || 'Atleta',
-      photo_url: profile.photo_url || '',
-      city: profile.city || null,
-      state: profile.state || null,
-      level: profile.level || null,
-      leveling_level: profile.leveling_level || null,
-      // Denormalizado para rankings segmentados (Fase ranking_filters).
-      gender: profile.gender || null,
-      age: Number.isFinite(profile.age) ? profile.age : null,
-      club_ids: Array.isArray(profile.club_ids) ? profile.club_ids : [],
-      clubs: Array.isArray(profile.clubs) ? profile.clubs : [],
-    };
-  });
-
-  // Lê (uma vez) o histórico e os ratings já existentes — para acrescentar
-  // pontos ao histórico e detectar ratings órfãos a remover.
-  const [historySnap, existingRatingsSnap] = await Promise.all([
-    getDocs(collection(db, HISTORY_COLLECTION)),
-    getDocs(collection(db, RATINGS_COLLECTION)),
-  ]);
-  const historyByUid = new Map(historySnap.docs.map((d) => [d.id, d.data()]));
-  const snapshotAt = Date.now();
-
-  for (let i = 0; i < rows.length; i += SAFE_BATCH_WRITE_SIZE) {
-    const batch = writeBatch(db);
-    rows.slice(i, i + SAFE_BATCH_WRITE_SIZE).forEach((row) => {
-      batch.set(doc(db, RATINGS_COLLECTION, row.uid), { ...row, updated_at: serverTimestamp() });
-
-      const prev = historyByUid.get(row.uid);
-      const points = Array.isArray(prev?.points) ? prev.points.slice(-(HISTORY_MAX_POINTS - 1)) : [];
-      points.push({ at: snapshotAt, rating: row.rating });
-      batch.set(doc(db, HISTORY_COLLECTION, row.uid), {
-        uid: row.uid,
-        points,
-        updated_at: serverTimestamp(),
-      });
-    });
-    await batch.commit();
-  }
-
-  // Limpeza: remove ratings de jogadores que não estão mais no ranking (ex.:
-  // jogos excluídos/anulados), evitando posições e ratings obsoletos no ranking
-  // público. O histórico é preservado (caso o jogador volte a pontuar).
-  const newUids = new Set(rows.map((r) => r.uid));
-  const staleIds = existingRatingsSnap.docs.map((d) => d.id).filter((id) => !newUids.has(id));
-  for (let i = 0; i < staleIds.length; i += SAFE_BATCH_WRITE_SIZE) {
-    const batch = writeBatch(db);
-    staleIds.slice(i, i + SAFE_BATCH_WRITE_SIZE).forEach((id) => batch.delete(doc(db, RATINGS_COLLECTION, id)));
-    await batch.commit();
-  }
-
-  // RANKING DE DUPLAS — materializado na mesma passada, dos MESMOS jogos.
-  //
-  // Quem recalcula o ranking espera que "o ranking" fique todo consistente. Se
-  // o botão do admin atualizasse só o ELO, a página de duplas continuaria
-  // mostrando a classificação anterior sem nenhum sinal de que está velha.
-  //
-  // No dia a dia quem escreve esta coleção é a Cloud Function, a cada resultado
-  // publicado (`functions/platformRankings.js`); os dois caminhos usam a mesma
-  // regra de classificação, com teste de paridade entre eles.
-  const duplas = computeDoublesRanking(engineMatches, { minGames: 1 });
-  const duplasRows = duplas.map((r) => ({
-    pair_key: r.pair_key,
-    player_ids: r.player_ids,
-    players: r.player_ids.map((playerUid) => {
-      const perfil = profileById.get(playerUid) || {};
-      return {
-        uid: playerUid,
-        name: perfil.platform_name || perfil.full_name || 'Atleta',
-        photo: perfil.photo_url || '',
-      };
-    }),
-    games: r.games,
-    wins: r.wins,
-    losses: r.losses,
-    win_rate: r.win_rate,
-    points_for: r.points_for,
-    points_against: r.points_against,
-    points_balance: r.points_balance,
-    position: r.position,
-  }));
-
-  const existingDoublesSnap = await getDocs(collection(db, DOUBLES_RANKING_COLLECTION));
-  for (let i = 0; i < duplasRows.length; i += SAFE_BATCH_WRITE_SIZE) {
-    const batch = writeBatch(db);
-    duplasRows.slice(i, i + SAFE_BATCH_WRITE_SIZE).forEach((row) => {
-      batch.set(doc(db, DOUBLES_RANKING_COLLECTION, row.pair_key), {
-        ...row, updated_at: serverTimestamp(),
-      });
-    });
-    await batch.commit();
-  }
-  // Parcerias que deixaram de existir (jogo apagado, resultado anulado) não
-  // podem ficar na tabela com a classificação antiga.
-  const paresVivos = new Set(duplasRows.map((r) => r.pair_key));
-  const paresMortos = existingDoublesSnap.docs.map((d) => d.id).filter((id) => !paresVivos.has(id));
-  for (let i = 0; i < paresMortos.length; i += SAFE_BATCH_WRITE_SIZE) {
-    const batch = writeBatch(db);
-    paresMortos.slice(i, i + SAFE_BATCH_WRITE_SIZE)
-      .forEach((id) => batch.delete(doc(db, DOUBLES_RANKING_COLLECTION, id)));
-    await batch.commit();
-  }
-
-  // Marca o estado do recálculo (assinatura das entradas + timestamp) para o
-  // recálculo automático detectar staleness sem reprocessar tudo.
-  if (onlyPublicClosed) {
-    try {
-      await setDoc(
-        doc(db, SETTINGS_COLLECTION, SETTINGS_DOC),
-        { ratings_signature: ratingSignature, ratings_recomputed_at: serverTimestamp() },
-        { merge: true },
-      );
-    } catch (err) {
-      logger.error('Falha ao gravar o estado do recálculo de ratings:', err);
-    }
-  }
-
-  await createAuditLog({
-    action: 'ratings_recomputed',
-    actor,
-    details: {
-      players: rows.length,
-      matches_used: engineMatches.length,
-      matches_total: finishedMatches.length,
-      club_event_matches_total: clubEventMatches.length,
-      doubles_pairs: duplasRows.length,
-      doubles_stale_removed: paresMortos.length,
-      stale_removed: staleIds.length,
-      auto: Boolean(onlyPublicClosed && options.auto),
-    },
-  });
-
-  return {
-    players: rows.length,
-    matchesUsed: engineMatches.length,
-    matchesTotal: finishedMatches.length,
-    clubEventMatchesTotal: clubEventMatches.length,
-    doublesPairs: duplasRows.length,
-    staleRemoved: staleIds.length,
-  };
-}
-
-/** Lê o estado do último recálculo (assinatura + momento). */
-async function readRatingMeta() {
-  try {
-    const snap = await getDoc(doc(db, SETTINGS_COLLECTION, SETTINGS_DOC));
-    const data = snap.exists() ? snap.data() : {};
-    return {
-      signature: data.ratings_signature ?? null,
-      recomputedAtMs: toMillis(data.ratings_recomputed_at) || 0,
-    };
-  } catch {
-    return { signature: null, recomputedAtMs: 0 };
-  }
-}
-
-/**
- * Recálculo AUTOMÁTICO do ranking: recalcula apenas quando as entradas mudaram
- * desde a última vez (nova assinatura), respeitando um intervalo mínimo para não
- * reprocessar em excesso. Considera sempre o ranking oficial (público +
- * encerrado). Só o admin da plataforma consegue gravar (regras do Firestore).
- *
- * @param {object} actor
- * @param {{ minIntervalMs?: number, force?: boolean }} [options]
- * @returns {Promise<{ ran: boolean, reason?: string } & Record<string, unknown>>}
- */
-export async function maybeAutoRecomputeRatings(actor, options = {}) {
-  if (!db) return { ran: false, reason: 'no-db' };
-  const { minIntervalMs = 60_000, force = false } = options;
-  let currentSignature = '';
-  try {
-    const tournamentsSnap = await getDocs(collection(db, 'tournaments'));
-    currentSignature = computeRatingSignature(tournamentsSnap.docs.map((d) => d.data()));
-  } catch (err) {
-    logger.error('Falha ao ler torneios para o recálculo automático:', err);
-    return { ran: false, reason: 'read-failed' };
-  }
-
-  if (!force) {
-    const meta = await readRatingMeta();
-    if (currentSignature === meta.signature) return { ran: false, reason: 'up-to-date' };
-    if (meta.recomputedAtMs && Date.now() - meta.recomputedAtMs < minIntervalMs) {
-      return { ran: false, reason: 'throttled' };
-    }
-  }
-
-  const result = await recomputeAllRatings(actor, { onlyPublicClosed: true, auto: true });
-  return { ran: true, ...result };
-}
-
 /** Ranking nacional materializado (ordenado por rating desc). */
 export async function listNationalRanking() {
   if (!db) return [];
   const snap = await getDocs(query(collection(db, RATINGS_COLLECTION), orderBy('rating', 'desc')));
   return snap.docs.map((d) => ({ id: d.id, ...d.data() }));
+}
+
+/**
+ * Estado do recálculo no servidor (`platform_settings/ranking_worker`), ou null
+ * quando ele nunca registrou passada. Leitura pública, como o resto de
+ * `platform_settings`. Uma consulta que FALHA lança — quem chama distingue
+ * "não sei" de "não existe" (docs/27-FALHA-NAO-E-VAZIO.md).
+ */
+export async function getRankingWorkerStatus() {
+  if (!db) return null;
+  const snap = await getDoc(doc(db, 'platform_settings', 'ranking_worker'));
+  return snap.exists() ? snap.data() : null;
 }
 
 /** Rating de um atleta específico (ou null). */
