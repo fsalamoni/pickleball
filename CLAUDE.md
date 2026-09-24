@@ -1755,6 +1755,13 @@ Quando você for commitar, atualize esta seção se os números mudarem.
 - **Não sabe por onde começar?** → Volte ao §3 (mapa) ou §5 (decisão rápida).
 
 **Gotchas de bugs reais (aprendidos na marra):**
+- **🔴 O projeto Firebase é COMPARTILHADO com outro aplicativo** (as Cloud
+  Functions dele ficam em `us-central1`). `firebase deploy --only functions
+  --force` APAGA toda função do projeto que não está no código local — em
+  2026-09-24 isso apagou ~40 funções do outro app, e dias antes o deploy do
+  outro app tinha apagado todas as daqui. O deploy agora publica **por nome**
+  (`functions:a,functions:b`); **nunca** volte ao deploy amplo — há guarda em
+  `src/core/guards/deployFunctions.test.js`. Ver `docs/03-WORKFLOW.md` §9.1
 - **Diálogo cortado em paisagem (tablet/celular):** `DialogContent`/`AlertDialogContent`
   precisam de `max-h-[90dvh] overflow-y-auto`. Sem isso, em telas baixas o
   rodapé (campos + botão salvar) fica fora da viewport e inacessível.
