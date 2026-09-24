@@ -19,7 +19,7 @@ const TUDO_LIGADO = {
   ...BASE,
   modulos: {
     jogoAberto: true, membros: true, pacotes: true, aulas: true, torneios: true, torneiosPlataforma: true,
-    loja: true,
+    loja: true, marketing: true, cupons: true, campanhas: true, satisfacao: true, indicacoes: true,
   },
 };
 
@@ -57,6 +57,22 @@ describe('buildArenaSections', () => {
     expect(com.tabs.map((t) => t.value)).toEqual(['pedidos', 'pagamento', 'mercado']);
     const sem = buildArenaSections(BASE).find((s) => s.id === 'comercial');
     expect(sem.tabs.map((t) => t.value)).toEqual(['pagamento', 'mercado']);
+  });
+
+  it('⭐ Marketing: uma aba por ferramenta ligada, antes de Pagamentos e loja', () => {
+    const secs = buildArenaSections(TUDO_LIGADO);
+    const ids = secs.map((s) => s.id);
+    expect(ids.indexOf('marketing')).toBe(ids.indexOf('comercial') - 1);
+    expect(secs.find((s) => s.id === 'marketing').tabs.map((t) => t.value))
+      .toEqual(['cupons', 'campanhas', 'satisfacao', 'indicacoes']);
+    const soCupons = buildArenaSections({ ...BASE, modulos: { marketing: true, cupons: true } });
+    expect(soCupons.find((s) => s.id === 'marketing').tabs.map((t) => t.value)).toEqual(['cupons']);
+    expect(valores(buildArenaSections(BASE))).not.toContain('cupons');
+  });
+
+  it('Marketing ligado sem ferramenta: UMA aba que explica (seção sem aba não existe)', () => {
+    const secs = buildArenaSections({ ...BASE, modulos: { marketing: true } });
+    expect(secs.find((s) => s.id === 'marketing').tabs.map((t) => t.value)).toEqual(['marketing']);
   });
 
   it('Pacotes só com o módulo de pacotes', () => {

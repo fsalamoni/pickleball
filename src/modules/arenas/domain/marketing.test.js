@@ -1,6 +1,6 @@
 import { describe, it, expect } from 'vitest';
 import {
-  classifyNps, calculateNps, normalizeCouponInput, isCouponValid, applyCoupon,
+  classifyNps, calculateNps, normalizeCouponInput, isCouponValid, applyCoupon, publicPromos, promoConditions,
   generateReferralCode, calculateLoyaltyPoints, CAMPAIGN_STATUS, COUPON_TYPE, NPS_SCORE,
   couponError,
   couponDiscount,
@@ -352,5 +352,58 @@ describe('shouldAskNps', () => {
 
   it('data inválida não quebra', () => {
     expect(shouldAskNps({ lastVisitISO: 'ontem', now: AGORA })).toBe(false);
+  });
+});
+
+describe('publicPromos — as promoções que a arena divulga', () => {
+  const agora = new Date(2026, 8, 24, 12).getTime();
+  const base = { active: true, type: 'percent', value: 10, show_public: true };
+
+  it('⭐ só entra cupom DIVULGADO — o código entregue a alguém nunca aparece', () => {
+    const r = publicPromos([
+      { ...base, id: 'a', code: 'TARDE10' },
+      { ...base, id: 'b', code: 'SEGREDO', show_public: false },
+      { ...base, id: 'c', code: 'ANTIGO', show_public: undefined },
+    ], agora);
+    expect(r.map((p) => p.code)).toEqual(['TARDE10']);
+    expect(r[0].label).toBe('TARDE10 · 10% de desconto');
+    expect(r[0].discount).toBe('10% de desconto');
+  });
+
+  it('⭐ promoção desligada, vencida ou esgotada some', () => {
+    const r = publicPromos([
+      { ...base, id: 'a', code: 'OFF', active: false },
+      { ...base, id: 'b', code: 'VENCEU', expires_at: agora - 1000 },
+      { ...base, id: 'c', code: 'ACABOU', max_uses: 5, used_count: 5 },
+      { ...base, id: 'd', code: 'VALE', expires_at: agora + 86400000 },
+    ], agora);
+    expect(r.map((p) => p.code)).toEqual(['VALE']);
+  });
+
+  it('a que vence primeiro vem primeiro; sem prazo vai para o fim', () => {
+    const r = publicPromos([
+      { ...base, id: 'a', code: 'SEMPRAZO' },
+      { ...base, id: 'b', code: 'LOGO', expires_at: agora + 1000 },
+      { ...base, id: 'c', code: 'DEPOIS', expires_at: agora + 90000000 },
+    ], agora);
+    expect(r.map((p) => p.code)).toEqual(['LOGO', 'DEPOIS', 'SEMPRAZO']);
+  });
+
+  it('normalizeCouponInput só marca como divulgado quando pedido', () => {
+    expect(normalizeCouponInput({ code: 'X', value: 5 }).value.show_public).toBe(false);
+    expect(normalizeCouponInput({ code: 'X', value: 5, show_public: true }).value.show_public).toBe(true);
+  });
+});
+
+describe('promoConditions — a regra da promoção em uma linha', () => {
+  it('junta mínimo, prazo e uma-vez-por-pessoa, como gente lê', () => {
+    const txt = promoConditions({ min_amount: 100, expires_at: new Date(2026, 9, 1, 23, 59).getTime(), once_per_user: true })
+      .replace(/\u00a0/g, ' ');
+    expect(txt).toMatch(/^a partir de R\$ 100,00 · até .*01\/10 · uma vez por pessoa$/);
+    expect(txt).not.toContain('2026-10-01');
+  });
+
+  it('sem condição, vazia', () => {
+    expect(promoConditions({ once_per_user: false })).toBe('');
   });
 });

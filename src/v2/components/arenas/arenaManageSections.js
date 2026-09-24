@@ -9,8 +9,8 @@
  */
 import {
   BarChart3, Building2, CalendarClock, CalendarDays, CalendarRange, ClipboardList,
-  Crown, DollarSign, Globe, GraduationCap, Image, Info, LayoutGrid, Package, Puzzle,
-  ShoppingBag, SlidersHorizontal, Star, Swords, Trophy, Users, Wallet,
+  Crown, DollarSign, Gift, Globe, GraduationCap, Image, Info, LayoutGrid, Megaphone, Package, Puzzle,
+  ShoppingBag, SlidersHorizontal, Smile, Star, Swords, Tag, Trophy, Users, Wallet,
 } from 'lucide-react';
 
 // Navegação em dois níveis do admin da arena. Ordem = ciclo de vida, do
@@ -104,6 +104,24 @@ export function buildArenaSections({
     // Pagamentos e loja. Com a loja do app ligada (módulo `pdv`), o BALCÃO
     // dos pedidos vem primeiro — é a aba que a equipe abre o dia inteiro — e
     // os produtos continuam no Mercado, que é o cadastro único.
+    // Marketing: trazer de volta quem já veio. Uma aba por ferramenta ligada
+    // (cupons, campanhas, satisfação, indicações). Com o módulo ligado e
+    // nenhuma ferramenta, a seção tem UMA aba que explica e leva aos módulos
+    // — seção sem aba não existe, e seção sumida esconderia o que falta ligar.
+    ...(modulos.marketing ? [{
+      id: 'marketing',
+      label: 'Marketing',
+      icon: Megaphone,
+      tabs: (() => {
+        const ferramentas = [
+          ...(modulos.cupons ? [{ value: 'cupons', label: 'Cupons', icon: Tag }] : []),
+          ...(modulos.campanhas ? [{ value: 'campanhas', label: 'Campanhas', icon: Megaphone }] : []),
+          ...(modulos.satisfacao ? [{ value: 'satisfacao', label: 'Satisfação', icon: Smile }] : []),
+          ...(modulos.indicacoes ? [{ value: 'indicacoes', label: 'Indicações', icon: Gift }] : []),
+        ];
+        return ferramentas.length > 0 ? ferramentas : [{ value: 'marketing', label: 'Ferramentas', icon: Megaphone }];
+      })(),
+    }] : []),
     {
       id: 'comercial',
       label: 'Pagamentos e loja',

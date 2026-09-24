@@ -5,6 +5,14 @@
 > **Chave-mestra**: flag `arena_modules` (default OFF).
 > **Banco**: zero coleção nova, zero índice novo, zero regra nova.
 
+> **Atualização 2026-09-24 — dentro da arena.** O console virou a seção
+> **Marketing** da Central (uma aba por ferramenta), o cupom ganhou **"Divulgar
+> na página da arena"** (vira promoção na página e no pedido de reserva) e o
+> "Indique e ganhe" do atleta foi para a página da arena, criado quando a
+> pessoa pede. No caminho, o defeito que fazia o código de indicação **nunca**
+> ser criado e o primeiro crédito em carteira ser recusado — ver
+> `09-INTEGRACAO-NA-ARENA.md` §10.
+
 ---
 
 ## 1. O que existia e o que não funcionava
@@ -265,3 +273,8 @@ Os campos acrescentados a `arena_coupons` (`min_amount`, `once_per_user`,
    para a tela do atleta produz *permissão negada*.
 6. **Atalho de módulo vem do catálogo**, não de uma lista escrita à mão.
 7. **O serviço não se chama `useCoupon`.** (`rules-of-hooks`.)
+8. **O código de indicação não nasce numa visita.** A página da arena LÊ
+   (`getMyReferralCode`); criar é quando a pessoa pede. E o `get` antes de
+   criar depende de `canGetMissingArenaUserDoc` — tirá-la volta a quebrar a
+   indicação, a venda de pacote e o crédito em carteira, em silêncio.
+9. **Só cupom com `show_public: true` aparece em público** (`publicPromos`).

@@ -65,6 +65,20 @@ export async function addArenaMember(arenaId, target, actor) {
   const norm = normalizeMemberInput(target);
   const id = memberId(arenaId, target.user_id);
   const ref = doc(db, COL_MEMBERS, id);
+  const walletRef = doc(db, COL_WALLETS, walletId(arenaId, target.user_id));
+  // 🐞 Os dois `setDoc` eram SEM `merge`: incluir de novo quem já era membro
+  // zerava pontos, nível e data de entrada, e a carteira era regravada ZERADA
+  // — levando o saldo e as horas de pacote que a pessoa já tinha pago (quem
+  // saiu e voltou, ou quem ganhou crédito de indicação antes de ser membro).
+  const [mSnap, wSnap] = await Promise.all([getDoc(ref), getDoc(walletRef)]);
+  if (mSnap.exists()) {
+    await updateDoc(ref, {
+      ...(norm.user_name ? { user_name: norm.user_name } : {}),
+      ...(norm.user_photo ? { user_photo: norm.user_photo } : {}),
+      updated_at: serverTimestamp(),
+    });
+    return id;
+  }
   await setDoc(ref, {
     id,
     arena_id: arenaId,
@@ -73,19 +87,21 @@ export async function addArenaMember(arenaId, target, actor) {
     created_at: serverTimestamp(),
     updated_at: serverTimestamp(),
   });
-  // Cria wallet zerado também
-  await setDoc(doc(db, COL_WALLETS, walletId(arenaId, target.user_id)), {
-    id: walletId(arenaId, target.user_id),
-    arena_id: arenaId,
-    user_id: target.user_id,
-    user_name: norm.user_name,
-    balance: 0,
-    points: 0,
-    total_spent: 0,
-    transactions: [],
-    created_at: serverTimestamp(),
-    updated_at: serverTimestamp(),
-  });
+  // A carteira zerada só nasce se ainda não houver uma.
+  if (!wSnap.exists()) {
+    await setDoc(walletRef, {
+      id: walletId(arenaId, target.user_id),
+      arena_id: arenaId,
+      user_id: target.user_id,
+      user_name: norm.user_name,
+      balance: 0,
+      points: 0,
+      total_spent: 0,
+      transactions: [],
+      created_at: serverTimestamp(),
+      updated_at: serverTimestamp(),
+    });
+  }
   try {
     notifyUsers([target.user_id], {
       title: 'Você é membro!',
@@ -268,16 +284,27 @@ export async function getArenaWallet(arenaId, userId) {
 export async function creditWallet(arenaId, userId, amount, source, actor) {
   if (!arenaId || !userId || !Number.isFinite(amount) || amount <= 0) return;
   const walletRef = doc(db, COL_WALLETS, walletId(arenaId, userId));
+  const snap = await getDoc(walletRef);
+  // `serverTimestamp()` não entra em vetor — a data do lançamento é a do
+  // cliente, como nos outros lançamentos da carteira.
   const tx = {
     type: 'credit',
     amount,
     source: str(source).slice(0, 60),
-    at: serverTimestamp(),
+    at: new Date(),
   };
+  // 🐞 A carteira NOVA era gravada sem `arena_id` nem `user_id`: a regra de
+  // criação confere `arena_id`, e o primeiro crédito de quem ainda não tinha
+  // carteira era recusado (indicação, resgate de pontos, crédito manual). Os
+  // dois campos vão sempre — numa carteira existente são os mesmos valores.
   await setDoc(walletRef, {
+    id: walletId(arenaId, userId),
+    arena_id: arenaId,
+    user_id: userId,
     balance: increment(amount),
-    transactions: [...((await getDoc(walletRef)).data()?.transactions || []), tx],
+    transactions: [...(snap.exists() ? (snap.data()?.transactions || []) : []), tx].slice(-200),
     updated_at: serverTimestamp(),
+    ...(snap.exists() ? {} : { points: 0, packages: [], created_at: serverTimestamp() }),
   }, { merge: true });
   await createAuditLog({ action: 'arena_wallet_credited', actor, details: { arena_id: arenaId, user_id: userId, amount, source } });
 }
@@ -378,8 +405,9 @@ export async function consumeMemberBenefit(arenaId, userId, uso = {}, actor = nu
   const wallet = wSnap.exists() ? wSnap.data() : null;
 
   const batch = writeBatch(db);
+  const escreveCarteira = Boolean(wallet) && (plano.length > 0 || valorCarteira > 0);
 
-  if (wallet && (plano.length > 0 || valorCarteira > 0)) {
+  if (escreveCarteira) {
     const porId = new Map(plano.map((p) => [p.id, p.hours]));
     const pacotes = (wallet.packages || []).map((p) => (
       porId.has(p.pkg_id)
@@ -411,12 +439,19 @@ export async function consumeMemberBenefit(arenaId, userId, uso = {}, actor = nu
     }, { merge: true });
   }
 
-  if (pontos > 0) {
-    batch.set(doc(db, COL_MEMBERS, memberId(arenaId, userId)), {
+  // Pontos só para quem JÁ é membro. 🐞 O `set` com `merge` criava um
+  // documento de membro sem `arena_id` para quem não era — a regra recusava, e
+  // o lote inteiro caía junto (a baixa de pacote e de saldo inclusive). Virar
+  // membro é decisão da arena ("Tornar membro"), não efeito de uma reserva.
+  const mRef = doc(db, COL_MEMBERS, memberId(arenaId, userId));
+  const ehMembro = pontos > 0 ? (await getDoc(mRef)).exists() : false;
+  if (ehMembro) {
+    batch.set(mRef, {
       points: increment(pontos),
       updated_at: serverTimestamp(),
     }, { merge: true });
   }
+  if (!escreveCarteira && !ehMembro) return;
 
   await batch.commit();
   await createAuditLog({
@@ -426,12 +461,12 @@ export async function consumeMemberBenefit(arenaId, userId, uso = {}, actor = nu
       arena_id: arenaId,
       user_id: userId,
       package_hours: plano.reduce((a, p) => a + p.hours, 0),
-      wallet_amount: valorCarteira,
-      points: pontos,
+      wallet_amount: escreveCarteira ? valorCarteira : 0,
+      points: ehMembro ? pontos : 0,
       reference: uso.reference || null,
     },
   });
-  logger.info('arena_member_benefit_applied', { arenaId, userId, pontos });
+  logger.info('arena_member_benefit_applied', { arenaId, userId, pontos: ehMembro ? pontos : 0 });
 }
 
 /* ================================================================== */

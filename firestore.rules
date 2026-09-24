@@ -160,6 +160,26 @@ service cloud.firestore {
       return isAuthed()
         && exists(/databases/$(database)/documents/arena_managers/$(arenaId + '_' + request.auth.uid));
     }
+    // Ler um documento `{arena}_{uid}` que AINDA NÃO EXISTE (2026-09-24).
+    //
+    // 🐞 Membro, carteira, mensalidade e indicação têm id determinístico, e o
+    // código pergunta "já existe?" com um `get` antes de criar. Só que a regra
+    // de leitura dessas coleções olha `resource.data`, e num documento que não
+    // existe `resource` é nulo: o `get` dava ERRO — para o próprio atleta E
+    // para a arena. Consequências medidas no emulador: a arena não conseguia
+    // vender pacote nem creditar saldo a quem ainda não era membro, e o código
+    // "Indique e ganhe" nunca era criado (a tela sumia sem aviso).
+    //
+    // Documento ausente não tem dado nenhum para vazar; mesmo assim a leitura
+    // é só do dono do uid, da arena do prefixo e do admin. Ids de arena são
+    // automáticos (sem `_`); se um dia não forem, a conta NEGA — nunca libera.
+    function canGetMissingArenaUserDoc(docId) {
+      return isAuthed() && resource == null && (
+        docId == docId.split('_')[0] + '_' + request.auth.uid
+        || isArenaManager(docId.split('_')[0])
+        || isPlatformAdmin()
+      );
+    }
     // Dados/relações de um evento (para validar subcoleções pelo documento-pai).
     function eventData(eventId) {
       return get(/databases/$(database)/documents/club_events/$(eventId)).data;
@@ -838,6 +858,7 @@ service cloud.firestore {
         || isArenaManager(resource.data.arena_id)
         || isPlatformAdmin()
       );
+      allow get: if canGetMissingArenaUserDoc(docId);
       allow create, update: if isAuthed() && (
         isArenaManager(request.resource.data.arena_id) || isPlatformAdmin()
       );
@@ -864,6 +885,7 @@ service cloud.firestore {
         || isArenaManager(resource.data.arena_id)
         || isPlatformAdmin()
       );
+      allow get: if canGetMissingArenaUserDoc(docId);
       allow create, update: if isAuthed() && (
         isArenaManager(request.resource.data.arena_id) || isPlatformAdmin()
       );
@@ -876,6 +898,7 @@ service cloud.firestore {
         || isArenaManager(resource.data.arena_id)
         || isPlatformAdmin()
       );
+      allow get: if canGetMissingArenaUserDoc(subId);
       allow create, update: if isAuthed() && (
         isArenaManager(request.resource.data.arena_id) || isPlatformAdmin()
       );
@@ -1819,6 +1842,7 @@ service cloud.firestore {
         isArenaManager(resource.data.arena_id) ||
         isPlatformAdmin()
       );
+      allow get: if canGetMissingArenaUserDoc(referralId);
       // Só se pode indicar EM NOME PRÓPRIO. Antes bastava estar logado, e dava
       // para criar indicação apontando outra pessoa como indicadora.
       allow create: if isAuthed()

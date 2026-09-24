@@ -19,7 +19,8 @@ import { BOOKING_KIND, BOOKING_STATUS, WEEKDAY_LABELS } from '../domain/constant
 import { resolveArenaPrice, formatPrice, totalBookingPrice, priceWithDurationText } from '../domain/pricing.js';
 import { memberBookingPrice } from '../domain/memberBenefit.js';
 import { validateCouponCode } from '../services/marketingService.js';
-import { useArenaMember, useArenaWallet } from '../hooks/useArenaV3.js';
+import { publicPromos } from '../domain/marketing.js';
+import { useArenaMember, useArenaWallet, useArenaCoupons } from '../hooks/useArenaV3.js';
 import { useArenaModules } from '../hooks/useArenaModules.js';
 import { ARENA_MODULE_ID } from '../domain/modules.js';
 import { bookingSlots, expandRecurring, isValidSlot, sortSlots, weekdayOf } from '../domain/booking.js';
@@ -178,12 +179,18 @@ export default function BookingRequestDialog({ arena, open, onOpenChange, court:
   const [cupomErro, setCupomErro] = useState('');
   const [conferindoCupom, setConferindoCupom] = useState(false);
 
-  const conferirCupom = async () => {
+  // As PROMOÇÕES que a arena divulga — oferecidas aqui com um toque, para a
+  // pessoa não precisar saber o código de cor (nem ter visto a página).
+  const cuponsLigados = isOn(ARENA_MODULE_ID.MARKETING_COUPONS);
+  const { data: cuponsDaArena } = useArenaCoupons(cuponsLigados ? arena?.id : null);
+  const promocoes = useMemo(() => publicPromos(cuponsDaArena || []), [cuponsDaArena]);
+
+  const conferirCupom = async (codigo = cupomDigitado) => {
     const base = totalDaSelecao?.total || 0;
     setConferindoCupom(true);
     setCupomErro('');
     try {
-      const r = await validateCouponCode(arena?.id, cupomDigitado, {
+      const r = await validateCouponCode(arena?.id, codigo, {
         userId: user?.uid, amount: base,
       });
       if (r.error) { setCupom(null); setCupomErro(r.error); }
@@ -868,11 +875,28 @@ export default function BookingRequestDialog({ arena, open, onOpenChange, court:
                       <Button
                         type="button" size="sm" variant="outline"
                         disabled={conferindoCupom || !cupomDigitado.trim()}
-                        onClick={conferirCupom}
+                        onClick={() => conferirCupom()}
                       >
                         {conferindoCupom ? 'Conferindo…' : 'Aplicar'}
                       </Button>
                     </div>
+                    {promocoes.length > 0 && !cupom && (
+                      <div className="mt-2 flex flex-wrap items-center gap-1.5">
+                        <span className="text-[11px] font-bold uppercase tracking-wider text-ink/50">Promoções:</span>
+                        {promocoes.slice(0, 3).map((p) => (
+                          <button
+                            key={p.id}
+                            type="button"
+                            disabled={conferindoCupom}
+                            onClick={() => { setCupomDigitado(p.code); conferirCupom(p.code); }}
+                            className="rounded-full border border-dashed border-ink/30 bg-paper-pure px-2.5 py-1 text-xs font-bold text-ink hover:border-ink disabled:opacity-50"
+                            title={p.description || p.label}
+                          >
+                            {p.label}
+                          </button>
+                        ))}
+                      </div>
+                    )}
                     {cupomErro && <p className="mt-1 text-xs text-red-700">{cupomErro}</p>}
                     {cupom && !cupomErro && (
                       <p className="mt-1 text-xs font-bold text-green-700">Cupom aplicado.</p>

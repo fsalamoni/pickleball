@@ -22,9 +22,15 @@ describe('atalhos dos módulos de arena', () => {
     expect(atalhos).toEqual([]);
   });
 
-  it('⭐ o console de marketing é alcançável quando o módulo está ligado', () => {
-    const atalhos = shortcutsFor(ligados(ARENA_MODULE_ID.MARKETING), 'a1', 'manage');
-    expect(atalhos.map((a) => a.to)).toContain('/arenas/a1/gerir/marketing');
+  it('⭐ módulo com tela própria é alcançável quando está ligado', () => {
+    const atalhos = shortcutsFor(ligados(ARENA_MODULE_ID.OPERATIONS), 'a1', 'manage');
+    expect(atalhos.map((a) => a.to)).toContain('/arenas/a1/gerir/operacoes');
+  });
+
+  it('⭐ o marketing virou seção da Central: sem atalho para fora', () => {
+    const ids = [ARENA_MODULE_ID.MARKETING, ARENA_MODULE_ID.MARKETING_COUPONS, ARENA_MODULE_ID.MARKETING_NPS];
+    expect(shortcutsFor(ligados(...ids), 'a1', 'manage')).toEqual([]);
+    expect(shortcutsFor(ligados(...ids), 'a1', 'public')).toEqual([]);
   });
 
   it('o :arenaId é substituído pela arena de verdade', () => {
@@ -59,8 +65,8 @@ describe('atalhos dos módulos de arena', () => {
   });
 
   it('⭐ módulo sem tela para este público não vira botão quebrado', () => {
-    // Marketing não tem rota pública — só a arena mexe nele.
-    const atalhos = shortcutsFor(ligados(ARENA_MODULE_ID.MARKETING), 'a1', 'public');
+    // Operações não tem rota pública — só a arena mexe nela.
+    const atalhos = shortcutsFor(ligados(ARENA_MODULE_ID.OPERATIONS), 'a1', 'public');
     expect(atalhos).toEqual([]);
   });
 
@@ -68,11 +74,12 @@ describe('atalhos dos módulos de arena', () => {
     // A família avançada inteira cai em /gerir/avancado; quatro botões iguais
     // seriam ruído, não navegação.
     const atalhos = shortcutsFor(
-      ligados(ARENA_MODULE_ID.MARKETING, ARENA_MODULE_ID.MARKETING_COUPONS, ARENA_MODULE_ID.MARKETING_NPS),
+      ligados(ARENA_MODULE_ID.MULTI_UNIT, ARENA_MODULE_ID.WHITE_LABEL, ARENA_MODULE_ID.AI),
       'a1',
       'manage',
     );
     const destinos = atalhos.map((a) => a.to);
+    expect(destinos.length).toBeGreaterThan(0);
     expect(new Set(destinos).size).toBe(destinos.length);
   });
 

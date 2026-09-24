@@ -21,6 +21,9 @@
  * consegue prever o pior caso de uma promoção.
  */
 
+import { formatDateShortBR } from './calendar.js';
+import { formatPrice } from './pricing.js';
+
 export const CAMPAIGN_STATUS = Object.freeze({
   DRAFT: 'draft',
   SCHEDULED: 'scheduled',
@@ -84,6 +87,12 @@ export function normalizeCouponInput(input = {}) {
       once_per_user: input.once_per_user !== false,
       expires_at: input.expires_at || null,
       active: input.active !== false,
+      /**
+       * Divulgar na página da arena (2026-09-24). Um cupom é, por padrão, um
+       * código que a arena ENTREGA a alguém; marcado, ele vira PROMOÇÃO — a
+       * página da arena mostra, e o pedido de reserva oferece com um toque.
+       */
+      show_public: input.show_public === true,
     },
   };
 }
@@ -165,6 +174,53 @@ export function couponLabel(coupon) {
     ? `R$ ${(Number(coupon.value) || 0).toFixed(2).replace('.', ',')}`
     : `${Number(coupon.value) || 0}%`;
   return `${coupon.code} · ${valor} de desconto`;
+}
+
+/**
+ * As PROMOÇÕES da arena: os cupons que ela escolheu divulgar e que ainda
+ * valem (ligados, no prazo e com uso disponível). Cupom não divulgado é
+ * código entregue a alguém — nunca aparece aqui.
+ *
+ * @param {object[]} coupons
+ * @param {number} [now]
+ * @returns {Array<{ id: string, code: string, label: string, discount: string, description: string,
+ *   min_amount: number|null, expires_at: number|null, once_per_user: boolean }>}
+ */
+export function publicPromos(coupons = [], now = Date.now()) {
+  return coupons
+    .filter((c) => c?.show_public === true && isCouponValid(c, now))
+    .map((c) => ({
+      id: c.id,
+      code: c.code,
+      label: couponLabel(c),
+      // Sem o código — para o título, quando o código já está no botão ao lado.
+      discount: couponLabel(c).slice(String(c.code).length + 3),
+      description: c.description || '',
+      min_amount: Number(c.min_amount) > 0 ? Number(c.min_amount) : null,
+      expires_at: Number.isFinite(Number(c.expires_at)) && c.expires_at ? Number(c.expires_at) : null,
+      once_per_user: c.once_per_user !== false,
+    }))
+    // A que vence primeiro vem primeiro: é a que a pessoa pode perder.
+    .sort((a, b) => (a.expires_at ?? Infinity) - (b.expires_at ?? Infinity) || String(a.code).localeCompare(String(b.code)));
+}
+
+/**
+ * A regra da promoção em uma linha — "a partir de R$ 100,00 · até Qui, 01/10 ·
+ * uma vez por pessoa". Vazia quando não há condição.
+ */
+export function promoConditions(promo) {
+  if (!promo) return '';
+  let ate = null;
+  if (promo.expires_at) {
+    const d = new Date(Number(promo.expires_at));
+    const p = (n) => String(n).padStart(2, '0');
+    ate = `até ${formatDateShortBR(`${d.getFullYear()}-${p(d.getMonth() + 1)}-${p(d.getDate())}`)}`;
+  }
+  return [
+    promo.min_amount ? `a partir de ${formatPrice(promo.min_amount)}` : null,
+    ate,
+    promo.once_per_user ? 'uma vez por pessoa' : null,
+  ].filter(Boolean).join(' · ');
 }
 
 /** Gera código de indicação único. */
