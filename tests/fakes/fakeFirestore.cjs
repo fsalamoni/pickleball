@@ -18,6 +18,19 @@ class FakeDocRef {
   async get() { return new FakeDocSnap(this, this.store.docs.get(this.path)); }
   collection(name) { return new FakeQuery(this.store, `${this.path}/${name}`); }
   async delete() { this.store.log.push(['delete', this.path]); this.store.docs.delete(this.path); }
+  async update(data) { aplicarUpdate(this.store, this, data); }
+}
+
+/** Aplica um `update` (com `increment` falso) — usado pelo lote e pela transação. */
+function aplicarUpdate(store, ref, data) {
+  store.log.push(['update', ref.path]);
+  const atual = store.docs.get(ref.path);
+  if (atual === undefined) throw new Error(`update em documento ausente: ${ref.path}`);
+  const novo = { ...atual };
+  Object.entries(data).forEach(([k, v]) => {
+    novo[k] = v && typeof v === 'object' && '__increment' in v ? (Number(atual[k]) || 0) + v.__increment : v;
+  });
+  store.docs.set(ref.path, novo);
 }
 
 class FakeQuery {
@@ -59,6 +72,20 @@ function createFakeDb(seed = {}) {
   const db = {
     store,
     collection: (name) => new FakeQuery(store, name),
+    /**
+     * Transação falsa: lê e escreve direto (sem isolamento) — basta para
+     * exercitar a LÓGICA; a exclusão mútua de verdade é do Firestore.
+     */
+    async runTransaction(fn) {
+      const escritas = [];
+      const tx = {
+        get: (alvo) => alvo.get(),
+        update: (ref, data) => escritas.push(() => aplicarUpdate(store, ref, data)),
+      };
+      const r = await fn(tx);
+      escritas.forEach((w) => w());
+      return r;
+    },
     batch() {
       const ops = [];
       return {

@@ -394,7 +394,15 @@ export async function confirmPayment(paymentId, actor) {
   if (psnap.exists()) {
     const saleId = psnap.data().sale_id;
     const saleRef = doc(db, COL_SALES, saleId);
-    const allPays = await getDocs(query(collection(db, COL_PAYMENTS), where('sale_id', '==', saleId)));
+    // 🐞 Filtrava só por `sale_id`, e a regra deixa a arena ler conferindo o
+    // `arena_id`: a consulta era recusada e a confirmação quebrava no meio —
+    // o pagamento ficava "pago" e a VENDA nunca. Os dois filtros (só
+    // igualdades: sem índice composto).
+    const allPays = await getDocs(query(
+      collection(db, COL_PAYMENTS),
+      where('arena_id', '==', psnap.data().arena_id),
+      where('sale_id', '==', saleId),
+    ));
     const allPaid = allPays.docs.every((d) => d.id === paymentId || d.data().status === SALE_STATUS.PAID);
     if (allPaid) {
       await updateDoc(saleRef, { status: SALE_STATUS.PAID, paid_at: serverTimestamp(), updated_at: serverTimestamp() });

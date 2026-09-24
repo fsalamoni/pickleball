@@ -747,23 +747,69 @@ service cloud.firestore {
     // Open Match slots (sprint 1) — vagas abertas publicadas pela arena.
     match /arena_open_slots/{slotId} {
       allow read: if true;
-      allow create, update: if isAuthed() && (
+      allow create: if isAuthed() && (
         isArenaManager(request.resource.data.arena_id) || isPlatformAdmin()
+      );
+      allow update: if isAuthed() && (
+        isArenaManager(request.resource.data.arena_id) || isPlatformAdmin()
+        || openSlotSelfJoinLeave()
       );
       allow delete: if isAuthed() && (
         isArenaManager(resource.data.arena_id) || isPlatformAdmin()
       );
+
+      // 🐞 O ATLETA entra e sai do jogo aberto (2026-09-24). Entrar grava
+      // `participants` no próprio documento da vaga, e a atualização era só da
+      // arena: o botão "Quero jogar" existia e NUNCA funcionou — nem entrar,
+      // nem sair, nem aceitar a vaga da fila. Mesmo desenho do dia de jogo e
+      // do torneio da casa: a pessoa só entra ou sai A SI MESMA, com a vaga de
+      // pé, sem passar do número de lugares, e o que se grava tem de bater
+      // (contagem = lista; "lotado" só quando lotou).
+      function openSlotSelfJoinLeave() {
+        return resource.data.get('status', 'open') in ['open', 'full']
+          && request.resource.data.diff(resource.data).affectedKeys()
+              .hasOnly(['participants', 'filled_spots', 'status', 'updated_at'])
+          && request.resource.data.get('status', 'open') in ['open', 'full']
+          && request.resource.data.get('filled_spots', 0) == request.resource.data.participants.size()
+          && ((request.resource.data.get('status', 'open') == 'full')
+              == (request.resource.data.participants.size() >= resource.data.get('total_spots', 0)))
+          && (
+            (!(request.auth.uid in resource.data.get('participants', []))
+              && request.resource.data.participants.toSet()
+                  == resource.data.get('participants', []).toSet().union([request.auth.uid].toSet())
+              && request.resource.data.participants.size() <= resource.data.get('total_spots', 0))
+            || ((request.auth.uid in resource.data.get('participants', []))
+              && request.resource.data.participants.toSet()
+                  == resource.data.get('participants', []).toSet().difference([request.auth.uid].toSet()))
+          );
+      }
     }
     // Waitlist (sprint 1) — fila de espera por slot.
     match /arena_waitlist/{waitlistId} {
-      allow read: if isAuthed() && (
-        resource.data.athlete_id == request.auth.uid
-        || isArenaManager(resource.data.arena_id)
-        || isPlatformAdmin()
-      );
-      allow create: if isAuthed() && request.resource.data.athlete_id == request.auth.uid;
+      // Leitura por quem tem conta (2026-09-24). 🐞 Era só a própria entrada
+      // e a arena: para entrar na fila o atleta precisa saber quantos estão
+      // na frente, e a consulta da fila da vaga era recusada — ENTRAR NA FILA
+      // NUNCA FUNCIONOU. A entrada guarda nome e posição (o mesmo nível de
+      // exposição da lista de quem está na vaga, que é pública); nenhum
+      // contato, nenhum dado pessoal sensível.
+      allow read: if isAuthed();
+      // Em nome próprio, no fim da fila — nunca já "chamado" (furar a fila) —,
+      // uma entrada por pessoa por vaga, e na arena DA VAGA.
+      allow create: if isAuthed()
+        && request.resource.data.athlete_id == request.auth.uid
+        && request.resource.data.get('status', 'waiting') == 'waiting'
+        && waitlistId == request.resource.data.slot_id + '_' + request.auth.uid
+        && get(/databases/$(database)/documents/arena_open_slots/$(request.resource.data.slot_id)).data.arena_id
+            == request.resource.data.arena_id;
+      // A arena mexe em tudo; o atleta só RESPONDE à própria chamada (aceitar
+      // ou recusar) — antes nem isso, e a vaga ficava presa até o prazo.
       allow update: if isAuthed() && (
         isArenaManager(resource.data.arena_id) || isPlatformAdmin()
+        || (resource.data.athlete_id == request.auth.uid
+          && resource.data.get('status', 'waiting') == 'notified'
+          && request.resource.data.get('status', '') in ['accepted', 'declined']
+          && request.resource.data.diff(resource.data).affectedKeys()
+              .hasOnly(['status', 'accepted_at', 'declined_at', 'updated_at']))
       );
       allow delete: if isAuthed() && (
         resource.data.athlete_id == request.auth.uid
@@ -1712,9 +1758,14 @@ service cloud.firestore {
     }
 
     match /arena_referrals/{referralId} {
+      // A ARENA também lê as indicações dela (2026-09-24). 🐞 Sem isto o
+      // resgate ("fulano chegou pelo código X") procurava o código com uma
+      // consulta que a regra recusava — a arena nunca conseguiu registrar uma
+      // indicação. O documento tem só o código e os dois uids.
       allow read: if isAuthed() && (
         resource.data.referrer_id == request.auth.uid ||
         resource.data.referred_id == request.auth.uid ||
+        isArenaManager(resource.data.arena_id) ||
         isPlatformAdmin()
       );
       // Só se pode indicar EM NOME PRÓPRIO. Antes bastava estar logado, e dava

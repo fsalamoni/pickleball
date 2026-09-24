@@ -23,7 +23,7 @@
 const { initializeApp, getApps, getApp } = require('firebase-admin/app');
 const { getFirestore, Timestamp } = require('firebase-admin/firestore');
 const { getMessaging } = require('firebase-admin/messaging');
-const { onDocumentWritten, onDocumentCreated } = require('firebase-functions/v2/firestore');
+const { onDocumentWritten, onDocumentCreated, onDocumentUpdated } = require('firebase-functions/v2/firestore');
 const { onSchedule } = require('firebase-functions/v2/scheduler');
 const { setGlobalOptions } = require('firebase-functions/v2');
 const logger = require('firebase-functions/logger');
@@ -189,20 +189,11 @@ exports.expireStaleNotifications = onSchedule(
 //
 // Sem índice novo: um `where` de igualdade só, o resto conferido em memória.
 
-const JANELA_PROMOCAO_MIN = 60;
+const openSlotWaitlist = require('./openSlotWaitlist');
 
-/** O próximo da fila: menor posição entre quem está esperando. */
-function proximoDaFila(entradas) {
-  return entradas
-    .filter((e) => e.status === 'waiting')
-    .sort((a, b) => (Number(a.position) || 0) - (Number(b.position) || 0))[0] || null;
-}
-
-function venceu(entrada, agoraMs) {
-  const t = entrada?.notification_expires_at;
-  const ms = t?.toMillis ? t.toMillis() : Number(t);
-  return Number.isFinite(ms) && ms < agoraMs;
-}
+const ctxFila = () => ({
+  db: getFirestore(getApp(), DATABASE_ID), Timestamp, agoraMs: Date.now(), logger,
+});
 
 exports.advanceOpenSlotWaitlist = onSchedule(
   {
@@ -220,7 +211,7 @@ exports.advanceOpenSlotWaitlist = onSchedule(
         .limit(300)
         .get();
 
-      const vencidas = notificados.docs.filter((d) => venceu(d.data(), agora));
+      const vencidas = notificados.docs.filter((d) => openSlotWaitlist.venceu(d.data(), agora));
       if (vencidas.length === 0) return { expired: 0, promoted: 0 };
 
       // 1. Expira quem não respondeu no prazo.
@@ -232,44 +223,15 @@ exports.advanceOpenSlotWaitlist = onSchedule(
       }));
       await lote.commit();
 
-      // 2. Chama o próximo de cada vaga afetada — se ainda houver lugar.
+      // 2. Chama o próximo de cada vaga afetada — se ainda houver lugar. Numa
+      // transação (`promoverProximo`): o gatilho da entrada, disparado por
+      // esta mesma expiração, não chama uma segunda pessoa para o lugar.
       const slotIds = [...new Set(vencidas.map((d) => d.data()?.slot_id).filter(Boolean))];
       let promovidos = 0;
-
       for (const slotId of slotIds) {
-        const slotSnap = await db.collection('arena_open_slots').doc(slotId).get();
-        const slot = slotSnap.exists ? slotSnap.data() : null;
-        if (!slot || slot.status === 'cancelled') continue;
-
-        const ocupadas = Array.isArray(slot.participants) ? slot.participants.length : 0;
-        if (ocupadas >= (Number(slot.total_spots) || 0)) continue;
-
-        const filaSnap = await db
-          .collection('arena_waitlist')
-          .where('slot_id', '==', slotId)
-          .get();
-        const proximo = proximoDaFila(filaSnap.docs.map((d) => ({ id: d.id, ...d.data() })));
-        if (!proximo) continue;
-
-        await db.collection('arena_waitlist').doc(proximo.id).update({
-          status: 'notified',
-          notified_at: Timestamp.now(),
-          notification_expires_at: Timestamp.fromMillis(agora + JANELA_PROMOCAO_MIN * 60_000),
-          updated_at: Timestamp.now(),
-        });
-
-        await db.collection('notifications').add({
-          user_id: proximo.athlete_id,
-          title: `Vagou um lugar em "${String(slot.arena_name || '').slice(0, 50)}"`,
-          message: `${slot.date || ''} ${slot.start || ''} — você tem `
-            + `${JANELA_PROMOCAO_MIN} minutos para confirmar.`,
-          type: 'generic',
-          link: slot.arena_id ? `/arenas/${slot.arena_id}/open-match` : '/arenas',
-          read: false,
-          archived: false,
-          created_at: Timestamp.now(),
-        });
-        promovidos += 1;
+        // eslint-disable-next-line no-await-in-loop
+        const r = await openSlotWaitlist.promoverProximo({ db, Timestamp, agoraMs: agora, logger }, slotId);
+        promovidos += r.promoted.length;
       }
 
       logger.info('advanceOpenSlotWaitlist: fila avançou.', {
@@ -279,6 +241,41 @@ exports.advanceOpenSlotWaitlist = onSchedule(
     } catch (err) {
       logger.error('advanceOpenSlotWaitlist: erro.', err);
       throw err;
+    }
+  },
+);
+
+/**
+ * Alguém SAIU de uma vaga (2026-09-24): chama o próximo da fila na hora.
+ *
+ * Antes era o navegador de quem saía que tentava — e a regra recusava,
+ * porque chamar o próximo é escrever na entrada de OUTRA pessoa.
+ */
+exports.promoteOpenSlotWaitlistOnSlot = onDocumentUpdated(
+  { document: 'arena_open_slots/{slotId}', database: DATABASE_ID, region: REGION },
+  async (event) => {
+    if (!openSlotWaitlist.vagaAbriuLugar(antes(event), depois(event))) return;
+    try {
+      await openSlotWaitlist.promoverProximo(ctxFila(), event.params.slotId);
+    } catch (err) {
+      logger.error('promoteOpenSlotWaitlistOnSlot: erro.', err);
+    }
+  },
+);
+
+/**
+ * Uma chamada deixou de valer (recusada, expirada, apagada): o lugar que ela
+ * segurava vai para o próximo — na hora, não em até 10 minutos.
+ */
+exports.promoteOpenSlotWaitlistOnEntry = onDocumentWritten(
+  { document: 'arena_waitlist/{entryId}', database: DATABASE_ID, region: REGION },
+  async (event) => {
+    const a = antes(event);
+    if (!openSlotWaitlist.chamadaLiberouLugar(a, depois(event))) return;
+    try {
+      await openSlotWaitlist.promoverProximo(ctxFila(), a.slot_id);
+    } catch (err) {
+      logger.error('promoteOpenSlotWaitlistOnEntry: erro.', err);
     }
   },
 );

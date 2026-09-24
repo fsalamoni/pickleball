@@ -152,8 +152,8 @@ describe('computePromotionExpiresAt', () => {
     const expires = computePromotionExpiresAt(notified, 5);
     expect(expires).toBe(notified + 5 * 60_000);
   });
-  it('default window 5 min', () => {
-    expect(DEFAULT_PROMOTION_WINDOW_MINUTES).toBe(5);
+  it('a janela padrão é a MESMA do servidor (60 min) — antes o cliente dizia 5', () => {
+    expect(DEFAULT_PROMOTION_WINDOW_MINUTES).toBe(60);
   });
   it('retorna null para input inválido', () => {
     expect(computePromotionExpiresAt(null)).toBeNull();

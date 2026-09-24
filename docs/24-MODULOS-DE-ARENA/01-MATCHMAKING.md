@@ -167,4 +167,41 @@ aqui quer alguém que jogue aqui.
 | Serviços | `services/openMatchService.js`, `waitlistService.js` |
 | Nível | `modules/rating/hooks/useMyUnifiedLevel.js` (`useMyUnifiedLevel`, `useUnifiedLevels`) |
 | Telas | `V2ArenaAdminOpenMatch`, `V2ArenaOpenMatch`, `V2ArenaMatchmaking` |
-| Servidor | `functions/index.js` → `advanceOpenSlotWaitlist` |
+| Servidor | `functions/index.js` → `advanceOpenSlotWaitlist`, `promoteOpenSlotWaitlistOnSlot`, `promoteOpenSlotWaitlistOnEntry`; lógica em `functions/openSlotWaitlist.js` |
+
+---
+
+## Atualização 2026-09-24 — o atleta passou a conseguir usar
+
+Um levantamento no emulador mostrou que **nada disto funcionava para o
+atleta** desde a entrega, e nenhum teste de regra existia para mostrar:
+
+| Passo | Por que falhava |
+|---|---|
+| Entrar / sair do jogo aberto | grava `participants` na vaga, e só a ARENA atualizava `arena_open_slots` |
+| Entrar na fila | o serviço lê a fila da vaga para calcular a posição, e o atleta só podia ler a própria entrada |
+| Aceitar / recusar a chamada | é atualizar a PRÓPRIA entrada, e só a arena podia |
+| Sair da fila, recusar | "reordenava" e "chamava o próximo" — escrita na entrada de OUTRA pessoa |
+| A arena ver a fila | a consulta era por `slot_id`, e a regra da arena confere `arena_id` |
+
+O que mudou:
+
+- **Regras.** Na vaga, o atleta entra e sai **só a si mesmo**, com a vaga de
+  pé, sem passar dos lugares, e com contagem e "lotada" coerentes com a lista.
+  A fila passou a ser **legível por quem tem conta** (nome e posição — o mesmo
+  nível de exposição de quem está na vaga, que é público); entrar é em nome
+  próprio, **esperando** (nunca já chamado), uma entrada por pessoa por vaga e
+  na arena da vaga; o chamado só **responde** (aceitar/recusar) à própria
+  chamada. Vinte e cinco asserções no emulador
+  (`tests/rules/matchmaking.rules.test.js`).
+- **Chamar o próximo é do servidor.** `promoverProximo`
+  (`functions/openSlotWaitlist.js`) roda numa transação quando alguém **sai**
+  da vaga (`promoteOpenSlotWaitlistOnSlot`), quando uma chamada é **recusada,
+  expira ou some** (`promoteOpenSlotWaitlistOnEntry`) e na varredura de 10 em
+  10 minutos. Lugares = total − quem está na vaga − quem já foi chamado e está
+  no prazo; chama quantos couberem, na ordem da fila.
+- **Sem "reordenar".** A fila anda pela menor posição entre quem espera; um
+  buraco na numeração não muda quem é o próximo.
+- **Um prazo só: 60 minutos.** O cliente dizia 5 e o servidor aplicava 60; há
+  teste de paridade.
+
