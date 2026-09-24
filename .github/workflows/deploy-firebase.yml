@@ -189,30 +189,13 @@ jobs:
       - name: Deploy Cloud Functions (non-fatal)
         run: |
           set +e
-          # SÓ as funções DESTE repositório, pelo NOME.
-          #
-          # O projeto Firebase é compartilhado com outro aplicativo, e os dois
-          # usavam o codebase "default". `firebase deploy --only functions
-          # --force` trata toda função do projeto que não está no código
-          # daqui como "removida" e a APAGA: em 2026-09-24 este passo apagou
-          # ~40 funções do outro app (us-central1) — e, dias antes, o deploy
-          # do outro app tinha apagado todas as funções do PickleRush.
-          #
-          # Com o filtro por nome, a CLI só cria/atualiza/apaga as funções
-          # listadas; o resto do projeto fica intocado. O `--force` fica
-          # porque, sem ele, o modo não interativo aborta no aviso da política
-          # de limpeza de imagens — e agora ele só vale dentro do filtro.
-          #
-          # A lista sai das exportações de functions/index.js. Lista VAZIA não
-          # publica nada: `--only` vazio voltaria a significar "tudo".
+          # SÓ as funções DESTE repositório: codebase próprio ("picklerush") +
+          # deploy por NOME. O projeto Firebase é compartilhado com outro
+          # aplicativo, e o deploy amplo de um apagava as funções do outro
+          # (2026-09-24, nos dois sentidos). O script é o MESMO que a
+          # vigilância (functions-watchdog.yml) usa para recriar o que sumir.
           # Há teste travando isto: src/core/guards/deployFunctions.test.js
-          FUNCS=$(grep -oE '^exports\.[A-Za-z0-9_]+' functions/index.js | sed 's/^exports\./functions:/' | paste -sd, -)
-          if [ -z "$FUNCS" ]; then
-            echo "::warning title=Nenhuma função listada::A lista de funções saiu vazia; nada foi publicado (de propósito)."
-            exit 0
-          fi
-          echo "Publicando: $FUNCS"
-          OUT=$(firebase deploy --only "$FUNCS" --project "$FIREBASE_PROJECT_ID" --non-interactive --force 2>&1)
+          OUT=$(bash scripts/functions-deploy.sh)
           RC=$?
           echo "$OUT"
           if [ $RC -eq 0 ]; then
@@ -220,13 +203,14 @@ jobs:
             exit 0
           fi
           if echo "$OUT" | grep -qiE "Your project .* must be on the Blaze"; then
-            echo "::warning title=Blaze necessário::As Cloud Functions exigem o plano Blaze. O ranking segue automático pelo cliente (admin) enquanto isso."
+            echo "::warning title=Blaze necessário::As Cloud Functions exigem o plano Blaze. Sem elas, os rankings NÃO recalculam (só o servidor escreve ranking)."
           elif echo "$OUT" | grep -qiE "HTTP Error: 403|PERMISSION_DENIED|caller does not have permission|iam.serviceAccounts"; then
-            echo "::warning title=IAM para Functions::A service account '$SA_EMAIL' precisa de 'Cloud Functions Admin' e 'Service Account User' (e as APIs Cloud Functions/Cloud Build/Artifact Registry habilitadas) em '$FIREBASE_PROJECT_ID'. O ranking segue automático pelo cliente (admin) enquanto isso."
+            echo "::warning title=IAM para Functions::A service account '$SA_EMAIL' precisa de 'Cloud Functions Admin' e 'Service Account User' (e as APIs Cloud Functions/Cloud Build/Artifact Registry habilitadas) em '$FIREBASE_PROJECT_ID'. Sem as funções, os rankings não recalculam; a vigilância (functions-watchdog.yml) tenta de novo a cada 30 min."
           else
-            echo "::warning title=Deploy de Functions falhou::Veja o log acima. Hosting/Firestore não foram afetados; o ranking segue automático pelo cliente."
+            echo "::warning title=Deploy de Functions falhou::Veja o log acima. Hosting/Firestore não foram afetados; a vigilância (functions-watchdog.yml) tenta de novo a cada 30 min."
           fi
-          # Não falha o job: Hosting/Firestore já foram aplicados e o cliente cobre o recálculo.
+          # Não falha o job: Hosting/Firestore já foram aplicados; a vigilância refaz o
+          # deploy das funções que faltarem e avisa por e-mail (job em vermelho).
           exit 0
 
       # Wave C.4: backfill dos rankings de clube após deploy das
