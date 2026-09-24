@@ -1,0 +1,91 @@
+name: Vigilância das Cloud Functions
+
+# O projeto Firebase é COMPARTILHADO com outro aplicativo. O codebase próprio
+# ("picklerush", em firebase.json) impede que o deploy dele apague as funções
+# daqui — mas isso depende de o outro lado usar uma CLI com suporte a codebase
+# e não apagar funções à mão. Esta vigilância é a segunda linha: a cada 30 min
+# ela confere se TODAS as funções exportadas em functions/index.js existem na
+# região do PickleRush e, se alguma sumiu, publica de novo (só as nossas, pelo
+# nome) e FALHA o job — para o dono do repositório receber o aviso por e-mail.
+#
+# Ela só lê a lista de funções; não toca no banco. Ver docs/03-WORKFLOW.md §9.1.
+
+on:
+  schedule:
+    - cron: '7,37 * * * *'
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+concurrency:
+  group: functions-watchdog
+  cancel-in-progress: false
+
+jobs:
+  vigiar:
+    runs-on: ubuntu-latest
+    timeout-minutes: 20
+    env:
+      FIREBASE_PROJECT_ID: ${{ secrets.VITE_FIREBASE_PROJECT_ID }}
+      FUNCTIONS_REGION: southamerica-east1
+    steps:
+      - uses: actions/checkout@v5
+
+      - uses: actions/setup-node@v5
+        with:
+          node-version: '24'
+
+      - name: Credenciais da service account
+        env:
+          FIREBASE_SERVICE_ACCOUNT: ${{ secrets.FIREBASE_SERVICE_ACCOUNT }}
+        run: |
+          SA_FILE="$RUNNER_TEMP/firebase-sa.json"
+          printf '%s' "$FIREBASE_SERVICE_ACCOUNT" > "$SA_FILE"
+          jq -e . "$SA_FILE" >/dev/null || { echo "::error::FIREBASE_SERVICE_ACCOUNT não é JSON válido."; exit 1; }
+          echo "GOOGLE_APPLICATION_CREDENTIALS=$SA_FILE" >> "$GITHUB_ENV"
+
+      - name: Instalar a CLI do Firebase
+        run: npm install -g firebase-tools@latest
+
+      - name: Conferir as funções publicadas
+        id: conferir
+        run: |
+          set -uo pipefail
+          CODEBASE=$(jq -r '.functions[0].codebase' firebase.json)
+          grep -oE '^exports\.[A-Za-z0-9_]+' functions/index.js | sed 's/^exports\.//' | sort -u > esperadas.txt
+          if ! firebase functions:list --project "$FIREBASE_PROJECT_ID" --json > lista.json 2> lista.err; then
+            cat lista.err
+            echo "::error title=Vigilância::Não foi possível listar as funções do projeto (veja o log). Nada foi alterado."
+            exit 1
+          fi
+          jq -r --arg r "$FUNCTIONS_REGION" '.result[] | select(.region == $r) | .id' lista.json | sort -u > publicadas.txt
+          comm -23 esperadas.txt publicadas.txt > faltando.txt
+          # Funções nossas que ainda não carregam o rótulo do codebase próprio:
+          # continuam vulneráveis ao deploy do outro app até o próximo deploy.
+          jq -r --arg r "$FUNCTIONS_REGION" --arg c "$CODEBASE" \
+            '.result[] | select(.region == $r and (.codebase // "default") != $c) | .id' lista.json \
+            | sort -u | comm -12 - esperadas.txt > sem_rotulo.txt
+          echo "Esperadas: $(wc -l < esperadas.txt) · publicadas na região: $(wc -l < publicadas.txt)"
+          if [ -s sem_rotulo.txt ]; then
+            echo "::warning title=Funções sem o codebase próprio::$(paste -sd, sem_rotulo.txt) — serão reetiquetadas no próximo deploy."
+            echo "sem_rotulo=true" >> "$GITHUB_OUTPUT"
+          fi
+          if [ -s faltando.txt ]; then
+            echo "::error title=Funções apagadas::Sumiram do projeto: $(paste -sd, faltando.txt). Publicando de novo."
+            echo "faltando=true" >> "$GITHUB_OUTPUT"
+          else
+            echo "Todas as funções do PickleRush estão no ar."
+          fi
+
+      - name: Publicar de novo o que sumiu
+        if: steps.conferir.outputs.faltando == 'true' || steps.conferir.outputs.sem_rotulo == 'true'
+        run: |
+          npm --prefix functions ci
+          bash scripts/functions-deploy.sh
+
+      - name: Avisar (falha proposital)
+        if: steps.conferir.outputs.faltando == 'true'
+        run: |
+          echo "::error title=Funções recriadas::Alguma coisa fora deste repositório apagou Cloud Functions do PickleRush: $(paste -sd, faltando.txt). Elas foram publicadas de novo, e a recuperação agendada do ranking cobre os resultados desse intervalo. Confira o deploy do outro aplicativo do projeto."
+          exit 1

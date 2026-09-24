@@ -597,20 +597,44 @@ que não está no código local como "removida" e a APAGA.
 - Em 24/09, o deploy do PickleRush (merge do #136) as recriou — e apagou
   **~40 funções do outro app**.
 
-**Conserto deste lado**: o passo publica só as funções exportadas em
-`functions/index.js`, **pelo nome** (`--only functions:a,functions:b,…`). Com o
-filtro, a CLI não toca no resto do projeto. Lista vazia não publica nada
-(`--only` vazio voltaria a ser "tudo"). Guarda:
-`src/core/guards/deployFunctions.test.js`.
+**Conserto deste lado — três camadas** (Onda BK, 2026-09-24):
 
-**O que continua fora do alcance deste repositório**:
-1. **Restaurar o outro app** — é preciso publicá-lo de novo a partir do
-   repositório dele.
-2. **O outro app continua capaz de apagar as funções daqui** enquanto o deploy
-   dele for amplo. Ali, a mesma correção: publicar por nome, ou dar a ele um
-   `codebase` próprio no `firebase.json` (ex.: `"codebase": "outroapp"`) — com
-   codebases distintos, cada deploy só enxerga as próprias funções.
-3. O ideal, a médio prazo, é **um projeto Firebase por aplicativo**.
+1. **Codebase próprio: `"codebase": "picklerush"`** em `firebase.json`. A CLI
+   rotula cada função com `firebase-functions-codebase=picklerush` e, num
+   deploy, só considera "removidas" as funções **do mesmo codebase** (conferido
+   no código da CLI: `groupEndpointsByCodebase`). Protege nos DOIS sentidos:
+   nós nunca enxergamos as funções do outro app, e o deploy dele (codebase
+   `default`) deixa de enxergar as nossas. A migração é o próprio deploy: as
+   funções existentes são ATUALIZADAS (casam pelo nome e região) e ganham o
+   rótulo novo — nada é apagado nem recriado.
+2. **Deploy por nome, num script só** — `scripts/functions-deploy.sh` publica
+   `functions:picklerush:<nome>` para cada exportação de `functions/index.js`.
+   Recusa codebase ausente ou `default`; lista vazia não publica nada (`--only`
+   vazio voltaria a ser "tudo").
+3. **Vigilância** — `.github/workflows/functions-watchdog.yml`, a cada 30 min:
+   lista as funções do projeto, confere se TODAS as nossas existem em
+   `southamerica-east1` e se carregam o rótulo `picklerush`. Faltou alguma?
+   Publica de novo pelo mesmo script e **falha o job de propósito** (o dono do
+   repositório recebe o e-mail do GitHub). Ela não toca no banco; e os
+   resultados publicados enquanto as funções estiveram fora são recuperados
+   pelo `catchUpPlatformRankings` (`docs/18-RANKINGS.md` §3).
+
+Guarda: `src/core/guards/deployFunctions.test.js`.
+
+**O que continua fora do alcance deste repositório** (projeto compartilhado):
+1. **O outro app pode apagar à mão** (`firebase functions:delete`) ou com uma
+   CLI anterior a codebases (v10.7, 2022). A vigilância recria em até 30 min.
+2. **Mesma conta de serviço, mesmo projeto**: tudo o que o outro app faz com
+   privilégio de administrador (Admin SDK) alcança o banco `pickleball`. Regra
+   do Firestore não se aplica ao Admin SDK.
+3. **Storage**: o bucket padrão é um só. Quem publicar `storage.rules` por último
+   vence — se o outro app usa Storage, as regras de um sobrescrevem as do outro.
+4. **Authentication**: as contas de login são as MESMAS nos dois aplicativos.
+   Excluir um cadastro aqui (`adminDeleteAccounts`) apaga o login da pessoa no
+   outro app também.
+5. **Isolamento completo só com um projeto Firebase por aplicativo** — é
+   migração de dados (Firestore `pickleball`, contas de login, arquivos do
+   Storage, segredos e domínios) e precisa ser planejada como tal.
 
 Depois de qualquer deploy, confira no log do passo *Deploy Cloud Functions*
 que não há linha `Successful delete operation` de função que não é daqui.

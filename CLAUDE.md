@@ -493,6 +493,16 @@ chore(deps): bump firebase to 12.x
 >
 > **Destaques por onda**:
 >
+> - **Onda BK — As funções do PickleRush num codebase próprio, com vigilância**
+>   (2026-09-24): *"você não consegue isolar por completo o repositório e o
+>   banco do PickleRush?"*. Dentro de um projeto Firebase compartilhado, por
+>   completo não — mas o que apagava as nossas funções era o codebase comum.
+>   Agora elas vivem no codebase `picklerush` (a CLI só apaga funções do MESMO
+>   codebase — conferido no código dela), são publicadas por nome num script
+>   único, e uma vigilância a cada 30 min recria o que sumir e avisa por
+>   e-mail. O que segue compartilhado está escrito em `docs/03-WORKFLOW.md`
+>   §9.1: Auth, bucket do Storage e a conta de serviço. Zero banco.
+>
 > - **Onda BJ — Um escritor só para o ranking, e a recuperação do gatilho
 >   perdido** (2026-09-24): relatado — *"o rating voltou a calcular, mas os
 >   demais ranking e duplas não estão atualizando automaticamente"*. Medido na
@@ -1880,8 +1890,14 @@ Quando você for commitar, atualize esta seção se os números mudarem.
   --force` APAGA toda função do projeto que não está no código local — em
   2026-09-24 isso apagou ~40 funções do outro app, e dias antes o deploy do
   outro app tinha apagado todas as daqui. O deploy agora publica **por nome**
-  (`functions:a,functions:b`); **nunca** volte ao deploy amplo — há guarda em
-  `src/core/guards/deployFunctions.test.js`. Ver `docs/03-WORKFLOW.md` §9.1
+  (`functions:picklerush:a,…`, via `scripts/functions-deploy.sh`) e as funções
+  vivem num **codebase próprio** (`picklerush`), que o deploy `default` do
+  outro app não enxerga; a vigilância `functions-watchdog.yml` recria o que
+  sumir a cada 30 min. **Nunca** volte ao deploy amplo nem ao codebase
+  `default` — há guarda em `src/core/guards/deployFunctions.test.js`. Mesmo
+  assim o projeto segue compartilhado: **Auth e o bucket do Storage são os
+  mesmos dos dois apps** (excluir cadastro aqui apaga o login lá). Ver
+  `docs/03-WORKFLOW.md` §9.1
 - **Diálogo cortado em paisagem (tablet/celular):** `DialogContent`/`AlertDialogContent`
   precisam de `max-h-[90dvh] overflow-y-auto`. Sem isso, em telas baixas o
   rodapé (campos + botão salvar) fica fora da viewport e inacessível.
