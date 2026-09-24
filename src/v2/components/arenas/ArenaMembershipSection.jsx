@@ -28,7 +28,7 @@ import { ChevronRight, Crown } from 'lucide-react';
 import { useAuth } from '@/core/lib/FirebaseAuthContext';
 import { useArenaModules } from '@/modules/arenas/hooks/useArenaModules';
 import {
-  useArenaMember, useArenaWallet, useArenaPackages, useMemberSubscription, usePurchasePackage,
+  useArenaMember, useArenaWallet, useArenaPackages, useMemberSubscription, useRequestPackage,
 } from '@/modules/arenas/hooks/useArenaV3';
 import { ARENA_MODULE_ID } from '@/modules/arenas/domain/modules';
 import { tierProgress, usableHours } from '@/modules/arenas/domain/memberBenefit';
@@ -53,7 +53,7 @@ export default function ArenaMembershipSection({ arena }) {
   const { data: catalogo = [] } = useArenaPackages(temPacotes ? arenaId : null);
   const temMensalidade = ligado && isOn(ARENA_MODULE_ID.MEMBERS_SUBSCRIPTION);
   const { data: mensalidade } = useMemberSubscription(temMensalidade ? arenaId : null, uid);
-  const comprar = usePurchasePackage();
+  const comprar = useRequestPackage();
 
   const horas = useMemo(() => (Array.isArray(wallet?.packages) ? wallet.packages : [])
     .reduce((s, p) => s + usableHours(p), 0), [wallet]);
@@ -72,8 +72,8 @@ export default function ArenaMembershipSection({ arena }) {
   if (!member && vitrine.length === 0) return null;
 
   const aoComprar = (pkg) => comprar.mutateAsync({ arenaId, pkgId: pkg.id })
-    .then(() => toast.success('Pacote reservado! Combine o pagamento com a arena.'))
-    .catch((e) => toast.error(e?.message || 'Não foi possível comprar.'));
+    .then(() => toast.success('Pedido enviado à arena. As horas entram na sua carteira assim que ela confirmar o pagamento.'))
+    .catch((e) => toast.error(e?.message || 'Não foi possível enviar o pedido.'));
 
   return (
     <V2Surface>
@@ -100,7 +100,8 @@ export default function ArenaMembershipSection({ arena }) {
       {vitrine.length > 0 && (
         <>
           <p className="mb-3 text-xs text-gray-500">
-            Horas compradas adiantado saem mais baratas e são abatidas sozinhas quando a arena confirma a reserva.
+            Horas compradas adiantado saem mais baratas e são abatidas sozinhas quando a arena confirma a
+            reserva. Você pede aqui; a arena credita quando receber o pagamento.
           </p>
           <div className="grid gap-3 sm:grid-cols-2">
             {vitrine.map((p) => (

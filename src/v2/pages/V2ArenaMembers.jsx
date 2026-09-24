@@ -27,7 +27,7 @@ import {
 import { useAuth } from '@/core/lib/FirebaseAuthContext';
 import { useArena } from '@/modules/arenas/hooks/useArenas';
 import {
-  useArenaPackages, usePurchasePackage, useArenaWallet, useArenaMember,
+  useArenaPackages, useRequestPackage, useArenaWallet, useArenaMember,
   useMemberSubscription, useMyReferralCode,
 } from '@/modules/arenas/hooks/useArenaV3';
 import { useArenaModules } from '@/modules/arenas/hooks/useArenaModules';
@@ -372,7 +372,7 @@ export default function V2ArenaMembers() {
   const { data: wallet } = useArenaWallet(arenaId, user?.uid);
   const { data: catalogo = [], isError, refetch } = useArenaPackages(arenaId);
   const { data: mensalidade } = useMemberSubscription(arenaId, user?.uid);
-  const comprar = usePurchasePackage();
+  const comprar = useRequestPackage();
 
   const temMembros = isOn(ARENA_MODULE_ID.MEMBERS);
   const temNiveis = isOn(ARENA_MODULE_ID.MEMBERS_TIERS);
@@ -389,8 +389,8 @@ export default function V2ArenaMembers() {
   if (!temMembros) return <Navigate to={`/arenas/${arena.id}`} replace />;
 
   const aoComprar = (pkg) => comprar.mutateAsync({ arenaId: arena.id, pkgId: pkg.id })
-    .then(() => toast.success('Pacote reservado! Combine o pagamento com a arena.'))
-    .catch((e) => toast.error(e?.message || 'Não foi possível comprar.'));
+    .then(() => toast.success('Pedido enviado à arena. As horas entram na sua carteira assim que ela confirmar o pagamento.'))
+    .catch((e) => toast.error(e?.message || 'Não foi possível enviar o pedido.'));
 
   const meusPacotes = Array.isArray(wallet?.packages) ? wallet.packages : [];
 

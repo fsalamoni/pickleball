@@ -412,6 +412,31 @@ describe('🐞 o ATLETA se inscreve no torneio da casa (antes: toda inscrição 
   });
 });
 
+describe('💳 pacote de horas: o atleta PEDE, a arena CREDITA', () => {
+  // O botão "Comprar" gravava a carteira pelo atleta e falhava sempre. A
+  // regra está CERTA: se o atleta escrevesse a própria carteira, bastaria
+  // gravar um pacote para ter horas sem pagar. O pedido virou aviso à arena.
+  const carteira = (over = {}) => ({
+    arena_id: ARENA, user_id: ATLETA, balance: 0, total_spent: 500,
+    packages: [{ pkg_id: 'p1', total_hours: 10, used_hours: 0 }], ...over,
+  });
+
+  it('o atleta NÃO se dá horas escrevendo a própria carteira', async () => {
+    await assertFails(setDoc(doc(como(ATLETA), 'arena_wallets', `${ARENA}_${ATLETA}`), carteira()));
+  });
+
+  it('a arena credita o pacote na carteira do atleta', async () => {
+    await assertSucceeds(setDoc(doc(como(GESTOR), 'arena_wallets', `${ARENA}_${ATLETA}`), carteira()));
+  });
+
+  it('o atleta continua LENDO a própria carteira', async () => {
+    await testEnv.withSecurityRulesDisabled(async (ctx) => {
+      await setDoc(doc(ctx.firestore(), 'arena_wallets', `${ARENA}_${ATLETA}`), carteira());
+    });
+    await assertSucceeds(getDoc(doc(como(ATLETA), 'arena_wallets', `${ARENA}_${ATLETA}`)));
+  });
+});
+
 describe('🐞 reserva de aula', () => {
   it('o aluno cancela a própria aula', async () => {
     await assertSucceeds(deleteDoc(doc(como(ATLETA), 'arena_class_bookings', 'b1')));

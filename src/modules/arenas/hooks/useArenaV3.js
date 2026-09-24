@@ -313,6 +313,7 @@ import {
   listArenaMembers, getArenaMember, addArenaMember, removeArenaMember,
   addPointsToMember, listArenaPackages, createArenaPackage, updateArenaPackage,
   deleteArenaPackage, purchasePackage, getArenaWallet, creditWallet, applyCashback,
+  requestPackagePurchase, sellPackageToMember,
   redeemMemberPoints,
   listArenaSubscriptions, getMemberSubscription, setMemberSubscription,
   setSubscriptionMonthPaid, cancelMemberSubscription,
@@ -401,6 +402,32 @@ export function usePurchasePackage() {
       qc.invalidateQueries({ queryKey: ['arena-packages', arenaId] });
       qc.invalidateQueries({ queryKey: ['arena-wallet', arenaId, user?.uid] });
       qc.invalidateQueries({ queryKey: ['arena-member', arenaId, user?.uid] });
+    },
+  });
+}
+
+/**
+ * O atleta PEDE um pacote — a arena é avisada e confirma quando receber.
+ *
+ * Substitui `usePurchasePackage` nas telas do atleta: aquela gravava a
+ * carteira pelo atleta, e a regra (com razão) recusa.
+ */
+export function useRequestPackage() {
+  const { user, userProfile } = useAuth();
+  return useMutation({
+    mutationFn: ({ arenaId, pkgId }) => requestPackagePurchase(arenaId, pkgId, user, userProfile),
+  });
+}
+
+/** A ARENA vende o pacote (pedido confirmado ou venda de balcão). */
+export function useSellPackageToMember() {
+  const { user } = useAuth();
+  const qc = useQueryClient();
+  return useMutation({
+    mutationFn: ({ arenaId, pkgId, target }) => sellPackageToMember(arenaId, pkgId, target, user),
+    onSuccess: (_d, { arenaId, target }) => {
+      invalidarMembro(qc, arenaId, target?.user_id);
+      qc.invalidateQueries({ queryKey: ['arena-packages', arenaId] });
     },
   });
 }

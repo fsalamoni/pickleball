@@ -19,7 +19,7 @@
  */
 
 import React, { useMemo, useState } from 'react';
-import { Navigate, useParams } from 'react-router-dom';
+import { Navigate, useParams, useSearchParams } from 'react-router-dom';
 import { toast } from 'sonner';
 import {
   CalendarClock, Check, Package, Plus, Search, Trash2,
@@ -31,7 +31,7 @@ import {
   useAddArenaMember, useRemoveArenaMember, useAddPointsToMember, useCreditWallet,
   useRedeemMemberPoints,
   useArenaSubscriptions, useSetMemberSubscription, useSetSubscriptionMonthPaid,
-  useCancelMemberSubscription,
+  useCancelMemberSubscription, useSellPackageToMember,
 } from '@/modules/arenas/hooks/useArenaV3';
 import { useArenaModules } from '@/modules/arenas/hooks/useArenaModules';
 import { ARENA_MODULE_ID } from '@/modules/arenas/domain/modules';
@@ -454,10 +454,109 @@ function MensalidadeDoMembro({ arenaId, member, sub }) {
   );
 }
 
+/**
+ * O PEDIDO de pacote que chegou pelo aviso (`?pacote=&para=`).
+ *
+ * O atleta pede na página da arena; a arena recebe o aviso, cai aqui e, com o
+ * pagamento na mão, confirma — as horas entram na carteira da pessoa na hora.
+ * Descartar só limpa o endereço: nada foi gravado pelo pedido.
+ */
+function PedidoDePacote({ arenaId, packages, members }) {
+  const [params, setParams] = useSearchParams();
+  const pkgId = params.get('pacote');
+  const uid = params.get('para');
+  const { data: athletes = [] } = useAthletes();
+  const vender = useSellPackageToMember();
+  if (!pkgId || !uid) return null;
+
+  const pkg = packages.find((p) => p.id === pkgId);
+  const membro = members.find((m) => m.user_id === uid);
+  const atleta = athletes.find((a) => a.id === uid);
+  const nome = membro?.user_name || atleta?.platform_name || atleta?.full_name || 'Atleta';
+  const foto = membro?.user_photo || atleta?.photo_url || '';
+  const limpar = () => setParams((atual) => {
+    const p = new URLSearchParams(atual);
+    p.delete('pacote');
+    p.delete('para');
+    return p;
+  }, { replace: true });
+
+  if (!pkg) {
+    return (
+      <div className="mb-4 rounded-2xl border border-amber-200 bg-amber-50 p-4 text-sm text-amber-900">
+        O pacote deste pedido não existe mais.{' '}
+        <button type="button" className="font-bold underline" onClick={limpar}>Fechar</button>
+      </div>
+    );
+  }
+
+  return (
+    <div className="mb-4 rounded-2xl border border-acid/60 bg-acid/10 p-4">
+      <p className="text-xs font-bold uppercase tracking-wider text-ink/70">Pedido de pacote</p>
+      <div className="mt-2 flex flex-wrap items-center gap-3">
+        <V2Avatar name={nome} photoUrl={foto} size="sm" />
+        <p className="min-w-0 flex-1 text-sm text-ink">
+          <strong>{nome}</strong> quer <strong>{pkg.name}</strong> — {pkg.hours}h por {formatPrice(pkg.price)}.
+          {!membro && ' Ao confirmar, a pessoa vira membro.'}
+        </p>
+      </div>
+      <div className="mt-3 flex flex-wrap gap-2">
+        <V2Button
+          size="sm"
+          disabled={vender.isPending}
+          onClick={() => vender.mutateAsync({
+            arenaId, pkgId, target: { user_id: uid, user_name: nome, user_photo: foto },
+          })
+            .then(() => { toast.success(`${pkg.hours}h creditadas para ${nome}.`); limpar(); })
+            .catch((e) => toast.error(e?.message || 'Não foi possível creditar.'))}
+        >
+          <Check className="h-4 w-4" /> Recebi o pagamento — creditar
+        </V2Button>
+        <V2Button size="sm" variant="ghost" onClick={limpar}>Descartar</V2Button>
+      </div>
+    </div>
+  );
+}
+
+/** Venda de balcão: a arena escolhe o pacote e credita na hora. */
+function VenderPacote({ arenaId, member, packages, onClose }) {
+  const aVenda = packages.filter((p) => p.active !== false);
+  const [pkgId, setPkgId] = useState(aVenda[0]?.id || '');
+  const vender = useSellPackageToMember();
+  const pkg = aVenda.find((p) => p.id === pkgId);
+  if (aVenda.length === 0) {
+    return <p className="mt-2 text-xs text-gray-500">Nenhum pacote à venda — crie um na aba Pacotes de horas.</p>;
+  }
+  return (
+    <div className="mt-2 flex flex-wrap items-end gap-2 rounded-xl bg-paper-pure p-3">
+      <V2Field label="Pacote" htmlFor={`vp-${member.user_id}`} className="min-w-[200px] flex-1">
+        <select id={`vp-${member.user_id}`} value={pkgId} onChange={(e) => setPkgId(e.target.value)}
+          className="h-10 w-full rounded-2xl border border-gray-200 bg-paper-pure px-3 text-sm">
+          {aVenda.map((p) => <option key={p.id} value={p.id}>{p.name} · {p.hours}h · {formatPrice(p.price)}</option>)}
+        </select>
+      </V2Field>
+      <V2Button
+        size="sm"
+        disabled={!pkg || vender.isPending}
+        onClick={() => vender.mutateAsync({
+          arenaId, pkgId, target: { user_id: member.user_id, user_name: member.user_name, user_photo: member.user_photo },
+        })
+          .then(() => { toast.success(`${pkg.hours}h creditadas.`); onClose(); })
+          .catch((e) => toast.error(e?.message || 'Não foi possível creditar.'))}
+      >
+        Recebi — creditar
+      </V2Button>
+      <V2Button size="sm" variant="ghost" onClick={onClose}>Cancelar</V2Button>
+    </div>
+  );
+}
+
 function LinhaDoMembro({
   arenaId, member, temCarteira, temMensalidade, temPontos, sub, onRemover,
+  pacotes = [],
 }) {
   const [ajustando, setAjustando] = useState(false);
+  const [vendendo, setVendendo] = useState(false);
   const [resgatando, setResgatando] = useState(false);
   const tier = computeTier(Number(member.points) || 0);
   const podeResgatar = temPontos && temCarteira
@@ -483,6 +582,11 @@ function LinhaDoMembro({
             Resgatar pontos
           </V2Button>
         )}
+        {pacotes.length > 0 && (
+          <V2Button variant="ghost" size="sm" onClick={() => setVendendo((v) => !v)}>
+            Vender pacote
+          </V2Button>
+        )}
         <ConfirmDialog
           title="Remover este membro?"
           description="A pessoa deixa de ter os benefícios. Pacotes já comprados e saldo em carteira NÃO são apagados."
@@ -505,6 +609,9 @@ function LinhaDoMembro({
       )}
       {resgatando && (
         <ResgateDePontos arenaId={arenaId} member={member} onClose={() => setResgatando(false)} />
+      )}
+      {vendendo && (
+        <VenderPacote arenaId={arenaId} member={member} packages={pacotes} onClose={() => setVendendo(false)} />
       )}
       {temMensalidade && (
         <MensalidadeDoMembro arenaId={arenaId} member={member} sub={sub} />
@@ -647,6 +754,8 @@ export function ArenaMembersPanel({ arena, view = 'membros' }) {
         )}
       </div>
 
+      {temPacotes && <PedidoDePacote arenaId={arena.id} packages={packages} members={members} />}
+
       {incluindo && (
         <div className="mb-3">
           <IncluirMembro
@@ -675,6 +784,7 @@ export function ArenaMembersPanel({ arena, view = 'membros' }) {
               temMensalidade={temMensalidade}
               temPontos={temPontos}
               sub={mensalidadePorUid.get(m.user_id) || null}
+              pacotes={temPacotes ? packages : []}
               onRemover={(alvo) => remover.mutateAsync({ arenaId: arena.id, userId: alvo.user_id })
                 .then(() => toast.success('Membro removido.'))
                 .catch((e) => toast.error(e?.message || 'Não foi possível remover.'))}
