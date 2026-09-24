@@ -69,3 +69,44 @@ export function arenaCrmSummary(clients = []) {
     no_shows: clients.reduce((s, c) => s + c.no_shows, 0),
   };
 }
+
+/* ------------------------------------------------ clientes × membros ----- */
+
+/**
+ * Quantas reservas CONFIRMADAS fazem de alguém um cliente frequente — o
+ * candidato natural a membro. Três é o ponto em que "veio uma vez" vira
+ * "volta": abaixo disso, oferecer o programa de membros é empurrar.
+ */
+export const FREQUENT_CLIENT_MIN = 3;
+
+/**
+ * Junta os clientes (derivados das reservas) com os membros da arena.
+ *
+ * Antes eram dois mundos: a aba Clientes sai das reservas e `arena_members` é
+ * outro cadastro — nenhum mostrava o outro. A chave é o uid
+ * (`arena_bookings.athlete_id` = `arena_members.user_id`). Cliente avulso
+ * (sem conta) nunca é membro nem candidato: não há a quem dar o benefício.
+ *
+ * @param {Array} clients   saída de `buildArenaClients`
+ * @param {Array} members   documentos de `arena_members`
+ * @returns {Array} os clientes com `member` (ou null) e `memberCandidate`
+ */
+export function attachMembership(clients = [], members = []) {
+  const porUid = new Map((members || []).filter((m) => m?.user_id).map((m) => [m.user_id, m]));
+  return (clients || []).map((c) => {
+    const member = c.athlete_id ? porUid.get(c.athlete_id) || null : null;
+    return {
+      ...c,
+      member,
+      memberCandidate: Boolean(c.athlete_id) && !member && c.confirmed >= FREQUENT_CLIENT_MIN,
+    };
+  });
+}
+
+/** Quantos são membros e quantos são candidatos — o resumo do topo. */
+export function membershipSummary(clientsWithMembership = []) {
+  return {
+    members: clientsWithMembership.filter((c) => c.member).length,
+    candidates: clientsWithMembership.filter((c) => c.memberCandidate).length,
+  };
+}

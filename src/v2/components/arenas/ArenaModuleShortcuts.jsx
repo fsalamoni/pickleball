@@ -37,6 +37,11 @@ import { V2Button } from '@/v2/ui/primitives';
  * `/gerir/avancado`, por exemplo) — mostrar o mesmo botão quatro vezes seria
  * ruído. Fica o primeiro, que é o mais alto na família.
  *
+ * Módulo `native` (integrado à arena: tem aba na Central e seção na página
+ * pública) não vira atalho — um botão levando para fora de algo que já está
+ * na tela é exatamente o "separado do resto da arena" que a integração
+ * desfaz.
+ *
  * @param {(id: string) => boolean} isOn
  * @param {string} arenaId
  * @param {'manage'|'public'} audience
@@ -47,10 +52,11 @@ export function shortcutsFor(isOn, arenaId, audience = 'manage') {
   return listArenaModuleIds()
     .filter((id) => isOn(id))
     .map((id) => {
+      const mod = getArenaModule(id);
+      if (mod?.native) return null;
       const to = arenaModuleRoute(id, arenaId, audience);
       if (!to || vistos.has(to)) return null;
       vistos.add(to);
-      const mod = getArenaModule(id);
       return { id, label: mod?.label || id, icon: mod?.icon || null, to };
     })
     .filter(Boolean);

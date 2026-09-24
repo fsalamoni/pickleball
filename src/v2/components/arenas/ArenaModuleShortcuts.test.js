@@ -28,14 +28,22 @@ describe('atalhos dos módulos de arena', () => {
   });
 
   it('o :arenaId é substituído pela arena de verdade', () => {
-    const atalhos = shortcutsFor(ligados(ARENA_MODULE_ID.MEMBERS), 'minha-arena', 'manage');
-    expect(atalhos[0].to).toBe('/arenas/minha-arena/gerir/membros');
+    const atalhos = shortcutsFor(ligados(ARENA_MODULE_ID.MATCHMAKING_OPEN_MATCH), 'minha-arena', 'manage');
+    expect(atalhos[0].to).toBe('/arenas/minha-arena/gerir/open-match');
     expect(atalhos[0].to).not.toContain(':arenaId');
   });
 
   it('o público do ATLETA é outro: a rota pública, não a de gestão', () => {
-    const atalhos = shortcutsFor(ligados(ARENA_MODULE_ID.MEMBERS), 'a1', 'public');
-    expect(atalhos[0].to).toBe('/arenas/a1/membros');
+    const atalhos = shortcutsFor(ligados(ARENA_MODULE_ID.MATCHMAKING_OPEN_MATCH), 'a1', 'public');
+    expect(atalhos[0].to).toBe('/arenas/a1/open-match');
+  });
+
+  it('⭐ módulo INTEGRADO à arena não vira atalho para fora', () => {
+    // Membros tem aba na Central e seção na página pública. Um botão levando
+    // para outra tela seria justamente o "separado da arena" que a integração
+    // desfaz — nos dois públicos.
+    expect(shortcutsFor(ligados(ARENA_MODULE_ID.MEMBERS), 'a1', 'manage')).toEqual([]);
+    expect(shortcutsFor(ligados(ARENA_MODULE_ID.MEMBERS), 'a1', 'public')).toEqual([]);
   });
 
   it('⭐ módulo sem tela para este público não vira botão quebrado', () => {
@@ -57,8 +65,8 @@ describe('atalhos dos módulos de arena', () => {
   });
 
   it('cada atalho tem rótulo em pt-BR, não o id cru', () => {
-    const atalhos = shortcutsFor(ligados(ARENA_MODULE_ID.MEMBERS), 'a1', 'manage');
-    expect(atalhos[0].label).not.toBe(ARENA_MODULE_ID.MEMBERS);
+    const atalhos = shortcutsFor(ligados(ARENA_MODULE_ID.MATCHMAKING_OPEN_MATCH), 'a1', 'manage');
+    expect(atalhos[0].label).not.toBe(ARENA_MODULE_ID.MATCHMAKING_OPEN_MATCH);
     expect(atalhos[0].label.length).toBeGreaterThan(2);
   });
 });

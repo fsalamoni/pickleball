@@ -1,5 +1,7 @@
 import { describe, it, expect } from 'vitest';
-import { buildArenaClients, arenaCrmSummary } from './arena_crm.js';
+import {
+  buildArenaClients, arenaCrmSummary, attachMembership, membershipSummary, FREQUENT_CLIENT_MIN,
+} from './arena_crm.js';
 
 const bookings = [
   { athlete_id: 'a', athlete_name: 'Ana', status: 'confirmed', agreed_price: 100, slots: [{ date: '2026-08-01', start: '18:00', end: '19:00' }] },
@@ -43,5 +45,39 @@ describe('arenaCrmSummary', () => {
     expect(s.bookings).toBe(4);
     expect(s.revenue).toBe(300); // 220 + 80 (canceladas não contam)
     expect(s.no_shows).toBe(1);
+  });
+});
+
+describe('attachMembership — clientes × membros', () => {
+  const cliente = (over) => ({ key: over.athlete_id || over.name, name: 'X', bookings: 5, confirmed: 5, ...over });
+
+  it('marca quem é membro', () => {
+    const r = attachMembership([cliente({ athlete_id: 'u1' })], [{ user_id: 'u1', tier: 'gold' }]);
+    expect(r[0].member).toEqual({ user_id: 'u1', tier: 'gold' });
+    expect(r[0].memberCandidate).toBe(false);
+  });
+
+  it('⭐ frequente e não membro é candidato', () => {
+    const r = attachMembership([cliente({ athlete_id: 'u2', confirmed: FREQUENT_CLIENT_MIN })], []);
+    expect(r[0].memberCandidate).toBe(true);
+  });
+
+  it('pouca reserva ainda não é candidato', () => {
+    const r = attachMembership([cliente({ athlete_id: 'u3', confirmed: FREQUENT_CLIENT_MIN - 1 })], []);
+    expect(r[0].memberCandidate).toBe(false);
+  });
+
+  it('⭐ cliente avulso (sem conta) nunca é membro nem candidato', () => {
+    const r = attachMembership([cliente({ athlete_id: null, name: 'Seu Zé', confirmed: 20 })], [{ user_id: null }]);
+    expect(r[0].member).toBeNull();
+    expect(r[0].memberCandidate).toBe(false);
+  });
+
+  it('resume', () => {
+    const r = attachMembership(
+      [cliente({ athlete_id: 'a' }), cliente({ athlete_id: 'b' }), cliente({ athlete_id: 'c', confirmed: 1 })],
+      [{ user_id: 'a' }],
+    );
+    expect(membershipSummary(r)).toEqual({ members: 1, candidates: 1 });
   });
 });
