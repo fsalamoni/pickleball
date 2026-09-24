@@ -1,12 +1,9 @@
-import React, { Suspense, lazy, useEffect, useMemo, useState } from 'react';
-import { Link, Navigate, useLocation, useParams } from 'react-router-dom';
+import React, { Suspense, lazy, useCallback, useEffect, useMemo, useState } from 'react';
+import { Link, Navigate, useLocation, useParams, useSearchParams } from 'react-router-dom';
 import { toast } from 'sonner';
 import { collection, getDocs, query, where } from 'firebase/firestore';
 import {
-  AlertTriangle, ArrowLeft, Building2, Trash2, UserPlus, Users,
-  BarChart3, CalendarClock, CalendarDays, CalendarRange, Wallet, ClipboardList,
-  Package, LayoutGrid, DollarSign, Image, Info, Star, GraduationCap,
-  Puzzle, SlidersHorizontal,
+  AlertTriangle, ArrowLeft, Building2, Trash2, UserPlus, Users, CalendarClock, Puzzle, Crown,
 } from 'lucide-react';
 /**
  * As abas chegam SOB DEMANDA.
@@ -28,6 +25,8 @@ const V2ArenaRulesTab = lazy(() => import('@/v2/components/arenas/V2ArenaRulesTa
 const V2ArenaMercadoTab = lazy(() => import('@/v2/components/arenas/V2ArenaMercadoTab'));
 const V2ArenaWeekPanel = lazy(() => import('@/v2/components/arenas/V2ArenaWeekPanel'));
 const ArenaModulesPanel = lazy(() => import('@/v2/components/arenas/ArenaModulesPanel'));
+// Módulos que viraram parte da Central: o corpo das telas deles entra como aba.
+const ArenaMembersPanel = lazy(() => import('@/v2/pages/V2ArenaAdminMembers').then((m) => ({ default: m.ArenaMembersPanel })));
 import { useFeatureFlag } from '@/core/lib/FeatureFlagsContext';
 import { FEATURE_FLAG } from '@/core/featureFlags';
 import { db } from '@/core/config/firebase';
@@ -35,6 +34,9 @@ import { useAuth } from '@/core/lib/FirebaseAuthContext';
 import { ImageUpload } from '@/components/ui/image-upload';
 import { PhotoLightbox } from '@/components/ui/photo-lightbox';
 import ArenaModuleShortcuts from '@/v2/components/arenas/ArenaModuleShortcuts';
+import { buildArenaSections } from '@/v2/components/arenas/arenaManageSections';
+import { useArenaModules } from '@/modules/arenas/hooks/useArenaModules';
+import { ARENA_MODULE_ID } from '@/modules/arenas/domain/modules';
 import ConfirmDialog from '@/components/ConfirmDialog';
 import { V2ProfileFields, V2PricingEditor } from '@/v2/components/arenas/V2ArenaEditors';
 const V2ArenaReviews = lazy(() => import('@/v2/components/arenas/V2ArenaReviews'));
@@ -51,89 +53,15 @@ import {
 } from '@/modules/arenas/hooks/useArenas';
 import { courtsWithoutSchedule } from '@/modules/arenas/domain/court_schedule';
 import { useArenaBookings } from '@/modules/arenas/hooks/useBookings';
-import { buildArenaClients, arenaCrmSummary } from '@/modules/arenas/domain/arena_crm';
+import {
+  buildArenaClients, arenaCrmSummary, attachMembership, membershipSummary, FREQUENT_CLIENT_MIN,
+} from '@/modules/arenas/domain/arena_crm';
+import { computeTier } from '@/modules/arenas/domain/members';
+import { formatDateShortBR } from '@/modules/arenas/domain/calendar';
+import { useArenaMembers, useAddArenaMember } from '@/modules/arenas/hooks/useArenaV3';
 import { formatPrice } from '@/modules/arenas/domain/pricing';
 import { V2Badge, V2Button, V2EmptyState, V2Field, V2Input, V2Skeleton, V2StatCard, V2Surface } from '@/v2/ui/primitives';
 import { cn } from '@/core/lib/utils';
-
-// Navegação em dois níveis do admin da arena. Ordem = ciclo de vida, do
-// início ao fim: identidade → estrutura/preços → reservas → comercial →
-// resultados → equipe/parceiros. Cada seção agrupa sub-abas por tema.
-// `coachResidentOn` injeta a aba de professores parceiros na seção de equipe.
-function buildArenaSections({ coachResidentOn, linkedClubsOn, crmOn, opsKpisOn, arenaModulesOn }) {
-  return [
-    {
-      id: 'perfil',
-      label: 'Perfil',
-      icon: Building2,
-      tabs: [
-        { value: 'info', label: 'Informações', icon: Info },
-        { value: 'fotos', label: 'Fotos', icon: Image },
-      ],
-    },
-    {
-      id: 'estrutura',
-      label: 'Estrutura e preços',
-      icon: LayoutGrid,
-      tabs: [
-        { value: 'quadras', label: 'Quadras', icon: LayoutGrid },
-        { value: 'precos', label: 'Preços', icon: DollarSign },
-        { value: 'regras', label: 'Regras', icon: ClipboardList },
-      ],
-    },
-    {
-      id: 'reservas',
-      label: 'Reservas',
-      icon: CalendarClock,
-      tabs: [
-        { value: 'reservas', label: 'Solicitações', icon: CalendarClock },
-        { value: 'calendario', label: 'Calendário', icon: CalendarDays },
-        { value: 'calendario-admin', label: 'Reservas (admin)', icon: CalendarRange },
-        ...(crmOn ? [{ value: 'clientes', label: 'Clientes', icon: Users }] : []),
-      ],
-    },
-    {
-      id: 'comercial',
-      label: 'Pagamentos e loja',
-      icon: Wallet,
-      tabs: [
-        { value: 'pagamento', label: 'Pagamento', icon: Wallet },
-        { value: 'mercado', label: 'Mercado', icon: Package },
-      ],
-    },
-    {
-      id: 'desempenho',
-      label: 'Desempenho',
-      icon: BarChart3,
-      tabs: [
-        ...(opsKpisOn ? [{ value: 'semana', label: 'Semana', icon: CalendarRange }] : []),
-        { value: 'metricas', label: 'Métricas', icon: BarChart3 },
-        { value: 'retornos', label: 'Retornos', icon: Star },
-      ],
-    },
-    {
-      id: 'equipe',
-      label: 'Equipe e parceiros',
-      icon: Users,
-      tabs: [
-        { value: 'admins', label: 'Admins', icon: Users },
-        ...(coachResidentOn ? [{ value: 'professores', label: 'Professores', icon: GraduationCap }] : []),
-        ...(linkedClubsOn ? [{ value: 'clubes', label: 'Clubes', icon: Users }] : []),
-      ],
-    },
-    // Configurações fecha o ciclo: o que a arena LIGA para si. Vem por último
-    // de propósito — é a seção em que se escolhe o que existe, e escolher só
-    // faz sentido depois de conhecer o resto.
-    ...(arenaModulesOn ? [{
-      id: 'configuracoes',
-      label: 'Configurações',
-      icon: SlidersHorizontal,
-      tabs: [
-        { value: 'modulos', label: 'Módulos', icon: Puzzle },
-      ],
-    }] : []),
-  ];
-}
 
 /**
  * O que falta para a arena receber reserva.
@@ -202,7 +130,21 @@ export default function V2ArenaManage() {
   const { data: managed = [] } = useMyManagedArenas();
   const deleteArena = useDeleteArena();
   const location = useLocation();
-  const [tab, setTab] = useState('reservas');
+  // A aba mora na URL (`?aba=`): recarregar, voltar e mandar um link levam à
+  // mesma aba — e os links "abrir os módulos" / "abrir o mercado" das outras
+  // telas, que caíam sempre em Reservas, passam a funcionar. `?secao=` é
+  // aceito por compatibilidade (abre a primeira aba da seção).
+  const [params, setParams] = useSearchParams();
+  const tab = params.get('aba') || '';
+  const secao = params.get('secao') || '';
+  const setTab = useCallback((value) => {
+    setParams((atual) => {
+      const novo = new URLSearchParams(atual);
+      novo.set('aba', value);
+      novo.delete('secao');
+      return novo;
+    }, { replace: true });
+  }, [setParams]);
 
   return (
     <V2ArenaManageContent
@@ -215,12 +157,13 @@ export default function V2ArenaManage() {
       deleteArena={deleteArena}
       location={location}
       tab={tab}
+      secao={secao}
       setTab={setTab}
     />
   );
 }
 
-function V2ArenaManageContent({ arenaId, user, isPlatformAdmin, arena, managed, isLoading, deleteArena, location, tab, setTab }) {
+function V2ArenaManageContent({ arenaId, user, isPlatformAdmin, arena, managed, isLoading, deleteArena, location, tab: tabPedida, secao, setTab }) {
 
   // Âncora para o stepper de onboarding: ao montar, lê o hash
   // (#fotos / #precos / #horarios), troca a aba e rola até a seção.
@@ -238,7 +181,7 @@ function V2ArenaManageContent({ arenaId, user, isPlatformAdmin, arena, managed, 
       const el = document.getElementById(`arena-manage-${hash}`);
       el?.scrollIntoView({ behavior: 'smooth', block: 'start' });
     });
-  }, [location.hash]);
+  }, [location.hash, setTab]);
 
   const coachResidentOn = true;
   const linkedClubsOn = true;
@@ -252,6 +195,11 @@ function V2ArenaManageContent({ arenaId, user, isPlatformAdmin, arena, managed, 
   // ligada. Desligada, não há o que configurar — e aba vazia é pior que aba
   // nenhuma.
   const arenaModulesOn = useFeatureFlag(FEATURE_FLAG.ARENA_MODULES);
+  const { isOn: moduloLigado, isLoading: modulosCarregando } = useArenaModules(arenaId);
+  const modulos = {
+    membros: moduloLigado(ARENA_MODULE_ID.MEMBERS),
+    pacotes: moduloLigado(ARENA_MODULE_ID.MEMBERS_PACKAGES),
+  };
   // Lembra a última sub-aba visitada em cada seção principal.
   const [sectionMemory, setSectionMemory] = useState({});
 
@@ -277,8 +225,16 @@ function V2ArenaManageContent({ arenaId, user, isPlatformAdmin, arena, managed, 
   // identidade → estrutura/preços → reservas (operação) → dinheiro →
   // resultados → equipe.
   const sections = buildArenaSections({
-    coachResidentOn, linkedClubsOn, crmOn, opsKpisOn, arenaModulesOn,
+    coachResidentOn, linkedClubsOn, crmOn, opsKpisOn, arenaModulesOn, modulos,
   });
+  // A aba pedida na URL só vale se existir. Aba de módulo desligado cai em
+  // Reservas — mas, enquanto os módulos ainda CARREGAM, a aba pedida pode
+  // ser de um módulo que vai aparecer; aí espera, em vez de mostrar Reservas
+  // por meio segundo e trocar.
+  const abasValidas = sections.flatMap((sec) => sec.tabs.map((t) => t.value));
+  const abaDaSecao = sections.find((sec) => sec.id === secao)?.tabs[0]?.value;
+  const tab = abasValidas.includes(tabPedida) ? tabPedida : (abaDaSecao || 'reservas');
+  const esperandoModulo = Boolean(tabPedida) && !abasValidas.includes(tabPedida) && modulosCarregando;
   const activeSectionId = sections.find((s) => s.tabs.some((t) => t.value === tab))?.id
     || sections[0].id;
   const activeSection = sections.find((s) => s.id === activeSectionId) || sections[0];
@@ -387,12 +343,16 @@ function V2ArenaManageContent({ arenaId, user, isPlatformAdmin, arena, managed, 
           nova baixa, então trocar de aba nunca pisca a página inteira. */}
       <div className="mt-6">
         <Suspense fallback={<V2Skeleton lines={6} />}>
+        {esperandoModulo ? <V2Skeleton lines={6} /> : (
+        <>
+        {tab === 'membros' && modulos.membros && <ArenaMembersPanel arena={arena} view="membros" />}
+        {tab === 'planos' && modulos.pacotes && <ArenaMembersPanel arena={arena} view="planos" />}
         {tab === 'semana' && opsKpisOn && <V2ArenaWeekPanel arenaId={arena.id} />}
         {tab === 'metricas' && <V2ArenaMetrics arena={arena} />}
         {tab === 'reservas' && <BookingsTab arena={arena} />}
         {tab === 'calendario' && <V2ArenaCalendar arena={arena} />}
         {tab === 'calendario-admin' && <V2AdminBookingCalendar arenaId={arena.id} />}
-        {tab === 'clientes' && crmOn && <ArenaCrmTab arenaId={arena.id} />}
+        {tab === 'clientes' && crmOn && <ArenaCrmTab arenaId={arena.id} membrosOn={modulos.membros} onVerMembros={() => selectTab('membros', 'membros')} />}
         {tab === 'pagamento' && <V2ArenaPaymentTab />}
         {tab === 'regras' && <V2ArenaRulesTab />}
         {tab === 'mercado' && <V2ArenaMercadoTab />}
@@ -407,16 +367,46 @@ function V2ArenaManageContent({ arenaId, user, isPlatformAdmin, arena, managed, 
         {tab === 'modulos' && arenaModulesOn && (
           <ArenaModulesPanel arenaId={arena.id} canManage={canManage} />
         )}
+        </>
+        )}
         </Suspense>
       </div>
     </div>
   );
 }
 
-function ArenaCrmTab({ arenaId }) {
+const TIER_TONE = { bronze: 'amber', silver: 'neutral', gold: 'acid', platinum: 'ink' };
+
+/**
+ * Clientes — quem reserva aqui, derivado das reservas.
+ *
+ * Com o módulo Membros ligado, a mesma lista diz quem JÁ é membro (e em que
+ * nível) e quem é FREQUENTE e ainda não é — com o botão ali mesmo. Antes eram
+ * dois mundos: a arena via o cliente fiel aqui e tinha de ir a outra tela,
+ * procurar pelo nome, para torná-lo membro.
+ */
+function ArenaCrmTab({ arenaId, membrosOn = false, onVerMembros }) {
   const { data: bookings = [], isLoading } = useArenaBookings(arenaId);
+  const { data: members = [] } = useArenaMembers(membrosOn ? arenaId : null);
+  const incluir = useAddArenaMember();
+  const [soCandidatos, setSoCandidatos] = useState(false);
   const clients = React.useMemo(() => buildArenaClients(bookings), [bookings]);
   const summary = React.useMemo(() => arenaCrmSummary(clients), [clients]);
+  const comMembro = React.useMemo(
+    () => (membrosOn ? attachMembership(clients, members) : clients),
+    [clients, members, membrosOn],
+  );
+  const resumoMembros = React.useMemo(() => membershipSummary(comMembro), [comMembro]);
+  const listados = soCandidatos ? comMembro.filter((c) => c.memberCandidate) : comMembro;
+
+  const tornarMembro = async (c) => {
+    try {
+      await incluir.mutateAsync({ arenaId, target: { user_id: c.athlete_id, user_name: c.name } });
+      toast.success(`${c.name} agora é membro.`);
+    } catch (err) {
+      toast.error(err?.message || 'Não foi possível incluir.');
+    }
+  };
 
   if (isLoading) return <V2Skeleton lines={5} />;
   if (clients.length === 0) {
@@ -429,18 +419,34 @@ function ArenaCrmTab({ arenaId }) {
 
   return (
     <div className="space-y-4">
-      <div className="grid grid-cols-2 gap-3 sm:grid-cols-4">
+      <div className={cn('grid grid-cols-2 gap-3', membrosOn ? 'sm:grid-cols-3 lg:grid-cols-6' : 'sm:grid-cols-4')}>
         <V2StatCard label="Clientes" value={summary.clients} />
         <V2StatCard label="Reservas" value={summary.bookings} />
         <V2StatCard label="Valor acordado" value={formatPrice(summary.revenue)} />
         <V2StatCard label="No-shows" value={summary.no_shows} />
+        {membrosOn && <V2StatCard label="Membros" value={resumoMembros.members} />}
+        {membrosOn && <V2StatCard label="Frequentes sem ser membro" value={resumoMembros.candidates} />}
       </div>
+
+      {membrosOn && resumoMembros.candidates > 0 && (
+        <div className="flex flex-wrap items-center justify-between gap-2 rounded-2xl border border-acid/30 bg-acid/10 px-4 py-3">
+          <p className="text-sm text-ink">
+            <strong>{resumoMembros.candidates}</strong> {resumoMembros.candidates === 1 ? 'cliente reservou' : 'clientes reservaram'} {FREQUENT_CLIENT_MIN} vezes
+            ou mais e ainda não {resumoMembros.candidates === 1 ? 'é membro' : 'são membros'}. É quem mais aproveita desconto, pacote e carteira.
+          </p>
+          <V2Button size="sm" variant="secondary" onClick={() => setSoCandidatos((v) => !v)}>
+            {soCandidatos ? 'Ver todos' : 'Ver só esses'}
+          </V2Button>
+        </div>
+      )}
+
       <V2Surface className="overflow-hidden p-0">
         <div className="overflow-x-auto">
           <table className="w-full text-sm">
             <thead className="bg-paper text-left text-[11px] uppercase tracking-wide text-gray-500">
               <tr>
                 <th className="px-4 py-3">Cliente</th>
+                {membrosOn && <th className="px-4 py-3">Membro</th>}
                 <th className="px-4 py-3 text-center">Reservas</th>
                 <th className="px-4 py-3 text-center">Confirmadas</th>
                 <th className="px-4 py-3 text-center">No-show</th>
@@ -449,19 +455,39 @@ function ArenaCrmTab({ arenaId }) {
               </tr>
             </thead>
             <tbody>
-              {clients.map((c) => (
-                <tr key={c.key} className="border-t border-gray-100">
-                  <td className="px-4 py-3 font-semibold text-ink">
-                    {c.athlete_id ? <Link to={`/atletas/${c.athlete_id}`} className="hover:underline">{c.name}</Link> : c.name}
-                    {!c.athlete_id && <span className="ml-1 text-xs text-gray-400">· avulso</span>}
-                  </td>
-                  <td className="px-4 py-3 text-center tabular-nums">{c.bookings}</td>
-                  <td className="px-4 py-3 text-center tabular-nums text-green-700">{c.confirmed}</td>
-                  <td className="px-4 py-3 text-center tabular-nums">{c.no_shows > 0 ? <V2Badge tone="amber">{c.no_shows}</V2Badge> : '—'}</td>
-                  <td className="px-4 py-3 text-right tabular-nums">{c.total_value > 0 ? formatPrice(c.total_value) : '—'}</td>
-                  <td className="px-4 py-3 text-gray-500">{c.last_date || '—'}</td>
-                </tr>
-              ))}
+              {listados.map((c) => {
+                const tier = c.member ? computeTier(Number(c.member.points) || 0) : null;
+                return (
+                  <tr key={c.key} className="border-t border-gray-100">
+                    <td className="px-4 py-3 font-semibold text-ink">
+                      {c.athlete_id ? <Link to={`/atletas/${c.athlete_id}`} className="hover:underline">{c.name}</Link> : c.name}
+                      {!c.athlete_id && <span className="ml-1 text-xs text-gray-400">· avulso</span>}
+                    </td>
+                    {membrosOn && (
+                      <td className="px-4 py-3">
+                        {tier ? (
+                          <button type="button" onClick={onVerMembros} className="inline-flex" title="Ver na aba Membros">
+                            <V2Badge tone={TIER_TONE[tier.id] || 'amber'}>{tier.name}</V2Badge>
+                          </button>
+                        ) : c.memberCandidate ? (
+                          <V2Button size="sm" variant="secondary" disabled={incluir.isPending} onClick={() => tornarMembro(c)}>
+                            <Crown className="h-3.5 w-3.5" /> Tornar membro
+                          </V2Button>
+                        ) : c.athlete_id ? (
+                          <span className="text-xs text-gray-400">—</span>
+                        ) : (
+                          <span className="text-xs text-gray-400" title="Sem conta na plataforma">sem conta</span>
+                        )}
+                      </td>
+                    )}
+                    <td className="px-4 py-3 text-center tabular-nums">{c.bookings}</td>
+                    <td className="px-4 py-3 text-center tabular-nums text-green-700">{c.confirmed}</td>
+                    <td className="px-4 py-3 text-center tabular-nums">{c.no_shows > 0 ? <V2Badge tone="amber">{c.no_shows}</V2Badge> : '—'}</td>
+                    <td className="px-4 py-3 text-right tabular-nums">{c.total_value > 0 ? formatPrice(c.total_value) : '—'}</td>
+                    <td className="px-4 py-3 text-gray-500">{c.last_date ? formatDateShortBR(c.last_date) : '—'}</td>
+                  </tr>
+                );
+              })}
             </tbody>
           </table>
         </div>

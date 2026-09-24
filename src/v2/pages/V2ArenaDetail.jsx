@@ -26,6 +26,8 @@ import V2BookingCalendar from '@/v2/components/arenas/V2BookingCalendar';
 import ArenaGameDaysSection from '@/v2/components/arenas/ArenaGameDaysSection';
 import ArenaNpsAsk from '@/v2/components/arenas/ArenaNpsAsk';
 import ArenaCheckinAsk from '@/v2/components/arenas/ArenaCheckinAsk';
+import ArenaMembershipSection from '@/v2/components/arenas/ArenaMembershipSection';
+import { formatDateShortBR } from '@/modules/arenas/domain/calendar';
 import ArenaModuleShortcuts from '@/v2/components/arenas/ArenaModuleShortcuts';
 import { isPixConfigured, PIX_KEY_TYPE_LABELS } from '@/modules/arenas/domain/pix_payment';
 import { groupRulesByCategory } from '@/modules/arenas/domain/arena_rules';
@@ -288,7 +290,7 @@ function V2ArenaDetailContent({ arenaId, user, arena, managed, bookings, isLoadi
                 {(arena.price_overrides || []).map((o) => (
                   <div key={o.id} className="flex items-center justify-between rounded-2xl border border-amber-100 bg-amber-50/40 px-4 py-2.5 text-sm">
                     <span className="text-gray-700">
-                      {o.date ? `${o.date}${o.label ? ` · ${o.label}` : ''}` : o.label || 'Data especial'}
+                      {o.date ? `${formatDateShortBR(o.date)}${o.label ? ` · ${o.label}` : ''}` : o.label || 'Data especial'}
                       {o.note ? <span className="ml-1 text-xs text-gray-500">— {o.note}</span> : null}
                     </span>
                     <strong className="text-ink">{formatPrice(o.price)}</strong>
@@ -300,6 +302,13 @@ function V2ArenaDetailContent({ arenaId, user, arena, managed, bookings, isLoadi
           <p className="mt-3 text-xs text-gray-400">Valores de referência; o valor final é confirmado pela arena na reserva.</p>
         </V2Surface>
       )}
+
+      {/* Planos e vantagens (módulo Membros) — logo depois dos preços, porque é
+          olhando o preço da hora avulsa que se decide comprar pacote. Some
+          sozinha com o módulo desligado. */}
+      <div className="mt-6 empty:mt-0">
+        <ArenaMembershipSection arena={arena} />
+      </div>
 
       {(arena.photos || []).length > 0 && (
         <V2Surface className="mt-6">

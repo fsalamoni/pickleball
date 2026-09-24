@@ -170,6 +170,11 @@ export const ARENA_MODULE_DETAIL = Object.freeze({
     },
     manage: '/arenas/:arenaId/gerir/membros',
     public: '/arenas/:arenaId/membros',
+    // Parte da arena: aba "Membros" na Central e seção "Planos e vantagens"
+    // na página pública. As rotas acima seguem valendo (notificações antigas
+    // apontam para elas), mas não viram botão de atalho — a funcionalidade já
+    // está onde a pessoa está.
+    native: true,
     collections: ['arena_members'],
   },
   [ARENA_MODULE_ID.MEMBERS_TIERS]: {

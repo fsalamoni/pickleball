@@ -281,6 +281,8 @@ Estes princípios vieram de bugs reais que custaram horas pra arrumar. São ineg
 **"Vou acrescentar algo que OCUPA uma quadra"** → entre em `mergeArenaBlocks` (`arenas/domain/arenaBlocks.js`) e em `arenaOccupancy` (`arenas/services/arenaOccupancy.js`), **não** em cada tela. A cadeia estava repetida em CINCO lugares (dois serviços e três calendários) e a que ficasse para trás não dava erro — dava a quadra vendida duas vezes. Fonte opcional: quem não a carregou passa `undefined` e nada muda. Derivado x gravado: derive quando a coleção for legível pelo atleta (dia de jogo, vaga aberta, aula); **grave** quando não for (ordem de manutenção), e aí a cópia chega dentro de `gravados`
 **"Vou mexer em checklist, manutenção, estoque ou equipe da arena"** → `docs/24-MODULOS-DE-ARENA/04-OPERACOES.md`. (1) O estado do checklist HOJE sai de `checklistRunState(checklist, hoje)` — ler `checklist.items` direto na tela reintroduz o defeito de o checkmark de ontem aparecer marcado hoje; a virada do dia é feita ao abrir a tela e é **idempotente**. (2) Ordem de manutenção com `blocks_court` **grava** `arena_unavailabilities` (não deriva, ao contrário do dia de jogo — a ordem é privada da arena e o atleta nunca a leria), e **concluir ou cancelar devolve a quadra**; o `sync` só toca documentos com `maintenance_id`. (3) O **motivo** da ordem nunca entra no bloqueio público — ele diz só "Manutenção programada". (4) Marcar "fechar" sem data é ERRO, não bloqueio de zero dias. (5) A equipe (`arena_settings.staff`) **não guarda telefone nem e-mail**. (6) Toda mutação de manutenção invalida o calendário inteiro da arena (`arenaKeys.bloqueiosDaArena`), porque cada recorte de datas é uma consulta diferente
 **"Vou mexer em cupom, campanha, NPS, pontos ou indicação"** → `docs/24-MODULOS-DE-ARENA/03-MARKETING.md`. Sete coisas que NÃO podem regredir: (1) o cupom é **reconferido pelo serviço** contra o banco antes de gravar — conferir só no navegador deixa qualquer pessoa gravar um desconto que a arena não criou; (2) o uso do cupom é contabilizado na **confirmação**, nunca no pedido; (3) a campanha mostra **quantas pessoas** vão receber ANTES de enviar, e não envia para zero; (4) o NPS não é perguntado a quem não veio, nem mais de uma vez a cada 90 dias; (5) resgate de pontos e de indicação são escritas da **ARENA** (a regra só deixa o gestor escrever `arena_members` e `arena_wallets` — botão na tela do atleta dá "permissão negada" que ele não tem como resolver); (6) atalho de módulo vem do **catálogo**, não de lista escrita à mão; (7) o serviço de contabilizar cupom **não** se chama `useCoupon` (o ESLint trata `useX` como hook e derruba o lint de quem o chama)
+**"Vou mandar alguém para uma aba da Central da arena"** → `/arenas/:id/gerir?aba=<valor>` (ex.: `?aba=membros`, `?aba=modulos`, `?aba=mercado`); `?secao=<id>` abre a primeira aba da seção. A aba mora na URL: clicar grava, recarregar não perde. Antes a Central NÃO lia a URL e todo link "abrir os módulos"/"abrir o mercado" caía em Reservas. Estrutura em `v2/components/arenas/arenaManageSections.js` — **o valor de cada aba é único em toda a Central** (a seção ativa é achada pela aba; há teste). Aba de módulo desligado cai em Reservas, nunca em branco
+**"Os módulos da arena devem parecer parte da arena"** → módulo integrado vira **seção na Central** (ao lado de Reservas) e **seção na página pública**, não botão para fora. Marque `native: true` no catálogo: `ArenaModuleShortcuts` para de gerar atalho, e a rota antiga vira `<Navigate>` para a aba (notificações antigas seguem funcionando). **Membros** já é assim: Central → Membros (Membros · Pacotes), selo + "Tornar membro" em Clientes (`attachMembership`, 3+ reservas confirmadas), e "Planos e vantagens" na página da arena, depois dos Preços. Ver `docs/24-MODULOS-DE-ARENA/09-INTEGRACAO-NA-ARENA.md`
 **"Criei uma tela nova de módulo de arena. Como alguém chega nela?"** → `<ArenaModuleShortcuts arenaId audience="manage"|"public" />`. Ele lê `manage`/`public` do catálogo e cruza com o que a arena ligou — rota preenchida vira botão sozinho, nos dois lugares (página da arena e Central). **Não escreva o link à mão**: o console de marketing existia, tinha rota, e nada na plataforma levava até ele — módulo ligado, tela inalcançável. Destinos repetidos viram um botão só
 **"Mudei/removi uma rota de tela de módulo de arena"** → o CATÁLOGO promete aquele caminho (`manage`/`public`) e `ArenaModuleShortcuts` monta o botão a partir dele — caminho com erro de digitação **não dá erro**, dá um botão bonito que leva a uma tela em branco, no celular do cliente, na frente da recepção. `src/core/guards/rotasDeModulos.test.js` lê `V2App.jsx` e reprova quem quebrar o par (e exige `:arenaId`, que é o nome que `arenaModuleRoute` troca)
 **"A tela precisa saber se um módulo está ligado"** → `useArenaModules(arenaId)` (UM hook, DUAS consultas, responde pelos 50). **Nunca** `useCanArenaUseModule` por módulo, e jamais dentro de um `map`
@@ -481,6 +483,25 @@ chore(deps): bump firebase to 12.x
 > memory topic `picklerush-sync-2026-08.md`.
 >
 > **Destaques por onda**:
+>
+> - **Onda BE — Membros dentro da arena** (2026-09-24): *"os módulos da
+>   arena V3 estão um tanto separados do restante da arena… precisamos
+>   integrar esses módulos dentro da arena e não como algo adicional"*. O
+>   levantamento achou cinco causas — só a primeira de aparência: cada módulo
+>   era uma página alcançada por um BOTÃO; dois cadastros de professor sem
+>   ligação; dois lugares de torneio que não se viam; o atleta não achava o
+>   que é dele; e membro e cliente eram dois mundos. Esta onda resolve
+>   Membros e a base de todas: **a Central passou a ter endereço** (`?aba=`,
+>   `?secao=` pelos links antigos) — ela NÃO lia a URL, e todo "abrir os
+>   módulos" / "abrir o mercado" das outras telas caía em Reservas (quatro
+>   links mortos, três escritos nas ondas anteriores). Membros virou **seção
+>   da Central** (Membros · Pacotes de horas), a aba **Clientes** passou a
+>   mostrar o nível de quem é membro e **"Tornar membro"** para quem reservou
+>   3+ vezes e ainda não é, e a página da arena ganhou **"Planos e
+>   vantagens"** logo depois dos Preços — é olhando o preço da hora avulsa que
+>   se decide comprar pacote. O módulo é `native` no catálogo: sem botão de
+>   atalho para fora, e a rota antiga vira a aba certa. **Zero banco.** Ver
+>   `docs/24-MODULOS-DE-ARENA/09-INTEGRACAO-NA-ARENA.md`.
 >
 > - **Onda BD — Excluir cadastro** (2026-09-24): *"há muitos cadastros de
 >   exemplo e mock que foram criados e quero poder excluí-los"*. A primeira
@@ -1726,7 +1747,7 @@ chore(deps): bump firebase to 12.x
 
 | Métrica | Valor | Delta do início do agente |
 |---|---|---|
-| **Testes Vitest** | **5058 passing** (296 arquivos) + 218 asserções de regras (Vitest) + 85 do dia de jogo no emulador | +4650 (era 408) |
+| **Testes Vitest** | **5089 passing** (300 arquivos) + 218 asserções de regras (Vitest) + 85 do dia de jogo no emulador | +4650 (era 408) |
 | **Lint errors** | 0 | era 30+ |
 | **Módulos** | 21 (+`help` — conteúdo dos tutoriais em tela) (`games` e `legal` saíram como `src/modules/` mas continuam como pastas oficiais — **rating virou módulo oficial** com domain/services/hooks/components) | +4 (coaches, circuits, games, legal) |
 | **V2 pages** | 82 (+V2GameDayTelao — telão, fora do V2Layout; +V2Help — central de ajuda; +V2ArenaKiosk — totem da recepção, também fora do V2Layout; +V2ArenaCheckin; +V2ArenaAttendance) | +58 |

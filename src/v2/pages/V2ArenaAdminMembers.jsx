@@ -1,7 +1,8 @@
 /**
  * V2ArenaAdminMembers — a arena cuida dos seus membros.
  *
- * Rota: `/arenas/:arenaId/gerir/membros`
+ * Onde: **Central da arena → Membros** (abas *Membros* e *Pacotes*). A rota
+ * `/arenas/:arenaId/gerir/membros` virou atalho para a aba.
  * Módulo: `members` (+ `members_packages`, `members_wallet`, `members_tiers`).
  *
  * ## O que faltava
@@ -18,14 +19,12 @@
  */
 
 import React, { useMemo, useState } from 'react';
-import { Link, Navigate, useParams } from 'react-router-dom';
+import { Navigate, useParams } from 'react-router-dom';
 import { toast } from 'sonner';
 import {
-  ArrowLeft, CalendarClock, Check, Package, Plus, Search, Trash2, Trophy,
+  CalendarClock, Check, Package, Plus, Search, Trash2,
   UserPlus, Wallet, X,
 } from 'lucide-react';
-import { useAuth } from '@/core/lib/FirebaseAuthContext';
-import { useArena, useMyManagedArenas } from '@/modules/arenas/hooks/useArenas';
 import { useAthletes } from '@/modules/athletes/hooks/useAthletes';
 import {
   useArenaMembers, useArenaPackages, useCreatePackage, useDeletePackage,
@@ -514,14 +513,22 @@ function LinhaDoMembro({
   );
 }
 
-/* --------------------------------- página ---------------------------------- */
+/* ----------------------------- o painel (aba) ------------------------------ */
 
-export default function V2ArenaAdminMembers() {
-  const { arenaId } = useParams();
-  const { user, isPlatformAdmin } = useAuth();
-  const { data: arena, isLoading } = useArena(arenaId);
-  const { data: managed = [] } = useMyManagedArenas();
-  const { isOn, isLoading: modulosLoading } = useArenaModules(arenaId);
+/**
+ * O corpo da gestão de membros, como PAINEL — é o que vira aba na Central da
+ * arena. `view` escolhe o pedaço:
+ *
+ * - `membros`: quem é membro, incluir, ajustar, mensalidade;
+ * - `planos`: os pacotes de horas à venda.
+ *
+ * Quem chama já garantiu que a pessoa gere a arena e que o módulo está
+ * ligado: o painel não redireciona ninguém (dentro de uma aba, redirecionar
+ * tiraria a pessoa da Central no meio do caminho).
+ */
+export function ArenaMembersPanel({ arena, view = 'membros' }) {
+  const arenaId = arena?.id;
+  const { isOn } = useArenaModules(arenaId);
   const { data: members = [], isLoading: carregandoMembros } = useArenaMembers(arenaId);
   const { data: packages = [], isLoading: carregandoPacotes } = useArenaPackages(arenaId, { onlyActive: false });
   const remover = useRemoveArenaMember();
@@ -530,7 +537,6 @@ export default function V2ArenaAdminMembers() {
   const [novoPacote, setNovoPacote] = useState(false);
   const [incluindo, setIncluindo] = useState(false);
 
-  const temMembros = isOn(ARENA_MODULE_ID.MEMBERS);
   const temPacotes = isOn(ARENA_MODULE_ID.MEMBERS_PACKAGES);
   const temCarteira = isOn(ARENA_MODULE_ID.MEMBERS_WALLET);
   const temMensalidade = isOn(ARENA_MODULE_ID.MEMBERS_SUBSCRIPTION);
@@ -544,169 +550,151 @@ export default function V2ArenaAdminMembers() {
     [mensalidades],
   );
 
-  if (isLoading || modulosLoading) {
-    return <V2Skeleton className="mx-auto h-96 max-w-[900px] rounded-4xl" />;
-  }
-  if (!arena) {
-    return (
-      <div className="mx-auto max-w-[700px]">
-        <V2Surface>
-          <V2EmptyState title="Arena não encontrada"
-            action={<Link to="/arenas" className="text-sm font-bold text-ink underline">← Voltar</Link>} />
-        </V2Surface>
-      </div>
-    );
-  }
+  if (!arena) return null;
 
-  const podeGerir = arena.owner_id === user?.uid
-    || managed.some((m) => m.id === arena.id)
-    || isPlatformAdmin;
-  if (!podeGerir) return <Navigate to={`/arenas/${arena.id}`} replace />;
-
-  const voltar = (
-    <Link to={`/arenas/${arena.id}/gerir`}
-      className="mb-3 inline-flex items-center gap-1.5 text-xs font-bold uppercase tracking-wider text-gray-500 hover:text-ink">
-      <ArrowLeft className="h-3.5 w-3.5" /> Central da arena
-    </Link>
-  );
-
-  if (!temMembros) {
-    return (
-      <div className="mx-auto max-w-[700px]">
-        {voltar}
+  if (view === 'planos') {
+    if (!temPacotes) {
+      return (
         <V2Surface>
           <V2EmptyState
-            icon={Trophy}
-            title="Membros não está ativo nesta arena"
-            description="Com este módulo, quem joga sempre aqui ganha nível, desconto, pacotes de horas e carteira — e você sai da venda avulsa."
-            action={(
-              <V2Button asChild>
-                <Link to={`/arenas/${arena.id}/gerir/modulos`}>Ver módulos da arena</Link>
-              </V2Button>
-            )}
+            icon={Package}
+            title="Pacotes de horas não estão ativos"
+            description="Ative “Pacotes de horas” em Configurações → Módulos para vender horas adiantado."
           />
         </V2Surface>
-      </div>
-    );
-  }
-
-  return (
-    <div className="mx-auto max-w-[900px]">
-      {voltar}
-      <h1 className="font-display text-3xl font-bold tracking-tight text-ink">Membros</h1>
-      <p className="mt-1 text-sm text-gray-500">
-        {arena.name} · quem é de casa, o que cada um tem e o que cada nível dá.
-      </p>
-
-      {temPacotes && (
-        <V2Surface className="mt-5">
-          <div className="mb-3 flex flex-wrap items-center justify-between gap-2">
-            <h2 className="font-display text-base font-bold text-ink">Pacotes de horas</h2>
-            {!novoPacote && (
-              <V2Button size="sm" onClick={() => setNovoPacote(true)}>
-                <Plus className="h-4 w-4" /> Novo pacote
-              </V2Button>
-            )}
-          </div>
-          {novoPacote && (
-            <div className="mb-3">
-              <NovoPacoteForm arenaId={arena.id} onClose={() => setNovoPacote(false)} />
-            </div>
-          )}
-          {carregandoPacotes ? (
-            <V2Skeleton className="h-24" />
-          ) : packages.length === 0 ? (
-            <V2EmptyState
-              icon={Package}
-              title="Nenhum pacote ainda"
-              description="Vender horas adiantado garante a frequência e o caixa. Comece por um."
-            />
-          ) : (
-            <div className="space-y-2">
-              {packages.map((pkg) => (
-                <div key={pkg.id} className="flex flex-wrap items-center justify-between gap-2 rounded-2xl border border-gray-100 bg-paper p-3">
-                  <div className="min-w-0">
-                    <p className="font-bold text-ink">{pkg.name}</p>
-                    <p className="text-xs text-gray-500">
-                      {pkg.hours}h · {formatPrice(pkg.price)} · vale {pkg.validity_days} dias
-                      {pkg.sold_count ? ` · ${pkg.sold_count} vendido(s)` : ''}
-                    </p>
-                  </div>
-                  <div className="flex items-center gap-2">
-                    <V2Badge tone={pkg.active !== false ? 'green' : 'neutral'}>
-                      {pkg.active !== false ? 'À venda' : 'Fora do ar'}
-                    </V2Badge>
-                    <ConfirmDialog
-                      title="Excluir este pacote?"
-                      description={`"${pkg.name}" sai da vitrine. Quem já comprou NÃO perde as horas.`}
-                      confirmLabel="Excluir"
-                      destructive
-                      onConfirm={() => excluirPacote.mutateAsync({ pkgId: pkg.id })
-                        .then(() => toast.success('Pacote excluído.'))
-                        .catch((e) => toast.error(e?.message || 'Não foi possível excluir.'))}
-                      trigger={(
-                        <button type="button" aria-label="Excluir pacote"
-                          className="rounded-full border border-red-200 bg-red-50 p-1.5 text-red-600 hover:bg-red-100">
-                          <Trash2 className="h-3.5 w-3.5" />
-                        </button>
-                      )}
-                    />
-                  </div>
-                </div>
-              ))}
-            </div>
-          )}
-        </V2Surface>
-      )}
-
-      <V2Surface className="mt-4">
+      );
+    }
+    return (
+      <V2Surface>
         <div className="mb-3 flex flex-wrap items-center justify-between gap-2">
-          <h2 className="font-display text-base font-bold text-ink">
-            Quem é membro <V2Badge tone="neutral">{members.length}</V2Badge>
-          </h2>
-          {!incluindo && (
-            <V2Button size="sm" variant="secondary" onClick={() => setIncluindo(true)}>
-              <UserPlus className="h-4 w-4" /> Incluir membro
+          <div>
+            <h2 className="font-display text-base font-bold text-ink">Pacotes de horas</h2>
+            <p className="text-xs text-gray-500">
+              Horas vendidas adiantado. O pacote é abatido na CONFIRMAÇÃO da reserva, e o que vence primeiro sai primeiro.
+            </p>
+          </div>
+          {!novoPacote && (
+            <V2Button size="sm" onClick={() => setNovoPacote(true)}>
+              <Plus className="h-4 w-4" /> Novo pacote
             </V2Button>
           )}
         </div>
-
-        {incluindo && (
+        {novoPacote && (
           <div className="mb-3">
-            <IncluirMembro
-              arenaId={arena.id} jaSaoMembros={jaSaoMembros} onClose={() => setIncluindo(false)}
-            />
+            <NovoPacoteForm arenaId={arena.id} onClose={() => setNovoPacote(false)} />
           </div>
         )}
-
-        {carregandoMembros ? (
-          <V2Skeleton className="h-32" />
-        ) : members.length === 0 ? (
+        {carregandoPacotes ? (
+          <V2Skeleton className="h-24" />
+        ) : packages.length === 0 ? (
           <V2EmptyState
-            icon={Wallet}
-            title="Nenhum membro ainda"
-            description="Inclua quem já joga aqui sempre. Membro tem desconto, pacote e carteira — e volta mais."
-            action={<V2Button onClick={() => setIncluindo(true)}><UserPlus className="h-4 w-4" /> Incluir o primeiro</V2Button>}
+            icon={Package}
+            title="Nenhum pacote ainda"
+            description="Vender horas adiantado garante a frequência e o caixa. Comece por um."
           />
         ) : (
           <div className="space-y-2">
-            {members.map((m) => (
-              <LinhaDoMembro
-                key={m.id}
-                arenaId={arena.id}
-                member={m}
-                temCarteira={temCarteira}
-                temMensalidade={temMensalidade}
-                temPontos={temPontos}
-                sub={mensalidadePorUid.get(m.user_id) || null}
-                onRemover={(alvo) => remover.mutateAsync({ arenaId: arena.id, userId: alvo.user_id })
-                  .then(() => toast.success('Membro removido.'))
-                  .catch((e) => toast.error(e?.message || 'Não foi possível remover.'))}
-              />
+            {packages.map((pkg) => (
+              <div key={pkg.id} className="flex flex-wrap items-center justify-between gap-2 rounded-2xl border border-gray-100 bg-paper p-3">
+                <div className="min-w-0">
+                  <p className="font-bold text-ink">{pkg.name}</p>
+                  <p className="text-xs text-gray-500">
+                    {pkg.hours}h · {formatPrice(pkg.price)} · vale {pkg.validity_days} dias
+                    {pkg.sold_count ? ` · ${pkg.sold_count} vendido(s)` : ''}
+                  </p>
+                </div>
+                <div className="flex items-center gap-2">
+                  <V2Badge tone={pkg.active !== false ? 'green' : 'neutral'}>
+                    {pkg.active !== false ? 'À venda' : 'Fora do ar'}
+                  </V2Badge>
+                  <ConfirmDialog
+                    title="Excluir este pacote?"
+                    description={`"${pkg.name}" sai da vitrine. Quem já comprou NÃO perde as horas.`}
+                    confirmLabel="Excluir"
+                    destructive
+                    onConfirm={() => excluirPacote.mutateAsync({ pkgId: pkg.id })
+                      .then(() => toast.success('Pacote excluído.'))
+                      .catch((e) => toast.error(e?.message || 'Não foi possível excluir.'))}
+                    trigger={(
+                      <button type="button" aria-label="Excluir pacote"
+                        className="rounded-full border border-red-200 bg-red-50 p-1.5 text-red-600 hover:bg-red-100">
+                        <Trash2 className="h-3.5 w-3.5" />
+                      </button>
+                    )}
+                  />
+                </div>
+              </div>
             ))}
           </div>
         )}
       </V2Surface>
-    </div>
+    );
+  }
+
+  return (
+    <V2Surface>
+      <div className="mb-3 flex flex-wrap items-center justify-between gap-2">
+        <div>
+          <h2 className="font-display text-base font-bold text-ink">
+            Quem é membro <V2Badge tone="neutral">{members.length}</V2Badge>
+          </h2>
+          <p className="text-xs text-gray-500">Nível, horas de pacote, saldo e mensalidade de cada um.</p>
+        </div>
+        {!incluindo && (
+          <V2Button size="sm" variant="secondary" onClick={() => setIncluindo(true)}>
+            <UserPlus className="h-4 w-4" /> Incluir membro
+          </V2Button>
+        )}
+      </div>
+
+      {incluindo && (
+        <div className="mb-3">
+          <IncluirMembro
+            arenaId={arena.id} jaSaoMembros={jaSaoMembros} onClose={() => setIncluindo(false)}
+          />
+        </div>
+      )}
+
+      {carregandoMembros ? (
+        <V2Skeleton className="h-32" />
+      ) : members.length === 0 ? (
+        <V2EmptyState
+          icon={Wallet}
+          title="Nenhum membro ainda"
+          description="Inclua quem já joga aqui sempre — a aba Clientes mostra quem mais reserva. Membro tem desconto, pacote e carteira, e volta mais."
+          action={<V2Button onClick={() => setIncluindo(true)}><UserPlus className="h-4 w-4" /> Incluir o primeiro</V2Button>}
+        />
+      ) : (
+        <div className="space-y-2">
+          {members.map((m) => (
+            <LinhaDoMembro
+              key={m.id}
+              arenaId={arena.id}
+              member={m}
+              temCarteira={temCarteira}
+              temMensalidade={temMensalidade}
+              temPontos={temPontos}
+              sub={mensalidadePorUid.get(m.user_id) || null}
+              onRemover={(alvo) => remover.mutateAsync({ arenaId: arena.id, userId: alvo.user_id })
+                .then(() => toast.success('Membro removido.'))
+                .catch((e) => toast.error(e?.message || 'Não foi possível remover.'))}
+            />
+          ))}
+        </div>
+      )}
+    </V2Surface>
   );
+}
+
+/* --------------------------------- página ---------------------------------- */
+
+/**
+ * A rota antiga `/arenas/:id/gerir/membros` virou atalho para a aba da
+ * Central. Ela continua existindo porque notificações antigas e o catálogo
+ * apontam para cá — e um link antigo que abre a aba certa é melhor que uma
+ * segunda tela com o mesmo conteúdo.
+ */
+export default function V2ArenaAdminMembers() {
+  const { arenaId } = useParams();
+  return <Navigate to={`/arenas/${arenaId}/gerir?aba=membros`} replace />;
 }
