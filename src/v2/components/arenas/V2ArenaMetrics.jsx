@@ -21,10 +21,19 @@
  */
 
 import React, { useMemo, useState } from 'react';
-import { ChevronLeft, ChevronRight, TrendingUp, Users, Clock, Star, ShoppingBag, Calendar } from 'lucide-react';
+import {
+  ChevronLeft, ChevronRight, TrendingUp, Users, Clock, Star, ShoppingBag, Calendar,
+  Crown, GraduationCap, Trophy,
+} from 'lucide-react';
 import { calculateArenaMetrics, formatPeriodLabel, nowYearMonth } from '@/modules/arenas/domain/arena_metrics';
 import { useArenaBookings } from '@/modules/arenas/hooks/useBookings';
-import { useArenaSales } from '@/modules/arenas/hooks/useArenaV3';
+import {
+  useArenaSales, useArenaClasses, useArenaClassBookingsAll, useArenaWallets,
+  useArenaSubscriptions, useArenaInternalTournaments,
+} from '@/modules/arenas/hooks/useArenaV3';
+import { useArenaModules } from '@/modules/arenas/hooks/useArenaModules';
+import { ARENA_MODULE_ID } from '@/modules/arenas/domain/modules';
+import { moduleRevenue } from '@/modules/arenas/domain/moduleRevenue';
 import { useArenaReviews } from '@/modules/arenas/hooks/useArenas';
 import { useArenaCourtSchedules, useArenaCourts, useInventoryEntries, useInventoryExits } from '@/modules/arenas/hooks/useArenas';
 import { V2Badge, V2Button, V2Surface } from '@/v2/ui/primitives';
@@ -119,6 +128,29 @@ export default function V2ArenaMetrics({ arena }) {
     };
   }, [invExits, invEntries, monthPrefix]);
 
+  // Os MÓDULOS integrados à arena (Membros, Aulas, Torneios): o que entrou
+  // por eles no mês. Cada consulta só sai com o módulo ligado.
+  const { isOn } = useArenaModules(arena.id);
+  const comAulas = isOn(ARENA_MODULE_ID.CLASSES);
+  const comPacotes = isOn(ARENA_MODULE_ID.MEMBERS_PACKAGES);
+  const comMensalidade = isOn(ARENA_MODULE_ID.MEMBERS_SUBSCRIPTION);
+  const comTorneios = isOn(ARENA_MODULE_ID.LEAGUES);
+  const { data: aulas = [] } = useArenaClasses(comAulas ? arena.id : null, { includeClosed: true, lim: 500 });
+  const { data: matriculas = [] } = useArenaClassBookingsAll(comAulas ? arena.id : null);
+  const { data: carteiras = [] } = useArenaWallets(comPacotes ? arena.id : null);
+  const { data: mensalidades = [] } = useArenaSubscriptions(comMensalidade ? arena.id : null);
+  const { data: torneiosDaCasa = [] } = useArenaInternalTournaments(comTorneios ? arena.id : null);
+  const modulos = useMemo(() => moduleRevenue({
+    year: cursor.year,
+    month: cursor.month,
+    classes: aulas,
+    classBookings: matriculas,
+    wallets: carteiras,
+    subscriptions: mensalidades,
+    tournaments: torneiosDaCasa,
+  }), [cursor.year, cursor.month, aulas, matriculas, carteiras, mensalidades, torneiosDaCasa]);
+  const algumModulo = comAulas || comPacotes || comMensalidade || comTorneios;
+
   const metrics = useMemo(() => calculateArenaMetrics({
     bookings: bookingsInMonth,
     sales: salesInMonth,
@@ -155,10 +187,10 @@ export default function V2ArenaMetrics({ arena }) {
       <div className="grid grid-cols-2 gap-3 md:grid-cols-4">
         <Stat
           label="Receita total (mês)"
-          value={formatPrice(metrics.revenue.confirmed + metrics.revenue_by_source.sales + market.revenue)}
+          value={formatPrice(metrics.revenue.confirmed + metrics.revenue_by_source.sales + market.revenue + modulos.recebido)}
           tone="success"
           icon={TrendingUp}
-          sub={`Reservas + PDV + Mercado${metrics.revenue.pending > 0 ? ` · +${formatPrice(metrics.revenue.pending)} pendente` : ''}`}
+          sub={`Reservas + PDV + Mercado${algumModulo ? ' + Planos e aulas' : ''}${metrics.revenue.pending > 0 ? ` · +${formatPrice(metrics.revenue.pending)} pendente` : ''}`}
         />
         <Stat
           label="Reservas"
@@ -222,6 +254,57 @@ export default function V2ArenaMetrics({ arena }) {
           </div>
         </V2Surface>
       </div>
+
+      {/* Planos, aulas e torneios — só com os módulos ligados. */}
+      {algumModulo && (
+        <div className="grid grid-cols-1 gap-3 md:grid-cols-3">
+          {(comPacotes || comMensalidade) && (
+            <V2Surface className="p-4">
+              <div className="flex items-center gap-2 text-sm font-bold text-ink">
+                <Crown className="h-4 w-4 text-gray-500" />
+                Planos (membros)
+              </div>
+              <div className="mt-2 font-display text-2xl font-bold text-ink">
+                {formatPrice(modulos.pacotes.valor + modulos.mensalidades.recebido)}
+              </div>
+              <div className="mt-1 text-xs text-gray-500">
+                {comPacotes && `${modulos.pacotes.vendidos} pacote(s) vendido(s)`}
+                {comPacotes && comMensalidade && ' · '}
+                {comMensalidade && `${modulos.mensalidades.pagantes} mensalidade(s) paga(s)`}
+              </div>
+            </V2Surface>
+          )}
+          {comAulas && (
+            <V2Surface className="p-4">
+              <div className="flex items-center gap-2 text-sm font-bold text-ink">
+                <GraduationCap className="h-4 w-4 text-gray-500" />
+                Aulas
+              </div>
+              <div className="mt-2 font-display text-2xl font-bold text-ink">
+                {formatPrice(modulos.aulas.arena)}
+              </div>
+              <div className="mt-1 text-xs text-gray-500">
+                Fica com a arena · {formatPrice(modulos.aulas.recebido)} recebidos de {modulos.aulas.alunos} aluno(s)
+                {modulos.aulas.aReceber > 0 ? ` · ${formatPrice(modulos.aulas.aReceber)} a receber` : ''}
+              </div>
+            </V2Surface>
+          )}
+          {comTorneios && (
+            <V2Surface className="p-4">
+              <div className="flex items-center gap-2 text-sm font-bold text-ink">
+                <Trophy className="h-4 w-4 text-gray-500" />
+                Torneios da casa
+              </div>
+              <div className="mt-2 font-display text-2xl font-bold text-ink">
+                {formatPrice(modulos.torneios.previsto)}
+              </div>
+              <div className="mt-1 text-xs text-gray-500">
+                Previsto em inscrições · {modulos.torneios.quantos} torneio(s), {modulos.torneios.inscritos} inscrito(s) — não entra no total
+              </div>
+            </V2Surface>
+          )}
+        </div>
+      )}
 
       {/* Status das reservas */}
       <V2Surface className="p-4">

@@ -111,7 +111,7 @@ novo**; consultas com um `where` só e ordenação em memória.
 | I-1 | Abas por URL (D1) + seção **Membros** na gestão + membros na página pública + selo no CRM | ✅ §4 |
 | I-2 | Seção **Aulas**, lista única de professores (Sistema A + aulas), D2, D5–D11, aulas no lado do atleta e do professor | ✅ §5 |
 | I-3 | Seção **Torneios** (casa + plataforma), D3, D4, D12–D14, torneios na página pública e no lado do atleta | ✅ §6 |
-| I-4 | Receita de aulas, planos e torneios no painel de métricas | ⏳ |
+| I-4 | Receita de aulas, planos e torneios no painel de métricas | ✅ §7 |
 
 ---
 
@@ -339,4 +339,24 @@ compartilham prefixo); o nome antigo segue exportado como alias.
 (`arena_internal_tournaments`: a inscrição do próprio atleta), provada no
 emulador — metade das asserções prova o que passou a funcionar, metade o que
 continua barrado.
+
+---
+
+## 7. I-4 — O dinheiro dos módulos nas métricas (entregue)
+
+Central → Desempenho → **Métricas** ganhou, com os módulos ligados, a linha
+**Planos (membros) · Aulas · Torneios da casa**, e o **total do mês** passou a
+somar o que entrou por eles. A regra do que conta mora em `moduleRevenue`
+(`arenas/domain/moduleRevenue.js`), pura e testada:
+
+| Origem | O que entra no TOTAL | Pela data de |
+|---|---|---|
+| Aulas | só a parte que **fica com a arena** (`arena_amount`) das matrículas **pagas**; o "a receber" aparece à parte | a aula |
+| Pacotes | o valor da venda registrada na carteira (quem registra é a arena, ao confirmar o pagamento) | a venda |
+| Mensalidades | o mês marcado como pago × o valor do plano | o mês |
+| Torneios da casa | **nada** — aparece como *previsto* (inscritos × inscrição), porque a plataforma não registra o pagamento da inscrição | o torneio |
+
+- Cada consulta só sai com o módulo ligado; sem nenhum, o painel é o de antes.
+- As consultas novas (`listArenaClassBookings`, `listArenaWallets`) filtram
+  por `arena_id`, o campo que a regra confere para a arena ler.
 

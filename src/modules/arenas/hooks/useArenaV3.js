@@ -313,7 +313,7 @@ import {
   listArenaMembers, getArenaMember, addArenaMember, removeArenaMember,
   addPointsToMember, listArenaPackages, createArenaPackage, updateArenaPackage,
   deleteArenaPackage, purchasePackage, getArenaWallet, creditWallet, applyCashback,
-  requestPackagePurchase, sellPackageToMember,
+  requestPackagePurchase, sellPackageToMember, listArenaWallets,
   redeemMemberPoints,
   listArenaSubscriptions, getMemberSubscription, setMemberSubscription,
   setSubscriptionMonthPaid, cancelMemberSubscription,
@@ -406,6 +406,16 @@ export function usePurchasePackage() {
   });
 }
 
+/** Todas as carteiras da arena (métricas). `null` = não consulta. */
+export function useArenaWallets(arenaId) {
+  return useQuery({
+    queryKey: ['arena-wallets', arenaId],
+    queryFn: () => listArenaWallets(arenaId),
+    enabled: !!arenaId,
+    staleTime: 60_000,
+  });
+}
+
 /**
  * O atleta PEDE um pacote — a arena é avisada e confirma quando receber.
  *
@@ -428,6 +438,7 @@ export function useSellPackageToMember() {
     onSuccess: (_d, { arenaId, target }) => {
       invalidarMembro(qc, arenaId, target?.user_id);
       qc.invalidateQueries({ queryKey: ['arena-packages', arenaId] });
+      qc.invalidateQueries({ queryKey: ['arena-wallets', arenaId] });
     },
   });
 }
@@ -688,7 +699,7 @@ import {
   listArenaClasses, createArenaClass, bookClass,
   updateArenaClass, cancelArenaClass, deleteArenaClass, completeArenaClass,
   listClassBookings, listMyClassBookings, cancelClassBooking, setClassBookingPaid,
-  listCoachProfiles, listCoachClasses, listCoachClassBookings,
+  listCoachProfiles, listCoachClasses, listCoachClassBookings, listArenaClassBookings,
   listMyClassEnrollments, listMyTaughtClasses,
 } from '../services/classesService.js';
 
@@ -881,6 +892,16 @@ export function useCoachClassBookings(coachId) {
     queryFn: () => listCoachClassBookings(coachId),
     enabled: !!coachId,
     staleTime: 30_000,
+  });
+}
+
+/** Todas as matrículas da arena (métricas). `null` = não consulta. */
+export function useArenaClassBookingsAll(arenaId) {
+  return useQuery({
+    queryKey: ['arena-class-bookings', 'arena', arenaId],
+    queryFn: () => listArenaClassBookings(arenaId),
+    enabled: !!arenaId,
+    staleTime: 60_000,
   });
 }
 
