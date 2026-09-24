@@ -21,8 +21,14 @@ vi.mock('@/core/services/auditService', () => ({ createAuditLog: vi.fn(() => Pro
 vi.mock('@/core/services/notificationService', () => ({
   notifyUsers: vi.fn(() => Promise.resolve()), NOTIFICATION_TYPE: { GENERIC: 'generic' },
 }));
-vi.mock('./arenaService.js', () => ({ listArenaManagers: vi.fn(async () => estado.gestores) }));
-const estado = { gestores: ['g1'] };
+// Os gestores como o BANCO devolve: documentos. `listArenaManagerIds` é quem
+// os traduz em uids — mandar os documentos ao aviso era o defeito (o pedido
+// ia para "[object Object]").
+vi.mock('./arenaService.js', () => ({
+  listArenaManagers: vi.fn(async () => estado.gestores),
+  listArenaManagerIds: vi.fn(async () => estado.gestores.map((g) => g.user_id)),
+}));
+const estado = { gestores: [{ id: 'a1_g1', arena_id: 'a1', user_id: 'g1' }] };
 vi.mock('firebase/firestore', () => ({
   collection: (_db, nome) => ({ _col: nome }),
   doc: (_db, col, id) => ({ _path: `${col?._col || col}/${id}` }),
@@ -52,7 +58,7 @@ const { notifyUsers } = await import('@/core/services/notificationService');
 beforeEach(() => {
   banco.clear();
   escritas.length = 0;
-  estado.gestores = ['g1'];
+  estado.gestores = [{ id: 'a1_g1', arena_id: 'a1', user_id: 'g1' }];
   notifyUsers.mockClear();
   banco.set('arena_packages/p1', { arena_id: 'a1', name: '10 horas', hours: 10, price: 500, validity_days: 90, active: true });
 });
@@ -63,6 +69,7 @@ describe('o atleta PEDE', () => {
     expect(r.notified).toBe(1);
     expect(escritas).toEqual([]);
     const [gestores, aviso] = notifyUsers.mock.calls[0];
+    // ⭐ uids — não os documentos de gestor.
     expect(gestores).toEqual(['g1']);
     expect(aviso.link).toBe('/arenas/a1/gerir?aba=membros&pacote=p1&para=u1');
     expect(aviso.message).toContain('Ana quer o pacote "10 horas"');

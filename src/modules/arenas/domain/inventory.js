@@ -85,6 +85,10 @@ export function normalizeInventoryProduct(input = {}) {
   if (Number.isFinite(salePrice) && salePrice >= 0) {
     value.sale_price = Math.round(salePrice * 100) / 100;
   }
+  // Venda pelo APP (módulo PDV): o produto do Mercado aparece na loja da
+  // arena no aplicativo. Só gravado quando marcado — produtos antigos e quem
+  // não usa a loja ficam como sempre foram. Ver `domain/shop.js`.
+  if (input.sell_online === true) value.sell_online = true;
   // Estoque mínimo para alertar reposição.
   const minStock = Number(input.min_stock);
   if (Number.isFinite(minStock) && minStock >= 0) {
@@ -196,6 +200,11 @@ export function normalizeInventoryExit(input = {}) {
       buyer_id: str(input.buyer_id),
       buyer_name: str(input.buyer_name).slice(0, 80),
       reason: str(input.reason).slice(0, EXIT_REASON_MAX),
+      // Saída gerada pela ENTREGA de um pedido do app: o pedido de origem e o
+      // canal. Só gravados quando informados (saídas digitadas no balcão não
+      // têm pedido). É o que deixa o cancelamento desfazer a saída certa.
+      ...(str(input.sale_id) ? { sale_id: str(input.sale_id) } : {}),
+      ...(['app', 'balcao'].includes(str(input.channel)) ? { channel: str(input.channel) } : {}),
     },
   };
 }

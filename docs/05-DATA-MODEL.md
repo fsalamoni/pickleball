@@ -332,21 +332,39 @@ Favoritos do professor (curtir). Id determinístico.
 Regras Firestore: read/create/delete apenas pelo próprio `user_id`
 (mesmo padrão de `arena_favorites`). Ver `firestore.rules`.
 
-### `arena_products/{id}` (V3, do Arena V3 — PDV)
+### `arena_products/{id}` (V3, do Arena V3 — PDV) — LEGADO
+> Desde 2026-09-24 a loja do app vende os produtos do **Mercado**
+> (`arena_inventory_products` com `sell_online: true`). Esta coleção só serve às
+> vendas antigas (sem `catalog`) e não recebe mais produtos pela tela.
+
 Produtos da loja. `arena_id`, `name` (max 80), `description` (max 500),
 `price` (number), `category` (`'bebidas'|'equipamentos'|'vestuario'|'acessorios'|'alimentos'|'outros'`),
 `stock` (number, opcional = sem controle), `image_url`, `active: bool`,
 `sold_count` (contador). `created_at`, `updated_at`.
 
 ### `arena_sales/{id}` (V3, do Arena V3 — PDV)
-Vendas. `arena_id`, `buyer_id`, `buyer_name`, `items[]` (`{product_id, quantity, price}`),
+Vendas / pedidos da loja do app. `arena_id`, `buyer_id`, `buyer_name`, `items[]` (`{product_id, name, quantity, price}`),
 `total`, `payment_method`, `status` (`'pending'|'paid'|'cancelled'|'refunded'`),
-`split_with[]` (user_ids), `split_details[]` (somas por participante).
-`created_at`, `updated_at`.
+`split_with[]` (user_ids), `split_details[]` (somas por participante),
+`stock_applied` (entregue), `created_at_ms`. `created_at`, `updated_at`.
+- (2026-09-24, opcionais) `catalog: 'mercado'` (pedido dos produtos do Mercado —
+  preço do BANCO; ausente = venda antiga de `arena_products`), `arena_name`,
+  `delivered_at`/`delivered_by`, `cancel_reason`/`cancelled_by`.
+- **Regras**: lê o comprador, a arena, o admin e **quem está em `split_with`**
+  (consulta `split_with array-contains uid`, sem índice composto). O comprador só
+  cria em aberto (`status` pending) e não entregue (`stock_applied` false); e só
+  atualiza para DESISTIR (`status: 'cancelled'`, tocando só
+  `status`/`cancel_reason`/`cancelled_by`/`updated_at`), com o pedido em aberto,
+  não entregue e não dividido. A arena faz o resto.
 
 ### `arena_payments/{id}` (V3, do Arena V3 — PDV)
 Pagamentos individuais. `sale_id`, `arena_id`, `payer_id`, `amount`,
 `payment_method`, `status`. Id = `${saleId}_${userId}`. `created_at`, `updated_at`, `paid_at`.
+- (2026-09-24, opcionais) `confirmed_by`, `received_at_counter` (a arena recebeu
+  no balcão por quem não registrou pelo app).
+- **Regras**: quem paga cria só PENDENTE e só numa venda de que faz parte, da
+  mesma arena (`paymentBelongsToSale`); e só troca `payment_method` ou desiste
+  (`status` pending → cancelled) enquanto não foi confirmado. "Pago" é a arena.
 
 ## Transversal
 
@@ -905,7 +923,9 @@ e sem `queue_removed`. É exatamente esse conjunto que vira o CSV.
 > `docs/10-ARENA-V3/26-ARENA-V3-COMPLETE-REFERENCE.md`. Cada módulo
 > controla o que está ativo via sub-flag.
 
-**PDV**: `arena_products`, `arena_sales`, `arena_payments`.
+**PDV**: `arena_sales`, `arena_payments` — os produtos são os do Mercado
+(`arena_inventory_products` com `sell_online`); `arena_products` é legado
+(vendas antigas). Ver `docs/24-MODULOS-DE-ARENA/09-INTEGRACAO-NA-ARENA.md` §9.
 **Members**: `arena_members`, `arena_packages`, `arena_subscriptions`,
 `arena_wallets`, `arena_tier_configs`, `arena_network_memberships`,
 `arena_networks`.
@@ -962,6 +982,16 @@ atualização/remoção (moderação) só `platform_admin`.
 `arena_inventory_products` ganhou campos ADITIVOS opcionais quando o produto vem
 do catálogo/mercado: `catalog_id`, `subcategory`, `packaging`, `size`, `flavor`,
 `sale_price`, `min_stock`, `expiry_date`.
+
+(2026-09-24) A loja do app é um CANAL do Mercado:
+- `arena_inventory_products.sell_online` (só gravado quando marcado) — o produto
+  aparece na loja do app com o `sale_price`;
+- `arena_inventory_products.stock_qty` — a cópia do estoque que o atleta lê
+  (ele não lê entradas e saídas). Escrita só pela arena; refeita a cada
+  entrada/saída/entrega/cancelamento. **Vazio = sem controle de estoque**
+  (nenhuma entrada registrada: o app vende sem limite);
+- `arena_inventory_exits.sale_id` + `channel: 'app'` — a saída gerada pela
+  ENTREGA de um pedido. O cancelamento acha o que desfazer por esse campo.
 
 ## Relacionamentos (resumo)
 

@@ -19,6 +19,7 @@ const TUDO_LIGADO = {
   ...BASE,
   modulos: {
     jogoAberto: true, membros: true, pacotes: true, aulas: true, torneios: true, torneiosPlataforma: true,
+    loja: true,
   },
 };
 
@@ -49,6 +50,13 @@ describe('buildArenaSections', () => {
     expect(ids.indexOf('jogo-aberto')).toBe(ids.indexOf('reservas') + 1);
     expect(secs.find((s) => s.id === 'jogo-aberto').tabs.map((t) => t.value)).toEqual(['jogo-aberto']);
     expect(valores(buildArenaSections(BASE))).not.toContain('jogo-aberto');
+  });
+
+  it('⭐ loja ligada: "Pedidos do app" é a PRIMEIRA aba de Pagamentos e loja; desligada, a seção é a de antes', () => {
+    const com = buildArenaSections(TUDO_LIGADO).find((s) => s.id === 'comercial');
+    expect(com.tabs.map((t) => t.value)).toEqual(['pedidos', 'pagamento', 'mercado']);
+    const sem = buildArenaSections(BASE).find((s) => s.id === 'comercial');
+    expect(sem.tabs.map((t) => t.value)).toEqual(['pagamento', 'mercado']);
   });
 
   it('Pacotes só com o módulo de pacotes', () => {

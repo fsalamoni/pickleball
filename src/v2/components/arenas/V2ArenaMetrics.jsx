@@ -34,6 +34,7 @@ import {
 import { useArenaModules } from '@/modules/arenas/hooks/useArenaModules';
 import { ARENA_MODULE_ID } from '@/modules/arenas/domain/modules';
 import { moduleRevenue } from '@/modules/arenas/domain/moduleRevenue';
+import { appOrdersSummary, salesOutsideMercado } from '@/modules/arenas/domain/shop';
 import { useArenaReviews } from '@/modules/arenas/hooks/useArenas';
 import { useArenaCourtSchedules, useArenaCourts, useInventoryEntries, useInventoryExits } from '@/modules/arenas/hooks/useArenas';
 import { V2Badge, V2Button, V2Surface } from '@/v2/ui/primitives';
@@ -119,8 +120,11 @@ export default function V2ArenaMetrics({ arena }) {
     const revenue = salesExits.reduce((s, x) => s + Number(x.total_price || 0), 0);
     const units = salesExits.reduce((s, x) => s + Number(x.quantity || 0), 0);
     const invested = invEntries.filter((e) => inMonth(e.date)).reduce((s, e) => s + Number(e.total_cost || 0), 0);
+    // O que saiu pela ENTREGA de pedidos do app — já está dentro de `revenue`.
+    const pelaLoja = salesExits.filter((x) => x.channel === 'app').reduce((s, x) => s + Number(x.total_price || 0), 0);
     return {
       revenue: Math.round(revenue * 100) / 100,
+      app: Math.round(pelaLoja * 100) / 100,
       invested: Math.round(invested * 100) / 100,
       net: Math.round((revenue - invested) * 100) / 100,
       units,
@@ -150,16 +154,27 @@ export default function V2ArenaMetrics({ arena }) {
     tournaments: torneiosDaCasa,
   }), [cursor.year, cursor.month, aulas, matriculas, carteiras, mensalidades, torneiosDaCasa]);
   const algumModulo = comAulas || comPacotes || comMensalidade || comTorneios;
+  const lojaOn = isOn(ARENA_MODULE_ID.PDV);
+
+  // As vendas da loja em duas famílias. As ANTIGAS (catálogo próprio da
+  // loja) contam pelo pagamento, como sempre. Os pedidos do app, quando
+  // entregues, viram saída do Mercado e já estão em `market.revenue` —
+  // somá-los aqui também seria contar a mesma água duas vezes.
+  const vendasAntigas = useMemo(() => salesOutsideMercado(salesInMonth), [salesInMonth]);
+  const pedidosApp = useMemo(() => appOrdersSummary(salesInMonth), [salesInMonth]);
+  // Com a loja desligada o painel é o de antes; o cartão do PDV antigo segue
+  // enquanto houver venda dele no mês.
+  const mostrarPdvAntigo = vendasAntigas.length > 0 || !lojaOn;
 
   const metrics = useMemo(() => calculateArenaMetrics({
     bookings: bookingsInMonth,
-    sales: salesInMonth,
+    sales: vendasAntigas,
     reviews,
     schedules,
     courts,
     year: cursor.year,
     month: cursor.month,
-  }), [bookingsInMonth, salesInMonth, reviews, schedules, courts, cursor.year, cursor.month]);
+  }), [bookingsInMonth, vendasAntigas, reviews, schedules, courts, cursor.year, cursor.month]);
 
   const isLoading = loadingBookings || loadingSales;
 
@@ -179,7 +194,7 @@ export default function V2ArenaMetrics({ arena }) {
           </V2Button>
         </div>
         <div className="text-xs text-gray-500">
-          {isLoading ? 'Carregando…' : `${bookingsInMonth.length} reservas · ${salesInMonth.length} vendas no mês`}
+          {isLoading ? 'Carregando…' : `${bookingsInMonth.length} reservas · ${salesInMonth.length} pedidos da loja no mês`}
         </div>
       </div>
 
@@ -187,10 +202,12 @@ export default function V2ArenaMetrics({ arena }) {
       <div className="grid grid-cols-2 gap-3 md:grid-cols-4">
         <Stat
           label="Receita total (mês)"
-          value={formatPrice(metrics.revenue.confirmed + metrics.revenue_by_source.sales + market.revenue + modulos.recebido)}
+          // 🐞 Somava `revenue_by_source.sales` por cima de `revenue.confirmed`,
+          // que JÁ inclui as vendas pagas: toda venda da loja entrava duas vezes.
+          value={formatPrice(metrics.revenue.confirmed + market.revenue + modulos.recebido)}
           tone="success"
           icon={TrendingUp}
-          sub={`Reservas + PDV + Mercado${algumModulo ? ' + Planos e aulas' : ''}${metrics.revenue.pending > 0 ? ` · +${formatPrice(metrics.revenue.pending)} pendente` : ''}`}
+          sub={`Reservas${mostrarPdvAntigo ? ' + PDV' : ''} + Mercado${algumModulo ? ' + Planos e aulas' : ''}${metrics.revenue.pending > 0 ? ` · +${formatPrice(metrics.revenue.pending)} pendente` : ''}`}
         />
         <Stat
           label="Reservas"
@@ -228,18 +245,31 @@ export default function V2ArenaMetrics({ arena }) {
             Reservas confirmadas/concluídas no mês
           </div>
         </V2Surface>
-        <V2Surface className="p-4">
-          <div className="flex items-center gap-2 text-sm font-bold text-ink">
-            <ShoppingBag className="h-4 w-4 text-gray-500" />
-            Receita de vendas (PDV)
-          </div>
-          <div className="mt-2 font-display text-2xl font-bold text-ink">
-            {formatPrice(metrics.revenue_by_source.sales)}
-          </div>
-          <div className="mt-1 text-xs text-gray-500">
-            {metrics.sales.paid} de {metrics.sales.total} vendas pagas
-          </div>
-        </V2Surface>
+        {mostrarPdvAntigo ? (
+          <V2Surface className="p-4">
+            <div className="flex items-center gap-2 text-sm font-bold text-ink">
+              <ShoppingBag className="h-4 w-4 text-gray-500" />
+              Receita de vendas (PDV)
+            </div>
+            <div className="mt-2 font-display text-2xl font-bold text-ink">
+              {formatPrice(metrics.revenue_by_source.sales)}
+            </div>
+            <div className="mt-1 text-xs text-gray-500">
+              {metrics.sales.paid} de {metrics.sales.total} vendas pagas (catálogo antigo da loja)
+            </div>
+          </V2Surface>
+        ) : (
+          <V2Surface className="p-4">
+            <div className="flex items-center gap-2 text-sm font-bold text-ink">
+              <ShoppingBag className="h-4 w-4 text-gray-500" />
+              Pedidos do app
+            </div>
+            <div className="mt-2 font-display text-2xl font-bold text-ink">{pedidosApp.total}</div>
+            <div className="mt-1 text-xs text-gray-500">
+              {pedidosApp.entregues} entregue(s) · {pedidosApp.pagos} pago(s) — o valor entra no Mercado ao entregar
+            </div>
+          </V2Surface>
+        )}
         <V2Surface className="p-4">
           <div className="flex items-center gap-2 text-sm font-bold text-ink">
             <ShoppingBag className="h-4 w-4 text-gray-500" />
@@ -249,7 +279,7 @@ export default function V2ArenaMetrics({ arena }) {
             {formatPrice(market.revenue)}
           </div>
           <div className="mt-1 text-xs text-gray-500">
-            {market.count} venda(s) · {market.units} un · investido {formatPrice(market.invested)}
+            {market.count} venda(s) · {market.units} un{market.app > 0 ? ` (${formatPrice(market.app)} pelo app)` : ''} · investido {formatPrice(market.invested)}
             {' · '}<span className={market.net >= 0 ? 'font-bold text-green-700' : 'font-bold text-red-600'}>líquido {formatPrice(market.net)}</span>
           </div>
         </V2Surface>

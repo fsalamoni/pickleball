@@ -601,36 +601,40 @@ export function useArenaWallet(arenaId, userId) {
 /* ---------------------- PDV (sprint 3) ---------------------- */
 
 import {
-  listArenaProducts, createArenaProduct, updateArenaProduct, deleteArenaProduct,
-  createSale, listArenaSales, listUserSales,
-  listArenaPayments, confirmPayment,
-  confirmSale, cancelSale, payMyShare,
+  listShopProducts, syncShopStock,
+  createSale, listArenaSales, listMyShopSales, listMyPayments,
+  listArenaPayments, confirmPayment, receiveShareAtCounter,
+  confirmSale, cancelSale, cancelMyOrder, payMyShare,
 } from '../services/pdvService.js';
 
-export function useArenaProducts(arenaId) {
+/**
+ * A vitrine da loja do app — os produtos do MERCADO marcados "Vender pelo
+ * app". Exige login (a regra só deixa conta autenticada ler o Mercado).
+ */
+export function useShopProducts(arenaId) {
+  const { user } = useAuth();
   return useQuery({
-    queryKey: ['arena-products', arenaId],
-    queryFn: () => listArenaProducts(arenaId),
-    enabled: !!arenaId,
+    queryKey: ['shop-products', arenaId],
+    queryFn: () => listShopProducts(arenaId),
+    enabled: !!arenaId && !!user?.uid,
     staleTime: 60_000,
   });
 }
 
-export function useCreateProduct() {
-  const { user } = useAuth();
+/**
+ * A arena acerta a cópia do estoque que a loja lê. Rede de segurança: cada
+ * entrada e saída do Mercado já a atualiza.
+ */
+export function useSyncShopStock() {
   const qc = useQueryClient();
   return useMutation({
-    mutationFn: ({ arenaId, input }) => createArenaProduct(arenaId, input, user),
-    onSuccess: (_d, { arenaId }) => qc.invalidateQueries({ queryKey: ['arena-products', arenaId] }),
-  });
-}
-
-export function useDeleteProduct() {
-  const { user } = useAuth();
-  const qc = useQueryClient();
-  return useMutation({
-    mutationFn: ({ prodId }) => deleteArenaProduct(prodId, user),
-    onSuccess: () => qc.invalidateQueries({ queryKey: ['arena-products'] }),
+    mutationFn: ({ arenaId }) => syncShopStock(arenaId),
+    onSuccess: (acertados, { arenaId }) => {
+      if (acertados > 0) {
+        qc.invalidateQueries({ queryKey: ['shop-products', arenaId] });
+        qc.invalidateQueries({ queryKey: ['inventory-products', arenaId] });
+      }
+    },
   });
 }
 
@@ -662,6 +666,16 @@ export function useConfirmPayment() {
   });
 }
 
+/** A arena recebe no balcão a parte de quem ainda não a registrou pelo app. */
+export function useReceiveShareAtCounter() {
+  const { user } = useAuth();
+  const qc = useQueryClient();
+  return useMutation({
+    mutationFn: ({ saleId, payerId }) => receiveShareAtCounter(saleId, payerId, user),
+    onSuccess: (_d, { arenaId }) => invalidarLoja(qc, arenaId),
+  });
+}
+
 export function useArenaPayments(arenaId) {
   return useQuery({
     queryKey: ['arena-payments', arenaId],
@@ -671,27 +685,34 @@ export function useArenaPayments(arenaId) {
   });
 }
 
-/** As MINHAS compras nesta arena. */
-export function useMySales(arenaId) {
+/**
+ * TODAS as minhas compras, em todas as arenas — as que fiz e as que dividem
+ * a conta comigo.
+ */
+export function useMyShopSales() {
   const { user } = useAuth();
   return useQuery({
-    queryKey: ['arena-sales', 'minhas', arenaId, user?.uid],
-    queryFn: async () => {
-      const todas = await listUserSales(user?.uid);
-      return todas.filter((v) => v.arena_id === arenaId);
-    },
-    enabled: !!arenaId && !!user?.uid,
+    queryKey: ['arena-sales', 'minhas', user?.uid],
+    queryFn: () => listMyShopSales(user?.uid),
+    enabled: !!user?.uid,
     staleTime: 30_000,
   });
 }
 
-/** Atualizar produto (preço, estoque, ativo). */
-export function useUpdateProduct() {
+/** As MINHAS compras nesta arena (inclusive as divididas comigo). */
+export function useMySales(arenaId) {
+  const q = useMyShopSales();
+  return { ...q, data: q.data ? q.data.filter((v) => v.arena_id === arenaId) : q.data };
+}
+
+/** Os meus pagamentos — para saber de que conta já registrei a minha parte. */
+export function useMyPayments() {
   const { user } = useAuth();
-  const qc = useQueryClient();
-  return useMutation({
-    mutationFn: ({ prodId, updates }) => updateArenaProduct(prodId, updates, user),
-    onSuccess: (_d, { arenaId }) => invalidarLoja(qc, arenaId),
+  return useQuery({
+    queryKey: ['arena-payments', 'minhas', user?.uid],
+    queryFn: () => listMyPayments(user?.uid),
+    enabled: !!user?.uid,
+    staleTime: 30_000,
   });
 }
 
@@ -699,8 +720,8 @@ export function useUpdateProduct() {
  * A arena ENTREGA a compra — e é aqui que o estoque sai.
  *
  * Na compra o estoque não baixa: a regra do Firestore não deixa o atleta
- * escrever `arena_products`, e reservar o que ainda não foi entregue conta
- * uma venda que pode não acontecer.
+ * escrever o estoque, e reservar o que ainda não foi entregue conta uma venda
+ * que pode não acontecer. No pedido do app, a entrega vira saída do Mercado.
  */
 export function useConfirmSale() {
   const { user } = useAuth();
@@ -720,6 +741,16 @@ export function useCancelSale() {
   });
 }
 
+/** Quem pediu desiste — enquanto não foi entregue e não é dividido. */
+export function useCancelMyOrder() {
+  const { user, userProfile } = useAuth();
+  const qc = useQueryClient();
+  return useMutation({
+    mutationFn: ({ saleId }) => cancelMyOrder(saleId, user, userProfile),
+    onSuccess: (_d, { arenaId }) => invalidarLoja(qc, arenaId),
+  });
+}
+
 /** Pago a MINHA parte de uma conta dividida — cada um grava o próprio. */
 export function usePayMyShare() {
   const { user } = useAuth();
@@ -730,11 +761,16 @@ export function usePayMyShare() {
   });
 }
 
-/** Tudo o que muda quando a loja se mexe. */
+/**
+ * Tudo o que muda quando a loja se mexe — inclusive o MERCADO, porque a
+ * entrega de um pedido do app vira saída de estoque lá.
+ */
 function invalidarLoja(qc, arenaId) {
-  qc.invalidateQueries({ queryKey: ['arena-products', arenaId] });
+  qc.invalidateQueries({ queryKey: ['shop-products', arenaId] });
   qc.invalidateQueries({ queryKey: ['arena-sales'] });
-  qc.invalidateQueries({ queryKey: ['arena-payments', arenaId] });
+  qc.invalidateQueries({ queryKey: ['arena-payments'] });
+  qc.invalidateQueries({ queryKey: ['inventory-products', arenaId] });
+  qc.invalidateQueries({ queryKey: ['inventory-exits', arenaId] });
 }
 
 /* -------------------- Classes (sprint 4) -------------------- */

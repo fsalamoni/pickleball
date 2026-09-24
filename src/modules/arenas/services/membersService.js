@@ -627,8 +627,11 @@ export async function requestPackagePurchase(arenaId, pkgId, user, profile) {
   const pkg = pkgSnap.data();
   if (pkg.active === false) throw new Error('Este pacote saiu da vitrine.');
 
-  const { listArenaManagers } = await import('./arenaService.js');
-  const gestores = await listArenaManagers(arenaId).catch(() => []);
+  // 🐞 Usava `listArenaManagers`, que devolve os DOCUMENTOS de gestor, não
+  // os uids: o aviso era gravado para "[object Object]" e o pedido de pacote
+  // nunca chegava a ninguém da arena.
+  const { listArenaManagerIds } = await import('./arenaService.js');
+  const gestores = await listArenaManagerIds(arenaId).catch(() => []);
   if (gestores.length === 0) throw new Error('A arena ainda não tem quem receba o pedido. Fale com ela.');
   const nome = displayName(user, profile);
   await notifyUsers(gestores, {

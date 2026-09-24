@@ -10,7 +10,7 @@
 import {
   BarChart3, Building2, CalendarClock, CalendarDays, CalendarRange, ClipboardList,
   Crown, DollarSign, Globe, GraduationCap, Image, Info, LayoutGrid, Package, Puzzle,
-  SlidersHorizontal, Star, Swords, Trophy, Users, Wallet,
+  ShoppingBag, SlidersHorizontal, Star, Swords, Trophy, Users, Wallet,
 } from 'lucide-react';
 
 // Navegação em dois níveis do admin da arena. Ordem = ciclo de vida, do
@@ -101,11 +101,15 @@ export function buildArenaSections({
         ...(modulos.torneiosPlataforma ? [{ value: 'torneios-plataforma', label: 'Da plataforma', icon: Globe }] : []),
       ],
     }] : []),
+    // Pagamentos e loja. Com a loja do app ligada (módulo `pdv`), o BALCÃO
+    // dos pedidos vem primeiro — é a aba que a equipe abre o dia inteiro — e
+    // os produtos continuam no Mercado, que é o cadastro único.
     {
       id: 'comercial',
       label: 'Pagamentos e loja',
       icon: Wallet,
       tabs: [
+        ...(modulos.loja ? [{ value: 'pedidos', label: 'Pedidos do app', icon: ShoppingBag }] : []),
         { value: 'pagamento', label: 'Pagamento', icon: Wallet },
         { value: 'mercado', label: 'Mercado', icon: Package },
       ],

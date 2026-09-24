@@ -74,7 +74,9 @@
 ### `arena_favorites/{uid_arenaId}` (id determinista)
 
 ### Arena V3 (35+ coleções, todas atrás de `ARENA_MODULE_*` flags)
-- `arena_products`, `arena_sales`, `arena_payments` (PDV)
+- `arena_sales`, `arena_payments` (PDV — a loja do app vende os produtos do
+  Mercado com `sell_online`; `arena_products` é legado das vendas antigas.
+  Domínio em `domain/shop.js`; ver `docs/24-MODULOS-DE-ARENA/09-INTEGRACAO-NA-ARENA.md` §9)
 - `arena_members`, `arena_packages`, `arena_subscriptions`, `arena_wallets`,
   `arena_tier_configs` (members)
 - `arena_ladders`, `arena_internal_tournaments`, `arena_matches` (leagues)

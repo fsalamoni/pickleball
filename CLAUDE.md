@@ -278,6 +278,7 @@ Estes princípios vieram de bugs reais que custaram horas pra arrumar. São ineg
 **"A receita dos módulos (aulas, pacotes, mensalidades, torneios) nas métricas"** → `moduleRevenue` (`arenas/domain/moduleRevenue.js`). Só o **recebido** entra no total: aula conta só a parte da ARENA (`arena_amount`) das matrículas pagas; pacote pela data da venda na carteira; mensalidade pelo mês pago; torneio da casa é **previsto** e nunca entra no total (a plataforma não registra o pagamento da inscrição). Ver `docs/24-MODULOS-DE-ARENA/09-INTEGRACAO-NA-ARENA.md` §7
 **"Vou mexer em aula ou professor da arena"** → `docs/24-MODULOS-DE-ARENA/05-AULAS.md`. (1) A matrícula grava **`user_id`** — é o campo que a REGRA confere, e gravar só `athlete_id` fazia o Firestore recusar TODA matrícula em silêncio, desde que a funcionalidade foi escrita. **O nome do campo que a regra usa é contrato.** (2) Aula com `court_id` **OCUPA a quadra** (derivada, como o dia de jogo — `arena_classes` é legível por todos); cancelada ou já dada devolve. (3) O bloqueio de aula **não carrega nome de aluno** — ele é público. (4) A comissão vem da **configuração** do módulo `classes_marketplace`, não de um número no código (eram 50% fixos contra 20% configurados), e professor **da casa não paga comissão**. (5) O professor é reconhecido pelo **`user_id`** em `arena_coaches`: sem o vínculo ele não vê a própria agenda
 **"Vou mexer em torneio interno da arena"** → `docs/24-MODULOS-DE-ARENA/06-TORNEIOS-INTERNOS.md`. (1) **Começar o torneio CRIA UM DIA DE JOGO da arena** com os inscritos, no formato escolhido — é o que faz o torneio virar jogo sem reescrever sorteio, placar, ranking do dia e telão; o dia de jogo é criado ANTES de o status mudar, para um erro não deixar o torneio "em andamento" sem jogo nenhum. (2) O formato tem de ser um que o dia de jogo saiba conduzir (`americano`, `americano_live`, `mexicano`, `king`, `play`) — `single_elimination` era guardado e nada o executava. (3) Torneio com `court_ids` **ocupa a quadra** (derivado), mas **para de derivar quando tem `game_day_id`**: o dia de jogo já bloqueia, e contar duas vezes mostra dois bloqueios para o mesmo horário. (4) O **ladder** (`arena_ladders`) era lido e nunca escrito — agora `applyTournamentToLadder` acumula, quem participou leva 10 pontos, e o documento tem id determinístico `arenaId_periodo` (leitura por `getDoc`, sem índice). (5) O `roster` guarda **nome e foto**, não só uid: sem isso o sorteio mostraria identificadores
+**"Vou mexer na loja do app / produto à venda pelo app"** → ⭐ `docs/24-MODULOS-DE-ARENA/09-INTEGRACAO-NA-ARENA.md` §9. **O Mercado é o cadastro ÚNICO de produto**: a loja vende os `arena_inventory_products` com `sell_online: true` (preço = `sale_price`), e `arena_products` é LEGADO (só vendas antigas, sem `catalog`). **Nunca** crie um segundo catálogo. (1) O pedido manda SÓ produto e quantidade; `createSale` precifica pelo banco, só com produtos DESTA arena, e grava `catalog: 'mercado'`. (2) A entrega vira **saída do Mercado** (`exitsForSale`, com `sale_id` + `channel: 'app'`) numa transação; o cancelamento acha as saídas pelo `sale_id` GRAVADO NELAS. (3) O atleta não lê entradas/saídas, então o produto carrega a cópia `stock_qty` — e **produto sem nenhuma entrada NÃO tem estoque controlado** (`trackedStock` devolve `null`; senão todo serviço nasceria esgotado). (4) A conta só fecha como paga quando TODAS as partes pagaram (`saleShares` — quem deve sai do PEDIDO, não dos pagamentos existentes). (5) As Métricas contam o pedido do app entregue **pelo Mercado**, nunca de novo como venda. (6) Aviso para a arena: `listArenaManagerIds` (uids) — `listArenaManagers` devolve DOCUMENTOS, e passá-los ao `notifyUsers` grava o aviso para `"[object Object]"` (era o defeito do pedido de pacote e do jogo aberto)
 **"Vou mexer no PDV / venda / dividir a conta"** → `docs/24-MODULOS-DE-ARENA/07-PDV-MARCA-REDE-IA.md`. (1) O estoque baixa na **ENTREGA**, nunca na compra: a regra de `arena_products` só deixa o gestor escrever, então a baixa feita pelo atleta era **recusada** e sobrava uma venda fantasma no banco — e o modelo está certo, reservar o que a arena ainda não entregou conta uma venda que pode não acontecer; a arena **reconfere** antes de baixar, porque entre a compra e a retirada outra pessoa pode levar a última unidade. (2) **Cada pessoa grava o próprio pagamento** (`payer_id == request.auth.uid`): o comprador gravava o de todo mundo, e num `writeBatch` a recusa de um derrubava **todos, o dele inclusive** — a divisão fica em `split_details` e quem entra nela é **avisado**. (3) `created_at_ms` tem de ser GRAVADO — a ordenação do caixa existia e comparava `undefined` com `undefined`; a leitura tem fallback para o `created_at` do servidor, senão o histórico antigo desaba para o fim da lista
 **"Vou mexer na marca (cor, logo) da arena"** → `arenas/{id}.branding` (campo opcional do documento da arena, `allow read: if true`), **nunca** `arena_settings.branding`: aquela coleção só o GESTOR lê, e a cor gravada lá nunca teria como chegar à página pública nem ao telão — era o caso, e nada no projeto lia o campo. **O que é público tem de estar onde o público lê.** O texto por cima da cor é escolhido por CONTRASTE (`readableInk`, luminância da WCAG), senão amarelo-limão apaga o cabeçalho inteiro. Domínio em `arenas/domain/whiteLabel.js`; use `brandingOf(arena)` para exibir
 **"Vou mexer na previsão / preço sugerido da IA da arena"** → `getHistoricalBookings` devolvia `return []` com o comentário "só para satisfazer a interface": a previsão era **sempre zero** e o preço sugerido não tinha histórico. Agora lê reservas **confirmadas e concluídas** (pedido recusado não é demanda). Sem histórico a tela **não inventa** — diz que falta movimento. E o preço é **sugestão**: nada muda de preço sozinho, quem aplica é a arena. ⚠️ `resolveArenaPrice` devolve um **objeto** `{ price, … }` — usar o retorno cru faz `base > 0` ser sempre falso e o bloco some da tela sem erro nenhum
@@ -493,6 +494,26 @@ chore(deps): bump firebase to 12.x
 > memory topic `picklerush-sync-2026-08.md`.
 >
 > **Destaques por onda**:
+>
+> - **Onda BM — A loja do app vira um canal do Mercado** (2026-09-24, I-6 da
+>   integração): a arena tinha DOIS cadastros de produto sem ligação — o
+>   Mercado (entradas, saídas, estoque, financeiro) e o catálogo próprio da
+>   loja, com outro estoque. Agora o Mercado é o cadastro: o produto ganha
+>   **"Vender pelo app"**, a vitrine aparece na página da arena (seção
+>   **Loja**), o pedido é precificado pelo BANCO, a arena é **avisada** (antes
+>   nunca era) e o balcão é a aba **Pedidos do app** da Central — onde
+>   "Entreguei" vira saída do Mercado. **Minhas reservas** ganhou "Compras nas
+>   arenas". No caminho, oito defeitos: 🐞 quem dividia a conta **não lia a
+>   venda** (não via a própria parte); 🐞 o comprador criava a venda já
+>   "paga"/"entregue"; 🐞 quem pagava marcava o próprio pagamento como pago;
+>   🐞 qualquer conta semeava pagamentos em qualquer arena; 🐞 **a conta
+>   dividida fechava como paga com gente devendo**; 🐞 **as Métricas contavam
+>   a venda da loja duas vezes**; 🐞 **o pedido de pacote e a entrada no jogo
+>   aberto nunca avisavam a arena** (`listArenaManagers` devolve documentos, e
+>   o aviso ia para `"[object Object]"`); e o preço vinha da tela. **Zero
+>   coleção, zero índice**; campos opcionais; regras de `arena_sales` e
+>   `arena_payments` endurecidas com 20 asserções novas no emulador. Ver
+>   `docs/24-MODULOS-DE-ARENA/09-INTEGRACAO-NA-ARENA.md` §9.
 >
 > - **Onda BL — Jogo aberto dentro da arena** (2026-09-24, I-5 da integração):
 >   *"vamos fazer o mesmo tipo de integração para os demais módulos v3"*. O
@@ -1870,7 +1891,7 @@ chore(deps): bump firebase to 12.x
 
 | Métrica | Valor | Delta do início do agente |
 |---|---|---|
-| **Testes Vitest** | **5322 passing** (320 arquivos) + 283 asserções de regras (Vitest) + 85 do dia de jogo no emulador | +4873 (era 408) |
+| **Testes Vitest** | **5404 passing** (323 arquivos) + 283 asserções de regras do Firestore no emulador (+ 17 do Storage) | +4996 (era 408) |
 | **Lint errors** | 0 | era 30+ |
 | **Módulos** | 21 (+`help` — conteúdo dos tutoriais em tela) (`games` e `legal` saíram como `src/modules/` mas continuam como pastas oficiais — **rating virou módulo oficial** com domain/services/hooks/components) | +4 (coaches, circuits, games, legal) |
 | **V2 pages** | 82 (+V2GameDayTelao — telão, fora do V2Layout; +V2Help — central de ajuda; +V2ArenaKiosk — totem da recepção, também fora do V2Layout; +V2ArenaCheckin; +V2ArenaAttendance) | +58 |

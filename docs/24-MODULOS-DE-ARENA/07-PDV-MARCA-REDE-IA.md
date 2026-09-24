@@ -6,6 +6,14 @@
 > **Chave-mestra**: flag `arena_modules` (default OFF).
 > **Banco**: zero coleção nova, zero índice novo. **Uma regra ampliada** (rede).
 
+> **Atualização 2026-09-24 — a loja virou um canal do Mercado.** O catálogo
+> próprio da loja (`arena_products`) saiu da tela: a vitrine são os produtos do
+> **Mercado** marcados "Vender pelo app", o pedido é precificado pelo banco, a
+> arena é avisada, e a entrega vira saída do Mercado. O balcão é a aba
+> **Pedidos do app** da Central. Regras de `arena_sales`/`arena_payments`
+> endurecidas. Ver `09-INTEGRACAO-NA-ARENA.md` §9 — o que está abaixo sobre
+> `arena_products` descreve as vendas ANTIGAS.
+
 ---
 
 ## 1. 🐞 PDV: três defeitos, e o atleta não conseguia comprar

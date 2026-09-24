@@ -5,7 +5,9 @@
  *  1. ⭐ sem módulo ligado, o painel é o de antes (sem cartão novo, total igual);
  *  2. ⭐ com os módulos, aparecem Planos, Aulas e Torneios, e o total do mês
  *     soma o que foi RECEBIDO (aula: só a parte da arena);
- *  3. o torneio da casa é PREVISTO e não entra no total.
+ *  3. o torneio da casa é PREVISTO e não entra no total;
+ *  4. 🐞 a venda paga da loja entra UMA vez (antes, duas);
+ *  5. ⭐ o pedido do app entregue conta pelo Mercado — e não de novo como venda.
  */
 import React from 'react';
 import { createRoot } from 'react-dom/client';
@@ -17,17 +19,18 @@ const LIGADOS = new Set();
 const hoje = new Date();
 const MES = `${hoje.getFullYear()}-${String(hoje.getMonth() + 1).padStart(2, '0')}`;
 const vazio = { data: [], isLoading: false };
+const dados = { vendas: [], saidas: [] };
 
 vi.mock('@/modules/arenas/hooks/useBookings', () => ({ useArenaBookings: () => vazio }));
 vi.mock('@/modules/arenas/hooks/useArenas', () => ({
   useArenaReviews: () => vazio, useArenaCourtSchedules: () => vazio, useArenaCourts: () => vazio,
-  useInventoryEntries: () => vazio, useInventoryExits: () => vazio,
+  useInventoryEntries: () => vazio, useInventoryExits: () => ({ data: dados.saidas, isLoading: false }),
 }));
 vi.mock('@/modules/arenas/hooks/useArenaModules', () => ({
   useArenaModules: () => ({ isOn: (id) => LIGADOS.has(id) }),
 }));
 vi.mock('@/modules/arenas/hooks/useArenaV3', () => ({
-  useArenaSales: () => vazio,
+  useArenaSales: () => ({ data: dados.vendas, isLoading: false }),
   useArenaClasses: (id) => ({ data: id ? [{ id: 'k1', date: `${MES}-10` }] : [] }),
   useArenaClassBookingsAll: (id) => ({ data: id ? [{ class_id: 'k1', paid: true, amount: 100, arena_amount: 20 }] : [] }),
   useArenaWallets: (id) => ({ data: id ? [{ transactions: [{ type: 'package_purchase', amount: 500, at: new Date() }] }] : [] }),
@@ -40,6 +43,8 @@ const { default: V2ArenaMetrics } = await import('./V2ArenaMetrics.jsx');
 let container, root;
 beforeEach(() => {
   LIGADOS.clear();
+  dados.vendas = [];
+  dados.saidas = [];
   container = document.createElement('div');
   document.body.appendChild(container);
   root = createRoot(container);
@@ -83,5 +88,26 @@ describe('o dinheiro dos módulos nas métricas', () => {
     expect(t).toMatch(/R\$\s?400,00/);
     expect(t).toContain('não entra no total');
     expect(t).toMatch(/Receita total \(mês\)\s?R\$\s?0,00/);
+  });
+
+  it('🐞 a venda paga da loja entra UMA vez no total (antes somava duas)', async () => {
+    dados.vendas = [{ id: 'v1', status: 'paid', total: 10, created_at_ms: Date.now() }];
+    await render();
+    // O real sai com espaço inseparável (toLocaleString).
+    expect(container.textContent.replace(/\u00a0/g, ' ')).toContain('Receita total (mês)R$ 10,00');
+  });
+
+  it('⭐ o pedido do app entregue conta pelo MERCADO, uma vez só', async () => {
+    LIGADOS.add(ARENA_MODULE_ID.PDV);
+    dados.vendas = [{
+      id: 'v2', catalog: 'mercado', status: 'paid', stock_applied: true, total: 8, created_at_ms: Date.now(),
+    }];
+    dados.saidas = [{ date: `${MES}-05`, exit_type: 'sale', quantity: 1, total_price: 8, channel: 'app' }];
+    await render();
+    const texto = container.textContent.replace(/\u00a0/g, ' ');
+    expect(texto).toContain('Receita total (mês)R$ 8,00');
+    expect(texto).toContain('Pedidos do app');
+    expect(texto).toContain('(R$ 8,00 pelo app)');
+    expect(container.textContent).not.toContain('Receita de vendas (PDV)');
   });
 });

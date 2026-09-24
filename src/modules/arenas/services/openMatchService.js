@@ -38,7 +38,7 @@ import {
 import { openSlotConflict } from '../domain/openMatch.js';
 import { formatSlotLabel } from '../domain/calendar.js';
 import { getNextInLine, WAITLIST_STATUS, compactPositions, computePromotionExpiresAt, DEFAULT_PROMOTION_WINDOW_MINUTES } from '../domain/waitlist.js';
-import { getArena, listArenaManagers } from './arenaService.js';
+import { getArena, listArenaManagerIds } from './arenaService.js';
 import { fetchUnifiedLevelValues } from '@/modules/rating/services/unifiedLevelService.js';
 
 const COL = 'arena_open_slots';
@@ -280,7 +280,9 @@ export async function joinOpenSlot(slotId, user, profile) {
 
   // Notifica a arena
   try {
-    const managerIds = await listArenaManagers(slot.arena_id);
+    // 🐞 Era `listArenaManagers` — documentos, não uids: o aviso ia para
+    // "[object Object]" e a arena nunca sabia de quem entrou.
+    const managerIds = await listArenaManagerIds(slot.arena_id);
     notifyUsers(managerIds, {
       title: `Novo inscrito em "${str(slot.arena_name).slice(0, 50)}"`,
       message: `${displayName(user, profile)} entrou no jogo aberto de ${formatSlotLabel(slot)}`,
