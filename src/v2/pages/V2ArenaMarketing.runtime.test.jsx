@@ -1,26 +1,25 @@
 /**
- * O console de marketing da arena.
+ * O marketing da arena — hoje a seção Marketing da Central.
  *
  * O que estes testes protegem:
- *  1. ⭐ quem não gere a arena não entra — é a mesa dela, não uma tela pública;
- *  2. ⭐ cada ferramenta depende do SEU módulo (cupom sem campanha, e vice-versa);
+ *  1. ⭐ as rotas antigas (`/gerir/marketing`, `/marketing`) levam à seção da
+ *     Central — avisos e links salvos seguem funcionando; quem decide se a
+ *     pessoa gere a arena é a Central, que já guarda;
+ *  2. ⭐ cada aba mostra a SUA ferramenta, e sem nenhuma ligada diz o que fazer;
  *  3. ⭐ a campanha diz PARA QUANTAS PESSOAS vai antes de enviar;
  *  4. ⭐ público vazio não deixa enviar — mensagem para ninguém é bug, não ação;
  *  5. o cupom desligado continua na lista, para poder ser religado;
  *  6. ⭐ o NPS mostra os COMENTÁRIOS, que são a parte acionável da nota;
- *  7. falha ao carregar cupom não vira "esta arena não tem cupons".
+ *  7. falha ao carregar cupom não vira "esta arena não tem cupons";
+ *  8. ⭐ o cupom divulgado diz, na lista, que está na página da arena.
  */
 import React from 'react';
 import { createRoot } from 'react-dom/client';
 import { act } from 'react';
-import { MemoryRouter, Routes, Route } from 'react-router-dom';
+import { MemoryRouter, Routes, Route, useLocation } from 'react-router-dom';
 import { describe, it, expect, beforeEach, afterEach, vi } from 'vitest';
 
-import { ARENA_MODULE_ID } from '@/modules/arenas/domain/modules';
-
-const LIGADOS = new Set();
 const estado = {
-  gere: true,
   cupons: [],
   cuponsErro: false,
   campanhas: [],
@@ -31,16 +30,6 @@ const estado = {
 };
 
 vi.mock('sonner', () => ({ toast: { success: vi.fn(), error: vi.fn() } }));
-vi.mock('@/core/lib/FirebaseAuthContext', () => ({
-  useAuth: () => ({ user: { uid: 'eu' }, isPlatformAdmin: false, isAuthenticated: true }),
-}));
-vi.mock('@/modules/arenas/hooks/useArenas', () => ({
-  useArena: () => ({ data: { id: 'a1', name: 'Arena Teste', owner_id: estado.gere ? 'eu' : 'outro' }, isLoading: false }),
-  useMyManagedArenas: () => ({ data: [] }),
-}));
-vi.mock('@/modules/arenas/hooks/useArenaModules', () => ({
-  useArenaModules: () => ({ isOn: (id) => LIGADOS.has(id), isLoading: false }),
-}));
 vi.mock('@/modules/arenas/hooks/useBookings', () => ({
   useArenaBookings: () => ({ data: estado.reservas }),
 }));
@@ -63,15 +52,15 @@ vi.mock('@/modules/arenas/hooks/useArenaV3', () => ({
   useRedeemReferral: () => ({ mutateAsync: vi.fn(), isPending: false }),
 }));
 
-const { default: V2ArenaMarketing } = await import('./V2ArenaMarketing.jsx');
+const { default: V2ArenaMarketing, ArenaMarketingPanel } = await import('./V2ArenaMarketing.jsx');
+
+const ARENA = { id: 'a1', name: 'Arena Teste' };
 
 let container, root;
 
 beforeEach(() => {
-  LIGADOS.clear();
-  LIGADOS.add(ARENA_MODULE_ID.MARKETING);
   Object.assign(estado, {
-    gere: true, cupons: [], cuponsErro: false, campanhas: [], membros: [],
+    cupons: [], cuponsErro: false, campanhas: [], membros: [],
     reservas: [], nps: { nps: 40, count: 5 }, respostas: [],
   });
   container = document.createElement('div');
@@ -85,13 +74,31 @@ afterEach(() => {
   document.body.innerHTML = '';
 });
 
-async function render() {
+/** Monta a aba `view` do marketing, como a Central monta. */
+async function render(view) {
   await act(async () => {
     root.render(
-      <MemoryRouter initialEntries={['/arenas/a1/gerir/marketing']}>
+      <MemoryRouter initialEntries={['/arenas/a1/gerir']}>
+        <ArenaMarketingPanel arena={ARENA} view={view} />
+      </MemoryRouter>,
+    );
+  });
+}
+
+/** Mostra a URL em que a navegação terminou. */
+function OndeEstou() {
+  const loc = useLocation();
+  return <div data-testid="onde">{loc.pathname + loc.search}</div>;
+}
+
+async function abrirRotaAntiga(caminho) {
+  await act(async () => {
+    root.render(
+      <MemoryRouter initialEntries={[caminho]}>
         <Routes>
           <Route path="/arenas/:arenaId/gerir/marketing" element={<V2ArenaMarketing />} />
-          <Route path="/arenas/:arenaId" element={<div>PÁGINA DA ARENA</div>} />
+          <Route path="/arenas/:arenaId/marketing" element={<V2ArenaMarketing />} />
+          <Route path="/arenas/:arenaId/gerir" element={<OndeEstou />} />
         </Routes>
       </MemoryRouter>,
     );
@@ -108,43 +115,51 @@ async function clicar(texto) {
 
 /* ================================================================ guarda === */
 
-describe('quem entra aqui', () => {
-  it('⭐ quem não gere a arena volta para a página dela', async () => {
-    estado.gere = false;
-    await render();
-    expect(container.textContent).toContain('PÁGINA DA ARENA');
+describe('as rotas antigas e as abas', () => {
+  it('⭐ /gerir/marketing leva à seção Marketing da Central', async () => {
+    await abrirRotaAntiga('/arenas/a1/gerir/marketing');
+    expect(container.querySelector('[data-testid="onde"]').textContent)
+      .toBe('/arenas/a1/gerir?secao=marketing');
   });
 
-  it('⭐ sem o módulo de marketing, a rota não existe', async () => {
-    LIGADOS.clear();
-    await render();
-    expect(container.textContent).toContain('PÁGINA DA ARENA');
+  it('⭐ /marketing (o atalho público antigo) também', async () => {
+    await abrirRotaAntiga('/arenas/a1/marketing');
+    expect(container.querySelector('[data-testid="onde"]').textContent)
+      .toBe('/arenas/a1/gerir?secao=marketing');
   });
 
-  it('com o módulo ligado, a página abre', async () => {
-    await render();
-    expect(container.textContent).toContain('Marketing e fidelidade');
-  });
-
-  it('módulo pai ligado e nenhuma ferramenta: diz o que fazer', async () => {
-    await render();
+  it('módulo pai ligado e nenhuma ferramenta: diz o que fazer e onde', async () => {
+    await render('marketing');
     expect(container.textContent).toMatch(/Nenhuma ferramenta de marketing ativa/i);
+    const link = [...container.querySelectorAll('a')].find((a) => a.textContent.includes('Abrir os módulos'));
+    expect(link?.getAttribute('href')).toBe('/arenas/a1/gerir?aba=modulos');
+  });
+
+  it('cada aba mostra só a SUA ferramenta', async () => {
+    await render('satisfacao');
+    expect(container.textContent).toContain('Satisfação (NPS)');
+    expect(container.textContent).not.toContain('Cupons');
+    expect(container.textContent).not.toContain('Campanhas');
+  });
+
+  it('a aba de indicações abre o indique-e-ganhe', async () => {
+    await render('indicacoes');
+    expect(container.textContent).toContain('Indique e ganhe');
   });
 });
 
 /* ================================================================ cupons === */
 
 describe('cupons', () => {
-  beforeEach(() => LIGADOS.add(ARENA_MODULE_ID.MARKETING_COUPONS));
 
   it('sem cupom, convida a criar o primeiro em vez de mostrar vazio', async () => {
-    await render();
+    await render('cupons');
     expect(container.textContent).toMatch(/Nenhum cupom ainda/i);
   });
 
   it('mostra o cupom com o desconto legível e a contagem de usos', async () => {
     estado.cupons = [{ id: 'c1', code: 'VERAO10', type: 'percent', value: 10, used_count: 3, active: true }];
-    await render();
+    await render('cupons');
     expect(container.textContent).toContain('VERAO10');
     expect(container.textContent).toContain('10%');
     expect(container.textContent).toContain('3');
@@ -152,7 +167,7 @@ describe('cupons', () => {
 
   it('⭐ cupom DESLIGADO continua na lista, com o botão de religar', async () => {
     estado.cupons = [{ id: 'c1', code: 'ANTIGO', type: 'percent', value: 10, active: false }];
-    await render();
+    await render('cupons');
     expect(container.textContent).toContain('ANTIGO');
     expect(container.textContent).toContain('Desligado');
     expect(container.textContent).toContain('Religar');
@@ -160,23 +175,38 @@ describe('cupons', () => {
 
   it('⭐ cupom esgotado é dito, não some', async () => {
     estado.cupons = [{ id: 'c1', code: 'CHEIO', type: 'percent', value: 10, max_uses: 5, used_count: 5, active: true }];
-    await render();
+    await render('cupons');
     expect(container.textContent).toContain('Esgotado');
   });
 
   it('⭐ falha ao carregar NÃO vira "esta arena não tem cupons"', async () => {
     estado.cuponsErro = true;
-    await render();
+    await render('cupons');
     expect(container.textContent).toMatch(/não foi possível carregar os cupons/i);
     expect(container.textContent).not.toMatch(/Nenhum cupom ainda/i);
   });
 
-  it('sem o módulo de cupons, a seção não existe', async () => {
-    LIGADOS.delete(ARENA_MODULE_ID.MARKETING_COUPONS);
-    LIGADOS.add(ARENA_MODULE_ID.MARKETING_NPS);
-    estado.cupons = [{ id: 'c1', code: 'VERAO10', type: 'percent', value: 10, active: true }];
-    await render();
-    expect(container.textContent).not.toContain('VERAO10');
+  it('⭐ o cupom DIVULGADO diz que está na página da arena; o outro, não', async () => {
+    estado.cupons = [
+      { id: 'c1', code: 'VERAO10', type: 'percent', value: 10, active: true, show_public: true },
+      { id: 'c2', code: 'AMIGO5', type: 'fixed', value: 5, active: true },
+    ];
+    await render('cupons');
+    const cartaoDe = (codigo) => [...container.querySelectorAll('p')]
+      .find((p) => p.textContent === codigo)?.closest('div.rounded-2xl');
+    const divulgado = cartaoDe('VERAO10');
+    const privado = cartaoDe('AMIGO5');
+    expect(divulgado).toBeTruthy();
+    expect(privado).toBeTruthy();
+    expect(divulgado?.textContent).toContain('Na página da arena');
+    expect(privado?.textContent).not.toContain('Na página da arena');
+  });
+
+  it('o formulário oferece divulgar o cupom, explicando o que muda', async () => {
+    await render('cupons');
+    await clicar('Novo cupom');
+    expect(container.textContent).toContain('Divulgar na página da arena');
+    expect(container.textContent).toMatch(/Vira PROMOÇÃO/);
   });
 });
 
@@ -184,7 +214,6 @@ describe('cupons', () => {
 
 describe('campanhas', () => {
   beforeEach(() => {
-    LIGADOS.add(ARENA_MODULE_ID.MARKETING_CAMPAIGNS);
     estado.membros = [{ user_id: 'u1' }, { user_id: 'u2' }];
     estado.reservas = [
       { athlete_id: 'u3', status: 'completed', slots: [{ date: '2026-09-10' }] },
@@ -192,7 +221,7 @@ describe('campanhas', () => {
   });
 
   it('⭐ diz para QUANTAS pessoas cada público vai, antes de enviar', async () => {
-    await render();
+    await render('campanhas');
     await clicar('Nova campanha');
     // Membros = 2; todo mundo = 3 (dois membros + um que já reservou).
     expect(container.textContent).toMatch(/Membros/);
@@ -203,7 +232,7 @@ describe('campanhas', () => {
   it('⭐ público vazio avisa em vez de deixar enviar para ninguém', async () => {
     estado.membros = [];
     estado.reservas = [];
-    await render();
+    await render('campanhas');
     await clicar('Nova campanha');
     expect(container.textContent).toMatch(/Ninguém neste público ainda/i);
     const enviar = [...container.querySelectorAll('button')].find((b) => b.textContent.trim() === 'Enviar');
@@ -212,7 +241,7 @@ describe('campanhas', () => {
 
   it('lista a campanha já enviada com quantas pessoas receberam', async () => {
     estado.campanhas = [{ id: 'k1', name: 'Quinta barata', status: 'sent', sent_count: 12, target_audience: 'all' }];
-    await render();
+    await render('campanhas');
     expect(container.textContent).toContain('Quinta barata');
     expect(container.textContent).toContain('12 pessoas');
     expect(container.textContent).toContain('Enviada');
@@ -222,11 +251,10 @@ describe('campanhas', () => {
 /* =================================================================== NPS === */
 
 describe('satisfação', () => {
-  beforeEach(() => LIGADOS.add(ARENA_MODULE_ID.MARKETING_NPS));
 
   it('sem resposta, explica quando a pergunta aparece', async () => {
     estado.respostas = [];
-    await render();
+    await render('satisfacao');
     expect(container.textContent).toMatch(/Ninguém respondeu ainda/i);
   });
 
@@ -236,7 +264,7 @@ describe('satisfação', () => {
       { id: 'r2', score: 3, comment: 'Vestiário sujo', created_at: Date.now() },
     ];
     estado.nps = { nps: 0, count: 2 };
-    await render();
+    await render('satisfacao');
     expect(container.textContent).toContain('Quadra impecável');
     expect(container.textContent).toContain('Vestiário sujo');
     expect(container.textContent).toContain('Promotor');
@@ -246,7 +274,7 @@ describe('satisfação', () => {
   it('nota sem comentário não finge que há texto', async () => {
     estado.respostas = [{ id: 'r1', score: 9, comment: '', created_at: Date.now() }];
     estado.nps = { nps: 100, count: 1 };
-    await render();
+    await render('satisfacao');
     expect(container.textContent).toMatch(/vieram sem comentário/i);
   });
 });

@@ -416,6 +416,10 @@ export const ARENA_MODULE_DETAIL = Object.freeze({
       [ATHLETE]: 'Receba as promoções da arena que você frequenta.',
     },
     manage: '/arenas/:arenaId/gerir/marketing',
+    // Integrado à arena (2026-09-24): a gestão é a seção Marketing da Central
+    // (uma aba por ferramenta), e os cupons divulgados viram "Promoções" na
+    // página da arena e no pedido de reserva. Sem atalho.
+    native: true,
     collections: ['arena_coupons', 'arena_campaigns', 'arena_referrals', 'arena_nps_responses'],
   },
   [ARENA_MODULE_ID.MARKETING_CAMPAIGNS]: {

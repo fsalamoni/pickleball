@@ -50,6 +50,7 @@ vi.mock('../hooks/useArenaModules.js', () => ({
 vi.mock('../hooks/useArenaV3.js', () => ({
   useArenaMember: () => ({ data: null }),
   useArenaWallet: () => ({ data: null }),
+  useArenaCoupons: () => ({ data: [] }),
 }));
 
 const { default: BookingRequestDialog } = await import('./BookingRequestDialog.jsx');

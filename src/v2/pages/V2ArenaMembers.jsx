@@ -21,14 +21,14 @@ import React, { useMemo } from 'react';
 import { Link, Navigate, useParams } from 'react-router-dom';
 import { toast } from 'sonner';
 import {
-  AlertTriangle, ArrowLeft, CalendarClock, Check, Clock, Copy, Gift, Package,
-  Share2, Sparkles, Star, Trophy, Wallet,
+  AlertTriangle, ArrowLeft, CalendarClock, Check, Clock, Gift, Package,
+  Sparkles, Star, Trophy, Wallet,
 } from 'lucide-react';
 import { useAuth } from '@/core/lib/FirebaseAuthContext';
 import { useArena } from '@/modules/arenas/hooks/useArenas';
 import {
   useArenaPackages, useRequestPackage, useArenaWallet, useArenaMember,
-  useMemberSubscription, useMyReferralCode,
+  useMemberSubscription,
 } from '@/modules/arenas/hooks/useArenaV3';
 import { useArenaModules } from '@/modules/arenas/hooks/useArenaModules';
 import { ARENA_MODULE_ID } from '@/modules/arenas/domain/modules';
@@ -41,6 +41,7 @@ import { formatPrice } from '@/modules/arenas/domain/pricing';
 import { formatDateShortBR } from '@/modules/arenas/domain/calendar';
 import { V2Badge, V2Button, V2EmptyState, V2Skeleton, V2Surface } from '@/v2/ui/primitives';
 import PackageForSaleCard from '@/v2/components/arenas/PackageForSaleCard';
+import ArenaReferralCard from '@/v2/components/arenas/marketing/ArenaReferralCard';
 
 const TIER_CLASS = {
   bronze: 'bg-amber-100 text-amber-800 border-amber-200',
@@ -162,73 +163,8 @@ function MeusPontos({ member }) {
 
 /* ---------------------------- 1c. indique e ganhe -------------------------- */
 
-/**
- * O código de indicação do atleta nesta arena.
- *
- * Criado na primeira vez que a tela abre (`getOrCreateReferralCode`), com o
- * documento pertencendo ao INDICADOR — que é exatamente o que a regra permite
- * escrever. Quem foi indicado não escreve nada: o resgate é registrado pela
- * arena, que é quem pode creditar carteira nos dois lados.
- */
-function MinhaIndicacao({ arenaId, arenaName }) {
-  const { data: indicacao, isLoading } = useMyReferralCode(arenaId);
-  const codigo = indicacao?.code;
-
-  if (isLoading) return <V2Skeleton className="h-28 rounded-4xl" />;
-  if (!codigo) return null;
-
-  const copiar = async () => {
-    try {
-      await navigator.clipboard.writeText(codigo);
-      toast.success('Código copiado.');
-    } catch {
-      toast.error('Não foi possível copiar. Anote: ' + codigo);
-    }
-  };
-
-  const compartilhar = async () => {
-    const texto = `Jogo na ${arenaName} — use meu código ${codigo} na primeira reserva e nós dois ganhamos crédito.`;
-    try {
-      if (navigator.share) await navigator.share({ text: texto });
-      else {
-        await navigator.clipboard.writeText(texto);
-        toast.success('Convite copiado.');
-      }
-    } catch {
-      /* o usuário cancelou o compartilhamento — não é erro */
-    }
-  };
-
-  return (
-    <V2Surface>
-      <div className="flex items-start gap-2">
-        <Gift className="mt-0.5 h-5 w-5 shrink-0 text-ink" />
-        <div className="min-w-0 flex-1">
-          <h2 className="font-display text-base font-bold text-ink">Indique e ganhe</h2>
-          <p className="mt-0.5 text-sm text-gray-500">
-            Quem chegar dizendo o seu código ganha crédito — e você também.
-          </p>
-          <div className="mt-3 flex flex-wrap items-center gap-2">
-            <span className="rounded-2xl border border-dashed border-gray-300 bg-paper px-4 py-2 font-display text-lg font-bold tracking-widest text-ink">
-              {codigo}
-            </span>
-            <V2Button size="sm" variant="ghost" onClick={copiar}>
-              <Copy className="mr-1.5 h-4 w-4" /> Copiar
-            </V2Button>
-            <V2Button size="sm" variant="ghost" onClick={compartilhar}>
-              <Share2 className="mr-1.5 h-4 w-4" /> Convidar
-            </V2Button>
-          </div>
-          {Number(indicacao.redeemed_count) > 0 && (
-            <p className="mt-2 text-xs text-gray-500">
-              {indicacao.redeemed_count} {Number(indicacao.redeemed_count) === 1 ? 'pessoa já usou' : 'pessoas já usaram'} o seu código.
-            </p>
-          )}
-        </div>
-      </div>
-    </V2Surface>
-  );
-}
+// O cartão é o mesmo da página da arena (`ArenaReferralCard`): um lugar só
+// decide quando o código existe, é criado e é mostrado.
 
 /* ----------------------------- 2. o que eu tenho --------------------------- */
 
@@ -437,9 +373,7 @@ export default function V2ArenaMembers() {
           {temPacotes && <MeusPacotes packages={meusPacotes} />}
           {temCarteira && <MinhaCarteira wallet={wallet} />}
 
-          {temIndicacao && member && (
-            <MinhaIndicacao arenaId={arena.id} arenaName={arena.name} />
-          )}
+          {temIndicacao && <ArenaReferralCard arena={arena} className="" />}
 
           {temPacotes && (
             <V2Surface>

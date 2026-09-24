@@ -929,6 +929,13 @@ e sem `queue_removed`. É exatamente esse conjunto que vira o CSV.
 **Members**: `arena_members`, `arena_packages`, `arena_subscriptions`,
 `arena_wallets`, `arena_tier_configs`, `arena_network_memberships`,
 `arena_networks`.
+  - (2026-09-24) `arena_members`, `arena_wallets`, `arena_subscriptions` e
+    `arena_referrals` têm id `{arena}_{uid}` e o código lê antes de criar. A
+    regra de leitura olha `resource.data`, que num documento inexistente é
+    nulo — o `get` dava erro para o atleta e para a arena. Regra aditiva
+    `canGetMissingArenaUserDoc`: o `get` de documento **inexistente** é do dono
+    do uid, da arena do prefixo e do admin (não abre documento existente, não
+    muda consulta). Ver `docs/24-MODULOS-DE-ARENA/09-INTEGRACAO-NA-ARENA.md` §10.
 **Leagues**: `arena_ladders`, `arena_internal_tournaments`, `arena_matches`.
   - `arena_internal_tournaments` (2026-09-24): além da arena, o **próprio
     atleta** atualiza o documento para se inscrever ou sair — só a si mesmo em
@@ -949,6 +956,10 @@ e sem `queue_removed`. É exatamente esse conjunto que vira o CSV.
     `classes_marketplace`. Ver `docs/24-MODULOS-DE-ARENA/09-INTEGRACAO-NA-ARENA.md` §5.
 **Marketing**: `arena_campaigns`, `arena_coupons`, `arena_referrals`,
 `arena_nps_responses`.
+  - `arena_coupons.show_public` (2026-09-24, opcional): `true` = o cupom é
+    PROMOÇÃO, oferecido na página da arena e no pedido de reserva. Ausente =
+    código entregue a dedo (todo cupom anterior). Não muda leitura nenhuma —
+    `arena_coupons` já era legível por conta logada.
 **Operations**: `arena_checklists`, `arena_maintenance_orders`,
 `arena_inventory_products`, `arena_inventory_entries`, `arena_inventory_exits`.
 **IoT**: `arena_devices`.

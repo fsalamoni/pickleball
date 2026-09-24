@@ -28,6 +28,7 @@ const ArenaModulesPanel = lazy(() => import('@/v2/components/arenas/ArenaModules
 // Módulos que viraram parte da Central: o corpo das telas deles entra como aba.
 const ArenaOpenMatchAdminPanel = lazy(() => import('@/v2/components/arenas/openMatch/ArenaOpenMatchAdminPanel'));
 const ArenaShopOrdersPanel = lazy(() => import('@/v2/components/arenas/shop/ArenaShopOrdersPanel'));
+const ArenaMarketingPanel = lazy(() => import('@/v2/pages/V2ArenaMarketing').then((m) => ({ default: m.ArenaMarketingPanel })));
 const ArenaMembersPanel = lazy(() => import('@/v2/pages/V2ArenaAdminMembers').then((m) => ({ default: m.ArenaMembersPanel })));
 import { useFeatureFlag } from '@/core/lib/FeatureFlagsContext';
 import { FEATURE_FLAG } from '@/core/featureFlags';
@@ -213,6 +214,12 @@ function V2ArenaManageContent({ arenaId, user, isPlatformAdmin, arena, managed, 
     aulas: moduloLigado(ARENA_MODULE_ID.CLASSES),
     torneios: moduloLigado(ARENA_MODULE_ID.LEAGUES),
     loja: moduloLigado(ARENA_MODULE_ID.PDV),
+    // Marketing: a seção existe com o módulo; cada ferramenta vira uma aba.
+    marketing: moduloLigado(ARENA_MODULE_ID.MARKETING),
+    cupons: moduloLigado(ARENA_MODULE_ID.MARKETING) && moduloLigado(ARENA_MODULE_ID.MARKETING_COUPONS),
+    campanhas: moduloLigado(ARENA_MODULE_ID.MARKETING) && moduloLigado(ARENA_MODULE_ID.MARKETING_CAMPAIGNS),
+    satisfacao: moduloLigado(ARENA_MODULE_ID.MARKETING) && moduloLigado(ARENA_MODULE_ID.MARKETING_NPS),
+    indicacoes: moduloLigado(ARENA_MODULE_ID.MARKETING) && moduloLigado(ARENA_MODULE_ID.MARKETING_REFERRAL),
     // Torneio da plataforma sediado aqui não depende de módulo: é da arena
     // desde sempre, só não tinha lugar na gestão.
     torneiosPlataforma: torneiosDaPlataforma.some((t) => !t.archived),
@@ -374,6 +381,9 @@ function V2ArenaManageContent({ arenaId, user, isPlatformAdmin, arena, managed, 
         {tab === 'clientes' && crmOn && <ArenaCrmTab arenaId={arena.id} membrosOn={modulos.membros} onVerMembros={() => selectTab('membros', 'membros')} />}
         {tab === 'pedidos' && modulos.loja && (
           <ArenaShopOrdersPanel arena={arena} onIrAoMercado={() => selectTab('comercial', 'mercado')} />
+        )}
+        {['cupons', 'campanhas', 'satisfacao', 'indicacoes', 'marketing'].includes(tab) && modulos.marketing && (
+          <ArenaMarketingPanel arena={arena} view={tab} />
         )}
         {tab === 'pagamento' && <V2ArenaPaymentTab />}
         {tab === 'regras' && <V2ArenaRulesTab />}

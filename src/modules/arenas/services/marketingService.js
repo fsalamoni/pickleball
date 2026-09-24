@@ -252,10 +252,10 @@ export async function sendCampaign(arenaId, input, recipients = [], actor = null
  */
 export async function getOrCreateReferralCode(arenaId, user) {
   if (!db || !arenaId || !user?.uid) return null;
+  const existente = await getMyReferralCode(arenaId, user.uid);
+  if (existente) return existente;
   const id = `${arenaId}_${user.uid}`;
   const ref = doc(db, COL_REFERRALS, id);
-  const snap = await getDoc(ref);
-  if (snap.exists()) return { id: snap.id, ...snap.data() };
 
   const code = generateReferralCode(user.uid);
   const payload = {
@@ -270,6 +270,22 @@ export async function getOrCreateReferralCode(arenaId, user) {
   };
   await setDoc(ref, payload);
   return payload;
+}
+
+/**
+ * O MEU código nesta arena, se já existir — sem criar.
+ *
+ * É o que a página da arena usa: criar o documento só porque alguém ABRIU a
+ * página gravaria um código para cada curioso. O código nasce quando a pessoa
+ * pede ("Quero meu código"). Id determinístico: um `get`, sem consulta — e a
+ * regra deixa o dono ler o próprio documento mesmo antes de ele existir
+ * (`canGetMissingArenaUserDoc`; antes esse `get` dava erro e o código nunca
+ * era criado).
+ */
+export async function getMyReferralCode(arenaId, userId) {
+  if (!db || !arenaId || !userId) return null;
+  const snap = await getDoc(doc(db, COL_REFERRALS, `${arenaId}_${userId}`));
+  return snap.exists() ? { id: snap.id, ...snap.data() } : null;
 }
 
 /** Procura o dono de um código nesta arena. Um `where` só. */

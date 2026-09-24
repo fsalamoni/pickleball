@@ -1178,7 +1178,7 @@ import {
   listArenaCampaigns, createCampaign,
   submitNps, getArenaNpsResponses, getArenaNpsSummary,
   createReferral,
-  sendCampaign, listMyNpsAnswers, getOrCreateReferralCode, redeemReferral,
+  sendCampaign, listMyNpsAnswers, getOrCreateReferralCode, getMyReferralCode, redeemReferral,
   updateArenaCoupon, setCouponActive, deleteArenaCoupon,
 } from '../services/marketingService.js';
 
@@ -1324,13 +1324,29 @@ export function useSendCampaign() {
 }
 
 /** O meu código de indicação nesta arena (cria na primeira vez). */
+/**
+ * O MEU código de indicação nesta arena — só LÊ (`null` = ainda não pedi).
+ * Passe `null` como arena para não consultar (módulo desligado).
+ */
 export function useMyReferralCode(arenaId) {
   const { user } = useAuth();
   return useQuery({
     queryKey: ['arena-referral', arenaId, user?.uid],
-    queryFn: () => getOrCreateReferralCode(arenaId, user),
+    queryFn: () => getMyReferralCode(arenaId, user.uid),
     enabled: !!arenaId && !!user?.uid,
     staleTime: 10 * 60_000,
+  });
+}
+
+/** Cria o meu código nesta arena (ou devolve o que já existe). */
+export function useCreateMyReferralCode() {
+  const { user } = useAuth();
+  const qc = useQueryClient();
+  return useMutation({
+    mutationFn: ({ arenaId }) => getOrCreateReferralCode(arenaId, user),
+    onSuccess: (codigo, { arenaId }) => {
+      qc.setQueryData(['arena-referral', arenaId, user?.uid], codigo);
+    },
   });
 }
 

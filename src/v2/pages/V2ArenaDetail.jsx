@@ -26,6 +26,8 @@ import V2BookingCalendar from '@/v2/components/arenas/V2BookingCalendar';
 import ArenaGameDaysSection from '@/v2/components/arenas/ArenaGameDaysSection';
 import ArenaOpenMatchSection from '@/v2/components/arenas/openMatch/ArenaOpenMatchSection';
 import ArenaShopSection from '@/v2/components/arenas/shop/ArenaShopSection';
+import ArenaPromosSection from '@/v2/components/arenas/marketing/ArenaPromosSection';
+import ArenaReferralCard from '@/v2/components/arenas/marketing/ArenaReferralCard';
 import ArenaNpsAsk from '@/v2/components/arenas/ArenaNpsAsk';
 import ArenaCheckinAsk from '@/v2/components/arenas/ArenaCheckinAsk';
 import ArenaMembershipSection from '@/v2/components/arenas/ArenaMembershipSection';
@@ -317,12 +319,20 @@ function V2ArenaDetailContent({ arenaId, user, arena, managed, bookings, isLoadi
         </V2Surface>
       )}
 
+      {/* Promoções (módulo Marketing → cupons divulgados) — logo depois dos
+          preços, que é onde se decide. Some sem promoção divulgada valendo. */}
+      <ArenaPromosSection arena={arena} />
+
       {/* Planos e vantagens (módulo Membros) — logo depois dos preços, porque é
           olhando o preço da hora avulsa que se decide comprar pacote. Some
           sozinha com o módulo desligado. */}
       <div className="mt-6 empty:mt-0">
         <ArenaMembershipSection arena={arena} />
       </div>
+
+      {/* Indique e ganhe (módulo Marketing → indicação) — o código de quem
+          está logado, criado só quando a pessoa pede. */}
+      <ArenaReferralCard arena={arena} />
 
       {/* Loja (módulo PDV) — o que eu pedi para retirar aqui e o que a arena
           vende. Some sozinha com o módulo desligado ou sem nada à venda. */}

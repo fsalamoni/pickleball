@@ -1,9 +1,18 @@
 /**
- * V2ArenaMarketing — o console de marketing e fidelidade da arena.
+ * V2ArenaMarketing — o marketing e a fidelidade da arena.
  *
- * Rota: `/arenas/:arenaId/gerir/marketing` (e `/arenas/:arenaId/marketing`).
  * Módulos: `marketing` (+ `marketing_coupons`, `marketing_campaigns`,
  * `marketing_nps`, `marketing_referral`, `marketing_loyalty`).
+ *
+ * ## Dentro da arena (2026-09-24)
+ *
+ * Era uma página separada, alcançada por um botão. Virou a seção
+ * **Marketing** da Central (`ArenaMarketingPanel`, uma aba por ferramenta
+ * ligada: Cupons · Campanhas · Satisfação · Indicações). As rotas antigas
+ * (`/gerir/marketing` e `/marketing`) levam à seção — avisos e links salvos
+ * seguem funcionando. E o cupom ganhou **"Divulgar na página da arena"**: aí
+ * ele vira promoção, aparece na página da arena e é oferecido no pedido de
+ * reserva com um toque.
  *
  * ## O que a versão anterior não fazia
  *
@@ -33,11 +42,9 @@ import React, { useMemo, useState } from 'react';
 import { Link, Navigate, useParams } from 'react-router-dom';
 import { toast } from 'sonner';
 import {
-  AlertTriangle, ArrowLeft, Check, Gift, Megaphone, MessageSquare, Pencil,
+  AlertTriangle, Check, Eye, Gift, Megaphone, MessageSquare, Pencil,
   Plus, Send, Star, Tag, Trash2, TrendingUp, Users, X,
 } from 'lucide-react';
-import { useAuth } from '@/core/lib/FirebaseAuthContext';
-import { useArena, useMyManagedArenas } from '@/modules/arenas/hooks/useArenas';
 import { useArenaBookings } from '@/modules/arenas/hooks/useBookings';
 import { useAthletes } from '@/modules/athletes/hooks/useAthletes';
 import {
@@ -45,8 +52,6 @@ import {
   useDeleteCoupon, useArenaCampaigns, useSendCampaign, useArenaNps,
   useArenaNpsResponses, useArenaMembers, useRedeemReferral,
 } from '@/modules/arenas/hooks/useArenaV3';
-import { useArenaModules } from '@/modules/arenas/hooks/useArenaModules';
-import { ARENA_MODULE_ID } from '@/modules/arenas/domain/modules';
 import {
   CAMPAIGN_AUDIENCE, CAMPAIGN_AUDIENCE_META, COUPON_TYPE, campaignRecipients,
   classifyNps, couponLabel, normalizeCouponInput,
@@ -81,6 +86,7 @@ function iso(v) {
 const CUPOM_VAZIO = {
   code: '', type: COUPON_TYPE.PERCENT, value: 10, description: '',
   max_uses: '', min_amount: '', once_per_user: true, expires_at: '', active: true,
+  show_public: false,
 };
 
 function CupomForm({ arenaId, cupom, onClose }) {
@@ -95,6 +101,7 @@ function CupomForm({ arenaId, cupom, onClose }) {
       once_per_user: cupom.once_per_user !== false,
       expires_at: iso(cupom.expires_at) || '',
       active: cupom.active !== false,
+      show_public: cupom.show_public === true,
     }
     : { ...CUPOM_VAZIO }));
   const criar = useCreateCoupon();
@@ -189,6 +196,19 @@ function CupomForm({ arenaId, cupom, onClose }) {
           onChange={(e) => set({ once_per_user: e.target.checked })}
           className="h-4 w-4 rounded border-gray-300" />
         Cada pessoa pode usar uma vez só
+      </label>
+
+      <label className="mt-2 flex items-start gap-2 text-sm text-gray-600">
+        <input type="checkbox" checked={form.show_public}
+          onChange={(e) => set({ show_public: e.target.checked })}
+          className="mt-0.5 h-4 w-4 rounded border-gray-300" />
+        <span>
+          Divulgar na página da arena
+          <span className="block text-xs text-gray-500">
+            Vira PROMOÇÃO: aparece na página da arena e no pedido de reserva, com um toque para aplicar.
+            Sem marcar, o cupom é um código que você entrega a quem quiser.
+          </span>
+        </span>
       </label>
 
       {previa.valid && (
@@ -300,6 +320,11 @@ function CuponsSecao({ arenaId }) {
                 </div>
 
                 <div className="mt-2 flex flex-wrap gap-x-3 gap-y-1 text-xs text-gray-500">
+                  {c.show_public === true && (
+                    <span className="inline-flex items-center gap-1 font-bold text-ink">
+                      <Eye className="h-3.5 w-3.5" /> Na página da arena
+                    </span>
+                  )}
                   <span>{c.used_count || 0}{c.max_uses ? ` de ${c.max_uses}` : ''} usos</span>
                   {c.min_amount ? <span>mín. {formatPrice(c.min_amount)}</span> : null}
                   {iso(c.expires_at) ? <span>até {formatDateShortBR(iso(c.expires_at))}</span> : null}
@@ -615,7 +640,6 @@ function NpsSecao({ arenaId }) {
 /* =================================================== 4. INDICAÇÕES ====== */
 
 function IndicacoesSecao({ arenaId }) {
-  const { data: membros = [] } = useArenaMembers(arenaId);
   const { data: atletas = [] } = useAthletes();
   const resgatar = useRedeemReferral();
   const [code, setCode] = useState('');
@@ -656,9 +680,10 @@ function IndicacoesSecao({ arenaId }) {
         <h2 className="font-display text-lg font-bold text-ink">Indique e ganhe</h2>
       </div>
       <p className="mb-4 text-sm text-gray-500">
-        Cada membro tem um código na página dele. Quando alguém chegar dizendo que foi
-        indicado, registre aqui: os <strong>dois lados</strong> recebem o mesmo crédito em
-        carteira. O registro é feito pela arena porque só ela pode creditar saldo.
+        Cada atleta pega o próprio código na página da arena, em &quot;Indique e ganhe&quot;.
+        Quando alguém chegar dizendo que foi indicado, registre aqui: os <strong>dois
+        lados</strong> recebem o mesmo crédito em carteira — quem ainda não tinha carteira
+        ganha uma. O registro é feito pela arena porque só ela pode creditar saldo.
       </p>
 
       <div className="grid gap-3 sm:grid-cols-2">
@@ -708,93 +733,48 @@ function IndicacoesSecao({ arenaId }) {
         </V2Button>
       </div>
 
-      {membros.length === 0 && (
-        <p className="mt-3 text-xs text-gray-500">
-          Esta arena ainda não tem membros — o código de indicação nasce com o primeiro.
-        </p>
-      )}
     </V2Surface>
   );
 }
 
-/* ======================================================== A PÁGINA ====== */
+/* ================================================ NA CENTRAL ====== */
 
+/**
+ * O marketing dentro da Central da arena — uma aba por ferramenta.
+ *
+ * `view` é o valor da aba (`cupons`, `campanhas`, `satisfacao`, `indicacoes`,
+ * ou `marketing` quando nenhuma ferramenta está ligada). Quem decide que a
+ * aba existe é a Central (`buildArenaSections`), pelo módulo de cada uma.
+ */
+export function ArenaMarketingPanel({ arena, view }) {
+  if (view === 'cupons') return <CuponsSecao arenaId={arena.id} />;
+  if (view === 'campanhas') return <CampanhasSecao arenaId={arena.id} />;
+  if (view === 'satisfacao') return <NpsSecao arenaId={arena.id} />;
+  if (view === 'indicacoes') return <IndicacoesSecao arenaId={arena.id} />;
+  return (
+    <V2Surface>
+      <V2EmptyState
+        icon={MessageSquare}
+        title="Nenhuma ferramenta de marketing ativa"
+        description="Cupons, campanhas, pesquisa de satisfação e indique-e-ganhe ligam separadamente, em Configurações → Módulos. Cada uma ligada vira uma aba aqui."
+        action={(
+          <Link to={`/arenas/${arena.id}/gerir?aba=modulos`} className="text-sm font-bold text-ink underline">
+            Abrir os módulos
+          </Link>
+        )}
+      />
+    </V2Surface>
+  );
+}
+
+/* ======================================================== A ROTA ====== */
+
+/**
+ * `/arenas/:arenaId/gerir/marketing` e `/arenas/:arenaId/marketing` — as rotas
+ * antigas do console. O marketing virou a seção Marketing da Central; a rota
+ * fica porque avisos antigos e links salvos apontam para ela.
+ */
 export default function V2ArenaMarketing() {
   const { arenaId } = useParams();
-  const { user, isPlatformAdmin } = useAuth();
-  const { data: arena, isLoading } = useArena(arenaId);
-  const { data: managed = [] } = useMyManagedArenas();
-  const { isOn, isLoading: modulosCarregando } = useArenaModules(arenaId);
-
-  if (isLoading || modulosCarregando) {
-    return <V2Skeleton className="mx-auto h-96 max-w-[1100px] rounded-4xl" />;
-  }
-
-  if (!arena) {
-    return (
-      <div className="mx-auto max-w-[700px]">
-        <V2Surface>
-          <V2EmptyState
-            title="Arena não encontrada"
-            action={<Link to="/arenas" className="text-sm font-bold text-ink underline">← Voltar ao diretório</Link>}
-          />
-        </V2Surface>
-      </div>
-    );
-  }
-
-  const podeGerir = arena.owner_id === user?.uid
-    || managed.some((m) => m.id === arena.id)
-    || isPlatformAdmin;
-
-  // Esta é a mesa da arena, não uma tela pública. Quem não gere volta para a
-  // página da arena — onde a parte que lhe cabe (o cupom, a pergunta de NPS)
-  // já aparece no momento certo.
-  if (!podeGerir || !isOn(ARENA_MODULE_ID.MARKETING)) {
-    return <Navigate to={`/arenas/${arenaId}`} replace />;
-  }
-
-  const cupons = isOn(ARENA_MODULE_ID.MARKETING_COUPONS);
-  const campanhas = isOn(ARENA_MODULE_ID.MARKETING_CAMPAIGNS);
-  const nps = isOn(ARENA_MODULE_ID.MARKETING_NPS);
-  const indicacoes = isOn(ARENA_MODULE_ID.MARKETING_REFERRAL);
-  const nenhum = !cupons && !campanhas && !nps && !indicacoes;
-
-  return (
-    <div className="mx-auto max-w-[1100px]">
-      <div className="mb-6">
-        <Link to={`/arenas/${arena.id}/gerir`} className="mb-3 inline-flex items-center gap-1.5 text-xs font-bold uppercase tracking-wider text-gray-500 hover:text-ink">
-          <ArrowLeft className="h-3.5 w-3.5" /> Voltar para a gestão
-        </Link>
-        <h1 className="font-display text-3xl font-bold tracking-tight text-ink">
-          Marketing e fidelidade
-        </h1>
-        <p className="mt-2 font-medium text-gray-500">
-          {arena.name} · cupons, campanhas, satisfação e indicações.
-        </p>
-      </div>
-
-      {nenhum ? (
-        <V2Surface>
-          <V2EmptyState
-            icon={MessageSquare}
-            title="Nenhuma ferramenta de marketing ativa"
-            description="Ative o que quiser usar em Gestão → Configurações → Módulos. Cada ferramenta liga separadamente."
-            action={(
-              <Link to={`/arenas/${arena.id}/gerir?secao=configuracoes&aba=modulos`} className="text-sm font-bold text-ink underline">
-                Abrir os módulos
-              </Link>
-            )}
-          />
-        </V2Surface>
-      ) : (
-        <div className="space-y-6">
-          {cupons && <CuponsSecao arenaId={arena.id} />}
-          {campanhas && <CampanhasSecao arenaId={arena.id} />}
-          {nps && <NpsSecao arenaId={arena.id} />}
-          {indicacoes && <IndicacoesSecao arenaId={arena.id} />}
-        </div>
-      )}
-    </div>
-  );
+  return <Navigate to={`/arenas/${arenaId}/gerir?secao=marketing`} replace />;
 }

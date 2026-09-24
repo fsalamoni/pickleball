@@ -114,7 +114,7 @@ novo**; consultas com um `where` só e ordenação em memória.
 | I-4 | Receita de aulas, planos e torneios no painel de métricas | ✅ §7 |
 | I-5 | **Jogo aberto, buscar parceiro e fila** — seção na Central, seção na página da arena, Minhas reservas e Procura-se jogo | ✅ §8 |
 | I-6 | **Loja do app unificada com o Mercado** — um cadastro de produto só | ✅ §9 |
-| I-7 | **Marketing** dentro da arena | ⏳ |
+| I-7 | **Marketing** dentro da arena — seção na Central, promoções e indicação na página da arena, e o defeito do documento que ainda não existe | ✅ §10 |
 | I-8 | **Operação, presença e avançado** dentro da arena | ⏳ |
 
 ---
@@ -530,3 +530,82 @@ quem pediu desiste, a arena segue podendo tudo) e metade o que ficou barrado.
 A consulta `split_with array-contains` é provável pela regra (provado no
 emulador) e não pede índice composto.
 
+
+---
+
+## 10. I-7 — Marketing dentro da arena (entregue)
+
+### Onde o marketing está agora
+
+| Lugar | O quê |
+|---|---|
+| Central → **Marketing** (seção nova, antes de "Pagamentos e loja") | uma aba por ferramenta ligada: **Cupons · Campanhas · Satisfação · Indicações**. Com o módulo pai ligado e nenhuma ferramenta, uma aba só, dizendo onde ligar |
+| Central → Marketing → **Cupons** | o cupom ganhou **"Divulgar na página da arena"** — marcado, ele vira PROMOÇÃO; a lista mostra o selo "Na página da arena" |
+| Página da arena → **Promoções** | as promoções que ainda valem (ligadas, no prazo, com uso disponível), com a regra em uma linha e o código para copiar — logo depois dos preços, que é onde se decide |
+| Pedido de reserva | as promoções em botões ("Promoções: …"): um toque preenche o código e o confere contra o banco com o valor da conta |
+| Página da arena → **Indique e ganhe** | o código de quem está logado, criado **quando a pessoa pede** ("Quero meu código"), com copiar e convidar |
+| **Você nesta arena** (`/arenas/:id/membros`) | o mesmo cartão de indicação — agora para qualquer pessoa, não só membro |
+
+- `/arenas/:id/gerir/marketing` e `/arenas/:id/marketing` levam a
+  `?secao=marketing`; `marketing` é `native` no catálogo (sem botão de atalho).
+- A pesquisa de satisfação ao atleta já morava na página da arena
+  (`ArenaNpsAsk`, Onda AJ) e continua lá; os pontos, em "Você nesta arena".
+- Cupom **não divulgado** continua sendo o que era: um código que a arena
+  entrega a quem quiser. Ele nunca aparece na página nem no pedido.
+
+### Por que "divulgar" não expõe nada novo
+
+`arena_coupons` já era legível por qualquer conta logada — é assim que o pedido
+de reserva confere o código digitado. `show_public` não abre leitura nenhuma:
+só diz à TELA quais cupons ela pode oferecer. A conferência continua no
+serviço, contra o banco, antes de gravar (Onda AJ).
+
+### 🐞 O documento que ainda não existe
+
+Ao ligar o "Indique e ganhe" à página da arena, o código não aparecia — nunca.
+A causa não era da tela, e não era só da indicação:
+
+Membro, carteira, mensalidade e indicação têm **id determinístico**
+(`{arena}_{uid}`), e o código pergunta "já existe?" com um `get` antes de
+criar. A regra de leitura dessas quatro coleções olha `resource.data` — e num
+documento que não existe `resource` é **nulo**. O `get` não devolvia "não
+existe": dava **erro de permissão**, para o próprio atleta **e para a arena**.
+Medido no emulador antes de corrigir:
+
+| # | O que quebrava | Onde |
+|---|---|---|
+| D34 | 🐞 O código "Indique e ganhe" **nunca era criado**, para ninguém — a tela sumia sem aviso | `getOrCreateReferralCode` lia antes de criar |
+| D35 | 🐞 **A arena não conseguia vender pacote a quem ainda não era membro** — o caso normal do pedido de pacote da Onda BI | `sellPackageToMember` → `getArenaMember` |
+| D36 | 🐞 **O primeiro crédito em carteira era recusado** (indicação, resgate de pontos, crédito manual) — duas vezes: a leitura prévia, e a carteira nova era gravada **sem `arena_id`**, que é o campo que a regra de criação confere | `creditWallet` |
+| D37 | 🐞 **Quem não era membro e usava saldo numa reserva não tinha o saldo debitado**: na confirmação, os pontos da visita tentavam criar um documento de membro sem `arena_id`, a regra recusava, e o lote inteiro caía — a baixa do saldo junto | `consumeMemberBenefit` |
+| D38 | 🐞 **Tornar membro zerava a carteira**: os dois `setDoc` eram sem `merge`, então o saldo e as horas pagas de quem voltava (ou de quem ganhou crédito de indicação antes) eram regravados como zero — e incluir de novo quem já era membro zerava os pontos | `addArenaMember` |
+| D39 | Toda visita de não membro à página de uma arena com membros gerava **três leituras recusadas** (membro, carteira, mensalidade), com as novas tentativas do React Query por cima | `useArenaMember`, `useArenaWallet`, `useMemberSubscription` |
+
+**A correção é uma regra aditiva**, `canGetMissingArenaUserDoc`, nas quatro
+coleções: o `get` de um documento **que não existe** é permitido ao dono do uid
+do id, à arena do prefixo e ao admin — e a ninguém mais. Documento ausente não
+tem dado para vazar; mesmo assim a regra não serve a estranhos, não abre
+documento EXISTENTE de ninguém e não muda nenhuma consulta (lista). Os ids de
+arena são automáticos (sem `_`); se um dia não forem, a conta **nega** — nunca
+libera. **28 asserções novas no emulador**
+(`tests/rules/arenaUserDocs.rules.test.js`), metade provando o que passou a
+funcionar e metade provando o que continua barrado.
+
+E três correções de código, com teste: a carteira nova nasce com `arena_id` e
+`user_id`; os pontos da reserva só vão para quem **já é** membro (virar membro
+é decisão da arena, não efeito de uma reserva); e `addArenaMember` ficou
+idempotente — não regrava membro existente nem carteira existente.
+
+> **A lição.** Os testes de serviço usam um banco falso que nunca recusa
+> nada, e por isso seis fluxos "prontos" passavam em verde sem nunca terem
+> funcionado. Leitura por id determinístico **antes de criar** é o padrão que
+> esconde isso: sempre que o documento pode não existir, a regra precisa dizer
+> quem pode perguntar — e isso só se prova no emulador.
+
+### Banco
+
+**Zero coleção, zero índice.** Um campo **opcional**:
+`arena_coupons.show_public` (só `true` divulga; ausente = não divulgado, que é
+como todo cupom anterior continua). **Uma regra aditiva** em `arena_members`,
+`arena_wallets`, `arena_subscriptions` e `arena_referrals` (`allow get` de
+documento inexistente, ver acima). Nada foi migrado.
