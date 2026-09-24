@@ -930,6 +930,14 @@ e sem `queue_removed`. É exatamente esse conjunto que vira o CSV.
 `arena_inventory_products`, `arena_inventory_entries`, `arena_inventory_exits`.
 **IoT**: `arena_devices`.
 **Matchmaking**: `arena_open_slots`.
+  - (2026-09-24) O atleta atualiza `arena_open_slots` só para entrar/sair A SI
+    MESMO (`participants`, `filled_spots`, `status`, `updated_at`, coerentes).
+    `arena_waitlist` é legível por quem tem conta; criar é em nome próprio,
+    `status: waiting`, id `slotId_uid`, na arena da vaga; o atleta só responde
+    à própria chamada (`notified` → `accepted`/`declined`). Chamar o próximo é
+    do servidor (`functions/openSlotWaitlist.js`). `arena_referrals`: a arena
+    lê as indicações dela. `arena_payments`: a arena consulta por `arena_id` +
+    `sale_id`.
 **Settings**: `arena_settings`, `arena_module_states`.
 
 ### `catalog_products/{id}` (flag `arena_product_catalog`)

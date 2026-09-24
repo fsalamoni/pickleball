@@ -18,7 +18,6 @@ import {
   query,
   where,
   serverTimestamp,
-  writeBatch,
 } from 'firebase/firestore';
 import { db } from '@/core/config/firebase';
 import { logger } from '@/core/lib/logger';
@@ -30,7 +29,6 @@ import {
   getNextInLine,
   isPromotionExpired,
   getNextPosition,
-  compactPositions,
   buildAcceptPromotionAction,
   buildDeclinePromotionAction,
   computePromotionExpiresAt,
@@ -64,6 +62,10 @@ export async function joinWaitlist(slotId, user, profile) {
   const existing = await getUserWaitlistEntry(user.uid, slotId);
   const check = canJoinWaitlist(slot, user, existing);
   if (!check.ok) throw new Error(check.reason);
+  // Quem recusou/expirou e volta entra DE NOVO, no fim da fila: a entrada
+  // antiga sai antes (reescrevê-la seria uma atualização, e a regra só deixa
+  // o atleta responder à própria chamada — não se reinscrever por cima).
+  if (existing) await deleteDoc(doc(db, COL, existing.id));
 
   // Calcula próxima posição
   const allEntries = await listSlotWaitlist(slotId);
@@ -100,8 +102,10 @@ export async function leaveWaitlist(slotId, userId, actor) {
   if (!slotId || !userId) throw new Error('Parâmetros obrigatórios.');
   const id = `${slotId}_${userId}`;
   await deleteDoc(doc(db, COL, id));
-  // Reordena
-  await reorderWaitlist(slotId);
+  // Sem "reordenar": a fila anda pela MENOR posição entre quem espera, e um
+  // buraco na numeração não muda quem é o próximo. Reordenar era reescrever
+  // a entrada dos OUTROS — escrita que o navegador de quem sai não pode
+  // fazer (a regra recusava, e a saída quebrava no meio).
   await createAuditLog({
     action: 'waitlist_left',
     actor,
@@ -221,9 +225,6 @@ export async function acceptWaitlistPromotion(slotId, user, profile) {
   // Inscreve no slot
   await joinOpenSlot(slotId, user, profile);
 
-  // Reordena os próximos
-  await reorderWaitlist(slotId);
-
   await createAuditLog({
     action: 'waitlist_accepted',
     actor: user,
@@ -234,7 +235,7 @@ export async function acceptWaitlistPromotion(slotId, user, profile) {
 /**
  * Atleta recusa promoção.
  */
-export async function declineWaitlistPromotion(slotId, user, actor) {
+export async function declineWaitlistPromotion(slotId, user, _actor) {
   if (!slotId || !user?.uid) throw new Error('Parâmetros obrigatórios.');
   const entry = await getUserWaitlistEntry(user.uid, slotId);
   if (!entry) throw new Error('Você não está na fila.');
@@ -250,9 +251,9 @@ export async function declineWaitlistPromotion(slotId, user, actor) {
     updated_at: serverTimestamp(),
   });
 
-  // Reordena e notifica o próximo
-  await reorderWaitlist(slotId);
-  await notifyNextInLine(slotId, actor);
+  // Chamar o próximo é do SERVIDOR (`promoteOpenSlotWaitlistOnEntry`): é
+  // escrita na entrada de outra pessoa, que o navegador de quem recusou não
+  // pode fazer. O gatilho roda na hora em que esta recusa é gravada.
 
   await createAuditLog({
     action: 'waitlist_declined',
@@ -283,18 +284,3 @@ export async function expireStaleNotifications(now = Date.now()) {
   return count;
 }
 
-/**
- * Reordena posições da fila.
- */
-async function reorderWaitlist(slotId) {
-  const allEntries = await listSlotWaitlist(slotId);
-  const waiting = allEntries.filter((e) => e.status === WAITLIST_STATUS.WAITING);
-  const compact = compactPositions(waiting);
-  if (compact.length === 0) return;
-  const batch = writeBatch(db);
-  compact.forEach((entry) => {
-    const ref = doc(db, COL, entry.id);
-    batch.update(ref, { position: entry.position, updated_at: serverTimestamp() });
-  });
-  await batch.commit();
-}

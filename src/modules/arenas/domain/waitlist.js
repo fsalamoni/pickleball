@@ -14,8 +14,15 @@ export const WAITLIST_STATUS = Object.freeze({
   CANCELLED: 'cancelled',
 });
 
-/** Janela padrão para aceitar a promoção (em minutos). */
-export const DEFAULT_PROMOTION_WINDOW_MINUTES = 5;
+/**
+ * Janela para aceitar a promoção (em minutos).
+ *
+ * 🐞 Era 5 aqui e 60 no servidor (`functions/openSlotWaitlist.js`), que é
+ * quem de fato chama o próximo: o aviso dizia uma coisa e o prazo era outro.
+ * Agora é um número só — há teste de paridade no servidor. Cinco minutos
+ * também era curto demais: quem está no trabalho não vê o aviso a tempo.
+ */
+export const DEFAULT_PROMOTION_WINDOW_MINUTES = 60;
 
 /**
  * Próximo da fila (status = 'waiting', menor position).

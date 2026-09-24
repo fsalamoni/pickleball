@@ -312,24 +312,11 @@ export async function leaveOpenSlot(slotId, userId) {
   });
 
   // 🐞 A fila de espera existia e NUNCA era chamada: alguém saía, a vaga
-  // abria, e quem estava na fila não ficava sabendo — que é a única coisa que
-  // a fila promete. Agora quem sai libera o próximo, na hora.
-  //
-  // Só quando o slot estava LOTADO e passou a ter vaga: sair de um jogo com
-  // lugar sobrando não chama ninguém.
-  if (slot.status === OPEN_SLOT_STATUS.FULL && newStatus === OPEN_SLOT_STATUS.OPEN) {
-    try {
-      // Importado sob demanda: `waitlistService` já importa daqui, e um ciclo
-      // no topo do arquivo é a receita para uma exportação chegar `undefined`
-      // em tempo de carga.
-      const { notifyNextInLine } = await import('./waitlistService.js');
-      await notifyNextInLine(slotId, { uid: userId });
-    } catch (err) {
-      // Chamar a fila é consequência, não pré-requisito: se falhar, quem saiu
-      // saiu do mesmo jeito.
-      logger.info('Falha ao chamar o próximo da fila (não crítico)', { err: err?.code });
-    }
-  }
+  // abria, e quem estava na fila não ficava sabendo. Chamar o próximo é
+  // escrita na entrada de OUTRA pessoa — o navegador de quem sai não pode
+  // fazê-la (a regra recusa). Quem chama é o SERVIDOR: o gatilho
+  // `promoteOpenSlotWaitlistOnSlot` roda na hora em que esta saída é gravada
+  // e, se a vaga lotada passou a ter lugar, chama o próximo.
 
   await createAuditLog({
     action: 'open_slot_left',
