@@ -157,6 +157,13 @@ export async function deleteArenaPackage(pkgId, actor) {
  * Atleta compra um pacote (sandbox: registra intent).
  * Cria registro em arena_wallets/{user_id}.packages[].
  */
+/**
+ * @deprecated O ATLETA não consegue comprar sozinho: esta função grava a
+ * carteira (`arena_wallets`), e a regra só deixa a ARENA escrever carteira —
+ * de propósito, senão qualquer pessoa se daria horas sem pagar. O botão
+ * "Comprar" chamava isto e falhava sempre. Use `requestPackagePurchase` (o
+ * atleta pede) e `sellPackageToMember` (a arena confirma e credita).
+ */
 export async function purchasePackage(arenaId, pkgId, user, profile) {
   if (!arenaId || !pkgId) throw new Error('arenaId/pkgId obrigatórios.');
   if (!user?.uid) throw new Error('Faça login.');
@@ -586,3 +593,122 @@ export async function redeemMemberPoints(arenaId, userId, points, opts = {}, act
   });
   return { points: gastos, credit };
 }
+
+/* ================================================================== */
+/*  Pacote: o atleta PEDE, a arena CONFIRMA                            */
+/* ================================================================== */
+
+/**
+ * O atleta pede um pacote — a arena é avisada, com o caminho para confirmar.
+ *
+ * 🐞 O botão "Comprar" gravava a carteira pelo atleta, e a regra (com razão)
+ * só deixa a arena escrever carteira: a compra falhava SEMPRE. O modelo certo
+ * é o da reserva: pedido → a arena recebe o pagamento → confirma. O aviso leva
+ * a arena direto à confirmação (`?aba=membros&pacote=&para=`) — nenhuma
+ * coleção nova.
+ *
+ * @returns {Promise<{ notified: number }>}
+ */
+export async function requestPackagePurchase(arenaId, pkgId, user, profile) {
+  if (!arenaId || !pkgId) throw new Error('Pacote inválido.');
+  if (!user?.uid) throw new Error('Faça login.');
+  const pkgSnap = await getDoc(doc(db, COL_PACKAGES, pkgId));
+  if (!pkgSnap.exists()) throw new Error('Pacote não encontrado.');
+  const pkg = pkgSnap.data();
+  if (pkg.active === false) throw new Error('Este pacote saiu da vitrine.');
+
+  const { listArenaManagers } = await import('./arenaService.js');
+  const gestores = await listArenaManagers(arenaId).catch(() => []);
+  if (gestores.length === 0) throw new Error('A arena ainda não tem quem receba o pedido. Fale com ela.');
+  const nome = displayName(user, profile);
+  await notifyUsers(gestores, {
+    title: 'Pedido de pacote de horas',
+    message: `${nome} quer o pacote "${str(pkg.name).slice(0, 60)}" (${pkg.hours}h · R$ ${Number(pkg.price || 0).toFixed(2).replace('.', ',')}). Confirme quando receber o pagamento.`,
+    type: NOTIFICATION_TYPE.GENERIC,
+    link: `/arenas/${arenaId}/gerir?aba=membros&pacote=${encodeURIComponent(pkgId)}&para=${encodeURIComponent(user.uid)}`,
+    actor: user,
+  });
+  await createAuditLog({
+    action: 'arena_package_requested', actor: user,
+    details: { arena_id: arenaId, pkg_id: pkgId, price: pkg.price },
+  });
+  return { notified: gestores.length };
+}
+
+/**
+ * A ARENA vende o pacote a alguém: credita as horas na carteira, registra o
+ * valor, torna a pessoa membro (se ainda não for), soma os pontos e avisa.
+ *
+ * Serve ao pedido que chegou pelo aviso E à venda de balcão.
+ *
+ * @param {string} arenaId
+ * @param {string} pkgId
+ * @param {{ user_id: string, user_name?: string, user_photo?: string }} target
+ * @param {object} actor  o gestor
+ */
+export async function sellPackageToMember(arenaId, pkgId, target, actor) {
+  if (!arenaId || !pkgId) throw new Error('Pacote inválido.');
+  if (!target?.user_id) throw new Error('Escolha para quem é o pacote.');
+  const pkgSnap = await getDoc(doc(db, COL_PACKAGES, pkgId));
+  if (!pkgSnap.exists()) throw new Error('Pacote não encontrado.');
+  const pkg = { id: pkgSnap.id, ...pkgSnap.data() };
+  const preco = Math.max(0, Number(pkg.price) || 0);
+
+  // Membro primeiro: incluir cria a carteira zerada, onde o pacote entra.
+  const membro = await getArenaMember(arenaId, target.user_id);
+  if (!membro) await addArenaMember(arenaId, target, actor);
+
+  const agoraMs = Date.now();
+  const compra = {
+    pkg_id: pkgId,
+    pkg_name: pkg.name,
+    total_hours: Number(pkg.hours) || 0,
+    used_hours: 0,
+    purchased_at: new Date(agoraMs),
+    expires_at: new Date(agoraMs + (Number(pkg.validity_days) || 60) * 86_400_000),
+    sold_by: actor?.uid || null,
+  };
+  const walletRef = doc(db, COL_WALLETS, walletId(arenaId, target.user_id));
+  const walletSnap = await getDoc(walletRef);
+  const w = walletSnap.exists() ? walletSnap.data() : {};
+  await setDoc(walletRef, {
+    id: walletId(arenaId, target.user_id),
+    arena_id: arenaId,
+    user_id: target.user_id,
+    user_name: w.user_name || str(target.user_name),
+    packages: [...(Array.isArray(w.packages) ? w.packages : []), compra],
+    total_spent: (Number(w.total_spent) || 0) + preco,
+    transactions: [
+      ...(Array.isArray(w.transactions) ? w.transactions : []),
+      { type: 'package_purchase', amount: preco, pkg_id: pkgId, pkg_name: pkg.name, at: new Date(agoraMs) },
+    ].slice(-200),
+    updated_at: serverTimestamp(),
+    ...(walletSnap.exists() ? {} : { balance: 0, points: 0, created_at: serverTimestamp() }),
+  }, { merge: true });
+
+  // Pontos (1 por real) e a contagem de vendidos do pacote. Conveniências:
+  // falhar aqui não pode desfazer as horas já creditadas.
+  try {
+    if (membro && preco > 0) await addPointsToMember(arenaId, target.user_id, Math.floor(preco), actor);
+    await updateDoc(doc(db, COL_PACKAGES, pkgId), { sold_count: increment(1), updated_at: serverTimestamp() });
+  } catch (err) {
+    logger.info('Pacote vendido; pontos/contagem não atualizaram', { err: err?.code });
+  }
+
+  try {
+    notifyUsers([target.user_id], {
+      title: 'Pacote de horas creditado',
+      message: `${compra.total_hours}h do pacote "${str(pkg.name).slice(0, 60)}" já estão na sua carteira.`,
+      type: NOTIFICATION_TYPE.GENERIC,
+      link: `/arenas/${arenaId}`,
+      actor,
+    });
+  } catch (err) { logger.info('notify package sold failed', { err: err?.code }); }
+
+  await createAuditLog({
+    action: 'arena_package_sold', actor,
+    details: { arena_id: arenaId, pkg_id: pkgId, user_id: target.user_id, price: preco },
+  });
+  return compra;
+}
+

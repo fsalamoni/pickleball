@@ -148,3 +148,29 @@ o que impediria a arena de configurar os próprios níveis.
 | Serviço | `services/membersService.js` (`getMemberContext`, `consumeMemberBenefit`, mensalidade) |
 | Reserva | `services/bookingService.js` (`precoComBeneficio`, `aplicarBeneficioNaConfirmacao`) |
 | Telas | `V2ArenaMembers` (atleta), `V2ArenaAdminMembers` (arena), `BookingRequestDialog` (o preço) |
+
+---
+
+## Atualização 2026-09-24 — comprar pacote vira PEDIDO
+
+🐞 O botão "Comprar" (na página de membros e em "Planos e vantagens") gravava a
+carteira pelo atleta (`purchasePackage`), e a regra de `arena_wallets` só deixa
+a ARENA escrever — **a compra falhava sempre**. A regra está certa: se o atleta
+escrevesse a própria carteira, bastaria gravar um pacote para ter horas sem
+pagar (há asserção no emulador provando que ele não consegue).
+
+O modelo agora é o da reserva:
+
+1. o atleta toca **"Quero este pacote"** → `requestPackagePurchase` avisa os
+   gestores (nada é gravado), com o link
+   `/arenas/:id/gerir?aba=membros&pacote=<id>&para=<uid>`;
+2. o aviso abre a Central já com **"Pedido de pacote"**: quem pediu, o quê, e
+   **"Recebi o pagamento — creditar"**;
+3. `sellPackageToMember` credita as horas, soma o valor gasto, registra a
+   transação, torna a pessoa membro se ainda não for, soma os pontos, conta a
+   venda no pacote (`sold_count`) e avisa a pessoa.
+
+A mesma venda serve ao **balcão**: "Vender pacote" na linha de cada membro.
+**Nenhuma coleção nova** — o pedido vive no aviso. De quebra, a data da compra
+deixou de ser `serverTimestamp()` dentro de uma lista (o Firestore não aceita).
+

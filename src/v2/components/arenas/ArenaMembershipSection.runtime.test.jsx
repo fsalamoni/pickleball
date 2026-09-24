@@ -30,7 +30,7 @@ vi.mock('@/modules/arenas/hooks/useArenaV3', () => ({
   useArenaWallet: () => ({ data: estado.wallet }),
   useArenaPackages: () => ({ data: estado.pacotes }),
   useMemberSubscription: () => ({ data: estado.mensalidade }),
-  usePurchasePackage: () => ({ mutateAsync: comprar, isPending: false }),
+  useRequestPackage: () => ({ mutateAsync: comprar, isPending: false }),
 }));
 
 const { default: ArenaMembershipSection } = await import('./ArenaMembershipSection.jsx');

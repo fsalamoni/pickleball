@@ -36,7 +36,7 @@ vi.mock('@/modules/arenas/hooks/useArenaV3', () => ({
   useArenaMember: () => ({ data: estado.member }),
   useArenaWallet: () => ({ data: estado.wallet }),
   useArenaPackages: () => ({ data: estado.catalogo, isError: estado.erro, refetch: vi.fn() }),
-  usePurchasePackage: () => ({ mutateAsync: vi.fn(), isPending: false }),
+  useRequestPackage: () => ({ mutateAsync: vi.fn(), isPending: false }),
   useMemberSubscription: () => ({ data: estado.sub }),
 }));
 

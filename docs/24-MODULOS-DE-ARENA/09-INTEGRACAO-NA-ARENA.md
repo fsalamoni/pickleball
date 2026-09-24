@@ -160,6 +160,9 @@ Duas regras que a navegação depende:
 
 - A data da última reserva na aba Clientes e as datas especiais de preço na
   página da arena saíam em ISO cru (`2026-09-01`); agora em pt-BR.
+- **Correção posterior (Onda BI)**: o "comprar" do pacote nesta seção falhava
+  sempre — a carteira só a arena escreve. Virou **pedido** que a arena confirma
+  na Central (ver `02-MEMBROS.md`, atualização 2026-09-24).
 - O cartão de pacote virou componente compartilhado
   (`PackageForSaleCard`): importá-lo da página de membros traria a página
   inteira para o pacote da página da arena.
