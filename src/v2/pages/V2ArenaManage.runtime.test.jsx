@@ -10,7 +10,9 @@
  *     membro e oferece "Tornar membro" a quem reserva sempre;
  *  5. sem Membros, a aba Clientes é a de antes;
  *  6. ⭐ com Aulas ligado, há seção Aulas (agenda + lista única de
- *     professores) — e `?aba=professores` leva à lista única.
+ *     professores) — e `?aba=professores` leva à lista única;
+ *  7. ⭐ Torneios: os da casa (módulo) e os da plataforma sediados aqui, que
+ *     antes não apareciam em lugar nenhum da gestão.
  */
 import React from 'react';
 import { createRoot } from 'react-dom/client';
@@ -22,7 +24,7 @@ import { ARENA_MODULE_ID } from '@/modules/arenas/domain/modules';
 import { FEATURE_FLAG } from '@/core/featureFlags';
 
 const LIGADOS = new Set();
-const estado = { reservas: [], membros: [] };
+const estado = { reservas: [], membros: [], torneiosPlataforma: [] };
 const incluir = vi.fn(() => Promise.resolve());
 const mutacao = () => ({ mutateAsync: vi.fn(), isPending: false });
 
@@ -68,6 +70,15 @@ vi.mock('@/v2/components/arenas/classes/ArenaClassesPanel', () => ({
 vi.mock('@/v2/components/arenas/classes/ArenaCoachRoster', () => ({
   default: () => <div>LISTA ÚNICA DE PROFESSORES</div>,
 }));
+vi.mock('@/modules/tournament/hooks/useTournament', () => ({
+  useArenaTournaments: () => ({ data: estado.torneiosPlataforma, isLoading: false }),
+}));
+vi.mock('@/v2/components/arenas/tournaments/ArenaLeaguesPanel', () => ({
+  default: () => <div>TORNEIOS DA CASA</div>,
+}));
+vi.mock('@/v2/components/arenas/tournaments/ArenaPlatformTournamentsTab', () => ({
+  default: () => <div>TORNEIOS DA PLATAFORMA</div>,
+}));
 vi.mock('@/v2/pages/V2ArenaCoaches', () => ({
   default: () => null,
   ArenaCoachesManager: () => <div>SÓ PARCEIROS</div>,
@@ -87,6 +98,7 @@ beforeEach(() => {
   incluir.mockClear();
   estado.reservas = [];
   estado.membros = [];
+  estado.torneiosPlataforma = [];
   container = document.createElement('div');
   document.body.appendChild(container);
   root = createRoot(container);
@@ -232,3 +244,30 @@ describe('⭐ Aulas dentro da Central', () => {
     expect(container.textContent).toContain('Nenhuma solicitação de reserva ainda');
   });
 });
+
+describe('⭐ Torneios dentro da Central', () => {
+  it('com o módulo, `?aba=torneios` abre os torneios da casa', async () => {
+    LIGADOS.add(ARENA_MODULE_ID.LEAGUES);
+    await render('/arenas/a1/gerir?aba=torneios');
+    expect(container.textContent).toContain('TORNEIOS DA CASA');
+  });
+
+  it('⭐ torneio da PLATAFORMA sediado aqui aparece na gestão, mesmo sem o módulo', async () => {
+    estado.torneiosPlataforma = [{ id: 'p1', name: 'Open', arena_id: 'a1' }];
+    await render('/arenas/a1/gerir?aba=torneios-plataforma');
+    expect(container.textContent).toContain('TORNEIOS DA PLATAFORMA');
+    expect(botao('Torneios')).toBeTruthy();
+  });
+
+  it('torneio arquivado não conta', async () => {
+    estado.torneiosPlataforma = [{ id: 'p1', name: 'Velho', arena_id: 'a1', archived: true }];
+    await render('/arenas/a1/gerir');
+    expect(botao('Torneios')).toBeFalsy();
+  });
+
+  it('sem módulo e sem torneio da plataforma, a Central não ganha seção', async () => {
+    await render('/arenas/a1/gerir');
+    expect(botao('Torneios')).toBeFalsy();
+  });
+});
+

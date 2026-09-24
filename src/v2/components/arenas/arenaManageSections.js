@@ -9,8 +9,8 @@
  */
 import {
   BarChart3, Building2, CalendarClock, CalendarDays, CalendarRange, ClipboardList,
-  Crown, DollarSign, GraduationCap, Image, Info, LayoutGrid, Package, Puzzle,
-  SlidersHorizontal, Star, Users, Wallet,
+  Crown, DollarSign, Globe, GraduationCap, Image, Info, LayoutGrid, Package, Puzzle,
+  SlidersHorizontal, Star, Trophy, Users, Wallet,
 } from 'lucide-react';
 
 // Navegação em dois níveis do admin da arena. Ordem = ciclo de vida, do
@@ -76,6 +76,18 @@ export function buildArenaSections({
       tabs: [
         { value: 'aulas', label: 'Agenda', icon: CalendarDays },
         { value: 'professores', label: 'Professores', icon: GraduationCap },
+      ],
+    }] : []),
+    // Torneios: os DA CASA (módulo `leagues`) e os DA PLATAFORMA sediados
+    // aqui — que antes apareciam na página pública e em lugar nenhum da
+    // gestão. A seção existe se houver qualquer um dos dois.
+    ...(modulos.torneios || modulos.torneiosPlataforma ? [{
+      id: 'torneios',
+      label: 'Torneios',
+      icon: Trophy,
+      tabs: [
+        ...(modulos.torneios ? [{ value: 'torneios', label: 'Da casa', icon: Trophy }] : []),
+        ...(modulos.torneiosPlataforma ? [{ value: 'torneios-plataforma', label: 'Da plataforma', icon: Globe }] : []),
       ],
     }] : []),
     {

@@ -287,6 +287,7 @@ Estes princípios vieram de bugs reais que custaram horas pra arrumar. São ineg
 **"Vou mexer na matrícula em aula de arena"** → a divisão arena × professor é decidida pelo SERVIÇO (`bookClass`) com o `partner` do cadastro do professor e `commissionPctFrom(config)` — **nunca** mande comissão nem "é parceiro" da tela (ela mandava `partner: true` fixo, e o professor da casa pagava comissão). `commissionPctFrom` trata **0% como 0%** (o `|| 20` virava 20%). O PROFESSOR lê as matrículas da aula dele só consultando **por `coach_id`** (`useCoachClassBookings`) — consulta por `class_id` a regra recusa. E a agenda da arena usa `includeClosed: true`: sem isso a aula DADA some, e com ela o botão de registrar o pagamento
 **"Consulta numa coleção de leitura restrita volta vazia (ou dá permission-denied)"** → a consulta tem de filtrar pelo campo que a REGRA confere: o Firestore só aceita a consulta se conseguir provar a regra para TUDO o que ela pode devolver. A arena lê por `arena_id` (a regra faz `isArenaManager(resource.data.arena_id)`), o dono por `user_id`, o professor da aula por `coach_id`. Filtrar só por `class_id`/`slot_id`/`sale_id` é recusado SEMPRE — era o caso da lista de alunos da aula (a arena nunca a viu). Várias igualdades juntas não pedem índice composto
 **"Onde o atleta/professor vê as aulas das arenas?"** → `/minhas-aulas` (`MyArenaEnrollments`: matrículas de todas as arenas) e `/aulas` (`MyTaughtArenaClasses`: aparece até para quem não tem perfil de professor da plataforma). Na página da arena, "Aulas e professores" (`ArenaClassesSection`), no lugar de "Professores parceiros" quando o módulo está ligado
+**"Vou mexer em torneio da casa (interno) da arena"** → com o módulo `leagues`, **Torneios** é seção da Central (*Da casa* · *Da plataforma*); o corpo é `ArenaLeaguesPanel` (`v2/components/arenas/tournaments/`), o MESMO da página `/arenas/:id/torneios`. O ciclo é publicar → inscrição → Começar (vira dia de jogo) → **Encerrar e pontuar** (`FinishTournamentDialog`: pódio do ranking do dia via `tournamentStandings`, pontos mostrados ANTES de confirmar). A INSCRIÇÃO é escrita do próprio atleta no documento do torneio — a regra deixa só entrar/sair A SI MESMO (antes recusava toda inscrição); não afrouxe. Encerrar confere o status NO BANCO (encerrar duas vezes somaria pontos duas vezes). Os torneios da casa usam `useArenaInternalTournaments` + `arenaKeys.torneiosDaCasa` — **não** `useArenaTournaments` de `tournament/hooks`, que são os da PLATAFORMA (outra coleção)
 **"Criei uma tela nova de módulo de arena. Como alguém chega nela?"** → `<ArenaModuleShortcuts arenaId audience="manage"|"public" />`. Ele lê `manage`/`public` do catálogo e cruza com o que a arena ligou — rota preenchida vira botão sozinho, nos dois lugares (página da arena e Central). **Não escreva o link à mão**: o console de marketing existia, tinha rota, e nada na plataforma levava até ele — módulo ligado, tela inalcançável. Destinos repetidos viram um botão só
 **"Mudei/removi uma rota de tela de módulo de arena"** → o CATÁLOGO promete aquele caminho (`manage`/`public`) e `ArenaModuleShortcuts` monta o botão a partir dele — caminho com erro de digitação **não dá erro**, dá um botão bonito que leva a uma tela em branco, no celular do cliente, na frente da recepção. `src/core/guards/rotasDeModulos.test.js` lê `V2App.jsx` e reprova quem quebrar o par (e exige `:arenaId`, que é o nome que `arenaModuleRoute` troca)
 **"A tela precisa saber se um módulo está ligado"** → `useArenaModules(arenaId)` (UM hook, DUAS consultas, responde pelos 50). **Nunca** `useCanArenaUseModule` por módulo, e jamais dentro de um `map`
@@ -487,6 +488,24 @@ chore(deps): bump firebase to 12.x
 > memory topic `picklerush-sync-2026-08.md`.
 >
 > **Destaques por onda**:
+>
+> - **Onda BG — Torneios dentro da arena** (2026-09-24): a terceira parte
+>   da integração. **Torneios virou seção da Central**, com os torneios DA
+>   CASA e — pela primeira vez na gestão — os DA PLATAFORMA sediados na arena
+>   (antes só apareciam na página pública), com "Criar torneio aqui" já com a
+>   arena escolhida. A página da arena ganhou **"Torneios da casa"** (inscrição
+>   ali mesmo, o que está rolando, o topo do ladder) e "Meus torneios" passou a
+>   mostrar os da casa. E o ciclo, que **nunca tinha fechado uma vez**, fechou:
+>   **🐞 o atleta não conseguia se inscrever** — a inscrição grava no
+>   documento do torneio e a regra só deixava a arena atualizá-lo; e **🐞
+>   "Encerrar" não tinha botão**, então o ladder nunca pontuava. Agora
+>   "Encerrar e pontuar" monta o pódio do ranking do dia, mostra os pontos de
+>   cada um antes de confirmar, e o serviço confere no banco para não somar
+>   duas vezes. De quebra: a chave de cache dos torneios da casa era o prefixo
+>   da dos torneios da plataforma, e a página pública mostrava status cru e
+>   rascunhos. Regra ampliada só para o atleta entrar/sair A SI MESMO, com dez
+>   asserções no emulador. **Zero coleção, zero índice, zero campo.** Ver
+>   `docs/24-MODULOS-DE-ARENA/09-INTEGRACAO-NA-ARENA.md` §6.
 >
 > - **Onda BF — Aulas e professores dentro da arena** (2026-09-24): a
 >   segunda parte do pedido de integração. **Aulas virou seção da Central**
@@ -1777,7 +1796,7 @@ chore(deps): bump firebase to 12.x
 
 | Métrica | Valor | Delta do início do agente |
 |---|---|---|
-| **Testes Vitest** | **5169 passing** (306 arquivos) + 233 asserções de regras (Vitest) + 85 do dia de jogo no emulador | +4650 (era 408) |
+| **Testes Vitest** | **5209 passing** (310 arquivos) + 243 asserções de regras (Vitest) + 85 do dia de jogo no emulador | +4650 (era 408) |
 | **Lint errors** | 0 | era 30+ |
 | **Módulos** | 21 (+`help` — conteúdo dos tutoriais em tela) (`games` e `legal` saíram como `src/modules/` mas continuam como pastas oficiais — **rating virou módulo oficial** com domain/services/hooks/components) | +4 (coaches, circuits, games, legal) |
 | **V2 pages** | 82 (+V2GameDayTelao — telão, fora do V2Layout; +V2Help — central de ajuda; +V2ArenaKiosk — totem da recepção, também fora do V2Layout; +V2ArenaCheckin; +V2ArenaAttendance) | +58 |

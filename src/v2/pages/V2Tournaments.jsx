@@ -2,6 +2,8 @@ import React, { useMemo, useState } from 'react';
 import { Link } from 'react-router-dom';
 import { Archive, Calendar, Globe, Hash, MapPin, Plus, Trophy } from 'lucide-react';
 import { useMyTournaments, usePublicTournaments } from '@/modules/tournament/hooks/useTournament';
+import { useMyInternalTournaments } from '@/modules/arenas/hooks/useArenaV3';
+import MyHouseTournaments from '@/v2/components/arenas/tournaments/MyHouseTournaments';
 import {
   TOURNAMENT_STATUS,
   TOURNAMENT_STATUS_LABELS,
@@ -56,6 +58,11 @@ export default function V2Tournaments() {
     data: publicTournaments = [], isLoading: loadingPublic, isError: falhouPublicos, refetch: recarregarPublicos,
   } = usePublicTournaments();
   const [tab, setTab] = useState('public');
+  // Torneios DA CASA das arenas em que estou inscrito (outra coleção). Entram
+  // em "Meus torneios" — e contam para não dizer "você ainda não tem
+  // torneios" a quem está inscrito num.
+  const { data: daCasa } = useMyInternalTournaments();
+  const torneiosDaCasa = daCasa?.torneios || [];
 
   const list = tab === 'mine' ? myTournaments : publicTournaments;
   const isLoading = tab === 'mine' ? loadingMine : loadingPublic;
@@ -82,6 +89,10 @@ export default function V2Tournaments() {
         <TabButton active={tab === 'mine'} onClick={() => setTab('mine')}>Meus torneios</TabButton>
       </div>
 
+      {tab === 'mine' && !isLoading && (
+        <MyHouseTournaments torneios={torneiosDaCasa} arenas={daCasa?.arenas || []} />
+      )}
+
       {isLoading ? (
         <div className="grid gap-6 lg:grid-cols-2 xl:grid-cols-3">
           {[1, 2, 3].map((i) => <V2Skeleton key={i} className="h-56 rounded-4xl" />)}
@@ -94,7 +105,7 @@ export default function V2Tournaments() {
             onRetry={() => recarregar()}
           />
         </V2Surface>
-      ) : sorted.length === 0 ? (
+      ) : sorted.length === 0 && tab === 'mine' && torneiosDaCasa.length > 0 ? null : sorted.length === 0 ? (
         <V2Surface>
           <V2EmptyState
             icon={Trophy}

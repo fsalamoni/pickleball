@@ -1638,8 +1638,44 @@ service cloud.firestore {
     match /arena_internal_tournaments/{tournamentId} {
       allow read: if isAuthed();
       allow create: if isArenaManager(request.resource.data.arena_id) || isPlatformAdmin();
-      allow update: if isArenaManager(resource.data.arena_id) || isPlatformAdmin();
+      allow update: if isArenaManager(resource.data.arena_id) || isPlatformAdmin()
+        || internalTournamentSelfSignup();
       allow delete: if isArenaManager(resource.data.arena_id) || isPlatformAdmin();
+
+      // 🐞 O ATLETA se inscreve e sai (2026-09-24). A inscrição grava no
+      // próprio documento do torneio (`participants`, `roster`, `enrolled`) e
+      // a atualização era só da arena: TODA inscrição era recusada — o botão
+      // "Quero jogar" existia e nunca funcionou. Aqui, o mesmo desenho do dia
+      // de jogo: a pessoa só entra ou sai A SI MESMA, só enquanto as
+      // inscrições estão abertas (antes de o torneio virar dia de jogo), e não
+      // toca em mais nada do documento.
+      function internalTournamentSelfSignup() {
+        return isAuthed()
+          && resource.data.get('status', 'scheduled') == 'scheduled'
+          && resource.data.get('game_day_id', null) == null
+          && request.resource.data.diff(resource.data).affectedKeys()
+              .hasOnly(['participants', 'roster', 'enrolled', 'updated_at'])
+          && (internalTournamentJoin() || internalTournamentLeave());
+      }
+      function internalTournamentJoin() {
+        return !(request.auth.uid in resource.data.get('participants', []))
+          && request.resource.data.participants.toSet()
+              == resource.data.get('participants', []).toSet().union([request.auth.uid].toSet())
+          && request.resource.data.get('enrolled', 0) == resource.data.get('enrolled', 0) + 1
+          && (resource.data.get('max_participants', 0) <= 0
+              || request.resource.data.get('enrolled', 0) <= resource.data.max_participants)
+          && request.resource.data.get('roster', []).size() == resource.data.get('roster', []).size() + 1
+          && request.resource.data.get('roster', []).hasAll(resource.data.get('roster', []));
+      }
+      function internalTournamentLeave() {
+        return (request.auth.uid in resource.data.get('participants', []))
+          && request.resource.data.participants.toSet()
+              == resource.data.get('participants', []).toSet().difference([request.auth.uid].toSet())
+          && resource.data.get('roster', []).hasAll(request.resource.data.get('roster', []))
+          && ((resource.data.get('enrolled', 0) > 0
+                && request.resource.data.get('enrolled', 0) == resource.data.get('enrolled', 0) - 1)
+              || (resource.data.get('enrolled', 0) <= 0 && request.resource.data.get('enrolled', 0) == 0));
+      }
     }
 
     match /arena_ladders/{ladderId} {

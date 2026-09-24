@@ -28,6 +28,8 @@ import ArenaNpsAsk from '@/v2/components/arenas/ArenaNpsAsk';
 import ArenaCheckinAsk from '@/v2/components/arenas/ArenaCheckinAsk';
 import ArenaMembershipSection from '@/v2/components/arenas/ArenaMembershipSection';
 import ArenaClassesSection from '@/v2/components/arenas/classes/ArenaClassesSection';
+import ArenaHouseTournamentsSection from '@/v2/components/arenas/tournaments/ArenaHouseTournamentsSection';
+import { TOURNAMENT_STATUS_LABELS } from '@/modules/tournament/domain/constants';
 import { useArenaModules } from '@/modules/arenas/hooks/useArenaModules';
 import { ARENA_MODULE_ID } from '@/modules/arenas/domain/modules';
 import { formatDateShortBR } from '@/modules/arenas/domain/calendar';
@@ -248,6 +250,7 @@ function V2ArenaDetailContent({ arenaId, user, arena, managed, bookings, isLoadi
       <V2ArenaPaymentSection arena={arena} />
 
       {/* Torneios + Professores residentes (Sprint 4) */}
+      <ArenaHouseTournamentsGate arena={arena} />
       <ArenaTournamentsSection arenaId={arenaId} />
       <ArenaTeachingSection arena={arena} />
       {linkedClubsOn && (
@@ -340,8 +343,22 @@ function V2ArenaDetailContent({ arenaId, user, arena, managed, bookings, isLoadi
   );
 }
 
+/** Torneios da casa (módulo `leagues`) — só com o módulo ligado. */
+function ArenaHouseTournamentsGate({ arena }) {
+  const { isOn, isLoading } = useArenaModules(arena.id);
+  if (isLoading || !isOn(ARENA_MODULE_ID.LEAGUES)) return null;
+  return (
+    <div className="mt-6 empty:mt-0">
+      <ArenaHouseTournamentsSection arena={arena} />
+    </div>
+  );
+}
+
 function ArenaTournamentsSection({ arenaId }) {
-  const { data: tournaments = [], isLoading } = useArenaTournaments(arenaId);
+  const { data: todos = [], isLoading } = useArenaTournaments(arenaId);
+  // Rascunho e arquivado não são eventos públicos: o organizador ainda não
+  // abriu (ou já tirou do ar).
+  const tournaments = todos.filter((t) => !t.archived && t.status !== 'draft');
   if (isLoading) return null;
   if (tournaments.length === 0) return null;
   return (
@@ -355,7 +372,8 @@ function ArenaTournamentsSection({ arenaId }) {
             <div className="flex items-center gap-2">
               <Trophy className="h-4 w-4 text-amber-500" />
               <h4 className="flex-1 text-sm font-bold text-ink line-clamp-1">{t.name}</h4>
-              {t.status && <V2Badge tone="neutral">{t.status}</V2Badge>}
+              {/* Era o status CRU do banco ("registrations_open"). */}
+              {t.status && <V2Badge tone="neutral">{TOURNAMENT_STATUS_LABELS[t.status] || 'Torneio'}</V2Badge>}
             </div>
             {t.starts_at && (
               <p className="mt-1 text-xs text-gray-500">

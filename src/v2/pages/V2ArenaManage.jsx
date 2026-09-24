@@ -36,6 +36,7 @@ import { PhotoLightbox } from '@/components/ui/photo-lightbox';
 import ArenaModuleShortcuts from '@/v2/components/arenas/ArenaModuleShortcuts';
 import { buildArenaSections } from '@/v2/components/arenas/arenaManageSections';
 import { useArenaModules } from '@/modules/arenas/hooks/useArenaModules';
+import { useArenaTournaments as useArenaPlatformTournaments } from '@/modules/tournament/hooks/useTournament';
 import { ARENA_MODULE_ID } from '@/modules/arenas/domain/modules';
 import ConfirmDialog from '@/components/ConfirmDialog';
 import { V2ProfileFields, V2PricingEditor } from '@/v2/components/arenas/V2ArenaEditors';
@@ -44,6 +45,9 @@ const ArenaCoachesManager = lazy(() => import('@/v2/pages/V2ArenaCoaches').then(
 // Aulas (módulo `classes`): a agenda e a lista ÚNICA de professores.
 const ArenaClassesPanel = lazy(() => import('@/v2/components/arenas/classes/ArenaClassesPanel'));
 const ArenaCoachRoster = lazy(() => import('@/v2/components/arenas/classes/ArenaCoachRoster'));
+// Torneios: os da casa (módulo `leagues`) e os da plataforma sediados aqui.
+const ArenaLeaguesPanel = lazy(() => import('@/v2/components/arenas/tournaments/ArenaLeaguesPanel'));
+const ArenaPlatformTournamentsTab = lazy(() => import('@/v2/components/arenas/tournaments/ArenaPlatformTournamentsTab'));
 import BookingParticipantsPanel from '@/modules/arenas/components/BookingParticipantsPanel';
 const LinkedClubsSection = lazy(() => import('@/modules/clubs/components/LinkedClubsSection'));
 import V2BookingRow from '@/v2/components/arenas/V2BookingRow';
@@ -199,10 +203,15 @@ function V2ArenaManageContent({ arenaId, user, isPlatformAdmin, arena, managed, 
   // nenhuma.
   const arenaModulesOn = useFeatureFlag(FEATURE_FLAG.ARENA_MODULES);
   const { isOn: moduloLigado, isLoading: modulosCarregando } = useArenaModules(arenaId);
+  const { data: torneiosDaPlataforma = [], isLoading: torneiosCarregando } = useArenaPlatformTournaments(arenaId);
   const modulos = {
     membros: moduloLigado(ARENA_MODULE_ID.MEMBERS),
     pacotes: moduloLigado(ARENA_MODULE_ID.MEMBERS_PACKAGES),
     aulas: moduloLigado(ARENA_MODULE_ID.CLASSES),
+    torneios: moduloLigado(ARENA_MODULE_ID.LEAGUES),
+    // Torneio da plataforma sediado aqui não depende de módulo: é da arena
+    // desde sempre, só não tinha lugar na gestão.
+    torneiosPlataforma: torneiosDaPlataforma.some((t) => !t.archived),
   };
   // Lembra a última sub-aba visitada em cada seção principal.
   const [sectionMemory, setSectionMemory] = useState({});
@@ -238,7 +247,8 @@ function V2ArenaManageContent({ arenaId, user, isPlatformAdmin, arena, managed, 
   const abasValidas = sections.flatMap((sec) => sec.tabs.map((t) => t.value));
   const abaDaSecao = sections.find((sec) => sec.id === secao)?.tabs[0]?.value;
   const tab = abasValidas.includes(tabPedida) ? tabPedida : (abaDaSecao || 'reservas');
-  const esperandoModulo = Boolean(tabPedida) && !abasValidas.includes(tabPedida) && modulosCarregando;
+  const esperandoModulo = Boolean(tabPedida) && !abasValidas.includes(tabPedida)
+    && (modulosCarregando || torneiosCarregando);
   const activeSectionId = sections.find((s) => s.tabs.some((t) => t.value === tab))?.id
     || sections[0].id;
   const activeSection = sections.find((s) => s.id === activeSectionId) || sections[0];
@@ -370,6 +380,8 @@ function V2ArenaManageContent({ arenaId, user, isPlatformAdmin, arena, managed, 
             quem dá aula); desligado, é a de parceiros, como sempre foi. */}
         {tab === 'professores' && modulos.aulas && <ArenaCoachRoster arena={arena} />}
         {tab === 'professores' && !modulos.aulas && coachResidentOn && <ArenaCoachesManager arena={arena} />}
+        {tab === 'torneios' && modulos.torneios && <ArenaLeaguesPanel arena={arena} podeGerir />}
+        {tab === 'torneios-plataforma' && modulos.torneiosPlataforma && <ArenaPlatformTournamentsTab arena={arena} />}
         {tab === 'clubes' && linkedClubsOn && <LinkedClubsSection ownerType="arena" ownerId={arena.id} canManage title="Clubes da arena" />}
         {tab === 'retornos' && <V2ArenaReviews arena={arena} canModerate />}
         {tab === 'modulos' && arenaModulesOn && (

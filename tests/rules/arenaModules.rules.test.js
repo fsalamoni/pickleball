@@ -28,6 +28,7 @@ import {
 } from '@firebase/rules-unit-testing';
 import {
   doc, getDoc, setDoc, updateDoc, deleteDoc, getDocs, collection, query, where,
+  arrayUnion, arrayRemove, increment, serverTimestamp,
 } from 'firebase/firestore';
 
 const ADMIN = 'admin_uid';
@@ -325,6 +326,89 @@ describe('🔒 a matrícula do aluno não decide o que é da arena', () => {
 
   it('o aluno continua podendo DESMARCAR a própria aula', async () => {
     await assertSucceeds(deleteDoc(doc(como(ATLETA), 'arena_class_bookings', 'aula2_' + ATLETA)));
+  });
+});
+
+describe('🐞 o ATLETA se inscreve no torneio da casa (antes: toda inscrição recusada)', () => {
+  const VAGA = { user_id: ATLETA, name: 'Atleta', photo_url: null, level: null };
+  const OUTRO = { user_id: 'outro_uid', name: 'Outro', photo_url: null, level: null };
+
+  beforeEach(async () => {
+    await testEnv.withSecurityRulesDisabled(async (ctx) => {
+      const db = ctx.firestore();
+      await setDoc(doc(db, 'arena_internal_tournaments', 't_aberto'), {
+        arena_id: ARENA, name: 'Copa', status: 'scheduled', game_day_id: null,
+        max_participants: 8, enrolled: 1, participants: ['outro_uid'], roster: [OUTRO],
+      });
+      await setDoc(doc(db, 'arena_internal_tournaments', 't_inscrito'), {
+        arena_id: ARENA, name: 'Copa 2', status: 'scheduled', game_day_id: null,
+        max_participants: 8, enrolled: 2, participants: ['outro_uid', ATLETA], roster: [OUTRO, VAGA],
+      });
+      await setDoc(doc(db, 'arena_internal_tournaments', 't_lotado'), {
+        arena_id: ARENA, name: 'Copa cheia', status: 'scheduled', game_day_id: null,
+        max_participants: 1, enrolled: 1, participants: ['outro_uid'], roster: [OUTRO],
+      });
+      await setDoc(doc(db, 'arena_internal_tournaments', 't_rolando'), {
+        arena_id: ARENA, name: 'Copa rolando', status: 'running', game_day_id: 'gd1',
+        max_participants: 8, enrolled: 1, participants: ['outro_uid'], roster: [OUTRO],
+      });
+    });
+  });
+
+  // O mesmo formato que o serviço (`joinTournament`) grava.
+  const entrar = (uid, extra = {}) => ({
+    participants: arrayUnion(uid),
+    roster: arrayUnion({ ...VAGA, user_id: uid }),
+    enrolled: increment(1),
+    updated_at: serverTimestamp(),
+    ...extra,
+  });
+
+  it('⭐ o atleta ENTRA no torneio', async () => {
+    await assertSucceeds(updateDoc(doc(como(ATLETA), 'arena_internal_tournaments', 't_aberto'), entrar(ATLETA)));
+  });
+
+  it('⭐ o atleta SAI do torneio (reescrevendo o roster sem ele)', async () => {
+    await assertSucceeds(updateDoc(doc(como(ATLETA), 'arena_internal_tournaments', 't_inscrito'), {
+      participants: arrayRemove(ATLETA), roster: [OUTRO], enrolled: 1, updated_at: serverTimestamp(),
+    }));
+  });
+
+  it('não inscreve OUTRA pessoa', async () => {
+    await assertFails(updateDoc(doc(como(ATLETA), 'arena_internal_tournaments', 't_aberto'), entrar('terceiro_uid')));
+  });
+
+  it('não TIRA outra pessoa', async () => {
+    await assertFails(updateDoc(doc(como(ATLETA), 'arena_internal_tournaments', 't_inscrito'), {
+      participants: arrayRemove('outro_uid'), roster: [VAGA], enrolled: 1, updated_at: serverTimestamp(),
+    }));
+  });
+
+  it('não entra em torneio LOTADO', async () => {
+    await assertFails(updateDoc(doc(como(ATLETA), 'arena_internal_tournaments', 't_lotado'), entrar(ATLETA)));
+  });
+
+  it('não entra depois que o torneio COMEÇOU', async () => {
+    await assertFails(updateDoc(doc(como(ATLETA), 'arena_internal_tournaments', 't_rolando'), entrar(ATLETA)));
+  });
+
+  it('não muda mais nada do torneio junto (nome, prêmio, status)', async () => {
+    await assertFails(updateDoc(doc(como(ATLETA), 'arena_internal_tournaments', 't_aberto'), entrar(ATLETA, { name: 'Minha copa' })));
+    await assertFails(updateDoc(doc(como(ATLETA), 'arena_internal_tournaments', 't_aberto'), entrar(ATLETA, { status: 'finished' })));
+  });
+
+  it('não apaga o roster dos outros ao entrar', async () => {
+    await assertFails(updateDoc(doc(como(ATLETA), 'arena_internal_tournaments', 't_aberto'), {
+      participants: arrayUnion(ATLETA), roster: [VAGA], enrolled: increment(1), updated_at: serverTimestamp(),
+    }));
+  });
+
+  it('não infla a contagem de inscritos', async () => {
+    await assertFails(updateDoc(doc(como(ATLETA), 'arena_internal_tournaments', 't_aberto'), entrar(ATLETA, { enrolled: increment(5) })));
+  });
+
+  it('a arena continua editando o torneio', async () => {
+    await assertSucceeds(updateDoc(doc(como(GESTOR), 'arena_internal_tournaments', 't_aberto'), { name: 'Copa da Casa' }));
   });
 });
 

@@ -345,6 +345,9 @@ export const ARENA_MODULE_DETAIL = Object.freeze({
     },
     manage: '/arenas/:arenaId/gerir/torneios',
     public: '/arenas/:arenaId/torneios',
+    // Integrado à arena (2026-09-24): a gestão é a seção Torneios da Central
+    // (Da casa · Da plataforma), e a página da arena tem "Torneios da casa".
+    native: true,
     collections: ['arena_internal_tournaments', 'arena_ladders'],
   },
   [ARENA_MODULE_ID.LEAGUES_INTERNAL]: {

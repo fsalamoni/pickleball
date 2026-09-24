@@ -15,7 +15,9 @@ import { buildArenaSections } from './arenaManageSections.js';
 const BASE = {
   coachResidentOn: true, linkedClubsOn: true, crmOn: true, opsKpisOn: true, arenaModulesOn: true,
 };
-const TUDO_LIGADO = { ...BASE, modulos: { membros: true, pacotes: true, aulas: true } };
+const TUDO_LIGADO = {
+  ...BASE, modulos: { membros: true, pacotes: true, aulas: true, torneios: true, torneiosPlataforma: true },
+};
 
 const valores = (sections) => sections.flatMap((s) => s.tabs.map((t) => t.value));
 
@@ -70,4 +72,21 @@ describe('buildArenaSections', () => {
     expect(secs.find((s) => s.id === 'aulas')).toBeUndefined();
     expect(secs.find((s) => s.id === 'equipe').tabs.map((t) => t.value)).toContain('professores');
   });
+
+  it('⭐ Torneios: da casa e da plataforma numa seção só, depois de Aulas', () => {
+    const secs = buildArenaSections(TUDO_LIGADO);
+    const ids = secs.map((s) => s.id);
+    expect(ids.indexOf('torneios')).toBe(ids.indexOf('aulas') + 1);
+    expect(secs.find((s) => s.id === 'torneios').tabs.map((t) => t.value)).toEqual(['torneios', 'torneios-plataforma']);
+  });
+
+  it('sem o módulo, mas com torneio da plataforma sediado aqui, a seção aparece só com eles', () => {
+    const secs = buildArenaSections({ ...BASE, modulos: { torneiosPlataforma: true } });
+    expect(secs.find((s) => s.id === 'torneios').tabs.map((t) => t.value)).toEqual(['torneios-plataforma']);
+  });
+
+  it('nenhum dos dois: a seção não existe', () => {
+    expect(buildArenaSections(BASE).find((s) => s.id === 'torneios')).toBeUndefined();
+  });
 });
+
