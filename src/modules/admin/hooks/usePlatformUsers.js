@@ -3,6 +3,7 @@ import {
   listAllPlatformUsers, revokeAccountPowers, updateUserRecordAsAdmin,
 } from '../services/adminService';
 import { useAuth } from '@/core/lib/FirebaseAuthContext';
+import { previewAccountDeletion, deleteAccounts } from '../services/accountDeletionService';
 
 /**
  * Lista todos os usuários da plataforma (coleção `users`). Só o admin da
@@ -47,5 +48,30 @@ export function useUpdateUserRecordAsAdmin() {
   return useMutation({
     mutationFn: ({ uid, patch, reason }) => updateUserRecordAsAdmin(uid, patch, user, { reason }),
     onSuccess: () => queryClient.invalidateQueries({ queryKey: ['platform-users-all'] }),
+  });
+}
+
+/**
+ * Prévia da exclusão: o servidor diz o que aconteceria com cada conta, sem
+ * gravar nada. É uma mutação (e não uma consulta) de propósito: é disparada
+ * pelo admin, sobre uma seleção, e não deve ser refeita sozinha em segundo
+ * plano — cada prévia varre dezenas de coleções.
+ */
+export function usePreviewAccountDeletion() {
+  return useMutation({ mutationFn: ({ uids }) => previewAccountDeletion(uids) });
+}
+
+/**
+ * Exclui cadastros. Invalida a lista de usuários E o diretório público: a
+ * conta excluída não pode continuar aparecendo em nenhum dos dois.
+ */
+export function useDeleteAccounts() {
+  const queryClient = useQueryClient();
+  return useMutation({
+    mutationFn: ({ uids, reason, confirm }) => deleteAccounts(uids, { reason, confirm }),
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ['platform-users-all'] });
+      queryClient.invalidateQueries({ queryKey: ['athletes'] });
+    },
   });
 }

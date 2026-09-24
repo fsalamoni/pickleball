@@ -865,3 +865,72 @@ exports.recomputeSeasonRankingDaily = onSchedule(
     }
   },
 );
+
+// =====================================================================
+// (8) Admin: EXCLUIR CADASTRO. Callable.
+//
+// Prévia (só lê) e execução (refaz a análise aqui dentro e apaga). Motivo
+// obrigatório, "EXCLUIR" digitado, 25 contas por vez, e SÓ o dono da
+// plataforma executa — excluir é mais destrutivo que revogar poder, e a
+// revogação também é só do dono. Todo o desenho, as travas e a ordem das
+// operações estão em `functions/accountDeletion.js`.
+// =====================================================================
+const { getAuth } = require('firebase-admin/auth');
+const { getStorage } = require('firebase-admin/storage');
+const { FieldValue: FieldValueDel } = require('firebase-admin/firestore');
+const accountDeletion = require('./accountDeletion');
+
+exports.adminDeleteAccounts = onCall(
+  {
+    region: REGION,
+    timeoutSeconds: 540,
+    memory: '1GiB',
+  },
+  async (req) => {
+    const db = getFirestore(getApp(), DATABASE_ID);
+    if (!(await isPlatformAdminUser(req, db))) {
+      throw new HttpsError('permission-denied', 'Só o admin da plataforma exclui cadastros.');
+    }
+    const pedido = accountDeletion.validateRequest(req.data || {});
+    if (pedido.error) throw new HttpsError('invalid-argument', pedido.error);
+
+    const token = (req.auth && req.auth.token) || {};
+    if (pedido.mode === 'execute'
+      && !(accountDeletion.isOwnerEmail(token.email) && token.email_verified !== false)) {
+      throw new HttpsError('permission-denied', 'Só o dono da plataforma executa a exclusão de cadastros.');
+    }
+
+    let bucket = null;
+    try {
+      bucket = getStorage().bucket();
+    } catch (err) {
+      logger.warn('adminDeleteAccounts: Storage indisponível; arquivos não serão tocados.', err);
+    }
+    const ctx = { db, auth: getAuth(), bucket };
+    const hojeISO = accountDeletion.hojeEmSaoPaulo();
+    const actor = { uid: req.auth.uid, name: token.name || '', email: token.email || '' };
+
+    // Uma conta por vez, de propósito: o lote de 25 fica dentro do prazo da
+    // função, e uma falha numa conta não contamina as outras.
+    const resultados = [];
+    for (const uid of pedido.uids) {
+      try {
+        if (pedido.mode === 'preview') {
+          // eslint-disable-next-line no-await-in-loop
+          const { report } = await accountDeletion.analyzeAccount(ctx, uid, { actorUid: actor.uid, hojeISO });
+          resultados.push({ uid, status: 'preview', report });
+        } else {
+          // eslint-disable-next-line no-await-in-loop
+          resultados.push(await accountDeletion.executeAccountDeletion(ctx, uid, {
+            actor, reason: pedido.reason, hojeISO, FieldValue: FieldValueDel,
+          }));
+        }
+      } catch (err) {
+        logger.error(`adminDeleteAccounts: falha em ${uid}`, err);
+        resultados.push({ uid, status: 'error', error: 'Falha inesperada nesta conta. Nada mais foi feito nela.' });
+      }
+    }
+    logger.info(`adminDeleteAccounts ${pedido.mode}: ${resultados.length} conta(s) por ${actor.uid}`);
+    return { mode: pedido.mode, results: resultados };
+  },
+);

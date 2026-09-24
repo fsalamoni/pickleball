@@ -1,5 +1,7 @@
-import React, { useMemo, useState } from 'react';
-import { UserCog, Search, AlertCircle, CheckCircle2, Pencil, ArrowRight } from 'lucide-react';
+import React, { lazy, Suspense, useMemo, useState } from 'react';
+import {
+  UserCog, Search, AlertCircle, CheckCircle2, Pencil, ArrowRight, Trash2, FlaskConical,
+} from 'lucide-react';
 import { toast } from 'sonner';
 
 import {
@@ -17,6 +19,13 @@ import {
   diffAdminUserPatch, sanitizeAdminUserPatch, validateAdminEdit,
   fieldOptions, isValidOptionValue,
 } from '@/modules/admin/domain/adminUserEdit';
+import {
+  deletionBlockedReason, testAccountSignals, DELETION_BATCH_MAX,
+} from '@/modules/admin/domain/accountDeletion';
+import { PLATFORM_OWNER_EMAILS } from '@/core/config/owners';
+
+// O diálogo de exclusão só baixa quando alguém vai excluir.
+const AdminAccountDeletionDialog = lazy(() => import('./AdminAccountDeletionDialog'));
 
 const GRUPOS = [
   { id: 'identidade', label: 'Identidade' },
@@ -33,17 +42,33 @@ const GRUPOS = [
  *
  * O limite é explícito na própria tela: o admin corrige dado ERRADO; não
  * decide quem VÊ o dado (privacidade é do titular) e não concede poder.
+ *
+ * E EXCLUI cadastro — principalmente contas de exemplo. O filtro "Parecem de
+ * teste" existe porque o pedido foi "há MUITOS cadastros de exemplo": achar
+ * um a um numa lista de centenas é a tarefa que não acontece. Ele SUGERE e
+ * mostra o porquê; quem decide é o admin, que ainda vê a prévia do servidor
+ * antes de confirmar.
  */
 export default function AdminUserRecordsTab() {
-  const { isPlatformAdmin } = useAuth();
+  const { isPlatformAdmin, user } = useAuth();
   const { data: users = [], isLoading } = useAllPlatformUsers({ enabled: isPlatformAdmin });
   const [busca, setBusca] = useState('');
-  const [filtro, setFiltro] = useState('todos'); // todos | incompletos | pendentes
+  const [filtro, setFiltro] = useState('todos'); // todos | incompletos | pendentes | teste
   const [alvo, setAlvo] = useState(null);
+  const [selecionados, setSelecionados] = useState(() => new Set());
+  const [paraExcluir, setParaExcluir] = useState(null);
+
+  const ctxExclusao = useMemo(
+    () => ({ actorUid: user?.uid || null, ownerEmails: PLATFORM_OWNER_EMAILS }),
+    [user?.uid],
+  );
 
   const comStatus = useMemo(() => (users || []).map((u) => ({
-    ...u, _status: userRecordStatus(u),
-  })), [users]);
+    ...u,
+    _status: userRecordStatus(u),
+    _teste: testAccountSignals(u),
+    _bloqueio: deletionBlockedReason(u, ctxExclusao),
+  })), [users, ctxExclusao]);
 
   const listados = useMemo(() => {
     const q = busca.trim().toLowerCase();
@@ -51,6 +76,7 @@ export default function AdminUserRecordsTab() {
       .filter((u) => {
         if (filtro === 'incompletos' && u._status.missingCount === 0) return false;
         if (filtro === 'pendentes' && u._status.complete) return false;
+        if (filtro === 'teste' && u._teste.length === 0) return false;
         if (!q) return true;
         return [u.platform_name, u.full_name, u.email, u.uid, u.city]
           .some((v) => String(v || '').toLowerCase().includes(q));
@@ -66,7 +92,26 @@ export default function AdminUserRecordsTab() {
     total: comStatus.length,
     incompletos: comStatus.filter((u) => u._status.missingCount > 0).length,
     pendentes: comStatus.filter((u) => !u._status.complete).length,
+    teste: comStatus.filter((u) => u._teste.length > 0).length,
   }), [comStatus]);
+
+  const alternar = (u) => {
+    setSelecionados((atual) => {
+      const novo = new Set(atual);
+      if (novo.has(u.uid)) novo.delete(u.uid);
+      else if (novo.size < DELETION_BATCH_MAX) novo.add(u.uid);
+      return novo;
+    });
+  };
+
+  // "Selecionar os que aparecem": só os que PODEM ser excluídos, e até o
+  // limite — selecionar 300 para depois descobrir que só 25 cabem é frustrante.
+  const selecionarVisiveis = () => {
+    const podem = listados.filter((u) => u._bloqueio.ok).slice(0, DELETION_BATCH_MAX);
+    setSelecionados(new Set(podem.map((u) => u.uid)));
+  };
+
+  const abrirExclusao = (lista) => setParaExcluir(lista);
 
   if (isLoading) return <V2Skeleton lines={6} />;
 
@@ -109,13 +154,58 @@ export default function AdminUserRecordsTab() {
           <V2FilterChip active={filtro === 'incompletos'} onClick={() => setFiltro('incompletos')}>
             Algo a preencher ({totais.incompletos})
           </V2FilterChip>
+          <V2FilterChip active={filtro === 'teste'} onClick={() => setFiltro('teste')}>
+            <FlaskConical className="mr-1 inline h-3.5 w-3.5" />
+            Parecem de teste ({totais.teste})
+          </V2FilterChip>
         </div>
+
+        {filtro === 'teste' && (
+          <p className="mt-3 rounded-lg bg-amber-50 px-3 py-2 text-[11px] leading-5 text-amber-900">
+            A suspeita vem de sinais simples — conta oculta na moderação, e-mail de domínio de
+            exemplo, nome ou e-mail com &ldquo;teste&rdquo;, &ldquo;mock&rdquo;, &ldquo;demo&rdquo;. Cada linha
+            mostra o que levantou a suspeita. <strong>Confira antes de excluir</strong>: é sugestão,
+            não certeza.
+          </p>
+        )}
+
+        {selecionados.size > 0 ? (
+          <div className="sticky top-2 z-10 mt-3 flex flex-wrap items-center justify-between gap-2 rounded-xl border border-red-200 bg-red-50 px-3 py-2">
+            <span className="text-sm font-semibold text-red-900">
+              {selecionados.size} selecionado{selecionados.size > 1 ? 's' : ''}
+              {selecionados.size >= DELETION_BATCH_MAX && ` (limite de ${DELETION_BATCH_MAX} por vez)`}
+            </span>
+            <div className="flex gap-2">
+              <V2Button size="sm" variant="ghost" onClick={() => setSelecionados(new Set())}>Limpar</V2Button>
+              <V2Button
+                size="sm"
+                className="bg-red-600 text-white hover:bg-red-700"
+                onClick={() => abrirExclusao(comStatus.filter((u) => selecionados.has(u.uid)))}
+              >
+                <Trash2 className="h-3.5 w-3.5" /> Excluir selecionados
+              </V2Button>
+            </div>
+          </div>
+        ) : listados.some((u) => u._bloqueio.ok) && (
+          <div className="mt-3 text-right">
+            <button type="button" className="text-[11px] font-semibold text-gray-500 underline hover:text-ink" onClick={selecionarVisiveis}>
+              Selecionar os que aparecem (até {DELETION_BATCH_MAX})
+            </button>
+          </div>
+        )}
 
         <div className="mt-4 space-y-2">
           {listados.length === 0 ? (
             <p className="py-6 text-center text-sm text-gray-400">Nenhum cadastro encontrado.</p>
           ) : listados.slice(0, 100).map((u) => (
-            <UserRow key={u.uid} user={u} onEdit={() => setAlvo(u)} />
+            <UserRow
+              key={u.uid}
+              user={u}
+              onEdit={() => setAlvo(u)}
+              selected={selecionados.has(u.uid)}
+              onToggle={() => alternar(u)}
+              onDelete={() => abrirExclusao([u])}
+            />
           ))}
           {listados.length > 100 && (
             <p className="pt-2 text-center text-[11px] text-gray-400">
@@ -128,18 +218,40 @@ export default function AdminUserRecordsTab() {
       {alvo && (
         <RecordEditDialog user={alvo} onClose={() => setAlvo(null)} />
       )}
+
+      {paraExcluir && (
+        <Suspense fallback={null}>
+          <AdminAccountDeletionDialog
+            users={paraExcluir}
+            onClose={() => {
+              setParaExcluir(null);
+              setSelecionados(new Set());
+            }}
+          />
+        </Suspense>
+      )}
     </div>
   );
 }
 
 /* --------------------------------------------------------------------------- */
 
-function UserRow({ user: u, onEdit }) {
+function UserRow({ user: u, onEdit, selected, onToggle, onDelete }) {
   const s = u._status;
+  const bloqueio = u._bloqueio;
   return (
     <div className={`flex flex-wrap items-center justify-between gap-3 rounded-xl border p-3 ${
-      s.complete ? 'border-gray-100' : 'border-amber-200 bg-amber-50/40'
+      selected ? 'border-red-300 bg-red-50/40' : s.complete ? 'border-gray-100' : 'border-amber-200 bg-amber-50/40'
     }`}>
+      <input
+        type="checkbox"
+        className="h-4 w-4 shrink-0 rounded border-gray-300"
+        checked={selected}
+        disabled={!bloqueio.ok}
+        onChange={onToggle}
+        aria-label={`Selecionar ${u.platform_name || u.full_name || u.uid} para excluir`}
+        title={bloqueio.ok ? 'Selecionar para excluir' : bloqueio.reason}
+      />
       <div className="min-w-0 flex-1">
         <div className="flex flex-wrap items-center gap-1.5">
           <span className="font-semibold text-ink">
@@ -164,10 +276,28 @@ function UserRow({ user: u, onEdit }) {
         <div className="mt-1 text-[10px] text-gray-400">
           {s.filledCount}/{s.totalCount} campos preenchidos
         </div>
+        {u._teste.length > 0 && (
+          <div className="mt-1 flex flex-wrap gap-1">
+            {u._teste.map((m) => (
+              <span key={m} className="rounded-full bg-amber-100 px-2 py-0.5 text-[10px] font-medium text-amber-900">
+                {m}
+              </span>
+            ))}
+          </div>
+        )}
       </div>
-      <V2Button size="sm" variant="secondary" onClick={onEdit}>
-        <Pencil className="mr-1 h-3.5 w-3.5" /> Editar cadastro
-      </V2Button>
+      <div className="flex gap-2">
+        <V2Button size="sm" variant="secondary" onClick={onEdit}>
+          <Pencil className="mr-1 h-3.5 w-3.5" /> Editar cadastro
+        </V2Button>
+        {bloqueio.ok ? (
+          <V2Button size="sm" variant="ghost" className="text-red-600 hover:bg-red-50" onClick={onDelete} aria-label={`Excluir ${u.platform_name || u.full_name || u.uid}`}>
+            <Trash2 className="h-3.5 w-3.5" /> Excluir
+          </V2Button>
+        ) : (
+          <span className="self-center text-[10px] text-gray-400" title={bloqueio.reason}>não excluível</span>
+        )}
+      </div>
     </div>
   );
 }
