@@ -27,6 +27,7 @@ const V2ArenaWeekPanel = lazy(() => import('@/v2/components/arenas/V2ArenaWeekPa
 const ArenaModulesPanel = lazy(() => import('@/v2/components/arenas/ArenaModulesPanel'));
 // Módulos que viraram parte da Central: o corpo das telas deles entra como aba.
 const ArenaOpenMatchAdminPanel = lazy(() => import('@/v2/components/arenas/openMatch/ArenaOpenMatchAdminPanel'));
+const ArenaShopOrdersPanel = lazy(() => import('@/v2/components/arenas/shop/ArenaShopOrdersPanel'));
 const ArenaMembersPanel = lazy(() => import('@/v2/pages/V2ArenaAdminMembers').then((m) => ({ default: m.ArenaMembersPanel })));
 import { useFeatureFlag } from '@/core/lib/FeatureFlagsContext';
 import { FEATURE_FLAG } from '@/core/featureFlags';
@@ -211,6 +212,7 @@ function V2ArenaManageContent({ arenaId, user, isPlatformAdmin, arena, managed, 
     pacotes: moduloLigado(ARENA_MODULE_ID.MEMBERS_PACKAGES),
     aulas: moduloLigado(ARENA_MODULE_ID.CLASSES),
     torneios: moduloLigado(ARENA_MODULE_ID.LEAGUES),
+    loja: moduloLigado(ARENA_MODULE_ID.PDV),
     // Torneio da plataforma sediado aqui não depende de módulo: é da arena
     // desde sempre, só não tinha lugar na gestão.
     torneiosPlataforma: torneiosDaPlataforma.some((t) => !t.archived),
@@ -370,6 +372,9 @@ function V2ArenaManageContent({ arenaId, user, isPlatformAdmin, arena, managed, 
         {tab === 'calendario' && <V2ArenaCalendar arena={arena} />}
         {tab === 'calendario-admin' && <V2AdminBookingCalendar arenaId={arena.id} />}
         {tab === 'clientes' && crmOn && <ArenaCrmTab arenaId={arena.id} membrosOn={modulos.membros} onVerMembros={() => selectTab('membros', 'membros')} />}
+        {tab === 'pedidos' && modulos.loja && (
+          <ArenaShopOrdersPanel arena={arena} onIrAoMercado={() => selectTab('comercial', 'mercado')} />
+        )}
         {tab === 'pagamento' && <V2ArenaPaymentTab />}
         {tab === 'regras' && <V2ArenaRulesTab />}
         {tab === 'mercado' && <V2ArenaMercadoTab />}

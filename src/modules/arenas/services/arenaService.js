@@ -33,6 +33,7 @@ import { normalizeScheduleInput } from '../domain/court_schedule.js';
 import { normalizePriceRule, normalizePriceOverride } from '../domain/pricing.js';
 import { normalizeReviewResponse } from '../domain/review_response.js';
 import { normalizeInventoryProduct, normalizeInventoryEntry, normalizeInventoryExit } from '../domain/inventory.js';
+import { trackedStock } from '../domain/shop.js';
 
 const COL = ARENA_COLLECTIONS;
 
@@ -675,6 +676,47 @@ export async function updateInventoryProduct(productId, updates, actor) {
   await updateDoc(doc(db, COL.inventory_products, productId), {
     ...updates, updated_at: serverTimestamp(), updated_by: actor?.uid || null,
   });
+  // Acabou de entrar na loja do app: a cópia do estoque nasce certa.
+  if (updates?.sell_online === true) {
+    const snap = await getDoc(doc(db, COL.inventory_products, productId)).catch(() => null);
+    const arenaId = snap?.exists?.() ? snap.data().arena_id : null;
+    if (arenaId) await refreshShopStock(arenaId, productId);
+  }
+}
+
+/**
+ * Mantém certa a cópia do estoque que a LOJA DO APP lê (`stock_qty`).
+ *
+ * O atleta não lê entradas e saídas do Mercado (são da arena), então o
+ * produto à venda pelo app carrega uma cópia do estoque. A conta verdadeira
+ * continua sendo entradas − saídas (`trackedStock`); esta função a refaz
+ * para UM produto e grava só quando muda. Roda depois de toda entrada e saída, e de quem liga
+ * "Vender pelo app".
+ *
+ * Nunca derruba a operação que a chamou: a entrada/saída já foi gravada, e a
+ * cópia é conferida de novo quando a arena abre os pedidos (`syncShopStock`).
+ */
+export async function refreshShopStock(arenaId, productId) {
+  if (!db || !arenaId || !productId) return;
+  try {
+    const ref = doc(db, COL.inventory_products, productId);
+    const snap = await getDoc(ref);
+    if (!snap.exists()) return;
+    const p = snap.data();
+    if (p.arena_id !== arenaId || p.sell_online !== true) return;
+    const [entries, exits] = await Promise.all([
+      listInventoryEntries(arenaId, { productId }),
+      listInventoryExits(arenaId, { productId }),
+    ]);
+    // Sem nenhuma entrada, o produto não tem estoque controlado: a cópia
+    // fica vazia e a loja vende sem limite (ver `trackedStock`).
+    const real = trackedStock(productId, entries, exits);
+    const atual = p.stock_qty == null ? null : Number(p.stock_qty);
+    if (atual === real) return;
+    await updateDoc(ref, { stock_qty: real, updated_at: serverTimestamp() });
+  } catch (err) {
+    logger.info('Cópia do estoque da loja não atualizada agora', { err: err?.code || err?.message });
+  }
 }
 
 export async function deleteInventoryProduct(productId, actor) {
@@ -693,6 +735,7 @@ export async function addInventoryEntry(arenaId, input, actor) {
     created_at: serverTimestamp(),
   });
   await createAuditLog({ action: 'arena_inventory_entry_added', actor, details: { arena_id: arenaId, product_id: value.product_id, quantity: value.quantity, total_cost: value.total_cost } });
+  await refreshShopStock(arenaId, value.product_id);
   return ref.id;
 }
 
@@ -718,6 +761,7 @@ export async function addInventoryExit(arenaId, input, actor) {
     created_at: serverTimestamp(),
   });
   await createAuditLog({ action: 'arena_inventory_exit_added', actor, details: { arena_id: arenaId, product_id: value.product_id, quantity: value.quantity, total_price: value.total_price, exit_type: value.exit_type } });
+  await refreshShopStock(arenaId, value.product_id);
   return ref.id;
 }
 

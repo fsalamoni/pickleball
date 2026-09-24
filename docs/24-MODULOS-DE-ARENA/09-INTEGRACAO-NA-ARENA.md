@@ -113,7 +113,7 @@ novo**; consultas com um `where` só e ordenação em memória.
 | I-3 | Seção **Torneios** (casa + plataforma), D3, D4, D12–D14, torneios na página pública e no lado do atleta | ✅ §6 |
 | I-4 | Receita de aulas, planos e torneios no painel de métricas | ✅ §7 |
 | I-5 | **Jogo aberto, buscar parceiro e fila** — seção na Central, seção na página da arena, Minhas reservas e Procura-se jogo | ✅ §8 |
-| I-6 | **Loja do app unificada com o Mercado** — um cadastro de produto só | ⏳ |
+| I-6 | **Loja do app unificada com o Mercado** — um cadastro de produto só | ✅ §9 |
 | I-7 | **Marketing** dentro da arena | ⏳ |
 | I-8 | **Operação, presença e avançado** dentro da arena | ⏳ |
 
@@ -429,3 +429,104 @@ Duas regras que vêm de antes e continuam valendo: **LOTADO não é ENCERRADO**
 são de igualdade ou `array-contains` num campo só (índice de campo único) e
 passam pelas regras que já existiam (`arena_open_slots` é pública; a fila é
 legível por quem tem conta desde a Onda BH).
+
+---
+
+## 9. I-6 — A loja do app vira um canal do Mercado (entregue)
+
+### O problema: dois cadastros de produto
+
+A arena tinha **dois** lugares para cadastrar produto, sem ligação nenhuma:
+
+| | Mercado (Central → Pagamentos e loja) | Loja do PDV (`/gerir/pdv`) |
+|---|---|---|
+| coleção | `arena_inventory_products` + entradas + saídas | `arena_products` |
+| estoque | entradas − saídas, com validade e mínimo | um número solto no produto |
+| financeiro | compras, vendas e lucro por período | nenhum |
+
+A mesma garrafa de água seria cadastrada duas vezes, com dois estoques que
+divergiriam no primeiro dia — a doença de sempre dos cadastros duplicados (foi
+o que aconteceu com os professores, §5). Em produção a loja do PDV **não tinha
+produto nenhum**: o momento de unificar era antes de existir dado nos dois.
+
+### O desenho: o Mercado é o cadastro; a loja do app é um canal
+
+```
+Mercado: produto com "Vender pelo app"  ──► vitrine da loja (página da arena, /loja)
+atleta pede pelo app                    ──► arena_sales (catalog: 'mercado'), preço DO BANCO
+                                            + aviso à arena → Central → Pedidos do app
+arena toca "Entreguei"                  ──► SAÍDA do Mercado (tipo venda, com o comprador)
+                                            → estoque, vendas e financeiro do Mercado
+arena cancela                           ──► apaga as saídas daquele pedido, devolve o estoque
+```
+
+- O produto ganha **`sell_online`** ("Vender pelo app") e usa o `sale_price`
+  que o Mercado já tinha. Sem preço de venda, não aparece na loja — e o
+  editor avisa.
+- O atleta não lê entradas e saídas (são da arena), então o produto à venda
+  carrega **`stock_qty`**, uma cópia do estoque. A conta verdadeira continua
+  sendo entradas − saídas: a cópia é refeita a cada entrada e saída do
+  Mercado (`refreshShopStock`), a cada entrega/cancelamento, e conferida de
+  uma vez quando a arena abre os pedidos (`syncShopStock`).
+- **Produto sem controle de estoque.** Nem tudo tem estoque: aluguel de
+  raquete é serviço, e muita arena nunca registrou uma compra no Mercado. Se a
+  conta fosse sempre entradas − saídas, todo produto assim nasceria
+  **esgotado** na loja e o primeiro pedido entregue o deixaria negativo. A
+  regra (`trackedStock`) é a do PDV antigo, dita pelo que a arena FEZ:
+  produto **com pelo menos uma entrada** tem estoque controlado; sem nenhuma,
+  o app vende sem limite (`stock_qty` vazio). O editor do Mercado diz isso ao
+  lado do "Vender pelo app".
+- Vendas antigas (sem `catalog`) seguem o caminho de sempre, em
+  `arena_products`. Nada foi migrado.
+
+### Onde a loja está agora
+
+| Lugar | O quê |
+|---|---|
+| Central → Pagamentos e loja → **Pedidos do app** (primeira aba da seção) | o BALCÃO: a entregar, pedidos e vendido hoje; "Entreguei"; cada parte da conta dividida (quem registrou, quem pagou, quem não fez nada) com **"Confirmar recebimento"** e **"Recebi no balcão"**; cancelar com motivo; o valor conferido contra a tabela de hoje |
+| Central → Pagamentos e loja → **Mercado** | o cadastro único: **"Vender pelo app"** no produto (novo e edição), selo **"No app"**, e as saídas geradas pela loja com o selo **"Pedido pelo app"** |
+| Página da arena → **Loja** | os meus pedidos para retirar ali; a vitrine com preço (módulo `pdv_catalog`); "Fazer um pedido" |
+| `/arenas/:id/loja` | a vitrine inteira, por categoria, com o carrinho e a divisão da conta; as minhas compras ali, com "Desistir" e a chave Pix |
+| **Minhas reservas** → **Compras nas arenas** | o que retirar e a parte de conta a pagar, **de todas as arenas**; o histórico recolhido |
+| Métricas | o pedido do app entregue conta **pelo Mercado** ("R$ X pelo app"), e o cartão "Pedidos do app" diz quantos foram entregues e pagos |
+
+`/arenas/:id/gerir/pdv` leva a `?aba=pedidos`; `pdv` é `native` no catálogo
+(sem botão de atalho). Quem gere a arena e abre `/loja` vê a loja como o atleta
+vê, com o caminho para o balcão no topo.
+
+### Os defeitos do caminho
+
+| # | O que havia | O que ficou |
+|---|---|---|
+| D22 | Dois cadastros de produto, dois estoques | um só (Mercado); a loja é um canal dele |
+| D23 | `createSale` **confiava no preço da tela** | o pedido manda só produto e quantidade; o preço é o `sale_price` do banco, e só de produtos DESTA arena |
+| D24 | A arena **não era avisada** de pedido nenhum — o pedido só aparecia se alguém abrisse a tela da loja por acaso | aviso na hora, com o caminho direto para a aba de pedidos |
+| D25 | 🐞 Quem **dividia** a conta sem ser o comprador **não conseguia ler a venda**: não via a própria parte, e `payMyShare` quebrava no primeiro `getDoc` — e o aviso de "sua parte" levava a uma tela que não mostrava a conta | a regra deixa ler quem está em `split_with`; a parte aparece em Minhas reservas e na loja, com "Registrar a minha parte" |
+| D26 | 🐞 O comprador podia **criar a venda já "paga" e "entregue"** — e ela entrava assim no caixa e nos números | o comprador só cria PEDIDO: em aberto e não entregue |
+| D27 | 🐞 Quem pagava podia **marcar o próprio pagamento como pago** — o registro que a arena usa para saber se recebeu | quem paga só troca a forma de pagamento ou desiste; "pago" é a arena quem marca |
+| D28 | 🐞 Qualquer conta podia **semear "pagamentos" na lista de qualquer arena** | o pagamento tem de ser de uma venda de que a pessoa FAZ PARTE, da mesma arena |
+| D29 | 🐞 **A conta dividida fechava como paga com gente devendo**: bastava confirmar o pagamento do comprador, porque só se contavam os documentos existentes | quem deve sai do PEDIDO (`saleShares`), e a conta só fecha com TODAS as partes pagas |
+| D30 | 🐞 **Métricas contavam a venda da loja duas vezes** — `revenue.confirmed` já incluía as vendas pagas, e o total somava `revenue_by_source.sales` por cima. Com a entrega virando saída do Mercado, seriam três | o total é reservas + PDV antigo + Mercado + planos e aulas, cada venda uma vez |
+| D31 | 🐞 **O pedido de pacote e a entrada no jogo aberto nunca chegavam à arena**: `listArenaManagers` devolve DOCUMENTOS de gestor, e os dois avisos os passavam como destinatários — o aviso era gravado para `"[object Object]"` | `listArenaManagerIds` (uids), com teste que trava a diferença |
+| D32 | Não havia como **desistir** de um pedido nem **receber no balcão** a parte de quem não usa o app | "Desistir" (enquanto não foi entregue e não é dividido — a regra confere) e "Recebi no balcão" |
+| D33 | Dois cliques em "Entreguei" podiam baixar o estoque duas vezes | a entrega é uma transação que confere se o pedido já foi entregue |
+
+### Banco
+
+**Zero coleção, zero índice.** Campos **opcionais**:
+
+- `arena_inventory_products.sell_online` (só gravado quando marcado) e
+  `stock_qty` (a cópia do estoque; vazio = sem controle);
+- `arena_inventory_exits.sale_id` e `channel` (só nas saídas geradas pela
+  entrega de um pedido — é pelo `sale_id` que o cancelamento acha o que
+  desfazer);
+- `arena_sales.catalog`, `arena_name`, `delivered_by`, `cancelled_by`;
+- `arena_payments.confirmed_by`, `received_at_counter`.
+
+**Regras endurecidas** em `arena_sales` e `arena_payments` (ver D25–D28), com
+**20 asserções novas no emulador** em `tests/rules/arenaModules.rules.test.js`
+— metade provando o que passou a funcionar (quem divide lê e paga a parte,
+quem pediu desiste, a arena segue podendo tudo) e metade o que ficou barrado.
+A consulta `split_with array-contains` é provável pela regra (provado no
+emulador) e não pede índice composto.
+

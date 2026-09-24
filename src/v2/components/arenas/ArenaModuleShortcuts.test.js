@@ -28,14 +28,20 @@ describe('atalhos dos módulos de arena', () => {
   });
 
   it('o :arenaId é substituído pela arena de verdade', () => {
-    const atalhos = shortcutsFor(ligados(ARENA_MODULE_ID.PDV), 'minha-arena', 'manage');
-    expect(atalhos[0].to).toBe('/arenas/minha-arena/gerir/pdv');
+    const atalhos = shortcutsFor(ligados(ARENA_MODULE_ID.IOT_QR_KIOSK), 'minha-arena', 'manage');
+    expect(atalhos[0].to).toBe('/arenas/minha-arena/gerir/presenca');
     expect(atalhos[0].to).not.toContain(':arenaId');
   });
 
   it('o público do ATLETA é outro: a rota pública, não a de gestão', () => {
-    const atalhos = shortcutsFor(ligados(ARENA_MODULE_ID.PDV), 'a1', 'public');
-    expect(atalhos[0].to).toBe('/arenas/a1/loja');
+    const atalhos = shortcutsFor(ligados(ARENA_MODULE_ID.IOT_QR_KIOSK), 'a1', 'public');
+    expect(atalhos[0].to).toBe('/arenas/a1/chegada');
+  });
+
+  it('⭐ a loja virou parte da arena (Pedidos do app + seção Loja): sem atalho', () => {
+    const ids = [ARENA_MODULE_ID.PDV, ARENA_MODULE_ID.PDV_CATALOG, ARENA_MODULE_ID.PDV_SPLIT];
+    expect(shortcutsFor(ligados(...ids), 'a1', 'manage')).toEqual([]);
+    expect(shortcutsFor(ligados(...ids), 'a1', 'public')).toEqual([]);
   });
 
   it('⭐ jogo aberto e buscar parceiro viraram parte da arena: sem atalho', () => {
@@ -71,8 +77,8 @@ describe('atalhos dos módulos de arena', () => {
   });
 
   it('cada atalho tem rótulo em pt-BR, não o id cru', () => {
-    const atalhos = shortcutsFor(ligados(ARENA_MODULE_ID.PDV), 'a1', 'manage');
-    expect(atalhos[0].label).not.toBe(ARENA_MODULE_ID.PDV);
+    const atalhos = shortcutsFor(ligados(ARENA_MODULE_ID.IOT_QR_KIOSK), 'a1', 'manage');
+    expect(atalhos[0].label).not.toBe(ARENA_MODULE_ID.IOT_QR_KIOSK);
     expect(atalhos[0].label.length).toBeGreaterThan(2);
   });
 });

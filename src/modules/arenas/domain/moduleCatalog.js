@@ -240,18 +240,22 @@ export const ARENA_MODULE_DETAIL = Object.freeze({
     },
     manage: '/arenas/:arenaId/gerir/pdv',
     public: '/arenas/:arenaId/loja',
-    collections: ['arena_products', 'arena_sales', 'arena_payments'],
+    // Integrado à arena (2026-09-24): a gestão é a aba "Pedidos do app" da
+    // Central (Pagamentos e loja), os produtos são os do MERCADO (marcados
+    // "Vender pelo app"), e a página da arena tem a seção "Loja". Sem atalho.
+    native: true,
+    collections: ['arena_inventory_products', 'arena_sales', 'arena_payments'],
   },
   [ARENA_MODULE_ID.PDV_CATALOG]: {
     status: READY,
     audience: [ATHLETE, ARENA],
-    summary: 'Catálogo de produtos com preço e estoque.',
+    summary: 'A vitrine da loja na página da arena, com preço e estoque.',
     benefit: {
-      [ARENA]: 'Cadastre uma vez, venda sempre — e o estoque baixa sozinho.',
+      [ARENA]: 'Cadastre uma vez no Mercado, venda sempre — e o estoque baixa sozinho na entrega.',
       [ATHLETE]: 'Veja o que a arena vende antes de chegar.',
     },
     requires: [ARENA_MODULE_ID.PDV],
-    collections: ['arena_products'],
+    collections: ['arena_inventory_products'],
   },
   [ARENA_MODULE_ID.PDV_PIX_NATIVE]: {
     status: READY,
@@ -509,7 +513,7 @@ export const ARENA_MODULE_DETAIL = Object.freeze({
       [ARENA]: 'Nunca mais acabar a água no sábado à tarde.',
     },
     requires: [ARENA_MODULE_ID.OPERATIONS],
-    collections: ['arena_products'],
+    collections: ['arena_inventory_products', 'arena_inventory_entries', 'arena_inventory_exits'],
   },
   [ARENA_MODULE_ID.OPERATIONS_STAFF]: {
     status: READY,

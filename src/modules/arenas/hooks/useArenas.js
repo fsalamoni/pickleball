@@ -387,8 +387,19 @@ export function useCreateInventoryProduct(arenaId) {
   const qc = useQueryClient();
   return useMutation({
     mutationFn: (input) => createInventoryProduct(arenaId, input, user),
-    onSuccess: () => qc.invalidateQueries({ queryKey: ['inventory-products', arenaId] }),
+    onSuccess: () => invalidarMercado(qc, arenaId),
   });
+}
+
+/**
+ * O que muda quando o Mercado se mexe. A loja do app lê os produtos do
+ * Mercado (e a cópia do estoque que entrada e saída atualizam), então a
+ * vitrine vai junto.
+ */
+function invalidarMercado(qc, arenaId, ...extras) {
+  qc.invalidateQueries({ queryKey: ['inventory-products', arenaId] });
+  qc.invalidateQueries({ queryKey: ['shop-products', arenaId] });
+  extras.forEach((k) => qc.invalidateQueries({ queryKey: [k, arenaId] }));
 }
 
 export function useUpdateInventoryProduct(arenaId) {
@@ -396,7 +407,7 @@ export function useUpdateInventoryProduct(arenaId) {
   const qc = useQueryClient();
   return useMutation({
     mutationFn: ({ productId, updates }) => updateInventoryProduct(productId, updates, user),
-    onSuccess: () => qc.invalidateQueries({ queryKey: ['inventory-products', arenaId] }),
+    onSuccess: () => invalidarMercado(qc, arenaId),
   });
 }
 
@@ -405,7 +416,7 @@ export function useDeleteInventoryProduct(arenaId) {
   const qc = useQueryClient();
   return useMutation({
     mutationFn: (productId) => deleteInventoryProduct(productId, user),
-    onSuccess: () => qc.invalidateQueries({ queryKey: ['inventory-products', arenaId] }),
+    onSuccess: () => invalidarMercado(qc, arenaId),
   });
 }
 
@@ -422,7 +433,7 @@ export function useAddInventoryEntry(arenaId) {
   const qc = useQueryClient();
   return useMutation({
     mutationFn: (input) => addInventoryEntry(arenaId, input, user),
-    onSuccess: () => qc.invalidateQueries({ queryKey: ['inventory-entries', arenaId] }),
+    onSuccess: () => invalidarMercado(qc, arenaId, 'inventory-entries'),
   });
 }
 
@@ -439,6 +450,6 @@ export function useAddInventoryExit(arenaId) {
   const qc = useQueryClient();
   return useMutation({
     mutationFn: (input) => addInventoryExit(arenaId, input, user),
-    onSuccess: () => qc.invalidateQueries({ queryKey: ['inventory-exits', arenaId] }),
+    onSuccess: () => invalidarMercado(qc, arenaId, 'inventory-exits'),
   });
 }

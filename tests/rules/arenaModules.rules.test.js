@@ -99,6 +99,18 @@ beforeEach(async () => {
     await setDoc(doc(db, 'arena_module_states', `${ARENA}_members`), {
       arena_id: ARENA, module_id: 'members', enabled: true,
     });
+    // Loja do app: um pedido em aberto, um dividido (com o PROF) e um já
+    // entregue — todos do ATLETA. E dois pagamentos dele.
+    const pedido = { arena_id: ARENA, buyer_id: ATLETA, status: 'pending', stock_applied: false, split_with: [], total: 10, catalog: 'mercado' };
+    await setDoc(doc(db, 'arena_sales', 'v_atleta'), pedido);
+    await setDoc(doc(db, 'arena_sales', 'v_dividida'), { ...pedido, split_with: [ATLETA, PROF], total: 20 });
+    await setDoc(doc(db, 'arena_sales', 'v_entregue'), { ...pedido, stock_applied: true });
+    await setDoc(doc(db, 'arena_payments', 'pg_atleta'), {
+      arena_id: ARENA, sale_id: 'v_atleta', payer_id: ATLETA, amount: 10, status: 'pending', payment_method: 'pix',
+    });
+    await setDoc(doc(db, 'arena_payments', 'pg_pago'), {
+      arena_id: ARENA, sale_id: 'v_atleta', payer_id: ATLETA, amount: 10, status: 'paid', payment_method: 'pix',
+    });
   });
 });
 
@@ -190,7 +202,7 @@ describe('🔒 venda e pagamento', () => {
 
   it('quem paga registra o PRÓPRIO pagamento', async () => {
     await assertSucceeds(setDoc(doc(como(ATLETA), 'arena_payments', 'p1'), {
-      arena_id: ARENA, payer_id: ATLETA, amount: 10,
+      arena_id: ARENA, sale_id: 'v_atleta', payer_id: ATLETA, amount: 10,
     }));
   });
 
@@ -198,6 +210,114 @@ describe('🔒 venda e pagamento', () => {
     await assertFails(setDoc(doc(como(ESTRANHO), 'arena_payments', 'p2'), {
       arena_id: ARENA, payer_id: ATLETA, amount: 10,
     }));
+  });
+});
+
+/* ---------------------------------------------------------------- */
+/*  🔒 Loja do app: o pedido é pedido, e cada um mexe só no seu      */
+/* ---------------------------------------------------------------- */
+
+describe('🔒 loja do app: pedido, divisão e pagamento', () => {
+  const pagamento = (over = {}) => ({
+    arena_id: ARENA, sale_id: 'v_dividida', payer_id: PROF, amount: 10, status: 'pending', ...over,
+  });
+
+  it('🐞⭐ quem DIVIDE a conta lê a venda (antes: não via a própria parte)', async () => {
+    await assertSucceeds(getDoc(doc(como(PROF), 'arena_sales', 'v_dividida')));
+  });
+
+  it('⭐ quem divide lista as contas divididas com ele, pelo campo que a regra confere', async () => {
+    await assertSucceeds(getDocs(query(collection(como(PROF), 'arena_sales'), where('split_with', 'array-contains', PROF))));
+  });
+
+  it('um estranho não lê a venda dos outros', async () => {
+    await assertFails(getDoc(doc(como(ESTRANHO), 'arena_sales', 'v_dividida')));
+    await assertFails(getDoc(doc(como(PROF), 'arena_sales', 'v_atleta')));
+  });
+
+  it('⭐ quem divide registra a PRÓPRIA parte', async () => {
+    await assertSucceeds(setDoc(doc(como(PROF), 'arena_payments', 'v_dividida_prof'), pagamento()));
+  });
+
+  it('🐞 NÃO registra pagamento em venda de que não faz parte', async () => {
+    await assertFails(setDoc(doc(como(ESTRANHO), 'arena_payments', 'x1'), pagamento({ payer_id: ESTRANHO })));
+  });
+
+  it('🐞 NÃO semeia pagamento na lista de OUTRA arena', async () => {
+    await assertFails(setDoc(doc(como(ATLETA), 'arena_payments', 'x2'), pagamento({
+      payer_id: ATLETA, sale_id: 'v_atleta', arena_id: ARENA_2,
+    })));
+  });
+
+  it('🐞 NÃO registra pagamento já "pago" (quem confirma é a arena)', async () => {
+    await assertFails(setDoc(doc(como(PROF), 'arena_payments', 'x3'), pagamento({ status: 'paid' })));
+  });
+
+  it('🐞 o comprador NÃO cria a venda já paga nem já entregue', async () => {
+    const base = { arena_id: ARENA, buyer_id: ATLETA, total: 10 };
+    await assertFails(setDoc(doc(como(ATLETA), 'arena_sales', 'x4'), { ...base, status: 'paid' }));
+    await assertFails(setDoc(doc(como(ATLETA), 'arena_sales', 'x5'), { ...base, stock_applied: true }));
+    await assertSucceeds(setDoc(doc(como(ATLETA), 'arena_sales', 'x6'), { ...base, status: 'pending', stock_applied: false }));
+  });
+
+  it('⭐ quem pediu DESISTE do pedido em aberto', async () => {
+    await assertSucceeds(updateDoc(doc(como(ATLETA), 'arena_sales', 'v_atleta'), {
+      status: 'cancelled', cancel_reason: 'Quem pediu desistiu', cancelled_by: ATLETA, updated_at: serverTimestamp(),
+    }));
+  });
+
+  it('não desiste de pedido já ENTREGUE nem de conta DIVIDIDA', async () => {
+    const desistir = { status: 'cancelled', cancelled_by: ATLETA, updated_at: serverTimestamp() };
+    await assertFails(updateDoc(doc(como(ATLETA), 'arena_sales', 'v_entregue'), desistir));
+    await assertFails(updateDoc(doc(como(ATLETA), 'arena_sales', 'v_dividida'), desistir));
+  });
+
+  it('🐞 o comprador NÃO marca o próprio pedido como entregue, pago nem muda o valor', async () => {
+    await assertFails(updateDoc(doc(como(ATLETA), 'arena_sales', 'v_atleta'), { stock_applied: true }));
+    await assertFails(updateDoc(doc(como(ATLETA), 'arena_sales', 'v_atleta'), { status: 'paid' }));
+    await assertFails(updateDoc(doc(como(ATLETA), 'arena_sales', 'v_atleta'), { status: 'cancelled', total: 0.01 }));
+  });
+
+  it('um estranho não desiste do pedido dos outros', async () => {
+    await assertFails(updateDoc(doc(como(ESTRANHO), 'arena_sales', 'v_atleta'), {
+      status: 'cancelled', updated_at: serverTimestamp(),
+    }));
+  });
+
+  it('🐞 quem paga NÃO marca o próprio pagamento como pago', async () => {
+    await assertFails(updateDoc(doc(como(ATLETA), 'arena_payments', 'pg_atleta'), { status: 'paid' }));
+  });
+
+  it('quem paga cancela o próprio pagamento em aberto — não o já confirmado, nem o valor', async () => {
+    await assertSucceeds(updateDoc(doc(como(ATLETA), 'arena_payments', 'pg_atleta'), {
+      status: 'cancelled', updated_at: serverTimestamp(),
+    }));
+    await assertFails(updateDoc(doc(como(ATLETA), 'arena_payments', 'pg_pago'), { status: 'cancelled' }));
+    await assertFails(updateDoc(doc(como(ATLETA), 'arena_payments', 'pg_atleta'), { amount: 0.01 }));
+  });
+
+  it('a arena continua podendo tudo: entregar, cancelar, confirmar o pagamento', async () => {
+    await assertSucceeds(updateDoc(doc(como(GESTOR), 'arena_sales', 'v_atleta'), {
+      stock_applied: true, delivered_at: serverTimestamp(), delivered_by: GESTOR,
+    }));
+    await assertSucceeds(updateDoc(doc(como(GESTOR), 'arena_sales', 'v_dividida'), { status: 'cancelled' }));
+    await assertSucceeds(updateDoc(doc(como(GESTOR), 'arena_payments', 'pg_atleta'), { status: 'paid' }));
+  });
+
+  it('a entrega vira saída do Mercado, e a cópia do estoque é só da arena', async () => {
+    await assertSucceeds(setDoc(doc(como(GESTOR), 'arena_inventory_exits', 'saida_app'), {
+      arena_id: ARENA, product_id: 'ip1', quantity: 1, exit_type: 'sale', sale_id: 'v_atleta', channel: 'app',
+    }));
+    await assertSucceeds(updateDoc(doc(como(GESTOR), 'arena_inventory_products', 'ip1'), { stock_qty: 9 }));
+    await assertFails(updateDoc(doc(como(ATLETA), 'arena_inventory_products', 'ip1'), { stock_qty: 999 }));
+    await assertFails(setDoc(doc(como(ATLETA), 'arena_inventory_exits', 'x7'), {
+      arena_id: ARENA, product_id: 'ip1', quantity: 1,
+    }));
+  });
+
+  it('a vitrine do Mercado é lida por quem está logado; sem login, não', async () => {
+    await assertSucceeds(getDoc(doc(como(ATLETA), 'arena_inventory_products', 'ip1')));
+    await assertFails(getDoc(doc(anon(), 'arena_inventory_products', 'ip1')));
   });
 });
 

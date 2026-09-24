@@ -15,7 +15,7 @@ import { useParams } from 'react-router-dom';
 import { toast } from 'sonner';
 import {
   Package, Plus, Search, TrendingUp, TrendingDown, Trash2,
-  Save, Pencil, CalendarClock, ShoppingBasket, Tag,
+  Save, Pencil, CalendarClock, ShoppingBasket, Tag, Smartphone,
 } from 'lucide-react';
 import {
   useInventoryProducts, useCreateInventoryProduct, useUpdateInventoryProduct, useDeleteInventoryProduct,
@@ -29,6 +29,9 @@ import {
 } from '@/modules/arenas/domain/inventory';
 import { CATALOG_SUBCATEGORIES, CATALOG_PACKAGINGS } from '@/modules/arenas/domain/productCatalog';
 import { formatPrice } from '@/modules/arenas/domain/pricing';
+import { formatDateShortBR } from '@/modules/arenas/domain/calendar';
+import { useArenaModules } from '@/modules/arenas/hooks/useArenaModules';
+import { ARENA_MODULE_ID } from '@/modules/arenas/domain/modules';
 import ProductTypeahead from '@/v2/components/arenas/ProductTypeahead';
 import V2ArenaGestaoTab from '@/v2/components/arenas/V2ArenaGestaoTab';
 import V2ArenaCatalogBrowser from '@/v2/components/arenas/V2ArenaCatalogBrowser';
@@ -129,8 +132,40 @@ function EstoqueSection({ arenaId, catalogOn, mode, setMode }) {
 const EMPTY_PRODUCT = {
   name: '', brand: '', category: INVENTORY_CATEGORIES.OUTROS, subcategory: '',
   packaging: '', size: '', flavor: '', unit: 'un', description: '',
-  sale_price: '', min_stock: '', expiry_date: '',
+  sale_price: '', min_stock: '', expiry_date: '', sell_online: false,
 };
+
+/**
+ * "Vender pelo app": o produto do Mercado entra na loja da arena no
+ * aplicativo (módulo PDV), com o preço de venda daqui. É o que faz o Mercado
+ * ser o cadastro ÚNICO — antes a loja tinha um catálogo próprio, e a mesma
+ * água era cadastrada duas vezes, com dois estoques.
+ */
+function SellOnlineToggle({ checked, onChange, price }) {
+  const semPreco = !(Number(price) > 0);
+  return (
+    <div className="rounded-2xl border border-gray-100 bg-paper p-3">
+      <label className="flex items-start gap-2 text-sm text-ink">
+        <input type="checkbox" checked={Boolean(checked)} onChange={(e) => onChange(e.target.checked)}
+          className="mt-0.5 h-4 w-4 rounded border-gray-300" />
+        <span>
+          <strong>Vender pelo app</strong>
+          <span className="block text-xs text-gray-500">
+            Aparece na loja da arena: o atleta pede pelo celular e retira no balcão. Ao entregar, sai do estoque daqui.
+          </span>
+          <span className="block text-xs text-gray-500">
+            Sem nenhuma compra (entrada) registrada, o app vende sem limite de estoque.
+          </span>
+          {checked && semPreco && (
+            <span className="mt-1 block text-xs font-bold text-amber-700">
+              Informe o preço de venda — sem ele o produto não aparece na loja.
+            </span>
+          )}
+        </span>
+      </label>
+    </div>
+  );
+}
 
 function ProductsSection({ arenaId, onOpenCatalog }) {
   const { data: products = [], isLoading } = useInventoryProducts(arenaId);
@@ -139,6 +174,8 @@ function ProductsSection({ arenaId, onOpenCatalog }) {
   const create = useCreateInventoryProduct(arenaId);
   const update = useUpdateInventoryProduct(arenaId);
   const remove = useDeleteInventoryProduct(arenaId);
+  const { isOn: moduloLigado } = useArenaModules(arenaId);
+  const lojaOn = moduloLigado(ARENA_MODULE_ID.PDV);
   const [creating, setCreating] = useState(false);
   const [editingId, setEditingId] = useState(null);
   const [search, setSearch] = useState('');
@@ -168,8 +205,9 @@ function ProductsSection({ arenaId, onOpenCatalog }) {
         sale_price: form.sale_price === '' ? undefined : Number(form.sale_price),
         min_stock: form.min_stock === '' ? undefined : Number(form.min_stock),
         expiry_date: form.expiry_date || undefined,
+        sell_online: lojaOn && form.sell_online === true,
       });
-      toast.success('Produto cadastrado!');
+      toast.success(lojaOn && form.sell_online ? 'Produto cadastrado — e já está na loja do app.' : 'Produto cadastrado!');
       setForm(EMPTY_PRODUCT);
       setCreating(false);
     } catch (err) { toast.error(err.message); }
@@ -266,6 +304,10 @@ function ProductsSection({ arenaId, onOpenCatalog }) {
           <V2Field label="Descrição">
             <V2Textarea value={form.description} onChange={set('description')} maxLength={500} rows={2} />
           </V2Field>
+          {lojaOn && (
+            <SellOnlineToggle checked={form.sell_online} price={form.sale_price}
+              onChange={(v) => setForm((f) => ({ ...f, sell_online: v }))} />
+          )}
           <div className="flex justify-end gap-2">
             <V2Button type="button" variant="ghost" size="sm" onClick={() => setCreating(false)}>Cancelar</V2Button>
             <V2Button type="submit" size="sm" disabled={create.isPending}>
@@ -283,6 +325,7 @@ function ProductsSection({ arenaId, onOpenCatalog }) {
             <ProductRow
               key={p.id}
               product={p}
+              lojaOn={lojaOn}
               quantity={stockById.get(p.id) ?? 0}
               editing={editingId === p.id}
               onToggleEdit={() => setEditingId(editingId === p.id ? null : p.id)}
@@ -305,9 +348,10 @@ function ProductsSection({ arenaId, onOpenCatalog }) {
 }
 
 /** Linha de produto do mercado: detalhes, preço de venda, estoque e validade. */
-function ProductRow({ product: p, quantity, editing, onToggleEdit, onToggleActive, onDelete, onSave, saving }) {
+function ProductRow({ product: p, quantity, editing, onToggleEdit, onToggleActive, onDelete, onSave, saving, lojaOn }) {
   const [edit, setEdit] = useState({
     sale_price: p.sale_price ?? '', min_stock: p.min_stock ?? '', expiry_date: p.expiry_date ?? '',
+    sell_online: p.sell_online === true,
   });
   const stStatus = stockStatus(quantity, p.min_stock);
   const exStatus = expiryStatus(p.expiry_date);
@@ -324,6 +368,12 @@ function ProductRow({ product: p, quantity, editing, onToggleEdit, onToggleActiv
           <div className="flex flex-wrap items-center gap-1.5">
             <h4 className="truncate text-sm font-bold text-ink">{p.name}</h4>
             {p.catalog_id && <V2Badge tone="neutral">catálogo</V2Badge>}
+            {lojaOn && p.sell_online === true && (
+              <V2Badge tone={Number(p.sale_price) > 0 && p.active !== false ? 'green' : 'amber'}>
+                <Smartphone className="mr-1 h-3 w-3" />
+                {Number(p.sale_price) > 0 && p.active !== false ? 'No app' : 'No app — sem preço ou inativo'}
+              </V2Badge>
+            )}
             {!p.active && <V2Badge tone="red">Inativo</V2Badge>}
           </div>
           <div className="mt-0.5 flex flex-wrap items-center gap-1 text-xs text-gray-500">
@@ -390,11 +440,20 @@ function ProductRow({ product: p, quantity, editing, onToggleEdit, onToggleActiv
                 sale_price: edit.sale_price === '' ? 0 : Number(edit.sale_price),
                 min_stock: edit.min_stock === '' ? 0 : Number(edit.min_stock),
                 expiry_date: edit.expiry_date || '',
+                // Só grava o campo quando a loja está ligada ou quando ele já
+                // existe — produto de arena sem loja fica como sempre foi.
+                ...(lojaOn || p.sell_online != null ? { sell_online: edit.sell_online === true } : {}),
               })}
             >
               <Save className="h-4 w-4" /> Salvar
             </V2Button>
           </div>
+          {lojaOn && (
+            <div className="sm:col-span-4">
+              <SellOnlineToggle checked={edit.sell_online} price={edit.sale_price}
+                onChange={(v) => setEdit((s) => ({ ...s, sell_online: v }))} />
+            </div>
+          )}
         </div>
       )}
     </div>
@@ -692,10 +751,13 @@ function ExitsSection({ arenaId }) {
                   <div className="flex-1">
                     <div className="text-sm font-bold text-ink">{product?.name || 'Produto removido'}</div>
                     <div className="mt-0.5 text-xs text-gray-500">
-                      {x.date} · {x.quantity} × {formatPrice(x.unit_price)} = <span className="font-bold">{formatPrice(x.total_price)}</span>
+                      {formatDateShortBR(x.date) || x.date} · {x.quantity} × {formatPrice(x.unit_price)} = <span className="font-bold">{formatPrice(x.total_price)}</span>
                     </div>
                     <div className="mt-0.5 text-xs">
                       <V2Badge tone="amber">{EXIT_TYPE_LABELS[x.exit_type] || x.exit_type}</V2Badge>
+                      {x.channel === 'app' && (
+                        <V2Badge tone="blue" className="ml-1"><Smartphone className="mr-1 h-3 w-3" />Pedido pelo app</V2Badge>
+                      )}
                       {x.buyer_name && <span className="ml-2 text-gray-400">{x.buyer_name}</span>}
                     </div>
                     {x.reason && <div className="mt-1 text-xs text-gray-600 italic">&quot;{x.reason}&quot;</div>}

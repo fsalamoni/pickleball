@@ -220,3 +220,33 @@ describe('searchProducts', () => {
     expect(searchProducts(products, '')).toHaveLength(3);
   });
 });
+
+
+describe('campos da loja do app (aditivos)', () => {
+  it('produto marcado para o app grava sell_online; sem marcar, não grava nada', () => {
+    const com = normalizeInventoryProduct({ name: 'Água', category: INVENTORY_CATEGORIES.BEBIDA, sell_online: true });
+    expect(com.value.sell_online).toBe(true);
+    const sem = normalizeInventoryProduct({ name: 'Água', category: INVENTORY_CATEGORIES.BEBIDA });
+    expect('sell_online' in sem.value).toBe(false);
+  });
+
+  it('saída da entrega de um pedido guarda o pedido e o canal', () => {
+    const r = normalizeInventoryExit({
+      product_id: 'p', date: '2026-09-24', quantity: 2, unit_price: 5, sale_id: 's1', channel: 'app',
+    });
+    expect(r.valid).toBe(true);
+    expect(r.value.sale_id).toBe('s1');
+    expect(r.value.channel).toBe('app');
+  });
+
+  it('saída digitada no balcão continua sem pedido e sem canal (retrocompatível)', () => {
+    const r = normalizeInventoryExit({ product_id: 'p', date: '2026-09-24', quantity: 1, unit_price: 5 });
+    expect('sale_id' in r.value).toBe(false);
+    expect('channel' in r.value).toBe(false);
+  });
+
+  it('canal desconhecido é ignorado', () => {
+    const r = normalizeInventoryExit({ product_id: 'p', date: '2026-09-24', quantity: 1, unit_price: 5, channel: 'x' });
+    expect('channel' in r.value).toBe(false);
+  });
+});

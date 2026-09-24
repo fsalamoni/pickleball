@@ -25,6 +25,7 @@ import { useArenaCoaches } from '@/modules/coaches/hooks/useCoaches';
 import V2BookingCalendar from '@/v2/components/arenas/V2BookingCalendar';
 import ArenaGameDaysSection from '@/v2/components/arenas/ArenaGameDaysSection';
 import ArenaOpenMatchSection from '@/v2/components/arenas/openMatch/ArenaOpenMatchSection';
+import ArenaShopSection from '@/v2/components/arenas/shop/ArenaShopSection';
 import ArenaNpsAsk from '@/v2/components/arenas/ArenaNpsAsk';
 import ArenaCheckinAsk from '@/v2/components/arenas/ArenaCheckinAsk';
 import ArenaMembershipSection from '@/v2/components/arenas/ArenaMembershipSection';
@@ -322,6 +323,10 @@ function V2ArenaDetailContent({ arenaId, user, arena, managed, bookings, isLoadi
       <div className="mt-6 empty:mt-0">
         <ArenaMembershipSection arena={arena} />
       </div>
+
+      {/* Loja (módulo PDV) — o que eu pedi para retirar aqui e o que a arena
+          vende. Some sozinha com o módulo desligado ou sem nada à venda. */}
+      <ArenaShopSection arena={arena} />
 
       {(arena.photos || []).length > 0 && (
         <V2Surface className="mt-6">

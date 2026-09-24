@@ -147,6 +147,14 @@ service cloud.firestore {
         || isPlatformAdmin()
       );
     }
+    // O pagamento é de uma venda de que quem paga FAZ PARTE (comprador ou quem
+    // divide a conta), e da mesma arena da venda.
+    function paymentBelongsToSale(p) {
+      let venda = get(/databases/$(database)/documents/arena_sales/$(p.sale_id)).data;
+      return venda.arena_id == p.arena_id
+        && (venda.buyer_id == request.auth.uid
+            || request.auth.uid in venda.get('split_with', []));
+    }
     // Gestor (dono ou administrador) de uma arena — doc determinístico arenaId_uid.
     function isArenaManager(arenaId) {
       return isAuthed()
@@ -883,22 +891,46 @@ service cloud.firestore {
         isArenaManager(resource.data.arena_id) || isPlatformAdmin()
       );
     }
-    // Sales (sprint 3) — vendas.
+    // Sales (sprint 3) — vendas / pedidos da loja do app.
     match /arena_sales/{saleId} {
+      // 🐞 Quem DIVIDE a conta sem ser o comprador não lia a venda: não via
+      // a própria parte e `payMyShare` quebrava no primeiro `getDoc`. Agora
+      // lê quem está em `split_with` (e a consulta `array-contains` por esse
+      // campo é provável pela regra).
       allow read: if isAuthed() && (
         resource.data.buyer_id == request.auth.uid
         || isArenaManager(resource.data.arena_id)
         || isPlatformAdmin()
+        || request.auth.uid in resource.data.get('split_with', [])
       );
       // Antes: `if isAuthed()` — qualquer conta forjava venda em QUALQUER
       // arena, com qualquer valor. Agora a venda é do próprio comprador ou de
-      // quem opera a arena.
+      // quem opera a arena. E o comprador só cria o pedido como PEDIDO: em
+      // aberto e não entregue — antes dava para gravar a venda já "paga" e
+      // "entregue", e ela entrava no caixa e nos números da arena assim.
       allow create: if isAuthed() && (
-        request.resource.data.buyer_id == request.auth.uid
-        || isArenaManager(request.resource.data.arena_id)
+        isArenaManager(request.resource.data.arena_id)
         || isPlatformAdmin()
+        || (request.resource.data.buyer_id == request.auth.uid
+            && request.resource.data.get('status', 'pending') == 'pending'
+            && request.resource.data.get('stock_applied', false) == false)
       );
-      allow update, delete: if isAuthed() && (
+      // Quem pediu pode DESISTIR — só isso, e só enquanto o pedido está em
+      // aberto, não foi entregue e não é dividido (conta dividida pode ter
+      // parte paga por outra pessoa: essa se cancela no balcão).
+      allow update: if isAuthed() && (
+        isArenaManager(resource.data.arena_id)
+        || isPlatformAdmin()
+        || (resource.data.buyer_id == request.auth.uid
+            && resource.data.get('status', 'pending') == 'pending'
+            && resource.data.get('stock_applied', false) == false
+            && resource.data.get('split_with', []).size() <= 1
+            && request.resource.data.status == 'cancelled'
+            && request.resource.data.get('cancelled_by', request.auth.uid) == request.auth.uid
+            && request.resource.data.diff(resource.data).affectedKeys()
+                 .hasOnly(['status', 'cancel_reason', 'cancelled_by', 'updated_at']))
+      );
+      allow delete: if isAuthed() && (
         isArenaManager(resource.data.arena_id) || isPlatformAdmin()
       );
     }
@@ -909,16 +941,29 @@ service cloud.firestore {
         || isArenaManager(resource.data.arena_id)
         || isPlatformAdmin()
       );
-      // Idem `arena_sales`: o pagamento é de quem paga, ou da arena.
+      // Idem `arena_sales`: o pagamento é de quem paga, ou da arena. Quem paga
+      // registra a parte como PENDENTE (quem confirma o recebimento é a
+      // arena) e só numa venda de que faz parte, da MESMA arena — senão
+      // qualquer conta semeava "pagamentos" na lista de qualquer arena.
       allow create: if isAuthed() && (
-        request.resource.data.payer_id == request.auth.uid
-        || isArenaManager(request.resource.data.arena_id)
+        isArenaManager(request.resource.data.arena_id)
         || isPlatformAdmin()
+        || (request.resource.data.payer_id == request.auth.uid
+            && request.resource.data.get('status', 'pending') == 'pending'
+            && paymentBelongsToSale(request.resource.data))
       );
+      // 🐞 Quem paga podia atualizar o próprio pagamento para "pago" — o
+      // registro que a arena usa para saber se recebeu. Agora ele só troca a
+      // forma de pagamento ou desiste (cancela) enquanto o pagamento não foi
+      // confirmado; "pago" é a arena quem marca.
       allow update: if isAuthed() && (
-        resource.data.payer_id == request.auth.uid
-        || isArenaManager(resource.data.arena_id)
+        isArenaManager(resource.data.arena_id)
         || isPlatformAdmin()
+        || (resource.data.payer_id == request.auth.uid
+            && resource.data.get('status', 'pending') != 'paid'
+            && request.resource.data.get('status', 'pending') in ['pending', 'cancelled']
+            && request.resource.data.diff(resource.data).affectedKeys()
+                 .hasOnly(['payment_method', 'status', 'updated_at']))
       );
       allow delete: if isPlatformAdmin();
     }
