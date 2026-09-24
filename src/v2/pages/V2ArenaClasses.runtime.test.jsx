@@ -23,6 +23,7 @@ import { describe, it, expect, beforeEach, afterEach, vi } from 'vitest';
 import { ARENA_MODULE_ID } from '@/modules/arenas/domain/modules';
 
 const LIGADOS = new Set();
+const SESSAO = { logado: true };
 const estado = {
   gere: false, coaches: [], aulas: [], minhas: [], meusPerfis: [], config: {},
   alunos: [], alunosDoProfessor: [],
@@ -31,7 +32,7 @@ const matricular = vi.fn(() => Promise.resolve());
 
 vi.mock('sonner', () => ({ toast: { success: vi.fn(), error: vi.fn() } }));
 vi.mock('@/core/lib/FirebaseAuthContext', () => ({
-  useAuth: () => ({ user: { uid: 'eu' }, isPlatformAdmin: false, isAuthenticated: true }),
+  useAuth: () => ({ user: SESSAO.logado ? { uid: 'eu' } : null, isPlatformAdmin: false, isAuthenticated: SESSAO.logado }),
 }));
 vi.mock('@/modules/arenas/hooks/useArenas', () => ({
   useArena: () => ({ data: { id: 'a1', name: 'Arena Teste', owner_id: estado.gere ? 'eu' : 'outro' }, isLoading: false }),
@@ -82,6 +83,7 @@ const aula = (over = {}) => ({
 let container, root;
 
 beforeEach(() => {
+  SESSAO.logado = true;
   LIGADOS.clear();
   LIGADOS.add(ARENA_MODULE_ID.CLASSES);
   matricular.mockClear();
@@ -331,3 +333,13 @@ describe('a arena', () => {
     expect(container.textContent).toMatch(/arena R\$\s?0,00 · professor R\$\s?100,00/);
   });
 });
+
+describe('sem conta', () => {
+  it('convida a entrar, em vez de mostrar erro (a leitura exige conta)', async () => {
+    SESSAO.logado = false;
+    await render();
+    expect(container.textContent).toContain('Entre para ver as aulas');
+    expect(container.textContent).not.toMatch(/Não foi possível carregar/);
+  });
+});
+

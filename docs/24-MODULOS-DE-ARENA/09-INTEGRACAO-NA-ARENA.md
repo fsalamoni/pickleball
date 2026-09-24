@@ -276,6 +276,13 @@ funcionar, metade o que continua ou passou a ser barrado.
 (calendários) continua trazendo só as de pé — só aula de pé ocupa quadra. E o
 corte por limite passou a levar as MAIS ANTIGAS (D9).
 
+### Sem conta
+
+Aulas, professores das aulas e torneios da casa só são legíveis por quem tem
+conta. Sem login, `/arenas/:id/aulas` e `/arenas/:id/torneios` não consultam
+nada e **convidam a entrar** — antes a consulta era recusada e a tela dizia
+"não foi possível carregar", como se a plataforma estivesse com problema.
+
 ### Banco
 
 **Zero coleção, zero índice, zero campo novo.** Uma regra alterada

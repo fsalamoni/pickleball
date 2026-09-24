@@ -447,7 +447,8 @@ export default function ArenaLeaguesPanel({ arena, podeGerir }) {
   const { user, isAuthenticated } = useAuth();
   const { isOn } = useArenaModules(arena.id);
   const { data: courts = [] } = useArenaCourts(arena.id);
-  const torneiosQ = useArenaInternalTournaments(arena.id);
+  // Torneios da casa exigem conta para ler: sem login a consulta nem sai.
+  const torneiosQ = useArenaInternalTournaments(isAuthenticated ? arena.id : null);
   const [form, setForm] = useState(null);
   const [verEncerrados, setVerEncerrados] = useState(false);
 
@@ -461,6 +462,19 @@ export default function ArenaLeaguesPanel({ arena, podeGerir }) {
 
   const temLadder = isOn(ARENA_MODULE_ID.LEAGUES_LADDER);
   const lista = verEncerrados ? encerrados : ativos;
+
+  if (!isAuthenticated) {
+    return (
+      <V2Surface>
+        <V2EmptyState
+          icon={Trophy}
+          title="Entre para ver os torneios da casa"
+          description="Os torneios e a classificação da arena aparecem para quem tem conta — e é com ela que você se inscreve."
+          action={<V2Button asChild size="sm"><Link to="/entrar">Entrar</Link></V2Button>}
+        />
+      </V2Surface>
+    );
+  }
 
   return (
     <div className="space-y-6">

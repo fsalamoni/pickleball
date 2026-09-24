@@ -378,8 +378,11 @@ export default function ArenaClassesPanel({ arena, podeGerir, meuPerfilDeProfess
   const arenaId = arena.id;
   const { isAuthenticated } = useAuth();
   const { data: courts = [] } = useArenaCourts(arenaId);
-  const { data: coaches = [] } = useArenaClassCoaches(arenaId, { onlyActive: false });
-  const aulasQ = useArenaClasses(arenaId, { includeClosed: true, lim: 300 });
+  // Aulas e professores exigem conta para ler: sem login a consulta nem sai
+  // (falharia, e a falha viraria "não foi possível carregar").
+  const leitura = isAuthenticated ? arenaId : null;
+  const { data: coaches = [] } = useArenaClassCoaches(leitura, { onlyActive: false });
+  const aulasQ = useArenaClasses(leitura, { includeClosed: true, lim: 300 });
   const { data: minhas = [] } = useMyClassBookings(isAuthenticated ? arenaId : null);
   const marketplaceConfig = useArenaModuleConfig(arenaId, ARENA_MODULE_ID.CLASSES_MARKETPLACE);
 
@@ -408,6 +411,20 @@ export default function ArenaClassesPanel({ arena, podeGerir, meuPerfilDeProfess
   }), [aulasQ.data, hoje, papel, meuPerfilDeProfessor, minhas]);
 
   const lista = verPassadas ? passadas : futuras;
+
+  if (!isAuthenticated) {
+    return (
+      <V2Surface>
+        <V2EmptyState
+          icon={Calendar}
+          title="Entre para ver as aulas"
+          description="A agenda de aulas da arena aparece para quem tem conta — e é com ela que você se matricula."
+          action={<V2Button asChild size="sm"><Link to="/entrar">Entrar</Link></V2Button>}
+        />
+      </V2Surface>
+    );
+  }
+
   const tituloPassadas = papel === AGENDA_ROLE.ATHLETE ? 'Suas aulas passadas' : 'Aulas passadas';
 
   return (
