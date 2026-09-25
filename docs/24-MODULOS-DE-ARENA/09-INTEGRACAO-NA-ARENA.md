@@ -297,7 +297,11 @@ fechadas), provada no emulador.
 
 ## 6. I-3 — Torneios dentro da arena (entregue)
 
-### Onde os torneios estão agora
+> ⚠️ **Substituído pela Onda CB (§15)**: o torneio interno saiu; os torneios da
+> casa passaram a ser os da plataforma sediados na arena, e o ladder virou o
+> ranking da casa derivado. Esta seção fica como histórico.
+
+### Onde os torneios estavam
 
 | Lugar | O quê |
 |---|---|
@@ -774,3 +778,89 @@ linhas da tela pequena para cima; no celular continua deslizando, para não
 empurrar a reserva para baixo da dobra.
 
 **Banco: zero.**
+
+## 15. Torneios da casa e ranking da casa (Onda CB, 2026-09-25)
+
+**Pedido:** *"transformar os torneios da plataforma em torneios da plataforma
+na casa, excluindo o que foi criado como 'torneio da casa'. O torneio da casa,
+da forma como está, foi incorporado pelo jogo aberto (dia de jogo), que deve
+ter ranking próprio, conforme a modalidade do dia de jogo escolhida, e deve
+formar o ranking da casa, em conjunto com os torneios da plataforma na casa."*
+
+### Onde está agora
+
+| Lugar | O quê |
+|---|---|
+| Central → **Torneios** → *Torneios da casa* | os torneios da PLATAFORMA sediados na arena (rascunho incluído, só para a arena), na ordem rolando → próximos → encerrados, e **"Criar torneio aqui"**; embaixo, o aviso dos torneios internos antigos ainda abertos |
+| Central → **Torneios** → *Ranking da casa* | o ranking (com o módulo `leagues`), com "Ver como o atleta vê" |
+| Página da arena → **Torneios da casa** (`#arena-torneios`) | os torneios da plataforma sediados aqui, sem rascunho nem cancelado |
+| Página da arena → **Ranking da casa** (`#arena-ranking-da-casa`) | a CHAMADA para o ranking — sem a conta (ver "Custo" abaixo) |
+| `/arenas/:id/torneios` | o ranking da casa completo + a lista dos torneios da casa |
+| Jogo aberto (página do dia de jogo) | "Este jogo conta no ranking da casa" / "Play não pontua" |
+| Formulário do jogo aberto | "Com placar, o resultado soma no ranking da casa" |
+
+A âncora antiga `#arena-torneios-da-casa` segue viva (é o invólucro das duas
+seções), e `?aba=torneios-plataforma` abre `?aba=torneios`
+(`resolveArenaTabAlias`). A seção Torneios existe com o módulo **ou** com
+torneio sediado — sem nenhum dos dois, a Central é a de antes (teste travando).
+
+### A conta (`domain/houseRanking.js`)
+
+- **Dia de jogo da arena com placar** (todo jogo aberto é um): colocação no
+  RANKING DO DIA (`computeGameDayLeaderboard`, o mesmo do painel e do telão),
+  com todo mundo — convidado sem conta ocupa a posição dele, e o atleta leva a
+  que conquistou. 1º 100 · 2º 70 · 3º 50 · 4º 35 · jogou 10. Empate exato
+  divide a posição (o nome não separa ninguém).
+- **Torneio da casa ENCERRADO**, por categoria, **vale o dobro**. Mata-mata:
+  quem venceu a FINAL é o campeão (contar vitórias daria o título a quem
+  ganhou mais nos grupos); semifinalistas dividem o 3º sem disputa de 3º.
+  Qualquer outra estrutura: a classificação oficial da última fase
+  (`buildRanking`, com o desempate da plataforma). Os dois da dupla (ou o
+  elenco da equipe) levam os pontos, cada um.
+- **Ladder antigo**: os pontos já somados, na temporada do último resultado.
+- Ordem: pontos → títulos → vitórias → menos eventos → nome.
+- Filtros: **temporada** (ano; o seletor sai das listas-base, sem ler placar)
+  e **modalidade** (Americano, Mexicano, Rei da Quadra, Americano aprimorado,
+  Torneios) — é o "ranking próprio conforme a modalidade" do pedido.
+- **"De onde vêm os pontos"**: a tabela, cada evento que entrou e **o que
+  ainda não entrou, com o motivo** (torneio em andamento, dia sem resultado,
+  Play) — sem isso a arena procura o jogo de ontem, não acha e acha que o
+  sistema errou.
+
+### Por que derivado, e não gravado
+
+Ranking gravado pelo navegador é o "segundo escritor" que já fez três
+rankings discordarem (Onda BJ). Derivado não tem como divergir da fonte, não
+precisa de botão, não pede regra nova nem coleção nova. **Custo**: a
+temporada é somada a cada leitura (2 leituras por dia de jogo, 3 por
+torneio), por isso a conta mora na página própria e na Central, e a página da
+arena — que todo visitante abre — mostra só a chamada. As chaves de cache são
+AS MESMAS da tela do dia de jogo e do torneio: quem abriu o jogo de ontem já
+trouxe parte do ranking.
+
+**Falha não é vazio**: leitura que falha não some da soma calada — vai para
+"Ficou de fora: …", e o vazio ("Ninguém pontuou em 2026 ainda") só é afirmado
+com tudo carregado.
+
+### 🐞 O defeito que o ranking desenterrou: ninguém listava os dias de jogo da arena
+
+`listArenaGameDays` filtrava só por `arena_id`. A regra de `game_days` libera
+por `created_by`, `member_uids`, `visibility == 'public'` ou clube — e numa
+CONSULTA o Firestore só aceita o que consegue provar para tudo o que ela pode
+devolver. Nada disso era provável: **a consulta era recusada para todo mundo
+menos o admin da plataforma**, o gestor da própria arena inclusive (provado no
+emulador). O admin testava com a conta de admin, e nada parecia errado. Para
+quem usa, falhavam em silêncio: a lista de dias de jogo da Central, a seção
+"Dias de jogo" da página da arena e o bloqueio DERIVADO do calendário do
+atleta (que caía no `catch` e contava só com a cópia gravada). Agora a
+consulta leva `where('visibility', '==', 'public')` — todo dia de jogo de
+arena nasce público, então o filtro não esconde nada, só torna a regra
+provável. Duas igualdades não pedem índice. Asserções em
+`tests/rules/houseRanking.rules.test.js` e guarda de fonte em
+`src/modules/games/services/listArenaGameDays.guard.test.js`.
+
+### Banco
+
+**Zero.** Nenhuma coleção, campo, índice, regra, função ou migração. Nenhum
+documento apagado: `arena_internal_tournaments` e `arena_ladders` seguem como
+estão. Nove asserções novas no emulador (364 no total).

@@ -25,6 +25,7 @@ import {
   getArenaModule,
   listArenaModuleIds,
   isModuleReleasable,
+  isModuleRetired,
   moduleConfigWithDefaults,
 } from './moduleCatalog.js';
 
@@ -43,6 +44,7 @@ export const MODULE_OFF_REASON = Object.freeze({
   MASTER_OFF: 'master_off',
   NOT_RELEASED: 'not_released',
   NOT_IMPLEMENTED: 'not_implemented',
+  RETIRED: 'retired',
   FAMILY_OFF: 'family_off',
   REQUIRES: 'requires',
   ARENA_OFF: 'arena_off',
@@ -70,6 +72,8 @@ export function moduleOffReasonText(reason, { audience = 'arena', missing = [] }
         : 'Módulo não liberado às arenas.';
     case MODULE_OFF_REASON.NOT_IMPLEMENTED:
       return 'Este módulo ainda está em construção.';
+    case MODULE_OFF_REASON.RETIRED:
+      return 'Este módulo foi aposentado: outra funcionalidade faz o que ele fazia.';
     case MODULE_OFF_REASON.FAMILY_OFF:
       return names
         ? `Depende de ${names}, que não está ativo.`
@@ -179,7 +183,9 @@ export function resolveArenaModule({
 
   if (!mod) return off(MODULE_OFF_REASON.UNKNOWN);
   if (!masterOn) return off(MODULE_OFF_REASON.MASTER_OFF);
-  if (!isModuleReleasable(moduleId)) return off(MODULE_OFF_REASON.NOT_IMPLEMENTED);
+  if (!isModuleReleasable(moduleId)) {
+    return off(isModuleRetired(moduleId) ? MODULE_OFF_REASON.RETIRED : MODULE_OFF_REASON.NOT_IMPLEMENTED);
+  }
   if (!platformModules?.[moduleId]?.released) return off(MODULE_OFF_REASON.NOT_RELEASED);
 
   // Ciclo em `requires` seria um erro de catálogo; em vez de estourar a pilha,

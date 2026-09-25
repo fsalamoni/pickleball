@@ -117,7 +117,7 @@ Um módulo pode estar pronto no código e não liberado; liberado e não ativado
 | 2 | Membros (níveis, pacotes, mensalidade, carteira) | ✅ `02-MEMBROS.md` |
 | 3 | Marketing e fidelidade (cupom, pontos, indicação, NPS, campanha) | ✅ `03-MARKETING.md` |
 | 4 | Operações (checklist, manutenção, estoque, equipe) | ✅ `04-OPERACOES.md` |
-| 5 | Aulas e torneios internos | ✅ `05-AULAS.md` + `06-TORNEIOS-INTERNOS.md` |
+| 5 | Aulas e torneios internos | ✅ `05-AULAS.md` + `06-TORNEIOS-INTERNOS.md` (o torneio interno saiu na Onda CB: virou o ranking da casa — `09-INTEGRACAO-NA-ARENA.md` §15) |
 | 6 | PDV, rede multi-unidade, branding e inteligência | ✅ `07-PDV-MARCA-REDE-IA.md` |
 | 7 | Chegada: totem de check-in e presença medida | ✅ `08-CHEGADA-E-TOTEM.md` |
 

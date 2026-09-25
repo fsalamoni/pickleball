@@ -22,7 +22,9 @@ import { readFileSync } from 'node:fs';
 import { MemoryRouter } from 'react-router-dom';
 import { describe, it, expect, beforeEach, afterEach, vi } from 'vitest';
 
-const estado = { slot: null, slotErro: false, participantes: [], fila: [], gameDay: null, quadrasErro: false };
+const estado = {
+  slot: null, slotErro: false, participantes: [], fila: [], gameDay: null, quadrasErro: false, ligados: new Set(),
+};
 const criar = vi.fn(() => Promise.resolve({ slotId: 's9', gameDayId: 'gd9' }));
 const editar = vi.fn(() => Promise.resolve());
 const ligar = vi.fn(() => Promise.resolve());
@@ -40,6 +42,9 @@ vi.mock('@/modules/arenas/hooks/useArenas', () => ({
   useArenaCourts: () => (estado.quadrasErro
     ? { data: undefined, isError: true, isLoading: false, refetch: vi.fn() }
     : { data: [{ id: 'q1', name: 'Quadra 1' }, { id: 'q2', name: 'Quadra 2' }], isError: false, isLoading: false }),
+}));
+vi.mock('@/modules/arenas/hooks/useArenaModules', () => ({
+  useArenaModules: () => ({ isOn: (id) => estado.ligados.has(id), isLoading: false }),
 }));
 vi.mock('@/modules/games/hooks/useGameDays', () => ({
   useGameDay: () => ({ data: estado.gameDay, isLoading: false, isError: false }),
@@ -77,7 +82,9 @@ const vaga = (over = {}) => ({
 let container;
 let root;
 beforeEach(() => {
-  Object.assign(estado, { slot: null, slotErro: false, participantes: [], fila: [], gameDay: null, quadrasErro: false });
+  Object.assign(estado, {
+    slot: null, slotErro: false, participantes: [], fila: [], gameDay: null, quadrasErro: false, ligados: new Set(),
+  });
   [criar, editar, ligar, entrar, erro].forEach((f) => f.mockClear());
   container = document.createElement('div');
   document.body.appendChild(container);
@@ -211,6 +218,28 @@ describe('⭐ página do dia de jogo: o painel do jogo aberto', () => {
     estado.slotErro = true;
     await render(<OpenMatchGameDayPanel gameDay={dia} />);
     expect(container.textContent).toContain('Não foi possível carregar o jogo aberto');
+  });
+
+  it('⭐ com o ranking da casa ligado, diz que o jogo conta — e leva ao ranking', async () => {
+    estado.ligados = new Set(['leagues']);
+    estado.slot = vaga({ game_day_id: 'gd1' });
+    await render(<OpenMatchGameDayPanel gameDay={{ ...dia, format: 'americano' }} />);
+    expect(container.textContent).toContain('Este jogo conta no ranking da casa');
+    const link = [...container.querySelectorAll('a')].find((a) => a.textContent.includes('Ver o ranking'));
+    expect(link.getAttribute('href')).toBe('/arenas/a1/torneios');
+  });
+
+  it('Play não pontua — e a tela diz por quê', async () => {
+    estado.ligados = new Set(['leagues']);
+    estado.slot = vaga({ game_day_id: 'gd1' });
+    await render(<OpenMatchGameDayPanel gameDay={{ ...dia, format: 'play' }} />);
+    expect(container.textContent).toContain('Play não tem placar');
+  });
+
+  it('sem o módulo do ranking, não fala de ranking', async () => {
+    estado.slot = vaga({ game_day_id: 'gd1' });
+    await render(<OpenMatchGameDayPanel gameDay={{ ...dia, format: 'americano' }} />);
+    expect(container.textContent).not.toContain('ranking da casa');
   });
 });
 

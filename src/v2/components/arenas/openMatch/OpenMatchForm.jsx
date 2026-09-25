@@ -27,6 +27,8 @@ import { FEATURE_FLAG } from '@/core/featureFlags';
 import { useFeatureFlag } from '@/core/lib/FeatureFlagsContext';
 import { cn } from '@/core/lib/utils';
 import { useArenaBookings } from '@/modules/arenas/hooks/useBookings';
+import { useArenaModules } from '@/modules/arenas/hooks/useArenaModules';
+import { ARENA_MODULE_ID } from '@/modules/arenas/domain/modules';
 import {
   useCreateOpenMatch, useUpdateOpenMatch, useLinkOpenSlotToGameDay,
 } from '@/modules/arenas/hooks/useArenaV3';
@@ -144,6 +146,9 @@ export default function OpenMatchForm({
   const set = (patch) => setForm((f) => ({ ...f, ...patch }));
   const americanoLiveOn = useFeatureFlag(FEATURE_FLAG.GAMEDAY_AMERICANO_LIVE);
   const { data: bookings } = useArenaBookings(arenaId);
+  // Com o ranking da casa ligado, "com placar" também quer dizer "soma pontos".
+  const { isOn: moduloLigado } = useArenaModules(arenaId);
+  const comRanking = moduloLigado(ARENA_MODULE_ID.LEAGUES);
   const criar = useCreateOpenMatch();
   const editar = useUpdateOpenMatch();
   const ligar = useLinkOpenSlotToGameDay();
@@ -274,7 +279,13 @@ export default function OpenMatchForm({
           </div>
         </Secao>
 
-        <Secao icone={Swords} titulo="Como se joga" descricao="É o formato do dia de jogo — decide como as partidas saem e se há placar.">
+        <Secao
+          icone={Swords}
+          titulo="Como se joga"
+          descricao={comRanking
+            ? 'É o formato do dia de jogo — decide como as partidas saem e se há placar. Com placar, o resultado soma no ranking da casa.'
+            : 'É o formato do dia de jogo — decide como as partidas saem e se há placar.'}
+        >
           <div className="grid gap-2 sm:grid-cols-2">
             {formatos.map((f) => (
               <Escolha

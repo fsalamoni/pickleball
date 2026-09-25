@@ -18,11 +18,14 @@
 
 import React, { useMemo } from 'react';
 import { Link } from 'react-router-dom';
-import { Info, Users } from 'lucide-react';
+import { ArrowRight, Info, Trophy, Users } from 'lucide-react';
 import { useAuth } from '@/core/lib/FirebaseAuthContext';
 import { useOpenSlot, useUserWaitlist } from '@/modules/arenas/hooks/useArenaV3';
 import { useGameDayParticipants } from '@/modules/games/hooks/useGameDays';
 import { useMyUnifiedLevel } from '@/modules/rating/hooks/useMyUnifiedLevel';
+import { useArenaModules } from '@/modules/arenas/hooks/useArenaModules';
+import { ARENA_MODULE_ID } from '@/modules/arenas/domain/modules';
+import { formatHasScores } from '@/modules/clubs/domain/gameDayFormats';
 import { formatLevel, slotLevelRangeLabel, slotLevelFit } from '@/modules/arenas/domain/openMatch';
 import { OPEN_SLOT_FORMAT_LABEL, slotActionState } from '@/modules/arenas/domain/openMatchView';
 import { linkedOccupancy } from '@/modules/arenas/domain/openMatchGameDay';
@@ -39,6 +42,9 @@ export default function OpenMatchGameDayPanel({ gameDay, className = '' }) {
   const { data: minhaFila = [] } = useUserWaitlist();
   const { level } = useMyUnifiedLevel();
   const acoes = useOpenSlotActions();
+  // O ranking da casa (Onda CB): o jogo aberto com placar soma pontos nele.
+  const { isOn: moduloLigado } = useArenaModules(slotId ? gameDay.arena_id : null);
+  const comRanking = moduloLigado(ARENA_MODULE_ID.LEAGUES);
 
   const slot = slotQ.data || null;
   const occ = useMemo(() => linkedOccupancy(slot, participants), [slot, participants]);
@@ -130,6 +136,22 @@ export default function OpenMatchGameDayPanel({ gameDay, className = '' }) {
               {motivo && <span className="text-xs text-amber-700">{motivo}</span>}
               {jaEstou && <span className="text-xs text-gray-500">Você está na lista abaixo.</span>}
             </div>
+          )}
+
+          {comRanking && gameDay.arena_id && (
+            <p className="mt-3 flex flex-wrap items-center gap-x-1.5 gap-y-1 text-xs text-gray-500">
+              <Trophy className="h-3.5 w-3.5 shrink-0" aria-hidden="true" />
+              {formatHasScores(gameDay.format) ? (
+                <>
+                  <span>Este jogo conta no ranking da casa: cada colocação vale pontos.</span>
+                  <Link to={`/arenas/${gameDay.arena_id}/torneios`} className="inline-flex items-center gap-0.5 font-bold text-ink hover:underline">
+                    Ver o ranking <ArrowRight className="h-3 w-3" aria-hidden="true" />
+                  </Link>
+                </>
+              ) : (
+                <span>Play não tem placar, então este jogo não pontua no ranking da casa.</span>
+              )}
+            </p>
           )}
         </>
       )}

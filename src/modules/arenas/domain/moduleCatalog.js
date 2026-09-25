@@ -28,6 +28,9 @@ import { ARENA_MODULE_ID, ARENA_MODULE_META } from './modules.js';
  * - `ready`    implementado e pronto para liberar.
  * - `beta`     implementado, mas novo: liberar com parcimônia.
  * - `planned`  desenhado, ainda sem código. NÃO é liberável.
+ * - `retired`  existiu e foi SUBSTITUÍDO por outra funcionalidade. NÃO é
+ *              liberável. O id continua (é contrato de banco: pode estar
+ *              gravado em `arena_module_states`), mas nada o oferece.
  * - `external` depende de hardware/infra de terceiro que a plataforma não
  *              controla (fabricante de iluminação, DNS, loja de aplicativos).
  *              Liberável, mas com o limite escrito na tela.
@@ -37,6 +40,7 @@ export const ARENA_MODULE_STATUS = Object.freeze({
   BETA: 'beta',
   PLANNED: 'planned',
   EXTERNAL: 'external',
+  RETIRED: 'retired',
 });
 
 export const ARENA_MODULE_STATUS_META = Object.freeze({
@@ -64,6 +68,12 @@ export const ARENA_MODULE_STATUS_META = Object.freeze({
     hint: 'Exige hardware ou infraestrutura fora da plataforma.',
     releasable: true,
   },
+  [ARENA_MODULE_STATUS.RETIRED]: {
+    label: 'Aposentado',
+    tone: 'neutral',
+    hint: 'Foi substituído por outra funcionalidade. Não pode mais ser liberado.',
+    releasable: false,
+  },
 });
 
 /** Públicos possíveis de um módulo. */
@@ -74,7 +84,9 @@ export const ARENA_MODULE_AUDIENCE = Object.freeze({
 });
 
 const { ATHLETE, COACH, ARENA } = ARENA_MODULE_AUDIENCE;
-const { READY, BETA, PLANNED, EXTERNAL } = ARENA_MODULE_STATUS;
+const {
+  READY, BETA, PLANNED, EXTERNAL, RETIRED,
+} = ARENA_MODULE_STATUS;
 
 /**
  * Detalhamento por módulo. Chaveado pelo id do catálogo.
@@ -345,40 +357,46 @@ export const ARENA_MODULE_DETAIL = Object.freeze({
     collections: ['arena_coaches'],
   },
 
-  /* ---------------------------- 5. Torneios internos ------------------- */
+  /* ---------------------------- 5. Ranking da casa --------------------- */
+  // Onda CB: a família era "Torneios internos". O torneio interno saiu — o jogo
+  // aberto (que é um dia de jogo) faz o que ele fazia, e os torneios da casa
+  // passaram a ser os torneios da PLATAFORMA sediados na arena. O que sobrou
+  // é o RANKING DA CASA, que soma os dois. O id `leagues` fica: é contrato de
+  // banco, gravado em `arena_module_states`.
   [ARENA_MODULE_ID.LEAGUES]: {
     status: READY,
     audience: [ATHLETE, ARENA],
-    summary: 'Competição da casa, para a comunidade da arena.',
+    summary: 'O ranking da casa: jogos abertos e torneios da casa somados por temporada.',
     benefit: {
-      [ARENA]: 'Dê motivo para voltar toda semana, sem virar torneio nacional.',
-      [ATHLETE]: 'Dispute com a turma da arena e acompanhe a sua posição.',
+      [ARENA]: 'Dê motivo para voltar toda semana — cada jogo aberto com placar vale pontos.',
+      [ATHLETE]: 'Veja quem lidera a sua arena e onde você está, jogo a jogo.',
     },
     manage: '/arenas/:arenaId/gerir/torneios',
     public: '/arenas/:arenaId/torneios',
-    // Integrado à arena (2026-09-24): a gestão é a seção Torneios da Central
-    // (Da casa · Da plataforma), e a página da arena tem "Torneios da casa".
+    // Integrado à arena: a Central tem a seção Torneios (Torneios da casa ·
+    // Ranking da casa), e a página da arena tem "Torneios da casa" e a
+    // chamada do ranking.
     native: true,
-    collections: ['arena_internal_tournaments', 'arena_ladders'],
+    collections: ['game_days', 'tournaments', 'arena_ladders'],
   },
   [ARENA_MODULE_ID.LEAGUES_INTERNAL]: {
-    status: READY,
+    status: RETIRED,
     audience: [ATHLETE, ARENA],
-    summary: 'Torneio que só aparece para quem é da arena.',
+    summary: 'Aposentado: o jogo aberto faz o que o torneio interno fazia, e os torneios da casa passaram a ser os da plataforma.',
     benefit: {
-      [ARENA]: 'Organize sem abrir para a plataforma inteira.',
-      [ATHLETE]: 'Um torneio no seu nível, com gente que você conhece.',
+      [ARENA]: 'Use o jogo aberto (com placar) e os torneios da plataforma sediados aqui.',
+      [ATHLETE]: 'Os jogos abertos e os torneios da casa contam no ranking da casa.',
     },
     requires: [ARENA_MODULE_ID.LEAGUES],
     collections: ['arena_internal_tournaments'],
   },
   [ARENA_MODULE_ID.LEAGUES_LADDER]: {
-    status: READY,
+    status: RETIRED,
     audience: [ATHLETE, ARENA],
-    summary: 'Ranking contínuo da arena, atualizado a cada resultado.',
+    summary: 'Aposentado: o ladder virou o próprio Ranking da casa.',
     benefit: {
-      [ARENA]: 'Uma tabela viva que traz o atleta de volta para defender posição.',
-      [ATHLETE]: 'Suba na tabela da sua arena jogando.',
+      [ARENA]: 'O ranking da casa soma cada resultado sozinho.',
+      [ATHLETE]: 'Suba no ranking da casa jogando.',
     },
     requires: [ARENA_MODULE_ID.LEAGUES],
     collections: ['arena_ladders'],
@@ -395,12 +413,12 @@ export const ARENA_MODULE_DETAIL = Object.freeze({
     collections: ['game_days'],
   },
   [ARENA_MODULE_ID.LEAGUES_PRIZING]: {
-    status: READY,
+    status: RETIRED,
     audience: [ATHLETE, ARENA],
-    summary: 'Premiação do torneio interno (dinheiro, brinde ou crédito).',
+    summary: 'Aposentado junto com o torneio interno.',
     benefit: {
-      [ARENA]: 'Prêmio em crédito volta como consumo na própria arena.',
-      [ATHLETE]: 'Saiba o que está em jogo antes de se inscrever.',
+      [ARENA]: 'A premiação dos torneios da casa é configurada no próprio torneio da plataforma.',
+      [ATHLETE]: 'Veja o que está em jogo na página do torneio.',
     },
     requires: [ARENA_MODULE_ID.LEAGUES, ARENA_MODULE_ID.LEAGUES_INTERNAL],
     collections: ['arena_internal_tournaments'],
@@ -820,6 +838,11 @@ export function isModuleReleasable(moduleId) {
   const mod = getArenaModule(moduleId);
   if (!mod) return false;
   return ARENA_MODULE_STATUS_META[mod.status]?.releasable === true;
+}
+
+/** O módulo existiu e foi substituído (`retired`)? */
+export function isModuleRetired(moduleId) {
+  return getArenaModule(moduleId)?.status === ARENA_MODULE_STATUS.RETIRED;
 }
 
 /**

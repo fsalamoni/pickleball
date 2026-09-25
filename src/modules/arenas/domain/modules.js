@@ -238,8 +238,8 @@ export const ARENA_MODULE_META = Object.freeze({
   },
 
   [ARENA_MODULE_ID.LEAGUES]: {
-    label: 'Torneios internos',
-    description: 'Torneios, ladder, open play e premiação.',
+    label: 'Ranking da casa',
+    description: 'Jogos abertos e torneios da casa somados num ranking da arena.',
     icon: 'Trophy',
     color: 'yellow',
     sprint: 5,
@@ -251,15 +251,15 @@ export const ARENA_MODULE_META = Object.freeze({
     ],
   },
   [ARENA_MODULE_ID.LEAGUES_INTERNAL]: {
-    label: 'Torneios só da arena',
-    description: 'Não aparece no feed público de torneios.',
+    label: 'Torneios só da arena (aposentado)',
+    description: 'Substituído pelo jogo aberto e pelos torneios da casa.',
     icon: 'Trophy',
     color: 'yellow',
     parent: ARENA_MODULE_ID.LEAGUES,
   },
   [ARENA_MODULE_ID.LEAGUES_LADDER]: {
-    label: 'Ladder semanal',
-    description: 'Ranking semanal com pódio e rating.',
+    label: 'Ladder (aposentado)',
+    description: 'Virou o próprio Ranking da casa.',
     icon: 'BarChart3',
     color: 'yellow',
     parent: ARENA_MODULE_ID.LEAGUES,
@@ -272,8 +272,8 @@ export const ARENA_MODULE_META = Object.freeze({
     parent: ARENA_MODULE_ID.LEAGUES,
   },
   [ARENA_MODULE_ID.LEAGUES_PRIZING]: {
-    label: 'Premiação',
-    description: 'R$, brinde ou crédito na wallet.',
+    label: 'Premiação (aposentado)',
+    description: 'Saiu junto com o torneio interno.',
     icon: 'Gift',
     color: 'yellow',
     parent: ARENA_MODULE_ID.LEAGUES,

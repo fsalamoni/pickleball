@@ -116,12 +116,33 @@ export async function syncArenaGameDayBlocks(gameDay, { remover = false } = {}) 
 
 /* -------------------------------------------------------------- CRUD -- */
 
-/** Os dias de jogo de uma arena (sem os arquivados, salvo pedido contrário). */
+/**
+ * Os dias de jogo de uma arena (sem os arquivados, salvo pedido contrário).
+ *
+ * 🐞 **O filtro de visibilidade é obrigatório** (Onda CB). A regra de leitura
+ * de `game_days` libera o documento por `created_by`, por `member_uids`, por
+ * `visibility == 'public'` ou pelo clube — e numa CONSULTA o Firestore só
+ * aceita o que consegue provar para tudo o que ela pode devolver. Filtrando
+ * só por `arena_id`, nada disso é provável: a consulta era recusada para
+ * TODO MUNDO menos o admin da plataforma — o gestor da própria arena
+ * inclusive. Como o admin testava com a conta de admin, ninguém viu: a lista
+ * de dias de jogo da Central, a seção da página da arena e o bloqueio
+ * derivado do calendário do atleta falhavam em silêncio para quem de fato
+ * usa. Todo dia de jogo de arena nasce público (`buildArenaGameDayPayload`),
+ * então o filtro não esconde nada; ele só torna a regra provável.
+ *
+ * Duas igualdades não pedem índice composto. Asserções no emulador em
+ * `tests/rules/houseRanking.rules.test.js`.
+ */
 export async function listArenaGameDays(arenaId, { includeArchived = false } = {}) {
   if (!db || !arenaId) return [];
-  // Um `where` só: sem índice composto, como no resto do projeto. A ordenação
-  // por data é feita em memória.
-  const snap = await getDocs(query(collection(db, COL), where('arena_id', '==', arenaId)));
+  // Sem `orderBy`: a ordenação por data é feita em memória, como no resto do
+  // projeto.
+  const snap = await getDocs(query(
+    collection(db, COL),
+    where('arena_id', '==', arenaId),
+    where('visibility', '==', GAME_DAY_VISIBILITY.PUBLIC),
+  ));
   return snap.docs
     .map((d) => ({ id: d.id, ...d.data() }))
     .filter((g) => includeArchived || g.status !== GAME_DAY_STATUS.ARCHIVED)

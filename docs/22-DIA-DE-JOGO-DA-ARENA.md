@@ -259,6 +259,14 @@ A correção não toca no banco: **um `where` só, ordenação e recorte de data
 memória**, que é o padrão já usado em `listArenaGameDays` (a coleção é pequena
 por arena).
 
+> ⚠️ **Atualização 2026-09-25 (Onda CB)**: `listArenaGameDays` também tinha
+> uma consulta morta — de outro jeito. Filtrando só por `arena_id`, a REGRA de
+> `game_days` (que libera por criador, membro, público ou clube) não era
+> provável para a consulta, e o Firestore a recusava para todo mundo menos o
+> admin da plataforma, o gestor da arena inclusive. Agora ela leva
+> `where('visibility', '==', 'public')` (todo dia de jogo de arena nasce
+> público). Ver `docs/24-MODULOS-DE-ARENA/09-INTEGRACAO-NA-ARENA.md` §15.
+
 ### Não era a única
 
 A mesma varredura achou **mais quatro consultas mortas pelo mesmo motivo**,

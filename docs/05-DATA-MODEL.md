@@ -941,6 +941,17 @@ e sem `queue_removed`. É exatamente esse conjunto que vira o CSV.
     do uid, da arena do prefixo e do admin (não abre documento existente, não
     muda consulta). Ver `docs/24-MODULOS-DE-ARENA/09-INTEGRACAO-NA-ARENA.md` §10.
 **Leagues**: `arena_ladders`, `arena_internal_tournaments`, `arena_matches`.
+  - ⚠️ (2026-09-25, Onda CB) **o torneio interno saiu da tela** — os torneios
+    da casa passaram a ser os torneios da PLATAFORMA com `arena_id`, e o
+    ranking da casa é DERIVADO (`arenas/domain/houseRanking.js`), sem escrita.
+    As duas coleções ficam como estão (nada apagado, regra intacta): o ladder
+    `{arena}_geral` é LIDO como "torneios internos (formato antigo)" e os
+    torneios internos abertos aparecem na Central para a arena cancelar
+    avisando os inscritos. Nenhuma tela nova escreve nelas.
+  - `game_days` por arena (Onda CB): a consulta TEM de levar
+    `visibility == 'public'` junto de `arena_id` — sem isso a regra recusa a
+    lista para todo mundo menos o admin da plataforma. Ver
+    `docs/24-MODULOS-DE-ARENA/09-INTEGRACAO-NA-ARENA.md` §15.
   - `arena_internal_tournaments` (2026-09-24): além da arena, o **próprio
     atleta** atualiza o documento para se inscrever ou sair — só a si mesmo em
     `participants`, só com o torneio `scheduled` e sem `game_day_id`, tocando

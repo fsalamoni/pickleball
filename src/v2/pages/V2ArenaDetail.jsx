@@ -20,7 +20,6 @@ import { BOOKING_STATUS, WEEKDAY_SHORT } from '@/modules/arenas/domain/constants
 import { bookingSlots, sortSlots } from '@/modules/arenas/domain/booking';
 import { useArena, useMyManagedArenas, useArenaCourts } from '@/modules/arenas/hooks/useArenas';
 import { useArenaBookings } from '@/modules/arenas/hooks/useBookings';
-import { useArenaTournaments } from '@/modules/tournament/hooks/useTournament';
 import { useArenaCoaches } from '@/modules/coaches/hooks/useCoaches';
 import V2BookingCalendar from '@/v2/components/arenas/V2BookingCalendar';
 import ArenaGameDaysSection from '@/v2/components/arenas/ArenaGameDaysSection';
@@ -33,8 +32,8 @@ import ArenaNpsAsk from '@/v2/components/arenas/ArenaNpsAsk';
 import ArenaCheckinAsk from '@/v2/components/arenas/ArenaCheckinAsk';
 import ArenaMembershipSection from '@/v2/components/arenas/ArenaMembershipSection';
 import ArenaClassesSection from '@/v2/components/arenas/classes/ArenaClassesSection';
-import ArenaHouseTournamentsSection from '@/v2/components/arenas/tournaments/ArenaHouseTournamentsSection';
-import { TOURNAMENT_STATUS_LABELS } from '@/modules/tournament/domain/constants';
+import HouseTournamentsSection from '@/v2/components/arenas/tournaments/HouseTournamentsSection';
+import HouseRankingTeaser from '@/v2/components/arenas/houseRanking/HouseRankingTeaser';
 import { useArenaModules } from '@/modules/arenas/hooks/useArenaModules';
 import { ARENA_MODULE_ID } from '@/modules/arenas/domain/modules';
 import { formatDateShortBR } from '@/modules/arenas/domain/calendar';
@@ -284,8 +283,13 @@ function V2ArenaDetailContent({ arenaId, user, arena, managed, bookings, isLoadi
       <V2ArenaPaymentSection arena={arena} />
 
       {/* Torneios + Professores residentes (Sprint 4) */}
-      <div id="arena-torneios-da-casa" data-secao-arena="Torneios da casa" className="scroll-mt-4"><ArenaHouseTournamentsGate arena={arena} /></div>
-      <div id="arena-torneios" data-secao-arena="Torneios" className="scroll-mt-4"><ArenaTournamentsSection arenaId={arenaId} /></div>
+      {/* Torneios da casa = torneios da PLATAFORMA sediados aqui (Onda CB). O
+          invólucro mantém a âncora antiga `#arena-torneios-da-casa` viva — o id
+          é contrato de link. */}
+      <div id="arena-torneios-da-casa" className="scroll-mt-4">
+        <div id="arena-torneios" data-secao-arena="Torneios da casa" className="scroll-mt-4"><HouseTournamentsSection arenaId={arenaId} /></div>
+        <div id="arena-ranking-da-casa" data-secao-arena="Ranking da casa" className="scroll-mt-4"><HouseRankingTeaser arenaId={arenaId} /></div>
+      </div>
       <div id="arena-aulas" data-secao-arena="Aulas e professores" className="scroll-mt-4"><ArenaTeachingSection arena={arena} /></div>
       {linkedClubsOn && (
         <div className="mt-6">
@@ -394,51 +398,6 @@ function V2ArenaDetailContent({ arenaId, user, arena, managed, bookings, isLoadi
       {/* Quadras (item 2 — preço e regras completos) */}
       <div id="arena-quadras" data-secao-arena="Quadras" className="scroll-mt-4"><ArenaCourtsSection arenaId={arenaId} /></div>
     </div>
-  );
-}
-
-/** Torneios da casa (módulo `leagues`) — só com o módulo ligado. */
-function ArenaHouseTournamentsGate({ arena }) {
-  const { isOn, isLoading } = useArenaModules(arena.id);
-  if (isLoading || !isOn(ARENA_MODULE_ID.LEAGUES)) return null;
-  return (
-    <div className="mt-6 empty:mt-0">
-      <ArenaHouseTournamentsSection arena={arena} />
-    </div>
-  );
-}
-
-function ArenaTournamentsSection({ arenaId }) {
-  const { data: todos = [], isLoading } = useArenaTournaments(arenaId);
-  // Rascunho e arquivado não são eventos públicos: o organizador ainda não
-  // abriu (ou já tirou do ar).
-  const tournaments = todos.filter((t) => !t.archived && t.status !== 'draft');
-  if (isLoading) return null;
-  if (tournaments.length === 0) return null;
-  return (
-    <V2Surface className="mt-6">
-      <h3 className="flex items-center gap-1.5 font-display text-base font-bold text-ink">
-        <Trophy className="h-4 w-4" /> Torneios desta arena
-      </h3>
-      <div className="mt-3 grid gap-3 sm:grid-cols-2">
-        {tournaments.slice(0, 6).map((t) => (
-          <Link key={t.id} to={`/torneios/${t.id}`} className="block rounded-2xl border border-gray-100 bg-paper p-3 transition-transform hover:scale-[1.02]">
-            <div className="flex items-center gap-2">
-              <Trophy className="h-4 w-4 text-amber-500" />
-              <h4 className="flex-1 text-sm font-bold text-ink line-clamp-1">{t.name}</h4>
-              {/* Era o status CRU do banco ("registrations_open"). */}
-              {t.status && <V2Badge tone="neutral">{TOURNAMENT_STATUS_LABELS[t.status] || 'Torneio'}</V2Badge>}
-            </div>
-            {t.starts_at && (
-              <p className="mt-1 text-xs text-gray-500">
-                {t.starts_at?.toDate?.()?.toLocaleDateString?.('pt-BR') || t.starts_at}
-              </p>
-            )}
-            {t.city && <p className="flex items-center gap-1 text-xs text-gray-400"><MapPin className="h-3 w-3" /> {t.city}{t.state && `, ${t.state}`}</p>}
-          </Link>
-        ))}
-      </div>
-    </V2Surface>
   );
 }
 

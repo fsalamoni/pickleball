@@ -16,7 +16,7 @@
  *     primeira linha.
  */
 import { describe, it, expect } from 'vitest';
-import { ARENA_SECTION_GROUPS, buildArenaSections } from './arenaManageSections.js';
+import { ARENA_SECTION_GROUPS, buildArenaSections, resolveArenaTabAlias } from './arenaManageSections.js';
 
 const BASE = {
   coachResidentOn: true, linkedClubsOn: true, crmOn: true, opsKpisOn: true, arenaModulesOn: true,
@@ -118,20 +118,32 @@ describe('buildArenaSections', () => {
     expect(secs.find((s) => s.id === 'equipe').tabs.map((t) => t.value)).toContain('professores');
   });
 
-  it('⭐ Torneios: da casa e da plataforma numa seção só, depois de Aulas', () => {
+  it('⭐ Torneios: torneios da casa + ranking da casa numa seção só, depois de Aulas', () => {
     const secs = buildArenaSections(TUDO_LIGADO);
     const ids = secs.map((s) => s.id);
     expect(ids.indexOf('torneios')).toBe(ids.indexOf('aulas') + 1);
-    expect(secs.find((s) => s.id === 'torneios').tabs.map((t) => t.value)).toEqual(['torneios', 'torneios-plataforma']);
+    expect(secs.find((s) => s.id === 'torneios').tabs.map((t) => t.value)).toEqual(['torneios', 'ranking-da-casa']);
   });
 
-  it('sem o módulo, mas com torneio da plataforma sediado aqui, a seção aparece só com eles', () => {
-    const secs = buildArenaSections({ ...BASE, modulos: { torneiosPlataforma: true } });
-    expect(secs.find((s) => s.id === 'torneios').tabs.map((t) => t.value)).toEqual(['torneios-plataforma']);
+  it('sem o módulo, mas com torneio sediado aqui, a seção aparece só com os torneios da casa', () => {
+    const torneios = buildArenaSections({ ...BASE, modulos: { torneiosPlataforma: true } }).find((s) => s.id === 'torneios');
+    expect(torneios.tabs.map((t) => t.value)).toEqual(['torneios']);
+    expect(torneios.tabs[0].label).toBe('Torneios da casa');
+  });
+
+  it('com o módulo e sem torneio nenhum, a seção existe — é onde a arena cria o primeiro', () => {
+    const torneios = buildArenaSections({ ...BASE, modulos: { torneios: true } }).find((s) => s.id === 'torneios');
+    expect(torneios.tabs.map((t) => t.value)).toEqual(['torneios', 'ranking-da-casa']);
   });
 
   it('nenhum dos dois: a seção não existe', () => {
     expect(buildArenaSections(BASE).find((s) => s.id === 'torneios')).toBeUndefined();
+  });
+
+  it('o link antigo da aba "Da plataforma" abre os torneios da casa', () => {
+    expect(resolveArenaTabAlias('torneios-plataforma')).toBe('torneios');
+    expect(resolveArenaTabAlias('reservas')).toBe('reservas');
+    expect(resolveArenaTabAlias('')).toBe('');
   });
 
   it('⭐ Operação: seção depois de Pagamentos e loja, com Hoje primeiro', () => {
