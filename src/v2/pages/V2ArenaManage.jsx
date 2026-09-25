@@ -40,6 +40,7 @@ import { useAuth } from '@/core/lib/FirebaseAuthContext';
 import { ImageUpload } from '@/components/ui/image-upload';
 import { PhotoLightbox } from '@/components/ui/photo-lightbox';
 import ArenaModuleShortcuts from '@/v2/components/arenas/ArenaModuleShortcuts';
+import ArenaPendencias from '@/v2/components/arenas/ArenaPendencias';
 import { buildArenaSections } from '@/v2/components/arenas/arenaManageSections';
 import { useArenaModules } from '@/modules/arenas/hooks/useArenaModules';
 import { useArenaTournaments as useArenaPlatformTournaments } from '@/modules/tournament/hooks/useTournament';
@@ -352,6 +353,17 @@ function V2ArenaManageContent({ arenaId, user, isPlatformAdmin, arena, managed, 
           problema que ele não sabe que tem — ele só descobriria quando alguém
           reclamasse de não conseguir reservar. */}
       <ArenaProntidao arena={arena} onIrParaQuadras={() => selectTab('estrutura', 'quadras')} />
+
+      {/* O que está esperando a arena agir, de todos os módulos — cada item
+          leva à aba que resolve. Vem depois da prontidão: aquela diz o que
+          IMPEDE de funcionar; esta, o trabalho do dia. */}
+      <ArenaPendencias
+        arena={arena}
+        onIrParaAba={(aba) => {
+          const secaoDaAba = sections.find((sec) => sec.tabs.some((t) => t.value === aba));
+          if (secaoDaAba) selectTab(secaoDaAba.id, aba);
+        }}
+      />
 
       <div className="mt-6 space-y-3">
         {/* Nível 1: seções principais (temas) */}

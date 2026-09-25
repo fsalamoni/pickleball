@@ -299,6 +299,7 @@ Estes princípios vieram de bugs reais que custaram horas pra arrumar. São ineg
 **"Consulta numa coleção de leitura restrita volta vazia (ou dá permission-denied)"** → a consulta tem de filtrar pelo campo que a REGRA confere: o Firestore só aceita a consulta se conseguir provar a regra para TUDO o que ela pode devolver. A arena lê por `arena_id` (a regra faz `isArenaManager(resource.data.arena_id)`), o dono por `user_id`, o professor da aula por `coach_id`. Filtrar só por `class_id`/`slot_id`/`sale_id` é recusado SEMPRE — era o caso da lista de alunos da aula (a arena nunca a viu). Várias igualdades juntas não pedem índice composto
 **"Onde o atleta/professor vê as aulas das arenas?"** → `/minhas-aulas` (`MyArenaEnrollments`: matrículas de todas as arenas) e `/aulas` (`MyTaughtArenaClasses`: aparece até para quem não tem perfil de professor da plataforma). Na página da arena, "Aulas e professores" (`ArenaClassesSection`), no lugar de "Professores parceiros" quando o módulo está ligado
 **"Vou mexer em torneio da casa (interno) da arena"** → com o módulo `leagues`, **Torneios** é seção da Central (*Da casa* · *Da plataforma*); o corpo é `ArenaLeaguesPanel` (`v2/components/arenas/tournaments/`), o MESMO da página `/arenas/:id/torneios`. O ciclo é publicar → inscrição → Começar (vira dia de jogo) → **Encerrar e pontuar** (`FinishTournamentDialog`: pódio do ranking do dia via `tournamentStandings`, pontos mostrados ANTES de confirmar). A INSCRIÇÃO é escrita do próprio atleta no documento do torneio — a regra deixa só entrar/sair A SI MESMO (antes recusava toda inscrição); não afrouxe. Encerrar confere o status NO BANCO (encerrar duas vezes somaria pontos duas vezes). Os torneios da casa usam `useArenaInternalTournaments` + `arenaKeys.torneiosDaCasa` — **não** `useArenaTournaments` de `tournament/hooks`, que são os da PLATAFORMA (outra coleção)
+**"Vou criar algo que espera a ARENA agir (uma nova pendência)"** → entre em `arenaPendingItems` (`arenas/domain/arenaPending.js`), com a MESMA conta da aba que resolve, e ele aparece na faixa **"Precisa de você"** do topo da Central (`ArenaPendencias`), levando à aba. Fonte que não carregou ou falhou é `undefined` e o item some — **nunca** zero. Ver `docs/24-MODULOS-DE-ARENA/09-INTEGRACAO-NA-ARENA.md` §13
 **"Vou acrescentar uma seção à página PÚBLICA da arena"** → envolva-a em `<div id="arena-…" data-secao-arena="Rótulo" className="scroll-mt-4">`: é assim que ela entra no índice **"Nesta página"** (`ArenaPageIndex`), que lê o DOM e só lista seção com conteúdo (módulo desligado não vira atalho). O id é contrato de link (`/arenas/:id#arena-planos` rola até a seção): **nunca** renomeie. Ver `docs/24-MODULOS-DE-ARENA/09-INTEGRACAO-NA-ARENA.md` §12
 **"Criei uma tela nova de módulo de arena. Como alguém chega nela?"** → `<ArenaModuleShortcuts arenaId audience="manage"|"public" />`. Ele lê `manage`/`public` do catálogo e cruza com o que a arena ligou — rota preenchida vira botão sozinho, nos dois lugares (página da arena e Central). **Não escreva o link à mão**: o console de marketing existia, tinha rota, e nada na plataforma levava até ele — módulo ligado, tela inalcançável. Destinos repetidos viram um botão só. **Desde a I-8 (Onda BO) TODO módulo com tela é `native`** (aba na Central, seção na página pública) e o componente não mostra nada: ele é a rede de segurança para o módulo NOVO. O caminho certo para um módulo novo é integrá-lo (aba em `buildArenaSections`, painel exportado da página, rota antiga virando `<Navigate>`, `native: true`) — `ArenaModuleShortcuts.test.js` reprova módulo com tela que não esteja marcado
 **"Mudei/removi uma rota de tela de módulo de arena"** → o CATÁLOGO promete aquele caminho (`manage`/`public`) e `ArenaModuleShortcuts` monta o botão a partir dele — caminho com erro de digitação **não dá erro**, dá um botão bonito que leva a uma tela em branco, no celular do cliente, na frente da recepção. `src/core/guards/rotasDeModulos.test.js` lê `V2App.jsx` e reprova quem quebrar o par (e exige `:arenaId`, que é o nome que `arenaModuleRoute` troca)
@@ -500,6 +501,14 @@ chore(deps): bump firebase to 12.x
 > memory topic `picklerush-sync-2026-08.md`.
 >
 > **Destaques por onda**:
+>
+> - **Onda BU — "Precisa de você" no topo da Central** (2026-09-25): cada
+>   pendência morava na sua aba (reserva para confirmar, pedido do app para
+>   entregar, falta para marcar, mensalidade atrasada) e quem abria a Central
+>   não sabia por onde começar. Agora uma faixa no topo junta tudo, cada item
+>   levando à aba que resolve, com as MESMAS contas das abas. Consulta que
+>   falhou não vira zero, e a faixa não diz "tudo em dia". Só leitura, das
+>   mesmas consultas das abas. **Banco: zero.**
 >
 > - **Onda BT — "Nesta página": o índice da página da arena** (2026-09-25): a
 >   integração trouxe os módulos para dentro da página da arena, e ela ficou
@@ -2015,7 +2024,7 @@ chore(deps): bump firebase to 12.x
 
 | Métrica | Valor | Delta do início do agente |
 |---|---|---|
-| **Testes Vitest** | **5558 passing** (336 arquivos) + 317 asserções de regras do Firestore no emulador (+ 17 do Storage) | +5150 (era 408) |
+| **Testes Vitest** | **5569 passing** (338 arquivos) + 317 asserções de regras do Firestore no emulador (+ 17 do Storage) | +5161 (era 408) |
 | **Lint errors** | 0 | era 30+ |
 | **Módulos** | 21 (+`help` — conteúdo dos tutoriais em tela) (`games` e `legal` saíram como `src/modules/` mas continuam como pastas oficiais — **rating virou módulo oficial** com domain/services/hooks/components) | +4 (coaches, circuits, games, legal) |
 | **V2 pages** | 82 (+V2GameDayTelao — telão, fora do V2Layout; +V2Help — central de ajuda; +V2ArenaKiosk — totem da recepção, também fora do V2Layout; +V2ArenaCheckin; +V2ArenaAttendance) | +58 |

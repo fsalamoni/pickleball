@@ -490,6 +490,7 @@ const ARENA = {
           'RESERVAS (ADMIN) — criar e ajustar reservas você mesmo, inclusive para quem ligou por telefone.',
           'CLIENTES — quem já reservou na sua arena.',
         ),
+        tip('No topo da Central, "Precisa de você" junta o que está esperando a arena agir — reservas para confirmar, pedidos do app para entregar, faltas para marcar e mensalidades em atraso. Toque num item para ir direto à aba que resolve.'),
         warn('Pedido sem resposta trava o horário na cabeça do cliente e não trava na sua agenda. Responder rápido é o que evita conflito de horário.'),
       ],
     },

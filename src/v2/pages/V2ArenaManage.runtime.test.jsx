@@ -56,6 +56,9 @@ vi.mock('@/modules/arenas/hooks/useArenaModules', () => ({
 vi.mock('@/modules/arenas/hooks/useArenaV3', () => ({
   useArenaMembers: () => ({ data: estado.membros }),
   useAddArenaMember: () => ({ mutateAsync: incluir, isPending: false }),
+  // A faixa "Precisa de você" lê vendas e mensalidades (testada à parte).
+  useArenaSales: () => ({ data: [], isSuccess: true }),
+  useArenaSubscriptions: () => ({ data: [], isSuccess: true }),
 }));
 vi.mock('@/v2/pages/V2ArenaAdminMembers', () => ({
   default: () => null,

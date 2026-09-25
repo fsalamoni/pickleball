@@ -709,3 +709,30 @@ em `ArenaPageIndex.runtime.test.jsx`.
 isso ela funciona, mas não entra no índice.
 
 Zero banco.
+
+## 13. "Precisa de você" — o topo da Central (Onda BU, 2026-09-25)
+
+Com os módulos dentro da Central, cada pendência passou a morar na sua aba:
+reserva para confirmar em Reservas, pedido do app para entregar em Pedidos,
+falta para marcar em Presença, mensalidade atrasada em Membros. Quem abre a
+Central de manhã não sabe por onde começar, e o que não está na aba aberta
+espera até alguém lembrar.
+
+Agora a Central tem, logo abaixo da prontidão, uma faixa **"Precisa de você"**
+(`v2/components/arenas/ArenaPendencias.jsx`), e cada item leva à aba que
+resolve:
+
+- **As mesmas contas das abas** (`arenas/domain/arenaPending.js`): pedido a
+  entregar é o de `counterSummary`, falta a marcar é a de `noShowCandidates`,
+  mensalidade atrasada é a de `subscriptionState`. A faixa não pode dizer 3 e a
+  aba mostrar 5. Reserva só conta enquanto ainda dá para confirmar: tem horário
+  de hoje em diante e está `requested` (a negociação espera o atleta).
+- **Consulta que falhou não vira zero**: o item some. Pela mesma razão a faixa
+  não diz "tudo em dia", porque só sabe o que carregou.
+- **Módulo desligado**: nem o item, nem a consulta.
+- **Não é alarme**: o âmbar fica com a prontidão, que é o que impede a arena de
+  receber reserva. Pendência do dia é trabalho de rotina.
+- **Só leitura**, e das mesmas consultas das abas (mesma chave de cache):
+  abrir a aba depois não busca de novo.
+
+A ajuda ("Receber e gerenciar reservas") ganhou a dica. Zero banco.
