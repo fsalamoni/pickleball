@@ -121,3 +121,58 @@ describe('cidades com banner e o texto da região', () => {
     expect(regionLabel({ mode: 'cidade', city: 'Porto Alegre', state: 'RS' })).toBe('em Porto Alegre (RS)');
   });
 });
+
+describe('Onda CC — banners de CAMPANHA no mesmo carrossel', () => {
+  const banner = { source: 'design', template_id: 'destaque', design: { layout: 'destaque', title: 'Oi', bg: '#0b0b0c', fg: '#ffffff', accent: '#d4f631' } };
+  const camp = (over) => ({
+    id: over.id, arena_id: over.arena_id, name: over.id, banner, show_home: true,
+    banner_active: true, banner_until: '2026-10-01', ...over,
+  });
+  const CAMPANHAS = [
+    camp({ id: 'k1', arena_id: 'poa1' }),
+    camp({ id: 'k2', arena_id: 'sp' }),
+    camp({ id: 'pausada', arena_id: 'poa1', banner_active: false }),
+    camp({ id: 'acabou', arena_id: 'poa1', banner_until: '2026-09-24' }),
+    camp({ id: 'soarena', arena_id: 'poa1', show_home: false }),
+    camp({ id: 'semarte', arena_id: 'poa1', banner: null }),
+    camp({ id: 'orfa', arena_id: 'sumiu' }),
+  ];
+
+  it('sem `campaigns`, a saída é a de antes (só cupons)', () => {
+    expect(eligibleBanners(dados()).every((b) => !b.campaign)).toBe(true);
+  });
+
+  it('entra só a campanha no ar, marcada para a tela inicial, com arte e arena existente', () => {
+    const ids = eligibleBanners(dados({ campaigns: CAMPANHAS })).filter((b) => b.campaign).map((b) => b.id).sort();
+    expect(ids).toEqual(['campanha:k1', 'campanha:k2']);
+  });
+
+  it('o último dia ainda vale (banner_until = hoje)', () => {
+    const hoje = camp({ id: 'hoje', arena_id: 'poa1', banner_until: '2026-09-25' });
+    const ids = eligibleBanners(dados({ campaigns: [hoje] })).map((b) => b.id);
+    expect(ids).toContain('campanha:hoje');
+  });
+
+  it('o módulo de campanhas desligado na arena tira a campanha — e não mexe nos cupons', () => {
+    const lista = eligibleBanners(dados({ campaigns: CAMPANHAS, isCampaignOnIn: (id) => id !== 'sp' }));
+    expect(lista.map((b) => b.id)).not.toContain('campanha:k2');
+    expect(lista.map((b) => b.id)).toContain('c4');
+  });
+
+  it('obedece ao filtro de região, como o cupom', () => {
+    const r = resolveBannerRegion(null, { city: 'São Paulo', state: 'SP' });
+    const ids = homeBanners(dados({ campaigns: CAMPANHAS }), r).map((b) => b.id).sort();
+    expect(ids).toEqual(['c4', 'campanha:k2']);
+  });
+
+  it('conta na lista de cidades do seletor', () => {
+    const sp = bannerCities(dados({ campaigns: CAMPANHAS })).find((c) => c.city === 'São Paulo');
+    expect(sp.count).toBe(2);
+  });
+
+  it('vence no fim do dia de `banner_until` — e entra na ordem por vencimento', () => {
+    const b = eligibleBanners(dados({ campaigns: CAMPANHAS })).find((x) => x.id === 'campanha:k1');
+    expect(b.expiresAt).toBe(new Date('2026-10-01T23:59:59').getTime());
+    expect(b.arenaName).toBe('Arena Sol');
+  });
+});

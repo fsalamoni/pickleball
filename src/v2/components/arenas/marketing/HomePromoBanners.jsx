@@ -20,6 +20,13 @@
  *
  * Falha ao carregar não vira "não há promoções": a seção simplesmente não
  * aparece — ela é convite, não informação que alguém precise para agir.
+ *
+ * Onda CC: os BANNERS DE CAMPANHA que a arena marcou para a tela inicial
+ * entram no mesmo carrossel e no mesmo filtro de região, desenhados com a
+ * arte da campanha (`CampaignBanner`) e levando ao destino que ela escolheu.
+ * Cada fonte falha sozinha: se as campanhas não carregarem, os cupons
+ * aparecem (e vice-versa) — mas a frase "não divulgaram promoção" só é dita
+ * com as DUAS fontes carregadas, porque com uma faltando ela pode ser mentira.
  */
 import React, { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import { Link } from 'react-router-dom';
@@ -28,6 +35,7 @@ import { ChevronLeft, ChevronRight, MapPin, Pause, Play, Tag } from 'lucide-reac
 import { useAuth } from '@/core/lib/FirebaseAuthContext';
 import { readViewPreference, writeViewPreference } from '@/core/lib/viewPreference';
 import { useHomeBannerCoupons } from '@/modules/arenas/hooks/useArenaV3';
+import { useHomeCampaignBanners } from '@/modules/arenas/hooks/useCampaignBanners';
 import { useModuleOnInArenas } from '@/modules/arenas/hooks/useArenaModules';
 import { arenaQueries } from '@/modules/arenas/hooks/arenaQueries';
 import { ARENA_MODULE_ID } from '@/modules/arenas/domain/modules';
@@ -36,6 +44,7 @@ import {
 } from '@/modules/arenas/domain/homeBanners';
 import { brandingOf } from '@/modules/arenas/domain/whiteLabel';
 import { cn } from '@/core/lib/utils';
+import CampaignBanner from './campaigns/CampaignBanner';
 
 const PREF = 'home:promocoes:regiao';
 const INTERVALO_MS = 7000;
@@ -78,7 +87,32 @@ function SeletorDeRegiao({ region, cidades, profile, onChange }) {
   );
 }
 
+/**
+ * O banner de CAMPANHA no carrossel: a arte da arena, clicável inteira, e a
+ * arena numa legenda embaixo. A legenda não é enfeite: nem todo desenho mostra
+ * o nome da arena (o Chamado não mostra, a imagem enviada não tem como), e na
+ * tela inicial quem olha precisa saber DE QUE arena é antes de tocar.
+ */
+function BannerDeCampanha({ banner, posicao, total }) {
+  return (
+    <div
+      role="group"
+      aria-roledescription="destaque"
+      aria-label={`${posicao} de ${total}: ${banner.campaign.name || 'Campanha'} — ${banner.arenaName}`}
+      className="flex w-[88%] shrink-0 snap-start flex-col gap-1.5 sm:w-[62%] lg:w-[46%]"
+    >
+      <CampaignBanner campaign={banner.campaign} ratio="phone" arenaInArt={false}
+        arenaName={`${banner.arenaName}${banner.city ? ` · ${banner.city}` : ''}`} />
+      <p className="flex items-center gap-1 px-1 text-xs font-semibold text-gray-500">
+        <MapPin className="h-3.5 w-3.5 shrink-0" aria-hidden />
+        <span className="truncate">{banner.arenaName}{banner.city ? ` · ${banner.city}` : ''}</span>
+      </p>
+    </div>
+  );
+}
+
 function Banner({ banner, posicao, total }) {
+  if (banner.campaign) return <BannerDeCampanha banner={banner} posicao={posicao} total={total} />;
   const marca = brandingOf(banner.arena);
   const estilo = marca.on
     ? { backgroundColor: marca.color, color: marca.ink }
@@ -128,12 +162,20 @@ export default function HomePromoBanners() {
   const { user, userProfile } = useAuth();
   const uid = user?.uid || null;
   const cupons = useHomeBannerCoupons();
+  const campanhas = useHomeCampaignBanners();
   const listaCupons = useMemo(() => (Array.isArray(cupons.data) ? cupons.data : []), [cupons.data]);
-  const arenaIds = useMemo(() => [...new Set(listaCupons.map((c) => c.arena_id).filter(Boolean))].sort(), [listaCupons]);
+  const listaCampanhas = useMemo(() => (Array.isArray(campanhas.data) ? campanhas.data : []), [campanhas.data]);
+  const arenaIds = useMemo(() => [...new Set(
+    [...listaCupons, ...listaCampanhas].map((c) => c.arena_id).filter(Boolean),
+  )].sort(), [listaCupons, listaCampanhas]);
   // Só as arenas que têm banner — com a MESMA chave de cache da página da arena.
   const arenasQ = useQueries({ queries: arenaIds.map((id) => ({ ...arenaQueries.arena(id), staleTime: 5 * 60_000 })) });
   const arenas = useMemo(() => arenasQ.map((q) => q.data).filter(Boolean), [arenasQ]);
+  // As três perguntas usam as MESMAS consultas por arena (mesma chave): o
+  // segundo e o terceiro hook não custam leitura nenhuma a mais.
   const cuponsLigados = useModuleOnInArenas(arenaIds, ARENA_MODULE_ID.MARKETING_COUPONS);
+  const marketingLigado = useModuleOnInArenas(arenaIds, ARENA_MODULE_ID.MARKETING);
+  const campanhasLigadas = useModuleOnInArenas(arenaIds, ARENA_MODULE_ID.MARKETING_CAMPAIGNS);
 
   const [pref, setPref] = useState(() => readViewPreference(uid, PREF));
   useEffect(() => { setPref(readViewPreference(uid, PREF)); }, [uid]);
@@ -143,7 +185,13 @@ export default function HomePromoBanners() {
     writeViewPreference(uid, PREF, valor);
   };
 
-  const dados = { coupons: listaCupons, arenas, isOnIn: cuponsLigados.isOnIn };
+  const dados = {
+    coupons: listaCupons,
+    arenas,
+    isOnIn: cuponsLigados.isOnIn,
+    campaigns: listaCampanhas,
+    isCampaignOnIn: (id) => marketingLigado.isOnIn(id) && campanhasLigadas.isOnIn(id),
+  };
   const cidades = bannerCities(dados);
   const banners = homeBanners(dados, region);
 
@@ -181,14 +229,17 @@ export default function HomePromoBanners() {
     if (i !== atual && i >= 0 && i < banners.length) setAtual(i);
   };
 
-  const carregando = cupons.isLoading || arenasQ.some((q) => q.isLoading) || cuponsLigados.isLoading;
-  // Convite, não informação: falhando ou sem banner em lugar nenhum, não aparece.
-  if (cupons.isError || carregando || cidades.length === 0) return null;
+  const carregando = cupons.isLoading || campanhas.isLoading || arenasQ.some((q) => q.isLoading)
+    || cuponsLigados.isLoading || campanhasLigadas.isLoading || marketingLigado.isLoading;
+  const algumaFalhou = cupons.isError || campanhas.isError;
+  // Convite, não informação: as duas falhando ou sem banner em lugar nenhum, não aparece.
+  if ((cupons.isError && campanhas.isError) || carregando || cidades.length === 0) return null;
+  const temCampanha = banners.some((b) => b.campaign);
 
   return (
     <section
       aria-roledescription="carrossel"
-      aria-label="Promoções das arenas"
+      aria-label="Promoções e destaques das arenas"
       className="mb-8"
       onMouseEnter={() => setInteragindo(true)}
       onMouseLeave={() => setInteragindo(false)}
@@ -198,7 +249,7 @@ export default function HomePromoBanners() {
     >
       <div className="mb-3 flex flex-wrap items-center justify-between gap-2">
         <h2 className="flex items-center gap-2 font-display text-lg font-bold text-ink">
-          <Tag className="h-4 w-4" /> Promoções {regionLabel(region.mode === BANNER_REGION.OTHER
+          <Tag className="h-4 w-4" /> {temCampanha ? 'Destaques' : 'Promoções'} {regionLabel(region.mode === BANNER_REGION.OTHER
             ? { ...region, city: cidades.find((c) => c.key === region.key)?.city || region.city }
             : region) || 'das arenas'}
         </h2>
@@ -232,9 +283,17 @@ export default function HomePromoBanners() {
           <Link to="/perfil/editar" className="font-bold text-ink underline">informe a cidade no seu perfil</Link>.
         </p>
       ) : banners.length === 0 ? (
+        // Com uma das fontes falhando, "não divulgaram" pode ser mentira: aí
+        // o carrossel fica vazio sem afirmar nada — só o convite de trocar.
+        algumaFalhou ? (
+          <p className="rounded-2xl border border-dashed border-gray-200 bg-paper p-4 text-sm text-gray-600">
+            Troque a região acima para ver as promoções de outros lugares.
+          </p>
+        ) : (
         <p className="rounded-2xl border border-dashed border-gray-200 bg-paper p-4 text-sm text-gray-600">
           As arenas {regionLabel(region)} não divulgaram promoção agora. Troque a região acima para ver as de outros lugares.
         </p>
+        )
       ) : (
         <>
           <div

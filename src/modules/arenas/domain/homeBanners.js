@@ -30,6 +30,21 @@
  */
 
 import { publicPromos, promoConditions } from './marketing.js';
+import { homeCampaignBanners } from './campaignBanner.js';
+
+/** 'YYYY-MM-DD' local de um instante (ms). */
+function isoLocal(ms) {
+  const d = new Date(ms);
+  const p = (x) => String(x).padStart(2, '0');
+  return `${d.getFullYear()}-${p(d.getMonth() + 1)}-${p(d.getDate())}`;
+}
+
+/** O fim (23:59:59, hora local) de um dia 'YYYY-MM-DD', em ms — ou `null`. */
+function fimDoDia(iso) {
+  if (!/^\d{4}-\d{2}-\d{2}$/.test(String(iso || ''))) return null;
+  const ms = new Date(`${iso}T23:59:59`).getTime();
+  return Number.isFinite(ms) ? ms : null;
+}
 
 export const BANNER_REGION = Object.freeze({
   CITY: 'cidade',
@@ -109,12 +124,24 @@ export function arenaInRegion(arena, region) {
  * Os banners possíveis (antes do filtro de região): cupons marcados para a
  * tela inicial, ainda valendo, de arenas que existem e com o módulo ligado.
  *
- * @param {{ coupons?: object[], arenas?: object[], isOnIn?: (arenaId: string) => boolean, now?: number }} dados
+ * Com `campaigns` (Onda CC), entram também os banners de CAMPANHA marcados
+ * para a tela inicial e no ar — cada um com `campaign` preenchido, que é como
+ * a tela sabe desenhar a arte em vez do cartão do cupom. `isCampaignOnIn`
+ * responde pelo módulo de campanhas de cada arena. Sem `campaigns`, a saída é
+ * exatamente a de antes.
+ *
+ * @param {{
+ *   coupons?: object[], arenas?: object[], isOnIn?: (arenaId: string) => boolean, now?: number,
+ *   campaigns?: object[]|null, isCampaignOnIn?: (arenaId: string) => boolean,
+ * }} dados
  */
-export function eligibleBanners({ coupons = [], arenas = [], isOnIn = () => true, now = Date.now() } = {}) {
+export function eligibleBanners({
+  coupons = [], arenas = [], isOnIn = () => true, now = Date.now(),
+  campaigns = null, isCampaignOnIn = () => true,
+} = {}) {
   const porId = new Map((arenas || []).map((a) => [a.id, a]));
   const marcados = (coupons || []).filter((c) => c?.show_home === true && c?.show_public === true);
-  return publicPromos(marcados, now)
+  const cupons = publicPromos(marcados, now)
     .map((promo) => {
       const arena = porId.get(promo.arena_id);
       if (!arena || !isOnIn(arena.id)) return null;
@@ -134,6 +161,24 @@ export function eligibleBanners({ coupons = [], arenas = [], isOnIn = () => true
       };
     })
     .filter(Boolean);
+  if (!campaigns) return cupons;
+
+  // Onda CC: o BANNER de campanha que a arena marcou para a tela inicial
+  // entra no mesmo carrossel e no mesmo filtro de região. Quem decide se está
+  // no ar é `homeCampaignBanners` (ativo, dentro da data, módulo ligado).
+  const doDia = homeCampaignBanners({
+    campaigns, arenas, isOnIn: isCampaignOnIn, today: isoLocal(now),
+  }).map(({ campaign, arena }) => ({
+    id: `campanha:${campaign.id}`,
+    campaign,
+    arenaId: arena.id,
+    arenaName: arena.name || 'Arena',
+    city: arena.city || '',
+    state: uf(arena.state),
+    expiresAt: fimDoDia(campaign.banner_until),
+    arena,
+  }));
+  return [...cupons, ...doDia];
 }
 
 /**

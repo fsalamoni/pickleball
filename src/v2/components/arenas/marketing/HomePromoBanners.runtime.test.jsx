@@ -10,7 +10,11 @@
  *  4. região sem promoção diz isso e oferece trocar;
  *  5. falhando, ou sem banner em lugar nenhum, a seção não aparece;
  *  6. o carrossel tem pausar, setas e pontos com nome; o banner leva à arena;
- *  7. ⭐ a tela inicial monta os banners (guarda de fonte).
+ *  7. ⭐ a tela inicial monta os banners (guarda de fonte);
+ *  8. ⭐ Onda CC: o banner de CAMPANHA entra no mesmo carrossel e no mesmo
+ *     filtro de região, com a arte e o link para o destino; uma fonte
+ *     falhando não derruba a outra, e com uma delas falhando a tela não
+ *     afirma que "não divulgaram promoção".
  */
 import React from 'react';
 import { createRoot } from 'react-dom/client';
@@ -19,7 +23,9 @@ import { readFileSync } from 'node:fs';
 import { MemoryRouter } from 'react-router-dom';
 import { describe, it, expect, beforeEach, afterEach, vi } from 'vitest';
 
-const estado = { perfil: { city: 'Porto Alegre', state: 'RS' }, cupons: [], erro: false };
+const estado = {
+  perfil: { city: 'Porto Alegre', state: 'RS' }, cupons: [], erro: false, campanhas: [], erroCampanhas: false,
+};
 const ARENAS = {
   poa: { id: 'poa', name: 'Arena Sol', city: 'Porto Alegre', state: 'RS' },
   cax: { id: 'cax', name: 'Arena Serra', city: 'Caxias do Sul', state: 'RS' },
@@ -31,6 +37,11 @@ vi.mock('@/core/lib/FirebaseAuthContext', () => ({
 }));
 vi.mock('@/modules/arenas/hooks/useArenaV3', () => ({
   useHomeBannerCoupons: () => ({ data: estado.erro ? undefined : estado.cupons, isLoading: false, isError: estado.erro }),
+}));
+vi.mock('@/modules/arenas/hooks/useCampaignBanners', () => ({
+  useHomeCampaignBanners: () => ({
+    data: estado.erroCampanhas ? undefined : estado.campanhas, isLoading: false, isError: estado.erroCampanhas,
+  }),
 }));
 vi.mock('@/modules/arenas/hooks/useArenaModules', () => ({
   useModuleOnInArenas: () => ({ isOnIn: () => true, isLoading: false }),
@@ -50,6 +61,8 @@ beforeEach(() => {
   localStorage.clear();
   estado.perfil = { city: 'Porto Alegre', state: 'RS' };
   estado.erro = false;
+  estado.erroCampanhas = false;
+  estado.campanhas = [];
   estado.cupons = [
     cupom('sol10', 'poa', { description: 'Na primeira reserva do mês' }),
     cupom('serra20', 'cax', { value: 20 }),
@@ -135,6 +148,71 @@ describe('promoções na tela inicial', () => {
     expect(container.querySelectorAll('button[aria-label^="Ir para a promoção"]')).toHaveLength(2);
     await act(async () => { container.querySelector('button[aria-label="Pausar a troca automática"]').click(); });
     expect(container.querySelector('button[aria-label="Retomar a troca automática"]')).toBeTruthy();
+  });
+});
+
+const campanha = (id, arena_id, over = {}) => ({
+  id, arena_id, name: `Campanha ${id}`, show_home: true, banner_active: true, banner_until: '2999-12-31',
+  destination: { type: 'booking' },
+  banner: {
+    source: 'design', template_id: 'destaque',
+    design: { layout: 'destaque', title: `Arte ${id}`, bg: '#0b0b0c', fg: '#ffffff', accent: '#d4f631' },
+  },
+  ...over,
+});
+
+describe('⭐ Onda CC — banners de campanha no carrossel', () => {
+  it('entra com a arte, do lado das promoções, e leva ao destino', async () => {
+    estado.campanhas = [campanha('k1', 'poa')];
+    await render();
+    expect(container.textContent).toContain('Destaques em Porto Alegre (RS)');
+    expect(container.textContent).toContain('Arte k1');
+    expect(container.textContent).toContain('10% de desconto');
+    const link = container.querySelector('a[href="/arenas/poa#arena-reservar"]');
+    expect(link).toBeTruthy();
+    expect(link.getAttribute('aria-label')).toContain('Arena Sol');
+    expect(container.querySelectorAll('button[aria-label^="Ir para a promoção"]')).toHaveLength(2);
+  });
+
+  it('obedece à região: a campanha de São Paulo não aparece em Porto Alegre', async () => {
+    estado.campanhas = [campanha('k2', 'sp')];
+    await render();
+    expect(container.textContent).not.toContain('Arte k2');
+    await escolher('todas');
+    expect(container.textContent).toContain('Arte k2');
+  });
+
+  it('pausada ou vencida não entra', async () => {
+    estado.campanhas = [
+      campanha('pausada', 'poa', { banner_active: false }),
+      campanha('venceu', 'poa', { banner_until: '2000-01-01' }),
+    ];
+    await render();
+    expect(container.textContent).not.toContain('Arte pausada');
+    expect(container.textContent).not.toContain('Arte venceu');
+    expect(container.textContent).toContain('Promoções em Porto Alegre (RS)');
+  });
+
+  it('só campanhas (cupons falhando): a campanha aparece', async () => {
+    estado.erro = true;
+    estado.campanhas = [campanha('k1', 'poa')];
+    await render();
+    expect(container.textContent).toContain('Arte k1');
+  });
+
+  it('⭐ com uma fonte falhando, a região vazia NÃO afirma que não há promoção', async () => {
+    estado.erroCampanhas = true;
+    estado.perfil = { city: 'Pelotas', state: 'RS' };
+    await render();
+    expect(container.textContent).not.toMatch(/não divulgaram promoção/);
+    expect(container.textContent).toContain('Troque a região acima');
+  });
+
+  it('as duas fontes falhando: a seção não aparece', async () => {
+    estado.erro = true;
+    estado.erroCampanhas = true;
+    await render();
+    expect(container.innerHTML).toBe('');
   });
 });
 

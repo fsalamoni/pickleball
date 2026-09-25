@@ -1,4 +1,4 @@
-import React, { useRef, useState } from 'react';
+import React, { Suspense, lazy, useRef, useState } from 'react';
 import { Link, useParams } from 'react-router-dom';
 import {
   ArrowLeft, Building2, Calendar, CalendarPlus, Check, Clock, Copy, Globe, Instagram, Mail, MapPin,
@@ -42,6 +42,11 @@ import ArenaPageIndex from '@/v2/components/arenas/ArenaPageIndex';
 import { isPixConfigured, PIX_KEY_TYPE_LABELS } from '@/modules/arenas/domain/pix_payment';
 import { groupRulesByCategory } from '@/modules/arenas/domain/arena_rules';
 import { V2Badge, V2Button, V2EmptyState, V2Skeleton, V2Surface, V2ErrorState } from '@/v2/ui/primitives';
+
+
+// O banner de campanha (desenho, modelos, especificação) pesa ~25 kB: vem sob
+// demanda, e só a arena com campanha no ar paga por ele (Onda CC).
+const ArenaCampaignsSection = lazy(() => import('@/v2/components/arenas/marketing/campaigns/ArenaCampaignsSection'));
 
 function arenaPhotoUrl(photo) {
   return typeof photo === 'string' ? photo : photo?.url;
@@ -232,6 +237,12 @@ function V2ArenaDetailContent({ arenaId, user, arena, managed, bookings, isLoadi
       <div className="mt-6 empty:mt-0">
         <ArenaNpsAsk arenaId={arenaId} arenaName={arena.name} />
       </div>
+
+      {/* "Em destaque": os banners de campanha que a arena pôs no ar (Onda CC).
+          Depois das duas perguntas pessoais (chegada e "como foi?"), que somem
+          quase sempre, e antes de tudo o mais — é o espaço da arena falar
+          primeiro. Some sem banner no ar. */}
+      <div id="arena-campanhas" data-secao-arena="Em destaque" className="scroll-mt-4"><Suspense fallback={null}><ArenaCampaignsSection arena={arena} /></Suspense></div>
 
       {/* Dia de jogo da arena vem ANTES do calendário de reservas: quem chega
           na página e encontra uma rodada marcada para o dia seguinte tem uma

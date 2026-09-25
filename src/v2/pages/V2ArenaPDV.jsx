@@ -22,8 +22,8 @@
  */
 
 import React, { useMemo, useState } from 'react';
-import { Link, Navigate, useParams } from 'react-router-dom';
-import { ArrowLeft, ArrowRight, ShoppingBag, Store } from 'lucide-react';
+import { Link, Navigate, useParams, useSearchParams } from 'react-router-dom';
+import { ArrowLeft, ArrowRight, ShoppingBag, Sparkles, Store } from 'lucide-react';
 import { useAuth } from '@/core/lib/FirebaseAuthContext';
 import { useArena, useMyManagedArenas } from '@/modules/arenas/hooks/useArenas';
 import { useShopProducts, useMySales, useMyPayments } from '@/modules/arenas/hooks/useArenaV3';
@@ -78,6 +78,10 @@ export default function V2ArenaPDV() {
   const { data: managed = [] } = useMyManagedArenas();
   const { isOn, isLoading: modulosCarregando } = useArenaModules(arenaId);
   const produtosQ = useShopProducts(arenaId);
+  // `?produto=` — quem chega pelo banner de uma campanha (Onda CC) vê o
+  // produto dela primeiro, em destaque, sem ter de procurar no catálogo.
+  const [params] = useSearchParams();
+  const produtoDaCampanha = params.get('produto') || '';
 
   const [carrinho, setCarrinho] = useState({});
 
@@ -87,6 +91,11 @@ export default function V2ArenaPDV() {
     produtos.forEach((p) => m.set(p.category, [...(m.get(p.category) || []), p]));
     return [...m.entries()].sort(([a], [b]) => a.localeCompare(b, 'pt-BR'));
   }, [produtos]);
+
+  const destaque = useMemo(
+    () => (produtoDaCampanha ? produtos.find((p) => p.id === produtoDaCampanha) || null : null),
+    [produtos, produtoDaCampanha],
+  );
 
   const podeGerir = arena?.owner_id === user?.uid
     || managed.some((m) => m.id === arena?.id)
@@ -142,6 +151,23 @@ export default function V2ArenaPDV() {
       )}
 
       <MinhasCompras arena={arena} temPix={temPix} />
+
+      {destaque && (
+        <V2Surface className="mb-4 ring-2 ring-acid">
+          <h2 className="mb-3 flex items-center gap-2 font-display text-lg font-bold text-ink">
+            <Sparkles className="h-5 w-5" /> Em destaque
+          </h2>
+          <div className="sm:max-w-[calc(50%-0.375rem)]">
+            <ShopProductCard product={destaque}
+              quantidade={carrinho[destaque.id]?.quantity || 0} onAdd={add} onRemove={remove} />
+          </div>
+        </V2Surface>
+      )}
+      {produtoDaCampanha && produtosQ.isSuccess && !destaque && (
+        <p className="mb-4 rounded-2xl bg-amber-50 px-4 py-3 text-sm text-amber-800">
+          O produto da campanha saiu da loja do app. Veja abaixo o que a arena vende agora.
+        </p>
+      )}
 
       <V2Surface className="mb-4">
         <h2 className="mb-4 flex items-center gap-2 font-display text-lg font-bold text-ink">
