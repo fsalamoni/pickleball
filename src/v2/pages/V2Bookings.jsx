@@ -27,6 +27,7 @@ import {
 import V2BookingRow from '@/v2/components/arenas/V2BookingRow';
 import MyOpenMatches from '@/v2/components/arenas/openMatch/MyOpenMatches';
 import MyShopPurchases from '@/v2/components/arenas/shop/MyShopPurchases';
+import MyArenaPlans from '@/v2/components/arenas/members/MyArenaPlans';
 
 const ACTIVE = new Set([BOOKING_STATUS.REQUESTED, BOOKING_STATUS.NEGOTIATING, BOOKING_STATUS.CONFIRMED]);
 
@@ -121,6 +122,10 @@ export default function V2Bookings() {
       {/* Compras nas lojas das arenas: o que retirar e a parte de conta que
           dividiram comigo — de todas as arenas, num lugar só. */}
       <MyShopPurchases />
+
+      {/* Horas de pacote, saldo e mensalidade de cada arena — é olhando isso
+          que se decide onde reservar. */}
+      <MyArenaPlans />
 
       {isLoading ? (
         <V2Skeleton className="h-48 rounded-4xl" />

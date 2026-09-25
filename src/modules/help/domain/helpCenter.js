@@ -267,6 +267,27 @@ const ATLETA = {
       ],
     },
     {
+      id: 'planos-arena',
+      title: 'Pacote de horas, saldo e mensalidade numa arena',
+      summary: 'Comprar horas adiantado, onde conferir o que você tem, e quando é abatido.',
+      keywords: ['pacote', 'horas', 'plano', 'membro', 'saldo', 'carteira', 'mensalidade', 'nível', 'desconto'],
+      blocks: [
+        p('Arenas com o programa de membros ligado mostram "Planos e vantagens" na página delas, logo depois dos preços. Ali você vê o seu nível, as horas de pacote que restam, o saldo e a mensalidade.'),
+        steps(
+          'Na página da arena, em "Planos e vantagens", toque em "Quero este pacote".',
+          'A arena recebe o pedido. Quando ela receber o pagamento, as horas entram na sua carteira daquela arena.',
+          'Nas próximas reservas, as horas são abatidas sozinhas do valor — você vê o abatimento no pedido.',
+        ),
+        list(
+          'ONDE CONFERIR — "Minhas reservas → Planos e saldo nas arenas" junta o que você tem em cada arena, e quando o primeiro pacote vence.',
+          'QUAL PACOTE SAI PRIMEIRO — o que vence antes. Assim nenhum pacote expira com horas sobrando enquanto outro é gasto.',
+          'SALDO — crédito na carteira da arena (de indicação, por exemplo) também é abatido da reserva, depois das horas e dos descontos.',
+        ),
+        link('/minhas-reservas', 'Meus planos e saldo'),
+        warn('As horas só saem da carteira quando a arena CONFIRMA a reserva. Pedido recusado não gasta nada.'),
+      ],
+    },
+    {
       id: 'dia-de-jogo',
       title: 'Participar de um dia de jogo',
       summary: 'Como funciona do lado de quem joga.',
@@ -941,7 +962,7 @@ export const HELP_ROUTE_HINTS = Object.freeze([
   { pattern: '/arenas/*/gerir', label: 'gerenciar a arena',
     refs: [[HELP_SECTION.ARENA, 'gerir-reservas'], [HELP_SECTION.ARENA, 'precos-regras'], [HELP_SECTION.ARENA, 'desempenho-arena'], [HELP_SECTION.ARENA, 'loja-pdv'], [HELP_SECTION.ARENA, 'marketing-arena']] },
   { pattern: '/minhas-reservas', label: 'suas reservas',
-    refs: [[HELP_SECTION.ATHLETE, 'reservas-aulas'], [HELP_SECTION.ATHLETE, 'jogo-aberto-arena'], [HELP_SECTION.ATHLETE, 'loja-arena']] },
+    refs: [[HELP_SECTION.ATHLETE, 'reservas-aulas'], [HELP_SECTION.ATHLETE, 'jogo-aberto-arena'], [HELP_SECTION.ATHLETE, 'loja-arena'], [HELP_SECTION.ATHLETE, 'planos-arena']] },
   { pattern: '/arenas', label: 'arenas',
     refs: [[HELP_SECTION.ATHLETE, 'reservas-aulas'], [HELP_SECTION.ARENA, 'criar-arena']] },
 
