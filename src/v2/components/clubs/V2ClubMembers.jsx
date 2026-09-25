@@ -78,8 +78,12 @@ export default function V2ClubMembers({ clubId, isAdmin }) {
             {isAdmin && !isSelf && (
               <DropdownMenu>
                 <DropdownMenuTrigger asChild>
-                  <button className="flex h-9 w-9 shrink-0 items-center justify-center rounded-full text-gray-400 transition-colors hover:bg-paper hover:text-ink">
-                    <MoreVertical className="h-4 w-4" />
+                  <button
+                    type="button"
+                    aria-label={`Ações para ${member.user_name || 'este membro'}`}
+                    className="flex h-9 w-9 shrink-0 items-center justify-center rounded-full text-gray-400 transition-colors hover:bg-paper hover:text-ink"
+                  >
+                    <MoreVertical className="h-4 w-4" aria-hidden="true" />
                   </button>
                 </DropdownMenuTrigger>
                 <DropdownMenuContent align="end">

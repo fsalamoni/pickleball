@@ -251,4 +251,8 @@ tempo.
   confirmar". O texto sai de `promotionWindowLabel`, a partir da mesma
   constante que o servidor usa.
 
+De quebra, na mesma onda: os dois últimos botões só-ícone sem nome acessível
+(adicionar admin da arena, ações do membro do clube) ganharam `aria-label`, e
+`src/core/guards/botaoSoIcone.test.js` varre as telas da arena e do professor.
+
 Zero banco.

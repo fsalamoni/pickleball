@@ -506,7 +506,10 @@ chore(deps): bump firebase to 12.x
 >   (`waitlistCallDeadline`, lendo o `Timestamp` do servidor), e com o prazo
 >   vencido não oferece o "Confirmar" que o serviço recusaria. Quem está na
 >   fila lê "você tem 1 hora para confirmar", pela mesma constante do
->   servidor. **Banco: zero.**
+>   servidor. De quebra, os dois últimos botões só-ícone sem nome acessível
+>   (adicionar admin da arena, ações do membro do clube) ganharam rótulo, e
+>   um guarda (`botaoSoIcone.test.js`) varre as telas da arena e do
+>   professor. **Banco: zero.**
 >
 > - **Onda BR — "Planos e saldo nas arenas"** (2026-09-25): quem comprou
 >   horas numa arena só sabia quanto restava abrindo a página DAQUELA arena.
@@ -2002,7 +2005,7 @@ chore(deps): bump firebase to 12.x
 
 | Métrica | Valor | Delta do início do agente |
 |---|---|---|
-| **Testes Vitest** | **5538 passing** (334 arquivos) + 317 asserções de regras do Firestore no emulador (+ 17 do Storage) | +5130 (era 408) |
+| **Testes Vitest** | **5540 passing** (335 arquivos) + 317 asserções de regras do Firestore no emulador (+ 17 do Storage) | +5132 (era 408) |
 | **Lint errors** | 0 | era 30+ |
 | **Módulos** | 21 (+`help` — conteúdo dos tutoriais em tela) (`games` e `legal` saíram como `src/modules/` mas continuam como pastas oficiais — **rating virou módulo oficial** com domain/services/hooks/components) | +4 (coaches, circuits, games, legal) |
 | **V2 pages** | 82 (+V2GameDayTelao — telão, fora do V2Layout; +V2Help — central de ajuda; +V2ArenaKiosk — totem da recepção, também fora do V2Layout; +V2ArenaCheckin; +V2ArenaAttendance) | +58 |
