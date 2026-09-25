@@ -160,3 +160,24 @@ describe('sortLessons / partitionLessons', () => {
     expect(history.map((l) => l.id).sort()).toEqual(['b', 'c']);
   });
 });
+
+describe('pedidos de aula que esperam resposta', () => {
+  it('lessonsAwaitingReply pega só os solicitados', async () => {
+    const { lessonsAwaitingReply } = await import('./lesson.js');
+    const r = lessonsAwaitingReply([
+      { id: 'a', status: LESSON_STATUS.REQUESTED }, { id: 'b', status: LESSON_STATUS.CONFIRMED }, null,
+    ]);
+    expect(r.map((l) => l.id)).toEqual(['a']);
+  });
+
+  it('upcomingRepliesFirst põe os pedidos primeiro e mantém a ordem de cada grupo', async () => {
+    const { upcomingRepliesFirst } = await import('./lesson.js');
+    const r = upcomingRepliesFirst([
+      { id: 'amanha', status: LESSON_STATUS.CONFIRMED },
+      { id: 'pedido1', status: LESSON_STATUS.REQUESTED },
+      { id: 'semana', status: LESSON_STATUS.CONFIRMED },
+      { id: 'pedido2', status: LESSON_STATUS.REQUESTED },
+    ]);
+    expect(r.map((l) => l.id)).toEqual(['pedido1', 'pedido2', 'amanha', 'semana']);
+  });
+});

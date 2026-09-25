@@ -24,7 +24,7 @@ import {
 } from '@/modules/coaches/hooks/useLessons';
 import { SLOT_MINUTES_DEFAULT } from '@/modules/coaches/domain/availability';
 import {
-  partitionLessons, availableActions, lessonStatusLabel, lessonStatusTone,
+  partitionLessons, lessonsAwaitingReply, upcomingRepliesFirst, availableActions, lessonStatusLabel, lessonStatusTone,
   lessonFormatLabel, lessonSlots, LESSON_STATUS,
 } from '@/modules/coaches/domain/lesson';
 import CoachStudentsSection from '@/modules/coaches/components/CoachStudentsSection';
@@ -313,6 +313,9 @@ function V2CoachAgendaContent() {
   }, [clinicsOn]);
 
   const { upcoming, history } = useMemo(() => partitionLessons(lessons), [lessons]);
+  // Os pedidos que esperam resposta vêm primeiro: só eles dependem do professor.
+  const proximas = useMemo(() => upcomingRepliesFirst(upcoming), [upcoming]);
+  const aResponder = useMemo(() => lessonsAwaitingReply(upcoming).length, [upcoming]);
 
   if (!isAuthenticated) return <Navigate to="/login" replace />;
   if (coachLoading) return <div className="mx-auto max-w-[900px] p-4"><V2Skeleton lines={6} /></div>;
@@ -414,12 +417,19 @@ function V2CoachAgendaContent() {
         {tab === 'fotos' && <CoachPhotosSection coach={coach} />}
         {tab === 'agenda' && (
           <>
-            <AvailabilityEditor coachId={coachId} />
-            {/* As aulas que ele dá na agenda das ARENAS (módulo de aulas). */}
-            <MyTaughtArenaClasses />
-            {sharedBookingsOn && <CoachCourtBookingsSection coach={coach} />}
+            {/* As próximas aulas vêm PRIMEIRO, com os pedidos que esperam
+                resposta no topo: é o que tem prazo (o aluno está esperando para
+                marcar). Antes elas ficavam no fim da aba, abaixo do editor de
+                disponibilidade — configuração que muda pouco. */}
             <V2Surface>
-              <h2 className="mb-4 font-display text-lg font-bold text-ink">Próximas aulas</h2>
+              <div className="mb-4 flex flex-wrap items-center gap-2">
+                <h2 className="font-display text-lg font-bold text-ink">Próximas aulas</h2>
+                {!lessonsLoading && !aulasFalharam && aResponder > 0 && (
+                  <V2Badge tone="amber">
+                    {aResponder === 1 ? '1 pedido esperando a sua resposta' : `${aResponder} pedidos esperando a sua resposta`}
+                  </V2Badge>
+                )}
+              </div>
               {lessonsLoading ? (
                 <V2Skeleton lines={3} />
               ) : aulasFalharam ? (
@@ -433,10 +443,14 @@ function V2CoachAgendaContent() {
                 <V2EmptyState icon={CalendarDays} title="Nenhuma aula agendada" description="Solicitações de aula dos alunos aparecem aqui para você confirmar." />
               ) : (
                 <div className="space-y-2">
-                  {upcoming.map((l) => <LessonCard key={l.id} lesson={l} onAction={handleAction} isPending={respond.isPending} />)}
+                  {proximas.map((l) => <LessonCard key={l.id} lesson={l} onAction={handleAction} isPending={respond.isPending} />)}
                 </div>
               )}
             </V2Surface>
+            {/* As aulas que ele dá na agenda das ARENAS (módulo de aulas). */}
+            <MyTaughtArenaClasses />
+            <AvailabilityEditor coachId={coachId} />
+            {sharedBookingsOn && <CoachCourtBookingsSection coach={coach} />}
             {history.length > 0 && (
               <V2Surface>
                 <h2 className="mb-4 font-display text-lg font-bold text-ink">Histórico</h2>

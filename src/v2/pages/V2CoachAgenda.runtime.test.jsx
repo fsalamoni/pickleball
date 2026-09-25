@@ -14,17 +14,17 @@ import { act } from 'react';
 import { MemoryRouter } from 'react-router-dom';
 import { describe, it, expect, beforeEach, afterEach, vi } from 'vitest';
 
-const estado = { consulta: null };
+const estado = { consulta: null, coach: null, aulas: [] };
 const salvar = vi.fn(() => Promise.resolve());
 const recarregar = vi.fn();
 
 vi.mock('sonner', () => ({ toast: { success: vi.fn(), error: vi.fn() } }));
-vi.mock('@/core/lib/FirebaseAuthContext', () => ({ useAuth: () => ({ user: { uid: 'c1' } }) }));
-vi.mock('@/modules/coaches/hooks/useCoaches', () => ({ useCoach: () => ({ data: null }) }));
+vi.mock('@/core/lib/FirebaseAuthContext', () => ({ useAuth: () => ({ user: { uid: 'c1' }, isAuthenticated: true }) }));
+vi.mock('@/modules/coaches/hooks/useCoaches', () => ({ useCoach: () => ({ data: estado.coach, isLoading: false }) }));
 vi.mock('@/modules/coaches/hooks/useLessons', () => ({
   useCoachAvailability: () => estado.consulta,
   useSaveAvailability: () => ({ mutateAsync: salvar, isPending: false }),
-  useCoachLessons: () => ({ data: [] }),
+  useCoachLessons: () => ({ data: estado.aulas, isLoading: false, isError: false }),
   useRespondLesson: () => ({ mutateAsync: vi.fn(), isPending: false }),
 }));
 // As seções vizinhas não entram neste teste.
@@ -40,13 +40,15 @@ vi.mock('@/modules/coaches/components/CoachCourtBookingsSection', () => ({ defau
 vi.mock('@/modules/clubs/components/LinkedClubsSection', () => ({ default: Nada }));
 vi.mock('@/modules/coaches/components/CoachProfileSections', () => ({ CoachInfoSection: Nada, CoachPhotosSection: Nada }));
 
-const { AvailabilityEditor } = await import('./V2CoachAgenda.jsx');
+const { AvailabilityEditor, default: V2CoachAgenda } = await import('./V2CoachAgenda.jsx');
 
 const ok = (data) => ({ data, isLoading: false, isError: false, refetch: recarregar });
 
 let container, root;
 beforeEach(() => {
   estado.consulta = ok(null);
+  estado.coach = null;
+  estado.aulas = [];
   salvar.mockClear();
   recarregar.mockClear();
   container = document.createElement('div');
@@ -98,5 +100,40 @@ describe('disponibilidade semanal do professor', () => {
     await render();
     expect(container.textContent).not.toContain('Sem janelas de horário');
     expect(container.querySelector('input[value="Arena X"]')).toBeTruthy();
+  });
+});
+
+describe('⭐ a aba Agenda começa pelo que depende do professor', () => {
+  const futuro = (dias) => {
+    const d = new Date(); d.setDate(d.getDate() + dias);
+    const p = (n) => String(n).padStart(2, '0');
+    return `${d.getFullYear()}-${p(d.getMonth() + 1)}-${p(d.getDate())}`;
+  };
+  const aula = (id, status, dias, nome) => ({
+    id, status, student_name: nome, format: 'private', slots: [{ date: futuro(dias), start: '18:00', end: '19:00' }],
+  });
+
+  async function renderPagina() {
+    await act(async () => { root.render(<MemoryRouter><V2CoachAgenda /></MemoryRouter>); });
+  }
+
+  it('⭐ próximas aulas ANTES da disponibilidade, com os pedidos no topo e o selo de quantos', async () => {
+    estado.coach = { id: 'c1', display_name: 'Prof' };
+    estado.aulas = [
+      aula('l1', 'confirmed', 1, 'Confirmada Amanhã'),
+      aula('l2', 'requested', 10, 'Pedido Longe'),
+    ];
+    await renderPagina();
+    const texto = container.textContent;
+    expect(texto).toContain('1 pedido esperando a sua resposta');
+    expect(texto.indexOf('Próximas aulas')).toBeLessThan(texto.indexOf('Disponibilidade semanal'));
+    expect(texto.indexOf('Pedido Longe')).toBeLessThan(texto.indexOf('Confirmada Amanhã'));
+  });
+
+  it('sem pedido esperando, sem selo', async () => {
+    estado.coach = { id: 'c1', display_name: 'Prof' };
+    estado.aulas = [aula('l1', 'confirmed', 1, 'Confirmada')];
+    await renderPagina();
+    expect(container.textContent).not.toMatch(/esperando a sua resposta/);
   });
 });

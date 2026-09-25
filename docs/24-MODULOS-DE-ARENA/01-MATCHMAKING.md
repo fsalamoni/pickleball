@@ -256,3 +256,20 @@ De quebra, na mesma onda: os dois últimos botões só-ícone sem nome acessíve
 `src/core/guards/botaoSoIcone.test.js` varre as telas da arena e do professor.
 
 Zero banco.
+
+## Atualização 2026-09-25 — a chamada na tela inicial (Onda BV)
+
+A chamada da fila é o item mais urgente que um atleta pode ter (1 hora de
+prazo), e aparecia só na página da arena e em Minhas reservas, lugares aonde a
+pessoa só vai se já sabe que tem algo lá. Agora ela aparece também na **tela
+inicial** (`v2/components/arenas/openMatch/HomeWaitlistCalls.jsx`), com o mesmo
+cartão (prazo, confirmar, não vou poder).
+
+- Só existe quando há chamada, e só busca as vagas das CHAMADAS (quem só está
+  esperando não custa consulta extra).
+- O Dashboard só monta o componente com a chave-mestra `arena_modules`: sem
+  ela não há jogo aberto, e nem a consulta da fila sai.
+- É uma superfície de cortesia: a falha de leitura não afirma nada, não
+  mostra.
+
+Zero banco.

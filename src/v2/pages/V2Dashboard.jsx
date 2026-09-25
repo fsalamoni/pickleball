@@ -27,6 +27,7 @@ import { V2Skeleton, V2StatCard } from '@/v2/ui/primitives';
 import { useFeatureFlag } from '@/core/lib/FeatureFlagsContext';
 import { FEATURE_FLAG } from '@/core/featureFlags';
 import V2ActionHome from '@/v2/components/home/V2ActionHome';
+import HomeWaitlistCalls from '@/v2/components/arenas/openMatch/HomeWaitlistCalls';
 
 const INTEREST_BY_VALUE = Object.fromEntries(PLATFORM_INTEREST_META.map((m) => [m.value, m]));
 // Ações rápidas padrão (quando o usuário não escolheu interesses).
@@ -78,6 +79,9 @@ function formatMatchWhen(ms) {
 export default function V2Dashboard() {
   const { user, userProfile } = useAuth();
   const actionHomeOn = useFeatureFlag(FEATURE_FLAG.ACTION_HOME);
+  // Sem a chave-mestra dos módulos de arena não existe jogo aberto — nem a
+  // consulta da fila sai.
+  const arenaModulesOn = useFeatureFlag(FEATURE_FLAG.ARENA_MODULES);
   const { data: myTournaments = [], isLoading: loadingMine } = useMyTournaments();
   const { data: publicTournaments = [], isLoading: loadingPublic } = usePublicTournaments();
   const { data: ranking = [] } = useNationalRanking();
@@ -146,6 +150,10 @@ export default function V2Dashboard() {
             : 'Acompanhe seus torneios, quadras e a comunidade em um só lugar.'}
         </p>
       </div>
+
+      {/* A chamada da fila tem prazo de 1 hora: vem antes de tudo, onde todo
+          mundo abre o aplicativo. Só aparece quando há chamada. */}
+      {arenaModulesOn && <HomeWaitlistCalls />}
 
       {actionHomeOn && <V2ActionHome />}
 
