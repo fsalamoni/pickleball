@@ -77,3 +77,17 @@ describe('arenaPendingItems', () => {
     expect(r.map((i) => i.id)).toEqual(['reservas', 'pedidos', 'faltas', 'mensalidades']);
   });
 });
+
+describe('indicações das reservas para registrar (Onda BY)', () => {
+  const reserva = (over) => ({ id: Math.random().toString(36), arena_id: 'a1', slots: [], ...over });
+  it('conta a reserva confirmada com código pendente — só com o módulo ligado', () => {
+    const bookings = [
+      reserva({ status: 'confirmed', referral: { code: 'X1234567', status: 'pending' } }),
+      reserva({ status: 'requested', referral: { code: 'X1234567', status: 'pending' } }),
+    ];
+    const com = arenaPendingItems({ bookings }, { indicacoes: true }, { hoje: '2026-09-25' });
+    expect(com.find((i) => i.id === 'indicacoes')).toMatchObject({ count: 1, aba: 'indicacoes', label: 'indicação para registrar' });
+    const sem = arenaPendingItems({ bookings }, {}, { hoje: '2026-09-25' });
+    expect(sem.find((i) => i.id === 'indicacoes')).toBeUndefined();
+  });
+});

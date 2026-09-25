@@ -29,6 +29,7 @@ export default function ArenaPendencias({ arena, onIrParaAba }) {
   const loja = isOn(ARENA_MODULE_ID.PDV);
   const presenca = isOn(ARENA_MODULE_ID.IOT) && isOn(ARENA_MODULE_ID.IOT_QR_KIOSK);
   const mensalidade = isOn(ARENA_MODULE_ID.MEMBERS) && isOn(ARENA_MODULE_ID.MEMBERS_SUBSCRIPTION);
+  const indicacoes = isOn(ARENA_MODULE_ID.MARKETING) && isOn(ARENA_MODULE_ID.MARKETING_REFERRAL);
   // A mesma consulta das abas (mesma chave de cache): abrir a aba depois não
   // busca de novo.
   const reservasQ = useArenaBookings(arenaId);
@@ -42,10 +43,10 @@ export default function ArenaPendencias({ arena, onIrParaAba }) {
   const itens = useMemo(
     () => arenaPendingItems(
       { bookings, sales, subscriptions },
-      { loja, presenca, mensalidade },
+      { loja, presenca, mensalidade, indicacoes },
       { hoje: todayISO(), now: new Date() },
     ),
-    [bookings, sales, subscriptions, loja, presenca, mensalidade],
+    [bookings, sales, subscriptions, loja, presenca, mensalidade, indicacoes],
   );
 
   if (itens.length === 0) return null;

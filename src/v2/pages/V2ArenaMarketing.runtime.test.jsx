@@ -27,6 +27,7 @@ import { act } from 'react';
 import { MemoryRouter, Routes, Route, useLocation } from 'react-router-dom';
 import { describe, it, expect, beforeEach, afterEach, vi } from 'vitest';
 
+const aplicarIndicacao = vi.fn(async () => ({ status: 'aplicada' }));
 const estado = {
   cupons: [],
   cuponsErro: false,
@@ -69,6 +70,7 @@ vi.mock('@/modules/arenas/hooks/useArenaV3', () => ({
   useRedeemVoucher: () => ({ mutateAsync: vi.fn(), isPending: false }),
   useFindArenaCoupon: () => ({ mutateAsync: vi.fn(), isPending: false }),
   useSetCouponUnitCost: () => ({ mutateAsync: vi.fn(), isPending: false }),
+  useApplyBookingReferral: () => ({ mutateAsync: aplicarIndicacao, isPending: false }),
   useArenaCampaigns: () => ({ data: estado.campanhas }),
   useSendCampaign: () => ({ mutateAsync: vi.fn(), isPending: false }),
   useArenaNps: () => ({ data: estado.nps }),
@@ -428,5 +430,37 @@ describe('satisfação', () => {
     estado.nps = { nps: 100, count: 1 };
     await render('satisfacao');
     expect(container.textContent).toMatch(/vieram sem comentário/i);
+  });
+});
+
+/* ===================================== indicações das reservas (BY) === */
+
+describe('⭐ indicações que chegaram com reservas', () => {
+  it('reserva confirmada com código pendente: botão para conferir e registrar', async () => {
+    estado.reservas = [
+      { id: 'b1', status: 'confirmed', athlete_name: 'Bia', slots: [], referral: { code: 'ana1234567', status: 'pending' } },
+      { id: 'b2', status: 'requested', athlete_name: 'Caio', slots: [], referral: { code: 'ana1234567', status: 'pending' } },
+    ];
+    await render('indicacoes');
+    expect(container.textContent).toContain('Indicações que chegaram com reservas');
+    expect(container.textContent).toContain('Bia');
+    expect(container.textContent).toContain('Código ANA1234567');
+    expect(container.textContent).toMatch(/1 pedido de reserva chegou com código de indicação/);
+    await clicar('Conferir e registrar');
+    expect(aplicarIndicacao).toHaveBeenCalledWith({ booking: expect.objectContaining({ id: 'b1' }) });
+  });
+
+  it('sem indicação pendente, o bloco não aparece', async () => {
+    estado.reservas = [{ id: 'b1', status: 'confirmed', slots: [] }];
+    await render('indicacoes');
+    expect(container.textContent).not.toContain('Indicações que chegaram com reservas');
+  });
+
+  it('as regras oferecem o desconto na primeira reserva para quem chega', async () => {
+    estado.cupons = [{ id: 'p1', kind: 'referral', code: 'INDICACAO', active: true, referrer_reward: 30 }];
+    await render('indicacoes');
+    await clicar('Editar regras');
+    expect(container.textContent).toContain('Desconto na primeira reserva (%)');
+    expect(container.textContent).toContain('Desconto na primeira reserva (R$)');
   });
 });

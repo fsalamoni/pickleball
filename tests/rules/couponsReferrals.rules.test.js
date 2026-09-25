@@ -166,3 +166,61 @@ describe('o custo interno do vale é só da arena', () => {
     await assertSucceeds(getDoc(doc(como(ATLETA), 'arena_coupons', 'cupomA')));
   });
 });
+
+/* ---------------------------------------------------------------- */
+/*  A indicação que chega com a reserva (Onda BY)                    */
+/* ---------------------------------------------------------------- */
+
+describe('4. a indicação na reserva: o atleta grava o código; só a arena decide', () => {
+  const reserva = (over = {}) => ({
+    arena_id: ARENA, athlete_id: VITIMA, status: 'requested', slots: [], proposed_price: 100, ...over,
+  });
+  const pendente = { code: 'ATLETA7XQ2', status: 'pending', created_at_ms: 1 };
+
+  beforeEach(async () => {
+    await testEnv.withSecurityRulesDisabled(async (ctx) => {
+      await setDoc(doc(ctx.firestore(), 'arena_bookings', 'b1'), reserva({ referral: pendente }));
+    });
+  });
+
+  it('⭐ o atleta pede a reserva com o código, pendente', async () => {
+    await assertSucceeds(setDoc(doc(como(VITIMA), 'arena_bookings', 'b2'), reserva({ referral: pendente })));
+  });
+
+  it('pedido sem indicação segue como sempre', async () => {
+    await assertSucceeds(setDoc(doc(como(VITIMA), 'arena_bookings', 'b3'), reserva()));
+  });
+
+  it('🔒 NÃO nasce "aplicada", nem com desconto ou prêmio preenchidos', async () => {
+    const ref = (id) => doc(como(VITIMA), 'arena_bookings', id);
+    await assertFails(setDoc(ref('b4'), reserva({ referral: { ...pendente, status: 'aplicada' } })));
+    await assertFails(setDoc(ref('b5'), reserva({ referral: { ...pendente, discount_value: 50 } })));
+    await assertFails(setDoc(ref('b6'), reserva({ referral: { ...pendente, referrer_reward: 99 } })));
+  });
+
+  it('🔒 o atleta NÃO altera a indicação depois do pedido (nem a apaga)', async () => {
+    const ref = doc(como(VITIMA), 'arena_bookings', 'b1');
+    await assertFails(updateDoc(ref, { 'referral.status': 'aplicada' }));
+    await assertFails(updateDoc(ref, { 'referral.discount_value': 30 }));
+    await assertFails(updateDoc(ref, { referral: null }));
+  });
+
+  it('o atleta segue atualizando o resto da reserva (ex.: observação, chegada)', async () => {
+    await assertSucceeds(updateDoc(doc(como(VITIMA), 'arena_bookings', 'b1'), { notes: 'levo bolinhas' }));
+  });
+
+  it('⭐ a arena decide a indicação na confirmação', async () => {
+    await assertSucceeds(updateDoc(doc(como(GESTOR), 'arena_bookings', 'b1'), {
+      status: 'confirmed', agreed_price: 90,
+      'referral.status': 'aplicada', 'referral.discount_value': 10, 'referral.referrer_id': ATLETA,
+    }));
+  });
+
+  it('outra arena não decide', async () => {
+    await assertFails(updateDoc(doc(como(GESTOR_B), 'arena_bookings', 'b1'), { 'referral.status': 'aplicada' }));
+  });
+
+  it('o dono continua podendo apagar a própria reserva (o delete não passa pela trava)', async () => {
+    await assertSucceeds(deleteDoc(doc(como(VITIMA), 'arena_bookings', 'b1')));
+  });
+});

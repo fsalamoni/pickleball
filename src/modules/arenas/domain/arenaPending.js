@@ -23,6 +23,7 @@ import { bookingSlots } from './booking.js';
 import { counterSummary } from './shop.js';
 import { noShowCandidates } from './checkin.js';
 import { SUBSCRIPTION_STATUS, subscriptionState } from './subscription.js';
+import { pendingBookingReferrals } from './marketing.js';
 
 const plural = (n, um, varios) => (n === 1 ? um : varios);
 
@@ -66,6 +67,13 @@ export function arenaPendingItems(fontes = {}, ligados = {}, { hoje, now = new D
     if (n > 0) {
       itens.push({ id: 'faltas', count: n, aba: 'presenca',
         label: plural(n, 'falta para marcar hoje', 'faltas para marcar hoje') });
+    }
+  }
+  if (ligados.indicacoes && Array.isArray(bookings)) {
+    const n = pendingBookingReferrals(bookings).toRegister.length;
+    if (n > 0) {
+      itens.push({ id: 'indicacoes', count: n, aba: 'indicacoes',
+        label: plural(n, 'indicação para registrar', 'indicações para registrar') });
     }
   }
   if (ligados.mensalidade && Array.isArray(subscriptions)) {

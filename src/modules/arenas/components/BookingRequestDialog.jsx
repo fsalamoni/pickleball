@@ -19,14 +19,17 @@ import { BOOKING_KIND, BOOKING_STATUS, WEEKDAY_LABELS } from '../domain/constant
 import { resolveArenaPrice, formatPrice, totalBookingPrice, priceWithDurationText } from '../domain/pricing.js';
 import { memberBookingPrice } from '../domain/memberBenefit.js';
 import { validateCouponCode } from '../services/marketingService.js';
-import { publicPromos } from '../domain/marketing.js';
+import {
+  normalizeReferralCode, publicPromos, referralCodeProblem, referralFriendReward, referralProgram, shouldOfferReferral,
+} from '../domain/marketing.js';
+import BookingReferralField from './BookingReferralField.jsx';
 import { useArenaMember, useArenaWallet, useArenaCoupons } from '../hooks/useArenaV3.js';
 import { useArenaModules } from '../hooks/useArenaModules.js';
 import { ARENA_MODULE_ID } from '../domain/modules.js';
 import { bookingSlots, expandRecurring, isValidSlot, sortSlots, weekdayOf } from '../domain/booking.js';
 import { formatSlotLabel } from '../domain/calendar.js';
 import { pickAvailableCourtForSlots, unavailableCourtsForSlots, availableCourtsForSlots } from '../domain/court_assignment.js';
-import { useArenaBookings, useCreateBooking } from '../hooks/useBookings.js';
+import { useArenaBookings, useCreateBooking, useMyBookings } from '../hooks/useBookings.js';
 import { useArenaCourts, useArenaCourtSchedules } from '../hooks/useArenas.js';
 import { validateBookingRequest, getCourtAvailabilityForDate, checkBookingConflict, BLOCKING_STATUSES } from '../domain/booking_conflict.js';
 import { normalizeTime } from '../domain/court_schedule.js';
@@ -191,10 +194,25 @@ export default function BookingRequestDialog({ arena, open, onOpenChange, court:
   // As PROMOÇÕES que a arena divulga — oferecidas aqui com um toque, para a
   // pessoa não precisar saber o código de cor (nem ter visto a página).
   const cuponsLigados = isOn(ARENA_MODULE_ID.MARKETING_COUPONS);
-  const { data: cuponsDaArena } = useArenaCoupons(cuponsLigados ? arena?.id : null);
+  // A indicação (Onda BY): as regras moram num cupom do tipo indicação, então
+  // a lista de cupons é lida também quando só as indicações estão ligadas.
+  const indicacoesLigadas = isOn(ARENA_MODULE_ID.MARKETING) && isOn(ARENA_MODULE_ID.MARKETING_REFERRAL);
+  const { data: cuponsDaArena } = useArenaCoupons(cuponsLigados || indicacoesLigadas ? arena?.id : null);
   // Só o que entra no PREÇO: um vale (bebida, brinde) divulgado também é
   // promoção, mas é usado na recepção — oferecê-lo aqui daria "não vale".
   const promocoes = useMemo(() => publicPromos(cuponsDaArena || []).filter((p) => p.bookable), [cuponsDaArena]);
+
+  const programaIndicacao = useMemo(
+    () => (indicacoesLigadas ? referralProgram(cuponsDaArena || []) : null),
+    [indicacoesLigadas, cuponsDaArena],
+  );
+  const { data: minhasReservas } = useMyBookings();
+  const ofereceIndicacao = shouldOfferReferral({
+    program: programaIndicacao, myBookings: minhasReservas, arenaId: arena?.id,
+  });
+  const [indicacaoDigitada, setIndicacaoDigitada] = useState('');
+  const problemaIndicacao = referralCodeProblem(indicacaoDigitada, { userId: user?.uid });
+  const codigoIndicacao = ofereceIndicacao && !problemaIndicacao ? normalizeReferralCode(indicacaoDigitada) || null : null;
 
   const conferirCupom = async (codigo = cupomDigitado) => {
     const base = totalDaSelecao?.total || 0;
@@ -405,6 +423,8 @@ export default function BookingRequestDialog({ arena, open, onOpenChange, court:
           // nunca era contado. O serviço reconfere contra o banco — daqui vai
           // só o código.
           coupon_code: cupom?.code || null,
+          // O código de quem indicou: vai pendente, a arena confere ao confirmar.
+          referral_code: codigoIndicacao,
         },
       });
       toast.success(
@@ -962,12 +982,21 @@ export default function BookingRequestDialog({ arena, open, onOpenChange, court:
               <span className="text-ink/70"> · {estimate.label} (por horário; a arena confirma o valor final)</span>
             </div>
           )}
+
+          {modoSelecao && ofereceIndicacao && (
+            <BookingReferralField
+              value={indicacaoDigitada}
+              onChange={setIndicacaoDigitada}
+              problem={problemaIndicacao}
+              friendReward={referralFriendReward(programaIndicacao)}
+            />
+          )}
         </div>
 
         <DialogFooter>
           <Button variant="outline" onClick={() => onOpenChange(false)}>Cancelar</Button>
           {modoSelecao ? (
-            <Button onClick={handleSubmit} disabled={createFromSelection.isPending || celulasEscolhidas.length === 0}>
+            <Button onClick={handleSubmit} disabled={createFromSelection.isPending || celulasEscolhidas.length === 0 || (ofereceIndicacao && Boolean(problemaIndicacao))}>
               {createFromSelection.isPending
                 ? 'Enviando…'
                 : totalReservas > 1 ? `Solicitar ${totalReservas} reservas` : 'Solicitar reserva'}

@@ -533,6 +533,118 @@ export function referralInviteText({ arenaName = 'arena', code = '', program = n
   return `${base}.`;
 }
 
+/* ------------------------------------------------------------------ */
+/*  A indicação NA RESERVA (Onda BY)                                   */
+/* ------------------------------------------------------------------ */
+
+/** O código como a pessoa digitou → como ele é gravado. */
+export function normalizeReferralCode(code) {
+  return String(code || '').trim().toUpperCase().replace(/\s+/g, '');
+}
+
+/**
+ * Por que ESTA pessoa não pode usar este código — a conferência da TELA.
+ * Vazio não é problema (o campo é opcional). A arena confere de novo na
+ * confirmação, contra o banco; aqui só se evita o engano óbvio.
+ * @param {string} code
+ * @param {{ userId?: string|null }} [ctx]
+ * @returns {string|null}
+ */
+export function referralCodeProblem(code, { userId = null } = {}) {
+  const c = normalizeReferralCode(code);
+  if (!c) return null;
+  if (c.length < 6 || c.length > 20 || !/^[A-Z0-9]+$/.test(c)) {
+    return 'Confira o código: são letras e números, como ele aparece para quem indicou.';
+  }
+  if (userId && c.slice(0, 6) === String(userId).slice(0, 6).toUpperCase()) {
+    return 'Esse é o seu próprio código — ele é para quem você indicar.';
+  }
+  return null;
+}
+
+/** Reserva que conta como "já reservou aqui". */
+const RESERVA_QUE_CONTA = new Set(['confirmed', 'completed']);
+
+/**
+ * Esta seria a primeira reserva da pessoa nesta arena? Pedido em aberto,
+ * recusado ou cancelado não conta — ninguém jogou.
+ */
+export function isFirstArenaBooking(myBookings = [], arenaId) {
+  return !(myBookings || []).some((b) => b?.arena_id === arenaId && RESERVA_QUE_CONTA.has(b?.status));
+}
+
+/**
+ * O pedido de reserva oferece o campo "Foi indicado por alguém?"?
+ *
+ * Só com um programa valendo. Se o programa vale só para quem nunca reservou
+ * aqui, só na primeira reserva — e sem saber as reservas da pessoa (consulta
+ * carregando ou falhando), NÃO oferece: prometer um prêmio que a arena vai
+ * recusar é pior do que não oferecer.
+ */
+export function shouldOfferReferral({ program = null, myBookings, arenaId } = {}) {
+  if (!program) return false;
+  if (program.first_booking_only === false) return true;
+  if (!Array.isArray(myBookings)) return false;
+  return isFirstArenaBooking(myBookings, arenaId);
+}
+
+export const BOOKING_REFERRAL_STATUS = Object.freeze({
+  PENDING: 'pending',
+  APPLIED: 'aplicada',
+  REFUSED: 'recusada',
+});
+
+/**
+ * A indicação de uma reserva, em uma linha, para quem olha a reserva.
+ * @param {object|null} referral  `booking.referral`
+ * @param {{ perspective?: 'arena'|'athlete' }} [ctx]
+ * @returns {{ tone: 'amber'|'green'|'red', text: string }|null}
+ */
+export function bookingReferralLine(referral, { perspective = 'athlete' } = {}) {
+  if (!referral?.code) return null;
+  const code = normalizeReferralCode(referral.code);
+  if (referral.status === BOOKING_REFERRAL_STATUS.APPLIED) {
+    const partes = [];
+    const desconto = Number(referral.discount_value) || 0;
+    const credito = Number(referral.referred_reward) || 0;
+    if (desconto > 0) partes.push(`${reais(desconto)} de desconto`);
+    if (credito > 0) partes.push(`${reais(credito)} em crédito`);
+    if (perspective === 'arena' && Number(referral.referrer_reward) > 0) {
+      partes.push(`${reais(referral.referrer_reward)} para quem indicou`);
+    }
+    return { tone: 'green', text: `Indicação registrada (${code})${partes.length ? ` · ${partes.join(' · ')}` : ''}` };
+  }
+  if (referral.status === BOOKING_REFERRAL_STATUS.REFUSED) {
+    return { tone: 'red', text: `Indicação não aplicada (${code})${referral.reason ? `: ${referral.reason}` : ''}` };
+  }
+  return {
+    tone: 'amber',
+    text: perspective === 'arena'
+      ? `Chegou por indicação (${code}) — a arena confere e credita ao confirmar`
+      : `Código de indicação ${code} — a arena confere ao confirmar a reserva`,
+  };
+}
+
+/**
+ * As indicações que chegaram com reservas e ainda não foram decididas.
+ *
+ *  - `toRegister`: a reserva JÁ está confirmada (ou concluída) e o código segue
+ *    pendente — a reserva instantânea nasce confirmada e não passa pela
+ *    confirmação da arena, e uma confirmação em que as regras não carregaram
+ *    deixa a indicação pendente. Precisa de um toque da arena.
+ *  - `awaitingConfirmation`: pedido ainda em aberto; a indicação será conferida
+ *    quando a arena confirmar. Não há o que fazer além de confirmar.
+ */
+export function pendingBookingReferrals(bookings = []) {
+  const pendentes = (bookings || []).filter(
+    (b) => b?.referral?.code && b.referral.status === BOOKING_REFERRAL_STATUS.PENDING,
+  );
+  return {
+    toRegister: pendentes.filter((b) => ['confirmed', 'completed'].includes(b.status)),
+    awaitingConfirmation: pendentes.filter((b) => ['requested', 'negotiating'].includes(b.status)),
+  };
+}
+
 /** Gera código de indicação único. */
 export function generateReferralCode(userId) {
   if (!userId) return '';

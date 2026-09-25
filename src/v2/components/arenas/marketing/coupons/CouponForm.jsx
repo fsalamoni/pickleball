@@ -258,16 +258,16 @@ export default function CouponForm({ arenaId, cupom = null, initialKind = null, 
               <select id="ind-tipo" value={form.referred_reward_kind}
                 onChange={(e) => set({ referred_reward_kind: e.target.value })} className={inputClasse}>
                 <option value={REFERRED_REWARD.CREDIT}>Crédito em carteira (R$)</option>
+                <option value={REFERRED_REWARD.PERCENT}>Desconto na primeira reserva (%)</option>
+                <option value={REFERRED_REWARD.FIXED}>Desconto na primeira reserva (R$)</option>
                 <option value={REFERRED_REWARD.NONE}>Nada — só quem indica ganha</option>
-                {[REFERRED_REWARD.PERCENT, REFERRED_REWARD.FIXED].includes(form.referred_reward_kind) && (
-                  <option value={form.referred_reward_kind}>
-                    {form.referred_reward_kind === REFERRED_REWARD.PERCENT ? '% na primeira reserva' : 'R$ na primeira reserva'}
-                  </option>
-                )}
               </select>
             </V2Field>
             {form.referred_reward_kind !== REFERRED_REWARD.NONE && (
-              <V2Field label={form.referred_reward_kind === REFERRED_REWARD.PERCENT ? 'Desconto (%)' : 'Valor (R$)'} htmlFor="ind-valor">
+              <V2Field label={form.referred_reward_kind === REFERRED_REWARD.PERCENT ? 'Desconto (%)' : 'Valor (R$)'} htmlFor="ind-valor"
+                hint={form.referred_reward_kind === REFERRED_REWARD.CREDIT
+                  ? 'Creditado na carteira de quem chegou.'
+                  : 'Abatido da primeira reserva, quando a arena confirma o código.'}>
                 <V2Input id="ind-valor" type="number" min="0" step="0.01"
                   value={form.referred_reward_value} onChange={(e) => set({ referred_reward_value: e.target.value })} />
               </V2Field>

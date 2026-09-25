@@ -9,6 +9,7 @@ import ProfileProgressionSection from '@/v2/components/profile/ProfileProgressio
 import { genderLabel } from '@/modules/athletes/domain/constants';
 import { V2Avatar, V2Button } from '@/v2/ui/primitives';
 import V2DuprRatingBadge from '@/v2/components/rating/V2DuprRatingBadge';
+import MyReferralCodes from '@/v2/components/arenas/marketing/MyReferralCodes';
 
 function memberSince(profile) {
   const ts = profile?.created_at;
@@ -21,6 +22,8 @@ export default function V2Profile() {
   const { user, userProfile } = useAuth();
   const { data: ranking = [] } = useNationalRanking();
   const gamificationOn = useFeatureFlag(FEATURE_FLAG.GAMIFICATION_V2);
+  // Os códigos de indicação vivem nos módulos de arena (chave-mestra).
+  const arenaModulesOn = useFeatureFlag(FEATURE_FLAG.ARENA_MODULES);
 
   const me = useMemo(
     () => ranking.find((p) => p.id === user?.uid || p.uid === user?.uid) || null,
@@ -103,6 +106,8 @@ export default function V2Profile() {
           <MiniStat label="Jogos" value={me.games} />
         </div>
       )}
+
+      {arenaModulesOn && user && <MyReferralCodes />}
 
       <div className="mt-8 rounded-4xl border border-dashed border-gray-200 bg-paper p-6 text-sm text-gray-500">
         Edite seus dados, nivelamento e privacidade no editor de perfil.{' '}

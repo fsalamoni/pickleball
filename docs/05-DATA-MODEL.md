@@ -976,6 +976,13 @@ e sem `queue_removed`. É exatamente esse conjunto que vira o CSV.
     zerado (sem `redeemed_*` nem `reward_total`), e só a arena atualiza — sem
     trocar arena, dono ou código. `arena_referrals.reward_total` (opcional)
     soma o que cada resgate creditou.
+  - **`arena_bookings.referral` (2026-09-25, Onda BY, opcional):** o código de
+    quem indicou, gravado pelo atleta no pedido — só `{ code, status:
+    'pending', created_at_ms }` (regra `bookingReferralOkOnCreate`). A ARENA o
+    decide na confirmação: `status` vira `aplicada` (com `referrer_id`,
+    `referrer_reward`, `referred_reward`, `discount_value`, `decided_at`) ou
+    `recusada` (com `reason`). Só a arena/admin altera `referral` depois do
+    pedido (regra de update de `arena_bookings`).
 **Operations**: `arena_checklists`, `arena_maintenance_orders`,
 `arena_inventory_products`, `arena_inventory_entries`, `arena_inventory_exits`.
 **IoT**: `arena_devices`.

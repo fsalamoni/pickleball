@@ -16,6 +16,8 @@ import {
   couponBenefitText, couponDiscount, couponError, couponFamily, couponKind, couponLabel,
   isBookingCoupon, normalizeCouponInput, publicPromos, referralProgram, referralRewards,
   referralRulesText, referralFriendReward, referralInviteText,
+  referralCodeProblem, isFirstArenaBooking, shouldOfferReferral, bookingReferralLine,
+  pendingBookingReferrals,
 } from './marketing.js';
 import { memberBookingPrice } from './memberBenefit.js';
 
@@ -204,5 +206,59 @@ describe('o convite de indicação diz o que as regras dão', () => {
     expect(referralInviteText({ arenaName: 'Arena X', code: 'ANA1', program: { ...programa, referred_reward_value: 0 } }))
       .toBe('Jogo na Arena X — use meu código ANA1 na sua primeira reserva.');
     expect(referralInviteText({ arenaName: 'Arena X', code: 'ANA1' })).toMatch(/nós dois ganhamos crédito/);
+  });
+});
+
+describe('⭐ a indicação na reserva (Onda BY)', () => {
+  it('conferência da tela: vazio passa, formato errado e o próprio código não', () => {
+    expect(referralCodeProblem('')).toBeNull();
+    expect(referralCodeProblem('abc')).toMatch(/Confira o código/);
+    expect(referralCodeProblem('ANA-12345')).toMatch(/Confira o código/);
+    expect(referralCodeProblem('anauid7xq2', { userId: 'anaUid99' })).toMatch(/seu próprio código/);
+    expect(referralCodeProblem(' bruno12ab ', { userId: 'anaUid99' })).toBeNull();
+  });
+
+  it('primeira reserva: só confirmada ou concluída conta como "já reservou"', () => {
+    expect(isFirstArenaBooking([], 'a1')).toBe(true);
+    expect(isFirstArenaBooking([{ arena_id: 'a1', status: 'requested' }, { arena_id: 'a1', status: 'declined' }], 'a1')).toBe(true);
+    expect(isFirstArenaBooking([{ arena_id: 'b2', status: 'confirmed' }], 'a1')).toBe(true);
+    expect(isFirstArenaBooking([{ arena_id: 'a1', status: 'completed' }], 'a1')).toBe(false);
+  });
+
+  it('oferece o campo só com programa — e, se for só para quem nunca reservou, só na primeira reserva', () => {
+    const programa = { kind: 'referral', referrer_reward: 10, first_booking_only: true };
+    expect(shouldOfferReferral({ program: null, myBookings: [], arenaId: 'a1' })).toBe(false);
+    expect(shouldOfferReferral({ program: programa, myBookings: [], arenaId: 'a1' })).toBe(true);
+    expect(shouldOfferReferral({ program: programa, myBookings: [{ arena_id: 'a1', status: 'confirmed' }], arenaId: 'a1' })).toBe(false);
+    // Sem saber as reservas da pessoa, não promete.
+    expect(shouldOfferReferral({ program: programa, myBookings: undefined, arenaId: 'a1' })).toBe(false);
+    // Programa aberto a qualquer um: oferece sempre.
+    expect(shouldOfferReferral({ program: { ...programa, first_booking_only: false }, myBookings: undefined, arenaId: 'a1' })).toBe(true);
+  });
+
+  it('a linha da indicação na reserva, para o atleta e para a arena', () => {
+    expect(bookingReferralLine(null)).toBeNull();
+    expect(bookingReferralLine({ code: 'ana1234567', status: 'pending' }).text).toMatch(/ANA1234567 — a arena confere ao confirmar/);
+    expect(bookingReferralLine({ code: 'ANA1234567', status: 'pending' }, { perspective: 'arena' }).text).toMatch(/Chegou por indicação/);
+    const aplicada = { code: 'ANA1234567', status: 'aplicada', discount_value: 20, referred_reward: 0, referrer_reward: 15 };
+    expect(bookingReferralLine(aplicada)).toEqual({ tone: 'green', text: 'Indicação registrada (ANA1234567) · R$ 20,00 de desconto' });
+    expect(bookingReferralLine(aplicada, { perspective: 'arena' }).text).toContain('R$ 15,00 para quem indicou');
+    expect(bookingReferralLine({ code: 'X1234567', status: 'recusada', reason: 'Código não encontrado.' }))
+      .toEqual({ tone: 'red', text: 'Indicação não aplicada (X1234567): Código não encontrado.' });
+  });
+});
+
+describe('indicações das reservas ainda não decididas', () => {
+  it('separa o que precisa de um toque da arena do que espera a confirmação', () => {
+    const r = pendingBookingReferrals([
+      { id: 'a', status: 'confirmed', referral: { code: 'X1234567', status: 'pending' } },
+      { id: 'b', status: 'completed', referral: { code: 'X1234567', status: 'pending' } },
+      { id: 'c', status: 'requested', referral: { code: 'X1234567', status: 'pending' } },
+      { id: 'd', status: 'confirmed', referral: { code: 'X1234567', status: 'aplicada' } },
+      { id: 'e', status: 'declined', referral: { code: 'X1234567', status: 'pending' } },
+      { id: 'f', status: 'confirmed' },
+    ]);
+    expect(r.toRegister.map((b) => b.id)).toEqual(['a', 'b']);
+    expect(r.awaitingConfirmation.map((b) => b.id)).toEqual(['c']);
   });
 });

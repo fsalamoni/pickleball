@@ -26,6 +26,7 @@ vi.mock('sonner', () => ({ toast: { success: vi.fn(), error: vi.fn(), info: vi.f
 vi.mock('@/core/lib/FirebaseAuthContext', () => ({ useAuth: () => ({ user: { uid: 'u1' }, userProfile: { platform_name: 'Ana' } }) }));
 vi.mock('../hooks/useBookings.js', () => ({
   useArenaBookings: () => ({ data: [] }),
+  useMyBookings: () => ({ data: [] }),
   useCreateBooking: () => ({ mutateAsync: vi.fn(), isPending: false }),
   useCreateBookingsForSelection: () => ({ mutateAsync: criarSelecao, isPending: false }),
 }));

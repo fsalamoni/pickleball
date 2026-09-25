@@ -267,6 +267,20 @@ export function getArenaNpsSummary(responses) {
 /* --------------------- Referral -------------------- */
 
 /**
+ * Os MEUS códigos de indicação, de todas as arenas — para o perfil (Onda BY).
+ * Consulta pelo campo que a regra confere (`referrer_id`). Só entram os
+ * documentos legítimos (id `{arena}_{eu}`): um código forjado antes da trava
+ * da Onda BX não aparece como meu.
+ */
+export async function listMyReferralCodes(uid) {
+  if (!db || !uid) return [];
+  const snap = await getDocs(query(collection(db, COL_REFERRALS), where('referrer_id', '==', uid)));
+  return snap.docs
+    .map((d) => ({ id: d.id, ...d.data() }))
+    .filter((r) => r.arena_id && r.id === `${r.arena_id}_${uid}` && r.code);
+}
+
+/**
  * As indicações (códigos dos atletas) desta arena — para o controle de uso.
  * A arena lê as dela (regra de 2026-09-24).
  */
@@ -455,7 +469,7 @@ export async function hasPriorArenaBooking(arenaId, userId, { exceptBookingId = 
  * @param {{
  *   code: string, referredId: string, referredName?: string,
  *   reward?: number, referrerReward?: number, referredReward?: number,
- *   program?: object|null, exceptBookingId?: string|null,
+ *   referredDiscount?: number, program?: object|null, exceptBookingId?: string|null,
  * }} input
  * @param {object|null} actor
  * @returns {Promise<{ referrerId: string, referrerReward: number, referredReward: number, reward: number }>}
@@ -463,12 +477,15 @@ export async function hasPriorArenaBooking(arenaId, userId, { exceptBookingId = 
 export async function redeemReferral(arenaId, input, actor) {
   const {
     code, referredId, referredName = '', reward,
-    referrerReward, referredReward, program = null, exceptBookingId = null,
+    referrerReward, referredReward, referredDiscount = 0, program = null, exceptBookingId = null,
   } = input || {};
   const paraQuemIndica = Math.max(0, Number(referrerReward ?? reward) || 0);
   const paraQuemChega = Math.max(0, Number(referredReward ?? reward) || 0);
+  // O desconto na primeira reserva também é prêmio: uma indicação que dá SÓ
+  // desconto a quem chega (e nada a quem indica) é válida.
+  const descontoChegada = Math.max(0, Number(referredDiscount) || 0);
   if (!arenaId || !referredId) throw new Error('Informe quem foi indicado.');
-  if (paraQuemIndica + paraQuemChega <= 0) throw new Error('Informe o prêmio de pelo menos um dos lados.');
+  if (paraQuemIndica + paraQuemChega + descontoChegada <= 0) throw new Error('Informe o prêmio de pelo menos um dos lados.');
 
   const indicacao = await findReferralByCode(arenaId, code);
   if (!indicacao) throw new Error('Código de indicação não encontrado nesta arena.');
@@ -507,6 +524,7 @@ export async function redeemReferral(arenaId, input, actor) {
       referred_name: referredName,
       referrer_reward: paraQuemIndica,
       referred_reward: paraQuemChega,
+      referred_discount: descontoChegada,
       booking_id: exceptBookingId,
     },
   });

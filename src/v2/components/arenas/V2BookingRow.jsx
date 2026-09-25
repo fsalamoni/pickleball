@@ -1,6 +1,6 @@
 import React, { useState } from 'react';
 import { toast } from 'sonner';
-import { CalendarClock, Repeat, CheckCircle2, XCircle, DollarSign, Pencil } from 'lucide-react';
+import { CalendarClock, Repeat, CheckCircle2, XCircle, DollarSign, Handshake, Pencil } from 'lucide-react';
 import {
   BOOKING_STATUS,
   BOOKING_STATUS_LABELS,
@@ -12,6 +12,7 @@ import {
 import { bookingSlots } from '@/modules/arenas/domain/booking';
 import { formatSlotLabel } from '@/modules/arenas/domain/calendar';
 import { bookingPriceInfo } from '@/modules/arenas/domain/pricing';
+import { bookingReferralLine } from '@/modules/arenas/domain/marketing';
 import { brtDateTime } from '@/modules/tournament/domain/ics';
 import AddToCalendarButton from '@/modules/tournament/components/AddToCalendarButton';
 import {
@@ -76,6 +77,9 @@ export default function V2BookingRow({ booking, perspective, arena = null }) {
   const price = precoDigitado ?? (precoInfo.value ?? '');
   const [editing, setEditing] = useState(false);
   const options = { byManager: isArena };
+  // A indicação que veio com o pedido (Onda BY): pendente até a arena
+  // confirmar; depois, aplicada (com o que deu) ou recusada (com o motivo).
+  const linhaIndicacao = bookingReferralLine(booking.referral, { perspective: isArena ? 'arena' : 'athlete' });
 
   const firstSlot = bookingSlots(booking)[0];
   const calendarEvent = firstSlot && brtDateTime(firstSlot.date, firstSlot.start) ? {
@@ -150,6 +154,14 @@ export default function V2BookingRow({ booking, perspective, arena = null }) {
           )}
         </div>
       </div>
+
+      {linhaIndicacao && (
+        <div className="mt-3">
+          <V2Badge tone={linhaIndicacao.tone} className="max-w-full whitespace-normal text-left">
+            <Handshake className="h-3.5 w-3.5 shrink-0" /> {linhaIndicacao.text}
+          </V2Badge>
+        </div>
+      )}
 
       <div className="mt-4 flex flex-wrap items-center gap-3 text-sm text-gray-600">
         {precoInfo.value != null && (
