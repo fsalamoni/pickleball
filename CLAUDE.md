@@ -248,6 +248,7 @@ Estes princípios vieram de bugs reais que custaram horas pra arrumar. São ineg
 **"Vou mexer em `play_courts`"** → ele é a contagem de quadras DO DIA e vale para todo formato. Na **arena** é DERIVADO das quadras reservadas (`arena_slots.length`) e por isso o cartão o mostra em leitura — campo livre ali desencontraria o dia das quadras realmente bloqueadas no calendário. Nos formatos de GRADE ele **semeia** o diálogo de sorteio, mas **só a partir de 2**: `play_courts` nasce valendo 1 em toda criação, inclusive onde o campo nunca significou nada, então tratar esse 1 como escolha transformaria todo Americano já existente num dia de uma quadra só
 **"Dá para converter uma data LEGADA de clube para o módulo?"** → só se ela estiver **vazia** — `canUpgradeLegacyDate({ dateId, participants, games })`, com as contagens recortadas por `date_id`. As duas casas guardam em lugares diferentes, então converter data com gente ou jogo esconderia esses documentos da tela (seguem no banco, invisíveis), e um dia já publicado costuma estar no ranking de quem jogou. Consulta FALHANDO não conta como vazio. A escrita tem porta própria (`setEventDateGameDay`) e **não** passa por `updateEventDate`: a lista fechada de campos daquela função é o que impede a edição corriqueira de uma data trocar, de tabela, a casa que a serve
 **"Criei uma tela de dia de jogo ou torneio que mostra uma lista"**  → ⭐ a **varredura** vai te examinar: `src/core/guards/afirmaVazio.js` + `falhaNaoEVazio.test.js` leem o CÓDIGO de **toda** tela do escopo e reprovam quem AFIRMA que algo não existe sem saber se a consulta falhou. Não há lista para entrar — entra quem existe. A isenção exige **motivo escrito** (hoje são 5: fotos, e texto que chega por `props`), e acrescentar caminho lá é decisão de projeto, não atalho: o critério é se a frase leva alguém a AGIR (criar de novo, sortear de novo, não ir à quadra). 🐞 O guarda ANTES tinha lista à mão — a mesma doença que ele veio tratar —, e por isso três ondas seguidas "fecharam a classe" deixando viva a LISTA de torneios, a aba de modalidades (*"Comece criando a primeira modalidade"*, convidando a duplicar) e o organizador legado do clube. Ver `docs/27-FALHA-NAO-E-VAZIO.md` §9
+**"Criei uma tela de ARENA, PROFESSOR ou RESERVA que mostra uma lista"** → a mesma varredura te examina, num segundo escopo (`falhaNaoEVazio.test.js`, Onda BP). E ali o risco passa da frase para o COMANDO: ao lado de "Nenhum X", quase sempre há "Criar X" (duplica o que existe) ou "Salvar" (regrava por cima). 🐞 A disponibilidade do professor abria EM BRANCO com a leitura falhando e salvar gravava a semana vazia; o fechamento financeiro gravava um retrato do mês com estoque zero; a aba de quadras oferecia "Nova quadra" sem saber quais existem. Regra: sem a lista na mão, **não renderize** criar nem salvar; e alarme (ex.: "quadra sem horário") só com as DUAS consultas em `isSuccess`. Ver `docs/27-FALHA-NAO-E-VAZIO.md` §10
 **"Vou mexer no organizador LEGADO de dia de jogo do clube"** → `src/modules/clubs/components/GameDayOrganizer.jsx`, servido para **toda data anterior à Onda AS** (as novas nascem em `game_days`). Ele NÃO foi migrado de propósito, então correção de classe feita nos organizadores modulares **precisa ser feita nele também** — foi assim que o defeito de sorteio da Onda AW (o `orderBase` saindo dos jogos carregados) ficou vivo ali por três ondas
 **"Mexi numa tela PÚBLICA de torneio (link compartilhado, impressão, telão)"** → ⭐ elas são V1, roteadas direto em `src/App.jsx`, **fora da árvore do V2** — e foi só por isso que ficaram de fora das ondas AV/AW/AX. São quatro: `/p/:id` (`PublicTournament`), `/torneios/:id/imprimir` (`PrintTournament`), `/torneios/:id/telao` (`Telao`) e `/c/:clubId` (`PublicClub`). Nelas a falha é a mais cara da plataforma porque chega a **quem não tem conta**: `/p/:id` dizia *"Torneio não encontrado. Verifique o link recebido"* (acusando o que a pessoa não pode conferir), `/c/:clubId` transformava queda de rede numa AFIRMAÇÃO sobre a escolha do clube (*"não disponível publicamente"*) e oferecia criar conta como saída, e a impressão ficava em *"Carregando…"* **para sempre**. Ver `docs/27-FALHA-NAO-E-VAZIO.md` §8
 **"Vou mexer na versão para IMPRESSÃO do torneio"** → ⚠️ **o papel sobrevive à tela**: modalidade que não carregou não sai na folha, e a folha vai para a mesa da organização parecendo completa — ninguém desconfia de uma ausência. É o único aviso da plataforma que **precisa ser impresso junto**; `print:hidden` no TEXTO do aviso devolve o defeito (no botão "Tentar de novo" está certo — não se clica no papel). Guarda travando
@@ -495,6 +496,27 @@ chore(deps): bump firebase to 12.x
 > memory topic `picklerush-sync-2026-08.md`.
 >
 > **Destaques por onda**:
+>
+> - **Onda BP — Falha não é vazio na arena e no professor** (2026-09-25): a
+>   varredura da Onda BA parava na porta da arena — o filtro só enxergava dia
+>   de jogo e torneio. Estendida à arena, ao professor e às reservas (111
+>   arquivos), acusou **32**: 30 telas afirmando vazio sobre consulta que podia
+>   ter falhado, e 2 isentas com motivo (preço chega por `props`). Ali o custo
+>   passa da frase para o comando. **🐞 O que regravaria**: a disponibilidade
+>   do professor abria em branco e salvar gravava a semana vazia; o perfil do
+>   professor virava "Sou professor" com formulário vazio; o fechamento
+>   financeiro gravava um relatório do mês com estoque zero. **🐞 O que
+>   duplicaria**: quadras, janelas de horário, totem, adoção do catálogo,
+>   entradas do Mercado, pacotes, membros, parceiros, e no professor pacotes,
+>   alunos (reativando quem estava pausado), clínicas e conteúdo. **🐞 O que
+>   mentia**: *"Você ainda não reservou"* para quem tem jogo à noite, a arena
+>   "não encontrada" por queda de rede, o pedido de reserva mostrando tudo
+>   livre, as Métricas em R$ 0,00 e o alarme de "quadra sem horário" com as
+>   janelas sem carregar. Agora cada uma diz que falhou, com "Tentar de novo",
+>   e **não renderiza** criar nem salvar sobre estado desconhecido; nas
+>   Métricas, parte secundária falhando sai com "Ficou de fora: …". Guarda
+>   estendido + testes de renderização nos casos de maior dano. **Banco:
+>   zero.** Ver `docs/27-FALHA-NAO-E-VAZIO.md` §10.
 >
 > - **Onda BO — Operação, presença e avançado dentro da arena** (2026-09-24,
 >   I-8, a última parte da integração): com ela, **todo módulo de arena que
@@ -1941,7 +1963,7 @@ chore(deps): bump firebase to 12.x
 
 | Métrica | Valor | Delta do início do agente |
 |---|---|---|
-| **Testes Vitest** | **5473 passing** (328 arquivos) + 311 asserções de regras do Firestore no emulador (+ 17 do Storage) | +5065 (era 408) |
+| **Testes Vitest** | **5493 passing** (330 arquivos) + 311 asserções de regras do Firestore no emulador (+ 17 do Storage) | +5085 (era 408) |
 | **Lint errors** | 0 | era 30+ |
 | **Módulos** | 21 (+`help` — conteúdo dos tutoriais em tela) (`games` e `legal` saíram como `src/modules/` mas continuam como pastas oficiais — **rating virou módulo oficial** com domain/services/hooks/components) | +4 (coaches, circuits, games, legal) |
 | **V2 pages** | 82 (+V2GameDayTelao — telão, fora do V2Layout; +V2Help — central de ajuda; +V2ArenaKiosk — totem da recepção, também fora do V2Layout; +V2ArenaCheckin; +V2ArenaAttendance) | +58 |

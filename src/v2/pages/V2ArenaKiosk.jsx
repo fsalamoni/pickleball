@@ -34,7 +34,7 @@
 import React, { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import { Link, Navigate, useParams } from 'react-router-dom';
 import QRCode from 'qrcode';
-import { ArrowLeft, Loader2, Maximize2, Minimize2, QrCode, WifiOff } from 'lucide-react';
+import { ArrowLeft, Loader2, Maximize2, Minimize2, QrCode, RefreshCw, WifiOff } from 'lucide-react';
 import { useAuth } from '@/core/lib/FirebaseAuthContext';
 import { useArena, useMyManagedArenas } from '@/modules/arenas/hooks/useArenas';
 import { useArenaBookings } from '@/modules/arenas/hooks/useBookings';
@@ -67,13 +67,31 @@ function Relogio() {
   );
 }
 
+/** A leitura falhou: diz isso, e deixa tentar de novo — no fundo escuro do totem. */
+function FalhaNoTotem({ onRetry }) {
+  return (
+    <div role="alert" className="flex min-h-screen flex-col items-center justify-center gap-4 bg-ink px-6 text-center text-white">
+      <WifiOff className="h-12 w-12 opacity-60" />
+      <h1 className="font-display text-2xl font-bold">Não foi possível carregar o totem</h1>
+      <p className="max-w-md text-sm text-white/70">
+        A conexão falhou no meio do caminho. Isso quase sempre se resolve tentando de novo.
+      </p>
+      <V2Button onClick={onRetry}>
+        <RefreshCw className="h-4 w-4" /> Tentar de novo
+      </V2Button>
+    </div>
+  );
+}
+
 export default function V2ArenaKiosk() {
   const { arenaId } = useParams();
   const { user } = useAuth();
-  const { data: arena, isLoading } = useArena(arenaId);
+  const { data: arena, isLoading, isError: arenaFalhou, refetch: recarregarArena } = useArena(arenaId);
   const { data: minhas = [] } = useMyManagedArenas();
   const { isOn, isLoading: modulosCarregando } = useArenaModules(arenaId);
-  const { data: devices = [], isLoading: dvCarregando } = useArenaDevices(arenaId);
+  const {
+    data: devices = [], isLoading: dvCarregando, isError: totensFalharam, refetch: recarregarTotens,
+  } = useArenaDevices(arenaId);
   const { data: reservas = [] } = useArenaBookings(arenaId);
 
   const rotate = useRotateKioskToken();
@@ -163,6 +181,12 @@ export default function V2ArenaKiosk() {
   if (isLoading || modulosCarregando || dvCarregando) {
     return <div className="min-h-screen bg-ink p-10"><V2Skeleton lines={6} /></div>;
   }
+  // Falha não é "arena não existe": mandar o tablet da recepção para o
+  // diretório por uma queda de rede deixaria o balcão sem totem e sem ninguém
+  // que saiba voltar.
+  if (arenaFalhou && !arena) {
+    return <FalhaNoTotem onRetry={() => recarregarArena()} />;
+  }
   if (!arena) return <Navigate to="/arenas" replace />;
 
   const podeGerir = arena.owner_id === user?.uid
@@ -179,6 +203,12 @@ export default function V2ArenaKiosk() {
   const fundo = marca.on ? marca.color : '#0B0B0B';
   const tinta = marca.on ? marca.ink : '#FFFFFF';
 
+  // 🐞 Com a lista de equipamentos falhando, a tela dizia "Nenhum totem
+  // cadastrado" e oferecia criar um — um segundo totem para a mesma recepção.
+  if (totensFalharam && devices.length === 0) {
+    return <FalhaNoTotem onRetry={() => recarregarTotens()} />;
+  }
+
   if (!totem) {
     return (
       <div className="flex min-h-screen flex-col items-center justify-center gap-4 bg-ink px-6 text-center text-white">
@@ -186,7 +216,7 @@ export default function V2ArenaKiosk() {
         <h1 className="font-display text-2xl font-bold">Nenhum totem cadastrado</h1>
         <p className="max-w-md text-sm text-white/70">
           O totem é um equipamento desta arena. Criamos um agora e esta tela passa a
-          funcionar — depois ele aparece em Gestão → Avançado → Equipamentos.
+          funcionar — depois ele aparece em Gestão → Operação → Equipamentos.
         </p>
         <V2Button
           disabled={criar.isPending}

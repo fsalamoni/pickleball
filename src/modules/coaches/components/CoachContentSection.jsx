@@ -19,6 +19,7 @@ import ConfirmDialog from '@/components/ConfirmDialog';
 import {
   V2Badge, V2Button, V2EmptyState, V2Field, V2Input, V2Select, V2Skeleton,
   V2Surface, V2Textarea,
+  V2ErrorState,
 } from '@/v2/ui/primitives';
 
 function ContentForm({ coachId, content, onClose }) {
@@ -80,7 +81,7 @@ function ContentForm({ coachId, content, onClose }) {
 }
 
 export default function CoachContentSection({ coachId }) {
-  const { data: content = [], isLoading } = useCoachContent(coachId, { full: true });
+  const { data: content = [], isLoading, isError, refetch } = useCoachContent(coachId, { full: true });
   const del = useDeleteContent();
   const [showForm, setShowForm] = useState(false);
   const [editing, setEditing] = useState(null);
@@ -103,7 +104,8 @@ export default function CoachContentSection({ coachId }) {
           <BookOpen className="h-5 w-5 text-ink" />
           <h2 className="font-display text-lg font-bold text-ink">Biblioteca de conteúdo</h2>
         </div>
-        {!showForm && <V2Button size="sm" onClick={openNew}><Plus className="mr-1 h-4 w-4" /> Novo</V2Button>}
+        {/* Sem a biblioteca na mão, "Novo" é convite a publicar de novo o que já está lá. */}
+        {!showForm && !isError && <V2Button size="sm" onClick={openNew}><Plus className="mr-1 h-4 w-4" /> Novo</V2Button>}
       </div>
 
       {showForm && (
@@ -114,6 +116,8 @@ export default function CoachContentSection({ coachId }) {
 
       {isLoading ? (
         <V2Skeleton lines={3} />
+      ) : isError ? (
+        <V2ErrorState inline title="Não foi possível carregar a sua biblioteca" onRetry={() => refetch()} />
       ) : items.length === 0 ? (
         <V2EmptyState icon={BookOpen} title="Nenhum conteúdo" description="Publique drills e dicas (texto e/ou vídeo). Aparecem no seu perfil público." />
       ) : (

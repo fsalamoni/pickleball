@@ -18,6 +18,7 @@ import ConfirmDialog from '@/components/ConfirmDialog';
 import CoachAddArenaForm from './CoachAddArenaForm';
 import {
   V2Badge, V2Button, V2EmptyState, V2Skeleton, V2Surface,
+  V2ErrorState,
 } from '@/v2/ui/primitives';
 
 function PartnerArenaCard({ coachId, residency }) {
@@ -96,7 +97,7 @@ function PartnerArenaCard({ coachId, residency }) {
 }
 
 export default function CoachPartnersSection({ coachId }) {
-  const { data: residencies = [], isLoading } = useCoachResidencies(coachId);
+  const { data: residencies = [], isLoading, isError, refetch } = useCoachResidencies(coachId);
   const [adding, setAdding] = useState(false);
 
   return (
@@ -106,9 +107,12 @@ export default function CoachPartnersSection({ coachId }) {
           <Handshake className="h-5 w-5 text-ink" />
           <h2 className="font-display text-lg font-bold text-ink">Parceiros</h2>
         </div>
-        <V2Button size="sm" variant="ghost" onClick={() => setAdding((s) => !s)}>
-          <Plus className="h-4 w-4" /> {adding ? 'Fechar' : 'Adicionar arena'}
-        </V2Button>
+        {/* Sem a lista, "Adicionar arena" pediria de novo uma parceria que já existe. */}
+        {!isError && (
+          <V2Button size="sm" variant="ghost" onClick={() => setAdding((s) => !s)}>
+            <Plus className="h-4 w-4" /> {adding ? 'Fechar' : 'Adicionar arena'}
+          </V2Button>
+        )}
       </div>
       <p className="-mt-2 mb-3 text-sm text-gray-500">
         Arenas onde você atende. Você pode ser convidado por uma arena ou
@@ -123,6 +127,8 @@ export default function CoachPartnersSection({ coachId }) {
 
       {isLoading ? (
         <V2Skeleton lines={3} />
+      ) : isError ? (
+        <V2ErrorState inline title="Não foi possível carregar as suas parcerias" onRetry={() => refetch()} />
       ) : residencies.length === 0 ? (
         <V2EmptyState
           icon={Handshake}

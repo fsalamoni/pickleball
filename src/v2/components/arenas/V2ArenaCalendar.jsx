@@ -31,7 +31,7 @@ import { FEATURE_FLAG } from '@/core/featureFlags';
 import { useFeatureFlag } from '@/core/lib/FeatureFlagsContext';
 import { useArenaGameDays } from '@/modules/games/hooks/useArenaGameDays';
 import { arenaGameDayTimeRange } from '@/modules/games/domain/arenaGameDay';
-import { V2Badge, V2Button, V2Surface } from '@/v2/ui/primitives';
+import { V2Badge, V2Button, V2ErrorState, V2Surface } from '@/v2/ui/primitives';
 import { cn } from '@/core/lib/utils';
 
 // Tons alinhados aos suportados pelo V2Badge (neutral/acid/ink/green/blue/amber/red).
@@ -71,7 +71,7 @@ export default function V2ArenaCalendar({ arena }) {
   const [courtFilter, setCourtFilter] = useState('');
   const [dayModal, setDayModal] = useState(null);
 
-  const { data: bookings = [], isLoading } = useArenaBookings(arena.id);
+  const { data: bookings = [], isLoading, isError, refetch } = useArenaBookings(arena.id);
   const { data: courts = [] } = useArenaCourts(arena.id);
   // O dia de jogo da própria arena OCUPA quadra e fecha horário. Ele aparecia
   // no calendário do atleta e não aqui — a arena via um mês de reservas sem o
@@ -178,6 +178,15 @@ export default function V2ArenaCalendar({ arena }) {
 
       {isLoading ? (
         <p className="text-sm text-gray-500">Carregando reservas…</p>
+      ) : isError ? (
+        // Falha não é "mês sem reserva": o calendário vazio diria à arena que
+        // todo horário está livre — e ela venderia por fora o que já vendeu.
+        <V2ErrorState
+          inline
+          title="Não foi possível carregar as reservas"
+          description="Sem elas, o calendário mostraria o mês inteiro livre. Tente de novo."
+          onRetry={() => refetch()}
+        />
       ) : (
         <div className="overflow-x-auto">
           <div className="min-w-[640px]">

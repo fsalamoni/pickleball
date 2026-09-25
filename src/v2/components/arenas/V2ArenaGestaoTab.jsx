@@ -25,13 +25,17 @@ import {
 } from '@/modules/arenas/domain/inventory';
 import { formatPrice } from '@/modules/arenas/domain/pricing';
 import { cn } from '@/core/lib/utils';
-import { V2Badge, V2StatCard, V2Surface, V2Skeleton } from '@/v2/ui/primitives';
+import { V2Badge, V2ErrorState, V2StatCard, V2Surface, V2Skeleton } from '@/v2/ui/primitives';
 
 export default function V2ArenaGestaoTab({ onGoToCatalog, onGoToMercado }) {
   const { arenaId } = useParams();
-  const { data: products = [], isLoading } = useInventoryProducts(arenaId);
-  const { data: entries = [] } = useInventoryEntries(arenaId);
-  const { data: exits = [] } = useInventoryExits(arenaId);
+  const qP = useInventoryProducts(arenaId);
+  const qE = useInventoryEntries(arenaId);
+  const qX = useInventoryExits(arenaId);
+  const { data: products = [], isLoading } = qP;
+  const { data: entries = [] } = qE;
+  const { data: exits = [] } = qX;
+  const falhou = qP.isError || qE.isError || qX.isError;
 
   const model = useMemo(() => {
     const rows = products.map((p) => {
@@ -64,6 +68,22 @@ export default function V2ArenaGestaoTab({ onGoToCatalog, onGoToMercado }) {
 
   if (isLoading) {
     return <V2Skeleton lines={6} />;
+  }
+
+  // 🐞 Com uma das três listas falhando, a tela inteira mentia: estoque zero,
+  // "primeiros passos" por fazer que já foram feitos e "Estoque saudável 👍".
+  if (falhou) {
+    return (
+      <V2ErrorState
+        title="Não foi possível carregar o estoque"
+        description="Os números desta tela dependem de produtos, compras e saídas. Tente de novo em instantes."
+        onRetry={() => {
+          if (qP.isError) qP.refetch();
+          if (qE.isError) qE.refetch();
+          if (qX.isError) qX.refetch();
+        }}
+      />
+    );
   }
 
   const { totalInvested, totalRevenue, lowOrOut, expiringOrExpired, steps, doneCount } = model;

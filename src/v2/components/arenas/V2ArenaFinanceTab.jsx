@@ -32,17 +32,31 @@ import { formatPrice } from '@/modules/arenas/domain/pricing';
 import ConfirmDialog from '@/components/ConfirmDialog';
 import { cn } from '@/core/lib/utils';
 import {
-  V2Badge, V2Button, V2StatCard, V2Surface, V2Skeleton,
+  V2Badge, V2Button, V2ErrorState, V2StatCard, V2Surface, V2Skeleton,
 } from '@/v2/ui/primitives';
 
 export default function V2ArenaFinanceTab() {
   const { arenaId } = useParams();
-  const { data: products = [] } = useInventoryProducts(arenaId);
-  const { data: entries = [] } = useInventoryEntries(arenaId);
-  const { data: exits = [], isLoading } = useInventoryExits(arenaId);
+  const qP = useInventoryProducts(arenaId);
+  const qE = useInventoryEntries(arenaId);
+  const qX = useInventoryExits(arenaId);
+  const { data: products = [] } = qP;
+  const { data: entries = [] } = qE;
+  const { data: exits = [], isLoading } = qX;
   const { data: settings } = useArenaSettings(arenaId, { createIfMissing: false });
   const updateSettings = useUpdateArenaSettings();
-  const { data: saved = [] } = useSavedReports(arenaId);
+  const qSalvos = useSavedReports(arenaId);
+  const { data: saved = [] } = qSalvos;
+  // 🐞 "Fechar" e "Regerar" GRAVAM um retrato do período feito com as listas
+  // carregadas. Com uma delas falhando, o retrato sairia zerado — e seria
+  // gravado por cima do relatório verdadeiro daquele período.
+  const falhou = qP.isError || qE.isError || qX.isError || qSalvos.isError;
+  const tentar = () => {
+    if (qP.isError) qP.refetch();
+    if (qE.isError) qE.refetch();
+    if (qX.isError) qX.refetch();
+    if (qSalvos.isError) qSalvos.refetch();
+  };
   const saveSnapshot = useSaveReportSnapshot(arenaId);
   const saveEdits = useSaveReportEdits(arenaId);
   const deleteReport = useDeleteSavedReport(arenaId);
@@ -87,7 +101,7 @@ export default function V2ArenaFinanceTab() {
   }
 
   async function handleClose() {
-    if (!autoReport) return;
+    if (!autoReport || falhou) return;
     try {
       await saveSnapshot.mutateAsync({ ...autoReport, status: 'closed' });
       toast.success('Relatório do período fechado e enviado ao financeiro.');
@@ -95,7 +109,7 @@ export default function V2ArenaFinanceTab() {
   }
 
   async function handleRegenerate() {
-    if (!autoReport) return;
+    if (!autoReport || falhou) return;
     try {
       await saveSnapshot.mutateAsync({ ...autoReport, status: savedForPeriod?.status || 'closed' });
       toast.success('Relatório regerado a partir dos registros da plataforma.');
@@ -109,6 +123,7 @@ export default function V2ArenaFinanceTab() {
   }
 
   async function handleSaveEdits() {
+    if (falhou) return;
     try {
       let id = savedForPeriod?.id;
       if (!id) {
@@ -188,6 +203,12 @@ export default function V2ArenaFinanceTab() {
 
       {isLoading ? (
         <V2Skeleton lines={6} />
+      ) : falhou ? (
+        <V2ErrorState
+          title="Não foi possível carregar o financeiro do mercado"
+          description="Fechar ou regerar um relatório agora gravaria números incompletos por cima dos verdadeiros. Tente de novo."
+          onRetry={tentar}
+        />
       ) : !report ? (
         <V2Surface><p className="text-sm text-gray-500">Sem movimento de mercado ainda. Registre entradas e saídas na aba Mercado.</p></V2Surface>
       ) : (

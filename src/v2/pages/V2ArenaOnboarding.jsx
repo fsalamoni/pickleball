@@ -29,6 +29,7 @@ import { useAuth } from '@/core/lib/FirebaseAuthContext';
 import { useArena } from '@/modules/arenas/hooks/useArenas';
 import {
   V2Badge, V2Button, V2Surface,
+  V2ErrorState,
 } from '@/v2/ui/primitives';
 import { cn } from '@/core/lib/utils';
 
@@ -66,7 +67,7 @@ export default function V2ArenaOnboarding() {
 
 function V2ArenaOnboardingContent({ arenaId, user }) {
   const navigate = useNavigate();
-  const { data: arena, isLoading } = useArena(arenaId);
+  const { data: arena, isLoading, isError: arenaFalhou, refetch: recarregarArena } = useArena(arenaId);
   const [progress, setProgress] = useState(DEFAULT_PROGRESS);
   const [hydrated, setHydrated] = useState(false);
   const [activeIdx, setActiveIdx] = useState(0);
@@ -103,6 +104,17 @@ function V2ArenaOnboardingContent({ arenaId, user }) {
 
   if (isLoading) {
     return <div className="mx-auto max-w-3xl p-6 text-sm text-gray-500">Carregando…</div>;
+  }
+  if (!arena && arenaFalhou) {
+    return (
+      <div className="mx-auto max-w-3xl p-6">
+        <V2ErrorState
+          title="Não foi possível abrir a configuração da arena"
+          description="A conexão falhou no meio do caminho. O que você já configurou continua salvo — tente de novo."
+          onRetry={() => recarregarArena()}
+        />
+      </div>
+    );
   }
   if (!arena) {
     return (

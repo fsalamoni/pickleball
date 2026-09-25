@@ -19,6 +19,7 @@ import {
 } from '@/modules/arenas/domain/arena_rules';
 import {
   V2Badge, V2Button, V2Field, V2Input, V2Select, V2Surface, V2Textarea, V2Skeleton, V2Toggle,
+  V2ErrorState,
 } from '@/v2/ui/primitives';
 import { DEFAULT_CANCELLATION_HOURS } from '@/modules/arenas/domain/cancellation_policy';
 
@@ -28,7 +29,7 @@ function newBlankRule() {
 
 export default function V2ArenaRulesTab() {
   const { arenaId } = useParams();
-  const { data: arena, isLoading } = useArena(arenaId);
+  const { data: arena, isLoading, isError, refetch } = useArena(arenaId);
   const update = useUpdateArena();
   const [rules, setRules] = useState(() => arena?.rules || []);
   const [saving, setSaving] = useState(false);
@@ -80,6 +81,18 @@ export default function V2ArenaRulesTab() {
   }
 
   if (isLoading) return <V2Skeleton lines={4} />;
+  // As regras são UMA lista gravada inteira no documento da arena: sem a arena
+  // na mão, a aba não pode oferecer "salvar todas" (gravaria só o que foi
+  // digitado agora). Falha diz que falhou — antes a aba ficava em branco.
+  if (!arena && isError) {
+    return (
+      <V2ErrorState
+        title="Não foi possível carregar as regras da arena"
+        description="Tente de novo antes de editar."
+        onRetry={() => refetch()}
+      />
+    );
+  }
   if (!arena) return null;
 
   return (

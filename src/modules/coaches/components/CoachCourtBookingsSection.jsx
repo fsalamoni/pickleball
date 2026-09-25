@@ -22,6 +22,7 @@ import BookingParticipantsPanel from '@/modules/arenas/components/BookingPartici
 import ConfirmDialog from '@/components/ConfirmDialog';
 import {
   V2Badge, V2Button, V2EmptyState, V2Skeleton, V2Surface,
+  V2ErrorState,
 } from '@/v2/ui/primitives';
 
 function PartnerArenaRow({ residency, coach, onBook }) {
@@ -95,8 +96,8 @@ function CoachBookingCard({ booking }) {
 export default function CoachCourtBookingsSection({ coach }) {
   const { user } = useAuth();
   const coachId = coach?.id || user?.uid;
-  const { data: residencies = [], isLoading } = useCoachResidencies(coachId);
-  const { data: bookings = [] } = useCoachBookings(coachId);
+  const { data: residencies = [], isLoading, isError, refetch } = useCoachResidencies(coachId);
+  const { data: bookings = [], isError: reservasFalharam, refetch: recarregarReservas } = useCoachBookings(coachId);
   const [dialogArena, setDialogArena] = useState(null);
 
   return (
@@ -112,6 +113,8 @@ export default function CoachCourtBookingsSection({ coach }) {
 
       {isLoading ? (
         <V2Skeleton lines={2} />
+      ) : isError ? (
+        <V2ErrorState inline title="Não foi possível carregar as suas arenas parceiras" onRetry={() => refetch()} />
       ) : residencies.length === 0 ? (
         <V2EmptyState
           icon={Building2}
@@ -124,6 +127,15 @@ export default function CoachCourtBookingsSection({ coach }) {
             <PartnerArenaRow key={r.id} residency={r} coach={coach} onBook={setDialogArena} />
           ))}
         </div>
+      )}
+
+      {reservasFalharam && (
+        <V2ErrorState
+          inline
+          className="mt-4"
+          title="Não foi possível carregar as quadras que você já reservou"
+          onRetry={() => recarregarReservas()}
+        />
       )}
 
       {bookings.length > 0 && (

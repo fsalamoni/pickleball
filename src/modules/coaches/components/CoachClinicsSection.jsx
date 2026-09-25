@@ -18,6 +18,7 @@ import ConfirmDialog from '@/components/ConfirmDialog';
 import {
   V2Badge, V2Button, V2EmptyState, V2Field, V2Input, V2Skeleton,
   V2Surface, V2Textarea,
+  V2ErrorState,
 } from '@/v2/ui/primitives';
 
 function emptyForm() {
@@ -74,7 +75,7 @@ function ClinicForm({ coachId, coachName, onDone }) {
 }
 
 function ClinicRow({ clinic }) {
-  const { data: signups = [] } = useClinicSignups(clinic.id);
+  const { data: signups = [], isError: inscritosFalharam, refetch: recarregarInscritos } = useClinicSignups(clinic.id);
   const cancel = useCancelClinic();
   const remove = useDeleteClinic();
   const [showSignups, setShowSignups] = useState(false);
@@ -139,7 +140,12 @@ function ClinicRow({ clinic }) {
       </div>
       {showSignups && (
         <div className="mt-2 rounded-xl bg-gray-50 px-3 py-2 text-xs text-gray-600">
-          {signups.length === 0 ? 'Nenhum inscrito ainda.' : (
+          {inscritosFalharam ? (
+            <span role="alert">
+              Não foi possível carregar os inscritos.{' '}
+              <button type="button" className="font-bold underline" onClick={() => recarregarInscritos()}>Tentar de novo</button>
+            </span>
+          ) : signups.length === 0 ? 'Nenhum inscrito ainda.' : (
             <ul className="space-y-0.5">
               {signups.map((s) => <li key={s.id}>{s.athlete_name || 'Atleta'}</li>)}
             </ul>
@@ -151,7 +157,7 @@ function ClinicRow({ clinic }) {
 }
 
 export default function CoachClinicsSection({ coachId, coachName }) {
-  const { data: clinics = [], isLoading } = useCoachClinics(coachId);
+  const { data: clinics = [], isLoading, isError, refetch } = useCoachClinics(coachId);
   const [creating, setCreating] = useState(false);
   const sorted = useMemo(() => sortClinics(clinics), [clinics]);
 
@@ -162,15 +168,20 @@ export default function CoachClinicsSection({ coachId, coachName }) {
           <GraduationCap className="h-5 w-5 text-ink" />
           <h2 className="font-display text-lg font-bold text-ink">Clínicas e workshops</h2>
         </div>
-        <V2Button size="sm" variant={creating ? 'ghost' : 'primary'} onClick={() => setCreating((v) => !v)}>
-          {creating ? 'Fechar' : <><Plus className="h-4 w-4" /> Nova clínica</>}
-        </V2Button>
+        {/* Sem a lista, "Nova clínica" é convite a publicar de novo uma que já está aberta. */}
+        {!isError && (
+          <V2Button size="sm" variant={creating ? 'ghost' : 'primary'} onClick={() => setCreating((v) => !v)}>
+            {creating ? 'Fechar' : <><Plus className="h-4 w-4" /> Nova clínica</>}
+          </V2Button>
+        )}
       </div>
 
-      {creating && <div className="mb-4"><ClinicForm coachId={coachId} coachName={coachName} onDone={() => setCreating(false)} /></div>}
+      {creating && !isError && <div className="mb-4"><ClinicForm coachId={coachId} coachName={coachName} onDone={() => setCreating(false)} /></div>}
 
       {isLoading ? (
         <V2Skeleton lines={3} />
+      ) : isError ? (
+        <V2ErrorState inline title="Não foi possível carregar as suas clínicas" onRetry={() => refetch()} />
       ) : sorted.length === 0 ? (
         <V2EmptyState
           icon={GraduationCap}

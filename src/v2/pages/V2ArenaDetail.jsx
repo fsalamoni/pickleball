@@ -41,7 +41,7 @@ import { formatDateShortBR } from '@/modules/arenas/domain/calendar';
 import ArenaModuleShortcuts from '@/v2/components/arenas/ArenaModuleShortcuts';
 import { isPixConfigured, PIX_KEY_TYPE_LABELS } from '@/modules/arenas/domain/pix_payment';
 import { groupRulesByCategory } from '@/modules/arenas/domain/arena_rules';
-import { V2Badge, V2Button, V2EmptyState, V2Skeleton, V2Surface } from '@/v2/ui/primitives';
+import { V2Badge, V2Button, V2EmptyState, V2Skeleton, V2Surface, V2ErrorState } from '@/v2/ui/primitives';
 
 function arenaPhotoUrl(photo) {
   return typeof photo === 'string' ? photo : photo?.url;
@@ -66,7 +66,7 @@ function ContactRow({ icon: Icon, href, label }) {
 export default function V2ArenaDetail() {
   const { arenaId } = useParams();
   const { user } = useAuth();
-  const { data: arena, isLoading } = useArena(arenaId);
+  const { data: arena, isLoading, isError: arenaFalhou, refetch: recarregarArena } = useArena(arenaId);
   const { data: managed = [] } = useMyManagedArenas();
   const { data: bookings = [] } = useArenaBookings(arenaId);
   const [bookingOpen, setBookingOpen] = useState(false);
@@ -79,13 +79,15 @@ export default function V2ArenaDetail() {
       managed={managed}
       bookings={bookings}
       isLoading={isLoading}
+      arenaFalhou={arenaFalhou}
+      recarregarArena={recarregarArena}
       bookingOpen={bookingOpen}
       setBookingOpen={setBookingOpen}
     />
   );
 }
 
-function V2ArenaDetailContent({ arenaId, user, arena, managed, bookings, isLoading, bookingOpen, setBookingOpen }) {
+function V2ArenaDetailContent({ arenaId, user, arena, managed, bookings, isLoading, arenaFalhou, recarregarArena, bookingOpen, setBookingOpen }) {
   const sharedBookingsOn = true;
   const linkedClubsOn = true;
   const [sharedOpen, setSharedOpen] = useState(false);
@@ -95,6 +97,20 @@ function V2ArenaDetailContent({ arenaId, user, arena, managed, bookings, isLoadi
       <div className="mx-auto max-w-[900px] space-y-4">
         <V2Skeleton className="h-56 rounded-4xl" />
         <V2Skeleton className="h-48 rounded-4xl" />
+      </div>
+    );
+  }
+
+  // Falha não é "a arena não existe": quem recebeu o link de uma arena e a vê
+  // "removida" por uma queda de rede desiste dela — e não tenta de novo.
+  if (!arena && arenaFalhou) {
+    return (
+      <div className="mx-auto max-w-[700px]">
+        <V2ErrorState
+          title="Não foi possível abrir esta arena"
+          description="A conexão falhou no meio do caminho. A arena continua lá — tente de novo."
+          onRetry={() => recarregarArena?.()}
+        />
       </div>
     );
   }

@@ -39,7 +39,7 @@ import V2ArenaFinanceTab from '@/v2/components/arenas/V2ArenaFinanceTab';
 import ConfirmDialog from '@/components/ConfirmDialog';
 import { cn } from '@/core/lib/utils';
 import {
-  V2Badge, V2Button, V2Field, V2Input, V2Select, V2Surface, V2Textarea, V2EmptyState, V2Skeleton,
+  V2Badge, V2Button, V2Field, V2Input, V2Select, V2Surface, V2Textarea, V2EmptyState, V2ErrorState, V2Skeleton,
 } from '@/v2/ui/primitives';
 
 const EXIT_TYPE_LABELS = {
@@ -62,6 +62,48 @@ const SUB_HINTS = {
  *  - Vendas       (saídas: só o que está/esteve em estoque)
  *  - Financeiro   (relatórios por período: compras, vendas, lucro)
  */
+const VAZIO = [];
+
+/**
+ * As três listas do Mercado com o estado de FALHA junto.
+ *
+ * 🐞 Cada seção lia as três com `data = []`: com entradas ou saídas falhando,
+ * o estoque de TODO produto dava zero — selos de "Esgotado" que mentem, "Nenhum
+ * produto em estoque para vender" com a prateleira cheia, e o convite a
+ * registrar de novo uma compra que já está lá. Quem mostra estoque precisa
+ * saber se as três chegaram.
+ */
+function useEstoqueDaArena(arenaId) {
+  const qP = useInventoryProducts(arenaId);
+  const qE = useInventoryEntries(arenaId);
+  const qX = useInventoryExits(arenaId);
+  return {
+    products: qP.data || VAZIO,
+    entries: qE.data || VAZIO,
+    exits: qX.data || VAZIO,
+    carregando: qP.isLoading || qE.isLoading || qX.isLoading,
+    falhou: qP.isError || qE.isError || qX.isError,
+    tentar: () => {
+      if (qP.isError) qP.refetch();
+      if (qE.isError) qE.refetch();
+      if (qX.isError) qX.refetch();
+    },
+  };
+}
+
+/** O aviso de falha das três seções — o mesmo texto, no mesmo lugar. */
+function FalhaNoEstoque({ onRetry }) {
+  return (
+    <V2ErrorState
+      inline
+      className="mt-3"
+      title="Não foi possível carregar o estoque"
+      description="Sem produtos, compras e saídas na mão, os números de estoque não são confiáveis. Tente de novo antes de registrar algo."
+      onRetry={onRetry}
+    />
+  );
+}
+
 export default function V2ArenaMercadoTab() {
   const { arenaId } = useParams();
   const catalogOn = true;
@@ -168,9 +210,7 @@ function SellOnlineToggle({ checked, onChange, price }) {
 }
 
 function ProductsSection({ arenaId, onOpenCatalog }) {
-  const { data: products = [], isLoading } = useInventoryProducts(arenaId);
-  const { data: entries = [] } = useInventoryEntries(arenaId);
-  const { data: exits = [] } = useInventoryExits(arenaId);
+  const { products, entries, exits, carregando: isLoading, falhou, tentar } = useEstoqueDaArena(arenaId);
   const create = useCreateInventoryProduct(arenaId);
   const update = useUpdateInventoryProduct(arenaId);
   const remove = useDeleteInventoryProduct(arenaId);
@@ -239,14 +279,16 @@ function ProductsSection({ arenaId, onOpenCatalog }) {
           <option value="all">Todas categorias</option>
           {INVENTORY_CATEGORIES_LIST.map((c) => <option key={c} value={c}>{c}</option>)}
         </V2Select>
-        {onOpenCatalog && (
+        {onOpenCatalog && !falhou && (
           <V2Button size="sm" onClick={onOpenCatalog}>
             <ShoppingBasket className="h-4 w-4" /> Adicionar do catálogo
           </V2Button>
         )}
-        <V2Button size="sm" variant="secondary" onClick={() => { setForm(EMPTY_PRODUCT); setCreating((v) => !v); }}>
-          <Plus className="h-4 w-4" /> Produto próprio
-        </V2Button>
+        {!falhou && (
+          <V2Button size="sm" variant="secondary" onClick={() => { setForm(EMPTY_PRODUCT); setCreating((v) => !v); }}>
+            <Plus className="h-4 w-4" /> Produto próprio
+          </V2Button>
+        )}
       </div>
 
       {creating && (
@@ -318,7 +360,9 @@ function ProductsSection({ arenaId, onOpenCatalog }) {
       )}
 
       <div className="mt-3 space-y-2">
-        {isLoading ? <V2Skeleton lines={3} /> : filtered.length === 0 ? (
+        {isLoading ? <V2Skeleton lines={3} /> : falhou ? (
+          <FalhaNoEstoque onRetry={tentar} />
+        ) : filtered.length === 0 ? (
           <V2EmptyState icon={Package} title="Nenhum produto" description="Puxe do catálogo ou cadastre um produto próprio." />
         ) : (
           filtered.map((p) => (
@@ -461,9 +505,7 @@ function ProductRow({ product: p, quantity, editing, onToggleEdit, onToggleActiv
 }
 
 function EntriesSection({ arenaId }) {
-  const { data: products = [] } = useInventoryProducts(arenaId);
-  const { data: entries = [], isLoading } = useInventoryEntries(arenaId);
-  const { data: exits = [] } = useInventoryExits(arenaId);
+  const { products, entries, exits, carregando: isLoading, falhou, tentar } = useEstoqueDaArena(arenaId);
   const add = useAddInventoryEntry(arenaId);
   const [creating, setCreating] = useState(false);
   const [form, setForm] = useState({
@@ -488,11 +530,13 @@ function EntriesSection({ arenaId }) {
         <h3 className="font-display text-base font-bold text-ink flex items-center gap-2">
           <TrendingUp className="h-4 w-4 text-green-700" /> Entradas (compras)
         </h3>
-        <V2Button size="sm" onClick={() => setCreating(true)} disabled={products.length === 0}>
-          <Plus className="h-4 w-4" /> Nova entrada
-        </V2Button>
+        {!falhou && (
+          <V2Button size="sm" onClick={() => setCreating(true)} disabled={products.length === 0}>
+            <Plus className="h-4 w-4" /> Nova entrada
+          </V2Button>
+        )}
       </div>
-      {products.length === 0 && (
+      {!falhou && !isLoading && products.length === 0 && (
         <p className="mt-2 text-xs text-amber-700">Cadastre produtos antes de registrar entradas.</p>
       )}
 
@@ -538,7 +582,9 @@ function EntriesSection({ arenaId }) {
       )}
 
       <div className="mt-3 space-y-2">
-        {isLoading ? <V2Skeleton lines={3} /> : entries.length === 0 ? (
+        {isLoading ? <V2Skeleton lines={3} /> : falhou ? (
+          <FalhaNoEstoque onRetry={tentar} />
+        ) : entries.length === 0 ? (
           <p className="text-sm text-gray-500">Nenhuma entrada registrada.</p>
         ) : (
           entries.map((e) => {
@@ -566,9 +612,7 @@ function EntriesSection({ arenaId }) {
 }
 
 function ExitsSection({ arenaId }) {
-  const { data: products = [] } = useInventoryProducts(arenaId);
-  const { data: entries = [] } = useInventoryEntries(arenaId);
-  const { data: exits = [], isLoading } = useInventoryExits(arenaId);
+  const { products, entries, exits, carregando: isLoading, falhou, tentar } = useEstoqueDaArena(arenaId);
   const add = useAddInventoryExit(arenaId);
   const [creating, setCreating] = useState(false);
   const [form, setForm] = useState({
@@ -643,11 +687,14 @@ function ExitsSection({ arenaId }) {
         <h3 className="font-display text-base font-bold text-ink flex items-center gap-2">
           <TrendingDown className="h-4 w-4 text-orange-700" /> Saídas (vendas / consumo / perdas)
         </h3>
-        <V2Button size="sm" onClick={() => setCreating(true)} disabled={inStockProducts.length === 0}>
-          <Plus className="h-4 w-4" /> Nova saída
-        </V2Button>
+        {!falhou && (
+          <V2Button size="sm" onClick={() => setCreating(true)} disabled={inStockProducts.length === 0}>
+            <Plus className="h-4 w-4" /> Nova saída
+          </V2Button>
+        )}
       </div>
-      {inStockProducts.length === 0 && (
+      {falhou && <FalhaNoEstoque onRetry={tentar} />}
+      {!falhou && !isLoading && inStockProducts.length === 0 && (
         <p className="mt-2 text-xs text-amber-700">
           Nenhum produto em estoque para vender. Registre uma entrada (compra) primeiro.
         </p>
@@ -655,7 +702,7 @@ function ExitsSection({ arenaId }) {
 
       {/* Produtos à venda (estão ou já estiveram em estoque): quanto foi vendido,
           quanto resta e o resultado por produto. */}
-      {managedSales.length === 0 ? (
+      {falhou || isLoading ? null : managedSales.length === 0 ? (
         <p className="mt-3 text-sm text-gray-500">
           Ainda não há produtos em estoque para vender. Registre uma compra (entrada) na aba Compras.
         </p>
@@ -740,7 +787,7 @@ function ExitsSection({ arenaId }) {
       )}
 
       <div className="mt-3 space-y-2">
-        {isLoading ? <V2Skeleton lines={3} /> : exits.length === 0 ? (
+        {isLoading ? <V2Skeleton lines={3} /> : falhou ? null : exits.length === 0 ? (
           <p className="text-sm text-gray-500">Nenhuma saída registrada.</p>
         ) : (
           exits.map((x) => {

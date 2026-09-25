@@ -30,7 +30,7 @@ import {
 } from '@/modules/arenas/hooks/useArenas';
 import { ConfirmDialog } from '@/components/ui/confirm-dialog';
 import V2CourtSchedulesModal from '@/v2/components/arenas/V2CourtSchedulesModal';
-import { V2Badge, V2Button, V2Field, V2Input, V2Select, V2Surface, V2Textarea } from '@/v2/ui/primitives';
+import { V2Badge, V2Button, V2ErrorState, V2Field, V2Input, V2Select, V2Surface, V2Textarea } from '@/v2/ui/primitives';
 
 const COURT_TYPE_OPTIONS = Object.entries(COURT.TYPE_LABELS).map(([value, label]) => ({ value, label }));
 const SURFACE_TYPE_OPTIONS = [
@@ -110,13 +110,21 @@ function CourtForm({ initial = {}, onCancel, onSubmit, busy }) {
 }
 
 export default function V2CourtsTab({ arena }) {
-  const { data: courts = [], isLoading } = useArenaCourts(arena.id);
+  const {
+    data: courts = [], isLoading, isError: quadrasFalharam, refetch: recarregarQuadras,
+  } = useArenaCourts(arena.id);
   // Sem janela de horário, a quadra é INVISÍVEL: não entra no calendário, não
   // aceita reserva, não entra em dia de jogo. Até aqui nada dizia isso ao dono
   // — ele cadastrava a quadra, ela sumia da página pública, e a única forma de
   // descobrir era alguém reclamar.
-  const { data: schedules = [] } = useArenaCourtSchedules(arena.id);
-  const semHorario = useMemo(() => courtsWithoutSchedule(courts, schedules), [courts, schedules]);
+  const { data: schedules = [], isSuccess: janelasCarregadas } = useArenaCourtSchedules(arena.id);
+  // Só se afirma "sem horário" com as janelas NA MÃO: com a consulta falhando
+  // a lista vem vazia e toda quadra pareceria invisível — um alarme falso de
+  // "ninguém consegue reservar" que manda a arena recadastrar horários.
+  const semHorario = useMemo(
+    () => (janelasCarregadas ? courtsWithoutSchedule(courts, schedules) : []),
+    [janelasCarregadas, courts, schedules],
+  );
   const horarioDe = (court) => courtScheduleStatus(schedules, court.id);
   const createCourt = useCreateCourt(arena.id);
   const updateCourt = useUpdateCourt(arena.id);
@@ -206,7 +214,9 @@ export default function V2CourtsTab({ arena }) {
               Reordenar
             </V2Button>
           )}
-          {!adding && (
+          {/* Sem saber quais quadras existem, "Nova quadra" é convite a
+              duplicar uma que já está cadastrada. */}
+          {!adding && !quadrasFalharam && (
             <V2Button size="sm" onClick={() => setAdding(true)}>
               <Plus className="mr-1 h-4 w-4" /> Nova quadra
             </V2Button>
@@ -244,6 +254,13 @@ export default function V2CourtsTab({ arena }) {
 
       {isLoading ? (
         <p className="text-sm text-gray-500">Carregando quadras…</p>
+      ) : quadrasFalharam ? (
+        <V2ErrorState
+          inline
+          title="Não foi possível carregar as quadras"
+          description="Sem a lista, não dá para saber o que já está cadastrado. Tente de novo antes de adicionar."
+          onRetry={() => recarregarQuadras()}
+        />
       ) : courts.length === 0 && !adding ? (
         <div className="rounded-2xl border border-dashed border-gray-200 bg-paper p-6 text-center">
           <p className="text-sm text-gray-500">

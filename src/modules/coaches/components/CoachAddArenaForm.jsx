@@ -14,10 +14,10 @@ import { Search, Plus, Loader2, Building2 } from 'lucide-react';
 import { toast } from 'sonner';
 import { useArenas } from '@/modules/arenas/hooks/useArenas';
 import { useAddCoachResidency } from '../hooks/useCoaches.js';
-import { V2Button, V2Field, V2Input } from '@/v2/ui/primitives';
+import { V2Button, V2Field, V2Input, V2ErrorState } from '@/v2/ui/primitives';
 
 export default function CoachAddArenaForm({ coachId, onClose }) {
-  const { data: arenas = [], isLoading } = useArenas();
+  const { data: arenas = [], isLoading, isError, refetch } = useArenas();
   const add = useAddCoachResidency();
   const [query, setQuery] = useState('');
   const [selectedId, setSelectedId] = useState('');
@@ -68,6 +68,8 @@ export default function CoachAddArenaForm({ coachId, onClose }) {
         <div className="flex items-center gap-2 text-xs text-gray-500">
           <Loader2 className="h-3.5 w-3.5 animate-spin" /> Carregando arenas…
         </div>
+      ) : isError ? (
+        <V2ErrorState inline title="Não foi possível carregar as arenas" onRetry={() => refetch()} />
       ) : results.length === 0 ? (
         <p className="text-xs text-gray-500">Nenhuma arena encontrada.</p>
       ) : (

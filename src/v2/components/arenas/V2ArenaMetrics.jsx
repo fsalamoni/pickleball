@@ -37,9 +37,13 @@ import { moduleRevenue } from '@/modules/arenas/domain/moduleRevenue';
 import { appOrdersSummary, salesOutsideMercado } from '@/modules/arenas/domain/shop';
 import { useArenaReviews } from '@/modules/arenas/hooks/useArenas';
 import { useArenaCourtSchedules, useArenaCourts, useInventoryEntries, useInventoryExits } from '@/modules/arenas/hooks/useArenas';
-import { V2Badge, V2Button, V2Surface } from '@/v2/ui/primitives';
+import { V2Badge, V2Button, V2ErrorState, V2Surface } from '@/v2/ui/primitives';
 import { formatPrice } from '@/modules/arenas/domain/pricing';
+import { formatDateShortBR } from '@/modules/arenas/domain/calendar';
 import { BOOKING_STATUS_LABELS } from '@/modules/arenas/domain/constants';
+
+/** Lista vazia estável: um `[]` novo a cada render desfaria os `useMemo`. */
+const SEM_ITENS = [];
 
 function Stat({ label, value, sub, tone = 'default', icon: Icon }) {
   const toneColors = {
@@ -79,11 +83,14 @@ export default function V2ArenaMetrics({ arena }) {
   const [cursor, setCursor] = useState(() => getNowYearMonth());
 
   // Carrega tudo via hooks já cacheados
-  const { data: bookings = [], isLoading: loadingBookings } = useArenaBookings(arena.id);
-  const { data: sales = [], isLoading: loadingSales } = useArenaSales(arena.id);
-  const { data: courts = [] } = useArenaCourts(arena.id);
-  const { data: reviews = [] } = useArenaReviews(arena.id);
-  const { data: schedulesData } = useArenaCourtSchedules(arena.id);
+  const { data: bookings = [], isLoading: loadingBookings, isError: reservasFalharam, refetch: recarregarReservas } = useArenaBookings(arena.id);
+  const { data: sales = [], isLoading: loadingSales, isError: vendasFalharam, refetch: recarregarVendas } = useArenaSales(arena.id);
+  const qQuadras = useArenaCourts(arena.id);
+  const courts = qQuadras.data || SEM_ITENS;
+  const qAvaliacoes = useArenaReviews(arena.id);
+  const reviews = qAvaliacoes.data || SEM_ITENS;
+  const qJanelas = useArenaCourtSchedules(arena.id);
+  const schedulesData = qJanelas.data;
   const schedules = useMemo(() => {
     if (!schedulesData) return [];
     return Array.isArray(schedulesData) ? schedulesData : [];
@@ -112,8 +119,10 @@ export default function V2ArenaMetrics({ arena }) {
 
   // Mercado / estoque do mês (contabiliza no desempenho): receita das saídas
   // do tipo "venda" e o investido nas entradas do mês.
-  const { data: invEntries = [] } = useInventoryEntries(arena.id);
-  const { data: invExits = [] } = useInventoryExits(arena.id);
+  const qEntradas = useInventoryEntries(arena.id);
+  const invEntries = qEntradas.data || SEM_ITENS;
+  const qSaidas = useInventoryExits(arena.id);
+  const invExits = qSaidas.data || SEM_ITENS;
   const market = useMemo(() => {
     const inMonth = (d) => String(d || '').startsWith(monthPrefix);
     const salesExits = invExits.filter((x) => inMonth(x.date) && (x.exit_type || 'sale') === 'sale');
@@ -139,11 +148,16 @@ export default function V2ArenaMetrics({ arena }) {
   const comPacotes = isOn(ARENA_MODULE_ID.MEMBERS_PACKAGES);
   const comMensalidade = isOn(ARENA_MODULE_ID.MEMBERS_SUBSCRIPTION);
   const comTorneios = isOn(ARENA_MODULE_ID.LEAGUES);
-  const { data: aulas = [] } = useArenaClasses(comAulas ? arena.id : null, { includeClosed: true, lim: 500 });
-  const { data: matriculas = [] } = useArenaClassBookingsAll(comAulas ? arena.id : null);
-  const { data: carteiras = [] } = useArenaWallets(comPacotes ? arena.id : null);
-  const { data: mensalidades = [] } = useArenaSubscriptions(comMensalidade ? arena.id : null);
-  const { data: torneiosDaCasa = [] } = useArenaInternalTournaments(comTorneios ? arena.id : null);
+  const qAulas = useArenaClasses(comAulas ? arena.id : null, { includeClosed: true, lim: 500 });
+  const aulas = qAulas.data || SEM_ITENS;
+  const qMatriculas = useArenaClassBookingsAll(comAulas ? arena.id : null);
+  const matriculas = qMatriculas.data || SEM_ITENS;
+  const qCarteiras = useArenaWallets(comPacotes ? arena.id : null);
+  const carteiras = qCarteiras.data || SEM_ITENS;
+  const qMensalidades = useArenaSubscriptions(comMensalidade ? arena.id : null);
+  const mensalidades = qMensalidades.data || SEM_ITENS;
+  const qTorneios = useArenaInternalTournaments(comTorneios ? arena.id : null);
+  const torneiosDaCasa = qTorneios.data || SEM_ITENS;
   const modulos = useMemo(() => moduleRevenue({
     year: cursor.year,
     month: cursor.month,
@@ -178,6 +192,29 @@ export default function V2ArenaMetrics({ arena }) {
 
   const isLoading = loadingBookings || loadingSales;
 
+  // 🐞 Toda consulta daqui lia `data = []`: com as reservas falhando, a receita
+  // do mês saía ZERO, sem aviso — o número que a arena usa para decidir preço
+  // e horário. Reservas e vendas são o coração do painel: sem elas, não há
+  // número a mostrar. As outras partes, faltando, deixam o total INCOMPLETO —
+  // e a tela diz qual parte ficou de fora.
+  const nucleoFalhou = reservasFalharam || vendasFalharam;
+  const partesQueFalharam = [
+    [qQuadras.isError || qJanelas.isError, 'ocupação (quadras e horários)', [qQuadras, qJanelas]],
+    [qAvaliacoes.isError, 'avaliações', [qAvaliacoes]],
+    [qEntradas.isError || qSaidas.isError, 'mercado', [qEntradas, qSaidas]],
+    [qAulas.isError || qMatriculas.isError, 'aulas', [qAulas, qMatriculas]],
+    [qCarteiras.isError, 'pacotes', [qCarteiras]],
+    [qMensalidades.isError, 'mensalidades', [qMensalidades]],
+    [qTorneios.isError, 'torneios da casa', [qTorneios]],
+  ].filter(([falhou]) => falhou);
+  const tentarNucleo = () => {
+    if (reservasFalharam) recarregarReservas();
+    if (vendasFalharam) recarregarVendas();
+  };
+  const tentarPartes = () => partesQueFalharam.forEach(([, , consultas]) => (
+    consultas.forEach((q) => q.isError && q.refetch())
+  ));
+
   return (
     <V2Surface className="space-y-4 p-4 sm:p-6">
       {/* Header: navegação de mês */}
@@ -197,6 +234,23 @@ export default function V2ArenaMetrics({ arena }) {
           {isLoading ? 'Carregando…' : `${bookingsInMonth.length} reservas · ${salesInMonth.length} pedidos da loja no mês`}
         </div>
       </div>
+
+      {nucleoFalhou ? (
+        <V2ErrorState
+          title="Não foi possível carregar as reservas e vendas do mês"
+          description="Sem elas, a receita e a ocupação sairiam zeradas. Tente de novo em instantes."
+          onRetry={tentarNucleo}
+        />
+      ) : (
+      <>
+      {partesQueFalharam.length > 0 && (
+        <V2ErrorState
+          inline
+          title="Parte dos números não carregou"
+          description={`Ficou de fora: ${partesQueFalharam.map(([, rotulo]) => rotulo).join(', ')}. Os totais abaixo estão incompletos até carregar.`}
+          onRetry={tentarPartes}
+        />
+      )}
 
       {/* Stats principais */}
       <div className="grid grid-cols-2 gap-3 md:grid-cols-4">
@@ -367,7 +421,7 @@ export default function V2ArenaMetrics({ arena }) {
               <li key={b.id} className="flex flex-wrap items-center justify-between gap-2 py-2 text-sm">
                 <div className="min-w-0">
                   <div className="font-semibold text-ink">
-                    {b.next_date} {b.next_start && `· ${b.next_start}–${b.next_end}`}
+                    {b.next_date ? formatDateShortBR(b.next_date) : ''} {b.next_start && `· ${b.next_start}–${b.next_end}`}
                   </div>
                   <div className="text-xs text-gray-500">{b.athlete_name || 'Atleta'}</div>
                 </div>
@@ -379,6 +433,8 @@ export default function V2ArenaMetrics({ arena }) {
           </ul>
         )}
       </V2Surface>
+      </>
+      )}
     </V2Surface>
   );
 }

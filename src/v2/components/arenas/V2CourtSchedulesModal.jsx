@@ -29,7 +29,7 @@ import {
   useCourtSchedules, useCreateSchedule, useUpdateSchedule, useDeleteSchedule,
 } from '@/modules/arenas/hooks/useArenas';
 import ConfirmDialog from '@/components/ConfirmDialog';
-import { V2Badge, V2Button, V2Field, V2Input, V2Surface } from '@/v2/ui/primitives';
+import { V2Badge, V2Button, V2ErrorState, V2Field, V2Input, V2Surface } from '@/v2/ui/primitives';
 
 const WEEKDAY_OPTIONS = [0, 1, 2, 3, 4, 5, 6].map((d) => ({ value: d, label: WEEKDAY_SHORT_PT[d] }));
 
@@ -129,7 +129,7 @@ function ScheduleForm({ initial, onCancel, onSubmit, busy }) {
 }
 
 export default function V2CourtSchedulesModal({ arenaId, court, open, onClose }) {
-  const { data, isLoading } = useCourtSchedules(open ? court?.id : null);
+  const { data, isLoading, isError, refetch } = useCourtSchedules(open ? court?.id : null);
   const createSchedule = useCreateSchedule(arenaId, court?.id);
   const updateSchedule = useUpdateSchedule(court?.id);
   const deleteSchedule = useDeleteSchedule(court?.id);
@@ -185,6 +185,9 @@ export default function V2CourtSchedulesModal({ arenaId, court, open, onClose })
       onClick={onClose}
     >
       <div
+        role="dialog"
+        aria-modal="true"
+        aria-labelledby="horarios-quadra-titulo"
         className="max-h-[90vh] w-full max-w-2xl overflow-y-auto rounded-3xl bg-paper-pure p-4 sm:p-6"
         onClick={(e) => e.stopPropagation()}
       >
@@ -192,7 +195,7 @@ export default function V2CourtSchedulesModal({ arenaId, court, open, onClose })
           <div>
             <div className="flex items-center gap-2">
               <Clock className="h-4 w-4 text-gray-500" />
-              <h3 className="font-display text-lg font-bold text-ink">Horários — {court.name}</h3>
+              <h3 id="horarios-quadra-titulo" className="font-display text-lg font-bold text-ink">Horários — {court.name}</h3>
             </div>
             <p className="mt-1 text-xs text-gray-500">
               Janelas recorrentes em que esta quadra está disponível para reservas. Atletas veem o resumo em cards.
@@ -210,6 +213,16 @@ export default function V2CourtSchedulesModal({ arenaId, court, open, onClose })
 
         {isLoading ? (
           <p className="text-sm text-gray-500">Carregando janelas…</p>
+        ) : isError ? (
+          // Falha não é "nenhuma janela": o convite a adicionar a primeira
+          // duplicaria as que já existem — e janela duplicada vira horário
+          // oferecido duas vezes no calendário.
+          <V2ErrorState
+            inline
+            title="Não foi possível carregar os horários desta quadra"
+            description="Tente de novo antes de adicionar uma janela."
+            onRetry={() => refetch()}
+          />
         ) : list.length === 0 && !adding ? (
           <div className="rounded-2xl border border-dashed border-gray-200 bg-paper p-6 text-center">
             <p className="text-sm text-gray-500">

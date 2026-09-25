@@ -353,3 +353,77 @@ describe('⭐ a folha impressa não sai incompleta em silêncio', () => {
       .toMatch(/if\s*\(\s*isLoading\s*\)/);
   });
 });
+
+/**
+ * ⭐ A MESMA VARREDURA, NA ARENA E NO PROFESSOR (Onda BP).
+ *
+ * A varredura acima cobria dia de jogo e torneio. Estendida à arena, ao
+ * professor e às reservas (111 arquivos), ela acusou **32**: trinta afirmando
+ * vazio sobre consulta que pode ter falhado, e duas isentas abaixo. Ali o
+ * custo não é só a frase — muitas ofereciam um comando que GRAVA em cima do
+ * que a tela não viu:
+ *
+ * - a agenda do professor abria o editor de disponibilidade EM BRANCO, e
+ *   salvar regravava a semana inteira vazia;
+ * - a aba de quadras dizia "nenhuma quadra" e oferecia "Nova quadra" (quadra
+ *   duplicada, com o calendário contando duas);
+ * - o totem dizia "nenhum totem" e criava outro; o catálogo, "nenhum produto",
+ *   e oferecia adotar de novo o que a arena já tem;
+ * - o financeiro fechava o mês com estoque vazio — um relatório GRAVADO que
+ *   diz que a arena não vendeu nada;
+ * - o pedido de reserva mostrava todos os horários livres porque as reservas
+ *   não tinham carregado.
+ */
+describe('⭐ a varredura na arena, no professor e nas reservas', () => {
+  const NA_ARENA = /(arena|coach|classes|booking|member|shop|openMatch|marketing|leagues)/i;
+
+  /**
+   * Isenções — cada uma com o MOTIVO. Mesma exigência da varredura acima.
+   */
+  const ISENTOS = new Map([
+    ['src/modules/arenas/components/PricingEditor.jsx',
+      'as regras de preço vêm do documento da arena recebido por props; o único hook é o de salvar'],
+    ['src/v2/components/arenas/V2ArenaEditors.jsx',
+      'as regras de preço vêm do documento da arena recebido por props; o único hook é o de salvar'],
+  ]);
+
+  const arquivosDaArena = () => [
+    ...varrer('src/v2', (c) => c.endsWith('.jsx') && !/\.test\.jsx$/.test(c) && !/\.runtime\./.test(c) && NA_ARENA.test(c)),
+    ...varrer('src/modules/arenas/components', (c) => c.endsWith('.jsx') && !/\.test\.jsx$/.test(c)),
+    ...varrer('src/modules/coaches', (c) => c.endsWith('.jsx') && !/\.test\.jsx$/.test(c)),
+  ];
+
+  it('⭐ nenhuma tela da arena ou do professor afirma vazio sem tratar falha', () => {
+    const arquivos = [...new Set(arquivosDaArena())];
+    expect(arquivos.length, 'a varredura não encontrou arquivo nenhum — o filtro quebrou')
+      .toBeGreaterThan(80);
+
+    const mentem = telasQueMentemNoVazio(arquivos).filter((c) => !ISENTOS.has(c));
+    expect(mentem, `estas telas afirmam que algo não existe sem saber se a consulta FALHOU:\n  ${mentem.join('\n  ')}\n\nCorrija com isError + <V2ErrorState onRetry> (docs/27-FALHA-NAO-E-VAZIO.md), ou justifique em ISENTOS.`)
+      .toEqual([]);
+  });
+
+  it('⭐ toda isenção tem motivo escrito', () => {
+    for (const [caminho, motivo] of ISENTOS) {
+      expect(existsSync(caminho), `isenção aponta para arquivo que não existe: ${caminho}`).toBe(true);
+      expect(String(motivo).length, `isenção sem motivo de verdade: ${caminho}`).toBeGreaterThan(30);
+    }
+  });
+
+  it('⭐ a disponibilidade do professor não nasce em branco quando a leitura falha', () => {
+    const src = semComentarios(ler('src/v2/pages/V2CoachAgenda.jsx'));
+    // O editor só assume "agenda vazia" quando a consulta CONFIRMOU que não há.
+    expect(src).toMatch(/!isError/);
+    expect(src).toMatch(/V2ErrorState/);
+  });
+
+  it('⭐ o fechamento financeiro não grava sobre estoque desconhecido', () => {
+    const src = semComentarios(ler('src/v2/components/arenas/V2ArenaFinanceTab.jsx'));
+    for (const fn of ['handleClose', 'handleRegenerate', 'handleSaveEdits']) {
+      const inicio = src.indexOf(`function ${fn}`);
+      expect(inicio, `${fn} não existe mais — atualize o guarda`).toBeGreaterThan(-1);
+      const corpo = src.slice(inicio, inicio + 120);
+      expect(corpo, `${fn} grava relatório mesmo com o estoque falhando`).toMatch(/falhou/);
+    }
+  });
+});

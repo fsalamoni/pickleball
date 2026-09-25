@@ -7,7 +7,10 @@
  *     soma o que foi RECEBIDO (aula: só a parte da arena);
  *  3. o torneio da casa é PREVISTO e não entra no total;
  *  4. 🐞 a venda paga da loja entra UMA vez (antes, duas);
- *  5. ⭐ o pedido do app entregue conta pelo Mercado — e não de novo como venda.
+ *  5. ⭐ o pedido do app entregue conta pelo Mercado — e não de novo como venda;
+ *  6. ⭐ reservas ou vendas falhando: nada de "R$ 0,00" — a tela diz que falhou;
+ *  7. uma parte secundária falhando: os números saem, com o aviso de que estão
+ *     incompletos e do que ficou de fora.
  */
 import React from 'react';
 import { createRoot } from 'react-dom/client';
@@ -19,9 +22,12 @@ const LIGADOS = new Set();
 const hoje = new Date();
 const MES = `${hoje.getFullYear()}-${String(hoje.getMonth() + 1).padStart(2, '0')}`;
 const vazio = { data: [], isLoading: false };
-const dados = { vendas: [], saidas: [] };
+const dados = { vendas: [], saidas: [], falhaReservas: false, falhaAulas: false };
+const falha = () => ({ data: undefined, isLoading: false, isError: true, refetch: vi.fn() });
 
-vi.mock('@/modules/arenas/hooks/useBookings', () => ({ useArenaBookings: () => vazio }));
+vi.mock('@/modules/arenas/hooks/useBookings', () => ({
+  useArenaBookings: () => (dados.falhaReservas ? falha() : vazio),
+}));
 vi.mock('@/modules/arenas/hooks/useArenas', () => ({
   useArenaReviews: () => vazio, useArenaCourtSchedules: () => vazio, useArenaCourts: () => vazio,
   useInventoryEntries: () => vazio, useInventoryExits: () => ({ data: dados.saidas, isLoading: false }),
@@ -31,7 +37,7 @@ vi.mock('@/modules/arenas/hooks/useArenaModules', () => ({
 }));
 vi.mock('@/modules/arenas/hooks/useArenaV3', () => ({
   useArenaSales: () => ({ data: dados.vendas, isLoading: false }),
-  useArenaClasses: (id) => ({ data: id ? [{ id: 'k1', date: `${MES}-10` }] : [] }),
+  useArenaClasses: (id) => (id && dados.falhaAulas ? falha() : { data: id ? [{ id: 'k1', date: `${MES}-10` }] : [] }),
   useArenaClassBookingsAll: (id) => ({ data: id ? [{ class_id: 'k1', paid: true, amount: 100, arena_amount: 20 }] : [] }),
   useArenaWallets: (id) => ({ data: id ? [{ transactions: [{ type: 'package_purchase', amount: 500, at: new Date() }] }] : [] }),
   useArenaSubscriptions: (id) => ({ data: id ? [{ price: 150, paid_months: [MES] }] : [] }),
@@ -45,6 +51,8 @@ beforeEach(() => {
   LIGADOS.clear();
   dados.vendas = [];
   dados.saidas = [];
+  dados.falhaReservas = false;
+  dados.falhaAulas = false;
   container = document.createElement('div');
   document.body.appendChild(container);
   root = createRoot(container);
@@ -109,5 +117,21 @@ describe('o dinheiro dos módulos nas métricas', () => {
     expect(texto).toContain('Pedidos do app');
     expect(texto).toContain('(R$ 8,00 pelo app)');
     expect(container.textContent).not.toContain('Receita de vendas (PDV)');
+  });
+
+  it('⭐ reservas falhando: a tela diz que falhou, e não mostra R$ 0,00', async () => {
+    dados.falhaReservas = true;
+    await render();
+    expect(container.textContent).toMatch(/Não foi possível/);
+    expect(container.textContent).toContain('Tentar de novo');
+    expect(container.textContent).not.toContain('Receita total (mês)');
+  });
+
+  it('uma parte falhando: os números saem, avisando o que ficou de fora', async () => {
+    LIGADOS.add(ARENA_MODULE_ID.CLASSES);
+    dados.falhaAulas = true;
+    await render();
+    expect(container.textContent).toContain('Receita total (mês)');
+    expect(container.textContent).toMatch(/Ficou de fora: aulas/);
   });
 });

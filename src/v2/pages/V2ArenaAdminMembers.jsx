@@ -45,6 +45,7 @@ import ConfirmDialog from '@/components/ConfirmDialog';
 import {
   V2Avatar, V2Badge, V2Button, V2EmptyState, V2Field, V2Input,
   V2Skeleton, V2Surface, V2Textarea,
+  V2ErrorState,
 } from '@/v2/ui/primitives';
 
 const TIER_TONE = { bronze: 'amber', silver: 'neutral', gold: 'acid', platinum: 'ink' };
@@ -636,10 +637,16 @@ function LinhaDoMembro({
 export function ArenaMembersPanel({ arena, view = 'membros' }) {
   const arenaId = arena?.id;
   const { isOn } = useArenaModules(arenaId);
-  const { data: members = [], isLoading: carregandoMembros } = useArenaMembers(arenaId);
-  const { data: packages = [], isLoading: carregandoPacotes } = useArenaPackages(arenaId, { onlyActive: false });
+  const {
+    data: members = [], isLoading: carregandoMembros, isError: membrosFalharam, refetch: recarregarMembros,
+  } = useArenaMembers(arenaId);
+  const {
+    data: packages = [], isLoading: carregandoPacotes, isError: pacotesFalharam, refetch: recarregarPacotes,
+  } = useArenaPackages(arenaId, { onlyActive: false });
   const remover = useRemoveArenaMember();
-  const { data: mensalidades = [] } = useArenaSubscriptions(arenaId);
+  const {
+    data: mensalidades = [], isError: mensalidadesFalharam, refetch: recarregarMensalidades,
+  } = useArenaSubscriptions(arenaId);
   const excluirPacote = useDeletePackage();
   const [novoPacote, setNovoPacote] = useState(false);
   const [incluindo, setIncluindo] = useState(false);
@@ -680,7 +687,8 @@ export function ArenaMembersPanel({ arena, view = 'membros' }) {
               Horas vendidas adiantado. O pacote é abatido na CONFIRMAÇÃO da reserva, e o que vence primeiro sai primeiro.
             </p>
           </div>
-          {!novoPacote && (
+          {/* Sem a lista, "Novo pacote" é convite a duplicar um que já está à venda. */}
+          {!novoPacote && !pacotesFalharam && (
             <V2Button size="sm" onClick={() => setNovoPacote(true)}>
               <Plus className="h-4 w-4" /> Novo pacote
             </V2Button>
@@ -693,6 +701,13 @@ export function ArenaMembersPanel({ arena, view = 'membros' }) {
         )}
         {carregandoPacotes ? (
           <V2Skeleton className="h-24" />
+        ) : pacotesFalharam ? (
+          <V2ErrorState
+            inline
+            title="Não foi possível carregar os pacotes"
+            description="Tente de novo antes de criar um — ele pode já existir."
+            onRetry={() => recarregarPacotes()}
+          />
         ) : packages.length === 0 ? (
           <V2EmptyState
             icon={Package}
@@ -747,14 +762,29 @@ export function ArenaMembersPanel({ arena, view = 'membros' }) {
           </h2>
           <p className="text-xs text-gray-500">Nível, horas de pacote, saldo e mensalidade de cada um.</p>
         </div>
-        {!incluindo && (
+        {!incluindo && !membrosFalharam && (
           <V2Button size="sm" variant="secondary" onClick={() => setIncluindo(true)}>
             <UserPlus className="h-4 w-4" /> Incluir membro
           </V2Button>
         )}
       </div>
 
-      {temPacotes && <PedidoDePacote arenaId={arena.id} packages={packages} members={members} />}
+      {/* O pedido de pacote precisa do pacote e de saber se a pessoa já é
+          membro: sem as duas listas, ele não é oferecido (a venda confere de
+          novo no banco, mas a tela não pode afirmar o que não sabe). */}
+      {temPacotes && !pacotesFalharam && !membrosFalharam && (
+        <PedidoDePacote arenaId={arena.id} packages={packages} members={members} />
+      )}
+
+      {temMensalidade && mensalidadesFalharam && !membrosFalharam && (
+        <V2ErrorState
+          inline
+          className="mb-3"
+          title="Não foi possível carregar as mensalidades"
+          description="Os membros aparecem sem o plano até carregar."
+          onRetry={() => recarregarMensalidades()}
+        />
+      )}
 
       {incluindo && (
         <div className="mb-3">
@@ -766,6 +796,13 @@ export function ArenaMembersPanel({ arena, view = 'membros' }) {
 
       {carregandoMembros ? (
         <V2Skeleton className="h-32" />
+      ) : membrosFalharam ? (
+        <V2ErrorState
+          inline
+          title="Não foi possível carregar os membros"
+          description="A arena não perdeu ninguém — a lista só não chegou. Tente de novo."
+          onRetry={() => recarregarMembros()}
+        />
       ) : members.length === 0 ? (
         <V2EmptyState
           icon={Wallet}
@@ -781,10 +818,12 @@ export function ArenaMembersPanel({ arena, view = 'membros' }) {
               arenaId={arena.id}
               member={m}
               temCarteira={temCarteira}
-              temMensalidade={temMensalidade}
+              // Sem as mensalidades na mão, o plano de cada um é desconhecido —
+              // não "sem plano", que ofereceria criar um por cima do que existe.
+              temMensalidade={temMensalidade && !mensalidadesFalharam}
               temPontos={temPontos}
               sub={mensalidadePorUid.get(m.user_id) || null}
-              pacotes={temPacotes ? packages : []}
+              pacotes={temPacotes && !pacotesFalharam ? packages : []}
               onRemover={(alvo) => remover.mutateAsync({ arenaId: arena.id, userId: alvo.user_id })
                 .then(() => toast.success('Membro removido.'))
                 .catch((e) => toast.error(e?.message || 'Não foi possível remover.'))}
