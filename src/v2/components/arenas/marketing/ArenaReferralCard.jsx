@@ -14,14 +14,21 @@
  *
  * Falha ao ler não vira "você ainda não tem código": o botão de criar só
  * aparece quando a leitura CONFIRMOU que não há.
+ *
+ * Desde a Onda BX o cartão diz as REGRAS do programa (o cupom do tipo
+ * indicação): quanto ganha quem indica, quanto ganha quem chega, e se vale só
+ * para quem nunca reservou aqui. O convite enviado diz o mesmo. Sem programa,
+ * o texto de sempre.
  */
-import React from 'react';
+import React, { useMemo } from 'react';
 import { toast } from 'sonner';
 import { Copy, Gift, Share2 } from 'lucide-react';
 import { useAuth } from '@/core/lib/FirebaseAuthContext';
 import { useArenaModules } from '@/modules/arenas/hooks/useArenaModules';
-import { useCreateMyReferralCode, useMyReferralCode } from '@/modules/arenas/hooks/useArenaV3';
+import { useArenaCoupons, useCreateMyReferralCode, useMyReferralCode } from '@/modules/arenas/hooks/useArenaV3';
 import { ARENA_MODULE_ID } from '@/modules/arenas/domain/modules';
+import { referralInviteText, referralProgram, referralRulesText } from '@/modules/arenas/domain/marketing';
+import { formatPrice } from '@/modules/arenas/domain/pricing';
 import { V2Button, V2ErrorState, V2Skeleton, V2Surface } from '@/v2/ui/primitives';
 
 export default function ArenaReferralCard({ arena, className = 'mt-6' }) {
@@ -31,6 +38,10 @@ export default function ArenaReferralCard({ arena, className = 'mt-6' }) {
   const ligado = isOn(ARENA_MODULE_ID.MARKETING) && isOn(ARENA_MODULE_ID.MARKETING_REFERRAL);
   const consulta = useMyReferralCode(ligado && user?.uid ? arenaId : null);
   const criar = useCreateMyReferralCode();
+  // As regras do programa (cupom do tipo indicação). A mesma consulta das
+  // promoções da página — o cache é compartilhado.
+  const { data: cupons } = useArenaCoupons(ligado ? arenaId : null);
+  const programa = useMemo(() => referralProgram(cupons || []), [cupons]);
 
   if (modulosLoading || !ligado || !user?.uid || !arena) return null;
 
@@ -46,7 +57,7 @@ export default function ArenaReferralCard({ arena, className = 'mt-6' }) {
   };
 
   const convidar = async () => {
-    const texto = `Jogo na ${arena.name} — use meu código ${codigo} na primeira visita e nós dois ganhamos crédito.`;
+    const texto = referralInviteText({ arenaName: arena.name, code: codigo, program: programa });
     try {
       if (navigator.share) await navigator.share({ text: texto });
       else {
@@ -69,9 +80,23 @@ export default function ArenaReferralCard({ arena, className = 'mt-6' }) {
         <Gift className="mt-0.5 h-5 w-5 shrink-0 text-ink" />
         <div className="min-w-0 flex-1">
           <h3 className="font-display text-base font-bold text-ink">Indique e ganhe</h3>
-          <p className="mt-0.5 text-sm text-gray-500">
-            Traga alguém para jogar aqui: quem chegar dizendo o seu código ganha crédito na arena — e você também.
-          </p>
+          {programa ? (
+            <>
+              <p className="mt-0.5 text-sm text-gray-600">{referralRulesText(programa)}.</p>
+              <p className="mt-0.5 text-xs text-gray-500">
+                {[
+                  programa.first_booking_only !== false ? 'Vale para quem nunca reservou aqui' : null,
+                  programa.min_amount ? `primeira reserva a partir de ${formatPrice(programa.min_amount)}` : null,
+                  programa.max_per_referrer ? `até ${programa.max_per_referrer} indicações por pessoa` : null,
+                ].filter(Boolean).join(' · ')}
+              </p>
+              {programa.description && <p className="mt-1 text-sm text-gray-600">{programa.description}</p>}
+            </>
+          ) : (
+            <p className="mt-0.5 text-sm text-gray-500">
+              Traga alguém para jogar aqui: quem chegar dizendo o seu código ganha crédito na arena — e você também.
+            </p>
+          )}
 
           {consulta.isLoading && <V2Skeleton className="mt-3 h-10 w-48 rounded-2xl" />}
 

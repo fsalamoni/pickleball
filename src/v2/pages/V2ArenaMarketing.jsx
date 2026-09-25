@@ -42,26 +42,28 @@ import React, { useMemo, useState } from 'react';
 import { Link, Navigate, useParams } from 'react-router-dom';
 import { toast } from 'sonner';
 import {
-  AlertTriangle, Check, Eye, Gift, Megaphone, MessageSquare, Pencil,
-  Plus, Send, Star, Tag, Trash2, TrendingUp, Users, X,
+  Check, Gift, Megaphone, MessageSquare,
+  Plus, Send, Star, TrendingUp, Users, X,
 } from 'lucide-react';
 import { useArenaBookings } from '@/modules/arenas/hooks/useBookings';
-import { useAthletes } from '@/modules/athletes/hooks/useAthletes';
 import {
-  useArenaCouponsAll, useCreateCoupon, useUpdateCoupon, useSetCouponActive,
-  useDeleteCoupon, useArenaCampaigns, useSendCampaign, useArenaNps,
+  useArenaCouponsAll, useArenaCampaigns, useSendCampaign, useArenaNps,
   useArenaNpsResponses, useArenaMembers, useRedeemReferral,
 } from '@/modules/arenas/hooks/useArenaV3';
 import {
-  CAMPAIGN_AUDIENCE, CAMPAIGN_AUDIENCE_META, COUPON_TYPE, campaignRecipients,
-  classifyNps, couponLabel, normalizeCouponInput,
+  CAMPAIGN_AUDIENCE, CAMPAIGN_AUDIENCE_META, campaignRecipients,
+  classifyNps, referralProgram, referralRewards,
 } from '@/modules/arenas/domain/marketing';
+import { useArenaModules } from '@/modules/arenas/hooks/useArenaModules';
+import { ARENA_MODULE_ID } from '@/modules/arenas/domain/modules';
+import CouponsPanel from '@/v2/components/arenas/marketing/coupons/CouponsPanel';
+import ReferralRulesCard from '@/v2/components/arenas/marketing/coupons/ReferralRulesCard';
+import { AthletePicker } from '@/v2/components/arenas/marketing/coupons/VoucherReception';
 import { formatPrice } from '@/modules/arenas/domain/pricing';
 import { formatDateShortBR } from '@/modules/arenas/domain/calendar';
-import ConfirmDialog from '@/components/ConfirmDialog';
 import { ConfirmDialog as ConfirmDialogControlado } from '@/components/ui/confirm-dialog';
 import {
-  V2Avatar, V2Badge, V2Button, V2EmptyState, V2Field, V2Input, V2Skeleton,
+  V2Badge, V2Button, V2EmptyState, V2Field, V2Input, V2Skeleton,
   V2Surface, V2Textarea,
 } from '@/v2/ui/primitives';
 
@@ -83,283 +85,9 @@ function iso(v) {
 
 /* ======================================================== 1. CUPONS ====== */
 
-const CUPOM_VAZIO = {
-  code: '', type: COUPON_TYPE.PERCENT, value: 10, description: '',
-  max_uses: '', min_amount: '', once_per_user: true, expires_at: '', active: true,
-  show_public: false,
-};
-
-function CupomForm({ arenaId, cupom, onClose }) {
-  const [form, setForm] = useState(() => (cupom
-    ? {
-      code: cupom.code || '',
-      type: cupom.type || COUPON_TYPE.PERCENT,
-      value: cupom.value ?? 10,
-      description: cupom.description || '',
-      max_uses: cupom.max_uses ?? '',
-      min_amount: cupom.min_amount ?? '',
-      once_per_user: cupom.once_per_user !== false,
-      expires_at: iso(cupom.expires_at) || '',
-      active: cupom.active !== false,
-      show_public: cupom.show_public === true,
-    }
-    : { ...CUPOM_VAZIO }));
-  const criar = useCreateCoupon();
-  const editar = useUpdateCoupon();
-  const set = (patch) => setForm((f) => ({ ...f, ...patch }));
-
-  // A prévia usa a MESMA normalização do serviço: o que a arena lê aqui é
-  // exatamente o que vai ser gravado, não uma aproximação da tela.
-  const previa = useMemo(() => normalizeCouponInput({
-    ...form,
-    value: Number(form.value),
-    max_uses: form.max_uses === '' ? null : Number(form.max_uses),
-    min_amount: form.min_amount === '' ? null : Number(form.min_amount),
-    expires_at: form.expires_at ? new Date(`${form.expires_at}T23:59:59`).getTime() : null,
-  }), [form]);
-
-  const submit = async (e) => {
-    e.preventDefault();
-    if (!previa.valid) {
-      toast.error(Object.values(previa.errors)[0]);
-      return;
-    }
-    try {
-      const input = {
-        ...form,
-        value: Number(form.value),
-        max_uses: form.max_uses === '' ? null : Number(form.max_uses),
-        min_amount: form.min_amount === '' ? null : Number(form.min_amount),
-        expires_at: form.expires_at ? new Date(`${form.expires_at}T23:59:59`).getTime() : null,
-      };
-      if (cupom) await editar.mutateAsync({ arenaId, couponId: cupom.id, input });
-      else await criar.mutateAsync({ arenaId, input });
-      toast.success(cupom ? 'Cupom atualizado.' : 'Cupom criado.');
-      onClose();
-    } catch (err) {
-      toast.error(err?.message || 'Não foi possível salvar o cupom.');
-    }
-  };
-
-  const salvando = criar.isPending || editar.isPending;
-
-  return (
-    <form onSubmit={submit} className="rounded-2xl border border-gray-100 bg-paper p-4">
-      <div className="mb-3 flex items-center justify-between">
-        <h3 className="font-display text-base font-bold text-ink">
-          {cupom ? `Editar ${cupom.code}` : 'Novo cupom'}
-        </h3>
-        <button type="button" onClick={onClose} aria-label="Fechar" className="rounded-full p-1.5 text-gray-400 hover:bg-gray-100 hover:text-ink">
-          <X className="h-4 w-4" />
-        </button>
-      </div>
-
-      <div className="grid gap-3 sm:grid-cols-2">
-        <V2Field label="Código" htmlFor="cup-code" hint="Quem digita sempre em maiúsculas.">
-          <V2Input id="cup-code" required maxLength={30} placeholder="VERAO10"
-            value={form.code} onChange={(e) => set({ code: e.target.value.toUpperCase().replace(/\s+/g, '') })} />
-        </V2Field>
-        <V2Field label="Tipo de desconto" htmlFor="cup-tipo">
-          <select id="cup-tipo" value={form.type} onChange={(e) => set({ type: e.target.value })}
-            className="h-11 w-full rounded-2xl border border-gray-200 bg-paper-pure px-4 text-sm">
-            <option value={COUPON_TYPE.PERCENT}>Percentual (%)</option>
-            <option value={COUPON_TYPE.FIXED}>Valor fixo (R$)</option>
-          </select>
-        </V2Field>
-        <V2Field label={form.type === COUPON_TYPE.PERCENT ? 'Desconto (%)' : 'Desconto (R$)'} htmlFor="cup-valor">
-          <V2Input id="cup-valor" type="number" min="0.01" step="0.01" required
-            max={form.type === COUPON_TYPE.PERCENT ? '100' : undefined}
-            value={form.value} onChange={(e) => set({ value: e.target.value })} />
-        </V2Field>
-        <V2Field label="Valor mínimo da conta (R$)" htmlFor="cup-min" hint="Vazio = sem mínimo.">
-          <V2Input id="cup-min" type="number" min="0" step="0.01" placeholder="Sem mínimo"
-            value={form.min_amount} onChange={(e) => set({ min_amount: e.target.value })} />
-        </V2Field>
-        <V2Field label="Usos máximos" htmlFor="cup-max" hint="Vazio = ilimitado.">
-          <V2Input id="cup-max" type="number" min="1" placeholder="Ilimitado"
-            value={form.max_uses} onChange={(e) => set({ max_uses: e.target.value })} />
-        </V2Field>
-        <V2Field label="Vale até" htmlFor="cup-exp" hint="Vazio = sem prazo.">
-          <V2Input id="cup-exp" type="date" value={form.expires_at}
-            onChange={(e) => set({ expires_at: e.target.value })} />
-        </V2Field>
-      </div>
-
-      <V2Field label="Descrição" htmlFor="cup-desc" className="mt-3"
-        hint="Aparece para quem digita o código. Diga a regra em uma linha.">
-        <V2Input id="cup-desc" maxLength={160} placeholder="10% na primeira reserva do mês"
-          value={form.description} onChange={(e) => set({ description: e.target.value })} />
-      </V2Field>
-
-      <label className="mt-3 flex items-center gap-2 text-sm text-gray-600">
-        <input type="checkbox" checked={form.once_per_user}
-          onChange={(e) => set({ once_per_user: e.target.checked })}
-          className="h-4 w-4 rounded border-gray-300" />
-        Cada pessoa pode usar uma vez só
-      </label>
-
-      <label className="mt-2 flex items-start gap-2 text-sm text-gray-600">
-        <input type="checkbox" checked={form.show_public}
-          onChange={(e) => set({ show_public: e.target.checked })}
-          className="mt-0.5 h-4 w-4 rounded border-gray-300" />
-        <span>
-          Divulgar na página da arena
-          <span className="block text-xs text-gray-500">
-            Vira PROMOÇÃO: aparece na página da arena e no pedido de reserva, com um toque para aplicar.
-            Sem marcar, o cupom é um código que você entrega a quem quiser.
-          </span>
-        </span>
-      </label>
-
-      {previa.valid && (
-        <p className="mt-3 rounded-2xl bg-paper-pure p-3 text-xs text-gray-600">
-          Vai valer como: <strong className="text-ink">{couponLabel(previa.value)}</strong>
-          {previa.value.min_amount ? ` · a partir de ${formatPrice(previa.value.min_amount)}` : ''}
-          {previa.value.max_uses ? ` · até ${previa.value.max_uses} usos` : ' · usos ilimitados'}
-        </p>
-      )}
-
-      <div className="mt-3 flex justify-end gap-2">
-        <V2Button type="button" variant="ghost" onClick={onClose}>Cancelar</V2Button>
-        <V2Button type="submit" disabled={salvando}>
-          {salvando ? 'Salvando…' : cupom ? 'Salvar' : 'Criar cupom'}
-        </V2Button>
-      </div>
-    </form>
-  );
-}
-
-function CuponsSecao({ arenaId }) {
-  const { data: cupons = [], isLoading, isError, refetch } = useArenaCouponsAll(arenaId);
-  const ligar = useSetCouponActive();
-  const apagar = useDeleteCoupon();
-  const [form, setForm] = useState(null);   // null | 'novo' | cupom
-
-  const ordenados = useMemo(
-    () => [...cupons].sort((a, b) => {
-      if ((a.active !== false) !== (b.active !== false)) return a.active === false ? 1 : -1;
-      return (ms(b.created_at) || 0) - (ms(a.created_at) || 0);
-    }),
-    [cupons],
-  );
-
-  const alternar = async (c) => {
-    try {
-      await ligar.mutateAsync({ arenaId, couponId: c.id, active: c.active === false });
-      toast.success(c.active === false ? 'Cupom religado.' : 'Cupom desligado.');
-    } catch (err) {
-      toast.error(err?.message || 'Não foi possível alterar o cupom.');
-    }
-  };
-
-  const remover = async (c) => {
-    try {
-      await apagar.mutateAsync({ arenaId, couponId: c.id });
-      toast.success('Cupom apagado.');
-    } catch (err) {
-      toast.error(err?.message || 'Não foi possível apagar.');
-    }
-  };
-
-  return (
-    <V2Surface>
-      <div className="mb-4 flex flex-wrap items-center justify-between gap-2">
-        <div className="flex items-center gap-2">
-          <Tag className="h-5 w-5 text-ink" />
-          <h2 className="font-display text-lg font-bold text-ink">Cupons</h2>
-        </div>
-        {!form && (
-          <V2Button size="sm" onClick={() => setForm('novo')}>
-            <Plus className="mr-1.5 h-4 w-4" /> Novo cupom
-          </V2Button>
-        )}
-      </div>
-
-      {form && (
-        <div className="mb-4">
-          <CupomForm arenaId={arenaId} cupom={form === 'novo' ? null : form} onClose={() => setForm(null)} />
-        </div>
-      )}
-
-      {isLoading && <V2Skeleton className="h-24 rounded-2xl" />}
-
-      {isError && (
-        <div className="rounded-2xl border border-amber-200 bg-amber-50 p-4 text-sm text-amber-900">
-          <p className="flex items-center gap-2 font-bold"><AlertTriangle className="h-4 w-4" /> Não foi possível carregar os cupons.</p>
-          <p className="mt-1 text-xs">Isto é uma falha de leitura — não quer dizer que a arena não tenha cupons.</p>
-          <V2Button size="sm" variant="ghost" className="mt-2" onClick={() => refetch()}>Tentar de novo</V2Button>
-        </div>
-      )}
-
-      {!isLoading && !isError && ordenados.length === 0 && !form && (
-        <V2EmptyState
-          icon={Tag}
-          title="Nenhum cupom ainda"
-          description="Um cupom é a forma mais direta de trazer gente numa semana fraca. Quem reserva digita o código e o desconto entra no preço."
-          action={<V2Button size="sm" onClick={() => setForm('novo')}>Criar o primeiro</V2Button>}
-        />
-      )}
-
-      {ordenados.length > 0 && (
-        <div className="grid gap-3 md:grid-cols-2">
-          {ordenados.map((c) => {
-            const desligado = c.active === false;
-            const esgotado = c.max_uses && (c.used_count || 0) >= c.max_uses;
-            const vencido = ms(c.expires_at) && ms(c.expires_at) < Date.now();
-            return (
-              <div key={c.id} className={`rounded-2xl border p-3 ${desligado ? 'border-gray-100 bg-gray-50 opacity-70' : 'border-gray-100 bg-paper'}`}>
-                <div className="flex items-start justify-between gap-2">
-                  <div className="min-w-0">
-                    <p className="font-display text-base font-bold tracking-wide text-ink">{c.code}</p>
-                    <p className="text-sm text-gray-600">{couponLabel(c)}</p>
-                    {c.description && <p className="mt-0.5 text-xs text-gray-500">{c.description}</p>}
-                  </div>
-                  <V2Badge tone={desligado ? 'neutral' : esgotado || vencido ? 'amber' : 'green'}>
-                    {desligado ? 'Desligado' : esgotado ? 'Esgotado' : vencido ? 'Vencido' : 'Ativo'}
-                  </V2Badge>
-                </div>
-
-                <div className="mt-2 flex flex-wrap gap-x-3 gap-y-1 text-xs text-gray-500">
-                  {c.show_public === true && (
-                    <span className="inline-flex items-center gap-1 font-bold text-ink">
-                      <Eye className="h-3.5 w-3.5" /> Na página da arena
-                    </span>
-                  )}
-                  <span>{c.used_count || 0}{c.max_uses ? ` de ${c.max_uses}` : ''} usos</span>
-                  {c.min_amount ? <span>mín. {formatPrice(c.min_amount)}</span> : null}
-                  {iso(c.expires_at) ? <span>até {formatDateShortBR(iso(c.expires_at))}</span> : null}
-                  {c.once_per_user !== false ? <span>1 por pessoa</span> : null}
-                </div>
-
-                <div className="mt-3 flex flex-wrap gap-1.5">
-                  <V2Button size="sm" variant="ghost" onClick={() => setForm(c)}>
-                    <Pencil className="mr-1 h-3.5 w-3.5" /> Editar
-                  </V2Button>
-                  <V2Button size="sm" variant="ghost" onClick={() => alternar(c)}>
-                    {desligado ? 'Religar' : 'Desligar'}
-                  </V2Button>
-                  <ConfirmDialog
-                    title={`Apagar o cupom ${c.code}?`}
-                    description={`Apagar leva junto a contagem de ${c.used_count || 0} uso(s) — depois não dá para saber quanto essa promoção rendeu. Se a ideia é só parar de aceitar o código, use "Desligar".`}
-                    confirmLabel="Apagar mesmo assim"
-                    destructive
-                    onConfirm={() => remover(c)}
-                    trigger={(
-                      <V2Button size="sm" variant="ghost" className="text-red-600">
-                        <Trash2 className="mr-1 h-3.5 w-3.5" /> Apagar
-                      </V2Button>
-                    )}
-                  />
-                </div>
-              </div>
-            );
-          })}
-        </div>
-      )}
-
-    </V2Surface>
-  );
-}
+// Os cupons moram em `v2/components/arenas/marketing/coupons/` desde a Onda BX:
+// tipos (desconto, hora grátis, vales, indicação), recepção de vales e o
+// controle de uso. Esta página só os monta.
 
 /* ===================================================== 2. CAMPANHAS ====== */
 
@@ -640,38 +368,41 @@ function NpsSecao({ arenaId }) {
 /* =================================================== 4. INDICAÇÕES ====== */
 
 function IndicacoesSecao({ arenaId }) {
-  const { data: atletas = [] } = useAthletes();
+  const cuponsQ = useArenaCouponsAll(arenaId);
+  const programa = useMemo(() => referralProgram(cuponsQ.data || []), [cuponsQ.data]);
   const resgatar = useRedeemReferral();
   const [code, setCode] = useState('');
-  const [q, setQ] = useState('');
   const [indicado, setIndicado] = useState(null);
-  const [premio, setPremio] = useState(20);
-
-  const resultados = useMemo(() => {
-    const termo = q.trim().toLowerCase();
-    if (!termo) return [];
-    return atletas
-      .filter((a) => `${a.platform_name || ''} ${a.full_name || ''}`.toLowerCase().includes(termo))
-      .slice(0, 6);
-  }, [atletas, q]);
+  // Os valores vêm das regras do programa; sem programa, o padrão de antes.
+  const [premios, setPremios] = useState(null);
+  const padrao = useMemo(() => {
+    const r = referralRewards(programa);
+    return programa
+      ? { quemIndica: r.referrerCredit, quemChega: r.referredCredit }
+      : { quemIndica: 20, quemChega: 20 };
+  }, [programa]);
+  const valores = premios || padrao;
 
   const enviar = async () => {
     try {
-      const { reward } = await resgatar.mutateAsync({
+      const r = await resgatar.mutateAsync({
         arenaId,
         code: code.trim().toUpperCase(),
         referredId: indicado.id,
         referredName: indicado.platform_name || indicado.full_name || 'Atleta',
-        reward: Number(premio),
+        referrerReward: Number(valores.quemIndica) || 0,
+        referredReward: Number(valores.quemChega) || 0,
+        program: programa,
       });
-      toast.success(`Indicação registrada. ${formatPrice(reward)} para cada lado.`);
-      setCode(''); setQ(''); setIndicado(null);
+      toast.success(`Indicação registrada. ${formatPrice(r.referrerReward)} para quem indicou e ${formatPrice(r.referredReward)} para quem chegou.`);
+      setCode(''); setIndicado(null); setPremios(null);
     } catch (err) {
       toast.error(err?.message || 'Não foi possível registrar a indicação.');
     }
   };
 
-  const pronto = code.trim().length >= 4 && indicado && Number(premio) > 0;
+  const pronto = code.trim().length >= 4 && indicado
+    && (Number(valores.quemIndica) || 0) + (Number(valores.quemChega) || 0) > 0;
 
   return (
     <V2Surface>
@@ -680,51 +411,43 @@ function IndicacoesSecao({ arenaId }) {
         <h2 className="font-display text-lg font-bold text-ink">Indique e ganhe</h2>
       </div>
       <p className="mb-4 text-sm text-gray-500">
-        Cada atleta pega o próprio código na página da arena, em &quot;Indique e ganhe&quot;.
-        Quando alguém chegar dizendo que foi indicado, registre aqui: os <strong>dois
-        lados</strong> recebem o mesmo crédito em carteira — quem ainda não tinha carteira
-        ganha uma. O registro é feito pela arena porque só ela pode creditar saldo.
+        Cada atleta pega o próprio código na página da arena, em &quot;Indique e ganhe&quot;. As regras abaixo dizem o
+        que cada lado ganha. O crédito é lançado pela arena porque só ela pode creditar saldo.
       </p>
 
-      <div className="grid gap-3 sm:grid-cols-2">
+      <ReferralRulesCard
+        arenaId={arenaId}
+        coupons={cuponsQ.data}
+        program={programa}
+        isLoading={cuponsQ.isLoading}
+        isError={cuponsQ.isError}
+        onRetry={() => cuponsQ.refetch()}
+      />
+
+      <h3 className="mb-2 mt-5 font-display text-base font-bold text-ink">Registrar uma indicação</h3>
+      <p className="mb-3 text-xs text-gray-500">
+        Alguém chegou dizendo que foi indicado? Informe o código e quem chegou.
+        {programa ? ' As regras do programa são conferidas (limite por pessoa e, se valer, "só quem nunca reservou aqui").' : ''}
+      </p>
+
+      <div className="grid gap-3 sm:grid-cols-3">
         <V2Field label="Código de indicação" htmlFor="ref-code">
-          <V2Input id="ref-code" maxLength={20} placeholder="ABC123"
+          <V2Input id="ref-code" maxLength={20} placeholder="ABC123XYZW"
             value={code} onChange={(e) => setCode(e.target.value.toUpperCase().replace(/\s+/g, ''))} />
         </V2Field>
-        <V2Field label="Crédito para cada lado (R$)" htmlFor="ref-premio">
-          <V2Input id="ref-premio" type="number" min="1" step="0.01"
-            value={premio} onChange={(e) => setPremio(e.target.value)} />
+        <V2Field label="Crédito para quem indicou (R$)" htmlFor="ref-premio-indica">
+          <V2Input id="ref-premio-indica" type="number" min="0" step="0.01"
+            value={valores.quemIndica} onChange={(e) => setPremios({ ...valores, quemIndica: e.target.value })} />
+        </V2Field>
+        <V2Field label="Crédito para quem chegou (R$)" htmlFor="ref-premio-chega">
+          <V2Input id="ref-premio-chega" type="number" min="0" step="0.01"
+            value={valores.quemChega} onChange={(e) => setPremios({ ...valores, quemChega: e.target.value })} />
         </V2Field>
       </div>
 
       <V2Field label="Quem foi indicado" htmlFor="ref-quem" className="mt-3">
-        {indicado ? (
-          <div className="flex items-center justify-between gap-2 rounded-2xl border border-gray-200 bg-paper p-2.5">
-            <div className="flex items-center gap-2">
-              <V2Avatar photoUrl={indicado.photo_url} name={indicado.platform_name || indicado.full_name} size="sm" />
-              <span className="text-sm font-bold text-ink">{indicado.platform_name || indicado.full_name}</span>
-            </div>
-            <button type="button" onClick={() => setIndicado(null)} aria-label="Trocar" className="rounded-full p-1.5 text-gray-400 hover:bg-gray-100 hover:text-ink">
-              <X className="h-4 w-4" />
-            </button>
-          </div>
-        ) : (
-          <V2Input id="ref-quem" value={q} onChange={(e) => setQ(e.target.value)}
-            placeholder="Buscar atleta pelo nome…" />
-        )}
+        <AthletePicker value={indicado} onChange={setIndicado} inputId="ref-quem" />
       </V2Field>
-
-      {!indicado && resultados.length > 0 && (
-        <div className="mt-2 space-y-1.5">
-          {resultados.map((a) => (
-            <button key={a.id} type="button" onClick={() => { setIndicado(a); setQ(''); }}
-              className="flex w-full items-center gap-2 rounded-2xl border border-gray-100 bg-paper p-2.5 text-left hover:border-gray-300">
-              <V2Avatar photoUrl={a.photo_url} name={a.platform_name || a.full_name} size="sm" />
-              <span className="text-sm text-ink">{a.platform_name || a.full_name}</span>
-            </button>
-          ))}
-        </div>
-      )}
 
       <div className="mt-3 flex justify-end">
         <V2Button disabled={!pronto || resgatar.isPending} onClick={enviar}>
@@ -747,7 +470,10 @@ function IndicacoesSecao({ arenaId }) {
  * aba existe é a Central (`buildArenaSections`), pelo módulo de cada uma.
  */
 export function ArenaMarketingPanel({ arena, view }) {
-  if (view === 'cupons') return <CuponsSecao arenaId={arena.id} />;
+  // O tipo "Indicação" só aparece em Cupons com o módulo de indicações ligado.
+  const { isOn } = useArenaModules(arena.id);
+  const indicacoesLigadas = isOn(ARENA_MODULE_ID.MARKETING_REFERRAL);
+  if (view === 'cupons') return <CouponsPanel arenaId={arena.id} referralOn={indicacoesLigadas} />;
   if (view === 'campanhas') return <CampanhasSecao arenaId={arena.id} />;
   if (view === 'satisfacao') return <NpsSecao arenaId={arena.id} />;
   if (view === 'indicacoes') return <IndicacoesSecao arenaId={arena.id} />;

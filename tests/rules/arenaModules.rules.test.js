@@ -326,14 +326,19 @@ describe('🔒 loja do app: pedido, divisão e pagamento', () => {
 /* ---------------------------------------------------------------- */
 
 describe('🔒 indique e ganhe', () => {
+  // O id é o DA PRÓPRIA PESSOA (`{arena}_{uid}`) desde 2026-09-25 — ver
+  // `couponsReferrals.rules.test.js`, que prova o sequestro do código.
   it('indico em nome próprio', async () => {
-    await assertSucceeds(setDoc(doc(como(ATLETA), 'arena_referrals', 'r1'), {
+    await assertSucceeds(setDoc(doc(como(ATLETA), 'arena_referrals', `${ARENA}_${ATLETA}`), {
       arena_id: ARENA, referrer_id: ATLETA, referred_id: ESTRANHO,
     }));
   });
 
   it('🐞 NÃO crio indicação apontando outra pessoa como indicadora', async () => {
-    await assertFails(setDoc(doc(como(ESTRANHO), 'arena_referrals', 'r2'), {
+    await assertFails(setDoc(doc(como(ESTRANHO), 'arena_referrals', `${ARENA}_${ATLETA}`), {
+      arena_id: ARENA, referrer_id: ATLETA, referred_id: ESTRANHO,
+    }));
+    await assertFails(setDoc(doc(como(ESTRANHO), 'arena_referrals', `${ARENA}_${ESTRANHO}`), {
       arena_id: ARENA, referrer_id: ATLETA, referred_id: ESTRANHO,
     }));
   });

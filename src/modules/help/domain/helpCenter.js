@@ -536,14 +536,15 @@ const ARENA = {
       id: 'marketing-arena',
       title: 'Marketing: promoções, campanhas, satisfação e indicação',
       summary: 'Trazer gente, trazer de volta e saber o que acharam — dentro da gestão.',
-      keywords: ['marketing', 'cupom', 'promoção', 'campanha', 'mensagem', 'nps', 'satisfação', 'indicação', 'fidelidade'],
+      keywords: ['marketing', 'cupom', 'promoção', 'campanha', 'mensagem', 'nps', 'satisfação', 'indicação', 'fidelidade', 'vale', 'hora grátis', 'bebida', 'controle de uso', 'custo'],
       blocks: [
         p('Com o módulo Marketing ligado, a gestão da arena ganha a seção MARKETING, com uma aba para cada ferramenta que você ligar em Configurações → Módulos:'),
         list(
-          'CUPONS — crie o desconto (percentual ou valor), com mínimo, limite de usos, prazo e "uma vez por pessoa". Marque "Divulgar na página da arena" e ele vira PROMOÇÃO: aparece na página da arena e no pedido de reserva, com um toque para aplicar. Sem marcar, é um código que você entrega a quem quiser.',
+          'CUPONS — comece escolhendo o que o cupom DÁ. Desconto e hora grátis entram sozinhos no preço da reserva. Aula particular, aula em grupo, clínica, comida, bebida, brinde, aluguel de equipamento e inscrição em evento são VALES: a pessoa mostra o código na recepção e você toca em "Registrar uso". Cada cupom tem mínimo, limite de usos, prazo e "uma vez por pessoa"; marque "Divulgar na página da arena" para ele virar PROMOÇÃO.',
+          'CONTROLE DE USO (dentro de Cupons) — usos, custo e receita de cada cupom e de cada tipo. Custo é o desconto dado, os vales entregues (usos × o custo que você informa, que só a arena vê) e os créditos de indicação; receita é o que pagaram as reservas que usaram o cupom.',
           'CAMPANHAS — uma mensagem para um público (membros, sumidos, frequentes, todo mundo). A tela diz para quantas pessoas vai ANTES de enviar, e não envia para público vazio.',
           'SATISFAÇÃO — a nota de 0 a 10 que os atletas dão depois de jogar, com os COMENTÁRIOS, que é onde está o que fazer.',
-          'INDICAÇÕES — o atleta pega o código na página da arena. Quando alguém chegar dizendo que foi indicado, registre aqui: os dois lados ganham o mesmo crédito em carteira.',
+          'INDICAÇÕES — defina as REGRAS do programa: quanto ganha quem indica, quanto ganha quem chega, se vale só para quem nunca reservou aqui e o limite por pessoa. O atleta pega o código na página da arena, que já mostra essas regras. Quando alguém chegar dizendo que foi indicado, registre aqui: os valores vêm das regras e são conferidos.',
         ),
         steps(
           'Configurações → Módulos: ligue Marketing e as ferramentas que for usar.',
@@ -551,6 +552,7 @@ const ARENA = {
           'Crie uma promoção e marque "Divulgar na página da arena" para ela chegar a quem procura horário.',
         ),
         tip('Desligue o cupom em vez de apagar: apagar leva junto a contagem de usos, e aí ninguém responde mais "quanto essa promoção rendeu?".'),
+        tip('Vale sem custo informado aparece com "Informar" no controle de uso — e o custo total fica marcado como incompleto, nunca como zero.'),
         warn('O desconto é conferido de novo pelo sistema quando o pedido é gravado, e o uso só é contado na CONFIRMAÇÃO. Um cupom desligado depois do pedido não vale mais.'),
       ],
     },

@@ -209,7 +209,9 @@ export function memberBookingPrice(arena, selecao = {}, contexto = {}) {
   // 3. Cupom — vale para QUALQUER pessoa, membro ou não. É promoção da arena,
   //    não benefício de membro; condicioná-lo a ser membro esvaziaria o uso
   //    mais comum (trazer gente nova).
-  const valorCupom = coupon ? couponDiscount(aposDesconto, coupon) : 0;
+  //    Hora grátis abate a proporção das horas que SOBRARAM depois do pacote:
+  //    a hora já coberta pelo pacote não pode ser "dada" de novo.
+  const valorCupom = coupon ? couponDiscount(aposDesconto, coupon, { hours: Math.max(0, horas - horasPacote) }) : 0;
   if (valorCupom > 0) {
     lines.push({ label: couponLabel(coupon) || 'Cupom', value: -valorCupom });
   }

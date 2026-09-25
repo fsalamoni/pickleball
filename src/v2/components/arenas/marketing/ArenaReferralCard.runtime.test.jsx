@@ -14,7 +14,7 @@ import { act } from 'react';
 import { describe, it, expect, beforeEach, afterEach, vi } from 'vitest';
 
 const LIGADOS = new Set();
-const estado = { uid: 'u1', consulta: null };
+const estado = { uid: 'u1', consulta: null, cupons: [] };
 const consultas = [];
 const criar = vi.fn(async () => ({ code: 'NOVO42' }));
 
@@ -31,6 +31,7 @@ vi.mock('@/modules/arenas/hooks/useArenaV3', () => ({
     return estado.consulta;
   },
   useCreateMyReferralCode: () => ({ mutateAsync: criar, isPending: false }),
+  useArenaCoupons: () => ({ data: estado.cupons }),
 }));
 
 const { default: ArenaReferralCard } = await import('./ArenaReferralCard.jsx');
@@ -45,6 +46,7 @@ beforeEach(() => {
   LIGADOS.add(ARENA_MODULE_ID.MARKETING_REFERRAL);
   estado.uid = 'u1';
   estado.consulta = ok(null);
+  estado.cupons = [];
   consultas.length = 0;
   criar.mockClear();
   container = document.createElement('div');
@@ -111,5 +113,33 @@ describe('Indique e ganhe na página da arena', () => {
     await render();
     expect(container.innerHTML).toBe('');
     expect(consultas.every((id) => id === null)).toBe(true);
+  });
+});
+
+describe('⭐ as regras do programa (Onda BX)', () => {
+  it('com programa, o cartão diz o que CADA lado ganha e as condições', async () => {
+    estado.consulta = ok({ code: 'ANA123', redeemed_count: 0 });
+    estado.cupons = [{
+      id: 'p1', kind: 'referral', code: 'INDICACAO', active: true,
+      referrer_reward: 30, referred_reward_kind: 'credit', referred_reward_value: 10,
+      first_booking_only: true, max_per_referrer: 5,
+    }];
+    await render();
+    expect(container.textContent).toContain('Quem indica ganha R$ 30,00 em crédito · quem chega ganha R$ 10,00 em crédito');
+    expect(container.textContent).toContain('Vale para quem nunca reservou aqui');
+    expect(container.textContent).toContain('até 5 indicações por pessoa');
+    // A promessa genérica sai: as regras já dizem o que vale.
+    expect(container.textContent).not.toContain('e você também');
+  });
+
+  it('sem programa, o texto de sempre', async () => {
+    await render();
+    expect(container.textContent).toContain('e você também');
+  });
+
+  it('programa desligado não conta como regra valendo', async () => {
+    estado.cupons = [{ id: 'p1', kind: 'referral', code: 'INDICACAO', active: false, referrer_reward: 30 }];
+    await render();
+    expect(container.textContent).not.toContain('R$ 30,00');
   });
 });

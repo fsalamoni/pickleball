@@ -278,3 +278,110 @@ Os campos acrescentados a `arena_coupons` (`min_amount`, `once_per_user`,
    criar depende de `canGetMissingArenaUserDoc` — tirá-la volta a quebrar a
    indicação, a venda de pacote e o crédito em carteira, em silêncio.
 9. **Só cupom com `show_public: true` aparece em público** (`publicPromos`).
+
+---
+
+## 9. Tipos de cupom, recepção de vales e controle de uso (Onda BX, 2026-09-25)
+
+**Pedido:** *"seria bom inserir as indicações como um tipo de cupom que é
+possível criar, entre outros tipos como: indicação, desconto, hora grátis,
+aula particular, aula em grupo, clínica, comida, bebida e vários outros…
+dentro de cupons, deve ter a aba de criação dos cupons e uma aba de controle
+de uso, com tabela indicativa de cada tipo de cupom criado, seus usos, custos,
+ganhos"*.
+
+### 9.1 O cupom ganhou TIPO — em três famílias
+
+| Família | Tipos | Onde é usado |
+|---|---|---|
+| **Desconto na reserva** | Desconto (% ou R$), Hora grátis | Sozinho, no preço, quando a pessoa digita o código ao reservar |
+| **Vale para usar na arena** | Aula particular, Aula em grupo, Clínica, Comida, Bebida, Produto ou brinde, Aluguel de equipamento, Inscrição em evento, Outro benefício | A pessoa mostra o código na recepção; a arena toca em **Registrar uso** |
+| **Indique e ganhe** | Indicação | As REGRAS do programa; cada atleta tem o próprio código |
+
+A família decide o que o formulário pergunta (o vale não tem "% de
+desconto"; a indicação não tem código para digitar) e o que o cartão oferece
+(o vale tem "Registrar uso"; o desconto conta sozinho na confirmação da
+reserva). Criar começa escolhendo o tipo, em cartões; editar mantém o tipo.
+
+**Hora grátis** abate a PROPORÇÃO das horas da reserva, pelo preço médio da
+própria reserva (1 hora grátis numa reserva de 2 horas de R$ 200 = R$ 100) —
+e só das horas que sobraram depois do pacote, para a hora já coberta não ser
+dada duas vezes. Sem saber as horas, não abate nada.
+
+**Cupom antigo não muda**: sem `kind`, ele é desconto, exatamente como sempre
+foi (há teste travando).
+
+### 9.2 A recepção do vale
+
+`VoucherReception`: a equipe digita o código que o cliente mostra, a tela diz
+o que o vale dá e se ainda vale (vencido, esgotado, desligado, "esta pessoa já
+usou"), a pessoa é escolhida (opcional — vale divulgado serve a quem não tem
+cadastro, e aí "uma vez por pessoa" não tem como ser conferido, o que a tela
+diz) e o uso é registrado **numa transação** (`redeemVoucher`): duas pessoas
+da equipe registrando o último uso ao mesmo tempo não passam do limite.
+Desconto digitado ali é explicado ("entra sozinho no preço"), não registrado.
+
+### 9.3 O controle de uso
+
+`couponUsageReport` (domínio puro, sem consulta nova — as reservas a Central
+já carrega): uma linha por cupom e um total por tipo, com **usos, custo e
+receita**.
+
+- **Desconto/hora grátis**: custo = o que foi abatido nas reservas
+  CONFIRMADAS ou CONCLUÍDAS (`member_benefit.coupon_value`); receita = o que
+  essas reservas pagaram. Recusada e cancelada não entram.
+- **Vale**: custo = usos × o **custo unitário** que a arena informa.
+- **Indicação**: custo = o que foi creditado (`reward_total`, gravado a cada
+  resgate) + descontos; receita = as reservas que chegaram por indicação.
+
+Número desconhecido é **"—", nunca zero** — zero afirma que não custou nada.
+Um custo desconhecido torna desconhecido o total do tipo, e o resumo diz
+"Falta o custo de algum vale". E, com qualquer consulta falhando, o relatório
+**não aparece**: diz que falhou e oferece tentar de novo (falha não é vazio).
+
+### 9.4 O custo do vale mora onde só a arena lê
+
+`arena_coupons` é legível por qualquer conta logada (o atleta confere o código
+e vê as promoções). Quanto a arena paga pela água de coco não é assunto do
+cliente: o custo unitário vai para `arena_settings.coupon_costs.{couponId}`,
+que só o gestor lê (`setCouponUnitCost`, criando o documento com os padrões se
+ele não existir). Há teste garantindo que o cupom gravado não carrega o custo,
+e asserção no emulador de que o atleta não lê `arena_settings`.
+
+### 9.5 A indicação vira um cupom com regras
+
+O programa "indique e ganhe" é um cupom do tipo **indicação**: quanto ganha
+quem indica (crédito em carteira), quanto ganha quem chega (crédito, ou nada),
+se vale só para quem nunca reservou na arena (padrão: sim), limite de
+indicações por pessoa e valor mínimo da primeira reserva. **Um programa ativo
+por arena** (o serviço recusa o segundo — duas regras dariam duas respostas a
+"quanto eu ganho?"). As regras aparecem:
+
+- na aba **Indicações** (`ReferralRulesCard`, editáveis ali mesmo — a
+  indicação liga separada dos cupons), preenchendo o registro manual, que
+  agora credita **um valor para cada lado** e confere o limite por pessoa e o
+  "só quem nunca reservou aqui" (`hasPriorArenaBooking`, duas igualdades, sem
+  índice);
+- no cartão público **Indique e ganhe** e no convite que o atleta manda
+  (`referralInviteText`) — antes o cartão prometia "nós dois ganhamos"
+  qualquer que fosse o combinado.
+
+### 9.6 🐞 Três brechas fechadas nas regras (com asserções no emulador)
+
+1. **O cupom (e a campanha) mudava de arena.** O `update` conferia só a arena
+   antiga: o gestor de A trocava o `arena_id` para B e o cupom virava
+   promoção na página de B e desconto nas reservas de B.
+2. **O código de indicação podia ser sequestrado.** O id era livre: dava para
+   criar `{arena}_{uid da vítima}` com o próprio uid como indicador — o "Meu
+   código" da vítima mostrava o código do atacante, e toda indicação dela o
+   creditava. Agora o id é o da própria pessoa, o documento nasce zerado, e o
+   serviço só aceita código **legítimo** (documento do dono + código que
+   começa pelo uid dele, `isLegitReferral`), o que também neutraliza
+   documentos forjados antes da trava.
+3. **O indicador reescrevia a própria contagem e o próprio código.** Agora só
+   a arena atualiza o documento — e sem trocar arena, dono ou código.
+
+**Banco:** zero coleção, zero índice. Campos opcionais em `arena_coupons`,
+`arena_referrals` (`reward_total`) e `arena_settings` (`coupon_costs`). Regras
+ENDURECIDAS em três coleções, nenhuma ampliada. O código morto que criava
+indicação com id livre (`createReferral`) saiu.

@@ -11,7 +11,15 @@
  *  5. o cupom desligado continua na lista, para poder ser religado;
  *  6. ⭐ o NPS mostra os COMENTÁRIOS, que são a parte acionável da nota;
  *  7. falha ao carregar cupom não vira "esta arena não tem cupons";
- *  8. ⭐ o cupom divulgado diz, na lista, que está na página da arena.
+ *  8. ⭐ o cupom divulgado diz, na lista, que está na página da arena;
+ *  9. ⭐ (Onda BX) criar começa pelo TIPO, e cada família pergunta o seu — o
+ *     vale pede o benefício e o custo que só a arena vê; a indicação só
+ *     aparece com o módulo de indicações ligado;
+ * 10. ⭐ o vale tem "Registrar uso"; o desconto, não (conta sozinho na reserva);
+ * 11. ⭐ o controle de uso mostra custo e receita por tipo — e, com uma
+ *     consulta falhando, não mostra número nenhum pela metade;
+ * 12. ⭐ as regras do indique e ganhe moram na aba Indicações e preenchem o
+ *     registro manual.
  */
 import React from 'react';
 import { createRoot } from 'react-dom/client';
@@ -22,6 +30,9 @@ import { describe, it, expect, beforeEach, afterEach, vi } from 'vitest';
 const estado = {
   cupons: [],
   cuponsErro: false,
+  reservasErro: false,
+  custos: {},
+  indicacoesLigadas: true,
   campanhas: [],
   membros: [],
   reservas: [],
@@ -30,8 +41,17 @@ const estado = {
 };
 
 vi.mock('sonner', () => ({ toast: { success: vi.fn(), error: vi.fn() } }));
+vi.mock('@/modules/arenas/hooks/useArenaModules', () => ({
+  useArenaModules: () => ({
+    isOn: (id) => (id === 'marketing_referral' ? estado.indicacoesLigadas : true),
+    isLoading: false,
+  }),
+}));
 vi.mock('@/modules/arenas/hooks/useBookings', () => ({
-  useArenaBookings: () => ({ data: estado.reservas }),
+  useArenaBookings: () => ({
+    data: estado.reservasErro ? undefined : estado.reservas,
+    isLoading: false, isError: estado.reservasErro, refetch: vi.fn(),
+  }),
 }));
 vi.mock('@/modules/athletes/hooks/useAthletes', () => ({
   useAthletes: () => ({ data: [] }),
@@ -44,6 +64,11 @@ vi.mock('@/modules/arenas/hooks/useArenaV3', () => ({
   useUpdateCoupon: () => ({ mutateAsync: vi.fn(), isPending: false }),
   useSetCouponActive: () => ({ mutateAsync: vi.fn(), isPending: false }),
   useDeleteCoupon: () => ({ mutateAsync: vi.fn(), isPending: false }),
+  useArenaSettings: () => ({ data: { coupon_costs: estado.custos }, isLoading: false, isError: false, refetch: vi.fn() }),
+  useArenaReferrals: () => ({ data: [], isLoading: false, isError: false, refetch: vi.fn() }),
+  useRedeemVoucher: () => ({ mutateAsync: vi.fn(), isPending: false }),
+  useFindArenaCoupon: () => ({ mutateAsync: vi.fn(), isPending: false }),
+  useSetCouponUnitCost: () => ({ mutateAsync: vi.fn(), isPending: false }),
   useArenaCampaigns: () => ({ data: estado.campanhas }),
   useSendCampaign: () => ({ mutateAsync: vi.fn(), isPending: false }),
   useArenaNps: () => ({ data: estado.nps }),
@@ -60,7 +85,8 @@ let container, root;
 
 beforeEach(() => {
   Object.assign(estado, {
-    cupons: [], cuponsErro: false, campanhas: [], membros: [],
+    cupons: [], cuponsErro: false, reservasErro: false, custos: {}, indicacoesLigadas: true,
+    campanhas: [], membros: [],
     reservas: [], nps: { nps: 40, count: 5 }, respostas: [],
   });
   container = document.createElement('div');
@@ -205,8 +231,134 @@ describe('cupons', () => {
   it('o formulário oferece divulgar o cupom, explicando o que muda', async () => {
     await render('cupons');
     await clicar('Novo cupom');
+    await clicar('Percentual ou valor fixo');
     expect(container.textContent).toContain('Divulgar na página da arena');
     expect(container.textContent).toMatch(/Vira PROMOÇÃO/);
+  });
+});
+
+/* ============================================================ tipos (BX) === */
+
+describe('⭐ tipos de cupom', () => {
+  it('criar começa pelo tipo, agrupado por família — com a indicação quando o módulo está ligado', async () => {
+    await render('cupons');
+    await clicar('Novo cupom');
+    for (const txt of ['Desconto na reserva', 'Vale para usar na arena', 'Indique e ganhe',
+      'Hora grátis', 'Aula particular', 'Aula em grupo', 'Clínica', 'Comida', 'Bebida', 'Indicação']) {
+      expect(container.textContent).toContain(txt);
+    }
+  });
+
+  it('sem o módulo de indicações, o tipo Indicação não é oferecido', async () => {
+    estado.indicacoesLigadas = false;
+    await render('cupons');
+    await clicar('Novo cupom');
+    expect(container.textContent).not.toContain('Indique e ganhe');
+  });
+
+  it('⭐ o vale pede o benefício e o custo que SÓ A ARENA vê — sem "% de desconto"', async () => {
+    await render('cupons');
+    await clicar('Novo cupom');
+    await clicar('Uma bebida na arena');
+    expect(container.textContent).toContain('O que o vale dá');
+    expect(container.textContent).toContain('Custo para a arena');
+    expect(container.textContent).toContain('Só a arena vê');
+    expect(container.textContent).not.toContain('Tipo de desconto');
+    expect(container.querySelector('#cup-beneficio')?.getAttribute('placeholder')).toBe('1 água de coco');
+  });
+
+  it('⭐ o vale tem "Registrar uso"; o desconto, não', async () => {
+    estado.cupons = [
+      { id: 'v1', kind: 'drink', code: 'COCO', benefit: '1 água de coco', active: true, used_count: 2 },
+      { id: 'd1', code: 'DEZ', type: 'percent', value: 10, active: true },
+    ];
+    await render('cupons');
+    const cartao = (codigo) => [...container.querySelectorAll('p')]
+      .find((p) => p.textContent === codigo)?.closest('div.rounded-2xl');
+    expect(cartao('COCO').textContent).toContain('Registrar uso');
+    expect(cartao('COCO').textContent).toContain('1 água de coco');
+    expect(cartao('COCO').textContent).toContain('Bebida');
+    expect(cartao('DEZ').textContent).not.toContain('Registrar uso');
+    // Há vale na lista: a recepção por código aparece no topo.
+    expect(container.textContent).toContain('Registrar uso de vale');
+  });
+
+  it('filtra por família quando há mais de uma', async () => {
+    estado.cupons = [
+      { id: 'v1', kind: 'drink', code: 'COCO', benefit: '1 água de coco', active: true },
+      { id: 'd1', code: 'DEZ', type: 'percent', value: 10, active: true },
+    ];
+    await render('cupons');
+    await clicar('Vale para usar na arena');
+    expect(container.textContent).toContain('COCO');
+    expect(container.textContent).not.toContain('DEZ');
+  });
+});
+
+/* ======================================================= controle de uso === */
+
+describe('⭐ controle de uso', () => {
+  it('mostra custo e receita por tipo e cupom a cupom', async () => {
+    estado.cupons = [
+      { id: 'd1', code: 'DEZ', type: 'percent', value: 10, active: true, used_count: 1 },
+      { id: 'v1', kind: 'drink', code: 'COCO', benefit: '1 água de coco', active: true, used_count: 4 },
+    ];
+    estado.custos = { v1: 3 };
+    estado.reservas = [{ id: 'b1', status: 'confirmed', proposed_price: 90, member_benefit: { coupon_id: 'd1', coupon_value: 10 } }];
+    await render('cupons');
+    await clicar('Controle de uso');
+    expect(container.textContent).toContain('Por tipo de cupom');
+    expect(container.textContent).toContain('Cupom a cupom');
+    expect(container.textContent).toMatch(/R\$\s?10,00/);  // desconto dado
+    expect(container.textContent).toMatch(/R\$\s?12,00/);  // 4 vales × R$ 3
+    expect(container.textContent).toMatch(/R\$\s?90,00/);  // receita
+  });
+
+  it('vale sem custo informado: "Informar", nunca zero', async () => {
+    estado.cupons = [{ id: 'v1', kind: 'drink', code: 'COCO', benefit: 'água', active: true, used_count: 4 }];
+    await render('cupons');
+    await clicar('Controle de uso');
+    expect(container.textContent).toContain('Informar');
+    expect(container.textContent).toMatch(/Falta o custo de algum vale/);
+  });
+
+  it('⭐ com as reservas falhando, não mostra número nenhum pela metade', async () => {
+    estado.cupons = [{ id: 'd1', code: 'DEZ', type: 'percent', value: 10, active: true, used_count: 1 }];
+    estado.reservasErro = true;
+    await render('cupons');
+    await clicar('Controle de uso');
+    expect(container.textContent).toMatch(/Não foi possível montar o controle de uso/);
+    expect(container.textContent).not.toContain('Por tipo de cupom');
+  });
+});
+
+/* ============================================ indicações: regras (BX) === */
+
+describe('⭐ regras do indique e ganhe', () => {
+  it('sem programa, convida a definir as regras', async () => {
+    await render('indicacoes');
+    expect(container.textContent).toContain('Defina as regras do programa');
+  });
+
+  it('com programa, mostra as regras valendo e preenche o registro com elas', async () => {
+    estado.cupons = [{
+      id: 'p1', kind: 'referral', code: 'INDICACAO', active: true,
+      referrer_reward: 30, referred_reward_kind: 'credit', referred_reward_value: 15, max_per_referrer: 3,
+    }];
+    await render('indicacoes');
+    expect(container.textContent).toContain('Regras valendo');
+    expect(container.textContent).toMatch(/Quem indica ganha R\$ 30,00 em crédito · quem chega ganha R\$ 15,00 em crédito/);
+    expect(container.textContent).toContain('até 3 por pessoa');
+    expect(container.querySelector('#ref-premio-indica').value).toBe('30');
+    expect(container.querySelector('#ref-premio-chega').value).toBe('15');
+  });
+
+  it('editar as regras abre o mesmo formulário de cupom, no tipo indicação', async () => {
+    estado.cupons = [{ id: 'p1', kind: 'referral', code: 'INDICACAO', active: true, referrer_reward: 30 }];
+    await render('indicacoes');
+    await clicar('Editar regras');
+    expect(container.textContent).toContain('Quem indica ganha (R$ em crédito)');
+    expect(container.textContent).toContain('Vale só para quem nunca reservou nesta arena');
   });
 });
 
