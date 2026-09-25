@@ -288,3 +288,39 @@ describe('quem gere a arena', () => {
     expect(container.textContent).not.toContain('Balcão em dia');
   });
 });
+
+/* ===================================================== banner (Onda CC) === */
+
+describe('⭐ quem chega pelo banner de uma campanha', () => {
+  it('vê o produto da campanha primeiro, em destaque — e pode pedir dali', async () => {
+    estado.produtos = [produto(), produto({ id: 'p2', name: 'Camiseta da arena', price: 80, category: 'Loja' })];
+    await render('/arenas/a1/loja?produto=p2');
+    const destaque = [...container.querySelectorAll('h2')].find((h) => h.textContent.includes('Em destaque'));
+    expect(destaque).toBeTruthy();
+    const secao = destaque.parentElement;
+    expect(secao.textContent).toContain('Camiseta da arena');
+    expect(secao.textContent).not.toContain('Água 500ml');
+    // O destaque vem ANTES do catálogo.
+    const texto = container.textContent;
+    expect(texto.indexOf('Em destaque')).toBeLessThan(texto.indexOf('O que a arena vende'));
+  });
+
+  it('produto que saiu da loja: diz isso e mostra o que há', async () => {
+    estado.produtos = [produto()];
+    await render('/arenas/a1/loja?produto=sumiu');
+    expect(container.textContent).toContain('O produto da campanha saiu da loja do app');
+    expect(container.textContent).toContain('Água 500ml');
+  });
+
+  it('com a leitura falhando, não afirma que o produto saiu', async () => {
+    estado.produtosErro = true;
+    await render('/arenas/a1/loja?produto=p2');
+    expect(container.textContent).not.toContain('saiu da loja');
+  });
+
+  it('sem `?produto=`, nada muda', async () => {
+    estado.produtos = [produto()];
+    await render();
+    expect(container.textContent).not.toContain('Em destaque');
+  });
+});

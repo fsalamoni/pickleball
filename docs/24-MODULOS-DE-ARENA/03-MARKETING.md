@@ -550,3 +550,123 @@ anônimo, não.
 
 **Banco:** zero coleção, zero índice, zero regra. Um campo opcional
 (`arena_coupons.show_home`).
+
+---
+
+## 12. Banners de campanha (Onda CC, 2026-09-25)
+
+**Pedido:** *"Em marketing, em campanhas, precisa ter a possibilidade de
+criação, dentro da plataforma, de banner específico da campanha, com
+hiperlink para os detalhes da campanha ou para as funções específicas
+(reservas, dia de jogo, torneio, produto, membros etc.). A arena deve ter
+meios de ou gerar o respectivo banner na própria plataforma, ou fazer upload
+do banner, caso em que deve ter expressas referências para o tamanho do
+banner e demais detalhes que sejam importantes. Pode inclusive criar 5
+padrões (modelos) para utilização e edição. As arenas devem poder salvar os
+seus próprios modelos."*
+
+Antes, a campanha era só um AVISO no aplicativo para um público. Agora ela
+pode ter um **banner**, que aparece na página da arena ("Em destaque") e, se a
+arena quiser, na tela inicial — e leva a um lugar da plataforma.
+
+### 12.1 O editor (Central → Marketing → Campanhas)
+
+`CampaignsPanel` + `CampaignForm` (`v2/components/arenas/marketing/campaigns/`),
+na ordem da decisão de quem faz marketing:
+
+1. **O que é** — o nome (título do aviso, e como a arena acha a campanha).
+2. **Para onde leva** (`DestinationPicker`) — uma lista FECHADA de destinos,
+   nenhum link digitado: página da campanha, reservar, jogos abertos, um dia
+   de jogo, um torneio, um produto da loja, planos, aulas, promoções, ranking
+   da casa. Só aparecem os destinos dos módulos que a arena ligou; destino de
+   UM item pede "qual?" numa lista do que existe (e a lista que falhou diz que
+   falhou).
+3. **Banner** — criar na plataforma (`BannerDesigner`), enviar a imagem
+   (`BannerUploader`) ou sem banner.
+4. **Onde aparece e até quando** — página da arena (padrão), tela inicial
+   (opcional), data de saída (padrão 14 dias, máximo 120).
+5. **Aviso no aplicativo** — opcional; o público mostra quantas pessoas ANTES.
+
+O botão não fica mudo: a linha **"Falta: …"** diz o quê. A confirmação resume
+onde aparece, para onde leva e para quantas pessoas vai o aviso. Na lista, cada
+campanha mostra o estado do banner (**no ar até** / **pausado** /
+**encerrado** / só aviso), "Ver como o atleta vê", **Pausar / Voltar ao ar**
+(só `banner_active`) e **Editar o banner** (desenho, destino, lugar e data — o
+aviso já enviado nunca é reenviado). Falha ao carregar diz que falhou e **não**
+oferece criar outra.
+
+### 12.2 Os cinco modelos e os modelos da arena
+
+`domain/bannerArt.js`. Cinco modelos da plataforma, congelados:
+**Destaque**, **Oferta** (um número grande: "20% OFF"), **Evento** (a data em
+destaque), **Vitrine** (com foto) e **Chamado**. A arena troca textos (com
+contador e limite), cores ("Usar a cor da arena" aplica a marca) e vê o
+resultado no computador (2:1) e no celular (16:9). Contraste abaixo de 4,5:1
+vira aviso; a cor do texto é escolhida por contraste quando não informada.
+
+**Modelos da arena**: "Salvar como meu modelo" grava em
+`arena_settings.banner_templates` (até 20, ids `arena:…`). Os cinco da
+plataforma **nunca mudam** — editar um e salvar cria um modelo da arena ao
+lado deles. Atualizar e apagar valem só para os da arena, e apagar pede
+confirmação. Trocar de modelo mantém os textos que a pessoa já escreveu
+(`switchTemplate`).
+
+### 12.3 Enviar a própria arte
+
+A especificação vem **antes** do botão (`BANNER_UPLOAD_SPEC`,
+`bannerUploadGuide`): **1600 × 800 px** (2:1), mínimo **1200 × 600**, JPG/PNG/
+WebP, ideal até 2 MB (máximo 5 MB), **área segura** de 80% × 70% (no celular
+as laterais são cortadas), sem botão desenhado (o banner já é clicável) e com
+um desenho da área segura. A imagem é **conferida antes de subir**
+(`checkBannerImage`): pequena demais não sobe; proporção diferente sobe com
+aviso. A pré-visualização mostra os dois recortes com a área segura por cima.
+A **descrição** é obrigatória (leitor de tela). O arquivo vai para
+`uploads/{uid}/arena-banners/…` pela regra de Storage que já existia; a URL só
+é aceita se for do Storage do projeto (`isAllowedImageUrl`).
+
+### 12.4 Onde o atleta vê
+
+- **Página da arena → "Em destaque"** (`ArenaCampaignsSection`, âncora
+  `#arena-campanhas`), logo depois das perguntas de chegada e satisfação: um
+  banner em largura inteira, ou uma fileira que desliza com o próximo
+  aparecendo na borda. Nada gira sozinho aqui.
+- **Tela inicial** — o mesmo carrossel das promoções (Onda BZ), com o mesmo
+  filtro de região; o título vira "Destaques em …" quando há campanha.
+- **Página da campanha** — `/arenas/:arenaId/campanhas/:campaignId`
+  (`V2ArenaCampaign`): banner, mensagem, validade, o destino como ação
+  principal e "Reservar um horário". Separa **falhou** (tentar de novo), **não
+  existe** (leva à arena) e **acabou** (mostra o que era e diz que acabou).
+- **Loja** — o destino "um produto" abre `/arenas/:id/loja?produto=…` com o
+  produto **em destaque**, antes do catálogo.
+
+O banner inteiro é UM link (um alvo grande; o leitor de tela anuncia "título.
+Chamada — arena", não cada pedaço do desenho).
+
+### 12.5 De onde vem
+
+- Página da arena: `where arena_id == X` + `where show_on_arena == true`.
+- Tela inicial: `where show_home == true` + `where banner_active == true`,
+  `limit`.
+
+Só igualdades — sem índice composto. "No ar" (ativo e dentro da data), módulo
+ligado e região são conferidos no domínio (`campaignBanner.js`,
+`homeBanners.js`). O serviço (`campaignBannerService.js`) **refaz toda a
+validação** antes de gravar.
+
+### 12.6 O que NÃO pode regredir
+
+1. Os cinco modelos da plataforma não mudam; salvar cria modelo da arena.
+2. Destino é lista fechada — nenhum link digitado.
+3. Imagem enviada: especificação antes, conferência antes de subir,
+   descrição obrigatória, só URL do Storage do projeto.
+4. Falha não vira "nenhuma campanha" nem "não há promoção"; sem a lista não
+   se oferece criar outra.
+5. Com uma fonte falhando na tela inicial, a região vazia não afirma nada.
+
+**Banco:** zero coleção, zero índice, **zero regra**. Campos opcionais em
+`arena_campaigns` (`banner`, `destination`, `show_on_arena`, `show_home`,
+`banner_until`, `banner_active`) e `arena_settings.banner_templates`. As
+regras de sempre já deixavam a arena escrever as campanhas dela (com a trava de
+não trocar de arena, Onda BX) e as configurações dela; 14 asserções novas no
+emulador (`tests/rules/campaignBanners.rules.test.js`) provam as escritas, as
+duas consultas e que o atleta e outra arena não mexem em nada.

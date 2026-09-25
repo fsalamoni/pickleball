@@ -54,6 +54,23 @@ vi.mock('@/modules/arenas/hooks/useBookings', () => ({
     isLoading: false, isError: estado.reservasErro, refetch: vi.fn(),
   }),
 }));
+vi.mock('@/core/lib/FirebaseAuthContext', () => ({
+  useAuth: () => ({ user: { uid: 'gestor' } }),
+}));
+vi.mock('@/modules/arenas/hooks/useCampaignBanners', () => ({
+  usePublishCampaign: () => ({ mutateAsync: vi.fn(), isPending: false }),
+  useUpdateCampaignBanner: () => ({ mutateAsync: vi.fn(), isPending: false }),
+  useArenaBannerTemplates: () => ({ data: [], isLoading: false, isError: false, refetch: vi.fn() }),
+  useSaveArenaBannerTemplates: () => ({ mutateAsync: vi.fn(), isPending: false }),
+}));
+vi.mock('@/modules/games/hooks/useArenaGameDays', () => ({
+  useArenaGameDays: () => ({ data: [], isLoading: false, isError: false }),
+}));
+vi.mock('@/modules/tournament/hooks/useTournament', () => ({
+  useArenaTournaments: () => ({ data: [], isLoading: false, isError: false }),
+}));
+vi.mock('@/components/ui/image-upload', () => ({ ImageUpload: () => null }));
+vi.mock('@/core/services/storageService', () => ({ uploadImage: vi.fn() }));
 vi.mock('@/modules/athletes/hooks/useAthletes', () => ({
   useAthletes: () => ({ data: [] }),
 }));
@@ -75,7 +92,8 @@ vi.mock('@/modules/arenas/hooks/useArenaV3', () => ({
   useSendCampaign: () => ({ mutateAsync: vi.fn(), isPending: false }),
   useArenaNps: () => ({ data: estado.nps }),
   useArenaNpsResponses: () => ({ data: estado.respostas, isLoading: false }),
-  useArenaMembers: () => ({ data: estado.membros }),
+  useArenaMembers: () => ({ data: estado.membros, isError: false }),
+  useShopProducts: () => ({ data: [], isLoading: false, isError: false }),
   useRedeemReferral: () => ({ mutateAsync: vi.fn(), isPending: false }),
 }));
 
@@ -388,17 +406,17 @@ describe('campanhas', () => {
     estado.reservas = [];
     await render('campanhas');
     await clicar('Nova campanha');
-    expect(container.textContent).toMatch(/Ninguém neste público ainda/i);
-    const enviar = [...container.querySelectorAll('button')].find((b) => b.textContent.trim() === 'Enviar');
-    expect(enviar?.disabled).toBe(true);
+    expect(container.textContent).toMatch(/Falta:.*alguém no público do aviso/);
+    const publicar = [...container.querySelectorAll('button')].find((b) => b.textContent.trim() === 'Publicar campanha');
+    expect(publicar?.disabled).toBe(true);
   });
 
   it('lista a campanha já enviada com quantas pessoas receberam', async () => {
     estado.campanhas = [{ id: 'k1', name: 'Quinta barata', status: 'sent', sent_count: 12, target_audience: 'all' }];
     await render('campanhas');
     expect(container.textContent).toContain('Quinta barata');
-    expect(container.textContent).toContain('12 pessoas');
-    expect(container.textContent).toContain('Enviada');
+    expect(container.textContent).toContain('Aviso para 12 pessoas');
+    expect(container.textContent).toContain('Só aviso');
   });
 });
 

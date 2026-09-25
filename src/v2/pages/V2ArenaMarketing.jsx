@@ -42,30 +42,25 @@ import React, { useMemo, useState } from 'react';
 import { Link, Navigate, useParams } from 'react-router-dom';
 import { toast } from 'sonner';
 import {
-  Check, Gift, Megaphone, MessageSquare,
-  Plus, Send, Star, TrendingUp, Users, X,
+  Check, Gift, MessageSquare, Star, TrendingUp,
 } from 'lucide-react';
-import { useArenaBookings } from '@/modules/arenas/hooks/useBookings';
 import {
-  useArenaCouponsAll, useArenaCampaigns, useSendCampaign, useArenaNps,
-  useArenaNpsResponses, useArenaMembers, useRedeemReferral,
+  useArenaCouponsAll, useArenaNps, useArenaNpsResponses, useRedeemReferral,
 } from '@/modules/arenas/hooks/useArenaV3';
 import {
-  CAMPAIGN_AUDIENCE, CAMPAIGN_AUDIENCE_META, campaignRecipients,
   classifyNps, referralProgram, referralRewards,
 } from '@/modules/arenas/domain/marketing';
 import { useArenaModules } from '@/modules/arenas/hooks/useArenaModules';
 import { ARENA_MODULE_ID } from '@/modules/arenas/domain/modules';
 import CouponsPanel from '@/v2/components/arenas/marketing/coupons/CouponsPanel';
+import CampaignsPanel from '@/v2/components/arenas/marketing/campaigns/CampaignsPanel';
 import ReferralRulesCard from '@/v2/components/arenas/marketing/coupons/ReferralRulesCard';
 import BookingReferralsToRegister from '@/v2/components/arenas/marketing/coupons/BookingReferralsToRegister';
 import { AthletePicker } from '@/v2/components/arenas/marketing/coupons/VoucherReception';
 import { formatPrice } from '@/modules/arenas/domain/pricing';
 import { formatDateShortBR } from '@/modules/arenas/domain/calendar';
-import { ConfirmDialog as ConfirmDialogControlado } from '@/components/ui/confirm-dialog';
 import {
-  V2Badge, V2Button, V2EmptyState, V2Field, V2Input, V2Skeleton,
-  V2Surface, V2Textarea,
+  V2Badge, V2Button, V2EmptyState, V2Field, V2Input, V2Skeleton, V2Surface,
 } from '@/v2/ui/primitives';
 
 /** `Timestamp | Date | number` → ms, ou `null`. */
@@ -92,169 +87,9 @@ function iso(v) {
 
 /* ===================================================== 2. CAMPANHAS ====== */
 
-function CampanhasSecao({ arenaId }) {
-  const { data: campanhas = [] } = useArenaCampaigns(arenaId);
-  const { data: membros = [] } = useArenaMembers(arenaId);
-  const { data: reservas = [] } = useArenaBookings(arenaId);
-  const enviar = useSendCampaign();
-
-  const [form, setForm] = useState({ name: '', message: '', audience: CAMPAIGN_AUDIENCE.ALL });
-  const [aberto, setAberto] = useState(false);
-  const [confirmar, setConfirmar] = useState(false);
-
-  // Só reserva CONCLUÍDA conta como "já jogou aqui" — pedido recusado não é
-  // relação com a arena, e mandar "sentimos sua falta" a quem nunca veio é o
-  // tipo de mensagem que faz desinstalar o aplicativo.
-  const concluidas = useMemo(
-    () => reservas.filter((b) => ['completed', 'confirmed'].includes(b.status)),
-    [reservas],
-  );
-
-  const destinatarios = useMemo(
-    () => campaignRecipients(form.audience, { members: membros, bookings: concluidas }),
-    [form.audience, membros, concluidas],
-  );
-
-  const disparar = async () => {
-    try {
-      const { sent } = await enviar.mutateAsync({
-        arenaId,
-        input: { name: form.name, message: form.message, audience: form.audience },
-        recipients: destinatarios,
-      });
-      toast.success(`Campanha enviada para ${sent} pessoa(s).`);
-      setForm({ name: '', message: '', audience: CAMPAIGN_AUDIENCE.ALL });
-      setAberto(false);
-      setConfirmar(false);
-    } catch (err) {
-      toast.error(err?.message || 'Não foi possível enviar.');
-      setConfirmar(false);
-    }
-  };
-
-  const podeEnviar = form.name.trim() && form.message.trim() && destinatarios.length > 0;
-
-  return (
-    <V2Surface>
-      <div className="mb-4 flex flex-wrap items-center justify-between gap-2">
-        <div className="flex items-center gap-2">
-          <Megaphone className="h-5 w-5 text-ink" />
-          <h2 className="font-display text-lg font-bold text-ink">Campanhas</h2>
-        </div>
-        {!aberto && (
-          <V2Button size="sm" onClick={() => setAberto(true)}>
-            <Plus className="mr-1.5 h-4 w-4" /> Nova campanha
-          </V2Button>
-        )}
-      </div>
-
-      {aberto && (
-        <div className="mb-4 rounded-2xl border border-gray-100 bg-paper p-4">
-          <div className="mb-3 flex items-center justify-between">
-            <h3 className="font-display text-base font-bold text-ink">Nova campanha</h3>
-            <button type="button" onClick={() => setAberto(false)} aria-label="Fechar" className="rounded-full p-1.5 text-gray-400 hover:bg-gray-100 hover:text-ink">
-              <X className="h-4 w-4" />
-            </button>
-          </div>
-
-          <p className="mb-3 text-xs font-bold uppercase tracking-widest text-gray-400">Para quem vai</p>
-          <div className="grid gap-2 sm:grid-cols-2">
-            {Object.values(CAMPAIGN_AUDIENCE).map((a) => {
-              const meta = CAMPAIGN_AUDIENCE_META[a];
-              const quantos = campaignRecipients(a, { members: membros, bookings: concluidas }).length;
-              const marcado = form.audience === a;
-              return (
-                <button
-                  key={a}
-                  type="button"
-                  onClick={() => setForm((f) => ({ ...f, audience: a }))}
-                  className={`rounded-2xl border p-3 text-left transition ${marcado ? 'border-ink bg-ink/5' : 'border-gray-200 bg-paper-pure hover:border-gray-300'}`}
-                >
-                  <div className="flex items-center justify-between gap-2">
-                    <span className="font-bold text-ink">{meta.label}</span>
-                    <V2Badge tone={quantos > 0 ? 'green' : 'neutral'}>
-                      {quantos} {quantos === 1 ? 'pessoa' : 'pessoas'}
-                    </V2Badge>
-                  </div>
-                  <p className="mt-1 text-xs text-gray-500">{meta.hint}</p>
-                </button>
-              );
-            })}
-          </div>
-
-          <V2Field label="Nome da campanha" htmlFor="camp-nome" className="mt-3"
-            hint="É o título do aviso que a pessoa recebe.">
-            <V2Input id="camp-nome" maxLength={80} required placeholder="Quinta com 20% de desconto"
-              value={form.name} onChange={(e) => setForm((f) => ({ ...f, name: e.target.value }))} />
-          </V2Field>
-          <V2Field label="Mensagem" htmlFor="camp-msg" className="mt-3">
-            <V2Textarea id="camp-msg" rows={3} maxLength={1000} required
-              placeholder="Escreva como falaria no balcão. Diga o que é, quando vale e o que a pessoa precisa fazer."
-              value={form.message} onChange={(e) => setForm((f) => ({ ...f, message: e.target.value }))} />
-          </V2Field>
-
-          <div className="mt-3 flex flex-wrap items-center justify-between gap-2">
-            <p className="text-xs text-gray-500">
-              {destinatarios.length === 0
-                ? 'Ninguém neste público ainda — escolha outro.'
-                : <>Vai para <strong className="text-ink">{destinatarios.length}</strong> {destinatarios.length === 1 ? 'pessoa' : 'pessoas'}, como aviso dentro do aplicativo.</>}
-            </p>
-            <div className="flex gap-2">
-              <V2Button variant="ghost" onClick={() => setAberto(false)}>Cancelar</V2Button>
-              <V2Button disabled={!podeEnviar || enviar.isPending} onClick={() => setConfirmar(true)}>
-                <Send className="mr-1.5 h-4 w-4" /> {enviar.isPending ? 'Enviando…' : 'Enviar'}
-              </V2Button>
-            </div>
-          </div>
-        </div>
-      )}
-
-      {campanhas.length === 0 ? (
-        <V2EmptyState
-          icon={Megaphone}
-          title="Nenhuma campanha enviada"
-          description="Uma campanha avisa a sua comunidade dentro do aplicativo. Vale para chamar os sumidos de volta ou encher um horário vago."
-        />
-      ) : (
-        <div className="space-y-2">
-          {[...campanhas]
-            .sort((a, b) => (ms(b.sent_at) || ms(b.created_at) || 0) - (ms(a.sent_at) || ms(a.created_at) || 0))
-            .map((c) => (
-              <div key={c.id} className="rounded-2xl border border-gray-100 bg-paper p-3">
-                <div className="flex flex-wrap items-start justify-between gap-2">
-                  <div className="min-w-0">
-                    <p className="font-bold text-ink">{c.name}</p>
-                    {c.message && <p className="mt-0.5 line-clamp-2 text-xs text-gray-500">{c.message}</p>}
-                  </div>
-                  <V2Badge tone={c.status === 'sent' ? 'green' : 'amber'}>
-                    {c.status === 'sent' ? 'Enviada' : 'Rascunho'}
-                  </V2Badge>
-                </div>
-                <p className="mt-2 flex flex-wrap gap-x-3 text-xs text-gray-500">
-                  <span className="inline-flex items-center gap-1">
-                    <Users className="h-3.5 w-3.5" /> {c.sent_count || 0} {c.sent_count === 1 ? 'pessoa' : 'pessoas'}
-                  </span>
-                  {CAMPAIGN_AUDIENCE_META[c.target_audience]
-                    && <span>{CAMPAIGN_AUDIENCE_META[c.target_audience].label}</span>}
-                  {iso(c.sent_at) && <span>{formatDateShortBR(iso(c.sent_at))}</span>}
-                </p>
-              </div>
-            ))}
-        </div>
-      )}
-
-      <ConfirmDialogControlado
-        open={confirmar}
-        onOpenChange={setConfirmar}
-        title={`Enviar para ${destinatarios.length} ${destinatarios.length === 1 ? 'pessoa' : 'pessoas'}?`}
-        description="O aviso chega na hora e não dá para cancelar depois. Confira o texto — é a sua arena falando."
-        confirmLabel="Enviar agora"
-        destructive={false}
-        onConfirm={disparar}
-      />
-    </V2Surface>
-  );
-}
+// As campanhas moram em `v2/components/arenas/marketing/campaigns/` desde a
+// Onda CC: banner (criado a partir de um modelo ou enviado), destino, onde
+// aparece e até quando, e o aviso no aplicativo.
 
 /* ========================================================== 3. NPS ====== */
 
@@ -478,7 +313,7 @@ export function ArenaMarketingPanel({ arena, view }) {
   const { isOn } = useArenaModules(arena.id);
   const indicacoesLigadas = isOn(ARENA_MODULE_ID.MARKETING_REFERRAL);
   if (view === 'cupons') return <CouponsPanel arenaId={arena.id} referralOn={indicacoesLigadas} />;
-  if (view === 'campanhas') return <CampanhasSecao arenaId={arena.id} />;
+  if (view === 'campanhas') return <CampaignsPanel arena={arena} />;
   if (view === 'satisfacao') return <NpsSecao arenaId={arena.id} />;
   if (view === 'indicacoes') return <IndicacoesSecao arenaId={arena.id} />;
   return (

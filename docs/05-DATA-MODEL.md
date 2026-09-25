@@ -997,6 +997,19 @@ e sem `queue_removed`. É exatamente esse conjunto que vira o CSV.
     zerado (sem `redeemed_*` nem `reward_total`), e só a arena atualiza — sem
     trocar arena, dono ou código. `arena_referrals.reward_total` (opcional)
     soma o que cada resgate creditou.
+  - **Banner de campanha (2026-09-25, Onda CC, todos opcionais):**
+    `arena_campaigns.banner` (`{ source: 'design', template_id, design: {
+    layout, kicker, title, subtitle, highlight, cta, bg, fg, accent, image_url?,
+    image_path? } }` ou `{ source: 'upload', image_url, image_path, width,
+    height, alt }` — URL só do Storage do projeto), `destination` (`{ type,
+    target_id, target_label }`, lista fechada de destinos), `show_on_arena`,
+    `show_home`, `banner_until` ('YYYY-MM-DD', até 120 dias) e `banner_active`
+    (pausar/retomar). `channel` passa a aceitar `'banner'` (campanha sem
+    aviso). Consultas: página da arena `arena_id` + `show_on_arena`; tela
+    inicial `show_home` + `banner_active` — só igualdades, sem índice composto.
+    Os modelos da arena ficam em `arena_settings.banner_templates` (até 20,
+    ids `arena:…`; só a arena lê e grava). Zero regra nova. Ver
+    `docs/24-MODULOS-DE-ARENA/03-MARKETING.md` §12.
   - **`arena_bookings.referral` (2026-09-25, Onda BY, opcional):** o código de
     quem indicou, gravado pelo atleta no pedido — só `{ code, status:
     'pending', created_at_ms }` (regra `bookingReferralOkOnCreate`). A ARENA o

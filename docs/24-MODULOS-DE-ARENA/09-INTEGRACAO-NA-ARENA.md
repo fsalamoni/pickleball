@@ -864,3 +864,26 @@ provável. Duas igualdades não pedem índice. Asserções em
 **Zero.** Nenhuma coleção, campo, índice, regra, função ou migração. Nenhum
 documento apagado: `arena_internal_tournaments` e `arena_ladders` seguem como
 estão. Nove asserções novas no emulador (364 no total).
+
+## 16. Campanhas com banner: "Em destaque" (Onda CC, 2026-09-25)
+
+A campanha deixou de ser só um aviso: ela pode ter um BANNER, criado na
+plataforma (cinco modelos + os modelos da arena) ou enviado pronto, que leva a
+um lugar da plataforma. Detalhe em `03-MARKETING.md` §12. O que isso mudou na
+integração:
+
+| Onde | O quê |
+|---|---|
+| Central → Marketing → Campanhas | `CampaignsPanel`: a lista com o estado de cada banner, pausar/retomar, editar, e "Nova campanha" (`CampaignForm`) |
+| Página da arena | seção **"Em destaque"** (`ArenaCampaignsSection`, `#arena-campanhas`), logo abaixo das perguntas de chegada e satisfação — entra sozinha no índice "Nesta página" |
+| Tela inicial | o carrossel das promoções também leva os banners de campanha, no mesmo filtro de região |
+| `/arenas/:arenaId/campanhas/:campaignId` | a página "saiba mais" (`V2ArenaCampaign`) |
+| Loja | `?produto=` abre o produto da campanha em destaque |
+
+Os destinos reaproveitam as âncoras que a página da arena já tinha
+(`#arena-reservar`, `#arena-jogos-abertos`, `#arena-dia-de-jogo`,
+`#arena-torneios`, `#arena-loja`, `#arena-planos`, `#arena-aulas`,
+`#arena-promocoes`) — é por isso que **o id da seção é contrato de link** e
+nunca se renomeia.
+
+**Banco:** zero coleção, zero índice, zero regra; campos opcionais.
