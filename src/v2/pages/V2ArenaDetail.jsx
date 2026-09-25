@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import React, { useRef, useState } from 'react';
 import { Link, useParams } from 'react-router-dom';
 import {
   ArrowLeft, Building2, Calendar, CalendarPlus, Check, Clock, Copy, Globe, Instagram, Mail, MapPin,
@@ -39,6 +39,7 @@ import { useArenaModules } from '@/modules/arenas/hooks/useArenaModules';
 import { ARENA_MODULE_ID } from '@/modules/arenas/domain/modules';
 import { formatDateShortBR } from '@/modules/arenas/domain/calendar';
 import ArenaModuleShortcuts from '@/v2/components/arenas/ArenaModuleShortcuts';
+import ArenaPageIndex from '@/v2/components/arenas/ArenaPageIndex';
 import { isPixConfigured, PIX_KEY_TYPE_LABELS } from '@/modules/arenas/domain/pix_payment';
 import { groupRulesByCategory } from '@/modules/arenas/domain/arena_rules';
 import { V2Badge, V2Button, V2EmptyState, V2Skeleton, V2Surface, V2ErrorState } from '@/v2/ui/primitives';
@@ -91,6 +92,8 @@ function V2ArenaDetailContent({ arenaId, user, arena, managed, bookings, isLoadi
   const sharedBookingsOn = true;
   const linkedClubsOn = true;
   const [sharedOpen, setSharedOpen] = useState(false);
+  // O índice "Nesta página" lê as seções que renderizaram dentro daqui.
+  const paginaRef = useRef(null);
 
   if (isLoading) {
     return (
@@ -141,7 +144,7 @@ function V2ArenaDetailContent({ arenaId, user, arena, managed, bookings, isLoadi
   const hasContacts = links.whatsapp || links.phone || links.email || links.instagram || links.website;
 
   return (
-    <div className="mx-auto max-w-[900px]">
+    <div ref={paginaRef} className="mx-auto max-w-[900px]">
       <Link to="/arenas" className="mb-5 inline-flex items-center gap-1.5 text-sm font-semibold text-gray-500 hover:text-ink">
         <ArrowLeft className="h-4 w-4" /> Voltar às arenas
       </Link>
@@ -211,6 +214,10 @@ function V2ArenaDetailContent({ arenaId, user, arena, managed, bookings, isLoadi
         </div>
       </div>
 
+      {/* Índice das seções que esta arena de fato tem (módulo desligado não
+          aparece). Logo abaixo do cabeçalho: é daqui que se decide para onde ir. */}
+      <ArenaPageIndex containerRef={paginaRef} />
+
       {/* "Como foi?" vem logo depois do cabeçalho, e só para quem jogou aqui
           nos últimos 30 dias e não respondeu nos últimos 90 — o componente
           decide sozinho e não renderiza nada quando não é a hora. Mais abaixo
@@ -231,17 +238,17 @@ function V2ArenaDetailContent({ arenaId, user, arena, managed, bookings, isLoadi
           na página e encontra uma rodada marcada para o dia seguinte tem uma
           decisão mais simples (marcar presença) do que escolher horário e
           pedir uma quadra. Some sozinha quando não há nada marcado. */}
-      <ArenaGameDaysSection arenaId={arenaId} />
+      <div id="arena-dia-de-jogo" data-secao-arena="Dia de jogo" className="scroll-mt-4"><ArenaGameDaysSection arenaId={arenaId} /></div>
 
       {/* Jogos abertos (módulos de matchmaking) — pela mesma razão do dia de
           jogo: entrar num jogo pronto é uma decisão mais simples do que
           escolher horário e pedir uma quadra. Some sozinha com os módulos
           desligados ou sem nada para oferecer. */}
-      <ArenaOpenMatchSection arena={arena} />
+      <div id="arena-jogos-abertos" data-secao-arena="Jogos abertos" className="scroll-mt-4"><ArenaOpenMatchSection arena={arena} /></div>
 
       {/* Reservar é a ação principal do visitante: o calendário interativo
           vem logo após o hero, antes de regras/contato. */}
-      <V2BookingCalendarSection arenaId={arenaId} arena={arena} />
+      <div id="arena-reservar" data-secao-arena="Reservar" className="scroll-mt-4"><V2BookingCalendarSection arenaId={arenaId} arena={arena} /></div>
 
       {sharedBookingsOn && user && (
         <div className="mt-3 flex flex-col items-center gap-1">
@@ -254,10 +261,10 @@ function V2ArenaDetailContent({ arenaId, user, arena, managed, bookings, isLoadi
       {sharedBookingsOn && <SharedBookingDialog arena={arena} open={sharedOpen} onOpenChange={setSharedOpen} />}
 
       {/* Sprint 5: Regras estruturadas (público) — preferido sobre house_rules_md */}
-      <ArenaRulesSection arena={arena} />
+      <div id="arena-regras" data-secao-arena="Regras" className="scroll-mt-4"><ArenaRulesSection arena={arena} /></div>
 
       {/* Contact + hours */}
-      <div className="mt-6 grid gap-6 sm:grid-cols-2">
+      <div id="arena-contato" data-secao-arena="Contato" className="mt-6 grid scroll-mt-4 gap-6 sm:grid-cols-2">
         <V2Surface collapsible collapseId="arena-contato" title="Contato e redes">
           <div className="flex flex-col gap-2">
             <ContactRow icon={MessageCircle} href={links.whatsapp} label="WhatsApp" />
@@ -277,9 +284,9 @@ function V2ArenaDetailContent({ arenaId, user, arena, managed, bookings, isLoadi
       <V2ArenaPaymentSection arena={arena} />
 
       {/* Torneios + Professores residentes (Sprint 4) */}
-      <ArenaHouseTournamentsGate arena={arena} />
-      <ArenaTournamentsSection arenaId={arenaId} />
-      <ArenaTeachingSection arena={arena} />
+      <div id="arena-torneios-da-casa" data-secao-arena="Torneios da casa" className="scroll-mt-4"><ArenaHouseTournamentsGate arena={arena} /></div>
+      <div id="arena-torneios" data-secao-arena="Torneios" className="scroll-mt-4"><ArenaTournamentsSection arenaId={arenaId} /></div>
+      <div id="arena-aulas" data-secao-arena="Aulas e professores" className="scroll-mt-4"><ArenaTeachingSection arena={arena} /></div>
       {linkedClubsOn && (
         <div className="mt-6">
           <LinkedClubsSection ownerType="arena" ownerId={arenaId} title="Clubes da arena" />
@@ -298,6 +305,7 @@ function V2ArenaDetailContent({ arenaId, user, arena, managed, bookings, isLoadi
         </V2Surface>
       )}
 
+      <div id="arena-precos" data-secao-arena="Preços" className="scroll-mt-4">
       {(arena.base_price != null || (arena.price_rules || []).length > 0 || (arena.price_overrides || []).length > 0) && (
         <V2Surface className="mt-6">
           <h3 className="font-display text-base font-bold text-ink">Preços</h3>
@@ -335,15 +343,16 @@ function V2ArenaDetailContent({ arenaId, user, arena, managed, bookings, isLoadi
           <p className="mt-3 text-xs text-gray-400">Valores de referência; o valor final é confirmado pela arena na reserva.</p>
         </V2Surface>
       )}
+      </div>
 
       {/* Promoções (módulo Marketing → cupons divulgados) — logo depois dos
           preços, que é onde se decide. Some sem promoção divulgada valendo. */}
-      <ArenaPromosSection arena={arena} />
+      <div id="arena-promocoes" data-secao-arena="Promoções" className="scroll-mt-4"><ArenaPromosSection arena={arena} /></div>
 
       {/* Planos e vantagens (módulo Membros) — logo depois dos preços, porque é
           olhando o preço da hora avulsa que se decide comprar pacote. Some
           sozinha com o módulo desligado. */}
-      <div className="mt-6 empty:mt-0">
+      <div id="arena-planos" data-secao-arena="Planos" className="mt-6 scroll-mt-4 empty:mt-0">
         <ArenaMembershipSection arena={arena} />
       </div>
 
@@ -353,12 +362,13 @@ function V2ArenaDetailContent({ arenaId, user, arena, managed, bookings, isLoadi
 
       {/* Loja (módulo PDV) — o que eu pedi para retirar aqui e o que a arena
           vende. Some sozinha com o módulo desligado ou sem nada à venda. */}
-      <ArenaShopSection arena={arena} />
+      <div id="arena-loja" data-secao-arena="Loja" className="scroll-mt-4"><ArenaShopSection arena={arena} /></div>
 
       {/* Outras unidades da rede (módulo Multi-unidade) — para quem joga aqui
           saber que existem irmãs. Some sem rede ou sem outra unidade. */}
       <ArenaNetworkSection arena={arena} />
 
+      <div id="arena-fotos" data-secao-arena="Fotos" className="scroll-mt-4">
       {(arena.photos || []).length > 0 && (
         <V2Surface className="mt-6">
           <h3 className="font-display text-base font-bold text-ink">Fotos</h3>
@@ -373,15 +383,16 @@ function V2ArenaDetailContent({ arenaId, user, arena, managed, bookings, isLoadi
           </div>
         </V2Surface>
       )}
+      </div>
 
-      <div className="mt-6">
+      <div id="arena-avaliacoes" data-secao-arena="Avaliações" className="mt-6 scroll-mt-4">
         <V2ArenaReviews arena={arena} />
       </div>
 
       {bookingOpen && <BookingRequestDialog arena={arena} open={bookingOpen} onOpenChange={setBookingOpen} />}
 
       {/* Quadras (item 2 — preço e regras completos) */}
-      <ArenaCourtsSection arenaId={arenaId} />
+      <div id="arena-quadras" data-secao-arena="Quadras" className="scroll-mt-4"><ArenaCourtsSection arenaId={arenaId} /></div>
     </div>
   );
 }
