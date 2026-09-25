@@ -44,6 +44,7 @@ import { GAME_DAY_STATUS, GD_PARTICIPANT_SOURCE, GAME_DAY_VISIBILITY } from '../
 import {
   normalizeArenaGameDayInput, findGameDayOverlaps, slotsAsBookingCandidates,
   unavailabilityPayloadsFor, canSignUpToArenaGameDay, arenaGameDaySlots,
+  arenaGameDayTimeRange,
 } from '../domain/arenaGameDay.js';
 import {
   getGameDay, listGameDayParticipants, addGameDayParticipant,
@@ -53,6 +54,30 @@ import {
 const COL = 'game_days';
 const SUB_PARTICIPANTS = 'participants';
 const COL_UNAV = ARENA_COLLECTIONS.unavailabilities;
+// A vitrine do JOGO ABERTO ligado (Onda CA). Escrita direta, sem importar o
+// serviço do jogo aberto — que já importa este arquivo.
+const COL_OPEN_SLOTS = 'arena_open_slots';
+
+/**
+ * Leva à vitrine do jogo aberto o que mudou no dia de jogo: data, horário,
+ * quadras e vagas. Nunca derruba a edição do dia (falha vira log no console
+ * do navegador — a próxima edição reescreve).
+ */
+async function espelharVitrine(slotId, value) {
+  const quadras = arenaGameDaySlots(value);
+  const faixa = arenaGameDayTimeRange(value);
+  const patch = {
+    date: value.date,
+    court_ids: quadras.map((q) => q.court_id).filter(Boolean),
+    court_id: quadras[0]?.court_id || null,
+    court: quadras.map((q) => q.court_name).filter(Boolean).join(', '),
+    game_format: value.format,
+    updated_at: serverTimestamp(),
+  };
+  if (faixa) { patch.start = faixa.start; patch.end = faixa.end; }
+  if (value.capacity) patch.total_spots = value.capacity;
+  await updateDoc(doc(db, COL_OPEN_SLOTS, slotId), patch).catch(() => {});
+}
 
 function nomeDe(user, profile) {
   return profile?.platform_name || profile?.full_name || user?.displayName || user?.email || 'Atleta';
@@ -141,26 +166,18 @@ export async function checkArenaGameDaySlots(arenaId, value, { ignoreId = null, 
 }
 
 /**
- * Cria o dia de jogo da arena e fecha as quadras no calendário.
+ * O documento de um dia de jogo de arena, pronto para gravar.
  *
- * @param {string} arenaId
- * @param {object} input o que a arena preencheu
- * @param {object} actor usuário autenticado (gestor da arena)
- * @param {{ arena?: object, courts?: Array, bookings?: Array }} [ctx]
- * @returns {Promise<{ id: string }>}
+ * Um lugar só para a forma: o dia de jogo que a arena marca no calendário e o
+ * que nasce de um JOGO ABERTO (Onda CA) são o mesmo `game_days`, e forma que
+ * diverge não dá erro — dá um deles sem `visibility: 'public'`, invisível para
+ * o atleta que deveria marcar presença.
+ *
+ * @param {{ id: string, value: object, arenaId: string, arena?: object, actor: object, extra?: object }} p
+ *   `value`: já normalizado por `normalizeArenaGameDayInput`.
  */
-export async function createArenaGameDay(arenaId, input, actor, { arena = null, courts = [], bookings = null } = {}) {
-  if (!actor?.uid) throw new Error('É preciso estar autenticado.');
-  if (!arenaId) throw new Error('Arena inválida.');
-
-  const { valid, errors, value } = normalizeArenaGameDayInput(input, { courts });
-  if (!valid) throw new Error(Object.values(errors)[0] || 'Dados inválidos.');
-
-  const livre = await checkArenaGameDaySlots(arenaId, value, { bookings });
-  if (!livre.ok) throw new Error(livre.message);
-
-  const id = doc(collection(db, COL)).id;
-  const payload = {
+export function buildArenaGameDayPayload({ id, value, arenaId, arena = null, actor, extra = {} }) {
+  return {
     id,
     ...value,
     // --- o que faz dele um dia de jogo de ARENA ---
@@ -181,14 +198,38 @@ export async function createArenaGameDay(arenaId, input, actor, { arena = null, 
     invited_uids: [],
     admin_uids: [],
     // O Play usa esta contagem para saber quantas quadras rodam ao mesmo tempo.
-    play_courts: Math.max(1, value.arena_slots.length),
+    play_courts: Math.max(1, (value.arena_slots || []).length),
     status: GAME_DAY_STATUS.ACTIVE,
     publish_to_ranking: false,
     published_count: 0,
     created_at: serverTimestamp(),
     created_at_ms: Date.now(),
     updated_at: serverTimestamp(),
+    ...extra,
   };
+}
+
+/**
+ * Cria o dia de jogo da arena e fecha as quadras no calendário.
+ *
+ * @param {string} arenaId
+ * @param {object} input o que a arena preencheu
+ * @param {object} actor usuário autenticado (gestor da arena)
+ * @param {{ arena?: object, courts?: Array, bookings?: Array }} [ctx]
+ * @returns {Promise<{ id: string }>}
+ */
+export async function createArenaGameDay(arenaId, input, actor, { arena = null, courts = [], bookings = null } = {}) {
+  if (!actor?.uid) throw new Error('É preciso estar autenticado.');
+  if (!arenaId) throw new Error('Arena inválida.');
+
+  const { valid, errors, value } = normalizeArenaGameDayInput(input, { courts });
+  if (!valid) throw new Error(Object.values(errors)[0] || 'Dados inválidos.');
+
+  const livre = await checkArenaGameDaySlots(arenaId, value, { bookings });
+  if (!livre.ok) throw new Error(livre.message);
+
+  const id = doc(collection(db, COL)).id;
+  const payload = buildArenaGameDayPayload({ id, value, arenaId, arena, actor });
   await setDoc(doc(db, COL, id), payload);
   await syncArenaGameDayBlocks({ ...payload, id });
 
@@ -217,6 +258,9 @@ export async function updateArenaGameDay(gameDayId, input, actor, { courts = [],
     updated_at: serverTimestamp(),
   });
   await syncArenaGameDayBlocks({ ...atual, ...value, id: gameDayId });
+  // Nasceu de um JOGO ABERTO (Onda CA): a vitrine mostra data, horário e
+  // quadras — mudou aqui, muda lá, senão o atleta chega na hora errada.
+  if (atual.open_slot_id) await espelharVitrine(atual.open_slot_id, value);
 
   await createAuditLog({
     action: 'arena_game_day_updated',
@@ -231,11 +275,23 @@ export async function updateArenaGameDay(gameDayId, input, actor, { courts = [],
  * Reusa `deleteGameDay` (que já tira o convite público e os resultados do
  * ranking) e acrescenta só o que é da arena.
  */
-export async function archiveArenaGameDay(gameDayId, actor) {
+export async function archiveArenaGameDay(gameDayId, actor, { fromOpenSlot = false } = {}) {
   const atual = await getGameDay(gameDayId);
   if (!atual?.arena_id) throw new Error('Dia de jogo de arena não encontrado.');
   await deleteGameDay(gameDayId, actor);
   await syncArenaGameDayBlocks({ ...atual, id: gameDayId }, { remover: true });
+  // Encerrar o dia de jogo de um JOGO ABERTO encerra a vitrine junto: senão o
+  // atleta continuaria vendo "Quero jogar" num jogo que não existe mais.
+  // (`fromOpenSlot`: o cancelamento começou pela vaga, que já está cancelada.)
+  if (atual.open_slot_id && !fromOpenSlot) {
+    await updateDoc(doc(db, COL_OPEN_SLOTS, atual.open_slot_id), {
+      status: 'cancelled',
+      cancellation_reason: 'Dia de jogo encerrado pela arena.',
+      cancelled_by: actor?.uid || null,
+      cancelled_at: serverTimestamp(),
+      updated_at: serverTimestamp(),
+    }).catch(() => {});
+  }
   await createAuditLog({
     action: 'arena_game_day_archived',
     actor,
@@ -257,6 +313,14 @@ export async function signUpToArenaGameDay(gameDay, user, profile, { courtId = n
 
   const atual = await getGameDay(gameDay.id);
   if (!atual) throw new Error('Dia de jogo não encontrado.');
+  // Dia de jogo de um JOGO ABERTO (Onda CA): entrar é entrar no jogo aberto —
+  // a faixa de nível, a fila e a vitrine valem, e as duas listas são gravadas
+  // juntas. Importação dinâmica para não criar ciclo entre os módulos.
+  if (atual.open_slot_id) {
+    const { joinOpenSlot } = await import('@/modules/arenas/services/openMatchService.js');
+    await joinOpenSlot(atual.open_slot_id, user, profile);
+    return;
+  }
   const participants = await listGameDayParticipants(gameDay.id);
 
   const pode = canSignUpToArenaGameDay({
@@ -294,6 +358,14 @@ export async function signUpToArenaGameDay(gameDay, user, profile, { courtId = n
 /** Desmarca presença: tira o participante e a associação ao dia de jogo. */
 export async function leaveArenaGameDay(gameDayId, uid, actor) {
   if (!gameDayId || !uid) return;
+  const gd = await getGameDay(gameDayId);
+  if (gd?.open_slot_id) {
+    // Mesma razão da entrada: sair do dia de um JOGO ABERTO é sair do jogo
+    // aberto, e isso libera a vaga para a fila (Onda CA).
+    const { leaveOpenSlot } = await import('@/modules/arenas/services/openMatchService.js');
+    await leaveOpenSlot(gd.open_slot_id, uid);
+    return;
+  }
   const participants = await listGameDayParticipants(gameDayId);
   const meu = participants.find((p) => p.user_id === uid);
   if (!meu) return;

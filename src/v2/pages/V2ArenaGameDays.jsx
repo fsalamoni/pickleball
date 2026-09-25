@@ -44,6 +44,7 @@ import {
   arenaGameDayWhenText, arenaGameDayVacancies, arenaGameDaySlots,
   arenaSignupMode, ARENA_SIGNUP_MODE,
 } from '@/modules/games/domain/arenaGameDay';
+import { isOpenMatchGameDay } from '@/modules/arenas/domain/openMatchGameDay';
 import { GAME_DAY_FORMAT_LABELS } from '@/modules/clubs/domain/gameDayFormats';
 import { isGameDayOpenToParticipants } from '@/modules/games/domain/gameDayRoles';
 import ArenaGameDayDialog from '@/v2/components/games/ArenaGameDayDialog';
@@ -113,7 +114,10 @@ function CartaoDoDia({ gameDay, arenaId, onOpen, apagado }) {
     >
       <div className="flex items-start justify-between gap-2">
         <h3 className="font-display text-lg font-bold text-ink">{gameDay.title}</h3>
-        <V2Badge tone="neutral">{GAME_DAY_FORMAT_LABELS[gameDay.format] || gameDay.format}</V2Badge>
+        <div className="flex shrink-0 flex-wrap justify-end gap-1.5">
+          {isOpenMatchGameDay(gameDay) && <V2Badge tone="acid">Jogo aberto</V2Badge>}
+          <V2Badge tone="neutral">{GAME_DAY_FORMAT_LABELS[gameDay.format] || gameDay.format}</V2Badge>
+        </div>
       </div>
       <p className="mt-2 text-sm text-gray-500">{arenaGameDayWhenText(gameDay)}</p>
       <div className="mt-auto flex flex-wrap items-center gap-2 pt-4 text-xs text-gray-500">

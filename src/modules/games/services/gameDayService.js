@@ -47,8 +47,13 @@ import {
   drawAmericanoLiveRoundForFreeCourts,
 } from '../domain/americanoLive.js';
 import { GAME_DAY_FORMAT } from '@/modules/clubs/domain/gameDayFormats.js';
+import { slotMirrorFromGameDay } from '@/modules/arenas/domain/openMatchGameDay.js';
 
 const COL = 'game_days';
+// O jogo aberto ligado a este dia de jogo (Onda CA). Escrito direto aqui, e
+// não pelo serviço do jogo aberto, para não criar um ciclo de import entre os
+// dois módulos.
+const COL_OPEN_SLOTS = 'arena_open_slots';
 const COL_OPEN = 'open_games';
 const COL_RANKING = 'club_event_games';
 const SUB_PARTICIPANTS = 'participants';
@@ -139,6 +144,12 @@ export async function updateGameDay(id, patch, actor) {
   // da arena. Sem esta guarda, qualquer edição criaria um convite que a arena
   // nunca pediu. (Ele tem serviço próprio: `arenaGameDayService`.)
   if (current.arena_id) {
+    // O jogo aberto mostra o formato na vitrine (Onda CA): troca aqui, troca lá.
+    if (current.open_slot_id && 'format' in editable) {
+      await updateDoc(doc(db, COL_OPEN_SLOTS, current.open_slot_id), {
+        game_format: editable.format, updated_at: serverTimestamp(),
+      }).catch(() => {});
+    }
     await createAuditLog({ action: 'game_day_updated', actor, details: { game_day_id: id } });
     return;
   }
@@ -256,12 +267,15 @@ export async function listGameDayParticipants(gdId) {
  * ser membro do dia de jogo (vê o dia de jogo). Convidados avulsos (só nome)
  * não afetam a associação.
  */
-export async function addGameDayParticipant(gdId, entry, actor) {
-  if (!gdId) throw new Error('Dia de jogo inválido.');
-  const pid = doc(collection(db, COL, gdId, SUB_PARTICIPANTS)).id;
+/**
+ * O documento de um participante — a MESMA forma para quem é inserido pela
+ * organização e para quem entra sozinho pelo jogo aberto (Onda CA). Forma que
+ * diverge não dá erro: dá o Play sem `available_since` ordenando a fila errado.
+ */
+export function buildGameDayParticipant(pid, entry = {}) {
   const source = entry.source || (entry.user_id ? GD_PARTICIPANT_SOURCE.INVITED : GD_PARTICIPANT_SOURCE.GUEST);
   const now = Date.now();
-  await setDoc(doc(db, COL, gdId, SUB_PARTICIPANTS, pid), {
+  return {
     id: pid,
     user_id: entry.user_id || null,
     name: entry.name || 'Atleta',
@@ -279,7 +293,15 @@ export async function addGameDayParticipant(gdId, entry, actor) {
     // Quadra escolhida no dia de jogo de ARENA com inscrição por quadra.
     // Aditivo e inerte em todos os outros casos: `null` quando não se aplica.
     arena_court_id: entry.arena_court_id ?? null,
-  });
+  };
+}
+
+export async function addGameDayParticipant(gdId, entry, actor) {
+  if (!gdId) throw new Error('Dia de jogo inválido.');
+  const pid = doc(collection(db, COL, gdId, SUB_PARTICIPANTS)).id;
+  const participante = buildGameDayParticipant(pid, entry);
+  const { source } = participante;
+  await setDoc(doc(db, COL, gdId, SUB_PARTICIPANTS, pid), participante);
   if (entry.user_id) {
     const patch = { member_uids: arrayUnion(entry.user_id), updated_at: serverTimestamp() };
     if (source === GD_PARTICIPANT_SOURCE.INVITED) patch.invited_uids = arrayUnion(entry.user_id);
@@ -295,34 +317,47 @@ export async function addGameDayParticipant(gdId, entry, actor) {
       });
     }
   }
+  // Dia de jogo que nasceu de um JOGO ABERTO: a vaga espelha a lista (Onda CA).
+  await espelharJogoAberto(gdId);
   return pid;
 }
 
 /** Remove um participante e recalcula os membros do dia de jogo. */
+/**
+ * Sela o `user_id` do participante (se for atleta da plataforma) nos jogos
+ * dele ANTES de apagá-lo, para que suas partidas decididas sigam contando
+ * mesmo depois de ele sair do dia — o jogo passa a se basear na uid, não na
+ * relação atual de participantes. Convidados avulsos (sem uid) são ignorados.
+ * Um dia de jogo de atleta é sempre de data única (GAME_DAY_DATE_ID) e os
+ * nomes são únicos no dia, então selar por todos os jogos do dia é seguro.
+ *
+ * Nunca derruba a saída: falha vira log.
+ */
+export async function sealParticipantBeforeRemoval(gdId, participant) {
+  try {
+    if (!participant?.user_id) return;
+    const games = await listGameDayGames(gdId);
+    const patches = sealParticipantUidIntoGames(games, participant);
+    if (patches.length) {
+      const batch = writeBatch(db);
+      patches.forEach((p) => batch.update(doc(db, COL, gdId, SUB_GAMES, p.id), {
+        side_a: p.side_a,
+        side_b: p.side_b,
+        updated_at: serverTimestamp(),
+      }));
+      await batch.commit();
+    }
+  } catch (err) {
+    logger.error('removeGameDayParticipant: selagem de uid nas partidas falhou:', err);
+  }
+}
+
 export async function removeGameDayParticipant(gdId, pid, actor) {
   if (!gdId || !pid) return;
-  // Sela o `user_id` do participante (se for atleta da plataforma) nos jogos
-  // dele ANTES de apagá-lo, para que suas partidas decididas sigam contando
-  // mesmo depois de ele sair do dia — o jogo passa a se basear na uid, não na
-  // relação atual de participantes. Convidados avulsos (sem uid) são ignorados.
-  // Um dia de jogo de atleta é sempre de data única (GAME_DAY_DATE_ID) e os
-  // nomes são únicos no dia, então selar por todos os jogos do dia é seguro.
   try {
     const pSnap = await getDoc(doc(db, COL, gdId, SUB_PARTICIPANTS, pid));
     const participant = pSnap.exists() ? { id: pSnap.id, ...pSnap.data() } : null;
-    if (participant?.user_id) {
-      const games = await listGameDayGames(gdId);
-      const patches = sealParticipantUidIntoGames(games, participant);
-      if (patches.length) {
-        const batch = writeBatch(db);
-        patches.forEach((p) => batch.update(doc(db, COL, gdId, SUB_GAMES, p.id), {
-          side_a: p.side_a,
-          side_b: p.side_b,
-          updated_at: serverTimestamp(),
-        }));
-        await batch.commit();
-      }
-    }
+    await sealParticipantBeforeRemoval(gdId, participant);
   } catch (err) {
     logger.error('removeGameDayParticipant: selagem de uid nas partidas falhou:', err);
   }
@@ -341,6 +376,36 @@ async function recomputeGameDayMembers(gdId) {
     participants,
   });
   await updateDoc(doc(db, COL, gdId), { member_uids, updated_at: serverTimestamp() });
+  await espelharJogoAberto(gdId, { gameDay: gd, participants });
+}
+
+/**
+ * O JOGO ABERTO que é este dia de jogo (Onda CA) passa a espelhar a lista.
+ *
+ * Quem entra pelo botão "Quero jogar" já grava os dois juntos, num lote. Este
+ * espelho cobre o outro caminho: a ARENA inserindo ou tirando alguém pela tela
+ * do dia de jogo. Sem ele, a vitrine diria "2 vagas" com a quadra cheia.
+ *
+ * Só quem gerencia a arena escreve a vaga — quando outra pessoa mexe na lista
+ * (um inscrito, num dia aberto aos inscritos), a regra recusa e o espelho fica
+ * para a próxima escrita da arena. Nunca derruba a operação principal.
+ */
+async function espelharJogoAberto(gdId, { gameDay = null, participants = null } = {}) {
+  try {
+    const gd = gameDay || await getGameDay(gdId);
+    if (!gd?.open_slot_id) return;
+    const lista = participants || await listGameDayParticipants(gdId);
+    const slotSnap = await getDoc(doc(db, COL_OPEN_SLOTS, gd.open_slot_id));
+    if (!slotSnap.exists()) return;
+    const slot = slotSnap.data();
+    if (!['open', 'full'].includes(slot.status || 'open')) return;
+    await updateDoc(doc(db, COL_OPEN_SLOTS, gd.open_slot_id), {
+      ...slotMirrorFromGameDay(slot, lista),
+      updated_at: serverTimestamp(),
+    });
+  } catch (err) {
+    logger.info('Espelho do jogo aberto não gravado (não crítico)', { gdId, err: err?.code || err?.message });
+  }
 }
 
 /* ---------------------------- Administradores ---------------------------- */

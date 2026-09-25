@@ -205,14 +205,15 @@ const ATLETA = {
       id: 'jogo-aberto-arena',
       title: 'Entrar num jogo aberto de uma arena',
       summary: 'Horário com vaga, sem precisar montar o grupo.',
-      keywords: ['jogo aberto', 'open match', 'vaga', 'fila de espera', 'arena', 'parceiro'],
+      keywords: ['jogo aberto', 'open match', 'vaga', 'fila de espera', 'arena', 'parceiro', 'dia de jogo', 'formato', 'quem vai'],
       blocks: [
         p('Algumas arenas publicam horários com vagas — o "jogo aberto". Você entra sozinho, e a arena junta quem entrou. Não precisa levar dupla.'),
         steps(
           'Na página da arena, veja "Jogos abertos": os que cabem no seu nível vêm primeiro.',
-          'Toque em "Quero jogar". Pronto: você está no jogo, e ele aparece em "Minhas reservas".',
+          'Toque em "Quero jogar". Pronto: você está no jogo, e ele aparece em "Minhas reservas" e em "Dia de jogo".',
           'Não vai mais? Toque em "Sair deste jogo" — a vaga volta para quem está esperando.',
         ),
+        p('Cada jogo aberto é também um DIA DE JOGO. Em "Ver o jogo: regras e quem vai" você vê o formato (Americano, Play, Mexicano…), como as partidas saem, se há placar, as quadras e a lista de quem vai — e, na hora, as partidas e o ranking do dia.'),
         p('O jogo diz a faixa de nível e o seu nível, lado a lado. Fora da faixa, o botão avisa e não deixa entrar. Se a plataforma ainda não sabe o seu nível, você pode entrar.'),
         p('Jogo lotado vira FILA DE ESPERA: entre na fila e, quando alguém sair, a vaga é oferecida a você — com um prazo para confirmar, e o horário-limite aparece na própria chamada. A chamada aparece na página da arena e em "Minhas reservas".'),
         link('/procura-jogo', 'Ver jogos abertos em todas as arenas'),
@@ -634,7 +635,7 @@ const ARENA = {
       blocks: [
         p('A gestão da arena é modular. Você liga só os módulos que fazem sentido para a sua operação — e a tela fica só com o que você usa.'),
         list(
-          'Jogo aberto — vira a seção JOGO ABERTO da gestão: você publica horário com vaga, vê quem vem e quem está na fila. A página da arena ganha "Jogos abertos", com o botão de entrar ali mesmo, e os jogos aparecem também em "Procura-se jogo".',
+          'Jogo aberto — vira a seção JOGO ABERTO da gestão: você publica horário com vaga, vê quem vem e quem está na fila. Cada jogo aberto é um DIA DE JOGO (você escolhe o formato, as quadras e quem conduz), e "Organizar o jogo" leva ao sorteio, ao placar e ao telão. A página da arena ganha "Jogos abertos", com o botão de entrar ali mesmo, e os jogos aparecem também em "Procura-se jogo".',
           'Membros — sua base de alunos/mensalistas. Ligado, vira a seção MEMBROS da gestão.',
           'Aulas — a agenda de aulas na sua estrutura. Ligado, vira a seção AULAS da gestão (agenda + professores), e a página da arena ganha "Aulas e professores".',
           'Torneios — torneios da casa. Ligado, vira a seção TORNEIOS da gestão (da casa e da plataforma): publicar, começar (vira dia de jogo) e ENCERRAR, que leva o pódio à classificação da casa.',

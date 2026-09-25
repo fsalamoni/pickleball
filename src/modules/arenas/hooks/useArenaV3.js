@@ -30,6 +30,9 @@ import {
   getOpenSlot,
   createOpenSlot,
   updateOpenSlot,
+  createOpenMatch,
+  updateOpenMatch,
+  linkOpenSlotToGameDay,
   cancelOpenSlot,
   joinOpenSlot,
   leaveOpenSlot,
@@ -169,6 +172,14 @@ function invalidarVagas(qc) {
   qc.invalidateQueries({ queryKey: ['user-waitlist'] });
   qc.invalidateQueries({ queryKey: ['my-open-slots'] });
   qc.invalidateQueries({ queryKey: ['arena-waitlist'] });
+  qc.invalidateQueries({ queryKey: ['open-slot'] });
+  // O jogo aberto que é um DIA DE JOGO (Onda CA): entrar, sair, editar e
+  // cancelar mexem também na lista do dia, na lista de dias da arena e nos
+  // bloqueios do calendário — sem isto, a tela do dia de jogo mostraria a
+  // lista de antes até alguém recarregar.
+  qc.invalidateQueries({ queryKey: ['game-days'] });
+  qc.invalidateQueries({ queryKey: ['arena-game-days'] });
+  qc.invalidateQueries({ queryKey: ['arena-unavailabilities'] });
 }
 
 /** Os jogos abertos em que eu estou, de todas as arenas (Minhas reservas). */
@@ -218,6 +229,39 @@ export function useCreateOpenSlot() {
   const qc = useQueryClient();
   return useMutation({
     mutationFn: ({ arenaId, input }) => createOpenSlot(arenaId, input, user),
+    onSuccess: () => invalidarVagas(qc),
+  });
+}
+
+/**
+ * Publicar um jogo aberto que é um dia de jogo (Onda CA). `ctx` leva o que a
+ * tela já tem: as quadras (para o nome), os formatos oferecidos e as reservas
+ * (para recusar em cima de uma reserva, como o diálogo do dia de jogo).
+ */
+export function useCreateOpenMatch() {
+  const { user } = useAuth();
+  const qc = useQueryClient();
+  return useMutation({
+    mutationFn: ({ arenaId, input, ctx }) => createOpenMatch(arenaId, input, user, ctx),
+    onSuccess: () => invalidarVagas(qc),
+  });
+}
+
+export function useUpdateOpenMatch() {
+  const { user } = useAuth();
+  const qc = useQueryClient();
+  return useMutation({
+    mutationFn: ({ slotId, input, ctx }) => updateOpenMatch(slotId, input, user, ctx),
+    onSuccess: () => invalidarVagas(qc),
+  });
+}
+
+/** Um jogo aberto antigo (sem dia de jogo) passa a ter o dele. */
+export function useLinkOpenSlotToGameDay() {
+  const { user } = useAuth();
+  const qc = useQueryClient();
+  return useMutation({
+    mutationFn: ({ slotId, input, ctx }) => linkOpenSlotToGameDay(slotId, input, user, ctx),
     onSuccess: () => invalidarVagas(qc),
   });
 }

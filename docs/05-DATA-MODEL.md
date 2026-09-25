@@ -550,6 +550,10 @@ dia de jogo é exatamente o do atleta, como sempre foi.
 - `capacity` — teto do dia (`null` = sem limite). No modo `'court'` o teto vive
   em cada slot e este fica `null`
 - em `participants/{pid}`: `arena_court_id` (**opcional**) — a quadra escolhida
+- `open_slot_id` (**opcional**, Onda CA) — o dia de jogo nasceu de um JOGO
+  ABERTO (`arena_open_slots/{id}`, que aponta de volta por `game_day_id`).
+  Marcar presença nele é entrar no jogo aberto (faixa de nível, fila, vitrine),
+  e a arena o edita pelo jogo aberto — a vitrine e o dia mudam juntos
 
 Dia de jogo de arena é sempre `visibility: 'public'` — é assim que o atleta o
 enxerga na página da arena, e é o que faz a listagem por `arena_id` passar pela
@@ -993,6 +997,16 @@ e sem `queue_removed`. É exatamente esse conjunto que vira o CSV.
 `arena_inventory_products`, `arena_inventory_entries`, `arena_inventory_exits`.
 **IoT**: `arena_devices`.
 **Matchmaking**: `arena_open_slots`.
+  - **O jogo aberto que é um DIA DE JOGO (2026-09-25, Onda CA, campos
+    opcionais):** `arena_open_slots.game_day_id` ⇄ `game_days.open_slot_id`
+    ligam a vitrine ao dia de jogo; `arena_open_slots.court_ids[]` (o jogo pode
+    rodar em mais de uma quadra; `court_id` segue com a primeira) e
+    `arena_open_slots.game_format` (cópia do formato do dia, para a vitrine).
+    Ausentes, a vaga antiga segue como sempre. Entrar/sair grava a vitrine, o
+    participante e `member_uids` num LOTE só, cada escrita pela regra de "só a
+    si mesmo" que já existia — **nenhuma regra nova**. A vaga ligada não deriva
+    bloqueio próprio: quem fecha a quadra é o dia de jogo. Ver
+    `docs/24-MODULOS-DE-ARENA/01-MATCHMAKING.md` (atualização 2026-09-25, CA).
   - (2026-09-24) O atleta atualiza `arena_open_slots` só para entrar/sair A SI
     MESMO (`participants`, `filled_spots`, `status`, `updated_at`, coerentes).
     `arena_waitlist` é legível por quem tem conta; criar é em nome próprio,

@@ -42,14 +42,23 @@ function naOrdemDaFila(entradas) {
       || ((ms(a.joined_at) || 0) - (ms(b.joined_at) || 0)));
 }
 
-/** Quantos lugares dá para oferecer agora. */
-function lugaresParaChamar(slot, entradas, agoraMs) {
+/**
+ * Quantos lugares dá para oferecer agora.
+ *
+ * `noDiaDeJogo`: quantos inscritos tem o DIA DE JOGO ligado à vaga (Onda CA).
+ * A vaga guarda só contas da plataforma; o dia de jogo pode ter também os
+ * CONVIDADOS que a arena inseriu à mão (quem chegou na hora, sem conta). Os
+ * dois ocupam lugar na quadra — por isso vale o maior dos dois números, e a
+ * fila não chama ninguém para um lugar que um convidado já ocupa.
+ */
+function lugaresParaChamar(slot, entradas, agoraMs, { noDiaDeJogo = 0 } = {}) {
   if (!slot || !['open', 'full'].includes(slot.status || 'open')) return 0;
   const total = Number(slot.total_spots) || 0;
   const naVaga = Array.isArray(slot.participants) ? slot.participants.length : 0;
+  const ocupados = Math.max(naVaga, Number(noDiaDeJogo) || 0);
   const chamadosNoPrazo = entradas
     .filter((e) => e && e.status === 'notified' && !venceu(e, agoraMs)).length;
-  return Math.max(0, total - naVaga - chamadosNoPrazo);
+  return Math.max(0, total - ocupados - chamadosNoPrazo);
 }
 
 /**
@@ -72,8 +81,14 @@ async function promoverProximo(ctx, slotId) {
     const slot = slotSnap.exists ? slotSnap.data() : null;
     const filaSnap = await tx.get(filaQuery);
     const entradas = filaSnap.docs.map((d) => ({ id: d.id, ref: d.ref, ...d.data() }));
+    // Jogo aberto que é um dia de jogo (Onda CA): conta quem está no dia.
+    let noDiaDeJogo = 0;
+    if (slot && typeof slot.game_day_id === 'string' && slot.game_day_id) {
+      const inscritos = await tx.get(db.collection('game_days').doc(slot.game_day_id).collection('participants'));
+      noDiaDeJogo = inscritos.size || 0;
+    }
 
-    const lugares = lugaresParaChamar(slot, entradas, agora);
+    const lugares = lugaresParaChamar(slot, entradas, agora, { noDiaDeJogo });
     if (lugares <= 0) return { slot, chamados: [] };
 
     const chamados = naOrdemDaFila(entradas).slice(0, lugares);

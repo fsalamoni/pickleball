@@ -67,6 +67,7 @@ import {
   normalizePlayCourts, GAME_DAY_VISIBILITY, GAME_DAY_VISIBILITY_LABELS,
 } from '@/modules/games/domain/gameDay';
 import { isArenaGameDay } from '@/modules/games/domain/arenaGameDay';
+import { arenaGameDayEditLink, isOpenMatchGameDay } from '@/modules/arenas/domain/openMatchGameDay';
 import { isClubGameDay } from '@/modules/games/domain/clubGameDay';
 import {
   useGameDayGames, useGameDayParticipants, useUpdateGameDay,
@@ -526,12 +527,14 @@ export default function GameDaySettingsCard({ gameDay }) {
                 <>
                   <Building2 aria-hidden="true" className="mt-0.5 h-3.5 w-3.5 shrink-0" />
                   <span>
-                    Nome, data, local e as quadras reservadas são da arena.{' '}
+                    {isOpenMatchGameDay(gameDay)
+                      ? 'Nome, data, horário, quadras e vagas são do jogo aberto — mudam junto com a vitrine.'
+                      : 'Nome, data, local e as quadras reservadas são da arena.'}{' '}
                     <Link
-                      to={`/arenas/${gameDay.arena_id}/gerir/dia-de-jogo/${gdId}`}
+                      to={arenaGameDayEditLink({ ...gameDay, id: gdId })}
                       className="font-semibold text-ink underline"
                     >
-                      Editar na gestão da arena
+                      {isOpenMatchGameDay(gameDay) ? 'Editar o jogo aberto' : 'Editar na gestão da arena'}
                     </Link>.
                   </span>
                 </>

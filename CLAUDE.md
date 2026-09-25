@@ -270,6 +270,7 @@ Estes princípios vieram de bugs reais que custaram horas pra arrumar. São ineg
 **"Vou criar um módulo de arena novo"** → id em `ARENA_MODULE_ID` (**o id é contrato de banco**, está gravado em `arena_module_states.module_id` — nunca renomeie), metadados em `ARENA_MODULE_META`, detalhamento em `ARENA_MODULE_DETAIL` (público, benefício por persona, `status`, `requires`, rotas, `config`). Nasce `planned`, que **não é liberável**. Há teste de integridade do catálogo
 **"Por que não faço uma feature flag por módulo de arena?"** → porque são 50, e `FEATURE_FLAG` é liga/desliga de CÓDIGO. Cinquenta linhas ali estourariam a contagem "X ativas de Y" e misturariam dois conceitos. A liberação por módulo tem modo (`opt_in`/`forced`) e observação, e mora no documento da camada 1
 **"Uma regra do Firestore recusa `delete` sem motivo aparente"** → confira se a condição olha `request.resource.data`: num **delete** ele NÃO EXISTE, e a regra é sempre falsa. Já foi corrigido em `arena_unavailabilities` (Onda AA) e, em 2026-09-13, em mais **onze** coleções de arena, onde ninguém conseguia apagar professor, aula, cupom, campanha, checklist, dispositivo, ladder nem item de estoque. O mesmo vale para `read` — a arena nunca conseguiu ler o próprio NPS nem as próprias ordens de manutenção
+**"O jogo aberto e o dia de jogo: qual é qual?"** → desde a Onda CA **o jogo aberto É um dia de jogo**. Dois documentos que se apontam (`arena_open_slots.game_day_id` ⇄ `game_days.open_slot_id`): a VITRINE (nível, valor, vagas, fila) e o JOGO (formato, quem conduz, quadras, sorteio, placar, telão). Publicar (`createOpenMatch`) cria os dois num lote; **entrar e sair gravam vitrine + participante + `member_uids` num lote só** (`joinOpenSlot`/`leaveOpenSlot`) — nunca grave uma lista sem a outra. Marcar presença pelo lado do dia de jogo delega ao jogo aberto; a arena inserindo/tirando pela tela do dia faz a vitrine ESPELHAR (`slotMirrorFromGameDay`), e convidado sem conta ocupa lugar (`linkedOccupancy`, também no servidor da fila). Quem fecha a quadra é o dia de jogo — a vaga ligada não deriva bloqueio. A arena EDITA pelo jogo aberto (`arenaGameDayEditLink`). Jogo aberto antigo não é migrado: "Criar o dia de jogo" (`linkOpenSlotToGameDay`), um por vez. Zero regra nova — provado em `tests/rules/openMatchGameDay.rules.test.js`. Ver `docs/24-MODULOS-DE-ARENA/01-MATCHMAKING.md` (atualização CA)
 **"Onde o jogo aberto aparece?"** → em QUATRO lugares além da página própria, e todos saem da MESMA regra (`arenas/domain/openMatchView.js`: `openMatchSectionModel`, `slotActionState`, `openSlotsForDiscovery`…) e das MESMAS peças (`v2/components/arenas/openMatch/`): Central → **Jogo aberto** (quem vem e a fila de cada jogo), página da arena → **Jogos abertos** (entrar ali mesmo, chamada da fila em destaque), **Minhas reservas** (jogos e filas de todas as arenas) e **Procura-se jogo** (vagas das arenas com o módulo ligado — `useModuleOnInArenas`). **Nunca** decida "tem vaga"/o botão da vaga numa tela: LOTADO não é ENCERRADO (lotado oferece a fila) e nível desconhecido não barra. Ver `docs/24-MODULOS-DE-ARENA/09-INTEGRACAO-NA-ARENA.md` §8
 **"Vou mexer em jogo aberto / fila de espera / buscar parceiro"** → `docs/24-MODULOS-DE-ARENA/01-MATCHMAKING.md`. Três coisas que NÃO podem regredir: (1) a vaga com `court_id` **OCUPA a quadra** (`openSlotBlocks`/`mergeOpenSlotBlocks`, mesmo desenho do dia de jogo — e o bloqueio nunca depende de flag); (2) o nível é a régua única 2.0–8.0 dos DOIS lados, e **nível desconhecido não barra ninguém**; (3) quem CHAMA o próximo da fila é o **servidor** (`promoverProximo` em `functions/openSlotWaitlist.js`, disparado quando alguém sai da vaga, quando uma chamada é recusada/expira, e pela varredura `advanceOpenSlotWaitlist`) — nunca o navegador, porque é escrita na entrada de OUTRA pessoa; (4) o atleta entra/sai da vaga e responde à própria chamada por regras de "só a si mesmo" (`tests/rules/matchmaking.rules.test.js`) — até 2026-09-24 NADA disso funcionava para o atleta
 **"Preciso do nível de alguém numa tela"** → `useMyUnifiedLevel()` (o meu) ou `useUnifiedLevels(uids)` (um lote, UMA consulta). **Nunca** `profile.level` nem `leveling_level`: são código de faixa, não número na régua — comparar contra 2.0–8.0 não filtra, filtra errado (era o defeito do "buscar parceiro" e da peneira do jogo aberto)
@@ -505,6 +506,19 @@ chore(deps): bump firebase to 12.x
 > memory topic `picklerush-sync-2026-08.md`.
 >
 > **Destaques por onda**:
+>
+> - **Onda CA — O jogo aberto é um dia de jogo** (2026-09-25): *"o jogo
+>   aberto deve gerar um dia de jogo"*. Publicar cria a vitrine (nível, valor,
+>   vagas, fila) E o dia de jogo (formato, quem conduz, quadras — mais de uma),
+>   num lote; entrar e sair gravam as duas listas juntas, também num lote, e
+>   marcar presença pelo dia de jogo é entrar no jogo aberto. O atleta vê, da
+>   página da arena, "regras e quem vai" (a página do dia de jogo, com o painel
+>   do jogo aberto e o mesmo botão); a arena organiza sorteio, placar e telão
+>   por "Organizar o jogo". Convidado sem conta ocupa lugar (inclusive na fila,
+>   no servidor). 🐞 Cancelar dizia "serão avisados" e ninguém era: agora avisa.
+>   Jogo aberto antigo não é migrado ("Criar o dia de jogo", um por vez). Zero
+>   coleção, zero índice, zero regra; campos opcionais; 10 asserções novas no
+>   emulador provam que as regras de sempre aceitam os lotes.
 >
 > - **Onda BZ — As promoções na tela inicial, por região** (2026-09-25): a
 >   promoção só aparecia na página da arena, ou seja, para quem JÁ tinha achado
@@ -2086,7 +2100,7 @@ chore(deps): bump firebase to 12.x
 
 | Métrica | Valor | Delta do início do agente |
 |---|---|---|
-| **Testes Vitest** | **5727 passing** (351 arquivos) + 345 asserções de regras do Firestore no emulador (+ 17 do Storage) | +5169 (era 408) |
+| **Testes Vitest** | **5772 passing** (354 arquivos) + 355 asserções de regras do Firestore no emulador (+ 17 do Storage) | +5169 (era 408) |
 | **Lint errors** | 0 | era 30+ |
 | **Módulos** | 21 (+`help` — conteúdo dos tutoriais em tela) (`games` e `legal` saíram como `src/modules/` mas continuam como pastas oficiais — **rating virou módulo oficial** com domain/services/hooks/components) | +4 (coaches, circuits, games, legal) |
 | **V2 pages** | 82 (+V2GameDayTelao — telão, fora do V2Layout; +V2Help — central de ajuda; +V2ArenaKiosk — totem da recepção, também fora do V2Layout; +V2ArenaCheckin; +V2ArenaAttendance) | +58 |

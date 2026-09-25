@@ -354,10 +354,16 @@ function slotEndMs(slot) {
 /*  A vaga aberta OCUPA a quadra                                       */
 /* ------------------------------------------------------------------ */
 
-/** Uma vaga ainda vale para ocupar a quadra? Cancelada, não. */
+/**
+ * Uma vaga ainda vale para ocupar a quadra? Cancelada, não. E a vaga ligada a
+ * um DIA DE JOGO (Onda CA) também não: quem fecha a quadra é o dia de jogo
+ * (`gameDayBlocks`), e contar os dois mostraria dois bloqueios no mesmo
+ * horário — o mesmo cuidado do torneio interno que virou dia de jogo.
+ */
 function vagaOcupaQuadra(slot) {
   if (!slot) return false;
   if (slot.status === OPEN_SLOT_STATUS.CANCELLED) return false;
+  if (typeof slot.game_day_id === 'string' && slot.game_day_id) return false;
   return Boolean(slot.court_id && slot.date && slot.start && slot.end);
 }
 
@@ -433,6 +439,16 @@ export function mergeOpenSlotBlocks(blocks = [], slots = []) {
  * @returns {{ hasConflict: boolean, reason: string|null }}
  */
 export function openSlotConflict(vaga, blocks = [], bookedSlots = []) {
+  // Jogo aberto em MAIS de uma quadra (Onda CA): confere quadra a quadra e
+  // devolve o primeiro choque, dizendo em qual.
+  const varias = Array.isArray(vaga?.court_ids) ? vaga.court_ids.filter(Boolean) : [];
+  if (varias.length > 1) {
+    for (const courtId of varias) {
+      const r = openSlotConflict({ ...vaga, court_ids: undefined, court_id: courtId }, blocks, bookedSlots);
+      if (r.hasConflict) return r;
+    }
+    return { hasConflict: false, reason: null };
+  }
   if (!vaga?.court_id || !vaga?.date || !vaga?.start || !vaga?.end) {
     return { hasConflict: false, reason: null };
   }

@@ -87,6 +87,17 @@ describe('promoverProximo', () => {
     }
   });
 
+  it('⭐ jogo aberto ligado (Onda CA): convidado do dia de jogo ocupa lugar', async () => {
+    // Vaga com 3 contas de 4 lugares; o dia de jogo tem as 3 + 1 convidado.
+    const db = banco(vaga({ game_day_id: 'gd1' }), { e1: entrada('w1', 1) });
+    ['p1', 'p2', 'p3'].forEach((uid, i) => db.store.docs.set(`game_days/gd1/participants/x${i}`, { user_id: uid }));
+    db.store.docs.set('game_days/gd1/participants/conv', { user_id: null, name: 'Convidado' });
+    expect((await promoverProximo({ db, Timestamp, agoraMs: AGORA }, 's1')).promoted).toEqual([]);
+    // Sem o convidado, o lugar existe e o primeiro da fila é chamado.
+    db.store.docs.delete('game_days/gd1/participants/conv');
+    expect((await promoverProximo({ db, Timestamp, agoraMs: AGORA }, 's1')).promoted).toEqual(['w1']);
+  });
+
   it('só chama quem está ESPERANDO (não quem recusou, expirou ou já aceitou)', async () => {
     const db = banco(vaga(), {
       a: entrada('x1', 1, { status: 'declined' }),
@@ -107,6 +118,9 @@ describe('peças puras', () => {
 
   it('lugares = total − na vaga − chamados no prazo', () => {
     expect(lugaresParaChamar(vaga(), [], AGORA)).toBe(1);
+    // Ligado a um dia de jogo, vale o maior: a vaga ou o dia (Onda CA).
+    expect(lugaresParaChamar(vaga(), [], AGORA, { noDiaDeJogo: 4 })).toBe(0);
+    expect(lugaresParaChamar(vaga(), [], AGORA, { noDiaDeJogo: 1 })).toBe(1);
     expect(lugaresParaChamar(vaga(), [entrada('w', 1, { status: 'notified', notification_expires_at: AGORA + 5 })], AGORA)).toBe(0);
   });
 
