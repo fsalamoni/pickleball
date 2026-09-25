@@ -1215,9 +1215,9 @@ import {
   listArenaCoupons, createArenaCoupon,
   listArenaCampaigns, createCampaign,
   submitNps, getArenaNpsResponses, getArenaNpsSummary,
-  createReferral,
   sendCampaign, listMyNpsAnswers, getOrCreateReferralCode, getMyReferralCode, redeemReferral,
   updateArenaCoupon, setCouponActive, deleteArenaCoupon,
+  setCouponUnitCost, redeemVoucher, findArenaCouponByCode, listArenaReferrals,
 } from '../services/marketingService.js';
 
 export function useArenaCoupons(arenaId) {
@@ -1234,7 +1234,10 @@ export function useCreateCoupon() {
   const qc = useQueryClient();
   return useMutation({
     mutationFn: ({ arenaId, input }) => createArenaCoupon(arenaId, input, user),
-    onSuccess: (_d, { arenaId }) => qc.invalidateQueries({ queryKey: ['arena-coupons', arenaId] }),
+    onSuccess: (_d, { arenaId }) => {
+      qc.invalidateQueries({ queryKey: ['arena-coupons', arenaId] });
+      qc.invalidateQueries({ queryKey: ['arena-settings', arenaId] });
+    },
   });
 }
 
@@ -1257,8 +1260,11 @@ export function useUpdateCoupon() {
   const { user } = useAuth();
   const qc = useQueryClient();
   return useMutation({
-    mutationFn: ({ couponId, input }) => updateArenaCoupon(couponId, input, user),
-    onSuccess: (_d, { arenaId }) => qc.invalidateQueries({ queryKey: ['arena-coupons', arenaId] }),
+    mutationFn: ({ arenaId, couponId, input }) => updateArenaCoupon(couponId, input, user, { arenaId }),
+    onSuccess: (_d, { arenaId }) => {
+      qc.invalidateQueries({ queryKey: ['arena-coupons', arenaId] });
+      qc.invalidateQueries({ queryKey: ['arena-settings', arenaId] });
+    },
   });
 }
 
@@ -1275,8 +1281,51 @@ export function useDeleteCoupon() {
   const { user } = useAuth();
   const qc = useQueryClient();
   return useMutation({
-    mutationFn: ({ couponId }) => deleteArenaCoupon(couponId, user),
+    mutationFn: ({ arenaId, couponId }) => deleteArenaCoupon(couponId, user, { arenaId }),
+    onSuccess: (_d, { arenaId }) => {
+      qc.invalidateQueries({ queryKey: ['arena-coupons', arenaId] });
+      qc.invalidateQueries({ queryKey: ['arena-settings', arenaId] });
+    },
+  });
+}
+
+/**
+ * A arena registra o uso de um VALE na recepção. Invalida os cupons (a
+ * contagem mudou) — o controle de uso lê a mesma lista.
+ */
+export function useRedeemVoucher() {
+  const { user } = useAuth();
+  const qc = useQueryClient();
+  return useMutation({
+    mutationFn: ({ arenaId, couponId, userId, userName }) => redeemVoucher(arenaId, couponId, { userId, userName }, user),
     onSuccess: (_d, { arenaId }) => qc.invalidateQueries({ queryKey: ['arena-coupons', arenaId] }),
+  });
+}
+
+/** Procura um cupom da arena pelo código — a recepção digita o que o cliente mostra. */
+export function useFindArenaCoupon() {
+  return useMutation({
+    mutationFn: ({ arenaId, code }) => findArenaCouponByCode(arenaId, code),
+  });
+}
+
+/** O custo unitário de um vale (mora em `arena_settings`, que só o gestor lê). */
+export function useSetCouponUnitCost() {
+  const { user } = useAuth();
+  const qc = useQueryClient();
+  return useMutation({
+    mutationFn: ({ arenaId, couponId, cost }) => setCouponUnitCost(arenaId, couponId, cost, user),
+    onSuccess: (_d, { arenaId }) => qc.invalidateQueries({ queryKey: ['arena-settings', arenaId] }),
+  });
+}
+
+/** Os códigos de indicação desta arena — para o controle de uso. */
+export function useArenaReferrals(arenaId) {
+  return useQuery({
+    queryKey: ['arena-referral', arenaId, 'todos'],
+    queryFn: () => listArenaReferrals(arenaId),
+    enabled: !!arenaId,
+    staleTime: 60_000,
   });
 }
 
@@ -1393,14 +1442,21 @@ export function useRedeemReferral() {
   const { user } = useAuth();
   const qc = useQueryClient();
   return useMutation({
-    mutationFn: async ({ arenaId, code, referredId, referredName, reward }) => {
-      const { referrerId, reward: premio } = await redeemReferral(
-        arenaId, { code, referredId, referredName, reward }, user,
+    mutationFn: async ({
+      arenaId, code, referredId, referredName, reward, referrerReward, referredReward, program,
+    }) => {
+      const r = await redeemReferral(
+        arenaId, { code, referredId, referredName, reward, referrerReward, referredReward, program }, user,
       );
-      // Os dois lados ganham o mesmo crédito — é o que "indique e ganhe" diz.
-      await creditWallet(arenaId, referrerId, premio, `indicou ${referredName || 'um amigo'}`, user);
-      await creditWallet(arenaId, referredId, premio, 'veio por indicação', user);
-      return { referrerId, reward: premio };
+      // Cada lado recebe o que as regras do programa dizem — que podem ser
+      // valores diferentes (antes era sempre o mesmo para os dois).
+      if (r.referrerReward > 0) {
+        await creditWallet(arenaId, r.referrerId, r.referrerReward, `indicou ${referredName || 'um amigo'}`, user);
+      }
+      if (r.referredReward > 0) {
+        await creditWallet(arenaId, referredId, r.referredReward, 'veio por indicação', user);
+      }
+      return r;
     },
     onSuccess: (_d, { arenaId }) => {
       qc.invalidateQueries({ queryKey: ['arena-wallet', arenaId] });

@@ -192,7 +192,9 @@ export default function BookingRequestDialog({ arena, open, onOpenChange, court:
   // pessoa não precisar saber o código de cor (nem ter visto a página).
   const cuponsLigados = isOn(ARENA_MODULE_ID.MARKETING_COUPONS);
   const { data: cuponsDaArena } = useArenaCoupons(cuponsLigados ? arena?.id : null);
-  const promocoes = useMemo(() => publicPromos(cuponsDaArena || []), [cuponsDaArena]);
+  // Só o que entra no PREÇO: um vale (bebida, brinde) divulgado também é
+  // promoção, mas é usado na recepção — oferecê-lo aqui daria "não vale".
+  const promocoes = useMemo(() => publicPromos(cuponsDaArena || []).filter((p) => p.bookable), [cuponsDaArena]);
 
   const conferirCupom = async (codigo = cupomDigitado) => {
     const base = totalDaSelecao?.total || 0;
@@ -398,6 +400,11 @@ export default function BookingRequestDialog({ arena, open, onOpenChange, court:
           invitees: podeConvidar ? invitees : [],
           is_instant: instantaneaOk,
           payment_method: instantaneaOk ? paymentMethod : null,
+          // 🐞 (2026-09-25) O cupom era conferido e mostrado como "aplicado",
+          // mas nunca ENVIADO: a reserva era gravada com o preço cheio e o uso
+          // nunca era contado. O serviço reconfere contra o banco — daqui vai
+          // só o código.
+          coupon_code: cupom?.code || null,
         },
       });
       toast.success(

@@ -32,14 +32,16 @@ export default function ArenaPromosSection({ arena }) {
 
   if (isLoading || !ligado || promos.length === 0) return null;
 
-  const copiar = async (codigo) => {
+  const copiar = async (p) => {
     try {
-      await navigator.clipboard.writeText(codigo);
-      toast.success('Código copiado. Use no pedido de reserva.');
+      await navigator.clipboard.writeText(p.code);
+      toast.success(p.bookable ? 'Código copiado. Use no pedido de reserva.' : 'Código copiado. Mostre na recepção da arena.');
     } catch {
-      toast.error(`Não foi possível copiar. O código é: ${codigo}`);
+      toast.error(`Não foi possível copiar. O código é: ${p.code}`);
     }
   };
+  const temVale = promos.some((p) => !p.bookable);
+  const temDesconto = promos.some((p) => p.bookable);
 
   return (
     <V2Surface className="mt-6">
@@ -47,17 +49,22 @@ export default function ArenaPromosSection({ arena }) {
         <Tag className="h-4 w-4" /> Promoções
       </h3>
       <p className="mt-1 text-xs text-gray-500">
-        No pedido de reserva, toque na promoção para aplicar — ou digite o código.
+        {temDesconto && 'Desconto na reserva: no pedido, toque na promoção para aplicar — ou digite o código.'}
+        {temDesconto && temVale && ' '}
+        {temVale && 'Vale: mostre o código na recepção da arena.'}
       </p>
       <ul className="mt-3 space-y-2">
         {promos.map((p) => (
           <li key={p.id} className="flex flex-wrap items-center justify-between gap-2 rounded-2xl border border-dashed border-gray-300 bg-paper p-3">
             <div className="min-w-0">
-              <p className="font-bold text-ink">{p.discount}</p>
+              <p className="font-bold text-ink">
+                {p.discount}
+                {!p.bookable && <span className="ml-1.5 rounded-full bg-paper-pure px-2 py-0.5 text-[11px] font-bold text-gray-600">vale na recepção</span>}
+              </p>
               {p.description && <p className="mt-0.5 text-sm text-gray-600">{p.description}</p>}
               {promoConditions(p) && <p className="mt-0.5 text-xs text-gray-500">{promoConditions(p)}</p>}
             </div>
-            <V2Button size="sm" variant="ghost" onClick={() => copiar(p.code)} aria-label={`Copiar o código ${p.code}`}>
+            <V2Button size="sm" variant="ghost" onClick={() => copiar(p)} aria-label={`Copiar o código ${p.code}`}>
               <Copy className="mr-1 h-3.5 w-3.5" /> {p.code}
             </V2Button>
           </li>

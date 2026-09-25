@@ -5,6 +5,7 @@
 import {
   collection, doc, getDoc, getDocs, setDoc, updateDoc, deleteDoc,
   query, where, orderBy, serverTimestamp, increment, limit, arrayUnion,
+  runTransaction, deleteField,
 } from 'firebase/firestore';
 import { db } from '@/core/config/firebase';
 import { logger } from '@/core/lib/logger';
@@ -12,8 +13,9 @@ import { createAuditLog } from '@/core/services/auditService';
 import {
   normalizeCouponInput, isCouponValid, applyCoupon, generateReferralCode,
   calculateLoyaltyPoints, classifyNps, calculateNps, CAMPAIGN_STATUS,
-  couponError, couponDiscount,
+  couponError, couponDiscount, couponFamily, couponKind, COUPON_FAMILY, COUPON_KIND,
 } from '../domain/marketing.js';
+import { getOrCreateArenaSettings } from './v3SettingsService.js';
 import { notifyUsers, NOTIFICATION_TYPE } from '@/core/services/notificationService';
 
 const COL_COUPONS = 'arena_coupons';
@@ -34,16 +36,121 @@ export async function listArenaCoupons(arenaId, { onlyActive = true, lim = 100 }
   return snap.docs.map((d) => ({ id: d.id, ...d.data() }));
 }
 
+/**
+ * Cria um cupom de QUALQUER tipo.
+ *
+ * O custo unitário de um vale (`input.unit_cost`) NÃO vai para o cupom — o
+ * cupom é legível por qualquer conta logada. Vai para `arena_settings`, que
+ * só o gestor lê (`setCouponUnitCost`).
+ */
 export async function createArenaCoupon(arenaId, input, actor) {
   if (!arenaId) throw new Error('arenaId obrigatório.');
   const { valid, errors, value } = normalizeCouponInput(input);
   if (!valid) throw new Error(Object.values(errors)[0] || 'Dados inválidos.');
+  if (value.kind === COUPON_KIND.REFERRAL && value.active) await garantirUmProgramaSo(arenaId);
   const id = doc(collection(db, COL_COUPONS)).id;
   await setDoc(doc(db, COL_COUPONS, id), {
     id, arena_id: arenaId, ...value, used_count: 0, created_at: serverTimestamp(), updated_at: serverTimestamp(),
   });
-  await createAuditLog({ action: 'arena_coupon_created', actor, details: { arena_id: arenaId, code: value.code } });
+  if (couponFamily(value) === COUPON_FAMILY.VOUCHER && input?.unit_cost !== undefined) {
+    await setCouponUnitCost(arenaId, id, input.unit_cost, actor).catch((err) => {
+      logger.info('Cupom criado sem o custo unitário', { err: err?.code });
+    });
+  }
+  await createAuditLog({
+    action: 'arena_coupon_created', actor, details: { arena_id: arenaId, code: value.code, kind: value.kind },
+  });
   return id;
+}
+
+/**
+ * Um programa de indicação ATIVO por arena. Dois programas ativos dariam duas
+ * respostas para "quanto eu ganho indicando?" — e a arena pagaria a maior.
+ */
+async function garantirUmProgramaSo(arenaId, exceptId = null) {
+  const ativos = await listArenaCoupons(arenaId, { onlyActive: true });
+  const outro = ativos.find((c) => c.id !== exceptId && couponKind(c) === COUPON_KIND.REFERRAL);
+  if (outro) {
+    throw new Error('Já existe um programa de indicação ativo nesta arena. Edite as regras dele — ou desligue-o antes de criar outro.');
+  }
+}
+
+/**
+ * O custo unitário de um vale — quanto a ARENA paga por cada uso (a água de
+ * coco, a hora do professor). Mora em `arena_settings.coupon_costs`, que só o
+ * gestor lê: o cupom é legível por qualquer conta logada, e custo interno não
+ * é assunto do cliente. Vazio apaga (custo desconhecido, nunca zero).
+ */
+export async function setCouponUnitCost(arenaId, couponId, cost, actor = null) {
+  if (!db || !arenaId || !couponId) return;
+  const n = cost === '' || cost == null ? NaN : Number(cost);
+  const valor = Number.isFinite(n) && n >= 0 ? Math.round(n * 100) / 100 : null;
+  // O documento de configurações pode não existir ainda; nasce com os padrões,
+  // senão um documento com SÓ o custo seria lido como a configuração inteira.
+  await getOrCreateArenaSettings(arenaId);
+  await updateDoc(doc(db, 'arena_settings', arenaId), {
+    [`coupon_costs.${couponId}`]: valor == null ? deleteField() : valor,
+    updated_at: serverTimestamp(),
+  });
+  await createAuditLog({
+    action: 'arena_coupon_cost_set', actor, details: { arena_id: arenaId, coupon_id: couponId, unit_cost: valor },
+  });
+}
+
+/** O cupom pelo CÓDIGO, para a arena (que lê todos os cupons dela). */
+export async function findArenaCouponByCode(arenaId, code) {
+  const limpo = String(code || '').trim().toUpperCase().replace(/\s+/g, '');
+  if (!db || !arenaId || !limpo) return null;
+  const lista = await listArenaCoupons(arenaId, { onlyActive: false });
+  return lista.find((c) => String(c.code || '').toUpperCase() === limpo) || null;
+}
+
+/**
+ * A ARENA registra o uso de um VALE na recepção — a pessoa mostrou o código e
+ * recebeu a bebida, a aula, o brinde.
+ *
+ * Numa transação: entre abrir a tela e confirmar, outra pessoa da equipe pode
+ * ter registrado o último uso de um vale limitado, e contar os dois passaria
+ * do limite que a arena escolheu. `userId` é opcional — quem não tem cadastro
+ * também pode usar um vale divulgado; aí "uma vez por pessoa" não tem como ser
+ * conferido, e a tela diz isso.
+ *
+ * @param {string} arenaId
+ * @param {string} couponId
+ * @param {{ userId?: string|null, userName?: string }} [quem]
+ * @param {object|null} [actor]
+ */
+export async function redeemVoucher(arenaId, couponId, { userId = null, userName = '' } = {}, actor = null) {
+  if (!db || !arenaId || !couponId) throw new Error('Cupom não informado.');
+  const ref = doc(db, COL_COUPONS, couponId);
+  const cupom = await runTransaction(db, async (tx) => {
+    const snap = await tx.get(ref);
+    if (!snap.exists()) throw new Error('Cupom não encontrado.');
+    const c = { id: snap.id, ...snap.data() };
+    if (c.arena_id !== arenaId) throw new Error('Este cupom é de outra arena.');
+    const familia = couponFamily(c);
+    if (familia === COUPON_FAMILY.BOOKING) {
+      throw new Error('Este cupom é desconto na reserva: ele entra sozinho no preço quando a pessoa digita o código ao reservar.');
+    }
+    if (familia === COUPON_FAMILY.REFERRAL) {
+      throw new Error('Este é o programa de indicação: registre a indicação na aba Indicações.');
+    }
+    const erro = couponError(c, {
+      anyFamily: true,
+      usedByUser: Boolean(userId) && (c.used_by || []).includes(userId),
+    });
+    if (erro) throw new Error(erro.replace('Você já usou', 'Esta pessoa já usou'));
+    const patch = { used_count: increment(1), last_used_at: serverTimestamp(), updated_at: serverTimestamp() };
+    if (userId) patch.used_by = arrayUnion(userId);
+    tx.update(ref, patch);
+    return c;
+  });
+  await createAuditLog({
+    action: 'arena_voucher_redeemed',
+    actor,
+    details: { arena_id: arenaId, coupon_id: couponId, code: cupom.code, user_id: userId, user_name: userName || null },
+  });
+  return cupom;
 }
 
 /**
@@ -159,15 +266,14 @@ export function getArenaNpsSummary(responses) {
 
 /* --------------------- Referral -------------------- */
 
-export async function createReferral(arenaId, userId, referredUserId) {
-  if (!arenaId || !userId) return null;
-  const id = `${arenaId}_${userId}_${referredUserId || 'open'}`;
-  const code = generateReferralCode(userId);
-  await setDoc(doc(db, COL_REFERRALS, id), {
-    id, arena_id: arenaId, referrer_id: userId, referred_id: referredUserId || null,
-    code, status: 'pending', created_at: serverTimestamp(),
-  });
-  return code;
+/**
+ * As indicações (códigos dos atletas) desta arena — para o controle de uso.
+ * A arena lê as dela (regra de 2026-09-24).
+ */
+export async function listArenaReferrals(arenaId) {
+  if (!db || !arenaId) return [];
+  const snap = await getDocs(query(collection(db, COL_REFERRALS), where('arena_id', '==', arenaId)));
+  return snap.docs.map((d) => ({ id: d.id, ...d.data() }));
 }
 
 /* ================================================================== */
@@ -288,6 +394,24 @@ export async function getMyReferralCode(arenaId, userId) {
   return snap.exists() ? { id: snap.id, ...snap.data() } : null;
 }
 
+/**
+ * Um código de indicação é LEGÍTIMO quando o documento é o do próprio
+ * indicador (`{arena}_{uid}`) e o código começa pelo uid dele — que é como
+ * `generateReferralCode` o monta.
+ *
+ * 🐞 Antes da trava da Onda BX, dava para criar o documento de outra pessoa,
+ * ou reescrever o próprio código com o código de outra pessoa; um documento
+ * assim fica no banco. Conferir aqui é o que impede o crédito de ir para
+ * quem copiou o código.
+ */
+export function isLegitReferral(referral, arenaId, code) {
+  const limpo = String(code || '').trim().toUpperCase();
+  if (!referral?.referrer_id || !limpo) return false;
+  if (referral.id !== `${arenaId}_${referral.referrer_id}`) return false;
+  if (String(referral.code || '').toUpperCase() !== limpo) return false;
+  return String(referral.referrer_id).slice(0, 6).toUpperCase() === limpo.slice(0, 6);
+}
+
 /** Procura o dono de um código nesta arena. Um `where` só. */
 export async function findReferralByCode(arenaId, code) {
   const limpo = String(code || '').trim().toUpperCase();
@@ -295,24 +419,56 @@ export async function findReferralByCode(arenaId, code) {
   const snap = await getDocs(query(collection(db, COL_REFERRALS), where('arena_id', '==', arenaId)));
   return snap.docs
     .map((d) => ({ id: d.id, ...d.data() }))
-    .find((r) => String(r.code || '').toUpperCase() === limpo) || null;
+    .find((r) => isLegitReferral(r, arenaId, limpo)) || null;
 }
 
 /**
- * A ARENA registra a indicação e credita os dois lados.
+ * Esta pessoa já tem reserva CONFIRMADA ou CONCLUÍDA nesta arena (fora
+ * `exceptBookingId`)? É o que "indicação só para quem nunca reservou aqui"
+ * pergunta. Duas igualdades — não pedem índice composto; a arena lê as
+ * reservas dela.
+ */
+export async function hasPriorArenaBooking(arenaId, userId, { exceptBookingId = null } = {}) {
+  if (!db || !arenaId || !userId) return false;
+  const snap = await getDocs(query(
+    collection(db, 'arena_bookings'),
+    where('arena_id', '==', arenaId),
+    where('athlete_id', '==', userId),
+  ));
+  return snap.docs.some((d) => d.id !== exceptBookingId && ['confirmed', 'completed'].includes(d.data()?.status));
+}
+
+/**
+ * A ARENA registra a indicação.
  *
  * Quem chama é o gestor — é ele que tem permissão de creditar carteira, e é
- * ele que sabe que a pessoa realmente veio por indicação.
+ * ele que sabe que a pessoa realmente veio por indicação. O crédito em si fica
+ * com quem chama (o serviço de membros, dono da carteira); aqui a indicação é
+ * conferida e registrada.
+ *
+ * As REGRAS vêm do programa de indicação (o cupom do tipo indicação), quando
+ * passado em `program`: limite de indicações por pessoa e "só para quem nunca
+ * reservou aqui". Cada lado pode ganhar um valor diferente — `reward` sozinho
+ * (o formato antigo) vale para os dois.
  *
  * @param {string} arenaId
- * @param {{ code: string, referredId: string, referredName?: string, reward: number }} input
+ * @param {{
+ *   code: string, referredId: string, referredName?: string,
+ *   reward?: number, referrerReward?: number, referredReward?: number,
+ *   program?: object|null, exceptBookingId?: string|null,
+ * }} input
  * @param {object|null} actor
+ * @returns {Promise<{ referrerId: string, referrerReward: number, referredReward: number, reward: number }>}
  */
 export async function redeemReferral(arenaId, input, actor) {
-  const { code, referredId, referredName = '', reward } = input || {};
-  const premio = Math.max(0, Number(reward) || 0);
+  const {
+    code, referredId, referredName = '', reward,
+    referrerReward, referredReward, program = null, exceptBookingId = null,
+  } = input || {};
+  const paraQuemIndica = Math.max(0, Number(referrerReward ?? reward) || 0);
+  const paraQuemChega = Math.max(0, Number(referredReward ?? reward) || 0);
   if (!arenaId || !referredId) throw new Error('Informe quem foi indicado.');
-  if (premio <= 0) throw new Error('Informe o valor do prêmio.');
+  if (paraQuemIndica + paraQuemChega <= 0) throw new Error('Informe o prêmio de pelo menos um dos lados.');
 
   const indicacao = await findReferralByCode(arenaId, code);
   if (!indicacao) throw new Error('Código de indicação não encontrado nesta arena.');
@@ -322,16 +478,24 @@ export async function redeemReferral(arenaId, input, actor) {
   if ((indicacao.redeemed_by || []).includes(referredId)) {
     throw new Error('Esta pessoa já foi creditada com este código.');
   }
+  const limite = Number(program?.max_per_referrer) || 0;
+  if (limite > 0 && (Number(indicacao.redeemed_count) || 0) >= limite) {
+    throw new Error(`Este código já chegou ao limite de ${limite} ${limite === 1 ? 'indicação' : 'indicações'}.`);
+  }
+  if (program?.first_booking_only && await hasPriorArenaBooking(arenaId, referredId, { exceptBookingId })) {
+    throw new Error('A indicação vale só para quem nunca reservou nesta arena — e esta pessoa já reservou.');
+  }
 
   await updateDoc(doc(db, COL_REFERRALS, indicacao.id), {
     redeemed_count: increment(1),
     redeemed_by: arrayUnion(referredId),
+    // O quanto foi creditado, somado a cada resgate: é o CUSTO do programa no
+    // controle de uso. Sem isto a arena só saberia quantas indicações pagou.
+    reward_total: increment(paraQuemIndica + paraQuemChega),
     last_redeemed_at: serverTimestamp(),
     status: 'redeemed',
   });
 
-  // O crédito dos dois lados fica com quem chamou (o serviço de membros), que
-  // é o dono da carteira. Aqui só registramos a indicação.
   await createAuditLog({
     action: 'arena_referral_redeemed',
     actor,
@@ -341,10 +505,18 @@ export async function redeemReferral(arenaId, input, actor) {
       referrer_id: indicacao.referrer_id,
       referred_id: referredId,
       referred_name: referredName,
-      reward: premio,
+      referrer_reward: paraQuemIndica,
+      referred_reward: paraQuemChega,
+      booking_id: exceptBookingId,
     },
   });
-  return { referrerId: indicacao.referrer_id, reward: premio };
+  return {
+    referrerId: indicacao.referrer_id,
+    referrerReward: paraQuemIndica,
+    referredReward: paraQuemChega,
+    // Compatibilidade: quem ainda lê `reward` recebe o de quem indicou.
+    reward: paraQuemIndica,
+  };
 }
 
 /** As respostas de NPS de UMA pessoa nesta arena — para saber quando calar. */
@@ -376,15 +548,23 @@ export async function listMyNpsAnswers(arenaId, userId) {
  * @param {object} input
  * @param {object|null} actor
  */
-export async function updateArenaCoupon(couponId, input, actor) {
+export async function updateArenaCoupon(couponId, input, actor, { arenaId = null } = {}) {
   if (!couponId) throw new Error('couponId obrigatório.');
   const { valid, errors, value } = normalizeCouponInput(input);
   if (!valid) throw new Error(Object.values(errors)[0] || 'Dados inválidos.');
+  if (arenaId && value.kind === COUPON_KIND.REFERRAL && value.active) await garantirUmProgramaSo(arenaId, couponId);
   await updateDoc(doc(db, COL_COUPONS, couponId), { ...value, updated_at: serverTimestamp() });
+  if (arenaId && input?.unit_cost !== undefined) {
+    // Deixou de ser vale: o custo unitário não se aplica mais e sai.
+    const custo = couponFamily(value) === COUPON_FAMILY.VOUCHER ? input.unit_cost : null;
+    await setCouponUnitCost(arenaId, couponId, custo, actor).catch((err) => {
+      logger.info('Cupom salvo sem o custo unitário', { err: err?.code });
+    });
+  }
   await createAuditLog({
     action: 'arena_coupon_updated',
     actor,
-    details: { coupon_id: couponId, code: value.code },
+    details: { coupon_id: couponId, code: value.code, kind: value.kind },
   });
 }
 
@@ -396,6 +576,12 @@ export async function updateArenaCoupon(couponId, input, actor) {
  */
 export async function setCouponActive(couponId, active, actor) {
   if (!couponId) return;
+  if (active) {
+    // Religar um programa de indicação com outro já ativo daria duas regras.
+    const snap = await getDoc(doc(db, COL_COUPONS, couponId));
+    const c = snap.exists() ? snap.data() : null;
+    if (c && couponKind(c) === COUPON_KIND.REFERRAL) await garantirUmProgramaSo(c.arena_id, couponId);
+  }
   await updateDoc(doc(db, COL_COUPONS, couponId), {
     active: Boolean(active),
     updated_at: serverTimestamp(),
@@ -408,8 +594,12 @@ export async function setCouponActive(couponId, active, actor) {
 }
 
 /** Apaga o cupom de vez. A regra de `delete` foi corrigida na Onda AG. */
-export async function deleteArenaCoupon(couponId, actor) {
+export async function deleteArenaCoupon(couponId, actor, { arenaId = null } = {}) {
   if (!couponId) return;
   await deleteDoc(doc(db, COL_COUPONS, couponId));
+  // O custo unitário do vale apagado sai junto — sem cupom, é um número solto.
+  if (arenaId) {
+    await setCouponUnitCost(arenaId, couponId, null, actor).catch(() => {});
+  }
   await createAuditLog({ action: 'arena_coupon_deleted', actor, details: { coupon_id: couponId } });
 }

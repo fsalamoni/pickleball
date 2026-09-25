@@ -37,6 +37,138 @@ export const COUPON_TYPE = Object.freeze({
   FIXED: 'fixed',
 });
 
+/**
+ * O TIPO do cupom — o que ele dá (2026-09-25).
+ *
+ * Até aqui todo cupom era desconto na reserva. A arena pedia mais: hora
+ * grátis, aula, clínica, comida, bebida, e o próprio "indique e ganhe" como um
+ * cupom configurável. Os tipos se dividem em TRÊS famílias, porque cada uma é
+ * usada num lugar diferente:
+ *
+ *  - **reserva** — entra sozinho no PREÇO da reserva (desconto, hora grátis).
+ *  - **vale** — um benefício entregue NA ARENA (aula, bebida, brinde…): quem
+ *    tem o código mostra na recepção, e a arena registra o uso.
+ *  - **indicacao** — as REGRAS do programa "indique e ganhe": quanto ganha
+ *    quem indica, quanto ganha quem chega, e em que condições. Cada atleta tem
+ *    o próprio código; o cupom de indicação diz o que ele vale.
+ *
+ * `kind` é campo NOVO e opcional: cupom gravado antes não tem, e é tratado
+ * como desconto (`couponKind`) — exatamente o que ele sempre foi.
+ */
+export const COUPON_KIND = Object.freeze({
+  DISCOUNT: 'discount',
+  FREE_HOURS: 'free_hours',
+  PRIVATE_LESSON: 'private_lesson',
+  GROUP_LESSON: 'group_lesson',
+  CLINIC: 'clinic',
+  FOOD: 'food',
+  DRINK: 'drink',
+  PRODUCT: 'product',
+  RENTAL: 'rental',
+  EVENT: 'event',
+  OTHER: 'other',
+  REFERRAL: 'referral',
+});
+
+export const COUPON_FAMILY = Object.freeze({
+  BOOKING: 'reserva',
+  VOUCHER: 'vale',
+  REFERRAL: 'indicacao',
+});
+
+/**
+ * Como cada tipo se apresenta. `example` é o texto de exemplo do benefício
+ * (placeholder do formulário) — dizer "1 água de coco" ensina mais do que
+ * "descreva o benefício".
+ */
+export const COUPON_KIND_META = Object.freeze({
+  [COUPON_KIND.DISCOUNT]: { label: 'Desconto', family: COUPON_FAMILY.BOOKING, hint: 'Percentual ou valor fixo abatido do preço da reserva.' },
+  [COUPON_KIND.FREE_HOURS]: { label: 'Hora grátis', family: COUPON_FAMILY.BOOKING, hint: 'Horas de quadra sem custo, abatidas do preço da reserva.' },
+  [COUPON_KIND.PRIVATE_LESSON]: { label: 'Aula particular', family: COUPON_FAMILY.VOUCHER, hint: 'Uma aula individual com professor da arena.', example: '1 aula particular de 1h' },
+  [COUPON_KIND.GROUP_LESSON]: { label: 'Aula em grupo', family: COUPON_FAMILY.VOUCHER, hint: 'Uma vaga numa aula em grupo.', example: '1 aula em grupo (turma de iniciantes)' },
+  [COUPON_KIND.CLINIC]: { label: 'Clínica', family: COUPON_FAMILY.VOUCHER, hint: 'Participação numa clínica ou treino especial.', example: 'Clínica de saque e devolução' },
+  [COUPON_KIND.FOOD]: { label: 'Comida', family: COUPON_FAMILY.VOUCHER, hint: 'Um lanche ou refeição na arena.', example: '1 sanduíche natural' },
+  [COUPON_KIND.DRINK]: { label: 'Bebida', family: COUPON_FAMILY.VOUCHER, hint: 'Uma bebida na arena.', example: '1 água de coco' },
+  [COUPON_KIND.PRODUCT]: { label: 'Produto ou brinde', family: COUPON_FAMILY.VOUCHER, hint: 'Um item da loja ou um brinde.', example: '1 tubo de bolas' },
+  [COUPON_KIND.RENTAL]: { label: 'Aluguel de equipamento', family: COUPON_FAMILY.VOUCHER, hint: 'Raquete, bolas ou outro equipamento emprestado.', example: 'Aluguel de 2 raquetes' },
+  [COUPON_KIND.EVENT]: { label: 'Inscrição em evento', family: COUPON_FAMILY.VOUCHER, hint: 'Inscrição num torneio da casa, dia de jogo ou evento.', example: 'Inscrição no torneio de sábado' },
+  [COUPON_KIND.OTHER]: { label: 'Outro benefício', family: COUPON_FAMILY.VOUCHER, hint: 'Qualquer outra vantagem que a arena queira dar.', example: 'Estacionamento grátis' },
+  [COUPON_KIND.REFERRAL]: { label: 'Indicação', family: COUPON_FAMILY.REFERRAL, hint: 'As regras do "indique e ganhe": quem indica e quem chega ganham.' },
+});
+
+export const COUPON_FAMILY_META = Object.freeze({
+  [COUPON_FAMILY.BOOKING]: { label: 'Desconto na reserva', hint: 'Entra sozinho no preço, quando a pessoa digita o código.' },
+  [COUPON_FAMILY.VOUCHER]: { label: 'Vale para usar na arena', hint: 'A pessoa mostra o código na recepção e a arena registra o uso.' },
+  [COUPON_FAMILY.REFERRAL]: { label: 'Indique e ganhe', hint: 'Cada atleta tem o próprio código; aqui ficam as regras.' },
+});
+
+/** Como a pessoa que chega por indicação é premiada. */
+export const REFERRED_REWARD = Object.freeze({
+  CREDIT: 'credit',     // crédito em carteira
+  PERCENT: 'percent',   // % de desconto na primeira reserva
+  FIXED: 'fixed',       // R$ de desconto na primeira reserva
+  NONE: 'none',
+});
+
+/** O tipo do cupom. Sem `kind` (cupom antigo) é desconto — o que sempre foi. */
+export function couponKind(coupon) {
+  const k = coupon?.kind;
+  return k && COUPON_KIND_META[k] ? k : COUPON_KIND.DISCOUNT;
+}
+
+/** A família do cupom: `reserva`, `vale` ou `indicacao`. */
+export function couponFamily(coupon) {
+  return COUPON_KIND_META[couponKind(coupon)].family;
+}
+
+/** Entra no preço da reserva? */
+export function isBookingCoupon(coupon) {
+  return couponFamily(coupon) === COUPON_FAMILY.BOOKING;
+}
+
+const reais = (n) => `R$ ${(Number(n) || 0).toFixed(2).replace('.', ',')}`;
+const horasTexto = (h) => {
+  const n = Number(h) || 0;
+  const t = Number.isInteger(n) ? String(n) : String(n).replace('.', ',');
+  return `${t} ${n === 1 ? 'hora grátis' : 'horas grátis'}`;
+};
+
+/**
+ * O que o cupom dá, em uma linha e SEM o código: "10% de desconto",
+ * "1 hora grátis", "1 água de coco", "R$ 20 para quem indica".
+ */
+export function couponBenefitText(coupon) {
+  if (!coupon) return '';
+  const kind = couponKind(coupon);
+  if (kind === COUPON_KIND.DISCOUNT) {
+    return coupon.type === COUPON_TYPE.FIXED
+      ? `${reais(coupon.value)} de desconto`
+      : `${Number(coupon.value) || 0}% de desconto`;
+  }
+  if (kind === COUPON_KIND.FREE_HOURS) return horasTexto(coupon.value);
+  if (kind === COUPON_KIND.REFERRAL) return referralRulesText(coupon);
+  return String(coupon.benefit || COUPON_KIND_META[kind].label).trim();
+}
+
+/**
+ * As regras do programa de indicação, em uma linha.
+ * "Quem indica ganha R$ 20 · quem chega ganha 10% na primeira reserva".
+ */
+export function referralRulesText(rules) {
+  if (!rules) return '';
+  const partes = [];
+  const quemIndica = Number(rules.referrer_reward) || 0;
+  if (quemIndica > 0) partes.push(`quem indica ganha ${reais(quemIndica)} em crédito`);
+  const valor = Number(rules.referred_reward_value) || 0;
+  if (valor > 0) {
+    if (rules.referred_reward_kind === REFERRED_REWARD.PERCENT) partes.push(`quem chega ganha ${valor}% na primeira reserva`);
+    else if (rules.referred_reward_kind === REFERRED_REWARD.FIXED) partes.push(`quem chega ganha ${reais(valor)} na primeira reserva`);
+    else if (rules.referred_reward_kind === REFERRED_REWARD.CREDIT) partes.push(`quem chega ganha ${reais(valor)} em crédito`);
+  }
+  const txt = partes.join(' · ');
+  return txt ? txt.charAt(0).toUpperCase() + txt.slice(1) : 'Sem prêmio definido';
+}
+
 export const NPS_SCORE = Object.freeze({
   DETRACTOR: 'detractor',     // 0-6
   PASSIVE: 'passive',         // 7-8
@@ -59,41 +191,107 @@ export function calculateNps(responses = []) {
   return Math.round(((promoters - detractors) / responses.length) * 100);
 }
 
-/** Normaliza cupom. */
+const num = (v) => (v === '' || v == null ? NaN : Number(v));
+const positivoOuNull = (v) => { const n = num(v); return Number.isFinite(n) && n > 0 ? n : null; };
+
+/**
+ * Normaliza o cupom — de QUALQUER tipo.
+ *
+ * Os campos comuns (código, descrição, limites, prazo, divulgação) valem para
+ * todos; cada família acrescenta os seus. Campo que não se aplica ao tipo é
+ * gravado como `null`, nunca com o valor que sobrou no formulário: um vale
+ * com `value: 10` herdado do desconto seria lido como "10% de desconto" por
+ * quem não conhece o tipo.
+ */
 export function normalizeCouponInput(input = {}) {
   const errors = {};
+  const kind = COUPON_KIND_META[input.kind] ? input.kind : COUPON_KIND.DISCOUNT;
+  const family = COUPON_KIND_META[kind].family;
   // O código é sempre MAIÚSCULO e sem espaço: quem digita "verao 10" e quem
   // digita "VERAO10" querem o mesmo cupom.
-  const code = String(input.code || '').trim().toUpperCase().replace(/\s+/g, '');
+  let code = String(input.code || '').trim().toUpperCase().replace(/\s+/g, '');
+  // O cupom de indicação não é digitado por ninguém (cada atleta tem o
+  // próprio código): o código é só um nome para a lista.
+  if (!code && family === COUPON_FAMILY.REFERRAL) code = 'INDICACAO';
   if (!code) errors.code = 'Dê um código ao cupom.';
   if (code.length > 30) errors.code = 'No máximo 30 caracteres.';
-  const type = Object.values(COUPON_TYPE).includes(input.type) ? input.type : COUPON_TYPE.PERCENT;
-  const value = Number(input.value);
-  if (!Number.isFinite(value) || value <= 0) errors.value = 'O desconto deve ser maior que zero.';
-  if (type === COUPON_TYPE.PERCENT && value > 100) errors.value = 'O desconto não passa de 100%.';
-  const maxUses = Number(input.max_uses);
-  const minAmount = Number(input.min_amount);
+
+  let type = null;
+  let value = null;
+  let benefit = null;
+  let faceValue = null;
+  let referral = {
+    referrer_reward: null, referred_reward_kind: null, referred_reward_value: null,
+    first_booking_only: null, max_per_referrer: null,
+  };
+
+  if (kind === COUPON_KIND.DISCOUNT) {
+    type = Object.values(COUPON_TYPE).includes(input.type) ? input.type : COUPON_TYPE.PERCENT;
+    value = Number(input.value);
+    if (!Number.isFinite(value) || value <= 0) errors.value = 'O desconto deve ser maior que zero.';
+    if (type === COUPON_TYPE.PERCENT && value > 100) errors.value = 'O desconto não passa de 100%.';
+  } else if (kind === COUPON_KIND.FREE_HOURS) {
+    value = Number(input.value);
+    if (!Number.isFinite(value) || value <= 0) errors.value = 'Informe quantas horas são grátis.';
+    else if (value > 24) errors.value = 'No máximo 24 horas.';
+    else value = Math.round(value * 2) / 2; // de meia em meia hora
+  } else if (family === COUPON_FAMILY.VOUCHER) {
+    benefit = String(input.benefit || '').trim().slice(0, 120);
+    if (!benefit) errors.benefit = 'Diga o que o vale dá (ex.: "1 água de coco").';
+    faceValue = positivoOuNull(input.face_value);
+  } else if (family === COUPON_FAMILY.REFERRAL) {
+    const quemIndica = num(input.referrer_reward);
+    const tipoChegada = Object.values(REFERRED_REWARD).includes(input.referred_reward_kind)
+      ? input.referred_reward_kind : REFERRED_REWARD.CREDIT;
+    const valorChegada = num(input.referred_reward_value);
+    referral = {
+      referrer_reward: Number.isFinite(quemIndica) && quemIndica > 0 ? quemIndica : 0,
+      referred_reward_kind: tipoChegada,
+      referred_reward_value: tipoChegada !== REFERRED_REWARD.NONE && Number.isFinite(valorChegada) && valorChegada > 0
+        ? valorChegada : 0,
+      // Indicação é para trazer gente NOVA: por padrão, só vale para quem
+      // nunca reservou na arena. A arena pode abrir.
+      first_booking_only: input.first_booking_only !== false,
+      max_per_referrer: positivoOuNull(input.max_per_referrer),
+    };
+    if (tipoChegada === REFERRED_REWARD.PERCENT && referral.referred_reward_value > 100) {
+      errors.referred_reward_value = 'O desconto não passa de 100%.';
+    }
+    if (referral.referrer_reward <= 0 && referral.referred_reward_value <= 0) {
+      errors.referrer_reward = 'Defina o prêmio de pelo menos um dos lados.';
+    }
+  }
+
+  const maxUses = num(input.max_uses);
+  const minAmount = num(input.min_amount);
   return {
     valid: Object.keys(errors).length === 0,
     errors,
     value: {
+      kind,
       code,
       type,
       value,
+      benefit,
+      /** Quanto o benefício custaria ao cliente — "valor de referência" do vale. */
+      face_value: faceValue,
+      ...referral,
       description: String(input.description || '').trim().slice(0, 160),
       max_uses: Number.isFinite(maxUses) && maxUses > 0 ? maxUses : null,
-      /** Valor mínimo da conta para o cupom valer. */
-      min_amount: Number.isFinite(minAmount) && minAmount > 0 ? minAmount : null,
+      /** Valor mínimo da conta para o cupom valer (reserva e indicação). */
+      min_amount: family !== COUPON_FAMILY.VOUCHER && Number.isFinite(minAmount) && minAmount > 0 ? minAmount : null,
       /** Uma vez por pessoa (o padrão) ou livre. */
-      once_per_user: input.once_per_user !== false,
+      once_per_user: family === COUPON_FAMILY.REFERRAL ? true : input.once_per_user !== false,
       expires_at: input.expires_at || null,
       active: input.active !== false,
       /**
        * Divulgar na página da arena (2026-09-24). Um cupom é, por padrão, um
        * código que a arena ENTREGA a alguém; marcado, ele vira PROMOÇÃO — a
        * página da arena mostra, e o pedido de reserva oferece com um toque.
+       * O cupom de indicação não é divulgado assim: ele aparece no "Indique e
+       * ganhe" da página da arena, com o código de cada um.
        */
-      show_public: input.show_public === true,
+      show_public: family !== COUPON_FAMILY.REFERRAL && input.show_public === true,
     },
   };
 }
@@ -127,12 +325,22 @@ export function applyCoupon(price, coupon) {
  * seguir.
  *
  * @param {object|null} coupon
- * @param {{ amount?: number, usedByUser?: boolean, now?: number }} [ctx]
+ * `ctx.anyFamily` confere o cupom sem exigir que ele entre no preço — é o que
+ * a arena usa ao registrar o uso de um vale na recepção.
+ *
+ * @param {{ amount?: number, usedByUser?: boolean, now?: number, anyFamily?: boolean }} [ctx]
  * @returns {string|null}
  */
 export function couponError(coupon, ctx = {}) {
   const { amount = 0, usedByUser = false, now = Date.now() } = ctx;
   if (!coupon) return 'Cupom não encontrado.';
+  // Vale e indicação não entram no preço da reserva — e dizer por quê ensina
+  // onde usar, em vez de parecer que o código está errado.
+  if (!ctx.anyFamily) {
+    const familia = couponFamily(coupon);
+    if (familia === COUPON_FAMILY.VOUCHER) return 'Este código é um vale: mostre na recepção da arena para usar.';
+    if (familia === COUPON_FAMILY.REFERRAL) return 'Este é o programa de indicação: use o código de quem indicou você.';
+  }
   if (coupon.active === false) return 'Este cupom não está mais valendo.';
   if (coupon.expires_at) {
     const exp = instanteEmMs(coupon.expires_at);
@@ -157,24 +365,42 @@ export function couponError(coupon, ctx = {}) {
  * Nunca passa do próprio valor da conta: um cupom de R$ 50 numa conta de R$ 30
  * desconta 30, não 50 (e a arena não fica devendo).
  *
+ * **Hora grátis** abate a PROPORÇÃO das horas: 1 hora grátis numa reserva de 2
+ * horas de R$ 200 abate R$ 100 — o preço médio da hora da própria reserva. Usar
+ * o preço de uma faixa específica daria margem a escolher a hora mais cara.
+ * Sem saber as horas (`ctx.hours`), não abate nada: melhor não descontar do que
+ * descontar errado.
+ *
+ * Vale e indicação não entram no preço: abatem zero.
+ *
+ * @param {number} amount
+ * @param {object|null} coupon
+ * @param {{ hours?: number }} [ctx]
  * @returns {number}
  */
-export function couponDiscount(amount, coupon) {
+export function couponDiscount(amount, coupon, ctx = {}) {
   const base = Number(amount) || 0;
-  if (base <= 0 || !coupon) return 0;
-  const bruto = coupon.type === COUPON_TYPE.FIXED
-    ? Number(coupon.value) || 0
-    : base * ((Number(coupon.value) || 0) / 100);
+  if (base <= 0 || !coupon || !isBookingCoupon(coupon)) return 0;
+  let bruto = 0;
+  if (couponKind(coupon) === COUPON_KIND.FREE_HOURS) {
+    const horas = Number(ctx.hours) || 0;
+    if (horas <= 0) return 0;
+    bruto = base * Math.min(1, (Number(coupon.value) || 0) / horas);
+  } else {
+    bruto = coupon.type === COUPON_TYPE.FIXED
+      ? Number(coupon.value) || 0
+      : base * ((Number(coupon.value) || 0) / 100);
+  }
   return Math.max(0, Math.min(base, Math.round(bruto * 100) / 100));
 }
 
-/** O cupom em uma linha, para a tela: "VERAO10 · 10% de desconto". */
+/**
+ * O cupom em uma linha, para a tela: "VERAO10 · 10% de desconto",
+ * "HORA1 · 1 hora grátis", "COCO · 1 água de coco".
+ */
 export function couponLabel(coupon) {
   if (!coupon?.code) return '';
-  const valor = coupon.type === COUPON_TYPE.FIXED
-    ? `R$ ${(Number(coupon.value) || 0).toFixed(2).replace('.', ',')}`
-    : `${Number(coupon.value) || 0}%`;
-  return `${coupon.code} · ${valor} de desconto`;
+  return `${coupon.code} · ${couponBenefitText(coupon)}`;
 }
 
 /**
@@ -184,18 +410,23 @@ export function couponLabel(coupon) {
  *
  * @param {object[]} coupons
  * @param {number} [now]
- * @returns {Array<{ id: string, code: string, label: string, discount: string, description: string,
+ * @returns {Array<{ id: string, code: string, kind: string, family: string, bookable: boolean,
+ *   label: string, discount: string, description: string,
  *   min_amount: number|null, expires_at: number|null, once_per_user: boolean }>}
  */
 export function publicPromos(coupons = [], now = Date.now()) {
   return coupons
-    .filter((c) => c?.show_public === true && isCouponValid(c, now))
+    .filter((c) => c?.show_public === true && couponFamily(c) !== COUPON_FAMILY.REFERRAL && isCouponValid(c, now))
     .map((c) => ({
       id: c.id,
       code: c.code,
+      kind: couponKind(c),
+      family: couponFamily(c),
+      /** Entra no preço da reserva (pode ser aplicado no pedido com um toque). */
+      bookable: isBookingCoupon(c),
       label: couponLabel(c),
       // Sem o código — para o título, quando o código já está no botão ao lado.
-      discount: couponLabel(c).slice(String(c.code).length + 3),
+      discount: couponBenefitText(c),
       description: c.description || '',
       min_amount: Number(c.min_amount) > 0 ? Number(c.min_amount) : null,
       expires_at: instanteEmMs(c.expires_at) > 0 ? instanteEmMs(c.expires_at) : null,
@@ -222,6 +453,84 @@ export function promoConditions(promo) {
     ate,
     promo.once_per_user ? 'uma vez por pessoa' : null,
   ].filter(Boolean).join(' · ');
+}
+
+/**
+ * O programa de indicação VIGENTE da arena: o cupom de indicação ligado e no
+ * prazo. Com mais de um (não deveria — o serviço impede), vale o mais novo.
+ * Sem nenhum, `null`: a arena ainda não definiu as regras.
+ *
+ * @param {object[]} coupons
+ * @param {number} [now]
+ * @returns {object|null}
+ */
+export function referralProgram(coupons = [], now = Date.now()) {
+  const vigentes = (coupons || []).filter(
+    (c) => couponKind(c) === COUPON_KIND.REFERRAL && isCouponValid(c, now),
+  );
+  if (vigentes.length === 0) return null;
+  const quando = (c) => instanteEmMs(c.created_at) || 0;
+  return [...vigentes].sort((a, b) => quando(b) - quando(a))[0];
+}
+
+/**
+ * O que cada lado ganha numa indicação, pelas regras do programa.
+ *
+ * `amount` é o valor da primeira reserva de quem chegou (para o desconto
+ * percentual e para o mínimo). Sem programa, nada — e quem chama não inventa.
+ *
+ * @param {object|null} program
+ * @param {{ amount?: number }} [ctx]
+ * @returns {{ referrerCredit: number, referredCredit: number, referredDiscount: number, blocked: string|null }}
+ */
+export function referralRewards(program, ctx = {}) {
+  const vazio = { referrerCredit: 0, referredCredit: 0, referredDiscount: 0, blocked: null };
+  if (!program) return { ...vazio, blocked: 'A arena ainda não definiu as regras do indique e ganhe.' };
+  const amount = Number(ctx.amount) || 0;
+  const minimo = Number(program.min_amount) || 0;
+  if (minimo > 0 && amount > 0 && amount < minimo) {
+    return { ...vazio, blocked: `A indicação vale para a primeira reserva a partir de ${reais(minimo)}.` };
+  }
+  const valor = Number(program.referred_reward_value) || 0;
+  let referredDiscount = 0;
+  if (program.referred_reward_kind === REFERRED_REWARD.PERCENT) {
+    referredDiscount = Math.round(amount * Math.min(100, valor)) / 100;
+  } else if (program.referred_reward_kind === REFERRED_REWARD.FIXED) {
+    referredDiscount = Math.min(amount, valor);
+  }
+  return {
+    referrerCredit: Math.max(0, Number(program.referrer_reward) || 0),
+    referredCredit: program.referred_reward_kind === REFERRED_REWARD.CREDIT ? Math.max(0, valor) : 0,
+    referredDiscount: Math.max(0, Math.round(referredDiscount * 100) / 100),
+    blocked: null,
+  };
+}
+
+/**
+ * O que quem CHEGA por indicação ganha, em texto — "R$ 20,00 em crédito",
+ * "10% na primeira reserva". `null` quando não ganha nada.
+ */
+export function referralFriendReward(program) {
+  const valor = Number(program?.referred_reward_value) || 0;
+  if (!program || valor <= 0) return null;
+  if (program.referred_reward_kind === REFERRED_REWARD.PERCENT) return `${valor}% na primeira reserva`;
+  if (program.referred_reward_kind === REFERRED_REWARD.FIXED) return `${reais(valor)} na primeira reserva`;
+  if (program.referred_reward_kind === REFERRED_REWARD.CREDIT) return `${reais(valor)} em crédito`;
+  return null;
+}
+
+/**
+ * O convite que o atleta manda — dizendo o que as REGRAS dão, não uma
+ * promessa genérica. Sem programa, o texto de sempre.
+ */
+export function referralInviteText({ arenaName = 'arena', code = '', program = null } = {}) {
+  if (!program) return `Jogo na ${arenaName} — use meu código ${code} na primeira visita e nós dois ganhamos crédito.`;
+  const valor = Number(program.referred_reward_value) || 0;
+  const base = `Jogo na ${arenaName} — use meu código ${code} na sua primeira reserva`;
+  if (valor > 0 && program.referred_reward_kind === REFERRED_REWARD.PERCENT) return `${base} e ganhe ${valor}% de desconto nela.`;
+  if (valor > 0 && program.referred_reward_kind === REFERRED_REWARD.FIXED) return `${base} e ganhe ${reais(valor)} de desconto nela.`;
+  if (valor > 0 && program.referred_reward_kind === REFERRED_REWARD.CREDIT) return `${base} e ganhe ${reais(valor)} em crédito.`;
+  return `${base}.`;
 }
 
 /** Gera código de indicação único. */

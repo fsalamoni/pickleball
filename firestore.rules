@@ -1805,17 +1805,28 @@ service cloud.firestore {
     }
 
     // Sprint 6: Marketing (cupons, campanhas, NPS, referral)
+    // O cupom é legível por qualquer conta logada (o atleta confere o código e
+    // vê as promoções). Por isso o CUSTO que a arena paga por um vale NÃO mora
+    // aqui: fica em `arena_settings.coupon_costs`, que só o gestor lê.
     match /arena_coupons/{couponId} {
       allow read: if isAuthed();
       allow create: if isArenaManager(request.resource.data.arena_id) || isPlatformAdmin();
-      allow update: if isArenaManager(resource.data.arena_id) || isPlatformAdmin();
+      // A arena dona edita — mas não MUDA O CUPOM DE ARENA (2026-09-25). 🐞
+      // Antes o gestor de A podia trocar o `arena_id` para B: o cupom virava
+      // promoção na página de B e desconto nas reservas de B, sem B saber.
+      allow update: if (isArenaManager(resource.data.arena_id)
+          && request.resource.data.arena_id == resource.data.arena_id)
+        || isPlatformAdmin();
       allow delete: if isArenaManager(resource.data.arena_id) || isPlatformAdmin();
     }
 
     match /arena_campaigns/{campaignId} {
       allow read: if isAuthed();
       allow create: if isArenaManager(request.resource.data.arena_id) || isPlatformAdmin();
-      allow update: if isArenaManager(resource.data.arena_id) || isPlatformAdmin();
+      // Mesma trava do cupom: a campanha não muda de arena (2026-09-25).
+      allow update: if (isArenaManager(resource.data.arena_id)
+          && request.resource.data.arena_id == resource.data.arena_id)
+        || isPlatformAdmin();
       allow delete: if isArenaManager(resource.data.arena_id) || isPlatformAdmin();
     }
 
@@ -1845,9 +1856,30 @@ service cloud.firestore {
       allow get: if canGetMissingArenaUserDoc(referralId);
       // Só se pode indicar EM NOME PRÓPRIO. Antes bastava estar logado, e dava
       // para criar indicação apontando outra pessoa como indicadora.
+      //
+      // E o documento tem de ser o DA PRÓPRIA PESSOA (2026-09-25): id
+      // `{arena}_{uid}`. 🐞 O id era livre, e dava para criar o documento
+      // `{arena}_{uid da vítima}` com o próprio uid como indicador: o "Meu
+      // código" da vítima passava a mostrar o código do atacante, e toda
+      // indicação que ela fizesse creditava o atacante. O código também nasce
+      // zerado — contagem e crédito são escritos só pela arena, no resgate.
       allow create: if isAuthed()
-        && request.resource.data.referrer_id == request.auth.uid;
-      allow update, delete: if isAuthed() && (
+        && request.resource.data.referrer_id == request.auth.uid
+        && referralId == request.resource.data.arena_id + '_' + request.auth.uid
+        && request.resource.data.get('redeemed_count', 0) == 0
+        && !('redeemed_by' in request.resource.data)
+        && !('reward_total' in request.resource.data);
+      // Quem atualiza é a ARENA (resgate: contagem, quem foi creditado, quanto
+      // foi creditado) — e sem trocar a arena, o dono nem o código. Antes o
+      // próprio indicador podia reescrever a contagem e o código dele.
+      allow update: if isAuthed() && (
+        (isArenaManager(resource.data.arena_id)
+          && request.resource.data.arena_id == resource.data.arena_id
+          && request.resource.data.referrer_id == resource.data.referrer_id
+          && request.resource.data.get('code', null) == resource.data.get('code', null))
+        || isPlatformAdmin()
+      );
+      allow delete: if isAuthed() && (
         resource.data.referrer_id == request.auth.uid
         || isArenaManager(resource.data.arena_id)
         || isPlatformAdmin()

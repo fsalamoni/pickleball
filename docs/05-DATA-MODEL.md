@@ -960,6 +960,22 @@ e sem `queue_removed`. É exatamente esse conjunto que vira o CSV.
     PROMOÇÃO, oferecido na página da arena e no pedido de reserva. Ausente =
     código entregue a dedo (todo cupom anterior). Não muda leitura nenhuma —
     `arena_coupons` já era legível por conta logada.
+  - **Tipos de cupom (2026-09-25, Onda BX, todos opcionais):** `kind`
+    (`discount` · `free_hours` · `private_lesson` · `group_lesson` · `clinic` ·
+    `food` · `drink` · `product` · `rental` · `event` · `other` · `referral`;
+    ausente = `discount`, o que todo cupom antigo é), `benefit` (texto do vale),
+    `face_value` (valor de referência do vale), `last_used_at`, e as regras da
+    indicação — `referrer_reward`, `referred_reward_kind`
+    (`credit`/`percent`/`fixed`/`none`), `referred_reward_value`,
+    `first_booking_only`, `max_per_referrer`. Campo que não se aplica ao tipo é
+    gravado `null`. **O custo interno do vale NÃO fica no cupom** (legível por
+    conta logada): fica em `arena_settings.coupon_costs.{couponId}`, que só o
+    gestor lê.
+  - Regras endurecidas (Onda BX): o cupom e a campanha **não mudam de
+    `arena_id`** no update; `arena_referrals` nasce com id `{arena}_{uid}`,
+    zerado (sem `redeemed_*` nem `reward_total`), e só a arena atualiza — sem
+    trocar arena, dono ou código. `arena_referrals.reward_total` (opcional)
+    soma o que cada resgate creditou.
 **Operations**: `arena_checklists`, `arena_maintenance_orders`,
 `arena_inventory_products`, `arena_inventory_entries`, `arena_inventory_exits`.
 **IoT**: `arena_devices`.
