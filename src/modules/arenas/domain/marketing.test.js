@@ -407,3 +407,37 @@ describe('promoConditions — a regra da promoção em uma linha', () => {
     expect(promoConditions({ once_per_user: false })).toBe('');
   });
 });
+
+describe('⭐ Onda CD — a arte do cupom no que se grava', () => {
+  it('sem `art` no formulário, o que se grava não tem `art` (não apaga a de ninguém)', () => {
+    const r = normalizeCouponInput({ code: 'X', value: 10 });
+    expect('art' in r.value).toBe(false);
+  });
+
+  it('com arte de desenho, grava o desenho conferido', () => {
+    const r = normalizeCouponInput({
+      code: 'X', value: 10, art: { source: 'design', template_id: 'neon', design: { style: 'neon', title: 'Terça' } },
+    });
+    expect(r.valid).toBe(true);
+    expect(r.value.art).toMatchObject({ source: 'design', template_id: 'neon' });
+    expect(r.value.art.design.title).toBe('Terça');
+  });
+
+  it('`art: null` tira a arte (volta ao Clássico)', () => {
+    expect(normalizeCouponInput({ code: 'X', value: 10, art: null }).value.art).toBeNull();
+  });
+
+  it('imagem sem descrição não passa', () => {
+    const r = normalizeCouponInput({
+      code: 'X', value: 10,
+      art: { source: 'upload', image_url: 'https://firebasestorage.googleapis.com/v0/b/x/o/a.jpg', alt: '' },
+    });
+    expect(r.valid).toBe(false);
+    expect(r.errors.art).toMatch(/Descreva a imagem/);
+  });
+
+  it('a indicação não tem arte', () => {
+    const r = normalizeCouponInput({ kind: 'referral', referrer_reward: 10, art: { source: 'design', design: {} } });
+    expect('art' in r.value).toBe(false);
+  });
+});

@@ -22,7 +22,7 @@ import { CAMPAIGN_STATUS } from '../domain/marketing.js';
 import {
   destinationLink, normalizeBannerPlacement, normalizeCampaignBanner, normalizeDestination,
 } from '../domain/campaignBanner.js';
-import { arenaTemplatesFrom } from '../domain/bannerArt.js';
+import { ARENA_TEMPLATES_MAX, arenaTemplatesFrom } from '../domain/bannerArt.js';
 import { todayISO } from '../domain/subscription.js';
 import { getOrCreateArenaSettings } from './v3SettingsService.js';
 
@@ -240,7 +240,7 @@ export async function getArenaBannerTemplates(arenaId) {
  */
 export async function saveArenaBannerTemplates(arenaId, lista = [], actor = null) {
   if (!db || !arenaId) throw new Error('arenaId é obrigatório.');
-  const limpa = arenaTemplatesFrom({ banner_templates: lista }).map((t) => ({
+  const limpa = arenaTemplatesFrom({ banner_templates: lista }).slice(0, ARENA_TEMPLATES_MAX).map((t) => ({
     id: t.id,
     name: str(t.name).slice(0, 40),
     design: t.design,

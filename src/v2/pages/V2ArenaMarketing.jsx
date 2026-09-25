@@ -312,7 +312,7 @@ export function ArenaMarketingPanel({ arena, view }) {
   // O tipo "Indicação" só aparece em Cupons com o módulo de indicações ligado.
   const { isOn } = useArenaModules(arena.id);
   const indicacoesLigadas = isOn(ARENA_MODULE_ID.MARKETING_REFERRAL);
-  if (view === 'cupons') return <CouponsPanel arenaId={arena.id} referralOn={indicacoesLigadas} />;
+  if (view === 'cupons') return <CouponsPanel arenaId={arena.id} arena={arena} referralOn={indicacoesLigadas} />;
   if (view === 'campanhas') return <CampaignsPanel arena={arena} />;
   if (view === 'satisfacao') return <NpsSecao arenaId={arena.id} />;
   if (view === 'indicacoes') return <IndicacoesSecao arenaId={arena.id} />;

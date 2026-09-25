@@ -63,6 +63,10 @@ vi.mock('@/modules/arenas/hooks/useCampaignBanners', () => ({
   useArenaBannerTemplates: () => ({ data: [], isLoading: false, isError: false, refetch: vi.fn() }),
   useSaveArenaBannerTemplates: () => ({ mutateAsync: vi.fn(), isPending: false }),
 }));
+vi.mock('@/modules/arenas/hooks/useCouponArt', () => ({
+  useArenaCouponTemplates: () => ({ data: [], isLoading: false, isError: false, refetch: vi.fn() }),
+  useSaveArenaCouponTemplates: () => ({ mutateAsync: vi.fn(), isPending: false }),
+}));
 vi.mock('@/modules/games/hooks/useArenaGameDays', () => ({
   useArenaGameDays: () => ({ data: [], isLoading: false, isError: false }),
 }));
@@ -238,8 +242,7 @@ describe('cupons', () => {
       { id: 'c2', code: 'AMIGO5', type: 'fixed', value: 5, active: true },
     ];
     await render('cupons');
-    const cartaoDe = (codigo) => [...container.querySelectorAll('p')]
-      .find((p) => p.textContent === codigo)?.closest('div.rounded-2xl');
+    const cartaoDe = (codigo) => container.querySelector(`[data-cupom="${codigo}"]`);
     const divulgado = cartaoDe('VERAO10');
     const privado = cartaoDe('AMIGO5');
     expect(divulgado).toBeTruthy();
@@ -293,8 +296,7 @@ describe('⭐ tipos de cupom', () => {
       { id: 'd1', code: 'DEZ', type: 'percent', value: 10, active: true },
     ];
     await render('cupons');
-    const cartao = (codigo) => [...container.querySelectorAll('p')]
-      .find((p) => p.textContent === codigo)?.closest('div.rounded-2xl');
+    const cartao = (codigo) => container.querySelector(`[data-cupom="${codigo}"]`);
     expect(cartao('COCO').textContent).toContain('Registrar uso');
     expect(cartao('COCO').textContent).toContain('1 água de coco');
     expect(cartao('COCO').textContent).toContain('Bebida');

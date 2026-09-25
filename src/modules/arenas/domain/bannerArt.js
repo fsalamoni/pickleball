@@ -240,7 +240,7 @@ export function checkBannerImage({ width, height, bytes, type } = {}, spec = BAN
     const proporcao = w / h;
     if (Math.abs(proporcao - spec.ratio) / spec.ratio > spec.ratioTolerance) {
       const txt = proporcao.toFixed(2).replace('.', ',');
-      warnings.push(`A proporção é ${txt}:1; o banner é ${spec.ratioLabel}. Parte da imagem vai ser cortada.`);
+      warnings.push(`A proporção é ${txt}:1; ${spec.noun || 'o banner'} é ${spec.ratioLabel}. Parte da imagem vai ser cortada.`);
     }
   }
   return { ok: errors.length === 0, errors, warnings };
@@ -347,10 +347,14 @@ export function isArenaTemplateId(id) {
  * @param {{ now?: number, newId?: () => string }} [ctx]
  * @returns {{ list: Array<object>, saved: object|null, error: string|null }}
  */
-export function saveArenaTemplate(lista = [], modelo = {}, { now = Date.now(), newId } = {}) {
+export function saveArenaTemplate(lista = [], modelo = {}, {
+  now = Date.now(), newId, normalize = normalizeBannerDesign,
+} = {}) {
   const nome = texto(modelo.name, 40);
   if (!nome) return { list: lista, saved: null, error: 'Dê um nome ao modelo.' };
-  const { value: design, valid } = normalizeBannerDesign(modelo.design || {});
+  // `normalize` troca o desenho conferido: o do banner por padrão; o cupom
+  // (Onda CD) passa o dele, e a regra de nome, limite e ids é a mesma.
+  const { value: design, valid } = normalize(modelo.design || {});
   if (!valid) return { list: lista, saved: null, error: 'O modelo precisa de um título.' };
 
   const atuais = (Array.isArray(lista) ? lista : []).filter((t) => isArenaTemplateId(t?.id));
@@ -373,12 +377,16 @@ export function removeArenaTemplate(lista = [], id) {
   return (Array.isArray(lista) ? lista : []).filter((t) => t?.id !== id);
 }
 
-/** Os modelos da arena lidos do banco, só os válidos, do mais recente ao mais antigo. */
-export function arenaTemplatesFrom(settings) {
-  const lista = Array.isArray(settings?.banner_templates) ? settings.banner_templates : [];
+/**
+ * Os modelos da arena lidos do banco, só os válidos, do mais recente ao mais
+ * antigo. `field`/`normalize` servem aos modelos de CUPOM (Onda CD), que moram
+ * em outro campo de `arena_settings` e têm outro desenho.
+ */
+export function arenaTemplatesFrom(settings, { field = 'banner_templates', normalize = normalizeBannerDesign } = {}) {
+  const lista = Array.isArray(settings?.[field]) ? settings[field] : [];
   return lista
     .filter((t) => isArenaTemplateId(t?.id) && t?.design)
-    .map((t) => ({ ...t, design: normalizeBannerDesign(t.design).value }))
+    .map((t) => ({ ...t, design: normalize(t.design).value }))
     .sort((a, b) => (Number(b.updated_at_ms) || 0) - (Number(a.updated_at_ms) || 0));
 }
 

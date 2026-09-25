@@ -45,6 +45,8 @@ import {
 import { brandingOf } from '@/modules/arenas/domain/whiteLabel';
 import { cn } from '@/core/lib/utils';
 import CampaignBanner from './campaigns/CampaignBanner';
+import CouponArt from './coupons/CouponArt';
+import CopyCodeButton from '@/v2/ui/CopyCodeButton';
 
 const PREF = 'home:promocoes:regiao';
 const INTERVALO_MS = 7000;
@@ -111,8 +113,38 @@ function BannerDeCampanha({ banner, posicao, total }) {
   );
 }
 
+/**
+ * A promoção com ARTE (Onda CD): o tíquete que a arena escolheu, com o código
+ * copiável no canhoto, e embaixo a arena e o caminho para usar.
+ */
+function PromocaoComArte({ banner, posicao, total }) {
+  return (
+    <div
+      role="group"
+      aria-roledescription="promoção"
+      aria-label={`${posicao} de ${total}: ${banner.benefit} — ${banner.arenaName}`}
+      className="flex w-[88%] shrink-0 snap-start flex-col gap-1.5 sm:w-[62%] lg:w-[46%]"
+    >
+      <CouponArt art={banner.art} code={banner.code} benefit={banner.benefit} description={banner.description}
+        kicker={banner.bookable ? 'Desconto na reserva' : 'Vale na recepção'} copyable
+        copyMessage={banner.bookable ? 'Código copiado. Use no pedido de reserva.' : 'Código copiado. Mostre na recepção da arena.'} />
+      <div className="flex flex-wrap items-center justify-between gap-x-2 gap-y-1 px-1">
+        <p className="flex min-w-0 items-center gap-1 text-xs font-semibold text-gray-500">
+          <MapPin className="h-3.5 w-3.5 shrink-0" aria-hidden />
+          <span className="truncate">{banner.arenaName}{banner.city ? ` · ${banner.city}` : ''}</span>
+        </p>
+        <Link to={`/arenas/${banner.arenaId}#arena-promocoes`}
+          className="text-xs font-bold text-ink underline-offset-2 hover:underline focus:outline-none focus-visible:ring-2 focus-visible:ring-ink">
+          {banner.bookable ? 'Reservar com esta promoção' : 'Ver na arena'}
+        </Link>
+      </div>
+    </div>
+  );
+}
+
 function Banner({ banner, posicao, total }) {
   if (banner.campaign) return <BannerDeCampanha banner={banner} posicao={posicao} total={total} />;
+  if (banner.art) return <PromocaoComArte banner={banner} posicao={posicao} total={total} />;
   const marca = brandingOf(banner.arena);
   const estilo = marca.on
     ? { backgroundColor: marca.color, color: marca.ink }
@@ -138,12 +170,9 @@ function Banner({ banner, posicao, total }) {
         {banner.conditions && <p className="mt-1 text-xs opacity-75">{banner.conditions}</p>}
       </div>
       <div className="relative mt-4 flex flex-wrap items-center gap-2">
-        <span className={cn(
-          'rounded-full border border-dashed px-3 py-1 font-display text-xs font-bold tracking-widest',
-          marca.on ? 'border-current' : 'border-white/40',
-        )}>
-          {banner.code}
-        </span>
+        {/* O código é o botão de copiar (Onda CD) — antes era só texto. */}
+        <CopyCodeButton code={banner.code} size="sm" tone={marca.on ? 'clear' : 'ink'} className="rounded-full"
+          successMessage={banner.bookable ? 'Código copiado. Use no pedido de reserva.' : 'Código copiado. Mostre na recepção da arena.'} />
         <Link
           to={`/arenas/${banner.arenaId}#arena-promocoes`}
           className={cn(

@@ -28,6 +28,7 @@ import { instanteEmMs } from '@/core/domain/instant';
 import ConfirmDialog from '@/components/ConfirmDialog';
 import { cn } from '@/core/lib/utils';
 import { V2Badge, V2Button, V2EmptyState, V2ErrorState, V2Skeleton, V2Surface } from '@/v2/ui/primitives';
+import CouponArt from './CouponArt';
 import CouponForm from './CouponForm';
 import CouponUsageReport from './CouponUsageReport';
 import VoucherReception from './VoucherReception';
@@ -64,7 +65,7 @@ function Alternador({ valor, onChange }) {
   );
 }
 
-function CartaoCupom({ cupom, onEditar, onRegistrar, onAlternar, onApagar }) {
+function CartaoCupom({ cupom, arenaName, onEditar, onRegistrar, onAlternar, onApagar }) {
   const kind = couponKind(cupom);
   const familia = couponFamily(cupom);
   const estado = couponStatus(cupom);
@@ -73,20 +74,28 @@ function CartaoCupom({ cupom, onEditar, onRegistrar, onAlternar, onApagar }) {
   const ate = diaIso(cupom.expires_at);
 
   return (
-    <div className={cn('rounded-2xl border p-3', desligado ? 'border-gray-100 bg-gray-50 opacity-75' : 'border-gray-100 bg-paper')}>
+    <div data-cupom={cupom.code} className={cn('rounded-2xl border p-3', desligado ? 'border-gray-100 bg-gray-50 opacity-75' : 'border-gray-100 bg-paper')}>
       <div className="flex items-start justify-between gap-2">
-        <div className="min-w-0">
-          <p className="mb-1 inline-flex items-center gap-1 rounded-full bg-paper-pure px-2 py-0.5 text-[11px] font-bold text-gray-600">
-            {Icone && <Icone className="h-3 w-3" />} {COUPON_KIND_META[kind].label}
-          </p>
-          {familia !== COUPON_FAMILY.REFERRAL && (
-            <p className="font-display text-base font-bold tracking-wide text-ink">{cupom.code}</p>
-          )}
+        <p className="inline-flex items-center gap-1 rounded-full bg-paper-pure px-2 py-0.5 text-[11px] font-bold text-gray-600">
+          {Icone && <Icone className="h-3 w-3" />} {COUPON_KIND_META[kind].label}
+        </p>
+        <V2Badge tone={TOM_DO_ESTADO[estado]}>{COUPON_STATUS_LABEL[estado]}</V2Badge>
+      </div>
+
+      {familia !== COUPON_FAMILY.REFERRAL ? (
+        // O cupom como o atleta vê — a arte, com o código copiável no canhoto
+        // (a arena também copia para mandar a alguém). Onda CD.
+        <div className="mt-2">
+          <CouponArt coupon={cupom} code={cupom.code} benefit={couponBenefitText(cupom)} description={cupom.description}
+            footer={ate ? `até ${formatDateShortBR(ate)}` : ''} arenaName={arenaName} copyable
+            notch={desligado ? 'bg-gray-50' : 'bg-paper'} />
+        </div>
+      ) : (
+        <div className="mt-1">
           <p className="text-sm text-gray-700">{couponBenefitText(cupom)}</p>
           {cupom.description && <p className="mt-0.5 text-xs text-gray-500">{cupom.description}</p>}
         </div>
-        <V2Badge tone={TOM_DO_ESTADO[estado]}>{COUPON_STATUS_LABEL[estado]}</V2Badge>
-      </div>
+      )}
 
       <div className="mt-2 flex flex-wrap gap-x-3 gap-y-1 text-xs text-gray-500">
         {cupom.show_public === true && (
@@ -141,7 +150,7 @@ function CartaoCupom({ cupom, onEditar, onRegistrar, onAlternar, onApagar }) {
   );
 }
 
-export default function CouponsPanel({ arenaId, referralOn = false }) {
+export default function CouponsPanel({ arenaId, arena = null, referralOn = false }) {
   const [aba, setAba] = useState('cupons');
   const [form, setForm] = useState(null);          // null | 'novo' | cupom
   const [recepcao, setRecepcao] = useState(null);  // null | 'codigo' | cupom
@@ -235,6 +244,7 @@ export default function CouponsPanel({ arenaId, referralOn = false }) {
                 <div className="mb-4">
                   <CouponForm
                     arenaId={arenaId}
+                    arena={arena}
                     cupom={form === 'novo' ? null : form}
                     referralOn={referralOn}
                     unitCost={form !== 'novo' ? configuracoes?.coupon_costs?.[form.id] ?? null : null}
@@ -283,6 +293,7 @@ export default function CouponsPanel({ arenaId, referralOn = false }) {
                     <CartaoCupom
                       key={c.id}
                       cupom={c}
+                      arenaName={arena?.name || ''}
                       onEditar={(x) => { setForm(x); setRecepcao(null); }}
                       onRegistrar={(x) => { setRecepcao(x); setForm(null); }}
                       onAlternar={alternar}

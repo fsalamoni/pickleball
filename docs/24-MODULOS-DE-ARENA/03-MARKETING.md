@@ -670,3 +670,67 @@ regras de sempre já deixavam a arena escrever as campanhas dela (com a trava de
 não trocar de arena, Onda BX) e as configurações dela; 14 asserções novas no
 emulador (`tests/rules/campaignBanners.rules.test.js`) provam as escritas, as
 duas consultas e que o atleta e outra arena não mexem em nada.
+
+---
+
+## 13. A arte do cupom e o "copiar o código" (Onda CD, 2026-09-25)
+
+**Pedido:** *"A mesma coisa para cupons, deve ter padrões e modelos, mas
+permitir que a arena também faça upload ou crie o seu próprio. E deve ser
+possível copiar o código."*
+
+### 13.1 O cupom vira um TÍQUETE
+
+`CouponArt` (`v2/components/arenas/marketing/coupons/`): a parte principal diz
+o que o cupom dá; o **canhoto**, do outro lado do picote, traz o **código** —
+sempre o de verdade, montado pela tela. Com `copyable`, o código do canhoto é
+o botão de copiar. O tíquete responde à própria largura (container query):
+largo, o canhoto fica ao lado; estreito (celular, carrossel), ele desce e vira
+uma faixa. Aparece em: **página da arena → Promoções**, **tela inicial** (o
+cupom com arte vira tíquete no carrossel), **Central → Cupons** (a lista mostra
+o cupom como o atleta vê) e na **prévia do editor**.
+
+### 13.2 Cinco modelos, os da arena, e a imagem enviada
+
+`domain/couponArt.js`: **Clássico**, **Neon**, **Quadra**, **Festa** e **Sol**,
+congelados. Título e texto vêm **em branco** de propósito: em branco, valem o
+benefício ("10% de desconto", "1 água de coco") e a descrição do próprio
+cupom — a arte nunca desmente o cupom, nem quando o desconto muda depois. A
+arena personaliza chamada, título, texto e as três cores (fundo, texto,
+canhoto), com "Usar a cor da arena" e aviso de contraste.
+
+**Modelos da arena** em `arena_settings.coupon_templates` (até 20, ids
+`arena:…`), com as mesmas regras dos modelos de banner (`saveArenaTemplate`
+generalizado com `normalize`); apagar pede confirmação; os cinco da plataforma
+nunca mudam.
+
+**Imagem enviada** (`COUPON_UPLOAD_SPEC`): 1200 × 600 (2:1), mínimo 800 × 400,
+JPG/PNG/WebP, até 1 MB (máximo 5 MB), margem de 90% × 80% — e **sem o código
+escrito nela**: a plataforma mostra o código no canhoto, copiável, e ele nunca
+fica desatualizado. Descrição obrigatória. Vai para
+`uploads/{uid}/arena-coupons/…` pela regra de Storage de sempre. O envio
+reaproveita o `BannerUploader` da Onda CC (agora com `spec`/`guide`/`folder`/
+`preview`).
+
+### 13.3 Copiar o código
+
+`CopyCodeButton` (`v2/ui/`): o código **é** o botão — alvo grande, código à
+vista, ícone de copiar, ✓ por dois segundos, nome acessível ("Copiar o código
+VERAO10") e o resultado anunciado ao leitor de tela. `useClipboard` ganhou o
+caminho antigo (`execCommand`) quando a API moderna recusa, e a mensagem de
+erro de um código **traz o código** — é o que a pessoa vai anotar.
+
+### 13.4 O que NÃO pode regredir
+
+1. O código nunca vai dentro da imagem; é sempre o do cupom, copiável.
+2. Os cinco modelos não mudam; salvar cria modelo da arena.
+3. Editar um cupom antigo **sem mexer na arte** não grava arte nenhuma
+   (`art` só entra no que se grava quando o formulário a manda — e `update`
+   sem ela não apaga a de ninguém).
+4. A indicação não tem arte (ela tem o próprio cartão).
+
+**Banco:** zero coleção, zero índice, **zero regra**. Um campo opcional
+(`arena_coupons.art`) e `arena_settings.coupon_templates`. 8 cenários novos no
+emulador (`tests/rules/couponArt.rules.test.js`): a arena cria/edita/tira a
+arte do cupom dela; outra arena e o atleta não; o atleta lê; os modelos só a
+arena lê e grava.
