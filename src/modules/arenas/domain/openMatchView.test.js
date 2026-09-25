@@ -2,6 +2,7 @@ import { describe, it, expect } from 'vitest';
 import {
   isUpcomingSlot, sortSlotsBySchedule, openMatchSectionModel, myUpcomingOpenSlots,
   pendingWaitlistCalls, waitlistBySlot, openSlotsForDiscovery, slotActionState,
+  waitlistCallDeadline, promotionWindowLabel,
 } from './openMatchView.js';
 
 // Meio-dia de 15/09/2026, hora local — o relógio dos testes.
@@ -178,5 +179,43 @@ describe('slotActionState — o botão da vaga', () => {
   });
   it('conta as vagas', () => {
     expect(slotActionState(vaga('x', { participants: ['a'] }), { now: AGORA })).toEqual({ estado: 'entrar', vagas: 3 });
+  });
+});
+
+describe('⭐ waitlistCallDeadline — o prazo da chamada, para mostrar', () => {
+  // `Timestamp` de verdade: é o que o servidor grava (Onda BQ).
+  const agora = new Date(2026, 8, 25, 19, 35).getTime();
+
+  it('⭐ mostra o horário da chamada gravada pelo servidor', async () => {
+    const { Timestamp } = await import('firebase/firestore');
+    const r = waitlistCallDeadline({ notification_expires_at: Timestamp.fromMillis(agora + 60 * 60_000) }, agora);
+    expect(r).toMatchObject({ label: '20:35', vencida: false });
+  });
+
+  it('prazo em outro dia leva a data junto', () => {
+    const amanha = new Date(2026, 8, 26, 0, 20).getTime();
+    expect(waitlistCallDeadline({ notification_expires_at: amanha }, agora).label).toBe('26/09 às 00:20');
+  });
+
+  it('passado o prazo, vencida — a tela não oferece o que o serviço vai recusar', () => {
+    expect(waitlistCallDeadline({ notification_expires_at: agora - 1000 }, agora).vencida).toBe(true);
+  });
+
+  it('sem prazo gravado, vale o avisado + a janela', () => {
+    const r = waitlistCallDeadline({ notified_at: agora, window_minutes: 30 }, agora);
+    expect(r.label).toBe('20:05');
+  });
+
+  it('sem prazo nenhum: null (a tela cai no texto genérico)', () => {
+    expect(waitlistCallDeadline({}, agora)).toBeNull();
+    expect(waitlistCallDeadline(null, agora)).toBeNull();
+  });
+});
+
+describe('promotionWindowLabel', () => {
+  it('diz o prazo da fila em texto', () => {
+    expect(promotionWindowLabel()).toBe('1 hora');
+    expect(promotionWindowLabel(120)).toBe('2 horas');
+    expect(promotionWindowLabel(30)).toBe('30 minutos');
   });
 });

@@ -15,7 +15,7 @@ import {
 } from '@/modules/arenas/domain/openMatch';
 import { formatSlotLabel } from '@/modules/arenas/domain/calendar';
 import { formatPrice } from '@/modules/arenas/domain/pricing';
-import { OPEN_SLOT_FORMAT_LABEL, slotActionState } from '@/modules/arenas/domain/openMatchView';
+import { OPEN_SLOT_FORMAT_LABEL, slotActionState, waitlistCallDeadline } from '@/modules/arenas/domain/openMatchView';
 import { V2Badge, V2Button, V2Surface } from '@/v2/ui/primitives';
 
 /**
@@ -182,6 +182,9 @@ export function OpenSlotCard({
 export function WaitlistCallCard({
   entrada, slot, onAceitar, onRecusar, ocupado = false, mostrarArena = false,
 }) {
+  // O horário do prazo — "com um prazo para confirmar" não diz se são cinco
+  // minutos ou cinquenta.
+  const prazo = waitlistCallDeadline(entrada);
   return (
     <V2Surface className="border-acid bg-acid/10">
       <div className="flex flex-wrap items-start gap-3">
@@ -196,16 +199,23 @@ export function WaitlistCallCard({
             {slot?.court ? ` · ${slot.court}` : ''}
           </p>
           <p className="mt-1 text-xs text-gray-500">
-            Confirme para garantir a vaga. Se não confirmar, ela passa para o próximo da fila.
+            {prazo?.vencida
+              ? 'O prazo para confirmar acabou — a vaga está passando para o próximo da fila.'
+              : prazo
+                ? <>Confirme até <strong className="text-ink">{prazo.label}</strong> para garantir a vaga. Depois disso, ela passa para o próximo da fila.</>
+                : 'Confirme para garantir a vaga. Se não confirmar, ela passa para o próximo da fila.'}
           </p>
-          <div className="mt-3 flex flex-wrap gap-2">
-            <V2Button size="sm" disabled={ocupado} onClick={() => onAceitar?.(entrada)}>
-              Confirmar minha vaga
-            </V2Button>
-            <V2Button variant="ghost" size="sm" disabled={ocupado} onClick={() => onRecusar?.(entrada)}>
-              Não vou poder
-            </V2Button>
-          </div>
+          {/* Vencida, o serviço recusaria o "Confirmar" — a tela não oferece. */}
+          {!prazo?.vencida && (
+            <div className="mt-3 flex flex-wrap gap-2">
+              <V2Button size="sm" disabled={ocupado} onClick={() => onAceitar?.(entrada)}>
+                Confirmar minha vaga
+              </V2Button>
+              <V2Button variant="ghost" size="sm" disabled={ocupado} onClick={() => onRecusar?.(entrada)}>
+                Não vou poder
+              </V2Button>
+            </div>
+          )}
         </div>
       </div>
     </V2Surface>

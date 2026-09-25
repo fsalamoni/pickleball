@@ -123,6 +123,28 @@ describe('a seção na página da arena', () => {
     expect(container.querySelector('a[href="/arenas/a1/open-match"]')).toBeTruthy();
   });
 
+  it('⭐ a chamada diz ATÉ QUANDO dá para confirmar (o prazo que o servidor gravou)', async () => {
+    const { Timestamp } = await import('firebase/firestore');
+    LIGADOS.add(ARENA_MODULE_ID.MATCHMAKING_OPEN_MATCH);
+    estado.slots = [vaga('s1', { participants: ['a', 'b', 'c'] })];
+    const prazo = new Date(Date.now() + 45 * 60_000);
+    const hhmm = `${String(prazo.getHours()).padStart(2, '0')}:${String(prazo.getMinutes()).padStart(2, '0')}`;
+    estado.fila = [{ id: 'w1', slot_id: 's1', status: 'notified', notification_expires_at: Timestamp.fromDate(prazo) }];
+    await render(<ArenaOpenMatchSection arena={ARENA} />);
+    // Perto da meia-noite o prazo cai no dia seguinte e o rótulo leva a data.
+    expect(container.textContent).toMatch(new RegExp(`Confirme até (\\d{2}/\\d{2} às )?${hhmm}`));
+    expect(botao('Confirmar minha vaga')).toBeTruthy();
+  });
+
+  it('prazo vencido: a tela diz e não oferece o "Confirmar" que o serviço recusaria', async () => {
+    LIGADOS.add(ARENA_MODULE_ID.MATCHMAKING_OPEN_MATCH);
+    estado.slots = [vaga('s1', { participants: ['a', 'b', 'c'] })];
+    estado.fila = [{ id: 'w1', slot_id: 's1', status: 'notified', notification_expires_at: Date.now() - 60_000 }];
+    await render(<ArenaOpenMatchSection arena={ARENA} />);
+    expect(container.textContent).toContain('O prazo para confirmar acabou');
+    expect(botao('Confirmar minha vaga')).toBeFalsy();
+  });
+
   it('⭐ a chamada da fila vem antes de tudo, com o botão de confirmar', async () => {
     LIGADOS.add(ARENA_MODULE_ID.MATCHMAKING_OPEN_MATCH);
     estado.slots = [vaga('s1', { participants: ['a', 'b', 'c'] })];

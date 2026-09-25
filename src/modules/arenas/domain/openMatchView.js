@@ -17,7 +17,8 @@
  */
 
 import { getAvailableSpots, slotLevelFit, slotStartMs } from './openMatch.js';
-import { WAITLIST_STATUS } from './waitlist.js';
+import { WAITLIST_STATUS, DEFAULT_PROMOTION_WINDOW_MINUTES } from './waitlist.js';
+import { instanteEmMs } from '@/core/domain/instant';
 
 const CANCELADA = 'cancelled';
 
@@ -144,6 +145,47 @@ export function pendingWaitlistCalls(waitlist = [], slots = [], now = Date.now()
     .filter((w) => w.status === WAITLIST_STATUS.NOTIFIED)
     .map((w) => ({ entrada: w, slot: porId.get(w.slot_id) }))
     .filter(({ slot }) => slot && isUpcomingSlot(slot, now));
+}
+
+/**
+ * Quanto tempo a chamada da fila dá para confirmar, em texto: "1 hora".
+ * Sai da MESMA constante que o servidor usa (há paridade travada em teste).
+ */
+export function promotionWindowLabel(minutos = DEFAULT_PROMOTION_WINDOW_MINUTES) {
+  const m = Math.max(1, Math.round(Number(minutos) || 0));
+  if (m % 60 === 0) return m === 60 ? '1 hora' : `${m / 60} horas`;
+  return `${m} minutos`;
+}
+
+/**
+ * O prazo da chamada da fila, para MOSTRAR: "confirme até 20:35".
+ *
+ * A chamada tem 60 minutos, e nenhuma tela dizia o horário — só "com um prazo
+ * para confirmar". Quem lê isso não sabe se tem cinco minutos ou cinquenta, e
+ * decide pior (ou perde a vaga achando que tinha tempo).
+ *
+ * `vencida` usa a mesma conta de `isPromotionExpired`, que é o que trava o
+ * "Confirmar" no serviço: a tela não oferece o que o serviço vai recusar.
+ *
+ * @returns {{ ms: number, label: string, vencida: boolean } | null}
+ */
+export function waitlistCallDeadline(entrada, now = Date.now()) {
+  let ms = instanteEmMs(entrada?.notification_expires_at);
+  if (!Number.isFinite(ms) && entrada?.notified_at && entrada?.window_minutes) {
+    ms = instanteEmMs(entrada.notified_at) + Number(entrada.window_minutes) * 60_000;
+  }
+  if (!Number.isFinite(ms)) return null;
+  const d = new Date(ms);
+  const hoje = new Date(now);
+  const p = (n) => String(n).padStart(2, '0');
+  const hora = `${p(d.getHours())}:${p(d.getMinutes())}`;
+  const mesmoDia = d.getFullYear() === hoje.getFullYear()
+    && d.getMonth() === hoje.getMonth() && d.getDate() === hoje.getDate();
+  return {
+    ms,
+    label: mesmoDia ? hora : `${p(d.getDate())}/${p(d.getMonth() + 1)} às ${hora}`,
+    vencida: now > ms,
+  };
 }
 
 /**

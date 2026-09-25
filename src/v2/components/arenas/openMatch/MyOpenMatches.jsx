@@ -18,7 +18,7 @@ import React, { useMemo } from 'react';
 import { Link } from 'react-router-dom';
 import { Clock, Users } from 'lucide-react';
 import { useMyOpenSlots, useOpenSlotsByIds, useUserWaitlist } from '@/modules/arenas/hooks/useArenaV3';
-import { myUpcomingOpenSlots, pendingWaitlistCalls } from '@/modules/arenas/domain/openMatchView';
+import { myUpcomingOpenSlots, pendingWaitlistCalls, promotionWindowLabel } from '@/modules/arenas/domain/openMatchView';
 import { WAITLIST_STATUS } from '@/modules/arenas/domain/waitlist';
 import { formatSlotLabel } from '@/modules/arenas/domain/calendar';
 import { useMyUnifiedLevel } from '@/modules/rating/hooks/useMyUnifiedLevel';
@@ -95,7 +95,9 @@ export default function MyOpenMatches() {
               </li>
             ))}
           </ul>
-          <p className="mt-2 text-xs text-gray-500">Se alguém sair, a vaga é oferecida a você — com um prazo para confirmar.</p>
+          <p className="mt-2 text-xs text-gray-500">
+            Se alguém sair, a vaga é oferecida a você — e você tem {promotionWindowLabel()} para confirmar.
+          </p>
         </div>
       )}
     </div>
