@@ -40,6 +40,7 @@ import {
 } from '@/modules/games/domain/arenaGameDay';
 import { GAME_DAY_FORMAT_LABELS } from '@/modules/clubs/domain/gameDayFormats';
 import { isGameDayOpenToParticipants } from '@/modules/games/domain/gameDayRoles';
+import { isOpenMatchGameDay } from '@/modules/arenas/domain/openMatchGameDay';
 
 function hojeISO() {
   const d = new Date();
@@ -185,6 +186,10 @@ export default function ArenaGameDaysSection({ arenaId }) {
 
   const proximos = useMemo(
     () => dias
+      // O dia de jogo que nasceu de um JOGO ABERTO aparece em "Jogos abertos"
+      // (com a faixa de nível, o valor e a fila). Mostrá-lo aqui também seria
+      // oferecer o mesmo jogo duas vezes, com dois botões diferentes (Onda CA).
+      .filter((g) => !isOpenMatchGameDay(g))
       .filter((g) => !g.date || g.date >= hoje)
       .sort((a, b) => String(a.date || '').localeCompare(String(b.date || ''))),
     [dias, hoje],

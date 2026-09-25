@@ -273,3 +273,118 @@ cartão (prazo, confirmar, não vou poder).
   mostra.
 
 Zero banco.
+
+## Atualização 2026-09-25 — o jogo aberto é um DIA DE JOGO (Onda CA)
+
+**Pedido:** *"O jogo aberto, além do que ele já contempla, deve gerar um 'dia
+de jogo'. Então, na configuração do jogo aberto, é preciso contemplar outros
+detalhes de configuração do dia de jogo. Os usuários, dentro da página da
+arena, podem dizer que vão no jogo aberto (dia de jogo) e devem poder
+visualizar as configurações do dia de jogo, os participantes inscritos e tudo
+mais. Faça a vinculação das duas funções."*
+
+### A forma: dois documentos, uma lista de inscritos
+
+O jogo aberto (`arena_open_slots`) segue sendo a **vitrine** — faixa de nível,
+valor, vagas, fila de espera — e é ele que aparece na página da arena, em
+Minhas reservas e em Procura-se jogo. O **jogo** passa a ser um dia de jogo da
+arena (`game_days` com `arena_id`): formato, quem conduz, quadras, sorteio,
+placar, ranking do dia e telão. Um aponta para o outro:
+
+```
+arena_open_slots.game_day_id  ⇄  game_days.open_slot_id
+```
+
+A tentação era copiar formato, sorteio e placar para dentro do jogo aberto.
+Seria o erro que a plataforma já pagou duas vezes (o clube meses sem Play; o
+torneio interno que não gerava partida): a máquina do dia de jogo existe, é
+testada e é a mesma em toda origem.
+
+| O quê | Mora em |
+|---|---|
+| nível, valor, fila | vitrine (o que decide QUEM entra) |
+| formato, quem conduz, partidas | dia de jogo (o que decide COMO se joga) |
+| data, horário, quadras, vagas | os dois — a vitrine para mostrar, o dia para fechar a quadra |
+| inscritos | os dois, **gravados juntos** |
+
+### O que a arena faz
+
+Central → **Jogo aberto** → **Publicar jogo**. O formulário ganhou três
+seções: **Quando e onde** (data, horário e as quadras — mais de uma: um
+Americano com 8 atletas pede duas), **Como se joga** (o formato, com o que ele
+muda — placar, ranking do dia —, e quem conduz: só a equipe ou também os
+inscritos) e **Quem pode entrar** (vagas, nível, valor, modalidade). Antes de
+salvar, o resumo diz o efeito: *"Vira um dia de jogo em Americano, em 2
+quadras, para até 8 atletas"*.
+
+Cada cartão da Central tem **Organizar o jogo** (abre o dia de jogo: sorteio,
+placar, telão) e **Editar** (vitrine e dia mudam juntos). **A quadra é
+obrigatória**: um dia de jogo acontece em quadras, e sem ela o horário não
+fecharia no calendário.
+
+O jogo aberto **antigo** (publicado antes desta onda) segue funcionando como
+sempre. Se tem quadra e ainda vai acontecer, o cartão oferece **Criar o dia de
+jogo** — por escolha da arena, um de cada vez; os inscritos entram no dia de
+jogo. **Nada é migrado em lote.**
+
+### O que o atleta vê
+
+- Na página da arena, a linha do jogo mostra o **formato** e leva a **"Ver o
+  jogo: regras e quem vai"** — a página do dia de jogo, com formato, regras,
+  quadras, a lista de quem vai e, na hora, as partidas e o ranking do dia.
+- Na página do dia de jogo, um painel **Jogo aberto** com faixa de nível, valor,
+  vagas e o **mesmo botão** da página da arena (entrar, sair, fila, chamada).
+- Quem entra passa a ver o jogo também em **Dia de jogo** (a lista dele).
+- A seção "Dias de jogo" da página da arena **não repete** o jogo aberto — ele
+  já está em "Jogos abertos", com a fila e a faixa de nível.
+
+### Entrar e sair: tudo ou nada
+
+`joinOpenSlot`/`leaveOpenSlot` gravam a vitrine, o participante do dia de jogo
+e `member_uids` num **lote único**. Lista que diverge não dá erro — dá a arena
+vendo 4 inscritos numa tela e 3 na outra. As três escritas passam, cada uma,
+pela regra de "só a si mesmo" que já existia (asserções no emulador em
+`tests/rules/openMatchGameDay.rules.test.js`). **Nenhuma regra nova.**
+
+Marcar presença pelo lado do dia de jogo (`signUpToArenaGameDay`) **é** entrar
+no jogo aberto — a faixa de nível e a fila valem; sair, idem.
+
+Quando a **arena** insere ou tira alguém pela tela do dia de jogo (que não
+passa pelo botão), a vitrine **espelha** a lista (`slotMirrorFromGameDay`):
+contas na lista da vitrine, e "lotado" contando também os **convidados** sem
+conta — eles ocupam lugar na quadra. O mesmo vale no servidor: a fila de
+espera conta os inscritos do dia de jogo (`lugaresParaChamar(..., {
+noDiaDeJogo })`), para não chamar ninguém para um lugar que um convidado já
+ocupa.
+
+### Editar, cancelar
+
+- **Vagas abaixo de quem já entrou**: recusado — tirar alguém é decisão sobre
+  uma pessoa, não efeito colateral de um número.
+- **Formato depois de partida**: recusado — o Play não guarda placar e
+  Mexicano/Rei da Quadra derivam as rodadas do que já aconteceu.
+- **Cancelar** encerra o dia de jogo, libera as quadras e **avisa quem estava
+  dentro**. 🐞 O diálogo sempre disse "serão avisados" e ninguém era avisado.
+- Encerrar o dia de jogo pela tela de dias de jogo cancela a vitrine junto.
+
+### A quadra
+
+Quem fecha a quadra é o **dia de jogo** (`gameDayBlocks` + a cópia em
+`arena_unavailabilities`). A vaga ligada deixa de derivar bloqueio próprio —
+contar os dois mostraria dois bloqueios no mesmo horário. Ao editar, a
+conferência exclui a própria vaga **e** o próprio dia (`arenaOccupancy(...,
+{ exceptGameDayId })`), senão o jogo conflitaria consigo mesmo.
+
+### Onde está o quê
+
+| Camada | Arquivo |
+|---|---|
+| Domínio | `arenas/domain/openMatchGameDay.js` (+ `openMatch.js`: bloqueio e conflito por quadra) |
+| Serviço | `arenas/services/openMatchService.js` (`createOpenMatch`, `updateOpenMatch`, `linkOpenSlotToGameDay`, entrar/sair em lote) |
+| Dia de jogo | `games/services/arenaGameDayService.js` (`buildArenaGameDayPayload`, delegação), `gameDayService.js` (espelho) |
+| Telas | `openMatch/OpenMatchForm.jsx`, `OpenMatchGameDayPanel.jsx`, `ArenaOpenMatchAdminPanel.jsx`, `OpenSlotCard.jsx` |
+| Servidor | `functions/openSlotWaitlist.js` (conta os inscritos do dia) |
+
+**Banco:** zero coleção, zero índice, zero regra. Campos opcionais:
+`arena_open_slots.game_day_id`, `court_ids`, `game_format`;
+`game_days.open_slot_id`.

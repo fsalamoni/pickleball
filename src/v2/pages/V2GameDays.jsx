@@ -7,7 +7,7 @@
  * Aditivo — desligada a flag, a rota redireciona para o início.
  */
 
-import React, { useMemo, useState } from 'react';
+import React, { Suspense, lazy, useMemo, useState } from 'react';
 import { Navigate, useNavigate, useParams, Link } from 'react-router-dom';
 import {
   Plus, CalendarClock, Users, Globe, Lock, ChevronLeft, Trash2, ExternalLink, History,
@@ -30,6 +30,12 @@ import {
 import { useGameDayRoles } from '@/modules/games/hooks/useGameDayRoles';
 import { isArenaGameDay, arenaGameDayWhenText } from '@/modules/games/domain/arenaGameDay';
 import { isClubGameDay } from '@/modules/games/domain/clubGameDay';
+import { isOpenMatchGameDay, arenaGameDayEditLink } from '@/modules/arenas/domain/openMatchGameDay';
+
+// O painel do JOGO ABERTO (Onda CA) só existe no dia de jogo que nasceu de um
+// jogo aberto — e ele puxa os hooks da arena. Sob demanda, para o dia de jogo
+// comum (atleta, clube) não baixar nada disso.
+const OpenMatchGameDayPanel = lazy(() => import('@/v2/components/arenas/openMatch/OpenMatchGameDayPanel'));
 
 export default function V2GameDays() {
   const enabled = true;
@@ -55,7 +61,9 @@ function GameDayCard({ g, onOpen, muted }) {
     >
       <div className="flex items-start justify-between gap-2">
         <h3 className="font-display text-lg font-bold text-ink">{g.title}</h3>
-        {isArenaGameDay(g)
+        {isOpenMatchGameDay(g)
+          ? <V2Badge tone="acid"><Users className="mr-1 h-3 w-3" /> Jogo aberto</V2Badge>
+          : isArenaGameDay(g)
           ? <V2Badge tone="acid"><Building2 className="mr-1 h-3 w-3" /> Da arena</V2Badge>
           : isPublicGameDay(g)
             ? <V2Badge tone="blue"><Globe className="mr-1 h-3 w-3" /> Público</V2Badge>
@@ -243,7 +251,9 @@ function GameDayDetail({ gameDayId }) {
           <div className="min-w-0">
             <div className="flex flex-wrap items-center gap-2">
               <h1 className="font-display text-2xl font-bold text-ink">{gameDay.title}</h1>
-              {daArena
+              {isOpenMatchGameDay(gameDay)
+                ? <V2Badge tone="acid"><Users className="mr-1 h-3 w-3" /> Jogo aberto da arena</V2Badge>
+                : daArena
                 ? <V2Badge tone="acid"><Building2 className="mr-1 h-3 w-3" /> Da arena</V2Badge>
                 : doClube
                   ? <V2Badge tone="acid"><Users className="mr-1 h-3 w-3" /> {gameDay.club_name || 'Do clube'}</V2Badge>
@@ -262,8 +272,8 @@ function GameDayDetail({ gameDayId }) {
             <GameDayModuleTools gameDay={gameDay} podeGerenciar={podeGerenciar} />
             {daArena && podeConfigurar && (
               <V2Button asChild variant="ghost" size="sm">
-                <Link to={`/arenas/${gameDay.arena_id}/gerir/dia-de-jogo/${gameDay.id}`}>
-                  <Building2 className="mr-1.5 h-4 w-4" /> Gerir na arena
+                <Link to={arenaGameDayEditLink(gameDay)}>
+                  <Building2 className="mr-1.5 h-4 w-4" /> {isOpenMatchGameDay(gameDay) ? 'Gerir o jogo aberto' : 'Gerir na arena'}
                 </Link>
               </V2Button>
             )}
@@ -305,6 +315,14 @@ function GameDayDetail({ gameDayId }) {
           </p>
         )}
       </V2Surface>
+
+      {/* O jogo aberto por trás deste dia (Onda CA): nível, valor, vagas e o
+          botão de entrar — o mesmo da página da arena. */}
+      {isOpenMatchGameDay(gameDay) && (
+        <Suspense fallback={null}>
+          <OpenMatchGameDayPanel gameDay={gameDay} className="mb-4" />
+        </Suspense>
+      )}
 
       {/* O miolo é do MÓDULO — o mesmo no atleta, na arena e no clube. */}
       <GameDayModule gameDay={gameDay} podeGerenciar={podeGerenciar} />

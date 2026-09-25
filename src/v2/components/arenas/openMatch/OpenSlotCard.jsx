@@ -9,20 +9,36 @@
 
 import React from 'react';
 import { Link } from 'react-router-dom';
-import { BellRing, Building2, Check, Clock, Info, MapPin, Users } from 'lucide-react';
+import { ArrowRight, BellRing, Building2, Check, Clock, Info, MapPin, Swords, Users } from 'lucide-react';
 import {
   formatLevel, getSlotFillPct, slotLevelFit, slotLevelRangeLabel,
 } from '@/modules/arenas/domain/openMatch';
 import { formatSlotLabel } from '@/modules/arenas/domain/calendar';
 import { formatPrice } from '@/modules/arenas/domain/pricing';
 import { OPEN_SLOT_FORMAT_LABEL, slotActionState, waitlistCallDeadline } from '@/modules/arenas/domain/openMatchView';
+import { isLinkedOpenSlot, openMatchFormatLabel } from '@/modules/arenas/domain/openMatchGameDay';
 import { V2Badge, V2Button, V2Surface } from '@/v2/ui/primitives';
+
+/**
+ * O caminho para o DIA DE JOGO deste jogo aberto (Onda CA): formato, regras,
+ * quem vai, quadras. Sem conta não há link — a página do dia de jogo pede
+ * login, e mandar para lá quem não entrou é mandar para uma porta fechada.
+ */
+function LinkDoDiaDeJogo({ slot, semConta }) {
+  if (!isLinkedOpenSlot(slot) || semConta) return null;
+  return (
+    <Link to={`/dia-de-jogo/${slot.game_day_id}`}
+      className="inline-flex items-center gap-1 text-xs font-bold text-ink underline-offset-2 hover:underline">
+      Ver o jogo: regras e quem vai <ArrowRight className="h-3.5 w-3.5" />
+    </Link>
+  );
+}
 
 /**
  * O botão da vaga, pelo estado que o domínio decidiu (`slotActionState`).
  * Sem conta, não há botão — só o convite para entrar.
  */
-function SlotAction({ estado, semConta, ocupado, onEntrar, onSair, onFila, size = 'sm' }) {
+export function SlotAction({ estado, semConta, ocupado, onEntrar, onSair, onFila, size = 'sm' }) {
   if (semConta) {
     return (
       <span className="text-xs text-gray-500">
@@ -70,6 +86,7 @@ export function OpenSlotRow({
         <p className="text-sm font-bold text-ink">{formatSlotLabel(slot)}</p>
         <p className="mt-0.5 text-xs text-gray-500">
           {[
+            slot.game_format ? openMatchFormatLabel(slot.game_format) : null,
             slot.court,
             slot.format ? (OPEN_SLOT_FORMAT_LABEL[slot.format] || slot.format) : null,
             faixa ? `nível ${faixa}` : null,
@@ -81,6 +98,7 @@ export function OpenSlotRow({
           {vagas > 0 ? `${vagas} vaga${vagas === 1 ? '' : 's'}` : 'lotado'}
           {motivo && <span className="text-amber-700"> · {motivo}</span>}
         </p>
+        <div className="mt-1"><LinkDoDiaDeJogo slot={slot} semConta={semConta} /></div>
       </div>
       <SlotAction estado={estado} semConta={semConta} ocupado={ocupado}
         onEntrar={() => onEntrar?.(slot)} onSair={() => onSair?.(slot)} onFila={() => onFila?.(slot)} />
@@ -128,6 +146,11 @@ export function OpenSlotCard({
             {Number.isFinite(Number(slot.price)) && Number(slot.price) > 0 && (
               <span>{formatPrice(Number(slot.price))} por atleta</span>
             )}
+            {slot.game_format && (
+              <span className="inline-flex items-center gap-1 font-semibold text-ink">
+                <Swords className="h-3.5 w-3.5 text-gray-400" aria-hidden="true" /> {openMatchFormatLabel(slot.game_format)}
+              </span>
+            )}
           </p>
         </div>
         <div className="flex flex-col items-end gap-1">
@@ -164,9 +187,10 @@ export function OpenSlotCard({
 
       {slot.notes && <p className="mt-2 text-xs leading-5 text-gray-500">{slot.notes}</p>}
 
-      <div className="mt-4 flex flex-wrap items-center gap-2">
+      <div className="mt-4 flex flex-wrap items-center justify-between gap-2">
         <SlotAction estado={estado} semConta={semConta} ocupado={ocupado}
           onEntrar={() => onEntrar?.(slot)} onSair={() => onSair?.(slot)} onFila={() => onFila?.(slot)} />
+        <LinkDoDiaDeJogo slot={slot} semConta={semConta} />
       </div>
     </V2Surface>
   );
