@@ -214,3 +214,20 @@ aberto** da Central (com quem vem e a fila de cada jogo), a seção **Jogos
 abertos** da página da arena (entrar ali mesmo), e aparece em **Minhas
 reservas** e em **Procura-se jogo**. Detalhes e defeitos corrigidos em
 `09-INTEGRACAO-NA-ARENA.md` §8.
+
+## Atualização 2026-09-25 — a chamada da fila vencia ao chegar (Onda BQ)
+
+**🐞 Nenhum atleta conseguia aceitar uma chamada da fila.** O servidor
+(`promoverProximo`, em `functions/openSlotWaitlist.js`) grava o prazo como
+`Timestamp.fromMillis(...)`. O cliente conferia com
+`x instanceof Date ? x.getTime() : Number(x)`, e `Number(timestamp)` dá os
+segundos desde o ano 1, que comparados com `Date.now()` caem em 1972. Com isso
+`isPromotionExpired` dizia que toda chamada já tinha vencido, e "Aceitar"
+respondia **"Promoção expirou"**, com a hora inteira ainda pela frente.
+
+O servidor sempre esteve certo, porque o Admin SDK usa `toMillis()`. O defeito
+estava só na leitura do cliente, e os testes não o viam porque montavam o prazo
+com número. Agora a leitura passa por `instanteEmMs`
+(`src/core/domain/instant.js`), e os testes usam o `Timestamp` que o servidor
+grava. Ver `02-MEMBROS.md`, atualização de 2026-09-25: o mesmo defeito zerava
+os pacotes de horas.

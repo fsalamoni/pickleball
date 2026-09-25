@@ -33,6 +33,7 @@
  * que já vale para o preço da reserva (`precoDaReserva`).
  */
 
+import { instanteEmMs } from '@/core/domain/instant';
 import { DEFAULT_TIERS, MEMBER_STATUS, computeTier } from './members.js';
 import { couponDiscount, couponLabel } from './marketing.js';
 import { totalBookingPrice } from './pricing.js';
@@ -102,16 +103,24 @@ export function tierProgress(member, tiers = DEFAULT_TIERS) {
   };
 }
 
+/**
+ * Quando o pacote vence, em ms — `Infinity` quando não vence.
+ *
+ * 🐞 Era `x instanceof Date ? x.getTime() : Number(x)`. O banco devolve
+ * `Timestamp`, e `Number(timestamp)` dá segundos desde o ano 1: TODO pacote
+ * lido do Firestore "venceu em 1972". Ver `core/domain/instant.js`.
+ */
+function venceEm(pkg) {
+  const t = instanteEmMs(pkg?.expires_at);
+  return Number.isFinite(t) ? t : Infinity;
+}
+
 /** Horas que um pacote ainda tem, considerando validade. */
 export function usableHours(pkg, now = Date.now()) {
   if (!pkg) return 0;
   // Ausência de validade é "não vence" — e `Number(null)` é 0, que passaria
   // por "venceu em 1970" e zeraria um pacote perfeitamente válido.
-  const bruto = pkg.expires_at;
-  if (bruto != null && bruto !== '') {
-    const expira = bruto instanceof Date ? bruto.getTime() : Number(bruto);
-    if (Number.isFinite(expira) && expira <= now) return 0;
-  }
+  if (venceEm(pkg) <= now) return 0;
   return Math.max(0, (Number(pkg.total_hours) || 0) - (Number(pkg.used_hours) || 0));
 }
 
@@ -263,25 +272,53 @@ export function pointsForBooking({ amount = 0, hours = 0 } = {}) {
  * **o que vence antes sai primeiro** — senão o pacote velho expira com saldo
  * enquanto o novo é gasto.
  *
+ * Cada item diz a POSIÇÃO do pacote na carteira (`index`). 🐞 Antes o plano
+ * dizia só `id: p.id` — e o pacote da carteira não tem `id`, tem `pkg_id`: o
+ * plano nascia sem identificação e o consumo o descartava. E nem `pkg_id`
+ * serve de chave: quem compra o mesmo pacote duas vezes tem duas entradas com
+ * o MESMO `pkg_id`, e baixar por ele debitaria as duas.
+ *
  * @param {Array<object>} packages
  * @param {number} horas
  * @param {number} [now]
- * @returns {Array<{ id: string, hours: number }>}
+ * @returns {Array<{ index: number, id: string|null, hours: number }>}
  */
 export function planPackageConsumption(packages = [], horas = 0, now = Date.now()) {
   let restante = Math.max(0, Number(horas) || 0);
   if (restante === 0) return [];
-  return (packages || [])
-    .filter((p) => usableHours(p, now) > 0)
-    .sort((a, b) => {
-      const va = a.expires_at instanceof Date ? a.expires_at.getTime() : Number(a.expires_at) || Infinity;
-      const vb = b.expires_at instanceof Date ? b.expires_at.getTime() : Number(b.expires_at) || Infinity;
-      return va - vb;
-    })
-    .reduce((plano, p) => {
+  return (Array.isArray(packages) ? packages : [])
+    .map((p, index) => ({ p, index }))
+    .filter(({ p }) => usableHours(p, now) > 0)
+    // Empate na validade: a compra mais antiga primeiro (a ordem da carteira).
+    .sort((a, b) => (venceEm(a.p) - venceEm(b.p)) || (a.index - b.index))
+    .reduce((plano, { p, index }) => {
       if (restante <= 0) return plano;
       const usa = Math.min(restante, usableHours(p, now));
       restante -= usa;
-      return usa > 0 ? [...plano, { id: p.id, hours: usa }] : plano;
+      return usa > 0 ? [...plano, { index, id: p.pkg_id ?? p.id ?? null, hours: usa }] : plano;
     }, []);
+}
+
+/**
+ * Baixa `horas` dos pacotes da carteira — a escrita que a confirmação da
+ * reserva faz. Refaz o plano sobre a carteira ATUAL (entre o pedido e a
+ * confirmação outra reserva pode ter usado horas) e nunca debita mais do que
+ * o pacote tem.
+ *
+ * @param {Array<object>} packages  os pacotes como estão no banco agora
+ * @param {number} horas            o que a reserva abateu no preço
+ * @param {number} [now]
+ * @returns {{ packages: Array<object>, used: number }}
+ */
+export function applyPackageUse(packages = [], horas = 0, now = Date.now()) {
+  const lista = Array.isArray(packages) ? packages : [];
+  const plano = planPackageConsumption(lista, horas, now);
+  if (plano.length === 0) return { packages: lista, used: 0 };
+  const porPosicao = new Map(plano.map((i) => [i.index, i.hours]));
+  return {
+    packages: lista.map((p, i) => (porPosicao.has(i)
+      ? { ...p, used_hours: (Number(p.used_hours) || 0) + porPosicao.get(i) }
+      : p)),
+    used: plano.reduce((a, i) => a + i.hours, 0),
+  };
 }

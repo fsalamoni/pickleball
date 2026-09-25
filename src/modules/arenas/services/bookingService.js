@@ -829,7 +829,9 @@ async function aplicarBeneficioNaConfirmacao(booking, agreedPrice, actor) {
   await contabilizarCupom(booking, actor).catch(() => {});
 
   await consumeMemberBenefit(arenaId, uid, {
-    packagePlan: beneficio?.package_plan || [],
+    // As horas que a reserva ABATEU no preço; a baixa é refeita sobre a
+    // carteira atual (`applyPackageUse`), pacote a pacote.
+    packageHours: num(beneficio?.package_hours) || 0,
     walletAmount: beneficio?.wallet_value || 0,
     points: pointsForBooking({ amount: valorPago, hours: horas }),
     reference: `reserva ${booking.id}`,

@@ -1,4 +1,5 @@
 import { describe, it, expect } from 'vitest';
+import { Timestamp } from 'firebase/firestore';
 import {
   WAITLIST_STATUS,
   DEFAULT_PROMOTION_WINDOW_MINUTES,
@@ -158,5 +159,41 @@ describe('computePromotionExpiresAt', () => {
   it('retorna null para input inválido', () => {
     expect(computePromotionExpiresAt(null)).toBeNull();
     expect(computePromotionExpiresAt('xxx')).toBeNull();
+  });
+});
+
+/**
+ * ⭐ 🐞 A chamada como o SERVIDOR a grava.
+ *
+ * `promoverProximo` (functions/openSlotWaitlist.js) grava
+ * `notification_expires_at: Timestamp.fromMillis(...)`. O cliente lia com
+ * `Number(x)`, que num Timestamp dá segundos desde o ano 1: toda chamada
+ * "vencia" ao chegar, e "Aceitar" respondia "Promoção expirou" para todo mundo.
+ * Os testes acima montam o prazo com número — o que ninguém grava.
+ */
+describe('⭐ a chamada da fila como o banco devolve', () => {
+  const agora = Date.now();
+  const chamada = (prazoMs) => ({
+    athlete_id: 'u1', status: WAITLIST_STATUS.NOTIFIED,
+    notified_at: Timestamp.fromMillis(agora),
+    notification_expires_at: Timestamp.fromMillis(prazoMs),
+  });
+
+  it('⭐ dentro do prazo NÃO está vencida', () => {
+    expect(isPromotionExpired(chamada(agora + 60 * 60_000), agora)).toBe(false);
+  });
+
+  it('⭐ e dá para aceitar', () => {
+    expect(buildAcceptPromotionAction(chamada(agora + 60 * 60_000), { uid: 'u1' })).not.toBeNull();
+  });
+
+  it('passado o prazo, vence', () => {
+    expect(isPromotionExpired(chamada(agora - 1000), agora)).toBe(true);
+  });
+
+  it('sem prazo gravado, vale o avisado + a janela', () => {
+    const item = { status: WAITLIST_STATUS.NOTIFIED, notified_at: Timestamp.fromMillis(agora), window_minutes: 30 };
+    expect(isPromotionExpired(item, agora + 29 * 60_000)).toBe(false);
+    expect(isPromotionExpired(item, agora + 31 * 60_000)).toBe(true);
   });
 });

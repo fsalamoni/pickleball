@@ -1,6 +1,8 @@
 import { describe, it, expect } from 'vitest';
+import { Timestamp } from 'firebase/firestore';
 import { DEFAULT_TIERS, MEMBER_STATUS } from './members.js';
 import {
+  applyPackageUse,
   isMemberActive,
   memberBookingPrice,
   memberTier,
@@ -114,6 +116,16 @@ describe('usableHours', () => {
 
   it('usado além do total não vira negativo', () => {
     expect(usableHours(pacote({ total_hours: 2, used_hours: 5 }))).toBe(0);
+  });
+
+  it('⭐ 🐞 pacote como o BANCO devolve (Timestamp) não "venceu em 1972"', () => {
+    const doBanco = { pkg_id: 'p1', total_hours: 10, used_hours: 3, expires_at: Timestamp.fromMillis(Date.now() + 30 * 86_400_000) };
+    expect(usableHours(doBanco)).toBe(7);
+  });
+
+  it('e o Timestamp vencido continua vencido', () => {
+    const doBanco = { pkg_id: 'p1', total_hours: 10, used_hours: 0, expires_at: Timestamp.fromMillis(Date.now() - 1000) };
+    expect(usableHours(doBanco)).toBe(0);
   });
 });
 
@@ -230,6 +242,15 @@ describe('⭐ memberBookingPrice — o benefício chega ao preço', () => {
     expect(r.total).toBe(200);
   });
 
+  it('⭐ 🐞 pacote como o banco devolve (pkg_id + Timestamp) ABATE as horas', () => {
+    const r = memberBookingPrice(ARENA, DUAS_HORAS, {
+      member: membro(),
+      packages: [{ pkg_id: 'dez', total_hours: 10, used_hours: 0, expires_at: Timestamp.fromMillis(Date.now() + 30 * 86_400_000) }],
+    });
+    expect(r.packageHours).toBe(2);
+    expect(r.total).toBe(0);
+  });
+
   it('seleção vazia não quebra', () => {
     const r = memberBookingPrice(ARENA, { slots: [] }, { member: membro({ points: 600 }) });
     expect(r.total).toBe(0);
@@ -265,7 +286,7 @@ describe('planPackageConsumption', () => {
       pacote({ id: 'novo', total_hours: 5, expires_at: agora + 30 * dia }),
       pacote({ id: 'velho', total_hours: 5, expires_at: agora + 2 * dia }),
     ], 3, agora);
-    expect(plano).toEqual([{ id: 'velho', hours: 3 }]);
+    expect(plano).toEqual([{ index: 1, id: 'velho', hours: 3 }]);
   });
 
   it('atravessa mais de um pacote quando precisa', () => {
@@ -273,7 +294,7 @@ describe('planPackageConsumption', () => {
       pacote({ id: 'velho', total_hours: 2, expires_at: agora + 2 * dia }),
       pacote({ id: 'novo', total_hours: 5, expires_at: agora + 30 * dia }),
     ], 4, agora);
-    expect(plano).toEqual([{ id: 'velho', hours: 2 }, { id: 'novo', hours: 2 }]);
+    expect(plano).toEqual([{ index: 0, id: 'velho', hours: 2 }, { index: 1, id: 'novo', hours: 2 }]);
   });
 
   it('pula pacote vencido', () => {
@@ -281,7 +302,7 @@ describe('planPackageConsumption', () => {
       pacote({ id: 'vencido', total_hours: 9, expires_at: agora - 1 }),
       pacote({ id: 'valido', total_hours: 9, expires_at: agora + dia }),
     ], 2, agora);
-    expect(plano).toEqual([{ id: 'valido', hours: 2 }]);
+    expect(plano).toEqual([{ index: 1, id: 'valido', hours: 2 }]);
   });
 
   it('sem horas a consumir, plano vazio', () => {
@@ -290,7 +311,55 @@ describe('planPackageConsumption', () => {
 
   it('mais horas do que existe: consome tudo o que há', () => {
     const plano = planPackageConsumption([pacote({ total_hours: 2 })], 10, agora);
-    expect(plano).toEqual([{ id: 'p1', hours: 2 }]);
+    expect(plano).toEqual([{ index: 0, id: 'p1', hours: 2 }]);
+  });
+
+  it('⭐ 🐞 pacote como está na CARTEIRA (pkg_id + Timestamp) entra no plano, identificado', () => {
+    const carteira = [
+      { pkg_id: 'dez', total_hours: 10, used_hours: 0, expires_at: Timestamp.fromMillis(agora + 30 * dia) },
+    ];
+    expect(planPackageConsumption(carteira, 2, agora)).toEqual([{ index: 0, id: 'dez', hours: 2 }]);
+  });
+});
+
+describe('⭐ applyPackageUse — a baixa na confirmação', () => {
+  const agora = Date.now();
+  const dia = 86_400_000;
+  const compra = (over = {}) => ({
+    pkg_id: 'dez', total_hours: 10, used_hours: 0, expires_at: Timestamp.fromMillis(agora + 30 * dia), ...over,
+  });
+
+  it('⭐ o mesmo pacote comprado duas vezes: baixa em UMA entrada só', () => {
+    const r = applyPackageUse([compra(), compra({ expires_at: Timestamp.fromMillis(agora + 60 * dia) })], 2, agora);
+    expect(r.used).toBe(2);
+    expect(r.packages.map((p) => p.used_hours)).toEqual([2, 0]);
+  });
+
+  it('baixa primeiro o que vence antes, mesmo estando depois na carteira', () => {
+    const r = applyPackageUse([
+      compra({ pkg_id: 'novo', expires_at: Timestamp.fromMillis(agora + 60 * dia) }),
+      compra({ pkg_id: 'velho', total_hours: 1, expires_at: Timestamp.fromMillis(agora + 2 * dia) }),
+    ], 3, agora);
+    expect(r.packages.map((p) => p.used_hours)).toEqual([2, 1]);
+    expect(r.used).toBe(3);
+  });
+
+  it('nunca debita mais do que a carteira tem agora', () => {
+    const r = applyPackageUse([compra({ total_hours: 2, used_hours: 1 })], 5, agora);
+    expect(r.used).toBe(1);
+    expect(r.packages[0].used_hours).toBe(2);
+  });
+
+  it('pacote vencido não é tocado', () => {
+    const vencido = compra({ expires_at: Timestamp.fromMillis(agora - 1) });
+    const r = applyPackageUse([vencido], 2, agora);
+    expect(r.used).toBe(0);
+    expect(r.packages[0]).toBe(vencido);
+  });
+
+  it('nada a baixar: devolve a carteira como estava', () => {
+    const lista = [compra()];
+    expect(applyPackageUse(lista, 0, agora)).toEqual({ packages: lista, used: 0 });
   });
 });
 
