@@ -45,6 +45,12 @@ export const arenaKeys = Object.freeze({
   torneiosDaCasaDaArena: (id) => ['arena-internal-tournaments', id],
   /** A classificação acumulada (ladder) de um período. */
   ladder: (id, periodo = 'geral') => ['arena-ladder', id, periodo],
+  /**
+   * O documento do ladder antigo, com a data (Onda CB). Chave própria: o
+   * `ladder` acima guarda só as linhas, e o mesmo dado em duas formas sob a
+   * mesma chave faria uma tela ler o formato da outra.
+   */
+  ladderLegado: (id) => ['arena-ladder-doc', id],
   /** Módulos que ESTA arena ligou (camada 2). */
   modulos: (id) => ['arena-module-states', id],
   /** Módulos que a PLATAFORMA liberou (camada 1). Global, sem arena. */

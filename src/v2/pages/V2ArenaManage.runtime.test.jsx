@@ -76,8 +76,8 @@ vi.mock('@/v2/components/arenas/classes/ArenaCoachRoster', () => ({
 vi.mock('@/modules/tournament/hooks/useTournament', () => ({
   useArenaTournaments: () => ({ data: estado.torneiosPlataforma, isLoading: false }),
 }));
-vi.mock('@/v2/components/arenas/tournaments/ArenaLeaguesPanel', () => ({
-  default: () => <div>TORNEIOS DA CASA</div>,
+vi.mock('@/v2/components/arenas/houseRanking/HouseRankingPanel', () => ({
+  default: () => <div>RANKING DA CASA</div>,
 }));
 vi.mock('@/v2/components/arenas/tournaments/ArenaPlatformTournamentsTab', () => ({
   default: () => <div>TORNEIOS DA PLATAFORMA</div>,
@@ -248,18 +248,31 @@ describe('⭐ Aulas dentro da Central', () => {
   });
 });
 
-describe('⭐ Torneios dentro da Central', () => {
-  it('com o módulo, `?aba=torneios` abre os torneios da casa', async () => {
+describe('⭐ Torneios dentro da Central (Onda CB: os torneios da casa são os da plataforma)', () => {
+  it('com o módulo, `?aba=torneios` abre os torneios da casa — os da plataforma sediados aqui', async () => {
     LIGADOS.add(ARENA_MODULE_ID.LEAGUES);
     await render('/arenas/a1/gerir?aba=torneios');
-    expect(container.textContent).toContain('TORNEIOS DA CASA');
+    expect(container.textContent).toContain('TORNEIOS DA PLATAFORMA');
+    expect(container.textContent).not.toContain('RANKING DA CASA');
   });
 
-  it('⭐ torneio da PLATAFORMA sediado aqui aparece na gestão, mesmo sem o módulo', async () => {
+  it('⭐ com o módulo, o ranking da casa é uma aba da seção', async () => {
+    LIGADOS.add(ARENA_MODULE_ID.LEAGUES);
+    await render('/arenas/a1/gerir?aba=ranking-da-casa');
+    expect(container.textContent).toContain('RANKING DA CASA');
+  });
+
+  it('⭐ o link antigo `?aba=torneios-plataforma` ainda abre os torneios da casa', async () => {
     estado.torneiosPlataforma = [{ id: 'p1', name: 'Open', arena_id: 'a1' }];
     await render('/arenas/a1/gerir?aba=torneios-plataforma');
     expect(container.textContent).toContain('TORNEIOS DA PLATAFORMA');
     expect(botao('Torneios')).toBeTruthy();
+  });
+
+  it('sem o módulo, o ranking da casa não abre (cai em Reservas)', async () => {
+    estado.torneiosPlataforma = [{ id: 'p1', name: 'Open', arena_id: 'a1' }];
+    await render('/arenas/a1/gerir?aba=ranking-da-casa');
+    expect(container.textContent).not.toContain('RANKING DA CASA');
   });
 
   it('torneio arquivado não conta', async () => {
@@ -273,4 +286,5 @@ describe('⭐ Torneios dentro da Central', () => {
     expect(botao('Torneios')).toBeFalsy();
   });
 });
+
 

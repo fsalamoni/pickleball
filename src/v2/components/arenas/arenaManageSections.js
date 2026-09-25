@@ -9,7 +9,7 @@
  */
 import {
   BarChart3, Building2, CalendarClock, CalendarDays, CalendarRange, ClipboardCheck, ClipboardList,
-  Clock, Cpu, Crown, DollarSign, Gift, Globe, GraduationCap, Image, Info, LayoutGrid, Megaphone,
+  Clock, Cpu, Crown, DollarSign, Gift, GraduationCap, Image, Info, LayoutGrid, Megaphone,
   Network, Package, Palette, Puzzle, ShoppingBag, SlidersHorizontal, Smile, Sparkles, Star, Sun,
   Swords, Tag, Trophy, UserCheck, Users, Wallet, Wrench,
 } from 'lucide-react';
@@ -114,17 +114,21 @@ export function buildArenaSections({
         { value: 'professores', label: 'Professores', icon: GraduationCap },
       ],
     }] : []),
-    // Torneios: os DA CASA (módulo `leagues`) e os DA PLATAFORMA sediados
-    // aqui — que antes apareciam na página pública e em lugar nenhum da
-    // gestão. A seção existe se houver qualquer um dos dois.
+    // Torneios (Onda CB): os torneios DA CASA são os torneios da PLATAFORMA
+    // sediados aqui, com as regras da plataforma — o antigo "torneio da casa",
+    // uma competição paralela, saiu (o jogo aberto faz o que ele fazia). A
+    // seção existe com o módulo `leagues` (Ranking da casa) ou quando a arena
+    // já sedia algum torneio — sem nenhum dos dois, a Central é a de antes.
+    // O valor `torneios` continua o mesmo: links antigos (`?aba=torneios`)
+    // seguem levando à seção certa.
     ...(modulos.torneios || modulos.torneiosPlataforma ? [{
       id: 'torneios',
       grupo: 'atender',
       label: 'Torneios',
       icon: Trophy,
       tabs: [
-        ...(modulos.torneios ? [{ value: 'torneios', label: 'Da casa', icon: Trophy }] : []),
-        ...(modulos.torneiosPlataforma ? [{ value: 'torneios-plataforma', label: 'Da plataforma', icon: Globe }] : []),
+        { value: 'torneios', label: 'Torneios da casa', icon: Trophy },
+        ...(modulos.torneios ? [{ value: 'ranking-da-casa', label: 'Ranking da casa', icon: Crown }] : []),
       ],
     }] : []),
     // Pagamentos e loja. Com a loja do app ligada (módulo `pdv`), o BALCÃO
@@ -217,4 +221,20 @@ export function buildArenaSections({
       ],
     }] : []),
   ];
+}
+
+/**
+ * Abas que mudaram de nome continuam abrindo: link antigo em aviso, em
+ * favorito ou em mensagem não pode cair em Reservas sem explicação.
+ *
+ * - `torneios-plataforma` (Onda BG): os torneios da plataforma sediados aqui
+ *   viraram os torneios da casa (Onda CB), na aba `torneios`.
+ */
+export const ARENA_TAB_ALIASES = Object.freeze({
+  'torneios-plataforma': 'torneios',
+});
+
+/** A aba de verdade por trás de um valor pedido na URL. */
+export function resolveArenaTabAlias(tab) {
+  return ARENA_TAB_ALIASES[tab] || tab;
 }

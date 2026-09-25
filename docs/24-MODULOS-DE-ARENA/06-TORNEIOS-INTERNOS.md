@@ -10,6 +10,50 @@
 > casa" na página, inscrições em "Meus torneios". **A inscrição nunca tinha
 > funcionado** (a regra só deixava a arena atualizar o torneio) e **"Encerrar"
 > não tinha botão** — corrigidos. Ver `09-INTEGRACAO-NA-ARENA.md` §6.
+>
+> ## ⚠️ Atualização 2026-09-25 (Onda CB): o torneio interno SAIU
+>
+> *"Você deve transformar os torneios da plataforma em torneios da plataforma
+> na casa, excluindo o que foi criado como 'torneio da casa'."*
+>
+> O torneio interno era uma segunda porta para a mesma sala: começar o torneio
+> **criava um dia de jogo da arena** (§2 abaixo), e desde a Onda CA **todo jogo
+> aberto já é um dia de jogo**. Sobrou uma competição paralela, com inscrição,
+> formato e ladder próprios, fazendo pior o que o jogo aberto faz melhor. Então:
+>
+> | Antes | Agora |
+> |---|---|
+> | "Torneio da casa" = `arena_internal_tournaments`, com regras próprias | **Torneio da casa = torneio da PLATAFORMA sediado na arena** (`tournaments.arena_id`), com as regras da plataforma (chaves, desempate, ranking nacional) |
+> | Ladder somado à mão ao "Encerrar e pontuar" | **Ranking da casa DERIVADO** (`domain/houseRanking.js`): jogos abertos/dias de jogo com placar + torneios da casa encerrados, por temporada, somado a cada leitura — ninguém clica em nada |
+> | Central → Torneios → *Da casa* · *Da plataforma* | Central → Torneios → **Torneios da casa** · **Ranking da casa** |
+> | Página da arena → "Torneios da casa" (os internos) | Página da arena → **Torneios da casa** (os da plataforma) + chamada **Ranking da casa** |
+> | `/arenas/:id/torneios` = torneios internos | `/arenas/:id/torneios` = ranking da casa + torneios da casa |
+> | "Meus torneios" mostrava os internos | Só os torneios da plataforma (os da casa já estão lá) |
+>
+> **Nada foi apagado do banco.** `arena_internal_tournaments` e
+> `arena_ladders` seguem como estão, e a regra também. O que mudou foi a tela:
+>
+> - **Encerrados** → os pontos que já foram para o ladder (`{arena}_geral`)
+>   **continuam** no ranking da casa, como "Torneios internos (formato
+>   antigo)". O dia de jogo de um torneio encerrado é **excluído** da soma pelo
+>   placar (`legacyLadderGameDayIds`) — senão contaria duas vezes.
+> - **Abertos** (`scheduled`) → a Central mostra um aviso
+>   (`LegacyInternalTournamentsNotice`) com **"Cancelar e avisar os
+>   inscritos"** (o `cancelInternalTournament` de sempre): sumir com eles
+>   calado deixaria gente inscrita num torneio que ninguém vê.
+> - **Em andamento** (`running`) → já viraram dia de jogo; o aviso leva a ele,
+>   e o placar conta sozinho no ranking da casa.
+> - O **bloqueio de quadra** dos torneios internos segue derivado
+>   (`tournamentBlocks`): um torneio antigo marcado para o futuro continua
+>   ocupando a quadra até ser cancelado.
+>
+> O catálogo mudou de sentido sem mudar de id (o id é contrato de banco):
+> `leagues` passou a ser **"Ranking da casa"**; `leagues_internal`,
+> `leagues_ladder` e `leagues_prizing` ganharam o status novo **`retired`**
+> (não liberável — somem da tela da arena; o admin os vê como "Aposentado").
+>
+> O restante deste documento descreve o módulo como ele era, e fica como
+> histórico. A referência atual é `09-INTEGRACAO-NA-ARENA.md` §15.
 
 ---
 

@@ -41,7 +41,7 @@ import { ImageUpload } from '@/components/ui/image-upload';
 import { PhotoLightbox } from '@/components/ui/photo-lightbox';
 import ArenaModuleShortcuts from '@/v2/components/arenas/ArenaModuleShortcuts';
 import ArenaPendencias from '@/v2/components/arenas/ArenaPendencias';
-import { ARENA_SECTION_GROUPS, buildArenaSections } from '@/v2/components/arenas/arenaManageSections';
+import { ARENA_SECTION_GROUPS, buildArenaSections, resolveArenaTabAlias } from '@/v2/components/arenas/arenaManageSections';
 import { V2SectionNav, V2SubTabs } from '@/v2/ui/V2SectionNav';
 import { useArenaModules } from '@/modules/arenas/hooks/useArenaModules';
 import { useArenaTournaments as useArenaPlatformTournaments } from '@/modules/tournament/hooks/useTournament';
@@ -53,9 +53,10 @@ const ArenaCoachesManager = lazy(() => import('@/v2/pages/V2ArenaCoaches').then(
 // Aulas (módulo `classes`): a agenda e a lista ÚNICA de professores.
 const ArenaClassesPanel = lazy(() => import('@/v2/components/arenas/classes/ArenaClassesPanel'));
 const ArenaCoachRoster = lazy(() => import('@/v2/components/arenas/classes/ArenaCoachRoster'));
-// Torneios: os da casa (módulo `leagues`) e os da plataforma sediados aqui.
-const ArenaLeaguesPanel = lazy(() => import('@/v2/components/arenas/tournaments/ArenaLeaguesPanel'));
+// Torneios (Onda CB): os torneios da casa são os da PLATAFORMA sediados aqui,
+// e o ranking da casa (módulo `leagues`) soma jogos abertos e torneios.
 const ArenaPlatformTournamentsTab = lazy(() => import('@/v2/components/arenas/tournaments/ArenaPlatformTournamentsTab'));
+const HouseRankingPanel = lazy(() => import('@/v2/components/arenas/houseRanking/HouseRankingPanel'));
 import BookingParticipantsPanel from '@/modules/arenas/components/BookingParticipantsPanel';
 const LinkedClubsSection = lazy(() => import('@/modules/clubs/components/LinkedClubsSection'));
 import V2BookingRow from '@/v2/components/arenas/V2BookingRow';
@@ -155,7 +156,8 @@ export default function V2ArenaManage() {
   // telas, que caíam sempre em Reservas, passam a funcionar. `?secao=` é
   // aceito por compatibilidade (abre a primeira aba da seção).
   const [params, setParams] = useSearchParams();
-  const tab = params.get('aba') || '';
+  // Aba que mudou de nome segue abrindo (`?aba=torneios-plataforma` → `torneios`).
+  const tab = resolveArenaTabAlias(params.get('aba') || '');
   const secao = params.get('secao') || '';
   const setTab = useCallback((value) => {
     setParams((atual) => {
@@ -434,8 +436,8 @@ function V2ArenaManageContent({ arenaId, user, isPlatformAdmin, arena, managed, 
             quem dá aula); desligado, é a de parceiros, como sempre foi. */}
         {tab === 'professores' && modulos.aulas && <ArenaCoachRoster arena={arena} />}
         {tab === 'professores' && !modulos.aulas && coachResidentOn && <ArenaCoachesManager arena={arena} />}
-        {tab === 'torneios' && modulos.torneios && <ArenaLeaguesPanel arena={arena} podeGerir />}
-        {tab === 'torneios-plataforma' && modulos.torneiosPlataforma && <ArenaPlatformTournamentsTab arena={arena} />}
+        {tab === 'torneios' && (modulos.torneios || modulos.torneiosPlataforma) && <ArenaPlatformTournamentsTab arena={arena} />}
+        {tab === 'ranking-da-casa' && modulos.torneios && <HouseRankingPanel arena={arena} audience="arena" />}
         {tab === 'clubes' && linkedClubsOn && <LinkedClubsSection ownerType="arena" ownerId={arena.id} canManage title="Clubes da arena" />}
         {tab === 'retornos' && <V2ArenaReviews arena={arena} canModerate />}
         {tab === 'modulos' && arenaModulesOn && (
