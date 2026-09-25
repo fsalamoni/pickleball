@@ -231,3 +231,28 @@ com número. Agora a leitura passa por `instanteEmMs`
 (`src/core/domain/instant.js`), e os testes usam o `Timestamp` que o servidor
 grava. Ver `02-MEMBROS.md`, atualização de 2026-09-25: o mesmo defeito zerava
 os pacotes de horas.
+
+## Atualização 2026-09-25 — a chamada diz até quando (Onda BS)
+
+A chamada da fila tem 60 minutos para ser confirmada, e **nenhuma tela dizia o
+horário**, só "com um prazo para confirmar". Quem lê isso não sabe se tem
+cinco minutos ou cinquenta. Decide pior, ou perde a vaga achando que tinha
+tempo.
+
+- O cartão da chamada (`WaitlistCallCard`, usado na página da arena, na seção
+  da Central e em Minhas reservas) passou a dizer **"Confirme até 20:35"**, com
+  a data junto quando o prazo cai em outro dia. A conta é
+  `waitlistCallDeadline` (`arenas/domain/openMatchView.js`), que lê o
+  `Timestamp` gravado pelo servidor por `instanteEmMs`.
+- **Prazo vencido** (pelo relógio do aparelho): a tela diz que a vaga está
+  passando para o próximo e **não oferece "Confirmar"**, porque
+  `isPromotionExpired` faz a mesma conta e o serviço recusaria.
+- Quem está só na fila lê quanto tempo terá: "você tem 1 hora para
+  confirmar". O texto sai de `promotionWindowLabel`, a partir da mesma
+  constante que o servidor usa.
+
+De quebra, na mesma onda: os dois últimos botões só-ícone sem nome acessível
+(adicionar admin da arena, ações do membro do clube) ganharam `aria-label`, e
+`src/core/guards/botaoSoIcone.test.js` varre as telas da arena e do professor.
+
+Zero banco.

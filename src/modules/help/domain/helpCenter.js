@@ -214,7 +214,7 @@ const ATLETA = {
           'Não vai mais? Toque em "Sair deste jogo" — a vaga volta para quem está esperando.',
         ),
         p('O jogo diz a faixa de nível e o seu nível, lado a lado. Fora da faixa, o botão avisa e não deixa entrar. Se a plataforma ainda não sabe o seu nível, você pode entrar.'),
-        p('Jogo lotado vira FILA DE ESPERA: entre na fila e, quando alguém sair, a vaga é oferecida a você — com um prazo para confirmar. A chamada aparece na página da arena e em "Minhas reservas".'),
+        p('Jogo lotado vira FILA DE ESPERA: entre na fila e, quando alguém sair, a vaga é oferecida a você — com um prazo para confirmar, e o horário-limite aparece na própria chamada. A chamada aparece na página da arena e em "Minhas reservas".'),
         link('/procura-jogo', 'Ver jogos abertos em todas as arenas'),
         link('/minhas-reservas', 'Meus jogos e filas'),
         tip('Sem jogo pronto? Na mesma seção da arena há "veja quem joga aqui no seu nível", para combinar um jogo com alguém que frequenta o lugar.'),

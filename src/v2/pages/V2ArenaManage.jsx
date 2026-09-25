@@ -762,7 +762,7 @@ function ManagersTab({ arena }) {
         <V2Field label="Adicionar admin (e-mail do usuário já cadastrado)">
           <div className="flex gap-2">
             <V2Input value={email} onChange={(e) => setEmail(e.target.value)} placeholder="email@dominio.com" type="email" />
-            <V2Button onClick={handleAddManager} disabled={addManager.isPending}><UserPlus className="h-4 w-4" /></V2Button>
+            <V2Button onClick={handleAddManager} disabled={addManager.isPending} aria-label="Adicionar admin"><UserPlus className="h-4 w-4" aria-hidden="true" /></V2Button>
           </div>
         </V2Field>
       </div>
