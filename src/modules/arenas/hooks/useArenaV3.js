@@ -1211,13 +1211,15 @@ export function useArenaLadder(arenaId, period = 'geral') {
 
 /* -------------------- Marketing (sprint 6) -------------------- */
 
+import { applyBookingReferral } from '../services/bookingReferralService.js';
+
 import {
   listArenaCoupons, createArenaCoupon,
   listArenaCampaigns, createCampaign,
   submitNps, getArenaNpsResponses, getArenaNpsSummary,
   sendCampaign, listMyNpsAnswers, getOrCreateReferralCode, getMyReferralCode, redeemReferral,
   updateArenaCoupon, setCouponActive, deleteArenaCoupon,
-  setCouponUnitCost, redeemVoucher, findArenaCouponByCode, listArenaReferrals,
+  setCouponUnitCost, redeemVoucher, findArenaCouponByCode, listArenaReferrals, listMyReferralCodes,
 } from '../services/marketingService.js';
 
 export function useArenaCoupons(arenaId) {
@@ -1433,7 +1435,38 @@ export function useCreateMyReferralCode() {
     mutationFn: ({ arenaId }) => getOrCreateReferralCode(arenaId, user),
     onSuccess: (codigo, { arenaId }) => {
       qc.setQueryData(['arena-referral', arenaId, user?.uid], codigo);
+      // O perfil lista os meus códigos de todas as arenas.
+      qc.invalidateQueries({ queryKey: ['arena-referral-mine', user?.uid] });
     },
+  });
+}
+
+/**
+ * A arena registra AGORA a indicação que veio com uma reserva — a reserva
+ * instantânea (nasce confirmada, sem passar pela confirmação) e a que ficou
+ * pendente porque as regras não carregaram. Mesma conferência da confirmação.
+ */
+export function useApplyBookingReferral() {
+  const { user } = useAuth();
+  const qc = useQueryClient();
+  return useMutation({
+    mutationFn: ({ booking }) => applyBookingReferral(booking, {}, user),
+    onSuccess: (_d, { booking }) => {
+      qc.invalidateQueries({ queryKey: arenaKeys.reservas(booking.arena_id) });
+      qc.invalidateQueries({ queryKey: ['arena-referral', booking.arena_id] });
+      qc.invalidateQueries({ queryKey: ['arena-wallet', booking.arena_id] });
+    },
+  });
+}
+
+/** Os MEUS códigos de indicação, de todas as arenas (perfil do atleta). */
+export function useMyReferralCodes() {
+  const { user } = useAuth();
+  return useQuery({
+    queryKey: ['arena-referral-mine', user?.uid],
+    queryFn: () => listMyReferralCodes(user.uid),
+    enabled: !!user?.uid,
+    staleTime: 5 * 60_000,
   });
 }
 

@@ -44,6 +44,8 @@ import { arenaOccupancy } from './arenaOccupancy.js';
 import { memberBookingPrice, planPackageConsumption, pointsForBooking } from '../domain/memberBenefit.js';
 import { getMemberContext, consumeMemberBenefit } from './membersService.js';
 import { validateCouponCode, registrarUsoDeCupom } from './marketingService.js';
+import { applyBookingReferral } from './bookingReferralService.js';
+import { BOOKING_REFERRAL_STATUS, normalizeReferralCode, referralCodeProblem } from '../domain/marketing.js';
 import { listArenaManagerIds } from './arenaService.js';
 
 const COL = ARENA_COLLECTIONS;
@@ -144,6 +146,19 @@ async function contextoDeMembro(arenaId, uid, couponCode) {
       : Promise.resolve(null),
   ]);
   return { ...(ctx || { member: null, tiers: undefined, packages: [], wallet: null }), coupon: cupom };
+}
+
+/**
+ * O código de indicação que o atleta digitou, pronto para ir na reserva — ou
+ * `null`. Só a forma é conferida aqui (e o óbvio: não é o próprio código); o
+ * código em si a ARENA confere na confirmação, porque o atleta não lê os
+ * códigos dos outros. Vai numa reserva só do pedido: uma pessoa, uma
+ * indicação.
+ */
+export function indicacaoDoPedido(input, uid) {
+  const code = normalizeReferralCode(input?.referral_code);
+  if (!code || referralCodeProblem(code, { userId: uid })) return null;
+  return { code, status: BOOKING_REFERRAL_STATUS.PENDING, created_at_ms: Date.now() };
 }
 
 /**
@@ -331,6 +346,8 @@ export async function createBooking(arena, user, profile, input) {
   const nowMs = Date.now();
   // Uma leitura só do contexto de membro, para todas as quadras do pedido.
   const ctxMembro = await contextoDeMembro(arena.id, user.uid, input.coupon_code);
+  // A indicação vai na PRIMEIRA reserva do pedido, e só nela.
+  let indicacao = indicacaoDoPedido(input, user.uid);
   for (const cid of targetCourtIds) {
     const id = doc(collection(db, COL.bookings)).id;
     const { price: precoTotal, benefit } = precoComBeneficio(arena, {
@@ -361,6 +378,7 @@ export async function createBooking(arena, user, profile, input) {
       // Como o preço foi formado para ESTE membro. Ausente (null) quando não
       // há benefício — reserva antiga e não-membro seguem idênticas.
       member_benefit: benefit,
+      ...(indicacao ? { referral: indicacao } : {}),
       agreed_price: null,
       payment_status: PAYMENT_STATUS.NONE,
       created_by: user.uid,
@@ -369,6 +387,7 @@ export async function createBooking(arena, user, profile, input) {
       updated_at: serverTimestamp(),
     });
     createdIds.push(id);
+    indicacao = null;
   }
   await batch.commit();
 
@@ -556,6 +575,8 @@ export async function createBookingsForSelection(arena, user, profile, input) {
   const createdIds = [];
   const nowMs = Date.now();
   const ctxMembro = await contextoDeMembro(arena.id, user.uid, input.coupon_code);
+  // A indicação vai na PRIMEIRA reserva do pedido, e só nela.
+  let indicacao = indicacaoDoPedido(input, user.uid);
 
   resolvidos.forEach(({ courtIds, slots }) => {
     courtIds.forEach((cid) => {
@@ -587,6 +608,7 @@ export async function createBookingsForSelection(arena, user, profile, input) {
         payment_method: str(input.payment_method) || null,
         proposed_price: precoTotal,
         member_benefit: benefit,
+        ...(indicacao ? { referral: indicacao } : {}),
         agreed_price: null,
         payment_status: PAYMENT_STATUS.NONE,
         created_by: user.uid,
@@ -595,6 +617,7 @@ export async function createBookingsForSelection(arena, user, profile, input) {
         updated_at: serverTimestamp(),
       });
       createdIds.push(id);
+      indicacao = null;
     });
   });
   await batch.commit();
@@ -775,6 +798,17 @@ export async function updateBookingStatus(booking, nextStatus, actor, { agreedPr
   if (nextStatus === BOOKING_STATUS.CONFIRMED) {
     await aplicarBeneficioNaConfirmacao(booking, agreedPrice, actor).catch((err) => {
       logger.warn('Falha ao aplicar benefício de membro na confirmação', {
+        booking_id: booking.id, err: err?.code || err?.message,
+      });
+    });
+  }
+
+  // A indicação que chegou com o pedido: a arena confere o código, credita
+  // cada lado e aplica o desconto de quem chegou. Também nunca derruba a
+  // confirmação — recusada, fica gravada com o motivo.
+  if (nextStatus === BOOKING_STATUS.CONFIRMED && booking?.referral?.status === BOOKING_REFERRAL_STATUS.PENDING) {
+    await applyBookingReferral(booking, { agreedPrice }, actor).catch((err) => {
+      logger.warn('Falha ao aplicar a indicação na confirmação', {
         booking_id: booking.id, err: err?.code || err?.message,
       });
     });

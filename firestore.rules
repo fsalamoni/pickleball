@@ -156,6 +156,18 @@ service cloud.firestore {
             || request.auth.uid in venda.get('split_with', []));
     }
     // Gestor (dono ou administrador) de uma arena — doc determinístico arenaId_uid.
+    // A indicação que chega com o pedido de reserva (Onda BY): o atleta grava
+    // SÓ o código, pendente. Conferir, creditar e aplicar desconto é da arena,
+    // na confirmação — por isso ninguém nasce "aplicada", nem com desconto ou
+    // prêmio já preenchidos (o controle de uso da arena lê esses campos).
+    function bookingReferralOkOnCreate() {
+      return !('referral' in request.resource.data)
+        || request.resource.data.referral == null
+        || (request.resource.data.referral.keys().hasOnly(['code', 'status', 'created_at_ms'])
+            && request.resource.data.referral.status == 'pending'
+            && request.resource.data.referral.code is string
+            && request.resource.data.referral.code.size() <= 20);
+    }
     function isArenaManager(arenaId) {
       return isAuthed()
         && exists(/databases/$(database)/documents/arena_managers/$(arenaId + '_' + request.auth.uid));
@@ -688,17 +700,31 @@ service cloud.firestore {
         request.resource.data.athlete_id == request.auth.uid
         || request.resource.data.get('coach_id', null) == request.auth.uid
         || isArenaManager(request.resource.data.arena_id)
-        || isPlatformAdmin());
+        || isPlatformAdmin())
+        && bookingReferralOkOnCreate();
       // Atualiza/exclui: dono original, participantes (aceitos e convidados —
       // o convidado aceita/recusa), o professor, quem está ingressando numa
       // reserva aberta (aparece nos novos participant_ids), o gestor e o admin.
-      allow update, delete: if isAuthed() && (
+      allow update: if isAuthed() && (
         resource.data.athlete_id == request.auth.uid
         || request.auth.uid in resource.data.get('participant_ids', [])
         || request.auth.uid in resource.data.get('invited_ids', [])
         || resource.data.get('coach_id', null) == request.auth.uid
         || (resource.data.get('open_join', false) == true
             && request.auth.uid in request.resource.data.get('participant_ids', []))
+        || isArenaManager(resource.data.arena_id)
+        || isPlatformAdmin())
+        // A indicação da reserva só a ARENA decide (Onda BY): ninguém mais
+        // altera `referral` depois do pedido. (Só no update: num delete não há
+        // `request.resource`, e a condição recusaria toda exclusão.)
+        && (request.resource.data.get('referral', null) == resource.data.get('referral', null)
+            || isArenaManager(resource.data.arena_id)
+            || isPlatformAdmin());
+      allow delete: if isAuthed() && (
+        resource.data.athlete_id == request.auth.uid
+        || request.auth.uid in resource.data.get('participant_ids', [])
+        || request.auth.uid in resource.data.get('invited_ids', [])
+        || resource.data.get('coach_id', null) == request.auth.uid
         || isArenaManager(resource.data.arena_id)
         || isPlatformAdmin());
     }

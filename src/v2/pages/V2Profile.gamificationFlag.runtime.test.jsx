@@ -19,6 +19,8 @@ vi.mock('@/modules/rating/hooks/useRating', () => ({
   useNationalRanking: () => ({ data: [] }),
 }));
 vi.mock('@/v2/components/rating/V2DuprRatingBadge', () => ({ default: () => null }));
+// Os códigos de indicação (Onda BY) têm teste próprio; aqui só a gamificação.
+vi.mock('@/v2/components/arenas/marketing/MyReferralCodes', () => ({ default: () => null }));
 
 const statsSpy = vi.fn(() => ({ stats: {}, isLoading: false }));
 const matchDatesSpy = vi.fn(() => ({ data: [] }));

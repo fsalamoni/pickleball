@@ -247,12 +247,12 @@ const ATLETA = {
       id: 'vantagens-arena',
       title: 'Promoções, indicação e pontos numa arena',
       summary: 'Descontos divulgados, "indique e ganhe" e o que conta como fidelidade.',
-      keywords: ['promoção', 'cupom', 'desconto', 'código', 'indicação', 'indique e ganhe', 'pontos', 'fidelidade', 'pesquisa', 'nps'],
+      keywords: ['promoção', 'cupom', 'desconto', 'código', 'indicação', 'indique e ganhe', 'fui indicado', 'vale', 'pontos', 'fidelidade', 'pesquisa', 'nps'],
       blocks: [
         p('Arenas com o marketing ligado podem ter vantagens para quem joga lá. Tudo aparece na própria página da arena:'),
         list(
-          'PROMOÇÕES — descontos que a arena divulgou, com a regra em uma linha (valor mínimo, prazo, uma vez por pessoa). No pedido de reserva elas aparecem com um toque para aplicar; também dá para digitar um código que alguém te passou.',
-          'INDIQUE E GANHE — toque em "Quero meu código" e mande para um amigo. Quando ele chegar dizendo o seu código, a arena registra e os DOIS ganham crédito na carteira da arena.',
+          'PROMOÇÕES — descontos e vales que a arena divulgou, com a regra em uma linha (valor mínimo, prazo, uma vez por pessoa). O desconto aparece no pedido de reserva com um toque para aplicar; o VALE (uma bebida, uma aula, um brinde) você mostra na recepção.',
+          'INDIQUE E GANHE — toque em "Quero meu código" e mande para um amigo; o cartão mostra as regras da arena (quanto cada lado ganha). Quem você indicar digita o seu código no campo "Foi indicado por alguém?" ao pedir a primeira reserva, e a arena credita quando confirmar. Todos os seus códigos ficam no seu Perfil, em "Meus códigos de indicação".',
           'PONTOS — para quem é membro da arena, cada reserva concluída soma pontos, que a recepção troca por crédito. Seus pontos ficam em "Você nesta arena".',
           'PESQUISA — depois de jogar, a arena pode perguntar de 0 a 10 o quanto você a recomendaria. A nota vai no toque; o comentário é opcional.',
         ),
@@ -263,6 +263,7 @@ const ATLETA = {
         ),
         link('/arenas', 'Procurar uma arena'),
         tip('O código de indicação é seu naquela arena: cada arena tem o próprio. Ele não é criado só porque você abriu a página — só quando você pede.'),
+        tip('Foi indicado? O campo "Foi indicado por alguém?" aparece no pedido de reserva quando a arena tem o programa ligado (e, se ele vale só para quem nunca reservou ali, na sua primeira reserva). A arena confere o código ao confirmar — se não valer, a reserva mostra o motivo.'),
         warn('O cupom só é contado como usado quando a arena CONFIRMA a reserva. Pedido recusado não gasta o seu cupom.'),
       ],
     },

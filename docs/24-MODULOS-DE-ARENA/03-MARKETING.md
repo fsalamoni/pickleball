@@ -394,3 +394,76 @@ reconfere antes de gravar (como sempre deveria), e há teste travando.
 `arena_referrals` (`reward_total`) e `arena_settings` (`coupon_costs`). Regras
 ENDURECIDAS em três coleções, nenhuma ampliada. O código morto que criava
 indicação com id livre (`createReferral`) saiu.
+
+---
+
+## 10. A indicação de ponta a ponta (Onda BY, 2026-09-25)
+
+**Pedido:** *"as indicações, foram feitas todas as particularidades
+necessárias, inserção do código de indicações nos perfis dos atletas, bem como
+local para inserção desse código na arena, quando for marcar, pela primeira
+vez uma quadra"*. Não estavam: o código só existia no cartão da página de cada
+arena, e quem chegava indicado dependia de alguém na recepção lembrar de
+registrar.
+
+### 10.1 O código no perfil
+
+**Perfil → "Meus códigos de indicação"** (`MyReferralCodes`): um código por
+arena, com o nome da arena, as REGRAS dela, quantas pessoas já usaram e
+copiar/convidar (o convite diz o que as regras dão). Consulta por
+`referrer_id` (o campo que a regra confere) e só entram documentos legítimos
+(`{arena}_{eu}`). Linha de arena com a indicação desligada some; sem código
+nenhum, a seção não aparece.
+
+### 10.2 O campo na primeira reserva
+
+No pedido de reserva, **"Foi indicado por alguém?"** (`BookingReferralField`)
+aparece quando a arena tem um programa valendo e — se ele vale só para quem
+nunca reservou ali — só na primeira reserva (`shouldOfferReferral`; sem saber
+as reservas da pessoa, NÃO oferece, porque prometer um prêmio que a arena vai
+recusar é pior do que não oferecer). A tela confere só a forma e o óbvio ("é o
+seu próprio código"), e com o código errado o pedido não segue.
+
+O código vai na PRIMEIRA reserva do pedido, e só nela
+(`referral: { code, status: 'pending' }`). **O atleta não confere o código**:
+ele não lê os códigos dos outros (a regra só deixa o dono e a arena lerem
+`arena_referrals`).
+
+### 10.3 Registrado na confirmação
+
+Quando a arena confirma a reserva, `applyBookingReferral`
+(`services/bookingReferralService.js`) confere o código contra o banco e as
+regras (limite por pessoa, "só quem nunca reservou aqui" desconsiderando a
+própria reserva, valor mínimo), **credita cada lado**, **aplica o desconto de
+quem chegou no valor acordado**, grava na reserva o que foi dado e **avisa os
+dois**. Recusada, fica gravada COM O MOTIVO (e o atleta é avisado). Nunca
+derruba a confirmação; regras que não carregaram deixam a indicação pendente.
+
+A reserva **instantânea** nasce confirmada e não passa por ali: ela aparece na
+aba Indicações, em "Indicações que chegaram com reservas", com **Conferir e
+registrar** (a mesma função), e na faixa "Precisa de você" da Central.
+
+A linha da reserva (`bookingReferralLine`) mostra a indicação dos dois lados:
+pendente, aplicada (com o que foi dado) ou recusada (com o motivo).
+
+### 10.4 Desconto na primeira reserva
+
+Com a conferência na confirmação, o programa passou a oferecer, para quem
+chega, **desconto na primeira reserva** (% ou R$) além de crédito em carteira.
+O desconto entra no custo do programa no controle de uso
+(`referral.discount_value`).
+
+### 10.5 🔒 Só a arena decide a indicação da reserva
+
+Regra de `arena_bookings`, com 8 asserções novas no emulador:
+
+- **criar**: `referral` só com `code`, `status: 'pending'` e `created_at_ms`
+  (`bookingReferralOkOnCreate`) — ninguém nasce "aplicada", nem com desconto ou
+  prêmio preenchidos (o controle de uso lê esses campos);
+- **atualizar**: `referral` só muda pela arena (ou admin); o atleta segue
+  atualizando o resto da reserva;
+- **apagar**: idêntico ao de antes (a trava é só no update — num delete não há
+  `request.resource`, e ela recusaria toda exclusão).
+
+**Banco:** zero coleção, zero índice. Um campo opcional
+(`arena_bookings.referral`); regra endurecida numa coleção.

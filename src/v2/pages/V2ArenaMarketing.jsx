@@ -58,6 +58,7 @@ import { useArenaModules } from '@/modules/arenas/hooks/useArenaModules';
 import { ARENA_MODULE_ID } from '@/modules/arenas/domain/modules';
 import CouponsPanel from '@/v2/components/arenas/marketing/coupons/CouponsPanel';
 import ReferralRulesCard from '@/v2/components/arenas/marketing/coupons/ReferralRulesCard';
+import BookingReferralsToRegister from '@/v2/components/arenas/marketing/coupons/BookingReferralsToRegister';
 import { AthletePicker } from '@/v2/components/arenas/marketing/coupons/VoucherReception';
 import { formatPrice } from '@/modules/arenas/domain/pricing';
 import { formatDateShortBR } from '@/modules/arenas/domain/calendar';
@@ -424,9 +425,12 @@ function IndicacoesSecao({ arenaId }) {
         onRetry={() => cuponsQ.refetch()}
       />
 
-      <h3 className="mb-2 mt-5 font-display text-base font-bold text-ink">Registrar uma indicação</h3>
+      <BookingReferralsToRegister arenaId={arenaId} />
+
+      <h3 className="mb-2 mt-5 font-display text-base font-bold text-ink">Registrar uma indicação no balcão</h3>
       <p className="mb-3 text-xs text-gray-500">
-        Alguém chegou dizendo que foi indicado? Informe o código e quem chegou.
+        Quem digita o código ao pedir a reserva é conferido sozinho, na confirmação. Aqui é para quem chegou no
+        balcão dizendo que foi indicado: informe o código e quem chegou.
         {programa ? ' As regras do programa são conferidas (limite por pessoa e, se valer, "só quem nunca reservou aqui").' : ''}
       </p>
 
