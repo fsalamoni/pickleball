@@ -247,7 +247,7 @@ const ATLETA = {
       id: 'vantagens-arena',
       title: 'Promoções, indicação e pontos numa arena',
       summary: 'Descontos divulgados, "indique e ganhe" e o que conta como fidelidade.',
-      keywords: ['promoção', 'cupom', 'desconto', 'código', 'indicação', 'indique e ganhe', 'fui indicado', 'vale', 'pontos', 'fidelidade', 'pesquisa', 'nps'],
+      keywords: ['promoção', 'cupom', 'desconto', 'código', 'indicação', 'indique e ganhe', 'fui indicado', 'vale', 'pontos', 'fidelidade', 'pesquisa', 'nps', 'banner', 'tela inicial', 'cidade', 'região'],
       blocks: [
         p('Arenas com o marketing ligado podem ter vantagens para quem joga lá. Tudo aparece na própria página da arena:'),
         list(
@@ -262,6 +262,7 @@ const ATLETA = {
           'O desconto aparece no valor estimado. Ele é conferido de novo quando a arena confirma.',
         ),
         link('/arenas', 'Procurar uma arena'),
+        tip('Na TELA INICIAL, "Promoções" mostra as promoções que as arenas da SUA CIDADE escolheram divulgar ali. Pelo seletor ao lado você troca para o seu estado, para outra cidade (se vai viajar) ou para o Brasil todo; a escolha fica guardada. A cidade vem do seu perfil — sem ela, a tela pede que você escolha.'),
         tip('O código de indicação é seu naquela arena: cada arena tem o próprio. Ele não é criado só porque você abriu a página — só quando você pede.'),
         tip('Foi indicado? O campo "Foi indicado por alguém?" aparece no pedido de reserva quando a arena tem o programa ligado (e, se ele vale só para quem nunca reservou ali, na sua primeira reserva). A arena confere o código ao confirmar — se não valer, a reserva mostra o motivo.'),
         warn('O cupom só é contado como usado quando a arena CONFIRMA a reserva. Pedido recusado não gasta o seu cupom.'),
@@ -537,11 +538,11 @@ const ARENA = {
       id: 'marketing-arena',
       title: 'Marketing: promoções, campanhas, satisfação e indicação',
       summary: 'Trazer gente, trazer de volta e saber o que acharam — dentro da gestão.',
-      keywords: ['marketing', 'cupom', 'promoção', 'campanha', 'mensagem', 'nps', 'satisfação', 'indicação', 'fidelidade', 'vale', 'hora grátis', 'bebida', 'controle de uso', 'custo'],
+      keywords: ['marketing', 'cupom', 'promoção', 'campanha', 'mensagem', 'nps', 'satisfação', 'indicação', 'fidelidade', 'vale', 'hora grátis', 'bebida', 'controle de uso', 'custo', 'banner', 'tela inicial'],
       blocks: [
         p('Com o módulo Marketing ligado, a gestão da arena ganha a seção MARKETING, com uma aba para cada ferramenta que você ligar em Configurações → Módulos:'),
         list(
-          'CUPONS — comece escolhendo o que o cupom DÁ. Desconto e hora grátis entram sozinhos no preço da reserva. Aula particular, aula em grupo, clínica, comida, bebida, brinde, aluguel de equipamento e inscrição em evento são VALES: a pessoa mostra o código na recepção e você toca em "Registrar uso". Cada cupom tem mínimo, limite de usos, prazo e "uma vez por pessoa"; marque "Divulgar na página da arena" para ele virar PROMOÇÃO.',
+          'CUPONS — comece escolhendo o que o cupom DÁ. Desconto e hora grátis entram sozinhos no preço da reserva. Aula particular, aula em grupo, clínica, comida, bebida, brinde, aluguel de equipamento e inscrição em evento são VALES: a pessoa mostra o código na recepção e você toca em "Registrar uso". Cada cupom tem mínimo, limite de usos, prazo e "uma vez por pessoa"; marque "Divulgar na página da arena" para ele virar PROMOÇÃO — e, logo abaixo, "Também como banner na tela inicial" para ele aparecer na tela inicial de quem é da SUA CIDADE.',
           'CONTROLE DE USO (dentro de Cupons) — usos, custo e receita de cada cupom e de cada tipo. Custo é o desconto dado, os vales entregues (usos × o custo que você informa, que só a arena vê) e os créditos de indicação; receita é o que pagaram as reservas que usaram o cupom.',
           'CAMPANHAS — uma mensagem para um público (membros, sumidos, frequentes, todo mundo). A tela diz para quantas pessoas vai ANTES de enviar, e não envia para público vazio.',
           'SATISFAÇÃO — a nota de 0 a 10 que os atletas dão depois de jogar, com os COMENTÁRIOS, que é onde está o que fazer.',

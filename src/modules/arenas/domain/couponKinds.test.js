@@ -45,6 +45,17 @@ describe('normalizeCouponInput por família', () => {
     expect(value).toMatchObject({ kind: 'discount', code: 'X10', type: 'percent', value: 10, benefit: null, face_value: null });
   });
 
+  it('⭐ banner na tela inicial (Onda BZ): só junto de "divulgar", e nunca a indicação', () => {
+    const base = { code: 'SOL10', type: 'percent', value: 10 };
+    expect(normalizeCouponInput({ ...base, show_public: true, show_home: true }).value.show_home).toBe(true);
+    expect(normalizeCouponInput({ ...base, show_public: false, show_home: true }).value.show_home).toBe(false);
+    expect(normalizeCouponInput({ ...base, show_public: true }).value.show_home).toBe(false);
+    const ind = normalizeCouponInput({
+      kind: 'referral', code: 'INDICA', referrer_reward: 10, show_public: true, show_home: true,
+    });
+    expect(ind.value.show_home).toBe(false);
+  });
+
   it('hora grátis: horas de meia em meia, sem tipo de desconto', () => {
     const { valid, value } = normalizeCouponInput({ kind: 'free_hours', code: 'HORA', value: 1.3, type: 'fixed' });
     expect(valid).toBe(true);

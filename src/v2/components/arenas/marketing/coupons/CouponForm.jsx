@@ -46,7 +46,7 @@ function estadoInicial(cupom, kind, unitCost) {
       code: '', type: COUPON_TYPE.PERCENT, value: kind === COUPON_KIND.FREE_HOURS ? 1 : 10,
       benefit: '', face_value: '', unit_cost: '',
       description: '', max_uses: '', min_amount: '', once_per_user: true, expires_at: '',
-      active: true, show_public: false,
+      active: true, show_public: false, show_home: false,
       referrer_reward: 20, referred_reward_kind: REFERRED_REWARD.CREDIT, referred_reward_value: 20,
       first_booking_only: true, max_per_referrer: '',
     };
@@ -66,6 +66,7 @@ function estadoInicial(cupom, kind, unitCost) {
     expires_at: dataDoCampo(cupom.expires_at),
     active: cupom.active !== false,
     show_public: cupom.show_public === true,
+    show_home: cupom.show_home === true,
     referrer_reward: vazioSeNulo(cupom.referrer_reward),
     referred_reward_kind: cupom.referred_reward_kind || REFERRED_REWARD.CREDIT,
     referred_reward_value: vazioSeNulo(cupom.referred_reward_value),
@@ -332,7 +333,7 @@ export default function CouponForm({ arenaId, cupom = null, initialKind = null, 
           </label>
           <label className="mt-2 flex items-start gap-2 text-sm text-gray-600">
             <input type="checkbox" checked={form.show_public}
-              onChange={(e) => set({ show_public: e.target.checked })}
+              onChange={(e) => set({ show_public: e.target.checked, ...(e.target.checked ? {} : { show_home: false }) })}
               className="mt-0.5 h-4 w-4 rounded border-gray-300" />
             <span>
               Divulgar na página da arena
@@ -344,6 +345,19 @@ export default function CouponForm({ arenaId, cupom = null, initialKind = null, 
               </span>
             </span>
           </label>
+          {form.show_public && (
+            <label className="ml-6 mt-2 flex items-start gap-2 text-sm text-gray-600">
+              <input type="checkbox" checked={form.show_home}
+                onChange={(e) => set({ show_home: e.target.checked })}
+                className="mt-0.5 h-4 w-4 rounded border-gray-300" />
+              <span>
+                Também como banner na tela inicial
+                <span className="block text-xs text-gray-500">
+                  Aparece para quem é da cidade da arena (ou escolheu ver essa região), no carrossel de promoções da tela inicial.
+                </span>
+              </span>
+            </label>
+          )}
         </>
       )}
 

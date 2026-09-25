@@ -18,11 +18,13 @@
  * um vale mora em `arena_settings`, que o atleta não lê.
  */
 import { readFileSync } from 'node:fs';
-import { beforeAll, afterAll, beforeEach, describe, it } from 'vitest';
+import { beforeAll, afterAll, beforeEach, describe, it, expect } from 'vitest';
 import {
   initializeTestEnvironment, assertSucceeds, assertFails,
 } from '@firebase/rules-unit-testing';
-import { doc, getDoc, setDoc, updateDoc, deleteDoc, increment, arrayUnion } from 'firebase/firestore';
+import {
+  doc, getDoc, getDocs, setDoc, updateDoc, deleteDoc, increment, arrayUnion, collection, query, where, limit,
+} from 'firebase/firestore';
 
 const GESTOR = 'gestorUid';
 const GESTOR_B = 'gestorBUid';
@@ -222,5 +224,21 @@ describe('4. a indicação na reserva: o atleta grava o código; só a arena dec
 
   it('o dono continua podendo apagar a própria reserva (o delete não passa pela trava)', async () => {
     await assertSucceeds(deleteDoc(doc(como(VITIMA), 'arena_bookings', 'b1')));
+  });
+});
+
+describe('5. os banners da tela inicial (Onda BZ)', () => {
+  it('⭐ quem está logado lista os cupons marcados como banner (a consulta da tela inicial)', async () => {
+    await testEnv.withSecurityRulesDisabled(async (ctx) => {
+      await setDoc(doc(ctx.firestore(), 'arena_coupons', 'banner1'), {
+        arena_id: ARENA, code: 'SOL10', type: 'percent', value: 10, active: true, show_public: true, show_home: true,
+      });
+    });
+    const snap = await assertSucceeds(getDocs(query(collection(como(VITIMA), 'arena_coupons'), where('show_home', '==', true), where('active', '==', true), limit(100))));
+    expect(snap.docs.map((d) => d.id)).toEqual(['banner1']);
+  });
+
+  it('anônimo não lista', async () => {
+    await assertFails(getDocs(query(collection(testEnv.unauthenticatedContext().firestore(), 'arena_coupons'), where('show_home', '==', true))));
   });
 });
