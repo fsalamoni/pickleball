@@ -515,8 +515,10 @@ chore(deps): bump firebase to 12.x
 >   mora em `arena_settings`, que só a arena lê. **🐞 Três brechas fechadas**:
 >   o cupom e a campanha mudavam de arena no update; o código de indicação
 >   podia ser sequestrado (id livre); o indicador reescrevia a própria
->   contagem. Campos opcionais, zero coleção, zero índice; regras só
->   endurecidas, com asserções novas no emulador.
+>   contagem. **🐞 E o cupom nunca chegava ao pedido**: a tela o conferia e
+>   mostrava "aplicado", mas não enviava o código — a reserva saía com preço
+>   cheio e o uso nunca era contado. Campos opcionais, zero coleção, zero
+>   índice; regras só endurecidas, com asserções novas no emulador.
 >
 > - **Onda BW — A barra de seções em duas linhas** (2026-09-25): com os
 >   módulos integrados, a Central da arena chegou a treze seções numa barra que

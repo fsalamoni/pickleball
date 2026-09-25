@@ -6,7 +6,11 @@
  *     precisa saber o código de cor;
  *  2. ⭐ o código que a arena não divulgou NUNCA aparece;
  *  3. tocar confere o cupom de verdade (contra o banco), com o valor da conta;
- *  4. com o módulo de cupons desligado, nada disso existe.
+ *  4. com o módulo de cupons desligado, nada disso existe;
+ *  5. ⭐ 🐞 o cupom aplicado VAI no pedido (`coupon_code`) — antes era conferido,
+ *     mostrado como "aplicado" e nunca enviado: a reserva saía com preço cheio;
+ *  6. ⭐ um VALE divulgado (bebida, brinde) não é oferecido no pedido — ele é
+ *     usado na recepção, e aplicar daria "não vale".
  */
 import React from 'react';
 import { createRoot } from 'react-dom/client';
@@ -16,13 +20,14 @@ import { describe, it, expect, beforeEach, afterEach, vi } from 'vitest';
 const LIGADOS = new Set();
 const estado = { cupons: [] };
 const conferir = vi.fn(async (_arenaId, code) => ({ coupon: { id: 'c1', code, type: 'percent', value: 10 }, discount: 10, error: null }));
+const criarSelecao = vi.fn(async () => ({}));
 
 vi.mock('sonner', () => ({ toast: { success: vi.fn(), error: vi.fn(), info: vi.fn() } }));
 vi.mock('@/core/lib/FirebaseAuthContext', () => ({ useAuth: () => ({ user: { uid: 'u1' }, userProfile: { platform_name: 'Ana' } }) }));
 vi.mock('../hooks/useBookings.js', () => ({
   useArenaBookings: () => ({ data: [] }),
   useCreateBooking: () => ({ mutateAsync: vi.fn(), isPending: false }),
-  useCreateBookingsForSelection: () => ({ mutateAsync: vi.fn(), isPending: false }),
+  useCreateBookingsForSelection: () => ({ mutateAsync: criarSelecao, isPending: false }),
 }));
 vi.mock('../hooks/useArenas.js', () => ({
   useArenaCourts: () => ({ data: [{ id: 'c1', name: 'Quadra 1' }] }),
@@ -53,6 +58,7 @@ beforeEach(() => {
   LIGADOS.clear();
   estado.cupons = [];
   conferir.mockClear();
+  criarSelecao.mockClear();
   container = document.createElement('div');
   document.body.appendChild(container);
   root = createRoot(container);
@@ -95,5 +101,30 @@ describe('promoções no pedido de reserva', () => {
     await render();
     expect(texto()).not.toContain('Tem um cupom?');
     expect(texto()).not.toContain('Promoções:');
+  });
+
+  it('⭐ 🐞 o cupom aplicado VAI no pedido de reserva', async () => {
+    LIGADOS.add(ARENA_MODULE_ID.MARKETING_COUPONS);
+    estado.cupons = [promo()];
+    await render();
+    await act(async () => { botaoQueContem('TARDE10 · 10% de desconto').click(); });
+    await act(async () => { botaoQueContem('Solicitar reserva').click(); });
+    expect(criarSelecao).toHaveBeenCalledTimes(1);
+    expect(criarSelecao.mock.calls[0][0].input.coupon_code).toBe('TARDE10');
+  });
+
+  it('sem cupom aplicado, o pedido vai sem código', async () => {
+    LIGADOS.add(ARENA_MODULE_ID.MARKETING_COUPONS);
+    await render();
+    await act(async () => { botaoQueContem('Solicitar reserva').click(); });
+    expect(criarSelecao.mock.calls[0][0].input.coupon_code).toBeNull();
+  });
+
+  it('⭐ o vale divulgado não é oferecido no pedido', async () => {
+    LIGADOS.add(ARENA_MODULE_ID.MARKETING_COUPONS);
+    estado.cupons = [promo({ id: 'v1', code: 'COCO', kind: 'drink', benefit: '1 água de coco', type: null, value: null })];
+    await render();
+    expect(texto()).not.toContain('Promoções:');
+    expect(texto()).not.toContain('COCO');
   });
 });

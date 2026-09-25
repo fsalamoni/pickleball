@@ -400,6 +400,11 @@ export default function BookingRequestDialog({ arena, open, onOpenChange, court:
           invitees: podeConvidar ? invitees : [],
           is_instant: instantaneaOk,
           payment_method: instantaneaOk ? paymentMethod : null,
+          // 🐞 (2026-09-25) O cupom era conferido e mostrado como "aplicado",
+          // mas nunca ENVIADO: a reserva era gravada com o preço cheio e o uso
+          // nunca era contado. O serviço reconfere contra o banco — daqui vai
+          // só o código.
+          coupon_code: cupom?.code || null,
         },
       });
       toast.success(

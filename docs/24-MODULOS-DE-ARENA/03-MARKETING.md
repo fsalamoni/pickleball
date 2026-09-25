@@ -381,6 +381,15 @@ por arena** (o serviço recusa o segundo — duas regras dariam duas respostas a
 3. **O indicador reescrevia a própria contagem e o próprio código.** Agora só
    a arena atualiza o documento — e sem trocar arena, dono ou código.
 
+### 9.7 🐞 O cupom nunca chegava ao pedido
+
+Achado no caminho, anterior a esta onda: o pedido de reserva **conferia** o
+cupom contra o banco, mostrava "Cupom aplicado" e o total com desconto — e
+**nunca enviava o código** ao serviço (`coupon_code` não estava no pedido). A
+reserva era gravada com o preço cheio, o uso nunca era contado, e o atleta via
+um desconto que não chegava à arena. Agora o código vai no pedido, o serviço o
+reconfere antes de gravar (como sempre deveria), e há teste travando.
+
 **Banco:** zero coleção, zero índice. Campos opcionais em `arena_coupons`,
 `arena_referrals` (`reward_total`) e `arena_settings` (`coupon_costs`). Regras
 ENDURECIDAS em três coleções, nenhuma ampliada. O código morto que criava
