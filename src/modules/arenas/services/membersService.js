@@ -28,6 +28,7 @@ import {
   SUBSCRIPTION_STATUS, normalizeSubscriptionInput, todayISO,
 } from '../domain/subscription.js';
 import { redeemPoints, DEFAULT_POINTS_PER_REAL } from '../domain/marketing.js';
+import { applyPackageUse } from '../domain/memberBenefit.js';
 
 const COL_MEMBERS = 'arena_members';
 const COL_PACKAGES = 'arena_packages';
@@ -388,32 +389,42 @@ export async function getMemberContext(arenaId, userId) {
  * Idempotência é responsabilidade de quem chama (a confirmação só acontece
  * uma vez por reserva, e a transição de status é validada antes).
  *
+ * 🐞 As horas eram baixadas por um plano feito no PEDIDO, casado por
+ * `p.id` — campo que o pacote da carteira não tem (ele tem `pkg_id`): o plano
+ * era descartado e nada era baixado. Agora chega só QUANTAS horas a reserva
+ * abateu, e a baixa é refeita aqui, sobre a carteira como está AGORA, pacote a
+ * pacote pela posição (`applyPackageUse`) — duas compras do mesmo pacote têm o
+ * mesmo `pkg_id`, e baixar por ele debitaria as duas.
+ *
  * @param {string} arenaId
  * @param {string} userId
- * @param {{ packagePlan?: Array<{id: string, hours: number}>, walletAmount?: number, points?: number, reference?: string }} uso
+ * @param {{ packageHours?: number, packagePlan?: Array<{hours: number}>, walletAmount?: number, points?: number, reference?: string }} uso
+ *   `packagePlan` é o formato antigo: vale a soma das horas.
  * @param {object|null} actor
  */
 export async function consumeMemberBenefit(arenaId, userId, uso = {}, actor = null) {
   if (!db || !arenaId || !userId) return;
-  const plano = Array.isArray(uso.packagePlan) ? uso.packagePlan.filter((p) => p?.id && p.hours > 0) : [];
+  const horasPedidas = Number(uso.packageHours) > 0
+    ? Number(uso.packageHours)
+    : (Array.isArray(uso.packagePlan) ? uso.packagePlan : [])
+      .reduce((a, p) => a + Math.max(0, Number(p?.hours) || 0), 0);
   const valorCarteira = Math.max(0, Number(uso.walletAmount) || 0);
   const pontos = Math.max(0, Math.round(Number(uso.points) || 0));
-  if (plano.length === 0 && valorCarteira === 0 && pontos === 0) return;
+  if (horasPedidas === 0 && valorCarteira === 0 && pontos === 0) return;
 
   const wRef = doc(db, COL_WALLETS, walletId(arenaId, userId));
   const wSnap = await getDoc(wRef);
   const wallet = wSnap.exists() ? wSnap.data() : null;
 
+  const baixa = wallet && horasPedidas > 0
+    ? applyPackageUse(wallet.packages, horasPedidas)
+    : { packages: wallet?.packages || [], used: 0 };
+
   const batch = writeBatch(db);
-  const escreveCarteira = Boolean(wallet) && (plano.length > 0 || valorCarteira > 0);
+  const escreveCarteira = Boolean(wallet) && (baixa.used > 0 || valorCarteira > 0);
 
   if (escreveCarteira) {
-    const porId = new Map(plano.map((p) => [p.id, p.hours]));
-    const pacotes = (wallet.packages || []).map((p) => (
-      porId.has(p.pkg_id)
-        ? { ...p, used_hours: (Number(p.used_hours) || 0) + porId.get(p.pkg_id) }
-        : p
-    ));
+    const pacotes = baixa.packages;
     const lancamentos = [...(wallet.transactions || [])];
     if (valorCarteira > 0) {
       lancamentos.push({
@@ -423,10 +434,10 @@ export async function consumeMemberBenefit(arenaId, userId, uso = {}, actor = nu
         at: new Date(),
       });
     }
-    if (plano.length > 0) {
+    if (baixa.used > 0) {
       lancamentos.push({
         type: 'package_use',
-        hours: plano.reduce((a, p) => a + p.hours, 0),
+        hours: baixa.used,
         source: str(uso.reference) || 'reserva',
         at: new Date(),
       });
@@ -460,7 +471,7 @@ export async function consumeMemberBenefit(arenaId, userId, uso = {}, actor = nu
     details: {
       arena_id: arenaId,
       user_id: userId,
-      package_hours: plano.reduce((a, p) => a + p.hours, 0),
+      package_hours: baixa.used,
       wallet_amount: escreveCarteira ? valorCarteira : 0,
       points: ehMembro ? pontos : 0,
       reference: uso.reference || null,

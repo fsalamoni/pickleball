@@ -5,6 +5,8 @@
  * Sem I/O, testável.
  */
 
+import { instanteEmMs } from '@/core/domain/instant';
+
 export const WAITLIST_STATUS = Object.freeze({
   WAITING: 'waiting',
   NOTIFIED: 'notified',
@@ -48,22 +50,22 @@ export function isPromotionExpired(waitlistItem, now = Date.now()) {
   if (waitlistItem.status !== WAITLIST_STATUS.NOTIFIED) return false;
   const expiresMs = notificationExpiresMs(waitlistItem);
   if (!Number.isFinite(expiresMs)) return false;
-  const nowMs = now instanceof Date ? now.getTime() : Number(now);
+  const nowMs = instanteEmMs(now);
   return nowMs > expiresMs;
 }
 
+/**
+ * 🐞 Era `x instanceof Date ? x.getTime() : Number(x)`. O servidor grava a
+ * chamada com `Timestamp.fromMillis(...)`, e `Number(timestamp)` dá segundos
+ * desde o ano 1 — toda chamada "vencia" no instante em que chegava, e
+ * "Aceitar" respondia "Promoção expirou" para todo mundo. Ver
+ * `core/domain/instant.js`.
+ */
 function notificationExpiresMs(item) {
   if (!item) return NaN;
-  if (item.notification_expires_at) {
-    return item.notification_expires_at instanceof Date
-      ? item.notification_expires_at.getTime()
-      : Number(item.notification_expires_at);
-  }
+  if (item.notification_expires_at) return instanteEmMs(item.notification_expires_at);
   if (item.notified_at && item.window_minutes) {
-    const notifiedMs = item.notified_at instanceof Date
-      ? item.notified_at.getTime()
-      : Number(item.notified_at);
-    return notifiedMs + item.window_minutes * 60_000;
+    return instanteEmMs(item.notified_at) + item.window_minutes * 60_000;
   }
   return NaN;
 }
@@ -133,7 +135,7 @@ export function buildDeclinePromotionAction(waitlistItem, actor) {
  */
 export function computePromotionExpiresAt(notifiedAt, windowMinutes = DEFAULT_PROMOTION_WINDOW_MINUTES) {
   if (!notifiedAt) return null;
-  const ms = notifiedAt instanceof Date ? notifiedAt.getTime() : Number(notifiedAt);
+  const ms = instanteEmMs(notifiedAt);
   if (!Number.isFinite(ms)) return null;
   return ms + windowMinutes * 60_000;
 }

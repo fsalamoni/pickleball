@@ -11,7 +11,11 @@
  *  4. reserva de membro soma os pontos e baixa o pacote no MESMO lote;
  *  5. ⭐ tornar membro NÃO regrava a carteira que já existia (o saldo de
  *     indicação e as horas pagas ficavam zerados) nem zera os pontos de quem
- *     já era membro.
+ *     já era membro;
+ *  6. ⭐ 🐞 a baixa de horas funciona com a carteira como o BANCO devolve
+ *     (`pkg_id` + Timestamp) — antes o plano casava por `p.id`, que a carteira
+ *     não tem, e nada era baixado; e duas compras do mesmo pacote não são
+ *     debitadas juntas.
  *
  * O banco falso aqui não recusa nada — por isso o teste confere o CONTEÚDO do
  * que seria gravado, e as asserções de regra ficam no emulador
@@ -123,6 +127,34 @@ describe('consumeMemberBenefit', () => {
     const membro = lote.find((l) => l.path === 'arena_members/a1_u1');
     expect(carteira.data.packages[0].used_hours).toBe(4);
     expect(membro.data.points).toEqual({ _inc: 5 });
+  });
+
+  it('⭐ 🐞 carteira como o banco devolve: baixa as horas numa entrada só', async () => {
+    // Timestamp de verdade tem `toMillis`; o módulo do Firestore está falso aqui.
+    const vence = (dias) => ({ toMillis: () => Date.now() + dias * 86_400_000 });
+    banco.set('arena_wallets/a1_u1', {
+      arena_id: 'a1', user_id: 'u1', balance: 0, transactions: [],
+      packages: [
+        { pkg_id: 'dez', total_hours: 10, used_hours: 0, expires_at: vence(60) },
+        { pkg_id: 'dez', total_hours: 10, used_hours: 0, expires_at: vence(10) },
+      ],
+    });
+    await consumeMemberBenefit('a1', 'u1', { packageHours: 2, reference: 'reserva b1' }, { uid: 'g1' });
+    const carteira = lote.find((l) => l.path === 'arena_wallets/a1_u1');
+    // Sai do que vence ANTES (a segunda), e só dela.
+    expect(carteira.data.packages.map((p) => p.used_hours)).toEqual([0, 2]);
+    expect(carteira.data.transactions.at(-1)).toMatchObject({ type: 'package_use', hours: 2 });
+  });
+
+  it('pedido com mais horas do que a carteira tem agora: baixa só o que há', async () => {
+    banco.set('arena_wallets/a1_u1', {
+      arena_id: 'a1', user_id: 'u1', balance: 0, transactions: [],
+      packages: [{ pkg_id: 'dez', total_hours: 10, used_hours: 9 }],
+    });
+    await consumeMemberBenefit('a1', 'u1', { packageHours: 3 }, { uid: 'g1' });
+    const carteira = lote.find((l) => l.path === 'arena_wallets/a1_u1');
+    expect(carteira.data.packages[0].used_hours).toBe(10);
+    expect(createAuditLog.mock.calls[0][0].details.package_hours).toBe(1);
   });
 
   it('pacote sem carteira e sem ser membro: não grava lote vazio nem auditoria', async () => {

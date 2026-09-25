@@ -4,6 +4,8 @@
  * PURO. Sem I/O.
  */
 
+import { instanteEmMs } from '@/core/domain/instant';
+
 export const MEMBER_TIER = Object.freeze({
   BRONZE: 'bronze',
   SILVER: 'silver',
@@ -93,9 +95,8 @@ export function normalizePackageInput(input = {}) {
 /** Verifica se pacote está dentro da validade. */
 export function isPackageValid(pkg, now = Date.now()) {
   if (!pkg?.expires_at) return false;
-  const expiresMs = pkg.expires_at instanceof Date
-    ? pkg.expires_at.getTime()
-    : Number(pkg.expires_at);
+  // `instanteEmMs`, não `Number`: o banco devolve Timestamp (ver core/domain/instant.js).
+  const expiresMs = instanteEmMs(pkg.expires_at);
   return Number.isFinite(expiresMs) && expiresMs > now;
 }
 

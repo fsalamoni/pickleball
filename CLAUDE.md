@@ -275,6 +275,8 @@ Estes princípios vieram de bugs reais que custaram horas pra arrumar. São ineg
 **"Preciso do nível de alguém numa tela"** → `useMyUnifiedLevel()` (o meu) ou `useUnifiedLevels(uids)` (um lote, UMA consulta). **Nunca** `profile.level` nem `leveling_level`: são código de faixa, não número na régua — comparar contra 2.0–8.0 não filtra, filtra errado (era o defeito do "buscar parceiro" e da peneira do jogo aberto)
 **"Escrevi uma consulta e a lista vem vazia"** → antes de investigar a tela, rode `npx vitest run src/core/guards/indicesCompostos.test.js`. Ele varre `where` + `orderBy` sem índice **nos dois estilos** de montagem (dentro de `query(...)` e por vetor de constraints) e ignora comentários. Cinco consultas estavam mortas desde que foram escritas — vagas de jogo aberto (duas), catálogo de professores da arena, agenda de aulas e torneios internos
 **"Vou mexer no preço de uma reserva"** → confira se passa por `memberBookingPrice` (`arenas/domain/memberBenefit.js`). A ordem da conta é **tabela → horas de pacote → desconto do nível → saldo da carteira**, e o pacote vem ANTES do desconto de propósito (a hora do pacote já foi paga; aplicar percentual sobre ela dá desconto duas vezes — há teste travando). A tela ESTIMA, o serviço REFAZ antes de gravar; e horas e saldo só são CONSUMIDOS na **confirmação**, nunca no pedido — queimar pacote num pedido que a arena pode recusar é cobrar por um jogo que não vai acontecer. Ver `docs/24-MODULOS-DE-ARENA/02-MEMBROS.md`
+**"Vou ler uma DATA que veio do banco (prazo, validade, vencimento)"** → `instanteEmMs(valor)` (`src/core/domain/instant.js`). **Nunca** `x instanceof Date ? x.getTime() : Number(x)`: o Firestore devolve `Timestamp`, não `Date`, e `Number(timestamp)` não falha — dá os SEGUNDOS desde o ano 1, que viram 1972 ao lado de `Date.now()`. 🐞 Era assim que todo pacote de horas "vencia" (e nunca era abatido na reserva) e toda chamada da fila do jogo aberto "expirava" ao chegar. Teste de data lida do banco usa `Timestamp` de verdade (`import { Timestamp } from 'firebase/firestore'`), não número — número é o que o código GRAVA. Guarda em `src/core/guards/instanteDoBanco.test.js`. Ver `docs/24-MODULOS-DE-ARENA/02-MEMBROS.md` (atualização 2026-09-25)
+**"Vou baixar horas de pacote da carteira"** → `applyPackageUse(carteira.packages, horas)` (`arenas/domain/memberBenefit.js`), sobre a carteira lida AGORA, pacote a pacote pela POSIÇÃO. **Nunca** por `pkg_id` (duas compras do mesmo pacote têm o mesmo) nem por `id` (o pacote da carteira não tem). A confirmação da reserva manda `packageHours`, não um plano
 **"Vou mexer na compra de pacote de horas"** → o atleta **não** compra sozinho: a regra só deixa a ARENA escrever `arena_wallets` (senão bastaria gravar um pacote para ter horas sem pagar). O atleta PEDE (`requestPackagePurchase` → aviso aos gestores com `?aba=membros&pacote=&para=`) e a arena CONFIRMA (`sellPackageToMember`, também usada na venda de balcão). **Nunca** chame `purchasePackage` numa tela do atleta — ela existe só por compatibilidade e falha. Ver `docs/24-MODULOS-DE-ARENA/02-MEMBROS.md` (atualização 2026-09-24)
 **"A receita dos módulos (aulas, pacotes, mensalidades, torneios) nas métricas"** → `moduleRevenue` (`arenas/domain/moduleRevenue.js`). Só o **recebido** entra no total: aula conta só a parte da ARENA (`arena_amount`) das matrículas pagas; pacote pela data da venda na carteira; mensalidade pelo mês pago; torneio da casa é **previsto** e nunca entra no total (a plataforma não registra o pagamento da inscrição). Ver `docs/24-MODULOS-DE-ARENA/09-INTEGRACAO-NA-ARENA.md` §7
 **"Vou mexer em aula ou professor da arena"** → `docs/24-MODULOS-DE-ARENA/05-AULAS.md`. (1) A matrícula grava **`user_id`** — é o campo que a REGRA confere, e gravar só `athlete_id` fazia o Firestore recusar TODA matrícula em silêncio, desde que a funcionalidade foi escrita. **O nome do campo que a regra usa é contrato.** (2) Aula com `court_id` **OCUPA a quadra** (derivada, como o dia de jogo — `arena_classes` é legível por todos); cancelada ou já dada devolve. (3) O bloqueio de aula **não carrega nome de aluno** — ele é público. (4) A comissão vem da **configuração** do módulo `classes_marketplace`, não de um número no código (eram 50% fixos contra 20% configurados), e professor **da casa não paga comissão**. (5) O professor é reconhecido pelo **`user_id`** em `arena_coaches`: sem o vínculo ele não vê a própria agenda
@@ -496,6 +498,24 @@ chore(deps): bump firebase to 12.x
 > memory topic `picklerush-sync-2026-08.md`.
 >
 > **Destaques por onda**:
+>
+> - **Onda BQ — O pacote de horas e a chamada da fila, lidos do banco**
+>   (2026-09-25): o Firestore devolve `Timestamp`, não `Date`, e o código lia
+>   datas com `x instanceof Date ? x.getTime() : Number(x)`. `Number(timestamp)`
+>   não falha: dá os segundos desde o ano 1, que ao lado de `Date.now()` caem
+>   em 1972. **🐞 Todo pacote de horas "venceu"**: não aparecia, e o preço da
+>   reserva nunca o abatia, então quem comprou horas pagava o preço cheio.
+>   **🐞 Toda chamada da fila do jogo aberto "expirou" ao chegar**: "Aceitar"
+>   respondia "Promoção expirou" com a hora inteira pela frente. E um segundo
+>   defeito estava escondido pelo primeiro: o plano de consumo casava por
+>   `p.id`, que o pacote da carteira não tem. **Corrigir só a data criaria
+>   horas grátis para sempre** (abatidas no preço, nunca debitadas), por isso
+>   saíram juntos: um conversor único (`instanteEmMs`), a baixa refeita na
+>   confirmação sobre a carteira atual, pacote a pacote pela posição
+>   (`applyPackageUse`), e um guarda contra `Number()` em campo de data. Os
+>   testes não pegavam porque montavam a data com número, que é o que o código
+>   grava, nunca o que o banco devolve; os novos usam `Timestamp` de verdade e
+>   reprovam o código antigo. **Banco: zero.** Nenhum dado migrado.
 >
 > - **Onda BP — Falha não é vazio na arena e no professor** (2026-09-25): a
 >   varredura da Onda BA parava na porta da arena — o filtro só enxergava dia
@@ -1963,7 +1983,7 @@ chore(deps): bump firebase to 12.x
 
 | Métrica | Valor | Delta do início do agente |
 |---|---|---|
-| **Testes Vitest** | **5493 passing** (330 arquivos) + 311 asserções de regras do Firestore no emulador (+ 17 do Storage) | +5085 (era 408) |
+| **Testes Vitest** | **5515 passing** (332 arquivos) + 311 asserções de regras do Firestore no emulador (+ 17 do Storage) | +5107 (era 408) |
 | **Lint errors** | 0 | era 30+ |
 | **Módulos** | 21 (+`help` — conteúdo dos tutoriais em tela) (`games` e `legal` saíram como `src/modules/` mas continuam como pastas oficiais — **rating virou módulo oficial** com domain/services/hooks/components) | +4 (coaches, circuits, games, legal) |
 | **V2 pages** | 82 (+V2GameDayTelao — telão, fora do V2Layout; +V2Help — central de ajuda; +V2ArenaKiosk — totem da recepção, também fora do V2Layout; +V2ArenaCheckin; +V2ArenaAttendance) | +58 |

@@ -21,6 +21,7 @@
  * consegue prever o pior caso de uma promoção.
  */
 
+import { instanteEmMs } from '@/core/domain/instant';
 import { formatDateShortBR } from './calendar.js';
 import { formatPrice } from './pricing.js';
 
@@ -103,7 +104,7 @@ export function isCouponValid(coupon, now = Date.now()) {
   if (!coupon.active) return false;
   if (coupon.max_uses && (coupon.used_count || 0) >= coupon.max_uses) return false;
   if (coupon.expires_at) {
-    const exp = coupon.expires_at instanceof Date ? coupon.expires_at.getTime() : Number(coupon.expires_at);
+    const exp = instanteEmMs(coupon.expires_at);
     if (Number.isFinite(exp) && exp < now) return false;
   }
   return true;
@@ -134,7 +135,7 @@ export function couponError(coupon, ctx = {}) {
   if (!coupon) return 'Cupom não encontrado.';
   if (coupon.active === false) return 'Este cupom não está mais valendo.';
   if (coupon.expires_at) {
-    const exp = coupon.expires_at instanceof Date ? coupon.expires_at.getTime() : Number(coupon.expires_at);
+    const exp = instanteEmMs(coupon.expires_at);
     if (Number.isFinite(exp) && exp < now) return 'Este cupom venceu.';
   }
   if (coupon.max_uses && (coupon.used_count || 0) >= coupon.max_uses) {
@@ -197,7 +198,7 @@ export function publicPromos(coupons = [], now = Date.now()) {
       discount: couponLabel(c).slice(String(c.code).length + 3),
       description: c.description || '',
       min_amount: Number(c.min_amount) > 0 ? Number(c.min_amount) : null,
-      expires_at: Number.isFinite(Number(c.expires_at)) && c.expires_at ? Number(c.expires_at) : null,
+      expires_at: instanteEmMs(c.expires_at) > 0 ? instanteEmMs(c.expires_at) : null,
       once_per_user: c.once_per_user !== false,
     }))
     // A que vence primeiro vem primeiro: é a que a pessoa pode perder.

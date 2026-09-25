@@ -174,3 +174,49 @@ A mesma venda serve ao **balcão**: "Vender pacote" na linha de cada membro.
 **Nenhuma coleção nova** — o pedido vive no aviso. De quebra, a data da compra
 deixou de ser `serverTimestamp()` dentro de uma lista (o Firestore não aceita).
 
+
+## Atualização 2026-09-25 — o pacote comprado passou a valer (Onda BQ)
+
+**🐞 O pacote de horas nunca foi abatido na reserva.** Dois defeitos em
+sequência, cada um escondendo o outro:
+
+1. **Todo pacote lido do banco parecia vencido.** A validade é gravada como
+   `Date`, e o Firestore a devolve como `Timestamp`. `usableHours` lia com
+   `x instanceof Date ? x.getTime() : Number(x)`, e `Number(timestamp)` não
+   falha: devolve os **segundos desde o ano 1** (≈ 6,4 × 10¹⁰). Comparado com
+   `Date.now()`, em milissegundos (≈ 1,8 × 10¹²), dá 1972. Resultado: as horas
+   valiam zero. O pacote não aparecia na página da arena nem em "Ver meu plano",
+   e o preço da reserva nunca o abatia. **Quem comprou horas pagava o preço
+   cheio.**
+2. **E, mesmo valendo, nada seria baixado.** O plano de consumo saía com
+   `id: p.id`, mas o pacote da carteira não tem `id`, tem `pkg_id`. O plano
+   nascia sem identificação, e a confirmação o descartava.
+
+O segundo só não aparecia por causa do primeiro. **Corrigir apenas a validade
+criaria um vazamento**: a reserva abateria as horas no preço sem nunca
+debitá-las, ou seja, horas grátis para sempre. Por isso os dois saíram juntos.
+
+**Como ficou:**
+
+- a leitura de instante tem **uma** fonte: `instanteEmMs`
+  (`src/core/domain/instant.js`), que entende `Timestamp`, `Date`, número e
+  texto. Um guarda (`src/core/guards/instanteDoBanco.test.js`) reprova quem
+  voltar a ler campo de data com `Number(...)`;
+- a confirmação recebe **quantas horas** a reserva abateu (`packageHours`) e
+  refaz a baixa sobre a carteira **como está naquele momento**
+  (`applyPackageUse`), pacote a pacote **pela posição**. `pkg_id` não serve de
+  chave: quem compra o mesmo pacote duas vezes tem duas entradas com o mesmo
+  `pkg_id`, e baixar por ele debitaria as duas;
+- nunca se baixa mais do que a carteira tem. Se entre o pedido e a confirmação
+  outra reserva usou as horas, baixa-se o que resta (o preço acordado não muda
+  sozinho).
+
+**Por que os testes não pegavam:** a fixture montava o pacote com `id` e com
+`expires_at` em milissegundos, que é o que o código **grava**, nunca o que o
+banco **devolve**. Os testes novos usam `Timestamp` de verdade e o formato da
+carteira (`pkg_id`), e **reprovam o código antigo** (conferido).
+
+**Dados:** nenhum migrado nem reescrito. Os pacotes já comprados simplesmente
+passam a aparecer e a ser abatidos a partir das próximas reservas. Reserva
+pedida antes da correção foi precificada sem o abatimento e continua assim: a
+confirmação baixa as horas que ela abateu, ou seja, zero.

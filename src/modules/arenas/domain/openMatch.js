@@ -22,6 +22,7 @@
  */
 
 import { DUPR_MAX, DUPR_MIN } from '@/modules/rating/domain/duprScale.js';
+import { instanteEmMs } from '@/core/domain/instant';
 
 export const OPEN_SLOT_STATUS = Object.freeze({
   OPEN: 'open',
@@ -69,11 +70,8 @@ export function isSlotOpenForJoin(slot, now = Date.now()) {
 export function slotStartMs(slot) {
   if (!slot) return NaN;
   if (slot.start_ms && Number.isFinite(slot.start_ms)) return slot.start_ms;
-  if (slot.start_at) {
-    return slot.start_at instanceof Date
-      ? slot.start_at.getTime()
-      : Number(slot.start_at);
-  }
+  // `instanteEmMs`: lido do banco, isto é Timestamp (ver core/domain/instant.js).
+  if (slot.start_at) return instanteEmMs(slot.start_at);
   if (slot.date && slot.start) {
     // Interpretar como local time (YYYY-MM-DDTHH:MM sem TZ = local).
     // Usamos Date() que converte corretamente.
@@ -339,11 +337,8 @@ export function isSlotFinished(slot, now = Date.now()) {
 function slotEndMs(slot) {
   if (!slot) return NaN;
   if (slot.end_ms && Number.isFinite(slot.end_ms)) return slot.end_ms;
-  if (slot.end_at) {
-    return slot.end_at instanceof Date
-      ? slot.end_at.getTime()
-      : Number(slot.end_at);
-  }
+  // `instanteEmMs`: lido do banco, isto é Timestamp (ver core/domain/instant.js).
+  if (slot.end_at) return instanteEmMs(slot.end_at);
   if (slot.date && slot.end) {
     const m = String(slot.date).match(/^(\d{4})-(\d{2})-(\d{2})$/);
     const sm = String(slot.end).match(/^(\d{1,2}):(\d{2})$/);
