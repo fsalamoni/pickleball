@@ -143,3 +143,20 @@ describe('os fluxos que dependiam disso', () => {
     }));
   });
 });
+
+/**
+ * "Planos e saldo nas arenas" (2026-09-25): o atleta lista o que é DELE em
+ * todas as arenas, por `user_id` — o campo que a regra confere. Nenhuma regra
+ * nova: estas asserções provam que a consulta da tela é aceita para o dono e
+ * recusada para quem tenta varrer os planos de outra pessoa.
+ */
+describe('⭐ os meus planos em todas as arenas', () => {
+  for (const col of ['arena_members', 'arena_wallets', 'arena_subscriptions']) {
+    it(`⭐ o atleta lista os PRÓPRIOS ${col} de todas as arenas`, async () => {
+      await assertSucceeds(getDocs(query(collection(como(ATLETA), col), where('user_id', '==', ATLETA))));
+    });
+    it(`⭐ ninguém lista os ${col} de OUTRA pessoa`, async () => {
+      await assertFails(getDocs(query(collection(como(OUTRO), col), where('user_id', '==', ATLETA))));
+    });
+  }
+});

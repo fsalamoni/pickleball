@@ -220,3 +220,34 @@ carteira (`pkg_id`), e **reprovam o código antigo** (conferido).
 passam a aparecer e a ser abatidos a partir das próximas reservas. Reserva
 pedida antes da correção foi precificada sem o abatimento e continua assim: a
 confirmação baixa as horas que ela abateu, ou seja, zero.
+
+## Atualização 2026-09-25 — "Planos e saldo nas arenas" (Onda BR)
+
+Quem comprou 10 horas de pacote numa arena só sabia quanto restava abrindo a
+página **daquela** arena. Quem joga em três arenas tinha de abrir as três.
+
+Agora **Minhas reservas** tem **"Planos e saldo nas arenas"**: uma linha por
+arena, com as horas que restam (e quando a primeira vence), o saldo, o nível e
+se a mensalidade está em dia. A linha leva ao "meu plano" daquela arena. É
+olhando isso que se decide **onde** reservar.
+
+- **Leitura só.** Três consultas por `user_id` (membro, carteira,
+  mensalidade), o campo que a regra já conferia. **Nenhuma regra nova**, e
+  seis asserções no emulador provam que o dono lista os próprios documentos e
+  que ninguém lista os de outra pessoa (`tests/rules/arenaUserDocs.rules.test.js`).
+  Uma igualdade só, então sem índice composto. Todo documento dessas coleções
+  nasce com `user_id` (conferido no histórico do serviço), por isso a lista é
+  completa.
+- **Cada linha obedece aos módulos da arena.** Com o programa de membros
+  desligado, ela some: as horas não seriam abatidas lá, e mostrá-las seria
+  prometer o que a reserva não entrega. Sem carteira ligada, não aparece saldo;
+  sem níveis, não aparece nível.
+- **Falha vira aviso**, nunca some (quem tem horas pagas concluiria que elas
+  sumiram). E `data` só existe quando as três consultas responderam: meia
+  resposta mostraria, por exemplo, o nível sem as horas.
+- Domínio em `arenas/domain/myArenaPlans.js` (`groupMyArenaPlans`), hook
+  `useMyArenaPlans`, tela `v2/components/arenas/members/MyArenaPlans.jsx`. A
+  central de ajuda ganhou o artigo do atleta **"Pacote de horas, saldo e
+  mensalidade numa arena"**, que ainda não existia.
+
+Depende da Onda BQ: antes dela, as horas apareciam zeradas aqui também.

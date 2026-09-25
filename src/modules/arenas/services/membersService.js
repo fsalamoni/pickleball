@@ -43,6 +43,26 @@ function displayName(u, p) {
   return p?.platform_name || p?.full_name || u?.displayName || u?.email || 'Atleta';
 }
 
+/* ----------------------- O que é MEU, em todas as arenas ----------------------- */
+
+/**
+ * Os meus documentos de membro, carteira e mensalidade — de TODAS as arenas.
+ *
+ * Consultam por `user_id`, que é exatamente o campo que a regra confere
+ * (`resource.data.user_id == request.auth.uid`): o Firestore só aceita a
+ * consulta se conseguir provar a regra para tudo o que ela pode devolver.
+ * Uma igualdade só — sem índice composto. Todo documento destas três coleções
+ * nasce com `user_id` (conferido no histórico do serviço).
+ */
+async function listarMeus(colecao, uid, lim = 50) {
+  if (!db || !uid) return [];
+  const snap = await getDocs(query(collection(db, colecao), where('user_id', '==', uid), limit(lim)));
+  return snap.docs.map((d) => ({ id: d.id, ...d.data() }));
+}
+export const listMyArenaMemberships = (uid) => listarMeus(COL_MEMBERS, uid);
+export const listMyArenaWallets = (uid) => listarMeus(COL_WALLETS, uid);
+export const listMyArenaSubscriptions = (uid) => listarMeus(COL_SUBSCRIPTIONS, uid);
+
 /* -------------------------- Members --------------------------- */
 
 export async function listArenaMembers(arenaId, { limit: lim = 200 } = {}) {

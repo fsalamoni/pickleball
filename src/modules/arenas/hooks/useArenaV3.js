@@ -9,6 +9,7 @@
  * - useUpdateArenaSettings — mutation
  */
 
+import { useMemo } from 'react';
 import { useQuery, useQueries, useMutation, useQueryClient } from '@tanstack/react-query';
 import { useAuth } from '@/core/lib/FirebaseAuthContext';
 import { useArenaModuleOn } from './useArenaModules.js';
@@ -362,7 +363,44 @@ import {
   redeemMemberPoints,
   listArenaSubscriptions, getMemberSubscription, setMemberSubscription,
   setSubscriptionMonthPaid, cancelMemberSubscription,
+  listMyArenaMemberships, listMyArenaWallets, listMyArenaSubscriptions,
 } from '../services/membersService.js';
+import { groupMyArenaPlans } from '../domain/myArenaPlans.js';
+import { combinarConsultas } from '@/core/lib/queryState';
+
+/**
+ * O que é MEU em todas as arenas — membro, carteira e mensalidade — numa
+ * linha por arena (`groupMyArenaPlans`). Três consultas por `user_id`, o campo
+ * que a regra confere; nenhuma escrita.
+ *
+ * `data` só existe quando as TRÊS responderam: meia resposta mostraria, por
+ * exemplo, o nível sem as horas — e a pessoa concluiria que o pacote sumiu.
+ */
+const PLANOS_VAZIOS = [];
+export function useMyArenaPlans() {
+  const { user } = useAuth();
+  const uid = user?.uid;
+  const opcoes = (tipo, fn) => ({
+    queryKey: ['arena-plans-mine', tipo, uid],
+    queryFn: () => fn(uid),
+    enabled: !!uid,
+    staleTime: 30_000,
+  });
+  const membros = useQuery(opcoes('membros', listMyArenaMemberships));
+  const carteiras = useQuery(opcoes('carteiras', listMyArenaWallets));
+  const mensalidades = useQuery(opcoes('mensalidades', listMyArenaSubscriptions));
+  const estado = combinarConsultas([membros, carteiras, mensalidades]);
+  const prontas = Boolean(membros.data && carteiras.data && mensalidades.data);
+  const data = useMemo(() => (prontas
+    ? groupMyArenaPlans({ members: membros.data, wallets: carteiras.data, subscriptions: mensalidades.data })
+    : undefined), [prontas, membros.data, carteiras.data, mensalidades.data]);
+  return {
+    data: uid ? data : PLANOS_VAZIOS,
+    isLoading: estado.carregando,
+    isError: estado.falhou,
+    refetch: estado.recarregar,
+  };
+}
 
 export function useArenaMembers(arenaId) {
   return useQuery({
