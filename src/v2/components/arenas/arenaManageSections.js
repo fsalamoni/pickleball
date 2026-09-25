@@ -14,6 +14,20 @@ import {
   Swords, Tag, Trophy, UserCheck, Users, Wallet, Wrench,
 } from 'lucide-react';
 
+/**
+ * As duas linhas da barra de seções. A ordem das seções dentro de cada linha é
+ * a do ciclo de vida (abaixo); a linha diz para que a seção serve:
+ *  - **Atender** — o trabalho do dia, com cliente na frente: reservas, jogo
+ *    aberto, membros, aulas, torneios, loja e a rotina da casa.
+ *  - **Gerir** — como a arena é: perfil, estrutura e preços, marketing,
+ *    desempenho, equipe e o que ela liga para si.
+ * Atender vem em cima porque é por onde se entra (a aba padrão é Reservas).
+ */
+export const ARENA_SECTION_GROUPS = Object.freeze([
+  { id: 'atender', label: 'Atender' },
+  { id: 'gerir', label: 'Gerir' },
+]);
+
 // Navegação em dois níveis do admin da arena. Ordem = ciclo de vida, do
 // início ao fim: identidade → estrutura/preços → reservas → comercial →
 // resultados → equipe/parceiros. Cada seção agrupa sub-abas por tema.
@@ -29,6 +43,7 @@ export function buildArenaSections({
   return [
     {
       id: 'perfil',
+      grupo: 'gerir',
       label: 'Perfil',
       icon: Building2,
       tabs: [
@@ -40,6 +55,7 @@ export function buildArenaSections({
     },
     {
       id: 'estrutura',
+      grupo: 'gerir',
       label: 'Estrutura e preços',
       icon: LayoutGrid,
       tabs: [
@@ -50,6 +66,7 @@ export function buildArenaSections({
     },
     {
       id: 'reservas',
+      grupo: 'atender',
       label: 'Reservas',
       icon: CalendarClock,
       tabs: [
@@ -66,6 +83,7 @@ export function buildArenaSections({
     // de quadra — e ocupa a quadra como uma reserva.
     ...(modulos.jogoAberto ? [{
       id: 'jogo-aberto',
+      grupo: 'atender',
       label: 'Jogo aberto',
       icon: Swords,
       tabs: [
@@ -74,6 +92,7 @@ export function buildArenaSections({
     }] : []),
     ...(modulos.membros ? [{
       id: 'membros',
+      grupo: 'atender',
       label: 'Membros',
       icon: Crown,
       tabs: [
@@ -87,6 +106,7 @@ export function buildArenaSections({
     // links antigos (`?aba=professores`) seguem levando ao lugar certo.
     ...(modulos.aulas ? [{
       id: 'aulas',
+      grupo: 'atender',
       label: 'Aulas',
       icon: GraduationCap,
       tabs: [
@@ -99,6 +119,7 @@ export function buildArenaSections({
     // gestão. A seção existe se houver qualquer um dos dois.
     ...(modulos.torneios || modulos.torneiosPlataforma ? [{
       id: 'torneios',
+      grupo: 'atender',
       label: 'Torneios',
       icon: Trophy,
       tabs: [
@@ -115,6 +136,7 @@ export function buildArenaSections({
     // — seção sem aba não existe, e seção sumida esconderia o que falta ligar.
     ...(modulos.marketing ? [{
       id: 'marketing',
+      grupo: 'gerir',
       label: 'Marketing',
       icon: Megaphone,
       tabs: (() => {
@@ -129,6 +151,7 @@ export function buildArenaSections({
     }] : []),
     {
       id: 'comercial',
+      grupo: 'atender',
       label: 'Pagamentos e loja',
       icon: Wallet,
       tabs: [
@@ -143,6 +166,7 @@ export function buildArenaSections({
     // que existe fisicamente na arena, e a seção existe mesmo só com eles.
     ...(modulos.operacao || modulos.equipamentos ? [{
       id: 'operacao',
+      grupo: 'atender',
       label: 'Operação',
       icon: ClipboardCheck,
       tabs: [
@@ -154,6 +178,7 @@ export function buildArenaSections({
     }] : []),
     {
       id: 'desempenho',
+      grupo: 'gerir',
       label: 'Desempenho',
       icon: BarChart3,
       tabs: [
@@ -167,6 +192,7 @@ export function buildArenaSections({
     },
     {
       id: 'equipe',
+      grupo: 'gerir',
       label: 'Equipe e parceiros',
       icon: Users,
       tabs: [
@@ -183,6 +209,7 @@ export function buildArenaSections({
     // faz sentido depois de conhecer o resto.
     ...(arenaModulesOn ? [{
       id: 'configuracoes',
+      grupo: 'gerir',
       label: 'Configurações',
       icon: SlidersHorizontal,
       tabs: [

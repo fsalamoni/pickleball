@@ -10,10 +10,13 @@
  *     seção Aulas — com o MESMO valor, para links antigos continuarem valendo;
  *  5. ⭐ as ferramentas da antiga página "Avançado" e da operação moram onde se
  *     procura por elas: Marca em Perfil, Presença em Reservas, Operação como
- *     seção, Rede e Inteligência em Desempenho, Plantão em Equipe.
+ *     seção, Rede e Inteligência em Desempenho, Plantão em Equipe;
+ *  6. ⭐ toda seção está numa das duas linhas da barra — "Atender" (o trabalho
+ *     do dia) ou "Gerir" (como a arena é) —, e a aba padrão (Reservas) abre a
+ *     primeira linha.
  */
 import { describe, it, expect } from 'vitest';
-import { buildArenaSections } from './arenaManageSections.js';
+import { ARENA_SECTION_GROUPS, buildArenaSections } from './arenaManageSections.js';
 
 const BASE = {
   coachResidentOn: true, linkedClubsOn: true, crmOn: true, opsKpisOn: true, arenaModulesOn: true,
@@ -164,5 +167,38 @@ describe('buildArenaSections', () => {
     for (const aba of ['marca', 'presenca', 'operacao', 'checklists', 'manutencao', 'equipamentos', 'plantao', 'rede', 'inteligencia']) {
       expect(v).not.toContain(aba);
     }
+  });
+});
+
+describe('as duas linhas da barra: Atender e Gerir', () => {
+  const grupoDe = (secs) => Object.fromEntries(secs.map((s) => [s.id, s.grupo]));
+
+  it('⭐ toda seção tem uma linha conhecida — com tudo ligado e com tudo desligado', () => {
+    const conhecidos = new Set(ARENA_SECTION_GROUPS.map((g) => g.id));
+    for (const cfg of [TUDO_LIGADO, BASE, { ...BASE, arenaModulesOn: false }]) {
+      for (const sec of buildArenaSections(cfg)) expect(conhecidos.has(sec.grupo)).toBe(true);
+    }
+  });
+
+  it('⭐ Atender: o trabalho do dia, com o cliente na frente', () => {
+    const atender = buildArenaSections(TUDO_LIGADO).filter((s) => s.grupo === 'atender').map((s) => s.id);
+    expect(atender).toEqual(['reservas', 'jogo-aberto', 'membros', 'aulas', 'torneios', 'comercial', 'operacao']);
+  });
+
+  it('Gerir: como a arena é configurada', () => {
+    const gerir = buildArenaSections(TUDO_LIGADO).filter((s) => s.grupo === 'gerir').map((s) => s.id);
+    expect(gerir).toEqual(['perfil', 'estrutura', 'marketing', 'desempenho', 'equipe', 'configuracoes']);
+  });
+
+  it('Atender vem primeiro, e é onde mora a aba padrão (Reservas)', () => {
+    expect(ARENA_SECTION_GROUPS[0].id).toBe('atender');
+    expect(grupoDe(buildArenaSections(BASE)).reservas).toBe('atender');
+  });
+
+  it('com tudo ligado, as duas linhas ficam equilibradas (nenhuma com o dobro da outra)', () => {
+    const secs = buildArenaSections(TUDO_LIGADO);
+    const a = secs.filter((s) => s.grupo === 'atender').length;
+    const g = secs.filter((s) => s.grupo === 'gerir').length;
+    expect(Math.max(a, g)).toBeLessThan(2 * Math.min(a, g));
   });
 });

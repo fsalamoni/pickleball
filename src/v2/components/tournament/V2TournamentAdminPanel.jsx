@@ -7,7 +7,7 @@ import V2TournamentDrawTab from '@/v2/components/tournament/V2TournamentDrawTab'
 import { V2TournamentMatches } from '@/v2/components/tournament/V2MatchesBlock';
 import TournamentAdminTab from '@/modules/tournament/components/TournamentAdminTab';
 import { V2Badge } from '@/v2/ui/primitives';
-import { cn } from '@/core/lib/utils';
+import { V2SectionNav } from '@/v2/ui/V2SectionNav';
 import { useModalities, useMatchesByTournament, useMaybeAutoCloseTournament } from '@/modules/tournament/hooks/useTournament';
 import { isTournamentComplete } from '@/modules/tournament/domain/tournamentCompletion';
 import { TOURNAMENT_STATUS } from '@/modules/tournament/domain/constants';
@@ -83,22 +83,14 @@ export default function V2TournamentAdminPanel({ tournament }) {
         </div>
       </div>
 
-      <div className="overflow-x-auto">
-        <div className="inline-flex gap-1.5 rounded-full border border-gray-100 bg-paper-pure p-1.5 shadow-sm">
-          {tabs.map(({ value, label, icon: Icon }) => (
-            <button
-              key={value}
-              onClick={() => setActiveTab(value)}
-              className={cn(
-                'inline-flex items-center gap-2 whitespace-nowrap rounded-full px-5 py-2.5 text-sm font-bold transition-colors',
-                activeTab === value ? 'bg-ink text-white shadow-md' : 'text-gray-500 hover:text-ink',
-              )}
-            >
-              <Icon className="h-4 w-4" /> {label}
-            </button>
-          ))}
-        </div>
-      </div>
+      {/* Quebra em linhas no celular em vez de rolar para o lado: aba que não
+          cabe na tela não é vista. */}
+      <V2SectionNav
+        ariaLabel="Abas da gestão do torneio"
+        sections={tabs.map(({ value, label, icon }) => ({ id: value, label, icon }))}
+        activeId={activeTab}
+        onSelect={(section) => setActiveTab(section.id)}
+      />
 
       <div className="mt-6">
         {activeTab === 'resumo' && opsOn && <V2TournamentOpsTab tournament={tournament} />}

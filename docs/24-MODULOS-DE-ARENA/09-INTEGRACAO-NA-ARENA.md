@@ -736,3 +736,41 @@ resolve:
   abrir a aba depois não busca de novo.
 
 A ajuda ("Receber e gerenciar reservas") ganhou a dica. Zero banco.
+
+## 14. A barra de seções em duas linhas: Atender e Gerir (Onda BW, 2026-09-25)
+
+**Relato, olhando a tela:** *"há muitas funcionalidades… em vez de ficar uma
+linha comprida, seria bom quebrar a linha em duas"*. Com os módulos
+integrados a Central chegou a **treze seções** numa barra que rolava para o
+lado — e o que não cabia não era visto. Quem procura "Marketing" não rola uma
+barra horizontal esperando que ele esteja lá: conclui que não existe.
+
+**O que mudou.** A barra quebra em duas linhas COM NOME, não duas metades da
+mesma lista:
+
+| Linha | Para que serve | Seções |
+|---|---|---|
+| **Atender** | o trabalho do dia, com o cliente na frente | Reservas · Jogo aberto · Membros · Aulas · Torneios · Pagamentos e loja · Operação |
+| **Gerir** | como a arena é | Perfil · Estrutura e preços · Marketing · Desempenho · Equipe e parceiros · Configurações |
+
+Atender vem em cima porque é por onde se entra (a aba padrão é Reservas).
+Duas linhas com sentido se aprendem; duas linhas que só dividem a lista ao
+meio, não. No celular cada linha quebra de novo, e **nada rola para o lado**
+— nem as seções nem as abas de cada seção.
+
+**Uma peça só.** `V2SectionNav` + `V2SubTabs` (`src/v2/ui/V2SectionNav.jsx`),
+usadas pela Central da arena, pelo painel do professor e pela gestão do
+torneio. Seção nova entra com `grupo: 'atender' | 'gerir'` em
+`buildArenaSections`; seção sem grupo conhecido vai para o fim — nunca some.
+Há teste travando as duas linhas, o equilíbrio entre elas e a guarda de fonte
+contra a barra que rolava.
+
+**Medido** (render isolado com a fonte do app, Inter): a 1000 px cada linha
+cabe inteira (841 de 878 px); a 768 px cada linha quebra em duas; a 390 px, em
+três. Largura da página nunca passa da tela.
+
+O índice **"Nesta página"** da página pública também passou a quebrar em
+linhas da tela pequena para cima; no celular continua deslizando, para não
+empurrar a reserva para baixo da dobra.
+
+**Banco: zero.**

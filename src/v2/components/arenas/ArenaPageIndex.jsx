@@ -91,7 +91,10 @@ export default function ArenaPageIndex({ containerRef }) {
   return (
     <nav aria-label="Seções desta arena" className="mt-4">
       <p className="mb-2 text-[11px] font-bold uppercase tracking-widest text-gray-400">Nesta página</p>
-      <ul className="hide-scrollbar -mx-1 flex gap-2 overflow-x-auto px-1 pb-1">
+      {/* No celular desliza (uma linha só, para não empurrar a reserva para
+          baixo da dobra); da tela pequena para cima, quebra em linhas e mostra
+          tudo — atalho escondido à direita é atalho que ninguém usa. */}
+      <ul className="hide-scrollbar -mx-1 flex gap-2 overflow-x-auto px-1 pb-1 sm:flex-wrap sm:overflow-visible">
         {secoes.map((s) => (
           <li key={s.id} className="shrink-0">
             <a

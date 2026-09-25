@@ -37,7 +37,7 @@ import CoachCourtBookingsSection from '@/modules/coaches/components/CoachCourtBo
 import LinkedClubsSection from '@/modules/clubs/components/LinkedClubsSection';
 import { CoachInfoSection, CoachPhotosSection } from '@/modules/coaches/components/CoachProfileSections';
 import ConfirmDialog from '@/components/ConfirmDialog';
-import { cn } from '@/core/lib/utils';
+import { V2SectionNav, V2SubTabs } from '@/v2/ui/V2SectionNav';
 import {
   V2Badge, V2Button, V2EmptyState, V2Field, V2Input, V2Skeleton, V2Surface,
   V2ErrorState,
@@ -374,41 +374,21 @@ function V2CoachAgendaContent() {
       </div>
       <p className="mb-5 font-medium text-gray-500">Gerencie perfil, agenda, alunos, comercial, conteúdo e parcerias.</p>
 
-      {/* Navegação em dois níveis */}
+      {/* Navegação em dois níveis — quebra em linhas, nunca rola para o lado */}
       <div className="space-y-3">
-        <div className="overflow-x-auto">
-          <div className="inline-flex gap-1.5 rounded-full border border-gray-100 bg-paper-pure p-1.5 shadow-sm">
-            {sections.map((section) => {
-              const Icon = section.icon;
-              const active = section.id === activeSection.id;
-              return (
-                <button key={section.id} onClick={() => setTab(section.tabs[0].value)}
-                  aria-current={active ? 'page' : undefined}
-                  className={cn('inline-flex items-center gap-1.5 whitespace-nowrap rounded-full px-4 py-2 text-sm font-semibold transition-colors', active ? 'bg-ink text-white shadow-md' : 'text-gray-500 hover:text-ink')}>
-                  {Icon && <Icon className={cn('h-4 w-4', active ? 'text-acid' : 'text-gray-400')} />}
-                  {section.label}
-                </button>
-              );
-            })}
-          </div>
-        </div>
+        <V2SectionNav
+          ariaLabel="Seções do painel do professor"
+          sections={sections}
+          activeId={activeSection.id}
+          onSelect={(section) => setTab(section.tabs[0].value)}
+        />
         {activeSection.tabs.length > 1 && (
-          <div className="overflow-x-auto">
-            <div className="inline-flex flex-wrap gap-1.5 px-1">
-              {activeSection.tabs.map((t) => {
-                const Icon = t.icon;
-                const active = tab === t.value;
-                return (
-                  <button key={t.value} onClick={() => setTab(t.value)}
-                    aria-current={active ? 'page' : undefined}
-                    className={cn('inline-flex items-center gap-1.5 whitespace-nowrap rounded-full border px-3.5 py-1.5 text-sm font-semibold transition-colors', active ? 'border-ink bg-ink/5 text-ink' : 'border-gray-200 text-gray-500 hover:border-ink/40 hover:text-ink')}>
-                    {Icon && <Icon className={cn('h-3.5 w-3.5', active ? 'text-ink' : 'text-gray-400')} />}
-                    {t.label}
-                  </button>
-                );
-              })}
-            </div>
-          </div>
+          <V2SubTabs
+            ariaLabel={`Abas de ${activeSection.label}`}
+            tabs={activeSection.tabs}
+            activeValue={tab}
+            onSelect={(t) => setTab(t.value)}
+          />
         )}
       </div>
 
