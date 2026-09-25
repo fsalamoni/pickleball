@@ -41,7 +41,8 @@ import { ImageUpload } from '@/components/ui/image-upload';
 import { PhotoLightbox } from '@/components/ui/photo-lightbox';
 import ArenaModuleShortcuts from '@/v2/components/arenas/ArenaModuleShortcuts';
 import ArenaPendencias from '@/v2/components/arenas/ArenaPendencias';
-import { buildArenaSections } from '@/v2/components/arenas/arenaManageSections';
+import { ARENA_SECTION_GROUPS, buildArenaSections } from '@/v2/components/arenas/arenaManageSections';
+import { V2SectionNav, V2SubTabs } from '@/v2/ui/V2SectionNav';
 import { useArenaModules } from '@/modules/arenas/hooks/useArenaModules';
 import { useArenaTournaments as useArenaPlatformTournaments } from '@/modules/tournament/hooks/useTournament';
 import { ARENA_MODULE_ID } from '@/modules/arenas/domain/modules';
@@ -366,42 +367,26 @@ function V2ArenaManageContent({ arenaId, user, isPlatformAdmin, arena, managed, 
       />
 
       <div className="mt-6 space-y-3">
-        {/* Nível 1: seções principais (temas) */}
-        <div className="overflow-x-auto">
-          <div className="inline-flex gap-1.5 rounded-full border border-gray-100 bg-paper-pure p-1.5 shadow-sm">
-            {sections.map((section) => {
-              const Icon = section.icon;
-              const active = section.id === activeSectionId;
-              return (
-                <button key={section.id} onClick={() => selectSection(section)}
-                  aria-current={active ? 'page' : undefined}
-                  className={cn('inline-flex items-center gap-1.5 whitespace-nowrap rounded-full px-4 py-2 text-sm font-semibold transition-colors', active ? 'bg-ink text-white shadow-md' : 'text-gray-500 hover:text-ink')}>
-                  {Icon && <Icon className={cn('h-4 w-4', active ? 'text-acid' : 'text-gray-400')} />}
-                  {section.label}
-                </button>
-              );
-            })}
-          </div>
-        </div>
+        {/* Nível 1: as seções, em duas linhas com nome — "Atender" (o trabalho
+            do dia) e "Gerir" (como a arena é). Nada rola para o lado: com os
+            módulos ligados eram treze seções numa linha só, e o que não cabia
+            não era visto. */}
+        <V2SectionNav
+          ariaLabel="Seções da Central da arena"
+          sections={sections}
+          grupos={ARENA_SECTION_GROUPS}
+          activeId={activeSectionId}
+          onSelect={selectSection}
+        />
 
         {/* Nível 2: sub-abas da seção ativa (só quando há mais de uma) */}
         {activeSection.tabs.length > 1 && (
-          <div className="overflow-x-auto">
-            <div className="inline-flex flex-wrap gap-1.5 px-1">
-              {activeSection.tabs.map((t) => {
-                const Icon = t.icon;
-                const active = tab === t.value;
-                return (
-                  <button key={t.value} onClick={() => selectTab(activeSection.id, t.value)}
-                    aria-current={active ? 'page' : undefined}
-                    className={cn('inline-flex items-center gap-1.5 whitespace-nowrap rounded-full border px-3.5 py-1.5 text-sm font-semibold transition-colors', active ? 'border-ink bg-ink/5 text-ink' : 'border-gray-200 text-gray-500 hover:border-ink/40 hover:text-ink')}>
-                    {Icon && <Icon className={cn('h-3.5 w-3.5', active ? 'text-ink' : 'text-gray-400')} />}
-                    {t.label}
-                  </button>
-                );
-              })}
-            </div>
-          </div>
+          <V2SubTabs
+            ariaLabel={`Abas de ${activeSection.label}`}
+            tabs={activeSection.tabs}
+            activeValue={tab}
+            onSelect={(t) => selectTab(activeSection.id, t.value)}
+          />
         )}
       </div>
 
