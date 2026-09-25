@@ -27,12 +27,13 @@ import {
 import {
   V2Badge, V2Button, V2EmptyState, V2Field, V2SearchInput,
   V2Skeleton, V2Surface, V2Textarea,
+  V2ErrorState,
 } from '@/v2/ui/primitives';
 
 /* ----------------------- Adicionar parceiro ----------------------- */
 
 export function AddPartner({ arenaId, linkedIds, onDone }) {
-  const { data: coaches = [], isLoading } = useCoaches({ acceptingOnly: false });
+  const { data: coaches = [], isLoading, isError: buscaFalhou, refetch: refazerBusca } = useCoaches({ acceptingOnly: false });
   const add = useAddCoachResidency();
   const [q, setQ] = useState('');
   const [notes, setNotes] = useState('');
@@ -88,6 +89,13 @@ export function AddPartner({ arenaId, linkedIds, onDone }) {
           <div className="mt-3 space-y-2">
             {isLoading ? (
               <V2Skeleton lines={3} />
+            ) : buscaFalhou ? (
+              <V2ErrorState
+                inline
+                title="Não foi possível buscar os professores"
+                description="A lista de professores da plataforma não chegou."
+                onRetry={() => refazerBusca()}
+              />
             ) : results.length === 0 ? (
               <p className="text-sm text-gray-500">
                 {coaches.filter((c) => !linkedIds.has(c.id)).length === 0
@@ -225,7 +233,9 @@ export function PartnerCard({ arenaId, coach, extraBadges = null, children = nul
  * aba dentro do hub admin da arena (V2ArenaManage).
  */
 export function ArenaCoachesManager({ arena, showTitle = true }) {
-  const { data: partners = [], isLoading: partnersLoading } = useArenaCoaches(arena.id, { activeOnly: false });
+  const {
+    data: partners = [], isLoading: partnersLoading, isError: parceirosFalharam, refetch: recarregarParceiros,
+  } = useArenaCoaches(arena.id, { activeOnly: false });
   const [adding, setAdding] = useState(false);
   const linkedIds = useMemo(() => new Set(partners.map((c) => c.id)), [partners]);
 
@@ -239,7 +249,9 @@ export function ArenaCoachesManager({ arena, showTitle = true }) {
               {showTitle ? 'Professores parceiros' : 'Parceiros'} ({partners.length})
             </h2>
           </div>
-          {!adding && (
+          {/* Sem a lista de parceiros, a busca ofereceria vincular de novo quem
+              já é parceiro. */}
+          {!adding && !parceirosFalharam && (
             <V2Button size="sm" onClick={() => setAdding(true)}><Plus className="mr-1.5 h-4 w-4" /> Vincular professor</V2Button>
           )}
         </div>
@@ -255,6 +267,12 @@ export function ArenaCoachesManager({ arena, showTitle = true }) {
 
         {partnersLoading ? (
           <V2Skeleton lines={3} />
+        ) : parceirosFalharam ? (
+          <V2ErrorState
+            inline
+            title="Não foi possível carregar os professores parceiros"
+            onRetry={() => recarregarParceiros()}
+          />
         ) : partners.length === 0 ? (
           <V2EmptyState
             icon={GraduationCap}
@@ -276,10 +294,17 @@ export function ArenaCoachesManager({ arena, showTitle = true }) {
 function V2ArenaCoachesContent() {
   const { arenaId } = useParams();
   const { user, isPlatformAdmin } = useAuth();
-  const { data: arena, isLoading: arenaLoading } = useArena(arenaId);
+  const { data: arena, isLoading: arenaLoading, isError: arenaFalhou, refetch: recarregarArena } = useArena(arenaId);
   const { data: managed = [] } = useMyManagedArenas();
 
   if (arenaLoading) return <V2Skeleton className="mx-auto h-96 max-w-[1000px] rounded-4xl" />;
+  if (!arena && arenaFalhou) {
+    return (
+      <div className="mx-auto max-w-[700px]">
+        <V2ErrorState title="Não foi possível abrir esta arena" onRetry={() => recarregarArena()} />
+      </div>
+    );
+  }
   if (!arena) {
     return (
       <div className="mx-auto max-w-[700px]">

@@ -26,6 +26,7 @@ import { V2FavoriteCoachButton, V2CoachShareButton } from '@/v2/components/coach
 import V2CoachAvailabilityCalendar from '@/v2/components/coach/V2CoachAvailabilityCalendar';
 import {
   V2Badge, V2Button, V2EmptyState, V2Surface, V2Skeleton,
+  V2ErrorState,
 } from '@/v2/ui/primitives';
 
 function ResidencyCard({ residency }) {
@@ -56,8 +57,8 @@ function ResidencyCard({ residency }) {
 export default function V2CoachProfile() {
   const { coachId } = useParams();
   const { user, isAuthenticated } = useAuth();
-  const { data: coach, isLoading } = useCoach(coachId);
-  const { data: residencies = [] } = useCoachResidencies(coachId);
+  const { data: coach, isLoading, isError: perfilFalhou, refetch: recarregarPerfil } = useCoach(coachId);
+  const { data: residencies = [], isError: arenasFalharam, refetch: recarregarArenas } = useCoachResidencies(coachId);
   const [requesting, setRequesting] = useState(false);
   const lessonsOn = true;
   const linkedClubsOn = true;
@@ -76,6 +77,17 @@ export default function V2CoachProfile() {
 
   if (!isAuthenticated) return <Navigate to="/login" replace />;
   if (isLoading) return <div className="p-4"><V2Skeleton lines={6} /></div>;
+  // Falha não é "professor não encontrado": quem recebeu o link do professor
+  // concluiria que ele saiu da plataforma.
+  if (!coach && perfilFalhou) return (
+    <div className="p-4">
+      <V2ErrorState
+        title="Não foi possível abrir o perfil deste professor"
+        description="A conexão falhou no meio do caminho. Tente de novo."
+        onRetry={() => recarregarPerfil()}
+      />
+    </div>
+  );
   if (!coach) return (
     <div className="p-4">
       <V2EmptyState icon={GraduationCap} title="Professor não encontrado" />
@@ -216,7 +228,9 @@ export default function V2CoachProfile() {
       <V2Surface>
         <h3 className="font-display text-base font-bold text-ink">Arenas parceiras</h3>
         <div className="mt-3 space-y-2">
-          {residencies.length === 0 ? (
+          {arenasFalharam ? (
+            <V2ErrorState inline title="Não foi possível carregar as arenas parceiras" onRetry={() => recarregarArenas()} />
+          ) : residencies.length === 0 ? (
             <p className="text-sm text-gray-500">Nenhuma arena vinculada ainda.</p>
           ) : (
             residencies.map((r) => (

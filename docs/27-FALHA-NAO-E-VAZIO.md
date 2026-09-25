@@ -329,3 +329,98 @@ que todo caminho isento existe e que o motivo não é uma palavra solta.
 ### 9.4 Impacto no banco
 
 **Zero.** Nenhuma coleção, campo, índice, regra, função ou migração.
+
+---
+
+## 10. Arena, professor e reservas (Onda BP, 2026-09-25)
+
+### 10.1 A varredura parava na porta da arena
+
+O escopo da §9 era dia de jogo e torneio — onde a classe tinha sido achada. A
+arena, o professor e as reservas do atleta ficaram de fora **por construção**:
+o filtro não os enxergava. Estendida a eles (111 arquivos), a mesma varredura
+acusou **32**. Dois são isentos com motivo (as regras de preço chegam por
+`props`); os outros **30** afirmavam vazio sobre consulta que podia ter
+falhado.
+
+E ali o custo é maior que no torneio, porque boa parte dessas telas oferece, ao
+lado do vazio, um comando que **grava**.
+
+### 10.2 🐞 O que regravaria por cima do que existe
+
+São os casos mais caros: a pessoa não vê nada de errado, clica em "salvar" e
+apaga o que estava gravado.
+
+| Tela | O que acontecia com a leitura falhando |
+|---|---|
+| **Disponibilidade do professor** (`V2CoachAgenda`) | o editor abria **em branco**; "Salvar" gravava a semana vazia por cima da verdadeira — e os alunos deixavam de ver horários |
+| **Perfil do professor** (`V2Coaches`) | o botão virava *"Sou professor"* e abria o formulário vazio; salvar regravava bio, valor e regiões |
+| **Fechamento financeiro** (`V2ArenaFinanceTab`) | "Fechar período" e "Regerar" gravavam um **retrato** do mês feito com estoque vazio — um relatório salvo dizendo que a arena não vendeu nada |
+| **Regras da arena** (`V2ArenaRulesTab`) | as regras são UMA lista no documento da arena; sem a arena na mão, a aba ficava em branco |
+
+Nas quatro, o comando que grava **não é renderizado** enquanto o estado for
+desconhecido, e a tela diz o porquê (*"salvar agora gravaria a agenda em
+branco"*). As funções de gravar do financeiro também retornam cedo — a tela
+esconde, a função confere de novo.
+
+### 10.3 🐞 O que duplicaria o que existe
+
+"Nenhum X ainda" ao lado de "Criar X" é convite a criar de novo algo que já
+está lá:
+
+- **quadras** (`V2CourtsTab`) — quadra duplicada, e o calendário contando duas;
+- **janelas de horário** (`V2CourtSchedulesModal`) — janela duplicada vira
+  horário oferecido duas vezes;
+- **totem** (`V2ArenaKiosk`) — um segundo totem para a mesma recepção;
+- **catálogo** (`V2ArenaCatalogBrowser`) — com "meus produtos" falhando, tudo
+  parecia "não adotado", e adotar de novo duplicava o produto no estoque;
+- **entradas e saídas do Mercado** (`V2ArenaMercadoTab`) — registrar de novo
+  uma compra que já está lá;
+- **pacotes e membros** (`V2ArenaAdminMembers`), **professores parceiros**
+  (`V2ArenaCoaches`) e, do lado do professor, **pacotes**, **alunos**,
+  **clínicas**, **conteúdo** e **arenas parceiras**.
+
+Um caso sutil: nos **alunos do professor**, com a lista falhando, todo o
+histórico de aulas aparecia como "fora do roster", e adicionar regravava como
+**ativo** quem estava pausado.
+
+### 10.4 🐞 O que afirmava uma coisa falsa
+
+- **Minhas reservas** (`V2Bookings`): *"Você ainda não reservou"* — para quem
+  tem jogo hoje à noite, a conclusão é que a reserva sumiu;
+- **Página da arena** (`V2ArenaDetail`), módulos e onboarding: a arena
+  "não encontrada" por uma queda de rede — quem recebeu o link desiste dela;
+- **Pedido de reserva** (`BookingRequestDialog`): com reservas, quadras ou
+  janelas falhando, todo horário parecia livre. O pedido continua possível (o
+  serviço confere o conflito ao gravar e a arena confirma), mas agora um aviso
+  diz que a disponibilidade **não foi conferida**, com "Conferir de novo";
+- **Métricas** (`V2ArenaMetrics`): **R$ 0,00** de receita. Agora, reservas ou
+  vendas falhando derrubam o painel para o estado de erro (sem elas os números
+  não significam nada); uma parte secundária falhando (ocupação, avaliações,
+  Mercado, aulas, pacotes, mensalidades, torneios) deixa os números saírem,
+  com o aviso **"Ficou de fora: …"** — número incompleto sem aviso é o mesmo
+  defeito;
+- **Prontidão da arena** (`V2ArenaManage`) e aba de quadras: janelas que não
+  carregaram viravam o alarme *"quadra sem horário de funcionamento"*, mandando
+  o dono configurar o que já está configurado. O alarme só sai com quadras
+  **e** janelas carregadas (`isSuccess`).
+
+### 10.5 O guarda
+
+`falhaNaoEVazio.test.js` ganhou um segundo `describe` com o escopo da arena,
+do professor e das reservas — a mesma varredura, o mesmo `ISENTOS` com motivo
+escrito. E há testes de renderização travando os casos de maior dano:
+disponibilidade do professor (sem editor em branco), aba de quadras (sem
+"Nova quadra"), totem (sem "Criar o totem"), membros e pacotes (sem incluir,
+criar nem confirmar pedido) e métricas (erro no núcleo, aviso nas partes).
+
+> ⚠️ O detector é por ARQUIVO: basta um `isError` em qualquer lugar para o
+> arquivo passar. Ele pega quem esqueceu a classe inteira, não quem tratou uma
+> consulta e esqueceu a vizinha. Ao escrever uma tela com várias consultas,
+> trate **cada** uma que alimenta uma afirmação ou um comando.
+
+### 10.6 Impacto no banco
+
+**Zero.** Nenhuma coleção, campo, índice, regra, função ou migração. Nenhum
+dado lido ou gravado de forma diferente — as mudanças decidem só o que a tela
+mostra e quais comandos ela oferece.

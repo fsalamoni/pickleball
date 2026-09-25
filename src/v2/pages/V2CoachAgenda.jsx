@@ -40,6 +40,7 @@ import ConfirmDialog from '@/components/ConfirmDialog';
 import { cn } from '@/core/lib/utils';
 import {
   V2Badge, V2Button, V2EmptyState, V2Field, V2Input, V2Skeleton, V2Surface,
+  V2ErrorState,
 } from '@/v2/ui/primitives';
 
 // Navegação em dois níveis do hub do professor (espelha o admin da arena).
@@ -104,22 +105,34 @@ function emptyWindow() {
 
 /* ----------------------- Editor de disponibilidade ----------------------- */
 
-function AvailabilityEditor({ coachId }) {
-  const { data: availability, isLoading } = useCoachAvailability(coachId);
+export function AvailabilityEditor({ coachId }) {
+  const { data: availability, isLoading, isError, refetch } = useCoachAvailability(coachId);
   const save = useSaveAvailability();
   const [windows, setWindows] = useState(null);
   const [slotMinutes, setSlotMinutes] = useState(SLOT_MINUTES_DEFAULT);
 
   // Inicializa a partir do doc salvo (uma vez).
+  // 🐞 Com a leitura FALHANDO, `availability` vinha vazio e o editor abria em
+  // branco — "Salvar" gravava a agenda vazia por cima da verdadeira. Só se
+  // começa do zero quando a leitura CONFIRMOU que não há disponibilidade.
   React.useEffect(() => {
     if (availability && windows === null) {
       setWindows((availability.windows || []).map((w) => ({ ...w, location: w.location || '' })));
       setSlotMinutes(availability.slot_minutes || SLOT_MINUTES_DEFAULT);
-    } else if (!isLoading && !availability && windows === null) {
+    } else if (!isLoading && !isError && !availability && windows === null) {
       setWindows([]);
     }
-  }, [availability, isLoading, windows]);
+  }, [availability, isLoading, isError, windows]);
 
+  if (isError && windows === null) {
+    return (
+      <V2ErrorState
+        title="Não foi possível carregar a sua disponibilidade"
+        description="Tente de novo antes de editar — salvar agora gravaria a agenda em branco."
+        onRetry={() => refetch()}
+      />
+    );
+  }
   if (isLoading || windows === null) return <V2Skeleton lines={4} />;
 
   const toggleWeekday = (idx, wd) => {
@@ -279,8 +292,10 @@ function LessonCard({ lesson, onAction, isPending }) {
 
 function V2CoachAgendaContent() {
   const { user, isAuthenticated } = useAuth();
-  const { data: coach, isLoading: coachLoading } = useCoach(user?.uid);
-  const { data: lessons = [], isLoading: lessonsLoading } = useCoachLessons(user?.uid);
+  const { data: coach, isLoading: coachLoading, isError: perfilFalhou, refetch: recarregarPerfil } = useCoach(user?.uid);
+  const {
+    data: lessons = [], isLoading: lessonsLoading, isError: aulasFalharam, refetch: recarregarAulas,
+  } = useCoachLessons(user?.uid);
   const respond = useRespondLesson();
   const sharedBookingsOn = true;
   const linkedClubsOn = true;
@@ -301,6 +316,20 @@ function V2CoachAgendaContent() {
 
   if (!isAuthenticated) return <Navigate to="/login" replace />;
   if (coachLoading) return <div className="mx-auto max-w-[900px] p-4"><V2Skeleton lines={6} /></div>;
+
+  // Falha não é "você não é professor": o convite a criar o perfil mandaria o
+  // professor recadastrar o que já tem.
+  if (!coach && perfilFalhou) {
+    return (
+      <div className="mx-auto max-w-[700px] space-y-6 p-4">
+        <V2ErrorState
+          title="Não foi possível abrir o seu painel de professor"
+          description="O seu perfil continua lá — a conexão falhou no meio do caminho."
+          onRetry={() => recarregarPerfil()}
+        />
+      </div>
+    );
+  }
 
   if (!coach) {
     // Professor da ARENA sem perfil de professor da plataforma: a agenda dele
@@ -393,6 +422,13 @@ function V2CoachAgendaContent() {
               <h2 className="mb-4 font-display text-lg font-bold text-ink">Próximas aulas</h2>
               {lessonsLoading ? (
                 <V2Skeleton lines={3} />
+              ) : aulasFalharam ? (
+                <V2ErrorState
+                  inline
+                  title="Não foi possível carregar as suas aulas"
+                  description="Pode haver pedido de aula esperando resposta."
+                  onRetry={() => recarregarAulas()}
+                />
               ) : upcoming.length === 0 ? (
                 <V2EmptyState icon={CalendarDays} title="Nenhuma aula agendada" description="Solicitações de aula dos alunos aparecem aqui para você confirmar." />
               ) : (

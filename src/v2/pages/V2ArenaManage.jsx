@@ -73,7 +73,7 @@ import { computeTier } from '@/modules/arenas/domain/members';
 import { formatDateShortBR } from '@/modules/arenas/domain/calendar';
 import { useArenaMembers, useAddArenaMember } from '@/modules/arenas/hooks/useArenaV3';
 import { formatPrice } from '@/modules/arenas/domain/pricing';
-import { V2Badge, V2Button, V2EmptyState, V2Field, V2Input, V2Skeleton, V2StatCard, V2Surface } from '@/v2/ui/primitives';
+import { V2Badge, V2Button, V2EmptyState, V2ErrorState, V2Field, V2Input, V2Skeleton, V2StatCard, V2Surface } from '@/v2/ui/primitives';
 import { cn } from '@/core/lib/utils';
 
 /**
@@ -84,8 +84,13 @@ import { cn } from '@/core/lib/utils';
  * resolver, porque avisar sem oferecer o caminho é metade do favor.
  */
 function ArenaProntidao({ arena, onIrParaQuadras }) {
-  const { data: courts = [] } = useArenaCourts(arena.id);
-  const { data: schedules = [] } = useArenaCourtSchedules(arena.id);
+  const { data: courts = [], isSuccess: quadrasOk } = useArenaCourts(arena.id);
+  const { data: schedules = [], isSuccess: janelasOk } = useArenaCourtSchedules(arena.id);
+
+  // Só se afirma "falta isto" com quadras E janelas na mão. Com a consulta
+  // falhando, as listas vêm vazias e o painel mandaria cadastrar de novo
+  // quadras e horários que já existem.
+  if (!quadrasOk || !janelasOk) return null;
 
   const ativas = courts.filter((c) => c.is_active !== false);
   const semHorario = courtsWithoutSchedule(courts, schedules);
@@ -139,7 +144,7 @@ function ArenaProntidao({ arena, onIrParaQuadras }) {
 export default function V2ArenaManage() {
   const { arenaId } = useParams();
   const { user, isPlatformAdmin } = useAuth();
-  const { data: arena, isLoading } = useArena(arenaId);
+  const { data: arena, isLoading, isError: arenaFalhou, refetch: recarregarArena } = useArena(arenaId);
   const { data: managed = [] } = useMyManagedArenas();
   const deleteArena = useDeleteArena();
   const location = useLocation();
@@ -167,6 +172,8 @@ export default function V2ArenaManage() {
       arena={arena}
       managed={managed}
       isLoading={isLoading}
+      arenaFalhou={arenaFalhou}
+      recarregarArena={recarregarArena}
       deleteArena={deleteArena}
       location={location}
       tab={tab}
@@ -176,7 +183,7 @@ export default function V2ArenaManage() {
   );
 }
 
-function V2ArenaManageContent({ arenaId, user, isPlatformAdmin, arena, managed, isLoading, deleteArena, location, tab: tabPedida, secao, setTab }) {
+function V2ArenaManageContent({ arenaId, user, isPlatformAdmin, arena, managed, isLoading, arenaFalhou, recarregarArena, deleteArena, location, tab: tabPedida, secao, setTab }) {
 
   // Âncora para o stepper de onboarding: ao montar, lê o hash
   // (#fotos / #precos / #horarios), troca a aba e rola até a seção.
@@ -240,6 +247,17 @@ function V2ArenaManageContent({ arenaId, user, isPlatformAdmin, arena, managed, 
   const [sectionMemory, setSectionMemory] = useState({});
 
   if (isLoading) return <div className="mx-auto max-w-[1000px] space-y-4"><V2Skeleton className="h-40 rounded-4xl" /><V2Skeleton className="h-64 rounded-4xl" /></div>;
+  if (!arena && arenaFalhou) {
+    return (
+      <div className="mx-auto max-w-[700px]">
+        <V2ErrorState
+          title="Não foi possível abrir a gestão da arena"
+          description="A conexão falhou no meio do caminho. A arena continua lá — tente de novo."
+          onRetry={() => recarregarArena()}
+        />
+      </div>
+    );
+  }
   if (!arena) {
     return (
       <div className="mx-auto max-w-[700px]">
@@ -445,15 +463,18 @@ const TIER_TONE = { bronze: 'amber', silver: 'neutral', gold: 'acid', platinum: 
  * procurar pelo nome, para torná-lo membro.
  */
 function ArenaCrmTab({ arenaId, membrosOn = false, onVerMembros }) {
-  const { data: bookings = [], isLoading } = useArenaBookings(arenaId);
-  const { data: members = [] } = useArenaMembers(membrosOn ? arenaId : null);
+  const { data: bookings = [], isLoading, isError: reservasFalharam, refetch: recarregarReservas } = useArenaBookings(arenaId);
+  const { data: members = [], isError: membrosFalharam, refetch: recarregarMembros } = useArenaMembers(membrosOn ? arenaId : null);
+  // Sem a lista de membros, todo cliente frequente pareceria "ainda não é
+  // membro" — e o botão ofereceria tornar membro quem já é.
+  const membrosNaMao = membrosOn && !membrosFalharam;
   const incluir = useAddArenaMember();
   const [soCandidatos, setSoCandidatos] = useState(false);
   const clients = React.useMemo(() => buildArenaClients(bookings), [bookings]);
   const summary = React.useMemo(() => arenaCrmSummary(clients), [clients]);
   const comMembro = React.useMemo(
-    () => (membrosOn ? attachMembership(clients, members) : clients),
-    [clients, members, membrosOn],
+    () => (membrosNaMao ? attachMembership(clients, members) : clients),
+    [clients, members, membrosNaMao],
   );
   const resumoMembros = React.useMemo(() => membershipSummary(comMembro), [comMembro]);
   const listados = soCandidatos ? comMembro.filter((c) => c.memberCandidate) : comMembro;
@@ -468,6 +489,15 @@ function ArenaCrmTab({ arenaId, membrosOn = false, onVerMembros }) {
   };
 
   if (isLoading) return <V2Skeleton lines={5} />;
+  if (reservasFalharam) {
+    return (
+      <V2ErrorState
+        title="Não foi possível carregar os clientes"
+        description="A lista de clientes sai das reservas, e elas não carregaram. Tente de novo."
+        onRetry={() => recarregarReservas()}
+      />
+    );
+  }
   if (clients.length === 0) {
     return (
       <V2Surface>
@@ -478,16 +508,24 @@ function ArenaCrmTab({ arenaId, membrosOn = false, onVerMembros }) {
 
   return (
     <div className="space-y-4">
-      <div className={cn('grid grid-cols-2 gap-3', membrosOn ? 'sm:grid-cols-3 lg:grid-cols-6' : 'sm:grid-cols-4')}>
+      {membrosOn && membrosFalharam && (
+        <V2ErrorState
+          inline
+          title="Não foi possível conferir quem já é membro"
+          description="Os clientes aparecem sem o nível até carregar."
+          onRetry={() => recarregarMembros()}
+        />
+      )}
+      <div className={cn('grid grid-cols-2 gap-3', membrosNaMao ? 'sm:grid-cols-3 lg:grid-cols-6' : 'sm:grid-cols-4')}>
         <V2StatCard label="Clientes" value={summary.clients} />
         <V2StatCard label="Reservas" value={summary.bookings} />
         <V2StatCard label="Valor acordado" value={formatPrice(summary.revenue)} />
         <V2StatCard label="No-shows" value={summary.no_shows} />
-        {membrosOn && <V2StatCard label="Membros" value={resumoMembros.members} />}
-        {membrosOn && <V2StatCard label="Frequentes sem ser membro" value={resumoMembros.candidates} />}
+        {membrosNaMao && <V2StatCard label="Membros" value={resumoMembros.members} />}
+        {membrosNaMao && <V2StatCard label="Frequentes sem ser membro" value={resumoMembros.candidates} />}
       </div>
 
-      {membrosOn && resumoMembros.candidates > 0 && (
+      {membrosNaMao && resumoMembros.candidates > 0 && (
         <div className="flex flex-wrap items-center justify-between gap-2 rounded-2xl border border-acid/30 bg-acid/10 px-4 py-3">
           <p className="text-sm text-ink">
             <strong>{resumoMembros.candidates}</strong> {resumoMembros.candidates === 1 ? 'cliente reservou' : 'clientes reservaram'} {FREQUENT_CLIENT_MIN} vezes
@@ -505,7 +543,7 @@ function ArenaCrmTab({ arenaId, membrosOn = false, onVerMembros }) {
             <thead className="bg-paper text-left text-[11px] uppercase tracking-wide text-gray-500">
               <tr>
                 <th className="px-4 py-3">Cliente</th>
-                {membrosOn && <th className="px-4 py-3">Membro</th>}
+                {membrosNaMao && <th className="px-4 py-3">Membro</th>}
                 <th className="px-4 py-3 text-center">Reservas</th>
                 <th className="px-4 py-3 text-center">Confirmadas</th>
                 <th className="px-4 py-3 text-center">No-show</th>
@@ -522,7 +560,7 @@ function ArenaCrmTab({ arenaId, membrosOn = false, onVerMembros }) {
                       {c.athlete_id ? <Link to={`/atletas/${c.athlete_id}`} className="hover:underline">{c.name}</Link> : c.name}
                       {!c.athlete_id && <span className="ml-1 text-xs text-gray-400">· avulso</span>}
                     </td>
-                    {membrosOn && (
+                    {membrosNaMao && (
                       <td className="px-4 py-3">
                         {tier ? (
                           <button type="button" onClick={onVerMembros} className="inline-flex" title="Ver na aba Membros">
@@ -625,7 +663,7 @@ function PhotosTab({ arena }) {
 
 function BookingsTab({ arena }) {
   const sharedBookingsOn = true;
-  const { data: bookings = [], isLoading } = useArenaBookings(arena.id);
+  const { data: bookings = [], isLoading, isError, refetch } = useArenaBookings(arena.id);
   const grouped = useMemo(() => {
     const active = sortBookings(bookings.filter((b) => [BOOKING_STATUS.REQUESTED, BOOKING_STATUS.NEGOTIATING, BOOKING_STATUS.CONFIRMED].includes(b.status)));
     const past = sortBookings(bookings.filter((b) => [BOOKING_STATUS.DECLINED, BOOKING_STATUS.CANCELLED, BOOKING_STATUS.COMPLETED].includes(b.status)));
@@ -641,6 +679,17 @@ function BookingsTab({ arena }) {
   );
 
   if (isLoading) return <V2Skeleton className="h-40 rounded-4xl" />;
+  // Falha não é "nenhuma solicitação": a arena deixaria pedidos sem resposta
+  // achando que não chegou nenhum.
+  if (isError) {
+    return (
+      <V2ErrorState
+        title="Não foi possível carregar as reservas"
+        description="Pode haver pedidos esperando resposta. Tente de novo."
+        onRetry={() => refetch()}
+      />
+    );
+  }
   if (bookings.length === 0) return <V2Surface className="text-center"><p className="py-6 text-sm text-gray-500">Nenhuma solicitação de reserva ainda.</p></V2Surface>;
 
   return (

@@ -23,6 +23,7 @@ import ConfirmDialog from '@/components/ConfirmDialog';
 import {
   V2Badge, V2Button, V2EmptyState, V2Field, V2Input, V2Select, V2Skeleton,
   V2StatCard, V2Surface, V2Textarea,
+  V2ErrorState,
 } from '@/v2/ui/primitives';
 
 function downloadCSV(filename, content) {
@@ -177,9 +178,13 @@ function SaleRow({ sale, onTogglePaid, onConsume, isPending }) {
 }
 
 export default function CoachPackagesSection({ coachId }) {
-  const { data: packages = [], isLoading: pkgLoading } = useCoachPackages(coachId);
-  const { data: sales = [], isLoading: salesLoading } = useCoachSales(coachId);
-  const { data: students = [] } = useCoachStudents(coachId);
+  const {
+    data: packages = [], isLoading: pkgLoading, isError: pacotesFalharam, refetch: recarregarPacotes,
+  } = useCoachPackages(coachId);
+  const {
+    data: sales = [], isLoading: salesLoading, isError: vendasFalharam, refetch: recarregarVendas,
+  } = useCoachSales(coachId);
+  const { data: students = [], isError: alunosFalharam } = useCoachStudents(coachId);
   const del = useDeletePackage();
   const setPaid = useSetSalePaid();
   const consume = useConsumeCredit();
@@ -210,17 +215,29 @@ export default function CoachPackagesSection({ coachId }) {
           <h2 className="font-display text-lg font-bold text-ink">Pacotes e financeiro</h2>
         </div>
         <div className="flex gap-2">
-          {!showCreate && <V2Button size="sm" variant="ghost" onClick={() => { setShowCreate(true); setShowSell(false); }}><Plus className="mr-1 h-4 w-4" /> Pacote</V2Button>}
-          {packages.length > 0 && !showSell && <V2Button size="sm" onClick={() => { setShowSell(true); setShowCreate(false); }}><DollarSign className="mr-1 h-4 w-4" /> Vender</V2Button>}
+          {/* Sem a lista de pacotes, criar é convite a duplicar; sem a de
+              alunos, vender não tem para quem. */}
+          {!showCreate && !pacotesFalharam && <V2Button size="sm" variant="ghost" onClick={() => { setShowCreate(true); setShowSell(false); }}><Plus className="mr-1 h-4 w-4" /> Pacote</V2Button>}
+          {packages.length > 0 && !showSell && !alunosFalharam && <V2Button size="sm" onClick={() => { setShowSell(true); setShowCreate(false); }}><DollarSign className="mr-1 h-4 w-4" /> Vender</V2Button>}
         </div>
       </div>
 
-      {/* Financeiro */}
+      {/* Financeiro — com as vendas falhando, receita zero seria mentira. */}
+      {vendasFalharam ? (
+        <V2ErrorState
+          inline
+          className="mb-4"
+          title="Não foi possível carregar as suas vendas"
+          description="A receita e o que falta receber aparecem assim que carregar."
+          onRetry={() => recarregarVendas()}
+        />
+      ) : (
       <div className="mb-4 grid gap-3 sm:grid-cols-3">
         <V2StatCard icon={DollarSign} label="Receita recebida" value={finance.revenue_label} accent="ink" />
         <V2StatCard label="A receber" value={finance.pending_label} hint={`${finance.pending_count} venda(s) pendente(s)`} />
         <V2StatCard label="Vendas" value={String(finance.total_sales)} hint={`${finance.paid_count} paga(s)`} />
       </div>
+      )}
 
       {showCreate && <div className="mb-4"><CreatePackageForm coachId={coachId} onClose={() => setShowCreate(false)} /></div>}
       {showSell && <div className="mb-4"><SellForm coachId={coachId} packages={packages.filter((p) => p.active !== false)} students={activeStudents} onClose={() => setShowSell(false)} /></div>}
@@ -230,6 +247,8 @@ export default function CoachPackagesSection({ coachId }) {
         <h3 className="mb-2 text-xs font-bold uppercase tracking-wider text-gray-400">Pacotes ofertados</h3>
         {pkgLoading ? (
           <V2Skeleton lines={2} />
+        ) : pacotesFalharam ? (
+          <V2ErrorState inline title="Não foi possível carregar os seus pacotes" onRetry={() => recarregarPacotes()} />
         ) : packages.length === 0 ? (
           <V2EmptyState icon={Package} title="Nenhum pacote" description="Crie um pacote (ex.: 10 aulas com validade) para vender aos alunos." />
         ) : (
@@ -272,7 +291,7 @@ export default function CoachPackagesSection({ coachId }) {
         </div>
         {salesLoading ? (
           <V2Skeleton lines={2} />
-        ) : sales.length === 0 ? (
+        ) : vendasFalharam ? null : sales.length === 0 ? (
           <V2EmptyState icon={DollarSign} title="Nenhuma venda ainda" description="Venda um pacote a um aluno para começar a controlar créditos e receita." />
         ) : (
           <div className="space-y-2">

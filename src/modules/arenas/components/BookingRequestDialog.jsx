@@ -69,9 +69,18 @@ export default function BookingRequestDialog({ arena, open, onOpenChange, court:
   const { user } = useAuth();
   const createBooking = useCreateBooking();
   const createFromSelection = useCreateBookingsForSelection();
-  const { data: existingBookings = [] } = useArenaBookings(arena.id);
-  const { data: courts = [] } = useArenaCourts(arena.id);
-  const { data: allSchedules = [] } = useArenaCourtSchedules(arena.id);
+  const { data: existingBookings = [], isError: reservasFalharam, refetch: recarregarReservas } = useArenaBookings(arena.id);
+  const { data: courts = [], isError: quadrasFalharam, refetch: recarregarQuadras } = useArenaCourts(arena.id);
+  const { data: allSchedules = [], isError: janelasFalharam, refetch: recarregarJanelas } = useArenaCourtSchedules(arena.id);
+  // Sem reservas, quadras ou janelas na mão, o diálogo mostraria como livre o
+  // que talvez esteja ocupado. O servidor recusa o conflito ao gravar — mas
+  // quem pede merece saber ANTES que a disponibilidade não foi conferida.
+  const disponibilidadeIncerta = reservasFalharam || quadrasFalharam || janelasFalharam;
+  const reconferirDisponibilidade = () => {
+    if (reservasFalharam) recarregarReservas();
+    if (quadrasFalharam) recarregarQuadras();
+    if (janelasFalharam) recarregarJanelas();
+  };
   const activeCourts = useMemo(() => courts.filter((c) => c.is_active !== false), [courts]);
   // Seleção de quadra: 'any' (a arena atribui uma livre), 'specific' (uma ou
   // mais escolhidas) ou 'all' (todas as disponíveis — cada quadra vira uma reserva).
@@ -486,6 +495,16 @@ export default function BookingRequestDialog({ arena, open, onOpenChange, court:
               : 'Escolha um horário avulso ou recorrente. A arena confirma o valor.'}
           </DialogDescription>
         </DialogHeader>
+
+        {disponibilidadeIncerta && (
+          <p role="alert" className="rounded-2xl border border-amber-300 bg-amber-50 px-3 py-2 text-xs text-amber-900">
+            Não deu para conferir a disponibilidade agora — um horário pode aparecer livre sem estar.
+            Ao enviar, a arena confere de novo.{' '}
+            <button type="button" className="font-bold underline" onClick={reconferirDisponibilidade}>
+              Conferir de novo
+            </button>
+          </p>
+        )}
 
         <div className="space-y-4">
           {/* CONFIRMAÇÃO: o que foi escolhido, sem re-perguntar nada. */}

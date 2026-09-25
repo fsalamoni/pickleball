@@ -21,7 +21,7 @@ import { useMyClassEnrollments, useMyTaughtClasses } from '@/modules/arenas/hook
 import { enrollmentRows, taughtClassRows } from '@/modules/arenas/domain/classAgenda';
 import { formatDateShortBR } from '@/modules/arenas/domain/calendar';
 import { todayISO } from '@/modules/arenas/domain/subscription';
-import { V2Badge, V2Button, V2Surface } from '@/v2/ui/primitives';
+import { V2Badge, V2Button, V2Surface, V2ErrorState } from '@/v2/ui/primitives';
 
 const porId = (lista = []) => new Map(lista.map((x) => [x.id, x]));
 
@@ -48,13 +48,24 @@ function LinhaDeAula({ aula, arenaId, arenaName, children }) {
 
 /** "Minhas aulas": as matrículas em aula de arena. */
 export function MyArenaEnrollments() {
-  const { data, isLoading } = useMyClassEnrollments();
+  const { data, isLoading, isError, refetch } = useMyClassEnrollments();
   const [verTodas, setVerTodas] = useState(false);
   const hoje = todayISO();
   const linhas = useMemo(() => enrollmentRows(
     data?.bookings || [], porId(data?.aulas), porId(data?.arenas), hoje,
   ), [data, hoje]);
 
+  // A seção some quando não há matrícula — mas falha não é "não há": sumir
+  // calado faria o atleta achar que perdeu a vaga da aula de amanhã.
+  if (isError) {
+    return (
+      <V2ErrorState
+        inline
+        title="Não foi possível carregar as suas aulas nas arenas"
+        onRetry={() => refetch()}
+      />
+    );
+  }
   if (isLoading || linhas.length === 0) return null;
   const vindo = linhas.filter((l) => l.upcoming);
   const foi = linhas.filter((l) => !l.upcoming);
@@ -99,7 +110,7 @@ export function MyArenaEnrollments() {
 
 /** Painel do professor: as aulas que ele DÁ nas arenas. */
 export function MyTaughtArenaClasses() {
-  const { data, isLoading } = useMyTaughtClasses();
+  const { data, isLoading, isError, refetch } = useMyTaughtClasses();
   const hoje = todayISO();
   const { proximas, passadas } = useMemo(() => taughtClassRows(
     data?.perfis || [],
@@ -108,6 +119,15 @@ export function MyTaughtArenaClasses() {
     hoje,
   ), [data, hoje]);
 
+  if (isError) {
+    return (
+      <V2ErrorState
+        inline
+        title="Não foi possível carregar as aulas que você dá nas arenas"
+        onRetry={() => refetch()}
+      />
+    );
+  }
   if (isLoading || !data?.perfis?.length) return null;
   const arenas = [...new Map((data.perfis || []).map((p) => [p.arena_id, porId(data.arenas).get(p.arena_id)?.name || 'Arena'])).entries()];
 

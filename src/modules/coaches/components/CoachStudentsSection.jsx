@@ -27,7 +27,7 @@ import { FEATURE_FLAG } from '@/core/featureFlags';
 import ConfirmDialog from '@/components/ConfirmDialog';
 import {
   V2Badge, V2Button, V2EmptyState, V2Field, V2Input, V2Select, V2Skeleton,
-  V2Surface, V2Textarea,
+  V2Surface, V2Textarea, V2ErrorState,
 } from '@/v2/ui/primitives';
 
 /** Alunos distintos derivados do histórico de aulas (com id conhecido). */
@@ -243,7 +243,9 @@ export default function CoachStudentsSection({ coachId, lessons = [] }) {
   const { user } = useAuth();
   const levelingOn = true;
   const progressOn = useFeatureFlag(FEATURE_FLAG.COACH_STUDENT_PROGRESS);
-  const { data: students = [], isLoading } = useCoachStudents(coachId);
+  const {
+    data: students = [], isLoading, isError: alunosFalharam, refetch: recarregarAlunos,
+  } = useCoachStudents(coachId);
   const { data: validations = [] } = useCoachValidations(levelingOn ? coachId : null);
   const { data: ranking = [] } = useNationalRanking();
 
@@ -337,7 +339,9 @@ export default function CoachStudentsSection({ coachId, lessons = [] }) {
         )}
       </div>
 
-      {candidates.length > 0 && (
+      {/* Sem a lista de alunos, todo o histórico pareceria "fora do roster" — e
+          adicionar regravaria como ativo quem está pausado. */}
+      {candidates.length > 0 && !alunosFalharam && (
         <div className="mb-4 rounded-2xl border border-green-100 bg-green-50/50 p-3">
           <p className="text-xs font-bold uppercase tracking-wider text-green-700">Do seu histórico de aulas</p>
           <div className="mt-2 flex flex-wrap gap-2">
@@ -358,6 +362,8 @@ export default function CoachStudentsSection({ coachId, lessons = [] }) {
 
       {isLoading ? (
         <V2Skeleton lines={3} />
+      ) : alunosFalharam ? (
+        <V2ErrorState inline title="Não foi possível carregar os seus alunos" onRetry={() => recarregarAlunos()} />
       ) : visible.length === 0 ? (
         <V2EmptyState
           icon={Users}

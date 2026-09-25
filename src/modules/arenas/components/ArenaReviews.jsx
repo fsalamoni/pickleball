@@ -31,7 +31,7 @@ function StarPicker({ value, onChange }) {
 
 export default function ArenaReviews({ arena, canModerate = false }) {
   const { user, isAuthenticated } = useAuth();
-  const { data: reviews = [], isLoading } = useArenaReviews(arena.id);
+  const { data: reviews = [], isLoading, isError, refetch } = useArenaReviews(arena.id);
   const addReview = useAddReview();
   const deleteReview = useDeleteReview();
   const [type, setType] = useState(REVIEW_TYPE.REVIEW);
@@ -104,6 +104,15 @@ export default function ArenaReviews({ arena, canModerate = false }) {
           <div className="mt-4 space-y-2">
             {isLoading ? (
               <p className="text-sm text-gray-500">Carregando…</p>
+            ) : isError ? (
+              // Falha não é "sem avaliações": "seja o primeiro" sobre uma lista
+              // que não chegou faz a arena parecer nova para quem pesquisa.
+              <p role="alert" className="text-sm text-gray-500">
+                Não foi possível carregar as avaliações.{' '}
+                <button type="button" className="font-bold text-ink underline" onClick={() => refetch()}>
+                  Tentar de novo
+                </button>
+              </p>
             ) : reviews.length === 0 ? (
               <p className="text-sm text-gray-500">Ainda não há avaliações. Seja o primeiro a comentar.</p>
             ) : (

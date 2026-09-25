@@ -30,15 +30,22 @@ import {
 import { cn } from '@/core/lib/utils';
 import {
   V2Badge, V2Button, V2Field, V2Input, V2Select, V2Surface, V2Textarea,
-  V2EmptyState, V2Skeleton,
+  V2EmptyState, V2ErrorState, V2Skeleton,
 } from '@/v2/ui/primitives';
 
 const todayStr = () => new Date().toISOString().slice(0, 10);
 
 export default function V2ArenaCatalogBrowser() {
   const { arenaId } = useParams();
-  const { data: catalog = [], isLoading } = useCatalogProducts();
-  const { data: myProducts = [] } = useInventoryProducts(arenaId);
+  const {
+    data: catalog = [], isLoading, isError: catalogoFalhou, refetch: recarregarCatalogo,
+  } = useCatalogProducts();
+  const {
+    data: myProducts = [], isError: meusFalharam, refetch: recarregarMeus,
+  } = useInventoryProducts(arenaId);
+  // Sem a lista do MEU mercado, todo item do catálogo pareceria "ainda não
+  // adotado" — e adicionar de novo duplicaria o produto no estoque da arena.
+  const podeAdotar = !meusFalharam;
   const adoptMany = useAdoptManyCatalogProducts(arenaId);
 
   const [query, setQuery] = useState('');
@@ -67,8 +74,8 @@ export default function V2ArenaCatalogBrowser() {
 
   // Produtos filtrados que ainda NÃO estão no mercado (candidatos ao lote).
   const selectableFiltered = useMemo(
-    () => filtered.filter((p) => !adoptedCatalogIds.has(p.id)),
-    [filtered, adoptedCatalogIds],
+    () => (podeAdotar ? filtered.filter((p) => !adoptedCatalogIds.has(p.id)) : []),
+    [podeAdotar, filtered, adoptedCatalogIds],
   );
   const selectedCount = selected.size;
   const allFilteredSelected = selectableFiltered.length > 0 && selectableFiltered.every((p) => selected.has(p.id));
@@ -109,9 +116,13 @@ export default function V2ArenaCatalogBrowser() {
           <ShoppingBasket className="h-5 w-5 text-green-700" />
           <h2 className="font-display text-xl font-bold text-ink">Catálogo de produtos</h2>
         </div>
-        <V2Button size="sm" variant="secondary" onClick={() => setSuggesting((s) => !s)}>
-          <PackagePlus className="h-4 w-4" /> Sugerir produto novo
-        </V2Button>
+        {/* Sugerir exige conferir duplicidade contra o catálogo — sem ele na
+            mão, "não há parecido" seria afirmado sobre uma lista vazia. */}
+        {!catalogoFalhou && (
+          <V2Button size="sm" variant="secondary" onClick={() => setSuggesting((s) => !s)}>
+            <PackagePlus className="h-4 w-4" /> Sugerir produto novo
+          </V2Button>
+        )}
       </div>
       <p className="text-sm text-gray-500">
         Esta é a <strong>lista geral</strong> da plataforma (não é o seu estoque). Marque os produtos que a
@@ -120,7 +131,16 @@ export default function V2ArenaCatalogBrowser() {
         produto novo (a plataforma verifica se ele já não existe com outro nome).
       </p>
 
-      {suggesting && (
+      {meusFalharam && (
+        <V2ErrorState
+          inline
+          title="Não foi possível conferir o que já está no seu mercado"
+          description="Enquanto isso, adicionar fica desligado — senão um produto que você já tem entraria de novo."
+          onRetry={() => recarregarMeus()}
+        />
+      )}
+
+      {suggesting && !catalogoFalhou && (
         <SuggestForm
           arenaId={arenaId}
           catalog={catalog}
@@ -182,11 +202,17 @@ export default function V2ArenaCatalogBrowser() {
 
       {isLoading ? (
         <V2Skeleton lines={4} />
+      ) : catalogoFalhou ? (
+        <V2ErrorState
+          title="Não foi possível carregar o catálogo"
+          description="Você já pode cadastrar produtos próprios na aba Mercado — ou tentar de novo."
+          onRetry={() => recarregarCatalogo()}
+        />
       ) : catalog.length === 0 ? (
         <V2EmptyState
           icon={Database}
-          title="Catálogo indisponível"
-          description="Não foi possível carregar o catálogo agora. Você já pode cadastrar produtos próprios na aba Mercado, ou tentar novamente."
+          title="O catálogo da plataforma ainda está vazio"
+          description="Cadastre produtos próprios na aba Mercado, ou sugira um produto novo para o catálogo."
         />
       ) : filtered.length === 0 ? (
         <V2EmptyState icon={Search} title="Nada encontrado" description="Ajuste a busca ou os filtros — ou sugira um produto novo." />
@@ -199,7 +225,7 @@ export default function V2ArenaCatalogBrowser() {
             return (
               <div key={p.id} className={cn('rounded-2xl border p-3 transition-colors', isAdopting || isSelected ? 'border-green-300 bg-green-50/40' : 'border-gray-100 bg-paper')}>
                 <div className="flex items-start gap-2">
-                  {adopted ? (
+                  {adopted || !podeAdotar ? (
                     <div className="flex h-9 w-9 shrink-0 items-center justify-center rounded-2xl bg-ink text-acid">
                       <Package className="h-4 w-4" />
                     </div>
@@ -225,7 +251,7 @@ export default function V2ArenaCatalogBrowser() {
                   </div>
                   {adopted ? (
                     <V2Badge tone="green"><Check className="mr-1 h-3 w-3" /> No seu mercado</V2Badge>
-                  ) : (
+                  ) : !podeAdotar ? null : (
                     <V2Button size="sm" variant={isAdopting ? 'ghost' : 'secondary'} onClick={() => setAdopting(isAdopting ? null : p)}>
                       {isAdopting ? 'Fechar' : <><Plus className="h-4 w-4" /> Adicionar</>}
                     </V2Button>

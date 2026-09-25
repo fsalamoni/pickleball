@@ -21,6 +21,7 @@ import {
   V2PageIntro,
   V2Skeleton,
   V2Surface,
+  V2ErrorState,
 } from '@/v2/ui/primitives';
 
 import V2BookingRow from '@/v2/components/arenas/V2BookingRow';
@@ -49,9 +50,11 @@ function whenLabel(booking) {
 
 export default function V2Bookings() {
   const sharedOn = true;
-  const { data: myBookings = [], isLoading } = useMyBookings();
-  const { data: invites = [] } = useMyBookingInvites();
-  const { data: participations = [] } = useMyParticipations();
+  const { data: myBookings = [], isLoading, isError: reservasFalharam, refetch: recarregarReservas } = useMyBookings();
+  const { data: invites = [], isError: convitesFalharam, refetch: recarregarConvites } = useMyBookingInvites();
+  const {
+    data: participations = [], isError: compartilhadasFalharam, refetch: recarregarCompartilhadas,
+  } = useMyParticipations();
 
   // Une as reservas próprias com aquelas em que o usuário é co-proprietário
   // (reservas compartilhadas que ele aceitou), sem duplicar.
@@ -78,6 +81,19 @@ export default function V2Bookings() {
         subtitle="Acompanhe suas solicitações, valores e pagamentos nas arenas."
         action={<V2Button asChild variant="ghost" size="sm"><Link to="/arenas"><Building2 className="h-4 w-4" /> Ver arenas</Link></V2Button>}
       />
+
+      {sharedOn && (convitesFalharam || compartilhadasFalharam) && !reservasFalharam && (
+        <V2ErrorState
+          inline
+          className="mb-6"
+          title={convitesFalharam ? 'Não foi possível carregar os convites de reserva' : 'Não foi possível carregar as reservas compartilhadas com você'}
+          description="As suas próprias reservas estão abaixo; esta parte volta assim que carregar."
+          onRetry={() => {
+            if (convitesFalharam) recarregarConvites();
+            if (compartilhadasFalharam) recarregarCompartilhadas();
+          }}
+        />
+      )}
 
       {sharedOn && pendingInvites.length > 0 && (
         <div className="mb-8">
@@ -108,6 +124,14 @@ export default function V2Bookings() {
 
       {isLoading ? (
         <V2Skeleton className="h-48 rounded-4xl" />
+      ) : reservasFalharam ? (
+        // Falha não é "você ainda não reservou": quem tem jogo hoje à noite e lê
+        // isso conclui que a reserva sumiu.
+        <V2ErrorState
+          title="Não foi possível carregar as suas reservas"
+          description="Elas continuam feitas — a lista só não chegou. Tente de novo."
+          onRetry={() => recarregarReservas()}
+        />
       ) : bookings.length === 0 ? (
         <V2Surface>
           <V2EmptyState

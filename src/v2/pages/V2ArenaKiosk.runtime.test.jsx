@@ -8,7 +8,9 @@
  *  4. ⭐ a tela cumprimenta só o ÚLTIMO que chegou, e pelo primeiro nome;
  *  5. ⭐ chegada antiga não fica cumprimentando a sala a tarde toda;
  *  6. sem totem cadastrado, um clique resolve;
- *  7. a tela sai com a marca da arena.
+ *  7. a tela sai com a marca da arena;
+ *  8. ⭐ lista de totens ou arena falhando: a tela diz que falhou — e NÃO
+ *     oferece criar um segundo totem para a mesma recepção.
  */
 import React from 'react';
 import { createRoot } from 'react-dom/client';
@@ -19,7 +21,8 @@ import { describe, it, expect, beforeEach, afterEach, vi } from 'vitest';
 import { ARENA_MODULE_ID } from '@/modules/arenas/domain/modules';
 
 const LIGADOS = new Set();
-const estado = { gere: true, devices: [], reservas: [], branding: null };
+const estado = { gere: true, devices: [], reservas: [], branding: null, falhaTotens: false, falhaArena: false };
+const falha = () => ({ data: undefined, isLoading: false, isError: true, refetch: vi.fn() });
 const girar = vi.fn(() => Promise.resolve({ code: 'AB2CD' }));
 const desligar = vi.fn();
 const criarDispositivo = vi.fn(() => Promise.resolve('dev1'));
@@ -30,7 +33,7 @@ vi.mock('@/core/lib/FirebaseAuthContext', () => ({
   useAuth: () => ({ user: { uid: 'eu' }, isPlatformAdmin: false, isAuthenticated: true }),
 }));
 vi.mock('@/modules/arenas/hooks/useArenas', () => ({
-  useArena: () => ({
+  useArena: () => (estado.falhaArena ? falha() : {
     data: {
       id: 'a1', name: 'Arena Teste',
       owner_id: estado.gere ? 'eu' : 'outro',
@@ -47,7 +50,7 @@ vi.mock('@/modules/arenas/hooks/useArenaModules', () => ({
   useArenaModules: () => ({ isOn: (id) => LIGADOS.has(id), isLoading: false }),
 }));
 vi.mock('@/modules/arenas/hooks/useArenaV3', () => ({
-  useArenaDevices: () => ({ data: estado.devices, isLoading: false }),
+  useArenaDevices: () => (estado.falhaTotens ? falha() : { data: estado.devices, isLoading: false }),
   useCreateDevice: () => ({ mutateAsync: criarDispositivo, isPending: false }),
 }));
 vi.mock('@/modules/arenas/hooks/useCheckin', () => ({
@@ -82,6 +85,8 @@ beforeEach(() => {
     devices: [{ id: 'dev1', arena_id: 'a1', kind: 'qr_kiosk', name: 'Totem' }],
     reservas: [],
     branding: null,
+    falhaTotens: false,
+    falhaArena: false,
   });
   container = document.createElement('div');
   document.body.appendChild(container);
@@ -189,6 +194,29 @@ describe('arena sem totem cadastrado', () => {
     estado.devices = [{ id: 'l1', arena_id: 'a1', kind: 'lighting', name: 'Luz' }];
     await render();
     expect(container.textContent).toContain('Nenhum totem cadastrado');
+    await act(async () => root.unmount());
+  });
+});
+
+/* ================================================================ falha === */
+
+describe('quando a leitura falha', () => {
+  it('⭐ lista de totens falhando: diz que falhou e NÃO oferece criar outro', async () => {
+    estado.falhaTotens = true;
+    await render();
+    expect(container.textContent).toContain('Não foi possível carregar o totem');
+    expect(container.textContent).toContain('Tentar de novo');
+    expect(container.textContent).not.toContain('Nenhum totem cadastrado');
+    expect([...container.querySelectorAll('button')].some((b) => b.textContent.includes('Criar o totem'))).toBe(false);
+    expect(girar).not.toHaveBeenCalled();
+    await act(async () => root.unmount());
+  });
+
+  it('arena falhando: diz que falhou, em vez de mandar para outra página', async () => {
+    estado.falhaArena = true;
+    await render();
+    expect(container.textContent).toContain('Não foi possível carregar o totem');
+    expect(container.textContent).not.toContain('PÁGINA DA ARENA');
     await act(async () => root.unmount());
   });
 });

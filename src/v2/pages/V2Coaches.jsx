@@ -20,6 +20,7 @@ import { cn } from '@/core/lib/utils';
 import {
   V2Badge, V2Button, V2EmptyState, V2Field, V2Input, V2Surface, V2Textarea,
   V2Skeleton,
+  V2ErrorState,
 } from '@/v2/ui/primitives';
 
 function CoachForm({ existing, onClose }) {
@@ -159,8 +160,12 @@ export default function V2Coaches() {
   }, [userProfile?.city]);
   // Mostra TODOS os professores ativos (não só os "aceitando"); a busca é
   // automática (reativa a region/modality).
-  const { data: coaches = [], isLoading } = useCoaches({ region, modality, acceptingOnly: false });
-  const { data: myProfile } = useCoach(user?.uid);
+  const { data: coaches = [], isLoading, isError: listaFalhou, refetch: recarregarLista } = useCoaches({ region, modality, acceptingOnly: false });
+  // 🐞 Com o MEU perfil falhando, o botão virava "Sou professor" e abria o
+  // formulário em branco — salvar gravava o perfil vazio por cima do
+  // verdadeiro (bio, valor, regiões). Sem saber se o perfil existe, não há
+  // botão de editar nem de criar.
+  const { data: myProfile, isError: meuPerfilFalhou, refetch: recarregarMeuPerfil } = useCoach(user?.uid);
   const [editing, setEditing] = useState(false);
 
   // Descoberta aprimorada (flag): filtro de preço, "aceitando alunos" e ordenação.
@@ -194,12 +199,23 @@ export default function V2Coaches() {
           </h1>
           <p className="mt-1 text-sm text-gray-500">Encontre coaches de pickleball ou cadastre-se como professor</p>
         </div>
-        <V2Button size="sm" variant={myProfile ? 'ghost' : 'default'} onClick={() => setEditing(true)}>
-          {myProfile ? <><Edit3 className="h-4 w-4" /> Editar perfil</> : <><Plus className="h-4 w-4" /> Sou professor</>}
-        </V2Button>
+        {!meuPerfilFalhou && (
+          <V2Button size="sm" variant={myProfile ? 'ghost' : 'default'} onClick={() => setEditing(true)}>
+            {myProfile ? <><Edit3 className="h-4 w-4" /> Editar perfil</> : <><Plus className="h-4 w-4" /> Sou professor</>}
+          </V2Button>
+        )}
       </div>
 
-      {editing && <CoachForm existing={myProfile} onClose={() => setEditing(false)} />}
+      {meuPerfilFalhou && (
+        <V2ErrorState
+          inline
+          title="Não foi possível conferir o seu perfil de professor"
+          description="Editar ou criar o perfil volta assim que carregar."
+          onRetry={() => recarregarMeuPerfil()}
+        />
+      )}
+
+      {editing && !meuPerfilFalhou && <CoachForm existing={myProfile} onClose={() => setEditing(false)} />}
 
       {/* Filtros */}
       <V2Surface collapsible collapseId="coaches-filtros" title="Filtros">
@@ -240,6 +256,12 @@ export default function V2Coaches() {
       {/* Lista */}
       {isLoading ? (
         <V2Skeleton lines={4} />
+      ) : listaFalhou ? (
+        <V2ErrorState
+          title="Não foi possível carregar os professores"
+          description="A lista não chegou — isso não quer dizer que não haja professores na sua região."
+          onRetry={() => recarregarLista()}
+        />
       ) : displayed.length === 0 ? (
         <V2EmptyState
           icon={GraduationCap}
