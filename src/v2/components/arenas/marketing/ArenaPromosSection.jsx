@@ -8,6 +8,9 @@
  * uma linha e o código para copiar. Os outros continuam sendo códigos que ela
  * entrega a quem quiser.
  *
+ * Desde a Onda CD cada promoção é um TÍQUETE com a arte que a arena escolheu
+ * (ou o Clássico), e o código no canhoto é o botão de copiar.
+ *
  * O pedido de reserva oferece as mesmas promoções com um toque; aqui a
  * pessoa descobre que elas existem antes de escolher o horário.
  *
@@ -15,13 +18,13 @@
  * quando a leitura falha — a seção só aparece com promoção de verdade.
  */
 import React, { useMemo } from 'react';
-import { toast } from 'sonner';
-import { Copy, Tag } from 'lucide-react';
+import { Tag } from 'lucide-react';
 import { useArenaModules } from '@/modules/arenas/hooks/useArenaModules';
 import { useArenaCoupons } from '@/modules/arenas/hooks/useArenaV3';
 import { ARENA_MODULE_ID } from '@/modules/arenas/domain/modules';
 import { promoConditions, publicPromos } from '@/modules/arenas/domain/marketing';
-import { V2Button, V2Surface } from '@/v2/ui/primitives';
+import { V2Surface } from '@/v2/ui/primitives';
+import CouponArt from './coupons/CouponArt';
 
 export default function ArenaPromosSection({ arena }) {
   const arenaId = arena?.id;
@@ -32,14 +35,6 @@ export default function ArenaPromosSection({ arena }) {
 
   if (isLoading || !ligado || promos.length === 0) return null;
 
-  const copiar = async (p) => {
-    try {
-      await navigator.clipboard.writeText(p.code);
-      toast.success(p.bookable ? 'Código copiado. Use no pedido de reserva.' : 'Código copiado. Mostre na recepção da arena.');
-    } catch {
-      toast.error(`Não foi possível copiar. O código é: ${p.code}`);
-    }
-  };
   const temVale = promos.some((p) => !p.bookable);
   const temDesconto = promos.some((p) => p.bookable);
 
@@ -49,24 +44,32 @@ export default function ArenaPromosSection({ arena }) {
         <Tag className="h-4 w-4" /> Promoções
       </h3>
       <p className="mt-1 text-xs text-gray-500">
-        {temDesconto && 'Desconto na reserva: no pedido, toque na promoção para aplicar — ou digite o código.'}
+        Toque no código para copiar.{' '}
+        {temDesconto && 'Desconto na reserva: no pedido, toque na promoção para aplicar — ou cole o código.'}
         {temDesconto && temVale && ' '}
         {temVale && 'Vale: mostre o código na recepção da arena.'}
       </p>
-      <ul className="mt-3 space-y-2">
+      <ul className="mt-3 grid gap-3 lg:grid-cols-2">
         {promos.map((p) => (
-          <li key={p.id} className="flex flex-wrap items-center justify-between gap-2 rounded-2xl border border-dashed border-gray-300 bg-paper p-3">
-            <div className="min-w-0">
-              <p className="font-bold text-ink">
-                {p.discount}
-                {!p.bookable && <span className="ml-1.5 rounded-full bg-paper-pure px-2 py-0.5 text-[11px] font-bold text-gray-600">vale na recepção</span>}
+          <li key={p.id} data-promo={p.code}>
+            {/* O tíquete da promoção (Onda CD): a arte que a arena escolheu —
+                ou o Clássico —, com o código copiável no canhoto. */}
+            <CouponArt
+              art={p.art}
+              code={p.code}
+              benefit={p.discount}
+              description={p.description}
+              kicker={p.bookable ? 'Desconto na reserva' : 'Vale na recepção'}
+              copyable
+              copyMessage={p.bookable ? 'Código copiado. Use no pedido de reserva.' : 'Código copiado. Mostre na recepção da arena.'}
+              notch="bg-paper-pure"
+            />
+            {(promoConditions(p) || !p.bookable) && (
+              <p className="mt-1.5 px-1 text-xs text-gray-500">
+                {!p.bookable && <span className="mr-1.5 rounded-full bg-paper px-2 py-0.5 text-[11px] font-bold text-gray-600">vale na recepção</span>}
+                {promoConditions(p)}
               </p>
-              {p.description && <p className="mt-0.5 text-sm text-gray-600">{p.description}</p>}
-              {promoConditions(p) && <p className="mt-0.5 text-xs text-gray-500">{promoConditions(p)}</p>}
-            </div>
-            <V2Button size="sm" variant="ghost" onClick={() => copiar(p)} aria-label={`Copiar o código ${p.code}`}>
-              <Copy className="mr-1 h-3.5 w-3.5" /> {p.code}
-            </V2Button>
+            )}
           </li>
         ))}
       </ul>

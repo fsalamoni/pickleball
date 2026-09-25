@@ -997,6 +997,15 @@ e sem `queue_removed`. É exatamente esse conjunto que vira o CSV.
     zerado (sem `redeemed_*` nem `reward_total`), e só a arena atualiza — sem
     trocar arena, dono ou código. `arena_referrals.reward_total` (opcional)
     soma o que cada resgate creditou.
+  - **Arte do cupom (2026-09-25, Onda CD, opcional):** `arena_coupons.art` —
+    `{ source: 'design', template_id, design: { style, kicker, title,
+    subtitle, bg, fg, accent } }` ou `{ source: 'upload', image_url,
+    image_path, width, height, alt }` (URL só do Storage do projeto). Ausente
+    ou `null` = desenhado como o modelo Clássico. Só é gravado quando o
+    formulário o manda (editar um cupom antigo sem mexer na arte não grava
+    nada), e nunca na indicação. Modelos da arena em
+    `arena_settings.coupon_templates` (até 20, ids `arena:…`). Zero regra
+    nova. Ver `docs/24-MODULOS-DE-ARENA/03-MARKETING.md` §13.
   - **Banner de campanha (2026-09-25, Onda CC, todos opcionais):**
     `arena_campaigns.banner` (`{ source: 'design', template_id, design: {
     layout, kicker, title, subtitle, highlight, cta, bg, fg, accent, image_url?,

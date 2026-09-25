@@ -216,6 +216,25 @@ describe('⭐ Onda CC — banners de campanha no carrossel', () => {
   });
 });
 
+describe('⭐ Onda CD — o código copiável e a arte do cupom', () => {
+  it('o código do cupom é o botão de copiar', async () => {
+    await render();
+    expect(container.querySelector('button[aria-label="Copiar o código SOL10"]')).toBeTruthy();
+  });
+
+  it('cupom com arte vira tíquete, com a arena e o caminho embaixo', async () => {
+    estado.cupons = [cupom('sol10', 'poa', {
+      art: { source: 'design', template_id: 'neon', design: { style: 'neon', title: 'Terça amiga', bg: '#0b0b0c', fg: '#ffffff', accent: '#d4f631' } },
+    })];
+    await render();
+    expect(container.textContent).toContain('Terça amiga');
+    expect(container.textContent).toContain('Arena Sol · Porto Alegre');
+    expect(container.querySelector('button[aria-label="Copiar o código SOL10"]')).toBeTruthy();
+    const link = [...container.querySelectorAll('a')].find((a) => a.textContent.includes('Reservar com esta promoção'));
+    expect(link.getAttribute('href')).toBe('/arenas/poa#arena-promocoes');
+  });
+});
+
 describe('⭐ a tela inicial monta os banners', () => {
   it('guarda de fonte', () => {
     const src = readFileSync('src/v2/pages/V2Dashboard.jsx', 'utf8');

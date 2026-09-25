@@ -21,12 +21,13 @@ import { ArrowLeft, Lock, X } from 'lucide-react';
 import { useCreateCoupon, useUpdateCoupon } from '@/modules/arenas/hooks/useArenaV3';
 import {
   COUPON_FAMILY, COUPON_KIND, COUPON_KIND_META, COUPON_TYPE, REFERRED_REWARD,
-  couponFamily, couponKind, couponLabel, normalizeCouponInput, referralRulesText,
+  couponBenefitText, couponFamily, couponKind, couponLabel, normalizeCouponInput, referralRulesText,
 } from '@/modules/arenas/domain/marketing';
 import { formatPrice } from '@/modules/arenas/domain/pricing';
 import { instanteEmMs } from '@/core/domain/instant';
 import { V2Button, V2Field, V2Input } from '@/v2/ui/primitives';
 import { COUPON_KIND_ICON, kindGroups } from './couponKindUi';
+import CouponArtEditor from './CouponArtEditor';
 
 /** ms → 'YYYY-MM-DD' para o campo de data. */
 function dataDoCampo(v) {
@@ -125,9 +126,18 @@ export function CouponKindPicker({ referralOn, onPick }) {
 
 const inputClasse = 'h-11 w-full rounded-2xl border border-gray-200 bg-paper-pure px-4 text-sm';
 
-export default function CouponForm({ arenaId, cupom = null, initialKind = null, referralOn = false, unitCost = null, onClose }) {
+export default function CouponForm({
+  arenaId, arena = null, cupom = null, initialKind = null, referralOn = false, unitCost = null, onClose,
+}) {
   const [kind, setKind] = useState(cupom ? couponKind(cupom) : initialKind);
   const [form, setForm] = useState(() => estadoInicial(cupom, kind || COUPON_KIND.DISCOUNT, unitCost));
+  // A arte do cupom (Onda CD). `null` = o Clássico, o padrão. Num cupom antigo
+  // (sem arte), ela só é gravada se a arena mexer — salvar o resto do cupom
+  // não acrescenta nada que a arena não escolheu.
+  const [art, setArt] = useState(() => cupom?.art || null);
+  const [artTocada, setArtTocada] = useState(false);
+  const mudarArte = (a) => { setArt(a); setArtTocada(true); };
+  const enviaArte = !cupom || artTocada;
   const criar = useCreateCoupon();
   const editar = useUpdateCoupon();
   const set = (patch) => setForm((f) => ({ ...f, ...patch }));
@@ -139,7 +149,10 @@ export default function CouponForm({ arenaId, cupom = null, initialKind = null, 
 
   // A prévia usa a MESMA normalização do serviço: o que a arena lê aqui é
   // exatamente o que vai ser gravado.
-  const previa = useMemo(() => normalizeCouponInput(paraEnvio({ ...form, kind })), [form, kind]);
+  const previa = useMemo(
+    () => normalizeCouponInput(paraEnvio({ ...form, kind, ...(enviaArte ? { art } : {}) })),
+    [form, kind, art, enviaArte],
+  );
   const familia = kind ? couponFamily({ kind }) : null;
   const meta = kind ? COUPON_KIND_META[kind] : null;
   const Icone = kind ? COUPON_KIND_ICON[kind] : null;
@@ -151,7 +164,7 @@ export default function CouponForm({ arenaId, cupom = null, initialKind = null, 
       toast.error(Object.values(previa.errors)[0]);
       return;
     }
-    const input = paraEnvio({ ...form, kind });
+    const input = paraEnvio({ ...form, kind, ...(enviaArte ? { art } : {}) });
     // O custo unitário só existe no vale; nos outros tipos não é enviado.
     if (familia !== COUPON_FAMILY.VOUCHER) delete input.unit_cost;
     try {
@@ -310,6 +323,28 @@ export default function CouponForm({ arenaId, cupom = null, initialKind = null, 
           }[familia] || '10% na primeira reserva do mês'}
           value={form.description} onChange={(e) => set({ description: e.target.value })} />
       </V2Field>
+
+      {familia !== COUPON_FAMILY.REFERRAL && (
+        <section className="mt-4 rounded-2xl border border-gray-100 bg-paper-pure p-3" aria-label="Arte do cupom">
+          <p className="font-display text-sm font-bold text-ink">Arte do cupom</p>
+          <p className="mb-3 text-xs text-gray-500">
+            É como o cupom aparece na página da arena, na tela inicial e na lista. O código fica no canhoto — quem vê toca para copiar.
+          </p>
+          <CouponArtEditor
+            arenaId={arenaId}
+            arena={arena}
+            value={art}
+            onChange={mudarArte}
+            amostra={{
+              code: form.code,
+              // O benefício aparece assim que ele é conhecido — não espera o
+              // código (ou outro campo) estar preenchido.
+              benefit: previa.errors.value || previa.errors.benefit ? (meta?.label || '') : couponBenefitText(previa.value),
+              description: form.description,
+            }}
+          />
+        </section>
+      )}
 
       {familia === COUPON_FAMILY.REFERRAL ? (
         <label className="mt-3 flex items-start gap-2 text-sm text-gray-600">

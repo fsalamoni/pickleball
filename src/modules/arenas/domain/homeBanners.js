@@ -157,6 +157,7 @@ export function eligibleBanners({
         conditions: promoConditions(promo),
         bookable: promo.bookable,
         expiresAt: promo.expires_at,
+        art: promo.art || null,
         arena,
       };
     })

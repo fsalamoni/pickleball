@@ -269,11 +269,11 @@ const ATLETA = {
       id: 'vantagens-arena',
       title: 'Promoções, indicação e pontos numa arena',
       summary: 'Descontos divulgados, "indique e ganhe" e o que conta como fidelidade.',
-      keywords: ['promoção', 'cupom', 'desconto', 'código', 'indicação', 'indique e ganhe', 'fui indicado', 'vale', 'pontos', 'fidelidade', 'pesquisa', 'nps', 'banner', 'tela inicial', 'cidade', 'região'],
+      keywords: ['promoção', 'cupom', 'desconto', 'código', 'copiar', 'indicação', 'indique e ganhe', 'fui indicado', 'vale', 'pontos', 'fidelidade', 'pesquisa', 'nps', 'banner', 'tela inicial', 'cidade', 'região'],
       blocks: [
         p('Arenas com o marketing ligado podem ter vantagens para quem joga lá. Tudo aparece na própria página da arena:'),
         list(
-          'PROMOÇÕES — descontos e vales que a arena divulgou, com a regra em uma linha (valor mínimo, prazo, uma vez por pessoa). O desconto aparece no pedido de reserva com um toque para aplicar; o VALE (uma bebida, uma aula, um brinde) você mostra na recepção.',
+          'PROMOÇÕES — descontos e vales que a arena divulgou, cada um num tíquete com a regra em uma linha (valor mínimo, prazo, uma vez por pessoa). TOQUE NO CÓDIGO para copiar. O desconto aparece no pedido de reserva com um toque para aplicar (ou cole o código); o VALE (uma bebida, uma aula, um brinde) você mostra na recepção.',
           'INDIQUE E GANHE — toque em "Quero meu código" e mande para um amigo; o cartão mostra as regras da arena (quanto cada lado ganha). Quem você indicar digita o seu código no campo "Foi indicado por alguém?" ao pedir a primeira reserva, e a arena credita quando confirmar. Todos os seus códigos ficam no seu Perfil, em "Meus códigos de indicação".',
           'PONTOS — para quem é membro da arena, cada reserva concluída soma pontos, que a recepção troca por crédito. Seus pontos ficam em "Você nesta arena".',
           'PESQUISA — depois de jogar, a arena pode perguntar de 0 a 10 o quanto você a recomendaria. A nota vai no toque; o comentário é opcional.',
@@ -560,11 +560,12 @@ const ARENA = {
       id: 'marketing-arena',
       title: 'Marketing: promoções, campanhas, satisfação e indicação',
       summary: 'Trazer gente, trazer de volta e saber o que acharam — dentro da gestão.',
-      keywords: ['marketing', 'cupom', 'promoção', 'campanha', 'mensagem', 'nps', 'satisfação', 'indicação', 'fidelidade', 'vale', 'hora grátis', 'bebida', 'controle de uso', 'custo', 'banner', 'tela inicial'],
+      keywords: ['marketing', 'cupom', 'promoção', 'campanha', 'mensagem', 'nps', 'satisfação', 'indicação', 'fidelidade', 'vale', 'hora grátis', 'bebida', 'controle de uso', 'custo', 'banner', 'tela inicial', 'arte', 'modelo', 'tíquete', 'copiar'],
       blocks: [
         p('Com o módulo Marketing ligado, a gestão da arena ganha a seção MARKETING, com uma aba para cada ferramenta que você ligar em Configurações → Módulos:'),
         list(
           'CUPONS — comece escolhendo o que o cupom DÁ. Desconto e hora grátis entram sozinhos no preço da reserva. Aula particular, aula em grupo, clínica, comida, bebida, brinde, aluguel de equipamento e inscrição em evento são VALES: a pessoa mostra o código na recepção e você toca em "Registrar uso". Cada cupom tem mínimo, limite de usos, prazo e "uma vez por pessoa"; marque "Divulgar na página da arena" para ele virar PROMOÇÃO — e, logo abaixo, "Também como banner na tela inicial" para ele aparecer na tela inicial de quem é da SUA CIDADE.',
+          'ARTE DO CUPOM — cada cupom é um TÍQUETE, com o código no canhoto (toque nele para copiar — na lista também, para mandar a alguém). Escolha um dos cinco modelos (Clássico, Neon, Quadra, Festa, Sol), personalize textos e cores, ou envie a sua imagem: 1200 × 600 px (2:1), mínimo 800 × 400, sem o código escrito nela — a plataforma põe o código ao lado. "Salvar como meu modelo" guarda o desenho para os próximos cupons; os cinco da plataforma nunca mudam.',
           'CONTROLE DE USO (dentro de Cupons) — usos, custo e receita de cada cupom e de cada tipo. Custo é o desconto dado, os vales entregues (usos × o custo que você informa, que só a arena vê) e os créditos de indicação; receita é o que pagaram as reservas que usaram o cupom.',
           'CAMPANHAS — um BANNER (na página da arena e, se quiser, na tela inicial) que leva a um lugar da plataforma, e/ou um aviso no aplicativo para um público (membros, sumidos, frequentes, todo mundo). A tela diz para quantas pessoas vai o aviso ANTES de enviar, e não envia para público vazio. Veja "Banners de campanha".',
           'SATISFAÇÃO — a nota de 0 a 10 que os atletas dão depois de jogar, com os COMENTÁRIOS, que é onde está o que fazer.',
@@ -576,6 +577,7 @@ const ARENA = {
           'Crie uma promoção e marque "Divulgar na página da arena" para ela chegar a quem procura horário.',
         ),
         tip('Desligue o cupom em vez de apagar: apagar leva junto a contagem de usos, e aí ninguém responde mais "quanto essa promoção rendeu?".'),
+        tip('Na arte, título e texto em branco usam o benefício e a descrição do próprio cupom. Assim, se você mudar o desconto depois, o tíquete acompanha sozinho.'),
         tip('Vale sem custo informado aparece com "Informar" no controle de uso — e o custo total fica marcado como incompleto, nunca como zero.'),
         warn('O desconto é conferido de novo pelo sistema quando o pedido é gravado, e o uso só é contado na CONFIRMAÇÃO. Um cupom desligado depois do pedido não vale mais.'),
       ],

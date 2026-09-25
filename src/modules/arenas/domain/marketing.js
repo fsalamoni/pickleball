@@ -24,6 +24,7 @@
 import { instanteEmMs } from '@/core/domain/instant';
 import { formatDateShortBR } from './calendar.js';
 import { formatPrice } from './pricing.js';
+import { normalizeCouponArt } from './couponArt.js';
 
 export const CAMPAIGN_STATUS = Object.freeze({
   DRAFT: 'draft',
@@ -262,6 +263,16 @@ export function normalizeCouponInput(input = {}) {
     }
   }
 
+  // A ARTE do cupom (Onda CD) — só entra no que se grava quando o formulário
+  // a manda: um `update` sem ela não pode apagar a arte de ninguém. A
+  // indicação não tem arte (ela tem o próprio cartão, com o código de cada um).
+  let art;
+  if (input.art !== undefined && family !== COUPON_FAMILY.REFERRAL) {
+    const a = normalizeCouponArt(input.art);
+    if (!a.valid) errors.art = Object.values(a.errors)[0];
+    art = a.value;
+  }
+
   const maxUses = num(input.max_uses);
   const minAmount = num(input.min_amount);
   return {
@@ -298,6 +309,7 @@ export function normalizeCouponInput(input = {}) {
        * não faz sentido.
        */
       show_home: family !== COUPON_FAMILY.REFERRAL && input.show_public === true && input.show_home === true,
+      ...(art !== undefined ? { art } : {}),
     },
   };
 }
@@ -438,6 +450,8 @@ export function publicPromos(coupons = [], now = Date.now()) {
       min_amount: Number(c.min_amount) > 0 ? Number(c.min_amount) : null,
       expires_at: instanteEmMs(c.expires_at) > 0 ? instanteEmMs(c.expires_at) : null,
       once_per_user: c.once_per_user !== false,
+      /** A arte do cupom (Onda CD) — `null` = desenhado como Clássico. */
+      art: c.art || null,
     }))
     // A que vence primeiro vem primeiro: é a que a pessoa pode perder.
     .sort((a, b) => (a.expires_at ?? Infinity) - (b.expires_at ?? Infinity) || String(a.code).localeCompare(String(b.code)));
