@@ -30,6 +30,19 @@
 
 ## Ondas adicionais
 
+### Onda BV (2026-09-25) — a Agenda começa pelo que depende do professor
+
+A aba Agenda do painel (`V2CoachAgenda`) abria com o **editor de
+disponibilidade semanal** (configuração, muda pouco) e deixava os **pedidos de
+aula esperando resposta** no fim, abaixo das aulas nas arenas e das quadras
+reservadas. Só os pedidos têm prazo: o aluno está esperando para marcar.
+
+Agora a ordem é **Próximas aulas → Aulas nas arenas → Disponibilidade semanal
+→ Quadras reservadas**, e dentro das próximas aulas os pedidos solicitados vêm
+primeiro (`upcomingRepliesFirst`, domínio em `domain/lesson.js`), com o selo
+"N pedidos esperando a sua resposta" (`lessonsAwaitingReply`). Cada grupo
+mantém a ordem por data. Zero banco.
+
 ### Wave B (Sprint 14, 2026-07-27) — página pública + painel
 
 - **Curtir + Compartilhar** (`src/v2/components/coach/V2CoachActions.jsx`):

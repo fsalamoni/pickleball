@@ -502,6 +502,17 @@ chore(deps): bump firebase to 12.x
 >
 > **Destaques por onda**:
 >
+> - **Onda BV — O que tem prazo vem primeiro** (2026-09-25): **(1)** a aba
+>   Agenda do professor abria com o editor de disponibilidade semanal
+>   (configuração, muda pouco) e deixava os pedidos de aula esperando resposta
+>   no fim da página. Agora a ordem é próximas aulas → aulas nas arenas →
+>   disponibilidade → quadras reservadas, com os pedidos solicitados primeiro
+>   (`upcomingRepliesFirst`) e o selo "N pedidos esperando a sua resposta".
+>   **(2)** A chamada da fila do jogo aberto (prazo de 1 hora) só aparecia na
+>   arena e em Minhas reservas; agora aparece também na **tela inicial**
+>   (`HomeWaitlistCalls`, o mesmo cartão), só quando há chamada e só com a
+>   chave-mestra dos módulos de arena. **Banco: zero.**
+>
 > - **Onda BU — "Precisa de você" no topo da Central** (2026-09-25): cada
 >   pendência morava na sua aba (reserva para confirmar, pedido do app para
 >   entregar, falta para marcar, mensalidade atrasada) e quem abria a Central
@@ -2024,7 +2035,7 @@ chore(deps): bump firebase to 12.x
 
 | Métrica | Valor | Delta do início do agente |
 |---|---|---|
-| **Testes Vitest** | **5569 passing** (338 arquivos) + 317 asserções de regras do Firestore no emulador (+ 17 do Storage) | +5161 (era 408) |
+| **Testes Vitest** | **5577 passing** (339 arquivos) + 317 asserções de regras do Firestore no emulador (+ 17 do Storage) | +5169 (era 408) |
 | **Lint errors** | 0 | era 30+ |
 | **Módulos** | 21 (+`help` — conteúdo dos tutoriais em tela) (`games` e `legal` saíram como `src/modules/` mas continuam como pastas oficiais — **rating virou módulo oficial** com domain/services/hooks/components) | +4 (coaches, circuits, games, legal) |
 | **V2 pages** | 82 (+V2GameDayTelao — telão, fora do V2Layout; +V2Help — central de ajuda; +V2ArenaKiosk — totem da recepção, também fora do V2Layout; +V2ArenaCheckin; +V2ArenaAttendance) | +58 |

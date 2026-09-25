@@ -205,6 +205,24 @@ export function sortLessons(lessons = []) {
 }
 
 /** Separa aulas em próximas (ativas/futuras) e histórico (concluídas/passadas). */
+/**
+ * Os pedidos de aula que esperam a resposta do PROFESSOR (solicitados).
+ * É o que tem prazo na agenda: o aluno está esperando para marcar o horário.
+ */
+export function lessonsAwaitingReply(lessons = []) {
+  return (lessons || []).filter((l) => l?.status === BOOKING_STATUS.REQUESTED);
+}
+
+/**
+ * As próximas aulas com os pedidos que esperam resposta PRIMEIRO — cada grupo
+ * mantém a ordem por data. Um pedido para daqui a duas semanas vem antes da
+ * aula confirmada de amanhã porque só ele depende de alguém agir.
+ */
+export function upcomingRepliesFirst(upcoming = []) {
+  const pedidos = lessonsAwaitingReply(upcoming);
+  return [...pedidos, ...(upcoming || []).filter((l) => l?.status !== BOOKING_STATUS.REQUESTED)];
+}
+
 export function partitionLessons(lessons = [], nowDate = new Date()) {
   const upcoming = [];
   const history = [];
