@@ -672,3 +672,40 @@ faltas) **não aparecem** enquanto a leitura não voltar. Há teste para cada ca
 ### Banco
 
 **Zero.** Nenhuma coleção, campo, índice, regra ou função.
+
+## 12. "Nesta página" — o índice da página da arena (Onda BT, 2026-09-25)
+
+A integração (I-1 a I-8) trouxe os módulos para dentro da página da arena, e
+ela ficou longa: dia de jogo, jogos abertos, reserva, regras, contato, torneios
+da casa e da plataforma, aulas, preços, promoções, planos, loja, fotos,
+avaliações e quadras. Quem chegava procurando a aula ou a loja rolava a página
+inteira, e boa parte do que a integração trouxe ficava abaixo da dobra.
+
+Agora há um índice **"Nesta página"** logo abaixo do cabeçalho
+(`v2/components/arenas/ArenaPageIndex.jsx`):
+
+- **Só aparece o que renderizou.** Cada seção vem num envoltório com um `id`
+  estável e o rótulo em `data-secao-arena`, e o índice lê o DOM. Envoltório sem
+  texto (módulo desligado, seção sem o que mostrar) não vira atalho. Assim o
+  índice não promete o que a página não tem, e não precisa perguntar a cada
+  módulo se ele está ligado: as seções já decidem isso sozinhas.
+- **Seção que chega depois entra.** Cada módulo tem a sua consulta; um
+  `MutationObserver` junta as mudanças de um quadro numa leitura só.
+- Com menos de 3 seções, o índice some. Tocar num atalho rola até a seção,
+  sem criar entrada no histórico.
+- **Âncoras servem a links de fora.** `/arenas/:id#arena-planos` rola até a
+  seção quando ela aparece, uma vez por âncora (uma âncora nova na mesma página
+  rola de novo). O aviso "Pacote de horas creditado" já leva direto a Planos.
+
+Ids: `arena-dia-de-jogo`, `arena-jogos-abertos`, `arena-reservar`,
+`arena-regras`, `arena-contato`, `arena-torneios-da-casa`, `arena-torneios`,
+`arena-aulas`, `arena-precos`, `arena-promocoes`, `arena-planos`, `arena-loja`,
+`arena-fotos`, `arena-avaliacoes`, `arena-quadras`. **Um id publicado em
+link é contrato**: renomear quebra o link sem erro nenhum. Há guarda de fonte
+em `ArenaPageIndex.runtime.test.jsx`.
+
+**Ao acrescentar uma seção à página da arena**: envolva-a com
+`<div id="arena-…" data-secao-arena="Rótulo" className="scroll-mt-4">`. Sem
+isso ela funciona, mas não entra no índice.
+
+Zero banco.

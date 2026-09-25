@@ -779,7 +779,8 @@ export async function sellPackageToMember(arenaId, pkgId, target, actor) {
       title: 'Pacote de horas creditado',
       message: `${compra.total_hours}h do pacote "${str(pkg.name).slice(0, 60)}" já estão na sua carteira.`,
       type: NOTIFICATION_TYPE.GENERIC,
-      link: `/arenas/${arenaId}`,
+      // Direto em "Planos" na página da arena, onde as horas aparecem.
+      link: `/arenas/${arenaId}#arena-planos`,
       actor,
     });
   } catch (err) { logger.info('notify package sold failed', { err: err?.code }); }
