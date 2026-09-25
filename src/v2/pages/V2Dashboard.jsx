@@ -1,4 +1,4 @@
-import React, { useMemo } from 'react';
+import React, { Suspense, lazy, useMemo } from 'react';
 import { Link } from 'react-router-dom';
 import { useQuery } from '@tanstack/react-query';
 import {
@@ -28,6 +28,10 @@ import { useFeatureFlag } from '@/core/lib/FeatureFlagsContext';
 import { FEATURE_FLAG } from '@/core/featureFlags';
 import V2ActionHome from '@/v2/components/home/V2ActionHome';
 import HomeWaitlistCalls from '@/v2/components/arenas/openMatch/HomeWaitlistCalls';
+
+// Sob demanda: a chave-mestra `arena_modules` nasce desligada, e quem não a
+// tem não precisa baixar o carrossel junto com a tela inicial.
+const HomePromoBanners = lazy(() => import('@/v2/components/arenas/marketing/HomePromoBanners'));
 
 const INTEREST_BY_VALUE = Object.fromEntries(PLATFORM_INTEREST_META.map((m) => [m.value, m]));
 // Ações rápidas padrão (quando o usuário não escolheu interesses).
@@ -154,6 +158,10 @@ export default function V2Dashboard() {
       {/* A chamada da fila tem prazo de 1 hora: vem antes de tudo, onde todo
           mundo abre o aplicativo. Só aparece quando há chamada. */}
       {arenaModulesOn && <HomeWaitlistCalls />}
+
+      {/* As promoções das arenas DA REGIÃO da pessoa, em banners (Onda BZ).
+          Depois da chamada da fila (que tem prazo), antes do resto. */}
+      {arenaModulesOn && <Suspense fallback={null}><HomePromoBanners /></Suspense>}
 
       {actionHomeOn && <V2ActionHome />}
 

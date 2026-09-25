@@ -235,3 +235,15 @@ describe('indicação: as regras do programa', () => {
       .rejects.toThrow(/pelo menos um dos lados/);
   });
 });
+
+describe('banners da tela inicial (Onda BZ)', () => {
+  it('lista só os cupons marcados como banner E ligados', async () => {
+    banco.set('arena_coupons/b1', { arena_id: 'a1', code: 'SOL10', show_home: true, active: true });
+    banco.set('arena_coupons/b2', { arena_id: 'a1', code: 'OFF', show_home: true, active: false });
+    banco.set('arena_coupons/b3', { arena_id: 'a1', code: 'SOARENA', show_public: true, active: true });
+    const ids = (await svc.listHomeBannerCoupons()).map((c) => c.id);
+    expect(ids).toContain('b1');
+    expect(ids).not.toContain('b2');
+    expect(ids).not.toContain('b3');
+  });
+});

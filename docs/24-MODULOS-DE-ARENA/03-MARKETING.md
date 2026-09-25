@@ -467,3 +467,86 @@ Regra de `arena_bookings`, com 8 asserções novas no emulador:
 
 **Banco:** zero coleção, zero índice. Um campo opcional
 (`arena_bookings.referral`); regra endurecida numa coleção.
+
+---
+
+## 11. As promoções na tela inicial, por região (Onda BZ, 2026-09-25)
+
+**Pedido:** *"as campanhas e cupons são divulgados dentro da arena apenas?
+Talvez seja importante divulgar na página início, como banner, com rolagem
+entre todos os banners criados e filtro de distância ou localidade, para que
+alguém de determinado local não veja banner de região muito distante."*
+
+Eram divulgados só dentro da arena: a promoção (`show_public`) aparecia na
+página da arena e no pedido de reserva, ou seja, só para quem JÁ tinha
+encontrado a arena.
+
+### 11.1 A arena escolhe
+
+No formulário do cupom, logo abaixo de "Divulgar na página da arena", aparece
+**"Também como banner na tela inicial"** (`show_home`). São duas decisões
+separadas de propósito: divulgar na própria página não põe o cupom na tela
+inicial de todo mundo. `show_home` só é gravado `true` junto de `show_public`,
+e **nunca** na indicação (ela tem o próprio cartão). Na lista de cupons, o
+selo "Banner na tela inicial" diz quais estão lá.
+
+### 11.2 O carrossel
+
+Na tela inicial, **"Promoções em Porto Alegre (RS)"** (`HomePromoBanners`,
+montado atrás da chave-mestra `arena_modules`):
+
+- um cartão por promoção, com a **marca da arena** (`brandingOf` — a cor e o
+  contraste da Onda AN) ou o cartão escuro padrão; o que vence primeiro vem
+  primeiro (é o que a pessoa pode perder);
+- **troca sozinha a cada 7 s**, com botão de pausar, setas e pontos com nome
+  para leitor de tela; para quando o dedo, o mouse ou o foco estão no
+  carrossel, e **não gira** para quem pediu menos movimento no sistema;
+- o botão leva a `/arenas/:id#arena-promocoes` — "Reservar com esta promoção"
+  quando o cupom entra no preço, "Ver na arena" quando é vale;
+- falhando a leitura, ou sem promoção em lugar nenhum, a seção **não aparece**
+  (é vitrine, não é informação de que a pessoa precise para agir — e não pode
+  afirmar "não há promoção" sem saber).
+
+### 11.3 Localidade, não distância
+
+Nem as arenas nem os perfis têm coordenadas — têm **cidade e estado**. Medir
+quilômetros exigiria geocodificar os endereços num serviço externo e gravar
+coordenadas em todas as arenas; ficou fora, porque mexeria no banco. O filtro
+é por localidade (`domain/homeBanners.js`):
+
+| Região | O que mostra |
+|---|---|
+| Minha cidade (padrão) | arenas da cidade do perfil |
+| Meu estado | arenas do estado do perfil |
+| Outra cidade | só cidades que TÊM promoção agora, com a contagem — quem vai viajar |
+| Todo o Brasil | tudo |
+
+A comparação ignora acento e caixa ("São Paulo" = "sao paulo"). A escolha fica
+guardada por usuário no navegador (`v2:view:<uid>:home:promocoes:regiao`,
+`viewPreference`) — **nada no banco**. ⭐ **Sem cidade nem estado no perfil, a
+tela NÃO mostra o Brasil inteiro**: era exatamente o que o pedido queria
+evitar. Ela pede a cidade (seletor ou perfil). Região sem promoção diz isso e
+oferece trocar.
+
+### 11.4 De onde vem
+
+`listHomeBannerCoupons`: `where('show_home','==',true)` +
+`where('active','==',true)`, com `limit(100)`. Só igualdades — o Firestore
+resolve sem índice composto, e `active` entra para o cupom desligado não
+ocupar as vagas do limite. Validade (prazo, usos), módulo ligado na arena e
+região são conferidos no domínio (`eligibleBanners`/`homeBanners`), e só as
+arenas que TÊM banner são buscadas (`arenaQueries.arena`, já em cache quando a
+pessoa passou pela lista). `arena_coupons` já era legível por conta logada, e
+duas asserções novas no emulador provam: conta logada lista os banners;
+anônimo, não.
+
+### 11.5 O que NÃO pode regredir
+
+1. Sem saber a cidade, **não** mostrar tudo — pedir.
+2. `show_home` sem `show_public` não existe; indicação nunca vira banner.
+3. O carrossel respeita "menos movimento", pausa com foco/toque e tem botão
+   de pausar (WCAG 2.2.2).
+4. Falha não vira "não há promoção" — a seção some.
+
+**Banco:** zero coleção, zero índice, zero regra. Um campo opcional
+(`arena_coupons.show_home`).

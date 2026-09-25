@@ -267,6 +267,25 @@ export function getArenaNpsSummary(responses) {
 /* --------------------- Referral -------------------- */
 
 /**
+ * Os cupons que as arenas marcaram como BANNER na tela inicial (Onda BZ).
+ * Só igualdades (`show_home` e `active`), que o Firestore resolve sem índice
+ * composto; `active` entra para o cupom DESLIGADO não ocupar as vagas do
+ * `limit`. Validade, módulo e região são conferidos no domínio
+ * (`homeBanners`). O cupom já é legível por qualquer conta logada — o banner
+ * não expõe nada novo.
+ */
+export async function listHomeBannerCoupons({ lim = 100 } = {}) {
+  if (!db) return [];
+  const snap = await getDocs(query(
+    collection(db, COL_COUPONS),
+    where('show_home', '==', true),
+    where('active', '==', true),
+    limit(lim),
+  ));
+  return snap.docs.map((d) => ({ id: d.id, ...d.data() }));
+}
+
+/**
  * Os MEUS códigos de indicação, de todas as arenas — para o perfil (Onda BY).
  * Consulta pelo campo que a regra confere (`referrer_id`). Só entram os
  * documentos legítimos (id `{arena}_{eu}`): um código forjado antes da trava

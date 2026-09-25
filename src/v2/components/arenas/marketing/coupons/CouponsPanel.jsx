@@ -14,7 +14,7 @@
  */
 import React, { useMemo, useState } from 'react';
 import { toast } from 'sonner';
-import { BarChart3, Eye, Pencil, Plus, ScanLine, Tag, Trash2 } from 'lucide-react';
+import { BarChart3, Eye, Megaphone, Pencil, Plus, ScanLine, Tag, Trash2 } from 'lucide-react';
 import {
   useArenaCouponsAll, useArenaSettings, useDeleteCoupon, useSetCouponActive,
 } from '@/modules/arenas/hooks/useArenaV3';
@@ -91,6 +91,9 @@ function CartaoCupom({ cupom, onEditar, onRegistrar, onAlternar, onApagar }) {
       <div className="mt-2 flex flex-wrap gap-x-3 gap-y-1 text-xs text-gray-500">
         {cupom.show_public === true && (
           <span className="inline-flex items-center gap-1 font-bold text-ink"><Eye className="h-3.5 w-3.5" /> Na página da arena</span>
+        )}
+        {cupom.show_public === true && cupom.show_home === true && (
+          <span className="inline-flex items-center gap-1 font-bold text-ink"><Megaphone className="h-3.5 w-3.5" /> Banner na tela inicial</span>
         )}
         {familia !== COUPON_FAMILY.REFERRAL && (
           <span>{Number(cupom.used_count) || 0}{cupom.max_uses ? ` de ${cupom.max_uses}` : ''} usos</span>

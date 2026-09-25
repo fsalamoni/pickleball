@@ -960,6 +960,12 @@ e sem `queue_removed`. É exatamente esse conjunto que vira o CSV.
     PROMOÇÃO, oferecido na página da arena e no pedido de reserva. Ausente =
     código entregue a dedo (todo cupom anterior). Não muda leitura nenhuma —
     `arena_coupons` já era legível por conta logada.
+  - `arena_coupons.show_home` (2026-09-25, Onda BZ, opcional): `true` = a
+    promoção aparece também como BANNER na tela inicial, para quem está na
+    cidade/estado da arena (filtro no domínio, `homeBanners.js`). Só é gravado
+    `true` junto de `show_public`, e nunca na indicação. A tela inicial lê por
+    `where show_home == true` + `where active == true` (só igualdades, sem
+    índice composto). Ausente = não é banner (todo cupom anterior).
   - **Tipos de cupom (2026-09-25, Onda BX, todos opcionais):** `kind`
     (`discount` · `free_hours` · `private_lesson` · `group_lesson` · `clinic` ·
     `food` · `drink` · `product` · `rental` · `event` · `other` · `referral`;

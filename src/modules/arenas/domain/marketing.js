@@ -292,6 +292,12 @@ export function normalizeCouponInput(input = {}) {
        * ganhe" da página da arena, com o código de cada um.
        */
       show_public: family !== COUPON_FAMILY.REFERRAL && input.show_public === true,
+      /**
+       * Também como BANNER na tela inicial, para quem é da região da arena
+       * (Onda BZ). Só vale para cupom divulgado — banner de um código secreto
+       * não faz sentido.
+       */
+      show_home: family !== COUPON_FAMILY.REFERRAL && input.show_public === true && input.show_home === true,
     },
   };
 }
@@ -419,6 +425,7 @@ export function publicPromos(coupons = [], now = Date.now()) {
     .filter((c) => c?.show_public === true && couponFamily(c) !== COUPON_FAMILY.REFERRAL && isCouponValid(c, now))
     .map((c) => ({
       id: c.id,
+      arena_id: c.arena_id || null,
       code: c.code,
       kind: couponKind(c),
       family: couponFamily(c),

@@ -1220,6 +1220,7 @@ import {
   sendCampaign, listMyNpsAnswers, getOrCreateReferralCode, getMyReferralCode, redeemReferral,
   updateArenaCoupon, setCouponActive, deleteArenaCoupon,
   setCouponUnitCost, redeemVoucher, findArenaCouponByCode, listArenaReferrals, listMyReferralCodes,
+  listHomeBannerCoupons,
 } from '../services/marketingService.js';
 
 export function useArenaCoupons(arenaId) {
@@ -1239,6 +1240,7 @@ export function useCreateCoupon() {
     onSuccess: (_d, { arenaId }) => {
       qc.invalidateQueries({ queryKey: ['arena-coupons', arenaId] });
       qc.invalidateQueries({ queryKey: ['arena-settings', arenaId] });
+      qc.invalidateQueries({ queryKey: ['arena-coupons-home'] });
     },
   });
 }
@@ -1266,6 +1268,7 @@ export function useUpdateCoupon() {
     onSuccess: (_d, { arenaId }) => {
       qc.invalidateQueries({ queryKey: ['arena-coupons', arenaId] });
       qc.invalidateQueries({ queryKey: ['arena-settings', arenaId] });
+      qc.invalidateQueries({ queryKey: ['arena-coupons-home'] });
     },
   });
 }
@@ -1275,7 +1278,10 @@ export function useSetCouponActive() {
   const qc = useQueryClient();
   return useMutation({
     mutationFn: ({ couponId, active }) => setCouponActive(couponId, active, user),
-    onSuccess: (_d, { arenaId }) => qc.invalidateQueries({ queryKey: ['arena-coupons', arenaId] }),
+    onSuccess: (_d, { arenaId }) => {
+      qc.invalidateQueries({ queryKey: ['arena-coupons', arenaId] });
+      qc.invalidateQueries({ queryKey: ['arena-coupons-home'] });
+    },
   });
 }
 
@@ -1287,6 +1293,7 @@ export function useDeleteCoupon() {
     onSuccess: (_d, { arenaId }) => {
       qc.invalidateQueries({ queryKey: ['arena-coupons', arenaId] });
       qc.invalidateQueries({ queryKey: ['arena-settings', arenaId] });
+      qc.invalidateQueries({ queryKey: ['arena-coupons-home'] });
     },
   });
 }
@@ -1456,6 +1463,15 @@ export function useApplyBookingReferral() {
       qc.invalidateQueries({ queryKey: ['arena-referral', booking.arena_id] });
       qc.invalidateQueries({ queryKey: ['arena-wallet', booking.arena_id] });
     },
+  });
+}
+
+/** Os cupons marcados como banner na tela inicial (Onda BZ). */
+export function useHomeBannerCoupons() {
+  return useQuery({
+    queryKey: ['arena-coupons-home'],
+    queryFn: () => listHomeBannerCoupons(),
+    staleTime: 5 * 60_000,
   });
 }
 
