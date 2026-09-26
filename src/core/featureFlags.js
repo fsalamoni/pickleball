@@ -158,6 +158,32 @@ export const FEATURE_FLAG = Object.freeze({
   GAMEDAY_AMERICANO_LIVE: 'gameday_americano_live',
 
   /**
+   * Dia de jogo — MEXICANO como formato ESCOLHÍVEL.
+   *
+   * O Mexicano sempre existiu no dia de jogo; a partir da Onda CE ele passa a
+   * ser opcional, ligado pelo admin da plataforma. A flag decide só se o
+   * formato APARECE para ser escolhido — na criação, na edição do formato e
+   * no sorteio de grade, em toda origem (atleta, arena, clube, jogo aberto).
+   *
+   * O que ela NÃO faz, de propósito: tirar nada de quem já usa. Um dia de
+   * jogo gravado como Mexicano continua abrindo, sorteando, lançando placar e
+   * publicando como sempre, e o seletor dele mostra o formato que está
+   * gravado mesmo com a flag desligada. Nenhum dado é lido de outro jeito,
+   * nenhum é regravado. Fonte única das opções: `gameDayFormatChoices`.
+   */
+  GAMEDAY_MEXICANO: 'gameday_mexicano',
+
+  /**
+   * Dia de jogo — REI DA QUADRA como formato ESCOLHÍVEL.
+   *
+   * Mesma regra do Mexicano, com a própria chave: o admin liga um sem o
+   * outro. Desligada, o Rei da Quadra some das listas de escolha daqui para
+   * frente; os dias já gravados nele seguem funcionando (a próxima rodada,
+   * que sai dos RESULTADOS da anterior, continua sendo gerada normalmente).
+   */
+  GAMEDAY_KING_OF_COURT: 'gameday_king_of_court',
+
+  /**
    * CENTRAL DE AJUDA — a página `/ajuda`.
    *
    * Um manual completo da plataforma, separado por tipo de usuário (atleta,
@@ -249,6 +275,22 @@ export const FEATURE_FLAG_META = Object.freeze({
       + 'partidas saem uma a uma, sempre com quem está disponível no momento, '
       + 'e cada uma grava resultado, entra no ranking do dia e pode ir para o '
       + 'ranking da plataforma e o DUPR. Desligada, a opção nem aparece.',
+  },
+  [FEATURE_FLAG.GAMEDAY_MEXICANO]: {
+    label: 'Dia de jogo — Mexicano',
+    description:
+      'Oferece o Mexicano entre os formatos do dia de jogo: na criação, na '
+      + 'troca de formato e no sorteio, no atleta, na arena, no clube e no '
+      + 'jogo aberto. Desligada, a opção some daqui para frente — os dias já '
+      + 'criados como Mexicano continuam funcionando normalmente.',
+  },
+  [FEATURE_FLAG.GAMEDAY_KING_OF_COURT]: {
+    label: 'Dia de jogo — Rei da Quadra',
+    description:
+      'Oferece o Rei da Quadra entre os formatos do dia de jogo: na criação, '
+      + 'na troca de formato e no sorteio, no atleta, na arena, no clube e no '
+      + 'jogo aberto. Desligada, a opção some daqui para frente — os dias já '
+      + 'criados como Rei da Quadra continuam funcionando normalmente.',
   },
   [FEATURE_FLAG.PLAY_SMART_ROTATION]: {
     label: 'Dia de jogo (Play) — rodízio equilibrado',

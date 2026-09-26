@@ -40,8 +40,9 @@ import { suggestRounds } from '@/modules/clubs/domain/gameDayDraw';
 import { splitGamesByResult } from '@/modules/clubs/domain/gameDayDrawMerge';
 import { buildGameDayDraw } from '@/modules/games/services/gameDayDrawPlanner';
 import {
-  GAME_DAY_FORMAT, GAME_DAY_FORMAT_LABELS, DRAW_FORMATS,
+  GAME_DAY_FORMAT, GAME_DAY_FORMAT_LABELS,
 } from '@/modules/clubs/domain/gameDayFormats';
+import { useGameDayFormatChoices } from '@/modules/games/hooks/useGameDayFormatChoices';
 import GameDayLeaderboard from '@/modules/clubs/components/GameDayLeaderboard';
 import V2CollapsibleCard from '@/v2/ui/V2CollapsibleCard';
 import { V2ErrorState } from '@/v2/ui/primitives';
@@ -370,6 +371,9 @@ function GamesSection({ eventId, dateId, participants }) {
   // já tinha Mexicano e Rei da Quadra — mesma ferramenta, versões diferentes,
   // e nada dizia isso a quem organizava pelo clube.
   const [format, setFormat] = useState(GAME_DAY_FORMAT.AMERICANO);
+  // A data legada não grava formato, então não há `current` a preservar: o
+  // que vale daqui para frente é o que a plataforma liberou.
+  const formatosDoSorteio = useGameDayFormatChoices({ scope: 'draw' });
   const isAmericano = format === GAME_DAY_FORMAT.AMERICANO;
   // Quadras simultâneas disponíveis, como TEXTO livre (vazio = automático).
   const [courtsText, setCourtsText] = useState('');
@@ -548,19 +552,24 @@ function GamesSection({ eventId, dateId, participants }) {
                   </label>
                 </div>
               )}
-              <div>
-                <Label htmlFor="gd-club-format">Formato</Label>
-                <select
-                  id="gd-club-format"
-                  value={format}
-                  onChange={(e) => setFormat(e.target.value)}
-                  className="mt-1 w-full rounded-lg border border-gray-200 bg-white px-3 py-2 text-sm text-ink"
-                >
-                  {DRAW_FORMATS.map((f) => (
-                    <option key={f} value={f}>{GAME_DAY_FORMAT_LABELS[f]}</option>
-                  ))}
-                </select>
-              </div>
+              {/* Os formatos de grade saem da fonte ÚNICA
+                  (`gameDayFormatChoices`): Mexicano e Rei da Quadra só com a
+                  própria flag. Com uma opção só, o seletor seria ruído. */}
+              {formatosDoSorteio.length > 1 && (
+                <div>
+                  <Label htmlFor="gd-club-format">Formato</Label>
+                  <select
+                    id="gd-club-format"
+                    value={format}
+                    onChange={(e) => setFormat(e.target.value)}
+                    className="mt-1 w-full rounded-lg border border-gray-200 bg-white px-3 py-2 text-sm text-ink"
+                  >
+                    {formatosDoSorteio.map((f) => (
+                      <option key={f} value={f}>{GAME_DAY_FORMAT_LABELS[f]}</option>
+                    ))}
+                  </select>
+                </div>
+              )}
               <Label htmlFor="rounds">Número de rodadas</Label>
               <Input
                 id="rounds"

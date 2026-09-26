@@ -264,3 +264,79 @@ describe('⭐ ranking e rating não dependem de botão', () => {
     });
   });
 });
+
+/* ---------------------------------------------------------------------------
+ * OS FORMATOS QUE SE PODE ESCOLHER TÊM UMA FONTE (Onda CE)
+ *
+ * O Mexicano e o Rei da Quadra passaram a ser opcionais, cada um atrás da
+ * própria flag. A lista de formatos estava escrita em SETE telas — criação do
+ * atleta, da arena e do clube, cartão de configurações, jogo aberto e os dois
+ * diálogos de sorteio —, cada uma com a sua ordem e as suas flags. Uma cópia
+ * esquecida continuaria oferecendo o formato desligado, sem erro nenhum.
+ *
+ * A varredura examina TODA tela que existe (não uma lista de quem alguém
+ * lembrou): ninguém monta a lista à mão, ninguém lê as flags de formato por
+ * fora do hook.
+ * ------------------------------------------------------------------------ */
+describe('⭐ os formatos que se pode escolher têm UMA fonte', () => {
+  const telas = [];
+  const varrer = (dir) => {
+    if (!existsSync(dir)) return;
+    readdirSync(dir, { withFileTypes: true }).forEach((e) => {
+      const caminho = `${dir}/${e.name}`;
+      if (e.isDirectory()) { varrer(caminho); return; }
+      if (!/\.(jsx?|tsx?)$/.test(e.name) || /\.test\./.test(e.name)) return;
+      telas.push(caminho);
+    });
+  };
+  varrer('src/v2');
+  varrer('src/pages');
+  readdirSync('src/modules', { withFileTypes: true })
+    .filter((e) => e.isDirectory())
+    .forEach((m) => { varrer(`src/modules/${m.name}/components`); varrer(`src/modules/${m.name}/pages`); });
+
+  it('a varredura encontrou as telas (sanidade)', () => {
+    expect(telas.length).toBeGreaterThan(100);
+    expect(telas).toContain('src/v2/components/games/CreateGameDayDialog.jsx');
+    expect(telas).toContain('src/modules/clubs/components/GameDayOrganizer.jsx');
+  });
+
+  it('⭐ nenhuma tela usa `DRAW_FORMATS` (é a lista SEM as flags)', () => {
+    const culpadas = telas.filter((t) => semComentarios(ler(t)).includes('DRAW_FORMATS'));
+    expect(culpadas, 'use useGameDayFormatChoices({ scope: "draw" })').toEqual([]);
+  });
+
+  it('⭐ nenhuma tela lê as flags de formato por fora de `useGameDayFormatChoices`', () => {
+    const culpadas = telas.filter((t) => /GAMEDAY_(AMERICANO_LIVE|MEXICANO|KING_OF_COURT)/.test(semComentarios(ler(t))));
+    expect(culpadas).toEqual([]);
+  });
+
+  it('⭐ nenhuma tela escreve à mão uma LISTA com os formatos opcionais', () => {
+    // Comparar (`format === GAME_DAY_FORMAT.MEXICANO`) é legítimo; o que se
+    // proíbe é o formato como ELEMENTO de uma lista de opções.
+    const lista = /GAME_DAY_FORMAT\.(MEXICANO|KING_OF_COURT|AMERICANO_LIVE)\s*,|OPEN_MATCH_GAME_FORMATS/;
+    const culpadas = telas.filter((t) => lista.test(semComentarios(ler(t))));
+    expect(culpadas).toEqual([]);
+  });
+
+  it('⭐ os seletores de formato conhecidos passam pelo hook', () => {
+    [
+      'src/v2/components/games/CreateGameDayDialog.jsx',
+      'src/v2/components/games/GameDaySettingsCard.jsx',
+      'src/v2/components/games/ArenaGameDayDialog.jsx',
+      'src/v2/components/clubs/V2EventDatesPanel.jsx',
+      'src/v2/components/arenas/openMatch/OpenMatchForm.jsx',
+      'src/v2/components/games/AthleteGameDayOrganizer.jsx',
+      'src/modules/clubs/components/GameDayOrganizer.jsx',
+    ].forEach((caminho) => {
+      expect(semComentarios(ler(caminho)), caminho).toContain('useGameDayFormatChoices(');
+    });
+  });
+
+  it('⭐ o hook lê as TRÊS flags e delega à fonte única', () => {
+    const src = semComentarios(ler('src/modules/games/hooks/useGameDayFormatChoices.js'));
+    ['GAMEDAY_AMERICANO_LIVE', 'GAMEDAY_MEXICANO', 'GAMEDAY_KING_OF_COURT', 'gameDayFormatChoices('].forEach((t) => {
+      expect(src).toContain(t);
+    });
+  });
+});

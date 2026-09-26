@@ -80,6 +80,64 @@ export function formatHasScores(format) {
   return !isPlayFormat(format);
 }
 
+/* ------------------------ formatos que se pode ESCOLHER ------------------------ */
+
+/**
+ * A ordem em que os formatos aparecem para escolha, em TODA tela: o Americano
+ * primeiro (é o padrão de quem cria), depois os opcionais.
+ */
+const ORDEM_DE_ESCOLHA = Object.freeze([
+  GAME_DAY_FORMAT.AMERICANO,
+  GAME_DAY_FORMAT.MEXICANO,
+  GAME_DAY_FORMAT.KING_OF_COURT,
+  GAME_DAY_FORMAT.PLAY,
+  GAME_DAY_FORMAT.AMERICANO_LIVE,
+]);
+
+/**
+ * Os formatos que se pode ESCOLHER agora — na criação, na troca de formato e
+ * no sorteio de grade, em toda origem (atleta, arena, clube, jogo aberto).
+ * FONTE ÚNICA: nenhuma tela monta essa lista à mão (há guarda de fonte).
+ *
+ * Por que existe (Onda CE): o Mexicano e o Rei da Quadra passaram a ser
+ * opcionais, cada um atrás da própria flag, e a lista de formatos estava
+ * escrita em SETE lugares — cada um com a sua ordem e as suas flags. Uma
+ * cópia esquecida seguiria oferecendo o formato desligado, sem erro nenhum.
+ *
+ * Regra que NÃO pode regredir: o formato que o dia JÁ TEM entra sempre, mesmo
+ * com a flag desligada. Flag desligada tira a opção de ESCOLHER daqui para
+ * frente; nunca pode deixar o seletor de um dia existente sem a opção que
+ * está gravada (o select mostraria outro formato e salvar trocaria o dia).
+ *
+ * @param {{
+ *   current?: string|null,
+ *   scope?: 'all'|'draw',
+ *   flags?: { mexicano?: boolean, kingOfCourt?: boolean, americanoLive?: boolean },
+ * }} [opts]
+ *   `scope: 'draw'` devolve só os formatos de GRADE (o seletor do diálogo de
+ *   sorteio), e aí o `current` só entra se também for de grade.
+ * @returns {string[]}
+ */
+export function gameDayFormatChoices({ current = null, scope = 'all', flags = {} } = {}) {
+  const ligado = {
+    [GAME_DAY_FORMAT.AMERICANO]: true,
+    [GAME_DAY_FORMAT.PLAY]: scope !== 'draw',
+    [GAME_DAY_FORMAT.MEXICANO]: flags.mexicano === true,
+    [GAME_DAY_FORMAT.KING_OF_COURT]: flags.kingOfCourt === true,
+    [GAME_DAY_FORMAT.AMERICANO_LIVE]: scope !== 'draw' && flags.americanoLive === true,
+  };
+  const permitido = (f) => scope !== 'draw' || DRAW_FORMATS.includes(f);
+  return ORDEM_DE_ESCOLHA.filter((f) => ligado[f] || (f === current && permitido(f)));
+}
+
+/**
+ * O formato pode ser escolhido (não só mantido)? Útil para quem valida uma
+ * entrada vinda de fora — o serviço do jogo aberto, por exemplo.
+ */
+export function isFormatChoosable(format, opts = {}) {
+  return gameDayFormatChoices({ ...opts, current: null }).includes(format);
+}
+
 /* --------------------------- utilidades RNG --------------------------- */
 
 function seededRng(seed) {

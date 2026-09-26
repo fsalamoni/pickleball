@@ -33,10 +33,9 @@ import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { V2Button } from '@/v2/ui/primitives';
 import { cn } from '@/core/lib/utils';
-import { FEATURE_FLAG } from '@/core/featureFlags';
-import { useFeatureFlag } from '@/core/lib/FeatureFlagsContext';
+import { useGameDayFormatChoices } from '@/modules/games/hooks/useGameDayFormatChoices';
 import {
-  GAME_DAY_FORMAT, GAME_DAY_FORMAT_LABELS, DRAW_FORMATS,
+  GAME_DAY_FORMAT, GAME_DAY_FORMAT_LABELS,
 } from '@/modules/clubs/domain/gameDayFormats';
 import {
   GAME_DAY_MANAGE_MODE, gameDayManageMode,
@@ -125,7 +124,10 @@ export default function ArenaGameDayDialog({
   const { data: bookings = [] } = useArenaBookings(arenaId);
   const criar = useCreateArenaGameDay(arenaId);
   const atualizar = useUpdateArenaGameDay(arenaId);
-  const americanoLiveOn = useFeatureFlag(FEATURE_FLAG.GAMEDAY_AMERICANO_LIVE);
+  // Formatos que se pode escolher — fonte ÚNICA (`gameDayFormatChoices`). O
+  // formato que o dia JÁ tem entra sempre: desligar uma flag tira a opção de
+  // CRIAR, nunca pode travar uma edição.
+  const formatos = useGameDayFormatChoices({ current: editando ? gameDay?.format : null });
 
   const [form, setForm] = useState(() => estadoInicial(gameDay, courts));
   const [erros, setErros] = useState({});
@@ -136,15 +138,6 @@ export default function ArenaGameDayDialog({
   }, [open, gameDay, courts.length]);
 
   const set = (patch) => setForm((f) => ({ ...f, ...patch }));
-
-  const formatos = [
-    ...DRAW_FORMATS,
-    GAME_DAY_FORMAT.PLAY,
-    ...(americanoLiveOn ? [GAME_DAY_FORMAT.AMERICANO_LIVE] : []),
-  ];
-  // O formato que o dia JÁ tem entra na lista mesmo com a flag desligada:
-  // desligar uma flag tira a opção de CRIAR, nunca pode travar uma edição.
-  if (editando && gameDay?.format && !formatos.includes(gameDay.format)) formatos.push(gameDay.format);
 
   const marcada = (courtId) => form.selecionadas.some((s) => s.court_id === courtId);
   const alternarQuadra = (courtId) => {
