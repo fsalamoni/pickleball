@@ -1089,6 +1089,46 @@ do catálogo/mercado: `catalog_id`, `subcategory`, `packaging`, `size`, `flavor`
 - `arena_inventory_exits.sale_id` + `channel: 'app'` — a saída gerada pela
   ENTREGA de um pedido. O cancelamento acha o que desfazer por esse campo.
 
+## Divulgação da plataforma e dos professores (Onda CG — `platform_marketing` / `coach_marketing`)
+
+Três coleções NOVAS e um campo opcional. Tudo aditivo; nenhuma regra existente
+tocada. Detalhes em `docs/29-INICIO-PERSONALIZADO-E-DIVULGACAO.md` §3.
+
+### `promo_coupons/{id}` (NOVO)
+O cupom de um EMISSOR que não é arena. `issuer_type` (`platform` | `coach`),
+`issuer_id` (`'platform'` ou o uid do professor), `issuer_name`, e os campos
+do cupom da arena (`kind`, `code`, `type`, `value`, `benefit`, `face_value`,
+`description`, `max_uses`, `once_per_user`, `expires_at`, `active`,
+`show_public`, `show_home`, `art`, `used_count`, `used_by[]`) — **sem** os de
+indicação e sem `min_amount`. Mais `reach` (`{ mode: brasil|estado|cidade,
+state, city }` — até onde aparece na tela inicial) e `visibility`
+(`todos` | `alunos`, só professor). Leitura: conta logada. Escrita: só o
+emissor (admin para a plataforma; o professor COM `coaches/{uid}`), sem trocar
+o emissor; admin pausa/apaga. **O custo do vale nunca mora aqui.**
+
+### `promo_campaigns/{id}` (NOVO)
+Emissor + `name`, `message`, `channel`, `target_audience`
+(`todos|interesse|estado|cidade|professores` / `alunos_ativos|todos_alunos`),
+`audience_detail` (`{ interest, state, city }`), `status`, `sent_count`,
+`destination` (`{ type, target_id, target_label }`, lista fechada por
+emissor), `banner` (o mesmo formato do banner da arena), `show_on_page`,
+`show_home`, `banner_until`, `banner_active`, `reach`, `visibility`. Mesmas
+regras do cupom.
+
+### `promo_settings/{platform|uid}` (NOVO)
+Configurações PRIVADAS do emissor: `coupon_costs` (custo unitário por cupom),
+`banner_templates`, `coupon_templates` (ids `arena:…`, o mesmo formato dos
+modelos da arena). Só o emissor (e o admin) lê e escreve.
+
+### `coach_lessons.coupon` (campo opcional)
+`{ coupon_id, code, benefit, kind, status: pending|applied|rejected,
+discount_value?, original_price?, reason? }`. O aluno só grava `pending`
+(`normalizeLessonCoupon`); o professor resolve na confirmação
+(`resolveLessonCoupon`) — aplicado, `price` passa a ser o valor já com o
+desconto. Ausente = aula sem cupom (todas as antigas).
+
+**Índices**: nenhum. Todas as consultas são só de igualdades.
+
 ## Relacionamentos (resumo)
 
 ```

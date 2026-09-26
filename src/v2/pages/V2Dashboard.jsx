@@ -118,6 +118,9 @@ function DashboardClassico() {
   // Sem a chave-mestra dos módulos de arena não existe jogo aberto — nem a
   // consulta da fila sai.
   const arenaModulesOn = useFeatureFlag(FEATURE_FLAG.ARENA_MODULES);
+  // Divulgação da plataforma e dos professores (Onda CG): cada uma com a sua flag.
+  const platformMarketingOn = useFeatureFlag(FEATURE_FLAG.PLATFORM_MARKETING);
+  const coachMarketingOn = useFeatureFlag(FEATURE_FLAG.COACH_MARKETING);
   const { data: myTournaments = [], isLoading: loadingMine } = useMyTournaments();
   // ⚠️ Falha não é vazio (docs/27): sem isto, uma queda de rede virava
   // "Nenhum torneio com inscrição aberta" e "Você não tem jogos marcados".
@@ -197,9 +200,14 @@ function DashboardClassico() {
           mundo abre o aplicativo. Só aparece quando há chamada. */}
       {arenaModulesOn && <HomeWaitlistCalls />}
 
-      {/* As promoções das arenas DA REGIÃO da pessoa, em banners (Onda BZ).
-          Depois da chamada da fila (que tem prazo), antes do resto. */}
-      {arenaModulesOn && <Suspense fallback={null}><HomePromoBanners /></Suspense>}
+      {/* As promoções DA REGIÃO da pessoa, em banners: das arenas (Onda BZ) e
+          da plataforma e dos professores (Onda CG). Depois da chamada da fila
+          (que tem prazo), antes do resto. */}
+      {(arenaModulesOn || platformMarketingOn || coachMarketingOn) && (
+        <Suspense fallback={null}>
+          <HomePromoBanners arenasOn={arenaModulesOn} platformOn={platformMarketingOn} coachesOn={coachMarketingOn} />
+        </Suspense>
+      )}
 
       {actionHomeOn && <V2ActionHome />}
 

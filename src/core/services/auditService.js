@@ -69,6 +69,18 @@ export const AUDIT_ACTION_LABELS = {
   gamification_mentorship_started: 'Mentoria iniciada',
   // Gravado pelo SERVIDOR (função adminDeleteAccounts), com o mesmo formato.
   admin_account_deleted: 'Cadastro excluído pelo admin',
+  // Divulgação da PLATAFORMA (Onda CG). As do professor (`coach_promo_*`)
+  // seguem o padrão das da arena: sem rótulo, a ação crua basta.
+  platform_promo_coupon_created: 'Cupom da plataforma criado',
+  platform_promo_coupon_updated: 'Cupom da plataforma editado',
+  platform_promo_coupon_enabled: 'Cupom da plataforma religado',
+  platform_promo_coupon_disabled: 'Cupom da plataforma desligado',
+  platform_promo_coupon_deleted: 'Cupom da plataforma apagado',
+  platform_promo_coupon_redeemed: 'Uso de cupom da plataforma registrado',
+  platform_promo_coupon_cost_set: 'Custo de vale da plataforma definido',
+  platform_promo_campaign_sent: 'Campanha da plataforma publicada',
+  platform_promo_campaign_updated: 'Campanha da plataforma editada',
+  platform_promo_campaign_deleted: 'Campanha da plataforma apagada',
 };
 
 export async function createAuditLog({

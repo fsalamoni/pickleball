@@ -128,8 +128,8 @@ export function useAllTournaments({ includeArchived = false } = {}) {
   });
 }
 
-export function usePublicTournaments() {
-  return useQuery({ queryKey: ['tournaments-public'], queryFn: listPublicTournaments });
+export function usePublicTournaments({ enabled = true } = {}) {
+  return useQuery({ queryKey: ['tournaments-public'], queryFn: listPublicTournaments, enabled });
 }
 
 // Sprint 4 ARE-14: tournaments de uma arena

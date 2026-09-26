@@ -90,16 +90,30 @@ function Miniatura({ id, nome, design, ativo, seu, onClick }) {
 }
 
 /**
+ * O editor serve a qualquer DONO de modelos. Sem `templates`, é a arena
+ * (`arena_settings.banner_templates`, pelo `arenaId`) — exatamente como
+ * sempre. Com `templates`, os "meus modelos" vêm e vão por ele: é assim que a
+ * plataforma e cada professor usam o MESMO editor (Onda CG), cada um com os
+ * seus modelos, sem uma segunda cópia desta tela.
+ *
  * @param {{
- *   arenaId: string, arena?: object,
+ *   arenaId?: string, arena?: object,
  *   templateId: string|null, design: object,
  *   onChange: (next: { template_id: string|null, design: object }) => void,
  *   cta: string,
+ *   templates?: { query: object, save: (list: object[]) => Promise<unknown>, saving?: boolean },
+ *   brand?: { color?: string, label?: string, name?: string },
+ *   uploadFolder?: string,
  * }} props
  */
-export default function BannerDesigner({ arenaId, arena, templateId, design, onChange, cta }) {
-  const modelosQ = useArenaBannerTemplates(arenaId);
-  const salvarModelos = useSaveArenaBannerTemplates();
+export default function BannerDesigner({
+  arenaId, arena, templateId, design, onChange, cta, templates = null, brand = null, uploadFolder = 'arena-banners',
+}) {
+  const modelosDaArenaQ = useArenaBannerTemplates(templates ? null : arenaId);
+  const salvarDaArena = useSaveArenaBannerTemplates();
+  const modelosQ = templates?.query || modelosDaArenaQ;
+  const salvando = templates ? Boolean(templates.saving) : salvarDaArena.isPending;
+  const salvarLista = (lista) => (templates ? templates.save(lista) : salvarDaArena.mutateAsync({ arenaId, list: lista }));
   const meus = useMemo(() => modelosQ.data || [], [modelosQ.data]);
   const [nomeNovo, setNomeNovo] = useState('');
   const [salvandoComo, setSalvandoComo] = useState(false);
@@ -107,7 +121,9 @@ export default function BannerDesigner({ arenaId, arena, templateId, design, onC
   const [confirmarApagar, setConfirmarApagar] = useState(false);
 
   const verif = normalizeBannerDesign(design);
-  const corDaMarca = arena?.branding?.primary_color || '';
+  const corDaMarca = brand ? (brand.color || '') : (arena?.branding?.primary_color || '');
+  const rotuloDaCor = brand?.label || 'Usar a cor da arena';
+  const nomeDoDono = brand ? (brand.name || '') : (arena?.name || '');
   const modeloAtual = isArenaTemplateId(templateId)
     ? meus.find((t) => t.id === templateId)?.design || null
     : platformTemplate(templateId)?.design || null;
@@ -119,7 +135,7 @@ export default function BannerDesigner({ arenaId, arena, templateId, design, onC
 
   const gravar = async (lista, msg) => {
     try {
-      await salvarModelos.mutateAsync({ arenaId, list: lista });
+      await salvarLista(lista);
       toast.success(msg);
       return true;
     } catch (err) {
@@ -201,7 +217,7 @@ export default function BannerDesigner({ arenaId, arena, templateId, design, onC
               {corDaMarca && (
                 <button type="button" onClick={() => onChange({ template_id: templateId, design: withArenaColors(design, corDaMarca) })}
                   className="inline-flex items-center gap-1 text-xs font-bold text-ink hover:underline">
-                  <Palette className="h-3.5 w-3.5" /> Usar a cor da arena
+                  <Palette className="h-3.5 w-3.5" /> {rotuloDaCor}
                 </button>
               )}
             </div>
@@ -218,7 +234,7 @@ export default function BannerDesigner({ arenaId, arena, templateId, design, onC
               <p className="mb-2 text-xs text-gray-500">Aparece à direita. Uma foto quadrada ou em pé funciona melhor.</p>
               <ImageUpload
                 value={design.image_url || ''}
-                folder="arena-banners"
+                folder={uploadFolder}
                 label="Enviar foto"
                 onChange={(url, meta) => onChange({
                   template_id: templateId,
@@ -244,7 +260,7 @@ export default function BannerDesigner({ arenaId, arena, templateId, design, onC
           </div>
           <div className={cn('mx-auto', previa === 'phone' ? 'max-w-[340px]' : 'w-full')}>
             <BannerArt banner={{ source: 'design', design: verif.value }} ratio={previa} cta={design.cta || cta}
-              arenaName={arena?.name || ''} />
+              arenaName={nomeDoDono} />
           </div>
           {verif.warnings.length > 0 && (
             <ul className="space-y-1">
@@ -257,10 +273,10 @@ export default function BannerDesigner({ arenaId, arena, templateId, design, onC
           <div className="rounded-2xl border border-dashed border-gray-200 p-3">
             {isArenaTemplateId(templateId) && meus.some((t) => t.id === templateId) ? (
               <div className="flex flex-wrap items-center gap-2">
-                <V2Button size="sm" variant="secondary" disabled={salvarModelos.isPending || !verif.valid} onClick={atualizar}>
+                <V2Button size="sm" variant="secondary" disabled={salvando || !verif.valid} onClick={atualizar}>
                   <Save className="h-4 w-4" /> Atualizar o modelo
                 </V2Button>
-                <V2Button size="sm" variant="ghost" disabled={salvarModelos.isPending} onClick={() => setConfirmarApagar(true)}>
+                <V2Button size="sm" variant="ghost" disabled={salvando} onClick={() => setConfirmarApagar(true)}>
                   <Trash2 className="h-4 w-4" /> Apagar o modelo
                 </V2Button>
               </div>
@@ -271,7 +287,7 @@ export default function BannerDesigner({ arenaId, arena, templateId, design, onC
                   <V2Input id="ban-modelo-nome" maxLength={40} value={nomeNovo} autoFocus
                     placeholder="Terças de promoção" onChange={(e) => setNomeNovo(e.target.value)} />
                 </V2Field>
-                <V2Button size="sm" disabled={!nomeNovo.trim() || salvarModelos.isPending || !verif.valid} onClick={salvarComoNovo}>
+                <V2Button size="sm" disabled={!nomeNovo.trim() || salvando || !verif.valid} onClick={salvarComoNovo}>
                   Salvar
                 </V2Button>
                 <V2Button size="sm" variant="ghost" onClick={() => setSalvandoComo(false)}>Cancelar</V2Button>

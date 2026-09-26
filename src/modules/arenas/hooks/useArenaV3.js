@@ -1512,11 +1512,12 @@ export function useApplyBookingReferral() {
 }
 
 /** Os cupons marcados como banner na tela inicial (Onda BZ). */
-export function useHomeBannerCoupons() {
+export function useHomeBannerCoupons({ enabled = true } = {}) {
   return useQuery({
     queryKey: ['arena-coupons-home'],
     queryFn: () => listHomeBannerCoupons(),
     staleTime: 5 * 60_000,
+    enabled,
   });
 }
 

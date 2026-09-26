@@ -30,6 +30,8 @@ import {
 } from '../domain/lesson.js';
 import { getCoach } from './coachService.js';
 import { debitForLesson } from './packageService.js';
+import { logger } from '@/core/lib/logger';
+import { LESSON_COUPON_STATUS, lessonCouponLine } from '../../promo/domain/lessonCoupon.js';
 
 export const COACH_LESSON_COLLECTIONS = {
   availability: 'coach_availability',
@@ -152,6 +154,8 @@ export async function requestLesson(coachId, actor, input) {
     student_id: isCoach ? (str(input.student_id) || null) : actor.uid,
     student_name: isCoach ? input.student_name : (input.student_name || actor.displayName),
     status: (isCoach && input.confirm) ? LESSON_STATUS.CONFIRMED : LESSON_STATUS.REQUESTED,
+    // O cupom é do ALUNO que pede: aula criada pelo professor não leva cupom.
+    coupon: isCoach ? null : input.coupon,
   });
   if (!valid) throw new Error(error);
 
@@ -208,10 +212,26 @@ export async function respondLesson(lesson, nextStatus, actor) {
     throw new Error('Sem permissão para esta ação.');
   }
 
+  // O cupom do pedido (Onda CG) é resolvido na CONFIRMAÇÃO, pelo professor —
+  // como na arena, o uso é contado quando o serviço acontece, não no pedido.
+  const cupom = isCoach && nextStatus === LESSON_STATUS.CONFIRMED
+    ? await resolverCupomDaAula(lesson)
+    : null;
+
   await updateDoc(doc(db, COACH_LESSON_COLLECTIONS.lessons, lesson.id), {
     status: nextStatus,
+    ...(cupom ? { coupon: cupom.coupon, ...(cupom.price !== undefined ? { price: cupom.price } : {}) } : {}),
     updated_at: serverTimestamp(),
   });
+  if (cupom?.coupon?.status === LESSON_COUPON_STATUS.APPLIED) {
+    // Best-effort: a aula já está confirmada; falhar aqui só deixa de contar o uso.
+    try {
+      const { registrarUsoDePromo } = await import('../../promo/services/promoService.js');
+      await registrarUsoDePromo(cupom.coupon.coupon_id, lesson.student_id);
+    } catch (err) {
+      logger.info('Uso do cupom da aula não contabilizado', { err: err?.code });
+    }
+  }
 
   // Ao concluir, debita 1 crédito do pacote vinculado (best-effort).
   if (nextStatus === LESSON_STATUS.COMPLETED) {
@@ -229,15 +249,42 @@ export async function respondLesson(lesson, nextStatus, actor) {
       [LESSON_STATUS.CANCELLED]: 'cancelada',
       [LESSON_STATUS.COMPLETED]: 'concluída',
     }[nextStatus] || 'atualizada';
+    const linhaDoCupom = cupom ? ` ${lessonCouponLine(cupom.coupon)}.` : '';
     notifyUsers([recipient], {
       title: `Aula ${label}`,
-      message: `A aula ${when ? `de ${when} ` : ''}foi ${label}.`,
+      message: `A aula ${when ? `de ${when} ` : ''}foi ${label}.${linhaDoCupom}`,
       type: NOTIFICATION_TYPE.GENERIC,
       link: isCoach ? '/minhas-aulas' : '/aulas',
       actor: { uid: actor.uid },
     });
   }
   await createAuditLog({ action: 'coach_lesson_status_changed', actor, details: { lesson_id: lesson.id, to: nextStatus } });
+}
+
+/**
+ * Confere o cupom pendente da aula contra o BANCO (o aluno informou; quem
+ * aplica é o professor) e devolve o que gravar. Sem cupom pendente, `null`.
+ * Se a conferência falhar (rede), o cupom segue pendente — nunca é recusado
+ * nem aplicado às cegas.
+ */
+async function resolverCupomDaAula(lesson) {
+  if (lesson?.coupon?.status !== LESSON_COUPON_STATUS.PENDING || !lesson.coupon.coupon_id) return null;
+  try {
+    // Sob demanda: a conferência puxa o marketing inteiro, e o serviço de
+    // aulas é carregado por telas (a tela inicial) que nunca confirmam aula.
+    const [{ getPromoCoupon }, { resolveLessonCoupon }] = await Promise.all([
+      import('../../promo/services/promoService.js'),
+      import('../../promo/domain/promo.js'),
+    ]);
+    const [cupom, professor] = await Promise.all([
+      getPromoCoupon(lesson.coupon.coupon_id),
+      getCoach(lesson.coach_id).catch(() => null),
+    ]);
+    return resolveLessonCoupon({ lesson, coupon: cupom, coach: professor || {} });
+  } catch (err) {
+    logger.info('Cupom da aula não conferido', { err: err?.code });
+    return null;
+  }
 }
 
 /** Perfil do professor (reexport de conveniência para as telas de aula). */

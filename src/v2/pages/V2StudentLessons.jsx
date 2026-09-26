@@ -10,7 +10,7 @@
 import React, { useMemo } from 'react';
 import { Link, Navigate } from 'react-router-dom';
 import { toast } from 'sonner';
-import { CalendarDays, GraduationCap } from 'lucide-react';
+import { CalendarDays, GraduationCap, Tag } from 'lucide-react';
 import { useAuth } from '@/core/lib/FirebaseAuthContext';
 import { useStudentLessons, useRespondLesson } from '@/modules/coaches/hooks/useLessons';
 import { useStudentSales } from '@/modules/coaches/hooks/usePackages';
@@ -20,6 +20,7 @@ import {
 } from '@/modules/coaches/domain/lesson';
 import { creditsRemaining, isSaleActive } from '@/modules/coaches/domain/package';
 import { formatPrice } from '@/modules/arenas/domain/pricing';
+import { lessonCouponLine } from '@/modules/promo/domain/lessonCoupon';
 import ConfirmDialog from '@/components/ConfirmDialog';
 import { MyArenaEnrollments } from '@/v2/components/arenas/classes/MyArenaClasses';
 import {
@@ -51,6 +52,11 @@ function StudentLessonCard({ lesson, onCancel, isPending }) {
         {slots.length > 1 && <span className="ml-1">+{slots.length - 1} data(s)</span>}
       </div>
       {lesson.location && <p className="mt-1 text-xs text-gray-500">📍 {lesson.location}</p>}
+      {lesson.coupon?.code && (
+        <p className={`mt-1.5 inline-flex items-center gap-1 rounded-full px-2 py-0.5 text-[11px] font-bold ${lesson.coupon.status === 'rejected' ? 'bg-amber-50 text-amber-800' : 'bg-acid/20 text-ink'}`}>
+          <Tag className="h-3 w-3" aria-hidden /> {lessonCouponLine(lesson.coupon)}
+        </p>
+      )}
       {canCancel && (
         <div className="mt-3 flex justify-end">
           <ConfirmDialog

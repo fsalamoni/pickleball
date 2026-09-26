@@ -61,7 +61,7 @@ import HomeLessonsSection from './HomeLessonsSection';
 import HomeClubsSection from './HomeClubsSection';
 import HomeCommunitySection from './HomeCommunitySection';
 
-// Sob demanda: só com a chave-mestra dos módulos de arena.
+// Sob demanda: só com alguma fonte de promoção ligada (arena, plataforma ou professores).
 const HomePromoBanners = lazy(() => import('@/v2/components/arenas/marketing/HomePromoBanners'));
 
 /** O próximo passo de quem está com a agenda livre (os atalhos de jogar). */
@@ -75,6 +75,7 @@ export default function V2PersonalHome() {
   const arenaModulesOn = useFeatureFlag(FEATURE_FLAG.ARENA_MODULES);
   const actionHomeOn = useFeatureFlag(FEATURE_FLAG.ACTION_HOME);
   const coachMarketingOn = useFeatureFlag(FEATURE_FLAG.COACH_MARKETING);
+  const platformMarketingOn = useFeatureFlag(FEATURE_FLAG.PLATFORM_MARKETING);
 
   // Papéis reais — todos já em cache pela barra lateral (arena, professor).
   const { arenas, pendingByArena, totalPendingBookings } = useMyArenaSummary();
@@ -180,8 +181,13 @@ export default function V2PersonalHome() {
       {/* O que tem PRAZO vem antes de tudo: a chamada da fila vence em 1 hora. */}
       {arenaModulesOn && <HomeWaitlistCalls />}
 
-      {/* Destaques da região (promoções e campanhas). Vitrine: some sem nada. */}
-      {arenaModulesOn && <Suspense fallback={null}><HomePromoBanners /></Suspense>}
+      {/* Destaques da região — das arenas, da plataforma e dos professores
+          (cupons e campanhas). Vitrine: some sem nada. */}
+      {(arenaModulesOn || platformMarketingOn || coachMarketingOn) && (
+        <Suspense fallback={null}>
+          <HomePromoBanners arenasOn={arenaModulesOn} platformOn={platformMarketingOn} coachesOn={coachMarketingOn} />
+        </Suspense>
+      )}
 
       <HomeShortcuts atalhos={atalhos} />
 

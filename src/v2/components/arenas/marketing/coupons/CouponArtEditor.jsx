@@ -81,16 +81,28 @@ function CampoCor({ id, label, valor, onChange }) {
 }
 
 /**
+ * Como o editor de banner, serve a qualquer DONO de modelos: sem `templates`
+ * é a arena (`arena_settings.coupon_templates`); com `templates`, a
+ * plataforma ou o professor (Onda CG) — o mesmo editor, os modelos de cada um.
+ *
  * @param {{
- *   arenaId: string, arena?: object,
+ *   arenaId?: string, arena?: object,
  *   value: object|null,             // a arte (null = Clássico, o padrão)
  *   onChange: (art: object) => void,
  *   amostra: { code: string, benefit: string, description: string },
+ *   templates?: { query: object, save: (list: object[]) => Promise<unknown>, saving?: boolean },
+ *   brand?: { color?: string, label?: string, name?: string },
+ *   uploadFolder?: string,
  * }} props
  */
-export default function CouponArtEditor({ arenaId, arena, value, onChange, amostra }) {
-  const modelosQ = useArenaCouponTemplates(arenaId);
-  const salvarModelos = useSaveArenaCouponTemplates();
+export default function CouponArtEditor({
+  arenaId, arena, value, onChange, amostra, templates = null, brand = null, uploadFolder = 'arena-coupons',
+}) {
+  const modelosDaArenaQ = useArenaCouponTemplates(templates ? null : arenaId);
+  const salvarDaArena = useSaveArenaCouponTemplates();
+  const modelosQ = templates?.query || modelosDaArenaQ;
+  const salvando = templates ? Boolean(templates.saving) : salvarDaArena.isPending;
+  const salvarLista = (lista) => (templates ? templates.save(lista) : salvarDaArena.mutateAsync({ arenaId, list: lista }));
   const meus = useMemo(() => modelosQ.data || [], [modelosQ.data]);
   const [personalizar, setPersonalizar] = useState(false);
   const [nomeNovo, setNomeNovo] = useState('');
@@ -103,7 +115,9 @@ export default function CouponArtEditor({ arenaId, arena, value, onChange, amost
     ? value.design
     : couponDesignFromTemplate(couponTemplate(DEFAULT_COUPON_TEMPLATE_ID));
   const verif = normalizeCouponArtDesign(design);
-  const corDaMarca = arena?.branding?.primary_color || '';
+  const corDaMarca = brand ? (brand.color || '') : (arena?.branding?.primary_color || '');
+  const rotuloDaCor = brand?.label || 'Usar a cor da arena';
+  const nomeDoDono = brand ? (brand.name || '') : (arena?.name || '');
   const modeloAtual = isArenaTemplateId(templateId)
     ? meus.find((t) => t.id === templateId)?.design || null
     : couponTemplate(templateId)?.design || null;
@@ -114,7 +128,7 @@ export default function CouponArtEditor({ arenaId, arena, value, onChange, amost
 
   const gravar = async (lista, msg) => {
     try {
-      await salvarModelos.mutateAsync({ arenaId, list: lista });
+      await salvarLista(lista);
       toast.success(msg);
       return true;
     } catch (err) {
@@ -194,10 +208,10 @@ export default function CouponArtEditor({ arenaId, arena, value, onChange, amost
             <p className="mb-1.5 text-sm font-semibold text-ink">Como fica</p>
             <div className="grid gap-3 lg:grid-cols-[minmax(0,1.5fr)_minmax(0,1fr)]">
               <CouponArt art={{ source: 'design', design: verif.value }} code={amostra.code || 'CODIGO'}
-                benefit={amostra.benefit} description={amostra.description} arenaName={arena?.name || ''} notch="bg-paper" />
+                benefit={amostra.benefit} description={amostra.description} arenaName={nomeDoDono} notch="bg-paper" />
               <div className="mx-auto w-full max-w-[330px]">
                 <CouponArt art={{ source: 'design', design: verif.value }} code={amostra.code || 'CODIGO'}
-                  benefit={amostra.benefit} description={amostra.description} arenaName={arena?.name || ''} notch="bg-paper" />
+                  benefit={amostra.benefit} description={amostra.description} arenaName={nomeDoDono} notch="bg-paper" />
               </div>
             </div>
             {verif.warnings.map((w) => (
@@ -229,7 +243,7 @@ export default function CouponArtEditor({ arenaId, arena, value, onChange, amost
                   {corDaMarca && (
                     <button type="button" onClick={() => porDesenho(templateId, withArenaCouponColors(design, corDaMarca))}
                       className="inline-flex items-center gap-1 text-xs font-bold text-ink hover:underline">
-                      <Palette className="h-3.5 w-3.5" /> Usar a cor da arena
+                      <Palette className="h-3.5 w-3.5" /> {rotuloDaCor}
                     </button>
                   )}
                 </div>
@@ -243,10 +257,10 @@ export default function CouponArtEditor({ arenaId, arena, value, onChange, amost
               <div className="rounded-2xl border border-dashed border-gray-200 p-3">
                 {ehMeu && (
                   <div className="mb-2 flex flex-wrap items-center gap-2">
-                    <V2Button type="button" size="sm" variant="secondary" disabled={salvarModelos.isPending} onClick={atualizar}>
+                    <V2Button type="button" size="sm" variant="secondary" disabled={salvando} onClick={atualizar}>
                       <Save className="h-4 w-4" /> Atualizar o modelo
                     </V2Button>
-                    <V2Button type="button" size="sm" variant="ghost" disabled={salvarModelos.isPending} onClick={() => setConfirmarApagar(true)}>
+                    <V2Button type="button" size="sm" variant="ghost" disabled={salvando} onClick={() => setConfirmarApagar(true)}>
                       <Trash2 className="h-4 w-4" /> Apagar o modelo
                     </V2Button>
                   </div>
@@ -257,7 +271,7 @@ export default function CouponArtEditor({ arenaId, arena, value, onChange, amost
                       <V2Input id="cup-art-modelo" maxLength={40} value={nomeNovo} autoFocus placeholder="Vale da recepção"
                         onChange={(e) => setNomeNovo(e.target.value)} />
                     </V2Field>
-                    <V2Button type="button" size="sm" disabled={!nomeNovo.trim() || salvarModelos.isPending} onClick={salvarComoNovo}>
+                    <V2Button type="button" size="sm" disabled={!nomeNovo.trim() || salvando} onClick={salvarComoNovo}>
                       Salvar
                     </V2Button>
                     <V2Button type="button" size="sm" variant="ghost" onClick={() => setSalvandoComo(false)}>Cancelar</V2Button>
@@ -279,7 +293,7 @@ export default function CouponArtEditor({ arenaId, arena, value, onChange, amost
           onChange={(patch) => onChange({ ...upload, ...patch, source: COUPON_ART_SOURCE.UPLOAD })}
           spec={COUPON_UPLOAD_SPEC}
           guide={couponUploadGuide()}
-          folder="arena-coupons"
+          folder={uploadFolder}
           diagram={false}
           altPlaceholder="1 água de coco grátis a partir do quinto jogo."
           preview={(v) => (

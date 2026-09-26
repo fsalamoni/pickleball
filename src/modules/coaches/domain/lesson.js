@@ -22,6 +22,7 @@ import {
   isValidSlot,
   sortSlots,
 } from '../../arenas/domain/booking.js';
+import { normalizeLessonCoupon } from '../../promo/domain/lessonCoupon.js';
 
 // Reexporta para consumidores do módulo de aulas (não precisam conhecer arenas).
 export {
@@ -115,6 +116,7 @@ export function normalizeLesson(input = {}) {
   const paymentStatus = Object.values(PAYMENT_STATUS).includes(str(input.payment_status))
     ? str(input.payment_status)
     : PAYMENT_STATUS.NONE;
+  const cupom = normalizeLessonCoupon(input.coupon);
 
   return {
     valid: true,
@@ -138,6 +140,10 @@ export function normalizeLesson(input = {}) {
       status,
       package_sale_id: str(input.package_sale_id) || null,
       notes: str(input.notes).slice(0, 1000),
+      // Cupom do professor informado no pedido (Onda CG) — campo OPCIONAL,
+      // só gravado quando existe, e sempre PENDENTE: quem aplica é o
+      // professor, na confirmação.
+      ...(cupom ? { coupon: cupom } : {}),
     },
   };
 }

@@ -168,6 +168,7 @@ navegação nova.
 | `/chat` `/novidades` | autenticado (V2) | mensagens + feed |
 | `/ranking` `/ranking/duplas` `/encontrar-jogadores` `/procura-jogo` `/parceiros` | autenticado (V2) | rating (simples+duplas) + jogos + parceiros |
 | `/meu-desempenho` | autenticado (V2) | performance |
+| `/promocoes` `/campanhas/:campaignId` | autenticado (V2) | vitrine e página de campanha da **divulgação da plataforma e dos professores** (Onda CG) — gated por `platform_marketing`/`coach_marketing` (as duas OFF ⇒ volta ao início). Ver `docs/29-INICIO-PERSONALIZADO-E-DIVULGACAO.md` |
 | `/gamification` `/conquistas` `/conquistas/:uid` `/hall-da-fama` `/vinculos` | autenticado (V2) | Gamificação V2 — **gated por `gamification_v2`** (flag OFF ⇒ empty state). Cada rota isolada em `GamificationErrorBoundary`. `/vinculos` = rivais (derivados do H2H), crews e mentorias |
 | `/admin/torneios` `/admin/metricas` `/admin/parceiros` `/admin/console` | platform_admin (V2) | painel + console (flags, migrations) |
 | `/admin/owner-debug` `/admin/owner-restore` `/admin/profiles` | platform_admin (V2) | admin tools |
@@ -358,6 +359,15 @@ viraram código (lotes 1 e 2 de `convertFlagsToCode`). Apenas
 - `coach_student_progress` — alunos ligados à evolução.
 - `coach_level_rating_seed` — semente por nível validado.
 
+**Onda CG (2026-09-26)** — mais três, default OFF (ver
+`docs/29-INICIO-PERSONALIZADO-E-DIVULGACAO.md`):
+- `personalized_home` — a tela inicial montada por pessoa (papéis reais +
+  interesses declarados), só com o que está valendo.
+- `platform_marketing` — cupons e campanhas DA PLATAFORMA (Painel admin →
+  Plataforma → Divulgação), com as ferramentas do marketing da arena.
+- `coach_marketing` — cupons e campanhas DE CADA PROFESSOR (Painel do
+  professor → Divulgação); o desconto entra no pedido de aula.
+
 Padrão de uso:
 
 ```jsx
@@ -460,3 +470,5 @@ usuário" (apenas para `platform_admin`). Quando ativo:
   completa do Arena V3.
 - `docs/09-UX-ANALYSIS/01-15` — UX/UI docs, incluindo backlog remanescente (15).
 - `docs/feature-flags-catalog.md` — catálogo detalhado de todas as flags.
+- `docs/29-INICIO-PERSONALIZADO-E-DIVULGACAO.md` — tela inicial personalizada
+  e cupons/campanhas da plataforma e dos professores (Onda CG).

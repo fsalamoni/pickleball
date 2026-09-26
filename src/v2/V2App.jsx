@@ -72,6 +72,9 @@ const V2ArenaClasses = lazy(() => import('@/v2/pages/V2ArenaClasses'));
 const V2ArenaCoaches = lazy(() => import('@/v2/pages/V2ArenaCoaches'));
 const V2ArenaLeagues = lazy(() => import('@/v2/pages/V2ArenaLeagues'));
 const V2ArenaCampaign = lazy(() => import('@/v2/pages/V2ArenaCampaign'));
+// Divulgação da plataforma e dos professores (Onda CG, flags `platform_marketing` / `coach_marketing`).
+const V2PromoCampaign = lazy(() => import('@/v2/pages/V2PromoCampaign'));
+const V2Promotions = lazy(() => import('@/v2/pages/V2Promotions'));
 const V2ArenaMarketing = lazy(() => import('@/v2/pages/V2ArenaMarketing'));
 const V2ArenaOperations = lazy(() => import('@/v2/pages/V2ArenaOperations'));
 const V2ArenaCheckin = lazy(() => import('@/v2/pages/V2ArenaCheckin'));
@@ -172,6 +175,8 @@ export default function V2App() {
           {/* A página "saiba mais" de uma campanha — para onde o banner e o
               aviso levam quando o destino é "Detalhes da campanha" (Onda CC). */}
           <Route path="arenas/:arenaId/campanhas/:campaignId" element={<V2ArenaCampaign />} />
+          <Route path="campanhas/:campaignId" element={<Isolada nome="campanha"><V2PromoCampaign /></Isolada>} />
+          <Route path="promocoes" element={<Isolada nome="promocoes"><V2Promotions /></Isolada>} />
           <Route path="arenas/:arenaId/marketing" element={<V2ArenaMarketing />} />
           <Route path="arenas/:arenaId/gerir/marketing" element={<V2ArenaMarketing />} />
           <Route path="arenas/:arenaId/gerir/operacoes" element={<V2ArenaOperations />} />
