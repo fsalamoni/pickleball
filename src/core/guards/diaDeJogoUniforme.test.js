@@ -340,3 +340,60 @@ describe('⭐ os formatos que se pode escolher têm UMA fonte', () => {
     });
   });
 });
+
+/* ---------------------------------------------------------------------------
+ * SIMPLES × DUPLAS TEM UMA FONTE (Onda CF)
+ *
+ * Com jogo simples e em duplas no mesmo dia, são DOIS rankings do dia. Uma
+ * tela que chamasse a conta antiga (`computeGameDayLeaderboard`, no singular)
+ * somaria vitória de simples com vitória de duplas — sem erro nenhum, só uma
+ * classificação errada na frente de todo mundo. E o tipo de cada quadra tem de
+ * sair da mesma conta nas três telas que criam partida quadra a quadra (painel
+ * do Play, painel do Americano aprimorado e telão), senão uma anuncia simples
+ * e a outra cria duplas.
+ * ------------------------------------------------------------------------ */
+describe('⭐ simples × duplas têm UMA fonte', () => {
+  const telas = [];
+  const varrer = (dir) => {
+    if (!existsSync(dir)) return;
+    readdirSync(dir, { withFileTypes: true }).forEach((e) => {
+      const caminho = `${dir}/${e.name}`;
+      if (e.isDirectory()) { varrer(caminho); return; }
+      if (!/\.(jsx?|tsx?)$/.test(e.name) || /\.test\./.test(e.name)) return;
+      telas.push(caminho);
+    });
+  };
+  varrer('src/v2');
+  varrer('src/pages');
+  readdirSync('src/modules', { withFileTypes: true })
+    .filter((e) => e.isDirectory())
+    .forEach((m) => { varrer(`src/modules/${m.name}/components`); varrer(`src/modules/${m.name}/pages`); });
+
+  it('⭐ nenhuma tela usa a conta do ranking do dia que junta os tipos', () => {
+    const culpadas = telas.filter((t) => /computeGameDayLeaderboard\(/.test(semComentarios(ler(t))));
+    expect(culpadas, 'use computeGameDayLeaderboards (um ranking por tipo)').toEqual([]);
+  });
+
+  it('⭐ o ranking do dia (componente e telão) sai por tipo', () => {
+    [
+      'src/modules/clubs/components/GameDayLeaderboard.jsx',
+      'src/v2/pages/V2GameDayTelao.jsx',
+    ].forEach((caminho) => {
+      expect(semComentarios(ler(caminho)), caminho).toContain('computeGameDayLeaderboards(');
+    });
+  });
+
+  it('⭐ as três telas quadra a quadra leem o tipo da quadra da MESMA fonte', () => {
+    [
+      'src/v2/components/games/AthletePlayOrganizer.jsx',
+      'src/v2/components/games/AthleteAmericanoLiveOrganizer.jsx',
+      'src/v2/pages/V2GameDayTelao.jsx',
+    ].forEach((caminho) => {
+      expect(semComentarios(ler(caminho)), caminho).toContain('useCourtKinds(');
+    });
+  });
+
+  it('⭐ o ranking da casa separa as colocações por tipo', () => {
+    expect(semComentarios(ler('src/modules/arenas/hooks/useHouseRanking.js'))).toContain('gameDayHouseEvents(');
+  });
+});

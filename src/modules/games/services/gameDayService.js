@@ -30,10 +30,14 @@ import {
   sealParticipantUidIntoGames,
 } from '../domain/gameDayRanking.js';
 import {
-  computePlayOrder, buildPlayNextMatch, assignPlayTeams,
+  computePlayOrder, buildPlayNextMatch, assignPlaySides,
   nextFreePlayCourt, freePlayCourts, pickSwapReplacement, isEligibleSwapReplacement,
   PLAY_GAME_STATUS, PLAY_SLOTS,
 } from '../domain/gamePlay.js';
+import {
+  GAME_KIND, courtKindsFromGames, gameKindOf, kindOfCourt, mergeCourtKinds, normalizeGameKind,
+  slotsForKind, withoutPartnerLinks,
+} from '../domain/gameKind.js';
 import {
   buildPlayHistory, buildPlayNextMatchBalanced, makePartnerRepeatCounter,
   drawPlayRoundForFreeCourts,
@@ -606,13 +610,17 @@ function playSideEntries(ids, byId) {
 }
 
 /** Grava (no batch) um jogo aberto do Play numa quadra e devolve o id. */
-function writePlayGame(batch, gdId, { court, side_a, side_b, order, format = 'play' }) {
+function writePlayGame(batch, gdId, {
+  court, side_a, side_b, order, format = 'play', kind = GAME_KIND.DOUBLES,
+}) {
   const gid = doc(collection(db, COL, gdId, SUB_GAMES)).id;
   batch.set(doc(db, COL, gdId, SUB_GAMES, gid), {
     id: gid,
     round: null,
     court: court ?? null,
-    kind: 'doubles',
+    // Simples ou duplas (Onda CF). É o mesmo campo de sempre — só passou a
+    // aceitar `singles`, que o organizador legado do clube já gravava.
+    kind: normalizeGameKind(kind),
     format,
     status: PLAY_GAME_STATUS.OPEN,
     side_a: side_a || [],
@@ -641,6 +649,21 @@ function applySkipDecrement(batch, gdId, participants) {
 }
 
 /**
+ * O TIPO da partida que vai nascer numa quadra (Onda CF): o que quem organiza
+ * escolheu agora ou, sem escolha, o tipo do último jogo daquela quadra — a
+ * quadra "lembra". Quadra que nunca teve jogo é de duplas.
+ */
+function kindForCourt(kind, games, court, courts) {
+  if (kind) return normalizeGameKind(kind);
+  return kindOfCourt(courtKindsFromGames(games, courts), court);
+}
+
+/** A mensagem de "falta gente" certa para o tipo da partida. */
+function faltaGente(kind, partida = 'o próximo jogo') {
+  return `Não há jogadores disponíveis suficientes (mínimo ${slotsForKind(kind)}) para criar ${partida}.`;
+}
+
+/**
  * Cria o PRÓXIMO jogo do Play por ordem de participação (sorteando entre
  * empatados via `available_tie`), formando duplas equilibradas por nível/sexo.
  * @param {string} gdId
@@ -648,7 +671,7 @@ function applySkipDecrement(batch, gdId, participants) {
  * @param {{ court?: number|null }} [opts]  quadra alvo (padrão: menor livre)
  * @returns {{ gameId: string, court: number }}
  */
-export async function createNextPlayGame(gdId, actor, { court = null } = {}) {
+export async function createNextPlayGame(gdId, actor, { court = null, kind = null } = {}) {
   const gd = await getGameDay(gdId);
   if (!gd) throw new Error('Dia de jogo não encontrado.');
   const [participants, games] = await Promise.all([
@@ -656,8 +679,12 @@ export async function createNextPlayGame(gdId, actor, { court = null } = {}) {
   ]);
   const targetCourt = court ?? nextFreePlayCourt({ courts: gd.play_courts || 1, games });
   if (targetCourt == null) throw new Error('Todas as quadras já estão em jogo.');
+  const tipo = kindForCourt(kind, games, targetCourt, gd.play_courts || 1);
+  const vagas = slotsForKind(tipo);
 
-  const { order } = computePlayOrder({ participants, games });
+  const { order: filaCompleta } = computePlayOrder({ participants, games });
+  // No simples a dupla vinculada não vale: a fila é lida sem os vínculos.
+  const order = tipo === GAME_KIND.SINGLES ? withoutPartnerLinks(filaCompleta) : filaCompleta;
 
   // RODÍZIO EQUILIBRADO (flag `play_smart_rotation`, padrão DESLIGADA).
   // Ligada, varia os grupos e as duplas sem furar a ordem de participação —
@@ -671,9 +698,9 @@ export async function createNextPlayGame(gdId, actor, { court = null } = {}) {
   const historico = rodizioEquilibrado ? buildPlayHistory(games) : null;
 
   const ids = rodizioEquilibrado
-    ? buildPlayNextMatchBalanced(order, { slots: PLAY_SLOTS, history: historico })
-    : buildPlayNextMatch(order, { slots: PLAY_SLOTS });
-  if (!ids) throw new Error('Não há jogadores disponíveis suficientes (mínimo 4) para criar o próximo jogo.');
+    ? buildPlayNextMatchBalanced(order, { slots: vagas, history: historico })
+    : buildPlayNextMatch(order, { slots: vagas });
+  if (!ids) throw new Error(faltaGente(tipo));
 
   const byId = new Map(participants.map((p) => [p.id, p]));
   // Nível na régua unificada (DUPR informado → rating 2.0–8.0 da plataforma →
@@ -681,13 +708,14 @@ export async function createNextPlayGame(gdId, actor, { court = null } = {}) {
   // Best-effort — sem os níveis, o `playLevelValue` volta ao nível do
   // formulário e a formação de duplas acontece do mesmo jeito.
   const nivelPorParticipante = await fetchUnifiedLevelsByParticipant(participants).catch(() => ({}));
-  const four = ids
+  const escolhidos = ids
     .map((id) => byId.get(id))
     .filter(Boolean)
     .map((p) => (Number.isFinite(nivelPorParticipante[p.id])
       ? { ...p, level_value: nivelPorParticipante[p.id] }
       : p));
-  const { side_a, side_b } = assignPlayTeams(four, {
+  const { side_a, side_b } = assignPlaySides(escolhidos, {
+    kind: tipo,
     partnerRepeatCount: makePartnerRepeatCounter(historico),
   });
 
@@ -697,15 +725,16 @@ export async function createNextPlayGame(gdId, actor, { court = null } = {}) {
     side_a: playSideEntries(side_a, byId),
     side_b: playSideEntries(side_b, byId),
     order: Date.now(),
+    kind: tipo,
   });
   const chosen = new Set(ids);
   applySkipDecrement(batch, gdId, participants.filter((p) => !chosen.has(p.id)));
   await batch.commit();
   await createAuditLog({
     action: 'game_day_play_game_created', actor,
-    details: { game_day_id: gdId, court: targetCourt, game_id: gid },
+    details: { game_day_id: gdId, court: targetCourt, game_id: gid, kind: tipo },
   });
-  return { gameId: gid, court: targetCourt };
+  return { gameId: gid, court: targetCourt, kind: tipo };
 }
 
 /**
@@ -729,7 +758,7 @@ export async function createNextPlayGame(gdId, actor, { court = null } = {}) {
  *
  * @returns {{ created: Array<{gameId:string, court:number}>, courts:number[] }}
  */
-export async function createPlayRoundForFreeCourts(gdId, actor) {
+export async function createPlayRoundForFreeCourts(gdId, actor, { courtKinds = null } = {}) {
   const gd = await getGameDay(gdId);
   if (!gd) throw new Error('Dia de jogo não encontrado.');
   const [participants, games] = await Promise.all([
@@ -751,11 +780,14 @@ export async function createPlayRoundForFreeCourts(gdId, actor) {
   const rodizioEquilibrado = flags[FEATURE_FLAG.PLAY_SMART_ROTATION] === true;
   const historico = rodizioEquilibrado ? buildPlayHistory(games) : null;
 
+  // O tipo de cada quadra: o que a tela escolheu agora por cima do que cada
+  // quadra já era (o último jogo dela). É a MESMA conta da previsão da tela.
+  const tipos = mergeCourtKinds(courtKindsFromGames(games, totalCourts), courtKinds);
   const rodada = drawPlayRoundForFreeCourts(order, {
-    courts: totalCourts, games, slots: PLAY_SLOTS, history: historico,
+    courts: totalCourts, games, slots: PLAY_SLOTS, history: historico, courtKinds: tipos,
   });
   if (rodada.length === 0) {
-    throw new Error('Não há jogadores disponíveis suficientes (mínimo 4) para criar o próximo jogo.');
+    throw new Error(faltaGente(GAME_KIND.SINGLES, 'uma partida'));
   }
 
   const byId = new Map(participants.map((p) => [p.id, p]));
@@ -767,20 +799,21 @@ export async function createPlayRoundForFreeCourts(gdId, actor) {
   const created = [];
   const escolhidos = new Set();
 
-  rodada.forEach(({ court, ids }, i) => {
-    const quatro = ids
+  rodada.forEach(({ court, ids, kind }, i) => {
+    const escolhidos4 = ids
       .map((id) => byId.get(id))
       .filter(Boolean)
       .map((p) => (Number.isFinite(nivelPorParticipante[p.id])
         ? { ...p, level_value: nivelPorParticipante[p.id] }
         : p));
-    const { side_a, side_b } = assignPlayTeams(quatro, { partnerRepeatCount: contarParceria });
+    const { side_a, side_b } = assignPlaySides(escolhidos4, { kind, partnerRepeatCount: contarParceria });
     const gid = writePlayGame(batch, gdId, {
       court,
       side_a: playSideEntries(side_a, byId),
       side_b: playSideEntries(side_b, byId),
       // `order` distinto por quadra mantém a sequência legível na lista.
       order: agora + i,
+      kind,
     });
     created.push({ gameId: gid, court });
     ids.forEach((id) => escolhidos.add(id));
@@ -795,8 +828,24 @@ export async function createPlayRoundForFreeCourts(gdId, actor) {
   return { created, courts: created.map((c) => c.court) };
 }
 
+/**
+ * O tipo de uma partida MONTADA À MÃO, conferido no serviço (a tela é
+ * conveniência): 1 × 1 é simples, 2 × 2 é duplas, e nada além disso. Ninguém
+ * repetido.
+ */
+function manualGameKind(sideAIds = [], sideBIds = []) {
+  const a = (sideAIds || []).filter(Boolean);
+  const b = (sideBIds || []).filter(Boolean);
+  const todos = [...a, ...b];
+  if (new Set(todos).size !== todos.length) throw new Error('Há jogadores repetidos.');
+  if (a.length === 1 && b.length === 1) return GAME_KIND.SINGLES;
+  if (a.length === 2 && b.length === 2) return GAME_KIND.DOUBLES;
+  throw new Error('Escolha 1 jogador de cada lado (simples) ou 2 de cada lado (duplas).');
+}
+
 /** Criação MANUAL de um jogo do Play (jogadores escolhidos à mão). */
 export async function createManualPlayGame(gdId, { court = null, sideAIds = [], sideBIds = [] }, actor) {
+  const tipo = manualGameKind(sideAIds, sideBIds);
   const participants = await listGameDayParticipants(gdId);
   const byId = new Map(participants.map((p) => [p.id, p]));
   const batch = writeBatch(db);
@@ -805,6 +854,7 @@ export async function createManualPlayGame(gdId, { court = null, sideAIds = [], 
     side_a: playSideEntries(sideAIds, byId),
     side_b: playSideEntries(sideBIds, byId),
     order: Date.now(),
+    kind: tipo,
   });
   await batch.commit();
   await createAuditLog({ action: 'game_day_play_game_manual', actor, details: { game_day_id: gdId, game_id: gid, court } });
@@ -822,7 +872,7 @@ export async function createManualPlayGame(gdId, { court = null, sideAIds = [], 
  *   quadra a noite inteira, porque eram os únicos na fila no momento do
  *   sorteio.
  */
-export async function finishPlayGame(gdId, gid, actor, { createNext = true } = {}) {
+export async function finishPlayGame(gdId, gid, actor, { createNext = true, kind = null } = {}) {
   const gd = await getGameDay(gdId);
   if (!gd) throw new Error('Dia de jogo não encontrado.');
   const [participants, games] = await Promise.all([
@@ -852,7 +902,11 @@ export async function finishPlayGame(gdId, gid, actor, { createNext = true } = {
   // Cria o próximo jogo para a quadra liberada (se houver 4 disponíveis).
   if (!createNext) return { finished: gid, next: null };
   try {
-    const next = await createNextPlayGame(gdId, actor, { court: game.court });
+    // A próxima partida da quadra mantém o tipo da que acabou, a não ser que
+    // quem organiza tenha trocado o tipo daquela quadra na tela.
+    const next = await createNextPlayGame(gdId, actor, {
+      court: game.court, kind: kind || gameKindOf(game),
+    });
     return { finished: gid, next };
   } catch (err) {
     return { finished: gid, next: null, reason: err.message };
@@ -1315,7 +1369,7 @@ export { gameDayRankingId, GAME_DAY_DATE_ID };
  * ========================================================================= */
 
 /** Cria a PRÓXIMA partida do Americano aprimorado numa quadra. */
-export async function createNextAmericanoLiveGame(gdId, actor, { court = null } = {}) {
+export async function createNextAmericanoLiveGame(gdId, actor, { court = null, kind = null } = {}) {
   const gd = await getGameDay(gdId);
   if (!gd) throw new Error('Dia de jogo não encontrado.');
   const [participants, games] = await Promise.all([
@@ -1331,10 +1385,9 @@ export async function createNextAmericanoLiveGame(gdId, actor, { court = null } 
   // terciário de equilíbrio de força.
   const niveis = await fetchUnifiedLevelsByParticipant(participants).catch(() => ({}));
 
-  const escolha = drawNextAmericanoLiveMatch(order, { games, levels: niveis });
-  if (!escolha) {
-    throw new Error('Não há jogadores disponíveis suficientes (mínimo 4) para criar a próxima partida.');
-  }
+  const tipo = kindForCourt(kind, games, targetCourt, gd.play_courts || 1);
+  const escolha = drawNextAmericanoLiveMatch(order, { games, levels: niveis, kind: tipo });
+  if (!escolha) throw new Error(faltaGente(tipo, 'a próxima partida'));
 
   const byId = new Map(participants.map((p) => [p.id, p]));
   const batch = writeBatch(db);
@@ -1344,15 +1397,16 @@ export async function createNextAmericanoLiveGame(gdId, actor, { court = null } 
     side_b: playSideEntries(escolha.side_b, byId),
     order: Date.now(),
     format: GAME_DAY_FORMAT.AMERICANO_LIVE,
+    kind: tipo,
   });
   const escolhidos = new Set(escolha.ids);
   applySkipDecrement(batch, gdId, participants.filter((p) => !escolhidos.has(p.id)));
   await batch.commit();
   await createAuditLog({
     action: 'game_day_americano_live_created', actor,
-    details: { game_day_id: gdId, court: targetCourt, game_id: gid },
+    details: { game_day_id: gdId, court: targetCourt, game_id: gid, kind: tipo },
   });
-  return { gameId: gid, court: targetCourt };
+  return { gameId: gid, court: targetCourt, kind: tipo };
 }
 
 /**
@@ -1365,7 +1419,7 @@ export async function createNextAmericanoLiveGame(gdId, actor, { court = null } 
  *
  * @returns {{ created: Array<{gameId:string, court:number}>, courts:number[] }}
  */
-export async function createAmericanoLiveRoundForFreeCourts(gdId, actor) {
+export async function createAmericanoLiveRoundForFreeCourts(gdId, actor, { courtKinds = null } = {}) {
   const gd = await getGameDay(gdId);
   if (!gd) throw new Error('Dia de jogo não encontrado.');
   const [participants, games] = await Promise.all([
@@ -1379,11 +1433,13 @@ export async function createAmericanoLiveRoundForFreeCourts(gdId, actor) {
   const { order } = computePlayOrder({ participants, games });
   const niveis = await fetchUnifiedLevelsByParticipant(participants).catch(() => ({}));
 
+  // Mesma conta de tipo por quadra da previsão da tela (ver Play acima).
+  const tipos = mergeCourtKinds(courtKindsFromGames(games, totalCourts), courtKinds);
   const rodada = drawAmericanoLiveRoundForFreeCourts(order, {
-    courts: totalCourts, games, levels: niveis, slots: PLAY_SLOTS,
+    courts: totalCourts, games, levels: niveis, slots: PLAY_SLOTS, courtKinds: tipos,
   });
   if (rodada.length === 0) {
-    throw new Error('Não há jogadores disponíveis suficientes (mínimo 4) para criar a próxima partida.');
+    throw new Error(faltaGente(GAME_KIND.SINGLES, 'uma partida'));
   }
 
   const byId = new Map(participants.map((p) => [p.id, p]));
@@ -1392,13 +1448,14 @@ export async function createAmericanoLiveRoundForFreeCourts(gdId, actor) {
   const created = [];
   const escolhidos = new Set();
 
-  rodada.forEach(({ court, ids, side_a, side_b }, i) => {
+  rodada.forEach(({ court, ids, side_a, side_b, kind }, i) => {
     const gid = writePlayGame(batch, gdId, {
       court,
       side_a: playSideEntries(side_a, byId),
       side_b: playSideEntries(side_b, byId),
       order: agora + i,
       format: GAME_DAY_FORMAT.AMERICANO_LIVE,
+      kind,
     });
     created.push({ gameId: gid, court });
     ids.forEach((id) => escolhidos.add(id));
@@ -1471,11 +1528,11 @@ export async function submitAmericanoLiveResult(gdId, gid, { scoreA, scoreB } = 
 export async function createManualAmericanoLiveGame(
   gdId, { court = null, sideAIds = [], sideBIds = [], scoreA = null, scoreB = null }, actor,
 ) {
+  // 1 × 1 (simples) ou 2 × 2 (duplas), conferido aqui — Onda CF.
+  const tipo = manualGameKind(sideAIds, sideBIds);
   const participants = await listGameDayParticipants(gdId);
   const byId = new Map(participants.map((p) => [p.id, p]));
   const ids = [...sideAIds, ...sideBIds].filter(Boolean);
-  if (ids.length !== PLAY_SLOTS) throw new Error('Escolha exatamente 4 jogadores.');
-  if (new Set(ids).size !== ids.length) throw new Error('Há jogadores repetidos.');
 
   const temPlacar = scoreA != null && scoreB != null;
 
@@ -1510,6 +1567,7 @@ export async function createManualAmericanoLiveGame(
     side_b: playSideEntries(sideBIds, byId),
     order: Date.now(),
     format: GAME_DAY_FORMAT.AMERICANO_LIVE,
+    kind: tipo,
   });
   if (temPlacar) {
     batch.update(doc(db, COL, gdId, SUB_GAMES, gid), {

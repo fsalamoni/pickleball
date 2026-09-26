@@ -24,6 +24,9 @@
  * PURO. Sem React, sem Firebase.
  */
 import { computeGameDayLeaderboard } from '@/modules/clubs/domain/gameDayLeaderboard.js';
+import {
+  GAME_KIND, GAME_KIND_LABELS, gameKindsIn, splitGamesByKind,
+} from '@/modules/games/domain/gameKind.js';
 import { GAME_DAY_FORMAT, formatHasScores } from '@/modules/clubs/domain/gameDayFormats.js';
 import { buildRanking } from '@/modules/tournament/domain/ranking.js';
 import { resolveStageScoringConfig } from '@/modules/tournament/domain/scoring.js';
@@ -213,6 +216,38 @@ export function gameDayHouseEvent({ gameDay, participants = [], games = [] } = {
     decidedGames: decididos.length,
     entries: [...porUid.values()],
   };
+}
+
+/**
+ * Os eventos de UM dia de jogo, SEPARADOS POR TIPO de jogo (Onda CF).
+ *
+ * Com jogo simples e em duplas no mesmo dia são DOIS rankings do dia — e,
+ * portanto, duas colocações. Somá-las numa só daria ao vencedor do simples a
+ * posição de uma disputa que ele não jogou. Cada tipo vira um evento:
+ *
+ *  - duplas mantém a chave de sempre (`gd:<id>`) — um dia só de duplas sai
+ *    exatamente como antes;
+ *  - simples ganha a sua (`gd:<id>:simples`), com "· simples" no título.
+ *
+ * Sem resultado, é o evento "sem resultado" de sempre, um só.
+ *
+ * @returns {Array<object>} os eventos, no formato de `gameDayHouseEvent`
+ */
+export function gameDayHouseEvents({ gameDay, participants = [], games = [] } = {}) {
+  const decididos = (games || []).filter(jogoDecidido);
+  const tipos = gameKindsIn(decididos);
+  if (tipos.length <= 1) {
+    const ev = gameDayHouseEvent({ gameDay, participants, games });
+    if (tipos[0] !== GAME_KIND.SINGLES) return [ev];
+    return [{ ...ev, key: `${ev.key}:simples`, title: `${ev.title} · simples`, gameKind: GAME_KIND.SINGLES }];
+  }
+  const porTipo = splitGamesByKind(decididos);
+  return tipos.map((tipo) => {
+    const ev = gameDayHouseEvent({ gameDay, participants, games: porTipo[tipo] });
+    return tipo === GAME_KIND.DOUBLES
+      ? { ...ev, title: `${ev.title} · duplas`, gameKind: tipo }
+      : { ...ev, key: `${ev.key}:simples`, title: `${ev.title} · ${GAME_KIND_LABELS[tipo].toLowerCase()}`, gameKind: tipo };
+  });
 }
 
 /* ------------------------------------------------------------------ */
@@ -554,9 +589,11 @@ export function houseRankingSummary(events = []) {
   const contam = (events || []).filter((e) => e?.status === 'counted');
   const dias = contam.filter((e) => e.kind === HOUSE_EVENT_KIND.GAME_DAY);
   const categorias = contam.filter((e) => e.kind === HOUSE_EVENT_KIND.TOURNAMENT);
+  // Um dia com simples e duplas vira DOIS eventos (um por tipo) — mas
+  // continua sendo UM dia de jogo.
   return {
-    gameDays: dias.length,
-    openMatches: dias.filter((e) => e.isOpenMatch).length,
+    gameDays: new Set(dias.map((e) => e.id)).size,
+    openMatches: new Set(dias.filter((e) => e.isOpenMatch).map((e) => e.id)).size,
     tournaments: new Set(categorias.map((e) => e.id)).size,
     categories: categorias.length,
     legacy: contam.some((e) => e.kind === HOUSE_EVENT_KIND.LEGACY),

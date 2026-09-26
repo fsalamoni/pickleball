@@ -27,7 +27,7 @@ import { listMatchesByTournament } from '@/modules/tournament/services/matchServ
 import { formatDateShortBR } from '@/modules/arenas/domain/calendar';
 import { todayISO } from '@/modules/arenas/domain/subscription';
 import {
-  HOUSE_ALL, buildHouseRanking, gameDayHouseEvent, houseFormats, houseGameDaysToLoad,
+  HOUSE_ALL, buildHouseRanking, gameDayHouseEvents, houseFormats, houseGameDaysToLoad,
   houseRankingSummary, houseRankingWaiting, houseSeasonsFromSources, houseTournamentsToLoad,
   legacyLadderGameDayIds, legacyLadderHouseEvent, tournamentHouseEvents,
 } from '@/modules/arenas/domain/houseRanking';
@@ -143,7 +143,8 @@ export function useHouseRanking(arenaId, { season = new Date().getFullYear(), fo
       const p = participantesQs[i];
       const j = jogosQs[i];
       if (p?.isSuccess && j?.isSuccess) {
-        evs.push(gameDayHouseEvent({ gameDay: g, participants: p.data || [], games: j.data || [] }));
+        // Um evento por TIPO de jogo: simples e duplas têm colocações próprias.
+        evs.push(...gameDayHouseEvents({ gameDay: g, participants: p.data || [], games: j.data || [] }));
       } else if (p?.isError || j?.isError) {
         falhas.push({ key: `gd:${g.id}`, label: rotuloDoDia(g) });
       } else {

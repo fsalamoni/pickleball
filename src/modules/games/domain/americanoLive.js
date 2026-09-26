@@ -35,6 +35,9 @@ import {
   freePlayCourts, inCourtIdsFromGames,
 } from './gamePlay.js';
 import { buildDrawHistory, pairFourBalanced } from '@/modules/clubs/domain/gameDayDraw.js';
+import {
+  GAME_KIND, gameKindOf, hasSinglesCourt, kindOfCourt, withoutPartnerLinks,
+} from './gameKind.js';
 
 /** Quantos candidatos ALÉM dos 4 slots entram na janela de escolha. */
 export const AMERICANO_LIVE_WINDOW_EXTRA = 4;
@@ -182,6 +185,9 @@ function combinacoes(lista, k) {
  * @returns {{ side_a: string[], side_b: string[], ids: string[] }|null}
  */
 export function drawNextAmericanoLiveMatch(availableOrdered, opts = {}) {
+  // Jogo SIMPLES (Onda CF): caminho próprio, porque a conta é outra — não há
+  // dupla a formar, só um adversário a escolher.
+  if (opts.kind === GAME_KIND.SINGLES) return drawNextSinglesLiveMatch(availableOrdered, opts);
   const {
     games = [], levels = null, rng = Math.random, slots = PLAY_SLOTS,
     windowExtra = AMERICANO_LIVE_WINDOW_EXTRA,
@@ -223,6 +229,76 @@ export function drawNextAmericanoLiveMatch(availableOrdered, opts = {}) {
     history: historico, levels, rng, fixedPairs: fixedPairsWithin(estrita, fila),
   });
   return { side_a: par.side_a, side_b: par.side_b, ids: estrita };
+}
+
+/** Repetir o MESMO adversário no simples: o que mais se quer evitar. */
+export const AMERICANO_LIVE_SINGLES_REPEAT_WEIGHT = 10;
+/** Desnível no simples, por ponto da régua 2.0–8.0 (o mesmo peso das duplas). */
+const SINGLES_LEVEL_WEIGHT = 2;
+
+const chaveDoPar = (a, b) => (String(a) < String(b) ? `${a}|${b}` : `${b}|${a}`);
+
+/** Quantas vezes cada par já se enfrentou em jogo SIMPLES. */
+function confrontosDeSimples(games = []) {
+  const mapa = new Map();
+  (games || []).forEach((g) => {
+    if (!g || gameKindOf(g) !== GAME_KIND.SINGLES) return;
+    const [a] = idsDoLado(g.side_a);
+    const [b] = idsDoLado(g.side_b);
+    if (!a || !b) return;
+    const k = chaveDoPar(a, b);
+    mapa.set(k, (mapa.get(k) || 0) + 1);
+  });
+  return mapa;
+}
+
+/**
+ * A próxima partida SIMPLES (1 × 1) — Onda CF.
+ *
+ * A mesma filosofia das duplas, com a conta de dois:
+ *
+ *  1. o PRIMEIRO da fila joga sempre (ninguém é pulado em nome da variedade);
+ *  2. o adversário sai de uma janela curta logo atrás dele, e o escolhido é o
+ *     que MENOS repete confronto de simples, com nível mais parecido e mais
+ *     perto do topo da fila — nessa ordem de peso: repetir adversário (10)
+ *     pesa mais que descer várias posições (2 cada) e que o desnível (2 por
+ *     ponto).
+ *
+ * A dupla vinculada não vale no simples: a fila é lida sem os vínculos.
+ *
+ * @returns {{ side_a: string[], side_b: string[], ids: string[] }|null}
+ */
+function drawNextSinglesLiveMatch(availableOrdered, opts = {}) {
+  const {
+    games = [], levels = null, rng = Math.random,
+    windowExtra = AMERICANO_LIVE_WINDOW_EXTRA,
+    orderWeight = AMERICANO_LIVE_ORDER_WEIGHT,
+  } = opts;
+  const fila = withoutPartnerLinks((availableOrdered || []).filter(Boolean));
+  if (fila.length < 2) return null;
+
+  const primeiro = fila[0].id;
+  const repetidos = confrontosDeSimples(games);
+  const nivel = (id) => {
+    const v = levels ? levels[id] : null;
+    if (v == null || v === '') return null;
+    const n = Number(v);
+    return Number.isFinite(n) ? n : null;
+  };
+  const nivelDoPrimeiro = nivel(primeiro);
+
+  let melhor = null;
+  fila.slice(1, 2 + Math.max(0, windowExtra)).forEach((p, i) => {
+    const nv = nivel(p.id);
+    const desnivel = nivelDoPrimeiro != null && nv != null ? Math.abs(nivelDoPrimeiro - nv) : 0;
+    const custo = AMERICANO_LIVE_SINGLES_REPEAT_WEIGHT * (repetidos.get(chaveDoPar(primeiro, p.id)) || 0)
+      + SINGLES_LEVEL_WEIGHT * desnivel
+      + orderWeight * (i + 1)
+      + rng() * 0.001;
+    if (!melhor || custo < melhor.custo) melhor = { custo, id: p.id };
+  });
+
+  return { side_a: [primeiro], side_b: [melhor.id], ids: [primeiro, melhor.id] };
 }
 
 /**
@@ -415,9 +491,10 @@ function bestAmericanoLiveRound(fila, k, opts = {}) {
 export function forecastAmericanoLiveMatches(availableOrdered, opts = {}) {
   const {
     courts = 1, games = [], levels = null, rng = Math.random, slots = PLAY_SLOTS,
-    participants = null,
+    participants = null, courtKinds = null,
   } = opts;
   const total = Math.max(1, Math.floor(courts) || 1);
+  const tipoDa = (court) => (courtKinds ? kindOfCourt(courtKinds, court) : GAME_KIND.DOUBLES);
   const livres = freePlayCourts({ courts: total, games });
   const livresSet = new Set(livres);
   const abertos = (games || [])
@@ -446,6 +523,7 @@ export function forecastAmericanoLiveMatches(availableOrdered, opts = {}) {
     blocos.push({
       court,
       conditional,
+      kind: GAME_KIND.DOUBLES,
       players: ids.map((id) => porId.get(id) || { id }),
       side_a: par.side_a,
       side_b: par.side_b,
@@ -456,14 +534,16 @@ export function forecastAmericanoLiveMatches(availableOrdered, opts = {}) {
   };
 
   const escolher = (court, conditional) => {
+    const kind = tipoDa(court);
     const escolha = drawNextAmericanoLiveMatch(fila, {
-      games: jogosHipoteticos, levels, rng, slots,
+      games: jogosHipoteticos, levels, rng, slots, kind,
     });
     if (!escolha) return false;
     const escolhidos = new Set(escolha.ids);
     blocos.push({
       court,
       conditional,
+      kind,
       players: escolha.ids.map((id) => porId.get(id) || { id }),
       side_a: escolha.side_a,
       side_b: escolha.side_b,
@@ -478,22 +558,48 @@ export function forecastAmericanoLiveMatches(availableOrdered, opts = {}) {
   // e com 8 na fila e 2 quadras a segunda nem tem escolha. `bestAmericanoLiveRound`
   // olha a rodada inteira. Com uma quadra livre só (ou sem rodada possível), o
   // caminho continua sendo exatamente o de antes, partida a partida.
-  const quadrasDaRodada = Math.min(livres.length, Math.floor(fila.length / slots));
-  const rodada = quadrasDaRodada >= 2
-    ? bestAmericanoLiveRound(fila, quadrasDaRodada, {
-      games: jogosHipoteticos, levels, rng, slots,
-    })
-    : null;
-  if (rodada) {
-    rodada.forEach((ids, i) => registrar(livres[i], false, ids));
-  } else {
-    for (const court of livres) {
-      if (!escolher(court, false)) return blocos;
+  if (courtKinds && hasSinglesCourt(courtKinds)) {
+    // QUADRAS DE TIPOS DIFERENTES (Onda CF). As de DUPLAS saem primeiro, como
+    // rodada (a mesma otimização de sempre, só sobre elas); depois as de
+    // SIMPLES, uma a uma, com quem sobrou. Uma quadra que não fecha não
+    // impede a outra: três na fila não enchem as duplas, mas dão um simples.
+    const livresDuplas = livres.filter((c) => tipoDa(c) === GAME_KIND.DOUBLES);
+    const livresSimples = livres.filter((c) => tipoDa(c) === GAME_KIND.SINGLES);
+    let todasCheias = true;
+    const nDuplas = Math.min(livresDuplas.length, Math.floor(fila.length / slots));
+    const rodadaDuplas = nDuplas >= 2
+      ? bestAmericanoLiveRound(fila, nDuplas, { games: jogosHipoteticos, levels, rng, slots })
+      : null;
+    if (rodadaDuplas) {
+      rodadaDuplas.forEach((ids, i) => registrar(livresDuplas[i], false, ids));
+      if (rodadaDuplas.length < livresDuplas.length) todasCheias = false;
+    } else {
+      for (const court of livresDuplas) {
+        if (!escolher(court, false)) { todasCheias = false; break; }
+      }
     }
+    for (const court of livresSimples) {
+      if (!escolher(court, false)) { todasCheias = false; break; }
+    }
+    if (!todasCheias) return blocos;
+  } else {
+    const quadrasDaRodada = Math.min(livres.length, Math.floor(fila.length / slots));
+    const rodada = quadrasDaRodada >= 2
+      ? bestAmericanoLiveRound(fila, quadrasDaRodada, {
+        games: jogosHipoteticos, levels, rng, slots,
+      })
+      : null;
+    if (rodada) {
+      rodada.forEach((ids, i) => registrar(livres[i], false, ids));
+    } else {
+      for (const court of livres) {
+        if (!escolher(court, false)) return blocos;
+      }
+    }
+    // Sobrou quadra livre sem gente para encher? A previsão simplesmente para
+    // ali — meia partida não existe.
+    if (rodada && rodada.length < livres.length) return blocos;
   }
-  // Sobrou quadra livre sem gente para encher? A previsão simplesmente para
-  // ali — meia partida não existe.
-  if (rodada && rodada.length < livres.length) return blocos;
   for (const jogo of abertos) {
     const voltando = gameIds(jogo)
       .map((id) => porId.get(id) || { id, available_since: Number.MAX_SAFE_INTEGER })
@@ -522,6 +628,7 @@ export function drawAmericanoLiveRoundForFreeCourts(availableOrdered, opts = {})
     .filter((b) => !b.conditional)
     .map((b) => ({
       court: b.court,
+      kind: b.kind,
       ids: b.players.map((p) => p.id),
       side_a: b.side_a,
       side_b: b.side_b,
@@ -548,13 +655,18 @@ export function americanoLiveProgress({ participants = [], games = [] } = {}) {
   (games || []).forEach((g) => {
     const a = idsDoLado(g?.side_a);
     const b = idsDoLado(g?.side_b);
-    [a, b].forEach((lado) => {
-      if (lado.length === 2) duplas.add([...lado].sort().join('|'));
-    });
-    a.forEach((x) => b.forEach((y) => {
-      const k = [x, y].sort().join('|');
-      confrontos.set(k, (confrontos.get(k) || 0) + 1);
-    }));
+    // A bússola é a do AMERICANO: todos com todos, contra todos duas vezes —
+    // em DUPLAS. Um jogo simples conta como partida jogada, mas não forma
+    // dupla nem soma confronto de duplas (Onda CF).
+    if (gameKindOf(g) === GAME_KIND.DOUBLES) {
+      [a, b].forEach((lado) => {
+        if (lado.length === 2) duplas.add([...lado].sort().join('|'));
+      });
+      a.forEach((x) => b.forEach((y) => {
+        const k = [x, y].sort().join('|');
+        confrontos.set(k, (confrontos.get(k) || 0) + 1);
+      }));
+    }
     [...a, ...b].forEach((id) => {
       if (jogosPor.has(id)) jogosPor.set(id, jogosPor.get(id) + 1);
     });

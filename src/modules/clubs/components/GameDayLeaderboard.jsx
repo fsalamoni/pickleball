@@ -2,7 +2,7 @@ import React, { useMemo } from 'react';
 import { Trophy } from 'lucide-react';
 import { UserAvatar } from '@/components/ui/user-avatar';
 import { EmptyState } from '@/components/ui/empty-state';
-import { computeGameDayLeaderboard } from '@/modules/clubs/domain/gameDayLeaderboard';
+import { computeGameDayLeaderboards } from '@/modules/clubs/domain/gameDayLeaderboard';
 
 /**
  * Ranking do dia (classificação interna do dia de jogo). Presentacional e
@@ -12,15 +12,20 @@ import { computeGameDayLeaderboard } from '@/modules/clubs/domain/gameDayLeaderb
  * Mostra, por participante: jogos, vitórias, derrotas, saldo de pontos e
  * pontos sofridos. Ordenação: mais vitórias → menos derrotas → melhor saldo →
  * menos pontos sofridos (ver domain/gameDayLeaderboard).
+ *
+ * Onda CF: com jogos SIMPLES e em DUPLAS no mesmo dia, são DOIS rankings,
+ * independentes — uma tabela por tipo. Com um tipo só, a tela é a de sempre.
  */
 export default function GameDayLeaderboard({ participants = [], games = [] }) {
-  const rows = useMemo(
-    () => computeGameDayLeaderboard(participants, games),
+  const secoes = useMemo(
+    () => computeGameDayLeaderboards(participants, games),
     [participants, games],
   );
+  const rows = secoes[0]?.rows || [];
+  const separado = secoes.length > 1;
   const anyDecided = useMemo(
-    () => rows.some((r) => r.games > 0),
-    [rows],
+    () => secoes.some((sec) => sec.rows.some((r) => r.games > 0)),
+    [secoes],
   );
 
   return (
@@ -43,51 +48,74 @@ export default function GameDayLeaderboard({ participants = [], games = [] }) {
               Lance os resultados dos jogos para a classificação começar a contar.
             </p>
           )}
-          <div className="overflow-x-auto">
-            <table className="w-full min-w-[420px] border-collapse text-sm">
-              <thead>
-                <tr className="border-b border-gray-200 text-xs uppercase tracking-wide text-gray-500">
-                  <th className="w-8 py-2 pr-2 text-left font-semibold">#</th>
-                  <th className="py-2 pr-2 text-left font-semibold">Atleta</th>
-                  <th className="py-2 px-2 text-center font-semibold" title="Jogos">J</th>
-                  <th className="py-2 px-2 text-center font-semibold" title="Vitórias">V</th>
-                  <th className="py-2 px-2 text-center font-semibold" title="Derrotas">D</th>
-                  <th className="py-2 px-2 text-center font-semibold" title="Saldo de pontos">Saldo</th>
-                  <th className="py-2 pl-2 text-center font-semibold" title="Pontos sofridos">Sofr.</th>
-                </tr>
-              </thead>
-              <tbody>
-                {rows.map((r, i) => (
-                  <tr key={r.id} className="border-b border-gray-100 last:border-0">
-                    <td className="py-2 pr-2 text-left">
-                      <span className={`inline-flex h-6 w-6 items-center justify-center rounded-full text-xs font-bold ${
-                        i === 0 && r.games > 0 ? 'bg-acid text-ink' : 'text-gray-500'
-                      }`}>
-                        {i + 1}
-                      </span>
-                    </td>
-                    <td className="py-2 pr-2">
-                      <div className="flex min-w-0 items-center gap-2">
-                        <UserAvatar name={r.name} size="xs" />
-                        <span className="truncate font-medium text-ink">{r.name}</span>
-                      </div>
-                    </td>
-                    <td className="py-2 px-2 text-center tabular-nums text-gray-600">{r.games}</td>
-                    <td className="py-2 px-2 text-center tabular-nums font-semibold text-green-700">{r.wins}</td>
-                    <td className="py-2 px-2 text-center tabular-nums text-gray-600">{r.losses}</td>
-                    <td className={`py-2 px-2 text-center tabular-nums font-medium ${
-                      r.diff > 0 ? 'text-green-700' : r.diff < 0 ? 'text-red-600' : 'text-gray-500'
-                    }`}>
-                      {r.diff > 0 ? `+${r.diff}` : r.diff}
-                    </td>
-                    <td className="py-2 pl-2 text-center tabular-nums text-gray-600">{r.pointsAgainst}</td>
-                  </tr>
-                ))}
-              </tbody>
-            </table>
-          </div>
+          {separado && (
+            <p className="text-xs leading-5 text-gray-500">
+              Hoje teve jogo <strong>simples</strong> e em <strong>duplas</strong>: cada tipo tem o seu
+              ranking, e um não soma no outro. Na publicação, o simples vai para o rating de simples e as
+              duplas para o de duplas.
+            </p>
+          )}
+          {secoes.map((sec) => (
+            <div key={sec.kind} className="space-y-1.5">
+              {separado && (
+                <h4 className="text-xs font-bold uppercase tracking-wide text-gray-500">
+                  {sec.label}
+                </h4>
+              )}
+              <LeaderboardTable rows={sec.rows} />
+            </div>
+          ))}
         </>
       )}
+    </div>
+  );
+}
+
+/** A tabela de UM ranking do dia (um tipo de jogo). */
+function LeaderboardTable({ rows }) {
+  return (
+    <div className="overflow-x-auto">
+      <table className="w-full min-w-[420px] border-collapse text-sm">
+        <thead>
+          <tr className="border-b border-gray-200 text-xs uppercase tracking-wide text-gray-500">
+            <th className="w-8 py-2 pr-2 text-left font-semibold">#</th>
+            <th className="py-2 pr-2 text-left font-semibold">Atleta</th>
+            <th className="py-2 px-2 text-center font-semibold" title="Jogos">J</th>
+            <th className="py-2 px-2 text-center font-semibold" title="Vitórias">V</th>
+            <th className="py-2 px-2 text-center font-semibold" title="Derrotas">D</th>
+            <th className="py-2 px-2 text-center font-semibold" title="Saldo de pontos">Saldo</th>
+            <th className="py-2 pl-2 text-center font-semibold" title="Pontos sofridos">Sofr.</th>
+          </tr>
+        </thead>
+        <tbody>
+          {rows.map((r, i) => (
+            <tr key={r.id} className="border-b border-gray-100 last:border-0">
+              <td className="py-2 pr-2 text-left">
+                <span className={`inline-flex h-6 w-6 items-center justify-center rounded-full text-xs font-bold ${
+                  i === 0 && r.games > 0 ? 'bg-acid text-ink' : 'text-gray-500'
+                }`}>
+                  {i + 1}
+                </span>
+              </td>
+              <td className="py-2 pr-2">
+                <div className="flex min-w-0 items-center gap-2">
+                  <UserAvatar name={r.name} size="xs" />
+                  <span className="truncate font-medium text-ink">{r.name}</span>
+                </div>
+              </td>
+              <td className="py-2 px-2 text-center tabular-nums text-gray-600">{r.games}</td>
+              <td className="py-2 px-2 text-center tabular-nums font-semibold text-green-700">{r.wins}</td>
+              <td className="py-2 px-2 text-center tabular-nums text-gray-600">{r.losses}</td>
+              <td className={`py-2 px-2 text-center tabular-nums font-medium ${
+                r.diff > 0 ? 'text-green-700' : r.diff < 0 ? 'text-red-600' : 'text-gray-500'
+              }`}>
+                {r.diff > 0 ? `+${r.diff}` : r.diff}
+              </td>
+              <td className="py-2 pl-2 text-center tabular-nums text-gray-600">{r.pointsAgainst}</td>
+            </tr>
+          ))}
+        </tbody>
+      </table>
     </div>
   );
 }

@@ -74,7 +74,12 @@ import {
   useCreateNextAmericanoLiveGame, useCreateAmericanoLiveRound, useSubmitAmericanoLiveResult,
 } from '@/modules/games/hooks/useGameDays';
 import { SkipDialog, PartnerDialog, CourtPlayerDialog } from '@/v2/components/games/AthletePlayOrganizer';
-import { computeGameDayLeaderboard } from '@/modules/clubs/domain/gameDayLeaderboard';
+import { computeGameDayLeaderboards } from '@/modules/clubs/domain/gameDayLeaderboard';
+import {
+  GAME_KIND, courtKindsFromGames, fillableCourts, gameKindOf, hasSinglesCourt, kindOfCourt, slotsForKind,
+} from '@/modules/games/domain/gameKind';
+import { GameKindBadge, GameKindToggle } from '@/v2/components/games/GameKindToggle';
+import { useCourtKinds } from '@/v2/components/games/useCourtKinds';
 import {
   GAME_DAY_FORMAT_LABELS, isAmericanoLiveFormat,
 } from '@/modules/clubs/domain/gameDayFormats';
@@ -214,8 +219,11 @@ function CardEmQuadra({ jogo, comPlacar = true, onJogador = null, acoes = null }
   return (
     <div className="flex flex-col justify-center rounded-3xl border border-acid/30 bg-white/5 p-5 landscape:lg:min-h-[14rem] landscape:lg:max-h-[24rem] portrait:lg:min-h-[16rem] xl:p-6">
       <div className="mb-3 flex items-center justify-between">
-        <span className="rounded-full bg-acid px-3 py-1 text-sm font-black text-ink">
-          {jogo.court != null ? `QUADRA ${jogo.court}` : 'EM JOGO'}
+        <span className="flex items-center gap-2">
+          <span className="rounded-full bg-acid px-3 py-1 text-sm font-black text-ink">
+            {jogo.court != null ? `QUADRA ${jogo.court}` : 'EM JOGO'}
+          </span>
+          <GameKindBadge kind={gameKindOf(jogo)} variant="dark" />
         </span>
         {placar && <span className="font-display text-3xl font-black text-acid">{placar}</span>}
       </div>
@@ -255,13 +263,18 @@ function BotaoTelao({ tone = 'ghost', onClick, disabled, title, children }) {
  * Quadra sem jogo. No telão do Play ela não some da tela: quem organiza precisa
  * ver que há quadra vaga — e poder criar o jogo dali mesmo.
  */
-function CardQuadraLivre({ court, acoes = null }) {
+function CardQuadraLivre({ court, acoes = null, kind = GAME_KIND.DOUBLES, onKind = null }) {
   return (
     <div className="flex flex-col justify-center rounded-3xl border border-dashed border-white/15 bg-white/[0.02] p-5 landscape:lg:min-h-[14rem] portrait:lg:min-h-[16rem] xl:p-6">
-      <div className="mb-3">
+      <div className="mb-3 flex flex-wrap items-center gap-2">
         <span className="rounded-full bg-white/10 px-3 py-1 text-sm font-black text-white/50">
           QUADRA {court}
         </span>
+        {/* O tipo da próxima partida desta quadra: quem organiza escolhe; os
+            demais só veem o selo quando é de simples. */}
+        {onKind
+          ? <GameKindToggle value={kind} onChange={onKind} variant="dark" label={`Tipo de jogo da quadra ${court}`} />
+          : <GameKindBadge kind={kind} variant="dark" />}
       </div>
       <p className="text-2xl font-bold text-white/30 xl:text-3xl">Livre</p>
       {acoes && <div className="mt-4 flex flex-wrap gap-2">{acoes}</div>}
@@ -325,14 +338,15 @@ const POR_JOGO = 4;
  * item da lista: os nomes de quem está jogando já estão, em letra grande, nos
  * cards de quadra ao lado — repeti-los aqui só empurraria a fila para baixo.
  */
-function OrdemDeParticipacao({ view, onAtleta = null }) {
+function OrdemDeParticipacao({ view, onAtleta = null, porJogo = POR_JOGO }) {
   const { order, inCourt, unavailable } = view;
   const total = order.length + inCourt.length + unavailable.length;
   if (total === 0) return <Vazio>Ninguém na ordem ainda.</Vazio>;
 
   // Só faz sentido anunciar "entra a seguir" quando há gente suficiente para
-  // formar uma partida; com 3 na fila, ninguém entra.
-  const proximos = order.length >= POR_JOGO ? POR_JOGO : 0;
+  // formar uma partida; com 3 na fila, ninguém entra. Numa quadra de SIMPLES
+  // a partida é de dois (Onda CF).
+  const proximos = order.length >= porJogo ? porJogo : 0;
 
   return (
     <div className="space-y-1.5">
@@ -412,7 +426,7 @@ function ProximaPorQuadra({ entradas, disponiveis, acoesPorQuadra = null }) {
       <Vazio>
         {disponiveis === 0
           ? 'Ninguém aguardando no momento.'
-          : `Faltam jogadores para a próxima partida (${disponiveis} na fila, mínimo ${PLAY_SLOTS}).`}
+          : `Faltam jogadores para a próxima partida (${disponiveis} na fila).`}
       </Vazio>
     );
   }
@@ -444,6 +458,7 @@ function ProximaPorQuadra({ entradas, disponiveis, acoesPorQuadra = null }) {
               <span className={`text-xs font-bold uppercase tracking-wide ${destaque ? 'text-acid' : 'text-white/40'}`}>
                 {e.free ? 'livre agora' : 'quando liberar'}
               </span>
+              <GameKindBadge kind={e.kind} variant="dark" />
             </div>
 
             {e.players.length === 0 ? (
@@ -456,7 +471,7 @@ function ProximaPorQuadra({ entradas, disponiveis, acoesPorQuadra = null }) {
 
             {e.waiting > 0 && (
               <div className="mt-1 text-sm text-amber-300/70">
-                faltam {e.waiting} — a partida sai quando houver {PLAY_SLOTS} na fila
+                faltam {e.waiting} — a partida sai quando houver {e.slots || PLAY_SLOTS} na fila
               </div>
             )}
             {acoes && <div className="mt-2 flex flex-wrap gap-2">{acoes}</div>}
@@ -485,7 +500,7 @@ function ProximaAoVivo({ entradas, disponiveis, acoesPorQuadra = null }) {
       <Vazio>
         {disponiveis === 0
           ? 'Ninguém aguardando no momento.'
-          : `Faltam jogadores para a próxima partida (${disponiveis} na fila, mínimo ${PLAY_SLOTS}).`}
+          : `Faltam jogadores para a próxima partida (${disponiveis} na fila).`}
       </Vazio>
     );
   }
@@ -519,6 +534,7 @@ function ProximaAoVivo({ entradas, disponiveis, acoesPorQuadra = null }) {
                 <span className={`text-xs font-bold uppercase tracking-wide ${destaque ? 'text-acid' : 'text-white/40'}`}>
                   {destaque ? 'livre agora' : 'quando liberar'}
                 </span>
+                <GameKindBadge kind={e.kind} variant="dark" />
               </div>
               <div className="truncate text-lg font-semibold leading-snug text-white">
                 {(e.side_a || []).map(nomeDe).join(' · ')}
@@ -542,6 +558,25 @@ function ProximaAoVivo({ entradas, disponiveis, acoesPorQuadra = null }) {
 
 /** Quantas posições cabem confortavelmente num telão sem virar planilha. */
 const RANKING_VISIVEL = 10;
+
+/**
+ * O ranking do dia no telão. Com jogo SIMPLES e em DUPLAS no mesmo dia são
+ * DUAS tabelas, uma por tipo, cada uma com o seu título (Onda CF) — vitória
+ * no simples não soma nas duplas.
+ */
+function RankingsDoDia({ secoes }) {
+  if (secoes.length <= 1) return <RankingDoDia linhas={secoes[0]?.rows || []} />;
+  return (
+    <div className="space-y-5">
+      {secoes.map((sec) => (
+        <div key={sec.kind} className="space-y-2">
+          <p className="text-sm font-black uppercase tracking-widest text-white/50">{sec.label}</p>
+          <RankingDoDia linhas={sec.rows} />
+        </div>
+      ))}
+    </div>
+  );
+}
 
 function RankingDoDia({ linhas }) {
   if (linhas.length === 0) return <Vazio>Ainda sem resultados.</Vazio>;
@@ -677,6 +712,7 @@ export default function V2GameDayTelao() {
       const courtsDoDia = Math.max(1, Number(gameDay?.play_courts) || 1);
       return applyPlayEntryOrder(bruto, {
         courts: courtsDoDia, games, history: buildPlayHistory(games),
+        courtKinds: courtKindsFromGames(games, courtsDoDia),
       });
     },
     [board.isPlay, participants, games, rodizioEquilibrado, gameDay?.play_courts],
@@ -684,38 +720,58 @@ export default function V2GameDayTelao() {
   // Ranking do dia só existe onde há placar. O Play não grava resultado, então
   // nem calculamos: a lista viria vazia de qualquer jeito. O Americano
   // aprimorado grava — e por isso tem ranking, mesmo sendo quadra a quadra.
-  const ranking = useMemo(
+  // Um ranking por TIPO de jogo (Onda CF): simples e duplas não se somam.
+  // Seção sem ninguém com jogo disputado não entra.
+  const rankings = useMemo(
     () => (board.hasScores
-      ? computeGameDayLeaderboard(participants, games).filter((l) => l.games > 0)
+      ? computeGameDayLeaderboards(participants, games)
+        .map((sec) => ({ ...sec, rows: sec.rows.filter((l) => l.games > 0) }))
+        .filter((sec) => sec.rows.length > 0)
       : []),
     [board.hasScores, participants, games],
   );
+  const temRanking = rankings.length > 0;
 
   const disponiveis = playView
     ? playView.all.filter((p) => p.status === PLAY_STATUS.AVAILABLE).length
     : 0;
 
   const quadras = Math.max(1, Number(gameDay?.play_courts) || 1);
+  // SIMPLES × DUPLAS por quadra (Onda CF) — a mesma conta do painel: o tipo do
+  // último jogo de cada quadra, com a escolha de quem organiza por cima.
+  const { tipos: tiposDasQuadras, definir: definirTipo, pedido: pedidoDoTipo } = useCourtKinds(games, quadras);
+  const comSimples = hasSinglesCourt(tiposDasQuadras);
+  // Quantos entram na PRÓXIMA partida: os da primeira quadra livre (ou da
+  // quadra 1, com todas ocupadas) — 2 no simples, 4 nas duplas.
+  const vagasDaProxima = useMemo(() => {
+    const livres = freePlayCourts({ courts: quadras, games });
+    return slotsForKind(kindOfCourt(tiposDasQuadras, livres[0] ?? 1));
+  }, [quadras, games, tiposDasQuadras]);
 
   // A próxima partida DE CADA QUADRA, na mesma ordem em que
-  // `createNextPlayGame` criaria os jogos.
+  // `createNextPlayGame` criaria os jogos. Com quadra de simples, a previsão é
+  // sempre a por quadra (é a única que sabe que ali entram dois).
   const proximasPlay = useMemo(() => {
     if (!playView) return [];
-    if (!rodizioEquilibrado) {
+    if (!rodizioEquilibrado && !comSimples) {
       return forecastPlayByCourt(playView.order, { courts: quadras, games });
     }
     return forecastPlayByCourtBalanced(playView.order, {
-      courts: quadras, games, history: buildPlayHistory(games),
+      courts: quadras, games,
+      history: rodizioEquilibrado ? buildPlayHistory(games) : null,
+      courtKinds: tiposDasQuadras,
     });
-  }, [playView, quadras, games, rodizioEquilibrado]);
+  }, [playView, quadras, games, rodizioEquilibrado, comSimples, tiposDasQuadras]);
 
   // Previsão do Americano aprimorado: já com as duplas, porque neste formato o
   // sorteio decide os quatro E o pareamento na mesma conta.
   const previsaoAoVivo = useMemo(
     () => (ehAoVivo && playView
-      ? forecastAmericanoLiveMatches(playView.order, { courts: quadras, games, participants })
+      ? forecastAmericanoLiveMatches(playView.order, {
+        courts: quadras, games, participants, courtKinds: tiposDasQuadras,
+      })
       : []),
-    [ehAoVivo, playView, quadras, games, participants],
+    [ehAoVivo, playView, quadras, games, participants, tiposDasQuadras],
   );
 
   /**
@@ -727,8 +783,8 @@ export default function V2GameDayTelao() {
   const podeSortearRodada = useMemo(() => {
     if (!board.isPlay) return false;
     const livres = freePlayCourts({ courts: quadras, games });
-    return Math.min(livres.length, Math.floor(disponiveis / PLAY_SLOTS)) >= 2;
-  }, [board.isPlay, quadras, games, disponiveis]);
+    return fillableCourts(livres, tiposDasQuadras, disponiveis) >= 2;
+  }, [board.isPlay, quadras, games, disponiveis, tiposDasQuadras]);
 
   // Uma linha por quadra existente: o jogo aberto dela, ou `null` se está livre.
   const quadrasDoPlay = useMemo(() => {
@@ -764,14 +820,16 @@ export default function V2GameDayTelao() {
   }, [recarregar]);
 
   const criarJogoNaQuadra = (court) => executar(
-    () => criarProximo.mutateAsync({ court }),
+    () => criarProximo.mutateAsync({ court, ...pedidoDoTipo(court) }),
     (res) => `Jogo criado na quadra ${res?.court ?? court}.`,
   );
-  const encerrarECriarProxima = (gid) => executar(
-    () => encerrarPartida.mutateAsync({ gid, createNext: true }),
+  const encerrarECriarProxima = (gid, court = null) => executar(
+    () => encerrarPartida.mutateAsync({
+      gid, createNext: true, ...(court != null ? pedidoDoTipo(court) : {}),
+    }),
     (res) => (res?.next
       ? `Partida encerrada. Próxima criada na quadra ${res.next.court}.`
-      : 'Partida encerrada. Sem 4 disponíveis na ordem — a quadra ficou livre.'),
+      : 'Partida encerrada. Não há gente suficiente na fila — a quadra ficou livre.'),
   );
   /** Encerra SEM sortear: libera a quadra para o sorteio da rodada inteira. */
   const encerrarSemSortear = (gid) => executar(
@@ -784,7 +842,9 @@ export default function V2GameDayTelao() {
    * jogadores devolve sempre os mesmos quatro para a mesma quadra.
    */
   const sortearRodada = () => executar(
-    () => (ehAoVivo ? criarRodadaAoVivo.mutateAsync() : criarRodada.mutateAsync()),
+    () => (ehAoVivo
+      ? criarRodadaAoVivo.mutateAsync({ courtKinds: tiposDasQuadras })
+      : criarRodada.mutateAsync({ courtKinds: tiposDasQuadras })),
     (res) => {
       const n = res?.created?.length || 0;
       return n === 1
@@ -806,7 +866,7 @@ export default function V2GameDayTelao() {
     count > 0 ? `Pausado por ${count} partida(s).` : 'De volta à fila.',
   );
   const gerarAoVivo = (court) => executar(
-    () => criarProximoAoVivo.mutateAsync({ court }),
+    () => criarProximoAoVivo.mutateAsync({ court, ...pedidoDoTipo(court) }),
     (res) => `Partida sorteada na quadra ${res?.court ?? court}.`,
   );
   const salvarResultado = ({ gid, court, scoreA, scoreB }) => executar(
@@ -1025,12 +1085,16 @@ export default function V2GameDayTelao() {
                   <CardQuadraLivre
                     key={court}
                     court={court}
+                    kind={kindOfCourt(tiposDasQuadras, court)}
+                    onKind={podeGerir ? (k) => definirTipo(court, k) : null}
                     acoes={podeGerir && (
                       <BotaoTelao
                         tone="acid"
                         onClick={() => (ehAoVivo ? gerarAoVivo(court) : criarJogoNaQuadra(court))}
-                        disabled={ocupado || disponiveis < PLAY_SLOTS}
-                        title={disponiveis < PLAY_SLOTS ? `Mínimo de ${PLAY_SLOTS} disponíveis na fila` : undefined}
+                        disabled={ocupado || disponiveis < slotsForKind(kindOfCourt(tiposDasQuadras, court))}
+                        title={disponiveis < slotsForKind(kindOfCourt(tiposDasQuadras, court))
+                          ? `Mínimo de ${slotsForKind(kindOfCourt(tiposDasQuadras, court))} disponíveis na fila`
+                          : undefined}
                       >
                         <PlayCircle className="h-4 w-4" />
                         {ehAoVivo ? 'Gerar próxima partida' : 'Criar jogo'}
@@ -1082,9 +1146,9 @@ export default function V2GameDayTelao() {
               ehAoVivo ? 'landscape:lg:row-span-3' : 'landscape:lg:row-span-2'
             }`}
           >
-            {ehAoVivo && ranking.length > 0 && (
+            {ehAoVivo && temRanking && (
               <Bloco icon={Trophy} titulo="Ranking do dia">
-                <RankingDoDia linhas={ranking} />
+                <RankingsDoDia secoes={rankings} />
               </Bloco>
             )}
             {board.isCourtByCourt ? (
@@ -1094,15 +1158,16 @@ export default function V2GameDayTelao() {
                     <OrdemDeParticipacao
                       view={playView}
                       onAtleta={podeGerir ? setAtletaAberto : null}
+                      porJogo={vagasDaProxima}
                     />
                   )
                   : null}
               </Bloco>
             ) : (
               <>
-                {ranking.length > 0 && (
+                {temRanking && (
                   <Bloco icon={Trophy} titulo="Ranking do dia">
-                    <RankingDoDia linhas={ranking} />
+                    <RankingsDoDia secoes={rankings} />
                   </Bloco>
                 )}
                 <Bloco icon={CheckCircle2} titulo="Últimos resultados" contagem={board.totals.decided}>
@@ -1170,9 +1235,9 @@ export default function V2GameDayTelao() {
             title={`Encerrar a partida da quadra ${alvoEncerrar?.court ?? ''}?`}
             description={quadras > 1
               ? 'Criar a próxima AQUI mantém este grupo nesta quadra. Só encerrar deixa a quadra livre — quando as outras terminarem, "Sortear todas as quadras" mistura todo mundo.'
-              : 'A partida atual é encerrada e a próxima entra automaticamente nesta quadra (se houver 4 disponíveis na ordem).'}
+              : 'A partida atual é encerrada e a próxima entra automaticamente nesta quadra (se houver gente suficiente na ordem).'}
             confirmLabel="Criar próxima aqui"
-            onConfirm={() => { const g = alvoEncerrar; setAlvoEncerrar(null); if (g) encerrarECriarProxima(g.gid); }}
+            onConfirm={() => { const g = alvoEncerrar; setAlvoEncerrar(null); if (g) encerrarECriarProxima(g.gid, g.court); }}
             secondaryLabel={quadras > 1 ? 'Só encerrar' : null}
             onSecondary={quadras > 1
               ? () => { const g = alvoEncerrar; setAlvoEncerrar(null); if (g) encerrarSemSortear(g.gid); }

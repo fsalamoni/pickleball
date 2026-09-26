@@ -674,3 +674,137 @@ export function suggestRounds(n, courts = null) {
   const playPerRound = effective * 4;
   return Math.max(base, Math.min(MAX_SUGGESTED_ROUNDS, Math.ceil((base * n) / playPerRound)));
 }
+
+/* ======================== SIMPLES (1 × 1) — Onda CF ======================== */
+
+/**
+ * Sugestão de rodadas para um sorteio de SIMPLES.
+ *
+ * Com todos jogando em toda rodada, `n − 1` rodadas fazem cada um enfrentar
+ * todos uma vez (o "todos contra todos"). O teto é o mesmo das duplas, e com
+ * quadras a menos a conta escala para preservar a média de jogos por pessoa.
+ */
+export function suggestSinglesRounds(n, courts = null) {
+  if (n < 2) return 0;
+  const base = Math.max(3, Math.min(12, n - 1));
+  if (courts == null) return base;
+  const maxByPlayers = Math.floor(n / 2);
+  const effective = normalizeDrawCourts(courts, maxByPlayers);
+  if (effective >= maxByPlayers) return base;
+  return Math.max(base, Math.min(MAX_SUGGESTED_ROUNDS, Math.ceil((base * n) / (effective * 2))));
+}
+
+/**
+ * Os confrontos de UMA rodada de simples: pareia quem vai jogar evitando
+ * repetir adversário e, depois disso, aproximando níveis. Várias tentativas
+ * com a ordem embaralhada; fica a de menor custo total.
+ */
+function bestSinglesRound(playing, oppCount, rng, levelOf) {
+  const W_OPP = 10;   // repetir adversário é o que mais se quer evitar
+  const W_LEVEL = 2;  // o mesmo peso de desnível das duplas
+  const custoDoPar = (x, y) => {
+    let c = W_OPP * (oppCount.get(pairKey(x, y)) || 0);
+    if (levelOf) {
+      const vx = levelOf(x);
+      const vy = levelOf(y);
+      if (vx != null && vy != null) c += W_LEVEL * Math.abs(vx - vy);
+    }
+    return c;
+  };
+
+  const TENTATIVAS = 40;
+  let melhor = null;
+  for (let t = 0; t < TENTATIVAS; t += 1) {
+    const resto = t === 0 ? playing.slice() : shuffle(playing, rng);
+    const pares = [];
+    let total = 0;
+    while (resto.length >= 2) {
+      const x = resto.shift();
+      let escolhido = 0;
+      let menor = Infinity;
+      resto.forEach((y, i) => {
+        const c = custoDoPar(x, y) + rng() * 0.001;
+        if (c < menor) { menor = c; escolhido = i; }
+      });
+      const [y] = resto.splice(escolhido, 1);
+      pares.push([x, y]);
+      total += menor;
+    }
+    if (!melhor || total < melhor.total) melhor = { total, pares };
+  }
+  return melhor ? melhor.pares : [];
+}
+
+/**
+ * Gera os jogos SIMPLES do dia em `rounds` rodadas — o Americano de simples.
+ *
+ * A mesma regra de participação das duplas: em cada rodada joga quem MENOS
+ * jogou (em empate, quem mais descansou), então ninguém fica para trás. Dentro
+ * da rodada, os confrontos evitam repetir adversário e preferem níveis
+ * parecidos. Com `history` (sorteio aditivo), o que já aconteceu no dia entra
+ * na conta. Não há dupla vinculada no simples.
+ *
+ * @param {string[]} playerIds
+ * @param {{ rounds?: number, seed?: string, history?: object, courts?: number|null,
+ *           levels?: Record<string, number>|null }} [options]
+ * @returns {Array<{ round: number, side_a: [string], side_b: [string] }>}
+ */
+export function generateSinglesGames(playerIds, options = {}) {
+  const ids = (playerIds || []).filter(Boolean);
+  const n = ids.length;
+  if (n < 2) {
+    throw new Error('O sorteio de jogos simples exige no mínimo 2 participantes.');
+  }
+  const {
+    seed = 'gameday-simples', history = null, courts: courtsOption = null, levels = null,
+  } = options;
+  const courts = normalizeDrawCourts(courtsOption, Math.floor(n / 2));
+  const rounds = options.rounds === undefined ? suggestSinglesRounds(n, courtsOption) : options.rounds;
+  const totalRounds = Math.max(1, Math.min(60, Math.floor(rounds)));
+  const rng = seededRng(seed);
+
+  const players = shuffle(Array.from({ length: n }, (_, i) => i), rng);
+  let levelOf = null;
+  if (levels && typeof levels === 'object') {
+    const porIndice = ids.map((id) => {
+      const bruto = levels[id];
+      // `Number(null)` é 0: sem esta guarda, "sem nível" viraria o piso da régua.
+      if (bruto == null || bruto === '') return null;
+      const v = Number(bruto);
+      return Number.isFinite(v) ? v : null;
+    });
+    if (porIndice.some((v) => v != null)) levelOf = (i) => porIndice[i];
+  }
+
+  const gamesPlayed = new Array(n).fill(0);
+  const restCount = new Array(n).fill(0);
+  const oppCount = new Map();
+  if (history) {
+    const idToIndex = new Map(ids.map((id, i) => [id, i]));
+    // Parceria não existe no simples: o mapa de duplas é descartado.
+    seedFromHistory(history, ids, idToIndex, gamesPlayed, new Map(), oppCount);
+  }
+
+  const playPerRound = courts * 2;
+  const out = [];
+  for (let r = 0; r < totalRounds; r += 1) {
+    const ranked = players
+      .slice()
+      .sort((x, y) => {
+        if (gamesPlayed[x] !== gamesPlayed[y]) return gamesPlayed[x] - gamesPlayed[y];
+        if (restCount[x] !== restCount[y]) return restCount[y] - restCount[x];
+        return rng() - 0.5;
+      });
+    const playing = ranked.slice(0, playPerRound);
+    const emQuadra = new Set(playing);
+    ranked.filter((p) => !emQuadra.has(p)).forEach((p) => { restCount[p] += 1; });
+
+    bestSinglesRound(playing, oppCount, rng, levelOf).forEach(([x, y]) => {
+      oppCount.set(pairKey(x, y), (oppCount.get(pairKey(x, y)) || 0) + 1);
+      gamesPlayed[x] += 1;
+      gamesPlayed[y] += 1;
+      out.push({ round: r + 1, side_a: [ids[x]], side_b: [ids[y]] });
+    });
+  }
+  return out;
+}

@@ -17,6 +17,10 @@
  *  5. nome (desempate estável em pt-BR).
  */
 
+import {
+  GAME_KIND, GAME_KIND_LABELS, gameKindsIn, splitGamesByKind,
+} from '@/modules/games/domain/gameKind.js';
+
 function makeRow(id, name) {
   return {
     id,
@@ -89,4 +93,50 @@ export function computeGameDayLeaderboard(participants, games) {
       if (x.pointsAgainst !== y.pointsAgainst) return x.pointsAgainst - y.pointsAgainst;
       return String(x.name || '').localeCompare(String(y.name || ''), 'pt-BR');
     });
+}
+
+/**
+ * O RANKING DO DIA SEPARADO POR TIPO DE JOGO (Onda CF).
+ *
+ * Um dia com jogos simples e em duplas tem DOIS rankings do dia,
+ * independentes: vitória no simples não se soma a vitória nas duplas — são
+ * disputas diferentes, e a própria plataforma as leva a ratings diferentes
+ * (o servidor decide pelo número de atletas de cada lado).
+ *
+ * - Um tipo só (ou nenhum jogo): UMA tabela, exatamente a de sempre — com
+ *   TODOS os participantes, inclusive quem ainda não jogou. Nenhum dia de jogo
+ *   existente muda.
+ * - Os dois tipos: uma tabela por tipo, cada uma com quem jogou AQUELE tipo.
+ *   Quem ainda não jogou nada aparece na de duplas (o padrão da plataforma),
+ *   para "todo mundo aparece" continuar valendo em exatamente um lugar.
+ *
+ * @param {Array<{id:string,name?:string}>} participants
+ * @param {Array} games
+ * @returns {Array<{ kind: 'doubles'|'singles', label: string, rows: Array }>}
+ */
+export function computeGameDayLeaderboards(participants, games) {
+  const lista = (participants || []).filter(Boolean);
+  const kinds = gameKindsIn(games);
+  if (kinds.length <= 1) {
+    const kind = kinds[0] || GAME_KIND.DOUBLES;
+    return [{ kind, label: GAME_KIND_LABELS[kind], rows: computeGameDayLeaderboard(lista, games) }];
+  }
+
+  const porTipo = splitGamesByKind(games);
+  const idsDe = (jogos) => {
+    const set = new Set();
+    jogos.forEach((g) => [...(g.side_a || []), ...(g.side_b || [])].forEach((p) => {
+      const id = p && typeof p === 'object' ? p.id : p;
+      if (id) set.add(id);
+    }));
+    return set;
+  };
+  const emAlgumJogo = idsDe((games || []).filter(Boolean));
+
+  return kinds.map((kind) => {
+    const jogaram = idsDe(porTipo[kind]);
+    const doTipo = lista.filter((p) => jogaram.has(p.id)
+      || (kind === GAME_KIND.DOUBLES && !emAlgumJogo.has(p.id)));
+    return { kind, label: GAME_KIND_LABELS[kind], rows: computeGameDayLeaderboard(doTipo, porTipo[kind]) };
+  });
 }

@@ -312,7 +312,10 @@ export function useFinishPlayGame(gdId) {
     mutationFn: (arg) => {
       const gid = typeof arg === 'string' ? arg : arg?.gid;
       const createNext = typeof arg === 'string' ? true : arg?.createNext !== false;
-      return finishPlayGame(gdId, gid, user, { createNext });
+      // `kind` (Onda CF): o tipo que a quadra terá na próxima partida, quando
+      // quem organiza o trocou. Ausente, vale o da partida que acabou.
+      const kind = typeof arg === 'string' ? null : (arg?.kind || null);
+      return finishPlayGame(gdId, gid, user, { createNext, kind });
     },
     onSuccess: invalidate,
   });
@@ -323,7 +326,8 @@ export function useCreatePlayRound(gdId) {
   const { user } = useAuth();
   const invalidate = usePlayInvalidate(gdId);
   return useMutation({
-    mutationFn: () => createPlayRoundForFreeCourts(gdId, user),
+    // `courtKinds` (Onda CF): o tipo que a tela mostra em cada quadra.
+    mutationFn: (opts = {}) => createPlayRoundForFreeCourts(gdId, user, { courtKinds: opts?.courtKinds || null }),
     onSuccess: invalidate,
   });
 }
@@ -333,7 +337,7 @@ export function useCreateAmericanoLiveRound(gdId) {
   const { user } = useAuth();
   const invalidate = usePlayInvalidate(gdId);
   return useMutation({
-    mutationFn: () => createAmericanoLiveRoundForFreeCourts(gdId, user),
+    mutationFn: (opts = {}) => createAmericanoLiveRoundForFreeCourts(gdId, user, { courtKinds: opts?.courtKinds || null }),
     onSuccess: invalidate,
   });
 }

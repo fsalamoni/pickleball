@@ -684,7 +684,7 @@ describe('⭐ drawPlayRoundForFreeCourts — sortear TODAS as quadras de uma vez
     const opts = { courts: 2, games: [] };
     const previsto = simulatePlaySequence(entrada, opts).blocks
       .filter((b) => b.free && b.full)
-      .map((b) => ({ court: b.court, ids: b.players.map((p) => p.id) }));
+      .map((b) => ({ court: b.court, kind: b.kind, ids: b.players.map((p) => p.id) }));
     expect(drawPlayRoundForFreeCourts(entrada, opts)).toEqual(previsto);
   });
 
