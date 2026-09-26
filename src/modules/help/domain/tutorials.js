@@ -176,8 +176,18 @@ const PLAY = {
       tip: 'A seção "Ordem de participação" mostra a fila numerada e quem entra a seguir. É a pergunta que todo mundo faz: "quando eu jogo?".',
     },
     {
+      id: 'simples-duplas',
+      title: '4. Simples ou duplas',
+      body: [
+        'Cada quadra pode ser de DUPLAS (quatro jogadores) ou de SIMPLES (um contra um). Escolha em "Duplas | Simples", na própria quadra, antes de criar o jogo.',
+        'Numa quadra de simples entram os DOIS primeiros da fila — a ordem continua mandando. A dupla vinculada não vale no simples: ali cada um joga por si.',
+        'A quadra lembra o tipo do último jogo: a quadra 3 que recebeu um simples continua de simples até você trocar. Dá para ter quadra de duplas e quadra de simples ao mesmo tempo.',
+      ],
+      tip: 'Com poucas pessoas no começo do dia (2 ou 3), uma quadra de simples já põe gente para jogar enquanto o resto chega.',
+    },
+    {
       id: 'ajustes',
-      title: '4. Quando a vida real acontece',
+      title: '5. Quando a vida real acontece',
       body: [
         'CLICANDO NUM NOME EM QUADRA você escolhe entre deixar a pessoa indisponível para aquela partida (entra o próximo da fila) ou SUBSTITUÍ-LA por alguém específico da ordem. O clique nunca executa nada sozinho: ele oferece as duas opções.',
         'CLICANDO NUM ATLETA DA FILA você pode pausá-lo por X partidas (ele descansa e volta sozinho) ou VINCULAR UMA DUPLA FIXA — duas pessoas que só entram juntas.',
@@ -187,7 +197,7 @@ const PLAY = {
     },
     {
       id: 'previsao',
-      title: '5. Previsão e telão',
+      title: '6. Previsão e telão',
       body: [
         'A previsão mostra quem entra em cada quadra a seguir — e é a MESMA conta que cria as partidas, então não gera falsa expectativa. A previsão de uma quadra ocupada é condicional: depende de qual partida terminar primeiro.',
         'O TELÃO (botão "Abrir telão") mostra tudo isso em tela cheia, para uma TV ou tablet ao lado da quadra, atualizando sozinho.',
@@ -233,8 +243,18 @@ const AMERICANO = {
       tip: 'Informe o número de quadras: o sorteio distribui os jogos de cada rodada entre elas.',
     },
     {
+      id: 'simples-duplas',
+      title: '3. Simples ou duplas',
+      body: [
+        'No sorteio do Americano você escolhe o TIPO DE JOGO: duplas (dois contra dois) ou simples (um contra um). No simples, quem menos jogou entra primeiro e ninguém repete adversário enquanto houver outro para enfrentar.',
+        'A partida avulsa ("Inserir partida") também pode ser de duplas ou simples. O mesmo dia pode ter os dois.',
+        'Simples e duplas têm RANKINGS DO DIA SEPARADOS — uma vitória no simples não soma nas duplas.',
+      ],
+      tip: 'Mexicano e Rei da Quadra são sempre de duplas: é assim que os dois formatos funcionam.',
+    },
+    {
       id: 'resultados',
-      title: '3. Lançar resultados',
+      title: '4. Lançar resultados',
       body: [
         'Na seção Jogos, lance o placar de cada partida. O ranking do dia se atualiza a cada resultado.',
         'Também é possível criar uma partida avulsa na mão e excluir um jogo que não vai acontecer.',
@@ -244,17 +264,17 @@ const AMERICANO = {
     },
     {
       id: 'ranking',
-      title: '4. Ranking do dia e ranking da plataforma',
+      title: '5. Ranking do dia e ranking da plataforma',
       body: [
         'O RANKING DO DIA classifica os participantes pelos resultados daquele dia. Ele é automático e vive dentro do dia de jogo.',
-        'Já o RANKING DA PLATAFORMA é uma decisão sua: na seção "Resultados no ranking", o criador do dia publica as partidas decididas no ranking geral, no rating e na exportação para o DUPR.',
+        'Já o RANKING DA PLATAFORMA é uma decisão sua: na seção "Resultados no ranking", o criador do dia publica as partidas decididas no ranking geral, no rating e na exportação para o DUPR. Cada jogo vai para o lugar certo: o simples para o rating de simples, as duplas para o rating e o ranking de duplas.',
         'Publicado uma vez, o dia continua sincronizado: corrigir um placar depois atualiza o ranking sozinho.',
       ],
       tip: 'Partidas em que todos os atletas são do mesmo clube também contam para o ranking daquele clube.',
     },
     {
       id: 'telao',
-      title: '5. Telão',
+      title: '6. Telão',
       body: [
         'O botão "Abrir telão" mostra, em tela cheia, os jogos da rodada atual, os próximos jogos, o ranking do dia e os últimos resultados.',
         'Ele se atualiza sozinho e foi feito para ficar aberto numa TV ou tablet durante o dia inteiro.',
@@ -318,17 +338,27 @@ const AMERICANO_LIVE = {
       tip: 'O número de partidas sugerido é o que faria todos formarem dupla com todos e enfrentarem todos duas vezes. É referência, não obrigação.',
     },
     {
+      id: 'simples-duplas',
+      title: '5. Simples ou duplas',
+      body: [
+        'Cada quadra pode ser de DUPLAS ou de SIMPLES. Na quadra livre, escolha "Duplas | Simples" e só então gere a partida. A quadra lembra o tipo do último jogo até você trocar.',
+        'No simples, quem está há mais tempo na fila joga, e o adversário é o que ele menos enfrentou, com nível parecido. A dupla vinculada não vale no simples.',
+        'Simples e duplas têm RANKINGS DO DIA SEPARADOS — no painel e no telão. Publicado, o simples vai para o rating de simples, e as duplas para o de duplas.',
+      ],
+      tip: 'A criação manual também tem os dois tipos: um contra um ou dois contra dois, com ou sem placar.',
+    },
+    {
       id: 'concluidas',
-      title: '5. Partidas concluídas',
+      title: '6. Partidas concluídas',
       body: [
         'Todas as partidas do dia ficam registradas em ordem, com o placar. Dali você EDITA um resultado lançado errado ou EXCLUI uma partida que não deveria existir.',
-        'Também dá para criar uma partida MANUALMENTE, escolhendo os quatro jogadores — com placar (registra um jogo que já aconteceu) ou sem placar (coloca a partida numa quadra livre).',
+        'Também dá para criar uma partida MANUALMENTE, escolhendo os jogadores (dois no simples, quatro nas duplas) — com placar (registra um jogo que já aconteceu) ou sem placar (coloca a partida numa quadra livre).',
       ],
       tip: 'Editar um placar recalcula o ranking do dia na hora.',
     },
     {
       id: 'ranking-telao',
-      title: '6. Ranking e telão',
+      title: '7. Ranking e telão',
       body: [
         'O RANKING DO DIA classifica os participantes pelos resultados do dia, automaticamente.',
         'Na seção "Resultados no ranking", o criador publica as partidas no ranking geral da plataforma, no rating e na exportação para o DUPR.',

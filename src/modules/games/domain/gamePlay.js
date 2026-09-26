@@ -421,6 +421,27 @@ export function assignPlayTeams(four, { rng = Math.random, partnerRepeatCount = 
 }
 
 /**
+ * Os LADOS de uma partida do Play, para qualquer tipo (Onda CF).
+ *
+ * Duplas: exatamente `assignPlayTeams` (sexo, nível, dupla fixa, repetição).
+ * Simples: 1 × 1, na ordem em que os dois vieram da fila — não há o que
+ * equilibrar com dois jogadores, e a dupla fixa não vale no simples.
+ *
+ * @param {Array} players  os escolhidos (2 no simples, 4 nas duplas)
+ * @param {{ kind?: string, rng?: () => number,
+ *           partnerRepeatCount?: (a: string, b: string) => number }} [opts]
+ * @returns {{ side_a: string[], side_b: string[] }}
+ */
+export function assignPlaySides(players, { kind = 'doubles', ...opts } = {}) {
+  if (kind === 'singles') {
+    const dois = (players || []).filter(Boolean).slice(0, 2);
+    if (dois.length !== 2) return { side_a: [], side_b: [] };
+    return { side_a: [dois[0].id], side_b: [dois[1].id] };
+  }
+  return assignPlayTeams(players, opts);
+}
+
+/**
  * Previsão da próxima partida DE CADA QUADRA.
  *
  * Diferente de `forecastPlayMatches`, que devolve levas soltas, aqui cada leva

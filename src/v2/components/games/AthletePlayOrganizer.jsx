@@ -31,6 +31,12 @@ import {
 import {
   buildPlayHistory, forecastPlayMatchesBalanced, applyPlayEntryOrder,
 } from '@/modules/games/domain/playRotation.js';
+import {
+  GAME_KIND, courtKindsFromGames, fillableCourts, gameKindOf, hasSinglesCourt,
+  kindOfCourt, sideSizeForKind, slotsForKind,
+} from '@/modules/games/domain/gameKind';
+import { GameKindBadge, GameKindToggle } from '@/v2/components/games/GameKindToggle';
+import { useCourtKinds } from '@/v2/components/games/useCourtKinds';
 import { FEATURE_FLAG } from '@/core/featureFlags';
 import { useFeatureFlag } from '@/core/lib/FeatureFlagsContext';
 import {
@@ -83,6 +89,8 @@ export default function AthletePlayOrganizer({ gameDay }) {
     if (!rodizioEquilibrado) return bruto;
     return applyPlayEntryOrder(bruto, {
       courts: courtsDoDia, games, history: buildPlayHistory(games),
+      // Quadra de simples leva 2, não 4: a ordem de entrada muda com isso.
+      courtKinds: courtKindsFromGames(games, courtsDoDia),
     });
   }, [participants, games, rodizioEquilibrado, courtsDoDia]);
 
@@ -634,29 +642,39 @@ export function PlayCourtsSection({ gameDay, participants, games, view, canManag
     return map;
   }, [openGames]);
 
+  // SIMPLES × DUPLAS por quadra (Onda CF): o tipo que a quadra já tem (o do
+  // último jogo dela) com a escolha de quem organiza por cima.
+  const { tipos: tiposDasQuadras, definir: definirTipo, pedido: pedidoDoTipo } = useCourtKinds(games, courts);
+  const comSimples = hasSinglesCourt(tiposDasQuadras);
+  const vagasDa = (court) => slotsForKind(kindOfCourt(tiposDasQuadras, court));
+
   const free = freePlayCourts({ courts, games });
   const availableCount = view.order.length;
-  const canCreateNext = free.length > 0 && availableCount >= 4;
+  const canCreateNext = free.length > 0 && availableCount >= vagasDa(free[0]);
   /**
    * Sortear a RODADA só vale a pena com pelo menos duas quadras livres e gente
    * para encher as duas — é aí que a fila tem os dois grupos na mesa e o
    * sorteio pode misturá-los. Com uma quadra livre só, "sortear todas" seria
    * apenas o "criar próximo jogo" com outro nome.
    */
-  const quadrasDaRodada = Math.min(free.length, Math.floor(availableCount / 4));
+  const quadrasDaRodada = fillableCourts(free, tiposDasQuadras, availableCount);
   const podeSortearRodada = quadrasDaRodada >= 2;
   // Rodízio equilibrado (flag `play_smart_rotation`): a previsão do painel usa
   // a mesma simulação da criação, para não anunciar um grupo e entrar outro.
   // `games` é obrigatório: é dele que sai quais quadras estão ocupadas e quem
-  // volta para a fila quando cada partida terminar.
+  // volta para a fila quando cada partida terminar. Com alguma quadra de
+  // SIMPLES, a previsão passa a ser por quadra mesmo sem o rodízio — é a única
+  // que sabe que ali entram dois, não quatro.
   const rodizioEquilibrado = useFeatureFlag(FEATURE_FLAG.PLAY_SMART_ROTATION);
   const forecast = useMemo(
-    () => (rodizioEquilibrado
+    () => (rodizioEquilibrado || comSimples
       ? forecastPlayMatchesBalanced(view.order, {
-        courts, games, history: buildPlayHistory(games),
+        courts, games,
+        history: rodizioEquilibrado ? buildPlayHistory(games) : null,
+        courtKinds: tiposDasQuadras,
       })
       : forecastPlayMatches(view.order, { courts })),
-    [view.order, courts, games, rodizioEquilibrado],
+    [view.order, courts, games, rodizioEquilibrado, comSimples, tiposDasQuadras],
   );
 
   const courtRows = useMemo(
@@ -667,18 +685,31 @@ export function PlayCourtsSection({ gameDay, participants, games, view, canManag
   const handleCreateNext = async (court = null) => {
     setBusy(true);
     try {
-      const res = await createNext.mutateAsync(court != null ? { court } : {});
-      toast.success(`Jogo criado na quadra ${res.court}.`);
+      const alvo = court ?? free[0];
+      const res = await createNext.mutateAsync({
+        ...(court != null ? { court } : {}),
+        ...pedidoDoTipo(alvo),
+      });
+      toast.success(res.kind === GAME_KIND.SINGLES
+        ? `Jogo simples criado na quadra ${res.court}.`
+        : `Jogo criado na quadra ${res.court}.`);
     } catch (err) {
       toast.error(err.message || 'Não foi possível criar o jogo.');
     } finally { setBusy(false); }
   };
 
-  const handleFinish = async (gid, { createNext = true } = {}) => {
+  const handleFinish = async (gid, { createNext = true, court = null } = {}) => {
     try {
-      const res = await finishGame.mutateAsync({ gid, createNext });
+      // O tipo só vai junto quando quem organiza TROCOU o da quadra: sem
+      // troca, a próxima herda o tipo da partida que acabou (no serviço).
+      const jogo = games.find((g) => g.id === gid);
+      const tipoDaQuadra = court != null ? kindOfCourt(tiposDasQuadras, court) : null;
+      const trocou = createNext && jogo && tipoDaQuadra && tipoDaQuadra !== gameKindOf(jogo);
+      const res = await finishGame.mutateAsync({
+        gid, createNext, ...(trocou ? { kind: tipoDaQuadra } : {}),
+      });
       if (res?.next) toast.success(`Partida encerrada. Próxima criada na quadra ${res.next.court}.`);
-      else if (createNext) toast.success('Partida encerrada. Sem 4 disponíveis na ordem — a quadra ficou livre.');
+      else if (createNext) toast.success('Partida encerrada. Não há gente suficiente na fila — a quadra ficou livre.');
       else toast.success('Partida encerrada. A quadra ficou livre para o sorteio da rodada.');
     } catch (err) {
       toast.error(err.message || 'Não foi possível concluir o jogo.');
@@ -695,7 +726,7 @@ export function PlayCourtsSection({ gameDay, participants, games, view, canManag
   const handleCreateRound = async () => {
     setBusy(true);
     try {
-      const res = await createRound.mutateAsync();
+      const res = await createRound.mutateAsync({ courtKinds: tiposDasQuadras });
       const n = res?.created?.length || 0;
       toast.success(n === 1
         ? `Jogo criado na quadra ${res.courts[0]}.`
@@ -716,7 +747,7 @@ export function PlayCourtsSection({ gameDay, participants, games, view, canManag
         : `${openGames.length} em quadra · ${finishedGames.length} concluído(s)`}
       actions={canManage && (
         <>
-          <V2Button size="sm" variant="ghost" onClick={() => setManualOpen(true)} disabled={participants.length < 4}>
+          <V2Button size="sm" variant="ghost" onClick={() => setManualOpen(true)} disabled={participants.length < 2}>
             <Plus className="mr-1.5 h-4 w-4" /> Criação manual
           </V2Button>
           {/* Só aparece onde faz diferença: com uma quadra, "sortear todas" é
@@ -745,12 +776,27 @@ export function PlayCourtsSection({ gameDay, participants, games, view, canManag
         )}
         {canManage && participants.length > 0 && participants.length < 4 && (
           <p className="text-xs text-gray-500">
-            Insira ao menos 4 participantes para começar a criar jogos — há {participants.length} no dia.
+            Com {participants.length} no dia dá para <strong>jogo simples</strong> (2 atletas) — troque a quadra
+            para <strong>Simples</strong>. Duplas pedem ao menos 4.
           </p>
         )}
-        {canManage && participants.length >= 4 && !canCreateNext && free.length > 0 && (
+        {canManage && participants.length >= 2 && !canCreateNext && free.length > 0 && (
           <p className="text-xs text-gray-500">
-            Aguardando jogadores disponíveis: há {availableCount} na ordem (mínimo 4 para um novo jogo).
+            Aguardando jogadores disponíveis: há {availableCount} na ordem (mínimo {vagasDa(free[0])} para
+            {' '}{kindOfCourt(tiposDasQuadras, free[0]) === GAME_KIND.SINGLES ? 'um jogo simples' : 'um jogo de duplas'}).
+            {/* Com 2 ou 3 na fila, a quadra de duplas espera — mas um simples
+                já põe gente para jogar. A tela oferece o caminho em vez de
+                deixar a pessoa procurando. */}
+            {availableCount >= 2 && kindOfCourt(tiposDasQuadras, free[0]) === GAME_KIND.DOUBLES && (
+              <> Ou troque a <strong>quadra {free[0]}</strong> para <strong>Simples</strong> e os dois primeiros já jogam.</>
+            )}
+          </p>
+        )}
+        {canManage && (
+          <p className="text-[11px] leading-5 text-gray-400">
+            Cada quadra pode ser de <strong className="text-gray-500">duplas</strong> ou de{' '}
+            <strong className="text-gray-500">simples</strong> — escolha na própria quadra. A quadra mantém o tipo
+            do último jogo até você trocar; no simples entram os dois primeiros da fila, e a dupla vinculada não vale.
           </p>
         )}
         {/* A dica que evita o congelamento dos grupos. Aparece quando há mais
@@ -787,7 +833,9 @@ export function PlayCourtsSection({ gameDay, participants, games, view, canManag
                   court={court}
                   game={game}
                   canManage={canManage}
-                  canCreate={availableCount >= 4 && !busy}
+                  kind={kindOfCourt(tiposDasQuadras, court)}
+                  onKind={(k) => definirTipo(court, k)}
+                  canCreate={availableCount >= vagasDa(court) && !busy}
                   onCreate={() => handleCreateNext(court)}
                   onFinish={() => setFinishTarget({ gid: game.id, court })}
                   onCancel={() => setCancelTarget(game.id)}
@@ -813,6 +861,7 @@ export function PlayCourtsSection({ gameDay, participants, games, view, canManag
         participants={participants}
         view={view}
         freeCourts={free}
+        courtKinds={tiposDasQuadras}
       />
 
       {/* Encerrar tem DUAS saídas legítimas, e a diferença entre elas é quem
@@ -823,9 +872,9 @@ export function PlayCourtsSection({ gameDay, participants, games, view, canManag
         title={`Encerrar a partida da quadra ${finishTarget?.court ?? ''}?`}
         description={courts > 1
           ? 'Criar a próxima AQUI mantém este grupo nesta quadra. Só encerrar deixa a quadra livre — quando as outras terminarem, "Sortear todas as quadras" mistura todo mundo.'
-          : 'A partida atual é encerrada e a próxima entra automaticamente nesta quadra (se houver 4 disponíveis na ordem).'}
+          : 'A partida atual é encerrada e a próxima entra automaticamente nesta quadra (se houver gente suficiente na ordem).'}
         confirmLabel="Criar próxima aqui"
-        onConfirm={() => { const g = finishTarget; setFinishTarget(null); if (g) handleFinish(g.gid); }}
+        onConfirm={() => { const g = finishTarget; setFinishTarget(null); if (g) handleFinish(g.gid, { court: g.court }); }}
         secondaryLabel={courts > 1 ? 'Só encerrar' : null}
         onSecondary={courts > 1
           ? () => { const g = finishTarget; setFinishTarget(null); if (g) handleFinish(g.gid, { createNext: false }); }
@@ -884,14 +933,30 @@ function SideCell({ side, align, canManage, onPlayer }) {
   );
 }
 
-function CourtRow({ court, game, canManage, canCreate, onCreate, onFinish, onCancel, onPlayer }) {
+function CourtRow({
+  court, game, canManage, kind, onKind, canCreate, onCreate, onFinish, onCancel, onPlayer,
+}) {
   const busy = !!game;
   return (
     <tr className="border-b border-gray-100 align-middle last:border-0">
       <td className="py-2.5 pr-2">
-        <span className={`inline-flex items-center rounded-full px-2 py-0.5 text-[11px] font-bold ${busy ? 'bg-acid text-ink' : 'bg-gray-100 text-gray-500'}`}>
-          Quadra {court}
-        </span>
+        <div className="flex flex-col items-start gap-1">
+          <span className={`inline-flex items-center rounded-full px-2 py-0.5 text-[11px] font-bold ${busy ? 'bg-acid text-ink' : 'bg-gray-100 text-gray-500'}`}>
+            Quadra {court}
+          </span>
+          {/* O tipo da PRÓXIMA partida desta quadra. Com a partida em andamento
+              ele vale para a seguinte; a atual mostra o próprio tipo no selo. */}
+          {canManage ? (
+            <GameKindToggle
+              size="xs"
+              value={kind}
+              onChange={onKind}
+              label={`Tipo de jogo da quadra ${court}`}
+            />
+          ) : (
+            <GameKindBadge kind={game ? gameKindOf(game) : kind} />
+          )}
+        </div>
       </td>
       <td className="py-2.5 px-2 text-gray-500 tabular-nums">{game ? formatPlayTime(game.created_at_ms) : '—'}</td>
       <td className="py-2.5 px-2 text-right">
@@ -942,6 +1007,7 @@ function PlayForecastTable({ forecast, availableCount }) {
       </div>
       <p className="text-[11px] text-gray-500">
         Ordem prevista para as próximas partidas conforme a fila — só indica quem entra (não define as duplas).
+        Na quadra de simples entram dois.
       </p>
 
       {forecast.length === 0 ? (
@@ -961,9 +1027,12 @@ function PlayForecastTable({ forecast, availableCount }) {
               {forecast.map((block, i) => (
                 <tr key={i} className="border-b border-gray-100 last:border-0 align-top">
                   <td className="py-2 pr-2">
-                    <span className="inline-flex items-center rounded-full bg-white px-2 py-0.5 text-[11px] font-bold text-gray-600">
-                      {i + 1}ª próxima
-                    </span>
+                    <div className="flex flex-col items-start gap-1">
+                      <span className="inline-flex items-center rounded-full bg-white px-2 py-0.5 text-[11px] font-bold text-gray-600">
+                        {i + 1}ª próxima
+                      </span>
+                      <GameKindBadge kind={block.kind} />
+                    </div>
                   </td>
                   <td className="py-2 pl-2">
                     <div className="flex flex-wrap items-center gap-1.5">
@@ -1019,17 +1088,24 @@ function FinishedGamesList({ games }) {
   );
 }
 
-function ManualPlayGameDialog({ open, onClose, gameDay, participants, view, freeCourts }) {
+function ManualPlayGameDialog({ open, onClose, gameDay, participants, view, freeCourts, courtKinds = {} }) {
   const createManual = useCreateManualPlayGame(gameDay.id);
   const [court, setCourt] = useState('');
+  const [kind, setKind] = useState(GAME_KIND.DOUBLES);
   const [sideA, setSideA] = useState(['', '']);
   const [sideB, setSideB] = useState(['', '']);
+  // 1 por lado no simples, 2 nas duplas (Onda CF).
+  const porLado = sideSizeForKind(kind);
 
   React.useEffect(() => {
     if (open) {
       setSideA(['', '']); setSideB(['', '']);
-      setCourt(String(freeCourts[0] ?? 1));
+      const primeira = freeCourts[0] ?? 1;
+      setCourt(String(primeira));
+      // Começa com o tipo que a quadra já tem.
+      setKind(kindOfCourt(courtKinds, primeira));
     }
+    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [open, freeCourts]);
 
   const chosen = new Set([...sideA, ...sideB].filter(Boolean));
@@ -1043,9 +1119,12 @@ function ManualPlayGameDialog({ open, onClose, gameDay, participants, view, free
   );
 
   const handleSave = async () => {
-    const sideAIds = sideA.filter(Boolean);
-    const sideBIds = sideB.filter(Boolean);
-    if (sideAIds.length < 2 || sideBIds.length < 2) { toast.error('Selecione 2 jogadores de cada lado.'); return; }
+    const sideAIds = sideA.slice(0, porLado).filter(Boolean);
+    const sideBIds = sideB.slice(0, porLado).filter(Boolean);
+    if (sideAIds.length < porLado || sideBIds.length < porLado) {
+      toast.error(porLado === 1 ? 'Selecione 1 jogador de cada lado.' : 'Selecione 2 jogadores de cada lado.');
+      return;
+    }
     const all = [...sideAIds, ...sideBIds];
     if (new Set(all).size !== all.length) { toast.error('Um jogador não pode aparecer duas vezes.'); return; }
     try {
@@ -1064,28 +1143,35 @@ function ManualPlayGameDialog({ open, onClose, gameDay, participants, view, free
       <DialogContent className="max-h-[90dvh] overflow-y-auto">
         <DialogHeader>
           <DialogTitle>Criação manual de jogo</DialogTitle>
-          <DialogDescription>Escolha a quadra e os jogadores de cada lado. Sem resultado — é um jogo de Play.</DialogDescription>
+          <DialogDescription>
+            Escolha a quadra, se é de duplas ou simples, e os jogadores de cada lado. Sem resultado — é um jogo de Play.
+          </DialogDescription>
         </DialogHeader>
         <div className="space-y-4">
-          <div className="w-32">
-            <Label className="text-xs">Quadra</Label>
-            <select value={court} onChange={(e) => setCourt(e.target.value)} className="h-10 w-full rounded-md border border-input bg-background px-2 text-sm">
-              {Array.from({ length: courts }, (_, i) => i + 1).map((c) => (
-                <option key={c} value={c}>Quadra {c}{freeCourts.includes(c) ? '' : ' (ocupada)'}</option>
-              ))}
-            </select>
+          <div className="flex flex-wrap items-end gap-3">
+            <div className="w-32">
+              <Label className="text-xs">Quadra</Label>
+              <select value={court} onChange={(e) => setCourt(e.target.value)} className="h-10 w-full rounded-md border border-input bg-background px-2 text-sm">
+                {Array.from({ length: courts }, (_, i) => i + 1).map((c) => (
+                  <option key={c} value={c}>Quadra {c}{freeCourts.includes(c) ? '' : ' (ocupada)'}</option>
+                ))}
+              </select>
+            </div>
+            <div className="pb-1">
+              <GameKindToggle value={kind} onChange={setKind} />
+            </div>
           </div>
           <div className="grid grid-cols-[1fr_auto_1fr] items-start gap-3">
             <div className="space-y-2">
               <Label className="text-xs uppercase text-gray-500">Lado A</Label>
-              {[0, 1].map((i) => (
+              {Array.from({ length: porLado }, (_, i) => (
                 <PlayerSelect key={i} value={sideA[i] || ''} onChange={(v) => setSideA((prev) => prev.map((x, j) => (j === i ? v : x)))} />
               ))}
             </div>
             <div className="pt-7 text-xs font-medium text-gray-400">vs</div>
             <div className="space-y-2">
               <Label className="text-xs uppercase text-gray-500">Lado B</Label>
-              {[0, 1].map((i) => (
+              {Array.from({ length: porLado }, (_, i) => (
                 <PlayerSelect key={i} value={sideB[i] || ''} onChange={(v) => setSideB((prev) => prev.map((x, j) => (j === i ? v : x)))} />
               ))}
             </div>

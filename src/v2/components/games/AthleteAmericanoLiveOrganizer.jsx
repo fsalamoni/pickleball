@@ -29,6 +29,11 @@ import {
 } from '@/modules/games/hooks/useGameDays';
 import { PLAY_GAME_STATUS, freePlayCourts } from '@/modules/games/domain/gamePlay';
 import {
+  GAME_KIND, fillableCourts, gameKindOf, kindOfCourt, sideSizeForKind, slotsForKind,
+} from '@/modules/games/domain/gameKind';
+import { GameKindBadge, GameKindToggle } from '@/v2/components/games/GameKindToggle';
+import { useCourtKinds } from '@/v2/components/games/useCourtKinds';
+import {
   americanoLiveView, forecastAmericanoLiveMatches, americanoLiveProgress,
   americanoLiveInCourtIds,
 } from '@/modules/games/domain/americanoLive';
@@ -198,17 +203,25 @@ function CourtsSection({ gameDay, participants, games, view, canManage }) {
 
   const livres = freePlayCourts({ courts, games });
   const disponiveis = view.order.length;
+  // SIMPLES × DUPLAS por quadra (Onda CF): o tipo que cada quadra já tem (o do
+  // último jogo dela) com a escolha de quem organiza por cima.
+  const { tipos: tiposDasQuadras, definir: definirTipo, pedido: pedidoDoTipo } = useCourtKinds(games, courts);
   const previsao = useMemo(
     // `participants` entra só para nomear quem volta de uma quadra ocupada:
     // quem está jogando não está na fila, e sem a lista o nome sairia como id.
-    () => forecastAmericanoLiveMatches(view.order, { courts, games, participants }),
-    [view.order, courts, games, participants],
+    () => forecastAmericanoLiveMatches(view.order, {
+      courts, games, participants, courtKinds: tiposDasQuadras,
+    }),
+    [view.order, courts, games, participants, tiposDasQuadras],
   );
 
   const gerar = async (court) => {
+    const kind = kindOfCourt(tiposDasQuadras, court);
     try {
-      await criar.mutateAsync({ court });
-      toast.success(`Partida sorteada na quadra ${court}.`);
+      await criar.mutateAsync({ court, ...pedidoDoTipo(court) });
+      toast.success(kind === GAME_KIND.SINGLES
+        ? `Partida simples sorteada na quadra ${court}.`
+        : `Partida sorteada na quadra ${court}.`);
     } catch (e) {
       toast.error(e?.message || 'Não foi possível sortear.');
     }
@@ -241,11 +254,11 @@ function CourtsSection({ gameDay, participants, games, view, canManage }) {
    * os 4 que acabaram de sair são os únicos na fila e voltam para a mesma
    * quadra. Aqui a fila inteira está na mesa e o motor mistura.
    */
-  const quadrasDaRodada = Math.min(livres.length, Math.floor(disponiveis / 4));
+  const quadrasDaRodada = fillableCourts(livres, tiposDasQuadras, disponiveis);
   const podeSortearRodada = quadrasDaRodada >= 2;
   const gerarRodada = async () => {
     try {
-      const res = await criarRodada.mutateAsync();
+      const res = await criarRodada.mutateAsync({ courtKinds: tiposDasQuadras });
       const n = res?.created?.length || 0;
       toast.success(n === 1
         ? `Partida sorteada na quadra ${res.courts[0]}.`
@@ -263,7 +276,7 @@ function CourtsSection({ gameDay, participants, games, view, canManage }) {
       summary={`${abertos.length} em quadra · ${disponiveis} na fila`}
       actions={canManage ? (
         <>
-          <V2Button size="sm" variant="ghost" onClick={() => setManualOpen(true)} disabled={participants.length < 4}>
+          <V2Button size="sm" variant="ghost" onClick={() => setManualOpen(true)} disabled={participants.length < 2}>
             <Plus className="mr-1 h-3.5 w-3.5" /> Manual
           </V2Button>
           {/* Com uma quadra só, "sortear todas" é o mesmo que "gerar próxima". */}
@@ -299,8 +312,16 @@ function CourtsSection({ gameDay, participants, games, view, canManage }) {
         {participants.length === 0 && (
           <p className="rounded-xl border border-amber-200 bg-amber-50/60 px-3 py-2 text-xs leading-5 text-amber-900">
             <Users aria-hidden="true" className="mr-1 inline h-3.5 w-3.5" />
-            As quadras só liberam partida com <strong>pelo menos 4 atletas</strong> no dia de jogo — e
-            ainda não há ninguém. Use <strong>Inserir atletas</strong>, em Participantes, logo acima.
+            As quadras só liberam partida com atletas no dia de jogo — <strong>2 para simples</strong>,
+            {' '}<strong>4 para duplas</strong> — e ainda não há ninguém. Use <strong>Inserir atletas</strong>,
+            em Participantes, logo acima.
+          </p>
+        )}
+        {canManage && participants.length > 0 && (
+          <p className="text-[11px] leading-5 text-gray-400">
+            Cada quadra pode ser de <strong className="text-gray-500">duplas</strong> ou de{' '}
+            <strong className="text-gray-500">simples</strong> — escolha na quadra livre, antes de gerar a partida.
+            Simples e duplas têm rankings do dia separados.
           </p>
         )}
         {Array.from({ length: courts }, (_, i) => i + 1).map((court) => (
@@ -309,7 +330,9 @@ function CourtsSection({ gameDay, participants, games, view, canManage }) {
             court={court}
             game={porQuadra.get(court) || null}
             canManage={canManage}
-            podeGerar={livres.includes(court) && disponiveis >= 4}
+            kind={kindOfCourt(tiposDasQuadras, court)}
+            onKind={(k) => definirTipo(court, k)}
+            podeGerar={livres.includes(court) && disponiveis >= slotsForKind(kindOfCourt(tiposDasQuadras, court))}
             disponiveis={disponiveis}
             semNinguem={participants.length === 0}
             onGerar={() => gerar(court)}
@@ -345,6 +368,7 @@ function CourtsSection({ gameDay, participants, games, view, canManage }) {
         participants={participants}
         games={games}
         livres={livres}
+        courtKinds={tiposDasQuadras}
       />
 
       {/* Clicar num nome em quadra abre a MESMA escolha do Play e do telão:
@@ -374,7 +398,7 @@ function CourtsSection({ gameDay, participants, games, view, canManage }) {
         onOpenChange={(v) => !v && setAlvoCancelar(null)}
         destructive
         title={alvoCancelar ? `Cancelar a partida da quadra ${alvoCancelar.court}?` : 'Cancelar a partida?'}
-        description="A partida sai da quadra sem placar nenhum e os quatro voltam para a fila. Nada vai para o ranking do dia. Depois disso, a quadra oferece um NOVO sorteio, com outra organização."
+        description="A partida sai da quadra sem placar nenhum e os jogadores voltam para a fila. Nada vai para o ranking do dia. Depois disso, a quadra oferece um NOVO sorteio, com outra organização."
         confirmLabel="Cancelar partida"
         cancelLabel="Voltar"
         onConfirm={() => {
@@ -389,8 +413,9 @@ function CourtsSection({ gameDay, participants, games, view, canManage }) {
 
 function CourtCard({
   court, game, canManage, podeGerar, disponiveis, onGerar, onLancar, onJogador, onCancelar, pendente,
-  semNinguem = false,
+  semNinguem = false, kind = GAME_KIND.DOUBLES, onKind = null,
 }) {
+  const vagas = slotsForKind(kind);
   const [a, setA] = useState('');
   const [b, setB] = useState('');
   React.useEffect(() => { setA(''); setB(''); }, [game?.id]);
@@ -407,6 +432,7 @@ function CourtCard({
         >
           Quadra {court}
         </span>
+        {game && <GameKindBadge kind={gameKindOf(game)} />}
         {game ? <V2Badge tone="acid">Em quadra</V2Badge> : <V2Badge tone="neutral">Livre</V2Badge>}
       </div>
 
@@ -460,7 +486,7 @@ function CourtCard({
                 <XCircle className="mr-1 h-3.5 w-3.5" /> Cancelar partida
               </V2Button>
               <p className="text-center text-[10px] leading-4 text-gray-400">
-                Toque num nome para deixá-lo de fora ou trocá-lo. Cancelar devolve os quatro
+                Toque num nome para deixá-lo de fora ou trocá-lo. Cancelar devolve os jogadores
                 à fila, sem placar — e a quadra volta a oferecer um novo sorteio.
               </p>
             </div>
@@ -468,16 +494,26 @@ function CourtCard({
         </>
       ) : (
         <div className="mt-3 flex flex-col items-center gap-2">
+          {/* O tipo da próxima partida desta quadra: escolhido AQUI, na quadra
+              livre, antes de gerar — é quando a escolha faz sentido. */}
+          {canManage && onKind && (
+            <GameKindToggle value={kind} onChange={onKind} label={`Tipo de jogo da quadra ${court}`} />
+          )}
           <p className="text-xs text-gray-500">
-            {disponiveis >= 4
+            {disponiveis >= vagas
               ? 'Pronta para a próxima partida.'
               : semNinguem
                 ? 'Sem atletas no dia de jogo ainda.'
-                : `Faltam ${4 - disponiveis} jogador(es) disponível(is).`}
+                : `Faltam ${vagas - disponiveis} jogador(es) disponível(is).`}
+            {/* Duplas esperando com 2 ou 3 na fila: um simples já sai. */}
+            {canManage && onKind && kind === GAME_KIND.DOUBLES && disponiveis >= 2 && disponiveis < vagas && (
+              <> Ou troque para <strong>Simples</strong> e a partida sai agora.</>
+            )}
           </p>
           {canManage && (
             <V2Button size="sm" variant="secondary" disabled={!podeGerar || pendente} onClick={onGerar}>
-              <PlayCircle className="mr-1 h-3.5 w-3.5" /> Gerar próxima partida
+              <PlayCircle className="mr-1 h-3.5 w-3.5" />
+              {kind === GAME_KIND.SINGLES ? 'Gerar partida simples' : 'Gerar próxima partida'}
             </V2Button>
           )}
         </div>
@@ -530,6 +566,7 @@ function ForecastBlock({ previsao }) {
             <span className="rounded bg-gray-100 px-1.5 py-0.5 font-semibold text-gray-600">
               Quadra {b.court}
             </span>
+            <GameKindBadge kind={b.kind} />
             {b.conditional && (
               <span className="rounded bg-amber-50 px-1.5 py-0.5 text-[10px] text-amber-700">
                 quando liberar
@@ -712,19 +749,29 @@ function EditScoreDialog({ game, onClose, onSave }) {
  * A trava real está no serviço; aqui ela é mostrada ANTES do clique, para o
  * organizador não descobrir o problema por mensagem de erro.
  */
-function ManualMatchDialog({ open, onClose, gameDay, participants, games = [], livres }) {
+function ManualMatchDialog({ open, onClose, gameDay, participants, games = [], livres, courtKinds = {} }) {
   const criar = useCreateManualAmericanoLiveGame(gameDay.id);
   const [ids, setIds] = useState(['', '', '', '']);
   const [court, setCourt] = useState('');
+  const [kind, setKind] = useState(GAME_KIND.DOUBLES);
   const [a, setA] = useState('');
   const [b, setB] = useState('');
   React.useEffect(() => {
-    if (open) { setIds(['', '', '', '']); setCourt(String(livres[0] ?? '')); setA(''); setB(''); }
+    if (open) {
+      setIds(['', '', '', '']); setCourt(String(livres[0] ?? '')); setA(''); setB('');
+      // Começa com o tipo que a primeira quadra livre já tem.
+      setKind(livres[0] != null ? kindOfCourt(courtKinds, livres[0]) : GAME_KIND.DOUBLES);
+    }
+    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [open, livres]);
   if (!open) return null;
 
-  const escolhidos = ids.filter(Boolean);
-  const valido = escolhidos.length === 4 && new Set(escolhidos).size === 4;
+  // 1 por lado no simples, 2 nas duplas (Onda CF). As posições do lado B
+  // começam depois das do lado A: [A1, A2, B1, B2] ou [A1, B1].
+  const porLado = sideSizeForKind(kind);
+  const posicoes = Array.from({ length: porLado * 2 }, (_, i) => i);
+  const escolhidos = ids.slice(0, porLado * 2).filter(Boolean);
+  const valido = escolhidos.length === porLado * 2 && new Set(escolhidos).size === escolhidos.length;
   const comPlacar = a !== '' && b !== '';
   const emQuadra = americanoLiveInCourtIds(games);
   const conflitos = comPlacar ? [] : escolhidos.filter((id) => emQuadra.has(id));
@@ -738,16 +785,19 @@ function ManualMatchDialog({ open, onClose, gameDay, participants, games = [], l
         <DialogHeader>
           <DialogTitle>Criar partida manualmente</DialogTitle>
           <DialogDescription>
-            Escolha os quatro jogadores. O placar é opcional — sem ele, a partida entra
-            como em andamento na quadra escolhida.
+            Escolha se é de duplas ou simples e os jogadores. O placar é opcional — sem ele, a
+            partida entra como em andamento na quadra escolhida.
           </DialogDescription>
         </DialogHeader>
 
         <div className="space-y-3">
+          <GameKindToggle value={kind} onChange={setKind} />
           <div className="grid gap-2 sm:grid-cols-2">
-            {[0, 1, 2, 3].map((i) => (
-              <label key={i} className="text-xs font-semibold text-ink">
-                {i < 2 ? `Lado A · jogador ${i + 1}` : `Lado B · jogador ${i - 1}`}
+            {posicoes.map((i) => (
+              <label key={`${kind}-${i}`} className="text-xs font-semibold text-ink">
+                {porLado === 1
+                  ? (i === 0 ? 'Lado A' : 'Lado B')
+                  : (i < 2 ? `Lado A · jogador ${i + 1}` : `Lado B · jogador ${i - 1}`)}
                 <V2Select
                   className="mt-1"
                   value={ids[i]}
@@ -801,8 +851,8 @@ function ManualMatchDialog({ open, onClose, gameDay, participants, games = [], l
               try {
                 await criar.mutateAsync({
                   court: court === '' ? null : Number(court),
-                  sideAIds: [ids[0], ids[1]],
-                  sideBIds: [ids[2], ids[3]],
+                  sideAIds: porLado === 1 ? [ids[0]] : [ids[0], ids[1]],
+                  sideBIds: porLado === 1 ? [ids[1]] : [ids[2], ids[3]],
                   scoreA: comPlacar ? Number(a) : null,
                   scoreB: comPlacar ? Number(b) : null,
                 });

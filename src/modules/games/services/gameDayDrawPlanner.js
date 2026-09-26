@@ -22,6 +22,7 @@
  */
 import {
   generateGameDayGames, suggestRounds, buildDrawHistory,
+  generateSinglesGames, suggestSinglesRounds,
 } from '@/modules/clubs/domain/gameDayDraw';
 import { planAdditiveDraw, offsetRounds } from '@/modules/clubs/domain/gameDayDrawMerge';
 import {
@@ -29,6 +30,7 @@ import {
   generateMexicanoSchedule, kingOfCourtFirstRound,
 } from '@/modules/clubs/domain/gameDayFormats';
 import { fetchUnifiedLevelsByParticipant } from '@/modules/rating/services/unifiedLevelService';
+import { GAME_KIND, isSinglesGame, normalizeGameKind } from '@/modules/games/domain/gameKind';
 
 /**
  * As DUPLAS VINCULADAS de uma lista de participantes — só os vínculos MÚTUOS.
@@ -81,9 +83,13 @@ export function formatHonorsFixedPairs(format) {
  * @param {number} [opts.rounds]          rodadas (0/ausente = sugerido)
  * @param {number|null} [opts.courts]     quadras simultâneas (só Americano)
  * @param {string} [opts.seed]            semente (padrão: o relógio)
+ * @param {'doubles'|'singles'} [opts.kind] tipo de jogo (Onda CF). Simples
+ *                                        só existe no Americano: Mexicano e Rei
+ *                                        da Quadra são duplas por definição.
  * @returns {Promise<{
- *   payload: Array, removeIds: string[], orderBase: number,
+ *   payload: Array, removeIds: string[], orderBase: number, kind: string,
  *   label: string, fixedPairs: Array, fixedPairsIgnored: boolean,
+ *   fixedPairsReason: 'format'|'singles'|null,
  * }>}
  */
 export async function buildGameDayDraw({
@@ -94,13 +100,19 @@ export async function buildGameDayDraw({
   rounds = 0,
   courts = null,
   seed = null,
+  kind = GAME_KIND.DOUBLES,
 } = {}) {
   const ids = (participants || []).map((p) => p.id).filter(Boolean);
   const semente = seed || `gd-${Date.now()}`;
   const ehAmericano = format === GAME_DAY_FORMAT.AMERICANO;
+  // SIMPLES só no Americano. Nos outros formatos o pedido é ignorado, não
+  // atendido pela metade: um Mexicano de simples não existe.
+  const simples = ehAmericano && normalizeGameKind(kind) === GAME_KIND.SINGLES;
   // Quadras só se aplicam ao Americano — é o único que monta rodadas completas.
   const quadras = ehAmericano ? courts : null;
-  const rodadas = rounds || suggestRounds(ids.length, quadras) || 3;
+  const rodadas = rounds
+    || (simples ? suggestSinglesRounds(ids.length, quadras) : suggestRounds(ids.length, quadras))
+    || 3;
 
   // Sorteio ADITIVO: mantém os jogos com resultado, opcionalmente substitui os
   // sem resultado, e numera as rodadas novas depois das que já existem.
@@ -120,7 +132,17 @@ export async function buildGameDayDraw({
   const honra = formatHonorsFixedPairs(format);
 
   let raw;
-  if (format === GAME_DAY_FORMAT.MEXICANO) {
+  if (simples) {
+    // O Americano de SIMPLES. A participação (quem menos jogou entra
+    // primeiro) conta TODOS os jogos do dia; os confrontos a evitar, só os de
+    // simples — ter sido adversário numa dupla não é o mesmo confronto.
+    const history = buildDrawHistory(plan.keptGames, ids, {
+      formationGames: (games || []).filter(isSinglesGame),
+    });
+    raw = generateSinglesGames(ids, {
+      rounds: rodadas, seed: semente, history, courts: quadras, levels,
+    });
+  } else if (format === GAME_DAY_FORMAT.MEXICANO) {
     raw = generateMexicanoSchedule(ids, { rounds: rodadas, seed: semente, levels });
   } else if (format === GAME_DAY_FORMAT.KING_OF_COURT) {
     raw = kingOfCourtFirstRound(ids, { seed: semente, levels });
@@ -145,21 +167,31 @@ export async function buildGameDayDraw({
     const p = porId.get(id);
     return { id, name: p?.name || 'Jogador', user_id: p?.user_id || null };
   };
+  const tipo = simples ? GAME_KIND.SINGLES : GAME_KIND.DOUBLES;
   const payload = offsetRounds(raw, plan.roundBase).map((g) => ({
     round: g.round,
     court: g.court ?? null,
-    kind: 'doubles',
+    kind: tipo,
     side_a: g.side_a.map(slot),
     side_b: g.side_b.map(slot),
   }));
+
+  // A tela avisa quando havia vínculo e ele não vale neste sorteio — pelo
+  // formato (Mexicano, Rei da Quadra) ou por ser simples.
+  let fixedPairsReason = null;
+  if (fixedPairs.length > 0) {
+    if (!honra) fixedPairsReason = 'format';
+    else if (simples) fixedPairsReason = 'singles';
+  }
 
   return {
     payload,
     removeIds: plan.removeIds,
     orderBase: plan.orderBase,
-    label: GAME_DAY_FORMAT_LABELS[format] || 'Americano',
+    kind: tipo,
+    label: simples ? 'Americano de simples' : (GAME_DAY_FORMAT_LABELS[format] || 'Americano'),
     fixedPairs,
-    // A tela avisa quando havia vínculo e o formato não o honra.
-    fixedPairsIgnored: fixedPairs.length > 0 && !honra,
+    fixedPairsIgnored: fixedPairsReason != null,
+    fixedPairsReason,
   };
 }

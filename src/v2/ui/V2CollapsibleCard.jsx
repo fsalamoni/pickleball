@@ -72,13 +72,17 @@ export default function V2CollapsibleCard({
         className,
       )}
     >
-      <div className="flex items-center justify-between gap-2 px-4 py-3 sm:px-5 sm:py-3.5">
+      {/* O cabeçalho QUEBRA LINHA: quando as ações não cabem ao lado do título
+          (celular), elas descem para a linha de baixo. Antes elas eram
+          cortadas pela borda do cartão — no Play, "Criar próximo jogo" sumia
+          no celular. No computador, onde tudo cabe, nada muda. */}
+      <div className="flex flex-wrap items-center justify-between gap-2 px-4 py-3 sm:px-5 sm:py-3.5">
         <button
           type="button"
           onClick={toggle}
           aria-expanded={!collapsed}
           aria-controls={bodyId}
-          className="group flex min-w-0 flex-1 items-center gap-2 text-left"
+          className="group flex min-w-[9rem] flex-1 items-center gap-2 text-left"
         >
           <ChevronDown
             aria-hidden="true"
@@ -98,7 +102,7 @@ export default function V2CollapsibleCard({
             )}
           </span>
         </button>
-        {actions && <div className="flex shrink-0 flex-wrap items-center gap-2">{actions}</div>}
+        {actions && <div className="flex max-w-full flex-wrap items-center gap-2">{actions}</div>}
       </div>
 
       {/* O corpo é DESMONTADO quando recolhido (não só escondido): evita manter

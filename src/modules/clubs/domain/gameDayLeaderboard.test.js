@@ -1,5 +1,5 @@
 import { describe, it, expect } from 'vitest';
-import { computeGameDayLeaderboard } from './gameDayLeaderboard.js';
+import { computeGameDayLeaderboard, computeGameDayLeaderboards } from './gameDayLeaderboard.js';
 
 const P = (id, name) => ({ id, name });
 const side = (...ids) => ids.map((id) => ({ id, name: id.toUpperCase() }));
@@ -88,5 +88,65 @@ describe('computeGameDayLeaderboard', () => {
     ];
     const rows = computeGameDayLeaderboard(parts, games);
     expect(rows.find((r) => r.id === 'ghost')).toBeTruthy();
+  });
+});
+
+/* ------------------------------------------------------------------ */
+/*  Onda CF — um ranking do dia por tipo de jogo                       */
+/* ------------------------------------------------------------------ */
+
+describe('⭐ computeGameDayLeaderboards — simples e duplas separados', () => {
+  const parts = ['a', 'b', 'c', 'd', 'e', 'f', 'g'].map((id) => P(id, id.toUpperCase()));
+  const duplas = { side_a: side('a', 'b'), side_b: side('c', 'd'), score_a: 11, score_b: 7 };
+  const simples = { side_a: side('a'), side_b: side('e'), score_a: 4, score_b: 11 };
+
+  it('⭐ só duplas: UMA tabela, idêntica à de sempre (todos os participantes)', () => {
+    const r = computeGameDayLeaderboards(parts, [duplas]);
+    expect(r).toHaveLength(1);
+    expect(r[0].kind).toBe('doubles');
+    expect(r[0].label).toBe('Duplas');
+    expect(r[0].rows).toEqual(computeGameDayLeaderboard(parts, [duplas]));
+  });
+
+  it('sem jogo nenhum: uma tabela de duplas com todo mundo', () => {
+    const r = computeGameDayLeaderboards(parts, []);
+    expect(r).toHaveLength(1);
+    expect(r[0].rows).toHaveLength(parts.length);
+  });
+
+  it('só simples: uma tabela de simples, também com todos', () => {
+    const r = computeGameDayLeaderboards(parts, [simples]);
+    expect(r).toHaveLength(1);
+    expect(r[0].kind).toBe('singles');
+    expect(r[0].rows).toHaveLength(parts.length);
+  });
+
+  it('⭐ os dois tipos: duas tabelas INDEPENDENTES', () => {
+    const [d, s] = computeGameDayLeaderboards(parts, [duplas, simples]);
+    expect(d.kind).toBe('doubles');
+    expect(s.kind).toBe('singles');
+    // `a` venceu nas duplas e perdeu no simples: cada tabela conta só o seu.
+    const aD = d.rows.find((x) => x.id === 'a');
+    const aS = s.rows.find((x) => x.id === 'a');
+    expect([aD.games, aD.wins, aD.losses]).toEqual([1, 1, 0]);
+    expect([aS.games, aS.wins, aS.losses]).toEqual([1, 0, 1]);
+    expect(s.rows[0].id).toBe('e');
+  });
+
+  it('⭐ cada tabela traz quem jogou aquele tipo; quem não jogou nada fica na de duplas', () => {
+    const [d, s] = computeGameDayLeaderboards(parts, [duplas, simples]);
+    expect(s.rows.map((x) => x.id).sort()).toEqual(['a', 'e']);
+    // f e g não jogaram nada: aparecem uma vez só, na de duplas.
+    expect(d.rows.map((x) => x.id).sort()).toEqual(['a', 'b', 'c', 'd', 'f', 'g']);
+  });
+
+  it('jogo sem placar define o tipo, mas não conta ponto', () => {
+    const [, s] = computeGameDayLeaderboards(parts, [duplas, { side_a: side('f'), side_b: side('g') }]);
+    expect(s.rows.every((x) => x.games === 0)).toBe(true);
+    expect(s.rows.map((x) => x.id).sort()).toEqual(['f', 'g']);
+  });
+
+  it('tolera jogo nulo na lista', () => {
+    expect(() => computeGameDayLeaderboards(parts, [duplas, null, simples])).not.toThrow();
   });
 });

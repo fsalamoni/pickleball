@@ -21,7 +21,9 @@ import { PartnerDialog } from '@/v2/components/games/AthletePlayOrganizer';
 import { useGameDayRoles } from '@/modules/games/hooks/useGameDayRoles';
 import { useGameDayFormatChoices } from '@/modules/games/hooks/useGameDayFormatChoices';
 import { useAthletes } from '@/modules/athletes/hooks/useAthletes';
-import { suggestRounds } from '@/modules/clubs/domain/gameDayDraw';
+import { suggestRounds, suggestSinglesRounds } from '@/modules/clubs/domain/gameDayDraw';
+import { GAME_KIND, gameKindOf, slotsForKind } from '@/modules/games/domain/gameKind';
+import { GameKindBadge, GameKindToggle } from '@/v2/components/games/GameKindToggle';
 import { splitGamesByResult } from '@/modules/clubs/domain/gameDayDrawMerge';
 import { buildGameDayDraw } from '@/modules/games/services/gameDayDrawPlanner';
 import {
@@ -326,6 +328,9 @@ function GamesSection({ gameDay, participants, isOwner }) {
   // com a própria flag; o formato que o dia já tem entra sempre.
   const formatosDoSorteio = useGameDayFormatChoices({ current: gameDay.format || null, scope: 'draw' });
   const [drawOpen, setDrawOpen] = useState(false);
+  // Simples ou duplas no sorteio (Onda CF). Só o Americano tem simples:
+  // Mexicano e Rei da Quadra são duplas por definição.
+  const [drawKind, setDrawKind] = useState(GAME_KIND.DOUBLES);
   const [replaceUnscored, setReplaceUnscored] = useState(false);
   const [manualOpen, setManualOpen] = useState(false);
   const [confirmClear, setConfirmClear] = useState(false);
@@ -337,17 +342,27 @@ function GamesSection({ gameDay, participants, isOwner }) {
     [games],
   );
 
-  const canDraw = participants.length >= 4;
   const isKingOfCourt = formatsOn && format === GAME_DAY_FORMAT.KING_OF_COURT;
   // Quadras só se aplicam ao Americano (o motor que monta rodadas completas).
   const isAmericano = !formatsOn || format === GAME_DAY_FORMAT.AMERICANO;
+  const simples = isAmericano && drawKind === GAME_KIND.SINGLES;
+  // Jogadores por partida do sorteio escolhido: 2 no simples, 4 nas duplas.
+  const porJogo = slotsForKind(simples ? GAME_KIND.SINGLES : GAME_KIND.DOUBLES);
+  // O diálogo abre com 2 (dá um simples); o botão de sortear, dentro dele,
+  // confere o mínimo do tipo escolhido.
+  const canOpenDraw = participants.length >= 2;
+  const canDraw = participants.length >= porJogo;
   // Limite FÍSICO de jogos simultâneos que o nº de atletas comporta. Não limita
   // o que o organizador pode digitar — só informa e é aplicado no motor.
-  const maxCourts = Math.max(1, Math.floor(participants.length / 4));
+  const maxCourts = Math.max(1, Math.floor(participants.length / porJogo));
   const typedCourts = Math.floor(Number(courtsText));
   const courtsValue = Number.isFinite(typedCourts) && typedCourts > 0 ? typedCourts : null;
   const effectiveCourts = isAmericano ? courtsValue : null;
-  const effectiveRounds = rounds || suggestRounds(participants.length, effectiveCourts) || 3;
+  const effectiveRounds = rounds
+    || (simples
+      ? suggestSinglesRounds(participants.length, effectiveCourts)
+      : suggestRounds(participants.length, effectiveCourts))
+    || 3;
 
   const participantById = useMemo(() => {
     const map = new Map();
@@ -386,14 +401,17 @@ function GamesSection({ gameDay, participants, isOwner }) {
       const res = await buildGameDayDraw({
         format, participants, games, replaceUnscored,
         rounds: effectiveRounds, courts: effectiveCourts,
+        kind: simples ? GAME_KIND.SINGLES : GAME_KIND.DOUBLES,
       });
       await appendGames.mutateAsync({
         removeIds: res.removeIds, games: res.payload, orderBase: res.orderBase,
       });
       // Mexicano e Rei da Quadra montam as duplas pela classificação e pelo
-      // resultado — é o que define os dois formatos. A tela AVISA em vez de
-      // ignorar o vínculo em silêncio.
-      if (res.fixedPairsIgnored) {
+      // resultado — é o que define os dois formatos; no simples cada um joga
+      // por si. A tela AVISA em vez de ignorar o vínculo em silêncio.
+      if (res.fixedPairsReason === 'singles') {
+        toast.warning('No jogo simples cada um joga por si — as duplas vinculadas não valem neste sorteio.');
+      } else if (res.fixedPairsIgnored) {
         toast.warning(`${res.label} monta as duplas pela classificação de cada rodada — as duplas vinculadas não valem neste formato.`);
       }
       toast.success(isKingOfCourt
@@ -475,7 +493,7 @@ function GamesSection({ gameDay, participants, isOwner }) {
           <V2Button size="sm" variant="ghost" onClick={() => setManualOpen(true)} disabled={participants.length < 2}>
             <Plus className="mr-1.5 h-4 w-4" /> Inserir partida
           </V2Button>
-          <V2Button size="sm" onClick={openDraw} disabled={!canDraw}>
+          <V2Button size="sm" onClick={openDraw} disabled={!canOpenDraw}>
             <Shuffle className="mr-1.5 h-4 w-4" /> Sortear jogos
           </V2Button>
           {isKingOfCourt && games.length > 0 && (
@@ -492,9 +510,10 @@ function GamesSection({ gameDay, participants, isOwner }) {
       )}
     >
       <div className="space-y-4">
-        {isOwner && !canDraw && (
+        {isOwner && participants.length < 4 && (
           <p className="text-xs text-gray-500">
-            Insira ao menos 4 participantes para sortear jogos de duplas. Para partidas individuais avulsas, bastam 2.
+            Jogos de duplas pedem ao menos 4 participantes. Com 2 ou 3 já dá para jogo <strong>simples</strong> —
+            no sorteio ou em Inserir partida.
           </p>
         )}
 
@@ -539,8 +558,8 @@ function GamesSection({ gameDay, participants, isOwner }) {
             <DialogHeader>
               <DialogTitle>Sortear jogos do dia</DialogTitle>
               <DialogDescription>
-                Gera novos jogos de duplas com os {participants.length} participantes atuais e os
-                adiciona aos que já existem.
+                Gera novos jogos {simples ? 'simples (1 × 1)' : 'de duplas'} com os {participants.length} participantes
+                atuais e os adiciona aos que já existem.
                 {scoredGames.length > 0 && ' Os jogos com resultado lançado são sempre mantidos.'}
               </DialogDescription>
             </DialogHeader>
@@ -578,6 +597,29 @@ function GamesSection({ gameDay, participants, isOwner }) {
                   </select>
                 </div>
               )}
+              {/* Simples ou duplas: só no Americano. Simples é o "todos contra
+                  todos" um a um — quem menos jogou entra primeiro, sem repetir
+                  adversário enquanto houver outro para enfrentar. */}
+              {isAmericano && (
+                <div className="space-y-1.5">
+                  <Label>Tipo de jogo</Label>
+                  <div>
+                    <GameKindToggle value={drawKind} onChange={setDrawKind} />
+                  </div>
+                  <p className="text-xs text-gray-500">
+                    {simples
+                      ? 'Um contra um. Quem menos jogou entra primeiro, e ninguém repete adversário enquanto houver outro para enfrentar. Simples e duplas têm rankings do dia separados.'
+                      : 'Dois contra dois, com duplas e adversários variando a cada rodada.'}
+                  </p>
+                </div>
+              )}
+              {!canDraw && (
+                <p className="rounded-lg bg-amber-50 px-3 py-2 text-xs text-amber-800">
+                  {simples
+                    ? 'O jogo simples pede ao menos 2 participantes.'
+                    : `Jogos de duplas pedem ao menos 4 participantes — há ${participants.length}.${isAmericano ? ' Troque para Simples para sortear um contra um.' : ''}`}
+                </p>
+              )}
               {!isKingOfCourt && (
                 <div className="space-y-2">
                   <Label htmlFor="rounds">Número de rodadas</Label>
@@ -613,14 +655,14 @@ function GamesSection({ gameDay, participants, isOwner }) {
                       ? `Em branco usa todas as quadras possíveis (${maxCourts} com ${participants.length} atletas).`
                       : courtsValue >= maxCourts
                         ? `Com ${participants.length} atletas cabem no máximo ${maxCourts} jogo(s) ao mesmo tempo.`
-                        : `${courtsValue * 4} em quadra e ${participants.length - courtsValue * 4} aguardando por rodada — quem fica de fora entra na seguinte, com os jogos distribuídos por igual.`}
+                        : `${courtsValue * porJogo} em quadra e ${participants.length - courtsValue * porJogo} aguardando por rodada — quem fica de fora entra na seguinte, com os jogos distribuídos por igual.`}
                   </p>
                 </div>
               )}
             </div>
             <DialogFooter>
               <V2Button variant="ghost" onClick={() => setDrawOpen(false)} disabled={drawing}>Cancelar</V2Button>
-              <V2Button onClick={handleDraw} disabled={drawing}>{drawing ? 'Sorteando…' : 'Sortear'}</V2Button>
+              <V2Button onClick={handleDraw} disabled={drawing || !canDraw}>{drawing ? 'Sorteando…' : 'Sortear'}</V2Button>
             </DialogFooter>
           </DialogContent>
         </Dialog>
@@ -667,6 +709,7 @@ function GameRow({ gdId, game, isOwner }) {
           Q{game.court}
         </span>
       )}
+      <GameKindBadge kind={gameKindOf(game)} className="shrink-0" />
       <div className={`flex-1 text-right ${winA ? 'font-bold text-green-700' : 'font-medium text-gray-600'}`}>{sideNames(game.side_a)}</div>
       <div className="flex items-center gap-1">
         <Input type="number" min={0} value={a} onChange={(e) => setA(e.target.value)} onBlur={saveScore}
@@ -752,13 +795,12 @@ function ManualGameDialog({ open, onClose, gdId, participants }) {
       <DialogContent>
         <DialogHeader>
           <DialogTitle>Inserir partida</DialogTitle>
-          <DialogDescription>Defina os jogadores de cada lado (individual ou dupla).</DialogDescription>
+          <DialogDescription>
+            Defina se é de duplas ou simples e os jogadores de cada lado. Simples e duplas têm rankings do dia separados.
+          </DialogDescription>
         </DialogHeader>
         <div className="space-y-4">
-          <div className="flex gap-2">
-            <V2Button variant={kind === 'doubles' ? 'default' : 'outline'} size="sm" onClick={() => setKind('doubles')}>Dupla</V2Button>
-            <V2Button variant={kind === 'singles' ? 'default' : 'outline'} size="sm" onClick={() => setKind('singles')}>Individual</V2Button>
-          </div>
+          <GameKindToggle value={kind} onChange={setKind} />
           <div className="grid grid-cols-[1fr_auto_1fr] items-start gap-3">
             <div className="space-y-2">
               <Label className="text-xs uppercase text-gray-500">Lado A</Label>
@@ -848,9 +890,10 @@ export function RankingSection({ gameDay, participants }) {
       <div className="space-y-3">
         <p className="text-sm text-gray-500">
           Publique os resultados decididos no ranking geral da plataforma — tanto as rodadas
-          sorteadas quanto as partidas avulsas contam igualmente. Partidas em que todos os
-          atletas são do mesmo clube também entram no ranking desse clube. Apenas convidados
-          sem conta na plataforma são ignorados.
+          sorteadas quanto as partidas avulsas contam igualmente. Cada jogo vai para o lugar certo:
+          o <strong>simples</strong> entra no rating de simples; as <strong>duplas</strong>, no rating
+          de duplas e no ranking de duplas. Partidas em que todos os atletas são do mesmo clube
+          também entram no ranking desse clube. Apenas convidados sem conta na plataforma são ignorados.
         </p>
         <p className="text-xs text-gray-400">
           {decidedCount} jogo(s) decidido(s){publishedCount > 0 ? ` · ${publishedCount} espelhado(s) no ranking` : ''}.

@@ -315,7 +315,9 @@ describe('⭐ drawAmericanoLiveRoundForFreeCourts', () => {
     const opts = { courts: 2, games: [], rng };
     const previsto = forecastAmericanoLiveMatches(entrada, opts)
       .filter((b) => !b.conditional)
-      .map((b) => ({ court: b.court, ids: b.players.map((p) => p.id), side_a: b.side_a, side_b: b.side_b }));
+      .map((b) => ({
+        court: b.court, kind: b.kind, ids: b.players.map((p) => p.id), side_a: b.side_a, side_b: b.side_b,
+      }));
     expect(drawAmericanoLiveRoundForFreeCourts(entrada, opts)).toEqual(previsto);
   });
 

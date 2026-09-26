@@ -503,3 +503,84 @@ nenhuma. Agora:
 **Zero.** Nenhuma coleção, campo, índice, regra, função ou migração. Duas
 chaves novas em `platform_settings/feature_flags` quando o admin as ligar —
 documento que já existia, sob a regra de sempre.
+
+## 11. Jogo simples ou em duplas, e um ranking do dia por tipo (Onda CF)
+
+> Pedido: *"em dia de jogo, em todas as modalidades que restam, devem ser
+> possível criar jogo simples ou em duplas, manualmente ou por sorteio,
+> observando a ordem. Se houver jogos simples e em duplas deve haver um
+> ranking do dia independente para cada um, e os resultados devem entrar para
+> ranking e rating da plataforma que seja apropriado, se simples ou duplas."*
+
+### 11.1. Onde se escolhe
+
+| Formato | Por sorteio | Manual |
+|---|---|---|
+| **Play** | cada QUADRA tem "Duplas \| Simples"; "Criar jogo", "Criar próxima partida" e "Sortear todas as quadras" respeitam o tipo de cada uma | "Criação manual" com o seletor |
+| **Americano aprimorado** | o mesmo seletor na quadra LIVRE, antes de "Gerar próxima partida"; a rodada inteira respeita cada quadra | "Manual" com o seletor (com ou sem placar) |
+| **Americano (grade)** | "Tipo de jogo" no diálogo de sorteio | "Inserir partida" com o seletor |
+| Mexicano, Rei da Quadra | sempre duplas — é o que define os dois formatos | "Inserir partida" aceita os dois |
+
+O seletor é UM componente (`GameKindToggle`) em todas as telas, painel e
+telão. O organizador legado do clube, que já tinha "Individual" na partida
+avulsa, ganhou o mesmo seletor e o sorteio de simples — nada gravado mudou.
+
+### 11.2. "Observando a ordem"
+
+- **Play e Americano aprimorado:** a quadra de simples leva os DOIS primeiros
+  da fila (com o rodízio equilibrado, o primeiro joga sempre e o adversário
+  varia dentro da janela). No Americano aprimorado o adversário é o que o
+  primeiro MENOS enfrentou em simples, com nível parecido e perto do topo.
+- **Americano de grade:** em cada rodada joga quem MENOS jogou (em empate,
+  quem mais descansou); os confrontos evitam repetir adversário e preferem
+  níveis parelhos. Com número par e `n − 1` rodadas, sai o "todos contra
+  todos" sem repetição.
+- **Dupla vinculada não vale no simples.** Com o vínculo, "entram juntos"
+  poria a dupla um contra o outro; a fila é lida sem ele
+  (`withoutPartnerLinks`), e o sorteio de grade AVISA quando havia vínculo.
+
+### 11.3. O tipo de cada quadra
+
+A quadra "lembra" o tipo do ÚLTIMO jogo criado nela (`courtKindsFromGames`) —
+DERIVADO dos jogos, então o painel de quem organiza e o telão enxergam o mesmo
+sem nenhum campo novo no dia de jogo. A escolha que ainda não virou jogo fica
+na tela (`useCourtKinds`); ao criar a partida, o tipo passa a morar nela. A
+previsão e o sorteio saem da MESMA simulação com o tipo por quadra
+(`simulatePlaySequence` / `forecastAmericanoLiveMatches`, parâmetro
+`courtKinds`): o que se anuncia é o que se cria. Sem quadra de simples, o
+caminho é bit a bit o de antes (há teste travando).
+
+### 11.4. O ranking do dia
+
+`computeGameDayLeaderboards` devolve **uma tabela por tipo**. Com um tipo só,
+é a tabela de sempre, com todos os participantes. Com os dois, cada tabela
+traz quem jogou aquele tipo (quem ainda não jogou nada aparece na de duplas).
+Vale no painel (`GameDayLeaderboard`, o mesmo nas três origens e no legado) e
+no telão. O **ranking da casa** também separa: o dia vira um evento por tipo
+(`gameDayHouseEvents`), cada um com a sua colocação — e continua contando como
+um dia.
+
+### 11.5. O ranking e o rating da plataforma
+
+Já funcionava, e agora está provado: o espelho em `club_event_games` grava
+`kind: 'singles'` com um uid por lado (`inferKind`), a regra de sempre aceita
+(e recusa o formato torto), e o servidor manda o simples para o rating de
+simples, o ELO geral o soma como sempre somou o simples de torneio, e o
+ranking de duplas o ignora. Ver `docs/18-RANKINGS.md` §1.
+
+### 11.6. De quebra: os botões do cabeçalho no celular
+
+A conferência visual desta onda achou um defeito antigo: no cabeçalho dos
+cartões recolhíveis (`V2CollapsibleCard`), as ações não quebravam linha — no
+celular, "Criar próximo jogo" e "Sortear todas as quadras" eram CORTADOS pela
+borda do cartão. Agora, quando não cabem ao lado do título, descem para a
+linha de baixo. No computador, onde cabem, nada muda. Vale para todo cartão
+que usa o componente.
+
+### 11.7. Impacto no banco
+
+**Zero coleção, zero campo novo, zero índice, zero regra, zero função.** O
+campo `kind` do jogo já existia e já aceitava `singles`; o dia de jogo não
+ganhou nada. Provas: 7 asserções no emulador
+(`tests/rules/gameDaySingles.rules.test.js`) e 5 testes dos motores do
+servidor (`functions/singlesRankings.test.js`).

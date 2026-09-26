@@ -17,6 +17,19 @@
 Os três saem **dos mesmos jogos**: `tournament_matches` (torneios públicos e
 encerrados) + `club_event_games` (dias de jogo e eventos de clube publicados).
 
+**Simples × duplas (Onda CF).** O que decide para onde vai um jogo é o número
+de atletas de cada lado, nos três motores, sem campo nenhum a conferir:
+
+| Jogo | ELO / nacional | Rating 2.0–8.0 | Ranking de duplas |
+|---|---|---|---|
+| 1 × 1 (simples) | entra | bloco **simples** | **não** entra |
+| 2 × 2 (duplas) | entra | bloco **duplas** | entra |
+
+Desde a Onda CF o dia de jogo cria jogo simples no Play, no Americano e no
+Americano aprimorado; publicado, o espelho grava `kind: 'singles'` com um uid
+por lado. Nenhuma linha mudou no servidor — os motores já separavam, e
+`functions/singlesRankings.test.js` prova o caminho inteiro.
+
 O ranking **interno de clube** é outra coisa, com o seu próprio conjunto de
 gatilhos (`functions/clubRanking.js`), e não mudou.
 

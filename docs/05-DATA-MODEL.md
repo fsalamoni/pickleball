@@ -605,6 +605,15 @@ Subcoleções:
   `source: 'owner'|'invited'|'joined'|'guest'`
 - `game_days/{id}/games/{gid}` — `round`, `court`, `kind`, `side_a`/`side_b`
   (`[{id,name}]`), `score_a`/`score_b`, `order`
+  - **`kind` (2026-09-26, Onda CF):** `'doubles'` (padrão, 2 × 2) ou
+    `'singles'` (1 × 1). O campo sempre existiu; passou a receber `singles`
+    também no Play, no Americano aprimorado e no sorteio do Americano (o
+    organizador legado do clube já gravava). Quem decide o tipo de um jogo é
+    o NÚMERO DE ATLETAS por lado (`gameKindOf`) — a mesma regra da publicação
+    e do servidor. Jogo antigo sem `kind` é duplas. Nenhum campo novo no dia
+    de jogo: o tipo de cada QUADRA é derivado do último jogo dela
+    (`courtKindsFromGames`). O espelho em `club_event_games` grava
+    `kind: 'singles'` com um uid por lado, formato que a regra já validava.
 
 Regras: read pelo dono/membros (ou qualquer um se público); escrita plena do
 dono; um atleta se auto-inclui como membro/participante ao "Participar" de um

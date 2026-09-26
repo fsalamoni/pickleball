@@ -222,6 +222,7 @@ Estes princípios vieram de bugs reais que custaram horas pra arrumar. São ineg
 **"Cliquei no jogador em quadra: quero escolher entre deixá-lo de fora e trocá-lo por alguém"** → é o que acontece — o clique abre `CourtPlayerDialog` (exportado de `AthletePlayOrganizer.jsx`), com as duas opções; a lista de quem pode entrar vem de `eligibleSwapReplacements` e é reconferida no serviço. Vale no painel E no telão. Ver `docs/14-DIA-DE-JOGO-TELAO.md`
 **"No Americano aprimorado, como corrijo a quadra: trocar quem está jogando ou desfazer o sorteio?"** → tocando no NOME de quem está em quadra (abre `CourtPlayerDialog`: deixar de fora × substituir) e em **Cancelar partida** (devolve os quatro à fila, sem placar). Vale no painel E no telão — antes só existia no telão, e desfazer um sorteio no painel exigia lançar um resultado que não aconteceu e apagá-lo depois, ou seja, um placar falso atravessando o ranking do dia. `cancelPlayGame` **recusa** partida que já tem placar: aquela sai pela lista de partidas concluídas, que re-sincroniza o ranking. Ver `docs/17-DIA-DE-JOGO-AMERICANO-APRIMORADO.md` §6b
 **"No Americano aprimorado, por que não saem todas as duplas possíveis?"** → porque sortear quadra a quadra é GULOSO: a primeira quadra leva o melhor quarteto e a última herda o que sobrou — e com atletas = 4 × quadras a última nem tem escolha. Medido em dia inteiro com elenco estável: 8 em 2 quadras formavam **12 das 28 duplas**; 12 em 3, **18 de 66**. Agora a rodada é escolhida como um TODO (`bestAmericanoLiveRound`) e dá 28/28 e 66/66. Os grupos de uma rodada são DISJUNTOS, então o custo da rodada é a soma dos custos dos grupos sobre o mesmo histórico — é isso que torna a otimização barata. Com UMA quadra livre nada disso roda: o caminho é o de antes, partida a partida. E a frente da fila é obrigatória na rodada, senão a busca por variedade empurra sempre a mesma pessoa para fora. Ver `docs/17-DIA-DE-JOGO-AMERICANO-APRIMORADO.md` §4b
+**"Dá para ter jogo SIMPLES (1 × 1) no dia de jogo?"** → ⭐ sim, no Play, no Americano e no Americano aprimorado (Onda CF), por sorteio ou à mão, respeitando a fila. No Play e no Americano aprimorado cada QUADRA tem "Duplas | Simples" (`GameKindToggle`) e **lembra** o tipo do último jogo dela (`courtKindsFromGames` — derivado dos jogos, nenhum campo novo no dia); no Americano o tipo é escolhido no sorteio. O tipo de um jogo sai do NÚMERO DE ATLETAS por lado (`gameKindOf`, `modules/games/domain/gameKind.js`) — a mesma regra da publicação e do servidor. Três coisas que não podem regredir: (1) com simples e duplas no mesmo dia são DOIS rankings do dia — **nunca** chame `computeGameDayLeaderboard` (singular) numa tela, use `computeGameDayLeaderboards` (guarda de fonte travando); (2) a previsão e o sorteio recebem `courtKinds` da MESMA conta (`useCourtKinds`) nas três telas quadra a quadra, senão uma anuncia simples e a outra cria duplas; (3) no simples a dupla vinculada NÃO vale (`withoutPartnerLinks`) — com ela, "entram juntos" poria a dupla um contra o outro. Publicado, o simples vai para o rating de simples, soma no ELO geral e fica fora do ranking de duplas — os motores do servidor já separavam por tamanho do lado (provado em `functions/singlesRankings.test.js`). Ver `docs/25-DIA-DE-JOGO-COMO-MODULO.md` §11
 **"Quais formatos de dia de jogo aparecem para escolher?"** → ⭐ Americano e Play, sempre; **Americano aprimorado**, **Mexicano** e **Rei da Quadra** só com a PRÓPRIA flag (`gameday_americano_live`, `gameday_mexicano`, `gameday_king_of_court`, todas default OFF — Onda CE). Fonte ÚNICA: `gameDayFormatChoices` (`modules/clubs/domain/gameDayFormats.js`) via `useGameDayFormatChoices` — **nunca** escreva a lista numa tela nem use `DRAW_FORMATS` nela (o guarda em `diaDeJogoUniforme.test.js` varre todas as telas). E a regra que não pode regredir: o formato que o dia JÁ TEM entra sempre no seletor dele, mesmo com a flag desligada — flag tira a opção de ESCOLHER daqui para frente, nunca a de manter o que está gravado. Ver `docs/25-DIA-DE-JOGO-COMO-MODULO.md` §10
 **"Quero um Americano em que as partidas saiam UMA A UMA, quadra por quadra, mas COM placar"** → é o **Americano aprimorado** (`americano_live`), atrás da flag `gameday_americano_live` (default OFF). Organização do Play (fila, pausa, dupla fixa, entra/sai a qualquer hora) + placar, ranking do dia e publicação no ranking/rating/DUPR do Americano. O fluxo é de DOIS passos: **"Lançar resultado"** libera a quadra, e só então aparece **"Gerar próxima partida"** — não junte os dois. Código em `src/modules/games/domain/americanoLive.js` e `src/v2/components/games/AthleteAmericanoLiveOrganizer.jsx`; doc em `docs/17-DIA-DE-JOGO-AMERICANO-APRIMORADO.md`
 **"Criei uma tela nova de dia de jogo ou torneio"** → ela entra em `<Isolada>` no `V2App.jsx`. 🐞 O `ErrorBoundary` global fica **acima do Router** e **nunca reseta**: um defeito em UMA tela substituía o aplicativo inteiro por "Algo deu errado" — sem barra lateral, sem navegação, sem volta a não ser recarregar. O mecanismo certo já existia (`GamificationErrorBoundary`) mas só a gamificação o usava, e ela está atrás de flag DESLIGADA — a ferramenta guardada onde não fazia falta, a mesma família do defeito da Onda AU. Guarda em `src/core/guards/telaIsolada.test.js`. Ver `docs/28-ERRO-NAO-DERRUBA-O-APP.md`
@@ -510,6 +511,24 @@ chore(deps): bump firebase to 12.x
 > memory topic `picklerush-sync-2026-08.md`.
 >
 > **Destaques por onda**:
+>
+> - **Onda CF — Jogo simples ou em duplas, e um ranking do dia por tipo**
+>   (2026-09-26): *"em todas as modalidades que restam, devem ser possível
+>   criar jogo simples ou em duplas, manualmente ou por sorteio, observando a
+>   ordem… um ranking do dia independente para cada um… e os resultados devem
+>   entrar para ranking e rating da plataforma que seja apropriado"*. No Play e
+>   no Americano aprimorado cada QUADRA tem "Duplas | Simples" e lembra o tipo
+>   do último jogo; na de simples entram os dois primeiros da fila (no
+>   aprimorado, o adversário é o que o primeiro menos enfrentou, com nível
+>   parecido). No Americano o tipo se escolhe no sorteio — o "todos contra
+>   todos" de simples, sem repetir adversário enquanto der. A criação manual
+>   tem os dois tipos em todo formato, e o legado do clube ganhou o mesmo. Com
+>   os dois tipos no dia, o ranking do dia vira DUAS tabelas (painel e telão),
+>   e o ranking da casa separa as colocações. A publicação já levava o simples
+>   ao rating de simples e para fora do ranking de duplas — agora está provado
+>   no emulador e nos motores do servidor. De quebra, o cabeçalho dos cartões
+>   recolhíveis passou a quebrar linha: no celular, "Criar próximo jogo" era
+>   cortado pela borda. **Banco: zero** (o campo `kind` do jogo já existia).
 >
 > - **Onda CE — Mexicano e Rei da Quadra, cada um com a sua flag**
 >   (2026-09-26): *"coloque as modalidades mexicano e rei da quadra em uma flag
@@ -2172,7 +2191,7 @@ chore(deps): bump firebase to 12.x
 
 | Métrica | Valor | Delta do início do agente |
 |---|---|---|
-| **Testes Vitest** | **5962 passing** (363 arquivos) + 386 asserções de regras do Firestore no emulador (+ 17 do Storage) | +5169 (era 408) |
+| **Testes Vitest** | **6061 passing** (371 arquivos) + 393 asserções de regras do Firestore no emulador (+ 17 do Storage) | +5653 (era 408) |
 | **Lint errors** | 0 | era 30+ |
 | **Módulos** | 21 (+`help` — conteúdo dos tutoriais em tela) (`games` e `legal` saíram como `src/modules/` mas continuam como pastas oficiais — **rating virou módulo oficial** com domain/services/hooks/components) | +4 (coaches, circuits, games, legal) |
 | **V2 pages** | 82 (+V2GameDayTelao — telão, fora do V2Layout; +V2Help — central de ajuda; +V2ArenaKiosk — totem da recepção, também fora do V2Layout; +V2ArenaCheckin; +V2ArenaAttendance) | +58 |

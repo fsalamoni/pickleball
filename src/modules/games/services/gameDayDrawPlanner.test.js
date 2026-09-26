@@ -120,3 +120,64 @@ describe('⭐ buildGameDayDraw — a mesma conta para toda origem', () => {
     expect(res.payload.length).toBeGreaterThan(0);
   });
 });
+
+/* ------------------------------------------------------------------ */
+/*  Onda CF — o sorteio em SIMPLES                                     */
+/* ------------------------------------------------------------------ */
+describe('⭐ buildGameDayDraw em simples', () => {
+  it('⭐ Americano de simples: todo jogo 1 × 1, gravado como `singles`, com o uid', async () => {
+    const r = await buildGameDayDraw({
+      format: GAME_DAY_FORMAT.AMERICANO, participants: oito(), rounds: 2, seed: 's', kind: 'singles',
+    });
+    expect(r.kind).toBe('singles');
+    expect(r.label).toBe('Americano de simples');
+    expect(r.payload).toHaveLength(8);
+    r.payload.forEach((g) => {
+      expect(g.kind).toBe('singles');
+      expect(g.side_a).toHaveLength(1);
+      expect(g.side_b).toHaveLength(1);
+      expect(g.side_a[0].user_id).toMatch(/^u_/);
+    });
+  });
+
+  it('⭐ sem `kind`, o sorteio é o de duplas de sempre', async () => {
+    const r = await buildGameDayDraw({ format: GAME_DAY_FORMAT.AMERICANO, participants: oito(), rounds: 1, seed: 'd' });
+    expect(r.kind).toBe('doubles');
+    r.payload.forEach((g) => { expect(g.kind).toBe('doubles'); expect(g.side_a).toHaveLength(2); });
+    expect(r.fixedPairsReason).toBeNull();
+  });
+
+  it('simples funciona com 2 ou 3 participantes (duplas exige 4)', async () => {
+    const r = await buildGameDayDraw({
+      format: GAME_DAY_FORMAT.AMERICANO, participants: [P('a'), P('b'), P('c')], rounds: 3, seed: 't', kind: 'singles',
+    });
+    expect(r.payload.length).toBeGreaterThan(0);
+  });
+
+  it('⭐ Mexicano e Rei da Quadra ignoram o pedido de simples (são duplas por definição)', async () => {
+    const r = await buildGameDayDraw({
+      format: GAME_DAY_FORMAT.MEXICANO, participants: oito(), rounds: 1, seed: 'm', kind: 'singles',
+    });
+    expect(r.kind).toBe('doubles');
+    r.payload.forEach((g) => expect(g.side_a).toHaveLength(2));
+  });
+
+  it('⭐ com dupla vinculada, o simples AVISA que o vínculo não vale', async () => {
+    const parts = oito();
+    parts[0].partner_id = 'b';
+    parts[1].partner_id = 'a';
+    const r = await buildGameDayDraw({
+      format: GAME_DAY_FORMAT.AMERICANO, participants: parts, rounds: 1, seed: 'v', kind: 'singles',
+    });
+    expect(r.fixedPairsIgnored).toBe(true);
+    expect(r.fixedPairsReason).toBe('singles');
+  });
+
+  it('o aditivo continua a numeração das rodadas', async () => {
+    const existentes = [{ id: 'g1', round: 3, side_a: [{ id: 'a' }, { id: 'b' }], side_b: [{ id: 'c' }, { id: 'd' }], score_a: 11, score_b: 2 }];
+    const r = await buildGameDayDraw({
+      format: GAME_DAY_FORMAT.AMERICANO, participants: oito(), games: existentes, rounds: 1, seed: 'x', kind: 'singles',
+    });
+    expect(Math.min(...r.payload.map((g) => g.round))).toBe(4);
+  });
+});

@@ -36,7 +36,9 @@ import {
 import { useAuth } from '@/core/lib/FirebaseAuthContext';
 import { useAthletes } from '@/modules/athletes/hooks/useAthletes';
 import { PARTICIPANT_SOURCE, INVITE_STATUS, GAME_DAY_LIMITS } from '@/modules/clubs/domain/constants';
-import { suggestRounds } from '@/modules/clubs/domain/gameDayDraw';
+import { suggestRounds, suggestSinglesRounds } from '@/modules/clubs/domain/gameDayDraw';
+import { GAME_KIND, slotsForKind } from '@/modules/games/domain/gameKind';
+import { GameKindToggle } from '@/v2/components/games/GameKindToggle';
 import { splitGamesByResult } from '@/modules/clubs/domain/gameDayDrawMerge';
 import { buildGameDayDraw } from '@/modules/games/services/gameDayDrawPlanner';
 import {
@@ -375,6 +377,11 @@ function GamesSection({ eventId, dateId, participants }) {
   // que vale daqui para frente é o que a plataforma liberou.
   const formatosDoSorteio = useGameDayFormatChoices({ scope: 'draw' });
   const isAmericano = format === GAME_DAY_FORMAT.AMERICANO;
+  // Simples ou duplas no sorteio (Onda CF) — o mesmo do módulo: só o
+  // Americano tem simples. O que se grava continua no lugar de sempre.
+  const [drawKind, setDrawKind] = useState(GAME_KIND.DOUBLES);
+  const simples = isAmericano && drawKind === GAME_KIND.SINGLES;
+  const porJogo = slotsForKind(simples ? GAME_KIND.SINGLES : GAME_KIND.DOUBLES);
   // Quadras simultâneas disponíveis, como TEXTO livre (vazio = automático).
   const [courtsText, setCourtsText] = useState('');
   const [drawOpen, setDrawOpen] = useState(false);
@@ -384,17 +391,24 @@ function GamesSection({ eventId, dateId, participants }) {
   const [drawing, setDrawing] = useState(false);
 
   // Limite FÍSICO de jogos simultâneos (não limita o que se pode digitar).
-  const maxCourts = Math.max(1, Math.floor(participants.length / 4));
+  const maxCourts = Math.max(1, Math.floor(participants.length / porJogo));
   const typedCourts = Math.floor(Number(courtsText));
   const courtsValue = Number.isFinite(typedCourts) && typedCourts > 0 ? typedCourts : null;
   const effectiveCourts = isAmericano ? courtsValue : null;
-  const effectiveRounds = rounds || suggestRounds(participants.length, effectiveCourts) || 3;
+  const effectiveRounds = rounds
+    || (simples
+      ? suggestSinglesRounds(participants.length, effectiveCourts)
+      : suggestRounds(participants.length, effectiveCourts))
+    || 3;
   // ⚠️ O MESMO defeito da Onda AW, vivo no caminho LEGADO: o `orderBase` sai
   // dos jogos já carregados. Com a consulta falhando ele vale 0, e a rodada
   // nova nasce com a MESMA numeração das que já aconteceram — duas "rodada 1"
   // no mesmo dia, sem erro nenhum na tela. Comando sobre estado desconhecido
   // não é renderizado (nunca só desabilitado).
-  const canDraw = participants.length >= 4 && !falhouJogos;
+  const canDraw = participants.length >= porJogo && !falhouJogos;
+  // O diálogo abre com 2 (dá um simples); o botão de sortear confere o
+  // mínimo do tipo escolhido.
+  const canOpenDraw = participants.length >= 2 && !falhouJogos;
 
   const { scored: scoredGames, unscored: unscoredGames } = useMemo(
     () => splitGamesByResult(games),
@@ -416,12 +430,15 @@ function GamesSection({ eventId, dateId, participants }) {
       const res = await buildGameDayDraw({
         format, participants, games, replaceUnscored,
         rounds: effectiveRounds, courts: effectiveCourts,
+        kind: simples ? GAME_KIND.SINGLES : GAME_KIND.DOUBLES,
       });
       await appendGames.mutateAsync({
         plan: { removeIds: res.removeIds, games: res.payload, orderBase: res.orderBase },
         dateId,
       });
-      if (res.fixedPairsIgnored) {
+      if (res.fixedPairsReason === 'singles') {
+        toast.warning('No jogo simples cada um joga por si — as duplas vinculadas não valem neste sorteio.');
+      } else if (res.fixedPairsIgnored) {
         toast.warning(`${res.label} monta as duplas pela classificação de cada rodada — as duplas vinculadas não valem neste formato.`);
       }
       toast.success(`Sorteio (${res.label}): ${res.payload.length} jogo(s) adicionado(s).`);
@@ -473,7 +490,7 @@ function GamesSection({ eventId, dateId, participants }) {
           <Button size="sm" variant="outline" onClick={() => setManualOpen(true)} disabled={participants.length < 2}>
             <Plus className="mr-1.5 h-4 w-4" /> Inserir partida
           </Button>
-          <Button size="sm" onClick={openDraw} disabled={!canDraw}>
+          <Button size="sm" onClick={openDraw} disabled={!canOpenDraw}>
             <Shuffle className="mr-1.5 h-4 w-4" /> Sortear jogos
           </Button>
           {games.length > 0 && (
@@ -485,9 +502,10 @@ function GamesSection({ eventId, dateId, participants }) {
       )}
     >
       <div className="space-y-4">
-        {!canDraw && !falhouJogos && (
+        {participants.length < 4 && !falhouJogos && (
           <p className="text-xs text-gray-500">
-            Insira ao menos 4 participantes para sortear jogos de duplas. Para partidas individuais avulsas, bastam 2.
+            Jogos de duplas pedem ao menos 4 participantes. Com 2 ou 3 já dá para jogo simples — no sorteio ou em
+            Inserir partida.
           </p>
         )}
 
@@ -529,9 +547,10 @@ function GamesSection({ eventId, dateId, participants }) {
             <DialogHeader>
               <DialogTitle>Sortear jogos do dia</DialogTitle>
               <DialogDescription>
-                Gera jogos de duplas com os {participants.length} participantes atuais, na lógica do Americano —
-                priorizando parcerias e adversários inéditos, equilibrando a participação. Os novos jogos são
-                ADICIONADOS aos existentes.
+                {simples
+                  ? `Gera jogos simples (1 × 1) com os ${participants.length} participantes atuais — quem menos jogou entra primeiro, sem repetir adversário enquanto houver outro para enfrentar.`
+                  : `Gera jogos de duplas com os ${participants.length} participantes atuais, na lógica do Americano — priorizando parcerias e adversários inéditos, equilibrando a participação.`}
+                {' '}Os novos jogos são ADICIONADOS aos existentes.
                 {scoredGames.length > 0 && ' Os jogos com resultado lançado são sempre mantidos.'}
               </DialogDescription>
             </DialogHeader>
@@ -570,6 +589,20 @@ function GamesSection({ eventId, dateId, participants }) {
                   </select>
                 </div>
               )}
+              {isAmericano && (
+                <div className="space-y-1">
+                  <Label>Tipo de jogo</Label>
+                  <div><GameKindToggle value={drawKind} onChange={setDrawKind} /></div>
+                  <p className="text-xs text-gray-500">Simples e duplas têm rankings do dia separados.</p>
+                </div>
+              )}
+              {!canDraw && (
+                <p className="rounded-lg bg-amber-50 px-3 py-2 text-xs text-amber-800">
+                  {simples
+                    ? 'O jogo simples pede ao menos 2 participantes.'
+                    : `Jogos de duplas pedem ao menos 4 participantes — há ${participants.length}.${isAmericano ? ' Troque para Simples para sortear um contra um.' : ''}`}
+                </p>
+              )}
               <Label htmlFor="rounds">Número de rodadas</Label>
               <Input
                 id="rounds"
@@ -603,7 +636,7 @@ function GamesSection({ eventId, dateId, participants }) {
             </div>
             <DialogFooter>
               <Button variant="outline" onClick={() => setDrawOpen(false)} disabled={drawing}>Cancelar</Button>
-              <Button onClick={handleDraw} disabled={drawing}>{drawing ? 'Sorteando…' : 'Sortear'}</Button>
+              <Button onClick={handleDraw} disabled={drawing || !canDraw}>{drawing ? 'Sorteando…' : 'Sortear'}</Button>
             </DialogFooter>
           </DialogContent>
         </Dialog>
@@ -794,13 +827,12 @@ function ManualGameDialog({ open, onClose, eventId, dateId, participants }) {
       <DialogContent>
         <DialogHeader>
           <DialogTitle>Inserir partida</DialogTitle>
-          <DialogDescription>Defina os jogadores de cada lado (individual ou dupla).</DialogDescription>
+          <DialogDescription>
+            Defina se é de duplas ou simples e os jogadores de cada lado. Simples e duplas têm rankings do dia separados.
+          </DialogDescription>
         </DialogHeader>
         <div className="space-y-4">
-          <div className="flex gap-2">
-            <Button variant={kind === 'doubles' ? 'default' : 'outline'} size="sm" onClick={() => setKind('doubles')}>Dupla</Button>
-            <Button variant={kind === 'singles' ? 'default' : 'outline'} size="sm" onClick={() => setKind('singles')}>Individual</Button>
-          </div>
+          <GameKindToggle value={kind} onChange={setKind} />
           <div className="grid grid-cols-[1fr_auto_1fr] items-start gap-3">
             <div className="space-y-2">
               <Label className="text-xs uppercase text-gray-500">Lado A</Label>
