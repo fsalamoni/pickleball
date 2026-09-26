@@ -658,6 +658,17 @@ function kindForCourt(kind, games, court, courts) {
   return kindOfCourt(courtKindsFromGames(games, courts), court);
 }
 
+/**
+ * O tipo que pede MENOS gente entre as quadras livres — é o que a mensagem de
+ * "falta gente" da rodada tem de citar: num dia só de duplas, 4; com uma
+ * quadra de simples livre, 2.
+ */
+function tipoMaisBarato(livres, tipos) {
+  return (livres || []).some((c) => kindOfCourt(tipos, c) === GAME_KIND.SINGLES)
+    ? GAME_KIND.SINGLES
+    : GAME_KIND.DOUBLES;
+}
+
 /** A mensagem de "falta gente" certa para o tipo da partida. */
 function faltaGente(kind, partida = 'o próximo jogo') {
   return `Não há jogadores disponíveis suficientes (mínimo ${slotsForKind(kind)}) para criar ${partida}.`;
@@ -787,7 +798,7 @@ export async function createPlayRoundForFreeCourts(gdId, actor, { courtKinds = n
     courts: totalCourts, games, slots: PLAY_SLOTS, history: historico, courtKinds: tipos,
   });
   if (rodada.length === 0) {
-    throw new Error(faltaGente(GAME_KIND.SINGLES, 'uma partida'));
+    throw new Error(faltaGente(tipoMaisBarato(livres, tipos), 'uma partida'));
   }
 
   const byId = new Map(participants.map((p) => [p.id, p]));
@@ -1439,7 +1450,7 @@ export async function createAmericanoLiveRoundForFreeCourts(gdId, actor, { court
     courts: totalCourts, games, levels: niveis, slots: PLAY_SLOTS, courtKinds: tipos,
   });
   if (rodada.length === 0) {
-    throw new Error(faltaGente(GAME_KIND.SINGLES, 'uma partida'));
+    throw new Error(faltaGente(tipoMaisBarato(livres, tipos), 'uma partida'));
   }
 
   const byId = new Map(participants.map((p) => [p.id, p]));

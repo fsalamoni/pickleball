@@ -184,3 +184,15 @@ describe('⭐ publicação: o simples vai ao ranking como simples', () => {
     expect(espelho).toMatchObject({ kind: 'singles', side_a_ids: ['u_a'], side_b_ids: ['u_b'], winner_side: 'a' });
   });
 });
+
+describe('a mensagem de "falta gente" da rodada', () => {
+  it('num dia só de duplas, cita 4 — como sempre', async () => {
+    h.dados.participants = ['a', 'b', 'c'].map(pessoa);
+    await expect(createPlayRoundForFreeCourts('gd1', ACTOR)).rejects.toThrow(/mínimo 4/);
+  });
+
+  it('com uma quadra de simples livre, cita 2', async () => {
+    h.dados.participants = [pessoa('a', 0)];
+    await expect(createPlayRoundForFreeCourts('gd1', ACTOR, { courtKinds: { 2: 'singles' } })).rejects.toThrow(/mínimo 2/);
+  });
+});
