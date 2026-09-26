@@ -437,3 +437,69 @@ fazer**, e a mensagem por quadra distingue *"sem atletas no dia ainda"* de
 ### 9.6. Impacto no banco
 
 **Zero.** Nenhuma coleção, campo, índice, regra, função ou migração.
+
+## 10. Os formatos opcionais: Mexicano e Rei da Quadra atrás de flag (Onda CE)
+
+> Pedido: *"Coloque as modalidades mexicano e rei da quadra em uma flag própria
+> para cada uma, a ser ativada pelo admin da plataforma se assim quiser. Isso
+> deve ser ajustado em todos os formatos de dia de jogo. Não precisa modificar
+> a gravação de legados, deve alterar daqui para frente."*
+
+### 10.1. As flags
+
+| Flag | Formato | Padrão |
+|---|---|---|
+| `gameday_americano_live` | Americano aprimorado | OFF (já existia) |
+| `gameday_mexicano` | Mexicano | **OFF** (nova) |
+| `gameday_king_of_court` | Rei da Quadra | **OFF** (nova) |
+
+Americano e Play estão sempre disponíveis. Cada flag liga **só o seu**
+formato — o admin pode oferecer o Mexicano sem o Rei da Quadra. As três ficam
+juntas no grupo **Dia de jogo** do painel de funcionalidades.
+
+### 10.2. O que a flag decide (e o que não decide)
+
+A flag decide se o formato **aparece para ser escolhido**, daqui para frente,
+em **todo** lugar onde se escolhe formato:
+
+| Onde | Tela |
+|---|---|
+| Criar dia de jogo (atleta) | `CreateGameDayDialog` |
+| Trocar o formato de um dia | `GameDaySettingsCard` (vale nas três origens) |
+| Criar/editar dia de jogo da arena | `ArenaGameDayDialog` |
+| Data nova de evento de clube | `V2EventDatesPanel` |
+| Publicar/editar jogo aberto | `OpenMatchForm` |
+| Sortear a grade (atleta, arena e clube modular) | `AthleteGameDayOrganizer` |
+| Sortear a grade (data LEGADA de clube) | `GameDayOrganizer` |
+
+O que ela **não** faz, de propósito: tirar nada de quem já usa. Um dia de jogo
+gravado como Mexicano ou Rei da Quadra continua abrindo, sorteando, lançando
+placar, publicando no ranking e aparecendo no telão, e o seletor **dele**
+mostra o formato gravado mesmo com a flag desligada — senão o select exibiria
+outro formato e "salvar" trocaria o dia. Nenhum dado é lido de outro jeito,
+nenhum é regravado. No diálogo de sorteio, com só o Americano disponível, o
+seletor de formato nem aparece (uma opção só é ruído).
+
+A data **legada** de clube não grava formato; ali o sorteio passa a oferecer
+só o que a plataforma liberou.
+
+### 10.3. Uma fonte só
+
+A lista estava escrita em **sete** telas, cada uma com a sua ordem e as suas
+flags — o jogo aberto, por exemplo, oferecia Mexicano e Rei da Quadra sem flag
+nenhuma. Agora:
+
+- **domínio** — `gameDayFormatChoices({ current, scope, flags })`
+  (`modules/clubs/domain/gameDayFormats.js`), pura e testada;
+  `scope: 'draw'` devolve só os de grade;
+- **hook** — `useGameDayFormatChoices({ current, scope })`
+  (`modules/games/hooks/`), o único lugar que lê as três flags;
+- **guarda** — `diaDeJogoUniforme.test.js` varre TODAS as telas (não uma lista
+  de quem alguém lembrou) e reprova quem usar `DRAW_FORMATS`, ler as flags de
+  formato por fora do hook ou escrever uma lista com os formatos opcionais.
+
+### 10.4. Impacto no banco
+
+**Zero.** Nenhuma coleção, campo, índice, regra, função ou migração. Duas
+chaves novas em `platform_settings/feature_flags` quando o admin as ligar —
+documento que já existia, sob a regra de sempre.

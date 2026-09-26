@@ -14,13 +14,12 @@ import {
   GAME_DAY_MANAGE_MODE, GAME_DAY_MANAGE_MODE_LABELS, GAME_DAY_MANAGE_MODE_HINTS,
 } from '@/modules/games/domain/gameDayRoles';
 import {
-  GAME_DAY_FORMAT, GAME_DAY_FORMAT_LABELS, DRAW_FORMATS, isPlayFormat,
+  GAME_DAY_FORMAT, GAME_DAY_FORMAT_LABELS, isPlayFormat,
   isAmericanoLiveFormat,
 } from '@/modules/clubs/domain/gameDayFormats';
 import { useCreateGameDay } from '@/modules/games/hooks/useGameDays';
+import { useGameDayFormatChoices } from '@/modules/games/hooks/useGameDayFormatChoices';
 import { useAuth } from '@/core/lib/FirebaseAuthContext';
-import { FEATURE_FLAG } from '@/core/featureFlags';
-import { useFeatureFlag } from '@/core/lib/FeatureFlagsContext';
 
 const EMPTY_FORM = {
   title: '', visibility: GAME_DAY_VISIBILITY.PRIVATE, date: '', time: '',
@@ -42,12 +41,7 @@ const EMPTY_FORM = {
 export default function CreateGameDayDialog({ open, onOpenChange, onCreated }) {
   const create = useCreateGameDay();
   const { userProfile } = useAuth();
-  const formatsOn = true;
   const playOn = true;
-  // Americano aprimorado: formato NOVO, atrás da própria flag (padrão OFF).
-  // Desligada, a opção nem aparece na lista — nenhum dia de jogo existente
-  // muda, porque nenhum deles tem esse formato gravado.
-  const americanoLiveOn = useFeatureFlag(FEATURE_FLAG.GAMEDAY_AMERICANO_LIVE);
 
   // Na CRIAÇÃO, os padrões são: visibilidade pública + cidade/UF do usuário.
   const defaultsForNew = () => ({
@@ -64,18 +58,11 @@ export default function CreateGameDayDialog({ open, onOpenChange, onCreated }) {
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [open, userProfile?.city, userProfile?.state]);
 
-  // Formatos oferecidos na criação: os de sorteio + Play + Americano aprimorado,
-  // cada um atrás da sua própria flag. Desligadas, a lista é exatamente a de antes.
-  const formatOptions = [
-    ...DRAW_FORMATS,
-    ...(playOn ? [GAME_DAY_FORMAT.PLAY] : []),
-    ...(americanoLiveOn ? [GAME_DAY_FORMAT.AMERICANO_LIVE] : []),
-  ];
-  // O formato que o dia JÁ TEM entra na lista mesmo com a flag desligada. Uma
-  // flag desligada tira a opção de CRIAR — nunca pode quebrar a edição de um
-  // dia que já existe, deixando o select sem opção correspondente.
-  if (form.format && !formatOptions.includes(form.format)) formatOptions.unshift(form.format);
-  const showFormatSelect = formatsOn || playOn || americanoLiveOn;
+  // Formatos oferecidos na criação: fonte ÚNICA (`gameDayFormatChoices`).
+  // Americano aprimorado, Mexicano e Rei da Quadra aparecem cada um com a sua
+  // própria flag; o que já está no formulário nunca some da lista.
+  const formatOptions = useGameDayFormatChoices({ current: form.format });
+  const showFormatSelect = formatOptions.length > 1;
   // Quadras são configuráveis nos formatos organizados quadra a quadra. Depende
   // do FORMATO, não da flag, pela mesma razão acima.
   const mostrarQuadras = isPlayFormat(form.format) || isAmericanoLiveFormat(form.format);
@@ -215,7 +202,7 @@ export default function CreateGameDayDialog({ open, onOpenChange, onCreated }) {
                   resultados. Ao concluir um jogo, o próximo entra automaticamente na quadra liberada.
                 </p>
               )}
-              {americanoLiveOn && isAmericanoLiveFormat(form.format) && (
+              {isAmericanoLiveFormat(form.format) && (
                 <p className="mt-1 text-[11px] leading-5 text-gray-500">
                   No <strong>Americano aprimorado</strong>, as partidas são sorteadas <strong>uma a uma</strong>,
                   quadra por quadra, sempre com quem está disponível naquele momento — usando as mesmas regras do

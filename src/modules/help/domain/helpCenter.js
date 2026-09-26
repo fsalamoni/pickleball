@@ -336,6 +336,7 @@ const ATLETA = {
       keywords: ['organizar', 'criar dia de jogo', 'formato', 'quadras'],
       blocks: [
         p('Qualquer atleta cria um dia de jogo. Escolha o formato, o número de quadras, a data e quem pode organizar as partidas (só você e quem você nomear, ou qualquer inscrito).'),
+        p('Americano e Play estão sempre na lista. Americano aprimorado, Mexicano e Rei da Quadra são formatos opcionais: aparecem quando a plataforma os oferece. Um dia de jogo já criado num deles continua funcionando normalmente, mesmo que o formato deixe de ser oferecido.'),
         p('Cada formato tem um tutorial completo dentro da própria tela — o botão "Como funciona" explica passo a passo, e pode ser revisto quando quiser.'),
         link('/dia-de-jogo', 'Criar um dia de jogo'),
         tip('Se o seu grupo varia (gente chegando e saindo), use Play ou Americano aprimorado. Se é o mesmo grupo do começo ao fim, o Americano é mais simples.'),

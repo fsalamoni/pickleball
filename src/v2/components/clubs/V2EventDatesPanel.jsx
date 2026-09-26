@@ -22,10 +22,9 @@ import {
 } from '@/modules/clubs/hooks/useClubs';
 import { RSVP_STATUS, RSVP_STATUS_LABELS } from '@/modules/clubs/domain/constants';
 import {
-  GAME_DAY_FORMAT, GAME_DAY_FORMAT_LABELS, DRAW_FORMATS, isCourtByCourtFormat,
+  GAME_DAY_FORMAT, GAME_DAY_FORMAT_LABELS, isCourtByCourtFormat,
 } from '@/modules/clubs/domain/gameDayFormats';
-import { useFeatureFlag } from '@/core/lib/FeatureFlagsContext';
-import { FEATURE_FLAG } from '@/core/featureFlags';
+import { useGameDayFormatChoices } from '@/modules/games/hooks/useGameDayFormatChoices';
 import {
   useCreateEventGameDay, useSyncEventGameDay, useArchiveEventGameDay,
 } from '@/modules/games/hooks/useClubGameDay';
@@ -60,14 +59,11 @@ export default function EventDatesPanel({ event, clubId, showGames = false }) {
   // nova nasce como um `game_days` — o mesmo módulo do atleta e da arena.
   const { data: club = null } = useClub(clubId);
   const createGameDay = useCreateEventGameDay(event, club || { id: clubId });
-  // O Americano aprimorado é o único formato ainda atrás de flag. Desligada, a
-  // opção nem aparece — como na criação do dia de jogo do atleta.
-  const americanoLiveOn = useFeatureFlag(FEATURE_FLAG.GAMEDAY_AMERICANO_LIVE);
-  const formatosOferecidos = useMemo(() => ([
-    ...DRAW_FORMATS,
-    GAME_DAY_FORMAT.PLAY,
-    ...(americanoLiveOn ? [GAME_DAY_FORMAT.AMERICANO_LIVE] : []),
-  ]), [americanoLiveOn]);
+  // Os formatos oferecidos na data NOVA saem da mesma fonte da criação do
+  // atleta e da arena (`gameDayFormatChoices`): Americano aprimorado, Mexicano
+  // e Rei da Quadra cada um com a própria flag. Uma data nova não tem formato
+  // gravado, então não há `current` a preservar.
+  const formatosOferecidos = useGameDayFormatChoices();
   const recurringOn = true;
   const [adding, setAdding] = useState(false);
   const [form, setForm] = useState({

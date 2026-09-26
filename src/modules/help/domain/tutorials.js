@@ -209,7 +209,7 @@ const AMERICANO = {
       body: [
         'No Americano a grade de jogos é sorteada DE UMA VEZ: o sistema monta as rodadas com todos os participantes, e todo mundo entra e sai junto a cada rodada.',
         'Cada partida tem placar, e os resultados alimentam o ranking do dia.',
-        'Mexicano e Rei da Quadra funcionam do mesmo jeito nesta tela — muda o critério do sorteio, não a forma de operar.',
+        'Mexicano e Rei da Quadra — quando a plataforma oferece esses formatos — funcionam do mesmo jeito nesta tela: muda o critério do sorteio, não a forma de operar.',
       ],
       tip: 'Se o seu grupo é fechado e o horário é o mesmo para todos, este é o formato.',
     },

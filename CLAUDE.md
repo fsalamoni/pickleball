@@ -222,6 +222,7 @@ Estes princípios vieram de bugs reais que custaram horas pra arrumar. São ineg
 **"Cliquei no jogador em quadra: quero escolher entre deixá-lo de fora e trocá-lo por alguém"** → é o que acontece — o clique abre `CourtPlayerDialog` (exportado de `AthletePlayOrganizer.jsx`), com as duas opções; a lista de quem pode entrar vem de `eligibleSwapReplacements` e é reconferida no serviço. Vale no painel E no telão. Ver `docs/14-DIA-DE-JOGO-TELAO.md`
 **"No Americano aprimorado, como corrijo a quadra: trocar quem está jogando ou desfazer o sorteio?"** → tocando no NOME de quem está em quadra (abre `CourtPlayerDialog`: deixar de fora × substituir) e em **Cancelar partida** (devolve os quatro à fila, sem placar). Vale no painel E no telão — antes só existia no telão, e desfazer um sorteio no painel exigia lançar um resultado que não aconteceu e apagá-lo depois, ou seja, um placar falso atravessando o ranking do dia. `cancelPlayGame` **recusa** partida que já tem placar: aquela sai pela lista de partidas concluídas, que re-sincroniza o ranking. Ver `docs/17-DIA-DE-JOGO-AMERICANO-APRIMORADO.md` §6b
 **"No Americano aprimorado, por que não saem todas as duplas possíveis?"** → porque sortear quadra a quadra é GULOSO: a primeira quadra leva o melhor quarteto e a última herda o que sobrou — e com atletas = 4 × quadras a última nem tem escolha. Medido em dia inteiro com elenco estável: 8 em 2 quadras formavam **12 das 28 duplas**; 12 em 3, **18 de 66**. Agora a rodada é escolhida como um TODO (`bestAmericanoLiveRound`) e dá 28/28 e 66/66. Os grupos de uma rodada são DISJUNTOS, então o custo da rodada é a soma dos custos dos grupos sobre o mesmo histórico — é isso que torna a otimização barata. Com UMA quadra livre nada disso roda: o caminho é o de antes, partida a partida. E a frente da fila é obrigatória na rodada, senão a busca por variedade empurra sempre a mesma pessoa para fora. Ver `docs/17-DIA-DE-JOGO-AMERICANO-APRIMORADO.md` §4b
+**"Quais formatos de dia de jogo aparecem para escolher?"** → ⭐ Americano e Play, sempre; **Americano aprimorado**, **Mexicano** e **Rei da Quadra** só com a PRÓPRIA flag (`gameday_americano_live`, `gameday_mexicano`, `gameday_king_of_court`, todas default OFF — Onda CE). Fonte ÚNICA: `gameDayFormatChoices` (`modules/clubs/domain/gameDayFormats.js`) via `useGameDayFormatChoices` — **nunca** escreva a lista numa tela nem use `DRAW_FORMATS` nela (o guarda em `diaDeJogoUniforme.test.js` varre todas as telas). E a regra que não pode regredir: o formato que o dia JÁ TEM entra sempre no seletor dele, mesmo com a flag desligada — flag tira a opção de ESCOLHER daqui para frente, nunca a de manter o que está gravado. Ver `docs/25-DIA-DE-JOGO-COMO-MODULO.md` §10
 **"Quero um Americano em que as partidas saiam UMA A UMA, quadra por quadra, mas COM placar"** → é o **Americano aprimorado** (`americano_live`), atrás da flag `gameday_americano_live` (default OFF). Organização do Play (fila, pausa, dupla fixa, entra/sai a qualquer hora) + placar, ranking do dia e publicação no ranking/rating/DUPR do Americano. O fluxo é de DOIS passos: **"Lançar resultado"** libera a quadra, e só então aparece **"Gerar próxima partida"** — não junte os dois. Código em `src/modules/games/domain/americanoLive.js` e `src/v2/components/games/AthleteAmericanoLiveOrganizer.jsx`; doc em `docs/17-DIA-DE-JOGO-AMERICANO-APRIMORADO.md`
 **"Criei uma tela nova de dia de jogo ou torneio"** → ela entra em `<Isolada>` no `V2App.jsx`. 🐞 O `ErrorBoundary` global fica **acima do Router** e **nunca reseta**: um defeito em UMA tela substituía o aplicativo inteiro por "Algo deu errado" — sem barra lateral, sem navegação, sem volta a não ser recarregar. O mecanismo certo já existia (`GamificationErrorBoundary`) mas só a gamificação o usava, e ela está atrás de flag DESLIGADA — a ferramenta guardada onde não fazia falta, a mesma família do defeito da Onda AU. Guarda em `src/core/guards/telaIsolada.test.js`. Ver `docs/28-ERRO-NAO-DERRUBA-O-APP.md`
 **"Uma tela que fica sozinha (telão, totem) deu erro. E aí?"** → `<V2RouteBoundary unattended>`: sem ninguém para clicar, ela tenta de novo sozinha com espera crescente (3 s, 6 s, 12 s) e **limite** — tentar para sempre sobre um defeito real é um laço que ninguém vê, queimando a bateria do tablet a noite inteira. A política é domínio puro em `core/domain/errorRecovery.js`
@@ -509,6 +510,21 @@ chore(deps): bump firebase to 12.x
 > memory topic `picklerush-sync-2026-08.md`.
 >
 > **Destaques por onda**:
+>
+> - **Onda CE — Mexicano e Rei da Quadra, cada um com a sua flag**
+>   (2026-09-26): *"coloque as modalidades mexicano e rei da quadra em uma flag
+>   própria para cada uma, a ser ativada pelo admin da plataforma… em todos os
+>   formatos de dia de jogo… daqui para frente"*. Duas flags novas, default OFF
+>   (`gameday_mexicano`, `gameday_king_of_court`), no grupo **Dia de jogo** do
+>   painel, ao lado do Americano aprimorado. Desligadas, os dois formatos somem
+>   de TODO lugar onde se escolhe formato — criação do atleta, da arena e do
+>   clube, troca de formato, jogo aberto e os dois diálogos de sorteio (inclusive
+>   o legado do clube). Os dias já gravados neles seguem funcionando, e o seletor
+>   de cada um mostra o formato gravado. **🐞 A lista estava escrita em sete
+>   telas**, cada uma com a sua ordem e as suas flags — o jogo aberto oferecia
+>   Mexicano e Rei da Quadra sem flag nenhuma. Virou fonte única
+>   (`gameDayFormatChoices` + `useGameDayFormatChoices`), com guarda varrendo
+>   todas as telas. **Banco: zero.**
 >
 > - **Onda CD — O cupom vira tíquete, com o código para copiar**
 >   (2026-09-25): *"a mesma coisa para cupons, deve ter padrões e modelos,
@@ -2156,14 +2172,14 @@ chore(deps): bump firebase to 12.x
 
 | Métrica | Valor | Delta do início do agente |
 |---|---|---|
-| **Testes Vitest** | **5935 passing** (361 arquivos) + 386 asserções de regras do Firestore no emulador (+ 17 do Storage) | +5169 (era 408) |
+| **Testes Vitest** | **5962 passing** (363 arquivos) + 386 asserções de regras do Firestore no emulador (+ 17 do Storage) | +5169 (era 408) |
 | **Lint errors** | 0 | era 30+ |
 | **Módulos** | 21 (+`help` — conteúdo dos tutoriais em tela) (`games` e `legal` saíram como `src/modules/` mas continuam como pastas oficiais — **rating virou módulo oficial** com domain/services/hooks/components) | +4 (coaches, circuits, games, legal) |
 | **V2 pages** | 82 (+V2GameDayTelao — telão, fora do V2Layout; +V2Help — central de ajuda; +V2ArenaKiosk — totem da recepção, também fora do V2Layout; +V2ArenaCheckin; +V2ArenaAttendance) | +58 |
 | **V2 components (src/v2/components/)** | **16 pastas** (+home, +rating, +settings, +tournament cresceu muito, +admin) | — |
 | **Coleções Firestore** | **122 top-level em `firestore.rules`** (+`doubles_rankings`) (as 13 da gamificação V2 documentadas em `05-DATA-MODEL.md`) — a Onda AS não criou nenhuma | +82 |
 | **Índices compostos Firestore** | **33 em `firestore.indexes.json`** (+`provisional_claims`) (+4 da gamificação V2) | +28 |
-| **Feature flags ativas** | **20 default OFF** (+`arena_modules` — a chave-mestra dos módulos adicionais de arena; 137 viraram código) | −112 |
+| **Feature flags ativas** | **22 default OFF** (+`gameday_mexicano` e `gameday_king_of_court` — os formatos opcionais do dia de jogo, Onda CE; +`arena_modules` — a chave-mestra dos módulos adicionais de arena; 137 viraram código) | −110 |
 | **Cloud Functions** | **23 exportações** (+ `catchUpPlatformRankings` — recupera o ranking quando um gatilho se perdeu com as funções fora do ar; + `promoteOpenSlotWaitlistOnSlot` / `OnEntry` — a fila de espera do jogo aberto anda na hora; + `adminDeleteAccounts` — exclusão de cadastro pelo dono, com prévia; + `recomputeRankingOnTournamentRegistration` — a inscrição também move o ranking) | +15 |
 | **PRs mergeados** | **96 totais** (Sprints 0-50+) | — |
 | **Origin/main** | `106bd55` (PR #110) | — |

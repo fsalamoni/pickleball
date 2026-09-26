@@ -57,7 +57,7 @@ import V2CollapsibleCard from '@/v2/ui/V2CollapsibleCard';
 import { cn } from '@/core/lib/utils';
 import { GAME_DAY_SECTION } from '@/v2/components/games/gameDaySections';
 import {
-  GAME_DAY_FORMAT, GAME_DAY_FORMAT_LABELS, DRAW_FORMATS, isCourtByCourtFormat,
+  GAME_DAY_FORMAT, GAME_DAY_FORMAT_LABELS, isCourtByCourtFormat,
 } from '@/modules/clubs/domain/gameDayFormats';
 import {
   GAME_DAY_MANAGE_MODE, GAME_DAY_MANAGE_MODE_LABELS, GAME_DAY_MANAGE_MODE_HINTS,
@@ -75,8 +75,7 @@ import {
 } from '@/modules/games/hooks/useGameDays';
 import { useGameDayRoles } from '@/modules/games/hooks/useGameDayRoles';
 import { useAthletes } from '@/modules/athletes/hooks/useAthletes';
-import { useFeatureFlag } from '@/core/lib/FeatureFlagsContext';
-import { FEATURE_FLAG } from '@/core/featureFlags';
+import { useGameDayFormatChoices } from '@/modules/games/hooks/useGameDayFormatChoices';
 
 const CAMPOS_DE_IDENTIDADE = [
   'title', 'visibility', 'date', 'time', 'location', 'city', 'state', 'notes',
@@ -114,7 +113,13 @@ export default function GameDaySettingsCard({ gameDay }) {
   const setMode = useSetGameDayManageMode(gdId);
   const addAdmin = useAddGameDayAdmin(gdId);
   const removeAdmin = useRemoveGameDayAdmin(gdId);
-  const americanoLiveOn = useFeatureFlag(FEATURE_FLAG.GAMEDAY_AMERICANO_LIVE);
+  // Formatos que se pode escolher — fonte ÚNICA (`gameDayFormatChoices`):
+  // cada formato opcional com a sua flag, e o formato que o dia JÁ TEM sempre
+  // presente (flag desligada tira a opção de ESCOLHER, nunca a de manter o
+  // que está gravado). Chamado antes do retorno antecipado: regra dos hooks.
+  const opcoesDeFormato = useGameDayFormatChoices({
+    current: gameDay?.format || GAME_DAY_FORMAT.AMERICANO,
+  });
 
   const [pickerOpen, setPickerOpen] = useState(false);
   const [confirmRemove, setConfirmRemove] = useState(null);
@@ -172,17 +177,6 @@ export default function GameDaySettingsCard({ gameDay }) {
   const formatoTravado = temPartidas || falhouJogos || update.isPending;
   const nomeados = organizadores.filter((o) => !o.criador).length;
 
-  const opcoesDeFormato = (() => {
-    const lista = [
-      ...DRAW_FORMATS,
-      GAME_DAY_FORMAT.PLAY,
-      ...(americanoLiveOn ? [GAME_DAY_FORMAT.AMERICANO_LIVE] : []),
-    ];
-    // O formato que o dia JÁ TEM entra mesmo com a flag desligada: flag
-    // desligada tira a opção de ESCOLHER, nunca pode deixar o seletor sem a
-    // opção correspondente ao que está gravado.
-    return lista.includes(format) ? lista : [format, ...lista];
-  })();
 
   const gravar = async (patch, sucesso) => {
     try {

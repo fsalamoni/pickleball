@@ -20,11 +20,9 @@
  * antes da Onda CA, ganhando o dia de jogo dele).
  */
 
-import React, { useMemo, useState } from 'react';
+import React, { useState } from 'react';
 import { toast } from 'sonner';
 import { CalendarDays, Info, LayoutGrid, ShieldCheck, Swords, Users, X } from 'lucide-react';
-import { FEATURE_FLAG } from '@/core/featureFlags';
-import { useFeatureFlag } from '@/core/lib/FeatureFlagsContext';
 import { cn } from '@/core/lib/utils';
 import { useArenaBookings } from '@/modules/arenas/hooks/useBookings';
 import { useArenaModules } from '@/modules/arenas/hooks/useArenaModules';
@@ -41,6 +39,7 @@ import { formatDateShortBR, todayISO } from '@/modules/arenas/domain/calendar';
 import { GAME_DAY_FORMAT, formatHasScores } from '@/modules/clubs/domain/gameDayFormats';
 import { formatRhythm } from '@/modules/games/domain/gameDayRules';
 import { GAME_DAY_MANAGE_MODE } from '@/modules/games/domain/gameDayRoles';
+import { useGameDayFormatChoices } from '@/modules/games/hooks/useGameDayFormatChoices';
 import { DUPR_MAX, DUPR_MIN } from '@/modules/rating/domain/duprScale';
 import {
   V2Badge, V2Button, V2Field, V2Input, V2Surface, V2Textarea,
@@ -144,7 +143,6 @@ export default function OpenMatchForm({
 }) {
   const [form, setForm] = useState(() => estadoInicial(slot, gameDay));
   const set = (patch) => setForm((f) => ({ ...f, ...patch }));
-  const americanoLiveOn = useFeatureFlag(FEATURE_FLAG.GAMEDAY_AMERICANO_LIVE);
   const { data: bookings } = useArenaBookings(arenaId);
   // Com o ranking da casa ligado, "com placar" também quer dizer "soma pontos".
   const { isOn: moduloLigado } = useArenaModules(arenaId);
@@ -154,18 +152,13 @@ export default function OpenMatchForm({
   const ligar = useLinkOpenSlotToGameDay();
   const salvando = criar.isPending || editar.isPending || ligar.isPending;
 
-  const formatos = useMemo(() => {
-    const lista = [
-      GAME_DAY_FORMAT.AMERICANO,
-      ...(americanoLiveOn ? [GAME_DAY_FORMAT.AMERICANO_LIVE] : []),
-      GAME_DAY_FORMAT.PLAY,
-      GAME_DAY_FORMAT.MEXICANO,
-      GAME_DAY_FORMAT.KING_OF_COURT,
-    ];
-    // Desligar uma flag tira a opção de CRIAR, nunca trava uma edição.
-    if (gameDay?.format && !lista.includes(gameDay.format)) lista.push(gameDay.format);
-    return lista;
-  }, [americanoLiveOn, gameDay?.format]);
+  // Formatos que se pode escolher — a MESMA fonte da criação do dia de jogo
+  // (`gameDayFormatChoices`): Americano aprimorado, Mexicano e Rei da Quadra
+  // cada um com a própria flag. Desligar uma flag tira a opção de CRIAR, nunca
+  // trava uma edição: o formato que o dia já tem entra sempre.
+  // O gravado vem do dia de jogo OU, numa vaga antiga ainda sem dia de jogo
+  // ("Criar o dia de jogo"), do formato que a própria vaga guardou.
+  const formatos = useGameDayFormatChoices({ current: gameDay?.format || slot?.game_format || null });
 
   const numeroOuNulo = (v) => (v === '' || v == null ? null : Number(v));
   const entrada = () => ({

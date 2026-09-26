@@ -19,12 +19,13 @@ import V2CollapsibleCard from '@/v2/ui/V2CollapsibleCard';
 import { GAME_DAY_SECTION } from '@/v2/components/games/gameDaySections';
 import { PartnerDialog } from '@/v2/components/games/AthletePlayOrganizer';
 import { useGameDayRoles } from '@/modules/games/hooks/useGameDayRoles';
+import { useGameDayFormatChoices } from '@/modules/games/hooks/useGameDayFormatChoices';
 import { useAthletes } from '@/modules/athletes/hooks/useAthletes';
 import { suggestRounds } from '@/modules/clubs/domain/gameDayDraw';
 import { splitGamesByResult } from '@/modules/clubs/domain/gameDayDrawMerge';
 import { buildGameDayDraw } from '@/modules/games/services/gameDayDrawPlanner';
 import {
-  GAME_DAY_FORMAT, GAME_DAY_FORMAT_LABELS, DRAW_FORMATS,
+  GAME_DAY_FORMAT, GAME_DAY_FORMAT_LABELS,
   kingOfCourtNextRound,
 } from '@/modules/clubs/domain/gameDayFormats';
 import GameDayLeaderboard from '@/modules/clubs/components/GameDayLeaderboard';
@@ -320,6 +321,10 @@ function GamesSection({ gameDay, participants, isOwner }) {
     () => (Number(gameDay?.play_courts) >= 2 ? String(Number(gameDay.play_courts)) : ''),
   );
   const [format, setFormat] = useState(gameDay.format || GAME_DAY_FORMAT.AMERICANO);
+  // Os formatos de GRADE que o sorteio oferece — fonte ÚNICA
+  // (`gameDayFormatChoices`, escopo de sorteio). Mexicano e Rei da Quadra só
+  // com a própria flag; o formato que o dia já tem entra sempre.
+  const formatosDoSorteio = useGameDayFormatChoices({ current: gameDay.format || null, scope: 'draw' });
   const [drawOpen, setDrawOpen] = useState(false);
   const [replaceUnscored, setReplaceUnscored] = useState(false);
   const [manualOpen, setManualOpen] = useState(false);
@@ -556,7 +561,9 @@ function GamesSection({ gameDay, participants, isOwner }) {
                   </label>
                 </div>
               )}
-              {formatsOn && (
+              {/* Com uma opção só (Mexicano e Rei da Quadra desligados pela
+                  plataforma), um seletor seria ruído: não há o que escolher. */}
+              {formatsOn && formatosDoSorteio.length > 1 && (
                 <div className="space-y-1.5">
                   <Label htmlFor="gd-format">Formato</Label>
                   <select
@@ -565,7 +572,7 @@ function GamesSection({ gameDay, participants, isOwner }) {
                     onChange={(e) => setFormat(e.target.value)}
                     className="h-10 w-full rounded-md border border-input bg-background px-3 text-sm"
                   >
-                    {DRAW_FORMATS.map((f) => (
+                    {formatosDoSorteio.map((f) => (
                       <option key={f} value={f}>{GAME_DAY_FORMAT_LABELS[f]}</option>
                     ))}
                   </select>
