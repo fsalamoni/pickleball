@@ -11,8 +11,8 @@ import {
 } from '../services/openGameService.js';
 
 /** Mural de convites abertos. */
-export function useOpenGames() {
-  return useQuery({ queryKey: ['open-games'], queryFn: listOpenGames, staleTime: 30_000 });
+export function useOpenGames({ enabled = true } = {}) {
+  return useQuery({ queryKey: ['open-games'], queryFn: listOpenGames, staleTime: 30_000, enabled });
 }
 
 /** Convites do próprio usuário. */

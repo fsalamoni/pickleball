@@ -15,8 +15,8 @@ import { usePlayerMatchDates, useGoals } from '@/modules/progression/hooks/usePr
 import { computeXp, levelFromXp, computeWeekStreak } from '@/modules/progression/domain/progression';
 import { computeAchievements } from '@/modules/achievements/domain/achievements';
 import { useNationalRanking } from '@/modules/rating/hooks/useRating';
-import { TOURNAMENT_STATUS } from '@/modules/tournament/domain/constants';
-import { V2Skeleton } from '@/v2/ui/primitives';
+import { hojeLocal, isTournamentOpen } from '@/modules/home/domain/freshness';
+import { V2ErrorState, V2Skeleton } from '@/v2/ui/primitives';
 import { cn } from '@/core/lib/utils';
 
 /** Ícone por tipo de notificação (fallback: sino). */
@@ -51,7 +51,9 @@ export default function V2ActionHome() {
 
   const { notifications = [], markAsRead } = useNotifications();
   const { data: publicTournaments = [] } = usePublicTournaments();
-  const { data: upcoming = [], isLoading: loadingUpcoming } = useQuery({
+  const {
+    data: upcoming = [], isLoading: loadingUpcoming, isError: upcomingFailed, refetch: refetchUpcoming,
+  } = useQuery({
     queryKey: ['dashboard-upcoming', uid],
     queryFn: () => getMyUpcomingMatches(uid, { limit: 4 }),
     enabled: !!uid,
@@ -66,16 +68,19 @@ export default function V2ActionHome() {
   );
 
   const myCity = (userProfile?.city || '').trim().toLowerCase();
+  // Inscrição aberta DE VERDADE: status + prazo não vencido + não arquivado
+  // (a régua de `freshness.js`). Antes bastava o status — um torneio com o
+  // prazo vencido seguia aparecendo "perto de você".
   const nearby = useMemo(() => {
     if (!myCity) return [];
+    const hoje = hojeLocal();
     return publicTournaments
-      .filter((t) => !t.archived
-        && (t.city || '').trim().toLowerCase() === myCity
-        && t.status === TOURNAMENT_STATUS.REGISTRATIONS_OPEN)
+      .filter((t) => (t.city || '').trim().toLowerCase() === myCity && isTournamentOpen(t, hoje))
       .slice(0, 3);
   }, [publicTournaments, myCity]);
 
-  const nothingToDo = !nextMatch && pending.length === 0 && nearby.length === 0;
+  // Com os próximos jogos sem carregar, "tudo em dia" seria um palpite.
+  const nothingToDo = !upcomingFailed && !nextMatch && pending.length === 0 && nearby.length === 0;
 
   function openNotification(n) {
     if (!n.read && n.id) markAsRead(n.id).catch(() => {});
@@ -91,6 +96,15 @@ export default function V2ActionHome() {
           <h2 className="font-display text-xl font-bold text-ink">O que fazer agora</h2>
         </div>
 
+        {upcomingFailed && (
+          <V2ErrorState
+            inline
+            className="mb-4"
+            title="Não foi possível carregar o seu próximo jogo"
+            description="Pode haver jogo marcado — tente de novo."
+            onRetry={() => refetchUpcoming()}
+          />
+        )}
         {loadingUpcoming ? (
           <V2Skeleton className="h-32 rounded-4xl" />
         ) : nothingToDo ? (
@@ -201,8 +215,11 @@ export default function V2ActionHome() {
   );
 }
 
-/** Faixa de gamificação: streak, nível/XP, próxima conquista e metas. */
-function EvolutionStrip({ uid }) {
+/**
+ * Faixa de gamificação: streak, nível/XP, próxima conquista e metas.
+ * Exportada para a tela inicial personalizada reaproveitar (mesma faixa).
+ */
+export function EvolutionStrip({ uid }) {
   const { stats, isLoading } = usePlayerStats();
   const { data: matchDates = [] } = usePlayerMatchDates(uid);
   const { data: goals = [] } = useGoals(uid);

@@ -82,12 +82,12 @@ export function useClubs() {
   return useQuery({ queryKey: ['clubs'], queryFn: listClubs });
 }
 
-export function useMyClubs() {
+export function useMyClubs({ enabled = true } = {}) {
   const { user } = useAuth();
   return useQuery({
     queryKey: ['my-clubs', user?.uid],
     queryFn: () => (user?.uid ? listMyClubs(user.uid) : Promise.resolve([])),
-    enabled: !!user?.uid,
+    enabled: enabled && !!user?.uid,
   });
 }
 
@@ -417,14 +417,14 @@ export function useMyEventInvites() {
 }
 
 /** Eventos disponíveis para o início (públicos dos meus clubes + convites). */
-export function useAvailableEvents() {
+export function useAvailableEvents({ enabled = true } = {}) {
   const { user } = useAuth();
-  const { data: myClubs = [] } = useMyClubs();
+  const { data: myClubs = [] } = useMyClubs({ enabled });
   const clubIds = myClubs.map((c) => c.id).filter(Boolean);
   return useQuery({
     queryKey: ['available-events', user?.uid, clubIds.slice().sort().join(',')],
     queryFn: () => listAvailableEvents(user?.uid, clubIds),
-    enabled: !!user?.uid,
+    enabled: enabled && !!user?.uid,
   });
 }
 

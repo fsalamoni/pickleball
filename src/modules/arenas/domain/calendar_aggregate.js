@@ -191,6 +191,42 @@ function aggregateDayStatus({
 }
 
 /**
+ * QUAIS horários de um dia têm quadra livre — e quantas quadras em cada.
+ *
+ * `aggregateDayStatus` responde "quantos horários livres" (o rótulo "4h
+ * livres" do calendário); esta responde "quais", para quem quer mostrar os
+ * horários em si (a tela inicial: "livres hoje às 18:00, 19:00…"). É a MESMA
+ * conta — `statusPorHorario`, quadra a quadra —, então um horário que o
+ * calendário mostra ocupado nunca aparece aqui como livre.
+ *
+ * Mesmos argumentos de `aggregateDayStatus`.
+ * @returns {Array<{ time: string, freeCourts: number }>} em ordem de horário
+ */
+function freeTimesOfDay({
+  date,
+  courtId = null,
+  courts = null,
+  schedules = [],
+  bookings = [],
+  unavailabilities = [],
+} = {}) {
+  if (weekdayOf(date) == null) return [];
+  const ids = courtId ? [] : idsDasQuadras(courts);
+  const visoes = ids.length > 0 ? ids : [courtId || null];
+  const livres = new Map();
+  visoes.forEach((id) => {
+    const mapa = statusPorHorario({ date, courtId: id, schedules, bookings, unavailabilities });
+    if (!mapa) return;
+    for (const [time, status] of mapa) {
+      if (status === SLOT_STATUS.AVAILABLE) livres.set(time, (livres.get(time) || 0) + 1);
+    }
+  });
+  return [...livres.entries()]
+    .sort(([a], [b]) => a.localeCompare(b))
+    .map(([time, freeCourts]) => ({ time, freeCourts }));
+}
+
+/**
  * Indexa as reservas por DATA.
  *
  * O calendário mensal faz 42 dias × quadras consultas de status, e cada uma
@@ -278,6 +314,7 @@ function buildMonthGrid(yearMonth) {
 
 export {
   aggregateDayStatus,
+  freeTimesOfDay,
   buildMonthGrid,
   indexBookingsByDate,
   indexUnavailabilitiesByDate,

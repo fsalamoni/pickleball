@@ -7,8 +7,12 @@
  * Aditivo — desligada a flag, a rota redireciona para o início.
  */
 
-import React, { Suspense, lazy, useMemo, useState } from 'react';
-import { Navigate, useNavigate, useParams, Link } from 'react-router-dom';
+import React, {
+  Suspense, lazy, useEffect, useMemo, useState,
+} from 'react';
+import {
+  Navigate, useNavigate, useParams, useSearchParams, Link,
+} from 'react-router-dom';
 import {
   Plus, CalendarClock, Users, Globe, Lock, ChevronLeft, Trash2, ExternalLink, History,
   Building2,
@@ -92,6 +96,16 @@ function GameDayList() {
   // um duplicado. Falha é falha, e tem botão.
   const { data: gameDays = [], isLoading, isError, refetch } = useMyGameDays();
   const [createOpen, setCreateOpen] = useState(false);
+  // `/dia-de-jogo?criar=1` (atalho da tela inicial) abre a criação direto — e
+  // o parâmetro sai da URL, para voltar/recarregar não reabrir o diálogo.
+  const [params, setParams] = useSearchParams();
+  useEffect(() => {
+    if (params.get('criar') !== '1') return;
+    setCreateOpen(true);
+    const resto = new URLSearchParams(params);
+    resto.delete('criar');
+    setParams(resto, { replace: true });
+  }, [params, setParams]);
   const today = todayISO();
   const open = (id) => navigate(`/dia-de-jogo/${id}`);
 

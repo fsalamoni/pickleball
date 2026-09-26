@@ -143,10 +143,11 @@ export function useArenaOpenSlots(arenaId, filters = {}) {
   });
 }
 
-export function useGlobalOpenSlots(filters = {}) {
+export function useGlobalOpenSlots(filters = {}, { enabled = true } = {}) {
   return useQuery({
     queryKey: ['open-slots-global', filters],
     queryFn: () => listOpenSlotsGlobal(filters),
+    enabled,
     staleTime: 30_000,
   });
 }
@@ -183,12 +184,12 @@ function invalidarVagas(qc) {
 }
 
 /** Os jogos abertos em que eu estou, de todas as arenas (Minhas reservas). */
-export function useMyOpenSlots() {
+export function useMyOpenSlots({ enabled = true } = {}) {
   const { user } = useAuth();
   return useQuery({
     queryKey: ['my-open-slots', user?.uid],
     queryFn: () => listMyOpenSlots(user?.uid),
-    enabled: !!user?.uid,
+    enabled: enabled && !!user?.uid,
     staleTime: 30_000,
   });
 }
@@ -1069,12 +1070,12 @@ export function useArenaClassBookingsAll(arenaId) {
 }
 
 /** As minhas matrículas em aula, em todas as arenas ("Minhas aulas"). */
-export function useMyClassEnrollments() {
+export function useMyClassEnrollments({ enabled = true } = {}) {
   const { user } = useAuth();
   return useQuery({
     queryKey: ['my-class-enrollments', user?.uid],
     queryFn: () => listMyClassEnrollments(user?.uid),
-    enabled: !!user?.uid,
+    enabled: enabled && !!user?.uid,
     staleTime: 60_000,
   });
 }

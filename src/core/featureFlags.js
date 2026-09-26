@@ -233,10 +233,86 @@ export const FEATURE_FLAG = Object.freeze({
    * `platform_settings/arena_modules`. Ver `docs/24-MODULOS-DE-ARENA/`.
    */
   ARENA_MODULES: 'arena_modules',
+
+  /**
+   * INÍCIO PERSONALIZADO — a tela inicial montada para cada pessoa.
+   *
+   * Junta o que a pessoa DISSE que quer (os interesses do cadastro/perfil) ao
+   * que ela FAZ na plataforma (gere arena, dá aula, organiza torneio) e mostra
+   * primeiro o que importa para ela: a agenda de todos os compromissos numa
+   * linha do tempo, atalhos diretos (a Central da SUA arena, o painel de
+   * professor, "criar torneio"…), torneios com inscrição aberta perto dela, o
+   * resultado do último torneio, ranking e duplas, dias de jogo com vaga,
+   * horários livres da arena de sempre, aulas e clubes.
+   *
+   * Só leitura: consulta o que as telas de sempre já consultam (com uma
+   * leitura nova, de um documento/lista da própria pessoa, para o ranking) e
+   * não grava nada. O único ato de escrita é o "Personalizar", que salva os
+   * interesses no MESMO campo e pelo MESMO caminho do editor de perfil.
+   * Desligada, a tela inicial segue exatamente como está.
+   */
+  PERSONALIZED_HOME: 'personalized_home',
+
+  /**
+   * CAMPANHAS E CUPONS DA PLATAFORMA — o admin anuncia para todo mundo.
+   *
+   * As mesmas ferramentas do marketing da arena (cupons por tipo com arte de
+   * tíquete, banners com cinco modelos ou arte enviada, destino de lista
+   * fechada, aviso com o público contado antes, pausa e página da campanha),
+   * emitidas pela PLATAFORMA, para todos os usuários ou por região/interesse.
+   * Coleções próprias (`promo_coupons`, `promo_campaigns`, `promo_settings`),
+   * aditivas: nenhuma coleção de arena é tocada. Desligada, a aba do admin
+   * não existe e nada aparece para ninguém.
+   */
+  PLATFORM_MARKETING: 'platform_marketing',
+
+  /**
+   * CAMPANHAS E CUPONS DOS PROFESSORES — cada professor anuncia o que é seu.
+   *
+   * No painel do professor, a seção "Divulgação": cupons (desconto em aula,
+   * aula grátis, clínica, brinde…) e campanhas com banner, para todos os
+   * usuários ou só para os alunos, com o aviso indo para os alunos. O cupom
+   * pode ser informado no pedido de aula e é contado quando o professor
+   * confirma. Mesmas coleções aditivas do marketing da plataforma. Desligada,
+   * a seção não existe e nada aparece para ninguém.
+   */
+  COACH_MARKETING: 'coach_marketing',
 });
 
 /** Metadados de exibição para o painel de flags (admin master). */
 export const FEATURE_FLAG_META = Object.freeze({
+  [FEATURE_FLAG.PERSONALIZED_HOME]: {
+    label: 'Início personalizado',
+    description:
+      'A tela inicial passa a ser montada para cada pessoa, pelos interesses '
+      + 'do perfil e pelo que ela faz na plataforma: agenda com todos os '
+      + 'compromissos, atalhos diretos (a Central da arena de quem gere, o '
+      + 'painel de quem dá aula, criar torneio de quem organiza), torneios com '
+      + 'inscrição aberta perto, o resultado do último torneio, ranking e '
+      + 'duplas, dias de jogo com vaga, horários livres, aulas e clubes. Nada '
+      + 'encerrado ou vencido aparece. Só leitura. Desligada, a tela inicial '
+      + 'segue como está.',
+  },
+  [FEATURE_FLAG.PLATFORM_MARKETING]: {
+    label: 'Campanhas e cupons da plataforma',
+    description:
+      'Ganha a aba "Campanhas e cupons" aqui no painel (em Plataforma): cupons '
+      + 'por tipo com arte de tíquete e código para copiar, campanhas com '
+      + 'banner (cinco modelos ou arte enviada), destino da lista fechada, '
+      + 'aviso para todos, por região ou por interesse — com o número de '
+      + 'pessoas antes de enviar — e controle de uso. O que for divulgado '
+      + 'aparece na tela inicial de todos. Desligada, nada disso existe.',
+  },
+  [FEATURE_FLAG.COACH_MARKETING]: {
+    label: 'Campanhas e cupons dos professores',
+    description:
+      'Cada professor ganha, no painel dele, a seção "Divulgação": cupons '
+      + '(desconto em aula, aula grátis, clínica, brinde…) e campanhas com '
+      + 'banner, para todos os usuários ou só para os alunos, com aviso aos '
+      + 'alunos. O aluno informa o cupom ao pedir a aula e ele é contado '
+      + 'quando o professor confirma. Os banners e cupons aparecem na tela '
+      + 'inicial e no perfil do professor. Desligada, nada disso existe.',
+  },
   [FEATURE_FLAG.ARENA_MODULES]: {
     label: 'Módulos adicionais da arena (chave geral)',
     description:

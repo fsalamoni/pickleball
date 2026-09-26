@@ -16,12 +16,12 @@ import {
 } from '../services/bookingService.js';
 import { arenaKeys } from './arenaKeys.js';
 
-export function useMyBookings() {
+export function useMyBookings({ enabled = true } = {}) {
   const { user } = useAuth();
   return useQuery({
     queryKey: ['my-bookings', user?.uid],
     queryFn: () => listMyBookings(user?.uid),
-    enabled: !!user?.uid,
+    enabled: enabled && !!user?.uid,
     refetchInterval: 30_000,
   });
 }

@@ -4,7 +4,6 @@ import { useQuery } from '@tanstack/react-query';
 import {
   ArrowRight,
   TrendingUp,
-  CalendarCheck,
   CalendarClock,
   CalendarX,
   Flame,
@@ -17,31 +16,35 @@ import { useAuth } from '@/core/lib/FirebaseAuthContext';
 import { useMyTournaments, usePublicTournaments } from '@/modules/tournament/hooks/useTournament';
 import { useNationalRanking } from '@/modules/rating/hooks/useRating';
 import { getMyUpcomingMatches } from '@/modules/tournament/services/upcomingService';
-import {
-  TOURNAMENT_STATUS,
-  TOURNAMENT_STATUS_LABELS,
-} from '@/modules/tournament/domain/constants';
+import { TOURNAMENT_STATUS_LABELS } from '@/modules/tournament/domain/constants';
 import { PLATFORM_INTEREST_META, sanitizeInterests } from '@/modules/athletes/domain/profileMeta';
 import { interestIcon } from '@/v2/components/profile/profileMetaIcons';
-import { V2Skeleton, V2StatCard } from '@/v2/ui/primitives';
+import { V2ErrorState, V2Skeleton, V2StatCard } from '@/v2/ui/primitives';
 import { useFeatureFlag } from '@/core/lib/FeatureFlagsContext';
 import { FEATURE_FLAG } from '@/core/featureFlags';
 import V2ActionHome from '@/v2/components/home/V2ActionHome';
 import HomeWaitlistCalls from '@/v2/components/arenas/openMatch/HomeWaitlistCalls';
+import {
+  TOURNAMENT_PHASE, hojeLocal, isTournamentCurrent, isTournamentOpen, tournamentPhase,
+} from '@/modules/home/domain/freshness';
 
 // Sob demanda: a chave-mestra `arena_modules` nasce desligada, e quem não a
 // tem não precisa baixar o carrossel junto com a tela inicial.
 const HomePromoBanners = lazy(() => import('@/v2/components/arenas/marketing/HomePromoBanners'));
 
+// A tela inicial PERSONALIZADA (flag `personalized_home`), sob demanda: com a
+// flag desligada ninguém baixa o pedaço dela.
+const V2PersonalHome = lazy(() => import('@/v2/components/home/personal/V2PersonalHome'));
+
 const INTEREST_BY_VALUE = Object.fromEntries(PLATFORM_INTEREST_META.map((m) => [m.value, m]));
 // Ações rápidas padrão (quando o usuário não escolheu interesses).
 const DEFAULT_QUICK_ACTIONS = ['play_tournaments', 'random_partners', 'book_courts', 'ranking'];
 
-const LIVE_STATUSES = new Set([
-  TOURNAMENT_STATUS.IN_PROGRESS,
-  TOURNAMENT_STATUS.REGISTRATIONS_OPEN,
-  TOURNAMENT_STATUS.REGISTRATIONS_CLOSED,
-]);
+/** Acontecendo ou com inscrição aberta DE VERDADE (a régua de `freshness.js`). */
+function isLive(t, hoje) {
+  const fase = tournamentPhase(t, hoje);
+  return fase === TOURNAMENT_PHASE.LIVE || fase === TOURNAMENT_PHASE.OPEN;
+}
 
 function greeting() {
   const h = new Date().getHours();
@@ -80,41 +83,76 @@ function formatMatchWhen(ms) {
   return new Date(ms).toLocaleString('pt-BR', { day: '2-digit', month: 'short', hour: '2-digit', minute: '2-digit' });
 }
 
+/**
+ * A tela inicial: a PERSONALIZADA com a flag `personalized_home` ligada, a de
+ * sempre com ela desligada. As duas nunca montam juntas — a de sempre lê o
+ * ranking nacional inteiro, e a personalizada não precisa disso.
+ */
 export default function V2Dashboard() {
+  const personalizadaOn = useFeatureFlag(FEATURE_FLAG.PERSONALIZED_HOME);
+  if (personalizadaOn) {
+    return (
+      <Suspense fallback={<HomeCarregando />}>
+        <V2PersonalHome />
+      </Suspense>
+    );
+  }
+  return <DashboardClassico />;
+}
+
+function HomeCarregando() {
+  return (
+    <div className="mx-auto max-w-[1400px] space-y-6" aria-busy="true" aria-label="Carregando a tela inicial">
+      <V2Skeleton className="h-52 rounded-4xl" />
+      <div className="grid grid-cols-2 gap-3 sm:grid-cols-4">
+        {[1, 2, 3, 4].map((i) => <V2Skeleton key={i} className="h-20 rounded-3xl" />)}
+      </div>
+      <V2Skeleton className="h-64 rounded-4xl" />
+    </div>
+  );
+}
+
+function DashboardClassico() {
   const { user, userProfile } = useAuth();
   const actionHomeOn = useFeatureFlag(FEATURE_FLAG.ACTION_HOME);
   // Sem a chave-mestra dos módulos de arena não existe jogo aberto — nem a
   // consulta da fila sai.
   const arenaModulesOn = useFeatureFlag(FEATURE_FLAG.ARENA_MODULES);
   const { data: myTournaments = [], isLoading: loadingMine } = useMyTournaments();
-  const { data: publicTournaments = [], isLoading: loadingPublic } = usePublicTournaments();
+  // ⚠️ Falha não é vazio (docs/27): sem isto, uma queda de rede virava
+  // "Nenhum torneio com inscrição aberta" e "Você não tem jogos marcados".
+  const {
+    data: publicTournaments = [], isLoading: loadingPublic, isError: publicFailed, refetch: refetchPublic,
+  } = usePublicTournaments();
   const { data: ranking = [] } = useNationalRanking();
 
   const name = (userProfile?.platform_name || user?.displayName || 'Atleta').split(' ')[0];
 
   const me = useMemo(() => ranking.find((p) => p.id === user?.uid || p.uid === user?.uid) || null, [ranking, user?.uid]);
 
+  const hoje = hojeLocal();
+  // 🐞 O destaque caía no "primeiro torneio meu não arquivado" — que podia ser
+  // um torneio ENCERRADO há meses — e, sem nenhum meu, no primeiro público,
+  // qualquer que fosse o status. Agora só entra o que ainda vale.
   const spotlight = useMemo(() => {
-    const live = myTournaments.filter((t) => LIVE_STATUSES.has(t.status));
-    const mineNotArchived = myTournaments.find((t) => !t.archived);
-    return live[0] || mineNotArchived || publicTournaments[0] || null;
-  }, [myTournaments, publicTournaments]);
+    const live = myTournaments.filter((t) => isLive(t, hoje));
+    const mineCurrent = myTournaments.find((t) => isTournamentCurrent(t, hoje));
+    const publicCurrent = publicTournaments.find((t) => isTournamentCurrent(t, hoje));
+    return live[0] || mineCurrent || publicCurrent || null;
+  }, [myTournaments, publicTournaments, hoje]);
 
   // Torneios com inscrição realmente aberta: status aberto E ainda não vencidos
   // pela data (prazo de inscrição e data de término não podem ter passado).
-  const today = useMemo(() => { const d = new Date(); d.setHours(0, 0, 0, 0); return d; }, []);
-  const openTournaments = useMemo(() => publicTournaments.filter((t) => {
-    if (t.status !== TOURNAMENT_STATUS.REGISTRATIONS_OPEN) return false;
-    const deadline = parseDate(t.registration_deadline);
-    if (deadline && deadline < today) return false;
-    const ends = parseDate(t.ends_at);
-    if (ends && ends < today) return false;
-    return true;
-  }), [publicTournaments, today]);
+  const openTournaments = useMemo(
+    () => publicTournaments.filter((t) => isTournamentOpen(t, hoje)),
+    [publicTournaments, hoje],
+  );
   const featured = openTournaments[0] || null;
 
   // Próximos jogos marcados (agendados) do atleta.
-  const { data: upcomingMatches = [], isLoading: loadingUpcoming } = useQuery({
+  const {
+    data: upcomingMatches = [], isLoading: loadingUpcoming, isError: upcomingFailed, refetch: refetchUpcoming,
+  } = useQuery({
     queryKey: ['dashboard-upcoming', user?.uid],
     queryFn: () => getMyUpcomingMatches(user?.uid, { limit: 4 }),
     enabled: !!user?.uid,
@@ -140,7 +178,7 @@ export default function V2Dashboard() {
     () => myTournaments.filter((t) => t.my_role === 'owner' || t.my_role === 'admin').length,
     [myTournaments],
   );
-  const liveCount = useMemo(() => myTournaments.filter((t) => LIVE_STATUSES.has(t.status)).length, [myTournaments]);
+  const liveCount = useMemo(() => myTournaments.filter((t) => isLive(t, hoje)).length, [myTournaments, hoje]);
 
   const isLoading = loadingMine || loadingPublic;
 
@@ -179,7 +217,7 @@ export default function V2Dashboard() {
             <div className="relative z-10 flex h-full flex-col justify-between">
               <div>
                 <span className="rounded-full border border-white/10 bg-white/10 px-3 py-1 text-xs font-bold uppercase tracking-wider text-acid backdrop-blur-md">
-                  {spotlight && LIVE_STATUSES.has(spotlight.status) ? 'Em destaque agora' : 'Comece por aqui'}
+                  {spotlight && isLive(spotlight, hoje) ? 'Em destaque agora' : 'Comece por aqui'}
                 </span>
                 <h2 className="mt-4 font-display text-3xl font-bold text-white">
                   {spotlight ? spotlight.name : 'Sua jornada no pickleball'}
@@ -246,20 +284,34 @@ export default function V2Dashboard() {
                 {featured ? `Inscrições abertas · ${openTournaments.length} torneio(s)` : 'Torneios'}
               </p>
               <h3 className="mb-2 mt-1 font-display text-2xl font-bold">
-                {featured ? featured.name : 'Nenhum torneio com inscrição aberta'}
+                {featured
+                  ? featured.name
+                  : publicFailed ? 'Não foi possível carregar os torneios' : 'Nenhum torneio com inscrição aberta'}
               </h3>
               <p className="max-w-sm text-blue-100 opacity-90">
                 {featured
                   ? `${TOURNAMENT_STATUS_LABELS[featured.status] || ''} • ${locationLabel(featured)}`
-                  : 'No momento não há torneios com inscrição aberta. Explore os eventos ou crie o seu.'}
+                  : publicFailed
+                    ? 'A conexão falhou no meio do caminho — pode haver torneio com inscrição aberta.'
+                    : 'No momento não há torneios com inscrição aberta. Explore os eventos ou crie o seu.'}
               </p>
             </div>
-            <Link
-              to={featured ? `/torneios/${featured.id}` : '/torneios'}
-              className="relative z-10 whitespace-nowrap rounded-full bg-white px-8 py-3.5 font-bold text-indigo-700 shadow-lg transition-all hover:-translate-y-1 hover:shadow-xl"
-            >
-              {featured ? 'Garantir vaga' : 'Ver torneios'}
-            </Link>
+            {!featured && publicFailed ? (
+              <button
+                type="button"
+                onClick={() => refetchPublic()}
+                className="relative z-10 whitespace-nowrap rounded-full bg-white px-8 py-3.5 font-bold text-indigo-700 shadow-lg transition-all hover:-translate-y-1 hover:shadow-xl"
+              >
+                Tentar de novo
+              </button>
+            ) : (
+              <Link
+                to={featured ? `/torneios/${featured.id}` : '/torneios'}
+                className="relative z-10 whitespace-nowrap rounded-full bg-white px-8 py-3.5 font-bold text-indigo-700 shadow-lg transition-all hover:-translate-y-1 hover:shadow-xl"
+              >
+                {featured ? 'Garantir vaga' : 'Ver torneios'}
+              </Link>
+            )}
           </div>
 
           {/* Ações rápidas personalizadas pelos interesses */}
@@ -279,6 +331,13 @@ export default function V2Dashboard() {
         </div>
         {loadingUpcoming ? (
           <V2Skeleton className="h-28 rounded-4xl" />
+        ) : upcomingFailed ? (
+          <V2ErrorState
+            inline
+            title="Não foi possível carregar os seus próximos jogos"
+            description="Pode haver jogo marcado — tente de novo."
+            onRetry={() => refetchUpcoming()}
+          />
         ) : upcomingMatches.length === 0 ? (
           <div className="flex items-center gap-3 rounded-4xl border border-gray-100 bg-paper-pure p-6 text-sm text-gray-500 shadow-organic-sm">
             <CalendarX className="h-5 w-5 shrink-0 text-gray-400" />

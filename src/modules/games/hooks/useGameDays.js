@@ -21,12 +21,12 @@ import {
 
 /* ------------------------------ Dias de jogo ---------------------------- */
 
-export function useMyGameDays() {
+export function useMyGameDays({ enabled = true } = {}) {
   const { user } = useAuth();
   return useQuery({
     queryKey: ['game-days', 'mine', user?.uid],
     queryFn: () => listMyGameDays(user?.uid),
-    enabled: !!user?.uid,
+    enabled: enabled && !!user?.uid,
     staleTime: 20_000,
   });
 }

@@ -17,9 +17,15 @@ export const FLAG_GROUPS = Object.freeze([
     id: 'engagement',
     label: 'Engajamento e retenção',
     keys: [
+      FEATURE_FLAG.PERSONALIZED_HOME,
       FEATURE_FLAG.ACTION_HOME, FEATURE_FLAG.SMART_MATCHMAKING,
       FEATURE_FLAG.POST_GAME_FLOW, FEATURE_FLAG.PUSH_NOTIFICATIONS,
     ],
+  },
+  {
+    id: 'marketing',
+    label: 'Campanhas e cupons (plataforma e professores)',
+    keys: [FEATURE_FLAG.PLATFORM_MARKETING, FEATURE_FLAG.COACH_MARKETING],
   },
   {
     id: 'arena_new',

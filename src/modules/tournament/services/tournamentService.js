@@ -398,19 +398,21 @@ export async function listMyTournaments(userId, { includeArchived = false } = {}
   });
 
   const unique = Array.from(new Set(tournamentIds));
+  // Em paralelo (antes era um torneio de cada vez, em fila — a tela inicial
+  // esperava a soma de todas as leituras). Mesma ordem e mesmo resultado.
+  const docs = await Promise.all(unique.map((id) => getTournament(id)));
   const results = [];
-  for (const id of unique) {
-    const t = await getTournament(id);
-    if (t) {
-      // Filtra arquivados por padrão (a Dashboard do atleta mostra só ativos).
-      if (!includeArchived && t.archived) continue;
-      const adminDoc = adminSnap.docs.find((d) => d.data().tournament_id === id);
-      results.push({
-        ...t,
-        my_role: adminDoc ? adminDoc.data().role : 'player',
-      });
-    }
-  }
+  unique.forEach((id, i) => {
+    const t = docs[i];
+    if (!t) return;
+    // Filtra arquivados por padrão (a Dashboard do atleta mostra só ativos).
+    if (!includeArchived && t.archived) return;
+    const adminDoc = adminSnap.docs.find((d) => d.data().tournament_id === id);
+    results.push({
+      ...t,
+      my_role: adminDoc ? adminDoc.data().role : 'player',
+    });
+  });
   return results;
 }
 

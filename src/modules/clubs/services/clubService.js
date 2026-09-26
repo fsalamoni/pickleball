@@ -179,12 +179,12 @@ export async function listMyClubs(userId) {
   if (!db || !userId) return [];
   const memberSnap = await getDocs(query(collection(db, COL.members), where('user_id', '==', userId)));
   const memberships = memberSnap.docs.map((d) => d.data());
-  const results = [];
-  for (const membership of memberships) {
-    const club = await getClub(membership.club_id);
-    if (club) results.push({ ...club, my_role: membership.role });
-  }
-  return results;
+  // Em paralelo (antes era um clube de cada vez, em fila). Mesma ordem e mesmo
+  // resultado: `Promise.all` preserva a posição de cada membership.
+  const clubs = await Promise.all(memberships.map((m) => getClub(m.club_id)));
+  return memberships
+    .map((membership, i) => (clubs[i] ? { ...clubs[i], my_role: membership.role } : null))
+    .filter(Boolean);
 }
 
 export async function updateClub(id, updates, actor) {
