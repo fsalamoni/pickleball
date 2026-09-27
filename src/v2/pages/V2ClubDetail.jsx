@@ -197,12 +197,12 @@ export default function V2ClubDetail() {
                   <p className="mt-1 text-sm text-gray-500">
                     {myRequest?.status === JOIN_REQUEST_STATUS.REJECTED ? 'Seu pedido anterior não foi aprovado. Você pode pedir novamente.' : 'Peça para ingressar ou entre direto com o código de convite.'}
                   </p>
-                  <V2Button className="mt-4" onClick={handleRequestJoin} disabled={requestToJoin.isPending || !isAuthenticated}>
+                  <V2Button className="mt-4" onClick={handleRequestJoin} disabled={requestToJoin.isPending || !isAuthenticated} data-dica="clube-entrar">
                     {requestToJoin.isPending ? 'Enviando…' : 'Pedir para ingressar'}
                   </V2Button>
                 </>
               )}
-              <form onSubmit={handleJoin} className="mt-4 flex flex-col gap-3 border-t border-gray-100 pt-4 sm:flex-row">
+              <form onSubmit={handleJoin} data-dica="clube-codigo" className="mt-4 flex flex-col gap-3 border-t border-gray-100 pt-4 sm:flex-row">
                 <div className="relative flex-1">
                   <Hash className="absolute left-4 top-1/2 h-4 w-4 -translate-y-1/2 text-gray-400" />
                   <input value={code} onChange={(e) => setCode(e.target.value.toUpperCase())} placeholder="TENHO UM CÓDIGO" maxLength={12}

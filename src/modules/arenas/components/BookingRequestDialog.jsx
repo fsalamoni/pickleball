@@ -505,7 +505,7 @@ export default function BookingRequestDialog({ arena, open, onOpenChange, court:
             ? 'Reserva instantânea confirmada! Compareça no horário marcado.'
             : 'Solicitação enviada! A arena vai responder em breve.',
       );
-      onOpenChange(false);
+      _onOpenChange(false);
     } catch (err) {
       toast.error(err?.message || 'Não foi possível solicitar a reserva.');
     }
@@ -994,15 +994,15 @@ export default function BookingRequestDialog({ arena, open, onOpenChange, court:
         </div>
 
         <DialogFooter>
-          <Button variant="outline" onClick={() => onOpenChange(false)}>Cancelar</Button>
+          <Button variant="outline" onClick={() => _onOpenChange(false)}>Cancelar</Button>
           {modoSelecao ? (
-            <Button onClick={handleSubmit} disabled={createFromSelection.isPending || celulasEscolhidas.length === 0 || (ofereceIndicacao && Boolean(problemaIndicacao))}>
+            <Button onClick={handleSubmit} data-dica="reserva-confirmar" disabled={createFromSelection.isPending || celulasEscolhidas.length === 0 || (ofereceIndicacao && Boolean(problemaIndicacao))}>
               {createFromSelection.isPending
                 ? 'Enviando…'
                 : totalReservas > 1 ? `Solicitar ${totalReservas} reservas` : 'Solicitar reserva'}
             </Button>
           ) : (
-            <Button onClick={handleSubmit} disabled={createBooking.isPending || hasConflict || candidateSlots.length === 0 || (kind === BOOKING_KIND.SINGLE && !singleValidation.ok) || (courtMode !== 'any' && activeCourts.length > 0 && effectiveCourtIds.length === 0)}>
+            <Button onClick={handleSubmit} data-dica="reserva-confirmar" disabled={createBooking.isPending || hasConflict || candidateSlots.length === 0 || (kind === BOOKING_KIND.SINGLE && !singleValidation.ok) || (courtMode !== 'any' && activeCourts.length > 0 && effectiveCourtIds.length === 0)}>
               {createBooking.isPending ? 'Enviando…' : (isMultiCourt ? `Solicitar ${effectiveCourtIds.length} reservas` : 'Solicitar reserva')}
             </Button>
           )}

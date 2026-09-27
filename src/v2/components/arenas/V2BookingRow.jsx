@@ -189,7 +189,7 @@ export default function V2BookingRow({ booking, perspective, arena = null }) {
           <V2Button size="sm" variant="ghost" onClick={handlePropose}>
             <DollarSign className="h-4 w-4" /> Propor
           </V2Button>
-          <V2Button size="sm" onClick={handleConfirm}>
+          <V2Button size="sm" onClick={handleConfirm} data-dica="reserva-confirmar-pedido">
             <CheckCircle2 className="h-4 w-4" /> Confirmar
           </V2Button>
           {editable && (

@@ -43,6 +43,14 @@
  * funcionalidade e aparece sozinho no dia em que o admin a liga — sem mandar
  * ninguém, antes disso, para uma porta que não abre.
  *
+ * ## "Mostre na tela" (dicas guiadas)
+ *
+ * `guias: ['id']` no artigo: com a flag `guided_tips`, o fim do artigo ganha
+ * um botão que começa o GUIA daquele assunto na tela de verdade (`guias.js`) —
+ * ler e depois fazer, sem procurar o botão sozinho. Só aparecem os guias
+ * visíveis para a pessoa (flags e papel); há teste conferindo que cada id
+ * existe no catálogo de guias.
+ *
  * ## O que NÃO vai aqui
  *
  * Regra de negócio. Este texto descreve o que a plataforma faz; quem decide o
@@ -81,6 +89,7 @@ const COMECAR = {
       title: 'O que é o PickleRush',
       summary: 'Para que serve a plataforma e o que dá para fazer nela.',
       keywords: ['início', 'plataforma', 'visão geral', 'começar'],
+      guias: ['conhecer-a-plataforma'],
       blocks: [
         p('O PickleRush reúne, num lugar só, o que o pickleball amador brasileiro faz espalhado: organizar torneios, marcar o jogo de sábado, encontrar com quem jogar, achar quadra, achar professor, e acompanhar a própria evolução.'),
         p('Você usa a plataforma em um ou mais papéis ao mesmo tempo. A maioria das pessoas começa como ATLETA. Quem tem quadra também vira ARENA. Quem dá aula também vira PROFESSOR. Não é preciso escolher: os papéis convivem na mesma conta.'),
@@ -97,6 +106,7 @@ const COMECAR = {
       title: 'Primeiros passos: conta e perfil',
       summary: 'O que preencher logo no começo, e por quê.',
       keywords: ['conta', 'cadastro', 'perfil', 'criar conta', 'entrar'],
+      guias: ['completar-perfil'],
       blocks: [
         p('Crie a conta e preencha o perfil. Não é burocracia: quase tudo na plataforma usa esses dados para funcionar bem.'),
         steps(
@@ -115,6 +125,7 @@ const COMECAR = {
       title: 'Como a plataforma é organizada',
       summary: 'O menu, os hubs e onde cada coisa mora.',
       keywords: ['menu', 'navegação', 'hub', 'onde fica'],
+      guias: ['conhecer-a-plataforma'],
       blocks: [
         p('O menu lateral tem HUBS (temas). Ao entrar num hub, aparece uma segunda barra com as páginas daquele tema. É sempre dois níveis — nada fica escondido num terceiro.'),
         list(
@@ -129,6 +140,26 @@ const COMECAR = {
         ),
         p('A busca do topo procura em toda a plataforma: atletas, torneios, arenas, clubes.'),
         tip('O menu lateral recolhe, se você quiser mais espaço na tela. A preferência fica guardada no seu navegador.'),
+      ],
+    },
+    {
+      id: 'dicas',
+      flags: ['guided_tips'],
+      title: 'Dicas: a plataforma mostra na tela, quando você pedir',
+      summary: 'Guias que apontam o botão de verdade, e pontos que explicam cada tela.',
+      keywords: ['dicas', 'dica', 'guia', 'tutorial', 'seta', 'como faço', 'ajuda na tela', 'passo a passo', 'como funciona'],
+      guias: ['conhecer-a-plataforma'],
+      blocks: [
+        p('O botão DICAS, no topo de toda tela (a lâmpada), abre o painel das dicas. Nada aparece sozinho: as dicas surgem quando você pede — nunca no meio do que você está fazendo.'),
+        steps(
+          'Toque em "Dicas" e escreva o que você quer fazer ("reservar quadra", "criar torneio") — ou escolha um guia da lista, separada por assunto. Em "Nesta tela" ficam os guias do lugar onde você está.',
+          'O guia leva você até a tela certa, escurece o resto e aponta com uma SETA o botão em que tocar.',
+          'Faça o que o passo pede — tocar no botão, abrir o formulário — e o guia avança sozinho. "Voltar", "Próximo" e o X ficam no cartão; o Esc também sai.',
+        ),
+        p('Ligando "Dicas na tela", aparecem PONTOS pulsando ao lado dos botões de cada tela. Tocar num ponto explica aonde aquele botão leva e, quando há, oferece "Me mostre como". "Entendi" marca o ponto como visto: ele para de pulsar.'),
+        tip('O botão "Como funciona" das ferramentas (torneio, dia de jogo) também vira um guia na tela. E, no fim dos artigos desta central, "Mostre na tela" começa o guia daquele assunto.'),
+        p('A escolha é da sua conta e fica guardada neste aparelho — num tablet compartilhado, ninguém herda as dicas do outro. Para desligar, ligar de novo ou mostrar outra vez os pontos já vistos: Configurações, cartão "Dicas".'),
+        link('/configuracoes', 'Ajustar as dicas'),
       ],
     },
     {
@@ -164,6 +195,7 @@ const COMECAR = {
       title: 'A sua tela inicial: você escolhe os cards',
       summary: 'Ligue, desligue e ponha na ordem o que aparece no seu início.',
       keywords: ['início', 'tela inicial', 'home', 'personalizar', 'cards', 'cartões', 'ordem', 'esconder', 'mostrar', 'página inicial', 'enxuto', 'poluído', 'cheio'],
+      guias: ['escolher-cards-do-inicio'],
       blocks: [
         p('A tela inicial mostra os CARDS que você escolher, na ordem que você quiser. De começo vêm três: DIAS DE JOGO, HORÁRIOS DA ARENA e RANKING. Qualquer um deles pode sair, e os outros podem entrar.'),
         steps(
@@ -184,6 +216,7 @@ const COMECAR = {
       title: 'Nível, rating e ranking: o que é cada coisa',
       summary: 'Três conceitos que parecem o mesmo e não são.',
       keywords: ['nível', 'rating', 'ranking', 'dupr', 'elo', 'nivelamento'],
+      guias: ['completar-perfil', 'entender-ranking'],
       blocks: [
         p('São três coisas diferentes, e confundi-las gera muita dúvida:'),
         list(
@@ -242,6 +275,7 @@ const ATLETA = {
       title: 'Achar com quem e onde jogar',
       summary: 'Quatro caminhos diferentes para sair do sofá.',
       keywords: ['jogar', 'parceiro', 'procura-se jogo', 'encontrar jogadores', 'quadra', 'jogo aberto'],
+      guias: ['encontrar-jogo', 'encontrar-jogadores'],
       blocks: [
         p('A plataforma tem quatro caminhos, e eles servem a situações diferentes:'),
         list(
@@ -396,6 +430,7 @@ const ATLETA = {
       title: 'Participar de um dia de jogo',
       summary: 'Como funciona do lado de quem joga.',
       keywords: ['dia de jogo', 'play', 'americano', 'fila', 'participar', 'simples', 'duplas'],
+      guias: ['encontrar-jogo'],
       blocks: [
         p('Dia de jogo é o evento de um dia: o treino, o open play, o americano do clube. Quem organiza cria; você entra como participante.'),
         p('O que você faz depende do formato:'),
@@ -415,10 +450,11 @@ const ATLETA = {
       title: 'Organizar o seu próprio dia de jogo',
       summary: 'Você não precisa ser clube nem arena para organizar.',
       keywords: ['organizar', 'criar dia de jogo', 'formato', 'quadras', 'simples', 'duplas', 'um contra um'],
+      guias: ['criar-dia-de-jogo'],
       blocks: [
         p('Qualquer atleta cria um dia de jogo. Escolha o formato, o número de quadras, a data e quem pode organizar as partidas (só você e quem você nomear, ou qualquer inscrito).'),
         p('Americano e Play estão sempre na lista. Americano aprimorado, Mexicano e Rei da Quadra são formatos opcionais: aparecem quando a plataforma os oferece. Um dia de jogo já criado num deles continua funcionando normalmente, mesmo que o formato deixe de ser oferecido.'),
-        p('Cada formato tem um tutorial completo dentro da própria tela — o botão "Como funciona" explica passo a passo, e pode ser revisto quando quiser.'),
+        p('Cada formato tem um tutorial completo dentro da própria tela — o botão "Como funciona" explica passo a passo, sempre que você quiser.'),
         list(
           'SIMPLES OU DUPLAS — no Play e no Americano aprimorado, cada quadra tem "Duplas | Simples": na de simples entram os dois primeiros da fila. No Americano, o tipo se escolhe no sorteio. A partida criada à mão também pode ser dos dois tipos.',
           'RANKING DO DIA — com jogo simples e em duplas no mesmo dia, são duas tabelas, independentes. Uma vitória no simples não soma nas duplas.',
@@ -433,6 +469,7 @@ const ATLETA = {
       title: 'Se inscrever num torneio',
       summary: 'Do achar ao check-in no dia.',
       keywords: ['torneio', 'inscrição', 'inscrever', 'modalidade', 'dupla'],
+      guias: ['inscrever-em-torneio'],
       blocks: [
         p('Torneios públicos aparecem na busca. Torneios privados exigem link ou código de acesso.'),
         steps(
@@ -462,9 +499,10 @@ const ATLETA = {
       title: 'Organizar um torneio',
       summary: 'Criar, gerir modalidades, inscrições, sorteio e resultados.',
       keywords: ['organizar torneio', 'criar torneio', 'sorteio', 'gestão'],
+      guias: ['criar-torneio', 'tutorial:torneio'],
       blocks: [
         p('Qualquer pessoa cria um torneio. O caminho é sempre: criar → modalidades → inscrições → sorteio → resultados. O encerramento é automático quando o último resultado entra.'),
-        p('Há um tutorial completo dentro do console de gestão, com os sete passos detalhados — ele abre na primeira vez e fica disponível no botão "Como funciona".'),
+        p('Há um tutorial completo dentro do console de gestão, com os sete passos detalhados — sempre à mão no botão "Como funciona".'),
         p('Se o número de inscritos não bateu com o formato ideal — grupos de tamanhos diferentes, chave que não fecha, alguém que precisa entrar mais à frente — veja "Quando o número de inscritos não é o ideal".'),
         link('/torneios/criar', 'Criar um torneio'),
         link('/torneios/guia', 'Guia dos formatos de chave'),
@@ -510,6 +548,7 @@ const ATLETA = {
       title: 'Ranking, rating e a sua evolução',
       summary: 'De onde vêm os números e quando eles mudam.',
       keywords: ['ranking', 'rating', 'evolução', 'desempenho', 'duplas', 'dupr'],
+      guias: ['entender-ranking'],
       blocks: [
         p('Os resultados que contam vêm de duas fontes, e elas têm gatilhos diferentes: em TORNEIO público, cada placar lançado já conta — não é preciso esperar o torneio encerrar; em DIA DE JOGO, contam quando quem organiza PUBLICA os resultados no ranking.'),
         p('Fica de fora o que não é resultado de verdade: torneio em rascunho, cancelado, privado ou arquivado. E como a conta é sempre refeita por inteiro, cancelar ou arquivar TIRA do ranking o que já tinha contado.'),
@@ -531,6 +570,7 @@ const ATLETA = {
       title: 'Clubes, mensagens e comunidade',
       summary: 'Conviver com quem joga com você.',
       keywords: ['clube', 'comunidade', 'mensagem', 'chat', 'fórum', 'mural'],
+      guias: ['entrar-num-clube', 'criar-clube'],
       blocks: [
         p('CLUBES são grupos de pessoas que jogam juntas. Dentro de um clube há mural, fóruns, eventos, membros e um ranking interno — só dos jogos daquele clube.'),
         p('Você entra num clube por convite ou pedindo para entrar. Quem administra aprova.'),
@@ -548,6 +588,7 @@ const ATLETA = {
       title: 'Reservar quadra e marcar aula',
       summary: 'Do lado de quem contrata.',
       keywords: ['reserva', 'quadra', 'aula', 'professor', 'agendar'],
+      guias: ['reservar-quadra', 'minhas-reservas', 'encontrar-professor'],
       blocks: [
         p('Em Arenas você encontra quadras por cidade, vê preços e horários, e pede a reserva. A arena responde confirmando ou recusando — você acompanha em "Minhas reservas".'),
         p('Em Aulas você encontra professores, vê o perfil, os pacotes e a agenda, e marca. Suas aulas ficam em "Minhas aulas".'),
@@ -575,6 +616,7 @@ const ARENA = {
       title: 'Publicar a sua arena',
       summary: 'O mínimo para aparecer e começar a receber pedidos.',
       keywords: ['criar arena', 'cadastrar', 'publicar', 'onboarding'],
+      guias: ['cadastrar-arena'],
       blocks: [
         p('Criar a arena leva poucos minutos. O que a faz ser encontrada é o básico bem preenchido: nome, cidade, endereço, fotos e quadras.'),
         steps(
@@ -593,6 +635,7 @@ const ARENA = {
       title: 'Receber e gerenciar reservas',
       summary: 'Solicitações, calendário e clientes.',
       keywords: ['reserva', 'solicitação', 'calendário', 'agenda', 'cliente'],
+      guias: ['responder-reservas'],
       blocks: [
         p('Pedidos de reserva chegam em SOLICITAÇÕES. Você confirma ou recusa, e quem pediu é avisado. O contador no menu mostra quantos estão aguardando.'),
         list(
@@ -610,6 +653,7 @@ const ARENA = {
       title: 'Estrutura, preços e regras',
       summary: 'Quadras, faixas de preço e as condições da casa.',
       keywords: ['preço', 'quadra', 'regras', 'horário', 'valor'],
+      guias: ['configurar-quadras'],
       blocks: [
         p('Em "Estrutura e preços" ficam as três coisas que definem o que você vende:'),
         list(
@@ -767,6 +811,7 @@ const ARENA = {
       title: 'Módulos: ligar só o que você usa',
       summary: 'A arena não precisa de tudo ligado.',
       keywords: ['módulos', 'ativar', 'funcionalidades', 'open match', 'marketing'],
+      guias: ['ligar-modulos'],
       blocks: [
         p('A gestão da arena é modular. Você liga só os módulos que fazem sentido para a sua operação — e a tela fica só com o que você usa.'),
         list(
@@ -799,6 +844,7 @@ const PROFESSOR = {
       title: 'Ativar o seu perfil de professor',
       summary: 'Como aparecer na busca de professores.',
       keywords: ['professor', 'virar professor', 'perfil', 'ativar'],
+      guias: ['virar-professor'],
       blocks: [
         p('No seu perfil há a opção "Sou professor(a)". Ao marcar, abrem-se os campos do professor: sobre as suas aulas, regiões de atuação e valor (opcional).'),
         steps(
@@ -817,6 +863,7 @@ const PROFESSOR = {
       title: 'Agenda e calendário',
       summary: 'Onde as suas aulas vivem.',
       keywords: ['agenda', 'calendário', 'aula', 'horário'],
+      guias: ['disponibilidade-professor'],
       blocks: [
         p('O painel do professor tem a AGENDA (o que vem a seguir) e o CALENDÁRIO (a visão do período). É por ali que você acompanha e organiza as aulas marcadas.'),
         p('Dá aula na agenda de uma arena? Quando a arena vincula o cadastro de professor à sua conta, as aulas dela aparecem na sua agenda — e, abrindo a aula, você vê os alunos matriculados.'),
@@ -902,6 +949,7 @@ const CONTA = {
       title: 'O que aparece de você, e o que não',
       summary: 'Você decide o que é público.',
       keywords: ['privacidade', 'dados', 'público', 'contato', 'lgpd', 'diretório'],
+      guias: ['privacidade-e-dados'],
       blocks: [
         p('Nome de exibição, cidade e nível fazem você ser encontrado — é o que permite te convidarem para jogar. Já CONTATO é escolha sua.'),
         list(
@@ -918,6 +966,7 @@ const CONTA = {
       title: 'Notificações',
       summary: 'O que te avisa, e como diminuir.',
       keywords: ['notificação', 'aviso', 'sino', 'push', 'e-mail'],
+      guias: ['escolher-notificacoes'],
       blocks: [
         p('O sino reúne o que aconteceu com você: convites, respostas de reserva, resultados, movimentação dos seus clubes.'),
         p('Em Configurações você escolhe o que quer receber. Se a plataforma estiver instalada como aplicativo no celular, também pode receber notificações push.'),
@@ -930,6 +979,7 @@ const CONTA = {
       title: 'Modo escuro: claro, escuro ou automático',
       summary: 'Escolha a aparência da plataforma — é só sua.',
       keywords: ['modo escuro', 'escuro', 'tema', 'aparência', 'noite', 'claro', 'automático', 'dark'],
+      guias: ['escolher-aparencia'],
       blocks: [
         p('A plataforma tem três aparências: CLARO (o visual de sempre), ESCURO (fundo escuro, mais confortável à noite e com pouca luz) e AUTOMÁTICO, que acompanha o seu aparelho — claro de dia, escuro quando o celular ou o computador escurecer.'),
         steps(
@@ -1209,7 +1259,7 @@ export const HELP_ROUTE_HINTS = Object.freeze([
   { pattern: '/perfil', label: 'seu perfil',
     refs: [[HELP_SECTION.START, 'primeiros-passos'], [HELP_SECTION.ACCOUNT, 'privacidade']] },
   { pattern: '/configuracoes', label: 'configurações',
-    refs: [[HELP_SECTION.ACCOUNT, 'modo-escuro'], [HELP_SECTION.START, 'inicio-sob-medida'], [HELP_SECTION.ACCOUNT, 'notificacoes'], [HELP_SECTION.ACCOUNT, 'privacidade']] },
+    refs: [[HELP_SECTION.ACCOUNT, 'modo-escuro'], [HELP_SECTION.START, 'inicio-sob-medida'], [HELP_SECTION.START, 'dicas'], [HELP_SECTION.ACCOUNT, 'notificacoes'], [HELP_SECTION.ACCOUNT, 'privacidade']] },
   { pattern: '/legal', label: 'os documentos',
     refs: [[HELP_SECTION.ACCOUNT, 'documentos']] },
 ]);
@@ -1271,6 +1321,8 @@ export const HELP_FAQ = Object.freeze([
   { q: 'Quem vê meu telefone e meu e-mail?', section: HELP_SECTION.ACCOUNT, article: 'privacidade' },
   { q: 'Como publico minha arena?', section: HELP_SECTION.ARENA, article: 'criar-arena' },
   { q: 'Como apareço como professor?', section: HELP_SECTION.COACH, article: 'virar-professor' },
+  // Com as dicas guiadas desligadas, a pergunta some junto com o artigo.
+  { q: 'Como a plataforma me mostra onde tocar?', section: HELP_SECTION.START, article: 'dicas' },
 ]);
 
 /** As perguntas frequentes já resolvidas em artigos (ignora ref quebrada). */

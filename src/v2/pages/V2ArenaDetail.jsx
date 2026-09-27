@@ -196,7 +196,7 @@ function V2ArenaDetailContent({ arenaId, user, arena, managed, bookings, isLoadi
           </div>
 
           <div className="mt-5 flex flex-wrap items-center gap-2">
-            <V2Button onClick={() => setBookingOpen(true)}><CalendarPlus className="h-4 w-4" /> Solicitar reserva</V2Button>
+            <V2Button onClick={() => setBookingOpen(true)} data-dica="arena-solicitar"><CalendarPlus className="h-4 w-4" /> Solicitar reserva</V2Button>
             {arena.owner_id && arena.owner_id !== user?.uid && (
               <V2ChatLauncherButton
                 athlete={{ id: arena.owner_id, platform_name: arena.name, photo_url: cover }}
@@ -207,7 +207,7 @@ function V2ArenaDetailContent({ arenaId, user, arena, managed, bookings, isLoadi
             <V2FavoriteArenaButton arena={arena} />
             <V2ArenaShareButton arena={arena} />
             {canManage && (
-              <V2Button asChild variant="ghost" size="sm"><Link to={`/arenas/${arena.id}/gerir`}><Settings className="h-4 w-4" /> Gerir</Link></V2Button>
+              <V2Button asChild variant="ghost" size="sm"><Link to={`/arenas/${arena.id}/gerir`} data-dica="arena-gerir"><Settings className="h-4 w-4" /> Gerir</Link></V2Button>
             )}
             {/* As telas públicas dos módulos que esta arena ligou (jogos
                 abertos, encontrar parceiro, membros…). A lista vem do catálogo. */}

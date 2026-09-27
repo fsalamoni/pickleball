@@ -71,7 +71,7 @@ function Stat({ label, value }) {
 /** Explicação, em linguagem natural, de como o ranking é formado. */
 function RankingExplainer() {
   return (
-    <V2Surface className="mb-8">
+    <V2Surface className="mb-8" data-dica="ranking-como-funciona">
       <details className="group">
         <summary className="flex cursor-pointer list-none items-center justify-between gap-2">
           <span className="font-semibold text-ink">Como funciona o ranking?</span>
@@ -162,7 +162,7 @@ function NationalRankingView() {
         title="Ranking nacional"
         subtitle="Rating calculado a partir dos jogos disputados nos torneios da plataforma."
         action={doublesRankingOn ? (
-          <Link to="/ranking/duplas" className="inline-flex items-center gap-1.5 rounded-full border border-gray-200 bg-paper-pure px-4 py-2 text-sm font-semibold text-ink hover:bg-white">
+          <Link to="/ranking/duplas" data-dica="ranking-duplas-link" className="inline-flex items-center gap-1.5 rounded-full border border-gray-200 bg-paper-pure px-4 py-2 text-sm font-semibold text-ink hover:bg-white">
             <Users2 className="h-4 w-4" /> Ranking de duplas
           </Link>
         ) : null}
@@ -170,7 +170,7 @@ function NationalRankingView() {
 
       <RankingExplainer />
 
-      <V2Surface className="mb-8 space-y-4">
+      <V2Surface className="mb-8 space-y-4" data-dica="ranking-busca">
         <V2SearchInput
           icon={Search}
           value={search}
@@ -298,7 +298,7 @@ export default function V2Ranking() {
   return (
     <div className="mx-auto max-w-[1100px]">
       <div className="mb-6 overflow-x-auto">
-        <div className="inline-flex gap-1.5 rounded-full border border-gray-100 bg-paper-pure p-1.5 shadow-sm">
+        <div data-dica="ranking-abas" className="inline-flex gap-1.5 rounded-full border border-gray-100 bg-paper-pure p-1.5 shadow-sm">
           {TABS.map((t) => (
             <button
               key={t.id}

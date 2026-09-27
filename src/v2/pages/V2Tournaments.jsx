@@ -74,10 +74,10 @@ export default function V2Tournaments() {
       <V2PageIntro
         title="Torneios"
         subtitle="Descubra eventos abertos e acompanhe os seus."
-        action={<V2Button asChild><Link to="/torneios/criar"><Plus className="h-4 w-4" /> Criar torneio</Link></V2Button>}
+        action={<V2Button asChild><Link to="/torneios/criar" data-dica="torneios-criar"><Plus className="h-4 w-4" /> Criar torneio</Link></V2Button>}
       />
 
-      <div className="mb-8 inline-flex rounded-full border border-gray-100 bg-paper-pure p-1.5 shadow-sm">
+      <div data-dica="torneios-abas" className="mb-8 inline-flex rounded-full border border-gray-100 bg-paper-pure p-1.5 shadow-sm">
         <TabButton active={tab === 'public'} onClick={() => setTab('public')}>Públicos</TabButton>
         <TabButton active={tab === 'mine'} onClick={() => setTab('mine')}>Meus torneios</TabButton>
       </div>
@@ -106,7 +106,7 @@ export default function V2Tournaments() {
           />
         </V2Surface>
       ) : (
-        <div className="grid gap-6 lg:grid-cols-2 xl:grid-cols-3">
+        <div data-dica="torneios-lista" className="grid gap-6 lg:grid-cols-2 xl:grid-cols-3">
           {sorted.map((t) => <TournamentCard key={t.id} tournament={t} />)}
         </div>
       )}

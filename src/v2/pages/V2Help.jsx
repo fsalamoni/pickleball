@@ -60,6 +60,7 @@ import {
   V2Badge, V2Button, V2ContentHero, V2SearchInput, V2Surface,
 } from '@/v2/ui/primitives';
 import { cn } from '@/core/lib/utils';
+import GuiasDoArtigo from '@/v2/components/dicas/GuiasDoArtigo';
 
 /** Ícone de cada seção — reforça o "isto é sobre mim" antes da leitura. */
 const ICONE = {
@@ -347,40 +348,46 @@ export default function V2Help() {
   };
   const aoTopo = () => topoRef.current?.scrollIntoView({ block: 'start', behavior: 'smooth' });
 
-  /** O rodapé de um artigo aberto: sem becos — próximo, link, topo. */
+  /**
+   * O rodapé de um artigo aberto: sem becos — "Mostre na tela" (com as dicas
+   * guiadas), próximo, link, topo.
+   */
   const rodapeDoArtigo = (a) => {
     const proximo = ajuda.next(a.sectionId, a.id);
     const url = typeof window !== 'undefined'
       ? `${window.location.origin}/ajuda?s=${a.sectionId}&a=${a.id}`
       : `/ajuda?s=${a.sectionId}&a=${a.id}`;
     return (
-      <div className="flex flex-wrap items-center gap-2 border-t border-gray-100 pt-3">
-        {proximo && (
+      <>
+        <GuiasDoArtigo ids={a.guias} />
+        <div className="flex flex-wrap items-center gap-2 border-t border-gray-100 pt-3">
+          {proximo && (
+            <V2Button
+              type="button"
+              size="sm"
+              variant="subtle"
+              onClick={() => abrir(proximo.sectionId, proximo.id)}
+            >
+              <CornerDownLeft aria-hidden="true" className="h-3.5 w-3.5 -scale-x-100" />
+              Próximo: {proximo.title}
+            </V2Button>
+          )}
           <V2Button
             type="button"
             size="sm"
-            variant="subtle"
-            onClick={() => abrir(proximo.sectionId, proximo.id)}
+            variant="ghost"
+            onClick={() => copy(url, 'Link do artigo copiado.')}
+            title="Copiar o link direto deste artigo"
           >
-            <CornerDownLeft aria-hidden="true" className="h-3.5 w-3.5 -scale-x-100" />
-            Próximo: {proximo.title}
+            <Link2 aria-hidden="true" className="h-3.5 w-3.5" />
+            Copiar link
           </V2Button>
-        )}
-        <V2Button
-          type="button"
-          size="sm"
-          variant="ghost"
-          onClick={() => copy(url, 'Link do artigo copiado.')}
-          title="Copiar o link direto deste artigo"
-        >
-          <Link2 aria-hidden="true" className="h-3.5 w-3.5" />
-          Copiar link
-        </V2Button>
-        <V2Button type="button" size="sm" variant="ghost" onClick={aoTopo}>
-          <ArrowUp aria-hidden="true" className="h-3.5 w-3.5" />
-          Topo
-        </V2Button>
-      </div>
+          <V2Button type="button" size="sm" variant="ghost" onClick={aoTopo}>
+            <ArrowUp aria-hidden="true" className="h-3.5 w-3.5" />
+            Topo
+          </V2Button>
+        </div>
+      </>
     );
   };
 

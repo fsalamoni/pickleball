@@ -161,7 +161,7 @@ describe('⭐ o miolo do dia de jogo tem UMA fonte', () => {
     // origem para origem.
     const modulo = semComentarios(ler('src/v2/components/games/GameDayModule.jsx'));
     expect(modulo, 'o módulo voltou a não espaçar os próprios cartões')
-      .toMatch(/<div className="space-y-\d">/);
+      .toMatch(/<div className="space-y-\d"[\s>]/);
 
     const regras = semComentarios(ler('src/v2/components/games/GameDayRulesCard.jsx'));
     expect(regras, 'o cartão de regras voltou a espaçar a si mesmo').not.toContain('mb-4 rounded');

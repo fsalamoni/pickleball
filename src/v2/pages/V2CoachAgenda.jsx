@@ -183,13 +183,13 @@ export function AvailabilityEditor({ coachId }) {
   };
 
   return (
-    <V2Surface>
+    <V2Surface data-dica="professor-disponibilidade">
       <div className="mb-4 flex items-center justify-between">
         <div className="flex items-center gap-2">
           <Clock className="h-5 w-5 text-ink" />
           <h2 className="font-display text-lg font-bold text-ink">Disponibilidade semanal</h2>
         </div>
-        <V2Button size="sm" variant="ghost" onClick={() => setWindows((p) => [...p, emptyWindow()])}>
+        <V2Button size="sm" variant="ghost" onClick={() => setWindows((p) => [...p, emptyWindow()])} data-dica="professor-janela">
           <Plus className="mr-1 h-4 w-4" /> Janela
         </V2Button>
       </div>
@@ -243,7 +243,7 @@ export function AvailabilityEditor({ coachId }) {
         <V2Field label="Duração de cada aula (min)" className="w-40">
           <V2Input type="number" min="15" max="240" step="15" value={slotMinutes} onChange={(e) => setSlotMinutes(e.target.value)} />
         </V2Field>
-        <V2Button onClick={handleSave} disabled={save.isPending}>
+        <V2Button onClick={handleSave} disabled={save.isPending} data-dica="professor-salvar-disponibilidade">
           {save.isPending ? 'Salvando…' : 'Salvar disponibilidade'}
         </V2Button>
       </div>
@@ -352,7 +352,10 @@ function V2CoachAgendaContent() {
 
   const [params, setParams] = useSearchParams();
   const [tabEscolhida, setTabEscolhida] = useState(null);
-  const tab = tabEscolhida || coachTabFromUrl(params, sections);
+  // A URL manda quando diz a aba: um link com `?aba=` (um aviso, um guia das
+  // dicas) tem de trocar a aba mesmo com o painel já aberto noutra.
+  const urlDizAba = Boolean(params.get('aba') || params.get('secao'));
+  const tab = urlDizAba ? coachTabFromUrl(params, sections) : (tabEscolhida || coachTabFromUrl(params, sections));
   const setTab = (valor) => {
     setTabEscolhida(valor);
     // A aba vai para a URL: recarregar ou voltar não perde o lugar.
@@ -428,6 +431,7 @@ function V2CoachAgendaContent() {
       <div className="space-y-3">
         <V2SectionNav
           ariaLabel="Seções do painel do professor"
+          dica="professor-secoes"
           sections={sections}
           activeId={activeSection.id}
           onSelect={(section) => setTab(section.tabs[0].value)}

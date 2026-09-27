@@ -195,7 +195,7 @@ export default function V2Tournament() {
 
           <div className="mt-6 flex flex-wrap gap-2">
             {adminConsoleOn && isAdmin && (
-              <Link to={`/torneios/${tournament.id}/gerenciar`} className="btn-press inline-flex items-center gap-2 rounded-full bg-acid px-4 py-2 text-sm font-bold text-ink">
+              <Link to={`/torneios/${tournament.id}/gerenciar`} data-dica="torneio-gerenciar" className="btn-press inline-flex items-center gap-2 rounded-full bg-acid px-4 py-2 text-sm font-bold text-ink">
                 <ShieldCheck className="h-4 w-4" /> Gerenciar torneio
               </Link>
             )}
@@ -240,7 +240,7 @@ export default function V2Tournament() {
       )}
 
       {/* Tabs */}
-      <div className="mt-6 inline-flex flex-wrap gap-1.5 rounded-full border border-gray-100 bg-paper-pure p-1.5 shadow-sm">
+      <div data-dica="torneio-abas" className="mt-6 inline-flex flex-wrap gap-1.5 rounded-full border border-gray-100 bg-paper-pure p-1.5 shadow-sm">
         {tabs.map((t) => {
           const Icon = t.icon;
           return (

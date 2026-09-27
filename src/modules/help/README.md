@@ -1,29 +1,51 @@
-# help/ — tutoriais e ajuda em tela
+# help/ — tutoriais, dicas guiadas e ajuda em tela
 
-Módulo pequeno e de propósito único: guardar o **conteúdo dos tutoriais** que a
-plataforma mostra dentro das próprias ferramentas.
+O CONTEÚDO de tudo o que ensina a usar a plataforma — e as contas puras que as
+telas de ajuda fazem. Três coisas, complementares:
 
-Duas coisas, complementares:
+| | Tutoriais em tela | Dicas guiadas (flag `guided_tips`) | Central de ajuda |
+|---|---|---|---|
+| Onde | dentro da ferramenta | sobre a tela de verdade, em qualquer tela | página própria, `/ajuda` |
+| Quando | na primeira vez, sozinho | **só quando a pessoa pede** (ou liga os pontos) | quando a pessoa procura |
+| Escopo | uma ferramenta, passo a passo, para ler | uma TAREFA, apontando o botão, que avança quando a pessoa faz | a plataforma inteira, por persona |
 
-| | Tutoriais em tela | Central de ajuda |
-|---|---|---|
-| Onde | dentro da ferramenta | página própria, `/ajuda` |
-| Quando | na primeira vez, sozinho | quando a pessoa procura |
-| Escopo | uma ferramenta, passo a passo | a plataforma inteira, por persona |
+Com `guided_tips` ligada, os tutoriais **são** guias (`tutorial:<id>`, o mesmo
+texto) e não abrem mais sozinhos. Ver `docs/32-DICAS-GUIADAS.md`.
 
 ## O que tem aqui
 
 ```
 help/
-└── domain/
-    ├── tutorials.js          # tutoriais em tela (torneio, dia de jogo)
-    ├── tutorials.test.js
-    ├── helpCenter.js         # a central de ajuda: 33 artigos em 5 partes
-    └── helpCenter.test.js
+├── domain/
+│   ├── tutorials.js          # tutoriais em tela (torneio, dia de jogo)
+│   ├── helpCenter.js         # a central de ajuda: artigos em 5 partes (+ `guias` de cada um)
+│   ├── helpLink.js           # o link de ajuda de uma tela (leve: fica no pacote comum)
+│   ├── guias.js              # ⭐ dicas: os 27 guias (23 escritos + 4 tutoriais) e as contas deles
+│   ├── pontosDeDica.js       # ⭐ dicas: os pontos pulsando, por tela (máx. 6)
+│   ├── dicasRota.js          # moldes de rota (`*` um segmento, `**` o resto)
+│   └── dicasPosicao.js       # geometria do destaque: onde vão o cartão e a seta
+└── services/
+    └── dicasPreference.js    # ligadas / feitos / vistos (localStorage) + guia em andamento (sessionStorage)
 ```
 
 As interfaces vivem em `src/v2/components/tutorial/V2TutorialLauncher.jsx`
-(tutoriais) e `src/v2/pages/V2Help.jsx` (central, flag `help_center`).
+(tutoriais), `src/v2/components/dicas/` (dicas: provedor, botão, painel, guia,
+pontos, destaque) e `src/v2/pages/V2Help.jsx` (central, flag `help_center`).
+
+## Dicas guiadas — o essencial
+
+- Um **guia** é uma lista de passos `{ route, goTo?, target, advanceOn?, title,
+  body, tip?, action? }`. `target` é o `data-dica` do botão de verdade (ou uma
+  LISTA, da âncora preferida à de reserva); `advanceOn` é `'click'`,
+  `{ route }` ou `{ appears }`.
+- `dicaVisivel(item, ctx)` decide quem vê: `flags` (qualquer), `flagsTodas`,
+  `semFlags` e `audience: 'arena' | 'professor'`.
+- `guiasDaTela`, `buscarGuias`, `guiasPorArea` alimentam o painel;
+  `destinoDoPasso`, `destinoDeRecuo` ("Levar-me até lá" para a aba certa) e
+  `passoQueAbre` ("Abrir de novo" o formulário fechado) alimentam o guia.
+- **Zero banco**, **por usuário**. E o catálogo só baixa com as dicas em uso
+  (guarda em `src/core/guards/dicas.test.js`, que também confere que toda
+  âncora e toda rota citadas existem).
 
 ## Tutoriais existentes
 

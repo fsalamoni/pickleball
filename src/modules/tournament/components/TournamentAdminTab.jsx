@@ -466,7 +466,7 @@ export default function TournamentAdminTab({ tournament }) {
         </PlatformSurfaceCard>
 
         <div className="space-y-5">
-          <PlatformSurfaceCard>
+          <PlatformSurfaceCard data-dica="torneio-status">
             <div className="text-xs font-semibold uppercase tracking-[0.16em] text-gray-400">Status da operação</div>
             <h4 className="mt-2 text-xl font-semibold text-ink">Atualize o estado do evento com clareza</h4>
             <p className="mt-2 text-sm leading-6 text-gray-500">

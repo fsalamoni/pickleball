@@ -21,7 +21,9 @@ export default function HomeCardsDialog({ open, onOpenChange, foci = [] }) {
             Ligue, desligue e ordene os cards. Muda na hora — a tela atrás já mostra.
           </DialogDescription>
         </DialogHeader>
-        <HomeCardsPicker foci={foci} />
+        <div data-dica="inicio-seletor">
+          <HomeCardsPicker foci={foci} />
+        </div>
         <div className="flex flex-col-reverse gap-3 sm:flex-row sm:items-center sm:justify-between">
           <Link
             to="/configuracoes#pagina-inicial"

@@ -47,7 +47,7 @@ export default function V2PushCard() {
   }
 
   return (
-    <V2Surface>
+    <V2Surface data-dica="config-push">
       <div className="flex items-center gap-2">
         <BellRing className="h-5 w-5 text-ink" />
         <h2 className="font-display text-lg font-bold text-ink">Notificações push</h2>

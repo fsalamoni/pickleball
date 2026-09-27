@@ -92,6 +92,7 @@ export default function HomeHero({
               type="button"
               onClick={abrir}
               aria-haspopup="dialog"
+              data-dica="inicio-personalizar"
               className="btn-press inline-flex items-center gap-1.5 rounded-full bg-white px-3.5 py-1.5 text-xs font-bold text-ink transition-transform hover:scale-105 focus-visible:outline-none focus-visible:ring-4 focus-visible:ring-acid/50"
             >
               <SlidersHorizontal className="h-3.5 w-3.5" aria-hidden="true" /> Personalizar

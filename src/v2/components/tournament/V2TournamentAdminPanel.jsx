@@ -40,12 +40,13 @@ function useAutoCloseTournament(tournament) {
   }, [lifecycleOn, tournament.status, tournament.results_locked, tournament.id, modalities, matches]);
 }
 
+// `dica`: âncora das dicas guiadas — é para onde a seta do guia do torneio aponta.
 const ADMIN_TABS = [
-  { value: 'geral', label: 'Geral', icon: Settings2 },
-  { value: 'modalidades', label: 'Modalidades', icon: FolderCog },
-  { value: 'inscricoes', label: 'Inscrições', icon: Users },
-  { value: 'sorteio', label: 'Sorteio', icon: ClipboardCheck },
-  { value: 'resultados', label: 'Resultados', icon: Swords },
+  { value: 'geral', label: 'Geral', icon: Settings2, dica: 'torneio-aba-geral' },
+  { value: 'modalidades', label: 'Modalidades', icon: FolderCog, dica: 'torneio-aba-modalidades' },
+  { value: 'inscricoes', label: 'Inscrições', icon: Users, dica: 'torneio-aba-inscricoes' },
+  { value: 'sorteio', label: 'Sorteio', icon: ClipboardCheck, dica: 'torneio-aba-sorteio' },
+  { value: 'resultados', label: 'Resultados', icon: Swords, dica: 'torneio-aba-resultados' },
 ];
 
 export default function V2TournamentAdminPanel({ tournament }) {
@@ -87,7 +88,8 @@ export default function V2TournamentAdminPanel({ tournament }) {
           cabe na tela não é vista. */}
       <V2SectionNav
         ariaLabel="Abas da gestão do torneio"
-        sections={tabs.map(({ value, label, icon }) => ({ id: value, label, icon }))}
+        dica="torneio-gestao-secoes"
+        sections={tabs.map(({ value, label, icon, dica }) => ({ id: value, label, icon, dica }))}
         activeId={activeTab}
         onSelect={(section) => setActiveTab(section.id)}
       />

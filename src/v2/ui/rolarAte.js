@@ -28,19 +28,28 @@ export function conteinerQueRola(el) {
 
 /**
  * @param {Element|null} el
- * @param {{ suave?: boolean }} [opcoes] - `suave: false` para "menos movimento"
+ * @param {{ suave?: boolean, alinhar?: 'inicio'|'centro', reservaInferior?: number }} [opcoes] -
+ *   `suave: false` para "menos movimento"; `alinhar: 'centro'` põe o elemento
+ *   no meio da área visível (é o que as dicas usam: o cartão cabe em volta);
+ *   `reservaInferior` (px) desconta o que cobre o pé do contêiner — a faixa do
+ *   guia presa ao rodapé de um diálogo, que senão cobriria o próprio campo.
  * @returns {boolean} se havia o que rolar
  */
-export function rolarAte(el, { suave = true } = {}) {
+export function rolarAte(el, { suave = true, alinhar = 'inicio', reservaInferior = 0 } = {}) {
   if (!el) return false;
   const behavior = suave ? 'smooth' : 'auto';
   const conteiner = conteinerQueRola(el);
   if (!conteiner) {
-    el.scrollIntoView?.({ behavior, block: 'start' });
+    el.scrollIntoView?.({ behavior, block: alinhar === 'centro' ? 'center' : 'start' });
     return true;
   }
+  const r = el.getBoundingClientRect();
+  const relativo = r.top - conteiner.getBoundingClientRect().top + conteiner.scrollTop;
   const margem = parseFloat(window.getComputedStyle(el).scrollMarginTop) || 0;
-  const topo = el.getBoundingClientRect().top - conteiner.getBoundingClientRect().top + conteiner.scrollTop - margem;
+  const util = Math.max(0, conteiner.clientHeight - reservaInferior);
+  const topo = alinhar === 'centro'
+    ? relativo - Math.max(0, (util - r.height) / 2)
+    : relativo - margem;
   const top = Math.max(0, Math.round(topo));
   if (typeof conteiner.scrollTo === 'function') conteiner.scrollTo({ top, behavior });
   else conteiner.scrollTop = top;

@@ -61,6 +61,8 @@ import { useFeatureFlag } from '@/core/lib/FeatureFlagsContext';
 // De `helpLink` e não de `helpCenter`: o layout está em toda tela, e importar
 // do arquivo do conteúdo traria os 33 artigos da ajuda no chunk de todo mundo.
 import { helpLinkFor } from '@/modules/help/domain/helpLink';
+import DicasProvider from '@/v2/components/dicas/DicasProvider';
+import BotaoDicas from '@/v2/components/dicas/BotaoDicas';
 import { useAncoraDoAviso } from '@/v2/ui/useAncoraDoAviso';
 import LegalConsentGate from '@/v2/components/legal/LegalConsentGate';
 import { useMyConsents } from '@/modules/legal/hooks/useConsents';
@@ -202,9 +204,9 @@ function useV2Nav() {
       return { ...h, children };
     };
     return [
-      hub({ id: 'inicio', label: 'Início', icon: LayoutGrid, to: '/', exact: true, children: [] }),
+      hub({ id: 'inicio', dica: 'menu-inicio', label: 'Início', icon: LayoutGrid, to: '/', exact: true, children: [] }),
       hub({
-        id: 'competir', label: 'Competir', icon: Trophy, to: '/torneios',
+        id: 'competir', dica: 'menu-competir', label: 'Competir', icon: Trophy, to: '/torneios',
         children: [
           { to: '/torneios', label: 'Torneios', icon: Trophy },
           circuitsOn && { to: '/circuits', label: 'Circuitos', icon: Award },
@@ -213,7 +215,7 @@ function useV2Nav() {
         ],
       }),
       hub({
-        id: 'jogar', label: 'Jogar', icon: Swords, to: openGamesOn ? '/procura-jogo' : (gameDayOn ? '/dia-de-jogo' : '/encontrar-jogadores'),
+        id: 'jogar', dica: 'menu-jogar', label: 'Jogar', icon: Swords, to: openGamesOn ? '/procura-jogo' : (gameDayOn ? '/dia-de-jogo' : '/encontrar-jogadores'),
         children: [
           ratingOn && matchmakingOn && { to: '/encontrar-jogadores', label: 'Encontrar jogadores', icon: Swords },
           openGamesOn && { to: '/procura-jogo', label: 'Procura-se jogo', icon: Megaphone },
@@ -221,7 +223,7 @@ function useV2Nav() {
         ],
       }),
       hub({
-        id: 'comunidade', label: 'Comunidade', icon: Users, to: '/atletas',
+        id: 'comunidade', dica: 'menu-comunidade', label: 'Comunidade', icon: Users, to: '/atletas',
         children: [
           { to: '/atletas', label: 'Atletas', icon: Users },
           { to: '/clubes', label: 'Clubes', icon: Building2 },
@@ -230,7 +232,7 @@ function useV2Nav() {
         ],
       }),
       (arenasOn || isPlatformAdmin) && hub({
-        id: 'arenas', label: 'Arenas', icon: Building2, to: '/arenas',
+        id: 'arenas', dica: 'menu-arenas', label: 'Arenas', icon: Building2, to: '/arenas',
         badge: showMyArenas ? myPendingBookings : 0,
         badgeHint: showMyArenas && myPendingBookings > 0 ? `${myPendingBookings} pedido(s) de reserva aguardando resposta` : undefined,
         children: [
@@ -239,7 +241,7 @@ function useV2Nav() {
         ],
       }),
       (coachesOn || isCoach || coachLessonsOn) && hub({
-        id: 'ensino', label: 'Aulas', icon: GraduationCap, to: coachesOn ? '/coaches' : '/minhas-aulas',
+        id: 'ensino', dica: 'menu-aulas', label: 'Aulas', icon: GraduationCap, to: coachesOn ? '/coaches' : '/minhas-aulas',
         children: [
           coachesOn && { to: '/coaches', label: 'Professores', icon: GraduationCap },
           coachLessonsOn && { to: '/minhas-aulas', label: 'Minhas aulas', icon: CalendarClock },
@@ -247,7 +249,7 @@ function useV2Nav() {
         ],
       }),
       hub({
-        id: 'aprender', label: 'Pickleball', icon: BookOpen, to: '/regras',
+        id: 'aprender', dica: 'menu-pickleball', label: 'Pickleball', icon: BookOpen, to: '/regras',
         children: [
           { to: '/regras', label: 'Regras', icon: BookOpen },
           { to: '/nivelamento', label: 'Nivelamento', icon: Award },
@@ -256,7 +258,7 @@ function useV2Nav() {
         ],
       }),
       hub({
-        id: 'perfil', label: 'Perfil', icon: User, to: '/perfil',
+        id: 'perfil', dica: 'menu-perfil', label: 'Perfil', icon: User, to: '/perfil',
         children: [
           { to: '/perfil', label: 'Meu perfil', icon: User },
           performanceOn && { to: '/meu-desempenho', label: 'Meu desempenho', icon: BarChart3 },
@@ -360,8 +362,12 @@ function NotificationsMenu() {
   return (
     <DropdownMenu>
       <DropdownMenuTrigger asChild>
-        <button className="btn-press relative flex h-10 w-10 items-center justify-center rounded-full bg-white text-gray-500 shadow-sm transition-colors hover:text-ink">
-          <Bell className="h-5 w-5" />
+        <button
+          data-dica="botao-notificacoes"
+          aria-label={unreadCount > 0 ? `Avisos (${unreadCount} não lidos)` : 'Avisos'}
+          className="btn-press relative flex h-10 w-10 items-center justify-center rounded-full bg-white text-gray-500 shadow-sm transition-colors hover:text-ink"
+        >
+          <Bell className="h-5 w-5" aria-hidden="true" />
           {unreadCount > 0 && (
             <span className="absolute -right-0.5 top-0 flex h-4 w-4 items-center justify-center rounded-full bg-acid text-[10px] font-bold text-ink">
               {unreadCount}
@@ -415,7 +421,7 @@ function NotificationsMenu() {
 
 const BOTTOM_NAV_ITEMS = [
   { to: '/', label: 'Início', icon: LayoutGrid, exact: true },
-  { to: '/torneios', label: 'Torneios', icon: Trophy },
+  { to: '/torneios', label: 'Torneios', icon: Trophy, dica: 'nav-inferior-torneios' },
   { to: '/atletas', label: 'Atletas', icon: Users },
   { to: '/chat', label: 'Chat', icon: MessageSquare },
   { to: '/perfil', label: 'Perfil', icon: User },
@@ -436,6 +442,7 @@ function MobileBottomNav({ pathname }) {
             <Link
               key={item.to}
               to={item.to}
+              data-dica={item.dica}
               aria-current={active ? 'page' : undefined}
               className={cn(
                 'flex flex-1 flex-col items-center justify-center gap-0.5 text-[11px] font-semibold transition-colors',
@@ -507,6 +514,7 @@ function HubItem({ hub, active, collapsed, onClick }) {
     <Link
       to={hub.to}
       onClick={onClick}
+      data-dica={hub.dica}
       title={collapsed ? hub.label : hub.badgeHint || undefined}
       aria-label={collapsed ? hub.label : undefined}
       className={cn(
@@ -645,6 +653,7 @@ export default function V2Layout({ children }) {
   };
 
   return (
+    <DicasProvider>
     <div className="v2-root flex h-[100dvh] w-full overflow-hidden bg-paper font-inter text-ink">
       {/* Acessibilidade: link "pular para o conteúdo" — primeiro elemento
           focável, visível só ao receber foco pelo teclado. */}
@@ -674,7 +683,7 @@ export default function V2Layout({ children }) {
               <Link to="/" aria-label="PickleRush"><BrandMark className="h-9 w-9" /></Link>
             ) : <BrandLockup />}
           </div>
-          <nav className="hide-scrollbar flex-1 space-y-1.5 overflow-y-auto px-3 py-4">
+          <nav data-dica="menu-principal" aria-label="Menu principal" className="hide-scrollbar flex-1 space-y-1.5 overflow-y-auto px-3 py-4">
             {hubs.map((hub) => (
               <HubItem key={hub.id} hub={hub} active={activeHub?.id === hub.id} collapsed={collapsed} />
             ))}
@@ -781,6 +790,7 @@ export default function V2Layout({ children }) {
         )}>
           <button
             onClick={() => setMobileOpen(true)}
+            data-dica="menu-celular"
             className="mr-3 flex h-10 w-10 items-center justify-center rounded-full bg-white text-ink shadow-sm lg:hidden"
             aria-label="Abrir menu"
           >
@@ -816,6 +826,9 @@ export default function V2Layout({ children }) {
                 <span className="hidden md:inline">{viewAsUser ? 'Vendo como usuário' : 'Visão admin'}</span>
               </button>
             )}
+            {/* Dicas (flag guided_tips): o único pedaço das dicas que existe com
+                elas desligadas — é por ele que a pessoa liga. */}
+            <BotaoDicas />
             <NotificationsMenu />
             {userMenuOn && (
               <UserMenu
@@ -827,6 +840,8 @@ export default function V2Layout({ children }) {
             )}
             <Link
               to="/procura-jogo"
+              data-dica="botao-procuro-jogo"
+              aria-label="Procuro jogo"
               className="btn-press flex items-center gap-2 rounded-full bg-acid px-5 py-3 text-sm font-bold text-ink shadow-glow transition-all hover:bg-acid-light sm:px-6"
             >
               <Plus className="h-4 w-4" /> <span className="hidden sm:inline">Procuro jogo</span>
@@ -883,6 +898,7 @@ export default function V2Layout({ children }) {
                     key={hub.id}
                     to={hub.to}
                     onClick={closeMobile}
+                    data-dica={hub.dica}
                     className={cn(
                       'flex items-center gap-3 rounded-2xl px-4 py-3 text-lg font-display font-semibold transition-colors',
                       active ? 'bg-white/10 text-acid' : 'text-white hover:text-acid',
@@ -951,5 +967,6 @@ export default function V2Layout({ children }) {
         </div>
       </div>
     </div>
+    </DicasProvider>
   );
 }

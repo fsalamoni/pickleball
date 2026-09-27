@@ -116,7 +116,7 @@ export default function V2FindPlayers() {
           : 'A leitura parte do seu rating atual para sugerir parcerias coerentes.'}
       />
 
-      <V2Surface className="mb-8">
+      <V2Surface className="mb-8" data-dica="jogadores-filtros">
         <p className="text-sm text-gray-500">
           Seu rating: <strong className="text-ink">{me.rating}</strong>{myCity ? <> · {myCity}</> : null}.
         </p>
@@ -139,7 +139,7 @@ export default function V2FindPlayers() {
           />
         </V2Surface>
       ) : (
-        <div className="grid gap-4 sm:grid-cols-2">
+        <div data-dica="jogadores-lista" className="grid gap-4 sm:grid-cols-2">
           {suggestions.map((p) => (
             <div key={p.id} className="flex items-center gap-3 rounded-4xl border border-gray-100 bg-paper-pure p-4 shadow-organic-sm">
               <V2Avatar name={p.platform_name} photoUrl={p.photo_url} size="lg" />

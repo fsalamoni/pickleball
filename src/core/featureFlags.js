@@ -310,6 +310,23 @@ export const FEATURE_FLAG = Object.freeze({
    * fica guardada e volta se a flag for religada).
    */
   DARK_MODE: 'dark_mode',
+
+  /**
+   * DICAS GUIADAS — as dicas na tela, que cada pessoa liga ou desliga.
+   *
+   * Um botão "Dicas" no topo de toda tela. Ligadas, pontos pulsando ao lado
+   * dos botões dizem aonde cada um leva, e "O que você quer fazer?" abre um
+   * GUIA para cada tarefa — criar dia de jogo, reservar quadra, inscrever-se
+   * num torneio, configurar as quadras da arena… — com destaque e SETA sobre
+   * o botão de verdade, passo a passo, inclusive dentro dos formulários. Os
+   * tutoriais das ferramentas ("Como funciona") viram guias na tela e deixam
+   * de abrir sozinhos: nada aparece sem a pessoa pedir.
+   *
+   * Zero banco: a escolha fica no navegador, por usuário
+   * (`v2:view:<uid>:dicas:*`). Desligada, o botão não existe e os tutoriais
+   * seguem como antes (abrindo na primeira vez).
+   */
+  GUIDED_TIPS: 'guided_tips',
 });
 
 /** Metadados de exibição para o painel de flags (admin master). */
@@ -376,6 +393,18 @@ export const FEATURE_FLAG_META = Object.freeze({
       + 'escolha de ativar para si o que foi liberado. Desligada, nada disso '
       + 'existe para ninguém: nem a aba daqui, nem a da arena, nem os módulos '
       + 'que já estiverem ativados.',
+  },
+  [FEATURE_FLAG.GUIDED_TIPS]: {
+    label: 'Dicas guiadas (guias na tela)',
+    description:
+      'Um botão "Dicas" no topo de toda tela, que cada pessoa liga ou desliga. '
+      + 'Ligadas, pontos pulsando mostram o que cada botão faz, e "O que você '
+      + 'quer fazer?" traz um guia para cada tarefa (criar dia de jogo, '
+      + 'reservar quadra, inscrever-se em torneio, configurar a arena…), com '
+      + 'destaque e seta sobre o botão real, passo a passo. Os "Como funciona" '
+      + 'das ferramentas viram guias na tela e param de abrir sozinhos. A '
+      + 'escolha fica no navegador de cada um; nada é gravado no banco. '
+      + 'Desligada, tudo segue como antes.',
   },
   [FEATURE_FLAG.HELP_CENTER]: {
     label: 'Central de ajuda',

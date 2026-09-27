@@ -86,6 +86,13 @@ Todo artigo aberto termina com **Próximo: <título>** (atravessa para a próxim
 seção quando acaba a atual), **Copiar link** (o link direto, que é como o
 suporte manda alguém ao ponto) e **Topo**.
 
+Com as **dicas guiadas** (flag `guided_tips`, Onda CJ), o artigo que diz os
+seus guias (`guias: [...]` no artigo) ganha antes disso **"Quer fazer agora?
+→ Mostre na tela"**: ler e, em seguida, fazer — o guia leva à tela e aponta o
+botão de verdade. Só aparecem os guias que valem para a pessoa (flags e
+papel); há teste conferindo que cada id existe. Ver `docs/32-DICAS-GUIADAS.md`
+§2.6.
+
 ### 2.6 O resto
 
 - **Sem busca** — uma seção por vez, escolhida nas abas ou nos cartões.
@@ -245,6 +252,11 @@ São complementares, e a divisão de trabalho é clara:
 
 O rodapé da central aponta para os tutoriais; os tutoriais cobrem o passo a
 passo de torneio e dia de jogo, que a central resume e referencia.
+
+A terceira peça, as **dicas guiadas** (`docs/32-DICAS-GUIADAS.md`), fecha o
+ciclo: a central explica, o guia FAZ junto — sobre a tela de verdade, só
+quando a pessoa pede. O botão "Dicas" do topo e o link da central convivem: um
+é para fazer, o outro para entender.
 
 ## 8. Ao mexer, cuidado com
 

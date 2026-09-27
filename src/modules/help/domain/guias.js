@@ -1,0 +1,1286 @@
+/**
+ * OS GUIAS das dicas — "me mostre como fazer isso", na tela de verdade.
+ *
+ * Um guia é uma TAREFA ("Criar um dia de jogo", "Reservar uma quadra"), não
+ * um tema. Cada passo aponta para um elemento REAL da tela — marcado no código
+ * com `data-dica="<âncora>"` — e a tela desenha o destaque, a seta e o cartão
+ * em cima dele. Nada aqui abre sozinho: o guia começa quando a pessoa pede.
+ *
+ * Conteúdo puro, sem React nem I/O (como `tutorials.js` e `helpCenter.js`):
+ * dá para testar que toda âncora citada existe no código, que toda rota
+ * existe no roteador, e que nenhum guia manda alguém para uma porta fechada.
+ *
+ * ## O passo
+ *
+ * | campo       | para quê                                                      |
+ * |-------------|---------------------------------------------------------------|
+ * | `title`     | o que é aquilo, em poucas palavras                            |
+ * | `body`      | um ou mais parágrafos (texto curto: é um cartão, não um manual)|
+ * | `tip`       | observação opcional                                           |
+ * | `target`    | âncora(s) `data-dica`; a primeira VISÍVEL vale                |
+ * | `route`     | molde da tela do passo (`dicasRota.js`)                        |
+ * | `goTo`      | para onde LEVAR a pessoa quando ela não está na tela          |
+ * | `awayText`  | o que dizer quando ela não está na tela e não dá para levar   |
+ * | `advanceOn` | 'click' (tocar no alvo) · `{ route }` · `{ appears: âncora }` |
+ * | `action`    | a chamada para agir ("Toque em «Criar»")                      |
+ *
+ * Sem `advanceOn`, o passo avança pelo botão "Próximo". Com ele, a pessoa FAZ
+ * a coisa de verdade e o guia acompanha — é a diferença entre ler sobre o
+ * botão e apertar o botão.
+ *
+ * `goTo` aceita `:minhaArena` (a primeira arena que a pessoa gere): é o que
+ * leva o gestor direto à Central da arena dele.
+ *
+ * ## Quem vê cada guia
+ *
+ * `flags` (basta uma ligada), `flagsTodas` (todas) e `semFlags` (nenhuma) —
+ * a mesma regra dos artigos da central de ajuda — e `audience`: 'arena' (quem
+ * gere arena) ou 'professor' (quem tem perfil de professor). Guia de
+ * funcionalidade desligada ou de papel que a pessoa não tem não aparece: ele a
+ * mandaria para uma porta que não abre.
+ *
+ * ## Contrato
+ *
+ * Os ids de guia e de passo são CONTRATO: é por eles que se guarda "já fiz
+ * este guia" (localStorage) e o guia em andamento (sessão). E as âncoras são
+ * contrato com as telas — há guarda (`src/core/guards/dicas.test.js`) lendo o
+ * código-fonte e reprovando âncora citada aqui que nenhuma tela tenha.
+ */
+
+import { GAME_DAY_FORMAT } from '@/modules/clubs/domain/gameDayFormats.js';
+import { TUTORIALS, TUTORIAL_ID } from './tutorials.js';
+import { casaAlgumaRota, casaRota } from './dicasRota.js';
+
+/* ================================================================== áreas == */
+
+/** As áreas do painel, na ordem em que aparecem. */
+export const GUIA_AREA = Object.freeze({
+  COMECAR: 'comecar',
+  JOGAR: 'jogar',
+  COMPETIR: 'competir',
+  COMUNIDADE: 'comunidade',
+  ARENAS: 'arenas',
+  MINHA_ARENA: 'minha-arena',
+  AULAS: 'aulas',
+  CONTA: 'conta',
+});
+
+export const GUIA_AREA_META = Object.freeze({
+  [GUIA_AREA.COMECAR]: { label: 'Primeiros passos', icon: 'Compass' },
+  [GUIA_AREA.JOGAR]: { label: 'Jogar', icon: 'Swords' },
+  [GUIA_AREA.COMPETIR]: { label: 'Competir', icon: 'Trophy' },
+  [GUIA_AREA.COMUNIDADE]: { label: 'Comunidade', icon: 'Users' },
+  [GUIA_AREA.ARENAS]: { label: 'Quadras e reservas', icon: 'CalendarCheck' },
+  [GUIA_AREA.MINHA_ARENA]: { label: 'Para a sua arena', icon: 'Building2' },
+  [GUIA_AREA.AULAS]: { label: 'Aulas', icon: 'GraduationCap' },
+  [GUIA_AREA.CONTA]: { label: 'Conta e preferências', icon: 'Settings' },
+});
+
+/** Prefixo dos guias que vêm dos tutoriais das ferramentas. */
+export const GUIA_DE_TUTORIAL = 'tutorial:';
+
+/** O id do guia de um tutorial (o botão "Como funciona" das ferramentas). */
+export function guiaIdDoTutorial(tutorialId) {
+  return tutorialId ? `${GUIA_DE_TUTORIAL}${tutorialId}` : null;
+}
+
+/* ================================================================== guias == */
+
+const TOQUE = (rotulo) => `Toque em «${rotulo}»`;
+
+const GUIAS_BASE = [
+  /* ---------------------------------------------------- primeiros passos -- */
+  {
+    id: 'conhecer-a-plataforma',
+    area: GUIA_AREA.COMECAR,
+    title: 'Conhecer a plataforma',
+    summary: 'Onde fica cada coisa: o menu, os atalhos, os avisos e as dicas.',
+    keywords: ['menu', 'navegar', 'onde fica', 'começar', 'início', 'tour'],
+    screens: ['/'],
+    steps: [
+      {
+        id: 'menu',
+        route: '/',
+        goTo: '/',
+        target: ['menu-principal', 'menu-celular'],
+        title: 'O menu da plataforma',
+        body: [
+          'Tudo o que dá para fazer aqui está organizado em temas: Início, Competir, Jogar, Comunidade, Arenas, Aulas, Pickleball e Perfil.',
+          'Ao entrar num tema, as páginas dele aparecem numa barra logo acima do conteúdo.',
+        ],
+        tip: 'No celular, o menu abre no botão de três linhas, no canto de cima.',
+      },
+      {
+        id: 'competir',
+        route: '/',
+        target: ['menu-competir', 'nav-inferior-torneios'],
+        title: 'Competir',
+        body: 'Torneios, circuitos e o ranking. É aqui que você se inscreve num torneio, cria o seu e acompanha a sua posição.',
+      },
+      {
+        id: 'jogar',
+        route: '/',
+        target: ['menu-jogar', 'menu-celular'],
+        title: 'Jogar',
+        body: 'Procura-se jogo (convites de quem quer parceiros), Dia de jogo (uma tarde de partidas organizada, com placar se você quiser) e Encontrar jogadores do seu nível.',
+      },
+      {
+        id: 'arenas',
+        route: '/',
+        target: ['menu-arenas', 'menu-celular'],
+        title: 'Arenas',
+        body: 'Encontre uma quadra, veja os horários livres e peça a reserva. O que você reservou fica em Minhas reservas.',
+      },
+      {
+        id: 'procuro-jogo',
+        route: '/',
+        target: 'botao-procuro-jogo',
+        title: 'Atalho: Procuro jogo',
+        body: 'Leva direto aos convites abertos — o jeito mais rápido de achar com quem jogar hoje.',
+      },
+      {
+        id: 'avisos',
+        route: '/',
+        target: 'botao-notificacoes',
+        title: 'Seus avisos',
+        body: 'Convites, respostas de reserva, resultados e novidades dos seus clubes chegam neste sino.',
+      },
+      {
+        id: 'dicas',
+        route: '/',
+        target: 'botao-dicas',
+        title: 'As dicas moram aqui',
+        body: [
+          'Ligue ou desligue as dicas quando quiser. Ligadas, pontos pulsando nas telas mostram o que cada botão faz.',
+          'E em "O que você quer fazer?" há um guia como este para cada tarefa.',
+        ],
+      },
+    ],
+  },
+  {
+    id: 'completar-perfil',
+    area: GUIA_AREA.COMECAR,
+    title: 'Completar o seu perfil',
+    summary: 'Foto, cidade, interesses e nível — o que faz a plataforma trabalhar para você.',
+    keywords: ['perfil', 'foto', 'nome', 'cidade', 'interesses', 'nível', 'editar'],
+    screens: ['/perfil', '/perfil/editar'],
+    steps: [
+      {
+        id: 'identidade',
+        route: '/perfil/editar',
+        goTo: '/perfil/editar',
+        target: 'perfil-identidade',
+        title: 'Quem é você',
+        body: [
+          'Foto, nome de exibição e tempo de experiência. É assim que atletas, arenas e organizadores te encontram.',
+          'Cada cartão tem o seu botão de salvar: "Salvar alterações" guarda só o que está nele.',
+        ],
+        tip: 'Cartão fechado abre com um toque no título.',
+      },
+      {
+        id: 'comunidade',
+        route: '/perfil/editar',
+        target: 'perfil-comunidade',
+        title: 'Cidade e privacidade',
+        body: 'A cidade traz torneios, jogos e arenas perto de você. Aqui você também decide quem vê o seu contato e se aparece no diretório de atletas.',
+      },
+      {
+        id: 'interesses',
+        route: '/perfil/editar',
+        target: 'perfil-interesses',
+        title: 'Seus interesses',
+        body: 'Marque o que você quer fazer aqui: jogar torneios, organizar, achar parceiros, ter aulas, reservar quadras… A tela inicial e as sugestões partem disso.',
+      },
+      {
+        id: 'nivel',
+        route: '/perfil/editar',
+        target: 'perfil-nivel',
+        title: 'Seu nível',
+        body: 'Informe o seu nível ou responda ao questionário. É ele que equilibra os sorteios dos dias de jogo e as sugestões de parceiros.',
+      },
+    ],
+  },
+
+  /* ------------------------------------------------------------- jogar -- */
+  {
+    id: 'encontrar-jogo',
+    area: GUIA_AREA.JOGAR,
+    title: 'Achar um jogo para hoje',
+    summary: 'Os convites abertos, os jogos das arenas e como publicar o seu.',
+    keywords: ['procura-se jogo', 'convite', 'parceiro', 'jogar hoje', 'jogo aberto'],
+    screens: ['/procura-jogo'],
+    steps: [
+      {
+        id: 'convites',
+        route: '/procura-jogo',
+        goTo: '/procura-jogo',
+        target: ['procura-lista', 'procura-publicar'],
+        title: 'Convites abertos',
+        body: [
+          'Aqui ficam os convites de quem procura gente para jogar: dia, lugar, nível e vagas.',
+          'Achou um que combina? Toque em "Participar do dia de jogo".',
+        ],
+      },
+      {
+        id: 'arenas',
+        route: '/procura-jogo',
+        target: 'procura-arenas',
+        title: 'Jogos abertos nas arenas',
+        body: 'Arenas também publicam jogos com vaga, com quadra e horário já garantidos. Dá para entrar ali mesmo — e, se lotar, entrar na fila.',
+      },
+      {
+        id: 'publicar',
+        route: '/procura-jogo',
+        target: 'procura-publicar',
+        title: 'Não achou? Publique o seu',
+        body: 'Em "Publicar convite" você diz quando, onde e quantas vagas tem. O convite aparece aqui para quem procura jogo.',
+      },
+    ],
+  },
+  {
+    id: 'criar-dia-de-jogo',
+    area: GUIA_AREA.JOGAR,
+    title: 'Criar um dia de jogo',
+    summary: 'Do nome ao formato, passo a passo no próprio formulário.',
+    keywords: ['dia de jogo', 'criar', 'americano', 'play', 'formato', 'quadras', 'organizar'],
+    screens: ['/dia-de-jogo'],
+    steps: [
+      {
+        id: 'abrir',
+        route: '/dia-de-jogo',
+        goTo: '/dia-de-jogo',
+        target: 'dia-de-jogo-criar',
+        advanceOn: 'click',
+        action: TOQUE('Novo dia de jogo'),
+        title: 'Comece aqui',
+        body: 'Um dia de jogo organiza uma tarde (ou manhã) de partidas: quem joga com quem, em que quadra — e, se você quiser, placar e ranking do dia.',
+      },
+      {
+        id: 'nome',
+        route: '/dia-de-jogo',
+        target: 'dia-de-jogo-nome',
+        title: 'Dê um nome',
+        body: 'Algo que as pessoas reconheçam: "Treino de sábado", "Open do clube".',
+      },
+      {
+        id: 'visibilidade',
+        route: '/dia-de-jogo',
+        target: 'dia-de-jogo-visibilidade',
+        title: 'Quem vê',
+        body: 'Público: aparece para outras pessoas pedirem para entrar. Privado: só quem você incluir.',
+      },
+      {
+        id: 'quem-organiza',
+        route: '/dia-de-jogo',
+        target: 'dia-de-jogo-quem-organiza',
+        title: 'Quem conduz as partidas',
+        body: 'Só você (e quem você nomear) sorteia e cria as partidas — ou qualquer inscrito pode ajudar. Dá para mudar depois, nas configurações do dia.',
+      },
+      {
+        id: 'data',
+        route: '/dia-de-jogo',
+        target: 'dia-de-jogo-data',
+        title: 'Quando',
+        body: 'Data e horário de início. Local e cidade ajudam quem vem de fora.',
+      },
+      {
+        id: 'formato',
+        route: '/dia-de-jogo',
+        target: ['dia-de-jogo-formato', 'dia-de-jogo-nome'],
+        title: 'O formato',
+        body: [
+          'Play: jogo aberto, por ordem de chegada, sem placar.',
+          'Americano: as rodadas saem sorteadas de uma vez, com placar e ranking do dia.',
+        ],
+        tip: 'Outros formatos aparecem quando estão ligados na plataforma. "Como funciona este formato" explica cada um.',
+      },
+      {
+        id: 'criar',
+        route: '/dia-de-jogo',
+        target: 'dia-de-jogo-confirmar',
+        advanceOn: { route: '/dia-de-jogo/*' },
+        action: TOQUE('Criar dia de jogo'),
+        title: 'Pronto para criar',
+        body: 'Criado o dia, a plataforma abre a tela dele.',
+      },
+      {
+        id: 'depois',
+        route: '/dia-de-jogo/*',
+        awayText: 'Abra o dia de jogo que você criou — ele está em Jogar → Dia de jogo.',
+        goTo: '/dia-de-jogo',
+        target: ['dia-de-jogo-inserir-atletas', 'dia-de-jogo-participantes'],
+        title: 'Agora, os participantes',
+        body: 'Inclua os atletas em "Inserir atletas". Com gente no dia, os botões de sortear e de criar partidas passam a funcionar.',
+        tip: 'O "Como funciona" desta tela abre o guia completo do formato que você escolheu.',
+      },
+    ],
+  },
+  {
+    id: 'encontrar-jogadores',
+    area: GUIA_AREA.JOGAR,
+    title: 'Achar parceiros do seu nível',
+    summary: 'Sugestões de atletas parecidos com você, perto de você.',
+    keywords: ['parceiro', 'nível', 'jogadores', 'encontrar', 'rating'],
+    screens: ['/encontrar-jogadores'],
+    steps: [
+      {
+        id: 'filtros',
+        route: '/encontrar-jogadores',
+        goTo: '/encontrar-jogadores',
+        target: 'jogadores-filtros',
+        title: 'Nível e cidade',
+        body: 'Combine "Nível parecido" e "Minha cidade" para ver só quem joga como você, perto de você.',
+        tip: 'As sugestões precisam de um nível ou rating seu. Sem ele, a tela explica como conseguir.',
+      },
+      {
+        id: 'lista',
+        route: '/encontrar-jogadores',
+        target: 'jogadores-lista',
+        title: 'Os sugeridos',
+        body: 'Cada cartão mostra o nível e a cidade. Mande uma mensagem para combinar o jogo.',
+      },
+    ],
+  },
+
+  /* ---------------------------------------------------------- competir -- */
+  {
+    id: 'inscrever-em-torneio',
+    area: GUIA_AREA.COMPETIR,
+    title: 'Inscrever-se num torneio',
+    summary: 'Achar o torneio, escolher a modalidade e acompanhar os jogos.',
+    keywords: ['torneio', 'inscrição', 'inscrever', 'modalidade', 'competir'],
+    screens: ['/torneios', '/torneios/*'],
+    steps: [
+      {
+        id: 'abas',
+        route: '/torneios',
+        goTo: '/torneios',
+        target: 'torneios-abas',
+        title: 'Públicos ou os seus',
+        body: '"Públicos" mostra os torneios abertos a todos; "Meus torneios", aqueles em que você joga ou organiza.',
+      },
+      {
+        id: 'escolher',
+        route: '/torneios',
+        target: ['torneios-lista', 'torneios-abas'],
+        advanceOn: { route: '/torneios/*' },
+        action: 'Toque num torneio para abrir',
+        title: 'Escolha um torneio',
+        body: 'Cada cartão mostra datas, cidade e se as inscrições estão abertas.',
+      },
+      {
+        id: 'inscrever',
+        route: '/torneios/*',
+        goTo: '/torneios',
+        awayText: 'Abra um torneio da lista de Torneios.',
+        target: ['torneio-inscrever', 'torneio-abas'],
+        title: 'Inscreva-se na modalidade',
+        body: [
+          'Na aba Visão geral, cada modalidade (por exemplo, "Dupla Mista B") tem o seu botão "Inscrever-se".',
+          'Nas duplas, você informa o parceiro na própria inscrição.',
+        ],
+        tip: 'Torneio privado pede o código que o organizador passou.',
+      },
+      {
+        id: 'acompanhar',
+        route: '/torneios/*',
+        target: 'torneio-abas',
+        title: 'Depois de inscrito',
+        body: 'Em Jogos você vê horários e adversários; em Ranking, a classificação. Os avisos chegam no sino.',
+      },
+    ],
+  },
+  {
+    id: 'criar-torneio',
+    area: GUIA_AREA.COMPETIR,
+    title: 'Criar um torneio',
+    summary: 'As três etapas do cadastro, no próprio formulário.',
+    keywords: ['torneio', 'criar', 'organizar', 'rascunho', 'inscrições'],
+    screens: ['/torneios', '/torneios/criar'],
+    steps: [
+      {
+        id: 'etapas',
+        route: '/torneios/criar',
+        goTo: '/torneios/criar',
+        target: 'criar-torneio-etapas',
+        title: 'Três etapas',
+        body: 'Identidade, acesso e regras, calendário. Dá para voltar a qualquer etapa antes de criar — e tudo se edita depois.',
+      },
+      {
+        id: 'identidade',
+        route: '/torneios/criar',
+        target: 'criar-torneio-nome',
+        title: 'Nome e local',
+        body: 'Nome do torneio, cidade, UF e o local. Se ele acontece numa arena sua, vincule-a: o torneio aparece na página da arena.',
+      },
+      {
+        id: 'avancar-1',
+        route: '/torneios/criar',
+        target: 'criar-torneio-avancar',
+        advanceOn: { appears: 'criar-torneio-acesso' },
+        action: TOQUE('Avançar'),
+        title: 'Próxima etapa',
+        body: 'Preenchido o nome, siga para o acesso e as regras.',
+      },
+      {
+        id: 'acesso',
+        route: '/torneios/criar',
+        target: 'criar-torneio-acesso',
+        title: 'Público ou privado',
+        body: 'Público aparece na busca. Privado só recebe quem tem o link ou o código.',
+      },
+      {
+        id: 'avancar-2',
+        route: '/torneios/criar',
+        target: 'criar-torneio-avancar',
+        advanceOn: { appears: 'criar-torneio-datas' },
+        action: TOQUE('Avançar'),
+        title: 'Última etapa',
+        body: 'Falta só o calendário.',
+      },
+      {
+        id: 'datas',
+        route: '/torneios/criar',
+        target: 'criar-torneio-datas',
+        title: 'Datas e prazo',
+        body: 'Início, fim e o fim das inscrições.',
+      },
+      {
+        id: 'criar',
+        route: '/torneios/criar',
+        target: 'criar-torneio-criar',
+        title: 'Criar',
+        body: [
+          'O torneio nasce como rascunho: só você o vê.',
+          'Depois vêm as modalidades, as inscrições e o sorteio — no console de gestão, em "Gerenciar torneio".',
+        ],
+        tip: 'No console, "Como funciona" abre o guia completo da organização.',
+      },
+    ],
+  },
+  {
+    id: 'entender-ranking',
+    area: GUIA_AREA.COMPETIR,
+    title: 'Entender o ranking',
+    summary: 'Os dois rankings, a busca e o ranking de duplas.',
+    keywords: ['ranking', 'rating', 'posição', 'elo', 'dupr', 'duplas'],
+    screens: ['/ranking', '/ranking/duplas'],
+    steps: [
+      {
+        id: 'abas',
+        route: '/ranking',
+        goTo: '/ranking',
+        target: 'ranking-abas',
+        title: 'Dois rankings',
+        body: 'Nacional (pontuação ELO) e Nível 2.0–8.0 (no estilo DUPR). Os dois se movem com os resultados publicados — de torneios e de dias de jogo.',
+      },
+      {
+        id: 'como',
+        route: '/ranking',
+        target: ['ranking-como-funciona', 'ranking-abas'],
+        title: 'O que conta',
+        body: 'Abra "Como funciona o ranking?" para ver o que entra e o que não entra na conta.',
+      },
+      {
+        id: 'busca',
+        route: '/ranking',
+        target: ['ranking-busca', 'ranking-abas'],
+        title: 'Ache alguém',
+        body: 'Busque por nome, cidade, estado ou nível. Os filtros ao lado recortam por região, gênero, clube e faixa etária.',
+      },
+      {
+        id: 'duplas',
+        route: '/ranking',
+        target: ['ranking-duplas-link', 'ranking-abas'],
+        title: 'E as duplas',
+        body: 'O ranking de duplas classifica as parcerias pelo aproveitamento — a dupla que mais vence junto.',
+      },
+    ],
+  },
+
+  /* -------------------------------------------------------- comunidade -- */
+  {
+    id: 'entrar-num-clube',
+    area: GUIA_AREA.COMUNIDADE,
+    title: 'Entrar num clube',
+    summary: 'Buscar o clube e pedir para participar (ou usar o código).',
+    keywords: ['clube', 'entrar', 'participar', 'código', 'convite'],
+    screens: ['/clubes', '/clubes/*'],
+    steps: [
+      {
+        id: 'busca',
+        route: '/clubes',
+        goTo: '/clubes',
+        target: 'clubes-busca',
+        title: 'Busque o clube',
+        body: 'Pelo nome. Os clubes de que você já participa aparecem no topo da página.',
+        tip: 'O cartão de busca fechado abre com um toque no título.',
+      },
+      {
+        id: 'escolher',
+        route: '/clubes',
+        target: ['clubes-lista', 'clubes-busca'],
+        advanceOn: { route: '/clubes/*' },
+        action: 'Toque num clube para abrir',
+        title: 'Abra o clube',
+        body: 'A página do clube mostra os eventos, os membros e como entrar.',
+      },
+      {
+        id: 'entrar',
+        route: '/clubes/*',
+        goTo: '/clubes',
+        awayText: 'Abra um clube da lista de Clubes.',
+        target: ['clube-entrar', 'clube-codigo'],
+        title: 'Peça para entrar',
+        body: 'Em "Pedir para ingressar" o administrador do clube recebe o pedido. Tem um código de convite? Use "Entrar com código".',
+      },
+    ],
+  },
+  {
+    id: 'criar-clube',
+    area: GUIA_AREA.COMUNIDADE,
+    title: 'Criar um clube',
+    summary: 'O cadastro do clube, campo a campo.',
+    keywords: ['clube', 'criar', 'grupo', 'comunidade'],
+    screens: ['/clubes', '/clubes/criar'],
+    steps: [
+      {
+        id: 'nome',
+        route: '/clubes/criar',
+        goTo: '/clubes/criar',
+        target: 'clube-criar-nome',
+        title: 'Nome e descrição',
+        body: 'O nome é o que aparece na busca. A descrição conta para quem é o clube e como funciona.',
+      },
+      {
+        id: 'onde',
+        route: '/clubes/criar',
+        target: 'clube-criar-cidade',
+        title: 'Onde',
+        body: 'Cidade, UF e a quadra principal ajudam quem procura um clube perto.',
+      },
+      {
+        id: 'criar',
+        route: '/clubes/criar',
+        target: 'clube-criar-enviar',
+        title: 'Criar',
+        body: 'Criado o clube, você é o administrador: aprova quem pede para entrar, cria eventos e convida pelo código.',
+      },
+    ],
+  },
+
+  /* ------------------------------------------------------------ arenas -- */
+  {
+    id: 'reservar-quadra',
+    area: GUIA_AREA.ARENAS,
+    title: 'Reservar uma quadra',
+    summary: 'Da busca da arena ao pedido de reserva, na tela de verdade.',
+    keywords: ['reserva', 'reservar', 'quadra', 'arena', 'horário', 'calendário'],
+    screens: ['/arenas', '/arenas/*'],
+    steps: [
+      {
+        id: 'buscar',
+        route: '/arenas',
+        goTo: '/arenas',
+        target: 'arenas-busca',
+        title: 'Ache a arena',
+        body: 'Busque por nome, cidade ou endereço — ou filtre pela cidade logo abaixo.',
+      },
+      {
+        id: 'escolher',
+        route: '/arenas',
+        target: ['arenas-lista', 'arenas-busca'],
+        advanceOn: { route: '/arenas/*' },
+        action: 'Toque numa arena para abrir',
+        title: 'Abra a arena',
+        body: 'A página da arena mostra preços, quadras, regras e o calendário de horários.',
+      },
+      {
+        id: 'dia',
+        route: '/arenas/*',
+        goTo: '/arenas',
+        awayText: 'Abra uma arena da lista de Arenas.',
+        target: 'arena-calendario',
+        advanceOn: { appears: 'arena-horarios' },
+        action: 'Toque num dia com horário livre',
+        title: 'Escolha o dia',
+        body: 'Cada dia mostra quantas horas livres tem. Dia apagado já passou ou está fechado.',
+      },
+      {
+        id: 'horarios',
+        route: '/arenas/*',
+        target: 'arena-horarios',
+        title: 'Quadra e horário',
+        body: 'Toque nos horários que quiser — dá para escolher mais de um, e em mais de uma quadra. Em "Por quadra" você vê exatamente quais quadras estão livres.',
+      },
+      {
+        id: 'continuar',
+        route: '/arenas/*',
+        target: 'arena-continuar',
+        advanceOn: { appears: 'reserva-confirmar' },
+        action: TOQUE('Continuar'),
+        title: 'Siga para confirmar',
+        body: 'O botão aparece assim que você escolhe pelo menos um horário.',
+      },
+      {
+        id: 'confirmar',
+        route: '/arenas/*',
+        target: 'reserva-confirmar',
+        title: 'Confirme o pedido',
+        body: [
+          'Avulsa ou toda semana, observações e convidados. O preço aparece antes de você enviar.',
+          'Em "Solicitar reserva" a arena recebe o pedido — e você é avisado quando ela responder.',
+        ],
+      },
+      {
+        id: 'acompanhar',
+        title: 'Acompanhe em Minhas reservas',
+        body: 'O pedido aparece em Arenas → Minhas reservas, com o status. Mudou de ideia? Dá para cancelar ali.',
+      },
+    ],
+  },
+  {
+    id: 'minhas-reservas',
+    area: GUIA_AREA.ARENAS,
+    title: 'Acompanhar as suas reservas',
+    summary: 'Status, convites, jogos abertos e os seus planos nas arenas.',
+    keywords: ['minhas reservas', 'status', 'cancelar', 'reserva'],
+    screens: ['/minhas-reservas'],
+    steps: [
+      {
+        id: 'lista',
+        route: '/minhas-reservas',
+        goTo: '/minhas-reservas',
+        target: ['reservas-lista', 'reservas-ver-arenas'],
+        title: 'Ativas e histórico',
+        body: 'Cada reserva mostra a arena, o horário e o status: pedida, confirmada, recusada. Dá para cancelar ou pedir alteração ali mesmo.',
+      },
+      {
+        id: 'arenas',
+        route: '/minhas-reservas',
+        target: 'reservas-ver-arenas',
+        title: 'Reservar de novo',
+        body: '"Ver arenas" leva à busca de quadras.',
+      },
+    ],
+  },
+
+  /* ---------------------------------------------------- a sua arena -- */
+  {
+    id: 'cadastrar-arena',
+    area: GUIA_AREA.MINHA_ARENA,
+    title: 'Cadastrar a sua arena',
+    summary: 'O cadastro da arena, antes de abrir as reservas.',
+    keywords: ['arena', 'cadastrar', 'criar', 'quadras', 'dono'],
+    screens: ['/arenas', '/arenas/criar'],
+    steps: [
+      {
+        id: 'nome',
+        route: '/arenas/criar',
+        goTo: '/arenas/criar',
+        target: 'arena-criar-nome',
+        title: 'Nome e descrição',
+        body: 'Como a arena aparece na busca e na página dela.',
+      },
+      {
+        id: 'local',
+        route: '/arenas/criar',
+        target: 'arena-criar-local',
+        title: 'Onde fica',
+        body: 'Endereço, bairro, cidade e UF — é por eles que os atletas acham a arena.',
+      },
+      {
+        id: 'quadras',
+        route: '/arenas/criar',
+        target: 'arena-criar-quadras',
+        title: 'Quadras e funcionamento',
+        body: 'Um primeiro número. Depois você cadastra cada quadra e os horários dela na Central da arena.',
+      },
+      {
+        id: 'enviar',
+        route: '/arenas/criar',
+        target: 'arena-criar-enviar',
+        title: 'Cadastrar',
+        body: 'Em seguida a plataforma abre os primeiros passos da arena. O guia "Cadastrar quadras e horários" continua dali.',
+      },
+    ],
+  },
+  {
+    id: 'configurar-quadras',
+    area: GUIA_AREA.MINHA_ARENA,
+    audience: 'arena',
+    title: 'Cadastrar quadras e horários',
+    summary: 'Sem horário, a quadra não aparece para reserva. Veja onde se configura.',
+    keywords: ['quadra', 'horário', 'janela', 'funcionamento', 'central da arena'],
+    screens: ['/arenas/*/gerir'],
+    steps: [
+      {
+        id: 'secao',
+        route: '/arenas/*/gerir',
+        goTo: '/arenas/:minhaArena/gerir?aba=quadras',
+        target: ['arena-aba-quadras', 'arena-secao-estrutura', 'arena-secoes'],
+        title: 'Estrutura e preços → Quadras',
+        body: 'A Central da arena é organizada em seções. As quadras moram em "Estrutura e preços".',
+      },
+      {
+        id: 'nova',
+        route: '/arenas/*/gerir',
+        target: ['arena-nova-quadra', 'arena-quadras'],
+        title: 'Cadastre as quadras',
+        body: 'Uma por uma: nome, piso, se é coberta. Quadra inativa fica fora da reserva sem precisar apagar.',
+      },
+      {
+        id: 'relogio',
+        route: '/arenas/*/gerir',
+        target: ['arena-horarios-quadra', 'arena-quadras'],
+        advanceOn: { appears: 'arena-nova-janela' },
+        action: 'Toque no relógio de uma quadra',
+        title: 'Os horários de cada quadra',
+        body: 'Cada quadra tem as suas janelas de funcionamento. Quadra sem janela não aparece no calendário.',
+      },
+      {
+        id: 'janela',
+        route: '/arenas/*/gerir',
+        target: ['arena-nova-janela', 'arena-janelas'],
+        title: 'Uma janela de horário',
+        body: 'Dias da semana e das tantas às tantas. Pode haver mais de uma — manhã e noite, por exemplo.',
+        tip: 'Uma janela sem quadra escolhida vale para a arena inteira.',
+      },
+    ],
+  },
+  {
+    id: 'responder-reservas',
+    area: GUIA_AREA.MINHA_ARENA,
+    audience: 'arena',
+    title: 'Responder pedidos de reserva',
+    summary: 'Onde chegam os pedidos e como confirmar ou recusar.',
+    keywords: ['pedido', 'reserva', 'confirmar', 'recusar', 'central da arena'],
+    screens: ['/arenas/*/gerir'],
+    steps: [
+      {
+        id: 'pendencias',
+        route: '/arenas/*/gerir',
+        goTo: '/arenas/:minhaArena/gerir?aba=reservas',
+        target: ['arena-pendencias', 'arena-secao-reservas', 'arena-secoes'],
+        title: 'Precisa de você',
+        body: 'O topo da Central junta o que espera a arena agir: pedidos de reserva, pedidos do app, faltas para marcar. Cada item leva à aba que resolve.',
+      },
+      {
+        id: 'aba',
+        route: '/arenas/*/gerir',
+        target: ['arena-aba-reservas', 'arena-secao-reservas', 'arena-secoes'],
+        title: 'Reservas → Solicitações',
+        body: 'Os pedidos ativos, do mais próximo para o mais distante.',
+      },
+      {
+        id: 'responder',
+        route: '/arenas/*/gerir',
+        target: ['reserva-confirmar-pedido', 'arena-aba-reservas'],
+        title: 'Confirmar, propor ou recusar',
+        body: 'Confirmar avisa o atleta na hora. "Propor" sugere outro valor; "Recusar" libera o horário.',
+      },
+    ],
+  },
+  {
+    id: 'ligar-modulos',
+    area: GUIA_AREA.MINHA_ARENA,
+    audience: 'arena',
+    flags: ['arena_modules'],
+    title: 'Ligar os módulos da arena',
+    summary: 'Membros, aulas, jogo aberto, loja, marketing: o que a arena ativa para si.',
+    keywords: ['módulos', 'membros', 'aulas', 'loja', 'marketing', 'ativar'],
+    screens: ['/arenas/*/gerir'],
+    steps: [
+      {
+        id: 'aba',
+        route: '/arenas/*/gerir',
+        goTo: '/arenas/:minhaArena/gerir?aba=modulos',
+        target: ['arena-aba-modulos', 'arena-secao-configuracoes', 'arena-secoes'],
+        title: 'Configurações → Módulos',
+        body: 'Cada módulo liberado pela plataforma aparece aqui, com o que ele faz e para quem.',
+      },
+      {
+        id: 'ativar',
+        route: '/arenas/*/gerir',
+        target: 'arena-modulos',
+        title: 'Ative o que a arena usa',
+        body: 'Ligado, o módulo vira uma seção da Central e da página da arena. Desligar não apaga nada: os dados voltam se você religar.',
+      },
+    ],
+  },
+
+  /* ------------------------------------------------------------- aulas -- */
+  {
+    id: 'encontrar-professor',
+    area: GUIA_AREA.AULAS,
+    title: 'Encontrar um professor',
+    summary: 'Filtros por cidade e nível, e como pedir uma aula.',
+    keywords: ['professor', 'aula', 'treino', 'coach'],
+    screens: ['/coaches'],
+    steps: [
+      {
+        id: 'filtros',
+        route: '/coaches',
+        goTo: '/coaches',
+        target: 'professores-filtros',
+        title: 'Filtre',
+        body: 'Por cidade, modalidade e nível. O cartão de filtros fechado abre com um toque no título.',
+      },
+      {
+        id: 'lista',
+        route: '/coaches',
+        target: ['professores-lista', 'professores-filtros'],
+        title: 'Escolha e peça a aula',
+        body: 'Abra o perfil do professor para ver a agenda e os preços, e peça a aula por ali.',
+      },
+    ],
+  },
+  {
+    id: 'virar-professor',
+    area: GUIA_AREA.AULAS,
+    title: 'Começar a dar aulas',
+    summary: 'Criar o seu perfil de professor e abrir a agenda.',
+    keywords: ['professor', 'dar aula', 'coach', 'agenda', 'perfil de professor'],
+    screens: ['/coaches', '/aulas'],
+    steps: [
+      {
+        id: 'sou',
+        route: '/coaches',
+        goTo: '/coaches',
+        target: 'professor-sou',
+        advanceOn: { appears: 'professor-formulario' },
+        action: TOQUE('Sou professor'),
+        title: 'O seu perfil de professor',
+        body: 'É ele que aparece na busca de professores e recebe os pedidos de aula.',
+      },
+      {
+        id: 'formulario',
+        route: '/coaches',
+        target: 'professor-formulario',
+        title: 'Conte como é a sua aula',
+        body: 'Cidade, modalidades, níveis, valor e se está aceitando alunos. Salve para aparecer na busca.',
+      },
+      {
+        id: 'painel',
+        title: 'Depois: o Painel do professor',
+        body: 'Com o perfil salvo, o menu Aulas ganha o "Painel do professor": agenda, alunos, clínicas e horários disponíveis.',
+      },
+    ],
+  },
+  {
+    id: 'disponibilidade-professor',
+    area: GUIA_AREA.AULAS,
+    audience: 'professor',
+    title: 'Definir os seus horários de aula',
+    summary: 'A disponibilidade semanal que os alunos veem ao pedir aula.',
+    keywords: ['disponibilidade', 'horário', 'agenda', 'professor', 'janela'],
+    screens: ['/aulas'],
+    steps: [
+      {
+        id: 'secoes',
+        route: '/aulas',
+        goTo: '/aulas?aba=agenda',
+        target: 'professor-secoes',
+        title: 'O Painel do professor',
+        body: 'Perfil, Agenda, Alunos, Clínicas e o resto — cada seção com as suas abas.',
+      },
+      {
+        id: 'disponibilidade',
+        route: '/aulas',
+        target: 'professor-disponibilidade',
+        title: 'Disponibilidade semanal',
+        body: 'Os dias e horários em que você dá aula. Os alunos só pedem aula dentro deles.',
+      },
+      {
+        id: 'janela',
+        route: '/aulas',
+        target: ['professor-janela', 'professor-disponibilidade'],
+        title: 'Acrescente janelas',
+        body: '"+ Janela" acrescenta outro período no mesmo dia.',
+      },
+      {
+        id: 'salvar',
+        route: '/aulas',
+        target: ['professor-salvar-disponibilidade', 'professor-disponibilidade'],
+        title: 'Salve',
+        body: 'Só vale depois de "Salvar disponibilidade".',
+      },
+    ],
+  },
+
+  /* ------------------------------------------------------------- conta -- */
+  {
+    id: 'escolher-aparencia',
+    area: GUIA_AREA.CONTA,
+    flags: ['dark_mode'],
+    title: 'Mudar a aparência (modo escuro)',
+    summary: 'Claro, escuro ou automático — escolha sua, neste aparelho.',
+    keywords: ['modo escuro', 'tema', 'aparência', 'claro', 'escuro'],
+    screens: ['/configuracoes'],
+    steps: [
+      {
+        id: 'cartao',
+        route: '/configuracoes',
+        goTo: '/configuracoes',
+        target: 'config-aparencia',
+        title: 'Aparência',
+        body: 'Claro, Escuro ou Automático (acompanha o aparelho). A escolha é sua e fica neste aparelho.',
+        tip: 'Também dá para trocar no menu do seu avatar e, no celular, na gaveta do menu.',
+      },
+    ],
+  },
+  {
+    id: 'escolher-cards-do-inicio',
+    area: GUIA_AREA.CONTA,
+    flagsTodas: ['personalized_home', 'home_cards'],
+    title: 'Escolher o que aparece no início',
+    summary: 'Ligar, desligar e ordenar os cards da tela inicial.',
+    keywords: ['início', 'cards', 'personalizar', 'tela inicial', 'ordem'],
+    screens: ['/', '/configuracoes'],
+    steps: [
+      {
+        id: 'personalizar',
+        route: '/',
+        goTo: '/',
+        target: 'inicio-personalizar',
+        advanceOn: { appears: 'inicio-seletor' },
+        action: TOQUE('Personalizar'),
+        title: 'Personalizar',
+        body: 'O início mostra os cards que você escolher, na ordem que você quiser.',
+      },
+      {
+        id: 'ligados',
+        route: '/',
+        target: 'inicio-seletor',
+        title: 'Ligue, desligue e ordene',
+        body: 'O interruptor tira ou põe o card; as setas mudam a ordem. A tela atrás muda na hora — não há o que salvar.',
+        tip: '"Sugeridos para você" traz os cards do que você faz na plataforma.',
+      },
+    ],
+  },
+  {
+    id: 'escolher-notificacoes',
+    area: GUIA_AREA.CONTA,
+    title: 'Escolher os seus avisos',
+    summary: 'Quais notificações você quer receber.',
+    keywords: ['notificação', 'aviso', 'push', 'e-mail', 'configurações'],
+    screens: ['/configuracoes'],
+    steps: [
+      {
+        id: 'notificacoes',
+        route: '/configuracoes',
+        goTo: '/configuracoes',
+        target: 'config-notificacoes',
+        title: 'Notificações',
+        body: 'Ligue ou desligue cada tipo de aviso: torneios, reservas, clubes, mensagens.',
+      },
+      {
+        id: 'push',
+        route: '/configuracoes',
+        target: ['config-push', 'config-notificacoes'],
+        title: 'No celular',
+        body: 'Com a plataforma instalada no celular, dá para receber os avisos como notificação do aparelho.',
+      },
+    ],
+  },
+  {
+    id: 'privacidade-e-dados',
+    area: GUIA_AREA.CONTA,
+    title: 'Privacidade e os seus dados',
+    summary: 'Quem vê o seu contato e como baixar tudo o que é seu.',
+    keywords: ['privacidade', 'lgpd', 'dados', 'contato', 'diretório', 'baixar'],
+    screens: ['/perfil/editar', '/configuracoes'],
+    steps: [
+      {
+        id: 'contato',
+        route: '/perfil/editar',
+        goTo: '/perfil/editar',
+        target: 'perfil-comunidade',
+        title: 'Quem vê o seu contato',
+        body: 'Em "Comunidade e privacidade" você escolhe o que fica visível e se aparece no diretório de atletas.',
+      },
+      {
+        id: 'dados',
+        route: '/configuracoes',
+        goTo: '/configuracoes',
+        target: 'config-dados',
+        title: 'Baixar os seus dados',
+        body: 'Em "Baixar meus dados" você recebe um arquivo com tudo o que a plataforma guarda sobre você.',
+      },
+    ],
+  },
+];
+
+/* ============================================ os tutoriais viram guias == */
+
+/**
+ * Onde cada passo dos tutoriais das ferramentas acontece na tela. O TEXTO é o
+ * dos tutoriais (fonte única, `tutorials.js`); aqui só se diz ONDE apontar.
+ */
+const ANCORAS_DOS_TUTORIAIS = Object.freeze({
+  [TUTORIAL_ID.TOURNAMENT]: {
+    route: '/torneios/*/gerenciar',
+    goTo: '/perfil/torneios',
+    awayText: 'Abra um torneio que você organiza: Perfil → Meus torneios, e depois "Gerenciar torneio".',
+    area: GUIA_AREA.COMPETIR,
+    title: 'Organizar um torneio',
+    summary: 'Do rascunho ao ranking: modalidades, inscrições, sorteio e resultados.',
+    alvos: {
+      'visao-geral': 'torneio-gestao-secoes',
+      criar: ['torneio-aba-geral', 'torneio-gestao-secoes'],
+      modalidades: ['torneio-aba-modalidades', 'torneio-gestao-secoes'],
+      inscricoes: ['torneio-aba-inscricoes', 'torneio-gestao-secoes'],
+      sorteio: ['torneio-aba-sorteio', 'torneio-gestao-secoes'],
+      resultados: ['torneio-aba-resultados', 'torneio-gestao-secoes'],
+      encerrar: ['torneio-status', 'torneio-aba-geral'],
+      acompanhar: 'torneio-pagina-publica',
+    },
+  },
+  [TUTORIAL_ID.GAME_DAY_PLAY]: {
+    route: '/dia-de-jogo/*',
+    goTo: '/dia-de-jogo',
+    awayText: 'Abra um dia de jogo no formato Play (Jogar → Dia de jogo).',
+    area: GUIA_AREA.JOGAR,
+    title: 'Conduzir um dia de jogo — Play',
+    summary: 'Participantes, a fila, as partidas quadra a quadra e o telão.',
+    formatos: [GAME_DAY_FORMAT.PLAY],
+    alvos: {
+      'o-que-e': 'dia-de-jogo-regras',
+      criar: ['dia-de-jogo-config', 'dia-de-jogo-regras'],
+      participantes: ['dia-de-jogo-inserir-atletas', 'dia-de-jogo-participantes'],
+      partidas: ['dia-de-jogo-criar-partida', 'dia-de-jogo-quadras'],
+      'simples-duplas': 'dia-de-jogo-quadras',
+      ajustes: ['dia-de-jogo-ordem', 'dia-de-jogo-quadras'],
+      previsao: 'dia-de-jogo-telao',
+    },
+  },
+  [TUTORIAL_ID.GAME_DAY_AMERICANO]: {
+    route: '/dia-de-jogo/*',
+    goTo: '/dia-de-jogo',
+    awayText: 'Abra um dia de jogo no formato Americano (Jogar → Dia de jogo).',
+    area: GUIA_AREA.JOGAR,
+    title: 'Conduzir um dia de jogo — Americano',
+    summary: 'Participantes, o sorteio da grade, os placares e o ranking do dia.',
+    formatos: [GAME_DAY_FORMAT.AMERICANO, GAME_DAY_FORMAT.MEXICANO, GAME_DAY_FORMAT.KING_OF_COURT],
+    alvos: {
+      'o-que-e': 'dia-de-jogo-regras',
+      criar: ['dia-de-jogo-inserir-atletas', 'dia-de-jogo-participantes'],
+      sortear: ['dia-de-jogo-sortear', 'dia-de-jogo-jogos'],
+      'simples-duplas': ['dia-de-jogo-sortear', 'dia-de-jogo-jogos'],
+      resultados: 'dia-de-jogo-jogos',
+      ranking: ['dia-de-jogo-publicar', 'dia-de-jogo-ranking'],
+      telao: 'dia-de-jogo-telao',
+    },
+  },
+  [TUTORIAL_ID.GAME_DAY_AMERICANO_LIVE]: {
+    route: '/dia-de-jogo/*',
+    goTo: '/dia-de-jogo',
+    awayText: 'Abra um dia de jogo no formato Americano aprimorado (Jogar → Dia de jogo).',
+    area: GUIA_AREA.JOGAR,
+    title: 'Conduzir um dia de jogo — Americano aprimorado',
+    summary: 'A fila, os dois passos por quadra, as concluídas e o ranking.',
+    flags: ['gameday_americano_live'],
+    formatos: [GAME_DAY_FORMAT.AMERICANO_LIVE],
+    alvos: {
+      'o-que-e': 'dia-de-jogo-regras',
+      criar: ['dia-de-jogo-config', 'dia-de-jogo-regras'],
+      fila: ['dia-de-jogo-inserir-atletas', 'dia-de-jogo-participantes'],
+      'dois-passos': ['dia-de-jogo-lancar-resultado', 'dia-de-jogo-criar-partida', 'dia-de-jogo-quadras'],
+      sorteio: ['dia-de-jogo-sortear-rodada', 'dia-de-jogo-ordem', 'dia-de-jogo-quadras'],
+      'simples-duplas': 'dia-de-jogo-quadras',
+      concluidas: ['dia-de-jogo-concluidas', 'dia-de-jogo-quadras'],
+      'ranking-telao': 'dia-de-jogo-telao',
+    },
+  },
+});
+
+function guiaDoTutorial(tutorial) {
+  const mapa = ANCORAS_DOS_TUTORIAIS[tutorial.id];
+  if (!mapa) return null;
+  return {
+    id: guiaIdDoTutorial(tutorial.id),
+    area: mapa.area,
+    title: mapa.title,
+    summary: mapa.summary,
+    keywords: [...tutorial.title.toLowerCase().split(/\s+/), 'como funciona', 'tutorial'],
+    screens: [mapa.route],
+    flags: mapa.flags,
+    tutorial: tutorial.id,
+    formatos: mapa.formatos,
+    steps: tutorial.steps.map((p, i) => ({
+      id: p.id,
+      route: mapa.route,
+      ...(i === 0 ? { goTo: mapa.goTo } : {}),
+      awayText: mapa.awayText,
+      target: mapa.alvos[p.id],
+      title: p.title,
+      body: p.body,
+      tip: p.tip,
+    })),
+  };
+}
+
+/** Todos os guias: os escritos aqui e os que vêm dos tutoriais. */
+export const GUIAS = Object.freeze([
+  ...GUIAS_BASE,
+  ...Object.values(TUTORIALS).map(guiaDoTutorial).filter(Boolean),
+].map((g) => Object.freeze(g)));
+
+/* ============================================================ consultas == */
+
+/**
+ * O contexto de quem abre as dicas.
+ * @typedef {object} DicasContexto
+ * @property {Record<string, boolean>} [flags]
+ * @property {boolean} [gereArena]
+ * @property {boolean} [ehProfessor]
+ * @property {string|null} [minhaArena] id da primeira arena que a pessoa gere
+ */
+
+const lista = (x) => (Array.isArray(x) ? x : (x ? [x] : []));
+
+/**
+ * A mesma regra de visibilidade dos artigos da central de ajuda, mais o papel.
+ * @param {object} item guia ou ponto de dica
+ * @param {DicasContexto} [ctx]
+ */
+export function dicaVisivel(item, ctx = {}) {
+  const flags = ctx.flags || {};
+  const ligada = (f) => Boolean(flags[f]);
+  const algum = lista(item?.flags);
+  if (algum.length > 0 && !algum.some(ligada)) return false;
+  if (!lista(item?.flagsTodas).every(ligada)) return false;
+  if (lista(item?.semFlags).some(ligada)) return false;
+  if (item?.audience === 'arena' && !ctx.gereArena) return false;
+  if (item?.audience === 'professor' && !ctx.ehProfessor) return false;
+  return true;
+}
+
+/** Um guia pelo id — `null` quando não existe (a tela não quebra por isso). */
+export function guiaPorId(id) {
+  return GUIAS.find((g) => g.id === id) || null;
+}
+
+/** Os guias que esta pessoa pode fazer, na ordem do catálogo. */
+export function guiasVisiveis(ctx = {}) {
+  return GUIAS.filter((g) => dicaVisivel(g, ctx));
+}
+
+/**
+ * Os guias DESTA TELA — "Nesta tela" no painel. O guia do tutorial da
+ * ferramenta vem primeiro (é o mais específico); num dia de jogo, só o do
+ * formato do dia (`ctx.formatoDoDia`).
+ */
+export function guiasDaTela(caminho, ctx = {}) {
+  const formato = ctx.formatoDoDia || null;
+  const daTela = GUIAS.filter((g) => casaAlgumaRota(g.screens, caminho))
+    .filter((g) => {
+      if (!g.formatos) return dicaVisivel(g, ctx);
+      // No dia de jogo, o guia é o do FORMATO do dia. E o formato que o dia
+      // já tem vale mesmo com a flag dele desligada: flag tira a opção de
+      // escolher daqui para frente, nunca a de conduzir o que está gravado.
+      if (formato) return g.formatos.includes(formato);
+      return dicaVisivel(g, ctx);
+    });
+  return [...daTela.filter((g) => g.tutorial), ...daTela.filter((g) => !g.tutorial)];
+}
+
+/** Sem acento, sem caixa. */
+export function normalizarBusca(s) {
+  return String(s || '').normalize('NFD').replace(/[̀-ͯ]/g, '').toLowerCase();
+}
+
+function textoDoGuia(g) {
+  const passos = g.steps.map((p) => [p.title, ...lista(p.body), p.tip].filter(Boolean).join(' '));
+  return normalizarBusca([g.title, g.summary, ...(g.keywords || []), GUIA_AREA_META[g.area]?.label, ...passos].join(' '));
+}
+
+/**
+ * "O que você quer fazer?" — busca nos guias. Vários termos ESTREITAM (E).
+ * O título pesa mais que o corpo: quem digita "reservar" quer o guia de
+ * reservar primeiro, não um que cita reserva no quarto passo.
+ */
+export function buscarGuias(termo, ctx = {}) {
+  const termos = normalizarBusca(termo).split(/\s+/).filter((t) => t.length >= 2);
+  if (termos.length === 0) return [];
+  return guiasVisiveis(ctx)
+    .map((g) => {
+      const todo = textoDoGuia(g);
+      if (!termos.every((t) => todo.includes(t))) return null;
+      const titulo = normalizarBusca(`${g.title} ${(g.keywords || []).join(' ')}`);
+      const peso = termos.filter((t) => titulo.includes(t)).length;
+      return { g, peso };
+    })
+    .filter(Boolean)
+    .sort((a, b) => b.peso - a.peso)
+    .map((x) => x.g);
+}
+
+/** Os guias agrupados por área, na ordem das áreas; área vazia some. */
+export function guiasPorArea(ctx = {}) {
+  const visiveis = guiasVisiveis(ctx);
+  return Object.values(GUIA_AREA)
+    .map((area) => ({ area, ...GUIA_AREA_META[area], guias: visiveis.filter((g) => g.area === area) }))
+    .filter((x) => x.guias.length > 0);
+}
+
+/** As âncoras de um passo, na ordem de preferência. */
+export function alvosDoPasso(passo) {
+  return lista(passo?.target);
+}
+
+/** O texto do passo sempre como lista de parágrafos. */
+export function paragrafos(passo) {
+  return lista(passo?.body);
+}
+
+/**
+ * Para onde levar a pessoa neste passo — `null` quando não dá (`:minhaArena`
+ * sem arena, ou nenhum destino).
+ */
+/**
+ * Para onde levar quando o passo está na TELA certa mas o ponto não apareceu —
+ * a pessoa está noutra aba da mesma tela (a Central da arena no Calendário, o
+ * painel do professor em Alunos). Vale o `goTo` deste passo ou do passo
+ * anterior mais próximo, desde que ele leve à MESMA tela (`route`): um
+ * `goTo` para a LISTA (`/dia-de-jogo`) não serve a quem já está dentro de um
+ * dia de jogo — tiraria a pessoa de onde ela está.
+ * @returns {string|null}
+ */
+export function destinoDeRecuo(guia, idx, ctx = {}) {
+  const passo = guia?.steps?.[idx];
+  if (!passo?.route) return null;
+  for (let i = idx; i >= 0; i -= 1) {
+    const d = destinoDoPasso(guia.steps[i], ctx);
+    if (d && casaRota(passo.route, d.split(/[?#]/)[0])) return d;
+  }
+  return null;
+}
+
+/**
+ * O passo que ABRE o lugar deste passo — o formulário, o diálogo, o cartão:
+ * o anterior mais próximo, na mesma tela, que avança por um clique ou pelo
+ * aparecimento de algo. Quando a pessoa fecha o formulário no meio do guia, é
+ * para ele que "Abrir de novo" volta. `-1` quando não há.
+ * @returns {number}
+ */
+export function passoQueAbre(guia, idx) {
+  const passo = guia?.steps?.[idx];
+  if (!passo?.route) return -1;
+  for (let i = idx - 1; i >= 0; i -= 1) {
+    const p = guia.steps[i];
+    if (p.route !== passo.route) continue;
+    if (p.advanceOn === 'click' || p.advanceOn?.appears) return i;
+  }
+  return -1;
+}
+
+export function destinoDoPasso(passo, ctx = {}) {
+  const alvo = passo?.goTo;
+  if (!alvo) return null;
+  if (alvo.includes(':minhaArena')) {
+    if (!ctx.minhaArena) return null;
+    return alvo.replace(':minhaArena', encodeURIComponent(ctx.minhaArena));
+  }
+  return alvo;
+}

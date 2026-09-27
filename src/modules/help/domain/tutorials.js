@@ -58,7 +58,7 @@ const TORNEIO = {
       id: 'criar',
       title: '1. Criar o torneio',
       body: [
-        'Em Torneios → Criar, você começa do zero ou a partir de um MODELO pronto (que já traz modalidades e formato sugeridos — dá para ajustar tudo depois).',
+        'Em Torneios → Criar torneio, você começa do zero ou a partir de um MODELO pronto (que já traz modalidades e formato sugeridos — dá para ajustar tudo depois).',
         'Preencha nome, datas, local, cidade e o prazo final das inscrições. O campo Acesso define se o torneio é público (aparece na busca) ou privado (só quem tem o link ou o código entra).',
         'Se o torneio acontece numa arena cadastrada, vincule-a: ele passa a aparecer também na página da arena.',
       ],
@@ -150,7 +150,7 @@ const PLAY = {
       id: 'criar',
       title: '1. Criar o dia de jogo',
       body: [
-        'Em Dia de jogo → Criar, escolha o formato Play e informe quantas QUADRAS estão disponíveis. É esse número que define quantas partidas podem acontecer ao mesmo tempo.',
+        'Em Dia de jogo → Novo dia de jogo, escolha o formato Play e informe quantas QUADRAS estão disponíveis. É esse número que define quantas partidas podem acontecer ao mesmo tempo.',
         'A visibilidade decide se o dia aparece em "Procura-se jogo" para outras pessoas pedirem para entrar, ou se fica só para quem você chamar.',
         'Em "Quem pode organizar as partidas", escolha entre só você (e quem você nomear) ou qualquer inscrito.',
       ],
@@ -227,10 +227,10 @@ const AMERICANO = {
       id: 'criar',
       title: '1. Criar e inscrever',
       body: [
-        'Em Dia de jogo → Criar, escolha o formato Americano, a data, o horário e a visibilidade.',
+        'Em Dia de jogo → Novo dia de jogo, escolha o formato Americano, a data, o horário e a visibilidade.',
         'Depois inclua os participantes na seção Participantes. Vale inscrever todo mundo antes de sortear: a grade é montada com quem está na lista.',
       ],
-      tip: 'Dá para nomear outras pessoas como organizadoras do dia, no card Organização.',
+      tip: 'Dá para nomear outras pessoas como organizadoras do dia: no cartão "Configurações do dia de jogo", em "Quem organiza as partidas".',
     },
     {
       id: 'sortear',
@@ -302,7 +302,7 @@ const AMERICANO_LIVE = {
       id: 'criar',
       title: '1. Criar o dia de jogo',
       body: [
-        'Em Dia de jogo → Criar, escolha "Americano aprimorado" e informe quantas QUADRAS estão disponíveis.',
+        'Em Dia de jogo → Novo dia de jogo, escolha "Americano aprimorado" e informe quantas QUADRAS estão disponíveis.',
         'Como no Play, defina a visibilidade e quem pode organizar as partidas.',
       ],
       tip: 'Esta opção só aparece com a funcionalidade ligada no painel da plataforma.',

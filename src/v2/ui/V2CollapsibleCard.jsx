@@ -34,6 +34,7 @@ import { readCollapsePreference, writeCollapsePreference } from '@/core/lib/coll
  * @param {boolean} [props.defaultCollapsed=false] estado na primeira vez
  * @param {string} [props.className] classes do card
  * @param {string} [props.bodyClassName] classes do corpo
+ * @param {string} [props.dica] âncora `data-dica` do cartão (guias e pontos de dica)
  */
 export default function V2CollapsibleCard({
   icon: Icon,
@@ -45,6 +46,7 @@ export default function V2CollapsibleCard({
   defaultCollapsed = false,
   className,
   bodyClassName,
+  dica,
   children,
 }) {
   const { user } = useAuth();
@@ -67,6 +69,7 @@ export default function V2CollapsibleCard({
 
   return (
     <div
+      data-dica={dica}
       className={cn(
         'overflow-hidden rounded-4xl border border-gray-100 bg-paper-pure shadow-organic-sm',
         className,

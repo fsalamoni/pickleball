@@ -120,12 +120,28 @@ export default {
           from: { transform: 'translateX(0)', opacity: '1' },
           to: { transform: 'translateX(120%)', opacity: '0' },
         },
+        // Dicas: a seta "empurra" em direção ao alvo; o anel do ponto se expande.
+        'dica-seta': {
+          '0%, 100%': { transform: 'translateY(0)' },
+          '50%': { transform: 'translateY(6px)' },
+        },
+        'dica-anel': {
+          '0%': { transform: 'scale(1)', opacity: '0.7' },
+          '80%, 100%': { transform: 'scale(2.2)', opacity: '0' },
+        },
+        'dica-entrada': {
+          from: { transform: 'translateY(6px)', opacity: '0' },
+          to: { transform: 'translateY(0)', opacity: '1' },
+        },
       },
       animation: {
         'accordion-down': 'accordion-down 0.2s ease-out',
         'accordion-up': 'accordion-up 0.2s ease-out',
         'slide-in-right': 'slide-in-right 0.3s ease-out',
         'slide-out-right': 'slide-out-right 0.3s ease-in',
+        'dica-seta': 'dica-seta 1.1s ease-in-out infinite',
+        'dica-anel': 'dica-anel 1.8s cubic-bezier(0, 0, 0.2, 1) infinite',
+        'dica-entrada': 'dica-entrada 0.22s ease-out',
       },
     },
   },

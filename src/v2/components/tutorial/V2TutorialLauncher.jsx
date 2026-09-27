@@ -27,6 +27,13 @@
  * Fechar de qualquer jeito (X, "Entendi", clicar fora) marca como visto. A
  * intenção de quem fecha é sempre a mesma: "não precisa me mostrar isso de
  * novo sozinho". Rever continua a um clique.
+ *
+ * ## Com as DICAS GUIADAS (flag `guided_tips`)
+ *
+ * O botão continua o mesmo, mas começa o GUIA na tela — destaque e seta sobre
+ * os botões de verdade, com o mesmo texto deste tutorial (`guias.js`) — e
+ * **nada abre sozinho**: a dica aparece quando a pessoa pede, nunca no meio do
+ * que ela está fazendo. O modal abaixo segue valendo com a flag desligada.
  */
 
 import React, { useEffect, useMemo, useRef, useState } from 'react';
@@ -40,6 +47,10 @@ import { useAuth } from '@/core/lib/FirebaseAuthContext';
 import { readViewPreference, writeViewPreference } from '@/core/lib/viewPreference';
 import { getTutorial } from '@/modules/help/domain/tutorials';
 import { cn } from '@/core/lib/utils';
+import { useDicas } from '@/v2/components/dicas/DicasContext';
+
+/** O id do guia de um tutorial (o mesmo de `guiaIdDoTutorial`, sem importar o catálogo). */
+const guiaDoTutorial = (tutorialId) => `tutorial:${tutorialId}`;
 
 /** Prefixo da preferência. Junto com o id do tutorial, é o CONTRATO da memória. */
 const PREF_PREFIX = 'tutorial:';
@@ -103,11 +114,18 @@ function Progresso({ total, atual, onIr }) {
  * @param {boolean} [props.autoOpen=true] abre sozinho na primeira vez
  * @param {string} [props.variant='ghost'] variante do botão
  * @param {string} [props.size='sm']
+ * @param {string} [props.dica] âncora `data-dica` do botão (para os guias e os pontos de dica)
+ * @param {string} [props.guia] com as dicas guiadas, o guia a começar (padrão: o
+ *   do próprio tutorial). Ex.: em `/torneios/criar`, o guia do formulário.
+ * @param {boolean} [props.explicar=false] sempre o modal de leitura, mesmo com
+ *   as dicas guiadas — para quando a tela do guia ainda não existe (escolher
+ *   o formato ANTES de criar o dia de jogo).
  */
 export default function V2TutorialLauncher({
-  tutorialId, label = 'Como funciona', autoOpen = true, variant = 'ghost', size = 'sm',
+  tutorialId, label = 'Como funciona', autoOpen = true, variant = 'ghost', size = 'sm', dica, guia, explicar = false,
 }) {
   const { user } = useAuth();
+  const dicas = useDicas();
   const tutorial = useMemo(() => getTutorial(tutorialId), [tutorialId]);
 
   const [aberto, setAberto] = useState(false);
@@ -116,14 +134,15 @@ export default function V2TutorialLauncher({
   const jaTentouAbrir = useRef(false);
 
   useEffect(() => {
-    if (!autoOpen || !tutorial) return;
+    // Com as dicas guiadas, nada abre sozinho.
+    if (!autoOpen || !tutorial || dicas.on) return;
     if (jaTentouAbrir.current) return;
     jaTentouAbrir.current = true;
     if (!tutorialJaVisto(user?.uid, tutorial.id)) {
       setPasso(0);
       setAberto(true);
     }
-  }, [autoOpen, tutorial, user?.uid]);
+  }, [autoOpen, tutorial, user?.uid, dicas.on]);
 
   // Id desconhecido: não oferece nada em vez de quebrar a tela.
   if (!tutorial) return null;
@@ -137,11 +156,18 @@ export default function V2TutorialLauncher({
     setAberto(false);
   };
 
-  const abrir = () => { setPasso(0); setAberto(true); };
+  const abrir = () => {
+    if (dicas.on && !explicar) {
+      dicas.iniciarGuia(guia || guiaDoTutorial(tutorial.id));
+      return;
+    }
+    setPasso(0);
+    setAberto(true);
+  };
 
   return (
     <>
-      <V2Button variant={variant} size={size} onClick={abrir}>
+      <V2Button variant={variant} size={size} onClick={abrir} data-dica={dica}>
         <GraduationCap className="mr-1.5 h-4 w-4" aria-hidden="true" />
         {label}
       </V2Button>

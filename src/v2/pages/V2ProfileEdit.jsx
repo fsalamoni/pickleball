@@ -303,7 +303,7 @@ export default function V2ProfileEdit() {
 
       <div className="space-y-6">
         {/* Identity */}
-        <V2Surface collapsible collapseId="perfil-identidade" eyebrow="Identidade" title="Dados do participante">
+        <V2Surface collapsible collapseId="perfil-identidade" data-dica="perfil-identidade" eyebrow="Identidade" title="Dados do participante">
           <div className="mt-5">
             <ImageUpload
               value={photoUrl}
@@ -361,7 +361,7 @@ export default function V2ProfileEdit() {
         </V2Surface>
 
         {/* Community & privacy */}
-        <V2Surface collapsible collapseId="perfil-comunidade" eyebrow="Comunidade" title="Comunidade e privacidade"
+        <V2Surface collapsible collapseId="perfil-comunidade" data-dica="perfil-comunidade" eyebrow="Comunidade" title="Comunidade e privacidade"
           description="Defina como você aparece no diretório e quais contatos são públicos.">
           <div className="mt-5 grid gap-4 sm:grid-cols-2">
             <V2Field label="Gênero">
@@ -397,7 +397,7 @@ export default function V2ProfileEdit() {
         </V2Surface>
 
         {/* Interesses na plataforma */}
-        <V2Surface collapsible collapseId="perfil-interesses" eyebrow="Interesses" title="Meus interesses na plataforma"
+        <V2Surface collapsible collapseId="perfil-interesses" data-dica="perfil-interesses" eyebrow="Interesses" title="Meus interesses na plataforma"
           description="O que você quer fazer por aqui. Usamos isso para destacar o que importa para você no painel.">
           <div className="mt-5 grid gap-2 sm:grid-cols-2">
             {PLATFORM_INTEREST_META.map(({ value, label, hint, icon }) => {
@@ -474,7 +474,7 @@ export default function V2ProfileEdit() {
         <V2ParticipationHistoryCard />
 
         {/* Leveling */}
-        <V2Surface collapsible collapseId="perfil-nivelamento" eyebrow="Nivelamento" title="Seu nível competitivo"
+        <V2Surface collapsible collapseId="perfil-nivelamento" data-dica="perfil-nivel" eyebrow="Nivelamento" title="Seu nível competitivo"
           description="Informe pela tabela detalhada ou preencha o formulário para obter a recomendação.">
           <div className="mt-5 grid gap-3 sm:grid-cols-[1fr,auto] sm:items-end">
             <V2Field label="Meu nível informado" hint={selectedLevel?.tagline}>

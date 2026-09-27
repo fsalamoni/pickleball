@@ -462,7 +462,7 @@ function ModalityCard({ modality, confirmed, tournament, currentUserId, allRegis
                 {alreadyRegistered ? (
                   <V2Badge tone="green">Sua equipe está inscrita</V2Badge>
                 ) : canRegister ? (
-                  <V2Button size="sm" onClick={onRegister} disabled={slotsFull && !isAdmin}>
+                  <V2Button size="sm" onClick={onRegister} disabled={slotsFull && !isAdmin} data-dica="torneio-inscrever">
                     <Plus className="h-4 w-4" />
                     {slotsFull && !isAdmin ? 'Modalidade lotada' : 'Inscrever equipe'}
                   </V2Button>
@@ -473,7 +473,7 @@ function ModalityCard({ modality, confirmed, tournament, currentUserId, allRegis
             ) : alreadyRegistered ? (
               <V2Badge tone="green">Inscrito</V2Badge>
             ) : canRegister ? (
-              <V2Button size="sm" onClick={onRegister} disabled={slotsFull && !canWaitlist}>
+              <V2Button size="sm" onClick={onRegister} disabled={slotsFull && !canWaitlist} data-dica="torneio-inscrever">
                 <Plus className="h-4 w-4" />
                 {canWaitlist ? 'Entrar na lista de espera' : slotsFull ? 'Modalidade lotada' : isAdmin ? 'Inscrever jogador' : 'Inscrever-se'}
               </V2Button>

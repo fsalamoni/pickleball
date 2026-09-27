@@ -559,7 +559,8 @@ export default function V2DaySlotsDialog({
                       }
                     />
                   ) : (
-                    <>
+                    // `data-dica`: o guia "Reservar uma quadra" aponta aqui.
+                    <div data-dica="arena-horarios">
                       {/* Nada livre? Isso é um AVISO acima da grade, não uma
                           parede no lugar dela: ver a forma do dia (o que está
                           reservado, o que está bloqueado) é meio caminho para
@@ -684,7 +685,7 @@ export default function V2DaySlotsDialog({
                         })}
                       </div>
                       )}
-                    </>
+                    </div>
                   )}
                 </div>
 
@@ -893,7 +894,7 @@ export default function V2DaySlotsDialog({
                     </div>
                   )}
                 </div>
-                <V2Button onClick={handleConfirm}>
+                <V2Button onClick={handleConfirm} data-dica="arena-continuar">
                   Continuar
                 </V2Button>
               </div>

@@ -380,6 +380,15 @@ viraram código (lotes 1 e 2 de `convertFlagsToCode`). Apenas
   inicial. Card escondido não consulta nada; a escolha fica no navegador, por
   usuário (zero banco).
 
+**Onda CJ (2026-09-27)** — mais uma, default OFF (ver `docs/32-DICAS-GUIADAS.md`):
+- `guided_tips` — as DICAS: um botão "Dicas" no topo de toda tela abre o
+  painel (ligar/desligar, os guias desta tela, "O que você quer fazer?").
+  Nada aparece sozinho: os 27 guias levam à tela, apontam o botão de verdade
+  com seta e avançam quando a pessoa faz; com as dicas ligadas, pontos
+  pulsando explicam os botões. Os tutoriais viram guias e deixam de abrir
+  sozinhos; a ajuda ganha "Mostre na tela". Zero banco (navegador, por
+  usuário). Âncoras: `data-dica="…"` nos elementos reais.
+
 Padrão de uso:
 
 ```jsx
@@ -488,3 +497,5 @@ usuário" (apenas para `platform_admin`). Quando ativo:
   o que fica claro de propósito (Onda CH).
 - `docs/31-INICIO-SOB-MEDIDA.md` — cada pessoa escolhe os cards do seu início
   e a ordem, sem tocar o banco (Onda CI).
+- `docs/32-DICAS-GUIADAS.md` — as dicas sob pedido: guias com seta sobre a tela
+  de verdade, pontos de dica, tutoriais como guias (Onda CJ).

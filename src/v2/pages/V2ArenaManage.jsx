@@ -375,6 +375,7 @@ function V2ArenaManageContent({ arenaId, user, isPlatformAdmin, arena, managed, 
             não era visto. */}
         <V2SectionNav
           ariaLabel="Seções da Central da arena"
+          dica="arena-secoes"
           sections={sections}
           grupos={ARENA_SECTION_GROUPS}
           activeId={activeSectionId}

@@ -37,7 +37,7 @@ export default function V2Clubs() {
       <V2PageIntro
         title="Clubes"
         subtitle="Descubra clubes, crie o seu e organize sua turma."
-        action={<V2Button asChild><Link to="/clubes/criar"><Plus className="h-4 w-4" /> Criar clube</Link></V2Button>}
+        action={<V2Button asChild><Link to="/clubes/criar" data-dica="clubes-criar"><Plus className="h-4 w-4" /> Criar clube</Link></V2Button>}
       />
 
       {myClubs.length > 0 && (
@@ -49,7 +49,7 @@ export default function V2Clubs() {
         </div>
       )}
 
-      <V2Surface collapsible collapseId="clubs-busca" title="Buscar clubes" className="mb-8">
+      <V2Surface collapsible collapseId="clubs-busca" title="Buscar clubes" className="mb-8" data-dica="clubes-busca">
         <V2SearchInput
           icon={Search}
           value={search}
@@ -75,7 +75,7 @@ export default function V2Clubs() {
           />
         </V2Surface>
       ) : (
-        <div className="grid gap-6 sm:grid-cols-2 xl:grid-cols-3">
+        <div data-dica="clubes-lista" className="grid gap-6 sm:grid-cols-2 xl:grid-cols-3">
           {filtered.map((club) => <ClubCard key={club.id} club={club} mine={myClubIds.has(club.id)} />)}
         </div>
       )}

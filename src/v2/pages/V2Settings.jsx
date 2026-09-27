@@ -30,6 +30,8 @@ import { useTheme } from '@/core/lib/ThemeContext';
 import HomeCardsSettingsCard from '@/v2/components/home/cards/HomeCardsSettingsCard';
 import { useHomeCardsOn } from '@/modules/home/hooks/useHomeCards';
 import { useHashScroll } from '@/v2/ui/useHashScroll';
+import DicasSettingsCard from '@/v2/components/dicas/DicasSettingsCard';
+import { useDicas } from '@/v2/components/dicas/DicasContext';
 
 export default function V2Settings() {
   const enabled = true;
@@ -37,6 +39,7 @@ export default function V2Settings() {
   const pushOn = useFeatureFlag(FEATURE_FLAG.PUSH_NOTIFICATIONS);
   const { disponivel: aparenciaOn } = useTheme();
   const inicioOn = useHomeCardsOn();
+  const { on: dicasOn } = useDicas();
   // `/configuracoes#pagina-inicial` (o link do "Personalizar" do início) cai no cartão.
   useHashScroll();
   const { user, userProfile, updateUserProfile } = useAuth();
@@ -92,7 +95,7 @@ export default function V2Settings() {
     <div className="mx-auto max-w-[720px]">
       <V2PageIntro
         title="Configurações"
-        subtitle={`Conta, ${[aparenciaOn && 'aparência', inicioOn && 'página inicial'].filter(Boolean).map((x) => `${x}, `).join('')}privacidade e seus dados.`}
+        subtitle={`Conta, ${[aparenciaOn && 'aparência', inicioOn && 'página inicial', dicasOn && 'dicas'].filter(Boolean).map((x) => `${x}, `).join('')}privacidade e seus dados.`}
       />
 
       <div className="space-y-4">
@@ -113,7 +116,10 @@ export default function V2Settings() {
         {/* Página inicial: os cards do início e a ordem (flag home_cards). */}
         <HomeCardsSettingsCard />
 
-        <V2Surface>
+        {/* Dicas: ligar, desligar e abrir os guias (flag guided_tips). */}
+        <DicasSettingsCard />
+
+        <V2Surface data-dica="config-notificacoes">
           <div className="flex items-center gap-2">
             <Bell className="h-5 w-5 text-ink" />
             <h2 className="font-display text-lg font-bold text-ink">Notificações</h2>
@@ -147,7 +153,7 @@ export default function V2Settings() {
 
         {pushOn && <V2PushCard />}
 
-        <V2Surface>
+        <V2Surface data-dica="config-dados">
           <div className="flex items-center gap-2">
             <ShieldCheck className="h-5 w-5 text-ink" />
             <h2 className="font-display text-lg font-bold text-ink">Privacidade e dados (LGPD)</h2>

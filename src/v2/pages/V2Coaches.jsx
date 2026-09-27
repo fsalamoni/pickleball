@@ -62,7 +62,7 @@ function CoachForm({ existing, onClose }) {
   function str(s) { return String(s ?? ''); }
 
   return (
-    <V2Surface className="border-emerald-200 bg-emerald-50/40">
+    <V2Surface className="border-emerald-200 bg-emerald-50/40" data-dica="professor-formulario">
       <h3 className="font-display text-base font-bold text-ink">
         {existing ? 'Editar perfil de professor' : 'Tornar-se professor'}
       </h3>
@@ -200,7 +200,7 @@ export default function V2Coaches() {
           <p className="mt-1 text-sm text-gray-500">Encontre coaches de pickleball ou cadastre-se como professor</p>
         </div>
         {!meuPerfilFalhou && (
-          <V2Button size="sm" variant={myProfile ? 'ghost' : 'default'} onClick={() => setEditing(true)}>
+          <V2Button size="sm" variant={myProfile ? 'ghost' : 'default'} onClick={() => setEditing(true)} data-dica="professor-sou">
             {myProfile ? <><Edit3 className="h-4 w-4" /> Editar perfil</> : <><Plus className="h-4 w-4" /> Sou professor</>}
           </V2Button>
         )}
@@ -218,7 +218,7 @@ export default function V2Coaches() {
       {editing && !meuPerfilFalhou && <CoachForm existing={myProfile} onClose={() => setEditing(false)} />}
 
       {/* Filtros */}
-      <V2Surface collapsible collapseId="coaches-filtros" title="Filtros">
+      <V2Surface collapsible collapseId="coaches-filtros" title="Filtros" data-dica="professores-filtros">
         <div className="grid grid-cols-1 gap-2 sm:grid-cols-2">
           <V2Field label="Cidade / Estado">
             <V2Input value={region} onChange={(e) => setRegion(e.target.value)} placeholder="São Paulo" />
@@ -274,7 +274,7 @@ export default function V2Coaches() {
             : undefined}
         />
       ) : (
-        <div className="space-y-3">
+        <div className="space-y-3" data-dica="professores-lista">
           {discoveryOn && (
             <p className="px-1 text-xs text-gray-400">{displayed.length} professor(es)</p>
           )}

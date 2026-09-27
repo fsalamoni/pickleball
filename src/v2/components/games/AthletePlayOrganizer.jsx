@@ -221,12 +221,13 @@ export function PlayParticipantsSection({ gameDay, participants, view, isLoading
       icon={Users}
       title="Participantes"
       count={participants.length}
+      dica="dia-de-jogo-participantes"
       sectionId={GAME_DAY_SECTION.PLAY_PARTICIPANTS}
       summary={participants.length === 0
         ? 'Nenhum participante ainda'
         : `${view.order.length} na fila · ${view.inCourt.length} em quadra · ${view.unavailable.length} pausado(s)`}
       actions={canManage && (
-        <V2Button size="sm" variant="ghost" onClick={() => setPickerOpen(true)} disabled={atLimit}>
+        <V2Button size="sm" variant="ghost" onClick={() => setPickerOpen(true)} disabled={atLimit} data-dica="dia-de-jogo-inserir-atletas">
           <UserPlus className="mr-1.5 h-4 w-4" /> Inserir atletas
         </V2Button>
       )}
@@ -741,6 +742,7 @@ export function PlayCourtsSection({ gameDay, participants, games, view, canManag
       icon={LayoutGrid}
       title="Quadras e jogos"
       count={courts}
+      dica="dia-de-jogo-quadras"
       sectionId={GAME_DAY_SECTION.PLAY_COURTS}
       summary={openGames.length === 0
         ? `${courts} quadra(s) livre(s)`
@@ -753,11 +755,11 @@ export function PlayCourtsSection({ gameDay, participants, games, view, canManag
           {/* Só aparece onde faz diferença: com uma quadra, "sortear todas" é
               o mesmo que "criar próximo jogo". */}
           {courts > 1 && (
-            <V2Button size="sm" variant="secondary" onClick={handleCreateRound} disabled={!podeSortearRodada || busy}>
+            <V2Button size="sm" variant="secondary" onClick={handleCreateRound} disabled={!podeSortearRodada || busy} data-dica="dia-de-jogo-sortear-rodada">
               <Shuffle className="mr-1.5 h-4 w-4" /> {busy ? 'Sorteando…' : 'Sortear todas as quadras'}
             </V2Button>
           )}
-          <V2Button size="sm" onClick={() => handleCreateNext()} disabled={!canCreateNext || busy}>
+          <V2Button size="sm" onClick={() => handleCreateNext()} disabled={!canCreateNext || busy} data-dica="dia-de-jogo-criar-partida">
             <PlayCircle className="mr-1.5 h-4 w-4" /> {busy ? 'Criando…' : 'Criar próximo jogo'}
           </V2Button>
         </>
@@ -1197,6 +1199,7 @@ export function PlayOrderSection({ view }) {
       icon={ListOrdered}
       title="Ordem de participação"
       count={total || null}
+      dica="dia-de-jogo-ordem"
       sectionId={GAME_DAY_SECTION.PLAY_ORDER}
       summary={total === 0
         ? 'Ninguém na ordem ainda'
