@@ -6,6 +6,9 @@
  *   incompleta ela não afirma "livre".
  * - "Seu início mostra: …" lista as frentes, cada uma com o motivo no título
  *   (passar o dedo/mouse explica), e o botão Personalizar abre a escolha.
+ * - Com o início sob medida (`cards` + `onPersonalizar`), a lista é a dos
+ *   CARDS que a pessoa escolheu, e Personalizar abre o seletor deles — quem
+ *   manda na tela é a escolha dela, não os interesses.
  */
 import React, { useMemo, useState } from 'react';
 import { SlidersHorizontal } from 'lucide-react';
@@ -25,8 +28,18 @@ function Contador({ label, value, destaque = false }) {
   );
 }
 
-export default function HomeHero({ nome, hoje, agora, agenda, foci = [], pendenciasExtras = 0 }) {
+const MAX_CHIPS = 6;
+
+export default function HomeHero({
+  nome, hoje, agora, agenda, foci = [], pendenciasExtras = 0, cards = null, onPersonalizar = null,
+}) {
   const [personalizar, setPersonalizar] = useState(false);
+  const sobMedida = Array.isArray(cards);
+  const chips = sobMedida
+    ? cards.map((c) => ({ key: c.id, label: c.label, title: undefined }))
+    : foci.map((f) => ({ key: f.focus, label: HOME_FOCUS_LABEL[f.focus] || f.focus, title: focusReasonText(f.reason) }));
+  const sobra = Math.max(0, chips.length - MAX_CHIPS);
+  const abrir = () => (onPersonalizar ? onPersonalizar() : setPersonalizar(true));
   const itens = useMemo(() => mergeAgenda([agenda?.itens || []]), [agenda?.itens]);
   const acoes = itens.filter((i) => i.acao).length + (pendenciasExtras || 0);
   const frase = frasePrincipal({ agenda: itens, hoje, completa: !!agenda?.completa, acoes });
@@ -56,18 +69,29 @@ export default function HomeHero({ nome, hoje, agora, agenda, foci = [], pendenc
           </p>
           <div className="mt-5 flex flex-wrap items-center gap-2">
             <span className="text-[11px] font-bold uppercase tracking-widest text-gray-400">Seu início mostra</span>
-            {foci.slice(0, 6).map((f) => (
+            {chips.slice(0, MAX_CHIPS).map((c) => (
               <span
-                key={f.focus}
-                title={focusReasonText(f.reason)}
+                key={c.key}
+                title={c.title}
                 className="rounded-full border border-white/10 bg-white/10 px-3 py-1 text-xs font-semibold text-white"
               >
-                {HOME_FOCUS_LABEL[f.focus] || f.focus}
+                {c.label}
               </span>
             ))}
+            {sobra > 0 && (
+              <span className="rounded-full px-1 py-1 text-xs font-semibold text-gray-300">
+                +{sobra}<span className="sr-only"> {sobra === 1 ? 'card' : 'cards'}</span>
+              </span>
+            )}
+            {sobMedida && chips.length === 0 && (
+              <span className="rounded-full border border-dashed border-white/20 px-3 py-1 text-xs font-semibold text-gray-300">
+                Só o resumo do dia
+              </span>
+            )}
             <button
               type="button"
-              onClick={() => setPersonalizar(true)}
+              onClick={abrir}
+              aria-haspopup="dialog"
               className="btn-press inline-flex items-center gap-1.5 rounded-full bg-white px-3.5 py-1.5 text-xs font-bold text-ink transition-transform hover:scale-105 focus-visible:outline-none focus-visible:ring-4 focus-visible:ring-acid/50"
             >
               <SlidersHorizontal className="h-3.5 w-3.5" aria-hidden="true" /> Personalizar
@@ -80,7 +104,7 @@ export default function HomeHero({ nome, hoje, agora, agenda, foci = [], pendenc
           <Contador label="Pedem ação" value={sabe ? acoes : '…'} destaque={sabe && acoes > 0} />
         </div>
       </div>
-      <PersonalizeHomeDialog open={personalizar} onOpenChange={setPersonalizar} />
+      {!onPersonalizar && <PersonalizeHomeDialog open={personalizar} onOpenChange={setPersonalizar} />}
     </section>
   );
 }

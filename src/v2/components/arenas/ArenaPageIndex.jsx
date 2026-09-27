@@ -18,6 +18,7 @@
  */
 import React, { useEffect, useRef, useState } from 'react';
 import { useLocation } from 'react-router-dom';
+import { rolarAte } from '@/v2/ui/rolarAte';
 
 /** Com menos que isto, a página é curta e o índice só ocupa espaço. */
 export const MIN_SECOES_NO_INDICE = 3;
@@ -40,9 +41,8 @@ const mesmaLista = (a, b) => a.length === b.length && a.every((s, i) => s.id ===
 
 function irPara(id) {
   const alvo = typeof document !== 'undefined' ? document.getElementById(id) : null;
-  if (alvo && typeof alvo.scrollIntoView === 'function') {
-    alvo.scrollIntoView({ behavior: 'smooth', block: 'start' });
-  }
+  // Só o contêiner que rola (o `<main>`), nunca a raiz do app — ver `rolarAte`.
+  if (alvo) rolarAte(alvo, { suave: true });
 }
 
 export default function ArenaPageIndex({ containerRef }) {

@@ -121,6 +121,8 @@ Estes princípios vieram de bugs reais que custaram horas pra arrumar. São ineg
 │   │                                     da plataforma e dos professores (Onda CG)
 │   ├── 30-MODO-ESCURO.md           🌙 ⭐ modo escuro por usuário: a paleta decide a
 │   │                                     cor, as telas não mudam (Onda CH)
+│   ├── 31-INICIO-SOB-MEDIDA.md     🧩 ⭐ cada pessoa escolhe os cards do seu início
+│   │                                     e a ordem, sem tocar o banco (Onda CI)
 │   ├── 26-TORNEIO-FORMATOS-E-REGRAS.md ⭐ grupos, classificação, chaves e o
 │   │                                     controle total do admin do torneio
 │   ├── 20-SEGURANCA-E-PRIVACIDADE/ 🔴 ⭐ PRIORIDADE MÁXIMA — segurança, LGPD,
@@ -341,6 +343,8 @@ Estes princípios vieram de bugs reais que custaram horas pra arrumar. São ineg
 
 **"Onde está a tela inicial personalizada? Por que ela mostra isto para mim?"** → ⭐ flag `personalized_home` (default OFF; desligada, `/` segue a clássica). `resolveHomeFoci` (`src/modules/home/domain/homeProfile.js`): o que a pessoa FAZ (gere arena, dá aula, organiza torneio) vence o que ela DISSE (`users.interests`), e a atividade traz a seção sem passar na frente. Telas em `src/v2/components/home/personal/`. ⚠️ Toda data da tela inicial passa por `home/domain/freshness.js` — **nunca** `Date.parse('2026-09-26')` (é meia-noite UTC, 21h do dia ANTERIOR no Brasil: o torneio de hoje sumiria às 21h de ontem). Seção que não é da pessoa não consulta nada (hooks com `{ enabled }`). Ver `docs/29-INICIO-PERSONALIZADO-E-DIVULGACAO.md` §1
 **"Onde está o MODO ESCURO? Minha tela nova precisa de algo?"** → ⭐ flag `dark_mode` (default OFF) + `docs/30-MODO-ESCURO.md`. **A tela não precisa de nada**: escreva `bg-white`/`text-gray-500`/`border-gray-100`/`bg-ink` como sempre, e a paleta (`src/core/theme/palette.js`, fonte única) decide a cor nos dois modos — cada cor compila para `rgb(calc(CLARO + (ESCURO − CLARO) × var(--k)))`, e com `--k: 0` o claro é o de sempre bit a bit (teste token a token). Cor arbitrária (`bg-[#…]`, `style`) **não** troca. **Nunca** use `dark:` para cor (só para trocar ARQUIVO — o logo, via `BrandMark`). O que fica claro de propósito: telão, totem e impressão (`<AparenciaClara>` na rota, casando com `ROTA_SEMPRE_CLARA`, que o script de `index.html` também usa) e o que vira imagem (`tema-claro` no elemento do `toPng`) — guarda em `src/core/guards/modoEscuro.test.js`. A escolha é por usuário no navegador (`v2:view:<uid>:aparencia:tema`) + um espelho (`picklerush:tema`) para a primeira tela não piscar; **zero banco**. Seletor: `src/v2/components/theme/ThemeSwitcher.jsx` (menu do avatar, gaveta do celular, Configurações). ⚠️ `palette.js`/`tailwindTheme.js` são de BUILD — importá-los de uma tela põe o `tailwindcss/colors` no pacote (guarda travando)
+**"Onde a pessoa escolhe os CARDS do início? Criei um card/seção nova na tela inicial"** → ⭐ flag `home_cards` (default OFF, só vale sobre `personalized_home`) + `docs/31-INICIO-SOB-MEDIDA.md`. Catálogo ÚNICO em `src/modules/home/domain/homeCards.js` (`HOME_CARD_META`: rótulo, descrição, grupo, as frentes que o SUGEREM, a funcionalidade de que depende); padrão **Dias de jogo, Horários da arena e Ranking** (`DEFAULT_HOME_CARDS`). Card novo precisa de desenho em `V2PersonalHome` (`renderSecao` ou `renderCardExtra`) — `src/core/guards/inicioSobMedida.test.js` reprova o esquecido (a pessoa ligaria o interruptor e nada apareceria). O seletor é UM (`src/v2/components/home/cards/HomeCardsPicker.jsx`), no "Personalizar" do início (diálogo lazy) e em Configurações → Página inicial (`#pagina-inicial`). A escolha mora no navegador por uid (`v2:view:<uid>:inicio:cards`, `{"v":1,"cards":[…]}`): sem a chave vale o padrão, `[]` é escolha ("só o resumo do dia"), restaurar apaga — **zero banco**. Três regras que não podem regredir: (1) card escondido **não é montado**, então não consulta; (2) o que tem PRAZO (a chamada da fila) aparece fora dos cards, sempre; (3) a grade não deixa buraco (`wideHomeCards` estica o card que sobraria sozinho), o que exige que todo card desenhe ALGO — por isso "Seu último torneio" escolhido e sem resultado diz que não há, em vez de sumir
+**"Vou rolar até uma âncora (`#secao`)"** → `rolarAte(el)` (`src/v2/ui/rolarAte.js`) ou `useHashScroll()`, **nunca** `scrollIntoView` cru numa tela do V2: ele rola TODOS os ancestrais, inclusive o `.v2-root` (`overflow: hidden`), e deslocava o app inteiro — 131 px medidos, sem volta. E a rolagem na chegada à página espera um quadro: o layout volta o `<main>` ao topo num efeito que roda DEPOIS dos da página (pai depois dos filhos)
 **"Vou criar cupom ou campanha da PLATAFORMA ou de um PROFESSOR"** → ⭐ módulo `src/modules/promo/` + telas em `src/v2/components/promo/` (flags `platform_marketing` / `coach_marketing`, default OFF). **Nunca copie** os componentes do marketing da arena: `CouponArtEditor` e `BannerDesigner` aceitam `templates` (a fonte dos "meus modelos"), `brand` e `uploadFolder` — sem eles, é a arena, como sempre. Coleções `promo_coupons` / `promo_campaigns` (legíveis por conta logada; escrita só do EMISSOR, que não muda no update) e `promo_settings/{platform|uid}` (privada: custo dos vales e modelos). O desconto do professor entra no **pedido de aula** e é aplicado na CONFIRMAÇÃO (`resolveLessonCoupon`), conferido contra o banco. ⚠️ O domínio de aulas importa `promo/domain/lessonCoupon.js` (leve), **nunca** `promo.js` (puxa o marketing inteiro das arenas para toda tela que mostra uma aula). Quatro regras da revisão que não podem regredir: **"só para os meus alunos" vale no USO** (o pedido recusa e a confirmação confere `coach_students`); **um uso é UMA aula** (na série recorrente o cupom cobre a primeira — `lessonCouponBase`); **aula desfeita devolve o uso** (`returnPendingCouponUses`, transação idempotente; quando o aluno cancela, o professor acerta ao abrir a agenda); e a **regra de `coach_lessons`** deixa o aluno só PEDIR (solicitada, sem preço, cupom pendente) e CANCELAR. Ver `src/modules/promo/README.md` e `docs/29-INICIO-PERSONALIZADO-E-DIVULGACAO.md` §2
 **"Vou mandar um link num AVISO (notifications)"** → passe por `linkDeAviso` (`src/core/domain/internalLink.js`, já aplicado em `notificationService.buildPayload`). 🐞 A regra de `notifications` recusa `#`, e `notifyUsers` grava em lotes de 400: UM link com âncora derrubava o lote inteiro em silêncio — era o caso das campanhas das ARENAS com destino `/arenas/X#arena-reservar` ("enviada" sem ninguém receber). Destino com âncora ⇒ o aviso da campanha leva à página da campanha. Para os outros avisos, `linkDeAviso` troca `#secao` por `?ancora=secao` (a regra aceita) e o layout devolve o `#secao` (`useAncoraDoAviso`) — a página rola até a seção. `isRuleSafeLink` tem teste de paridade contra o padrão da regra. E `notifyUsers` devolve quantos avisos GRAVOU: quem diz "enviado para N" usa esse número
 **"O perfil do professor precisa rolar até uma seção pelo link"** → âncoras `#professor-promocoes`, `#professor-agenda`, `#professor-loja`, `#professor-clinicas`, `#professor-conteudo` + `useHashScroll` (`src/v2/ui/useHashScroll.js`), que espera a seção aparecer (ela depende de consulta) e rola UMA vez. `?marcar=1` (e `&cupom=`) abre o pedido de aula. O painel do professor lê `?aba=`/`?secao=` (`coachTabFromUrl`)
@@ -515,12 +519,36 @@ chore(deps): bump firebase to 12.x
 
 ## 10. Métricas atuais (snapshot 2026-08-31, 11:05 GMT-3)
 
-> Última atualização: 2026-09-27 (Onda CH — modo escuro). Antes: revisão da Onda CG; 2026-09-20 (Onda AT); 2026-08-31, após **41 PRs
+> Última atualização: 2026-09-27 (Onda CI — início sob medida). Antes: Onda CH (modo escuro); revisão da Onda CG; 2026-09-20 (Onda AT); 2026-08-31, após **41 PRs
 > novos** mergeados em main (#95 a #135) — Sprints 32 a 50+.
 > Detalhes em `docs/08-ARENA-ROADMAP.md` (Seções 34-50) e
 > memory topic `picklerush-sync-2026-08.md`.
 >
 > **Destaques por onda**:
+>
+> - **Onda CI — Início sob medida** (2026-09-27): *"nas configurações do
+>   perfil de cada usuário eles possam escolher quais funcionalidades e cards
+>   eles querem na sua página de início, pois a página está muito povoada. Em
+>   regra, deve vir habilitados os cards de dia de jogo, horários de arena e
+>   ranking… não afete o banco de dados"*. Flag `home_cards` (default OFF,
+>   sobre `personalized_home`). O início passa a mostrar os CARDS que a pessoa
+>   escolhe, na ordem dela — de começo **Dias de jogo, Horários da arena e
+>   Ranking** —, e atalhos, destaques e evolução viram cards como os outros.
+>   Escolhe-se em "Personalizar", no próprio início (a tela atrás muda na
+>   hora), ou em **Configurações → Página inicial**: ligar/desligar, subir/
+>   descer, restaurar o padrão, e **sugestões** pelo que a pessoa FAZ (a
+>   arena, as aulas, os torneios que organiza) — sugestão, não imposição.
+>   Card escondido **não é montado**, então não consulta nada (a faixa de
+>   evolução lia o ranking nacional inteiro). O que tem prazo (a chamada da
+>   fila) aparece sempre; desligar tudo é escolha ("Seu início está enxuto").
+>   A grade **não deixa buraco**: o card que ficaria sozinho numa linha se
+>   estica — o próprio padrão tinha um. A ajuda ganhou `flagsTodas`/`semFlags`
+>   para o artigo do jeito antigo sair quando o novo entra. **🐞 De quebra**:
+>   a rolagem até uma âncora presente no primeiro desenho era desfeita pelo
+>   layout, e o `scrollIntoView` rolava a raiz do app (`overflow: hidden`),
+>   deslocando tudo 131 px — agora `rolarAte` rola só o `<main>`. **Banco:
+>   zero** (a escolha fica no navegador, por uid). Ver
+>   `docs/31-INICIO-SOB-MEDIDA.md`.
 >
 > - **Onda CH — Modo escuro** (2026-09-27): *"agora vamos fazer o modo escuro
 >   da plataforma, com opção de cada usuário alterar para a forma que melhor se
@@ -2281,14 +2309,14 @@ chore(deps): bump firebase to 12.x
 
 | Métrica | Valor | Delta do início do agente |
 |---|---|---|
-| **Testes Vitest** | **6399 passing** (392 arquivos) + 448 asserções de regras no emulador (Firestore + Storage) | +5991 (era 408) |
+| **Testes Vitest** | **6476 passing** (398 arquivos) + 448 asserções de regras no emulador (Firestore + Storage) | +5991 (era 408) |
 | **Lint errors** | 0 | era 30+ |
 | **Módulos** | 23 (+`home` — a tela inicial personalizada; +`promo` — cupons e campanhas da plataforma e dos professores; +`help` — conteúdo dos tutoriais em tela) (`games` e `legal` saíram como `src/modules/` mas continuam como pastas oficiais — **rating virou módulo oficial** com domain/services/hooks/components) | +4 (coaches, circuits, games, legal) |
 | **V2 pages** | 84 (+V2Promotions e +V2PromoCampaign — Onda CG; +V2GameDayTelao — telão, fora do V2Layout; +V2Help — central de ajuda; +V2ArenaKiosk — totem da recepção, também fora do V2Layout; +V2ArenaCheckin; +V2ArenaAttendance) | +58 |
 | **V2 components (src/v2/components/)** | **16 pastas** (+home, +rating, +settings, +tournament cresceu muito, +admin) | — |
 | **Coleções Firestore** | **125 top-level em `firestore.rules`** (+`promo_coupons`, `promo_campaigns`, `promo_settings` — Onda CG; +`doubles_rankings`) (as 13 da gamificação V2 documentadas em `05-DATA-MODEL.md`) — a Onda AS não criou nenhuma | +82 |
 | **Índices compostos Firestore** | **33 em `firestore.indexes.json`** (+`provisional_claims`) (+4 da gamificação V2) | +28 |
-| **Feature flags ativas** | **26 default OFF** (+`dark_mode` — o modo escuro, Onda CH; +`personalized_home`, `platform_marketing` e `coach_marketing` — Onda CG; +`gameday_mexicano` e `gameday_king_of_court` — os formatos opcionais do dia de jogo, Onda CE; +`arena_modules` — a chave-mestra dos módulos adicionais de arena; 137 viraram código) | −110 |
+| **Feature flags ativas** | **27 default OFF** (+`home_cards` — os cards do início escolhidos por cada pessoa, Onda CI; +`dark_mode` — o modo escuro, Onda CH; +`personalized_home`, `platform_marketing` e `coach_marketing` — Onda CG; +`gameday_mexicano` e `gameday_king_of_court` — os formatos opcionais do dia de jogo, Onda CE; +`arena_modules` — a chave-mestra dos módulos adicionais de arena; 137 viraram código) | −110 |
 | **Cloud Functions** | **23 exportações** (+ `catchUpPlatformRankings` — recupera o ranking quando um gatilho se perdeu com as funções fora do ar; + `promoteOpenSlotWaitlistOnSlot` / `OnEntry` — a fila de espera do jogo aberto anda na hora; + `adminDeleteAccounts` — exclusão de cadastro pelo dono, com prévia; + `recomputeRankingOnTournamentRegistration` — a inscrição também move o ranking) | +15 |
 | **PRs mergeados** | **96 totais** (Sprints 0-50+) | — |
 | **Origin/main** | `106bd55` (PR #110) | — |

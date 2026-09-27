@@ -24,9 +24,18 @@
  *    vitrine sem conteúdo (destaques) some;
  *  - cada seção é isolada: um defeito numa delas não derruba as outras.
  *
+ * ⭐ Com o INÍCIO SOB MEDIDA (flag `home_cards`) quem decide é a pessoa: os
+ * cards que ela escolheu (padrão: Dias de jogo, Horários da arena e Ranking),
+ * NA ORDEM dela, numa grade só — atalhos, destaques e evolução viram cards
+ * como os outros. O que ela faz na plataforma deixa de encher a tela e vira
+ * sugestão no seletor. O aviso com prazo (a chamada da fila) fica fora dos
+ * cards: aparece sempre. Card escondido não é montado, então não consulta
+ * nada. Desligada a flag, a tela segue decidindo sozinha, como antes.
+ *
  * Só leitura. Nenhuma coleção, campo ou regra nova.
  */
-import React, { Suspense, lazy, useMemo } from 'react';
+import React, { Suspense, lazy, useMemo, useState } from 'react';
+import { SlidersHorizontal } from 'lucide-react';
 import { useAuth } from '@/core/lib/FirebaseAuthContext';
 import { useFeatureFlag } from '@/core/lib/FeatureFlagsContext';
 import { FEATURE_FLAG } from '@/core/featureFlags';
@@ -42,12 +51,17 @@ import {
   HOME_SECTION, focusReasonText, homeSectionsFor, resolveHomeFoci,
 } from '@/modules/home/domain/homeProfile';
 import { homeShortcuts } from '@/modules/home/domain/homeShortcuts';
+import {
+  HOME_CARD, HOME_CARD_META, isSectionCard, visibleHomeCards, wideHomeCards,
+} from '@/modules/home/domain/homeCards';
+import { useHomeCards, useHomeCardsContext, useHomeCardsOn } from '@/modules/home/hooks/useHomeCards';
 import { managedTournamentsForHome, myCurrentTournaments } from '@/modules/home/domain/homeTournaments';
 import HomeWaitlistCalls from '@/v2/components/arenas/openMatch/HomeWaitlistCalls';
 import { EvolutionStrip } from '@/v2/components/home/V2ActionHome';
 import HomeHero from './HomeHero';
 import HomeShortcuts from './HomeShortcuts';
 import { HomeSectionBoundary } from './HomeSection';
+import { HomeWideCards } from './homeWideCards';
 import HomeAgendaSection from './HomeAgendaSection';
 import HomeTournamentsSection from './HomeTournamentsSection';
 import HomeLastResultSection from './HomeLastResultSection';
@@ -60,6 +74,10 @@ import HomeCoachSection from './HomeCoachSection';
 import HomeLessonsSection from './HomeLessonsSection';
 import HomeClubsSection from './HomeClubsSection';
 import HomeCommunitySection from './HomeCommunitySection';
+import HomeCardsEmpty from '../cards/HomeCardsEmpty';
+
+// O seletor dos cards só baixa quando a pessoa abre "Personalizar".
+const HomeCardsDialog = lazy(() => import('../cards/HomeCardsDialog'));
 
 // Sob demanda: só com alguma fonte de promoção ligada (arena, plataforma ou professores).
 const HomePromoBanners = lazy(() => import('@/v2/components/arenas/marketing/HomePromoBanners'));
@@ -126,7 +144,18 @@ export default function V2PersonalHome() {
   );
   const podeCriarTorneio = foci.some((f) => f.focus === 'organizar');
 
-  const renderSecao = ({ id, reason }) => {
+  // Início sob medida: os cards da pessoa, na ordem dela.
+  const sobMedida = useHomeCardsOn();
+  const cardsCtx = useHomeCardsContext();
+  const { escolhidos } = useHomeCards();
+  const cards = useMemo(
+    () => (sobMedida ? visibleHomeCards(escolhidos, cardsCtx) : []),
+    [sobMedida, escolhidos, cardsCtx],
+  );
+  const largos = useMemo(() => wideHomeCards(cards), [cards]);
+  const [escolhendo, setEscolhendo] = useState(false);
+
+  const renderSecao = ({ id, reason }, { escolhido = false } = {}) => {
     const motivo = reason ? focusReasonText(reason) : null;
     switch (id) {
       case HOME_SECTION.AGENDA:
@@ -149,7 +178,7 @@ export default function V2PersonalHome() {
           />
         );
       case HOME_SECTION.RESULTADO:
-        return <HomeLastResultSection reason={motivo} hoje={hoje} />;
+        return <HomeLastResultSection reason={motivo} hoje={hoje} escolhido={escolhido} />;
       case HOME_SECTION.RANKING:
         return <HomeRankingSection reason={motivo} />;
       case HOME_SECTION.JOGAR:
@@ -166,6 +195,82 @@ export default function V2PersonalHome() {
         return null;
     }
   };
+
+  // Um card que não é seção (atalhos, destaques, evolução): ocupa a linha
+  // inteira da grade, na posição que a pessoa escolheu.
+  const renderCardExtra = (id) => {
+    switch (id) {
+      case HOME_CARD.ATALHOS:
+        return <HomeShortcuts atalhos={atalhos} className="xl:col-span-2" />;
+      case HOME_CARD.DESTAQUES:
+        return (
+          <Suspense fallback={null}>
+            <HomePromoBanners
+              arenasOn={arenaModulesOn} platformOn={platformMarketingOn} coachesOn={coachMarketingOn}
+              className="xl:col-span-2"
+            />
+          </Suspense>
+        );
+      case HOME_CARD.EVOLUCAO:
+        return (
+          <EvolutionStrip uid={uid} className="min-w-0 xl:col-span-2" />
+        );
+      default:
+        return null;
+    }
+  };
+
+  if (sobMedida) {
+    return (
+      <div className="mx-auto max-w-[1400px]">
+        <HomeHero
+          nome={nome}
+          hoje={hoje}
+          agora={agora}
+          agenda={agenda}
+          pendenciasExtras={totalPendingBookings}
+          cards={cards.map((id) => ({ id, label: HOME_CARD_META[id].label }))}
+          onPersonalizar={() => setEscolhendo(true)}
+        />
+
+        {/* O que tem PRAZO não é card: a chamada da fila vence em 1 hora. */}
+        {arenaModulesOn && <HomeWaitlistCalls />}
+
+        {cards.length === 0 ? (
+          <HomeCardsEmpty onEscolher={() => setEscolhendo(true)} />
+        ) : (
+          <HomeWideCards.Provider value={largos}>
+            <div className="grid grid-cols-1 gap-6 xl:grid-cols-2">
+              {cards.map((id) => (
+                <HomeSectionBoundary key={id} name={id} wide={largos.has(id)}>
+                  {isSectionCard(id) ? renderSecao({ id, reason: null }, { escolhido: true }) : renderCardExtra(id)}
+                </HomeSectionBoundary>
+              ))}
+            </div>
+          </HomeWideCards.Provider>
+        )}
+
+        {cards.length > 0 && (
+          <div className="mt-6 flex justify-center">
+            <button
+              type="button"
+              onClick={() => setEscolhendo(true)}
+              aria-haspopup="dialog"
+              className="inline-flex items-center gap-1.5 rounded-full px-3 py-1.5 text-sm font-semibold text-gray-500 transition-colors hover:text-ink focus-visible:outline-none focus-visible:ring-4 focus-visible:ring-acid/30"
+            >
+              <SlidersHorizontal className="h-4 w-4" aria-hidden="true" /> Escolher o que aparece aqui
+            </button>
+          </div>
+        )}
+
+        {escolhendo && (
+          <Suspense fallback={null}>
+            <HomeCardsDialog open={escolhendo} onOpenChange={setEscolhendo} foci={foci} />
+          </Suspense>
+        )}
+      </div>
+    );
+  }
 
   return (
     <div className="mx-auto max-w-[1400px]">

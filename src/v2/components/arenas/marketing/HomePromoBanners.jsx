@@ -257,7 +257,9 @@ function Banner({ banner, posicao, total }) {
  *   Cada fonte só é lida com a sua flag: `arenasOn` (módulos de arena),
  *   `platformOn` (divulgação da plataforma), `coachesOn` (dos professores).
  */
-export default function HomePromoBanners({ arenasOn = true, platformOn = false, coachesOn = false } = {}) {
+export default function HomePromoBanners({
+  arenasOn = true, platformOn = false, coachesOn = false, className = 'mb-8',
+} = {}) {
   const { user, userProfile } = useAuth();
   const uid = user?.uid || null;
   const cupons = useHomeBannerCoupons({ enabled: arenasOn });
@@ -354,7 +356,7 @@ export default function HomePromoBanners({ arenasOn = true, platformOn = false, 
     <section
       aria-roledescription="carrossel"
       aria-label={promosOn ? 'Promoções e destaques' : 'Promoções e destaques das arenas'}
-      className="mb-8"
+      className={className}
       onMouseEnter={() => setInteragindo(true)}
       onMouseLeave={() => setInteragindo(false)}
       onFocusCapture={() => setInteragindo(true)}

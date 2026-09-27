@@ -5,22 +5,26 @@
  * de cache). Some quando a pessoa ainda não disputou torneio nenhum: não há o
  * que mostrar, e uma caixa dizendo isso não ajuda ninguém a agir.
  *
+ * A exceção é quando a PESSOA escolheu o card (início sob medida, `escolhido`):
+ * ligar um card e ver nada aparecer parece defeito. Aí ele diz que ainda não
+ * há resultado e aponta os torneios abertos.
+ *
  * ⚠️ A colocação é a da CLASSIFICAÇÃO da modalidade (a aba Ranking do
  * torneio), e o texto diz isso — não promete pódio de chave.
  */
 import React, { useMemo } from 'react';
 import { Link } from 'react-router-dom';
-import { ArrowRight, Medal, Users } from 'lucide-react';
+import { ArrowRight, Medal, Trophy, Users } from 'lucide-react';
 import { useMyTournamentHistory } from '@/modules/tournament/hooks/useTournament';
 import { V2ErrorState, V2Skeleton } from '@/v2/ui/primitives';
 import { colocacaoTexto, lastTournamentResult } from '@/modules/home/domain/homeTournaments';
 import { TOURNAMENT_PHASE_LABEL } from '@/modules/home/domain/freshness';
 import { cn } from '@/core/lib/utils';
-import { HomeSection } from './HomeSection';
+import { HomeAction, HomeEmpty, HomeSection } from './HomeSection';
 
 const MEDALHA = { 1: 'bg-acid text-ink', 2: 'bg-gray-200 text-ink', 3: 'bg-amber-200 text-ink' };
 
-export default function HomeLastResultSection({ reason, hoje }) {
+export default function HomeLastResultSection({ reason, hoje, escolhido = false }) {
   const historico = useMyTournamentHistory();
   const ultimo = useMemo(() => lastTournamentResult(historico.data || [], hoje), [historico.data, hoje]);
 
@@ -35,6 +39,15 @@ export default function HomeLastResultSection({ reason, hoje }) {
     return (
       <HomeSection id="resultado" icon={Medal} title="Seu último torneio" reason={reason}>
         <V2ErrorState inline title="Não carregou o seu histórico" description="Os seus resultados continuam lá." onRetry={historico.refetch} />
+      </HomeSection>
+    );
+  }
+  if (!ultimo && escolhido) {
+    return (
+      <HomeSection id="resultado" icon={Medal} title="Seu último torneio" reason={reason}>
+        <HomeEmpty icon={Trophy} actions={<HomeAction to="/torneios">Ver torneios</HomeAction>}>
+          Você ainda não tem resultado de torneio. Depois do primeiro, a sua colocação aparece aqui.
+        </HomeEmpty>
       </HomeSection>
     );
   }

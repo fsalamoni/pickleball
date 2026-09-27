@@ -18,10 +18,10 @@ const ICONES = {
   LayoutDashboard, Medal, Megaphone, TrendingUp, Trophy, Users, Zap,
 };
 
-export default function HomeShortcuts({ atalhos = [] }) {
+export default function HomeShortcuts({ atalhos = [], className = 'mb-6' }) {
   if (atalhos.length === 0) return null;
   return (
-    <nav aria-label="Atalhos para você" className="mb-6">
+    <nav aria-label="Atalhos para você" className={className}>
       <ul className="grid grid-cols-2 gap-3 sm:grid-cols-4">
         {atalhos.map((a) => {
           const Icon = ICONES[a.icon] || Sparkles;

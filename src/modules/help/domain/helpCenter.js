@@ -134,6 +134,9 @@ const COMECAR = {
     {
       id: 'inicio-personalizado',
       flags: ['personalized_home'],
+      // Com o início sob medida, quem manda são os cards (o artigo seguinte):
+      // aqui "Personalizar" muda os interesses, e lá abre o seletor dos cards.
+      semFlags: ['home_cards'],
       title: 'A sua tela inicial',
       summary: 'Por que ela mostra o que mostra, e como mudar.',
       keywords: ['início', 'tela inicial', 'home', 'personalizar', 'interesses', 'atalhos', 'agenda', 'hoje'],
@@ -153,6 +156,27 @@ const COMECAR = {
         tip('A tela inicial NUNCA mostra coisa vencida: torneio encerrado, dia de jogo que já passou, inscrição com prazo esgotado, cupom vencido e horário que já passou ficam de fora. Seção sem nada atual some ou diz que não há nada.'),
         warn('Se uma parte não carregar (conexão), a seção diz que não carregou, com "Tentar de novo" — ela não afirma que você não tem nada.'),
         link('/perfil/editar', 'Revisar os meus interesses no perfil'),
+      ],
+    },
+    {
+      id: 'inicio-sob-medida',
+      flagsTodas: ['personalized_home', 'home_cards'],
+      title: 'A sua tela inicial: você escolhe os cards',
+      summary: 'Ligue, desligue e ponha na ordem o que aparece no seu início.',
+      keywords: ['início', 'tela inicial', 'home', 'personalizar', 'cards', 'cartões', 'ordem', 'esconder', 'mostrar', 'página inicial', 'enxuto', 'poluído', 'cheio'],
+      blocks: [
+        p('A tela inicial mostra os CARDS que você escolher, na ordem que você quiser. De começo vêm três: DIAS DE JOGO, HORÁRIOS DA ARENA e RANKING. Qualquer um deles pode sair, e os outros podem entrar.'),
+        steps(
+          'Toque em "Personalizar", no topo da tela inicial — ou vá em Configurações, no cartão "Página inicial".',
+          'Ligue ou desligue cada card no interruptor. O que você liga entra no fim da lista.',
+          'Use as setas para subir ou descer um card. A tela muda na hora — não há o que salvar.',
+        ),
+        p('Para acrescentar há, entre outros: Sua agenda, Atalhos, Torneios, Seu último torneio, Aulas e professores, Seus clubes e Comunidade — e, para quem gere arena, dá aula ou organiza torneio, o card de cada uma dessas frentes. Promoções e destaques e Sua evolução aparecem quando essas funcionalidades estão ligadas na plataforma.'),
+        tip('Em "Sugeridos para você" ficam os cards do que você FAZ na plataforma (a sua arena, as suas aulas, os torneios que organiza) e do que marcou nos interesses do perfil, com o motivo e um toque em "Adicionar". É sugestão: a tela não volta a se encher sozinha.'),
+        p('O que tem PRAZO aparece sempre, fora dos cards — como a chamada da fila de um jogo aberto, que vence em 1 hora. Dá até para deixar o início só com o resumo do dia: desligue tudo. "Restaurar o padrão" volta aos três de começo.'),
+        tip('A escolha é da SUA conta e fica guardada neste aparelho: num tablet compartilhado, cada pessoa vê o próprio início. Em outro aparelho, escolha de novo. Card escondido não carrega nada — o início fica mais leve.'),
+        warn('Como sempre, o início nunca mostra coisa vencida, e uma parte que não carregar diz que não carregou, com "Tentar de novo" — ela não afirma que você não tem nada.'),
+        link('/configuracoes', 'Escolher os cards do meu início'),
       ],
     },
     {
@@ -1185,7 +1209,7 @@ export const HELP_ROUTE_HINTS = Object.freeze([
   { pattern: '/perfil', label: 'seu perfil',
     refs: [[HELP_SECTION.START, 'primeiros-passos'], [HELP_SECTION.ACCOUNT, 'privacidade']] },
   { pattern: '/configuracoes', label: 'configurações',
-    refs: [[HELP_SECTION.ACCOUNT, 'modo-escuro'], [HELP_SECTION.ACCOUNT, 'notificacoes'], [HELP_SECTION.ACCOUNT, 'privacidade']] },
+    refs: [[HELP_SECTION.ACCOUNT, 'modo-escuro'], [HELP_SECTION.START, 'inicio-sob-medida'], [HELP_SECTION.ACCOUNT, 'notificacoes'], [HELP_SECTION.ACCOUNT, 'privacidade']] },
   { pattern: '/legal', label: 'os documentos',
     refs: [[HELP_SECTION.ACCOUNT, 'documentos']] },
 ]);
@@ -1361,12 +1385,23 @@ function proximoEm(secoes, sectionId, articleId) {
  * gamificação). Assim o artigo já nasce escrito, e aparece sozinho no dia em
  * que o admin liga a funcionalidade.
  *
+ * Duas formas a mais, para quando uma funcionalidade MUDA outra:
+ *  - `flagsTodas`: vale só com TODAS ligadas (o início sob medida só existe
+ *    sobre o início personalizado);
+ *  - `semFlags`: some quando QUALQUER uma está ligada — o artigo que descreve
+ *    o jeito antigo sai no dia em que o novo entra, em vez de os dois
+ *    ensinarem coisas diferentes para o mesmo botão.
+ *
  * @param {object} artigo
  * @param {Record<string, boolean>} [flags]
  */
 export function helpArticleVisible(artigo, flags = {}) {
-  const exige = Array.isArray(artigo?.flags) ? artigo.flags : [];
-  return exige.length === 0 || exige.some((f) => Boolean(flags?.[f]));
+  const lista = (x) => (Array.isArray(x) ? x : []);
+  const ligada = (f) => Boolean(flags?.[f]);
+  const algum = lista(artigo?.flags);
+  return (algum.length === 0 || algum.some(ligada))
+    && lista(artigo?.flagsTodas).every(ligada)
+    && !lista(artigo?.semFlags).some(ligada);
 }
 
 /**

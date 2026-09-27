@@ -2,7 +2,8 @@
  * V2Settings — Configurações da conta (flag settings_page).
  *
  * Reúne atalhos de conta, a aparência (modo escuro, atrás da flag
- * `dark_mode`) e a exportação de dados pessoais (LGPD) em JSON.
+ * `dark_mode`), os cards da página inicial (flag `home_cards`) e a exportação
+ * de dados pessoais (LGPD) em JSON.
  * Rota /configuracoes. Aditivo — desligada a flag, redireciona ao perfil.
  */
 
@@ -26,12 +27,18 @@ import { FEATURE_FLAG } from '@/core/featureFlags';
 import V2PushCard from '@/v2/components/settings/V2PushCard';
 import { ThemeSettingsCard } from '@/v2/components/theme/ThemeSwitcher';
 import { useTheme } from '@/core/lib/ThemeContext';
+import HomeCardsSettingsCard from '@/v2/components/home/cards/HomeCardsSettingsCard';
+import { useHomeCardsOn } from '@/modules/home/hooks/useHomeCards';
+import { useHashScroll } from '@/v2/ui/useHashScroll';
 
 export default function V2Settings() {
   const enabled = true;
   const notifPrefsOn = true;
   const pushOn = useFeatureFlag(FEATURE_FLAG.PUSH_NOTIFICATIONS);
   const { disponivel: aparenciaOn } = useTheme();
+  const inicioOn = useHomeCardsOn();
+  // `/configuracoes#pagina-inicial` (o link do "Personalizar" do início) cai no cartão.
+  useHashScroll();
   const { user, userProfile, updateUserProfile } = useAuth();
   const { data: registrations = [] } = useMyRegistrations();
   const { data: bookings = [] } = useMyBookings();
@@ -85,7 +92,7 @@ export default function V2Settings() {
     <div className="mx-auto max-w-[720px]">
       <V2PageIntro
         title="Configurações"
-        subtitle={aparenciaOn ? 'Conta, aparência, privacidade e seus dados.' : 'Conta, privacidade e seus dados.'}
+        subtitle={`Conta, ${[aparenciaOn && 'aparência', inicioOn && 'página inicial'].filter(Boolean).map((x) => `${x}, `).join('')}privacidade e seus dados.`}
       />
 
       <div className="space-y-4">
@@ -102,6 +109,9 @@ export default function V2Settings() {
 
         {/* Aparência: Claro, Escuro ou Automático (flag dark_mode). */}
         <ThemeSettingsCard />
+
+        {/* Página inicial: os cards do início e a ordem (flag home_cards). */}
+        <HomeCardsSettingsCard />
 
         <V2Surface>
           <div className="flex items-center gap-2">
