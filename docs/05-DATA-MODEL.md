@@ -1104,6 +1104,16 @@ lido pelo script de `index.html` para pintar a primeira tela). A flag é a de
 sempre, em `platform_settings/global.feature_flags.dark_mode`. Ver
 `docs/30-MODO-ESCURO.md` §3.
 
+## Início sob medida (Onda CI — `home_cards`)
+
+**Nenhuma coleção, campo, índice ou regra.** Os cards que a pessoa escolhe
+para o seu início (e a ordem) moram no navegador, por usuário:
+`v2:view:<uid>:inicio:cards` = `{"v":1,"cards":[…]}` (via `viewPreference`).
+Sem a chave vale o padrão; `cards: []` é uma escolha ("só o resumo do dia").
+Com o início sob medida, o "Personalizar" do início **deixa** de gravar
+`users.interests` (os interesses seguem editáveis no perfil). Ver
+`docs/31-INICIO-SOB-MEDIDA.md` §6.
+
 ## Divulgação da plataforma e dos professores (Onda CG — `platform_marketing` / `coach_marketing`)
 
 Três coleções NOVAS e um campo opcional. Tudo aditivo; nenhuma regra existente

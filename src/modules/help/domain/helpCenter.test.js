@@ -496,11 +496,12 @@ describe('helpLinkFor', () => {
 });
 
 describe('⭐ artigo de funcionalidade atrás de flag', () => {
-  const comFlag = allHelpArticles().filter((a) => Array.isArray(a.flags) && a.flags.length > 0);
+  const citadas = (a) => [...(a.flags || []), ...(a.flagsTodas || []), ...(a.semFlags || [])];
+  const comFlag = allHelpArticles().filter((a) => (a.flags || []).length > 0 || (a.flagsTodas || []).length > 0);
 
   it('toda flag citada num artigo EXISTE — um erro de digitação o esconderia para sempre', () => {
     const conhecidas = new Set(Object.values(FEATURE_FLAG));
-    const invalidas = comFlag.flatMap((a) => a.flags.filter((f) => !conhecidas.has(f)).map((f) => `${a.id} → ${f}`));
+    const invalidas = allHelpArticles().flatMap((a) => citadas(a).filter((f) => !conhecidas.has(f)).map((f) => `${a.id} → ${f}`));
     expect(comFlag.length).toBeGreaterThan(0);
     expect(invalidas).toEqual([]);
   });
@@ -509,6 +510,24 @@ describe('⭐ artigo de funcionalidade atrás de flag', () => {
     expect(helpArticleVisible({ id: 'x' }, {})).toBe(true);
     expect(helpArticleVisible({ id: 'x', flags: ['a', 'b'] }, {})).toBe(false);
     expect(helpArticleVisible({ id: 'x', flags: ['a', 'b'] }, { b: true })).toBe(true);
+  });
+
+  it('flagsTodas exige TODAS; semFlags some com QUALQUER uma', () => {
+    expect(helpArticleVisible({ id: 'x', flagsTodas: ['a', 'b'] }, { a: true })).toBe(false);
+    expect(helpArticleVisible({ id: 'x', flagsTodas: ['a', 'b'] }, { a: true, b: true })).toBe(true);
+    expect(helpArticleVisible({ id: 'x', flags: ['a'], semFlags: ['c'] }, { a: true })).toBe(true);
+    expect(helpArticleVisible({ id: 'x', flags: ['a'], semFlags: ['c'] }, { a: true, c: true })).toBe(false);
+  });
+
+  it('⭐ a tela inicial: um artigo por jeito, nunca os dois ensinando coisas diferentes para "Personalizar"', () => {
+    const inicio = (flags) => helpCatalog(flags).all().map((a) => a.id).filter((id) => id.startsWith('inicio-'));
+    expect(inicio({})).toEqual([]);
+    expect(inicio({ home_cards: true })).toEqual([]);
+    expect(inicio({ personalized_home: true })).toEqual(['inicio-personalizado']);
+    expect(inicio({ personalized_home: true, home_cards: true })).toEqual(['inicio-sob-medida']);
+    const configuracoes = helpCatalog({ personalized_home: true, home_cards: true }).forRoute('/configuracoes');
+    expect(configuracoes.articles.map((a) => a.id)).toContain('inicio-sob-medida');
+    expect(helpCatalog({}).forRoute('/configuracoes').articles.map((a) => a.id)).not.toContain('inicio-sob-medida');
   });
 
   it('o catálogo de quem abre esconde o desligado em TODAS as consultas', () => {
@@ -522,7 +541,11 @@ describe('⭐ artigo de funcionalidade atrás de flag', () => {
     expect(desligado.next(HELP_SECTION.COACH, 'pacotes-clinicas')?.id).toBe('parcerias');
 
     const ligado = helpCatalog({ personalized_home: true, platform_marketing: true, coach_marketing: true, dark_mode: true });
-    expect(ligado.all()).toHaveLength(allHelpArticles().length);
+    // Todos, menos o que só existe com o início sob medida.
+    expect(ligado.all()).toHaveLength(allHelpArticles().length - 1);
+    expect(helpCatalog({
+      personalized_home: true, home_cards: true, platform_marketing: true, coach_marketing: true, dark_mode: true,
+    }).all()).toHaveLength(allHelpArticles().length - 1);
     expect(ligado.forRoute('/promocoes').articles[0].id).toBe('promocoes-plataforma-professores');
   });
 

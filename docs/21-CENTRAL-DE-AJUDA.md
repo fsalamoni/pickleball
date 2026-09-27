@@ -21,7 +21,7 @@ garimpar o que não interessa.
 | **Professor** | quem dá aula | 6 |
 | **Conta e privacidade** | todos | 6 |
 
-47 artigos no total (quatro deles atrás de flag — §4).
+48 artigos no total (cinco deles atrás de flag — §4).
 
 ## 2. O momento em que esta tela é usada
 
@@ -133,7 +133,7 @@ src/v2/pages/V2Help.runtime.test.jsx        # 44 testes de runtime
 ```
 
 **Por que `helpLinkFor` mora sozinho.** Quem o chama é o LAYOUT, presente em
-toda tela; `helpCenter.js` carrega 47 artigos de texto. Importar do arquivo do
+toda tela; `helpCenter.js` carrega 48 artigos de texto. Importar do arquivo do
 conteúdo arrasta o manual inteiro para o chunk que todo mundo baixa — medido:
 **216 kB contra 184 kB** (63 kB contra 52 kB comprimidos) por uma função de
 três linhas. Rollup não consegue descartar o conteúdo: são objetos montados por
@@ -165,6 +165,15 @@ esconderia o artigo para sempre, sem erro nenhum). Hoje: "A sua tela inicial"
 (`platform_marketing` ou `coach_marketing`), "Cupons e campanhas do
 professor" (`coach_marketing`) e "Modo escuro: claro, escuro ou automático"
 (`dark_mode`, com a pista de `/configuracoes` apontando para ele primeiro).
+
+**Quando uma funcionalidade MUDA outra** (Onda CI): `flagsTodas: [...]` exige
+TODAS ligadas, e `semFlags: [...]` esconde o artigo quando QUALQUER uma está
+ligada. É o caso da tela inicial: "A sua tela inicial" (`personalized_home`,
+`semFlags: ['home_cards']` — ensina que "Personalizar" muda os interesses) e
+"A sua tela inicial: você escolhe os cards" (`flagsTodas: ['personalized_home',
+'home_cards']` — ensina que "Personalizar" abre o seletor). Os dois nunca
+aparecem juntos, porque ensinam coisas diferentes para o MESMO botão. Há teste
+travando isso.
 A gamificação segue fora da ajuda (§5) — o
 mecanismo permitiria escrevê-la agora, e isso é decisão para quando ela for
 ligada.
@@ -206,7 +215,7 @@ Três testes que valem mais que os outros:
 5. **⭐ `helpLinkFor` e `helpForRoute` fecham o contrato**: o que um escreve o
    outro lê. Se um dos dois mudar de forma, quebra na hora. E **o layout
    importa de `helpLink`, não de `helpCenter`** — se isso inverter, o chunk de
-   toda tela volta a carregar os 47 artigos (§4).
+   toda tela volta a carregar os 48 artigos (§4).
 6. **⭐ `highlightParts` nunca perde nem inventa caractere** — remontar os
    pedaços devolve o texto original, com acento e caixa.
 7. **Estrutura**: todo artigo tem título, resumo, corpo e palavras-chave; ids

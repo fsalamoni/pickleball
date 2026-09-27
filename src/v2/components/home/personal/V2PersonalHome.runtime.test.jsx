@@ -11,6 +11,17 @@
  *     novo") e NUNCA "não há";
  *  4. ⭐ uma seção quebrada não derruba a tela;
  *  5. Personalizar salva os interesses pelo mesmo caminho do perfil.
+ *
+ * E o INÍCIO SOB MEDIDA (flag `home_cards`, Onda CI):
+ *  6. ⭐ o padrão é Dias de jogo, Horários da arena e Ranking — mesmo para
+ *     quem gere arena e dá aula (o que a pessoa faz vira SUGESTÃO, não enche
+ *     a tela);
+ *  7. ⭐ a ordem é a da pessoa, e atalhos/destaques/evolução são cards como
+ *     os outros;
+ *  8. ⭐ card escondido não é montado — e por isso não consulta nada;
+ *  9. desligar tudo é escolha: a tela diz "enxuto" e oferece os dois caminhos;
+ * 10. Personalizar abre o seletor dos cards (e não mexe nos interesses);
+ * 11. o que tem PRAZO (a chamada da fila) aparece com qualquer escolha.
  */
 import React from 'react';
 import { createRoot } from 'react-dom/client';
@@ -39,6 +50,7 @@ function reset() {
     agenda: { itens: [], carregando: false, completa: true, falhas: [], recarregar: vi.fn(), sinais: {} },
     rating: ok(null),
     quebrarRanking: false,
+    consultasRanking: 0,
     updateUserProfile: vi.fn(() => Promise.resolve()),
   });
 }
@@ -111,6 +123,7 @@ vi.mock('@/modules/clubs/hooks/useClubs', () => ({
 vi.mock('@/modules/home/hooks/useHomeAgenda', () => ({ useHomeAgenda: () => estado.agenda }));
 vi.mock('@/modules/rating/hooks/useRating', () => ({
   useMyPlayerRating: () => {
+    estado.consultasRanking += 1;
     if (estado.quebrarRanking) throw new Error('defeito simulado');
     return estado.rating;
   },
@@ -118,9 +131,15 @@ vi.mock('@/modules/rating/hooks/useRating', () => ({
 }));
 vi.mock('@/modules/rating/hooks/useDuprRating', () => ({ useDuprRatingForUid: () => ok(null) }));
 vi.mock('@/modules/athletes/hooks/useAthletes', () => ({ useAthletes: () => ok([]) }));
-vi.mock('@/v2/components/home/V2ActionHome', () => ({ EvolutionStrip: () => null }));
-vi.mock('@/v2/components/arenas/openMatch/HomeWaitlistCalls', () => ({ default: () => null }));
-vi.mock('@/v2/components/arenas/marketing/HomePromoBanners', () => ({ default: () => null }));
+vi.mock('@/v2/components/home/V2ActionHome', () => ({
+  EvolutionStrip: ({ className }) => <section data-extra-inicio="evolucao" className={className} />,
+}));
+vi.mock('@/v2/components/arenas/openMatch/HomeWaitlistCalls', () => ({
+  default: () => <div data-extra-inicio="fila" />,
+}));
+vi.mock('@/v2/components/arenas/marketing/HomePromoBanners', () => ({
+  default: ({ className }) => <section data-extra-inicio="destaques" className={className} />,
+}));
 
 const { default: V2PersonalHome } = await import('./V2PersonalHome.jsx');
 
@@ -128,6 +147,7 @@ let container;
 let root;
 beforeEach(() => {
   reset();
+  window.localStorage.clear();
   container = document.createElement('div');
   document.body.appendChild(container);
   root = createRoot(container);
@@ -276,5 +296,115 @@ describe('Personalizar', () => {
     const salvar = [...document.querySelectorAll('button')].find((b) => b.textContent.trim() === 'Salvar');
     await act(async () => { salvar.click(); });
     expect(estado.updateUserProfile).toHaveBeenCalledWith({ interests: ['ranking', 'organize_tournaments'] });
+  });
+});
+
+// ---------------------------------------------------------------------------
+// Início sob medida (flag `home_cards`)
+// ---------------------------------------------------------------------------
+
+const SOB_MEDIDA = { personalized_home: true, home_cards: true };
+const escolher = (cards) => window.localStorage.setItem('v2:view:u1:inicio:cards', JSON.stringify({ v: 1, cards }));
+/** A ordem na grade: seções e os cards que não são seção, como aparecem. */
+const ordem = () => [...container.querySelectorAll('[data-secao-inicio], [data-extra-inicio], nav[aria-label="Atalhos para você"]')]
+  .map((el) => el.getAttribute('data-secao-inicio') || el.getAttribute('data-extra-inicio') || 'atalhos')
+  .filter((id) => id !== 'fila');
+const chipsDoTopo = () => {
+  const rotulo = [...container.querySelectorAll('span')].find((s) => s.textContent === 'Seu início mostra');
+  return [...rotulo.parentElement.querySelectorAll(':scope > span')].slice(1).map((s) => s.textContent);
+};
+const botao = (texto, raiz = container) => [...raiz.querySelectorAll('button')].find((b) => b.textContent.includes(texto));
+
+describe('⭐ início sob medida', () => {
+  beforeEach(() => { estado.flags = { ...SOB_MEDIDA }; });
+
+  it('⭐ o padrão é Dias de jogo, Horários da arena e Ranking — mesmo para quem gere arena e dá aula', async () => {
+    estado.arenas = [{ id: 'a1', name: 'Arena Sul', my_role: 'owner' }];
+    estado.coach = ok({ id: 'u1', display_name: 'Ana', active: true });
+    estado.perfil.interests = ['organize_tournaments'];
+    await render();
+    expect(ordem()).toEqual(['jogar', 'reservar', 'ranking']);
+    expect(chipsDoTopo()).toEqual(['Dias de jogo', 'Horários da arena', 'Ranking']);
+    // O motivo ("Porque…") é da tela que decide sozinha; aqui quem decidiu foi a pessoa.
+    expect(texto()).not.toContain('Porque você faz isso na plataforma');
+    expect(atalhos()).toEqual([]);
+    // Três cards: o terceiro ocupa a linha inteira em vez de ficar sozinho com um buraco ao lado.
+    expect(container.querySelector('[data-secao-inicio="ranking"]').className).toContain('xl:col-span-2');
+    expect(container.querySelector('[data-secao-inicio="jogar"]').className).not.toContain('xl:col-span-2');
+  });
+
+  it('"Seu último torneio" escolhido e ainda sem resultado: diz que não há, em vez de sumir', async () => {
+    escolher(['resultado']);
+    await render();
+    expect(ordem()).toEqual(['resultado']);
+    expect(texto()).toContain('Você ainda não tem resultado de torneio');
+  });
+
+  it('⭐ a ordem é a da pessoa, com atalhos e evolução como cards', async () => {
+    estado.flags = { ...SOB_MEDIDA, action_home: true };
+    escolher(['ranking', 'atalhos', 'agenda', 'evolucao']);
+    await render();
+    expect(ordem()).toEqual(['ranking', 'atalhos', 'agenda', 'evolucao']);
+    // Os cards "largos" ocupam a linha inteira da grade.
+    expect(container.querySelector('[data-extra-inicio="evolucao"]').className).toContain('xl:col-span-2');
+    expect(container.querySelector('nav[aria-label="Atalhos para você"]').className).toContain('xl:col-span-2');
+  });
+
+  it('⭐ card escondido não é montado — e não consulta nada', async () => {
+    escolher(['jogar', 'reservar']);
+    await render();
+    expect(ordem()).toEqual(['jogar', 'reservar']);
+    expect(estado.consultasRanking).toBe(0);
+  });
+
+  it('card que depende de funcionalidade desligada fica guardado e não aparece', async () => {
+    escolher(['destaques', 'evolucao', 'ranking']);
+    await render();
+    expect(ordem()).toEqual(['ranking']);
+    act(() => root.unmount());
+    root = createRoot(container);
+    estado.flags = { ...SOB_MEDIDA, arena_modules: true, action_home: true };
+    await render();
+    expect(ordem()).toEqual(['destaques', 'evolucao', 'ranking']);
+  });
+
+  it('⭐ o que tem prazo aparece com qualquer escolha (mesmo sem card nenhum)', async () => {
+    estado.flags = { ...SOB_MEDIDA, arena_modules: true };
+    escolher([]);
+    await render();
+    expect(container.querySelector('[data-extra-inicio="fila"]')).toBeTruthy();
+  });
+
+  it('desligar tudo é escolha: "enxuto", e voltar ao padrão num toque', async () => {
+    escolher([]);
+    await render();
+    expect(texto()).toContain('Seu início está enxuto');
+    expect(chipsDoTopo()).toEqual(['Só o resumo do dia']);
+    expect(ordem()).toEqual([]);
+    await act(async () => { botao('Voltar ao padrão').click(); });
+    expect(ordem()).toEqual(['jogar', 'reservar', 'ranking']);
+    expect(window.localStorage.getItem('v2:view:u1:inicio:cards')).toBeNull();
+  });
+
+  it('⭐ Personalizar abre o seletor dos cards, muda a tela na hora e não mexe nos interesses', async () => {
+    await render();
+    await act(async () => { botao('Personalizar').click(); });
+    // O seletor é baixado sob demanda (lazy): espera ele chegar.
+    for (let i = 0; i < 100 && !document.querySelector('[data-card-inicio]'); i += 1) {
+      await act(async () => { await new Promise((r) => { setTimeout(r, 20); }); });
+    }
+    expect(document.body.textContent).toContain('O que aparece no seu início');
+    const linhaAgenda = document.querySelector('[data-card-inicio="agenda"]');
+    await act(async () => { linhaAgenda.querySelector('[role="switch"]').click(); });
+    expect(ordem()).toEqual(['jogar', 'reservar', 'ranking', 'agenda']);
+    expect(estado.updateUserProfile).not.toHaveBeenCalled();
+  });
+
+  it('o topo mostra no máximo seis cards e diz quantos sobram', async () => {
+    escolher(['agenda', 'jogar', 'reservar', 'ranking', 'torneios', 'aulas', 'clubes', 'comunidade']);
+    await render();
+    const chips = chipsDoTopo();
+    expect(chips).toHaveLength(7);
+    expect(chips[6]).toBe('+2 cards');
   });
 });

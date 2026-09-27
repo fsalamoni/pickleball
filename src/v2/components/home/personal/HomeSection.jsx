@@ -10,16 +10,21 @@
  *   isolada por rota; sem isto, um defeito numa seção derrubaria o app).
  * - `HomeRow`: a linha clicável (um alvo grande, um link só).
  * - `HomeEmpty`: o "não há" que sempre oferece o próximo passo.
+ * Quais seções ocupam a linha inteira da grade vem de `HomeWideCards`
+ * (`homeWideCards.js`): o início sob medida decide pela ordem da pessoa.
  */
-import React from 'react';
+import React, { useContext } from 'react';
 import { Link } from 'react-router-dom';
 import { AlertTriangle, ArrowRight, ChevronRight, RotateCw } from 'lucide-react';
 import { recordClientError } from '@/core/services/observabilityService';
 import { cn } from '@/core/lib/utils';
+import { HomeWideCards } from './homeWideCards';
 
 export function HomeSection({
   id, icon: Icon, title, reason, action, children, className, wide = false,
 }) {
+  const largas = useContext(HomeWideCards);
+  const larga = wide || Boolean(id && largas?.has(id));
   const tituloId = id ? `home-secao-${id}-titulo` : undefined;
   return (
     <section
@@ -27,7 +32,7 @@ export function HomeSection({
       data-secao-inicio={id}
       className={cn(
         'flex min-w-0 flex-col rounded-4xl border border-gray-100 bg-paper-pure p-5 shadow-organic-sm sm:p-6',
-        wide && 'xl:col-span-2',
+        larga && 'xl:col-span-2',
         className,
       )}
     >

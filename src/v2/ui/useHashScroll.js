@@ -5,9 +5,17 @@
  *
  * É o que faz o banner "Ver clínicas" cair na seção certa do perfil, em vez de
  * no topo de uma página comprida. Respeita "menos movimento".
+ *
+ * 🐞 A primeira tentativa espera UM QUADRO: o layout volta o conteúdo ao topo a
+ * cada troca de página, num efeito que roda DEPOIS dos efeitos da página (o
+ * React roda o efeito do pai depois do dos filhos). Com a seção já na tela no
+ * primeiro desenho — Configurações#pagina-inicial —, a rolagem era desfeita na
+ * hora e a pessoa caía no topo. E quem rola é só o contêiner que rola de
+ * verdade (`rolarAte`), nunca a raiz do aplicativo.
  */
 import { useEffect } from 'react';
 import { useLocation } from 'react-router-dom';
+import { rolarAte } from './rolarAte';
 
 const ESPERA_MAX_MS = 8000;
 
@@ -24,13 +32,27 @@ export function useHashScroll() {
       const el = document.getElementById(id);
       if (!el) return false;
       feito = true;
-      el.scrollIntoView?.({ behavior: suave ? 'smooth' : 'auto', block: 'start' });
+      rolarAte(el, { suave });
       return true;
     };
-    if (tentar()) return undefined;
-    const obs = new MutationObserver(() => { if (tentar()) obs.disconnect(); });
-    obs.observe(document.body, { childList: true, subtree: true });
-    const t = setTimeout(() => obs.disconnect(), ESPERA_MAX_MS);
-    return () => { obs.disconnect(); clearTimeout(t); };
+    let obs = null;
+    let prazo = null;
+    const comecar = () => {
+      quadro = null;
+      if (tentar() || typeof MutationObserver === 'undefined') return;
+      obs = new MutationObserver(() => { if (tentar()) obs.disconnect(); });
+      obs.observe(document.body, { childList: true, subtree: true });
+      prazo = setTimeout(() => obs.disconnect(), ESPERA_MAX_MS);
+    };
+    const comRaf = typeof requestAnimationFrame === 'function';
+    let quadro = comRaf ? requestAnimationFrame(comecar) : setTimeout(comecar, 0);
+    return () => {
+      if (quadro != null) {
+        if (comRaf) cancelAnimationFrame(quadro);
+        else clearTimeout(quadro);
+      }
+      obs?.disconnect();
+      clearTimeout(prazo);
+    };
   }, [hash]);
 }

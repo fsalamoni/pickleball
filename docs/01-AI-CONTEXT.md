@@ -373,6 +373,13 @@ viraram código (lotes 1 e 2 de `convertFlagsToCode`). Apenas
   no menu do avatar, na gaveta do celular e em Configurações. A paleta decide
   a cor e as telas não mudam; a escolha fica no navegador (zero banco).
 
+**Onda CI (2026-09-27)** — mais uma, default OFF (ver `docs/31-INICIO-SOB-MEDIDA.md`):
+- `home_cards` — sobre o início personalizado, cada pessoa escolhe os CARDS
+  do seu início e a ordem (padrão: Dias de jogo, Horários da arena e
+  Ranking), em "Personalizar" no próprio início ou em Configurações → Página
+  inicial. Card escondido não consulta nada; a escolha fica no navegador, por
+  usuário (zero banco).
+
 Padrão de uso:
 
 ```jsx
@@ -479,3 +486,5 @@ usuário" (apenas para `platform_admin`). Quando ativo:
   e cupons/campanhas da plataforma e dos professores (Onda CG).
 - `docs/30-MODO-ESCURO.md` — o modo escuro por usuário: paleta, escolha,
   o que fica claro de propósito (Onda CH).
+- `docs/31-INICIO-SOB-MEDIDA.md` — cada pessoa escolhe os cards do seu início
+  e a ordem, sem tocar o banco (Onda CI).

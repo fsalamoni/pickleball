@@ -24,6 +24,12 @@
 
 ## 1. A tela inicial personalizada (`personalized_home`)
 
+> ⭐ **Onda CI**: com a flag `home_cards`, quem decide os cards do início é a
+> PESSOA (padrão: Dias de jogo, Horários da arena e Ranking), e o que ela faz
+> vira sugestão no seletor. O que está descrito abaixo continua valendo com
+> `home_cards` desligada — e as regras de §1.2 e as seções valem nos dois
+> casos. Ver `docs/31-INICIO-SOB-MEDIDA.md`.
+
 ### 1.1 Duas fontes, com pesos diferentes
 
 `resolveHomeFoci` (`src/modules/home/domain/homeProfile.js`) decide as

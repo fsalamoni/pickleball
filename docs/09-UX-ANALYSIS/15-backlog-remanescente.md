@@ -241,6 +241,12 @@ que pode se unificar foi unificado**. Pontos pertinentes ainda abertos:
   contraste AA conferido por teste; primeira tela sem clarão; telão, totem,
   impressão e cards exportados continuam claros. Zero banco. Ver
   `docs/30-MODO-ESCURO.md`.
+- ✅ **TRV-21** início sob medida (Onda CI, flag `home_cards`): cada pessoa
+  escolhe os cards do início e a ordem (padrão: Dias de jogo, Horários da
+  arena e Ranking), no próprio início ou em Configurações → Página inicial;
+  sugestões pelo que ela faz; card escondido não consulta nada; grade sem
+  buraco. De quebra, a rolagem até âncora que era desfeita pelo layout (e
+  deslocava o app). Zero banco. Ver `docs/31-INICIO-SOB-MEDIDA.md`.
 - ⏳ **TRV-19** (sugestão da revisão CG) contar o público e enviar os avisos
   das campanhas no SERVIDOR: hoje o navegador do emissor lê os usuários do
   público e grava os avisos em lotes — correto e honesto (a campanha mostra o

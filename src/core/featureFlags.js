@@ -254,6 +254,23 @@ export const FEATURE_FLAG = Object.freeze({
   PERSONALIZED_HOME: 'personalized_home',
 
   /**
+   * INÍCIO SOB MEDIDA — cada pessoa escolhe os cards da tela inicial.
+   *
+   * Vale sobre a tela inicial personalizada (precisa de `personalized_home`).
+   * Em vez de a tela decidir sozinha o que mostrar, a pessoa escolhe — em
+   * Configurações → Página inicial ou no "Personalizar" do próprio início —
+   * quais cards aparecem e em que ordem. O padrão são TRÊS: Dias de jogo,
+   * Horários da arena e Ranking; o resto começa desligado e pode ser ligado
+   * (o que a pessoa faz na plataforma vira SUGESTÃO no seletor). Avisos com
+   * prazo, como a chamada da fila de um jogo aberto, aparecem sempre.
+   *
+   * Zero banco: a escolha fica no navegador, por usuário
+   * (`v2:view:<uid>:inicio:cards`). Desligada, o início segue decidindo
+   * sozinho, como antes.
+   */
+  HOME_CARDS: 'home_cards',
+
+  /**
    * CAMPANHAS E CUPONS DA PLATAFORMA — o admin anuncia para todo mundo.
    *
    * As mesmas ferramentas do marketing da arena (cupons por tipo com arte de
@@ -308,6 +325,17 @@ export const FEATURE_FLAG_META = Object.freeze({
       + 'duplas, dias de jogo com vaga, horários livres, aulas e clubes. Nada '
       + 'encerrado ou vencido aparece. Só leitura. Desligada, a tela inicial '
       + 'segue como está.',
+  },
+  [FEATURE_FLAG.HOME_CARDS]: {
+    label: 'Início sob medida (escolher os cards)',
+    description:
+      'Cada pessoa escolhe os cards da tela inicial e a ordem deles — em '
+      + 'Configurações → Página inicial ou no "Personalizar" do próprio início. '
+      + 'Por padrão vêm só três: Dias de jogo, Horários da arena e Ranking; o '
+      + 'resto pode ser ligado, e o que a pessoa faz na plataforma aparece como '
+      + 'sugestão. Precisa do "Início personalizado" ligado. A escolha fica no '
+      + 'navegador de cada um; nada é gravado no banco. Desligada, o início '
+      + 'segue decidindo sozinho o que mostrar.',
   },
   [FEATURE_FLAG.PLATFORM_MARKETING]: {
     label: 'Campanhas e cupons da plataforma',

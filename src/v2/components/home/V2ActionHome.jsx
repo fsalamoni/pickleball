@@ -219,7 +219,7 @@ export default function V2ActionHome() {
  * Faixa de gamificação: streak, nível/XP, próxima conquista e metas.
  * Exportada para a tela inicial personalizada reaproveitar (mesma faixa).
  */
-export function EvolutionStrip({ uid }) {
+export function EvolutionStrip({ uid, className }) {
   const { stats, isLoading } = usePlayerStats();
   const { data: matchDates = [] } = usePlayerMatchDates(uid);
   const { data: goals = [] } = useGoals(uid);
@@ -239,7 +239,7 @@ export function EvolutionStrip({ uid }) {
   const activeGoals = Array.isArray(goals) ? goals.length : 0;
 
   return (
-    <section>
+    <section className={className}>
       <div className="mb-4 flex items-center justify-between gap-2">
         <div className="flex items-center gap-2">
           <TrendingUpIcon />
