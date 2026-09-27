@@ -471,7 +471,7 @@ export default function V2BookingCalendar({ arenaId, arena: arenaProp }) {
       )}
 
       {/* Grade do mês */}
-      <div className="overflow-hidden rounded-3xl border border-gray-100 bg-paper">
+      <div data-dica="arena-calendario" className="overflow-hidden rounded-3xl border border-gray-100 bg-paper">
         {/* Header da semana */}
         <div className="grid grid-cols-7 border-b border-gray-100 bg-gray-50">
           {WEEKDAY_LABELS_PT.map((wd) => (

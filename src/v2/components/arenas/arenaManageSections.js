@@ -58,8 +58,10 @@ export function buildArenaSections({
       grupo: 'gerir',
       label: 'Estrutura e preços',
       icon: LayoutGrid,
+      // `dica`: âncora das dicas guiadas (a seta de "Cadastrar quadras e horários").
+      dica: 'arena-secao-estrutura',
       tabs: [
-        { value: 'quadras', label: 'Quadras', icon: LayoutGrid },
+        { value: 'quadras', label: 'Quadras', icon: LayoutGrid, dica: 'arena-aba-quadras' },
         { value: 'precos', label: 'Preços', icon: DollarSign },
         { value: 'regras', label: 'Regras', icon: ClipboardList },
       ],
@@ -69,8 +71,9 @@ export function buildArenaSections({
       grupo: 'atender',
       label: 'Reservas',
       icon: CalendarClock,
+      dica: 'arena-secao-reservas',
       tabs: [
-        { value: 'reservas', label: 'Solicitações', icon: CalendarClock },
+        { value: 'reservas', label: 'Solicitações', icon: CalendarClock, dica: 'arena-aba-reservas' },
         { value: 'calendario', label: 'Calendário', icon: CalendarDays },
         { value: 'calendario-admin', label: 'Reservas (admin)', icon: CalendarRange },
         ...(crmOn ? [{ value: 'clientes', label: 'Clientes', icon: Users }] : []),
@@ -216,8 +219,9 @@ export function buildArenaSections({
       grupo: 'gerir',
       label: 'Configurações',
       icon: SlidersHorizontal,
+      dica: 'arena-secao-configuracoes',
       tabs: [
-        { value: 'modulos', label: 'Módulos', icon: Puzzle },
+        { value: 'modulos', label: 'Módulos', icon: Puzzle, dica: 'arena-aba-modulos' },
       ],
     }] : []),
   ];

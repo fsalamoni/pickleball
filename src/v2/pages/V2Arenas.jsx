@@ -69,10 +69,10 @@ function V2ArenasContent() {
       <V2PageIntro
         title="Explorar Quadras"
         subtitle="Encontre arenas, veja preços e horários e solicite sua reserva."
-        action={<V2Button asChild variant="secondary" size="sm"><Link to="/arenas/criar">Cadastrar arena</Link></V2Button>}
+        action={<V2Button asChild variant="secondary" size="sm"><Link to="/arenas/criar" data-dica="arenas-cadastrar">Cadastrar arena</Link></V2Button>}
       />
 
-      <V2Surface className="mb-8">
+      <V2Surface className="mb-8" data-dica="arenas-busca">
         <V2SearchInput
           icon={Search}
           value={search}
@@ -122,7 +122,7 @@ function V2ArenasContent() {
           />
         </V2Surface>
       ) : (
-        <div className="grid gap-8 sm:grid-cols-2 xl:grid-cols-3">
+        <div data-dica="arenas-lista" className="grid gap-8 sm:grid-cols-2 xl:grid-cols-3">
           {filtered.map((arena) => <ArenaCard key={arena.id} arena={arena} onIntencao={prefetchArena} />)}
         </div>
       )}

@@ -80,7 +80,7 @@ export default function V2Bookings() {
       <V2PageIntro
         title="Minhas reservas"
         subtitle="Acompanhe suas solicitações, valores e pagamentos nas arenas."
-        action={<V2Button asChild variant="ghost" size="sm"><Link to="/arenas"><Building2 className="h-4 w-4" /> Ver arenas</Link></V2Button>}
+        action={<V2Button asChild variant="ghost" size="sm"><Link to="/arenas" data-dica="reservas-ver-arenas"><Building2 className="h-4 w-4" /> Ver arenas</Link></V2Button>}
       />
 
       {sharedOn && (convitesFalharam || compartilhadasFalharam) && !reservasFalharam && (
@@ -147,7 +147,7 @@ export default function V2Bookings() {
           />
         </V2Surface>
       ) : (
-        <div className="space-y-8">
+        <div className="space-y-8" data-dica="reservas-lista">
           <BookingsGroup title="Ativas" bookings={active} emptyText="Nenhuma reserva ativa." sharedOn={sharedOn} />
           {past.length > 0 && <BookingsGroup title="Histórico" bookings={past} sharedOn={sharedOn} />}
         </div>

@@ -57,9 +57,9 @@ export default function V2TournamentAdmin() {
           )}
           {/* O tutorial abre sozinho na primeira vez que alguém entra na gestão
               de um torneio, e fica aqui para rever quando quiser. */}
-          <V2TutorialLauncher tutorialId={TUTORIAL_ID.TOURNAMENT} />
+          <V2TutorialLauncher tutorialId={TUTORIAL_ID.TOURNAMENT} dica="torneio-como-funciona" />
           <V2Button asChild size="sm" variant="ghost">
-            <Link to={`/torneios/${tournamentId}`}><Eye className="h-4 w-4" /> Ver página pública</Link>
+            <Link to={`/torneios/${tournamentId}`} data-dica="torneio-pagina-publica"><Eye className="h-4 w-4" /> Ver página pública</Link>
           </V2Button>
         </div>
       </div>

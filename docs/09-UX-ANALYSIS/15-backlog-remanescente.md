@@ -247,6 +247,14 @@ que pode se unificar foi unificado**. Pontos pertinentes ainda abertos:
   sugestões pelo que ela faz; card escondido não consulta nada; grade sem
   buraco. De quebra, a rolagem até âncora que era desfeita pelo layout (e
   deslocava o app). Zero banco. Ver `docs/31-INICIO-SOB-MEDIDA.md`.
+- ✅ **TRV-22** dicas guiadas (Onda CJ, flag `guided_tips`): a pessoa liga e
+  desliga as dicas; nada aparece sozinho; 27 guias que levam à tela, apontam o
+  botão de verdade com seta (inclusive dentro dos formulários) e avançam
+  quando ela faz; 40 pontos de dica; os tutoriais viraram guias; "Mostre na
+  tela" nos artigos da ajuda. De quebra: o "Cancelar" do pedido de reserva
+  que quebrava, o painel do professor que ignorava `?aba=` e os tutoriais que
+  ensinavam botões que não existem mais. Zero banco. Ver
+  `docs/32-DICAS-GUIADAS.md`.
 - ⏳ **TRV-19** (sugestão da revisão CG) contar o público e enviar os avisos
   das campanhas no SERVIDOR: hoje o navegador do emissor lê os usuários do
   público e grava os avisos em lotes — correto e honesto (a campanha mostra o

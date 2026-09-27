@@ -77,15 +77,17 @@ export default function V2CreateClub() {
             />
           </V2Field>
 
-          <V2Field label="Nome do clube" required error={errors.name}>
-            <V2Input value={form.name} onChange={set('name')} maxLength={80} />
-          </V2Field>
+          <div data-dica="clube-criar-nome">
+            <V2Field label="Nome do clube" required error={errors.name}>
+              <V2Input value={form.name} onChange={set('name')} maxLength={80} />
+            </V2Field>
+          </div>
 
           <V2Field label="Descrição">
             <V2Textarea value={form.description} onChange={set('description')} maxLength={1000} placeholder="Conte sobre o clube, horários de jogo, ambiente, valores…" />
           </V2Field>
 
-          <div className="grid gap-4 sm:grid-cols-[1fr,120px]">
+          <div data-dica="clube-criar-cidade" className="grid gap-4 sm:grid-cols-[1fr,120px]">
             <V2Field label="Cidade"><V2Input value={form.city} onChange={set('city')} maxLength={60} /></V2Field>
             <V2Field label="UF"><V2Input value={form.state} onChange={set('state')} maxLength={2} placeholder="SP" /></V2Field>
           </div>
@@ -101,7 +103,7 @@ export default function V2CreateClub() {
 
           <div className="flex justify-end gap-2 pt-2">
             <V2Button type="button" variant="ghost" onClick={() => navigate('/clubes')}>Cancelar</V2Button>
-            <V2Button type="submit" disabled={createClub.isPending || !isAuthenticated}>
+            <V2Button type="submit" disabled={createClub.isPending || !isAuthenticated} data-dica="clube-criar-enviar">
               {createClub.isPending ? 'Criando…' : 'Criar clube'}
             </V2Button>
           </div>

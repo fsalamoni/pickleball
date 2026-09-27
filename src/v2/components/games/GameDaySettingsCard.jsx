@@ -259,6 +259,7 @@ export default function GameDaySettingsCard({ gameDay }) {
       icon={Settings2}
       title="Configurações do dia de jogo"
       summary={resumo}
+      dica="dia-de-jogo-config"
       sectionId={GAME_DAY_SECTION.SETTINGS}
       defaultCollapsed
     >

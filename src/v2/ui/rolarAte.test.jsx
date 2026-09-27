@@ -63,6 +63,20 @@ describe('rolarAte', () => {
     expect(main.scrollTo).toHaveBeenCalledWith({ top: 896, behavior: 'smooth' });
   });
 
+  it('alinhar ao centro põe o elemento no meio da área visível', () => {
+    alvo.getBoundingClientRect = () => ({ top: 900, left: 0, right: 0, bottom: 0, width: 0, height: 100 });
+    rolarAte(alvo, { suave: false, alinhar: 'centro' });
+    // 900 − 80 + 100 − (800 − 100) / 2 = 570
+    expect(main.scrollTo).toHaveBeenCalledWith({ top: 570, behavior: 'auto' });
+  });
+
+  it('⭐ a reserva inferior tira do meio o que a faixa do guia cobre', () => {
+    alvo.getBoundingClientRect = () => ({ top: 900, left: 0, right: 0, bottom: 0, width: 0, height: 100 });
+    rolarAte(alvo, { suave: false, alinhar: 'centro', reservaInferior: 200 });
+    // área útil 800 − 200 = 600: 900 − 80 + 100 − (600 − 100) / 2 = 670
+    expect(main.scrollTo).toHaveBeenCalledWith({ top: 670, behavior: 'auto' });
+  });
+
   it('sem contêiner que role, cai no scrollIntoView', () => {
     medidas(main, { scrollHeight: 800, clientHeight: 800, top: 80 });
     expect(conteinerQueRola(alvo)).toBeNull();

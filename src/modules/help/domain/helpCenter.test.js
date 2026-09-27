@@ -540,11 +540,14 @@ describe('⭐ artigo de funcionalidade atrás de flag', () => {
     // O próximo artigo pula o que está escondido.
     expect(desligado.next(HELP_SECTION.COACH, 'pacotes-clinicas')?.id).toBe('parcerias');
 
-    const ligado = helpCatalog({ personalized_home: true, platform_marketing: true, coach_marketing: true, dark_mode: true });
+    const ligado = helpCatalog({
+      personalized_home: true, platform_marketing: true, coach_marketing: true, dark_mode: true, guided_tips: true,
+    });
     // Todos, menos o que só existe com o início sob medida.
     expect(ligado.all()).toHaveLength(allHelpArticles().length - 1);
     expect(helpCatalog({
       personalized_home: true, home_cards: true, platform_marketing: true, coach_marketing: true, dark_mode: true,
+      guided_tips: true,
     }).all()).toHaveLength(allHelpArticles().length - 1);
     expect(ligado.forRoute('/promocoes').articles[0].id).toBe('promocoes-plataforma-professores');
   });
@@ -556,5 +559,15 @@ describe('⭐ artigo de funcionalidade atrás de flag', () => {
     const ligado = helpCatalog({ dark_mode: true });
     expect(ligado.forRoute('/configuracoes').articles[0].id).toBe('modo-escuro');
     expect(ligado.search('modo escuro')[0].id).toBe('modo-escuro');
+  });
+
+  it('as dicas: o artigo só existe com a flag, e aparece em Configurações', () => {
+    const desligado = helpCatalog({});
+    expect(desligado.search('dicas seta').map((a) => a.id)).not.toContain('dicas');
+    expect(desligado.faq().map((f) => f.id)).not.toContain('dicas');
+    const ligado = helpCatalog({ guided_tips: true });
+    expect(ligado.getArticle(HELP_SECTION.START, 'dicas')).not.toBeNull();
+    expect(ligado.forRoute('/configuracoes').articles.map((a) => a.id)).toContain('dicas');
+    expect(ligado.faq().map((f) => f.id)).toContain('dicas');
   });
 });

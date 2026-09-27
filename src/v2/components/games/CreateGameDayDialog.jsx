@@ -98,12 +98,12 @@ export default function CreateGameDayDialog({ open, onOpenChange, onCreated }) {
         </DialogHeader>
 
         <div className="space-y-4">
-          <div>
+          <div data-dica="dia-de-jogo-nome">
             <Label className="text-xs">Nome*</Label>
             <Input value={form.title} onChange={(e) => set('title', e.target.value)} maxLength={80} placeholder="Ex.: Dia de jogo de sábado" />
           </div>
 
-          <div>
+          <div data-dica="dia-de-jogo-visibilidade">
             <Label className="text-xs">Visibilidade</Label>
             <div className="mt-1 grid gap-2 sm:grid-cols-2">
               {Object.values(GAME_DAY_VISIBILITY).map((v) => (
@@ -131,7 +131,7 @@ export default function CreateGameDayDialog({ open, onOpenChange, onCreated }) {
               clube. Dois lugares editando o mesmo campo divergem, e foi
               exatamente assim que o dia de jogo do clube ficou sem "quem
               organiza". */}
-          <div>
+          <div data-dica="dia-de-jogo-quem-organiza">
             <Label className="text-xs">Quem pode organizar as partidas</Label>
             <div className="mt-1 grid gap-2">
               {Object.values(GAME_DAY_MANAGE_MODE).map((m) => (
@@ -157,7 +157,7 @@ export default function CreateGameDayDialog({ open, onOpenChange, onCreated }) {
             </p>
           </div>
 
-          <div className="grid grid-cols-2 gap-3">
+          <div className="grid grid-cols-2 gap-3" data-dica="dia-de-jogo-data">
             <div>
               <Label className="text-xs">Data</Label>
               <Input type="date" value={form.date} onChange={(e) => set('date', e.target.value)} />
@@ -185,7 +185,7 @@ export default function CreateGameDayDialog({ open, onOpenChange, onCreated }) {
           </div>
 
           {showFormatSelect && (
-            <div>
+            <div data-dica="dia-de-jogo-formato">
               <Label className="text-xs">Formato do dia de jogo</Label>
               <select
                 value={form.format}
@@ -221,6 +221,8 @@ export default function CreateGameDayDialog({ open, onOpenChange, onCreated }) {
                     tutorialId={tutorialIdForGameDayFormat(form.format)}
                     label="Como funciona este formato"
                     autoOpen={false}
+                    // O dia ainda não existe: aqui é leitura para escolher o formato.
+                    explicar
                   />
                 </div>
               )}
@@ -255,7 +257,7 @@ export default function CreateGameDayDialog({ open, onOpenChange, onCreated }) {
 
         <DialogFooter>
           <V2Button variant="ghost" onClick={() => onOpenChange(false)}>Cancelar</V2Button>
-          <V2Button onClick={handleSubmit} disabled={busy || !form.title.trim()}>
+          <V2Button onClick={handleSubmit} disabled={busy || !form.title.trim()} data-dica="dia-de-jogo-confirmar">
             {busy ? 'Criando…' : 'Criar dia de jogo'}
           </V2Button>
         </DialogFooter>

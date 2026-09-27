@@ -196,7 +196,7 @@ export default function V2CourtsTab({ arena }) {
   }
 
   return (
-    <V2Surface className="space-y-4 p-5 sm:p-6">
+    <V2Surface className="space-y-4 p-5 sm:p-6" data-dica="arena-quadras">
       <div className="flex flex-wrap items-center justify-between gap-3">
         <div>
           <div className="flex items-center gap-2">
@@ -217,7 +217,7 @@ export default function V2CourtsTab({ arena }) {
           {/* Sem saber quais quadras existem, "Nova quadra" é convite a
               duplicar uma que já está cadastrada. */}
           {!adding && !quadrasFalharam && (
-            <V2Button size="sm" onClick={() => setAdding(true)}>
+            <V2Button size="sm" onClick={() => setAdding(true)} data-dica="arena-nova-quadra">
               <Plus className="mr-1 h-4 w-4" /> Nova quadra
             </V2Button>
           )}
@@ -266,7 +266,7 @@ export default function V2CourtsTab({ arena }) {
           <p className="text-sm text-gray-500">
             Nenhuma quadra cadastrada ainda. Comece adicionando a primeira.
           </p>
-          <V2Button size="sm" onClick={() => setAdding(true)} className="mt-3">
+          <V2Button size="sm" onClick={() => setAdding(true)} className="mt-3" data-dica="arena-nova-quadra">
             <Plus className="mr-1 h-4 w-4" /> Adicionar quadra
           </V2Button>
         </div>
@@ -333,6 +333,7 @@ export default function V2CourtsTab({ arena }) {
                     className="flex h-9 w-9 items-center justify-center rounded-full text-gray-500 hover:bg-gray-100 hover:text-ink"
                     aria-label="Gerenciar horários"
                     title="Gerenciar horários"
+                    data-dica="arena-horarios-quadra"
                   >
                     <Clock className="h-4 w-4" />
                   </button>

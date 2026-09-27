@@ -1114,6 +1114,16 @@ Com o início sob medida, o "Personalizar" do início **deixa** de gravar
 `users.interests` (os interesses seguem editáveis no perfil). Ver
 `docs/31-INICIO-SOB-MEDIDA.md` §6.
 
+## Dicas guiadas (Onda CJ — `guided_tips`)
+
+**Nenhuma coleção, campo, índice ou regra.** Tudo é preferência de interface,
+no navegador, por usuário: `v2:view:<uid>:dicas:ligadas` (`'1'`/`'0'`; sem a
+chave, desligadas), `v2:view:<uid>:dicas:feitos` e `v2:view:<uid>:dicas:vistos`
+(listas de ids), e o guia em andamento no `sessionStorage`
+(`picklerush:dicas:guia:<uid>` = `{ id, passo }`). A marca antiga de "já vi o
+tutorial" (`v2:view:<uid>:tutorial:<id>`) segue valendo com a flag desligada.
+Ver `docs/32-DICAS-GUIADAS.md` §5.
+
 ## Divulgação da plataforma e dos professores (Onda CG — `platform_marketing` / `coach_marketing`)
 
 Três coleções NOVAS e um campo opcional. Tudo aditivo; nenhuma regra existente

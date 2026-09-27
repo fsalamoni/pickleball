@@ -18,6 +18,9 @@ import { cn } from '@/core/lib/utils';
  *
  * O nível 2 (`V2SubTabs`) é o mesmo desenho, menor: as abas da seção ativa,
  * também quebrando em linhas.
+ *
+ * Âncoras das dicas guiadas: `dica` na barra inteira e `dica` em cada seção ou
+ * aba viram `data-dica` — é onde a seta do guia aponta ("toque em Quadras").
  */
 
 /**
@@ -39,11 +42,11 @@ export function agruparSecoes(sections = [], grupos = []) {
   return linhas;
 }
 
-export function V2SectionNav({ sections, activeId, onSelect, grupos, ariaLabel = 'Seções' }) {
+export function V2SectionNav({ sections, activeId, onSelect, grupos, ariaLabel = 'Seções', dica }) {
   const linhas = agruparSecoes(sections, grupos);
   const comNome = linhas.some((l) => l.label);
   return (
-    <nav aria-label={ariaLabel} className="rounded-3xl border border-gray-100 bg-paper-pure p-1.5 shadow-sm">
+    <nav aria-label={ariaLabel} data-dica={dica} className="rounded-3xl border border-gray-100 bg-paper-pure p-1.5 shadow-sm">
       {linhas.map((linha, i) => (
         <div
           key={linha.id}
@@ -67,6 +70,7 @@ export function V2SectionNav({ sections, activeId, onSelect, grupos, ariaLabel =
                   type="button"
                   onClick={() => onSelect(section)}
                   aria-current={active ? 'page' : undefined}
+                  data-dica={section.dica}
                   className={cn(
                     'inline-flex items-center gap-1.5 whitespace-nowrap rounded-full px-3 py-1.5 text-xs font-semibold transition-colors focus:outline-none focus-visible:ring-2 focus-visible:ring-ink sm:py-2 sm:text-sm',
                     active ? 'bg-ink text-white shadow-md' : 'text-gray-500 hover:bg-paper hover:text-ink',
@@ -84,9 +88,9 @@ export function V2SectionNav({ sections, activeId, onSelect, grupos, ariaLabel =
   );
 }
 
-export function V2SubTabs({ tabs, activeValue, onSelect, ariaLabel = 'Abas da seção' }) {
+export function V2SubTabs({ tabs, activeValue, onSelect, ariaLabel = 'Abas da seção', dica }) {
   return (
-    <nav aria-label={ariaLabel} className="flex flex-wrap gap-1.5 px-1">
+    <nav aria-label={ariaLabel} data-dica={dica} className="flex flex-wrap gap-1.5 px-1">
       {tabs.map((t) => {
         const Icon = t.icon;
         const active = activeValue === t.value;
@@ -96,6 +100,7 @@ export function V2SubTabs({ tabs, activeValue, onSelect, ariaLabel = 'Abas da se
             type="button"
             onClick={() => onSelect(t)}
             aria-current={active ? 'page' : undefined}
+            data-dica={t.dica}
             className={cn(
               'inline-flex items-center gap-1.5 whitespace-nowrap rounded-full border px-3 py-1.5 text-xs font-semibold transition-colors focus:outline-none focus-visible:ring-2 focus-visible:ring-ink sm:px-3.5 sm:text-sm',
               active ? 'border-ink bg-ink/5 text-ink' : 'border-gray-200 text-gray-500 hover:border-ink/40 hover:text-ink',

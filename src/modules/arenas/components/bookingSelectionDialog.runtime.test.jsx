@@ -219,3 +219,26 @@ describe('⭐ sem seleção, o formulário completo não mudou', () => {
     expect(texto()).not.toContain('Sua escolha');
   });
 });
+
+/* ============================================ fechar pelo "Cancelar" === */
+
+describe('🐞 "Cancelar" funciona com quem passa só `onClose`', () => {
+  // A grade do dia (V2DaySlotsDialog) abre a confirmação passando `onClose`, e
+  // não `onOpenChange`. O "Cancelar" chamava `onOpenChange(false)` direto:
+  // `undefined is not a function`, e o diálogo não fechava.
+  it('com seleção e só `onClose`: fecha, sem erro', async () => {
+    const onClose = vi.fn();
+    await act(async () => {
+      root.render(<BookingRequestDialog arena={arena} open selection={[cel('c1', '19:00')]} onClose={onClose} />);
+    });
+    await act(async () => { botao('Cancelar').dispatchEvent(new MouseEvent('click', { bubbles: true })); });
+    expect(onClose).toHaveBeenCalledWith(false);
+  });
+
+  it('com `onOpenChange`: continua como antes', async () => {
+    const onOpenChange = vi.fn();
+    await render({ onOpenChange });
+    await act(async () => { botao('Cancelar').dispatchEvent(new MouseEvent('click', { bubbles: true })); });
+    expect(onOpenChange).toHaveBeenCalledWith(false);
+  });
+});

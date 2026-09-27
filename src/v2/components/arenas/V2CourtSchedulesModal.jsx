@@ -188,6 +188,7 @@ export default function V2CourtSchedulesModal({ arenaId, court, open, onClose })
         role="dialog"
         aria-modal="true"
         aria-labelledby="horarios-quadra-titulo"
+        data-dica="arena-janelas"
         className="max-h-[90vh] w-full max-w-2xl overflow-y-auto rounded-3xl bg-paper-pure p-4 sm:p-6"
         onClick={(e) => e.stopPropagation()}
       >
@@ -266,7 +267,7 @@ export default function V2CourtSchedulesModal({ arenaId, court, open, onClose })
                   Janelas <V2Badge tone="neutral">{active} ativas</V2Badge>
                 </div>
                 {!adding && (
-                  <V2Button size="sm" onClick={() => setAdding(true)}>
+                  <V2Button size="sm" onClick={() => setAdding(true)} data-dica="arena-nova-janela">
                     <Plus className="mr-1 h-3.5 w-3.5" /> Nova janela
                   </V2Button>
                 )}

@@ -3,6 +3,12 @@
 > Ajuda onde a pessoa está, na hora em que ela precisa — não num manual à
 > parte que ninguém abre.
 
+> **Com as dicas guiadas ligadas (flag `guided_tips`, Onda CJ)** tudo o que
+> segue muda de forma: cada tutorial vira um GUIA na tela (`tutorial:<id>`, o
+> mesmo texto), o botão "Como funciona" começa o guia — destaque e seta sobre
+> os botões de verdade — e **nada abre sozinho**. O modal abaixo segue valendo
+> com a flag desligada. Ver `docs/32-DICAS-GUIADAS.md` §2.5.
+
 ---
 
 ## 1. O que existe
@@ -77,7 +83,8 @@ uid, e quem não está autenticado usa o escopo `anon`.
 
 | Quero… | Vá em |
 |---|---|
-| corrigir um texto | `src/modules/help/domain/tutorials.js` |
+| corrigir um texto | `src/modules/help/domain/tutorials.js` (vale para o modal E para o guia) |
+| apontar um passo para outro botão (dicas guiadas) | `ANCORAS_DOS_TUTORIAIS` em `src/modules/help/domain/guias.js` |
 | mudar o comportamento (abrir, fechar, navegar) | `src/v2/components/tutorial/V2TutorialLauncher.jsx` |
 | colocar um tutorial numa tela nova | uma linha: `<V2TutorialLauncher tutorialId={...} />` |
 | criar um tutorial novo | id em `TUTORIAL_ID` + objeto em `TUTORIALS` |

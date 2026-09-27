@@ -58,7 +58,7 @@ export default function V2Profile() {
             </div>
             <div className="flex w-full gap-3 sm:w-auto">
               <V2Button asChild variant="subtle" className="flex-1 sm:flex-none">
-                <Link to="/perfil/editar"><Pencil className="h-4 w-4" /> Editar perfil</Link>
+                <Link to="/perfil/editar" data-dica="perfil-editar"><Pencil className="h-4 w-4" /> Editar perfil</Link>
               </V2Button>
               {me && (
                 <V2Button asChild className="flex-1 sm:flex-none">

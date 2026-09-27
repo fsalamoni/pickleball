@@ -117,6 +117,7 @@ export default function V2CreateTournament() {
                 tutorialId={TUTORIAL_ID.TOURNAMENT}
                 label="Como funciona um torneio"
                 autoOpen={false}
+                guia="criar-torneio"
               />
             </div>
 
@@ -148,9 +149,11 @@ export default function V2CreateTournament() {
 
             {showStep(0) && (<>
             <V2SectionHeader eyebrow="Identidade" title="Dados do evento" titleClassName="text-xl" />
-            <V2Field label="Nome do torneio" required>
-              <V2Input value={form.name} onChange={(e) => set('name', e.target.value)} placeholder="Ex.: Open de Pickleball de Floripa" />
-            </V2Field>
+            <div data-dica="criar-torneio-nome">
+              <V2Field label="Nome do torneio" required>
+                <V2Input value={form.name} onChange={(e) => set('name', e.target.value)} placeholder="Ex.: Open de Pickleball de Floripa" />
+              </V2Field>
+            </div>
             <V2Field label="Descrição">
               <V2Textarea value={form.description} onChange={(e) => set('description', e.target.value)} placeholder="Apresentação do torneio e o que o atleta deve esperar." />
             </V2Field>
@@ -164,7 +167,7 @@ export default function V2CreateTournament() {
 
             {showStep(1) && (<>
             <V2SectionHeader eyebrow="Acesso" title="Quem encontra e como entra" titleClassName="text-xl" />
-            <div className="grid gap-3 sm:grid-cols-2">
+            <div data-dica="criar-torneio-acesso" className="grid gap-3 sm:grid-cols-2">
               {VISIBILITY_OPTIONS.map(({ value, title, description, icon: Icon }) => {
                 const active = form.visibility === value;
                 return (
@@ -190,7 +193,7 @@ export default function V2CreateTournament() {
 
             {showStep(2) && (<>
             <V2SectionHeader eyebrow="Calendário" title="Janela do evento" titleClassName="text-xl" />
-            <div className="grid gap-4 sm:grid-cols-3">
+            <div data-dica="criar-torneio-datas" className="grid gap-4 sm:grid-cols-3">
               <V2Field label="Início"><V2Input type="date" value={form.starts_at} onChange={(e) => set('starts_at', e.target.value)} /></V2Field>
               <V2Field label="Fim"><V2Input type="date" value={form.ends_at} onChange={(e) => set('ends_at', e.target.value)} /></V2Field>
               <V2Field label="Fim das inscrições"><V2Input type="date" value={form.registration_deadline} onChange={(e) => set('registration_deadline', e.target.value)} /></V2Field>
@@ -207,17 +210,17 @@ export default function V2CreateTournament() {
                   {step === 0 ? 'Cancelar' : <><ArrowLeft className="h-4 w-4" /> Voltar</>}
                 </V2Button>
                 {isLastStep ? (
-                  <V2Button type="submit" disabled={createMutation.isPending || isPreview}>
+                  <V2Button type="submit" disabled={createMutation.isPending || isPreview} data-dica="criar-torneio-criar">
                     {createMutation.isPending ? 'Criando…' : 'Criar torneio'} <Check className="h-4 w-4" />
                   </V2Button>
                 ) : (
-                  <V2Button type="button" onClick={goNext}>Avançar <ArrowRight className="h-4 w-4" /></V2Button>
+                  <V2Button type="button" onClick={goNext} data-dica="criar-torneio-avancar">Avançar <ArrowRight className="h-4 w-4" /></V2Button>
                 )}
               </div>
             ) : (
               <div className="flex justify-end gap-2 pt-2">
                 <V2Button type="button" variant="ghost" onClick={() => navigate('/torneios')}>Cancelar</V2Button>
-                <V2Button type="submit" disabled={createMutation.isPending || isPreview}>
+                <V2Button type="submit" disabled={createMutation.isPending || isPreview} data-dica="criar-torneio-criar">
                   {createMutation.isPending ? 'Criando…' : 'Criar torneio'} <ArrowRight className="h-4 w-4" />
                 </V2Button>
               </div>
@@ -291,7 +294,7 @@ function TemplatePicker() {
 
 function WizardStepper({ steps, current, onGo }) {
   return (
-    <div className="flex items-center gap-2">
+    <div data-dica="criar-torneio-etapas" className="flex items-center gap-2">
       {steps.map((s, i) => {
         const done = i < current;
         const active = i === current;

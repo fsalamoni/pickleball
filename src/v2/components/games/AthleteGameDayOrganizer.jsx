@@ -163,10 +163,11 @@ function ParticipantsSection({ gameDay, participants, isLoading, isOwner }) {
       icon={Users}
       title="Participantes"
       count={participants.length}
+      dica="dia-de-jogo-participantes"
       sectionId={GAME_DAY_SECTION.PARTICIPANTS}
       summary={participants.length === 0 ? 'Nenhum participante ainda' : `${participants.length} no dia de jogo`}
       actions={isOwner && (
-        <V2Button size="sm" variant="ghost" onClick={() => setPickerOpen(true)} disabled={atLimit}>
+        <V2Button size="sm" variant="ghost" onClick={() => setPickerOpen(true)} disabled={atLimit} data-dica="dia-de-jogo-inserir-atletas">
           <UserPlus className="mr-1.5 h-4 w-4" /> Inserir atletas
         </V2Button>
       )}
@@ -486,6 +487,7 @@ function GamesSection({ gameDay, participants, isOwner }) {
       icon={Swords}
       title="Jogos"
       count={games.length}
+      dica="dia-de-jogo-jogos"
       sectionId={GAME_DAY_SECTION.GAMES}
       summary={resumoJogos}
       actions={isOwner && !falhouJogos && (
@@ -493,7 +495,7 @@ function GamesSection({ gameDay, participants, isOwner }) {
           <V2Button size="sm" variant="ghost" onClick={() => setManualOpen(true)} disabled={participants.length < 2}>
             <Plus className="mr-1.5 h-4 w-4" /> Inserir partida
           </V2Button>
-          <V2Button size="sm" onClick={openDraw} disabled={!canOpenDraw}>
+          <V2Button size="sm" onClick={openDraw} disabled={!canOpenDraw} data-dica="dia-de-jogo-sortear">
             <Shuffle className="mr-1.5 h-4 w-4" /> Sortear jogos
           </V2Button>
           {isKingOfCourt && games.length > 0 && (
@@ -840,6 +842,7 @@ export function DailyRankingSection({ gameDay, participants }) {
     <V2CollapsibleCard
       icon={BarChart3}
       title="Ranking do dia"
+      dica="dia-de-jogo-ranking"
       sectionId={GAME_DAY_SECTION.DAILY_RANKING}
       summary={decididos === 0 ? 'Ainda sem resultados' : `${decididos} jogo(s) computado(s)`}
     >
@@ -881,6 +884,7 @@ export function RankingSection({ gameDay, participants }) {
     <V2CollapsibleCard
       icon={Trophy}
       title="Resultados no ranking"
+      dica="dia-de-jogo-publicar"
       sectionId={GAME_DAY_SECTION.PLATFORM_RANKING}
       summary={isPublished
         ? `Publicado · ${publishedCount} jogo(s) no ranking`

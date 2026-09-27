@@ -119,7 +119,7 @@ export default function V2OpenGames() {
       <V2PageIntro
         title="Procura-se jogo"
         subtitle="Publique um convite e encontre parceiros para jogar fora dos torneios."
-        action={<V2Button onClick={() => setCreateOpen(true)}><Plus className="h-4 w-4" /> Publicar convite</V2Button>}
+        action={<V2Button onClick={() => setCreateOpen(true)} data-dica="procura-publicar"><Plus className="h-4 w-4" /> Publicar convite</V2Button>}
       />
 
       {/* Os jogos com vaga que as ARENAS publicaram — o que quem procura
@@ -175,7 +175,7 @@ export default function V2OpenGames() {
       ) : (
         <div className="space-y-8">
           {upcoming.length > 0 ? (
-            <div className="grid gap-6 sm:grid-cols-2 xl:grid-cols-3">
+            <div data-dica="procura-lista" className="grid gap-6 sm:grid-cols-2 xl:grid-cols-3">
               {upcoming.map((g) => (
                 <OpenGameCard key={g.id} g={g} gameDayOn={gameDayOn} joining={joinGameDay.isPending} onJoin={handleJoinGameDay} />
               ))}

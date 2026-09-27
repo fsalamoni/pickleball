@@ -28,6 +28,11 @@ export const FLAG_GROUPS = Object.freeze([
     keys: [FEATURE_FLAG.DARK_MODE],
   },
   {
+    id: 'help',
+    label: 'Ajuda e dicas',
+    keys: [FEATURE_FLAG.GUIDED_TIPS, FEATURE_FLAG.HELP_CENTER],
+  },
+  {
     id: 'marketing',
     label: 'Campanhas e cupons (plataforma e professores)',
     keys: [FEATURE_FLAG.PLATFORM_MARKETING, FEATURE_FLAG.COACH_MARKETING],

@@ -123,6 +123,8 @@ Estes princípios vieram de bugs reais que custaram horas pra arrumar. São ineg
 │   │                                     cor, as telas não mudam (Onda CH)
 │   ├── 31-INICIO-SOB-MEDIDA.md     🧩 ⭐ cada pessoa escolhe os cards do seu início
 │   │                                     e a ordem, sem tocar o banco (Onda CI)
+│   ├── 32-DICAS-GUIADAS.md         💡 ⭐ dicas sob pedido: guias com seta sobre a
+│   │                                     tela de verdade, pontos de dica (Onda CJ)
 │   ├── 26-TORNEIO-FORMATOS-E-REGRAS.md ⭐ grupos, classificação, chaves e o
 │   │                                     controle total do admin do torneio
 │   ├── 20-SEGURANCA-E-PRIVACIDADE/ 🔴 ⭐ PRIORIDADE MÁXIMA — segurança, LGPD,
@@ -148,7 +150,7 @@ Estes princípios vieram de bugs reais que custaram horas pra arrumar. São ineg
 │   │   ├── arenas/README.md
 │   │   ├── coaches/README.md
 │   │   ├── clubs/README.md
-│   │   ├── help/README.md          🎓 conteúdo dos tutoriais em tela
+│   │   ├── help/README.md          🎓 tutoriais, dicas guiadas (guias + pontos) e ajuda
 │   │   └── ... (15 mais)
 │   ├── v2/                         # ⭐ APP ATIVO (Athleisure Premium)
 │   │   ├── pages/                  # 67 páginas V2
@@ -321,12 +323,13 @@ Estes princípios vieram de bugs reais que custaram horas pra arrumar. São ineg
 **"Mudei/removi uma rota de tela de módulo de arena"** → o CATÁLOGO promete aquele caminho (`manage`/`public`) e `ArenaModuleShortcuts` monta o botão a partir dele — caminho com erro de digitação **não dá erro**, dá um botão bonito que leva a uma tela em branco, no celular do cliente, na frente da recepção. `src/core/guards/rotasDeModulos.test.js` lê `V2App.jsx` e reprova quem quebrar o par (e exige `:arenaId`, que é o nome que `arenaModuleRoute` troca)
 **"A tela precisa saber se um módulo está ligado"** → `useArenaModules(arenaId)` (UM hook, DUAS consultas, responde pelos 50). **Nunca** `useCanArenaUseModule` por módulo, e jamais dentro de um `map`
 **"Onde ficam os níveis de membro de uma arena?"** → `arena_settings.member_tiers` (campo opcional), **não** em `arena_tier_configs`: aquela coleção só o admin da plataforma escreve, e a arena ficaria sem poder configurar os próprios níveis. Ausente, valem os padrões (`DEFAULT_TIERS`)
-**"Onde está o MANUAL da plataforma?"** → `/ajuda` (flag `help_center`, default OFF): 47 artigos em 5 partes (4 atrás da flag da própria funcionalidade) — Começar aqui, **Atleta**, **Arena**, **Professor**, Conta e privacidade. Conteúdo em `src/modules/help/domain/helpCenter.js`, página em `src/v2/pages/V2Help.jsx`. Acesso em três pontos de TODA tela (barra lateral, menu do usuário, gaveta do celular), fora dos hubs de propósito. Link direto por `?s=<seção>&a=<artigo>`. **Nada no Firestore** (só a parte preferida, no localStorage por usuário). Ver `docs/21-CENTRAL-DE-AJUDA.md`
-**"Vou colocar um link de ajuda numa tela"** → use `helpLinkFor(location.pathname)`, importado de **`modules/help/domain/helpLink`** (NUNCA de `helpCenter`: aquele arquivo carrega os 47 artigos, e importá-lo de uma tela comum joga o manual inteiro no chunk que todo mundo baixa — 216 kB contra 184 kB, medido; há teste travando isso). Nunca `'/ajuda'` cru. Ele monta `/ajuda?de=<rota>` e a central abre com **"Ajuda para esta tela"** no topo — os artigos daquele assunto, sem a pessoa ter de adivinhar a persona nem varrer a lista. O mapa rota → artigos é `HELP_ROUTE_HINTS`; `*` vale por UM segmento e **vence o primeiro molde que casa**, então o específico vem antes do genérico (teste trava a ordem). Rota sem pista ⇒ bloco nenhum, de propósito: sugestão errada ensina a ignorar o bloco
+**"Onde está o MANUAL da plataforma?"** → `/ajuda` (flag `help_center`, default OFF): 49 artigos em 5 partes (6 atrás da flag da própria funcionalidade; com `guided_tips`, o fim do artigo ganha "Mostre na tela") — Começar aqui, **Atleta**, **Arena**, **Professor**, Conta e privacidade. Conteúdo em `src/modules/help/domain/helpCenter.js`, página em `src/v2/pages/V2Help.jsx`. Acesso em três pontos de TODA tela (barra lateral, menu do usuário, gaveta do celular), fora dos hubs de propósito. Link direto por `?s=<seção>&a=<artigo>`. **Nada no Firestore** (só a parte preferida, no localStorage por usuário). Ver `docs/21-CENTRAL-DE-AJUDA.md`
+**"Vou colocar um link de ajuda numa tela"** → use `helpLinkFor(location.pathname)`, importado de **`modules/help/domain/helpLink`** (NUNCA de `helpCenter`: aquele arquivo carrega os 49 artigos, e importá-lo de uma tela comum joga o manual inteiro no chunk que todo mundo baixa — 216 kB contra 184 kB, medido; há teste travando isso). Nunca `'/ajuda'` cru. Ele monta `/ajuda?de=<rota>` e a central abre com **"Ajuda para esta tela"** no topo — os artigos daquele assunto, sem a pessoa ter de adivinhar a persona nem varrer a lista. O mapa rota → artigos é `HELP_ROUTE_HINTS`; `*` vale por UM segmento e **vence o primeiro molde que casa**, então o específico vem antes do genérico (teste trava a ordem). Rota sem pista ⇒ bloco nenhum, de propósito: sugestão errada ensina a ignorar o bloco
 **"Criei/removi uma tela. O que a ajuda precisa saber?"** → duas coisas: os artigos que citam a tela (`{ type: 'link', to }` — há teste lendo `V2App.jsx`) e a PISTA de rota em `HELP_ROUTE_HINTS`. O teste pega a pista órfã; a pista que FALTA ninguém vê
 **"Vou escrever ajuda sobre uma funcionalidade"** → confira antes se ela está LIGADA. A gamificação (`/conquistas`, `/hall-da-fama`, `/vinculos`) está atrás de `gamification_v2`, que é OFF — documentá-la manda a pessoa para uma porta que não abre. Há teste travando isso em `helpCenter.test.js`; e outro que confere cada link da ajuda contra as rotas reais de `V2App.jsx`. ⭐ Funcionalidade NOVA atrás de flag: escreva o artigo com `flags: ['chave']` — ele só aparece (parte, busca, link direto, "Ajuda para esta tela") quando a flag está ligada, via `helpCatalog(flags)`, que é o que `V2Help` usa. Há teste exigindo que a chave exista em `FEATURE_FLAG`
-**"Quero um tutorial explicando esta ferramenta"** → já existem quatro (torneio, dia de jogo Play, Americano e Americano aprimorado). Conteúdo em `src/modules/help/domain/tutorials.js`; para colocar numa tela é UMA linha: `<V2TutorialLauncher tutorialId={...} />` (ou `tutorialIdForGameDayFormat(gameDay.format)` num dia de jogo). Ele abre sozinho na primeira vez, deixa dispensar e mantém o botão para rever. A memória é `localStorage` por usuário — **nada no banco**. Ver `docs/19-TUTORIAIS.md`
-**"Mexi numa tela de torneio ou dia de jogo"** → passe pelo tutorial dela (`src/modules/help/domain/tutorials.js`). Um tutorial que ensina um botão que não existe mais é PIOR que nenhum: quem segue passo a passo conclui que está fazendo algo errado
+**"Quero um tutorial explicando esta ferramenta"** → já existem quatro (torneio, dia de jogo Play, Americano e Americano aprimorado). Conteúdo em `src/modules/help/domain/tutorials.js`; para colocar numa tela é UMA linha: `<V2TutorialLauncher tutorialId={...} />` (ou `tutorialIdForGameDayFormat(gameDay.format)` num dia de jogo). Ele abre sozinho na primeira vez, deixa dispensar e mantém o botão para rever. A memória é `localStorage` por usuário — **nada no banco**. Ver `docs/19-TUTORIAIS.md`. ⭐ Com a flag `guided_tips` ligada o mesmo botão começa o GUIA na tela (o mesmo texto, com seta sobre os botões) e **nada abre sozinho**; `guia="…"` troca o guia, `explicar` mantém o modal (a tela do guia ainda não existe)
+**"Onde estão as DICAS? Quero ensinar uma tarefa na tela"** → ⭐ flag `guided_tips` (default OFF) + `docs/32-DICAS-GUIADAS.md`. Botão "Dicas" no topo → painel (interruptor, "Nesta tela", "O que você quer fazer?"). **Nada aparece sozinho**: o guia só começa quando a pessoa pede, leva à tela, aponta o botão de VERDADE com seta e avança quando ela faz (`advanceOn`: `'click'`, `{ route }`, `{ appears }`). Guias em `src/modules/help/domain/guias.js` (os tutoriais viram `tutorial:<id>` pelo mapa `ANCORAS_DOS_TUTORIAIS`), pontos em `pontosDeDica.js` (máx. 6 por tela), motor em `src/v2/components/dicas/`. O alvo é um `data-dica="…"` no elemento real (ou `dica` em `V2CollapsibleCard`, `V2TutorialLauncher`, `V2SectionNav`/`V2SubTabs` e nos itens de navegação). ⚠️ **A âncora é contrato**: renomear não dá erro, o guia diz "não encontrei" para sempre — `src/core/guards/dicas.test.js` confere que toda âncora e toda rota citadas existem, zero banco, e que só a camada preguiçosa importa o catálogo. No diálogo do Radix o cartão vira faixa DENTRO dele (fora, clicar fecharia o formulário)
+**"Mexi numa tela de torneio ou dia de jogo"** → passe pelo tutorial dela (`src/modules/help/domain/tutorials.js`). Um tutorial que ensina um botão que não existe mais é PIOR que nenhum: quem segue passo a passo conclui que está fazendo algo errado. E se a tela tem guia (dicas), mantenha o `data-dica` dos botões — o guarda reprova a âncora que sumiu
 **"Preciso guardar uma preferência de tela por usuário"** → `src/core/lib/viewPreference.js` (valores) ou `collapsePreference.js` (booleanos). Sempre com o uid na chave — `localStorage` é por NAVEGADOR, e num tablet de clube uma pessoa herdaria a preferência da outra. E ao testar, espione `Storage.prototype`: no jsdom, `vi.spyOn(window.localStorage, …)` não troca o método, grava uma chave com aquele nome e o teste passa sem exercitar nada
 **"Posso mexer no motor de rating?"** → só nos DOIS lados. Os motores existem em `src/modules/rating/domain/` (cliente) e `functions/engines/` (servidor, porque o pacote de Functions é publicado isolado). `functions/engines/parity.test.js` roda as duas implementações sobre as mesmas 400 partidas e exige resultado idêntico — mexer num lado só quebra o teste, de propósito
 **"A previsão de próxima partida mostra gente diferente de quem entra. Por quê?"** → era isso mesmo, e foi corrigido: previsão, previsão por quadra e ordem de participação derivam todas de `simulatePlaySequence` (fonte única). A previsão de quadra **ocupada** é condicional (depende de quem termina primeiro). Ver `docs/16-DIA-DE-JOGO-RODIZIO.md` §4b
@@ -519,12 +522,37 @@ chore(deps): bump firebase to 12.x
 
 ## 10. Métricas atuais (snapshot 2026-08-31, 11:05 GMT-3)
 
-> Última atualização: 2026-09-27 (Onda CI — início sob medida). Antes: Onda CH (modo escuro); revisão da Onda CG; 2026-09-20 (Onda AT); 2026-08-31, após **41 PRs
+> Última atualização: 2026-09-27 (Onda CJ — dicas guiadas). Antes: Onda CI (início sob medida); Onda CH (modo escuro); revisão da Onda CG; 2026-09-20 (Onda AT); 2026-08-31, após **41 PRs
 > novos** mergeados em main (#95 a #135) — Sprints 32 a 50+.
 > Detalhes em `docs/08-ARENA-ROADMAP.md` (Seções 34-50) e
 > memory topic `picklerush-sync-2026-08.md`.
 >
 > **Destaques por onda**:
+>
+> - **Onda CJ — Dicas guiadas** (2026-09-27): *"o tutorial não está bem da
+>   forma como está. O ideal é que o usuário ligue ou desligue 'dicas'… com
+>   setas e avisos reais na tela… elas não devem surgir depois de o usuário
+>   ter feito algo, elas devem surgir se ele quiser e guiar ele para fazer o
+>   que ele procura… não afete o banco de dados"*. Flag `guided_tips` (default
+>   OFF; desligada, nada muda). Um botão **Dicas** no topo de toda tela abre o
+>   painel: o **interruptor** (dicas na tela ligadas/desligadas, por pessoa),
+>   os guias **desta tela** e **"O que você quer fazer?"** (busca e 27 guias
+>   por área). **Nada aparece sozinho**: o guia começa quando a pessoa pede,
+>   **leva à tela**, **escurece o resto e aponta o botão de verdade com uma
+>   seta**, e **avança quando ela faz** (tocou no botão, a tela mudou, o
+>   formulário abriu). Ligadas, **pontos pulsando** explicam os botões de cada
+>   tela (40, em 20 telas; "Entendi" os marca como vistos). Dentro de um
+>   formulário, o cartão vira uma faixa presa ao rodapé DELE e o guia rola até
+>   o campo ficar acima dela. Ponto fora do lugar não vira beco: **"Levar-me
+>   até lá"** abre a aba certa, **"Abrir de novo"** reabre o formulário
+>   fechado. Os quatro **tutoriais viraram guias** (o mesmo texto) e deixam de
+>   abrir sozinhos; a Central de ajuda ganhou **"Mostre na tela"** no fim dos
+>   artigos, só com os guias que valem para a pessoa. **🐞 De quebra**: o
+>   "Cancelar" do pedido de reserva quebrava quando o pedido vinha da grade
+>   do dia; o painel do professor ignorava `?aba=` já aberto; e os tutoriais
+>   ensinavam "Dia de jogo → Criar" e "o card Organização", que não existem
+>   mais. **Banco: zero** (navegador, por usuário). Ver
+>   `docs/32-DICAS-GUIADAS.md`.
 >
 > - **Onda CI — Início sob medida** (2026-09-27): *"nas configurações do
 >   perfil de cada usuário eles possam escolher quais funcionalidades e cards
@@ -2309,14 +2337,14 @@ chore(deps): bump firebase to 12.x
 
 | Métrica | Valor | Delta do início do agente |
 |---|---|---|
-| **Testes Vitest** | **6476 passing** (398 arquivos) + 448 asserções de regras no emulador (Firestore + Storage) | +5991 (era 408) |
+| **Testes Vitest** | **6586 passing** (404 arquivos) + 448 asserções de regras no emulador (Firestore + Storage) | +5991 (era 408) |
 | **Lint errors** | 0 | era 30+ |
-| **Módulos** | 23 (+`home` — a tela inicial personalizada; +`promo` — cupons e campanhas da plataforma e dos professores; +`help` — conteúdo dos tutoriais em tela) (`games` e `legal` saíram como `src/modules/` mas continuam como pastas oficiais — **rating virou módulo oficial** com domain/services/hooks/components) | +4 (coaches, circuits, games, legal) |
+| **Módulos** | 23 (+`home` — a tela inicial personalizada; +`promo` — cupons e campanhas da plataforma e dos professores; +`help` — tutoriais, dicas guiadas e central de ajuda) (`games` e `legal` saíram como `src/modules/` mas continuam como pastas oficiais — **rating virou módulo oficial** com domain/services/hooks/components) | +4 (coaches, circuits, games, legal) |
 | **V2 pages** | 84 (+V2Promotions e +V2PromoCampaign — Onda CG; +V2GameDayTelao — telão, fora do V2Layout; +V2Help — central de ajuda; +V2ArenaKiosk — totem da recepção, também fora do V2Layout; +V2ArenaCheckin; +V2ArenaAttendance) | +58 |
 | **V2 components (src/v2/components/)** | **16 pastas** (+home, +rating, +settings, +tournament cresceu muito, +admin) | — |
 | **Coleções Firestore** | **125 top-level em `firestore.rules`** (+`promo_coupons`, `promo_campaigns`, `promo_settings` — Onda CG; +`doubles_rankings`) (as 13 da gamificação V2 documentadas em `05-DATA-MODEL.md`) — a Onda AS não criou nenhuma | +82 |
 | **Índices compostos Firestore** | **33 em `firestore.indexes.json`** (+`provisional_claims`) (+4 da gamificação V2) | +28 |
-| **Feature flags ativas** | **27 default OFF** (+`home_cards` — os cards do início escolhidos por cada pessoa, Onda CI; +`dark_mode` — o modo escuro, Onda CH; +`personalized_home`, `platform_marketing` e `coach_marketing` — Onda CG; +`gameday_mexicano` e `gameday_king_of_court` — os formatos opcionais do dia de jogo, Onda CE; +`arena_modules` — a chave-mestra dos módulos adicionais de arena; 137 viraram código) | −110 |
+| **Feature flags ativas** | **28 default OFF** (+`guided_tips` — as dicas guiadas, Onda CJ; +`home_cards` — os cards do início escolhidos por cada pessoa, Onda CI; +`dark_mode` — o modo escuro, Onda CH; +`personalized_home`, `platform_marketing` e `coach_marketing` — Onda CG; +`gameday_mexicano` e `gameday_king_of_court` — os formatos opcionais do dia de jogo, Onda CE; +`arena_modules` — a chave-mestra dos módulos adicionais de arena; 137 viraram código) | −110 |
 | **Cloud Functions** | **23 exportações** (+ `catchUpPlatformRankings` — recupera o ranking quando um gatilho se perdeu com as funções fora do ar; + `promoteOpenSlotWaitlistOnSlot` / `OnEntry` — a fila de espera do jogo aberto anda na hora; + `adminDeleteAccounts` — exclusão de cadastro pelo dono, com prévia; + `recomputeRankingOnTournamentRegistration` — a inscrição também move o ranking) | +15 |
 | **PRs mergeados** | **96 totais** (Sprints 0-50+) | — |
 | **Origin/main** | `106bd55` (PR #110) | — |

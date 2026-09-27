@@ -52,7 +52,7 @@ export default function OpenSlotsDiscovery() {
   if (vagasQ.isLoading || modulosCarregando || vagas.length === 0) return null;
 
   return (
-    <section className="mb-8">
+    <section className="mb-8" data-dica="procura-arenas">
       <p className="flex items-center gap-1.5 text-[11px] font-bold uppercase tracking-widest text-gray-400">
         <Building2 className="h-3.5 w-3.5" /> Jogos abertos nas arenas
       </p>

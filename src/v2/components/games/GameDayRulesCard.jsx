@@ -41,7 +41,7 @@ export default function GameDayRulesCard({ gameDay, podeGerenciar = false }) {
   const Chevron = aberto ? ChevronDown : ChevronRight;
 
   return (
-    <div className="rounded-2xl border border-gray-200 bg-paper/60 p-3">
+    <div className="rounded-2xl border border-gray-200 bg-paper/60 p-3" data-dica="dia-de-jogo-regras">
       <button
         type="button"
         onClick={() => setAberto((v) => !v)}

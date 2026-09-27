@@ -129,7 +129,7 @@ function GameDayList() {
       <V2PageIntro
         title="Dia de jogo"
         subtitle="Crie sua rodada, convide qualquer atleta e organize os jogos — como no dia de jogo dos clubes."
-        action={<V2Button onClick={() => setCreateOpen(true)}><Plus className="h-4 w-4" /> Novo dia de jogo</V2Button>}
+        action={<V2Button onClick={() => setCreateOpen(true)} data-dica="dia-de-jogo-criar"><Plus className="h-4 w-4" /> Novo dia de jogo</V2Button>}
       />
 
       {isLoading ? (
@@ -156,7 +156,7 @@ function GameDayList() {
       ) : (
         <div className="space-y-8">
           {upcoming.length > 0 && (
-            <div className="grid gap-4 sm:grid-cols-2">
+            <div className="grid gap-4 sm:grid-cols-2" data-dica="dia-de-jogo-lista">
               {upcoming.map((g) => <GameDayCard key={g.id} g={g} onOpen={open} />)}
             </div>
           )}

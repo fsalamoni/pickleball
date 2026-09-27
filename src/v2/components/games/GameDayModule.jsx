@@ -59,6 +59,7 @@ export function GameDayModuleTools({ gameDay, podeGerenciar = false, showTelao =
       <V2TutorialLauncher
         tutorialId={tutorialIdForGameDayFormat(gameDay.format)}
         autoOpen={podeGerenciar}
+        dica="dia-de-jogo-como-funciona"
       />
       {/* Telão: abre em outra aba de propósito — o uso é numa SEGUNDA tela
           (TV, tablet na beira da quadra), com esta aqui seguindo aberta para o
@@ -67,6 +68,7 @@ export function GameDayModuleTools({ gameDay, podeGerenciar = false, showTelao =
         <V2Button
           variant="secondary"
           size="sm"
+          data-dica="dia-de-jogo-telao"
           onClick={() => window.open(`/dia-de-jogo/${gameDay.id}/telao`, '_blank', 'noopener')}
         >
           <MonitorPlay className="mr-1.5 h-4 w-4" /> Abrir telão
@@ -106,8 +108,10 @@ export default function GameDayModule({ gameDay, podeGerenciar = false }) {
   // `space-y` por dentro — então o intervalo entre cartões mudava a cada
   // cartão E de origem para origem (o clube ainda somava o `space-y` dele por
   // fora). Um container só, um ritmo só.
+  // `data-formato-dia`: as dicas perguntam à tela qual é o formato do dia,
+  // para oferecer o guia certo em "Nesta tela".
   return (
-    <div className="space-y-4">
+    <div className="space-y-4" data-formato-dia={gameDay.format || undefined}>
       {/* O que ESTE dia é — formato, placar, ranking, dupla vinculada. Fica
           aqui, no módulo, para chegar às TRÊS origens por construção. */}
       <GameDayRulesCard gameDay={gameDay} podeGerenciar={podeGerenciar} />

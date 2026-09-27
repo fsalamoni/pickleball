@@ -62,15 +62,17 @@ function V2CreateArenaContent() {
       <V2Surface>
         <form onSubmit={onSubmit} className="space-y-6">
           <V2SectionHeader eyebrow="Identidade" title="Dados da arena" titleClassName="text-xl" />
-          <V2Field label="Nome da arena" required error={errors.name}>
-            <V2Input value={form.name} onChange={set('name')} placeholder="Ex.: Arena Praia de Belas" />
-          </V2Field>
+          <div data-dica="arena-criar-nome">
+            <V2Field label="Nome da arena" required error={errors.name}>
+              <V2Input value={form.name} onChange={set('name')} placeholder="Ex.: Arena Praia de Belas" />
+            </V2Field>
+          </div>
           <V2Field label="Descrição">
             <V2Textarea value={form.description} onChange={set('description')} placeholder="Estrutura, quadras, diferenciais e regras da arena." />
           </V2Field>
 
           <V2SectionHeader eyebrow="Localização" title="Onde fica" titleClassName="text-xl" />
-          <div className="grid gap-4 sm:grid-cols-2">
+          <div data-dica="arena-criar-local" className="grid gap-4 sm:grid-cols-2">
             <V2Field label="Endereço"><V2Input value={form.address} onChange={set('address')} /></V2Field>
             <V2Field label="Bairro"><V2Input value={form.neighborhood} onChange={set('neighborhood')} /></V2Field>
             <V2Field label="Cidade"><V2Input value={form.city} onChange={set('city')} /></V2Field>
@@ -78,7 +80,7 @@ function V2CreateArenaContent() {
           </div>
 
           <V2SectionHeader eyebrow="Operação" title="Quadras e horários" titleClassName="text-xl" />
-          <div className="grid gap-4 sm:grid-cols-2">
+          <div data-dica="arena-criar-quadras" className="grid gap-4 sm:grid-cols-2">
             <V2Field label="Número de quadras"><V2Input type="number" min="0" value={form.court_count} onChange={set('court_count')} /></V2Field>
             <V2Field label="Horário de funcionamento" hint="Ex.: Seg a Sex 7h–22h, Sáb 8h–18h"><V2Input value={form.hours} onChange={set('hours')} /></V2Field>
           </div>
@@ -96,7 +98,7 @@ function V2CreateArenaContent() {
 
           <div className="flex justify-end gap-2 pt-2">
             <V2Button type="button" variant="ghost" onClick={() => navigate('/arenas')}>Cancelar</V2Button>
-            <V2Button type="submit" disabled={createArena.isPending}>
+            <V2Button type="submit" disabled={createArena.isPending} data-dica="arena-criar-enviar">
               {createArena.isPending ? 'Cadastrando…' : 'Cadastrar arena'}
             </V2Button>
           </div>

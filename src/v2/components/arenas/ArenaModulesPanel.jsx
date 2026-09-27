@@ -340,7 +340,7 @@ export default function ArenaModulesPanel({ arenaId, canManage = false }) {
 
   if (visible.length === 0) {
     return (
-      <V2Surface>
+      <V2Surface data-dica="arena-modulos">
         <V2EmptyState
           icon={Puzzle}
           title="Nenhum módulo disponível ainda"
@@ -357,7 +357,7 @@ export default function ArenaModulesPanel({ arenaId, canManage = false }) {
   const { summary } = access;
 
   return (
-    <div className="space-y-4">
+    <div className="space-y-4" data-dica="arena-modulos">
       <V2Surface>
         <div className="flex items-start gap-3">
           <span className="mt-0.5 flex h-10 w-10 shrink-0 items-center justify-center rounded-2xl bg-acid/15 text-ink">

@@ -272,6 +272,7 @@ function CourtsSection({ gameDay, participants, games, view, canManage }) {
     <V2CollapsibleCard
       icon={LayoutGrid}
       title="Quadras e partidas"
+      dica="dia-de-jogo-quadras"
       sectionId={GAME_DAY_SECTION.AL_COURTS}
       summary={`${abertos.length} em quadra · ${disponiveis} na fila`}
       actions={canManage ? (
@@ -285,6 +286,7 @@ function CourtsSection({ gameDay, participants, games, view, canManage }) {
               size="sm" variant="secondary"
               disabled={!podeSortearRodada || criarRodada.isPending}
               onClick={gerarRodada}
+              data-dica="dia-de-jogo-sortear-rodada"
             >
               <Shuffle className="mr-1 h-3.5 w-3.5" />
               {criarRodada.isPending ? 'Sorteando…' : 'Sortear todas as quadras'}
@@ -469,6 +471,7 @@ function CourtCard({
                 size="sm"
                 disabled={!placarValido || pendente}
                 onClick={() => onLancar({ scoreA: Number(a), scoreB: Number(b) })}
+                data-dica="dia-de-jogo-lancar-resultado"
               >
                 <Check className="mr-1 h-3.5 w-3.5" /> Lançar resultado
               </V2Button>
@@ -511,7 +514,7 @@ function CourtCard({
             )}
           </p>
           {canManage && (
-            <V2Button size="sm" variant="secondary" disabled={!podeGerar || pendente} onClick={onGerar}>
+            <V2Button size="sm" variant="secondary" disabled={!podeGerar || pendente} onClick={onGerar} data-dica="dia-de-jogo-criar-partida">
               <PlayCircle className="mr-1 h-3.5 w-3.5" />
               {kind === GAME_KIND.SINGLES ? 'Gerar partida simples' : 'Gerar próxima partida'}
             </V2Button>
@@ -603,6 +606,7 @@ function CompletedSection({ gameDay, games, participants, canManage }) {
     <V2CollapsibleCard
       icon={Swords}
       title="Partidas concluídas"
+      dica="dia-de-jogo-concluidas"
       sectionId={GAME_DAY_SECTION.AL_COMPLETED}
       summary={concluidas.length === 0 ? 'Nenhuma ainda' : `${concluidas.length} partida(s)`}
     >

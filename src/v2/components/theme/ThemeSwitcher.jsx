@@ -197,7 +197,7 @@ export function ThemeSettingsCard() {
   const atual = OPCOES_DE_TEMA.find((o) => o.valor === escolha) || OPCOES_DE_TEMA[0];
 
   return (
-    <V2Surface>
+    <V2Surface data-dica="config-aparencia">
       <div className="flex items-center gap-2">
         <Palette className="h-5 w-5 text-ink" aria-hidden />
         <h2 id={rotuloId} className="font-display text-lg font-bold text-ink">Aparência</h2>
