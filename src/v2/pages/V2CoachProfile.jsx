@@ -5,8 +5,8 @@
  * Rota: /coaches/:coachId
  */
 
-import React, { useState } from 'react';
-import { Link, useParams, Navigate } from 'react-router-dom';
+import React, { Suspense, lazy, useEffect, useState } from 'react';
+import { Link, useParams, Navigate, useSearchParams } from 'react-router-dom';
 import { ArrowLeft, GraduationCap, MapPin, Award, MessageCircle, Video, Phone, Mail, Store, Image as ImageIcon } from 'lucide-react';
 import { useAuth } from '@/core/lib/FirebaseAuthContext';
 import { useCoach, useCoachResidencies } from '@/modules/coaches/hooks/useCoaches';
@@ -24,10 +24,15 @@ import LinkedClubsSection from '@/modules/clubs/components/LinkedClubsSection';
 import RequestLessonDialog from '@/modules/coaches/components/RequestLessonDialog';
 import { V2FavoriteCoachButton, V2CoachShareButton } from '@/v2/components/coach/V2CoachActions';
 import V2CoachAvailabilityCalendar from '@/v2/components/coach/V2CoachAvailabilityCalendar';
+import { useHashScroll } from '@/v2/ui/useHashScroll';
 import {
   V2Badge, V2Button, V2EmptyState, V2Surface, V2Skeleton,
   V2ErrorState,
 } from '@/v2/ui/primitives';
+
+// Promoções do professor (Onda CG, flag `coach_marketing`) — sob demanda: com
+// a flag desligada, o perfil não baixa nada do marketing.
+const CoachPromosSection = lazy(() => import('@/v2/components/promo/CoachPromosSection'));
 
 function ResidencyCard({ residency }) {
   const { data: arena } = useArena(residency.arena_id);
@@ -60,6 +65,10 @@ export default function V2CoachProfile() {
   const { data: coach, isLoading, isError: perfilFalhou, refetch: recarregarPerfil } = useCoach(coachId);
   const { data: residencies = [], isError: arenasFalharam, refetch: recarregarArenas } = useCoachResidencies(coachId);
   const [requesting, setRequesting] = useState(false);
+  // O código de um cupom do professor ("Usar ao pedir a aula"), para o pedido.
+  const [cupomDoPedido, setCupomDoPedido] = useState('');
+  const [params, setParams] = useSearchParams();
+  useHashScroll();
   const lessonsOn = true;
   const linkedClubsOn = true;
   const clinicsOn = true;
@@ -74,6 +83,18 @@ export default function V2CoachProfile() {
   const libraryItems = sortContent(visibleContent(contentRaw, { isOwner: isOwn, isStudent }));
   // Loja pública: sempre só os produtos marcados como públicos (preview fiel).
   const { data: storeProducts = [] } = useCoachProducts(lessonsOn ? coachId : null, { full: false });
+
+  // `?marcar=1` (o banner "Marcar aula") abre o pedido — uma vez, e sai da URL
+  // para voltar/recarregar não reabrir. `?cupom=` chega junto, se houver.
+  useEffect(() => {
+    if (params.get('marcar') !== '1' || !canRequestLesson) return;
+    setCupomDoPedido(params.get('cupom') || '');
+    setRequesting(true);
+    const next = new URLSearchParams(params);
+    next.delete('marcar');
+    next.delete('cupom');
+    setParams(next, { replace: true });
+  }, [params, setParams, canRequestLesson]);
 
   if (!isAuthenticated) return <Navigate to="/login" replace />;
   if (isLoading) return <div className="p-4"><V2Skeleton lines={6} /></div>;
@@ -175,6 +196,14 @@ export default function V2CoachProfile() {
         </div>
       </V2Surface>
 
+      {/* Promoções do professor — logo depois do cabeçalho: têm prazo. */}
+      <Suspense fallback={null}>
+        <CoachPromosSection
+          coachId={coachId}
+          onUseInLesson={canRequestLesson ? (code) => { setCupomDoPedido(code); setRequesting(true); } : undefined}
+        />
+      </Suspense>
+
       {/* Fotos */}
       {coach.photos?.length > 0 && (
         <V2Surface>
@@ -196,7 +225,7 @@ export default function V2CoachProfile() {
 
       {/* Loja pública */}
       {lessonsOn && storeProducts.length > 0 && (
-        <V2Surface>
+        <V2Surface id="professor-loja" className="scroll-mt-4">
           <h3 className="flex items-center gap-1.5 font-display text-base font-bold text-ink">
             <Store className="h-4 w-4" /> Loja
           </h3>
@@ -219,10 +248,12 @@ export default function V2CoachProfile() {
       )}
 
       {/* Calendário público de disponibilidade (item 3.1) */}
-      <V2CoachAvailabilityCalendar
-        coach={coach}
-        onRequestLesson={() => setRequesting(true)}
-      />
+      <div id="professor-agenda" className="scroll-mt-4">
+        <V2CoachAvailabilityCalendar
+          coach={coach}
+          onRequestLesson={() => setRequesting(true)}
+        />
+      </div>
 
       {/* Residências — apenas visualização pública (item 3.2) */}
       <V2Surface>
@@ -241,11 +272,11 @@ export default function V2CoachProfile() {
       </V2Surface>
 
       {/* Clínicas e workshops abertos (flag coach_clinics) */}
-      {clinicsOn && <CoachClinicsPublic coachId={coachId} />}
+      {clinicsOn && <div id="professor-clinicas" className="scroll-mt-4"><CoachClinicsPublic coachId={coachId} /></div>}
 
       {/* Biblioteca de conteúdo (PRO-18) — só visualização pública (item 3.2) */}
       {lessonsOn && libraryItems.length > 0 && (
-        <V2Surface>
+        <V2Surface id="professor-conteudo" className="scroll-mt-4">
           <h3 className="font-display text-base font-bold text-ink">Biblioteca de conteúdo</h3>
           {libraryItems.length === 0 ? (
             <p className="mt-3 text-sm text-gray-500">Nenhum conteúdo publicado ainda.</p>
@@ -275,7 +306,12 @@ export default function V2CoachProfile() {
       {linkedClubsOn && <LinkedClubsSection ownerType="coach" ownerId={coachId} title="Clubes" />}
 
       {canRequestLesson && (
-        <RequestLessonDialog coach={coach} open={requesting} onOpenChange={setRequesting} />
+        <RequestLessonDialog
+          coach={coach}
+          open={requesting}
+          onOpenChange={(aberto) => { setRequesting(aberto); if (!aberto) setCupomDoPedido(''); }}
+          initialCouponCode={cupomDoPedido}
+        />
       )}
     </div>
   );

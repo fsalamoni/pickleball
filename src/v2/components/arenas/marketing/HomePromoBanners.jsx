@@ -27,11 +27,19 @@
  * Cada fonte falha sozinha: se as campanhas não carregarem, os cupons
  * aparecem (e vice-versa) — mas a frase "não divulgaram promoção" só é dita
  * com as DUAS fontes carregadas, porque com uma faltando ela pode ser mentira.
+ *
+ * Onda CG: os cupons e banners DA PLATAFORMA e DOS PROFESSORES entram no
+ * mesmo carrossel (`platformOn` / `coachesOn`, as flags de cada um), com o
+ * alcance que o emissor escolheu — o Brasil todo (aparece até para quem ainda
+ * não disse a cidade), um estado ou uma cidade — e respeitando "só para os
+ * meus alunos". Sem a chave-mestra dos módulos de arena (`arenasOn`), só eles.
  */
 import React, { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import { Link } from 'react-router-dom';
 import { useQueries } from '@tanstack/react-query';
-import { ChevronLeft, ChevronRight, MapPin, Pause, Play, Tag } from 'lucide-react';
+import {
+  ChevronLeft, ChevronRight, GraduationCap, MapPin, Pause, Play, Tag,
+} from 'lucide-react';
 import { useAuth } from '@/core/lib/FirebaseAuthContext';
 import { readViewPreference, writeViewPreference } from '@/core/lib/viewPreference';
 import { useHomeBannerCoupons } from '@/modules/arenas/hooks/useArenaV3';
@@ -43,7 +51,16 @@ import {
   BANNER_REGION, bannerCities, homeBanners, regionLabel, resolveBannerRegion,
 } from '@/modules/arenas/domain/homeBanners';
 import { brandingOf } from '@/modules/arenas/domain/whiteLabel';
+import {
+  LESSON_COUPON_KINDS, PROMO_ISSUER, byExpiry, homePromoItems, mergeBannerCities, promoBenefitText,
+  promoCities, promoItemsInRegion, promoUseHint, reachLabel,
+} from '@/modules/promo/domain/promo';
+import { couponKind } from '@/modules/arenas/domain/marketing';
+import { todayISO } from '@/modules/arenas/domain/subscription';
+import { useHomePromos, usePromoViewer } from '@/modules/promo/hooks/usePromo';
 import { cn } from '@/core/lib/utils';
+import PromoCampaignBanner from '@/v2/components/promo/PromoCampaignBanner';
+import { issuerDisplayName } from '@/v2/components/promo/promoUi';
 import CampaignBanner from './campaigns/CampaignBanner';
 import CouponArt from './coupons/CouponArt';
 import CopyCodeButton from '@/v2/ui/CopyCodeButton';
@@ -142,7 +159,55 @@ function PromocaoComArte({ banner, posicao, total }) {
   );
 }
 
+/**
+ * Um item da PLATAFORMA ou de um PROFESSOR (Onda CG): o banner da campanha
+ * (clicável, levando ao destino escolhido) ou o tíquete do cupom (código
+ * copiável) — e embaixo, QUEM divulga e o caminho para usar.
+ */
+function ItemDaDivulgacao({ banner, posicao, total }) {
+  const { doc } = banner;
+  const dono = issuerDisplayName(doc);
+  const ehProfessor = doc.issuer_type === PROMO_ISSUER.COACH;
+  const alcance = doc.reach?.mode && doc.reach.mode !== 'brasil' ? ` · ${reachLabel(doc.reach)}` : '';
+  const legenda = (
+    <p className="flex min-w-0 items-center gap-1 text-xs font-semibold text-gray-500">
+      {ehProfessor ? <GraduationCap className="h-3.5 w-3.5 shrink-0" aria-hidden /> : <Tag className="h-3.5 w-3.5 shrink-0" aria-hidden />}
+      <span className="truncate">{dono}{alcance}</span>
+    </p>
+  );
+  if (banner.promo === 'campaign') {
+    return (
+      <div role="group" aria-roledescription="destaque" aria-label={`${posicao} de ${total}: ${doc.name || 'Campanha'} — ${dono}`}
+        className="flex w-[88%] shrink-0 snap-start flex-col gap-1.5 sm:w-[62%] lg:w-[46%]">
+        <PromoCampaignBanner campaign={doc} ratio="phone" inArt={false} />
+        <div className="px-1">{legenda}</div>
+      </div>
+    );
+  }
+  const naAula = ehProfessor && LESSON_COUPON_KINDS.includes(couponKind(doc));
+  const caminho = !ehProfessor
+    ? { to: '/promocoes', label: 'Ver promoções' }
+    : naAula
+      ? { to: `/coaches/${encodeURIComponent(doc.issuer_id)}?marcar=1&cupom=${encodeURIComponent(doc.code)}`, label: 'Pedir aula com este cupom' }
+      : { to: `/coaches/${encodeURIComponent(doc.issuer_id)}#professor-promocoes`, label: 'Ver no perfil' };
+  return (
+    <div role="group" aria-roledescription="promoção" aria-label={`${posicao} de ${total}: ${promoBenefitText(doc)} — ${dono}`}
+      className="flex w-[88%] shrink-0 snap-start flex-col gap-1.5 sm:w-[62%] lg:w-[46%]">
+      <CouponArt coupon={doc} code={doc.code} benefit={promoBenefitText(doc)} description={doc.description}
+        arenaName={dono} copyable copyMessage={`Código copiado. ${promoUseHint(doc)}`} />
+      <div className="flex flex-wrap items-center justify-between gap-x-2 gap-y-1 px-1">
+        {legenda}
+        <Link to={caminho.to}
+          className="text-xs font-bold text-ink underline-offset-2 hover:underline focus:outline-none focus-visible:ring-2 focus-visible:ring-ink">
+          {caminho.label}
+        </Link>
+      </div>
+    </div>
+  );
+}
+
 function Banner({ banner, posicao, total }) {
+  if (banner.promo) return <ItemDaDivulgacao banner={banner} posicao={posicao} total={total} />;
   if (banner.campaign) return <BannerDeCampanha banner={banner} posicao={posicao} total={total} />;
   if (banner.art) return <PromocaoComArte banner={banner} posicao={posicao} total={total} />;
   const marca = brandingOf(banner.arena);
@@ -187,11 +252,19 @@ function Banner({ banner, posicao, total }) {
   );
 }
 
-export default function HomePromoBanners() {
+/**
+ * @param {{ arenasOn?: boolean, platformOn?: boolean, coachesOn?: boolean }} props
+ *   Cada fonte só é lida com a sua flag: `arenasOn` (módulos de arena),
+ *   `platformOn` (divulgação da plataforma), `coachesOn` (dos professores).
+ */
+export default function HomePromoBanners({ arenasOn = true, platformOn = false, coachesOn = false } = {}) {
   const { user, userProfile } = useAuth();
   const uid = user?.uid || null;
-  const cupons = useHomeBannerCoupons();
-  const campanhas = useHomeCampaignBanners();
+  const cupons = useHomeBannerCoupons({ enabled: arenasOn });
+  const campanhas = useHomeCampaignBanners({ enabled: arenasOn });
+  const promosOn = platformOn || coachesOn;
+  const promos = useHomePromos({ enabled: promosOn });
+  const quem = usePromoViewer({ enabled: coachesOn });
   const listaCupons = useMemo(() => (Array.isArray(cupons.data) ? cupons.data : []), [cupons.data]);
   const listaCampanhas = useMemo(() => (Array.isArray(campanhas.data) ? campanhas.data : []), [campanhas.data]);
   const arenaIds = useMemo(() => [...new Set(
@@ -221,8 +294,14 @@ export default function HomePromoBanners() {
     campaigns: listaCampanhas,
     isCampaignOnIn: (id) => marketingLigado.isOnIn(id) && campanhasLigadas.isOnIn(id),
   };
-  const cidades = bannerCities(dados);
-  const banners = homeBanners(dados, region);
+  const promoItens = useMemo(() => (promosOn && promos.data ? homePromoItems({
+    coupons: promos.data.coupons, campaigns: promos.data.campaigns, platformOn, coachesOn, viewer: quem, today: todayISO(),
+  }) : []), [promosOn, promos.data, platformOn, coachesOn, quem]);
+  const cidades = mergeBannerCities(arenasOn ? bannerCities(dados) : [], promoCities(promoItens));
+  const banners = [
+    ...(arenasOn ? homeBanners(dados, region) : []),
+    ...promoItemsInRegion(promoItens, region),
+  ].sort(byExpiry);
 
   // O carrossel.
   const trilho = useRef(null);
@@ -259,16 +338,22 @@ export default function HomePromoBanners() {
   };
 
   const carregando = cupons.isLoading || campanhas.isLoading || arenasQ.some((q) => q.isLoading)
-    || cuponsLigados.isLoading || campanhasLigadas.isLoading || marketingLigado.isLoading;
-  const algumaFalhou = cupons.isError || campanhas.isError;
-  // Convite, não informação: as duas falhando ou sem banner em lugar nenhum, não aparece.
-  if ((cupons.isError && campanhas.isError) || carregando || cidades.length === 0) return null;
-  const temCampanha = banners.some((b) => b.campaign);
+    || cuponsLigados.isLoading || campanhasLigadas.isLoading || marketingLigado.isLoading || promos.isLoading;
+  const algumaFalhou = (arenasOn && (cupons.isError || campanhas.isError))
+    || (promosOn && promos.isError) || (coachesOn && quem.falhou);
+  const todasFalharam = (!arenasOn || (cupons.isError && campanhas.isError)) && (!promosOn || promos.isError);
+  // Convite, não informação: tudo falhando ou sem banner em lugar nenhum, não aparece.
+  if (todasFalharam || carregando || (cidades.length === 0 && promoItens.length === 0)) return null;
+  const temCampanha = banners.some((b) => b.campaign || b.promo === 'campaign');
+  // Sem região: os itens NACIONAIS aparecem, e o convite a escolher a cidade
+  // só vem se houver algo regional para ver.
+  const semRegiao = region.mode === BANNER_REGION.UNKNOWN;
+  const temRegional = cidades.length > 0 || promoItens.some((i) => i.reach?.mode && i.reach.mode !== 'brasil');
 
   return (
     <section
       aria-roledescription="carrossel"
-      aria-label="Promoções e destaques das arenas"
+      aria-label={promosOn ? 'Promoções e destaques' : 'Promoções e destaques das arenas'}
       className="mb-8"
       onMouseEnter={() => setInteragindo(true)}
       onMouseLeave={() => setInteragindo(false)}
@@ -280,9 +365,15 @@ export default function HomePromoBanners() {
         <h2 className="flex items-center gap-2 font-display text-lg font-bold text-ink">
           <Tag className="h-4 w-4" /> {temCampanha ? 'Destaques' : 'Promoções'} {regionLabel(region.mode === BANNER_REGION.OTHER
             ? { ...region, city: cidades.find((c) => c.key === region.key)?.city || region.city }
-            : region) || 'das arenas'}
+            : region) || (promosOn ? '' : 'das arenas')}
         </h2>
         <div className="flex items-center gap-1.5">
+          {promosOn && (
+            <Link to="/promocoes"
+              className="rounded-full px-2 py-1 text-xs font-bold text-ink underline-offset-2 hover:underline focus:outline-none focus-visible:ring-2 focus-visible:ring-ink">
+              Ver todas
+            </Link>
+          )}
           <SeletorDeRegiao region={region} cidades={cidades} profile={userProfile} onChange={escolher} />
           {banners.length > 1 && (
             <>
@@ -306,12 +397,13 @@ export default function HomePromoBanners() {
         </div>
       </div>
 
-      {region.mode === BANNER_REGION.UNKNOWN ? (
-        <p className="rounded-2xl border border-dashed border-gray-200 bg-paper p-4 text-sm text-gray-600">
-          Escolha a sua cidade acima para ver as promoções das arenas perto de você — ou{' '}
+      {semRegiao && temRegional && (
+        <p className={cn('rounded-2xl border border-dashed border-gray-200 bg-paper p-4 text-sm text-gray-600', banners.length > 0 && 'mb-3')}>
+          Escolha a sua cidade acima para ver as promoções {promosOn ? 'da sua região' : 'das arenas perto de você'} — ou{' '}
           <Link to="/perfil/editar" className="font-bold text-ink underline">informe a cidade no seu perfil</Link>.
         </p>
-      ) : banners.length === 0 ? (
+      )}
+      {semRegiao && banners.length === 0 ? null : banners.length === 0 ? (
         // Com uma das fontes falhando, "não divulgaram" pode ser mentira: aí
         // o carrossel fica vazio sem afirmar nada — só o convite de trocar.
         algumaFalhou ? (
@@ -320,7 +412,9 @@ export default function HomePromoBanners() {
           </p>
         ) : (
         <p className="rounded-2xl border border-dashed border-gray-200 bg-paper p-4 text-sm text-gray-600">
-          As arenas {regionLabel(region)} não divulgaram promoção agora. Troque a região acima para ver as de outros lugares.
+          {promosOn
+            ? `Nenhuma promoção ${regionLabel(region)} agora. Troque a região acima para ver as de outros lugares.`
+            : `As arenas ${regionLabel(region)} não divulgaram promoção agora. Troque a região acima para ver as de outros lugares.`}
         </p>
         )
       ) : (

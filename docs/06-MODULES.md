@@ -726,6 +726,31 @@ por `action_home` (default OFF). Componentes:
 - **Sem query nova**: tudo via dedupe do React Query.
 - **Desligada, home segue exatamente como está**.
 
+### home/ — Início personalizado (NOVO Onda CG, `personalized_home`)
+
+Módulo `src/modules/home/` (domínio + hook) e telas em
+`src/v2/components/home/personal/`. A tela inicial passa a ser montada por
+pessoa: o que ela FAZ (gere arena, dá aula, organiza torneio) vence o que ela
+DISSE que quer (`users.interests`), e a atividade traz a seção sem passar na
+frente. Agenda unificada, atalhos diretos, seções por frente, nada vencido
+(`freshness.js`), falha ≠ vazio em cada seção. Botão **Personalizar** edita os
+interesses ali mesmo. Desligada, `/` segue a tela clássica (que também deixou
+de destacar torneio encerrado). Ver `docs/29-INICIO-PERSONALIZADO-E-DIVULGACAO.md` §1.
+
+## promo/ — cupons e campanhas da plataforma e dos professores (NOVO Onda CG)
+
+Flags `platform_marketing` e `coach_marketing` (default OFF). As MESMAS
+ferramentas do marketing da arena (tipos de cupom, tíquete com arte, banner com
+cinco modelos ou imagem enviada, destino de lista fechada, aviso com o público
+contado antes, pausa, página da campanha, controle de uso), para a PLATAFORMA
+(Painel admin → Plataforma → Divulgação) e para CADA PROFESSOR (Painel do
+professor → Divulgação). O desconto do professor entra no **pedido de aula**
+e é aplicado na confirmação. Vitrine `/promocoes`, página `/campanhas/:id`,
+seção Promoções no perfil do professor e o carrossel da tela inicial (alcance
+Brasil/estado/cidade; "só para os meus alunos"). Coleções `promo_coupons`,
+`promo_campaigns`, `promo_settings`. Ver `src/modules/promo/README.md` e
+`docs/29-INICIO-PERSONALIZADO-E-DIVULGACAO.md` §2.
+
 ## arenas/ — Mercado (NOVO Onda J)
 
 Sistema de mercado da arena (PDV V2) — 6 PRs (#95-#100).
@@ -841,6 +866,7 @@ por `athletes/`, `auth/`, `coaches/`, `arenas/`, etc.).
 | `/ranking` `/ranking/duplas` `/encontrar-jogadores` `/procura-jogo` `/parceiros` | `V2Ranking` · `V2DoublesRanking` · `V2FindPlayers` · `V2OpenGames` · `V2Partners` |
 | `/meu-desempenho` `/perfil*` `/configuracoes` | `V2Performance` · `V2AthleteAgenda` · `V2Profile` · `V2ProfileEdit` · `V2Settings` |
 | `/buscar` | `V2Search` (busca global, Onda 10) |
+| `/promocoes` `/campanhas/:campaignId` | `V2Promotions` · `V2PromoCampaign` (divulgação da plataforma e dos professores, Onda CG — flags `platform_marketing`/`coach_marketing`) |
 | `/404` | `V2NotFound` (Onda 1) |
 | `/regras` `/nivelamento` `/historia` `/conduta` `/politica-uso` | `V2Rules` · `V2Leveling` · `V2History` · `V2Conduct` · `V2Privacy` |
 | `/admin/*` | `V2AdminTournaments` · `V2AdminMetrics` · `V2AdminPartners` · `V2AdminConsole` · `V2AdminProfiles` · `V2AdminBootstrap` · `V2AdminOwnerDebug` · `V2AdminOwnerRestore` |

@@ -4,9 +4,11 @@ import {
   getRatingHistory,
   listFinishedEngineMatches,
   getRankingWorkerStatus,
+  getPlayerRating,
 } from '../services/ratingService.js';
 import { computeDoublesRanking } from '../domain/doublesRanking.js';
-import { listDoublesRanking } from '../services/doublesRankingService.js';
+import { listDoublesRanking, listMyDoublesRankings } from '../services/doublesRankingService.js';
+import { useAuth } from '@/core/lib/FirebaseAuthContext';
 
 /** Ranking nacional materializado (rating ELO). */
 export function useNationalRanking() {
@@ -86,6 +88,32 @@ export function useRankingWorkerStatus(enabled = true) {
     queryKey: ['ranking-worker-status'],
     queryFn: getRankingWorkerStatus,
     enabled,
+    staleTime: 60_000,
+  });
+}
+
+/**
+ * O MEU rating nacional (um documento, `player_ratings/{uid}`), com a posição
+ * já gravada pelo servidor. Para a tela inicial, que só precisa de uma linha —
+ * `useNationalRanking` lê a coleção inteira para desenhar a tabela.
+ */
+export function useMyPlayerRating({ enabled = true } = {}) {
+  const { user } = useAuth();
+  return useQuery({
+    queryKey: ['player-rating', user?.uid],
+    queryFn: () => getPlayerRating(user?.uid),
+    enabled: enabled && !!user?.uid,
+    staleTime: 60_000,
+  });
+}
+
+/** As MINHAS parcerias no ranking de duplas (melhor posição primeiro). */
+export function useMyDoublesRankings({ enabled = true } = {}) {
+  const { user } = useAuth();
+  return useQuery({
+    queryKey: ['doubles-ranking', 'mine', user?.uid],
+    queryFn: () => listMyDoublesRankings(user?.uid),
+    enabled: enabled && !!user?.uid,
     staleTime: 60_000,
   });
 }

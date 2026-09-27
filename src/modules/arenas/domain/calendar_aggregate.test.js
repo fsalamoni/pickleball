@@ -16,6 +16,7 @@ import {
   indexBookingsByDate,
   indexUnavailabilitiesByDate,
   findFirstFreeDate,
+  freeTimesOfDay,
 } from './calendar_aggregate.js';
 
 describe('aggregateDayStatus', () => {
@@ -407,5 +408,48 @@ describe('buildMonthGrid', () => {
     const grid = buildMonthGrid('2024-09');
     const idx = grid.indexOf('2024-09-01');
     expect(idx).toBe(0);
+  });
+});
+
+describe('freeTimesOfDay — QUAIS horários têm quadra livre', () => {
+  const THU = '2026-07-23';
+  const schedules = [
+    { weekdays: [4], start_time: '18:00', end_time: '22:00', is_active: true },
+  ];
+  const courts = [{ id: 'q1' }, { id: 'q2' }];
+
+  it('lista os horários com pelo menos uma quadra livre, e quantas', () => {
+    const bookings = [
+      { status: 'confirmed', court_id: 'q1', slots: [{ date: THU, start: '18:00', end: '20:00' }] },
+      { status: 'confirmed', court_id: 'q2', slots: [{ date: THU, start: '19:00', end: '20:00' }] },
+    ];
+    const r = freeTimesOfDay({ date: THU, courts, schedules, bookings, unavailabilities: [] });
+    expect(r).toEqual([
+      { time: '18:00', freeCourts: 1 },
+      { time: '20:00', freeCourts: 2 },
+      { time: '21:00', freeCourts: 2 },
+    ]);
+  });
+
+  it('é a MESMA conta do calendário: freeTimes do dia bate com o tamanho da lista', () => {
+    const bookings = [
+      { status: 'requested', court_id: 'q1', slots: [{ date: THU, start: '21:00', end: '22:00' }] },
+      { status: 'requested', court_id: 'q2', slots: [{ date: THU, start: '21:00', end: '22:00' }] },
+    ];
+    const lista = freeTimesOfDay({ date: THU, courts, schedules, bookings, unavailabilities: [] });
+    const dia = aggregateDayStatus({ date: THU, courts, schedules, bookings, unavailabilities: [] });
+    expect(lista).toHaveLength(dia.freeTimes);
+    expect(lista.map((x) => x.time)).not.toContain('21:00');
+  });
+
+  it('bloqueio da arena inteira (sem quadra) fecha o horário', () => {
+    const unavailabilities = [{ date: THU, court_id: null, start_time: '18:00', end_time: '19:00' }];
+    const r = freeTimesOfDay({ date: THU, courts, schedules, bookings: [], unavailabilities });
+    expect(r.map((x) => x.time)).not.toContain('18:00');
+  });
+
+  it('dia fechado ou data inválida: lista vazia', () => {
+    expect(freeTimesOfDay({ date: '2026-07-22', courts, schedules })).toEqual([]);
+    expect(freeTimesOfDay({ date: 'x', courts, schedules })).toEqual([]);
   });
 });

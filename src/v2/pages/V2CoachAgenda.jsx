@@ -8,21 +8,24 @@
  * Aditivo — não altera o diretório/perfil existente.
  */
 
-import React, { useMemo, useState } from 'react';
-import { Link, Navigate } from 'react-router-dom';
+import React, { Suspense, lazy, useMemo, useState } from 'react';
+import { Link, Navigate, useSearchParams } from 'react-router-dom';
 import { MyTaughtArenaClasses } from '@/v2/components/arenas/classes/MyArenaClasses';
 import { toast } from 'sonner';
 import {
   GraduationCap, Plus, Trash2, Clock, CalendarDays, CalendarOff, Check, X,
   UserCircle, Image as ImageIcon, Users, Wallet, Package, Store, BookOpen, Handshake,
-  Sparkles,
+  Sparkles, Megaphone, Tag,
 } from 'lucide-react';
 import { useAuth } from '@/core/lib/FirebaseAuthContext';
+import { useFeatureFlag } from '@/core/lib/FeatureFlagsContext';
+import { FEATURE_FLAG } from '@/core/featureFlags';
 import { useCoach } from '@/modules/coaches/hooks/useCoaches';
 import {
   useCoachAvailability, useSaveAvailability, useCoachLessons, useRespondLesson,
 } from '@/modules/coaches/hooks/useLessons';
 import { SLOT_MINUTES_DEFAULT } from '@/modules/coaches/domain/availability';
+import { lessonCouponLine } from '@/modules/promo/domain/lessonCoupon';
 import {
   partitionLessons, lessonsAwaitingReply, upcomingRepliesFirst, availableActions, lessonStatusLabel, lessonStatusTone,
   lessonFormatLabel, lessonSlots, LESSON_STATUS,
@@ -89,6 +92,28 @@ const COACH_SECTIONS = [
     tabs: [{ value: 'parceiros', label: 'Parceiros', icon: Handshake }],
   },
 ];
+
+// Cupons e campanhas DO PROFESSOR (Onda CG, flag `coach_marketing`). Sob
+// demanda: o console de divulgação só baixa quando a seção abre.
+const CoachPromoConsole = lazy(() => import('@/v2/components/promo/CoachPromoConsole'));
+const SECAO_DIVULGACAO = {
+  id: 'divulgacao',
+  label: 'Divulgação',
+  icon: Megaphone,
+  tabs: [{ value: 'divulgacao', label: 'Cupons e campanhas', icon: Megaphone }],
+};
+
+/**
+ * A aba que abre, pela URL: `?aba=<valor>` (uma aba) ou `?secao=<id>` (a
+ * primeira aba da seção) — é assim que a tela inicial leva direto à
+ * divulgação. Valor desconhecido cai na Agenda, nunca em branco.
+ */
+export function coachTabFromUrl(params, sections) {
+  const aba = params.get('aba');
+  if (aba && sections.some((s) => s.tabs.some((t) => t.value === aba))) return aba;
+  const secao = sections.find((s) => s.id === params.get('secao'));
+  return secao ? secao.tabs[0].value : 'agenda';
+}
 
 const WEEKDAY_SHORT = ['Dom', 'Seg', 'Ter', 'Qua', 'Qui', 'Sex', 'Sáb'];
 
@@ -247,6 +272,11 @@ function LessonCard({ lesson, onAction, isPending }) {
             {slots.length > 1 && <span className="ml-1">+{slots.length - 1} data(s)</span>}
           </div>
           {lesson.notes && <p className="mt-1.5 text-xs text-gray-500">{lesson.notes}</p>}
+          {lesson.coupon?.code && (
+            <p className={`mt-1.5 inline-flex items-center gap-1 rounded-full px-2 py-0.5 text-[11px] font-bold ${lesson.coupon.status === 'rejected' ? 'bg-amber-50 text-amber-800' : 'bg-acid/20 text-ink'}`}>
+              <Tag className="h-3 w-3" aria-hidden /> {lessonCouponLine(lesson.coupon)}
+            </p>
+          )}
         </div>
       </div>
       {actions.length > 0 && (
@@ -300,17 +330,35 @@ function V2CoachAgendaContent() {
   const sharedBookingsOn = true;
   const linkedClubsOn = true;
   const clinicsOn = true;
-  const [tab, setTab] = useState('agenda');
+  const marketingOn = useFeatureFlag(FEATURE_FLAG.COACH_MARKETING);
 
   const sections = useMemo(() => {
-    if (!clinicsOn) return COACH_SECTIONS;
-    const extra = { id: 'clinicas', label: 'Clínicas', icon: Sparkles, tabs: [{ value: 'clinicas', label: 'Clínicas', icon: Sparkles }] };
-    // Insere logo após "Alunos".
     const out = [...COACH_SECTIONS];
-    const idx = out.findIndex((s) => s.id === 'alunos');
-    out.splice(idx >= 0 ? idx + 1 : out.length, 0, extra);
+    if (clinicsOn) {
+      const extra = { id: 'clinicas', label: 'Clínicas', icon: Sparkles, tabs: [{ value: 'clinicas', label: 'Clínicas', icon: Sparkles }] };
+      // Insere logo após "Alunos".
+      const idx = out.findIndex((s) => s.id === 'alunos');
+      out.splice(idx >= 0 ? idx + 1 : out.length, 0, extra);
+    }
+    // Divulgação logo depois de Comercial: é o que faz o comercial vender.
+    if (marketingOn) {
+      const idx = out.findIndex((s) => s.id === 'comercial');
+      out.splice(idx >= 0 ? idx + 1 : out.length, 0, SECAO_DIVULGACAO);
+    }
     return out;
-  }, [clinicsOn]);
+  }, [clinicsOn, marketingOn]);
+
+  const [params, setParams] = useSearchParams();
+  const [tabEscolhida, setTabEscolhida] = useState(null);
+  const tab = tabEscolhida || coachTabFromUrl(params, sections);
+  const setTab = (valor) => {
+    setTabEscolhida(valor);
+    // A aba vai para a URL: recarregar ou voltar não perde o lugar.
+    const next = new URLSearchParams(params);
+    next.set('aba', valor);
+    next.delete('secao');
+    setParams(next, { replace: true });
+  };
 
   const { upcoming, history } = useMemo(() => partitionLessons(lessons), [lessons]);
   // Os pedidos que esperam resposta vêm primeiro: só eles dependem do professor.
@@ -446,6 +494,11 @@ function V2CoachAgendaContent() {
         {tab === 'pacotes' && <CoachPackagesSection coachId={coachId} />}
         {tab === 'loja' && <CoachStoreSection coachId={coachId} />}
         {tab === 'conteudo' && <CoachContentSection coachId={coachId} />}
+        {tab === 'divulgacao' && marketingOn && (
+          <Suspense fallback={<V2Skeleton lines={4} />}>
+            <CoachPromoConsole coachId={coachId} coach={coach} />
+          </Suspense>
+        )}
         {tab === 'parceiros' && (
           <>
             <CoachPartnersSection coachId={coachId} />

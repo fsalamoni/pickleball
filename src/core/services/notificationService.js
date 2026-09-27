@@ -15,6 +15,7 @@
 import { collection, doc, serverTimestamp, writeBatch } from 'firebase/firestore';
 import { db } from '@/core/config/firebase';
 import { logger } from '@/core/lib/logger';
+import { linkDeAviso } from '@/core/domain/internalLink';
 
 export const NOTIFICATION_COLLECTION = 'notifications';
 
@@ -88,7 +89,9 @@ function buildPayload({ userId, title, message, type, link, actor, data }) {
     title: trimText(title, 140) || 'Nova atividade',
     message: trimText(message, 300),
     type: type || NOTIFICATION_TYPE.GENERIC,
-    link: trimText(link, 400) || null,
+    // A mesma régua da regra (`isInternalLink`): link que ela recusaria
+    // derrubaria o LOTE inteiro em silêncio. Ver core/domain/internalLink.js.
+    link: linkDeAviso(link),
     // Payload de ação opcional (ex.: confirmar dupla no próprio sino). Aditivo:
     // notificações sem `data` seguem gravando `null`, como antes.
     data: sanitizeData(data),

@@ -216,6 +216,17 @@ que pode se unificar foi unificado**. Pontos pertinentes ainda abertos:
   responsivas com thumbs.
 - ⏳ **TRV-13 (flags)** matriz de dependência entre as 124 flags; bundles por
   persona.
+- ✅ **TRV-15** tela inicial por persona (Onda CG, flag `personalized_home`):
+  papéis reais + interesses declarados decidem as seções; agenda unificada;
+  atalhos diretos; nada vencido (`home/domain/freshness.js`); falha ≠ vazio em
+  cada seção. Ver `docs/29-INICIO-PERSONALIZADO-E-DIVULGACAO.md` §1.
+- ✅ **TRV-16** cupons e campanhas da PLATAFORMA e de cada PROFESSOR (Onda CG,
+  flags `platform_marketing`/`coach_marketing`), com as ferramentas do
+  marketing da arena; desconto do professor no pedido de aula; vitrine
+  `/promocoes`; carrossel da tela inicial por região. Ver doc 29 §2.
+- ⏳ **TRV-17** (sugestão da Onda CG) artigos da central de ajuda para a
+  divulgação da plataforma e do professor — ficam para quando as flags forem
+  ligadas (a ajuda não documenta o que está atrás de flag desligada).
 
 ---
 

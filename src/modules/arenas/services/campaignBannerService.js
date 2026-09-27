@@ -38,6 +38,21 @@ function primeiroErro(errors = {}) {
 }
 
 /**
+ * O link que vai no AVISO da campanha.
+ *
+ * 🐞 Os destinos que rolam até uma seção da página da arena
+ * (`/arenas/X#arena-reservar`, `#arena-aulas`, `#arena-planos`…) têm `#`, e a
+ * regra de `notifications` recusa `#` — o lote inteiro de avisos caía em
+ * silêncio e a campanha registrava "enviada" sem ninguém receber. No aviso,
+ * esses destinos levam à PÁGINA DA CAMPANHA, que mostra o banner, a mensagem
+ * e o botão para o destino certo (o clique no banner segue indo direto).
+ */
+export function linkDoAviso(link, { arenaId, campaignId } = {}) {
+  if (typeof link === 'string' && !link.includes('#')) return link;
+  return destinationLink({ type: 'details' }, { arenaId, campaignId });
+}
+
+/**
  * Publica uma campanha: banner (na página da arena e/ou na tela inicial) e/ou
  * aviso ao público escolhido. Pelo menos um dos dois — campanha que não
  * aparece em lugar nenhum não é campanha.
@@ -107,7 +122,7 @@ export async function publishCampaign(arenaId, input = {}, recipients = [], acto
         title: nome.slice(0, 80),
         message: mensagem,
         type: NOTIFICATION_TYPE.GENERIC,
-        link,
+        link: linkDoAviso(link, { arenaId, campaignId: id }),
         actor,
       });
     } catch (err) {

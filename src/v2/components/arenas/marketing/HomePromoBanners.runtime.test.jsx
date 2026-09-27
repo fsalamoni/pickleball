@@ -25,6 +25,7 @@ import { describe, it, expect, beforeEach, afterEach, vi } from 'vitest';
 
 const estado = {
   perfil: { city: 'Porto Alegre', state: 'RS' }, cupons: [], erro: false, campanhas: [], erroCampanhas: false,
+  promos: { coupons: [], campaigns: [] }, erroPromos: false, alunoDe: [],
 };
 const ARENAS = {
   poa: { id: 'poa', name: 'Arena Sol', city: 'Porto Alegre', state: 'RS' },
@@ -46,6 +47,12 @@ vi.mock('@/modules/arenas/hooks/useCampaignBanners', () => ({
 vi.mock('@/modules/arenas/hooks/useArenaModules', () => ({
   useModuleOnInArenas: () => ({ isOnIn: () => true, isLoading: false }),
 }));
+vi.mock('@/modules/promo/hooks/usePromo', () => ({
+  useHomePromos: ({ enabled }) => ({
+    data: enabled && !estado.erroPromos ? estado.promos : undefined, isLoading: false, isError: enabled && estado.erroPromos,
+  }),
+  usePromoViewer: () => ({ uid: 'u1', coachIdsDoAluno: new Set(estado.alunoDe), falhou: false, recarregar: () => {} }),
+}));
 vi.mock('@tanstack/react-query', () => ({
   useQueries: ({ queries }) => queries.map((q) => ({ data: ARENAS[q.queryKey[q.queryKey.length - 1]], isLoading: false })),
 }));
@@ -63,6 +70,9 @@ beforeEach(() => {
   estado.erro = false;
   estado.erroCampanhas = false;
   estado.campanhas = [];
+  estado.promos = { coupons: [], campaigns: [] };
+  estado.erroPromos = false;
+  estado.alunoDe = [];
   estado.cupons = [
     cupom('sol10', 'poa', { description: 'Na primeira reserva do mês' }),
     cupom('serra20', 'cax', { value: 20 }),
@@ -76,8 +86,8 @@ afterEach(() => {
   act(() => root.unmount());
   container.remove();
 });
-const render = async () => {
-  await act(async () => { root.render(<MemoryRouter><HomePromoBanners /></MemoryRouter>); });
+const render = async (props = {}) => {
+  await act(async () => { root.render(<MemoryRouter><HomePromoBanners {...props} /></MemoryRouter>); });
 };
 const escolher = async (valor) => {
   const sel = container.querySelector('select');
@@ -235,11 +245,101 @@ describe('⭐ Onda CD — o código copiável e a arte do cupom', () => {
   });
 });
 
+const promoCupom = (id, over = {}) => ({
+  id, code: id.toUpperCase(), issuer_type: 'platform', issuer_id: 'platform', issuer_name: 'PickleRush',
+  type: 'percent', value: 10, active: true, show_public: true, show_home: true, ...over,
+});
+const promoCampanha = (id, over = {}) => ({
+  id, issuer_type: 'coach', issuer_id: 'prof', issuer_name: 'Prof. Ana', name: `Campanha ${id}`,
+  show_home: true, banner_active: true, banner_until: '2999-12-31', destination: { type: 'book_lesson' },
+  banner: { source: 'design', template_id: 'destaque', design: { layout: 'destaque', title: `Arte ${id}`, bg: '#0b0b0c', fg: '#ffffff', accent: '#d4f631' } },
+  ...over,
+});
+
+describe('⭐ Onda CG — a plataforma e os professores no carrossel', () => {
+  it('desligadas, nada muda: a divulgação nem é considerada', async () => {
+    estado.promos = { coupons: [promoCupom('open10')], campaigns: [] };
+    await render();
+    expect(container.textContent).not.toContain('OPEN10');
+    expect(container.textContent).toContain('Promoções em Porto Alegre (RS)');
+  });
+
+  it('⭐ o cupom NACIONAL da plataforma aparece, com quem divulga e o caminho', async () => {
+    estado.promos = { coupons: [promoCupom('open10')], campaigns: [] };
+    await render({ platformOn: true });
+    expect(container.querySelector('button[aria-label="Copiar o código OPEN10"]')).toBeTruthy();
+    expect(container.textContent).toContain('PickleRush');
+    const link = [...container.querySelectorAll('a')].find((a) => a.textContent.includes('Ver promoções'));
+    expect(link.getAttribute('href')).toBe('/promocoes');
+  });
+
+  it('⭐ o nacional aparece até para quem ainda não disse a cidade (com o convite a escolher)', async () => {
+    estado.perfil = {};
+    estado.promos = { coupons: [promoCupom('open10')], campaigns: [] };
+    await render({ platformOn: true });
+    expect(container.querySelector('button[aria-label="Copiar o código OPEN10"]')).toBeTruthy();
+    expect(container.textContent).toContain('Escolha a sua cidade acima');
+    expect(container.textContent).not.toContain('SOL10');
+  });
+
+  it('obedece ao alcance: o de São Paulo não aparece em Porto Alegre', async () => {
+    estado.promos = { coupons: [promoCupom('sp5', { reach: { mode: 'cidade', city: 'São Paulo', state: 'SP' } })], campaigns: [] };
+    await render({ platformOn: true });
+    expect(container.textContent).not.toContain('SP5');
+    await escolher('todas');
+    expect(container.querySelector('button[aria-label="Copiar o código SP5"]')).toBeTruthy();
+  });
+
+  it('⭐ o banner do professor "só alunos": só o aluno vê, e leva a marcar aula', async () => {
+    estado.promos = { coupons: [], campaigns: [promoCampanha('turma', { visibility: 'alunos' })] };
+    await render({ coachesOn: true });
+    expect(container.textContent).not.toContain('Arte turma');
+    estado.alunoDe = ['prof'];
+    await render({ coachesOn: true });
+    expect(container.textContent).toContain('Arte turma');
+    expect(container.querySelector('a[href="/coaches/prof?marcar=1"]')).toBeTruthy();
+    expect(container.textContent).toContain('Prof. Ana');
+  });
+
+  it('cupom de desconto do professor: "Pedir aula com este cupom"', async () => {
+    estado.promos = { coupons: [promoCupom('aula10', { issuer_type: 'coach', issuer_id: 'prof', issuer_name: 'Prof. Ana' })], campaigns: [] };
+    await render({ coachesOn: true });
+    const link = [...container.querySelectorAll('a')].find((a) => a.textContent.includes('Pedir aula com este cupom'));
+    expect(link.getAttribute('href')).toBe('/coaches/prof?marcar=1&cupom=AULA10');
+  });
+
+  it('⭐ sem a chave dos módulos de arena, só a divulgação — e as arenas nem são lidas', async () => {
+    estado.promos = { coupons: [promoCupom('open10')], campaigns: [] };
+    await render({ arenasOn: false, platformOn: true });
+    expect(container.textContent).not.toContain('SOL10');
+    expect(container.querySelector('button[aria-label="Copiar o código OPEN10"]')).toBeTruthy();
+    expect(container.textContent).not.toMatch(/das arenas/);
+  });
+
+  it('⭐ com a divulgação falhando, a região vazia NÃO afirma que não há promoção', async () => {
+    estado.erroPromos = true;
+    estado.perfil = { city: 'Pelotas', state: 'RS' };
+    await render({ platformOn: true });
+    expect(container.textContent).not.toMatch(/Nenhuma promoção|não divulgaram/);
+    expect(container.textContent).toContain('Troque a região acima');
+  });
+
+  it('só a divulgação ligada e falhando: a seção não aparece', async () => {
+    estado.erroPromos = true;
+    await render({ arenasOn: false, platformOn: true });
+    expect(container.innerHTML).toBe('');
+  });
+});
+
 describe('⭐ a tela inicial monta os banners', () => {
   it('guarda de fonte', () => {
-    const src = readFileSync('src/v2/pages/V2Dashboard.jsx', 'utf8');
-    expect(src).toMatch(/\{arenaModulesOn && <Suspense fallback=\{null\}><HomePromoBanners \/><\/Suspense>\}/);
-    // Sob demanda — a chave-mestra nasce desligada.
-    expect(src).toMatch(/const HomePromoBanners = lazy\(\(\) => import\('@\/v2\/components\/arenas\/marketing\/HomePromoBanners'\)\)/);
+    // As DUAS telas iniciais (clássica e personalizada) montam o carrossel,
+    // sob demanda, quando alguma fonte está ligada — e cada fonte com a sua flag.
+    for (const arquivo of ['src/v2/pages/V2Dashboard.jsx', 'src/v2/components/home/personal/V2PersonalHome.jsx']) {
+      const src = readFileSync(arquivo, 'utf8');
+      expect(src).toMatch(/\{\(arenaModulesOn \|\| platformMarketingOn \|\| coachMarketingOn\) && \(\s*<Suspense fallback=\{null\}>\s*<HomePromoBanners arenasOn=\{arenaModulesOn\} platformOn=\{platformMarketingOn\} coachesOn=\{coachMarketingOn\} \/>/);
+      // Sob demanda — as chaves nascem desligadas.
+      expect(src).toMatch(/const HomePromoBanners = lazy\(\(\) => import\('@\/v2\/components\/arenas\/marketing\/HomePromoBanners'\)\)/);
+    }
   });
 });

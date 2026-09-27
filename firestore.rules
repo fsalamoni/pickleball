@@ -2640,5 +2640,53 @@ service cloud.firestore {
       allow read: if isAuthed();
       allow create, update, delete: if isPlatformAdmin();
     }
+
+    // ---- Divulgação da PLATAFORMA e dos PROFESSORES (Onda CG) --------------
+    // Cupons e campanhas com as mesmas ferramentas do marketing da arena, para
+    // dois emissores novos (flags `platform_marketing` / `coach_marketing`).
+    // ADITIVO: três coleções novas, nenhuma regra existente tocada.
+    //
+    // O emissor é `issuer_type` + `issuer_id`:
+    //  - 'platform' + 'platform' → só o admin da plataforma;
+    //  - 'coach' + uid           → só o próprio professor, e só se ele TEM
+    //    perfil de professor (`coaches/{uid}` existe — é o que o impede de
+    //    virar "professor" só para divulgar).
+    // Ninguém cria em nome de outro emissor, e o emissor não muda no update
+    // (a mesma trava do cupom da arena): senão um cupom viraria promoção de
+    // outro professor sem ele saber.
+    function isPromoIssuer(type, id) {
+      return isAuthed() && (
+        (type == 'platform' && id == 'platform' && isPlatformAdmin())
+        || (type == 'coach' && id == request.auth.uid
+          && exists(/databases/$(database)/documents/coaches/$(request.auth.uid)))
+      );
+    }
+    function promoIssuerKept() {
+      return request.resource.data.issuer_type == resource.data.issuer_type
+        && request.resource.data.issuer_id == resource.data.issuer_id;
+    }
+    // Legível por conta logada (o atleta vê a promoção e confere o código),
+    // como `arena_coupons`. Por isso o CUSTO do vale não mora aqui: fica em
+    // `promo_settings`, que só o emissor lê. O admin pode pausar/apagar (moderação).
+    match /promo_coupons/{couponId} {
+      allow read: if isAuthed();
+      allow create: if isPromoIssuer(request.resource.data.issuer_type, request.resource.data.issuer_id);
+      allow update: if (isPromoIssuer(resource.data.issuer_type, resource.data.issuer_id) && promoIssuerKept())
+        || isPlatformAdmin();
+      allow delete: if isPromoIssuer(resource.data.issuer_type, resource.data.issuer_id) || isPlatformAdmin();
+    }
+    match /promo_campaigns/{campaignId} {
+      allow read: if isAuthed();
+      allow create: if isPromoIssuer(request.resource.data.issuer_type, request.resource.data.issuer_id);
+      allow update: if (isPromoIssuer(resource.data.issuer_type, resource.data.issuer_id) && promoIssuerKept())
+        || isPlatformAdmin();
+      allow delete: if isPromoIssuer(resource.data.issuer_type, resource.data.issuer_id) || isPlatformAdmin();
+    }
+    // Configurações PRIVADAS do emissor: modelos de banner e de cupom, e o
+    // custo interno de cada vale. Id = 'platform' ou o uid do professor.
+    match /promo_settings/{issuerId} {
+      allow read, write: if isPlatformAdmin()
+        || (issuerId != 'platform' && isPromoIssuer('coach', issuerId));
+    }
   }
 }

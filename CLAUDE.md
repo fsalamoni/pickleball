@@ -117,6 +117,8 @@ Estes princípios vieram de bugs reais que custaram horas pra arrumar. São ineg
 │   ├── 25-DIA-DE-JOGO-COMO-MODULO.md ⭐ o dia de jogo igual em toda origem
 │   ├── 27-FALHA-NAO-E-VAZIO.md     ⚠️ ⭐ consulta que falha vira "não existe"
 │   ├── 28-ERRO-NAO-DERRUBA-O-APP.md ⚠️ ⭐ boundary por tela, telão que se recupera
+│   ├── 29-INICIO-PERSONALIZADO-E-DIVULGACAO.md ⭐ início por pessoa + cupons/campanhas
+│   │                                     da plataforma e dos professores (Onda CG)
 │   ├── 26-TORNEIO-FORMATOS-E-REGRAS.md ⭐ grupos, classificação, chaves e o
 │   │                                     controle total do admin do torneio
 │   ├── 20-SEGURANCA-E-PRIVACIDADE/ 🔴 ⭐ PRIORIDADE MÁXIMA — segurança, LGPD,
@@ -335,6 +337,11 @@ Estes princípios vieram de bugs reais que custaram horas pra arrumar. São ineg
 **"Onde está o MERCADO (marketplace) / o FEED (rede social) / a GAMIFICAÇÃO?"** → 📐 **ainda não existem** — só o desenho, em `docs/FUTURO/00-INDEX.md`. Pastas dos módulos já estruturadas (só README) em `src/modules/{marketplace,feed,moderation}/`
 **"Cuidado: 'mercado' já significa outra coisa!"** → `arena_products`/`catalog_products` são o **PDV/loja da arena** (módulo `arenas/`). O marketplace novo usa **só** o prefixo `market_`. Ver `docs/FUTURO/MERCADO/00-INDEX.md` § Colisão de nomes
 
+**"Onde está a tela inicial personalizada? Por que ela mostra isto para mim?"** → ⭐ flag `personalized_home` (default OFF; desligada, `/` segue a clássica). `resolveHomeFoci` (`src/modules/home/domain/homeProfile.js`): o que a pessoa FAZ (gere arena, dá aula, organiza torneio) vence o que ela DISSE (`users.interests`), e a atividade traz a seção sem passar na frente. Telas em `src/v2/components/home/personal/`. ⚠️ Toda data da tela inicial passa por `home/domain/freshness.js` — **nunca** `Date.parse('2026-09-26')` (é meia-noite UTC, 21h do dia ANTERIOR no Brasil: o torneio de hoje sumiria às 21h de ontem). Seção que não é da pessoa não consulta nada (hooks com `{ enabled }`). Ver `docs/29-INICIO-PERSONALIZADO-E-DIVULGACAO.md` §1
+**"Vou criar cupom ou campanha da PLATAFORMA ou de um PROFESSOR"** → ⭐ módulo `src/modules/promo/` + telas em `src/v2/components/promo/` (flags `platform_marketing` / `coach_marketing`, default OFF). **Nunca copie** os componentes do marketing da arena: `CouponArtEditor` e `BannerDesigner` aceitam `templates` (a fonte dos "meus modelos"), `brand` e `uploadFolder` — sem eles, é a arena, como sempre. Coleções `promo_coupons` / `promo_campaigns` (legíveis por conta logada; escrita só do EMISSOR, que não muda no update) e `promo_settings/{platform|uid}` (privada: custo dos vales e modelos). O desconto do professor entra no **pedido de aula** e é aplicado na CONFIRMAÇÃO (`resolveLessonCoupon`), conferido contra o banco. ⚠️ O domínio de aulas importa `promo/domain/lessonCoupon.js` (leve), **nunca** `promo.js` (puxa o marketing inteiro das arenas para toda tela que mostra uma aula). Ver `src/modules/promo/README.md` e `docs/29-INICIO-PERSONALIZADO-E-DIVULGACAO.md` §2
+**"Vou mandar um link num AVISO (notifications)"** → passe por `linkDeAviso` (`src/core/domain/internalLink.js`, já aplicado em `notificationService.buildPayload`). 🐞 A regra de `notifications` recusa `#`, e `notifyUsers` grava em lotes de 400: UM link com âncora derrubava o lote inteiro em silêncio — era o caso das campanhas das ARENAS com destino `/arenas/X#arena-reservar` ("enviada" sem ninguém receber). Destino com âncora ⇒ o aviso leva à página da campanha. `isRuleSafeLink` tem teste de paridade contra o padrão da regra
+**"O perfil do professor precisa rolar até uma seção pelo link"** → âncoras `#professor-promocoes`, `#professor-agenda`, `#professor-loja`, `#professor-clinicas`, `#professor-conteudo` + `useHashScroll` (`src/v2/ui/useHashScroll.js`), que espera a seção aparecer (ela depende de consulta) e rola UMA vez. `?marcar=1` (e `&cupom=`) abre o pedido de aula. O painel do professor lê `?aba=`/`?secao=` (`coachTabFromUrl`)
+
 **Para encontrar QUALQUER arquivo rápido:**
 ```bash
 # por nome
@@ -505,12 +512,46 @@ chore(deps): bump firebase to 12.x
 
 ## 10. Métricas atuais (snapshot 2026-08-31, 11:05 GMT-3)
 
-> Última atualização: 2026-09-20 (Onda AT). Antes: 2026-08-31, após **41 PRs
+> Última atualização: 2026-09-26 (Onda CG). Antes: 2026-09-20 (Onda AT); 2026-08-31, após **41 PRs
 > novos** mergeados em main (#95 a #135) — Sprints 32 a 50+.
 > Detalhes em `docs/08-ARENA-ROADMAP.md` (Seções 34-50) e
 > memory topic `picklerush-sync-2026-08.md`.
 >
 > **Destaques por onda**:
+>
+> - **Onda CG — O início por pessoa, e a plataforma e os professores divulgando**
+>   (2026-09-26): *"melhorar a página início, para que seja personalizada por
+>   tipo de usuário… itens atualizados… nunca itens antigos"* e *"campanhas e
+>   cupons da plataforma e de professores… com as mesmas funcionalidades,
+>   detalhes e configuração que existem para campanhas e cupons de arena"*.
+>   **(1) `personalized_home`**: a tela inicial montada por pessoa — o que ela
+>   FAZ (gere arena, dá aula, organiza torneio) vence o que ela DISSE
+>   (interesses), e a atividade traz a seção. Agenda unificada de todas as
+>   fontes, atalhos diretos (a Central com os pedidos no selo,
+>   `/dia-de-jogo?criar=1`), último resultado, ranking e duplas, horários
+>   livres da "arena de sempre", e **nada vencido** (`freshness.js`: data sem
+>   hora é dia LOCAL). "Personalizar" muda os interesses ali mesmo. De
+>   quebra, a tela CLÁSSICA parou de destacar torneio encerrado e de listar
+>   como aberto o que tem o prazo vencido. **(2) `platform_marketing` e
+>   `coach_marketing`**: cupons e campanhas da PLATAFORMA (Painel admin →
+>   Plataforma → Divulgação) e de CADA PROFESSOR (Painel do professor →
+>   Divulgação), com os MESMOS componentes da arena — tíquete, cinco modelos,
+>   imagem enviada, banner, destino de lista fechada, público contado antes,
+>   pausa, página da campanha, controle de uso. Cada emissor com os seus tipos,
+>   destinos e públicos (a plataforma fala com todos, um interesse, um estado,
+>   uma cidade ou os professores; o professor, com os alunos), alcance na tela
+>   inicial (Brasil/estado/cidade — o nacional aparece até para quem não disse
+>   a cidade) e "só para os meus alunos". O desconto do professor entra no
+>   **pedido de aula** e é aplicado na confirmação, conferido contra o banco
+>   (recusado com o motivo, a aula segue). Vitrine `/promocoes`, página
+>   `/campanhas/:id`, seção Promoções no perfil do professor (com "Usar ao
+>   pedir a aula") e o carrossel da tela inicial. **🐞 E o aviso das campanhas
+>   das ARENAS caía inteiro**: destino com `#` é recusado pela regra de
+>   `notifications`, e o lote de 400 ia junto — a campanha dizia "enviada".
+>   Agora `linkDeAviso`, com paridade contra a regra. **Banco**: três coleções
+>   novas (`promo_coupons`, `promo_campaigns`, `promo_settings`) e um campo
+>   opcional (`coach_lessons.coupon`); zero índice; regras aditivas com 23
+>   asserções no emulador. Ver `docs/29-INICIO-PERSONALIZADO-E-DIVULGACAO.md`.
 >
 > - **Onda CF — Jogo simples ou em duplas, e um ranking do dia por tipo**
 >   (2026-09-26): *"em todas as modalidades que restam, devem ser possível
@@ -2191,14 +2232,14 @@ chore(deps): bump firebase to 12.x
 
 | Métrica | Valor | Delta do início do agente |
 |---|---|---|
-| **Testes Vitest** | **6061 passing** (371 arquivos) + 393 asserções de regras do Firestore no emulador (+ 17 do Storage) | +5653 (era 408) |
+| **Testes Vitest** | **6266 passing** (383 arquivos) + 431 asserções de regras no emulador (Firestore + Storage) | +5858 (era 408) |
 | **Lint errors** | 0 | era 30+ |
-| **Módulos** | 21 (+`help` — conteúdo dos tutoriais em tela) (`games` e `legal` saíram como `src/modules/` mas continuam como pastas oficiais — **rating virou módulo oficial** com domain/services/hooks/components) | +4 (coaches, circuits, games, legal) |
-| **V2 pages** | 82 (+V2GameDayTelao — telão, fora do V2Layout; +V2Help — central de ajuda; +V2ArenaKiosk — totem da recepção, também fora do V2Layout; +V2ArenaCheckin; +V2ArenaAttendance) | +58 |
+| **Módulos** | 23 (+`home` — a tela inicial personalizada; +`promo` — cupons e campanhas da plataforma e dos professores; +`help` — conteúdo dos tutoriais em tela) (`games` e `legal` saíram como `src/modules/` mas continuam como pastas oficiais — **rating virou módulo oficial** com domain/services/hooks/components) | +4 (coaches, circuits, games, legal) |
+| **V2 pages** | 84 (+V2Promotions e +V2PromoCampaign — Onda CG; +V2GameDayTelao — telão, fora do V2Layout; +V2Help — central de ajuda; +V2ArenaKiosk — totem da recepção, também fora do V2Layout; +V2ArenaCheckin; +V2ArenaAttendance) | +58 |
 | **V2 components (src/v2/components/)** | **16 pastas** (+home, +rating, +settings, +tournament cresceu muito, +admin) | — |
-| **Coleções Firestore** | **122 top-level em `firestore.rules`** (+`doubles_rankings`) (as 13 da gamificação V2 documentadas em `05-DATA-MODEL.md`) — a Onda AS não criou nenhuma | +82 |
+| **Coleções Firestore** | **125 top-level em `firestore.rules`** (+`promo_coupons`, `promo_campaigns`, `promo_settings` — Onda CG; +`doubles_rankings`) (as 13 da gamificação V2 documentadas em `05-DATA-MODEL.md`) — a Onda AS não criou nenhuma | +82 |
 | **Índices compostos Firestore** | **33 em `firestore.indexes.json`** (+`provisional_claims`) (+4 da gamificação V2) | +28 |
-| **Feature flags ativas** | **22 default OFF** (+`gameday_mexicano` e `gameday_king_of_court` — os formatos opcionais do dia de jogo, Onda CE; +`arena_modules` — a chave-mestra dos módulos adicionais de arena; 137 viraram código) | −110 |
+| **Feature flags ativas** | **25 default OFF** (+`personalized_home`, `platform_marketing` e `coach_marketing` — Onda CG; +`gameday_mexicano` e `gameday_king_of_court` — os formatos opcionais do dia de jogo, Onda CE; +`arena_modules` — a chave-mestra dos módulos adicionais de arena; 137 viraram código) | −110 |
 | **Cloud Functions** | **23 exportações** (+ `catchUpPlatformRankings` — recupera o ranking quando um gatilho se perdeu com as funções fora do ar; + `promoteOpenSlotWaitlistOnSlot` / `OnEntry` — a fila de espera do jogo aberto anda na hora; + `adminDeleteAccounts` — exclusão de cadastro pelo dono, com prévia; + `recomputeRankingOnTournamentRegistration` — a inscrição também move o ranking) | +15 |
 | **PRs mergeados** | **96 totais** (Sprints 0-50+) | — |
 | **Origin/main** | `106bd55` (PR #110) | — |

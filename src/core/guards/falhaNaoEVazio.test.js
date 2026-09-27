@@ -427,3 +427,29 @@ describe('⭐ a varredura na arena, no professor e nas reservas', () => {
     }
   });
 });
+
+/**
+ * A TELA INICIAL (Onda CG) — a vitrine mais vista da plataforma.
+ *
+ * Ela ficava fora das duas varreduras (o caminho não casa com nenhum dos
+ * filtros), e por isso afirmava "Nenhum torneio com inscrição aberta" e "Você
+ * não tem jogos marcados" com a consulta falhando. Na tela inicial o custo é a
+ * confiança: quem lê "nenhum torneio" não volta para conferir.
+ *
+ * O escopo inclui a tela inicial de sempre, a personalizada e as peças de
+ * divulgação da plataforma e dos professores.
+ */
+describe('⭐ a varredura na tela inicial e na divulgação', () => {
+  const NA_HOME = /(src\/v2\/components\/home\/|src\/v2\/pages\/V2Dashboard\.jsx|src\/v2\/components\/promo\/)/;
+
+  it('⭐ nenhuma peça da tela inicial afirma vazio sem tratar falha', () => {
+    const arquivos = varrer('src/v2', (c) => (
+      c.endsWith('.jsx') && !/\.test\.jsx$/.test(c) && !/\.runtime\./.test(c) && NA_HOME.test(c)
+    ));
+    expect(arquivos.length, 'a varredura não encontrou arquivo nenhum — o filtro quebrou')
+      .toBeGreaterThan(10);
+    const mentem = telasQueMentemNoVazio(arquivos);
+    expect(mentem, `estas telas afirmam que algo não existe sem saber se a consulta FALHOU:\n  ${mentem.join('\n  ')}`)
+      .toEqual([]);
+  });
+});

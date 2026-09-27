@@ -24,7 +24,7 @@
  * uma substituição.
  */
 
-import React, { useEffect, useMemo, useState } from 'react';
+import React, { Suspense, lazy, useEffect, useMemo, useState } from 'react';
 import { Link, Navigate } from 'react-router-dom';
 import {
   Activity,
@@ -56,6 +56,7 @@ import {
   Check,
   X,
   KeyRound,
+  Megaphone,
 } from 'lucide-react';
 import { toast } from 'sonner';
 import {
@@ -98,6 +99,9 @@ import AdminAccessTab from '@/v2/components/admin/AdminAccessTab';
 import AdminUserRecordsTab from '@/v2/components/admin/AdminUserRecordsTab';
 import AdminDuprExportTab from '@/v2/components/admin/AdminDuprExportTab';
 import AdminArenaModulesTab from '@/v2/components/admin/AdminArenaModulesTab';
+
+// Sob demanda: só com a flag `platform_marketing`, e só quando a aba abre.
+const PlatformPromoConsole = lazy(() => import('@/v2/components/promo/PlatformPromoConsole'));
 import {
   useAffiliateLinks,
   useCreateAffiliateLink,
@@ -158,8 +162,17 @@ const SECTIONS = Object.freeze([
  * `dupr_match_export` está ligada. Mantém `SECTIONS` intacto (base) e devolve
  * uma cópia aditiva — nada muda quando a flag está desligada.
  */
-function buildSections(duprExportOn, arenaModulesOn) {
+function buildSections(duprExportOn, arenaModulesOn, platformMarketingOn = false) {
   let out = SECTIONS;
+  // Cupons e campanhas DA PLATAFORMA (Onda CG): moram em Plataforma, ao lado
+  // do branding e do conteúdo — é a voz da plataforma falando com todos.
+  if (platformMarketingOn) {
+    out = out.map((section) => (
+      section.id === 'platform'
+        ? { ...section, tabs: [...section.tabs, { id: 'promo', label: 'Divulgação', icon: Megaphone }] }
+        : section
+    ));
+  }
   if (duprExportOn) {
     out = out.map((section) => (
       section.id === 'governance'
@@ -203,13 +216,14 @@ export default function V2AdminConsole() {
   const enabled = true;
   const duprExportOn = useFeatureFlag(FEATURE_FLAG.DUPR_MATCH_EXPORT);
   const arenaModulesOn = useFeatureFlag(FEATURE_FLAG.ARENA_MODULES);
+  const platformMarketingOn = useFeatureFlag(FEATURE_FLAG.PLATFORM_MARKETING);
   const [searchParams, setSearchParams] = useSearchParams();
   const navigate = useNavigate();
 
   // Seções/abas dinâmicas: a aba de exportação DUPR só existe com a flag on.
   const sections = useMemo(
-    () => buildSections(duprExportOn, arenaModulesOn),
-    [duprExportOn, arenaModulesOn],
+    () => buildSections(duprExportOn, arenaModulesOn, platformMarketingOn),
+    [duprExportOn, arenaModulesOn, platformMarketingOn],
   );
   const allTabs = useMemo(() => sections.flatMap((s) => s.tabs), [sections]);
 
@@ -261,6 +275,11 @@ export default function V2AdminConsole() {
         {tab === 'tools'      && <ToolsTab navigate={navigate} />}
         {tab === 'dupr'       && duprExportOn && <AdminDuprExportTab />}
         {tab === 'arena-modules' && arenaModulesOn && <AdminArenaModulesTab />}
+        {tab === 'promo' && platformMarketingOn && (
+          <Suspense fallback={<V2Skeleton className="h-40 rounded-3xl" />}>
+            <PlatformPromoConsole />
+          </Suspense>
+        )}
       </div>
     </div>
   );
