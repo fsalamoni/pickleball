@@ -180,7 +180,7 @@ export default function PromoCampaignForm({ issuer, campaign = null, onClose }) 
       : null,
     `Leva a: ${PROMO_DESTINATION_META[vDestino.value.type].label}${vDestino.value.target_label ? ` (${vDestino.value.target_label})` : ''}.`,
     ehProfessor && banner && f.visibility === PROMO_VISIBILITY.STUDENTS ? 'O banner aparece só para os seus alunos.' : null,
-    !editando && f.notify ? `Aviso no aplicativo para ${pessoas(destinatarios.length)} — não dá para cancelar depois.` : null,
+    !editando && f.notify ? `Aviso no aplicativo para ${pessoas(destinatarios.length)} — não dá para cancelar depois. Mantenha esta tela aberta até terminar de enviar.` : null,
   ].filter(Boolean);
 
   const enviar = async () => {
@@ -193,7 +193,7 @@ export default function PromoCampaignForm({ issuer, campaign = null, onClose }) 
         await editar.mutateAsync({ campaignId: campaign.id, patch: { banner, destination: f.destination, ...lugar } });
         toast.success('Banner atualizado.');
       } else {
-        const { sent } = await publicar.mutateAsync({
+        const { sent, recipients } = await publicar.mutateAsync({
           issuer,
           input: {
             name: f.name, message: f.message, audience: f.audience, audience_detail: f.detail,
@@ -201,7 +201,12 @@ export default function PromoCampaignForm({ issuer, campaign = null, onClose }) 
           },
           recipients: f.notify ? destinatarios : [],
         });
-        toast.success(f.notify ? `Campanha publicada. Aviso enviado para ${pessoas(sent)}.` : 'Campanha publicada.');
+        if (!f.notify) toast.success('Campanha publicada.');
+        else if (Number(recipients) > 0 && Number(sent) < Number(recipients)) {
+          // Parte dos avisos não foi gravada (conexão): a campanha diz isso, em
+          // vez de "enviado para todos".
+          toast.warning(`Campanha publicada, mas o aviso só foi confirmado para ${sent} de ${pessoas(Number(recipients))}. Confira a conexão.`);
+        } else toast.success(`Campanha publicada. Aviso enviado para ${pessoas(sent)}.`);
       }
       setConfirmar(false);
       onClose?.();

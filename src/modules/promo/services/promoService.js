@@ -304,40 +304,44 @@ export async function registrarUsoDePromo(couponId, userId) {
 /*  Vitrines (tela inicial, perfil do professor, promoções)           */
 /* ------------------------------------------------------------------ */
 
-/** Os cupons marcados para a TELA INICIAL (de todos os emissores). */
-export async function listHomePromoCoupons({ lim = 60 } = {}) {
+/**
+ * O teto de leituras das vitrines. NÃO é filtro: a consulta não ordena
+ * (ordenar exigiria índice composto) e o cupom vencido continua `active` até
+ * o emissor desligá-lo — com um corte baixo, um vencido podia ocupar a vaga
+ * de um que está no ar, sem erro nenhum. 300 fica muito acima do volume real
+ * de plataforma + professores; se a vitrine chegar ao teto, o log avisa, e o
+ * caminho é um índice com o prazo (docs/29 §2).
+ */
+export const VITRINE_LIMITE = 300;
+
+async function vitrine(colecao, campoLugar, campoLigado, lim) {
   if (!db) return [];
   const snap = await getDocs(query(
-    collection(db, COL_COUPONS), where('show_home', '==', true), where('active', '==', true), limit(lim),
+    collection(db, colecao), where(campoLugar, '==', true), where(campoLigado, '==', true), limit(lim),
   ));
-  return lista(snap);
+  const docs = lista(snap);
+  if (docs.length >= lim) logger.warn('Vitrine de divulgação no teto de leituras', { colecao, campoLugar, lim });
+  return docs;
+}
+
+/** Os cupons marcados para a TELA INICIAL (de todos os emissores). */
+export async function listHomePromoCoupons({ lim = VITRINE_LIMITE } = {}) {
+  return vitrine(COL_COUPONS, 'show_home', 'active', lim);
 }
 
 /** Os banners de campanha da TELA INICIAL (de todos os emissores). */
-export async function listHomePromoCampaigns({ lim = 40 } = {}) {
-  if (!db) return [];
-  const snap = await getDocs(query(
-    collection(db, COL_CAMPAIGNS), where('show_home', '==', true), where('banner_active', '==', true), limit(lim),
-  ));
-  return lista(snap);
+export async function listHomePromoCampaigns({ lim = VITRINE_LIMITE } = {}) {
+  return vitrine(COL_CAMPAIGNS, 'show_home', 'banner_active', lim);
 }
 
 /** Os cupons DIVULGADOS (vitrine de promoções), de todos os emissores. */
-export async function listPublicPromoCoupons({ lim = 80 } = {}) {
-  if (!db) return [];
-  const snap = await getDocs(query(
-    collection(db, COL_COUPONS), where('show_public', '==', true), where('active', '==', true), limit(lim),
-  ));
-  return lista(snap);
+export async function listPublicPromoCoupons({ lim = VITRINE_LIMITE } = {}) {
+  return vitrine(COL_COUPONS, 'show_public', 'active', lim);
 }
 
 /** Os banners de campanha das PÁGINAS (vitrine / perfil), de todos os emissores. */
-export async function listPagePromoCampaigns({ lim = 60 } = {}) {
-  if (!db) return [];
-  const snap = await getDocs(query(
-    collection(db, COL_CAMPAIGNS), where('show_on_page', '==', true), where('banner_active', '==', true), limit(lim),
-  ));
-  return lista(snap);
+export async function listPagePromoCampaigns({ lim = VITRINE_LIMITE } = {}) {
+  return vitrine(COL_CAMPAIGNS, 'show_on_page', 'banner_active', lim);
 }
 
 /** Os cupons divulgados e os banners de UM professor (o perfil dele). */
@@ -436,7 +440,11 @@ export async function publishPromoCampaign(issuer, input = {}, recipients = [], 
     target_audience: avisar ? str(input.audience).slice(0, 60) : '',
     audience_detail: avisar ? detalhe : null,
     status: CAMPAIGN_STATUS.SENT,
-    sent_count: destinatarios.length,
+    // O público pedido e o que foi CONFIRMADO: começa em 0 e só sobe quando os
+    // avisos são gravados. Se a aba fechar no meio, a campanha não afirma que
+    // chegou a todos.
+    recipients_count: destinatarios.length,
+    sent_count: 0,
     sent_at: serverTimestamp(),
     destination: destino.value,
     reach: alcance.value,
@@ -454,19 +462,25 @@ export async function publishPromoCampaign(issuer, input = {}, recipients = [], 
     updated_at: serverTimestamp(),
   });
 
+  let entregues = 0;
   if (avisar) {
     // A entrega não derruba o registro: se parte dos avisos falhar, a
     // campanha continua gravada e o emissor vê quantos foram.
     try {
-      await notifyUsers(destinatarios, {
+      entregues = Number(await notifyUsers(destinatarios, {
         title: nome.slice(0, 80),
         message: mensagem,
         type: NOTIFICATION_TYPE.GENERIC,
         link: promoNoticeLink(destino.value, ctxLink),
         actor,
-      });
+      })) || 0;
     } catch (err) {
       logger.info('Falha ao entregar parte da campanha', { err: err?.code });
+    }
+    try {
+      await updateDoc(doc(db, COL_CAMPAIGNS, id), { sent_count: entregues, updated_at: serverTimestamp() });
+    } catch (err) {
+      logger.info('Contagem de envio da campanha não gravada', { err: err?.code });
     }
   }
 
@@ -478,11 +492,12 @@ export async function publishPromoCampaign(issuer, input = {}, recipients = [], 
       campaign_id: id,
       audience: avisar ? input.audience : null,
       count: destinatarios.length,
+      delivered: entregues,
       banner: banner.value ? banner.value.source : null,
       destination: destino.value.type,
     },
   });
-  return { id, sent: destinatarios.length, link };
+  return { id, sent: entregues, recipients: destinatarios.length, link };
 }
 
 /**

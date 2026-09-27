@@ -14,8 +14,11 @@
  * recusa:
  *
  *  1. link que a regra aceita → segue igual;
- *  2. link com `#` (ou outra sobra) → vai SEM o fragmento: a página certa abre,
- *     só não rola até a seção;
+ *  2. link com `#secao` → a âncora vira PARÂMETRO (`?ancora=secao`), que a
+ *     regra aceita; ao abrir, o layout devolve o `#secao` à URL
+ *     (`hashDaAncora`) e a página rola como sempre rolou. Âncora estranha
+ *     (fora de letras, números, `-` e `_`) só é descartada: a página certa
+ *     abre, sem rolar;
  *  3. nada disso serve → o aviso vai sem link. Um aviso sem link ainda é
  *     lido; um lote recusado não chega a ninguém.
  *
@@ -47,7 +50,40 @@ export function linkDeAviso(link) {
   const t = link.trim();
   if (!t) return null;
   if (isRuleSafeLink(t)) return t;
-  const semFragmento = t.split('#')[0];
-  if (semFragmento && isRuleSafeLink(semFragmento)) return semFragmento;
-  return null;
+  const i = t.indexOf('#');
+  const caminho = i >= 0 ? t.slice(0, i) : t;
+  if (!caminho || !isRuleSafeLink(caminho)) return null;
+  const ancora = i >= 0 ? t.slice(i + 1) : '';
+  if (ANCORA_VALIDA.test(ancora)) {
+    const comAncora = `${caminho}${caminho.includes('?') ? '&' : '?'}${ANCORA_PARAM}=${ancora}`;
+    if (isRuleSafeLink(comAncora)) return comAncora;
+  }
+  return caminho;
+}
+
+/** O parâmetro que leva a âncora de um aviso (a regra não aceita `#`). */
+export const ANCORA_PARAM = 'ancora';
+
+/** Âncora que atravessa: os ids das seções (`arena-planos`, `professor-clinicas`). */
+const ANCORA_VALIDA = /^[A-Za-z][A-Za-z0-9_-]{0,79}$/;
+
+/**
+ * O caminho de volta: a URL aberta a partir de um aviso traz `?ancora=secao`;
+ * isto devolve a URL com o `#secao` no lugar do parâmetro — ou `null` quando
+ * não há o que trocar. Quem aplica é o layout (`useAncoraDoAviso`).
+ *
+ * @param {{ pathname: string, search: string }} local
+ * @returns {{ pathname: string, search: string, hash: string }|null}
+ */
+export function hashDaAncora({ pathname, search } = {}) {
+  const params = new URLSearchParams(search || '');
+  const ancora = params.get(ANCORA_PARAM);
+  if (ancora == null) return null;
+  params.delete(ANCORA_PARAM);
+  const resto = params.toString();
+  return {
+    pathname: pathname || '/',
+    search: resto ? `?${resto}` : '',
+    hash: ANCORA_VALIDA.test(ancora) ? `#${ancora}` : '',
+  };
 }

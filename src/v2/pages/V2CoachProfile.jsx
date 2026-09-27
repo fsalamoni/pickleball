@@ -86,15 +86,24 @@ export default function V2CoachProfile() {
 
   // `?marcar=1` (o banner "Marcar aula") abre o pedido — uma vez, e sai da URL
   // para voltar/recarregar não reabrir. `?cupom=` chega junto, se houver.
+  // 🐞 Com o professor sem aceitar alunos, o link não fazia NADA: a pessoa
+  // tocava no banner e caía no perfil sem saber por que o pedido não abriu.
+  // Agora a tela diz — e guarda o código, que segue valendo.
+  const [semVagas, setSemVagas] = useState(null);
   useEffect(() => {
-    if (params.get('marcar') !== '1' || !canRequestLesson) return;
-    setCupomDoPedido(params.get('cupom') || '');
-    setRequesting(true);
+    if (params.get('marcar') !== '1' || !coach) return;
+    const codigo = params.get('cupom') || '';
+    if (canRequestLesson) {
+      setCupomDoPedido(codigo);
+      setRequesting(true);
+    } else if (!isOwn) {
+      setSemVagas({ cupom: codigo });
+    }
     const next = new URLSearchParams(params);
     next.delete('marcar');
     next.delete('cupom');
     setParams(next, { replace: true });
-  }, [params, setParams, canRequestLesson]);
+  }, [params, setParams, canRequestLesson, coach, isOwn]);
 
   if (!isAuthenticated) return <Navigate to="/login" replace />;
   if (isLoading) return <div className="p-4"><V2Skeleton lines={6} /></div>;
@@ -121,6 +130,20 @@ export default function V2CoachProfile() {
       <Link to="/coaches" className="inline-flex items-center gap-1 text-sm font-bold text-gray-500 hover:text-ink">
         <ArrowLeft className="h-4 w-4" /> Professores
       </Link>
+
+      {semVagas && (
+        <div role="status" className="flex items-start justify-between gap-3 rounded-2xl border border-amber-200 bg-amber-50 px-4 py-3 text-sm text-amber-900">
+          <p>
+            <strong>{coach.display_name || 'Este professor'} não está aceitando alunos novos agora</strong>, então o pedido de aula não abre.
+            {semVagas.cupom && <> Guarde o código <strong>{semVagas.cupom}</strong>: ele segue valendo enquanto a promoção estiver no ar.</>}
+            {coach.contact_whatsapp && ' Se quiser, fale com ele pelo WhatsApp logo abaixo.'}
+          </p>
+          <button type="button" onClick={() => setSemVagas(null)}
+            className="shrink-0 text-xs font-bold text-amber-900 underline">
+            Entendi
+          </button>
+        </div>
+      )}
 
       {/* Header */}
       <V2Surface>

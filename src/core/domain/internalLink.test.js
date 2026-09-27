@@ -1,6 +1,6 @@
 import { describe, it, expect } from 'vitest';
 import { readFileSync } from 'node:fs';
-import { INTERNAL_LINK_PATTERN, isRuleSafeLink, linkDeAviso } from './internalLink.js';
+import { INTERNAL_LINK_PATTERN, hashDaAncora, isRuleSafeLink, linkDeAviso } from './internalLink.js';
 
 describe('linkDeAviso — o aviso pede só o que a regra aceita', () => {
   it('caminho interno comum segue igual', () => {
@@ -9,10 +9,33 @@ describe('linkDeAviso — o aviso pede só o que a regra aceita', () => {
     expect(linkDeAviso('/')).toBe('/');
   });
 
-  it('🐞 link com # perde só o fragmento (antes derrubava o lote inteiro)', () => {
+  it('🐞 link com # não derruba mais o lote: a âncora vira ?ancora= (que a regra aceita)', () => {
     expect(isRuleSafeLink('/arenas/abc#arena-reservar')).toBe(false);
-    expect(linkDeAviso('/arenas/abc#arena-reservar')).toBe('/arenas/abc');
-    expect(linkDeAviso('/coaches/u1#professor-clinicas')).toBe('/coaches/u1');
+    expect(linkDeAviso('/arenas/abc#arena-reservar')).toBe('/arenas/abc?ancora=arena-reservar');
+    expect(linkDeAviso('/coaches/u1#professor-clinicas')).toBe('/coaches/u1?ancora=professor-clinicas');
+    expect(linkDeAviso('/arenas/abc?aba=planos#arena-planos')).toBe('/arenas/abc?aba=planos&ancora=arena-planos');
+    for (const l of ['/arenas/abc#arena-reservar', '/arenas/abc?aba=planos#arena-planos']) {
+      expect(isRuleSafeLink(linkDeAviso(l))).toBe(true);
+    }
+  });
+
+  it('âncora estranha é descartada — a página certa abre, sem rolar', () => {
+    expect(linkDeAviso('/arenas/abc#<script>')).toBe('/arenas/abc');
+    expect(linkDeAviso('/arenas/abc#')).toBe('/arenas/abc');
+    expect(linkDeAviso('/arenas/abc#a b')).toBe('/arenas/abc');
+  });
+
+  it('⭐ o caminho de volta: ?ancora=secao vira #secao, sem perder os outros parâmetros', () => {
+    expect(hashDaAncora({ pathname: '/arenas/abc', search: '?ancora=arena-planos' }))
+      .toEqual({ pathname: '/arenas/abc', search: '', hash: '#arena-planos' });
+    expect(hashDaAncora({ pathname: '/arenas/abc', search: '?aba=planos&ancora=arena-planos' }))
+      .toEqual({ pathname: '/arenas/abc', search: '?aba=planos', hash: '#arena-planos' });
+    expect(hashDaAncora({ pathname: '/x', search: '?aba=1' })).toBeNull();
+    expect(hashDaAncora({ pathname: '/x', search: '?ancora=%3Cb%3E' })).toEqual({ pathname: '/x', search: '', hash: '' });
+    // Ida e volta.
+    const ida = linkDeAviso('/coaches/u1#professor-clinicas');
+    const [pathname, query] = ida.split('?');
+    expect(hashDaAncora({ pathname, search: `?${query}` }).hash).toBe('#professor-clinicas');
   });
 
   it('nada que saia do domínio passa', () => {

@@ -59,6 +59,7 @@ import { useFeatureFlag } from '@/core/lib/FeatureFlagsContext';
 // De `helpLink` e não de `helpCenter`: o layout está em toda tela, e importar
 // do arquivo do conteúdo traria os 33 artigos da ajuda no chunk de todo mundo.
 import { helpLinkFor } from '@/modules/help/domain/helpLink';
+import { useAncoraDoAviso } from '@/v2/ui/useAncoraDoAviso';
 import LegalConsentGate from '@/v2/components/legal/LegalConsentGate';
 import { useMyConsents } from '@/modules/legal/hooks/useConsents';
 import { pendingGateConsents } from '@/modules/legal/domain/consent';
@@ -564,6 +565,8 @@ export default function V2Layout({ children }) {
   // docs/18-RANKINGS.md §8.
   const location = useLocation();
   const navigate = useNavigate();
+  // Aviso com `?ancora=secao` → `#secao` (a regra de avisos não aceita `#`).
+  useAncoraDoAviso();
   const { sections, hubs } = useV2Nav();
   const mainRef = useRef(null);
   const [mobileOpen, setMobileOpen] = useState(false);

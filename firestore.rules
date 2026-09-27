@@ -2092,9 +2092,32 @@ service cloud.firestore {
       );
     }
     // coach_lessons/{lessonId} — aula (avulsa/recorrente).
-    // Lê o professor e o aluno vinculado (e admin). Cria o professor, o aluno
-    // (student_id == uid) ou admin. Atualiza/exclui o professor ou o aluno
-    // vinculado (a UI/serviço restringe o aluno a cancelar).
+    // Lê o professor e o aluno vinculado (e admin). O PROFESSOR (e o admin)
+    // escreve a aula inteira. O ALUNO — quem é só `student_id` — PEDE e
+    // CANCELA, e nada além (Onda CG, revisão):
+    //  - pede: a aula nasce SOLICITADA, sem preço, e o cupom só PENDENTE —
+    //    aplicado/recusado, desconto e preço são decisão do professor, na
+    //    confirmação, conferidos contra o banco;
+    //  - cancela: só o status vira `cancelled` (e `updated_at`).
+    // 🐞 Antes o aluno escrevia qualquer campo: criava a aula já confirmada e
+    // podia gravar um cupom "aplicado" com o desconto que quisesse — a agenda
+    // do professor mostraria o preço forjado. Nenhuma tela faz isso; a regra
+    // passa a dizer o mesmo que o serviço (`respondLesson`) sempre disse.
+    function isLessonStudentRequest() {
+      let d = request.resource.data;
+      return d.get('status', '') == 'requested'
+        && d.get('price', null) == null
+        && (!('coupon' in d) || d.coupon == null || (
+          d.coupon is map
+          && d.coupon.keys().hasOnly(['coupon_id', 'code', 'benefit', 'kind', 'status'])
+          && d.coupon.get('status', '') == 'pending'
+        ));
+    }
+    function isLessonStudentCancel() {
+      return request.resource.data.diff(resource.data).affectedKeys().hasOnly(['status', 'updated_at'])
+        && request.resource.data.status == 'cancelled'
+        && resource.data.get('status', '') in ['requested', 'negotiating', 'confirmed'];
+    }
     match /coach_lessons/{lessonId} {
       allow read: if isAuthed() && (
         request.auth.uid == resource.data.coach_id ||
@@ -2103,13 +2126,16 @@ service cloud.firestore {
       );
       allow create: if isAuthed() && (
         request.auth.uid == request.resource.data.coach_id ||
-        request.auth.uid == request.resource.data.student_id ||
-        isPlatformAdmin()
+        isPlatformAdmin() ||
+        (request.auth.uid == request.resource.data.student_id && isLessonStudentRequest())
       );
-      allow update, delete: if isAuthed() && (
+      allow update: if isAuthed() && (
         request.auth.uid == resource.data.coach_id ||
-        request.auth.uid == resource.data.student_id ||
-        isPlatformAdmin()
+        isPlatformAdmin() ||
+        (request.auth.uid == resource.data.student_id && isLessonStudentCancel())
+      );
+      allow delete: if isAuthed() && (
+        request.auth.uid == resource.data.coach_id || isPlatformAdmin()
       );
     }
     // coach_students/{coachId_studentId} — vínculo aluno↔professor.

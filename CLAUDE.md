@@ -320,7 +320,7 @@ Estes princípios vieram de bugs reais que custaram horas pra arrumar. São ineg
 **"Onde está o MANUAL da plataforma?"** → `/ajuda` (flag `help_center`, default OFF): 43 artigos em 5 partes — Começar aqui, **Atleta**, **Arena**, **Professor**, Conta e privacidade. Conteúdo em `src/modules/help/domain/helpCenter.js`, página em `src/v2/pages/V2Help.jsx`. Acesso em três pontos de TODA tela (barra lateral, menu do usuário, gaveta do celular), fora dos hubs de propósito. Link direto por `?s=<seção>&a=<artigo>`. **Nada no Firestore** (só a parte preferida, no localStorage por usuário). Ver `docs/21-CENTRAL-DE-AJUDA.md`
 **"Vou colocar um link de ajuda numa tela"** → use `helpLinkFor(location.pathname)`, importado de **`modules/help/domain/helpLink`** (NUNCA de `helpCenter`: aquele arquivo carrega os 43 artigos, e importá-lo de uma tela comum joga o manual inteiro no chunk que todo mundo baixa — 216 kB contra 184 kB, medido; há teste travando isso). Nunca `'/ajuda'` cru. Ele monta `/ajuda?de=<rota>` e a central abre com **"Ajuda para esta tela"** no topo — os artigos daquele assunto, sem a pessoa ter de adivinhar a persona nem varrer a lista. O mapa rota → artigos é `HELP_ROUTE_HINTS`; `*` vale por UM segmento e **vence o primeiro molde que casa**, então o específico vem antes do genérico (teste trava a ordem). Rota sem pista ⇒ bloco nenhum, de propósito: sugestão errada ensina a ignorar o bloco
 **"Criei/removi uma tela. O que a ajuda precisa saber?"** → duas coisas: os artigos que citam a tela (`{ type: 'link', to }` — há teste lendo `V2App.jsx`) e a PISTA de rota em `HELP_ROUTE_HINTS`. O teste pega a pista órfã; a pista que FALTA ninguém vê
-**"Vou escrever ajuda sobre uma funcionalidade"** → confira antes se ela está LIGADA. A gamificação (`/conquistas`, `/hall-da-fama`, `/vinculos`) está atrás de `gamification_v2`, que é OFF — documentá-la manda a pessoa para uma porta que não abre. Há teste travando isso em `helpCenter.test.js`; e outro que confere cada link da ajuda contra as rotas reais de `V2App.jsx`
+**"Vou escrever ajuda sobre uma funcionalidade"** → confira antes se ela está LIGADA. A gamificação (`/conquistas`, `/hall-da-fama`, `/vinculos`) está atrás de `gamification_v2`, que é OFF — documentá-la manda a pessoa para uma porta que não abre. Há teste travando isso em `helpCenter.test.js`; e outro que confere cada link da ajuda contra as rotas reais de `V2App.jsx`. ⭐ Funcionalidade NOVA atrás de flag: escreva o artigo com `flags: ['chave']` — ele só aparece (parte, busca, link direto, "Ajuda para esta tela") quando a flag está ligada, via `helpCatalog(flags)`, que é o que `V2Help` usa. Há teste exigindo que a chave exista em `FEATURE_FLAG`
 **"Quero um tutorial explicando esta ferramenta"** → já existem quatro (torneio, dia de jogo Play, Americano e Americano aprimorado). Conteúdo em `src/modules/help/domain/tutorials.js`; para colocar numa tela é UMA linha: `<V2TutorialLauncher tutorialId={...} />` (ou `tutorialIdForGameDayFormat(gameDay.format)` num dia de jogo). Ele abre sozinho na primeira vez, deixa dispensar e mantém o botão para rever. A memória é `localStorage` por usuário — **nada no banco**. Ver `docs/19-TUTORIAIS.md`
 **"Mexi numa tela de torneio ou dia de jogo"** → passe pelo tutorial dela (`src/modules/help/domain/tutorials.js`). Um tutorial que ensina um botão que não existe mais é PIOR que nenhum: quem segue passo a passo conclui que está fazendo algo errado
 **"Preciso guardar uma preferência de tela por usuário"** → `src/core/lib/viewPreference.js` (valores) ou `collapsePreference.js` (booleanos). Sempre com o uid na chave — `localStorage` é por NAVEGADOR, e num tablet de clube uma pessoa herdaria a preferência da outra. E ao testar, espione `Storage.prototype`: no jsdom, `vi.spyOn(window.localStorage, …)` não troca o método, grava uma chave com aquele nome e o teste passa sem exercitar nada
@@ -338,8 +338,8 @@ Estes princípios vieram de bugs reais que custaram horas pra arrumar. São ineg
 **"Cuidado: 'mercado' já significa outra coisa!"** → `arena_products`/`catalog_products` são o **PDV/loja da arena** (módulo `arenas/`). O marketplace novo usa **só** o prefixo `market_`. Ver `docs/FUTURO/MERCADO/00-INDEX.md` § Colisão de nomes
 
 **"Onde está a tela inicial personalizada? Por que ela mostra isto para mim?"** → ⭐ flag `personalized_home` (default OFF; desligada, `/` segue a clássica). `resolveHomeFoci` (`src/modules/home/domain/homeProfile.js`): o que a pessoa FAZ (gere arena, dá aula, organiza torneio) vence o que ela DISSE (`users.interests`), e a atividade traz a seção sem passar na frente. Telas em `src/v2/components/home/personal/`. ⚠️ Toda data da tela inicial passa por `home/domain/freshness.js` — **nunca** `Date.parse('2026-09-26')` (é meia-noite UTC, 21h do dia ANTERIOR no Brasil: o torneio de hoje sumiria às 21h de ontem). Seção que não é da pessoa não consulta nada (hooks com `{ enabled }`). Ver `docs/29-INICIO-PERSONALIZADO-E-DIVULGACAO.md` §1
-**"Vou criar cupom ou campanha da PLATAFORMA ou de um PROFESSOR"** → ⭐ módulo `src/modules/promo/` + telas em `src/v2/components/promo/` (flags `platform_marketing` / `coach_marketing`, default OFF). **Nunca copie** os componentes do marketing da arena: `CouponArtEditor` e `BannerDesigner` aceitam `templates` (a fonte dos "meus modelos"), `brand` e `uploadFolder` — sem eles, é a arena, como sempre. Coleções `promo_coupons` / `promo_campaigns` (legíveis por conta logada; escrita só do EMISSOR, que não muda no update) e `promo_settings/{platform|uid}` (privada: custo dos vales e modelos). O desconto do professor entra no **pedido de aula** e é aplicado na CONFIRMAÇÃO (`resolveLessonCoupon`), conferido contra o banco. ⚠️ O domínio de aulas importa `promo/domain/lessonCoupon.js` (leve), **nunca** `promo.js` (puxa o marketing inteiro das arenas para toda tela que mostra uma aula). Ver `src/modules/promo/README.md` e `docs/29-INICIO-PERSONALIZADO-E-DIVULGACAO.md` §2
-**"Vou mandar um link num AVISO (notifications)"** → passe por `linkDeAviso` (`src/core/domain/internalLink.js`, já aplicado em `notificationService.buildPayload`). 🐞 A regra de `notifications` recusa `#`, e `notifyUsers` grava em lotes de 400: UM link com âncora derrubava o lote inteiro em silêncio — era o caso das campanhas das ARENAS com destino `/arenas/X#arena-reservar` ("enviada" sem ninguém receber). Destino com âncora ⇒ o aviso leva à página da campanha. `isRuleSafeLink` tem teste de paridade contra o padrão da regra
+**"Vou criar cupom ou campanha da PLATAFORMA ou de um PROFESSOR"** → ⭐ módulo `src/modules/promo/` + telas em `src/v2/components/promo/` (flags `platform_marketing` / `coach_marketing`, default OFF). **Nunca copie** os componentes do marketing da arena: `CouponArtEditor` e `BannerDesigner` aceitam `templates` (a fonte dos "meus modelos"), `brand` e `uploadFolder` — sem eles, é a arena, como sempre. Coleções `promo_coupons` / `promo_campaigns` (legíveis por conta logada; escrita só do EMISSOR, que não muda no update) e `promo_settings/{platform|uid}` (privada: custo dos vales e modelos). O desconto do professor entra no **pedido de aula** e é aplicado na CONFIRMAÇÃO (`resolveLessonCoupon`), conferido contra o banco. ⚠️ O domínio de aulas importa `promo/domain/lessonCoupon.js` (leve), **nunca** `promo.js` (puxa o marketing inteiro das arenas para toda tela que mostra uma aula). Quatro regras da revisão que não podem regredir: **"só para os meus alunos" vale no USO** (o pedido recusa e a confirmação confere `coach_students`); **um uso é UMA aula** (na série recorrente o cupom cobre a primeira — `lessonCouponBase`); **aula desfeita devolve o uso** (`returnPendingCouponUses`, transação idempotente; quando o aluno cancela, o professor acerta ao abrir a agenda); e a **regra de `coach_lessons`** deixa o aluno só PEDIR (solicitada, sem preço, cupom pendente) e CANCELAR. Ver `src/modules/promo/README.md` e `docs/29-INICIO-PERSONALIZADO-E-DIVULGACAO.md` §2
+**"Vou mandar um link num AVISO (notifications)"** → passe por `linkDeAviso` (`src/core/domain/internalLink.js`, já aplicado em `notificationService.buildPayload`). 🐞 A regra de `notifications` recusa `#`, e `notifyUsers` grava em lotes de 400: UM link com âncora derrubava o lote inteiro em silêncio — era o caso das campanhas das ARENAS com destino `/arenas/X#arena-reservar` ("enviada" sem ninguém receber). Destino com âncora ⇒ o aviso da campanha leva à página da campanha. Para os outros avisos, `linkDeAviso` troca `#secao` por `?ancora=secao` (a regra aceita) e o layout devolve o `#secao` (`useAncoraDoAviso`) — a página rola até a seção. `isRuleSafeLink` tem teste de paridade contra o padrão da regra. E `notifyUsers` devolve quantos avisos GRAVOU: quem diz "enviado para N" usa esse número
 **"O perfil do professor precisa rolar até uma seção pelo link"** → âncoras `#professor-promocoes`, `#professor-agenda`, `#professor-loja`, `#professor-clinicas`, `#professor-conteudo` + `useHashScroll` (`src/v2/ui/useHashScroll.js`), que espera a seção aparecer (ela depende de consulta) e rola UMA vez. `?marcar=1` (e `&cupom=`) abre o pedido de aula. O painel do professor lê `?aba=`/`?secao=` (`coachTabFromUrl`)
 
 **Para encontrar QUALQUER arquivo rápido:**
@@ -512,12 +512,35 @@ chore(deps): bump firebase to 12.x
 
 ## 10. Métricas atuais (snapshot 2026-08-31, 11:05 GMT-3)
 
-> Última atualização: 2026-09-26 (Onda CG). Antes: 2026-09-20 (Onda AT); 2026-08-31, após **41 PRs
+> Última atualização: 2026-09-27 (revisão da Onda CG). Antes: 2026-09-20 (Onda AT); 2026-08-31, após **41 PRs
 > novos** mergeados em main (#95 a #135) — Sprints 32 a 50+.
 > Detalhes em `docs/08-ARENA-ROADMAP.md` (Seções 34-50) e
 > memory topic `picklerush-sync-2026-08.md`.
 >
 > **Destaques por onda**:
+>
+> - **Onda CG — revisão** (2026-09-27): pedida depois do deploy (*"Você fez
+>   tudo o que pedi? Com profundidade e cuidado?"*), a revisão achou defeitos
+>   reais e os corrigiu. **🐞 "Só para os meus alunos" não valia no uso**:
+>   quem não era aluno e soubesse o código levava o desconto — agora o pedido
+>   recusa e a confirmação confere o vínculo. **🐞 Na aula recorrente o
+>   desconto era sobre a série inteira** ("aula experimental grátis" zerava
+>   dez semanas) — um uso é uma aula. **🐞 Cancelar a aula não devolvia o uso
+>   do cupom** — agora devolve, numa transação idempotente, pelo lado do
+>   professor. **🐞 O aluno escrevia qualquer campo da própria aula** (criava
+>   confirmada, gravava cupom "aplicado") — a regra de `coach_lessons` passou a
+>   deixar o aluno só pedir e cancelar, como o serviço sempre fez (17
+>   asserções). **🐞 `?marcar=1` não fazia nada** com o professor sem aceitar
+>   alunos — agora a tela diz. **🐞 "Enviado para N" era o tamanho da lista**,
+>   não o que foi gravado — `notifyUsers` devolve a contagem e a campanha
+>   mostra "confirmado para X de N". **🐞 Aviso com âncora caía no topo da
+>   página** — vira `?ancora=` e o layout rola. E o que faltava: o valor final
+>   na aula, os cupons do professor para tocar no pedido (com a estimativa), a
+>   vitrine sem corte que trocava cupom no ar por vencido, e três artigos na
+>   central de ajuda — cada um atrás da flag da própria funcionalidade
+>   (`helpCatalog`). **Banco**: campos opcionais (`coach_lessons.coupon.{lessons_count,
+>   returned, returned_at}`, `promo_campaigns.recipients_count`) e a regra de
+>   `coach_lessons` endurecida do lado do aluno. Zero coleção, zero índice.
 >
 > - **Onda CG — O início por pessoa, e a plataforma e os professores divulgando**
 >   (2026-09-26): *"melhorar a página início, para que seja personalizada por
@@ -2232,7 +2255,7 @@ chore(deps): bump firebase to 12.x
 
 | Métrica | Valor | Delta do início do agente |
 |---|---|---|
-| **Testes Vitest** | **6266 passing** (383 arquivos) + 431 asserções de regras no emulador (Firestore + Storage) | +5858 (era 408) |
+| **Testes Vitest** | **6306 passing** (385 arquivos) + 448 asserções de regras no emulador (Firestore + Storage) | +5898 (era 408) |
 | **Lint errors** | 0 | era 30+ |
 | **Módulos** | 23 (+`home` — a tela inicial personalizada; +`promo` — cupons e campanhas da plataforma e dos professores; +`help` — conteúdo dos tutoriais em tela) (`games` e `legal` saíram como `src/modules/` mas continuam como pastas oficiais — **rating virou módulo oficial** com domain/services/hooks/components) | +4 (coaches, circuits, games, legal) |
 | **V2 pages** | 84 (+V2Promotions e +V2PromoCampaign — Onda CG; +V2GameDayTelao — telão, fora do V2Layout; +V2Help — central de ajuda; +V2ArenaKiosk — totem da recepção, também fora do V2Layout; +V2ArenaCheckin; +V2ArenaAttendance) | +58 |

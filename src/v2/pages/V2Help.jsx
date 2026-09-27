@@ -49,13 +49,12 @@ import {
 } from 'lucide-react';
 
 import { FEATURE_FLAG } from '@/core/featureFlags';
-import { useFeatureFlag } from '@/core/lib/FeatureFlagsContext';
+import { useFeatureFlag, useFeatureFlags } from '@/core/lib/FeatureFlagsContext';
 import { useAuth } from '@/core/lib/FirebaseAuthContext';
 import { readViewPreference, writeViewPreference } from '@/core/lib/viewPreference';
 import { useClipboard } from '@/core/lib/useClipboard';
 import {
-  HELP_SECTION, HELP_SECTIONS, getHelpSection, searchHelp,
-  helpForRoute, faqArticles, highlightParts, searchSnippet, nextHelpArticle,
+  HELP_SECTION, helpCatalog, highlightParts, searchSnippet,
 } from '@/modules/help/domain/helpCenter';
 import {
   V2Badge, V2Button, V2ContentHero, V2SearchInput, V2Surface,
@@ -260,6 +259,10 @@ function Perguntas({ perguntas, onAbrir, titulo, subtitulo }) {
 
 export default function V2Help() {
   const ligado = useFeatureFlag(FEATURE_FLAG.HELP_CENTER);
+  // Só o que está LIGADO para quem abre: artigo de funcionalidade desligada
+  // mandaria a pessoa para uma porta que não abre.
+  const { flags } = useFeatureFlags();
+  const ajuda = useMemo(() => helpCatalog(flags || {}), [flags]);
   const { user } = useAuth();
   const uid = user?.uid || null;
   const [params, setParams] = useSearchParams();
@@ -279,8 +282,8 @@ export default function V2Help() {
   const [secaoLembrada, setSecaoLembrada] = useState(() => readViewPreference(uid, PREF_SECAO));
   useEffect(() => { setSecaoLembrada(readViewPreference(uid, PREF_SECAO)); }, [uid]);
 
-  const secaoAtual = (getHelpSection(secaoDaUrl) && secaoDaUrl)
-    || (getHelpSection(secaoLembrada) && secaoLembrada)
+  const secaoAtual = (ajuda.getSection(secaoDaUrl) && secaoDaUrl)
+    || (ajuda.getSection(secaoLembrada) && secaoLembrada)
     || HELP_SECTION.START;
 
   const atualizar = useCallback((patch) => {
@@ -295,10 +298,10 @@ export default function V2Help() {
   }, [setParams]);
 
   const buscando = q.trim().length > 0;
-  const resultados = useMemo(() => (buscando ? searchHelp(q) : []), [buscando, q]);
-  const perguntas = useMemo(() => faqArticles(), []);
-  const contexto = useMemo(() => (veioDe ? helpForRoute(veioDe) : null), [veioDe]);
-  const secao = getHelpSection(secaoAtual) || getHelpSection(HELP_SECTION.START);
+  const resultados = useMemo(() => (buscando ? ajuda.search(q) : []), [ajuda, buscando, q]);
+  const perguntas = useMemo(() => ajuda.faq(), [ajuda]);
+  const contexto = useMemo(() => (veioDe ? ajuda.forRoute(veioDe) : null), [ajuda, veioDe]);
+  const secao = ajuda.getSection(secaoAtual) || ajuda.getSection(HELP_SECTION.START);
 
   // Chegou por link direto para um artigo: leva a leitura até ele. Sem isto,
   // um link de suporte abriria a página no topo e a pessoa teria de procurar.
@@ -346,7 +349,7 @@ export default function V2Help() {
 
   /** O rodapé de um artigo aberto: sem becos — próximo, link, topo. */
   const rodapeDoArtigo = (a) => {
-    const proximo = nextHelpArticle(a.sectionId, a.id);
+    const proximo = ajuda.next(a.sectionId, a.id);
     const url = typeof window !== 'undefined'
       ? `${window.location.origin}/ajuda?s=${a.sectionId}&a=${a.id}`
       : `/ajuda?s=${a.sectionId}&a=${a.id}`;
@@ -468,7 +471,7 @@ export default function V2Help() {
           seções, e manter a aba marcada sugeriria um filtro que não existe. */}
       {!buscando && (
         <div className="mb-5 flex flex-wrap gap-2">
-          {HELP_SECTIONS.map((s) => {
+          {ajuda.sections.map((s) => {
             const Icone = ICONE[s.id] || BookOpen;
             const ativa = s.id === secaoAtual;
             return (
@@ -509,7 +512,7 @@ export default function V2Help() {
                 subtitulo="A busca procura no corpo dos textos — se não achou, tente outra palavra ou comece por uma pergunta."
               />
               <div className="flex flex-wrap gap-2">
-                {HELP_SECTIONS.map((s) => (
+                {ajuda.sections.map((s) => (
                   <V2Button key={s.id} type="button" size="sm" variant="secondary" onClick={() => escolherSecao(s.id)}>
                     Ver {s.label}
                   </V2Button>
@@ -552,7 +555,8 @@ export default function V2Help() {
                 </p>
                 <div className="mt-3 grid gap-2 sm:grid-cols-3">
                   {[HELP_SECTION.ATHLETE, HELP_SECTION.ARENA, HELP_SECTION.COACH].map((id) => {
-                    const s = getHelpSection(id);
+                    const s = ajuda.getSection(id);
+                    if (!s) return null;
                     const Icone = ICONE[id] || BookOpen;
                     return (
                       <button

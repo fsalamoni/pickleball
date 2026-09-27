@@ -136,25 +136,46 @@ arenas (`mergeBannerCities`).
 
 ### 2.4 O cupom no pedido de aula
 
-1. O aluno digita o código (ou toca **"Usar ao pedir a aula"** no perfil do
-   professor / **"Pedir aula com este cupom"** no carrossel, que chega por
-   `/coaches/:id?marcar=1&cupom=CODIGO`). A tela **confere antes** — "venceu",
-   "é de outro professor", "você já usou", "é um vale: mostre ao professor" —
-   mas não aplica nada.
+1. O aluno digita o código, **toca num dos cupons do professor** que o próprio
+   pedido lista (os de aula, no ar, visíveis a ele e ainda não usados por ele —
+   como as promoções no pedido de reserva da arena), ou chega por **"Usar ao
+   pedir a aula"** / **"Pedir aula com este cupom"**
+   (`/coaches/:id?marcar=1&cupom=CODIGO`). A tela **confere antes** — "venceu",
+   "é de outro professor", "você já usou", "é só para quem já é aluno", "é um
+   vale: mostre ao professor" — e mostra a **estimativa** ("de R$ 150 por
+   R$ 135"), mas não aplica nada. O campo é `LessonCouponField`
+   (`v2/components/promo/`), carregado **sob demanda** pelo diálogo.
 2. O cupom vai **pendente** na aula (`coach_lessons.coupon`, campo opcional,
-   saneado por `normalizeLessonCoupon`: o aluno nunca grava "aplicado").
+   saneado por `normalizeLessonCoupon`: o aluno nunca grava "aplicado" — e,
+   desde a revisão, **a regra também não deixa**, ver §3).
 3. Na **confirmação**, o serviço confere de novo contra o banco
    (`resolveLessonCoupon`): aplica (preço de referência = o da aula, ou
    valor-hora × horas; `price` passa a ser o valor já descontado, o cupom
    guarda `original_price` e `discount_value`, e o uso é contado) ou recusa
    com o motivo — **a aula é confirmada assim mesmo** e o aluno é avisado.
    Sem preço conhecido, o desconto em % fica `null` (combinado na hora, nunca
-   inventado).
+   inventado). No cupom **"só para os meus alunos"** a confirmação confere o
+   vínculo em `coach_students` (ativo ou em pausa); se não conseguir conferir,
+   o cupom segue **pendente** — nunca recusado nem aplicado às cegas.
 4. Tipos aceitos no pedido: **desconto** e **vale de aula particular** (a aula
    sai por conta do professor). Os outros vales são entregues em mãos.
+5. **Aula recorrente**: o cupom cobre **UMA aula** (a primeira da série,
+   `lessonCouponBase`), porque conta um uso só — senão "aula experimental
+   grátis" viraria a série inteira grátis. `price` é o valor da série menos
+   esse desconto, e a aula guarda `lessons_count`.
+6. **Aula desfeita** (cancelada ou recusada) com o cupom já contado: **o uso
+   volta** para o aluno (`used_count − 1`, sai de `used_by`), numa transação
+   que lê a aula — duas abas não descontam duas vezes. Quem devolve é o
+   **professor** (só o emissor escreve o cupom): na hora, quando é ele quem
+   cancela; quando é o **aluno**, ao abrir a agenda (`useReturnPendingCouponUses`)
+   ou antes de conferir outro pedido do mesmo aluno. Para o aluno, a linha da
+   aula já diz "devolvido", e o pedido novo não diz "você já usou"
+   (`hasReturnableUse`).
 
-Recusar a aula não mexe no cupom. A conferência é carregada **sob demanda**:
-o serviço de aulas é usado pela tela inicial, que nunca confirma aula.
+A linha do cupom na aula (`lessonCouponLine`) diz o **valor final** — "−R$ 15
+· aula de R$ 150 por R$ 135" (numa série: "na 1ª aula · série de …"). A
+conferência é carregada **sob demanda**: o serviço de aulas é usado pela tela
+inicial, que nunca confirma aula.
 
 ### 2.5 Controle de uso
 
@@ -173,7 +194,7 @@ mãos.
 | `/aulas?secao=divulgacao` | a divulgação do professor (`CoachPromoConsole`, sob demanda) |
 | `/promocoes` | a vitrine: banners em destaque, cupons da plataforma e dos professores |
 | `/campanhas/:campaignId` | a página "saiba mais" da campanha (falha ≠ inexistente ≠ encerrada) |
-| `/coaches/:coachId` | seção **Promoções** logo depois do cabeçalho; âncoras `#professor-promocoes`, `#professor-agenda`, `#professor-loja`, `#professor-clinicas`, `#professor-conteudo` (rolagem por `useHashScroll`); `?marcar=1` abre o pedido de aula |
+| `/coaches/:coachId` | seção **Promoções** logo depois do cabeçalho; âncoras `#professor-promocoes`, `#professor-agenda`, `#professor-loja`, `#professor-clinicas`, `#professor-conteudo` (rolagem por `useHashScroll`); `?marcar=1` abre o pedido de aula — e, com o professor **sem aceitar alunos**, a tela **diz isso** e guarda o código (antes o link não fazia nada) |
 | tela inicial (as duas) | o mesmo carrossel das arenas, com os itens da plataforma e dos professores e o atalho **Ver todas** |
 
 Os dois consoles (`?divulgacao=cupons|campanhas`) guardam a aba na URL.
@@ -182,9 +203,43 @@ Os dois consoles (`?divulgacao=cupons|campanhas`) guardam a aba na URL.
 
 `notifyUsers` com tipo `generic`. O link do **aviso** nunca leva `#` — a regra
 de `notifications` recusa, e o lote inteiro cairia em silêncio (é o defeito
-que a Onda CG achou e corrigiu nas campanhas das **arenas**: `linkDoAviso` /
-`linkDeAviso`). Destino com âncora ⇒ o aviso leva à página da campanha, que
-tem o botão para o lugar certo. Público vazio não envia.
+que a Onda CG achou e corrigiu nas campanhas das **arenas**: `linkDeAviso`).
+Destino com âncora ⇒ o aviso da campanha leva à página da campanha, que tem o
+botão para o lugar certo. Público vazio não envia.
+
+**Revisão**: para qualquer OUTRO aviso com âncora (ex.: "Pacote de horas
+creditado" → `/arenas/X#arena-planos`), `linkDeAviso` passou a converter o
+`#secao` em **`?ancora=secao`** (que a regra aceita), e o layout
+(`useAncoraDoAviso`) devolve o `#secao` à URL ao abrir — a página rola até a
+seção como sempre rolou. Antes da revisão o fragmento era só descartado e o
+aviso caía no topo da página.
+
+**Quanto chegou.** `notifyUsers` devolve quantos avisos foram **gravados**. A
+campanha grava `recipients_count` (o público) e `sent_count` (o CONFIRMADO,
+que começa em 0 e só sobe depois dos avisos): se a aba fechar ou a conexão
+cair no meio, a lista mostra "Aviso confirmado para X de N pessoas" em vez de
+"para todos". O diálogo pede para manter a tela aberta até terminar.
+
+### 2.8 Vitrines: o teto de leituras
+
+As quatro consultas das vitrines (tela inicial e `/promocoes`) só usam
+igualdades e **não ordenam** (ordenar pediria índice composto). E o cupom
+vencido continua `active` até o emissor desligá-lo — então um corte baixo
+podia deixar de fora um cupom no ar, trocado por um vencido, sem erro nenhum.
+Desde a revisão o corte é um **teto** (`VITRINE_LIMITE = 300`), bem acima do
+volume real, e atingi-lo gera aviso no log. Se chegar perto, o caminho é um
+índice com o prazo.
+
+### 2.9 Ajuda
+
+Três artigos na central, **cada um atrás da flag da própria funcionalidade**
+(campo `flags` do artigo, `helpCatalog(flags)`): "A sua tela inicial"
+(`personalized_home`), "Promoções da plataforma e dos professores"
+(`platform_marketing` **ou** `coach_marketing`) e "Cupons e campanhas do
+professor" (`coach_marketing`). Desligada a flag, o artigo não aparece em
+lugar nenhum — parte, busca, link direto, "Ajuda para esta tela"; ligada,
+aparece sozinho. Pistas de rota: `/promocoes`, `/campanhas/*`, `/aulas`,
+`/minhas-aulas`, `/coaches/*`. Ver `docs/21-CENTRAL-DE-AJUDA.md`.
 
 ---
 
@@ -196,15 +251,27 @@ opcional:
 | Coleção | Documento | Leitura | Escrita |
 |---|---|---|---|
 | `promo_coupons/{id}` | `issuer_type` (`platform`/`coach`), `issuer_id` (`platform` ou uid), `issuer_name`, os campos do cupom da arena (sem os de indicação e sem `min_amount`), `reach`, `visibility`, `art`, `used_count`, `used_by` | qualquer conta logada | o emissor (admin para a plataforma; o próprio professor, **com perfil** em `coaches/{uid}`); o emissor não muda no update; admin pausa/apaga (moderação) |
-| `promo_campaigns/{id}` | emissor + `name`, `message`, `target_audience`, `audience_detail`, `sent_count`, `destination`, `banner`, `show_on_page`, `show_home`, `banner_until`, `banner_active`, `reach`, `visibility` | qualquer conta logada | idem |
+| `promo_campaigns/{id}` | emissor + `name`, `message`, `target_audience`, `audience_detail`, `recipients_count` (o público), `sent_count` (o confirmado), `destination`, `banner`, `show_on_page`, `show_home`, `banner_until`, `banner_active`, `reach`, `visibility` | qualquer conta logada | idem |
 | `promo_settings/{platform\|uid}` | `coupon_costs`, `banner_templates`, `coupon_templates` | **só o emissor** (e o admin) | idem |
-| `coach_lessons.coupon` (campo) | `{ coupon_id, code, benefit, kind, status: pending\|applied\|rejected, discount_value?, original_price?, reason? }` | regra de sempre | regra de sempre |
+| `coach_lessons.coupon` (campo) | `{ coupon_id, code, benefit, kind, status: pending\|applied\|rejected, discount_value?, original_price?, lessons_count?, returned?, returned_at?, reason? }` | regra de sempre | o aluno só grava **pendente** (ver abaixo) |
 
 Regras em `firestore.rules` § "Divulgação da PLATAFORMA e dos PROFESSORES",
 provadas por **23 asserções** no emulador (`tests/rules/promoMarketing.rules.test.js`),
 metade provando o que funciona e metade o que continua barrado — inclusive
-que o cupom da ARENA segue a regra de sempre. Nenhuma regra existente foi
-tocada.
+que o cupom da ARENA segue a regra de sempre.
+
+**Revisão — a regra de `coach_lessons` foi ENDURECIDA do lado do aluno.**
+Antes o aluno escrevia qualquer campo da própria aula: criava já confirmada e
+podia gravar um cupom "aplicado" com o desconto que quisesse (a agenda do
+professor mostraria o preço forjado). Agora o aluno (quem é só `student_id`)
+**pede** — a aula nasce `requested`, sem `price`, com o cupom só `pending` e
+só com os cinco campos do pedido — e **cancela** — só `status` → `cancelled`
+(+ `updated_at`) a partir de solicitada, em negociação ou confirmada; não
+apaga. O professor e o admin seguem escrevendo tudo. É exatamente o que o
+serviço (`requestLesson`/`respondLesson`) sempre fez: nenhuma tela perde
+nada. Provado por **17 asserções** no emulador
+(`tests/rules/coachLessons.rules.test.js`), inclusive o lote do professor que
+cancela e devolve o uso do cupom, e as duas consultas da confirmação.
 
 ---
 
@@ -228,11 +295,19 @@ src/core/domain/internalLink.js   ← o link de aviso que a regra aceita (parida
 
 ## 5. Guardas e testes
 
-- Domínio: `home/domain/*.test.js`, `promo/domain/promo.test.js` (76).
-- Serviço: `promo/services/promoService.test.js` (15) — custo fora do cupom,
-  código repetido, recepção, aviso sem `#`, cupom na confirmação da aula.
-- Telas: `V2PersonalHome.runtime.test.jsx`, `promo.runtime.test.jsx` (17),
-  `HomePromoBanners.runtime.test.jsx` (+9 da Onda CG).
+- Domínio: `home/domain/*.test.js`, `promo/domain/promo.test.js` — inclui,
+  desde a revisão, "só alunos", a série (uma aula coberta), o valor final na
+  linha e o uso a devolver.
+- Serviço: `promo/services/promoService.test.js` — custo fora do cupom,
+  código repetido, recepção, aviso sem `#`, cupom na confirmação da aula e,
+  desde a revisão: o uso volta (uma vez só), cancelamento pelo aluno acertado
+  pelo professor, "só alunos" na confirmação e o envio parcial da campanha.
+- Telas: `V2PersonalHome.runtime.test.jsx`, `promo.runtime.test.jsx`,
+  `LessonCouponField.runtime.test.jsx` (cupons para tocar, estimativa, "só
+  alunos", uso devolvido), `HomePromoBanners.runtime.test.jsx`.
+- Regras: `promoMarketing.rules.test.js` (23) e `coachLessons.rules.test.js` (17).
+- Aviso com âncora: `core/domain/internalLink.test.js` e
+  `v2/ui/useAncoraDoAviso.test.jsx` (ida e volta).
 - Varredura "falha não é vazio" estendida à **tela inicial e à divulgação**
   (`falhaNaoEVazio.test.js`).
 - Guarda de fonte: as DUAS telas iniciais montam o carrossel sob demanda, cada
@@ -249,6 +324,19 @@ src/core/domain/internalLink.js   ← o link de aviso que a regra aceita (parida
    divulgação ali levaria o marketing das arenas para toda tela que mostra uma
    aula. Por isso `lessonCoupon.js` existe e a conferência é `import()` sob
    demanda.
-3. **"Só para os meus alunos" é apresentação, não segredo.** O cupom é
-   legível por qualquer conta logada (como o da arena); quem confere na hora
-   de usar é o professor. Não prometa sigilo que a regra não dá.
+3. **"Só para os meus alunos" não é segredo, mas VALE na hora de usar.** O
+   cupom é legível por qualquer conta logada (como o da arena) — não prometa
+   sigilo que a regra não dá. O que a revisão fechou é o USO: na primeira
+   versão, quem não era aluno e soubesse o código recebia o desconto, porque
+   a conferência olhava professor, tipo e validade, mas não para quem o cupom
+   era. Agora o pedido recusa (quando SABE que não é aluno) e a confirmação
+   confere o vínculo no banco.
+4. **Um uso de cupom é uma aula.** Na série recorrente o desconto era
+   calculado sobre o preço da série inteira — "aula experimental grátis"
+   zerava dez semanas. O cupom conta um uso, então cobre uma aula.
+5. **O que foi contado tem de poder ser devolvido.** Cancelar uma aula com o
+   cupom aplicado deixava o aluno sem o "uma vez por pessoa" e o relatório
+   com um uso que não aconteceu. Como só o emissor escreve o cupom, a
+   devolução é do professor — e idempotente, porque roda em mais de um lugar.
+6. **"Enviado para N" tem de ser o que foi gravado**, não o tamanho da lista
+   que se pediu para enviar.

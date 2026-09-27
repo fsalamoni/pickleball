@@ -11,7 +11,8 @@ import {
   PROMO_AUDIENCE, PROMO_AUDIENCES_BY_ISSUER, platformRecipients, coachRecipients,
   promoUsageReport,
   LESSON_COUPON_STATUS, lessonCouponFromPromo, normalizeLessonCoupon, lessonCouponDiscount, lessonCouponProblem,
-  lessonReferencePrice, resolveLessonCoupon, lessonCouponLine,
+  lessonReferencePrice, lessonCouponBase, resolveLessonCoupon, lessonCouponLine,
+  pendingCouponReturn, hasReturnableUse,
   homePromoItems, promoItemsInRegion, promoCities, mergeBannerCities, byExpiry,
 } from './promo.js';
 import { COUPON_KIND, COUPON_TYPE } from '../../arenas/domain/marketing.js';
@@ -480,6 +481,68 @@ describe('cupom na confirmação da aula', () => {
     expect(lessonCouponLine({ code: 'AULA10', status: 'applied', discount_value: 15 })).toBe('Cupom AULA10 aplicado: −R$ 15,00');
     expect(lessonCouponLine({ code: 'AULA10', status: 'rejected', reason: 'Este cupom venceu.' })).toBe('Cupom AULA10 não aplicado: Este cupom venceu.');
     expect(lessonCouponLine(null)).toBe('');
+  });
+
+  it('⭐ a linha diz o valor FINAL, e numa série diz que vale para a 1ª aula', () => {
+    expect(lessonCouponLine({ code: 'AULA10', status: 'applied', discount_value: 15, original_price: 150 }))
+      .toBe('Cupom AULA10 aplicado: −R$ 15,00 · aula de R$ 150,00 por R$ 135,00');
+    expect(lessonCouponLine({ code: 'AULA10', status: 'applied', discount_value: 10, original_price: 400, lessons_count: 4 }))
+      .toBe('Cupom AULA10 aplicado na 1ª aula: −R$ 10,00 · série de R$ 400,00 por R$ 390,00');
+  });
+
+  it('⭐ aula desfeita: a linha diz que o cupom voltou a valer', () => {
+    const aplicado = { code: 'AULA10', status: 'applied', discount_value: 15, original_price: 150 };
+    expect(lessonCouponLine(aplicado, { lessonStatus: 'cancelled' })).toMatch(/devolvido/);
+    expect(lessonCouponLine(aplicado, { lessonStatus: 'declined' })).toMatch(/volta a valer/);
+    expect(lessonCouponLine(aplicado, { lessonStatus: 'confirmed' })).toMatch(/aplicado/);
+    // Recusado nunca foi contado: nada a devolver.
+    expect(lessonCouponLine({ code: 'X', status: 'rejected', reason: 'Venceu.' }, { lessonStatus: 'cancelled' })).toMatch(/não aplicado/);
+  });
+
+  it('⭐ só para alunos: recusado quando SABIDO que não é aluno; desconhecido não recusa', () => {
+    const soAlunos = { ...cupom, visibility: 'alunos' };
+    expect(lessonCouponProblem(soAlunos, { coachId: 'prof', isStudent: false })).toMatch(/só para quem já é aluno/);
+    expect(lessonCouponProblem(soAlunos, { coachId: 'prof', isStudent: true })).toBeNull();
+    expect(lessonCouponProblem(soAlunos, { coachId: 'prof' })).toBeNull();
+    // Cupom aberto a todos não depende de ser aluno.
+    expect(lessonCouponProblem(cupom, { coachId: 'prof', isStudent: false })).toBeNull();
+    expect(resolveLessonCoupon({ lesson: aula(), coupon: soAlunos, coach: {}, isStudent: false, now }).coupon)
+      .toMatchObject({ status: 'rejected', reason: expect.stringMatching(/só para quem já é aluno/) });
+  });
+
+  it('⭐ aula recorrente: o cupom cobre UMA aula, não a série', () => {
+    const serie = aula({ slots: [
+      { date: '2026-10-14', start: '18:00', end: '19:00' },
+      { date: '2026-10-07', start: '18:00', end: '19:00' },
+      { date: '2026-10-21', start: '18:00', end: '19:00' },
+    ] });
+    expect(lessonCouponBase(serie, { hourly_rate: 100 })).toBe(100);
+    expect(lessonReferencePrice(serie, { hourly_rate: 100 })).toBe(300);
+    // Aula experimental grátis: UMA aula grátis, não três.
+    const gratis = resolveLessonCoupon({ lesson: serie, coupon: { ...cupom, kind: 'private_lesson', benefit: 'Aula experimental' }, coach: { hourly_rate: 100 }, now });
+    expect(gratis.price).toBe(200);
+    expect(gratis.coupon).toMatchObject({ discount_value: 100, original_price: 300, lessons_count: 3 });
+    // 10%: sobre a aula coberta.
+    const pct = resolveLessonCoupon({ lesson: serie, coupon: cupom, coach: { hourly_rate: 100 }, now });
+    expect(pct.coupon.discount_value).toBe(10);
+    expect(pct.price).toBe(290);
+    // Preço gravado da série: a parte de cada aula.
+    expect(lessonCouponBase({ ...serie, price: 270 }, {})).toBe(90);
+    // Aula avulsa: sem `lessons_count`.
+    expect(resolveLessonCoupon({ lesson: aula(), coupon: cupom, coach: { hourly_rate: 100 }, now }).coupon.lessons_count).toBeUndefined();
+  });
+
+  it('⭐ o uso a devolver: só aula desfeita, com cupom contado e ainda não devolvido', () => {
+    const l = (over = {}) => ({ id: 'l1', status: 'cancelled', coupon: { coupon_id: 'c1', code: 'AULA10', status: 'applied' }, ...over });
+    expect(pendingCouponReturn(l())).toBe(true);
+    expect(pendingCouponReturn(l({ status: 'declined' }))).toBe(true);
+    expect(pendingCouponReturn(l({ status: 'confirmed' }))).toBe(false);
+    expect(pendingCouponReturn(l({ status: 'completed' }))).toBe(false);
+    expect(pendingCouponReturn(l({ coupon: { coupon_id: 'c1', status: 'pending' } }))).toBe(false);
+    expect(pendingCouponReturn(l({ coupon: { coupon_id: 'c1', status: 'applied', returned: true } }))).toBe(false);
+    expect(hasReturnableUse([l()], 'c1')).toBe(true);
+    expect(hasReturnableUse([l()], 'c2')).toBe(false);
+    expect(hasReturnableUse([], 'c1')).toBe(false);
   });
 });
 

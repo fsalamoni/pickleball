@@ -151,6 +151,21 @@ O que o domínio exporta, além do conteúdo:
 | `highlightParts(texto, termo)` | pedaços `{ text, match }` para o destaque |
 | `searchSnippet(artigo, termo)` | o trecho do corpo onde o termo apareceu |
 | `nextHelpArticle(s, a)` | o artigo seguinte, atravessando seções |
+| `helpArticleVisible(artigo, flags)` | o artigo vale para quem abre? (sem `flags`, sempre) |
+| `helpCatalog(flags)` | **a central como quem abre a vê**: as mesmas consultas (`sections`, `getSection`, `getArticle`, `all`, `search`, `forRoute`, `faq`, `next`), só sobre os artigos ligados. **A tela usa sempre esta.** As funções soltas acima varrem o catálogo INTEIRO — é o que os testes de integridade usam |
+
+**Artigo de funcionalidade atrás de flag** (Onda CG, revisão): o artigo leva
+`flags: ['chave', …]` e só aparece quando QUALQUER uma delas está ligada — na
+parte, na busca, por link direto e em "Ajuda para esta tela". Assim o texto
+nasce junto com a funcionalidade e aparece sozinho no dia em que o admin a
+liga, sem mandar ninguém, antes disso, para uma porta que não abre. Há teste
+exigindo que toda flag citada exista em `FEATURE_FLAG` (um erro de digitação
+esconderia o artigo para sempre, sem erro nenhum). Hoje: "A sua tela inicial"
+(`personalized_home`), "Promoções da plataforma e dos professores"
+(`platform_marketing` ou `coach_marketing`) e "Cupons e campanhas do
+professor" (`coach_marketing`). A gamificação segue fora da ajuda (§5) — o
+mecanismo permitiria escrevê-la agora, e isso é decisão para quando ela for
+ligada.
 
 O conteúdo é **dado**, não JSX. Cada artigo é uma lista de **blocos tipados**:
 
@@ -175,7 +190,8 @@ Três testes que valem mais que os outros:
    `V2App.jsx`, extrai as rotas declaradas e confere cada link da ajuda contra
    elas. Um manual que manda a pessoa para uma página 404 é pior que manual
    nenhum.
-2. **⭐ A ajuda não documenta o que está atrás de flag desligada.** Gamificação
+2. **⭐ A ajuda não documenta o que está atrás de flag desligada.** Artigo de
+   funcionalidade nova leva `flags` e some com ela desligada (§4). Gamificação
    (`/conquistas`, `/hall-da-fama`, `/vinculos`) vive dentro de `<Gamified>` e
    a flag `gamification_v2` está OFF: essas telas **não existem** para o
    usuário. Quando a flag for ligada, escreva os artigos **e remova o teste**.

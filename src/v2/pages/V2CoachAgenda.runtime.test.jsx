@@ -26,6 +26,7 @@ vi.mock('@/modules/coaches/hooks/useLessons', () => ({
   useSaveAvailability: () => ({ mutateAsync: salvar, isPending: false }),
   useCoachLessons: () => ({ data: estado.aulas, isLoading: false, isError: false }),
   useRespondLesson: () => ({ mutateAsync: vi.fn(), isPending: false }),
+  useReturnPendingCouponUses: () => {},
 }));
 // As seções vizinhas não entram neste teste.
 const Nada = () => null;

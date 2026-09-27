@@ -22,7 +22,7 @@ import { useFeatureFlag } from '@/core/lib/FeatureFlagsContext';
 import { FEATURE_FLAG } from '@/core/featureFlags';
 import { useCoach } from '@/modules/coaches/hooks/useCoaches';
 import {
-  useCoachAvailability, useSaveAvailability, useCoachLessons, useRespondLesson,
+  useCoachAvailability, useSaveAvailability, useCoachLessons, useRespondLesson, useReturnPendingCouponUses,
 } from '@/modules/coaches/hooks/useLessons';
 import { SLOT_MINUTES_DEFAULT } from '@/modules/coaches/domain/availability';
 import { lessonCouponLine } from '@/modules/promo/domain/lessonCoupon';
@@ -273,8 +273,8 @@ function LessonCard({ lesson, onAction, isPending }) {
           </div>
           {lesson.notes && <p className="mt-1.5 text-xs text-gray-500">{lesson.notes}</p>}
           {lesson.coupon?.code && (
-            <p className={`mt-1.5 inline-flex items-center gap-1 rounded-full px-2 py-0.5 text-[11px] font-bold ${lesson.coupon.status === 'rejected' ? 'bg-amber-50 text-amber-800' : 'bg-acid/20 text-ink'}`}>
-              <Tag className="h-3 w-3" aria-hidden /> {lessonCouponLine(lesson.coupon)}
+            <p className={`mt-1.5 inline-flex items-start gap-1 rounded-xl px-2 py-0.5 text-[11px] font-bold leading-4 ${lesson.coupon.status === 'rejected' ? 'bg-amber-50 text-amber-800' : 'bg-acid/20 text-ink'}`}>
+              <Tag className="mt-0.5 h-3 w-3 shrink-0" aria-hidden /> <span>{lessonCouponLine(lesson.coupon, { lessonStatus: lesson.status })}</span>
             </p>
           )}
         </div>
@@ -327,6 +327,8 @@ function V2CoachAgendaContent() {
     data: lessons = [], isLoading: lessonsLoading, isError: aulasFalharam, refetch: recarregarAulas,
   } = useCoachLessons(user?.uid);
   const respond = useRespondLesson();
+  // Aula que o aluno cancelou com o cupom já contado: o uso volta para ele.
+  useReturnPendingCouponUses(lessons, user?.uid);
   const sharedBookingsOn = true;
   const linkedClubsOn = true;
   const clinicsOn = true;

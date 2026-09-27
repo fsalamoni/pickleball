@@ -12,7 +12,9 @@
  */
 import { describe, it, expect } from 'vitest';
 import { readFileSync } from 'node:fs';
+import { FEATURE_FLAG } from '../../../core/featureFlags.js';
 import {
+  helpArticleVisible, helpCatalog,
   HELP_SECTION, HELP_SECTIONS, getHelpSection, getHelpArticle,
   allHelpArticles, searchHelp, normalizeForSearch,
   HELP_ROUTE_HINTS, helpForRoute, HELP_FAQ, faqArticles,
@@ -490,5 +492,37 @@ describe('helpLinkFor', () => {
     expect(helpLinkFor(null)).toBe('/ajuda');
     expect(helpLinkFor('https://exemplo.com/x')).toBe('/ajuda');
     expect(helpLinkFor('javascript:alert(1)')).toBe('/ajuda');
+  });
+});
+
+describe('⭐ artigo de funcionalidade atrás de flag', () => {
+  const comFlag = allHelpArticles().filter((a) => Array.isArray(a.flags) && a.flags.length > 0);
+
+  it('toda flag citada num artigo EXISTE — um erro de digitação o esconderia para sempre', () => {
+    const conhecidas = new Set(Object.values(FEATURE_FLAG));
+    const invalidas = comFlag.flatMap((a) => a.flags.filter((f) => !conhecidas.has(f)).map((f) => `${a.id} → ${f}`));
+    expect(comFlag.length).toBeGreaterThan(0);
+    expect(invalidas).toEqual([]);
+  });
+
+  it('sem flags o artigo vale sempre; com flags, basta UMA ligada', () => {
+    expect(helpArticleVisible({ id: 'x' }, {})).toBe(true);
+    expect(helpArticleVisible({ id: 'x', flags: ['a', 'b'] }, {})).toBe(false);
+    expect(helpArticleVisible({ id: 'x', flags: ['a', 'b'] }, { b: true })).toBe(true);
+  });
+
+  it('o catálogo de quem abre esconde o desligado em TODAS as consultas', () => {
+    const desligado = helpCatalog({});
+    const ids = new Set(desligado.all().map((a) => a.id));
+    comFlag.forEach((a) => expect(ids.has(a.id)).toBe(false));
+    expect(desligado.getArticle(HELP_SECTION.COACH, 'divulgacao-professor')).toBeNull();
+    expect(desligado.search('divulgação professor').map((a) => a.id)).not.toContain('divulgacao-professor');
+    expect((desligado.forRoute('/promocoes')?.articles || []).map((a) => a.id)).not.toContain('promocoes-plataforma-professores');
+    // O próximo artigo pula o que está escondido.
+    expect(desligado.next(HELP_SECTION.COACH, 'pacotes-clinicas')?.id).toBe('parcerias');
+
+    const ligado = helpCatalog({ personalized_home: true, platform_marketing: true, coach_marketing: true });
+    expect(ligado.all()).toHaveLength(allHelpArticles().length);
+    expect(ligado.forRoute('/promocoes').articles[0].id).toBe('promocoes-plataforma-professores');
   });
 });

@@ -31,7 +31,7 @@ const q = (v) => (v?.erro
   : { data: v, isLoading: false, isError: false, isSuccess: true, refetch: vi.fn() });
 const mut = () => ({ mutateAsync: vi.fn(() => Promise.resolve()), isPending: false, reset: vi.fn() });
 
-vi.mock('sonner', () => ({ toast: { success: vi.fn(), error: vi.fn() } }));
+vi.mock('sonner', () => ({ toast: { success: vi.fn(), error: vi.fn(), warning: vi.fn() } }));
 vi.mock('@/core/lib/FirebaseAuthContext', () => ({ useAuth: () => ({ user: { uid: 'u1' } }) }));
 vi.mock('@/core/lib/FeatureFlagsContext', () => ({
   useFeatureFlag: (k) => Boolean(estado.flags[k]),
@@ -141,6 +141,19 @@ describe('⭐ campanhas', () => {
     await render(<PromoCampaignsPanel issuer={PLATAFORMA} />);
     expect(texto()).toContain('Não foi possível carregar as campanhas');
     expect(botao('Nova campanha')).toBeUndefined();
+  });
+
+  it('⭐ o aviso diz quanto foi CONFIRMADO — nunca "para todos" quando parte não saiu', async () => {
+    estado.campanhas = [
+      { id: 'c1', name: 'Parcial', issuer_type: 'platform', issuer_id: 'platform', message: 'Oi', recipients_count: 5, sent_count: 3, status: 'sent' },
+      { id: 'c2', name: 'Inteira', issuer_type: 'platform', issuer_id: 'platform', message: 'Oi', recipients_count: 4, sent_count: 4, status: 'sent' },
+      // Campanha gravada antes da contagem confirmada: segue como antes.
+      { id: 'c3', name: 'Antiga', issuer_type: 'platform', issuer_id: 'platform', message: 'Oi', sent_count: 7, status: 'sent' },
+    ];
+    await render(<PromoCampaignsPanel issuer={PLATAFORMA} />);
+    expect(texto()).toContain('Aviso confirmado para 3 de 5 pessoas');
+    expect(texto()).toContain('Aviso para 4 pessoas');
+    expect(texto()).toContain('Aviso para 7 pessoas');
   });
 
   it('⭐ professor: o público são os alunos, contados antes — convite não aceito não conta', async () => {

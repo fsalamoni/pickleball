@@ -420,6 +420,12 @@ Aulas marcadas (avulsas ou recorrentes).
 - `status` ('scheduled'|'in_progress'|'completed'|'cancelled'|'no_show').
 - `price`, `payment_status` ('pending'|'paid'|'refunded'|'free').
 - `notes` (max 1000). `created_at`, `updated_at`.
+- **Regra (endurecida na revisão da Onda CG):** o professor e o admin
+  escrevem a aula inteira; o ALUNO (quem é só `student_id`) só **pede** — nasce
+  `requested`, sem `price`, com `coupon` só `pending` (e só os cinco campos do
+  pedido) — e só **cancela** (`status` → `cancelled` + `updated_at`, a partir
+  de `requested`/`negotiating`/`confirmed`); o aluno não apaga. É o que o
+  serviço sempre fez. `tests/rules/coachLessons.rules.test.js` (17).
 
 ### `coach_students/{coachId_studentId}` (Fase B)
 Vínculo professor ↔ aluno. Id determinista.
@@ -1109,7 +1115,9 @@ o emissor; admin pausa/apaga. **O custo do vale nunca mora aqui.**
 ### `promo_campaigns/{id}` (NOVO)
 Emissor + `name`, `message`, `channel`, `target_audience`
 (`todos|interesse|estado|cidade|professores` / `alunos_ativos|todos_alunos`),
-`audience_detail` (`{ interest, state, city }`), `status`, `sent_count`,
+`audience_detail` (`{ interest, state, city }`), `status`,
+`recipients_count` (o público pedido), `sent_count` (os avisos CONFIRMADOS —
+nasce 0 e sobe depois do envio; campanha antiga só tem `sent_count`),
 `destination` (`{ type, target_id, target_label }`, lista fechada por
 emissor), `banner` (o mesmo formato do banner da arena), `show_on_page`,
 `show_home`, `banner_until`, `banner_active`, `reach`, `visibility`. Mesmas
@@ -1122,10 +1130,13 @@ modelos da arena). Só o emissor (e o admin) lê e escreve.
 
 ### `coach_lessons.coupon` (campo opcional)
 `{ coupon_id, code, benefit, kind, status: pending|applied|rejected,
-discount_value?, original_price?, reason? }`. O aluno só grava `pending`
-(`normalizeLessonCoupon`); o professor resolve na confirmação
-(`resolveLessonCoupon`) — aplicado, `price` passa a ser o valor já com o
-desconto. Ausente = aula sem cupom (todas as antigas).
+discount_value?, original_price?, lessons_count?, returned?, returned_at?,
+reason? }`. O aluno só grava `pending` (`normalizeLessonCoupon`, e a regra
+confere); o professor resolve na confirmação (`resolveLessonCoupon`) —
+aplicado, `price` passa a ser o valor já com o desconto. Numa série
+(`lessons_count` > 1) o desconto cobre UMA aula. Aula desfeita com o cupom
+aplicado: o professor devolve o uso (`returned: true`, `returned_at` em ms).
+Ausente = aula sem cupom (todas as antigas).
 
 **Índices**: nenhum. Todas as consultas são só de igualdades.
 

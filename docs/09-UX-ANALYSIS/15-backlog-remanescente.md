@@ -224,9 +224,22 @@ que pode se unificar foi unificado**. Pontos pertinentes ainda abertos:
   flags `platform_marketing`/`coach_marketing`), com as ferramentas do
   marketing da arena; desconto do professor no pedido de aula; vitrine
   `/promocoes`; carrossel da tela inicial por região. Ver doc 29 §2.
-- ⏳ **TRV-17** (sugestão da Onda CG) artigos da central de ajuda para a
-  divulgação da plataforma e do professor — ficam para quando as flags forem
-  ligadas (a ajuda não documenta o que está atrás de flag desligada).
+- ✅ **TRV-17** artigos da central de ajuda para a tela inicial e a
+  divulgação da plataforma e do professor (revisão da Onda CG). Em vez de
+  esperar as flags, a central ganhou **artigo atrás de flag** (`flags` no
+  artigo + `helpCatalog(flags)`): o texto já existe e aparece sozinho quando o
+  admin liga a funcionalidade. Ver `docs/21-CENTRAL-DE-AJUDA.md` §4.
+- ✅ **TRV-18** revisão da Onda CG: "só para os meus alunos" valendo no uso,
+  cupom cobrindo UMA aula da série, uso devolvido ao desfazer a aula, regra de
+  `coach_lessons` endurecida do lado do aluno, aviso de "sem vagas" no
+  `?marcar=1`, "enviado para N" = o confirmado, aviso com âncora rolando até a
+  seção, valor final na aula e cupons para tocar no pedido. Ver doc 29 §2.4,
+  §2.7 e §3.
+- ⏳ **TRV-19** (sugestão da revisão CG) contar o público e enviar os avisos
+  das campanhas no SERVIDOR: hoje o navegador do emissor lê os usuários do
+  público e grava os avisos em lotes — correto e honesto (a campanha mostra o
+  CONFIRMADO), mas depende da aba aberta até o fim. Vale mudar quando o
+  público da plataforma passar de alguns milhares.
 
 ---
 
