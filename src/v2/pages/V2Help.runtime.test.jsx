@@ -16,8 +16,14 @@ import { act } from 'react';
 import { MemoryRouter, Routes, Route } from 'react-router-dom';
 import { describe, it, expect, beforeEach, afterEach, vi } from 'vitest';
 
-const flags = { help: true };
-vi.mock('@/core/lib/FeatureFlagsContext', () => ({ useFeatureFlag: () => flags.help }));
+// As funcionalidades com artigo próprio (Onda CG) ligadas por padrão, para
+// a tela mostrar o catálogo inteiro que os testes conferem.
+const TODAS = { personalized_home: true, platform_marketing: true, coach_marketing: true };
+const flags = { help: true, todas: { ...TODAS } };
+vi.mock('@/core/lib/FeatureFlagsContext', () => ({
+  useFeatureFlag: () => flags.help,
+  useFeatureFlags: () => ({ flags: flags.todas, isLoading: false }),
+}));
 
 // A tela lembra a parte escolhida POR USUÁRIO — precisa de um uid.
 const sessao = { user: { uid: 'u-teste' } };
@@ -35,6 +41,7 @@ let container, root;
 
 beforeEach(() => {
   flags.help = true;
+  flags.todas = { ...TODAS };
   sessao.user = { uid: 'u-teste' };
   // A memória da parte preferida vive no localStorage: sem limpar, um teste
   // decidiria a tela inicial do seguinte.
@@ -89,6 +96,53 @@ describe('central de ajuda — a flag', () => {
   it('ligada, a página abre', async () => {
     await render();
     expect(container.textContent).toContain('Como usar o PickleRush');
+  });
+});
+
+describe('⭐ central de ajuda — artigo de funcionalidade desligada', () => {
+  const PROF_ARTIGO = 'Cupons e campanhas do professor';
+  const PROMO_ARTIGO = 'Promoções da plataforma e dos professores';
+
+  it('desligada: não aparece na parte dele', async () => {
+    flags.todas = {};
+    await render('/ajuda?s=professor');
+    expect(container.textContent).toContain('Pacotes, clínicas e o lado comercial');
+    expect(container.textContent).not.toContain(PROF_ARTIGO);
+  });
+
+  it('desligada: não aparece na busca', async () => {
+    flags.todas = {};
+    await render('/ajuda?q=campanha%20professor');
+    expect(container.textContent).not.toContain(PROF_ARTIGO);
+  });
+
+  it('desligada: link direto não abre o artigo', async () => {
+    flags.todas = {};
+    await render('/ajuda?s=professor&a=divulgacao-professor');
+    expect(container.textContent).not.toContain(PROF_ARTIGO);
+  });
+
+  it('desligada: "Ajuda para esta tela" também não o sugere', async () => {
+    flags.todas = {};
+    await render('/ajuda?de=%2Fpromocoes');
+    expect(container.textContent).not.toContain(PROMO_ARTIGO);
+  });
+
+  it('ligada: aparece sozinho na parte dele', async () => {
+    flags.todas = { coach_marketing: true };
+    await render('/ajuda?s=professor');
+    expect(container.textContent).toContain(PROF_ARTIGO);
+  });
+
+  it('promoções: basta UMA das duas funcionalidades (plataforma OU professores)', async () => {
+    flags.todas = { platform_marketing: true };
+    await render('/ajuda?s=atleta');
+    expect(container.textContent).toContain(PROMO_ARTIGO);
+  });
+
+  it('ligada: a busca acha', async () => {
+    await render('/ajuda?q=campanha%20professor');
+    expect(container.textContent).toContain(PROF_ARTIGO);
   });
 });
 

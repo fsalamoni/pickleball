@@ -21,7 +21,7 @@ const snap = (path) => ({ id: path.split('/').pop(), exists: () => banco.has(pat
 const daColecao = (col) => [...banco.entries()]
   .filter(([k]) => k.startsWith(`${col}/`))
   .map(([k, v]) => ({ id: k.split('/').pop(), data: () => v }));
-const notifyUsers = vi.fn(() => Promise.resolve());
+const notifyUsers = vi.fn((ids = []) => Promise.resolve(ids.length));
 
 vi.mock('@/core/config/firebase', () => ({ db: {} }));
 vi.mock('@/core/lib/logger', () => ({ logger: { info: vi.fn(), warn: vi.fn(), error: vi.fn() } }));
@@ -89,7 +89,7 @@ vi.mock('firebase/firestore', () => ({
 }));
 
 const svc = await import('./promoService.js');
-const { respondLesson } = await import('../../coaches/services/lessonService.js');
+const { respondLesson, returnPendingCouponUses } = await import('../../coaches/services/lessonService.js');
 
 const PLATAFORMA = { type: 'platform', id: 'platform', name: 'PickleRush' };
 const PROF = { type: 'coach', id: 'prof', name: 'Prof. Ana' };
@@ -176,6 +176,13 @@ describe('⭐ campanha', () => {
     expect(aviso.link).not.toContain('#');
   });
 
+  it('⭐ parte dos avisos não gravou: a campanha guarda o CONFIRMADO, não o pedido', async () => {
+    notifyUsers.mockImplementationOnce(() => Promise.resolve(1));
+    const r = await svc.publishPromoCampaign(PLATAFORMA, { name: 'X', message: 'Y', notify: true }, ['ana', 'bia', 'caio'], admin);
+    expect(r).toMatchObject({ sent: 1, recipients: 3 });
+    expect(banco.get(`promo_campaigns/${r.id}`)).toMatchObject({ recipients_count: 3, sent_count: 1 });
+  });
+
   it('público vazio não envia', async () => {
     await expect(svc.publishPromoCampaign(PLATAFORMA, { name: 'X', message: 'Y', notify: true }, [], admin))
       .rejects.toThrow(/ninguém/);
@@ -240,5 +247,54 @@ describe('⭐ o cupom do pedido de aula, na confirmação', () => {
     await respondLesson(aula, 'declined', professor);
     expect(banco.get('coach_lessons/l1').coupon.status).toBe('pending');
     expect(banco.get(`promo_coupons/${id}`).used_count).toBe(0);
+  });
+
+  it('⭐ o professor cancela a aula confirmada: o uso VOLTA (e uma vez só)', async () => {
+    const { id, aula } = await preparar();
+    await respondLesson(aula, 'confirmed', professor);
+    const confirmada = banco.get('coach_lessons/l1');
+    await respondLesson({ ...confirmada, id: 'l1' }, 'cancelled', professor);
+    expect(banco.get(`promo_coupons/${id}`)).toMatchObject({ used_count: 0, used_by: [] });
+    expect(banco.get('coach_lessons/l1').coupon).toMatchObject({ status: 'applied', returned: true });
+    expect(notifyUsers.mock.calls.at(-1)[1].message).toMatch(/devolvido/);
+    // De novo (outra aba): nada desce duas vezes.
+    expect(await returnPendingCouponUses([{ ...banco.get('coach_lessons/l1'), id: 'l1' }])).toBe(0);
+    expect(banco.get(`promo_coupons/${id}`).used_count).toBe(0);
+  });
+
+  it('⭐ o ALUNO cancela: ele não mexe no cupom; o professor acerta depois', async () => {
+    const { id, aula } = await preparar();
+    await respondLesson(aula, 'confirmed', professor);
+    const antes = escritas.length;
+    await respondLesson({ ...banco.get('coach_lessons/l1'), id: 'l1' }, 'cancelled', { uid: 'ana' });
+    expect(escritas.slice(antes).filter((e) => e.path === `promo_coupons/${id}`)).toHaveLength(0);
+    expect(banco.get(`promo_coupons/${id}`).used_count).toBe(1);
+    // A agenda do professor abre:
+    expect(await returnPendingCouponUses([{ ...banco.get('coach_lessons/l1'), id: 'l1' }])).toBe(1);
+    expect(banco.get(`promo_coupons/${id}`)).toMatchObject({ used_count: 0, used_by: [] });
+  });
+
+  it('⭐ uso preso numa aula cancelada pelo aluno não recusa o pedido novo como "já usou"', async () => {
+    const { id, aula } = await preparar();
+    await respondLesson(aula, 'confirmed', professor);
+    await respondLesson({ ...banco.get('coach_lessons/l1'), id: 'l1' }, 'cancelled', { uid: 'ana' });
+    const nova = { ...aula, id: 'l2', status: 'requested', coupon: { coupon_id: id, code: 'AULA10', status: 'pending' } };
+    banco.set('coach_lessons/l2', nova);
+    await respondLesson(nova, 'confirmed', professor);
+    expect(banco.get('coach_lessons/l2').coupon.status).toBe('applied');
+    expect(banco.get(`promo_coupons/${id}`)).toMatchObject({ used_count: 1, used_by: ['ana'] });
+  });
+
+  it('⭐ "só para os meus alunos": quem não é aluno tem o cupom recusado; o aluno, aplicado', async () => {
+    const { id, aula } = await preparar();
+    banco.set(`promo_coupons/${id}`, { ...banco.get(`promo_coupons/${id}`), visibility: 'alunos' });
+    await respondLesson(aula, 'confirmed', professor);
+    expect(banco.get('coach_lessons/l1').coupon).toMatchObject({ status: 'rejected', reason: expect.stringMatching(/só para quem já é aluno/) });
+
+    banco.set('coach_students/prof_ana', { coach_id: 'prof', student_id: 'ana', status: 'active' });
+    const outra = { ...aula, id: 'l3' };
+    banco.set('coach_lessons/l3', outra);
+    await respondLesson(outra, 'confirmed', professor);
+    expect(banco.get('coach_lessons/l3').coupon.status).toBe('applied');
   });
 });

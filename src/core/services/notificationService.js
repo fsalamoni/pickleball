@@ -125,9 +125,12 @@ export async function createNotification({ userId, title, message, type, link, a
  * Divide em lotes de 400 operações para respeitar o limite do Firestore (500).
  */
 export async function notifyUsers(userIds, { title, message, type, link, actor, data } = {}) {
-  if (!db) return;
+  if (!db) return 0;
   const recipients = normalizeRecipients(userIds, actor?.uid);
-  if (recipients.length === 0) return;
+  if (recipients.length === 0) return 0;
+  // Quantos avisos foram de fato GRAVADOS — quem precisa dizer "enviado para
+  // N pessoas" usa este número, não o tamanho da lista que pediu.
+  let entregues = 0;
   try {
     const CHUNK = 400;
     for (let i = 0; i < recipients.length; i += CHUNK) {
@@ -138,8 +141,10 @@ export async function notifyUsers(userIds, { title, message, type, link, actor, 
         batch.set(ref, buildPayload({ userId: uid, title, message, type, link, actor, data }));
       });
       await batch.commit();
+      entregues += slice.length;
     }
   } catch (err) {
     logger.error('Falha ao notificar usuários:', err);
   }
+  return entregues;
 }

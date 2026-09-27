@@ -12,7 +12,7 @@
  */
 
 import {
-  collection, doc, getDoc, getDocs, orderBy, query, serverTimestamp,
+  collection, doc, getDoc, getDocs, orderBy, query, runTransaction, serverTimestamp,
   setDoc, updateDoc, where,
 } from 'firebase/firestore';
 import { db } from '@/core/config/firebase';
@@ -30,8 +30,9 @@ import {
 } from '../domain/lesson.js';
 import { getCoach } from './coachService.js';
 import { debitForLesson } from './packageService.js';
+import { COACH_STUDENT_COLLECTION } from './studentService.js';
 import { logger } from '@/core/lib/logger';
-import { LESSON_COUPON_STATUS, lessonCouponLine } from '../../promo/domain/lessonCoupon.js';
+import { LESSON_COUPON_STATUS, lessonCouponLine, pendingCouponReturn } from '../../promo/domain/lessonCoupon.js';
 
 export const COACH_LESSON_COLLECTIONS = {
   availability: 'coach_availability',
@@ -233,6 +234,17 @@ export async function respondLesson(lesson, nextStatus, actor) {
     }
   }
 
+  // Aula desfeita pelo PROFESSOR com o cupom já contado: o uso volta na hora
+  // (quando é o aluno quem cancela, ele não escreve o cupom — o professor
+  // acerta depois; ver `returnPendingCouponUses`).
+  if (isCoach && pendingCouponReturn({ ...lesson, status: nextStatus })) {
+    try {
+      await devolverUsoDoCupom(lesson.id);
+    } catch (err) {
+      logger.info('Uso do cupom da aula não devolvido', { err: err?.code });
+    }
+  }
+
   // Ao concluir, debita 1 crédito do pacote vinculado (best-effort).
   if (nextStatus === LESSON_STATUS.COMPLETED) {
     await debitForLesson(lesson, actor);
@@ -249,7 +261,11 @@ export async function respondLesson(lesson, nextStatus, actor) {
       [LESSON_STATUS.CANCELLED]: 'cancelada',
       [LESSON_STATUS.COMPLETED]: 'concluída',
     }[nextStatus] || 'atualizada';
-    const linhaDoCupom = cupom ? ` ${lessonCouponLine(cupom.coupon)}.` : '';
+    // A devolução do cupom só vai no aviso ao ALUNO (é dele o uso que volta);
+    // quando é o aluno quem cancela, o aviso vai ao professor e não fala nisso.
+    const cupomDoAviso = cupom?.coupon
+      || (isCoach && pendingCouponReturn({ ...lesson, status: nextStatus }) ? lesson.coupon : null);
+    const linhaDoCupom = cupomDoAviso ? ` ${lessonCouponLine(cupomDoAviso, { lessonStatus: nextStatus })}.` : '';
     notifyUsers([recipient], {
       title: `Aula ${label}`,
       message: `A aula ${when ? `de ${when} ` : ''}foi ${label}.${linhaDoCupom}`,
@@ -262,25 +278,115 @@ export async function respondLesson(lesson, nextStatus, actor) {
 }
 
 /**
+ * Devolve o uso do cupom de UMA aula desfeita — numa transação que lê a aula:
+ * se outra aba já devolveu, não devolve de novo (o contador não pode descer
+ * duas vezes pelo mesmo cancelamento). Só o professor (o emissor) consegue:
+ * a regra só deixa o emissor escrever o cupom.
+ *
+ * @returns {Promise<boolean>} se devolveu agora
+ */
+async function devolverUsoDoCupom(lessonId) {
+  if (!db || !lessonId) return false;
+  const { PROMO_COLLECTIONS } = await import('../../promo/domain/promo.js');
+  const aulaRef = doc(db, COACH_LESSON_COLLECTIONS.lessons, lessonId);
+  return runTransaction(db, async (tx) => {
+    const aulaSnap = await tx.get(aulaRef);
+    if (!aulaSnap.exists()) return false;
+    const aula = { id: aulaSnap.id, ...aulaSnap.data() };
+    if (!pendingCouponReturn(aula)) return false;
+    const cupomRef = doc(db, PROMO_COLLECTIONS.coupons, aula.coupon.coupon_id);
+    const cupomSnap = await tx.get(cupomRef);
+    if (cupomSnap.exists()) {
+      const c = cupomSnap.data();
+      const patch = {
+        used_count: Math.max(0, (Number(c.used_count) || 0) - 1),
+        updated_at: serverTimestamp(),
+      };
+      if (aula.student_id) {
+        patch.used_by = (Array.isArray(c.used_by) ? c.used_by : []).filter((u) => u !== aula.student_id);
+      }
+      tx.update(cupomRef, patch);
+    }
+    tx.update(aulaRef, {
+      coupon: { ...aula.coupon, returned: true, returned_at: Date.now() },
+      updated_at: serverTimestamp(),
+    });
+    return true;
+  });
+}
+
+/**
+ * Acerta os usos de cupom presos em aulas desfeitas pelo ALUNO (ele cancela,
+ * mas não escreve o cupom do professor). Roda do lado do professor — ao abrir
+ * a agenda e antes de conferir o cupom de outro pedido do mesmo aluno. Cada
+ * devolução é idempotente; uma que falhe não impede as outras.
+ *
+ * @param {object[]} lessons aulas já lidas pelo professor
+ * @returns {Promise<number>} quantas foram devolvidas agora
+ */
+export async function returnPendingCouponUses(lessons = []) {
+  const pendentes = (lessons || []).filter(pendingCouponReturn);
+  let devolvidas = 0;
+  for (const aula of pendentes) {
+    try {
+      if (await devolverUsoDoCupom(aula.id)) devolvidas += 1;
+    } catch (err) {
+      logger.info('Uso do cupom da aula não devolvido', { err: err?.code });
+    }
+  }
+  return devolvidas;
+}
+
+/**
+ * O aluno é aluno DESTE professor? (vínculo ativo ou em pausa, como na
+ * vitrine). Consulta pelas DUAS igualdades — `coach_id` é o campo que a regra
+ * confere, e ler o documento pelo id recusaria quando ele não existe.
+ */
+async function ehAlunoDoProfessor(coachId, studentId) {
+  if (!coachId || !studentId) return false;
+  const snap = await getDocs(query(
+    collection(db, COACH_STUDENT_COLLECTION),
+    where('coach_id', '==', coachId),
+    where('student_id', '==', studentId),
+  ));
+  return snap.docs.some((d) => ['active', 'paused'].includes(d.data()?.status));
+}
+
+/**
  * Confere o cupom pendente da aula contra o BANCO (o aluno informou; quem
  * aplica é o professor) e devolve o que gravar. Sem cupom pendente, `null`.
  * Se a conferência falhar (rede), o cupom segue pendente — nunca é recusado
  * nem aplicado às cegas.
+ *
+ * Antes de conferir: (1) acerta usos presos em aulas deste aluno que foram
+ * desfeitas — senão "você já usou" recusaria o cupom que a tela do aluno já
+ * disse ter voltado; (2) no cupom "só para os meus alunos", confere o vínculo.
  */
 async function resolverCupomDaAula(lesson) {
   if (lesson?.coupon?.status !== LESSON_COUPON_STATUS.PENDING || !lesson.coupon.coupon_id) return null;
   try {
     // Sob demanda: a conferência puxa o marketing inteiro, e o serviço de
     // aulas é carregado por telas (a tela inicial) que nunca confirmam aula.
-    const [{ getPromoCoupon }, { resolveLessonCoupon }] = await Promise.all([
+    const [{ getPromoCoupon }, { resolveLessonCoupon, PROMO_VISIBILITY }] = await Promise.all([
       import('../../promo/services/promoService.js'),
       import('../../promo/domain/promo.js'),
     ]);
+    if (lesson.student_id) {
+      const doAluno = await getDocs(query(
+        collection(db, COACH_LESSON_COLLECTIONS.lessons),
+        where('coach_id', '==', lesson.coach_id),
+        where('student_id', '==', lesson.student_id),
+      ));
+      await returnPendingCouponUses(doAluno.docs.map((d) => ({ id: d.id, ...d.data() })));
+    }
     const [cupom, professor] = await Promise.all([
       getPromoCoupon(lesson.coupon.coupon_id),
       getCoach(lesson.coach_id).catch(() => null),
     ]);
-    return resolveLessonCoupon({ lesson, coupon: cupom, coach: professor || {} });
+    const isStudent = cupom?.visibility === PROMO_VISIBILITY.STUDENTS
+      ? await ehAlunoDoProfessor(lesson.coach_id, lesson.student_id)
+      : null;
+    return resolveLessonCoupon({ lesson, coupon: cupom, coach: professor || {}, isStudent });
   } catch (err) {
     logger.info('Cupom da aula não conferido', { err: err?.code });
     return null;

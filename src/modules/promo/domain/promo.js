@@ -628,7 +628,9 @@ export function promoUsageReport({ coupons = [], costs = {}, lessons = [] } = {}
 /*  O cupom no pedido de aula (professor)                             */
 /* ------------------------------------------------------------------ */
 
-export { LESSON_COUPON_STATUS, lessonCouponLine, normalizeLessonCoupon } from './lessonCoupon.js';
+export {
+  LESSON_COUPON_STATUS, lessonCouponLine, normalizeLessonCoupon, pendingCouponReturn, hasReturnableUse,
+} from './lessonCoupon.js';
 
 /**
  * O cupom que o aluno informa no pedido de aula — só o que a tela sabe:
@@ -657,16 +659,23 @@ export const LESSON_COUPON_KINDS = Object.freeze([K.DISCOUNT, K.PRIVATE_LESSON])
  * Por que este código NÃO entra no pedido de aula deste professor — ou `null`.
  * "Cupom inválido" não ensina nada; "é de outro professor" e "venceu" ensinam.
  *
+ * `isStudent`: se a pessoa é aluna deste professor. Só pesa no cupom "só para
+ * os meus alunos", e só quando SABIDO — `false` recusa; `null` (não deu para
+ * conferir) não recusa aqui: quem decide é a confirmação, que confere de novo.
+ *
  * @param {object|null} coupon
- * @param {{ coachId: string, usedByUser?: boolean, now?: number }} ctx
+ * @param {{ coachId: string, usedByUser?: boolean, isStudent?: boolean|null, now?: number }} ctx
  */
-export function lessonCouponProblem(coupon, { coachId, usedByUser = false, now = Date.now() } = {}) {
+export function lessonCouponProblem(coupon, { coachId, usedByUser = false, isStudent = null, now = Date.now() } = {}) {
   if (!coupon) return 'Cupom não encontrado.';
   if (coupon.issuer_type !== PROMO_ISSUER.COACH || coupon.issuer_id !== coachId) {
     return 'Este código não é deste professor.';
   }
   if (!LESSON_COUPON_KINDS.includes(couponKind(coupon))) {
     return 'Este código é um vale: mostre ao professor na aula para usar.';
+  }
+  if (coupon.visibility === PROMO_VISIBILITY.STUDENTS && isStudent === false) {
+    return 'Este cupom é só para quem já é aluno deste professor.';
   }
   const erro = couponError(coupon, { anyFamily: true, usedByUser, now });
   return erro;
@@ -693,23 +702,51 @@ const minutosDoHorario = (hhmm) => {
   return m ? Number(m[1]) * 60 + Number(m[2]) : null;
 };
 
+/** Os horários válidos da aula, em ordem (data e início). */
+function horariosDaAula(lesson) {
+  return (Array.isArray(lesson?.slots) ? lesson.slots : [])
+    .filter((s) => {
+      const a = minutosDoHorario(s?.start);
+      const b = minutosDoHorario(s?.end);
+      return a != null && b != null && b > a;
+    })
+    .sort((x, y) => `${x.date || ''} ${x.start}`.localeCompare(`${y.date || ''} ${y.start}`));
+}
+
+const duracaoEmHoras = (s) => (minutosDoHorario(s.end) - minutosDoHorario(s.start)) / 60;
+const centavos = (n) => Math.round(n * 100) / 100;
+
 /**
- * O preço de referência da aula, para o desconto: o preço gravado na aula (se
- * houver) ou o valor-hora do professor × as horas dos horários. Sem nenhum
- * dos dois, `null` — e o desconto em % fica desconhecido (nunca inventado).
+ * O preço de referência da aula INTEIRA (todos os horários): o preço gravado
+ * na aula (se houver) ou o valor-hora do professor × as horas dos horários.
+ * Sem nenhum dos dois, `null` — e o desconto em % fica desconhecido (nunca
+ * inventado).
  */
 export function lessonReferencePrice(lesson = {}, coach = {}) {
   const gravado = Number(lesson?.price);
-  if (lesson?.price != null && Number.isFinite(gravado) && gravado > 0) return Math.round(gravado * 100) / 100;
+  if (lesson?.price != null && Number.isFinite(gravado) && gravado > 0) return centavos(gravado);
   const hora = Number(coach?.hourly_rate);
   if (coach?.hourly_rate == null || !Number.isFinite(hora) || hora <= 0) return null;
-  const minutos = (Array.isArray(lesson?.slots) ? lesson.slots : []).reduce((t, s) => {
-    const a = minutosDoHorario(s?.start);
-    const b = minutosDoHorario(s?.end);
-    return a != null && b != null && b > a ? t + (b - a) : t;
-  }, 0);
-  if (minutos <= 0) return null;
-  return Math.round(hora * (minutos / 60) * 100) / 100;
+  const horas = horariosDaAula(lesson).reduce((t, s) => t + duracaoEmHoras(s), 0);
+  if (horas <= 0) return null;
+  return centavos(hora * horas);
+}
+
+/**
+ * O valor da aula que o cupom COBRE — uma só. Numa aula recorrente (vários
+ * horários) o cupom vale para a PRIMEIRA: ele conta um uso só, e "aula
+ * experimental grátis" não pode virar dez semanas grátis. Com o preço gravado
+ * da série, a parte de cada aula é o preço ÷ o número de aulas.
+ */
+export function lessonCouponBase(lesson = {}, coach = {}) {
+  const horarios = horariosDaAula(lesson);
+  const gravado = Number(lesson?.price);
+  if (lesson?.price != null && Number.isFinite(gravado) && gravado > 0) {
+    return centavos(horarios.length > 1 ? gravado / horarios.length : gravado);
+  }
+  const hora = Number(coach?.hourly_rate);
+  if (coach?.hourly_rate == null || !Number.isFinite(hora) || hora <= 0 || horarios.length === 0) return null;
+  return centavos(hora * duracaoEmHoras(horarios[0]));
 }
 
 /**
@@ -725,22 +762,30 @@ export function lessonReferencePrice(lesson = {}, coach = {}) {
  *    fixo ainda vale; o percentual fica `null` — combinado na hora, nunca
  *    inventado.
  *
+ * Numa aula recorrente o desconto vale para UMA aula (`lessonCouponBase`), e
+ * `price` é o valor da série menos esse desconto. `isStudent` decide o cupom
+ * "só para os meus alunos": o serviço o confere no banco e, se não conseguir,
+ * nem chama esta conta (o cupom segue pendente).
+ *
  * @returns {{ coupon: object, price?: number }}
  */
-export function resolveLessonCoupon({ lesson, coupon, coach, now = Date.now() } = {}) {
+export function resolveLessonCoupon({ lesson, coupon, coach, isStudent = null, now = Date.now() } = {}) {
   const pedido = lesson?.coupon || {};
   const base = { ...pedido };
   const problema = lessonCouponProblem(coupon, {
     coachId: lesson?.coach_id,
     usedByUser: Boolean(lesson?.student_id) && (coupon?.used_by || []).includes(lesson.student_id),
+    isStudent,
     now,
   });
   if (problema) return { coupon: { ...base, status: LESSON_COUPON_STATUS.REJECTED, reason: problema } };
 
-  const referencia = lessonReferencePrice(lesson, coach);
+  const total = lessonReferencePrice(lesson, coach);
+  const coberta = lessonCouponBase(lesson, coach);
+  const aulas = horariosDaAula(lesson).length;
   const kind = couponKind(coupon);
   let desconto = null;
-  if (referencia != null) desconto = lessonCouponDiscount(referencia, coupon);
+  if (coberta != null) desconto = lessonCouponDiscount(coberta, coupon);
   else if (kind === K.DISCOUNT && coupon.type === COUPON_TYPE.FIXED) desconto = Math.max(0, Number(coupon.value) || 0);
 
   const aplicado = {
@@ -749,10 +794,11 @@ export function resolveLessonCoupon({ lesson, coupon, coach, now = Date.now() } 
     kind,
     status: LESSON_COUPON_STATUS.APPLIED,
     discount_value: desconto,
-    original_price: referencia,
+    original_price: total,
+    ...(aulas > 1 ? { lessons_count: aulas } : {}),
   };
-  if (referencia == null || desconto == null) return { coupon: aplicado };
-  return { coupon: aplicado, price: Math.max(0, Math.round((referencia - desconto) * 100) / 100) };
+  if (total == null || desconto == null) return { coupon: aplicado };
+  return { coupon: aplicado, price: Math.max(0, centavos(total - desconto)) };
 }
 
 /* ------------------------------------------------------------------ */

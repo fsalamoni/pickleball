@@ -69,3 +69,15 @@ export function promoKindGroups(issuerType) {
 
 /** "1 pessoa" / "3 pessoas". */
 export const pessoas = (n) => `${n} ${n === 1 ? 'pessoa' : 'pessoas'}`;
+
+/**
+ * Quanto do AVISO da campanha chegou. `recipients_count` é o público pedido e
+ * `sent_count` o que foi confirmado; campanha antiga (sem `recipients_count`)
+ * tinha só o número do público — segue como antes.
+ */
+export function avisoEnviado(campaign) {
+  const confirmados = Number(campaign?.sent_count) || 0;
+  const publico = Number(campaign?.recipients_count) || 0;
+  if (publico > 0 && confirmados < publico) return `Aviso confirmado para ${confirmados} de ${pessoas(publico)}`;
+  return `Aviso para ${pessoas(confirmados || publico)}`;
+}

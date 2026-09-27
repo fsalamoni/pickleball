@@ -1,4 +1,4 @@
-import React, { useEffect, useMemo, useState } from 'react';
+import React, { Suspense, lazy, useMemo, useState } from 'react';
 import { toast } from 'sonner';
 import {
   Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter, DialogDescription,
@@ -29,68 +29,10 @@ function fmtDay(iso) {
   return `${WEEKDAY_SHORT[date.getDay()]} ${String(d).padStart(2, '0')}/${String(m).padStart(2, '0')}`;
 }
 
-/**
- * "Tem um cupom do professor?" (Onda CG, flag `coach_marketing`).
- *
- * Confere o código ANTES de enviar — o aluno precisa saber se vale ("venceu",
- * "é de outro professor", "você já usou") — mas não aplica nada: o cupom vai
- * PENDENTE no pedido e é aplicado quando o professor confirma, com o preço já
- * descontado. A conferência é carregada sob demanda: quem não tem cupom não
- * baixa o marketing.
- */
-function CampoCupom({ coachId, uid, value, onChange, codigoInicial = '' }) {
-  const [codigo, setCodigo] = useState(codigoInicial);
-  const [estado, setEstado] = useState({ carregando: false, erro: '' });
-
-  const conferir = async (codigoDado) => {
-    const limpo = String(codigoDado ?? codigo).trim().toUpperCase().replace(/\s+/g, '');
-    if (!limpo) return;
-    setEstado({ carregando: true, erro: '' });
-    onChange(null);
-    try {
-      const [{ findCoachCouponByCode }, { lessonCouponProblem, lessonCouponFromPromo }] = await Promise.all([
-        import('@/modules/promo/services/promoService'),
-        import('@/modules/promo/domain/promo'),
-      ]);
-      const cupom = await findCoachCouponByCode(coachId, limpo);
-      const problema = lessonCouponProblem(cupom, {
-        coachId, usedByUser: Boolean(uid) && (cupom?.used_by || []).includes(uid),
-      });
-      if (problema) setEstado({ carregando: false, erro: problema });
-      else {
-        onChange(lessonCouponFromPromo(cupom));
-        setEstado({ carregando: false, erro: '' });
-      }
-    } catch {
-      setEstado({ carregando: false, erro: 'Não foi possível conferir o cupom agora. Tente de novo.' });
-    }
-  };
-
-  // Veio com o código (o aluno tocou em "Usar ao pedir a aula"): confere já.
-  useEffect(() => {
-    if (codigoInicial) conferir(codigoInicial);
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [codigoInicial]);
-
-  return (
-    <div>
-      <Label htmlFor="aula-cupom" className="text-xs">Tem um cupom do professor? (opcional)</Label>
-      <div className="mt-1 flex gap-2">
-        <Input id="aula-cupom" maxLength={30} placeholder="AULA10" value={codigo}
-          onChange={(e) => { setCodigo(e.target.value.toUpperCase().replace(/\s+/g, '')); onChange(null); setEstado({ carregando: false, erro: '' }); }} />
-        <Button type="button" variant="outline" disabled={!codigo.trim() || estado.carregando} onClick={() => conferir()}>
-          {estado.carregando ? 'Conferindo…' : 'Aplicar'}
-        </Button>
-      </div>
-      {estado.erro && <p role="alert" className="mt-1 text-xs font-semibold text-red-700">{estado.erro}</p>}
-      {value && (
-        <p className="mt-1 text-xs font-semibold text-green-700">
-          {value.code}: {value.benefit} — entra quando o professor confirmar a aula.
-        </p>
-      )}
-    </div>
-  );
-}
+// "Tem um cupom do professor?" (Onda CG, flag `coach_marketing`) — sob
+// demanda: quem não tem a flag ligada não baixa o marketing. Ver
+// `LessonCouponField` (cupons para tocar, estimativa com desconto, "só alunos").
+const LessonCouponField = lazy(() => import('@/v2/components/promo/LessonCouponField'));
 
 /**
  * Diálogo do aluno para solicitar uma aula a um professor. Mostra os horários
@@ -297,8 +239,10 @@ export default function RequestLessonDialog({ coach, open, onOpenChange, initial
           </div>
 
           {cuponsOn && (
-            <CampoCupom coachId={coachId} uid={user?.uid} value={cupom} onChange={setCupom}
-              codigoInicial={open ? initialCouponCode : ''} />
+            <Suspense fallback={null}>
+              <LessonCouponField coachId={coachId} hourlyRate={coach?.hourly_rate ?? null} slot={slot}
+                value={cupom} onChange={setCupom} initialCode={open ? initialCouponCode : ''} />
+            </Suspense>
           )}
 
           {slot && (

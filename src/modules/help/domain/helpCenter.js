@@ -36,6 +36,13 @@
  * Assim a tela desenha cada tipo do seu jeito, e o conteúdo nunca carrega
  * marcação — nada de `<b>` perdido num texto que um dia vira outra coisa.
  *
+ * ## Artigo de funcionalidade atrás de flag
+ *
+ * `flags: ['chave']` no artigo: ele só aparece na central quando QUALQUER uma
+ * dessas flags está ligada (`helpCatalog`). Assim o texto nasce junto com a
+ * funcionalidade e aparece sozinho no dia em que o admin a liga — sem mandar
+ * ninguém, antes disso, para uma porta que não abre.
+ *
  * ## O que NÃO vai aqui
  *
  * Regra de negócio. Este texto descreve o que a plataforma faz; quem decide o
@@ -122,6 +129,30 @@ const COMECAR = {
         ),
         p('A busca do topo procura em toda a plataforma: atletas, torneios, arenas, clubes.'),
         tip('O menu lateral recolhe, se você quiser mais espaço na tela. A preferência fica guardada no seu navegador.'),
+      ],
+    },
+    {
+      id: 'inicio-personalizado',
+      flags: ['personalized_home'],
+      title: 'A sua tela inicial',
+      summary: 'Por que ela mostra o que mostra, e como mudar.',
+      keywords: ['início', 'tela inicial', 'home', 'personalizar', 'interesses', 'atalhos', 'agenda', 'hoje'],
+      blocks: [
+        p('A tela inicial é montada para VOCÊ: o que aparece nela e em que ordem depende do que você faz na plataforma e do que disse que gosta.'),
+        list(
+          'O QUE VOCÊ FAZ vem primeiro — se você gere uma arena, dá aula ou organiza torneio, essas seções abrem a tela.',
+          'O QUE VOCÊ JÁ USA vem junto — quem tem reserva, dia de jogo ou torneio marcado vê essa seção mesmo sem ter marcado o interesse.',
+          'O QUE VOCÊ DISSE QUE GOSTA completa — são os interesses do seu perfil.',
+        ),
+        p('No topo ficam a sua agenda de hoje numa frase, os atalhos para o que você mais usa (criar dia de jogo, torneios abertos, a Central da sua arena com os pedidos esperando, o painel do professor…) e, mais abaixo, o seu último torneio, o ranking e as duplas.'),
+        steps(
+          'Toque em "Personalizar", no topo da tela inicial.',
+          'Marque ou desmarque os assuntos que quer ver.',
+          'Pronto: a tela muda na hora. Os seus interesses do perfil são atualizados juntos.',
+        ),
+        tip('A tela inicial NUNCA mostra coisa vencida: torneio encerrado, dia de jogo que já passou, inscrição com prazo esgotado, cupom vencido e horário que já passou ficam de fora. Seção sem nada atual some ou diz que não há nada.'),
+        warn('Se uma parte não carregar (conexão), a seção diz que não carregou, com "Tentar de novo" — ela não afirma que você não tem nada.'),
+        link('/perfil/editar', 'Revisar os meus interesses no perfil'),
       ],
     },
     {
@@ -288,6 +319,31 @@ const ATLETA = {
         tip('O código de indicação é seu naquela arena: cada arena tem o próprio. Ele não é criado só porque você abriu a página — só quando você pede.'),
         tip('Foi indicado? O campo "Foi indicado por alguém?" aparece no pedido de reserva quando a arena tem o programa ligado (e, se ele vale só para quem nunca reservou ali, na sua primeira reserva). A arena confere o código ao confirmar — se não valer, a reserva mostra o motivo.'),
         warn('O cupom só é contado como usado quando a arena CONFIRMA a reserva. Pedido recusado não gasta o seu cupom.'),
+      ],
+    },
+    {
+      id: 'promocoes-plataforma-professores',
+      flags: ['platform_marketing', 'coach_marketing'],
+      title: 'Promoções da plataforma e dos professores',
+      summary: 'Onde achar os cupons, como usar na aula e quando o desconto vale.',
+      keywords: ['promoção', 'promoções', 'cupom', 'código', 'desconto', 'professor', 'aula', 'plataforma', 'campanha', 'vale', 'aula experimental', 'copiar'],
+      blocks: [
+        p('Além das arenas, a própria plataforma e os professores podem lançar cupons e campanhas. Tudo o que está valendo agora fica em "Promoções" — e, se for da sua região, também na tela inicial.'),
+        list(
+          'DESCONTO NA AULA — o professor dá um percentual ou um valor na aula. Você usa ao pedir a aula.',
+          'AULA EXPERIMENTAL — uma aula por conta do professor. Também entra no pedido de aula.',
+          'VALES — clínica, brinde, equipamento, evento. Mostre o código ao professor (ou à equipe da plataforma) na hora: eles registram o uso.',
+        ),
+        steps(
+          'Abra "Promoções" (ou a seção Promoções no perfil do professor). TOQUE NO CÓDIGO para copiar.',
+          'Para aula: toque em "Usar ao pedir a aula" — o pedido já abre com o cupom. No pedido, os cupons do professor também aparecem para tocar.',
+          'O pedido mostra a estimativa com o desconto. O desconto é conferido e aplicado quando o professor CONFIRMA a aula; o valor final aparece na aula, em "Minhas aulas".',
+        ),
+        tip('Alguns cupons de professor são "só para alunos" — você os vê se já for aluno dele. Se o cupom não valer (venceu, esgotou, você já usou, é só para alunos), a tela diz o motivo antes de você enviar.'),
+        tip('Aula recorrente: o cupom vale para UMA aula (a primeira da série), porque ele conta um uso só.'),
+        warn('A aula foi cancelada ou recusada depois de o cupom ser aplicado? O uso volta para você, e dá para usar o cupom de novo noutro pedido.'),
+        link('/promocoes', 'Ver as promoções'),
+        link('/minhas-aulas', 'Minhas aulas'),
       ],
     },
     {
@@ -771,6 +827,31 @@ const PROFESSOR = {
       ],
     },
     {
+      id: 'divulgacao-professor',
+      flags: ['coach_marketing'],
+      title: 'Cupons e campanhas do professor',
+      summary: 'Criar cupom, divulgar com banner, avisar os alunos e medir o uso.',
+      keywords: ['divulgação', 'cupom', 'campanha', 'banner', 'promoção', 'desconto', 'aula experimental', 'alunos', 'aviso', 'controle de uso', 'vale'],
+      blocks: [
+        p('No painel do professor, a seção DIVULGAÇÃO tem as mesmas ferramentas das arenas: cupons (com a arte de tíquete e o código para copiar), campanhas com banner e o controle de uso.'),
+        steps(
+          'Abra o painel do professor → Divulgação → Cupons e crie um cupom: desconto na aula, aula experimental ou um vale (clínica, brinde, equipamento…).',
+          'Escolha a arte (cinco modelos, os seus modelos ou uma imagem sua), o prazo, o limite de usos e se vale uma vez por pessoa.',
+          'Decida onde ele aparece: no seu perfil, na vitrine de Promoções e, se quiser, na tela inicial (Brasil todo, um estado ou uma cidade). Marque "só para os meus alunos" se for exclusivo.',
+          'Em Campanhas, publique um banner e/ou um aviso no aplicativo. O público são os seus alunos, CONTADOS antes de enviar; o banner pode levar a "Marcar aula", às suas clínicas, à loja ou ao seu perfil.',
+        ),
+        p('O desconto na aula entra no PEDIDO: o aluno informa o código (ou toca no cupom) e, quando você confirma a aula, o cupom é conferido contra o banco e aplicado — o valor já descontado aparece na aula, para você e para o aluno. Se não valer, a aula é confirmada assim mesmo, e o aluno vê o motivo.'),
+        list(
+          'Cancelou ou recusou uma aula com cupom aplicado? O uso volta para o aluno. Se foi o aluno quem cancelou, o uso volta quando você abre a sua agenda.',
+          'Aula recorrente: o cupom cobre uma aula da série, não todas.',
+          'Vale (clínica, brinde…): na hora de entregar, registre o uso em Divulgação → Cupons → "Registrar uso de um cupom".',
+          'Cupons → Controle de uso: quantas vezes cada cupom foi usado, o custo e a receita — "—" quando não dá para saber, nunca zero.',
+        ),
+        warn('O aviso de uma campanha não pode ser cancelado depois de enviado. Mantenha a tela aberta até terminar: se a conexão cair no meio, a campanha mostra para quantas pessoas o aviso foi CONFIRMADO.'),
+        link('/aulas', 'Abrir o painel do professor'),
+      ],
+    },
+    {
       id: 'parcerias',
       title: 'Parcerias com arenas e clubes',
       summary: 'Onde você dá aula.',
@@ -865,23 +946,34 @@ export const HELP_SECTIONS = Object.freeze([COMECAR, ATLETA, ARENA, PROFESSOR, C
 
 /* --------------------------------------------------------------- consultas */
 
+/*
+ * Todas as consultas existem em duas formas: as exportadas abaixo, sobre o
+ * catálogo INTEIRO (é o que os testes de integridade varrem — todo artigo,
+ * ligado ou não), e as de `helpCatalog(flags)`, sobre o que está LIGADO para
+ * quem abre a central. A tela usa sempre a segunda.
+ */
+const secaoEm = (secoes, id) => secoes.find((s) => s.id === id) || null;
+const artigoEm = (secoes, sectionId, articleId) => {
+  const secao = secaoEm(secoes, sectionId);
+  return secao ? secao.articles.find((a) => a.id === articleId) || null : null;
+};
+const todosEm = (secoes) => secoes.flatMap((s) => s.articles.map((a) => ({
+  ...a, sectionId: s.id, sectionLabel: s.label,
+})));
+
 /** Uma seção pelo id, ou `null`. */
 export function getHelpSection(id) {
-  return HELP_SECTIONS.find((s) => s.id === id) || null;
+  return secaoEm(HELP_SECTIONS, id);
 }
 
 /** Um artigo pelo par (seção, artigo), ou `null`. */
 export function getHelpArticle(sectionId, articleId) {
-  const secao = getHelpSection(sectionId);
-  if (!secao) return null;
-  return secao.articles.find((a) => a.id === articleId) || null;
+  return artigoEm(HELP_SECTIONS, sectionId, articleId);
 }
 
 /** Todos os artigos, cada um sabendo de que seção veio. */
 export function allHelpArticles() {
-  return HELP_SECTIONS.flatMap((s) => s.articles.map((a) => ({
-    ...a, sectionId: s.id, sectionLabel: s.label,
-  })));
+  return todosEm(HELP_SECTIONS);
 }
 
 /** Texto pesquisável de um artigo (título, resumo, palavras-chave e corpo). */
@@ -912,9 +1004,13 @@ export function normalizeForSearch(texto) {
  * @returns {Array<object>} artigos, com `sectionId`/`sectionLabel`
  */
 export function searchHelp(termo, opts = {}) {
+  return buscarEm(HELP_SECTIONS, termo, opts);
+}
+
+function buscarEm(secoes, termo, opts = {}) {
   const base = opts.sectionId
-    ? allHelpArticles().filter((a) => a.sectionId === opts.sectionId)
-    : allHelpArticles();
+    ? todosEm(secoes).filter((a) => a.sectionId === opts.sectionId)
+    : todosEm(secoes);
 
   const termos = normalizeForSearch(termo).split(/\s+/).filter(Boolean);
   if (termos.length === 0) return base;
@@ -1031,11 +1127,17 @@ export const HELP_ROUTE_HINTS = Object.freeze([
 
   // --- professor -----------------------------------------------------------
   { pattern: '/aulas', label: 'o painel do professor',
-    refs: [[HELP_SECTION.COACH, 'agenda-professor'], [HELP_SECTION.COACH, 'alunos'], [HELP_SECTION.COACH, 'pacotes-clinicas']] },
+    refs: [[HELP_SECTION.COACH, 'agenda-professor'], [HELP_SECTION.COACH, 'alunos'], [HELP_SECTION.COACH, 'pacotes-clinicas'], [HELP_SECTION.COACH, 'divulgacao-professor']] },
   { pattern: '/minhas-aulas', label: 'suas aulas',
-    refs: [[HELP_SECTION.ATHLETE, 'reservas-aulas']] },
+    refs: [[HELP_SECTION.ATHLETE, 'reservas-aulas'], [HELP_SECTION.ATHLETE, 'promocoes-plataforma-professores']] },
   { pattern: '/coaches/*', label: 'este professor',
-    refs: [[HELP_SECTION.ATHLETE, 'reservas-aulas']] },
+    refs: [[HELP_SECTION.ATHLETE, 'reservas-aulas'], [HELP_SECTION.ATHLETE, 'promocoes-plataforma-professores']] },
+
+  // --- promoções da plataforma e dos professores --------------------------
+  { pattern: '/promocoes', label: 'promoções',
+    refs: [[HELP_SECTION.ATHLETE, 'promocoes-plataforma-professores'], [HELP_SECTION.ATHLETE, 'vantagens-arena']] },
+  { pattern: '/campanhas/*', label: 'esta campanha',
+    refs: [[HELP_SECTION.ATHLETE, 'promocoes-plataforma-professores']] },
   { pattern: '/coaches', label: 'professores',
     refs: [[HELP_SECTION.ATHLETE, 'reservas-aulas'], [HELP_SECTION.COACH, 'virar-professor']] },
 
@@ -1089,15 +1191,19 @@ function casaRota(pattern, pathname) {
  *   pessoa a ignorar o bloco.
  */
 export function helpForRoute(pathname) {
+  return pistaEm(HELP_SECTIONS, pathname);
+}
+
+function pistaEm(secoes, pathname) {
   if (!pathname) return null;
   const pista = HELP_ROUTE_HINTS.find((r) => casaRota(r.pattern, pathname));
   if (!pista) return null;
 
   const artigos = pista.refs
     .map(([s, a]) => {
-      const artigo = getHelpArticle(s, a);
+      const artigo = artigoEm(secoes, s, a);
       if (!artigo) return null;
-      const secao = getHelpSection(s);
+      const secao = secaoEm(secoes, s);
       return { ...artigo, sectionId: s, sectionLabel: secao.label };
     })
     .filter(Boolean);
@@ -1127,11 +1233,15 @@ export const HELP_FAQ = Object.freeze([
 
 /** As perguntas frequentes já resolvidas em artigos (ignora ref quebrada). */
 export function faqArticles() {
+  return perguntasEm(HELP_SECTIONS);
+}
+
+function perguntasEm(secoes) {
   return HELP_FAQ
     .map((f) => {
-      const artigo = getHelpArticle(f.section, f.article);
+      const artigo = artigoEm(secoes, f.section, f.article);
       if (!artigo) return null;
-      return { ...artigo, question: f.q, sectionId: f.section, sectionLabel: getHelpSection(f.section).label };
+      return { ...artigo, question: f.q, sectionId: f.section, sectionLabel: secaoEm(secoes, f.section).label };
     })
     .filter(Boolean);
 }
@@ -1214,10 +1324,53 @@ export function searchSnippet(artigo, termo, janela = 150) {
  * @returns {object|null} `null` no último artigo da última seção.
  */
 export function nextHelpArticle(sectionId, articleId) {
-  const todos = allHelpArticles();
+  return proximoEm(HELP_SECTIONS, sectionId, articleId);
+}
+
+function proximoEm(secoes, sectionId, articleId) {
+  const todos = todosEm(secoes);
   const i = todos.findIndex((a) => a.sectionId === sectionId && a.id === articleId);
   if (i < 0 || i + 1 >= todos.length) return null;
   return todos[i + 1];
+}
+
+/* ======================================================= LIGADO OU NÃO == */
+
+/**
+ * O artigo vale para quem abre a central? Artigo sem `flags` vale sempre. Com
+ * `flags`, vale quando QUALQUER uma delas está ligada — documentar o que está
+ * desligado manda a pessoa para uma porta que não abre (a lição da
+ * gamificação). Assim o artigo já nasce escrito, e aparece sozinho no dia em
+ * que o admin liga a funcionalidade.
+ *
+ * @param {object} artigo
+ * @param {Record<string, boolean>} [flags]
+ */
+export function helpArticleVisible(artigo, flags = {}) {
+  const exige = Array.isArray(artigo?.flags) ? artigo.flags : [];
+  return exige.length === 0 || exige.some((f) => Boolean(flags?.[f]));
+}
+
+/**
+ * A central como QUEM ABRE a vê: as mesmas consultas, só sobre os artigos
+ * ligados. Seção sem nenhum artigo ligado não aparece.
+ *
+ * @param {Record<string, boolean>} [flags]
+ */
+export function helpCatalog(flags = {}) {
+  const secoes = HELP_SECTIONS
+    .map((s) => ({ ...s, articles: s.articles.filter((a) => helpArticleVisible(a, flags)) }))
+    .filter((s) => s.articles.length > 0);
+  return {
+    sections: secoes,
+    getSection: (id) => secaoEm(secoes, id),
+    getArticle: (s, a) => artigoEm(secoes, s, a),
+    all: () => todosEm(secoes),
+    search: (termo, opts) => buscarEm(secoes, termo, opts),
+    forRoute: (pathname) => pistaEm(secoes, pathname),
+    faq: () => perguntasEm(secoes),
+    next: (s, a) => proximoEm(secoes, s, a),
+  };
 }
 
 /**

@@ -27,7 +27,7 @@ import {
 import BannerArt from '@/v2/components/arenas/marketing/campaigns/BannerArt';
 import BannerThumb from '@/v2/components/arenas/marketing/campaigns/BannerThumb';
 import PromoCampaignForm from './PromoCampaignForm';
-import { pessoas } from './promoUi';
+import { avisoEnviado } from './promoUi';
 
 const ESTADO = {
   [BANNER_STATE.LIVE]: { tone: 'green', rotulo: (c) => `Banner no ar até ${formatDateShortBR(c.banner_until)}` },
@@ -89,9 +89,9 @@ function LinhaDaCampanha({ campaign, today, onEditar }) {
         </div>
         {campaign.message && <p className="mt-0.5 line-clamp-2 text-xs text-gray-500">{campaign.message}</p>}
         <p className="mt-1.5 flex flex-wrap gap-x-3 gap-y-0.5 text-xs text-gray-500">
-          {Number(campaign.sent_count) > 0 && (
+          {(Number(campaign.sent_count) > 0 || Number(campaign.recipients_count) > 0) && (
             <span className="inline-flex items-center gap-1">
-              <Users className="h-3.5 w-3.5" aria-hidden /> Aviso para {pessoas(Number(campaign.sent_count))}{publico ? ` (${publico})` : ''}
+              <Users className="h-3.5 w-3.5" aria-hidden /> {avisoEnviado(campaign)}{publico ? ` (${publico})` : ''}
             </span>
           )}
           {enviadaEm && <span>{formatDateShortBR(enviadaEm)}</span>}

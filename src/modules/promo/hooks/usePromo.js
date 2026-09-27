@@ -170,9 +170,11 @@ export function usePromoViewer({ enabled = true } = {}) {
   const vinculos = useStudentCoaches(enabled ? uid : null);
   const coachIdsDoAluno = useMemo(() => coachIdsOfStudent(vinculos.data || []), [vinculos.data]);
   const { isError: falhou, refetch: recarregar } = vinculos;
+  // Ainda sem resposta: "é aluno?" é DESCONHECIDO, não "não é".
+  const carregando = Boolean(enabled && uid && vinculos.isLoading);
   return useMemo(
-    () => ({ uid, coachIdsDoAluno, falhou, recarregar }),
-    [uid, coachIdsDoAluno, falhou, recarregar],
+    () => ({ uid, coachIdsDoAluno, falhou, carregando, recarregar }),
+    [uid, coachIdsDoAluno, falhou, carregando, recarregar],
   );
 }
 

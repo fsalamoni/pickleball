@@ -53,8 +53,8 @@ function StudentLessonCard({ lesson, onCancel, isPending }) {
       </div>
       {lesson.location && <p className="mt-1 text-xs text-gray-500">📍 {lesson.location}</p>}
       {lesson.coupon?.code && (
-        <p className={`mt-1.5 inline-flex items-center gap-1 rounded-full px-2 py-0.5 text-[11px] font-bold ${lesson.coupon.status === 'rejected' ? 'bg-amber-50 text-amber-800' : 'bg-acid/20 text-ink'}`}>
-          <Tag className="h-3 w-3" aria-hidden /> {lessonCouponLine(lesson.coupon)}
+        <p className={`mt-1.5 inline-flex items-start gap-1 rounded-xl px-2 py-0.5 text-[11px] font-bold leading-4 ${lesson.coupon.status === 'rejected' ? 'bg-amber-50 text-amber-800' : 'bg-acid/20 text-ink'}`}>
+          <Tag className="mt-0.5 h-3 w-3 shrink-0" aria-hidden /> <span>{lessonCouponLine(lesson.coupon, { lessonStatus: lesson.status })}</span>
         </p>
       )}
       {canCancel && (
