@@ -93,10 +93,11 @@ export default function ShareCardDialog({ tournament, open, onOpenChange }) {
           </DialogDescription>
         </DialogHeader>
 
-        {/* Card visual capturável */}
+        {/* Card visual capturável. `tema-claro`: a imagem baixada é a mesma no
+            modo escuro — o card é da marca, não da tela. */}
         <div
           ref={cardRef}
-          className="relative overflow-hidden rounded-2xl bg-gradient-to-br from-ink to-ink-light p-5 text-white"
+          className="tema-claro relative overflow-hidden rounded-2xl bg-gradient-to-br from-ink to-ink-light p-5 text-white"
         >
           <div className="flex items-center gap-2 text-acid">
             <Trophy className="h-5 w-5" />

@@ -1095,6 +1095,15 @@ do catálogo/mercado: `catalog_id`, `subcategory`, `packaging`, `size`, `flavor`
 - `arena_inventory_exits.sale_id` + `channel: 'app'` — a saída gerada pela
   ENTREGA de um pedido. O cancelamento acha o que desfazer por esse campo.
 
+## Modo escuro (Onda CH — `dark_mode`)
+
+**Nenhuma coleção, campo, índice ou regra.** A aparência escolhida é
+conveniência de interface e mora no navegador: `v2:view:<uid>:aparencia:tema`
+(a escolha, por usuário, via `viewPreference`) e `picklerush:tema` (o espelho
+lido pelo script de `index.html` para pintar a primeira tela). A flag é a de
+sempre, em `platform_settings/global.feature_flags.dark_mode`. Ver
+`docs/30-MODO-ESCURO.md` §3.
+
 ## Divulgação da plataforma e dos professores (Onda CG — `platform_marketing` / `coach_marketing`)
 
 Três coleções NOVAS e um campo opcional. Tudo aditivo; nenhuma regra existente

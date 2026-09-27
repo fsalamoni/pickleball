@@ -3,6 +3,7 @@ import { BrowserRouter, Routes, Route, Navigate, useLocation } from 'react-route
 import { QueryClient, QueryClientProvider } from '@tanstack/react-query';
 import { AuthProvider, useAuth } from '@/core/lib/FirebaseAuthContext';
 import { FeatureFlagsProvider } from '@/core/lib/FeatureFlagsContext';
+import { AparenciaClara, ThemeProvider } from '@/core/lib/ThemeContext';
 import { Toaster } from '@/components/ui/sonner';
 import { recordPageView } from '@/core/services/observabilityService';
 import V2RouteBoundary from '@/v2/components/V2RouteBoundary';
@@ -111,6 +112,9 @@ export default function App() {
     <QueryClientProvider client={queryClient}>
       <AuthProvider>
         <FeatureFlagsProvider>
+        {/* Modo escuro: decide e aplica a aparência de cada pessoa (flag
+            `dark_mode`). As telas não o usam — só o seletor de aparência. */}
+        <ThemeProvider>
         <BrowserRouter basename={import.meta.env.BASE_URL}>
           <RouteTelemetry />
           <Suspense fallback={<FullScreenSpinner />}>
@@ -118,10 +122,20 @@ export default function App() {
               {/* Páginas públicas (sem autenticação) */}
               <Route path="/login" element={<Login />} />
               <Route path="/p/:tournamentId" element={<PublicTournament />} />
-              <Route path="/torneios/:tournamentId/imprimir" element={<PrintTournament />} />
+              {/* `AparenciaClara`: telão, totem e impressão ficam no visual
+                  claro mesmo com o modo escuro — o telão e o totem já são
+                  escuros de propósito, e a impressão mostra o que sai no papel. */}
+              <Route
+                path="/torneios/:tournamentId/imprimir"
+                element={<AparenciaClara><PrintTournament /></AparenciaClara>}
+              />
               <Route
                 path="/torneios/:tournamentId/telao"
-                element={<V2RouteBoundary name="telao-torneio" unattended><Telao /></V2RouteBoundary>}
+                element={(
+                  <AparenciaClara>
+                    <V2RouteBoundary name="telao-torneio" unattended><Telao /></V2RouteBoundary>
+                  </AparenciaClara>
+                )}
               />
               {/* Telão do dia de jogo: página inteira, FORA do V2Layout (sem
                   menu nem cabeçalho — a tela toda é conteúdo). Exige login
@@ -136,11 +150,13 @@ export default function App() {
               <Route
                 path="/dia-de-jogo/:gameDayId/telao"
                 element={(
-                  <ProtectedRoute>
-                    <V2RouteBoundary name="telao" unattended>
-                      <GameDayTelao />
-                    </V2RouteBoundary>
-                  </ProtectedRoute>
+                  <AparenciaClara>
+                    <ProtectedRoute>
+                      <V2RouteBoundary name="telao" unattended>
+                        <GameDayTelao />
+                      </V2RouteBoundary>
+                    </ProtectedRoute>
+                  </AparenciaClara>
                 )}
               />
               {/* Totem de chegada da arena: página inteira, FORA do V2Layout —
@@ -150,7 +166,7 @@ export default function App() {
                   arena, e a regra só deixa o gestor escrever. */}
               <Route
                 path="/arenas/:arenaId/totem"
-                element={<ProtectedRoute><ArenaKiosk /></ProtectedRoute>}
+                element={<AparenciaClara><ProtectedRoute><ArenaKiosk /></ProtectedRoute></AparenciaClara>}
               />
               <Route path="/c/:clubId" element={<PublicClub />} />
               {/* Destino do link de convite (`buildReferralUrl` gera /r/CODIGO).
@@ -172,6 +188,7 @@ export default function App() {
           </Suspense>
         </BrowserRouter>
         <Toaster />
+        </ThemeProvider>
         </FeatureFlagsProvider>
       </AuthProvider>
     </QueryClientProvider>

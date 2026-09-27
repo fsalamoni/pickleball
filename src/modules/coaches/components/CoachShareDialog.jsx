@@ -70,9 +70,10 @@ export default function CoachShareDialog({ coach, open, onOpenChange }) {
           </DialogDescription>
         </DialogHeader>
 
+        {/* `tema-claro`: a imagem baixada é a mesma no modo escuro. */}
         <div
           ref={cardRef}
-          className="rounded-3xl border border-gray-100 bg-gradient-to-br from-paper to-white p-6 shadow-organic-sm"
+          className="tema-claro rounded-3xl border border-gray-100 bg-gradient-to-br from-paper to-white p-6 shadow-organic-sm"
         >
           <div className="flex items-center gap-3">
             <div className="flex h-14 w-14 items-center justify-center rounded-2xl bg-ink text-2xl font-bold text-acid">

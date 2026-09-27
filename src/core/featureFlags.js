@@ -277,6 +277,22 @@ export const FEATURE_FLAG = Object.freeze({
    * a seção não existe e nada aparece para ninguém.
    */
   COACH_MARKETING: 'coach_marketing',
+
+  /**
+   * MODO ESCURO — cada pessoa escolhe a aparência: Claro, Escuro ou
+   * Automático (acompanha o sistema do aparelho).
+   *
+   * A paleta escura é derivada da própria marca (ink, acid, paper) e mora
+   * numa fonte única (`src/core/theme/palette.js`); as telas continuam
+   * escrevendo as classes de sempre. Impresso é sempre claro, e o telão, o
+   * totem e a moldura dos QR codes ficam claros de propósito.
+   *
+   * Zero banco: a escolha fica no navegador, por usuário
+   * (`v2:view:<uid>:aparencia:tema`). Desligada, todo mundo vê o claro de
+   * sempre, pixel a pixel — inclusive quem tinha escolhido o escuro (a escolha
+   * fica guardada e volta se a flag for religada).
+   */
+  DARK_MODE: 'dark_mode',
 });
 
 /** Metadados de exibição para o painel de flags (admin master). */
@@ -312,6 +328,16 @@ export const FEATURE_FLAG_META = Object.freeze({
       + 'alunos. O aluno informa o cupom ao pedir a aula e ele é contado '
       + 'quando o professor confirma. Os banners e cupons aparecem na tela '
       + 'inicial e no perfil do professor. Desligada, nada disso existe.',
+  },
+  [FEATURE_FLAG.DARK_MODE]: {
+    label: 'Modo escuro',
+    description:
+      'Cada pessoa passa a escolher a aparência da plataforma — Claro, Escuro '
+      + 'ou Automático (acompanha o aparelho) — no menu do usuário, na gaveta '
+      + 'do celular e em Configurações. O escuro segue as cores da marca, com '
+      + 'contraste conferido. Impresso, telão e totem continuam claros. A '
+      + 'escolha fica só no navegador de cada um; nada é gravado no banco. '
+      + 'Desligada, todos veem o claro de sempre.',
   },
   [FEATURE_FLAG.ARENA_MODULES]: {
     label: 'Módulos adicionais da arena (chave geral)',

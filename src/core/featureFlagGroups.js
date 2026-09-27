@@ -23,6 +23,11 @@ export const FLAG_GROUPS = Object.freeze([
     ],
   },
   {
+    id: 'appearance',
+    label: 'Aparência',
+    keys: [FEATURE_FLAG.DARK_MODE],
+  },
+  {
     id: 'marketing',
     label: 'Campanhas e cupons (plataforma e professores)',
     keys: [FEATURE_FLAG.PLATFORM_MARKETING, FEATURE_FLAG.COACH_MARKETING],

@@ -121,7 +121,26 @@ Antes de concluir uma página nova ou refatorada, valide:
 5. O formulário está dividido por intenção e ordem lógica?
 6. O mobile continua legível sem colapsar a hierarquia?
 
-## 11. Regra final
+## 11. Modo escuro
+
+A plataforma tem modo escuro por usuário (flag `dark_mode`, ver
+[30-MODO-ESCURO.md](./30-MODO-ESCURO.md)). Ele NÃO pede classe nova: a paleta
+(`src/core/theme/palette.js`) decide a cor de cada `bg-*`/`text-*`/`border-*`
+nos dois modos. O que isso exige de quem desenha uma tela:
+
+1. Use os tokens de sempre (`bg-white` para cartão, `bg-paper` para recuo,
+   `text-ink`/`text-gray-500` para texto, `bg-ink` para destaque). Cor
+   arbitrária (`bg-[#…]`, `style={{ color }}`) **não** troca no escuro.
+2. Superfície "de cor" (`bg-ink`, `bg-acid`, cores ≥ 300) mantém o texto do
+   design original lá dentro; superfície neutra acompanha o modo.
+3. **Nunca** use a variante `dark:` para cor — ela existe só para trocar
+   ARQUIVO (ex.: o logo, via `BrandMark`).
+4. Algo que precisa ficar claro nos dois modos (arte exportada, moldura de QR):
+   `tema-claro` no trecho. Tela inteira (telão, totem, impressão):
+   `<AparenciaClara>` na rota.
+5. Confira a tela no escuro antes de concluir (Configurações → Aparência).
+
+## 12. Regra final
 
 Se uma nova implementação precisar inventar um padrão visual fora destes
 componentes e regras, isso deve ser tratado como exceção deliberada e

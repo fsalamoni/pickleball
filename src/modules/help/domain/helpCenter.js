@@ -901,6 +901,24 @@ const CONTA = {
       ],
     },
     {
+      id: 'modo-escuro',
+      flags: ['dark_mode'],
+      title: 'Modo escuro: claro, escuro ou automático',
+      summary: 'Escolha a aparência da plataforma — é só sua.',
+      keywords: ['modo escuro', 'escuro', 'tema', 'aparência', 'noite', 'claro', 'automático', 'dark'],
+      blocks: [
+        p('A plataforma tem três aparências: CLARO (o visual de sempre), ESCURO (fundo escuro, mais confortável à noite e com pouca luz) e AUTOMÁTICO, que acompanha o seu aparelho — claro de dia, escuro quando o celular ou o computador escurecer.'),
+        steps(
+          'No computador: toque no seu avatar, no canto de cima, e escolha em "Aparência".',
+          'No celular: abra o menu (as três linhas) e escolha em "Aparência".',
+          'Ou em Configurações, no cartão "Aparência", que mostra uma miniatura de cada modo.',
+        ),
+        tip('A escolha é da SUA conta, e fica guardada neste aparelho. Num tablet compartilhado, cada pessoa que entrar vê a aparência que escolheu — ninguém herda a do outro. Em outro aparelho, escolha de novo.'),
+        p('O telão do dia de jogo e do torneio, o totem da arena e a versão para impressão continuam CLAROS de propósito: são feitos para quem está na quadra, na recepção e no papel. Os cards que você baixa para compartilhar e o certificado também saem sempre iguais.'),
+        link('/configuracoes', 'Escolher a aparência'),
+      ],
+    },
+    {
       id: 'documentos',
       title: 'Termos, privacidade e conduta',
       summary: 'Os documentos da plataforma.',
@@ -1167,7 +1185,7 @@ export const HELP_ROUTE_HINTS = Object.freeze([
   { pattern: '/perfil', label: 'seu perfil',
     refs: [[HELP_SECTION.START, 'primeiros-passos'], [HELP_SECTION.ACCOUNT, 'privacidade']] },
   { pattern: '/configuracoes', label: 'configurações',
-    refs: [[HELP_SECTION.ACCOUNT, 'notificacoes'], [HELP_SECTION.ACCOUNT, 'privacidade']] },
+    refs: [[HELP_SECTION.ACCOUNT, 'modo-escuro'], [HELP_SECTION.ACCOUNT, 'notificacoes'], [HELP_SECTION.ACCOUNT, 'privacidade']] },
   { pattern: '/legal', label: 'os documentos',
     refs: [[HELP_SECTION.ACCOUNT, 'documentos']] },
 ]);

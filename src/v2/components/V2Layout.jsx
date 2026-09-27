@@ -53,6 +53,8 @@ import {
 } from '@/components/ui/dropdown-menu';
 import { cn } from '@/core/lib/utils';
 import { V2Avatar } from '@/v2/ui/primitives';
+import BrandMark from '@/v2/ui/BrandMark';
+import { ThemeDrawerSwitcher, ThemeMenuSection } from '@/v2/components/theme/ThemeSwitcher';
 import V2OnboardingWizard from '@/v2/components/onboarding/V2OnboardingWizard';
 import { FEATURE_FLAG } from '@/core/featureFlags';
 import { useFeatureFlag } from '@/core/lib/FeatureFlagsContext';
@@ -301,7 +303,7 @@ function isActive(pathname, item) {
 function BrandLockup() {
   return (
     <Link to="/" className="flex items-center gap-3">
-      <img src="/logo-claro.png" alt="PickleRush" className="h-9 w-9 object-contain" />
+      <BrandMark className="h-9 w-9" />
       <span className="font-display text-2xl font-bold tracking-tight text-ink">PickleRush</span>
     </Link>
   );
@@ -486,6 +488,8 @@ function UserMenu({ displayName, displayPhoto, levelLabel, onLogout }) {
             <LifeBuoy className="mr-2 h-4 w-4" /> Central de ajuda
           </DropdownMenuItem>
         )}
+        {/* Aparência (modo escuro, flag dark_mode): some com a flag desligada. */}
+        <ThemeMenuSection />
         <DropdownMenuSeparator />
         <DropdownMenuItem className="cursor-pointer text-red-600 focus:text-red-600" onClick={onLogout}>
           <LogOut className="mr-2 h-4 w-4" /> Sair
@@ -667,7 +671,7 @@ export default function V2Layout({ children }) {
         )}>
           <div className={cn('flex h-20 items-center', collapsed ? 'justify-center px-2' : 'px-6')}>
             {collapsed ? (
-              <Link to="/" aria-label="PickleRush"><img src="/logo-claro.png" alt="PickleRush" className="h-9 w-9 object-contain" /></Link>
+              <Link to="/" aria-label="PickleRush"><BrandMark className="h-9 w-9" /></Link>
             ) : <BrandLockup />}
           </div>
           <nav className="hide-scrollbar flex-1 space-y-1.5 overflow-y-auto px-3 py-4">
@@ -922,6 +926,8 @@ export default function V2Layout({ children }) {
             ))
           )}
           <div className="mt-8 space-y-1 border-t border-white/10 pt-6">
+            {/* No celular não há o menu do avatar: a aparência mora aqui. */}
+            <ThemeDrawerSwitcher />
             {helpCenterOn && (
               <Link
                 to={helpLinkFor(location.pathname)}
