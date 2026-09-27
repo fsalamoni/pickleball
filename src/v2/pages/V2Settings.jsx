@@ -1,7 +1,8 @@
 /**
  * V2Settings — Configurações da conta (flag settings_page).
  *
- * Reúne atalhos de conta e a exportação de dados pessoais (LGPD) em JSON.
+ * Reúne atalhos de conta, a aparência (modo escuro, atrás da flag
+ * `dark_mode`) e a exportação de dados pessoais (LGPD) em JSON.
  * Rota /configuracoes. Aditivo — desligada a flag, redireciona ao perfil.
  */
 
@@ -23,11 +24,14 @@ import {
 import { useFeatureFlag } from '@/core/lib/FeatureFlagsContext';
 import { FEATURE_FLAG } from '@/core/featureFlags';
 import V2PushCard from '@/v2/components/settings/V2PushCard';
+import { ThemeSettingsCard } from '@/v2/components/theme/ThemeSwitcher';
+import { useTheme } from '@/core/lib/ThemeContext';
 
 export default function V2Settings() {
   const enabled = true;
   const notifPrefsOn = true;
   const pushOn = useFeatureFlag(FEATURE_FLAG.PUSH_NOTIFICATIONS);
+  const { disponivel: aparenciaOn } = useTheme();
   const { user, userProfile, updateUserProfile } = useAuth();
   const { data: registrations = [] } = useMyRegistrations();
   const { data: bookings = [] } = useMyBookings();
@@ -79,7 +83,10 @@ export default function V2Settings() {
 
   return (
     <div className="mx-auto max-w-[720px]">
-      <V2PageIntro title="Configurações" subtitle="Conta, privacidade e seus dados." />
+      <V2PageIntro
+        title="Configurações"
+        subtitle={aparenciaOn ? 'Conta, aparência, privacidade e seus dados.' : 'Conta, privacidade e seus dados.'}
+      />
 
       <div className="space-y-4">
         <V2Surface>
@@ -92,6 +99,9 @@ export default function V2Settings() {
             <V2Button asChild variant="secondary" size="sm"><Link to="/perfil/editar">Editar perfil</Link></V2Button>
           </div>
         </V2Surface>
+
+        {/* Aparência: Claro, Escuro ou Automático (flag dark_mode). */}
+        <ThemeSettingsCard />
 
         <V2Surface>
           <div className="flex items-center gap-2">

@@ -24,6 +24,7 @@ import ShareCardButton from '@/modules/sharing/components/ShareCardButton';
 import CertificateButton from '@/modules/tournament/components/CertificateButton';
 import TournamentGallery from '@/modules/tournament/components/TournamentGallery';
 import { V2ErrorState } from '@/v2/ui/primitives';
+import BrandMark from '@/v2/ui/BrandMark';
 
 function formatPublicMatchTime(iso) {
   if (!iso) return '—';
@@ -129,7 +130,7 @@ export default function PublicTournament() {
       <header className="sticky top-0 z-10 border-b border-gray-100 bg-paper/80 backdrop-blur">
         <div className="mx-auto flex max-w-5xl items-center justify-between gap-2 px-4 py-3">
           <Link to="/" className="flex items-center gap-3">
-            <img src="/logo-claro.png" alt="PickleRush" className="h-7 w-auto object-contain" />
+            <BrandMark className="h-7 w-auto" />
             <span className="font-display text-xl font-bold tracking-tight text-ink">PickleRush</span>
           </Link>
           <div className="flex items-center gap-2 flex-wrap">

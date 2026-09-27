@@ -1,11 +1,24 @@
 import animate from 'tailwindcss-animate';
+import { themeExtension, themePlugin } from './src/core/theme/tailwindTheme.js';
+
+// MODO ESCURO: as cores de cada propriedade (fundo, texto, borda…) vêm da
+// paleta (`src/core/theme/palette.js`) e acompanham o interruptor `--k`/`--kf`.
+// No modo claro elas são EXATAMENTE as de antes (há teste token a token).
+const tema = themeExtension();
 
 /** @type {import('tailwindcss').Config} */
 export default {
-  darkMode: ['class'],
+  // A variante `dark:` (ex.: trocar o logo) segue as MESMAS regras da paleta:
+  // só na tela (impresso é claro) e nunca dentro de um `.tema-claro` (telão,
+  // totem, cards exportados).
+  darkMode: ['variant', '@media screen { &:is(.dark *):not(.tema-claro *) }'],
   content: ['./index.html', './src/**/*.{ts,tsx,js,jsx}'],
+  // Escopos do modo escuro (ver palette.js): emitidos sempre, mesmo que a
+  // classe só apareça montada em tempo de execução.
+  safelist: ['tema-claro', 'v2-root'],
   theme: {
     extend: {
+      ...tema,
       // v2 (Athleisure Premium) — tipografia de display/leitura. Aditivo: o v1
       // continua usando a fonte padrão definida em index.css.
       fontFamily: {
@@ -13,9 +26,9 @@ export default {
         inter: ['Inter', 'ui-sans-serif', 'system-ui', 'sans-serif'],
       },
       // v2 — sombras orgânicas difusas e brilho neon para ações primárias.
+      // As orgânicas acompanham o modo (mais fundas no escuro: ver palette.js).
       boxShadow: {
-        organic: '0 24px 48px -12px rgba(11, 15, 25, 0.06)',
-        'organic-sm': '0 12px 24px -8px rgba(11, 15, 25, 0.04)',
+        ...tema.boxShadow,
         glow: '0 0 24px -4px rgba(212, 248, 46, 0.4)',
       },
       borderRadius: {
@@ -29,7 +42,8 @@ export default {
       },
       colors: {
         // v2 (Athleisure Premium) — paleta de destaque. Nomes novos, sem colidir
-        // com os tokens shadcn (HSL) usados pelo v1.
+        // com os tokens shadcn (HSL) usados pelo v1. Esta é a BASE (sombra
+        // colorida e afins); fundo, texto e borda vêm por propriedade (`tema`).
         acid: {
           DEFAULT: '#D4F82E',
           light: '#E5FA7A',
@@ -115,5 +129,5 @@ export default {
       },
     },
   },
-  plugins: [animate],
+  plugins: [animate, themePlugin],
 };

@@ -119,6 +119,8 @@ Estes princípios vieram de bugs reais que custaram horas pra arrumar. São ineg
 │   ├── 28-ERRO-NAO-DERRUBA-O-APP.md ⚠️ ⭐ boundary por tela, telão que se recupera
 │   ├── 29-INICIO-PERSONALIZADO-E-DIVULGACAO.md ⭐ início por pessoa + cupons/campanhas
 │   │                                     da plataforma e dos professores (Onda CG)
+│   ├── 30-MODO-ESCURO.md           🌙 ⭐ modo escuro por usuário: a paleta decide a
+│   │                                     cor, as telas não mudam (Onda CH)
 │   ├── 26-TORNEIO-FORMATOS-E-REGRAS.md ⭐ grupos, classificação, chaves e o
 │   │                                     controle total do admin do torneio
 │   ├── 20-SEGURANCA-E-PRIVACIDADE/ 🔴 ⭐ PRIORIDADE MÁXIMA — segurança, LGPD,
@@ -317,8 +319,8 @@ Estes princípios vieram de bugs reais que custaram horas pra arrumar. São ineg
 **"Mudei/removi uma rota de tela de módulo de arena"** → o CATÁLOGO promete aquele caminho (`manage`/`public`) e `ArenaModuleShortcuts` monta o botão a partir dele — caminho com erro de digitação **não dá erro**, dá um botão bonito que leva a uma tela em branco, no celular do cliente, na frente da recepção. `src/core/guards/rotasDeModulos.test.js` lê `V2App.jsx` e reprova quem quebrar o par (e exige `:arenaId`, que é o nome que `arenaModuleRoute` troca)
 **"A tela precisa saber se um módulo está ligado"** → `useArenaModules(arenaId)` (UM hook, DUAS consultas, responde pelos 50). **Nunca** `useCanArenaUseModule` por módulo, e jamais dentro de um `map`
 **"Onde ficam os níveis de membro de uma arena?"** → `arena_settings.member_tiers` (campo opcional), **não** em `arena_tier_configs`: aquela coleção só o admin da plataforma escreve, e a arena ficaria sem poder configurar os próprios níveis. Ausente, valem os padrões (`DEFAULT_TIERS`)
-**"Onde está o MANUAL da plataforma?"** → `/ajuda` (flag `help_center`, default OFF): 43 artigos em 5 partes — Começar aqui, **Atleta**, **Arena**, **Professor**, Conta e privacidade. Conteúdo em `src/modules/help/domain/helpCenter.js`, página em `src/v2/pages/V2Help.jsx`. Acesso em três pontos de TODA tela (barra lateral, menu do usuário, gaveta do celular), fora dos hubs de propósito. Link direto por `?s=<seção>&a=<artigo>`. **Nada no Firestore** (só a parte preferida, no localStorage por usuário). Ver `docs/21-CENTRAL-DE-AJUDA.md`
-**"Vou colocar um link de ajuda numa tela"** → use `helpLinkFor(location.pathname)`, importado de **`modules/help/domain/helpLink`** (NUNCA de `helpCenter`: aquele arquivo carrega os 43 artigos, e importá-lo de uma tela comum joga o manual inteiro no chunk que todo mundo baixa — 216 kB contra 184 kB, medido; há teste travando isso). Nunca `'/ajuda'` cru. Ele monta `/ajuda?de=<rota>` e a central abre com **"Ajuda para esta tela"** no topo — os artigos daquele assunto, sem a pessoa ter de adivinhar a persona nem varrer a lista. O mapa rota → artigos é `HELP_ROUTE_HINTS`; `*` vale por UM segmento e **vence o primeiro molde que casa**, então o específico vem antes do genérico (teste trava a ordem). Rota sem pista ⇒ bloco nenhum, de propósito: sugestão errada ensina a ignorar o bloco
+**"Onde está o MANUAL da plataforma?"** → `/ajuda` (flag `help_center`, default OFF): 47 artigos em 5 partes (4 atrás da flag da própria funcionalidade) — Começar aqui, **Atleta**, **Arena**, **Professor**, Conta e privacidade. Conteúdo em `src/modules/help/domain/helpCenter.js`, página em `src/v2/pages/V2Help.jsx`. Acesso em três pontos de TODA tela (barra lateral, menu do usuário, gaveta do celular), fora dos hubs de propósito. Link direto por `?s=<seção>&a=<artigo>`. **Nada no Firestore** (só a parte preferida, no localStorage por usuário). Ver `docs/21-CENTRAL-DE-AJUDA.md`
+**"Vou colocar um link de ajuda numa tela"** → use `helpLinkFor(location.pathname)`, importado de **`modules/help/domain/helpLink`** (NUNCA de `helpCenter`: aquele arquivo carrega os 47 artigos, e importá-lo de uma tela comum joga o manual inteiro no chunk que todo mundo baixa — 216 kB contra 184 kB, medido; há teste travando isso). Nunca `'/ajuda'` cru. Ele monta `/ajuda?de=<rota>` e a central abre com **"Ajuda para esta tela"** no topo — os artigos daquele assunto, sem a pessoa ter de adivinhar a persona nem varrer a lista. O mapa rota → artigos é `HELP_ROUTE_HINTS`; `*` vale por UM segmento e **vence o primeiro molde que casa**, então o específico vem antes do genérico (teste trava a ordem). Rota sem pista ⇒ bloco nenhum, de propósito: sugestão errada ensina a ignorar o bloco
 **"Criei/removi uma tela. O que a ajuda precisa saber?"** → duas coisas: os artigos que citam a tela (`{ type: 'link', to }` — há teste lendo `V2App.jsx`) e a PISTA de rota em `HELP_ROUTE_HINTS`. O teste pega a pista órfã; a pista que FALTA ninguém vê
 **"Vou escrever ajuda sobre uma funcionalidade"** → confira antes se ela está LIGADA. A gamificação (`/conquistas`, `/hall-da-fama`, `/vinculos`) está atrás de `gamification_v2`, que é OFF — documentá-la manda a pessoa para uma porta que não abre. Há teste travando isso em `helpCenter.test.js`; e outro que confere cada link da ajuda contra as rotas reais de `V2App.jsx`. ⭐ Funcionalidade NOVA atrás de flag: escreva o artigo com `flags: ['chave']` — ele só aparece (parte, busca, link direto, "Ajuda para esta tela") quando a flag está ligada, via `helpCatalog(flags)`, que é o que `V2Help` usa. Há teste exigindo que a chave exista em `FEATURE_FLAG`
 **"Quero um tutorial explicando esta ferramenta"** → já existem quatro (torneio, dia de jogo Play, Americano e Americano aprimorado). Conteúdo em `src/modules/help/domain/tutorials.js`; para colocar numa tela é UMA linha: `<V2TutorialLauncher tutorialId={...} />` (ou `tutorialIdForGameDayFormat(gameDay.format)` num dia de jogo). Ele abre sozinho na primeira vez, deixa dispensar e mantém o botão para rever. A memória é `localStorage` por usuário — **nada no banco**. Ver `docs/19-TUTORIAIS.md`
@@ -338,6 +340,7 @@ Estes princípios vieram de bugs reais que custaram horas pra arrumar. São ineg
 **"Cuidado: 'mercado' já significa outra coisa!"** → `arena_products`/`catalog_products` são o **PDV/loja da arena** (módulo `arenas/`). O marketplace novo usa **só** o prefixo `market_`. Ver `docs/FUTURO/MERCADO/00-INDEX.md` § Colisão de nomes
 
 **"Onde está a tela inicial personalizada? Por que ela mostra isto para mim?"** → ⭐ flag `personalized_home` (default OFF; desligada, `/` segue a clássica). `resolveHomeFoci` (`src/modules/home/domain/homeProfile.js`): o que a pessoa FAZ (gere arena, dá aula, organiza torneio) vence o que ela DISSE (`users.interests`), e a atividade traz a seção sem passar na frente. Telas em `src/v2/components/home/personal/`. ⚠️ Toda data da tela inicial passa por `home/domain/freshness.js` — **nunca** `Date.parse('2026-09-26')` (é meia-noite UTC, 21h do dia ANTERIOR no Brasil: o torneio de hoje sumiria às 21h de ontem). Seção que não é da pessoa não consulta nada (hooks com `{ enabled }`). Ver `docs/29-INICIO-PERSONALIZADO-E-DIVULGACAO.md` §1
+**"Onde está o MODO ESCURO? Minha tela nova precisa de algo?"** → ⭐ flag `dark_mode` (default OFF) + `docs/30-MODO-ESCURO.md`. **A tela não precisa de nada**: escreva `bg-white`/`text-gray-500`/`border-gray-100`/`bg-ink` como sempre, e a paleta (`src/core/theme/palette.js`, fonte única) decide a cor nos dois modos — cada cor compila para `rgb(calc(CLARO + (ESCURO − CLARO) × var(--k)))`, e com `--k: 0` o claro é o de sempre bit a bit (teste token a token). Cor arbitrária (`bg-[#…]`, `style`) **não** troca. **Nunca** use `dark:` para cor (só para trocar ARQUIVO — o logo, via `BrandMark`). O que fica claro de propósito: telão, totem e impressão (`<AparenciaClara>` na rota, casando com `ROTA_SEMPRE_CLARA`, que o script de `index.html` também usa) e o que vira imagem (`tema-claro` no elemento do `toPng`) — guarda em `src/core/guards/modoEscuro.test.js`. A escolha é por usuário no navegador (`v2:view:<uid>:aparencia:tema`) + um espelho (`picklerush:tema`) para a primeira tela não piscar; **zero banco**. Seletor: `src/v2/components/theme/ThemeSwitcher.jsx` (menu do avatar, gaveta do celular, Configurações). ⚠️ `palette.js`/`tailwindTheme.js` são de BUILD — importá-los de uma tela põe o `tailwindcss/colors` no pacote (guarda travando)
 **"Vou criar cupom ou campanha da PLATAFORMA ou de um PROFESSOR"** → ⭐ módulo `src/modules/promo/` + telas em `src/v2/components/promo/` (flags `platform_marketing` / `coach_marketing`, default OFF). **Nunca copie** os componentes do marketing da arena: `CouponArtEditor` e `BannerDesigner` aceitam `templates` (a fonte dos "meus modelos"), `brand` e `uploadFolder` — sem eles, é a arena, como sempre. Coleções `promo_coupons` / `promo_campaigns` (legíveis por conta logada; escrita só do EMISSOR, que não muda no update) e `promo_settings/{platform|uid}` (privada: custo dos vales e modelos). O desconto do professor entra no **pedido de aula** e é aplicado na CONFIRMAÇÃO (`resolveLessonCoupon`), conferido contra o banco. ⚠️ O domínio de aulas importa `promo/domain/lessonCoupon.js` (leve), **nunca** `promo.js` (puxa o marketing inteiro das arenas para toda tela que mostra uma aula). Quatro regras da revisão que não podem regredir: **"só para os meus alunos" vale no USO** (o pedido recusa e a confirmação confere `coach_students`); **um uso é UMA aula** (na série recorrente o cupom cobre a primeira — `lessonCouponBase`); **aula desfeita devolve o uso** (`returnPendingCouponUses`, transação idempotente; quando o aluno cancela, o professor acerta ao abrir a agenda); e a **regra de `coach_lessons`** deixa o aluno só PEDIR (solicitada, sem preço, cupom pendente) e CANCELAR. Ver `src/modules/promo/README.md` e `docs/29-INICIO-PERSONALIZADO-E-DIVULGACAO.md` §2
 **"Vou mandar um link num AVISO (notifications)"** → passe por `linkDeAviso` (`src/core/domain/internalLink.js`, já aplicado em `notificationService.buildPayload`). 🐞 A regra de `notifications` recusa `#`, e `notifyUsers` grava em lotes de 400: UM link com âncora derrubava o lote inteiro em silêncio — era o caso das campanhas das ARENAS com destino `/arenas/X#arena-reservar` ("enviada" sem ninguém receber). Destino com âncora ⇒ o aviso da campanha leva à página da campanha. Para os outros avisos, `linkDeAviso` troca `#secao` por `?ancora=secao` (a regra aceita) e o layout devolve o `#secao` (`useAncoraDoAviso`) — a página rola até a seção. `isRuleSafeLink` tem teste de paridade contra o padrão da regra. E `notifyUsers` devolve quantos avisos GRAVOU: quem diz "enviado para N" usa esse número
 **"O perfil do professor precisa rolar até uma seção pelo link"** → âncoras `#professor-promocoes`, `#professor-agenda`, `#professor-loja`, `#professor-clinicas`, `#professor-conteudo` + `useHashScroll` (`src/v2/ui/useHashScroll.js`), que espera a seção aparecer (ela depende de consulta) e rola UMA vez. `?marcar=1` (e `&cupom=`) abre o pedido de aula. O painel do professor lê `?aba=`/`?secao=` (`coachTabFromUrl`)
@@ -512,12 +515,35 @@ chore(deps): bump firebase to 12.x
 
 ## 10. Métricas atuais (snapshot 2026-08-31, 11:05 GMT-3)
 
-> Última atualização: 2026-09-27 (revisão da Onda CG). Antes: 2026-09-20 (Onda AT); 2026-08-31, após **41 PRs
+> Última atualização: 2026-09-27 (Onda CH — modo escuro). Antes: revisão da Onda CG; 2026-09-20 (Onda AT); 2026-08-31, após **41 PRs
 > novos** mergeados em main (#95 a #135) — Sprints 32 a 50+.
 > Detalhes em `docs/08-ARENA-ROADMAP.md` (Seções 34-50) e
 > memory topic `picklerush-sync-2026-08.md`.
 >
 > **Destaques por onda**:
+>
+> - **Onda CH — Modo escuro** (2026-09-27): *"agora vamos fazer o modo escuro
+>   da plataforma, com opção de cada usuário alterar para a forma que melhor se
+>   enquadra ao seu gosto… seguindo os padrões e cores da plataforma… não afete
+>   o banco de dados"*. Flag `dark_mode` (default OFF): **Claro**, **Escuro** ou
+>   **Automático** (acompanha o aparelho), escolhido no menu do avatar, na
+>   gaveta do celular e em Configurações (três cartões com uma miniatura da
+>   plataforma em cada modo). **Nenhuma tela foi reescrita**: a paleta
+>   (`core/theme/palette.js`) compila cada cor como uma interpolação entre o
+>   claro e o escuro por um interruptor CSS, e o plugin do Tailwind ensina cada
+>   `bg-*` a dizer se é superfície "de cor" (o texto do design original volta a
+>   valer dentro dela) ou neutra — com todas as variantes. O claro é idêntico
+>   (teste token a token e comparação do CSS gerado); o escuro é a família ink
+>   da marca em camadas, com o ácido intacto e **contraste AA conferido por
+>   teste**. A primeira tela não pisca (script em `index.html` + espelho no
+>   aparelho); a troca esmaece e não "derrete" em ondas. Telão, totem,
+>   impressão, cards exportados, certificado, QR e o botão das chaves ficam
+>   claros de propósito; o logo troca de versão. **🐞 Dois defeitos achados na
+>   verificação em tela** (e travados por teste): o `:root` de `index.css`
+>   vencia o `.dark` por ordem e deixava diálogos e menus CLAROS no escuro; e
+>   uma regra de base com classe de utilitário virava cópia com variante no
+>   Tailwind e vencia o `text-*` dos botões. **Banco: zero.** Ver
+>   `docs/30-MODO-ESCURO.md`.
 >
 > - **Onda CG — revisão** (2026-09-27): pedida depois do deploy (*"Você fez
 >   tudo o que pedi? Com profundidade e cuidado?"*), a revisão achou defeitos
@@ -2255,14 +2281,14 @@ chore(deps): bump firebase to 12.x
 
 | Métrica | Valor | Delta do início do agente |
 |---|---|---|
-| **Testes Vitest** | **6306 passing** (385 arquivos) + 448 asserções de regras no emulador (Firestore + Storage) | +5898 (era 408) |
+| **Testes Vitest** | **6399 passing** (392 arquivos) + 448 asserções de regras no emulador (Firestore + Storage) | +5991 (era 408) |
 | **Lint errors** | 0 | era 30+ |
 | **Módulos** | 23 (+`home` — a tela inicial personalizada; +`promo` — cupons e campanhas da plataforma e dos professores; +`help` — conteúdo dos tutoriais em tela) (`games` e `legal` saíram como `src/modules/` mas continuam como pastas oficiais — **rating virou módulo oficial** com domain/services/hooks/components) | +4 (coaches, circuits, games, legal) |
 | **V2 pages** | 84 (+V2Promotions e +V2PromoCampaign — Onda CG; +V2GameDayTelao — telão, fora do V2Layout; +V2Help — central de ajuda; +V2ArenaKiosk — totem da recepção, também fora do V2Layout; +V2ArenaCheckin; +V2ArenaAttendance) | +58 |
 | **V2 components (src/v2/components/)** | **16 pastas** (+home, +rating, +settings, +tournament cresceu muito, +admin) | — |
 | **Coleções Firestore** | **125 top-level em `firestore.rules`** (+`promo_coupons`, `promo_campaigns`, `promo_settings` — Onda CG; +`doubles_rankings`) (as 13 da gamificação V2 documentadas em `05-DATA-MODEL.md`) — a Onda AS não criou nenhuma | +82 |
 | **Índices compostos Firestore** | **33 em `firestore.indexes.json`** (+`provisional_claims`) (+4 da gamificação V2) | +28 |
-| **Feature flags ativas** | **25 default OFF** (+`personalized_home`, `platform_marketing` e `coach_marketing` — Onda CG; +`gameday_mexicano` e `gameday_king_of_court` — os formatos opcionais do dia de jogo, Onda CE; +`arena_modules` — a chave-mestra dos módulos adicionais de arena; 137 viraram código) | −110 |
+| **Feature flags ativas** | **26 default OFF** (+`dark_mode` — o modo escuro, Onda CH; +`personalized_home`, `platform_marketing` e `coach_marketing` — Onda CG; +`gameday_mexicano` e `gameday_king_of_court` — os formatos opcionais do dia de jogo, Onda CE; +`arena_modules` — a chave-mestra dos módulos adicionais de arena; 137 viraram código) | −110 |
 | **Cloud Functions** | **23 exportações** (+ `catchUpPlatformRankings` — recupera o ranking quando um gatilho se perdeu com as funções fora do ar; + `promoteOpenSlotWaitlistOnSlot` / `OnEntry` — a fila de espera do jogo aberto anda na hora; + `adminDeleteAccounts` — exclusão de cadastro pelo dono, com prévia; + `recomputeRankingOnTournamentRegistration` — a inscrição também move o ranking) | +15 |
 | **PRs mergeados** | **96 totais** (Sprints 0-50+) | — |
 | **Origin/main** | `106bd55` (PR #110) | — |

@@ -521,8 +521,17 @@ describe('⭐ artigo de funcionalidade atrás de flag', () => {
     // O próximo artigo pula o que está escondido.
     expect(desligado.next(HELP_SECTION.COACH, 'pacotes-clinicas')?.id).toBe('parcerias');
 
-    const ligado = helpCatalog({ personalized_home: true, platform_marketing: true, coach_marketing: true });
+    const ligado = helpCatalog({ personalized_home: true, platform_marketing: true, coach_marketing: true, dark_mode: true });
     expect(ligado.all()).toHaveLength(allHelpArticles().length);
     expect(ligado.forRoute('/promocoes').articles[0].id).toBe('promocoes-plataforma-professores');
+  });
+
+  it('o modo escuro: sem a flag, "Ajuda para esta tela" em Configurações não o cita', () => {
+    const desligado = helpCatalog({});
+    expect(desligado.forRoute('/configuracoes').articles.map((a) => a.id)).not.toContain('modo-escuro');
+    expect(desligado.search('modo escuro').map((a) => a.id)).not.toContain('modo-escuro');
+    const ligado = helpCatalog({ dark_mode: true });
+    expect(ligado.forRoute('/configuracoes').articles[0].id).toBe('modo-escuro');
+    expect(ligado.search('modo escuro')[0].id).toBe('modo-escuro');
   });
 });

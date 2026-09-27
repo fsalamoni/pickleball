@@ -80,6 +80,7 @@
 | [`23-ARENA-CALENDARIO-E-RESERVA.md`](./23-ARENA-CALENDARIO-E-RESERVA.md) | ⭐ Auditoria da arena: o bug da reserva de nove horas, a quadra invisível, a matriz quadra × horário do atleta e o painel de prontidão. Registra **o que estava errado e por quê**. |
 | [`22-DIA-DE-JOGO-DA-ARENA.md`](./22-DIA-DE-JOGO-DA-ARENA.md) | ⭐ A arena cria o próprio dia de jogo, marcado no calendário (flag `arena_game_day`): quadras e horários fechados para reserva, inscrição no dia ou por quadra, limites, quem conduz — e por que **não existe coleção nova**. |
 | [`29-INICIO-PERSONALIZADO-E-DIVULGACAO.md`](./29-INICIO-PERSONALIZADO-E-DIVULGACAO.md) | ⭐ Onda CG: a tela inicial montada por pessoa (papéis + interesses, nada vencido) e os cupons/campanhas da plataforma e de cada professor, com as ferramentas do marketing da arena. |
+| [`30-MODO-ESCURO.md`](./30-MODO-ESCURO.md) | ⭐ Onda CH: o modo escuro (Claro / Escuro / Automático, por usuário, flag `dark_mode`). A paleta decide a cor e as telas não mudam; o que fica claro de propósito; zero banco. |
 | [`20-SEGURANCA-E-PRIVACIDADE/00-INDEX.md`](./20-SEGURANCA-E-PRIVACIDADE/00-INDEX.md) | 🔴 ⭐ **PRIORIDADE MÁXIMA** — Auditoria (31 achados, **2 críticos abertos**), LGPD, documentos legais, direito de imagem, console de suporte do admin, plano em 12 PRs. |
 | [`FUTURO/00-INDEX.md`](./FUTURO/00-INDEX.md) | 📐 **PLANEJADO, NADA NO CÓDIGO** — Gamificação, Mercado (marketplace aberto), Feed (rede social) e Moderação. |
 | [`PUSH-ATIVACAO.md`](./PUSH-ATIVACAO.md) | Ativação do push (PWA + FCM). |
@@ -127,6 +128,7 @@ docs/
 ├── 22-DIA-DE-JOGO-DA-ARENA.md        # ⭐ a arena cria dia de jogo no calendário
 ├── 23-ARENA-CALENDARIO-E-RESERVA.md  # ⭐ auditoria: calendário, reserva, prontidão
 ├── 29-INICIO-PERSONALIZADO-E-DIVULGACAO.md  # ⭐ início por pessoa + divulgação plataforma/professor
+├── 30-MODO-ESCURO.md                 # ⭐ modo escuro por usuário (paleta, escolha, o que fica claro)
 │
 ├── 20-SEGURANCA-E-PRIVACIDADE/       # 🔴 ⭐ PRIORIDADE — segurança, LGPD, legal
 │   ├── 00-INDEX.md                   # ⭐ COMECE POR AQUI (achados críticos)

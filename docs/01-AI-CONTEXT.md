@@ -368,6 +368,11 @@ viraram código (lotes 1 e 2 de `convertFlagsToCode`). Apenas
 - `coach_marketing` — cupons e campanhas DE CADA PROFESSOR (Painel do
   professor → Divulgação); o desconto entra no pedido de aula.
 
+**Onda CH (2026-09-27)** — mais uma, default OFF (ver `docs/30-MODO-ESCURO.md`):
+- `dark_mode` — cada pessoa escolhe a aparência (Claro / Escuro / Automático)
+  no menu do avatar, na gaveta do celular e em Configurações. A paleta decide
+  a cor e as telas não mudam; a escolha fica no navegador (zero banco).
+
 Padrão de uso:
 
 ```jsx
@@ -472,3 +477,5 @@ usuário" (apenas para `platform_admin`). Quando ativo:
 - `docs/feature-flags-catalog.md` — catálogo detalhado de todas as flags.
 - `docs/29-INICIO-PERSONALIZADO-E-DIVULGACAO.md` — tela inicial personalizada
   e cupons/campanhas da plataforma e dos professores (Onda CG).
+- `docs/30-MODO-ESCURO.md` — o modo escuro por usuário: paleta, escolha,
+  o que fica claro de propósito (Onda CH).

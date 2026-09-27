@@ -235,6 +235,12 @@ que pode se unificar foi unificado**. Pontos pertinentes ainda abertos:
   `?marcar=1`, "enviado para N" = o confirmado, aviso com âncora rolando até a
   seção, valor final na aula e cupons para tocar no pedido. Ver doc 29 §2.4,
   §2.7 e §3.
+- ✅ **TRV-20** modo escuro por usuário (Onda CH, flag `dark_mode`): Claro,
+  Escuro ou Automático no menu do avatar, na gaveta do celular e em
+  Configurações (com miniatura de cada modo); paleta derivada da marca com
+  contraste AA conferido por teste; primeira tela sem clarão; telão, totem,
+  impressão e cards exportados continuam claros. Zero banco. Ver
+  `docs/30-MODO-ESCURO.md`.
 - ⏳ **TRV-19** (sugestão da revisão CG) contar o público e enviar os avisos
   das campanhas no SERVIDOR: hoje o navegador do emissor lê os usuários do
   público e grava os avisos em lotes — correto e honesto (a campanha mostra o

@@ -13,7 +13,8 @@ export const Switch = React.forwardRef(({ className, ...props }, ref) => (
   >
     <SwitchPrimitives.Thumb
       className={cn(
-        'pointer-events-none block h-5 w-5 rounded-full bg-white shadow-lg ring-0 transition-transform data-[state=checked]:translate-x-5 data-[state=unchecked]:translate-x-0',
+        // Branco nos dois modos: `bg-white` é o cartão (modo escuro).
+        'pointer-events-none block h-5 w-5 rounded-full bg-[#fff] shadow-lg ring-0 transition-transform data-[state=checked]:translate-x-5 data-[state=unchecked]:translate-x-0',
       )}
     />
   </SwitchPrimitives.Root>

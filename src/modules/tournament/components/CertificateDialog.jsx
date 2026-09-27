@@ -74,10 +74,11 @@ export default function CertificateDialog({ tournament, open, onOpenChange }) {
           </div>
         </div>
 
-        {/* Certificado capturável */}
+        {/* Certificado capturável. `tema-claro`: o PNG baixado é o mesmo no
+            modo escuro — o certificado é da marca, não da tela. */}
         <div
           ref={ref}
-          className="relative overflow-hidden rounded-lg border-4 border-ink bg-gradient-to-br from-white to-green-50 p-6 text-center"
+          className="tema-claro relative overflow-hidden rounded-lg border-4 border-ink bg-gradient-to-br from-white to-green-50 p-6 text-center"
         >
           <div className="flex items-center justify-center gap-2 text-green-700">
             {type === 'champion' ? <Medal className="h-6 w-6" /> : <Trophy className="h-6 w-6" />}

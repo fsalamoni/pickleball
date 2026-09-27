@@ -502,7 +502,9 @@ export function V2Toggle({ checked, onChange, label, hint, id }) {
           checked ? 'bg-acid' : 'bg-gray-200',
         )}
       >
-        <span className={cn('inline-block h-5 w-5 transform rounded-full bg-white shadow transition-transform', checked ? 'translate-x-6' : 'translate-x-1')} />
+        {/* O botão da chave é BRANCO nos dois modos (`bg-[#fff]`, fora da
+            paleta): `bg-white` é o cartão, e no escuro o botão sumiria no trilho. */}
+        <span className={cn('inline-block h-5 w-5 transform rounded-full bg-[#fff] shadow transition-transform', checked ? 'translate-x-6' : 'translate-x-1')} />
       </button>
     </div>
   );

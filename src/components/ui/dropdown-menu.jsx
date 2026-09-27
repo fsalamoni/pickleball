@@ -48,3 +48,17 @@ export const DropdownMenuSeparator = React.forwardRef(({ className, ...props }, 
   <DropdownMenuPrimitive.Separator ref={ref} className={cn('-mx-1 my-1 h-px bg-muted', className)} {...props} />
 ));
 DropdownMenuSeparator.displayName = 'DropdownMenuSeparator';
+
+export const DropdownMenuRadioGroup = DropdownMenuPrimitive.RadioGroup;
+
+export const DropdownMenuRadioItem = React.forwardRef(({ className, ...props }, ref) => (
+  <DropdownMenuPrimitive.RadioItem
+    ref={ref}
+    className={cn(
+      'relative flex cursor-default select-none items-center rounded-sm px-2 py-1.5 text-sm outline-none transition-colors focus:bg-accent focus:text-accent-foreground data-[disabled]:pointer-events-none data-[disabled]:opacity-50',
+      className,
+    )}
+    {...props}
+  />
+));
+DropdownMenuRadioItem.displayName = 'DropdownMenuRadioItem';
