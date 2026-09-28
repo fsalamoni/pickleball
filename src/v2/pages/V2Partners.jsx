@@ -1,6 +1,7 @@
 import React, { useMemo } from 'react';
 import { ExternalLink, Handshake } from 'lucide-react';
 import { useAffiliateLinks } from '@/modules/partners/hooks/useAffiliates';
+import { publicAffiliateLinks } from '@/modules/partners/domain/affiliate';
 import {
   V2Badge,
   V2EmptyState,
@@ -11,7 +12,7 @@ import {
 
 export default function V2Partners() {
   const { data: links = [], isLoading } = useAffiliateLinks();
-  const active = useMemo(() => links.filter((l) => l.active !== false), [links]);
+  const active = useMemo(() => publicAffiliateLinks(links), [links]);
 
   return (
     <div className="mx-auto max-w-[1100px]">

@@ -231,7 +231,7 @@ export default function PhasesEditor({ phases, format, onChange, unit = 'atletas
           <a
             href={`${import.meta.env.BASE_URL}torneios/guia`}
             target="_blank"
-            rel="noreferrer"
+            rel="noopener noreferrer"
             className="text-green-700 underline"
           >
             guia de formatos

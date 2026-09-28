@@ -111,6 +111,7 @@ import {
 import {
   AFFILIATE_CATEGORY_LABELS,
   normalizeAffiliateInput,
+  safeAffiliateUrl,
 } from '@/modules/partners/domain/affiliate';
 import { TOURNAMENT_STATUS_LABELS } from '@/modules/tournament/domain/constants';
 import { cn } from '@/core/lib/utils';
@@ -467,7 +468,7 @@ function QuickActions() {
         <a
           href="https://console.firebase.google.com/project/pickletour/firestore/databases/-/data/panel/users"
           target="_blank"
-          rel="noreferrer noopener"
+          rel="noopener noreferrer"
           className="flex items-start gap-3 rounded-2xl border border-gray-100 bg-paper p-4 transition-colors hover:border-ink"
         >
           <ExternalLink className="mt-0.5 h-4 w-4 shrink-0 text-ink" />
@@ -739,7 +740,7 @@ function PartnersTab() {
               <V2Toggle checked={form.active !== false} onChange={(v) => set({ active: v })} />
             </V2Field>
           </div>
-          <V2Field label="Imagem (opcional)">
+          <V2Field label="Imagem (opcional)" error={errors.image_url}>
             <ImageUpload
               value={form.image_url}
               onChange={(url) => set({ image_url: url })}
@@ -770,7 +771,9 @@ function PartnersTab() {
           </div>
         ) : (
           <ul className="divide-y divide-gray-100">
-            {links.map((l) => (
+            {links.map((l) => {
+              const url = safeAffiliateUrl(l.url);
+              return (
               <li key={l.id} className="flex items-center gap-4 p-4">
                 <div className="min-w-0 flex-1">
                   <div className="flex items-center gap-2">
@@ -778,9 +781,13 @@ function PartnersTab() {
                     {l.active === false && <V2Badge tone="neutral">Inativo</V2Badge>}
                     <V2Badge tone="neutral">{AFFILIATE_CATEGORY_LABELS[l.category] || l.category}</V2Badge>
                   </div>
-                  <a href={l.url} target="_blank" rel="noreferrer noopener" className="mt-0.5 block truncate text-xs text-gray-500 hover:text-ink">
-                    {l.url}
-                  </a>
+                  {url ? (
+                    <a href={url} target="_blank" rel="noopener noreferrer" className="mt-0.5 block truncate text-xs text-gray-500 hover:text-ink">
+                      {url}
+                    </a>
+                  ) : (
+                    <span className="mt-0.5 block text-xs font-semibold text-red-600">URL inválida — edite antes de publicar</span>
+                  )}
                 </div>
                 <V2Toggle checked={l.active !== false} onChange={() => toggleActive(l)} />
                 <button
@@ -800,7 +807,8 @@ function PartnersTab() {
                   <Trash2 className="h-4 w-4" />
                 </button>
               </li>
-            ))}
+              );
+            })}
           </ul>
         )}
       </V2Surface>

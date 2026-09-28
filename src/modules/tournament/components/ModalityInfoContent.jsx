@@ -99,7 +99,7 @@ export default function ModalityInfoContent({ modality, tournament, registration
           <a
             href={`${import.meta.env.BASE_URL}torneios/guia`}
             target="_blank"
-            rel="noreferrer"
+            rel="noopener noreferrer"
             className="text-xs text-green-700 inline-flex items-center gap-1 hover:underline"
           >
             <BookOpen className="w-3.5 h-3.5" /> Guia completo de formatos e modelos

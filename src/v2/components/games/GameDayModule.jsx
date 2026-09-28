@@ -69,7 +69,7 @@ export function GameDayModuleTools({ gameDay, podeGerenciar = false, showTelao =
           variant="secondary"
           size="sm"
           data-dica="dia-de-jogo-telao"
-          onClick={() => window.open(`/dia-de-jogo/${gameDay.id}/telao`, '_blank', 'noopener')}
+          onClick={() => window.open(`/dia-de-jogo/${gameDay.id}/telao`, '_blank', 'noopener,noreferrer')}
         >
           <MonitorPlay className="mr-1.5 h-4 w-4" /> Abrir telão
         </V2Button>

@@ -209,11 +209,11 @@ export default function V2Tournament() {
                 <Share2 className="h-4 w-4" /> Compartilhar link
               </button>
             )}
-            <a href={`/p/${tournament.id}`} target="_blank" rel="noreferrer" className="btn-press inline-flex items-center gap-2 rounded-full border border-white/15 bg-white/10 px-4 py-2 text-sm font-semibold text-white">
+            <a href={`/p/${tournament.id}`} target="_blank" rel="noopener noreferrer" className="btn-press inline-flex items-center gap-2 rounded-full border border-white/15 bg-white/10 px-4 py-2 text-sm font-semibold text-white">
               <Eye className="h-4 w-4" /> Visão pública
             </a>
             {tvModeOn && (
-              <a href={`/torneios/${tournament.id}/telao`} target="_blank" rel="noreferrer" className="btn-press inline-flex items-center gap-2 rounded-full border border-white/15 bg-white/10 px-4 py-2 text-sm font-semibold text-white">
+              <a href={`/torneios/${tournament.id}/telao`} target="_blank" rel="noopener noreferrer" className="btn-press inline-flex items-center gap-2 rounded-full border border-white/15 bg-white/10 px-4 py-2 text-sm font-semibold text-white">
                 <MonitorPlay className="h-4 w-4" /> Telão
               </a>
             )}

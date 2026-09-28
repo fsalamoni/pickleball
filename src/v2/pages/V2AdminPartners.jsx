@@ -6,7 +6,12 @@ import { ImageUpload } from '@/components/ui/image-upload';
 import ConfirmDialog from '@/components/ConfirmDialog';
 import { PhotoLightbox } from '@/components/ui/photo-lightbox';
 import { useAuth } from '@/core/lib/FirebaseAuthContext';
-import { AFFILIATE_CATEGORY_LABELS, normalizeAffiliateInput } from '@/modules/partners/domain/affiliate';
+import {
+  AFFILIATE_CATEGORY_LABELS,
+  normalizeAffiliateInput,
+  safeAffiliateImageUrl,
+  safeAffiliateUrl,
+} from '@/modules/partners/domain/affiliate';
 import {
   useAffiliateLinks, useCreateAffiliateLink, useUpdateAffiliateLink, useDeleteAffiliateLink,
 } from '@/modules/partners/hooks/useAffiliates';
@@ -85,7 +90,7 @@ export default function V2AdminPartners() {
             </V2Field>
             <V2Field label="Ordem"><V2Input type="number" value={form.sort_order} onChange={(e) => set({ sort_order: e.target.value })} /></V2Field>
           </div>
-          <V2Field label="Imagem (opcional)" hint="Logo ou banner do parceiro.">
+          <V2Field label="Imagem (opcional)" hint="Logo ou banner do parceiro." error={errors.image_url}>
             <ImageUpload value={form.image_url} onChange={(url) => set({ image_url: url || '' })} folder="partners" label="Enviar imagem" />
           </V2Field>
           <div className="rounded-2xl border border-gray-100 bg-paper p-4">
@@ -107,20 +112,45 @@ export default function V2AdminPartners() {
         ) : (
           <div className="mt-4 space-y-2">
             {links.map((link) => (
-              <div key={link.id} className="flex items-center justify-between gap-3 rounded-2xl border border-gray-100 bg-paper p-3">
-                <div className="flex min-w-0 items-center gap-2">
-                  {link.image_url && (
-                    <PhotoLightbox src={link.image_url} alt={link.title} title={link.title}
-                      trigger={<img src={link.image_url} alt="" className="h-10 w-10 cursor-zoom-in rounded-xl object-cover" />} />
-                  )}
+              <PartnerAdminRow
+                key={link.id}
+                link={link}
+                editingId={editingId}
+                resetForm={resetForm}
+                startEdit={startEdit}
+                toggleActive={toggleActive}
+                handleDelete={handleDelete}
+              />
+            ))}
+          </div>
+        )}
+      </V2Surface>
+    </div>
+  );
+}
+
+function PartnerAdminRow({ link, startEdit, toggleActive, handleDelete }) {
+  const url = safeAffiliateUrl(link.url);
+  const imageUrl = safeAffiliateImageUrl(link.image_url);
+  return (
+    <div className="flex items-center justify-between gap-3 rounded-2xl border border-gray-100 bg-paper p-3">
+      <div className="flex min-w-0 items-center gap-2">
+        {imageUrl && (
+          <PhotoLightbox src={imageUrl} alt={link.title} title={link.title}
+            trigger={<img src={imageUrl} alt="" className="h-10 w-10 cursor-zoom-in rounded-xl object-cover" />} />
+        )}
                   <div className="min-w-0">
                     <div className="flex items-center gap-2">
                       <span className="truncate font-semibold text-ink">{link.title}</span>
                       {!link.active && <V2Badge tone="neutral">inativo</V2Badge>}
                     </div>
-                    <a href={link.url} target="_blank" rel="noopener noreferrer" className="inline-flex items-center gap-1 text-xs text-ink-lighter hover:underline">
-                      {link.url} <ExternalLink className="h-3 w-3" />
-                    </a>
+                    {url ? (
+                      <a href={url} target="_blank" rel="noopener noreferrer" className="inline-flex items-center gap-1 text-xs text-ink-lighter hover:underline">
+                        {url} <ExternalLink className="h-3 w-3" />
+                      </a>
+                    ) : (
+                      <span className="text-xs font-semibold text-red-600">URL inválida — edite antes de publicar</span>
+                    )}
                   </div>
                 </div>
                 <div className="flex shrink-0 items-center gap-2">
@@ -133,12 +163,7 @@ export default function V2AdminPartners() {
                     onConfirm={() => handleDelete(link)}
                     trigger={<button aria-label="Excluir parceiro" className="flex h-9 w-9 items-center justify-center rounded-full text-red-500 hover:bg-red-50"><Trash2 className="h-4 w-4" /></button>}
                   />
-                </div>
-              </div>
-            ))}
-          </div>
-        )}
-      </V2Surface>
+      </div>
     </div>
   );
 }
