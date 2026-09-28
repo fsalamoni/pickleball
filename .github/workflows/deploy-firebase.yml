@@ -71,7 +71,7 @@ jobs:
         run: npm ci
 
       - name: Install Firebase CLI
-        run: npm install -g firebase-tools@latest
+        run: npm install -g firebase-tools@13
 
       - name: Write service account credentials
         env:

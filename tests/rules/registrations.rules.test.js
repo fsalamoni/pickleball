@@ -108,9 +108,16 @@ beforeEach(async () => {
   });
 });
 
-const como = (uid, email) => testEnv.authenticatedContext(uid, { email }).firestore();
+const como = (uid, email, extras = {}) => testEnv.authenticatedContext(
+  uid,
+  { email, email_verified: true, ...extras },
+).firestore();
 const anon = () => testEnv.unauthenticatedContext().firestore();
 const semEmail = () => testEnv.authenticatedContext('tel_uid', {}).firestore(); // login por telefone
+const emailNaoVerificado = (uid, email) => testEnv.authenticatedContext(
+  uid,
+  { email, email_verified: false },
+).firestore();
 
 // ---------------------------------------------------------------------------
 
@@ -178,6 +185,11 @@ describe('P0-02 · provisional_claims só mostra o do próprio e-mail', () => {
   it('13. o dono do e-mail lê a própria entrada', async () => {
     await assertSucceeds(getDoc(doc(
       como(CONVIDADO_UID, EMAIL_CONVIDADO), 'provisional_claims', `${RID_NOVO}_b`,
+    )));
+  });
+  it('13b. 🔴 o e-mail no token não basta sem email_verified', async () => {
+    await assertFails(getDoc(doc(
+      emailNaoVerificado(CONVIDADO_UID, EMAIL_CONVIDADO), 'provisional_claims', `${RID_NOVO}_b`,
     )));
   });
   it('14. o dono do e-mail consulta pelo PRÓPRIO e-mail (é como o login procura)', async () => {

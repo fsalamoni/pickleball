@@ -10,6 +10,14 @@ function texto(value) {
   return String(value ?? '').trim();
 }
 
+function hasUnsafeWhitespaceOrControl(value) {
+  for (const ch of value) {
+    const code = ch.charCodeAt(0);
+    if (code <= 32 || code === 127) return true;
+  }
+  return false;
+}
+
 /**
  * Devolve uma URL http(s) segura para uso em `href` ou string vazia.
  *
@@ -22,7 +30,7 @@ export function safeHttpUrl(value, opts = {}) {
   const requireHostWithDot = opts.requireHostWithDot === true;
   const raw = texto(value);
   if (!raw || raw.length > maxLength) return '';
-  if (/[\s\u0000-\u001F\u007F]/.test(raw)) return '';
+  if (hasUnsafeWhitespaceOrControl(raw)) return '';
 
   let parsed;
   try {
@@ -41,4 +49,3 @@ export function safeHttpUrl(value, opts = {}) {
 export function isSafeHttpUrl(value, opts = {}) {
   return safeHttpUrl(value, opts) !== '';
 }
-

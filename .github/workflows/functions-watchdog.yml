@@ -46,7 +46,7 @@ jobs:
           echo "GOOGLE_APPLICATION_CREDENTIALS=$SA_FILE" >> "$GITHUB_ENV"
 
       - name: Instalar a CLI do Firebase
-        run: npm install -g firebase-tools@latest
+        run: npm install -g firebase-tools@13
 
       - name: Conferir as funções publicadas
         id: conferir
