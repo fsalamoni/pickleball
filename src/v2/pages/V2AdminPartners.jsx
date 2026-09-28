@@ -131,7 +131,7 @@ export default function V2AdminPartners() {
                     description={`"${link.title}" deixará de aparecer na página de parceiros.`}
                     confirmLabel="Remover"
                     onConfirm={() => handleDelete(link)}
-                    trigger={<button className="flex h-9 w-9 items-center justify-center rounded-full text-red-500 hover:bg-red-50"><Trash2 className="h-4 w-4" /></button>}
+                    trigger={<button aria-label="Excluir parceiro" className="flex h-9 w-9 items-center justify-center rounded-full text-red-500 hover:bg-red-50"><Trash2 className="h-4 w-4" /></button>}
                   />
                 </div>
               </div>

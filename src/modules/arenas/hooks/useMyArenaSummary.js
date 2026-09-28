@@ -22,6 +22,7 @@ import { useQuery } from '@tanstack/react-query';
 import { collection, getDocs, query, where } from 'firebase/firestore';
 import { db } from '@/core/config/firebase';
 import { useAuth } from '@/core/lib/FirebaseAuthContext';
+import { logger } from '@/core/lib/logger';
 import { useMyManagedArenas } from './useArenas';
 import { ARENA_COLLECTIONS, BOOKING_STATUS } from '../domain/constants';
 
@@ -43,8 +44,7 @@ async function countPendingBookings(arenaId) {
     // Em caso de erro de permissão (ex: arena sem manager logado), retorna 0
     // silenciosamente para não quebrar o sidebar. Log em dev.
     if (import.meta.env.DEV) {
-      // eslint-disable-next-line no-console
-      console.warn(`[useMyArenaSummary] falha ao contar bookings de ${arenaId}:`, err?.code);
+      logger.warn('useMyArenaSummary: falha ao contar bookings', { arena_id: arenaId, err: err?.code });
     }
     return 0;
   }

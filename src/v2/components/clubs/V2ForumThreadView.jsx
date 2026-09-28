@@ -138,7 +138,7 @@ export default function V2ForumThreadView({ clubId, threadId, isAdmin, onBack, o
         {canManage && !editing && (
           <DropdownMenu>
             <DropdownMenuTrigger asChild>
-              <button className="flex h-9 w-9 shrink-0 items-center justify-center rounded-full text-gray-500 transition-colors hover:bg-paper hover:text-ink"><MoreVertical className="h-4 w-4" /></button>
+              <button aria-label="Mais opções" className="flex h-9 w-9 shrink-0 items-center justify-center rounded-full text-gray-500 transition-colors hover:bg-paper hover:text-ink"><MoreVertical className="h-4 w-4" /></button>
             </DropdownMenuTrigger>
             <DropdownMenuContent align="end">
               {isAuthor && (
@@ -278,7 +278,7 @@ function ForumComment({ comment, clubId, threadId, canModerate }) {
             {(isAuthor || canDelete) && !editing && (
               <DropdownMenu>
                 <DropdownMenuTrigger asChild>
-                  <button className="flex h-7 w-7 shrink-0 items-center justify-center rounded-full text-gray-400 transition-colors hover:bg-paper hover:text-ink"><MoreVertical className="h-4 w-4" /></button>
+                  <button aria-label="Mais opções" className="flex h-7 w-7 shrink-0 items-center justify-center rounded-full text-gray-400 transition-colors hover:bg-paper hover:text-ink"><MoreVertical className="h-4 w-4" /></button>
                 </DropdownMenuTrigger>
                 <DropdownMenuContent align="end">
                   {isAuthor && comment.body && (

@@ -1,5 +1,6 @@
 import { useEffect, useMemo, useRef } from 'react';
 import { useAuth } from '@/core/lib/FirebaseAuthContext';
+import { logger } from '@/core/lib/logger';
 import { useFeatureFlag } from '@/core/lib/FeatureFlagsContext';
 import { FEATURE_FLAG } from '@/core/featureFlags';
 import {
@@ -49,8 +50,8 @@ export function useGamificationTracker(options = {}) {
         // em produção sem nenhum destino, é noop silencioso
       } catch (e) {
         // nunca deve quebrar a app
-        if (typeof console !== 'undefined') {
-          console.warn('[gamification] track error', e);
+        if (typeof window !== 'undefined') {
+          logger.warn('gamification: track error', { err: e?.code || e?.message });
         }
       }
     };
