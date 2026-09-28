@@ -63,6 +63,24 @@ gcloud firestore databases update \
 **Custo**: proporcional ao tamanho do banco. Para esta base, poucos dólares
 por mês.
 
+### Helper seguro pelo repositório
+
+Se preferir não copiar comandos manualmente, há um helper que **não grava dados
+no repositório** e só executa quando você passa `APPLY=1`:
+
+```bash
+# ver o plano sem executar nada
+bash scripts/firestore-s0-backup.sh plan
+
+# conferir estado atual
+bash scripts/firestore-s0-backup.sh verify
+
+# ativar PITR
+APPLY=1 bash scripts/firestore-s0-backup.sh enable-pitr
+```
+
+Sem `APPLY=1`, o script apenas imprime o comando que seria rodado.
+
 ---
 
 ## S0.3 · Backup agendado
@@ -89,6 +107,27 @@ gcloud firestore export gs://SEU-BUCKET-DE-BACKUP \
 ```
 - [ ] Bucket de backup em conta separada (opcional, mas é o que protege no pior caso)
 
+### Export alternativo — fora do Git
+
+Se quiser uma cópia adicional antes do PITR/agenda ficarem completos, faça um
+export para bucket privado. **Nunca exporte para dentro deste repositório**:
+o dump pode conter dados pessoais, tokens e histórico privado.
+
+```bash
+# 1) escolha/crie um bucket privado, de preferência em outro projeto/conta
+export EXPORT_BUCKET=gs://SEU-BUCKET-PRIVADO
+
+# 2) confira o comando sem executar
+bash scripts/firestore-s0-backup.sh export
+
+# 3) execute
+APPLY=1 bash scripts/firestore-s0-backup.sh export
+```
+
+- [ ] Export alternativo criado em bucket privado
+- [ ] Bucket NÃO é público
+- [ ] Bucket NÃO é o repositório Git
+
 ---
 
 ## S0.4 · TESTAR uma restauração ⚠️ não pule
@@ -106,6 +145,19 @@ gcloud firestore databases restore \
 - [ ] Restauração concluída num banco de teste
 - [ ] Conferido que os dados estão lá (abrir 2-3 coleções no console)
 - [ ] **Banco de teste apagado depois** (custa dinheiro parado)
+
+Com o helper:
+
+```bash
+# substitua pelo caminho do backup listado no console/gcloud
+export SOURCE_BACKUP=projects/picklerush/locations/LOCAL/backups/ID_DO_BACKUP
+
+# conferir comando sem executar
+bash scripts/firestore-s0-backup.sh restore-test
+
+# restaurar para banco NOVO
+APPLY=1 bash scripts/firestore-s0-backup.sh restore-test
+```
 
 ---
 
