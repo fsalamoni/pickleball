@@ -12,7 +12,7 @@
 
 - **O que é**: PWA para pickleball amador BR — torneios, clubes, arenas, professores, comunidade.
 - **Stack**: React 18 + Vite, Tailwind + shadcn/ui, Firebase (Firestore db `pickleball`), React Query, Vitest, Playwright.
-- **Estado**: 20 módulos (rating virou oficial com domain/services/hooks/components), 71 V2 pages, 103 coleções Firestore (+push_tokens, +player_skill_ratings), **102 índices compostos**, **14 feature flags default OFF** (137 ativas viraram código em produção), **1800 testes verdes**, **9 Cloud Functions**. Ondas recentes: **DUPR-style rating** (escala 2.0-8.0, motor placar + confiabilidade), **engajamento** (action_home, smart_matchmaking, post_game_flow, push_notifications), **tournament equipes** (sortear → jogar → ranking), **arena mercado** (catálogo + gestão), **game day Play** (open play, visões separadas, sorteio aditivo). Legado V1 removido.
+- **Estado**: 26 módulos (rating virou oficial; novos: `home`, `feed`, `legal`, `marketplace`, `moderation`, `promo`, `help`), **113 V2 pages**, 130 `match /` blocos no `firestore.rules` (103 coleções + sub-coleções), **102 índices compostos**, **27 feature flags ativas** (o resto virou código permanente), **296 arquivos de teste** (~1800 asserts), **9 Cloud Functions** em produção. Ondas recentes: **DUPR-style rating** (escala 2.0-8.0), **engajamento** (action_home, smart_matchmaking, post_game_flow, push_notifications), **tournament equipes**, **arena mercado**, **game day Play + Mexicano + Rei da Quadra** (cada um atrás da própria flag), **home cards sob medida**, **modo escuro por usuário**, **dicas guiadas**. PWA `sw-v7`. Legado V1 removido.
 - **Live**: https://picklerush.web.app (Firebase site `picklerush`; `pickletour` é redirect-only).
 - **Deploy**: push em `main` → GitHub Actions → Firebase Hosting + Rules + Cloud Function.
 - **Repositório**: https://github.com/fsalamoni/pickleball
@@ -520,7 +520,7 @@ chore(deps): bump firebase to 12.x
 
 ---
 
-## 10. Métricas atuais (snapshot 2026-08-31, 11:05 GMT-3)
+## 10. Métricas atuais (snapshot 2026-09-28, 11:00 GMT-3)
 
 > Última atualização: 2026-09-27 (Onda CJ — dicas guiadas). Antes: Onda CI (início sob medida); Onda CH (modo escuro); revisão da Onda CG; 2026-09-20 (Onda AT); 2026-08-31, após **41 PRs
 > novos** mergeados em main (#95 a #135) — Sprints 32 a 50+.

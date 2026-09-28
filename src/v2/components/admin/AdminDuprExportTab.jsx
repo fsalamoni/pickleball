@@ -39,6 +39,7 @@
 
 import React, { useEffect, useMemo, useState } from 'react';
 import { toast } from 'sonner';
+import { ConfirmDialog } from '@/components/ui/confirm-dialog';
 import {
   Download, Filter, RotateCcw, Trophy, Users,
   AlertTriangle, CheckCircle2, ListChecks, Info,
@@ -166,6 +167,10 @@ export default function AdminDuprExportTab() {
   const [filteredSelection, setFilteredSelection] = useState(() => new Set());
   const [queueSelection, setQueueSelection] = useState(() => new Set());
 
+  // Confirmação aditiva: substitui `window.confirm` por ConfirmDialog V2.
+  // kind: 'status' → applyStatus; kind: 'queue-remove' → applyQueueChange(removed=true)
+  const [pendingConfirm, setPendingConfirm] = useState(null);
+
   // Conferência: texto colado do histórico DUPR (aplicado sob demanda).
   const [historyText, setHistoryText] = useState('');
   const [historyApplied, setHistoryApplied] = useState('');
@@ -273,8 +278,13 @@ export default function AdminDuprExportTab() {
       toast.error('Selecione ao menos uma partida.');
       return;
     }
-    const ok = window.confirm(STATUS_CONFIRM[status](entries.length));
-    if (!ok) return;
+    // Confirmação via dialog V2 (substitui window.confirm).
+    setPendingConfirm({ kind: 'status', entries, clearSelection, status });
+  };
+
+  const runStatusMutation = () => {
+    if (!pendingConfirm || pendingConfirm.kind !== 'status') return;
+    const { entries, clearSelection, status } = pendingConfirm;
     recordLedger.mutate(
       { entries, status, ledgerByKey, force: true },
       {
@@ -285,6 +295,23 @@ export default function AdminDuprExportTab() {
         onError: () => toast.error('Não foi possível atualizar a situação. Tente novamente.'),
       },
     );
+    setPendingConfirm(null);
+  };
+
+  const runQueueRemoveMutation = () => {
+    if (!pendingConfirm || pendingConfirm.kind !== 'queue-remove') return;
+    const { entries, clearSelection } = pendingConfirm;
+    updateQueue.mutate(
+      { entries, removed: true },
+      {
+        onSuccess: () => {
+          clearSelection();
+          toast.success(`${entries.length} partida(s) fora da lista de exportação.`);
+        },
+        onError: () => toast.error('Não foi possível atualizar a lista de exportação. Tente novamente.'),
+      },
+    );
+    setPendingConfirm(null);
   };
 
   /** Tira (ou devolve) as selecionadas da lista de exportação, sem mexer na situação. */
@@ -295,11 +322,9 @@ export default function AdminDuprExportTab() {
       return;
     }
     if (removed) {
-      const ok = window.confirm(
-        `Excluir ${entries.length} partida(s) da lista de exportação? `
-        + 'A situação DUPR delas NÃO muda — continuam pendentes e podem voltar à lista quando você quiser.',
-      );
-      if (!ok) return;
+      // Confirmação via dialog V2 (substitui window.confirm).
+      setPendingConfirm({ kind: 'queue-remove', entries, clearSelection });
+      return;
     }
     updateQueue.mutate(
       { entries, removed },
@@ -733,6 +758,32 @@ export default function AdminDuprExportTab() {
           )}
         />
       </section>
+
+      <ConfirmDialog
+        open={Boolean(pendingConfirm)}
+        onOpenChange={(v) => !v && !isWriting && setPendingConfirm(null)}
+        title={
+          pendingConfirm?.kind === 'status'
+            ? `Alterar situação de ${pendingConfirm.entries.length} partida(s)?`
+            : pendingConfirm?.kind === 'queue-remove'
+              ? `Excluir ${pendingConfirm.entries.length} partida(s) da lista de exportação?`
+              : 'Confirmar'
+        }
+        description={
+          pendingConfirm?.kind === 'status' && pendingConfirm.status
+            ? STATUS_CONFIRM[pendingConfirm.status](pendingConfirm.entries.length)
+            : pendingConfirm?.kind === 'queue-remove'
+              ? 'A situação DUPR delas NÃO muda — continuam pendentes e podem voltar à lista quando você quiser.'
+              : ''
+        }
+        confirmLabel={pendingConfirm?.kind === 'queue-remove' ? 'Excluir da lista' : 'Confirmar'}
+        destructive
+        loading={isWriting}
+        onConfirm={() => {
+          if (pendingConfirm?.kind === 'status') runStatusMutation();
+          else if (pendingConfirm?.kind === 'queue-remove') runQueueRemoveMutation();
+        }}
+      />
     </div>
   );
 }

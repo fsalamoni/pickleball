@@ -4,8 +4,15 @@
 > (`docs/09-UX-ANALYSIS/01–14`, `docs/08-ARENA-ROADMAP.md`, `docs/10-ARENA-V3/*`),
 > com uma **limpeza do que já foi implementado**. Este documento é a fonte
 > única de "o que ainda falta". Status apurado por: catálogo de flags
-> (`src/core/featureFlags.js`, 124 flags), trabalho desta branch e verificação
-> no código.
+> (`src/core/featureFlags.js`, 27 flags ativas — o resto virou código
+> permanente nas Ondas antigas), trabalho desta branch e verificação no
+> código.
+>
+> **Auditoria 2026-09-28** (`docs/AUDIT-2026-09-28.md`): o catálogo de
+> pendências priorizado está nos batches 5-7 do plano (P0-02 cleanup,
+> Direitos do titular, Governança contínua). Pendências do **dono**
+> (backup, revogação de admin extras) seguem em
+> `docs/20-SEGURANCA-E-PRIVACIDADE/19-PENDENCIAS.md`.
 
 Legenda: ✅ implementado · 🟡 parcial / a verificar · ⏳ pendente.
 

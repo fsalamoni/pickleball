@@ -22,4 +22,8 @@ functions/lib
 functions/node_modules
 .release/
 *.tar.gz
+*.zip
+# Scripts de deploy manual substituídos por .github/workflows/deploy-firebase.yml.
+# Mantidos no .gitignore por segurança contra commit acidental.
+/deploy-*.sh
 .worktrees/
