@@ -3,14 +3,21 @@
 > O que cada módulo faz, arquivos-chave e fluxos principais. Panorama em
 > `docs/01-AI-CONTEXT.md`; dados em `docs/05-DATA-MODEL.md`.
 
-A plataforma tem **19 módulos** em `src/modules/`. A camada de apresentação
+A plataforma tem **26 módulos** em `src/modules/`. A camada de apresentação
 ativa (V2, `src/v2/`) consome os hooks e services desses módulos. A camada
 legada (V1, `src/pages/`) também, mas está em desuso.
 
+**Módulos atuais** (além dos 19 originais): `home/` (personalização do
+início, Ondas CG/CI), `feed/`, `legal/`, `marketplace/`, `moderation/`,
+`promo/`, `help/` (tutoriais, dicas guiadas, central de ajuda).
+
 **Feature flags**: cada nova feature vive atrás de uma flag
-(`src/core/featureFlags.js` — 124 flags, ver `01-AI-CONTEXT.md` §9). UI
-gateada com `<FeatureFlagGuard flag=...>` ou via hook `useFeatureFlag(key)`.
-**Sempre aditivo** — nunca quebra o que está OFF.
+(`src/core/featureFlags.js` — **27 flags ativas**, ver
+`src/core/featureFlags.js` §FLAGS_DEFINIDAS). UI gateada com
+`<FeatureFlagGuard flag=...>` ou via hook `useFeatureFlag(key)`.
+**Sempre aditivo** — nunca quebra o que está OFF. As flags de Ondas
+antigas foram incorporadas ao código permanente (só restam as de
+Ondas CC-CJ e as da Fase FUTURO).
 
 ---
 

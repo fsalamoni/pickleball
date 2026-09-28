@@ -43,7 +43,8 @@ Pilares:
   `tournaments/{id}`). Toda a lógica de UI/Hooks roda no client; a
   segurança é garantida por `firestore.rules`.
 - **React Query** (`@tanstack/react-query`) para data fetching/cache.
-- **Vitest** (unit, **1350 testes**) + **Playwright** (E2E).
+- **Vitest** (unit, **~1800 asserts em 296 arquivos** de teste: 212 domain,
+  68 runtime, 16 rules) + **Playwright** (E2E).
 - **react-router-dom** (BrowserRouter), **react-hook-form + zod**, `sonner`
   (toasts), `date-fns`, `lucide-react`, `ics` (calendar export).
 
@@ -75,7 +76,8 @@ src/
 │   ├── featureFlagGroups.js      # agrupamento por assunto (admin)
 │   └── services/                 # auditService, notificationService,
 │                                 # baseService, storageService, observabilityService
-├── modules/             # ⭐ BASE DE DOMÍNIO (19 módulos — reusado por V1 e V2)
+├── modules/             # ⭐ BASE DE DOMÍNIO (26 módulos — reusado por V2;
+                        #   V1 está em desuso desde Onda AS)
 │   ├── tournament/      # núcleo: torneios, modalidades, jogos, ranking, sorteio
 │   ├── athletes/        # diretório de atletas (perfis públicos)
 │   ├── clubs/           # clubes, membros, eventos, fórum, game-day
@@ -432,7 +434,7 @@ Ondas recentes (PR #71 + #72):
 ```bash
 npm run dev       # Vite dev (http://localhost:5173)
 npm run lint      # ESLint (--quiet no CI) — esperado 0 errors
-npm run test      # Vitest unit (1350 testes)
+npm run test      # Vitest unit (~1800 asserts em 296 arquivos)
 npm run e2e       # Playwright
 npm run build     # produção → dist/  (VITE_PWA_ENABLED=true ativa PWA)
 ```
