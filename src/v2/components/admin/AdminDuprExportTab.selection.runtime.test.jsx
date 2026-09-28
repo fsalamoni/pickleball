@@ -94,7 +94,6 @@ const { default: AdminDuprExportTab } = await import('./AdminDuprExportTab.jsx')
 let container;
 let root;
 let originalClick;
-let originalConfirm;
 
 function mount() {
   container = document.createElement('div');
@@ -137,6 +136,27 @@ function setFilterType(value) {
   });
 }
 
+/**
+ * A partir do Batch 2 da auditoria 2026-09-28, `window.confirm` foi trocado
+ * pelo `ConfirmDialog` V2 em `AdminDuprExportTab`. O fluxo de teste passou
+ * a ser: clicar na ação (que abre o diálogo) e depois clicar no botão de
+ * confirmação do diálogo. Esta função centraliza esse segundo passo.
+ *
+ * O Radix AlertDialog usa Portal — o nó é renderizado em `document.body`,
+ * não dentro de `container`. Procuramos no `document` inteiro.
+ */
+function clickConfirmInDialog() {
+  // Espera um tick: o Portal é criado de forma assíncrona após o estado
+  // `open` virar true.
+  const dialog = document.querySelector('[role="alertdialog"]');
+  if (!dialog) throw new Error('ConfirmDialog não apareceu em document');
+  const buttons = [...dialog.querySelectorAll('button')];
+  // O ConfirmDialog da V2 coloca [Cancelar, Confirmar] no rodapé
+  // (AlertDialogFooter) — o último botão é o destrutivo (Confirmar/Excluir).
+  const confirm = buttons[buttons.length - 1];
+  click(confirm);
+}
+
 beforeEach(() => {
   container = null;
   root = null;
@@ -146,15 +166,12 @@ beforeEach(() => {
   window.HTMLAnchorElement.prototype.click = () => {};
   window.URL.createObjectURL = () => 'blob:teste';
   window.URL.revokeObjectURL = () => {};
-  originalConfirm = window.confirm;
-  window.confirm = () => true;
 });
 
 afterEach(() => {
   React.act(() => root.unmount());
   container.remove();
   window.HTMLAnchorElement.prototype.click = originalClick;
-  window.confirm = originalConfirm;
 });
 
 describe('AdminDuprExportTab — seleção e lista de exportação', () => {
@@ -176,6 +193,7 @@ describe('AdminDuprExportTab — seleção e lista de exportação', () => {
     click(container.querySelector('#dupr-filtered-check-m00'));
     setFilterType('S');
     clickButtonByText('Lançada no DUPR');
+    clickConfirmInDialog();
 
     expect(mocks.recordLedger).toHaveBeenCalledTimes(1);
     const [payload] = mocks.recordLedger.mock.calls[0];
@@ -217,6 +235,7 @@ describe('AdminDuprExportTab — seleção e lista de exportação', () => {
     mount();
     click(container.querySelector('#dupr-queue-check-m00'));
     clickButtonByText('Excluir da lista');
+    clickConfirmInDialog();
 
     expect(mocks.updateQueue).toHaveBeenCalledTimes(1);
     const [payload] = mocks.updateQueue.mock.calls[0];

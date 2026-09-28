@@ -16,6 +16,7 @@ export default function V2AdminTournaments() {
   const [error, setError] = useState(null);
   const [deleteTarget, setDeleteTarget] = useState(null);
   const [deleting, setDeleting] = useState(false);
+  const [brushTarget, setBrushTarget] = useState(null); // { tournament, scanned }
 
   async function load() {
     try {
@@ -69,18 +70,27 @@ export default function V2AdminTournaments() {
         toast.info('Nada pra limpar neste torneio.');
         return;
       }
-      const ok = window.confirm(
-        `Remover ${dry.scanned} inscrição(ões) provisória(s)/placeholder do torneio "${t.name}"?\n`
-        + 'A operação é registrada no audit_logs e não pode ser desfeita.',
-      );
-      if (!ok) return;
+      // Abre o ConfirmDialog com a contagem real; só executa após o usuário
+      // confirmar (substitui o `window.confirm` por UX V2 consistente).
+      setBrushTarget({ tournament: t, scanned: dry.scanned });
+    } catch (err) { toast.error(err.message); }
+  }
+
+  async function confirmCleanProvisionals() {
+    if (!brushTarget) return;
+    const { tournament: t, scanned } = brushTarget;
+    try {
       const result = await bulkRemoveProvisionalRegistrations({
         tournamentId: t.id,
         onlyProvisional: true,
         onlyPlaceholder: true,
       }, user);
-      toast.success(`${result.deleted} inscrição(ões) removida(s).`);
-    } catch (err) { toast.error(err.message); }
+      toast.success(`${result.deleted} inscrição(ões) removida(s) (de ${scanned} encontradas).`);
+    } catch (err) {
+      toast.error(err.message);
+    } finally {
+      setBrushTarget(null);
+    }
   }
 
   if (!isPlatformAdmin) return <Navigate to="/" replace />;
@@ -159,6 +169,16 @@ export default function V2AdminTournaments() {
         destructive
         loading={deleting}
         onConfirm={() => deleteTarget && handleDelete(deleteTarget)}
+      />
+
+      <ConfirmDialog
+        open={Boolean(brushTarget)}
+        onOpenChange={(v) => !v && setBrushTarget(null)}
+        title={`Remover inscrições provisórias de "${brushTarget?.tournament?.name}"?`}
+        description={`Serão removidas ${brushTarget?.scanned ?? 0} inscrição(ões) provisória(s)/placeholder. A operação é registrada no audit_logs e não pode ser desfeita.`}
+        confirmLabel="Remover"
+        destructive
+        onConfirm={confirmCleanProvisionals}
       />
     </div>
   );
