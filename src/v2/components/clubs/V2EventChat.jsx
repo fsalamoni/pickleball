@@ -90,7 +90,7 @@ export default function V2EventChat({ eventId }) {
           placeholder="Escreva uma mensagem…"
           className="max-h-32 flex-1 resize-none rounded-2xl border border-gray-200 bg-paper px-4 py-2.5 text-sm text-ink outline-none placeholder:text-gray-400 focus-visible:ring-4 focus-visible:ring-acid/30"
         />
-        <V2Button type="submit" size="icon" disabled={send.isPending || !draft.trim()}>
+        <V2Button type="submit" size="icon" disabled={send.isPending || !draft.trim()} aria-label="Enviar mensagem">
           <Send className="h-4 w-4" />
         </V2Button>
       </form>

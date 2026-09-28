@@ -161,7 +161,7 @@ export default function V2ChatWindow({ conversation, currentUserId, onBack, onCl
 
         <DropdownMenu>
           <DropdownMenuTrigger asChild>
-            <button className="flex h-9 w-9 shrink-0 items-center justify-center rounded-full text-gray-500 transition-colors hover:bg-paper hover:text-ink">
+            <button aria-label="Mais opções da conversa" className="flex h-9 w-9 shrink-0 items-center justify-center rounded-full text-gray-500 transition-colors hover:bg-paper hover:text-ink">
               <MoreVertical className="h-5 w-5" />
             </button>
           </DropdownMenuTrigger>

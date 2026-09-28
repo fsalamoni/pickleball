@@ -126,7 +126,7 @@ export default function V2MessageBubble({ message, isOwn, showAuthor, onEdit, on
         <div className="self-center opacity-0 transition-opacity focus-within:opacity-100 group-hover:opacity-100">
           <DropdownMenu>
             <DropdownMenuTrigger asChild>
-              <button className="flex h-7 w-7 items-center justify-center rounded-full text-gray-400 transition-colors hover:bg-paper hover:text-ink">
+              <button aria-label="Mais opções da mensagem" className="flex h-7 w-7 items-center justify-center rounded-full text-gray-400 transition-colors hover:bg-paper hover:text-ink">
                 <MoreVertical className="h-4 w-4" />
               </button>
             </DropdownMenuTrigger>
