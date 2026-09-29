@@ -53,7 +53,11 @@ jobs:
           fi
 
           missing=0
-          for var_name in FIREBASE_PROJECT_ID FIREBASE_SERVICE_ACCOUNT DATABASE_ID; do
+          if [ -z "${FIREBASE_PROJECT_ID:-}" ]; then
+            echo "::error title=Projeto Firebase ausente::Configure VITE_FIREBASE_PROJECT_ID em Settings > Secrets and variables > Actions."
+            missing=1
+          fi
+          for var_name in FIREBASE_SERVICE_ACCOUNT DATABASE_ID; do
             if [ -z "${!var_name}" ]; then
               echo "::error title=Configuração ausente::${var_name} não está configurado."
               missing=1
