@@ -46,6 +46,7 @@ jobs:
       DATABASE_ID: ${{ inputs.database_id }}
       SNAPSHOT_TIME: ${{ inputs.snapshot_time }}
       CONFIRM: ${{ inputs.confirm }}
+      BACKUP_BUCKET_LOCATION: southamerica-east1
     steps:
       - uses: actions/checkout@v5
 
@@ -74,8 +75,11 @@ jobs:
           export_bucket="${RAW_EXPORT_BUCKET:-$DEFAULT_EXPORT_BUCKET}"
           export_bucket="${export_bucket%/}"
           if [ -z "$export_bucket" ]; then
-            echo "::error title=Bucket ausente::Informe export_bucket ao rodar o workflow ou configure FIRESTORE_EXPORT_BUCKET em Settings > Secrets/Variables > Actions."
-            exit 1
+            export_bucket="gs://${FIREBASE_PROJECT_ID}-firestore-backups"
+            auto_export_bucket=1
+            echo "::notice title=Bucket padrão de backup::Nenhum bucket foi informado; será usado/criado '$export_bucket' com acesso público prevenido."
+          else
+            auto_export_bucket=0
           fi
           if [[ "$export_bucket" != gs://* ]] || [[ "$export_bucket" =~ [[:space:]] ]]; then
             echo "::error title=Bucket inválido::Use um destino GCS privado começando com gs:// e sem espaços."
@@ -101,6 +105,7 @@ jobs:
             echo "EXPORT_BUCKET=$export_bucket"
             echo "EXPORT_PREFIX_CLEAN=$prefix"
             echo "EXPORT_BUCKET_NAME=$bucket_name"
+            echo "AUTO_EXPORT_BUCKET=$auto_export_bucket"
           } >> "$GITHUB_ENV"
 
           sa_file="$RUNNER_TEMP/firebase-sa.json"
@@ -136,9 +141,34 @@ jobs:
             --project="$FIREBASE_PROJECT_ID" \
             --format='table(name,locationId,pointInTimeRecoveryEnablement)'
 
-          gcloud storage buckets describe "gs://$EXPORT_BUCKET_NAME" \
+          if ! gcloud storage buckets describe "gs://$EXPORT_BUCKET_NAME" \
             --project="$FIREBASE_PROJECT_ID" \
-            --format=json > "$RUNNER_TEMP/bucket.json"
+            --format=json > "$RUNNER_TEMP/bucket.json" 2>"$RUNNER_TEMP/bucket-describe.err"; then
+            cat "$RUNNER_TEMP/bucket-describe.err"
+            if [ "${AUTO_EXPORT_BUCKET:-0}" != "1" ]; then
+              echo "::error title=Bucket não encontrado::O bucket informado não está acessível. Corrija o destino ou use o bucket padrão automático."
+              exit 1
+            fi
+            echo "::notice title=Criando bucket privado de backup::Criando gs://$EXPORT_BUCKET_NAME em $BACKUP_BUCKET_LOCATION."
+            gcloud storage buckets create "gs://$EXPORT_BUCKET_NAME" \
+              --project="$FIREBASE_PROJECT_ID" \
+              --location="$BACKUP_BUCKET_LOCATION" \
+              --uniform-bucket-level-access \
+              --public-access-prevention=enforced
+            gcloud storage buckets describe "gs://$EXPORT_BUCKET_NAME" \
+              --project="$FIREBASE_PROJECT_ID" \
+              --format=json > "$RUNNER_TEMP/bucket.json"
+          fi
+
+          if [ "${AUTO_EXPORT_BUCKET:-0}" = "1" ]; then
+            gcloud storage buckets update "gs://$EXPORT_BUCKET_NAME" \
+              --project="$FIREBASE_PROJECT_ID" \
+              --uniform-bucket-level-access \
+              --public-access-prevention=enforced >/dev/null
+            gcloud storage buckets describe "gs://$EXPORT_BUCKET_NAME" \
+              --project="$FIREBASE_PROJECT_ID" \
+              --format=json > "$RUNNER_TEMP/bucket.json"
+          fi
 
           public_access_prevention="$(jq -r '.iamConfiguration.publicAccessPrevention // "unspecified"' "$RUNNER_TEMP/bucket.json")"
           uniform_access="$(jq -r '.iamConfiguration.uniformBucketLevelAccess.enabled // false' "$RUNNER_TEMP/bucket.json")"
@@ -152,6 +182,14 @@ jobs:
 
           if jq -e '.bindings[]?.members[]? | select(. == "allUsers" or . == "allAuthenticatedUsers")' "$RUNNER_TEMP/bucket-iam.json" >/dev/null; then
             echo "::error title=Bucket público::O bucket tem allUsers/allAuthenticatedUsers no IAM. Remova acesso público antes do backup."
+            exit 1
+          fi
+          if [ "$public_access_prevention" != "enforced" ]; then
+            echo "::error title=Bucket sem prevenção pública::Ative Public Access Prevention no bucket de backup antes de exportar dados do Firestore."
+            exit 1
+          fi
+          if [ "$uniform_access" != "true" ]; then
+            echo "::error title=Bucket sem acesso uniforme::Ative Uniform bucket-level access no bucket de backup antes de exportar dados do Firestore."
             exit 1
           fi
 

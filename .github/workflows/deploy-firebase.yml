@@ -171,15 +171,31 @@ jobs:
       - name: Build production bundle
         run: npm run build
 
-      - name: Deploy Firestore rules and indexes
+      - name: Deploy Firestore rules
         run: |
           set +e
-          OUT=$(firebase deploy --only "firestore:$FIRESTORE_DATABASE_ID" --project "$FIREBASE_PROJECT_ID" --non-interactive 2>&1)
+          OUT=$(firebase deploy --only "firestore:rules" --project "$FIREBASE_PROJECT_ID" --non-interactive 2>&1)
           RC=$?
           echo "$OUT"
           if [ $RC -eq 0 ]; then exit 0; fi
           if echo "$OUT" | grep -qiE "HTTP Error: 403|PERMISSION_DENIED|caller does not have permission"; then
-            echo "::error title=Missing IAM permission for Firestore deploy::Service account '$SA_EMAIL' cannot deploy Firestore rules/indexes to '$FIRESTORE_DATABASE_ID' in '$FIREBASE_PROJECT_ID'. Grant role 'Firebase Admin' at https://console.cloud.google.com/iam-admin/iam?project=$FIREBASE_PROJECT_ID"
+            echo "::error title=Missing IAM permission for Firestore rules deploy::Service account '$SA_EMAIL' cannot deploy Firestore rules to '$FIRESTORE_DATABASE_ID' in '$FIREBASE_PROJECT_ID'. Grant role 'Firebase Admin' at https://console.cloud.google.com/iam-admin/iam?project=$FIREBASE_PROJECT_ID"
+          fi
+          exit $RC
+
+      - name: Deploy Firestore indexes safely
+        run: |
+          set +e
+          OUT=$(firebase deploy --only "firestore:indexes" --project "$FIREBASE_PROJECT_ID" --non-interactive 2>&1)
+          RC=$?
+          echo "$OUT"
+          if [ $RC -eq 0 ]; then exit 0; fi
+          if echo "$OUT" | grep -qiE "not present in your firestore indexes file|Pass the --force flag"; then
+            echo "::warning title=Índice remoto preservado::Existe índice composto no Firebase que não está em firestore.indexes.json. Por segurança, o workflow NÃO usa --force e NÃO apaga índice remoto; regras, hosting e demais etapas podem seguir. Importe o índice remoto para firestore.indexes.json antes de tornar índices bloqueantes novamente."
+            exit 0
+          fi
+          if echo "$OUT" | grep -qiE "HTTP Error: 403|PERMISSION_DENIED|caller does not have permission"; then
+            echo "::error title=Missing IAM permission for Firestore indexes deploy::Service account '$SA_EMAIL' cannot deploy Firestore indexes to '$FIRESTORE_DATABASE_ID' in '$FIREBASE_PROJECT_ID'. Grant role 'Firebase Admin' at https://console.cloud.google.com/iam-admin/iam?project=$FIREBASE_PROJECT_ID"
           fi
           exit $RC
 
