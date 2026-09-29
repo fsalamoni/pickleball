@@ -1,0 +1,105 @@
+name: Limpeza de e-mails legados
+
+on:
+  workflow_dispatch:
+    inputs:
+      command:
+        description: 'Etapa da limpeza'
+        required: true
+        default: 'report'
+        type: choice
+        options:
+          - report
+          - backfill-registration-contacts
+          - delete-registration-public-emails
+          - delete-wide-user-emails
+      apply:
+        description: 'Executar escrita no Firestore. Desligado = dry-run.'
+        required: true
+        default: false
+        type: boolean
+      confirm:
+        description: 'Confirmação exata para APPLY: CRIAR_CONTATOS_PRIVADOS, APAGAR_EMAILS_PUBLICOS_LEGADOS ou APAGAR_USER_EMAIL_LEGADO.'
+        required: false
+        type: string
+      limit:
+        description: 'Opcional: limite de documentos por coleção para teste controlado.'
+        required: false
+        type: string
+
+permissions:
+  contents: read
+
+concurrency:
+  group: privacy-legacy-email-cleanup
+  cancel-in-progress: false
+
+jobs:
+  cleanup:
+    runs-on: ubuntu-latest
+    timeout-minutes: 120
+    env:
+      FIREBASE_PROJECT_ID: ${{ secrets.VITE_FIREBASE_PROJECT_ID }}
+      FIREBASE_SERVICE_ACCOUNT: ${{ secrets.FIREBASE_SERVICE_ACCOUNT }}
+      FIRESTORE_DATABASE_ID: pickleball
+      COMMAND: ${{ inputs.command }}
+      APPLY: ${{ inputs.apply && '1' || '0' }}
+      CONFIRM: ${{ inputs.confirm }}
+      LIMIT: ${{ inputs.limit }}
+    steps:
+      - uses: actions/checkout@v5
+
+      - uses: actions/setup-node@v5
+        with:
+          node-version: 24
+          cache: npm
+
+      - name: Validar entradas e credenciais
+        shell: bash
+        run: |
+          set -euo pipefail
+          if [ -z "${FIREBASE_PROJECT_ID:-}" ] || [ -z "${FIREBASE_SERVICE_ACCOUNT:-}" ]; then
+            echo "::error title=Configuração ausente::Configure VITE_FIREBASE_PROJECT_ID e FIREBASE_SERVICE_ACCOUNT."
+            exit 1
+          fi
+          if [ "$APPLY" = "1" ] && [ "$COMMAND" = "report" ]; then
+            echo "::error title=Entrada inválida::O comando report deve rodar sem APPLY."
+            exit 1
+          fi
+          case "$COMMAND:$APPLY:$CONFIRM" in
+            report:0:*) ;;
+            backfill-registration-contacts:0:*) ;;
+            delete-registration-public-emails:0:*) ;;
+            delete-wide-user-emails:0:*) ;;
+            backfill-registration-contacts:1:CRIAR_CONTATOS_PRIVADOS) ;;
+            delete-registration-public-emails:1:APAGAR_EMAILS_PUBLICOS_LEGADOS) ;;
+            delete-wide-user-emails:1:APAGAR_USER_EMAIL_LEGADO) ;;
+            *)
+              echo "::error title=Confirmação inválida::Confira command/apply/confirm antes de escrever no Firestore."
+              exit 1
+              ;;
+          esac
+          sa_file="$RUNNER_TEMP/firebase-sa.json"
+          printf '%s' "$FIREBASE_SERVICE_ACCOUNT" > "$sa_file"
+          jq -e . "$sa_file" >/dev/null
+          echo "GOOGLE_APPLICATION_CREDENTIALS=$sa_file" >> "$GITHUB_ENV"
+
+      - name: Instalar dependências
+        run: npm ci
+
+      - name: Executar limpeza de e-mails legados
+        shell: bash
+        run: |
+          set -euo pipefail
+          node scripts/privacy-legacy-email-cleanup.mjs "$COMMAND" | tee "$RUNNER_TEMP/privacy-cleanup.log"
+          {
+            echo "## Limpeza de e-mails legados"
+            echo
+            echo "- Comando: \`$COMMAND\`"
+            echo "- Modo: \`$([ "$APPLY" = "1" ] && echo APPLY || echo DRY-RUN)\`"
+            echo "- Banco: \`$FIRESTORE_DATABASE_ID\`"
+            echo
+            echo '```text'
+            tail -n 80 "$RUNNER_TEMP/privacy-cleanup.log"
+            echo '```'
+          } >> "$GITHUB_STEP_SUMMARY"

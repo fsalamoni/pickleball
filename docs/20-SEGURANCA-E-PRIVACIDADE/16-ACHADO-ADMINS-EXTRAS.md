@@ -1,7 +1,20 @@
-# 20.16 — 🔴 ACHADO ABERTO: quatro contas com `platform_admin`
+# 20.16 — ✅ ACHADO REVALIDADO: contas `platform_admin` extras
 
 > **Data**: 2026-09-09 · **Origem**: verificação S0.1 do runbook, feita pelo dono
-> **Estado**: ⏳ **precisa de decisão do dono** — não é corrigível por código
+> **Revalidação**: 2026-09-28 · a consulta atual devolveu só o dono
+> (`Kx7CC0NVgogh8cCF4wIRmpOvo7r2`). O achado fica como histórico e como
+> procedimento de resposta caso volte a ocorrer.
+
+## Estado atual (2026-09-28)
+
+O relatório incremental `docs/AUDIT-2026-09-28.md` registrou que a query
+`users` com `role == 'platform_admin'` devolveu apenas o uid do dono. Portanto,
+a pendência operacional de rebaixar três contas extras não está mais aberta.
+
+O restante deste documento preserva o contexto original de 2026-09-09 e o
+procedimento seguro: se uma conta inesperada voltar a aparecer, trate como
+incidente até prova em contrário e use **Painel admin → Governança → Acessos**
+para revogar o poder.
 
 ## O que foi visto
 
