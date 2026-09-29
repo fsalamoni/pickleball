@@ -6,6 +6,10 @@
 > qualquer trabalho de retenção.
 >
 > Marque cada item ao concluir. Ao final, avise — o P0-02 fica desbloqueado.
+>
+> **Status 2026-09-29**: o dono confirmou que o restore foi testado no
+> Console e está funcionando. A limpeza de e-mails legados pode seguir, mas
+> continua passando por dry-run, confirmação explícita e etapas separadas.
 
 Projeto: `picklerush` · banco Firestore: **`pickleball`** (banco nomeado, não
 o `(default)` — atenção nos comandos).
@@ -176,6 +180,9 @@ gcloud firestore databases restore \
 - [ ] Restauração concluída num banco de teste
 - [ ] Conferido que os dados estão lá (abrir 2-3 coleções no console)
 - [ ] **Banco de teste apagado depois** (custa dinheiro parado)
+
+> Em 2026-09-29, o dono confirmou no chat: “já testei o restore no console,
+> está funcionando perfeitamente”.
 
 Com o helper:
 

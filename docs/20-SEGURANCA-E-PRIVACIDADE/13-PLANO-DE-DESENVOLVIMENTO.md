@@ -80,7 +80,8 @@ todos os fluxos de login e edição de perfil continuam funcionando.
 > LEGADAS continua funcionando.
 >
 > **Falta**: apagar os campos `player_a_email`/`player_b_email`/`_lc` dos
-> documentos que já existem. É irreversível e continua **preso ao S0**.
+> documentos que já existem. O restore foi confirmado pelo dono em 2026-09-29,
+> então a limpeza pode seguir pelo script/workflow com dry-run e confirmação.
 > Enquanto isso, o vazamento **parou de crescer** mas não foi eliminado.
 
 ### Histórico do bloqueio
@@ -102,7 +103,7 @@ todos os fluxos de login e edição de perfil continuam funcionando.
       (inscrições novas) — 1h, reduz o crescimento do vazamento
 - [ ] Subcoleção `private/contact` + regra
 - [ ] Coleção `provisional_claims` + regra + índice
-- [ ] Migração em DRY-RUN → relatório → execução
+- [x] Script/workflow de migração em DRY-RUN → relatório → execução por etapa
 - [ ] Código lê do novo lugar, com fallback · **7 dias em produção**
 - [ ] Só então: apagar os campos antigos, em lotes
 - [ ] Remover o fallback

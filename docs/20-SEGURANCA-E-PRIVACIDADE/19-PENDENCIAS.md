@@ -30,12 +30,12 @@
 Passo a passo pronto em **`15-RUNBOOK-S0-CONSOLE.md`**, com os comandos
 `gcloud`. ~30-40 min, sem tocar em código.
 
-Na última verificação (tela do console enviada pelo dono em 2026-09-09),
-**"Backups programados" estava ⊖ nos três bancos** (`(default)`, `gerador3d`,
-`pickleball`).
+Em 2026-09-29, o dono confirmou que o **restore no Console foi testado e está
+funcionando**. Isso destrava a próxima etapa de privacidade, desde que ela
+continue em passos pequenos, com relatório/dry-run e confirmação forte.
 
-Enquanto isso não existir, **nada que apaga dado será executado** — é a regra
-que temos seguido desde o início e não deve ser afrouxada.
+Regra que continua valendo: qualquer deleção precisa rodar primeiro em dry-run,
+e a escrita precisa ficar em etapa separada e reversível por restore.
 
 ## 2. Contas admin extras — resolvido na última revalidação
 
@@ -64,12 +64,24 @@ os documentos antigos ainda carregam o campo.
 | Já não grava desde | 2026-09-08 | 2026-09-09 |
 | Ainda exibido? | não | não |
 
-**Passos, quando houver backup** (mesma receita para os dois):
-1. Script Admin SDK em **DRY-RUN** → relatório de quantos documentos e campos.
-2. Execução em lotes de 400, com log, em janela de baixo tráfego.
-3. Só depois, remover o *fallback* de leitura do código.
+**Passos agora disponíveis**:
+1. `npm run privacy:legacy-email-cleanup -- report` — relatório, sem escrita.
+2. `backfill-registration-contacts` — copia e-mails legados para
+   `private/contact` e cria `provisional_claims` faltantes. Por padrão é
+   dry-run; para escrever exige `APPLY=1 CONFIRM=CRIAR_CONTATOS_PRIVADOS`.
+3. Observar o código em produção com fallback ativo. Se não houver falha de
+   contato/claim, só então seguir.
+4. `delete-registration-public-emails` — apaga os quatro campos públicos de
+   `tournament_registrations`, mas só dos documentos que já têm contato privado
+   e claims necessários. Exige
+   `APPLY=1 CONFIRM=APAGAR_EMAILS_PUBLICOS_LEGADOS`.
+5. `delete-wide-user-emails` — apaga `user_email` legado de `club_members` e
+   `tournament_admins`. Exige `APPLY=1 CONFIRM=APAGAR_USER_EMAIL_LEGADO`.
+6. Só depois, em outro PR/deploy, remover o *fallback* de leitura do código.
 
-⚠ **Nunca fazer 2 e 3 no mesmo deploy.**
+O mesmo está disponível em GitHub Actions → **Limpeza de e-mails legados**.
+
+⚠ **Nunca fazer backfill, deleção e remoção de fallback no mesmo deploy.**
 
 ## 5. Direitos do titular — é obrigação legal, não melhoria
 
