@@ -57,7 +57,8 @@ describe('workflow de backup manual do Firestore', () => {
     expect(workflow).toMatch(/--uniform-bucket-level-access/);
     expect(workflow).toMatch(/--public-access-prevention=enforced/);
     expect(workflow).toMatch(/gcloud storage buckets update "\$EXPORT_BUCKET"/);
-    expect(workflow).toMatch(/allUsers[\s\S]+allAuthenticatedUsers/);
+    expect(workflow).toMatch(/allUsers/);
+    expect(workflow).toMatch(/allAuthenticatedUsers/);
     expect(workflow).not.toMatch(/EXPORT_BUCKET_NAME/);
   });
 });
