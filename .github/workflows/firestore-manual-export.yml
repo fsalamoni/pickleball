@@ -56,7 +56,8 @@ jobs:
         run: |
           set -euo pipefail
 
-          if [ "$CONFIRM" != "EXPORTAR" ]; then
+          confirm_value="$(printf '%s' "${CONFIRM:-}" | sed -E 's/^[[:space:]]+//; s/[[:space:]]+$//')"
+          if [ "$confirm_value" != "EXPORTAR" ]; then
             echo "::error title=Confirmação inválida::Digite exatamente EXPORTAR para executar o backup manual."
             exit 1
           fi
