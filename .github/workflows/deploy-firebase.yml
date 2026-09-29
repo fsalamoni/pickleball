@@ -19,7 +19,7 @@ jobs:
     # normal termina bem antes disso; 30min evita run preso por horas.
     timeout-minutes: 30
     outputs:
-      firestore_indexes_status: ${{ steps.firestore_indexes.outputs.status }}
+      firestore_indexes_status: ${{ steps.firestore_indexes.outputs.status || 'not_run' }}
     env:
       FIREBASE_PROJECT_ID: ${{ secrets.VITE_FIREBASE_PROJECT_ID }}
       FIRESTORE_DATABASE_ID: pickleball
@@ -219,8 +219,7 @@ jobs:
       - name: Registrar status do deploy de índices
         if: always()
         run: |
-          status="${{ steps.firestore_indexes.outputs.status }}"
-          status="${status:-unknown}"
+          status="${{ steps.firestore_indexes.outputs.status || 'not_run' }}"
           {
             echo "## Status do deploy de índices Firestore"
             echo

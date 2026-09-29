@@ -65,7 +65,7 @@ jobs:
           done
           [ "$missing" -eq 0 ] || exit 1
 
-          if [[ ! "$FIREBASE_PROJECT_ID" =~ ^[a-z][a-z0-9-]{4,28}[a-z0-9]$ ]]; then
+          if [[ ! "$FIREBASE_PROJECT_ID" =~ ^[a-z][-a-z0-9]{4,28}[a-z0-9]$ ]]; then
             echo "::error title=Projeto Firebase inválido::VITE_FIREBASE_PROJECT_ID precisa ser um project id GCP válido."
             exit 1
           fi

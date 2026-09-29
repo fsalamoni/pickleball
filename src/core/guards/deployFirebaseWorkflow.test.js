@@ -25,7 +25,8 @@ describe('workflow de deploy do Firebase', () => {
     expect(workflow).toMatch(/id: firestore_indexes/);
     expect(workflow).toMatch(/not present in your firestore indexes file\|Pass the --force flag/);
     expect(workflow).toMatch(/status=skipped_remote_divergence/);
-    expect(workflow).toMatch(/firestore_indexes_status: \$\{\{ steps\.firestore_indexes\.outputs\.status \}\}/);
+    expect(workflow).toMatch(/firestore_indexes_status: \$\{\{ steps\.firestore_indexes\.outputs\.status \|\| 'not_run' \}\}/);
+    expect(workflow).toMatch(/status="\$\{\{ steps\.firestore_indexes\.outputs\.status \|\| 'not_run' \}\}"/);
     expect(workflow).toMatch(/GITHUB_STEP_SUMMARY/);
     expect(workflow).toMatch(/Índice remoto do Firestore preservado/);
     expect(workflow).toMatch(/Status do deploy de índices Firestore/);
