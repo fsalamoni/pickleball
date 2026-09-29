@@ -137,22 +137,23 @@ agora**, use o workflow manual:
 2. Clique em **Run workflow**.
 3. Preencha:
    - `confirm`: `EXPORTAR`
-   - `export_bucket`: `gs://SEU-BUCKET-PRIVADO` (ou deixe vazio; o workflow usa
-     `FIRESTORE_EXPORT_BUCKET` se estiver configurado e, se não estiver, cria/usa
+   - destino: não há campo livre; o workflow usa/cria o bucket controlado
      `gs://<projeto>-firestore-backups` com Uniform bucket-level access e Public
-     Access Prevention)
+     Access Prevention
    - `export_prefix`: `manual`
-   - `database_id`: `pickleball`
+   - banco exportado: fixo em `pickleball`
    - `snapshot_time`: vazio, para o workflow usar automaticamente um snapshot
      consistente de `agora - 2 minutos`
 4. Aguarde o job terminar.
 5. No resumo do workflow, copie o destino `gs://.../firestore-pickleball-...`.
 
-O workflow usa o secret `FIREBASE_SERVICE_ACCOUNT`, confere que o bucket não
-tem `allUsers`/`allAuthenticatedUsers` no IAM, exige Public Access Prevention e
+O workflow usa o secret `FIREBASE_SERVICE_ACCOUNT`, não aceita bucket nem banco
+arbitrários por input, confere que o bucket não tem
+`allUsers`/`allAuthenticatedUsers` no IAM, exige Public Access Prevention e
 Uniform bucket-level access, e exporta para GCS. Ele **não** grava dados no Git.
 Se falhar por permissão, conceda à service account acesso de exportação do
-Firestore e escrita/criação do bucket, sem copiar credenciais para o chat.
+Firestore e escrita/criação do bucket controlado, sem copiar credenciais para o
+chat.
 
 - [ ] Workflow manual executado com sucesso
 - [ ] Destino `gs://...` anotado: ____________________________

@@ -7,19 +7,10 @@ on:
         description: 'Digite EXPORTAR para confirmar o export manual.'
         required: true
         type: string
-      export_bucket:
-        description: 'Destino GCS privado (gs://bucket ou gs://bucket/prefixo). Vazio usa FIRESTORE_EXPORT_BUCKET.'
-        required: false
-        type: string
       export_prefix:
         description: 'Subpasta adicional dentro do destino.'
         required: false
         default: 'manual'
-        type: string
-      database_id:
-        description: 'Banco Firestore a exportar.'
-        required: true
-        default: 'pickleball'
         type: string
       snapshot_time:
         description: 'Opcional: instante UTC arredondado ao minuto. Vazio usa agora -2min.'
@@ -40,10 +31,8 @@ jobs:
     env:
       FIREBASE_PROJECT_ID: ${{ secrets.VITE_FIREBASE_PROJECT_ID }}
       FIREBASE_SERVICE_ACCOUNT: ${{ secrets.FIREBASE_SERVICE_ACCOUNT }}
-      DEFAULT_EXPORT_BUCKET: ${{ vars.FIRESTORE_EXPORT_BUCKET || secrets.FIRESTORE_EXPORT_BUCKET }}
-      RAW_EXPORT_BUCKET: ${{ inputs.export_bucket }}
       EXPORT_PREFIX: ${{ inputs.export_prefix }}
-      DATABASE_ID: ${{ inputs.database_id }}
+      DATABASE_ID: pickleball
       SNAPSHOT_TIME: ${{ inputs.snapshot_time }}
       CONFIRM: ${{ inputs.confirm }}
       BACKUP_BUCKET_LOCATION: southamerica-east1
@@ -72,15 +61,9 @@ jobs:
           done
           [ "$missing" -eq 0 ] || exit 1
 
-          export_bucket="${RAW_EXPORT_BUCKET:-$DEFAULT_EXPORT_BUCKET}"
-          export_bucket="${export_bucket%/}"
-          if [ -z "$export_bucket" ]; then
-            export_bucket="gs://${FIREBASE_PROJECT_ID}-firestore-backups"
-            auto_export_bucket=1
-            echo "::notice title=Bucket padrão de backup::Nenhum bucket foi informado; será usado/criado '$export_bucket' com acesso público prevenido."
-          else
-            auto_export_bucket=0
-          fi
+          export_bucket="gs://${FIREBASE_PROJECT_ID}-firestore-backups"
+          auto_export_bucket=1
+          echo "::notice title=Bucket controlado de backup::Será usado/criado '$export_bucket' com acesso público prevenido."
           if [[ "$export_bucket" != gs://* ]] || [[ "$export_bucket" =~ [[:space:]] ]]; then
             echo "::error title=Bucket inválido::Use um destino GCS privado começando com gs:// e sem espaços."
             exit 1
