@@ -76,17 +76,9 @@ jobs:
             exit 1
           fi
 
-          bucket_name="${export_bucket#gs://}"
-          bucket_name="${bucket_name%%/*}"
-          if [ -z "$bucket_name" ]; then
-            echo "::error title=Bucket inválido::Não foi possível identificar o nome do bucket."
-            exit 1
-          fi
-
           {
             echo "EXPORT_BUCKET=$export_bucket"
             echo "EXPORT_PREFIX_CLEAN=$prefix"
-            echo "EXPORT_BUCKET_NAME=$bucket_name"
           } >> "$GITHUB_ENV"
 
           sa_file="$RUNNER_TEMP/firebase-sa.json"
@@ -122,36 +114,36 @@ jobs:
             --project="$FIREBASE_PROJECT_ID" \
             --format='table(name,locationId,pointInTimeRecoveryEnablement)'
 
-          if ! gcloud storage buckets describe "gs://$EXPORT_BUCKET_NAME" \
+          if ! gcloud storage buckets describe "$EXPORT_BUCKET" \
             --project="$FIREBASE_PROJECT_ID" \
             --format=json > "$RUNNER_TEMP/bucket.json" 2>"$RUNNER_TEMP/bucket-describe.err"; then
             cat "$RUNNER_TEMP/bucket-describe.err"
-            echo "::notice title=Criando bucket privado de backup::Criando gs://$EXPORT_BUCKET_NAME em $BACKUP_BUCKET_LOCATION."
-            gcloud storage buckets create "gs://$EXPORT_BUCKET_NAME" \
+            echo "::notice title=Criando bucket privado de backup::Criando $EXPORT_BUCKET em $BACKUP_BUCKET_LOCATION."
+            gcloud storage buckets create "$EXPORT_BUCKET" \
               --project="$FIREBASE_PROJECT_ID" \
               --location="$BACKUP_BUCKET_LOCATION" \
               --uniform-bucket-level-access \
               --public-access-prevention=enforced
-            gcloud storage buckets describe "gs://$EXPORT_BUCKET_NAME" \
+            gcloud storage buckets describe "$EXPORT_BUCKET" \
               --project="$FIREBASE_PROJECT_ID" \
               --format=json > "$RUNNER_TEMP/bucket.json"
           fi
 
-          gcloud storage buckets update "gs://$EXPORT_BUCKET_NAME" \
+          gcloud storage buckets update "$EXPORT_BUCKET" \
             --project="$FIREBASE_PROJECT_ID" \
             --uniform-bucket-level-access \
             --public-access-prevention=enforced >/dev/null
-          gcloud storage buckets describe "gs://$EXPORT_BUCKET_NAME" \
+          gcloud storage buckets describe "$EXPORT_BUCKET" \
             --project="$FIREBASE_PROJECT_ID" \
             --format=json > "$RUNNER_TEMP/bucket.json"
 
           public_access_prevention="$(jq -r '.iamConfiguration.publicAccessPrevention // "unspecified"' "$RUNNER_TEMP/bucket.json")"
           uniform_access="$(jq -r '.iamConfiguration.uniformBucketLevelAccess.enabled // false' "$RUNNER_TEMP/bucket.json")"
-          echo "Bucket: gs://$EXPORT_BUCKET_NAME"
+          echo "Bucket: $EXPORT_BUCKET"
           echo "Public access prevention: $public_access_prevention"
           echo "Uniform bucket-level access: $uniform_access"
 
-          gcloud storage buckets get-iam-policy "gs://$EXPORT_BUCKET_NAME" \
+          gcloud storage buckets get-iam-policy "$EXPORT_BUCKET" \
             --project="$FIREBASE_PROJECT_ID" \
             --format=json > "$RUNNER_TEMP/bucket-iam.json"
 

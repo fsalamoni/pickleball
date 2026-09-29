@@ -25,7 +25,8 @@ const blocoInputs = (texto) => {
 
   const bloco = [];
   for (const linha of linhas.slice(inicio + 1)) {
-    if (linha.trim() && !/^\s{6,}/.test(linha)) break;
+    const indentacao = linha.match(/^\s*/)?.[0].length ?? 0;
+    if (linha.trim() && indentacao <= 4) break;
     bloco.push(linha);
   }
   return bloco.join('\n');
@@ -33,7 +34,7 @@ const blocoInputs = (texto) => {
 
 describe('workflow de backup manual do Firestore', () => {
   const workflow = linhasSemComentarios(WORKFLOW);
-  const inputs = blocoInputs(WORKFLOW);
+  const inputs = blocoInputs(workflow);
 
   it('⭐ não aceita bucket nem banco arbitrários no disparo manual', () => {
     expect(inputs).toMatch(/confirm:/);
@@ -51,10 +52,12 @@ describe('workflow de backup manual do Firestore', () => {
   });
 
   it('⭐ cria ou corrige o bucket privado antes de exportar dados', () => {
-    expect(workflow).toMatch(/gcloud storage buckets create "gs:\/\/\$EXPORT_BUCKET_NAME"/);
+    expect(workflow).toMatch(/gcloud storage buckets describe "\$EXPORT_BUCKET"/);
+    expect(workflow).toMatch(/gcloud storage buckets create "\$EXPORT_BUCKET"/);
     expect(workflow).toMatch(/--uniform-bucket-level-access/);
     expect(workflow).toMatch(/--public-access-prevention=enforced/);
-    expect(workflow).toMatch(/gcloud storage buckets update "gs:\/\/\$EXPORT_BUCKET_NAME"/);
+    expect(workflow).toMatch(/gcloud storage buckets update "\$EXPORT_BUCKET"/);
     expect(workflow).toMatch(/allUsers[\s\S]+allAuthenticatedUsers/);
+    expect(workflow).not.toMatch(/EXPORT_BUCKET_NAME/);
   });
 });
