@@ -1,0 +1,183 @@
+name: Backup manual do Firestore
+
+on:
+  workflow_dispatch:
+    inputs:
+      confirm:
+        description: 'Digite EXPORTAR para confirmar o export manual.'
+        required: true
+        type: string
+      export_bucket:
+        description: 'Destino GCS privado (gs://bucket ou gs://bucket/prefixo). Vazio usa FIRESTORE_EXPORT_BUCKET.'
+        required: false
+        type: string
+      export_prefix:
+        description: 'Subpasta adicional dentro do destino.'
+        required: false
+        default: 'manual'
+        type: string
+      database_id:
+        description: 'Banco Firestore a exportar.'
+        required: true
+        default: 'pickleball'
+        type: string
+      snapshot_time:
+        description: 'Opcional: instante UTC arredondado ao minuto. Vazio usa agora -2min.'
+        required: false
+        type: string
+
+permissions:
+  contents: read
+
+concurrency:
+  group: firestore-manual-export
+  cancel-in-progress: false
+
+jobs:
+  exportar:
+    runs-on: ubuntu-latest
+    timeout-minutes: 120
+    env:
+      FIREBASE_PROJECT_ID: ${{ secrets.VITE_FIREBASE_PROJECT_ID }}
+      FIREBASE_SERVICE_ACCOUNT: ${{ secrets.FIREBASE_SERVICE_ACCOUNT }}
+      DEFAULT_EXPORT_BUCKET: ${{ vars.FIRESTORE_EXPORT_BUCKET || secrets.FIRESTORE_EXPORT_BUCKET }}
+      RAW_EXPORT_BUCKET: ${{ inputs.export_bucket }}
+      EXPORT_PREFIX: ${{ inputs.export_prefix }}
+      DATABASE_ID: ${{ inputs.database_id }}
+      SNAPSHOT_TIME: ${{ inputs.snapshot_time }}
+      CONFIRM: ${{ inputs.confirm }}
+    steps:
+      - uses: actions/checkout@v5
+
+      - uses: google-github-actions/setup-gcloud@v2
+
+      - name: Validar entrada e credenciais
+        shell: bash
+        run: |
+          set -euo pipefail
+
+          if [ "$CONFIRM" != "EXPORTAR" ]; then
+            echo "::error title=Confirmação inválida::Digite exatamente EXPORTAR para executar o backup manual."
+            exit 1
+          fi
+
+          missing=0
+          for var_name in FIREBASE_PROJECT_ID FIREBASE_SERVICE_ACCOUNT DATABASE_ID; do
+            if [ -z "${!var_name}" ]; then
+              echo "::error title=Configuração ausente::${var_name} não está configurado."
+              missing=1
+            fi
+          done
+          [ "$missing" -eq 0 ] || exit 1
+
+          export_bucket="${RAW_EXPORT_BUCKET:-$DEFAULT_EXPORT_BUCKET}"
+          export_bucket="${export_bucket%/}"
+          if [ -z "$export_bucket" ]; then
+            echo "::error title=Bucket ausente::Informe export_bucket ao rodar o workflow ou configure FIRESTORE_EXPORT_BUCKET em Settings > Secrets/Variables > Actions."
+            exit 1
+          fi
+          if [[ "$export_bucket" != gs://* ]] || [[ "$export_bucket" =~ [[:space:]] ]]; then
+            echo "::error title=Bucket inválido::Use um destino GCS privado começando com gs:// e sem espaços."
+            exit 1
+          fi
+
+          prefix="${EXPORT_PREFIX:-manual}"
+          prefix="${prefix#/}"
+          prefix="${prefix%/}"
+          if [[ "$prefix" == gs://* ]] || [[ "$prefix" =~ [[:space:]] ]]; then
+            echo "::error title=Prefixo inválido::Use só uma subpasta, sem gs:// e sem espaços."
+            exit 1
+          fi
+
+          bucket_name="${export_bucket#gs://}"
+          bucket_name="${bucket_name%%/*}"
+          if [ -z "$bucket_name" ]; then
+            echo "::error title=Bucket inválido::Não foi possível identificar o nome do bucket."
+            exit 1
+          fi
+
+          {
+            echo "EXPORT_BUCKET=$export_bucket"
+            echo "EXPORT_PREFIX_CLEAN=$prefix"
+            echo "EXPORT_BUCKET_NAME=$bucket_name"
+          } >> "$GITHUB_ENV"
+
+          sa_file="$RUNNER_TEMP/firebase-sa.json"
+          printf '%s' "$FIREBASE_SERVICE_ACCOUNT" > "$sa_file"
+          if ! jq -e . "$sa_file" >/dev/null 2>&1; then
+            echo "::error title=Service account inválida::FIREBASE_SERVICE_ACCOUNT não é JSON válido."
+            exit 1
+          fi
+          sa_email="$(jq -r '.client_email // empty' "$sa_file")"
+          if [ -z "$sa_email" ]; then
+            echo "::error title=Service account inválida::client_email ausente."
+            exit 1
+          fi
+          echo "GOOGLE_APPLICATION_CREDENTIALS=$sa_file" >> "$GITHUB_ENV"
+          echo "SA_EMAIL=$sa_email" >> "$GITHUB_ENV"
+
+      - name: Autenticar no Google Cloud
+        shell: bash
+        run: |
+          set -euo pipefail
+          gcloud auth activate-service-account "$SA_EMAIL" \
+            --key-file="$GOOGLE_APPLICATION_CREDENTIALS" \
+            --project="$FIREBASE_PROJECT_ID"
+          gcloud config set project "$FIREBASE_PROJECT_ID"
+
+      - name: Conferir banco e privacidade do bucket
+        shell: bash
+        run: |
+          set -euo pipefail
+
+          gcloud firestore databases describe \
+            --database="$DATABASE_ID" \
+            --project="$FIREBASE_PROJECT_ID" \
+            --format='table(name,locationId,pointInTimeRecoveryEnablement)'
+
+          gcloud storage buckets describe "gs://$EXPORT_BUCKET_NAME" \
+            --project="$FIREBASE_PROJECT_ID" \
+            --format=json > "$RUNNER_TEMP/bucket.json"
+
+          public_access_prevention="$(jq -r '.iamConfiguration.publicAccessPrevention // "unspecified"' "$RUNNER_TEMP/bucket.json")"
+          uniform_access="$(jq -r '.iamConfiguration.uniformBucketLevelAccess.enabled // false' "$RUNNER_TEMP/bucket.json")"
+          echo "Bucket: gs://$EXPORT_BUCKET_NAME"
+          echo "Public access prevention: $public_access_prevention"
+          echo "Uniform bucket-level access: $uniform_access"
+
+          gcloud storage buckets get-iam-policy "gs://$EXPORT_BUCKET_NAME" \
+            --project="$FIREBASE_PROJECT_ID" \
+            --format=json > "$RUNNER_TEMP/bucket-iam.json"
+
+          if jq -e '.bindings[]?.members[]? | select(. == "allUsers" or . == "allAuthenticatedUsers")' "$RUNNER_TEMP/bucket-iam.json" >/dev/null; then
+            echo "::error title=Bucket público::O bucket tem allUsers/allAuthenticatedUsers no IAM. Remova acesso público antes do backup."
+            exit 1
+          fi
+
+      - name: Exportar Firestore para GCS
+        shell: bash
+        run: |
+          set -euo pipefail
+
+          stamp="$(date -u +%Y%m%dT%H%M%SZ)"
+          snapshot_time="${SNAPSHOT_TIME:-$(date -u -d '2 minutes ago' +%Y-%m-%dT%H:%M:00Z)}"
+          destination="${EXPORT_BUCKET%/}/${EXPORT_PREFIX_CLEAN%/}/firestore-${DATABASE_ID}-${stamp}"
+
+          echo "Exportando banco '$DATABASE_ID' para '$destination'."
+          echo "Snapshot consistente: $snapshot_time"
+
+          gcloud firestore export "$destination" \
+            --database="$DATABASE_ID" \
+            --project="$FIREBASE_PROJECT_ID" \
+            --snapshot-time="$snapshot_time"
+
+          {
+            echo "## Backup manual do Firestore concluído"
+            echo
+            echo "- Projeto: \`$FIREBASE_PROJECT_ID\`"
+            echo "- Banco: \`$DATABASE_ID\`"
+            echo "- Destino: \`$destination\`"
+            echo "- Snapshot: \`$snapshot_time\`"
+            echo
+            echo "Próximo passo: testar restauração em um banco novo antes de qualquer migração destrutiva."
+          } >> "$GITHUB_STEP_SUMMARY"
