@@ -56,7 +56,9 @@ jobs:
         run: |
           set -euo pipefail
 
-          if [ "$CONFIRM" != "EXPORTAR" ]; then
+          confirm_trimmed="${CONFIRM#"${CONFIRM%%[![:space:]]*}"}"
+          confirm_trimmed="${confirm_trimmed%"${confirm_trimmed##*[![:space:]]}"}"
+          if [ "$confirm_trimmed" != "EXPORTAR" ]; then
             echo "::error title=Confirmação inválida::Digite exatamente EXPORTAR para executar o backup manual."
             exit 1
           fi
