@@ -35,13 +35,14 @@ function Numero({ to, label, value, icon: Icon }) {
 }
 
 export default function HomeCoachSection({
-  reason, coachId, ehProfessor, marketingOn = false, perfilQ,
+  reason, coachId, ehProfessor, marketingOn = false, perfilQ, agora,
 }) {
   const aulas = useCoachLessons(ehProfessor ? coachId : null);
   const alunos = useCoachStudents(ehProfessor ? coachId : null);
   const clinicas = useCoachClinics(ehProfessor ? coachId : null);
 
-  const { upcoming } = useMemo(() => partitionLessons(aulas.data || []), [aulas.data]);
+  const agoraDate = useMemo(() => new Date(agora || Date.now()), [agora]);
+  const { upcoming } = useMemo(() => partitionLessons(aulas.data || [], agoraDate), [aulas.data, agoraDate]);
   const pedidos = useMemo(() => lessonsAwaitingReply(upcoming).length, [upcoming]);
   const ativos = useMemo(
     () => (alunos.data || []).filter((s) => s.status === STUDENT_STATUS.ACTIVE).length,

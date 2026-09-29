@@ -251,8 +251,10 @@ GitHub Actions: .github/workflows/deploy-firebase.yml
 6. Ensure Hosting sites exist (cria se faltar — picklerush + pickletour)
 7. Build (vite build → dist/)
 8. Deploy:
-   - firebase deploy --only hosting,firestore:rules,firestore:indexes
-   - firebase deploy --only functions (recomputeRankingOnTournamentChange)
+   - firebase deploy --only firestore:rules (bloqueante)
+   - firebase deploy --only firestore:indexes (sem `--force`; se houver índice remoto não versionado, preserva e avisa)
+   - firebase deploy --only functions (por codebase/nome, via script seguro)
+   - firebase deploy --only hosting
   ↓
 ✅ Site atualizado em https://picklerush.web.app
 ```
@@ -286,6 +288,7 @@ Ou no GitHub: **Actions** tab → último workflow → verificar verde.
 | `Build failed` | Erro de import/sintaxe | Rodar `npm run build` local, ver erro |
 | `Lint errors` | ESLint quebrou | Rodar `npm run lint`, ver warnings |
 | `Tests failed` | Algum teste quebrou | Rodar `npm test`, ver qual |
+| `Pass the --force flag` ao publicar índices | Existe índice remoto que não está em `firestore.indexes.json` | **Não use `--force` às cegas**: ele apagaria o índice remoto. O workflow preserva o índice e continua; importe o índice para o JSON antes de voltar a tratar índices como bloqueantes. |
 
 ### 4.4 Deploy manual (emergência)
 

@@ -166,7 +166,7 @@ export default function V2PersonalHome() {
         return (
           <HomeCoachSection
             reason={motivo} coachId={uid} ehProfessor={ehProfessor} marketingOn={coachMarketingOn}
-            perfilQ={coachQ}
+            perfilQ={coachQ} agora={agora}
           />
         );
       case HOME_SECTION.ORGANIZAR:

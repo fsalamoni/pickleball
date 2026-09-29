@@ -18,6 +18,8 @@ jobs:
     # Rede de segurança contra travamento (CLI do Firebase/rede). Um deploy
     # normal termina bem antes disso; 30min evita run preso por horas.
     timeout-minutes: 30
+    outputs:
+      firestore_indexes_status: ${{ steps.firestore_indexes.outputs.status || 'not_run' }}
     env:
       FIREBASE_PROJECT_ID: ${{ secrets.VITE_FIREBASE_PROJECT_ID }}
       FIRESTORE_DATABASE_ID: pickleball
@@ -171,17 +173,58 @@ jobs:
       - name: Build production bundle
         run: npm run build
 
-      - name: Deploy Firestore rules and indexes
+      - name: Deploy Firestore rules
         run: |
           set +e
-          OUT=$(firebase deploy --only "firestore:$FIRESTORE_DATABASE_ID" --project "$FIREBASE_PROJECT_ID" --non-interactive 2>&1)
+          OUT=$(firebase deploy --only "firestore:rules" --project "$FIREBASE_PROJECT_ID" --non-interactive 2>&1)
           RC=$?
           echo "$OUT"
           if [ $RC -eq 0 ]; then exit 0; fi
           if echo "$OUT" | grep -qiE "HTTP Error: 403|PERMISSION_DENIED|caller does not have permission"; then
-            echo "::error title=Missing IAM permission for Firestore deploy::Service account '$SA_EMAIL' cannot deploy Firestore rules/indexes to '$FIRESTORE_DATABASE_ID' in '$FIREBASE_PROJECT_ID'. Grant role 'Firebase Admin' at https://console.cloud.google.com/iam-admin/iam?project=$FIREBASE_PROJECT_ID"
+            echo "::error title=Missing IAM permission for Firestore rules deploy::Service account '$SA_EMAIL' cannot deploy Firestore rules to '$FIRESTORE_DATABASE_ID' in '$FIREBASE_PROJECT_ID'. Grant role 'Firebase Admin' at https://console.cloud.google.com/iam-admin/iam?project=$FIREBASE_PROJECT_ID"
           fi
           exit $RC
+
+      - name: Deploy Firestore indexes safely
+        id: firestore_indexes
+        run: |
+          set +e
+          OUT=$(firebase deploy --only "firestore:indexes" --project "$FIREBASE_PROJECT_ID" --non-interactive 2>&1)
+          RC=$?
+          echo "$OUT"
+          if [ $RC -eq 0 ]; then
+            echo "status=deployed" >> "$GITHUB_OUTPUT"
+            exit 0
+          fi
+          if echo "$OUT" | grep -qiE "not present in your firestore indexes file|Pass the --force flag"; then
+            {
+              echo "## Índice remoto do Firestore preservado"
+              echo
+              echo "O deploy de índices foi pulado porque existe pelo menos um índice composto no Firebase que não está versionado em \`firestore.indexes.json\`."
+              echo
+              echo "- O workflow **não** usa \`--force\`, para não apagar índice remoto que pode estar em uso em produção."
+              echo "- Regras, hosting e demais etapas seguem normalmente."
+              echo "- Próximo ajuste seguro: importar o índice remoto para \`firestore.indexes.json\` e então voltar a tratar índices como bloqueantes."
+            } >> "$GITHUB_STEP_SUMMARY"
+            echo "::warning title=Índice remoto preservado::Existe índice composto no Firebase que não está em firestore.indexes.json. Por segurança, o workflow NÃO usa --force e NÃO apaga índice remoto; regras, hosting e demais etapas podem seguir. Importe o índice remoto para firestore.indexes.json antes de tornar índices bloqueantes novamente."
+            echo "status=skipped_remote_divergence" >> "$GITHUB_OUTPUT"
+            exit 0
+          fi
+          if echo "$OUT" | grep -qiE "HTTP Error: 403|PERMISSION_DENIED|caller does not have permission"; then
+            echo "::error title=Missing IAM permission for Firestore indexes deploy::Service account '$SA_EMAIL' cannot deploy Firestore indexes to '$FIRESTORE_DATABASE_ID' in '$FIREBASE_PROJECT_ID'. Grant role 'Firebase Admin' at https://console.cloud.google.com/iam-admin/iam?project=$FIREBASE_PROJECT_ID"
+          fi
+          echo "status=failed" >> "$GITHUB_OUTPUT"
+          exit $RC
+
+      - name: Registrar status do deploy de índices
+        if: always()
+        run: |
+          status="${{ steps.firestore_indexes.outputs.status || 'not_run' }}"
+          {
+            echo "## Status do deploy de índices Firestore"
+            echo
+            echo "\`$status\`"
+          } >> "$GITHUB_STEP_SUMMARY"
 
       - name: Install functions dependencies
         run: npm --prefix functions ci
