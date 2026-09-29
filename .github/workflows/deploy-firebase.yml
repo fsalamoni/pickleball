@@ -191,6 +191,15 @@ jobs:
           echo "$OUT"
           if [ $RC -eq 0 ]; then exit 0; fi
           if echo "$OUT" | grep -qiE "not present in your firestore indexes file|Pass the --force flag"; then
+            {
+              echo "## Índice remoto do Firestore preservado"
+              echo
+              echo "O deploy de índices foi pulado porque existe pelo menos um índice composto no Firebase que não está versionado em \`firestore.indexes.json\`."
+              echo
+              echo "- O workflow **não** usa \`--force\`, para não apagar índice remoto que pode estar em uso em produção."
+              echo "- Regras, hosting e demais etapas seguem normalmente."
+              echo "- Próximo ajuste seguro: importar o índice remoto para \`firestore.indexes.json\` e então voltar a tratar índices como bloqueantes."
+            } >> "$GITHUB_STEP_SUMMARY"
             echo "::warning title=Índice remoto preservado::Existe índice composto no Firebase que não está em firestore.indexes.json. Por segurança, o workflow NÃO usa --force e NÃO apaga índice remoto; regras, hosting e demais etapas podem seguir. Importe o índice remoto para firestore.indexes.json antes de tornar índices bloqueantes novamente."
             exit 0
           fi
