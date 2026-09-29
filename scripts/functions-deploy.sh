@@ -33,4 +33,4 @@ if [ -z "$FUNCS" ]; then
 fi
 
 echo "Publicando (codebase ${CODEBASE}): $FUNCS"
-firebase deploy --only "$FUNCS" --project "$FIREBASE_PROJECT_ID" --non-interactive --force 2>&1
+firebase deploy --only "$FUNCS" --project "$FIREBASE_PROJECT_ID" --non-interactive 2>&1

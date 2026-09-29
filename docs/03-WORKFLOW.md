@@ -613,7 +613,8 @@ que não está no código local como "removida" e a APAGA.
 2. **Deploy por nome, num script só** — `scripts/functions-deploy.sh` publica
    `functions:picklerush:<nome>` para cada exportação de `functions/index.js`.
    Recusa codebase ausente ou `default`; lista vazia não publica nada (`--only`
-   vazio voltaria a ser "tudo").
+   vazio voltaria a ser "tudo"). Não usa `--force`: se a CLI algum dia detectar
+   remoção inesperada, o deploy falha em vez de confirmar apagamento.
 3. **Vigilância** — `.github/workflows/functions-watchdog.yml`, a cada 30 min:
    lista as funções do projeto, confere se TODAS as nossas existem em
    `southamerica-east1` e se carregam o rótulo `picklerush`. Faltou alguma?

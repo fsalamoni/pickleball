@@ -54,6 +54,12 @@ describe('deploy das Cloud Functions', () => {
     expect(comandos(SCRIPT).find((l) => /firebase deploy/.test(l))).toMatch(/--only "\$FUNCS"/);
   });
 
+  it('⭐ o deploy nomeado das funções não usa --force', () => {
+    const deploy = comandos(SCRIPT).find((l) => /firebase deploy/.test(l));
+    expect(deploy).toBeTruthy();
+    expect(deploy).not.toMatch(/--force/);
+  });
+
   it('⭐ o script recusa codebase ausente ou "default"', () => {
     expect(SCRIPT).toMatch(/if \[ -z "\$CODEBASE" \] \|\| \[ "\$CODEBASE" = "default" \]; then[\s\S]{0,400}exit 1/);
   });
