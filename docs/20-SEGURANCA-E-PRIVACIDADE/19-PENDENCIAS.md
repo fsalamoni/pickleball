@@ -15,14 +15,13 @@
 | # | Pendência | Bloqueio | Quem resolve |
 |---|---|---|---|
 | 1 | Backup agendado + PITR + teste de restauração | — | **dono** (console) |
-| 2 | Revogar as 3 contas `platform_admin` indevidas | nenhum, a ferramenta existe | **dono** (2 min) |
-| 3 | Migração destrutiva do P0-02 (apagar e-mails antigos das inscrições) | item 1 | agente |
-| 4 | Migração destrutiva do P1-01 (apagar `user_email` legado) | item 1 | agente |
-| 5 | Direitos do titular (exclusão, exportação, canal) — **obrigação legal** | nenhum | agente |
-| 6 | App Check | nenhum (2 semanas de observação) | agente + dono |
-| 7 | Console de suporte: quebra-vidro, mascaramento, log de LEITURA | exige Cloud Function | agente |
-| 8 | P2-01 `directory_listed` no servidor | decisão de arquitetura | dono decide, agente faz |
-| 9 | Custom claims, retenção, consentimento de imagem e menores | nenhum | agente |
+| 2 | Migração destrutiva do P0-02 (apagar e-mails antigos das inscrições) | item 1 | agente |
+| 3 | Migração destrutiva do P1-01 (apagar `user_email` legado) | item 1 | agente |
+| 4 | Direitos do titular (exclusão, exportação, canal) — **obrigação legal** | nenhum | agente |
+| 5 | App Check | nenhum (2 semanas de observação) | agente + dono |
+| 6 | Console de suporte: quebra-vidro, mascaramento, log de LEITURA | exige Cloud Function | agente |
+| 7 | P2-01 `directory_listed` no servidor | decisão de arquitetura | dono decide, agente faz |
+| 8 | Custom claims, retenção, consentimento de imagem e menores | nenhum | agente |
 
 ---
 
@@ -38,19 +37,21 @@ Na última verificação (tela do console enviada pelo dono em 2026-09-09),
 Enquanto isso não existir, **nada que apaga dado será executado** — é a regra
 que temos seguido desde o início e não deve ser afrouxada.
 
-## 2. As três contas admin indevidas (com o dono, 2 minutos)
+## 2. Contas admin extras — resolvido na última revalidação
 
 Confirmado pelo dono: só `Kx7CC0NVgogh8cCF4wIRmpOvo7r2` deve ser
-`platform_admin`. As outras três são sobra de um ajuste antigo.
+`platform_admin`. Na revalidação de 2026-09-28, a consulta atual devolveu
+apenas esse uid; portanto, esta pendência não bloqueia mais o plano.
 
-**A ferramenta já existe**: Painel admin → Governança → Acessos → *Revogar
-poder*. Contexto completo em `16-ACHADO-ADMINS-EXTRAS.md`.
+**Se voltar a acontecer**, a ferramenta já existe: Painel admin → Governança →
+Acessos → *Revogar poder*. Contexto completo em
+`16-ACHADO-ADMINS-EXTRAS.md`.
 
 Lembrete que a tela já dá: revogar **não encerra a sessão** de quem já está
 logado (o token vale até expirar). Para cortar na hora,
 `revokeRefreshTokens(uid)` pelo Admin SDK.
 
-## 3 e 4. As duas migrações destrutivas
+## 3. As duas migrações destrutivas
 
 Mesmo padrão nas duas: o vazamento **parou de crescer** (nada novo grava), mas
 os documentos antigos ainda carregam o campo.
@@ -144,12 +145,11 @@ governança contínua (S12).
 
 ## Ordem recomendada de retomada
 
-1. **Backup** (dono) — destrava 3 e 4
-2. **Revogar as 3 contas** (dono, 2 min)
-3. **Direitos do titular** — é lei
-4. **App Check** — em modo monitor primeiro
-5. As duas migrações destrutivas
-6. A metade de leitura do console de suporte
+1. **Backup** (dono) — destrava as migrações destrutivas
+2. **Direitos do titular** — é lei
+3. **App Check** — em modo monitor primeiro
+4. As duas migrações destrutivas
+5. A metade de leitura do console de suporte
 
 ## O que NÃO pode ser esquecido ao retomar
 

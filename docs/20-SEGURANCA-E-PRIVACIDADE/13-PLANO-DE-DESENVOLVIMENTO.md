@@ -8,7 +8,7 @@
 
 | PR | Nome | Fecha | Esforço | Risco de quebrar | Estado |
 |---|---|---|---|---|---|
-| **S0** | Rede de proteção | P2-03, P3-05 | 4h | nenhum | 🟡 **parcial** — o dono executou o que dava; **backup agendado segue ⊖ nos 3 bancos**. Ver `16-ACHADO-ADMINS-EXTRAS.md` |
+| **S0** | Rede de proteção | P2-03, P3-05 | 4h | nenhum | 🟡 **parcial** — backup/PITR/restauração ainda exigem console; `platform_admin` extras revalidado como resolvido em 2026-09-28 |
 | **S1** | 🔴 Escalação de privilégio | P0-01 | 1 dia | baixo | ✅ **feito e no ar** (2026-09-07) |
 | **S1b** | E-mail como nome público | P1-02 | 2h | nenhum | ✅ **feito e no ar** (2026-09-07) |
 | **S2** | 🔴 E-mails públicos | P0-02 | 3 dias | **médio** (migração) | 🟡 **contido (2026-09-09)** — passos 1-5 feitos; falta só apagar os campos antigos, que exige S0 |
@@ -41,9 +41,9 @@
 - [ ] Ativar proteção contra enumeração de e-mail (Firebase Auth)
 - [ ] Ativar política de senha forte
 - [ ] **MFA na conta do admin**
-- [ ] Verificar quem tem `role == 'platform_admin'` hoje
-      (`patches/P0-01` §Etapa 1b) — se houver alguém além do dono, é
-      incidente
+- [x] Verificar quem tem `role == 'platform_admin'` hoje — em 2026-09-28,
+      só o dono apareceu. Repetir em revisão periódica; se houver alguém além
+      do dono, é incidente
 
 **Por que primeiro**: todos os PRs seguintes mexem em dado ou em regra.
 Sem backup testado, qualquer erro é permanente. Isto não tem risco nenhum e

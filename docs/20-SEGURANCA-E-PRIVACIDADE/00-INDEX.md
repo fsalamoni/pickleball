@@ -1,13 +1,13 @@
 # 20 — SEGURANÇA, PRIVACIDADE E CONFORMIDADE
 
-> **Status: 📋 ESTUDO CONCLUÍDO · CORREÇÕES NÃO APLICADAS.**
+> **Status: 📋 ESTUDO CONCLUÍDO · CORREÇÕES EM EXECUÇÃO INCREMENTAL.**
 > Este diretório é o levantamento completo do estado atual da plataforma em
 > segurança de dados, LGPD, documentos legais, autorizações e direito de
 > imagem — com o plano de correção priorizado por risco.
 >
-> **Nenhuma regra, código ou configuração foi alterada por este estudo.**
-> As correções estão especificadas em `patches/`, prontas para aplicar,
-> mas exigem decisão e validação antes do deploy.
+> O estudo original não alterou regra, código nem configuração. Desde então,
+> as correções vêm sendo aplicadas em PRs pequenos e validados; o que ainda
+> falta segue bloqueado por S0, decisão arquitetural ou implementação futura.
 
 ---
 
@@ -18,9 +18,10 @@ tratadas** — mas o P0-02 só se fecha por completo depois de a migração
 apagar os campos antigos, o que exige backup testado (S0). Detalhe em
 `01-AUDITORIA-ACHADOS.md`.
 
-> 🟡 **Há três contas com `platform_admin` a revogar** em produção (sobra de um
-> ajuste antigo, confirmado pelo dono). Agora dá para resolver pela própria
-> plataforma: **Painel admin → Governança → Acessos**. Ver
+> ✅ **A pendência de `platform_admin` extras foi revalidada em 2026-09-28.**
+> A consulta atual devolve só o dono (`Kx7CC0NVgogh8cCF4wIRmpOvo7r2`).
+> Se voltar a aparecer conta inesperada, a própria plataforma resolve em
+> **Painel admin → Governança → Acessos**. Ver
 > `16-ACHADO-ADMINS-EXTRAS.md` e `17-ACESSOS-E-PODERES.md`.
 
 | # | Achado | Impacto |
@@ -67,7 +68,7 @@ de os itens P0 e P1 deste estudo estarem fechados.
 | `14-RUNBOOK-E-GOVERNANCA.md` | Operação contínua: checklists, revisões periódicas, o que fazer todo mês | manter no ar |
 | `patches/` | ⭐ Correções **prontas para aplicar**, uma por achado crítico/alto | corrigir agora |
 | `15-RUNBOOK-S0-CONSOLE.md` | ⭐ **Para o dono executar** — PITR, backup, teste de restauração, alertas, MFA. Console do Firebase, ~30 min. **Desbloqueia o passo final do P0-02.** | proteger a base agora |
-| `16-ACHADO-ADMINS-EXTRAS.md` | 🟡 quatro contas `platform_admin` em produção; confirmado pelo dono como sobra de ajuste antigo. **Revogável pela aba Acessos** | rebaixar as três |
+| `16-ACHADO-ADMINS-EXTRAS.md` | ✅ histórico do achado de contas `platform_admin` extras; revalidado em 2026-09-28 como resolvido. Mantém o procedimento se voltar a ocorrer | conferir/revogar poder indevido |
 | `19-PENDENCIAS.md` | ⭐ **COMECE POR AQUI ao retomar** — tudo o que ficou em aberto, por que parou e o próximo passo de cada item | retomar o trabalho |
 | `18-CADASTROS-ADMIN.md` | ⭐ A aba **Comunidade → Cadastros**: corrigir e complementar cadastro de usuário, com lista fechada de campos, motivo obrigatório e auditoria com diff | corrigir dado de usuário |
 | `17-ACESSOS-E-PODERES.md` | ⭐ A aba **Governança → Acessos**: quem tem poder, revogação (só remove, nunca concede) e a avaliação das ferramentas antigas | gerir acessos |
