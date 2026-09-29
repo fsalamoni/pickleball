@@ -18,6 +18,8 @@ describe('sanitizeVideoUrl', () => {
   it('rejeita esquemas inseguros e vazio', () => {
     expect(sanitizeVideoUrl('javascript:alert(1)')).toBe('');
     expect(sanitizeVideoUrl('ftp://x')).toBe('');
+    expect(sanitizeVideoUrl('******video.com')).toBe('');
+    expect(sanitizeVideoUrl('https://video.com/a b')).toBe('');
     expect(sanitizeVideoUrl('')).toBe('');
   });
 });

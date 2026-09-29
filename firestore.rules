@@ -9,8 +9,11 @@ service cloud.firestore {
         && exists(/databases/$(database)/documents/users/$(request.auth.uid))
         && get(/databases/$(database)/documents/users/$(request.auth.uid)).data.role == 'platform_admin';
     }
+    function tokenEmailVerified() {
+      return isAuthed() && request.auth.token.get('email_verified', false) == true;
+    }
     function isPlatformOwnerEmail() {
-      return isAuthed() && request.auth.token.email == 'fsalamoni@gmail.com';
+      return tokenEmailVerified() && request.auth.token.email == 'fsalamoni@gmail.com';
     }
     function isTournamentAdmin(tid) {
       return isAuthed()
@@ -278,7 +281,7 @@ service cloud.firestore {
       return request.auth.token.get('email', '').lower();
     }
     function hasTokenEmail() {
-      return isAuthed() && tokenEmailLc() != '';
+      return tokenEmailVerified() && tokenEmailLc() != '';
     }
     // Id determinístico: dá para conferir dentro da regra, sem hash.
     function claimIdFor(rid, slot) { return rid + '_' + slot; }
@@ -295,6 +298,7 @@ service cloud.firestore {
     // existirem — é o que impede a correção de quebrar quem já se inscreveu.
     function isPlayerARegistrationEmailOwner() {
       return isAuthed()
+        && tokenEmailVerified()
         && request.auth.token.email is string
         && resource.data.player_a_email_lc == request.auth.token.email.lower()
         && request.resource.data.player_a_email_lc == request.auth.token.email.lower()
@@ -302,6 +306,7 @@ service cloud.firestore {
     }
     function isPlayerBRegistrationEmailOwner() {
       return isAuthed()
+        && tokenEmailVerified()
         && request.auth.token.email is string
         && resource.data.player_b_email_lc == request.auth.token.email.lower()
         && request.resource.data.player_b_email_lc == request.auth.token.email.lower()
@@ -670,10 +675,22 @@ service cloud.firestore {
     // mesmo como dono; gestores existentes adicionam outros; cada um pode sair.
     match /arena_managers/{docId} {
       allow read: if true;
-      allow create: if isAuthed() && (
-        request.resource.data.user_id == request.auth.uid
-        || isArenaManager(request.resource.data.arena_id)
-        || isPlatformAdmin());
+      allow create: if isAuthed()
+        && request.resource.data.arena_id is string
+        && request.resource.data.user_id is string
+        && docId == request.resource.data.arena_id + '_' + request.resource.data.user_id
+        && (
+          // Primeiro gestor: só o dono gravado no documento da arena registra a
+          // si mesmo como OWNER. Sem isto, qualquer conta cria vínculo na arena
+          // alheia e vira gestora.
+          (
+            request.resource.data.user_id == request.auth.uid
+            && request.resource.data.role == 'owner'
+            && getAfter(/databases/$(database)/documents/arenas/$(request.resource.data.arena_id)).data.owner_id == request.auth.uid
+          )
+          || isArenaManager(request.resource.data.arena_id)
+          || isPlatformAdmin()
+        );
       allow update: if isArenaManager(resource.data.arena_id) || isPlatformAdmin();
       allow delete: if isAuthed() && (
         resource.data.user_id == request.auth.uid
@@ -1146,9 +1163,21 @@ service cloud.firestore {
       allow read: if isAuthed();
       // Owner cria o registro inicial dele próprio durante createTournament.
       allow create: if isAuthed()
-        && (request.resource.data.user_id == request.auth.uid
-            || isTournamentAdmin(request.resource.data.tournament_id)
-            || isPlatformAdmin());
+        && request.resource.data.tournament_id is string
+        && request.resource.data.user_id is string
+        && docId == request.resource.data.tournament_id + '_' + request.resource.data.user_id
+        && (
+          // Primeiro admin: só o creator_uid gravado no torneio registra a si
+          // mesmo como owner. Um usuário comum não pode criar o próprio doc de
+          // admin em torneio alheio.
+          (
+            request.resource.data.user_id == request.auth.uid
+            && request.resource.data.role == 'owner'
+            && getAfter(/databases/$(database)/documents/tournaments/$(request.resource.data.tournament_id)).data.creator_uid == request.auth.uid
+          )
+          || isTournamentAdmin(request.resource.data.tournament_id)
+          || isPlatformAdmin()
+        );
       allow update, delete: if isPlatformAdmin()
         || isTournamentAdmin(resource.data.tournament_id);
     }

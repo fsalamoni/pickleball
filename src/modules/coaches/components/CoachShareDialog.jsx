@@ -112,7 +112,7 @@ export default function CoachShareDialog({ coach, open, onOpenChange }) {
             <Button asChild className="flex-1" variant="secondary">
               <a
                 href={buildWhatsAppShareUrl(text)}
-                target="_blank" rel="noreferrer"
+                target="_blank" rel="noopener noreferrer"
                 className="inline-flex items-center justify-center gap-1.5"
               >
                 <MessageCircle className="h-4 w-4" /> WhatsApp

@@ -10,7 +10,7 @@ import {
 } from 'lucide-react';
 import {
   CONTENT_CATEGORY, CONTENT_CATEGORY_LABELS, CONTENT_VISIBILITY,
-  contentCategoryLabel, sortContent,
+  contentCategoryLabel, sanitizeVideoUrl, sortContent,
 } from '../domain/content.js';
 import {
   useCoachContent, useCreateContent, useUpdateContent, useDeleteContent,
@@ -123,44 +123,51 @@ export default function CoachContentSection({ coachId }) {
       ) : (
         <div className="space-y-2">
           {items.map((item) => (
-            <div key={item.id} className="rounded-2xl border border-gray-100 bg-paper p-3">
-              <div className="flex items-start justify-between gap-2">
-                <div className="flex-1">
-                  <div className="flex flex-wrap items-center gap-2">
-                    <p className="font-bold text-ink">{item.title}</p>
-                    <V2Badge tone="blue">{contentCategoryLabel(item.category)}</V2Badge>
-                    {item.visibility === CONTENT_VISIBILITY.STUDENTS
-                      ? <V2Badge tone="amber"><Lock className="mr-1 inline h-3 w-3" />Só alunos</V2Badge>
-                      : <V2Badge tone="neutral"><Globe className="mr-1 inline h-3 w-3" />Público</V2Badge>}
-                  </div>
-                  {item.body && <p className="mt-1 whitespace-pre-line text-xs text-gray-600 line-clamp-3">{item.body}</p>}
-                  {item.video_url && (
-                    <a href={item.video_url} target="_blank" rel="noreferrer" className="mt-1 inline-flex items-center gap-1 text-xs font-bold text-ink hover:underline">
-                      <Video className="h-3 w-3" /> Ver vídeo
-                    </a>
-                  )}
-                </div>
-                <div className="flex items-center gap-1.5">
-                  <button type="button" onClick={() => openEdit(item)} className="rounded-full border border-gray-200 p-1.5 text-gray-500 hover:bg-white" aria-label="Editar">
-                    <Pencil className="h-3.5 w-3.5" />
-                  </button>
-                  <ConfirmDialog
-                    title="Excluir conteúdo?"
-                    description={`"${item.title}" será removido da sua biblioteca.`}
-                    confirmLabel="Excluir"
-                    onConfirm={() => handleDelete(item)}
-                    trigger={(
-                      <button type="button" className="rounded-full border border-red-200 p-1.5 text-red-500 hover:bg-red-50" aria-label="Excluir">
-                        <Trash2 className="h-3.5 w-3.5" />
-                      </button>
-                    )}
-                  />
-                </div>
-              </div>
-            </div>
+            <ContentRow key={item.id} item={item} openEdit={openEdit} handleDelete={handleDelete} />
           ))}
         </div>
       )}
     </V2Surface>
+  );
+}
+
+function ContentRow({ item, openEdit, handleDelete }) {
+  const videoUrl = sanitizeVideoUrl(item.video_url);
+  return (
+    <div className="rounded-2xl border border-gray-100 bg-paper p-3">
+      <div className="flex items-start justify-between gap-2">
+        <div className="flex-1">
+          <div className="flex flex-wrap items-center gap-2">
+            <p className="font-bold text-ink">{item.title}</p>
+            <V2Badge tone="blue">{contentCategoryLabel(item.category)}</V2Badge>
+            {item.visibility === CONTENT_VISIBILITY.STUDENTS
+              ? <V2Badge tone="amber"><Lock className="mr-1 inline h-3 w-3" />Só alunos</V2Badge>
+              : <V2Badge tone="neutral"><Globe className="mr-1 inline h-3 w-3" />Público</V2Badge>}
+          </div>
+          {item.body && <p className="mt-1 whitespace-pre-line text-xs text-gray-600 line-clamp-3">{item.body}</p>}
+          {videoUrl && (
+            <a href={videoUrl} target="_blank" rel="noopener noreferrer" className="mt-1 inline-flex items-center gap-1 text-xs font-bold text-ink hover:underline">
+              <Video className="h-3 w-3" /> Ver vídeo
+            </a>
+          )}
+        </div>
+        <div className="flex items-center gap-1.5">
+          <button type="button" onClick={() => openEdit(item)} className="rounded-full border border-gray-200 p-1.5 text-gray-500 hover:bg-white" aria-label="Editar">
+            <Pencil className="h-3.5 w-3.5" />
+          </button>
+          <ConfirmDialog
+            title="Excluir conteúdo?"
+            description={`"${item.title}" será removido da sua biblioteca.`}
+            confirmLabel="Excluir"
+            onConfirm={() => handleDelete(item)}
+            trigger={(
+              <button type="button" className="rounded-full border border-red-200 p-1.5 text-red-500 hover:bg-red-50" aria-label="Excluir">
+                <Trash2 className="h-3.5 w-3.5" />
+              </button>
+            )}
+          />
+        </div>
+      </div>
+    </div>
   );
 }

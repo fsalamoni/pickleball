@@ -63,6 +63,24 @@ gcloud firestore databases update \
 **Custo**: proporcional ao tamanho do banco. Para esta base, poucos dólares
 por mês.
 
+### Helper seguro pelo repositório
+
+Se preferir não copiar comandos manualmente, há um helper que **não grava dados
+no repositório** e só executa quando você passa `APPLY=1`:
+
+```bash
+# ver o plano sem executar nada
+bash scripts/firestore-s0-backup.sh plan
+
+# conferir estado atual
+bash scripts/firestore-s0-backup.sh verify
+
+# ativar PITR
+APPLY=1 bash scripts/firestore-s0-backup.sh enable-pitr
+```
+
+Sem `APPLY=1`, o script apenas imprime o comando que seria rodado.
+
 ---
 
 ## S0.3 · Backup agendado
@@ -89,6 +107,56 @@ gcloud firestore export gs://SEU-BUCKET-DE-BACKUP \
 ```
 - [ ] Bucket de backup em conta separada (opcional, mas é o que protege no pior caso)
 
+### Export alternativo — fora do Git
+
+Se quiser uma cópia adicional antes do PITR/agenda ficarem completos, faça um
+export para bucket privado. **Nunca exporte para dentro deste repositório**:
+o dump pode conter dados pessoais, tokens e histórico privado.
+
+```bash
+# 1) escolha/crie um bucket privado, de preferência em outro projeto/conta
+export EXPORT_BUCKET=gs://SEU-BUCKET-PRIVADO
+
+# 2) confira o comando sem executar
+bash scripts/firestore-s0-backup.sh export
+
+# 3) execute
+APPLY=1 bash scripts/firestore-s0-backup.sh export
+```
+
+- [ ] Export alternativo criado em bucket privado
+- [ ] Bucket NÃO é público
+- [ ] Bucket NÃO é o repositório Git
+
+### Export manual pelo GitHub Actions
+
+Se o backup agendado já estiver configurado e você quiser **forçar uma cópia
+agora**, use o workflow manual:
+
+1. GitHub → **Actions** → **Backup manual do Firestore**.
+2. Clique em **Run workflow**.
+3. Preencha:
+   - `confirm`: `EXPORTAR`
+   - `export_bucket`: `gs://SEU-BUCKET-PRIVADO` (ou deixe vazio se
+     `FIRESTORE_EXPORT_BUCKET` estiver configurado como secret/variable do
+     repositório)
+   - `export_prefix`: `manual`
+   - `database_id`: `pickleball`
+   - `snapshot_time`: vazio, para o workflow usar automaticamente um snapshot
+     consistente de `agora - 2 minutos`
+4. Aguarde o job terminar.
+5. No resumo do workflow, copie o destino `gs://.../firestore-pickleball-...`.
+
+O workflow usa o secret `FIREBASE_SERVICE_ACCOUNT`, confere que o bucket não
+tem `allUsers`/`allAuthenticatedUsers` no IAM e exporta para GCS. Ele **não**
+grava dados no Git. Se falhar por permissão, conceda à service account acesso
+de exportação do Firestore e escrita no bucket, sem copiar credenciais para o
+chat.
+
+- [ ] Workflow manual executado com sucesso
+- [ ] Destino `gs://...` anotado: ____________________________
+- [ ] O bucket segue privado após o export
+
 ---
 
 ## S0.4 · TESTAR uma restauração ⚠️ não pule
@@ -106,6 +174,19 @@ gcloud firestore databases restore \
 - [ ] Restauração concluída num banco de teste
 - [ ] Conferido que os dados estão lá (abrir 2-3 coleções no console)
 - [ ] **Banco de teste apagado depois** (custa dinheiro parado)
+
+Com o helper:
+
+```bash
+# substitua pelo caminho do backup listado no console/gcloud
+export SOURCE_BACKUP=projects/picklerush/locations/LOCAL/backups/ID_DO_BACKUP
+
+# conferir comando sem executar
+bash scripts/firestore-s0-backup.sh restore-test
+
+# restaurar para banco NOVO
+APPLY=1 bash scripts/firestore-s0-backup.sh restore-test
+```
 
 ---
 

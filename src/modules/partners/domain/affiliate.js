@@ -5,6 +5,8 @@
  * exibição. A persistência fica no `affiliateService`.
  */
 
+import { safeHttpUrl, isSafeHttpUrl } from '@/core/domain/externalUrl';
+
 export const AFFILIATE_CATEGORY = Object.freeze({
   EQUIPMENT: 'equipment',
   STORE: 'store',
@@ -27,8 +29,15 @@ function trimmed(value) {
 
 /** Valida que a URL é http(s) absoluta. */
 export function isValidUrl(url) {
-  const u = trimmed(url);
-  return /^https?:\/\/[^\s.]+\.[^\s]+$/i.test(u);
+  return isSafeHttpUrl(url, { requireHostWithDot: true });
+}
+
+export function safeAffiliateUrl(url) {
+  return safeHttpUrl(url, { requireHostWithDot: true });
+}
+
+export function safeAffiliateImageUrl(url) {
+  return safeHttpUrl(url, { requireHostWithDot: true });
 }
 
 /**
@@ -40,8 +49,8 @@ export function normalizeAffiliateInput(input = {}) {
   const value = {
     title: trimmed(input.title).slice(0, 100),
     description: trimmed(input.description).slice(0, 300),
-    url: trimmed(input.url),
-    image_url: trimmed(input.image_url),
+    url: safeAffiliateUrl(input.url),
+    image_url: safeAffiliateImageUrl(input.image_url),
     category: Object.values(AFFILIATE_CATEGORY).includes(input.category)
       ? input.category
       : AFFILIATE_CATEGORY.OTHER,
@@ -52,6 +61,7 @@ export function normalizeAffiliateInput(input = {}) {
   const errors = {};
   if (!value.title) errors.title = 'Informe o título.';
   if (!isValidUrl(value.url)) errors.url = 'Informe uma URL válida (https://…).';
+  if (trimmed(input.image_url) && !value.image_url) errors.image_url = 'A imagem precisa ser uma URL https:// válida.';
 
   return { valid: Object.keys(errors).length === 0, errors, value };
 }
@@ -65,4 +75,15 @@ export function sortActiveLinks(links) {
         (a.sort_order || 0) - (b.sort_order || 0)
         || String(a.title || '').localeCompare(String(b.title || ''), 'pt-BR'),
     );
+}
+
+/** Links seguros para exibição pública: ativo + URL clicável validada. */
+export function publicAffiliateLinks(links) {
+  return sortActiveLinks(links)
+    .map((link) => ({
+      ...link,
+      url: safeAffiliateUrl(link.url),
+      image_url: safeAffiliateImageUrl(link.image_url),
+    }))
+    .filter((link) => link.url);
 }

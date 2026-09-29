@@ -34,6 +34,9 @@ jobs:
         run: npm ci
         timeout-minutes: 8
 
+      - name: Secret scan (arquivos versionados)
+        run: npm run security:secrets
+
       - name: Lint
         run: npm run lint
 

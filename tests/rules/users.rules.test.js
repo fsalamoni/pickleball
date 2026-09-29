@@ -85,14 +85,16 @@ beforeEach(async () => {
   });
 });
 
-const asUser  = () => testEnv.authenticatedContext(USER_UID, { email: 'user@x.com' }).firestore();
-const asOther = () => testEnv.authenticatedContext(OTHER_UID, { email: 'other@x.com' }).firestore();
-const asOwner = () => testEnv.authenticatedContext(OWNER_UID, { email: OWNER_EMAIL }).firestore();
-const asAdmin = () => testEnv.authenticatedContext(ADMIN_UID, { email: 'admin@x.com' }).firestore();
+const token = (email) => ({ email, email_verified: true });
+const asUser  = () => testEnv.authenticatedContext(USER_UID, token('user@x.com')).firestore();
+const asOther = () => testEnv.authenticatedContext(OTHER_UID, token('other@x.com')).firestore();
+const asOwner = () => testEnv.authenticatedContext(OWNER_UID, token(OWNER_EMAIL)).firestore();
+const asAdmin = () => testEnv.authenticatedContext(ADMIN_UID, token('admin@x.com')).firestore();
 const asAnon  = () => testEnv.unauthenticatedContext().firestore();
 const NEW_UID = 'brand_new_uid';
-const asNew   = () => testEnv.authenticatedContext(NEW_UID, { email: 'new@x.com' }).firestore();
-const asNewOwner = () => testEnv.authenticatedContext('new_owner', { email: OWNER_EMAIL }).firestore();
+const asNew   = () => testEnv.authenticatedContext(NEW_UID, token('new@x.com')).firestore();
+const asNewOwner = () => testEnv.authenticatedContext('new_owner', token(OWNER_EMAIL)).firestore();
+const asUnverifiedNewOwner = () => testEnv.authenticatedContext('new_owner', { email: OWNER_EMAIL, email_verified: false }).firestore();
 
 describe('users/{uid} — leitura', () => {
   it('1. o dono lê o próprio documento', async () => {
@@ -128,6 +130,11 @@ describe('users/{uid} — criação (primeiro login)', () => {
   });
   it('9. FLUXO REAL: o dono da plataforma nasce como platform_admin', async () => {
     await assertSucceeds(setDoc(doc(asNewOwner(), 'users', 'new_owner'),
+      baseProfile({ uid: 'new_owner', email: OWNER_EMAIL,
+                    role: 'platform_admin', can_create_pools: true })));
+  });
+  it('9b. 🔴 o e-mail do dono só vale se estiver verificado no Auth', async () => {
+    await assertFails(setDoc(doc(asUnverifiedNewOwner(), 'users', 'new_owner'),
       baseProfile({ uid: 'new_owner', email: OWNER_EMAIL,
                     role: 'platform_admin', can_create_pools: true })));
   });

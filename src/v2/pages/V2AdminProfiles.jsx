@@ -245,7 +245,7 @@ export default function V2AdminProfiles({ embedded = false }) {
               <div className="sm:col-span-2 truncate">
                 <span className="text-gray-500">Foto:</span>{' '}
                 {targetProfile.photo_url ? (
-                  <a href={targetProfile.photo_url} target="_blank" rel="noreferrer" className="text-ink underline">
+                  <a href={targetProfile.photo_url} target="_blank" rel="noopener noreferrer" className="text-ink underline">
                     {targetProfile.photo_url.slice(0, 80)}…
                   </a>
                 ) : '— (vazia — alvo típico de restauração)'}

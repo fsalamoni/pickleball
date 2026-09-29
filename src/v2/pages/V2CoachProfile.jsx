@@ -13,7 +13,7 @@ import { useCoach, useCoachResidencies } from '@/modules/coaches/hooks/useCoache
 import { useArena } from '@/modules/arenas/hooks/useArenas';
 import { canAcceptStudents } from '@/modules/coaches/domain/coach';
 import { STUDENT_STATUS } from '@/modules/coaches/domain/student';
-import { visibleContent, sortContent, contentCategoryLabel, CONTENT_VISIBILITY } from '@/modules/coaches/domain/content';
+import { visibleContent, sortContent, contentCategoryLabel, sanitizeVideoUrl, CONTENT_VISIBILITY } from '@/modules/coaches/domain/content';
 import { coachProductCategoryLabel, formatCoachProductPrice } from '@/modules/coaches/domain/coachProduct';
 import { useStudentCoaches } from '@/modules/coaches/hooks/useStudents';
 import { useCoachContent } from '@/modules/coaches/hooks/useContent';
@@ -190,7 +190,7 @@ export default function V2CoachProfile() {
               {coach.contact_whatsapp && (
                 <a
                   href={`https://wa.me/${String(coach.contact_whatsapp).replace(/\D/g, '')}`}
-                  target="_blank" rel="noreferrer"
+                  target="_blank" rel="noopener noreferrer"
                   className="inline-flex items-center gap-1.5 rounded-full border border-green-200 bg-green-50 px-3 py-1.5 text-xs font-bold text-green-700 hover:bg-green-100"
                 >
                   <Phone className="h-3.5 w-3.5" /> WhatsApp
@@ -313,11 +313,7 @@ export default function V2CoachProfile() {
                     {item.visibility === CONTENT_VISIBILITY.STUDENTS && <V2Badge tone="amber">Só alunos</V2Badge>}
                   </div>
                   {item.body && <p className="mt-1 whitespace-pre-line text-sm text-gray-600">{item.body}</p>}
-                  {item.video_url && (
-                    <a href={item.video_url} target="_blank" rel="noreferrer" className="mt-1 inline-flex items-center gap-1 text-xs font-bold text-ink hover:underline">
-                      <Video className="h-3 w-3" /> Ver vídeo
-                    </a>
-                  )}
+                  <CoachContentVideoLink item={item} />
                 </div>
               ))}
             </div>
@@ -337,5 +333,15 @@ export default function V2CoachProfile() {
         />
       )}
     </div>
+  );
+}
+
+function CoachContentVideoLink({ item }) {
+  const videoUrl = sanitizeVideoUrl(item.video_url);
+  if (!videoUrl) return null;
+  return (
+    <a href={videoUrl} target="_blank" rel="noopener noreferrer" className="mt-1 inline-flex items-center gap-1 text-xs font-bold text-ink hover:underline">
+      <Video className="h-3 w-3" /> Ver vídeo
+    </a>
   );
 }

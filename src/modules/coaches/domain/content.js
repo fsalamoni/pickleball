@@ -6,6 +6,8 @@
  * vinculados. Sem I/O — testável isoladamente.
  */
 
+import { safeHttpUrl } from '@/core/domain/externalUrl';
+
 const str = (v) => String(v ?? '').trim();
 
 export const CONTENT_VISIBILITY = Object.freeze({
@@ -39,10 +41,7 @@ export const CONTENT_BODY_MAX = 5000;
 
 /** Aceita apenas http(s) e retorna a url limpa (ou ''). */
 export function sanitizeVideoUrl(value) {
-  const url = str(value);
-  if (!url) return '';
-  if (!/^https?:\/\/[^\s]+$/i.test(url)) return '';
-  return url.slice(0, 500);
+  return safeHttpUrl(str(value), { maxLength: 500 });
 }
 
 function normCategory(value) {

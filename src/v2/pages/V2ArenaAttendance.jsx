@@ -121,7 +121,7 @@ export function ArenaAttendancePanel({ arena }) {
           </p>
         </div>
         <V2Button asChild>
-          <Link to={`/arenas/${arena.id}/totem`} target="_blank" rel="noreferrer">
+          <Link to={`/arenas/${arena.id}/totem`} target="_blank" rel="noopener noreferrer">
             <Monitor className="h-4 w-4" /> Abrir o totem
           </Link>
         </V2Button>
