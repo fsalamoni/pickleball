@@ -161,7 +161,11 @@ jobs:
 
           stamp="$(date -u +%Y%m%dT%H%M%SZ)"
           snapshot_time="${SNAPSHOT_TIME:-$(date -u -d '2 minutes ago' +%Y-%m-%dT%H:%M:00Z)}"
-          destination="${EXPORT_BUCKET%/}/${EXPORT_PREFIX_CLEAN%/}/firestore-${DATABASE_ID}-${stamp}"
+          if [ -n "$EXPORT_PREFIX_CLEAN" ]; then
+            destination="${EXPORT_BUCKET%/}/${EXPORT_PREFIX_CLEAN%/}/firestore-${DATABASE_ID}-${stamp}"
+          else
+            destination="${EXPORT_BUCKET%/}/firestore-${DATABASE_ID}-${stamp}"
+          fi
 
           echo "Exportando banco '$DATABASE_ID' para '$destination'."
           echo "Snapshot consistente: $snapshot_time"

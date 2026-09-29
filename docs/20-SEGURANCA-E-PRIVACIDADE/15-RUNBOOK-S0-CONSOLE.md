@@ -128,6 +128,35 @@ APPLY=1 bash scripts/firestore-s0-backup.sh export
 - [ ] Bucket NÃO é público
 - [ ] Bucket NÃO é o repositório Git
 
+### Export manual pelo GitHub Actions
+
+Se o backup agendado já estiver configurado e você quiser **forçar uma cópia
+agora**, use o workflow manual:
+
+1. GitHub → **Actions** → **Backup manual do Firestore**.
+2. Clique em **Run workflow**.
+3. Preencha:
+   - `confirm`: `EXPORTAR`
+   - `export_bucket`: `gs://SEU-BUCKET-PRIVADO` (ou deixe vazio se
+     `FIRESTORE_EXPORT_BUCKET` estiver configurado como secret/variable do
+     repositório)
+   - `export_prefix`: `manual`
+   - `database_id`: `pickleball`
+   - `snapshot_time`: vazio, para o workflow usar automaticamente um snapshot
+     consistente de `agora - 2 minutos`
+4. Aguarde o job terminar.
+5. No resumo do workflow, copie o destino `gs://.../firestore-pickleball-...`.
+
+O workflow usa o secret `FIREBASE_SERVICE_ACCOUNT`, confere que o bucket não
+tem `allUsers`/`allAuthenticatedUsers` no IAM e exporta para GCS. Ele **não**
+grava dados no Git. Se falhar por permissão, conceda à service account acesso
+de exportação do Firestore e escrita no bucket, sem copiar credenciais para o
+chat.
+
+- [ ] Workflow manual executado com sucesso
+- [ ] Destino `gs://...` anotado: ____________________________
+- [ ] O bucket segue privado após o export
+
 ---
 
 ## S0.4 · TESTAR uma restauração ⚠️ não pule
