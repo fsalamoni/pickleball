@@ -293,3 +293,15 @@ só então ordenaria. Corte só depois de ordenar.
 índice que a sirva. Quem precisar de uma tem duas saídas honestas: criar o
 índice (mexe no banco, decisão consciente) ou ordenar em memória. O teste foi
 verificado ao contrário — com o defeito de volta, ele reprova.
+
+## Atualização 2026-09-30 — o dia de jogo da arena chega ao "Jogar"
+
+O dia de jogo da arena é público, mas não cria convite em "Procura-se jogo"
+(de propósito). O efeito colateral: ele **nunca aparecia** no "Jogar" do
+início nem no Procura-se jogo — só na página da arena. Agora os dois leem os
+dias de jogo públicos dos próximos 30 dias direto de `game_days`
+(`listUpcomingPublicGameDays`, sem índice novo), com as vagas que sobram, e o
+toque leva para DENTRO do dia (`/dia-de-jogo/:id`), onde o cartão de inscrição
+é o mesmo da página da arena (`ArenaGameDaySignupCard`). Entrar pelo caminho do
+atleta (o "Iniciar minha participação" do Play) passou a respeitar o teto: ele
+delega a `signUpToArenaGameDay`. Ver `docs/34-MINHA-REGIAO.md`.

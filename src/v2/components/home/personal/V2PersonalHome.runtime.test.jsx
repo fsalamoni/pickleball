@@ -27,6 +27,7 @@ import React from 'react';
 import { createRoot } from 'react-dom/client';
 import { act } from 'react';
 import { MemoryRouter } from 'react-router-dom';
+import { QueryClient, QueryClientProvider } from '@tanstack/react-query';
 import { describe, it, expect, beforeEach, afterEach, vi } from 'vitest';
 
 // Sábado, 26/09/2026, 15:00.
@@ -52,6 +53,8 @@ function reset() {
     quebrarRanking: false,
     consultasRanking: 0,
     updateUserProfile: vi.fn(() => Promise.resolve()),
+    todasArenas: null,
+    jogar: { itens: [], convites: [], carregando: false, isError: false, falhas: { dias: false, convites: false, vagas: false }, recarregar: { dias: vi.fn(), convites: vi.fn(), vagas: vi.fn() } },
   });
 }
 reset();
@@ -82,6 +85,7 @@ vi.mock('@/modules/arenas/hooks/useArenas', () => ({
   useArenaCourts: () => ok([]),
   useArenaCourtSchedules: () => ok([]),
   useArenaUnavailabilities: () => ok([]),
+  useArenas: () => estado.todasArenas || ok([]),
 }));
 vi.mock('@/modules/arenas/hooks/useBookings', () => ({
   useMyBookings: () => ok([]),
@@ -98,6 +102,7 @@ vi.mock('@/modules/arenas/hooks/useArenaModules', () => ({
 }));
 vi.mock('@/modules/games/hooks/useArenaGameDays', () => ({ useArenaGameDays: () => ok([]) }));
 vi.mock('@/modules/games/hooks/useOpenGames', () => ({ useOpenGames: () => ok([]) }));
+vi.mock('@/modules/games/hooks/usePlayDiscovery', () => ({ usePlayDiscovery: () => estado.jogar }));
 vi.mock('@/modules/coaches/hooks/useCoaches', () => ({
   useCoach: () => estado.coach,
   useCoaches: () => ok([]),
@@ -158,7 +163,8 @@ afterEach(() => {
 });
 
 const render = async () => {
-  await act(async () => { root.render(<MemoryRouter><V2PersonalHome /></MemoryRouter>); });
+  const qc = new QueryClient({ defaultOptions: { queries: { retry: false } } });
+  await act(async () => { root.render(<QueryClientProvider client={qc}><MemoryRouter><V2PersonalHome /></MemoryRouter></QueryClientProvider>); });
 };
 const secoes = () => [...container.querySelectorAll('[data-secao-inicio]')].map((s) => s.getAttribute('data-secao-inicio'));
 const atalhos = () => [...container.querySelectorAll('nav[aria-label="Atalhos para você"] a')].map((a) => a.getAttribute('href'));
@@ -406,5 +412,70 @@ describe('⭐ início sob medida', () => {
     const chips = chipsDoTopo();
     expect(chips).toHaveLength(7);
     expect(chips[6]).toBe('+2 cards');
+  });
+});
+
+describe('⭐ Jogar: os dias de jogo com vaga', () => {
+  it('⭐ o dia de jogo da ARENA aparece, com as vagas, e leva para DENTRO do dia de jogo', async () => {
+    estado.jogar = {
+      ...estado.jogar,
+      itens: [{
+        key: 'dia:gd1', kind: 'dia', id: 'gd1', link: '/dia-de-jogo/gd1', inicio: AGORA + 3_600_000,
+        title: 'Play de sábado', subtitle: 'Sáb, 26/09 · 18:00–21:00 · Arena Sol',
+        place: { city: 'Canoas', state: 'RS' }, vagas: 5, badge: '5 vagas', daArena: true,
+      }],
+    };
+    await render();
+    const secao = container.querySelector('[data-secao-inicio="jogar"]');
+    expect(secao.textContent).toContain('Play de sábado');
+    expect(secao.textContent).toContain('5 vagas');
+    expect(secao.querySelector('a[href="/dia-de-jogo/gd1"]')).not.toBeNull();
+    expect(secao.querySelector('a[href^="/arenas/"]')).toBeNull();
+  });
+
+  it('com uma fonte fora do ar, NÃO afirma "nenhum jogo"', async () => {
+    estado.jogar = { ...estado.jogar, isError: true, falhas: { dias: true, convites: false, vagas: false } };
+    await render();
+    const secao = container.querySelector('[data-secao-inicio="jogar"]');
+    expect(secao.textContent).toContain('Não carregou os dias de jogo');
+    expect(secao.textContent).not.toContain('Nenhum jogo com vaga');
+  });
+
+  it('mostra no máximo 5 e leva ao resto', async () => {
+    estado.jogar = {
+      ...estado.jogar,
+      itens: Array.from({ length: 7 }, (_, i) => ({
+        key: `dia:g${i}`, kind: 'dia', id: `g${i}`, link: `/dia-de-jogo/g${i}`, inicio: AGORA + i,
+        title: `Dia ${i}`, subtitle: '', place: { city: 'Porto Alegre', state: 'RS' }, vagas: null, badge: null, daArena: false,
+      })),
+    };
+    await render();
+    const secao = container.querySelector('[data-secao-inicio="jogar"]');
+    expect(secao.querySelectorAll('a[href^="/dia-de-jogo/g"]')).toHaveLength(5);
+    expect(secao.textContent).toContain('Ver todos os 7 jogos');
+  });
+});
+
+describe('Horários da arena, para quem ainda não tem arena de sempre', () => {
+  it('mostra as arenas da cidade e do estado do perfil, a da cidade primeiro', async () => {
+    estado.todasArenas = ok([
+      { id: 'sp', name: 'Arena Paulista', city: 'São Paulo', state: 'SP' },
+      { id: 'pel', name: 'Arena Pelotas', city: 'Pelotas', state: 'RS' },
+      { id: 'poa', name: 'Arena Moinhos', city: 'Porto Alegre', state: 'RS' },
+    ]);
+    await render();
+    const secao = container.querySelector('[data-secao-inicio="reservar"]');
+    expect(secao.textContent).toContain('Arenas perto de você');
+    const links = [...secao.querySelectorAll('a[href^="/arenas/"]')].map((a) => a.getAttribute('href'));
+    expect(links.slice(0, 2)).toEqual(['/arenas/poa#arena-reservar', '/arenas/pel#arena-reservar']);
+    expect(links).not.toContain('/arenas/sp#arena-reservar');
+  });
+
+  it('com a lista falhando, só o convite — sem afirmar que não há arena perto', async () => {
+    estado.todasArenas = { data: undefined, isLoading: false, isError: true, refetch: vi.fn() };
+    await render();
+    const secao = container.querySelector('[data-secao-inicio="reservar"]');
+    expect(secao.textContent).toContain('Encontrar uma arena');
+    expect(secao.textContent).not.toContain('Arenas perto de você');
   });
 });

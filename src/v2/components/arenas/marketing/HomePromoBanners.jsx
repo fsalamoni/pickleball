@@ -48,7 +48,7 @@ import { useModuleOnInArenas } from '@/modules/arenas/hooks/useArenaModules';
 import { arenaQueries } from '@/modules/arenas/hooks/arenaQueries';
 import { ARENA_MODULE_ID } from '@/modules/arenas/domain/modules';
 import {
-  BANNER_REGION, bannerCities, homeBanners, regionLabel, resolveBannerRegion,
+  BANNER_REGION, bannerCities, bannerRegionFromMyRegion, homeBanners, regionLabel, resolveBannerRegion,
 } from '@/modules/arenas/domain/homeBanners';
 import { brandingOf } from '@/modules/arenas/domain/whiteLabel';
 import {
@@ -59,6 +59,8 @@ import { couponKind } from '@/modules/arenas/domain/marketing';
 import { todayISO } from '@/modules/arenas/domain/subscription';
 import { useHomePromos, usePromoViewer } from '@/modules/promo/hooks/usePromo';
 import { cn } from '@/core/lib/utils';
+import { useMyRegion } from '@/core/lib/useMyRegion';
+import RegionBar from '@/v2/components/region/RegionBar';
 import PromoCampaignBanner from '@/v2/components/promo/PromoCampaignBanner';
 import { issuerDisplayName } from '@/v2/components/promo/promoUi';
 import CampaignBanner from './campaigns/CampaignBanner';
@@ -283,7 +285,13 @@ export default function HomePromoBanners({
 
   const [pref, setPref] = useState(() => readViewPreference(uid, PREF));
   useEffect(() => { setPref(readViewPreference(uid, PREF)); }, [uid]);
-  const region = resolveBannerRegion(pref, userProfile || {});
+  // Com a MINHA REGIÃO ligada, os destaques seguem a região da plataforma
+  // inteira (a mesma das outras telas, inclusive o raio); sem ela, o seletor
+  // próprio dos banners, como sempre.
+  const minha = useMyRegion();
+  const region = minha.ativa
+    ? bannerRegionFromMyRegion(minha.region, minha.matcher)
+    : resolveBannerRegion(pref, userProfile || {});
   const escolher = (valor) => {
     setPref(valor);
     writeViewPreference(uid, PREF, valor);
@@ -376,7 +384,9 @@ export default function HomePromoBanners({
               Ver todas
             </Link>
           )}
-          <SeletorDeRegiao region={region} cidades={cidades} profile={userProfile} onChange={escolher} />
+          {minha.ativa
+            ? <RegionBar regional={minha} compacta mostrarFora={false} />
+            : <SeletorDeRegiao region={region} cidades={cidades} profile={userProfile} onChange={escolher} />}
           {banners.length > 1 && (
             <>
               <button type="button" onClick={() => setPausado((p) => !p)}

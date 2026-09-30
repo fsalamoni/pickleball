@@ -16,15 +16,19 @@ import { Link } from 'react-router-dom';
 import { CalendarCheck, CalendarClock, MapPin, Search } from 'lucide-react';
 import { useArenaBookings, useMyBookings } from '@/modules/arenas/hooks/useBookings';
 import {
-  useArena, useArenaCourts, useArenaCourtSchedules, useArenaUnavailabilities, useMyFavoriteArenas,
+  useArena, useArenaCourts, useArenaCourtSchedules, useArenaUnavailabilities, useArenas, useMyFavoriteArenas,
 } from '@/modules/arenas/hooks/useArenas';
+import { useAuth } from '@/core/lib/FirebaseAuthContext';
+import { useRegionalList } from '@/core/lib/useMyRegion';
+import { distanceLabel } from '@/core/domain/region';
+import { proximidade } from '@/modules/home/domain/homeTournaments';
 import { useArenaGameDays } from '@/modules/games/hooks/useArenaGameDays';
 import { useArenaClasses, useArenaInternalTournaments, useArenaOpenSlots } from '@/modules/arenas/hooks/useArenaV3';
 import { addDaysISO } from '@/modules/arenas/domain/calendar';
 import { arenaFreeTimesForDays, pickHomeArena, upcomingFreeTimes } from '@/modules/home/domain/homePlay';
 import { agendaDayLabel } from '@/modules/home/domain/homeAgenda';
 import { V2ErrorState, V2Skeleton } from '@/v2/ui/primitives';
-import { HomeAction, HomeEmpty, HomeSection } from './HomeSection';
+import { HomeAction, HomeEmpty, HomeRow, HomeSection } from './HomeSection';
 
 function HorariosDaArena({ arenaId, nome, hoje, agora }) {
   const arena = useArena(arenaId);
@@ -98,6 +102,59 @@ function HorariosDaArena({ arenaId, nome, hoje, agora }) {
   );
 }
 
+/**
+ * Sem arena de sempre (nunca reservou nem favoritou): as arenas mais PERTO,
+ * em vez de só "encontre uma arena". Com a Minha região, as da região, da
+ * mais perto à mais longe; sem ela, as da cidade e do estado do perfil.
+ */
+function ArenasPerto() {
+  const { userProfile } = useAuth();
+  const perfil = { city: userProfile?.city, state: userProfile?.state };
+  const arenasQ = useArenas();
+  const regional = useRegionalList(arenasQ.data || [], (a) => ({ city: a.city, state: a.state }));
+  const lista = useMemo(() => {
+    if (regional.ativa) {
+      return [...regional.itens].sort((a, b) => (regional.infoDe(a)?.km ?? Infinity) - (regional.infoDe(b)?.km ?? Infinity));
+    }
+    return regional.itens
+      .map((a) => ({ a, perto: proximidade(a, perfil) }))
+      .filter((x) => x.perto > 0)
+      .sort((x, y) => y.perto - x.perto || String(x.a.name || '').localeCompare(String(y.a.name || ''), 'pt-BR'))
+      .map((x) => x.a);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [regional, perfil.city, perfil.state]);
+
+  if (arenasQ.isLoading || regional.carregando) return <V2Skeleton lines={2} />;
+  // Falhou: o convite de sempre, sem afirmar que não há arena perto.
+  if (arenasQ.isError || lista.length === 0) {
+    return (
+      <HomeEmpty icon={Search} actions={<HomeAction to="/arenas" primary>Encontrar uma arena</HomeAction>}>
+        Reserve uma vez (ou favorite uma arena) e os horários livres dela aparecem aqui.
+      </HomeEmpty>
+    );
+  }
+  return (
+    <div>
+      <p className="mb-1.5 text-xs font-bold uppercase tracking-wider text-gray-400">
+        Arenas perto de você
+      </p>
+      <ul className="space-y-1">
+        {lista.slice(0, 3).map((a) => (
+          <li key={a.id}>
+            <HomeRow
+              to={`/arenas/${a.id}#arena-reservar`}
+              icon={MapPin}
+              title={a.name || 'Arena'}
+              subtitle={[[a.city, a.state].filter(Boolean).join(' / '), regional.ativa ? distanceLabel(regional.infoDe(a)?.km) : null].filter(Boolean).join(' · ')}
+            />
+          </li>
+        ))}
+      </ul>
+      <p className="mt-2 text-xs text-gray-500">Reserve uma vez (ou favorite) e os horários livres dela aparecem aqui.</p>
+    </div>
+  );
+}
+
 export default function HomeBookingSection({ reason, hoje, agora }) {
   const minhas = useMyBookings();
   const favoritas = useMyFavoriteArenas();
@@ -123,9 +180,7 @@ export default function HomeBookingSection({ reason, hoje, agora }) {
             onRetry={() => { minhas.refetch(); favoritas.refetch(); }}
           />
         ) : (
-          <HomeEmpty icon={Search} actions={<HomeAction to="/arenas" primary>Encontrar uma arena</HomeAction>}>
-            Reserve uma vez (ou favorite uma arena) e os horários livres dela aparecem aqui.
-          </HomeEmpty>
+          <ArenasPerto />
         )}
         {escolha && (
           <div className="flex flex-wrap gap-2">

@@ -105,7 +105,7 @@
             },
             {
               "key": "Permissions-Policy",
-              "value": "accelerometer=(), autoplay=(self), bluetooth=(), camera=(self), display-capture=(), encrypted-media=(), geolocation=(), gyroscope=(), magnetometer=(), microphone=(), midi=(), payment=(), serial=(), usb=(), xr-spatial-tracking=()"
+              "value": "accelerometer=(), autoplay=(self), bluetooth=(), camera=(self), display-capture=(), encrypted-media=(), geolocation=(self), gyroscope=(), magnetometer=(), microphone=(), midi=(), payment=(), serial=(), usb=(), xr-spatial-tracking=()"
             },
             {
               "key": "X-Permitted-Cross-Domain-Policies",

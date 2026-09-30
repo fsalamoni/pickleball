@@ -271,6 +271,15 @@ que pode se unificar foi unificado**. Pontos pertinentes ainda abertos:
   que joga e nível obrigatórios, UF de lista, quem já tinha cadastro vê só o
   que falta; perfil e admin com a mesma regra do cadastro. Zero banco. Ver
   `docs/33-CADASTRO-ESSENCIAL.md`.
+- ✅ **TRV-25** o "Jogar" com os dias de jogo das ARENAS (nunca apareciam no
+  início nem no Procura-se jogo), tocar leva para DENTRO do dia com
+  "Participar", e o que já passou sai das listas (torneios encerrados atrás de
+  um botão). Minha região (flag `my_region`): cidade + raio, estado, outro
+  lugar ou todo lugar, em toda tela de descoberta. Zero banco. Ver
+  `docs/34-MINHA-REGIAO.md`.
+- ⏳ **TRV-26** (sugestão) coordenadas próprias da ARENA (endereço → ponto),
+  para medir a distância até a quadra e não só até a cidade. Pede campo novo em
+  `arenas` e geocodificação — mexe no banco, por isso ficou de fora.
 - ⏳ **TRV-19** (sugestão da revisão CG) contar o público e enviar os avisos
   das campanhas no SERVIDOR: hoje o navegador do emissor lê os usuários do
   público e grava os avisos em lotes — correto e honesto (a campanha mostra o

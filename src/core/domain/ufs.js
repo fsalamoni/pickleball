@@ -18,3 +18,19 @@ const UFS = new Set(BR_UFS);
 export function isBrazilUF(value) {
   return UFS.has(String(value || '').trim().toUpperCase());
 }
+
+/** O nome de cada UF — para dizer "Rio Grande do Sul" em vez de "RS". */
+export const BR_UF_NAMES = Object.freeze({
+  AC: 'Acre', AL: 'Alagoas', AP: 'Amapá', AM: 'Amazonas', BA: 'Bahia', CE: 'Ceará',
+  DF: 'Distrito Federal', ES: 'Espírito Santo', GO: 'Goiás', MA: 'Maranhão',
+  MT: 'Mato Grosso', MS: 'Mato Grosso do Sul', MG: 'Minas Gerais', PA: 'Pará',
+  PB: 'Paraíba', PR: 'Paraná', PE: 'Pernambuco', PI: 'Piauí', RJ: 'Rio de Janeiro',
+  RN: 'Rio Grande do Norte', RS: 'Rio Grande do Sul', RO: 'Rondônia', RR: 'Roraima',
+  SC: 'Santa Catarina', SP: 'São Paulo', SE: 'Sergipe', TO: 'Tocantins',
+});
+
+/** "RS" → "Rio Grande do Sul"; UF desconhecida volta como veio. */
+export function ufName(value) {
+  const uf = String(value || '').trim().toUpperCase();
+  return BR_UF_NAMES[uf] || uf;
+}

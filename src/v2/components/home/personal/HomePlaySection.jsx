@@ -1,117 +1,118 @@
 /**
- * "Jogar" na tela inicial — para quem procura jogo, parceria ou quer montar o
- * próprio dia de jogo.
+ * "Jogar" na tela inicial — os jogos com vaga dos próximos dias.
  *
- * Duas vitrines que antes só existiam em telas separadas:
- *  - os convites e dias de jogo PÚBLICOS dos atletas ("procura-se jogo"),
- *    perto da pessoa primeiro;
- *  - os jogos com vaga que as ARENAS publicaram (com a chave dos módulos de
- *    arena, e só de arena que mantém o jogo aberto ligado).
+ * 🐞 Antes, esta seção lia só os convites de "Procura-se jogo" e os jogos
+ * abertos das arenas. Os DIAS DE JOGO QUE AS ARENAS MARCAM no calendário —
+ * públicos, com vagas — nunca apareciam aqui (nem no Procura-se jogo), e o
+ * card prometia justamente "dias de jogo e jogos com vaga, das arenas e dos
+ * atletas". Agora a lista é uma só (`usePlayDiscovery` → `buildPlayList`):
+ *  - dias de jogo públicos do ATLETA e da ARENA, com as vagas que sobram;
+ *  - jogos abertos das arenas;
+ *  - convites de "Procura-se jogo".
  *
- * Só o que ainda vale: data de hoje em diante, com vaga, sem os convites que a
- * própria pessoa publicou.
+ * Tocar num dia de jogo leva para DENTRO dele (`/dia-de-jogo/:id`), onde a
+ * pessoa vê o formato, quem vai, e se inscreve — não para a página da arena.
+ *
+ * Só o que ainda vale: o que já terminou some, o que a pessoa já tem (o dia em
+ * que ela está, o que ela criou) também — ele mora na agenda.
+ *
+ * Com a MINHA REGIÃO (flag `my_region`), só o que está na região da pessoa,
+ * com a barra dizendo qual é e quantos ficaram de fora. Sem ela, o mais perto
+ * primeiro (cidade, depois estado), como antes.
  */
 import React, { useMemo } from 'react';
 import {
   Building2, Dices, Megaphone, Plus, Swords, Users,
 } from 'lucide-react';
-import { useAuth } from '@/core/lib/FirebaseAuthContext';
-import { useOpenGames } from '@/modules/games/hooks/useOpenGames';
-import { useGlobalOpenSlots } from '@/modules/arenas/hooks/useArenaV3';
-import { useModuleOnInArenas } from '@/modules/arenas/hooks/useArenaModules';
-import { ARENA_MODULE_ID } from '@/modules/arenas/domain/modules';
-import { openSlotsForDiscovery } from '@/modules/arenas/domain/openMatchView';
-import { getAvailableSpots } from '@/modules/arenas/domain/openMatch';
-import { formatDateShortBR } from '@/modules/arenas/domain/calendar';
-import { openGamesForMe } from '@/modules/home/domain/homePlay';
+import { usePlayDiscovery } from '@/modules/games/hooks/usePlayDiscovery';
+import { PLAY_KIND } from '@/modules/games/domain/playDiscovery';
+import { proximidade } from '@/modules/home/domain/homeTournaments';
+import { useRegionalList } from '@/core/lib/useMyRegion';
+import { distanceLabel } from '@/core/domain/region';
 import { V2ErrorState, V2Skeleton } from '@/v2/ui/primitives';
+import RegionBar, { RegionEmptyHint } from '@/v2/components/region/RegionBar';
 import { HomeAction, HomeEmpty, HomeRow, HomeSection } from './HomeSection';
 
-export default function HomePlaySection({ reason, hoje, perfil, arenaModulesOn = false }) {
-  const { user } = useAuth();
-  const convites = useOpenGames();
-  const vagasQ = useGlobalOpenSlots({ limit: 100 }, { enabled: arenaModulesOn });
-  const arenaIds = useMemo(() => (vagasQ.data || []).map((s) => s.arena_id), [vagasQ.data]);
-  const { isOnIn, isLoading: modulosCarregando } = useModuleOnInArenas(
-    arenaModulesOn ? arenaIds : [], ARENA_MODULE_ID.MATCHMAKING_OPEN_MATCH,
-  );
+/** Quantos jogos a tela inicial mostra (o resto está em Procura-se jogo). */
+const NO_INICIO = 5;
 
-  const lista = useMemo(
-    () => openGamesForMe(convites.data || [], { hoje, perfil, uid: user?.uid, limite: 3 }),
-    [convites.data, hoje, perfil, user?.uid],
-  );
-  const vagas = arenaModulesOn && !modulosCarregando
-    ? openSlotsForDiscovery(vagasQ.data || [], isOnIn)
-      .filter((s) => !(s.participants || []).includes(user?.uid))
-      .slice(0, 3)
-    : [];
+const lugarDe = (item) => item.place;
 
-  const carregando = convites.isLoading || (arenaModulesOn && (vagasQ.isLoading || modulosCarregando));
-  const falhouConvites = convites.isError;
-  const falhouVagas = arenaModulesOn && vagasQ.isError;
-  const nada = !carregando && !falhouConvites && !falhouVagas && lista.length === 0 && vagas.length === 0;
+function iconeDe(item) {
+  if (item.kind === PLAY_KIND.CONVITE) return Megaphone;
+  return item.daArena ? Building2 : Dices;
+}
+
+export default function HomePlaySection({ reason, hoje, agora, perfil }) {
+  const jogos = usePlayDiscovery({ hoje, agora });
+  const regional = useRegionalList(jogos.itens, lugarDe);
+
+  // Sem a Minha região: o mais perto primeiro, sem perder a ordem por data.
+  const lista = useMemo(() => {
+    if (regional.ativa) return regional.itens;
+    return regional.itens
+      .map((item, i) => ({ item, i, perto: proximidade(item.place, perfil) }))
+      .sort((a, b) => b.perto - a.perto || a.i - b.i)
+      .map(({ item }) => item);
+  }, [regional.ativa, regional.itens, perfil]);
+
+  const falhou = jogos.isError;
+  const carregando = jogos.carregando || regional.carregando;
+  // "Nenhum jogo" só com TODAS as fontes em mãos: com uma fora do ar, pode
+  // haver jogo esperando gente.
+  const nada = !carregando && !falhou && lista.length === 0;
+  const mostrados = lista.slice(0, NO_INICIO);
+  const resto = lista.length - mostrados.length;
 
   return (
     <HomeSection id="jogar" icon={Swords} title="Jogar" reason={reason} action={{ to: '/procura-jogo', label: 'Procura-se jogo' }}>
       <div className="space-y-4">
-        {falhouConvites && (
-          <V2ErrorState inline title="Não carregou os jogos com vaga" description="Pode haver jogo esperando gente." onRetry={convites.refetch} />
+        <RegionBar regional={regional} compacta nomeItens={['jogo', 'jogos']} />
+        {jogos.falhas.dias && (
+          <V2ErrorState inline title="Não carregou os dias de jogo" description="Pode haver dia de jogo esperando gente." onRetry={jogos.recarregar.dias} />
         )}
-        {falhouVagas && (
-          <V2ErrorState inline title="Não carregou os jogos das arenas" description="Tente de novo em instantes." onRetry={vagasQ.refetch} />
+        {jogos.falhas.convites && (
+          <V2ErrorState inline title="Não carregou os convites" description="Pode haver jogo esperando gente." onRetry={jogos.recarregar.convites} />
+        )}
+        {jogos.falhas.vagas && (
+          <V2ErrorState inline title="Não carregou os jogos das arenas" description="Tente de novo em instantes." onRetry={jogos.recarregar.vagas} />
         )}
         {carregando ? (
           <V2Skeleton lines={3} />
         ) : nada ? (
-          <HomeEmpty icon={Dices} actions={<HomeAction to="/dia-de-jogo?criar=1" primary><Plus className="h-3.5 w-3.5" aria-hidden="true" /> Criar dia de jogo</HomeAction>}>
-            Nenhum jogo com vaga agora. Monte o seu — público, ele aparece para quem procura jogo.
-          </HomeEmpty>
-        ) : (
           <>
-            {lista.length > 0 && (
-              <div>
-                <p className="mb-1.5 text-xs font-bold uppercase tracking-wider text-gray-400">Procura-se jogo</p>
-                <ul className="space-y-1">
-                  {lista.map(({ game: g, perto }) => (
-                    <li key={g.id}>
-                      <HomeRow
-                        to={g.game_day_id ? `/dia-de-jogo/${g.game_day_id}` : '/procura-jogo'}
-                        icon={g.kind === 'game_day' ? Dices : Megaphone}
-                        title={g.when_text || (g.date ? formatDateShortBR(g.date, { hoje }) : 'Jogo')}
-                        subtitle={[g.creator_name, [g.city, g.state].filter(Boolean).join(' / ')].filter(Boolean).join(' · ')}
-                        badge={perto === 2 ? 'Na sua cidade' : perto === 1 ? 'No seu estado' : null}
-                        badgeTone="acid"
-                      />
-                    </li>
-                  ))}
-                </ul>
-              </div>
-            )}
-            {vagas.length > 0 && (
-              <div>
-                <p className="mb-1.5 text-xs font-bold uppercase tracking-wider text-gray-400">Jogos abertos nas arenas</p>
-                <ul className="space-y-1">
-                  {vagas.map((s) => {
-                    const livres = getAvailableSpots(s);
-                    return (
-                      <li key={s.id}>
-                        <HomeRow
-                          to={s.game_day_id ? `/dia-de-jogo/${s.game_day_id}` : `/arenas/${s.arena_id}#arena-jogos-abertos`}
-                          icon={Building2}
-                          title={`${formatDateShortBR(s.date, { hoje })}${s.start ? ` · ${s.start}` : ''} · ${s.arena_name || 'Arena'}`}
-                          subtitle={s.court || s.format || ''}
-                          badge={`${livres} ${livres === 1 ? 'vaga' : 'vagas'}`}
-                          badgeTone="green"
-                        />
-                      </li>
-                    );
-                  })}
-                </ul>
-              </div>
+            <RegionEmptyHint regional={regional} oque="Nenhum jogo com vaga" />
+            {!(regional.ativa && regional.fora > 0) && (
+              <HomeEmpty icon={Dices} actions={<HomeAction to="/dia-de-jogo?criar=1" primary><Plus className="h-3.5 w-3.5" aria-hidden="true" /> Criar dia de jogo</HomeAction>}>
+                Nenhum jogo com vaga nos próximos dias{regional.limita ? ` ${regional.frase}` : ''}. Monte o seu — público, ele aparece para quem procura jogo.
+              </HomeEmpty>
             )}
           </>
-        )}
+        ) : mostrados.length > 0 ? (
+          <ul className="space-y-1">
+            {mostrados.map((item) => {
+              const km = regional.ativa ? distanceLabel(regional.infoDe(item)?.km) : null;
+              return (
+                <li key={item.key}>
+                  <HomeRow
+                    to={item.link}
+                    icon={iconeDe(item)}
+                    title={item.title}
+                    subtitle={[item.subtitle, km].filter(Boolean).join(' · ')}
+                    badge={item.badge || (!regional.ativa
+                      ? (proximidade(item.place, perfil) === 2 ? 'Na sua cidade' : proximidade(item.place, perfil) === 1 ? 'No seu estado' : null)
+                      : null)}
+                    badgeTone={item.badge ? 'green' : 'acid'}
+                  />
+                </li>
+              );
+            })}
+          </ul>
+        ) : null}
         <div className="flex flex-wrap gap-2">
+          {resto > 0 && (
+            <HomeAction to="/procura-jogo" primary>Ver todos os {lista.length} jogos</HomeAction>
+          )}
           {!nada && (
             <HomeAction to="/dia-de-jogo?criar=1"><Dices className="h-3.5 w-3.5" aria-hidden="true" /> Criar dia de jogo</HomeAction>
           )}

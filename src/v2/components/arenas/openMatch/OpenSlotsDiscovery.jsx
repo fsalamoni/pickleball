@@ -14,7 +14,13 @@
  */
 
 import React, { useMemo } from 'react';
+import { useQueries } from '@tanstack/react-query';
 import { Building2 } from 'lucide-react';
+import { arenaQueries } from '@/modules/arenas/hooks/arenaQueries';
+import { useFeatureFlag } from '@/core/lib/FeatureFlagsContext';
+import { FEATURE_FLAG } from '@/core/featureFlags';
+import { useRegionalList } from '@/core/lib/useMyRegion';
+import { RegionForaNote } from '@/v2/components/region/RegionBar';
 import { useAuth } from '@/core/lib/FirebaseAuthContext';
 import { useGlobalOpenSlots, useUserWaitlist } from '@/modules/arenas/hooks/useArenaV3';
 import { useModuleOnInArenas } from '@/modules/arenas/hooks/useArenaModules';
@@ -40,6 +46,15 @@ export default function OpenSlotsDiscovery() {
   // atrás de uma arena que ligou ou desligou o módulo.
   const vagas = openSlotsForDiscovery(vagasQ.data || [], isOnIn);
   const naFila = useMemo(() => new Set(fila.map((f) => f.slot_id)), [fila]);
+  // A vaga não guarda a cidade: ela vem da arena (mesma chave de cache da
+  // página da arena). Só com a Minha região ligada — senão não há o que medir.
+  const idsUnicos = useMemo(() => [...new Set(arenaIds.filter(Boolean))].sort(), [arenaIds]);
+  const regiaoOn = useFeatureFlag(FEATURE_FLAG.MY_REGION);
+  const arenasQ = useQueries({
+    queries: (regiaoOn ? idsUnicos : []).map((id) => ({ ...arenaQueries.arena(id), staleTime: 5 * 60_000 })),
+  });
+  const arenaPorId = new Map(idsUnicos.map((id, i) => [id, arenasQ[i]?.data]));
+  const regional = useRegionalList(vagas, (s) => ({ city: arenaPorId.get(s.arena_id)?.city, state: arenaPorId.get(s.arena_id)?.state }));
 
   if (vagasQ.isError) {
     return (
@@ -50,6 +65,7 @@ export default function OpenSlotsDiscovery() {
     );
   }
   if (vagasQ.isLoading || modulosCarregando || vagas.length === 0) return null;
+  const visiveis = regional.itens;
 
   return (
     <section className="mb-8" data-dica="procura-arenas">
@@ -59,8 +75,9 @@ export default function OpenSlotsDiscovery() {
       <p className="mt-1 text-sm text-gray-500">
         Horários com vaga que as arenas publicaram. Entre direto — não precisa de convite nem de dupla.
       </p>
+      <RegionForaNote regional={regional} nomeItens={['jogo', 'jogos']} className="mt-1 block text-sm" />
       <div className="mt-4 grid gap-4 sm:grid-cols-2">
-        {vagas.slice(0, LIMITE).map((s) => (
+        {visiveis.slice(0, LIMITE).map((s) => (
           <OpenSlotCard
             key={s.id} slot={s} meuNivel={level} mostrarArena
             jaEstou={Boolean(user?.uid) && (s.participants || []).includes(user.uid)}

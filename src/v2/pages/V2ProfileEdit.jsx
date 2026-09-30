@@ -74,6 +74,7 @@ export default function V2ProfileEdit() {
   const [communityBusy, setCommunityBusy] = useState(false);
   const [communityErrors, setCommunityErrors] = useState({});
   const essencial = useFeatureFlag(FEATURE_FLAG.ESSENTIAL_PROFILE);
+  const regiaoOn = useFeatureFlag(FEATURE_FLAG.MY_REGION);
   const [coachBusy, setCoachBusy] = useState(false);
   const [levelBusy, setLevelBusy] = useState(false);
   const [formMode, setFormMode] = useState(null);
@@ -411,6 +412,13 @@ export default function V2ProfileEdit() {
               </V2Field>
             </div>
           </div>
+          {regiaoOn && (
+            <p className="mt-2 text-xs leading-5 text-gray-500">
+              A cidade também é o centro da <strong className="font-semibold text-ink">sua região</strong>: dias de jogo,
+              torneios e arenas aparecem a partir dela.{' '}
+              <Link to="/configuracoes#minha-regiao" className="font-semibold text-ink underline">Escolher raio ou outro lugar</Link>
+            </p>
+          )}
           <V2Field label="Endereço" className="mt-4" hint="Só é exibido se você marcar como público abaixo.">
             <V2Input value={address} onChange={(e) => setAddress(e.target.value)} maxLength={160} />
           </V2Field>

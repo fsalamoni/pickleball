@@ -195,6 +195,10 @@ export function reachMatchesRegion(reach, region) {
   const st = uf(reach.state);
   if (region.mode === BANNER_REGION.STATE) return st === uf(region.state);
   if (mode === PROMO_REACH.ESTADO) return st === uf(region.state);
+  // CIDADE × a Minha região com raio: o juiz da região decide.
+  if (region.mode === BANNER_REGION.NEAR) {
+    return typeof region.dentro === 'function' && region.dentro({ city: reach.city, state: st });
+  }
   // CIDADE × (cidade | outra cidade)
   const alvo = region.key || cityKey(region.city, region.state);
   if (!uf(region.state)) return normalizeLocality(reach.city) === normalizeLocality(region.city);

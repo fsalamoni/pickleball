@@ -5,6 +5,10 @@
  * embaixo, os com inscrição aberta DE VERDADE (status + prazo), perto dela
  * primeiro. Nenhum encerrado, nenhum com prazo vencido — é a régua de
  * `freshness.js`.
+ *
+ * Com a MINHA REGIÃO (flag `my_region`), os abertos são os da região da
+ * pessoa (a cidade e o raio que ela escolheu), com a distância ao lado e o
+ * que ficou de fora dito — nunca escondido calado.
  */
 import React, { useMemo } from 'react';
 import { MapPin, Trophy } from 'lucide-react';
@@ -14,6 +18,9 @@ import { TOURNAMENT_PHASE, TOURNAMENT_PHASE_LABEL } from '@/modules/home/domain/
 import {
   localTexto, myCurrentTournaments, openTournamentsForMe, periodoTexto, prazoTexto,
 } from '@/modules/home/domain/homeTournaments';
+import { useRegionalList } from '@/core/lib/useMyRegion';
+import { distanceLabel } from '@/core/domain/region';
+import RegionBar, { RegionEmptyHint } from '@/v2/components/region/RegionBar';
 import { HomeAction, HomeEmpty, HomeRow, HomeSection } from './HomeSection';
 
 const LIMITE_ABERTOS = 4;
@@ -29,7 +36,9 @@ export default function HomeTournamentsSection({ reason, hoje, perfil, meus = []
     [publicos.data, hoje, perfil, inscritos],
   );
   const meusAtuais = useMemo(() => myCurrentTournaments(meus, hoje), [meus, hoje]);
-  const naoInscrito = abertos.filter((a) => !a.inscrito);
+  const naoInscritoTodos = useMemo(() => abertos.filter((a) => !a.inscrito), [abertos]);
+  const regional = useRegionalList(naoInscritoTodos, (a) => ({ city: a.tournament.city, state: a.tournament.state }));
+  const naoInscrito = regional.itens;
 
   return (
     <HomeSection id="torneios" icon={Trophy} title="Torneios" reason={reason} action={{ to: '/torneios', label: 'Ver todos' }}>
@@ -58,7 +67,8 @@ export default function HomeTournamentsSection({ reason, hoje, perfil, meus = []
 
         <div>
           <p className="mb-1.5 text-xs font-bold uppercase tracking-wider text-gray-400">Inscrições abertas</p>
-          {publicos.isLoading ? (
+          <RegionBar regional={regional} compacta className="mb-2" nomeItens={['torneio', 'torneios']} />
+          {publicos.isLoading || regional.carregando ? (
             <V2Skeleton lines={3} />
           ) : publicos.isError ? (
             <V2ErrorState
@@ -67,6 +77,8 @@ export default function HomeTournamentsSection({ reason, hoje, perfil, meus = []
               description="Pode haver torneio com inscrição aberta — tente de novo."
               onRetry={publicos.refetch}
             />
+          ) : naoInscrito.length === 0 && regional.fora > 0 ? (
+            <RegionEmptyHint regional={regional} oque="Nenhum torneio com inscrição aberta" />
           ) : naoInscrito.length === 0 ? (
             <HomeEmpty
               icon={Trophy}
@@ -79,22 +91,22 @@ export default function HomeTournamentsSection({ reason, hoje, perfil, meus = []
             >
               {abertos.length > 0
                 ? 'Você já está inscrito em todos os torneios com inscrição aberta agora.'
-                : 'Nenhum torneio com inscrição aberta agora. Novos torneios aparecem aqui assim que abrirem.'}
+                : `Nenhum torneio com inscrição aberta agora${regional.limita ? ` ${regional.frase}` : ''}. Novos torneios aparecem aqui assim que abrirem.`}
             </HomeEmpty>
           ) : (
             <ul className="space-y-1">
-              {naoInscrito.slice(0, LIMITE_ABERTOS).map(({ tournament: t, perto }) => (
+              {naoInscrito.slice(0, LIMITE_ABERTOS).map((item) => { const { tournament: t, perto } = item; return (
                 <li key={t.id}>
                   <HomeRow
                     to={`/torneios/${t.id}`}
                     icon={perto > 0 ? MapPin : Trophy}
                     title={t.name}
-                    subtitle={[prazoTexto(t, hoje), localTexto(t)].filter(Boolean).join(' · ')}
-                    badge={perto === 2 ? 'Na sua cidade' : perto === 1 ? 'No seu estado' : null}
+                    subtitle={[prazoTexto(t, hoje), localTexto(t), regional.ativa ? distanceLabel(regional.infoDe(item)?.km) : null].filter(Boolean).join(' · ')}
+                    badge={regional.ativa ? null : (perto === 2 ? 'Na sua cidade' : perto === 1 ? 'No seu estado' : null)}
                     badgeTone="acid"
                   />
                 </li>
-              ))}
+              ); })}
             </ul>
           )}
         </div>

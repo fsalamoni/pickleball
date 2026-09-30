@@ -2,6 +2,9 @@ import React, { useMemo, useState } from 'react';
 import { Link } from 'react-router-dom';
 import { Building2, MapPin, Plus, Search, Users } from 'lucide-react';
 import { useClubs, useMyClubs } from '@/modules/clubs/hooks/useClubs';
+import { useRegionalList } from '@/core/lib/useMyRegion';
+import { distanceLabel } from '@/core/domain/region';
+import RegionBar, { RegionEmptyHint } from '@/v2/components/region/RegionBar';
 import {
   V2Avatar,
   V2Badge,
@@ -26,12 +29,19 @@ export default function V2Clubs() {
 
   const myClubIds = useMemo(() => new Set(myClubs.map((c) => c.id)), [myClubs]);
 
-  const filtered = useMemo(() => {
+  const porBusca = useMemo(() => {
     const term = search.trim().toLowerCase();
     return clubs
       .filter((c) => (!term ? true : [c.name, c.city, c.state, c.description].filter(Boolean).join(' ').toLowerCase().includes(term)))
       .sort((a, b) => String(a.name || '').localeCompare(String(b.name || ''), 'pt-BR'));
   }, [clubs, search]);
+  // Minha região: os clubes da região, do mais perto ao mais longe. Buscar
+  // pelo nome é procurar em todo lugar.
+  const regional = useRegionalList(porBusca, (c) => ({ city: c.city, state: c.state }), { ignorar: Boolean(search.trim()) });
+  const filtered = useMemo(() => {
+    if (!regional.ativa) return regional.itens;
+    return [...regional.itens].sort((a, b) => (regional.infoDe(a)?.km ?? Infinity) - (regional.infoDe(b)?.km ?? Infinity));
+  }, [regional]);
 
   return (
     <div className="mx-auto max-w-[1400px]">
@@ -61,10 +71,14 @@ export default function V2Clubs() {
             consulta falhando, "0" seria mentira. */}
         {!isLoading && !isError && (
           <p className="mt-4 border-t border-gray-100 pt-4 text-sm text-gray-500">
-            <span className="font-bold text-ink">{filtered.length}</span> clube(s) na plataforma.
+            <span className="font-bold text-ink">{filtered.length}</span> clube(s)
+            {regional.limita && !regional.buscando && !regional.ampliado ? ` ${regional.frase}` : ' na plataforma'}.
           </p>
         )}
       </V2Surface>
+
+      {/* Fora da busca (que pode estar recolhida): a região vale para a lista. */}
+      <RegionBar regional={regional} className="-mt-4 mb-6" nomeItens={['clube', 'clubes']} />
 
       {isLoading ? (
         <div className="grid gap-6 sm:grid-cols-2 xl:grid-cols-3">
@@ -80,6 +94,8 @@ export default function V2Clubs() {
             onRetry={() => refetch()}
           />
         </V2Surface>
+      ) : filtered.length === 0 && regional.fora > 0 ? (
+        <RegionEmptyHint regional={regional} oque="Nenhum clube" />
       ) : filtered.length === 0 ? (
         <V2Surface>
           <V2EmptyState
@@ -91,14 +107,21 @@ export default function V2Clubs() {
         </V2Surface>
       ) : (
         <div data-dica="clubes-lista" className="grid gap-6 sm:grid-cols-2 xl:grid-cols-3">
-          {filtered.map((club) => <ClubCard key={club.id} club={club} mine={myClubIds.has(club.id)} />)}
+          {filtered.map((club) => (
+            <ClubCard
+              key={club.id}
+              club={club}
+              mine={myClubIds.has(club.id)}
+              distancia={regional.ativa ? distanceLabel(regional.infoDe(club)?.km) : null}
+            />
+          ))}
         </div>
       )}
     </div>
   );
 }
 
-function ClubCard({ club, mine }) {
+function ClubCard({ club, mine, distancia = null }) {
   const location = locationText(club);
   return (
     <Link
@@ -116,7 +139,7 @@ function ClubCard({ club, mine }) {
       </div>
 
       <div className="mt-4 space-y-2 text-sm text-gray-500">
-        <div className="flex items-center gap-2"><MapPin className="h-4 w-4 shrink-0 text-gray-400" /> {location || 'Cidade não informada'}</div>
+        <div className="flex items-center gap-2"><MapPin className="h-4 w-4 shrink-0 text-gray-400" /> {location || 'Cidade não informada'}{location && distancia ? ` · ${distancia}` : ''}</div>
         <div className="flex items-center gap-2"><Users className="h-4 w-4 shrink-0 text-gray-400" /> {club.member_count || 0} membro(s)</div>
       </div>
 

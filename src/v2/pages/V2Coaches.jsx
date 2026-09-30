@@ -17,6 +17,10 @@ import { useCoaches, useCoach, useUpsertCoachProfile } from '@/modules/coaches/h
 import { useFeatureFlag } from '@/core/lib/FeatureFlagsContext';
 import { FEATURE_FLAG } from '@/core/featureFlags';
 import { cn } from '@/core/lib/utils';
+import { useRegionalList } from '@/core/lib/useMyRegion';
+import { distanceLabel } from '@/core/domain/region';
+import { parsePlaceText } from '@/core/domain/locality';
+import RegionBar, { RegionEmptyHint } from '@/v2/components/region/RegionBar';
 import {
   V2Badge, V2Button, V2EmptyState, V2Field, V2Input, V2Surface, V2Textarea,
   V2Skeleton,
@@ -109,7 +113,7 @@ function CoachForm({ existing, onClose }) {
   );
 }
 
-function CoachCard({ coach }) {
+function CoachCard({ coach, distancia = null }) {
   return (
     <Link to={`/coaches/${coach.id}`} className="block transition-transform hover:scale-[1.01]">
       <V2Surface>
@@ -130,7 +134,7 @@ function CoachCard({ coach }) {
             </div>
             {coach.regions?.length > 0 && (
               <div className="mt-2 flex items-center gap-1 text-xs text-gray-400">
-                <MapPin className="h-3 w-3" /> {coach.regions.join(' · ')}
+                <MapPin className="h-3 w-3" /> {coach.regions.join(' · ')}{distancia ? ` · ${distancia}` : ''}
               </div>
             )}
             {coach.hourly_rate != null && (
@@ -152,12 +156,16 @@ export default function V2Coaches() {
   // Regra: o filtro de cidade/estado começa com a cidade do usuário logado.
   // Latcheado uma vez — se o usuário limpar o campo, mostra todos.
   const cityDefaulted = useRef(false);
+  // Com a MINHA REGIÃO, quem filtra por lugar é ela (cidade + raio, estado…),
+  // e o campo de texto fica para quem quer procurar outro lugar à mão.
+  const regiaoOn = useFeatureFlag(FEATURE_FLAG.MY_REGION);
   useEffect(() => {
+    if (regiaoOn) return;
     if (!cityDefaulted.current && userProfile?.city) {
       setRegion(userProfile.city);
       cityDefaulted.current = true;
     }
-  }, [userProfile?.city]);
+  }, [userProfile?.city, regiaoOn]);
   // Mostra TODOS os professores ativos (não só os "aceitando"); a busca é
   // automática (reativa a region/modality).
   const { data: coaches = [], isLoading, isError: listaFalhou, refetch: recarregarLista } = useCoaches({ region, modality, acceptingOnly: false });
@@ -174,7 +182,7 @@ export default function V2Coaches() {
   const [acceptingOnly, setAcceptingOnly] = useState(false);
   const [sortBy, setSortBy] = useState('relevancia');
 
-  const displayed = useMemo(() => {
+  const porFiltro = useMemo(() => {
     if (!discoveryOn) return coaches;
     const cap = maxPrice === '' ? null : Number(maxPrice);
     let list = coaches.filter((c) => {
@@ -187,6 +195,18 @@ export default function V2Coaches() {
     else if (sortBy === 'preco_desc') list = [...list].sort((a, b) => price(b) - price(a));
     return list;
   }, [discoveryOn, coaches, maxPrice, acceptingOnly, sortBy]);
+  // O professor diz onde atende em texto ("Porto Alegre/RS", "Canoas"): cada
+  // um vira um lugar, e basta um dentro da região. Digitar um lugar no campo
+  // é procurar em todo lugar.
+  const regional = useRegionalList(
+    porFiltro,
+    (c) => (c.regions || []).map((r) => parsePlaceText(r)),
+    { ignorar: Boolean(region.trim()) },
+  );
+  const displayed = useMemo(() => {
+    if (!regional.ativa || (discoveryOn && sortBy !== 'relevancia')) return regional.itens;
+    return [...regional.itens].sort((a, b) => (regional.infoDe(a)?.km ?? Infinity) - (regional.infoDe(b)?.km ?? Infinity));
+  }, [regional, discoveryOn, sortBy]);
 
   if (!isAuthenticated) return <Navigate to="/login" replace />;
 
@@ -253,8 +273,10 @@ export default function V2Coaches() {
         )}
       </V2Surface>
 
+      <RegionBar regional={regional} nomeItens={['professor', 'professores']} />
+
       {/* Lista */}
-      {isLoading ? (
+      {isLoading || regional.carregando ? (
         <V2Skeleton lines={4} />
       ) : listaFalhou ? (
         <V2ErrorState
@@ -262,6 +284,8 @@ export default function V2Coaches() {
           description="A lista não chegou — isso não quer dizer que não haja professores na sua região."
           onRetry={() => recarregarLista()}
         />
+      ) : displayed.length === 0 && regional.fora > 0 ? (
+        <RegionEmptyHint regional={regional} oque="Nenhum professor" />
       ) : displayed.length === 0 ? (
         <V2EmptyState
           icon={GraduationCap}
@@ -278,7 +302,9 @@ export default function V2Coaches() {
           {discoveryOn && (
             <p className="px-1 text-xs text-gray-400">{displayed.length} professor(es)</p>
           )}
-          {displayed.map((c) => <CoachCard key={c.id} coach={c} />)}
+          {displayed.map((c) => (
+            <CoachCard key={c.id} coach={c} distancia={regional.ativa ? distanceLabel(regional.infoDe(c)?.km) : null} />
+          ))}
         </div>
       )}
     </div>

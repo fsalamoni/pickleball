@@ -41,3 +41,11 @@ seção por arquivo). Três regras:
 Banco: **zero**. Só leitura, e o "Personalizar" grava `users.interests` pelo
 caminho de sempre — com o início sob medida ligado, ele abre o seletor dos
 cards e não grava nada (a escolha fica no navegador).
+
+## "Jogar" e a Minha região (2026-09-30)
+
+A seção Jogar usa `usePlayDiscovery` (módulo `games`): os dias de jogo das
+ARENAS passaram a aparecer, e o toque leva para dentro do dia. Com a flag
+`my_region`, Jogar, Torneios, Destaques e Horários da arena seguem a região da
+pessoa (`useRegionalList`, `core/lib/useMyRegion.js`). Ver
+`docs/34-MINHA-REGIAO.md`.

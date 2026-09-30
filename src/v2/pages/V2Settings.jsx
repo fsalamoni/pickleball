@@ -2,7 +2,8 @@
  * V2Settings — Configurações da conta (flag settings_page).
  *
  * Reúne atalhos de conta, a aparência (modo escuro, atrás da flag
- * `dark_mode`), os cards da página inicial (flag `home_cards`) e a exportação
+ * `dark_mode`), a minha região (flag `my_region`), os cards da página inicial
+ * (flag `home_cards`) e a exportação
  * de dados pessoais (LGPD) em JSON.
  * Rota /configuracoes. Aditivo — desligada a flag, redireciona ao perfil.
  */
@@ -28,6 +29,7 @@ import V2PushCard from '@/v2/components/settings/V2PushCard';
 import { ThemeSettingsCard } from '@/v2/components/theme/ThemeSwitcher';
 import { useTheme } from '@/core/lib/ThemeContext';
 import HomeCardsSettingsCard from '@/v2/components/home/cards/HomeCardsSettingsCard';
+import RegionSettingsCard from '@/v2/components/region/RegionSettingsCard';
 import { useHomeCardsOn } from '@/modules/home/hooks/useHomeCards';
 import { useHashScroll } from '@/v2/ui/useHashScroll';
 import DicasSettingsCard from '@/v2/components/dicas/DicasSettingsCard';
@@ -39,8 +41,10 @@ export default function V2Settings() {
   const pushOn = useFeatureFlag(FEATURE_FLAG.PUSH_NOTIFICATIONS);
   const { disponivel: aparenciaOn } = useTheme();
   const inicioOn = useHomeCardsOn();
+  const regiaoOn = useFeatureFlag(FEATURE_FLAG.MY_REGION);
   const { on: dicasOn } = useDicas();
-  // `/configuracoes#pagina-inicial` (o link do "Personalizar" do início) cai no cartão.
+  // `/configuracoes#pagina-inicial` (o link do "Personalizar" do início) e
+  // `/configuracoes#minha-regiao` caem no cartão certo.
   useHashScroll();
   const { user, userProfile, updateUserProfile } = useAuth();
   const { data: registrations = [] } = useMyRegistrations();
@@ -95,7 +99,7 @@ export default function V2Settings() {
     <div className="mx-auto max-w-[720px]">
       <V2PageIntro
         title="Configurações"
-        subtitle={`Conta, ${[aparenciaOn && 'aparência', inicioOn && 'página inicial', dicasOn && 'dicas'].filter(Boolean).map((x) => `${x}, `).join('')}privacidade e seus dados.`}
+        subtitle={`Conta, ${[aparenciaOn && 'aparência', regiaoOn && 'região', inicioOn && 'página inicial', dicasOn && 'dicas'].filter(Boolean).map((x) => `${x}, `).join('')}privacidade e seus dados.`}
       />
 
       <div className="space-y-4">
@@ -112,6 +116,9 @@ export default function V2Settings() {
 
         {/* Aparência: Claro, Escuro ou Automático (flag dark_mode). */}
         <ThemeSettingsCard />
+
+        {/* Minha região: de onde a plataforma mostra o que acontece (flag my_region). */}
+        <RegionSettingsCard />
 
         {/* Página inicial: os cards do início e a ordem (flag home_cards). */}
         <HomeCardsSettingsCard />

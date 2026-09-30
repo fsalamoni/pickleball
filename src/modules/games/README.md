@@ -468,3 +468,16 @@ guardam em lugares diferentes, e converter data com gente ou jogo esconderia
 documentos que seguem no banco.
 
 Ver `docs/25-DIA-DE-JOGO-COMO-MODULO.md` §8.
+
+## Jogos com vaga (2026-09-30)
+
+- `domain/playDiscovery.js` — `buildPlayList`: a lista única de "onde dá para
+  jogar" (dias de jogo públicos do atleta e da ARENA, jogos abertos, convites),
+  do mais cedo ao mais tarde, sem o que já terminou nem o que a pessoa já tem.
+  `gameDayEndsAt`/`gameDayStartsAt`/`gameDayVacanciesLeft`.
+- `hooks/usePlayDiscovery.js` — as leituras (a mesma no início e no
+  Procura-se jogo); `services/gameDayService.js#listUpcomingPublicGameDays`
+  (`visibility == public` + `date IN [30 dias]`, sem índice composto).
+- `domain/gameDayJoin.js` — `joinPanelApplies`: quem vê o "Participar" dentro
+  do dia de jogo. `joinPublicGameDay` delega a `signUpToArenaGameDay` quando o
+  dia é de arena. Ver `docs/34-MINHA-REGIAO.md`.

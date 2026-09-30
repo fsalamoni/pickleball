@@ -31,6 +31,7 @@
 
 import { publicPromos, promoConditions } from './marketing.js';
 import { homeCampaignBanners } from './campaignBanner.js';
+import { normalizeLocality, cityKey, ufOf } from '../../../core/domain/locality.js';
 
 /** 'YYYY-MM-DD' local de um instante (ms). */
 function isoLocal(ms) {
@@ -52,24 +53,52 @@ export const BANNER_REGION = Object.freeze({
   OTHER: 'outra',
   ALL: 'todas',
   UNKNOWN: 'escolher',
+  // A cidade e as vizinhas até N km — vem da MINHA REGIÃO (flag `my_region`);
+  // quem decide se um lugar entra é o juiz da região (`dentro`).
+  NEAR: 'perto',
 });
 
-/** "São Paulo " → "sao paulo". */
-export function normalizeLocality(valor) {
-  return String(valor || '')
-    .normalize('NFD')
-    .replace(/[̀-ͯ]/g, '')
-    .trim()
-    .toLowerCase()
-    .replace(/\s+/g, ' ');
+/**
+ * A MINHA REGIÃO (a da plataforma inteira) traduzida para os banners: com a
+ * flag `my_region`, os destaques seguem a mesma região das outras telas, em
+ * vez de ter um seletor só deles.
+ *
+ * Sem cidade nem estado (a região caiu para "todo lugar" por FALTA de dado),
+ * vale a regra de sempre dos banners: pedir a cidade, não mostrar o país
+ * inteiro. "Todo lugar" ESCOLHIDO é todo lugar.
+ *
+ * @param {object} region `resolveRegion`
+ * @param {(place: object) => { dentro: boolean }} juiz `regionMatcher`
+ */
+export function bannerRegionFromMyRegion(region, juiz) {
+  if (!region) return { mode: BANNER_REGION.UNKNOWN };
+  const estado = uf(region.uf);
+  switch (region.modo) {
+    case 'todos':
+      return region.falta ? { mode: BANNER_REGION.UNKNOWN } : { mode: BANNER_REGION.ALL };
+    case 'estado':
+      return estado ? { mode: BANNER_REGION.STATE, state: estado } : { mode: BANNER_REGION.UNKNOWN };
+    case 'cidade':
+      return { mode: BANNER_REGION.CITY, city: region.cidade, state: estado, key: cityKey(region.cidade, estado) };
+    case 'raio':
+      return {
+        mode: BANNER_REGION.NEAR,
+        city: region.cidade,
+        state: estado,
+        key: cityKey(region.cidade, estado),
+        raioKm: region.raioKm,
+        dentro: (place) => Boolean(juiz?.(place || {})?.dentro),
+      };
+    default:
+      return { mode: BANNER_REGION.UNKNOWN };
+  }
 }
 
-const uf = (v) => String(v || '').trim().toUpperCase().slice(0, 2);
+// A comparação de cidade é do NÚCLEO (fonte única, usada também pela
+// "Minha região" da plataforma inteira). Reexportada para quem já importa daqui.
+export { normalizeLocality, cityKey };
 
-/** A chave de uma cidade: "RS|porto alegre". */
-export function cityKey(city, state) {
-  return `${uf(state)}|${normalizeLocality(city)}`;
-}
+const uf = ufOf;
 
 /**
  * A região que vale, a partir da escolha guardada (`preference`) e do perfil.
@@ -106,6 +135,8 @@ export function arenaInRegion(arena, region) {
       return true;
     case BANNER_REGION.STATE:
       return Boolean(region.state) && uf(arena.state) === region.state;
+    case BANNER_REGION.NEAR:
+      return typeof region.dentro === 'function' && region.dentro({ city: arena.city, state: arena.state });
     case BANNER_REGION.CITY:
     case BANNER_REGION.OTHER: {
       const alvo = region.key || cityKey(region.city, region.state);
@@ -216,6 +247,9 @@ export function regionLabel(region) {
   if (region.mode === BANNER_REGION.STATE) return `no ${region.state}`;
   if (region.mode === BANNER_REGION.CITY || region.mode === BANNER_REGION.OTHER) {
     return `em ${region.city}${region.state ? ` (${region.state})` : ''}`;
+  }
+  if (region.mode === BANNER_REGION.NEAR) {
+    return `em ${region.city}${region.state ? ` (${region.state})` : ''} e até ${region.raioKm} km`;
   }
   return '';
 }
