@@ -87,3 +87,31 @@ export function hashDaAncora({ pathname, search } = {}) {
     hash: ANCORA_VALIDA.test(ancora) ? `#${ancora}` : '',
   };
 }
+
+/**
+ * Para onde a tela pode NAVEGAR a partir do link de um aviso — ou `null`.
+ *
+ * A regra de `notifications` já recusa link que não seja caminho interno, mas
+ * há avisos gravados pelo servidor (Admin SDK, que não passa pela regra) e
+ * avisos antigos, anteriores à regra. E o `navigate` do react-router 6 ainda
+ * tem um redirecionamento aberto conhecido por barra invertida
+ * (GHSA-wrjc-x8rr-h8h6, corrigido só na v7): `/\evil.com` sai do site.
+ *
+ * Então a tela confere de novo, do jeito mais estreito possível: um caminho
+ * que começa com UMA barra, sem barra invertida, sem `//` no início, sem
+ * esquema (`javascript:`) e sem caractere de controle. `#secao` segue valendo
+ * — é a âncora de sempre.
+ *
+ * @param {unknown} link
+ * @returns {string|null}
+ */
+export function destinoDeAviso(link) {
+  if (typeof link !== 'string') return null;
+  const t = link.trim();
+  if (!t || t.length > 2000) return null;
+  if (!t.startsWith('/') || t.startsWith('//')) return null;
+  if (t.includes('\\')) return null;
+  // eslint-disable-next-line no-control-regex
+  if (/[\u0000-\u001f\u007f]/.test(t)) return null;
+  return t;
+}

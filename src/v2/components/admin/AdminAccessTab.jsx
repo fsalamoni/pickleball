@@ -4,7 +4,7 @@ import {
 } from 'lucide-react';
 import { toast } from 'sonner';
 
-import { V2Surface, V2Button, V2Badge, V2Skeleton, V2Input } from '@/v2/ui/primitives';
+import { V2Surface, V2Button, V2Badge, V2Skeleton, V2Input, V2ErrorState } from '@/v2/ui/primitives';
 import {
   Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription, DialogFooter,
 } from '@/components/ui/dialog';
@@ -35,7 +35,7 @@ import {
  */
 export default function AdminAccessTab() {
   const { user, isPlatformAdmin } = useAuth();
-  const { data: users = [], isLoading } = useAllPlatformUsers({ enabled: isPlatformAdmin });
+  const { data: users = [], isLoading, isError, refetch } = useAllPlatformUsers({ enabled: isPlatformAdmin });
   const revoke = useRevokeAccountPowers();
   const [alvo, setAlvo] = useState(null);
 
@@ -46,6 +46,19 @@ export default function AdminAccessTab() {
   }), [users, user?.uid]);
 
   if (isLoading) return <V2Skeleton lines={6} />;
+  // Sem a lista, "nenhuma conta com poder" seria a pior afirmação possível
+  // numa tela de governança (docs/27-FALHA-NAO-E-VAZIO.md).
+  if (isError) {
+    return (
+      <V2Surface>
+        <V2ErrorState
+          title="Não foi possível carregar as contas"
+          description="Os poderes continuam como estão — só não conseguimos listá-los agora."
+          onRetry={() => refetch()}
+        />
+      </V2Surface>
+    );
+  }
 
   return (
     <div className="space-y-6">

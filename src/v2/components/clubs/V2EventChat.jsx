@@ -9,7 +9,7 @@ import {
   useUpdateEventMessage,
   useDeleteEventMessage,
 } from '@/modules/clubs/hooks/useClubs';
-import { V2Button, V2Skeleton } from '@/v2/ui/primitives';
+import { V2Button, V2ErrorState, V2Skeleton } from '@/v2/ui/primitives';
 
 function dayLabel(ms) {
   if (!ms) return '';
@@ -20,7 +20,7 @@ function dayLabel(ms) {
 
 export default function V2EventChat({ eventId }) {
   const { user } = useAuth();
-  const { data: messages = [], isLoading } = useEventMessages(eventId);
+  const { data: messages = [], isLoading, isError, refetch } = useEventMessages(eventId);
   const send = useSendEventMessage(eventId);
   const update = useUpdateEventMessage(eventId);
   const remove = useDeleteEventMessage(eventId);
@@ -52,6 +52,13 @@ export default function V2EventChat({ eventId }) {
       <div className="flex-1 space-y-2 overflow-y-auto p-4">
         {isLoading ? (
           <div className="space-y-3">{[1, 2, 3].map((i) => <V2Skeleton key={i} className="h-12 w-2/3 rounded-2xl" />)}</div>
+        ) : isError ? (
+          // Falha não é "nenhuma mensagem ainda" (docs/27-FALHA-NAO-E-VAZIO.md).
+          <V2ErrorState
+            title="Não foi possível carregar as mensagens"
+            description="A conversa continua lá — só não conseguimos buscá-la agora."
+            onRetry={() => refetch()}
+          />
         ) : messages.length === 0 ? (
           <p className="py-10 text-center text-sm text-gray-500">Nenhuma mensagem ainda. Comece a conversa com os participantes.</p>
         ) : (

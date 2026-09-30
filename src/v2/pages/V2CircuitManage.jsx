@@ -23,7 +23,7 @@ import {
 import { useMyTournaments } from '@/modules/tournament/hooks/useTournament';
 import { useAllAthletes } from '@/modules/athletes/hooks/useAthletes';
 import {
-  V2Badge, V2Button, V2EmptyState, V2Field, V2Input, V2Select, V2Surface, V2Textarea,
+  V2Badge, V2Button, V2EmptyState, V2ErrorState, V2Field, V2Input, V2Select, V2Surface, V2Textarea,
   V2Skeleton,
 } from '@/v2/ui/primitives';
 
@@ -70,7 +70,7 @@ function CircuitInfo({ circuit, isAdmin, onEdit }) {
 }
 
 function TournamentList({ circuitId, isAdmin }) {
-  const { data: tournaments = [], isLoading } = useCircuitTournaments(circuitId);
+  const { data: tournaments = [], isLoading, isError, refetch } = useCircuitTournaments(circuitId);
   const { data: myTournaments = [] } = useMyTournaments();
   const [adding, setAdding] = useState(false);
   const [tournamentId, setTournamentId] = useState('');
@@ -104,6 +104,20 @@ function TournamentList({ circuitId, isAdmin }) {
   };
 
   if (isLoading) return <V2Skeleton lines={3} />;
+  // Sem a lista, "Vincular torneio" ofereceria de novo o que já está no
+  // circuito — o comando não aparece sobre estado desconhecido.
+  if (isError) {
+    return (
+      <V2Surface>
+        <V2ErrorState
+          inline
+          title="Não foi possível carregar os torneios do circuito"
+          description="Os vínculos continuam lá — só não conseguimos buscá-los agora."
+          onRetry={() => refetch()}
+        />
+      </V2Surface>
+    );
+  }
   return (
     <V2Surface>
       <div className="flex items-center justify-between">
@@ -258,8 +272,22 @@ function CircuitResultsEntry({ circuit, circuitId }) {
 }
 
 function Ranking({ circuitId }) {
-  const { data: ranking = [], isLoading, pointsTable } = useCircuitRanking(circuitId);
+  const {
+    data: ranking = [], isLoading, isError, refetch, pointsTable,
+  } = useCircuitRanking(circuitId);
   if (isLoading) return <V2Skeleton lines={5} />;
+  if (isError) {
+    return (
+      <V2Surface>
+        <V2ErrorState
+          inline
+          title="Não foi possível carregar o ranking do circuito"
+          description="Os resultados continuam registrados — só não conseguimos buscá-los agora."
+          onRetry={() => refetch()}
+        />
+      </V2Surface>
+    );
+  }
   return (
     <V2Surface>
       <h3 className="flex items-center gap-1.5 font-display text-base font-bold text-ink">
@@ -359,7 +387,9 @@ function EditCircuitModal({ circuit, onClose }) {
 export default function V2CircuitManage() {
   const { circuitId } = useParams();
   const { user, isAuthenticated } = useAuth();
-  const { data: circuit, isLoading } = useCircuit(circuitId);
+  const {
+    data: circuit, isLoading, isError, refetch,
+  } = useCircuit(circuitId);
   const { data: myCircuits = [] } = useMyCircuits();
   const isAdmin = useMemo(() => {
     if (!user || !circuit) return false;
@@ -371,6 +401,17 @@ export default function V2CircuitManage() {
 
   if (!isAuthenticated) return <Navigate to="/login" replace />;
   if (isLoading) return <div className="p-4"><V2Skeleton lines={6} /></div>;
+  // Falha não é "circuito não encontrado — confira o link": o link está certo.
+  if (isError) return (
+    <div className="p-4">
+      <V2ErrorState
+        title="Não foi possível carregar o circuito"
+        description="O circuito continua lá — só não conseguimos buscá-lo agora."
+        onRetry={() => refetch()}
+      />
+      <Link to="/circuits" className="mt-3 inline-block text-sm font-bold text-emerald-700">← Ver circuitos</Link>
+    </div>
+  );
   if (!circuit) return (
     <div className="p-4">
       <V2EmptyState icon={Trophy} title="Circuito não encontrado" description="Confira o link ou volte para a lista." />

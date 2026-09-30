@@ -424,3 +424,107 @@ criar nem confirmar pedido) e métricas (erro no núcleo, aviso nas partes).
 **Zero.** Nenhuma coleção, campo, índice, regra, função ou migração. Nenhum
 dado lido ou gravado de forma diferente — as mudanças decidem só o que a tela
 mostra e quais comandos ela oferece.
+
+---
+
+## 11. A plataforma inteira (varredura de 2026-09-30)
+
+### 11.1 A varredura ainda tinha porta
+
+A Onda BA trocou a lista à mão pela varredura, e a Onda BP a levou à arena, ao
+professor e às reservas. Ficava de fora **o resto da plataforma**: clubes,
+chat, rankings, comunidade, circuitos, busca, aulas do aluno, parceiros e o
+painel admin. O `describe` **"a varredura na plataforma inteira"** de
+`falhaNaoEVazio.test.js` passou a varrer
+**`src/v2`, `src/modules`, `src/pages` e `src/components` inteiros** (mais de
+350 arquivos), com as isenções de sempre — motivo escrito, conferido por teste.
+
+### 11.2 🐞 O que afirmava uma coisa falsa
+
+Conferido **no navegador**, com as leituras negadas no emulador e a mesma
+rodada contra a `main` (A/B): na `main`, **oito telas** afirmavam o vazio
+numa falha; na branch, nenhuma.
+
+- **Aulas do aluno** (`V2StudentLessons`): *"Nenhuma aula agendada"* — a
+  pessoa deixava de ir à aula marcada;
+- **Encontrar jogadores** (`V2FindPlayers`): *"Você ainda não tem rating"* a
+  quem tem;
+- **Rankings** (nacional, duplas, 2.0–8.0), **clubes**, **atletas** (com
+  *"0 atleta(s) na comunidade"* — a contagem agora só sai com a lista na mão,
+  nem carregando), **circuitos**, **busca** (falha total vira erro; falha de
+  UMA fonte vira *"Resultados incompletos"*), **parceiros** e **parceiros no
+  admin** (os números viram "—");
+- **Chat**: *"Nenhuma conversa"* e a conversa aberta em branco. As assinaturas
+  em tempo real (`onSnapshot`) não têm `refetch`: `useConversations`,
+  `useMessages` e `useNotifications` ganharam `isError` e **`retry`**, que
+  assina de novo — a assinatura que falha está encerrada;
+- **Sino de avisos**: *"Nenhum aviso"* com os avisos lá;
+- **Clube**: pedidos de entrada, eventos, fóruns, tópico (*"Tópico não
+  encontrado"*), chat do evento, participantes (com **Participar/Sair** e
+  **Convidar** escondidos enquanto não se sabe quem já está) e o convite de
+  membros — que, com uma das três consultas falhando, **oferecia convidar quem
+  já é membro**;
+- **Circuito** (`V2CircuitManage`): *"Circuito não encontrado"* e "Vincular
+  torneio" sobre a lista que não carregou;
+- **Tela inicial clássica** (`V2Dashboard`): *"Torneios ativos 0"* e *"Nenhum
+  torneio em contexto ainda"* com **Criar torneio** — o convite ao duplicado.
+  Agora "—", o motivo e **Tentar de novo**;
+- **Perfil público do atleta**: *"Atleta não encontrado — o perfil não existe
+  ou não está mais disponível"*, e com o histórico falhando, **"0 torneios,
+  0 jogos"**.
+
+### 11.3 🐞 A família que a varredura não via: o HOOK que engole a falha
+
+Duas das oito telas **tratavam** `isError` — e mentiam assim mesmo. A falha
+nem chegava a elas: o `queryFn` trocava o erro por um vazio que parecia
+resposta.
+
+```js
+// useFeed (antes)
+listPublicTournaments().catch(() => []),
+listOpenGames().catch(() => []),
+// useAthleteProfile (antes)
+getAthlete(uid).catch(() => null),   // ⇒ "Atleta não encontrado"
+```
+
+A correção é `Promise.allSettled`: o que é essencial **falha** a consulta; o
+que é parte vem marcado (`feedDasFontes` devolve `{ items, incompleto }`; o
+perfil devolve `historicoFalhou`) e a tela diz o que ficou de fora. O
+`describe` **"nenhum hook de consulta engole a falha"** reprova **qualquer** `.catch(() => [] | null | ({}))` em
+`modules/*/hooks` e em `src/v2` — e acusa, sim, o código da `main`.
+
+> Nos **serviços** o mesmo desenho aparece dezenas de vezes, quase sempre de
+> propósito (a lista de gestores a avisar, o nível para equilibrar um sorteio).
+> O critério é o do resto deste documento: o vazio vira **afirmação** ou
+> **comando**? Foi o caso de `adoptManyCatalogToArena` — com a lista dos já
+> adotados falhando, "nenhum adotado" fazia o lote **gravar de novo tudo o que
+> a arena já tinha no Mercado**. Agora não grava nada e diz por quê.
+> `arenaOccupancy` segue com os seus `catch` de propósito (fonte opcional:
+> uma coleção que o atleta não lê não pode travar a reserva dele).
+
+### 11.4 Como a verificação foi feita (e o que ela ensinou)
+
+- **Regras de teste negando tudo** no emulador (menos perfil, flags e
+  consentimentos), para cada tela enfrentar uma falha REAL de permissão;
+- a mesma rodada contra a **`main`**, num `git worktree`, para separar o que
+  a branch corrigiu do que já era assim;
+- e contra o **build de produção** (`vite build` + `vite preview`).
+
+Dois tropeços que valem para a próxima vez:
+
+1. Em **desenvolvimento**, com as leituras negadas, o Firestore dispara
+   `INTERNAL ASSERTION FAILED: Unexpected state (ID: ca9)` e o `/chat` cai no
+   "Algo deu errado" — **também na `main`**. É o `StrictMode` montando e
+   desmontando cada `onSnapshot` duas vezes em sequência, o que expõe um
+   defeito do SDK (`pendingResponses >= 0`). No build de produção: **zero**
+   erros de página. Não é regressão, e não é o que o usuário vê.
+2. O emulador **recarrega o arquivo de regras só para o banco `(default)`**.
+   O banco nomeado (`pickleball`) recebe regras novas pela API do emulador:
+   `PUT /emulator/v1/projects/<projeto>/databases/pickleball:securityRules`.
+   Foi assim que se provou que **"Tentar de novo" recupera de verdade** —
+   abre negado, libera, clica, e a tela volta (chat incluído).
+
+### 11.5 Impacto no banco
+
+**Zero.** Nenhuma coleção, campo, índice, regra, função ou migração. O lote
+do catálogo passou a gravar **menos** (nada, quando não consegue conferir).

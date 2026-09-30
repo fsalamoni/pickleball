@@ -16,7 +16,7 @@ import {
   useAffiliateLinks, useCreateAffiliateLink, useUpdateAffiliateLink, useDeleteAffiliateLink,
 } from '@/modules/partners/hooks/useAffiliates';
 import {
-  V2Badge, V2Button, V2Field, V2Input, V2PageIntro, V2SectionHeader, V2Select, V2Surface, V2Textarea, V2Toggle,
+  V2Badge, V2Button, V2ErrorState, V2Field, V2Input, V2PageIntro, V2SectionHeader, V2Select, V2Surface, V2Textarea, V2Toggle,
 } from '@/v2/ui/primitives';
 
 const EMPTY = { title: '', url: '', description: '', category: 'other', image_url: '', active: true, sort_order: 0 };
@@ -24,7 +24,7 @@ const EMPTY = { title: '', url: '', description: '', category: 'other', image_ur
 export default function V2AdminPartners() {
   const enabled = true;
   const { isPlatformAdmin } = useAuth();
-  const { data: links = [], isLoading } = useAffiliateLinks();
+  const { data: links = [], isLoading, isError, refetch } = useAffiliateLinks();
   const create = useCreateAffiliateLink();
   const update = useUpdateAffiliateLink();
   const remove = useDeleteAffiliateLink();
@@ -69,9 +69,10 @@ export default function V2AdminPartners() {
       <V2PageIntro title="Parceiros e afiliados" subtitle="Cadastre e gerencie links de afiliado e patrocinadores." />
 
       <div className="mb-6 grid grid-cols-2 gap-4 md:grid-cols-3">
-        <StatMini label="Total" value={links.length} />
-        <StatMini label="Ativos" value={activeCount} />
-        <StatMini label="Inativos" value={links.length - activeCount} />
+        {/* Número desconhecido é "—", nunca zero. */}
+        <StatMini label="Total" value={isError ? '—' : links.length} />
+        <StatMini label="Ativos" value={isError ? '—' : activeCount} />
+        <StatMini label="Inativos" value={isError ? '—' : links.length - activeCount} />
       </div>
 
       <V2Surface className="mb-6">
@@ -107,6 +108,14 @@ export default function V2AdminPartners() {
         <V2SectionHeader eyebrow="Inventário" title="Parceiros cadastrados" titleClassName="text-lg" />
         {isLoading ? (
           <div className="mt-4 space-y-2">{[1, 2, 3].map((i) => <div key={i} className="h-20 animate-pulse rounded-2xl bg-gray-100" />)}</div>
+        ) : isError ? (
+          <V2ErrorState
+            inline
+            className="mt-4"
+            title="Não foi possível carregar os parceiros"
+            description="O cadastro continua lá — só não conseguimos buscá-lo agora."
+            onRetry={() => refetch()}
+          />
         ) : links.length === 0 ? (
           <p className="mt-4 text-sm text-gray-500">Nenhum parceiro cadastrado ainda.</p>
         ) : (

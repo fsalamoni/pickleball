@@ -381,8 +381,6 @@ describe('⭐ a varredura na arena, no professor e nas reservas', () => {
    * Isenções — cada uma com o MOTIVO. Mesma exigência da varredura acima.
    */
   const ISENTOS = new Map([
-    ['src/modules/arenas/components/PricingEditor.jsx',
-      'as regras de preço vêm do documento da arena recebido por props; o único hook é o de salvar'],
     ['src/v2/components/arenas/V2ArenaEditors.jsx',
       'as regras de preço vêm do documento da arena recebido por props; o único hook é o de salvar'],
   ]);
@@ -451,5 +449,139 @@ describe('⭐ a varredura na tela inicial e na divulgação', () => {
     const mentem = telasQueMentemNoVazio(arquivos);
     expect(mentem, `estas telas afirmam que algo não existe sem saber se a consulta FALHOU:\n  ${mentem.join('\n  ')}`)
       .toEqual([]);
+  });
+});
+
+/**
+ * A PLATAFORMA INTEIRA (varredura de 2026-09-30).
+ *
+ * As varreduras acima têm escopo: dia de jogo e torneio, arena e professor,
+ * tela inicial. Fora delas a classe continuava viva em 30 telas — e com as
+ * mesmas consequências de sempre, só que em lugares que ninguém tinha olhado:
+ * *"Nenhuma aula agendada"* fazia o aluno não ir à aula; *"O ranking ainda não
+ * foi calculado"* e *"Você ainda não tem rating"* contradiziam a pessoa;
+ * *"Nenhum clube — crie o primeiro"*, *"Nenhum evento planejado"* e *"Nenhum
+ * tópico ainda"* convidavam a DUPLICAR; *"Nenhuma conta com poder de
+ * administrador"* afirmava o impossível numa tela de governança; e, no convite
+ * a membros do clube, a lista de "disponíveis" (atletas − membros − convidados)
+ * ofereceria convidar quem já está no clube.
+ *
+ * Este guarda fecha a classe na raiz: examina TODO componente do aplicativo,
+ * não um escopo. Tela nova entra no exame por existir.
+ */
+describe('⭐ a varredura na plataforma inteira', () => {
+  /**
+   * Isenções — cada uma com o MOTIVO. O critério é o de sempre: a frase leva
+   * alguém a AGIR (criar de novo, deixar de ir, desconfiar da plataforma)?
+   * Se leva, a tela não se isenta.
+   */
+  const ISENTOS_NA_PLATAFORMA = new Map([
+    ['src/v2/components/arenas/V2ArenaEditors.jsx',
+      'as regras de preço vêm do documento da arena recebido por props; o único hook é o de salvar'],
+    ['src/v2/components/dicas/GuiaEmAndamento.jsx',
+      'o texto fala do ALVO do guia na tela (catálogo estático); o único dado vem do DOM, não de consulta'],
+    ['src/v2/components/dicas/PainelDeDicas.jsx',
+      '"nenhum guia com essas palavras" é busca num catálogo estático, que não pode falhar'],
+    ['src/v2/components/settings/V2PushCard.jsx',
+      'a frase é um toast DEPOIS de a pessoa pedir para ativar o push, não um estado vazio de tela'],
+    ['src/v2/components/tournament/TeamConfrontationDialogs.jsx',
+      'recebe a escalação por props — quem consulta (e trata a falha) é a tela de cima'],
+    ['src/v2/components/tournament/V2Gallery.jsx',
+      'fotos: "nenhuma foto ainda" não induz ação nenhuma nem arrisca dado'],
+    ['src/modules/tournament/components/TournamentGallery.jsx',
+      'fotos: mesmo caso do V2Gallery (página pública do torneio)'],
+    ['src/modules/tournament/components/TournamentAdminTab.jsx',
+      'a frase é um toast DEPOIS de uma busca explícita por e-mail, não um estado vazio de tela'],
+    ['src/v2/pages/V2JoinTournament.jsx',
+      'toast após o envio de um código: a pessoa acabou de agir e o erro real tem catch próprio'],
+    ['src/v2/pages/V2LegalDocument.jsx',
+      'o documento vem do catálogo estático de documentos legais; "não encontrado" é rota que não existe'],
+    ['src/v2/pages/V2Login.jsx',
+      '"Ainda não tem conta?" é convite de cadastro, não afirmação sobre dado consultado'],
+    ['src/v2/pages/V2NotFound.jsx',
+      'a página 404 afirma que a ROTA não existe — é exatamente o que ela é'],
+    ['src/v2/pages/V2Achievements.jsx',
+      'atrás de gamification_v2 (desligada); os hooks derivados não expõem erro — tratar ao retomar a gamificação (docs/FUTURO/GAMIFICACAO)'],
+    ['src/v2/pages/V2PublicAchievements.jsx',
+      'atrás de gamification_v2 (desligada); mesmo caso de V2Achievements — tratar ao retomar a gamificação'],
+  ]);
+
+  const todasAsTelas = () => [...new Set([
+    ...varrer('src/v2', (c) => c.endsWith('.jsx') && !/\.test\.jsx$/.test(c) && !/\.runtime\./.test(c)),
+    ...varrer('src/modules', (c) => c.endsWith('.jsx') && !/\.test\.jsx$/.test(c) && !/\.runtime\./.test(c)),
+    ...varrer('src/pages', (c) => c.endsWith('.jsx') && !/\.test\.jsx$/.test(c)),
+    ...varrer('src/components', (c) => c.endsWith('.jsx') && !/\.test\.jsx$/.test(c)),
+  ])];
+
+  it('⭐ nenhuma tela do aplicativo afirma vazio sem tratar falha', () => {
+    const arquivos = todasAsTelas();
+    expect(arquivos.length, 'a varredura não encontrou arquivo nenhum — o filtro quebrou')
+      .toBeGreaterThan(350);
+    const mentem = telasQueMentemNoVazio(arquivos).filter((c) => !ISENTOS_NA_PLATAFORMA.has(c));
+    expect(mentem, `estas telas afirmam que algo não existe sem saber se a consulta FALHOU:\n  ${mentem.join('\n  ')}\n\nCorrija com isError + <V2ErrorState onRetry> (docs/27-FALHA-NAO-E-VAZIO.md), ou justifique em ISENTOS_NA_PLATAFORMA.`)
+      .toEqual([]);
+  });
+
+  it('⭐ toda isenção tem motivo escrito, e nenhuma sobra por acaso', () => {
+    const mentiriam = new Set(telasQueMentemNoVazio(todasAsTelas()));
+    for (const [caminho, motivo] of ISENTOS_NA_PLATAFORMA) {
+      expect(existsSync(caminho), `isenção aponta para arquivo que não existe: ${caminho}`).toBe(true);
+      expect(String(motivo).length, `isenção sem motivo de verdade: ${caminho}`).toBeGreaterThan(30);
+      // Isenção que o detector já não acusa é lixo: esconderia a próxima regressão.
+      expect(mentiriam.has(caminho), `isenção sobrando (a tela já trata a falha): ${caminho}`).toBe(true);
+    }
+  });
+
+  it('⭐ o aluno não é mandado embora da aula numa falha', () => {
+    const src = semComentarios(ler('src/v2/pages/V2StudentLessons.jsx'));
+    const iErro = src.indexOf('isError ?');
+    const iVazio = src.indexOf('Nenhuma aula agendada');
+    expect(iErro, 'a lista de aulas não trata a falha').toBeGreaterThan(-1);
+    expect(iErro, 'a falha tem de ser decidida ANTES do vazio').toBeLessThan(iVazio);
+  });
+
+  it('⭐ o convite a membros do clube não oferece quem já é membro', () => {
+    const src = semComentarios(ler('src/v2/components/clubs/V2ClubAdmin.jsx'));
+    // A lista de disponíveis depende das TRÊS consultas; qualquer uma
+    // falhando esconde os convites.
+    expect(src).toMatch(/atletasQ\.isError \|\| membrosQ\.isError \|\| convitesQ\.isError/);
+    expect(src).toMatch(/inviteMany\.isPending \|\| falhou/);
+  });
+});
+
+
+/**
+ * ⭐ O HOOK também pode mentir — e a varredura por tela não o vê.
+ *
+ * Verificado no navegador (varredura de 2026-09-30, com as leituras negadas
+ * no emulador): a Comunidade dizia "Nenhuma atividade recente" e o perfil
+ * público dizia "Atleta não encontrado — o perfil não existe", mesmo com as
+ * telas tratando `isError`. A falha nem chegava a elas: o `queryFn` engolia o
+ * erro com `.catch(() => [])` / `.catch(() => null)` e devolvia um VAZIO que
+ * parecia resposta. Consulta que falha tem de FALHAR (ou devolver o que veio
+ * marcado como incompleto — `feedDasFontes`).
+ */
+describe('⭐ nenhum hook de consulta engole a falha', () => {
+  const ENGOLE = /\.catch\(\s*\(\s*\w*\s*\)\s*=>\s*(\[\s*\]|null|undefined|\(\s*\{\s*\}\s*\))\s*\)/;
+  const hooks = () => [
+    ...varrer('src/modules', (c) => /\/hooks\/[^/]+\.jsx?$/.test(c) && !/\.test\./.test(c)),
+    ...varrer('src/v2', (c) => /\.(jsx?)$/.test(c) && !/\.test\.|\.runtime\./.test(c)),
+  ];
+
+  it('a varredura encontrou os hooks (senão este teste não prova nada)', () => {
+    expect(hooks().length).toBeGreaterThan(150);
+  });
+
+  it('nenhum hook nem tela troca a falha de uma leitura por um vazio', () => {
+    const achados = hooks().filter((c) => ENGOLE.test(semComentarios(ler(c))));
+    expect(achados, `troque o .catch por Promise.allSettled e diga o que falhou:\n  ${achados.join('\n  ')}`)
+      .toEqual([]);
+  });
+
+  it('o detector reconhece as formas de engolir (e não acusa um catch que avisa)', () => {
+    expect(ENGOLE.test('listX().catch(() => [])')).toBe(true);
+    expect(ENGOLE.test('getY(uid).catch(() => null)')).toBe(true);
+    expect(ENGOLE.test('f().catch((err) => ({}))')).toBe(true);
+    expect(ENGOLE.test("f().catch((err) => logger.warn('x', err))")).toBe(false);
   });
 });

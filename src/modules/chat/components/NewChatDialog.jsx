@@ -31,7 +31,7 @@ import { toMember } from '@/modules/chat/domain/conversations';
  */
 export default function NewChatDialog({ open, onOpenChange, onConfirm, excludeIds = [], mode = 'new', busy = false }) {
   const { user } = useAuth();
-  const { data: athletes = [], isLoading } = useAthletes();
+  const { data: athletes = [], isLoading, isError, refetch } = useAthletes();
   const [search, setSearch] = useState('');
   const [selected, setSelected] = useState({});
   const [title, setTitle] = useState('');
@@ -137,6 +137,14 @@ export default function NewChatDialog({ open, onOpenChange, onConfirm, excludeId
             {isLoading ? (
               <div className="space-y-2 p-2">
                 {[1, 2, 3].map((i) => <Skeleton key={i} className="h-12 rounded-lg" />)}
+              </div>
+            ) : isError ? (
+              // Falha não é "não há outros atletas no diretório".
+              <div role="alert" className="px-3 py-6 text-center text-sm text-amber-800">
+                <p>Não foi possível carregar os atletas agora.</p>
+                <Button type="button" variant="outline" size="sm" className="mt-3" onClick={() => refetch()}>
+                  Tentar de novo
+                </Button>
               </div>
             ) : candidates.length === 0 ? (
               <p className="px-3 py-8 text-center text-sm text-gray-500">

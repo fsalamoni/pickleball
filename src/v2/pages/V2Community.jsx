@@ -5,6 +5,7 @@ import { useFeed } from '@/modules/social/hooks/useFeed';
 import {
   V2Badge,
   V2EmptyState,
+  V2ErrorState,
   V2PageIntro,
   V2Skeleton,
   V2Surface,
@@ -26,8 +27,13 @@ function feedTarget(item) {
   return id ? `/torneios/${id}` : (item.link || '/');
 }
 
+const SEM_ITENS = [];
+
 export default function V2Community() {
-  const { data: items = [], isLoading } = useFeed();
+  const { data, isLoading, isError, refetch } = useFeed();
+  const items = data?.items ?? SEM_ITENS;
+  // Uma das fontes falhou: o que veio aparece, mas o vazio não pode ser afirmado.
+  const incompleto = Boolean(data?.incompleto);
 
   return (
     <div className="mx-auto max-w-[900px]">
@@ -37,6 +43,14 @@ export default function V2Community() {
         <div className="space-y-3">
           {[1, 2, 3, 4].map((i) => <V2Skeleton key={i} className="h-24 rounded-3xl" />)}
         </div>
+      ) : isError || (incompleto && items.length === 0) ? (
+        <V2Surface>
+          <V2ErrorState
+            title="Não foi possível carregar a comunidade"
+            description="As novidades continuam lá — só não conseguimos buscá-las agora."
+            onRetry={() => refetch()}
+          />
+        </V2Surface>
       ) : items.length === 0 ? (
         <V2Surface>
           <V2EmptyState
@@ -47,6 +61,14 @@ export default function V2Community() {
         </V2Surface>
       ) : (
         <div className="space-y-3">
+          {incompleto && (
+            <V2ErrorState
+              inline
+              title="Parte das novidades não carregou"
+              description="Mostramos o que chegou — tente de novo para ver o resto."
+              onRetry={() => refetch()}
+            />
+          )}
           {items.map((item) => {
             const Icon = itemIcon(item.type);
             return (

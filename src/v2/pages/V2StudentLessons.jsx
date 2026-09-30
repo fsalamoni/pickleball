@@ -24,7 +24,7 @@ import { lessonCouponLine } from '@/modules/promo/domain/lessonCoupon';
 import ConfirmDialog from '@/components/ConfirmDialog';
 import { MyArenaEnrollments } from '@/v2/components/arenas/classes/MyArenaClasses';
 import {
-  V2Badge, V2EmptyState, V2Skeleton, V2Surface,
+  V2Badge, V2EmptyState, V2ErrorState, V2Skeleton, V2Surface,
 } from '@/v2/ui/primitives';
 
 const WEEKDAY_SHORT = ['Dom', 'Seg', 'Ter', 'Qua', 'Qui', 'Sex', 'Sáb'];
@@ -101,7 +101,7 @@ function PackageBalance({ sales }) {
 
 function V2StudentLessonsContent() {
   const { user, isAuthenticated } = useAuth();
-  const { data: lessons = [], isLoading } = useStudentLessons(user?.uid);
+  const { data: lessons = [], isLoading, isError, refetch } = useStudentLessons(user?.uid);
   const { data: sales = [] } = useStudentSales(user?.uid);
   const respond = useRespondLesson();
 
@@ -135,6 +135,14 @@ function V2StudentLessonsContent() {
         <h2 className="mb-4 font-display text-lg font-bold text-ink">Próximas com professores</h2>
         {isLoading ? (
           <V2Skeleton lines={3} />
+        ) : isError ? (
+          // Falhar não é "nenhuma aula": afirmar isso faria a pessoa não ir à
+          // aula que tem marcada (docs/27-FALHA-NAO-E-VAZIO.md).
+          <V2ErrorState
+            title="Não foi possível carregar suas aulas"
+            description="Suas aulas continuam marcadas — só não conseguimos buscá-las agora."
+            onRetry={() => refetch()}
+          />
         ) : upcoming.length === 0 ? (
           <V2EmptyState
             icon={GraduationCap}

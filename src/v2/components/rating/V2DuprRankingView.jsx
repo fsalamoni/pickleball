@@ -7,6 +7,7 @@ import {
   V2Avatar,
   V2Badge,
   V2EmptyState,
+  V2ErrorState,
   V2PageIntro,
   V2SearchInput,
   V2Skeleton,
@@ -70,7 +71,7 @@ function DuprExplainer() {
 
 export default function V2DuprRankingView() {
   const { user } = useAuth();
-  const { data: rows = [], isLoading } = useDuprRanking();
+  const { data: rows = [], isLoading, isError, refetch } = useDuprRanking();
   const [format, setFormat] = useState('doubles');
   const [search, setSearch] = useState('');
 
@@ -129,6 +130,15 @@ export default function V2DuprRankingView() {
 
       {isLoading ? (
         <V2Skeleton className="h-96 rounded-4xl" />
+      ) : isError ? (
+        // Falha não é "ranking ainda não calculado" (docs/27-FALHA-NAO-E-VAZIO.md).
+        <V2Surface>
+          <V2ErrorState
+            title="Não foi possível carregar o ranking"
+            description="O rating continua calculado — só não conseguimos buscá-lo agora."
+            onRetry={() => refetch()}
+          />
+        </V2Surface>
       ) : ranked.length === 0 ? (
         <V2Surface>
           <V2EmptyState

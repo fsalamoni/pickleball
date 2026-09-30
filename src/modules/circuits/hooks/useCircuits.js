@@ -46,13 +46,14 @@ export function useCircuitTournaments(circuitId) {
 
 export function useCircuitRanking(circuitId) {
   const { data: circuit } = useCircuit(circuitId);
-  const { data: results = [], isLoading } = useQuery({
+  const { data: results = [], isLoading, isError, refetch } = useQuery({
     queryKey: ['circuits', 'results', circuitId],
     queryFn: () => listCircuitResults(circuitId),
     enabled: !!circuitId,
   });
   const ranking = computeCircuitRanking(results, circuit?.points_table);
-  return { data: ranking, isLoading, pointsTable: circuit?.points_table };
+  // `isError` junto: sem ele a tela afirmaria "sem resultados" numa falha.
+  return { data: ranking, isLoading, isError, refetch, pointsTable: circuit?.points_table };
 }
 
 export function useCreateCircuit() {

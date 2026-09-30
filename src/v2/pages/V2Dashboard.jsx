@@ -121,13 +121,15 @@ function DashboardClassico() {
   // Divulgação da plataforma e dos professores (Onda CG): cada uma com a sua flag.
   const platformMarketingOn = useFeatureFlag(FEATURE_FLAG.PLATFORM_MARKETING);
   const coachMarketingOn = useFeatureFlag(FEATURE_FLAG.COACH_MARKETING);
-  const { data: myTournaments = [], isLoading: loadingMine } = useMyTournaments();
+  const {
+    data: myTournaments = [], isLoading: loadingMine, isError: mineFailed, refetch: refetchMine,
+  } = useMyTournaments();
   // ⚠️ Falha não é vazio (docs/27): sem isto, uma queda de rede virava
   // "Nenhum torneio com inscrição aberta" e "Você não tem jogos marcados".
   const {
     data: publicTournaments = [], isLoading: loadingPublic, isError: publicFailed, refetch: refetchPublic,
   } = usePublicTournaments();
-  const { data: ranking = [] } = useNationalRanking();
+  const { data: ranking = [], isError: rankingFailed } = useNationalRanking();
 
   const name = (userProfile?.platform_name || user?.displayName || 'Atleta').split(' ')[0];
 
@@ -252,6 +254,19 @@ function DashboardClassico() {
                       Abrir torneio
                     </Link>
                   </>
+                ) : mineFailed || publicFailed ? (
+                  // Sem saber se há torneio, "nenhum torneio" + "Criar torneio"
+                  // leva a um duplicado (docs/27-FALHA-NAO-E-VAZIO.md).
+                  <>
+                    <span className="text-sm text-gray-300">Não conseguimos buscar os seus torneios agora.</span>
+                    <button
+                      type="button"
+                      onClick={() => { if (mineFailed) refetchMine(); if (publicFailed) refetchPublic(); }}
+                      className="btn-press rounded-full bg-white px-5 py-2.5 text-sm font-bold text-ink hover:scale-105"
+                    >
+                      Tentar de novo
+                    </button>
+                  </>
                 ) : (
                   <>
                     <span className="text-sm text-gray-300">Nenhum torneio em contexto ainda.</span>
@@ -272,7 +287,9 @@ function DashboardClassico() {
             value={me ? me.rating : (userProfile?.level || userProfile?.leveling_level || '—')}
             delta={me ? `${me.position}º` : null}
             deltaTone="green"
-            hint={me ? `${me.wins}V – ${me.losses}D em ${me.games} jogo(s)` : 'Complete seu nivelamento no perfil'}
+            hint={me
+              ? `${me.wins}V – ${me.losses}D em ${me.games} jogo(s)`
+              : rankingFailed ? 'Não foi possível carregar o ranking agora' : 'Complete seu nivelamento no perfil'}
           />
 
           {/* Stat: torneios */}
@@ -280,8 +297,11 @@ function DashboardClassico() {
             icon={Flame}
             accent="acid"
             label="Torneios ativos"
-            value={liveCount}
-            hint={managedCount > 0 ? `${managedCount} sob sua gestão` : 'Participe ou crie um evento'}
+            // Número desconhecido é "—", nunca zero.
+            value={mineFailed ? '—' : liveCount}
+            hint={mineFailed
+              ? 'Não foi possível carregar os seus torneios'
+              : managedCount > 0 ? `${managedCount} sob sua gestão` : 'Participe ou crie um evento'}
           />
 
           {/* Torneios com inscrição aberta (com estado vazio explícito) */}

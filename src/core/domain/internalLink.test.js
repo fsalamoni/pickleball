@@ -1,6 +1,8 @@
 import { describe, it, expect } from 'vitest';
 import { readFileSync } from 'node:fs';
-import { INTERNAL_LINK_PATTERN, hashDaAncora, isRuleSafeLink, linkDeAviso } from './internalLink.js';
+import {
+  INTERNAL_LINK_PATTERN, destinoDeAviso, hashDaAncora, isRuleSafeLink, linkDeAviso,
+} from './internalLink.js';
 
 describe('linkDeAviso — o aviso pede só o que a regra aceita', () => {
   it('caminho interno comum segue igual', () => {
@@ -57,5 +59,32 @@ describe('linkDeAviso — o aviso pede só o que a regra aceita', () => {
     const m = regras.match(/function isInternalLink[\s\S]*?l\.matches\('([^']+)'\)/);
     expect(m).not.toBeNull();
     expect(m[1]).toBe(INTERNAL_LINK_PATTERN);
+  });
+});
+
+describe('destinoDeAviso — para onde a tela pode navegar', () => {
+  it('aceita caminho interno, com busca e âncora', () => {
+    expect(destinoDeAviso('/torneios/abc')).toBe('/torneios/abc');
+    expect(destinoDeAviso('/arenas/x?aba=membros&ancora=arena-planos')).toBe('/arenas/x?aba=membros&ancora=arena-planos');
+    expect(destinoDeAviso('/arenas/x#arena-reservar')).toBe('/arenas/x#arena-reservar');
+    expect(destinoDeAviso('  /perfil  ')).toBe('/perfil');
+  });
+
+  it('recusa o que sai do site', () => {
+    expect(destinoDeAviso('https://evil.com')).toBeNull();
+    expect(destinoDeAviso('//evil.com')).toBeNull();
+    expect(destinoDeAviso('/\\evil.com')).toBeNull();
+    expect(destinoDeAviso('\\\\evil.com')).toBeNull();
+    expect(destinoDeAviso('javascript:alert(1)')).toBeNull();
+    expect(destinoDeAviso('/ok\u0000')).toBeNull();
+    expect(destinoDeAviso('/a\nb')).toBeNull();
+  });
+
+  it('recusa o que não é texto', () => {
+    expect(destinoDeAviso(null)).toBeNull();
+    expect(destinoDeAviso(undefined)).toBeNull();
+    expect(destinoDeAviso(42)).toBeNull();
+    expect(destinoDeAviso('')).toBeNull();
+    expect(destinoDeAviso(`/${'a'.repeat(2001)}`)).toBeNull();
   });
 });

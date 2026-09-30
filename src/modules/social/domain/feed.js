@@ -55,3 +55,31 @@ export function filterFeedByFollowing(items, followingUids) {
   const set = followingUids instanceof Set ? followingUids : new Set(followingUids || []);
   return (items || []).filter((it) => it.actorUid && set.has(it.actorUid));
 }
+
+/**
+ * Junta as fontes do feed a partir dos resultados de `Promise.allSettled`.
+ *
+ * ⚠️ Falha não é vazio (docs/27-FALHA-NAO-E-VAZIO.md): antes cada fonte
+ * engolia a própria falha com `.catch(() => [])`, e com as duas caindo a tela
+ * afirmava "Nenhuma atividade recente". Agora:
+ *   - as duas falharam ⇒ lança (a consulta falha, a tela mostra o erro);
+ *   - uma falhou ⇒ devolve o que veio, marcado `incompleto`, para a tela não
+ *     afirmar vazio nem esconder que falta parte.
+ *
+ * @param {PromiseSettledResult<Array<object>>} torneios
+ * @param {PromiseSettledResult<Array<object>>} convites
+ * @returns {{ items: Array<object>, incompleto: boolean }}
+ */
+export function feedDasFontes(torneios, convites) {
+  const falhou = (r) => r?.status !== 'fulfilled';
+  if (falhou(torneios) && falhou(convites)) {
+    throw torneios?.reason || convites?.reason || new Error('Falha ao carregar o feed.');
+  }
+  return {
+    items: buildFeed({
+      tournaments: falhou(torneios) ? [] : torneios.value || [],
+      openGames: falhou(convites) ? [] : convites.value || [],
+    }),
+    incompleto: falhou(torneios) || falhou(convites),
+  };
+}

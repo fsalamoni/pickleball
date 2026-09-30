@@ -13,7 +13,9 @@ import { cn } from '@/core/lib/utils';
 
 export default function V2Chat() {
   const { user } = useAuth();
-  const { conversations, isLoading } = useConversations();
+  const {
+    conversations, isLoading, isError: conversasFalharam, retry: tentarConversasDeNovo,
+  } = useConversations();
   const actions = useChatActions();
   const [searchParams, setSearchParams] = useSearchParams();
   const [selectedId, setSelectedId] = useState(searchParams.get('c') || null);
@@ -85,6 +87,8 @@ export default function V2Chat() {
             <V2ConversationList
               conversations={filtered}
               isLoading={isLoading}
+              isError={conversasFalharam}
+              onRetry={tentarConversasDeNovo}
               selectedId={selectedId}
               currentUserId={user?.uid}
               onSelect={selectConversation}

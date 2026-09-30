@@ -35,7 +35,7 @@ import {
   useSetThreadPinned,
 } from '@/modules/clubs/hooks/useClubForum';
 import V2ForumPoll from './V2ForumPoll';
-import { V2Badge, V2Button, V2Skeleton } from '@/v2/ui/primitives';
+import { V2Badge, V2Button, V2ErrorState, V2Skeleton } from '@/v2/ui/primitives';
 import { cn } from '@/core/lib/utils';
 
 function timeAgo(ms) {
@@ -53,8 +53,12 @@ function timeAgo(ms) {
 
 export default function V2ForumThreadView({ clubId, threadId, isAdmin, onBack, onDeleted }) {
   const { user } = useAuth();
-  const { data: thread, isLoading } = useForumThread(threadId);
-  const { data: comments = [], isLoading: loadingComments } = useForumComments(threadId);
+  const {
+    data: thread, isLoading, isError, refetch,
+  } = useForumThread(threadId);
+  const {
+    data: comments = [], isLoading: loadingComments, isError: comentariosFalharam, refetch: recarregarComentarios,
+  } = useForumComments(threadId);
   const updateThread = useUpdateThread(clubId);
   const deleteThread = useDeleteThread(clubId);
   const setPinned = useSetThreadPinned(clubId);
@@ -70,6 +74,20 @@ export default function V2ForumThreadView({ clubId, threadId, isAdmin, onBack, o
       <div className="space-y-3">
         <V2Skeleton className="h-8 w-40 rounded-2xl" />
         <V2Skeleton className="h-48 rounded-4xl" />
+      </div>
+    );
+  }
+
+  // Falha não é "tópico não encontrado ou removido" (docs/27-FALHA-NAO-E-VAZIO.md).
+  if (isError) {
+    return (
+      <div className="space-y-3">
+        <V2Button variant="ghost" size="sm" onClick={onBack}><ArrowLeft className="mr-1.5 h-4 w-4" /> Voltar</V2Button>
+        <V2ErrorState
+          title="Não foi possível carregar o tópico"
+          description="O tópico continua lá — só não conseguimos buscá-lo agora."
+          onRetry={() => refetch()}
+        />
       </div>
     );
   }
@@ -196,11 +214,19 @@ export default function V2ForumThreadView({ clubId, threadId, isAdmin, onBack, o
 
       <div className="flex items-center gap-2 px-1 font-display text-sm font-bold text-ink">
         <MessageSquare className="h-4 w-4 text-ink" />
-        {comments.length} comentário(s)
+        {comentariosFalharam ? 'Comentários' : `${comments.length} comentário(s)`}
       </div>
 
       {loadingComments ? (
         <div className="space-y-2">{[1, 2].map((i) => <V2Skeleton key={i} className="h-20 rounded-4xl" />)}</div>
+      ) : comentariosFalharam ? (
+        // "0 comentário(s)" numa falha seria afirmar que ninguém respondeu.
+        <V2ErrorState
+          inline
+          title="Não foi possível carregar os comentários"
+          description="Eles continuam lá — tente de novo."
+          onRetry={() => recarregarComentarios()}
+        />
       ) : (
         <div className="space-y-3">
           {comments.map((comment) => (

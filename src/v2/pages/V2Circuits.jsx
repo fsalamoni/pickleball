@@ -10,11 +10,11 @@
 import React, { useState } from 'react';
 import { Link, Navigate } from 'react-router-dom';
 import { toast } from 'sonner';
-import { Trophy, Plus, Calendar, Award, Users } from 'lucide-react';
+import { Trophy, Plus, Calendar } from 'lucide-react';
 import { useAuth } from '@/core/lib/FirebaseAuthContext';
 import { useCircuits, useCreateCircuit } from '@/modules/circuits/hooks/useCircuits';
 import {
-  V2Badge, V2Button, V2EmptyState, V2Field, V2Input, V2Surface, V2Textarea,
+  V2Badge, V2Button, V2EmptyState, V2ErrorState, V2Field, V2Input, V2Surface, V2Textarea,
   V2Skeleton,
 } from '@/v2/ui/primitives';
 
@@ -77,7 +77,7 @@ function CreateCircuitForm({ onClose }) {
 
 export default function V2Circuits() {
   const { isAuthenticated } = useAuth();
-  const { data: circuits = [], isLoading } = useCircuits();
+  const { data: circuits = [], isLoading, isError, refetch } = useCircuits();
   const [creating, setCreating] = useState(false);
 
   if (!isAuthenticated) return <Navigate to="/login" replace />;
@@ -111,6 +111,12 @@ export default function V2Circuits() {
 
       {isLoading ? (
         <V2Skeleton lines={4} />
+      ) : isError ? (
+        <V2ErrorState
+          title="Não foi possível carregar os circuitos"
+          description="Os circuitos continuam lá — só não conseguimos buscá-los agora."
+          onRetry={() => refetch()}
+        />
       ) : circuits.length === 0 ? (
         <V2EmptyState
           icon={Trophy}

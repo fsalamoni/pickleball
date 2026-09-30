@@ -7,6 +7,7 @@ import {
   V2Badge,
   V2Button,
   V2EmptyState,
+  V2ErrorState,
   V2PageIntro,
   V2SearchInput,
   V2SectionHeader,
@@ -19,7 +20,7 @@ function locationText(club) {
 }
 
 export default function V2Clubs() {
-  const { data: clubs = [], isLoading } = useClubs();
+  const { data: clubs = [], isLoading, isError, refetch } = useClubs();
   const { data: myClubs = [] } = useMyClubs();
   const [search, setSearch] = useState('');
 
@@ -56,15 +57,29 @@ export default function V2Clubs() {
           onChange={(e) => setSearch(e.target.value)}
           placeholder="Buscar clube por nome, cidade ou descrição"
         />
-        <p className="mt-4 border-t border-gray-100 pt-4 text-sm text-gray-500">
-          <span className="font-bold text-ink">{filtered.length}</span> clube(s) na plataforma.
-        </p>
+        {/* A contagem só é afirmada com a lista na mão: carregando ou com a
+            consulta falhando, "0" seria mentira. */}
+        {!isLoading && !isError && (
+          <p className="mt-4 border-t border-gray-100 pt-4 text-sm text-gray-500">
+            <span className="font-bold text-ink">{filtered.length}</span> clube(s) na plataforma.
+          </p>
+        )}
       </V2Surface>
 
       {isLoading ? (
         <div className="grid gap-6 sm:grid-cols-2 xl:grid-cols-3">
           {[1, 2, 3].map((i) => <V2Skeleton key={i} className="h-52 rounded-4xl" />)}
         </div>
+      ) : isError ? (
+        // Sem a lista, "Nenhum clube — crie o primeiro" convidaria a DUPLICAR
+        // um clube que existe (docs/27-FALHA-NAO-E-VAZIO.md).
+        <V2Surface>
+          <V2ErrorState
+            title="Não foi possível carregar os clubes"
+            description="Os clubes continuam lá — só não conseguimos buscá-los agora."
+            onRetry={() => refetch()}
+          />
+        </V2Surface>
       ) : filtered.length === 0 ? (
         <V2Surface>
           <V2EmptyState

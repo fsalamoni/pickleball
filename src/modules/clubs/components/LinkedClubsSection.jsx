@@ -12,7 +12,7 @@ import { Users, Plus, Link2 } from 'lucide-react';
 import { useClubsByCoach, useClubsByArena, useMyClubs, useLinkClub } from '../hooks/useClubs';
 import { CLUB_ROLE } from '../domain/constants';
 import {
-  V2Badge, V2Button, V2EmptyState, V2Select, V2Skeleton, V2Surface,
+  V2Badge, V2Button, V2EmptyState, V2ErrorState, V2Select, V2Skeleton, V2Surface,
 } from '@/v2/ui/primitives';
 
 function ClubCard({ club }) {
@@ -36,7 +36,9 @@ export default function LinkedClubsSection({ ownerType, ownerId, canManage = fal
   const isCoach = ownerType === 'coach';
   const coachClubs = useClubsByCoach(isCoach ? ownerId : null);
   const arenaClubs = useClubsByArena(isCoach ? null : ownerId);
-  const { data: clubs = [], isLoading } = isCoach ? coachClubs : arenaClubs;
+  const {
+    data: clubs = [], isLoading, isError, refetch,
+  } = isCoach ? coachClubs : arenaClubs;
   const { data: myClubs = [] } = useMyClubs();
   const link = useLinkClub();
   const [selClub, setSelClub] = useState('');
@@ -49,6 +51,7 @@ export default function LinkedClubsSection({ ownerType, ownerId, canManage = fal
   }, [myClubs, clubs, linkField]);
 
   // Público: nada a mostrar se não há clubes.
+  // (inclusive quando a consulta falha: a seção só some, não afirma nada.)
   if (!canManage && clubs.length === 0) return null;
 
   const handleLink = async () => {
@@ -71,7 +74,7 @@ export default function LinkedClubsSection({ ownerType, ownerId, canManage = fal
           <Users className="h-5 w-5 text-ink" />
           <h3 className="font-display text-base font-bold text-ink">{title}</h3>
         </div>
-        {canManage && (
+        {canManage && !isError && (
           <V2Button size="sm" variant="secondary" onClick={() => navigate(createHref)}>
             <Plus className="h-4 w-4" /> Criar clube
           </V2Button>
@@ -80,6 +83,14 @@ export default function LinkedClubsSection({ ownerType, ownerId, canManage = fal
 
       {isLoading ? (
         <V2Skeleton lines={2} />
+      ) : isError ? (
+        // Sem a lista, "Criar clube" e "vincular" repetiriam o que já existe.
+        <V2ErrorState
+          inline
+          title="Não foi possível carregar os clubes vinculados"
+          description="Os vínculos continuam lá — só não conseguimos buscá-los agora."
+          onRetry={() => refetch()}
+        />
       ) : clubs.length === 0 ? (
         canManage ? (
           <V2EmptyState
@@ -94,7 +105,7 @@ export default function LinkedClubsSection({ ownerType, ownerId, canManage = fal
         </div>
       )}
 
-      {canManage && linkable.length > 0 && (
+      {canManage && !isError && linkable.length > 0 && (
         <div className="mt-4 flex flex-wrap items-end gap-2 border-t border-gray-100 pt-4">
           <div className="flex-1 min-w-[200px]">
             <label className="mb-1 block text-xs font-bold uppercase tracking-wider text-gray-400">Vincular clube existente</label>

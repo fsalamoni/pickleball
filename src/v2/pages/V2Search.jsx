@@ -15,8 +15,11 @@ import { useArenas } from '@/modules/arenas/hooks/useArenas';
 import { useClubs } from '@/modules/clubs/hooks/useClubs';
 import { searchAll } from '@/modules/athletes/domain/globalSearch';
 import {
-  V2Avatar, V2EmptyState, V2PageIntro, V2SearchInput, V2Surface,
+  V2Avatar, V2EmptyState, V2ErrorState, V2PageIntro, V2SearchInput, V2Skeleton, V2Surface,
 } from '@/v2/ui/primitives';
+
+/** Referência estável: `[]` novo a cada render refaria a busca inteira. */
+const SEM_ITENS = [];
 
 const TYPE_ICON = { athlete: Users, tournament: Trophy, arena: Building2, club: Users2 };
 
@@ -25,10 +28,25 @@ export default function V2Search() {
   const [params, setParams] = useSearchParams();
   const q = params.get('q') || '';
 
-  const { data: athletes = [] } = useAthletes();
-  const { data: tournaments = [] } = usePublicTournaments();
-  const { data: arenas = [] } = useArenas();
-  const { data: clubs = [] } = useClubs();
+  const atletasQ = useAthletes();
+  const torneiosQ = usePublicTournaments();
+  const arenasQ = useArenas();
+  const clubesQ = useClubs();
+  const athletes = atletasQ.data ?? SEM_ITENS;
+  const tournaments = torneiosQ.data ?? SEM_ITENS;
+  const arenas = arenasQ.data ?? SEM_ITENS;
+  const clubs = clubesQ.data ?? SEM_ITENS;
+
+  // Cada fonte falha sozinha: com uma delas fora, "Nada encontrado" seria uma
+  // afirmação sobre o que não se consultou (docs/27-FALHA-NAO-E-VAZIO.md).
+  const fontes = [
+    ['atletas', atletasQ], ['torneios', torneiosQ], ['arenas', arenasQ], ['clubes', clubesQ],
+  ];
+  const falharam = fontes.filter(([, consulta]) => consulta.isError);
+  const isError = falharam.length > 0;
+  // Enquanto uma fonte ainda carrega, "Nada encontrado" também seria cedo demais.
+  const carregando = fontes.some(([, consulta]) => consulta.isLoading);
+  const tentarDeNovo = () => falharam.forEach(([, consulta]) => consulta.refetch());
 
   const { groups, total } = useMemo(
     () => searchAll(q, { athletes, tournaments, arenas, clubs }),
@@ -53,10 +71,30 @@ export default function V2Search() {
 
       {q.trim().length < 2 ? (
         <V2Surface><V2EmptyState icon={Search} title="Digite para buscar" description="Busque por nome de atleta, torneio, arena ou clube (mínimo 2 letras)." /></V2Surface>
+      ) : total === 0 && carregando ? (
+        <div className="space-y-3" aria-busy="true" aria-label="Buscando">
+          {[1, 2, 3].map((i) => <V2Skeleton key={i} className="h-16 rounded-3xl" />)}
+        </div>
+      ) : total === 0 && isError ? (
+        <V2Surface>
+          <V2ErrorState
+            title="Não foi possível buscar agora"
+            description={`A busca em ${falharam.map(([nome]) => nome).join(', ')} falhou — tente de novo.`}
+            onRetry={tentarDeNovo}
+          />
+        </V2Surface>
       ) : total === 0 ? (
         <V2Surface><V2EmptyState icon={Search} title="Nada encontrado" description={`Nenhum resultado para “${q}”.`} /></V2Surface>
       ) : (
         <div className="space-y-6">
+          {isError && (
+            <V2ErrorState
+              inline
+              title="Resultados incompletos"
+              description={`Não conseguimos buscar em ${falharam.map(([nome]) => nome).join(', ')}.`}
+              onRetry={tentarDeNovo}
+            />
+          )}
           {groups.map((group) => {
             const Icon = TYPE_ICON[group.type] || Search;
             return (

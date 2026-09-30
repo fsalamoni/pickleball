@@ -5,13 +5,14 @@ import { publicAffiliateLinks } from '@/modules/partners/domain/affiliate';
 import {
   V2Badge,
   V2EmptyState,
+  V2ErrorState,
   V2PageIntro,
   V2Skeleton,
   V2Surface,
 } from '@/v2/ui/primitives';
 
 export default function V2Partners() {
-  const { data: links = [], isLoading } = useAffiliateLinks();
+  const { data: links = [], isLoading, isError, refetch } = useAffiliateLinks();
   const active = useMemo(() => publicAffiliateLinks(links), [links]);
 
   return (
@@ -22,6 +23,14 @@ export default function V2Partners() {
         <div className="grid gap-6 sm:grid-cols-2 lg:grid-cols-3">
           {[1, 2, 3].map((i) => <V2Skeleton key={i} className="h-56 rounded-4xl" />)}
         </div>
+      ) : isError ? (
+        <V2Surface>
+          <V2ErrorState
+            title="Não foi possível carregar os parceiros"
+            description="Tente de novo em instantes."
+            onRetry={() => refetch()}
+          />
+        </V2Surface>
       ) : active.length === 0 ? (
         <V2Surface>
           <V2EmptyState

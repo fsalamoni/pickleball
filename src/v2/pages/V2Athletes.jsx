@@ -7,6 +7,7 @@ import {
   V2Avatar,
   V2Badge,
   V2EmptyState,
+  V2ErrorState,
   V2PageIntro,
   V2SearchInput,
   V2Skeleton,
@@ -18,7 +19,7 @@ function clubNames(athlete) {
 }
 
 export default function V2Athletes() {
-  const { data: athletes = [], isLoading } = useAthletes();
+  const { data: athletes = [], isLoading, isError, refetch } = useAthletes();
   const profilePageOn = true;
   const coachDirectoryOn = true;
   const [params, setParams] = useSearchParams();
@@ -56,15 +57,27 @@ export default function V2Athletes() {
           onChange={(e) => setQ(e.target.value)}
           placeholder="Buscar por nome, cidade, nível ou clube"
         />
-        <p className="mt-4 border-t border-gray-100 pt-4 text-sm text-gray-500">
-          <span className="font-bold text-ink">{filtered.length}</span> atleta(s) na comunidade.
-        </p>
+        {/* A contagem só é afirmada com a lista na mão: carregando ou com a
+            consulta falhando, "0" seria mentira. */}
+        {!isLoading && !isError && (
+          <p className="mt-4 border-t border-gray-100 pt-4 text-sm text-gray-500">
+            <span className="font-bold text-ink">{filtered.length}</span> atleta(s) na comunidade.
+          </p>
+        )}
       </V2Surface>
 
       {isLoading ? (
         <div className="grid gap-6 sm:grid-cols-2 xl:grid-cols-3">
           {[1, 2, 3, 4, 5, 6].map((i) => <V2Skeleton key={i} className="h-52 rounded-4xl" />)}
         </div>
+      ) : isError ? (
+        <V2Surface>
+          <V2ErrorState
+            title="Não foi possível carregar os atletas"
+            description="A comunidade continua lá — só não conseguimos buscá-la agora."
+            onRetry={() => refetch()}
+          />
+        </V2Surface>
       ) : filtered.length === 0 ? (
         <V2Surface>
           <V2EmptyState

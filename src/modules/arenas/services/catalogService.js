@@ -198,7 +198,17 @@ export async function adoptManyCatalogToArena(arenaId, catalogProducts = [], act
   if (!Array.isArray(catalogProducts) || catalogProducts.length === 0) return { created: 0, skipped: 0 };
 
   // Já adotados (por catalog_id) para não duplicar no mercado.
-  const existing = await listInventoryProducts(arenaId).catch(() => []);
+  // 🐞 A leitura engolia a falha (`.catch(() => [])`): com ela caindo, "nenhum
+  // adotado" fazia o lote gravar de novo tudo o que a arena já tinha. Sem a
+  // lista na mão, não se grava — a tela mostra o erro e a pessoa tenta de novo
+  // (docs/27-FALHA-NAO-E-VAZIO.md).
+  let existing;
+  try {
+    existing = await listInventoryProducts(arenaId);
+  } catch (err) {
+    logger.warn('[catalog] não foi possível conferir os produtos já adotados', err);
+    throw new Error('Não foi possível conferir os produtos que você já tem. Nada foi adicionado — tente de novo.');
+  }
   const adopted = new Set(existing.map((p) => p.catalog_id).filter(Boolean));
 
   let created = 0;

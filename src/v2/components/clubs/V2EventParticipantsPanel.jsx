@@ -26,11 +26,17 @@ import {
   EVENT_VISIBILITY,
   isPrivateEvent,
 } from '@/modules/clubs/domain/constants';
-import { V2Badge, V2Button, V2EmptyState, V2Skeleton, V2Surface } from '@/v2/ui/primitives';
+import { V2Badge, V2Button, V2EmptyState, V2ErrorState, V2Skeleton, V2Surface } from '@/v2/ui/primitives';
 
 export default function V2EventParticipantsPanel({ event, clubId }) {
   const { user } = useAuth();
-  const { data: invites = [], isLoading } = useEventInvites(event.id);
+  const { data: invites = [], isLoading, isError, refetch } = useEventInvites(event.id);
+  // Sem a lista de convites não se sabe quem já participa: "Participar" e
+  // "Convidar" poderiam repetir o que já foi feito, e "sem participantes"
+  // seria uma afirmação sobre o que não se viu (docs/27-FALHA-NAO-E-VAZIO.md).
+  const convitesFalharam = isError;
+  // Enquanto carrega também não se sabe: o botão só aparece com a lista na mão.
+  const semSaberQuemParticipa = convitesFalharam || isLoading;
   const setResponse = useSetEventResponse(event);
   const removeInvite = useRemoveEventInvite(event.id);
   const updateEvent = useUpdateEvent(event.id);
@@ -114,11 +120,11 @@ export default function V2EventParticipantsPanel({ event, clubId }) {
         <div className="flex flex-wrap items-center justify-between gap-3">
           <div>
             <h3 className="font-display text-sm font-bold text-ink">
-              {amParticipant ? 'Você participa deste evento' : amInvited ? 'Você foi convidado' : 'Participe deste evento'}
+              {semSaberQuemParticipa ? 'Sua participação' : amParticipant ? 'Você participa deste evento' : amInvited ? 'Você foi convidado' : 'Participe deste evento'}
             </h3>
             <p className="text-xs text-gray-500">Confirme sua presença em cada dia de jogo na aba “Detalhes e dias de jogo”.</p>
           </div>
-          {amParticipant ? (
+          {semSaberQuemParticipa ? null : amParticipant ? (
             <V2Button size="sm" variant="ghost" onClick={handleLeave} disabled={removeInvite.isPending || isManager}>Sair do evento</V2Button>
           ) : (
             <V2Button size="sm" onClick={handleJoin} disabled={setResponse.isPending}>{amInvited ? 'Aceitar convite' : 'Participar'}</V2Button>
@@ -133,17 +139,28 @@ export default function V2EventParticipantsPanel({ event, clubId }) {
             <Users className="h-5 w-5 text-ink" />
             <h3 className="font-display text-base font-bold text-ink">Participantes do evento</h3>
           </div>
-          <V2Button size="sm" variant="ghost" onClick={() => setInviteOpen(true)}><UserPlus className="h-4 w-4" /> Convidar atletas</V2Button>
+          {!convitesFalharam && (
+            <V2Button size="sm" variant="ghost" onClick={() => setInviteOpen(true)}><UserPlus className="h-4 w-4" /> Convidar atletas</V2Button>
+          )}
         </div>
 
-        <div className="mt-3 flex flex-wrap gap-2">
-          <V2Badge tone="green">{counts.participants} participante(s)</V2Badge>
-          <V2Badge tone="neutral">{counts.invited} convite(s) pendente(s)</V2Badge>
-        </div>
+        {!convitesFalharam && (
+          <div className="mt-3 flex flex-wrap gap-2">
+            <V2Badge tone="green">{counts.participants} participante(s)</V2Badge>
+            <V2Badge tone="neutral">{counts.invited} convite(s) pendente(s)</V2Badge>
+          </div>
+        )}
 
         <div className="mt-4">
           {isLoading ? (
             <V2Skeleton className="h-20 rounded-3xl" />
+          ) : convitesFalharam ? (
+            <V2ErrorState
+              inline
+              title="Não foi possível carregar os participantes"
+              description="Eles continuam no evento — só não conseguimos buscá-los agora."
+              onRetry={() => refetch()}
+            />
           ) : invites.length === 0 ? (
             <V2EmptyState icon={Users} title="Sem participantes ainda" description="Convide os atletas do clube para integrarem o evento." />
           ) : (
