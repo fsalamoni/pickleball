@@ -22,10 +22,15 @@ vi.mock('@/core/lib/FirebaseAuthContext', () => ({ useAuth: () => ({ user: { uid
 vi.mock('@/modules/games/hooks/useGameDays', () => ({
   useGameDayParticipants: () => estado.inscritos,
   useJoinPublicGameDay: () => ({ mutateAsync: entrar, isPending: false }),
+  useLeaveGameDay: () => ({ mutateAsync: sair, isPending: false }),
 }));
 vi.mock('@/modules/games/hooks/useArenaGameDays', () => ({
   useLeaveArenaGameDay: () => ({ mutateAsync: sair, isPending: false }),
   useSignUpToArenaGameDay: () => ({ mutateAsync: marcarArena, isPending: false }),
+}));
+// Os clubes da pessoa: é por ser do clube que ela entra sozinha no dia dele.
+vi.mock('@/modules/clubs/hooks/useClubs', () => ({
+  useMyClubs: () => ({ data: estado.clubes, isLoading: false }),
 }));
 
 const { default: GameDayJoinPanel } = await import('./GameDayJoinPanel.jsx');
@@ -47,6 +52,7 @@ let container;
 let root;
 beforeEach(() => {
   estado.inscritos = ok([]);
+  estado.clubes = [{ id: 'c1', name: 'Clube Ace' }];
   entrar.mockClear(); sair.mockClear(); marcarArena.mockClear();
   container = document.createElement('div');
   document.body.appendChild(container);
@@ -66,6 +72,7 @@ describe('quem vê o painel', () => {
     expect(joinPanelApplies(diaAtleta({ visibility: 'private' }), { uid: 'eu' })).toBe(false);
     expect(joinPanelApplies(diaAtleta({ created_by: 'eu' }), { uid: 'eu' })).toBe(false);
     expect(joinPanelApplies(diaArena(), { uid: 'eu', podeConfigurar: true })).toBe(false);
+    // Dia de clube: só para quem é do clube (souDoClube), nunca por ser público.
     expect(joinPanelApplies(diaAtleta({ club_id: 'c1' }), { uid: 'eu' })).toBe(false);
     expect(joinPanelApplies(diaArena({ open_slot_id: 's1' }), { uid: 'eu' })).toBe(false);
     expect(joinPanelApplies(diaAtleta({ status: 'archived' }), { uid: 'eu' })).toBe(false);
@@ -86,7 +93,7 @@ describe('⭐ dia público do atleta', () => {
     await render({ gameDay: diaAtleta() });
     expect(container.textContent).toContain('Você está inscrito');
     await clicar(botao('Sair do dia de jogo'));
-    expect(sair).toHaveBeenCalledWith({ gameDayId: 'gd1', uid: 'eu' });
+    expect(sair).toHaveBeenCalledWith('gd1');
   });
 
   it('com a lista falhando, não oferece entrar (não se sabe se já está)', async () => {
@@ -118,5 +125,44 @@ describe('⭐ dia de jogo da arena', () => {
     await render({ gameDay: diaArena() });
     expect(botao('Marcar presença').disabled).toBe(true);
     expect(container.textContent).toContain('As vagas deste dia de jogo acabaram');
+  });
+});
+
+describe('⭐ dia de jogo do CLUBE (privado)', () => {
+  const diaClube = (over = {}) => ({
+    id: 'gdC', title: 'Terça do clube', visibility: 'private', status: 'active', club_id: 'c1',
+    club_name: 'Clube Ace', created_by: 'org', member_uids: ['org'], date: '2026-10-06', time: '19:00', ...over,
+  });
+
+  it('o membro do clube entra com um toque — é o dia aberto pelo "Jogar" e pelo Procura-se jogo', async () => {
+    await render({ gameDay: diaClube() });
+    expect(container.textContent).toContain('dia de jogo do seu clube');
+    await clicar(botao('Participar do dia de jogo'));
+    expect(entrar).toHaveBeenCalledWith(expect.objectContaining({ id: 'gdC' }));
+  });
+
+  it('e sai com um toque', async () => {
+    estado.inscritos = ok([{ id: 'p1', user_id: 'eu' }]);
+    await render({ gameDay: diaClube() });
+    await clicar(botao('Sair do dia de jogo'));
+    expect(sair).toHaveBeenCalledWith('gdC');
+  });
+
+  it('quem organiza (agendou a data) também pode entrar para jogar', async () => {
+    await render({ gameDay: diaClube({ created_by: 'eu' }), podeConfigurar: true });
+    expect(botao('Participar do dia de jogo')).toBeTruthy();
+  });
+
+  it('quem não é do clube não vê o botão (a regra recusaria)', async () => {
+    estado.clubes = [];
+    await render({ gameDay: diaClube() });
+    expect(container.textContent).toBe('');
+  });
+
+  it('a regra do painel: no clube vale ser do clube, não quem criou', () => {
+    expect(joinPanelApplies(diaClube(), { uid: 'eu', souDoClube: true })).toBe(true);
+    expect(joinPanelApplies(diaClube({ created_by: 'eu' }), { uid: 'eu', podeConfigurar: true, souDoClube: true })).toBe(true);
+    expect(joinPanelApplies(diaClube(), { uid: 'eu', souDoClube: false })).toBe(false);
+    expect(joinPanelApplies(diaClube({ status: 'archived' }), { uid: 'eu', souDoClube: true })).toBe(false);
   });
 });

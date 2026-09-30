@@ -19,19 +19,29 @@
  * Com a MINHA REGIÃO (flag `my_region`), só o que está na região da pessoa,
  * com a barra dizendo qual é e quantos ficaram de fora. Sem ela, o mais perto
  * primeiro (cidade, depois estado), como antes.
+ *
+ * ⭐ Cada linha tem o BOTÃO de entrar ao lado (`PlayItemAction`): *"podendo
+ * nesse local indicar que deseja participar e/ou entrar no próprio jogo"*. O
+ * título leva para dentro do jogo; o botão entra sem sair da tela inicial. E
+ * aqui só aparece o que a pessoa PODE fazer (`playItemsForMe`): o jogo aberto
+ * fora da faixa de nível dela fica no Procura-se jogo, com o motivo escrito.
+ * Os dias de jogo dos CLUBES dela entram também (são privados do clube).
  */
 import React, { useMemo } from 'react';
+import { Link } from 'react-router-dom';
 import {
   Building2, Dices, Megaphone, Plus, Swords, Users,
 } from 'lucide-react';
 import { usePlayDiscovery } from '@/modules/games/hooks/usePlayDiscovery';
-import { PLAY_KIND } from '@/modules/games/domain/playDiscovery';
+import { PLAY_KIND, PLAY_ORIGIN, playItemsForMe } from '@/modules/games/domain/playDiscovery';
 import { proximidade } from '@/modules/home/domain/homeTournaments';
 import { useRegionalList } from '@/core/lib/useMyRegion';
 import { distanceLabel } from '@/core/domain/region';
 import { V2ErrorState, V2Skeleton } from '@/v2/ui/primitives';
 import RegionBar, { RegionEmptyHint } from '@/v2/components/region/RegionBar';
-import { HomeAction, HomeEmpty, HomeRow, HomeSection } from './HomeSection';
+import PlayItemAction from '@/v2/components/games/play/PlayItemAction';
+import { cn } from '@/core/lib/utils';
+import { HomeAction, HomeEmpty, HomeSection } from './HomeSection';
 
 /** Quantos jogos a tela inicial mostra (o resto está em Procura-se jogo). */
 const NO_INICIO = 5;
@@ -40,12 +50,58 @@ const lugarDe = (item) => item.place;
 
 function iconeDe(item) {
   if (item.kind === PLAY_KIND.CONVITE) return Megaphone;
+  if (item.origem === PLAY_ORIGIN.CLUBE) return Users;
   return item.daArena ? Building2 : Dices;
+}
+
+const TONS = {
+  green: 'bg-green-50 text-green-700',
+  acid: 'bg-acid/25 text-ink',
+  blue: 'bg-blue-50 text-blue-700',
+};
+
+/**
+ * Uma linha do "Jogar": o título leva para dentro do jogo e o botão ao lado
+ * entra (ou sai) ali mesmo. Dois alvos, e nenhum dentro do outro — botão
+ * dentro de link não é clicável direito nem anunciado direito.
+ */
+function PlayRow({ item, selo, tomSelo, subtitulo }) {
+  const Icone = iconeDe(item);
+  return (
+    <li className={cn(
+      'flex flex-col gap-2 rounded-2xl border p-3 transition-colors sm:flex-row sm:items-center',
+      item.estou ? 'border-acid/50 bg-acid/[0.06]' : 'border-transparent hover:border-gray-200 hover:bg-paper',
+    )}
+    >
+      <Link
+        to={item.link}
+        className="group flex min-w-0 flex-1 items-center gap-3 rounded-xl focus-visible:outline-none focus-visible:ring-4 focus-visible:ring-acid/30"
+      >
+        <span className="flex h-9 w-9 shrink-0 items-center justify-center rounded-xl bg-paper text-ink" aria-hidden="true">
+          <Icone className="h-4 w-4" />
+        </span>
+        <span className="min-w-0 flex-1">
+          <span className="block truncate text-sm font-semibold text-ink group-hover:underline">{item.title}</span>
+          {subtitulo && <span className="block truncate text-xs text-gray-500">{subtitulo}</span>}
+        </span>
+        {selo && !item.estou && (
+          <span className={cn('hidden shrink-0 rounded-full px-2.5 py-1 text-[11px] font-bold sm:inline-block', TONS[tomSelo] || TONS.acid)}>
+            {selo}
+          </span>
+        )}
+      </Link>
+      <div className="flex shrink-0 flex-wrap items-center gap-2 pl-12 sm:pl-0">
+        <PlayItemAction item={item} />
+      </div>
+    </li>
+  );
 }
 
 export default function HomePlaySection({ reason, hoje, agora, perfil }) {
   const jogos = usePlayDiscovery({ hoje, agora });
-  const regional = useRegionalList(jogos.itens, lugarDe);
+  // Só o que a pessoa pode fazer: o que preenche os requisitos, ou já tem.
+  const paraMim = useMemo(() => playItemsForMe(jogos.itens), [jogos.itens]);
+  const regional = useRegionalList(paraMim, lugarDe);
 
   // Sem a Minha região: o mais perto primeiro, sem perder a ordem por data.
   const lista = useMemo(() => {
@@ -71,6 +127,9 @@ export default function HomePlaySection({ reason, hoje, agora, perfil }) {
         {jogos.falhas.dias && (
           <V2ErrorState inline title="Não carregou os dias de jogo" description="Pode haver dia de jogo esperando gente." onRetry={jogos.recarregar.dias} />
         )}
+        {jogos.falhas.clubes && (
+          <V2ErrorState inline title="Não carregou os dias de jogo dos seus clubes" description="Pode haver dia marcado no seu clube." onRetry={jogos.recarregar.clubes} />
+        )}
         {jogos.falhas.convites && (
           <V2ErrorState inline title="Não carregou os convites" description="Pode haver jogo esperando gente." onRetry={jogos.recarregar.convites} />
         )}
@@ -92,19 +151,17 @@ export default function HomePlaySection({ reason, hoje, agora, perfil }) {
           <ul className="space-y-1">
             {mostrados.map((item) => {
               const km = regional.ativa ? distanceLabel(regional.infoDe(item)?.km) : null;
+              const perto = !regional.ativa
+                ? (proximidade(item.place, perfil) === 2 ? 'Na sua cidade' : proximidade(item.place, perfil) === 1 ? 'No seu estado' : null)
+                : null;
               return (
-                <li key={item.key}>
-                  <HomeRow
-                    to={item.link}
-                    icon={iconeDe(item)}
-                    title={item.title}
-                    subtitle={[item.subtitle, km].filter(Boolean).join(' · ')}
-                    badge={item.badge || (!regional.ativa
-                      ? (proximidade(item.place, perfil) === 2 ? 'Na sua cidade' : proximidade(item.place, perfil) === 1 ? 'No seu estado' : null)
-                      : null)}
-                    badgeTone={item.badge ? 'green' : 'acid'}
-                  />
-                </li>
+                <PlayRow
+                  key={item.key}
+                  item={item}
+                  subtitulo={[item.subtitle, km].filter(Boolean).join(' · ')}
+                  selo={item.badge || perto}
+                  tomSelo={item.origem === PLAY_ORIGIN.CLUBE ? 'blue' : item.badge ? 'green' : 'acid'}
+                />
               );
             })}
           </ul>

@@ -445,6 +445,9 @@ export function useSetEventResponse(event) {
     onSuccess: () => {
       qc.invalidateQueries({ queryKey: ['event-invites', event.id] });
       qc.invalidateQueries({ queryKey: ['my-event-invites'] });
+      // O início lista os eventos ainda sem resposta: respondido, ele sai de
+      // lá e entra na agenda.
+      qc.invalidateQueries({ queryKey: ['available-events'] });
     },
   });
 }

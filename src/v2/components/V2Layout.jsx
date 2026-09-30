@@ -100,6 +100,15 @@ const PAGE_TITLES = [
   ['/admin', 'Admin'],
 ];
 
+/**
+ * Para onde vai quem toca em "Jogar": o Dia de jogo (os seus dias e os com vaga
+ * para você). Sem ele, Procura-se jogo; sem os dois, Encontrar jogadores.
+ */
+function jogarHubTo({ gameDayOn, openGamesOn }) {
+  if (gameDayOn) return '/dia-de-jogo';
+  return openGamesOn ? '/procura-jogo' : '/encontrar-jogadores';
+}
+
 function resolvePageTitle(pathname) {
   if (pathname === '/') return 'Visão Geral';
   const match = PAGE_TITLES.find(([prefix]) => pathname.startsWith(prefix));
@@ -215,12 +224,15 @@ function useV2Nav() {
           doublesRankingOn && { to: '/ranking/duplas', label: 'Ranking de duplas', icon: Medal },
         ],
       }),
+      // Jogar abre no DIA DE JOGO (os seus dias e os com vaga para você) e as
+      // abas seguem a ordem de uso: organizar/entrar num dia, procurar jogo,
+      // procurar gente. A ordem é contrato de tela (há teste travando).
       hub({
-        id: 'jogar', dica: 'menu-jogar', label: 'Jogar', icon: Swords, to: openGamesOn ? '/procura-jogo' : (gameDayOn ? '/dia-de-jogo' : '/encontrar-jogadores'),
+        id: 'jogar', dica: 'menu-jogar', label: 'Jogar', icon: Swords, to: jogarHubTo({ gameDayOn, openGamesOn }),
         children: [
-          ratingOn && matchmakingOn && { to: '/encontrar-jogadores', label: 'Encontrar jogadores', icon: Swords },
-          openGamesOn && { to: '/procura-jogo', label: 'Procura-se jogo', icon: Megaphone },
           gameDayOn && { to: '/dia-de-jogo', label: 'Dia de jogo', icon: Dices },
+          openGamesOn && { to: '/procura-jogo', label: 'Procura-se jogo', icon: Megaphone },
+          ratingOn && matchmakingOn && { to: '/encontrar-jogadores', label: 'Encontrar jogadores', icon: Swords },
         ],
       }),
       hub({

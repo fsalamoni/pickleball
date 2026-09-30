@@ -277,6 +277,18 @@ que pode se unificar foi unificado**. Pontos pertinentes ainda abertos:
   um botão). Minha região (flag `my_region`): cidade + raio, estado, outro
   lugar ou todo lugar, em toda tela de descoberta. Zero banco. Ver
   `docs/34-MINHA-REGIAO.md`.
+- ✅ **TRV-27** o "Jogar" abre no Dia de jogo (abas: Dia de jogo, Procura-se
+  jogo, Encontrar jogadores) com "Com vaga para você"; os dias de jogo dos
+  CLUBES para quem é membro; um botão só de entrar e sair (`PlayItemAction`) no
+  início, no Procura-se jogo e no Dia de jogo, com os requisitos; "Participar"
+  no calendário da arena e nos eventos dos clubes do início; e sair não falha
+  mais com administrador nomeado (`leaveGameDay`). Zero banco. Ver
+  `docs/35-JOGAR-ENTRAR-E-SAIR.md`.
+- ⏳ **TRV-28** (sugestão) as datas LEGADAS de evento de clube (anteriores à
+  Onda AS, fora de `game_days`) no "Jogar": pediria ler eventos e datas de cada
+  clube (N consultas por visita) ou uma regra de `collectionGroup` para as
+  datas — mexe em regra, por isso ficou de fora. Elas seguem na página do
+  evento, com o "Vou" de sempre, e encolhem sozinhas.
 - ⏳ **TRV-26** (sugestão) coordenadas próprias da ARENA (endereço → ponto),
   para medir a distância até a quadra e não só até a cidade. Pede campo novo em
   `arenas` e geocodificação — mexe no banco, por isso ficou de fora.

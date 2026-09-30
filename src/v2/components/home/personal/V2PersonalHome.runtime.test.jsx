@@ -100,7 +100,10 @@ vi.mock('@/modules/arenas/hooks/useArenaV3', () => ({
 vi.mock('@/modules/arenas/hooks/useArenaModules', () => ({
   useModuleOnInArenas: () => ({ isOnIn: () => true, isLoading: false }),
 }));
-vi.mock('@/modules/games/hooks/useArenaGameDays', () => ({ useArenaGameDays: () => ok([]) }));
+vi.mock('@/modules/games/hooks/useArenaGameDays', () => ({
+  useArenaGameDays: () => ok([]),
+  useSignUpToArenaGameDay: () => ({ mutateAsync: vi.fn(async () => {}), isPending: false }),
+}));
 vi.mock('@/modules/games/hooks/useOpenGames', () => ({ useOpenGames: () => ok([]) }));
 vi.mock('@/modules/games/hooks/usePlayDiscovery', () => ({ usePlayDiscovery: () => estado.jogar }));
 vi.mock('@/modules/coaches/hooks/useCoaches', () => ({
@@ -439,6 +442,47 @@ describe('⭐ Jogar: os dias de jogo com vaga', () => {
     const secao = container.querySelector('[data-secao-inicio="jogar"]');
     expect(secao.textContent).toContain('Não carregou os dias de jogo');
     expect(secao.textContent).not.toContain('Nenhum jogo com vaga');
+  });
+
+  it('⭐ cada jogo tem o botão de entrar ali mesmo — e o que não cabe no meu nível fica de fora', async () => {
+    estado.jogar = {
+      ...estado.jogar,
+      itens: [
+        {
+          key: 'dia:gd1', kind: 'dia', origem: 'atleta', id: 'gd1', link: '/dia-de-jogo/gd1', inicio: AGORA + 3_600_000,
+          title: 'Racha de sábado', subtitle: '', place: { city: 'Porto Alegre', state: 'RS' }, vagas: null, badge: null,
+          daArena: false, estou: false, cabe: true, fonte: { id: 'gd1' },
+        },
+        {
+          key: 'vaga:s1', kind: 'jogo_aberto', origem: 'jogo_aberto', id: 's1', link: '/dia-de-jogo/gs1', inicio: AGORA + 7_200_000,
+          title: 'Jogo aberto · Arena Sol', subtitle: '', place: { city: 'Porto Alegre', state: 'RS' }, vagas: 2, badge: '2 vagas',
+          daArena: true, estou: false, cabe: false, motivo: 'Esta vaga é a partir do nível 4.5', fonte: { id: 's1' },
+        },
+      ],
+    };
+    await render();
+    const secao = container.querySelector('[data-secao-inicio="jogar"]');
+    const botao = [...secao.querySelectorAll('button')].find((b) => b.textContent.includes('Participar'));
+    expect(botao).toBeTruthy();
+    expect(botao.getAttribute('aria-label')).toBe('Participar de Racha de sábado');
+    // O botão NÃO fica dentro do link (dois alvos, nenhum dentro do outro).
+    expect(botao.closest('a')).toBeNull();
+    expect(secao.textContent).not.toContain('Jogo aberto · Arena Sol');
+  });
+
+  it('o que já tenho marcado aparece com "Você vai" e o botão de sair', async () => {
+    estado.jogar = {
+      ...estado.jogar,
+      itens: [{
+        key: 'clube:gc', kind: 'dia', origem: 'clube', id: 'gc', link: '/dia-de-jogo/gc', inicio: AGORA + 3_600_000,
+        title: 'Terça do clube', subtitle: '', place: { city: 'Porto Alegre', state: 'RS' }, vagas: null, badge: 'Você vai',
+        daArena: false, estou: true, cabe: true, fonte: { id: 'gc', club_id: 'c1' },
+      }],
+    };
+    await render();
+    const secao = container.querySelector('[data-secao-inicio="jogar"]');
+    expect(secao.textContent).toContain('Você vai');
+    expect([...secao.querySelectorAll('button')].some((b) => b.textContent.includes('Sair'))).toBe(true);
   });
 
   it('mostra no máximo 5 e leva ao resto', async () => {

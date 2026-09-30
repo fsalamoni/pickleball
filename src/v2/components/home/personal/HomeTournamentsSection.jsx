@@ -102,8 +102,10 @@ export default function HomeTournamentsSection({ reason, hoje, perfil, meus = []
                     icon={perto > 0 ? MapPin : Trophy}
                     title={t.name}
                     subtitle={[prazoTexto(t, hoje), localTexto(t), regional.ativa ? distanceLabel(regional.infoDe(item)?.km) : null].filter(Boolean).join(' · ')}
-                    badge={regional.ativa ? null : (perto === 2 ? 'Na sua cidade' : perto === 1 ? 'No seu estado' : null)}
-                    badgeTone="acid"
+                    // Só entra aqui quem ainda NÃO se inscreveu: o selo diz o
+                    // que o toque faz (a inscrição, dentro do torneio).
+                    badge={regional.ativa || !perto ? 'Inscreva-se' : (perto === 2 ? 'Na sua cidade · inscreva-se' : 'No seu estado · inscreva-se')}
+                    badgeTone="green"
                   />
                 </li>
               ); })}

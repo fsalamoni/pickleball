@@ -408,6 +408,13 @@ viraram código (lotes 1 e 2 de `convertFlagsToCode`). Apenas
   dias de jogo das ARENAS, "Participar" dentro do dia de jogo e nada do que já
   passou nas listas.
 
+**O "Jogar" abre no Dia de jogo (2026-09-30)** — sem flag nova, sempre ligado
+(ver `docs/35-JOGAR-ENTRAR-E-SAIR.md`): abas Dia de jogo → Procura-se jogo →
+Encontrar jogadores, e "Jogar" abre `/dia-de-jogo` com "Com vaga para você"; os
+dias de jogo dos CLUBES de que a pessoa é membro entram nas listas; e um botão
+só de entrar e sair (`PlayItemAction`) em cada jogo, pelo caminho da origem.
+Zero banco.
+
 Padrão de uso:
 
 ```jsx

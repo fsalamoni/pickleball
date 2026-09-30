@@ -11,21 +11,26 @@
  *  - dia de jogo da ARENA: o mesmo cartão da página da arena (vagas, a quadra
  *    quando a inscrição é por quadra, marcar e desmarcar presença), porque o
  *    teto e a quadra valem igual nos dois lugares;
- *  - dia de jogo PÚBLICO do atleta: entrar e sair, sem teto.
+ *  - dia de jogo PÚBLICO do atleta: entrar e sair, sem teto;
+ *  - ⭐ dia de jogo do CLUBE, para quem é do clube: entrar e sair — inclusive
+ *    quem organiza, porque quem agenda a data não vira jogador. É o mesmo
+ *    painel na aba do evento do clube e aqui, no dia aberto pelo "Jogar".
  *
- * Não aparece para quem organiza (criador, arena, clube — eles inserem e tiram
- * gente pela lista de participantes), no dia privado, no de clube (o membro
- * marca presença na data do evento) e no do JOGO ABERTO (tem o painel próprio,
- * com a faixa de nível e a fila). E o que já TERMINOU não oferece entrada.
+ * Não aparece para quem organiza o dia do atleta ou da arena (inserem e tiram
+ * gente pela lista de participantes), no dia privado que não é de clube e no
+ * do JOGO ABERTO (tem o painel próprio, com a faixa de nível e a fila). Quem
+ * decide é `useJoinPanelApplies`. E o que já TERMINOU não oferece entrada.
  */
 import React from 'react';
 import { toast } from 'sonner';
-import { Check, Globe, LogIn, LogOut, Users } from 'lucide-react';
+import { Check, LogIn, LogOut, UserPlus, Users } from 'lucide-react';
 import { useAuth } from '@/core/lib/FirebaseAuthContext';
-import { useJoinPublicGameDay, useGameDayParticipants } from '@/modules/games/hooks/useGameDays';
-import { useLeaveArenaGameDay } from '@/modules/games/hooks/useArenaGameDays';
+import {
+  useJoinPublicGameDay, useGameDayParticipants, useLeaveGameDay,
+} from '@/modules/games/hooks/useGameDays';
+import { useJoinPanelApplies } from '@/modules/games/hooks/useGameDayJoin';
 import { isArenaGameDay } from '@/modules/games/domain/arenaGameDay';
-import { joinPanelApplies } from '@/modules/games/domain/gameDayJoin';
+import { isClubGameDay } from '@/modules/games/domain/clubGameDay';
 import { gameDayEndsAt } from '@/modules/games/domain/playDiscovery';
 import { V2Button, V2ErrorState, V2Surface } from '@/v2/ui/primitives';
 import ArenaGameDaySignupCard from '@/v2/components/arenas/ArenaGameDaySignupCard';
@@ -33,17 +38,17 @@ import ArenaGameDaySignupCard from '@/v2/components/arenas/ArenaGameDaySignupCar
 function Cabecalho({ children }) {
   return (
     <div className="mb-3 flex items-center gap-2">
-      <Globe className="h-5 w-5 text-acid-dark" aria-hidden="true" />
+      <UserPlus className="h-5 w-5 text-acid-dark" aria-hidden="true" />
       <h2 className="font-display text-lg font-bold text-ink">{children}</h2>
     </div>
   );
 }
 
-/** O dia público do atleta: entrar e sair. */
-function EntrarNoDiaDoAtleta({ gameDay, uid }) {
+/** O dia público do atleta e o do clube: entrar e sair. */
+function EntrarNoDia({ gameDay, uid }) {
   const inscritosQ = useGameDayParticipants(gameDay.id);
   const entrar = useJoinPublicGameDay();
-  const sair = useLeaveArenaGameDay(); // desmarca a PRÓPRIA inscrição, em qualquer dia público
+  const sair = useLeaveGameDay(); // tira só a PRÓPRIA inscrição, em qualquer origem
   const inscritos = inscritosQ.data || [];
   const jaEstou = inscritos.some((p) => p?.user_id === uid);
 
@@ -69,7 +74,7 @@ function EntrarNoDiaDoAtleta({ gameDay, uid }) {
   };
   const onSair = async () => {
     try {
-      await sair.mutateAsync({ gameDayId: gameDay.id, uid });
+      await sair.mutateAsync(gameDay.id);
       toast.success('Você saiu do dia de jogo.');
     } catch (err) {
       toast.error(err?.message || 'Não foi possível sair.');
@@ -103,7 +108,8 @@ function EntrarNoDiaDoAtleta({ gameDay, uid }) {
 export default function GameDayJoinPanel({ gameDay, podeConfigurar = false, agora = Date.now(), className }) {
   const { user } = useAuth();
   const uid = user?.uid || null;
-  if (!joinPanelApplies(gameDay, { uid, podeConfigurar })) return null;
+  const aparece = useJoinPanelApplies(gameDay, { podeConfigurar });
+  if (!aparece) return null;
 
   const terminou = Number.isFinite(gameDayEndsAt(gameDay)) && gameDayEndsAt(gameDay) <= agora;
   if (terminou) {
@@ -116,10 +122,10 @@ export default function GameDayJoinPanel({ gameDay, podeConfigurar = false, agor
 
   return (
     <V2Surface className={className} data-dica="dia-participar">
-      <Cabecalho>Participar</Cabecalho>
+      <Cabecalho>{isClubGameDay(gameDay) ? 'Participar · dia de jogo do seu clube' : 'Participar'}</Cabecalho>
       {isArenaGameDay(gameDay)
         ? <ArenaGameDaySignupCard gameDay={gameDay} naPaginaDoDia as="div" />
-        : <EntrarNoDiaDoAtleta gameDay={gameDay} uid={uid} />}
+        : <EntrarNoDia gameDay={gameDay} uid={uid} />}
     </V2Surface>
   );
 }

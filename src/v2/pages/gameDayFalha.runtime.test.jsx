@@ -5,7 +5,8 @@
  * `data` vem indefinido, cai no `[]` e a tela CONCLUI que não existe nada.
  * Nas telas de dia de jogo isso virava afirmação:
  *
- *   - "Nenhum dia de jogo ainda" — para quem tem dez;
+ *   - "Nenhum dia de jogo ainda" — para quem tem dez (hoje: "Você ainda não
+ *     tem dia de jogo");
  *   - "Dia de jogo não encontrado. Ele pode ter sido removido ou você não tem
  *     acesso." — na beira da quadra, minutos antes de começar.
  *
@@ -36,7 +37,12 @@ vi.mock('@/modules/arenas/hooks/useArenas', () => ({
   useArena: () => ({ data: null }),
   useArenaCourts: () => ({ data: [] }),
 }));
-vi.mock('@/modules/clubs/hooks/useClubs', () => ({ useMyMembership: () => ({ data: null }) }));
+vi.mock('@/modules/clubs/hooks/useClubs', () => ({
+  useMyMembership: () => ({ data: null }),
+  useMyClubs: () => ({ data: [], isLoading: false }),
+}));
+// "Com vaga para você" tem os próprios testes; aqui importa a LISTA da pessoa.
+vi.mock('@/v2/components/games/play/OpenGameDaysForMe', () => ({ default: () => <div>COM VAGA PARA VOCE</div> }));
 vi.mock('@/modules/games/hooks/useGameDays', () => ({
   useMyGameDays: () => ({
     data: estado.listaErro ? undefined : estado.lista,
@@ -48,6 +54,7 @@ vi.mock('@/modules/games/hooks/useGameDays', () => ({
     data: estado.diaErro ? undefined : estado.dia,
     isLoading: false,
     isError: estado.diaErro,
+    error: estado.diaErro ? { code: estado.diaErroCodigo || 'unavailable' } : null,
     refetch: () => { estado.recarregouDia += 1; },
   }),
   useGameDayParticipants: () => ({ data: [] }),
@@ -86,7 +93,7 @@ function clicar(texto) {
 
 beforeEach(() => {
   Object.assign(estado, {
-    lista: [], listaErro: false, dia: null, diaErro: false,
+    lista: [], listaErro: false, dia: null, diaErro: false, diaErroCodigo: null,
     recarregouLista: 0, recarregouDia: 0,
   });
   container = document.createElement('div');
@@ -104,7 +111,7 @@ describe('🐞 a LISTA de dias de jogo', () => {
   it('⭐ falha NÃO diz que a pessoa não tem dia de jogo', () => {
     estado.listaErro = true;
     const txt = render('/dia-de-jogo');
-    expect(txt).not.toContain('Nenhum dia de jogo ainda');
+    expect(txt).not.toContain('Você ainda não tem dia de jogo');
     expect(txt).toContain('Não foi possível carregar');
   });
 
@@ -115,9 +122,10 @@ describe('🐞 a LISTA de dias de jogo', () => {
     expect(estado.recarregouLista).toBe(1);
   });
 
-  it('vazio DE VERDADE continua convidando a criar', () => {
+  it('vazio DE VERDADE continua convidando a criar — e mostra os dias com vaga para entrar', () => {
     const txt = render('/dia-de-jogo');
-    expect(txt).toContain('Nenhum dia de jogo ainda');
+    expect(txt).toContain('Você ainda não tem dia de jogo');
+    expect(txt).toContain('COM VAGA PARA VOCE');
     expect(txt).not.toContain('Não foi possível carregar');
   });
 
@@ -125,7 +133,7 @@ describe('🐞 a LISTA de dias de jogo', () => {
     estado.lista = [{ id: 'g1', title: 'Rachão', date: '2099-10-02', visibility: 'public' }];
     const txt = render('/dia-de-jogo');
     expect(txt).toContain('Rachão');
-    expect(txt).not.toContain('Nenhum dia de jogo ainda');
+    expect(txt).not.toContain('Você ainda não tem dia de jogo');
     expect(txt).not.toContain('Não foi possível carregar');
   });
 });
@@ -153,6 +161,17 @@ describe('🐞 UM dia de jogo', () => {
     const txt = render('/dia-de-jogo/g1');
     expect(txt).toContain('não encontrado');
     expect(txt).not.toContain('Não foi possível carregar');
+  });
+
+  it('⭐ RECUSADO (privado, ou de um clube de que não sou) não vira "a conexão falhou"', () => {
+    estado.diaErro = true;
+    estado.diaErroCodigo = 'permission-denied';
+    const txt = render('/dia-de-jogo/g1');
+    expect(txt).toContain('não está aberto para você');
+    expect(txt).toContain('privado');
+    expect(txt).not.toContain('A conexão falhou');
+    // Tentar de novo não abriria: a saída é ver onde dá para entrar.
+    expect(container.querySelector('a[href="/dia-de-jogo"]')).not.toBeNull();
   });
 
   it('o dia de jogo que carregou abre normalmente', () => {

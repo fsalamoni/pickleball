@@ -36,6 +36,7 @@ import { isArenaGameDay, arenaGameDayWhenText } from '@/modules/games/domain/are
 import { isClubGameDay } from '@/modules/games/domain/clubGameDay';
 import { isOpenMatchGameDay, arenaGameDayEditLink } from '@/modules/arenas/domain/openMatchGameDay';
 import GameDayJoinPanel from '@/v2/components/games/GameDayJoinPanel';
+import OpenGameDaysForMe from '@/v2/components/games/play/OpenGameDaysForMe';
 
 // O painel do JOGO ABERTO (Onda CA) só existe no dia de jogo que nasceu de um
 // jogo aberto — e ele puxa os hooks da arena. Sob demanda, para o dia de jogo
@@ -130,7 +131,7 @@ function GameDayList() {
     <div className="mx-auto max-w-[1000px]">
       <V2PageIntro
         title="Dia de jogo"
-        subtitle="Crie sua rodada, convide qualquer atleta e organize os jogos — como no dia de jogo dos clubes."
+        subtitle="Os seus dias de jogo, os com vaga para você entrar — e o seu, se quiser organizar a rodada."
         action={<V2Button onClick={() => setCreateOpen(true)} data-dica="dia-de-jogo-criar"><Plus className="h-4 w-4" /> Novo dia de jogo</V2Button>}
       />
 
@@ -147,14 +148,26 @@ function GameDayList() {
           />
         </V2Surface>
       ) : gameDays.length === 0 ? (
-        <V2Surface>
-          <V2EmptyState
-            icon={CalendarClock}
-            title="Nenhum dia de jogo ainda"
-            description="Crie um dia de jogo público (aparece em Procura-se jogo) ou privado (só convidados) e monte as partidas."
-            action={<V2Button onClick={() => setCreateOpen(true)}>Criar dia de jogo</V2Button>}
-          />
-        </V2Surface>
+        // Sem dia de jogo próprio, o que interessa primeiro é ONDE ENTRAR — um
+        // cartão vazio do tamanho da tela empurraria os dias com vaga para
+        // baixo da dobra. O convite para criar fica compacto, logo depois.
+        <div className="space-y-6">
+          <OpenGameDaysForMe />
+          <V2Surface>
+            <div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
+              <p className="flex items-start gap-2 text-sm text-gray-600">
+                <CalendarClock className="mt-0.5 h-4 w-4 shrink-0 text-gray-400" aria-hidden="true" />
+                <span>
+                  <strong className="font-semibold text-ink">Você ainda não tem dia de jogo.</strong>{' '}
+                  Crie o seu: público (aparece para quem procura jogo) ou privado (só convidados).
+                </span>
+              </p>
+              <V2Button size="sm" className="shrink-0" onClick={() => setCreateOpen(true)}>
+                <Plus className="h-4 w-4" aria-hidden="true" /> Criar dia de jogo
+              </V2Button>
+            </div>
+          </V2Surface>
+        </div>
       ) : (
         <div className="space-y-8">
           {upcoming.length > 0 && (
@@ -179,6 +192,15 @@ function GameDayList() {
         </div>
       )}
 
+      {/* "Jogar" abre AQUI: além dos dias da pessoa, os dias em que ela pode
+          entrar — com o botão de entrar ali mesmo. (Sem dia próprio, eles já
+          vieram primeiro, lá em cima.) */}
+      {!isLoading && (isError || gameDays.length > 0) && (
+        <div className="mt-10">
+          <OpenGameDaysForMe />
+        </div>
+      )}
+
       <CreateGameDayDialog open={createOpen} onOpenChange={setCreateOpen} onCreated={(id) => navigate(`/dia-de-jogo/${id}`)} />
     </div>
   );
@@ -188,7 +210,7 @@ function GameDayList() {
 
 function GameDayDetail({ gameDayId }) {
   const navigate = useNavigate();
-  const { data: gameDay, isLoading, isError, refetch } = useGameDay(gameDayId);
+  const { data: gameDay, isLoading, isError, error, refetch } = useGameDay(gameDayId);
   // A lista de participantes decide se quem está olhando gerencia num dia
   // ABERTO — sem ela, cairíamos em `member_uids`, que inclui convidados.
   const { data: participants = [] } = useGameDayParticipants(gameDayId);
@@ -207,6 +229,25 @@ function GameDayDetail({ gameDayId }) {
   // acesso" quando o que caiu foi a rede é alarmar quem está na beira da
   // quadra, minutos antes de começar — e a reação natural é criar tudo de
   // novo. Só se afirma que não existe quando a consulta terminou bem.
+  // RECUSADO não é falha de rede: é o banco dizendo que este dia não é aberto
+  // a quem está olhando (privado, ou do clube de que a pessoa não é). "A
+  // conexão falhou — tente de novo" mandaria tentar para sempre algo que não
+  // vai abrir. (Dia removido também chega assim: a regra não lê o que não
+  // existe — por isso a frase admite as duas coisas.)
+  if (isError && error?.code === 'permission-denied') {
+    return (
+      <div className="mx-auto max-w-[900px]">
+        <V2Surface>
+          <V2EmptyState
+            icon={Lock}
+            title="Este dia de jogo não está aberto para você"
+            description="Ele é privado: só entra quem foi convidado ou quem é do clube dono dele. Se era para você estar nele, peça a quem organiza. (Ele também pode ter sido removido.)"
+            action={<V2Button asChild><Link to="/dia-de-jogo">Ver os dias com vaga para você</Link></V2Button>}
+          />
+        </V2Surface>
+      </div>
+    );
+  }
   if (isError) {
     return (
       <div className="mx-auto max-w-[900px]">

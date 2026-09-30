@@ -130,6 +130,9 @@ Estes princípios vieram de bugs reais que custaram horas pra arrumar. São ineg
 │   ├── 34-MINHA-REGIAO.md          📍 ⭐ o "Jogar" com os dias de jogo das arenas,
 │   │                                     "Participar" dentro do dia e a região de cada
 │   │                                     pessoa: cidade + raio, estado, todo lugar (my_region)
+│   ├── 35-JOGAR-ENTRAR-E-SAIR.md   🎾 ⭐ o "Jogar" abre no Dia de jogo; os dias do
+│   │                                     CLUBE para quem é membro; o botão de entrar e
+│   │                                     sair em todo lugar (PlayItemAction)
 │   ├── 26-TORNEIO-FORMATOS-E-REGRAS.md ⭐ grupos, classificação, chaves e o
 │   │                                     controle total do admin do torneio
 │   ├── 20-SEGURANCA-E-PRIVACIDADE/ 🔴 ⭐ PRIORIDADE MÁXIMA — segurança, LGPD,
@@ -357,7 +360,11 @@ Estes princípios vieram de bugs reais que custaram horas pra arrumar. São ineg
 **"Vou mostrar ESTOQUE (esgotado, acabando, à venda)"** → ⭐ `stockPosition(produto, entradas, saídas, { vendePeloApp })` (`arenas/domain/inventory.js`) — uma resposta só para a aba Estoque, o Resumo, a Operação e a loja do app. **Nunca** decida "esgotado" por `quantity <= 0` numa tela: produto SEM NENHUMA COMPRA não está esgotado, está só cadastrado (`sem_compra`) — 🐞 era o relatado: *"o estoque mostra a lista completa do mercado, mesmo esgotados"*, e cada item puxado do catálogo virava "Estoque: 0" e "Esgotado" na reposição. Vencido com estoque NÃO está à venda; validade só alerta o que está na prateleira. A aba Estoque abre em "À venda" e o resto fica em filtros (`STOCK_FILTERS`). Na loja do atleta, `shopAvailable` tira esgotado e vencido da vitrine. Ver `docs/24-MODULOS-DE-ARENA/09-INTEGRACAO-NA-ARENA.md` (atualização 2026-09-30)
 **"Preciso do HOJE (data) na arena"** → `todayISO()` / `formatDateISO(d)` (`arenas/domain/calendar.js`). **Nunca** `new Date().toISOString().slice(0, 10)`: é a data de Greenwich, e das 21h à meia-noite já é AMANHÃ — 🐞 o calendário tratava hoje como passado, jogos abertos/aulas/torneios de hoje sumiam das listas e a compra lançada à noite saía com a data de amanhã (17 lugares). Guarda em `src/core/guards/dataLocalArena.test.js`
 **"O que o cadastro exige? Quero tornar um campo obrigatório"** → ⭐ `missingRegistrationFields(perfil, { essencial })` (`core/lib/profileValidation.js`) é a fonte ÚNICA — o assistente (`V2OnboardingWizard`), a edição do perfil e o painel do admin (`isRequiredField`) perguntam a ela. Sempre: nome, nascimento, telefone, experiência, gênero, cidade, UF, lado da quadra, interesses. Com a flag `essential_profile`: também a **categoria em que joga** (`competition_gender`, masculina/feminina) e o **nível** (autoindicação, teste ou rating DUPR — `hasDeclaredLevel`), UF de lista (`core/domain/ufs.js`), e quem já tinha cadastro vê SÓ o passo do que falta. DUPR é opcional. Ver `docs/33-CADASTRO-ESSENCIAL.md`
-**"Por que o 'Jogar' do início não mostrava os dias de jogo com vaga?"** → 🐞 ele só lia os convites (`open_games`) e os jogos abertos; o dia de jogo que a ARENA marca no calendário nunca cria convite e ficava de fora (do início E do Procura-se jogo). Agora é uma lista só, `buildPlayList` (`modules/games/domain/playDiscovery.js`) via `usePlayDiscovery`, a MESMA no início e no Procura-se jogo: dias públicos dos próximos 30 dias (atleta e arena, com as vagas que sobram), jogos abertos e convites — do mais cedo ao mais tarde, sem o que já terminou (dia: pelo FIM; convite sem data: 14 dias), sem o que a pessoa já tem. A consulta é `visibility == 'public'` + `date IN [30 dias]`: a igualdade torna a regra provável e a LISTA de datas dispensa índice composto — **nunca** troque por faixa (`>=`), que pede índice novo (guarda `listUpcomingPublicGameDays.guard.test.js`; emulador em `tests/rules/publicGameDaysAhead.rules.test.js`). Ver `docs/34-MINHA-REGIAO.md`
+**"Por que o 'Jogar' do início não mostrava os dias de jogo com vaga?"** → 🐞 ele só lia os convites (`open_games`) e os jogos abertos; o dia de jogo que a ARENA marca no calendário nunca cria convite e ficava de fora (do início E do Procura-se jogo). Agora é uma lista só, `buildPlayList` (`modules/games/domain/playDiscovery.js`) via `usePlayDiscovery`, a MESMA no início e no Procura-se jogo: dias públicos dos próximos 30 dias (atleta e arena, com as vagas que sobram), jogos abertos e convites — do mais cedo ao mais tarde, sem o que já terminou (dia: pelo FIM; convite sem data: 14 dias); o que a pessoa já tem aparece com "Você vai" e o "Sair" (desde a onda do doc 35). A consulta é `visibility == 'public'` + `date IN [30 dias]`: a igualdade torna a regra provável e a LISTA de datas dispensa índice composto — **nunca** troque por faixa (`>=`), que pede índice novo (guarda `listUpcomingPublicGameDays.guard.test.js`; emulador em `tests/rules/publicGameDaysAhead.rules.test.js`). Ver `docs/34-MINHA-REGIAO.md`
+**"Quais são as abas do 'Jogar' e onde ele abre?"** → ⭐ **Dia de jogo → Procura-se jogo → Encontrar jogadores**, e tocar em "Jogar" abre `/dia-de-jogo` (`jogarHubTo` em `V2Layout.jsx`; guarda `src/core/guards/jogarAbas.test.js`). O Dia de jogo mostra os dias da pessoa E "Com vaga para você" (`OpenGameDaysForMe`); sem dia próprio, os com vaga vêm primeiro. Ver `docs/35-JOGAR-ENTRAR-E-SAIR.md`
+**"Vou pôr um botão de ENTRAR num jogo/dia de jogo numa lista"** → `<PlayItemAction item={…} />` (`v2/components/games/play/`), sobre um item de `buildPlayList`. **Nunca** escreva o botão à mão: ele decide pela ORIGEM (atleta/clube → `joinPublicGameDay`; arena → `signUpToArenaGameDay`, com teto; arena por quadra → "Escolher a quadra", que abre o dia; jogo aberto → `slotActionState`; convite → conversa) e sai por `leaveGameDay`. O que a pessoa já tem fica com "Você vai" + "Sair" (sumir no clique parece falha); o início filtra por `playItemsForMe` (requisitos: faixa de nível do jogo aberto). O cartão é `PlayGameDayCard`, o mesmo no Procura-se jogo e no Dia de jogo
+**"O membro de um CLUBE vê os dias de jogo do clube no 'Jogar'?"** → vê: `listUpcomingClubGameDays` (`club_id == X` + `date IN [30 dias]`, uma consulta por clube, até 10) — privados, e é o `club_id` fixo que deixa a regra provar `isClubMember` (emulador: `tests/rules/clubGameDaysAhead.rules.test.js`; guarda de fonte no mesmo arquivo dos públicos). Entrar é `joinPublicGameDay` (que aceita o dia de clube; o privado que não é de clube recusa DIZENDO que é só por convite). Dentro do dia, `GameDayJoinPanel` vale para quem é do clube (`useJoinPanelApplies`) — inclusive quem organiza, porque quem agenda a data não vira jogador. Dia de arena "só para membros" **não existe**: todo dia de arena é público
+**"Vou tirar alguém que SAIU SOZINHO de um dia de jogo"** → `leaveGameDay(gameDayId, uid)` (`gameDayService.js`), **nunca** `removeGameDayParticipant` (que recalcula a lista de membros inteira). 🐞 A regra só deixa quem sai gravar a lista antiga MENOS ele; a recontagem tirava também o administrador nomeado não inscrito e era recusada, com a inscrição já apagada. `leaveGameDay` apaga a própria inscrição e faz `arrayRemove(uid)` — criador, administrador e convidado continuam membros; o dia do jogo aberto sai pela vitrine
 **"Tocar num dia de jogo leva para onde?"** → para DENTRO dele (`/dia-de-jogo/:id`), nunca para a página da arena. Lá o `GameDayJoinPanel` é a porta de entrada: dia da arena = `ArenaGameDaySignupCard` (vagas, quadra, marcar/desmarcar — o mesmo da página da arena); dia público do atleta = entrar/sair. Quem vê o painel decide `joinPanelApplies` (`games/domain/gameDayJoin.js`). 🐞 E entrar pelo caminho do atleta num dia de ARENA pulava o teto de vagas e, no jogo aberto, gravava só uma lista: `joinPublicGameDay` agora confere o dia no banco e delega a `signUpToArenaGameDay`
 **"Onde está a MINHA REGIÃO? Minha tela de descoberta precisa dela?"** → ⭐ flag `my_region` (default OFF) + `docs/34-MINHA-REGIAO.md`. Padrão: a cidade do perfil + 50 km; também só a cidade, outros raios, o estado, outro lugar (ou a localização do aparelho, que vira a cidade mais próxima — nunca guardada) e todo lugar. Numa lista: `useRegionalList(itens, (x) => ({ city, state }))` devolve os itens da região, quantos ficaram de fora e `infoDe(item).km`; na tela, `<RegionBar regional={…} />` (+ `RegionEmptyHint`). **Nunca** esconda o que ficou de fora calado, e **busca pelo nome ignora a região** (`{ ignorar: busca }`). A distância é entre CIDADES pelo mapa do IBGE (`core/geo/cidadesBR.data.js`, 57 kB, **só import dinâmico** — guarda em `minhaRegiao.test.js`). Zero banco: a escolha é `v2:view:<uid>:regiao`. A comparação de nome de cidade é do núcleo (`core/domain/locality.js`)
 **"A lista pública mostra o que já passou?"** → não deve. Torneios: `discoverTournaments` (`tournament/domain/tournamentDiscovery.js`) separa atuais (rolando → abertos → por começar) de encerrados (inclui o "esquecido"), que ficam atrás de um botão; o dia de jogo, pelo FIM (`gameDayEndsAt`); o convite vencido de outra pessoa sai do Procura-se jogo
@@ -538,14 +545,42 @@ chore(deps): bump firebase to 12.x
 
 ## 10. Métricas atuais (snapshot 2026-09-28, 11:00 GMT-3)
 
-> Última atualização: 2026-09-30 (o "Jogar" com os dias de jogo das arenas +
-> Minha região). Antes: 2026-09-30 (estoque que diz o que há para vender +
+> Última atualização: 2026-09-30 (o "Jogar" abre no Dia de jogo, os dias do
+> clube e o botão de entrar em todo lugar). Antes: 2026-09-30 (o "Jogar" com os
+> dias de jogo das arenas + Minha região). Antes: 2026-09-30 (estoque que diz o que há para vender +
 > cadastro essencial). Antes: 2026-09-30 (varredura da plataforma). Antes: 2026-09-27 (Onda CJ — dicas guiadas); Onda CI (início sob medida); Onda CH (modo escuro); revisão da Onda CG; 2026-09-20 (Onda AT); 2026-08-31, após **41 PRs
 > novos** mergeados em main (#95 a #135) — Sprints 32 a 50+.
 > Detalhes em `docs/08-ARENA-ROADMAP.md` (Seções 34-50) e
 > memory topic `picklerush-sync-2026-08.md`.
 >
 > **Destaques por onda**:
+>
+> - **O "Jogar" que abre no Dia de jogo, os dias do clube e o botão de entrar
+>   em todo lugar** (2026-09-30): *"em jogar, a ordem de abas deve ser… dia de
+>   jogo, procura-se jogo, encontrar jogadores… ao clicar em jogar, o usuário
+>   deve entrar direto na aba dia de jogo… para os membros de clubes e arenas,
+>   também deve aparecer os dias de jogo privados… em todos os locais que existe
+>   a possibilidade de um usuário ingressar e participar, deve haver o botão
+>   respectivo"*. **(1)** O menu: Dia de jogo → Procura-se jogo → Encontrar
+>   jogadores, e "Jogar" abre o Dia de jogo, que ganhou **"Com vaga para você"**
+>   (os dias em que a pessoa pode entrar, primeiro quando ela não tem nenhum).
+>   **(2)** Os dias de jogo dos **CLUBES** de que a pessoa é membro (privados)
+>   entram no início, no Procura-se jogo e no Dia de jogo — uma consulta por
+>   clube, que a regra de sempre só deixa passar para o membro (provado no
+>   emulador). Dia de arena "só para membros" não existe: todo dia de arena é
+>   público. **(3)** Um botão só de entrar e sair (`PlayItemAction`) em cada
+>   linha e cartão, pelo caminho da origem (teto da arena, quadra, faixa de
+>   nível do jogo aberto, clube); o que a pessoa já tem fica com "Você vai" e
+>   "Sair", e o início mostra só o que ela preenche os requisitos para entrar.
+>   Dentro do dia do clube, o mesmo painel "Participar" (antes a aba do evento
+>   tinha um cartão próprio, que gravava o gênero do perfil no lugar da categoria
+>   de jogo). **(4) 🐞 Sair podia falhar**: a saída recontava a lista de membros e
+>   a regra recusava quando havia administrador nomeado — agora tira só quem
+>   saiu (`leaveGameDay`). **(5) Auditoria**: botão "Participar" no calendário
+>   da arena (dia com dia de jogo), "Participar"/"Aceitar convite" nos eventos
+>   dos clubes do início, "Inscreva-se" nos torneios abertos; e o dia privado
+>   que não é seu diz que é privado (antes: "a conexão falhou"). **Banco: zero.**
+>   Ver `docs/35-JOGAR-ENTRAR-E-SAIR.md`.
 >
 > - **O "Jogar" que mostra os dias de jogo, e a Minha região** (2026-09-30):
 >   *"para muitos usuários, na sessão 'jogar', não estão aparecendo os dias de
@@ -2417,7 +2452,7 @@ chore(deps): bump firebase to 12.x
 
 | Métrica | Valor | Delta do início do agente |
 |---|---|---|
-| **Testes Vitest** | **6776 passing** (427 arquivos) + 455 asserções de regras no emulador (Firestore + Storage) | +6287 (era 408) |
+| **Testes Vitest** | **6815 passing** (429 arquivos) + 465 asserções de regras no emulador (Firestore + Storage) | +6407 (era 408) |
 | **Lint errors** | 0 | era 30+ |
 | **Módulos** | 23 (+`home` — a tela inicial personalizada; +`promo` — cupons e campanhas da plataforma e dos professores; +`help` — tutoriais, dicas guiadas e central de ajuda) (`games` e `legal` saíram como `src/modules/` mas continuam como pastas oficiais — **rating virou módulo oficial** com domain/services/hooks/components) | +4 (coaches, circuits, games, legal) |
 | **V2 pages** | 84 (+V2Promotions e +V2PromoCampaign — Onda CG; +V2GameDayTelao — telão, fora do V2Layout; +V2Help — central de ajuda; +V2ArenaKiosk — totem da recepção, também fora do V2Layout; +V2ArenaCheckin; +V2ArenaAttendance) | +58 |
